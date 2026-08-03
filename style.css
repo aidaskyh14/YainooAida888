@@ -348,3 +348,7 @@ html, body, #app, .login-screen, .art-board {
 .code-field{
 transform: translateY(-24px) !important;
 }
+/* ขยับช่องชื่อผู้เล่นให้ตรงกรอบ */
+.player-field {
+  transform: translateY(-34px) !important;
+}
