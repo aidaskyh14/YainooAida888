@@ -88,11 +88,11 @@ button{touch-action:manipulation}
   transform:scale(.97);
   background:rgba(255,255,255,.10);
 }
-.start-area{left:8.7%;top:69.9%;width:41.6%;height:6.15%}
-.how-area{left:5.8%;top:79.0%;width:12.2%;height:8.3%}
-.menu-area{left:18.0%;top:79.0%;width:12.3%;height:8.3%}
-.settings-area{left:30.2%;top:79.0%;width:12.3%;height:8.3%}
-.reward-area{left:42.4%;top:79.0%;width:12.2%;height:8.3%}
+.start-area{left:8.7%;top:68.7%;width:41.6%;height:6.15%}
+.how-area{left:5.8%;top:77.8%;width:12.2%;height:8.3%}
+.menu-area{left:18.0%;top:77.8%;width:12.3%;height:8.3%}
+.settings-area{left:30.2%;top:77.8%;width:12.3%;height:8.3%}
+.reward-area{left:42.4%;top:77.8%;width:12.2%;height:8.3%}
 .login-error{
   position:absolute;
   z-index:6;
@@ -344,11 +344,26 @@ html, body, #app, .login-screen, .art-board {
   position: relative;
   z-index: 10;
 }
-/* ขยับช่องรหัสสมาชิกให้ตรงกรอบ */
+/* จัดตำแหน่งช่องกรอกด้วย top โดยตรง เพื่อให้ภาพและพื้นที่กดตรงกันบน iPhone */
 .code-field{
-transform: translateY(-24px) !important;
+  top: calc(51.8% - 24px) !important;
+  transform: none !important;
 }
-/* ขยับช่องชื่อผู้เล่นให้ตรงกรอบ */
-.player-field {
-  transform: translateY(-34px) !important;
+
+.player-field{
+  top: calc(62.1% - 34px) !important;
+  transform: none !important;
+}
+
+/* ป้องกันพื้นที่กดของปุ่มเคลื่อนจากตำแหน่งที่มองเห็น */
+.tap-area{
+  transform: none;
+  -webkit-transform: none;
+  touch-action: manipulation;
+}
+
+.tap-area:active{
+  transform: none;
+  -webkit-transform: none;
+  background:rgba(255,255,255,.10);
 }
