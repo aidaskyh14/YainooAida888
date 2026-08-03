@@ -164,16 +164,3 @@ $("closeModal").onclick=close;
 $("modal").onclick=e=>{if(e.target===$("modal"))close()};
 
 loadMembers();
-const loginArt = document.querySelector(".login-art");
-
-const frames = [
-  "login-art.jpg",
-  "login-art2.jpg"
-];
-
-let frame = 0;
-
-setInterval(() => {
-  frame = (frame + 1) % frames.length;
-  loginArt.src = frames[frame] + "?t=" + Date.now();
-}, 1200);
