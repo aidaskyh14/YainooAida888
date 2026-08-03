@@ -170,11 +170,35 @@ html, body {
   overflow: hidden;
   background: #21112d;
 }
-body {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
+
 .login-screen,
 .art-board {
   height: 100dvh;
+}
+
+html, body, #app, .login-screen, .art-board {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #21112d;
+}
+
+.login-screen,
+.art-board {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+}
+
+.login-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  object-position: center;
 }
