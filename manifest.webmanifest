@@ -1,0 +1,10 @@
+{
+  "name": "ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต",
+  "short_name": "สวนยัยหนู",
+  "start_url": "./?v=7",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#21112d",
+  "theme_color": "#21112d",
+  "orientation": "portrait"
+}
