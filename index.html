@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#2b1538">
+  <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <section id="login" class="page login">
+    <div class="shade"></div>
+    <div class="login-box card">
+      <h1>ในสวนของยัยหนู</h1>
+      <h2>× ปลูกผักแบบเปรตเปรต</h2>
+      <label>ชื่อสมาชิก</label>
+      <select id="member"></select>
+      <label>รหัสสมาชิก</label>
+      <input id="code" type="password" placeholder="กรอกรหัสสมาชิก">
+      <label>ชื่อผู้เล่นในเกม</label>
+      <input id="nickname" maxlength="20" placeholder="ตั้งชื่อในสวนของคุณ">
+      <button id="play" class="big-btn">เริ่มเล่น</button>
+      <div id="login-msg" class="msg"></div>
+      <button id="howLogin" class="link-btn">วิธีเล่น</button>
+    </div>
+  </section>
+
+  <section id="game" class="page game hidden">
+    <header class="hud card">
+      <div class="player">
+        <div class="avatar">👧🏻</div>
+        <div><b id="nickView"></b><small id="memberView"></small></div>
+      </div>
+      <div class="hud-actions">
+        <button id="bagBtn">🎒<small>กระเป๋า</small></button>
+        <button id="cookBtn">🍲<small>ครัว</small></button>
+        <button id="bookBtn">📖<small>สมุดเมนู</small></button>
+        <button id="exitBtn">🚪<small>ออก</small></button>
+      </div>
+    </header>
+
+    <section class="garden">
+      <div class="garden-head">
+        <h3>สวนของ <span id="owner"></span></h3>
+        <p>แตะแปลงว่างเพื่อปลูก • แตะแปลงที่พร้อมแล้วเพื่อเก็บเกี่ยว</p>
+      </div>
+      <div id="plots" class="plots"></div>
+    </section>
+
+    <footer class="flow card">
+      <span>🌱 ปลูกผัก</span><b>›</b><span>🧺 เก็บเกี่ยว</span><b>›</b><span>🍳 คราฟ</span><b>›</b><span>📸 แคปส่ง</span>
+    </footer>
+  </section>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card card">
+      <button id="close" class="close">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
