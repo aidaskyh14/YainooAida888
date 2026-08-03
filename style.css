@@ -346,5 +346,5 @@ html, body, #app, .login-screen, .art-board {
 }
 /* ขยับช่องรหัสสมาชิกให้ตรงกรอบ */
 .code-field{
-  transform: translateY(-14px) !important;
+transform: translateY(-24px) !important;
 }
