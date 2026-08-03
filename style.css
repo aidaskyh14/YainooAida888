@@ -344,3 +344,7 @@ html, body, #app, .login-screen, .art-board {
   position: relative;
   z-index: 10;
 }
+/* ขยับช่องรหัสสมาชิกให้ตรงกรอบ */
+.code-field{
+  transform: translateY(-14px) !important;
+}
