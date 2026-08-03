@@ -323,3 +323,24 @@ html, body, #app, .login-screen, .art-board {
     opacity: 0;
   }
 }
+/* เลื่อนเมนูด้านบนให้กดได้บน iPhone */
+.topbar {
+  height: auto !important;
+  min-height: 70px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.topbar .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.topbar button {
+  min-height: 48px;
+  position: relative;
+  z-index: 10;
+}
