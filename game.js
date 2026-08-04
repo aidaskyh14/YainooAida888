@@ -173,7 +173,14 @@ function icon(p){
       cls = "crop-img stage-sprout";
     }
 
-    return `<img class="${cls}" src="${src}" alt="${crop.name}">`;
+const size = cls.includes("stage-ready") ? "150px" : "";
+
+return `<img
+  class="${cls}"
+  src="${src}"
+  alt="${crop.name}"
+  style="${size ? `width:${size}!important;height:${size}!important;max-width:none!important;max-height:none!important;transform:scale(1.25)!important;transform-origin:center bottom!important;` : ""}"
+>`;
   }
 
   return crop.icon || "🌱";
