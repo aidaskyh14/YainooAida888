@@ -836,3 +836,20 @@ html, body, #app, .login-screen, .art-board {
   transform: none !important;
   -webkit-tap-highlight-color: transparent !important;
 }
+/* ไอคอนสถานะของแปลง */
+.game-screen .status-badge {
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+
+  width: 28px !important;
+  height: 28px !important;
+  padding: 3px !important;
+
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28) !important;
+
+  object-fit: contain !important;
+  z-index: 20 !important;
+}
