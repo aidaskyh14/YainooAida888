@@ -173,13 +173,13 @@ function icon(p){
       cls = "crop-img stage-sprout";
     }
 
-const size = cls.includes("stage-ready") ? "150px" : "";
+const size = cls.includes("stage-ready") ? "86px" : "";
 
 return `<img
   class="${cls}"
   src="${src}"
   alt="${crop.name}"
-  style="${size ? `width:${size}!important;height:${size}!important;max-width:none!important;max-height:none!important;transform:scale(1.25)!important;transform-origin:center bottom!important;` : ""}"
+style="${size ? `width:${size}!important;height:${size}!important;max-width:${size}!important;max-height:${size}!important;transform:translate(-3px,-10px)!important;object-fit:contain!important;` : ""}"
 >`;
   }
 
