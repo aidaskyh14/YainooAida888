@@ -133,17 +133,17 @@ function icon(p){
     const age = Date.now() - p.at;
     const total = CROPS[p.crop].ms;
 
-    let src = "pret-chili-seed.png?v=3";
+    let src = "pret-chili-seed.png?v=4";
     let cls = "crop-img stage-seed";
 
     if(age >= total){
-      src = "pret-chili-ready.png?v=3";
+      src = "pret-chili-ready.png?v=4";
       cls = "crop-img stage-ready";
     }else if(age >= total * 0.66){
-      src = "pret-chili-grow.png?v=3";
+      src = "pret-chili-grow.png?v=4";
       cls = "crop-img stage-grow";
     }else if(age >= total * 0.33){
-      src = "pret-chili-sprout.png?v=3";
+      src = "pret-chili-sprout.png?v=4";
       cls = "crop-img stage-sprout";
     }
 
