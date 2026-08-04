@@ -383,8 +383,50 @@ html, body, #app, .login-screen, .art-board {
   background-size: 100% 100% !important;
 }
 
-/* ซ่อนหน้าสวนแบบเก่าไว้ก่อน */
-.game-screen .topbar,
-.game-screen .garden {
+/* ซ่อนเฉพาะแถบบนแบบเก่า */
+.game-screen .topbar {
   display: none !important;
+}
+
+/* ใช้พื้นที่สวนเดิมเป็นปุ่มโปร่งใส */
+.game-screen .garden {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  pointer-events: none;
+  color: transparent !important;
+}
+
+.game-screen .garden h1,
+.game-screen .garden p {
+  display: none !important;
+}
+
+.game-screen .plots {
+  position: absolute !important;
+  left: 5.5% !important;
+  top: 35.5% !important;
+  width: 89% !important;
+  height: 35% !important;
+  display: grid !important;
+  grid-template-columns: repeat(3,1fr) !important;
+  grid-template-rows: repeat(3,1fr) !important;
+  gap: 3.5% !important;
+  pointer-events: none;
+}
+
+.game-screen .plot {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: transparent !important;
+  pointer-events: auto;
+}
+
+.game-screen .plot * {
+  visibility: hidden !important;
 }
