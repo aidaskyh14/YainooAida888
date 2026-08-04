@@ -430,3 +430,43 @@ html, body, #app, .login-screen, .art-board {
 .game-screen .plot * {
   visibility: hidden !important;
 }
+/* เอากรอบสีเหลืองของสถานะพร้อมเก็บออก */
+.game-screen .plot.ready {
+  outline: none !important;
+}
+
+/* จัดพื้นที่แสดงต้นผักให้อยู่กลางแปลง */
+.game-screen .plot-inner {
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+}
+
+/* ให้รูปต้นผักมองเห็น */
+.game-screen .crop {
+  visibility: visible !important;
+  display: block !important;
+  font-size: clamp(34px, 7vw, 56px) !important;
+  line-height: 1 !important;
+  color: initial !important;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.45));
+}
+
+/* ให้เวลามองเห็น */
+.game-screen .timer {
+  visibility: visible !important;
+  display: block !important;
+  margin-top: 5px !important;
+  padding: 3px 8px !important;
+  color: white !important;
+  background: rgba(55, 33, 18, 0.75) !important;
+  border-radius: 999px !important;
+  font-size: clamp(10px, 2vw, 14px) !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
