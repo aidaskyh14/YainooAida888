@@ -103,12 +103,13 @@ function stage(p){
 }
 function plotStatus(p){
   if(!p.crop) return null;
-  if(p.dead) return "dead";
+
 
   const age = Date.now() - p.at;
   const total = CROPS[p.crop].ms;
 
   if(age >= total) return null;
+    if(p.dead) return "dead";
 
   if(age >= total * 0.20 && age < total * 0.45){
     return "water";
