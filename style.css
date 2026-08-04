@@ -467,3 +467,80 @@ html, body, #app, .login-screen, .art-board {
   font-weight: 800 !important;
   text-shadow: 0 1px 2px rgba(0,0,0,.7);
 }
+/* จัดพื้นที่กดทั้ง 9 แปลงให้ตรงกับรูป */
+.game-screen .plots {
+  left: 5.5% !important;
+  top: 35.3% !important;
+  width: 89% !important;
+  height: 34% !important;
+  column-gap: 3.5% !important;
+  row-gap: 3% !important;
+}
+
+/* ล็อกแต่ละช่องไม่ให้เนื้อหาล้นลงด้านล่าง */
+.game-screen .plot {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: initial !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* ซ่อนหมายเลขและข้อความเก่าจากระบบเดิม */
+.game-screen .plot-no,
+.game-screen .crop-name {
+  display: none !important;
+}
+
+/* แปลงว่างให้เป็นเพียงพื้นที่กด ไม่แสดง + หรือข้อความ */
+.game-screen .plot.empty .plot-inner {
+  visibility: hidden !important;
+}
+
+/* แปลงที่ปลูกแล้วให้แสดงเฉพาะรูปผลผลิตกับเวลา */
+.game-screen .plot.growing .plot-inner,
+.game-screen .plot.ready .plot-inner {
+  visibility: visible !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* รูปผักหรือผลไม้ */
+.game-screen .plot.growing .crop,
+.game-screen .plot.ready .crop {
+  visibility: visible !important;
+  display: block !important;
+  font-size: 42px !important;
+  line-height: 1 !important;
+  color: initial !important;
+}
+
+/* เวลาหรือข้อความพร้อมเก็บ */
+.game-screen .plot.growing .timer,
+.game-screen .plot.ready .timer {
+  visibility: visible !important;
+  display: block !important;
+  margin-top: 4px !important;
+  padding: 3px 7px !important;
+  color: white !important;
+  background: rgba(82, 49, 24, .85) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+/* เอากรอบเหลืองออก */
+.game-screen .plot.ready,
+.game-screen .plot:focus,
+.game-screen .plot:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
