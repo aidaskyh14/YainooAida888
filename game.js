@@ -69,6 +69,184 @@ const RECIPES = [
 const $=id=>document.getElementById(id);
 let currentMember=null,state=null,ticker=null;
 
+/* ===== ระบบรูปโปรไฟล์ อัปโหลดจากโทรศัพท์และจำแยกตามสมาชิก ===== */
+function avatarKey(){
+  return currentMember ? `yainoo-avatar-v1:${currentMember}` : null;
+}
+
+function ensureAvatarUI(){
+  const gameScreen=$("gameScreen");
+  if(!gameScreen)return;
+
+  let avatarButton=$("avatarButton");
+  let avatar=$("playerAvatar");
+  let upload=$("avatarUpload");
+
+  if(!avatarButton){
+    avatarButton=document.createElement("button");
+    avatarButton.id="avatarButton";
+    avatarButton.type="button";
+    avatarButton.setAttribute("aria-label","เลือกรูปโปรไฟล์");
+    gameScreen.appendChild(avatarButton);
+  }
+
+  if(!avatar){
+    avatar=document.createElement("img");
+    avatar.id="playerAvatar";
+    avatar.alt="รูปโปรไฟล์";
+  }
+
+  if(avatar.parentElement!==avatarButton){
+    avatarButton.appendChild(avatar);
+  }
+
+  if(!upload){
+    upload=document.createElement("input");
+    upload.id="avatarUpload";
+    upload.type="file";
+    upload.accept="image/*";
+    upload.hidden=true;
+    gameScreen.appendChild(upload);
+  }
+
+  if(!$("avatarRuntimeStyle")){
+    const style=document.createElement("style");
+    style.id="avatarRuntimeStyle";
+    style.textContent=`
+      #gameScreen #avatarButton{
+        position:absolute !important;
+        left:6.2% !important;
+        top:75.5% !important;
+        width:15.7% !important;
+        aspect-ratio:1/1 !important;
+        padding:0 !important;
+        margin:0 !important;
+        border:0 !important;
+        border-radius:50% !important;
+        background:transparent !important;
+        overflow:hidden !important;
+        z-index:45 !important;
+        cursor:pointer !important;
+        pointer-events:auto !important;
+        -webkit-tap-highlight-color:transparent !important;
+      }
+
+      #gameScreen #playerAvatar{
+        display:none !important;
+        width:100% !important;
+        height:100% !important;
+        max-width:none !important;
+        max-height:none !important;
+        margin:0 !important;
+        padding:0 !important;
+        border:0 !important;
+        border-radius:50% !important;
+        object-fit:cover !important;
+        object-position:center !important;
+        background:transparent !important;
+        box-shadow:none !important;
+        transform:none !important;
+        pointer-events:none !important;
+      }
+
+      #gameScreen #playerAvatar.has-avatar{
+        display:block !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  avatarButton.onclick=()=>upload.click();
+  upload.onchange=handleAvatarUpload;
+}
+
+function showAvatar(dataUrl){
+  ensureAvatarUI();
+  const avatar=$("playerAvatar");
+  if(!avatar)return;
+
+  if(dataUrl){
+    avatar.src=dataUrl;
+    avatar.classList.add("has-avatar");
+  }else{
+    avatar.removeAttribute("src");
+    avatar.classList.remove("has-avatar");
+  }
+}
+
+function loadAvatar(){
+  const storageKey=avatarKey();
+  showAvatar(storageKey ? localStorage.getItem(storageKey) || "" : "");
+}
+
+function resizeAvatar(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+
+    reader.onerror=()=>reject(new Error("อ่านไฟล์รูปไม่สำเร็จ"));
+    reader.onload=()=>{
+      const image=new Image();
+
+      image.onerror=()=>reject(new Error("เปิดรูปไม่สำเร็จ"));
+      image.onload=()=>{
+        const sourceWidth=image.naturalWidth||image.width;
+        const sourceHeight=image.naturalHeight||image.height;
+        const cropSize=Math.min(sourceWidth,sourceHeight);
+        const sourceX=(sourceWidth-cropSize)/2;
+        const sourceY=(sourceHeight-cropSize)/2;
+
+        const canvas=document.createElement("canvas");
+        canvas.width=320;
+        canvas.height=320;
+
+        const context=canvas.getContext("2d");
+        if(!context){
+          reject(new Error("เตรียมรูปไม่สำเร็จ"));
+          return;
+        }
+
+        context.drawImage(
+          image,
+          sourceX,sourceY,cropSize,cropSize,
+          0,0,canvas.width,canvas.height
+        );
+
+        resolve(canvas.toDataURL("image/jpeg",0.84));
+      };
+
+      image.src=reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleAvatarUpload(event){
+  const file=event.target.files&&event.target.files[0];
+  event.target.value="";
+
+  if(!file)return;
+  if(!file.type.startsWith("image/")){
+    message("เลือกรูปไม่สำเร็จ","กรุณาเลือกไฟล์รูปภาพ");
+    return;
+  }
+
+  const storageKey=avatarKey();
+  if(!storageKey){
+    message("ยังเปลี่ยนรูปไม่ได้","กรุณาเข้าสู่เกมก่อน");
+    return;
+  }
+
+  try{
+    const dataUrl=await resizeAvatar(file);
+    localStorage.setItem(storageKey,dataUrl);
+    showAvatar(dataUrl);
+  }catch(error){
+    console.error(error);
+    message("บันทึกรูปไม่สำเร็จ","ลองเลือกรูปอื่นอีกครั้ง");
+  }
+}
+
 function parseLine(line){
   const cells=[];let cell="",quoted=false;
   for(let i=0;i<line.length;i++){
@@ -111,13 +289,19 @@ function start(){
   $("gardenOwner").textContent=state.player;
   $("loginScreen").classList.add("hidden");
   $("gameScreen").classList.remove("hidden");
+  ensureAvatarUI();
+  loadAvatar();
   draw();ticker=setInterval(draw,1000);
 }
 function logout(){
   if(ticker)clearInterval(ticker);save();
+  ticker=null;
+  showAvatar("");
   $("gameScreen").classList.add("hidden");
   $("loginScreen").classList.remove("hidden");
   $("memberCode").value="";
+  currentMember=null;
+  state=null;
 }
 
 function stage(p){
@@ -260,4 +444,5 @@ $("logoutBtn").onclick=logout;
 $("closeModal").onclick=close;
 $("modal").onclick=e=>{if(e.target===$("modal"))close()};
 
+ensureAvatarUI();
 loadMembers();
