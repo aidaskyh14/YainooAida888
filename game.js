@@ -54,9 +54,9 @@ mango:{
   morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
 };
 const STATUS_ICON = {
-  water: "status-water.png",
-  worm: "status-worm.png",
-  dead: "status-dead.png"
+water: "status-water.png?v=2",
+worm: "status-worm.png?v=2",
+dead: "status-dead.png?v=2"
 };
 
 const RECIPES = [
