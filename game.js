@@ -102,7 +102,7 @@ function draw(){
   $("plots").innerHTML="";
   state.plots.forEach((p,i)=>{
     const s=stage(p),b=document.createElement("button");
-    b.className="plot"+(s==="ready"?" ready":"");
+   b.className=`plot ${s}`;
     const name=p.crop?CROPS[p.crop].name:"แปลงว่าง";
     const time=p.crop?(s==="ready"?"พร้อมเก็บ!":`เหลือ ${remain(p)} วินาที`):"";
     b.innerHTML=`<span class="plot-no">#${i+1}</span><div class="plot-inner"><div class="crop">${icon(p)}</div><div class="crop-name">${name}</div>${time?`<div class="timer">${time}</div>`:""}</div>`;
