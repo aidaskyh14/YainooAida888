@@ -154,7 +154,7 @@ function draw(){
   if(!state)return;
   $("plots").innerHTML="";
   state.plots.forEach((p,i)=>{
-    const s=stage(p),b=document.createElement("button");
+const s=stage(p),need=plotStatus(p),b=document.createElement("button");
    b.className=`plot ${s}`;
     const name=p.crop?CROPS[p.crop].name:"แปลงว่าง";
     const time=p.crop?(s==="ready"?"พร้อมเก็บ!":`เหลือ ${remain(p)} วินาที`):"";
