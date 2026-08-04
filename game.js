@@ -29,6 +29,12 @@ chili:{name:"พริกผีเปรต",icon:"🌶️",ms:60000,seedImg:"pr
   lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",ms:40000},
   morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
 };
+const STATUS_ICON = {
+  water: "status-water.png",
+  worm: "status-worm.png",
+  dead: "status-dead.png"
+};
+
 const RECIPES = [
   {id:"r1",name:"ผัดพริกผีเปรต",icon:"🍛",need:{chili:3,morning:2}},
   {id:"r2",name:"แกงฟักทองกองกอย",icon:"🥘",need:{pumpkin:3,cabbage:2}},
