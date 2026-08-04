@@ -853,3 +853,55 @@ html, body, #app, .login-screen, .art-board {
   object-fit: contain !important;
   z-index: 20 !important;
 }
+/* ===== แก้ขนาดรูปพืชและไอคอนสถานะ ===== */
+
+/* กล่องรูปพืช ห้ามขยายจนเต็มแปลง */
+.game-screen .plot .crop {
+  width: 100% !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+/* รูปพืชจริง ให้เล็กและเห็นครบทั้งต้น */
+.game-screen .plot .crop img {
+  display: block !important;
+  width: 58px !important;
+  height: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ไอคอนสถานะมุมขวาบน */
+.game-screen .status-badge {
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+
+  width: 38px !important;
+  height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.38)) !important;
+
+  z-index: 20 !important;
+}
