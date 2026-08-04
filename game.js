@@ -137,28 +137,30 @@ function plotStatus(p){
 function icon(p){
   if(!p.crop) return "+";
 
-  if(p.crop === "chili"){
-    const age = Date.now() - p.at;
-    const total = CROPS[p.crop].ms;
+  const crop = CROPS[p.crop];
 
-    let src = "pret-chili-seed.png?v=4";
+  if(crop.seedImg && crop.sproutImg && crop.growImg && crop.readyImg){
+    const age = Date.now() - p.at;
+    const total = crop.ms;
+
+    let src = crop.seedImg;
     let cls = "crop-img stage-seed";
 
     if(age >= total){
-      src = "pret-chili-ready.png?v=4";
+      src = crop.readyImg;
       cls = "crop-img stage-ready";
     }else if(age >= total * 0.66){
-      src = "pret-chili-grow.png?v=4";
+      src = crop.growImg;
       cls = "crop-img stage-grow";
     }else if(age >= total * 0.33){
-      src = "pret-chili-sprout.png?v=4";
+      src = crop.sproutImg;
       cls = "crop-img stage-sprout";
     }
 
-    return `<img class="${cls}" src="${src}" alt="พริกผีเปรต">`;
+    return `<img class="${cls}" src="${src}" alt="${crop.name}">`;
   }
 
-  return CROPS[p.crop].icon || "🌱";
+  return crop.icon || "🌱";
 }
 function remain(p){return Math.max(0,Math.ceil((CROPS[p.crop].ms-(Date.now()-p.at))/1000))}
 function draw(){
