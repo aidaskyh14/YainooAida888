@@ -1040,16 +1040,17 @@ html, body, #app, .login-screen, .art-board {
 }
 /* ทำให้ระยะพร้อมเก็บใหญ่กว่าระยะอื่นเล็กน้อย */
 .game-screen .plot .crop img.crop-img.stage-ready {
-  width: 92px !important;
-  height: 92px !important;
-  max-width: 92px !important;
-  max-height: 92px !important;
-  transform: none !important;
+  width: 86px !important;
+  height: 86px !important;
+  max-width: 86px !important;
+  max-height: 86px !important;
   object-fit: contain !important;
-  object-position: center bottom !important;
+
+  transform: translate(-3px, -10px) !important;
+
   margin: 0 auto !important;
   position: static !important;
   z-index: 5 !important;
 }
 }
-}
+
