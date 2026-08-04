@@ -904,4 +904,112 @@ html, body, #app, .login-screen, .art-board {
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.38)) !important;
 
   z-index: 20 !important;
+}/* ===== จัดรูปพริกและข้อความในแปลง ===== */
+
+.game-screen .plot {
+  overflow: visible !important;
+}
+
+.game-screen .plot-inner {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 8px 2px 2px !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+.game-screen .plot .crop {
+  width: 100% !important;
+  height: 58px !important;
+  min-height: 58px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  overflow: visible !important;
+}
+
+.game-screen .plot .crop img.crop-img {
+  display: block !important;
+  object-fit: contain !important;
+  object-position: center bottom !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter:
+    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 0 3px rgba(255, 225, 170, 0.25)) !important;
+}
+
+/* ขนาดของพริกแต่ละช่วง */
+.game-screen .crop-img.stage-seed {
+  width: 34px !important;
+  height: 34px !important;
+  max-width: 34px !important;
+  max-height: 34px !important;
+}
+
+.game-screen .crop-img.stage-sprout {
+  width: 44px !important;
+  height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+}
+
+.game-screen .crop-img.stage-grow {
+  width: 50px !important;
+  height: 50px !important;
+  max-width: 50px !important;
+  max-height: 50px !important;
+}
+
+.game-screen .crop-img.stage-ready {
+  width: 56px !important;
+  height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+}
+
+/* ทำให้ชื่อและเวลามองเห็นครบ */
+.game-screen .crop-name {
+  display: block !important;
+  position: relative !important;
+  width: 92% !important;
+  color: white !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.75) !important;
+  z-index: 5 !important;
+}
+
+.game-screen .timer {
+  display: block !important;
+  position: relative !important;
+  margin-top: 2px !important;
+  padding: 2px 6px !important;
+  color: white !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  border-radius: 8px !important;
+  background: rgba(54, 31, 15, 0.62) !important;
+  z-index: 5 !important;
+}
+
+/* ขยายไอคอนสถานะ */
+.game-screen .status-badge {
+  top: 2px !important;
+  right: 2px !important;
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  background: transparent !important;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.4)) !important;
 }
