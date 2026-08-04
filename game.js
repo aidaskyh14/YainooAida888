@@ -101,6 +101,32 @@ function stage(p){
   const e=Date.now()-p.at,t=CROPS[p.crop].ms;
   if(e>=t)return"ready";if(e>=t*.66)return"grown";if(e>=t*.33)return"sprout";return"seed";
 }
+function plotStatus(p){
+  if(!p.crop) return null;
+  if(p.dead) return "dead";
+
+  const age = Date.now() - p.at;
+
+  if(!p.waterDone && age >= 12000 && age < 22000){
+    return "water";
+  }
+
+  if(!p.waterDone && age >= 22000){
+    p.dead = true;
+    return "dead";
+  }
+
+  if(!p.wormDone && age >= 32000 && age < 42000){
+    return "worm";
+  }
+
+  if(!p.wormDone && age >= 42000){
+    p.dead = true;
+    return "dead";
+  }
+
+  return null;
+}
 function icon(p){const s=stage(p);return s==="empty"?"➕":s==="seed"?"🫘":s==="sprout"?"🌱":s==="grown"?"🌿":CROPS[p.crop].icon}
 function remain(p){return Math.max(0,Math.ceil((CROPS[p.crop].ms-(Date.now()-p.at))/1000))}
 function draw(){
