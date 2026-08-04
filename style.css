@@ -427,9 +427,6 @@ html, body, #app, .login-screen, .art-board {
   pointer-events: auto;
 }
 
-.game-screen .plot * {
-  visibility: hidden !important;
-}
 /* เอากรอบสีเหลืองของสถานะพร้อมเก็บออก */
 .game-screen .plot.ready {
   outline: none !important;
