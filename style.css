@@ -1052,5 +1052,13 @@ html, body, #app, .login-screen, .art-board {
   position: static !important;
   z-index: 5 !important;
 }
+/* ขยายเฉพาะบัวรดน้ำและหนอน */
+.game-screen .status-badge[src*="status-water.png"],
+.game-screen .status-badge[src*="status-worm.png"] {
+  width: 64px !important;
+  height: 64px !important;
+  max-width: 64px !important;
+  max-height: 64px !important;
+}
 
 
