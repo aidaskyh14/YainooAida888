@@ -544,3 +544,156 @@ html, body, #app, .login-screen, .art-board {
   outline: none !important;
   box-shadow: none !important;
 }
+/* ===== จัดแปลงให้ตรงกลางและสะอาด ===== */
+
+.game-screen .plots {
+  left: 6.2% !important;
+  top: 36.1% !important;
+  width: 87.5% !important;
+  height: 31.8% !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-rows: repeat(3, 1fr) !important;
+
+  column-gap: 4.2% !important;
+  row-gap: 4.8% !important;
+}
+
+/* ล็อกพื้นที่แต่ละแปลง */
+.game-screen .plot {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+
+  color: initial !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* เอาวงรีหรือขีดสีม่วงมุมซ้ายออก */
+.game-screen .plot-no,
+.game-screen .plot-no::before,
+.game-screen .plot-no::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* ไม่ให้แปลงสร้างกรอบเสริม */
+.game-screen .plot::before,
+.game-screen .plot::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* แปลงว่าง: เหลือแค่เครื่องหมายบวกตรงกลาง */
+.game-screen .plot.empty .plot-inner {
+  visibility: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.game-screen .plot.empty .crop {
+  visibility: visible !important;
+  display: block !important;
+
+  font-size: 32px !important;
+  line-height: 1 !important;
+  color: rgba(65, 52, 42, .75) !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.game-screen .plot.empty .crop-name,
+.game-screen .plot.empty .timer {
+  display: none !important;
+}
+
+/* แปลงที่ปลูกแล้ว: ทุกอย่างอยู่ตรงกลาง */
+.game-screen .plot.growing .plot-inner,
+.game-screen .plot.ready .plot-inner {
+  visibility: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  text-align: center !important;
+}
+
+/* รูปผักหรือผลไม้ */
+.game-screen .plot.growing .crop,
+.game-screen .plot.ready .crop {
+  visibility: visible !important;
+  display: block !important;
+
+  font-size: 28px !important;
+  line-height: 1 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ชื่อพืช */
+.game-screen .plot.growing .crop-name,
+.game-screen .plot.ready .crop-name {
+  visibility: visible !important;
+  display: block !important;
+
+  max-width: 88% !important;
+  margin-top: 2px !important;
+
+  color: white !important;
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .8) !important;
+}
+
+/* เวลานับถอยหลัง */
+.game-screen .plot.growing .timer,
+.game-screen .plot.ready .timer {
+  visibility: visible !important;
+  display: block !important;
+
+  margin-top: 3px !important;
+  padding: 2px 5px !important;
+
+  color: white !important;
+  background: rgba(75, 48, 25, .82) !important;
+  border-radius: 999px !important;
+
+  font-size: 8px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+}
+
+/* เอากรอบเหลืองและกรอบตอนกดออก */
+.game-screen .plot.ready,
+.game-screen .plot:focus,
+.game-screen .plot:focus-visible,
+.game-screen .plot:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
