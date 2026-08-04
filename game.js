@@ -32,7 +32,15 @@ pumpkin:{
   growImg:"ghost-pumpkin-grow.png?v=1",
   readyImg:"ghost-pumpkin-ready.png?v=1"
 },
-  cabbage:{name:"ผักกาดบ้านนอก",icon:"🥬",ms:25000},
+cabbage:{
+  name:"ผักกาดบ้านนอก",
+  icon:"🥬",
+  ms:25000,
+  seedImg:"cabbage-seed.png?v=1",
+  sproutImg:"cabbage-sprout.png?v=1",
+  growImg:"cabbage-grow.png?v=1",
+  readyImg:"cabbage-ready.png?v=1"
+},
   mango:{name:"มะม่วงหน้าเน่า",icon:"🥭",ms:35000},
   lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",ms:40000},
   morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
