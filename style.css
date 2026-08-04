@@ -701,3 +701,137 @@ html, body, #app, .login-screen, .art-board {
 .game-screen .plot .plot-inner {
   transform: translateY(10px) !important;
 }
+/* ===== จัดทุกอย่างให้อยู่กลางแปลงจริง ๆ ===== */
+
+/* ตำแหน่งรวมของแปลง 9 ช่อง */
+.game-screen .plots {
+  left: 5.8% !important;
+  top: 35.6% !important;
+  width: 88.4% !important;
+  height: 33.4% !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-rows: repeat(3, 1fr) !important;
+  column-gap: 3.8% !important;
+  row-gap: 4.2% !important;
+}
+
+/* ปุ่มของแต่ละแปลง */
+.game-screen .plot {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ซ่อนหมายเลขจากระบบ เพราะในภาพมีเลขอยู่แล้ว */
+.game-screen .plot-no {
+  display: none !important;
+}
+
+/* กล่องที่รวม + รูปพืช ชื่อ และเวลา */
+.game-screen .plot-inner {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  text-align: center !important;
+}
+
+/* แปลงว่าง: เหลือแค่เครื่องหมายบวก */
+.game-screen .plot.empty .crop {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size: 34px !important;
+  line-height: 1 !important;
+  color: rgba(72, 58, 45, 0.78) !important;
+}
+
+.game-screen .plot.empty .crop-name,
+.game-screen .plot.empty .timer {
+  display: none !important;
+}
+
+/* รูปพืช */
+.game-screen .plot.growing .crop,
+.game-screen .plot.ready .crop {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size: 30px !important;
+  line-height: 1 !important;
+}
+
+/* ชื่อพืช */
+.game-screen .plot.growing .crop-name,
+.game-screen .plot.ready .crop-name {
+  display: block !important;
+  width: 88% !important;
+  margin: 3px 0 0 !important;
+  padding: 0 !important;
+
+  color: #fff !important;
+  font-size: 9px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  white-space: normal !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85) !important;
+}
+
+/* เวลาและคำว่าพร้อมเก็บ */
+.game-screen .plot.growing .timer,
+.game-screen .plot.ready .timer {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  padding: 2px 5px !important;
+
+  color: #fff !important;
+  background: rgba(76, 48, 25, 0.84) !important;
+  border-radius: 999px !important;
+
+  font-size: 8px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+}
+
+/* เอากรอบตอนแตะและกรอบพร้อมเก็บออก */
+.game-screen .plot.ready,
+.game-screen .plot:focus,
+.game-screen .plot:focus-visible,
+.game-screen .plot:active {
+  outline: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
