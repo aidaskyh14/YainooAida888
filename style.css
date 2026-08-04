@@ -1060,5 +1060,11 @@ html, body, #app, .login-screen, .art-board {
   max-width: 64px !important;
   max-height: 64px !important;
 }
+.game-screen .status-badge {
+  width: 60px !important;
+  height: 60px !important;
+  max-width: 60px !important;
+  max-height: 60px !important;
+}
 
 
