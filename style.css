@@ -1038,3 +1038,10 @@ html, body, #app, .login-screen, .art-board {
   margin-right: auto !important;
   transform: translateX(0) !important;
 }
+/* ทำให้ระยะพร้อมเก็บใหญ่กว่าระยะอื่นเล็กน้อย */
+.game-screen .crop-img.stage-ready {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
+}
