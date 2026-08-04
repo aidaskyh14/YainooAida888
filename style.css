@@ -442,6 +442,7 @@ html, body, #app, .login-screen, .art-board {
   align-items: center !important;
   justify-content: center !important;
   color: white !important;
+  transform: translateY(12px) !important;
 }
 
 /* ให้รูปต้นผักมองเห็น */
