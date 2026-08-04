@@ -144,7 +144,7 @@ function icon(p){
       src = "pret-chili-sprout.png";
     }
 
-    return `<img src="${src}" alt="พริกผีเปรต">`;
+return `<img src="${src}?v=2" alt="พริกผีเปรต">`;
   }
 
   return CROPS[p.crop].icon || "🌱";
