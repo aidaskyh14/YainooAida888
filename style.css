@@ -1039,12 +1039,14 @@ html, body, #app, .login-screen, .art-board {
   transform: translateX(0) !important;
 }
 /* ทำให้ระยะพร้อมเก็บใหญ่กว่าระยะอื่นเล็กน้อย */
-.game-screen .crop-img.stage-ready {
+.game-screen .plot .crop img.crop-img.stage-ready {
   width: 150px !important;
   height: 150px !important;
-  max-width: 150px !important;
-  max-height: 150px !important;
-  transform: scale(1.25) !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: scale(1.6) !important;
   transform-origin: center bottom !important;
-  z-index: 20 !important;
+  position: relative !important;
+  z-index: 30 !important;
+}
 }
