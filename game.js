@@ -45,10 +45,10 @@ mango:{
   name:"มะม่วงหน้าเน่า",
   icon:"🥭",
   ms:35000,
-  seedImg:"mango-seed.png?v=1",
-  sproutImg:"mango-sprout.png?v=1",
-  growImg:"mango-grow.png?v=1",
-  readyImg:"mango-ready.png?v=1"
+  seedImg:"mango-seed.png?v=2",
+  sproutImg:"mango-sprout.png?v=2",
+  growImg:"mango-grow.png?v=2",
+  readyImg:"mango-ready.png?v=2"
 },
   lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",ms:40000},
   morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
