@@ -106,21 +106,19 @@ function plotStatus(p){
   if(p.dead) return "dead";
 
   const age = Date.now() - p.at;
+  const total = CROPS[p.crop].ms;
 
-  if(!p.waterDone && age >= 12000 && age < 22000){
+  if(age >= total) return null;
+
+  if(age >= total * 0.20 && age < total * 0.45){
     return "water";
   }
 
-  if(!p.waterDone && age >= 22000){
-    p.dead = true;
-    return "dead";
-  }
-
-  if(!p.wormDone && age >= 32000 && age < 42000){
+  if(age >= total * 0.45 && age < total * 0.75){
     return "worm";
   }
 
-  if(!p.wormDone && age >= 42000){
+  if(age >= total * 0.75){
     p.dead = true;
     return "dead";
   }
