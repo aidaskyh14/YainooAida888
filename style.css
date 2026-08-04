@@ -1040,11 +1040,11 @@ html, body, #app, .login-screen, .art-board {
 }
 /* ทำให้ระยะพร้อมเก็บใหญ่กว่าระยะอื่นเล็กน้อย */
 .game-screen .crop-img.stage-ready {
- .game-screen .crop-img.stage-ready {
-  width: 110px !important;
-  height: 110px !important;
-  max-width: 110px !important;
-  max-height: 110px !important;
-  z-index: 10;
-}
+  width: 150px !important;
+  height: 150px !important;
+  max-width: 150px !important;
+  max-height: 150px !important;
+  transform: scale(1.25) !important;
+  transform-origin: center bottom !important;
+  z-index: 20 !important;
 }
