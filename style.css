@@ -697,3 +697,7 @@ html, body, #app, .login-screen, .art-board {
   outline: none !important;
   box-shadow: none !important;
 }
+/* เลื่อนเนื้อหาในทุกแปลงลงมาให้อยู่กลางหลุมมากขึ้น */
+.game-screen .plot .plot-inner {
+  transform: translateY(10px) !important;
+}
