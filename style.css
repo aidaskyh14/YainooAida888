@@ -1013,3 +1013,28 @@ html, body, #app, .login-screen, .art-board {
   background: transparent !important;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.4)) !important;
 }
+/* จัดรูปพืชให้อยู่ตรงกลางแปลงจริง ๆ */
+.game-screen .plot .crop {
+  position: relative !important;
+  width: 100% !important;
+  height: 62px !important;
+  min-height: 62px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.game-screen .plot .crop img.crop-img {
+  position: static !important;
+  margin: 0 auto !important;
+  transform: none !important;
+  object-position: center center !important;
+}
+
+/* แก้รูปพร้อมเก็บที่เยื้องซ้าย */
+.game-screen .crop-img.stage-ready {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  transform: translateX(0) !important;
+}
