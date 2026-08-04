@@ -1066,6 +1066,17 @@ html, body, #app, .login-screen, .art-board {
   max-width: 44px !important;
   max-height: 44px !important;
 }
+/* ล็อกไอคอนสถานะทั้ง 3 ให้ขนาดเดียวกัน */
+.game-screen img.status-badge[src*="status-water.png"],
+.game-screen img.status-badge[src*="status-worm.png"],
+.game-screen img.status-badge[src*="status-dead.png"] {
+  width: 44px !important;
+  height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
 
 
 
