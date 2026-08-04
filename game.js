@@ -160,6 +160,7 @@ const s=stage(p),need=plotStatus(p),b=document.createElement("button");
     const time=p.crop?(s==="ready"?"พร้อมเก็บ!":`เหลือ ${remain(p)} วินาที`):"";
    b.innerHTML = `
   <span class="plot-no">#${i + 1}</span>
+  ${need ? `<img class="status-badge" src="${STATUS_ICON[need]}" alt="${need}">` : ""}
   <div class="plot-inner">
     <div class="crop">${icon(p)}</div>
     <div class="crop-name">${name}</div>
