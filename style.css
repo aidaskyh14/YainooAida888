@@ -367,3 +367,24 @@ html, body, #app, .login-screen, .art-board {
   -webkit-transform: none;
   background:rgba(255,255,255,.10);
 }
+/* ===== หน้าแปลงผักรูปใหม่ ===== */
+.game-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100svh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+
+  background-image: url("farm-page-template.jpeg") !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+/* ซ่อนหน้าสวนแบบเก่าไว้ก่อน */
+.game-screen .topbar,
+.game-screen .garden {
+  display: none !important;
+}
