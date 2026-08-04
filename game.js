@@ -127,7 +127,28 @@ function plotStatus(p){
 
   return null;
 }
-function icon(p){const s=stage(p);return s==="empty"?"➕":s==="seed"?"🫘":s==="sprout"?"🌱":s==="grown"?"🌿":CROPS[p.crop].icon}
+function icon(p){
+  if(!p.crop) return "+";
+
+  if(p.crop === "chili"){
+    const age = Date.now() - p.at;
+    const total = CROPS[p.crop].ms;
+
+    let src = "pret-chili-seed.png";
+
+    if(age >= total){
+      src = "pret-chili-ready.png";
+    }else if(age >= total * 0.66){
+      src = "pret-chili-grow.png";
+    }else if(age >= total * 0.33){
+      src = "pret-chili-sprout.png";
+    }
+
+    return `<img src="${src}" alt="พริกผีเปรต">`;
+  }
+
+  return CROPS[p.crop].icon || "🌱";
+}
 function remain(p){return Math.max(0,Math.ceil((CROPS[p.crop].ms-(Date.now()-p.at))/1000))}
 function draw(){
   if(!state)return;
