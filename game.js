@@ -23,7 +23,15 @@ let MEMBERS = {
 
 const CROPS = {
 chili:{name:"พริกผีเปรต",icon:"🌶️",ms:60000,seedImg:"pret-chili-seed.png",sproutImg:"pret-chili-sprout.png",growImg:"pret-chili-grow.png",readyImg:"pret-chili-ready.png"},
-  pumpkin:{name:"ฟักทองกองกอย",icon:"🎃",ms:30000},
+pumpkin:{
+  name:"ฟักทองกองกอย",
+  icon:"🎃",
+  ms:30000,
+  seedImg:"ghost-pumpkin-seed.png?v=1",
+  sproutImg:"ghost-pumpkin-sprout.png?v=1",
+  growImg:"ghost-pumpkin-grow.png?v=1",
+  readyImg:"ghost-pumpkin-ready.png?v=1"
+},
   cabbage:{name:"ผักกาดบ้านนอก",icon:"🥬",ms:25000},
   mango:{name:"มะม่วงหน้าเน่า",icon:"🥭",ms:35000},
   lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",ms:40000},
