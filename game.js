@@ -168,23 +168,40 @@ if(!profileNameButton){
   profileNameButton.textContent=
     localStorage.getItem("profileRibbonName") || "ตั้งชื่อ";
 
-  profileNameButton.style.cssText=`
-    position:absolute;
-    left:5.7%;
-    top:84.2%;
-    width:17.5%;
-    height:4%;
-    padding:0;
-    border:0;
-    background:transparent;
-    color:white;
-    font-size:14px;
-    font-weight:800;
-    text-align:center;
-    text-shadow:0 2px 2px rgba(90,35,45,.8);
-    z-index:70;
-    transform:rotate(-1deg);
-  `;
+profileNameButton.style.cssText=`
+position:absolute;
+left:4.4%;
+top:84.8%;
+width:19.5%;
+height:4.8%;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+padding:0;
+margin:0;
+
+border:0;
+outline:none;
+background:transparent;
+
+color:#ffffff;
+font-size:15px;
+font-weight:800;
+font-family:inherit;
+text-align:center;
+
+text-shadow:
+0 2px 2px rgba(0,0,0,.55),
+0 0 6px rgba(90,35,45,.8);
+
+z-index:80;
+
+transform:rotate(-1deg);
+
+cursor:pointer;
+`;
 
   gameScreen.appendChild(profileNameButton);
 }
