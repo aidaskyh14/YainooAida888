@@ -22,10 +22,11 @@ let MEMBERS = {
 };
 
 const CROPS = {
-chili:{name:"พริกผีเปรต",icon:"🌶️",ms:60000,seedImg:"pret-chili-seed.png",sproutImg:"pret-chili-sprout.png",growImg:"pret-chili-grow.png",readyImg:"pret-chili-ready.png"},
+chili:{name:"พริกผีเปรต",icon:"🌶️",selectImg:"01_ghost_pepper.png?v=2",ms:60000,seedImg:"pret-chili-seed.png",sproutImg:"pret-chili-sprout.png",growImg:"pret-chili-grow.png",readyImg:"pret-chili-ready.png"},
 pumpkin:{
   name:"ฟักทองกองกอย",
   icon:"🎃",
+  selectImg:"02_ghost_pumpkin.png?v=2",
   ms:30000,
   seedImg:"ghost-pumpkin-seed.png?v=1",
   sproutImg:"ghost-pumpkin-sprout.png?v=1",
@@ -35,6 +36,7 @@ pumpkin:{
 cabbage:{
   name:"ผักกาดบ้านนอก",
   icon:"🥬",
+  selectImg:"04_country_cabbage.png?v=2",
   ms:25000,
   seedImg:"cabbage-seed.png?v=1",
   sproutImg:"cabbage-sprout.png?v=1",
@@ -44,6 +46,7 @@ cabbage:{
 mango:{
   name:"มะม่วงหน้าเน่า",
   icon:"🥭",
+  selectImg:"03_rotten_mango.png?v=2",
   ms:35000,
   seedImg:"mango-seed.png?v=2",
   sproutImg:"mango-sprout.png?v=2",
@@ -53,6 +56,7 @@ mango:{
 lychee:{
   name:"ลิ้นจี่ หลีหอม",
   icon:"🍒",
+  selectImg:"05_fragrant_lychee.png?v=2",
   ms:40000,
   seedImg:"lychee-seed.png?v=2",
   sproutImg:"lychee-sprout.png?v=2",
@@ -62,6 +66,7 @@ lychee:{
 morning:{
   name:"ผักบุ้ง สะดุ้งเก่ง",
   icon:"🌿",
+  selectImg:"06_startled_morning_glory.png?v=2",
   ms:22000,
   seedImg:"morning-seed.png?v=2",
   sproutImg:"morning-sprout.png?v=2",
@@ -490,8 +495,45 @@ function tapPlot(i){
   } else message("ยังไม่พร้อมเก็บ",`${CROPS[p.crop].name} เหลือประมาณ ${remain(p)} วินาที`);
 }
 function plantMenu(i){
-  $("modalContent").innerHTML=`<h2>เลือกเมล็ดสำหรับแปลง #${i+1}</h2><div class="grid">${Object.entries(CROPS).map(([k,c])=>`<div class="tile"><div class="icon">${c.icon}</div><b>${c.name}</b><p>${c.ms/1000} วินาที</p><button data-crop="${k}">ปลูก</button></div>`).join("")}</div>`;
-  document.querySelectorAll("[data-crop]").forEach(btn=>btn.onclick=()=>{state.plots[i]={crop:btn.dataset.crop,at:Date.now()};save();close();draw();});
+  $("modalContent").innerHTML=`
+    <h2>เลือกเมล็ดสำหรับแปลง #${i+1}</h2>
+    <div class="grid">
+      ${Object.entries(CROPS).map(([k,c])=>`
+        <div class="tile">
+          <img
+            src="${c.selectImg}"
+            alt="${c.name}"
+            class="seed-choice-img"
+            style="
+              display:block;
+              width:118px;
+              height:118px;
+              max-width:118px;
+              max-height:118px;
+              object-fit:contain;
+              margin:0 auto 8px;
+              background:transparent;
+              border:0;
+              box-shadow:none;
+            "
+          >
+          <b>${c.name}</b>
+          <p>${c.ms/1000} วินาที</p>
+          <button data-crop="${k}">ปลูก</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  document.querySelectorAll("[data-crop]").forEach(btn=>{
+    btn.onclick=()=>{
+      state.plots[i]={crop:btn.dataset.crop,at:Date.now()};
+      save();
+      close();
+      draw();
+    };
+  });
+
   open();
 }
 function inventory(){
