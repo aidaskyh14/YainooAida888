@@ -32,6 +32,13 @@ const SHOP_ITEMS=[
   {emoji:"🐄",name:"วัววิญญาณ"}
 ];
 
+const FARM_MODES={
+  original:{name:"ดั้งเดิม",emoji:"🌿",image:"farm-page-template.jpeg?v=4"},
+  haunted:{name:"กลางคืนหลอน",emoji:"🌙",image:"farm-mode-haunted-night.png?v=1"},
+  winter:{name:"ฤดูหนาว",emoji:"❄️",image:"farm-mode-winter.png?v=1"},
+  festival:{name:"งานวัดผี",emoji:"🏮",image:"farm-mode-ghost-festival.png?v=1"}
+};
+
 const FORECAST_SLOTS=[
   {start:0,end:240,time:"00:00–04:00",emoji:"🌧️",name:"ฝนผี"},
   {start:240,end:360,time:"04:00–06:00",emoji:"🌅",name:"ฟ้าสางนางไม้"},
@@ -62,6 +69,7 @@ function stateKey(){return currentMember?`yainoo-v5:${currentMember}`:null}
 function avatarKey(){return currentMember?`yainoo-avatar-v1:${currentMember}`:null}
 function profileNameKey(){return currentMember?`yainoo-profile-name-v1:${currentMember}`:null}
 function topPlayerNameKey(){return currentMember?`yainoo-top-player-name-v1:${currentMember}`:null}
+function farmModeKey(){return currentMember?`yainoo-farm-mode-v1:${currentMember}`:null}
 
 function fresh(player){
   return{
@@ -247,8 +255,7 @@ function getCurrentForecastIndex(){
 function updateThaiClock(){
   const now=getBangkokTimeParts();
   $("thaiClock").textContent=now.text;
-  const index=getCurrentForecastIndex();
-  $("weatherClockEmoji").textContent=index>=0?FORECAST_SLOTS[index].emoji:"🌤️";
+  $("weatherClockEmoji").textContent=now.hour>=6&&now.hour<18?"☀️":"🌙";
 }
 
 function showForecast(){
@@ -266,6 +273,50 @@ function showForecast(){
           </div>`).join("")}
       </div>
     </div>`;
+  openModal();
+}
+
+/* ===== โหมดฉากสวน 4 แบบ ===== */
+function getSavedFarmMode(){
+  const key=farmModeKey();
+  const saved=key?localStorage.getItem(key):"";
+  return FARM_MODES[saved]?saved:"original";
+}
+
+function applyFarmMode(mode,{persist=true}={}){
+  const selected=FARM_MODES[mode]?mode:"original";
+  const config=FARM_MODES[selected];
+  const gameScreen=$("gameScreen");
+  gameScreen.dataset.farmMode=selected;
+  gameScreen.style.backgroundImage=`url("${config.image}")`;
+  if(persist){
+    const key=farmModeKey();
+    if(key)localStorage.setItem(key,selected);
+  }
+}
+
+function showModeChooser(){
+  const current=$("gameScreen").dataset.farmMode||getSavedFarmMode();
+  $("modalContent").innerHTML=`
+    <section class="feature-panel mode-panel">
+      <h2>🪄 เปลี่ยนโหมดสวน</h2>
+      <p class="feature-subtitle">เลือกบรรยากาศที่ต้องการใช้</p>
+      <div class="mode-grid">
+        ${Object.entries(FARM_MODES).map(([key,item])=>`
+          <button class="mode-choice ${key===current?"selected":""}" type="button" data-farm-mode="${key}">
+            <span aria-hidden="true">${item.emoji}</span>
+            <b>${item.name}</b>
+            <small>${key===current?"กำลังใช้งาน":"แตะเพื่อเปลี่ยน"}</small>
+          </button>`).join("")}
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-farm-mode]").forEach(button=>{
+    button.onclick=()=>{
+      applyFarmMode(button.dataset.farmMode);
+      closeModal();
+      showWeatherToast(`เปลี่ยนเป็นโหมด ${FARM_MODES[button.dataset.farmMode].name} แล้ว`);
+    };
+  });
   openModal();
 }
 
@@ -344,6 +395,7 @@ function startGameExtras(){
   updateProfileName();
   loadAvatar();
   updateTopPlayerName();
+  applyFarmMode(getSavedFarmMode(),{persist:false});
   updateThaiClock();
   buildRainDrops();
   if(thaiClockTimer)clearInterval(thaiClockTimer);
@@ -474,6 +526,7 @@ function inventory(){
 function showShop(){
   $("modalContent").innerHTML=`
     <section class="feature-panel shop-panel">
+      <button class="stable-entrance-button" type="button" disabled>ทางเข้าโรงเรือน</button>
       <h2>🕯️ ร้านค้าสัตว์วิญญาณ</h2>
       <p class="feature-subtitle">สัตว์จากอีกภพกำลังรอเจ้าของ</p>
       <div class="shop-grid">
@@ -528,6 +581,36 @@ function showFriends(){
   openModal();
 }
 
+function showHouseChoices(){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel scene-choice-panel">
+      <div class="scene-choice-icon" aria-hidden="true">🏠</div>
+      <h2>ประตูบ้านผี</h2>
+      <div class="scene-choice-actions">
+        <button id="enterHouseBtn" class="primary-spooky-action" type="button">เข้าบ้าน</button>
+        <button id="closeHouseChoiceBtn" class="secondary-action" type="button">กดเล่นเฉยๆว่าง</button>
+      </div>
+    </section>`;
+  $("enterHouseBtn").onclick=()=>message("🏠 เข้าบ้าน","ภายในบ้านกำลังเตรียมเปิดให้เข้าใช้งาน");
+  $("closeHouseChoiceBtn").onclick=closeModal;
+  openModal();
+}
+
+function showWellChoices(){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel scene-choice-panel">
+      <div class="scene-choice-icon" aria-hidden="true">🕳️</div>
+      <h2>บ่อน้ำผี</h2>
+      <div class="scene-choice-actions">
+        <button id="enterUnderworldBtn" class="primary-spooky-action" type="button">ลงใต้บาดาล</button>
+        <button id="closeWellChoiceBtn" class="secondary-action" type="button">กดเล่นเฉยๆว่าง</button>
+      </div>
+    </section>`;
+  $("enterUnderworldBtn").onclick=()=>message("🕳️ ลงใต้บาดาล","ทางลงใต้บาดาลกำลังเตรียมเปิดให้เข้าใช้งาน");
+  $("closeWellChoiceBtn").onclick=closeModal;
+  openModal();
+}
+
 function confirmReturnToLogin(){
   $("modalContent").innerHTML=`
     <section class="feature-panel confirm-panel">
@@ -567,11 +650,9 @@ function craft(id){
 function start(){
   const member=$("memberSelect").value;
   const code=$("memberCode").value.trim();
-  const player=$("playerName").value.trim();
   if(MEMBERS[member]!==code){$("loginError").textContent="ชื่อสมาชิกหรือรหัสไม่ถูกต้อง";return}
-  if(!player){$("loginError").textContent="กรุณาตั้งชื่อผู้เล่นในเกม";return}
   currentMember=member;
-  state=load(player);
+  state=load(member);
   save();
   $("loginError").textContent="";
   $("loginScreen").classList.add("hidden");
@@ -612,6 +693,9 @@ function bindEvents(){
   $("closeModal").onclick=closeModal;
   $("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};
   $("forecastBtn").onclick=showForecast;
+  $("modeBtn").onclick=showModeChooser;
+  $("houseHotspot").onclick=showHouseChoices;
+  $("wellHotspot").onclick=showWellChoices;
   $("gardenNavBtn").onclick=confirmReturnToLogin;
   $("inventoryNavBtn").onclick=inventory;
   $("shopNavBtn").onclick=showShop;

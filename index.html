@@ -11,18 +11,16 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=41">
+  <link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
   <main id="app">
     <section id="loginScreen" class="screen login-screen">
       <div class="art-board" aria-label="หน้าเข้าสวนของยัยหนู">
-        <img class="login-art" src="login-art.jpg?v=20" alt="ในสวนของยัยหนู">
+        <img class="login-art" src="login-art.jpg?v=21" alt="ในสวนของยัยหนู">
 
         <select id="memberSelect" class="hotspot member-field" aria-label="ชื่อสมาชิก"></select>
         <input id="memberCode" class="hotspot code-field" type="password" placeholder="กรอกรหัสสมาชิก" aria-label="รหัสสมาชิก">
-        <input id="playerName" class="hotspot player-field" type="text" maxlength="20" placeholder="พิมพ์ชื่อผู้เล่นในเกม" aria-label="ชื่อผู้เล่นในเกม">
-
         <button id="startBtn" class="tap-area start-area" type="button" aria-label="เริ่มเล่น"></button>
         <button id="howBtn" class="tap-area how-area" type="button" aria-label="วิธีเล่น"></button>
         <button id="menuBtn" class="tap-area menu-area" type="button" aria-label="สมุดเมนู"></button>
@@ -67,6 +65,11 @@
       </div>
 
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
+      <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
+
+      <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
+      <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
+      <button id="wellHotspot" class="scene-hotspot well-hotspot" type="button" aria-label="แตะบริเวณบ่อน้ำ"></button>
 
       <!-- เอฟเฟกต์ฝน -->
       <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
@@ -93,6 +96,6 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=32"></script>
+  <script src="game.js?v=33"></script>
 </body>
 </html>

@@ -20,19 +20,17 @@ button{touch-action:manipulation}
 .login-screen{position:fixed;inset:0;overflow:hidden;background:#21112d}
 .art-board{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;isolation:isolate}
 .login-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;user-select:none;-webkit-user-drag:none}
-.hotspot{position:absolute;z-index:3;border:0;outline:none;background:rgba(255,255,255,.05);color:#4a2c46;font-weight:800;border-radius:1.8vw;padding:0 4%;-webkit-appearance:none;appearance:none}
-.hotspot:focus{background:rgba(255,255,255,.22);box-shadow:0 0 0 2px rgba(239,99,174,.75)}
-.member-field{left:9.4%;top:43.2%;width:40%;height:4.35%;font-size:clamp(13px,2.2vw,22px);padding-right:8%}
-.code-field{left:9.4%;top:calc(51.8% - 24px);width:40%;height:4.05%;font-size:clamp(12px,2vw,20px)}
-.player-field{left:9.4%;top:calc(62.1% - 34px);width:40%;height:4.1%;font-size:clamp(12px,2vw,20px)}
+.hotspot{position:absolute;z-index:3;border:0;outline:none;background:rgba(10,7,10,.22);color:#f8ead1;font-weight:850;border-radius:2.1vw;padding:0 4%;-webkit-appearance:none;appearance:none;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.hotspot::placeholder{color:rgba(248,234,209,.72)}
+.hotspot:focus{background:rgba(20,10,22,.42);box-shadow:0 0 0 2px rgba(209,129,171,.78)}
+.member-field{left:14.15%;top:56.85%;width:40.45%;height:4.45%;font-size:clamp(13px,3.15vw,21px);padding-right:9%}
+.code-field{left:14.15%;top:66.45%;width:40.45%;height:4.45%;font-size:clamp(13px,3.05vw,20px)}
+.player-field{display:none!important}
 .tap-area{position:absolute;z-index:4;border:0;background:transparent;cursor:pointer;border-radius:2vw;-webkit-tap-highlight-color:transparent}
 .tap-area:active{background:rgba(255,255,255,.10)}
-.start-area{left:8.7%;top:68.7%;width:41.6%;height:6.15%}
-.how-area{left:5.8%;top:77.8%;width:12.2%;height:8.3%}
-.menu-area{left:18%;top:77.8%;width:12.3%;height:8.3%}
-.settings-area{left:30.2%;top:77.8%;width:12.3%;height:8.3%}
-.reward-area{left:42.4%;top:77.8%;width:12.2%;height:8.3%}
-.login-error{position:absolute;z-index:6;left:8%;top:76.5%;width:43%;margin:0;text-align:center;color:#b42450;font-weight:900;font-size:clamp(11px,1.7vw,16px);text-shadow:0 1px #fff}
+.start-area{left:10.25%;top:72.5%;width:46.1%;height:7.15%;border-radius:4vw}
+.how-area,.menu-area,.settings-area,.reward-area{display:none!important}
+.login-error{position:absolute;z-index:6;left:8%;top:80.7%;width:49%;margin:0;text-align:center;color:#ffd4e4;font-weight:900;font-size:clamp(11px,2.5vw,16px);text-shadow:0 2px 3px #160d15}
 
 /* ===== หน้าสวนพื้นหลังใหม่ 12 แปลง ===== */
 .game-screen{
@@ -92,17 +90,17 @@ button{touch-action:manipulation}
 /* ===== รูปโปรไฟล์แบบวงกลม ปิดกรอบเต็ม ===== */
 .avatar-button{
   position:absolute;
-  left:2.2%;
-  top:1.6%;
-  width:14.5%;
+  left:1.7%;
+  top:1.35%;
+  width:15.7%;
   aspect-ratio:1/1;
   z-index:85;
   padding:0;
-  border:clamp(3px,.8vw,6px) solid #e8c47e;
+  border:clamp(3px,.75vw,6px) solid rgba(163,106,64,.96);
   border-radius:50%;
-  background:linear-gradient(145deg,#8d6037,#4c2f22);
+  background:linear-gradient(180deg,rgba(82,55,88,.99),rgba(43,29,53,.99));
   overflow:hidden;
-  box-shadow:0 4px 10px rgba(43,25,28,.38),inset 0 0 0 2px rgba(255,244,194,.45);
+  box-shadow:0 5px 12px rgba(39,18,42,.42),inset 0 1px rgba(255,238,198,.24),inset 0 0 0 2px rgba(28,12,34,.5);
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
@@ -113,31 +111,33 @@ button{touch-action:manipulation}
 #playerAvatar.has-avatar + #avatarPlaceholder{display:none}
 .profile-name-button{
   position:absolute;
-  left:1.2%;
-  top:11.7%;
-  width:16.5%;
-  height:3.2%;
+  left:1.1%;
+  top:12.05%;
+  width:17%;
+  height:3.15%;
   z-index:86;
   padding:0 4px;
-  border:1px solid rgba(83,49,29,.45);
+  border:1.5px solid rgba(163,106,64,.92);
   border-radius:999px;
-  background:linear-gradient(#fff2c8,#e9c47e);
-  color:#563246;
-  font-size:clamp(8px,2.2vw,13px);
-  font-weight:950;
+  background:linear-gradient(180deg,rgba(82,55,88,.98),rgba(43,29,53,.98));
+  color:#fff0c9;
+  font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;
+  font-size:clamp(8px,2.15vw,13px);
+  font-weight:800;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  box-shadow:0 3px 7px rgba(54,31,26,.25);
+  text-shadow:0 1px 2px rgba(14,6,18,.9);
+  box-shadow:0 4px 9px rgba(39,18,42,.34),inset 0 1px rgba(255,238,198,.18);
   cursor:pointer;
 }
 
 /* ชื่ออิสระบนป้ายไม้ในภาพ */
 .top-player-name-button{
   position:absolute;
-  left:5.9%;
-  top:25.4%;
-  width:28.6%;
+  left:2%;
+  top:25.25%;
+  width:30%;
   height:6.7%;
   z-index:82;
   padding:0 5%;
@@ -152,13 +152,13 @@ button{touch-action:manipulation}
   overflow:hidden;
   text-shadow:0 2px 0 #50301d,0 3px 5px rgba(30,15,10,.6);
   cursor:pointer;
-  transform:rotate(2deg);
+  transform:rotate(-1.7deg);
   -webkit-tap-highlight-color:transparent;
 }
-.top-player-name-button:active{transform:rotate(2deg) scale(.97)}
+.top-player-name-button:active{transform:rotate(-1.7deg) scale(.97)}
 
 /* ===== เวลาไทย / ฝน / พยากรณ์ ===== */
-.weather-clock,.rain-status,.forecast-button,.merit-status{
+.weather-clock,.rain-status,.forecast-button,.merit-status,.mode-button{
   position:absolute;
   top:2.2%;
   z-index:84;
@@ -168,13 +168,14 @@ button{touch-action:manipulation}
     linear-gradient(112deg,transparent 0 42%,rgba(255,255,255,.045) 43% 45%,transparent 46% 100%),
     linear-gradient(180deg,rgba(82,55,88,.97),rgba(43,29,53,.97));
   color:#fff0c9;
+  font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;
   text-shadow:0 1px 2px rgba(14,6,18,.9);
   box-shadow:
     0 5px 11px rgba(39,18,42,.38),
     inset 0 1px rgba(255,238,198,.22),
     inset 0 0 12px rgba(25,9,32,.32);
 }
-.weather-clock::after,.rain-status::after,.forecast-button::after,.merit-status::after{
+.weather-clock::after,.rain-status::after,.forecast-button::after,.merit-status::after,.mode-button::after{
   position:absolute;
   right:3px;
   top:-5px;
@@ -187,6 +188,7 @@ button{touch-action:manipulation}
 .rain-status::after{content:"👻"}
 .forecast-button::after{content:"🔮"}
 .merit-status::after{content:"🕯️"}
+.mode-button::after{content:"🪄"}
 .weather-clock{
   left:21.2%;
   width:22.5%;
@@ -198,8 +200,8 @@ button{touch-action:manipulation}
   gap:6px;
   pointer-events:none;
 }
-.weather-clock-emoji{font-size:clamp(19px,5.2vw,36px);line-height:1}
-.thai-clock{font-size:clamp(15px,4.3vw,29px);line-height:1;font-weight:950;letter-spacing:.5px}
+.weather-clock-emoji{font-size:clamp(16px,4.2vw,29px);line-height:1}
+.thai-clock{font-size:clamp(14px,3.65vw,25px);line-height:1;font-weight:850;letter-spacing:.35px}
 .rain-status{
   left:45.4%;
   width:29.8%;
@@ -244,7 +246,35 @@ button{touch-action:manipulation}
 }
 .merit-status span{font-size:clamp(8px,2.15vw,13px);line-height:1;font-weight:950}
 .merit-status strong{font-size:clamp(13px,3.5vw,22px);line-height:1;color:#ffd878;letter-spacing:1px}
-.forecast-button:active{transform:scale(.97)}
+.forecast-button:active,.mode-button:active{transform:scale(.97)}
+.mode-button{
+  position:absolute;
+  left:77%;
+  top:8.15%;
+  width:20.5%;
+  height:4.5%;
+  z-index:84;
+  overflow:hidden;
+  border:2px solid rgba(151,101,60,.88);
+  border-radius:14px;
+  background:linear-gradient(180deg,rgba(82,55,88,.97),rgba(43,29,53,.97));
+  color:#fff0c9;
+  padding:0 4px;
+  font-size:clamp(8px,2.15vw,13px);
+  font-weight:850;
+  cursor:pointer;
+  box-shadow:0 5px 11px rgba(39,18,42,.38),inset 0 1px rgba(255,238,198,.22),inset 0 0 12px rgba(25,9,32,.32);
+}
+.scene-hotspot{position:absolute;z-index:76;padding:0;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.scene-hotspot:active{background:rgba(255,255,255,.055);border-radius:20%}
+.house-hotspot{left:31%;top:22%;width:14%;height:11.8%}
+.well-hotspot{left:82%;top:24%;width:16%;height:13.5%}
+
+/* ปรับจุดสัมผัสเล็กน้อยตามองค์ประกอบของแต่ละโหมด */
+.game-screen[data-farm-mode="haunted"] .house-hotspot{left:31%;top:21.5%;width:14%;height:12%}
+.game-screen[data-farm-mode="winter"] .house-hotspot{left:31%;top:20.8%;width:14%;height:12%}
+.game-screen[data-farm-mode="festival"] .house-hotspot{left:31.5%;top:21%;width:14%;height:12%}
+.game-screen[data-farm-mode="haunted"] .well-hotspot,.game-screen[data-farm-mode="winter"] .well-hotspot,.game-screen[data-farm-mode="festival"] .well-hotspot{left:82%;top:23.5%;width:16%;height:14%}
 
 /* เอฟเฟกต์ฝนจริง 30 วินาที */
 .rain-overlay{position:absolute;inset:0;z-index:60;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .45s ease,visibility .45s ease}
@@ -317,6 +347,21 @@ button{touch-action:manipulation}
 .confirm-actions button{padding:10px 7px;border:0;border-radius:13px;font-size:12px;font-weight:950;cursor:pointer}
 .secondary-action{background:#e5d1a4;color:#513a4c}
 .danger-action{background:linear-gradient(#8c527d,#60365c);color:#fff0d0;box-shadow:0 4px 9px rgba(71,34,68,.25)}
+
+.shop-panel{position:relative;padding-top:2px}
+.stable-entrance-button{position:absolute;left:0;top:0;z-index:2;max-width:38%;padding:5px 8px;border:1px solid rgba(255,224,170,.34);border-radius:10px;background:linear-gradient(180deg,#5a435e,#3d2a46);color:#d9c9d7;font-size:clamp(8px,2vw,11px);font-weight:850;opacity:.78}
+.stable-entrance-button:disabled{cursor:not-allowed}
+.mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.mode-choice{display:flex;min-height:98px;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 6px;border:2px solid #9c735a;border-radius:17px;background:linear-gradient(180deg,rgba(79,51,84,.98),rgba(42,29,49,.98));color:#fff0cf;box-shadow:0 5px 12px rgba(46,25,48,.22);cursor:pointer}
+.mode-choice span{font-size:32px;line-height:1}
+.mode-choice b{font-size:12px}
+.mode-choice small{color:#d7c8d7;font-size:9px}
+.mode-choice.selected{border-color:#e3bd71;box-shadow:0 0 0 2px rgba(228,190,113,.18),0 5px 12px rgba(46,25,48,.26)}
+.scene-choice-panel{text-align:center}
+.scene-choice-icon{font-size:58px;line-height:1;margin:3px 0 8px;filter:drop-shadow(0 5px 5px rgba(54,29,56,.28))}
+.scene-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.scene-choice-actions button{padding:11px 7px;border:0;border-radius:13px;font-size:12px;font-weight:900;cursor:pointer}
+.primary-spooky-action{background:linear-gradient(#86517d,#59345d);color:#fff0d1;box-shadow:0 4px 9px rgba(71,34,68,.25)}
 
 @media(max-width:420px){
   .forecast-row{grid-template-columns:29px 79px 1fr;gap:4px;padding:8px 6px}
