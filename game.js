@@ -89,6 +89,25 @@ const RECIPES = [
 
 const $=id=>document.getElementById(id);
 let currentMember=null,state=null,ticker=null;
+let thaiClockTimer=null;
+let rainTickTimer=null;
+let rainToastTimer=null;
+let rainNextAt=0;
+
+const RAIN_DURATION_MS=30*1000;
+const RAIN_INTERVAL_MS=4*60*60*1000;
+
+const FORECAST_SLOTS=[
+  {start:0,end:240,time:"00:00–04:00",emoji:"🌧️",name:"ฝนผี"},
+  {start:240,end:360,time:"04:00–06:00",emoji:"🌅",name:"ฟ้าสางนางไม้"},
+  {start:360,end:600,time:"06:00–10:00",emoji:"☀️",name:"ฟ้าดีผีหลับ"},
+  {start:600,end:720,time:"10:00–12:00",emoji:"🍀",name:"ฤกษ์มงคล"},
+  {start:720,end:900,time:"12:00–15:00",emoji:"🌪️",name:"แปรปรวน สรวนจิต"},
+  {start:900,end:1080,time:"15:00–18:00",emoji:"👻",name:"ผีตากผ้าอ้อม"},
+  {start:1080,end:1200,time:"18:00–20:00",emoji:"🌆",name:"พลบค่ำ รำไทย"},
+  {start:1200,end:1260,time:"20:00–21:00",emoji:"🌃",name:"ย่ำค่ำ ผีเดินสวน"},
+  {start:1260,end:1440,time:"21:00–00:00",emoji:"🌙",name:"นอนไหม ผีอยากอำ"}
+];
 
 /* ===== ระบบรูปโปรไฟล์ อัปโหลดจากโทรศัพท์และจำแยกตามสมาชิก ===== */
 function avatarKey(){
@@ -187,10 +206,10 @@ function ensureAvatarUI(){
         border:0 !important;
         border-radius:50% !important;
         object-fit:cover !important;
-        object-position:center 62% !important;
+        object-position:center 60% !important;
         background:transparent !important;
         box-shadow:none !important;
-        transform:scale(1.08) !important;
+        transform:scale(1.30) !important;
         pointer-events:none !important;
       }
 
@@ -341,6 +360,247 @@ async function handleAvatarUpload(event){
   }
 }
 
+/* ===== ชื่อด้านบน เวลาไทย และระบบสภาพอากาศ ===== */
+function topPlayerNameKey(){
+  return currentMember ? `yainoo-top-player-name-v1:${currentMember}` : null;
+}
+
+function updateTopPlayerName(){
+  const button=$("topPlayerNameButton");
+  if(!button)return;
+
+  const storageKey=topPlayerNameKey();
+  button.textContent=storageKey
+    ? localStorage.getItem(storageKey) || "ตั้งชื่อ"
+    : "ตั้งชื่อ";
+}
+
+function setupTopPlayerName(){
+  const button=$("topPlayerNameButton");
+  if(!button || button.dataset.bound==="1")return;
+
+  button.dataset.bound="1";
+  button.onclick=()=>{
+    if(!currentMember)return;
+
+    const storageKey=topPlayerNameKey();
+    const oldName=localStorage.getItem(storageKey) || "";
+    const typedName=window.prompt("พิมพ์ชื่อด้านบน",oldName);
+
+    if(typedName===null)return;
+
+    const cleanName=typedName.trim().slice(0,20);
+    if(!cleanName)return;
+
+    localStorage.setItem(storageKey,cleanName);
+    button.textContent=cleanName;
+  };
+}
+
+function getBangkokTimeParts(){
+  const formatter=new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Asia/Bangkok",
+    hour:"2-digit",
+    minute:"2-digit",
+    hourCycle:"h23"
+  });
+
+  const parts=Object.fromEntries(
+    formatter.formatToParts(new Date())
+      .filter(part=>part.type!=="literal")
+      .map(part=>[part.type,part.value])
+  );
+
+  return{
+    hour:Number(parts.hour||0),
+    minute:Number(parts.minute||0),
+    text:`${parts.hour||"00"}:${parts.minute||"00"}`
+  };
+}
+
+function updateThaiClock(){
+  const clock=$("thaiClock");
+  if(!clock)return;
+  clock.textContent=getBangkokTimeParts().text;
+}
+
+function getCurrentForecastIndex(){
+  const now=getBangkokTimeParts();
+  const minutes=(now.hour*60)+now.minute;
+  return FORECAST_SLOTS.findIndex(slot=>minutes>=slot.start&&minutes<slot.end);
+}
+
+function showForecast(){
+  const currentIndex=getCurrentForecastIndex();
+
+  $("modalContent").innerHTML=`
+    <div class="forecast-panel">
+      <h2>🔮 พยากรณ์สวนผี</h2>
+      <p class="forecast-subtitle">อ้างอิงเวลาประเทศไทย</p>
+      <div class="forecast-list">
+        ${FORECAST_SLOTS.map((slot,index)=>`
+          <div class="forecast-row ${index===currentIndex?"current":""}">
+            <span class="forecast-emoji">${slot.emoji}</span>
+            <span class="forecast-time">${slot.time}</span>
+            <span class="forecast-name">${slot.name}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  open();
+}
+
+function buildRainDrops(){
+  const container=$("rainDrops");
+  if(!container || container.childElementCount)return;
+
+  const fragment=document.createDocumentFragment();
+
+  for(let i=0;i<72;i++){
+    const drop=document.createElement("span");
+    drop.className="rain-drop";
+    drop.style.left=`${Math.random()*110-5}%`;
+    drop.style.setProperty("--drop-speed",`${0.58+(Math.random()*.72)}s`);
+    drop.style.setProperty("--drop-delay",`${-(Math.random()*1.8)}s`);
+    drop.style.setProperty("--drop-length",`${11+Math.round(Math.random()*18)}px`);
+    drop.style.setProperty("--drop-opacity",`${0.34+(Math.random()*.52)}`);
+    fragment.appendChild(drop);
+  }
+
+  container.appendChild(fragment);
+}
+
+function setupWeatherUI(){
+  buildRainDrops();
+
+  const forecastButton=$("forecastBtn");
+  if(forecastButton && forecastButton.dataset.bound!=="1"){
+    forecastButton.dataset.bound="1";
+    forecastButton.onclick=showForecast;
+  }
+}
+
+function showWeatherToast(text){
+  const toast=$("weatherToast");
+  if(!toast)return;
+
+  toast.textContent=text;
+  toast.classList.add("show");
+
+  if(rainToastTimer)clearTimeout(rainToastTimer);
+  rainToastTimer=setTimeout(()=>toast.classList.remove("show"),2800);
+}
+
+function formatRainSeconds(milliseconds){
+  const totalSeconds=Math.max(0,Math.ceil(milliseconds/1000));
+  const minutes=Math.floor(totalSeconds/60);
+  const seconds=totalSeconds%60;
+  return `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+}
+
+function formatRainHoursMinutes(milliseconds){
+  const totalMinutes=Math.max(0,Math.ceil(milliseconds/60000));
+  const hours=Math.floor(totalMinutes/60);
+  const minutes=totalMinutes%60;
+  return `${String(hours).padStart(2,"0")}:${String(minutes).padStart(2,"0")}`;
+}
+
+function setRainStatus(title,countdown){
+  const titleEl=$("rainStatusTitle");
+  const countdownEl=$("rainCountdown");
+
+  if(titleEl)titleEl.textContent=title;
+  if(countdownEl)countdownEl.textContent=countdown;
+}
+
+function beginRain(){
+  const screen=$("gameScreen");
+  if(!screen || screen.classList.contains("hidden"))return;
+
+  if(rainTickTimer)clearInterval(rainTickTimer);
+
+  screen.classList.add("raining");
+  rainNextAt=0;
+
+  const rainEndsAt=Date.now()+RAIN_DURATION_MS;
+  setRainStatus("🌧️ ฝนผีกำลังตก","00:30");
+  showWeatherToast("🌧️ ฝนผีมาเยือน");
+
+  const updateRain=()=>{
+    const remaining=rainEndsAt-Date.now();
+
+    if(remaining<=0){
+      stopRainAndStartCountdown();
+      return;
+    }
+
+    setRainStatus("🌧️ ฝนผีกำลังตก",formatRainSeconds(remaining));
+  };
+
+  updateRain();
+  rainTickTimer=setInterval(updateRain,250);
+}
+
+function stopRainAndStartCountdown(){
+  const screen=$("gameScreen");
+  if(screen)screen.classList.remove("raining");
+
+  if(rainTickTimer)clearInterval(rainTickTimer);
+  rainTickTimer=null;
+
+  rainNextAt=Date.now()+RAIN_INTERVAL_MS;
+
+  const updateCountdown=()=>{
+    const remaining=rainNextAt-Date.now();
+
+    if(remaining<=0){
+      beginRain();
+      return;
+    }
+
+    setRainStatus("ฝนตกช่วงต่อไป",formatRainHoursMinutes(remaining));
+  };
+
+  updateCountdown();
+  rainTickTimer=setInterval(updateCountdown,1000);
+}
+
+function startGameExtras(){
+  setupTopPlayerName();
+  setupWeatherUI();
+  updateTopPlayerName();
+  updateThaiClock();
+
+  if(thaiClockTimer)clearInterval(thaiClockTimer);
+  thaiClockTimer=setInterval(updateThaiClock,60*1000);
+
+  beginRain();
+}
+
+function stopGameExtras(){
+  if(thaiClockTimer)clearInterval(thaiClockTimer);
+  if(rainTickTimer)clearInterval(rainTickTimer);
+  if(rainToastTimer)clearTimeout(rainToastTimer);
+
+  thaiClockTimer=null;
+  rainTickTimer=null;
+  rainToastTimer=null;
+  rainNextAt=0;
+
+  const screen=$("gameScreen");
+  if(screen)screen.classList.remove("raining");
+
+  const toast=$("weatherToast");
+  if(toast)toast.classList.remove("show");
+
+  setRainStatus("🌧️ ฝนผีกำลังตก","00:30");
+
+  const topName=$("topPlayerNameButton");
+  if(topName)topName.textContent="ตั้งชื่อ";
+}
+
 function parseLine(line){
   const cells=[];let cell="",quoted=false;
   for(let i=0;i<line.length;i++){
@@ -386,11 +646,13 @@ function start(){
   ensureAvatarUI();
   loadAvatar();
   updateProfileName();
+  startGameExtras();
   draw();ticker=setInterval(draw,1000);
 }
 function logout(){
   if(ticker)clearInterval(ticker);save();
   ticker=null;
+  stopGameExtras();
   showAvatar("");
   $("gameScreen").classList.add("hidden");
   $("loginScreen").classList.remove("hidden");
@@ -577,4 +839,7 @@ $("closeModal").onclick=close;
 $("modal").onclick=e=>{if(e.target===$("modal"))close()};
 
 ensureAvatarUI();
+setupTopPlayerName();
+setupWeatherUI();
+updateThaiClock();
 loadMembers();

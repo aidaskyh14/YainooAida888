@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=31">
+  <link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
   <main id="app">
@@ -51,6 +51,36 @@
         <p>แตะแปลงว่างเพื่อปลูก • แตะแปลงที่โตแล้วเพื่อเก็บเกี่ยว</p>
         <div id="plots" class="plots"></div>
       </section>
+
+      <!-- ส่วนควบคุมชื่อ เวลา และสภาพอากาศ -->
+      <button
+        id="topPlayerNameButton"
+        class="top-player-name-button"
+        type="button"
+        aria-label="ตั้งชื่อผู้เล่นด้านบน"
+      >ตั้งชื่อ</button>
+
+      <div id="thaiClock" class="thai-clock" aria-live="polite">--:--</div>
+
+      <div id="rainStatus" class="rain-status" aria-live="polite">
+        <strong id="rainStatusTitle">🌧️ ฝนผีกำลังตก</strong>
+        <span id="rainCountdown">00:30</span>
+      </div>
+
+      <button
+        id="forecastBtn"
+        class="forecast-hotspot"
+        type="button"
+        aria-label="ดูพยากรณ์อากาศ"
+      ><span class="sr-only">ดูพยากรณ์</span></button>
+
+      <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
+        <div id="rainDrops" class="rain-drops"></div>
+      </div>
+
+      <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">
+        🌧️ ฝนผีมาเยือน
+      </div>
     </section>
 
     <div id="modal" class="modal hidden">
@@ -74,6 +104,6 @@
 บันทึก
 </button>
   </main>
-<script src="game.js?v=19"></script>
+<script src="game.js?v=20"></script>
 </body>
 </html>
