@@ -50,7 +50,15 @@ mango:{
   growImg:"mango-grow.png?v=2",
   readyImg:"mango-ready.png?v=2"
 },
-  lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",ms:40000},
+lychee:{
+  name:"ลิ้นจี่ หลีหอม",
+  icon:"🍒",
+  ms:40000,
+  seedImg:"lychee-seed.png?v=2",
+  sproutImg:"lychee-sprout.png?v=2",
+  growImg:"lychee-grow.png?v=2",
+  readyImg:"lychee-ready.png?v=2"
+},
   morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
 };
 const STATUS_ICON = {
