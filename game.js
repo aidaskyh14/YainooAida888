@@ -74,6 +74,20 @@ function avatarKey(){
   return currentMember ? `yainoo-avatar-v1:${currentMember}` : null;
 }
 
+function profileNameKey(){
+  return currentMember ? `yainoo-profile-name-v1:${currentMember}` : null;
+}
+
+function updateProfileName(){
+  const button=$("profileNameButton");
+  if(!button)return;
+
+  const storageKey=profileNameKey();
+  button.textContent=storageKey
+    ? localStorage.getItem(storageKey) || "ตั้งชื่อ"
+    : "ตั้งชื่อ";
+}
+
 function ensureAvatarUI(){
   const gameScreen=$("gameScreen");
   if(!gameScreen)return;
@@ -81,6 +95,7 @@ function ensureAvatarUI(){
   let avatarButton=$("avatarButton");
   let avatar=$("playerAvatar");
   let upload=$("avatarUpload");
+  let profileNameButton=$("profileNameButton");
 
   if(!avatarButton){
     avatarButton=document.createElement("button");
@@ -109,15 +124,23 @@ function ensureAvatarUI(){
     gameScreen.appendChild(upload);
   }
 
+  if(!profileNameButton){
+    profileNameButton=document.createElement("button");
+    profileNameButton.id="profileNameButton";
+    profileNameButton.type="button";
+    profileNameButton.setAttribute("aria-label","ตั้งชื่อบนป้าย");
+    gameScreen.appendChild(profileNameButton);
+  }
+
   if(!$("avatarRuntimeStyle")){
     const style=document.createElement("style");
     style.id="avatarRuntimeStyle";
     style.textContent=`
       #gameScreen #avatarButton{
         position:absolute !important;
-        left:6.2% !important;
-        top:75.5% !important;
-        width:15.7% !important;
+        left:4.4% !important;
+        top:77.8% !important;
+        width:19.2% !important;
         aspect-ratio:1/1 !important;
         padding:0 !important;
         margin:0 !important;
@@ -125,6 +148,7 @@ function ensureAvatarUI(){
         border-radius:50% !important;
         background:transparent !important;
         overflow:hidden !important;
+        clip-path:inset(0 0 17% 0 round 50% 50% 42% 42%) !important;
         z-index:45 !important;
         cursor:pointer !important;
         pointer-events:auto !important;
@@ -142,92 +166,72 @@ function ensureAvatarUI(){
         border:0 !important;
         border-radius:50% !important;
         object-fit:cover !important;
-        object-position:center !important;
+        object-position:center 62% !important;
         background:transparent !important;
         box-shadow:none !important;
-        transform:none !important;
+        transform:scale(1.08) !important;
         pointer-events:none !important;
       }
 
       #gameScreen #playerAvatar.has-avatar{
         display:block !important;
       }
+
+      #gameScreen #profileNameButton{
+        position:absolute !important;
+        left:4.4% !important;
+        top:84.35% !important;
+        width:19.5% !important;
+        height:3.6% !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        padding:0 4px !important;
+        margin:0 !important;
+        border:0 !important;
+        outline:0 !important;
+        background:transparent !important;
+        color:#fff !important;
+        font-family:inherit !important;
+        font-size:13px !important;
+        line-height:1 !important;
+        font-weight:800 !important;
+        text-align:center !important;
+        white-space:nowrap !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+        text-shadow:0 2px 2px rgba(90,35,45,.85) !important;
+        z-index:80 !important;
+        transform:rotate(-1deg) !important;
+        cursor:pointer !important;
+        pointer-events:auto !important;
+        -webkit-tap-highlight-color:transparent !important;
+      }
     `;
     document.head.appendChild(style);
   }
 
-avatarButton.onclick=()=>upload.click();
-upload.onchange=handleAvatarUpload;
+  avatarButton.onclick=()=>upload.click();
+  upload.onchange=handleAvatarUpload;
 
-let profileNameButton=$("profileNameButton");
+  profileNameButton.onclick=()=>{
+    if(!currentMember)return;
 
-if(!profileNameButton){
-  profileNameButton=document.createElement("button");
-  profileNameButton.id="profileNameButton";
-  profileNameButton.type="button";
-  profileNameButton.textContent=
-    localStorage.getItem("profileRibbonName") || "ตั้งชื่อ";
+    const storageKey=profileNameKey();
+    const oldName=localStorage.getItem(storageKey) || "";
+    const typedName=window.prompt("พิมพ์ชื่อบนป้าย",oldName);
 
-profileNameButton.style.cssText=`
-position:absolute;
-left:4.4%;
-top:84.8%;
-width:19.5%;
-height:4.8%;
+    if(typedName===null)return;
 
-display:flex;
-align-items:center;
-justify-content:center;
+    const cleanName=typedName.trim().slice(0,12);
+    if(!cleanName)return;
 
-padding:0;
-margin:0;
+    localStorage.setItem(storageKey,cleanName);
+    profileNameButton.textContent=cleanName;
+  };
 
-border:0;
-outline:none;
-background:transparent;
-
-color:#ffffff;
-font-size:15px;
-font-weight:800;
-font-family:inherit;
-text-align:center;
-
-text-shadow:
-0 2px 2px rgba(0,0,0,.55),
-0 0 6px rgba(90,35,45,.8);
-
-z-index:80;
-
-transform:rotate(-1deg);
-
-cursor:pointer;
-`;
-
-  gameScreen.appendChild(profileNameButton);
+  updateProfileName();
 }
-
-profileNameButton.onclick = () => {
-
-    if (!currentMember) return;
-
-    const key = `profileRibbonName:${currentMember}`;
-
-    const oldName = localStorage.getItem(key) || "";
-
-    const typedName = prompt("พิมพ์ชื่อบนป้าย", oldName);
-
-    if (typedName === null) return;
-
-    const newName = typedName.trim().slice(0,12);
-
-    if (!newName) return;
-
-    localStorage.setItem(key, newName);
-
-    profileNameButton.textContent = newName;
-};
-
-
 
 function showAvatar(dataUrl){
   ensureAvatarUI();
@@ -360,6 +364,7 @@ function start(){
   $("gameScreen").classList.remove("hidden");
   ensureAvatarUI();
   loadAvatar();
+  updateProfileName();
   draw();ticker=setInterval(draw,1000);
 }
 function logout(){
@@ -515,19 +520,3 @@ $("modal").onclick=e=>{if(e.target===$("modal"))close()};
 
 ensureAvatarUI();
 loadMembers();
-const profileInput = $("profileNameInput");
-const profileSave = $("profileNameSave");
-
-profileSave.onclick = () => {
-  const name = profileInput.value.trim();
-
-  if (name) {
-    localStorage.setItem("profileRibbonName", name);
-    const btn = $("profileNameButton");
-    if (btn) btn.textContent = name;
-}
-  
-
-  profileInput.style.display = "none";
-  profileSave.style.display = "none";
-};
