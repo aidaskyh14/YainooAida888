@@ -295,30 +295,25 @@ function applyFarmMode(mode,{persist=true}={}){
   }
 }
 
-function showModeChooser(){
+function updateModeOverlaySelection(){
   const current=$("gameScreen").dataset.farmMode||getSavedFarmMode();
-  $("modalContent").innerHTML=`
-    <section class="feature-panel mode-panel">
-      <h2>🪄 เปลี่ยนโหมดสวน</h2>
-      <p class="feature-subtitle">เลือกบรรยากาศที่ต้องการใช้</p>
-      <div class="mode-grid">
-        ${Object.entries(FARM_MODES).map(([key,item])=>`
-          <button class="mode-choice ${key===current?"selected":""}" type="button" data-farm-mode="${key}">
-            <span aria-hidden="true">${item.emoji}</span>
-            <b>${item.name}</b>
-            <small>${key===current?"กำลังใช้งาน":"แตะเพื่อเปลี่ยน"}</small>
-          </button>`).join("")}
-      </div>
-    </section>`;
-  document.querySelectorAll("[data-farm-mode]").forEach(button=>{
-    button.onclick=()=>{
-      applyFarmMode(button.dataset.farmMode);
-      closeModal();
-      showWeatherToast(`เปลี่ยนเป็นโหมด ${FARM_MODES[button.dataset.farmMode].name} แล้ว`);
-    };
+  document.querySelectorAll("[data-mode-choice]").forEach(button=>{
+    const selected=button.dataset.modeChoice===current;
+    button.classList.toggle("selected",selected);
+    const small=button.querySelector("small");
+    if(small)small.textContent=selected?"กำลังใช้งาน":({original:"สวนปัจจุบัน",haunted:"สวนรัตติกาล",winter:"สวนหิมะ",festival:"สวนเทศกาล"}[button.dataset.modeChoice]||"แตะเพื่อเปลี่ยน");
   });
-  openModal();
 }
+
+function showModeChooser(){
+  updateModeOverlaySelection();
+  $("modeOverlay").classList.remove("hidden");
+}
+
+function closeModeChooser(){
+  $("modeOverlay").classList.add("hidden");
+}
+
 
 /* ===== ฝนตกทันที 30 วินาที แล้วนับ 4 ชั่วโมง ===== */
 function buildRainDrops(){
@@ -694,6 +689,16 @@ function bindEvents(){
   $("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};
   $("forecastBtn").onclick=showForecast;
   $("modeBtn").onclick=showModeChooser;
+  $("closeModeOverlay").onclick=closeModeChooser;
+  $("modeOverlay").onclick=event=>{if(event.target===$("modeOverlay"))closeModeChooser()};
+  document.querySelectorAll("[data-mode-choice]").forEach(button=>{
+    button.onclick=()=>{
+      const mode=button.dataset.modeChoice;
+      applyFarmMode(mode);
+      closeModeChooser();
+      showWeatherToast(`เปลี่ยนเป็นโหมด ${FARM_MODES[mode].name} แล้ว`);
+    };
+  });
   $("houseHotspot").onclick=showHouseChoices;
   $("wellHotspot").onclick=showWellChoices;
   $("gardenNavBtn").onclick=confirmReturnToLogin;

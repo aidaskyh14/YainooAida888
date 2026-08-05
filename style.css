@@ -373,3 +373,17 @@ button{touch-action:manipulation}
 }
 @media(prefers-reduced-motion:reduce){.rain-drop{animation-duration:1.6s}}
 @supports not (height:100dvh){.screen{height:100vh}}
+
+
+/* ===== หน้าต่างเลือกโหมดแบบแยก ป้องกันหน้าจอล็อก ===== */
+.mode-overlay{position:fixed;inset:0;z-index:260;display:grid;place-items:center;padding:18px;background:rgba(18,8,25,.78);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.mode-overlay-card{position:relative;width:min(520px,92vw);max-height:82svh;overflow:auto;padding:24px 16px 18px;border:3px solid #a66d3f;border-radius:24px;background:linear-gradient(180deg,#fff6d8,#efd7a5);box-shadow:0 18px 55px rgba(0,0,0,.55),inset 0 0 0 3px rgba(255,255,255,.35);color:#432c49}
+.mode-overlay-card h2{margin:0 38px 5px;text-align:center;font-size:clamp(20px,5.5vw,29px)}
+.mode-overlay-card>p{margin:0 0 14px;text-align:center;color:#765d7b;font-size:13px}
+.mode-overlay-close{position:absolute;right:8px;top:7px;width:38px;height:38px;border:0;border-radius:50%;background:#7c4c35;color:#fff;font-size:28px;line-height:1;cursor:pointer}
+.mode-overlay-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mode-overlay-grid button{display:flex;min-height:112px;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;border:2px solid #9c735a;border-radius:17px;background:linear-gradient(180deg,rgba(79,51,84,.98),rgba(42,29,49,.98));color:#fff0cf;box-shadow:0 5px 12px rgba(46,25,48,.22);cursor:pointer}
+.mode-overlay-grid button span{font-size:36px;line-height:1}
+.mode-overlay-grid button b{font-size:13px}
+.mode-overlay-grid button small{color:#d7c8d7;font-size:10px}
+.mode-overlay-grid button.selected{border-color:#f0c774;box-shadow:0 0 0 3px rgba(240,199,116,.2),0 5px 12px rgba(46,25,48,.26)}

@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=42">
+  <link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
   <main id="app">
@@ -88,6 +88,21 @@
       </nav>
     </section>
 
+
+    <div id="modeOverlay" class="mode-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modeOverlayTitle">
+      <div class="mode-overlay-card">
+        <button id="closeModeOverlay" class="mode-overlay-close" type="button" aria-label="ปิด">×</button>
+        <h2 id="modeOverlayTitle">🪄 เปลี่ยนโหมดสวน</h2>
+        <p>เลือกบรรยากาศที่ต้องการใช้</p>
+        <div class="mode-overlay-grid">
+          <button type="button" data-mode-choice="original"><span>🌿</span><b>ดั้งเดิม</b><small>สวนปัจจุบัน</small></button>
+          <button type="button" data-mode-choice="haunted"><span>🌙</span><b>กลางคืนหลอน</b><small>สวนรัตติกาล</small></button>
+          <button type="button" data-mode-choice="winter"><span>❄️</span><b>ฤดูหนาว</b><small>สวนหิมะ</small></button>
+          <button type="button" data-mode-choice="festival"><span>🏮</span><b>งานวัดผี</b><small>สวนเทศกาล</small></button>
+        </div>
+      </div>
+    </div>
+
     <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-card">
         <button id="closeModal" class="close" type="button" aria-label="ปิด">×</button>
@@ -96,6 +111,6 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=33"></script>
+  <script src="game.js?v=34"></script>
 </body>
 </html>
