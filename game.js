@@ -12,7 +12,9 @@ const CROPS={
   cabbage:{name:"ผักกาดบ้านนอก",icon:"🥬",selectImg:"04_country_cabbage.png?v=2",ms:25000,seedImg:"cabbage-seed.png?v=1",sproutImg:"cabbage-sprout.png?v=1",growImg:"cabbage-grow.png?v=1",readyImg:"cabbage-ready.png?v=1"},
   mango:{name:"มะม่วงหน้าเน่า",icon:"🥭",selectImg:"03_rotten_mango.png?v=2",ms:35000,seedImg:"mango-seed.png?v=2",sproutImg:"mango-sprout.png?v=2",growImg:"mango-grow.png?v=2",readyImg:"mango-ready.png?v=2"},
   lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",selectImg:"05_fragrant_lychee.png?v=2",ms:40000,seedImg:"lychee-seed.png?v=2",sproutImg:"lychee-sprout.png?v=2",growImg:"lychee-grow.png?v=2",readyImg:"lychee-ready.png?v=2"},
-  morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",selectImg:"06_startled_morning_glory.png?v=2",ms:22000,seedImg:"morning-seed.png?v=2",sproutImg:"morning-sprout.png?v=2",growImg:"morning-grow.png?v=2",readyImg:"morning-ready.png?v=2"}
+  morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",selectImg:"06_startled_morning_glory.png?v=2",ms:22000,seedImg:"morning-seed.png?v=2",sproutImg:"morning-sprout.png?v=2",growImg:"morning-grow.png?v=2",readyImg:"morning-ready.png?v=2"},
+  strawberry:{name:"สตรอว์เบอร์รีมรกต",icon:"🍓",selectImg:"emerald-strawberry-ready.png?v=1",ms:50000,seedImg:"emerald-strawberry-seed.png?v=1",sproutImg:"emerald-strawberry-sprout.png?v=1",growImg:"emerald-strawberry-grow.png?v=1",readyImg:"emerald-strawberry-ready.png?v=1"},
+  grape:{name:"องุ่น ครุ่นจิต",icon:"🍇",selectImg:"grape-ready.PNG?v=1",ms:45000,seedImg:"grape-seed.PNG?v=1",sproutImg:"grape-sprout.PNG?v=1",growImg:"grape-grow.PNG?v=1",readyImg:"grape-ready.PNG?v=1"}
 };
 
 const STATUS_ICON={water:"status-water.png?v=3",worm:"status-worm.png?v=3",dead:"status-dead.png?v=3"};
