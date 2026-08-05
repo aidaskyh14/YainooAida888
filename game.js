@@ -206,15 +206,27 @@ cursor:pointer;
   gameScreen.appendChild(profileNameButton);
 }
 
-profileNameButton.onclick=()=>{
-  profileInput.value=
-    localStorage.getItem("profileRibbonName") || "";
+profileNameButton.onclick = () => {
 
-  profileInput.style.display="block";
-  profileSave.style.display="block";
-  profileInput.focus();
+    if (!currentMember) return;
+
+    const key = `profileRibbonName:${currentMember}`;
+
+    const oldName = localStorage.getItem(key) || "";
+
+    const typedName = prompt("พิมพ์ชื่อบนป้าย", oldName);
+
+    if (typedName === null) return;
+
+    const newName = typedName.trim().slice(0,12);
+
+    if (!newName) return;
+
+    localStorage.setItem(key, newName);
+
+    profileNameButton.textContent = newName;
 };
-}
+
 
 
 function showAvatar(dataUrl){
