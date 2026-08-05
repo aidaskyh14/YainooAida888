@@ -156,9 +156,49 @@ function ensureAvatarUI(){
     document.head.appendChild(style);
   }
 
-  avatarButton.onclick=()=>upload.click();
-  upload.onchange=handleAvatarUpload;
+avatarButton.onclick=()=>upload.click();
+upload.onchange=handleAvatarUpload;
+
+let profileNameButton=$("profileNameButton");
+
+if(!profileNameButton){
+  profileNameButton=document.createElement("button");
+  profileNameButton.id="profileNameButton";
+  profileNameButton.type="button";
+  profileNameButton.textContent=
+    localStorage.getItem("profileRibbonName") || "ตั้งชื่อ";
+
+  profileNameButton.style.cssText=`
+    position:absolute;
+    left:5.7%;
+    top:84.2%;
+    width:17.5%;
+    height:4%;
+    padding:0;
+    border:0;
+    background:transparent;
+    color:white;
+    font-size:14px;
+    font-weight:800;
+    text-align:center;
+    text-shadow:0 2px 2px rgba(90,35,45,.8);
+    z-index:70;
+    transform:rotate(-1deg);
+  `;
+
+  gameScreen.appendChild(profileNameButton);
 }
+
+profileNameButton.onclick=()=>{
+  profileInput.value=
+    localStorage.getItem("profileRibbonName") || "";
+
+  profileInput.style.display="block";
+  profileSave.style.display="block";
+  profileInput.focus();
+};
+}
+
 
 function showAvatar(dataUrl){
   ensureAvatarUI();
@@ -446,3 +486,19 @@ $("modal").onclick=e=>{if(e.target===$("modal"))close()};
 
 ensureAvatarUI();
 loadMembers();
+const profileInput = $("profileNameInput");
+const profileSave = $("profileNameSave");
+
+profileSave.onclick = () => {
+  const name = profileInput.value.trim();
+
+  if (name) {
+    localStorage.setItem("profileRibbonName", name);
+    const btn = $("profileNameButton");
+    if (btn) btn.textContent = name;
+}
+  
+
+  profileInput.style.display = "none";
+  profileSave.style.display = "none";
+};
