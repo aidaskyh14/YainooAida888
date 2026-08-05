@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#21112d">
-<meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="สวนยัยหนู">
   <link rel="manifest" href="manifest.webmanifest?v=8">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=32">
+  <link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
   <main id="app">
@@ -23,87 +23,69 @@
         <input id="memberCode" class="hotspot code-field" type="password" placeholder="กรอกรหัสสมาชิก" aria-label="รหัสสมาชิก">
         <input id="playerName" class="hotspot player-field" type="text" maxlength="20" placeholder="พิมพ์ชื่อผู้เล่นในเกม" aria-label="ชื่อผู้เล่นในเกม">
 
-        <button id="startBtn" class="tap-area start-area" aria-label="เริ่มเล่น"></button>
-        <button id="howBtn" class="tap-area how-area" aria-label="วิธีเล่น"></button>
-        <button id="menuBtn" class="tap-area menu-area" aria-label="สมุดเมนู"></button>
-        <button id="settingsBtn" class="tap-area settings-area" aria-label="ตั้งค่า"></button>
-        <button id="rewardBtn" class="tap-area reward-area" aria-label="ของรางวัล"></button>
+        <button id="startBtn" class="tap-area start-area" type="button" aria-label="เริ่มเล่น"></button>
+        <button id="howBtn" class="tap-area how-area" type="button" aria-label="วิธีเล่น"></button>
+        <button id="menuBtn" class="tap-area menu-area" type="button" aria-label="สมุดเมนู"></button>
+        <button id="settingsBtn" class="tap-area settings-area" type="button" aria-label="ตั้งค่า"></button>
+        <button id="rewardBtn" class="tap-area reward-area" type="button" aria-label="ของรางวัล"></button>
 
         <p id="loginError" class="login-error" aria-live="polite"></p>
       </div>
     </section>
 
-    <section id="gameScreen" class="screen game-screen hidden">
-      <header class="topbar">
-        <div>
-          <strong id="displayPlayer">ผู้เล่น</strong>
-          <small id="displayMember">สมาชิก</small>
-        </div>
-        <div class="actions">
-          <button id="inventoryBtn">🎒 กระเป๋า</button>
-          <button id="kitchenBtn">🍲 ครัว</button>
-          <button id="logoutBtn">🚪 ออก</button>
-        </div>
-      </header>
-
-      <section class="garden">
-        <h1>สวนของ <span id="gardenOwner"></span></h1>
-        <p>แตะแปลงว่างเพื่อปลูก • แตะแปลงที่โตแล้วเพื่อเก็บเกี่ยว</p>
+    <section id="gameScreen" class="screen game-screen hidden" aria-label="สวนผี">
+      <section class="garden" aria-label="แปลงปลูกผัก">
         <div id="plots" class="plots"></div>
       </section>
 
-      <!-- ส่วนควบคุมชื่อ เวลา และสภาพอากาศ -->
-      <button
-        id="topPlayerNameButton"
-        class="top-player-name-button"
-        type="button"
-        aria-label="ตั้งชื่อผู้เล่นด้านบน"
-      >ตั้งชื่อ</button>
+      <!-- รูปและชื่อโปรไฟล์ แยกจากชื่อบนป้ายไม้ -->
+      <button id="avatarButton" class="avatar-button" type="button" aria-label="เปลี่ยนรูปโปรไฟล์">
+        <img id="playerAvatar" alt="รูปโปรไฟล์">
+        <span id="avatarPlaceholder" aria-hidden="true">👻</span>
+      </button>
+      <input id="avatarUpload" type="file" accept="image/*" hidden>
+      <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
 
-      <div id="thaiClock" class="thai-clock" aria-live="polite">--:--</div>
+      <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
+      <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
+
+      <!-- เวลาไทยและสภาพอากาศ -->
+      <div class="weather-clock" aria-live="polite">
+        <span id="weatherClockEmoji" class="weather-clock-emoji">🌤️</span>
+        <span id="thaiClock" class="thai-clock">--:--</span>
+      </div>
 
       <div id="rainStatus" class="rain-status" aria-live="polite">
         <strong id="rainStatusTitle">🌧️ ฝนผีกำลังตก</strong>
         <span id="rainCountdown">00:30</span>
       </div>
 
-      <button
-        id="forecastBtn"
-        class="forecast-hotspot"
-        type="button"
-        aria-label="ดูพยากรณ์อากาศ"
-      ><span class="sr-only">ดูพยากรณ์</span></button>
+      <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
 
+      <!-- เอฟเฟกต์ฝน -->
       <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
         <div id="rainDrops" class="rain-drops"></div>
       </div>
+      <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">🌧️ ฝนผีมาเยือน</div>
 
-      <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">
-        🌧️ ฝนผีมาเยือน
-      </div>
+      <!-- พื้นที่กดเมนูบนภาพพื้นหลัง -->
+      <nav class="bottom-nav-hotspots" aria-label="เมนูด้านล่าง">
+        <button id="gardenNavBtn" type="button" aria-label="สวน"></button>
+        <button id="inventoryNavBtn" type="button" aria-label="กระเป๋า"></button>
+        <button id="shopNavBtn" type="button" aria-label="ร้านค้า"></button>
+        <button id="missionsNavBtn" type="button" aria-label="ภารกิจ"></button>
+        <button id="friendsNavBtn" type="button" aria-label="เพื่อน"></button>
+        <button id="menuNavBtn" type="button" aria-label="เมนู"></button>
+      </nav>
     </section>
 
-    <div id="modal" class="modal hidden">
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-card">
-        <button id="closeModal" class="close">×</button>
+        <button id="closeModal" class="close" type="button" aria-label="ปิด">×</button>
         <div id="modalContent"></div>
       </div>
     </div>
-    <input
-  type="text"
-  id="profileNameInput"
-  maxlength="12"
-  placeholder="ชื่อ"
-  style="display:none;"
->
-
-<button
-  id="profileNameSave"
-  style="display:none;"
->
-บันทึก
-</button>
   </main>
-<script src="game.js?v=20"></script>
+  <script src="game.js?v=30"></script>
 </body>
 </html>

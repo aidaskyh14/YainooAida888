@@ -1,1361 +1,263 @@
-
 :root{
   --ink:#3a2141;
   --pink:#ef63ae;
   --purple:#6e3c93;
   --cream:#fff6fb;
+  --wood-dark:#55351f;
+  --wood-mid:#8b5b32;
+  --wood-light:#efd39a;
 }
+
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#21112d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",sans-serif;color:var(--ink)}
+html,body,#app{margin:0;width:100%;height:100%;overflow:hidden;background:#21112d}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",sans-serif;color:var(--ink)}
 button,input,select{font:inherit}
 button{touch-action:manipulation}
 .hidden{display:none!important}
-.screen{min-height:100svh}
+.screen{width:100%;height:100dvh;min-height:100svh}
 
-.login-screen{
-  position:relative;
-  width:100vw;
-  height:100dvh;
-  min-height:100svh;
-  overflow:hidden;
-  background:#21112d;
-}
-.art-board{
-  position:absolute;
-  inset:0;
-  width:100vw;
-  height:100dvh;
-  min-height:100svh;
-}
-.login-art{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:fill;
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-.hotspot{
-  position:absolute;
-  z-index:3;
-  border:0;
-  outline:none;
-  background:rgba(255,255,255,.05);
-  color:#4a2c46;
-  font-weight:800;
-  border-radius:1.8vw;
-  padding:0 4%;
-  -webkit-appearance:none;
-  appearance:none;
-}
-.hotspot:focus{
-  background:rgba(255,255,255,.22);
-  box-shadow:0 0 0 2px rgba(239,99,174,.75);
-}
-.member-field{
-  left:9.4%;
-  top:43.2%;
-  width:40%;
-  height:4.35%;
-  font-size:clamp(13px,2.2vw,22px);
-  padding-right:8%;
-}
-.code-field{
-  left:9.4%;
-  top:51.8%;
-  width:40%;
-  height:4.05%;
-  font-size:clamp(12px,2vw,20px);
-}
-.player-field{
-  left:9.4%;
-  top:62.1%;
-  width:40%;
-  height:4.1%;
-  font-size:clamp(12px,2vw,20px);
-}
-.tap-area{
-  position:absolute;
-  z-index:4;
-  border:0;
-  background:transparent;
-  cursor:pointer;
-  border-radius:2vw;
-}
-.tap-area:active{
-  transform:scale(.97);
-  background:rgba(255,255,255,.10);
-}
+/* ===== หน้าเข้าสู่เกมเดิม ===== */
+.login-screen{position:fixed;inset:0;overflow:hidden;background:#21112d}
+.art-board{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;isolation:isolate}
+.login-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;user-select:none;-webkit-user-drag:none}
+.hotspot{position:absolute;z-index:3;border:0;outline:none;background:rgba(255,255,255,.05);color:#4a2c46;font-weight:800;border-radius:1.8vw;padding:0 4%;-webkit-appearance:none;appearance:none}
+.hotspot:focus{background:rgba(255,255,255,.22);box-shadow:0 0 0 2px rgba(239,99,174,.75)}
+.member-field{left:9.4%;top:43.2%;width:40%;height:4.35%;font-size:clamp(13px,2.2vw,22px);padding-right:8%}
+.code-field{left:9.4%;top:calc(51.8% - 24px);width:40%;height:4.05%;font-size:clamp(12px,2vw,20px)}
+.player-field{left:9.4%;top:calc(62.1% - 34px);width:40%;height:4.1%;font-size:clamp(12px,2vw,20px)}
+.tap-area{position:absolute;z-index:4;border:0;background:transparent;cursor:pointer;border-radius:2vw;-webkit-tap-highlight-color:transparent}
+.tap-area:active{background:rgba(255,255,255,.10)}
 .start-area{left:8.7%;top:68.7%;width:41.6%;height:6.15%}
 .how-area{left:5.8%;top:77.8%;width:12.2%;height:8.3%}
-.menu-area{left:18.0%;top:77.8%;width:12.3%;height:8.3%}
+.menu-area{left:18%;top:77.8%;width:12.3%;height:8.3%}
 .settings-area{left:30.2%;top:77.8%;width:12.3%;height:8.3%}
 .reward-area{left:42.4%;top:77.8%;width:12.2%;height:8.3%}
-.login-error{
-  position:absolute;
-  z-index:6;
-  left:8%;
-  top:76.5%;
-  width:43%;
-  margin:0;
-  text-align:center;
-  color:#b42450;
-  font-weight:900;
-  font-size:clamp(11px,1.7vw,16px);
-  text-shadow:0 1px #fff;
+.login-error{position:absolute;z-index:6;left:8%;top:76.5%;width:43%;margin:0;text-align:center;color:#b42450;font-weight:900;font-size:clamp(11px,1.7vw,16px);text-shadow:0 1px #fff}
+
+/* ===== หน้าสวนพื้นหลังใหม่ 12 แปลง ===== */
+.game-screen{
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  background-image:url("farm-page-template.jpeg?v=4");
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  isolation:isolate;
 }
 
-.game-screen{background:linear-gradient(#422758,#1d1226);padding-bottom:30px}
-.topbar{
-  position:sticky;top:0;z-index:10;
-  display:flex;justify-content:space-between;align-items:center;
-  padding:12px;background:rgba(255,247,252,.95);
-  box-shadow:0 8px 20px rgba(0,0,0,.25)
-}
-.topbar small{display:block;color:#765d7b}
-.actions{display:flex;gap:6px}
-.actions button{border:0;border-radius:12px;padding:9px;background:white}
-.garden{padding:18px 12px;max-width:900px;margin:auto;color:white;text-align:center}
-.plots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.garden,.plots{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
+.garden{z-index:18;pointer-events:none}
+.plots{pointer-events:none}
 .plot{
-  min-height:135px;border:5px solid #9d6842;border-radius:22px;
-  background:radial-gradient(circle,#44291c 0 52%,#2d1a13 53%);
-  color:white;position:relative;box-shadow:0 10px 20px rgba(0,0,0,.35)
+  position:absolute;
+  width:25.6%;
+  height:10.8%;
+  margin:0;
+  padding:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  box-shadow:none;
+  color:inherit;
+  overflow:visible;
+  cursor:pointer;
+  pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
 }
-.plot-inner{min-height:125px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.plot-no{position:absolute;top:6px;left:7px;background:#291633;border-radius:999px;padding:3px 8px;font-size:12px}
-.crop{font-size:48px}
-.crop-name{font-size:13px;font-weight:900}
-.timer{margin-top:5px;background:rgba(35,18,42,.75);border-radius:999px;padding:4px 8px;font-size:12px}
-.ready{outline:4px solid #ffd95d}
+.plot:active{transform:scale(.985)}
 
-.modal{
-  position:fixed;inset:0;z-index:50;
-  display:grid;place-items:center;padding:16px;
-  background:rgba(16,6,21,.76)
+/* ตำแหน่งแปลง 1–12 ให้ตรงกับภาพใหม่ */
+.plot:nth-child(1),.plot:nth-child(4),.plot:nth-child(7),.plot:nth-child(10){left:6.4%}
+.plot:nth-child(2),.plot:nth-child(5),.plot:nth-child(8),.plot:nth-child(11){left:37.2%}
+.plot:nth-child(3),.plot:nth-child(6),.plot:nth-child(9),.plot:nth-child(12){left:67.7%}
+.plot:nth-child(1),.plot:nth-child(2),.plot:nth-child(3){top:38.5%}
+.plot:nth-child(4),.plot:nth-child(5),.plot:nth-child(6){top:50.5%}
+.plot:nth-child(7),.plot:nth-child(8),.plot:nth-child(9){top:62.7%}
+.plot:nth-child(10),.plot:nth-child(11),.plot:nth-child(12){top:75.2%}
+
+.plot-no{display:none!important}
+.plot-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1% 2% 0;text-align:center;overflow:visible}
+.plot.empty .plot-inner{opacity:0}
+.crop{width:100%;height:68%;display:flex;align-items:center;justify-content:center;overflow:visible}
+.crop img.crop-img{display:block;width:clamp(50px,12.5vw,100px);height:clamp(50px,12.5vw,100px);max-width:none;max-height:none;object-fit:contain;object-position:center;filter:drop-shadow(0 4px 4px rgba(0,0,0,.38));transform:none}
+.crop img.stage-seed{width:clamp(38px,8vw,66px);height:clamp(38px,8vw,66px)}
+.crop img.stage-sprout{width:clamp(45px,9.5vw,78px);height:clamp(45px,9.5vw,78px)}
+.crop img.stage-grow{width:clamp(52px,11vw,90px);height:clamp(52px,11vw,90px)}
+.crop img.stage-ready{width:clamp(62px,14.5vw,116px);height:clamp(62px,14.5vw,116px);transform:translateY(-3%)}
+.crop-name{max-width:96%;margin-top:-3%;padding:2px 5px;border-radius:999px;background:rgba(66,38,18,.72);color:#fff;font-size:clamp(7px,1.9vw,12px);line-height:1.05;font-weight:900;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.timer{margin-top:2px;padding:2px 5px;border-radius:999px;background:rgba(68,42,23,.82);color:#fff;font-size:clamp(7px,1.75vw,11px);line-height:1;font-weight:900;white-space:nowrap}
+.status-badge{position:absolute;right:1%;top:3%;width:clamp(30px,7.2vw,55px);height:clamp(30px,7.2vw,55px);object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.42));z-index:5}
+
+/* ===== รูปโปรไฟล์แบบวงกลม ปิดกรอบเต็ม ===== */
+.avatar-button{
+  position:absolute;
+  left:2.2%;
+  top:1.6%;
+  width:14.5%;
+  aspect-ratio:1/1;
+  z-index:85;
+  padding:0;
+  border:clamp(3px,.8vw,6px) solid #e8c47e;
+  border-radius:50%;
+  background:linear-gradient(145deg,#8d6037,#4c2f22);
+  overflow:hidden;
+  box-shadow:0 4px 10px rgba(43,25,28,.38),inset 0 0 0 2px rgba(255,244,194,.45);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
 }
-.modal-card{
-  position:relative;width:min(560px,95vw);max-height:88svh;overflow:auto;
-  background:#fff7fb;border-radius:24px;padding:20px;
-  box-shadow:0 20px 50px rgba(0,0,0,.4)
+.avatar-button:active{transform:scale(.97)}
+#playerAvatar{display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center 55%;transform:scale(1.16);background:transparent}
+#playerAvatar.has-avatar{display:block}
+#avatarPlaceholder{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(28px,8vw,58px)}
+#playerAvatar.has-avatar + #avatarPlaceholder{display:none}
+.profile-name-button{
+  position:absolute;
+  left:1.2%;
+  top:11.7%;
+  width:16.5%;
+  height:3.2%;
+  z-index:86;
+  padding:0 4px;
+  border:1px solid rgba(83,49,29,.45);
+  border-radius:999px;
+  background:linear-gradient(#fff2c8,#e9c47e);
+  color:#563246;
+  font-size:clamp(8px,2.2vw,13px);
+  font-weight:950;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  box-shadow:0 3px 7px rgba(54,31,26,.25);
+  cursor:pointer;
 }
-.close{position:absolute;right:10px;top:5px;border:0;background:transparent;font-size:34px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.tile{border:2px solid #e2bdd6;border-radius:17px;padding:12px;text-align:center;background:white}
-.tile .icon{font-size:42px}
-.tile button{width:100%;border:0;border-radius:12px;padding:10px;background:#8fd067;font-weight:900}
+
+/* ชื่ออิสระบนป้ายไม้ในภาพ */
+.top-player-name-button{
+  position:absolute;
+  left:7.1%;
+  top:25.4%;
+  width:27.8%;
+  height:6.7%;
+  z-index:82;
+  padding:0 5%;
+  border:0;
+  background:transparent;
+  color:#f8e7b9;
+  font-size:clamp(13px,4vw,28px);
+  line-height:1.08;
+  font-weight:950;
+  text-align:center;
+  white-space:normal;
+  overflow:hidden;
+  text-shadow:0 2px 0 #50301d,0 3px 5px rgba(30,15,10,.6);
+  cursor:pointer;
+  transform:rotate(-1deg);
+  -webkit-tap-highlight-color:transparent;
+}
+.top-player-name-button:active{transform:rotate(-1deg) scale(.97)}
+
+/* ===== เวลาไทย / ฝน / พยากรณ์ ===== */
+.weather-clock,.rain-status,.forecast-button{
+  position:absolute;
+  top:2.2%;
+  z-index:84;
+  border:1px solid rgba(91,53,28,.55);
+  background:linear-gradient(180deg,rgba(255,239,191,.96),rgba(222,180,103,.96));
+  color:#4b3043;
+  box-shadow:0 4px 9px rgba(54,31,25,.28),inset 0 1px rgba(255,255,255,.65);
+}
+.weather-clock{
+  left:21.2%;
+  width:22.5%;
+  height:5.3%;
+  border-radius:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  pointer-events:none;
+}
+.weather-clock-emoji{font-size:clamp(19px,5.2vw,36px);line-height:1}
+.thai-clock{font-size:clamp(15px,4.3vw,29px);line-height:1;font-weight:950;letter-spacing:.5px}
+.rain-status{
+  left:45.4%;
+  width:29.8%;
+  min-height:5.3%;
+  border-radius:15px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:1px;
+  padding:3px 5px;
+  text-align:center;
+  pointer-events:none;
+}
+.rain-status strong{font-size:clamp(8px,2.25vw,14px);line-height:1.05;font-weight:950}
+.rain-status span{font-size:clamp(13px,3.6vw,23px);line-height:1;font-weight:950;color:#704779}
+.forecast-button{
+  left:77%;
+  width:20.5%;
+  height:5.3%;
+  border-radius:15px;
+  padding:0 4px;
+  font-size:clamp(9px,2.5vw,15px);
+  line-height:1.05;
+  font-weight:950;
+  cursor:pointer;
+}
+.forecast-button:active{transform:scale(.97)}
+
+/* เอฟเฟกต์ฝนจริง 30 วินาที */
+.rain-overlay{position:absolute;inset:0;z-index:60;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .45s ease,visibility .45s ease}
+.rain-overlay::before{content:"";position:absolute;inset:0;background:rgba(18,31,51,.22);backdrop-filter:brightness(.84) saturate(.88);-webkit-backdrop-filter:brightness(.84) saturate(.88)}
+.game-screen.raining .rain-overlay{opacity:1;visibility:visible}
+.rain-drops{position:absolute;inset:0;overflow:hidden}
+.rain-drop{position:absolute;top:-24vh;width:2px;height:var(--drop-length,20px);border-radius:999px;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(210,235,255,.96));opacity:var(--drop-opacity,.75);animation:ghostRainFall var(--drop-speed,.9s) linear infinite;animation-delay:var(--drop-delay,0s);will-change:transform}
+@keyframes ghostRainFall{from{transform:translate3d(0,-20vh,0) rotate(11deg)}to{transform:translate3d(-46px,132vh,0) rotate(11deg)}}
+.weather-toast{position:absolute;left:50%;top:10%;z-index:90;max-width:78%;padding:8px 14px;border-radius:999px;background:rgba(54,35,75,.94);color:#fff;font-size:clamp(12px,3vw,18px);font-weight:950;text-align:center;box-shadow:0 5px 16px rgba(0,0,0,.3);transform:translate(-50%,-8px) scale(.96);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,transform .25s ease,visibility .25s ease}
+.weather-toast.show{opacity:1;visibility:visible;transform:translate(-50%,0) scale(1)}
+
+/* ===== พื้นที่กดเมนูล่าง 6 ปุ่ม ===== */
+.bottom-nav-hotspots{position:absolute;inset:0;z-index:80;pointer-events:none}
+.bottom-nav-hotspots button{position:absolute;top:89.2%;width:15.2%;height:9.7%;padding:0;border:0;border-radius:18%;background:transparent;pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bottom-nav-hotspots button:active{background:rgba(255,255,255,.13)}
+#gardenNavBtn{left:1.4%}
+#inventoryNavBtn{left:17.8%}
+#shopNavBtn{left:34.2%}
+#missionsNavBtn{left:50.6%}
+#friendsNavBtn{left:67%}
+#menuNavBtn{left:83.4%}
+
+/* ===== Popup ธีมสวนผี ===== */
+.modal{position:fixed;inset:0;z-index:150;display:grid;place-items:center;padding:16px;background:rgba(20,10,27,.72);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.modal-card{position:relative;width:min(560px,94vw);max-height:86svh;overflow:auto;padding:22px 16px 18px;border:3px solid #a66d3f;border-radius:25px;background:linear-gradient(180deg,#fff6d8,#f2dcae);box-shadow:0 18px 50px rgba(0,0,0,.46),inset 0 0 0 3px rgba(255,255,255,.38)}
+.close{position:absolute;right:8px;top:5px;z-index:2;width:38px;height:38px;border:0;border-radius:50%;background:#7c4c35;color:#fff;font-size:28px;line-height:1;cursor:pointer}
+#modalContent h2{margin:2px 38px 14px 0;color:#4d3045;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{min-width:0;padding:10px 7px;border:2px solid #d4a970;border-radius:18px;background:rgba(255,252,238,.92);text-align:center}
+.tile b{display:block;font-size:13px}
+.tile p{margin:6px 0;font-size:12px}
+.tile button{width:100%;border:0;border-radius:12px;padding:9px;background:linear-gradient(#93d76d,#60a84a);color:#24451f;font-weight:950;cursor:pointer}
+.seed-choice-img{display:block;width:min(118px,30vw);height:min(118px,30vw);object-fit:contain;margin:0 auto 7px;background:transparent}
 .list{display:grid;gap:8px}
-.row{display:flex;justify-content:space-between;background:white;border-radius:13px;padding:11px}
-
-@media(max-width:520px){
-  .plots{gap:7px}
-  .plot{min-height:118px;border-width:4px}
-  .plot-inner{min-height:108px}
-  .crop{font-size:41px}
-}
-
-
-@supports not (height: 100dvh){
-  .login-screen,
-  .art-board{
-    height:100vh;
-  }
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #21112d;
-}
-
-.login-screen,
-.art-board {
-  height: 100dvh;
-}
-
-html, body, #app, .login-screen, .art-board {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: #21112d;
-}
-
-.login-screen,
-.art-board {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-}
-
-.login-art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  object-position: center;
-}
-/* ทำให้หน้าแรกมีชีวิตชีวา โดยไม่เปลี่ยนรูปเดิม */
-.art-board {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  animation: hauntedFrameGlow 4s ease-in-out infinite;
-}
-
-/* ให้ภาพสว่าง–มืดเบา ๆ */
-.login-art {
-  animation: hauntedBreath 5s ease-in-out infinite;
-  will-change: filter;
-}
-
-/* ประกายระยิบระยับบนภาพ */
-.art-board::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  pointer-events: none;
-
-  background:
-    radial-gradient(circle at 15% 18%, rgba(255,255,255,.8) 0 1px, transparent 2px),
-    radial-gradient(circle at 82% 12%, rgba(190,120,255,.8) 0 1px, transparent 3px),
-    radial-gradient(circle at 88% 45%, rgba(110,255,180,.7) 0 1px, transparent 3px),
-    radial-gradient(circle at 25% 72%, rgba(255,170,240,.7) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 78%, rgba(255,255,255,.7) 0 1px, transparent 2px);
-
-  background-size:
-    120px 160px,
-    170px 210px,
-    150px 190px,
-    190px 230px,
-    140px 180px;
-
-  mix-blend-mode: screen;
-  animation: sparkleMove 7s linear infinite,
-             sparkleGlow 2.5s ease-in-out infinite;
-}
-
-/* แสงวูบผ่านกรอบเป็นระยะ */
-.art-board::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 21;
-  pointer-events: none;
-
-  background: linear-gradient(
-    110deg,
-    transparent 35%,
-    rgba(255,255,255,.10) 50%,
-    transparent 65%
-  );
-
-  transform: translateX(-120%);
-  animation: hauntedShine 6s ease-in-out infinite;
-}
-
-@keyframes hauntedBreath {
-  0%, 100% {
-    filter: brightness(1) saturate(1);
-  }
-  50% {
-    filter: brightness(1.06) saturate(1.08);
-  }
-}
-
-@keyframes hauntedFrameGlow {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(160,70,220,.25);
-  }
-  50% {
-    box-shadow:
-      0 0 25px rgba(190,90,255,.50),
-      0 0 45px rgba(70,255,150,.15);
-  }
-}
-
-@keyframes sparkleMove {
-  from {
-    background-position:
-      0 0,
-      30px 15px,
-      10px 40px,
-      50px 20px,
-      20px 60px;
-  }
-  to {
-    background-position:
-      0 -160px,
-      30px -195px,
-      10px -150px,
-      50px -210px,
-      20px -120px;
-  }
-}
-
-@keyframes sparkleGlow {
-  0%, 100% {
-    opacity: .30;
-  }
-  50% {
-    opacity: .85;
-  }
-}
-
-@keyframes hauntedShine {
-  0%, 70% {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
-  80% {
-    opacity: .65;
-  }
-  100% {
-    transform: translateX(120%);
-    opacity: 0;
-  }
-}
-/* เลื่อนเมนูด้านบนให้กดได้บน iPhone */
-.topbar {
-  height: auto !important;
-  min-height: 70px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-bottom: 12px;
-  box-sizing: border-box;
-}
-
-.topbar .actions {
-  display: flex;
-  gap: 8px;
-}
-
-.topbar button {
-  min-height: 48px;
-  position: relative;
-  z-index: 10;
-}
-/* จัดตำแหน่งช่องกรอกด้วย top โดยตรง เพื่อให้ภาพและพื้นที่กดตรงกันบน iPhone */
-.code-field{
-  top: calc(51.8% - 24px) !important;
-  transform: none !important;
-}
-
-.player-field{
-  top: calc(62.1% - 34px) !important;
-  transform: none !important;
-}
-
-/* ป้องกันพื้นที่กดของปุ่มเคลื่อนจากตำแหน่งที่มองเห็น */
-.tap-area{
-  transform: none;
-  -webkit-transform: none;
-  touch-action: manipulation;
-}
-
-.tap-area:active{
-  transform: none;
-  -webkit-transform: none;
-  background:rgba(255,255,255,.10);
-}
-/* ===== หน้าแปลงผักรูปใหม่ ===== */
-.game-screen {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important;
-  min-height: 100svh !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-
-  background-image: url("farm-page-template.jpeg") !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  background-size: 100% 100% !important;
-}
-
-/* ซ่อนเฉพาะแถบบนแบบเก่า */
-.game-screen .topbar {
-  display: none !important;
-}
-
-/* ใช้พื้นที่สวนเดิมเป็นปุ่มโปร่งใส */
-.game-screen .garden {
-  display: block !important;
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  pointer-events: none;
-  color: transparent !important;
-}
-
-.game-screen .garden h1,
-.game-screen .garden p {
-  display: none !important;
-}
-
-.game-screen .plots {
-  position: absolute !important;
-  left: 5.5% !important;
-  top: 35.5% !important;
-  width: 89% !important;
-  height: 35% !important;
-  display: grid !important;
-  grid-template-columns: repeat(3,1fr) !important;
-  grid-template-rows: repeat(3,1fr) !important;
-  gap: 3.5% !important;
-  pointer-events: none;
-}
-
-.game-screen .plot {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  color: transparent !important;
-  pointer-events: auto;
-}
-
-/* เอากรอบสีเหลืองของสถานะพร้อมเก็บออก */
-.game-screen .plot.ready {
-  outline: none !important;
-}
-
-/* จัดพื้นที่แสดงต้นผักให้อยู่กลางแปลง */
-.game-screen .plot-inner {
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: white !important;
-  transform: translateY(12px) !important;
-}
-
-/* ให้รูปต้นผักมองเห็น */
-.game-screen .crop {
-  visibility: visible !important;
-  display: block !important;
-  font-size: clamp(34px, 7vw, 56px) !important;
-  line-height: 1 !important;
-  color: initial !important;
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,.45));
-}
-
-/* ให้เวลามองเห็น */
-.game-screen .timer {
-  visibility: visible !important;
-  display: block !important;
-  margin-top: 5px !important;
-  padding: 3px 8px !important;
-  color: white !important;
-  background: rgba(55, 33, 18, 0.75) !important;
-  border-radius: 999px !important;
-  font-size: clamp(10px, 2vw, 14px) !important;
-  font-weight: 800 !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,.7);
-}
-/* จัดพื้นที่กดทั้ง 9 แปลงให้ตรงกับรูป */
-.game-screen .plots {
-  left: 5.5% !important;
-  top: 35.3% !important;
-  width: 89% !important;
-  height: 34% !important;
-  column-gap: 3.5% !important;
-  row-gap: 3% !important;
-}
-
-/* ล็อกแต่ละช่องไม่ให้เนื้อหาล้นลงด้านล่าง */
-.game-screen .plot {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  color: initial !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* ซ่อนหมายเลขและข้อความเก่าจากระบบเดิม */
-.game-screen .plot-no,
-.game-screen .crop-name {
-  display: none !important;
-}
-
-/* แปลงว่างให้เป็นเพียงพื้นที่กด ไม่แสดง + หรือข้อความ */
-.game-screen .plot.empty .plot-inner {
-  visibility: hidden !important;
-}
-
-/* แปลงที่ปลูกแล้วให้แสดงเฉพาะรูปผลผลิตกับเวลา */
-.game-screen .plot.growing .plot-inner,
-.game-screen .plot.ready .plot-inner {
-  visibility: visible !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* รูปผักหรือผลไม้ */
-.game-screen .plot.growing .crop,
-.game-screen .plot.ready .crop {
-  visibility: visible !important;
-  display: block !important;
-  font-size: 42px !important;
-  line-height: 1 !important;
-  color: initial !important;
-}
-
-/* เวลาหรือข้อความพร้อมเก็บ */
-.game-screen .plot.growing .timer,
-.game-screen .plot.ready .timer {
-  visibility: visible !important;
-  display: block !important;
-  margin-top: 4px !important;
-  padding: 3px 7px !important;
-  color: white !important;
-  background: rgba(82, 49, 24, .85) !important;
-  border-radius: 999px !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-}
-
-/* เอากรอบเหลืองออก */
-.game-screen .plot.ready,
-.game-screen .plot:focus,
-.game-screen .plot:active {
-  outline: none !important;
-  box-shadow: none !important;
-}
-/* ===== จัดแปลงให้ตรงกลางและสะอาด ===== */
-
-.game-screen .plots {
-  left: 6.2% !important;
-  top: 36.1% !important;
-  width: 87.5% !important;
-  height: 31.8% !important;
-
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  grid-template-rows: repeat(3, 1fr) !important;
-
-  column-gap: 4.2% !important;
-  row-gap: 4.8% !important;
-}
-
-/* ล็อกพื้นที่แต่ละแปลง */
-.game-screen .plot {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-
-  background: transparent !important;
-  border: 0 !important;
-  outline: none !important;
-  box-shadow: none !important;
-
-  color: initial !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* เอาวงรีหรือขีดสีม่วงมุมซ้ายออก */
-.game-screen .plot-no,
-.game-screen .plot-no::before,
-.game-screen .plot-no::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* ไม่ให้แปลงสร้างกรอบเสริม */
-.game-screen .plot::before,
-.game-screen .plot::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* แปลงว่าง: เหลือแค่เครื่องหมายบวกตรงกลาง */
-.game-screen .plot.empty .plot-inner {
-  visibility: visible !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-}
-
-.game-screen .plot.empty .crop {
-  visibility: visible !important;
-  display: block !important;
-
-  font-size: 32px !important;
-  line-height: 1 !important;
-  color: rgba(65, 52, 42, .75) !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.game-screen .plot.empty .crop-name,
-.game-screen .plot.empty .timer {
-  display: none !important;
-}
-
-/* แปลงที่ปลูกแล้ว: ทุกอย่างอยู่ตรงกลาง */
-.game-screen .plot.growing .plot-inner,
-.game-screen .plot.ready .plot-inner {
-  visibility: visible !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-
-  text-align: center !important;
-}
-
-/* รูปผักหรือผลไม้ */
-.game-screen .plot.growing .crop,
-.game-screen .plot.ready .crop {
-  visibility: visible !important;
-  display: block !important;
-
-  font-size: 28px !important;
-  line-height: 1 !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* ชื่อพืช */
-.game-screen .plot.growing .crop-name,
-.game-screen .plot.ready .crop-name {
-  visibility: visible !important;
-  display: block !important;
-
-  max-width: 88% !important;
-  margin-top: 2px !important;
-
-  color: white !important;
-  font-size: 9px !important;
-  line-height: 1.05 !important;
-  font-weight: 800 !important;
-  text-align: center !important;
-
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .8) !important;
-}
-
-/* เวลานับถอยหลัง */
-.game-screen .plot.growing .timer,
-.game-screen .plot.ready .timer {
-  visibility: visible !important;
-  display: block !important;
-
-  margin-top: 3px !important;
-  padding: 2px 5px !important;
-
-  color: white !important;
-  background: rgba(75, 48, 25, .82) !important;
-  border-radius: 999px !important;
-
-  font-size: 8px !important;
-  line-height: 1.1 !important;
-  font-weight: 800 !important;
-}
-
-/* เอากรอบเหลืองและกรอบตอนกดออก */
-.game-screen .plot.ready,
-.game-screen .plot:focus,
-.game-screen .plot:focus-visible,
-.game-screen .plot:active {
-  outline: none !important;
-  box-shadow: none !important;
-}
-/* เลื่อนเนื้อหาในทุกแปลงลงมาให้อยู่กลางหลุมมากขึ้น */
-.game-screen .plot .plot-inner {
-  transform: translateY(10px) !important;
-}
-/* ===== จัดทุกอย่างให้อยู่กลางแปลงจริง ๆ ===== */
-
-/* ตำแหน่งรวมของแปลง 9 ช่อง */
-.game-screen .plots {
-  left: 5.8% !important;
-  top: 35.6% !important;
-  width: 88.4% !important;
-  height: 33.4% !important;
-
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  grid-template-rows: repeat(3, 1fr) !important;
-  column-gap: 3.8% !important;
-  row-gap: 4.2% !important;
-}
-
-/* ปุ่มของแต่ละแปลง */
-.game-screen .plot {
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  background: transparent !important;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-}
-
-/* ซ่อนหมายเลขจากระบบ เพราะในภาพมีเลขอยู่แล้ว */
-.game-screen .plot-no {
-  display: none !important;
-}
-
-/* กล่องที่รวม + รูปพืช ชื่อ และเวลา */
-.game-screen .plot-inner {
-  position: absolute !important;
-  inset: 0 !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-  transform: none !important;
-  text-align: center !important;
-}
-
-/* แปลงว่าง: เหลือแค่เครื่องหมายบวก */
-.game-screen .plot.empty .crop {
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-
-  font-size: 34px !important;
-  line-height: 1 !important;
-  color: rgba(72, 58, 45, 0.78) !important;
-}
-
-.game-screen .plot.empty .crop-name,
-.game-screen .plot.empty .timer {
-  display: none !important;
-}
-
-/* รูปพืช */
-.game-screen .plot.growing .crop,
-.game-screen .plot.ready .crop {
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-
-  font-size: 30px !important;
-  line-height: 1 !important;
-}
-
-/* ชื่อพืช */
-.game-screen .plot.growing .crop-name,
-.game-screen .plot.ready .crop-name {
-  display: block !important;
-  width: 88% !important;
-  margin: 3px 0 0 !important;
-  padding: 0 !important;
-
-  color: #fff !important;
-  font-size: 9px !important;
-  line-height: 1.1 !important;
-  font-weight: 800 !important;
-  text-align: center !important;
-  white-space: normal !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85) !important;
-}
-
-/* เวลาและคำว่าพร้อมเก็บ */
-.game-screen .plot.growing .timer,
-.game-screen .plot.ready .timer {
-  display: block !important;
-  margin: 3px 0 0 !important;
-  padding: 2px 5px !important;
-
-  color: #fff !important;
-  background: rgba(76, 48, 25, 0.84) !important;
-  border-radius: 999px !important;
-
-  font-size: 8px !important;
-  line-height: 1.1 !important;
-  font-weight: 800 !important;
-  text-align: center !important;
-}
-
-/* เอากรอบตอนแตะและกรอบพร้อมเก็บออก */
-.game-screen .plot.ready,
-.game-screen .plot:focus,
-.game-screen .plot:focus-visible,
-.game-screen .plot:active {
-  outline: none !important;
-  box-shadow: none !important;
-  transform: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-/* ไอคอนสถานะของแปลง */
-.game-screen .status-badge {
-  position: absolute !important;
-  top: 6px !important;
-  right: 6px !important;
-
-  width: 28px !important;
-  height: 28px !important;
-  padding: 3px !important;
-
-  border-radius: 50% !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28) !important;
-
-  object-fit: contain !important;
-  z-index: 20 !important;
-}
-/* ===== แก้ขนาดรูปพืชและไอคอนสถานะ ===== */
-
-/* กล่องรูปพืช ห้ามขยายจนเต็มแปลง */
-.game-screen .plot .crop {
-  width: 100% !important;
-  height: auto !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: visible !important;
-  background: transparent !important;
-}
-
-/* รูปพืชจริง ให้เล็กและเห็นครบทั้งต้น */
-.game-screen .plot .crop img {
-  display: block !important;
-  width: 58px !important;
-  height: 58px !important;
-  max-width: 58px !important;
-  max-height: 58px !important;
-  object-fit: contain !important;
-  object-position: center !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* ไอคอนสถานะมุมขวาบน */
-.game-screen .status-badge {
-  position: absolute !important;
-  top: 4px !important;
-  right: 4px !important;
-
-  width: 38px !important;
-  height: 38px !important;
-  max-width: 38px !important;
-  max-height: 38px !important;
-
-  padding: 0 !important;
-  margin: 0 !important;
-
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-
-  object-fit: contain !important;
-  object-position: center !important;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.38)) !important;
-
-  z-index: 20 !important;
-}/* ===== จัดรูปพริกและข้อความในแปลง ===== */
-
-.game-screen .plot {
-  overflow: visible !important;
-}
-
-.game-screen .plot-inner {
-  width: 100% !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 2px !important;
-  padding: 8px 2px 2px !important;
-  transform: none !important;
-  overflow: visible !important;
-}
-
-.game-screen .plot .crop {
-  width: 100% !important;
-  height: 58px !important;
-  min-height: 58px !important;
-  display: flex !important;
-  align-items: flex-end !important;
-  justify-content: center !important;
-  overflow: visible !important;
-}
-
-.game-screen .plot .crop img.crop-img {
-  display: block !important;
-  object-fit: contain !important;
-  object-position: center bottom !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  filter:
-    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35))
-    drop-shadow(0 0 3px rgba(255, 225, 170, 0.25)) !important;
-}
-
-/* ขนาดของพริกแต่ละช่วง */
-.game-screen .crop-img.stage-seed {
-  width: 34px !important;
-  height: 34px !important;
-  max-width: 34px !important;
-  max-height: 34px !important;
-}
-
-.game-screen .crop-img.stage-sprout {
-  width: 44px !important;
-  height: 44px !important;
-  max-width: 44px !important;
-  max-height: 44px !important;
-}
-
-.game-screen .crop-img.stage-grow {
-  width: 50px !important;
-  height: 50px !important;
-  max-width: 50px !important;
-  max-height: 50px !important;
-}
-
-.game-screen .crop-img.stage-ready {
-  width: 56px !important;
-  height: 56px !important;
-  max-width: 56px !important;
-  max-height: 56px !important;
-}
-
-/* ทำให้ชื่อและเวลามองเห็นครบ */
-.game-screen .crop-name {
-  display: block !important;
-  position: relative !important;
-  width: 92% !important;
-  color: white !important;
-  font-size: 12px !important;
-  line-height: 1.1 !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.75) !important;
-  z-index: 5 !important;
-}
-
-.game-screen .timer {
-  display: block !important;
-  position: relative !important;
-  margin-top: 2px !important;
-  padding: 2px 6px !important;
-  color: white !important;
-  font-size: 11px !important;
-  line-height: 1.1 !important;
-  white-space: nowrap !important;
-  border-radius: 8px !important;
-  background: rgba(54, 31, 15, 0.62) !important;
-  z-index: 5 !important;
-}
-
-/* ขยายไอคอนสถานะ */
-.game-screen .status-badge {
-  top: 2px !important;
-  right: 2px !important;
-  width: 48px !important;
-  height: 48px !important;
-  max-width: 48px !important;
-  max-height: 48px !important;
-  background: transparent !important;
-  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.4)) !important;
-}
-/* จัดรูปพืชให้อยู่ตรงกลางแปลงจริง ๆ */
-.game-screen .plot .crop {
-  position: relative !important;
-  width: 100% !important;
-  height: 62px !important;
-  min-height: 62px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.game-screen .plot .crop img.crop-img {
-  position: static !important;
-  margin: 0 auto !important;
-  transform: none !important;
-  object-position: center center !important;
-}
-
-/* แก้รูปพร้อมเก็บที่เยื้องซ้าย */
-.game-screen .crop-img.stage-ready {
-  display: block !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  transform: translateX(0) !important;
-}
-/* ทำให้ระยะพร้อมเก็บใหญ่กว่าระยะอื่นเล็กน้อย */
-.game-screen .plot .crop img.crop-img.stage-ready {
-  width: 86px !important;
-  height: 86px !important;
-  max-width: 86px !important;
-  max-height: 86px !important;
-  object-fit: contain !important;
-
-  transform: translate(-3px, -10px) !important;
-
-  margin: 0 auto !important;
-  position: static !important;
-  z-index: 5 !important;
-}
-/* ขยายเฉพาะบัวรดน้ำและหนอน */
-.game-screen .status-badge[src*="status-water.png"],
-.game-screen .status-badge[src*="status-worm.png"] {
-  width: 64px !important;
-  height: 64px !important;
-  max-width: 64px !important;
-  max-height: 64px !important;
-}
-.game-screen .status-badge {
-  width: 44px !important;
-  height: 44px !important;
-  max-width: 44px !important;
-  max-height: 44px !important;
-}
-/* ล็อกไอคอนสถานะทั้ง 3 ให้ขนาดเดียวกัน */
-.game-screen img.status-badge[src*="status-water.png"],
-.game-screen img.status-badge[src*="status-worm.png"],
-.game-screen img.status-badge[src*="status-dead.png"] {
-  width: 44px !important;
-  height: 44px !important;
-  max-width: 44px !important;
-  max-height: 44px !important;
-  object-fit: contain !important;
-  transform: none !important;
-}
-/* ===== อัปเดตชื่อด้านบน เวลาไทย และระบบฝน ===== */
-.sr-only {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
-}
-
-.game-screen .top-player-name-button {
-  position: absolute !important;
-  left: 7.4% !important;
-  top: 6.0% !important;
-  width: 23.8% !important;
-  height: 3.9% !important;
-  z-index: 76 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 6px !important;
-  margin: 0 !important;
-  border: 1px solid rgba(135, 88, 51, .35) !important;
-  border-radius: 10px !important;
-  background: linear-gradient(180deg, rgba(255, 249, 220, .98), rgba(246, 222, 177, .98)) !important;
-  color: #4b2d3f !important;
-  font-size: clamp(10px, 2.7vw, 15px) !important;
-  line-height: 1 !important;
-  font-weight: 900 !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  box-shadow: 0 2px 4px rgba(59, 31, 24, .25) !important;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .85) !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-.game-screen .top-player-name-button:active {
-  transform: scale(.97) !important;
-}
-
-.game-screen .thai-clock {
-  position: absolute !important;
-  left: 7.2% !important;
-  top: 22.1% !important;
-  width: 18.2% !important;
-  height: 3.1% !important;
-  z-index: 74 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #543448 !important;
-  font-size: clamp(12px, 3.2vw, 18px) !important;
-  line-height: 1 !important;
-  font-weight: 950 !important;
-  letter-spacing: .5px !important;
-  text-align: center !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(61,31,42,.18) !important;
-  pointer-events: none !important;
-}
-
-.game-screen .rain-status {
-  position: absolute !important;
-  left: 27.2% !important;
-  top: 17.2% !important;
-  width: 29.4% !important;
-  min-height: 7.2% !important;
-  z-index: 74 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 2px !important;
-  padding: 4px 6px !important;
-  border-radius: 10px !important;
-  background: rgba(255, 248, 218, .92) !important;
-  color: #4c314a !important;
-  text-align: center !important;
-  box-shadow: 0 2px 5px rgba(52, 31, 35, .20) !important;
-  pointer-events: none !important;
-}
-
-.game-screen .rain-status strong {
-  display: block !important;
-  font-size: clamp(9px, 2.35vw, 13px) !important;
-  line-height: 1.05 !important;
-  font-weight: 900 !important;
-}
-
-.game-screen .rain-status span {
-  display: block !important;
-  color: #764a83 !important;
-  font-size: clamp(13px, 3.5vw, 20px) !important;
-  line-height: 1 !important;
-  font-weight: 950 !important;
-  letter-spacing: .5px !important;
-}
-
-.game-screen .forecast-hotspot {
-  position: absolute !important;
-  left: 6.2% !important;
-  top: 25.3% !important;
-  width: 28.5% !important;
-  height: 4.8% !important;
-  z-index: 78 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: transparent !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-.game-screen .forecast-hotspot:active {
-  background: rgba(255, 255, 255, .16) !important;
-}
-
-.game-screen .rain-overlay {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 24 !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transition: opacity .6s ease, visibility .6s ease !important;
-}
-
-.game-screen .rain-overlay::before {
-  content: "" !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background: rgba(20, 32, 52, .16) !important;
-  backdrop-filter: brightness(.92) saturate(.92) !important;
-  -webkit-backdrop-filter: brightness(.92) saturate(.92) !important;
-}
-
-.game-screen.raining .rain-overlay {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.game-screen .rain-drops {
-  position: absolute !important;
-  inset: 0 !important;
-  overflow: hidden !important;
-}
-
-.game-screen .rain-drop {
-  position: absolute !important;
-  top: -24vh !important;
-  width: 2px !important;
-  height: var(--drop-length, 18px) !important;
-  border-radius: 999px !important;
-  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(191,225,255,.88)) !important;
-  opacity: var(--drop-opacity, .7) !important;
-  transform: rotate(12deg) !important;
-  animation: ghostRainFall var(--drop-speed, .9s) linear infinite !important;
-  animation-delay: var(--drop-delay, 0s) !important;
-  will-change: transform !important;
-}
-
-@keyframes ghostRainFall {
-  from {
-    transform: translate3d(0, -20vh, 0) rotate(12deg);
-  }
-  to {
-    transform: translate3d(-38px, 132vh, 0) rotate(12deg);
-  }
-}
-
-.game-screen .weather-toast {
-  position: absolute !important;
-  left: 50% !important;
-  top: 30.5% !important;
-  z-index: 82 !important;
-  max-width: 78% !important;
-  padding: 8px 14px !important;
-  border-radius: 999px !important;
-  background: rgba(54, 35, 75, .92) !important;
-  color: #fff !important;
-  font-size: clamp(12px, 3vw, 17px) !important;
-  font-weight: 900 !important;
-  text-align: center !important;
-  box-shadow: 0 5px 16px rgba(0,0,0,.28) !important;
-  transform: translate(-50%, -8px) scale(.96) !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transition: opacity .25s ease, transform .25s ease, visibility .25s ease !important;
-}
-
-.game-screen .weather-toast.show {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translate(-50%, 0) scale(1) !important;
-}
-
-.forecast-panel {
-  color: #432c49;
-}
-
-.forecast-panel h2 {
-  margin: 0 34px 12px 0;
-  text-align: center;
-}
-
-.forecast-panel .forecast-subtitle {
-  margin: -4px 0 12px;
-  color: #765d7b;
-  font-size: 13px;
-  text-align: center;
-}
-
-.forecast-list {
-  display: grid;
-  gap: 8px;
-}
-
-.forecast-row {
-  display: grid;
-  grid-template-columns: 36px 92px 1fr;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 10px;
-  border: 1px solid #e4c6d8;
-  border-radius: 14px;
-  background: #fffafd;
-}
-
-.forecast-row.current {
-  border-color: #9f68bd;
-  background: #f3e8fb;
-  box-shadow: 0 0 0 2px rgba(159,104,189,.14);
-}
-
-.forecast-row .forecast-emoji {
-  font-size: 24px;
-  text-align: center;
-}
-
-.forecast-row .forecast-time {
-  color: #75527f;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.forecast-row .forecast-name {
-  font-size: 13px;
-  font-weight: 900;
-}
-
-@media (max-width: 420px) {
-  .forecast-row {
-    grid-template-columns: 30px 82px 1fr;
-    gap: 5px;
-    padding: 8px;
-  }
-
-  .forecast-row .forecast-emoji {
-    font-size: 21px;
-  }
-
-  .forecast-row .forecast-time,
-  .forecast-row .forecast-name {
-    font-size: 11px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-screen .rain-drop {
-    animation-duration: 1.6s !important;
-  }
-}
+.row{display:flex;justify-content:space-between;gap:8px;padding:11px;border:1px solid #e2c491;border-radius:13px;background:rgba(255,255,255,.7)}
+
+.forecast-panel{color:#432c49}
+.forecast-panel h2{margin-right:38px}
+.forecast-subtitle{margin:-6px 0 12px;color:#765d7b;font-size:13px;text-align:center}
+.forecast-list{display:grid;gap:8px}
+.forecast-row{display:grid;grid-template-columns:34px 92px 1fr;align-items:center;gap:7px;padding:9px 10px;border:1px solid #d9b78e;border-radius:14px;background:rgba(255,255,255,.72)}
+.forecast-row.current{border-color:#8d5aa7;background:#f2e5fa;box-shadow:0 0 0 2px rgba(141,90,167,.15)}
+.forecast-emoji{font-size:23px;text-align:center}
+.forecast-time{color:#75527f;font-size:12px;font-weight:950}
+.forecast-name{font-size:13px;font-weight:950}
+
+@media(max-width:420px){
+  .forecast-row{grid-template-columns:29px 79px 1fr;gap:4px;padding:8px 6px}
+  .forecast-time,.forecast-name{font-size:10.5px}
+  .tile b{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.rain-drop{animation-duration:1.6s}}
+@supports not (height:100dvh){.screen{height:100vh}}
