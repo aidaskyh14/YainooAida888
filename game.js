@@ -25,6 +25,13 @@ const RECIPES=[
   {id:"r4",name:"หม้อไฟเปรตเปรต",icon:"🍲",need:{chili:2,pumpkin:2,cabbage:2,mango:2,lychee:2,morning:2}}
 ];
 
+const SHOP_ITEMS=[
+  {emoji:"🐔",name:"ไก่เปรต"},
+  {emoji:"🐟",name:"ปลาสะกดจิต"},
+  {emoji:"🐷",name:"หมูผี"},
+  {emoji:"🐄",name:"วัววิญญาณ"}
+];
+
 const FORECAST_SLOTS=[
   {start:0,end:240,time:"00:00–04:00",emoji:"🌧️",name:"ฝนผี"},
   {start:240,end:360,time:"04:00–06:00",emoji:"🌅",name:"ฟ้าสางนางไม้"},
@@ -462,6 +469,84 @@ function inventory(){
   openModal();
 }
 
+
+/* ===== ร้านค้า / ภารกิจ / เพื่อน ===== */
+function showShop(){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel shop-panel">
+      <h2>🕯️ ร้านค้าสัตว์วิญญาณ</h2>
+      <p class="feature-subtitle">สัตว์จากอีกภพกำลังรอเจ้าของ</p>
+      <div class="shop-grid">
+        ${SHOP_ITEMS.map(item=>`
+          <article class="shop-card">
+            <div class="shop-emoji" aria-hidden="true">${item.emoji}</div>
+            <b>${item.name}</b>
+            <button type="button" disabled>ซื้อ — เร็ว ๆ นี้</button>
+          </article>`).join("")}
+      </div>
+    </section>`;
+  openModal();
+}
+
+function showMissions(){
+  const missions=Array.isArray(window.DAILY_MISSIONS)?window.DAILY_MISSIONS.slice(0,7):[];
+  $("modalContent").innerHTML=`
+    <section class="feature-panel mission-panel">
+      <h2>👻 ภารกิจประจำวัน</h2>
+      <p class="feature-subtitle">รายการสำหรับวันนี้</p>
+      <div class="mission-list">
+        ${missions.map((mission,index)=>`
+          <div class="mission-item">
+            <span class="mission-number">${index+1}</span>
+            <span class="mission-text">${mission}</span>
+          </div>`).join("") || '<p class="empty-feature">ยังไม่มีภารกิจประจำวัน</p>'}
+      </div>
+    </section>`;
+  openModal();
+}
+
+function getFriendNames(){
+  return Object.keys(MEMBERS)
+    .filter(name=>name.trim().toLowerCase()!=="aida")
+    .slice(0,18);
+}
+
+function showFriends(){
+  const friends=getFriendNames();
+  $("modalContent").innerHTML=`
+    <section class="feature-panel friends-panel">
+      <h2>👥 รายชื่อเพื่อน</h2>
+      <p class="feature-subtitle">สมาชิกทั้งหมด ${friends.length} คน</p>
+      <div class="friend-list">
+        ${friends.map(name=>`
+          <div class="friend-row">
+            <span class="friend-avatar" aria-hidden="true">👻</span>
+            <b>${name}</b>
+          </div>`).join("")}
+      </div>
+    </section>`;
+  openModal();
+}
+
+function confirmReturnToLogin(){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel confirm-panel">
+      <div class="confirm-ghost" aria-hidden="true">👻</div>
+      <h2>กลับไปหน้าล็อกอิน?</h2>
+      <p>ข้อมูลสวนและของในกระเป๋าจะถูกบันทึกไว้ตามเดิม</p>
+      <div class="confirm-actions">
+        <button id="cancelReturnBtn" class="secondary-action" type="button">อยู่ในสวนต่อ</button>
+        <button id="confirmReturnBtn" class="danger-action" type="button">กลับหน้าล็อกอิน</button>
+      </div>
+    </section>`;
+  $("cancelReturnBtn").onclick=closeModal;
+  $("confirmReturnBtn").onclick=()=>{
+    closeModal();
+    logout();
+  };
+  openModal();
+}
+
 function can(recipe){return Object.entries(recipe.need).every(([key,count])=>(state.bag[key]||0)>=count)}
 function kitchen(){
   $("modalContent").innerHTML=`<h2>🍲 ครัวเปรตเปรต</h2><div class="grid">${RECIPES.map(recipe=>`<div class="tile"><div style="font-size:42px">${recipe.icon}</div><b>${recipe.name}</b><p>${Object.entries(recipe.need).map(([key,count])=>CROPS[key].icon+count).join(" ")}</p><button type="button" data-recipe="${recipe.id}" ${can(recipe)?"":"disabled"}>${can(recipe)?"คราฟอาหาร":"วัตถุดิบไม่ครบ"}</button></div>`).join("")}</div>`;
@@ -527,11 +612,11 @@ function bindEvents(){
   $("closeModal").onclick=closeModal;
   $("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};
   $("forecastBtn").onclick=showForecast;
-  $("gardenNavBtn").onclick=closeModal;
+  $("gardenNavBtn").onclick=confirmReturnToLogin;
   $("inventoryNavBtn").onclick=inventory;
-  $("shopNavBtn").onclick=()=>message("ร้านค้า","ร้านค้าจะเพิ่มในเวอร์ชันถัดไป");
-  $("missionsNavBtn").onclick=()=>message("ภารกิจ","ภารกิจจะเพิ่มในเวอร์ชันถัดไป");
-  $("friendsNavBtn").onclick=()=>message("เพื่อน","ระบบเพื่อนจะเพิ่มในเวอร์ชันถัดไป");
+  $("shopNavBtn").onclick=showShop;
+  $("missionsNavBtn").onclick=showMissions;
+  $("friendsNavBtn").onclick=showFriends;
   $("menuNavBtn").onclick=showMenu;
   setupProfile();
   setupTopPlayerName();

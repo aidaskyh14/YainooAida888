@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
   <main id="app">
@@ -60,6 +60,12 @@
         <span id="rainCountdown">00:30</span>
       </div>
 
+      <!-- แถบจำนวนกุศลรวม เตรียมไว้สำหรับระบบแต้มในอนาคต -->
+      <div id="meritStatus" class="merit-status" aria-live="polite">
+        <span>🙏 จำนวนกุศลรวม</span>
+        <strong id="meritTotal">000</strong>
+      </div>
+
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
 
       <!-- เอฟเฟกต์ฝน -->
@@ -86,6 +92,7 @@
       </div>
     </div>
   </main>
-  <script src="game.js?v=31"></script>
+  <script src="daily-missions.js?v=1"></script>
+  <script src="game.js?v=32"></script>
 </body>
 </html>
