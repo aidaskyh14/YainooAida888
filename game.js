@@ -59,7 +59,15 @@ lychee:{
   growImg:"lychee-grow.png?v=2",
   readyImg:"lychee-ready.png?v=2"
 },
-  morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",ms:22000}
+morning:{
+  name:"ผักบุ้ง สะดุ้งเก่ง",
+  icon:"🌿",
+  ms:22000,
+  seedImg:"morning-seed.png?v=2",
+  sproutImg:"morning-sprout.png?v=2",
+  growImg:"morning-grow.png?v=2",
+  readyImg:"morning-ready.png?v=2"
+}
 };
 const STATUS_ICON = {
   water: "status-water.png?v=3",
