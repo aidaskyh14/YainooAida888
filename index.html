@@ -11,13 +11,14 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=46">
+  <link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
   <main id="app">
     <section id="loginScreen" class="screen login-screen">
       <div class="art-board" aria-label="หน้าเข้าสวนของยัยหนู">
         <img class="login-art" src="login-art.jpg?v=21" alt="ในสวนของยัยหนู">
+
         <select id="memberSelect" class="hotspot member-field" aria-label="ชื่อสมาชิก"></select>
         <input id="memberCode" class="hotspot code-field" type="password" placeholder="กรอกรหัสสมาชิก" aria-label="รหัสสมาชิก">
         <button id="startBtn" class="tap-area start-area" type="button" aria-label="เริ่มเล่น"></button>
@@ -25,46 +26,58 @@
         <button id="menuBtn" class="tap-area menu-area" type="button" aria-label="สมุดเมนู"></button>
         <button id="settingsBtn" class="tap-area settings-area" type="button" aria-label="ตั้งค่า"></button>
         <button id="rewardBtn" class="tap-area reward-area" type="button" aria-label="ของรางวัล"></button>
+
         <p id="loginError" class="login-error" aria-live="polite"></p>
       </div>
     </section>
 
     <section id="gameScreen" class="screen game-screen hidden" aria-label="สวนผี">
-      <section class="garden" aria-label="แปลงปลูกผัก"><div id="plots" class="plots"></div></section>
+      <section class="garden" aria-label="แปลงปลูกผัก">
+        <div id="plots" class="plots"></div>
+      </section>
 
+      <!-- รูปและชื่อโปรไฟล์ แยกจากชื่อบนป้ายไม้ -->
       <button id="avatarButton" class="avatar-button" type="button" aria-label="เปลี่ยนรูปโปรไฟล์">
         <img id="playerAvatar" alt="รูปโปรไฟล์">
         <span id="avatarPlaceholder" aria-hidden="true">👻</span>
       </button>
       <input id="avatarUpload" type="file" accept="image/*" hidden>
       <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
+
+      <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
       <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
 
+      <!-- เวลาไทยและสภาพอากาศ -->
       <div class="weather-clock" aria-live="polite">
         <span id="weatherClockEmoji" class="weather-clock-emoji">🌤️</span>
         <span id="thaiClock" class="thai-clock">--:--</span>
       </div>
+
       <div id="rainStatus" class="rain-status" aria-live="polite">
         <strong id="rainStatusTitle">🌧️ ฝนผีกำลังตก</strong>
         <span id="rainCountdown">00:30</span>
       </div>
+
+      <!-- แถบจำนวนกุศลรวม เตรียมไว้สำหรับระบบแต้มในอนาคต -->
       <div id="meritStatus" class="merit-status" aria-live="polite">
         <span>🙏 จำนวนกุศลรวม</span>
-        <strong id="meritTotal">300</strong>
+        <strong id="meritTotal">000</strong>
       </div>
+
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
       <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
-      <button id="almsBtn" class="alms-button activity-button" type="button"><b>🪷 พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></button>
-      <button id="challengeBtn" class="challenge-button activity-button" type="button"><b>👻 ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></button>
 
+      <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
       <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
       <button id="wellHotspot" class="scene-hotspot well-hotspot" type="button" aria-label="แตะบริเวณบ่อน้ำ"></button>
-      <button id="friendlyGhostHotspot" class="friendly-ghost-hotspot" type="button" aria-label="แตะผีน้อยใจดี"></button>
 
-      <div id="rainOverlay" class="rain-overlay" aria-hidden="true"><div id="rainDrops" class="rain-drops"></div></div>
-      <div id="challengeFx" class="challenge-fx hidden" aria-hidden="true"></div>
+      <!-- เอฟเฟกต์ฝน -->
+      <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
+        <div id="rainDrops" class="rain-drops"></div>
+      </div>
       <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">🌧️ ฝนผีมาเยือน</div>
 
+      <!-- พื้นที่กดเมนูบนภาพพื้นหลัง -->
       <nav class="bottom-nav-hotspots" aria-label="เมนูด้านล่าง">
         <button id="gardenNavBtn" type="button" aria-label="สวน"></button>
         <button id="inventoryNavBtn" type="button" aria-label="กระเป๋า"></button>
@@ -75,6 +88,7 @@
       </nav>
     </section>
 
+    <!-- ฉากภายในบ้าน เมืองบาดาล และโรงเรือนสัตว์ -->
     <section id="sceneScreen" class="screen scene-screen hidden" aria-label="ฉากพิเศษ">
       <button id="sceneBackBtn" class="scene-nav-button scene-back-button hidden" type="button"></button>
       <button id="sceneNextBtn" class="scene-nav-button scene-next-button hidden" type="button"></button>
@@ -103,6 +117,6 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=37"></script>
+  <script src="game.js?v=38"></script>
 </body>
 </html>
