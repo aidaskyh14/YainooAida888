@@ -19,18 +19,33 @@ const CROPS={
 
 const STATUS_ICON={water:"status-water.png?v=3",worm:"status-worm.png?v=3",dead:"status-dead.png?v=3"};
 const RECIPES=[
-  {id:"r1",name:"ผัดพริกผีเปรต",icon:"🍛",need:{chili:3,morning:2}},
-  {id:"r2",name:"แกงฟักทองกองกอย",icon:"🥘",need:{pumpkin:3,cabbage:2}},
-  {id:"r3",name:"ยำมะม่วงหน้าเน่า",icon:"🥗",need:{mango:3,chili:2,lychee:1}},
-  {id:"r4",name:"หม้อไฟเปรตเปรต",icon:"🍲",need:{chili:2,pumpkin:2,cabbage:2,mango:2,lychee:2,morning:2}}
+  {id:"r1",name:"แกงเปรตลิ้นยาว",icon:"🍲",image:"01-kaeng-pret-lin-yao.png?v=1",need:{chili:8,mango:8,morning:8}},
+  {id:"r2",name:"ฟักทองต้มกองกอย",icon:"🎃",image:"02-fakthong-tom-kongkoi.png?v=1",need:{pumpkin:10,cabbage:8}},
+  {id:"r3",name:"ตำมรกตผีหลอก",icon:"🍓",image:"03-tam-morakot-phi-lok.png?v=1",need:{strawberry:12,chili:10,mango:8}},
+  {id:"r4",name:"ยำองุ่นครู่นจิต",icon:"🍇",image:"04-yam-angun-khrun-chit.png?v=1",need:{grape:14,chili:12,morning:10}},
+  {id:"r5",name:"ข้าวคลุกวิญญาณ",icon:"🍚",image:"05-khao-kluk-winyan.png?v=1",need:{cabbage:16,pumpkin:14,lychee:12,chili:10}},
+  {id:"r6",name:"ลิ้นจี่น้ำแข็งหลุมศพ",icon:"🍧",image:"06-lychee-namkhaeng-lumsop.png?v=1",need:{lychee:18,grape:16,strawberry:14}},
+  {id:"r7",name:"ก๋วยเตี๋ยวเปรตแตก",icon:"🍜",image:"07-kuaitiao-pret-taek.png?v=1",need:{morning:22,chili:20,cabbage:18,pumpkin:16}},
+  {id:"r8",name:"น้ำปั่นคืนชีพ",icon:"🧪",image:"08-nam-pan-khuen-chip.png?v=1",need:{grape:30,strawberry:26,lychee:22,mango:18}}
 ];
 
 const SHOP_ITEMS=[
-  {emoji:"🐔",name:"ไก่เปรต"},
-  {emoji:"🐟",name:"ปลาสะกดจิต"},
-  {emoji:"🐷",name:"หมูผี"},
-  {emoji:"🐄",name:"วัววิญญาณ"}
+  {id:"chicken",image:"01_chicken_pret.png?v=1",name:"ไก่เปรต"},
+  {id:"fish",image:"02_hypno_fish.png?v=1",name:"ปลาสะกดจิต"},
+  {id:"pig",image:"03_ghost_pig.png?v=1",name:"หมูผี"},
+  {id:"cow",image:"04_spirit_cow.png?v=1",name:"วัววิญญาณ"}
 ];
+
+const SCENES={
+  house:{image:"ghost-house-interior.jpg?v=1"},
+  underwater:{image:"underwater-city-scene.jpg?v=1"},
+  chicken:{image:"01_chicken_coop.jpg?v=1"},
+  fish:{image:"02_fish_pond.jpg?v=1"},
+  pig:{image:"03_pig_pen.jpg?v=1"},
+  cow:{image:"04_cow_barn.jpg?v=1"}
+};
+
+const REST_DURATIONS={sleep:7*60*60*1000,nap:2*60*60*1000};
 
 const FARM_MODES={
   original:{name:"ดั้งเดิม",emoji:"🌿",image:"farm-page-template.jpeg?v=4"},
@@ -63,6 +78,8 @@ let thaiClockTimer=null;
 let rainTickTimer=null;
 let rainToastTimer=null;
 let rainNextAt=0;
+let sceneTimer=null;
+let currentScene=null;
 
 function emptyPlot(){return{crop:null,at:null}}
 function stateKey(){return currentMember?`yainoo-v5:${currentMember}`:null}
@@ -71,12 +88,41 @@ function profileNameKey(){return currentMember?`yainoo-profile-name-v1:${current
 function topPlayerNameKey(){return currentMember?`yainoo-top-player-name-v1:${currentMember}`:null}
 function farmModeKey(){return currentMember?`yainoo-farm-mode-v1:${currentMember}`:null}
 
+function recipeById(id){return RECIPES.find(recipe=>recipe.id===id)||null}
+function animalById(id){return SHOP_ITEMS.find(item=>item.id===id)||null}
+function clearExpiredRest(){
+  if(state&&Number(state.restUntil)>0&&Number(state.restUntil)<=Date.now()){
+    state.restUntil=0;
+    state.restType=null;
+    save();
+  }
+}
+function isResting(){clearExpiredRest();return Boolean(state&&Number(state.restUntil)>Date.now())}
+function formatLongCountdown(milliseconds){
+  const total=Math.max(0,Math.ceil(milliseconds/1000));
+  const hours=Math.floor(total/3600);
+  const minutes=Math.floor((total%3600)/60);
+  const seconds=total%60;
+  return `${String(hours).padStart(2,"0")}:${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+}
+function guardResting(){
+  if(!isResting())return false;
+  const label=state.restType==="nap"?"กำลังงีบ":"กำลังนอน";
+  message(`⏳ ${label}`,`เหลือเวลา ${formatLongCountdown(state.restUntil-Date.now())} ระหว่างนี้ยังไม่สามารถทำกิจกรรมในฟาร์มได้`);
+  return true;
+}
+function dishCount(recipeId){return state?.dishes?.filter(dish=>dish&&dish.id===recipeId).length||0}
+
 function fresh(player){
   return{
     player,
     plots:Array.from({length:PLOT_COUNT},emptyPlot),
     bag:Object.fromEntries(Object.keys(CROPS).map(k=>[k,0])),
-    dishes:[]
+    dishes:[],
+    houseOfferings:[null,null,null],
+    underwaterOffering:null,
+    restUntil:0,
+    restType:null
   };
 }
 
@@ -89,6 +135,11 @@ function normalizeState(raw,player){
   normalized.bag=normalized.bag&&typeof normalized.bag==="object"?normalized.bag:{};
   Object.keys(CROPS).forEach(key=>{if(!Number.isFinite(normalized.bag[key]))normalized.bag[key]=0});
   normalized.dishes=Array.isArray(normalized.dishes)?normalized.dishes:[];
+  normalized.houseOfferings=Array.isArray(normalized.houseOfferings)?normalized.houseOfferings.slice(0,3):[null,null,null];
+  while(normalized.houseOfferings.length<3)normalized.houseOfferings.push(null);
+  normalized.underwaterOffering=typeof normalized.underwaterOffering==="string"?normalized.underwaterOffering:null;
+  normalized.restUntil=Number.isFinite(Number(normalized.restUntil))?Number(normalized.restUntil):0;
+  normalized.restType=normalized.restType==="sleep"||normalized.restType==="nap"?normalized.restType:null;
   return normalized;
 }
 
@@ -259,6 +310,7 @@ function updateThaiClock(){
 }
 
 function showForecast(){
+  if(guardResting())return;
   const currentIndex=getCurrentForecastIndex();
   $("modalContent").innerHTML=`
     <div class="forecast-panel">
@@ -306,6 +358,7 @@ function updateModeOverlaySelection(){
 }
 
 function showModeChooser(){
+  if(guardResting())return;
   updateModeOverlaySelection();
   $("modeOverlay").classList.remove("hidden");
 }
@@ -473,6 +526,7 @@ function draw(){
 }
 
 function tapPlot(index){
+  if(guardResting())return;
   const plot=state.plots[index];
   const currentStage=stage(plot);
   if(currentStage==="empty"){plantMenu(index);return}
@@ -512,6 +566,7 @@ function plantMenu(index){
 }
 
 function inventory(){
+  if(guardResting())return;
   $("modalContent").innerHTML=`<h2>🎒 กระเป๋า</h2><div class="list">${Object.entries(CROPS).map(([key,crop])=>`<div class="row"><span>${crop.icon} ${crop.name}</span><b>×${state.bag[key]||0}</b></div>`).join("")}</div>`;
   openModal();
 }
@@ -519,24 +574,30 @@ function inventory(){
 
 /* ===== ร้านค้า / ภารกิจ / เพื่อน ===== */
 function showShop(){
+  if(guardResting())return;
   $("modalContent").innerHTML=`
     <section class="feature-panel shop-panel">
-      <button class="stable-entrance-button" type="button" disabled>ทางเข้าโรงเรือน</button>
+      <button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือน</button>
       <h2>🕯️ ร้านค้าสัตว์วิญญาณ</h2>
       <p class="feature-subtitle">สัตว์จากอีกภพกำลังรอเจ้าของ</p>
       <div class="shop-grid">
         ${SHOP_ITEMS.map(item=>`
           <article class="shop-card">
-            <div class="shop-emoji" aria-hidden="true">${item.emoji}</div>
+            <img class="shop-animal-img" src="${item.image}" alt="${item.name}">
             <b>${item.name}</b>
-            <button type="button" disabled>ซื้อ — เร็ว ๆ นี้</button>
+            <button class="shop-worship-button" type="button" data-shop-worship="${item.id}">บูชา</button>
           </article>`).join("")}
       </div>
     </section>`;
+  $("stableEntranceBtn").onclick=()=>{closeModal();openScene("chicken")};
+  document.querySelectorAll("[data-shop-worship]").forEach(button=>{
+    button.onclick=()=>message("บูชาสัตว์วิญญาณ","แจ้งให้ยัยหนูทราบแล้วเรียบร้อย");
+  });
   openModal();
 }
 
 function showMissions(){
+  if(guardResting())return;
   const missions=Array.isArray(window.DAILY_MISSIONS)?window.DAILY_MISSIONS.slice(0,7):[];
   $("modalContent").innerHTML=`
     <section class="feature-panel mission-panel">
@@ -560,6 +621,7 @@ function getFriendNames(){
 }
 
 function showFriends(){
+  if(guardResting())return;
   const friends=getFriendNames();
   $("modalContent").innerHTML=`
     <section class="feature-panel friends-panel">
@@ -586,12 +648,13 @@ function showHouseChoices(){
         <button id="closeHouseChoiceBtn" class="secondary-action" type="button">กดเล่นเฉยๆว่าง</button>
       </div>
     </section>`;
-  $("enterHouseBtn").onclick=()=>message("🏠 เข้าบ้าน","ภายในบ้านกำลังเตรียมเปิดให้เข้าใช้งาน");
+  $("enterHouseBtn").onclick=()=>{closeModal();openScene("house")};
   $("closeHouseChoiceBtn").onclick=closeModal;
   openModal();
 }
 
 function showWellChoices(){
+  if(guardResting())return;
   $("modalContent").innerHTML=`
     <section class="feature-panel scene-choice-panel">
       <div class="scene-choice-icon" aria-hidden="true">🕳️</div>
@@ -601,8 +664,188 @@ function showWellChoices(){
         <button id="closeWellChoiceBtn" class="secondary-action" type="button">กดเล่นเฉยๆว่าง</button>
       </div>
     </section>`;
-  $("enterUnderworldBtn").onclick=()=>message("🕳️ ลงใต้บาดาล","ทางลงใต้บาดาลกำลังเตรียมเปิดให้เข้าใช้งาน");
+  $("enterUnderworldBtn").onclick=()=>{closeModal();openScene("underwater")};
   $("closeWellChoiceBtn").onclick=closeModal;
+  openModal();
+}
+
+function setSceneNav({backText="",backAction=null,nextText="",nextAction=null}={}){
+  const back=$("sceneBackBtn");
+  const next=$("sceneNextBtn");
+  back.classList.toggle("hidden",!backText);
+  next.classList.toggle("hidden",!nextText);
+  back.textContent=backText;
+  next.textContent=nextText;
+  back.onclick=backAction;
+  next.onclick=nextAction;
+}
+
+function stopSceneTimer(){if(sceneTimer)clearInterval(sceneTimer);sceneTimer=null}
+function openScene(sceneName){
+  if(!SCENES[sceneName])return;
+  currentScene=sceneName;
+  stopSceneTimer();
+  $("gameScreen").classList.add("hidden");
+  $("sceneScreen").classList.remove("hidden");
+  $("sceneScreen").dataset.scene=sceneName;
+  $("sceneScreen").style.backgroundImage=`url("${SCENES[sceneName].image}")`;
+  renderScene();
+}
+
+function returnToFarm(){
+  stopSceneTimer();
+  currentScene=null;
+  closeModal();
+  $("sceneScreen").classList.add("hidden");
+  $("gameScreen").classList.remove("hidden");
+}
+
+function renderScene(){
+  if(currentScene==="house"){renderHouseScene();return}
+  if(currentScene==="underwater"){renderUnderwaterScene();return}
+  renderAnimalScene(currentScene);
+}
+
+function renderHouseScene(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
+  const resting=isResting();
+  $("sceneInteractiveLayer").innerHTML=`
+    <button id="bedHotspot" class="bed-hotspot" type="button" aria-label="เตียงนอน">
+      <span id="bedCountdown" class="bed-countdown">${resting?formatLongCountdown(state.restUntil-Date.now()):"แตะเตียง"}</span>
+    </button>
+    <div class="house-altar-slots">
+      ${state.houseOfferings.map((recipeId,index)=>{
+        const recipe=recipeById(recipeId);
+        return `<button class="offering-slot" type="button" data-house-offering="${index}" aria-label="เลือกอาหารช่องที่ ${index+1}" ${resting?"disabled":""}>${recipe?`<img src="${recipe.image}" alt="${recipe.name}">`:"<span>+</span>"}</button>`;
+      }).join("")}
+    </div>
+    <button id="startGhostWorshipBtn" class="scene-action-button house-worship-button" type="button" ${resting?"disabled":""}>เริ่มบูชาผี</button>`;
+  $("bedHotspot").onclick=showRestOptions;
+  if(!resting){
+    document.querySelectorAll("[data-house-offering]").forEach(button=>{
+      button.onclick=()=>showDishPicker("house",Number(button.dataset.houseOffering));
+    });
+    $("startGhostWorshipBtn").onclick=()=>{
+      if(!state.houseOfferings.some(Boolean)){message("ยังเริ่มบูชาไม่ได้","กรุณาเลือกอาหารอย่างน้อย 1 เมนูก่อน");return}
+      message("เริ่มบูชาผี","จัดอาหารบนแท่นบูชาเรียบร้อยแล้ว");
+    };
+  }
+  if(resting){
+    sceneTimer=setInterval(()=>{
+      clearExpiredRest();
+      if(!isResting()){stopSceneTimer();renderHouseScene();return}
+      const countdown=$("bedCountdown");
+      if(countdown)countdown.textContent=formatLongCountdown(state.restUntil-Date.now());
+    },1000);
+  }
+}
+
+function showRestOptions(){
+  if(isResting()){
+    message(state.restType==="nap"?"กำลังงีบ":"กำลังนอน",`เหลือเวลา ${formatLongCountdown(state.restUntil-Date.now())}`);
+    return;
+  }
+  $("modalContent").innerHTML=`
+    <section class="feature-panel rest-choice-panel">
+      <h2>🛏️ โหมดการนอน</h2>
+      <div class="rest-choice-actions">
+        <button type="button" data-rest-choice="sleep"><b>นอน</b><small>7 ชั่วโมง</small></button>
+        <button type="button" data-rest-choice="nap"><b>งีบ</b><small>2 ชั่วโมง</small></button>
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-rest-choice]").forEach(button=>button.onclick=()=>showRestConfirmation(button.dataset.restChoice));
+  openModal();
+}
+
+function showRestConfirmation(type){
+  const isNap=type==="nap";
+  const warning=isNap
+    ?"ในระหว่างที่คุณงีบ คุณจะไม่สามารถทำกิจกรรมอะไรในฟาร์มได้จนกว่าเวลาจะครบ"
+    :"ระหว่างการเข้านอนจะไม่สามารถทำกิจกรรมใดใดในฟาร์มได้เลย จนกว่าระยะเวลาจะครบ";
+  $("modalContent").innerHTML=`
+    <section class="feature-panel important-warning-panel">
+      <div class="warning-symbol">⚠️</div>
+      <h2>${isNap?"ยืนยันการงีบ 2 ชั่วโมง":"ยืนยันการนอน 7 ชั่วโมง"}</h2>
+      <p>${warning}</p>
+      <div class="confirm-actions">
+        <button id="confirmRestBtn" class="danger-action" type="button">ยืนยัน</button>
+        <button id="cancelRestBtn" class="secondary-action" type="button">${isNap?"ไม่งีบดีกว่า":"ไม่นอนดีกว่า"}</button>
+      </div>
+    </section>`;
+  $("confirmRestBtn").onclick=()=>{
+    state.restType=type;
+    state.restUntil=Date.now()+REST_DURATIONS[type];
+    save();
+    closeModal();
+    renderHouseScene();
+  };
+  $("cancelRestBtn").onclick=closeModal;
+}
+
+function renderUnderwaterScene(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
+  const recipe=recipeById(state.underwaterOffering);
+  $("sceneInteractiveLayer").innerHTML=`
+    <button id="underwaterOfferingSlot" class="underwater-offering-slot offering-slot" type="button" aria-label="เลือกเสบียงให้เจ้าแม่">${recipe?`<img src="${recipe.image}" alt="${recipe.name}">`:"<span>+</span>"}</button>
+    <button id="sendUnderwaterSupplyBtn" class="scene-action-button underwater-send-button" type="button">ส่งเสบียงให้เจ้าแม่</button>`;
+  $("underwaterOfferingSlot").onclick=()=>showDishPicker("underwater",0);
+  $("sendUnderwaterSupplyBtn").onclick=()=>{
+    if(!state.underwaterOffering){message("ยังส่งเสบียงไม่ได้","กรุณาเลือกอาหารก่อน");return}
+    message("ส่งเสบียงให้เจ้าแม่","จัดเตรียมเสบียงให้เจ้าแม่เมืองบาดาลเรียบร้อยแล้ว");
+  };
+}
+
+function showDishPicker(target,index){
+  const available=RECIPES.filter(recipe=>dishCount(recipe.id)>0);
+  if(!available.length){message("ยังไม่มีอาหาร","ต้องคราฟอาหารสำเร็จก่อนจึงจะนำมาวางได้");return}
+  $("modalContent").innerHTML=`
+    <section class="feature-panel dish-picker-panel">
+      <h2>เลือกอาหารที่มี</h2>
+      <div class="dish-picker-grid">
+        ${available.map(recipe=>`<button type="button" data-pick-dish="${recipe.id}"><img src="${recipe.image}" alt="${recipe.name}"><b>${recipe.name}</b><small>มี ×${dishCount(recipe.id)}</small></button>`).join("")}
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-pick-dish]").forEach(button=>{
+    button.onclick=()=>{
+      if(target==="house")state.houseOfferings[index]=button.dataset.pickDish;
+      else state.underwaterOffering=button.dataset.pickDish;
+      save();
+      closeModal();
+      renderScene();
+    };
+  });
+  openModal();
+}
+
+const ANIMAL_SLOT_POSITIONS=[
+  [11,37],[42,37],[73,37],
+  [11,50.5],[42,50.5],[73,50.5],
+  [11,64],[42,64],[73,64]
+];
+
+function renderAnimalScene(sceneName){
+  const nav={
+    chicken:{backText:"กลับแปลงผัก",backAction:returnToFarm,nextText:"คอกต่อไป",nextAction:()=>openScene("fish")},
+    fish:{backText:"กลับไปที่คอกไก่",backAction:()=>openScene("chicken"),nextText:"คอกต่อไป",nextAction:()=>openScene("pig")},
+    pig:{backText:"กลับไปที่บ่อปลา",backAction:()=>openScene("fish"),nextText:"คอกต่อไป",nextAction:()=>openScene("cow")},
+    cow:{nextText:"กลับไปที่แปลงผัก",nextAction:returnToFarm}
+  }[sceneName]||{};
+  setSceneNav(nav);
+  $("sceneInteractiveLayer").innerHTML=`<div class="animal-slots">${ANIMAL_SLOT_POSITIONS.map(([left,top],index)=>`<button class="animal-add-slot" type="button" data-animal-slot="${index}" style="left:${left}%;top:${top}%" aria-label="เพิ่มสัตว์ช่องที่ ${index+1}">+</button>`).join("")}</div>`;
+  document.querySelectorAll("[data-animal-slot]").forEach(button=>button.onclick=showAnimalApprovalChoices);
+}
+
+function showAnimalApprovalChoices(){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel animal-picker-panel">
+      <h2>เลือกสัตว์วิญญาณ</h2>
+      <div class="animal-picker-grid">
+        ${SHOP_ITEMS.map(item=>`<button type="button" data-pick-animal="${item.id}"><img src="${item.image}" alt="${item.name}"><b>${item.name}</b></button>`).join("")}
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-pick-animal]").forEach(button=>{
+    button.onclick=()=>message("สัตว์วิญญาณ","ต้องได้รับการอนุมัติจากยัยหนูก่อนน๊า");
+  });
   openModal();
 }
 
@@ -626,19 +869,53 @@ function confirmReturnToLogin(){
 }
 
 function can(recipe){return Object.entries(recipe.need).every(([key,count])=>(state.bag[key]||0)>=count)}
+function ingredientText(recipe){return Object.entries(recipe.need).map(([key,count])=>`<span>${CROPS[key].icon} ${CROPS[key].name} ×${count}</span>`).join("")}
 function kitchen(){
-  $("modalContent").innerHTML=`<h2>🍲 ครัวเปรตเปรต</h2><div class="grid">${RECIPES.map(recipe=>`<div class="tile"><div style="font-size:42px">${recipe.icon}</div><b>${recipe.name}</b><p>${Object.entries(recipe.need).map(([key,count])=>CROPS[key].icon+count).join(" ")}</p><button type="button" data-recipe="${recipe.id}" ${can(recipe)?"":"disabled"}>${can(recipe)?"คราฟอาหาร":"วัตถุดิบไม่ครบ"}</button></div>`).join("")}</div>`;
-  document.querySelectorAll("[data-recipe]").forEach(button=>button.onclick=()=>craft(button.dataset.recipe));
+  if(guardResting())return;
+  $("modalContent").innerHTML=`
+    <section class="feature-panel recipe-catalog-panel">
+      <h2>📖 สมุดเมนูอาหาร</h2>
+      <div class="recipe-catalog-grid">
+        ${RECIPES.map(recipe=>`
+          <article class="recipe-card">
+            <img src="${recipe.image}" alt="${recipe.name}">
+            <h3>${recipe.icon} ${recipe.name}</h3>
+            <div class="recipe-needs">${ingredientText(recipe)}</div>
+            <button type="button" data-confirm-craft="${recipe.id}">คราฟ</button>
+          </article>`).join("")}
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-confirm-craft]").forEach(button=>button.onclick=()=>confirmCraft(button.dataset.confirmCraft));
   openModal();
 }
 
+function confirmCraft(id){
+  const recipe=recipeById(id);
+  if(!recipe)return;
+  $("modalContent").innerHTML=`
+    <section class="feature-panel craft-warning-panel">
+      <img src="${recipe.image}" alt="${recipe.name}">
+      <h2>${recipe.name}</h2>
+      <p>หากคราฟสำเร็จ คุณจะได้รับแต้มกุศล หากคราฟไม่สำเร็จ วัตถุดิบที่ใช้ครั้งนี้ก็จะสูญเปล่า</p>
+      <div class="confirm-actions">
+        <button id="confirmCraftBtn" class="danger-action" type="button">ยืนยัน</button>
+        <button id="cancelCraftBtn" class="secondary-action" type="button">ไม่คราฟค่ะพี่ป๊อด</button>
+      </div>
+    </section>`;
+  $("confirmCraftBtn").onclick=()=>{
+    if(!can(recipe)){message("วัตถุดิบไม่ครบ",`ยังไม่สามารถคราฟ ${recipe.name} ได้`);return}
+    craft(id);
+  };
+  $("cancelCraftBtn").onclick=kitchen;
+}
+
 function craft(id){
-  const recipe=RECIPES.find(item=>item.id===id);
+  const recipe=recipeById(id);
   if(!recipe||!can(recipe))return;
   Object.entries(recipe.need).forEach(([key,count])=>state.bag[key]-=count);
-  state.dishes.push({...recipe,time:new Date().toLocaleString("th-TH")});
+  state.dishes.push({id:recipe.id,name:recipe.name,image:recipe.image,time:new Date().toLocaleString("th-TH")});
   save();
-  $("modalContent").innerHTML=`<h2>คราฟสำเร็จ!</h2><div style="font-size:80px;text-align:center">${recipe.icon}</div><h3 style="text-align:center">${recipe.name}</h3><p>สมาชิก: ${currentMember}</p><p>ชื่อในเกม: ${state.player}</p><p>แคปหน้าจอนี้แล้วส่งเข้ากิจกรรม</p>`;
+  $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>อาหารเพิ่มลงในรายการอาหารที่มีแล้ว ×1</p></section>`;
 }
 
 /* ===== เข้าและออกเกม ===== */
@@ -665,6 +942,9 @@ function logout(){
   stopGameExtras();
   showAvatar("");
   $("gameScreen").classList.add("hidden");
+  $("sceneScreen").classList.add("hidden");
+  stopSceneTimer();
+  currentScene=null;
   $("loginScreen").classList.remove("hidden");
   $("memberCode").value="";
   currentMember=null;
@@ -672,7 +952,7 @@ function logout(){
 }
 
 function showHow(){message("วิธีเล่น","แตะแปลงว่างเพื่อเลือกเมล็ด แตะแปลงที่โตเต็มวัยเพื่อเก็บเกี่ยว ตอนนี้ปลูกได้ครบทั้ง 12 แปลง")}
-function showMenu(){$("modalContent").innerHTML=`<h2>สมุดเมนู</h2>${RECIPES.map(recipe=>`<p>${recipe.icon} ${recipe.name}</p>`).join("")}`;openModal()}
+function showMenu(){kitchen()}
 function showSettings(){message("ตั้งค่า","ระบบตั้งค่าจะเพิ่มในเวอร์ชันถัดไป")}
 function showRewards(){message("ของรางวัล","คราฟอาหารสำเร็จแล้วแคปหน้าจอส่งรับรางวัล")}
 function message(title,text){$("modalContent").innerHTML=`<h2>${title}</h2><p>${text}</p>`;openModal()}

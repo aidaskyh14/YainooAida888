@@ -387,3 +387,75 @@ button{touch-action:manipulation}
 .mode-overlay-grid button b{font-size:13px}
 .mode-overlay-grid button small{color:#d7c8d7;font-size:10px}
 .mode-overlay-grid button.selected{border-color:#f0c774;box-shadow:0 0 0 3px rgba(240,199,116,.2),0 5px 12px rgba(46,25,48,.26)}
+
+/* ===== รอบปรับปรุง: ป้ายไม้ รูปโปรไฟล์ ร้านค้า ฉากบ้าน/บาดาล/โรงเรือน และสมุดเมนู ===== */
+.top-player-name-button{left:.45%;width:30.6%}
+.avatar-button{left:.75%;top:.9%;width:18.2%}
+#avatarPlaceholder{font-size:clamp(31px,9.2vw,66px)}
+.profile-name-button{left:.55%;top:13.15%;width:18.7%;height:3.35%}
+
+.shop-animal-img{position:relative;z-index:1;display:block;width:min(148px,35vw);height:min(118px,28vw);margin:0 auto 5px;object-fit:contain;background:transparent;filter:drop-shadow(0 4px 4px rgba(0,0,0,.3))}
+.shop-card button.shop-worship-button{background:linear-gradient(180deg,#9564a0,#5d3b67);color:#fff0d1;border-color:rgba(255,223,168,.48);opacity:1;cursor:pointer}
+.stable-entrance-button{opacity:1;color:#fff0d0;cursor:pointer}
+
+.scene-screen{position:fixed;inset:0;z-index:120;overflow:hidden;background-position:center;background-repeat:no-repeat;background-size:100% 100%;isolation:isolate}
+.scene-interactive-layer{position:absolute;inset:0;z-index:4}
+.scene-nav-button{position:absolute;top:max(2.2%,env(safe-area-inset-top));z-index:12;max-width:43%;min-height:38px;padding:7px 11px;border:2px solid rgba(183,125,75,.95);border-radius:13px;background:linear-gradient(180deg,rgba(82,55,88,.98),rgba(43,29,53,.98));color:#fff0c9;font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;font-size:clamp(9px,2.4vw,14px);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.85);box-shadow:0 5px 12px rgba(28,12,34,.42);cursor:pointer}
+.scene-back-button{left:2.2%}
+.scene-next-button{right:2.2%}
+.scene-nav-button:active{transform:scale(.97)}
+
+.bed-hotspot{position:absolute;left:0;top:30%;width:37%;height:37%;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bed-hotspot:active{background:rgba(255,255,255,.04)}
+.bed-countdown{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);min-width:110px;padding:7px 10px;border:2px solid rgba(184,123,76,.94);border-radius:999px;background:rgba(44,27,50,.93);color:#fff0cf;font-size:clamp(10px,2.8vw,16px);font-weight:950;text-align:center;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.38)}
+.house-altar-slots{position:absolute;left:18%;top:67.2%;width:64%;height:10%;display:grid;grid-template-columns:repeat(3,1fr);gap:5%}
+.offering-slot{display:grid;place-items:center;padding:2px;border:2px dashed rgba(255,225,174,.94);border-radius:50%;background:rgba(48,30,54,.77);color:#fff2cf;box-shadow:0 4px 10px rgba(0,0,0,.32);cursor:pointer}
+.offering-slot span{font-size:clamp(24px,7vw,48px);line-height:1}
+.offering-slot img{display:block;width:92%;height:92%;object-fit:contain}
+.scene-action-button{position:absolute;z-index:7;padding:8px 12px;border:2px solid rgba(180,117,72,.96);border-radius:13px;background:linear-gradient(180deg,#87517d,#57345c);color:#fff0cf;font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;font-size:clamp(10px,2.7vw,15px);font-weight:900;box-shadow:0 5px 12px rgba(34,15,38,.42);cursor:pointer}
+.house-worship-button{left:50%;top:79.1%;transform:translateX(-50%)}
+.house-worship-button:active,.underwater-send-button:active{transform:translateX(-50%) scale(.97)}
+
+.rest-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rest-choice-actions button{display:flex;min-height:92px;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:2px solid #a47a58;border-radius:17px;background:linear-gradient(180deg,#715079,#422d4d);color:#fff0d2;font-weight:900;cursor:pointer}
+.rest-choice-actions b{font-size:18px}
+.rest-choice-actions small{color:#e1d1df}
+.important-warning-panel{text-align:center}
+.warning-symbol{font-size:58px;line-height:1;margin-bottom:6px;animation:warningPulse 1.1s ease-in-out infinite}
+.important-warning-panel p{padding:12px;border:2px solid #b25963;border-radius:14px;background:#fff0e8;color:#772f3d;font-size:14px;line-height:1.55;font-weight:900}
+@keyframes warningPulse{50%{transform:scale(1.12)}}
+
+.underwater-offering-slot{position:absolute;left:41%;top:78.1%;width:18%;aspect-ratio:1/1}
+.underwater-send-button{left:50%;top:88.1%;transform:translateX(-50%)}
+
+.dish-picker-grid,.animal-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.dish-picker-grid button,.animal-picker-grid button{display:flex;min-width:0;flex-direction:column;align-items:center;gap:4px;padding:8px;border:2px solid #c79c68;border-radius:15px;background:rgba(255,252,236,.94);color:#4c3046;cursor:pointer}
+.dish-picker-grid img,.animal-picker-grid img{width:min(118px,28vw);height:min(94px,22vw);object-fit:contain}
+.dish-picker-grid b,.animal-picker-grid b{font-size:11px;text-align:center}
+.dish-picker-grid small{font-size:10px;color:#775b73}
+
+.animal-slots{position:absolute;inset:0}
+.animal-add-slot{position:absolute;width:15.5%;aspect-ratio:1/1;border:2px dashed rgba(255,235,190,.92);border-radius:50%;background:rgba(63,42,49,.34);color:#fff6d4;font-size:clamp(23px,7.5vw,48px);font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,.7);box-shadow:inset 0 0 14px rgba(0,0,0,.18);cursor:pointer}
+.animal-add-slot:active{transform:scale(.94);background:rgba(94,61,76,.45)}
+
+.recipe-catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.recipe-card{min-width:0;padding:9px 7px;border:2px solid #bd8f60;border-radius:18px;background:linear-gradient(180deg,rgba(255,252,235,.98),rgba(235,212,172,.98));box-shadow:0 5px 11px rgba(67,40,43,.18);text-align:center}
+.recipe-card>img{display:block;width:min(140px,31vw);height:min(120px,27vw);margin:0 auto 4px;object-fit:contain}
+.recipe-card h3{min-height:36px;margin:3px 0 7px;color:#51344a;font-size:clamp(11px,2.7vw,15px);line-height:1.2}
+.recipe-needs{display:grid;gap:3px;min-height:72px;margin-bottom:8px;padding:6px;border-radius:11px;background:rgba(255,255,255,.55);text-align:left}
+.recipe-needs span{font-size:clamp(8px,2.15vw,11px);line-height:1.25;font-weight:800}
+.recipe-card>button{width:100%;padding:9px 6px;border:0;border-radius:11px;background:linear-gradient(180deg,#8f5b85,#5e3b67);color:#fff0d2;font-weight:950;cursor:pointer}
+.craft-warning-panel,.craft-success-panel{text-align:center}
+.craft-warning-panel>img,.craft-success-panel>img{display:block;width:min(190px,48vw);height:min(160px,40vw);margin:0 auto 6px;object-fit:contain}
+.craft-warning-panel p{padding:11px;border:1px solid #d39a77;border-radius:13px;background:#fff4e4;color:#6b3b43;font-size:13px;line-height:1.5;font-weight:850}
+.craft-success-panel h3{margin:5px 0;color:#57364e}
+
+@media(max-width:420px){
+  .scene-nav-button{min-height:34px;padding:6px 8px;font-size:9.5px}
+  .recipe-catalog-grid{gap:7px}
+  .recipe-card{padding:7px 5px}
+  .recipe-needs{min-height:65px;padding:5px}
+  .recipe-needs span{font-size:8.5px}
+  .animal-add-slot{width:16.5%}
+}
+.offering-slot:disabled,.scene-action-button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.35)}

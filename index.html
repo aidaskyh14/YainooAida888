@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
   <main id="app">
@@ -88,6 +88,12 @@
       </nav>
     </section>
 
+    <!-- ฉากภายในบ้าน เมืองบาดาล และโรงเรือนสัตว์ -->
+    <section id="sceneScreen" class="screen scene-screen hidden" aria-label="ฉากพิเศษ">
+      <button id="sceneBackBtn" class="scene-nav-button scene-back-button hidden" type="button"></button>
+      <button id="sceneNextBtn" class="scene-nav-button scene-next-button hidden" type="button"></button>
+      <div id="sceneInteractiveLayer" class="scene-interactive-layer"></div>
+    </section>
 
     <div id="modeOverlay" class="mode-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modeOverlayTitle">
       <div class="mode-overlay-card">
@@ -111,6 +117,6 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=34"></script>
+  <script src="game.js?v=35"></script>
 </body>
 </html>
