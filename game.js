@@ -278,20 +278,36 @@ function save(){if(state&&currentMember)localStorage.setItem(key(),JSON.stringif
 function load(player){try{const s=JSON.parse(localStorage.getItem(key()));if(s){s.player=player||s.player;return s;}}catch(e){}return fresh(player)}
 
 function start(){
-  const member=$("memberSelect").value;
-  const code=$("memberCode").value.trim();
-  const player=$("playerName").value.trim();
-  if(MEMBERS[member]!==code){$("loginError").textContent="ชื่อสมาชิกหรือรหัสไม่ถูกต้อง";return;}
-  if(!player){$("loginError").textContent="กรุณาตั้งชื่อผู้เล่นในเกม";return;}
-  currentMember=member;state=load(player);save();
-  $("displayPlayer").textContent=state.player;
-  $("displayMember").textContent=currentMember;
-  $("gardenOwner").textContent=state.player;
+  const member=$("memberSelect")?.value || "";
+  const code=$("memberCode")?.value.trim() || "";
+  const player=member;
+
+  if(!member){
+    $("loginError").textContent="กรุณาเลือกชื่อสมาชิก";
+    return;
+  }
+  if(MEMBERS[member]!==code){
+    $("loginError").textContent="ชื่อสมาชิกหรือรหัสไม่ถูกต้อง";
+    return;
+  }
+
+  currentMember=member;
+  state=load(player);
+  save();
+
+  if($("displayPlayer")) $("displayPlayer").textContent=state.player;
+  if($("displayMember")) $("displayMember").textContent=currentMember;
+  if($("gardenOwner")) $("gardenOwner").textContent=state.player;
+  if($("profileNameButton")) $("profileNameButton").textContent=state.player;
+  if($("topPlayerNameButton")) $("topPlayerNameButton").textContent=state.player;
+
   $("loginScreen").classList.add("hidden");
   $("gameScreen").classList.remove("hidden");
   ensureAvatarUI();
   loadAvatar();
-  draw();ticker=setInterval(draw,1000);
+  draw();
+  if(ticker) clearInterval(ticker);
+  ticker=setInterval(draw,1000);
 }
 function logout(){
   if(ticker)clearInterval(ticker);save();
@@ -433,16 +449,26 @@ function message(t,x){$("modalContent").innerHTML=`<h2>${t}</h2><p>${x}</p>`;ope
 function open(){$("modal").classList.remove("hidden")}
 function close(){$("modal").classList.add("hidden")}
 
-$("startBtn").onclick=start;
-$("howBtn").onclick=showHow;
-$("menuBtn").onclick=showMenu;
-$("settingsBtn").onclick=showSettings;
-$("rewardBtn").onclick=showRewards;
-$("inventoryBtn").onclick=inventory;
-$("kitchenBtn").onclick=kitchen;
-$("logoutBtn").onclick=logout;
-$("closeModal").onclick=close;
-$("modal").onclick=e=>{if(e.target===$("modal"))close()};
+function bindClick(id, handler){
+  const el=$(id);
+  if(el) el.onclick=handler;
+}
+
+bindClick("startBtn",start);
+bindClick("howBtn",showHow);
+bindClick("menuBtn",showMenu);
+bindClick("settingsBtn",showSettings);
+bindClick("rewardBtn",showRewards);
+bindClick("inventoryNavBtn",inventory);
+bindClick("menuNavBtn",kitchen);
+bindClick("inventoryBtn",inventory);
+bindClick("kitchenBtn",kitchen);
+bindClick("logoutBtn",logout);
+bindClick("closeModal",close);
+
+if($("modal")){
+  $("modal").onclick=e=>{if(e.target===$("modal"))close()};
+}
 
 ensureAvatarUI();
 loadMembers();
