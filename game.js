@@ -7,34 +7,47 @@ let MEMBERS={
 };
 
 const CROPS={
-  chili:{name:"พริกผีเปรต",icon:"🌶️",selectImg:"01_ghost_pepper.png?v=2",ms:60000,seedImg:"pret-chili-seed.png",sproutImg:"pret-chili-sprout.png",growImg:"pret-chili-grow.png",readyImg:"pret-chili-ready.png"},
-  pumpkin:{name:"ฟักทองกองกอย",icon:"🎃",selectImg:"02_ghost_pumpkin.png?v=2",ms:30000,seedImg:"ghost-pumpkin-seed.png?v=1",sproutImg:"ghost-pumpkin-sprout.png?v=1",growImg:"ghost-pumpkin-grow.png?v=1",readyImg:"ghost-pumpkin-ready.png?v=1"},
-  cabbage:{name:"ผักกาดบ้านนอก",icon:"🥬",selectImg:"04_country_cabbage.png?v=2",ms:25000,seedImg:"cabbage-seed.png?v=1",sproutImg:"cabbage-sprout.png?v=1",growImg:"cabbage-grow.png?v=1",readyImg:"cabbage-ready.png?v=1"},
-  mango:{name:"มะม่วงหน้าเน่า",icon:"🥭",selectImg:"03_rotten_mango.png?v=2",ms:35000,seedImg:"mango-seed.png?v=2",sproutImg:"mango-sprout.png?v=2",growImg:"mango-grow.png?v=2",readyImg:"mango-ready.png?v=2"},
-  lychee:{name:"ลิ้นจี่ หลีหอม",icon:"🍒",selectImg:"05_fragrant_lychee.png?v=2",ms:40000,seedImg:"lychee-seed.png?v=2",sproutImg:"lychee-sprout.png?v=2",growImg:"lychee-grow.png?v=2",readyImg:"lychee-ready.png?v=2"},
-  morning:{name:"ผักบุ้ง สะดุ้งเก่ง",icon:"🌿",selectImg:"06_startled_morning_glory.png?v=2",ms:22000,seedImg:"morning-seed.png?v=2",sproutImg:"morning-sprout.png?v=2",growImg:"morning-grow.png?v=2",readyImg:"morning-ready.png?v=2"},
-  strawberry:{name:"สตรอว์เบอร์รีมรกต",icon:"🍓",selectImg:"07_emerald_strawberry.png?v=1",ms:50000,seedImg:"emerald-strawberry-seed.png?v=1",sproutImg:"emerald-strawberry-sprout.png?v=1",growImg:"emerald-strawberry-grow.png?v=1",readyImg:"emerald-strawberry-ready.png?v=1"},
-  grape:{name:"องุ่น ครุ่นจิต",icon:"🍇",selectImg:"08_grape_kruenjit.png?v=1",ms:45000,seedImg:"grape-seed.PNG?v=1",sproutImg:"grape-sprout.PNG?v=1",growImg:"grape-grow.PNG?v=1",readyImg:"grape-ready.PNG?v=1"}
+  morning:{name:"ผักบุ้งสะดุ้งเก่ง",icon:"🌿",selectImg:"06_startled_morning_glory.png?v=2",totalMs:25*60*1000,waterMs:8*60*1000,wormChance:0,seedImg:"morning-seed.png?v=2",sproutImg:"morning-sprout.png?v=2",growImg:"morning-grow.png?v=2",readyImg:"morning-ready.png?v=2"},
+  cabbage:{name:"ผักกาดบ้านนอก",icon:"🥬",selectImg:"04_country_cabbage.png?v=2",totalMs:35*60*1000,waterMs:12*60*1000,wormChance:0,seedImg:"cabbage-seed.png?v=1",sproutImg:"cabbage-sprout.png?v=1",growImg:"cabbage-grow.png?v=1",readyImg:"cabbage-ready.png?v=1"},
+  mango:{name:"มะม่วงหน้าเน่า",icon:"🥭",selectImg:"03_rotten_mango.png?v=2",totalMs:45*60*1000,waterMs:15*60*1000,wormChance:0,seedImg:"mango-seed.png?v=2",sproutImg:"mango-sprout.png?v=2",growImg:"mango-grow.png?v=2",readyImg:"mango-ready.png?v=2"},
+  chili:{name:"พริกผีเปรต",icon:"🌶️",selectImg:"01_ghost_pepper.png?v=2",totalMs:55*60*1000,waterMs:18*60*1000,wormChance:.20,seedImg:"pret-chili-seed.png",sproutImg:"pret-chili-sprout.png",growImg:"pret-chili-grow.png",readyImg:"pret-chili-ready.png"},
+  pumpkin:{name:"ฟักทองกองกอย",icon:"🎃",selectImg:"02_ghost_pumpkin.png?v=2",totalMs:70*60*1000,waterMs:25*60*1000,wormChance:.20,seedImg:"ghost-pumpkin-seed.png?v=1",sproutImg:"ghost-pumpkin-sprout.png?v=1",growImg:"ghost-pumpkin-grow.png?v=1",readyImg:"ghost-pumpkin-ready.png?v=1"},
+  lychee:{name:"ลิ้นจี่หลีหอม",icon:"🍒",selectImg:"05_fragrant_lychee.png?v=2",totalMs:85*60*1000,waterMs:30*60*1000,wormChance:.20,seedImg:"lychee-seed.png?v=2",sproutImg:"lychee-sprout.png?v=2",growImg:"lychee-grow.png?v=2",readyImg:"lychee-ready.png?v=2"},
+  strawberry:{name:"สตรอว์เบอร์รีมรกต",icon:"🍓",selectImg:"07_emerald_strawberry.png?v=1",totalMs:100*60*1000,waterMs:35*60*1000,wormChance:.20,seedImg:"emerald-strawberry-seed.png?v=1",sproutImg:"emerald-strawberry-sprout.png?v=1",growImg:"emerald-strawberry-grow.png?v=1",readyImg:"emerald-strawberry-ready.png?v=1"},
+  grape:{name:"องุ่นครุ่นจิต",icon:"🍇",selectImg:"08_grape_kruenjit.png?v=1",totalMs:115*60*1000,waterMs:40*60*1000,wormChance:.20,seedImg:"grape-seed.PNG?v=1",sproutImg:"grape-sprout.PNG?v=1",growImg:"grape-grow.PNG?v=1",readyImg:"grape-ready.PNG?v=1"},
+  banana:{name:"กล้วยผีตานีหาย",icon:"🍌",selectImg:"09_ghost_banana.png?v=1",totalMs:130*60*1000,waterMs:45*60*1000,wormChance:.20,seedImg:"banana-ghost-seed.png?v=1",sproutImg:"banana-ghost-sprout.png?v=1",growImg:"banana-ghost-grow.png?v=1",readyImg:"banana-ghost-ready.png?v=1"},
+  gooseberry:{name:"มะยมอมเค",icon:"🫒",selectImg:"10_star_gooseberry.png?v=1",totalMs:150*60*1000,waterMs:50*60*1000,wormChance:.20,seedImg:"star-gooseberry-seed.png?v=1",sproutImg:"star-gooseberry-sprout.png?v=1",growImg:"star-gooseberry-grow.png?v=1",readyImg:"star-gooseberry-ready.png?v=1"}
 };
 
 const STATUS_ICON={water:"status-water.png?v=3",worm:"status-worm.png?v=3",dead:"status-dead.png?v=3"};
 const RECIPES=[
-  {id:"r1",name:"แกงเปรตลิ้นยาว",icon:"🍲",image:"01-kaeng-pret-lin-yao.png?v=1",need:{chili:8,mango:8,morning:8}},
-  {id:"r2",name:"ฟักทองต้มกองกอย",icon:"🎃",image:"02-fakthong-tom-kongkoi.png?v=1",need:{pumpkin:10,cabbage:8}},
-  {id:"r3",name:"ตำมรกตผีหลอก",icon:"🍓",image:"03-tam-morakot-phi-lok.png?v=1",need:{strawberry:12,chili:10,mango:8}},
-  {id:"r4",name:"ยำองุ่นครู่นจิต",icon:"🍇",image:"04-yam-angun-khrun-chit.png?v=1",need:{grape:14,chili:12,morning:10}},
-  {id:"r5",name:"ข้าวคลุกวิญญาณ",icon:"🍚",image:"05-khao-kluk-winyan.png?v=1",need:{cabbage:16,pumpkin:14,lychee:12,chili:10}},
-  {id:"r6",name:"ลิ้นจี่น้ำแข็งหลุมศพ",icon:"🍧",image:"06-lychee-namkhaeng-lumsop.png?v=1",need:{lychee:18,grape:16,strawberry:14}},
-  {id:"r7",name:"ก๋วยเตี๋ยวเปรตแตก",icon:"🍜",image:"07-kuaitiao-pret-taek.png?v=1",need:{morning:22,chili:20,cabbage:18,pumpkin:16}},
-  {id:"r8",name:"น้ำปั่นคืนชีพ",icon:"🧪",image:"08-nam-pan-khuen-chip.png?v=1",need:{grape:30,strawberry:26,lychee:22,mango:18}}
+  {id:"r1",name:"แกงเปรตลิ้นยาว",icon:"🍲",image:"01-kaeng-pret-lin-yao.png?v=1",need:{chili:8,mango:8,morning:8},chance:80,reward:[1,3],difficulty:"ง่าย"},
+  {id:"r2",name:"ฟักทองต้มกองกอย",icon:"🎃",image:"02-fakthong-tom-kongkoi.png?v=1",need:{pumpkin:10,cabbage:8},chance:75,reward:[1,3],difficulty:"ง่าย"},
+  {id:"r3",name:"ตำมรกตผีหลอก",icon:"🍓",image:"03-tam-morakot-phi-lok.png?v=1",need:{strawberry:12,chili:10,mango:8},chance:65,reward:[5,8],difficulty:"กลาง"},
+  {id:"r4",name:"ยำองุ่นครุ่นจิต",icon:"🍇",image:"04-yam-angun-khrun-chit.png?v=1",need:{grape:14,chili:12,morning:10},chance:60,reward:[5,8],difficulty:"กลาง"},
+  {id:"r5",name:"ข้าวคลุกวิญญาณ",icon:"🍚",image:"05-khao-kluk-winyan.png?v=1",need:{cabbage:16,pumpkin:14,lychee:12,chili:10},chance:55,reward:[5,8],difficulty:"กลาง"},
+  {id:"r6",name:"ลิ้นจี่น้ำแข็งหลุมศพ",icon:"🍧",image:"06-lychee-namkhaeng-lumsop.png?v=1",need:{lychee:18,grape:16,strawberry:14},chance:45,reward:[7,10],difficulty:"ยาก"},
+  {id:"r7",name:"ก๋วยเตี๋ยวเปรตแตก",icon:"🍜",image:"07-kuaitiao-pret-taek.png?v=1",need:{morning:22,chili:20,cabbage:18,pumpkin:16},chance:35,reward:[7,10],difficulty:"ยาก"},
+  {id:"r8",name:"น้ำปั่นคืนชีพ",icon:"🧪",image:"08-nam-pan-khuen-chip.png?v=1",need:{grape:30,strawberry:26,lychee:22,mango:18},chance:25,reward:[7,10],difficulty:"ยาก"},
+  {id:"n1",night:true,name:"กอดทอดกอดเปรต",icon:"🍌",image:"01-kod-thot-kod-pret.png?v=1",need:{banana:2,strawberry:1},chance:65,reward:[5,8],difficulty:"กลาง"},
+  {id:"n2",night:true,name:"ตำมะยมผสมกุมาร",icon:"👻",image:"02-tam-mayom-phasom-kuman.png?v=1",need:{gooseberry:2,chili:1,mango:1},chance:50,reward:[5,8],difficulty:"กลาง"},
+  {id:"n3",night:true,name:"กล้วยคลุกเถ้าผี",icon:"💀",image:"03-kluai-kluk-thao-phi.png?v=1",need:{banana:3,lychee:2,grape:1},chance:35,reward:[7,10],difficulty:"ยาก"},
+  {id:"n4",night:true,name:"ยำมะยมสมน้ำหน้า",icon:"🥗",image:"04-yam-mayom-som-nam-na.png?v=1",need:{gooseberry:3,chili:2,morning:1,banana:1},chance:25,reward:[7,10],difficulty:"ยาก"}
 ];
 
 const SHOP_ITEMS=[
-  {id:"chicken",image:"01_chicken_pret.png?v=1",name:"ไก่เปรต"},
-  {id:"fish",image:"02_hypno_fish.png?v=1",name:"ปลาสะกดจิต"},
-  {id:"pig",image:"03_ghost_pig.png?v=1",name:"หมูผี"},
-  {id:"cow",image:"04_spirit_cow.png?v=1",name:"วัววิญญาณ"}
+  {id:"chicken",image:"01-chicken-ghost.png?v=1",name:"ไก่เปรต",product:"egg",productName:"ไข่เปรต",productImage:"01-pret-egg.png?v=1",productionMs:3*60*60*1000},
+  {id:"fish",image:"02-fish-ghost.png?v=1",name:"ปลาสะกดจิต",product:"fishMeat",productName:"เนื้อปลาผี",productImage:"03-ghost-fish-meat.png?v=1",productionMs:90*60*1000},
+  {id:"pig",image:"03-pig-ghost.png?v=1",name:"หมูผี",product:"truffle",productName:"เห็ดทรัฟเฟิลหลอน",productImage:"02-haunted-truffle.png?v=1",productionMs:6*60*60*1000},
+  {id:"cow",image:"04-cow-ghost.png?v=1",name:"วัววิญญาณ",product:"milk",productName:"นมวัวอาฆาต",productImage:"04-vengeful-cow-milk.png?v=1",productionMs:5*60*60*1000}
 ];
+
+const ANIMAL_PRODUCTS={
+  egg:{name:"ไข่เปรต",icon:"🥚",image:"01-pret-egg.png?v=1"},
+  fishMeat:{name:"เนื้อปลาผี",icon:"🐟",image:"03-ghost-fish-meat.png?v=1"},
+  truffle:{name:"เห็ดทรัฟเฟิลหลอน",icon:"🍄",image:"02-haunted-truffle.png?v=1"},
+  milk:{name:"นมวัวอาฆาต",icon:"🥛",image:"04-vengeful-cow-milk.png?v=1"}
+};
 
 const SCENES={
   house:{image:"ghost-house-interior.jpg?v=1"},
@@ -42,10 +55,21 @@ const SCENES={
   chicken:{image:"01_chicken_coop.jpg?v=1"},
   fish:{image:"02_fish_pond.jpg?v=1"},
   pig:{image:"03_pig_pen.jpg?v=1"},
-  cow:{image:"04_cow_barn.jpg?v=1"}
+  cow:{image:"04_cow_barn.jpg?v=1"},
+  almsSeated:{image:"01_monks-seated-bowls.png?v=1"},
+  almsBlessing:{image:"02_monks-standing-blessing.png?v=1"}
 };
 
 const REST_DURATIONS={sleep:7*60*60*1000,nap:2*60*60*1000};
+const REST_REWARDS={sleep:10,nap:2};
+const HOUSE_WORSHIP_COOLDOWN=3*60*60*1000;
+const UNDERWATER_COOLDOWN=5*60*60*1000;
+const FRIENDLY_GHOST_COOLDOWN=2*60*60*1000;
+const CHALLENGE_COST=5;
+const CHALLENGE_DURATION=30*1000;
+const ANIMAL_BONUS_INTERVAL=2*60*60*1000;
+const ALMS_START_MINUTE=6*60;
+const ALMS_END_MINUTE=10*60;
 
 const FARM_MODES={
   original:{name:"ดั้งเดิม",emoji:"🌿",image:"farm-page-template.jpeg?v=4"},
@@ -959,6 +983,705 @@ function message(title,text){$("modalContent").innerHTML=`<h2>${title}</h2><p>${
 function openModal(){$("modal").classList.remove("hidden")}
 function closeModal(){$("modal").classList.add("hidden")}
 
+
+/* ======================================================================
+   ระบบเกมชุดใหญ่ — ใช้ฐานหน้าตาเดิมและเพิ่มเฉพาะระบบที่สั่ง
+   ====================================================================== */
+
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function pad2(n){return String(n).padStart(2,"0")}
+function formatHM(ms){
+  const total=Math.max(0,Math.ceil(ms/60000));
+  return `${pad2(Math.floor(total/60))}:${pad2(total%60)}`;
+}
+function formatFriendlyCountdown(ms){
+  const total=Math.max(0,Math.ceil(ms/60000));
+  const h=Math.floor(total/60),m=total%60;
+  return h>0?`${h} ชั่วโมง ${m} นาที`:`${m} นาที`;
+}
+function bangkokPartsFull(date=new Date()){
+  const f=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});
+  const p=Object.fromEntries(f.formatToParts(date).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return{year:+p.year,month:+p.month,day:+p.day,hour:+p.hour,minute:+p.minute,second:+p.second,dateKey:`${p.year}-${p.month}-${p.day}`};
+}
+function bangkokMinutesNow(){const p=bangkokPartsFull();return p.hour*60+p.minute}
+function msUntilBangkokHour(targetHour){
+  const now=bangkokPartsFull();
+  const current=now.hour*60+now.minute+(now.second/60);
+  let delta=targetHour*60-current;
+  if(delta<=0)delta+=24*60;
+  return Math.round(delta*60*1000);
+}
+function isNightCraftOpen(){
+  const m=bangkokMinutesNow();
+  return m>=22*60||m<2*60;
+}
+function msUntilNightCraft(){
+  if(isNightCraftOpen()){
+    const p=bangkokPartsFull();
+    const mins=p.hour<2?(2*60-(p.hour*60+p.minute)):((24*60+2*60)-(p.hour*60+p.minute));
+    return mins*60*1000;
+  }
+  return msUntilBangkokHour(22);
+}
+function updateMeritUI(){
+  if(!state)return;
+  const el=$("meritTotal");
+  if(el)el.textContent=String(Number(state.merit)||0);
+}
+function changeMerit(delta,reason="",notify=false){
+  if(!state)return 0;
+  state.merit=(Number(state.merit)||0)+Number(delta||0);
+  save();updateMeritUI();
+  if(notify){
+    const sign=delta>=0?"+":"";
+    message(reason||"จำนวนกุศลเปลี่ยนแปลง",`${sign}${delta} กุศล • คงเหลือ ${state.merit}`);
+  }
+  return state.merit;
+}
+function addMerit(n,reason="",notify=false){return changeMerit(Math.abs(n),reason,notify)}
+function spendMerit(n,reason="",notify=false){return changeMerit(-Math.abs(n),reason,notify)}
+
+function emptyPlot(){return{crop:null,phase:"empty",phaseEndsAt:0,plantedAt:0,wateredAt:0,worm:false}}
+function fresh(player){
+  return{
+    player,
+    merit:300,
+    plots:Array.from({length:PLOT_COUNT},emptyPlot),
+    bag:Object.fromEntries(Object.keys(CROPS).map(k=>[k,0])),
+    animalProducts:Object.fromEntries(Object.keys(ANIMAL_PRODUCTS).map(k=>[k,0])),
+    dishes:[],
+    specials:{},
+    houseOfferings:[null,null,null],
+    underwaterOffering:null,
+    houseWorshipUntil:0,
+    underwaterUntil:0,
+    restUntil:0,
+    restType:null,
+    restRewardPending:false,
+    almsOfferings:[null,null,null,null],
+    lastAlmsDate:"",
+    friendlyGhostUntil:0,
+    challengeUntil:0,
+    animalRequests:{chicken:Array(9).fill(false),fish:Array(9).fill(false),pig:Array(9).fill(false),cow:Array(9).fill(false)},
+    animals:{chicken:Array(9).fill(null),fish:Array(9).fill(null),pig:Array(9).fill(null),cow:Array(9).fill(null)},
+    animalBonusNextAt:Date.now()+ANIMAL_BONUS_INTERVAL
+  };
+}
+function normalizePlot(plot){
+  if(!plot||typeof plot!=="object"||!plot.crop)return emptyPlot();
+  if(plot.phase)return plot;
+  // แปลงเซฟเก่าที่ใช้ at ให้เป็นระบบใหม่ โดยไม่ลบพืช
+  const crop=CROPS[plot.crop];
+  if(!crop)return emptyPlot();
+  const oldAt=Number(plot.at)||Date.now();
+  const elapsed=Math.max(0,Date.now()-oldAt);
+  if(elapsed>=crop.totalMs)return{crop:plot.crop,phase:"ready",phaseEndsAt:0,plantedAt:oldAt,wateredAt:oldAt+crop.waterMs,worm:false};
+  if(elapsed>=crop.waterMs)return{crop:plot.crop,phase:"growing2",phaseEndsAt:Date.now()+Math.max(1000,crop.totalMs-elapsed),plantedAt:oldAt,wateredAt:oldAt+crop.waterMs,worm:false};
+  return{crop:plot.crop,phase:"growing1",phaseEndsAt:oldAt+crop.waterMs,plantedAt:oldAt,wateredAt:0,worm:false};
+}
+function normalizeState(raw,player){
+  const n=raw&&typeof raw==="object"?raw:fresh(player);
+  n.player=player||n.player||"ผู้เล่น";
+  if(!Number.isFinite(Number(n.merit)))n.merit=300;
+  n.merit=Number(n.merit);
+  n.plots=Array.isArray(n.plots)?n.plots.slice(0,PLOT_COUNT):[];
+  while(n.plots.length<PLOT_COUNT)n.plots.push(emptyPlot());
+  n.plots=n.plots.map(normalizePlot);
+  n.bag=n.bag&&typeof n.bag==="object"?n.bag:{};
+  Object.keys(CROPS).forEach(k=>{if(!Number.isFinite(Number(n.bag[k])))n.bag[k]=0;else n.bag[k]=Number(n.bag[k])});
+  n.animalProducts=n.animalProducts&&typeof n.animalProducts==="object"?n.animalProducts:{};
+  Object.keys(ANIMAL_PRODUCTS).forEach(k=>{if(!Number.isFinite(Number(n.animalProducts[k])))n.animalProducts[k]=0;else n.animalProducts[k]=Number(n.animalProducts[k])});
+  n.dishes=Array.isArray(n.dishes)?n.dishes:[];
+  n.specials=n.specials&&typeof n.specials==="object"?n.specials:{};
+  n.houseOfferings=Array.isArray(n.houseOfferings)?n.houseOfferings.slice(0,3):[null,null,null];
+  while(n.houseOfferings.length<3)n.houseOfferings.push(null);
+  n.underwaterOffering=typeof n.underwaterOffering==="string"?n.underwaterOffering:null;
+  n.houseWorshipUntil=Number(n.houseWorshipUntil)||0;
+  n.underwaterUntil=Number(n.underwaterUntil)||0;
+  n.restUntil=Number(n.restUntil)||0;
+  n.restType=n.restType==="sleep"||n.restType==="nap"?n.restType:null;
+  n.restRewardPending=Boolean(n.restRewardPending);
+  n.almsOfferings=Array.isArray(n.almsOfferings)?n.almsOfferings.slice(0,4):[null,null,null,null];
+  while(n.almsOfferings.length<4)n.almsOfferings.push(null);
+  n.lastAlmsDate=typeof n.lastAlmsDate==="string"?n.lastAlmsDate:"";
+  n.friendlyGhostUntil=Number(n.friendlyGhostUntil)||0;
+  n.challengeUntil=Number(n.challengeUntil)||0;
+  n.animalRequests=n.animalRequests&&typeof n.animalRequests==="object"?n.animalRequests:{};
+  n.animals=n.animals&&typeof n.animals==="object"?n.animals:{};
+  SHOP_ITEMS.forEach(item=>{
+    if(!Array.isArray(n.animalRequests[item.id]))n.animalRequests[item.id]=Array(9).fill(false);
+    n.animalRequests[item.id]=n.animalRequests[item.id].slice(0,9);while(n.animalRequests[item.id].length<9)n.animalRequests[item.id].push(false);
+    if(!Array.isArray(n.animals[item.id]))n.animals[item.id]=Array(9).fill(null);
+    n.animals[item.id]=n.animals[item.id].slice(0,9);while(n.animals[item.id].length<9)n.animals[item.id].push(null);
+  });
+  n.animalBonusNextAt=Number(n.animalBonusNextAt)||Date.now()+ANIMAL_BONUS_INTERVAL;
+  return n;
+}
+
+function clearExpiredRest(){
+  if(!state)return;
+  if(Number(state.restUntil)>0&&Number(state.restUntil)<=Date.now()){
+    if(state.restType&&state.restRewardPending){
+      const reward=REST_REWARDS[state.restType]||0;
+      state.restRewardPending=false;
+      state.restUntil=0;
+      const finishedType=state.restType;
+      state.restType=null;
+      state.merit=(Number(state.merit)||0)+reward;
+      save();updateMeritUI();
+      setTimeout(()=>showWeatherToast(`${finishedType==="nap"?"งีบครบแล้ว":"นอนครบแล้ว"} +${reward} กุศล`),50);
+      return;
+    }
+    state.restUntil=0;state.restType=null;state.restRewardPending=false;save();
+  }
+}
+function isResting(){clearExpiredRest();return Boolean(state&&Number(state.restUntil)>Date.now())}
+
+function ensurePlotPhase(plot){
+  if(!plot||!plot.crop)return;
+  if(plot.phase==="growing1"&&Date.now()>=Number(plot.phaseEndsAt||0)){
+    plot.phase="needsWater";plot.phaseEndsAt=0;save();
+  }else if(plot.phase==="growing2"&&Date.now()>=Number(plot.phaseEndsAt||0)){
+    plot.phase="ready";plot.phaseEndsAt=0;save();
+  }
+}
+function stage(plot){
+  if(!plot||!plot.crop)return"empty";
+  ensurePlotPhase(plot);
+  if(plot.phase==="ready")return"ready";
+  if(plot.phase==="growing2"||plot.phase==="worm")return"grown";
+  if(plot.phase==="needsWater")return"sprout";
+  if(plot.phase==="growing1"){
+    const crop=CROPS[plot.crop];
+    const total=crop.waterMs;
+    const elapsed=Math.max(0,Date.now()-Number(plot.plantedAt||Date.now()));
+    return elapsed>=total*.48?"sprout":"seed";
+  }
+  return"seed";
+}
+function plotStatus(plot){
+  if(!plot||!plot.crop)return null;
+  ensurePlotPhase(plot);
+  if(plot.phase==="needsWater")return"water";
+  if(plot.phase==="worm")return"worm";
+  return null;
+}
+function cropIcon(plot){
+  if(!plot||!plot.crop)return"";
+  const crop=CROPS[plot.crop],s=stage(plot);
+  const src=s==="ready"?crop.readyImg:s==="grown"?crop.growImg:s==="sprout"?crop.sproutImg:crop.seedImg;
+  return `<img class="crop-img stage-${s}" src="${src}" alt="${crop.name}">`;
+}
+function remain(plot){
+  if(!plot||!plot.crop)return 0;
+  ensurePlotPhase(plot);
+  if(plot.phase==="needsWater"||plot.phase==="worm"||plot.phase==="ready")return 0;
+  return Math.max(0,Math.ceil((Number(plot.phaseEndsAt||0)-Date.now())/1000));
+}
+function plotTimerText(plot){
+  ensurePlotPhase(plot);
+  if(plot.phase==="needsWater")return"รอรดน้ำ";
+  if(plot.phase==="worm")return"มีหนอน";
+  if(plot.phase==="ready")return"พร้อมเก็บ";
+  const sec=remain(plot);
+  const m=Math.ceil(sec/60);
+  return m>=60?`${Math.floor(m/60)} ชม. ${m%60} นาที`:`${m} นาที`;
+}
+function draw(){
+  if(!state)return;
+  clearExpiredRest();
+  processAnimalSystems();
+  updateMeritUI();
+  updateAlmsButton();
+  const plots=$("plots");plots.innerHTML="";
+  state.plots.forEach((plot,index)=>{
+    ensurePlotPhase(plot);
+    const currentStage=stage(plot),status=plotStatus(plot);
+    const button=document.createElement("button");
+    button.type="button";
+    button.className=`plot ${currentStage} ${currentStage==="empty"?"empty":currentStage==="ready"?"ready":"growing"}`;
+    const name=plot.crop?CROPS[plot.crop].name:"";
+    button.innerHTML=`
+      <span class="plot-no">#${index+1}</span>
+      ${status?`<img class="status-badge" src="${STATUS_ICON[status]}" alt="${status}">`:""}
+      <div class="plot-inner">
+        <div class="crop">${cropIcon(plot)}</div>
+        ${name?`<div class="crop-name">${name}</div>`:""}
+        ${plot.crop?`<div class="timer">${plotTimerText(plot)}</div>`:""}
+      </div>`;
+    button.onclick=()=>tapPlot(index);
+    plots.appendChild(button);
+  });
+}
+function waterPlot(index){
+  const plot=state.plots[index],crop=CROPS[plot.crop];
+  plot.wateredAt=Date.now();
+  const finalMs=Math.max(60*1000,crop.totalMs-crop.waterMs);
+  if(Math.random()<Number(crop.wormChance||0)){
+    plot.phase="worm";plot.worm=true;plot.phaseEndsAt=0;
+    save();draw();showWeatherToast("🐛 เจอหนอนหลังรดน้ำ!");
+  }else{
+    plot.phase="growing2";plot.worm=false;plot.phaseEndsAt=Date.now()+finalMs;
+    save();draw();showWeatherToast("💧 รดน้ำแล้ว ต้นกำลังโต");
+  }
+}
+function clearWorm(index){
+  const plot=state.plots[index],crop=CROPS[plot.crop];
+  spendMerit(1,"กำจัดหนอน");
+  plot.phase="growing2";plot.worm=false;
+  plot.phaseEndsAt=Date.now()+Math.max(60*1000,crop.totalMs-crop.waterMs);
+  save();draw();
+  message("🐛 ไล่หนอนสำเร็จ",`ใช้ 1 กุศล • คงเหลือ ${state.merit} กุศล`);
+}
+function tapPlot(index){
+  if(guardResting())return;
+  const plot=state.plots[index];ensurePlotPhase(plot);
+  if(!plot.crop){plantMenu(index);return}
+  if(plot.phase==="needsWater"){
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>💧 รดน้ำ ${CROPS[plot.crop].name}</h2><p>กดบัวรดน้ำแล้วต้นจะเข้าสู่ขั้นโตต่อไป</p><button id="waterNowBtn" class="primary-spooky-action" type="button">รดน้ำ</button></section>`;
+    openModal();$("waterNowBtn").onclick=()=>{closeModal();waterPlot(index)};return;
+  }
+  if(plot.phase==="worm"){
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนมาแล้ว</h2><p>ต้นจะหยุดโตจนกว่าจะกำจัดหนอน ใช้ 1 คะแนนกุศล<br>คะแนนสามารถติดลบได้</p><button id="clearWormBtn" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button></section>`;
+    openModal();$("clearWormBtn").onclick=()=>{closeModal();clearWorm(index)};return;
+  }
+  if(plot.phase==="ready"){
+    state.bag[plot.crop]=(state.bag[plot.crop]||0)+1;
+    const name=CROPS[plot.crop].name;
+    state.plots[index]=emptyPlot();save();draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${name} ×1`);return;
+  }
+  message("ต้นกำลังเติบโต",`${CROPS[plot.crop].name} เหลือประมาณ ${plotTimerText(plot)}`);
+}
+function plantMenu(index){
+  $("modalContent").innerHTML=`
+    <h2>เลือกเมล็ดสำหรับแปลง #${index+1}</h2>
+    <div class="grid">
+      ${Object.entries(CROPS).map(([key,crop])=>`
+        <div class="tile spooky-seed-tile">
+          <img src="${crop.selectImg}" alt="${crop.name}" class="seed-choice-img">
+          <b>${crop.name}</b>
+          <p>เวลาโตประมาณ ${Math.round(crop.totalMs/60000)} นาที</p>
+          <button type="button" data-crop="${key}">ปลูก</button>
+        </div>`).join("")}
+    </div>`;
+  document.querySelectorAll("[data-crop]").forEach(button=>button.onclick=()=>{
+    const key=button.dataset.crop,crop=CROPS[key],now=Date.now();
+    state.plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false};
+    save();closeModal();draw();
+  });
+  openModal();
+}
+
+function dishCounts(){
+  const counts={};
+  RECIPES.forEach(r=>counts[r.id]=dishCount(r.id));
+  return counts;
+}
+function inventory(tab="crops"){
+  if(guardResting())return;
+  const dishMap=dishCounts();
+  const tabs=[
+    ["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["specials","🕯️ ของพิเศษ"]
+  ];
+  let body="";
+  if(tab==="crops"){
+    body=Object.entries(CROPS).map(([k,c])=>`<div class="inventory-item"><img src="${c.readyImg}" alt="${c.name}"><span>${c.name}</span><b>×${state.bag[k]||0}</b></div>`).join("");
+  }else if(tab==="products"){
+    body=Object.entries(ANIMAL_PRODUCTS).map(([k,p])=>`<div class="inventory-item"><img src="${p.image}" alt="${p.name}"><span>${p.name}</span><b>×${state.animalProducts[k]||0}</b></div>`).join("");
+  }else if(tab==="food"){
+    body=RECIPES.map(r=>`<div class="inventory-item"><img src="${r.image}" alt="${r.name}"><span>${r.name}</span><b>×${dishMap[r.id]||0}</b></div>`).join("");
+  }else{
+    const entries=Object.entries(state.specials||{});
+    body=entries.length?entries.map(([k,n])=>`<div class="inventory-item"><span>🕯️ ${k}</span><b>×${n}</b></div>`).join(""):`<p class="empty-feature">ยังไม่มีของพิเศษ</p>`;
+  }
+  $("modalContent").innerHTML=`
+    <section class="feature-panel inventory-panel">
+      <h2>🎒 กระเป๋าผี</h2>
+      <div class="inventory-tabs">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div>
+      <div class="inventory-grid">${body}</div>
+    </section>`;
+  document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+  openModal();
+}
+
+function removeDishIds(ids){
+  const needed={};
+  ids.filter(Boolean).forEach(id=>needed[id]=(needed[id]||0)+1);
+  for(const [id,count] of Object.entries(needed)){
+    if(dishCount(id)<count)return false;
+  }
+  for(const [id,count] of Object.entries(needed)){
+    let remaining=count;
+    state.dishes=state.dishes.filter(d=>{
+      if(remaining>0&&d&&d.id===id){remaining--;return false}
+      return true;
+    });
+  }
+  return true;
+}
+function selectedDishQuantities(ids){
+  const q={};ids.filter(Boolean).forEach(id=>q[id]=(q[id]||0)+1);return q;
+}
+function showDishPicker(target,index){
+  const selected=target==="house"?state.houseOfferings:target==="alms"?state.almsOfferings:[state.underwaterOffering];
+  const selectedQty=selectedDishQuantities(selected);
+  const available=RECIPES.filter(r=>dishCount(r.id)>(selectedQty[r.id]||0)-(selected[index]===r.id?1:0));
+  if(!available.length){message("ยังไม่มีอาหาร","ต้องคราฟอาหารสำเร็จก่อนจึงจะนำมาใช้ได้");return}
+  $("modalContent").innerHTML=`
+    <section class="feature-panel dish-picker-panel">
+      <h2>เลือกอาหารที่มี</h2>
+      <div class="dish-picker-grid">
+        ${available.map(r=>`<button type="button" data-pick-dish="${r.id}"><img src="${r.image}" alt="${r.name}"><b>${r.name}</b><small>มี ×${dishCount(r.id)}</small></button>`).join("")}
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-pick-dish]").forEach(button=>button.onclick=()=>{
+    if(target==="house")state.houseOfferings[index]=button.dataset.pickDish;
+    else if(target==="alms")state.almsOfferings[index]=button.dataset.pickDish;
+    else state.underwaterOffering=button.dataset.pickDish;
+    save();closeModal();renderScene();
+  });
+  openModal();
+}
+
+function renderHouseScene(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
+  clearExpiredRest();
+  const resting=isResting();
+  const worshipRemaining=Math.max(0,Number(state.houseWorshipUntil||0)-Date.now());
+  $("sceneInteractiveLayer").innerHTML=`
+    <button id="bedHotspot" class="bed-hotspot" type="button" aria-label="เตียงนอน">
+      <span id="bedCountdown" class="bed-countdown">${resting?formatLongCountdown(state.restUntil-Date.now()):"แตะเตียง"}</span>
+    </button>
+    <div class="house-altar-slots">
+      ${state.houseOfferings.map((recipeId,index)=>{
+        const recipe=recipeById(recipeId);
+        return `<button class="offering-slot" type="button" data-house-offering="${index}" ${resting||worshipRemaining>0?"disabled":""}>${recipe?`<img src="${recipe.image}" alt="${recipe.name}">`:"<span>+</span>"}</button>`;
+      }).join("")}
+    </div>
+    <button id="startGhostWorshipBtn" class="scene-action-button house-worship-button" type="button" ${resting||worshipRemaining>0?"disabled":""}>${worshipRemaining>0?`เปรตมารอรับเสบียงรอบต่อไป ${formatHM(worshipRemaining)}`:"เริ่มบูชาผี"}</button>`;
+  $("bedHotspot").onclick=showRestOptions;
+  if(!resting&&worshipRemaining<=0){
+    document.querySelectorAll("[data-house-offering]").forEach(b=>b.onclick=()=>showDishPicker("house",Number(b.dataset.houseOffering)));
+    $("startGhostWorshipBtn").onclick=()=>{
+      if(state.houseOfferings.some(x=>!x)){message("ยังเริ่มบูชาไม่ได้","กรุณาเลือกอาหารให้ครบทั้ง 3 เมนู");return}
+      if(!removeDishIds(state.houseOfferings)){message("อาหารไม่พอ","อาหารที่เลือกบางรายการไม่มีอยู่ในกระเป๋าแล้ว");return}
+      const reward=randInt(1,5);
+      state.houseOfferings=[null,null,null];
+      state.houseWorshipUntil=Date.now()+HOUSE_WORSHIP_COOLDOWN;
+      state.merit+=reward;save();updateMeritUI();renderHouseScene();
+      message("👻 บูชาผีสำเร็จ",`เปรตได้รับเสบียงแล้ว • ได้รับ ${reward} กุศล<br>เปรตมารอรับเสบียงรอบต่อไปใน 3 ชั่วโมง`);
+    };
+  }
+  stopSceneTimer();
+  sceneTimer=setInterval(()=>{
+    clearExpiredRest();
+    if(currentScene!=="house"){stopSceneTimer();return}
+    const needRefresh=(Number(state.houseWorshipUntil||0)>0&&Date.now()>=state.houseWorshipUntil)||(!isResting()&&resting);
+    if(needRefresh){renderHouseScene();return}
+    const bed=$("bedCountdown");if(bed&&isResting())bed.textContent=formatLongCountdown(state.restUntil-Date.now());
+    const btn=$("startGhostWorshipBtn");
+    if(btn&&Number(state.houseWorshipUntil)>Date.now())btn.textContent=`เปรตมารอรับเสบียงรอบต่อไป ${formatHM(state.houseWorshipUntil-Date.now())}`;
+  },1000);
+}
+function showRestConfirmation(type){
+  const isNap=type==="nap";
+  const warning=isNap?"ในระหว่างที่คุณงีบ คุณจะไม่สามารถทำกิจกรรมอะไรในฟาร์มได้จนกว่าเวลาจะครบ":"ระหว่างการเข้านอนจะไม่สามารถทำกิจกรรมใดใดในฟาร์มได้เลย จนกว่าระยะเวลาจะครบ";
+  $("modalContent").innerHTML=`
+    <section class="feature-panel important-warning-panel">
+      <div class="warning-symbol">⚠️</div>
+      <h2>${isNap?"ยืนยันการงีบ 2 ชั่วโมง":"ยืนยันการนอน 7 ชั่วโมง"}</h2>
+      <p>${warning}</p>
+      <p><b>เมื่อครบเวลาได้รับ ${REST_REWARDS[type]} กุศล</b></p>
+      <div class="confirm-actions"><button id="confirmRestBtn" class="danger-action" type="button">ยืนยัน</button><button id="cancelRestBtn" class="secondary-action" type="button">${isNap?"ไม่งีบดีกว่า":"ไม่นอนดีกว่า"}</button></div>
+    </section>`;
+  $("confirmRestBtn").onclick=()=>{
+    state.restType=type;state.restUntil=Date.now()+REST_DURATIONS[type];state.restRewardPending=true;
+    save();closeModal();renderHouseScene();
+  };
+  $("cancelRestBtn").onclick=closeModal;
+}
+
+function renderUnderwaterScene(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
+  const remaining=Math.max(0,Number(state.underwaterUntil||0)-Date.now());
+  const recipe=recipeById(state.underwaterOffering);
+  $("sceneInteractiveLayer").innerHTML=`
+    <button id="underwaterOfferingSlot" class="underwater-offering-slot offering-slot" type="button" ${remaining>0?"disabled":""}>${recipe?`<img src="${recipe.image}" alt="${recipe.name}">`:"<span>+</span>"}</button>
+    <button id="sendUnderwaterSupplyBtn" class="scene-action-button underwater-send-button" type="button" ${remaining>0?"disabled":""}>${remaining>0?`ส่งเสบียงได้อีกครั้งใน ${formatHM(remaining)}`:"ส่งเสบียงให้เจ้าแม่"}</button>`;
+  if(remaining<=0){
+    $("underwaterOfferingSlot").onclick=()=>showDishPicker("underwater",0);
+    $("sendUnderwaterSupplyBtn").onclick=()=>{
+      if(!state.underwaterOffering){message("ยังส่งเสบียงไม่ได้","กรุณาเลือกอาหารก่อน");return}
+      if(!removeDishIds([state.underwaterOffering])){message("อาหารไม่พอ","อาหารรายการนี้ไม่มีอยู่ในกระเป๋าแล้ว");return}
+      const reward=randInt(1,3);
+      state.underwaterOffering=null;state.underwaterUntil=Date.now()+UNDERWATER_COOLDOWN;state.merit+=reward;
+      save();updateMeritUI();renderUnderwaterScene();
+      message("🫧 เจ้าแม่ได้รับเสบียงแล้ว",`ขอบใจชาวสวนมาก<br>เจ้าแม่มีอะไรจะให้ปลอบใจ +${reward} คะแนนแต้มกุศล`);
+    };
+  }
+  stopSceneTimer();
+  sceneTimer=setInterval(()=>{
+    if(currentScene!=="underwater"){stopSceneTimer();return}
+    if(Number(state.underwaterUntil||0)>0&&Date.now()>=state.underwaterUntil){state.underwaterUntil=0;save();renderUnderwaterScene();return}
+    const b=$("sendUnderwaterSupplyBtn");
+    if(b&&state.underwaterUntil>Date.now())b.textContent=`ส่งเสบียงได้อีกครั้งใน ${formatHM(state.underwaterUntil-Date.now())}`;
+  },60000);
+}
+
+function updateAlmsButton(){
+  const btn=$("almsBtn");if(!btn)return;
+  const small=btn.querySelector("small");
+  const p=bangkokPartsFull(),mins=p.hour*60+p.minute;
+  const done=state&&state.lastAlmsDate===p.dateKey;
+  if(done){small.textContent=`ใส่บาตรวันนี้แล้ว • รอบใหม่ ${formatHM(msUntilBangkokHour(6))}`;return}
+  if(mins>=ALMS_START_MINUTE&&mins<ALMS_END_MINUTE){small.textContent=`พระกำลังบิณฑบาต • เหลือ ${formatHM((ALMS_END_MINUTE-mins)*60000)}`;return}
+  small.textContent=`พระมารอบต่อไปใน ${formatHM(msUntilBangkokHour(6))}`;
+}
+function showAlms(){
+  if(guardResting())return;
+  openScene("almsSeated");
+}
+function renderAlmsScene(){
+  setSceneNav({nextText:"กลับไปที่แปลงผัก",nextAction:returnToFarm});
+  const p=bangkokPartsFull(),mins=p.hour*60+p.minute,done=state.lastAlmsDate===p.dateKey;
+  const open=mins>=ALMS_START_MINUTE&&mins<ALMS_END_MINUTE&&!done;
+  if(done){
+    $("sceneScreen").style.backgroundImage=`url("${SCENES.almsBlessing.image}")`;
+    $("sceneInteractiveLayer").innerHTML=`<div class="alms-result-card"><b>🙏 วันนี้ใส่บาตรเรียบร้อยแล้ว</b><span>พระมาบิณฑบาตรอบต่อไปใน ${formatHM(msUntilBangkokHour(6))}</span></div>`;
+  }else if(!open){
+    $("sceneScreen").style.backgroundImage=`url("${SCENES.almsSeated.image}")`;
+    const text=mins>=ALMS_END_MINUTE?"วันนี้พระกลับวัดแล้ว":"พระยังไม่มาบิณฑบาต";
+    $("sceneInteractiveLayer").innerHTML=`<div class="alms-result-card"><b>${text}</b><span>พระมาบิณฑบาตรอบต่อไปใน ${formatHM(msUntilBangkokHour(6))}</span></div>`;
+  }else{
+    $("sceneScreen").style.backgroundImage=`url("${SCENES.almsSeated.image}")`;
+    $("sceneInteractiveLayer").innerHTML=`
+      <div class="alms-slots">${state.almsOfferings.map((id,i)=>{const r=recipeById(id);return `<button class="alms-offering-slot offering-slot" data-alms-slot="${i}" type="button">${r?`<img src="${r.image}" alt="${r.name}">`:"<span>+</span>"}</button>`}).join("")}</div>
+      <button id="giveAlmsBtn" class="scene-action-button alms-give-button" type="button">ใส่บาตร</button>`;
+    document.querySelectorAll("[data-alms-slot]").forEach(b=>b.onclick=()=>showDishPicker("alms",Number(b.dataset.almsSlot)));
+    $("giveAlmsBtn").onclick=()=>{
+      if(state.almsOfferings.some(x=>!x)){message("ยังใส่บาตรไม่ได้","กรุณาใส่อาหารให้ครบทั้ง 4 บาตร");return}
+      if(!removeDishIds(state.almsOfferings)){message("อาหารไม่พอ","อาหารที่เลือกบางรายการไม่มีอยู่ในกระเป๋าแล้ว");return}
+      const reward=randInt(1,5);
+      state.almsOfferings=[null,null,null,null];state.lastAlmsDate=p.dateKey;state.merit+=reward;
+      save();updateMeritUI();renderAlmsScene();
+      message("🙏 ใส่บาตรเรียบร้อย",`พระให้พรแก่ชาวสวน • ได้รับ ${reward} กุศล`);
+    };
+  }
+  stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene==="almsSeated"||currentScene==="almsBlessing")renderAlmsScene()},60000);
+}
+function renderScene(){
+  if(currentScene==="house"){renderHouseScene();return}
+  if(currentScene==="underwater"){renderUnderwaterScene();return}
+  if(currentScene==="almsSeated"||currentScene==="almsBlessing"){renderAlmsScene();return}
+  renderAnimalScene(currentScene);
+}
+
+function challengeFarm(){
+  if(guardResting())return;
+  if((Number(state.merit)||0)<CHALLENGE_COST){message("กุศลไม่พอ",`ท้าทายภูติผีต้องใช้ ${CHALLENGE_COST} กุศล`);return}
+  const active=state.plots.some(p=>{ensurePlotPhase(p);return p.crop&&(p.phase==="growing1"||p.phase==="growing2")});
+  if(!active){message("ยังท้าทายไม่ได้","ตอนนี้ไม่มีพืชที่กำลังเติบโต");return}
+  $("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>👻 ท้าทายภูติผี</h2><p>ใช้ 5 กุศล • สุ่มฝน หมอกผี หิ่งห้อย หรือดาวตก 30 วินาที<br>และลดเวลาที่เหลือของพืชที่กำลังโต 10%</p><div class="confirm-actions"><button id="confirmChallengeBtn" class="danger-action" type="button">เริ่มท้าทาย</button><button id="cancelChallengeBtn" class="secondary-action" type="button">ยกเลิก</button></div></section>`;
+  openModal();
+  $("confirmChallengeBtn").onclick=()=>{closeModal();startChallengeEffect()};
+  $("cancelChallengeBtn").onclick=closeModal;
+}
+function startChallengeEffect(){
+  spendMerit(CHALLENGE_COST,"ท้าทายภูติผี");
+  state.plots.forEach(p=>{
+    ensurePlotPhase(p);
+    if(p.crop&&(p.phase==="growing1"||p.phase==="growing2")){
+      const rem=Math.max(0,p.phaseEndsAt-Date.now());
+      p.phaseEndsAt=Date.now()+Math.round(rem*.90);
+    }
+  });
+  const effects=["rain","fog","fireflies","shootingstar"];
+  const effect=effects[Math.floor(Math.random()*effects.length)];
+  const game=$("gameScreen"),fx=$("challengeFx");
+  game.classList.remove("challenge-rain");fx.className="challenge-fx";
+  if(effect==="rain")game.classList.add("challenge-rain");
+  else fx.classList.add(`fx-${effect}`,"show");
+  showWeatherToast({rain:"🌧️ ฝนภูติ",fog:"👻 หมอกผี",fireflies:"✨ หิ่งห้อย",shootingstar:"🌠 ดาวตก"}[effect]+" • พืชเร็วขึ้น 10%");
+  save();draw();
+  setTimeout(()=>{game.classList.remove("challenge-rain");fx.className="challenge-fx hidden"},CHALLENGE_DURATION);
+}
+
+function friendlyGhostReward(){
+  if(guardResting())return;
+  const remain=Math.max(0,Number(state.friendlyGhostUntil||0)-Date.now());
+  if(remain>0){message("👻 กดบ่อยเกินไปค่ะแม่ รอก่อน",`ผีน้อยใจดีมาแจกของได้อีกใน ${formatFriendlyCountdown(remain)}`);return}
+  const qty=randInt(1,2);
+  const pool=[
+    ...Object.keys(CROPS).map(k=>({type:"crop",key:k,name:CROPS[k].name})),
+    ...Object.keys(ANIMAL_PRODUCTS).map(k=>({type:"product",key:k,name:ANIMAL_PRODUCTS[k].name})),
+    ...RECIPES.map(r=>({type:"dish",key:r.id,name:r.name})),
+    {type:"merit",key:"merit",name:"กุศล"}
+  ];
+  const prize=pool[Math.floor(Math.random()*pool.length)];
+  if(prize.type==="crop")state.bag[prize.key]=(state.bag[prize.key]||0)+qty;
+  if(prize.type==="product")state.animalProducts[prize.key]=(state.animalProducts[prize.key]||0)+qty;
+  if(prize.type==="dish"){const r=recipeById(prize.key);for(let i=0;i<qty;i++)state.dishes.push({id:r.id,name:r.name,image:r.image,time:new Date().toLocaleString("th-TH")})}
+  if(prize.type==="merit")state.merit+=qty;
+  state.friendlyGhostUntil=Date.now()+FRIENDLY_GHOST_COOLDOWN;
+  save();updateMeritUI();
+  message("👻 ผีน้อยใจดี",`รับ ${qty}x ${prize.name}`);
+}
+
+function showShop(){
+  if(guardResting())return;
+  $("modalContent").innerHTML=`
+    <section class="feature-panel shop-panel">
+      <button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือน</button>
+      <h2>🕯️ ร้านค้าสัตว์วิญญาณ</h2>
+      <p class="feature-subtitle">สัตว์จากอีกภพกำลังรอเจ้าของ</p>
+      <div class="shop-grid">${SHOP_ITEMS.map(item=>`<article class="shop-card"><img class="shop-animal-img" src="${item.image}" alt="${item.name}"><b>${item.name}</b><button class="shop-worship-button" type="button" data-shop-worship="${item.id}">บูชา</button></article>`).join("")}</div>
+    </section>`;
+  $("stableEntranceBtn").onclick=()=>{closeModal();openScene("chicken")};
+  document.querySelectorAll("[data-shop-worship]").forEach(button=>button.onclick=()=>message("บูชาสัตว์วิญญาณ","แจ้งให้ยัยหนูทราบแล้วเรียบร้อย"));
+  openModal();
+}
+function showAnimalApprovalChoices(sceneName,slotIndex){
+  const item=animalById(sceneName);if(!item)return;
+  if(state.animalRequests[sceneName][slotIndex]){message("🐾 คำขอถูกส่งแล้ว","ส่งคำขอเรียบร้อยแล้ว");return}
+  $("modalContent").innerHTML=`<section class="feature-panel animal-picker-panel"><h2>${item.name}</h2><div class="animal-picker-grid single-animal-choice"><button id="requestAnimalBtn" type="button"><img src="${item.image}" alt="${item.name}"><b>${item.name}</b><small>ต้องได้รับการอนุมัติจากยัยหนูก่อนน๊า</small></button></div></section>`;
+  openModal();
+  $("requestAnimalBtn").onclick=()=>{
+    state.animalRequests[sceneName][slotIndex]=true;save();closeModal();renderAnimalScene(sceneName);message("🐾 สัตว์วิญญาณ","ส่งคำขอเรียบร้อยแล้ว");
+  };
+}
+function animalSlotHTML(sceneName,index){
+  const item=animalById(sceneName);
+  const animal=state.animals[sceneName][index];
+  const pending=state.animalRequests[sceneName][index];
+  if(animal){
+    const remaining=Math.max(0,Number(animal.readyAt||0)-Date.now());
+    const ready=remaining<=0;
+    return `<button class="animal-owned-slot ${ready?"product-ready":""}" data-owned-animal="${index}" style="left:${ANIMAL_SLOT_POSITIONS[index][0]}%;top:${ANIMAL_SLOT_POSITIONS[index][1]}%" type="button">
+      <img src="${item.image}" alt="${item.name}">${animal.bonus?'<span class="animal-merit-star">⭐</span>':""}<small>${ready?`${item.productName}พร้อมเก็บ`:`กำลังผลิต ${item.productName}<br>${formatHM(remaining)}`}</small>
+    </button>`;
+  }
+  return `<button class="animal-add-slot ${pending?"pending":""}" type="button" data-animal-slot="${index}" style="left:${ANIMAL_SLOT_POSITIONS[index][0]}%;top:${ANIMAL_SLOT_POSITIONS[index][1]}%">${pending?`<img src="${item.image}" alt="${item.name}"><small>รออนุมัติ</small>`:"+"}</button>`;
+}
+function renderAnimalScene(sceneName){
+  const nav={
+    chicken:{backText:"กลับแปลงผัก",backAction:returnToFarm,nextText:"คอกต่อไป",nextAction:()=>openScene("fish")},
+    fish:{backText:"กลับไปที่คอกไก่",backAction:()=>openScene("chicken"),nextText:"คอกต่อไป",nextAction:()=>openScene("pig")},
+    pig:{backText:"กลับไปที่บ่อปลา",backAction:()=>openScene("fish"),nextText:"คอกต่อไป",nextAction:()=>openScene("cow")},
+    cow:{nextText:"กลับไปที่แปลงผัก",nextAction:returnToFarm}
+  }[sceneName]||{};
+  setSceneNav(nav);processAnimalSystems();
+  $("sceneInteractiveLayer").innerHTML=`<div class="animal-slots">${ANIMAL_SLOT_POSITIONS.map((_,i)=>animalSlotHTML(sceneName,i)).join("")}</div>`;
+  document.querySelectorAll("[data-animal-slot]").forEach(b=>b.onclick=()=>showAnimalApprovalChoices(sceneName,Number(b.dataset.animalSlot)));
+  document.querySelectorAll("[data-owned-animal]").forEach(b=>b.onclick=()=>collectAnimal(sceneName,Number(b.dataset.ownedAnimal)));
+  stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene===sceneName)renderAnimalScene(sceneName)},60000);
+}
+function processAnimalSystems(){
+  if(!state||!state.animals)return;
+  const now=Date.now();
+  if(now>=Number(state.animalBonusNextAt||0)){
+    const owned=[];
+    SHOP_ITEMS.forEach(item=>state.animals[item.id].forEach((a,i)=>{if(a)owned.push([item.id,i])}));
+    owned.forEach(([id,i])=>{if(state.animals[id][i])state.animals[id][i].bonus=false});
+    if(owned.length){
+      const count=Math.min(owned.length,randInt(1,3));
+      owned.sort(()=>Math.random()-.5).slice(0,count).forEach(([id,i])=>state.animals[id][i].bonus=true);
+    }
+    state.animalBonusNextAt=now+ANIMAL_BONUS_INTERVAL;save();
+  }
+}
+function collectAnimal(sceneName,index){
+  const item=animalById(sceneName),animal=state.animals[sceneName][index];if(!item||!animal)return;
+  if(animal.bonus){
+    const merit=randInt(1,2);animal.bonus=false;state.merit+=merit;save();updateMeritUI();renderAnimalScene(sceneName);message("⭐ โบนัสสัตว์วิญญาณ",`${item.name} มอบ +${merit} กุศล`);return;
+  }
+  if(Date.now()<Number(animal.readyAt||0)){message("ยังผลิตไม่เสร็จ",`${item.productName} พร้อมใน ${formatHM(animal.readyAt-Date.now())}`);return}
+  let qty=1;
+  if(Math.random()<.12)qty=Math.random()<.82?2:3;
+  state.animalProducts[item.product]=(state.animalProducts[item.product]||0)+qty;
+  animal.readyAt=Date.now()+item.productionMs;save();renderAnimalScene(sceneName);
+  message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`);
+}
+// ฟังก์ชันนี้เตรียมไว้สำหรับตอนมีระบบอนุมัติกลางในอนาคต
+function grantAnimal(sceneName,index){
+  const item=animalById(sceneName);if(!item||!state.animals[sceneName]||state.animals[sceneName][index])return false;
+  state.animals[sceneName][index]={readyAt:Date.now()+item.productionMs,bonus:false};
+  state.animalRequests[sceneName][index]=false;save();return true;
+}
+
+function can(recipe){return Object.entries(recipe.need).every(([key,count])=>(state.bag[key]||0)>=count)}
+function ingredientText(recipe){return Object.entries(recipe.need).map(([key,count])=>`<span>${CROPS[key].icon} ${CROPS[key].name} ×${count}</span>`).join("")}
+function recipeCard(recipe){
+  const locked=recipe.night&&!isNightCraftOpen();
+  return `<article class="recipe-card ${recipe.night?"night-recipe-card":""}">
+    <div class="craft-chance-badge">🎲 ${recipe.chance}%</div>
+    <img src="${recipe.image}" alt="${recipe.name}">
+    <h3>${recipe.icon} ${recipe.name}</h3>
+    <small class="difficulty-label">${recipe.difficulty} • กุศล ${recipe.reward[0]}–${recipe.reward[1]}</small>
+    <div class="recipe-needs">${ingredientText(recipe)}</div>
+    <button type="button" data-confirm-craft="${recipe.id}" ${locked?"disabled":""}>${locked?"เปิด 22:00–02:00":"คราฟ"}</button>
+  </article>`;
+}
+function kitchen(){
+  if(guardResting())return;
+  const normal=RECIPES.filter(r=>!r.night),night=RECIPES.filter(r=>r.night);
+  const nightOpen=isNightCraftOpen();
+  $("modalContent").innerHTML=`
+    <section class="feature-panel recipe-catalog-panel">
+      <h2>📖 สมุดเมนูอาหาร</h2>
+      <div class="recipe-section-title">เมนูทั่วไป</div>
+      <div class="recipe-catalog-grid">${normal.map(recipeCard).join("")}</div>
+      <div class="night-menu-frame">
+        <h2>🌙 เมนูท้าวิญญาณรอบดึก</h2>
+        <p>${nightOpen?`เปิดให้คราฟถึง 02:00 น.`:`เปิดเวลา 22:00–02:00 • เปิดอีกใน ${formatHM(msUntilNightCraft())}`}</p>
+        <div class="recipe-catalog-grid">${night.map(recipeCard).join("")}</div>
+      </div>
+    </section>`;
+  document.querySelectorAll("[data-confirm-craft]").forEach(b=>b.onclick=()=>confirmCraft(b.dataset.confirmCraft));
+  openModal();
+}
+function confirmCraft(id){
+  const recipe=recipeById(id);if(!recipe)return;
+  if(recipe.night&&!isNightCraftOpen()){message("🌙 ยังไม่ถึงเวลารอบดึก",`เมนูนี้เปิด 22:00–02:00 เวลาไทย • เหลือ ${formatHM(msUntilNightCraft())}`);return}
+  $("modalContent").innerHTML=`
+    <section class="feature-panel craft-warning-panel">
+      <div class="craft-chance-big">โอกาสสำเร็จ ${recipe.chance}%</div>
+      <img src="${recipe.image}" alt="${recipe.name}"><h2>${recipe.name}</h2>
+      <p>หากคราฟสำเร็จ คุณจะได้รับ ${recipe.reward[0]}–${recipe.reward[1]} แต้มกุศล หากคราฟไม่สำเร็จ วัตถุดิบที่ใช้ครั้งนี้ก็จะสูญเปล่า</p>
+      <div class="confirm-actions"><button id="confirmCraftBtn" class="danger-action" type="button">ยืนยัน</button><button id="cancelCraftBtn" class="secondary-action" type="button">ไม่คราฟค่ะพี่ป๊อด</button></div>
+    </section>`;
+  $("confirmCraftBtn").onclick=()=>{if(!can(recipe)){message("วัตถุดิบไม่ครบ",`ยังไม่สามารถคราฟ ${recipe.name} ได้`);return}craft(id)};
+  $("cancelCraftBtn").onclick=kitchen;
+}
+function craft(id){
+  const recipe=recipeById(id);if(!recipe||!can(recipe))return;
+  Object.entries(recipe.need).forEach(([key,count])=>state.bag[key]-=count);
+  const success=Math.random()*100<recipe.chance;
+  if(success){
+    const reward=randInt(recipe.reward[0],recipe.reward[1]);
+    state.dishes.push({id:recipe.id,name:recipe.name,image:recipe.image,time:new Date().toLocaleString("th-TH")});
+    state.merit+=reward;save();updateMeritUI();
+    $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`;
+  }else{
+    save();
+    $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
+  }
+}
+
+function updateThaiClock(){
+  const now=getBangkokTimeParts();
+  $("thaiClock").textContent=now.text;
+  $("weatherClockEmoji").textContent=now.hour>=6&&now.hour<18?"☀️":"🌙";
+  updateAlmsButton();
+}
+function startGameExtras(){
+  updateProfileName();loadAvatar();updateTopPlayerName();applyFarmMode(getSavedFarmMode(),{persist:false});
+  updateThaiClock();updateMeritUI();buildRainDrops();
+  if(thaiClockTimer)clearInterval(thaiClockTimer);
+  thaiClockTimer=setInterval(updateThaiClock,60*1000);
+  beginRain();
+}
+
 function bindEvents(){
   $("startBtn").onclick=start;
   $("howBtn").onclick=showHow;
@@ -969,6 +1692,9 @@ function bindEvents(){
   $("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};
   $("forecastBtn").onclick=showForecast;
   $("modeBtn").onclick=showModeChooser;
+  if($("almsBtn"))$("almsBtn").onclick=showAlms;
+  if($("challengeBtn"))$("challengeBtn").onclick=challengeFarm;
+  if($("friendlyGhostHotspot"))$("friendlyGhostHotspot").onclick=friendlyGhostReward;
   $("closeModeOverlay").onclick=closeModeChooser;
   $("modeOverlay").onclick=event=>{if(event.target===$("modeOverlay"))closeModeChooser()};
   document.querySelectorAll("[data-mode-choice]").forEach(button=>{

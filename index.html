@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=47">
+  <link rel="stylesheet" href="style.css?v=60">
 </head>
 <body>
   <main id="app">
@@ -61,20 +61,24 @@
       <!-- แถบจำนวนกุศลรวม เตรียมไว้สำหรับระบบแต้มในอนาคต -->
       <div id="meritStatus" class="merit-status" aria-live="polite">
         <span>🙏 จำนวนกุศลรวม</span>
-        <strong id="meritTotal">000</strong>
+        <strong id="meritTotal">300</strong>
       </div>
 
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
       <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
+      <button id="almsBtn" class="activity-button alms-button" type="button"><b>🪷 พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></button>
+      <button id="challengeBtn" class="activity-button challenge-button" type="button"><b>👻 ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></button>
 
       <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
       <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
       <button id="wellHotspot" class="scene-hotspot well-hotspot" type="button" aria-label="แตะบริเวณบ่อน้ำ"></button>
+      <button id="friendlyGhostHotspot" class="friendly-ghost-hotspot" type="button" aria-label="ผีน้อยใจดี"></button>
 
       <!-- เอฟเฟกต์ฝน -->
       <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
         <div id="rainDrops" class="rain-drops"></div>
       </div>
+      <div id="challengeFx" class="challenge-fx hidden" aria-hidden="true"></div>
       <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">🌧️ ฝนผีมาเยือน</div>
 
       <!-- พื้นที่กดเมนูบนภาพพื้นหลัง -->
@@ -117,6 +121,6 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=38"></script>
+  <script src="game.js?v=60"></script>
 </body>
 </html>
