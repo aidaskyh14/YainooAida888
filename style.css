@@ -577,3 +577,49 @@ button{touch-action:manipulation}
 .coconut-boost-btn:disabled{opacity:.45}
 
 .special-coconut-item img{width:50px;height:50px;object-fit:contain}
+
+/* ======================================================================
+   V1 ONLINE LAUNCH — UI ใหม่ใช้พื้นที่ว่างเดิม ไม่ดันแถบข้อมูลลงล่าง
+   ====================================================================== */
+.notification-button{
+  position:absolute;left:21.2%;top:8.15%;width:22.5%;height:4.5%;z-index:86;
+  border:2px solid rgba(151,101,60,.88);border-radius:14px;
+  background:linear-gradient(180deg,rgba(82,55,88,.97),rgba(43,29,53,.97));
+  color:#fff0c9;font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;
+  font-size:clamp(8px,2.15vw,13px);font-weight:900;cursor:pointer;
+  box-shadow:0 5px 11px rgba(39,18,42,.38),inset 0 1px rgba(255,238,198,.22);
+}
+.notification-button:active{transform:scale(.97)}
+.notification-badge{position:absolute;right:-5px;top:-8px;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border:2px solid #ffe2a7;border-radius:999px;background:#8d315f;color:#fff;font-size:9px;font-weight:950;box-shadow:0 3px 7px rgba(0,0,0,.38)}
+
+.shop-category-tabs,.notification-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 11px}
+.shop-category-tabs button,.notification-tabs button{padding:8px 5px;border:1px solid #9d745c;border-radius:11px;background:#4b3553;color:#f6e5c8;font-size:11px;font-weight:950}
+.shop-category-tabs button.active,.notification-tabs button.active{background:#7b4a73;box-shadow:0 0 0 2px #d6a26a inset}
+.shop-price{position:relative;z-index:1;display:block;margin:-4px 0 8px;color:#ffd77d;font-size:10px;font-weight:900}
+
+.mission-item-v1{grid-template-columns:31px 1fr auto}
+.mission-item-v1 .mission-text{display:grid;gap:3px}
+.mission-item-v1 .mission-text small{color:#dbc4d8;font-size:9px;font-weight:750}
+.mission-item-v1>button{min-width:70px;padding:7px 6px;border:1px solid #d8aa69;border-radius:10px;background:#7a4c71;color:#fff0cf;font-size:9px;font-weight:950}
+.mission-item-v1>button:disabled{opacity:.48}
+
+.friend-rank-row{display:grid;grid-template-columns:34px 36px minmax(0,1fr) auto;gap:7px}
+.friend-rank{font-size:12px;font-weight:950;color:#754466;text-align:center}
+.friend-info{display:grid;gap:2px;min-width:0}.friend-info small{font-size:9px;color:#765d70}
+.friend-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}.friend-actions button{padding:6px 5px;border:0;border-radius:9px;background:#67425f;color:#fff0cf;font-size:8px;font-weight:900}.friend-actions button:disabled{opacity:.4}.friend-self{font-size:9px;font-weight:950;color:#7b526f}
+
+.visitor-banner{position:absolute;left:21%;right:2%;top:18.4%;z-index:105;display:flex;align-items:center;justify-content:space-between;gap:7px;padding:6px 8px;border:2px solid #a87255;border-radius:12px;background:rgba(55,35,61,.95);color:#fff0cf;font-size:clamp(8px,2vw,11px);font-weight:900;box-shadow:0 5px 12px rgba(0,0,0,.35)}
+.visitor-banner button{padding:5px 7px;border:1px solid #e0b56f;border-radius:9px;background:#8b557c;color:#fff;font-size:9px;font-weight:950}
+.game-screen.visiting-friend .avatar-button,.game-screen.visiting-friend .profile-name-button,.game-screen.visiting-friend .top-player-name-button,.game-screen.visiting-friend .weather-clock,.game-screen.visiting-friend .rain-status,.game-screen.visiting-friend .forecast-button,.game-screen.visiting-friend .merit-status,.game-screen.visiting-friend .mode-button,.game-screen.visiting-friend .notification-button,.game-screen.visiting-friend .activity-button,.game-screen.visiting-friend .scene-hotspot,.game-screen.visiting-friend .friendly-ghost-hotspot,.game-screen.visiting-friend .coconut-garden-hotspot,.game-screen.visiting-friend .bottom-nav-hotspots{pointer-events:none!important}
+
+.gift-item-list{display:grid;gap:7px;max-height:48svh;overflow:auto}.gift-item-option{display:grid;grid-template-columns:22px 48px 1fr;align-items:center;gap:6px;padding:7px;border:1px solid #bc956b;border-radius:12px;background:rgba(255,248,224,.74)}.gift-item-option img{width:46px;height:46px;object-fit:contain}.gift-item-option span{font-size:10px;font-weight:900}.gift-item-option small{display:block;color:#765d70;font-size:8px}.gift-qty-label{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0;font-size:11px;font-weight:900}.gift-qty-label input{width:80px;padding:7px;border:1px solid #a47b5e;border-radius:9px}.gift-send-btn{width:100%;padding:10px;border:0;border-radius:12px}
+
+.notification-list{display:grid;gap:8px;max-height:58svh;overflow:auto;padding-right:2px}.notification-card{display:grid;gap:4px;padding:9px 10px;border:1px solid #c09a70;border-radius:13px;background:rgba(255,248,224,.8);color:#53384d}.notification-card.unread{border-color:#8a4e7d;box-shadow:0 0 0 2px rgba(138,78,125,.14)}.notification-card b{font-size:11px}.notification-card span{font-size:10px;line-height:1.35}.notification-card small{font-size:8px;color:#7b6476}.notification-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px}.notification-actions button{padding:6px;border:0;border-radius:9px;background:#704667;color:#fff0cf;font-size:9px;font-weight:900}.notification-actions button:disabled{opacity:.5}.admin-center-entry{width:100%;margin:0 0 10px;padding:8px;border:1px solid #bc8b59;border-radius:11px;background:#4f3157;color:#ffd985;font-weight:950}
+
+.admin-section{margin-top:11px;padding:10px;border:1px solid #b68b65;border-radius:14px;background:rgba(255,249,229,.64)}.admin-section h3{margin:0 0 8px;font-size:12px}.admin-request-list{display:grid;gap:7px;max-height:32svh;overflow:auto}.admin-request-card{display:grid;gap:4px;padding:8px;border:1px solid #c4a078;border-radius:11px;background:#fff8e5}.admin-request-card b{font-size:10px}.admin-request-card span,.admin-request-card small{font-size:9px}.admin-request-card>div{display:grid;grid-template-columns:1fr 1fr;gap:5px}.admin-request-card button,.admin-section>button{padding:7px;border:0;border-radius:9px;background:#6f4667;color:#fff0d0;font-size:9px;font-weight:950}.admin-section input,.admin-section textarea,.admin-section select{width:100%;margin:4px 0;padding:8px;border:1px solid #ad8662;border-radius:9px;background:#fffaf0;color:#4d3349;font-size:10px}.admin-section textarea{min-height:74px;resize:vertical}
+
+.animal-ready-banner{position:absolute;left:27%;right:27%;top:4.2%;z-index:10;padding:5px 7px;border:1px solid rgba(255,226,174,.85);border-radius:999px;background:rgba(49,31,55,.9);color:#fff0cf;text-align:center;font-size:clamp(7px,1.8vw,10px);font-weight:900}.animal-expired{filter:grayscale(.65);opacity:.72}.animal-detail-panel{text-align:center}.animal-detail-img{display:block;width:min(180px,42vw);height:min(130px,31vw);margin:0 auto;object-fit:contain}.animal-detail-panel>p{font-size:11px;line-height:1.55}.animal-detail-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0}.animal-detail-actions button{padding:8px;border:0;border-radius:10px;font-size:9px;font-weight:950}.animal-boost-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px;padding:8px;border:1px solid #a87c5c;border-radius:13px;background:#51374f}.animal-boost-panel h3{grid-column:1/-1;margin:0;color:#fff0cf;font-size:11px}.animal-boost-panel button{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:4px;padding:5px;border:1px solid #c99b69;border-radius:10px;background:#f5e4c4;color:#51384d;text-align:left}.animal-boost-panel img{width:40px;height:40px;object-fit:contain}.animal-boost-panel span{font-size:9px;font-weight:900}.animal-boost-panel small{display:block;font-size:7px;color:#775d70}
+
+.coconut-quota-label{position:absolute;left:35%;top:3.2%;z-index:12;padding:5px 8px;border:2px solid #aa744e;border-radius:999px;background:rgba(52,34,58,.94);color:#fff0cf;font-size:clamp(8px,2vw,11px);font-weight:950}.coconut-history-btn{position:absolute;right:2.2%;top:max(2.2%,env(safe-area-inset-top));z-index:13;padding:7px 9px;border:2px solid #aa744e;border-radius:11px;background:rgba(52,34,58,.96);color:#fff0cf;font-size:clamp(8px,2vw,11px);font-weight:950}.coconut-loading{position:absolute;left:18%;right:18%;top:45%;padding:10px;border-radius:14px;background:rgba(52,34,58,.92);color:#fff0cf;text-align:center;font-weight:900}.special-craft-section-title{margin:12px 0 7px;padding:6px;border-radius:10px;background:#4f3357;color:#fff0cf;text-align:center;font-size:11px;font-weight:950}
+
+@media(max-width:420px){.friend-rank-row{grid-template-columns:29px 32px minmax(0,1fr) auto}.friend-actions{grid-template-columns:1fr}.friend-actions button{font-size:7.5px}.mission-item-v1{grid-template-columns:28px 1fr auto}.mission-item-v1>button{min-width:60px;font-size:8px}.notification-button{font-size:clamp(7px,1.9vw,11px)}}

@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=61">
+  <link rel="stylesheet" href="style.css?v=70">
 </head>
 <body>
   <main id="app">
@@ -66,6 +66,7 @@
 
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
       <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
+       <button id="notificationBtn" class="notification-button" type="button" aria-label="การแจ้งเตือน"><span>🔔 แจ้งเตือน</span><b id="notificationBadge" class="notification-badge hidden">0</b></button>
       <button id="almsBtn" class="activity-button alms-button" type="button"><b>🪷 พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></button>
       <button id="challengeBtn" class="activity-button challenge-button" type="button"><b>👻 ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></button>
 
@@ -121,7 +122,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=1"></script>
+  <script src="daily-missions.js?v=2"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -133,13 +134,29 @@
     import {
       getAuth,
       signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
       signOut,
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
     import {
       getFirestore,
       doc,
-      getDoc
+      getDoc,
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      where,
+      orderBy,
+      limit,
+      runTransaction,
+      writeBatch,
+      serverTimestamp,
+      onSnapshot,
+      increment
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -173,13 +190,33 @@
           const credential=await signInWithEmailAndPassword(auth,email,password);
           return credential.user;
         },
+        async signInOrCreate(email,password){
+          try{
+            const credential=await signInWithEmailAndPassword(auth,email,password);
+            return credential.user;
+          }catch(error){
+            const code=String(error?.code||"");
+            if(!["auth/user-not-found","auth/invalid-credential","auth/invalid-login-credentials"].includes(code))throw error;
+            try{
+              const credential=await createUserWithEmailAndPassword(auth,email,password);
+              return credential.user;
+            }catch(createError){
+              if(String(createError?.code||"")==="auth/email-already-in-use") {
+                const credential=await signInWithEmailAndPassword(auth,email,password);
+                return credential.user;
+              }
+              throw createError;
+            }
+          }
+        },
         async signOut(){ await signOut(auth); },
         async getSignedInMember(){
           const user=auth.currentUser;
           if(!user)return null;
           const snap=await getDoc(doc(db,"members",user.uid));
           return snap.exists()?{id:snap.id,...snap.data()}:null;
-        }
+        },
+        firestore:{doc,getDoc,setDoc,updateDoc,deleteDoc,collection,addDoc,getDocs,query,where,orderBy,limit,runTransaction,writeBatch,serverTimestamp,onSnapshot,increment}
       };
 
       window.firebaseBridge=bridge;
@@ -189,6 +226,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=63"></script>
+  <script src="game.js?v=70"></script>
 </body>
 </html>
