@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=70">
+  <link rel="stylesheet" href="style.css?v=80">
 </head>
 <body>
   <main id="app">
@@ -73,6 +73,7 @@
       <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
       <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
       <button id="wellHotspot" class="scene-hotspot well-hotspot" type="button" aria-label="แตะบริเวณบ่อน้ำ"></button>
+      <button id="riverHotspot" class="scene-hotspot river-hotspot" type="button" aria-label="แตะบริเวณแม่น้ำเพื่อไปบ่อแมงกะพรุน"></button>
       <button id="friendlyGhostHotspot" class="friendly-ghost-hotspot" type="button" aria-label="ผีน้อยใจดี"></button>
       <button id="coconutGardenHotspot" class="coconut-garden-hotspot" type="button" aria-label="เข้าสวนมะพร้าว"></button>
 
@@ -111,6 +112,8 @@
           <button type="button" data-mode-choice="haunted"><span>🌙</span><b>กลางคืนหลอน</b><small>สวนรัตติกาล</small></button>
           <button type="button" data-mode-choice="winter"><span>❄️</span><b>ฤดูหนาว</b><small>สวนหิมะ</small></button>
           <button type="button" data-mode-choice="festival"><span>🏮</span><b>งานวัดผี</b><small>สวนเทศกาล</small></button>
+          <button type="button" data-mode-choice="village"><span>🏡</span><b>หมู่บ้านหรรษา</b><small>หมู่บ้านแฟนตาซี</small></button>
+          <button type="button" data-mode-choice="sea"><span>🌊</span><b>ทะเล</b><small>สวนริมทะเล</small></button>
         </div>
       </div>
     </div>
@@ -226,6 +229,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=70"></script>
+  <script src="game.js?v=80"></script>
 </body>
 </html>
