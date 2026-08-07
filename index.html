@@ -122,6 +122,73 @@
     </div>
   </main>
   <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=62"></script>
+  <script>
+    window.firebaseReady = new Promise((resolve,reject)=>{
+      window.__resolveFirebase = resolve;
+      window.__rejectFirebase = reject;
+    });
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64",
+      authDomain: "yainoo-ghost-farm.firebaseapp.com",
+      projectId: "yainoo-ghost-farm",
+      storageBucket: "yainoo-ghost-farm.firebasestorage.app",
+      messagingSenderId: "223708504826",
+      appId: "1:223708504826:web:8f0f71ebf84cb6c4545f43",
+      measurementId: "G-P3KRYBYF0C"
+    };
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      const bridge = {
+        auth,
+        db,
+        getCurrentUser(){ return auth.currentUser; },
+        waitForAuth(){
+          return new Promise(resolve=>{
+            const unsubscribe=onAuthStateChanged(auth,user=>{
+              unsubscribe();
+              resolve(user||null);
+            });
+          });
+        },
+        async signIn(email,password){
+          const credential=await signInWithEmailAndPassword(auth,email,password);
+          return credential.user;
+        },
+        async signOut(){ await signOut(auth); },
+        async getSignedInMember(){
+          const user=auth.currentUser;
+          if(!user)return null;
+          const snap=await getDoc(doc(db,"members",user.uid));
+          return snap.exists()?{id:snap.id,...snap.data()}:null;
+        }
+      };
+
+      window.firebaseBridge=bridge;
+      window.__resolveFirebase(bridge);
+    } catch (error) {
+      console.error("Firebase initialization failed",error);
+      window.__rejectFirebase(error);
+    }
+  </script>
+  <script src="game.js?v=63"></script>
 </body>
 </html>

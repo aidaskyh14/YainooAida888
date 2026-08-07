@@ -966,6 +966,7 @@ function start(){
   draw();
   if(ticker)clearInterval(ticker);
   ticker=setInterval(draw,1000);
+  if(member==="Aida")setTimeout(checkFirebaseAdminConnection,350);
 }
 
 function logout(){
@@ -1801,6 +1802,91 @@ function tapPlot(index){
   if(plot.phase==="worm"){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนมาแล้ว</h2><p>ต้นจะหยุดโตจนกว่าจะกำจัดหนอน ใช้ 1 คะแนนกุศล<br>คะแนนสามารถติดลบได้</p><button id="clearWormBtn" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button>${coconutHTML}</section>`;openModal();$("clearWormBtn").onclick=()=>{closeModal();clearWorm(index)};bindCoconutButtons(index);return}
   if(coconutHTML){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🌱 ${CROPS[plot.crop].name}</h2><p>เหลือประมาณ ${plotTimerText(plot)}</p>${coconutHTML}</section>`;openModal();bindCoconutButtons(index);return}
   message("ต้นกำลังเติบโต",`${CROPS[plot.crop].name} เหลือประมาณ ${plotTimerText(plot)}`);
+}
+
+
+/* ===== Firebase: เชื่อมบัญชี Aida/Admin เท่านั้น (รอบทดสอบแรก) ===== */
+async function getFirebaseBridge(){
+  try{
+    if(window.firebaseBridge)return window.firebaseBridge;
+    if(!window.firebaseReady)throw new Error("Firebase SDK ยังไม่พร้อม");
+    return await Promise.race([
+      window.firebaseReady,
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Firebase ใช้เวลาตอบสนองนานเกินไป")),10000))
+    ]);
+  }catch(error){
+    console.error("Firebase bridge error",error);
+    return null;
+  }
+}
+
+function firebaseAdminLoginForm(messageText=""){
+  $("modalContent").innerHTML=`
+    <section class="feature-panel confirm-panel">
+      <h2>🔥 เชื่อม Firebase Admin</h2>
+      <p>${messageText||"เข้าสู่ระบบด้วยบัญชี Firebase ที่สร้างไว้สำหรับ Aida เพื่อทดสอบการอ่านสิทธิ์ admin"}</p>
+      <input id="firebaseAdminEmail" type="email" autocomplete="username" placeholder="Email ของ Firebase Admin" style="width:100%;padding:11px 12px;margin:7px 0;border:1px solid #b58b64;border-radius:12px;background:#fffaf0;color:#432c49">
+      <input id="firebaseAdminPassword" type="password" autocomplete="current-password" placeholder="Password ของ Firebase Admin" style="width:100%;padding:11px 12px;margin:7px 0 12px;border:1px solid #b58b64;border-radius:12px;background:#fffaf0;color:#432c49">
+      <div class="confirm-actions">
+        <button id="firebaseAdminLoginBtn" class="danger-action" type="button">เชื่อม Firebase</button>
+        <button id="firebaseAdminSkipBtn" class="secondary-action" type="button">ไว้ทีหลัง</button>
+      </div>
+      <p id="firebaseAdminStatus" style="margin-top:10px;font-size:12px"></p>
+    </section>`;
+  openModal();
+  $("firebaseAdminSkipBtn").onclick=closeModal;
+  $("firebaseAdminLoginBtn").onclick=loginFirebaseAdmin;
+}
+
+async function checkFirebaseAdminConnection(){
+  if(currentMember!=="Aida")return;
+  const bridge=await getFirebaseBridge();
+  if(!bridge){
+    message("Firebase ยังไม่เชื่อม","โหลด Firebase SDK ไม่สำเร็จ แต่เกมส่วนเดิมยังเล่นได้ตามปกติ");
+    return;
+  }
+  try{
+    await bridge.waitForAuth();
+    const user=bridge.getCurrentUser();
+    if(!user){firebaseAdminLoginForm();return}
+    const profile=await bridge.getSignedInMember();
+    if(profile&&profile.role==="admin"){
+      showWeatherToast("🔥 Firebase Admin เชื่อมต่อแล้ว");
+      return;
+    }
+    await bridge.signOut();
+    firebaseAdminLoginForm("บัญชี Firebase ที่ค้างอยู่ไม่มีสิทธิ์ admin กรุณาเข้าสู่ระบบด้วยบัญชี Aida/Admin");
+  }catch(error){
+    console.error("ตรวจ Firebase Admin ไม่สำเร็จ",error);
+    firebaseAdminLoginForm("ยังตรวจสิทธิ์ Firebase ไม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง");
+  }
+}
+
+async function loginFirebaseAdmin(){
+  const email=$("firebaseAdminEmail")?.value.trim()||"";
+  const password=$("firebaseAdminPassword")?.value||"";
+  const status=$("firebaseAdminStatus");
+  if(!email||!password){if(status)status.textContent="กรุณากรอก Email และ Password ให้ครบ";return}
+  if(status)status.textContent="กำลังเชื่อม Firebase...";
+  const button=$("firebaseAdminLoginBtn");
+  if(button)button.disabled=true;
+  try{
+    const bridge=await getFirebaseBridge();
+    if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");
+    await bridge.signIn(email,password);
+    const profile=await bridge.getSignedInMember();
+    if(!profile)throw new Error("ไม่พบเอกสาร members ของบัญชีนี้");
+    if(profile.role!=="admin"){
+      await bridge.signOut();
+      throw new Error("บัญชีนี้ไม่มีสิทธิ์ admin");
+    }
+    closeModal();
+    message("🔥 Firebase เชื่อมสำเร็จ",`อ่านข้อมูลสมาชิกสำเร็จ<br>ชื่อ: ${profile.displayName||"Aida"}<br>สิทธิ์: ${profile.role}`);
+  }catch(error){
+    console.error("Firebase Admin login failed",error);
+    if(status)status.textContent=`เชื่อมไม่สำเร็จ: ${error.message||"กรุณาตรวจ Email/Password"}`;
+    if(button)button.disabled=false;
+  }
 }
 
 function bindEvents(){
