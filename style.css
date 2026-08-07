@@ -502,9 +502,9 @@ button{touch-action:manipulation}
 .inventory-item b{font-size:12px;color:#ffd879}
 
 /* ปรับตำแหน่งที่ผู้ใช้สั่งไว้ในบ้าน/บาดาล */
-.house-altar-slots{transform:translateY(-3.2%)}
+.house-altar-slots{top:61.5%!important;transform:none!important}
 .bed-hotspot{top:47%!important}
-.bed-countdown{top:7%!important}
+.bed-countdown{top:-12%!important;bottom:auto!important;min-width:0!important;padding:4px 7px!important;font-size:clamp(8px,2vw,11px)!important}
 .underwater-offering-slot{left:39.5%!important;top:74.5%!important;width:21%!important}
 .underwater-send-button{top:86.8%!important}
 
@@ -543,3 +543,37 @@ button{touch-action:manipulation}
 #modalContent h2{font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;text-shadow:0 1px 0 rgba(255,255,255,.55)}
 
 .challenge-fx.hidden{display:none!important}
+
+
+/* ===== PATCH สวนมะพร้าว + แก้เฉพาะจุดที่รายงาน ===== */
+.coconut-garden-hotspot{position:absolute;left:67%;top:20%;width:14%;height:13%;z-index:77;padding:0;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.coconut-garden-hotspot:active{background:rgba(255,255,255,.055);border-radius:22%}
+
+.coconut-tree-hotspot{position:absolute;z-index:7;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.coconut-tree-hotspot:active{background:rgba(255,255,255,.08);border-radius:40%}
+.coconut-tree-hotspot small{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);max-width:92%;padding:3px 6px;border:1px solid rgba(255,230,176,.82);border-radius:999px;background:rgba(48,31,50,.82);color:#fff1d0;font-size:clamp(7px,1.8vw,10px);font-weight:900;white-space:nowrap;text-shadow:0 1px 2px #241225}
+.coconut-boat-hotspot{position:absolute;left:37%;top:43%;width:26%;height:23%;z-index:8;border:0;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;border-radius:44%}
+.coconut-boat-hotspot:active{background:rgba(255,255,255,.08)}
+.coconut-boat-label{position:absolute;left:50%;bottom:2%;transform:translateX(-50%);padding:5px 8px;border:2px solid rgba(184,125,77,.92);border-radius:999px;background:rgba(65,39,67,.9);color:#fff0cf;font-size:clamp(8px,2vw,11px);font-weight:950;white-space:nowrap}
+
+.coconut-craft-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.coconut-craft-card{position:relative;min-width:0;padding:9px 7px;border:2px solid #b88961;border-radius:17px;background:linear-gradient(180deg,#fff8df,#ead2a5);text-align:center;color:#53364e}
+.coconut-craft-card img{display:block;width:min(120px,29vw);height:min(100px,24vw);margin:0 auto 4px;object-fit:contain}
+.coconut-craft-card h3{margin:4px 0;font-size:clamp(11px,2.8vw,15px)}
+.coconut-craft-card p{min-height:45px;margin:4px 0 7px;font-size:clamp(8px,2.15vw,11px);line-height:1.35}
+.coconut-needs{display:grid;gap:2px;min-height:52px;margin-bottom:7px;padding:5px;border-radius:10px;background:rgba(255,255,255,.58);text-align:left}
+.coconut-needs span{font-size:clamp(8px,2vw,10px);font-weight:850}
+.coconut-chance{position:absolute;right:5px;top:5px;padding:3px 6px;border-radius:999px;background:#4c2e54;color:#ffd97a;font-size:9px;font-weight:950}
+.coconut-craft-card button{width:100%;padding:8px 5px;border:0;border-radius:11px;background:linear-gradient(180deg,#8c5983,#5b3a64);color:#fff1d4;font-weight:950}
+.coconut-craft-card button:disabled{opacity:.48;filter:grayscale(.5)}
+.coconut-craft-back{margin-top:11px;width:100%;padding:9px;border:2px solid #a77b58;border-radius:12px;background:#5a3b62;color:#fff0d0;font-weight:950}
+
+.coconut-boost-panel{margin-top:10px;padding:9px;border:2px solid #ae7c57;border-radius:14px;background:rgba(71,45,70,.92);color:#fff0cf}
+.coconut-boost-panel h3{margin:0 0 7px;text-align:center;font-size:13px}
+.coconut-boost-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.coconut-boost-btn{display:grid;grid-template-columns:48px 1fr;align-items:center;gap:5px;padding:6px;border:1px solid #c79a68;border-radius:12px;background:#f7e7c6;color:#52374d;text-align:left;font-weight:900}
+.coconut-boost-btn img{width:46px;height:46px;object-fit:contain}
+.coconut-boost-btn small{display:block;font-size:8px;color:#775a70}
+.coconut-boost-btn:disabled{opacity:.45}
+
+.special-coconut-item img{width:50px;height:50px;object-fit:contain}

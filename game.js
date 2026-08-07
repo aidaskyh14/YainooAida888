@@ -15,8 +15,8 @@ const CROPS={
   lychee:{name:"ลิ้นจี่หลีหอม",icon:"🍒",selectImg:"05_fragrant_lychee.png?v=2",totalMs:85*60*1000,waterMs:30*60*1000,wormChance:.20,seedImg:"lychee-seed.png?v=2",sproutImg:"lychee-sprout.png?v=2",growImg:"lychee-grow.png?v=2",readyImg:"lychee-ready.png?v=2"},
   strawberry:{name:"สตรอว์เบอร์รีมรกต",icon:"🍓",selectImg:"07_emerald_strawberry.png?v=1",totalMs:100*60*1000,waterMs:35*60*1000,wormChance:.20,seedImg:"emerald-strawberry-seed.png?v=1",sproutImg:"emerald-strawberry-sprout.png?v=1",growImg:"emerald-strawberry-grow.png?v=1",readyImg:"emerald-strawberry-ready.png?v=1"},
   grape:{name:"องุ่นครุ่นจิต",icon:"🍇",selectImg:"08_grape_kruenjit.png?v=1",totalMs:115*60*1000,waterMs:40*60*1000,wormChance:.20,seedImg:"grape-seed.PNG?v=1",sproutImg:"grape-sprout.PNG?v=1",growImg:"grape-grow.PNG?v=1",readyImg:"grape-ready.PNG?v=1"},
-  banana:{name:"กล้วยผีตานีหาย",icon:"🍌",selectImg:"09_ghost_banana.png?v=1",totalMs:130*60*1000,waterMs:45*60*1000,wormChance:.20,seedImg:"banana-ghost-seed.png?v=1",sproutImg:"banana-ghost-sprout.png?v=1",growImg:"banana-ghost-grow.png?v=1",readyImg:"banana-ghost-ready.png?v=1"},
-  gooseberry:{name:"มะยมอมเค",icon:"🫒",selectImg:"10_star_gooseberry.png?v=1",totalMs:150*60*1000,waterMs:50*60*1000,wormChance:.20,seedImg:"star-gooseberry-seed.png?v=1",sproutImg:"star-gooseberry-sprout.png?v=1",growImg:"star-gooseberry-grow.png?v=1",readyImg:"star-gooseberry-ready.png?v=1"}
+  banana:{name:"กล้วยผีตานีหาย",icon:"🍌",selectImg:"09_ghost_banana.png?v=1",selectFallback:"banana-ghost-seed.png?v=1",totalMs:130*60*1000,waterMs:45*60*1000,wormChance:.20,seedImg:"banana-ghost-seed.png?v=1",sproutImg:"banana-ghost-sprout.png?v=1",growImg:"banana-ghost-grow.png?v=1",readyImg:"banana-ghost-ready.png?v=1"},
+  gooseberry:{name:"มะยมอมเค",icon:"🫒",selectImg:"10_star_gooseberry.png?v=1",selectFallback:"star-gooseberry-seed.png?v=1",totalMs:150*60*1000,waterMs:50*60*1000,wormChance:.20,seedImg:"star-gooseberry-seed.png?v=1",sproutImg:"star-gooseberry-sprout.png?v=1",growImg:"star-gooseberry-grow.png?v=1",readyImg:"star-gooseberry-ready.png?v=1"}
 };
 
 const STATUS_ICON={water:"status-water.png?v=3",worm:"status-worm.png?v=3",dead:"status-dead.png?v=3"};
@@ -37,8 +37,8 @@ const RECIPES=[
 
 const SHOP_ITEMS=[
   {id:"chicken",image:"01-chicken-ghost.png?v=1",name:"ไก่เปรต",product:"egg",productName:"ไข่เปรต",productImage:"01-pret-egg.png?v=1",productionMs:3*60*60*1000},
-  {id:"fish",image:"02-fish-ghost.png?v=1",name:"ปลาสะกดจิต",product:"fishMeat",productName:"เนื้อปลาผี",productImage:"03-ghost-fish-meat.png?v=1",productionMs:90*60*1000},
-  {id:"pig",image:"03-pig-ghost.png?v=1",name:"หมูผี",product:"truffle",productName:"เห็ดทรัฟเฟิลหลอน",productImage:"02-haunted-truffle.png?v=1",productionMs:6*60*60*1000},
+  {id:"fish",image:"03-pig-ghost.png?v=1",name:"ปลาสะกดจิต",product:"fishMeat",productName:"เนื้อปลาผี",productImage:"03-ghost-fish-meat.png?v=1",productionMs:90*60*1000},
+  {id:"pig",image:"02-fish-ghost.png?v=1",name:"หมูผี",product:"truffle",productName:"เห็ดทรัฟเฟิลหลอน",productImage:"02-haunted-truffle.png?v=1",productionMs:6*60*60*1000},
   {id:"cow",image:"04-cow-ghost.png?v=1",name:"วัววิญญาณ",product:"milk",productName:"นมวัวอาฆาต",productImage:"04-vengeful-cow-milk.png?v=1",productionMs:5*60*60*1000}
 ];
 
@@ -49,6 +49,14 @@ const ANIMAL_PRODUCTS={
   milk:{name:"นมวัวอาฆาต",icon:"🥛",image:"04-vengeful-cow-milk.png?v=1"}
 };
 
+const COCONUT_ITEMS={
+  coconut10:{name:"มะพร้าวสาวเสว",image:"coconut-boost-10.png?v=1",boost:10,weight:55,chance:100,need:{egg:5,fishMeat:3},description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 10%"},
+  coconut20:{name:"มะพร้าวสาวแก่",image:"coconut-boost-20.png?v=1",boost:20,weight:28,chance:80,need:{egg:3,fishMeat:3,truffle:2},description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 20%"},
+  coconut50:{name:"มะพร้าวหาวนอน",image:"coconut-boost-50.png?v=1",boost:50,weight:14,chance:30,need:{fishMeat:10,milk:2},description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 50%"},
+  coconut100:{name:"มะพร้าวสาวไอด้า",image:"coconut-boost-100.png?v=1",boost:100,weight:3,chance:null,need:null,description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 100%",locked:true}
+};
+const COCONUT_TREE_COOLDOWN=2*60*60*1000;
+
 const SCENES={
   house:{image:"ghost-house-interior.jpg?v=1"},
   underwater:{image:"underwater-city-scene.jpg?v=1"},
@@ -57,7 +65,8 @@ const SCENES={
   pig:{image:"03_pig_pen.jpg?v=1"},
   cow:{image:"04_cow_barn.jpg?v=1"},
   almsSeated:{image:"01_monks-seated-bowls.png?v=1"},
-  almsBlessing:{image:"02_monks-standing-blessing.png?v=1"}
+  almsBlessing:{image:"02_monks-standing-blessing.png?v=1"},
+  coconut:{image:"coconut-garden-scene.png?v=1"}
 };
 
 const REST_DURATIONS={sleep:7*60*60*1000,nap:2*60*60*1000};
@@ -1682,6 +1691,118 @@ function startGameExtras(){
   beginRain();
 }
 
+
+/* ===== PATCH รอบสวนมะพร้าว: ใช้ BASE ล่าสุดและ override เฉพาะระบบที่ระบุ ===== */
+function fresh(player){
+  return{
+    player,merit:300,plots:Array.from({length:PLOT_COUNT},emptyPlot),
+    bag:Object.fromEntries(Object.keys(CROPS).map(k=>[k,0])),
+    animalProducts:Object.fromEntries(Object.keys(ANIMAL_PRODUCTS).map(k=>[k,0])),
+    dishes:[],specials:Object.fromEntries(Object.keys(COCONUT_ITEMS).map(k=>[k,0])),
+    coconutTrees:Array(6).fill(0),
+    houseOfferings:[null,null,null],underwaterOffering:null,houseWorshipUntil:0,underwaterUntil:0,
+    restUntil:0,restType:null,restRewardPending:false,almsOfferings:[null,null,null,null],lastAlmsDate:"",
+    friendlyGhostUntil:0,challengeUntil:0,
+    animalRequests:{chicken:Array(9).fill(false),fish:Array(9).fill(false),pig:Array(9).fill(false),cow:Array(9).fill(false)},
+    animals:{chicken:Array(9).fill(null),fish:Array(9).fill(null),pig:Array(9).fill(null),cow:Array(9).fill(null)},
+    animalBonusNextAt:Date.now()+ANIMAL_BONUS_INTERVAL
+  };
+}
+function normalizeState(raw,player){
+  const n=raw&&typeof raw==="object"?raw:fresh(player);
+  n.player=player||n.player||"ผู้เล่น";
+  if(!Number.isFinite(Number(n.merit)))n.merit=300;n.merit=Number(n.merit);
+  n.plots=Array.isArray(n.plots)?n.plots.slice(0,PLOT_COUNT):[];while(n.plots.length<PLOT_COUNT)n.plots.push(emptyPlot());n.plots=n.plots.map(normalizePlot);
+  n.bag=n.bag&&typeof n.bag==="object"?n.bag:{};Object.keys(CROPS).forEach(k=>{n.bag[k]=Number.isFinite(Number(n.bag[k]))?Number(n.bag[k]):0});
+  n.animalProducts=n.animalProducts&&typeof n.animalProducts==="object"?n.animalProducts:{};Object.keys(ANIMAL_PRODUCTS).forEach(k=>{n.animalProducts[k]=Number.isFinite(Number(n.animalProducts[k]))?Number(n.animalProducts[k]):0});
+  n.dishes=Array.isArray(n.dishes)?n.dishes:[];
+  n.specials=n.specials&&typeof n.specials==="object"?n.specials:{};Object.keys(COCONUT_ITEMS).forEach(k=>{n.specials[k]=Number.isFinite(Number(n.specials[k]))?Number(n.specials[k]):0});
+  n.coconutTrees=Array.isArray(n.coconutTrees)?n.coconutTrees.slice(0,6):[];while(n.coconutTrees.length<6)n.coconutTrees.push(0);n.coconutTrees=n.coconutTrees.map(v=>Number(v)||0);
+  n.houseOfferings=Array.isArray(n.houseOfferings)?n.houseOfferings.slice(0,3):[null,null,null];while(n.houseOfferings.length<3)n.houseOfferings.push(null);
+  n.underwaterOffering=typeof n.underwaterOffering==="string"?n.underwaterOffering:null;n.houseWorshipUntil=Number(n.houseWorshipUntil)||0;n.underwaterUntil=Number(n.underwaterUntil)||0;
+  n.restUntil=Number(n.restUntil)||0;n.restType=n.restType==="sleep"||n.restType==="nap"?n.restType:null;n.restRewardPending=Boolean(n.restRewardPending);
+  n.almsOfferings=Array.isArray(n.almsOfferings)?n.almsOfferings.slice(0,4):[null,null,null,null];while(n.almsOfferings.length<4)n.almsOfferings.push(null);
+  n.lastAlmsDate=typeof n.lastAlmsDate==="string"?n.lastAlmsDate:"";n.friendlyGhostUntil=Number(n.friendlyGhostUntil)||0;n.challengeUntil=Number(n.challengeUntil)||0;
+  n.animalRequests=n.animalRequests&&typeof n.animalRequests==="object"?n.animalRequests:{};n.animals=n.animals&&typeof n.animals==="object"?n.animals:{};
+  SHOP_ITEMS.forEach(item=>{
+    if(!Array.isArray(n.animalRequests[item.id]))n.animalRequests[item.id]=Array(9).fill(false);n.animalRequests[item.id]=n.animalRequests[item.id].slice(0,9);while(n.animalRequests[item.id].length<9)n.animalRequests[item.id].push(false);
+    if(!Array.isArray(n.animals[item.id]))n.animals[item.id]=Array(9).fill(null);n.animals[item.id]=n.animals[item.id].slice(0,9);while(n.animals[item.id].length<9)n.animals[item.id].push(null);
+  });
+  n.animalBonusNextAt=Number(n.animalBonusNextAt)||Date.now()+ANIMAL_BONUS_INTERVAL;
+  return n;
+}
+function seedChoiceImage(crop){
+  const fallback=crop.selectFallback||crop.seedImg||"";
+  const escapedFallback=String(fallback).replace(/&/g,"&amp;").replace(/\"/g,"&quot;");
+  return `<img src="${crop.selectImg}" alt="${crop.name}" class="seed-choice-img" data-fallback="${escapedFallback}" onerror="if(this.dataset.fallback&&this.getAttribute('src')!==this.dataset.fallback){this.setAttribute('src',this.dataset.fallback)}else{this.style.display='none'}">`;
+}
+function plantMenu(index){
+  $("modalContent").innerHTML=`<h2>เลือกเมล็ดสำหรับแปลง #${index+1}</h2><div class="grid">${Object.entries(CROPS).map(([key,crop])=>`<div class="tile spooky-seed-tile">${seedChoiceImage(crop)}<b>${crop.name}</b><p>เวลาโตประมาณ ${Math.round(crop.totalMs/60000)} นาที</p><button type="button" data-crop="${key}">ปลูก</button></div>`).join("")}</div>`;
+  document.querySelectorAll("[data-crop]").forEach(button=>button.onclick=()=>{const key=button.dataset.crop,crop=CROPS[key],now=Date.now();state.plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false};save();closeModal();draw()});openModal();
+}
+function inventory(tab="crops"){
+  if(guardResting())return;const dishMap=dishCounts();const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["specials","🕯️ ของพิเศษ"]];let body="";
+  if(tab==="crops")body=Object.entries(CROPS).map(([k,c])=>`<div class="inventory-item"><img src="${c.readyImg}" alt="${c.name}"><span>${c.name}</span><b>×${state.bag[k]||0}</b></div>`).join("");
+  else if(tab==="products")body=Object.entries(ANIMAL_PRODUCTS).map(([k,p])=>`<div class="inventory-item"><img src="${p.image}" alt="${p.name}"><span>${p.name}</span><b>×${state.animalProducts[k]||0}</b></div>`).join("");
+  else if(tab==="food")body=RECIPES.map(r=>`<div class="inventory-item"><img src="${r.image}" alt="${r.name}"><span>${r.name}</span><b>×${dishMap[r.id]||0}</b></div>`).join("");
+  else body=Object.entries(COCONUT_ITEMS).map(([k,item])=>`<div class="inventory-item special-coconut-item"><img src="${item.image}" alt="${item.name}"><span>${item.name}<small style="display:block">เร่งโต ${item.boost}%</small></span><b>×${state.specials[k]||0}</b></div>`).join("");
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div><div class="inventory-grid">${body}</div></section>`;
+  document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));openModal();
+}
+function coconutRemainingText(ms){return formatFriendlyCountdown(Math.max(0,ms))}
+function rollCoconutReward(){
+  const roll=Math.random()*100;let cursor=0;for(const [key,item] of Object.entries(COCONUT_ITEMS)){cursor+=item.weight;if(roll<cursor)return key}return"coconut10";
+}
+function harvestCoconutTree(index){
+  if(guardResting())return;const nextAt=Number(state.coconutTrees[index]||0);if(nextAt>Date.now()){message("🥥 ต้นนี้ถูกสอยไปแล้ว",`กลับมาใหม่ในอีก ${coconutRemainingText(nextAt-Date.now())}`);return}
+  const key=rollCoconutReward(),item=COCONUT_ITEMS[key];state.specials[key]=(state.specials[key]||0)+1;state.coconutTrees[index]=Date.now()+COCONUT_TREE_COOLDOWN;save();renderCoconutScene();
+  message("🥥 สอยมะพร้าวสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>มะพร้าวถูกเก็บไว้ใน กระเป๋า → ของพิเศษ แล้ว`);
+}
+function coconutIngredientText(item){
+  if(!item.need)return"ยังไม่เปิดให้คราฟน๊าา";return Object.entries(item.need).map(([key,count])=>`<span>${ANIMAL_PRODUCTS[key].icon} ${ANIMAL_PRODUCTS[key].name} ×${count}</span>`).join("");
+}
+function canCraftCoconut(item){return item.need&&Object.entries(item.need).every(([key,count])=>(state.animalProducts[key]||0)>=count)}
+function showCoconutCraft(){
+  if(guardResting())return;
+  $("modalContent").innerHTML=`<section class="feature-panel coconut-craft-panel"><h2>🥥 คราฟไอเท็มพิเศษ</h2><div class="coconut-craft-grid">${Object.entries(COCONUT_ITEMS).map(([key,item])=>`<article class="coconut-craft-card"><div class="coconut-chance">${item.locked?"🔒":`🎲 ${item.chance}%`}</div><img src="${item.image}" alt="${item.name}"><h3>${item.name}</h3><p>${item.description}</p><div class="coconut-needs">${coconutIngredientText(item)}</div><button type="button" data-coconut-craft="${key}" ${item.locked?"disabled":""}>${item.locked?"ยังไม่เปิดให้คราฟน๊าา":"คราฟ"}</button></article>`).join("")}</div><button id="coconutCraftBackBtn" class="coconut-craft-back" type="button">กลับ</button></section>`;
+  document.querySelectorAll("[data-coconut-craft]").forEach(btn=>btn.onclick=()=>craftCoconut(btn.dataset.coconutCraft));$("coconutCraftBackBtn").onclick=()=>{closeModal();renderCoconutScene()};openModal();
+}
+function craftCoconut(key){
+  const item=COCONUT_ITEMS[key];if(!item||item.locked)return;if(!canCraftCoconut(item)){message("วัตถุดิบยังไม่ครบ","วัตถุดิบยังไม่ครบ");return}
+  Object.entries(item.need).forEach(([product,count])=>state.animalProducts[product]-=count);const success=Math.random()*100<item.chance;
+  if(success){state.specials[key]=(state.specials[key]||0)+1;save();message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>เก็บไว้ใน กระเป๋า → ของพิเศษ แล้ว`)}
+  else{save();message("คราฟไม่สำเร็จ","รอบนี้คราฟไม่สำเร็จ วัตถุดิบที่ใช้ถูกหักไปแล้วค่ะ")}
+}
+const COCONUT_TREE_POSITIONS=[[1,14,38,27],[61,14,38,27],[0,38,38,28],[62,38,38,28],[0,65,38,28],[62,65,38,28]];
+function renderCoconutScene(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
+  $("sceneInteractiveLayer").innerHTML=`${COCONUT_TREE_POSITIONS.map(([left,top,width,height],i)=>{const rem=Math.max(0,Number(state.coconutTrees[i]||0)-Date.now());return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${rem>0?coconutRemainingText(rem):"พร้อมสอย"}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button>`;
+  document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));$("coconutBoatHotspot").onclick=showCoconutCraft;
+  stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="coconut"){stopSceneTimer();return}renderCoconutScene()},60000);
+}
+function renderScene(){
+  if(currentScene==="house"){renderHouseScene();return}if(currentScene==="underwater"){renderUnderwaterScene();return}if(currentScene==="almsSeated"||currentScene==="almsBlessing"){renderAlmsScene();return}if(currentScene==="coconut"){renderCoconutScene();return}renderAnimalScene(currentScene);
+}
+function coconutOptionsHTML(plot){
+  const available=Object.entries(COCONUT_ITEMS).filter(([key,item])=>(state.specials[key]||0)>0&&(item.boost===100||(plot.phase==="growing1"||plot.phase==="growing2")));
+  if(!available.length)return"";return `<div class="coconut-boost-panel"><h3>🥥 ใช้มะพร้าวเร่งการเจริญเติบโต</h3><div class="coconut-boost-grid">${available.map(([key,item])=>`<button type="button" class="coconut-boost-btn" data-use-coconut="${key}"><img src="${item.image}" alt="${item.name}"><span>${item.name}<small>เร่งโต ${item.boost}% • มี ×${state.specials[key]||0}</small></span></button>`).join("")}</div></div>`;
+}
+function useCoconutOnPlot(index,key){
+  const plot=state.plots[index],item=COCONUT_ITEMS[key];if(!plot||!plot.crop||!item||(state.specials[key]||0)<=0)return false;ensurePlotPhase(plot);
+  if(item.boost===100){plot.phase="ready";plot.phaseEndsAt=0;plot.worm=false}else{if(plot.phase!=="growing1"&&plot.phase!=="growing2"){message("ยังใช้มะพร้าวนี้ไม่ได้","มะพร้าว 10% / 20% / 50% ใช้ได้ในช่วงที่ต้นกำลังนับเวลาเติบโตเท่านั้น");return false}const rem=Math.max(0,Number(plot.phaseEndsAt||0)-Date.now());plot.phaseEndsAt=Date.now()+Math.max(1000,Math.round(rem*(1-item.boost/100)))}
+  state.specials[key]-=1;save();closeModal();draw();showWeatherToast(`🥥 ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%`);return true;
+}
+function bindCoconutButtons(index){document.querySelectorAll("[data-use-coconut]").forEach(btn=>btn.onclick=()=>useCoconutOnPlot(index,btn.dataset.useCoconut))}
+function tapPlot(index){
+  if(guardResting())return;const plot=state.plots[index];ensurePlotPhase(plot);if(!plot.crop){plantMenu(index);return}
+  if(plot.phase==="ready"){state.bag[plot.crop]=(state.bag[plot.crop]||0)+1;const name=CROPS[plot.crop].name;state.plots[index]=emptyPlot();save();draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${name} ×1`);return}
+  const coconutHTML=coconutOptionsHTML(plot);
+  if(plot.phase==="needsWater"){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>💧 รดน้ำ ${CROPS[plot.crop].name}</h2><p>กดบัวรดน้ำแล้วต้นจะเข้าสู่ขั้นโตต่อไป</p><button id="waterNowBtn" class="primary-spooky-action" type="button">รดน้ำ</button>${coconutHTML}</section>`;openModal();$("waterNowBtn").onclick=()=>{closeModal();waterPlot(index)};bindCoconutButtons(index);return}
+  if(plot.phase==="worm"){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนมาแล้ว</h2><p>ต้นจะหยุดโตจนกว่าจะกำจัดหนอน ใช้ 1 คะแนนกุศล<br>คะแนนสามารถติดลบได้</p><button id="clearWormBtn" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button>${coconutHTML}</section>`;openModal();$("clearWormBtn").onclick=()=>{closeModal();clearWorm(index)};bindCoconutButtons(index);return}
+  if(coconutHTML){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🌱 ${CROPS[plot.crop].name}</h2><p>เหลือประมาณ ${plotTimerText(plot)}</p>${coconutHTML}</section>`;openModal();bindCoconutButtons(index);return}
+  message("ต้นกำลังเติบโต",`${CROPS[plot.crop].name} เหลือประมาณ ${plotTimerText(plot)}`);
+}
+
 function bindEvents(){
   $("startBtn").onclick=start;
   $("howBtn").onclick=showHow;
@@ -1695,6 +1816,7 @@ function bindEvents(){
   if($("almsBtn"))$("almsBtn").onclick=showAlms;
   if($("challengeBtn"))$("challengeBtn").onclick=challengeFarm;
   if($("friendlyGhostHotspot"))$("friendlyGhostHotspot").onclick=friendlyGhostReward;
+  if($("coconutGardenHotspot"))$("coconutGardenHotspot").onclick=()=>{if(!guardResting())openScene("coconut")};
   $("closeModeOverlay").onclick=closeModeChooser;
   $("modeOverlay").onclick=event=>{if(event.target===$("modeOverlay"))closeModeChooser()};
   document.querySelectorAll("[data-mode-choice]").forEach(button=>{
