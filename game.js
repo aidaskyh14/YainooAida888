@@ -2798,7 +2798,7 @@ function bindEvents(){
 const MAJOR_V2_SCHEMA=2;
 const SHOP_REQUEST_MAX_QTY=10;
 const JELLY_BOX_DAILY_LIMIT=7;
-const JELLY_BOX_PRICE=20;
+const JELLY_BOX_PRICE=50;
 const JELLY_LIFETIME_MS=3*24*60*60*1000;
 const JELLY_LOVE_COOLDOWN_MS=60*60*1000;
 const JELLY_POISON_REDUCE_MS=3*60*60*1000;
@@ -2878,6 +2878,7 @@ function fresh(player){
     animalProducts:Object.fromEntries(Object.keys(ANIMAL_PRODUCTS).map(k=>[k,0])),
     dishes:[],dishInventory:makeEmptyDishInventory(),specials,
     specialAnimals:Object.fromEntries(Object.keys(JELLYFISH_TYPES).map(k=>[k,0])),
+    mysteryBoxes:0,
     houseOfferings:[null,null,null],underwaterOffering:null,houseWorshipUntil:0,underwaterUntil:0,
     restUntil:0,restType:null,restRewardPending:false,
     almsOfferings:[null,null,null,null],lastAlmsDate:"",
@@ -2909,6 +2910,7 @@ function normalizeState(raw,player){
   n.dishes=[];
   n.specials=n.specials&&typeof n.specials==="object"?n.specials:{};Object.keys(SPECIAL_ITEMS).forEach(k=>{n.specials[k]=Number.isFinite(Number(n.specials[k]))?Math.max(0,Number(n.specials[k])):0});
   n.specialAnimals=n.specialAnimals&&typeof n.specialAnimals==="object"?n.specialAnimals:{};Object.keys(JELLYFISH_TYPES).forEach(k=>{n.specialAnimals[k]=Number.isFinite(Number(n.specialAnimals[k]))?Math.max(0,Number(n.specialAnimals[k])):0});
+  n.mysteryBoxes=Number.isFinite(Number(n.mysteryBoxes))?Math.max(0,Math.floor(Number(n.mysteryBoxes))):0;
   n.houseOfferings=Array.isArray(n.houseOfferings)?n.houseOfferings.slice(0,3):[null,null,null];while(n.houseOfferings.length<3)n.houseOfferings.push(null);
   n.underwaterOffering=typeof n.underwaterOffering==="string"?n.underwaterOffering:null;n.houseWorshipUntil=Number(n.houseWorshipUntil)||0;n.underwaterUntil=Number(n.underwaterUntil)||0;
   n.restUntil=Number(n.restUntil)||0;n.restType=n.restType==="sleep"||n.restType==="nap"?n.restType:null;n.restRewardPending=Boolean(n.restRewardPending);
@@ -2955,6 +2957,7 @@ function ensureAdminStock(target){
   RECIPES.forEach(r=>target.dishInventory[r.id]=Math.max(ADMIN_STOCK_QTY,Number(target.dishInventory[r.id])||0));
   Object.keys(SPECIAL_ITEMS).forEach(k=>target.specials[k]=Math.max(ADMIN_STOCK_QTY,Number(target.specials[k])||0));
   Object.keys(JELLYFISH_TYPES).forEach(k=>target.specialAnimals[k]=Math.max(ADMIN_STOCK_QTY,Number(target.specialAnimals[k])||0));
+  target.mysteryBoxes=Math.max(ADMIN_STOCK_QTY,Number(target.mysteryBoxes)||0);
   target.adminStockV2Seeded=true;return true;
 }
 
@@ -3023,13 +3026,14 @@ function craftPestle(key){
 
 // ===== กระเป๋า: สมาชิกทั่วไป + สัตว์พิเศษ =====
 function inventory(tab="crops"){
-  if(guardResting())return;const s=ownState||state,dishMap=dishCounts();const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["specials","🕯️ ของพิเศษ"],["specialAnimals","🪼 สัตว์พิเศษ"]];let body="";
+  if(guardResting())return;const s=ownState||state,dishMap=dishCounts();const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["specials","🕯️ ของพิเศษ"],["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"]];let body="";
   if(tab==="crops")body=Object.entries(CROPS).map(([k,c])=>`<div class="inventory-item"><img src="${c.readyImg}" alt="${c.name}"><span>${c.name}</span><b>×${s.bag[k]||0}</b></div>`).join("");
   else if(tab==="products")body=Object.entries(ANIMAL_PRODUCTS).map(([k,p])=>`<div class="inventory-item"><img src="${p.image}" alt="${p.name}"><span>${p.name}</span><b>×${s.animalProducts[k]||0}</b></div>`).join("");
   else if(tab==="food")body=RECIPES.map(r=>`<div class="inventory-item"><img src="${r.image}" alt="${r.name}"><span>${r.name}</span><b>×${dishMap[r.id]||0}</b></div>`).join("");
   else if(tab==="specialAnimals")body=Object.entries(JELLYFISH_TYPES).map(([k,j])=>`<div class="inventory-item"><img src="${j.image}" alt="${j.name}"><span>${j.name}<small style="display:block">ยังไม่เริ่มนับอายุจนกว่าจะวางลงบ่อ</small></span><b>×${s.specialAnimals[k]||0}</b></div>`).join("");
+  else if(tab==="mysteryBoxes")body=`<div class="inventory-item special-coconut-item"><img src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><span>${JELLY_BOX.name}<small style="display:block">กดใช้งานเพื่อเปิดกล่องและสุ่มรางวัล</small></span><b>×${s.mysteryBoxes||0}</b>${(Number(s.mysteryBoxes)||0)>0?'<button type="button" id="useJellyBoxBtn">ใช้งาน</button>':""}</div>`;
   else body=Object.entries(SPECIAL_ITEMS).map(([k,item])=>{const desc=item.kind==="animal"?`เร่งผลผลิตสัตว์ ${item.boost}%`:item.kind==="crop"?`เร่งโตพืช ${item.boost}%`:(item.description||"");return `<div class="inventory-item special-coconut-item"><img src="${item.image}" alt="${item.name}"><span>${item.name}<small style="display:block">${desc}</small></span><b>×${s.specials[k]||0}</b></div>`}).join("");
-  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));openModal();
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));if($("useJellyBoxBtn"))$("useJellyBoxBtn").onclick=showJellyBoxUse;openModal();
 }
 
 // ===== ผีน้อย: เพิ่มโอกาสยาถ่ายแมงกะพรุน =====
@@ -3087,6 +3091,15 @@ function rollMysteryBoxRewardOnState(s){
   if(roll===2){s.bag.hauntedPlankton=(Number(s.bag.hauntedPlankton)||0)+2;return"🫧 แพลงก์ตอนหลอนปิ๊ x2"}
   if(roll===3){s.merit=(Number(s.merit)||0)+5;return"🙏 กุศล +5"}
   s.specials.jellyfishLaxative=(Number(s.specials.jellyfishLaxative)||0)+1;return"🧪 ยาถ่ายแมงกะพรุน x1";
+}
+function showJellyBoxUse(){
+  const s=ownState||state,count=Math.max(0,Number(s?.mysteryBoxes)||0);if(count<=0){message("ไม่มีกล่องสุ่ม","ตอนนี้คุณไม่มีกล่องสุ่มแมงกะพรุนในกระเป๋า");return}
+  $("modalContent").innerHTML=`<section class="feature-panel mystery-box-open-panel"><img class="shop-animal-img" src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><h2>${JELLY_BOX.name}</h2><p>มีอยู่ <b>×${count}</b><br>เปิดครั้งละ 1 กล่อง แล้วระบบจะสุ่มรางวัลให้ทันที</p><button id="openJellyBoxBtn" class="primary-spooky-action" type="button">เปิดกล่อง</button><button id="cancelJellyBoxBtn" class="secondary-action" type="button">ยังไม่เปิด</button></section>`;openModal();$("openJellyBoxBtn").onclick=openOneJellyBox;$("cancelJellyBoxBtn").onclick=()=>inventory("mysteryBoxes");
+}
+async function openOneJellyBox(){
+  if(!cloudReady){message("ยังเปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+  const btn=$("openJellyBoxBtn");if(btn)btn.disabled=true;
+  try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next,reward="";await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);if((Number(s.mysteryBoxes)||0)<1)throw new Error("กล่องสุ่มหมดแล้ว");s.mysteryBoxes-=1;reward=rollMysteryBoxRewardOnState(s);next=s;tx.set(saveRef,{...cloneData(s),updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;updateMeritUI();message("🎁 เปิดกล่องแล้ว!",`คุณได้รับ<br><b>${reward}</b><br><br>กล่องสุ่มคงเหลือ ×${ownState.mysteryBoxes||0}`)}catch(error){message("เปิดกล่องไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 
 // ===== สมาชิกส่งได้เฉพาะอาหาร + ผลผลิตสัตว์; Admin แยกสิทธิ์ด้านล่าง =====
@@ -3228,7 +3241,7 @@ async function resolvePurchaseRequest(requestId,approve){
   try{const {db,fs}=await getFirebaseContext(),requestRef=fs.doc(db,"purchaseRequests",requestId),noticeId=`purchase-${requestId}`;let memberKey="",memberName="",noticeText="";await fs.runTransaction(db,async tx=>{const reqSnap=await tx.get(requestRef);if(!reqSnap.exists())throw new Error("ไม่พบคำขอ");const req=reqSnap.data();if(req.status!=="pending")throw new Error("คำขอนี้ถูกจัดการแล้ว");memberKey=req.memberKey;memberName=req.memberName;const saveRef=fs.doc(db,"saves",memberKey),saveSnap=await tx.get(saveRef);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(saveSnap.data(),memberName),qty=Math.max(1,Number(req.qty)||1);
       if(req.category==="animal"){s.purchasePendingCounts[req.itemKey]=Math.max(0,(Number(s.purchasePendingCounts[req.itemKey])||0)-qty);if(approve)s.pendingAnimals[req.itemKey]=(Number(s.pendingAnimals[req.itemKey])||0)+qty;noticeText=approve?`ไปที่โรงเรือนแล้วกด + เพื่อวางสัตว์ได้เลย • รอวาง ×${qty}`:"คำขอนี้ถูกปฏิเสธ"}
       else if(req.category==="special"){if(approve)s.specials[req.itemKey]=(Number(s.specials[req.itemKey])||0)+qty;else if(req.dateKey===currentBangkokDateKey()){ensureDailyLimitsFor(s);s.dailyLimits.specialPurchases=Math.max(0,(Number(s.dailyLimits.specialPurchases)||0)-qty)}noticeText=approve?`ของถูกเพิ่มเข้า กระเป๋า → ของพิเศษ ×${qty} แล้ว`:"คำขอนี้ถูกปฏิเสธ"}
-      else if(req.category==="mystery"){if(approve){const results=[];for(let i=0;i<qty;i++)results.push(rollMysteryBoxRewardOnState(s));const counts={};results.forEach(x=>counts[x]=(counts[x]||0)+1);noticeText=`เปิดกล่อง ${qty} กล่องแล้ว: `+Object.entries(counts).map(([x,n])=>n>1?`${x} (${n} ครั้ง)`:x).join(" • ")}else if(req.dateKey===currentBangkokDateKey()){ensureDailyLimitsFor(s);s.dailyLimits.jellyBoxes=Math.max(0,(Number(s.dailyLimits.jellyBoxes)||0)-qty);noticeText="คำขอนี้ถูกปฏิเสธ"}}
+      else if(req.category==="mystery"){if(approve){s.mysteryBoxes=(Number(s.mysteryBoxes)||0)+qty;noticeText=`กล่องถูกเพิ่มเข้า กระเป๋า → กล่องสุ่ม ×${qty} แล้ว • กดใช้งานเพื่อเปิดกล่อง`}else if(req.dateKey===currentBangkokDateKey()){ensureDailyLimitsFor(s);s.dailyLimits.jellyBoxes=Math.max(0,(Number(s.dailyLimits.jellyBoxes)||0)-qty);noticeText="คำขอนี้ถูกปฏิเสธ"}}
       tx.set(saveRef,{...cloneData(s),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(requestRef,{status:approve?"approved":"rejected",resolvedAt:fs.serverTimestamp(),resolvedBy:"Aida"},{merge:true});tx.set(fs.doc(db,"mailboxes",memberKey,"items",noticeId),{source:"yainoo",type:"purchase",title:approve?`ยัยหนูอนุมัติ ${req.itemName} ×${qty} แล้ว ✅`:`ยัยหนูไม่อนุมัติ ${req.itemName}`,text:noticeText,read:false,createdAt:fs.serverTimestamp()})});showWeatherToast(approve?`✅ อนุมัติ ${memberName} แล้ว`:`❌ ปฏิเสธคำขอแล้ว`);showAdminCenter();refreshNotificationBadge()}catch(error){message("จัดการคำขอไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 
