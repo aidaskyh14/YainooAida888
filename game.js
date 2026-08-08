@@ -2806,27 +2806,15 @@ const FRIEND_STEAL_DAILY_LIMIT=5;
 const ADMIN_STOCK_QTY=999;
 
 // ===== เพิ่มพืช 2 ชนิด และปรับหนอนพืชเดิมเป็น 30% =====
-babyBamboo:{
-  name:"เบบี้แบมบรู๊ววว",
-  icon:"🎋",
-  selectImg:"baby-bamboo-seed.PNG?v=1",
-
-  seedImg:"haunted-plankton-seed.png?v=1",
-  sproutImg:"haunted-plankton-sprout.png?v=1",
-  growImg:"haunted-plankton-grow.png?v=1",
-  readyImg:"haunted-plankton-ready.png?v=1"
-},
-
-hauntedPlankton:{
-  name:"แพลงก์ตอนหลอนปิ๊",
-  icon:"🫧",
-  selectImg:"haunted-plankton-seed.PNG?v=1",
-
-  seedImg:"baby-bamboo-seed.png?v=1",
-  sproutImg:"baby-bamboo-sprout.png?v=1",
-  growImg:"baby-bamboo-grow.png?v=1",
-  readyImg:"baby-bamboo-ready.png?v=1"
-}
+CROPS.babyBamboo={
+  name:"เบบี้แบมบรู๊ววว",icon:"🎋",selectImg:"baby-bamboo-seed.PNG?v=1",
+  totalMs:8*60*1000,waterMs:3*60*1000,wormChance:0,seedCostMerit:2,
+  seedImg:"baby-bamboo-seed.png?v=1",sproutImg:"baby-bamboo-sprout.png?v=1",growImg:"baby-bamboo-grow.png?v=1",readyImg:"baby-bamboo-ready.png?v=1"
+};
+CROPS.hauntedPlankton={
+  name:"แพลงก์ตอนหลอนปิ๊",icon:"🫧",selectImg:"haunted-plankton-seed.PNG?v=1",
+  totalMs:8*60*1000,waterMs:3*60*1000,wormChance:0,seedCostMerit:2,
+  seedImg:"haunted-plankton-seed.png?v=1",sproutImg:"haunted-plankton-sprout.png?v=1",growImg:"haunted-plankton-grow.png?v=1",readyImg:"haunted-plankton-ready.png?v=1"
 };
 ["morning","cabbage","mango","chili","pumpkin","lychee","strawberry","grape","banana","gooseberry"].forEach(key=>{if(CROPS[key])CROPS[key].wormChance=.30});
 
