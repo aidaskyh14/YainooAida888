@@ -3025,12 +3025,70 @@ function grantHarvestYield(s,cropKey,qty=1){
   qty=Math.max(1,Math.floor(Number(qty)||1));s.bag[cropKey]=(Number(s.bag[cropKey])||0)+qty;
   if(cropKey==="babyBamboo")s.specials.bambooLeaf=(Number(s.specials.bambooLeaf)||0)+qty;
 }
+async function harvestOwnPlot(index){
+  if(!state||index<0||index>=PLOT_COUNT)return;
+  const localPlot=state.plots[index];ensurePlotPhase(localPlot);
+  if(!localPlot?.crop||localPlot.phase!=="ready")return;
+
+  // ถ้า cloud ยังไม่พร้อม ให้ fallback แบบ local เพื่อไม่ทำให้เกมค้าง
+  if(!cloudReady||!currentMemberKey){
+    const cropKey=localPlot.crop,name=CROPS[cropKey].name;
+    grantHarvestYield(state,cropKey,1);
+    state.plots[index]=emptyPlot();
+    incrementMissionOn(state,"harvestCrops",1);
+    save();draw();
+    message("เก็บเกี่ยวสำเร็จ",cropKey==="babyBamboo"?`ได้ ${name} ×1 และ ใบไผ่ ×1`:`ได้ ${name} ×1`);
+    return;
+  }
+
+  try{
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let nextState=null,cropKey="",nextPlots=null;
+
+    await fs.runTransaction(db,async tx=>{
+      const [saveSnap,gardenSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(saveSnap.data(),currentMember);
+      assertCurrentCloudSession(saveSnap.data(),currentMember);
+
+      // ใช้ garden กลางเป็น source of truth ของแปลงเมื่อมีอยู่
+      const plots=(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots)
+        ? gardenSnap.data().plots
+        : s.plots).map(normalizePlot);
+      const p=plots[index];
+      ensurePlotPhaseStandalone(p);
+      if(!p?.crop||p.phase!=="ready")throw new Error("ต้นนี้ไม่พร้อมเก็บแล้ว กรุณารีเฟรชสวน");
+
+      cropKey=p.crop;
+      grantHarvestYield(s,cropKey,1);
+      incrementMissionOn(s,"harvestCrops",1);
+      plots[index]=emptyPlot();
+      s.plots=plots.map(normalizePlot);
+      nextPlots=s.plots;
+      nextState=s;
+
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentMember,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+
+    ownState=normalizeState(nextState,currentMember);
+    state=ownState;
+    lastGardenHash=plotHash(nextPlots);
+    const key=stateKey();if(key)localStorage.setItem(key,JSON.stringify(ownState));
+    draw();
+    const name=CROPS[cropKey].name;
+    message("เก็บเกี่ยวสำเร็จ",cropKey==="babyBamboo"?`ได้ ${name} ×1 และ ใบไผ่ ×1`:`ได้ ${name} ×1`);
+  }catch(error){
+    message("เก็บเกี่ยวไม่สำเร็จ",error.message||"กรุณาลองใหม่");
+  }
+}
+
 function tapPlot(index){
   if(visitContext){tapFriendPlot(index);return}if(guardResting())return;const plot=state.plots[index];ensurePlotPhase(plot);
   if(!plot.crop){plantMenu(index);return}
-  if(plot.phase==="ready"){
-    const cropKey=plot.crop,name=CROPS[cropKey].name;grantHarvestYield(state,cropKey,1);state.plots[index]=emptyPlot();incrementMissionOn(state,"harvestCrops",1);save();draw();message("เก็บเกี่ยวสำเร็จ",cropKey==="babyBamboo"?`ได้ ${name} ×1 และ ใบไผ่ ×1`:`ได้ ${name} ×1`);return;
-  }
+  if(plot.phase==="ready"){harvestOwnPlot(index);return}
   const boostHTML=cropBoostOptionsHTML(plot);
   if(plot.phase==="needsWater"){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>💧 รดน้ำ ${CROPS[plot.crop].name}</h2><p>กดบัวรดน้ำแล้วต้นจะเข้าสู่ขั้นโตต่อไป</p><button id="waterNowBtn" class="primary-spooky-action" type="button">รดน้ำ</button>${boostHTML}</section>`;openModal();$("waterNowBtn").onclick=()=>{closeModal();waterPlot(index)};bindCropBoostButtons(index);return}
   if(plot.phase==="worm"){$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนมาแล้ว</h2><p>ต้นจะหยุดโตจนกว่าจะกำจัดหนอน ใช้ 1 คะแนนกุศล<br>คะแนนสามารถติดลบได้</p><button id="clearWormBtn" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button>${boostHTML}</section>`;openModal();$("clearWormBtn").onclick=()=>{closeModal();clearWorm(index)};bindCropBoostButtons(index);return}
@@ -4176,7 +4234,7 @@ function drawBoatRace(race){
     const progress=Number(race[boatProgressKey(boatNo)])||0,remaining=boatCooldownRemaining(race,boatNo),left=[18,50,82][i],disabled=race.seasonLocked||remaining>0;
     return `<div class="boat-lane" style="left:${left}%"><div class="boat-lane-progress">${progress}/${race.target}</div><button class="boat-racer ${winner===boatNo?"winner":""}" type="button" data-boat-supply="${boatNo}" style="top:${boatTopPercent(progress)}%" ${disabled?"disabled":""}><img src="boat-race-${boatNo}.png?v=1" alt="เรือ ${boatNo}"><small>${race.seasonLocked?(winner===boatNo?"ผู้ชนะ 🏁":"ซีซั่นจบแล้ว"):remaining>0?`รอ ${formatHM(remaining)}`:"ส่งเสบียง"}</small></button></div>`;
   }).join("");
-  $("sceneInteractiveLayer").innerHTML=`<div class="boat-finish-label">🏁 เส้นชัย • 200</div><div class="boat-progress-marks"><span style="top:62%">50</span><span style="top:48%">100</span><span style="top:33%">150</span><span style="top:18%">200</span></div>${lanes}${race.seasonLocked?`<div class="boat-season-result"><b>ซีซั่นนี้มีผู้ชนะแล้ว</b><span>ขออนุญาตสมน้ำหน้ากับผู้แพ้ทั้งสองทีม<br>อีกไกลเลย สู้ต่อหน่อยนะ ซีซั่นหน้า</span></div>`:""}${currentMember==="Aida"?'<button id="resetBoatRaceBtn" class="boat-reset-button" type="button">รีเซ็ตการแข่งขัน</button>':""}`;
+  $("sceneInteractiveLayer").innerHTML=`<div class="boat-finish-label">🏁 เส้นชัย • 200</div><div class="boat-progress-marks"><span style="top:62%">50</span><span style="top:48%">100</span><span style="top:33%">150</span><span style="top:18%">200</span></div>${lanes}${race.seasonLocked?`<div class="boat-season-result"><b>ซีซั่นนี้มีผู้ชนะแล้ว</b><span>ขออนุญาตสมน้ำหน้ากับผู้แพ้ทั้งสองทีม<br>อีกไกลเลย สู้ต่อหน่อยนะ ซีซั่นหน้า</span></div>`:""}${currentMember==="Aida"?'<button id="resetBoatRaceBtn" class="boat-reset-button" type="button">🔄 รีเซ็ตการแข่งขัน</button>':""}`;
   document.querySelectorAll("[data-boat-supply]").forEach(btn=>btn.onclick=()=>showBoatSupplyPicker(Number(btn.dataset.boatSupply)));
   if($("resetBoatRaceBtn"))$("resetBoatRaceBtn").onclick=resetBoatRace;
 }
