@@ -4176,7 +4176,7 @@ function drawBoatRace(race){
     const progress=Number(race[boatProgressKey(boatNo)])||0,remaining=boatCooldownRemaining(race,boatNo),left=[18,50,82][i],disabled=race.seasonLocked||remaining>0;
     return `<div class="boat-lane" style="left:${left}%"><div class="boat-lane-progress">${progress}/${race.target}</div><button class="boat-racer ${winner===boatNo?"winner":""}" type="button" data-boat-supply="${boatNo}" style="top:${boatTopPercent(progress)}%" ${disabled?"disabled":""}><img src="boat-race-${boatNo}.png?v=1" alt="เรือ ${boatNo}"><small>${race.seasonLocked?(winner===boatNo?"ผู้ชนะ 🏁":"ซีซั่นจบแล้ว"):remaining>0?`รอ ${formatHM(remaining)}`:"ส่งเสบียง"}</small></button></div>`;
   }).join("");
-  $("sceneInteractiveLayer").innerHTML=`<div class="boat-finish-label">🏁 เส้นชัย • 200</div><div class="boat-progress-marks"><span style="top:62%">50</span><span style="top:48%">100</span><span style="top:33%">150</span><span style="top:18%">200</span></div>${lanes}${race.seasonLocked?`<div class="boat-season-result"><b>ซีซั่นนี้มีผู้ชนะแล้ว</b><span>ขออนุญาตสมน้ำหน้ากับผู้แพ้ทั้งสองทีม<br>อีกไกลเลย สู้ต่อหน่อยนะ ซีซั่นหน้า</span></div>`:""}${currentMember==="Aida"&&adminProfile?.role==="admin"?'<button id="resetBoatRaceBtn" class="boat-reset-button" type="button">รีเซ็ตการแข่งขัน</button>':""}`;
+  $("sceneInteractiveLayer").innerHTML=`<div class="boat-finish-label">🏁 เส้นชัย • 200</div><div class="boat-progress-marks"><span style="top:62%">50</span><span style="top:48%">100</span><span style="top:33%">150</span><span style="top:18%">200</span></div>${lanes}${race.seasonLocked?`<div class="boat-season-result"><b>ซีซั่นนี้มีผู้ชนะแล้ว</b><span>ขออนุญาตสมน้ำหน้ากับผู้แพ้ทั้งสองทีม<br>อีกไกลเลย สู้ต่อหน่อยนะ ซีซั่นหน้า</span></div>`:""}${currentMember==="Aida"?'<button id="resetBoatRaceBtn" class="boat-reset-button" type="button">รีเซ็ตการแข่งขัน</button>':""}`;
   document.querySelectorAll("[data-boat-supply]").forEach(btn=>btn.onclick=()=>showBoatSupplyPicker(Number(btn.dataset.boatSupply)));
   if($("resetBoatRaceBtn"))$("resetBoatRaceBtn").onclick=resetBoatRace;
 }
@@ -4222,7 +4222,7 @@ async function sendBoatSupply(boatNo,drinkId){
   }catch(error){message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 async function resetBoatRace(){
-  if(currentMember!=="Aida"||adminProfile?.role!=="admin"){message("ไม่มีสิทธิ์","ปุ่มนี้ใช้ได้เฉพาะ Aida");return}
+  if(currentMember!=="Aida"){message("ไม่มีสิทธิ์","ปุ่มนี้ใช้ได้เฉพาะ Aida");return}
   const ok=window.confirm("ยืนยันที่จะรีเซ็ตการแข่งขันกลับไปเริ่มต้นใหม่หรือไม่?");
   if(!ok)return;
   try{
