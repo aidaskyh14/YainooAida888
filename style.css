@@ -704,3 +704,47 @@ button{touch-action:manipulation}
   .jelly-pond-banner{top:8.5%;font-size:7.5px}
   .panda-forest-entry{min-width:34%;font-size:9px}
 }
+
+
+/* ======================================================================
+   MAJOR UPDATE V3 — Boat Race / Boat Drinks / Admin bundle
+   ====================================================================== */
+.boat-menu-frame{margin-top:15px;padding:10px;border:3px solid #e98ab7;border-radius:18px;background:linear-gradient(180deg,rgba(255,225,241,.96),rgba(247,190,220,.9));box-shadow:inset 0 0 0 2px rgba(255,255,255,.42)}
+.boat-menu-frame>h2{margin:0 0 4px;color:#6f3159;text-align:center}
+.boat-menu-frame>p{margin:0 0 9px;color:#7d4b68;font-size:10px;text-align:center;font-weight:850}
+.boat-recipe-card{border-color:#d783ad;background:linear-gradient(180deg,#fff4fa,#f8d7e9)}
+.boat-recipe-card .difficulty-label{color:#8b4c70}
+.boat-craft-warning,.boat-craft-success{border-color:#df8bb4}
+.boat-drink-inventory{border-color:#d994b5;background:rgba(255,237,247,.82)}
+
+.jelly-food-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.jelly-food-grid button{padding:12px 8px;border:2px solid #b88d67;border-radius:14px;background:#fff6dd;color:#52384d;font-weight:950}
+.jelly-food-grid button:disabled{opacity:.42}.jelly-food-grid small{display:block;margin-top:4px;font-size:9px;color:#7b6072}
+
+.admin-bundle-row{grid-template-columns:22px minmax(0,1fr) 86px!important}
+.admin-bundle-row>input[type="number"]{width:86px!important;margin:0!important;text-align:center}
+.admin-include-aida{display:flex;align-items:center;gap:8px;margin:6px 0 9px;font-size:10px;font-weight:950}
+.admin-include-aida input{width:auto!important;margin:0!important}
+
+.boat-finish-label{position:absolute;left:50%;top:9%;z-index:15;transform:translateX(-50%);padding:6px 13px;border:2px solid rgba(255,231,175,.94);border-radius:999px;background:rgba(49,32,57,.92);color:#fff0cf;font-size:clamp(10px,2.5vw,14px);font-weight:950;white-space:nowrap}
+.boat-progress-marks{position:absolute;left:2.2%;top:0;bottom:0;z-index:11;pointer-events:none}
+.boat-progress-marks span{position:absolute;left:0;padding:2px 5px;border-radius:999px;background:rgba(48,32,57,.76);color:#fff0cf;font-size:clamp(7px,1.8vw,10px);font-weight:950}
+.boat-lane{position:absolute;top:0;bottom:0;width:28%;transform:translateX(-50%);z-index:9;pointer-events:none}
+.boat-lane::before{content:"";position:absolute;left:50%;top:17%;bottom:13%;width:1px;border-left:2px dashed rgba(255,255,255,.26)}
+.boat-lane-progress{position:absolute;left:50%;top:13.5%;transform:translateX(-50%);min-width:68px;padding:4px 7px;border-radius:999px;background:rgba(49,32,57,.88);color:#fff4d2;text-align:center;font-size:clamp(8px,2vw,11px);font-weight:950}
+.boat-racer{position:absolute;left:50%;width:86%;height:16%;transform:translate(-50%,-50%);z-index:12;padding:0;border:0;background:transparent;pointer-events:auto;cursor:pointer;transition:top .4s ease;-webkit-tap-highlight-color:transparent}
+.boat-racer img{display:block;width:100%;height:78%;object-fit:contain;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35))}
+.boat-racer small{display:inline-block;max-width:100%;padding:3px 6px;border-radius:999px;background:rgba(49,32,57,.9);color:#fff0cf;font-size:clamp(6px,1.6vw,9px);font-weight:950;white-space:nowrap}
+.boat-racer:disabled{opacity:.72}.boat-racer.winner img{transform:scale(1.1)}
+.boat-season-result{position:absolute;left:13%;right:13%;top:43%;z-index:30;padding:11px 12px;border:3px solid rgba(213,157,91,.96);border-radius:17px;background:rgba(50,32,57,.94);color:#fff1d0;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.boat-season-result b{display:block;margin-bottom:5px;font-size:clamp(12px,3vw,18px)}.boat-season-result span{font-size:clamp(8px,2.05vw,11px);line-height:1.45;font-weight:850}
+.boat-reset-button{position:absolute;right:2%;top:max(2%,env(safe-area-inset-top));z-index:35;padding:7px 9px;border:2px solid rgba(255,212,157,.94);border-radius:11px;background:rgba(92,45,66,.95);color:#fff1d0;font-size:clamp(8px,2vw,11px);font-weight:950;cursor:pointer}
+
+.boat-supply-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.boat-supply-grid button{padding:8px 6px;border:2px solid #cf8cab;border-radius:14px;background:linear-gradient(180deg,#fff3f9,#f4d3e4);color:#55384e;font-weight:950}
+.boat-supply-grid img{display:block;width:100%;height:min(105px,25vw);object-fit:contain}.boat-supply-grid b{display:block;font-size:10px}.boat-supply-grid small{display:block;margin-top:3px;font-size:8px;color:#7a6071}
+
+@media(max-width:420px){
+  .boat-lane{width:30%}.boat-racer{width:94%}.boat-lane-progress{min-width:58px;font-size:8px}
+  .admin-bundle-row{grid-template-columns:20px minmax(0,1fr) 72px!important}.admin-bundle-row>input[type="number"]{width:72px!important}
+}

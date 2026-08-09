@@ -10,5 +10,9 @@ window.DAILY_MISSIONS = [
   {id:"harvestCoconut", title:"สอยมะพร้าวสำเร็จ 1 ครั้ง", target:1, reward:5},
   {id:"collectAnimal", title:"เก็บเกี่ยวผลผลิตจากสัตว์โลกวิญญาณ 8 ครั้ง", target:8, reward:10},
   {id:"craftFood", title:"คราฟอาหารสำเร็จ 10 ครั้ง", target:10, reward:10},
-  {id:"friendlyGhost", title:"ได้รับของจากผีน้อย 4 ชิ้น", target:4, reward:5}
+  {id:"friendlyGhost", title:"ได้รับของจากผีน้อย 4 ชิ้น", target:4, reward:5},
+  {id:"boatSupply", title:"ส่งเสบียงเรือ 10 ครั้ง", target:10, reward:30},
+  {id:"sendFriendGift", title:"ส่งของให้เพื่อนผู้เล่นคนอื่น 5 ครั้ง", target:5, reward:10},
+  {id:"stealFriendCrop", title:"ขโมยพืชพันธุ์ของเพื่อนคนอื่น 3 ครั้ง", target:3, reward:5},
+  {id:"feedJellyfish", title:"ให้อาหารแมงกะพรุน 30 ครั้ง", target:30, reward:20}
 ];
