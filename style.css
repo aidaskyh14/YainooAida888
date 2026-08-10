@@ -81,7 +81,7 @@ button{touch-action:manipulation}
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
 .aida-farm-pet-sprite.is-walking{
-  background-image:url("dog-01-walk-8.png?v=1");
+  background-image:url("dog-01-walk-flat.png?v=1");
   background-size:400% 200%;
 }
 .aida-farm-pet-sprite.face-left{transform:translateZ(0) scaleX(-1)}

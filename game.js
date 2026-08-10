@@ -4873,6 +4873,7 @@ let aidaFarmPetTimer=0;
 let aidaFarmPetFrameTimer=0;
 let aidaFarmPetMotion=null;
 let aidaFarmPetRunToken=0;
+let aidaFarmPetHorizontalDirection=1;
 
 function aidaFarmPetOwnerKey(){return visitContext?String(visitContext.memberKey||memberKeyFromName(visitContext.name)):String(currentMemberKey||memberKeyFromName(currentMember))}
 function shouldShowAidaFarmPet(){
@@ -4898,10 +4899,11 @@ function aidaFarmPetPoint(index){
   const petRect=aidaFarmPet?.getBoundingClientRect()||{width:0,height:0};
   return{x:rect.width*AIDA_FARM_PET_COLS[col]/100-petRect.width/2,y:rect.height*AIDA_FARM_PET_ROWS[row]/100-petRect.height*.82};
 }
-function aidaFarmPetNeighbors(index){
-  const cols=AIDA_FARM_PET_COLS.length,rows=AIDA_FARM_PET_ROWS.length,row=Math.floor(index/cols),col=index%cols,out=[];
-  if(col>0)out.push(index-1);if(col<cols-1)out.push(index+1);if(row>0)out.push(index-cols);if(row<rows-1)out.push(index+cols);
-  return out;
+function nextAidaFarmPetHorizontalNode(index){
+  const cols=AIDA_FARM_PET_COLS.length,col=index%cols;
+  if(col<=0)aidaFarmPetHorizontalDirection=1;
+  else if(col>=cols-1)aidaFarmPetHorizontalDirection=-1;
+  return index+aidaFarmPetHorizontalDirection;
 }
 function clearAidaFarmPetActivity(remove=false){
   aidaFarmPetRunToken++;
@@ -4918,7 +4920,7 @@ function scheduleAidaFarmPetPause(token){
 }
 function moveAidaFarmPet(token){
   if(token!==aidaFarmPetRunToken||!shouldShowAidaFarmPet()){syncAidaFarmPet();return}
-  const choices=aidaFarmPetNeighbors(aidaFarmPetNode),next=choices[Math.floor(Math.random()*choices.length)],from=aidaFarmPetPoint(aidaFarmPetNode),to=aidaFarmPetPoint(next),movingLeft=to.x<from.x;
+  const next=nextAidaFarmPetHorizontalNode(aidaFarmPetNode),from=aidaFarmPetPoint(aidaFarmPetNode),to=aidaFarmPetPoint(next),movingLeft=to.x<from.x;
   let walkFrame=0;clearInterval(aidaFarmPetFrameTimer);setAidaFarmPetWalkFrame(walkFrame,movingLeft);
   aidaFarmPetFrameTimer=setInterval(()=>{walkFrame=(walkFrame+1)%8;setAidaFarmPetWalkFrame(walkFrame,movingLeft)},105);
   const distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(2600,Math.min(6500,distance*18));
