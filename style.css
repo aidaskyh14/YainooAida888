@@ -44,6 +44,37 @@ button{touch-action:manipulation}
   isolation:isolate;
 }
 
+/* ===== สัตว์เลี้ยงเดินเล่นเฉพาะสวน Aida ===== */
+.aida-farm-pet-layer{
+  position:absolute;
+  inset:0;
+  z-index:19;
+  overflow:hidden;
+  pointer-events:none;
+  contain:layout paint;
+}
+.aida-farm-pet{
+  position:absolute;
+  left:0;
+  top:0;
+  width:clamp(58px,15.5vw,104px);
+  aspect-ratio:314/418;
+  background-image:url("dog-01-pose-sheet.png?v=1");
+  background-repeat:no-repeat;
+  background-size:400% 300%;
+  background-position:0 0;
+  transform:translate3d(0,0,0);
+  transform-origin:center bottom;
+  will-change:transform,background-position;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  image-rendering:auto;
+  filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
+}
+.game-screen.plot-page-2 .aida-farm-pet-layer,
+.game-screen.hidden .aida-farm-pet-layer{display:none!important}
+@media (prefers-reduced-motion:reduce){.aida-farm-pet{will-change:auto}}
+
 .garden,.plots{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
 .garden{z-index:18;pointer-events:none}
 .plots{pointer-events:none}
