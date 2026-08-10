@@ -4871,6 +4871,7 @@ let aidaFarmPetSprite=null;
 let aidaFarmPetNode=5;
 let aidaFarmPetTimer=0;
 let aidaFarmPetFrameTimer=0;
+let aidaFarmPetTransitionTimer=0;
 let aidaFarmPetMotion=null;
 let aidaFarmPetRunToken=0;
 let aidaFarmPetHorizontalDirection=1;
@@ -4893,6 +4894,22 @@ function setAidaFarmPetWalkFrame(index,faceLeft=false){
   aidaFarmPetSprite.classList.toggle("face-left",faceLeft);
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*100}%`;
 }
+function transitionAidaFarmPetSprite(change,token,done){
+  if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
+  clearTimeout(aidaFarmPetTransitionTimer);
+  aidaFarmPetSprite.classList.add("is-changing-pose");
+  aidaFarmPetTransitionTimer=setTimeout(()=>{
+    if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
+    change();
+    requestAnimationFrame(()=>{
+      if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
+      aidaFarmPetSprite.classList.remove("is-changing-pose");
+      aidaFarmPetTransitionTimer=setTimeout(()=>{
+        if(token===aidaFarmPetRunToken)done?.();
+      },240);
+    });
+  },180);
+}
 function aidaFarmPetPoint(index){
   const layer=$("aidaFarmPetLayer"),rect=layer.getBoundingClientRect();
   const row=Math.floor(index/AIDA_FARM_PET_COLS.length),col=index%AIDA_FARM_PET_COLS.length;
@@ -4907,25 +4924,31 @@ function nextAidaFarmPetHorizontalNode(index){
 }
 function clearAidaFarmPetActivity(remove=false){
   aidaFarmPetRunToken++;
-  clearTimeout(aidaFarmPetTimer);clearInterval(aidaFarmPetFrameTimer);aidaFarmPetTimer=0;aidaFarmPetFrameTimer=0;
+  clearTimeout(aidaFarmPetTimer);clearInterval(aidaFarmPetFrameTimer);clearTimeout(aidaFarmPetTransitionTimer);aidaFarmPetTimer=0;aidaFarmPetFrameTimer=0;aidaFarmPetTransitionTimer=0;
   if(aidaFarmPetMotion){aidaFarmPetMotion.cancel();aidaFarmPetMotion=null}
   if(remove){aidaFarmPet?.remove();aidaFarmPet=null;aidaFarmPetSprite=null}
 }
 function scheduleAidaFarmPetPause(token){
   if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
   const idlePoses=[AIDA_FARM_PET_POSES.idleA,AIDA_FARM_PET_POSES.idleB,AIDA_FARM_PET_POSES.scratch,AIDA_FARM_PET_POSES.sit,AIDA_FARM_PET_POSES.lie,AIDA_FARM_PET_POSES.sleep];
-  const pose=idlePoses[Math.floor(Math.random()*idlePoses.length)];setAidaFarmPetPose(pose);
+  const pose=idlePoses[Math.floor(Math.random()*idlePoses.length)];
   const wait=pose===AIDA_FARM_PET_POSES.sleep?5200+Math.random()*3200:2200+Math.random()*3300;
-  aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);
+  transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(pose),token,()=>{
+    aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);
+  });
 }
 function moveAidaFarmPet(token){
   if(token!==aidaFarmPetRunToken||!shouldShowAidaFarmPet()){syncAidaFarmPet();return}
   const next=nextAidaFarmPetHorizontalNode(aidaFarmPetNode),from=aidaFarmPetPoint(aidaFarmPetNode),to=aidaFarmPetPoint(next),movingLeft=to.x<from.x;
-  let walkFrame=0;clearInterval(aidaFarmPetFrameTimer);setAidaFarmPetWalkFrame(walkFrame,movingLeft);
-  aidaFarmPetFrameTimer=setInterval(()=>{walkFrame=(walkFrame+1)%8;setAidaFarmPetWalkFrame(walkFrame,movingLeft)},105);
-  const distance=Math.hypot(to.x-from.x,to.y-from.y),duration=Math.max(2600,Math.min(6500,distance*18));
-  aidaFarmPetMotion=aidaFarmPet.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
-  aidaFarmPetMotion.onfinish=()=>{if(token!==aidaFarmPetRunToken)return;clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;aidaFarmPetNode=next;aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;aidaFarmPetMotion=null;scheduleAidaFarmPetPause(token)};
+  const distance=Math.hypot(to.x-from.x,to.y-from.y),walkCycle=840;
+  const rawDuration=Math.max(2600,Math.min(6500,distance*18)),duration=Math.max(walkCycle*3,Math.round(rawDuration/walkCycle)*walkCycle);
+  transitionAidaFarmPetSprite(()=>setAidaFarmPetWalkFrame(0,movingLeft),token,()=>{
+    if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
+    let walkFrame=0;clearInterval(aidaFarmPetFrameTimer);
+    aidaFarmPetFrameTimer=setInterval(()=>{walkFrame=(walkFrame+1)%8;setAidaFarmPetWalkFrame(walkFrame,movingLeft)},105);
+    aidaFarmPetMotion=aidaFarmPet.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
+    aidaFarmPetMotion.onfinish=()=>{if(token!==aidaFarmPetRunToken)return;clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;setAidaFarmPetWalkFrame(0,movingLeft);aidaFarmPetNode=next;aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;aidaFarmPetMotion=null;scheduleAidaFarmPetPause(token)};
+  });
 }
 function startAidaFarmPet(){
   const layer=$("aidaFarmPetLayer");if(!layer||aidaFarmPet)return;
