@@ -2140,10 +2140,30 @@ async function getFirebaseContext(){
   const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");
   return{bridge,db:bridge.db,fs:bridge.firestore};
 }
+let cloudSaveInFlight=null;
 function queueCloudSave(){
   if(!cloudReady||!currentMemberKey||visitContext)return;
   if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
-  cloudSaveTimer=setTimeout(()=>flushCloudSave().catch(error=>console.error("บันทึก Firebase ไม่สำเร็จ",error)),220);
+  cloudSaveTimer=setTimeout(()=>{
+    cloudSaveTimer=null;
+    flushCloudSave().catch(error=>console.error("บันทึก Firebase ไม่สำเร็จ",error));
+  },320);
+}
+async function settlePendingCloudSave(){
+  if(cloudSaveTimer){
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer=null;
+    await flushCloudSave();
+    return;
+  }
+  if(cloudSaveInFlight){
+    try{await cloudSaveInFlight}catch{}
+  }
+}
+function saveLocalOnly(target=ownState||state){
+  if(!target)return;
+  const key=stateKey();
+  if(key)localStorage.setItem(key,JSON.stringify(target));
 }
 function save(){
   const target=ownState||state;if(!target)return;
@@ -2621,7 +2641,7 @@ async function harvestCoconutTree(index){
 }
 async function showCoconutHistory(){
   try{
-    const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"coconutHistory"),fs.orderBy("createdAt","desc"),fs.limit(50)),snap=await fs.getDocs(q),rows=[];snap.forEach(d=>rows.push(d.data()));
+    const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"coconutHistory"),fs.orderBy("createdAt","desc"),fs.limit(30)),snap=await fs.getDocs(q),rows=[];snap.forEach(d=>rows.push(d.data()));
     $("modalContent").innerHTML=`<section class="feature-panel coconut-history-panel"><h2>🥥 ประวัติสวนมะพร้าว</h2><p class="feature-subtitle">50 รายการล่าสุด</p><div class="notification-list">${rows.length?rows.map(r=>`<div class="notification-card"><b>${safeHtml(r.memberName||"สมาชิก")}</b><span>ได้รับ ${safeHtml(r.rewardName||`มะพร้าว ${r.rewardBoost||""}%`)}</span><small>${bangkokTimeText(r.createdAt)} น.</small></div>`).join(""):'<p class="empty-feature">ยังไม่มีประวัติ</p>'}</div></section>`;openModal();
   }catch(error){message("เปิดประวัติไม่ได้",error.message||"กรุณาลองใหม่")}
 }
@@ -2651,9 +2671,22 @@ function craftPestle(key){
   if(item.dishAny)s.dishes.splice(0,item.dishAny);if(item.meritNeed)s.merit-=item.meritNeed;Object.entries(item.need||{}).forEach(([k,n])=>s.animalProducts[k]-=n);s.specials[key]=(s.specials[key]||0)+1;save();updateMeritUI();message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>โอกาสสำเร็จ 100%`);
 }
 
+const broadcastClaimCache=new Map();
+let notificationBadgeInFlight=null;
+let notificationBadgeLastAt=0;
+const NOTIFICATION_BADGE_MIN_INTERVAL_MS=12000;
+function broadcastClaimCacheKey(id){return `${currentMemberKey}:${id}`}
+async function fetchBroadcastClaimCached(broadcastId){
+  const key=broadcastClaimCacheKey(broadcastId);
+  if(broadcastClaimCache.has(key))return broadcastClaimCache.get(key);
+  const claim=await fetchBroadcastClaim(broadcastId);
+  broadcastClaimCache.set(key,claim||null);
+  return claim||null;
+}
+
 async function fetchMailboxItems(){
   if(!cloudReady||!currentMemberKey)return[];const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"mailboxes",currentMemberKey,"items");
-  try{const snap=await fs.getDocs(fs.query(ref,fs.orderBy("createdAt","desc"),fs.limit(100))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(ref),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,100)}
+  try{const snap=await fs.getDocs(fs.query(ref,fs.orderBy("createdAt","desc"),fs.limit(60))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(ref),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,100)}
 }
 async function fetchBroadcasts(){
   if(!cloudReady)return[];const {db,fs}=await getFirebaseContext();try{const snap=await fs.getDocs(fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(50))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(fs.collection(db,"broadcasts")),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,50)}
@@ -2661,15 +2694,21 @@ async function fetchBroadcasts(){
 async function fetchBroadcastClaim(broadcastId){
   const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey));return snap.exists()?snap.data():null;
 }
-async function refreshNotificationBadge(){
+async function refreshNotificationBadge(force=false){
   const badge=$("notificationBadge");if(!badge)return;if(!cloudReady){badge.classList.add("hidden");return}
-  try{
-    const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);let count=mail.filter(x=>!x.read).length;const lastSeen=Number((ownState||state)?.lastSeenYainooAt)||0;count+=broadcasts.filter(b=>timestampMillis(b.createdAt)>lastSeen).length;
-    if(currentMember==="Aida"&&adminProfile?.role==="admin"){
-      const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending")));count+=snap.size;
-    }
-    badge.textContent=String(count);badge.classList.toggle("hidden",count<=0);
-  }catch(error){console.warn("notification badge",error)}
+  const now=Date.now();
+  if(!force&&notificationBadgeInFlight)return notificationBadgeInFlight;
+  if(!force&&now-notificationBadgeLastAt<NOTIFICATION_BADGE_MIN_INTERVAL_MS)return;
+  notificationBadgeInFlight=(async()=>{
+    try{
+      const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);let count=mail.filter(x=>!x.read).length;const lastSeen=Number((ownState||state)?.lastSeenYainooAt)||0;count+=broadcasts.filter(b=>timestampMillis(b.createdAt)>lastSeen).length;
+      if(currentMember==="Aida"&&adminProfile?.role==="admin"){
+        const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending")));count+=snap.size;
+      }
+      badge.textContent=String(count);badge.classList.toggle("hidden",count<=0);notificationBadgeLastAt=Date.now();
+    }catch(error){console.warn("notification badge",error)}
+  })();
+  try{return await notificationBadgeInFlight}finally{notificationBadgeInFlight=null}
 }
 function startNotificationPolling(){
   if(notificationTimer)clearInterval(notificationTimer);refreshNotificationBadge();notificationTimer=setInterval(refreshNotificationBadge,60000);
@@ -2766,7 +2805,7 @@ async function sendAdminGlobalGift(entry,qty){
 }
 
 function enterGameScreen(){
-  $("loginError").textContent="";$("loginScreen").classList.add("hidden");$("gameScreen").classList.remove("hidden");startGameExtras();draw();if(ticker)clearInterval(ticker);ticker=setInterval(draw,1000);
+  $("loginError").textContent="";$("loginScreen").classList.add("hidden");$("gameScreen").classList.remove("hidden");startGameExtras();draw();if(ticker)clearInterval(ticker);ticker=setInterval(tickFarmUI,1000);
 }
 async function completeAidaCloudSession(profile){
   const {db,fs}=await getFirebaseContext(),user=(await getFirebaseBridge()).getCurrentUser();if(!user)throw new Error("ยังไม่ได้เข้าสู่ Firebase Admin");
@@ -3014,11 +3053,19 @@ async function completeAidaCloudSession(profile){
 
 // ===== ปลูก / เก็บเกี่ยว =====
 function plantMenu(index){
-  const s=ownState||state;
-  $("modalContent").innerHTML=`<h2>เลือกเมล็ดสำหรับแปลง #${index+1}</h2><div class="grid">${Object.entries(CROPS).map(([key,crop])=>`<div class="tile spooky-seed-tile"><img src="${crop.selectImg}" alt="${crop.name}" class="seed-choice-img"><b>${crop.name}</b><p>เวลาโตประมาณ ${Math.round(crop.totalMs/60000)} นาที${crop.seedCostMerit?`<br><strong>ราคา ${crop.seedCostMerit} กุศล / 1 เมล็ด</strong>`:""}</p><button type="button" data-crop="${key}">ปลูก</button></div>`).join("")}</div>`;
+  $("modalContent").innerHTML=`<h2>เลือกเมล็ดสำหรับแปลง #${index+1}</h2><div class="grid">${Object.entries(CROPS).map(([key,crop])=>`<div class="tile spooky-seed-tile"><img src="${crop.selectImg}" alt="${crop.name}" class="seed-choice-img" decoding="async"><b>${crop.name}</b><p>เวลาโตประมาณ ${Math.round(crop.totalMs/60000)} นาที${crop.seedCostMerit?`<br><strong>ราคา ${crop.seedCostMerit} กุศล / 1 เมล็ด</strong>`:""}</p><button type="button" data-crop="${key}">ปลูก</button></div>`).join("")}</div>`;
   document.querySelectorAll("[data-crop]").forEach(button=>button.onclick=()=>{
-    const key=button.dataset.crop,crop=CROPS[key],cost=Number(crop.seedCostMerit)||0;if(cost>0&&(Number(s.merit)||0)<cost){message("กุศลไม่พอ",`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);return}
-    if(cost>0){s.merit-=cost;updateMeritUI()}const now=gameNow();s.plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false};save();closeModal();draw();
+    if(button.disabled)return;
+    const s=ownState||state;
+    if(!s?.plots||!s.plots[index])return;
+    if(s.plots[index]?.crop){closeModal();draw();return}
+    const key=button.dataset.crop,crop=CROPS[key],cost=Number(crop.seedCostMerit)||0;
+    if(cost>0&&(Number(s.merit)||0)<cost){message("กุศลไม่พอ",`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);return}
+    button.disabled=true;
+    if(cost>0){s.merit-=cost;updateMeritUI()}
+    const now=gameNow();s.plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false};
+    if(!visitContext){ownState=s;state=s}
+    save();closeModal();draw();
   });openModal();
 }
 function grantHarvestYield(s,cropKey,qty=1){
@@ -3578,6 +3625,8 @@ async function sendAdminBundleGift(catalog){
 
 async function claimFriendGift(giftId,accept,returnTab="friend"){
   try{
+    // ปิด race: autosave แบบ full document ต้องจบก่อน transaction รับของ
+    await settlePendingCloudSave();
     const {db,fs}=await getFirebaseContext();
     const giftRef=fs.doc(db,"gifts",giftId),saveRef=fs.doc(db,"saves",currentMemberKey),mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);
     let next;
@@ -3599,6 +3648,7 @@ async function claimFriendGift(giftId,accept,returnTab="friend"){
 
     ownState=normalizeState(next,currentMember);
     if(!visitContext)state=ownState;
+    saveLocalOnly(ownState);
     updateMeritUI();
     showNotifications(returnTab);
     showWeatherToast(accept?"🎁 รับของขวัญแล้ว":"🗑️ ทิ้งของขวัญแล้ว • ไม่คืนผู้ส่ง");
@@ -3792,7 +3842,7 @@ function save(){
   const target=ownState||state;if(!target)return;
   if(!visitContext){ownState=target;state=target}
   if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(target);
-  const key=stateKey();if(key)localStorage.setItem(key,JSON.stringify(target));
+  saveLocalOnly(target);
   queueCloudSave();
 }
 
@@ -3823,8 +3873,12 @@ async function initializeOrLoadCloudState(member,memberKey){
   loaded.activeSessionId=cloudSessionId;
   if(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots))loaded.plots=gardenSnap.data().plots.map(normalizePlot);
   ownState=normalizeState(loaded,member);state=ownState;lastGardenHash=plotHash(ownState.plots);
-  await fs.setDoc(gardenRef,{memberKey,displayName:member,plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});
-  await fs.setDoc(fs.doc(db,"publicProfiles",memberKey),{memberKey,displayName:member,merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
+  const loginWrites=[
+    fs.setDoc(fs.doc(db,"publicProfiles",memberKey),{memberKey,displayName:member,merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true})
+  ];
+  // สวนที่มีอยู่แล้วไม่ต้องเขียนซ้ำตอน login: ลด network และไม่ชนกับเพื่อนที่กำลังช่วยสวน
+  if(!gardenSnap.exists())loginWrites.push(fs.setDoc(gardenRef,{memberKey,displayName:member,plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:false}));
+  await Promise.all(loginWrites);
   cloudReady=true;
   const localKey=stateKey();if(localKey)localStorage.setItem(localKey,JSON.stringify(ownState));
   subscribeOwnGarden();startNotificationPolling();return ownState;
@@ -3832,24 +3886,30 @@ async function initializeOrLoadCloudState(member,memberKey){
 
 async function flushCloudSave(){
   if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;
-  const {db,fs}=await getFirebaseContext();
-  ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);ensureBoatState(ownState);
-  if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(ownState);
-  const saveRef=fs.doc(db,"saves",currentMemberKey);
-  const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.activeSessionId=cloudSessionId;
-  await fs.runTransaction(db,async tx=>{
-    const snap=await tx.get(saveRef);
-    if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-    const remoteSession=String(snap.data()?.activeSessionId||"");
-    if(remoteSession&&remoteSession!==cloudSessionId)throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
-    tx.set(saveRef,{...payload,updatedAt:fs.serverTimestamp()},{merge:false});
-  });
-  const currentHash=plotHash(ownState.plots);
-  if(currentHash!==lastGardenHash){
-    await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentMember,plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});
-    lastGardenHash=currentHash;
-  }
-  await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentMember,merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
+  if(cloudSaveInFlight)return cloudSaveInFlight;
+  cloudSaveInFlight=(async()=>{
+    const {db,fs}=await getFirebaseContext();
+    ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);ensureBoatState(ownState);
+    if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(ownState);
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.activeSessionId=cloudSessionId;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const remoteSession=String(snap.data()?.activeSessionId||"");
+      if(remoteSession&&remoteSession!==cloudSessionId)throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
+      tx.set(saveRef,{...payload,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    const currentHash=plotHash(ownState.plots);
+    const writes=[];
+    if(currentHash!==lastGardenHash){
+      writes.push(fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentMember,plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true}));
+    }
+    writes.push(fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentMember,merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true}));
+    await Promise.all(writes);
+    if(currentHash!==lastGardenHash)lastGardenHash=currentHash;
+  })();
+  try{return await cloudSaveInFlight}finally{cloudSaveInFlight=null}
 }
 
 function subscribeOwnGarden(){
@@ -3878,8 +3938,12 @@ function subscribeOwnGarden(){
       const localComparable=cloneData(ownState),remoteComparable=cloneData(remote);
       delete localComparable.updatedAt;delete remoteComparable.updatedAt;
       if(JSON.stringify(localComparable)===JSON.stringify(remoteComparable))return;
-      ownState=remote;if(!visitContext){state=ownState;updateMeritUI();draw();if(currentScene&&["chicken","fish","pig","cow"].includes(currentScene))renderAnimalScene(currentScene)}
-      const key=stateKey();if(key)localStorage.setItem(key,JSON.stringify(ownState));refreshNotificationBadge();
+      // รักษา object เดิมไว้ เพื่อไม่ให้ modal ที่เปิดอยู่ถือ reference เก่าแล้วกดไม่ติด
+      const preservedPlots=ownState.plots;
+      Object.keys(ownState).forEach(key=>{if(key!=="plots"&&!(key in remote))delete ownState[key]});
+      Object.assign(ownState,remote);ownState.plots=preservedPlots;
+      if(!visitContext){state=ownState;updateMeritUI();draw();if(currentScene&&["chicken","fish","pig","cow"].includes(currentScene))renderAnimalScene(currentScene)}
+      saveLocalOnly(ownState);refreshNotificationBadge();
     },error=>console.warn("save listener",error));
   }).catch(()=>{});
 }
@@ -4395,6 +4459,7 @@ async function sendAdminGlobalBundleGift(catalog){
 }
 async function claimBroadcastGift(broadcastId,accept){
   try{
+    await settlePendingCloudSave();
     const {db,fs}=await getFirebaseContext(),broadcastRef=fs.doc(db,"broadcasts",broadcastId),claimRef=fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey);let next;
     await fs.runTransaction(db,async tx=>{
       const [bSnap,cSnap,sSnap]=await Promise.all([tx.get(broadcastRef),tx.get(claimRef),tx.get(saveRef)]);if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");
@@ -4402,29 +4467,36 @@ async function claimBroadcastGift(broadcastId,accept){
       const s=normalizeState(sSnap.data(),currentMember);if(accept){if(Array.isArray(b.items))addGiftItemToState(s,{items:b.items});else addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty})}next=s;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(claimRef,{memberKey:currentMemberKey,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()});
     });
-    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;updateMeritUI();showNotifications("yainoo");showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);updateMeritUI();broadcastClaimCache.set(broadcastClaimCacheKey(broadcastId),{memberKey:currentMemberKey,status:accept?"accepted":"discarded"});showNotifications("yainoo");showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
   }catch(error){message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 async function showNotifications(tab="friend"){
   if(!cloudReady){message("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
   try{
-    const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]),friendItems=mail.filter(x=>x.source==="friend"),yainooItems=mail.filter(x=>x.source==="yainoo");
+    const mail=await fetchMailboxItems();
+    const friendItems=mail.filter(x=>x.source==="friend"),yainooItems=mail.filter(x=>x.source==="yainoo");
     const mailboxCard=(item,returnTab)=>`<div class="notification-card ${item.read?"":"unread"}"><b>${safeHtml(item.title||"แจ้งเตือน")}</b>${item.text?`<span>${safeHtml(item.text)}</span>`:""}<small>${bangkokTimeText(item.createdAt)} น.</small>${item.type==="gift"?`<div class="notification-actions">${item.resolved?`<button disabled>${item.status==="claimed"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-gift="${item.giftId||item.id}" data-gift-action="accept" data-return-tab="${returnTab}">รับของขวัญ</button><button type="button" data-claim-gift="${item.giftId||item.id}" data-gift-action="discard" data-return-tab="${returnTab}">ทิ้ง</button>`}</div>`:""}</div>`;
     let body="";
-    if(tab==="friend"){body=friendItems.length?friendItems.map(item=>mailboxCard(item,"friend")).join(""):'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากเพื่อน</p>';await markMailboxRead(friendItems)}
-    else{
-      const broadcastCards=[];
-      for(const b of broadcasts){
-        const claim=b.type==="gift"?await fetchBroadcastClaim(b.id):null,isExcludedAida=currentMember==="Aida"&&b.type==="gift"&&b.includeAida===false;
-        const giftSummary=Array.isArray(b.items)?b.items.map(i=>`${i.name||i.key} ×${Number(i.qty)||1}`).join(" • "):(b.type==="gift"?`${b.itemName||"ของขวัญ"} ×${Number(b.qty)||1}`:"");
-        broadcastCards.push(`<div class="notification-card"><b>${safeHtml(b.title||"ข้อความจากยัยหนู")}</b>${b.body?`<span>${safeHtml(b.body)}</span>`:""}${b.type==="gift"&&giftSummary?`<span>🎁 ${safeHtml(giftSummary)}</span>`:""}${b.type==="gift"?`<div class="notification-actions">${isExcludedAida?'<button disabled>รอบนี้ไม่รวม Aida</button>':claim?`<button disabled>${claim.status==="accepted"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="accept">รับของขวัญ</button><button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="discard">ทิ้ง</button>`}</div>`:""}<small>${bangkokTimeText(b.createdAt)} น.</small></div>`);
-      }
-      body=[...yainooItems.map(item=>mailboxCard(item,"yainoo")),...broadcastCards].join("")||'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากยัยหนู</p>';await markMailboxRead(yainooItems);(ownState||state).lastSeenYainooAt=gameNow();save();
+    if(tab==="friend"){
+      body=friendItems.length?friendItems.map(item=>mailboxCard(item,"friend")).join(""):'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากเพื่อน</p>';
+      await markMailboxRead(friendItems);
+    }else{
+      const broadcasts=await fetchBroadcasts();
+      // เดิมอ่าน claim ทีละรายการ (สูงสุด 50 round-trips) — เปลี่ยนเป็น parallel + cache
+      const claims=await Promise.all(broadcasts.map(b=>b.type==="gift"?fetchBroadcastClaimCached(b.id):Promise.resolve(null)));
+      const broadcastCards=broadcasts.map((b,i)=>{
+        const claim=claims[i],isExcludedAida=currentMember==="Aida"&&b.type==="gift"&&b.includeAida===false;
+        const giftSummary=Array.isArray(b.items)?b.items.map(item=>`${item.name||item.key} ×${Number(item.qty)||1}`).join(" • "):(b.type==="gift"?`${b.itemName||"ของขวัญ"} ×${Number(b.qty)||1}`:"");
+        return `<div class="notification-card"><b>${safeHtml(b.title||"ข้อความจากยัยหนู")}</b>${b.body?`<span>${safeHtml(b.body)}</span>`:""}${b.type==="gift"&&giftSummary?`<span>🎁 ${safeHtml(giftSummary)}</span>`:""}${b.type==="gift"?`<div class="notification-actions">${isExcludedAida?'<button disabled>รอบนี้ไม่รวม Aida</button>':claim?`<button disabled>${claim.status==="accepted"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="accept">รับของขวัญ</button><button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="discard">ทิ้ง</button>`}</div>`:""}<small>${bangkokTimeText(b.createdAt)} น.</small></div>`;
+      });
+      body=[...yainooItems.map(item=>mailboxCard(item,"yainoo")),...broadcastCards].join("")||'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากยัยหนู</p>';
+      await markMailboxRead(yainooItems);
+      const s=ownState||state;if(s){s.lastSeenYainooAt=gameNow();saveLocalOnly(s)}
     }
     $("modalContent").innerHTML=`<section class="feature-panel notification-panel"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${currentMember==="Aida"&&adminProfile?.role==="admin"?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':""}<div class="notification-list">${body}</div></section>`;
     document.querySelectorAll("[data-notification-tab]").forEach(btn=>btn.onclick=()=>showNotifications(btn.dataset.notificationTab));
-    document.querySelectorAll("[data-claim-gift]").forEach(btn=>btn.onclick=()=>claimFriendGift(btn.dataset.claimGift,btn.dataset.giftAction==="accept",btn.dataset.returnTab||"friend"));
-    document.querySelectorAll("[data-claim-broadcast]").forEach(btn=>btn.onclick=()=>claimBroadcastGift(btn.dataset.claimBroadcast,btn.dataset.broadcastAction==="accept"));
+    document.querySelectorAll("[data-claim-gift]").forEach(btn=>btn.onclick=()=>{btn.disabled=true;btn.textContent="กำลังจัดการ...";claimFriendGift(btn.dataset.claimGift,btn.dataset.giftAction==="accept",btn.dataset.returnTab||"friend").catch(()=>{})});
+    document.querySelectorAll("[data-claim-broadcast]").forEach(btn=>btn.onclick=()=>{btn.disabled=true;btn.textContent="กำลังจัดการ...";claimBroadcastGift(btn.dataset.claimBroadcast,btn.dataset.broadcastAction==="accept").catch(()=>{})});
     if($("adminCenterBtn"))$("adminCenterBtn").onclick=showAdminCenter;openModal();refreshNotificationBadge();
   }catch(error){message("เปิดการแจ้งเตือนไม่ได้",error.message||"กรุณาลองใหม่")}
 }
@@ -4452,6 +4524,11 @@ async function resolvePurchaseRequest(requestId,approve){
     showWeatherToast(approve?`✅ อนุมัติ ${memberName} แล้ว • ยังไม่ได้แจกของ`:`❌ ปฏิเสธคำขอแล้ว`);showAdminCenter();refreshNotificationBadge();
   }catch(error){message("จัดการคำขอไม่ได้",error.message||"กรุณาลองใหม่")}
 }
+
+/* ======================================================================
+   PERFORMANCE HOTFIX — 2026-08-10
+   Gift reliability / notification reads / planting taps / login / redraw
+   ====================================================================== */
 
 /* ======================================================================
    UPDATE V4 — 2026-08-09
@@ -4561,10 +4638,26 @@ function drawV4Plots(){
   if(!state)return;if(!visitContext){clearExpiredRest();processAnimalSystems();if(ensureMissionStateFor(ownState))save()}updateMeritUI();if(!visitContext)updateAlmsButton();ensureV4State(state);
   const plotsEl=$("plots");plotsEl.innerHTML="";const start=farmPlotPage*12;
   for(let localIndex=0;localIndex<12;localIndex++){
-    const index=start+localIndex,plot=state.plots[index]||emptyPlot();ensurePlotPhase(plot);const currentStage=stage(plot),status=plotStatus(plot);const button=document.createElement("button");button.type="button";button.className=`plot ${currentStage} ${currentStage==="empty"?"empty":currentStage==="ready"?"ready":"growing"}`;const name=plot.crop?CROPS[plot.crop].name:"";const steal=visitContext&&currentStage==="ready"&&!['babyBamboo','hauntedPlankton'].includes(plot.crop)?'<span class="steal-badge">🧤 ขโมย</span>':"";button.innerHTML=`<span class="plot-no">#${index+1}</span>${status?`<img class="status-badge" src="${STATUS_ICON[status]}" alt="${status}">`:""}${steal}<div class="plot-inner"><div class="crop">${cropIcon(plot)}</div>${name?`<div class="crop-name">${name}</div>`:""}${plot.crop?`<div class="timer">${plotTimerText(plot)}</div>`:""}</div>`;button.onclick=()=>tapPlot(index);plotsEl.appendChild(button);
+    const index=start+localIndex,plot=state.plots[index]||emptyPlot();ensurePlotPhase(plot);const currentStage=stage(plot),status=plotStatus(plot);const button=document.createElement("button");button.type="button";button.dataset.plotIndex=String(index);button.dataset.plotStage=currentStage;button.dataset.plotPhase=String(plot.phase||"");button.className=`plot ${currentStage} ${currentStage==="empty"?"empty":currentStage==="ready"?"ready":"growing"}`;const name=plot.crop?CROPS[plot.crop].name:"";const steal=visitContext&&currentStage==="ready"&&!['babyBamboo','hauntedPlankton'].includes(plot.crop)?'<span class="steal-badge">🧤 ขโมย</span>':"";button.innerHTML=`<span class="plot-no">#${index+1}</span>${status?`<img class="status-badge" src="${STATUS_ICON[status]}" alt="${status}">`:""}${steal}<div class="plot-inner"><div class="crop">${cropIcon(plot)}</div>${name?`<div class="crop-name">${name}</div>`:""}${plot.crop?`<div class="timer">${plotTimerText(plot)}</div>`:""}</div>`;button.onclick=()=>tapPlot(index);plotsEl.appendChild(button);
   }
 }
 draw=drawV4Plots;
+function tickFarmUI(){
+  if(!state||document.hidden||$("gameScreen")?.classList.contains("hidden"))return;
+  if(!visitContext)processAnimalSystems();
+  let redraw=false;
+  document.querySelectorAll('#plots [data-plot-index]').forEach(button=>{
+    if(redraw)return;
+    const index=Number(button.dataset.plotIndex),plot=state.plots[index];
+    if(!plot)return;
+    ensurePlotPhase(plot);
+    const nextStage=stage(plot),nextPhase=String(plot.phase||"");
+    if(button.dataset.plotStage!==nextStage||button.dataset.plotPhase!==nextPhase){redraw=true;return}
+    const timer=button.querySelector('.timer');
+    if(timer&&plot.crop)timer.textContent=plotTimerText(plot);
+  });
+  if(redraw)draw();
+}
 if($("plotPageNextBtn"))$("plotPageNextBtn").onclick=()=>setFarmPlotPage(1);
 if($("plotPagePrevBtn"))$("plotPagePrevBtn").onclick=()=>setFarmPlotPage(0);
 
