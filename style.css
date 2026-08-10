@@ -74,19 +74,21 @@ button{touch-action:manipulation}
   background-position:0 0;
   transform:translateZ(0) scaleX(1);
   transform-origin:center bottom;
-  opacity:1;
-  transition:opacity 220ms ease-in-out;
-  will-change:transform,background-position,opacity;
+  scale:1;
+  transition:scale 140ms ease-in-out;
+  will-change:transform,background-position,scale;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
-.aida-farm-pet-sprite.is-changing-pose{opacity:0}
+.aida-farm-pet-sprite.is-changing-pose{scale:.96 1.03}
 .aida-farm-pet-sprite.is-walking{
   background-image:url("dog-01-walk-flat.png?v=1");
   background-size:400% 200%;
 }
+.aida-farm-pet-sprite.is-walking.walk-front{background-image:url("dog-01-walk-front-aligned.png?v=1")}
+.aida-farm-pet-sprite.is-walking.walk-back{background-image:url("dog-01-walk-back-aligned.png?v=1")}
 .aida-farm-pet-sprite.face-left{transform:translateZ(0) scaleX(-1)}
 .game-screen.plot-page-2 .aida-farm-pet-layer,
 .game-screen.hidden .aida-farm-pet-layer{display:none!important}
