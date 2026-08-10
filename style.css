@@ -65,8 +65,30 @@ button{touch-action:manipulation}
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
 }
+.aida-farm-pet::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  bottom:var(--pet-shadow-bottom,22%);
+  width:var(--pet-shadow-width,48%);
+  height:7.5%;
+  border-radius:50%;
+  background:rgba(31,24,28,.25);
+  filter:blur(3px);
+  transform:translateX(-50%) scaleX(1);
+  transform-origin:center;
+  opacity:.82;
+  pointer-events:none;
+}
+.aida-farm-pet.is-walking::before{animation:aidaPetShadowStep 944ms ease-in-out infinite}
+@keyframes aidaPetShadowStep{
+  0%,50%,100%{transform:translateX(-50%) scaleX(.94);opacity:.78}
+  25%,75%{transform:translateX(-50%) scaleX(1.04);opacity:.86}
+}
 .aida-farm-pet-sprite{
   position:absolute;
+  z-index:1;
   inset:0;
   background-image:url("dog-01-pose-sheet.png?v=1");
   background-repeat:no-repeat;
@@ -92,7 +114,7 @@ button{touch-action:manipulation}
 .aida-farm-pet-sprite.face-left{transform:translateZ(0) scaleX(-1)}
 .game-screen.plot-page-2 .aida-farm-pet-layer,
 .game-screen.hidden .aida-farm-pet-layer{display:none!important}
-@media (prefers-reduced-motion:reduce){.aida-farm-pet,.aida-farm-pet-sprite{will-change:auto}}
+@media (prefers-reduced-motion:reduce){.aida-farm-pet,.aida-farm-pet-sprite{will-change:auto}.aida-farm-pet.is-walking::before{animation:none}}
 
 .garden,.plots{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
 .garden{z-index:18;pointer-events:none}

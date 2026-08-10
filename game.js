@@ -4885,12 +4885,19 @@ function shouldShowAidaFarmPet(){
 function setAidaFarmPetPose(index){
   if(!aidaFarmPetSprite)return;
   const col=index%4,row=Math.floor(index/4);
+  aidaFarmPet?.classList.remove("is-walking");
+  const widePose=index===AIDA_FARM_PET_POSES.lie||index===AIDA_FARM_PET_POSES.sleep;
+  aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"72%":index===AIDA_FARM_PET_POSES.sit?"52%":"48%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-bottom",widePose?"22%":"21%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
 }
 function setAidaFarmPetWalkFrame(index,direction="right"){
   if(!aidaFarmPetSprite)return;
   const frame=((index%8)+8)%8,col=frame%4,row=Math.floor(frame/4);
+  aidaFarmPet?.classList.add("is-walking");
+  aidaFarmPet?.style.setProperty("--pet-shadow-width",direction==="front"||direction==="back"?"42%":"48%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-bottom",direction==="front"||direction==="back"?"7.5%":"11.5%");
   aidaFarmPetSprite.classList.add("is-walking");
   aidaFarmPetSprite.classList.toggle("walk-front",direction==="front");
   aidaFarmPetSprite.classList.toggle("walk-back",direction==="back");
