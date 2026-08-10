@@ -59,11 +59,20 @@ button{touch-action:manipulation}
   top:0;
   width:clamp(58px,15.5vw,104px);
   aspect-ratio:314/418;
+  transform:translate3d(0,0,0);
+  transform-origin:center bottom;
+  will-change:transform;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.aida-farm-pet-sprite{
+  position:absolute;
+  inset:0;
   background-image:url("dog-01-pose-sheet.png?v=1");
   background-repeat:no-repeat;
   background-size:400% 300%;
   background-position:0 0;
-  transform:translate3d(0,0,0);
+  transform:translateZ(0) scaleX(1);
   transform-origin:center bottom;
   will-change:transform,background-position;
   backface-visibility:hidden;
@@ -71,9 +80,14 @@ button{touch-action:manipulation}
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
+.aida-farm-pet-sprite.is-walking{
+  background-image:url("dog-01-walk-8.png?v=1");
+  background-size:400% 200%;
+}
+.aida-farm-pet-sprite.face-left{transform:translateZ(0) scaleX(-1)}
 .game-screen.plot-page-2 .aida-farm-pet-layer,
 .game-screen.hidden .aida-farm-pet-layer{display:none!important}
-@media (prefers-reduced-motion:reduce){.aida-farm-pet{will-change:auto}}
+@media (prefers-reduced-motion:reduce){.aida-farm-pet,.aida-farm-pet-sprite{will-change:auto}}
 
 .garden,.plots{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
 .garden{z-index:18;pointer-events:none}
