@@ -790,3 +790,16 @@ button{touch-action:manipulation}
 .inventory-tabs-v2{grid-template-columns:repeat(2,minmax(0,1fr))!important}.inventory-item img{object-fit:contain}.inventory-item.coconut-river-inventory img,.inventory-item.fishing-bait-inventory img{width:55px;height:55px}
 
 @media(max-width:420px){.fishing-bait-grid,.fishing-result-grid{grid-template-columns:1fr 1fr}.coconut-river-slot small{width:180%;font-size:6px}.coconut-fast-bonus-btn{top:9.2%}}
+
+
+/* ===== PATCH V4.3 โบนัสคนมือไว: แสดงวัตถุดิบ + ปุ่มแลกกดได้เสมอและตรวจของตอนกด ===== */
+.coconut-exchange-row-v2{display:block!important;padding:9px!important}
+.coconut-exchange-items{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:5px;align-items:center}
+.coconut-exchange-item{min-width:0;padding:6px 4px;border:1px solid #cfaa82;border-radius:11px;background:rgba(255,250,235,.78);text-align:center}
+.coconut-exchange-item img{display:block;width:min(72px,17vw);height:min(72px,17vw);margin:0 auto 3px;object-fit:contain}
+.coconut-exchange-item b{display:block;font-size:9px;line-height:1.2;color:#55384f}
+.coconut-exchange-item span{display:block;margin-top:2px;font-size:8px;color:#765d70;font-weight:850}
+.coconut-exchange-plus{text-align:center;font-size:20px;font-weight:950;color:#6b4566}
+.coconut-exchange-reward{margin:7px 0 6px;text-align:center;font-size:11px;font-weight:950;color:#5c3a57}
+.coconut-exchange-row-v2>button{display:block;width:100%!important;min-height:40px;padding:9px 12px!important;border:0;border-radius:11px;background:#6a4b6f;color:#fff1d2;font-weight:950;cursor:pointer;opacity:1!important;pointer-events:auto!important}
+.coconut-exchange-row-v2>button:active{transform:scale(.98)}
