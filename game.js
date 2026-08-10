@@ -99,7 +99,7 @@ const FORECAST_SLOTS=[
   {start:1260,end:1440,time:"21:00–00:00",emoji:"🌙",name:"นอนไหม ผีอยากอำ"}
 ];
 
-const PLOT_COUNT=12;
+const PLOT_COUNT=24;
 const RAIN_DURATION_MS=30*1000;
 const RAIN_INTERVAL_MS=4*60*60*1000;
 const $=id=>document.getElementById(id);
@@ -4452,3 +4452,289 @@ async function resolvePurchaseRequest(requestId,approve){
     showWeatherToast(approve?`✅ อนุมัติ ${memberName} แล้ว • ยังไม่ได้แจกของ`:`❌ ปฏิเสธคำขอแล้ว`);showAdminCenter();refreshNotificationBadge();
   }catch(error){message("จัดการคำขอไม่ได้",error.message||"กรุณาลองใหม่")}
 }
+
+/* ======================================================================
+   UPDATE V4 — 2026-08-09
+   Fishing pond / plots 13–24 / coconut river / fast-hand bonus / save backup
+   Additive migration only: do not reset existing bag, merit, animals or plots 1–12.
+   ====================================================================== */
+
+const FISHING_BAITS={
+  bait1:{name:"เหยื่อตกปลาฝึกหัด",image:"fishing-bait-01.png?v=1",chance:75,durationMs:25*60*1000,needBag:{babyBamboo:8},needProducts:{},dishAny:0},
+  bait2:{name:"เหยื่อตกปลาสมัครเล่น",image:"fishing-bait-02.png?v=1",chance:75,durationMs:16*60*1000,needBag:{babyBamboo:8},needProducts:{truffle:5,milk:5},dishAny:0},
+  bait3:{name:"เหยื่อตกปลามืออาชีพ",image:"fishing-bait-03.png?v=1",chance:100,durationMs:8*60*1000,needBag:{babyBamboo:15,hauntedPlankton:5},needProducts:{milk:10},dishAny:0},
+  bait4:{name:"เหยื่อตกปลามือโปร",image:"fishing-bait-04.png?v=1",chance:100,durationMs:3*60*1000,needBag:{babyBamboo:22,hauntedPlankton:3},needProducts:{milk:2},dishAny:4}
+};
+const FISHING_FISH={
+  fish01:{name:"ปลาคาร์ฟวิญญาณ",image:"fishing-fish-01.png?v=1",tier:1,min:0.15,max:2.50},
+  fish02:{name:"ปลาปักเป้าเด้าหน้า",image:"fishing-fish-02.png?v=1",tier:1,min:0.15,max:2.50},
+  fish03:{name:"ปลาตะเกียงรัตติกาล",image:"fishing-fish-03.png?v=1",tier:1,min:0.15,max:2.50},
+  fish04:{name:"ปลาพริ้วม่วงมายา",image:"fishing-fish-04.png?v=1",tier:1,min:0.15,max:2.50},
+  fish05:{name:"ปลาหนามเพลิงชาด",image:"fishing-fish-05.png?v=1",tier:2,min:2.20,max:5.90},
+  fish06:{name:"ปลาปักเป้าทองคำ",image:"fishing-fish-06.png?v=1",tier:2,min:2.20,max:5.90},
+  fish07:{name:"ปลาดุกจันทร์ทมิฬ",image:"fishing-fish-07.png?v=1",tier:2,min:2.20,max:5.90},
+  fish08:{name:"ปลาหงส์เพลิงวารี",image:"fishing-fish-08.png?v=1",tier:2,min:2.20,max:5.90},
+  fish09:{name:"กระเบนศิลาพิฆาต",image:"fishing-fish-09.png?v=1",tier:3,min:7.50,max:14.00},
+  fish10:{name:"กระเบนดาราพราย",image:"fishing-fish-10.png?v=1",tier:3,min:7.50,max:14.00},
+  fish11:{name:"เนตรนาคา",image:"fishing-fish-11.png?v=1",tier:3,min:7.50,max:14.00},
+  fish12:{name:"พญาวารีเกลียวคลื่น",image:"fishing-fish-12.png?v=1",tier:3,min:7.50,max:14.00}
+};
+const FISHING_CONFIG={
+  bait1:{counts:[[1,.95],[2,.05]],tiers:[[1,.75],[2,.25]]},
+  bait2:{counts:[[1,.80],[2,.18],[3,.02]],tiers:[[1,.60],[2,.40]]},
+  bait3:{counts:[[1,.45],[2,.45],[3,.10]],tiers:[[1,.15],[2,.60],[3,.25]]},
+  bait4:{counts:[[1,.25],[2,.50],[3,.25]],tiers:[[1,.05],[2,.50],[3,.45]]}
+};
+const FISHING_DOCK_POSITIONS=[[5,31,20,15],[5,50,20,15],[7,69,20,15],[75,31,20,15],[75,50,20,15],[73,69,20,15]];
+const FISHING_CLAIM_MS=5*60*1000;
+const NAGA_OFFERING_COOLDOWN_MS=2*60*60*1000;
+const COCONUT_RIVER_COOLDOWN_MS=60*60*1000;
+const COCONUT_RIVER_POSITIONS=[[43.5,30,13,9],[44,43,13,9],[43.5,56,13,9],[44.5,69,13,9]];
+const COCONUT_RIVER_ITEMS={
+  frog1:{kind:"frog",index:1,name:"กบสวนมะพร้าว 1",image:"coconut-river-frog-01.png?v=1"},
+  frog2:{kind:"frog",index:2,name:"กบสวนมะพร้าว 2",image:"coconut-river-frog-02.png?v=1"},
+  frog3:{kind:"frog",index:3,name:"กบสวนมะพร้าว 3",image:"coconut-river-frog-03.png?v=1"},
+  frog4:{kind:"frog",index:4,name:"กบสวนมะพร้าว 4",image:"coconut-river-frog-04.png?v=1"},
+  fish1:{kind:"fish",index:1,name:"ปลาสวนมะพร้าว 1",image:"coconut-river-fish-01.png?v=1"},
+  fish2:{kind:"fish",index:2,name:"ปลาสวนมะพร้าว 2",image:"coconut-river-fish-02.png?v=1"},
+  fish3:{kind:"fish",index:3,name:"ปลาสวนมะพร้าว 3",image:"coconut-river-fish-03.png?v=1"},
+  fish4:{kind:"fish",index:4,name:"ปลาสวนมะพร้าว 4",image:"coconut-river-fish-04.png?v=1"}
+};
+const COCONUT_RIVER_KEYS=Object.keys(COCONUT_RIVER_ITEMS);
+SCENES.underwater.image="naga-fishing-pond-background.png?v=1";
+
+let farmPlotPage=0;
+let fishingSlotsCache=Array(6).fill(null);
+let fishingSlotsUnsubscribe=null;
+let v4Dirty=false;
+
+function makeFishingBaitInventory(){return Object.fromEntries(Object.keys(FISHING_BAITS).map(k=>[k,0]))}
+function makeCoconutRiverInventory(){return Object.fromEntries(COCONUT_RIVER_KEYS.map(k=>[k,0]))}
+function ensureV4State(target){
+  if(!target)return target;
+  target.fishingBaits=target.fishingBaits&&typeof target.fishingBaits==="object"?target.fishingBaits:{};
+  Object.keys(FISHING_BAITS).forEach(k=>target.fishingBaits[k]=Math.max(0,Math.floor(Number(target.fishingBaits[k])||0)));
+  target.coconutRiverItems=target.coconutRiverItems&&typeof target.coconutRiverItems==="object"?target.coconutRiverItems:{};
+  COCONUT_RIVER_KEYS.forEach(k=>target.coconutRiverItems[k]=Math.max(0,Math.floor(Number(target.coconutRiverItems[k])||0)));
+  const dateKey=currentBangkokDateKey();
+  if(!target.coconutQuickBonus||target.coconutQuickBonus.dateKey!==dateKey){target.coconutQuickBonus={dateKey,frogClaimed:false,fishClaimed:false}}
+  target.coconutQuickBonus.frogClaimed=Boolean(target.coconutQuickBonus.frogClaimed);
+  target.coconutQuickBonus.fishClaimed=Boolean(target.coconutQuickBonus.fishClaimed);
+  if(!Array.isArray(target.plots))target.plots=[];
+  while(target.plots.length<PLOT_COUNT)target.plots.push(emptyPlot());
+  target.plots=target.plots.slice(0,PLOT_COUNT).map(normalizePlot);
+  return target;
+}
+
+const __freshBeforeV4=fresh;
+fresh=function(player){return ensureV4State(__freshBeforeV4(player))};
+const __normalizeStateBeforeV4=normalizeState;
+normalizeState=function(raw,player){return ensureV4State(__normalizeStateBeforeV4(raw,player))};
+
+const __ensureAdminStockBeforeV4=ensureAdminStock;
+ensureAdminStock=function(target){
+  const changedBase=__ensureAdminStockBeforeV4(target);if(!target)return changedBase;
+  ensureV4State(target);let changed=Boolean(changedBase);
+  if(currentMember==="Aida"&&adminProfile?.role==="admin"){
+    Object.keys(FISHING_BAITS).forEach(k=>{if(Number(target.fishingBaits[k])!==ADMIN_STOCK_QTY){target.fishingBaits[k]=ADMIN_STOCK_QTY;changed=true}});
+    COCONUT_RIVER_KEYS.forEach(k=>{if(Number(target.coconutRiverItems[k])!==ADMIN_STOCK_QTY){target.coconutRiverItems[k]=ADMIN_STOCK_QTY;changed=true}});
+  }
+  return changed;
+};
+
+const __saveBeforeV4=save;
+save=function(){v4Dirty=true;return __saveBeforeV4()};
+const __flushCloudSaveBeforeV4=flushCloudSave;
+flushCloudSave=async function(){const result=await __flushCloudSaveBeforeV4();if(cloudReady)v4Dirty=false;return result};
+setInterval(()=>{if(v4Dirty&&cloudReady&&!cloudSessionSuperseded)flushCloudSave().catch(()=>{})},45000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&v4Dirty&&cloudReady)flushCloudSave().catch(()=>{})});
+window.addEventListener("pagehide",()=>{if(v4Dirty&&cloudReady)flushCloudSave().catch(()=>{})});
+
+function setFarmPlotPage(page){
+  farmPlotPage=page===1?1:0;
+  const screen=$("gameScreen");screen.classList.toggle("plot-page-2",farmPlotPage===1);
+  $("plotPageNextBtn")?.classList.toggle("hidden",farmPlotPage===1);
+  $("plotPagePrevBtn")?.classList.toggle("hidden",farmPlotPage!==1);
+  draw();
+}
+function drawV4Plots(){
+  if(!state)return;if(!visitContext){clearExpiredRest();processAnimalSystems();if(ensureMissionStateFor(ownState))save()}updateMeritUI();if(!visitContext)updateAlmsButton();ensureV4State(state);
+  const plotsEl=$("plots");plotsEl.innerHTML="";const start=farmPlotPage*12;
+  for(let localIndex=0;localIndex<12;localIndex++){
+    const index=start+localIndex,plot=state.plots[index]||emptyPlot();ensurePlotPhase(plot);const currentStage=stage(plot),status=plotStatus(plot);const button=document.createElement("button");button.type="button";button.className=`plot ${currentStage} ${currentStage==="empty"?"empty":currentStage==="ready"?"ready":"growing"}`;const name=plot.crop?CROPS[plot.crop].name:"";const steal=visitContext&&currentStage==="ready"&&!['babyBamboo','hauntedPlankton'].includes(plot.crop)?'<span class="steal-badge">🧤 ขโมย</span>':"";button.innerHTML=`<span class="plot-no">#${index+1}</span>${status?`<img class="status-badge" src="${STATUS_ICON[status]}" alt="${status}">`:""}${steal}<div class="plot-inner"><div class="crop">${cropIcon(plot)}</div>${name?`<div class="crop-name">${name}</div>`:""}${plot.crop?`<div class="timer">${plotTimerText(plot)}</div>`:""}</div>`;button.onclick=()=>tapPlot(index);plotsEl.appendChild(button);
+  }
+}
+draw=drawV4Plots;
+if($("plotPageNextBtn"))$("plotPageNextBtn").onclick=()=>setFarmPlotPage(1);
+if($("plotPagePrevBtn"))$("plotPagePrevBtn").onclick=()=>setFarmPlotPage(0);
+
+function baitNeedHTML(bait){
+  const rows=[];Object.entries(bait.needBag||{}).forEach(([k,n])=>rows.push(`${CROPS[k]?.icon||"🌱"} ${CROPS[k]?.name||k} ×${n}`));Object.entries(bait.needProducts||{}).forEach(([k,n])=>rows.push(`${ANIMAL_PRODUCTS[k]?.icon||"🐾"} ${ANIMAL_PRODUCTS[k]?.name||k} ×${n}`));if(bait.dishAny)rows.push(`🍲 อาหารที่คราฟแล้วอะไรก็ได้รวม ×${bait.dishAny}`);return rows.join("<br>");
+}
+function canCraftFishingBait(s,bait){return Object.entries(bait.needBag||{}).every(([k,n])=>(Number(s.bag[k])||0)>=n)&&Object.entries(bait.needProducts||{}).every(([k,n])=>(Number(s.animalProducts[k])||0)>=n)&&(!bait.dishAny||totalDishCount(s)>=bait.dishAny)}
+function showFishingBaitCraft(){
+  const s=ensureV4State(ownState||state);$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 คราฟเหยื่อตกปลา</h2><p class="feature-subtitle">คราฟสำเร็จแล้วเหยื่อจะเข้า กระเป๋า → เหยื่อตกปลา • สูตร 75% ถ้าพลาดวัตถุดิบจะถูกใช้ไป</p><div class="fishing-bait-grid">${Object.entries(FISHING_BAITS).map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>${baitNeedHTML(b)}<br>โอกาสสำเร็จ ${b.chance}% • ใช้ตก ${Math.round(b.durationMs/60000)} นาที<br>มีในกระเป๋า ×${s.fishingBaits[key]||0}</small><button type="button" data-craft-fishing-bait="${key}" ${canCraftFishingBait(s,b)?"":"disabled"}>คราฟ</button></article>`).join("")}</div></section>`;document.querySelectorAll("[data-craft-fishing-bait]").forEach(btn=>btn.onclick=()=>craftFishingBait(btn.dataset.craftFishingBait));openModal();
+}
+async function craftFishingBait(key){
+  const bait=FISHING_BAITS[key];if(!bait||!cloudReady)return;
+  try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next,success=false;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);if(!canCraftFishingBait(s,bait))throw new Error("วัตถุดิบไม่ครบตามสูตร");Object.entries(bait.needBag||{}).forEach(([k,n])=>s.bag[k]-=n);Object.entries(bait.needProducts||{}).forEach(([k,n])=>s.animalProducts[k]-=n);if(bait.dishAny)consumeAnyDishes(s,bait.dishAny);success=Math.random()*100<bait.chance;if(success)s.fishingBaits[key]=(Number(s.fishingBaits[key])||0)+1;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;showFishingBaitCraft();showWeatherToast(success?`🎣 คราฟ ${bait.name} สำเร็จ • เข้ากระเป๋า +1`:"💨 คราฟเหยื่อไม่สำเร็จ • วัตถุดิบถูกใช้ไปแล้ว")}catch(error){message("คราฟเหยื่อไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+
+function weightedPick(rows){let r=Math.random(),sum=0;for(const [value,weight] of rows){sum+=weight;if(r<=sum)return value}return rows[rows.length-1][0]}
+function randomWeight(min,max){const lo=Math.round(min*100),hi=Math.round(max*100);return (lo+Math.floor(Math.random()*(hi-lo+1)))/100}
+function rollFishingCatches(baitKey){
+  const cfg=FISHING_CONFIG[baitKey],count=weightedPick(cfg.counts),catches=[];
+  for(let i=0;i<count;i++){const tier=weightedPick(cfg.tiers),pool=Object.entries(FISHING_FISH).filter(([,f])=>f.tier===tier),[fishKey,fish]=pool[Math.floor(Math.random()*pool.length)],weight=randomWeight(fish.min,fish.max);catches.push({fishKey,name:fish.name,image:fish.image,weight:Number(weight.toFixed(2))})}
+  const total=Number(catches.reduce((a,c)=>a+c.weight,0).toFixed(2));return{catches,total};
+}
+function normalizeFishingSlot(data,index){if(!data||typeof data!=="object")return null;const catches=Array.isArray(data.catches)?data.catches.slice(0,3).map(c=>({fishKey:String(c.fishKey||""),name:String(c.name||FISHING_FISH[c.fishKey]?.name||"ปลา"),image:String(c.image||FISHING_FISH[c.fishKey]?.image||""),weight:Number(Number(c.weight||0).toFixed(2))})):[];return{slot:Number(data.slot)||index+1,ownerKey:String(data.ownerKey||""),ownerName:String(data.ownerName||"สมาชิก"),baitKey:String(data.baitKey||""),status:String(data.status||"fishing"),startAt:Number(data.startAt)||0,finishAt:Number(data.finishAt)||0,claimDeadline:Number(data.claimDeadline)||0,catches,totalWeight:Number(Number(data.totalWeight||0).toFixed(2)),claimedAt:Number(data.claimedAt)||0}}
+async function loadFishingSlots(){const {db,fs}=await getFirebaseContext();const snaps=await Promise.all(Array.from({length:6},(_,i)=>fs.getDoc(fs.doc(db,"fishingSlots",String(i+1)))));fishingSlotsCache=snaps.map((s,i)=>s.exists()?normalizeFishingSlot(s.data(),i):null);return fishingSlotsCache}
+function stopFishingSubscription(){if(fishingSlotsUnsubscribe){fishingSlotsUnsubscribe();fishingSlotsUnsubscribe=null}fishingSlotsCache=Array(6).fill(null)}
+function ensureFishingSubscription(){if(fishingSlotsUnsubscribe||!cloudReady)return;getFirebaseContext().then(({db,fs})=>{fishingSlotsUnsubscribe=fs.onSnapshot(fs.collection(db,"fishingSlots"),snap=>{const slots=Array(6).fill(null);snap.forEach(d=>{const i=Math.max(0,Math.min(5,Number(d.id)-1));slots[i]=normalizeFishingSlot(d.data(),i)});fishingSlotsCache=slots;if(currentScene==="underwater")drawFishingPond()},error=>console.warn("fishing slots",error))}).catch(()=>{})}
+function fishingCountdown(ms){const total=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(total/60),s=total%60;return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
+function fishingSlotIsAvailable(slot,now=gameNow()){return !slot||slot.status==="claimed"||Number(slot.claimDeadline||0)<=now}
+function fishingDockHTML(slot,index){
+  const [l,t,w,h]=FISHING_DOCK_POSITIONS[index],now=gameNow();let inner="";
+  if(!slot||fishingSlotIsAvailable(slot,now)){if(slot&&slot.status!=="claimed"&&slot.claimDeadline>0&&slot.claimDeadline<=now)inner=`<span class="fishing-dock-status">ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด<br>ท่านี้ว่างแล้ว</span>`;else if(slot?.status==="claimed")inner=`<span class="fishing-dock-status">รับน้ำหนักแล้ว • ท่านี้ว่าง</span>`;return `<button class="fishing-dock" data-fishing-dock="${index}" type="button" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%">${inner}</button>`}
+  if(now<slot.finishAt){inner=`<span class="fishing-dock-status">${safeHtml(slot.ownerName)} กำลังตกปลา<br>${fishingCountdown(slot.finishAt-now)}</span>`}
+  else{const imgs=slot.catches.map(c=>`<img src="${c.image}" alt="${safeHtml(c.name)}">`).join("");inner=`<span class="fishing-result-fishes">${imgs}</span><span class="fishing-dock-status">สำเร็จ ปลาติดเบ็ดแล้วแม่!<br>${Number(slot.totalWeight).toFixed(2)} lbs • รับภายใน ${fishingCountdown(slot.claimDeadline-now)}</span>${slot.ownerKey===currentMemberKey?'<span class="fishing-claim-mini">รับ</span>':""}`}
+  return `<button class="fishing-dock" data-fishing-dock="${index}" type="button" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%">${inner}</button>`;
+}
+function drawFishingPond(){
+  if(currentScene!=="underwater")return;setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm,nextText:"คราฟเหยื่อตกปลา",nextAction:showFishingBaitCraft});
+  $("sceneInteractiveLayer").innerHTML=`<div class="fishing-scene-banner">🎣 บ่อบาดาลส่วนกลาง • 6 ท่า</div><button id="fishingDashboardBtn" class="fishing-dashboard-btn" type="button">แดชบอร์ด</button><button id="nagaOfferingHotspot" class="naga-offering-hotspot" type="button" aria-label="ถวายเสบียงเจ้าแม่"></button>${fishingSlotsCache.map((slot,i)=>fishingDockHTML(slot,i)).join("")}`;
+  $("fishingDashboardBtn").onclick=()=>showFishingDashboard("today");$("nagaOfferingHotspot").onclick=openNagaOffering;document.querySelectorAll("[data-fishing-dock]").forEach(btn=>btn.onclick=()=>openFishingDock(Number(btn.dataset.fishingDock)));
+}
+async function renderUnderwaterScene(){
+  if(!cloudReady){setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm,nextText:"คราฟเหยื่อตกปลา",nextAction:showFishingBaitCraft});$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">กำลังเชื่อมบ่อบาดาลส่วนกลาง...</div>';return}
+  try{await loadFishingSlots();drawFishingPond();ensureFishingSubscription();stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="underwater"){stopSceneTimer();return}drawFishingPond()},1000)}catch(error){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">โหลดบ่อบาดาลไม่สำเร็จ</div>'}
+}
+async function getMyFishingLock(){if(!cloudReady)return null;const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"fishingPlayers",currentMemberKey));return snap.exists()?snap.data():null}
+async function openFishingDock(index){
+  const now=gameNow(),slot=fishingSlotsCache[index];
+  try{const lock=await getMyFishingLock();if(lock&&Number(lock.claimDeadline||0)>now){const mySlot=Math.max(0,Number(lock.slot||1)-1);if(mySlot!==index){message("🎣 รอก่อนแม่","โลภมากไม่ไหว รอก่อน ให้คนอื่นมาตกบ้าง ตกเสร็จบ่อนี้ก่อนเนาะ");return}const mine=fishingSlotsCache[mySlot];if(mine&&now>=mine.finishAt)showFishingResultModal(mine);else message("🎣 กำลังตกปลา",`ท่าของคุณกำลังทำงานอยู่ เหลือ ${fishingCountdown(Math.max(0,(mine?.finishAt||lock.finishAt)-now))}`);return}}
+  catch{}
+  if(slot&&!fishingSlotIsAvailable(slot,now)){if(now>=slot.finishAt){showFishingResultModal(slot);return}message("ท่านี้มีคนตกปลาอยู่",`${slot.ownerName} กำลังตกปลา • เหลือ ${fishingCountdown(slot.finishAt-now)}`);return}
+  showFishingBaitChoice(index);
+}
+function showFishingBaitChoice(index){
+  const s=ensureV4State(ownState||state),available=Object.entries(FISHING_BAITS).filter(([k])=>(Number(s.fishingBaits[k])||0)>0);if(!available.length){message("🎣 ไม่มีเหยื่อ","เสร่อมาก เหยื่อไม่มีแต่อยากจะกด");return}
+  $("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 เลือกเหยื่อสำหรับท่า ${index+1}</h2><div class="fishing-bait-grid">${available.map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>มี ×${s.fishingBaits[key]} • ใช้เวลา ${Math.round(b.durationMs/60000)} นาที</small><button type="button" data-start-fishing="${key}">ใช้เหยื่อนี้</button></article>`).join("")}</div></section>`;document.querySelectorAll("[data-start-fishing]").forEach(btn=>btn.onclick=()=>startFishing(index,btn.dataset.startFishing));openModal();
+}
+async function startFishing(index,baitKey){
+  const bait=FISHING_BAITS[baitKey];if(!bait||!cloudReady)return;const rolled=rollFishingCatches(baitKey),now=gameNow(),finishAt=now+bait.durationMs,claimDeadline=finishAt+FISHING_CLAIM_MS;
+  try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey);let next,slotData;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef)]);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const lock=playerSnap.exists()?playerSnap.data():null;if(lock&&Number(lock.claimDeadline||0)>now)throw new Error("โลภมากไม่ไหว รอก่อน ให้คนอื่นมาตกบ้าง ตกเสร็จบ่อนี้ก่อนเนาะ");const oldSlot=slotSnap.exists()?normalizeFishingSlot(slotSnap.data(),index):null;if(oldSlot&&!fishingSlotIsAvailable(oldSlot,now))throw new Error(`${oldSlot.ownerName} กำลังใช้ท่านี้อยู่`);if((Number(s.fishingBaits[baitKey])||0)<1)throw new Error("เหยื่อนี้หมดจากกระเป๋าแล้ว");s.fishingBaits[baitKey]-=1;slotData={slot:index+1,ownerKey:currentMemberKey,ownerName:currentMember,baitKey,status:"fishing",startAt:now,finishAt,claimDeadline,catches:rolled.catches,totalWeight:rolled.total,claimedAt:0};next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slotData,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(playerRef,{memberKey:currentMemberKey,memberName:currentMember,slot:index+1,finishAt,claimDeadline,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=slotData;closeModal();drawFishingPond();showWeatherToast(`🎣 เริ่มตกปลาท่า ${index+1} แล้ว • ${Math.round(bait.durationMs/60000)} นาที`)}catch(error){message("เริ่มตกปลาไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+function showFishingResultModal(slot){
+  const now=gameNow(),expired=now>Number(slot.claimDeadline||0),owner=slot.ownerKey===currentMemberKey;$("modalContent").innerHTML=`<section class="feature-panel"><h2>${expired?"💨 ปลาหนีไปแล้ว":"🎣 สำเร็จ ปลาติดเบ็ดแล้วแม่!"}</h2>${expired?'<p class="feature-subtitle">ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด</p>':`<div class="fishing-result-grid">${slot.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><h3>${safeHtml(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(slot.totalWeight).toFixed(2)} lbs</div><p class="feature-subtitle">${owner?`เหลือเวลารับ ${fishingCountdown(slot.claimDeadline-now)}`:`ของ ${safeHtml(slot.ownerName)} • คุณดูผลได้แต่รับแทนไม่ได้`}</p>${owner?'<button id="claimFishingWeightBtn" class="fishing-claim-button" type="button">รับน้ำหนักเข้าการแข่งขัน</button>':""}`}</section>`;if($("claimFishingWeightBtn"))$("claimFishingWeightBtn").onclick=()=>claimFishingCatch(slot.slot-1);openModal();
+}
+async function claimFishingCatch(index){
+  const now=gameNow(),dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey),dailyRef=fs.doc(db,"fishingDaily",dateKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap,dailySnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)]);if(!slotSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบผลการตกปลา");const slot=normalizeFishingSlot(slotSnap.data(),index);if(slot.ownerKey!==currentMemberKey)throw new Error("ปลาชุดนี้ไม่ใช่ของคุณ");if(now<slot.finishAt)throw new Error("ปลายังไม่ติดเบ็ด");if(now>slot.claimDeadline)throw new Error("ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด");if(slot.status==="claimed")throw new Error("รับน้ำหนักรอบนี้แล้ว");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const daily=dailySnap.exists()?dailySnap.data():{scores:{},names:{}};daily.scores=daily.scores&&typeof daily.scores==="object"?daily.scores:{};daily.names=daily.names&&typeof daily.names==="object"?daily.names:{};daily.scores[currentMemberKey]=Number(((Number(daily.scores[currentMemberKey])||0)+slot.totalWeight).toFixed(2));daily.names[currentMemberKey]=currentMember;incrementMissionOn(s,"fishingWeight",slot.totalWeight);slot.status="claimed";slot.claimedAt=now;next=s;newSlot=slot;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dailyRef,{dateKey,scores:daily.scores,names:daily.names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slot,updatedAt:fs.serverTimestamp()},{merge:false});if(playerSnap.exists())tx.delete(playerRef)});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=newSlot;closeModal();drawFishingPond();showWeatherToast(`🏆 รับน้ำหนัก ${Number(newSlot.totalWeight).toFixed(2)} lbs เข้าการแข่งขันแล้ว`)}catch(error){message("รับน้ำหนักไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+
+function previousBangkokDateKey(dateKey=currentBangkokDateKey()){const [y,m,d]=dateKey.split("-").map(Number),dt=new Date(Date.UTC(y,m-1,d)-86400000);return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`}
+function topFishingRows(daily){const scores=daily?.scores&&typeof daily.scores==="object"?daily.scores:{},names=daily?.names&&typeof daily.names==="object"?daily.names:{};return Object.entries(scores).map(([key,value])=>({memberKey:key,name:names[key]||key,weight:Number(Number(value||0).toFixed(2))})).sort((a,b)=>b.weight-a.weight||a.name.localeCompare(b.name)).slice(0,3)}
+async function maybeArchivePreviousFishingDay(){
+  if(!cloudReady)return;const prev=previousBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),dailyRef=fs.doc(db,"fishingDaily",prev),histRef=fs.doc(db,"fishingHistory",prev),[dailySnap,histSnap]=await Promise.all([fs.getDoc(dailyRef),fs.getDoc(histRef)]);if(histSnap.exists()||!dailySnap.exists())return;await fs.setDoc(histRef,{dateKey:prev,top3:topFishingRows(dailySnap.data()),createdAt:fs.serverTimestamp()},{merge:false})}catch(error){console.warn("archive fishing history",error)}
+}
+async function showFishingDashboard(tab="today"){
+  if(!cloudReady)return;await maybeArchivePreviousFishingDay();try{const {db,fs}=await getFirebaseContext(),dateKey=currentBangkokDateKey();if(tab==="today"){const snap=await fs.getDoc(fs.doc(db,"fishingDaily",dateKey)),daily=snap.exists()?snap.data():{scores:{},names:{}},members=Object.keys(MEMBERS).filter(n=>n!=="Aida"),rows=members.map(name=>({name,key:memberKeyFromName(name),weight:Number(daily.scores?.[memberKeyFromName(name)]||0)})).sort((a,b)=>b.weight-a.weight||a.name.localeCompare(b.name));$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 แดชบอร์ดตกปลา</h2><div class="fishing-dashboard-tabs"><button class="active" data-fishing-dashboard-tab="today">อันดับวันนี้</button><button data-fishing-dashboard-tab="history">สถิติผู้ชนะ</button></div><p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. เวลาไทย • นับเฉพาะปลาที่กดรับทันเวลา</p><div class="fishing-rank-list">${rows.map((r,i)=>`<div class="fishing-rank-row"><strong>${i+1}</strong><b>${safeHtml(r.name)}</b><span>${r.weight.toFixed(2)} lbs</span></div>`).join("")}</div></section>`}
+    else{const q=fs.query(fs.collection(db,"fishingHistory"),fs.orderBy("dateKey","desc"),fs.limit(28)),snap=await fs.getDocs(q),days=[];snap.forEach(d=>days.push(d.data()));$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 แดชบอร์ดตกปลา</h2><div class="fishing-dashboard-tabs"><button data-fishing-dashboard-tab="today">อันดับวันนี้</button><button class="active" data-fishing-dashboard-tab="history">สถิติผู้ชนะ</button></div><p class="feature-subtitle">เก็บสถิติผู้ชนะ Top 3 ย้อนหลัง 28 วันล่าสุด</p>${days.length?days.map(day=>`<div class="fishing-history-day"><h3>วันที่ ${safeHtml(day.dateKey||"")}</h3>${(day.top3||[]).map((r,i)=>`<div><b>${i+1}. ${safeHtml(r.name)}</b><span>${Number(r.weight||0).toFixed(2)} lbs</span></div>`).join("")||'<div>ยังไม่มีผู้ชนะ</div>'}</div>`).join(""):'<p class="empty-feature">ยังไม่มีประวัติการแข่งขัน</p>'}</section>`}
+    document.querySelectorAll("[data-fishing-dashboard-tab]").forEach(btn=>btn.onclick=()=>showFishingDashboard(btn.dataset.fishingDashboardTab));openModal();
+  }catch(error){message("เปิดแดชบอร์ดไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+
+function openNagaOffering(){
+  const s=ownState||state,remaining=Math.max(0,Number(s.underwaterUntil||0)-gameNow());if(remaining>0){message("🐍 เจ้าแม่กำลังพัก",`ส่งเสบียงได้อีกครั้งใน ${formatFriendlyCountdown(remaining)}`);return}const available=RECIPES.filter(r=>dishCountInState(r.id,s)>0);if(!available.length){message("ยังถวายไม่ได้","ไม่มีอาหารที่คราฟแล้วในกระเป๋า");return}$("modalContent").innerHTML=`<section class="feature-panel"><h2>🐍 ถวายเสบียงเจ้าแม่บาดาล</h2><p class="feature-subtitle">เลือกอาหาร 1 อย่าง • สุ่มรับกุศล 3–10 • คูลดาวน์ 2 ชั่วโมง</p><div class="fishing-bait-grid">${available.map(r=>`<article class="fishing-bait-card"><img src="${r.image}" alt="${r.name}"><h3>${r.name}</h3><small>มี ×${dishCountInState(r.id,s)}</small><button type="button" data-naga-offer="${r.id}">ถวายชิ้นนี้</button></article>`).join("")}</div></section>`;document.querySelectorAll("[data-naga-offer]").forEach(btn=>btn.onclick=()=>offerToNaga(btn.dataset.nagaOffer));openModal();
+}
+async function offerToNaga(recipeId){const now=gameNow(),reward=randInt(3,10);try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);if(Number(s.underwaterUntil||0)>now)throw new Error(`ส่งเสบียงได้อีกครั้งใน ${formatFriendlyCountdown(s.underwaterUntil-now)}`);if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารชิ้นนี้ไม่มีแล้ว");s.underwaterUntil=now+NAGA_OFFERING_COOLDOWN_MS;s.underwaterOffering=null;s.merit=(Number(s.merit)||0)+reward;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;updateMeritUI();closeModal();showWeatherToast(`🐍 เจ้าแม่ให้พร +${reward} กุศล`)}catch(error){message("ถวายเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+function randomCoconutRiverKey(){return COCONUT_RIVER_KEYS[Math.floor(Math.random()*COCONUT_RIVER_KEYS.length)]}
+const __normalizeSharedCoconutBeforeV4=normalizeSharedCoconut;
+normalizeSharedCoconut=function(data){
+  const base=__normalizeSharedCoconutBeforeV4(data),now=gameNow(),raw=Array.isArray(data?.riverSlots)?data.riverSlots.slice(0,4):[];while(raw.length<4)raw.push(null);base.riverSlots=raw.map(slot=>{const s=slot&&typeof slot==="object"?slot:{};let creatureKey=COCONUT_RIVER_ITEMS[s.creatureKey]?s.creatureKey:null,nextCreatureKey=COCONUT_RIVER_ITEMS[s.nextCreatureKey]?s.nextCreatureKey:null,nextAt=Math.max(0,Number(s.nextAt)||0);if(!creatureKey&&nextAt>0&&nextAt<=now){creatureKey=nextCreatureKey||randomCoconutRiverKey();nextCreatureKey=null;nextAt=0}return{creatureKey,nextCreatureKey,nextAt,lastByName:String(s.lastByName||""),lastByKey:String(s.lastByKey||"")}});return base;
+};
+loadSharedCoconut=async function(){
+  const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","coconutGarden");let result;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),garden=normalizeSharedCoconut(snap.exists()?snap.data():null);let changed=!snap.exists();garden.riverSlots.forEach(slot=>{if(!slot.creatureKey&&slot.nextAt<=0){slot.creatureKey=randomCoconutRiverKey();changed=true}});result=garden;if(changed)tx.set(ref,{...garden,updatedAt:fs.serverTimestamp()},{merge:false})});sharedCoconutCache=result;return result;
+};
+function coconutRiverRemainingText(ms){return `${Math.max(1,Math.ceil(ms/60000))} นาที`}
+renderCoconutScene=async function(){
+  setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});if(!cloudReady){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">กำลังเชื่อมสวนมะพร้าวส่วนกลาง...</div>';return}try{await loadSharedCoconut()}catch(error){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">โหลดสวนมะพร้าวไม่สำเร็จ</div>';return}
+  const s=ownState||state,quotaActive=Number(s.coconutQuotaResetAt||0)>gameNow(),used=quotaActive?(Number(s.coconutQuotaCount)||0):0,now=gameNow();$("sceneInteractiveLayer").innerHTML=`<div class="coconut-quota-label">🥥 โควตารอบนี้ ${used}/${COCONUT_QUOTA_PER_ROUND}</div><button id="coconutHistoryBtn" class="coconut-history-btn" type="button">ประวัติ 50 รายการ</button><button id="coconutFastBonusBtn" class="coconut-fast-bonus-btn" type="button">โบนัสคนมือไว</button>${COCONUT_TREE_POSITIONS_V1.map(([left,top,width,height],i)=>{const tree=sharedCoconutCache.trees[i],rem=Math.max(0,tree.nextAt-now),label=rem>0?`${tree.lastByName||"มีคน"} สอยแล้ว • ${coconutRemainingText(rem)}`:"พร้อมสอย";return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${safeHtml(label)}</small></button>`}).join("")}${sharedCoconutCache.riverSlots.map((slot,i)=>{const [l,t,w,h]=COCONUT_RIVER_POSITIONS[i],rem=Math.max(0,slot.nextAt-now),item=slot.creatureKey?COCONUT_RIVER_ITEMS[slot.creatureKey]:null;if(rem>0&&!item)return `<button class="coconut-river-slot cooldown" type="button" disabled style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><small>${safeHtml(slot.lastByName||"มีคน")} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(rem)}</small></button>`;if(!item)return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"></button>`;return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><img src="${item.image}" alt="${item.name}"><small>แตะจับ ${safeHtml(item.name)}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button><button id="pandaForestBtn" class="panda-forest-entry" type="button">สวนป่าของด้า</button>`;document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));document.querySelectorAll("[data-coconut-river-slot]").forEach(btn=>btn.onclick=()=>catchCoconutRiverCreature(Number(btn.dataset.coconutRiverSlot)));$("coconutBoatHotspot").onclick=showCoconutCraft;$("coconutHistoryBtn").onclick=showCoconutHistory;$("coconutFastBonusBtn").onclick=showCoconutFastBonus;$("pandaForestBtn").onclick=()=>openScene("panda");stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="coconut"){stopSceneTimer();return}renderCoconutScene()},1000);
+};
+async function catchCoconutRiverCreature(index){
+  const now=gameNow();try{const {db,fs}=await getFirebaseContext(),gardenRef=fs.doc(db,"shared","coconutGarden"),saveRef=fs.doc(db,"saves",currentMemberKey);let next,garden,itemKey;await fs.runTransaction(db,async tx=>{const [gSnap,sSnap]=await Promise.all([tx.get(gardenRef),tx.get(saveRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const g=normalizeSharedCoconut(gSnap.exists()?gSnap.data():null),s=normalizeState(sSnap.data(),currentMember),slot=g.riverSlots[index];if(!slot)throw new Error("ไม่พบจุดจับ");if(slot.nextAt>now&&!slot.creatureKey)throw new Error(`${slot.lastByName||"มีคน"} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(slot.nextAt-now)}`);if(!slot.creatureKey)slot.creatureKey=slot.nextCreatureKey||randomCoconutRiverKey();itemKey=slot.creatureKey;if(!COCONUT_RIVER_ITEMS[itemKey])throw new Error("สัตว์น้ำยังไม่พร้อม");s.coconutRiverItems[itemKey]=(Number(s.coconutRiverItems[itemKey])||0)+1;slot.creatureKey=null;slot.nextCreatureKey=randomCoconutRiverKey();slot.nextAt=now+COCONUT_RIVER_COOLDOWN_MS;slot.lastByName=currentMember;slot.lastByKey=currentMemberKey;next=s;garden=g;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{...g,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;sharedCoconutCache=garden;renderCoconutScene();message("🌴 จับสำเร็จ",`ได้รับ ${COCONUT_RIVER_ITEMS[itemKey].name} ×1<br>เก็บไว้ใน กระเป๋า → อื่นๆจากสวนมะพร้าว แล้ว`)}catch(error){message("จับไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+function collectionKeys(kind){return [1,2,3,4].map(i=>`${kind}${i}`)}
+function collectionReady(s,kind){return collectionKeys(kind).every(k=>(Number(s.coconutRiverItems[k])||0)>=1)}
+function showCoconutFastBonus(){
+  const s=ensureV4State(ownState||state),frogClaimed=s.coconutQuickBonus.frogClaimed,fishClaimed=s.coconutQuickBonus.fishClaimed;const block=kind=>collectionKeys(kind).map(k=>{const item=COCONUT_RIVER_ITEMS[k];return `<div class="coconut-collection-item"><img src="${item.image}" alt="${item.name}"><b>${item.name}</b><span>×${s.coconutRiverItems[k]||0}</span></div>`}).join("");$("modalContent").innerHTML=`<section class="feature-panel"><h2>⚡ โบนัสคนมือไว</h2><p class="feature-subtitle">คอลเล็กชั่นหลักรับได้อย่างละ 1 ครั้ง/วัน • รีเซ็ต 00:00 น. เวลาไทย</p><div class="coconut-bonus-section"><h3>🐸 กบครบ 4 ตัว → 50 กุศล</h3><div class="coconut-collection-grid">${block("frog")}</div><button id="claimFrogCollectionBtn" type="button" ${frogClaimed||!collectionReady(s,"frog")?"disabled":""}>${frogClaimed?"รับวันนี้แล้ว":"วางกบครบ 4 ช่อง • รับ 50 กุศล"}</button><div class="coconut-exchange-row"><span>กบตัวที่ 4 ×1 + นมวัว ×10 → 20 กุศล</span><button id="exchangeFrog4Btn" type="button" ${(s.coconutRiverItems.frog4||0)<1||(s.animalProducts.milk||0)<10?"disabled":""}>แลก</button></div></div><div class="coconut-bonus-section"><h3>🐟 ปลาครบ 4 ตัว → 50 กุศล</h3><div class="coconut-collection-grid">${block("fish")}</div><button id="claimFishCollectionBtn" type="button" ${fishClaimed||!collectionReady(s,"fish")?"disabled":""}>${fishClaimed?"รับวันนี้แล้ว":"วางปลาครบ 4 ช่อง • รับ 50 กุศล"}</button><div class="coconut-exchange-row"><span>ปลาตัวที่ 4 ×1 + เนื้อปลาผี ×10 → 30 กุศล</span><button id="exchangeFish4Btn" type="button" ${(s.coconutRiverItems.fish4||0)<1||(s.animalProducts.fishMeat||0)<10?"disabled":""}>แลก</button></div></div></section>`;$("claimFrogCollectionBtn").onclick=()=>claimCoconutCollection("frog");$("claimFishCollectionBtn").onclick=()=>claimCoconutCollection("fish");$("exchangeFrog4Btn").onclick=()=>exchangeCoconutDuplicate("frog");$("exchangeFish4Btn").onclick=()=>exchangeCoconutDuplicate("fish");openModal();
+}
+async function claimCoconutCollection(kind){const dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);if(s.coconutQuickBonus.dateKey!==dateKey)s.coconutQuickBonus={dateKey,frogClaimed:false,fishClaimed:false};const field=kind==="frog"?"frogClaimed":"fishClaimed";if(s.coconutQuickBonus[field])throw new Error("คอลเล็กชั่นนี้รับรางวัลวันนี้แล้ว");if(!collectionReady(s,kind))throw new Error("ยังมีไม่ครบทั้ง 4 ตัว อย่างละหนึ่ง");collectionKeys(kind).forEach(k=>s.coconutRiverItems[k]-=1);s.coconutQuickBonus[field]=true;s.merit=(Number(s.merit)||0)+50;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;updateMeritUI();showCoconutFastBonus();showWeatherToast("⚡ รับ +50 กุศลจากโบนัสคนมือไวแล้ว")}catch(error){message("รับโบนัสไม่ได้",error.message||"กรุณาลองใหม่")}}
+async function exchangeCoconutDuplicate(kind){const isFrog=kind==="frog",itemKey=isFrog?"frog4":"fish4",productKey=isFrog?"milk":"fishMeat",productQty=10,reward=isFrog?20:30;try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);if((Number(s.coconutRiverItems[itemKey])||0)<1)throw new Error("ตัวที่ 4 ไม่พอ");if((Number(s.animalProducts[productKey])||0)<productQty)throw new Error("วัตถุดิบผลผลิตสัตว์ไม่ครบ");s.coconutRiverItems[itemKey]-=1;s.animalProducts[productKey]-=productQty;s.merit=(Number(s.merit)||0)+reward;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;updateMeritUI();showCoconutFastBonus();showWeatherToast(`♻️ แลกสำเร็จ +${reward} กุศล`)}catch(error){message("แลกไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+/* กระเป๋าเพิ่ม เหยื่อตกปลา + อื่นๆจากสวนมะพร้าว */
+inventory=function(tab="crops"){
+  if(guardResting())return;const s=ensureV4State(ownState||state);ensureBoatState(s);const dishMap=dishCounts();const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],["boatDrinks","🩷 เสบียงเรือ"],["specials","🕯️ ของพิเศษ"],["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"]];let body="";
+  if(tab==="crops")body=Object.entries(CROPS).map(([k,c])=>`<div class="inventory-item"><img src="${c.readyImg}" alt="${c.name}"><span>${c.name}</span><b>×${s.bag[k]||0}</b></div>`).join("");
+  else if(tab==="products")body=Object.entries(ANIMAL_PRODUCTS).map(([k,p])=>`<div class="inventory-item"><img src="${p.image}" alt="${p.name}"><span>${p.name}</span><b>×${s.animalProducts[k]||0}</b></div>`).join("");
+  else if(tab==="food")body=RECIPES.map(r=>`<div class="inventory-item"><img src="${r.image}" alt="${r.name}"><span>${r.name}</span><b>×${dishMap[r.id]||0}</b></div>`).join("");
+  else if(tab==="fishingBaits")body=Object.entries(FISHING_BAITS).map(([k,b])=>`<div class="inventory-item fishing-bait-inventory"><img src="${b.image}" alt="${b.name}"><span>${b.name}<small style="display:block">ใช้ตกปลา ${Math.round(b.durationMs/60000)} นาที</small></span><b>×${s.fishingBaits[k]||0}</b></div>`).join("");
+  else if(tab==="coconutRiver")body=Object.entries(COCONUT_RIVER_ITEMS).map(([k,item])=>`<div class="inventory-item coconut-river-inventory"><img src="${item.image}" alt="${item.name}"><span>${item.name}</span><b>×${s.coconutRiverItems[k]||0}</b></div>`).join("");
+  else if(tab==="boatDrinks")body=BOAT_SUPPLY_DRINKS.map(r=>`<div class="inventory-item boat-drink-inventory"><img src="${r.image}" alt="${r.name}"><span>${r.name}<small style="display:block">ใช้เติมเรือเท่านั้น</small></span><b>×${s.boatDrinks[r.id]||0}</b></div>`).join("");
+  else if(tab==="specialAnimals")body=Object.entries(JELLYFISH_TYPES).map(([k,j])=>`<div class="inventory-item"><img src="${j.image}" alt="${j.name}"><span>${j.name}<small style="display:block">ยังไม่เริ่มนับอายุจนกว่าจะวางลงบ่อ</small></span><b>×${s.specialAnimals[k]||0}</b></div>`).join("");
+  else if(tab==="mysteryBoxes")body=`<div class="inventory-item special-coconut-item"><img src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><span>${JELLY_BOX.name}<small style="display:block">กดใช้งานเพื่อเปิดกล่องและสุ่มรางวัล</small></span><b>×${s.mysteryBoxes||0}</b>${(Number(s.mysteryBoxes)||0)>0?'<button type="button" id="useJellyBoxBtn">ใช้งาน</button>':""}</div>`;
+  else body=Object.entries(SPECIAL_ITEMS).map(([k,item])=>{const desc=item.kind==="animal"?`เร่งผลผลิตสัตว์ ${item.boost}%`:item.kind==="crop"?`เร่งโตพืช ${item.boost}%`:(item.description||"");return `<div class="inventory-item special-coconut-item"><img src="${item.image}" alt="${item.name}"><span>${item.name}<small style="display:block">${desc}</small></span><b>×${s.specials[k]||0}</b></div>`}).join("");
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));if($("useJellyBoxBtn"))$("useJellyBoxBtn").onclick=showJellyBoxUse;openModal();
+};
+if($("inventoryNavBtn"))$("inventoryNavBtn").onclick=()=>inventory();
+
+/* Admin สามารถส่งไอเท็มใหม่ได้ด้วย */
+const __adminGiftCatalogBeforeV4=adminGiftCatalog;
+adminGiftCatalog=function(){return[...__adminGiftCatalogBeforeV4(),...Object.entries(FISHING_BAITS).map(([key,b])=>({type:"fishingBait",key,name:b.name})),...Object.entries(COCONUT_RIVER_ITEMS).map(([key,item])=>({type:"coconutRiver",key,name:item.name}))]};
+const __addGiftItemBeforeV4=addGiftItemToState;
+addGiftItemToState=function(s,gift){ensureV4State(s);if(Array.isArray(gift?.items)){gift.items.forEach(item=>addGiftItemToState(s,{itemType:item.type,itemKey:item.key,qty:item.qty}));return}const type=gift.itemType||gift.type,key=gift.itemKey||gift.key,qty=Math.max(1,Math.floor(Number(gift.qty)||1));if(type==="fishingBait"){if(!FISHING_BAITS[key])throw new Error("ไม่พบเหยื่อตกปลา");s.fishingBaits[key]=(Number(s.fishingBaits[key])||0)+qty;return}if(type==="coconutRiver"){if(!COCONUT_RIVER_ITEMS[key])throw new Error("ไม่พบของจากสวนมะพร้าว");s.coconutRiverItems[key]=(Number(s.coconutRiverItems[key])||0)+qty;return}return __addGiftItemBeforeV4(s,gift)};
+const __removeGiftItemBeforeV4=removeGiftItemFromState;
+removeGiftItemFromState=function(s,itemType,itemKey,qty){ensureV4State(s);qty=Math.max(1,Math.floor(Number(qty)||1));if(itemType==="fishingBait"){if((Number(s.fishingBaits[itemKey])||0)<qty)return false;s.fishingBaits[itemKey]-=qty;return true}if(itemType==="coconutRiver"){if((Number(s.coconutRiverItems[itemKey])||0)<qty)return false;s.coconutRiverItems[itemKey]-=qty;return true}return __removeGiftItemBeforeV4(s,itemType,itemKey,qty)};
+const __adminEntryCountBeforeV4=adminEntryCount;
+adminEntryCount=function(s,entry){ensureV4State(s);if(entry.type==="fishingBait")return Number(s.fishingBaits[entry.key])||0;if(entry.type==="coconutRiver")return Number(s.coconutRiverItems[entry.key])||0;return __adminEntryCountBeforeV4(s,entry)};
+
+/* Maintenance backup: export exact save documents before opening the update */
+async function exportMaintenanceBackup(){
+  if(adminProfile?.role!=="admin"){message("ไม่มีสิทธิ์","เมนูนี้เปิดเฉพาะ Aida/Admin");return}try{const {db,fs}=await getFirebaseContext(),[saveSnap,gardenSnap,profileSnap]=await Promise.all([fs.getDocs(fs.collection(db,"saves")),fs.getDocs(fs.collection(db,"gardens")),fs.getDocs(fs.collection(db,"publicProfiles"))]),pack={exportedAt:new Date().toISOString(),bangkokDate:currentBangkokDateKey(),saves:{},gardens:{},publicProfiles:{}};saveSnap.forEach(d=>pack.saves[d.id]=d.data());gardenSnap.forEach(d=>pack.gardens[d.id]=d.data());profileSnap.forEach(d=>pack.publicProfiles[d.id]=d.data());const blob=new Blob([JSON.stringify(pack,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`yainoo-backup-${currentBangkokDateKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showWeatherToast("📦 สำรองข้อมูลสมาชิกเรียบร้อยแล้ว")}catch(error){message("สำรองข้อมูลไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
+}
+const __showAdminCenterBeforeV4=showAdminCenter;
+showAdminCenter=async function(){await __showAdminCenterBeforeV4();const panel=document.querySelector(".admin-panel");if(!panel||$("adminMaintenanceBackupBtn"))return;const section=document.createElement("div");section.className="admin-section";section.innerHTML='<h3>📦 สำรองข้อมูลก่อนปิดปรับปรุง</h3><p class="feature-subtitle">ดาวน์โหลด snapshot ของ saves / gardens / publicProfiles ทุกคนไว้เทียบกระเป๋าและกุศลหลังอัปเดต</p><button id="adminMaintenanceBackupBtn" class="primary-spooky-action" type="button">ดาวน์โหลด Backup ตอนนี้</button>';panel.insertBefore(section,panel.children[2]||null);$("adminMaintenanceBackupBtn").onclick=exportMaintenanceBackup};
+
+/* Well -> fishing pond directly */
+showWellChoices=function(){if(guardResting())return;openScene("underwater")};
+if($("wellHotspot"))$("wellHotspot").onclick=showWellChoices;
+
+const __openSceneBeforeV4=openScene;
+openScene=function(sceneName){if(currentScene==="underwater"&&sceneName!=="underwater")stopFishingSubscription();return __openSceneBeforeV4(sceneName)};
+const __returnToFarmBeforeV4=returnToFarm;
+returnToFarm=function(){if(currentScene==="underwater")stopFishingSubscription();const result=__returnToFarmBeforeV4();farmPlotPage=0;$("gameScreen")?.classList.remove("plot-page-2");$("plotPageNextBtn")?.classList.remove("hidden");$("plotPagePrevBtn")?.classList.add("hidden");if(state)draw();return result};
+
+/* first paint keeps original 1–12 page */
+setFarmPlotPage(0);
+
+/* V4.1 lightweight live redraws — avoid Firestore polling every second */
+let coconutSharedUnsubscribe=null;
+function stopCoconutSharedSubscription(){if(coconutSharedUnsubscribe){coconutSharedUnsubscribe();coconutSharedUnsubscribe=null}}
+function ensureCoconutSharedSubscription(){if(coconutSharedUnsubscribe||!cloudReady)return;getFirebaseContext().then(({db,fs})=>{coconutSharedUnsubscribe=fs.onSnapshot(fs.doc(db,"shared","coconutGarden"),snap=>{if(!snap.exists())return;sharedCoconutCache=normalizeSharedCoconut(snap.data());if(currentScene==="coconut")drawCoconutSceneV4FromCache()},error=>console.warn("coconut shared",error))}).catch(()=>{})}
+function drawCoconutSceneV4FromCache(){
+  if(currentScene!=="coconut"||!sharedCoconutCache)return;setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});const s=ownState||state,quotaActive=Number(s.coconutQuotaResetAt||0)>gameNow(),used=quotaActive?(Number(s.coconutQuotaCount)||0):0,now=gameNow();$("sceneInteractiveLayer").innerHTML=`<div class="coconut-quota-label">🥥 โควตารอบนี้ ${used}/${COCONUT_QUOTA_PER_ROUND}</div><button id="coconutHistoryBtn" class="coconut-history-btn" type="button">ประวัติ 50 รายการ</button><button id="coconutFastBonusBtn" class="coconut-fast-bonus-btn" type="button">โบนัสคนมือไว</button>${COCONUT_TREE_POSITIONS_V1.map(([left,top,width,height],i)=>{const tree=sharedCoconutCache.trees[i],rem=Math.max(0,tree.nextAt-now),label=rem>0?`${tree.lastByName||"มีคน"} สอยแล้ว • ${coconutRemainingText(rem)}`:"พร้อมสอย";return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${safeHtml(label)}</small></button>`}).join("")}${sharedCoconutCache.riverSlots.map((slot,i)=>{const [l,t,w,h]=COCONUT_RIVER_POSITIONS[i],rem=Math.max(0,slot.nextAt-now),item=slot.creatureKey?COCONUT_RIVER_ITEMS[slot.creatureKey]:null;if(rem>0&&!item)return `<button class="coconut-river-slot cooldown" type="button" disabled style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><small>${safeHtml(slot.lastByName||"มีคน")} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(rem)}</small></button>`;if(!item)return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"></button>`;return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><img src="${item.image}" alt="${item.name}"><small>แตะจับ ${safeHtml(item.name)}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button><button id="pandaForestBtn" class="panda-forest-entry" type="button">สวนป่าของด้า</button>`;document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));document.querySelectorAll("[data-coconut-river-slot]").forEach(btn=>btn.onclick=()=>catchCoconutRiverCreature(Number(btn.dataset.coconutRiverSlot)));$("coconutBoatHotspot").onclick=showCoconutCraft;$("coconutHistoryBtn").onclick=showCoconutHistory;$("coconutFastBonusBtn").onclick=showCoconutFastBonus;$("pandaForestBtn").onclick=()=>openScene("panda");
+}
+renderCoconutScene=async function(){setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});if(!cloudReady){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">กำลังเชื่อมสวนมะพร้าวส่วนกลาง...</div>';return}try{await loadSharedCoconut();drawCoconutSceneV4FromCache();ensureCoconutSharedSubscription();stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="coconut"){stopSceneTimer();return}drawCoconutSceneV4FromCache()},1000)}catch(error){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">โหลดสวนมะพร้าวไม่สำเร็จ</div>'}};
+
+const __openSceneBeforeV41=openScene;
+openScene=function(sceneName){if(currentScene==="coconut"&&sceneName!=="coconut")stopCoconutSharedSubscription();return __openSceneBeforeV41(sceneName)};
+const __returnToFarmBeforeV41=returnToFarm;
+returnToFarm=function(){if(currentScene==="coconut")stopCoconutSharedSubscription();return __returnToFarmBeforeV41()};
+
+/* history excludes Aida because contest board is the 18 regular members */
+topFishingRows=function(daily){const scores=daily?.scores&&typeof daily.scores==="object"?daily.scores:{},names=daily?.names&&typeof daily.names==="object"?daily.names:{};return Object.entries(scores).filter(([key])=>key!=="aida").map(([key,value])=>({memberKey:key,name:names[key]||key,weight:Number(Number(value||0).toFixed(2))})).sort((a,b)=>b.weight-a.weight||a.name.localeCompare(b.name)).slice(0,3)};
+
+/* claimed results remain visible until another player takes the free dock */
+const __fishingDockHTMLBeforeV41=fishingDockHTML;
+fishingDockHTML=function(slot,index){if(slot?.status==="claimed"){const [l,t,w,h]=FISHING_DOCK_POSITIONS[index],imgs=(slot.catches||[]).map(c=>`<img src="${c.image}" alt="${safeHtml(c.name)}">`).join("");return `<button class="fishing-dock" data-fishing-dock="${index}" type="button" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span class="fishing-result-fishes">${imgs}</span><span class="fishing-dock-status">${safeHtml(slot.ownerName)} รับแล้ว • ${Number(slot.totalWeight).toFixed(2)} lbs<br>ท่านี้ว่าง</span></button>`}return __fishingDockHTMLBeforeV41(slot,index)};
