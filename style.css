@@ -97,16 +97,13 @@ button{touch-action:manipulation}
   transform:translateZ(0) scaleX(1);
   transform-origin:center bottom;
   scale:1;
-  translate:0 0;
-  transition:scale 180ms ease-in-out,translate 180ms ease-in-out;
-  will-change:transform,background-position,scale,translate;
+  transition:scale 140ms ease-in-out;
+  will-change:transform,background-position,scale;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
-.aida-farm-pet-sprite.pose-lie{scale:1.16;translate:0 7%}
-.aida-farm-pet-sprite.pose-sleep{scale:1.18;translate:0 8%}
 .aida-farm-pet-sprite.is-changing-pose{scale:.96 1.03}
 .aida-farm-pet-sprite.is-walking{
   background-image:url("dog-01-walk-flat.png?v=1");
