@@ -5321,3 +5321,285 @@ setFarmPlotPage=function(page){const r=__setFarmPlotPageBeforeCats(page);activeP
 const __drawBeforeCats=draw;
 draw=function(){const r=__drawBeforeCats();if(!visitContext)syncAidaFarmPet();return r};
 
+
+/* ======================================================================
+   UPDATE V10 — Inventory safety / Dog Hotel / Dog Mystery / Drop Basket
+   2026-08-11
+   ====================================================================== */
+
+/* ---------- New assets / dog metadata ---------- */
+SCENES.dogHotel={image:"dog-hotel-background.png?v=1"};
+delete SCENES.panda;
+SPECIAL_ITEMS.wormKillerSpray={name:"สเปรย์ฆ่าหนอน",image:"worm-killer-spray.png?v=1",kind:"resource",description:"ใช้กำจัดหนอนในฟาร์มเพื่อนเท่านั้น • 1 ขวดต่อ 1 แปลง"};
+
+const DOG_TYPES={
+  dog1:{number:1,name:"ปุยเมฆ",image:"dog-01.png?v=1"},
+  dog2:{number:2,name:"พ่อมดจิ๋ว",image:"dog-02.png?v=1"},
+  dog3:{number:3,name:"หมีตุ๊บตั๊บ",image:"dog-03.png?v=1"},
+  dog4:{number:4,name:"รัตติกาล",image:"dog-04.png?v=1"},
+  dog5:{number:5,name:"คุณหนูม่วง",image:"dog-05.png?v=1"},
+  dog6:{number:6,name:"มัมมี่มึน",image:"dog-06.png?v=1"},
+  dog7:{number:7,name:"แดร็กคูล่าจิ๋ว",image:"dog-07.png?v=1"},
+  dog8:{number:8,name:"ป้าจอมขมัง",image:"dog-08.png?v=1"}
+};
+const DOG_BOX={name:"กล่องสุ่มน้องหมา",image:"rainbow-dog-mystery-box.png?v=1",price:200,chance:.20};
+const DOG_LIFETIME_MS=CAT_LIFETIME_MS;
+const DOG_HUNGER_MS=CAT_HUNGER_MS;
+const DOG_DROP_INTERVAL_MS=45*60*1000;
+const DOG_DROP_MAX_PENDING=30;
+const DOG_HOTEL_MAX=10;
+const DOG_DROP_POOL=[
+  {id:"wormKillerSpray",name:"สเปรย์ฆ่าหนอน",image:"worm-killer-spray.png?v=1",type:"special",key:"wormKillerSpray",qty:1,weight:40},
+  {id:"pestle10",name:"สากกะเบือประถม",image:PESTLE_ITEMS.pestle10.image,type:"special",key:"pestle10",qty:1,weight:10},
+  {id:"frog4",name:"กบสวนมะพร้าวหมายเลข 4",image:COCONUT_RIVER_ITEMS.frog4.image,type:"coconutRiver",key:"frog4",qty:1,weight:10},
+  {id:"bait2",name:"เหยื่อตกปลาสมัครเล่น",image:FISHING_BAITS.bait2.image,type:"fishingBait",key:"bait2",qty:1,weight:10},
+  {id:"coconut50",name:"มะพร้าวหาวนอน",image:COCONUT_ITEMS.coconut50.image,type:"special",key:"coconut50",qty:1,weight:10},
+  {id:"milk",name:ANIMAL_PRODUCTS.milk.name,image:ANIMAL_PRODUCTS.milk.image,type:"product",key:"milk",qty:1,weight:10},
+  {id:"fishMeat",name:ANIMAL_PRODUCTS.fishMeat.name,image:ANIMAL_PRODUCTS.fishMeat.image,type:"product",key:"fishMeat",qty:1,weight:10}
+];
+
+function newDogInstanceId(){return globalThis.crypto?.randomUUID?.()||`dog-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+function ensureDogState(target){
+  if(!target)return target;
+  target.dogMysteryBoxes=Math.max(0,Math.floor(Number(target.dogMysteryBoxes)||0));
+  target.dogs=Array.isArray(target.dogs)?target.dogs.filter(Boolean):[];
+  target.pendingDogBoxReward=target.pendingDogBoxReward&&typeof target.pendingDogBoxReward==="object"?target.pendingDogBoxReward:null;
+  if(!target.specials||typeof target.specials!=="object")target.specials={};
+  target.specials.wormKillerSpray=Math.max(0,Math.floor(Number(target.specials.wormKillerSpray)||0));
+  const now=gameNow();
+  target.dogs=target.dogs.map(dog=>{
+    const typeKey=DOG_TYPES[dog?.typeKey]?dog.typeKey:"dog1",placedHotel=Boolean(dog?.placedHotel),placedAt=Math.max(0,Number(dog?.placedAt)||0);
+    const drops=(Array.isArray(dog?.drops)?dog.drops.filter(Boolean):[]).map(drop=>({
+      id:String(drop?.id||newDogInstanceId()),itemId:String(drop?.itemId||""),x:Number(drop?.x)||50,y:Number(drop?.y)||65,createdAt:Math.max(0,Number(drop?.createdAt)||0)
+    })).filter(drop=>DOG_DROP_POOL.some(item=>item.id===drop.itemId)).slice(0,DOG_DROP_MAX_PENDING);
+    return{
+      id:String(dog?.id||newDogInstanceId()),typeKey,customName:String(dog?.customName||"").slice(0,20),placedHotel,placedAt,
+      expiresAt:placedHotel?Math.max(Number(dog?.expiresAt)||0,placedAt+DOG_LIFETIME_MS):0,
+      nextFeedAt:placedHotel?Math.max(0,Number(dog?.nextFeedAt)||placedAt):0,
+      nextDropAt:placedHotel?Math.max(0,Number(dog?.nextDropAt)||placedAt+DOG_DROP_INTERVAL_MS):0,
+      drops
+    };
+  }).filter(dog=>!(dog.placedHotel&&dog.expiresAt>0&&dog.expiresAt<=now));
+  return target;
+}
+const __normalizeStateBeforeDogsV10=normalizeState;
+normalizeState=function(raw,player){return ensureDogState(__normalizeStateBeforeDogsV10(raw,player))};
+const __ensureV4StateBeforeDogsV10=ensureV4State;
+ensureV4State=function(target){return ensureDogState(__ensureV4StateBeforeDogsV10(target))};
+function dogType(dog){return DOG_TYPES[dog?.typeKey]||DOG_TYPES.dog1}
+function dogDisplayName(dog){return dog?.customName||dogType(dog).name}
+function dogLifeText(dog){const ms=Math.max(0,Number(dog?.expiresAt||0)-gameNow()),days=Math.floor(ms/86400000),hours=Math.ceil((ms%86400000)/3600000);return `${days} วัน ${hours} ชม.`}
+function placedDogs(s=ownState||state){ensureDogState(s);return (s?.dogs||[]).filter(d=>d.placedHotel)}
+
+/* ---------- Unified drop reward helper ---------- */
+function applyPetDropReward(s,item){
+  if(!s||!item)return;
+  if(item.type==="special")s.specials[item.key]=(Number(s.specials[item.key])||0)+item.qty;
+  else if(item.type==="coconutRiver")s.coconutRiverItems[item.key]=(Number(s.coconutRiverItems[item.key])||0)+item.qty;
+  else if(item.type==="fishingBait")s.fishingBaits[item.key]=(Number(s.fishingBaits[item.key])||0)+item.qty;
+  else if(item.type==="product")s.animalProducts[item.key]=(Number(s.animalProducts[item.key])||0)+item.qty;
+}
+
+/* ---------- Save race fixes for craft / harvest ---------- */
+function canCraftRecipeFromState(recipe,s){return Boolean(recipe&&s&&Object.entries(recipe.need||{}).every(([key,count])=>(Number(s.bag?.[key])||0)>=count))}
+craft=async function(id){
+  const recipe=recipeById(id);if(!recipe||!cloudReady)return;
+  if(recipe.night&&!isNightCraftOpen()){message("ยังคราฟไม่ได้","เมนูรอบดึกเปิดเวลา 22:00–02:00");return}
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,success=false,reward=0;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
+      if(!canCraftRecipeFromState(recipe,s))throw new Error("วัตถุดิบไม่ครบตามสูตร");
+      Object.entries(recipe.need||{}).forEach(([key,count])=>s.bag[key]-=count);
+      success=Math.random()*100<recipe.chance;
+      if(success){reward=randInt(recipe.reward[0],recipe.reward[1]);addDishToState(s,recipe.id,1);s.merit=(Number(s.merit)||0)+reward;incrementMissionOn(s,"craftFood",1)}
+      next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(success)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();
+    $("modalContent").innerHTML=success?`<section class="feature-panel craft-success-panel"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`:`<section class="feature-panel craft-success-panel"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
+  }catch(error){message("คราฟอาหารไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+
+craftBoatDrink=async function(id){
+  const recipe=BOAT_DRINK_BY_ID[id];if(!recipe||!cloudReady)return;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,success=false;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);ensureBoatState(s);
+      if(!canCraftBoatDrink(recipe,s))throw new Error(`วัตถุดิบยังไม่ครบสำหรับ ${recipe.name}`);
+      Object.entries(recipe.need).forEach(([key,count])=>s.bag[key]-=count);s.animalProducts.milk-=recipe.milk;s.merit-=recipe.meritCost;
+      success=Math.random()*100<recipe.chance;
+      if(success){s.boatDrinks[id]=(Number(s.boatDrinks[id])||0)+1;s.merit+=recipe.meritReward;incrementMissionOn(s,"craftFood",1)}
+      next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();
+    $("modalContent").innerHTML=success?`<section class="feature-panel craft-success-panel boat-craft-success"><h2>🩷 คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>เครื่องดื่มนักพาย +1<br>ได้รับ +${recipe.meritReward} กุศล</p></section>`:`<section class="feature-panel craft-success-panel boat-craft-success"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>วัตถุดิบ นม และกุศลที่ใช้ครั้งนี้สูญเปล่าแล้ว</p></section>`;
+  }catch(error){message("คราฟเครื่องดื่มไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+
+const __harvestOwnPlotBeforeV10=harvestOwnPlot;
+harvestOwnPlot=async function(index){try{await settlePendingCloudSave()}catch{}return __harvestOwnPlotBeforeV10(index)};
+
+bulkHarvestCurrentPage=async function(){
+  if(tractorBusy||visitContext||guardResting()||!cloudReady)return;
+  tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;showTractorWorking();
+  try{
+    await settlePendingCloudSave();
+    const page=farmPlotPage,start=page*12,{db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let nextState,nextPlots,summary={},total=0;
+    const transaction=fs.runTransaction(db,async tx=>{
+      const [saveSnap,gardenSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);
+      const plots=(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots)?gardenSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+      for(let i=start;i<start+12;i++){
+        const p=plots[i];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="ready")continue;
+        const key=p.crop;grantHarvestYield(s,key,1);summary[key]=(summary[key]||0)+1;plots[i]=emptyPlot();total++;
+      }
+      if(!total)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");
+      incrementMissionOn(s,"harvestCrops",total);s.plots=plots.map(normalizePlot);nextState=s;nextPlots=s.plots;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentMember,plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    await Promise.all([transaction,new Promise(r=>setTimeout(r,650))]);
+    ownState=normalizeState(nextState,currentMember);state=ownState;lastGardenHash=plotHash(nextPlots);saveLocalOnly(ownState);draw();
+    const rows=Object.entries(summary).map(([key,qty])=>`${safeHtml(CROPS[key]?.name||key)} ${qty}x`).join("<br>");message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+  }catch(error){message("🚜 รถไถยังไม่ออก",error.message||"กรุณาลองใหม่")}
+  finally{hideTractorWorking();tractorBusy=false;if(btn)btn.disabled=false}
+};
+if($("tractorBtn"))$("tractorBtn").onclick=bulkHarvestCurrentPage;
+
+/* ---------- Collect-all basket for cat drops ---------- */
+function showDropBasketWorking(target="game"){
+  const host=target==="scene"?$("sceneScreen"):$("gameScreen");if(!host)return;
+  let overlay=host.querySelector(".drop-basket-working-overlay");if(!overlay){overlay=document.createElement("div");overlay.className="drop-basket-working-overlay";overlay.innerHTML='<div class="drop-basket-working-card"><img src="drop-collection-basket.png?v=1" alt="ตะกร้า"><b>กำลังเก็บของดรอปทั้งหมด...</b></div>';host.appendChild(overlay)}overlay.classList.remove("hidden");
+}
+function hideDropBasketWorking(){document.querySelectorAll(".drop-basket-working-overlay").forEach(el=>el.classList.add("hidden"))}
+function dropSummaryHTML(summary){return Object.values(summary).map(v=>`${safeHtml(v.name)} ${v.qty}x`).join("<br>")}
+async function collectAllCatDropsCurrentFarm(){
+  if(visitContext||farmPlotPage!==0||!cloudReady)return;
+  showDropBasketWorking("game");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,summary={};await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const cats=s.cats.filter(c=>c.placedFarm===1);let count=0;cats.forEach(cat=>{(cat.drops||[]).forEach(drop=>{const item=CAT_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;applyPetDropReward(s,item);if(!summary[item.id])summary[item.id]={name:item.name,qty:0};summary[item.id].qty+=item.qty;count++});cat.drops=[]});if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});await new Promise(r=>setTimeout(r,450));ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderCatPendingDrop();message("🧺 เก็บของดรอปทั้งหมดแล้ว",dropSummaryHTML(summary))}catch(error){message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่")}finally{hideDropBasketWorking()}
+}
+if($("collectDropsBtn"))$("collectDropsBtn").onclick=collectAllCatDropsCurrentFarm;
+
+/* ---------- Worm spray: friends only ---------- */
+const __tapFriendPlotBeforeV10=tapFriendPlot;
+tapFriendPlot=async function(index){
+  if(!visitContext)return;
+  const plot=state?.plots?.[index];ensurePlotPhase(plot);
+  if(plot?.phase!=="worm")return __tapFriendPlotBeforeV10(index);
+  const sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;
+  $("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนบ้านเพื่อน</h2><p>เลือกวิธีกำจัดหนอนแปลงนี้</p><div class="friend-worm-actions"><button id="friendWormMeritBtn" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button><button id="friendWormSprayBtn" class="primary-spooky-action" type="button" ${sprays<1?"disabled":""}><img src="worm-killer-spray.png?v=1" alt="สเปรย์ฆ่าหนอน"><span>ใช้สเปรย์ฆ่าหนอน<br><small>มี ×${sprays} • ใช้ ×1</small></span></button></div></section>`;
+  $("friendWormMeritBtn").onclick=()=>clearFriendWormV10(index,"merit");$("friendWormSprayBtn").onclick=()=>clearFriendWormV10(index,"spray");openModal();
+};
+async function clearFriendWormV10(index,method){
+  if(!visitContext||!cloudReady)return;const targetKey=visitContext.memberKey,targetName=visitContext.name;
+  try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),gardenRef=fs.doc(db,"gardens",targetKey),ownSaveRef=fs.doc(db,"saves",currentMemberKey),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));let nextOwn,newPlots;await fs.runTransaction(db,async tx=>{const [gSnap,oSnap]=await Promise.all([tx.get(gardenRef),tx.get(ownSaveRef)]);if(!gSnap.exists()||!oSnap.exists())throw new Error("ข้อมูลสวนไม่พร้อม");const plots=(gSnap.data().plots||[]).map(ensurePlotPhaseStandalone),p=plots[index];if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");const own=normalizeState(oSnap.data(),currentMember);assertCurrentCloudSession(oSnap.data(),currentMember);if(method==="spray"){if((Number(own.specials.wormKillerSpray)||0)<1)throw new Error("สเปรย์ฆ่าหนอนหมดแล้ว");own.specials.wormKillerSpray-=1}else own.merit=(Number(own.merit)||0)-1;const crop=CROPS[p.crop];p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);plots[index]=p;incrementMissionOn(own,"clearWorms",1);nextOwn=own;newPlots=plots;tx.set(gardenRef,{memberKey:targetKey,displayName:targetName,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(ownSaveRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(mailRef,{source:"friend",type:"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} เข้ามากำจัดหนอนให้คุณ 🐛`,text:method==="spray"?"ใช้สเปรย์ฆ่าหนอน":"ใช้กุศล",read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(nextOwn,currentMember);state.plots=newPlots.map(normalizePlot);closeModal();updateMeritUI();draw();showWeatherToast(method==="spray"?"🧴 ใช้สเปรย์กำจัดหนอนให้เพื่อนแล้ว":"🐛 ใช้ 1 กุศลกำจัดหนอนให้เพื่อนแล้ว")}catch(error){message("กำจัดหนอนไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
+}
+
+/* ---------- Dog mystery box + admin gift ---------- */
+async function requestDogMysteryBoxPurchase(){if(!cloudReady){message("ยังซื้อไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}try{const {db,fs}=await getFirebaseContext(),requestRef=fs.doc(fs.collection(db,"purchaseRequests"));await fs.setDoc(requestRef,{category:"mystery",itemKey:"dogBox",itemName:DOG_BOX.name,price:DOG_BOX.price,qty:1,status:"pending",memberKey:currentMemberKey,memberName:currentMember,dateKey:currentBangkokDateKey(),createdAt:fs.serverTimestamp()});message("🐶 ส่งคำขอแล้ว",`${DOG_BOX.name} ×1<br>${DOG_BOX.price}⭐️<br>รอยัยหนูอนุมัติ แล้วรอรับจากกล่องของขวัญนะ`);refreshNotificationBadge()}catch(error){message("ส่งคำขอไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+const __adminGiftCatalogBeforeDogsV10=adminGiftCatalog;
+adminGiftCatalog=function(){return[...__adminGiftCatalogBeforeDogsV10(),{type:"dogMystery",key:"dogBox",name:DOG_BOX.name},...Object.entries(DOG_TYPES).map(([key,d])=>({type:"dog",key,name:d.name}))]};
+const __addGiftItemBeforeDogsV10=addGiftItemToState;
+addGiftItemToState=function(s,gift){ensureDogState(s);if(Array.isArray(gift?.items)){gift.items.forEach(item=>addGiftItemToState(s,{itemType:item.type,itemKey:item.key,qty:item.qty}));return}const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,Math.floor(Number(gift?.qty)||1));if(type==="dogMystery"){s.dogMysteryBoxes=(Number(s.dogMysteryBoxes)||0)+qty;return}if(type==="dog"){if(!DOG_TYPES[key])throw new Error("ไม่พบน้องหมาชนิดนี้");for(let i=0;i<qty;i++)s.dogs.push({id:newDogInstanceId(),typeKey:key,customName:"",placedHotel:false,placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,drops:[]});return}return __addGiftItemBeforeDogsV10(s,gift)};
+const __removeGiftItemBeforeDogsV10=removeGiftItemFromState;
+removeGiftItemFromState=function(s,itemType,itemKey,qty){ensureDogState(s);qty=Math.max(1,Math.floor(Number(qty)||1));if(currentMember==="Aida"&&adminProfile?.role==="admin"&&(itemType==="dogMystery"||itemType==="dog")){s.dogMysteryBoxes=ADMIN_STOCK_QTY;return true}if(itemType==="dogMystery"){if((Number(s.dogMysteryBoxes)||0)<qty)return false;s.dogMysteryBoxes-=qty;return true}if(itemType==="dog"){let left=qty;for(let i=s.dogs.length-1;i>=0&&left>0;i--){if(s.dogs[i]?.typeKey===itemKey&&!s.dogs[i]?.placedHotel){s.dogs.splice(i,1);left--}}return left===0}return __removeGiftItemBeforeDogsV10(s,itemType,itemKey,qty)};
+const __adminEntryCountBeforeDogsV10=adminEntryCount;
+adminEntryCount=function(s,entry){ensureDogState(s);if(entry?.type==="dogMystery"||entry?.type==="dog")return currentMember==="Aida"&&adminProfile?.role==="admin"?ADMIN_STOCK_QTY:(entry.type==="dogMystery"?Number(s.dogMysteryBoxes)||0:s.dogs.filter(d=>d.typeKey===entry.key&&!d.placedHotel).length);return __adminEntryCountBeforeDogsV10(s,entry)};
+const __ensureAdminStockBeforeDogsV10=ensureAdminStock;
+ensureAdminStock=function(target){const changedBase=__ensureAdminStockBeforeDogsV10(target);if(!target)return changedBase;ensureDogState(target);let changed=Boolean(changedBase);if(currentMember==="Aida"&&adminProfile?.role==="admin"&&Number(target.dogMysteryBoxes)!==ADMIN_STOCK_QTY){target.dogMysteryBoxes=ADMIN_STOCK_QTY;changed=true}return changed};
+
+function rollDogBoxReward(){if(Math.random()<DOG_BOX.chance){const keys=Object.keys(DOG_TYPES);return{kind:"dog",typeKey:keys[Math.floor(Math.random()*keys.length)]}}const pool=catConsolationPool().slice(),ids=[];while(ids.length<3&&pool.length){const i=Math.floor(Math.random()*pool.length);ids.push(pool.splice(i,1)[0].id)}return{kind:"consolation",ids}}
+function showDogBoxPendingReward(){const s=ensureDogState(ownState||state),p=s.pendingDogBoxReward;if(!p)return;if(p.kind==="dog"){const d=DOG_TYPES[p.typeKey];$("modalContent").innerHTML=`<section class="feature-panel cat-box-result"><h2>🎉 สุ่มสำเร็จ</h2><img class="cat-result-icon" src="${d.image}" alt="${d.name}"><h3>ยินดีด้วยนะ คุณได้รับ<br>${safeHtml(d.name)}</h3><button id="claimDogBoxRewardBtn" class="primary-spooky-action" type="button">รับ</button></section>`}else{const pool=catConsolationPool(),rows=p.ids.map(id=>pool.find(x=>x.id===id)).filter(Boolean);$("modalContent").innerHTML=`<section class="feature-panel cat-box-result"><h2>เสียใจด้วยค่ะ ดวงคุณไม่มี<br>แต่ขอปลอบใจแทนนะ</h2><div class="cat-consolation-grid">${rows.map(r=>`<div>${r.image?`<img src="${r.image}" alt="${safeHtml(r.label)}">`:'<span class="cat-merit-gift">🙏</span>'}<b>${safeHtml(r.label)}</b></div>`).join("")}</div><button id="claimDogBoxRewardBtn" class="primary-spooky-action" type="button">รับของปลอบใจ</button></section>`}$("claimDogBoxRewardBtn").onclick=claimDogBoxPendingReward;openModal()}
+function showDogBoxUse(){const s=ensureDogState(ownState||state);if(s.pendingDogBoxReward){showDogBoxPendingReward();return}const count=Number(s.dogMysteryBoxes)||0;if(count<1){message("ไม่มีกล่องสุ่ม","ตอนนี้คุณไม่มีกล่องสุ่มน้องหมา");return}$("modalContent").innerHTML=`<section class="feature-panel mystery-box-open-panel"><img class="shop-animal-img" src="${DOG_BOX.image}" alt="${DOG_BOX.name}"><h2>${DOG_BOX.name}</h2><p>มีอยู่ <b>×${count}</b><br>โอกาสได้น้องหมา 20%</p><button id="openDogBoxBtn" class="primary-spooky-action" type="button">เปิด</button><button id="cancelDogBoxBtn" class="secondary-action" type="button">ยังไม่เปิดตอนนี้ดีกว่า</button></section>`;openModal();$("openDogBoxBtn").onclick=openOneDogBox;$("cancelDogBoxBtn").onclick=()=>inventory("mysteryBoxes")}
+async function openOneDogBox(){const btn=$("openDogBoxBtn");if(btn)btn.disabled=true;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);if(s.pendingDogBoxReward)throw new Error("มีรางวัลรอรับอยู่ กรุณารับก่อน");if((Number(s.dogMysteryBoxes)||0)<1)throw new Error("กล่องสุ่มน้องหมาหมดแล้ว");s.dogMysteryBoxes-=1;s.pendingDogBoxReward=rollDogBoxReward();next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);showDogBoxPendingReward()}catch(error){message("เปิดกล่องไม่ได้",error.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}}
+async function claimDogBoxPendingReward(){if(!cloudReady)return;const btn=$("claimDogBoxRewardBtn");if(btn)btn.disabled=true;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,resultText="";await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),p=s.pendingDogBoxReward;if(!p)throw new Error("ไม่มีรางวัลรอรับ");if(p.kind==="dog"){const d=DOG_TYPES[p.typeKey];s.dogs.push({id:newDogInstanceId(),typeKey:p.typeKey,customName:"",placedHotel:false,placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,drops:[]});resultText=`${d.name} เข้า กระเป๋า → น้องหมา แล้ว`}else{const pool=catConsolationPool();p.ids.forEach(id=>pool.find(x=>x.id===id)?.apply(s));resultText="ของปลอบใจทั้ง 3 รายการเข้ากระเป๋าแล้ว"}s.pendingDogBoxReward=null;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();message("🎁 รับเรียบร้อย",resultText)}catch(error){message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+/* ---------- Three equal mystery cards ---------- */
+const __showShopBeforeDogsV10=showShop;
+showShop=function(tab="animals"){
+  if(tab!=="mystery")return __showShopBeforeDogsV10(tab);
+  if(guardResting())return;const s=ensureDogState(ensureCatState(ownState||state));ensureDailyLimitsFor(s);
+  const jellyUsed=Number(s.dailyLimits.jellyBoxes)||0,jellyRemain=Math.max(0,JELLY_BOX_DAILY_LIMIT-jellyUsed),jellyMax=Math.min(JELLY_BOX_DAILY_LIMIT,jellyRemain);
+  const jellyCard=`<article class="shop-card mystery-box-card"><img class="shop-animal-img" src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><b>${JELLY_BOX.name}</b><small class="shop-price">${JELLY_BOX.price} ⭐️ / กล่อง</small><div class="mystery-rules"><strong>สูงสุด ${JELLY_BOX_DAILY_LIMIT} กล่อง/วัน</strong><span>โอกาสแมงกะพรุน 10%</span><span>วันนี้ใช้ ${jellyUsed}/${JELLY_BOX_DAILY_LIMIT}</span></div>${jellyMax>0?qtyInput("jellyBoxQty",jellyMax):'<div class="mystery-qty-spacer"></div>'}<button class="shop-worship-button" id="buyJellyBoxBtn" type="button" ${jellyMax<=0?"disabled":""}>${jellyMax<=0?"ครบลิมิตวันนี้แล้ว":"ส่งคำขอซื้อ"}</button></article>`;
+  const catCard=`<article class="shop-card mystery-box-card cat-box-card"><img class="shop-animal-img" src="${CAT_BOX.image}" alt="${CAT_BOX.name}"><b>${CAT_BOX.name}</b><small class="shop-price">${CAT_BOX.price} ⭐️ / กล่อง</small><div class="mystery-rules"><strong>ซื้อกี่กล่องก็ได้</strong><span>โอกาสได้แมว 25%</span><span>ไม่ออกแมว → ปลอบใจ 3 จาก 7</span></div><div class="mystery-qty-spacer"></div><button class="shop-worship-button" id="buyCatBoxBtn" type="button">ส่งคำขอซื้อ 1 กล่อง</button></article>`;
+  const dogCard=`<article class="shop-card mystery-box-card dog-box-card"><img class="shop-animal-img" src="${DOG_BOX.image}" alt="${DOG_BOX.name}"><b>${DOG_BOX.name}</b><small class="shop-price">${DOG_BOX.price} ⭐️ / กล่อง</small><div class="mystery-rules"><strong>ซื้อกี่กล่องก็ได้</strong><span>โอกาสได้น้องหมา 20%</span><span>ไม่ออกหมา → ปลอบใจ 3 จาก 7</span></div><div class="mystery-qty-spacer"></div><button class="shop-worship-button" id="buyDogBoxBtn" type="button">ส่งคำขอซื้อ 1 กล่อง</button></article>`;
+  $("modalContent").innerHTML=`<section class="feature-panel shop-panel"><button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือน</button><h2>🕯️ ร้านค้า</h2><div class="shop-category-tabs shop-category-tabs-v2"><button type="button" data-shop-tab="animals">🐾 สัตว์วิญญาณ</button><button type="button" data-shop-tab="specials">🎁 ของพิเศษ</button><button type="button" data-shop-tab="mystery" class="active">🎲 กล่องสุ่ม</button></div><div class="shop-grid mystery-shop-grid">${jellyCard}${catCard}${dogCard}</div></section>`;
+  $("stableEntranceBtn").onclick=()=>{closeModal();openScene("chicken")};document.querySelectorAll("[data-shop-tab]").forEach(btn=>btn.onclick=()=>showShop(btn.dataset.shopTab));if($("buyJellyBoxBtn"))$("buyJellyBoxBtn").onclick=()=>requestMysteryBoxPurchase(Number($("jellyBoxQty")?.value)||1);$("buyCatBoxBtn").onclick=requestCatMysteryBoxPurchase;$("buyDogBoxBtn").onclick=requestDogMysteryBoxPurchase;openModal();
+};
+
+/* ---------- Inventory adds dogs + dog box; spray flows through specials ---------- */
+const __inventoryBeforeDogsV10=inventory;
+inventory=function(tab="crops"){
+  if(!["mysteryBoxes","dogs"].includes(tab))return __inventoryBeforeDogsV10(tab);
+  if(guardResting())return;const s=ensureDogState(ensureCatState(ownState||state));
+  const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],["boatDrinks","🩷 เสบียงเรือ"],["specials","🕯️ ของพิเศษ"],["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"],["cats","🐱 น้องแมว"],["dogs","🐶 น้องหมา"]];let body="";
+  if(tab==="mysteryBoxes")body=`<div class="inventory-item special-coconut-item"><img src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><span>${JELLY_BOX.name}</span><b>×${s.mysteryBoxes||0}</b>${Number(s.mysteryBoxes)>0?'<button id="useJellyBoxBtn" type="button">ใช้งาน</button>':""}</div><div class="inventory-item special-coconut-item"><img src="${CAT_BOX.image}" alt="${CAT_BOX.name}"><span>${CAT_BOX.name}<small style="display:block">25% ได้แมว</small></span><b>×${s.catMysteryBoxes||0}</b>${Number(s.catMysteryBoxes)>0||s.pendingCatBoxReward?'<button id="useCatBoxBtn" type="button">ใช้งาน</button>':""}</div><div class="inventory-item special-coconut-item"><img src="${DOG_BOX.image}" alt="${DOG_BOX.name}"><span>${DOG_BOX.name}<small style="display:block">20% ได้น้องหมา</small></span><b>×${s.dogMysteryBoxes||0}</b>${Number(s.dogMysteryBoxes)>0||s.pendingDogBoxReward?'<button id="useDogBoxBtn" type="button">ใช้งาน</button>':""}</div>`;
+  else body=s.dogs.length?s.dogs.map(d=>`<div class="inventory-item cat-inventory-item"><img src="${dogType(d).image}" alt="${dogType(d).name}"><span>${safeHtml(dogDisplayName(d))}<small>${safeHtml(dogType(d).name)} • ${d.placedHotel?"อยู่โรงแรมน้องหมา":"อยู่ในกระเป๋า"}</small></span><b>${d.placedHotel?"🏨":"🐶"}</b><div class="cat-inventory-actions">${d.placedHotel?'<button type="button" disabled>วางแล้ว</button>':`<button type="button" data-place-dog="${d.id}">วางน้องหมา</button>`}<button class="danger-action" type="button" data-release-dog="${d.id}">ปล่อยวัด</button></div></div>`).join(""):'<p class="empty-feature">ยังไม่มีน้องหมาในกระเป๋า</p>';
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));if($("useJellyBoxBtn"))$("useJellyBoxBtn").onclick=showJellyBoxUse;if($("useCatBoxBtn"))$("useCatBoxBtn").onclick=showCatBoxUse;if($("useDogBoxBtn"))$("useDogBoxBtn").onclick=showDogBoxUse;document.querySelectorAll("[data-place-dog]").forEach(b=>b.onclick=()=>showDogPlaceConfirm(b.dataset.placeDog));document.querySelectorAll("[data-release-dog]").forEach(b=>b.onclick=()=>releaseDog(b.dataset.releaseDog));openModal();
+};
+
+function showDogPlaceConfirm(dogId){const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;const count=placedDogs(s).length;$("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}"><h2>${safeHtml(dogDisplayName(dog))}</h2><p>โรงแรมน้องหมาวางได้สูงสุด ${DOG_HOTEL_MAX} ตัว<br>ตอนนี้วางแล้ว ${count}/${DOG_HOTEL_MAX}</p><button id="placeDogHotelBtn" class="primary-spooky-action" type="button" ${count>=DOG_HOTEL_MAX?"disabled":""}>วางที่โรงแรมน้องหมา</button><button id="releaseDogHereBtn" class="danger-action" type="button">ปล่อยวัด</button></section>`;$("placeDogHotelBtn").onclick=()=>placeDogInHotel(dogId);$("releaseDogHereBtn").onclick=()=>releaseDog(dogId);openModal()}
+async function placeDogInHotel(dogId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");if(placedDogs(s).length>=DOG_HOTEL_MAX)throw new Error("โรงแรมน้องหมาเต็มแล้ว วางได้สูงสุด 10 ตัว");const now=gameNow();Object.assign(dog,{placedHotel:true,placedAt:now,expiresAt:now+DOG_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+DOG_DROP_INTERVAL_MS,drops:[]});next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();openScene("dogHotel");showWeatherToast("🐶 วางน้องหมาในโรงแรมแล้ว • เริ่มนับอายุ 10 วัน") }catch(error){message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่")}}
+async function releaseDog(dogId){if(!confirm("ปล่อยวัดแล้วน้องจะหายไปถาวร ยืนยันไหม?"))return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),idx=s.dogs.findIndex(d=>d.id===dogId);if(idx<0)throw new Error("ไม่พบน้องหมาตัวนี้");s.dogs.splice(idx,1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();if(currentScene==="dogHotel")renderDogHotelScene();else inventory("dogs");showWeatherToast("🐶 ปล่อยวัดแล้ว") }catch(error){message("ปล่อยวัดไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+/* ---------- Dog hotel movement ---------- */
+const DOG_HOTEL_POINTS=[[28,34],[50,33],[72,35],[31,48],[52,48],[70,49],[28,63],[48,63],[70,64],[35,77],[58,77],[72,78]];
+const dogAssetBaseCache=new Map();
+const dogHotelControllers=new Map();
+function dogAssetPath(base,kind){if(kind==="pose")return `${base}-pose-sheet.png?v=4`;return `${base}-walk-${kind}.png?v=4`}
+function resolveDogAssetBase(number){if(dogAssetBaseCache.has(number))return Promise.resolve(dogAssetBaseCache.get(number));const n=String(number).padStart(2,"0"),base=`dog-${n}`,candidates=[`pet-assets/dogs/${base}`,base,`pet-assets/${base}`,`dogs/${base}`];return new Promise(resolve=>{let i=0;const next=()=>{if(i>=candidates.length){dogAssetBaseCache.set(number,base);resolve(base);return}const candidate=candidates[i++],img=new Image(),timer=setTimeout(()=>{img.onload=img.onerror=null;next()},2200);img.onload=()=>{clearTimeout(timer);dogAssetBaseCache.set(number,candidate);resolve(candidate)};img.onerror=()=>{clearTimeout(timer);next()};img.src=`${candidate}-pose-sheet.png?v=4`};next()})}
+function stopDogHotelMotion(){dogHotelControllers.forEach(c=>{clearTimeout(c.timer);clearInterval(c.frameTimer);try{c.motion?.cancel()}catch{}});dogHotelControllers.clear()}
+function dogSetPose(c,pose){c.sprite.classList.remove("is-walking","face-left");c.sprite.style.backgroundImage=`url("${dogAssetPath(c.base,"pose")}")`;c.sprite.style.backgroundSize="400% 300%";const col=pose%4,row=Math.floor(pose/4);c.sprite.style.backgroundPosition=`${col*100/3}% ${row*50}%`}
+function dogSetWalkFrame(c,frame,kind,faceLeft=false){c.sprite.classList.add("is-walking");c.sprite.classList.toggle("face-left",faceLeft);c.sprite.style.backgroundImage=`url("${dogAssetPath(c.base,kind)}")`;c.sprite.style.backgroundSize="400% 200%";const col=frame%4,row=Math.floor(frame/4);c.sprite.style.backgroundPosition=`${col*100/3}% ${row*100}%`}
+function scheduleDogMove(c){if(currentScene!=="dogHotel"||!dogHotelControllers.has(c.id))return;const pose=Math.floor(Math.random()*12);dogSetPose(c,pose);c.timer=setTimeout(()=>moveDogHotelPet(c),1200+Math.random()*2200)}
+function moveDogHotelPet(c){if(currentScene!=="dogHotel"||!dogHotelControllers.has(c.id))return;let next=Math.floor(Math.random()*DOG_HOTEL_POINTS.length);if(next===c.node)next=(next+1)%DOG_HOTEL_POINTS.length;const [x1,y1]=DOG_HOTEL_POINTS[c.node],[x2,y2]=DOG_HOTEL_POINTS[next],dx=x2-x1,dy=y2-y1,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(2600,Math.min(7200,2300+distance*115));let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},165);c.motion=c.el.animate([{left:`${x1}%`,top:`${y1}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;c.node=next;c.motion=null;scheduleDogMove(c)}}
+async function mountDogHotelPets(){const layer=$("dogHotelPetLayer");if(!layer)return;stopDogHotelMotion();layer.innerHTML="";const dogs=placedDogs();for(let i=0;i<dogs.length;i++){const dog=dogs[i],node=i%DOG_HOTEL_POINTS.length,[x,y]=DOG_HOTEL_POINTS[node],el=document.createElement("button");el.type="button";el.className="dog-hotel-pet";el.style.left=`${x}%`;el.style.top=`${y}%`;el.innerHTML='<span class="dog-hotel-sprite"></span><span class="dog-hotel-name"></span>';el.querySelector(".dog-hotel-name").textContent=dogDisplayName(dog);el.onclick=()=>showPlacedDogMenu(dog.id);layer.appendChild(el);const c={id:dog.id,el,sprite:el.querySelector(".dog-hotel-sprite"),node,timer:0,frameTimer:0,motion:null,base:await resolveDogAssetBase(dogType(dog).number)};dogHotelControllers.set(dog.id,c);dogSetPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveDogHotelPet(c),900+Math.random()*1800)}}
+function showPlacedDogMenu(dogId){const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;const hungry=gameNow()>=Number(dog.nextFeedAt||0),foods=RECIPES.filter(r=>dishCountInState(r.id,s)>0);$("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel"><img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}"><h2>🐶 ${safeHtml(dogDisplayName(dog))}</h2><p>${safeHtml(dogType(dog).name)}<br>อายุเหลือ ${dogLifeText(dog)}<br>${hungry?"🍽️ หิวแล้ว":"อิ่มอยู่ • หิวอีกใน "+formatHM(Math.max(0,dog.nextFeedAt-gameNow()))}</p><button id="renameDogBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>${hungry?`<div class="cat-feed-grid">${foods.length?foods.map(r=>`<button type="button" data-feed-dog="${r.id}"><img src="${r.image}" alt="${r.name}"><span>${safeHtml(r.name)}<small>มี ×${dishCountInState(r.id,s)}</small></span></button>`).join(""):'<p class="empty-feature">ไม่มีอาหารที่คราฟไว้ให้น้องกิน</p>'}</div>`:""}<button id="releasePlacedDogBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button></section>`;$("renameDogBtn").onclick=()=>renameDog(dogId);$("releasePlacedDogBtn").onclick=()=>releaseDog(dogId);document.querySelectorAll("[data-feed-dog]").forEach(b=>b.onclick=()=>feedDog(dogId,b.dataset.feedDog));openModal()}
+async function renameDog(dogId){const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;const typed=prompt("ตั้งชื่อน้องหมา",dog.customName||dogType(dog).name);if(typed===null)return;const name=typed.trim().slice(0,20);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const x=normalizeState(snap.data(),currentMember),d=x.dogs.find(v=>v.id===dogId);if(!d)throw new Error("ไม่พบน้องหมา");d.customName=name;next=x;tx.set(ref,{...cloneData(x),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();renderDogHotelScene()}catch(error){message("เปลี่ยนชื่อไม่ได้",error.message||"กรุณาลองใหม่")}}
+async function feedDog(dogId,recipeId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");if(gameNow()<Number(dog.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=20+Math.floor(Math.random()*31);s.merit=(Number(s.merit)||0)+reward;dog.nextFeedAt=gameNow()+DOG_HUNGER_MS;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();showWeatherToast(`🐶 น้องให้ +${reward} กุศล`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}}
+
+/* ---------- Dog drops ---------- */
+function randomDogDrop(){const total=DOG_DROP_POOL.reduce((a,b)=>a+b.weight,0),r=Math.random()*total;let sum=0;for(const item of DOG_DROP_POOL){sum+=item.weight;if(r<sum)return item}return DOG_DROP_POOL[DOG_DROP_POOL.length-1]}
+function randomDogDropPoint(dog){const c=dogHotelControllers.get(dog.id);if(c){const pt=DOG_HOTEL_POINTS[c.node]||[50,65];return{x:Math.max(20,Math.min(80,pt[0]+(Math.random()*8-4))),y:Math.max(28,Math.min(84,pt[1]+(Math.random()*6-3)))}}const pt=DOG_HOTEL_POINTS[Math.floor(Math.random()*DOG_HOTEL_POINTS.length)];return{x:pt[0]+(Math.random()*8-4),y:pt[1]+(Math.random()*6-3)}}
+function processDogDrops(){if(!ownState)return;ensureDogState(ownState);const now=gameNow();let changed=false;ownState.dogs.forEach(dog=>{if(!dog.placedHotel||dog.expiresAt<=now)return;if(!Array.isArray(dog.drops))dog.drops=[];let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);if(now<nextAt)return;const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1),room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);for(let i=0;i<createCount;i++){const item=randomDogDrop(),pt=randomDogDropPoint(dog),createdAt=nextAt+(i*DOG_DROP_INTERVAL_MS);dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt})}dog.nextDropAt=nextAt+(due*DOG_DROP_INTERVAL_MS);changed=true});if(changed){state=ownState;save()}if(currentScene==="dogHotel")renderDogHotelDrops()}
+function renderDogHotelDrops(){const layer=$("dogHotelDropLayer");if(!layer)return;layer.innerHTML="";placedDogs().forEach(dog=>(dog.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;const btn=document.createElement("button");btn.className="dog-drop-item cat-drop-item";btn.type="button";btn.style.left=`${drop.x}%`;btn.style.top=`${drop.y}%`;btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;btn.onclick=()=>claimDogDrop(dog.id,drop.id);layer.appendChild(btn)}))}
+async function claimDogDrop(dogId,dropId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,item;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");const idx=(dog.drops||[]).findIndex(d=>d.id===dropId);if(idx<0)throw new Error("ของดรอปถูกเก็บไปแล้ว");item=DOG_DROP_POOL.find(x=>x.id===dog.drops[idx].itemId);if(!item)throw new Error("ไม่พบของดรอป");applyPetDropReward(s,item);dog.drops.splice(idx,1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();showWeatherToast(`✨ เก็บ ${item.name} ×${item.qty} เข้ากระเป๋าแล้ว`)}catch(error){message("เก็บของไม่ได้",error.message||"กรุณาลองใหม่")}}
+async function collectAllDogDrops(){if(!cloudReady)return;showDropBasketWorking("scene");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,summary={};await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);let count=0;s.dogs.filter(d=>d.placedHotel).forEach(dog=>{(dog.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;applyPetDropReward(s,item);if(!summary[item.id])summary[item.id]={name:item.name,qty:0};summary[item.id].qty+=item.qty;count++});dog.drops=[]});if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});await new Promise(r=>setTimeout(r,450));ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();message("🧺 เก็บของดรอปทั้งหมดแล้ว",dropSummaryHTML(summary))}catch(error){message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่")}finally{hideDropBasketWorking()}}
+setInterval(processDogDrops,30000);
+
+/* ---------- Dog hotel render / replaces Panda entrance ---------- */
+function renderDogHotelScene(){if(currentScene!=="dogHotel")return;processDogDrops();setSceneNav({backText:"กลับไปที่แปลง",backAction:returnToFarm,nextText:"เก็บของดรอปทั้งหมด",nextAction:collectAllDogDrops});const count=placedDogs().length;$("sceneInteractiveLayer").innerHTML=`<div class="dog-hotel-counter">🐶 น้องหมาในโรงแรม ${count}/${DOG_HOTEL_MAX}</div><div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div><div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;mountDogHotelPets();renderDogHotelDrops()}
+
+function drawCoconutSceneV10FromCache(){
+  if(currentScene!=="coconut"||!sharedCoconutCache)return;setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});const s=ownState||state,quotaActive=Number(s.coconutQuotaResetAt||0)>gameNow(),used=quotaActive?(Number(s.coconutQuotaCount)||0):0,now=gameNow();
+  $("sceneInteractiveLayer").innerHTML=`<div class="coconut-quota-label">🥥 โควตารอบนี้ ${used}/${COCONUT_QUOTA_PER_ROUND}</div><button id="coconutHistoryBtn" class="coconut-history-btn" type="button">ประวัติ 50 รายการ</button><button id="coconutFastBonusBtn" class="coconut-fast-bonus-btn" type="button">โบนัสคนมือไว</button>${COCONUT_TREE_POSITIONS_V1.map(([left,top,width,height],i)=>{const tree=sharedCoconutCache.trees[i],rem=Math.max(0,tree.nextAt-now),label=rem>0?`${tree.lastByName||"มีคน"} สอยแล้ว • ${coconutRemainingText(rem)}`:"พร้อมสอย";return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${safeHtml(label)}</small></button>`}).join("")}${sharedCoconutCache.riverSlots.map((slot,i)=>{const [l,t,w,h]=COCONUT_RIVER_POSITIONS[i],rem=Math.max(0,slot.nextAt-now),item=slot.creatureKey?COCONUT_RIVER_ITEMS[slot.creatureKey]:null;if(rem>0&&!item)return `<button class="coconut-river-slot cooldown" type="button" disabled style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><small>${safeHtml(slot.lastByName||"มีคน")} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(rem)}</small></button>`;if(!item)return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"></button>`;return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><img src="${item.image}" alt="${item.name}"><small>แตะจับ ${safeHtml(item.name)}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button><button id="dogHotelBtn" class="panda-forest-entry" type="button">โรงแรมน้องหมา</button>`;
+  document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));document.querySelectorAll("[data-coconut-river-slot]").forEach(btn=>btn.onclick=()=>catchCoconutRiverCreature(Number(btn.dataset.coconutRiverSlot)));$("coconutBoatHotspot").onclick=showCoconutCraft;$("coconutHistoryBtn").onclick=showCoconutHistory;$("coconutFastBonusBtn").onclick=showCoconutFastBonus;$("dogHotelBtn").onclick=()=>openScene("dogHotel");
+}
+renderCoconutScene=async function(){setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});if(!cloudReady){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">กำลังเชื่อมสวนมะพร้าวส่วนกลาง...</div>';return}try{await loadSharedCoconut();drawCoconutSceneV10FromCache();ensureCoconutSharedSubscription();stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="coconut"){stopSceneTimer();return}drawCoconutSceneV10FromCache()},1000)}catch(error){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">โหลดสวนมะพร้าวไม่สำเร็จ</div>'}};
+
+const __renderSceneBeforeDogsV10=renderScene;
+renderScene=function(){if(currentScene==="dogHotel"){renderDogHotelScene();return}return __renderSceneBeforeDogsV10()};
+const __openSceneBeforeDogsV10=openScene;
+openScene=function(sceneName){if(currentScene==="dogHotel"&&sceneName!=="dogHotel")stopDogHotelMotion();return __openSceneBeforeDogsV10(sceneName)};
+const __returnToFarmBeforeDogsV10=returnToFarm;
+returnToFarm=function(){if(currentScene==="dogHotel")stopDogHotelMotion();return __returnToFarmBeforeDogsV10()};
+
+/* ---------- Page-1-only collect-all button ---------- */
+const __setFarmPlotPageBeforeDropBasketV10=setFarmPlotPage;
+setFarmPlotPage=function(page){const r=__setFarmPlotPageBeforeDropBasketV10(page);$("collectDropsBtn")?.classList.toggle("hidden",farmPlotPage!==0||Boolean(visitContext));return r};
+const __drawBeforeDropBasketV10=draw;
+draw=function(){const r=__drawBeforeDropBasketV10();$("collectDropsBtn")?.classList.toggle("hidden",farmPlotPage!==0||Boolean(visitContext));return r};
+
+/* ---------- Safety: keep coconut shared cooldown at one hour ---------- */
+// COCONUT_TREE_COOLDOWN and COCONUT_RIVER_COOLDOWN_MS are both 60 minutes in the effective build.
+
+
+/* V10 final coconut live-listener hook: keep Dog Hotel button after shared snapshots */
+drawCoconutSceneV4FromCache=drawCoconutSceneV10FromCache;

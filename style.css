@@ -953,3 +953,30 @@ button{touch-action:manipulation}
 .cat-box-card::after{content:"";display:block;min-height:38px;margin:7px 0}
 .placed-cat-release{width:100%;margin-top:10px;padding:10px;border:0;border-radius:11px;background:#a83e60;color:#fff;font-weight:950}
 @media(max-width:430px){.mystery-shop-grid{gap:7px}.mystery-shop-grid .mystery-box-card{padding:8px}.mystery-shop-grid .mystery-rules{min-height:106px}.mystery-shop-grid .mystery-box-card>.shop-animal-img{width:min(118px,27vw);height:min(118px,27vw)}}
+
+/* ======================================================================
+   UPDATE V10 — Dog Hotel / Drop Basket / Worm Spray / 3 Mystery Cards
+   ====================================================================== */
+.collect-drops-button{position:absolute;left:1.4%;top:21.15%;z-index:87;min-width:25%;height:3.55%;padding:0 8px;border:2px solid rgba(151,101,60,.92);border-radius:999px;background:linear-gradient(180deg,rgba(82,55,88,.98),rgba(43,29,53,.98));color:#fff0c9;font-family:"Ayuthaya","Thonburi","Noto Serif Thai","Noto Sans Thai",serif;font-size:clamp(7px,1.9vw,11px);font-weight:950;box-shadow:0 5px 11px rgba(39,18,42,.36),inset 0 1px rgba(255,238,198,.2);cursor:pointer;white-space:nowrap}.collect-drops-button:active{transform:scale(.97)}
+.game-screen.plot-page-2 .collect-drops-button{display:none!important}
+.drop-basket-working-overlay{position:absolute;inset:0;z-index:146;display:grid;place-items:center;background:rgba(25,12,30,.30);backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);pointer-events:auto}.drop-basket-working-card{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(290px,72vw);padding:15px 16px;border:3px solid #aa744e;border-radius:22px;background:linear-gradient(180deg,#fff2cf,#e7c68d);color:#4d3045;text-align:center;box-shadow:0 14px 35px rgba(0,0,0,.42)}.drop-basket-working-card img{width:min(150px,39vw);height:min(125px,32vw);object-fit:contain;animation:basketWork .55s ease-in-out infinite alternate}.drop-basket-working-card b{font-size:clamp(13px,3.5vw,19px)}@keyframes basketWork{to{transform:translateY(-5px) rotate(2deg)}}
+
+/* ร้านกล่องสุ่ม 3 ใบ ให้กรอบ/แถบเท่ากัน */
+.mystery-shop-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;align-items:stretch!important}
+.mystery-shop-grid .mystery-box-card{height:100%!important;min-width:0!important;padding:8px 6px!important}
+.mystery-shop-grid .mystery-box-card>.shop-animal-img{width:min(108px,24vw)!important;height:min(108px,24vw)!important}
+.mystery-shop-grid .mystery-box-card>b{min-height:42px!important;font-size:clamp(8px,2vw,11px)!important;line-height:1.2}
+.mystery-shop-grid .mystery-box-card .shop-price{min-height:25px!important;font-size:clamp(7px,1.7vw,9px)!important}
+.mystery-shop-grid .mystery-rules{min-height:118px!important;padding:7px 5px!important;gap:4px!important}
+.mystery-shop-grid .mystery-rules strong,.mystery-shop-grid .mystery-rules span{font-size:clamp(6px,1.45vw,8px)!important}
+.mystery-shop-grid .shop-qty-label,.mystery-qty-spacer{height:38px!important;min-height:38px!important;margin:7px 0!important}
+.mystery-shop-grid .shop-worship-button{min-height:43px!important;padding:6px 3px!important;font-size:clamp(7px,1.65vw,9px)!important}
+.cat-box-card::after{display:none!important}
+
+/* ตัวเลือกสเปรย์หนอนบ้านเพื่อน */
+.friend-worm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.friend-worm-actions>button{min-height:58px;padding:7px;border:0;border-radius:12px;font-size:9px;font-weight:950}.friend-worm-actions .primary-spooky-action{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:5px;text-align:left}.friend-worm-actions img{width:40px;height:40px;object-fit:contain}.friend-worm-actions small{font-size:7px}.friend-worm-actions button:disabled{opacity:.42}
+
+/* โรงแรมน้องหมา */
+.dog-hotel-counter{position:absolute;left:50%;top:8.5%;z-index:20;transform:translateX(-50%);padding:6px 11px;border:2px solid rgba(176,126,80,.92);border-radius:999px;background:rgba(52,34,58,.92);color:#fff0cf;font-size:clamp(8px,2.1vw,12px);font-weight:950;white-space:nowrap;pointer-events:none}.dog-hotel-pet-layer,.dog-hotel-drop-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none}.dog-hotel-pet-layer{z-index:14}.dog-hotel-drop-layer{z-index:18}.dog-hotel-pet{position:absolute;width:clamp(64px,16vw,108px);aspect-ratio:314/418;transform:translate(-50%,-50%);padding:0;border:0;background:transparent;pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}.dog-hotel-pet::before{content:"";position:absolute;left:50%;bottom:18%;width:48%;height:8%;transform:translateX(-50%);border-radius:50%;background:rgba(20,13,22,.36);filter:blur(2.5px)}.dog-hotel-sprite{position:absolute;z-index:1;inset:0;background-repeat:no-repeat;background-size:400% 300%;background-position:0 0;transform-origin:center bottom;filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));backface-visibility:hidden}.dog-hotel-sprite.is-walking{background-size:400% 200%}.dog-hotel-sprite.face-left{transform:scaleX(-1)}.dog-hotel-name{position:absolute;z-index:3;left:50%;top:14%;transform:translateX(-50%);max-width:150%;padding:3px 7px;border:1px solid rgba(255,225,174,.9);border-radius:999px;background:rgba(49,31,57,.9);color:#fff1d0;font-size:clamp(7px,1.7vw,10px);font-weight:950;line-height:1.1;text-align:center;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.75);pointer-events:none}.dog-drop-item{pointer-events:auto}
+
+@media(max-width:430px){.collect-drops-button{left:1.3%;top:21.0%;min-width:27%;font-size:7px}.mystery-shop-grid{gap:5px!important}.mystery-shop-grid .mystery-box-card{padding:7px 4px!important}.mystery-shop-grid .mystery-rules{min-height:110px!important}.dog-hotel-pet{width:clamp(58px,15vw,88px)}}
