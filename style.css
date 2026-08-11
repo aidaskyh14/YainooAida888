@@ -99,7 +99,7 @@ button{touch-action:manipulation}
   background-position:0 0;
   transform:translateZ(0) scaleX(1);
   transform-origin:center bottom;
-  scale:1;
+  scale:var(--pet-art-scale,1);
   transition:scale 140ms ease-in-out;
   will-change:transform,background-position,scale;
   backface-visibility:hidden;
@@ -107,7 +107,7 @@ button{touch-action:manipulation}
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
-.aida-farm-pet-sprite.is-changing-pose{scale:.96 1.03}
+.aida-farm-pet-sprite.is-changing-pose{scale:calc(var(--pet-art-scale,1) * .96) calc(var(--pet-art-scale,1) * 1.03)}
 .aida-farm-pet-sprite.is-walking{
   background-size:400% 200%;
 }

@@ -4867,6 +4867,10 @@ const AIDA_FARM_PET_ROWS=[35.8,49.8,62,74.4,86.2];
 const AIDA_FARM_PET_COLS=[10,33.5,65.5,90];
 const AIDA_FARM_PET_POSES={idleA:0,idleB:1,sit:2,scratch:3,lie:4,sleep:5,happy:6,startled:7,sniff:8,stretch:9,groom:10,paw:11};
 const AIDA_FARM_PET_POSE_LABELS=["อยู่เฉย ๆ","หายใจเบา ๆ","นั่ง","เกาหัว","นอนมอง","หลับ","ดีใจ","ตกใจ","ดมพื้น","ยืดตัว","เลียอุ้งเท้า","ยกอุ้งเท้า"];
+const AIDA_FARM_PET_ART_SCALE={
+  dog:{1:{side:1.53,front:1.58,back:.94},2:{side:1.40,front:1.26,back:.85},3:{side:1.45,front:1.42,back:.84},4:{side:1.64,front:1.49,back:.83},5:{side:1.42,front:1.31,back:.98},6:{side:1.54,front:1.41,back:.87},7:{side:1.49,front:1.33,back:.82},8:{side:1.39,front:1.34,back:.81}},
+  cat:{1:{side:.92,front:.67,back:.67},2:{side:.92,front:.84,back:.78},3:{side:.85,front:.75,back:.66},4:{side:1.04,front:.68,back:.70},5:{side:1.06,front:.76,back:.80},6:{side:1.04,front:.76,back:.80},7:{side:.82,front:.73,back:.79},8:{side:.90,front:.73,back:.69}}
+};
 let aidaFarmPet=null;
 let aidaFarmPetSprite=null;
 let aidaFarmPetNode=5;
@@ -4918,6 +4922,7 @@ function setAidaFarmPetPose(index){
   aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"72%":index===AIDA_FARM_PET_POSES.sit?"52%":"48%");
   aidaFarmPet?.style.setProperty("--pet-shadow-bottom",widePose?"11.5%":"11.5%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
+  aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage("pose")}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 300%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
@@ -4933,6 +4938,8 @@ function setAidaFarmPetWalkFrame(index,direction="right"){
   aidaFarmPetSprite.classList.toggle("walk-back",direction==="back");
   aidaFarmPetSprite.classList.toggle("face-left",direction==="left");
   const walkKind=direction==="front"?"front":direction==="back"?"back":"side";
+  const artScale=AIDA_FARM_PET_ART_SCALE[aidaFarmPetType]?.[aidaFarmPetNumber]?.[walkKind]||1;
+  aidaFarmPetSprite.style.setProperty("--pet-art-scale",String(artScale));
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage(walkKind)}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 200%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*100}%`;
