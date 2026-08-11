@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=104">
+  <link rel="stylesheet" href="style.css?v=105">
 </head>
 <body>
   <main id="app">
@@ -36,22 +36,7 @@
         <div id="plots" class="plots"></div>
       </section>
       <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
-      <button id="petTestBtn" class="pet-test-button hidden" type="button">🐱 ทดลองแมว</button>
-      <aside id="petTestPanel" class="pet-test-panel hidden" aria-label="เครื่องมือทดสอบแมวสำหรับ Aida">
-        <div class="pet-test-heading">
-          <b>🐱 เลือกแมวที่จะทดลอง</b>
-          <button id="petTestCloseBtn" type="button" aria-label="ปิด">×</button>
-        </div>
-        <p class="pet-test-help">แตะตัวที่ต้องการเพียงครั้งเดียว แล้วน้องจะเดินและสุ่มท่าทางเองทั้งหมด</p>
-        <div id="petTestCatList" class="pet-test-list"></div>
-        <small>ทดลองได้ทีละ 1 ตัว • ไม่บันทึก Firebase และไม่กระทบคะแนน/คลัง</small>
-      </aside>
-      <aside id="petTestActivePanel" class="pet-test-active-panel hidden" aria-label="สัตว์ที่กำลังทดลอง">
-        <b id="petTestActiveName">กำลังทดลองแมว</b>
-        <span>น้องจะเดินและเปลี่ยนท่าเอง แตะน้องอีกครั้งเพื่อเปิดเมนูนี้</span>
-        <div><button id="petTestContinueBtn" type="button">ดูต่อ</button><button id="petTestStopBtn" type="button">เลิกทดลอง</button></div>
-      </aside>
-      <button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
+<button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
       <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
       <!-- รูปและชื่อโปรไฟล์ แยกจากชื่อบนป้ายไม้ -->
@@ -61,6 +46,7 @@
       </button>
       <input id="avatarUpload" type="file" accept="image/*" hidden>
       <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
+      <button id="tractorBtn" class="tractor-button" type="button">🚜 ใช้รถไถ</button>
 
       <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
       <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
@@ -247,6 +233,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=113"></script>
+  <script src="game.js?v=114"></script>
 </body>
 </html>
