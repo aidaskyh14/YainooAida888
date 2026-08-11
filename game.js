@@ -5481,7 +5481,8 @@ function showDropBasketWorking(target="game"){
 function hideDropBasketWorking(){document.querySelectorAll(".drop-basket-working-overlay").forEach(el=>el.classList.add("hidden"))}
 function dropSummaryHTML(summary){return Object.values(summary).map(v=>`${safeHtml(v.name)} ${v.qty}x`).join("<br>")}
 async function collectAllCatDropsCurrentFarm(){
-  if(visitContext||farmPlotPage!==0||!cloudReady)return;
+  // ใช้ได้ทั้งฟาร์มหน้า 1 และหน้า 2; currentFarmNo() จะเลือกแมวของหน้าปัจจุบันเอง
+  if(visitContext||!cloudReady)return;
   showDropBasketWorking("game");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,summary={};await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const farmNo=currentFarmNo();const cats=s.cats.filter(c=>c.placedFarm===farmNo);let count=0;cats.forEach(cat=>{(cat.drops||[]).forEach(drop=>{const item=CAT_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;applyPetDropReward(s,item);if(!summary[item.id])summary[item.id]={name:item.name,qty:0};summary[item.id].qty+=item.qty;count++});cat.drops=[]});if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});await new Promise(r=>setTimeout(r,450));ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderCatPendingDrop();message("🧺 เก็บของดรอปทั้งหมดแล้ว",dropSummaryHTML(summary))}catch(error){message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่")}finally{hideDropBasketWorking()}
 }
 if($("collectDropsBtn"))$("collectDropsBtn").onclick=collectAllCatDropsCurrentFarm;
@@ -5553,9 +5554,12 @@ async function placeDogInHotel(dogId){
     await fs.runTransaction(db,async tx=>{
       const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
+      // สำคัญ: ห้ามเรียก placedDogs(s) หลังจับ reference dog เพราะ placedDogs() normalize/remap dogs array
+      // แล้ว reference เดิมจะหลุดจาก s.dogs ทำให้ placedHotel ไม่ถูกบันทึกจริง
+      const hotelCount=(s.dogs||[]).filter(d=>d?.placedHotel).length;
       const dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
       if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
-      if(placedDogs(s).length>=DOG_HOTEL_MAX)throw new Error("โรงแรมน้องหมาเต็มแล้ว วางได้สูงสุด 10 ตัว");
+      if(hotelCount>=DOG_HOTEL_MAX)throw new Error("โรงแรมน้องหมาเต็มแล้ว วางได้สูงสุด 10 ตัว");
       const now=gameNow();Object.assign(dog,{placedHotel:true,placedAt:now,expiresAt:now+DOG_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+DOG_DROP_INTERVAL_MS,drops:[]});
       next=cloneData(s);
       tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
