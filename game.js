@@ -4862,13 +4862,14 @@ topFishingRows=function(daily){const scores=daily?.scores&&typeof daily.scores==
 const __fishingDockHTMLBeforeV41=fishingDockHTML;
 fishingDockHTML=function(slot,index){if(slot?.status==="claimed"){const [l,t,w,h]=FISHING_DOCK_POSITIONS[index],imgs=(slot.catches||[]).map(c=>`<img src="${c.image}" alt="${safeHtml(c.name)}">`).join("");return `<button class="fishing-dock" data-fishing-dock="${index}" type="button" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><span class="fishing-result-fishes">${imgs}</span><span class="fishing-dock-status">${safeHtml(slot.ownerName)} รับแล้ว • ${Number(slot.totalWeight).toFixed(2)} lbs<br>ท่านี้ว่าง</span></button>`}return __fishingDockHTMLBeforeV41(slot,index)};
 
-/* ===== ห้องทดลองสัตว์ Aida: local visual only, ไม่เขียน Firebase ===== */
+/* ===== ห้องทดลองแมว Aida: local visual only, ไม่เขียน Firebase ===== */
 const AIDA_FARM_PET_ROWS=[35.8,49.8,62,74.4,86.2];
 const AIDA_FARM_PET_COLS=[10,33.5,65.5,90];
 const AIDA_FARM_PET_POSES={idleA:0,idleB:1,sit:2,scratch:3,lie:4,sleep:5,happy:6,startled:7,sniff:8,stretch:9,groom:10,paw:11};
 const AIDA_FARM_PET_POSE_LABELS=["อยู่เฉย ๆ","หายใจเบา ๆ","นั่ง","เกาหัว","นอนมอง","หลับ","ดีใจ","ตกใจ","ดมพื้น","ยืดตัว","เลียอุ้งเท้า","ยกอุ้งเท้า"];
 let aidaFarmPet=null;
 let aidaFarmPetSprite=null;
+let aidaFarmPetOutgoingSprite=null;
 let aidaFarmPetNode=5;
 let aidaFarmPetTimer=0;
 let aidaFarmPetFrameTimer=0;
@@ -4877,9 +4878,9 @@ let aidaFarmPetMotion=null;
 let aidaFarmPetRunToken=0;
 let aidaFarmPetHorizontalDirection=1;
 let aidaFarmPetPreviousNode=-1;
-let aidaFarmPetType="dog";
+let aidaFarmPetType="cat";
 let aidaFarmPetNumber=1;
-let aidaFarmPetSpeed=1;
+let aidaFarmPetSpeed=.78;
 let aidaFarmPetAutoWalk=true;
 let aidaFarmPetForcedDirection="";
 let aidaFarmPetTestActive=false;
@@ -4887,9 +4888,7 @@ let aidaFarmPetAssetBase="";
 
 try{
   const saved=JSON.parse(sessionStorage.getItem("aidaPetTesterV1")||"null");
-  if(saved?.type==="cat"||saved?.type==="dog")aidaFarmPetType=saved.type;
   if(Number(saved?.number)>=1&&Number(saved?.number)<=8)aidaFarmPetNumber=Math.floor(Number(saved.number));
-  if(Number(saved?.speed)>=.75&&Number(saved?.speed)<=1.3)aidaFarmPetSpeed=Number(saved.speed);
 }catch(error){console.warn("pet tester settings",error)}
 
 function saveAidaFarmPetTestSettings(){
@@ -4915,8 +4914,8 @@ function setAidaFarmPetPose(index){
   const col=index%4,row=Math.floor(index/4);
   aidaFarmPet?.classList.remove("is-walking");
   const widePose=index===AIDA_FARM_PET_POSES.lie||index===AIDA_FARM_PET_POSES.sleep;
-  aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"72%":index===AIDA_FARM_PET_POSES.sit?"52%":"48%");
-  aidaFarmPet?.style.setProperty("--pet-shadow-bottom",widePose?"11.5%":"11.5%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"76%":index===AIDA_FARM_PET_POSES.sit?"57%":"52%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
   aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage("pose")}")`;
@@ -4927,8 +4926,8 @@ function setAidaFarmPetWalkFrame(index,direction="right"){
   if(!aidaFarmPetSprite)return;
   const frame=((index%8)+8)%8,col=frame%4,row=Math.floor(frame/4);
   aidaFarmPet?.classList.add("is-walking");
-  aidaFarmPet?.style.setProperty("--pet-shadow-width",direction==="front"||direction==="back"?"42%":"48%");
-  aidaFarmPet?.style.setProperty("--pet-shadow-bottom",direction==="front"||direction==="back"?"7.5%":"11.5%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-width",direction==="front"||direction==="back"?"46%":"54%");
+  aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
   aidaFarmPetSprite.classList.add("is-walking");
   aidaFarmPetSprite.classList.toggle("walk-front",direction==="front");
   aidaFarmPetSprite.classList.toggle("walk-back",direction==="back");
@@ -4942,18 +4941,20 @@ function setAidaFarmPetWalkFrame(index,direction="right"){
 function transitionAidaFarmPetSprite(change,token,done){
   if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
   clearTimeout(aidaFarmPetTransitionTimer);
-  aidaFarmPetSprite.classList.add("is-changing-pose");
-  aidaFarmPetTransitionTimer=setTimeout(()=>{
-    if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
-    change();
-    requestAnimationFrame(()=>{
-      if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
-      aidaFarmPetSprite.classList.remove("is-changing-pose");
-      aidaFarmPetTransitionTimer=setTimeout(()=>{
-        if(token===aidaFarmPetRunToken)done?.();
-      },170);
-    });
-  },140);
+  aidaFarmPetOutgoingSprite?.remove();aidaFarmPetOutgoingSprite=null;
+  const current=aidaFarmPetSprite,oldFrame=current.cloneNode(false);
+  oldFrame.classList.remove("is-changing-pose");oldFrame.classList.add("aida-farm-pet-sprite-outgoing");oldFrame.style.opacity="1";
+  aidaFarmPet?.appendChild(oldFrame);aidaFarmPetOutgoingSprite=oldFrame;
+  current.style.transition="none";current.style.opacity="0";change();current.getBoundingClientRect();
+  requestAnimationFrame(()=>{
+    if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite){oldFrame.remove();return}
+    current.style.transition="opacity 320ms cubic-bezier(.22,.61,.36,1),scale 240ms ease-in-out";
+    current.style.opacity="1";oldFrame.classList.add("is-fading-out");
+    aidaFarmPetTransitionTimer=setTimeout(()=>{
+      oldFrame.remove();if(aidaFarmPetOutgoingSprite===oldFrame)aidaFarmPetOutgoingSprite=null;
+      if(token===aidaFarmPetRunToken)done?.();
+    },340);
+  });
 }
 function aidaFarmPetPoint(index){
   const layer=$("aidaFarmPetLayer"),rect=layer.getBoundingClientRect();
@@ -4980,6 +4981,7 @@ function clearAidaFarmPetActivity(remove=false){
   aidaFarmPetRunToken++;
   clearTimeout(aidaFarmPetTimer);clearInterval(aidaFarmPetFrameTimer);clearTimeout(aidaFarmPetTransitionTimer);aidaFarmPetTimer=0;aidaFarmPetFrameTimer=0;aidaFarmPetTransitionTimer=0;
   if(aidaFarmPetMotion){aidaFarmPetMotion.cancel();aidaFarmPetMotion=null}
+  aidaFarmPetOutgoingSprite?.remove();aidaFarmPetOutgoingSprite=null;
   if(remove){aidaFarmPet?.remove();aidaFarmPet=null;aidaFarmPetSprite=null}
 }
 function scheduleAidaFarmPetPause(token){
@@ -5012,7 +5014,7 @@ function moveAidaFarmPet(token){
 }
 function startAidaFarmPet(){
   const layer=$("aidaFarmPetLayer");if(!layer||aidaFarmPet)return;
-  aidaFarmPet=document.createElement("div");aidaFarmPet.className="aida-farm-pet";
+  aidaFarmPet=document.createElement("div");aidaFarmPet.className="aida-farm-pet pet-cat";
   aidaFarmPet.setAttribute("role","button");aidaFarmPet.setAttribute("aria-label","เปิดเมนูสัตว์ที่กำลังทดลอง");aidaFarmPet.tabIndex=0;
   aidaFarmPetSprite=document.createElement("div");aidaFarmPetSprite.className="aida-farm-pet-sprite";aidaFarmPet.appendChild(aidaFarmPetSprite);layer.appendChild(aidaFarmPet);
   const openActivePanel=()=>$("petTestActivePanel")?.classList.remove("hidden");
@@ -5053,9 +5055,9 @@ function restartAidaFarmPetSelection(){
 }
 async function beginAidaFarmPetTest(type,number){
   if(farmPlotPage!==0||$("gameScreen")?.classList.contains("plot-page-2"))setFarmPlotPage(0);
-  aidaFarmPetType=type==="cat"?"cat":"dog";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=1;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
+  aidaFarmPetType="cat";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=.78;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
   $("petTestPanel")?.classList.add("hidden");$("petTestActivePanel")?.classList.add("hidden");
-  const label=`${aidaFarmPetType==="cat"?"แมว":"หมา"}ตัวที่ ${aidaFarmPetNumber}`;if($("petTestActiveName"))$("petTestActiveName").textContent=`กำลังทดลอง${label}`;
+  const label=`แมวตัวที่ ${aidaFarmPetNumber}`;if($("petTestActiveName"))$("petTestActiveName").textContent=`กำลังทดลอง${label}`;
   clearAidaFarmPetActivity(true);
   aidaFarmPetAssetBase=await resolveAidaFarmPetAssetBase();
   if(!aidaFarmPetAssetBase){alert(`ยังไม่พบไฟล์รูป${label}ใน GitHub กรุณาตรวจว่าอัปไฟล์ ${aidaFarmPetType==="cat"?"cat":"dog"}-${String(aidaFarmPetNumber).padStart(2,"0")}-pose-sheet.png แล้ว`);return}
@@ -5067,12 +5069,12 @@ function stopAidaFarmPetTest(){
   clearTimeout(aidaFarmPetTimer);clearInterval(aidaFarmPetFrameTimer);clearTimeout(aidaFarmPetTransitionTimer);if(aidaFarmPetMotion){aidaFarmPetMotion.cancel();aidaFarmPetMotion=null}
   if(!aidaFarmPet){clearAidaFarmPetActivity(true);return}
   const pet=aidaFarmPet,sprite=aidaFarmPetSprite,rect=pet.getBoundingClientRect(),direction=rect.left<innerWidth/2?"left":"right";setAidaFarmPetWalkFrame(0,direction);
-  let frame=0;aidaFarmPetFrameTimer=setInterval(()=>{frame=(frame+1)%8;setAidaFarmPetWalkFrame(frame,direction)},118);
-  pet.animate([{transform:pet.style.transform,opacity:1},{transform:`translate3d(${direction==="left"?-rect.width*2:innerWidth+rect.width}px,${Math.max(0,rect.top)}px,0)`,opacity:.2}],{duration:850,easing:"ease-in",fill:"forwards"}).onfinish=()=>{clearInterval(aidaFarmPetFrameTimer);clearAidaFarmPetActivity(true)};
+  let frame=0;aidaFarmPetFrameTimer=setInterval(()=>{frame=(frame+1)%8;setAidaFarmPetWalkFrame(frame,direction)},118/aidaFarmPetSpeed);
+  pet.animate([{transform:pet.style.transform,opacity:1},{transform:`translate3d(${direction==="left"?-rect.width*2:innerWidth+rect.width}px,${Math.max(0,rect.top)}px,0)`,opacity:.2}],{duration:1050,easing:"ease-in",fill:"forwards"}).onfinish=()=>{clearInterval(aidaFarmPetFrameTimer);clearAidaFarmPetActivity(true)};
 }
 function initializeAidaFarmPetTester(){
-  const dogs=$("petTestDogList"),cats=$("petTestCatList");if(!dogs||!cats||dogs.children.length)return;
-  const choices=type=>Array.from({length:8},(_,index)=>`<button class="pet-test-choice" type="button" data-pet-choice="${type}" data-pet-number="${index+1}">ตัวที่ ${index+1}</button>`).join("");dogs.innerHTML=choices("dog");cats.innerHTML=choices("cat");
+  const cats=$("petTestCatList");if(!cats||cats.children.length)return;
+  const choices=type=>Array.from({length:8},(_,index)=>`<button class="pet-test-choice" type="button" data-pet-choice="${type}" data-pet-number="${index+1}">ตัวที่ ${index+1}</button>`).join("");cats.innerHTML=choices("cat");
   $("petTestBtn").onclick=()=>{if(aidaFarmPetTestActive){$("petTestActivePanel").classList.remove("hidden");return}$("petTestPanel").classList.toggle("hidden")};
   $("petTestCloseBtn").onclick=()=>$("petTestPanel").classList.add("hidden");
   document.querySelectorAll("[data-pet-choice]").forEach(button=>button.onclick=()=>beginAidaFarmPetTest(button.dataset.petChoice,button.dataset.petNumber));

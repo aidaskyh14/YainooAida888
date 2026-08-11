@@ -68,6 +68,7 @@ button{touch-action:manipulation}
   cursor:pointer;
   touch-action:manipulation;
 }
+.aida-farm-pet.pet-cat{width:clamp(70px,19vw,125px)}
 .aida-farm-pet::before{
   content:"";
   position:absolute;
@@ -75,19 +76,19 @@ button{touch-action:manipulation}
   left:50%;
   bottom:var(--pet-shadow-bottom,22%);
   width:var(--pet-shadow-width,48%);
-  height:7.5%;
+  height:8.5%;
   border-radius:50%;
-  background:rgba(31,24,28,.25);
-  filter:blur(3px);
+  background:rgba(20,13,22,.48);
+  filter:blur(2.5px);
   transform:translateX(-50%) scaleX(1);
   transform-origin:center;
-  opacity:.82;
+  opacity:.94;
   pointer-events:none;
 }
-.aida-farm-pet.is-walking::before{animation:aidaPetShadowStep 944ms ease-in-out infinite}
+.aida-farm-pet.is-walking::before{animation:aidaPetShadowStep 1150ms ease-in-out infinite}
 @keyframes aidaPetShadowStep{
-  0%,50%,100%{transform:translateX(-50%) scaleX(.94);opacity:.78}
-  25%,75%{transform:translateX(-50%) scaleX(1.04);opacity:.86}
+  0%,50%,100%{transform:translateX(-50%) scaleX(.95);opacity:.90}
+  25%,75%{transform:translateX(-50%) scaleX(1.04);opacity:.98}
 }
 .aida-farm-pet-sprite{
   position:absolute;
@@ -100,14 +101,16 @@ button{touch-action:manipulation}
   transform:translateZ(0) scaleX(1);
   transform-origin:center bottom;
   scale:var(--pet-art-scale,1);
-  transition:scale 140ms ease-in-out;
-  will-change:transform,background-position,scale;
+  opacity:1;
+  transition:opacity 320ms cubic-bezier(.22,.61,.36,1),scale 240ms ease-in-out;
+  will-change:transform,background-position,scale,opacity;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
-.aida-farm-pet-sprite.is-changing-pose{scale:calc(var(--pet-art-scale,1) * .96) calc(var(--pet-art-scale,1) * 1.03)}
+.aida-farm-pet-sprite-outgoing{z-index:2;pointer-events:none;opacity:1;transition:opacity 320ms cubic-bezier(.22,.61,.36,1)}
+.aida-farm-pet-sprite-outgoing.is-fading-out{opacity:0}
 .aida-farm-pet-sprite.is-walking{
   background-size:400% 200%;
 }

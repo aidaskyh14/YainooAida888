@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=101">
+  <link rel="stylesheet" href="style.css?v=102">
 </head>
 <body>
   <main id="app">
@@ -36,21 +36,18 @@
         <div id="plots" class="plots"></div>
       </section>
       <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
-      <button id="petTestBtn" class="pet-test-button hidden" type="button">🐾 ทดลองสัตว์</button>
-      <aside id="petTestPanel" class="pet-test-panel hidden" aria-label="เครื่องมือทดสอบสัตว์สำหรับ Aida">
+      <button id="petTestBtn" class="pet-test-button hidden" type="button">🐱 ทดลองแมว</button>
+      <aside id="petTestPanel" class="pet-test-panel hidden" aria-label="เครื่องมือทดสอบแมวสำหรับ Aida">
         <div class="pet-test-heading">
-          <b>🐾 เลือกสัตว์ที่จะทดลอง</b>
+          <b>🐱 เลือกแมวที่จะทดลอง</b>
           <button id="petTestCloseBtn" type="button" aria-label="ปิด">×</button>
         </div>
         <p class="pet-test-help">แตะตัวที่ต้องการเพียงครั้งเดียว แล้วน้องจะเดินและสุ่มท่าทางเองทั้งหมด</p>
-        <b class="pet-test-section-title">🐶 น้องหมา</b>
-        <div id="petTestDogList" class="pet-test-list"></div>
-        <b class="pet-test-section-title">🐱 น้องแมว</b>
         <div id="petTestCatList" class="pet-test-list"></div>
         <small>ทดลองได้ทีละ 1 ตัว • ไม่บันทึก Firebase และไม่กระทบคะแนน/คลัง</small>
       </aside>
       <aside id="petTestActivePanel" class="pet-test-active-panel hidden" aria-label="สัตว์ที่กำลังทดลอง">
-        <b id="petTestActiveName">กำลังทดลองสัตว์</b>
+        <b id="petTestActiveName">กำลังทดลองแมว</b>
         <span>น้องจะเดินและเปลี่ยนท่าเอง แตะน้องอีกครั้งเพื่อเปิดเมนูนี้</span>
         <div><button id="petTestContinueBtn" type="button">ดูต่อ</button><button id="petTestStopBtn" type="button">เลิกทดลอง</button></div>
       </aside>
@@ -250,6 +247,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=110"></script>
+  <script src="game.js?v=111"></script>
 </body>
 </html>
