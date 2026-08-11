@@ -68,7 +68,7 @@ button{touch-action:manipulation}
   cursor:pointer;
   touch-action:manipulation;
 }
-.aida-farm-pet.pet-cat{width:clamp(70px,19vw,125px)}
+.aida-farm-pet.pet-cat{width:clamp(76px,20.5vw,134px)}
 .aida-farm-pet::before{
   content:"";
   position:absolute;
@@ -102,15 +102,14 @@ button{touch-action:manipulation}
   transform-origin:center bottom;
   scale:var(--pet-art-scale,1);
   opacity:1;
-  transition:opacity 320ms cubic-bezier(.22,.61,.36,1),scale 240ms ease-in-out;
+  transition:opacity 130ms ease-out,scale 110ms ease-in-out;
   will-change:transform,background-position,scale,opacity;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   image-rendering:auto;
   filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
 }
-.aida-farm-pet-sprite-outgoing{z-index:2;pointer-events:none;opacity:1;transition:opacity 320ms cubic-bezier(.22,.61,.36,1)}
-.aida-farm-pet-sprite-outgoing.is-fading-out{opacity:0}
+.aida-farm-pet-sprite.is-changing-pose{opacity:.08;scale:calc(var(--pet-art-scale,1) * .97)}
 .aida-farm-pet-sprite.is-walking{
   background-size:400% 200%;
 }

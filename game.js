@@ -4869,7 +4869,6 @@ const AIDA_FARM_PET_POSES={idleA:0,idleB:1,sit:2,scratch:3,lie:4,sleep:5,happy:6
 const AIDA_FARM_PET_POSE_LABELS=["อยู่เฉย ๆ","หายใจเบา ๆ","นั่ง","เกาหัว","นอนมอง","หลับ","ดีใจ","ตกใจ","ดมพื้น","ยืดตัว","เลียอุ้งเท้า","ยกอุ้งเท้า"];
 let aidaFarmPet=null;
 let aidaFarmPetSprite=null;
-let aidaFarmPetOutgoingSprite=null;
 let aidaFarmPetNode=5;
 let aidaFarmPetTimer=0;
 let aidaFarmPetFrameTimer=0;
@@ -4941,20 +4940,12 @@ function setAidaFarmPetWalkFrame(index,direction="right"){
 function transitionAidaFarmPetSprite(change,token,done){
   if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
   clearTimeout(aidaFarmPetTransitionTimer);
-  aidaFarmPetOutgoingSprite?.remove();aidaFarmPetOutgoingSprite=null;
-  const current=aidaFarmPetSprite,oldFrame=current.cloneNode(false);
-  oldFrame.classList.remove("is-changing-pose");oldFrame.classList.add("aida-farm-pet-sprite-outgoing");oldFrame.style.opacity="1";
-  aidaFarmPet?.appendChild(oldFrame);aidaFarmPetOutgoingSprite=oldFrame;
-  current.style.transition="none";current.style.opacity="0";change();current.getBoundingClientRect();
-  requestAnimationFrame(()=>{
-    if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite){oldFrame.remove();return}
-    current.style.transition="opacity 320ms cubic-bezier(.22,.61,.36,1),scale 240ms ease-in-out";
-    current.style.opacity="1";oldFrame.classList.add("is-fading-out");
-    aidaFarmPetTransitionTimer=setTimeout(()=>{
-      oldFrame.remove();if(aidaFarmPetOutgoingSprite===oldFrame)aidaFarmPetOutgoingSprite=null;
-      if(token===aidaFarmPetRunToken)done?.();
-    },340);
-  });
+  aidaFarmPetSprite.classList.add("is-changing-pose");
+  aidaFarmPetTransitionTimer=setTimeout(()=>{
+    if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
+    change();aidaFarmPetSprite.classList.remove("is-changing-pose");
+    aidaFarmPetTransitionTimer=setTimeout(()=>{if(token===aidaFarmPetRunToken)done?.()},135);
+  },95);
 }
 function aidaFarmPetPoint(index){
   const layer=$("aidaFarmPetLayer"),rect=layer.getBoundingClientRect();
@@ -4981,7 +4972,6 @@ function clearAidaFarmPetActivity(remove=false){
   aidaFarmPetRunToken++;
   clearTimeout(aidaFarmPetTimer);clearInterval(aidaFarmPetFrameTimer);clearTimeout(aidaFarmPetTransitionTimer);aidaFarmPetTimer=0;aidaFarmPetFrameTimer=0;aidaFarmPetTransitionTimer=0;
   if(aidaFarmPetMotion){aidaFarmPetMotion.cancel();aidaFarmPetMotion=null}
-  aidaFarmPetOutgoingSprite?.remove();aidaFarmPetOutgoingSprite=null;
   if(remove){aidaFarmPet?.remove();aidaFarmPet=null;aidaFarmPetSprite=null}
 }
 function scheduleAidaFarmPetPause(token){
