@@ -5557,13 +5557,30 @@ async function placeDogInHotel(dogId){
       if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
       if(placedDogs(s).length>=DOG_HOTEL_MAX)throw new Error("โรงแรมน้องหมาเต็มแล้ว วางได้สูงสุด 10 ตัว");
       const now=gameNow();Object.assign(dog,{placedHotel:true,placedAt:now,expiresAt:now+DOG_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+DOG_DROP_INTERVAL_MS,drops:[]});
-      next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      next=cloneData(s);
+      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
-    // ใช้ state ที่ transaction ยืนยันแล้วเป็น source of truth ทันที
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();
+
+    // ยืนยัน state ที่ transaction เพิ่งเขียนก่อนเปิดโรงแรม
+    let committed=normalizeState(next,currentMember);
+    let committedDog=committed.dogs.find(d=>d.id===dogId);
+    if(!committedDog?.placedHotel)throw new Error("บันทึกตำแหน่งน้องหมาไม่สำเร็จ กรุณาลองใหม่");
+
+    // อ่าน Firestore ซ้ำหนึ่งครั้ง เพื่อกัน state ในเครื่องเก่าทับค่าหลัง transaction
+    try{
+      const verifySnap=await fs.getDoc(ref);
+      if(verifySnap.exists()){
+        const verified=normalizeState(verifySnap.data(),currentMember);
+        const verifiedDog=verified.dogs.find(d=>d.id===dogId);
+        if(verifiedDog?.placedHotel)committed=verified;
+      }
+    }catch(error){console.warn("verify dog placement",error)}
+
+    ownState=committed;state=ownState;saveLocalOnly(ownState);closeModal();
+    if(placedDogs(ownState).length<1)throw new Error("วางน้องหมาแล้วแต่ข้อมูลโรงแรมยังไม่พร้อม กรุณากดอีกครั้ง");
     openScene("dogHotel");
-    // วาดซ้ำหลังเปิดฉากอีกหนึ่งรอบ ป้องกัน race ตอนเปลี่ยน modal -> scene บน iPhone/iPad
     requestAnimationFrame(()=>{if(currentScene==="dogHotel")renderDogHotelScene()});
+    setTimeout(()=>{if(currentScene==="dogHotel")renderDogHotelScene()},180);
     showWeatherToast("🐶 วางน้องหมาในโรงแรมแล้ว • เริ่มนับอายุ 10 วัน");
   }catch(error){message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่")}
 }
@@ -5614,7 +5631,22 @@ async function collectAllDogDrops(){if(!cloudReady)return;showDropBasketWorking(
 setInterval(processDogDrops,30000);
 
 /* ---------- Dog hotel render / replaces Panda entrance ---------- */
-function renderDogHotelScene(){if(currentScene!=="dogHotel")return;processDogDrops();setSceneNav({backText:"กลับไปที่แปลง",backAction:returnToFarm,nextText:"เก็บของดรอปทั้งหมด",nextAction:collectAllDogDrops});const count=placedDogs().length;$("sceneInteractiveLayer").innerHTML=`<div class="dog-hotel-counter">🐶 น้องหมาในโรงแรม ${count}/${DOG_HOTEL_MAX}</div><div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div><div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;mountDogHotelPets();renderDogHotelDrops()}
+async function refreshDogHotelFromCloud(){
+  if(!cloudReady||!currentMemberKey||currentScene!=="dogHotel")return;
+  try{
+    const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));
+    if(!snap.exists()||currentScene!=="dogHotel")return;
+    const fresh=normalizeState(snap.data(),currentMember);
+    // ใช้ cloud เฉพาะเมื่อมีรายการหมามากกว่าหรือเท่ากับ state ปัจจุบัน เพื่อลดโอกาส state เก่าทับ
+    if((fresh.dogs?.length||0)>=(ownState?.dogs?.length||0)){
+      ownState=fresh;state=ownState;saveLocalOnly(ownState);
+      const count=placedDogs(ownState).length;
+      const badge=document.querySelector(".dog-hotel-counter");if(badge)badge.textContent=`🐶 น้องหมาในโรงแรม ${count}/${DOG_HOTEL_MAX}`;
+      mountDogHotelPets();renderDogHotelDrops();
+    }
+  }catch(error){console.warn("refresh dog hotel",error)}
+}
+function renderDogHotelScene(){if(currentScene!=="dogHotel")return;processDogDrops();setSceneNav({backText:"กลับไปที่แปลง",backAction:returnToFarm,nextText:"เก็บของดรอปทั้งหมด",nextAction:collectAllDogDrops});const count=placedDogs().length;$("sceneInteractiveLayer").innerHTML=`<div class="dog-hotel-counter">🐶 น้องหมาในโรงแรม ${count}/${DOG_HOTEL_MAX}</div><div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div><div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;mountDogHotelPets();renderDogHotelDrops();setTimeout(()=>refreshDogHotelFromCloud(),250)}
 
 function drawCoconutSceneV10FromCache(){
   if(currentScene!=="coconut"||!sharedCoconutCache)return;setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});const s=ownState||state,quotaActive=Number(s.coconutQuotaResetAt||0)>gameNow(),used=quotaActive?(Number(s.coconutQuotaCount)||0):0,now=gameNow();
@@ -5632,9 +5664,9 @@ returnToFarm=function(){if(currentScene==="dogHotel")stopDogHotelMotion();return
 
 /* ---------- Page-1-only collect-all button ---------- */
 const __setFarmPlotPageBeforeDropBasketV10=setFarmPlotPage;
-setFarmPlotPage=function(page){const r=__setFarmPlotPageBeforeDropBasketV10(page);$("collectDropsBtn")?.classList.toggle("hidden",farmPlotPage!==0||Boolean(visitContext));return r};
+setFarmPlotPage=function(page){const r=__setFarmPlotPageBeforeDropBasketV10(page);$("collectDropsBtn")?.classList.toggle("hidden",Boolean(visitContext));return r};
 const __drawBeforeDropBasketV10=draw;
-draw=function(){const r=__drawBeforeDropBasketV10();$("collectDropsBtn")?.classList.toggle("hidden",farmPlotPage!==0||Boolean(visitContext));return r};
+draw=function(){const r=__drawBeforeDropBasketV10();$("collectDropsBtn")?.classList.toggle("hidden",Boolean(visitContext));return r};
 
 /* ---------- Safety: keep coconut shared cooldown at one hour ---------- */
 // COCONUT_TREE_COOLDOWN and COCONUT_RIVER_COOLDOWN_MS are both 60 minutes in the effective build.
