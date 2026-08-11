@@ -4867,10 +4867,6 @@ const AIDA_FARM_PET_ROWS=[35.8,49.8,62,74.4,86.2];
 const AIDA_FARM_PET_COLS=[10,33.5,65.5,90];
 const AIDA_FARM_PET_POSES={idleA:0,idleB:1,sit:2,scratch:3,lie:4,sleep:5,happy:6,startled:7,sniff:8,stretch:9,groom:10,paw:11};
 const AIDA_FARM_PET_POSE_LABELS=["อยู่เฉย ๆ","หายใจเบา ๆ","นั่ง","เกาหัว","นอนมอง","หลับ","ดีใจ","ตกใจ","ดมพื้น","ยืดตัว","เลียอุ้งเท้า","ยกอุ้งเท้า"];
-const AIDA_FARM_PET_ART_SCALE={
-  dog:{1:{side:1.53,front:1.58,back:.94},2:{side:1.40,front:1.26,back:.85},3:{side:1.45,front:1.42,back:.84},4:{side:1.64,front:1.49,back:.83},5:{side:1.42,front:1.31,back:.98},6:{side:1.54,front:1.41,back:.87},7:{side:1.49,front:1.33,back:.82},8:{side:1.39,front:1.34,back:.81}},
-  cat:{1:{side:.92,front:.67,back:.67},2:{side:.92,front:.84,back:.78},3:{side:.85,front:.75,back:.66},4:{side:1.04,front:.68,back:.70},5:{side:1.06,front:.76,back:.80},6:{side:1.04,front:.76,back:.80},7:{side:.82,front:.73,back:.79},8:{side:.90,front:.73,back:.69}}
-};
 let aidaFarmPet=null;
 let aidaFarmPetSprite=null;
 let aidaFarmPetNode=5;
@@ -4905,8 +4901,8 @@ function aidaFarmPetBasePath(){
 }
 function aidaFarmPetImage(kind){
   const base=aidaFarmPetBasePath();
-  if(kind==="pose")return `${base}-pose-sheet.png?v=1`;
-  return `${base}-walk-${kind}.png?v=1`;
+  if(kind==="pose")return `${base}-pose-sheet.png?v=3`;
+  return `${base}-walk-${kind}.png?v=3`;
 }
 
 function aidaFarmPetOwnerKey(){return visitContext?String(visitContext.memberKey||memberKeyFromName(visitContext.name)):String(currentMemberKey||memberKeyFromName(currentMember))}
@@ -4938,8 +4934,7 @@ function setAidaFarmPetWalkFrame(index,direction="right"){
   aidaFarmPetSprite.classList.toggle("walk-back",direction==="back");
   aidaFarmPetSprite.classList.toggle("face-left",direction==="left");
   const walkKind=direction==="front"?"front":direction==="back"?"back":"side";
-  const artScale=AIDA_FARM_PET_ART_SCALE[aidaFarmPetType]?.[aidaFarmPetNumber]?.[walkKind]||1;
-  aidaFarmPetSprite.style.setProperty("--pet-art-scale",String(artScale));
+  aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage(walkKind)}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 200%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*100}%`;
@@ -4991,7 +4986,7 @@ function scheduleAidaFarmPetPause(token){
   if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
   const idlePoses=[AIDA_FARM_PET_POSES.idleA,AIDA_FARM_PET_POSES.idleB,AIDA_FARM_PET_POSES.scratch,AIDA_FARM_PET_POSES.sit,AIDA_FARM_PET_POSES.lie,AIDA_FARM_PET_POSES.sleep];
   const pose=idlePoses[Math.floor(Math.random()*idlePoses.length)];
-  const wait=pose===AIDA_FARM_PET_POSES.sleep?5200+Math.random()*3200:2200+Math.random()*3300;
+  const wait=pose===AIDA_FARM_PET_POSES.sleep?1900+Math.random()*1200:900+Math.random()*1500;
   transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token,()=>{
     if(pose===AIDA_FARM_PET_POSES.idleA){aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);return}
     aidaFarmPetTimer=setTimeout(()=>transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(pose),token,()=>{
@@ -5042,7 +5037,7 @@ function resolveAidaFarmPetAssetBase(){
       const candidate=candidates[index++],image=new Image(),timeout=setTimeout(()=>{image.onload=image.onerror=null;tryNext()},3500);
       image.onload=()=>{clearTimeout(timeout);resolve(candidate)};
       image.onerror=()=>{clearTimeout(timeout);tryNext()};
-      image.src=`${candidate}-pose-sheet.png?v=2`;
+      image.src=`${candidate}-pose-sheet.png?v=3`;
     };
     tryNext();
   });
