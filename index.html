@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=107">
 </head>
 <body>
   <main id="app">
@@ -35,6 +35,9 @@
       <section class="garden" aria-label="แปลงปลูกผัก">
         <div id="plots" class="plots"></div>
       </section>
+      <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
+<button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
+      <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
       <!-- รูปและชื่อโปรไฟล์ แยกจากชื่อบนป้ายไม้ -->
       <button id="avatarButton" class="avatar-button" type="button" aria-label="เปลี่ยนรูปโปรไฟล์">
@@ -43,6 +46,7 @@
       </button>
       <input id="avatarUpload" type="file" accept="image/*" hidden>
       <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
+      <button id="tractorBtn" class="tractor-button" type="button">🚜 ใช้รถไถ</button>
 
       <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
       <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
@@ -61,20 +65,27 @@
       <!-- แถบจำนวนกุศลรวม เตรียมไว้สำหรับระบบแต้มในอนาคต -->
       <div id="meritStatus" class="merit-status" aria-live="polite">
         <span>🙏 จำนวนกุศลรวม</span>
-        <strong id="meritTotal">000</strong>
+        <strong id="meritTotal">300</strong>
       </div>
 
       <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
       <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
+       <button id="notificationBtn" class="notification-button" type="button" aria-label="การแจ้งเตือน"><span>🔔 แจ้งเตือน</span><b id="notificationBadge" class="notification-badge hidden">0</b></button>
+      <button id="almsBtn" class="activity-button alms-button" type="button"><b>🪷 พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></button>
+      <button id="challengeBtn" class="activity-button challenge-button" type="button"><b>👻 ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></button>
 
       <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
       <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
       <button id="wellHotspot" class="scene-hotspot well-hotspot" type="button" aria-label="แตะบริเวณบ่อน้ำ"></button>
+      <button id="riverHotspot" class="scene-hotspot river-hotspot" type="button" aria-label="แตะบริเวณแม่น้ำเพื่อไปบ่อแมงกะพรุน"></button>
+      <button id="friendlyGhostHotspot" class="friendly-ghost-hotspot" type="button" aria-label="ผีน้อยใจดี"></button>
+      <button id="coconutGardenHotspot" class="coconut-garden-hotspot" type="button" aria-label="เข้าสวนมะพร้าว"></button>
 
       <!-- เอฟเฟกต์ฝน -->
       <div id="rainOverlay" class="rain-overlay" aria-hidden="true">
         <div id="rainDrops" class="rain-drops"></div>
       </div>
+      <div id="challengeFx" class="challenge-fx hidden" aria-hidden="true"></div>
       <div id="weatherToast" class="weather-toast" role="status" aria-live="polite">🌧️ ฝนผีมาเยือน</div>
 
       <!-- พื้นที่กดเมนูบนภาพพื้นหลัง -->
@@ -105,6 +116,8 @@
           <button type="button" data-mode-choice="haunted"><span>🌙</span><b>กลางคืนหลอน</b><small>สวนรัตติกาล</small></button>
           <button type="button" data-mode-choice="winter"><span>❄️</span><b>ฤดูหนาว</b><small>สวนหิมะ</small></button>
           <button type="button" data-mode-choice="festival"><span>🏮</span><b>งานวัดผี</b><small>สวนเทศกาล</small></button>
+          <button type="button" data-mode-choice="village"><span>🏡</span><b>หมู่บ้านหรรษา</b><small>หมู่บ้านแฟนตาซี</small></button>
+          <button type="button" data-mode-choice="sea"><span>🌊</span><b>ทะเล</b><small>สวนริมทะเล</small></button>
         </div>
       </div>
     </div>
@@ -116,7 +129,110 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=1"></script>
-  <script src="game.js?v=35"></script>
+  <script src="daily-missions.js?v=4"></script>
+  <script>
+    window.firebaseReady = new Promise((resolve,reject)=>{
+      window.__resolveFirebase = resolve;
+      window.__rejectFirebase = reject;
+    });
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      where,
+      orderBy,
+      limit,
+      runTransaction,
+      writeBatch,
+      serverTimestamp,
+      onSnapshot,
+      increment
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64",
+      authDomain: "yainoo-ghost-farm.firebaseapp.com",
+      projectId: "yainoo-ghost-farm",
+      storageBucket: "yainoo-ghost-farm.firebasestorage.app",
+      messagingSenderId: "223708504826",
+      appId: "1:223708504826:web:8f0f71ebf84cb6c4545f43",
+      measurementId: "G-P3KRYBYF0C"
+    };
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      const bridge = {
+        auth,
+        db,
+        getCurrentUser(){ return auth.currentUser; },
+        waitForAuth(){
+          return new Promise(resolve=>{
+            const unsubscribe=onAuthStateChanged(auth,user=>{
+              unsubscribe();
+              resolve(user||null);
+            });
+          });
+        },
+        async signIn(email,password){
+          const credential=await signInWithEmailAndPassword(auth,email,password);
+          return credential.user;
+        },
+        async signInOrCreate(email,password){
+          try{
+            const credential=await signInWithEmailAndPassword(auth,email,password);
+            return credential.user;
+          }catch(error){
+            const code=String(error?.code||"");
+            if(!["auth/user-not-found","auth/invalid-credential","auth/invalid-login-credentials"].includes(code))throw error;
+            try{
+              const credential=await createUserWithEmailAndPassword(auth,email,password);
+              return credential.user;
+            }catch(createError){
+              if(String(createError?.code||"")==="auth/email-already-in-use") {
+                const credential=await signInWithEmailAndPassword(auth,email,password);
+                return credential.user;
+              }
+              throw createError;
+            }
+          }
+        },
+        async signOut(){ await signOut(auth); },
+        async getSignedInMember(){
+          const user=auth.currentUser;
+          if(!user)return null;
+          const snap=await getDoc(doc(db,"members",user.uid));
+          return snap.exists()?{id:snap.id,...snap.data()}:null;
+        },
+        firestore:{doc,getDoc,setDoc,updateDoc,deleteDoc,collection,addDoc,getDocs,query,where,orderBy,limit,runTransaction,writeBatch,serverTimestamp,onSnapshot,increment}
+      };
+
+      window.firebaseBridge=bridge;
+      window.__resolveFirebase(bridge);
+    } catch (error) {
+      console.error("Firebase initialization failed",error);
+      window.__rejectFirebase(error);
+    }
+  </script>
+  <script src="game.js?v=117"></script>
 </body>
 </html>
