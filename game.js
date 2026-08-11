@@ -4879,7 +4879,7 @@ let aidaFarmPetHorizontalDirection=1;
 let aidaFarmPetPreviousNode=-1;
 let aidaFarmPetType="cat";
 let aidaFarmPetNumber=1;
-let aidaFarmPetSpeed=.78;
+let aidaFarmPetSpeed=.65;
 let aidaFarmPetAutoWalk=true;
 let aidaFarmPetForcedDirection="";
 let aidaFarmPetTestActive=false;
@@ -4944,8 +4944,8 @@ function transitionAidaFarmPetSprite(change,token,done){
   aidaFarmPetTransitionTimer=setTimeout(()=>{
     if(token!==aidaFarmPetRunToken||!aidaFarmPetSprite)return;
     change();aidaFarmPetSprite.classList.remove("is-changing-pose");
-    aidaFarmPetTransitionTimer=setTimeout(()=>{if(token===aidaFarmPetRunToken)done?.()},135);
-  },95);
+    aidaFarmPetTransitionTimer=setTimeout(()=>{if(token===aidaFarmPetRunToken)done?.()},175);
+  },130);
 }
 function aidaFarmPetPoint(index){
   const layer=$("aidaFarmPetLayer"),rect=layer.getBoundingClientRect();
@@ -4978,12 +4978,9 @@ function scheduleAidaFarmPetPause(token){
   if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
   const idlePoses=[AIDA_FARM_PET_POSES.idleA,AIDA_FARM_PET_POSES.idleB,AIDA_FARM_PET_POSES.scratch,AIDA_FARM_PET_POSES.sit,AIDA_FARM_PET_POSES.lie,AIDA_FARM_PET_POSES.sleep];
   const pose=idlePoses[Math.floor(Math.random()*idlePoses.length)];
-  const wait=pose===AIDA_FARM_PET_POSES.sleep?1900+Math.random()*1200:900+Math.random()*1500;
-  transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token,()=>{
-    if(pose===AIDA_FARM_PET_POSES.idleA){aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);return}
-    aidaFarmPetTimer=setTimeout(()=>transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(pose),token,()=>{
-      aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);
-    }),260);
+  const wait=pose===AIDA_FARM_PET_POSES.sleep?2600+Math.random()*1100:1800+Math.random()*1200;
+  transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(pose),token,()=>{
+    aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),wait);
   });
 }
 function moveAidaFarmPet(token){
@@ -4992,14 +4989,12 @@ function moveAidaFarmPet(token){
   const direction=Math.abs(dy)>Math.abs(dx)*.7?(dy>0?"front":"back"):(dx<0?"left":"right");
   const distance=Math.hypot(dx,dy),walkCycle=944/aidaFarmPetSpeed;
   const rawDuration=Math.max(2900,Math.min(7300,distance*20))/aidaFarmPetSpeed,duration=Math.max(walkCycle*2,Math.round(rawDuration/walkCycle)*walkCycle);
-  transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token,()=>{
-    aidaFarmPetTimer=setTimeout(()=>transitionAidaFarmPetSprite(()=>setAidaFarmPetWalkFrame(0,direction),token,()=>{
+  transitionAidaFarmPetSprite(()=>setAidaFarmPetWalkFrame(0,direction),token,()=>{
       if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
       let walkFrame=0;clearInterval(aidaFarmPetFrameTimer);
       aidaFarmPetFrameTimer=setInterval(()=>{walkFrame=(walkFrame+1)%8;setAidaFarmPetWalkFrame(walkFrame,direction)},118/aidaFarmPetSpeed);
       aidaFarmPetMotion=aidaFarmPet.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
       aidaFarmPetMotion.onfinish=()=>{if(token!==aidaFarmPetRunToken)return;clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;aidaFarmPetPreviousNode=aidaFarmPetNode;aidaFarmPetNode=next;aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;aidaFarmPetMotion=null;if(aidaFarmPetAutoWalk)scheduleAidaFarmPetPause(token);else transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token)};
-    }),220);
   });
 }
 function startAidaFarmPet(){
@@ -5045,7 +5040,7 @@ function restartAidaFarmPetSelection(){
 }
 async function beginAidaFarmPetTest(type,number){
   if(farmPlotPage!==0||$("gameScreen")?.classList.contains("plot-page-2"))setFarmPlotPage(0);
-  aidaFarmPetType="cat";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=.78;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
+  aidaFarmPetType="cat";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=.65;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
   $("petTestPanel")?.classList.add("hidden");$("petTestActivePanel")?.classList.add("hidden");
   const label=`แมวตัวที่ ${aidaFarmPetNumber}`;if($("petTestActiveName"))$("petTestActiveName").textContent=`กำลังทดลอง${label}`;
   clearAidaFarmPetActivity(true);

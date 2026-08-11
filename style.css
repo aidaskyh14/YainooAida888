@@ -85,7 +85,7 @@ button{touch-action:manipulation}
   opacity:.94;
   pointer-events:none;
 }
-.aida-farm-pet.is-walking::before{animation:aidaPetShadowStep 1150ms ease-in-out infinite}
+.aida-farm-pet.is-walking::before{animation:aidaPetShadowStep 1450ms ease-in-out infinite}
 @keyframes aidaPetShadowStep{
   0%,50%,100%{transform:translateX(-50%) scaleX(.95);opacity:.90}
   25%,75%{transform:translateX(-50%) scaleX(1.04);opacity:.98}
@@ -102,7 +102,7 @@ button{touch-action:manipulation}
   transform-origin:center bottom;
   scale:var(--pet-art-scale,1);
   opacity:1;
-  transition:opacity 130ms ease-out,scale 110ms ease-in-out;
+  transition:opacity 170ms ease-out,scale 135ms ease-in-out;
   will-change:transform,background-position,scale,opacity;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
