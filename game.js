@@ -4883,6 +4883,7 @@ let aidaFarmPetSpeed=1;
 let aidaFarmPetAutoWalk=true;
 let aidaFarmPetForcedDirection="";
 let aidaFarmPetTestActive=false;
+let aidaFarmPetAssetBase="";
 
 try{
   const saved=JSON.parse(sessionStorage.getItem("aidaPetTesterV1")||"null");
@@ -4896,7 +4897,7 @@ function saveAidaFarmPetTestSettings(){
 }
 function aidaFarmPetBasePath(){
   const folder=aidaFarmPetType==="cat"?"cats":"dogs",prefix=aidaFarmPetType==="cat"?"cat":"dog",number=String(aidaFarmPetNumber).padStart(2,"0");
-  return `pet-assets/${folder}/${prefix}-${number}`;
+  return aidaFarmPetAssetBase||`pet-assets/${folder}/${prefix}-${number}`;
 }
 function aidaFarmPetImage(kind){
   const base=aidaFarmPetBasePath();
@@ -5024,6 +5025,21 @@ function syncAidaFarmPet(){
 function preloadAidaFarmPetSelection(){
   ["pose","side","front","back"].forEach(kind=>{const image=new Image();image.decoding="async";image.src=aidaFarmPetImage(kind)});
 }
+function resolveAidaFarmPetAssetBase(){
+  const folder=aidaFarmPetType==="cat"?"cats":"dogs",prefix=aidaFarmPetType==="cat"?"cat":"dog",number=String(aidaFarmPetNumber).padStart(2,"0"),base=`${prefix}-${number}`;
+  const candidates=[`pet-assets/${folder}/${base}`,base,`pet-assets/${base}`,`${folder}/${base}`];
+  return new Promise(resolve=>{
+    let index=0;
+    const tryNext=()=>{
+      if(index>=candidates.length){resolve("");return}
+      const candidate=candidates[index++],image=new Image(),timeout=setTimeout(()=>{image.onload=image.onerror=null;tryNext()},3500);
+      image.onload=()=>{clearTimeout(timeout);resolve(candidate)};
+      image.onerror=()=>{clearTimeout(timeout);tryNext()};
+      image.src=`${candidate}-pose-sheet.png?v=2`;
+    };
+    tryNext();
+  });
+}
 function syncAidaFarmPetTesterVisibility(){
   const button=$("petTestBtn"),panel=$("petTestPanel"),activePanel=$("petTestActivePanel");if(!button)return;
   const ownAidaFarm=currentMember==="Aida"&&aidaFarmPetOwnerKey()==="aida"&&!$("gameScreen")?.classList.contains("hidden");
@@ -5033,10 +5049,15 @@ function syncAidaFarmPetTesterVisibility(){
 function restartAidaFarmPetSelection(){
   saveAidaFarmPetTestSettings();preloadAidaFarmPetSelection();clearAidaFarmPetActivity(true);aidaFarmPetNode=5;aidaFarmPetPreviousNode=-1;aidaFarmPetAutoWalk=true;syncAidaFarmPet();
 }
-function beginAidaFarmPetTest(type,number){
-  aidaFarmPetType=type==="cat"?"cat":"dog";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=1;aidaFarmPetTestActive=true;
+async function beginAidaFarmPetTest(type,number){
+  if(farmPlotPage!==0||$("gameScreen")?.classList.contains("plot-page-2"))setFarmPlotPage(0);
+  aidaFarmPetType=type==="cat"?"cat":"dog";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=1;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
   $("petTestPanel")?.classList.add("hidden");$("petTestActivePanel")?.classList.add("hidden");
   const label=`${aidaFarmPetType==="cat"?"แมว":"หมา"}ตัวที่ ${aidaFarmPetNumber}`;if($("petTestActiveName"))$("petTestActiveName").textContent=`กำลังทดลอง${label}`;
+  clearAidaFarmPetActivity(true);
+  aidaFarmPetAssetBase=await resolveAidaFarmPetAssetBase();
+  if(!aidaFarmPetAssetBase){alert(`ยังไม่พบไฟล์รูป${label}ใน GitHub กรุณาตรวจว่าอัปไฟล์ ${aidaFarmPetType==="cat"?"cat":"dog"}-${String(aidaFarmPetNumber).padStart(2,"0")}-pose-sheet.png แล้ว`);return}
+  aidaFarmPetTestActive=true;
   restartAidaFarmPetSelection();
 }
 function stopAidaFarmPetTest(){
