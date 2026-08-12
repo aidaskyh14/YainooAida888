@@ -5664,6 +5664,107 @@ function processDogDrops(){
     return false;
   }
 }
+
+/* ======================================================================
+   V13.5 — DOG DROP CLAIM HOTFIX
+   ====================================================================== */
+function ensureDogDropRewardContainers(s){
+  if(!s)return s;
+  if(!s.specials||typeof s.specials!=="object")s.specials={};
+  if(!s.coconutRiverItems||typeof s.coconutRiverItems!=="object")s.coconutRiverItems={};
+  if(!s.fishingBaits||typeof s.fishingBaits!=="object")s.fishingBaits={};
+  if(!s.animalProducts||typeof s.animalProducts!=="object")s.animalProducts={};
+  return s;
+}
+
+function applyDogDropRewardSafe(s,item){
+  ensureDogDropRewardContainers(s);
+  if(!item)throw new Error("ไม่พบข้อมูลของดรอป");
+  const qty=Math.max(0,Math.floor(Number(item.qty)||0));
+  if(item.type==="badDrop")return;
+  if(item.type==="special"){
+    s.specials[item.key]=(Number(s.specials[item.key])||0)+qty;
+    return;
+  }
+  if(item.type==="coconutRiver"){
+    s.coconutRiverItems[item.key]=(Number(s.coconutRiverItems[item.key])||0)+qty;
+    return;
+  }
+  if(item.type==="fishingBait"){
+    s.fishingBaits[item.key]=(Number(s.fishingBaits[item.key])||0)+qty;
+    return;
+  }
+  if(item.type==="product"){
+    s.animalProducts[item.key]=(Number(s.animalProducts[item.key])||0)+qty;
+    return;
+  }
+  throw new Error(`รองรับของดรอปชนิด ${item.type||"ไม่ทราบชนิด"} ไม่ได้`);
+}
+
+async function claimDogDrop(dogId,dropId){
+  if(!cloudReady){
+    message("เก็บของไม่ได้","ยังเชื่อม Firebase ไม่สำเร็จ กรุณารอสักครู่แล้วลองใหม่");
+    return;
+  }
+
+  const clicked=document.querySelector(`[data-dog-drop-id="${CSS.escape(String(dropId))}"]`);
+  if(clicked)clicked.disabled=true;
+
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    let next,item,isBadDrop=false;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureDogDropRewardContainers(s);
+
+      const dog=(s.dogs||[]).find(d=>String(d?.id)===String(dogId));
+      if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
+
+      const drops=Array.isArray(dog.drops)?dog.drops:[];
+      const idx=drops.findIndex(d=>String(d?.id)===String(dropId));
+      if(idx<0)throw new Error("ของชิ้นนี้ถูกเก็บไปแล้ว");
+
+      const drop=drops[idx];
+      item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);
+      if(!item)throw new Error("ของดรอปชิ้นนี้ไม่รู้จัก กรุณาแจ้งไอด้า");
+
+      isBadDrop=item.type==="badDrop";
+      if(!isBadDrop)applyDogDropRewardSafe(s,item);
+
+      dog.drops.splice(idx,1);
+      next=cloneData(s);
+
+      tx.set(ref,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    renderDogHotelDrops();
+
+    if(isBadDrop){
+      message("🐛 หนอนไจแอนท์","เสียใจด้วยนะ หมาของคุณเหมือนจะท้องเสีย");
+    }else{
+      showWeatherToast(`✨ ${item.name} ×${item.qty} เข้ากระเป๋าแล้ว`);
+    }
+  }catch(error){
+    console.warn("claim dog drop",error);
+    message("เก็บของไม่ได้",error?.message||"กรุณาลองใหม่");
+    if(clicked)clicked.disabled=false;
+  }
+}
+
 function renderDogHotelDrops(){
   const layer=$("dogHotelDropLayer");if(!layer)return;
   layer.innerHTML="";
@@ -5678,6 +5779,7 @@ function renderDogHotelDrops(){
     const btn=document.createElement("button");
     btn.className="dog-drop-item cat-drop-item";
     btn.type="button";
+    btn.dataset.dogDropId=String(drop.id);
     btn.style.left=`${Number(drop.x)||50}%`;
     btn.style.top=`${Number(drop.y)||65}%`;
     btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;
@@ -5701,44 +5803,80 @@ function renderDogHotelDrops(){
   }else if(info)info.remove();
 }
 async function collectAllDogDrops(){
-  if(!cloudReady)return;
+  if(!cloudReady){
+    message("เก็บของดรอปไม่ได้","ยังเชื่อม Firebase ไม่สำเร็จ กรุณารอสักครู่แล้วลองใหม่");
+    return;
+  }
   showDropBasketWorking("scene");
+
   try{
     await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);
-    let next,summary={},badDropCount=0;
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    let next,summary={},badDropCount=0,unknownCount=0,collectedCount=0;
+
     await fs.runTransaction(db,async tx=>{
       const snap=await tx.get(ref);
       if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
       const s=normalizeState(snap.data(),currentMember);
       assertCurrentCloudSession(snap.data(),currentMember);
-      let count=0;
-      s.dogs.filter(d=>d.placedHotel).forEach(dog=>{
-        (dog.drops||[]).forEach(drop=>{
+      ensureDogDropRewardContainers(s);
+
+      const dogs=(s.dogs||[]).filter(d=>d?.placedHotel);
+      dogs.forEach(dog=>{
+        const keep=[];
+        (Array.isArray(dog.drops)?dog.drops:[]).forEach(drop=>{
           const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);
-          if(!item)return;
-          count++;
+
+          /* ของที่ระบบไม่รู้จัก ห้ามลบทิ้ง เพื่อกันของหาย */
+          if(!item){
+            keep.push(drop);
+            unknownCount++;
+            return;
+          }
+
+          collectedCount++;
+
           if(item.type==="badDrop"){
             badDropCount++;
             return;
           }
-          applyPetDropReward(s,item);
+
+          applyDogDropRewardSafe(s,item);
           if(!summary[item.id])summary[item.id]={name:item.name,qty:0};
-          summary[item.id].qty+=item.qty;
+          summary[item.id].qty+=Math.max(0,Math.floor(Number(item.qty)||0));
         });
-        dog.drops=[];
+        dog.drops=keep;
       });
-      if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");
-      next=s;
-      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+
+      if(!collectedCount&&unknownCount===0)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");
+
+      next=cloneData(s);
+      tx.set(ref,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
     });
-    await new Promise(r=>setTimeout(r,450));
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();
-    const normalHTML=Object.keys(summary).length?dropSummaryHTML(summary):"";
-    const badHTML=badDropCount?`<div>🐛 หนอนไจแอนท์ ×${badDropCount} — ไม่เข้ากระเป๋า</div>`:"";
-    message("🧺 เก็บของดรอปทั้งหมดแล้ว",`${normalHTML}${badHTML}`);
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    renderDogHotelDrops();
+
+    const parts=[];
+    if(Object.keys(summary).length)parts.push(dropSummaryHTML(summary));
+    if(badDropCount)parts.push(`<div>🐛 หนอนไจแอนท์ ×${badDropCount} — ไม่เข้ากระเป๋า</div>`);
+    if(unknownCount)parts.push(`<div>⚠️ มีของดรอปเก่า ${unknownCount} ชิ้นที่ยังไม่ถูกลบ กรุณาแจ้งไอด้า</div>`);
+
+    message(
+      "🧺 เก็บของดรอปทั้งหมดแล้ว",
+      parts.join("")||"เก็บของดรอปเรียบร้อย"
+    );
   }catch(error){
-    message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่");
+    console.warn("collect all dog drops",error);
+    message("เก็บของดรอปไม่ได้",error?.message||"กรุณาลองใหม่");
   }finally{
     hideDropBasketWorking();
   }

@@ -1813,3 +1813,20 @@ html.standalone-app .game-screen.plot-page-2 .collect-drops-button{
 html.standalone-app .bottom-nav-hotspots{
   bottom:var(--standalone-safe-bottom);
 }
+
+/* ======================================================================
+   V13.5 — Dog drop tapping hotfix
+   ====================================================================== */
+.dog-hotel-drop-layer{
+  pointer-events:none!important;
+  z-index:94!important;
+}
+.dog-hotel-drop-layer .dog-drop-item{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  z-index:95!important;
+}
+.dog-hotel-drop-layer .dog-drop-item:disabled{
+  opacity:.55;
+  pointer-events:none!important;
+}
