@@ -7443,3 +7443,141 @@ renderDogHotelScene=function(){
 
   setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
 };
+
+/* ======================================================================
+   V14.0 — DOG PEN2 PLACEMENT FIX + NUMBER4 ADMIN/GIFT FIX
+   ====================================================================== */
+
+/* 1) กล่องสุ่มหมายเลข4 รองรับ Admin 9999 + Admin Gift */
+const __adminGiftCatalogBeforeNumber4AdminV140=adminGiftCatalog;
+adminGiftCatalog=function(){
+  const list=__adminGiftCatalogBeforeNumber4AdminV140();
+  if(!list.some(e=>e?.type==="number4Mystery")){
+    list.push({type:"number4Mystery",key:"number4Box",name:NUMBER4_BOX.name});
+  }
+  return list;
+};
+
+const __addGiftItemBeforeNumber4AdminV140=addGiftItemToState;
+addGiftItemToState=function(s,gift){
+  ensureNumber4BoxState(s);
+  if(Array.isArray(gift?.items)){
+    gift.items.forEach(item=>addGiftItemToState(s,{itemType:item.type,itemKey:item.key,qty:item.qty}));
+    return;
+  }
+  const type=gift?.itemType||gift?.type;
+  const qty=Math.max(1,Math.floor(Number(gift?.qty)||1));
+  if(type==="number4Mystery"){
+    s.number4MysteryBoxes=(Number(s.number4MysteryBoxes)||0)+qty;
+    return;
+  }
+  return __addGiftItemBeforeNumber4AdminV140(s,gift);
+};
+
+const __removeGiftItemBeforeNumber4AdminV140=removeGiftItemFromState;
+removeGiftItemFromState=function(s,itemType,itemKey,qty){
+  ensureNumber4BoxState(s);
+  qty=Math.max(1,Math.floor(Number(qty)||1));
+  if(itemType==="number4Mystery"){
+    if(currentMember==="Aida"&&adminProfile?.role==="admin"){
+      s.number4MysteryBoxes=ADMIN_STOCK_QTY;
+      return true;
+    }
+    if((Number(s.number4MysteryBoxes)||0)<qty)return false;
+    s.number4MysteryBoxes-=qty;
+    return true;
+  }
+  return __removeGiftItemBeforeNumber4AdminV140(s,itemType,itemKey,qty);
+};
+
+const __adminEntryCountBeforeNumber4AdminV140=adminEntryCount;
+adminEntryCount=function(s,entry){
+  ensureNumber4BoxState(s);
+  if(entry?.type==="number4Mystery"){
+    return currentMember==="Aida"&&adminProfile?.role==="admin"
+      ?ADMIN_STOCK_QTY
+      :(Number(s.number4MysteryBoxes)||0);
+  }
+  return __adminEntryCountBeforeNumber4AdminV140(s,entry);
+};
+
+const __ensureAdminStockBeforeNumber4AdminV140=ensureAdminStock;
+ensureAdminStock=function(target){
+  const changedBase=__ensureAdminStockBeforeNumber4AdminV140(target);
+  if(!target)return changedBase;
+  ensureNumber4BoxState(target);
+  let changed=Boolean(changedBase);
+  if(currentMember==="Aida"&&adminProfile?.role==="admin"&&Number(target.number4MysteryBoxes)!==ADMIN_STOCK_QTY){
+    target.number4MysteryBoxes=ADMIN_STOCK_QTY;
+    changed=true;
+  }
+  return changed;
+};
+
+/* กระเป๋า Admin ต้องเห็น 9999 ทันที */
+const __inventoryBeforeNumber4AdminV140=inventory;
+inventory=function(tab="crops"){
+  if(currentMember==="Aida"&&adminProfile?.role==="admin"){
+    const s=ownState||state;
+    if(s)ensureAdminStock(s);
+  }
+  return __inventoryBeforeNumber4AdminV140(tab);
+};
+
+/* 2) แก้เลือกคอก 2 แล้วโดน openScene reset กลับคอก 1 */
+placeDogInHotel=async function(dogId,pen=1){
+  pen=pen===2?2:1;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    let next;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureDogHotelPenState(s);
+
+      const dog=s.dogs.find(d=>d.id===dogId);
+      if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
+      if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
+
+      const count=(s.dogs||[]).filter(d=>d?.placedHotel&&dogPenOf(d)===pen).length;
+      if(count>=DOG_HOTEL_MAX)throw new Error(`โรงแรมหมาคอก ${pen} เต็มแล้ว วางได้สูงสุด ${DOG_HOTEL_MAX} ตัว`);
+
+      const now=gameNow();
+      Object.assign(dog,{
+        placedHotel:true,
+        hotelPen:pen,
+        placedAt:now,
+        expiresAt:now+DOG_LIFETIME_MS,
+        nextFeedAt:now,
+        nextDropAt:now+DOG_DROP_INTERVAL_MS,
+        drops:[]
+      });
+
+      next=cloneData(s);
+      tx.set(ref,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    closeModal();
+
+    /* openScene เดิมจะตั้งคอก 1 ก่อน — หลังเปิดให้ตั้งกลับเป็นคอกที่ผู้ใช้เลือกทันที */
+    openScene("dogHotel");
+    currentDogHotelPen=pen;
+    renderDogHotelScene();
+    showWeatherToast(`🐶 วางน้องหมาที่คอก ${pen} แล้ว`);
+  }catch(error){
+    message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่");
+  }
+};

@@ -2043,3 +2043,23 @@ html.standalone-app .dog-hotel-scene .dog-member-check-clean{
 html.standalone-app .dog-hotel-scene .dog-collect-basket-button{
   top:calc(var(--standalone-safe-top) + 5.8%)!important;
 }
+
+/* ======================================================================
+   V14.0 — Member button position fix
+   ====================================================================== */
+
+/* class เดิมมี transform:translateX(-50%) ติดมาด้วย ทำให้หลุดซ้าย
+   ยกเลิก transform แล้วขยับเข้ามาในจอ */
+.dog-hotel-scene .dog-member-check-clean{
+  left:4%!important;
+  right:auto!important;
+  transform:none!important;
+  max-width:44%!important;
+}
+.dog-hotel-scene .dog-member-check-clean:active{
+  transform:scale(.97)!important;
+}
+html.standalone-app .dog-hotel-scene .dog-member-check-clean{
+  left:4%!important;
+  transform:none!important;
+}
