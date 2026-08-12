@@ -1770,3 +1770,46 @@ button{touch-action:manipulation}
   box-shadow:0 6px 16px rgba(22,10,28,.42),inset 0 1px rgba(255,245,218,.18);
 }
 .dog-hotel-drop-overflow:active{transform:translateX(-50%) scale(.97)}
+
+/* ======================================================================
+   V13.4 — iOS PWA / Home Screen Safe Area Fix
+   Safari ปกติไม่ขยับ แต่เมื่อเปิดจากไอคอนแอปบนหน้าจอหลัก
+   HUD ด้านบนจะเลื่อนลงพ้น Status Bar / Dynamic Island
+   ====================================================================== */
+:root{
+  --standalone-safe-top:0px;
+  --standalone-safe-bottom:0px;
+}
+html.standalone-app{
+  --standalone-safe-top:max(env(safe-area-inset-top,0px), 18px);
+  --standalone-safe-bottom:env(safe-area-inset-bottom,0px);
+}
+
+/* ขยับเฉพาะ HUD ด้านบน ไม่ขยับฉาก/แปลง/จุดกดของเกม */
+html.standalone-app .profile-hud-card,
+html.standalone-app .weather-clock,
+html.standalone-app .rain-status,
+html.standalone-app .hud-menu-button,
+html.standalone-app .tractor-button,
+html.standalone-app .collect-drops-button{
+  translate:0 var(--standalone-safe-top);
+}
+
+/* Drawer ทางลัดต้องเปิดใต้ status bar เช่นกัน */
+html.standalone-app .hud-menu-drawer{
+  top:calc(1.3% + var(--standalone-safe-top))!important;
+}
+html.standalone-app .hud-menu-backdrop{
+  padding-top:var(--standalone-safe-top);
+}
+
+/* หน้า 2: ไอคอนที่ย้ายล่างซ้ายไม่ต้องโดน translate ด้านบน */
+html.standalone-app .game-screen.plot-page-2 .tractor-button,
+html.standalone-app .game-screen.plot-page-2 .collect-drops-button{
+  translate:none!important;
+}
+
+/* กัน bottom nav ชิด home indicator บนเครื่องที่มี safe-area ล่าง */
+html.standalone-app .bottom-nav-hotspots{
+  bottom:var(--standalone-safe-bottom);
+}
