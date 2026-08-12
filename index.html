@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=115">
+  <link rel="stylesheet" href="style.css?v=117">
 </head>
 <body>
   <main id="app">
@@ -62,18 +62,18 @@
         <span id="rainCountdown">00:30</span>
       </div>
 
-      <button id="hudMenuBtn" class="hud-menu-button" type="button" aria-label="เปิดเมนูรวม">
-        <span>☰</span><b>เมนู</b>
+      <button id="hudMenuBtn" class="hud-menu-button" type="button" aria-label="เปิดทางลัด">
+        <span>☰</span><b>ทางลัด</b>
       </button>
 
-      <button id="tractorBtn" class="tractor-button" type="button">🚜 ใช้รถไถ</button>
-      <button id="collectDropsBtn" class="collect-drops-button" type="button">🧺 เก็บของดรอป</button>
+      <button id="tractorBtn" class="tractor-button" type="button" aria-label="ใช้รถไถ" title="ใช้รถไถ"><span aria-hidden="true">🚜</span></button>
+      <button id="collectDropsBtn" class="collect-drops-button" type="button" aria-label="เก็บของดรอปทั้งหมด" title="เก็บของดรอปทั้งหมด"><span aria-hidden="true">🧺</span></button>
 
       <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
       <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
 
       <div id="hudMenuBackdrop" class="hud-menu-backdrop hidden" aria-hidden="true"></div>
-      <aside id="hudMenuDrawer" class="hud-menu-drawer hidden" aria-label="เมนูรวมหน้าแรก">
+      <aside id="hudMenuDrawer" class="hud-menu-drawer hidden" aria-label="ทางลัดหน้าแรก">
         <div class="hud-menu-head">
           <div><small>ทางลัดในสวน</small><h2>เมนูของฉัน</h2></div>
           <button id="hudMenuCloseBtn" type="button" aria-label="ปิดเมนู">×</button>
@@ -247,6 +247,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=126"></script>
+  <script src="game.js?v=128"></script>
 </body>
 </html>

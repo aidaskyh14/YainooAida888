@@ -6334,3 +6334,6 @@ returnToFarm=function(){
   closeHomeHudMenu();
   return __returnToFarmBeforeHomeHudV13();
 };
+
+/* V13.1 HOTFIX — bind HUD now because the original bindEvents() already ran earlier */
+bindHomeHudMenu();
