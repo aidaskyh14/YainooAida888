@@ -982,3 +982,61 @@ button{touch-action:manipulation}
 
 /* V10.2 dog placement visibility fallback */
 .dog-hotel-fallback-icon{position:absolute;z-index:1;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));opacity:1;transition:opacity .18s ease}.dog-hotel-fallback-icon.sprite-ready{opacity:0;pointer-events:none}.dog-hotel-sprite{z-index:2!important}
+
+/* ======================================================================
+   UPDATE V11 — เมนูหน้าฝน / เช็คสมาชิกมะหมา / หนอนไจแอนท์
+   ====================================================================== */
+
+/* แถบสีเขียว เมนูหน้าฝน */
+.rainy-menu-frame{
+  margin-top:16px;padding:12px 10px 14px;border:3px solid #4f8d5d;border-radius:20px;
+  background:linear-gradient(180deg,#e5f6d7,#b9ddb0);
+  box-shadow:0 8px 18px rgba(35,83,49,.18),inset 0 1px rgba(255,255,255,.8);
+}
+.rainy-menu-frame>h2,.rainy-menu-frame>p{color:#285b36!important;text-align:center}
+.rainy-menu-frame>p{font-size:11px;font-weight:800}
+.rainy-recipe-card{border-color:#5d9b68!important;background:linear-gradient(180deg,#f4ffe9,#cde9c5)!important}
+.rainy-recipe-card h3{color:#285b36}
+.rainy-recipe-card button{background:linear-gradient(180deg,#4e985e,#2f6f40)!important;color:#fff!important}
+.rainy-recipe-card button:disabled{opacity:.38!important}
+.rainy-chance-badge{background:#2f6f40!important;color:#fff6bf!important}
+.rainy-craft-chance{background:#2f6f40!important;color:#fff7c8!important}
+.rainy-craft-result img{filter:drop-shadow(0 5px 8px rgba(32,84,45,.22))}
+.rainy-inventory-item{border-color:#72a77c!important;background:linear-gradient(180deg,#f6ffef,#d9ecd3)!important}
+.rainy-boat-supply-picker .boat-supply-grid button{border-color:#5e9669;background:linear-gradient(180deg,#f2ffe8,#cbe6c3)}
+
+/* โรงแรมน้องหมา: ปุ่มเช็คสมาชิก */
+.dog-member-check-button{
+  position:absolute;left:50%;top:13.2%;z-index:23;transform:translateX(-50%);
+  min-width:38%;padding:7px 12px;border:2px solid rgba(176,126,80,.95);border-radius:999px;
+  background:linear-gradient(180deg,rgba(84,55,92,.97),rgba(50,31,61,.97));
+  color:#fff1cf;font-size:clamp(8px,2.25vw,12px);font-weight:950;
+  box-shadow:0 5px 12px rgba(24,12,31,.32);cursor:pointer;
+}
+.dog-member-check-button:active{transform:translateX(-50%) scale(.97)}
+.dog-roster-panel{max-width:720px}
+.dog-roster-list{display:grid;gap:8px;margin-top:10px}
+.dog-roster-row{
+  display:grid;grid-template-columns:58px minmax(0,1fr) 74px;align-items:center;gap:8px;
+  padding:8px;border:1.5px solid #9c795b;border-radius:14px;background:rgba(255,249,226,.78)
+}
+.dog-roster-row>img{width:56px;height:62px;object-fit:contain}
+.dog-roster-info{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
+.dog-roster-info b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dog-roster-info small,.dog-roster-info span{font-size:9px;line-height:1.25}
+.dog-roster-hunger{font-weight:900;color:#735d50}
+.dog-roster-hunger.ready{color:#24733c}
+.dog-roster-row>button{
+  min-height:40px;border:0;border-radius:11px;padding:5px;background:linear-gradient(180deg,#4e985e,#2e713f);
+  color:#fff;font-size:9px;font-weight:950
+}
+.dog-roster-row>button:disabled{background:#aa9d8d;color:#eee;opacity:.72}
+.dog-roster-feed-panel .secondary-action{margin-bottom:8px}
+
+/* หนอนไจแอนท์ */
+.status-badge[src*="giant-worm"]{
+  right:-4%!important;top:-8%!important;width:clamp(46px,11vw,78px)!important;height:clamp(46px,11vw,78px)!important;
+  filter:drop-shadow(0 4px 7px rgba(64,16,27,.55))!important
+}
+.giant-worm-panel{text-align:center}
+.giant-worm-preview{display:block;width:min(180px,42vw);height:min(150px,34vw);object-fit:contain;margin:2px auto 8px;filter:drop-shadow(0 6px 9px rgba(55,18,22,.35))}
