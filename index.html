@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=114">
+  <link rel="stylesheet" href="style.css?v=115">
 </head>
 <body>
   <main id="app">
@@ -39,41 +39,54 @@
 <button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
       <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
-      <!-- รูปและชื่อโปรไฟล์ แยกจากชื่อบนป้ายไม้ -->
-      <button id="avatarButton" class="avatar-button" type="button" aria-label="เปลี่ยนรูปโปรไฟล์">
-        <img id="playerAvatar" alt="รูปโปรไฟล์">
-        <span id="avatarPlaceholder" aria-hidden="true">👻</span>
-      </button>
-      <input id="avatarUpload" type="file" accept="image/*" hidden>
-      <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
-      <button id="tractorBtn" class="tractor-button" type="button">🚜 ใช้รถไถ</button>
-       <button id="collectDropsBtn" class="collect-drops-button" type="button">🧺 เก็บของดรอปทั้งหมด</button>
+      <!-- HUD หน้าแรก: โปรไฟล์ซ้าย / เวลาอยู่ด้านนอก / เมนูรวมขวา -->
+      <div class="profile-hud-card">
+        <button id="avatarButton" class="avatar-button" type="button" aria-label="เปลี่ยนรูปโปรไฟล์">
+          <img id="playerAvatar" alt="รูปโปรไฟล์">
+          <span id="avatarPlaceholder" aria-hidden="true">👻</span>
+        </button>
+        <input id="avatarUpload" type="file" accept="image/*" hidden>
+        <button id="profileNameButton" class="profile-name-button" type="button">ตั้งชื่อ</button>
+        <div id="meritStatus" class="merit-status" aria-live="polite">
+          <span>🙏 กุศล</span>
+          <strong id="meritTotal">300</strong>
+        </div>
+      </div>
 
-      <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
-      <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
-
-      <!-- เวลาไทยและสภาพอากาศ -->
       <div class="weather-clock" aria-live="polite">
         <span id="weatherClockEmoji" class="weather-clock-emoji">🌤️</span>
         <span id="thaiClock" class="thai-clock">--:--</span>
       </div>
-
       <div id="rainStatus" class="rain-status" aria-live="polite">
         <strong id="rainStatusTitle">🌧️ ฝนผีกำลังตก</strong>
         <span id="rainCountdown">00:30</span>
       </div>
 
-      <!-- แถบจำนวนกุศลรวม เตรียมไว้สำหรับระบบแต้มในอนาคต -->
-      <div id="meritStatus" class="merit-status" aria-live="polite">
-        <span>🙏 จำนวนกุศลรวม</span>
-        <strong id="meritTotal">300</strong>
-      </div>
+      <button id="hudMenuBtn" class="hud-menu-button" type="button" aria-label="เปิดเมนูรวม">
+        <span>☰</span><b>เมนู</b>
+      </button>
 
-      <button id="forecastBtn" class="forecast-button" type="button">ดูพยากรณ์</button>
-      <button id="modeBtn" class="mode-button" type="button">เปลี่ยนโหมด</button>
-       <button id="notificationBtn" class="notification-button" type="button" aria-label="การแจ้งเตือน"><span>🔔 แจ้งเตือน</span><b id="notificationBadge" class="notification-badge hidden">0</b></button>
-      <button id="almsBtn" class="activity-button alms-button" type="button"><b>🪷 พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></button>
-      <button id="challengeBtn" class="activity-button challenge-button" type="button"><b>👻 ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></button>
+      <button id="tractorBtn" class="tractor-button" type="button">🚜 ใช้รถไถ</button>
+      <button id="collectDropsBtn" class="collect-drops-button" type="button">🧺 เก็บของดรอป</button>
+
+      <!-- ชื่ออิสระบนป้ายไม้ของภาพพื้นหลัง -->
+      <button id="topPlayerNameButton" class="top-player-name-button" type="button" aria-label="ตั้งชื่อบนป้ายไม้">แตะเพื่อตั้งชื่อ</button>
+
+      <div id="hudMenuBackdrop" class="hud-menu-backdrop hidden" aria-hidden="true"></div>
+      <aside id="hudMenuDrawer" class="hud-menu-drawer hidden" aria-label="เมนูรวมหน้าแรก">
+        <div class="hud-menu-head">
+          <div><small>ทางลัดในสวน</small><h2>เมนูของฉัน</h2></div>
+          <button id="hudMenuCloseBtn" type="button" aria-label="ปิดเมนู">×</button>
+        </div>
+        <div class="hud-menu-list">
+          <button id="mainDogHotelBtn" class="hud-menu-item hud-menu-featured" type="button"><span>🐶</span><div><b>โรงแรมน้องหมา</b><small>ไปดูน้องหมาและเก็บของดรอป</small></div><i>›</i></button>
+          <button id="notificationBtn" class="hud-menu-item" type="button" aria-label="การแจ้งเตือน"><span>🔔</span><div><b>แจ้งเตือน</b><small>ข้อความและกิจกรรมจากเพื่อน</small></div><i>›</i><em id="notificationBadge" class="notification-badge hidden">0</em></button>
+          <button id="forecastBtn" class="hud-menu-item" type="button"><span>🔮</span><div><b>ดูพยากรณ์</b><small>เช็กสภาพอากาศของสวน</small></div><i>›</i></button>
+          <button id="modeBtn" class="hud-menu-item" type="button"><span>🪄</span><div><b>เปลี่ยนโหมดสวน</b><small>เลือกบรรยากาศที่ต้องการ</small></div><i>›</i></button>
+          <button id="almsBtn" class="hud-menu-item activity-button alms-button" type="button"><span>🪷</span><div><b>พระบิณฑบาต</b><small>กำลังตรวจเวลา</small></div><i>›</i></button>
+          <button id="challengeBtn" class="hud-menu-item activity-button challenge-button" type="button"><span>👻</span><div><b>ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></div><i>›</i></button>
+        </div>
+      </aside>
 
       <!-- พื้นที่กดแบบโปร่งใสบนฉาก -->
       <button id="houseHotspot" class="scene-hotspot house-hotspot" type="button" aria-label="แตะบริเวณประตูบ้าน"></button>
@@ -234,6 +247,6 @@
       window.__rejectFirebase(error);
     }
   </script>
-  <script src="game.js?v=125"></script>
+  <script src="game.js?v=126"></script>
 </body>
 </html>

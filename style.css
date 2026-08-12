@@ -1103,3 +1103,271 @@ button{touch-action:manipulation}
   left:50%!important;
   bottom:8%!important;
 }
+
+/* ======================================================================
+   V13 — จัดระเบียบ HUD หน้าแรกใหม่
+   โปรไฟล์ซ้าย / เวลา+ฝนอยู่ด้านนอก / เมนูรวมขวา / รถไถ+เก็บดรอปคงด้านนอก
+   ====================================================================== */
+.profile-hud-card{
+  position:absolute;
+  left:1.7%;
+  top:1.4%;
+  width:31%;
+  height:13.4%;
+  z-index:88;
+  border:2px solid rgba(166,113,70,.96);
+  border-radius:16px;
+  background:
+    linear-gradient(145deg,rgba(255,240,200,.08),transparent 40%),
+    linear-gradient(180deg,rgba(76,47,79,.98),rgba(39,26,49,.98));
+  box-shadow:0 7px 16px rgba(30,13,34,.38),inset 0 1px rgba(255,240,205,.24);
+  overflow:hidden;
+}
+.profile-hud-card .avatar-button{
+  left:4%!important;
+  top:8%!important;
+  width:39%!important;
+  height:61%!important;
+  aspect-ratio:auto!important;
+  border-radius:12px!important;
+  border-width:2px!important;
+  z-index:2!important;
+}
+.profile-hud-card #playerAvatar{
+  border-radius:10px!important;
+  transform:scale(1.08)!important;
+}
+.profile-hud-card #avatarPlaceholder{
+  font-size:clamp(24px,7vw,46px)!important;
+}
+.profile-hud-card .profile-name-button{
+  left:46%!important;
+  top:11%!important;
+  width:50%!important;
+  height:29%!important;
+  z-index:3!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:rgba(255,239,204,.10)!important;
+  box-shadow:none!important;
+  text-align:left!important;
+  padding:0 6px!important;
+  font-size:clamp(9px,2.45vw,14px)!important;
+  color:#fff1ca!important;
+}
+.profile-hud-card .merit-status{
+  left:46%!important;
+  top:45%!important;
+  width:50%!important;
+  height:31%!important;
+  min-height:0!important;
+  z-index:3!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:rgba(24,14,30,.34)!important;
+  box-shadow:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:4px!important;
+  padding:0 6px!important;
+}
+.profile-hud-card .merit-status::after{display:none!important}
+.profile-hud-card .merit-status span{font-size:clamp(7px,1.9vw,10px)!important}
+.profile-hud-card .merit-status strong{font-size:clamp(11px,3.0vw,17px)!important}
+.profile-hud-card::after{
+  content:"แตะรูปหรือชื่อเพื่อแก้ไข";
+  position:absolute;
+  left:4%;right:4%;bottom:5%;
+  color:rgba(255,235,203,.62);
+  font-size:clamp(5px,1.35vw,8px);
+  text-align:center;
+  pointer-events:none;
+}
+
+/* เวลาและฝนยังอยู่ด้านนอกตามเดิม แต่รวมสมดุลให้เป็นคู่กลางบน */
+.weather-clock{
+  left:35%!important;
+  top:1.5%!important;
+  width:28%!important;
+  height:5.7%!important;
+  z-index:88!important;
+  border-radius:14px!important;
+}
+.rain-status{
+  left:35%!important;
+  top:7.8%!important;
+  width:28%!important;
+  min-height:5.7%!important;
+  height:5.7%!important;
+  z-index:88!important;
+  border-radius:14px!important;
+}
+.weather-clock::after,.rain-status::after{display:none!important}
+
+/* ปุ่มเมนูรวมขวาบน */
+.hud-menu-button{
+  position:absolute;
+  right:2%;
+  top:1.5%;
+  width:31%;
+  height:11.95%;
+  z-index:90;
+  border:2px solid rgba(166,113,70,.96);
+  border-radius:16px;
+  background:
+    linear-gradient(145deg,rgba(255,240,200,.10),transparent 42%),
+    linear-gradient(180deg,rgba(76,47,79,.98),rgba(39,26,49,.98));
+  color:#fff1ca;
+  box-shadow:0 7px 16px rgba(30,13,34,.38),inset 0 1px rgba(255,240,205,.24);
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:1px;
+}
+.hud-menu-button span{font-size:clamp(22px,6vw,36px);line-height:.9}
+.hud-menu-button b{font-size:clamp(10px,2.7vw,15px)}
+.hud-menu-button:active{transform:scale(.97)}
+
+/* ปุ่มใช้งานเร็ว 2 ปุ่มใต้หัว HUD */
+.tractor-button{
+  left:35%!important;
+  top:14.35%!important;
+  width:30%!important;
+  min-width:0!important;
+  height:3.8%!important;
+  border-radius:11px!important;
+  font-size:clamp(7px,1.9vw,11px)!important;
+}
+.collect-drops-button{
+  left:67%!important;
+  top:14.35%!important;
+  width:31%!important;
+  min-width:0!important;
+  height:3.8%!important;
+  border-radius:11px!important;
+  font-size:clamp(6px,1.75vw,10px)!important;
+}
+
+/* ปุ่มเดิมย้ายเข้า drawer แล้ว — ยกเลิก absolute layout เดิม */
+.hud-menu-drawer .forecast-button,
+.hud-menu-drawer .mode-button,
+.hud-menu-drawer .notification-button,
+.hud-menu-drawer .activity-button,
+.hud-menu-drawer .alms-button,
+.hud-menu-drawer .challenge-button{
+  position:relative!important;
+  inset:auto!important;
+  left:auto!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:auto!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:54px!important;
+  border:1px solid rgba(172,129,91,.55)!important;
+  border-radius:13px!important;
+  overflow:visible!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+  font-family:inherit!important;
+}
+.hud-menu-drawer .forecast-button::after,
+.hud-menu-drawer .mode-button::after{display:none!important}
+.hud-menu-drawer .activity-button b,
+.hud-menu-drawer .activity-button small{
+  font-size:inherit;
+  line-height:inherit;
+}
+
+/* drawer */
+.hud-menu-backdrop{
+  position:absolute;
+  inset:0;
+  z-index:118;
+  background:rgba(23,13,27,.42);
+  backdrop-filter:blur(2px);
+}
+.hud-menu-drawer{
+  position:absolute;
+  z-index:119;
+  right:2%;
+  top:1.5%;
+  width:min(76%,380px);
+  max-height:82%;
+  overflow:auto;
+  padding:10px;
+  border:2px solid rgba(176,126,79,.96);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 90% 0%,rgba(221,164,110,.14),transparent 34%),
+    linear-gradient(180deg,rgba(66,42,69,.99),rgba(35,24,43,.99));
+  box-shadow:0 14px 32px rgba(21,10,25,.55),inset 0 1px rgba(255,239,200,.22);
+  color:#fff0ce;
+}
+.hud-menu-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:3px 2px 9px;
+  border-bottom:1px solid rgba(224,190,143,.22);
+}
+.hud-menu-head small{display:block;color:#cfb7c9;font-size:9px}
+.hud-menu-head h2{margin:1px 0 0;font-size:clamp(16px,4.4vw,23px)}
+.hud-menu-head>button{
+  width:32px;height:32px;border:1px solid rgba(219,179,131,.65);border-radius:50%;
+  background:#f0d9b2;color:#4d304f;font-size:23px;font-weight:900;
+}
+.hud-menu-list{display:grid;gap:7px;margin-top:9px}
+.hud-menu-item{
+  position:relative;
+  display:grid!important;
+  grid-template-columns:36px minmax(0,1fr) 18px!important;
+  align-items:center!important;
+  gap:7px!important;
+  width:100%;
+  min-height:54px;
+  padding:7px 8px!important;
+  border:1px solid rgba(172,129,91,.55);
+  border-radius:13px;
+  background:linear-gradient(180deg,rgba(255,244,219,.96),rgba(226,204,165,.96))!important;
+  color:#513750!important;
+  text-align:left;
+  cursor:pointer;
+}
+.hud-menu-item>span{font-size:24px;text-align:center}
+.hud-menu-item>div{display:grid;gap:1px;min-width:0}
+.hud-menu-item>div>b{font-size:clamp(10px,2.65vw,14px)!important;line-height:1.1!important}
+.hud-menu-item>div>small{font-size:clamp(7px,1.8vw,10px)!important;line-height:1.15!important;color:#806a78!important}
+.hud-menu-item>i{font-style:normal;font-size:22px;color:#7b5c73;text-align:center}
+.hud-menu-item:active{transform:scale(.985)}
+.hud-menu-featured{
+  background:linear-gradient(180deg,#ffe7b4,#d8aa72)!important;
+  border-color:#d69b57!important;
+}
+.hud-menu-item .notification-badge{
+  position:absolute!important;
+  right:22px!important;
+  top:6px!important;
+}
+
+/* หน้า 2 และตอนเยี่ยมเพื่อน: ซ่อน HUD ใหม่ให้ตรงพฤติกรรมเดิม */
+.game-screen.plot-page-2 .profile-hud-card,
+.game-screen.plot-page-2 .hud-menu-button,
+.game-screen.plot-page-2 .hud-menu-drawer,
+.game-screen.plot-page-2 .hud-menu-backdrop,
+.game-screen.visiting-friend .profile-hud-card,
+.game-screen.visiting-friend .hud-menu-button,
+.game-screen.visiting-friend .hud-menu-drawer,
+.game-screen.visiting-friend .hud-menu-backdrop{display:none!important}
+
+@media(max-width:430px){
+  .profile-hud-card{width:32%;height:13.1%}
+  .weather-clock,.rain-status{left:35%;width:27.5%}
+  .hud-menu-button{width:32.5%}
+  .tractor-button{left:34.5%!important;width:30%!important}
+  .collect-drops-button{left:66%!important;width:32.5%!important}
+  .hud-menu-drawer{width:82%;right:2%}
+}

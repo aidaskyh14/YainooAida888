@@ -5750,8 +5750,8 @@ function renderDogHotelScene(){if(currentScene!=="dogHotel")return;processDogDro
 
 function drawCoconutSceneV10FromCache(){
   if(currentScene!=="coconut"||!sharedCoconutCache)return;setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});const s=ownState||state,quotaActive=Number(s.coconutQuotaResetAt||0)>gameNow(),used=quotaActive?(Number(s.coconutQuotaCount)||0):0,now=gameNow();
-  $("sceneInteractiveLayer").innerHTML=`<div class="coconut-quota-label">🥥 โควตารอบนี้ ${used}/${COCONUT_QUOTA_PER_ROUND}</div><button id="coconutHistoryBtn" class="coconut-history-btn" type="button">ประวัติ 50 รายการ</button><button id="coconutFastBonusBtn" class="coconut-fast-bonus-btn" type="button">โบนัสคนมือไว</button>${COCONUT_TREE_POSITIONS_V1.map(([left,top,width,height],i)=>{const tree=sharedCoconutCache.trees[i],rem=Math.max(0,tree.nextAt-now),label=rem>0?`${tree.lastByName||"มีคน"} สอยแล้ว • ${coconutRemainingText(rem)}`:"พร้อมสอย";return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${safeHtml(label)}</small></button>`}).join("")}${sharedCoconutCache.riverSlots.map((slot,i)=>{const [l,t,w,h]=COCONUT_RIVER_POSITIONS[i],rem=Math.max(0,slot.nextAt-now),item=slot.creatureKey?COCONUT_RIVER_ITEMS[slot.creatureKey]:null;if(rem>0&&!item)return `<button class="coconut-river-slot cooldown" type="button" disabled style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><small>${safeHtml(slot.lastByName||"มีคน")} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(rem)}</small></button>`;if(!item)return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"></button>`;return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><img src="${item.image}" alt="${item.name}"><small>แตะจับ ${safeHtml(item.name)}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button><button id="dogHotelBtn" class="panda-forest-entry" type="button">โรงแรมน้องหมา</button>`;
-  document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));document.querySelectorAll("[data-coconut-river-slot]").forEach(btn=>btn.onclick=()=>catchCoconutRiverCreature(Number(btn.dataset.coconutRiverSlot)));$("coconutBoatHotspot").onclick=showCoconutCraft;$("coconutHistoryBtn").onclick=showCoconutHistory;$("coconutFastBonusBtn").onclick=showCoconutFastBonus;$("dogHotelBtn").onclick=()=>openScene("dogHotel");
+  $("sceneInteractiveLayer").innerHTML=`<div class="coconut-quota-label">🥥 โควตารอบนี้ ${used}/${COCONUT_QUOTA_PER_ROUND}</div><button id="coconutHistoryBtn" class="coconut-history-btn" type="button">ประวัติ 50 รายการ</button><button id="coconutFastBonusBtn" class="coconut-fast-bonus-btn" type="button">โบนัสคนมือไว</button>${COCONUT_TREE_POSITIONS_V1.map(([left,top,width,height],i)=>{const tree=sharedCoconutCache.trees[i],rem=Math.max(0,tree.nextAt-now),label=rem>0?`${tree.lastByName||"มีคน"} สอยแล้ว • ${coconutRemainingText(rem)}`:"พร้อมสอย";return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${safeHtml(label)}</small></button>`}).join("")}${sharedCoconutCache.riverSlots.map((slot,i)=>{const [l,t,w,h]=COCONUT_RIVER_POSITIONS[i],rem=Math.max(0,slot.nextAt-now),item=slot.creatureKey?COCONUT_RIVER_ITEMS[slot.creatureKey]:null;if(rem>0&&!item)return `<button class="coconut-river-slot cooldown" type="button" disabled style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><small>${safeHtml(slot.lastByName||"มีคน")} จับไปแล้ว ซอรี่นะ มาใหม่ อีก ${coconutRiverRemainingText(rem)}</small></button>`;if(!item)return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"></button>`;return `<button class="coconut-river-slot" type="button" data-coconut-river-slot="${i}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%"><img src="${item.image}" alt="${item.name}"><small>แตะจับ ${safeHtml(item.name)}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button>`;
+  document.querySelectorAll("[data-coconut-tree]").forEach(btn=>btn.onclick=()=>harvestCoconutTree(Number(btn.dataset.coconutTree)));document.querySelectorAll("[data-coconut-river-slot]").forEach(btn=>btn.onclick=()=>catchCoconutRiverCreature(Number(btn.dataset.coconutRiverSlot)));$("coconutBoatHotspot").onclick=showCoconutCraft;$("coconutHistoryBtn").onclick=showCoconutHistory;$("coconutFastBonusBtn").onclick=showCoconutFastBonus;
 }
 renderCoconutScene=async function(){setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});if(!cloudReady){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">กำลังเชื่อมสวนมะพร้าวส่วนกลาง...</div>';return}try{await loadSharedCoconut();drawCoconutSceneV10FromCache();ensureCoconutSharedSubscription();stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene!=="coconut"){stopSceneTimer();return}drawCoconutSceneV10FromCache()},1000)}catch(error){$("sceneInteractiveLayer").innerHTML='<div class="coconut-loading">โหลดสวนมะพร้าวไม่สำเร็จ</div>'}};
 
@@ -6290,3 +6290,47 @@ if($("closeModal"))$("closeModal").onclick=closeModal;
 if($("modal"))$("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};
 
 /* refresh garden hash after V11 rendering/updates remains handled by existing listeners. */
+
+/* ======================================================================
+   V13 — HOME HUD REORGANIZE + DIRECT DOG HOTEL ENTRY
+   ====================================================================== */
+function closeHomeHudMenu(){
+  const drawer=$("hudMenuDrawer"),backdrop=$("hudMenuBackdrop");
+  if(drawer)drawer.classList.add("hidden");
+  if(backdrop)backdrop.classList.add("hidden");
+}
+function openHomeHudMenu(){
+  if(visitContext)return;
+  const drawer=$("hudMenuDrawer"),backdrop=$("hudMenuBackdrop");
+  if(drawer)drawer.classList.remove("hidden");
+  if(backdrop)backdrop.classList.remove("hidden");
+  updateAlmsButton();
+}
+function bindHomeHudMenu(){
+  const menuBtn=$("hudMenuBtn"),closeBtn=$("hudMenuCloseBtn"),backdrop=$("hudMenuBackdrop");
+  if(menuBtn)menuBtn.onclick=openHomeHudMenu;
+  if(closeBtn)closeBtn.onclick=closeHomeHudMenu;
+  if(backdrop)backdrop.onclick=closeHomeHudMenu;
+
+  const bindAndClose=(id,action)=>{
+    const el=$(id);if(!el)return;
+    el.onclick=()=>{closeHomeHudMenu();action()};
+  };
+  bindAndClose("forecastBtn",showForecast);
+  bindAndClose("modeBtn",showModeChooser);
+  bindAndClose("notificationBtn",()=>showNotifications("friend"));
+  bindAndClose("almsBtn",showAlms);
+  bindAndClose("challengeBtn",challengeFarm);
+  bindAndClose("mainDogHotelBtn",()=>{if(!guardResting())openScene("dogHotel")});
+}
+const __bindEventsBeforeHomeHudV13=bindEvents;
+bindEvents=function(){
+  const result=__bindEventsBeforeHomeHudV13();
+  bindHomeHudMenu();
+  return result;
+};
+const __returnToFarmBeforeHomeHudV13=returnToFarm;
+returnToFarm=function(){
+  closeHomeHudMenu();
+  return __returnToFarmBeforeHomeHudV13();
+};
