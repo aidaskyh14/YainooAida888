@@ -5360,7 +5360,10 @@ const DOG_DROP_POOL=[
   {id:"bait2",name:"เหยื่อตกปลาสมัครเล่น",image:FISHING_BAITS.bait2.image,type:"fishingBait",key:"bait2",qty:1,weight:10},
   {id:"coconut50",name:"มะพร้าวหาวนอน",image:COCONUT_ITEMS.coconut50.image,type:"special",key:"coconut50",qty:1,weight:10},
   {id:"milk",name:ANIMAL_PRODUCTS.milk.name,image:ANIMAL_PRODUCTS.milk.image,type:"product",key:"milk",qty:1,weight:10},
-  {id:"fishMeat",name:ANIMAL_PRODUCTS.fishMeat.name,image:ANIMAL_PRODUCTS.fishMeat.image,type:"product",key:"fishMeat",qty:1,weight:10}
+  {id:"fishMeat",name:ANIMAL_PRODUCTS.fishMeat.name,image:ANIMAL_PRODUCTS.fishMeat.image,type:"product",key:"fishMeat",qty:1,weight:10},
+  {id:"fish4",name:"ปลาสวนมะพร้าวหมายเลข 4",image:COCONUT_RIVER_ITEMS.fish4.image,type:"coconutRiver",key:"fish4",qty:1,weight:0},
+  {id:"giantWormDrop",name:"หนอนไจแอนท์",image:"giant-worm.png?v=1",type:"badDrop",key:"giantWormDrop",qty:0,weight:0},
+  {id:"jellyfishLaxative",name:"ยาถ่ายแมงกะพรุน",image:"jellyfish_Laxative_Bag.png?v=1",type:"special",key:"jellyfishLaxative",qty:1,weight:0}
 ];
 
 function newDogInstanceId(){return globalThis.crypto?.randomUUID?.()||`dog-${Date.now()}-${Math.random().toString(36).slice(2)}`}
@@ -5631,12 +5634,100 @@ async function renameDog(dogId){const s=ensureDogState(ownState||state),dog=s.do
 async function feedDog(dogId,recipeId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");if(gameNow()<Number(dog.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=20+Math.floor(Math.random()*31);s.merit=(Number(s.merit)||0)+reward;dog.nextFeedAt=gameNow()+DOG_HUNGER_MS;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();showWeatherToast(`🐶 น้องให้ +${reward} กุศล`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}}
 
 /* ---------- Dog drops ---------- */
-function randomDogDrop(){const total=DOG_DROP_POOL.reduce((a,b)=>a+b.weight,0),r=Math.random()*total;let sum=0;for(const item of DOG_DROP_POOL){sum+=item.weight;if(r<sum)return item}return DOG_DROP_POOL[DOG_DROP_POOL.length-1]}
+function randomDogDrop(dog){
+  /* dog-08 ยังคงดรอปเฉพาะกบ #4 / ปลา #4 */
+  if(dog?.typeKey==="dog8"){
+    return DOG_DROP_POOL.find(item=>item.id===(Math.random()<0.5?"frog4":"fish4"));
+  }
+
+  /* dog-01 ถึง dog-07:
+     15% หนอนไจแอนท์ (ดรอปเสีย)
+     10% ยาถ่ายแมงกะพรุน
+     75% พูลดรอปปกติเดิม
+  */
+  const specialRoll=Math.random();
+  if(specialRoll<0.15)return DOG_DROP_POOL.find(item=>item.id==="giantWormDrop");
+  if(specialRoll<0.25)return DOG_DROP_POOL.find(item=>item.id==="jellyfishLaxative");
+
+  const pool=DOG_DROP_POOL.filter(item=>Number(item.weight)>0);
+  const total=pool.reduce((a,b)=>a+b.weight,0),r=Math.random()*total;
+  let sum=0;
+  for(const item of pool){sum+=item.weight;if(r<sum)return item}
+  return pool[pool.length-1];
+}
 function randomDogDropPoint(dog){const c=dogHotelControllers.get(dog.id);if(c){const pt=DOG_HOTEL_POINTS[c.node]||[50,65];return{x:Math.max(20,Math.min(80,pt[0]+(Math.random()*8-4))),y:Math.max(28,Math.min(84,pt[1]+(Math.random()*6-3)))}}const pt=DOG_HOTEL_POINTS[Math.floor(Math.random()*DOG_HOTEL_POINTS.length)];return{x:pt[0]+(Math.random()*8-4),y:pt[1]+(Math.random()*6-3)}}
-function processDogDrops(){if(!ownState)return;ensureDogState(ownState);const now=gameNow();let changed=false;ownState.dogs.forEach(dog=>{if(!dog.placedHotel||dog.expiresAt<=now)return;if(!Array.isArray(dog.drops))dog.drops=[];let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);if(now<nextAt)return;const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1),room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);for(let i=0;i<createCount;i++){const item=randomDogDrop(),pt=randomDogDropPoint(dog),createdAt=nextAt+(i*DOG_DROP_INTERVAL_MS);dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt})}dog.nextDropAt=nextAt+(due*DOG_DROP_INTERVAL_MS);changed=true});if(changed){state=ownState;save()}if(currentScene==="dogHotel")renderDogHotelDrops()}
+function processDogDrops(){if(!ownState)return;ensureDogState(ownState);const now=gameNow();let changed=false;ownState.dogs.forEach(dog=>{if(!dog.placedHotel||dog.expiresAt<=now)return;if(!Array.isArray(dog.drops))dog.drops=[];let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);if(now<nextAt)return;const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1),room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);for(let i=0;i<createCount;i++){const item=randomDogDrop(dog),pt=randomDogDropPoint(dog),createdAt=nextAt+(i*DOG_DROP_INTERVAL_MS);dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt})}dog.nextDropAt=nextAt+(due*DOG_DROP_INTERVAL_MS);changed=true});if(changed){state=ownState;save()}if(currentScene==="dogHotel")renderDogHotelDrops()}
 function renderDogHotelDrops(){const layer=$("dogHotelDropLayer");if(!layer)return;layer.innerHTML="";placedDogs().forEach(dog=>(dog.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;const btn=document.createElement("button");btn.className="dog-drop-item cat-drop-item";btn.type="button";btn.style.left=`${drop.x}%`;btn.style.top=`${drop.y}%`;btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;btn.onclick=()=>claimDogDrop(dog.id,drop.id);layer.appendChild(btn)}))}
-async function claimDogDrop(dogId,dropId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,item;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");const idx=(dog.drops||[]).findIndex(d=>d.id===dropId);if(idx<0)throw new Error("ของดรอปถูกเก็บไปแล้ว");item=DOG_DROP_POOL.find(x=>x.id===dog.drops[idx].itemId);if(!item)throw new Error("ไม่พบของดรอป");applyPetDropReward(s,item);dog.drops.splice(idx,1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();showWeatherToast(`✨ เก็บ ${item.name} ×${item.qty} เข้ากระเป๋าแล้ว`)}catch(error){message("เก็บของไม่ได้",error.message||"กรุณาลองใหม่")}}
-async function collectAllDogDrops(){if(!cloudReady)return;showDropBasketWorking("scene");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,summary={};await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);let count=0;s.dogs.filter(d=>d.placedHotel).forEach(dog=>{(dog.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;applyPetDropReward(s,item);if(!summary[item.id])summary[item.id]={name:item.name,qty:0};summary[item.id].qty+=item.qty;count++});dog.drops=[]});if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});await new Promise(r=>setTimeout(r,450));ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();message("🧺 เก็บของดรอปทั้งหมดแล้ว",dropSummaryHTML(summary))}catch(error){message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่")}finally{hideDropBasketWorking()}}
+async function claimDogDrop(dogId,dropId){
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);
+    let next,item,isBadDrop=false;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);
+      if(!dog)throw new Error("ไม่พบน้องหมา");
+      const idx=(dog.drops||[]).findIndex(d=>d.id===dropId);
+      if(idx<0)throw new Error("ของดรอปถูกเก็บไปแล้ว");
+      item=DOG_DROP_POOL.find(x=>x.id===dog.drops[idx].itemId);
+      if(!item)throw new Error("ไม่พบของดรอป");
+      isBadDrop=item.type==="badDrop";
+      if(!isBadDrop)applyPetDropReward(s,item);
+      dog.drops.splice(idx,1);
+      next=s;
+      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();
+    if(isBadDrop)message("🐛 หนอนไจแอนท์","เสียใจด้วยนะ หมาของคุณเหมือนจะท้องเสีย");
+    else showWeatherToast(`✨ เก็บ ${item.name} ×${item.qty} เข้ากระเป๋าแล้ว`);
+  }catch(error){
+    message("เก็บของไม่ได้",error.message||"กรุณาลองใหม่");
+  }
+}
+async function collectAllDogDrops(){
+  if(!cloudReady)return;
+  showDropBasketWorking("scene");
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);
+    let next,summary={},badDropCount=0;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      let count=0;
+      s.dogs.filter(d=>d.placedHotel).forEach(dog=>{
+        (dog.drops||[]).forEach(drop=>{
+          const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);
+          if(!item)return;
+          count++;
+          if(item.type==="badDrop"){
+            badDropCount++;
+            return;
+          }
+          applyPetDropReward(s,item);
+          if(!summary[item.id])summary[item.id]={name:item.name,qty:0};
+          summary[item.id].qty+=item.qty;
+        });
+        dog.drops=[];
+      });
+      if(!count)throw new Error("ตอนนี้ยังไม่มีของดรอปให้เก็บ");
+      next=s;
+      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    await new Promise(r=>setTimeout(r,450));
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();
+    const normalHTML=Object.keys(summary).length?dropSummaryHTML(summary):"";
+    const badHTML=badDropCount?`<div>🐛 หนอนไจแอนท์ ×${badDropCount} — ไม่เข้ากระเป๋า</div>`:"";
+    message("🧺 เก็บของดรอปทั้งหมดแล้ว",`${normalHTML}${badHTML}`);
+  }catch(error){
+    message("เก็บของดรอปไม่ได้",error.message||"กรุณาลองใหม่");
+  }finally{
+    hideDropBasketWorking();
+  }
+}
 setInterval(processDogDrops,30000);
 
 /* ---------- Dog hotel render / replaces Panda entrance ---------- */
