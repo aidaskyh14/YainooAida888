@@ -1060,3 +1060,34 @@ button{touch-action:manipulation}
   margin:0 auto 8px!important;
   object-fit:contain!important;
 }
+
+/* ======================================================================
+   V12 — สวนมะพร้าว 8 ต้น + ปลา/กบ 16 จุด
+   ====================================================================== */
+.coconut-river-slot{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.coconut-river-slot img{
+  width:96%!important;
+  height:88%!important;
+  margin:0 auto!important;
+  object-fit:contain;
+}
+.coconut-river-slot:not(.cooldown) small{
+  display:none;
+}
+.coconut-river-slot.cooldown small{
+  bottom:6%!important;
+  width:145%!important;
+  padding:2px 3px!important;
+  font-size:clamp(5px,1.25vw,7px)!important;
+  line-height:1.1!important;
+  opacity:.9;
+}
+.coconut-tree-hotspot small{
+  max-width:115%;
+  font-size:clamp(6px,1.5vw,9px);
+}
+

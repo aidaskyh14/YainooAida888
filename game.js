@@ -55,7 +55,7 @@ const COCONUT_ITEMS={
   coconut50:{name:"มะพร้าวหาวนอน",image:"coconut-boost-50.png?v=1",boost:50,weight:14,chance:30,need:{fishMeat:10,milk:2},description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 50%"},
   coconut100:{name:"มะพร้าวสาวไอด้า",image:"coconut-boost-100.png?v=1",boost:100,weight:3,chance:null,need:null,description:"เร่งการเจริญเติบโตของพืชผักชนิดใดก็ได้ 100%",locked:true}
 };
-const COCONUT_TREE_COOLDOWN=1*60*60*1000;
+const COCONUT_TREE_COOLDOWN=90*60*1000;
 
 const SCENES={
   house:{image:"ghost-house-interior.jpg?v=1"},
@@ -66,7 +66,7 @@ const SCENES={
   cow:{image:"04_cow_barn.jpg?v=1"},
   almsSeated:{image:"01_monks-seated-bowls.png?v=1"},
   almsBlessing:{image:"02_monks-standing-blessing.png?v=1"},
-  coconut:{image:"coconut-garden-scene.png?v=1"}
+  coconut:{image:"coconut-garden-scene.png?v=2"}
 };
 
 const REST_DURATIONS={sleep:7*60*60*1000,nap:2*60*60*1000};
@@ -1800,7 +1800,7 @@ function craftCoconut(key){
   if(success){state.specials[key]=(state.specials[key]||0)+1;save();message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>เก็บไว้ใน กระเป๋า → ของพิเศษ แล้ว`)}
   else{save();message("คราฟไม่สำเร็จ","รอบนี้คราฟไม่สำเร็จ วัตถุดิบที่ใช้ถูกหักไปแล้วค่ะ")}
 }
-const COCONUT_TREE_POSITIONS=[[1,14,38,27],[61,14,38,27],[0,38,38,28],[62,38,38,28],[0,65,38,28],[62,65,38,28]];
+const COCONUT_TREE_POSITIONS=[[2.5,15.5,27.5,19.5],[36,8.5,28.5,20],[70,15.5,28,19.5],[0,35.5,23,20],[77,35.5,23,20],[0,59,24,22],[76,59,24,22],[36.5,72.5,27,21]];
 function renderCoconutScene(){
   setSceneNav({backText:"กลับแปลงผัก",backAction:returnToFarm});
   $("sceneInteractiveLayer").innerHTML=`${COCONUT_TREE_POSITIONS.map(([left,top,width,height],i)=>{const rem=Math.max(0,Number(state.coconutTrees[i]||0)-gameNow());return `<button class="coconut-tree-hotspot" type="button" data-coconut-tree="${i}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><small>${rem>0?coconutRemainingText(rem):"พร้อมสอย"}</small></button>`}).join("")}<button id="coconutBoatHotspot" class="coconut-boat-hotspot" type="button" aria-label="คราฟไอเท็มพิเศษ"><span class="coconut-boat-label">คราฟไอเท็มพิเศษ</span></button>`;
@@ -1992,7 +1992,7 @@ const SPECIAL_ITEMS={
 };
 
 const SPECIAL_SHOP_KEYS=["coconut100","cake100","pestle100"];
-const COCONUT_TREE_POSITIONS_V1=[[1,14,38,27],[61,14,38,27],[0,38,38,28],[62,38,38,28],[0,65,38,28],[62,65,38,28]];
+const COCONUT_TREE_POSITIONS_V1=[[2.5,15.5,27.5,19.5],[36,8.5,28.5,20],[70,15.5,28,19.5],[0,35.5,23,20],[77,35.5,23,20],[0,59,24,22],[76,59,24,22],[36.5,72.5,27,21]];
 
 let ownState=null;
 let currentMemberKey="";
@@ -2603,7 +2603,7 @@ async function tapFriendPlot(index){
 }
 
 function normalizeSharedCoconut(data){
-  const trees=Array.isArray(data?.trees)?data.trees.slice(0,6):[];while(trees.length<6)trees.push({nextAt:0,lastByName:"",lastByKey:""});
+  const trees=Array.isArray(data?.trees)?data.trees.slice(0,8):[];while(trees.length<8)trees.push({nextAt:0,lastByName:"",lastByKey:""});
   return{trees:trees.map(t=>({nextAt:Number(t?.nextAt)||0,lastByName:String(t?.lastByName||""),lastByKey:String(t?.lastByKey||"")}))};
 }
 async function loadSharedCoconut(){
@@ -4565,8 +4565,8 @@ const FISHING_CONFIG={
 const FISHING_DOCK_POSITIONS=[[5,31,20,15],[5,50,20,15],[7,69,20,15],[75,31,20,15],[75,50,20,15],[73,69,20,15]];
 const FISHING_CLAIM_MS=5*60*1000;
 const NAGA_OFFERING_COOLDOWN_MS=2*60*60*1000;
-const COCONUT_RIVER_COOLDOWN_MS=60*60*1000;
-const COCONUT_RIVER_POSITIONS=[[31.5,67.5,11,7.5],[47.5,72.5,11,7.5],[30.5,79,11,7.5],[46.5,84,11,7.5]];
+const COCONUT_RIVER_COOLDOWN_MS=35*60*1000;
+const COCONUT_RIVER_POSITIONS=[[27,30,9,6.5],[42,31.5,9,6.5],[57,30,9,6.5],[69,33,9,6.5],[23,40,9,6.5],[38,42,9,6.5],[53,40.5,9,6.5],[68,43,9,6.5],[28,50,9,6.5],[43,52,9,6.5],[58,50,9,6.5],[71,53,9,6.5],[23,60,9,6.5],[38,62,9,6.5],[54,60,9,6.5],[67,63,9,6.5]];
 const COCONUT_RIVER_ITEMS={
   frog1:{kind:"frog",index:1,name:"กบสวนมะพร้าว 1",image:"coconut-river-frog-01.png?v=1"},
   frog2:{kind:"frog",index:2,name:"กบสวนมะพร้าว 2",image:"coconut-river-frog-02.png?v=1"},
@@ -4760,10 +4760,15 @@ function openNagaOffering(){
 }
 async function offerToNaga(recipeId){const now=gameNow(),reward=randInt(3,10);try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);if(Number(s.underwaterUntil||0)>now)throw new Error(`ส่งเสบียงได้อีกครั้งใน ${formatFriendlyCountdown(s.underwaterUntil-now)}`);if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารชิ้นนี้ไม่มีแล้ว");s.underwaterUntil=now+NAGA_OFFERING_COOLDOWN_MS;s.underwaterOffering=null;s.merit=(Number(s.merit)||0)+reward;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentMember,merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;updateMeritUI();closeModal();showWeatherToast(`🐍 เจ้าแม่ให้พร +${reward} กุศล`)}catch(error){message("ถวายเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}}
 
-function randomCoconutRiverKey(){return COCONUT_RIVER_KEYS[Math.floor(Math.random()*COCONUT_RIVER_KEYS.length)]}
+function randomCoconutRiverKey(){
+  const kind=Math.random()<0.5?"frog":"fish";
+  const roll=Math.random();
+  const index=roll<0.30?1:roll<0.60?2:roll<0.90?3:4;
+  return `${kind}${index}`;
+}
 const __normalizeSharedCoconutBeforeV4=normalizeSharedCoconut;
 normalizeSharedCoconut=function(data){
-  const base=__normalizeSharedCoconutBeforeV4(data),now=gameNow(),raw=Array.isArray(data?.riverSlots)?data.riverSlots.slice(0,4):[];while(raw.length<4)raw.push(null);base.riverSlots=raw.map(slot=>{const s=slot&&typeof slot==="object"?slot:{};let creatureKey=COCONUT_RIVER_ITEMS[s.creatureKey]?s.creatureKey:null,nextCreatureKey=COCONUT_RIVER_ITEMS[s.nextCreatureKey]?s.nextCreatureKey:null,nextAt=Math.max(0,Number(s.nextAt)||0);if(!creatureKey&&nextAt>0&&nextAt<=now){creatureKey=nextCreatureKey||randomCoconutRiverKey();nextCreatureKey=null;nextAt=0}return{creatureKey,nextCreatureKey,nextAt,lastByName:String(s.lastByName||""),lastByKey:String(s.lastByKey||"")}});return base;
+  const base=__normalizeSharedCoconutBeforeV4(data),now=gameNow(),raw=Array.isArray(data?.riverSlots)?data.riverSlots.slice(0,16):[];while(raw.length<16)raw.push(null);base.riverSlots=raw.map(slot=>{const s=slot&&typeof slot==="object"?slot:{};let creatureKey=COCONUT_RIVER_ITEMS[s.creatureKey]?s.creatureKey:null,nextCreatureKey=COCONUT_RIVER_ITEMS[s.nextCreatureKey]?s.nextCreatureKey:null,nextAt=Math.max(0,Number(s.nextAt)||0);if(!creatureKey&&nextAt>0&&nextAt<=now){creatureKey=nextCreatureKey||randomCoconutRiverKey();nextCreatureKey=null;nextAt=0}return{creatureKey,nextCreatureKey,nextAt,lastByName:String(s.lastByName||""),lastByKey:String(s.lastByKey||"")}});return base;
 };
 loadSharedCoconut=async function(){
   const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","coconutGarden");let result;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),garden=normalizeSharedCoconut(snap.exists()?snap.data():null);let changed=!snap.exists();garden.riverSlots.forEach(slot=>{if(!slot.creatureKey&&slot.nextAt<=0){slot.creatureKey=randomCoconutRiverKey();changed=true}});result=garden;if(changed)tx.set(ref,{...garden,updatedAt:fs.serverTimestamp()},{merge:false})});sharedCoconutCache=result;return result;
@@ -5673,7 +5678,7 @@ const __drawBeforeDropBasketV10=draw;
 draw=function(){const r=__drawBeforeDropBasketV10();$("collectDropsBtn")?.classList.toggle("hidden",Boolean(visitContext));return r};
 
 /* ---------- Safety: keep coconut shared cooldown at one hour ---------- */
-// COCONUT_TREE_COOLDOWN and COCONUT_RIVER_COOLDOWN_MS are both 60 minutes in the effective build.
+// V12 coconut timing: tree cooldown 90 minutes; river creature cooldown 35 minutes.
 
 
 /* V10 final coconut live-listener hook: keep Dog Hotel button after shared snapshots */
