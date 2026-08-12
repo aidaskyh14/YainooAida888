@@ -7708,3 +7708,213 @@ renderDogHotelScene=function(){
 
   return result;
 };
+
+
+
+/* ======================================================================
+   V14.2 — Black Magic / Play Curse on Friend Plots
+   Asset filename expected: black-magic-plot-overlay.png
+   ====================================================================== */
+const BLACK_MAGIC_PLOT_IMAGE="black-magic-plot-overlay.png?v=2";
+const BLACK_MAGIC_DURATION_MS=3*60*60*1000;
+const BLACK_MAGIC_DAILY_LIMIT=20;
+const BLACK_MAGIC_REMOVE_COST={egg:10,milk:20};
+
+function ensureBlackMagicLimitState(target){
+  if(!target||typeof target!=="object")return target;
+  ensureDailyLimitsFor(target);
+  target.dailyLimits.blackMagicPlays=Math.max(0,Number(target.dailyLimits.blackMagicPlays)||0);
+  return target;
+}
+function isBlackMagicAdmin(){
+  return currentMember==="Aida"||currentMemberKey===memberKeyFromName("Aida")||adminProfile?.role==="admin";
+}
+function normalizeBlackMagicPlot(plot){
+  if(!plot||typeof plot!=="object")return plot;
+  const curse=plot.blackMagic;
+  if(!curse||typeof curse!=="object"){ delete plot.blackMagic; return plot; }
+  const expiresAt=Math.max(0,Number(curse.expiresAt)||0);
+  if(!expiresAt||expiresAt<=gameNow()){ delete plot.blackMagic; return plot; }
+  plot.blackMagic={
+    createdAt:Math.max(0,Number(curse.createdAt)||0),
+    expiresAt,
+    byKey:String(curse.byKey||""),
+    byName:String(curse.byName||"")
+  };
+  return plot;
+}
+function plotHasBlackMagic(plot){
+  normalizeBlackMagicPlot(plot);
+  return Boolean(plot?.blackMagic&&Number(plot.blackMagic.expiresAt)>gameNow());
+}
+function blackMagicRemainMs(plot){
+  return plotHasBlackMagic(plot)?Math.max(0,Number(plot.blackMagic.expiresAt)-gameNow()):0;
+}
+function blackMagicRemainText(plot){
+  return coconutRemainingText(blackMagicRemainMs(plot));
+}
+function blackMagicDailyRemain(target){
+  ensureBlackMagicLimitState(target);
+  if(isBlackMagicAdmin())return Number.POSITIVE_INFINITY;
+  return Math.max(0,BLACK_MAGIC_DAILY_LIMIT-(Number(target?.dailyLimits?.blackMagicPlays)||0));
+}
+function ensureBlackMagicStyles(){
+  if(document.getElementById('blackMagicStyleV142'))return;
+  const style=document.createElement('style');
+  style.id='blackMagicStyleV142';
+  style.textContent=`
+    .plot-black-magic-active{box-shadow:0 0 0 2px rgba(55,0,66,.45), 0 14px 28px rgba(0,0,0,.22) inset;}
+    .plot-black-magic-overlay{position:absolute;inset:-8% -8% -4% -8%;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:3;animation:blackMagicFloatV143 1.55s ease-in-out infinite,blackMagicFlickerV143 2.4s steps(2,end) infinite;transform-origin:center;}
+    @keyframes blackMagicFloatV143{0%,100%{transform:translate3d(0,0,0) scale(.98) rotate(-1deg)}25%{transform:translate3d(-2px,1px,0) scale(1.02) rotate(.7deg)}50%{transform:translate3d(2px,-1px,0) scale(1.035) rotate(-.4deg)}75%{transform:translate3d(-1px,-2px,0) scale(1.01) rotate(.8deg)}}
+    @keyframes blackMagicFlickerV143{0%,100%{opacity:.92;filter:brightness(.88) saturate(1.15)}20%{opacity:1;filter:brightness(1.18) saturate(1.35)}40%{opacity:.84;filter:brightness(.72) saturate(1.05)}60%{opacity:1;filter:brightness(1.28) saturate(1.45)}80%{opacity:.9;filter:brightness(.82) saturate(1.18)}}
+    .plot-black-magic-overlay img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.46)) drop-shadow(0 0 8px rgba(119,27,195,.65));}
+    .plot-black-magic-active::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at 50% 50%,rgba(17,0,25,.06),rgba(8,0,13,.34));animation:blackMagicDarkPulseV143 1.8s ease-in-out infinite;}
+    @keyframes blackMagicDarkPulseV143{0%,100%{opacity:.55}50%{opacity:.92}}
+    .plot-black-magic-badge{position:absolute;right:8px;bottom:8px;z-index:4;background:linear-gradient(180deg,#2d103f,#15071d);color:#f3d8ff;border:2px solid rgba(227,180,255,.55);border-radius:999px;padding:4px 10px;font-size:11px;line-height:1;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.2);pointer-events:none;}
+    .black-magic-actions{display:grid;gap:10px;margin-top:12px;}
+    .black-magic-actions button{width:100%;}
+    .black-magic-note{background:rgba(38,15,54,.08);border:1px dashed rgba(86,33,119,.35);border-radius:14px;padding:10px 12px;margin-top:10px;}
+    .black-magic-cost{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
+    .black-magic-cost span{background:#fff7fb;border:1px solid rgba(111,67,142,.22);border-radius:999px;padding:6px 12px;font-weight:700;}
+  `;
+  document.head.appendChild(style);
+}
+function injectBlackMagicIntoVisiblePlots(){
+  ensureBlackMagicStyles();
+  document.querySelectorAll('#plots [data-plot-index]').forEach(btn=>{
+    const index=Number(btn.dataset.plotIndex),plot=state?.plots?.[index];
+    btn.querySelector('.plot-black-magic-overlay')?.remove();
+    btn.querySelector('.plot-black-magic-badge')?.remove();
+    btn.classList.remove('plot-black-magic-active');
+    if(!plotHasBlackMagic(plot))return;
+    btn.classList.add('plot-black-magic-active');
+    const overlay=document.createElement('div');
+    overlay.className='plot-black-magic-overlay';
+    overlay.innerHTML=`<img src="${BLACK_MAGIC_PLOT_IMAGE}" alt="มนต์ดำครอบแปลง">`;
+    const badge=document.createElement('div');
+    badge.className='plot-black-magic-badge';
+    badge.textContent=`มนต์ดำ ${blackMagicRemainText(plot)}`;
+    btn.appendChild(overlay);
+    btn.appendChild(badge);
+  });
+}
+const __drawBeforeBlackMagicV142=draw;
+draw=function(){
+  const result=__drawBeforeBlackMagicV142();
+  injectBlackMagicIntoVisiblePlots();
+  return result;
+};
+
+async function removeBlackMagicFromOwnPlot(index){
+  if(!cloudReady||!currentMemberKey){message('ยังแก้ของไม่ได้','กรุณาเชื่อม Firebase ก่อน');return}
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,'saves',currentMemberKey),gardenRef=fs.doc(db,'gardens',currentMemberKey);
+    let next,newPlots;
+    await fs.runTransaction(db,async tx=>{
+      const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      if(!sSnap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+      const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
+      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(p=>normalizeBlackMagicPlot(ensurePlotPhaseStandalone(p)));
+      const p=plots[index];
+      if(!p?.crop||!plotHasBlackMagic(p))throw new Error('แปลงนี้ไม่มีมนต์ดำแล้ว');
+      const eggHave=Number(s.animalProducts?.egg)||0,milkHave=Number(s.animalProducts?.milk)||0;
+      if(eggHave<BLACK_MAGIC_REMOVE_COST.egg||milkHave<BLACK_MAGIC_REMOVE_COST.milk)throw new Error(`แก้ของต้องใช้ ${BLACK_MAGIC_REMOVE_COST.egg} ไข่เปรต และ ${BLACK_MAGIC_REMOVE_COST.milk} นมวัวอาฆาต`);
+      s.animalProducts.egg=eggHave-BLACK_MAGIC_REMOVE_COST.egg;
+      s.animalProducts.milk=milkHave-BLACK_MAGIC_REMOVE_COST.milk;
+      delete p.blackMagic;
+      plots[index]=p;
+      s.plots=plots.map(normalizePlot);
+      next=s;newPlots=s.plots;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentMember,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;lastGardenHash=plotHash(newPlots);saveLocalOnly(ownState);closeModal();draw();
+    message('✨ แก้ของสำเร็จ',`ใช้ ไข่เปรต ×${BLACK_MAGIC_REMOVE_COST.egg} และ นมวัวอาฆาต ×${BLACK_MAGIC_REMOVE_COST.milk}<br>มนต์ดำที่แปลงนี้ถูกถอนแล้ว`);
+  }catch(error){message('แก้ของไม่สำเร็จ',error?.message||'กรุณาลองใหม่')}
+}
+function showOwnBlackMagicModal(index){
+  const plot=state?.plots?.[index];
+  if(!plot)return;
+  const eggs=Number((ownState||state)?.animalProducts?.egg)||0,milk=Number((ownState||state)?.animalProducts?.milk)||0;
+  const enough=eggs>=BLACK_MAGIC_REMOVE_COST.egg&&milk>=BLACK_MAGIC_REMOVE_COST.milk;
+  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><h2>🪄 มนต์ดำครอบแปลง</h2><p>แปลงนี้ถูกเล่นของอยู่ และจะหายเองในอีก <b>${safeHtml(blackMagicRemainText(plot))}</b></p><div class="black-magic-cost"><span>🥚 ไข่เปรต ×${BLACK_MAGIC_REMOVE_COST.egg} <small>(มี ${eggs})</small></span><span>🥛 นมวัวอาฆาต ×${BLACK_MAGIC_REMOVE_COST.milk} <small>(มี ${milk})</small></span></div><div class="black-magic-note">ถ้าไม่แก้ของ มนต์ดำจะหายเองภายใน 3 ชั่วโมง</div><div class="black-magic-actions"><button id="removeBlackMagicBtn" class="primary-spooky-action" type="button" ${enough?'':'disabled'}>แก้ของ</button><button id="closeBlackMagicBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
+  openModal();
+  $('removeBlackMagicBtn').onclick=()=>removeBlackMagicFromOwnPlot(index);
+  $('closeBlackMagicBtn').onclick=closeModal;
+}
+const __tapPlotBeforeBlackMagicV142=tapPlot;
+tapPlot=async function(index){
+  if(visitContext)return tapFriendPlot(index);
+  const plot=state?.plots?.[index];
+  normalizeBlackMagicPlot(plot);
+  if(plotHasBlackMagic(plot)){showOwnBlackMagicModal(index);return}
+  return __tapPlotBeforeBlackMagicV142(index);
+};
+
+async function castBlackMagicOnFriendPlot(index){
+  if(!visitContext||!cloudReady||!currentMemberKey){message('ยังเล่นของไม่ได้','กรุณาเชื่อม Firebase ก่อน');return}
+  const targetKey=visitContext.memberKey,targetName=visitContext.name;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),gardenRef=fs.doc(db,'gardens',targetKey),ownSaveRef=fs.doc(db,'saves',currentMemberKey),mailRef=fs.doc(fs.collection(db,'mailboxes',targetKey,'items'));
+    let nextOwn,newPlots;
+    await fs.runTransaction(db,async tx=>{
+      const [gSnap,oSnap]=await Promise.all([tx.get(gardenRef),tx.get(ownSaveRef)]);
+      if(!gSnap.exists()||!oSnap.exists())throw new Error('ข้อมูลสวนไม่พร้อม');
+      const plots=(gSnap.data().plots||[]).map(p=>normalizeBlackMagicPlot(ensurePlotPhaseStandalone(p)));
+      const p=plots[index];
+      if(!p?.crop)throw new Error('แปลงนี้ว่างอยู่');
+      if(plotHasBlackMagic(p))throw new Error('แปลงนี้มีมนต์ดำอยู่แล้ว');
+      const own=normalizeState(oSnap.data(),currentMember);assertCurrentCloudSession(oSnap.data(),currentMember);ensureBlackMagicLimitState(own);
+      if(!isBlackMagicAdmin()&&(Number(own.dailyLimits.blackMagicPlays)||0)>=BLACK_MAGIC_DAILY_LIMIT)throw new Error(`วันนี้เล่นของครบ ${BLACK_MAGIC_DAILY_LIMIT} ครั้งแล้ว`);
+      p.blackMagic={createdAt:gameNow(),expiresAt:gameNow()+BLACK_MAGIC_DURATION_MS,byKey:currentMemberKey,byName:currentMember};
+      plots[index]=p;
+      if(!isBlackMagicAdmin())own.dailyLimits.blackMagicPlays=(Number(own.dailyLimits.blackMagicPlays)||0)+1;
+      nextOwn=own;newPlots=plots;
+      tx.set(gardenRef,{memberKey:targetKey,displayName:targetName,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      tx.set(ownSaveRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(mailRef,{source:'friend',type:'blackMagic',fromKey:currentMemberKey,title:'มีแม่หมอมนตร์ดำ เล่นไสย ใส่แปลงผักคุณ',text:`แปลง #${index+1} ถูกครอบด้วยมนต์ดำ 3 ชั่วโมง`,read:false,createdAt:fs.serverTimestamp()});
+    });
+    ownState=normalizeState(nextOwn,currentMember);state.plots=newPlots.map(normalizePlot);saveLocalOnly(ownState);closeModal();draw();
+    const remain=isBlackMagicAdmin()?'ไม่จำกัด':`${blackMagicDailyRemain(ownState)} ครั้ง`;
+    message('🪄 เล่นของสำเร็จ',`แปลงของ ${safeHtml(targetName)} ถูกครอบด้วยมนต์ดำแล้ว<br>เล่นของได้อีกวันนี้: <b>${remain}</b>`);
+  }catch(error){message('เล่นของไม่สำเร็จ',error?.message||'กรุณาลองใหม่')}
+}
+function showFriendBlackMagicMenu(index){
+  const plot=state?.plots?.[index];
+  if(!plot?.crop){message('เยี่ยมสวนเพื่อน','แปลงนี้ว่างอยู่');return}
+  normalizeBlackMagicPlot(plot);
+  const cropName=safeHtml(CROPS[plot.crop]?.name||'พืช');
+  const canCurse=!plotHasBlackMagic(plot);
+  const remain=blackMagicDailyRemain(ownState||state);
+  const remainText=isBlackMagicAdmin()?'ไม่จำกัด':`${remain}`;
+  const actionButtons=[];
+  if(plot.phase==='ready'&&!['babyBamboo','hauntedPlankton'].includes(plot.crop))actionButtons.push('<button id="friendStealBtn" class="secondary-action" type="button">🧤 ขโมย</button>');
+  if(plot.phase==='needsWater')actionButtons.push('<button id="friendWaterBtn" class="secondary-action" type="button">💧 รดน้ำ</button>');
+  if(plot.phase==='worm')actionButtons.push('<button id="friendWormBtn" class="secondary-action" type="button">🐛 กำจัดหนอน</button>');
+  actionButtons.push(`<button id="friendBlackMagicBtn" class="${canCurse?'danger-action':'secondary-action'}" type="button" ${canCurse?'':'disabled'}>🪄 เล่นของ</button>`);
+  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><h2>🧿 แปลง #${index+1}</h2><p><b>${cropName}</b></p>${plotHasBlackMagic(plot)?`<div class="black-magic-note">ตอนนี้มีมนต์ดำอยู่แล้ว • เหลือ ${safeHtml(blackMagicRemainText(plot))}</div>`:`<div class="black-magic-note">วันนี้คุณเล่นของได้อีก <b>${remainText}</b> ${isBlackMagicAdmin()?'(Aida เล่นได้ไม่จำกัด)':'ครั้ง'}</div>`}<div class="black-magic-actions">${actionButtons.join('')}<button id="friendBlackMagicCloseBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
+  openModal();
+  if($('friendStealBtn'))$('friendStealBtn').onclick=()=>{closeModal();showStealConfirmation(index)};
+  if($('friendWaterBtn'))$('friendWaterBtn').onclick=async()=>{closeModal();await waterFriendPlotV11(index)};
+  if($('friendWormBtn'))$('friendWormBtn').onclick=()=>{closeModal();showFriendWormChoicesV11(index)};
+  if($('friendBlackMagicBtn'))$('friendBlackMagicBtn').onclick=()=>castBlackMagicOnFriendPlot(index);
+  $('friendBlackMagicCloseBtn').onclick=closeModal;
+}
+tapFriendPlot=async function(index){
+  if(!visitContext)return;
+  const plot=state?.plots?.[index];
+  ensurePlotPhase(plot);normalizeBlackMagicPlot(plot);
+  if(!plot?.crop){message('เยี่ยมสวนเพื่อน','แปลงนี้ว่างอยู่');return}
+  showFriendBlackMagicMenu(index);
+};
+
+// keep own/visited plots visually updated after listeners refresh state
+const __returnFromFriendVisitBeforeBlackMagicV142=returnFromFriendVisit;
+returnFromFriendVisit=function(){
+  const result=__returnFromFriendVisitBeforeBlackMagicV142();
+  injectBlackMagicIntoVisiblePlots();
+  return result;
+};
+
