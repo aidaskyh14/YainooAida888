@@ -5375,19 +5375,39 @@ function ensureDogState(target){
   if(!target.specials||typeof target.specials!=="object")target.specials={};
   target.specials.wormKillerSpray=Math.max(0,Math.floor(Number(target.specials.wormKillerSpray)||0));
   const now=gameNow();
+
   target.dogs=target.dogs.map(dog=>{
-    const typeKey=DOG_TYPES[dog?.typeKey]?dog.typeKey:"dog1",placedHotel=Boolean(dog?.placedHotel),placedAt=Math.max(0,Number(dog?.placedAt)||0);
+    const typeKey=DOG_TYPES[dog?.typeKey]?dog.typeKey:"dog1";
+    const placedHotel=Boolean(dog?.placedHotel);
+    const placedAt=Math.max(0,Number(dog?.placedAt)||0);
+
+    /* IMPORTANT V14.1:
+       Preserve hotelPen when normalizing.
+       Old code rebuilt the dog object without hotelPen, causing every dog to default back to pen 1. */
+    const hotelPen=placedHotel?(Number(dog?.hotelPen)===2?2:1):0;
+
     const drops=(Array.isArray(dog?.drops)?dog.drops.filter(Boolean):[]).map(drop=>({
-      id:String(drop?.id||newDogInstanceId()),itemId:String(drop?.itemId||""),x:Number(drop?.x)||50,y:Number(drop?.y)||65,createdAt:Math.max(0,Number(drop?.createdAt)||0)
+      id:String(drop?.id||newDogInstanceId()),
+      itemId:String(drop?.itemId||""),
+      x:Number(drop?.x)||50,
+      y:Number(drop?.y)||65,
+      createdAt:Math.max(0,Number(drop?.createdAt)||0)
     })).filter(drop=>DOG_DROP_POOL.some(item=>item.id===drop.itemId)).slice(0,DOG_DROP_MAX_PENDING);
+
     return{
-      id:String(dog?.id||newDogInstanceId()),typeKey,customName:String(dog?.customName||"").slice(0,20),placedHotel,placedAt,
+      id:String(dog?.id||newDogInstanceId()),
+      typeKey,
+      customName:String(dog?.customName||"").slice(0,20),
+      placedHotel,
+      hotelPen,
+      placedAt,
       expiresAt:placedHotel?Math.max(Number(dog?.expiresAt)||0,placedAt+DOG_LIFETIME_MS):0,
       nextFeedAt:placedHotel?Math.max(0,Number(dog?.nextFeedAt)||placedAt):0,
       nextDropAt:placedHotel?Math.max(0,Number(dog?.nextDropAt)||placedAt+DOG_DROP_INTERVAL_MS):0,
       drops
     };
   }).filter(dog=>!(dog.placedHotel&&dog.expiresAt>0&&dog.expiresAt<=now));
+
   return target;
 }
 const __normalizeStateBeforeDogsV10=normalizeState;
@@ -7580,4 +7600,111 @@ placeDogInHotel=async function(dogId,pen=1){
   }catch(error){
     message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่");
   }
+};
+
+/* ======================================================================
+   V14.1 — REAL TWO-PEN FIX
+   1) hotelPen survives normalizeState / ensureDogState
+   2) collect-all only affects current pen
+   ====================================================================== */
+
+async function collectAllDogDropsCurrentPen(){
+  if(!cloudReady){
+    message("เก็บของดรอปไม่ได้","ยังเชื่อม Firebase ไม่สำเร็จ กรุณารอสักครู่แล้วลองใหม่");
+    return;
+  }
+
+  const pen=currentDogHotelPen===2?2:1;
+  showDropBasketWorking("scene");
+
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    let next,summary={},badDropCount=0,unknownCount=0,collectedCount=0;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureDogHotelPenState(s);
+      ensureDogDropRewardContainers(s);
+
+      const dogs=(s.dogs||[]).filter(d=>d?.placedHotel&&dogPenOf(d)===pen);
+
+      dogs.forEach(dog=>{
+        const keep=[];
+        (Array.isArray(dog.drops)?dog.drops:[]).forEach(drop=>{
+          const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);
+
+          if(!item){
+            keep.push(drop);
+            unknownCount++;
+            return;
+          }
+
+          collectedCount++;
+
+          if(item.type==="badDrop"){
+            badDropCount++;
+            return;
+          }
+
+          applyDogDropRewardSafe(s,item);
+          if(!summary[item.id])summary[item.id]={name:item.name,qty:0};
+          summary[item.id].qty+=Math.max(0,Math.floor(Number(item.qty)||0));
+        });
+
+        /* clear only drops from dogs in this pen */
+        dog.drops=keep;
+      });
+
+      if(!collectedCount&&unknownCount===0)throw new Error(`คอก ${pen} ยังไม่มีของดรอปให้เก็บ`);
+
+      next=cloneData(s);
+
+      tx.set(ref,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    renderDogHotelDropsForPen();
+
+    const parts=[];
+    if(Object.keys(summary).length)parts.push(dropSummaryHTML(summary));
+    if(badDropCount)parts.push(`<div>🐛 หนอนไจแอนท์ ×${badDropCount} — ไม่เข้ากระเป๋า</div>`);
+    if(unknownCount)parts.push(`<div>⚠️ มีของดรอปเก่า ${unknownCount} ชิ้นที่ยังไม่ถูกลบ</div>`);
+
+    message(
+      `🧺 เก็บของดรอปคอก ${pen} แล้ว`,
+      parts.join("")||`เก็บของดรอปคอก ${pen} เรียบร้อย`
+    );
+  }catch(error){
+    console.warn("collect dog drops current pen",error);
+    message("เก็บของดรอปไม่ได้",error?.message||"กรุณาลองใหม่");
+  }finally{
+    hideDropBasketWorking();
+  }
+}
+
+/* Route every dog-hotel basket action to current-pen collector */
+const __renderDogHotelSceneBeforePenCollectV141=renderDogHotelScene;
+renderDogHotelScene=function(){
+  const result=__renderDogHotelSceneBeforePenCollectV141();
+  if(currentScene!=="dogHotel")return result;
+
+  const basket=$("dogPenCollectAllBtn");
+  if(basket)basket.onclick=collectAllDogDropsCurrentPen;
+
+  const overflow=$("dogHotelDropOverflow");
+  if(overflow)overflow.onclick=collectAllDogDropsCurrentPen;
+
+  return result;
 };
