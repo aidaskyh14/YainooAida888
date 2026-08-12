@@ -1690,3 +1690,83 @@ button{touch-action:manipulation}
   .weather-clock,.rain-status{left:49%!important;width:20%!important}
   .hud-menu-button{width:28%!important}
 }
+
+/* ======================================================================
+   V13.3 — โปรไฟล์ไทยสวยขึ้น + โรงแรมหมาโหมดกันค้าง
+   ====================================================================== */
+
+/* ให้การ์ดโปรไฟล์เป็นจุดเด่นที่สุด */
+.profile-hud-card{
+  width:47%!important;
+  height:16.2%!important;
+}
+
+/* รูปใหญ่ขึ้นอีกเล็กน้อย */
+.profile-hud-card .avatar-button{
+  width:50%!important;
+  height:84%!important;
+}
+
+/* ชื่อ: อยู่กึ่งกลางฝั่งขวา ขยับขวา และใช้ฟอนต์ไทยนุ่มขึ้น */
+.profile-hud-card .profile-name-button{
+  left:53%!important;
+  top:10%!important;
+  width:45%!important;
+  height:35%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  padding:0 2px!important;
+  font-family:"Thonburi","Sukhumvit Set","Ayuthaya","Noto Serif Thai","Noto Sans Thai",serif!important;
+  font-size:clamp(16px,4.5vw,26px)!important;
+  font-weight:900!important;
+  letter-spacing:.15px!important;
+  color:#fff5d9!important;
+  text-shadow:0 2px 3px rgba(23,10,28,.88)!important;
+}
+
+/* กุศล: ไม่มี emoji, ตัวเลขใหญ่และหรู */
+.profile-hud-card .merit-status{
+  left:53%!important;
+  top:50%!important;
+  width:45%!important;
+  height:35%!important;
+  gap:7px!important;
+}
+.profile-hud-card .merit-status span{
+  font-family:"Thonburi","Sukhumvit Set","Ayuthaya","Noto Serif Thai",serif!important;
+  font-size:clamp(9px,2.35vw,13px)!important;
+  font-weight:800!important;
+  color:#f1d9b5!important;
+}
+.profile-hud-card .merit-status strong{
+  font-family:"Georgia","Times New Roman","Thonburi","Ayuthaya",serif!important;
+  font-size:clamp(23px,6.2vw,36px)!important;
+  font-weight:900!important;
+  letter-spacing:1px!important;
+  color:#ffe790!important;
+  text-shadow:
+    0 2px 0 rgba(96,55,22,.85),
+    0 0 10px rgba(255,224,135,.22)!important;
+}
+
+/* โรงแรมหมา: แจ้งเมื่อมีของดรอปจำนวนมาก โดยไม่วาดทุกชิ้นพร้อมกัน */
+.dog-hotel-drop-overflow{
+  position:absolute;
+  z-index:96;
+  left:50%;
+  bottom:7.5%;
+  transform:translateX(-50%);
+  width:min(82%,360px);
+  min-height:38px;
+  padding:6px 10px;
+  border:1.5px solid rgba(245,218,164,.88);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(75,46,79,.96),rgba(40,25,50,.96));
+  color:#fff1cb;
+  font-size:clamp(8px,2.2vw,12px);
+  font-weight:900;
+  box-shadow:0 6px 16px rgba(22,10,28,.42),inset 0 1px rgba(255,245,218,.18);
+}
+.dog-hotel-drop-overflow:active{transform:translateX(-50%) scale(.97)}

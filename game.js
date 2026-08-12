@@ -5656,34 +5656,49 @@ function randomDogDrop(dog){
   return pool[pool.length-1];
 }
 function randomDogDropPoint(dog){const c=dogHotelControllers.get(dog.id);if(c){const pt=DOG_HOTEL_POINTS[c.node]||[50,65];return{x:Math.max(20,Math.min(80,pt[0]+(Math.random()*8-4))),y:Math.max(28,Math.min(84,pt[1]+(Math.random()*6-3)))}}const pt=DOG_HOTEL_POINTS[Math.floor(Math.random()*DOG_HOTEL_POINTS.length)];return{x:pt[0]+(Math.random()*8-4),y:pt[1]+(Math.random()*6-3)}}
-function processDogDrops(){if(!ownState)return;ensureDogState(ownState);const now=gameNow();let changed=false;ownState.dogs.forEach(dog=>{if(!dog.placedHotel||dog.expiresAt<=now)return;if(!Array.isArray(dog.drops))dog.drops=[];let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);if(now<nextAt)return;const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1),room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);for(let i=0;i<createCount;i++){const item=randomDogDrop(dog),pt=randomDogDropPoint(dog),createdAt=nextAt+(i*DOG_DROP_INTERVAL_MS);dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt})}dog.nextDropAt=nextAt+(due*DOG_DROP_INTERVAL_MS);changed=true});if(changed){state=ownState;save()}if(currentScene==="dogHotel")renderDogHotelDrops()}
-function renderDogHotelDrops(){const layer=$("dogHotelDropLayer");if(!layer)return;layer.innerHTML="";placedDogs().forEach(dog=>(dog.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;const btn=document.createElement("button");btn.className="dog-drop-item cat-drop-item";btn.type="button";btn.style.left=`${drop.x}%`;btn.style.top=`${drop.y}%`;btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;btn.onclick=()=>claimDogDrop(dog.id,drop.id);layer.appendChild(btn)}))}
-async function claimDogDrop(dogId,dropId){
-  try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);
-    let next,item,isBadDrop=false;
-    await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(ref);
-      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);
-      if(!dog)throw new Error("ไม่พบน้องหมา");
-      const idx=(dog.drops||[]).findIndex(d=>d.id===dropId);
-      if(idx<0)throw new Error("ของดรอปถูกเก็บไปแล้ว");
-      item=DOG_DROP_POOL.find(x=>x.id===dog.drops[idx].itemId);
-      if(!item)throw new Error("ไม่พบของดรอป");
-      isBadDrop=item.type==="badDrop";
-      if(!isBadDrop)applyPetDropReward(s,item);
-      dog.drops.splice(idx,1);
-      next=s;
-      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-    });
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDrops();
-    if(isBadDrop)message("🐛 หนอนไจแอนท์","เสียใจด้วยนะ หมาของคุณเหมือนจะท้องเสีย");
-    else showWeatherToast(`✨ เก็บ ${item.name} ×${item.qty} เข้ากระเป๋าแล้ว`);
-  }catch(error){
-    message("เก็บของไม่ได้",error.message||"กรุณาลองใหม่");
+function processDogDropsUnsafe(){if(!ownState)return;ensureDogState(ownState);const now=gameNow();let changed=false;ownState.dogs.forEach(dog=>{if(!dog.placedHotel||dog.expiresAt<=now)return;if(!Array.isArray(dog.drops))dog.drops=[];let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);if(now<nextAt)return;const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1),room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);for(let i=0;i<createCount;i++){const item=randomDogDrop(dog),pt=randomDogDropPoint(dog),createdAt=nextAt+(i*DOG_DROP_INTERVAL_MS);dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt})}dog.nextDropAt=nextAt+(due*DOG_DROP_INTERVAL_MS);changed=true});if(changed){state=ownState;save()}if(currentScene==="dogHotel")renderDogHotelDrops()}
+function processDogDrops(){
+  try{return processDogDropsUnsafe()}
+  catch(error){
+    console.warn("processDogDrops recovered",error);
+    return false;
   }
+}
+function renderDogHotelDrops(){
+  const layer=$("dogHotelDropLayer");if(!layer)return;
+  layer.innerHTML="";
+  const allDrops=[];
+  placedDogs().forEach(dog=>(dog.drops||[]).forEach(drop=>allDrops.push({dog,drop})));
+
+  /* ป้องกันเครื่องค้าง: แสดงบนพื้นสูงสุด 60 ชิ้น แต่ของทั้งหมดในข้อมูลยังอยู่ครบ
+     ผู้เล่นสามารถกด "เก็บของดรอปทั้งหมด" เพื่อเก็บทุกชิ้นได้ */
+  const visible=allDrops.slice(0,60),fragment=document.createDocumentFragment();
+  visible.forEach(({dog,drop})=>{
+    const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;
+    const btn=document.createElement("button");
+    btn.className="dog-drop-item cat-drop-item";
+    btn.type="button";
+    btn.style.left=`${Number(drop.x)||50}%`;
+    btn.style.top=`${Number(drop.y)||65}%`;
+    btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;
+    btn.onclick=()=>claimDogDrop(dog.id,drop.id);
+    fragment.appendChild(btn);
+  });
+  layer.appendChild(fragment);
+
+  const overflow=allDrops.length-visible.length;
+  let info=$("dogHotelDropOverflow");
+  if(overflow>0){
+    if(!info){
+      info=document.createElement("button");
+      info.id="dogHotelDropOverflow";
+      info.className="dog-hotel-drop-overflow";
+      info.type="button";
+      info.onclick=collectAllDogDrops;
+      $("sceneInteractiveLayer")?.appendChild(info);
+    }
+    info.textContent=`🧺 มีของดรอปค้าง ${allDrops.length} ชิ้น • แตะเก็บทั้งหมด`;
+  }else if(info)info.remove();
 }
 async function collectAllDogDrops(){
   if(!cloudReady)return;
@@ -6118,12 +6133,42 @@ closeModal=function(){clearDogRosterTimer();return __closeModalBeforeDogRosterV1
 
 renderDogHotelScene=function(){
   if(currentScene!=="dogHotel")return;
-  processDogDrops();
-  setSceneNav({backText:"กลับไปที่แปลง",backAction:returnToFarm,nextText:"เก็บของดรอปทั้งหมด",nextAction:collectAllDogDrops});
-  const count=placedDogs().length;
+
+  /* วาด UI สำคัญก่อนเสมอ ต่อให้ระบบดรอปหรือ motion มีปัญหา
+     ผู้เล่นจะยังมีปุ่มกลับ / เก็บของ / เช็คสมาชิก */
+  stopDogHotelMotion();
+  setSceneNav({
+    backText:"กลับไปที่แปลง",
+    backAction:returnToFarm,
+    nextText:"เก็บของดรอปทั้งหมด",
+    nextAction:collectAllDogDrops
+  });
+
+  let count=0;
+  try{count=placedDogs().length}catch(error){console.warn("dog hotel count",error)}
   $("sceneInteractiveLayer").innerHTML=`<div class="dog-hotel-counter">🐶 น้องหมาในโรงแรม ${count}/${DOG_HOTEL_MAX}</div><button id="dogMemberCheckBtn" class="dog-member-check-button" type="button">เช็คสมาชิกมะหมา</button><div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div><div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;
-  $("dogMemberCheckBtn").onclick=showDogHotelRoster;
-  mountDogHotelPets();renderDogHotelDrops();setTimeout(()=>refreshDogHotelFromCloud(),250);
+  if($("dogMemberCheckBtn"))$("dogMemberCheckBtn").onclick=showDogHotelRoster;
+
+  /* แสดงหมาและของที่มีอยู่ก่อน ไม่รอการคำนวณ catch-up */
+  try{renderDogHotelDrops()}catch(error){console.warn("dog hotel drops paint",error)}
+  requestAnimationFrame(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{mountDogHotelPets()}catch(error){console.warn("dog hotel pets",error)}
+  });
+
+  /* คำนวณของดรอปย้อนหลังหลังจากฉากเปิดแล้ว เพื่อไม่ให้หน้าโรงแรมขาว/ค้าง */
+  setTimeout(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{
+      processDogDrops();
+      renderDogHotelDrops();
+    }catch(error){
+      console.warn("dog hotel drop recovery",error);
+      showWeatherToast("🐶 เปิดโรงแรมได้แล้ว • หากของดรอปเยอะให้กดเก็บทั้งหมด");
+    }
+  },80);
+
+  setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
 };
 
 /* ---------- หนอนไจแอนท์: 20% Giant / 30% ปกติ / 50% ไม่มี ---------- */
