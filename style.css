@@ -1830,3 +1830,103 @@ html.standalone-app .bottom-nav-hotspots{
   opacity:.55;
   pointer-events:none!important;
 }
+
+/* V13.6 — กล่องสุ่มหมายเลข4 */
+.number4-box-card{
+  border-color:rgba(255,211,112,.92)!important;
+  box-shadow:0 8px 22px rgba(62,38,20,.18),inset 0 0 0 1px rgba(255,239,175,.3)!important;
+}
+.number4-box-card .shop-price{color:#8a5b18!important;font-weight:950!important}
+.number4-reward-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin:10px 0;
+}
+.number4-reward-grid>div{
+  display:grid;
+  justify-items:center;
+  gap:4px;
+  padding:9px 5px;
+  border:1px solid rgba(133,93,128,.25);
+  border-radius:14px;
+  background:rgba(255,247,233,.88);
+}
+.number4-reward-grid img{
+  width:min(25vw,110px);
+  aspect-ratio:1/1;
+  object-fit:contain;
+}
+.number4-reward-grid b{font-size:clamp(8px,2.2vw,12px);text-align:center}
+.number4-reward-grid strong{font-size:clamp(18px,5vw,28px);color:#6d3d70}
+
+/* ======================================================================
+   V13.7 — Dog Hotel Pen 2
+   ====================================================================== */
+.dog-pen-choice-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.dog-pen-choice-grid button{
+  min-height:72px;
+  line-height:1.2;
+}
+.dog-pen-choice-grid button small{
+  display:block;
+  margin-top:3px;
+  opacity:.8;
+  font-size:.8em;
+}
+
+/* ======================================================================
+   V13.8 — Dog pen move + utility buttons
+   ====================================================================== */
+.dog-move-pen-button{
+  width:100%;
+  min-height:46px;
+  margin:8px 0;
+  border:1.5px solid rgba(153,111,196,.72);
+  border-radius:14px;
+  background:linear-gradient(180deg,#d9cbff,#a99ad8);
+  color:#38284a;
+  font-weight:950;
+  box-shadow:0 5px 12px rgba(46,30,70,.18),inset 0 1px rgba(255,255,255,.65);
+}
+.dog-move-pen-button:disabled{
+  opacity:.52;
+  filter:grayscale(.25);
+}
+.dog-hotel-utility-row{
+  position:absolute;
+  z-index:98;
+  left:50%;
+  top:7.2%;
+  transform:translateX(-50%);
+  width:min(88%,430px);
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  pointer-events:auto;
+}
+.dog-hotel-utility-row .dog-pen-utility{
+  position:relative!important;
+  inset:auto!important;
+  left:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  width:100%!important;
+  min-height:38px!important;
+  border-radius:999px!important;
+  font-size:clamp(8px,2.15vw,12px)!important;
+  padding:5px 8px!important;
+}
+.dog-pen-collect-button{
+  border:1.5px solid rgba(232,204,150,.86);
+  background:linear-gradient(180deg,rgba(81,52,85,.98),rgba(42,28,52,.98));
+  color:#fff1ca;
+  font-weight:900;
+  box-shadow:0 5px 12px rgba(25,12,31,.32);
+}

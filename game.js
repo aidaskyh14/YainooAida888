@@ -6520,3 +6520,856 @@ returnToFarm=function(){
 
 /* V13.1 HOTFIX — bind HUD now because the original bindEvents() already ran earlier */
 bindHomeHudMenu();
+
+/* ======================================================================
+   V13.6 — กล่องสุ่มหมายเลข4 + Rainy Craft Inventory Fix
+   ====================================================================== */
+
+const NUMBER4_BOX={
+  name:"กล่องสุ่มหมายเลข4",
+  image:"number4-mystery-box.png?v=1",
+  priceMerit:99,
+  quantities:[10,20,30,40,50,60,70,80,90,100]
+};
+
+function ensureNumber4BoxState(s){
+  if(!s)return s;
+  s.number4MysteryBoxes=Math.max(0,Math.floor(Number(s.number4MysteryBoxes)||0));
+  if(!s.coconutRiverItems||typeof s.coconutRiverItems!=="object")s.coconutRiverItems={};
+  if(!Number.isFinite(Number(s.coconutRiverItems.frog4)))s.coconutRiverItems.frog4=0;
+  if(!Number.isFinite(Number(s.coconutRiverItems.fish4)))s.coconutRiverItems.fish4=0;
+  return s;
+}
+
+/* ให้ fresh/normalize ทุกเส้นทางรู้จักกล่องใหม่ โดยไม่ล้างข้อมูลเดิม */
+const __freshBeforeNumber4BoxV136=fresh;
+fresh=function(player){
+  return ensureNumber4BoxState(__freshBeforeNumber4BoxV136(player));
+};
+const __normalizeStateBeforeNumber4BoxV136=normalizeState;
+normalizeState=function(raw,player){
+  return ensureNumber4BoxState(__normalizeStateBeforeNumber4BoxV136(raw,player));
+};
+
+/* ซื้อด้วยกุศลโดยตรง 99 — ซื้อสำเร็จแล้วกล่องเข้ากระเป๋าทันที */
+async function buyNumber4MysteryBox(){
+  if(!cloudReady){message("ยังซื้อไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+  const btn=$("buyNumber4BoxBtn");if(btn)btn.disabled=true;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let next;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureNumber4BoxState(s);
+
+      const merit=Math.max(0,Number(s.merit)||0);
+      if(merit<NUMBER4_BOX.priceMerit)throw new Error(`กุศลไม่พอ ต้องใช้ ${NUMBER4_BOX.priceMerit} กุศล`);
+
+      s.merit=merit-NUMBER4_BOX.priceMerit;
+      s.number4MysteryBoxes=(Number(s.number4MysteryBoxes)||0)+1;
+      next=cloneData(s);
+
+      tx.set(saveRef,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+
+      tx.set(profileRef,{
+        memberKey:currentMemberKey,
+        displayName:currentMember,
+        merit:s.merit,
+        initialized:true,
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    updateMeritUI();
+    message("🎲 ซื้อสำเร็จ",`${NUMBER4_BOX.name} ×1<br>หัก ${NUMBER4_BOX.priceMerit} กุศลแล้ว<br>กล่องเข้า กระเป๋า → กล่องสุ่ม เรียบร้อย`);
+  }catch(error){
+    message("ซื้อกล่องไม่ได้",error.message||"กรุณาลองใหม่");
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
+
+function randomNumber4Qty(){
+  const list=NUMBER4_BOX.quantities;
+  return list[Math.floor(Math.random()*list.length)];
+}
+
+function showNumber4BoxUse(){
+  const s=ensureNumber4BoxState(ownState||state),count=Number(s.number4MysteryBoxes)||0;
+  if(count<1){message("ไม่มีกล่องสุ่ม","ตอนนี้คุณไม่มีกล่องสุ่มหมายเลข4");return}
+  $("modalContent").innerHTML=`<section class="feature-panel mystery-box-open-panel number4-box-open-panel">
+    <img class="shop-animal-img" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}">
+    <h2>${NUMBER4_BOX.name}</h2>
+    <p>มีอยู่ <b>×${count}</b><br>
+    เปิด 1 กล่อง จะสุ่มได้ทั้ง<br>
+    🐸 กบสวนมะพร้าวหมายเลข4 ×10–100<br>
+    🐟 ปลาสวนมะพร้าวหมายเลข4 ×10–100</p>
+    <button id="openNumber4BoxBtn" class="primary-spooky-action" type="button">เปิดกล่อง</button>
+    <button id="cancelNumber4BoxBtn" class="secondary-action" type="button">ยังไม่เปิดตอนนี้</button>
+  </section>`;
+  openModal();
+  $("openNumber4BoxBtn").onclick=openOneNumber4Box;
+  $("cancelNumber4BoxBtn").onclick=()=>inventory("mysteryBoxes");
+}
+
+/* เปิดกล่อง = หักกล่องจากกระเป๋า 1 ก่อน และเพิ่มกบ+ปลาใน transaction เดียว */
+async function openOneNumber4Box(){
+  if(!cloudReady){message("เปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+  const btn=$("openNumber4BoxBtn");if(btn)btn.disabled=true;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    let next,frogQty=0,fishQty=0;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureNumber4BoxState(s);
+
+      if((Number(s.number4MysteryBoxes)||0)<1)throw new Error("กล่องสุ่มหมายเลข4 หมดแล้ว");
+
+      frogQty=randomNumber4Qty();
+      fishQty=randomNumber4Qty();
+
+      s.number4MysteryBoxes-=1;
+      s.coconutRiverItems.frog4=(Number(s.coconutRiverItems.frog4)||0)+frogQty;
+      s.coconutRiverItems.fish4=(Number(s.coconutRiverItems.fish4)||0)+fishQty;
+      next=cloneData(s);
+
+      tx.set(saveRef,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+
+    $("modalContent").innerHTML=`<section class="feature-panel cat-box-result number4-box-result">
+      <h2>🎉 ยินดีด้วยค่ะ</h2>
+      <img class="cat-result-icon" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}">
+      <h3>คุณได้รับ</h3>
+      <div class="number4-reward-grid">
+        <div><img src="${COCONUT_RIVER_ITEMS.frog4.image}" alt="กบสวนมะพร้าวหมายเลข4"><b>กบสวนมะพร้าวหมายเลข4</b><strong>×${frogQty}</strong></div>
+        <div><img src="${COCONUT_RIVER_ITEMS.fish4.image}" alt="ปลาสวนมะพร้าวหมายเลข4"><b>ปลาสวนมะพร้าวหมายเลข4</b><strong>×${fishQty}</strong></div>
+      </div>
+      <p>เข้ากระเป๋า → อื่นๆจากสวนมะพร้าว เรียบร้อยแล้ว</p>
+      <button id="number4BoxDoneBtn" class="primary-spooky-action" type="button">เรียบร้อย</button>
+    </section>`;
+    $("number4BoxDoneBtn").onclick=()=>inventory("mysteryBoxes");
+  }catch(error){
+    message("เปิดกล่องไม่ได้",error.message||"กรุณาลองใหม่");
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
+
+/* ร้านค้า: เพิ่มเป็นการ์ดที่ 4 ในหมวดกล่องสุ่ม */
+const __showShopBeforeNumber4BoxV136=showShop;
+showShop=function(tab="animals"){
+  if(tab!=="mystery")return __showShopBeforeNumber4BoxV136(tab);
+  if(guardResting())return;
+
+  const s=ensureNumber4BoxState(ensureDogState(ensureCatState(ownState||state)));
+  ensureDailyLimitsFor(s);
+
+  const jellyUsed=Number(s.dailyLimits.jellyBoxes)||0;
+  const jellyRemain=Math.max(0,JELLY_BOX_DAILY_LIMIT-jellyUsed);
+  const jellyMax=Math.min(JELLY_BOX_DAILY_LIMIT,jellyRemain);
+
+  const jellyCard=`<article class="shop-card mystery-box-card">
+    <img class="shop-animal-img" src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}">
+    <b>${JELLY_BOX.name}</b><small class="shop-price">${JELLY_BOX.price} ⭐️ / กล่อง</small>
+    <div class="mystery-rules"><strong>สูงสุด ${JELLY_BOX_DAILY_LIMIT} กล่อง/วัน</strong><span>โอกาสแมงกะพรุน 10%</span><span>วันนี้ใช้ ${jellyUsed}/${JELLY_BOX_DAILY_LIMIT}</span></div>
+    ${jellyMax>0?qtyInput("jellyBoxQty",jellyMax):'<div class="mystery-qty-spacer"></div>'}
+    <button class="shop-worship-button" id="buyJellyBoxBtn" type="button" ${jellyMax<=0?"disabled":""}>${jellyMax<=0?"ครบลิมิตวันนี้แล้ว":"ส่งคำขอซื้อ"}</button>
+  </article>`;
+
+  const catCard=`<article class="shop-card mystery-box-card cat-box-card">
+    <img class="shop-animal-img" src="${CAT_BOX.image}" alt="${CAT_BOX.name}">
+    <b>${CAT_BOX.name}</b><small class="shop-price">${CAT_BOX.price} ⭐️ / กล่อง</small>
+    <div class="mystery-rules"><strong>ซื้อกี่กล่องก็ได้</strong><span>โอกาสได้แมว 25%</span><span>ไม่ออกแมว → ปลอบใจ 3 จาก 7</span></div>
+    <div class="mystery-qty-spacer"></div><button class="shop-worship-button" id="buyCatBoxBtn" type="button">ส่งคำขอซื้อ 1 กล่อง</button>
+  </article>`;
+
+  const dogCard=`<article class="shop-card mystery-box-card dog-box-card">
+    <img class="shop-animal-img" src="${DOG_BOX.image}" alt="${DOG_BOX.name}">
+    <b>${DOG_BOX.name}</b><small class="shop-price">${DOG_BOX.price} ⭐️ / กล่อง</small>
+    <div class="mystery-rules"><strong>ซื้อกี่กล่องก็ได้</strong><span>โอกาสได้น้องหมา 20%</span><span>ไม่ออกหมา → ปลอบใจ 3 จาก 7</span></div>
+    <div class="mystery-qty-spacer"></div><button class="shop-worship-button" id="buyDogBoxBtn" type="button">ส่งคำขอซื้อ 1 กล่อง</button>
+  </article>`;
+
+  const number4Card=`<article class="shop-card mystery-box-card number4-box-card">
+    <img class="shop-animal-img" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}">
+    <b>${NUMBER4_BOX.name}</b>
+    <small class="shop-price">${NUMBER4_BOX.priceMerit} กุศล / กล่อง</small>
+    <div class="mystery-rules">
+      <strong>ซื้อแล้วเข้ากระเป๋าทันที</strong>
+      <span>ได้กบ #4 ×10–100</span>
+      <span>และปลา #4 ×10–100 ทุกกล่อง</span>
+    </div>
+    <div class="mystery-qty-spacer"></div>
+    <button class="shop-worship-button" id="buyNumber4BoxBtn" type="button" ${(Number(s.merit)||0)<NUMBER4_BOX.priceMerit?"disabled":""}>
+      ${(Number(s.merit)||0)<NUMBER4_BOX.priceMerit?"กุศลไม่พอ":"ซื้อ 99 กุศล"}
+    </button>
+  </article>`;
+
+  $("modalContent").innerHTML=`<section class="feature-panel shop-panel">
+    <button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือน</button>
+    <h2>🕯️ ร้านค้า</h2>
+    <div class="shop-category-tabs shop-category-tabs-v2">
+      <button type="button" data-shop-tab="animals">🐾 สัตว์วิญญาณ</button>
+      <button type="button" data-shop-tab="specials">🎁 ของพิเศษ</button>
+      <button type="button" data-shop-tab="mystery" class="active">🎲 กล่องสุ่ม</button>
+    </div>
+    <div class="shop-grid mystery-shop-grid">${jellyCard}${catCard}${dogCard}${number4Card}</div>
+  </section>`;
+
+  $("stableEntranceBtn").onclick=()=>{closeModal();openScene("chicken")};
+  document.querySelectorAll("[data-shop-tab]").forEach(btn=>btn.onclick=()=>showShop(btn.dataset.shopTab));
+  if($("buyJellyBoxBtn"))$("buyJellyBoxBtn").onclick=()=>requestMysteryBoxPurchase(Number($("jellyBoxQty")?.value)||1);
+  if($("buyCatBoxBtn"))$("buyCatBoxBtn").onclick=requestCatMysteryBoxPurchase;
+  if($("buyDogBoxBtn"))$("buyDogBoxBtn").onclick=requestDogMysteryBoxPurchase;
+  if($("buyNumber4BoxBtn"))$("buyNumber4BoxBtn").onclick=buyNumber4MysteryBox;
+  openModal();
+};
+
+/* กระเป๋า: เพิ่มกล่องใหม่ในแท็บกล่องสุ่ม */
+const __inventoryBeforeNumber4BoxV136=inventory;
+inventory=function(tab="crops"){
+  if(tab!=="mysteryBoxes")return __inventoryBeforeNumber4BoxV136(tab);
+  if(guardResting())return;
+
+  const s=ensureNumber4BoxState(ensureDogState(ensureCatState(ownState||state)));
+  const tabs=[
+    ["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],
+    ["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],
+    ["boatDrinks","🩷 เสบียงเรือ"],["rainyMenus","🌧️ เมนูหน้าฝน"],["specials","🕯️ ของพิเศษ"],
+    ["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"],["cats","🐱 น้องแมว"],["dogs","🐶 น้องหมา"]
+  ];
+
+  const body=`
+    <div class="inventory-item special-coconut-item"><img src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><span>${JELLY_BOX.name}</span><b>×${s.mysteryBoxes||0}</b>${Number(s.mysteryBoxes)>0?'<button id="useJellyBoxBtn" type="button">ใช้งาน</button>':""}</div>
+    <div class="inventory-item special-coconut-item"><img src="${CAT_BOX.image}" alt="${CAT_BOX.name}"><span>${CAT_BOX.name}<small style="display:block">25% ได้แมว</small></span><b>×${s.catMysteryBoxes||0}</b>${Number(s.catMysteryBoxes)>0||s.pendingCatBoxReward?'<button id="useCatBoxBtn" type="button">ใช้งาน</button>':""}</div>
+    <div class="inventory-item special-coconut-item"><img src="${DOG_BOX.image}" alt="${DOG_BOX.name}"><span>${DOG_BOX.name}<small style="display:block">20% ได้น้องหมา</small></span><b>×${s.dogMysteryBoxes||0}</b>${Number(s.dogMysteryBoxes)>0||s.pendingDogBoxReward?'<button id="useDogBoxBtn" type="button">ใช้งาน</button>':""}</div>
+    <div class="inventory-item special-coconut-item number4-box-inventory"><img src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}"><span>${NUMBER4_BOX.name}<small style="display:block">สุ่มกบ #4 + ปลา #4</small></span><b>×${s.number4MysteryBoxes||0}</b>${Number(s.number4MysteryBoxes)>0?'<button id="useNumber4BoxBtn" type="button">ใช้งาน</button>':""}</div>`;
+
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel">
+    <h2>🎒 กระเป๋าผี</h2>
+    <div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div>
+    <div class="inventory-grid">${body}</div>
+  </section>`;
+
+  document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+  if($("useJellyBoxBtn"))$("useJellyBoxBtn").onclick=showJellyBoxUse;
+  if($("useCatBoxBtn"))$("useCatBoxBtn").onclick=showCatBoxUse;
+  if($("useDogBoxBtn"))$("useDogBoxBtn").onclick=showDogBoxUse;
+  if($("useNumber4BoxBtn"))$("useNumber4BoxBtn").onclick=showNumber4BoxUse;
+  openModal();
+};
+
+/* ----------------------------------------------------------------------
+   Rainy Menu FIX
+   ทุกครั้งที่คราฟสำเร็จ transaction จะ +1 จากค่าบน Cloud แล้วอ่าน Cloud
+   กลับมายืนยันหลัง commit เพื่อไม่ให้คราฟติดกัน 2–3 ครั้งแล้ว local state ทับจำนวน
+   ---------------------------------------------------------------------- */
+craftRainyMenu=async function(id){
+  const recipe=RAINY_MENU_BY_ID[id];if(!recipe||!cloudReady)return;
+  const button=$("confirmRainyCraftBtn");if(button)button.disabled=true;
+
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let success=false,newCount=0;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureV4State(s);
+      ensureRainySeasonState(s);
+
+      if(!canCraftRainyMenu(recipe,s))throw new Error("วัตถุดิบไม่ครบตามสูตรแล้ว กรุณาเปิดเมนูใหม่");
+
+      Object.entries(recipe.needRiver||{}).forEach(([key,qty])=>s.coconutRiverItems[key]=(Number(s.coconutRiverItems[key])||0)-qty);
+      Object.entries(recipe.needBag||{}).forEach(([key,qty])=>s.bag[key]=(Number(s.bag[key])||0)-qty);
+      Object.entries(recipe.needProducts||{}).forEach(([key,qty])=>s.animalProducts[key]=(Number(s.animalProducts[key])||0)-qty);
+
+      success=Math.random()*100<recipe.chance;
+      if(success){
+        const before=Math.max(0,Math.floor(Number(s.rainyMenus[id])||0));
+        s.rainyMenus[id]=before+1;
+        newCount=s.rainyMenus[id];
+        s.merit=(Number(s.merit)||0)+recipe.meritReward;
+        incrementMissionOn(s,"craftFood",1);
+      }
+
+      tx.set(saveRef,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+
+      if(success){
+        tx.set(profileRef,{
+          memberKey:currentMemberKey,
+          displayName:currentMember,
+          merit:s.merit,
+          initialized:true,
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      }
+    });
+
+    /* ใช้ข้อมูลจาก Cloud หลัง commit เป็นตัวจริง ห้ามเอา local เก่าทับ */
+    const verifySnap=await fs.getDoc(saveRef);
+    if(!verifySnap.exists())throw new Error("ตรวจสอบกระเป๋าหลังคราฟไม่สำเร็จ");
+    const verified=normalizeState(verifySnap.data(),currentMember);
+    assertCurrentCloudSession(verifySnap.data(),currentMember);
+    ownState=verified;
+    state=ownState;
+    saveLocalOnly(ownState);
+    updateMeritUI();
+
+    if(success){
+      const verifiedCount=rainyMenuCount(id,verified);
+      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
+        <h2>✨ คราฟสำเร็จ!</h2>
+        <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
+        <h3>${safeHtml(recipe.name)}</h3>
+        <p>เมนูหน้าฝนเข้ากระเป๋า ×1<br>
+        ตอนนี้มีทั้งหมด <b>×${verifiedCount}</b><br>
+        ได้รับ +${recipe.meritReward} กุศล</p>
+      </section>`;
+    }else{
+      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
+        <h2>💨 คราฟไม่สำเร็จ</h2>
+        <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
+        <h3>${safeHtml(recipe.name)}</h3>
+        <p>วัตถุดิบทั้งหมดถูกใช้ไปแล้ว<br>ไม่ได้รับเมนูและไม่ได้รับกุศล</p>
+      </section>`;
+    }
+  }catch(error){
+    message("คราฟเมนูหน้าฝนไม่ได้",error.message||"กรุณาลองใหม่");
+  }finally{
+    if(button)button.disabled=false;
+  }
+};
+
+/* ======================================================================
+   V13.7 — DOG HOTEL PEN 2
+   ====================================================================== */
+
+const DOG_HOTEL_2_IMAGE="dog-hotel-background-2.png?v=1";
+let currentDogHotelPen=1;
+
+function dogPenOf(dog){
+  if(!dog?.placedHotel)return 0;
+  const pen=Number(dog.hotelPen);
+  return pen===2?2:1;
+}
+
+function ensureDogHotelPenState(s){
+  if(!s)return s;
+  ensureDogState(s);
+  s.dogs=(s.dogs||[]).map(dog=>{
+    if(dog?.placedHotel){
+      dog.hotelPen=dogPenOf(dog)||1;
+    }else{
+      dog.hotelPen=0;
+    }
+    return dog;
+  });
+  return s;
+}
+
+/* migrate old hotel dogs into pen 1 automatically */
+const __normalizeStateBeforeDogPen2V137=normalizeState;
+normalizeState=function(raw,player){
+  return ensureDogHotelPenState(__normalizeStateBeforeDogPen2V137(raw,player));
+};
+const __freshBeforeDogPen2V137=fresh;
+fresh=function(player){
+  return ensureDogHotelPenState(__freshBeforeDogPen2V137(player));
+};
+
+function dogsInHotelPen(pen,s=ownState||state){
+  ensureDogHotelPenState(s);
+  return (s?.dogs||[]).filter(d=>d?.placedHotel&&dogPenOf(d)===pen);
+}
+
+function dogHotelPenCount(pen,s=ownState||state){
+  return dogsInHotelPen(pen,s).length;
+}
+
+function setDogHotelPen(pen){
+  currentDogHotelPen=pen===2?2:1;
+  if(currentScene!=="dogHotel")return;
+  renderDogHotelScene();
+}
+
+/* Placement confirm now asks which pen */
+showDogPlaceConfirm=function(dogId){
+  const s=ensureDogHotelPenState(ownState||state);
+  const dog=s.dogs.find(d=>d.id===dogId);
+  if(!dog)return;
+
+  const c1=dogHotelPenCount(1,s),c2=dogHotelPenCount(2,s);
+  $("modalContent").innerHTML=`<section class="feature-panel cat-place-panel">
+    <img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}">
+    <h2>${safeHtml(dogDisplayName(dog))}</h2>
+    <p>เลือกโรงแรมที่จะวางน้องหมา</p>
+    <div class="dog-pen-choice-grid">
+      <button id="placeDogHotel1Btn" class="primary-spooky-action" type="button" ${c1>=DOG_HOTEL_MAX?"disabled":""}>
+        คอก 1 • ${c1}/${DOG_HOTEL_MAX}<br><small>${c1>=DOG_HOTEL_MAX?"คอกเต็ม":"วางที่คอก 1"}</small>
+      </button>
+      <button id="placeDogHotel2Btn" class="primary-spooky-action" type="button" ${c2>=DOG_HOTEL_MAX?"disabled":""}>
+        คอก 2 • ${c2}/${DOG_HOTEL_MAX}<br><small>${c2>=DOG_HOTEL_MAX?"คอกเต็ม":"วางที่คอก 2"}</small>
+      </button>
+    </div>
+    <button id="releaseDogHereBtn" class="danger-action" type="button">ปล่อยวัด</button>
+  </section>`;
+  if($("placeDogHotel1Btn"))$("placeDogHotel1Btn").onclick=()=>placeDogInHotel(dogId,1);
+  if($("placeDogHotel2Btn"))$("placeDogHotel2Btn").onclick=()=>placeDogInHotel(dogId,2);
+  $("releaseDogHereBtn").onclick=()=>releaseDog(dogId);
+  openModal();
+};
+
+placeDogInHotel=async function(dogId,pen=1){
+  pen=pen===2?2:1;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);
+    let next;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureDogHotelPenState(s);
+
+      const dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
+      if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
+
+      const count=(s.dogs||[]).filter(d=>d?.placedHotel&&dogPenOf(d)===pen).length;
+      if(count>=DOG_HOTEL_MAX)throw new Error(`โรงแรมหมาคอก ${pen} เต็มแล้ว วางได้สูงสุด ${DOG_HOTEL_MAX} ตัว`);
+
+      const now=gameNow();
+      Object.assign(dog,{
+        placedHotel:true,
+        hotelPen:pen,
+        placedAt:now,
+        expiresAt:now+DOG_LIFETIME_MS,
+        nextFeedAt:now,
+        nextDropAt:now+DOG_DROP_INTERVAL_MS,
+        drops:[]
+      });
+      next=cloneData(s);
+      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    closeModal();
+    currentDogHotelPen=pen;
+    openScene("dogHotel");
+  }catch(error){
+    message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่");
+  }
+};
+
+/* Render only dogs and drops belonging to current pen */
+function renderDogHotelDropsForPen(){
+  const layer=$("dogHotelDropLayer");if(!layer)return;
+  layer.innerHTML="";
+  const allDrops=[];
+  dogsInHotelPen(currentDogHotelPen).forEach(dog=>(dog.drops||[]).forEach(drop=>allDrops.push({dog,drop})));
+  const visible=allDrops.slice(0,60),fragment=document.createDocumentFragment();
+
+  visible.forEach(({dog,drop})=>{
+    const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(!item)return;
+    const btn=document.createElement("button");
+    btn.className="dog-drop-item cat-drop-item";
+    btn.type="button";
+    btn.dataset.dogDropId=String(drop.id);
+    btn.style.left=`${Number(drop.x)||50}%`;
+    btn.style.top=`${Number(drop.y)||65}%`;
+    btn.innerHTML=`<img src="${item.image}" alt="${safeHtml(item.name)}"><small>${safeHtml(item.name)}</small>`;
+    btn.onclick=()=>claimDogDrop(dog.id,drop.id);
+    fragment.appendChild(btn);
+  });
+  layer.appendChild(fragment);
+
+  const overflow=allDrops.length-visible.length;
+  let info=$("dogHotelDropOverflow");
+  if(overflow>0){
+    if(!info){
+      info=document.createElement("button");
+      info.id="dogHotelDropOverflow";
+      info.className="dog-hotel-drop-overflow";
+      info.type="button";
+      info.onclick=collectAllDogDrops;
+      $("sceneInteractiveLayer")?.appendChild(info);
+    }
+    info.textContent=`🧺 คอก ${currentDogHotelPen} มีของดรอป ${allDrops.length} ชิ้น • แตะเก็บทั้งหมด`;
+  }else if(info)info.remove();
+}
+
+function mountDogHotelPetsForPen(){
+  const layer=$("dogHotelPetLayer");if(!layer)return;
+  layer.innerHTML="";
+  stopDogHotelMotion();
+  const dogs=dogsInHotelPen(currentDogHotelPen);
+  dogs.forEach((dog,index)=>{
+    const type=dogType(dog);
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="dog-hotel-pet";
+    btn.dataset.dogId=dog.id;
+    btn.innerHTML=`<div class="dog-hotel-pet-sprite" style="background-image:url('${dogWalkSprite(type)}')"></div>`;
+    const pos=dogHotelStartPosition(index);
+    btn.style.left=`${pos.x}%`;
+    btn.style.top=`${pos.y}%`;
+    btn.onclick=()=>showDogDetails(dog.id);
+    layer.appendChild(btn);
+  });
+  startDogHotelMotion();
+}
+
+renderDogHotelScene=function(){
+  if(currentScene!=="dogHotel")return;
+  ensureDogHotelPenState(ownState||state);
+  stopDogHotelMotion();
+
+  $("sceneScreen").style.backgroundImage=currentDogHotelPen===2
+    ?`url("${DOG_HOTEL_2_IMAGE}")`
+    :`url("dog-hotel-background.png?v=1")`;
+
+  setSceneNav({
+    backText:currentDogHotelPen===2?"กลับคอกแรก":"กลับไปที่แปลง",
+    backAction:currentDogHotelPen===2?()=>setDogHotelPen(1):returnToFarm,
+    nextText:currentDogHotelPen===1?"ไป โรงแรมหมา2":"กลับไปที่แปลงผัก",
+    nextAction:currentDogHotelPen===1?()=>setDogHotelPen(2):returnToFarm
+  });
+
+  const count=dogHotelPenCount(currentDogHotelPen);
+  $("sceneInteractiveLayer").innerHTML=`
+    <div class="dog-hotel-counter">🐶 โรงแรมหมาคอก ${currentDogHotelPen} • ${count}/${DOG_HOTEL_MAX}</div>
+    <button id="dogMemberCheckBtn" class="dog-member-check-button" type="button">เช็คสมาชิกมะหมา</button>
+    <div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div>
+    <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;
+
+  if($("dogMemberCheckBtn"))$("dogMemberCheckBtn").onclick=showDogHotelRoster;
+
+  try{renderDogHotelDropsForPen()}catch(error){console.warn("dog pen drops paint",error)}
+  requestAnimationFrame(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{mountDogHotelPetsForPen()}catch(error){console.warn("dog pen pets",error)}
+  });
+
+  setTimeout(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{
+      processDogDrops();
+      renderDogHotelDropsForPen();
+    }catch(error){console.warn("dog hotel pen recovery",error)}
+  },80);
+
+  setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
+};
+
+/* Keep current pen when redraw helpers are called */
+renderDogHotelDrops=renderDogHotelDropsForPen;
+mountDogHotelPets=mountDogHotelPetsForPen;
+
+/* Inventory status should show which pen */
+const __inventoryBeforeDogPen2V137=inventory;
+inventory=function(tab="crops"){
+  if(tab!=="dogs")return __inventoryBeforeDogPen2V137(tab);
+  if(guardResting())return;
+  const s=ensureDogHotelPenState(ensureDogState(ensureCatState(ownState||state)));
+  const tabs=[["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],["boatDrinks","🩷 เสบียงเรือ"],["rainyMenus","🌧️ เมนูหน้าฝน"],["specials","🕯️ ของพิเศษ"],["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"],["cats","🐱 น้องแมว"],["dogs","🐶 น้องหมา"]];
+
+  const body=s.dogs.length?s.dogs.map(d=>{
+    const pen=dogPenOf(d);
+    return `<div class="inventory-item cat-inventory-item">
+      <img src="${dogType(d).image}" alt="${dogType(d).name}">
+      <span>${safeHtml(dogDisplayName(d))}
+        <small>${safeHtml(dogType(d).name)} • ${pen?`อยู่คอก ${pen}`:"อยู่ในกระเป๋า"}</small>
+      </span>
+      <b>${pen?`🏨${pen}`:"🐶"}</b>
+      <div class="cat-inventory-actions">
+        ${pen?'<button type="button" disabled>วางแล้ว</button>':`<button type="button" data-place-dog="${d.id}">วางน้องหมา</button>`}
+        <button class="danger-action" type="button" data-release-dog="${d.id}">ปล่อยวัด</button>
+      </div>
+    </div>`;
+  }).join(""):'<p class="empty-feature">ยังไม่มีน้องหมาในกระเป๋า</p>';
+
+  $("modalContent").innerHTML=`<section class="feature-panel inventory-panel">
+    <h2>🎒 กระเป๋าผี</h2>
+    <div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,label])=>`<button type="button" data-inventory-tab="${k}" class="${k===tab?"active":""}">${label}</button>`).join("")}</div>
+    <div class="inventory-grid">${body}</div>
+  </section>`;
+
+  document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+  document.querySelectorAll("[data-place-dog]").forEach(b=>b.onclick=()=>showDogPlaceConfirm(b.dataset.placeDog));
+  document.querySelectorAll("[data-release-dog]").forEach(b=>b.onclick=()=>releaseDog(b.dataset.releaseDog));
+  openModal();
+};
+
+/* Opening Dog Hotel always starts at pen 1 */
+const __openSceneBeforeDogPen2V137=openScene;
+openScene=function(sceneName){
+  if(sceneName==="dogHotel"&&currentScene!=="dogHotel")currentDogHotelPen=1;
+  return __openSceneBeforeDogPen2V137(sceneName);
+};
+
+/* ======================================================================
+   V13.8 — DOG HOTEL PEN MOVE + FINAL TWO-PEN UI
+   ต่อจาก V13.7 และคงระบบกล่องสุ่มหมายเลข4 จาก V13.6
+   ====================================================================== */
+
+/* ใช้ renderer motion เดิม แต่กรองเฉพาะหมาในคอกปัจจุบัน */
+mountDogHotelPetsForPen=async function(){
+  const layer=$("dogHotelPetLayer");if(!layer)return;
+  stopDogHotelMotion();
+  layer.innerHTML="";
+
+  const dogs=dogsInHotelPen(currentDogHotelPen);
+  for(let i=0;i<dogs.length;i++){
+    const dog=dogs[i];
+    const node=i%DOG_HOTEL_POINTS.length;
+    const [x,y]=DOG_HOTEL_POINTS[node];
+    const el=document.createElement("button");
+
+    el.type="button";
+    el.className="dog-hotel-pet";
+    el.style.left=`${x}%`;
+    el.style.top=`${y}%`;
+    el.dataset.dogId=dog.id;
+    el.innerHTML=`<img class="dog-hotel-fallback-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+      <span class="dog-hotel-sprite"></span>
+      <span class="dog-hotel-name"></span>`;
+
+    el.querySelector(".dog-hotel-name").textContent=dogDisplayName(dog);
+    el.onclick=()=>showPlacedDogMenu(dog.id);
+    layer.appendChild(el);
+
+    const sprite=el.querySelector(".dog-hotel-sprite");
+    const fallback=el.querySelector(".dog-hotel-fallback-icon");
+    const c={id:dog.id,el,sprite,node,timer:0,frameTimer:0,motion:null,base:"",fallback};
+    dogHotelControllers.set(dog.id,c);
+
+    resolveDogAssetBase(dogType(dog).number).then(base=>{
+      if(!dogHotelControllers.has(dog.id)||currentScene!=="dogHotel")return;
+      c.base=base;
+      dogSetPose(c,Math.floor(Math.random()*12));
+      if(fallback)fallback.classList.add("sprite-ready");
+      c.timer=setTimeout(()=>moveDogHotelPet(c),900+Math.random()*1800);
+    }).catch(()=>{});
+  }
+};
+mountDogHotelPets=mountDogHotelPetsForPen;
+
+/* ย้ายหมาระหว่างคอก โดยไม่รีเซ็ตอายุ ความหิว หรือของดรอป */
+async function moveDogToHotelPen(dogId,targetPen){
+  targetPen=targetPen===2?2:1;
+  if(!cloudReady){message("ย้ายคอกไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+
+  const btn=$("moveDogPenBtn");if(btn)btn.disabled=true;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    let next,dogName="";
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(snap.data(),currentMember);
+      assertCurrentCloudSession(snap.data(),currentMember);
+      ensureDogHotelPenState(s);
+
+      const dog=(s.dogs||[]).find(d=>d.id===dogId);
+      if(!dog||!dog.placedHotel)throw new Error("ไม่พบน้องหมาในโรงแรม");
+
+      const currentPen=dogPenOf(dog);
+      if(currentPen===targetPen)throw new Error(`น้องอยู่คอก ${targetPen} อยู่แล้ว`);
+
+      const targetCount=(s.dogs||[]).filter(d=>d?.placedHotel&&dogPenOf(d)===targetPen).length;
+      if(targetCount>=DOG_HOTEL_MAX)throw new Error(`คอก ${targetPen} เต็มแล้ว ${targetCount}/${DOG_HOTEL_MAX}`);
+
+      dog.hotelPen=targetPen;
+      dogName=dogDisplayName(dog);
+      next=cloneData(s);
+
+      tx.set(ref,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    });
+
+    ownState=normalizeState(next,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+    closeModal();
+
+    /* อยู่หน้าเดิมก่อน จะเห็นว่าน้องถูกย้ายออกจากคอกนี้ */
+    renderDogHotelScene();
+    showWeatherToast(`🐶 ย้าย ${dogName} ไปคอก ${targetPen} แล้ว`);
+  }catch(error){
+    message("ย้ายคอกไม่ได้",error.message||"กรุณาลองใหม่");
+    if(btn)btn.disabled=false;
+  }
+}
+
+/* กดตัวหมา: มีปุ่มย้ายไปอีกคอก */
+showPlacedDogMenu=function(dogId){
+  const s=ensureDogHotelPenState(ownState||state);
+  const dog=s.dogs.find(d=>d.id===dogId);
+  if(!dog)return;
+
+  const currentPen=dogPenOf(dog)||1;
+  const targetPen=currentPen===1?2:1;
+  const targetCount=dogHotelPenCount(targetPen,s);
+  const targetFull=targetCount>=DOG_HOTEL_MAX;
+  const hungry=gameNow()>=Number(dog.nextFeedAt||0);
+  const foods=RECIPES.filter(r=>dishCountInState(r.id,s)>0);
+
+  $("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel">
+    <img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}">
+    <h2>🐶 ${safeHtml(dogDisplayName(dog))}</h2>
+    <p>${safeHtml(dogType(dog).name)}<br>
+      อยู่โรงแรมหมาคอก ${currentPen}<br>
+      อายุเหลือ ${dogLifeText(dog)}<br>
+      ${hungry?"🍽️ หิวแล้ว":"อิ่มอยู่ • หิวอีกใน "+formatHM(Math.max(0,dog.nextFeedAt-gameNow()))}
+    </p>
+
+    <button id="moveDogPenBtn" class="dog-move-pen-button" type="button" ${targetFull?"disabled":""}>
+      ${targetFull?`คอก ${targetPen} เต็ม ${targetCount}/${DOG_HOTEL_MAX}`:`ย้ายไปคอก ${targetPen} • ${targetCount}/${DOG_HOTEL_MAX}`}
+    </button>
+
+    <button id="renameDogBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>
+
+    ${hungry?`<div class="cat-feed-grid">${
+      foods.length
+        ?foods.map(r=>`<button type="button" data-feed-dog="${r.id}"><img src="${r.image}" alt="${r.name}"><span>${safeHtml(r.name)}<small>มี ×${dishCountInState(r.id,s)}</small></span></button>`).join("")
+        :'<p class="empty-feature">ไม่มีอาหารที่คราฟไว้ให้น้องกิน</p>'
+    }</div>`:""}
+
+    <button id="releasePlacedDogBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button>
+  </section>`;
+
+  if($("moveDogPenBtn")&&!targetFull)$("moveDogPenBtn").onclick=()=>moveDogToHotelPen(dogId,targetPen);
+  $("renameDogBtn").onclick=()=>renameDog(dogId);
+  $("releasePlacedDogBtn").onclick=()=>releaseDog(dogId);
+  document.querySelectorAll("[data-feed-dog]").forEach(b=>b.onclick=()=>feedDog(dogId,b.dataset.feedDog));
+  openModal();
+};
+
+/* เช็คสมาชิกมะหมา แสดงเฉพาะคอกที่กำลังดู */
+showDogHotelRoster=function(){
+  clearDogRosterTimer();
+  const s=ensureDogHotelPenState(ownState||state);
+  const dogs=dogsInHotelPen(currentDogHotelPen,s);
+
+  const rows=dogs.length?dogs.map((dog,i)=>{
+    const ready=gameNow()>=Number(dog.nextFeedAt||0),type=dogType(dog);
+    return `<article class="dog-roster-row">
+      <img src="${type.image}" alt="${safeHtml(dogDisplayName(dog))}">
+      <div class="dog-roster-info">
+        <b>${i+1}. ${safeHtml(dogDisplayName(dog))}</b>
+        <small>${safeHtml(type.name)} • คอก ${currentDogHotelPen}</small>
+        <span data-dog-roster-life="${safeHtml(dog.id)}">อายุเหลือ ${dogLifeText(dog)}</span>
+        <span class="dog-roster-hunger ${ready?"ready":""}" data-dog-roster-status="${safeHtml(dog.id)}">${dogHungerCountdownText(dog)}</span>
+      </div>
+      <button type="button" data-dog-roster-feed="${safeHtml(dog.id)}" ${ready?"":"disabled"}>${ready?"ให้อาหาร":"ยังไม่หิว"}</button>
+    </article>`;
+  }).join(""):'<p class="empty-feature">ยังไม่มีน้องหมาในคอกนี้</p>';
+
+  $("modalContent").innerHTML=`<section class="feature-panel dog-roster-panel">
+    <h2>🐶 เช็คสมาชิกมะหมา • คอก ${currentDogHotelPen}</h2>
+    <p class="feature-subtitle">น้องหมา ${dogs.length}/${DOG_HOTEL_MAX}<br>เลือกให้อาหารจากลิสต์ได้</p>
+    <div class="dog-roster-list">${rows}</div>
+  </section>`;
+
+  document.querySelectorAll("[data-dog-roster-feed]").forEach(btn=>btn.onclick=()=>showDogRosterFoodPicker(btn.dataset.dogRosterFeed));
+  openModal();
+  updateDogRosterCountdowns();
+  dogRosterTimer=setInterval(updateDogRosterCountdowns,1000);
+};
+
+/* UI คอก 1 / คอก 2:
+   คอก 1: ซ้ายกลับแปลง, ขวาไปคอก 2
+   คอก 2: ซ้ายกลับคอก 1, ขวากลับแปลง
+   ปุ่มเช็คสมาชิก + เก็บดรอปยังอยู่ในฉากเหมือนกันทั้งสองคอก */
+renderDogHotelScene=function(){
+  if(currentScene!=="dogHotel")return;
+  ensureDogHotelPenState(ownState||state);
+  stopDogHotelMotion();
+
+  $("sceneScreen").style.backgroundImage=currentDogHotelPen===2
+    ?`url("${DOG_HOTEL_2_IMAGE}")`
+    :`url("dog-hotel-background.png?v=1")`;
+
+  setSceneNav({
+    backText:currentDogHotelPen===2?"กลับคอกแรก":"กลับไปที่แปลงผัก",
+    backAction:currentDogHotelPen===2?()=>setDogHotelPen(1):returnToFarm,
+    nextText:currentDogHotelPen===1?"ไป โรงแรมหมา2":"กลับไปที่แปลงผัก",
+    nextAction:currentDogHotelPen===1?()=>setDogHotelPen(2):returnToFarm
+  });
+
+  const count=dogHotelPenCount(currentDogHotelPen);
+  $("sceneInteractiveLayer").innerHTML=`
+    <div class="dog-hotel-counter">🐶 โรงแรมหมาคอก ${currentDogHotelPen} • ${count}/${DOG_HOTEL_MAX}</div>
+    <div class="dog-hotel-utility-row">
+      <button id="dogMemberCheckBtn" class="dog-member-check-button dog-pen-utility" type="button">เช็คสมาชิกมะหมา</button>
+      <button id="dogPenCollectAllBtn" class="dog-pen-collect-button dog-pen-utility" type="button">🧺 เก็บของดรอปทั้งหมด</button>
+    </div>
+    <div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div>
+    <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;
+
+  $("dogMemberCheckBtn").onclick=showDogHotelRoster;
+  $("dogPenCollectAllBtn").onclick=collectAllDogDrops;
+
+  try{renderDogHotelDropsForPen()}catch(error){console.warn("dog pen drops paint",error)}
+  requestAnimationFrame(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{mountDogHotelPetsForPen()}catch(error){console.warn("dog pen pets",error)}
+  });
+
+  setTimeout(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{
+      processDogDrops();
+      renderDogHotelDropsForPen();
+    }catch(error){console.warn("dog hotel pen recovery",error)}
+  },80);
+
+  setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
+};
