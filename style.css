@@ -1930,3 +1930,116 @@ html.standalone-app .bottom-nav-hotspots{
   font-weight:900;
   box-shadow:0 5px 12px rgba(25,12,31,.32);
 }
+
+/* ======================================================================
+   V13.9 — Dog Hotel clean layout
+   ====================================================================== */
+
+/* ซ่อนตัวนับ 0/10, 10/10 เดิม */
+.dog-hotel-scene .dog-hotel-counter{display:none!important}
+
+/* แถว utility เดิมจาก V13.8 ไม่ใช้แล้ว */
+.dog-hotel-scene .dog-hotel-utility-row{display:none!important}
+
+/* ปุ่มเช็คสมาชิก: แถบเล็กมุมซ้ายบน ไม่ชน nav */
+.dog-hotel-scene .dog-member-check-clean{
+  position:absolute!important;
+  z-index:110!important;
+  left:3%!important;
+  top:calc(env(safe-area-inset-top,0px) + 8.5%)!important;
+  width:auto!important;
+  max-width:46%!important;
+  min-height:38px!important;
+  padding:6px 12px!important;
+  border:1.5px solid rgba(224,186,126,.86)!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,rgba(80,49,84,.98),rgba(42,27,52,.98))!important;
+  color:#fff0cc!important;
+  font-size:clamp(8px,2.1vw,12px)!important;
+  font-weight:900!important;
+  box-shadow:0 6px 14px rgba(27,12,34,.35),inset 0 1px rgba(255,244,213,.22)!important;
+  white-space:nowrap!important;
+}
+
+/* เก็บดรอปทั้งหมด = ตะกร้าอย่างเดียว มีเงาและมิติ */
+.dog-hotel-scene .dog-collect-basket-button{
+  position:absolute;
+  z-index:111;
+  right:3%;
+  top:calc(env(safe-area-inset-top,0px) + 7.7%);
+  width:clamp(48px,13vw,62px);
+  height:clamp(48px,13vw,62px);
+  padding:0;
+  border:1.5px solid rgba(255,226,170,.88);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 32% 24%,rgba(255,255,255,.28),transparent 28%),
+    linear-gradient(180deg,rgba(91,57,94,.99),rgba(43,28,53,.99));
+  box-shadow:
+    0 8px 16px rgba(24,10,30,.40),
+    inset 0 2px rgba(255,246,215,.30),
+    inset 0 -5px 10px rgba(18,8,24,.28);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.dog-hotel-scene .dog-collect-basket-button span{
+  display:block;
+  font-size:clamp(25px,7vw,34px);
+  line-height:1;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.38));
+  transform:translateY(-1px);
+}
+.dog-hotel-scene .dog-collect-basket-button:active{
+  transform:scale(.91);
+  box-shadow:
+    0 3px 7px rgba(24,10,30,.34),
+    inset 0 3px 8px rgba(18,8,24,.30);
+}
+
+/* ปุ่มเปลี่ยนคอก/กลับแปลง ย้ายลงล่างให้พ้นทุกแถบ */
+.dog-hotel-scene .scene-nav-button{
+  top:auto!important;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 3.2%)!important;
+  width:auto!important;
+  max-width:44%!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:44px!important;
+  padding:8px 13px!important;
+  border-radius:16px!important;
+  font-size:clamp(9px,2.45vw,14px)!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  z-index:115!important;
+}
+.dog-hotel-scene .scene-back-button{
+  left:3%!important;
+  right:auto!important;
+}
+.dog-hotel-scene .scene-next-button{
+  right:3%!important;
+  left:auto!important;
+}
+
+/* ป้าย overflow ดรอปยกขึ้นเหนือปุ่มล่าง */
+.dog-hotel-scene .dog-hotel-drop-overflow{
+  bottom:calc(env(safe-area-inset-bottom,0px) + 9.5%)!important;
+  max-width:70%!important;
+}
+
+/* ลดโอกาสแตะทับหมาด้านบน */
+.dog-hotel-scene .dog-hotel-pet-layer{
+  top:13%!important;
+  bottom:9%!important;
+}
+
+/* iPhone แบบ Add to Home Screen */
+html.standalone-app .dog-hotel-scene .dog-member-check-clean{
+  top:calc(var(--standalone-safe-top) + 6.5%)!important;
+}
+html.standalone-app .dog-hotel-scene .dog-collect-basket-button{
+  top:calc(var(--standalone-safe-top) + 5.8%)!important;
+}

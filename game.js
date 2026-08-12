@@ -7373,3 +7373,73 @@ renderDogHotelScene=function(){
 
   setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
 };
+
+/* ======================================================================
+   V13.9 — DOG HOTEL UI CLEANUP
+   แยกปุ่มไม่ให้ซ้อน / ซ่อนตัวนับ / ตะกร้าเป็นไอคอน / nav ลงล่าง
+   ====================================================================== */
+
+const __openSceneBeforeDogHotelUIV139=openScene;
+openScene=function(sceneName){
+  const result=__openSceneBeforeDogHotelUIV139(sceneName);
+  const scene=$("sceneScreen");
+  if(scene)scene.classList.toggle("dog-hotel-scene",sceneName==="dogHotel");
+  return result;
+};
+
+const __returnToFarmBeforeDogHotelUIV139=returnToFarm;
+returnToFarm=function(){
+  $("sceneScreen")?.classList.remove("dog-hotel-scene");
+  return __returnToFarmBeforeDogHotelUIV139();
+};
+
+renderDogHotelScene=function(){
+  if(currentScene!=="dogHotel")return;
+  ensureDogHotelPenState(ownState||state);
+  stopDogHotelMotion();
+
+  const scene=$("sceneScreen");
+  scene?.classList.add("dog-hotel-scene");
+  scene.style.backgroundImage=currentDogHotelPen===2
+    ?`url("${DOG_HOTEL_2_IMAGE}")`
+    :`url("dog-hotel-background.png?v=1")`;
+
+  setSceneNav({
+    backText:currentDogHotelPen===2?"กลับคอกแรก":"กลับไปที่แปลงผัก",
+    backAction:currentDogHotelPen===2?()=>setDogHotelPen(1):returnToFarm,
+    nextText:currentDogHotelPen===1?"ไป โรงแรมหมา2":"กลับไปที่แปลงผัก",
+    nextAction:currentDogHotelPen===1?()=>setDogHotelPen(2):returnToFarm
+  });
+
+  $("sceneInteractiveLayer").innerHTML=`
+    <button id="dogMemberCheckBtn" class="dog-member-check-button dog-member-check-clean" type="button">
+      🐶 เช็คสมาชิกมะหมา
+    </button>
+
+    <button id="dogPenCollectAllBtn" class="dog-collect-basket-button" type="button"
+      aria-label="เก็บของดรอปทั้งหมด" title="เก็บของดรอปทั้งหมด">
+      <span aria-hidden="true">🧺</span>
+    </button>
+
+    <div id="dogHotelPetLayer" class="dog-hotel-pet-layer"></div>
+    <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;
+
+  $("dogMemberCheckBtn").onclick=showDogHotelRoster;
+  $("dogPenCollectAllBtn").onclick=collectAllDogDrops;
+
+  try{renderDogHotelDropsForPen()}catch(error){console.warn("dog pen drops paint",error)}
+  requestAnimationFrame(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{mountDogHotelPetsForPen()}catch(error){console.warn("dog pen pets",error)}
+  });
+
+  setTimeout(()=>{
+    if(currentScene!=="dogHotel")return;
+    try{
+      processDogDrops();
+      renderDogHotelDropsForPen();
+    }catch(error){console.warn("dog hotel pen recovery",error)}
+  },80);
+
+  setTimeout(()=>{if(currentScene==="dogHotel")refreshDogHotelFromCloud()},500);
+};
