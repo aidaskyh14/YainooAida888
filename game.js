@@ -7715,7 +7715,7 @@ renderDogHotelScene=function(){
    V14.2 — Black Magic / Play Curse on Friend Plots
    Asset filename expected: black-magic-plot-overlay.png
    ====================================================================== */
-const BLACK_MAGIC_PLOT_IMAGE="black-magic-plot-overlay.png?v=2";
+const BLACK_MAGIC_PLOT_IMAGE="black-magic-plot-overlay.png?v=3";
 const BLACK_MAGIC_DURATION_MS=3*60*60*1000;
 const BLACK_MAGIC_DAILY_LIMIT=20;
 const BLACK_MAGIC_REMOVE_COST={egg:10,milk:20};
@@ -7763,19 +7763,22 @@ function ensureBlackMagicStyles(){
   const style=document.createElement('style');
   style.id='blackMagicStyleV142';
   style.textContent=`
-    .plot-black-magic-active{box-shadow:0 0 0 2px rgba(55,0,66,.45), 0 14px 28px rgba(0,0,0,.22) inset;}
-    .plot-black-magic-overlay{position:absolute;inset:-8% -8% -4% -8%;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:3;animation:blackMagicFloatV143 1.55s ease-in-out infinite,blackMagicFlickerV143 2.4s steps(2,end) infinite;transform-origin:center;}
-    @keyframes blackMagicFloatV143{0%,100%{transform:translate3d(0,0,0) scale(.98) rotate(-1deg)}25%{transform:translate3d(-2px,1px,0) scale(1.02) rotate(.7deg)}50%{transform:translate3d(2px,-1px,0) scale(1.035) rotate(-.4deg)}75%{transform:translate3d(-1px,-2px,0) scale(1.01) rotate(.8deg)}}
-    @keyframes blackMagicFlickerV143{0%,100%{opacity:.92;filter:brightness(.88) saturate(1.15)}20%{opacity:1;filter:brightness(1.18) saturate(1.35)}40%{opacity:.84;filter:brightness(.72) saturate(1.05)}60%{opacity:1;filter:brightness(1.28) saturate(1.45)}80%{opacity:.9;filter:brightness(.82) saturate(1.18)}}
-    .plot-black-magic-overlay img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.46)) drop-shadow(0 0 8px rgba(119,27,195,.65));}
-    .plot-black-magic-active::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at 50% 50%,rgba(17,0,25,.06),rgba(8,0,13,.34));animation:blackMagicDarkPulseV143 1.8s ease-in-out infinite;}
-    @keyframes blackMagicDarkPulseV143{0%,100%{opacity:.55}50%{opacity:.92}}
-    .plot-black-magic-badge{position:absolute;right:8px;bottom:8px;z-index:4;background:linear-gradient(180deg,#2d103f,#15071d);color:#f3d8ff;border:2px solid rgba(227,180,255,.55);border-radius:999px;padding:4px 10px;font-size:11px;line-height:1;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.2);pointer-events:none;}
-    .black-magic-actions{display:grid;gap:10px;margin-top:12px;}
+    .plot-black-magic-active{box-shadow:0 0 0 2px rgba(73,16,95,.52), 0 0 18px rgba(117,0,186,.18), 0 16px 30px rgba(0,0,0,.22) inset;}
+    .plot-black-magic-overlay{position:absolute;inset:-22% -22% -18% -22%;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:3;animation:blackMagicFloatV144 1.8s ease-in-out infinite,blackMagicFlickerV144 2.6s steps(2,end) infinite;transform-origin:center;}
+    @keyframes blackMagicFloatV144{0%,100%{transform:translate3d(0,0,0) scale(1.02) rotate(-1.2deg)}25%{transform:translate3d(-3px,2px,0) scale(1.06) rotate(.7deg)}50%{transform:translate3d(3px,-2px,0) scale(1.09) rotate(-.5deg)}75%{transform:translate3d(-1px,-3px,0) scale(1.05) rotate(.8deg)}}
+    @keyframes blackMagicFlickerV144{0%,100%{opacity:.95;filter:brightness(.92) saturate(1.18)}18%{opacity:1;filter:brightness(1.2) saturate(1.38)}40%{opacity:.86;filter:brightness(.76) saturate(1.1)}65%{opacity:1;filter:brightness(1.34) saturate(1.5)}82%{opacity:.9;filter:brightness(.84) saturate(1.2)}}
+    .plot-black-magic-overlay img{width:118%;height:118%;object-fit:contain;background:transparent !important;mix-blend-mode:normal;filter:drop-shadow(0 10px 12px rgba(0,0,0,.5)) drop-shadow(0 0 12px rgba(126,36,228,.75));}
+    .plot-black-magic-active::after{content:"";position:absolute;inset:-2%;z-index:2;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at 50% 45%,rgba(44,0,67,.08),rgba(16,0,23,.28) 62%,rgba(9,0,13,.42));animation:blackMagicDarkPulseV144 2s ease-in-out infinite;}
+    @keyframes blackMagicDarkPulseV144{0%,100%{opacity:.58}50%{opacity:.9}}
+    .plot-black-magic-badge{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:4;background:linear-gradient(180deg,rgba(70,25,102,.96),rgba(34,9,49,.98));color:#f8eaff;border:2px solid rgba(223,186,255,.6);border-radius:16px;padding:7px 14px 8px;min-width:116px;text-align:center;font-size:12px;line-height:1.15;font-weight:800;letter-spacing:.1px;box-shadow:0 10px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16);text-shadow:0 1px 0 rgba(0,0,0,.28);pointer-events:none;backdrop-filter:blur(4px);}
+    .black-magic-actions{display:grid;gap:10px;margin-top:14px;}
     .black-magic-actions button{width:100%;}
-    .black-magic-note{background:rgba(38,15,54,.08);border:1px dashed rgba(86,33,119,.35);border-radius:14px;padding:10px 12px;margin-top:10px;}
-    .black-magic-cost{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
-    .black-magic-cost span{background:#fff7fb;border:1px solid rgba(111,67,142,.22);border-radius:999px;padding:6px 12px;font-weight:700;}
+    .black-magic-note{background:linear-gradient(180deg,rgba(97,42,128,.1),rgba(54,16,73,.06));border:1px solid rgba(109,58,147,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);border-radius:16px;padding:12px 14px;margin-top:12px;color:#5a3668;}
+    .black-magic-cost{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+    .black-magic-cost span{background:linear-gradient(180deg,#fffefe,#fff6fd);border:1px solid rgba(111,67,142,.2);border-radius:999px;padding:7px 12px;font-weight:800;box-shadow:0 4px 10px rgba(62,21,93,.06);}
+    .black-magic-modal-title{text-align:center;margin-bottom:8px;}
+    .black-magic-remain-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(180deg,#5f2a84,#341048);color:#fff0ff;border:2px solid rgba(228,199,255,.55);border-radius:999px;padding:8px 14px;font-weight:800;box-shadow:0 10px 18px rgba(42,10,60,.18);}
+    .black-magic-subtitle{text-align:center;color:#6a416e;margin:10px 0 0;}
   `;
   document.head.appendChild(style);
 }
@@ -7838,7 +7841,7 @@ function showOwnBlackMagicModal(index){
   if(!plot)return;
   const eggs=Number((ownState||state)?.animalProducts?.egg)||0,milk=Number((ownState||state)?.animalProducts?.milk)||0;
   const enough=eggs>=BLACK_MAGIC_REMOVE_COST.egg&&milk>=BLACK_MAGIC_REMOVE_COST.milk;
-  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><h2>🪄 มนต์ดำครอบแปลง</h2><p>แปลงนี้ถูกเล่นของอยู่ และจะหายเองในอีก <b>${safeHtml(blackMagicRemainText(plot))}</b></p><div class="black-magic-cost"><span>🥚 ไข่เปรต ×${BLACK_MAGIC_REMOVE_COST.egg} <small>(มี ${eggs})</small></span><span>🥛 นมวัวอาฆาต ×${BLACK_MAGIC_REMOVE_COST.milk} <small>(มี ${milk})</small></span></div><div class="black-magic-note">ถ้าไม่แก้ของ มนต์ดำจะหายเองภายใน 3 ชั่วโมง</div><div class="black-magic-actions"><button id="removeBlackMagicBtn" class="primary-spooky-action" type="button" ${enough?'':'disabled'}>แก้ของ</button><button id="closeBlackMagicBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
+  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><div class="black-magic-modal-title"><h2>🪄 มนต์ดำครอบแปลง</h2><div class="black-magic-remain-chip">⏳ เหลือ ${safeHtml(blackMagicRemainText(plot))}</div><p class="black-magic-subtitle">แปลงนี้ถูกเล่นของอยู่ ถ้าไม่แก้ของ มนต์ดำจะหายเองภายใน 3 ชั่วโมง</p></div><div class="black-magic-cost"><span>🥚 ไข่เปรต ×${BLACK_MAGIC_REMOVE_COST.egg} <small>(มี ${eggs})</small></span><span>🥛 นมวัวอาฆาต ×${BLACK_MAGIC_REMOVE_COST.milk} <small>(มี ${milk})</small></span></div><div class="black-magic-note">ใช้วัตถุดิบด้านบนเพื่อถอนมนต์ดำออกจากแปลงนี้ได้ทันที</div><div class="black-magic-actions"><button id="removeBlackMagicBtn" class="primary-spooky-action" type="button" ${enough?'':'disabled'}>✨ แก้ของ</button><button id="closeBlackMagicBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
   openModal();
   $('removeBlackMagicBtn').onclick=()=>removeBlackMagicFromOwnPlot(index);
   $('closeBlackMagicBtn').onclick=closeModal;
@@ -7894,7 +7897,7 @@ function showFriendBlackMagicMenu(index){
   if(plot.phase==='needsWater')actionButtons.push('<button id="friendWaterBtn" class="secondary-action" type="button">💧 รดน้ำ</button>');
   if(plot.phase==='worm')actionButtons.push('<button id="friendWormBtn" class="secondary-action" type="button">🐛 กำจัดหนอน</button>');
   actionButtons.push(`<button id="friendBlackMagicBtn" class="${canCurse?'danger-action':'secondary-action'}" type="button" ${canCurse?'':'disabled'}>🪄 เล่นของ</button>`);
-  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><h2>🧿 แปลง #${index+1}</h2><p><b>${cropName}</b></p>${plotHasBlackMagic(plot)?`<div class="black-magic-note">ตอนนี้มีมนต์ดำอยู่แล้ว • เหลือ ${safeHtml(blackMagicRemainText(plot))}</div>`:`<div class="black-magic-note">วันนี้คุณเล่นของได้อีก <b>${remainText}</b> ${isBlackMagicAdmin()?'(Aida เล่นได้ไม่จำกัด)':'ครั้ง'}</div>`}<div class="black-magic-actions">${actionButtons.join('')}<button id="friendBlackMagicCloseBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
+  $('modalContent').innerHTML=`<section class="feature-panel confirm-panel"><div class="black-magic-modal-title"><h2>🧿 แปลง #${index+1}</h2><p class="black-magic-subtitle"><b>${cropName}</b></p></div>${plotHasBlackMagic(plot)?`<div class="black-magic-note"><div class="black-magic-remain-chip">⏳ เหลือ ${safeHtml(blackMagicRemainText(plot))}</div><div style="margin-top:10px">ตอนนี้แปลงนี้มีมนต์ดำอยู่แล้ว</div></div>`:`<div class="black-magic-note">วันนี้คุณเล่นของได้อีก <b>${remainText}</b> ${isBlackMagicAdmin()?'(Aida เล่นได้ไม่จำกัด)':'ครั้ง'}</div>`}<div class="black-magic-actions">${actionButtons.join('')}<button id="friendBlackMagicCloseBtn" class="secondary-action" type="button">ปิด</button></div></section>`;
   openModal();
   if($('friendStealBtn'))$('friendStealBtn').onclick=()=>{closeModal();showStealConfirmation(index)};
   if($('friendWaterBtn'))$('friendWaterBtn').onclick=async()=>{closeModal();await waterFriendPlotV11(index)};
