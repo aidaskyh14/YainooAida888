@@ -2102,3 +2102,133 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .animal-collect-all-button{position:absolute;z-index:25;right:4%;top:max(8%,calc(env(safe-area-inset-top) + 4%));width:52px;height:52px;padding:0;border:1.5px solid rgba(255,229,176,.9);border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.28),transparent 30%),linear-gradient(180deg,#654c68,#38283e);box-shadow:0 7px 14px rgba(28,14,31,.35),inset 0 1px rgba(255,255,255,.24);color:white}.animal-collect-all-button span{font-size:29px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
 .v15-animal-place-panel{position:relative;text-align:center}.v15-animal-place-panel>img{display:block;width:min(170px,42vw);height:min(130px,32vw);object-fit:contain;margin:0 auto}.v15-animal-place-panel>p{font-size:11px}
 
+
+/* ======================================================================
+   V15.1 — จัดระเบียบ HUD ด้านบนให้สะอาดขึ้น
+   ลดการ์ดโปรไฟล์ / ใช้โทนเดียว / จัด 3 ปุ่มใช้งานเร็วเป็นแถวเดียว
+   ====================================================================== */
+.profile-hud-card{
+  left:1.4%!important;
+  top:1.25%!important;
+  width:39.5%!important;
+  height:13.7%!important;
+  border:1.5px solid rgba(214,183,128,.72)!important;
+  border-radius:17px!important;
+  background:linear-gradient(180deg,rgba(70,43,76,.97),rgba(41,27,50,.97))!important;
+  box-shadow:0 6px 14px rgba(28,13,34,.30),inset 0 1px rgba(255,244,214,.18)!important;
+}
+.profile-hud-card .avatar-button{
+  left:4%!important;
+  top:8%!important;
+  width:38%!important;
+  height:78%!important;
+  border-radius:13px!important;
+  border:2px solid rgba(244,224,184,.90)!important;
+  background:#f7f1e8!important;
+}
+.profile-hud-card #playerAvatar{
+  border-radius:11px!important;
+  transform:scale(1.03)!important;
+}
+.profile-hud-card .profile-name-button{
+  left:45%!important;
+  top:13%!important;
+  width:51%!important;
+  height:30%!important;
+  font-size:clamp(13px,3.5vw,20px)!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+  color:#fff3d6!important;
+}
+.profile-hud-card .merit-status{
+  left:45%!important;
+  top:50%!important;
+  width:51%!important;
+  height:31%!important;
+  border:1px solid rgba(231,203,151,.20)!important;
+  border-radius:10px!important;
+  background:rgba(24,14,30,.30)!important;
+  gap:5px!important;
+  justify-content:center!important;
+}
+.profile-hud-card .merit-status span{font-size:clamp(7px,1.8vw,10px)!important}
+.profile-hud-card .merit-status strong{font-size:clamp(18px,4.7vw,28px)!important}
+
+.weather-clock,
+.rain-status,
+.hud-menu-button{
+  border:1.5px solid rgba(214,183,128,.66)!important;
+  background:linear-gradient(180deg,rgba(70,43,76,.97),rgba(41,27,50,.97))!important;
+  box-shadow:0 5px 12px rgba(28,13,34,.28),inset 0 1px rgba(255,244,214,.16)!important;
+}
+.weather-clock{
+  left:42.5%!important;
+  top:1.35%!important;
+  width:24%!important;
+  height:4.25%!important;
+  border-radius:13px!important;
+}
+.rain-status{
+  left:42.5%!important;
+  top:6.05%!important;
+  width:24%!important;
+  min-height:4.25%!important;
+  height:4.25%!important;
+  border-radius:13px!important;
+}
+.hud-menu-button{
+  right:1.5%!important;
+  top:1.35%!important;
+  width:30.5%!important;
+  height:4.9%!important;
+  border-radius:999px!important;
+  padding:0 10px!important;
+  gap:5px!important;
+}
+.hud-menu-button span{font-size:clamp(12px,3vw,18px)!important}
+.hud-menu-button b{font-size:clamp(9px,2.4vw,13px)!important}
+
+/* ปุ่มเร็ว 3 ปุ่มวางเป็นแถวเดียวทางขวา ไม่กองทับสีของโปรไฟล์ */
+.sprinkler-button,
+.tractor-button,
+.collect-drops-button{
+  top:7.3%!important;
+  width:11.2vw!important;
+  max-width:50px!important;
+  height:11.2vw!important;
+  max-height:50px!important;
+  min-width:0!important;
+  padding:0!important;
+  border:1.5px solid rgba(232,210,169,.74)!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle at 34% 26%,rgba(255,255,255,.18),transparent 28%),linear-gradient(180deg,rgba(73,47,79,.98),rgba(40,27,49,.98))!important;
+  box-shadow:0 6px 12px rgba(28,13,34,.30),inset 0 1px rgba(255,246,219,.20)!important;
+  display:grid!important;
+  place-items:center!important;
+}
+.sprinkler-button{left:53%!important;right:auto!important}
+.tractor-button{left:68%!important;right:auto!important}
+.collect-drops-button{left:83%!important;right:auto!important}
+.sprinkler-button>span,
+.tractor-button>span,
+.collect-drops-button>span{
+  font-size:clamp(20px,5.7vw,29px)!important;
+  line-height:1!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.32))!important;
+}
+
+@media(max-width:390px){
+  .profile-hud-card{width:40.5%!important}
+  .weather-clock,.rain-status{left:43%!important;width:23.5%!important}
+  .hud-menu-button{width:30.5%!important}
+  .sprinkler-button{left:52.5%!important}
+  .tractor-button{left:67.5%!important}
+  .collect-drops-button{left:82.5%!important}
+}
+
+/* รักษาการจัดวางหน้าแปลง 13–24 เดิม */
+.game-screen.plot-page-2 .sprinkler-button,
+.game-screen.plot-page-2 .tractor-button,
+.game-screen.plot-page-2 .collect-drops-button{
+  top:auto!important;
+}
