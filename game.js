@@ -8922,3 +8922,97 @@ bindHomeHudMenu=function(){
   bind("shortcutSpiritBarnBtn",()=>openScene("chicken"));
 };
 bindHomeHudMenu();
+
+
+/* ======================================================================
+   V28 — BUGFIX ROUND (Rank / pet status / friend cats / jelly craft)
+   Only fixes the seven cleanup items requested after V27.
+   ====================================================================== */
+
+/* 1) Rank: Aida/Admin pinned on top with no rank number; members start at #1.
+      Display names come from current publicProfiles.displayName. */
+showFriends=async function(){
+  if(guardResting())return;
+  let profileMap={};
+  if(cloudReady){
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));
+      snap.forEach(docSnap=>profileMap[docSnap.id]=docSnap.data()||{});
+    }catch(error){console.warn("rank load v28",error)}
+  }
+  const build=(baseName)=>{
+    const key=memberKeyFromName(baseName),p=profileMap[key]||{};
+    return{baseName,key,name:String(p.displayName||baseName),merit:Number(p.merit??300),initialized:Boolean(p.initialized)};
+  };
+  const admin=build("Aida");
+  const members=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(build).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name));
+  const actions=(row)=>row.baseName===currentMember
+    ?`<span class="friend-self">คุณ</span>`
+    :`<span class="friend-actions"><button type="button" data-visit-friend="${row.key}" data-friend-name="${safeHtml(row.name)}" ${!row.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${row.key}" data-friend-name="${safeHtml(row.name)}">ส่งของ</button></span>`;
+  const adminRow=`<div class="friend-row friend-rank-row admin-rank-row"><span class="admin-rank-badge">👑 ADMIN</span><span class="friend-avatar" aria-hidden="true">👻</span><span class="friend-info"><b>${safeHtml(admin.name)}</b><small>🙏 ${admin.merit} กุศล • เจ้าของสวน</small></span>${actions(admin)}</div>`;
+  const memberRows=members.map((row,index)=>{const rank=index+1,cls=rank<=3?` rank-top-${rank}`:"";return `<div class="friend-row friend-rank-row${cls}"><span class="friend-rank">#${rank}</span><span class="friend-avatar" aria-hidden="true">${rank===1?"👑":"👻"}</span><span class="friend-info"><b>${safeHtml(row.name)}</b><small>🙏 ${row.merit} กุศล${row.initialized?"":" • ยังไม่เข้าสวนครั้งแรก"}</small></span>${actions(row)}</div>`}).join("");
+  $("modalContent").innerHTML=`<section class="feature-panel friends-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">Aida / Admin อยู่บนสุดและไม่นับอันดับ • สมาชิกเรียงกุศลมากไปน้อย</p><div class="friend-list friend-rank-list">${adminRow}${memberRows}</div></section>`;
+  document.querySelectorAll("[data-visit-friend]").forEach(btn=>btn.onclick=()=>visitFriend(btn.dataset.visitFriend,btn.dataset.friendName));
+  document.querySelectorAll("[data-gift-friend]").forEach(btn=>btn.onclick=()=>showGiftComposer(btn.dataset.giftFriend,btn.dataset.friendName));
+  openModal();
+};
+
+/* 2) Dog Hotel: attach hungry / angry status icon to each moving dog. */
+const V28_mountDogHotelPetsBase=mountDogHotelPetsForPen;
+mountDogHotelPetsForPen=function(){
+  V28_mountDogHotelPetsBase();
+  const dogs=dogsInHotelPen(currentDogHotelPen),nodes=[...document.querySelectorAll("#dogHotelPetLayer .dog-hotel-pet")];
+  nodes.forEach((node,index)=>{
+    const dog=dogs.find(d=>String(d.id)===String(node.dataset.dogId))||dogs[index];if(!dog)return;
+    node.dataset.dogId=dog.id;
+    node.querySelector(".farm-pet-status-wrap")?.remove();
+    const wrap=document.createElement("span");wrap.className="farm-pet-status-wrap dog-status-wrap";wrap.innerHTML=Y26_statusIconHTML(dog);node.appendChild(wrap);
+    wrap.querySelector("[data-pet-penalty]")?.addEventListener("click",e=>{e.stopPropagation();Y26_applyPetPenalty("dog",dog.id)});
+  });
+};
+mountDogHotelPets=mountDogHotelPetsForPen;
+
+/* 3) Friend cats: never reuse visitor's own cat; use target garden publicCats only.
+      Clear pet layer before visit to prevent a one-frame own-cat flash. */
+const V28_visitFriendBase=visitFriend;
+visitFriend=async function(targetKey,targetName){
+  activePlacedCatId="";clearAidaFarmPetActivity(true);
+  await V28_visitFriendBase(targetKey,targetName);
+  if(!visitContext||visitContext.memberKey!==targetKey)return;
+  try{
+    const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"gardens",targetKey));
+    if(!snap.exists())return;
+    const garden=snap.data()||{},cats=Array.isArray(garden.publicCats)?garden.publicCats:[];
+    visitContext.name=String(garden.displayName||targetName||visitContext.name||"เพื่อน");
+    state.cats=cats.map(c=>({...c,drops:[],placedAt:0,nextDropAt:0}));
+    ensureCatState(state);activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();draw();
+  }catch(error){console.warn("friend cats v28",error)}
+};
+
+/* Keep every owner's public cat projection fresh in gardens after the new version loads. */
+let V28_publicCatSyncDone=false;
+setInterval(()=>{
+  if(V28_publicCatSyncDone||!cloudReady||visitContext||!ownState)return;
+  V28_publicCatSyncDone=true;Y26_syncPublicCats().catch(()=>{V28_publicCatSyncDone=false});
+},2500);
+
+/* 4) Jellyfish V2 craft: visual ingredient picker for all 8 V1 + plankton. */
+let V28_selectedJellyV1="";
+Y26_showJellyCraft=function(){
+  const s=Y26_ensureState(ownState||state),plank=Number(s.bag?.hauntedPlankton)||0;
+  const cards=Object.entries(JELLYFISH_TYPES).map(([k,j])=>{const count=Number(s.specialAnimals[k])||0;return `<button type="button" class="jelly-v1-craft-choice ${V28_selectedJellyV1===k?"selected":""}" data-v28-jelly-v1="${k}" ${count<5?"disabled":""}><img src="${j.image}" alt="${safeHtml(j.name)}"><b>${safeHtml(j.name)}</b><small>มี ×${count} • ใช้ ×5</small></button>`}).join("");
+  const selected=V28_selectedJellyV1&&Number(s.specialAnimals[V28_selectedJellyV1]||0)>=5;
+  $("modalContent").innerHTML=`<section class="feature-panel jelly-v2-craft-panel jelly-v2-craft-panel-v28"><h2>👑 คราฟแมงกะพรุนตัวแม่</h2><p class="feature-subtitle">เลือกแมงกะพรุน V1 1 แบบ จำนวน 5 ตัว + แพลงก์ตอนหลอนปิ๊ ×100<br>สำเร็จ 100% • สุ่ม V2 1 ใน 4 ตัว</p><div class="jelly-craft-ingredients"><div><h3>🪼 เลือก V1 ×5</h3><div class="jelly-v1-craft-grid">${cards}</div></div><div class="jelly-plankton-card ${plank>=100?"ready":"not-ready"}"><img src="${CROPS.hauntedPlankton?.readyImg||CROPS.hauntedPlankton?.selectImg||"haunted-plankton-ready.png"}" alt="แพลงก์ตอนหลอนปิ๊"><span><b>แพลงก์ตอนหลอนปิ๊ ×100</b><small>มี ×${plank}</small></span></div></div><button id="confirmJellyV2CraftBtn" class="primary-spooky-action jelly-v28-craft-btn" type="button" ${!selected||plank<100?"disabled":""}>✨ คราฟแมงกะพรุนตัวแม่</button></section>`;
+  document.querySelectorAll("[data-v28-jelly-v1]").forEach(btn=>btn.onclick=()=>{V28_selectedJellyV1=btn.dataset.v28JellyV1;Y26_showJellyCraft()});
+  $("confirmJellyV2CraftBtn").onclick=V28_craftJellyV2;openModal();
+};
+async function V28_craftJellyV2(){
+  const chosen=V28_selectedJellyV1,btn=$("confirmJellyV2CraftBtn");if(!chosen)return;if(btn)btn.disabled=true;
+  try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next,resultKey="";
+    await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);if((Number(s.specialAnimals[chosen])||0)<5)throw new Error("แมงกะพรุน V1 ที่เลือกไม่ครบ 5 ตัว");if((Number(s.bag.hauntedPlankton)||0)<100)throw new Error("แพลงก์ตอนหลอนปิ๊ไม่ครบ 100 ชิ้น");s.specialAnimals[chosen]-=5;s.bag.hauntedPlankton-=100;const keys=Object.keys(Y26_JELLY_V2);resultKey=keys[Math.floor(Math.random()*keys.length)];s.jellyfishV2[resultKey]=(Number(s.jellyfishV2[resultKey])||0)+1;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);V28_selectedJellyV1="";message("ยินดีด้วยค่ะ",`คุณได้รับแมงกะพรุน ${safeHtml(Y26_JELLY_V2[resultKey].name)}`)
+  }catch(error){message("คราฟไม่ได้",error.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}
+}
+
+/* 5) Remove obsolete underwater-city shortcut binding if old markup is cached. */
+$("shortcutUnderwaterCityBtn")?.remove();
+

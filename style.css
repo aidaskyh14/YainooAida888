@@ -2316,3 +2316,24 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .hud-menu-sectioned-list .hud-menu-item{min-height:50px!important}
 .hud-menu-sectioned-list .hud-menu-item>span{font-size:22px}
 .hud-menu-drawer{max-height:88%!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+
+
+/* ======================================================================
+   V28 — cleanup bugfix visuals only
+   ====================================================================== */
+/* Rank hierarchy */
+.friend-rank-list{display:grid;gap:8px}.admin-rank-row{position:relative;border:2px solid #d7a84c!important;background:linear-gradient(115deg,#321a45,#5b2f66 55%,#7b5830)!important;box-shadow:0 0 0 2px rgba(255,220,126,.22),0 9px 22px rgba(45,18,52,.32)!important;color:#fff7df!important}.admin-rank-row .friend-info b,.admin-rank-row .friend-info small{color:#fff7df!important}.admin-rank-badge{min-width:66px;padding:6px 8px;border-radius:999px;background:linear-gradient(180deg,#ffd975,#b77a20);color:#4d2a19;font-weight:950;font-size:clamp(8px,2vw,11px);text-align:center;box-shadow:0 3px 8px rgba(80,43,13,.3)}
+.rank-top-1{border:2px solid #e1b13f!important;background:linear-gradient(110deg,#fff7d8,#f5d983,#fff5cf)!important;box-shadow:0 0 0 2px rgba(255,220,88,.2),0 7px 18px rgba(157,105,18,.22)!important}.rank-top-2{border:2px solid #aeb9ca!important;background:linear-gradient(110deg,#f7f9fc,#dfe6ef,#f7f9fc)!important;box-shadow:0 7px 16px rgba(84,98,121,.18)!important}.rank-top-3{border:2px solid #c88369!important;background:linear-gradient(110deg,#fff0e8,#e7b59f,#fff1e9)!important;box-shadow:0 7px 16px rgba(121,66,49,.17)!important}.rank-top-1 .friend-rank,.rank-top-2 .friend-rank,.rank-top-3 .friend-rank{font-size:1.08em;font-weight:1000}
+
+/* Dog hungry / angry icon follows moving dog */
+.dog-hotel-pet{overflow:visible!important}.dog-hotel-pet .dog-status-wrap{position:absolute!important;z-index:12!important;left:62%!important;top:-8px!important;transform:none!important;pointer-events:auto!important}.dog-hotel-pet .dog-status-wrap .pet-status-icon{width:32px!important;height:32px!important}
+
+/* Page 1 sprinkler: move away from the upper control stack. Pages 2/3 keep their own layout. */
+.game-screen:not(.plot-page-2):not(.plot-page-3) .sprinkler-button{left:52.5%!important;top:17.15%!important}
+
+/* Jelly craft ingredient cards */
+.jelly-v2-craft-panel-v28{max-width:620px}.jelly-v1-craft-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.jelly-v1-craft-choice{min-width:0;padding:7px 4px;border:2px solid rgba(116,77,135,.22);border-radius:13px;background:linear-gradient(180deg,#fffaf0,#f0dfc1);color:#4b2b4d;text-align:center}.jelly-v1-craft-choice img{display:block;width:58px;height:58px;max-width:100%;margin:0 auto 4px;object-fit:contain}.jelly-v1-craft-choice b,.jelly-v1-craft-choice small{display:block}.jelly-v1-craft-choice b{font-size:10px;line-height:1.15}.jelly-v1-craft-choice small{font-size:8px;margin-top:2px}.jelly-v1-craft-choice.selected{border-color:#d59d2e;background:linear-gradient(180deg,#fff4b7,#f2cc61);box-shadow:0 0 0 2px rgba(255,215,76,.24),0 6px 14px rgba(97,65,25,.18)}.jelly-v1-craft-choice:disabled{opacity:.43}.jelly-plankton-card{margin-top:10px;padding:9px 11px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(103,72,132,.10);border:2px solid rgba(103,72,132,.14)}.jelly-plankton-card.ready{border-color:rgba(69,145,81,.55);background:rgba(91,166,99,.12)}.jelly-plankton-card.not-ready{border-color:rgba(178,78,88,.45)}.jelly-plankton-card img{width:62px;height:62px;object-fit:contain}.jelly-plankton-card span,.jelly-plankton-card b,.jelly-plankton-card small{display:block}.jelly-v28-craft-btn{width:100%;margin-top:11px;min-height:46px}
+@media(max-width:430px){.jelly-v1-craft-grid{grid-template-columns:repeat(4,1fr);gap:5px}.jelly-v1-craft-choice img{width:48px;height:48px}.jelly-v1-craft-choice{padding:6px 2px}}
+
+/* Crop art slightly larger, same center/position */
+.crop img.crop-img{width:clamp(54px,13.4vw,106px)!important;height:clamp(54px,13.4vw,106px)!important}.crop img.stage-seed{width:clamp(41px,8.6vw,70px)!important;height:clamp(41px,8.6vw,70px)!important}.crop img.stage-sprout{width:clamp(48px,10.2vw,83px)!important;height:clamp(48px,10.2vw,83px)!important}.crop img.stage-grow{width:clamp(56px,11.8vw,96px)!important;height:clamp(56px,11.8vw,96px)!important}.crop img.stage-ready{width:clamp(66px,15.3vw,122px)!important;height:clamp(66px,15.3vw,122px)!important}
