@@ -9016,3 +9016,97 @@ async function V28_craftJellyV2(){
 /* 5) Remove obsolete underwater-city shortcut binding if old markup is cached. */
 $("shortcutUnderwaterCityBtn")?.remove();
 
+
+
+/* ======================================================================
+   V29 — FINAL CLEANUP: tools / rank / friend visit cats / smoother UI
+   ====================================================================== */
+
+/* Small in-memory cache so opening Rank repeatedly does not refetch immediately. */
+let V29_rankCache={at:0,map:null};
+async function V29_loadProfiles(force=false){
+  const now=Date.now();
+  if(!force&&V29_rankCache.map&&now-V29_rankCache.at<15000)return V29_rankCache.map;
+  const map={};
+  if(cloudReady){
+    try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(x=>map[x.id]=x.data()||{})}
+    catch(error){console.warn("rank load v29",error)}
+  }
+  V29_rankCache={at:now,map};return map;
+}
+
+/* Rank is defined here at the very end intentionally so no older override can win. */
+showFriends=async function(){
+  if(guardResting())return;
+  const profileMap=await V29_loadProfiles();
+  const build=(baseName)=>{const key=memberKeyFromName(baseName),p=profileMap[key]||{};return{baseName,key,name:String(p.displayName||baseName),merit:Number(p.merit??300),initialized:Boolean(p.initialized)}};
+  const admin=build("Aida");
+  const members=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(build).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name,"th"));
+  const actions=(row)=>row.key===currentMemberKey?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${row.key}" data-friend-name="${safeHtml(row.name)}" ${!row.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${row.key}" data-friend-name="${safeHtml(row.name)}">ส่งของ</button></span>`;
+  const adminHTML=`<div class="friend-row friend-rank-row v29-admin-rank"><span class="v29-admin-label">👑 ADMIN</span><span class="friend-avatar" aria-hidden="true">✨</span><span class="friend-info"><b>${safeHtml(admin.name)}</b><small>เจ้าของสวน • 🙏 ${admin.merit} กุศล</small></span>${actions(admin)}</div>`;
+  const rows=members.map((row,i)=>{const rank=i+1,cls=rank<=3?` v29-top-${rank}`:"";return `<div class="friend-row friend-rank-row${cls}">${rank===1?'<span class="v29-rank-crown">♛</span>':''}<span class="friend-rank">#${rank}</span><span class="friend-avatar" aria-hidden="true">${rank===1?"🏆":"👻"}</span><span class="friend-info"><b>${safeHtml(row.name)}</b><small>🙏 ${row.merit} กุศล${row.initialized?"":" • ยังไม่เข้าสวนครั้งแรก"}</small></span>${actions(row)}</div>`}).join("");
+  $("modalContent").innerHTML=`<section class="feature-panel friends-panel v29-rank-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">Aida / Admin อยู่บนสุดเสมอและไม่มีอันดับ • สมาชิกเริ่มที่ #1</p><div class="friend-list friend-rank-list">${adminHTML}${rows}</div></section>`;
+  document.querySelectorAll("[data-visit-friend]").forEach(btn=>btn.onclick=()=>visitFriend(btn.dataset.visitFriend,btn.dataset.friendName));
+  document.querySelectorAll("[data-gift-friend]").forEach(btn=>btn.onclick=()=>showGiftComposer(btn.dataset.giftFriend,btn.dataset.friendName));
+  openModal();
+};
+
+/* Publish cat snapshot in both public surfaces, so visits can fall back safely. */
+Y26_syncPublicCats=async function(){
+  if(!cloudReady||!currentMemberKey||!ownState)return;
+  try{
+    const {db,fs}=await getFirebaseContext(),cats=cloneData(Y26_publicCats());
+    await Promise.all([
+      fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),publicCats:cats,updatedAt:fs.serverTimestamp()},{merge:true}),
+      fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(ownState.merit)||0,initialized:true,publicCats:cats,updatedAt:fs.serverTimestamp()},{merge:true})
+    ]);
+  }catch(error){console.warn("public cats sync v29",error)}
+};
+
+/* Friend visit loads garden + public profile together and renders once, avoiding own-cat flash. */
+visitFriend=async function(targetKey,targetName){
+  if(!cloudReady){message("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+  activePlacedCatId="";clearAidaFarmPetActivity(true);
+  try{
+    const {db,fs}=await getFirebaseContext();
+    const [gardenSnap,profileSnap]=await Promise.all([
+      fs.getDoc(fs.doc(db,"gardens",targetKey)),
+      fs.getDoc(fs.doc(db,"publicProfiles",targetKey))
+    ]);
+    if(!gardenSnap.exists())throw new Error("เพื่อนคนนี้ยังไม่เปิดสวนครั้งแรก");
+    const garden=gardenSnap.data()||{},profile=profileSnap.exists()?(profileSnap.data()||{}):{};
+    const cats=Array.isArray(garden.publicCats)?garden.publicCats:(Array.isArray(profile.publicCats)?profile.publicCats:[]);
+    ownState=ownState||state;visitContext={memberKey:targetKey,name:String(garden.displayName||profile.displayName||targetName||"เพื่อน")};
+    state=fresh(visitContext.name);state.plots=(garden.plots||[]).map(normalizePlot);while(state.plots.length<PLOT_COUNT)state.plots.push(emptyPlot());
+    state.cats=cats.map(c=>({...c,drops:[],placedAt:0,nextDropAt:0}));ensureCatState(state);
+    closeModal();$("gameScreen").classList.add("visiting-friend");showVisitorBanner(visitContext.name);draw();
+    activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();
+    V29_syncVisitHud();
+  }catch(error){message("เยี่ยมสวนไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+
+/* Tool drawer is local-only and instant: no Firebase wait just to open it. */
+let V29_toolsOpen=false;
+function V29_setTools(open){V29_toolsOpen=Boolean(open);$("gameScreen")?.classList.toggle("farm-tools-open",V29_toolsOpen)}
+function V29_syncVisitHud(){
+  const visiting=Boolean(visitContext);$("gameScreen")?.classList.toggle("visiting-friend",visiting);
+  $("visitHomeBtn")?.classList.toggle("hidden",!visiting);
+  if(visiting)V29_setTools(false);
+}
+if($("farmToolsBtn"))$("farmToolsBtn").onclick=()=>{if(!visitContext)V29_setTools(!V29_toolsOpen)};
+if($("visitHomeBtn"))$("visitHomeBtn").onclick=()=>{returnFromFriendVisit();V29_syncVisitHud();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()};
+
+/* Keep old actions intact, just close tool drawer immediately after the tap. */
+[["tractorBtn",()=>bulkHarvestCurrentPage()],["collectDropsBtn",()=>collectAllCatDropsCurrentFarm?.()],["sprinklerBtn",()=>sprinklerCurrentPage?.()]].forEach(([id,fn])=>{
+  const el=$(id);if(!el)return;const old=el.onclick;el.onclick=(e)=>{V29_setTools(false);return old?old.call(el,e):fn()};
+});
+
+/* Public-cat snapshot is refreshed immediately after login/load, not several seconds later. */
+setTimeout(()=>{if(cloudReady&&!visitContext&&ownState)Y26_syncPublicCats().catch(()=>{})},350);
+setInterval(()=>{if(cloudReady&&!visitContext&&ownState)Y26_syncPublicCats().catch(()=>{})},60000);
+
+/* When farm page changes during a friend visit, switch the visible friend's cat immediately. */
+const V29_setFarmPlotPageBase=setFarmPlotPage;
+setFarmPlotPage=function(page){const r=V29_setFarmPlotPageBase(page);activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();V29_syncVisitHud();return r};
+
+V29_syncVisitHud();
