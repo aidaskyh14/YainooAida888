@@ -8685,7 +8685,7 @@ const Y26_animalSlotHTMLBase=animalSlotHTML;
 animalSlotHTML=function(sceneName,index){let html=Y26_animalSlotHTMLBase(sceneName,index);if(!["chicken","fish","pig","cow"].includes(sceneName))return html;const gift=Y26_animalGiftHTML(sceneName,index);if(!gift)return html;if(html.includes('</div>'))return html.replace('</div>',gift+'</div>');return html+gift};
 const Y26_renderAnimalSceneBase=renderAnimalScene;
 renderAnimalScene=function(type){if(!["chicken","fish","pig","cow"].includes(type))return Y26_renderAnimalSceneBase(type);const s=ownState||state;if(s&&Y26_prepareAnimalGift(s,type)){ownState=s;state=s;save();if(cloudReady)flushCloudSave().catch(e=>console.warn("animal merit gift sync",e))}Y26_renderAnimalSceneBase(type);document.querySelectorAll("[data-animal-merit-gift]").forEach(b=>b.onclick=e=>{e.stopPropagation();Y26_claimAnimalGift(type,Number(b.dataset.animalMeritGift))})};
-async function Y26_claimAnimalGift(type,index){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),g=s.animalMeritGifts[type];if(!g?.activeId||Number(g.animalIndex)!==index)throw new Error("กล่องนี้ถูกเก็บไปแล้ว");reward=randInt(20,40);s.merit=(Number(s.merit)||0)+reward;g.activeId="";g.animalIndex=-1;g.nextAt=Y26_nextAnimalGiftAt();next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();renderAnimalScene(type);message("🎁 ของขวัญสัตว์วิญญาณ",`ได้รับ +${reward} กุศล`)}catch(error){message("รับของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}}
+async function Y26_claimAnimalGift(type,index){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),g=s.animalMeritGifts[type];if(!g?.activeId||Number(g.animalIndex)!==index)throw new Error("กล่องนี้ถูกเก็บไปแล้ว");reward=randInt(20,40);s.merit=(Number(s.merit)||0)+reward;g.activeId="";g.animalIndex=-1;g.nextAt=Y26_nextAnimalGiftAt();next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();renderAnimalScene(type);message("🎁 ได้รับของขวัญจากสัตว์วิญญาณ",`ยินดีด้วยค่ะ คุณได้รับ <b>+${reward} กุศล</b> 🙏`)}catch(error){message("รับของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}}
 
 /* Collect single animal product cloud-safely and count actual pieces */
 collectAnimal=async function(sceneName,index){if(!cloudReady||!currentMemberKey)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0,item=animalById(sceneName);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),animal=s.animals?.[sceneName]?.[index];if(!item||!animal)throw new Error("ไม่พบสัตว์");if(animalIsExpired(animal))throw new Error("สัตว์หมดอายุแล้ว");if(gameNow()<Number(animal.readyAt||0))throw new Error(`${item.productName} ยังไม่พร้อม`);qty=1;if(Math.random()<.12)qty=Math.random()<.82?2:3;s.animalProducts[item.product]=(Number(s.animalProducts[item.product])||0)+qty;animal.readyAt=gameNow()+item.productionMs;incrementMissionOn(s,"collectAnimalProducts",qty);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();renderAnimalScene(sceneName);message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`)}catch(error){message("เก็บผลผลิตไม่ได้",error.message||"กรุณาลองใหม่")}};
@@ -9334,3 +9334,23 @@ if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home");
 /* Make sure the local-only tool button always starts closed after page load or
    when leaving a friend visit. */
 V29_setTools(false);
+
+/* ======================================================================
+   V33 — polish bed activity modal + exact Page 1 tool tray alignment
+   ====================================================================== */
+const V33_REST_META={
+  sleep:{icon:"🌙",title:"นอน",time:"6 ชั่วโมง",reward:50,desc:"พักยาวให้เต็มอิ่ม"},
+  nap:{icon:"💤",title:"งีบ",time:"3 ชั่วโมง",reward:12,desc:"พักสั้น ๆ เติมพลัง"},
+  flirt:{icon:"💞",title:"ไล่ปูไต่กับผู้",time:"1 ชั่วโมง",reward:3,desc:"กิจกรรมเบา ๆ ก่อนกลับสวน"},
+  introvert:{icon:"🫥",title:"อินโทรเวิร์ต ไม่อยากยุ่งกับใคร",time:"45 นาที",reward:1,desc:"ขออยู่เงียบ ๆ คนเดียว"}
+};
+showRestOptions=function(){
+  if(isResting()){
+    message("⏳ กำลังทำกิจกรรมบนเตียง",`เหลือเวลา ${formatLongCountdown(state.restUntil-gameNow())}`);
+    return;
+  }
+  const cards=Object.entries(V33_REST_META).map(([key,item])=>`<button class="v33-rest-card v33-rest-${key}" type="button" data-y26-rest="${key}"><span class="v33-rest-icon" aria-hidden="true">${item.icon}</span><span class="v33-rest-copy"><b>${safeHtml(item.title)}</b><small>${safeHtml(item.time)} · +${item.reward} กุศล</small><em>${safeHtml(item.desc)}</em></span><span class="v33-rest-arrow" aria-hidden="true">›</span></button>`).join("");
+  $("modalContent").innerHTML=`<section class="feature-panel rest-option-panel v33-rest-panel"><div class="v33-rest-heading"><span class="v33-rest-heading-icon">🛏️</span><div><h2>กิจกรรมบนเตียง</h2><p>เลือกกิจกรรมที่อยากทำก่อนกลับไปลุยในสวน</p></div></div><div class="rest-options v33-rest-options">${cards}</div></section>`;
+  document.querySelectorAll("[data-y26-rest]").forEach(button=>button.onclick=()=>showRestConfirmation(button.dataset.y26Rest));
+  openModal();
+};

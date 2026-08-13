@@ -2496,3 +2496,65 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .shop-home-cover>img{display:block;width:100%;max-height:52vh;object-fit:cover;object-position:center}
 .shop-home-copy{padding:11px 13px;text-align:center;background:linear-gradient(180deg,#fff7e7,#ecd7ae);color:#4b2a49}
 .shop-home-copy b,.shop-home-copy small{display:block}.shop-home-copy b{font-size:14px}.shop-home-copy small{margin-top:3px;font-size:10px;opacity:.78}
+
+/* ======================================================================
+   V33 — bed activity cards + exact tool tray alignment
+   ====================================================================== */
+.v33-rest-panel{padding-top:4px!important}
+.v33-rest-heading{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:4px 2px 12px;border-bottom:1px solid rgba(105,65,98,.16)}
+.v33-rest-heading-icon{flex:0 0 auto;width:48px;height:48px;border-radius:16px;display:grid;place-items:center;font-size:27px;background:linear-gradient(145deg,#fff8e8,#ead2a5);border:1.5px solid rgba(126,79,104,.2);box-shadow:0 5px 12px rgba(76,44,72,.13)}
+.v33-rest-heading h2{margin:0;color:#4a2948;font-size:clamp(21px,6vw,30px);line-height:1.05}
+.v33-rest-heading p{margin:5px 0 0;color:#806778;font-size:clamp(10px,2.7vw,13px);line-height:1.25}
+.v33-rest-options{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin:0!important}
+.v33-rest-card{position:relative;min-width:0;min-height:116px;padding:12px 10px 10px!important;border:1.5px solid rgba(116,72,103,.24)!important;border-radius:18px!important;background:linear-gradient(160deg,#fffaf0 0%,#f4e5c6 100%)!important;color:#4a2948!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-start!important;text-align:left!important;box-shadow:0 6px 14px rgba(68,36,66,.12),inset 0 1px rgba(255,255,255,.75)!important;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.v33-rest-card::before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:4px;background:linear-gradient(90deg,#9b5f8f,#e6b55f);opacity:.8}
+.v33-rest-card:active{transform:scale(.975)}
+.v33-rest-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;font-size:22px;margin-bottom:8px;background:rgba(255,255,255,.72);box-shadow:0 3px 8px rgba(73,39,68,.12)}
+.v33-rest-copy{display:block;width:100%;padding-right:14px}
+.v33-rest-copy b{display:block;font-size:clamp(13px,3.7vw,16px);line-height:1.18;color:#452641;margin-bottom:4px}
+.v33-rest-copy small{display:block;font-size:clamp(9px,2.55vw,11px);font-weight:850;color:#7d536e;line-height:1.2}
+.v33-rest-copy em{display:block;margin-top:4px;font-style:normal;font-size:clamp(8px,2.2vw,10px);line-height:1.2;color:#9a7b89}
+.v33-rest-arrow{position:absolute;right:10px;bottom:9px;font-size:24px;line-height:1;color:#8a587c;opacity:.75}
+.v33-rest-sleep{background:linear-gradient(160deg,#f9f3ff 0%,#eadcf4 100%)!important}
+.v33-rest-nap{background:linear-gradient(160deg,#eef8ff 0%,#dcebf5 100%)!important}
+.v33-rest-flirt{background:linear-gradient(160deg,#fff1f5 0%,#f4d9e4 100%)!important}
+.v33-rest-introvert{background:linear-gradient(160deg,#f5f2ed 0%,#e4ddd4 100%)!important}
+@media(max-width:380px){.v33-rest-options{gap:8px!important}.v33-rest-card{min-height:108px;padding:10px 8px 8px!important}.v33-rest-icon{width:34px;height:34px;font-size:20px;margin-bottom:6px}}
+
+/* Page 1 tools: one exact tray; every tool is centered inside its own equal slot. */
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open::after{
+  right:4%!important;
+  top:12.15%!important;
+  width:46%!important;
+  height:60px!important;
+  border-radius:19px!important;
+  border:2px solid rgba(224,187,119,.82)!important;
+  background:linear-gradient(180deg,rgba(69,38,76,.98),rgba(41,23,51,.98))!important;
+  box-shadow:0 7px 18px rgba(30,12,38,.32),inset 0 1px rgba(255,239,198,.18)!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{
+  top:12.58%!important;
+  right:auto!important;
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  min-height:46px!important;
+  max-width:46px!important;
+  max-height:46px!important;
+  padding:0!important;
+  margin:0!important;
+  border-radius:14px!important;
+  display:grid!important;
+  place-items:center!important;
+  line-height:1!important;
+  box-sizing:border-box!important;
+  transform:none!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button{left:52%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button{left:68%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{left:84%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button>span,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button>span,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button>span{display:grid!important;place-items:center!important;width:100%!important;height:100%!important;margin:0!important;font-size:25px!important;line-height:1!important}
