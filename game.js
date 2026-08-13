@@ -9110,3 +9110,124 @@ const V29_setFarmPlotPageBase=setFarmPlotPage;
 setFarmPlotPage=function(page){const r=V29_setFarmPlotPageBase(page);activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();V29_syncVisitHud();return r};
 
 V29_syncVisitHud();
+
+/* ======================================================================
+   V30 — targeted cleanup: definitive Rank binding / friend visit HUD+c ats / tool tray
+   ====================================================================== */
+
+/* Rank was already redefined late in the file, but the Friends button still held an
+   older function reference from bindEvents(). Rebind it after the final definition. */
+if($("friendsNavBtn"))$("friendsNavBtn").onclick=()=>showFriends();
+
+/* Friend visit HUD: absolutely no long visitor banner. Keep only the dedicated
+   home icon in the upper-right corner. */
+showVisitorBanner=function(){
+  $("visitorBanner")?.remove();
+  $("gameScreen")?.classList.add("visiting-friend");
+  $("visitHomeBtn")?.classList.remove("hidden");
+};
+
+const V30_returnFromFriendVisitBase=returnFromFriendVisit;
+returnFromFriendVisit=function(){
+  const result=V30_returnFromFriendVisitBase();
+  $("visitorBanner")?.remove();
+  $("visitHomeBtn")?.classList.add("hidden");
+  $("gameScreen")?.classList.remove("visiting-friend");
+  V29_setTools(false);
+  activePlacedCatId="";
+  clearAidaFarmPetActivity(true);
+  syncAidaFarmPet();
+  return result;
+};
+if($("visitHomeBtn"))$("visitHomeBtn").onclick=()=>returnFromFriendVisit();
+
+/* Convert any save-state cats to the intentionally small public projection used
+   for friend visits. */
+function V30_publicCatsFromState(raw){
+  const cats=Array.isArray(raw?.cats)?raw.cats:[];
+  return cats.filter(c=>[1,2,3].includes(Number(c?.placedFarm))).map(c=>({
+    id:c.id,typeKey:c.typeKey,customName:c.customName||"",placedFarm:Number(c.placedFarm),
+    expiresAt:Number(c.expiresAt)||0,nextFeedAt:Number(c.nextFeedAt)||0,
+    medicineKey:c.medicineKey||"",medicineUntil:Number(c.medicineUntil)||0,
+    lastPenaltyBucket:Number(c.lastPenaltyBucket)||0
+  }));
+}
+
+/* Aida/Admin can repair the public cat snapshots for every member from their saves.
+   This makes friend cats visible even for members who have not yet refreshed to the
+   version that publishes publicCats themselves. */
+let V30_catBackfillBusy=false;
+let V30_catBackfillDone=false;
+async function V30_adminBackfillPublicCats(){
+  if(V30_catBackfillBusy||V30_catBackfillDone||!cloudReady||currentMember!=="Aida"||adminProfile?.role!=="admin")return;
+  V30_catBackfillBusy=true;
+  try{
+    const {db,fs}=await getFirebaseContext();
+    for(const baseName of Object.keys(MEMBERS)){
+      const key=memberKeyFromName(baseName);
+      try{
+        const [saveSnap,profileSnap]=await Promise.all([
+          fs.getDoc(fs.doc(db,"saves",key)),
+          fs.getDoc(fs.doc(db,"publicProfiles",key))
+        ]);
+        if(!saveSnap.exists())continue;
+        const cats=V30_publicCatsFromState(saveSnap.data());
+        const displayName=String(profileSnap.exists()?(profileSnap.data()?.displayName||baseName):baseName);
+        await Promise.all([
+          fs.setDoc(fs.doc(db,"gardens",key),{memberKey:key,displayName,publicCats:cloneData(cats),updatedAt:fs.serverTimestamp()},{merge:true}),
+          fs.setDoc(fs.doc(db,"publicProfiles",key),{memberKey:key,displayName,publicCats:cloneData(cats),updatedAt:fs.serverTimestamp()},{merge:true})
+        ]);
+      }catch(error){console.warn("cat backfill member",key,error)}
+    }
+    V30_catBackfillDone=true;
+  }finally{V30_catBackfillBusy=false}
+}
+
+/* Friend visit: if publicCats is still absent and the visitor is Admin, read the
+   target save directly once, publish the safe projection, then render it immediately. */
+visitFriend=async function(targetKey,targetName){
+  if(!cloudReady){message("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+  activePlacedCatId="";clearAidaFarmPetActivity(true);V29_setTools(false);
+  try{
+    const {db,fs}=await getFirebaseContext();
+    const [gardenSnap,profileSnap]=await Promise.all([
+      fs.getDoc(fs.doc(db,"gardens",targetKey)),
+      fs.getDoc(fs.doc(db,"publicProfiles",targetKey))
+    ]);
+    if(!gardenSnap.exists())throw new Error("เพื่อนคนนี้ยังไม่เปิดสวนครั้งแรก");
+    const garden=gardenSnap.data()||{},profile=profileSnap.exists()?(profileSnap.data()||{}):{};
+    let cats=Array.isArray(garden.publicCats)?garden.publicCats:(Array.isArray(profile.publicCats)?profile.publicCats:[]);
+    if(!cats.length&&currentMember==="Aida"&&adminProfile?.role==="admin"){
+      try{
+        const saveSnap=await fs.getDoc(fs.doc(db,"saves",targetKey));
+        if(saveSnap.exists()){
+          cats=V30_publicCatsFromState(saveSnap.data());
+          if(cats.length){
+            const displayName=String(garden.displayName||profile.displayName||targetName||"เพื่อน");
+            await Promise.all([
+              fs.setDoc(fs.doc(db,"gardens",targetKey),{memberKey:targetKey,displayName,publicCats:cloneData(cats),updatedAt:fs.serverTimestamp()},{merge:true}),
+              fs.setDoc(fs.doc(db,"publicProfiles",targetKey),{memberKey:targetKey,displayName,publicCats:cloneData(cats),updatedAt:fs.serverTimestamp()},{merge:true})
+            ]);
+          }
+        }
+      }catch(error){console.warn("friend cat admin fallback",error)}
+    }
+    ownState=ownState||state;
+    visitContext={memberKey:targetKey,name:String(garden.displayName||profile.displayName||targetName||"เพื่อน")};
+    state=fresh(visitContext.name);
+    state.plots=(garden.plots||[]).map(normalizePlot);while(state.plots.length<PLOT_COUNT)state.plots.push(emptyPlot());
+    state.cats=cats.map(c=>({...c,drops:[],placedAt:0,nextDropAt:0}));ensureCatState(state);
+    closeModal();$("gameScreen").classList.add("visiting-friend");showVisitorBanner();draw();
+    activePlacedCatId="";clearAidaFarmPetActivity(true);await syncAidaFarmPet();
+  }catch(error){message("เยี่ยมสวนไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+
+/* Rebind Rank and Home one last time after every override above. */
+if($("friendsNavBtn"))$("friendsNavBtn").onclick=()=>showFriends();
+if($("visitHomeBtn"))$("visitHomeBtn").onclick=()=>returnFromFriendVisit();
+
+/* Kick off the public-cat repair shortly after Aida's cloud session is ready. */
+const V30_backfillTimer=setInterval(()=>{
+  if(V30_catBackfillDone){clearInterval(V30_backfillTimer);return}
+  if(cloudReady&&currentMember==="Aida"&&adminProfile?.role==="admin")V30_adminBackfillPublicCats().catch(()=>{});
+},1200);
