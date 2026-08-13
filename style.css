@@ -2232,3 +2232,87 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen.plot-page-2 .collect-drops-button{
   top:auto!important;
 }
+
+
+/* ======================================================================
+   REQUESTED UPDATE — 2026-08-13 (targeted visual overrides only)
+   ====================================================================== */
+/* page 1 quick icons: spaced cleanly; page 2/3 retain their own layout */
+.game-screen:not(.plot-page-2):not(.plot-page-3) .sprinkler-button{left:50.5%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3) .tractor-button{left:67%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3) .collect-drops-button{left:83.5%!important}
+
+/* Farm page 3 — exact uploaded filename/case */
+.game-screen.plot-page-3{background-image:url("farm-plots-25-36.PNG?v=1")!important}
+.game-screen.plot-page-3 .profile-hud-card,
+.game-screen.plot-page-3 .weather-clock,
+.game-screen.plot-page-3 .rain-status,
+.game-screen.plot-page-3 .hud-menu-button,
+.game-screen.plot-page-3 .top-player-name-button,
+.game-screen.plot-page-3 .scene-hotspot,
+.game-screen.plot-page-3 .friendly-ghost-hotspot,
+.game-screen.plot-page-3 .coconut-garden-hotspot,
+.game-screen.plot-page-3 .bottom-nav-hotspots{display:none!important}
+.game-screen.plot-page-3 .aida-farm-pet-layer{display:block!important}
+.game-screen.plot-page-3 .plot:nth-child(1),.game-screen.plot-page-3 .plot:nth-child(4),.game-screen.plot-page-3 .plot:nth-child(7),.game-screen.plot-page-3 .plot:nth-child(10){left:5.0%!important}
+.game-screen.plot-page-3 .plot:nth-child(2),.game-screen.plot-page-3 .plot:nth-child(5),.game-screen.plot-page-3 .plot:nth-child(8),.game-screen.plot-page-3 .plot:nth-child(11){left:34.5%!important}
+.game-screen.plot-page-3 .plot:nth-child(3),.game-screen.plot-page-3 .plot:nth-child(6),.game-screen.plot-page-3 .plot:nth-child(9),.game-screen.plot-page-3 .plot:nth-child(12){left:64.3%!important}
+.game-screen.plot-page-3 .plot:nth-child(1),.game-screen.plot-page-3 .plot:nth-child(2),.game-screen.plot-page-3 .plot:nth-child(3){top:30.6%!important}
+.game-screen.plot-page-3 .plot:nth-child(4),.game-screen.plot-page-3 .plot:nth-child(5),.game-screen.plot-page-3 .plot:nth-child(6){top:42.8%!important}
+.game-screen.plot-page-3 .plot:nth-child(7),.game-screen.plot-page-3 .plot:nth-child(8),.game-screen.plot-page-3 .plot:nth-child(9){top:55.0%!important}
+.game-screen.plot-page-3 .plot:nth-child(10),.game-screen.plot-page-3 .plot:nth-child(11),.game-screen.plot-page-3 .plot:nth-child(12){top:67.2%!important}
+.game-screen.plot-page-2 .plot-page-next{display:flex!important}
+.game-screen.plot-page-3 .plot-page-next{display:none!important}
+
+/* status icons: same size/position, subtle dimensional shadow, no blinking */
+.status-badge{filter:drop-shadow(0 3px 4px rgba(0,0,0,.46)) drop-shadow(0 1px 1px rgba(255,255,255,.20))!important;animation:none!important}
+.angel-status-badge{filter:drop-shadow(0 4px 5px rgba(45,18,62,.50)) drop-shadow(0 0 3px rgba(255,239,166,.55))!important}
+
+/* Rank podium */
+.friend-rank-row{position:relative;transition:transform .18s ease,box-shadow .18s ease}
+.admin-rank-row{border:2px solid rgba(244,200,91,.98)!important;background:linear-gradient(135deg,rgba(67,30,91,.98),rgba(112,53,121,.97))!important;box-shadow:0 8px 22px rgba(61,20,79,.35),0 0 0 2px rgba(255,224,135,.18),inset 0 0 18px rgba(255,214,95,.12)!important;transform:translateY(-2px)}
+.admin-rank-row .friend-info b{color:#fff0b9!important;font-size:1.06em}.admin-rank-badge{background:linear-gradient(180deg,#ffe18a,#c88d2e)!important;color:#4c270c!important;border-radius:999px!important;padding:5px 8px!important;font-size:.72em!important;width:auto!important}
+.rank-top-1{border:2px solid #d8a62b!important;box-shadow:0 7px 17px rgba(150,103,12,.28),inset 0 0 12px rgba(255,217,102,.18)!important;transform:translateY(-1px)}
+.rank-top-2{border:2px solid #b8c4d1!important;box-shadow:0 6px 15px rgba(100,118,140,.22),inset 0 0 12px rgba(235,246,255,.22)!important}
+.rank-top-3{border:2px solid #c88671!important;box-shadow:0 6px 15px rgba(145,83,65,.20),inset 0 0 12px rgba(255,207,190,.16)!important}
+.rank-crown{position:absolute;left:7px;top:-10px;font-size:22px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.admin-rank-row,.rank-top-1{background-size:200% 100%;animation:y26RankShimmer 5s ease-in-out infinite}@keyframes y26RankShimmer{0%,100%{background-position:0 0}50%{background-position:100% 0}}}
+
+/* Rainy menu text contrast only */
+.rainy-inventory-item,.rainy-inventory-item span,.rainy-inventory-item b,.rainy-inventory-item small{color:#2d241d!important;text-shadow:none!important}
+
+/* Pet status follows animal/name */
+.farm-pet-status-wrap{position:absolute;z-index:8;left:50%;top:-3%;transform:translateX(22px);pointer-events:auto}
+.pet-status-icon{width:30px;height:30px;padding:0;border:0;background:transparent;display:grid;place-items:center;filter:drop-shadow(0 3px 3px rgba(0,0,0,.38));cursor:pointer}
+.pet-status-icon img{width:100%;height:100%;object-fit:contain;display:block}
+.pet-hungry-icon{pointer-events:none}
+.dog-hotel-pet .farm-pet-status-wrap{top:-12px;left:52%}
+.dog-roster-actions{display:flex;align-items:center;gap:5px}.dog-roster-angry{width:34px!important;height:34px!important;padding:2px!important;border-radius:50%!important}.dog-roster-angry img{width:100%;height:100%;object-fit:contain}
+
+/* medicine */
+.medicine-shop-card img,.medicine-inventory-item>img{object-fit:contain}.medicine-inventory-item small{display:block}.pet-medicine-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0 12px}.pet-medicine-grid button{min-width:0;padding:7px;border-radius:12px}.pet-medicine-grid img{width:42px;height:42px;object-fit:contain}.pet-medicine-grid span,.pet-medicine-grid small{display:block}.pet-medicine-active{margin:8px 0 12px;padding:9px;border-radius:12px;background:rgba(126,91,159,.14);font-weight:800}.y26-three-farms{grid-template-columns:repeat(3,1fr)!important}
+
+/* Jelly V2 */
+.jelly-v2-craft-button{position:absolute;left:3%;bottom:4%;z-index:35;border:0;border-radius:999px;padding:9px 12px;background:rgba(63,34,85,.92);color:#fff3c9;font-weight:900;box-shadow:0 5px 14px rgba(30,12,42,.32)}
+.jelly-v2-slot img{filter:drop-shadow(0 4px 5px rgba(35,20,70,.38))}.jelly-version-title{margin:15px 4px 7px}.jelly-v2-inventory{box-shadow:inset 0 0 0 1px rgba(122,87,175,.22)}.jelly-craft-stock{margin:9px 0;padding:8px;border-radius:12px;background:rgba(100,70,130,.10)}
+
+/* Barn gift box */
+.animal-slot-wrap{overflow:visible!important}.animal-merit-gift{position:absolute;z-index:18;right:-5px;top:-12px;width:34px;height:34px;padding:0;border:0;border-radius:50%;background:rgba(255,247,220,.94);font-size:21px;box-shadow:0 4px 10px rgba(55,31,23,.28);cursor:pointer}
+
+.purchase-warning-card p{font-size:1.02em;line-height:1.55}.friend-cat-view .feature-subtitle{margin-top:10px}
+
+/* Bed activity: allow scene navigation but block gameplay interactions inside the scene. */
+.scene-interactive-layer.rest-view-only{pointer-events:none!important}
+
+
+/* ======================================================================
+   V27 — QUICK MENU REORGANIZE ONLY
+   ====================================================================== */
+.hud-menu-sectioned-list{gap:11px!important}
+.hud-menu-section{display:grid;gap:6px}
+.hud-menu-section+.hud-menu-section{padding-top:9px;border-top:1px solid rgba(224,190,143,.22)}
+.hud-menu-section-title{margin:0;padding:0 3px;color:#ffe1a8;font-size:clamp(11px,2.85vw,14px);font-weight:950;letter-spacing:.1px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.hud-menu-section-items{display:grid;gap:6px}
+.hud-menu-sectioned-list .hud-menu-item{min-height:50px!important}
+.hud-menu-sectioned-list .hud-menu-item>span{font-size:22px}
+.hud-menu-drawer{max-height:88%!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}

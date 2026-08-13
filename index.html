@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=128">
+  <link rel="stylesheet" href="style.css?v=130">
 </head>
 <body>
   <main id="app">
@@ -79,13 +79,35 @@
           <div><small>ทางลัดในสวน</small><h2>เมนูของฉัน</h2></div>
           <button id="hudMenuCloseBtn" type="button" aria-label="ปิดเมนู">×</button>
         </div>
-        <div class="hud-menu-list">
-          <button id="mainDogHotelBtn" class="hud-menu-item hud-menu-featured" type="button"><span>🐶</span><div><b>โรงแรมน้องหมา</b><small>ไปดูน้องหมาและเก็บของดรอป</small></div><i>›</i></button>
-          <button id="notificationBtn" class="hud-menu-item" type="button" aria-label="การแจ้งเตือน"><span>🔔</span><div><b>แจ้งเตือน</b><small>ข้อความและกิจกรรมจากเพื่อน</small></div><i>›</i><em id="notificationBadge" class="notification-badge hidden">0</em></button>
-          <button id="forecastBtn" class="hud-menu-item" type="button"><span>🔮</span><div><b>ดูพยากรณ์</b><small>เช็กสภาพอากาศของสวน</small></div><i>›</i></button>
-          <button id="modeBtn" class="hud-menu-item" type="button"><span>🪄</span><div><b>เปลี่ยนโหมดสวน</b><small>เลือกบรรยากาศที่ต้องการ</small></div><i>›</i></button>
-          <button id="almsBtn" class="hud-menu-item activity-button alms-button" type="button"><span>🛕</span><div><b>วัดไทยในสวน</b><small>กำลังตรวจเวลา</small></div><i>›</i></button>
-          <button id="challengeBtn" class="hud-menu-item activity-button challenge-button" type="button"><span>👻</span><div><b>ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></div><i>›</i></button>
+        <div class="hud-menu-list hud-menu-sectioned-list">
+          <section class="hud-menu-section" aria-labelledby="hudPlacesTitle">
+            <h3 id="hudPlacesTitle" class="hud-menu-section-title">📍 สถานที่</h3>
+            <div class="hud-menu-section-items">
+              <button id="mainDogHotelBtn" class="hud-menu-item hud-menu-featured" type="button"><span>🐶</span><div><b>โรงแรมน้องหมา</b><small>ไปดูน้องหมาและเก็บของดรอป</small></div><i>›</i></button>
+              <button id="almsBtn" class="hud-menu-item activity-button alms-button" type="button"><span>🛕</span><div><b>วัดไทยในสวน</b><small>กำลังตรวจเวลา</small></div><i>›</i></button>
+              <button id="shortcutFishingBtn" class="hud-menu-item" type="button"><span>🎣</span><div><b>บ่อตกปลา</b><small>ไปยังบ่อตกปลาบาดาล</small></div><i>›</i></button>
+              <button id="shortcutJellyfishBtn" class="hud-menu-item" type="button"><span>🪼</span><div><b>บ่อแมงกะพรุน</b><small>ไปยังบ่อแมงกะพรุนส่วนกลาง</small></div><i>›</i></button>
+              <button id="shortcutUnderwaterCityBtn" class="hud-menu-item" type="button"><span>🌊</span><div><b>เมืองบาดาล</b><small>ไปหาเจ้าแม่เมืองบาดาล</small></div><i>›</i></button>
+              <button id="shortcutBoatRaceBtn" class="hud-menu-item" type="button"><span>🚣</span><div><b>เทศกาลเรือพาย</b><small>เข้าสู่การแข่งขันเรือพายโดยตรง</small></div><i>›</i></button>
+              <button id="shortcutSpiritBarnBtn" class="hud-menu-item" type="button"><span>👻</span><div><b>โรงเรือนสัตว์วิญญาณ</b><small>เข้าสู่โรงเรือนสัตว์วิญญาณ</small></div><i>›</i></button>
+            </div>
+          </section>
+
+          <section class="hud-menu-section" aria-labelledby="hudGardenSystemsTitle">
+            <h3 id="hudGardenSystemsTitle" class="hud-menu-section-title">✨ ระบบในสวน</h3>
+            <div class="hud-menu-section-items">
+              <button id="forecastBtn" class="hud-menu-item" type="button"><span>🔮</span><div><b>ดูพยากรณ์</b><small>เช็กสภาพอากาศของสวน</small></div><i>›</i></button>
+              <button id="modeBtn" class="hud-menu-item" type="button"><span>🪄</span><div><b>เปลี่ยนโหมดสวน</b><small>เลือกบรรยากาศที่ต้องการ</small></div><i>›</i></button>
+            </div>
+          </section>
+
+          <section class="hud-menu-section" aria-labelledby="hudActivityTitle">
+            <h3 id="hudActivityTitle" class="hud-menu-section-title">🔔 กิจกรรม &amp; แจ้งเตือน</h3>
+            <div class="hud-menu-section-items">
+              <button id="notificationBtn" class="hud-menu-item" type="button" aria-label="การแจ้งเตือน"><span>🔔</span><div><b>แจ้งเตือน</b><small>ข้อความและกิจกรรมจากเพื่อน</small></div><i>›</i><em id="notificationBadge" class="notification-badge hidden">0</em></button>
+              <button id="challengeBtn" class="hud-menu-item activity-button challenge-button" type="button"><span>👻</span><div><b>ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></div><i>›</i></button>
+            </div>
+          </section>
         </div>
       </aside>
 
@@ -144,7 +166,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=6"></script>
+  <script src="daily-missions.js?v=7"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -255,6 +277,6 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=141"></script>
+  <script src="game.js?v=143"></script>
 </body>
 </html>
