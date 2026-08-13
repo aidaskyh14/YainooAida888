@@ -2454,3 +2454,45 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   top:11.6%!important;
   right:4.2%!important;
 }
+
+
+/* ======================================================================
+   V32 — cleanup visuals
+   ====================================================================== */
+/* Tools: closer to Shortcuts, but not overlapping. One compact aligned tray. */
+.game-screen:not(.plot-page-2):not(.plot-page-3):not(.visiting-friend) .farm-tools-button{
+  top:8.2%!important;
+  right:4.2%!important;
+  height:43px!important;
+  min-width:98px!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open::after{
+  right:3.2%!important;
+  top:12.25%!important;
+  width:45.5%!important;
+  height:60px!important;
+  border-radius:22px!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{
+  top:12.62%!important;
+  width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+  border-radius:16px!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button{right:34.5%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button{right:18.7%!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{right:3.8%!important}
+
+/* Jelly pond: V1 slightly calmer/smaller; V2 only modestly larger and more prominent. */
+.jelly-slot-owned:not(.jelly-v2-slot) img{width:94%!important;height:72%!important;margin:0 auto!important}
+.jelly-slot-owned.jelly-v2-slot img{width:108%!important;height:82%!important;margin-left:-4%!important;filter:drop-shadow(0 5px 7px rgba(54,24,86,.42))!important}
+.jelly-slot-owned.jelly-v2-hungry img{animation:v32JellyV2Hungry 1.28s ease-in-out infinite!important}
+@keyframes v32JellyV2Hungry{0%,100%{transform:scale(1);filter:drop-shadow(0 5px 7px rgba(54,24,86,.42)) brightness(1)}50%{transform:scale(1.08);filter:drop-shadow(0 7px 11px rgba(121,63,176,.58)) brightness(1.16)}}
+
+/* Shop neutral landing screen. */
+.shop-home-panel .shop-category-tabs{margin-bottom:12px}
+.shop-home-cover{position:relative;overflow:hidden;border-radius:18px;border:2px solid rgba(139,90,125,.22);background:#ead8b7;box-shadow:0 8px 20px rgba(70,38,67,.14)}
+.shop-home-cover>img{display:block;width:100%;max-height:52vh;object-fit:cover;object-position:center}
+.shop-home-copy{padding:11px 13px;text-align:center;background:linear-gradient(180deg,#fff7e7,#ecd7ae);color:#4b2a49}
+.shop-home-copy b,.shop-home-copy small{display:block}.shop-home-copy b{font-size:14px}.shop-home-copy small{margin-top:3px;font-size:10px;opacity:.78}

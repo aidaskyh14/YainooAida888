@@ -9231,3 +9231,106 @@ const V30_backfillTimer=setInterval(()=>{
   if(V30_catBackfillDone){clearInterval(V30_backfillTimer);return}
   if(cloudReady&&currentMember==="Aida"&&adminProfile?.role==="admin")V30_adminBackfillPublicCats().catch(()=>{});
 },1200);
+
+
+/* ======================================================================
+   V32 — cleanup round: friend cats all farms / instant planting preview /
+         tidy tools / V2 jelly emphasis / neutral Shop landing
+   ====================================================================== */
+
+/* Friend visit: currentPlacedCat must use the visited garden state on every
+   farm page. Never fall back to the visitor's own cat while visitContext exists. */
+const V32_currentPlacedCatBase=currentPlacedCat;
+currentPlacedCat=function(s){
+  const source=s||(visitContext?state:(ownState||state));
+  ensureCatState(source);
+  return source?.cats?.find(cat=>Number(cat.placedFarm)===currentFarmNo())||null;
+};
+function V32_refreshVisibleCat(){
+  activePlacedCatId="";
+  clearAidaFarmPetActivity(true);
+  return syncAidaFarmPet();
+}
+const V32_setFarmPlotPageBase=setFarmPlotPage;
+setFarmPlotPage=function(page){
+  const result=V32_setFarmPlotPageBase(page);
+  V32_refreshVisibleCat();
+  return result;
+};
+if($("plotPageNextBtn"))$("plotPageNextBtn").onclick=()=>setFarmPlotPage(farmPlotPage+1);
+if($("plotPagePrevBtn"))$("plotPagePrevBtn").onclick=()=>setFarmPlotPage(farmPlotPage-1);
+
+/* Planting: show the crop in the plot immediately, while the cloud transaction
+   finishes behind it. ownState is not changed until Firestore succeeds. */
+Y26_plantCrop=async function(index,key,button){
+  if(visitContext||guardResting())return;
+  const crop=CROPS[key];if(!crop)return;
+  const source=ownState||state;if(!source)return;
+  ensurePlotPhaseStandalone(source.plots?.[index]);
+  if(source.plots?.[index]?.crop){message("ปลูกไม่ได้","แปลงนี้ถูกปลูกไปแล้ว");return}
+  const cost=Number(crop.seedCostMerit)||0;
+  if(cost&&(Number(source.merit)||0)<cost){message("ปลูกไม่ได้",`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);return}
+  if(button)button.disabled=true;
+  const previousView=state;
+  const preview=normalizeState(cloneData(source),currentMember);
+  const previewNow=gameNow();
+  const predictedCounter=(Number(preview.angelPlantCounter)||0)+1;
+  preview.angelPlantCounter=predictedCounter>=30?0:predictedCounter;
+  if(cost)preview.merit=(Number(preview.merit)||0)-cost;
+  preview.plots[index]={crop:key,phase:"growing1",phaseEndsAt:previewNow+crop.waterMs,plantedAt:previewNow,wateredAt:0,worm:false,angel:predictedCounter>=30};
+  state=preview;
+  closeModal();draw();updateMeritUI();
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let next,newPlots;
+    await fs.runTransaction(db,async tx=>{
+      const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
+      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+      if(plots[index]?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");
+      const realCost=Number(crop.seedCostMerit)||0;if(realCost&&(Number(s.merit)||0)<realCost)throw new Error(`${crop.name} ใช้ ${realCost} กุศล / 1 เมล็ด`);if(realCost)s.merit-=realCost;
+      s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;
+      const now=gameNow();plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false,angel};
+      s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      if(realCost)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();updateMeritUI();
+  }catch(error){
+    state=ownState||previousView;draw();updateMeritUI();message("ปลูกไม่ได้",error.message||"กรุณาลองใหม่");
+  }finally{if(button)button.disabled=false}
+};
+
+/* Jelly V2: keep the same 12 slots, but visually distinguish V2 and pulse it
+   whenever it is ready for food. */
+const V32_drawJellyfishPondBase=drawJellyfishPond;
+drawJellyfishPond=function(pond){
+  const result=V32_drawJellyfishPondBase(pond);
+  const slots=pond?.slots||[];
+  document.querySelectorAll("[data-jelly-slot]").forEach(btn=>{
+    const i=Number(btn.dataset.jellySlot),slot=slots[i];
+    if(!slot||Number(slot.version)!==2)return;
+    btn.classList.add("jelly-v2-slot");
+    if(Number(slot.cooldownUntil||0)<=gameNow())btn.classList.add("jelly-v2-hungry");
+  });
+  return result;
+};
+
+/* Shop: opening the Shop button always starts on a neutral cover. Products only
+   appear after the player chooses a category. */
+const V32_showShopCategory=showShop;
+function V32_showShopHome(){
+  if(guardResting())return;
+  $("modalContent").innerHTML=`<section class="feature-panel shop-panel shop-home-panel"><h2>🕯️ ร้านค้า</h2><div class="shop-category-tabs shop-category-tabs-v2"><button type="button" data-v32-shop="animals">🐾 สัตว์วิญญาณ</button><button type="button" data-v32-shop="specials">🎁 ของพิเศษ</button><button type="button" data-v32-shop="mystery">🎲 กล่องสุ่ม</button><button type="button" data-v32-shop="medicine">💊 ยา</button></div><div class="shop-home-cover"><img src="shop_intro_jellyfish.png?v=1" alt="ร้านค้าของยัยหนู"><div class="shop-home-copy"><b>เลือกหมวดสินค้าที่ต้องการ</b><small>แตะประเภทด้านบนเพื่อดูสินค้า</small></div></div></section>`;
+  document.querySelectorAll("[data-v32-shop]").forEach(b=>b.onclick=()=>V32_showShopCategory(b.dataset.v32Shop));
+  openModal();
+}
+showShop=function(tab){return (!tab||tab==="home")?V32_showShopHome():V32_showShopCategory(tab)};
+if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home");
+
+/* Make sure the local-only tool button always starts closed after page load or
+   when leaving a friend visit. */
+V29_setTools(false);
