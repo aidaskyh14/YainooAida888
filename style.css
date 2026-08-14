@@ -3360,3 +3360,129 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .v42-reward-confirm{text-align:center}.v42-reward-confirm img{width:min(42vw,170px);height:min(42vw,170px);object-fit:contain}
 @media(max-height:700px){.modal-card:has(.v42-campaign-reward){height:88dvh!important;max-height:88dvh!important}.v42-reward-content{padding:7px;gap:4px}.v42-reward-progress-card{padding:6px 8px}.v42-reward-cat-list{gap:3px}.v42-reward-cat{min-height:42px}.v42-reward-cat img{width:34px;height:34px}}
 
+
+
+/* V42.1 — campaign footer layout fix
+   Keep gift button compact on the left and countdown wide/readable on the right. */
+.v42-campaign-footer-row{
+  display:grid !important;
+  grid-template-columns:64px minmax(0,1fr) !important;
+  gap:8px !important;
+  align-items:end !important;
+  width:100% !important;
+  margin-top:8px !important;
+}
+.v42-campaign-footer-row .v42-campaign-gift{
+  width:64px !important;
+  min-width:64px !important;
+  height:58px !important;
+  min-height:58px !important;
+  padding:4px 3px !important;
+  border-radius:14px !important;
+  align-self:end !important;
+}
+.v42-campaign-footer-row .v42-campaign-gift span{
+  font-size:24px !important;
+  line-height:1 !important;
+}
+.v42-campaign-footer-row .v42-campaign-gift small{
+  font-size:9px !important;
+  line-height:1.05 !important;
+  white-space:nowrap !important;
+}
+.v42-campaign-footer-row .v36-campaign-footer{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:58px !important;
+  height:58px !important;
+  margin:0 !important;
+  padding:6px 12px !important;
+  display:grid !important;
+  grid-template-columns:auto minmax(0,1fr) !important;
+  grid-template-rows:1fr !important;
+  align-items:center !important;
+  justify-content:stretch !important;
+  column-gap:10px !important;
+  text-align:left !important;
+  border-radius:14px !important;
+}
+.v42-campaign-footer-row .v36-campaign-footer span{
+  display:block !important;
+  margin:0 !important;
+  font-size:10px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+}
+.v42-campaign-footer-row .v36-campaign-footer strong{
+  display:block !important;
+  margin:0 !important;
+  text-align:right !important;
+  font-size:clamp(16px,4vw,22px) !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+  word-break:keep-all !important;
+  overflow-wrap:normal !important;
+  letter-spacing:.2px !important;
+}
+@media(max-width:390px){
+  .v42-campaign-footer-row{
+    grid-template-columns:58px minmax(0,1fr) !important;
+    gap:6px !important;
+  }
+  .v42-campaign-footer-row .v42-campaign-gift{
+    width:58px !important;
+    min-width:58px !important;
+    height:54px !important;
+    min-height:54px !important;
+  }
+  .v42-campaign-footer-row .v36-campaign-footer{
+    height:54px !important;
+    min-height:54px !important;
+    padding:5px 8px !important;
+    column-gap:6px !important;
+  }
+  .v42-campaign-footer-row .v36-campaign-footer strong{
+    font-size:clamp(14px,3.8vw,19px) !important;
+  }
+}
+
+
+
+/* V42.2 — make campaign reward page fill the modal instead of leaving beige empty space */
+.modal-card:has(.v42-campaign-reward){
+  display:flex !important;
+  flex-direction:column !important;
+}
+.modal-card:has(.v42-campaign-reward) #modalContent,
+.modal-card:has(.v42-campaign-reward) .modal-content{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  height:100% !important;
+  overflow:hidden !important;
+}
+.v42-campaign-reward{
+  width:100% !important;
+  height:100% !important;
+  min-height:100% !important;
+  flex:1 1 auto !important;
+  margin:0 !important;
+  background-size:cover !important;
+  background-position:center center !important;
+}
+.v42-reward-content{
+  height:100% !important;
+  min-height:100% !important;
+  justify-content:flex-start !important;
+}
+.v42-reward-progress-card{
+  margin-top:0 !important;
+}
+.v42-reward-cat-list{
+  margin-top:0 !important;
+}
+@media(max-height:700px){
+  .v42-campaign-reward{
+    min-height:100% !important;
+  }
+}
+
