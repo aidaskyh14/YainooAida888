@@ -3260,3 +3260,70 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
     font-size:7.5px!important;
   }
 }
+
+
+/* ======================================================================
+   V41 — campaign card hugs its content; no dead purple space below
+   ====================================================================== */
+.modal-card:has(.v36-campaign-dashboard){
+  width:min(94vw,610px)!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:88dvh!important;
+  overflow:hidden!important;
+}
+
+.v36-campaign-dashboard{
+  height:auto!important;
+  min-height:0!important;
+  max-height:88dvh!important;
+}
+
+.v36-campaign-dashboard .v36-campaign-content{
+  display:grid!important;
+  grid-template-rows:auto auto auto auto!important;
+  height:auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:9px 9px 9px!important;
+}
+
+.v36-campaign-dashboard .v36-campaign-ranks{
+  height:auto!important;
+  min-height:0!important;
+  grid-template-rows:repeat(9,28px)!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  overflow:hidden!important;
+  padding:2px 1px 2px!important;
+}
+
+.v36-campaign-dashboard .v36-rank-row,
+.v36-campaign-dashboard .v36-rank-top-1,
+.v36-campaign-dashboard .v36-rank-top-2,
+.v36-campaign-dashboard .v36-rank-top-3{
+  min-height:28px!important;
+  height:28px!important;
+}
+
+.v36-campaign-dashboard .v36-campaign-footer{
+  margin:5px auto 0!important;
+}
+
+/* Keep the visible area tight even on short iPhone viewports. */
+@media(max-width:390px){
+  .modal-card:has(.v36-campaign-dashboard){
+    width:94vw!important;
+    height:auto!important;
+    max-height:86dvh!important;
+  }
+  .v36-campaign-dashboard .v36-campaign-ranks{
+    grid-template-rows:repeat(9,26px)!important;
+  }
+  .v36-campaign-dashboard .v36-rank-row,
+  .v36-campaign-dashboard .v36-rank-top-1,
+  .v36-campaign-dashboard .v36-rank-top-2,
+  .v36-campaign-dashboard .v36-rank-top-3{
+    min-height:26px!important;
+    height:26px!important;
+  }
+}

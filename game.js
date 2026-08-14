@@ -9892,8 +9892,8 @@ function V37_bindCampaignShortcuts(){
     pumpkinBtn.onclick=event=>{
       event.preventDefault();
       event.stopPropagation();
-      closeHomeHudMenu();
       V36_showCampaign("pumpkin");
+      requestAnimationFrame(()=>closeHomeHudMenu());
     };
   }
   if(icecreamBtn){
@@ -9901,8 +9901,8 @@ function V37_bindCampaignShortcuts(){
     icecreamBtn.onclick=event=>{
       event.preventDefault();
       event.stopPropagation();
-      closeHomeHudMenu();
       V36_showCampaign("icecream");
+      requestAnimationFrame(()=>closeHomeHudMenu());
     };
   }
 }
@@ -9967,3 +9967,19 @@ setInterval(V36_checkEndedCampaigns,30000);
 /* V37 FINAL — campaign buttons must always remain clickable after any HUD rerender/rebind. */
 setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign shortcut bind",e)}},0);
 setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign shortcut bind",e)}},1200);
+
+
+/* V41 — prewarm campaign artwork quietly so opening feels instant.
+   Uses idle time and never blocks login/game interaction. */
+(function V41_prewarmCampaignArtwork(){
+  const warm=()=>{
+    ["campaign_pumpkin_background.png?v=1","campaign_icecream_gold_background.png?v=1"].forEach(src=>{
+      const img=new Image();
+      img.decoding="async";
+      img.loading="eager";
+      img.src=src;
+    });
+  };
+  if("requestIdleCallback" in window) requestIdleCallback(warm,{timeout:3000});
+  else setTimeout(warm,1800);
+})();
