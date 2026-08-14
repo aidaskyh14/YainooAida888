@@ -4910,7 +4910,7 @@ let aidaFarmPetAssetBase="";
 
 try{
   const saved=JSON.parse(sessionStorage.getItem("aidaPetTesterV1")||"null");
-  if(Number(saved?.number)>=1&&Number(saved?.number)<=8)aidaFarmPetNumber=Math.floor(Number(saved.number));
+  if(Number(saved?.number)>=1&&Number(saved?.number)<=12)aidaFarmPetNumber=Math.floor(Number(saved.number));
 }catch(error){console.warn("pet tester settings",error)}
 
 function saveAidaFarmPetTestSettings(){
@@ -5063,7 +5063,7 @@ function restartAidaFarmPetSelection(){
 }
 async function beginAidaFarmPetTest(type,number){
   if(farmPlotPage!==0||$("gameScreen")?.classList.contains("plot-page-2"))setFarmPlotPage(0);
-  aidaFarmPetType="cat";aidaFarmPetNumber=Math.max(1,Math.min(8,Number(number)||1));aidaFarmPetSpeed=.65;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
+  aidaFarmPetType="cat";aidaFarmPetNumber=Math.max(1,Math.min(12,Number(number)||1));aidaFarmPetSpeed=.65;aidaFarmPetAssetBase="";aidaFarmPetTestActive=false;
   $("petTestPanel")?.classList.add("hidden");$("petTestActivePanel")?.classList.add("hidden");
   const label=`แมวตัวที่ ${aidaFarmPetNumber}`;if($("petTestActiveName"))$("petTestActiveName").textContent=`กำลังทดลอง${label}`;
   clearAidaFarmPetActivity(true);
@@ -5082,7 +5082,7 @@ function stopAidaFarmPetTest(){
 }
 function initializeAidaFarmPetTester(){
   const cats=$("petTestCatList");if(!cats||cats.children.length)return;
-  const choices=type=>Array.from({length:8},(_,index)=>`<button class="pet-test-choice" type="button" data-pet-choice="${type}" data-pet-number="${index+1}">ตัวที่ ${index+1}</button>`).join("");cats.innerHTML=choices("cat");
+  const choices=type=>Array.from({length:12},(_,index)=>`<button class="pet-test-choice" type="button" data-pet-choice="${type}" data-pet-number="${index+1}">ตัวที่ ${index+1}</button>`).join("");cats.innerHTML=choices("cat");
   $("petTestBtn").onclick=()=>{if(aidaFarmPetTestActive){$("petTestActivePanel").classList.remove("hidden");return}$("petTestPanel").classList.toggle("hidden")};
   $("petTestCloseBtn").onclick=()=>$("petTestPanel").classList.add("hidden");
   document.querySelectorAll("[data-pet-choice]").forEach(button=>button.onclick=()=>beginAidaFarmPetTest(button.dataset.petChoice,button.dataset.petNumber));
@@ -5110,7 +5110,11 @@ const CAT_TYPES={
   cat5:{number:5,name:"เหมียวคุณหนูไว้ทุกข์",image:"cat-05.png?v=1"},
   cat6:{number:6,name:"เหมียวผู้ดีตกอับ",image:"cat-06.png?v=1"},
   cat7:{number:7,name:"เหมียวอาคมหน้าตึง",image:"cat-07.png?v=1"},
-  cat8:{number:8,name:"เหมียวชาวนาเบื่อโลก",image:"cat-08.png?v=1"}
+  cat8:{number:8,name:"เหมียวชาวนาเบื่อโลก",image:"cat-08.png?v=1"},
+  cat9:{number:9,name:"โมจิผี",image:"cat-09.png?v=1"},
+  cat10:{number:10,name:"บูบู้",image:"cat-10.png?v=1"},
+  cat11:{number:11,name:"เจียงเหมียว",image:"cat-11.png?v=1"},
+  cat12:{number:12,name:"พิงกี้บู",image:"cat-12.png?v=1"}
 };
 const CAT_LIFETIME_MS=10*24*60*60*1000;
 const CAT_HUNGER_MS=3*60*60*1000;
@@ -5242,7 +5246,17 @@ function catConsolationPool(){return[
   {id:"babyBamboo",label:"เบบี้แบมบรู๊ววว ×100",image:CROPS.babyBamboo.readyImg,apply:s=>s.bag.babyBamboo=(Number(s.bag.babyBamboo)||0)+100}
 ]}
 function rollCatBoxPendingReward(){
-  if(Math.random()<CAT_BOX.chance){const keys=Object.keys(CAT_TYPES),typeKey=keys[Math.floor(Math.random()*keys.length)];return{kind:"cat",typeKey}}
+  if(Math.random()<CAT_BOX.chance){
+    // CAT-01–08: 10% each within the cat pool; CAT-09–12: 5% each.
+    // With CAT_BOX.chance = 25%, this is 2.5% per old cat and 1.25% per new cat per box.
+    const weightedKeys=[
+      "cat1","cat1","cat2","cat2","cat3","cat3","cat4","cat4",
+      "cat5","cat5","cat6","cat6","cat7","cat7","cat8","cat8",
+      "cat9","cat10","cat11","cat12"
+    ];
+    const typeKey=weightedKeys[Math.floor(Math.random()*weightedKeys.length)];
+    return{kind:"cat",typeKey};
+  }
   const pool=catConsolationPool().slice(),ids=[];while(ids.length<3&&pool.length){const i=Math.floor(Math.random()*pool.length);ids.push(pool.splice(i,1)[0].id)}return{kind:"consolation",ids};
 }
 function showCatBoxPendingReward(){
