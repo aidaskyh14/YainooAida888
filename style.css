@@ -2558,3 +2558,46 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button>span,
 .game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button>span,
 .game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button>span{display:grid!important;place-items:center!important;width:100%!important;height:100%!important;margin:0!important;font-size:25px!important;line-height:1!important}
+
+
+/* ======================================================================
+   V35 — requested UI cleanup only
+   ====================================================================== */
+/* Food options: image-first game cards instead of text-only choices. */
+.v35-food-choice-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.v35-food-card{min-width:0!important;min-height:112px!important;padding:10px 8px!important;border:1.5px solid rgba(145,94,64,.46)!important;border-radius:18px!important;background:linear-gradient(160deg,#fffaf0,#f3dfb7)!important;color:#4b2a49!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;text-align:center!important;box-shadow:0 5px 12px rgba(70,38,67,.11),inset 0 1px rgba(255,255,255,.78)!important}
+.v35-food-card img{display:block!important;width:64px!important;height:64px!important;object-fit:contain!important;margin:0 auto!important;filter:drop-shadow(0 3px 4px rgba(65,35,56,.16))}
+.v35-food-card span,.v35-food-card b,.v35-food-card small{display:block!important}
+.v35-food-card b{font-size:clamp(11px,3.05vw,14px)!important;line-height:1.18!important}
+.v35-food-card small{margin-top:3px!important;font-size:clamp(9px,2.45vw,11px)!important;color:#856b76!important}
+.v35-food-card:disabled{opacity:.46!important;filter:grayscale(.22)!important}
+
+/* Dog roster actions: compact, separate, and visually intentional. */
+.v35-dog-roster-row{grid-template-columns:68px minmax(0,1fr) 112px!important;align-items:center!important;gap:9px!important}
+.v35-dog-roster-actions{display:grid!important;grid-template-columns:1fr!important;gap:6px!important;align-content:center!important}
+.v35-dog-roster-actions>button:not(.dog-roster-angry){width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;padding:5px 7px!important;border-radius:12px!important;font-size:clamp(10px,2.7vw,12px)!important;font-weight:900!important;line-height:1.05!important}
+.v35-dog-feed-btn{border:1.5px solid #4f9a59!important;background:linear-gradient(180deg,#75c77d,#4f9c5a)!important;color:#fff!important;box-shadow:0 4px 9px rgba(45,107,56,.23)!important}
+.v35-dog-feed-btn:disabled{background:linear-gradient(180deg,#b7c5b9,#98aa9b)!important;border-color:#94a796!important;color:#eef3ef!important;opacity:.68!important;box-shadow:none!important}
+.v35-dog-med-btn{border:1.5px solid #a66b9c!important;background:linear-gradient(180deg,#b978aa,#8d5486)!important;color:#fff!important;box-shadow:0 4px 9px rgba(104,54,96,.22)!important}
+.v35-dog-roster-actions .dog-roster-angry{justify-self:center!important;width:34px!important;height:34px!important;min-width:34px!important;padding:2px!important;border-radius:50%!important}
+.v35-dog-roster-actions .dog-roster-angry img{width:100%!important;height:100%!important;object-fit:contain!important}
+@media(max-width:390px){.v35-dog-roster-row{grid-template-columns:58px minmax(0,1fr) 98px!important}.v35-dog-roster-actions>button:not(.dog-roster-angry){font-size:10px!important;padding:4px!important}}
+
+/* Tool tray: lower than before, fixed shared tray, 3 equal centered slots. */
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open::after{
+  right:3.5%!important;
+  top:13.45%!important;
+  width:47.5%!important;
+  height:64px!important;
+  border-radius:20px!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button,
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{
+  top:13.82%!important;
+  width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;max-width:48px!important;max-height:48px!important;
+  margin:0!important;padding:0!important;border-radius:14px!important;display:grid!important;place-items:center!important;
+}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .sprinkler-button{left:51.6%!important;right:auto!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .tractor-button{left:68.1%!important;right:auto!important}
+.game-screen:not(.plot-page-2):not(.plot-page-3).farm-tools-open .collect-drops-button{left:84.6%!important;right:auto!important}

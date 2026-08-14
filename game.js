@@ -9354,3 +9354,181 @@ showRestOptions=function(){
   document.querySelectorAll("[data-y26-rest]").forEach(button=>button.onclick=()=>showRestConfirmation(button.dataset.y26Rest));
   openModal();
 };
+
+
+/* ======================================================================
+   V35 — Pet/Jelly food UI + angry penalty enforcement
+   Scope: requested cleanup only. No unrelated game systems changed.
+   ====================================================================== */
+function V35_cropFoodImage(key){
+  const c=CROPS[key]||{};
+  return c.readyImg||c.selectImg||c.growImg||c.sproutImg||c.seedImg||"";
+}
+
+/* V2 jellyfish food choices now show the actual item art. */
+Y26_showJellyV2Food=function(index){
+  const s=ownState||state,
+        plank=Number(s?.bag?.hauntedPlankton)||0,
+        fish4=Number(s?.coconutRiverItems?.fish4)||0,
+        plankImg=V35_cropFoodImage("hauntedPlankton"),
+        fishImg=COCONUT_RIVER_ITEMS?.fish4?.image||"coconut-river-fish-04.png?v=1";
+  $("modalContent").innerHTML=`<section class="feature-panel jelly-food-panel v35-jelly-food-panel">
+    <h2>🍽️ เลือกอาหารแมงกะพรุน V2</h2>
+    <p class="feature-subtitle">ให้อาหารครั้งเดียว • รับกุศลสุ่ม 50–150 • คูลดาวน์ 90 นาที</p>
+    <div class="jelly-food-grid v35-food-choice-grid">
+      <button type="button" class="v35-food-card" data-y26-jv2-food="plankton" ${plank<50?"disabled":""}>
+        <img src="${plankImg}" alt="แพลงก์ตอนหลอนปิ๊">
+        <span><b>แพลงก์ตอนหลอนปิ๊ ×50</b><small>มี ×${plank}</small></span>
+      </button>
+      <button type="button" class="v35-food-card" data-y26-jv2-food="fish4" ${fish4<20?"disabled":""}>
+        <img src="${fishImg}" alt="ปลาสวนมะพร้าวหมายเลข 4">
+        <span><b>ปลาสวนมะพร้าวหมายเลข 4 ×20</b><small>มี ×${fish4}</small></span>
+      </button>
+    </div>
+  </section>`;
+  document.querySelectorAll("[data-y26-jv2-food]").forEach(b=>b.onclick=()=>Y26_feedJellyV2(index,b.dataset.y26Jv2Food));
+  openModal();
+};
+
+function V35_dogCanFeed(dog){
+  const st=Y26_petStatus(dog);
+  return st.kind==="hungry"||st.kind==="angry";
+}
+function V35_dogPlantCards(s,dogId){
+  const rows=["babyBamboo","hauntedPlankton"];
+  return rows.map(key=>{
+    const count=Number(s?.bag?.[key])||0,crop=CROPS[key]||{name:key},img=V35_cropFoodImage(key);
+    return `<button type="button" class="v35-food-card" data-y26-feed-dog-plant="${key}" ${count<30?"disabled":""}>
+      <img src="${img}" alt="${safeHtml(crop.name)}">
+      <span><b>${safeHtml(crop.name)} ×30</b><small>มี ×${count}</small></span>
+    </button>`;
+  }).join("");
+}
+function V35_dogDishCards(s){
+  const foods=RECIPES.filter(r=>dishCountInState(r.id,s)>0);
+  return foods.length?foods.map(r=>`<button type="button" class="v35-food-card" data-y26-feed-dog-dish="${r.id}">
+    <img src="${r.image}" alt="${safeHtml(r.name)}"><span><b>${safeHtml(r.name)}</b><small>มี ×${dishCountInState(r.id,s)}</small></span>
+  </button>`).join(""):'<p class="empty-feature">ไม่มีอาหารคราฟ</p>';
+}
+
+/* Dedicated feeding picker from the dog roster. Includes item images for plants. */
+showDogRosterFoodPicker=function(dogId){
+  clearDogRosterTimer();
+  const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId&&d.placedHotel);
+  if(!dog)return;
+  if(!V35_dogCanFeed(dog)){showDogHotelRoster();return}
+  $("modalContent").innerHTML=`<section class="feature-panel dog-roster-feed-panel v35-dog-feed-panel">
+    <button id="backDogRosterBtn" class="secondary-action" type="button">← กลับรายชื่อมะหมา</button>
+    <img class="cat-result-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+    <h2>🍖 ให้อาหาร ${safeHtml(dogDisplayName(dog))}</h2>
+    <h3>🍲 อาหารคราฟ • +20–50 กุศล</h3>
+    <div class="cat-feed-grid v35-food-choice-grid">${V35_dogDishCards(s)}</div>
+    <h3>🌱 พืช • +5–20 กุศล</h3>
+    <div class="cat-feed-grid v35-food-choice-grid">${V35_dogPlantCards(s,dogId)}</div>
+  </section>`;
+  $("backDogRosterBtn").onclick=showDogHotelRoster;
+  document.querySelectorAll("[data-y26-feed-dog-dish]").forEach(b=>b.onclick=()=>Y26_feedDog(dogId,"dish",b.dataset.y26FeedDogDish));
+  document.querySelectorAll("[data-y26-feed-dog-plant]").forEach(b=>b.onclick=()=>Y26_feedDog(dogId,"plant",b.dataset.y26FeedDogPlant));
+  openModal();
+};
+
+function V35_showDogMedicinePicker(dogId){
+  clearDogRosterTimer();
+  const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId&&d.placedHotel);
+  if(!dog)return;
+  $("modalContent").innerHTML=`<section class="feature-panel v35-dog-medicine-panel">
+    <button id="backDogRosterBtn" class="secondary-action" type="button">← กลับรายชื่อมะหมา</button>
+    <img class="cat-result-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+    <h2>💊 ใช้ยาให้ ${safeHtml(dogDisplayName(dog))}</h2>
+    <p class="feature-subtitle">เลือกยา 1 ชนิด • ระหว่างยาออกฤทธิ์น้องจะไม่หิวและให้อาหารไม่ได้</p>
+    ${Y26_medicineButtons("dog",dog)}
+  </section>`;
+  $("backDogRosterBtn").onclick=showDogHotelRoster;
+  document.querySelectorAll("[data-use-pet-med]").forEach(b=>b.onclick=()=>Y26_useMedicine("dog",dogId,b.dataset.usePetMed));
+  openModal();
+}
+
+/* Roster has two clear actions: green Feed + separate Medicine. */
+showDogHotelRoster=function(){
+  clearDogRosterTimer();
+  const s=ensureDogHotelPenState(ownState||state),dogs=dogsInHotelPen(currentDogHotelPen,s);
+  const rows=dogs.length?dogs.map((dog,i)=>{
+    const st=Y26_petStatus(dog),canFeed=st.kind==="hungry"||st.kind==="angry",medActive=st.kind==="medicine";
+    return `<article class="dog-roster-row v35-dog-roster-row">
+      <img src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+      <div class="dog-roster-info"><b>${i+1}. ${safeHtml(dogDisplayName(dog))}</b><small>${safeHtml(dogType(dog).name)} • คอก ${currentDogHotelPen}</small><span>อายุเหลือ ${dogLifeText(dog)}</span><span class="dog-roster-hunger ${canFeed?"ready":""}">${safeHtml(st.text)}</span></div>
+      <div class="dog-roster-actions v35-dog-roster-actions">
+        <button type="button" class="v35-dog-feed-btn" data-v35-dog-feed="${dog.id}" ${canFeed?"":"disabled"}>🍖 ให้อาหาร</button>
+        <button type="button" class="v35-dog-med-btn" data-v35-dog-medicine="${dog.id}" ${medActive?"disabled":""}>💊 ใช้ยา</button>
+        ${st.kind==="angry"?`<button type="button" class="dog-roster-angry" data-y26-dog-penalty="${dog.id}" aria-label="หักกุศลสถานะโกรธ"><img src="${Y26_STATUS_ICON.angry}" alt="โกรธ"></button>`:""}
+      </div>
+    </article>`;
+  }).join(""):'<p class="empty-feature">ยังไม่มีน้องหมาในคอกนี้</p>';
+  $("modalContent").innerHTML=`<section class="feature-panel dog-roster-panel v35-dog-roster-panel"><h2>🐶 เช็คสมาชิกมะหมา • คอก ${currentDogHotelPen}</h2><p class="feature-subtitle">น้องหมา ${dogs.length}/${DOG_HOTEL_MAX}<br>ให้อาหารและใช้ยาแยกปุ่มชัดเจน</p><div class="dog-roster-list">${rows}</div></section>`;
+  document.querySelectorAll("[data-v35-dog-feed]").forEach(b=>b.onclick=()=>showDogRosterFoodPicker(b.dataset.v35DogFeed));
+  document.querySelectorAll("[data-v35-dog-medicine]").forEach(b=>b.onclick=()=>V35_showDogMedicinePicker(b.dataset.v35DogMedicine));
+  document.querySelectorAll("[data-y26-dog-penalty]").forEach(b=>b.onclick=()=>Y26_applyPetPenalty("dog",b.dataset.y26DogPenalty));
+  openModal();
+};
+
+/* Direct dog menu also shows artwork for both plant choices. */
+showPlacedDogMenu=function(dogId){
+  const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;
+  const st=Y26_petStatus(dog),canFeed=st.kind==="hungry"||st.kind==="angry";
+  $("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel v35-placed-dog-panel">
+    <img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}">
+    <h2>🐶 ${safeHtml(dogDisplayName(dog))}</h2>
+    <p>${safeHtml(dogType(dog).name)} • คอก ${dogPenOf(dog)}<br>อายุเหลือ ${dogLifeText(dog)}<br>${safeHtml(st.text)}</p>
+    <button id="renameDogBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>
+    ${canFeed?`<h3>🍲 อาหารคราฟ • +20–50 กุศล</h3><div class="cat-feed-grid v35-food-choice-grid">${V35_dogDishCards(s)}</div><h3>🌱 พืช • +5–20 กุศล</h3><div class="cat-feed-grid v35-food-choice-grid">${V35_dogPlantCards(s,dogId)}</div>`:""}
+    <h3>💊 ใช้ยา</h3>${Y26_medicineButtons("dog",dog)}
+    <button id="releasePlacedDogBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button>
+  </section>`;
+  $("renameDogBtn").onclick=()=>renameDog(dogId);$("releasePlacedDogBtn").onclick=()=>releaseDog(dogId);
+  document.querySelectorAll("[data-y26-feed-dog-dish]").forEach(b=>b.onclick=()=>Y26_feedDog(dogId,"dish",b.dataset.y26FeedDogDish));
+  document.querySelectorAll("[data-y26-feed-dog-plant]").forEach(b=>b.onclick=()=>Y26_feedDog(dogId,"plant",b.dataset.y26FeedDogPlant));
+  document.querySelectorAll("[data-use-pet-med]").forEach(b=>b.onclick=()=>Y26_useMedicine("dog",dogId,b.dataset.usePetMed));
+  openModal();
+};
+
+/* Angry debt cannot be bypassed by feeding. If an angry bucket is pending,
+   -30 merit is charged atomically in the SAME transaction before food/reward. */
+Y26_feedDog=async function(dogId,mode,key){
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let next,reward=0,penaltyApplied=false;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");
+      const now=gameNow();
+      if(Number(dog.medicineUntil||0)>now)throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");
+      if(now<Number(dog.nextFeedAt||0))throw new Error("น้องยังไม่หิว");
+      const nextFeed=Number(dog.nextFeedAt)||0,bucket=Math.floor((now-nextFeed)/Y26_PET_ANGRY_INTERVAL_MS),lastBucket=Number(dog.lastPenaltyBucket||0);
+      if(bucket>=1&&bucket>lastBucket){
+        s.merit=(Number(s.merit)||0)-30;
+        dog.lastPenaltyBucket=bucket;
+        penaltyApplied=true;
+      }
+      if(mode==="dish"){
+        if(!removeDishesFromState(s,key,1))throw new Error("อาหารจานนี้หมดแล้ว");
+        reward=randInt(20,50);
+      }else{
+        if(!["babyBamboo","hauntedPlankton"].includes(key))throw new Error("อาหารพืชไม่ถูกต้อง");
+        if((Number(s.bag[key])||0)<30)throw new Error(`${CROPS[key]?.name||key} ต้องมี 30 ชิ้น`);
+        s.bag[key]-=30;reward=randInt(5,20);
+      }
+      s.merit=(Number(s.merit)||0)+reward;
+      dog.nextFeedAt=now+V15_PET_HUNGER_MS;
+      dog.lastPenaltyBucket=0;
+      incrementMissionOn(s,"feedOwnPets",1);
+      next=s;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();
+    if(penaltyApplied)message("🐶 ให้อาหารแล้ว",`สถานะโกรธถูกคิดค่าปรับก่อน <b>-30 กุศล</b><br>จากนั้นน้องกินอาหารและให้ <b>+${reward} กุศล</b><br>หิวอีกใน 3 ชั่วโมง`);
+    else showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`);
+  }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+feedDog=async function(dogId,recipeId){return Y26_feedDog(dogId,"dish",recipeId)};
