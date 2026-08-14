@@ -9644,7 +9644,8 @@ async function V36_showCampaign(key){
   const c=V36_CAMPAIGNS[key];if(!c)return;
   try{
     if(adminProfile?.role==="admin")await V36_ensureCampaignDocs();
-    await V36_loadCampaignProfileNames();
+    /* V39: avoid an extra publicProfiles collection read on every campaign open. */
+    V36_campaignProfileNames={};
     const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaignScores",c.id);
     const [metaSnap,scoreSnap]=await Promise.all([fs.getDoc(metaRef),fs.getDoc(scoreRef)]);
     if(!metaSnap.exists()){
