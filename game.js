@@ -8419,9 +8419,32 @@ function v15GroupCard(slot,i){
   return `<article class="temple-mission-card temple-group-card is-active"><header><span>#${i+1}</span><h3>${safeHtml(slot.title)}</h3></header><div class="temple-sign-grid">${slots}</div><p>${parts.map(p=>safeHtml(p.name)).join(" • ")} กำลังช่วยทำภารกิจนี้อยู่<br>ภารกิจกำลังจะหมดเวลาใน <b data-v15-until="${Number(slot.deadlineAt||0)}">${formatLongCountdown(Math.max(0,Number(slot.deadlineAt||0)-now))}</b></p><div class="temple-supply-list">${reqs}</div><div class="temple-reward-chip">กองกุศล +${slot.rewardTotal}</div></article>`;
 }
 async function v15RenderGroupPanel(){
-  $("sceneScreen").style.backgroundImage=`url("${V15_TEMPLE_INSIDE_IMAGE}")`;setSceneNav({backText:"กลับหน้าวัด",backAction:()=>openScene("templeEntrance")});const day=v15TempleCache||await v15LoadTempleDay();if(currentScene!=="templeGroup")return;
-  $("sceneInteractiveLayer").innerHTML=`<section class="temple-mission-board"><div class="temple-board-head"><div><small>วัดไทยในสวน</small><h2>มิชชั่นหมู่</h2></div><span>45 นาที • สูงสุด 5 งาน/ชั่วโมง</span></div><div class="temple-mission-grid">${day.groupSlots.map(v15GroupCard).join("")}</div></section>`;
-  document.querySelectorAll("[data-group-join]").forEach(b=>b.onclick=()=>v15JoinGroup(Number(b.dataset.groupJoin)));document.querySelectorAll("[data-group-send]").forEach(b=>b.onclick=()=>v15SendGroup(Number(b.dataset.groupSend),b.dataset.reqId));
+  /* Keep the user's exact scroll position. Realtime snapshots used to rebuild
+     the whole board and Safari jumped back to the top. */
+  const pageY=window.scrollY||document.documentElement.scrollTop||0;
+  const layer=$("sceneInteractiveLayer");
+  const layerY=layer?layer.scrollTop:0;
+  const oldBoard=document.querySelector(".temple-mission-board");
+  const boardY=oldBoard?oldBoard.scrollTop:0;
+
+  $("sceneScreen").style.backgroundImage=`url("${V15_TEMPLE_INSIDE_IMAGE}")`;
+  setSceneNav({backText:"กลับหน้าวัด",backAction:()=>openScene("templeEntrance")});
+  const day=v15TempleCache||await v15LoadTempleDay();
+  if(currentScene!=="templeGroup")return;
+
+  layer.innerHTML=`<section class="temple-mission-board"><div class="temple-board-head"><div><small>วัดไทยในสวน</small><h2>มิชชั่นหมู่</h2></div><span>45 นาที • สูงสุด 5 งาน/ชั่วโมง</span></div><div class="temple-mission-grid">${day.groupSlots.map(v15GroupCard).join("")}</div></section>`;
+
+  document.querySelectorAll("[data-group-join]").forEach(b=>b.onclick=()=>v15JoinGroup(Number(b.dataset.groupJoin)));
+  document.querySelectorAll("[data-group-send]").forEach(b=>b.onclick=()=>v15SendGroup(Number(b.dataset.groupSend),b.dataset.reqId));
+
+  requestAnimationFrame(()=>{
+    if(currentScene!=="templeGroup")return;
+    const newLayer=$("sceneInteractiveLayer");
+    const newBoard=document.querySelector(".temple-mission-board");
+    if(newLayer)newLayer.scrollTop=layerY;
+    if(newBoard)newBoard.scrollTop=boardY;
+    window.scrollTo({top:pageY,left:0,behavior:"instant"});
+  });
 }
 async function v15JoinGroup(slotIndex){
   if(!v15TempleIsOpen())return v15ShowTempleClosed();
@@ -10073,3 +10096,5 @@ setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign 
   if("requestIdleCallback" in window) requestIdleCallback(warm,{timeout:3000});
   else setTimeout(warm,1800);
 })();
+
+console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
