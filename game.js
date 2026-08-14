@@ -6532,6 +6532,7 @@ function bindHomeHudMenu(){
   bindAndClose("almsBtn",showAlms);
   bindAndClose("challengeBtn",challengeFarm);
   bindAndClose("mainDogHotelBtn",()=>{if(!guardResting())openScene("dogHotel")});
+  if(typeof V37_bindCampaignShortcuts==="function")V37_bindCampaignShortcuts();
 }
 const __bindEventsBeforeHomeHudV13=bindEvents;
 bindEvents=function(){
@@ -9814,8 +9815,29 @@ bulkHarvestCurrentPage=async function(){
 if($("tractorBtn"))$("tractorBtn").onclick=bulkHarvestCurrentPage;
 
 /* Campaign shortcut bindings. */
-if($("campaignPumpkinBtn"))$("campaignPumpkinBtn").onclick=()=>{closeHudMenu?.();V36_showCampaign("pumpkin")};
-if($("campaignIcecreamBtn"))$("campaignIcecreamBtn").onclick=()=>{closeHudMenu?.();V36_showCampaign("icecream")};
+function V37_bindCampaignShortcuts(){
+  const pumpkinBtn=$("campaignPumpkinBtn");
+  const icecreamBtn=$("campaignIcecreamBtn");
+  if(pumpkinBtn){
+    pumpkinBtn.disabled=false;
+    pumpkinBtn.onclick=event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      closeHomeHudMenu();
+      V36_showCampaign("pumpkin");
+    };
+  }
+  if(icecreamBtn){
+    icecreamBtn.disabled=false;
+    icecreamBtn.onclick=event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      closeHomeHudMenu();
+      V36_showCampaign("icecream");
+    };
+  }
+}
+V37_bindCampaignShortcuts();
 
 /* Reliable animal-gift interaction:
    use delegated capture so rerenders / nested animal buttons cannot swallow taps. */
@@ -9871,3 +9893,8 @@ setInterval(V36_checkEndedCampaigns,30000);
     if(tries>=60)clearInterval(probe);
   },1000);
 })();
+
+
+/* V37 FINAL — campaign buttons must always remain clickable after any HUD rerender/rebind. */
+setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign shortcut bind",e)}},0);
+setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign shortcut bind",e)}},1200);
