@@ -3086,3 +3086,177 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 }
 .v36-campaign-dashboard .v36-campaign-footer span{font-size:7px!important}
 .v36-campaign-dashboard .v36-campaign-footer strong{font-size:14px!important;margin-top:0!important}
+
+
+/* ======================================================================
+   V40 — FINAL campaign layout:
+   - 18 members visible at once
+   - 2 columns × 9 rows, no scrolling required
+   - no collapsed grid rows
+   - lighter paint work for iPhone Safari
+   ====================================================================== */
+
+.modal-card:has(.v36-campaign-dashboard){
+  width:min(94vw,610px)!important;
+  height:min(82dvh,760px)!important;
+  max-height:82dvh!important;
+  overflow:hidden!important;
+}
+
+.v36-campaign-dashboard .v36-campaign-content{
+  display:grid!important;
+  grid-template-rows:auto auto minmax(0,1fr) auto!important;
+  height:100%!important;
+  min-height:0!important;
+  padding:9px 9px 8px!important;
+  overflow:hidden!important;
+}
+
+.v36-campaign-dashboard .v36-campaign-topbar{
+  grid-row:1!important;
+}
+.v36-campaign-dashboard .v36-campaign-title{
+  grid-row:2!important;
+  margin:5px 1px 5px!important;
+}
+.v36-campaign-dashboard .v36-campaign-title h2{
+  font-size:clamp(15px,4vw,21px)!important;
+  line-height:1.02!important;
+  margin:3px auto 1px!important;
+}
+.v36-campaign-dashboard .v36-campaign-title>small{
+  font-size:8px!important;
+  padding:3px 7px!important;
+}
+.v36-campaign-dashboard .v36-campaign-total-label{
+  font-size:7.5px!important;
+}
+.v36-campaign-dashboard .v36-my-score{
+  margin:3px auto 0!important;
+  padding:3px 7px!important;
+  min-width:108px!important;
+}
+.v36-campaign-dashboard .v36-my-score span{font-size:7px!important}
+.v36-campaign-dashboard .v36-my-score strong{font-size:15px!important}
+
+/* 18 people: #1–#9 left, #10–#18 right. */
+.v36-campaign-dashboard .v36-campaign-ranks{
+  grid-row:3!important;
+  display:grid!important;
+  grid-auto-flow:column!important;
+  grid-template-rows:repeat(9,minmax(0,1fr))!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:4px 5px!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  padding:2px 1px 3px!important;
+  margin:0!important;
+}
+
+/* Important: give every card a real minimum height; V39 could collapse to zero. */
+.v36-campaign-dashboard .v36-rank-row,
+.v36-campaign-dashboard .v36-rank-top-1,
+.v36-campaign-dashboard .v36-rank-top-2,
+.v36-campaign-dashboard .v36-rank-top-3{
+  display:grid!important;
+  grid-template-columns:24px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  min-width:0!important;
+  min-height:27px!important;
+  height:100%!important;
+  max-height:none!important;
+  padding:2px 5px!important;
+  gap:4px!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+.v36-campaign-dashboard .v36-rank-no{
+  width:20px!important;
+  height:20px!important;
+  border-radius:6px!important;
+  font-size:8px!important;
+}
+.v36-campaign-dashboard .v36-rank-top-1 .v36-rank-no{font-size:12px!important}
+.v36-campaign-dashboard .v36-rank-name{
+  display:block!important;
+  min-width:0!important;
+}
+.v36-campaign-dashboard .v36-rank-name b{
+  display:block!important;
+  font-size:clamp(7px,1.95vw,10px)!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.v36-campaign-dashboard .v36-rank-name small{display:none!important}
+.v36-campaign-dashboard .v36-rank-row strong{
+  font-size:clamp(10px,2.7vw,14px)!important;
+  line-height:1!important;
+}
+
+/* Keep top 3 beautiful without making them taller. */
+.v36-campaign-dashboard .v36-rank-top-1{
+  background:linear-gradient(135deg,rgba(255,247,211,.94),rgba(227,177,66,.88))!important;
+  border:1px solid rgba(255,228,150,.95)!important;
+}
+.v36-campaign-dashboard .v36-rank-top-2{
+  background:linear-gradient(135deg,rgba(247,251,255,.93),rgba(198,210,227,.89))!important;
+  border:1px solid rgba(239,246,255,.94)!important;
+}
+.v36-campaign-dashboard .v36-rank-top-3{
+  background:linear-gradient(135deg,rgba(255,239,231,.93),rgba(214,147,124,.88))!important;
+  border:1px solid rgba(255,211,194,.94)!important;
+}
+
+/* Countdown is a normal compact footer now, not an overlay covering ranks. */
+.v36-campaign-dashboard .v36-campaign-footer{
+  grid-row:4!important;
+  position:static!important;
+  left:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  justify-self:center!important;
+  width:min(62%,280px)!important;
+  min-width:0!important;
+  margin-top:4px!important;
+  padding:4px 10px!important;
+  border-radius:11px!important;
+}
+.v36-campaign-dashboard .v36-campaign-footer span{font-size:7px!important}
+.v36-campaign-dashboard .v36-campaign-footer strong{
+  font-size:clamp(12px,3.2vw,17px)!important;
+}
+
+/* Faster painting: background stays crisp, no expensive blur/filter layers. */
+.v36-campaign-dashboard .v36-campaign-shade{
+  background:linear-gradient(180deg,rgba(25,10,31,.10),rgba(25,10,31,.24) 52%,rgba(25,10,31,.42))!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+@media(max-width:390px){
+  .modal-card:has(.v36-campaign-dashboard){
+    width:94vw!important;
+    height:82dvh!important;
+  }
+  .v36-campaign-dashboard .v36-campaign-ranks{
+    gap:3px 4px!important;
+  }
+  .v36-campaign-dashboard .v36-rank-row{
+    grid-template-columns:21px minmax(0,1fr) auto!important;
+    padding:2px 4px!important;
+  }
+  .v36-campaign-dashboard .v36-rank-no{
+    width:18px!important;height:18px!important;
+  }
+  .v36-campaign-dashboard .v36-rank-name b{
+    font-size:7.5px!important;
+  }
+}

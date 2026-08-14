@@ -9640,32 +9640,100 @@ function V36_stopCampaignLive(){
   if(V36_campaignTimer){clearInterval(V36_campaignTimer);V36_campaignTimer=null}
 }
 async function V36_showCampaign(key){
-  V36_stopCampaignLive();V36_campaignCurrentKey=key;
-  const c=V36_CAMPAIGNS[key];if(!c)return;
+  V36_stopCampaignLive();
+  V36_campaignCurrentKey=key;
+  const c=V36_CAMPAIGNS[key];
+  if(!c)return;
+
+  /* V40: show the dashboard IMMEDIATELY.
+     Never wait for Firestore before the player sees the page. */
+  const zeroScores=Object.fromEntries(V36_memberRows().map(r=>[r.key,0]));
+  const zeroNames=Object.fromEntries(V36_memberRows().map(r=>[r.key,r.name]));
+  let cachedMeta=null,cachedScore=null;
   try{
-    if(adminProfile?.role==="admin")await V36_ensureCampaignDocs();
-    /* V39: avoid an extra publicProfiles collection read on every campaign open. */
-    V36_campaignProfileNames={};
-    const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaignScores",c.id);
-    const [metaSnap,scoreSnap]=await Promise.all([fs.getDoc(metaRef),fs.getDoc(scoreRef)]);
-    if(!metaSnap.exists()){
-      $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-wait"><h2>🎯 ${safeHtml(c.title)}</h2><p>แคมเปญยังไม่ได้เริ่มค่ะ รอ Aida เปิดแคมเปญก่อนน๊า 💗</p><button id="v36CampaignBackFarm" class="primary-spooky-action" type="button">กลับไปแปลงผัก</button></section>`;
-      $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();closeModal()};openModal();return;
+    cachedMeta=JSON.parse(localStorage.getItem(`yainoo-campaign-meta:${c.id}`)||"null");
+    cachedScore=JSON.parse(localStorage.getItem(`yainoo-campaign-score:${c.id}`)||"null");
+  }catch{}
+  const previewMeta=cachedMeta&&Number(cachedMeta.endAtMs)>0
+    ? cachedMeta
+    : {campaignId:c.id,title:c.title,startAtMs:gameNow(),endAtMs:gameNow()+c.durationMs,durationMs:c.durationMs,active:true};
+  const previewScore=cachedScore&&cachedScore.scores
+    ? cachedScore
+    : {campaignId:c.id,scores:zeroScores,names:zeroNames};
+
+  V36_renderCampaignDashboard(c,previewMeta,previewScore);
+
+  /* Start a lightweight local countdown instantly. It will be corrected
+     as soon as the real campaign metadata arrives. */
+  let liveMeta=previewMeta;
+  V36_campaignTimer=setInterval(()=>{
+    if(V36_campaignCurrentKey!==key)return V36_stopCampaignLive();
+    const left=Math.max(0,Number(liveMeta?.endAtMs||0)-gameNow());
+    const el=$("v36CampaignCountdown");
+    if(el)el.textContent=V36_formatCountdown(left);
+  },1000);
+
+  try{
+    const {db,fs}=await getFirebaseContext();
+
+    /* Admin initialization must never block opening the dashboard. */
+    if(adminProfile?.role==="admin"){
+      V36_ensureCampaignDocs().catch(e=>console.warn("campaign init background",e));
     }
-    const meta=metaSnap.data()||{},initialScore=scoreSnap.exists()?scoreSnap.data():{scores:{},names:{}};
-    V36_renderCampaignDashboard(c,meta,initialScore);
+
+    const metaRef=fs.doc(db,"campaigns",c.id);
+    const scoreRef=fs.doc(db,"campaignScores",c.id);
+
+    /* Read in parallel, after UI is already visible. */
+    let [metaSnap,scoreSnap]=await Promise.all([
+      fs.getDoc(metaRef),
+      fs.getDoc(scoreRef)
+    ]);
+
+    /* On the very first admin launch the background initializer may still
+       be creating the docs. Retry once without freezing the UI. */
+    if(!metaSnap.exists() && adminProfile?.role==="admin"){
+      await new Promise(resolve=>setTimeout(resolve,350));
+      [metaSnap,scoreSnap]=await Promise.all([
+        fs.getDoc(metaRef),
+        fs.getDoc(scoreRef)
+      ]);
+    }
+
+    if(metaSnap.exists()){
+      liveMeta=metaSnap.data()||previewMeta;
+      try{localStorage.setItem(`yainoo-campaign-meta:${c.id}`,JSON.stringify(liveMeta))}catch{}
+      const countdown=$("v36CampaignCountdown");
+      if(countdown)countdown.textContent=V36_formatCountdown(Math.max(0,Number(liveMeta.endAtMs)-gameNow()));
+    }
+
+    if(scoreSnap.exists()){
+      const data=scoreSnap.data()||previewScore;
+      try{localStorage.setItem(`yainoo-campaign-score:${c.id}`,JSON.stringify(data))}catch{}
+      const rank=$("v36CampaignRanks");
+      if(rank)rank.innerHTML=V36_rankHTML(data);
+      const mine=$("v36MyCampaignScore");
+      if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
+    }
+
+    /* Real-time updates after the first lightweight read. */
     V36_campaignUnsub=fs.onSnapshot(scoreRef,snap=>{
       if(V36_campaignCurrentKey!==key||!snap.exists())return;
-      const data=snap.data(),rank=$("v36CampaignRanks");if(rank)rank.innerHTML=V36_rankHTML(data);
-      const mine=$("v36MyCampaignScore");if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
-    });
-    V36_campaignTimer=setInterval(async()=>{
-      if(V36_campaignCurrentKey!==key)return V36_stopCampaignLive();
-      const left=Math.max(0,Number(meta.endAtMs)-gameNow()),el=$("v36CampaignCountdown");
-      if(el)el.textContent=V36_formatCountdown(left);
-      if(left<=0){V36_stopCampaignLive();try{const latest=await fs.getDoc(scoreRef);V36_showCampaignEnded(c,latest.exists()?latest.data():initialScore)}catch{V36_showCampaignEnded(c,initialScore)}}
-    },1000);
-  }catch(error){message("เปิดแคมเปญไม่ได้",error.message||"กรุณาลองใหม่")}
+      const data=snap.data();
+      try{localStorage.setItem(`yainoo-campaign-score:${c.id}`,JSON.stringify(data))}catch{}
+      const rank=$("v36CampaignRanks");
+      if(rank)rank.innerHTML=V36_rankHTML(data);
+      const mine=$("v36MyCampaignScore");
+      if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
+    },error=>console.warn("campaign realtime",error));
+
+  }catch(error){
+    /* Keep the already-visible cached/zero dashboard usable.
+       Do not replace it with a blocking error modal. */
+    console.warn("campaign load",error);
+    const status=$("v36CampaignLiveStatus");
+    if(status)status.textContent="กำลังเชื่อมต่อคะแนน…";
+  }
 }
 function V36_renderCampaignDashboard(c,meta,scoreData){
   $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard" style="--campaign-bg:url('${c.background}')">
@@ -9678,7 +9746,7 @@ function V36_renderCampaignDashboard(c,meta,scoreData){
       <div class="v36-campaign-title">
         <small>🎯 ${safeHtml(c.title)}</small>
         <h2>${safeHtml(c.heading)}</h2>
-        <div class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • อัปเดตแบบ Real-time</div>
+        <div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • อัปเดตแบบ Real-time</div>
         <div class="v36-my-score"><span>คะแนนของคุณ</span><strong id="v36MyCampaignScore">${Number(scoreData?.scores?.[currentMemberKey])||0}</strong></div>
       </div>
       <div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div>
