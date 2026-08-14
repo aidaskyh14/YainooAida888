@@ -3486,3 +3486,172 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   }
 }
 
+
+
+/* V42.3 — TRUE full-bleed reward modal.
+   Previous fix left #modalContent in normal document flow, so the cream modal
+   background was still visible below the reward content. */
+.modal-card:has(.v42-campaign-reward){
+  position:relative !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  background:#25142d !important;
+}
+.modal-card:has(.v42-campaign-reward) > #modalContent{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+.modal-card:has(.v42-campaign-reward) > .close{
+  z-index:50 !important;
+  top:8px !important;
+  right:8px !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-campaign-reward{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  overflow:hidden !important;
+  background-size:cover !important;
+  background-position:center center !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-reward-shade{
+  position:absolute !important;
+  inset:0 !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-reward-content{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  box-sizing:border-box !important;
+  padding:12px 14px 14px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+  gap:8px !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-reward-top{
+  padding-right:42px !important;
+  flex:0 0 auto !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-reward-progress-card{
+  margin-top:auto !important;
+  flex:0 0 auto !important;
+}
+.modal-card:has(.v42-campaign-reward) .v42-reward-cat-list{
+  flex:0 0 auto !important;
+  margin:0 !important;
+  padding-bottom:2px !important;
+}
+
+
+
+/* V42.4 — FINAL campaign footer alignment
+   Gift stays bottom-left, countdown stays bottom-right, both compact. */
+.v42-campaign-footer-row{
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:space-between !important;
+  align-items:flex-end !important;
+  gap:12px !important;
+  width:100% !important;
+  margin-top:8px !important;
+}
+
+.v42-campaign-footer-row .v42-campaign-gift{
+  flex:0 0 66px !important;
+  width:66px !important;
+  min-width:66px !important;
+  height:62px !important;
+  min-height:62px !important;
+  margin:0 !important;
+  padding:4px 4px !important;
+  align-self:flex-end !important;
+}
+
+.v42-campaign-footer-row .v42-campaign-gift span{
+  font-size:25px !important;
+  line-height:1 !important;
+}
+
+.v42-campaign-footer-row .v42-campaign-gift small{
+  font-size:9px !important;
+  line-height:1.05 !important;
+  white-space:nowrap !important;
+}
+
+.v42-campaign-footer-row .v36-campaign-footer{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:190px !important;
+  max-width:230px !important;
+  height:62px !important;
+  min-height:62px !important;
+  margin:0 0 0 auto !important;
+  padding:7px 12px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:flex-end !important;
+  align-items:center !important;
+  gap:8px !important;
+  text-align:right !important;
+  align-self:flex-end !important;
+  border-radius:14px !important;
+}
+
+.v42-campaign-footer-row .v36-campaign-footer span{
+  display:block !important;
+  margin:0 !important;
+  font-size:9px !important;
+  line-height:1.05 !important;
+  white-space:nowrap !important;
+  opacity:.9 !important;
+}
+
+.v42-campaign-footer-row .v36-campaign-footer strong{
+  display:block !important;
+  margin:0 !important;
+  font-size:clamp(15px,3.6vw,20px) !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+  word-break:keep-all !important;
+  overflow-wrap:normal !important;
+  letter-spacing:.15px !important;
+}
+
+@media(max-width:390px){
+  .v42-campaign-footer-row{
+    gap:8px !important;
+  }
+  .v42-campaign-footer-row .v42-campaign-gift{
+    flex-basis:60px !important;
+    width:60px !important;
+    min-width:60px !important;
+    height:56px !important;
+    min-height:56px !important;
+  }
+  .v42-campaign-footer-row .v36-campaign-footer{
+    min-width:175px !important;
+    max-width:205px !important;
+    height:56px !important;
+    min-height:56px !important;
+    padding:6px 9px !important;
+    gap:6px !important;
+  }
+  .v42-campaign-footer-row .v36-campaign-footer strong{
+    font-size:clamp(14px,3.5vw,18px) !important;
+  }
+}
+
