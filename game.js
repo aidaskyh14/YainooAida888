@@ -10176,3 +10176,151 @@ console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
     return prevAdminCount(s,entry);
   };
 })();
+
+
+/* ======================================================================
+   V42 — CAMPAIGN 1299 CAT REWARD
+   Pumpkin and Icecream are separate one-time rewards.
+   ====================================================================== */
+const V42_CAMPAIGN_REWARD_TARGET=1299;
+const V42_CAMPAIGN_REWARD_CATS=["cat9","cat10","cat11","cat12"];
+const V42_CAMPAIGN_REWARD_BG={
+  pumpkin:"campaign-pumpkin-gift-bg.jpg?v=1",
+  icecream:"campaign-icecream-gift-bg.jpg?v=1"
+};
+function V42_rewardState(s,key){
+  if(!s.campaignRewards||typeof s.campaignRewards!=="object")s.campaignRewards={};
+  if(!s.campaignRewards[key]||typeof s.campaignRewards[key]!=="object")s.campaignRewards[key]={claimed:false,catTypeKey:"",claimedAt:0};
+  return s.campaignRewards[key];
+}
+function V42_currentRewardClaimed(key){
+  const s=ownState||state;
+  return Boolean(s?.campaignRewards?.[key]?.claimed);
+}
+function V42_updateGiftButton(score){
+  const btn=$("v42CampaignGiftBtn");if(!btn)return;
+  const claimed=V42_currentRewardClaimed(V36_campaignCurrentKey);
+  const unlocked=Number(score)>=V42_CAMPAIGN_REWARD_TARGET&&!claimed;
+  btn.classList.toggle("is-ready",unlocked);
+  btn.classList.toggle("is-claimed",claimed);
+  btn.disabled=false;
+  btn.setAttribute("aria-label",claimed?"รับรางวัลแล้ว":unlocked?"รับรางวัลได้แล้ว":"ดูรางวัลแคมเปญ");
+}
+async function V42_showCampaignReward(key){
+  const c=V36_CAMPAIGNS[key];if(!c)return;
+  let score=0,claimed=V42_currentRewardClaimed(key),chosen="";
+  try{
+    const {db,fs}=await getFirebaseContext();
+    const [scoreSnap,saveSnap]=await Promise.all([
+      fs.getDoc(fs.doc(db,"campaignScores",c.id)),
+      fs.getDoc(fs.doc(db,"saves",currentMemberKey))
+    ]);
+    score=Number(scoreSnap.data()?.scores?.[currentMemberKey])||0;
+    if(saveSnap.exists()){
+      const cr=saveSnap.data()?.campaignRewards?.[key];
+      claimed=Boolean(cr?.claimed);chosen=String(cr?.catTypeKey||"");
+    }
+  }catch(e){
+    try{score=Number(JSON.parse(localStorage.getItem(`yainoo-campaign-score:${c.id}`)||"{}")?.scores?.[currentMemberKey])||0}catch{}
+  }
+  const remaining=Math.max(0,V42_CAMPAIGN_REWARD_TARGET-score);
+  const pct=Math.min(100,Math.max(0,score/V42_CAMPAIGN_REWARD_TARGET*100));
+  const ready=score>=V42_CAMPAIGN_REWARD_TARGET&&!claimed;
+  $("modalContent").innerHTML=`<section class="feature-panel v42-campaign-reward" style="--reward-bg:url('${V42_CAMPAIGN_REWARD_BG[key]}')">
+    <div class="v42-reward-shade"></div>
+    <div class="v42-reward-content">
+      <header class="v42-reward-top"><button id="v42RewardBack" type="button">← กลับ</button><b>🎁 รางวัลสะสมแคมเปญ</b></header>
+      <div class="v42-reward-progress-card">
+        <div class="v42-reward-score"><span>ยอดของคุณ</span><strong>${score.toLocaleString("th-TH")} / ${V42_CAMPAIGN_REWARD_TARGET.toLocaleString("th-TH")}</strong></div>
+        <div class="v42-reward-track"><i style="width:${pct}%"></i></div>
+        <small>${claimed?"✓ รับรางวัลแคมเปญนี้แล้ว":remaining>0?`เหลืออีก ${remaining.toLocaleString("th-TH")} เพื่อปลดล็อกรางวัล`:"เลือกรับน้องแมวได้ 1 ตัว"}</small>
+      </div>
+      <div class="v42-reward-cat-list">
+        ${V42_CAMPAIGN_REWARD_CATS.map(catKey=>{const cat=CAT_TYPES[catKey],selected=claimed&&chosen===catKey;return `<button type="button" class="v42-reward-cat${ready?" is-ready":""}${selected?" is-selected":""}" data-v42-cat="${catKey}" ${ready?"":"disabled"}>
+          <img src="${cat.image}" alt="${safeHtml(cat.name)}"><span><b>${safeHtml(cat.name)}</b><small>${selected?"✓ รับตัวนี้แล้ว":claimed?"รับรางวัลแล้ว":ready?"กดเพื่อรับตัวนี้":"🔒 ยังไม่ถึง 1,299"}</small></span><em>${selected?"✓":ready?"รับ":"🔒"}</em>
+        </button>`}).join("")}
+      </div>
+    </div>
+  </section>`;
+  $("v42RewardBack").onclick=()=>V36_showCampaign(key);
+  document.querySelectorAll("[data-v42-cat]").forEach(btn=>btn.onclick=()=>V42_confirmCampaignCat(key,btn.dataset.v42Cat,score));
+  openModal();
+}
+function V42_confirmCampaignCat(key,catKey,score){
+  if(score<V42_CAMPAIGN_REWARD_TARGET)return;
+  const cat=CAT_TYPES[catKey];if(!cat)return;
+  $("modalContent").innerHTML=`<section class="feature-panel v42-reward-confirm"><img src="${cat.image}" alt="${safeHtml(cat.name)}"><h2>รับ ${safeHtml(cat.name)} ?</h2><p>แคมเปญนี้เลือกรับแมวได้เพียง <b>1 ตัว</b><br>เมื่อยืนยันแล้วจะเปลี่ยนตัวไม่ได้ค่ะ</p><button id="v42ConfirmClaim" class="primary-spooky-action" type="button">🎁 ยืนยันรับ ${safeHtml(cat.name)}</button><button id="v42CancelClaim" class="secondary-action" type="button">กลับไปเลือกใหม่</button></section>`;
+  $("v42ConfirmClaim").onclick=()=>V42_claimCampaignCat(key,catKey);
+  $("v42CancelClaim").onclick=()=>V42_showCampaignReward(key);
+  openModal();
+}
+async function V42_claimCampaignCat(key,catKey){
+  const c=V36_CAMPAIGNS[key],cat=CAT_TYPES[catKey],btn=$("v42ConfirmClaim");
+  if(!c||!cat||!V42_CAMPAIGN_REWARD_CATS.includes(catKey))return;
+  if(btn)btn.disabled=true;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),scoreRef=fs.doc(db,"campaignScores",c.id);
+    let next;
+    await fs.runTransaction(db,async tx=>{
+      const [saveSnap,scoreSnap]=await Promise.all([tx.get(saveRef),tx.get(scoreRef)]);
+      if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      if(!scoreSnap.exists())throw new Error("ไม่พบคะแนนแคมเปญ");
+      const score=Number(scoreSnap.data()?.scores?.[currentMemberKey])||0;
+      if(score<V42_CAMPAIGN_REWARD_TARGET)throw new Error(`ยังขาดอีก ${V42_CAMPAIGN_REWARD_TARGET-score} คะแนน`);
+      const st=normalizeState(saveSnap.data(),currentMember);ensureCatState(st);
+      const reward=V42_rewardState(st,key);
+      if(reward.claimed)throw new Error("รับรางวัลแคมเปญนี้ไปแล้ว");
+      st.cats.push({id:newCatInstanceId(),typeKey:catKey,customName:"",placedFarm:0,placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,drops:[]});
+      reward.claimed=true;reward.catTypeKey=catKey;reward.claimedAt=gameNow();
+      next=st;
+      tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);
+    message("🎁 รับรางวัลเรียบร้อย",`${safeHtml(cat.name)} เข้า กระเป๋า → น้องแมว แล้ว`);
+    setTimeout(()=>V42_showCampaignReward(key),0);
+  }catch(error){message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่");if(btn)btn.disabled=false}
+}
+
+/* Replace campaign dashboard only; leaderboard/scoring logic remains V36. */
+V36_renderCampaignDashboard=function(c,meta,scoreData){
+  const score=Number(scoreData?.scores?.[currentMemberKey])||0;
+  $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard" style="--campaign-bg:url('${c.background}')">
+    <div class="v36-campaign-shade"></div>
+    <div class="v36-campaign-content">
+      <header class="v36-campaign-topbar">
+        <button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button>
+        <button id="v36CampaignConditions" type="button">เงื่อนไข ✨</button>
+      </header>
+      <div class="v36-campaign-title">
+        <small>🎯 ${safeHtml(c.title)}</small>
+        <h2>${safeHtml(c.heading)}</h2>
+        <div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • อัปเดตแบบ Real-time</div>
+        <div class="v36-my-score"><span>คะแนนของคุณ</span><strong id="v36MyCampaignScore">${score.toLocaleString("th-TH")}</strong></div>
+      </div>
+      <div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div>
+      <footer class="v42-campaign-footer-row">
+        <button id="v42CampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของขวัญ</small></button>
+        <div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div>
+      </footer>
+    </div>
+  </section>`;
+  $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};
+  $("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);
+  $("v42CampaignGiftBtn").onclick=()=>V42_showCampaignReward(V36_campaignCurrentKey);
+  V42_updateGiftButton(score);
+  openModal();
+};
+
+/* Keep gift readiness synchronized with the live score text. */
+const V42_observeGiftScore=new MutationObserver(()=>{
+  const el=$("v36MyCampaignScore");if(el){
+    const score=Number(String(el.textContent||"0").replace(/[^\d]/g,""))||0;
+    V42_updateGiftButton(score);
+  }
+});
+setInterval(()=>{
+  const el=$("v36MyCampaignScore");
+  if(el&&!el.dataset.v42Observed){el.dataset.v42Observed="1";V42_observeGiftScore.observe(el,{childList:true,characterData:true,subtree:true})}
+},500);
+

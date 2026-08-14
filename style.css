@@ -3334,3 +3334,29 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
     height:26px!important;
   }
 }
+
+
+/* V42 — compact campaign gift/reward UI, sized for phone screens */
+.v42-campaign-footer-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:7px;align-items:stretch;margin-top:4px}
+.v42-campaign-footer-row .v36-campaign-footer{margin:0!important;min-height:46px!important;padding:5px 8px!important}
+.v42-campaign-gift{border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(72,69,77,.88);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:46px;padding:3px 4px;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+.v42-campaign-gift span{font-size:21px;line-height:1}.v42-campaign-gift small{font-size:8px;font-weight:900}
+.v42-campaign-gift.is-ready{background:linear-gradient(180deg,#57b66c,#267b42);border-color:#bff4c9;box-shadow:0 0 0 2px rgba(174,255,188,.16),0 3px 9px rgba(0,0,0,.28)}
+.v42-campaign-gift.is-claimed{background:rgba(83,83,88,.88);filter:saturate(.45)}
+.modal-card:has(.v42-campaign-reward){width:min(92vw,520px)!important;height:min(82dvh,720px)!important;max-height:82dvh!important}
+.v42-campaign-reward{position:relative;height:100%;min-height:0;overflow:hidden;border-radius:20px;background-image:var(--reward-bg);background-size:cover;background-position:center}
+.v42-reward-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,8,20,.18),rgba(20,10,24,.28) 38%,rgba(18,8,22,.68))}
+.v42-reward-content{position:relative;z-index:2;height:100%;padding:10px;display:flex;flex-direction:column;gap:7px}
+.v42-reward-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:7px}.v42-reward-top b{grid-column:2;text-align:center;background:rgba(39,20,46,.76);border:1px solid rgba(255,232,181,.42);border-radius:999px;padding:6px 10px;font-size:12px}.v42-reward-top button{grid-column:1;grid-row:1;border:0;border-radius:10px;padding:6px 9px;font-size:10px;font-weight:900}
+.v42-reward-progress-card{margin-top:auto;background:rgba(38,22,42,.84);border:1px solid rgba(255,229,180,.34);border-radius:14px;padding:8px 10px;text-align:center;backdrop-filter:blur(4px)}
+.v42-reward-score{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px}.v42-reward-score strong{font-size:13px;color:#fff0b7}
+.v42-reward-track{height:8px;margin:6px 0 4px;border-radius:999px;background:rgba(255,255,255,.17);overflow:hidden}.v42-reward-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#efc05c,#fff0a3)}
+.v42-reward-progress-card small{font-size:9px;color:#f9e7c1}
+.v42-reward-cat-list{display:grid;grid-template-columns:1fr;gap:5px}
+.v42-reward-cat{width:100%;min-height:48px;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(63,61,68,.90);color:#fff;display:grid;grid-template-columns:42px minmax(0,1fr) 35px;align-items:center;gap:7px;padding:4px 7px;text-align:left}
+.v42-reward-cat img{width:40px;height:40px;object-fit:contain}.v42-reward-cat span{min-width:0}.v42-reward-cat b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v42-reward-cat small{display:block;font-size:8px;opacity:.8;margin-top:1px}.v42-reward-cat em{font-style:normal;text-align:center;font-size:10px;font-weight:900}
+.v42-reward-cat.is-ready{background:linear-gradient(90deg,rgba(43,113,61,.94),rgba(64,145,82,.90));border-color:rgba(193,255,202,.68)}
+.v42-reward-cat.is-selected{background:rgba(74,74,78,.92);border-color:rgba(255,255,255,.35)}
+.v42-reward-confirm{text-align:center}.v42-reward-confirm img{width:min(42vw,170px);height:min(42vw,170px);object-fit:contain}
+@media(max-height:700px){.modal-card:has(.v42-campaign-reward){height:88dvh!important;max-height:88dvh!important}.v42-reward-content{padding:7px;gap:4px}.v42-reward-progress-card{padding:6px 8px}.v42-reward-cat-list{gap:3px}.v42-reward-cat{min-height:42px}.v42-reward-cat img{width:34px;height:34px}}
+
