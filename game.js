@@ -9532,3 +9532,342 @@ Y26_feedDog=async function(dogId,mode,key){
   }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 feedDog=async function(dogId,recipeId){return Y26_feedDog(dogId,"dish",recipeId)};
+
+/* ======================================================================
+   V36 — Campaign dashboard + real-time harvest scores + animal gift fix
+   Scope:
+   - Campaign shortcut / two live dashboards
+   - Count ONLY own-farm harvest yield (manual + tractor, farms 1–3, plots 1–36)
+   - Angel harvest ×10 counts ×10
+   - Inventory remains unchanged; gifts/shop/admin rewards never count
+   - Spirit-animal gift button made reliably clickable
+   - Tool tray lowered/aligned
+   ====================================================================== */
+const V36_CAMPAIGNS={
+  pumpkin:{
+    id:"pumpkin-48h",
+    title:"ปลูกฟักทองกันเถอะ",
+    heading:"ยอดสะสมการปลูกฟักทองของชาวสวน",
+    durationMs:48*60*60*1000,
+    background:"campaign_pumpkin_background.png?v=1",
+    crops:["pumpkin"],
+    scoreLabel:"ผลผลิตฟักทอง",
+    conditions:`มาช่วยกันปลูกฟักทองกองกอยให้เต็มสวนกันน๊า 🎃✨<br><br>
+      แคมเปญนี้เปิดให้ร่วมสนุกเป็นเวลา <b>48 ชั่วโมง</b> ใครเก็บเกี่ยวฟักทองกองกอยได้เยอะที่สุด ก็มีสิทธิ์ขึ้นอันดับบนตารางคะแนนค่ะ<br><br>
+      นับเฉพาะ <b>ผลผลิตที่เก็บเกี่ยวจากแปลงผักของตัวเองจริง ๆ</b> เท่านั้น จะปลูกอยู่ฟาร์ม 1 ฟาร์ม 2 หรือฟาร์ม 3 ก็ได้หมด ตั้งแต่แปลงที่ 1–36 🌱<br><br>
+      ถ้าแปลงไหนได้รับปีกนางฟ้าแล้วเก็บเกี่ยวได้ 10 ชิ้น ระบบจะนับให้ครบ <b>10 คะแนน</b> ตามผลผลิตจริงค่ะ<br><br>
+      ของที่ได้รับจากของขวัญ ร้านค้า Admin Gift หรือรางวัลอื่น ๆ <b>ไม่นับรวม</b> ในแคมเปญนี้นะคะ 💗 คะแนนจะอัปเดตแบบ real-time ทุกครั้งที่เก็บเกี่ยว`
+  },
+  icecream:{
+    id:"icecream-gold-72h",
+    title:"ไอติมดกทองมาละจ้า",
+    heading:'คะแนนรวม แคมเปญ “ไอติมดกทอง”',
+    durationMs:72*60*60*1000,
+    background:"campaign_icecream_gold_background.png?v=1",
+    crops:["mango","lychee","strawberry"],
+    scoreLabel:"ผลผลิตรวม",
+    conditions:`ถึงเวลารวมพลังปลูกผลไม้หวาน ๆ สำหรับร้านไอติมดกทองแล้วค่า 🍦💖<br><br>
+      แคมเปญนี้เปิดให้ร่วมสนุกเป็นเวลา <b>72 ชั่วโมง หรือ 3 วันเต็ม</b><br><br>
+      คะแนนนับจากผลผลิตที่เก็บเกี่ยวจริงของ <b>มะม่วงหน้าเน่า 🥭 ลิ้นจี่หลีหอม 🍒 และสตรอว์เบอร์รีมรกต 🍓</b> รวมกันทั้งหมด จากฟาร์มของตัวเอง 1–3 และแปลง 1–36<br><br>
+      ถ้าแปลงไหนมีปีกนางฟ้า ผลผลิตที่ได้เพิ่มจะนับตามจำนวนที่เก็บเกี่ยวจริง ✨<br><br>
+      ผลไม้จากของขวัญ ร้านค้า Admin Gift หรือรางวัลอื่น ๆ <b>ไม่นับรวม</b> ค่ะ ตารางคะแนนจะขยับแบบ real-time ตลอดทั้งแคมเปญ`
+  }
+};
+let V36_campaignUnsub=null,V36_campaignTimer=null,V36_campaignProfileNames={},V36_campaignCurrentKey="";
+
+function V36_memberRows(){
+  return Object.keys(MEMBERS).filter(name=>name!=="Aida").map(name=>({name,key:memberKeyFromName(name)}));
+}
+function V36_formatCountdown(ms){
+  ms=Math.max(0,Number(ms)||0);
+  const total=Math.floor(ms/1000),d=Math.floor(total/86400),h=Math.floor((total%86400)/3600),
+        m=Math.floor((total%3600)/60),s=total%60;
+  return `${d>0?`${d} วัน `:""}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function V36_campaignById(id){return Object.values(V36_CAMPAIGNS).find(c=>c.id===id)||null}
+function V36_campaignActive(meta){
+  const now=gameNow(),start=Number(meta?.startAtMs)||0,end=Number(meta?.endAtMs)||0;
+  return Boolean(start&&end&&now>=start&&now<end&&meta?.active!==false);
+}
+function V36_campaignEnded(meta){return Boolean(Number(meta?.endAtMs)>0&&gameNow()>=Number(meta.endAtMs))}
+async function V36_loadCampaignProfileNames(){
+  const map={}; V36_memberRows().forEach(r=>map[r.key]=r.name);
+  try{
+    const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));
+    snap.forEach(docSnap=>{const d=docSnap.data()||{};if(docSnap.id!=="aida"&&d.displayName)map[docSnap.id]=String(d.displayName)});
+  }catch(e){console.warn("campaign profile names",e)}
+  V36_campaignProfileNames=map;return map;
+}
+async function V36_ensureCampaignDocs(){
+  if(!cloudReady||!currentMemberKey||adminProfile?.role!=="admin")return;
+  const {db,fs}=await getFirebaseContext(),now=gameNow(),rows=V36_memberRows(),
+        scores=Object.fromEntries(rows.map(r=>[r.key,0])),names=Object.fromEntries(rows.map(r=>[r.key,r.name]));
+  for(const c of Object.values(V36_CAMPAIGNS)){
+    const metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaignScores",c.id);
+    await fs.runTransaction(db,async tx=>{
+      const [metaSnap,scoreSnap]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);
+      if(!metaSnap.exists()){
+        tx.set(metaRef,{campaignId:c.id,title:c.title,startAtMs:now,endAtMs:now+c.durationMs,durationMs:c.durationMs,active:true,background:c.background.replace(/\?v=.*$/,""),createdAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()});
+      }
+      if(!scoreSnap.exists()){
+        tx.set(scoreRef,{campaignId:c.id,scores,names,updatedAt:fs.serverTimestamp()});
+      }
+    });
+  }
+}
+function V36_sortedRows(scoreData){
+  const scores=scoreData?.scores||{},names=scoreData?.names||{};
+  return V36_memberRows().map(r=>({
+    key:r.key,
+    name:V36_campaignProfileNames[r.key]||names[r.key]||r.name,
+    score:Number(scores[r.key])||0
+  })).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,"th"));
+}
+function V36_rankHTML(scoreData){
+  return V36_sortedRows(scoreData).map((r,i)=>{
+    const rank=i+1,top=rank<=3?` v36-rank-top-${rank}`:"";
+    const medal=rank===1?"👑":rank===2?"💎":rank===3?"🌹":"";
+    return `<article class="v36-rank-row${top}">
+      <span class="v36-rank-no">${medal||`#${rank}`}</span>
+      <div class="v36-rank-name"><b>${safeHtml(r.name)}</b><small>${rank<=3?`อันดับ ${rank}`:`#${rank}`}</small></div>
+      <strong>${r.score.toLocaleString("th-TH")}</strong>
+    </article>`;
+  }).join("");
+}
+function V36_stopCampaignLive(){
+  if(V36_campaignUnsub){try{V36_campaignUnsub()}catch{} V36_campaignUnsub=null}
+  if(V36_campaignTimer){clearInterval(V36_campaignTimer);V36_campaignTimer=null}
+}
+async function V36_showCampaign(key){
+  V36_stopCampaignLive();V36_campaignCurrentKey=key;
+  const c=V36_CAMPAIGNS[key];if(!c)return;
+  try{
+    if(adminProfile?.role==="admin")await V36_ensureCampaignDocs();
+    await V36_loadCampaignProfileNames();
+    const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaignScores",c.id);
+    const [metaSnap,scoreSnap]=await Promise.all([fs.getDoc(metaRef),fs.getDoc(scoreRef)]);
+    if(!metaSnap.exists()){
+      $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-wait"><h2>🎯 ${safeHtml(c.title)}</h2><p>แคมเปญยังไม่ได้เริ่มค่ะ รอ Aida เปิดแคมเปญก่อนน๊า 💗</p><button id="v36CampaignBackFarm" class="primary-spooky-action" type="button">กลับไปแปลงผัก</button></section>`;
+      $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();closeModal()};openModal();return;
+    }
+    const meta=metaSnap.data()||{},initialScore=scoreSnap.exists()?scoreSnap.data():{scores:{},names:{}};
+    V36_renderCampaignDashboard(c,meta,initialScore);
+    V36_campaignUnsub=fs.onSnapshot(scoreRef,snap=>{
+      if(V36_campaignCurrentKey!==key||!snap.exists())return;
+      const data=snap.data(),rank=$("v36CampaignRanks");if(rank)rank.innerHTML=V36_rankHTML(data);
+      const mine=$("v36MyCampaignScore");if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
+    });
+    V36_campaignTimer=setInterval(async()=>{
+      if(V36_campaignCurrentKey!==key)return V36_stopCampaignLive();
+      const left=Math.max(0,Number(meta.endAtMs)-gameNow()),el=$("v36CampaignCountdown");
+      if(el)el.textContent=V36_formatCountdown(left);
+      if(left<=0){V36_stopCampaignLive();try{const latest=await fs.getDoc(scoreRef);V36_showCampaignEnded(c,latest.exists()?latest.data():initialScore)}catch{V36_showCampaignEnded(c,initialScore)}}
+    },1000);
+  }catch(error){message("เปิดแคมเปญไม่ได้",error.message||"กรุณาลองใหม่")}
+}
+function V36_renderCampaignDashboard(c,meta,scoreData){
+  $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard" style="--campaign-bg:url('${c.background}')">
+    <div class="v36-campaign-shade"></div>
+    <div class="v36-campaign-content">
+      <header class="v36-campaign-topbar">
+        <button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button>
+        <button id="v36CampaignConditions" type="button">เงื่อนไข ✨</button>
+      </header>
+      <div class="v36-campaign-title">
+        <small>🎯 ${safeHtml(c.title)}</small>
+        <h2>${safeHtml(c.heading)}</h2>
+        <div class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • อัปเดตแบบ Real-time</div>
+        <div class="v36-my-score"><span>คะแนนของคุณ</span><strong id="v36MyCampaignScore">${Number(scoreData?.scores?.[currentMemberKey])||0}</strong></div>
+      </div>
+      <div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div>
+      <footer class="v36-campaign-footer">
+        <span>⏳ เวลาที่เหลือ</span>
+        <strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong>
+      </footer>
+    </div>
+  </section>`;
+  $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};
+  $("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);
+  openModal();
+}
+function V36_showCampaignConditions(c,meta,scoreData){
+  V36_stopCampaignLive();
+  $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-conditions" style="--campaign-bg:url('${c.background}')">
+    <div class="v36-campaign-shade"></div>
+    <div class="v36-campaign-content">
+      <header class="v36-campaign-topbar"><button id="v36ConditionsBack" type="button">← กลับหน้าแคมเปญ</button><span>✨ เงื่อนไข</span></header>
+      <div class="v36-condition-card"><h2>${safeHtml(c.title)}</h2><p>${c.conditions}</p></div>
+      <footer class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong>${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></footer>
+    </div>
+  </section>`;
+  $("v36ConditionsBack").onclick=()=>V36_showCampaign(V36_campaignCurrentKey);openModal();
+}
+function V36_showCampaignEnded(c,scoreData){
+  const top=V36_sortedRows(scoreData).slice(0,3);
+  $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-ended" style="--campaign-bg:url('${c.background}')">
+    <div class="v36-campaign-shade"></div><div class="v36-campaign-content">
+      <div class="v36-ended-card">
+        <span class="v36-ended-icon">🏆</span>
+        <h2>แคมเปญสิ้นสุด</h2>
+        <p>ขอแสดงความยินดีกับชาวสวน ที่ได้รางวัลทุกท่านค่ะ</p>
+        <div class="v36-ended-top3">${top.map((r,i)=>`<div class="v36-ended-place v36-ended-place-${i+1}"><span>${i===0?"👑":i===1?"💎":"🌹"}</span><b>${safeHtml(r.name)}</b><strong>${r.score.toLocaleString("th-TH")}</strong></div>`).join("")}</div>
+        <button id="v36EndedBackFarm" type="button">กลับไปแปลงผัก</button>
+      </div>
+    </div>
+  </section>`;
+  $("v36EndedBackFarm").onclick=()=>{V36_campaignCurrentKey="";closeModal()};openModal();
+}
+function V36_scoreAmountForCampaign(c,cropSummary){
+  return c.crops.reduce((sum,key)=>sum+(Number(cropSummary[key])||0),0);
+}
+async function V36_campaignTxReads(tx,fs,db){
+  const pairs={};
+  for(const c of Object.values(V36_CAMPAIGNS)){
+    const metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaignScores",c.id);
+    const [metaSnap,scoreSnap]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);
+    pairs[c.id]={c,metaRef,scoreRef,metaSnap,scoreSnap};
+  }
+  return pairs;
+}
+function V36_applyCampaignScoresInTx(tx,fs,pairs,cropSummary){
+  if(currentMemberKey==="aida")return;
+  for(const {c,metaRef,scoreRef,metaSnap,scoreSnap} of Object.values(pairs)){
+    if(!metaSnap.exists())continue;
+    const meta=metaSnap.data()||{};
+    if(!V36_campaignActive(meta))continue;
+    const add=V36_scoreAmountForCampaign(c,cropSummary);if(add<=0)continue;
+    const d=scoreSnap.exists()?scoreSnap.data():{campaignId:c.id,scores:{},names:{}};
+    const scores={...(d.scores||{})},names={...(d.names||{})};
+    scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;
+    names[currentMemberKey]=currentProfileDisplayName();
+    tx.set(scoreRef,{campaignId:c.id,scores,names,updatedAt:fs.serverTimestamp()},{merge:false});
+  }
+}
+
+/* Manual harvest: campaign score is written in the SAME transaction as
+   the actual farm harvest. Inventory behavior remains exactly the same. */
+harvestOwnPlot=async function(index){
+  if(!cloudReady||!currentMemberKey||visitContext)return;
+  try{
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let next,newPlots,cropKey="",qty=0;
+    await fs.runTransaction(db,async tx=>{
+      const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      const campaignPairs=await V36_campaignTxReads(tx,fs,db);
+      if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sSnap.data(),currentMember),
+            plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),
+            p=plots[index];
+      ensurePlotPhaseStandalone(p);
+      if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
+      cropKey=p.crop;qty=p.angel?10:1;
+      grantHarvestYield(s,cropKey,qty);
+      plots[index]=emptyPlot();
+      incrementMissionOn(s,"harvestCrops",1);
+      s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
+      V36_applyCampaignScoresInTx(tx,fs,campaignPairs,{[cropKey]:qty});
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();
+    message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}${cropKey==="babyBamboo"?` และ ใบไผ่ ×${qty}`:""}`);
+  }catch(error){message("เก็บเกี่ยวไม่ได้",error.message||"กรุณาลองใหม่")}
+};
+
+/* Tractor harvest: all campaign-eligible yield on the current 12 plots
+   is scored by actual harvested quantity, including angel ×10. */
+bulkHarvestCurrentPage=async function(){
+  if(tractorBusy||visitContext||guardResting()||!cloudReady)return;
+  tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;showTractorWorking();
+  try{
+    await settlePendingCloudSave();
+    const start=farmPlotPage*12,{db,fs}=await getFirebaseContext(),
+          saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let next,newPlots,summary={},totalPlots=0;
+    await fs.runTransaction(db,async tx=>{
+      const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      const campaignPairs=await V36_campaignTxReads(tx,fs,db);
+      if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sSnap.data(),currentMember),
+            plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+      while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+      for(let i=start;i<start+12;i++){
+        const p=plots[i];ensurePlotPhaseStandalone(p);
+        if(!p?.crop||p.phase!=="ready")continue;
+        const qty=p.angel?10:1,key=p.crop;
+        grantHarvestYield(s,key,qty);summary[key]=(summary[key]||0)+qty;plots[i]=emptyPlot();totalPlots++;
+      }
+      if(!totalPlots)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");
+      incrementMissionOn(s,"harvestCrops",totalPlots);
+      s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
+      V36_applyCampaignScoresInTx(tx,fs,campaignPairs,summary);
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();
+    const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");
+    message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+  }catch(error){message("🚜 รถไถยังไม่ออก",error.message||"กรุณาลองใหม่")}
+  finally{hideTractorWorking();tractorBusy=false;if(btn)btn.disabled=false}
+};
+if($("tractorBtn"))$("tractorBtn").onclick=bulkHarvestCurrentPage;
+
+/* Campaign shortcut bindings. */
+if($("campaignPumpkinBtn"))$("campaignPumpkinBtn").onclick=()=>{closeHudMenu?.();V36_showCampaign("pumpkin")};
+if($("campaignIcecreamBtn"))$("campaignIcecreamBtn").onclick=()=>{closeHudMenu?.();V36_showCampaign("icecream")};
+
+/* Reliable animal-gift interaction:
+   use delegated capture so rerenders / nested animal buttons cannot swallow taps. */
+(function V36_bindAnimalGiftDelegation(){
+  const layer=$("sceneInteractiveLayer");if(!layer||layer.dataset.v36GiftBound)return;
+  layer.dataset.v36GiftBound="1";
+  layer.addEventListener("click",e=>{
+    const btn=e.target.closest?.("[data-animal-merit-gift]");if(!btn)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    const type=currentScene,index=Number(btn.dataset.animalMeritGift);
+    if(["chicken","fish","pig","cow"].includes(type)&&Number.isFinite(index))Y26_claimAnimalGift(type,index);
+  },true);
+})();
+
+
+/* End-of-campaign popup: checks while the game is open and shows each result
+   once per browser/device after the deadline. */
+let V36_endWatchBusy=false;
+async function V36_checkEndedCampaigns(){
+  if(V36_endWatchBusy||!cloudReady||!currentMemberKey)return;
+  V36_endWatchBusy=true;
+  try{
+    const {db,fs}=await getFirebaseContext();
+    for(const c of Object.values(V36_CAMPAIGNS)){
+      const metaSnap=await fs.getDoc(fs.doc(db,"campaigns",c.id));
+      if(!metaSnap.exists()||!V36_campaignEnded(metaSnap.data()))continue;
+      const endAt=Number(metaSnap.data()?.endAtMs)||0,seenKey=`yainoo-campaign-ended:${c.id}:${endAt}`;
+      if(localStorage.getItem(seenKey))continue;
+      const scoreSnap=await fs.getDoc(fs.doc(db,"campaignScores",c.id));
+      localStorage.setItem(seenKey,"1");
+      V36_campaignCurrentKey="";
+      V36_stopCampaignLive();
+      V36_showCampaignEnded(c,scoreSnap.exists()?scoreSnap.data():{scores:{},names:{}});
+      break;
+    }
+  }catch(e){console.warn("campaign end watcher",e)}
+  finally{V36_endWatchBusy=false}
+}
+setTimeout(V36_checkEndedCampaigns,4500);
+setInterval(V36_checkEndedCampaigns,30000);
+
+/* If Aida is the first person to load after deploy, start both campaigns.
+   Other members only read them. */
+(function V36_startCampaignInitProbe(){
+  let tries=0;
+  const probe=setInterval(()=>{
+    tries++;
+    if(adminProfile?.role==="admin"&&currentMemberKey){
+      clearInterval(probe);
+      V36_ensureCampaignDocs().catch(e=>console.warn("campaign init",e));
+      return;
+    }
+    if(tries>=60)clearInterval(probe);
+  },1000);
+})();
