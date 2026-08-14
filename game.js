@@ -5008,7 +5008,10 @@ function scheduleAidaFarmPetPause(token){
 }
 function moveAidaFarmPet(token){
   if(token!==aidaFarmPetRunToken||!shouldShowAidaFarmPet()){syncAidaFarmPet();return}
-  const next=nextAidaFarmPetNode(aidaFarmPetNode),from=aidaFarmPetPoint(aidaFarmPetNode),to=aidaFarmPetPoint(next),dx=to.x-from.x,dy=to.y-from.y;
+  const next=nextAidaFarmPetNode(aidaFarmPetNode),to=aidaFarmPetPoint(next);
+  const layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=aidaFarmPet?.getBoundingClientRect();
+  const from=(layerRect&&petRect)?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:aidaFarmPetPoint(aidaFarmPetNode);
+  const dx=to.x-from.x,dy=to.y-from.y;
   const direction=Math.abs(dy)>Math.abs(dx)*.7?(dy>0?"front":"back"):(dx<0?"left":"right");
   const distance=Math.hypot(dx,dy),walkCycle=944/aidaFarmPetSpeed;
   const rawDuration=Math.max(2900,Math.min(7300,distance*20))/aidaFarmPetSpeed,duration=Math.max(walkCycle*2,Math.round(rawDuration/walkCycle)*walkCycle);
@@ -5288,7 +5291,7 @@ shouldShowAidaFarmPet=function(){const screen=$("gameScreen");return Boolean(!vi
 syncAidaFarmPetTesterVisibility=function(){};
 function refreshCatNameLabel(){const cat=currentPlacedCat(),label=aidaFarmPet?.querySelector(".farm-cat-name");if(label&&cat)label.textContent=catDisplayName(cat)}
 startAidaFarmPet=function(){
-  const cat=currentPlacedCat(),layer=$("aidaFarmPetLayer");if(!cat||!layer||aidaFarmPet)return;aidaFarmPet=document.createElement("div");aidaFarmPet.className="aida-farm-pet pet-cat";aidaFarmPet.setAttribute("role","button");aidaFarmPet.setAttribute("aria-label","เปิดเมนูน้องแมว");aidaFarmPet.tabIndex=0;aidaFarmPetSprite=document.createElement("div");aidaFarmPetSprite.className="aida-farm-pet-sprite";const name=document.createElement("span");name.className="farm-cat-name";name.textContent=catDisplayName(cat);aidaFarmPet.append(aidaFarmPetSprite,name);layer.appendChild(aidaFarmPet);const open=()=>showPlacedCatMenu(cat.id);aidaFarmPet.onclick=open;aidaFarmPet.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};const start=aidaFarmPetPoint(aidaFarmPetNode);aidaFarmPet.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA);const token=++aidaFarmPetRunToken;aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),1600);renderCatPendingDrop();
+  const cat=currentPlacedCat(),layer=$("aidaFarmPetLayer");if(!cat||!layer||aidaFarmPet)return;aidaFarmPet=document.createElement("div");aidaFarmPet.className=`aida-farm-pet pet-cat${catType(cat).number>=9?" pet-cat-09-12":""}`;aidaFarmPet.setAttribute("role","button");aidaFarmPet.setAttribute("aria-label","เปิดเมนูน้องแมว");aidaFarmPet.tabIndex=0;aidaFarmPetSprite=document.createElement("div");aidaFarmPetSprite.className="aida-farm-pet-sprite";const name=document.createElement("span");name.className="farm-cat-name";name.textContent=catDisplayName(cat);aidaFarmPet.append(aidaFarmPetSprite,name);layer.appendChild(aidaFarmPet);const open=()=>showPlacedCatMenu(cat.id);aidaFarmPet.onclick=open;aidaFarmPet.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};const start=aidaFarmPetPoint(aidaFarmPetNode);aidaFarmPet.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA);const token=++aidaFarmPetRunToken;aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),1600);renderCatPendingDrop();
 };
 syncAidaFarmPet=async function(){
   const cat=currentPlacedCat();if(!cat){activePlacedCatId="";clearAidaFarmPetActivity(true);renderCatPendingDrop();return}
@@ -8704,7 +8707,7 @@ function Y26_showFriendCat(cat){const st=Y26_petStatus(cat);$("modalContent").in
 
 /* pet status icon follows cat/dog name */
 function Y26_statusIconHTML(pet){const st=Y26_petStatus(pet);if(st.kind==="hungry")return `<span class="pet-status-icon pet-hungry-icon" aria-label="หิว"><img src="${Y26_STATUS_ICON.hungry}" alt="หิว"></span>`;if(st.kind==="angry")return `<span class="pet-status-icon pet-angry-icon" role="button" tabindex="0" data-pet-penalty="1" aria-label="โกรธ"><img src="${Y26_STATUS_ICON.angry}" alt="โกรธ"></span>`;return""}
-startAidaFarmPet=function(){const cat=currentPlacedCat(state),layer=$("aidaFarmPetLayer");if(!cat||!layer||aidaFarmPet)return;aidaFarmPet=document.createElement("div");aidaFarmPet.className="aida-farm-pet pet-cat";aidaFarmPet.setAttribute("role","button");aidaFarmPet.setAttribute("aria-label","เปิดข้อมูลน้องแมว");aidaFarmPet.tabIndex=0;aidaFarmPetSprite=document.createElement("div");aidaFarmPetSprite.className="aida-farm-pet-sprite";const name=document.createElement("span");name.className="farm-cat-name";name.textContent=catDisplayName(cat);aidaFarmPet.append(aidaFarmPetSprite,name);const status=document.createElement("span");status.className="farm-pet-status-wrap";status.innerHTML=Y26_statusIconHTML(cat);aidaFarmPet.append(status);layer.appendChild(aidaFarmPet);const open=()=>visitContext?Y26_showFriendCat(cat):showPlacedCatMenu(cat.id);aidaFarmPet.onclick=open;aidaFarmPet.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};status.querySelector("[data-pet-penalty]")?.addEventListener("click",e=>{e.stopPropagation();if(!visitContext)Y26_applyPetPenalty("cat",cat.id)});const start=aidaFarmPetPoint(aidaFarmPetNode);aidaFarmPet.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA);const token=++aidaFarmPetRunToken;aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),1600);if(!visitContext)renderCatPendingDrop()};
+startAidaFarmPet=function(){const cat=currentPlacedCat(state),layer=$("aidaFarmPetLayer");if(!cat||!layer||aidaFarmPet)return;aidaFarmPet=document.createElement("div");aidaFarmPet.className=`aida-farm-pet pet-cat${catType(cat).number>=9?" pet-cat-09-12":""}`;aidaFarmPet.setAttribute("role","button");aidaFarmPet.setAttribute("aria-label","เปิดข้อมูลน้องแมว");aidaFarmPet.tabIndex=0;aidaFarmPetSprite=document.createElement("div");aidaFarmPetSprite.className="aida-farm-pet-sprite";const name=document.createElement("span");name.className="farm-cat-name";name.textContent=catDisplayName(cat);aidaFarmPet.append(aidaFarmPetSprite,name);const status=document.createElement("span");status.className="farm-pet-status-wrap";status.innerHTML=Y26_statusIconHTML(cat);aidaFarmPet.append(status);layer.appendChild(aidaFarmPet);const open=()=>visitContext?Y26_showFriendCat(cat):showPlacedCatMenu(cat.id);aidaFarmPet.onclick=open;aidaFarmPet.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};status.querySelector("[data-pet-penalty]")?.addEventListener("click",e=>{e.stopPropagation();if(!visitContext)Y26_applyPetPenalty("cat",cat.id)});const start=aidaFarmPetPoint(aidaFarmPetNode);aidaFarmPet.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA);const token=++aidaFarmPetRunToken;aidaFarmPetTimer=setTimeout(()=>moveAidaFarmPet(token),1600);if(!visitContext)renderCatPendingDrop()};
 
 /* medicines + pet feeding/penalty */
 async function Y26_useMedicine(kind,petId,medicineKey){
@@ -10112,3 +10115,64 @@ setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign 
 })();
 
 console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
+
+/* ======================================================================
+   CAT-09..12 ADMIN GIFT GUARANTEE PATCH
+   Guarantees Aida/Admin can send CAT-09..12 directly, independent of
+   earlier admin catalog wrappers. Does not change non-cat systems.
+   ====================================================================== */
+(function ensureCat0912AdminGiftSupport(){
+  const CAT_ADMIN_KEYS=["cat9","cat10","cat11","cat12"];
+
+  const prevCatalog=adminGiftCatalog;
+  adminGiftCatalog=function(){
+    const list=prevCatalog();
+    CAT_ADMIN_KEYS.forEach(key=>{
+      const cat=CAT_TYPES[key];
+      if(cat&&!list.some(e=>e?.type==="cat"&&e?.key===key)){
+        list.push({type:"cat",key,name:cat.name});
+      }
+    });
+    return list;
+  };
+
+  const prevAddGift=addGiftItemToState;
+  addGiftItemToState=function(s,gift){
+    ensureCatState(s);
+    if(Array.isArray(gift?.items)){
+      gift.items.forEach(item=>addGiftItemToState(s,{itemType:item.type,itemKey:item.key,qty:item.qty}));
+      return;
+    }
+    const type=gift?.itemType||gift?.type;
+    const key=gift?.itemKey||gift?.key;
+    const qty=Math.max(1,Math.floor(Number(gift?.qty)||1));
+    if(type==="cat"&&CAT_ADMIN_KEYS.includes(key)){
+      if(!CAT_TYPES[key])throw new Error("ไม่พบแมวชนิดนี้");
+      for(let i=0;i<qty;i++){
+        s.cats.push({id:newCatInstanceId(),typeKey:key,customName:"",placedFarm:0,placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,drops:[]});
+      }
+      return;
+    }
+    return prevAddGift(s,gift);
+  };
+
+  const prevRemoveGift=removeGiftItemFromState;
+  removeGiftItemFromState=function(s,type,key,qty){
+    ensureCatState(s);
+    if(type==="cat"&&CAT_ADMIN_KEYS.includes(key)&&currentMember==="Aida"&&adminProfile?.role==="admin"){
+      return true;
+    }
+    return prevRemoveGift(s,type,key,qty);
+  };
+
+  const prevAdminCount=adminEntryCount;
+  adminEntryCount=function(s,entry){
+    ensureCatState(s);
+    if(entry?.type==="cat"&&CAT_ADMIN_KEYS.includes(entry?.key)){
+      return currentMember==="Aida"&&adminProfile?.role==="admin"
+        ? ADMIN_STOCK_QTY
+        : s.cats.filter(c=>c.typeKey===entry.key&&!c.placedFarm).length;
+    }
+    return prevAdminCount(s,entry);
+  };
+})();
