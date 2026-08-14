@@ -2788,3 +2788,203 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   transform:scale(.985)!important;
   filter:brightness(1.08)!important;
 }
+
+
+/* ======================================================================
+   V38 — Campaign dashboard compact + scrollable + more background visible
+   ====================================================================== */
+
+/* Smaller floating dashboard; do not fill almost the whole phone. */
+.modal-card:has(.v36-campaign-dashboard),
+.modal-card:has(.v36-campaign-conditions),
+.modal-card:has(.v36-campaign-ended){
+  width:min(91vw,560px)!important;
+  max-width:560px!important;
+  height:min(82dvh,760px)!important;
+  max-height:82dvh!important;
+  border-radius:22px!important;
+  overflow:hidden!important;
+}
+
+/* The background image is the visual hero; reduce the dark wash. */
+.v36-campaign-shade{
+  background:
+    linear-gradient(180deg,rgba(29,12,34,.15) 0%,rgba(34,15,40,.22) 36%,rgba(26,10,31,.50) 100%)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+/* Compact fixed header/footer with the ranking list as the only scroll area. */
+.v36-campaign-content{
+  height:100%!important;
+  padding:12px 11px 10px!important;
+  overflow:hidden!important;
+}
+.v36-campaign-topbar{
+  flex:0 0 auto!important;
+  gap:8px!important;
+}
+.v36-campaign-topbar button,
+.v36-campaign-topbar>span{
+  min-height:34px!important;
+  padding:6px 10px!important;
+  font-size:clamp(9px,2.45vw,12px)!important;
+  background:linear-gradient(180deg,rgba(64,31,75,.78),rgba(40,20,50,.84))!important;
+}
+
+.v36-campaign-title{
+  flex:0 0 auto!important;
+  margin:9px 2px 7px!important;
+}
+.v36-campaign-title>small{
+  padding:4px 9px!important;
+  font-size:clamp(9px,2.35vw,11px)!important;
+  background:rgba(54,24,65,.58)!important;
+}
+.v36-campaign-title h2{
+  margin:6px auto 3px!important;
+  max-width:90%!important;
+  font-size:clamp(18px,5.0vw,27px)!important;
+  line-height:1.08!important;
+  color:#fff6dc!important;
+  text-shadow:0 2px 5px rgba(25,8,29,.88)!important;
+}
+.v36-campaign-total-label{
+  font-size:clamp(8px,2.1vw,10px)!important;
+  color:#ffe9b7!important;
+  text-shadow:0 1px 3px rgba(20,7,23,.8)!important;
+}
+.v36-my-score{
+  margin:6px auto 0!important;
+  min-width:128px!important;
+  max-width:180px!important;
+  padding:5px 10px!important;
+  border-radius:13px!important;
+  background:linear-gradient(180deg,rgba(255,247,218,.88),rgba(226,190,119,.86))!important;
+}
+.v36-my-score span{font-size:9px!important}
+.v36-my-score strong{font-size:20px!important}
+
+/* This section must scroll on iPhone/Safari. */
+.v36-campaign-ranks{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:scroll!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding:3px 2px 62px!important;
+  gap:6px!important;
+  scrollbar-width:none!important;
+}
+
+/* Smaller, more translucent cards so the campaign artwork remains visible. */
+.v36-rank-row{
+  min-height:48px!important;
+  grid-template-columns:40px minmax(0,1fr) auto!important;
+  gap:7px!important;
+  padding:6px 9px!important;
+  border-radius:14px!important;
+  background:linear-gradient(135deg,rgba(255,248,230,.80),rgba(239,220,183,.74))!important;
+  border:1px solid rgba(255,237,199,.78)!important;
+  box-shadow:0 4px 10px rgba(21,8,27,.15)!important;
+  backdrop-filter:blur(1px)!important;
+}
+.v36-rank-no{
+  width:34px!important;
+  height:34px!important;
+  border-radius:11px!important;
+  font-size:14px!important;
+}
+.v36-rank-name b{
+  font-size:clamp(11px,3.0vw,14px)!important;
+}
+.v36-rank-name small{
+  margin-top:1px!important;
+  font-size:8px!important;
+}
+.v36-rank-row strong{
+  font-size:clamp(16px,4.2vw,22px)!important;
+}
+.v36-rank-top-1{
+  min-height:58px!important;
+  background:linear-gradient(135deg,rgba(255,248,217,.91),rgba(232,184,87,.86))!important;
+  border-width:1.5px!important;
+  box-shadow:0 6px 14px rgba(229,178,70,.20)!important;
+}
+.v36-rank-top-1 .v36-rank-no{font-size:22px!important}
+.v36-rank-top-2{
+  background:linear-gradient(135deg,rgba(247,251,255,.87),rgba(203,213,228,.82))!important;
+}
+.v36-rank-top-3{
+  background:linear-gradient(135deg,rgba(255,240,232,.87),rgba(217,155,134,.82))!important;
+}
+
+/* Small floating countdown, leaving more image visible. */
+.v36-campaign-footer{
+  bottom:8px!important;
+  min-width:min(68%,300px)!important;
+  padding:6px 13px!important;
+  border-radius:15px!important;
+  background:linear-gradient(180deg,rgba(57,27,69,.82),rgba(33,16,42,.88))!important;
+}
+.v36-campaign-footer span{font-size:8px!important}
+.v36-campaign-footer strong{
+  font-size:clamp(15px,4vw,21px)!important;
+}
+
+/* Conditions page should also scroll normally instead of locking the screen. */
+.v36-campaign-conditions .v36-campaign-content{
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+}
+.v36-condition-card{
+  margin:12px 0 64px!important;
+  max-height:none!important;
+  overflow:visible!important;
+  padding:15px 14px!important;
+  border-radius:18px!important;
+  background:linear-gradient(160deg,rgba(255,250,235,.88),rgba(239,218,181,.84))!important;
+}
+.v36-condition-card h2{
+  font-size:clamp(19px,5vw,27px)!important;
+}
+.v36-condition-card p{
+  font-size:clamp(10px,2.75vw,13px)!important;
+  line-height:1.55!important;
+}
+
+/* Make the end screen compact too. */
+.v36-ended-card{
+  padding:18px 13px 14px!important;
+  border-radius:20px!important;
+  background:linear-gradient(160deg,rgba(255,249,231,.90),rgba(233,205,155,.87))!important;
+}
+.v36-ended-icon{font-size:42px!important}
+.v36-ended-card h2{font-size:clamp(23px,6vw,32px)!important}
+.v36-ended-place{
+  padding:7px 9px!important;
+  border-radius:13px!important;
+}
+.v36-ended-place span{font-size:20px!important}
+.v36-ended-place b{font-size:12px!important}
+.v36-ended-place strong{font-size:17px!important}
+
+@media(max-width:390px){
+  .modal-card:has(.v36-campaign-dashboard),
+  .modal-card:has(.v36-campaign-conditions),
+  .modal-card:has(.v36-campaign-ended){
+    width:90vw!important;
+    height:80dvh!important;
+    max-height:80dvh!important;
+  }
+  .v36-campaign-content{padding:10px 8px 8px!important}
+  .v36-rank-row{
+    grid-template-columns:36px minmax(0,1fr) auto!important;
+    min-height:45px!important;
+    padding:5px 7px!important;
+  }
+  .v36-rank-no{width:31px!important;height:31px!important}
+}
