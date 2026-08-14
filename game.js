@@ -8248,6 +8248,37 @@ function v15NewGroupSlot(dateKey,i,cycle=0){return{slot:i,cycle,title:v15GroupTi
 function v15NewTempleDay(dateKey){return{dateKey,soloSlots:Array.from({length:6},(_,i)=>v15NewSoloSlot(dateKey,i,0)),groupSlots:Array.from({length:6},(_,i)=>v15NewGroupSlot(dateKey,i,0)),outcomes:{},updatedAtMs:gameNow()}}
 function v15EnsureTemplePlayerState(s){if(!s)return s;s.templeHourly=s.templeHourly&&typeof s.templeHourly==="object"?s.templeHourly:{};const hk=v15TempleHourKey();for(const type of ["solo","group"]){const x=s.templeHourly[type]&&typeof s.templeHourly[type]==="object"?s.templeHourly[type]:{};s.templeHourly[type]=x.hourKey===hk?{hourKey:hk,count:Math.max(0,Number(x.count)||0)}:{hourKey:hk,count:0}}return s}
 function v15AllocateGroupReward(total,participants,seed){const keys=participants.map(p=>p.key),n=keys.length,min=Math.min(20,Math.floor(total/n)),left=total-min*n,weights=keys.map((k,i)=>1+(v15Hash(`${seed}:${k}:${i}`)%100)),sum=weights.reduce((a,b)=>a+b,0),out={};let used=0;keys.forEach((k,i)=>{const extra=i===keys.length-1?left-used:Math.floor(left*weights[i]/sum);out[k]=min+extra;used+=extra});const diff=total-Object.values(out).reduce((a,b)=>a+b,0);if(keys.length)out[keys[keys.length-1]]+=diff;return out}
+
+/* TEMPLE GROUP HOTFIX — ส่งเสบียงครบแล้วจบภารกิจทันที
+   สร้าง outcome + เข้าคูลดาวน์ 15 นาที โดยรักษาข้อมูลรางวัลเดิม */
+function v15CompleteGroupSlot(day,slot,i,now=gameNow()){
+  if(!slot||slot.status!=="active"||!v15AllReqDone(slot))return false;
+  const id=slot.attemptId||`${day.dateKey}-group-${i}-${slot.cycle}`;
+  const participants=Array.isArray(slot.participants)?slot.participants:[];
+  if(!day.outcomes[id]){
+    const names=Object.fromEntries(participants.map(p=>[p.key,p.name]));
+    const total=Number(slot.rewardTotal)||300;
+    day.outcomes[id]={
+      type:"group",
+      status:"success",
+      title:slot.title,
+      names,
+      rewards:v15AllocateGroupReward(total,participants,id),
+      penalties:{},
+      appliedKeys:[],
+      createdAt:now,
+      total
+    };
+  }
+  slot.status="cooldown";
+  slot.lastResult="success";
+  slot.cooldownUntil=now+V15_GROUP_COOLDOWN_MS;
+  slot.requirements=[];
+  slot.sent={};
+  slot.participants=[];
+  return true;
+}
+
 function v15RefreshTempleDay(day,now=gameNow()){
   if(!day||typeof day!=="object")return v15NewTempleDay(currentBangkokDateKey());
   day.soloSlots=Array.isArray(day.soloSlots)?day.soloSlots:[];day.groupSlots=Array.isArray(day.groupSlots)?day.groupSlots:[];day.outcomes=day.outcomes&&typeof day.outcomes==="object"?day.outcomes:{};
@@ -8264,13 +8295,20 @@ function v15RefreshTempleDay(day,now=gameNow()){
   day.groupSlots.forEach((slot,i)=>{
     /* 16:00: ทีมที่ยังลงชื่อไม่ครบถูกปิดเฉย ๆ ไม่มีโทษ */
     if(templeClosedToday&&slot.status==="open"&&(slot.participants||[]).length){slot.status="closed";slot.lastResult="incomplete";slot.participants=[];slot.requirements=[];slot.sent={}}
+
+    /* ใหม่: ของครบทุกอย่างเมื่อไร = สำเร็จทันที ไม่ต้องรอ 45 นาทีหมด */
+    if(slot.status==="active"&&v15AllReqDone(slot)){
+      v15CompleteGroupSlot(day,slot,i,now);
+    }
+
+    /* ถ้ายังไม่ครบและเวลาหมด = ล้มเหลวตามกติกาเดิม */
     if(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&now>=slot.deadlineAt){
-      const id=slot.attemptId||`${day.dateKey}-group-${i}-${slot.cycle}`,success=v15AllReqDone(slot),participants=Array.isArray(slot.participants)?slot.participants:[];
+      const id=slot.attemptId||`${day.dateKey}-group-${i}-${slot.cycle}`,participants=Array.isArray(slot.participants)?slot.participants:[];
       if(!day.outcomes[id]){
         const names=Object.fromEntries(participants.map(p=>[p.key,p.name]));
-        day.outcomes[id]=success?{type:"group",status:"success",title:slot.title,names,rewards:v15AllocateGroupReward(Number(slot.rewardTotal)||300,participants,id),penalties:{},appliedKeys:[],createdAt:now,total:Number(slot.rewardTotal)||300}:{type:"group",status:"failed",title:slot.title,names,rewards:{},penalties:Object.fromEntries(participants.map(p=>[p.key,150])),appliedKeys:[],createdAt:now,total:0};
+        day.outcomes[id]={type:"group",status:"failed",title:slot.title,names,rewards:{},penalties:Object.fromEntries(participants.map(p=>[p.key,150])),appliedKeys:[],createdAt:now,total:0};
       }
-      slot.status="cooldown";slot.lastResult=success?"success":"failed";slot.cooldownUntil=now+V15_GROUP_COOLDOWN_MS;slot.requirements=[];slot.sent={};slot.participants=[];
+      slot.status="cooldown";slot.lastResult="failed";slot.cooldownUntil=now+V15_GROUP_COOLDOWN_MS;slot.requirements=[];slot.sent={};slot.participants=[];
     }
     if(slot.status==="cooldown"&&now>=Number(slot.cooldownUntil||0)&&canRespawn)day.groupSlots[i]=v15NewGroupSlot(day.dateKey,i,(Number(slot.cycle)||0)+1);
   });
@@ -8283,7 +8321,7 @@ function v15ShiftDateKey(dateKey,days){
 let v15TempleCache=null,v15TempleUnsub=null,v15TempleOutcomeSyncBusy=false,v15TempleClockTimer=null;
 async function v15TouchTempleDay(){if(!cloudReady||!currentMemberKey)return null;const {db,fs}=await getFirebaseContext(),dateKey=currentBangkokDateKey(),ref=fs.doc(db,"templeMissions",dateKey);let result;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),day=v15RefreshTempleDay(snap.exists()?cloneData(snap.data()):v15NewTempleDay(dateKey));result=day;tx.set(ref,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false})});v15TempleCache=result;return result}
 function v15StopTempleSubscription(){if(v15TempleUnsub){v15TempleUnsub();v15TempleUnsub=null}}
-async function v15StartTempleSubscription(){if(!cloudReady)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"templeMissions",currentBangkokDateKey());v15StopTempleSubscription();v15TempleUnsub=fs.onSnapshot(ref,snap=>{if(!snap.exists())return;v15TempleCache=v15RefreshTempleDay(cloneData(snap.data()));if(currentScene==="templeSolo")v15RenderSoloPanel();else if(currentScene==="templeGroup")v15RenderGroupPanel()},error=>console.warn("temple listener",error))}
+async function v15StartTempleSubscription(){if(!cloudReady)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"templeMissions",currentBangkokDateKey());v15StopTempleSubscription();v15TempleUnsub=fs.onSnapshot(ref,snap=>{if(!snap.exists())return;v15TempleCache=v15RefreshTempleDay(cloneData(snap.data()));if(currentScene==="templeSolo")v15RenderSoloPanel();else if(currentScene==="templeGroup")v15RenderGroupPanel();v15ApplyOwnTempleOutcomes().catch(()=>{})},error=>console.warn("temple listener",error))}
 async function v15ApplyTempleOutcomesForDate(dateKey){
   const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",dateKey),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,notices=[];
   await fs.runTransaction(db,async tx=>{
@@ -8323,7 +8361,7 @@ function v15UpdateTempleButton(){const btn=$("almsBtn");if(!btn)return;const b=b
 updateAlmsButton=v15UpdateTempleButton;
 let v15TempleExpiryTouchBusy=false;
 function v15UpdateVisibleTempleCountdowns(){document.querySelectorAll("[data-v15-until]").forEach(el=>{const until=Number(el.dataset.v15Until)||0;el.textContent=formatLongCountdown(Math.max(0,until-gameNow()))})}
-function v15TempleNeedsServerRefresh(){const day=v15TempleCache;if(!day)return false;const now=gameNow();return [...(day.soloSlots||[]),...(day.groupSlots||[])].some(slot=>(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&now>=Number(slot.deadlineAt))||(slot.status==="cooldown"&&Number(slot.cooldownUntil||0)>0&&now>=Number(slot.cooldownUntil)))}
+function v15TempleNeedsServerRefresh(){const day=v15TempleCache;if(!day)return false;const now=gameNow();return [...(day.soloSlots||[]),...(day.groupSlots||[])].some(slot=>(slot.status==="active"&&v15AllReqDone(slot))||(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&now>=Number(slot.deadlineAt))||(slot.status==="cooldown"&&Number(slot.cooldownUntil||0)>0&&now>=Number(slot.cooldownUntil)))}
 function v15StartTempleClock(){if(v15TempleClockTimer)clearInterval(v15TempleClockTimer);v15TempleClockTimer=setInterval(()=>{v15UpdateTempleButton();v15UpdateVisibleTempleCountdowns();if(v15TempleScene()&&!v15TempleIsOpen()){returnToFarm();message("🛕 วัดปิดแล้ว",v15TempleClosedText());return}if(v15TempleScene()&&v15TempleNeedsServerRefresh()&&!v15TempleExpiryTouchBusy){v15TempleExpiryTouchBusy=true;v15TouchTempleDay().then(()=>v15ApplyOwnTempleOutcomes()).catch(()=>{}).finally(()=>{v15TempleExpiryTouchBusy=false})}},1000)}
 function v15StopTempleClock(){if(v15TempleClockTimer){clearInterval(v15TempleClockTimer);v15TempleClockTimer=null}}
 function v15ShowTempleClosed(){message("🛕 วัดไทยในสวนยังไม่เปิด",`เปิดทุกวัน 11.00-16.00 น.<br>${v15TempleClosedText()}`)}
@@ -8398,14 +8436,66 @@ async function v15JoinGroup(slotIndex){
 }
 async function v15SendGroup(slotIndex,reqId){
   try{
-    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState;
+    await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),
+          dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),
+          saveRef=fs.doc(db,"saves",currentMemberKey);
+    let nextState,completedNow=false;
+
     await fs.runTransaction(db,async tx=>{
-      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.groupSlots[slotIndex],s=normalizeState(sSnap.data(),currentMember);if(!slot||slot.status!=="active")throw new Error("ภารกิจนี้ยังไม่เริ่มหรือจบแล้ว");if(!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error("คุณไม่ได้อยู่ในทีมนี้");if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
-      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error("ไม่พบเสบียงนี้");const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,req.qty-sent),have=v15ReqHave(s,req),qty=Math.min(remain,have);if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");if(!v15ConsumeReq(s,req,qty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);
+      if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
+
+      const day=v15RefreshTempleDay(cloneData(dSnap.data())),
+            slot=day.groupSlots[slotIndex],
+            s=normalizeState(sSnap.data(),currentMember);
+
+      if(!slot||slot.status!=="active")throw new Error("ภารกิจนี้ยังไม่เริ่มหรือจบแล้ว");
+      if(!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error("คุณไม่ได้อยู่ในทีมนี้");
+      if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
+
+      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);
+      if(!req)throw new Error("ไม่พบเสบียงนี้");
+
+      const sent=Number(slot.sent?.[reqId])||0,
+            remain=Math.max(0,req.qty-sent),
+            have=v15ReqHave(s,req),
+            qty=Math.min(remain,have);
+
+      if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");
+      if(!v15ConsumeReq(s,req,qty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");
+
+      slot.sent=slot.sent||{};
+      slot.sent[reqId]=sent+qty;
+
+      /* ถ้าของชิ้นนี้ทำให้ครบทุก requirement:
+         สร้างผลสำเร็จ + เริ่ม cooldown 15 นาทีทันทีใน transaction เดียวกัน */
+      if(v15AllReqDone(slot)){
+        completedNow=v15CompleteGroupSlot(day,slot,slotIndex,gameNow());
+      }
+
+      nextState=s;
+      tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
-    ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);showWeatherToast("🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว");
-  }catch(error){message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}
+
+    ownState=normalizeState(nextState,currentMember);
+    state=ownState;
+    saveLocalOnly(ownState);
+
+    if(completedNow){
+      /* ผู้ส่งคนสุดท้ายรับส่วนแบ่งทันที และสมาชิกคนอื่นจะรับผ่าน
+         realtime/outcome sync โดยไม่ต้องรอ timer 45 นาที */
+      await v15ApplyOwnTempleOutcomes();
+      showWeatherToast("✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที");
+    }else{
+      showWeatherToast("🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว");
+    }
+  }catch(error){
+    message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่");
+  }
 }
+
 const __renderSceneBeforeTempleV15=renderScene;
 renderScene=function(){
   if(currentScene==="templeEntrance"){v15RenderTempleEntrance();return}
