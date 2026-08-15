@@ -5263,7 +5263,7 @@ function rollCatBoxPendingReward(){
     const weightedKeys=[
       "cat1","cat1","cat2","cat2","cat3","cat3","cat4","cat4",
       "cat5","cat5","cat6","cat6","cat7","cat7","cat8","cat8",
-      "cat9","cat10","cat11","cat12"
+      "cat9","cat10","cat12"
     ];
     const typeKey=weightedKeys[Math.floor(Math.random()*weightedKeys.length)];
     return{kind:"cat",typeKey};
@@ -10130,7 +10130,7 @@ console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
    earlier admin catalog wrappers. Does not change non-cat systems.
    ====================================================================== */
 (function ensureCat0912AdminGiftSupport(){
-  const CAT_ADMIN_KEYS=["cat9","cat10","cat11","cat12"];
+  const CAT_ADMIN_KEYS=["cat9","cat10","cat12"];
 
   const prevCatalog=adminGiftCatalog;
   adminGiftCatalog=function(){
@@ -10191,7 +10191,7 @@ console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
    Pumpkin and Icecream are separate one-time rewards.
    ====================================================================== */
 const V42_CAMPAIGN_REWARD_TARGET=1299;
-const V42_CAMPAIGN_REWARD_CATS=["cat9","cat10","cat11","cat12"];
+const V42_CAMPAIGN_REWARD_CATS=["cat9","cat10","cat12"];
 const V42_CAMPAIGN_REWARD_BG={
   pumpkin:"campaign-pumpkin-gift-bg.jpg?v=1",
   icecream:"campaign-icecream-gift-bg.jpg?v=1"
@@ -10595,4 +10595,66 @@ V42_claimCampaignCat=async function(key,catKey){
   };
 })();
 console.info("YAINOO CURRENT 20260814 patch loaded");
+
+
+/* ===== CAT-11 / เจียงเหมียว — PERMANENTLY RETIRED ===== */
+(function YN_CAT11_RETIRED(){
+  const DEAD="cat11",HEAVEN="แมวตัวนี้ขึ้นสวรรค์แล้วจ้า";
+
+  const oldAdminGiftCatalog=adminGiftCatalog;
+  adminGiftCatalog=function(){
+    return oldAdminGiftCatalog().filter(e=>!(e?.type==="cat"&&e?.key===DEAD));
+  };
+
+  const oldAdminEntryCount=adminEntryCount;
+  adminEntryCount=function(s,e){
+    if(e?.type==="cat"&&e?.key===DEAD)return 0;
+    return oldAdminEntryCount(s,e);
+  };
+
+  const oldAddGiftItemToState=addGiftItemToState;
+  addGiftItemToState=function(s,gift){
+    const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key;
+    if(type==="cat"&&key===DEAD)throw new Error(HEAVEN);
+    if(Array.isArray(gift?.items)&&gift.items.some(x=>x?.type==="cat"&&x?.key===DEAD))throw new Error(HEAVEN);
+    return oldAddGiftItemToState(s,gift);
+  };
+
+  /* Remove historical CAT-11 instances from normalized gameplay state too. */
+  const oldEnsureCatState=ensureCatState;
+  ensureCatState=function(s){
+    const result=oldEnsureCatState(s);
+    if(Array.isArray(s?.cats))s.cats=s.cats.filter(c=>c?.typeKey!==DEAD);
+    return result;
+  };
+
+  /* Campaign row remains visible only as a disabled memorial row. */
+  const oldShow=V42_showCampaignReward;
+  V42_showCampaignReward=async function(key){
+    await oldShow(key);
+    const row=document.querySelector('[data-v42-cat="cat11"]');
+    if(row){
+      row.disabled=true;
+      row.classList.remove("is-ready","is-selected");
+      row.classList.add("is-retired");
+      row.onclick=null;
+      row.setAttribute("aria-disabled","true");
+      const small=row.querySelector("small"),em=row.querySelector("em");
+      if(small)small.textContent=HEAVEN;
+      if(em)em.textContent="☁️";
+    }
+  };
+
+  const oldConfirm=V42_confirmCampaignCat;
+  V42_confirmCampaignCat=function(key,catKey,score){
+    if(catKey===DEAD)return;
+    return oldConfirm(key,catKey,score);
+  };
+
+  const oldClaim=V42_claimCampaignCat;
+  V42_claimCampaignCat=async function(key,catKey){
+    if(catKey===DEAD)return;
+    return oldClaim(key,catKey);
+  };
+})();
 

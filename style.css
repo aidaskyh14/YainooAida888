@@ -3716,3 +3716,10 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .yn-boat-supply-picker .boat-supply-grid img{
   object-fit:contain !important;
 }
+
+.v42-reward-cat.is-retired{
+  opacity:.52 !important;
+  filter:grayscale(1) !important;
+  cursor:not-allowed !important;
+}
+.v42-reward-cat.is-retired small{white-space:normal !important}
