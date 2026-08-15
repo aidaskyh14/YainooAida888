@@ -11673,7 +11673,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function emptyJ2(){return{slots:Array(12).fill(null)}}
   function normJ2(d){const now=NOW(),slots=Array.isArray(d?.slots)?d.slots.slice(0,12):[];while(slots.length<12)slots.push(null);return{slots:slots.map(x=>{if(!x||typeof x!=="object")return null;if(Number(x.expiresAt||0)<=now)return null;return{...x,version:Number(x.version)||1,feedCount:Math.max(0,Math.min(5,Number(x.feedCount)||0)),cooldownUntil:Number(x.cooldownUntil)||0}})}}
   function stopJ2(){if(jelly2Unsub){jelly2Unsub();jelly2Unsub=null}jelly2Cache=null}
-  async function openJelly2(){$("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");if(jellyPondUnsubscribe)stopJellyPondSubscription();currentScene="jellyfish2";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");$("sceneScreen").style.backgroundImage='url("jellyfish-pond-2.jpg?v=1"),url("jellyfish-pond.jpg?v=1")';setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 1",backAction:()=>openScene("jellyfish"),nextText:"ไปที่สังเวียนมวยทะเล",nextAction:openArena});const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","jellyfishPond2");const snap=await fs.getDoc(ref);if(!snap.exists())await fs.setDoc(ref,{slots:Array(12).fill(null),updatedAt:fs.serverTimestamp()});jelly2Unsub=fs.onSnapshot(ref,s=>{jelly2Cache=normJ2(s.data());if(currentScene==="jellyfish2")drawJ2()});}
+  async function openJelly2(){$("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");if(jellyPondUnsubscribe)stopJellyPondSubscription();currentScene="jellyfish2";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");$("sceneScreen").style.backgroundImage='url("jellyfish-pond-02.png?v=2"),url("jellyfish-pond-2.jpg?v=1"),url("jellyfish-pond.jpg?v=1")';setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 1",backAction:()=>openScene("jellyfish"),nextText:"ไปที่สังเวียนมวยทะเล",nextAction:openArena});const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","jellyfishPond2");const snap=await fs.getDoc(ref);if(!snap.exists())await fs.setDoc(ref,{slots:Array(12).fill(null),updatedAt:fs.serverTimestamp()});jelly2Unsub=fs.onSnapshot(ref,s=>{jelly2Cache=normJ2(s.data());if(currentScene==="jellyfish2")drawJ2()});}
   function jtype(slot){return Number(slot.version)===2?(Y26_JELLY_V2[slot.typeKey]||{}):(JELLYFISH_TYPES[slot.typeKey]||{})}
   function drawJ2(){if(currentScene!=="jellyfish2")return;const slots=jelly2Cache?.slots||Array(12).fill(null);$("sceneInteractiveLayer").innerHTML=`<div class="jelly-pond-banner">🪼 บ่อแมงกะพรุน 2 • ${slots.filter(Boolean).length}/12</div>${JELLY_SLOT_POSITIONS.map(([l,t],i)=>{const x=slots[i];if(!x)return `<button class="jelly-slot jelly-slot-empty" data-j2="${i}" style="left:${l}%;top:${t}%"></button>`;const ty=jtype(x);return `<button class="jelly-slot jelly-slot-owned ${Number(x.version)===2?"jelly-v2-slot":""}" data-j2="${i}" style="left:${l}%;top:${t}%"><img src="${ty.image}" alt="${esc(ty.name)}"><small>${esc(x.customName||ty.name)}<br>${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชม. • ${Number(x.version)===2?(x.cooldownUntil>NOW()?"คูลดาวน์":"พร้อมให้อาหาร"):`${x.feedCount||0}/5`}</small></button>`}).join("")}`;document.querySelectorAll("[data-j2]").forEach(b=>b.onclick=()=>j2Slot(Number(b.dataset.j2)))}
   function j2Slot(i){const x=jelly2Cache?.slots?.[i];if(!x)return j2PlacePicker(i);j2Details(i,x)}
@@ -11686,7 +11686,29 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   async function poisonJ2(i){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.version!==1||x.ownerKey===currentMemberKey)throw new Error("วางยาไม่ได้");if(Number(s.specials?.jellyfishLaxative||0)<1)throw new Error("ไม่มียาถ่าย");s.specials.jellyfishLaxative--;x.expiresAt=Math.max(NOW(),Number(x.expiresAt)-JELLY_POISON_REDUCE_MS);if(x.expiresAt<=NOW())p.slots[i]=null;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();showWeatherToast("💊 วางยาถ่ายสำเร็จ") }catch(e){message("วางยาไม่ได้",e.message)}}
   function j2FeedV2(i){const s=ownState||state,plank=Number(s.bag?.hauntedPlankton||0),fish=Number(s.coconutRiverItems?.fish4||0);$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍽️ เลือกอาหาร V2</h2><div class="cat-feed-grid"><button data-j2-v2="plankton" ${plank<50?"disabled":""}>แพลงก์ตอน ×50 • มี ${plank}</button><button data-j2-v2="fish4" ${fish<20?"disabled":""}>ปลาหมายเลข4 ×20 • มี ${fish}</button></div></section>`;document.querySelectorAll("[data-j2-v2]").forEach(b=>b.onclick=()=>commitJ2V2(i,b.dataset.j2V2));openModal()}
   async function commitJ2V2(i,food){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.version!==2||x.ownerKey!==currentMemberKey||Number(x.cooldownUntil)>NOW())throw new Error("ให้อาหารไม่ได้");if(food==="fish4"){if(Number(s.coconutRiverItems?.fish4||0)<20)throw new Error("ปลาไม่พอ");s.coconutRiverItems.fish4-=20}else{if(Number(s.bag?.hauntedPlankton||0)<50)throw new Error("แพลงก์ตอนไม่พอ");s.bag.hauntedPlankton-=50}reward=rand(50,150);s.merit=Number(s.merit||0)+reward;x.cooldownUntil=NOW()+Y26_JELLY_V2_COOLDOWN_MS;incrementMissionOn(s,"feedJellyfish",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();message("ขอบคุณที่เลี้ยงดูเรา เป็นอย่างดี",`+${reward} กุศล`) }catch(e){message("ให้อาหารไม่ได้",e.message)}}
-  const _renderJelly=renderJellyfishScene;renderJellyfishScene=async function(){const r=await _renderJelly();if(currentScene==="jellyfish"&&!$("ynuJelly2Btn")){const b=document.createElement("button");b.id="ynuJelly2Btn";b.className="ynu-jelly2-button";b.textContent="ไปบ่อแมงกะพรุน 2";b.onclick=openJelly2;$("sceneInteractiveLayer").appendChild(b)}return r};
+  const _drawJellyBase=drawJellyfishPond;
+  drawJellyfishPond=function(pond){
+    const r=_drawJellyBase(pond);
+    if(currentScene==="jellyfish"){
+      const layer=$("sceneInteractiveLayer");
+      if(layer&&!$("ynuJelly2Btn")){
+        const b=document.createElement("button");
+        b.id="ynuJelly2Btn";
+        b.className="ynu-jelly2-button";
+        b.type="button";
+        b.textContent="ไปบ่อแมงกะพรุน 2";
+        b.onclick=()=>openJelly2();
+        layer.appendChild(b);
+      }
+    }
+    return r;
+  };
+  const _renderJelly=renderJellyfishScene;
+  renderJellyfishScene=async function(){
+    const r=await _renderJelly();
+    if(currentScene==="jellyfish"&&jellyPondCache)drawJellyfishPond(jellyPondCache);
+    return r;
+  };
 
   /* ---------- Sea boxing arena ---------- */
   const OPP=[
