@@ -3839,3 +3839,315 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 
 @media(max-width:390px){.shop-panel .shop-card,.ynu-shop-card{min-height:295px!important;padding:7px!important}.ynu-shop-image-box{height:105px!important;min-height:105px!important}.ynu-move-picker{grid-template-columns:repeat(4,1fr)}.ynu-arena-picked img{height:96px}.ynu-garden-manager-button{right:1.8%;top:27.2%;padding:5px 7px}.ynu-garden-manager-button b{display:none}.ynu-score-table>.head,.ynu-score-table>div{grid-template-columns:38px 1fr 54px 68px}}
 .ynu-fishing-lobby-scene .scene-back-button{top:auto!important;bottom:7%!important;left:3%!important}
+
+
+/* =====================================================================
+   V1.9 CLEANUP-14 — เก็บตก 14 หัวข้อ
+   ===================================================================== */
+
+/* 1–5 Take Over + Overlay: โฉนด/ปีกซาตานต้องมีตำแหน่งและมิติแบบเดียวกับ status */
+.ynu-deed-overlay,
+.ynu-satan-overlay{
+  right:1.5%!important;
+  top:2.5%!important;
+  width:clamp(34px,8vw,58px)!important;
+  height:clamp(34px,8vw,58px)!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  border:0!important;
+  filter:
+    drop-shadow(0 6px 6px rgba(25,12,30,.48))
+    drop-shadow(0 2px 1px rgba(255,235,185,.36))!important;
+  transform:translateZ(0)!important;
+}
+.ynu-deed-overlay{animation:ynuDeedFloat 2.2s ease-in-out infinite}
+.ynu-satan-overlay{animation:ynuSatanPop .42s ease-out both,ynuSatanPulse .72s ease-in-out .42s 2 alternate}
+@keyframes ynuDeedFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.045)}}
+@keyframes ynuSatanPop{0%{opacity:0;transform:scale(.45) rotate(-9deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes ynuSatanPulse{to{transform:scale(1.12);filter:drop-shadow(0 7px 7px rgba(25,12,30,.54)) drop-shadow(0 0 8px rgba(175,60,205,.46))}}
+.ynu-takeover-plot{
+  outline:2px dashed rgba(212,160,74,.8)!important;
+  outline-offset:-3px!important;
+  filter:drop-shadow(0 3px 4px rgba(53,30,61,.15));
+}
+.ynu-takeover-label{
+  left:3%!important;
+  right:3%!important;
+  bottom:-1%!important;
+  padding:4px 6px!important;
+  background:linear-gradient(180deg,rgba(77,45,91,.94),rgba(48,28,60,.96))!important;
+  border:1px solid rgba(248,220,164,.72)!important;
+  box-shadow:0 4px 8px rgba(31,14,38,.35)!important;
+  color:#fff5d9!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.55)!important;
+}
+.ynu-takeover-action{text-align:center}
+.ynu-takeover-action .primary-spooky-action{width:min(280px,90%);margin:8px auto 0}
+
+/* 6 เยี่ยมบ้านเพื่อน: เมนูด้านล่างทั้งหมดต้องกดได้ */
+.game-screen.visiting-friend .bottom-nav-hotspots{
+  display:block!important;
+  pointer-events:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.game-screen.visiting-friend .bottom-nav-hotspots button{
+  display:block!important;
+  pointer-events:auto!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.game-screen.visiting-friend .bottom-nav-hotspots button:active{background:rgba(255,255,255,.14)!important}
+
+/* 7 + 10 ตำแหน่งนักมวยแมงกะพรุน: กึ่งกลางแท่นซ้าย/ขวา และยกขึ้น */
+.ynu-arena-picked{
+  top:33.5%!important;
+  width:25%!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  transform:translateY(-3%)!important;
+}
+.ynu-arena-picked.mine{left:8.5%!important}
+.ynu-arena-picked.opp{right:8.5%!important}
+.ynu-arena-picked img{
+  width:100%!important;
+  height:clamp(108px,17.5vh,142px)!important;
+  object-fit:contain!important;
+  object-position:center bottom!important;
+  background:transparent!important;
+  filter:drop-shadow(0 8px 7px rgba(17,19,40,.38)) drop-shadow(0 1px 1px rgba(255,255,255,.2))!important;
+}
+.ynu-arena-picked small{
+  margin-top:-2px!important;
+  box-shadow:0 4px 9px rgba(25,12,31,.35)!important;
+}
+
+/* 11 ร้านค้า: ไม่ใช้พื้นขาวเรียบ / ตัวหนังสือเข้ม / การ์ดและสินค้ามีมิติ */
+.shop-panel .shop-card,
+.ynu-shop-card,
+.medicine-shop-card{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,245,218,.95),rgba(238,211,229,.92) 38%,rgba(221,193,214,.94) 100%)!important;
+  border:1.5px solid rgba(117,72,126,.5)!important;
+  box-shadow:
+    0 10px 22px rgba(53,27,62,.20),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 -8px 18px rgba(107,62,120,.08)!important;
+  color:#24172b!important;
+}
+.ynu-shop-image-box,
+.shop-card>.ynu-shop-image-box{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(255,249,231,.88) 0 20%,rgba(230,204,231,.94) 62%,rgba(198,162,207,.92) 100%)!important;
+  border:1.5px solid rgba(117,72,126,.42)!important;
+  box-shadow:
+    inset 0 3px 10px rgba(255,255,255,.62),
+    inset 0 -8px 15px rgba(88,48,103,.14),
+    0 7px 14px rgba(59,29,68,.18)!important;
+}
+.ynu-shop-image-box img,
+.shop-card>.ynu-shop-image-box img,
+.shop-card>.shop-animal-img{
+  background:transparent!important;
+  filter:
+    drop-shadow(0 8px 7px rgba(52,27,62,.28))
+    drop-shadow(0 2px 1px rgba(255,255,255,.48))!important;
+}
+.shop-card b,
+.shop-card h3,
+.shop-card small,
+.ynu-shop-card b,
+.ynu-shop-card h3,
+.ynu-shop-card small,
+.shop-price,
+.ynu-shop-price,
+.mystery-rules,
+.mystery-rules span,
+.mystery-rules strong{
+  color:#211525!important;
+  text-shadow:none!important;
+}
+.ynu-condition-copy,
+.mystery-rules{
+  background:rgba(246,231,235,.72)!important;
+  border:1px solid rgba(118,76,127,.18)!important;
+  box-shadow:inset 0 1px 3px rgba(255,255,255,.55)!important;
+}
+.ynu-condition-btn,
+.ynu-qty input,
+.yn-merit-qty{
+  background:#f4e3ec!important;
+  color:#26182b!important;
+  border-color:rgba(115,72,125,.38)!important;
+}
+.ynu-buy-btn,.ynu-shop-card>button:last-child,.yn-merit-buy-btn,.shop-worship-button{
+  box-shadow:0 5px 10px rgba(57,29,68,.22),inset 0 1px 0 rgba(255,255,255,.22)!important;
+}
+
+/* 12 สถานะต่อสู้/ชนะ/แพ้: ไอคอนเล็กเท่ากัน ไม่มีพื้นขาว */
+.ynu-arena-status{
+  min-height:285px!important;
+  max-width:380px!important;
+  padding:10px 8px!important;
+}
+.ynu-arena-status-icon{
+  width:104px!important;
+  height:104px!important;
+  display:grid!important;
+  place-items:center!important;
+  margin:0 auto 7px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+.ynu-arena-status-icon img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:drop-shadow(0 7px 7px rgba(41,23,53,.28))!important;
+}
+.ynu-arena-status.ynu-fighting .ynu-arena-status-icon img{
+  animation:ynuFightShake .52s ease-in-out infinite;
+  transform-origin:50% 70%;
+}
+@keyframes ynuFightShake{
+  0%,100%{transform:translate3d(0,0,0) rotate(0)}
+  20%{transform:translate3d(-2px,1px,0) rotate(-1.2deg)}
+  40%{transform:translate3d(2px,-1px,0) rotate(1.2deg)}
+  60%{transform:translate3d(-1px,-1px,0) rotate(-.7deg)}
+  80%{transform:translate3d(1px,1px,0) rotate(.7deg)}
+}
+
+/* 13 เปิดกล่องแมงกะพรุน: แสดงตัวที่สุ่มได้ */
+.ynu-jellybox-reward-icon{
+  display:block!important;
+  width:min(128px,30vw)!important;
+  height:min(128px,30vw)!important;
+  margin:0 auto 8px!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  filter:drop-shadow(0 8px 7px rgba(52,27,62,.28))!important;
+}
+
+/* 14 เลือกคู่แข่ง/ท่าต่อสู้ + Dashboard: ไม่มีพื้นขาวและมีมิติ */
+.ynu-arena-choice-panel{
+  background:
+    linear-gradient(180deg,rgba(255,239,207,.98),rgba(226,199,219,.98))!important;
+  border-color:rgba(126,75,137,.55)!important;
+  box-shadow:0 14px 28px rgba(35,17,43,.25),inset 0 1px 0 rgba(255,255,255,.7)!important;
+}
+.ynu-arena-picker button,
+.ynu-move-picker button{
+  position:relative!important;
+  overflow:hidden!important;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(255,246,221,.92),rgba(213,184,218,.92) 66%,rgba(178,139,190,.94) 100%)!important;
+  border:1.5px solid rgba(91,54,105,.42)!important;
+  color:#25162c!important;
+  box-shadow:
+    0 7px 13px rgba(47,23,56,.18),
+    inset 0 1px 0 rgba(255,255,255,.66),
+    inset 0 -5px 12px rgba(69,35,83,.10)!important;
+}
+.ynu-arena-picker button:active,
+.ynu-move-picker button:active{
+  transform:translateY(1px) scale(.985);
+  box-shadow:0 3px 7px rgba(47,23,56,.2),inset 0 2px 8px rgba(69,35,83,.13)!important;
+}
+.ynu-arena-picker img,
+.ynu-move-picker img{
+  background:transparent!important;
+  filter:drop-shadow(0 7px 6px rgba(42,22,52,.27))!important;
+}
+.ynu-arena-picker b,
+.ynu-arena-picker small,
+.ynu-move-picker small{
+  color:#24172b!important;
+  text-shadow:none!important;
+  font-weight:900!important;
+}
+.ynu-move-picker small{
+  display:block!important;
+  min-height:28px!important;
+  padding:4px 2px 1px!important;
+  line-height:1.18!important;
+  font-size:clamp(7px,1.75vw,9px)!important;
+}
+.ynu-arena-dashboard{
+  max-width:430px!important;
+  margin:auto!important;
+  background:linear-gradient(180deg,#f9e7c8,#ead1df)!important;
+  border:1.5px solid rgba(113,67,126,.48)!important;
+  box-shadow:0 14px 30px rgba(36,17,44,.28),inset 0 1px 0 rgba(255,255,255,.7)!important;
+}
+.ynu-arena-dash-title{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin-bottom:9px!important;
+  padding:8px 10px!important;
+  border-radius:14px!important;
+  background:linear-gradient(135deg,rgba(92,53,108,.96),rgba(54,31,68,.98))!important;
+  color:#fff4d3!important;
+  box-shadow:0 6px 13px rgba(44,21,52,.25)!important;
+}
+.ynu-arena-dash-title>span{font-size:28px}
+.ynu-arena-dash-title h2{margin:0!important;color:#fff4d3!important;font-size:17px!important}
+.ynu-arena-dash-title p{margin:2px 0 0!important;color:#f3e4ee!important;font-size:9px!important;line-height:1.35!important}
+.ynu-arena-dashboard .ynu-score-table{
+  max-height:56vh!important;
+  overflow:auto!important;
+  gap:5px!important;
+  padding-right:2px!important;
+}
+.ynu-arena-dashboard .ynu-score-table>.head,
+.ynu-arena-dashboard .ynu-score-table>.ynu-rank-row{
+  grid-template-columns:52px 1fr 70px!important;
+  border:1px solid rgba(111,72,120,.14)!important;
+  box-shadow:0 3px 8px rgba(58,30,66,.08)!important;
+}
+.ynu-arena-dashboard .ynu-score-table>.head{
+  position:sticky!important;
+  top:0!important;
+  z-index:2!important;
+  background:linear-gradient(180deg,#794c8d,#5d396e)!important;
+  color:#fff6dc!important;
+}
+.ynu-arena-dashboard .ynu-rank-row{
+  background:linear-gradient(180deg,rgba(255,248,229,.96),rgba(241,225,232,.96))!important;
+  color:#2b1b30!important;
+}
+.ynu-arena-dashboard .rank-1{background:linear-gradient(180deg,#fff1ae,#f3d47b)!important;border-color:#d8aa42!important}
+.ynu-arena-dashboard .rank-2{background:linear-gradient(180deg,#f4f1f4,#dcd8df)!important;border-color:#aaa5b0!important}
+.ynu-arena-dashboard .rank-3{background:linear-gradient(180deg,#f3d1b1,#dca77c)!important;border-color:#b97f54!important}
+.ynu-rank-no{font-size:15px;font-weight:900}
+.ynu-arena-dashboard .ynu-score-table strong{color:#4c2a58!important;font-size:12px!important}
+
+@media(max-width:390px){
+  .ynu-arena-picked{top:34%!important;width:24%!important}
+  .ynu-arena-picked.mine{left:9%!important}
+  .ynu-arena-picked.opp{right:9%!important}
+  .ynu-arena-picked img{height:104px!important}
+  .ynu-arena-status-icon{width:92px!important;height:92px!important}
+  .ynu-arena-dashboard .ynu-score-table>.head,
+  .ynu-arena-dashboard .ynu-score-table>.ynu-rank-row{grid-template-columns:44px 1fr 58px!important}
+}
+
+.ynu-arena-picker button.selected,
+.ynu-move-picker button.selected{
+  border-color:#d6a13d!important;
+  box-shadow:0 0 0 2px rgba(255,216,99,.42),0 8px 15px rgba(61,30,71,.22),inset 0 1px 0 rgba(255,255,255,.72)!important;
+  background:radial-gradient(circle at 50% 28%,#fff2bb,#e6c1dc 62%,#c698cc 100%)!important;
+}
+
+/* ถ้าเซิร์ฟเวอร์ยังมีไฟล์ผลแข่งเป็น JPG ให้พื้นขาวกลืนกับแผงแทนการเห็นสี่เหลี่ยมขาว */
+.ynu-arena-status-icon img[src*=".jpg"]{mix-blend-mode:multiply!important}
