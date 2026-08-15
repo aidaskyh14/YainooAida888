@@ -4939,7 +4939,7 @@ function setAidaFarmPetPose(index){
   aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"76%":index===AIDA_FARM_PET_POSES.sit?"57%":"52%");
   aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
-  aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
+  aidaFarmPetSprite.style.setProperty("--pet-art-scale",aidaFarmPetType==="cat"&&Number(aidaFarmPetNumber)===11?"1.10":"1");
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage("pose")}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 300%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
@@ -5019,8 +5019,18 @@ function moveAidaFarmPet(token){
       if(token!==aidaFarmPetRunToken||!aidaFarmPet)return;
       let walkFrame=0;clearInterval(aidaFarmPetFrameTimer);
       aidaFarmPetFrameTimer=setInterval(()=>{walkFrame=(walkFrame+1)%8;setAidaFarmPetWalkFrame(walkFrame,direction)},118/aidaFarmPetSpeed);
-      aidaFarmPetMotion=aidaFarmPet.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
-      aidaFarmPetMotion.onfinish=()=>{if(token!==aidaFarmPetRunToken)return;clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;aidaFarmPetPreviousNode=aidaFarmPetNode;aidaFarmPetNode=next;aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;aidaFarmPetMotion=null;if(aidaFarmPetAutoWalk)scheduleAidaFarmPetPause(token);else transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token)};
+      const motion=aidaFarmPet.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
+      aidaFarmPetMotion=motion;
+      motion.onfinish=()=>{
+        if(token!==aidaFarmPetRunToken)return;
+        clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;
+        aidaFarmPetPreviousNode=aidaFarmPetNode;aidaFarmPetNode=next;
+        aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;
+        try{motion.cancel()}catch(e){}
+        if(aidaFarmPetMotion===motion)aidaFarmPetMotion=null;
+        if(aidaFarmPetAutoWalk)scheduleAidaFarmPetPause(token);
+        else transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token);
+      };
   });
 }
 function startAidaFarmPet(){
@@ -8852,7 +8862,7 @@ const Y26_showAdminCenterBase=showAdminCenter;
 showAdminCenter=async function(){if(ownState)ensureAdminStock(ownState);return Y26_showAdminCenterBase()};
 
 /* refresh moving status icons at minute boundaries without changing gameplay */
-setInterval(()=>{if(currentMember&&!$("gameScreen")?.classList.contains("hidden")){if(currentPlacedCat(state)){activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()}}if(currentScene==="dogHotel")renderDogHotelScene()},60000);
+setInterval(()=>{if(currentScene==="dogHotel")renderDogHotelScene()},60000);
 
 
 /* ===== REQUESTED UPDATE QA GUARDS ===== */

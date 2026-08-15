@@ -70,7 +70,7 @@ button{touch-action:manipulation}
 }
 .aida-farm-pet.pet-cat{width:clamp(76px,20.5vw,134px)}
 /* CAT-09 ถึง CAT-12: ลดขนาดเฉพาะ 4 ตัวใหม่ ไม่กระทบ CAT-01 ถึง CAT-08 */
-.aida-farm-pet.pet-cat.pet-cat-09-12{width:clamp(64px,17.4vw,114px)}
+.aida-farm-pet.pet-cat.pet-cat-09-12{width:clamp(76px,20.5vw,134px)}
 .aida-farm-pet.pet-cat.pet-cat-09-12::before{
   background:rgba(20,13,22,.70);
   opacity:1;
@@ -3655,3 +3655,8 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   }
 }
 
+
+/* CAT 09-12 movement stability fix */
+.aida-farm-pet.pet-cat-09-12{
+  transition:none !important;
+}
