@@ -29,7 +29,7 @@ const RECIPES=[
   {id:"r6",name:"ลิ้นจี่น้ำแข็งหลุมศพ",icon:"🍧",image:"06-lychee-namkhaeng-lumsop.png?v=1",need:{lychee:18,grape:16,strawberry:14},chance:45,reward:[7,10],difficulty:"ยาก"},
   {id:"r7",name:"ก๋วยเตี๋ยวเปรตแตก",icon:"🍜",image:"07-kuaitiao-pret-taek.png?v=1",need:{morning:22,chili:20,cabbage:18,pumpkin:16},chance:35,reward:[7,10],difficulty:"ยาก"},
   {id:"r8",name:"น้ำปั่นคืนชีพ",icon:"🧪",image:"08-nam-pan-khuen-chip.png?v=1",need:{grape:30,strawberry:26,lychee:22,mango:18},chance:25,reward:[7,10],difficulty:"ยาก"},
-  {id:"n1",night:true,name:"กอดทอดกอดเปรต",icon:"🍌",image:"01-kod-thot-kod-pret.png?v=1",need:{banana:2,strawberry:1},chance:65,reward:[5,8],difficulty:"กลาง"},
+  {id:"n1",night:true,name:"กล้วยทอดกอดเปรต",icon:"🍌",image:"01-kod-thot-kod-pret.png?v=1",need:{banana:2,strawberry:1},chance:65,reward:[5,8],difficulty:"กลาง"},
   {id:"n2",night:true,name:"ตำมะยมผสมกุมาร",icon:"👻",image:"02-tam-mayom-phasom-kuman.png?v=1",need:{gooseberry:2,chili:1,mango:1},chance:50,reward:[5,8],difficulty:"กลาง"},
   {id:"n3",night:true,name:"กล้วยคลุกเถ้าผี",icon:"💀",image:"03-kluai-kluk-thao-phi.png?v=1",need:{banana:3,lychee:2,grape:1},chance:35,reward:[7,10],difficulty:"ยาก"},
   {id:"n4",night:true,name:"ยำมะยมสมน้ำหน้า",icon:"🥗",image:"04-yam-mayom-som-nam-na.png?v=1",need:{gooseberry:3,chili:2,morning:1,banana:1},chance:25,reward:[7,10],difficulty:"ยาก"},
@@ -5128,7 +5128,7 @@ const CAT_TYPES={
   cat12:{number:12,name:"พิงกี้บู",image:"cat-12.png?v=1"}
 };
 const CAT_LIFETIME_MS=10*24*60*60*1000;
-const CAT_HUNGER_MS=3*60*60*1000;
+const CAT_HUNGER_MS=4*60*60*1000;
 // รอบดรอปจริง 45 นาที
 const CAT_DROP_INTERVAL_MS=45*60*1000;
 const CAT_DROP_MAX_PENDING=30;
@@ -5326,12 +5326,18 @@ function processCatDrops(){
     if(!cat.placedFarm)return;if(cat.expiresAt&&cat.expiresAt<=now)return;
     if(!Array.isArray(cat.drops))cat.drops=[];
     let nextAt=Math.max(0,Number(cat.nextDropAt)||Number(cat.placedAt||now)+CAT_DROP_INTERVAL_MS);
+    const angry=Number(cat.medicineUntil||0)<=now&&now>=Number(cat.nextFeedAt||0)+(60*60*1000);
+    if(angry){
+      // โกรธ = ไม่มีของดรอปใหม่ และทิ้ง backlog ของช่วงที่โกรธ
+      if(now>=nextAt){cat.nextDropAt=now+CAT_DROP_INTERVAL_MS;changed=true}
+      return;
+    }
     if(now<nextAt)return;
     const due=Math.max(1,Math.floor((now-nextAt)/CAT_DROP_INTERVAL_MS)+1);
     const room=Math.max(0,CAT_DROP_MAX_PENDING-cat.drops.length),createCount=Math.min(room,due);
     for(let i=0;i<createCount;i++){
       const item=randomCatDrop(),pt=randomCatDropPoint(cat),createdAt=nextAt+(i*CAT_DROP_INTERVAL_MS);
-      cat.drops.push({id:newCatInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt});
+      if(item)cat.drops.push({id:newCatInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt});
     }
     // เดินนาฬิกาต่อเสมอ แม้ของค้างครบ 30 ชิ้น เพื่อไม่สะสม backlog เกินเพดาน
     cat.nextDropAt=nextAt+(due*CAT_DROP_INTERVAL_MS);changed=true;
@@ -7972,7 +7978,7 @@ returnFromFriendVisit=function(){
   10) Dogs and cats hungry every 3 hours
    ====================================================================== */
 
-const V15_PET_HUNGER_MS=3*60*60*1000;
+const V15_PET_HUNGER_MS=4*60*60*1000;
 const V15_TEMPLE_OPEN_MINUTE=11*60;
 const V15_TEMPLE_CLOSE_MINUTE=16*60;
 const V15_SOLO_DURATION_MS=30*60*1000;
@@ -8059,7 +8065,7 @@ feedCat=async function(catId,recipeId){
       reward=20+Math.floor(Math.random()*31);s.merit=(Number(s.merit)||0)+reward;cat.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;next=s;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
     });
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();syncAidaFarmPet();showWeatherToast(`🐱 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`);
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();syncAidaFarmPet();showWeatherToast(`🐱 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`);
   }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 feedDog=async function(dogId,recipeId){
@@ -8072,7 +8078,7 @@ feedDog=async function(dogId,recipeId){
       reward=20+Math.floor(Math.random()*31);s.merit=(Number(s.merit)||0)+reward;dog.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;next=s;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
     });
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`);
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`);
   }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 
@@ -8724,8 +8730,8 @@ async function Y26_useMedicine(kind,petId,medicineKey){
 function Y26_medicineButtons(kind,pet){const active=Number(pet.medicineUntil||0)>gameNow();if(active)return `<div class="pet-medicine-active">💊 ยากำลังออกฤทธิ์ • เหลือ ${formatHM(pet.medicineUntil-gameNow())}</div>`;return `<div class="pet-medicine-grid">${Object.entries(Y26_MEDICINES).map(([k,m])=>`<button type="button" data-use-pet-med="${k}" ${Number((ownState||state)?.medicines?.[k]||0)<1?"disabled":""}><img src="${m.image}" alt="${m.name}"><span>${m.name}<small>${m.hours} ชม. • มี ×${Number((ownState||state)?.medicines?.[k]||0)}</small></span></button>`).join("")}</div>`}
 async function Y26_applyPetPenalty(kind,petId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),pet=(kind==="dog"?s.dogs:s.cats).find(x=>x.id===petId);if(!pet)throw new Error("ไม่พบสัตว์เลี้ยง");if(Number(pet.medicineUntil||0)>gameNow())throw new Error("น้องกำลังได้รับยาอยู่");const nextFeed=Number(pet.nextFeedAt)||0,bucket=Math.floor((gameNow()-nextFeed)/Y26_PET_ANGRY_INTERVAL_MS);if(bucket<1||bucket<=Number(pet.lastPenaltyBucket||0))throw new Error("รอบนี้ไม่มีค่าปรับค้าง");s.merit=(Number(s.merit)||0)-30;pet.lastPenaltyBucket=bucket;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();if(kind==="cat")await Y26_syncPublicCats();message("ยังไม่ได้ให้อาหาร","คุณ ยังไม่ได้ให้อาหารน้องตัวนี้ 1 ชั่วโมงแล้ว<br>ทำไมไม่มีความใส่ใจอะไรเลยวะ  -30 กุศล");if(kind==="cat"){activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()}else if(currentScene==="dogHotel")renderDogHotelScene()}catch(error){message("หักกุศลไม่ได้",error.message||"กรุณาลองใหม่")}}
 
-feedCat=async function(catId,recipeId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),cat=s.cats.find(c=>c.id===catId);if(!cat)throw new Error("ไม่พบแมว");if(Number(cat.medicineUntil||0)>gameNow())throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");if(gameNow()<Number(cat.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=randInt(20,50);s.merit=(Number(s.merit)||0)+reward;cat.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;cat.lastPenaltyBucket=0;incrementMissionOn(s,"feedOwnPets",1);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();await Y26_syncPublicCats();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();showWeatherToast(`🐱 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}};
-async function Y26_feedDog(dogId,mode,key){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");if(Number(dog.medicineUntil||0)>gameNow())throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");if(gameNow()<Number(dog.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(mode==="dish"){if(!removeDishesFromState(s,key,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=randInt(20,50)}else{if(!["babyBamboo","hauntedPlankton"].includes(key))throw new Error("อาหารพืชไม่ถูกต้อง");if((Number(s.bag[key])||0)<30)throw new Error(`${CROPS[key]?.name||key} ต้องมี 30 ชิ้น`);s.bag[key]-=30;reward=randInt(5,20)}s.merit=(Number(s.merit)||0)+reward;dog.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;dog.lastPenaltyBucket=0;incrementMissionOn(s,"feedOwnPets",1);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}}
+feedCat=async function(catId,recipeId){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),cat=s.cats.find(c=>c.id===catId);if(!cat)throw new Error("ไม่พบแมว");if(Number(cat.medicineUntil||0)>gameNow())throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");if(gameNow()<Number(cat.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(!removeDishesFromState(s,recipeId,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=randInt(20,50);s.merit=(Number(s.merit)||0)+reward;cat.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;cat.lastPenaltyBucket=0;incrementMissionOn(s,"feedOwnPets",1);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();await Y26_syncPublicCats();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet();showWeatherToast(`🐱 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}};
+async function Y26_feedDog(dogId,mode,key){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");if(Number(dog.medicineUntil||0)>gameNow())throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");if(gameNow()<Number(dog.nextFeedAt||0))throw new Error("น้องยังไม่หิว");if(mode==="dish"){if(!removeDishesFromState(s,key,1))throw new Error("อาหารจานนี้หมดแล้ว");reward=randInt(20,50)}else{if(!["babyBamboo","hauntedPlankton"].includes(key))throw new Error("อาหารพืชไม่ถูกต้อง");if((Number(s.bag[key])||0)<30)throw new Error(`${CROPS[key]?.name||key} ต้องมี 30 ชิ้น`);s.bag[key]-=30;reward=randInt(5,20)}s.merit=(Number(s.merit)||0)+reward;dog.nextFeedAt=gameNow()+V15_PET_HUNGER_MS;dog.lastPenaltyBucket=0;incrementMissionOn(s,"feedOwnPets",1);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`)}catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}}
 feedDog=async function(dogId,recipeId){return Y26_feedDog(dogId,"dish",recipeId)};
 
 function showPlacedCatMenu(catId){const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;const st=Y26_petStatus(cat),foods=RECIPES.filter(r=>dishCountInState(r.id,s)>0),canFeed=st.kind==="hungry"||st.kind==="angry";$("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}"><h2>🐱 ${safeHtml(catDisplayName(cat))}</h2><p>${safeHtml(catType(cat).name)}<br>อายุเหลือ ${catLifeText(cat)}<br>${safeHtml(st.text)}</p><button id="renameCatBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>${canFeed?`<div class="cat-feed-grid">${foods.length?foods.map(r=>`<button type="button" data-feed-cat="${r.id}"><img src="${r.image}" alt="${r.name}"><span>${safeHtml(r.name)}<small>มี ×${dishCountInState(r.id,s)}</small></span></button>`).join(""):'<p class="empty-feature">ไม่มีอาหารที่คราฟไว้ให้น้องกิน</p>'}</div>`:""}<h3>💊 ใช้ยา</h3>${Y26_medicineButtons("cat",cat)}<button id="releasePlacedCatBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button></section>`;$("renameCatBtn").onclick=()=>renameCat(catId);$("releasePlacedCatBtn").onclick=()=>releasePlacedCat(catId);document.querySelectorAll("[data-feed-cat]").forEach(b=>b.onclick=()=>feedCat(catId,b.dataset.feedCat));document.querySelectorAll("[data-use-pet-med]").forEach(b=>b.onclick=()=>Y26_useMedicine("cat",catId,b.dataset.usePetMed));openModal()}
@@ -9666,8 +9672,8 @@ Y26_feedDog=async function(dogId,mode,key){
       tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
     });
     Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();
-    if(penaltyApplied)message("🐶 ให้อาหารแล้ว",`สถานะโกรธถูกคิดค่าปรับก่อน <b>-30 กุศล</b><br>จากนั้นน้องกินอาหารและให้ <b>+${reward} กุศล</b><br>หิวอีกใน 3 ชั่วโมง`);
-    else showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 3 ชม.`);
+    if(penaltyApplied)message("🐶 ให้อาหารแล้ว",`สถานะโกรธถูกคิดค่าปรับก่อน <b>-30 กุศล</b><br>จากนั้นน้องกินอาหารและให้ <b>+${reward} กุศล</b><br>หิวอีกใน 4 ชั่วโมง`);
+    else showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`);
   }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 feedDog=async function(dogId,recipeId){return Y26_feedDog(dogId,"dish",recipeId)};
@@ -10658,3 +10664,812 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   };
 })();
 
+/* ======================================================================
+   YAINOO FINAL — Shop merit items + Angel capsule + Fishing guardian bait
+                  Pet 4h hunger/angry drops + Feed all + Unified pet food
+                  Cute "เมนูในสวน" category home
+   ====================================================================== */
+(function YN_FINAL_ITEMS_MENU_PETS(){
+  const YN_GUARDIAN_BAIT_KEY="guardianBait";
+  const YN_ANGEL_CAPSULE_KEY="angelWingCapsule";
+  const YN_PET_HUNGER_MS=4*60*60*1000;
+  const YN_PET_HUNGRY_GRACE_MS=60*60*1000;
+
+  /* ---------- New items + exact fishing tier changes ---------- */
+  FISHING_BAITS[YN_GUARDIAN_BAIT_KEY]={
+    name:"เหยื่อตกปลาเทพารักษ์",
+    image:"guardian_angel_fishing_bait.png?v=1",
+    chance:100,
+    durationMs:FISHING_BAITS.bait4?.durationMs||3*60*1000,
+    needBag:{},needProducts:{},dishAny:0,
+    shopOnly:true,
+    description:"น้ำหนักปลาที่ตกได้ ×2"
+  };
+  FISHING_CONFIG.bait3.tiers=[[1,.10],[2,.60],[3,.30]];
+  FISHING_CONFIG.bait4.tiers=[[1,.30],[2,.40],[3,.30]];
+  FISHING_CONFIG[YN_GUARDIAN_BAIT_KEY]={
+    counts:(FISHING_CONFIG.bait4?.counts||[[1,.25],[2,.50],[3,.25]]).map(row=>row.slice()),
+    tiers:[[1,.40],[2,.50],[3,.10]]
+  };
+
+  SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY]={
+    name:"แคปซูลปีกนางฟ้า",
+    image:"angel_wing_capsule.png?v=1",
+    kind:"angel",
+    group:"angel",
+    description:"ใช้กับแปลงผักเพื่อเปิดสถานะปีกนางฟ้าทันที • เก็บเกี่ยวผลผลิต ×10"
+  };
+
+  const YN_MERIT_SHOP={
+    guardianBait:{
+      name:"เหยื่อตกปลาเทพารักษ์",
+      image:"guardian_angel_fishing_bait.png?v=1",
+      price:222,
+      storageType:"fishingBait",
+      storageKey:YN_GUARDIAN_BAIT_KEY,
+      detail:"✨ น้ำหนักปลาที่ตกได้ ×2"
+    },
+    angelWingCapsule:{
+      name:"แคปซูลปีกนางฟ้า",
+      image:"angel_wing_capsule.png?v=1",
+      price:99,
+      storageType:"special",
+      storageKey:YN_ANGEL_CAPSULE_KEY,
+      detail:"🪽 เปิดปีกนางฟ้าให้แปลง • ผลผลิต ×10"
+    }
+  };
+
+  /* Keep the new inventory keys alive in every load/new-save path. */
+  const YN_normalizeStateBase=normalizeState;
+  normalizeState=function(raw,player){
+    const s=YN_normalizeStateBase(raw,player);
+    ensureV4State(s);
+    s.fishingBaits[YN_GUARDIAN_BAIT_KEY]=Math.max(0,Math.floor(Number(s.fishingBaits[YN_GUARDIAN_BAIT_KEY])||0));
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    s.specials[YN_ANGEL_CAPSULE_KEY]=Math.max(0,Math.floor(Number(s.specials[YN_ANGEL_CAPSULE_KEY])||0));
+    return s;
+  };
+  const YN_freshBase=fresh;
+  fresh=function(player){
+    const s=YN_freshBase(player);
+    ensureV4State(s);
+    s.fishingBaits[YN_GUARDIAN_BAIT_KEY]=Math.max(0,Math.floor(Number(s.fishingBaits[YN_GUARDIAN_BAIT_KEY])||0));
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    s.specials[YN_ANGEL_CAPSULE_KEY]=Math.max(0,Math.floor(Number(s.specials[YN_ANGEL_CAPSULE_KEY])||0));
+    return s;
+  };
+
+  /* Aida/admin always has both new items in admin stock. */
+  const YN_ensureAdminStockBase=ensureAdminStock;
+  ensureAdminStock=function(s){
+    const changedBase=YN_ensureAdminStockBase(s);
+    if(!s)return changedBase;
+    let changed=Boolean(changedBase);
+    ensureV4State(s);
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    if(currentMember==="Aida"&&adminProfile?.role==="admin"){
+      if(Number(s.fishingBaits[YN_GUARDIAN_BAIT_KEY])!==ADMIN_STOCK_QTY){
+        s.fishingBaits[YN_GUARDIAN_BAIT_KEY]=ADMIN_STOCK_QTY;changed=true;
+      }
+      if(Number(s.specials[YN_ANGEL_CAPSULE_KEY])!==ADMIN_STOCK_QTY){
+        s.specials[YN_ANGEL_CAPSULE_KEY]=ADMIN_STOCK_QTY;changed=true;
+      }
+    }else{
+      s.fishingBaits[YN_GUARDIAN_BAIT_KEY]=Math.max(0,Math.floor(Number(s.fishingBaits[YN_GUARDIAN_BAIT_KEY])||0));
+      s.specials[YN_ANGEL_CAPSULE_KEY]=Math.max(0,Math.floor(Number(s.specials[YN_ANGEL_CAPSULE_KEY])||0));
+    }
+    return changed;
+  };
+
+  /* Admin Gift: explicitly expose both items and retain CAT-11 retirement filter. */
+  const YN_adminGiftCatalogBase=adminGiftCatalog;
+  adminGiftCatalog=function(){
+    const list=YN_adminGiftCatalogBase();
+    if(!list.some(e=>e?.type==="fishingBait"&&e?.key===YN_GUARDIAN_BAIT_KEY)){
+      list.push({type:"fishingBait",key:YN_GUARDIAN_BAIT_KEY,name:YN_MERIT_SHOP.guardianBait.name});
+    }
+    if(!list.some(e=>e?.type==="special"&&e?.key===YN_ANGEL_CAPSULE_KEY)){
+      list.push({type:"special",key:YN_ANGEL_CAPSULE_KEY,name:YN_MERIT_SHOP.angelWingCapsule.name});
+    }
+    return list.filter(e=>!(e?.type==="cat"&&e?.key==="cat11"));
+  };
+
+  /* Friend gift list: both new items are sendable when owned. */
+  const YN_giftableEntriesBase=giftableEntries;
+  giftableEntries=function(s=ownState||state){
+    const list=YN_giftableEntriesBase(s);
+    ensureV4State(s);
+    const guardianCount=Number(s?.fishingBaits?.[YN_GUARDIAN_BAIT_KEY])||0;
+    if(guardianCount>0&&!list.some(e=>e.type==="fishingBait"&&e.key===YN_GUARDIAN_BAIT_KEY)){
+      list.push({type:"fishingBait",key:YN_GUARDIAN_BAIT_KEY,name:YN_MERIT_SHOP.guardianBait.name,image:YN_MERIT_SHOP.guardianBait.image,count:guardianCount});
+    }
+    const capsuleCount=Number(s?.specials?.[YN_ANGEL_CAPSULE_KEY])||0;
+    if(capsuleCount>0&&!list.some(e=>e.type==="special"&&e.key===YN_ANGEL_CAPSULE_KEY)){
+      list.push({type:"special",key:YN_ANGEL_CAPSULE_KEY,name:YN_MERIT_SHOP.angelWingCapsule.name,image:YN_MERIT_SHOP.angelWingCapsule.image,count:capsuleCount});
+    }
+    return list;
+  };
+
+  /* Direct merit purchase: same confirmation modal, real merit deduction + inventory save. */
+  async function YN_buyMeritShopItem(itemId,qty=1){
+    const item=YN_MERIT_SHOP[itemId];if(!item||!cloudReady)return;
+    qty=Math.max(1,Math.min(99,Math.floor(Number(qty)||1)));
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
+        ensureDailyLimitsFor(s);
+        const used=Number(s.dailyLimits?.specialPurchases)||0;
+        if(used+qty>SPECIAL_DAILY_LIMIT)throw new Error(`ของพิเศษวันนี้ซื้อได้อีก ${Math.max(0,SPECIAL_DAILY_LIMIT-used)} ชิ้น`);
+        const total=item.price*qty;
+        if((Number(s.merit)||0)<total)throw new Error(`กุศลไม่พอ • ต้องใช้ ${total} กุศล`);
+        s.merit-=total;
+        s.dailyLimits.specialPurchases=used+qty;
+        if(item.storageType==="fishingBait"){
+          ensureV4State(s);
+          s.fishingBaits[item.storageKey]=(Number(s.fishingBaits[item.storageKey])||0)+qty;
+        }else{
+          s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+          s.specials[item.storageKey]=(Number(s.specials[item.storageKey])||0)+qty;
+        }
+        if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();
+      message("🎁 ซื้อสำเร็จ",`${safeHtml(item.name)} ×${qty}<br>หัก ${item.price*qty} กุศล<br>ของถูกส่งเข้ากระเป๋าแล้วค่ะ`);
+    }catch(error){message("ซื้อไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+
+  function YN_appendMeritShopCards(){
+    const grid=document.querySelector(".shop-panel .shop-grid,.shop-grid");
+    if(!grid||grid.querySelector("[data-yn-merit-shop]"))return;
+    const s=ownState||state;ensureDailyLimitsFor(s);
+    Object.entries(YN_MERIT_SHOP).forEach(([id,item])=>{
+      const count=item.storageType==="fishingBait"
+        ?Number(s?.fishingBaits?.[item.storageKey]||0)
+        :Number(s?.specials?.[item.storageKey]||0);
+      const card=document.createElement("article");
+      card.className="shop-card yn-merit-shop-card";
+      card.dataset.ynMeritShop=id;
+      card.innerHTML=`<img class="shop-animal-img yn-merit-shop-img" src="${item.image}" alt="${safeHtml(item.name)}">
+        <h3>${safeHtml(item.name)}</h3>
+        <small class="yn-merit-shop-detail">${item.detail}</small>
+        <div class="yn-merit-price">🙏 ${item.price} กุศล / ชิ้น</div>
+        <small>มีในกระเป๋า ×${count}</small>
+        <label class="yn-merit-qty-label">จำนวน <input class="yn-merit-qty" type="number" min="1" max="99" value="1"></label>
+        <button type="button" class="yn-merit-buy-btn">ซื้อด้วยกุศล</button>`;
+      card.querySelector(".yn-merit-buy-btn").onclick=()=>{
+        const qty=Math.max(1,Math.min(99,Math.floor(Number(card.querySelector(".yn-merit-qty")?.value)||1)));
+        Y26_confirmPurchaseRequest(()=>YN_buyMeritShopItem(id,qty));
+      };
+      grid.appendChild(card);
+    });
+  }
+
+  const YN_showShopBase=showShop;
+  showShop=function(tab){
+    const result=YN_showShopBase(tab);
+    if(tab==="specials")YN_appendMeritShopCards();
+    return result;
+  };
+  if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home");
+
+  /* Guardian bait is shop-only: do not expose it as a free craft recipe. */
+  showFishingBaitCraft=function(){
+    const s=ensureV4State(ownState||state);
+    const craftables=Object.entries(FISHING_BAITS).filter(([,b])=>!b.shopOnly);
+    $("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 คราฟเหยื่อตกปลา</h2>
+      <p class="feature-subtitle">คราฟสำเร็จแล้วเหยื่อจะเข้า กระเป๋า → เหยื่อตกปลา • เหยื่อเทพารักษ์ซื้อได้ที่ ร้านค้า → ของพิเศษ</p>
+      <div class="fishing-bait-grid">${craftables.map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>${baitNeedHTML(b)}<br>โอกาสสำเร็จ ${b.chance}% • ใช้ตก ${Math.round(b.durationMs/60000)} นาที<br>มีในกระเป๋า ×${s.fishingBaits[key]||0}</small><button type="button" data-craft-fishing-bait="${key}" ${canCraftFishingBait(s,b)?"":"disabled"}>คราฟ</button></article>`).join("")}</div>
+    </section>`;
+    document.querySelectorAll("[data-craft-fishing-bait]").forEach(btn=>btn.onclick=()=>craftFishingBait(btn.dataset.craftFishingBait));
+    openModal();
+  };
+
+  const YN_rollFishingCatchesBase=rollFishingCatches;
+  rollFishingCatches=function(baitKey){
+    const rolled=YN_rollFishingCatchesBase(baitKey);
+    if(baitKey!==YN_GUARDIAN_BAIT_KEY)return rolled;
+    const catches=rolled.catches.map(c=>({...c,weight:Number((Number(c.weight||0)*2).toFixed(2))}));
+    const total=Number(catches.reduce((sum,c)=>sum+Number(c.weight||0),0).toFixed(2));
+    return{catches,total};
+  };
+
+  const YN_showFishingBaitChoiceBase=showFishingBaitChoice;
+  showFishingBaitChoice=async function(index){
+    await YN_showFishingBaitChoiceBase(index);
+    const btn=document.querySelector(`[data-start-fishing="${YN_GUARDIAN_BAIT_KEY}"]`);
+    const small=btn?.closest(".fishing-bait-card")?.querySelector("small");
+    if(small&&!small.querySelector(".yn-guardian-bait-note")){
+      small.insertAdjacentHTML("beforeend",`<span class="yn-guardian-bait-note">✨ น้ำหนักปลาที่ตกได้ ×2</span>`);
+    }
+  };
+
+  showFishingResultModal=function(slot){
+    const now=gameNow(),expired=now>Number(slot.claimDeadline||0),owner=slot.ownerKey===currentMemberKey;
+    const guardian=slot.baitKey===YN_GUARDIAN_BAIT_KEY;
+    const normalTotal=guardian?Number((Number(slot.totalWeight||0)/2).toFixed(2)):0;
+    $("modalContent").innerHTML=`<section class="feature-panel"><h2>${expired?"💨 ปลาหนีไปแล้ว":"🎣 สำเร็จ ปลาติดเบ็ดแล้วแม่!"}</h2>
+      ${expired?'<p class="feature-subtitle">ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด</p>':`
+        ${guardian?`<div class="yn-guardian-result"><b>🪽 พลังเทพารักษ์ทำงาน!</b><span>ยินดีด้วยค่ะ น้ำหนักปลาที่คุณตกได้ถูกคูณ ×2</span><strong>${normalTotal.toFixed(2)} lbs → ${Number(slot.totalWeight).toFixed(2)} lbs</strong></div>`:""}
+        <div class="fishing-result-grid">${slot.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><h3>${safeHtml(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div>
+        <div class="fishing-total-weight">น้ำหนักรวม ${Number(slot.totalWeight).toFixed(2)} lbs</div>
+        <p class="feature-subtitle">${owner?`เหลือเวลารับ ${fishingCountdown(slot.claimDeadline-now)}`:`ของ ${safeHtml(slot.ownerName)} • คุณดูผลได้แต่รับแทนไม่ได้`}</p>
+        ${owner?'<button id="claimFishingWeightBtn" class="fishing-claim-button" type="button">รับน้ำหนักเข้าการแข่งขัน</button>':""}
+      `}
+    </section>`;
+    if($("claimFishingWeightBtn"))$("claimFishingWeightBtn").onclick=()=>claimFishingCatch(slot.slot-1);
+    openModal();
+  };
+
+  /* ---------- Angel capsule on a planted plot ---------- */
+  const YN_cropBoostOptionsBase=cropBoostOptionsHTML;
+  cropBoostOptionsHTML=function(plot){
+    const base=YN_cropBoostOptionsBase(plot);
+    const s=ownState||state,count=Number(s?.specials?.[YN_ANGEL_CAPSULE_KEY])||0;
+    if(!plot?.crop||plot.angel||count<1)return base;
+    const capsule=`<div class="yn-angel-capsule-panel"><h3>🪽 ปีกนางฟ้า</h3>
+      <button type="button" class="coconut-boost-btn yn-angel-capsule-btn" data-use-angel-capsule="1">
+        <img src="${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].image}" alt="${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].name}">
+        <span>${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].name}<small>ทำให้แปลงนี้เก็บเกี่ยว ×10 • มี ×${count}</small></span>
+      </button></div>`;
+    return base?`${base}${capsule}`:capsule;
+  };
+
+  async function YN_useAngelCapsuleOnPlot(index){
+    if(visitContext||guardResting()||!cloudReady)return false;
+    const original=ownState||state;if(!original)return false;
+    const preview=normalizeState(cloneData(original),currentMember);
+    const p=preview.plots?.[index];
+    if(!p?.crop){message("ใช้แคปซูลไม่ได้","แปลงนี้ว่างอยู่");return false}
+    if(p.angel){message("ใช้แคปซูลไม่ได้","แปลงนี้มีปีกนางฟ้าอยู่แล้ว");return false}
+    if((Number(preview.specials?.[YN_ANGEL_CAPSULE_KEY])||0)<1){message("ใช้แคปซูลไม่ได้","แคปซูลปีกนางฟ้าในกระเป๋าหมดแล้ว");return false}
+
+    preview.specials[YN_ANGEL_CAPSULE_KEY]-=1;
+    preview.plots[index].angel=true;
+    state=preview;
+    closeModal();draw();showWeatherToast("🪽 ปีกนางฟ้าปกป้องแปลงนี้แล้ว • ผลผลิต ×10");
+
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,newPlots;
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
+        if((Number(s.specials?.[YN_ANGEL_CAPSULE_KEY])||0)<1)throw new Error("แคปซูลปีกนางฟ้าในกระเป๋าหมดแล้ว");
+        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+        const plot=plots[index];ensurePlotPhaseStandalone(plot);
+        if(!plot?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        if(plot.angel)throw new Error("แปลงนี้มีปีกนางฟ้าอยู่แล้ว");
+        plot.angel=true;s.specials[YN_ANGEL_CAPSULE_KEY]-=1;plots[index]=plot;s.plots=plots.map(normalizePlot);
+        if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+        next=s;newPlots=s.plots;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();return true;
+    }catch(error){
+      state=ownState||original;draw();
+      message("ใช้แคปซูลไม่ได้",error.message||"กรุณาลองใหม่");
+      return false;
+    }
+  }
+
+  const YN_bindCropBoostBase=bindCropBoostButtons;
+  bindCropBoostButtons=function(index){
+    YN_bindCropBoostBase(index);
+    document.querySelectorAll("[data-use-angel-capsule]").forEach(btn=>btn.onclick=()=>YN_useAngelCapsuleOnPlot(index));
+  };
+
+  /* A ready crop normally harvests on tap. If a capsule is available, offer it
+     first so a player can turn that ready crop into an Angel ×10 crop before harvesting. */
+  const YN_tapPlotBase=tapPlot;
+  tapPlot=async function(index){
+    if(!visitContext){
+      const plot=state?.plots?.[index];if(plot)ensurePlotPhase(plot);
+      const capsuleCount=Number((ownState||state)?.specials?.[YN_ANGEL_CAPSULE_KEY])||0;
+      const blockedByMagic=typeof plotHasBlackMagic==="function"&&plotHasBlackMagic(plot);
+      if(plot?.crop&&plot.phase==="ready"&&!plot.angel&&capsuleCount>0&&!blockedByMagic){
+        $("modalContent").innerHTML=`<section class="feature-panel confirm-panel">
+          <h2>🌾 ${safeHtml(CROPS[plot.crop].name)}</h2>
+          <p>พืชพร้อมเก็บเกี่ยวแล้ว</p>
+          <div class="yn-ready-angel-actions">
+            <button id="ynHarvestReadyPlot" class="primary-spooky-action" type="button">เก็บเกี่ยวตอนนี้</button>
+            <button type="button" class="coconut-boost-btn yn-angel-capsule-btn" data-use-angel-capsule="1">
+              <img src="${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].image}" alt="${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].name}">
+              <span>${SPECIAL_ITEMS[YN_ANGEL_CAPSULE_KEY].name}<small>เปิดปีกนางฟ้า • ผลผลิต ×10 • มี ×${capsuleCount}</small></span>
+            </button>
+          </div>
+        </section>`;
+        $("ynHarvestReadyPlot").onclick=()=>{closeModal();harvestOwnPlot(index)};
+        document.querySelector("[data-use-angel-capsule]")?.addEventListener("click",()=>YN_useAngelCapsuleOnPlot(index));
+        openModal();return;
+      }
+    }
+    return YN_tapPlotBase(index);
+  };
+
+  /* Show the angel icon immediately, not only when the crop becomes ready. */
+  const YN_drawBase=draw;
+  draw=function(){
+    const result=YN_drawBase();
+    if(!state)return result;
+    document.querySelectorAll('#plots [data-plot-index]').forEach(btn=>{
+      const idx=Number(btn.dataset.plotIndex),p=state?.plots?.[idx];
+      if(!p?.crop||!p.angel)return;
+      if(!btn.querySelector(".angel-status-badge")){
+        const img=document.createElement("img");
+        img.className="status-badge angel-status-badge";
+        img.src=Y26_STATUS_ICON.angel;img.alt="ปีกนางฟ้า";
+        btn.prepend(img);
+      }
+      if(p.phase==="ready")btn.querySelector(".steal-badge")?.remove();
+    });
+    return result;
+  };
+
+  /* Crop boost UI is optimistic: tap -> visible change immediately, cloud save follows. */
+  useCropBoostOnPlot=async function(index,key){
+    if(visitContext||guardResting()||!cloudReady)return false;
+    const item=SPECIAL_ITEMS[key];if(!item||item.kind!=="crop")return false;
+    const original=ownState||state;if(!original)return false;
+    const preview=normalizeState(cloneData(original),currentMember),pp=preview.plots?.[index];
+    if(!pp?.crop)return false;ensurePlotPhaseStandalone(pp);
+    if((Number(preview.specials?.[key])||0)<1){message("ใช้ไอเท็มไม่ได้","ไอเท็มในกระเป๋าหมดแล้ว");return false}
+    if(item.boost===100){pp.phase="ready";pp.phaseEndsAt=0;pp.worm=false}
+    else{
+      if(pp.phase!=="growing1"&&pp.phase!=="growing2"){message("ยังใช้ไอเท็มนี้ไม่ได้","ไอเท็ม 10% / 20% / 50% ใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");return false}
+      const rem=Math.max(0,Number(pp.phaseEndsAt||0)-gameNow());
+      pp.phaseEndsAt=gameNow()+Math.max(1000,Math.round(rem*(1-item.boost/100)));
+    }
+    preview.specials[key]-=1;state=preview;
+    closeModal();draw();showWeatherToast(`⚡ ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%`);
+
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,newPlots;
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
+        if((Number(s.specials?.[key])||0)<1)throw new Error("ไอเท็มในกระเป๋าหมดแล้ว");
+        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+        const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        if(item.boost===100){p.phase="ready";p.phaseEndsAt=0;p.worm=false}
+        else{
+          if(p.phase!=="growing1"&&p.phase!=="growing2")throw new Error("ไอเท็ม 10% / 20% / 50% ใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");
+          const rem=Math.max(0,Number(p.phaseEndsAt||0)-gameNow());
+          p.phaseEndsAt=gameNow()+Math.max(1000,Math.round(rem*(1-item.boost/100)));
+        }
+        s.specials[key]-=1;plots[index]=p;s.plots=plots.map(normalizePlot);
+        if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+        next=s;newPlots=s.plots;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();return true;
+    }catch(error){
+      state=ownState||original;draw();
+      message("ใช้ไอเท็มไม่ได้",error.message||"กรุณาลองใหม่");return false;
+    }
+  };
+
+  /* ---------- Pet hunger / angry / no-drop rules ---------- */
+  function YN_petIsAngry(pet,now=gameNow()){
+    if(!pet)return false;
+    if(Number(pet.medicineUntil||0)>now)return false;
+    const next=Number(pet.nextFeedAt)||0;
+    return now>=next+YN_PET_HUNGRY_GRACE_MS;
+  }
+  function YN_petCanFeed(pet,now=gameNow()){
+    if(!pet||Number(pet.medicineUntil||0)>now)return false;
+    return now>=Number(pet.nextFeedAt||0);
+  }
+
+  Y26_petStatus=function(pet){
+    const now=gameNow(),med=Math.max(0,Number(pet?.medicineUntil)||0);
+    if(med>now)return{kind:"medicine",text:`ยาเหลือ ${formatHM(med-now)}`};
+    const next=Number(pet?.nextFeedAt)||0;
+    if(now<next)return{kind:"full",text:`อิ่มอยู่ • หิวอีกใน ${formatHM(next-now)}`};
+    if(now<next+YN_PET_HUNGRY_GRACE_MS)return{kind:"hungry",text:`หิวแล้ว • จะโกรธใน ${formatHM(next+YN_PET_HUNGRY_GRACE_MS-now)}`};
+    if(Number(pet?.lastPenaltyBucket||0)>=1)return{kind:"angryPaid",text:"โกรธอยู่ • ต้องให้อาหารก่อน จึงจะดรอปของอีกครั้ง"};
+    return{kind:"angry",text:"โกรธแล้ว • หยุดดรอปของจนกว่าจะได้รับอาหาร"};
+  };
+  Y26_statusIconHTML=function(pet){
+    const st=Y26_petStatus(pet);
+    if(st.kind==="hungry")return `<span class="pet-status-icon pet-hungry-icon" aria-label="หิว"><img src="${Y26_STATUS_ICON.hungry}" alt="หิว"></span>`;
+    if(st.kind==="angry")return `<span class="pet-status-icon pet-angry-icon" role="button" tabindex="0" data-pet-penalty="1" aria-label="โกรธ"><img src="${Y26_STATUS_ICON.angry}" alt="โกรธ"></span>`;
+    return"";
+  };
+
+  /* Exactly one -30 penalty per angry episode; feeding/medicine cannot bypass it. */
+  Y26_applyPetPenalty=async function(kind,petId){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember),pet=(kind==="dog"?s.dogs:s.cats).find(x=>x.id===petId);
+        if(!pet)throw new Error("ไม่พบสัตว์เลี้ยง");
+        if(!YN_petIsAngry(pet,gameNow()))throw new Error("รอบนี้ยังไม่มีสถานะโกรธ");
+        if(Number(pet.lastPenaltyBucket||0)>=1)throw new Error("ค่าปรับรอบนี้ถูกหักไปแล้ว");
+        s.merit=(Number(s.merit)||0)-30;pet.lastPenaltyBucket=1;next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();
+      if(kind==="cat"){await Y26_syncPublicCats();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()}
+      else if(currentScene==="dogHotel")renderDogHotelScene();
+      message("😡 น้องโกรธแล้ว","หัก <b>-30 กุศล</b> เรียบร้อยค่ะ<br>น้องจะยังไม่ดรอปของจนกว่าจะได้รับอาหาร");
+    }catch(error){message("หักกุศลไม่ได้",error.message||"กรุณาลองใหม่")}
+  };
+
+  /* Medicines also settle an unpaid angry penalty first, so no bypass remains. */
+  Y26_useMedicine=async function(kind,petId,medicineKey){
+    if(!Y26_MEDICINES[medicineKey])return;
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next,penaltyApplied=false;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember),list=kind==="dog"?s.dogs:s.cats,pet=(list||[]).find(x=>x.id===petId);
+        if(!pet)throw new Error("ไม่พบสัตว์เลี้ยงตัวนี้");
+        const now=gameNow();
+        if(Number(pet.medicineUntil||0)>now)throw new Error(`ยายังออกฤทธิ์อยู่ ${formatHM(pet.medicineUntil-now)}`);
+        if((Number(s.medicines?.[medicineKey])||0)<1)throw new Error("ยาในกระเป๋าไม่พอ");
+        if(YN_petIsAngry(pet,now)&&Number(pet.lastPenaltyBucket||0)<1){
+          s.merit=(Number(s.merit)||0)-30;penaltyApplied=true;
+        }
+        s.medicines[medicineKey]-=1;
+        pet.medicineKey=medicineKey;pet.medicineUntil=now+Y26_MEDICINES[medicineKey].hours*3600000;
+        pet.nextFeedAt=pet.medicineUntil;pet.lastPenaltyBucket=0;
+        pet.nextDropAt=now+(kind==="dog"?DOG_DROP_INTERVAL_MS:CAT_DROP_INTERVAL_MS);
+        if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        if(penaltyApplied)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();closeModal();
+      if(kind==="cat"){await Y26_syncPublicCats();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()}
+      else if(currentScene==="dogHotel")renderDogHotelScene();
+      showWeatherToast(`💊 ใช้ ${Y26_MEDICINES[medicineKey].name} แล้ว${penaltyApplied?" • หักโกรธ -30 กุศล":""}`);
+    }catch(error){message("ใช้ยาไม่ได้",error.message||"กรุณาลองใหม่")}
+  };
+
+  /* Any crafted food/drink in the game can feed cats/dogs. */
+  function YN_petFoodEntries(s=ownState||state){
+    ensureBoatState(s);ensureRainySeasonState(s);
+    const out=[];
+    RECIPES.forEach(r=>{const count=dishCountInState(r.id,s);if(count>0)out.push({type:"dish",key:r.id,name:r.name,image:r.image,count})});
+    BOAT_SUPPLY_DRINKS.forEach(r=>{const count=Number(s.boatDrinks?.[r.id])||0;if(count>0)out.push({type:"boatDrink",key:r.id,name:r.name,image:r.image,count})});
+    RAINY_SEASON_MENUS.forEach(r=>{const count=Number(s.rainyMenus?.[r.id])||0;if(count>0)out.push({type:"rainyMenu",key:r.id,name:r.name,image:r.image,count})});
+    return out;
+  }
+  function YN_consumePetFood(s,type,key,qty=1){
+    qty=Math.max(1,Math.floor(Number(qty)||1));
+    if(type==="dish")return dishCountInState(key,s)>=qty&&removeDishesFromState(s,key,qty);
+    if(type==="boatDrink"){
+      ensureBoatState(s);if((Number(s.boatDrinks?.[key])||0)<qty)return false;s.boatDrinks[key]-=qty;return true;
+    }
+    if(type==="rainyMenu"){
+      ensureRainySeasonState(s);if((Number(s.rainyMenus?.[key])||0)<qty)return false;s.rainyMenus[key]-=qty;return true;
+    }
+    return false;
+  }
+  function YN_petFoodCards(s,required=1){
+    const foods=YN_petFoodEntries(s);
+    return foods.length?foods.map(f=>`<button type="button" data-yn-pet-feed-type="${f.type}" data-yn-pet-feed-key="${f.key}" ${f.count<required?"disabled":""}>
+      <img src="${f.image}" alt="${safeHtml(f.name)}"><span>${safeHtml(f.name)}<small>มี ×${f.count}${required>1?` • ต้องใช้ ${required} ถาด`:""}</small></span></button>`).join("")
+      :'<p class="empty-feature">ยังไม่มีอาหารหรือเครื่องดื่มที่คราฟไว้</p>';
+  }
+
+  async function YN_feedPetCrafted(kind,petId,foodType,key){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next,reward=0,penaltyApplied=false;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember),pet=(kind==="dog"?s.dogs:s.cats).find(x=>x.id===petId);
+        if(!pet)throw new Error("ไม่พบสัตว์เลี้ยง");
+        const now=gameNow();
+        if(Number(pet.medicineUntil||0)>now)throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");
+        if(!YN_petCanFeed(pet,now))throw new Error("น้องยังไม่หิว");
+        if(YN_petIsAngry(pet,now)&&Number(pet.lastPenaltyBucket||0)<1){
+          s.merit=(Number(s.merit)||0)-30;penaltyApplied=true;
+        }
+        if(!YN_consumePetFood(s,foodType,key,1))throw new Error("เมนูนี้ในกระเป๋าไม่พอ");
+        reward=randInt(20,50);s.merit=(Number(s.merit)||0)+reward;
+        pet.nextFeedAt=now+YN_PET_HUNGER_MS;pet.lastPenaltyBucket=0;
+        pet.nextDropAt=now+(kind==="dog"?DOG_DROP_INTERVAL_MS:CAT_DROP_INTERVAL_MS);
+        incrementMissionOn(s,"feedOwnPets",1);next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();closeModal();
+      if(kind==="cat"){await Y26_syncPublicCats();activePlacedCatId="";clearAidaFarmPetActivity(true);syncAidaFarmPet()}
+      else if(currentScene==="dogHotel")renderDogHotelScene();
+      if(penaltyApplied)message(kind==="cat"?"🐱 ให้อาหารแล้ว":"🐶 ให้อาหารแล้ว",`สถานะโกรธถูกหัก <b>-30 กุศล</b><br>น้องให้กลับ +${reward} กุศล<br>หิวอีกใน 4 ชั่วโมง`);
+      else showWeatherToast(`${kind==="cat"?"🐱":"🐶"} น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`);
+    }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+
+  async function YN_feedDogPlant(dogId,key){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next,reward=0,penaltyApplied=false;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember),dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมา");
+        const now=gameNow();
+        if(Number(dog.medicineUntil||0)>now)throw new Error("น้องกำลังได้รับยาอยู่ จึงยังให้อาหารไม่ได้");
+        if(!YN_petCanFeed(dog,now))throw new Error("น้องยังไม่หิว");
+        if(YN_petIsAngry(dog,now)&&Number(dog.lastPenaltyBucket||0)<1){s.merit=(Number(s.merit)||0)-30;penaltyApplied=true}
+        if(!["babyBamboo","hauntedPlankton"].includes(key))throw new Error("อาหารพืชไม่ถูกต้อง");
+        if((Number(s.bag?.[key])||0)<30)throw new Error(`${CROPS[key]?.name||key} ต้องมี 30 ชิ้น`);
+        s.bag[key]-=30;reward=randInt(5,20);s.merit=(Number(s.merit)||0)+reward;
+        dog.nextFeedAt=now+YN_PET_HUNGER_MS;dog.lastPenaltyBucket=0;dog.nextDropAt=now+DOG_DROP_INTERVAL_MS;
+        incrementMissionOn(s,"feedOwnPets",1);next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();
+      if(penaltyApplied)message("🐶 ให้อาหารแล้ว",`สถานะโกรธถูกหัก <b>-30 กุศล</b><br>น้องให้กลับ +${reward} กุศล<br>หิวอีกใน 4 ชั่วโมง`);
+      else showWeatherToast(`🐶 น้องให้ +${reward} กุศล • หิวอีกใน 4 ชม.`);
+    }catch(error){message("ให้อาหารไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+
+  feedCat=async function(catId,recipeId){return YN_feedPetCrafted("cat",catId,"dish",recipeId)};
+  feedDog=async function(dogId,recipeId){return YN_feedPetCrafted("dog",dogId,"dish",recipeId)};
+  Y26_feedDog=async function(dogId,mode,key){
+    return mode==="plant"?YN_feedDogPlant(dogId,key):YN_feedPetCrafted("dog",dogId,"dish",key);
+  };
+
+  showPlacedCatMenu=function(catId){
+    const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;
+    const st=Y26_petStatus(cat),canFeed=YN_petCanFeed(cat);
+    $("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel">
+      <img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}">
+      <h2>🐱 ${safeHtml(catDisplayName(cat))}</h2>
+      <p>${safeHtml(catType(cat).name)}<br>อายุเหลือ ${catLifeText(cat)}<br>${safeHtml(st.text)}</p>
+      <button id="renameCatBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>
+      ${canFeed?`<h3>🍲 อาหารและเครื่องดื่มที่คราฟ • +20–50 กุศล</h3><div class="cat-feed-grid">${YN_petFoodCards(s)}</div>`:""}
+      <h3>💊 ใช้ยา</h3>${Y26_medicineButtons("cat",cat)}
+      <button id="releasePlacedCatBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button>
+    </section>`;
+    $("renameCatBtn").onclick=()=>renameCat(catId);$("releasePlacedCatBtn").onclick=()=>releasePlacedCat(catId);
+    document.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>b.onclick=()=>YN_feedPetCrafted("cat",catId,b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey));
+    document.querySelectorAll("[data-use-pet-med]").forEach(b=>b.onclick=()=>Y26_useMedicine("cat",catId,b.dataset.usePetMed));
+    openModal();
+  };
+
+  showDogRosterFoodPicker=function(dogId){
+    clearDogRosterTimer();
+    const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId&&d.placedHotel);if(!dog)return;
+    $("modalContent").innerHTML=`<section class="feature-panel v35-dog-food-panel">
+      <button id="backDogRosterBtn" class="secondary-action yn-compact-back" type="button">← กลับรายชื่อมะหมา</button>
+      <img class="cat-result-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+      <h2>🍖 ให้อาหาร ${safeHtml(dogDisplayName(dog))}</h2>
+      <p class="feature-subtitle">อาหารหรือเครื่องดื่มที่คราฟทุกเมนูใช้ได้ • 1 ถาด / 1 ตัว</p>
+      <div class="cat-feed-grid v35-food-choice-grid">${YN_petFoodCards(s)}</div>
+      <h3>🌱 พืช • +5–20 กุศล</h3><div class="cat-feed-grid v35-food-choice-grid">${V35_dogPlantCards(s,dogId)}</div>
+    </section>`;
+    $("backDogRosterBtn").onclick=showDogHotelRoster;
+    document.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>b.onclick=()=>YN_feedPetCrafted("dog",dogId,b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey));
+    document.querySelectorAll("[data-y26-feed-dog-plant]").forEach(b=>b.onclick=()=>YN_feedDogPlant(dogId,b.dataset.y26FeedDogPlant));
+    openModal();
+  };
+
+  showPlacedDogMenu=function(dogId){
+    const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;
+    const st=Y26_petStatus(dog),canFeed=YN_petCanFeed(dog),bamboo=Number(s.bag?.babyBamboo)||0,plank=Number(s.bag?.hauntedPlankton)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel v35-placed-dog-panel">
+      <img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}">
+      <h2>🐶 ${safeHtml(dogDisplayName(dog))}</h2>
+      <p>${safeHtml(dogType(dog).name)} • คอก ${dogPenOf(dog)}<br>อายุเหลือ ${dogLifeText(dog)}<br>${safeHtml(st.text)}</p>
+      <button id="renameDogBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>
+      ${canFeed?`<h3>🍲 อาหารและเครื่องดื่มที่คราฟ • +20–50 กุศล</h3><div class="cat-feed-grid v35-food-choice-grid">${YN_petFoodCards(s)}</div>
+        <h3>🌱 พืช • +5–20 กุศล</h3><div class="cat-feed-grid"><button type="button" data-y26-feed-dog-plant="babyBamboo" ${bamboo<30?"disabled":""}><span>เบบี้แบมบรู๊ววว ×30<small>มี ×${bamboo}</small></span></button><button type="button" data-y26-feed-dog-plant="hauntedPlankton" ${plank<30?"disabled":""}><span>แพลงก์ตอนหลอนปิ๊ ×30<small>มี ×${plank}</small></span></button></div>`:""}
+      <h3>💊 ใช้ยา</h3>${Y26_medicineButtons("dog",dog)}
+      <button id="releasePlacedDogBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button>
+    </section>`;
+    $("renameDogBtn").onclick=()=>renameDog(dogId);$("releasePlacedDogBtn").onclick=()=>releaseDog(dogId);
+    document.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>b.onclick=()=>YN_feedPetCrafted("dog",dogId,b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey));
+    document.querySelectorAll("[data-y26-feed-dog-plant]").forEach(b=>b.onclick=()=>YN_feedDogPlant(dogId,b.dataset.y26FeedDogPlant));
+    document.querySelectorAll("[data-use-pet-med]").forEach(b=>b.onclick=()=>Y26_useMedicine("dog",dogId,b.dataset.usePetMed));
+    openModal();
+  };
+
+  /* Bulk feed for current "สมาชิกมะหมา" pen. */
+  function YN_hungryDogsInCurrentPen(s=ownState||state){
+    ensureDogHotelPenState(s);
+    return dogsInHotelPen(currentDogHotelPen,s).filter(d=>YN_petCanFeed(d)&&Number(d.expiresAt||0)>gameNow());
+  }
+  function YN_showFeedAllDogsPicker(){
+    const s=ensureDogHotelPenState(ownState||state),dogs=YN_hungryDogsInCurrentPen(s),need=dogs.length;
+    if(!need){message("🐶 ยังไม่ต้องให้อาหาร","ตอนนี้ไม่มีน้องหมาที่หิวในคอกนี้ค่ะ");return}
+    $("modalContent").innerHTML=`<section class="feature-panel yn-feed-all-panel">
+      <button id="ynBackDogRoster" class="secondary-action yn-compact-back" type="button">← กลับ</button>
+      <h2>🍖 ให้อาหารทั้งหมด</h2>
+      <p class="yn-feed-all-need">ต้องการ <b>${need} ถาด</b> สำหรับน้องหมาที่หิว ${need} ตัว</p>
+      <p class="feature-subtitle">เลือกเมนูเดียว • ระบบจะใช้ 1 ถาดต่อน้องหมา 1 ตัว</p>
+      <div class="cat-feed-grid">${YN_petFoodCards(s,need)}</div>
+    </section>`;
+    $("ynBackDogRoster").onclick=showDogHotelRoster;
+    document.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>b.onclick=()=>YN_feedAllDogs(b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey));
+    openModal();
+  }
+  async function YN_feedAllDogs(foodType,key){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next,count=0,penalties=0,rewardTotal=0;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember);ensureDogHotelPenState(s);
+        const now=gameNow(),targets=dogsInHotelPen(currentDogHotelPen,s).filter(d=>YN_petCanFeed(d,now)&&Number(d.expiresAt||0)>now);
+        count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องหมาที่หิวแล้ว");
+        if(!YN_consumePetFood(s,foodType,key,count))throw new Error(`เมนูนี้ต้องมีอย่างน้อย ${count} ถาด`);
+        targets.forEach(dog=>{
+          if(YN_petIsAngry(dog,now)&&Number(dog.lastPenaltyBucket||0)<1){s.merit=(Number(s.merit)||0)-30;penalties++}
+          const reward=randInt(20,50);rewardTotal+=reward;s.merit=(Number(s.merit)||0)+reward;
+          dog.nextFeedAt=now+YN_PET_HUNGER_MS;dog.lastPenaltyBucket=0;dog.nextDropAt=now+DOG_DROP_INTERVAL_MS;
+        });
+        incrementMissionOn(s,"feedOwnPets",count);next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();
+      message("🐶 ให้อาหารทั้งหมดเรียบร้อย",`ใช้อาหาร ${count} ถาด • น้องหมา ${count} ตัว<br>ได้รับรวม +${rewardTotal} กุศล${penalties?`<br>สถานะโกรธ ${penalties} ตัว ถูกหัก -${penalties*30} กุศล`:""}<br>หิวอีกใน 4 ชั่วโมง`);
+    }catch(error){message("ให้อาหารทั้งหมดไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+
+  showDogHotelRoster=function(){
+    clearDogRosterTimer();
+    const s=ensureDogHotelPenState(ownState||state),dogs=dogsInHotelPen(currentDogHotelPen,s),hungryCount=YN_hungryDogsInCurrentPen(s).length;
+    const rows=dogs.length?dogs.map((dog,i)=>{
+      const st=Y26_petStatus(dog),canFeed=YN_petCanFeed(dog),medActive=st.kind==="medicine";
+      return `<article class="dog-roster-row v35-dog-roster-row">
+        <img src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}">
+        <div class="dog-roster-info"><b>${i+1}. ${safeHtml(dogDisplayName(dog))}</b><small>${safeHtml(dogType(dog).name)} • คอก ${currentDogHotelPen}</small><span>อายุเหลือ ${dogLifeText(dog)}</span><span class="dog-roster-hunger ${canFeed?"ready":""}">${safeHtml(st.text)}</span></div>
+        <div class="dog-roster-actions v35-dog-roster-actions">
+          <button type="button" class="v35-dog-feed-btn" data-v35-dog-feed="${dog.id}" ${canFeed?"":"disabled"}>🍖 ให้อาหาร</button>
+          <button type="button" class="v35-dog-med-btn" data-v35-dog-medicine="${dog.id}" ${medActive?"disabled":""}>💊 ใช้ยา</button>
+          ${st.kind==="angry"?`<button type="button" class="dog-roster-angry" data-y26-dog-penalty="${dog.id}" aria-label="หักกุศลสถานะโกรธ"><img src="${Y26_STATUS_ICON.angry}" alt="โกรธ"></button>`:""}
+        </div>
+      </article>`;
+    }).join(""):'<p class="empty-feature">ยังไม่มีน้องหมาในคอกนี้</p>';
+    $("modalContent").innerHTML=`<section class="feature-panel dog-roster-panel v35-dog-roster-panel">
+      <div class="yn-dog-roster-head"><h2>🐶 เช็คสมาชิกมะหมา • คอก ${currentDogHotelPen}</h2><button id="ynFeedAllDogsBtn" type="button" ${hungryCount?"":"disabled"}>🍖 ให้อาหารทั้งหมด</button></div>
+      <p class="feature-subtitle">น้องหมา ${dogs.length}/${DOG_HOTEL_MAX} • หิว ${hungryCount} ตัว<br>เลือกให้อาหารทีละตัวได้เหมือนเดิม</p>
+      <div class="dog-roster-list">${rows}</div>
+    </section>`;
+    $("ynFeedAllDogsBtn").onclick=YN_showFeedAllDogsPicker;
+    document.querySelectorAll("[data-v35-dog-feed]").forEach(b=>b.onclick=()=>showDogRosterFoodPicker(b.dataset.v35DogFeed));
+    document.querySelectorAll("[data-v35-dog-medicine]").forEach(b=>b.onclick=()=>V35_showDogMedicinePicker(b.dataset.v35DogMedicine));
+    document.querySelectorAll("[data-y26-dog-penalty]").forEach(b=>b.onclick=()=>Y26_applyPetPenalty("dog",b.dataset.y26DogPenalty));
+    openModal();
+  };
+
+  /* Angry pets create ZERO new drops. Due timers are discarded, never caught up later. */
+  processCatDrops=function(){
+    if(!ownState)return;
+    ensureCatState(ownState);const now=gameNow();let changed=false;
+    ownState.cats.forEach(cat=>{
+      if(!cat.placedFarm||Number(cat.expiresAt||0)<=now)return;
+      if(!Array.isArray(cat.drops))cat.drops=[];
+      let nextAt=Math.max(0,Number(cat.nextDropAt)||Number(cat.placedAt||now)+CAT_DROP_INTERVAL_MS);
+      if(YN_petIsAngry(cat,now)){
+        if(now>=nextAt){cat.nextDropAt=now+CAT_DROP_INTERVAL_MS;changed=true}
+        return;
+      }
+      if(now<nextAt)return;
+      const due=Math.max(1,Math.floor((now-nextAt)/CAT_DROP_INTERVAL_MS)+1);
+      const room=Math.max(0,CAT_DROP_MAX_PENDING-cat.drops.length),createCount=Math.min(room,due);
+      for(let i=0;i<createCount;i++){
+        const item=randomCatDrop(),pt=randomCatDropPoint(cat),createdAt=nextAt+i*CAT_DROP_INTERVAL_MS;
+        if(item)cat.drops.push({id:newCatInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt});
+      }
+      cat.nextDropAt=nextAt+due*CAT_DROP_INTERVAL_MS;changed=true;
+    });
+    if(changed){state=ownState;save()}
+    renderCatPendingDrop();
+  };
+
+  v15CreateDueDogDropsOnState=function(s,now=gameNow()){
+    ensureDogHotelPenState(ensureDogState(s));let changed=false;
+    (s.dogs||[]).forEach(dog=>{
+      if(!dog?.placedHotel||Number(dog.expiresAt||0)<=now)return;
+      const pen=dogPenOf(dog);if(pen!==1&&pen!==2)return;
+      if(!Array.isArray(dog.drops))dog.drops=[];
+      let nextAt=Math.max(0,Number(dog.nextDropAt)||Number(dog.placedAt||now)+DOG_DROP_INTERVAL_MS);
+      if(YN_petIsAngry(dog,now)){
+        if(now>=nextAt){dog.nextDropAt=now+DOG_DROP_INTERVAL_MS;changed=true}
+        return;
+      }
+      if(now<nextAt)return;
+      const due=Math.max(1,Math.floor((now-nextAt)/DOG_DROP_INTERVAL_MS)+1);
+      const room=Math.max(0,DOG_DROP_MAX_PENDING-dog.drops.length),createCount=Math.min(room,due);
+      for(let i=0;i<createCount;i++){
+        const item=randomDogDrop(dog),pt=randomDogDropPoint(dog),createdAt=nextAt+i*DOG_DROP_INTERVAL_MS;
+        if(item)dog.drops.push({id:newDogInstanceId(),itemId:item.id,x:pt.x,y:pt.y,createdAt,hotelPen:pen});
+      }
+      dog.nextDropAt=nextAt+due*DOG_DROP_INTERVAL_MS;changed=true;
+    });
+    return changed;
+  };
+  processDogDropsUnsafe=function(){return v15CreateDueDogDropsOnState(ownState||state,gameNow())};
+
+  /* ---------- Cute "เมนูในสวน" home + 5 clear categories ---------- */
+  const YN_MENU_GROUPS={
+    general:{label:"🍽️ เมนูทั่วไป",title:"🍽️ เมนูทั่วไป"},
+    special:{label:"👑 เมนูพิเศษ",title:"👑 เมนูพิเศษ"},
+    drinks:{label:"🥤 เครื่องดื่ม",title:"🥤 เครื่องดื่ม"},
+    rainy:{label:"🌧️ เมนูหน้าฝน",title:"🌧️ เมนูหน้าฝน"},
+    night:{label:"🌙 เมนูรอบดึก",title:"🌙 เมนูรอบดึก"}
+  };
+  const YN_GENERAL_MENU_IDS=["r1","r2","r3","r4","r5","r6","r7","r8"];
+  const YN_SPECIAL_MENU_IDS=["boatNew1","boatNew2","boatNew3","boatNew4","boatNew5","boatNew6","boatNew7","boatNew8"];
+  const YN_NIGHT_MENU_IDS=["n1","n2","n3","n4"];
+  let YN_menuActiveCategory="home";
+
+  function YN_menuTabs(active){
+    return `<div class="yn-menu-tabs">${Object.entries(YN_MENU_GROUPS).map(([key,g])=>`<button type="button" data-yn-menu-category="${key}" class="${active===key?"active":""}">${g.label}</button>`).join("")}</div>`;
+  }
+  function YN_bindMenuCommon(){
+    document.querySelectorAll("[data-yn-menu-category]").forEach(b=>b.onclick=()=>kitchen(b.dataset.ynMenuCategory));
+    const home=$("ynMenuHomeBtn");if(home)home.onclick=()=>kitchen("home");
+    document.querySelectorAll("[data-confirm-craft]").forEach(b=>b.onclick=()=>confirmCraft(b.dataset.confirmCraft));
+    document.querySelectorAll("[data-confirm-boat-craft]").forEach(b=>b.onclick=()=>confirmBoatDrinkCraft(b.dataset.confirmBoatCraft));
+    document.querySelectorAll("[data-craft-rainy]").forEach(b=>b.onclick=()=>showRainyCraftConfirm(b.dataset.craftRainy));
+  }
+  kitchen=function(category=YN_menuActiveCategory||"home"){
+    if(guardResting())return;
+    category=YN_MENU_GROUPS[category]?category:"home";YN_menuActiveCategory=category;
+    if(category==="home"){
+      $("modalContent").innerHTML=`<section class="feature-panel yn-menu-home-panel">
+        <h2>📖 เมนูในสวน</h2>${YN_menuTabs("")}
+        <div class="yn-menu-home-cover"><img src="menu-home.png?v=1" alt="เมนูในสวน">
+          <div class="yn-menu-home-copy"><b>เลือกประเภทเมนูที่ต้องการ</b><small>แตะประเภทด้านบนเพื่อดูเมนูคราฟในสวน</small></div>
+        </div>
+      </section>`;
+      YN_bindMenuCommon();openModal();return;
+    }
+
+    let cards="",note="";
+    if(category==="general")cards=YN_GENERAL_MENU_IDS.map(id=>recipeById(id)).filter(Boolean).map(recipeCard).join("");
+    if(category==="special")cards=YN_SPECIAL_MENU_IDS.map(id=>recipeById(id)).filter(Boolean).map(recipeCard).join("");
+    if(category==="drinks"){cards=BOAT_SUPPLY_DRINKS.map(boatDrinkCard).join("");note='<p class="feature-subtitle">เครื่องดื่มที่คราฟแล้วเก็บในกระเป๋า และใช้เป็นอาหารหมา/แมวได้ด้วย</p>'}
+    if(category==="rainy"){cards=RAINY_SEASON_MENUS.map(rainyMenuCard).join("");note='<p class="feature-subtitle">เมนูหน้าฝน 6 เมนู • สูตรและอัตราคราฟเดิมทั้งหมด</p>'}
+    if(category==="night"){
+      cards=YN_NIGHT_MENU_IDS.map(id=>recipeById(id)).filter(Boolean).map(recipeCard).join("");
+      note=`<p class="feature-subtitle">${isNightCraftOpen()?"🌙 เปิดให้คราฟถึง 02:00 น.":`🌙 เปิดเวลา 22:00–02:00 • เปิดอีกใน ${formatHM(msUntilNightCraft())}`}</p>`;
+    }
+    $("modalContent").innerHTML=`<section class="feature-panel recipe-catalog-panel yn-menu-catalog-panel">
+      <div class="yn-menu-title-row"><h2>📖 เมนูในสวน</h2><button id="ynMenuHomeBtn" type="button">🏠 หน้าแรก</button></div>
+      ${YN_menuTabs(category)}
+      <div class="yn-menu-category-title">${YN_MENU_GROUPS[category].title}</div>${note}
+      <div class="recipe-catalog-grid">${cards}</div>
+    </section>`;
+    YN_bindMenuCommon();openModal();
+  };
+  showMenu=function(){YN_menuActiveCategory="home";kitchen("home")};
+  if($("menuNavBtn"))$("menuNavBtn").onclick=showMenu;
+  if($("menuBtn"))$("menuBtn").onclick=showMenu;
+
+  console.info("YAINOO FINAL items/menu/pets patch loaded");
+})();
