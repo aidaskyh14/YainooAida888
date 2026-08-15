@@ -3656,7 +3656,63 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 }
 
 
-/* V2 smooth walking: movement element itself must not receive CSS transitions */
-.aida-farm-pet{
-  transition:none !important;
+
+/* ======================================================================
+   YAINOO CURRENT — new 8 menus / reward popup
+   ====================================================================== */
+
+/* New menu PNGs were visually larger than older dish art.
+   Keep their visible footprint consistent without stretching. */
+.recipe-card>img[src*="01_phak_kat_ho_phi"],
+.recipe-card>img[src*="02_phak_bung_phat_sadung_phi"],
+.recipe-card>img[src*="03_pla_phi_mamuang"],
+.recipe-card>img[src*="04_pla_phi_angun"],
+.recipe-card>img[src*="05_yam_phak_suan_phi_taek"],
+.recipe-card>img[src*="06_pla_phi_lui_suan"],
+.recipe-card>img[src*="07_kaeng_truffle_phak_lon"],
+.recipe-card>img[src*="08_samrap_phi_daek_mai_lueak"],
+.craft-warning-panel>img[src*="01_phak_kat_ho_phi"],
+.craft-warning-panel>img[src*="02_phak_bung_phat_sadung_phi"],
+.craft-warning-panel>img[src*="03_pla_phi_mamuang"],
+.craft-warning-panel>img[src*="04_pla_phi_angun"],
+.craft-warning-panel>img[src*="05_yam_phak_suan_phi_taek"],
+.craft-warning-panel>img[src*="06_pla_phi_lui_suan"],
+.craft-warning-panel>img[src*="07_kaeng_truffle_phak_lon"],
+.craft-warning-panel>img[src*="08_samrap_phi_daek_mai_lueak"],
+.craft-success-panel>img[src*="01_phak_kat_ho_phi"],
+.craft-success-panel>img[src*="02_phak_bung_phat_sadung_phi"],
+.craft-success-panel>img[src*="03_pla_phi_mamuang"],
+.craft-success-panel>img[src*="04_pla_phi_angun"],
+.craft-success-panel>img[src*="05_yam_phak_suan_phi_taek"],
+.craft-success-panel>img[src*="06_pla_phi_lui_suan"],
+.craft-success-panel>img[src*="07_kaeng_truffle_phak_lon"],
+.craft-success-panel>img[src*="08_samrap_phi_daek_mai_lueak"]{
+  transform:scale(.84);
+  transform-origin:center;
+  object-fit:contain;
+}
+
+.yn-claim-success{
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.yn-claim-success>img{
+  width:min(150px,42vw);
+  height:min(150px,42vw);
+  object-fit:contain;
+}
+.yn-claim-success h2{
+  margin:0;
+  font-size:clamp(17px,4.6vw,25px);
+  line-height:1.35;
+}
+.yn-claim-success p{margin:0;font-weight:900}
+.yn-claim-success button{min-width:130px}
+
+.yn-boat-supply-picker .boat-supply-grid img{
+  object-fit:contain !important;
 }
