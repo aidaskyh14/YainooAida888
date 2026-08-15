@@ -10855,6 +10855,12 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const YN_showShopBase=showShop;
   showShop=function(tab){
     const result=YN_showShopBase(tab);
+    /* V32 shop-home buttons captured an older showShop reference.
+       Rebind them to this final wrapper so new merit items are appended
+       after entering a category from the shop home screen. */
+    document.querySelectorAll("[data-v32-shop]").forEach(btn=>{
+      btn.onclick=()=>showShop(btn.dataset.v32Shop);
+    });
     if(tab==="specials")YN_appendMeritShopCards();
     return result;
   };
