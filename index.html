@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=147">
+  <link rel="stylesheet" href="style.css?v=148">
 </head>
 <body>
   <main id="app">
@@ -86,6 +86,7 @@
             <h3 id="hudPlacesTitle" class="hud-menu-section-title">📍 สถานที่</h3>
             <div class="hud-menu-section-items">
               <button id="mainDogHotelBtn" class="hud-menu-item hud-menu-featured" type="button"><span>🐶</span><div><b>โรงแรมน้องหมา</b><small>ไปดูน้องหมาและเก็บของดรอป</small></div><i>›</i></button>
+              <button id="shortcutDogPalaceBtn" class="hud-menu-item" type="button"><span>🏰</span><div><b>วิมานหมา</b><small>โปรดติดตามซีซั่นต่อไป</small></div><i>🔒</i></button>
               <button id="almsBtn" class="hud-menu-item activity-button alms-button" type="button"><span>🛕</span><div><b>วัดไทยในสวน</b><small>กำลังตรวจเวลา</small></div><i>›</i></button>
               <button id="shortcutFishingBtn" class="hud-menu-item" type="button"><span>🎣</span><div><b>บ่อตกปลา</b><small>ไปยังบ่อตกปลาบาดาล</small></div><i>›</i></button>
               <button id="shortcutJellyfishBtn" class="hud-menu-item" type="button"><span>🪼</span><div><b>บ่อแมงกะพรุน</b><small>ไปยังบ่อแมงกะพรุนส่วนกลาง</small></div><i>›</i></button>
@@ -175,7 +176,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=8"></script>
+  <script src="daily-missions.js?v=9"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -286,6 +287,6 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=162"></script>
+  <script src="game.js?v=163"></script>
 </body>
 </html>
