@@ -4900,6 +4900,8 @@ let aidaFarmPetMotion=null;
 let aidaFarmPetRunToken=0;
 let aidaFarmPetHorizontalDirection=1;
 let aidaFarmPetPreviousNode=-1;
+/* จำทิศที่เดินล่าสุด เพื่อป้องกันการกลับหลัง 180° แบบกะทันหัน */
+let aidaFarmPetLastStep={dr:0,dc:0};
 let aidaFarmPetType="cat";
 let aidaFarmPetNumber=1;
 let aidaFarmPetSpeed=.65;
@@ -4939,7 +4941,7 @@ function setAidaFarmPetPose(index){
   aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"76%":index===AIDA_FARM_PET_POSES.sit?"57%":"52%");
   aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
-  aidaFarmPetSprite.style.setProperty("--pet-art-scale",aidaFarmPetType==="cat"&&Number(aidaFarmPetNumber)===11?"1.10":"1");
+  aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage("pose")}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 300%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
@@ -4983,13 +4985,51 @@ function nextAidaFarmPetNode(index){
     const delta=direction==="left"?[0,-1]:direction==="right"?[0,1]:direction==="back"?[-1,0]:[1,0];
     const forcedRow=Math.max(0,Math.min(rows-1,row+delta[0])),forcedCol=Math.max(0,Math.min(cols-1,col+delta[1]));
     if(forcedRow!==row||forcedCol!==col)return forcedRow*cols+forcedCol;
-    const oppositeRow=Math.max(0,Math.min(rows-1,row-delta[0])),oppositeCol=Math.max(0,Math.min(cols-1,col-delta[1]));
-    return oppositeRow*cols+oppositeCol;
   }
+
   const offsets=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[-1,1],[1,-1],[1,1]];
-  let choices=offsets.map(([dr,dc])=>({row:row+dr,col:col+dc})).filter(p=>p.row>=0&&p.row<rows&&p.col>=0&&p.col<cols).map(p=>p.row*cols+p.col);
-  const fresh=choices.filter(node=>node!==aidaFarmPetPreviousNode);if(fresh.length)choices=fresh;
-  return choices[Math.floor(Math.random()*choices.length)];
+  let choices=offsets
+    .map(([dr,dc])=>({dr,dc,row:row+dr,col:col+dc}))
+    .filter(p=>p.row>=0&&p.row<rows&&p.col>=0&&p.col<cols)
+    .map(p=>({...p,node:p.row*cols+p.col}));
+
+  /* ห้ามย้อนกลับ node ที่เพิ่งเดินจากมา ถ้ามีทางอื่น */
+  const fresh=choices.filter(p=>p.node!==aidaFarmPetPreviousNode);
+  if(fresh.length)choices=fresh;
+
+  const last=aidaFarmPetLastStep||{dr:0,dc:0};
+  if(last.dr||last.dc){
+    const lastLen=Math.hypot(last.dr,last.dc)||1;
+
+    choices=choices.map(p=>{
+      const len=Math.hypot(p.dr,p.dc)||1;
+      const dot=(last.dr*p.dr+last.dc*p.dc)/(lastLen*len);
+
+      /* dot=-1 คือกลับหลัง 180° / dot=0 คือเลี้ยว / dot=1 คือตรงต่อ */
+      let score=dot*4;
+
+      /* ชอบเดินต่อเนื่องหรือเลี้ยว มากกว่าหันหลังกลับ */
+      if(dot>.70)score+=4.5;
+      else if(dot>=-.05)score+=2.4;
+      else score-=8;
+
+      /* diagonal เล็กน้อยเพื่อให้เส้นทางไม่แข็งเป็นตารางเกินไป */
+      if(p.dr!==0&&p.dc!==0)score+=.35;
+
+      score+=Math.random()*1.25;
+      return {...p,score,dot};
+    });
+
+    /* ถ้ามีทางที่ไม่ย้อน 180° ให้ตัดตัวเลือกย้อนกลับทิ้งทั้งหมด */
+    const nonReverse=choices.filter(p=>p.dot>-.35);
+    if(nonReverse.length)choices=nonReverse;
+
+    choices.sort((a,b)=>b.score-a.score);
+    const pool=choices.slice(0,Math.min(3,choices.length));
+    return pool[Math.floor(Math.random()*pool.length)].node;
+  }
+
+  return choices[Math.floor(Math.random()*choices.length)].node;
 }
 function clearAidaFarmPetActivity(remove=false){
   aidaFarmPetRunToken++;
@@ -5024,10 +5064,20 @@ function moveAidaFarmPet(token){
       motion.onfinish=()=>{
         if(token!==aidaFarmPetRunToken)return;
         clearInterval(aidaFarmPetFrameTimer);aidaFarmPetFrameTimer=0;
-        aidaFarmPetPreviousNode=aidaFarmPetNode;aidaFarmPetNode=next;
+
+        const cols=AIDA_FARM_PET_COLS.length;
+        const fromRow=Math.floor(aidaFarmPetNode/cols),fromCol=aidaFarmPetNode%cols;
+        const toRow=Math.floor(next/cols),toCol=next%cols;
+        aidaFarmPetLastStep={dr:toRow-fromRow,dc:toCol-fromCol};
+
+        aidaFarmPetPreviousNode=aidaFarmPetNode;
+        aidaFarmPetNode=next;
+
+        /* ยืนยันตำแหน่งจริงก่อนล้าง Web Animation เพื่อไม่ให้กระโดดกลับ */
         aidaFarmPet.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;
-        try{motion.cancel()}catch(e){}
+        try{motion.cancel()}catch(error){}
         if(aidaFarmPetMotion===motion)aidaFarmPetMotion=null;
+
         if(aidaFarmPetAutoWalk)scheduleAidaFarmPetPause(token);
         else transitionAidaFarmPetSprite(()=>setAidaFarmPetPose(AIDA_FARM_PET_POSES.idleA),token);
       };
@@ -5305,7 +5355,7 @@ startAidaFarmPet=function(){
 };
 syncAidaFarmPet=async function(){
   const cat=currentPlacedCat();if(!cat){activePlacedCatId="";clearAidaFarmPetActivity(true);renderCatPendingDrop();return}
-  if(activePlacedCatId!==cat.id){activePlacedCatId=cat.id;clearAidaFarmPetActivity(true);aidaFarmPetType="cat";aidaFarmPetNumber=catType(cat).number;aidaFarmPetSpeed=.65;aidaFarmPetAssetBase=await resolveAidaFarmPetAssetBase();if(!aidaFarmPetAssetBase){console.warn("ไม่พบ sprite sheet ของ",catType(cat).name);return}aidaFarmPetNode=5;aidaFarmPetPreviousNode=-1;aidaFarmPetAutoWalk=true;preloadAidaFarmPetSelection()}
+  if(activePlacedCatId!==cat.id){activePlacedCatId=cat.id;clearAidaFarmPetActivity(true);aidaFarmPetType="cat";aidaFarmPetNumber=catType(cat).number;aidaFarmPetSpeed=.65;aidaFarmPetAssetBase=await resolveAidaFarmPetAssetBase();if(!aidaFarmPetAssetBase){console.warn("ไม่พบ sprite sheet ของ",catType(cat).name);return}aidaFarmPetNode=5;aidaFarmPetPreviousNode=-1;aidaFarmPetLastStep={dr:0,dc:0};aidaFarmPetAutoWalk=true;preloadAidaFarmPetSelection()}
   if(!aidaFarmPet)requestAnimationFrame(startAidaFarmPet);else refreshCatNameLabel();renderCatPendingDrop();
 };
 function showPlacedCatMenu(catId){const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;const hungry=gameNow()>=Number(cat.nextFeedAt||0),foods=RECIPES.filter(r=>dishCountInState(r.id,s)>0);$("modalContent").innerHTML=`<section class="feature-panel placed-cat-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}"><h2>🐱 ${safeHtml(catDisplayName(cat))}</h2><p>${safeHtml(catType(cat).name)}<br>อายุเหลือ ${catLifeText(cat)}<br>${hungry?"🍽️ หิวแล้ว":"อิ่มอยู่ • หิวอีกใน "+formatHM(Math.max(0,cat.nextFeedAt-gameNow()))}</p><button id="renameCatBtn" class="secondary-action" type="button">ตั้งชื่อ / เปลี่ยนชื่อ</button>${hungry?`<div class="cat-feed-grid">${foods.length?foods.map(r=>`<button type="button" data-feed-cat="${r.id}"><img src="${r.image}" alt="${r.name}"><span>${safeHtml(r.name)}<small>มี ×${dishCountInState(r.id,s)}</small></span></button>`).join(""):'<p class="empty-feature">ไม่มีอาหารที่คราฟไว้ให้น้องกิน</p>'}</div>`:""}<button id="releasePlacedCatBtn" class="danger-action placed-cat-release" type="button">ปล่อยวัด</button></section>`;$("renameCatBtn").onclick=()=>renameCat(catId);$("releasePlacedCatBtn").onclick=()=>releasePlacedCat(catId);document.querySelectorAll("[data-feed-cat]").forEach(b=>b.onclick=()=>feedCat(catId,b.dataset.feedCat));openModal()}
