@@ -12111,3 +12111,103 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   };
 })();
 
+
+
+/* =====================================================================
+   V170 — Jellyfish Pond 2 FULL PARITY with Pond 1 for V1
+   - Same status display
+   - Same feed 0/5
+   - Same "พร้อมท้ารัก" button at 5/5
+   - Same rename / poison rules
+   ===================================================================== */
+(function YN_POND2_FULL_PARITY_V170(){
+  function j2TypeSafe(x){
+    try{return jtype(x)||{name:"แมงกะพรุน",image:""}}
+    catch{return {name:"แมงกะพรุน",image:""}}
+  }
+
+  j2Details=function(i,x){
+    if(!x)return;
+    const ty=j2TypeSafe(x);
+    const isOwner=String(x.ownerKey||"")===String(currentMemberKey||"");
+    const now=NOW();
+    const cooldown=Math.max(0,Number(x.cooldownUntil||0)-now);
+    const hours=Math.max(0,Math.ceil((Number(x.expiresAt||0)-now)/HOUR));
+    const lax=Number((ownState||state)?.specials?.jellyfishLaxative||0);
+
+    /* V2 keeps V2 rules */
+    if(Number(x.version)===2){
+      $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel">
+        <img class="jelly-detail-img" src="${ty.image}" alt="${esc(ty.name)}">
+        <h2>${esc(x.customName||ty.name)}</h2>
+        <p>
+          <b>เวอร์ชัน:</b> V2<br>
+          <b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br>
+          <b>อายุคงเหลือ:</b> ${hours} ชั่วโมง<br>
+          ${cooldown>0?`<b>ให้อาหารได้อีก:</b> ${fmt(cooldown)}`:"<b>พร้อมให้อาหารแล้ว</b>"}
+        </p>
+        <div class="jelly-action-grid">
+          <button id="j2FeedV2" type="button" ${cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>
+          ${isOwner?'<button id="j2Rename" type="button">✏️ ตั้งชื่อ</button>':""}
+        </div>
+        <p class="feature-subtitle">V2 ไม่สามารถถูกวางยาถ่ายได้</p>
+      </section>`;
+      if($("j2FeedV2"))$("j2FeedV2").onclick=()=>j2FeedV2(i);
+      if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+      openModal();
+      return;
+    }
+
+    /* V1 = same rules as Pond 1 */
+    const feedCount=Math.max(0,Math.min(5,Number(x.feedCount)||0));
+    const ready=feedCount>=5 && cooldown<=0;
+
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel">
+      <img class="jelly-detail-img" src="${ty.image}" alt="${esc(ty.name)}">
+      <h2>${esc(x.customName||ty.name)}</h2>
+      <p>
+        <b>เวอร์ชัน:</b> V1<br>
+        <b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br>
+        <b>อายุคงเหลือ:</b> ${hours} ชั่วโมง<br>
+        <b>อาหาร:</b> ${feedCount}/5
+        ${cooldown>0?`<br><b>คูลดาวน์:</b> ${fmt(cooldown)}`:""}
+      </p>
+      <div class="jelly-action-grid">
+        <button id="j2FeedV1" type="button" ${ready||cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>
+        ${ready && isOwner ? '<button id="j2Love" class="primary-spooky-action" type="button">💗 พร้อมท้ารัก</button>' : ""}
+        ${isOwner ? '<button id="j2Rename" type="button">✏️ ตั้งชื่อ</button>' :
+          `<button id="j2Poison" class="danger-action" type="button" ${lax<1?"disabled":""}>🧪 วางยาถ่าย ×1</button>`}
+      </div>
+    </section>`;
+
+    if($("j2FeedV1"))$("j2FeedV1").onclick=()=>j2FeedV1(i);
+    if($("j2Love"))$("j2Love").onclick=()=>claimJ2Love(i);
+    if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+    if($("j2Poison"))$("j2Poison").onclick=()=>poisonJ2(i);
+    openModal();
+  };
+
+  /* After each V1 feeding, refresh pond data and reopen details
+     so the 5/5 "พร้อมท้ารัก" button appears immediately. */
+  const feedBase = commitJ2V1;
+  commitJ2V1 = async function(i, foodType){
+    const before = Number(jelly2Cache?.slots?.[i]?.feedCount)||0;
+    await feedBase(i, foodType);
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const ref=fs.doc(db,"shared","jellyfishPond2");
+      const snap=await fs.getDoc(ref);
+      if(snap.exists()){
+        jelly2Cache=normJ2(snap.data());
+        drawJellyPond2(jelly2Cache);
+        const x=jelly2Cache?.slots?.[i];
+        if(x && Number(x.version)!==2 && Number(x.feedCount||0)>=5){
+          j2Details(i,x);
+        }
+      }
+    }catch(e){
+      console.warn("pond2 refresh after feed",e);
+    }
+  };
+})();
+
