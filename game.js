@@ -11606,25 +11606,22 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const targetRef=fs.doc(db,"saves",targetKey);
       const targetProf=fs.doc(db,"publicProfiles",targetKey);
       const mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));
-      let ownNext=null,targetMerit=0,bonusKey="",bonusLabel="";
+      let ownNext=null,bonusKey="",bonusLabel="";
 
       /*
-        IMPORTANT:
-        The core action transaction writes ONLY:
-        1) current player's own save (cooldown)
-        2) target member's save (merit / one bonus field)
-        publicProfiles + mailbox are auxiliary and run AFTER the transaction.
-        Therefore an auxiliary permission problem can no longer cancel slap/tease.
+        V176 IMPORTANT:
+        Normal members are NOT allowed to READ another member's /saves document.
+        Previous versions did tx.get(targetRef), so the transaction failed before
+        any write rule was even evaluated. Aida worked only because Admin can read all saves.
+
+        This version NEVER reads targetRef.
+        It uses Firestore atomic increment() for merit and bonus inventory instead.
       */
       await fs.runTransaction(db,async tx=>{
-        const [oSnap,tSnap]=await Promise.all([
-          tx.get(ownRef),
-          tx.get(targetRef)
-        ]);
-        if(!oSnap.exists()||!tSnap.exists())throw new Error("ข้อมูลสมาชิกไม่พร้อม");
+        const oSnap=await tx.get(ownRef);
+        if(!oSnap.exists())throw new Error("ข้อมูลสมาชิกไม่พร้อม");
 
         const own=normalizeState(oSnap.data(),currentMember);
-        const target=normalizeState(tSnap.data(),targetName);
         resetDailyExtras(own);
 
         own.friendCatCooldowns=ensureObj(own.friendCatCooldowns);
@@ -11633,18 +11630,12 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         if(readyAt>now)throw new Error(`แมวบ้านนี้กำลังพักอยู่ • เล่นได้อีกใน ${fmt(readyAt-now)}`);
         own.friendCatCooldowns[targetKey]=now+(3*HOUR);
 
-        if(action==="slap"){
-          target.merit=Number(target.merit||0)-10;
-        }else{
-          target.merit=Number(target.merit||0)+2;
+        if(action!=="slap"){
           const pool=[ANGEL_KEY,SATAN_KEY,DEED_KEY];
           bonusKey=pool[Math.floor(Math.random()*pool.length)];
-          target.specials=ensureObj(target.specials);
-          target.specials[bonusKey]=(Number(target.specials[bonusKey])||0)+1;
           bonusLabel=SPECIAL_ITEMS?.[bonusKey]?.name||bonusKey;
         }
 
-        targetMerit=target.merit;
         ownNext=own;
 
         tx.set(
@@ -11655,31 +11646,30 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
 
         if(action==="slap"){
           tx.update(targetRef,{
-            merit:target.merit,
+            merit:fs.increment(-10),
             updatedAt:fs.serverTimestamp()
           });
         }else{
           const patch={
-            merit:target.merit,
+            merit:fs.increment(2),
             updatedAt:fs.serverTimestamp()
           };
-          /* Change only ONE nested special field.
-             Do not rewrite the whole specials map, because normal members'
-             Rules allow only the one bonus item changed by this tease. */
-          patch[`specials.${bonusKey}`]=target.specials[bonusKey];
+          patch[`specials.${bonusKey}`]=fs.increment(1);
           tx.update(targetRef,patch);
         }
       });
 
       Y26_applyOwnState(ownNext);
 
-      /* Auxiliary sync/notification: best-effort only.
-         Failure here must never roll back the already successful cat action. */
+      /*
+        Profile + mailbox are optional secondary writes.
+        They are not part of the core transaction and cannot cancel the action.
+      */
       const aux=[];
       if(typeof fs.updateDoc==="function"){
         aux.push(
           fs.updateDoc(targetProf,{
-            merit:targetMerit,
+            merit:fs.increment(action==="slap"?-10:2),
             updatedAt:fs.serverTimestamp()
           }).catch(()=>null)
         );
