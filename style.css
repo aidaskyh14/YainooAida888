@@ -4167,3 +4167,26 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .yn177-seed-grid button{border:1px solid #d8b98f;border-radius:12px;background:#f7e7c9;padding:5px;color:#4f3558;font-size:9px;font-weight:800}
 .yn177-seed-grid img{display:block;width:52px!important;height:52px!important;object-fit:contain!important;margin:0 auto 3px;background:transparent!important}
 .ynu-deed-overlay{object-fit:contain!important;background:transparent!important}
+
+
+/* ===== V181 SMOOTH / MOBILE PERFORMANCE ===== */
+.ynu-garden-manager-button{
+  top:24.6%!important;
+}
+@media(max-width:390px){
+  .ynu-garden-manager-button{
+    top:24.8%!important;
+  }
+}
+
+/* backdrop-filter is expensive on older iPhones/iPads; these surfaces remain
+   opaque enough without continuously blurring the entire game underneath. */
+@media(max-width:600px){
+  .tractor-working-overlay,
+  .hud-menu-backdrop,
+  .pet-test-panel,
+  .pet-test-active-panel{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+}
