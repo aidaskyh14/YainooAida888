@@ -14083,3 +14083,479 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
 
 ;window.YAINOO_BUILD="V191-FINAL";
+
+
+/* ======================================================================
+   V192 — MAMEAW FARM 1 / 3-CROP HARVEST FIX
+   Targeted recovery for strawberry / lychee / mango.
+   If the normal tractor transaction fails on one of these legacy plots,
+   use a minimal Firestore transaction:
+   - increment ONLY bag.<crop>
+   - replace ONLY gardens.plots
+   This avoids rewriting Mameaw's entire old save document.
+   ====================================================================== */
+(function YN_V192_MAMEAW_CROPS(){
+  const V192_KEYS=new Set(["strawberry","lychee","mango"]);
+  let v192Busy=false;
+
+  async function v192MinimalHarvest(index){
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let cropKey="",qty=0,newPlots=null;
+
+    await fs.runTransaction(db,async tx=>{
+      const gSnap=await tx.get(gardenRef);
+      if(!gSnap.exists())throw new Error("ไม่พบข้อมูลสวน");
+
+      const gd=gSnap.data()||{};
+      const plots=(Array.isArray(gd.plots)?gd.plots:[]).map(normalizePlot);
+      while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+      const p=plots[index];
+      if(!p)throw new Error("ไม่พบข้อมูลแปลง");
+
+      try{ensurePlotPhaseStandalone(p)}catch{}
+
+      cropKey=String(p.crop||"");
+      if(!V192_KEYS.has(cropKey))
+        throw new Error("ไม่ใช่พืชที่อยู่ในชุดซ่อม");
+
+      if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)
+        throw new Error("แปลงนี้กำลังถูก Take Over");
+
+      if(p.phase!=="ready")
+        throw new Error("ต้นนี้ยังไม่พร้อมเก็บ");
+
+      qty=p.angel?10:1;
+      plots[index]=emptyPlot();
+      newPlots=plots.map(normalizePlot);
+
+      /*
+        IMPORTANT:
+        Do not tx.set the whole legacy save.
+        Only change the exact inventory key.
+      */
+      const savePatch={
+        updatedAt:fs.serverTimestamp()
+      };
+      savePatch[`bag.${cropKey}`]=fs.increment(qty);
+
+      tx.update(saveRef,savePatch);
+
+      tx.update(gardenRef,{
+        plots:cloneData(newPlots),
+        updatedAt:fs.serverTimestamp()
+      });
+    });
+
+    /* Reload authoritative save after atomic increment. */
+    const sSnap=await fs.getDoc(saveRef);
+    if(sSnap.exists()){
+      const refreshed=normalizeState(sSnap.data(),currentMember);
+      refreshed.plots=newPlots||refreshed.plots;
+      ownState=refreshed;
+      if(!visitContext)state=ownState;
+      lastGardenHash=plotHash(refreshed.plots);
+      saveLocalOnly(ownState);
+      draw();
+    }
+
+    return {cropKey,qty};
+  }
+
+  async function v192Farm1Tractor(){
+    if(v192Busy)return;
+    if(visitContext||guardResting())return;
+    if(!cloudReady||!currentMemberKey)return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล");
+
+    v192Busy=true;
+    tractorBusy=true;
+    const btn=$("tractorBtn");
+    if(btn)btn.disabled=true;
+    showTractorWorking();
+
+    try{
+      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+
+      /* Only special-case Mameaw Farm 1.
+         Everyone else continues through the normal V191/V190 path. */
+      if(String(currentMemberKey)!=="mameaw"||page!==0){
+        throw new Error("__USE_NORMAL_TRACTOR__");
+      }
+
+      const start=0,end=Math.min(12,PLOT_COUNT);
+      const summary={},failed=[];
+      let harvested=0;
+
+      for(let i=start;i<end;i++){
+        const local=(state?.plots||[])[i];
+        if(!local)continue;
+        try{ensurePlotPhaseStandalone(local)}catch{}
+        if(!local.crop||local.phase!=="ready")continue;
+
+        /* Three known problematic crops: use minimal write immediately. */
+        if(V192_KEYS.has(String(local.crop))){
+          try{
+            const r=await v192MinimalHarvest(i);
+            summary[r.cropKey]=(summary[r.cropKey]||0)+r.qty;
+            harvested++;
+          }catch(e){
+            failed.push({i,crop:String(local.crop),error:e});
+            console.warn("V192 Mameaw crop failed",i,local.crop,e);
+          }
+          continue;
+        }
+
+        /* Other crops already work for Mameaw: leave them to the existing
+           tractor path rather than changing successful behavior. */
+      }
+
+      if(harvested){
+        const rows=Object.entries(summary)
+          .map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");
+        if(failed.length){
+          message("🚜 เก็บพืชที่ซ่อมได้แล้ว",
+            `${rows}<br><small>ยังมี ${failed.length} แปลงที่ต้องตรวจเพิ่ม</small>`);
+        }else{
+          message("🚜 เก็บพืชที่มีปัญหาเรียบร้อย",rows);
+        }
+        return;
+      }
+
+      if(failed.length)
+        throw failed[0].error||new Error("ยังเก็บพืชชุดนี้ไม่ได้");
+
+      throw new Error("__USE_NORMAL_TRACTOR__");
+    }catch(error){
+      if(error?.message==="__USE_NORMAL_TRACTOR__"){
+        /* invoke the existing button handler captured before V192 */
+        return v192NormalHandler?.();
+      }
+      message("🚜 รถไถยังไม่ออก",error?.message||"กรุณาลองใหม่");
+    }finally{
+      v192Busy=false;
+      tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+    }
+  }
+
+  let v192NormalHandler=null;
+  function v192Bind(){
+    const btn=$("tractorBtn");
+    if(!btn)return;
+
+    /* Capture latest pre-V192 normal handler once. */
+    if(!v192NormalHandler && typeof btn.onclick==="function"){
+      const old=btn.onclick;
+      v192NormalHandler=()=>old.call(btn);
+    }
+
+    btn.disabled=false;
+    btn.onclick=()=>{
+      if(typeof V29_setTools==="function")V29_setTools(false);
+
+      if(String(currentMemberKey)==="mameaw" && Number(farmPlotPage||0)===0){
+        const hasProblemCrop=(state?.plots||[]).slice(0,12).some(p=>{
+          try{ensurePlotPhaseStandalone(p)}catch{}
+          return p?.phase==="ready" && V192_KEYS.has(String(p?.crop||""));
+        });
+        if(hasProblemCrop)return v192Farm1Tractor();
+      }
+
+      return v192NormalHandler?.();
+    };
+  }
+
+  v192Bind();
+  const prevDraw=draw;
+  draw=function(){
+    const r=prevDraw();
+    requestAnimationFrame(v192Bind);
+    return r;
+  };
+  window.addEventListener("pageshow",v192Bind);
+
+  window.YAINOO_BUILD="V192-MAMEAW-3CROP-FIX";
+})();
+
+
+
+/* ======================================================================
+   V193 — CAMPAIGN-DECOUPLED HARVEST + MAMEAW FISH CLAIM
+   ====================================================================== */
+(function YN_V193_CAMPAIGN_FISH_FIX(){
+  function v193DeferredCampaign(summary){
+    try{
+      if(typeof V181_campaignScoreLater==="function"){
+        setTimeout(()=>{ try{ V181_campaignScoreLater(summary) }catch(e){ console.warn("V193 campaign deferred",e) } },0);
+      }
+    }catch{}
+  }
+
+  /* Manual harvest: inventory + plot clear only. Campaign score is background-only. */
+  harvestOwnPlot=async function(index){
+    if(!cloudReady||!currentMemberKey||visitContext)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,newPlots,cropKey="",qty=0;
+
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sSnap.data(),currentMember);
+        const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+        const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+        const p=plots[index];
+        ensurePlotPhaseStandalone(p);
+        if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)
+          throw new Error("แปลงนี้กำลังถูก Take Over");
+        if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
+
+        cropKey=p.crop;
+        qty=p.angel?10:1;
+        grantHarvestYield(s,cropKey,qty);
+        incrementMissionOn(s,"harvestCrops",1);
+        plots[index]=emptyPlot();
+        s.plots=plots.map(normalizePlot);
+        next=s; newPlots=s.plots;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        if(gSnap.exists()){
+          tx.update(gardenRef,{
+            plots:cloneData(s.plots),
+            updatedAt:fs.serverTimestamp()
+          });
+        }else{
+          tx.set(gardenRef,{
+            memberKey:currentMemberKey,
+            displayName:currentProfileDisplayName(),
+            plots:cloneData(s.plots),
+            updatedAt:fs.serverTimestamp()
+          },{merge:false});
+        }
+      });
+
+      Y26_applyOwnState(next);
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      lastGardenHash=plotHash(newPlots);
+      saveLocalOnly(ownState);
+      draw();
+
+      v193DeferredCampaign({[cropKey]:qty});
+      message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}`);
+    }catch(e){
+      message("เก็บเกี่ยวไม่ได้",e.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* Tractor: never reads/writes campaign docs in the core harvest path. */
+  let v193TractorBusy=false;
+  async function v193Tractor(){
+    if(v193TractorBusy)return;
+    if(visitContext||guardResting())return;
+    if(!cloudReady||!currentMemberKey)return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล");
+
+    v193TractorBusy=true;
+    tractorBusy=true;
+    const btn=$("tractorBtn");
+    if(btn)btn.disabled=true;
+    showTractorWorking();
+
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const start=page*12;
+      let next,newPlots,summary={},total=0;
+
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sSnap.data(),currentMember);
+        const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+        const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+        for(let i=start;i<Math.min(start+12,PLOT_COUNT);i++){
+          const p=plots[i];
+          if(!p)continue;
+          try{ ensurePlotPhaseStandalone(p) }catch{ continue }
+          if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)continue;
+          if(!p.crop||p.phase!=="ready")continue;
+
+          const key=p.crop,qty=p.angel?10:1;
+          grantHarvestYield(s,key,qty);
+          summary[key]=(summary[key]||0)+qty;
+          plots[i]=emptyPlot();
+          total++;
+        }
+
+        if(!total)throw new Error(`ฟาร์ม ${page+1} ยังไม่มีพืชที่พร้อมเก็บเกี่ยว`);
+        incrementMissionOn(s,"harvestCrops",total);
+        s.plots=plots.map(normalizePlot);
+        next=s;newPlots=s.plots;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        if(gSnap.exists()){
+          tx.update(gardenRef,{plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()});
+        }else{
+          tx.set(gardenRef,{
+            memberKey:currentMemberKey,
+            displayName:currentProfileDisplayName(),
+            plots:cloneData(s.plots),
+            updatedAt:fs.serverTimestamp()
+          },{merge:false});
+        }
+      });
+
+      Y26_applyOwnState(next);
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      lastGardenHash=plotHash(newPlots);
+      saveLocalOnly(ownState);
+      draw();
+      v193DeferredCampaign(summary);
+
+      const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");
+      message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+    }catch(e){
+      message("🚜 รถไถยังไม่ออก",e.message||"กรุณาลองใหม่");
+    }finally{
+      v193TractorBusy=false;
+      tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+    }
+  }
+
+  function v193BindTractor(){
+    const btn=$("tractorBtn");
+    if(!btn)return;
+    btn.disabled=false;
+    btn.onclick=()=>{
+      if(typeof V29_setTools==="function")V29_setTools(false);
+      return v193Tractor();
+    };
+  }
+  v193BindTractor();
+
+  const v193Draw=draw;
+  draw=function(){
+    const r=v193Draw();
+    requestAnimationFrame(v193BindTractor);
+    return r;
+  };
+
+  /*
+    Mameaw fish claim fallback:
+    If the normal "รับปลา" fails because slot/player legacy docs reject a write,
+    commit only the member's own save + fishingDaily scoreboard.
+  */
+  async function v193ClaimFishFallback(){
+    const btn=$("ynuClaimFish");
+    if(!btn||btn.__v193Wrapped)return;
+    const old=btn.onclick;
+    if(typeof old!=="function")return;
+
+    btn.onclick=async function(ev){
+      try{
+        return await old.call(this,ev);
+      }catch{}
+    };
+
+    const originalHandler=old;
+    btn.onclick=async function(ev){
+      btn.disabled=true;
+      try{
+        const result=await originalHandler.call(this,ev);
+        return result;
+      }catch(error){
+        console.warn("V193 normal fish claim failed",error);
+        if(String(currentMemberKey)!=="mameaw")throw error;
+
+        try{
+          const x=(typeof fishingSlotsV2Cache!=="undefined"&&Array.isArray(fishingSlotsV2Cache))
+            ? fishingSlotsV2Cache.find(v=>v&&v.ownerKey===currentMemberKey&&v.status==="fishing")
+            : null;
+          if(!x)throw error||new Error("ไม่พบรอบตกปลา");
+
+          const {db,fs}=await getFirebaseContext();
+          const saveRef=fs.doc(db,"saves",currentMemberKey);
+          const dailyRef=fs.doc(db,"fishingDaily",currentBangkokDateKey());
+          let next=null;
+
+          await fs.runTransaction(db,async tx=>{
+            const [ss,dd]=await Promise.all([tx.get(saveRef),tx.get(dailyRef)]);
+            if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+            const s=normalizeState(ss.data(),currentMember);
+            const d=dd.exists()?dd.data():{dateKey:currentBangkokDateKey(),scores:{},names:{},ponds:{}};
+            d.scores=ensureObj(d.scores);d.names=ensureObj(d.names);d.ponds=ensureObj(d.ponds);
+
+            const key=memberKeyFromName(currentMember);
+            const receipt=`${currentBangkokDateKey()}:${x.pondId}:${x.slot}:${x.startedAt||x.finishAt}`;
+            s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
+            if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
+
+            const w=Number(Number(x.totalWeight||0).toFixed(2));
+            d.scores[key]=Number((Number(d.scores[key]||0)+w).toFixed(2));
+            d.names[key]=currentProfileDisplayName();
+            d.ponds[key]=Number(x.pondId||0);
+
+            ensureMissionStateFor(s);
+            s.missions.progress.fishingWeight200=d.scores[key];
+            s.missions.progress.fishingWeight800=d.scores[key];
+            s.fishingClaimReceipts[receipt]=Date.now();
+            s.fishingCooldownUntil=Date.now()+5*60*1000;
+            next=s;
+
+            tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+            tx.set(dailyRef,{
+              dateKey:currentBangkokDateKey(),
+              scores:d.scores,
+              names:d.names,
+              ponds:d.ponds,
+              updatedAt:fs.serverTimestamp()
+            },{merge:false});
+          });
+
+          Y26_applyOwnState(next);
+          closeModal();
+          showWeatherToast(`🏆 รับน้ำหนักปลาเข้าดashboardแล้ว`);
+        }catch(fallbackError){
+          message("รับปลาไม่ได้",fallbackError?.message||"กรุณาลองใหม่");
+        }
+      }finally{
+        btn.disabled=false;
+      }
+    };
+    btn.__v193Wrapped=true;
+  }
+
+  const v193OpenModal=openModal;
+  openModal=function(){
+    const r=v193OpenModal();
+    requestAnimationFrame(v193ClaimFishFallback);
+    return r;
+  };
+
+  window.YAINOO_BUILD="V193-CAMPAIGN-FISH-FIX";
+})();
+
