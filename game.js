@@ -12669,3 +12669,188 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   };
 })();
 
+
+
+/* =====================================================================
+   V178 TAKE OVER HARD FIX
+   Directly replaces takeoverPlotTap AND intercepts tapPlot.
+   Inline sizing prevents the old full-screen crop modal from appearing.
+   ===================================================================== */
+(function YN_V178_TAKEOVER_HARD_FIX(){
+  try{ DEED_ITEM.image="land-deed.png?v=178"; }catch(e){}
+
+  const _yn178_oldTapPlot = tapPlot;
+
+  function yn178Mine(p){
+    return !!(
+      p?.takeover &&
+      Number(p.takeover.until||0)>gameNow() &&
+      String(p.takeover.by||"")===String(currentMemberKey||"")
+    );
+  }
+
+  function yn178BoostItems(){
+    const own=ownState||state, merged={};
+    if(typeof CAKE_ITEMS!=="undefined")Object.assign(merged,CAKE_ITEMS);
+    if(typeof COCONUT_ITEMS!=="undefined")Object.assign(merged,COCONUT_ITEMS);
+    if(typeof SPECIAL_ITEMS!=="undefined"){
+      Object.entries(SPECIAL_ITEMS).forEach(([k,v])=>{
+        if(Number(v?.boost)>0)merged[k]=v;
+      });
+    }
+    return Object.entries(merged)
+      .filter(([k,it])=>Number(it?.boost)>0 && Number(own?.specials?.[k]||0)>0);
+  }
+
+  function yn178Modal(index){
+    const p=state?.plots?.[index];
+    if(!yn178Mine(p))return false;
+    ensurePlotPhase(p);
+
+    const remain=Math.max(0,Number(p.takeover.until||0)-gameNow());
+    const hh=Math.floor(remain/3600000);
+    const mm=Math.floor((remain%3600000)/60000);
+    const ss=Math.floor((remain%60000)/1000);
+    const remainText=hh>0
+      ?`${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`
+      :`${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+
+    if(!p.crop){
+      const choices=Object.entries(CROPS).map(([k,c])=>`
+        <button type="button" data-v178-plant="${k}"
+          style="border:1px solid #d8b98f;border-radius:12px;background:#f7e7c9;padding:6px;color:#4f3558;font-size:10px;font-weight:800;">
+          <img src="${c.selectImg}" alt="${safeHtml(c.name)}"
+            style="display:block;width:52px;height:52px;object-fit:contain;margin:0 auto 3px;background:transparent;">
+          <span>${safeHtml(c.name)}</span>
+        </button>`).join("");
+
+      $("modalContent").innerHTML=`
+        <section class="feature-panel" style="max-width:430px;margin:0 auto;padding:14px 12px;text-align:center;">
+          <h2 style="margin:0 0 6px;font-size:22px;">🌱 ปลูกในแปลง Take Over</h2>
+          <p style="margin:0 0 10px;font-size:13px;">เหลือเวลา ${remainText}</p>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-height:52vh;overflow:auto;">
+            ${choices}
+          </div>
+        </section>`;
+      document.querySelectorAll("[data-v178-plant]").forEach(b=>{
+        b.onclick=()=>plantTakeover(index,b.dataset.v178Plant);
+      });
+      openModal();
+      return true;
+    }
+
+    if(p.phase==="ready"){
+      takeoverPlotTap=index=>false;
+      // use the already-correct harvest path from V177/V176
+      (async()=>{
+        try{
+          const crop=p.crop,qty=p.angel?10:1;
+          const {db,fs}=await getFirebaseContext();
+          const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+          const sRef=fs.doc(db,"saves",currentMemberKey);
+          let ownNext,plots;
+          await fs.runTransaction(db,async tx=>{
+            const [g,o]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+            plots=(g.data().plots||[]).map(normalizePlot);
+            const q=plots[index];ensurePlotPhase(q);
+            if(!q?.takeover||q.takeover.by!==currentMemberKey||Number(q.takeover.until)<=gameNow()||q.phase!=="ready")
+              throw new Error("แปลงนี้ไม่พร้อมเก็บ");
+            const own=normalizeState(o.data(),currentMember);
+            own.bag[crop]=(Number(own.bag[crop])||0)+qty;
+            plots[index]={...emptyPlot(),takeover:q.takeover};
+            ownNext=own;
+            tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+            tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+          });
+          Y26_applyOwnState(ownNext);
+          state.plots=plots.map(normalizePlot);
+          closeModal();draw();
+          showWeatherToast(`🌾 เก็บ ${CROPS[crop].name} ×${qty} เข้ากระเป๋าคุณแล้ว`);
+        }catch(e){message("เก็บไม่ได้",e.message||"กรุณาลองใหม่")}
+      })();
+      return true;
+    }
+
+    const own=ownState||state;
+    const angelCount=Number(own?.specials?.angelWingCapsule||0);
+    const boosts=yn178BoostItems();
+
+    const angelBtn=(!p.angel && angelCount>0)
+      ?`<button id="v178Angel" type="button" class="primary-spooky-action"
+          style="min-height:42px;border-radius:12px;">🪽 ใช้ปีกนางฟ้า • มี ×${angelCount}</button>`:"";
+
+    const waterBtn=p.phase==="needsWater"
+      ?`<button id="v178Water" type="button" class="primary-spooky-action"
+          style="min-height:42px;border-radius:12px;">💧 รดน้ำแปลงนี้</button>`:"";
+
+    const wormBtn=p.phase==="worm"
+      ?`<button id="v178Worm" type="button" class="danger-action"
+          style="min-height:42px;border-radius:12px;">🪱 กำจัดหนอน</button>`:"";
+
+    const boostHtml=boosts.length?`
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:34vh;overflow:auto;">
+        ${boosts.map(([k,it])=>`
+          <button type="button" data-v178-boost="${k}"
+            style="display:grid;grid-template-columns:44px 1fr;align-items:center;gap:7px;padding:7px;border:1px solid #d8b98f;border-radius:12px;background:#f7e7c9;color:#4f3558;text-align:left;">
+            <img src="${it.image}" alt="${safeHtml(it.name)}"
+              style="width:42px;height:42px;object-fit:contain;background:transparent;">
+            <span style="font-size:11px;font-weight:800;">${safeHtml(it.name)}
+              <small style="display:block;font-size:9px;font-weight:600;opacity:.78;">
+                เร่งโต ${it.boost}% • มี ×${Number(own?.specials?.[k]||0)}
+              </small>
+            </span>
+          </button>`).join("")}
+      </div>`:"";
+
+    $("modalContent").innerHTML=`
+      <section class="feature-panel" style="max-width:430px;margin:0 auto;padding:14px 12px;text-align:center;">
+        <h2 style="margin:0 0 6px;font-size:22px;">📜 แปลง Take Over</h2>
+        <p style="margin:0 0 10px;font-size:13px;">แปลงนี้เป็นสิทธิ์ของคุณชั่วคราว • เหลือ ${remainText}</p>
+        <div style="display:grid;gap:8px;">
+          ${waterBtn}
+          ${wormBtn}
+          ${angelBtn}
+          ${boostHtml}
+        </div>
+      </section>`;
+
+    if($("v178Water"))$("v178Water").onclick=()=>{closeModal();takeoverWater(index)};
+    if($("v178Worm"))$("v178Worm").onclick=()=>{closeModal();takeoverClearWorm(index)};
+    if($("v178Angel"))$("v178Angel").onclick=()=>takeoverUseAngel(index);
+    document.querySelectorAll("[data-v178-boost]").forEach(b=>{
+      b.onclick=()=>takeoverUseBoost(index,b.dataset.v178Boost);
+    });
+
+    openModal();
+    return true;
+  }
+
+  // Direct replacement: any older code that calls takeoverPlotTap now gets V178.
+  takeoverPlotTap = async function(index){
+    return yn178Modal(index);
+  };
+
+  // Final plot interceptor.
+  tapPlot = async function(index){
+    if(visitContext){
+      const p=state?.plots?.[index];
+      if(yn178Mine(p))return yn178Modal(index);
+    }
+    return _yn178_oldTapPlot(index);
+  };
+
+  // Force all deed overlays to the new file.
+  const _yn178_draw=draw;
+  draw=function(){
+    const r=_yn178_draw();
+    document.querySelectorAll(".ynu-deed-overlay").forEach(img=>{
+      img.src="land-deed.png?v=178";
+      img.style.background="transparent";
+      img.style.objectFit="contain";
+    });
+    return r;
+  };
+
+  window.YAINOO_BUILD="V178";
+})();
+
