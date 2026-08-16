@@ -11500,7 +11500,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const DAY=24*60*60*1000, HOUR=60*60*1000, MIN=60*1000;
   const SATAN_KEY="satanWings", DEED_KEY="landDeed", ANGEL_KEY="angelWingCapsule";
   const SATAN_ITEM={name:"ปีกซาตาน",image:"item-satan-wings.png?v=1",price:99};
-  const DEED_ITEM={name:"โฉนดที่ดินขอคืนวัดได้บ่",image:"item-land-deed.png?v=1",price:129};
+  const DEED_ITEM={name:"โฉนดที่ดินขอคืนวัดได้บ่",image:"land-deed.png?v=177",price:129};
   const DAILY_KEY=()=>currentBangkokDateKey();
   const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
   function esc(s){return typeof safeHtml==="function"?safeHtml(String(s??"")):String(s??"")}
@@ -12382,6 +12382,290 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const x=jelly2Cache?.slots?.[i];
       if(x&&Number(x.version)===1&&Number(x.feedCount||0)>=5)j2Details(i,x);
     }catch(e){console.warn("V172 pond2 refresh",e)}
+  };
+})();
+
+
+
+/* =====================================================================
+   V177 FINAL TAKE OVER RESTORE
+   - Always intercept my active Take Over before older plot handlers.
+   - Supports legacy takeover records where by/byName used an older identity form.
+   - Restores compact action modal: water / angel / boost / worm / harvest / plant.
+   ===================================================================== */
+(function YN_V177_TAKEOVER_FINAL(){
+  const HOUR177=60*60*1000, MIN177=60*1000;
+  const ANGEL177="angelWingCapsule";
+
+  function yn177Esc(v){
+    return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"");
+  }
+  function yn177Fmt(ms){
+    const t=Math.max(0,Math.ceil(Number(ms||0)/1000));
+    const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;
+    return h>0
+      ?`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
+      :`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+  function yn177Mine(p){
+    if(!p?.takeover||Number(p.takeover.until||0)<=gameNow())return false;
+    const candidates=[
+      currentMemberKey,
+      currentMember,
+      (typeof currentProfileDisplayName==="function"?currentProfileDisplayName():"")
+    ].filter(Boolean).map(v=>String(v).trim().toLowerCase());
+    const stored=[p.takeover.by,p.takeover.byName]
+      .filter(Boolean).map(v=>String(v).trim().toLowerCase());
+    return stored.some(v=>candidates.includes(v));
+  }
+  function yn177BoostItems(){
+    const own=ownState||state, merged={};
+    if(typeof CAKE_ITEMS!=="undefined")Object.assign(merged,CAKE_ITEMS);
+    if(typeof COCONUT_ITEMS!=="undefined")Object.assign(merged,COCONUT_ITEMS);
+    if(typeof SPECIAL_ITEMS!=="undefined"){
+      for(const [k,v] of Object.entries(SPECIAL_ITEMS))
+        if(Number(v?.boost)>0)merged[k]=v;
+    }
+    return Object.entries(merged)
+      .filter(([k,it])=>Number(it?.boost)>0&&Number(own?.specials?.[k]||0)>0);
+  }
+
+  async function yn177Water(index){
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      let plots;
+      await fs.runTransaction(db,async tx=>{
+        const g=await tx.get(gRef);
+        if(!g.exists())throw new Error("ข้อมูลแปลงไม่พร้อม");
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const p=plots[index];
+        if(!yn177Mine(p))throw new Error("สิทธิ์ Take Over หมดแล้ว");
+        ensurePlotPhase(p);
+        if(p.phase!=="needsWater")throw new Error("แปลงนี้ยังไม่ต้องรดน้ำ");
+        const c=CROPS[p.crop],now=gameNow();
+        p.wateredAt=now;
+        if(Math.random()<Number(c.wormChance||0)){
+          p.phase="worm";p.worm=true;p.phaseEndsAt=0;
+        }else{
+          p.phase="growing2";p.worm=false;
+          p.phaseEndsAt=now+Math.max(MIN177,c.totalMs-c.waterMs);
+        }
+        plots[index]=p;
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      state.plots=plots.map(normalizePlot);closeModal();draw();
+      showWeatherToast("💧 รดน้ำแปลง Take Over แล้ว");
+    }catch(e){message("รดน้ำไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function yn177Angel(index){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      let plots,next;
+      await fs.runTransaction(db,async tx=>{
+        const [g,ss]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+        if(!g.exists()||!ss.exists())throw new Error("ข้อมูลไม่พร้อม");
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const p=plots[index];ensurePlotPhase(p);
+        if(!yn177Mine(p))throw new Error("สิทธิ์ Take Over หมดแล้ว");
+        if(!p.crop)throw new Error("แปลงนี้ยังไม่ได้ปลูก");
+        if(p.angel)throw new Error("แปลงนี้มีปีกนางฟ้าอยู่แล้ว");
+        const own=normalizeState(ss.data(),currentMember);
+        if(Number(own.specials?.[ANGEL177]||0)<1)throw new Error("แคปซูลปีกนางฟ้าหมดแล้ว");
+        p.angel=true;own.specials[ANGEL177]-=1;plots[index]=p;next=own;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(own);
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();
+      showWeatherToast("🪽 ใช้ปีกนางฟ้ากับแปลง Take Over แล้ว • ผลผลิต ×10");
+    }catch(e){message("ใช้ปีกนางฟ้าไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function yn177Boost(index,key){
+    try{
+      const item=(SPECIAL_ITEMS||{})[key]
+        ||(typeof CAKE_ITEMS!=="undefined"?CAKE_ITEMS[key]:null)
+        ||(typeof COCONUT_ITEMS!=="undefined"?COCONUT_ITEMS[key]:null);
+      if(!item||!Number(item.boost))throw new Error("ไม่พบไอเท็มเร่งโต");
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      let plots,next;
+      await fs.runTransaction(db,async tx=>{
+        const [g,ss]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+        if(!g.exists()||!ss.exists())throw new Error("ข้อมูลไม่พร้อม");
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const p=plots[index];ensurePlotPhase(p);
+        if(!yn177Mine(p))throw new Error("สิทธิ์ Take Over หมดแล้ว");
+        if(!p.crop)throw new Error("แปลงนี้ยังไม่ได้ปลูก");
+        const own=normalizeState(ss.data(),currentMember);
+        if(Number(own.specials?.[key]||0)<1)throw new Error("ไอเท็มเร่งโตชิ้นนี้หมดแล้ว");
+        if(Number(item.boost)>=100){
+          p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType;
+        }else{
+          if(p.phase==="needsWater")throw new Error("กรุณารดน้ำก่อน แล้วจึงใช้ไอเท็มเร่งโต");
+          if(p.phase!=="growing1"&&p.phase!=="growing2")throw new Error("พืชสถานะนี้ยังเร่งโตไม่ได้");
+          const rem=Math.max(0,Number(p.phaseEndsAt||0)-gameNow());
+          p.phaseEndsAt=gameNow()+Math.max(1000,Math.round(rem*(1-Number(item.boost)/100)));
+          ensurePlotPhase(p);
+        }
+        own.specials[key]-=1;plots[index]=p;next=own;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(own);
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();
+      showWeatherToast(`⚡ ใช้ ${item.name} กับแปลง Take Over แล้ว • เร่งโต ${item.boost}%`);
+    }catch(e){message("ใช้ไอเท็มเร่งโตไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function yn177Worm(index){
+    const p=state?.plots?.[index];
+    const giant=typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant";
+    const cost=giant?12:5;
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      let plots,next;
+      await fs.runTransaction(db,async tx=>{
+        const [g,ss]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const q=plots[index];
+        if(!yn177Mine(q)||q.phase!=="worm")throw new Error("แปลงนี้ไม่มีหนอนแล้ว");
+        const own=normalizeState(ss.data(),currentMember);
+        if(Number(own.specials?.wormKillerSpray||0)<cost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${cost} ขวด`);
+        own.specials.wormKillerSpray-=cost;
+        const c=CROPS[q.crop];
+        q.phase="growing2";q.worm=false;delete q.wormType;
+        q.phaseEndsAt=gameNow()+Math.max(MIN177,c.totalMs-c.waterMs);
+        plots[index]=q;next=own;
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();
+      showWeatherToast(`🪱 กำจัดหนอนแปลง Take Over แล้ว • ใช้ ${cost} ขวด`);
+    }catch(e){message("กำจัดไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function yn177Harvest(index){
+    try{
+      const p0=state.plots[index],crop=p0.crop,qty=p0.angel?10:1;
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      let plots,next;
+      await fs.runTransaction(db,async tx=>{
+        const [g,ss]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const q=plots[index];ensurePlotPhase(q);
+        if(!yn177Mine(q)||q.phase!=="ready")throw new Error("แปลงนี้ไม่พร้อมเก็บ");
+        const own=normalizeState(ss.data(),currentMember);
+        own.bag[crop]=(Number(own.bag[crop])||0)+qty;
+        plots[index]={...emptyPlot(),takeover:q.takeover};next=own;
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();
+      showWeatherToast(`🌾 เก็บ ${CROPS[crop].name} ×${qty} เข้ากระเป๋าคุณแล้ว`);
+    }catch(e){message("เก็บไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function yn177Plant(index,key){
+    const c=CROPS[key];if(!c)return;
+    const cost=Number(c.seedCostMerit)||0;
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",visitContext.memberKey);
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      const pRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let plots,next;
+      await fs.runTransaction(db,async tx=>{
+        const [g,ss]=await Promise.all([tx.get(gRef),tx.get(sRef)]);
+        plots=(g.data().plots||[]).map(normalizePlot);
+        const p=plots[index];
+        if(!yn177Mine(p)||p.crop)throw new Error("แปลงนี้ใช้ไม่ได้แล้ว");
+        const own=normalizeState(ss.data(),currentMember);
+        if(cost&&Number(own.merit||0)<cost)throw new Error(`${c.name} ใช้ ${cost} กุศล / 1 เมล็ด`);
+        if(cost)own.merit-=cost;
+        const now=gameNow();
+        plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel:false,takeover:p.takeover};
+        next=own;
+        tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        if(cost)tx.set(pRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:own.merit,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();updateMeritUI();
+      showWeatherToast(`🌱 ปลูก ${c.name} ในแปลง Take Over แล้ว`);
+    }catch(e){message("ปลูกไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  function yn177Open(index){
+    const p=state?.plots?.[index];
+    if(!yn177Mine(p))return false;
+    if(p.crop){
+      ensurePlotPhase(p);
+      if(p.phase==="ready"){yn177Harvest(index);return true}
+      const own=ownState||state;
+      const angelCount=Number(own?.specials?.[ANGEL177]||0);
+      const boosts=yn177BoostItems();
+      const angelBtn=!p.angel&&angelCount>0
+        ?`<button id="yn177Angel" class="primary-spooky-action">🪽 ใช้ปีกนางฟ้า • มี ×${angelCount}</button>`:"";
+      const boostHtml=boosts.length
+        ?`<div class="yn177-take-boost-grid">${boosts.map(([k,it])=>`
+           <button data-yn177-boost="${k}" type="button">
+             <img src="${it.image}" alt="${yn177Esc(it.name)}">
+             <span>${yn177Esc(it.name)}<small>เร่งโต ${it.boost}% • มี ×${Number(own?.specials?.[k]||0)}</small></span>
+           </button>`).join("")}</div>`:"";
+      const water=p.phase==="needsWater"
+        ?`<button id="yn177Water" class="primary-spooky-action">💧 รดน้ำแปลงนี้</button>`:"";
+      const worm=p.phase==="worm"
+        ?`<button id="yn177Worm" class="danger-action">🪱 กำจัดหนอน</button>`:"";
+      $("modalContent").innerHTML=`<section class="feature-panel yn177-take-panel">
+        <h2>📜 แปลง Take Over</h2>
+        <p>แปลงนี้เป็นสิทธิ์ของคุณชั่วคราว • เหลือ ${yn177Fmt(p.takeover.until-gameNow())}</p>
+        <div class="yn177-take-actions">${water}${worm}${angelBtn}${boostHtml}</div>
+      </section>`;
+      if($("yn177Water"))$("yn177Water").onclick=()=>yn177Water(index);
+      if($("yn177Worm"))$("yn177Worm").onclick=()=>yn177Worm(index);
+      if($("yn177Angel"))$("yn177Angel").onclick=()=>yn177Angel(index);
+      document.querySelectorAll("[data-yn177-boost]").forEach(b=>b.onclick=()=>yn177Boost(index,b.dataset.yn177Boost));
+      openModal();return true;
+    }
+
+    const choices=Object.entries(CROPS).map(([k,c])=>`
+      <button data-yn177-plant="${k}" type="button">
+        <img src="${c.selectImg}" alt="${yn177Esc(c.name)}"><span>${yn177Esc(c.name)}</span>
+      </button>`).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel yn177-take-panel">
+      <h2>🌱 ปลูกในแปลง Take Over</h2>
+      <p>เหลือเวลา ${yn177Fmt(p.takeover.until-gameNow())}</p>
+      <div class="yn177-seed-grid">${choices}</div>
+    </section>`;
+    document.querySelectorAll("[data-yn177-plant]").forEach(b=>b.onclick=()=>yn177Plant(index,b.dataset.yn177Plant));
+    openModal();return true;
+  }
+
+  const prevTap177=tapPlot;
+  tapPlot=async function(index){
+    if(visitContext&&yn177Open(index))return true;
+    return prevTap177(index);
+  };
+
+  /* Replace old deed images already drawn by earlier render wrappers. */
+  const prevDraw177=draw;
+  draw=function(){
+    const r=prevDraw177();
+    document.querySelectorAll(".ynu-deed-overlay").forEach(img=>img.src="land-deed.png?v=177");
+    return r;
   };
 })();
 
