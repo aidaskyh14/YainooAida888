@@ -2370,30 +2370,96 @@ function friendlyGhostReward(){
 }
 
 async function showMissions(){
-  if(guardResting())return;const target=ownState||state;if(ensureMissionStateFor(target))save();
+  if(guardResting())return;
+  const target=ownState||state;
+  if(ensureMissionStateFor(target))save();
+
+  let fishingToday=null;
+  try{
+    if(cloudReady&&currentMemberKey){
+      const {db,fs}=await getFirebaseContext();
+      const dateKey=currentBangkokDateKey();
+      const snap=await fs.getDoc(fs.doc(db,"fishingDaily",dateKey));
+      fishingToday=Number(Number(snap.exists()?snap.data()?.scores?.[currentMemberKey]||0:0).toFixed(2));
+
+      /* Keep save progress repaired too, but the UI below does NOT depend on it. */
+      ensureMissionStateFor(target);
+      target.missions.progress.fishingWeight200=fishingToday;
+      target.missions.progress.fishingWeight800=fishingToday;
+      save();
+    }
+  }catch(e){
+    console.warn("mission fishing dashboard read",e);
+  }
+
   const defs=missionDefs(),m=target.missions;
-  $("modalContent").innerHTML=`<section class="feature-panel mission-panel"><h2>👻 ภารกิจประจำวัน</h2><p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. ตามเวลาไทย</p><div class="mission-list">${defs.map((def,index)=>{const progress=Math.min(def.target,Number(m.progress[def.id])||0),done=progress>=def.target,claimed=Boolean(m.claimed[def.id]);return `<div class="mission-item mission-item-v1"><span class="mission-number">${index+1}</span><span class="mission-text"><b>${safeHtml(def.title)}</b><small>${progress}/${def.target} • รางวัล ${def.reward} กุศล</small></span><button type="button" data-claim-mission="${def.id}" ${!done||claimed?"disabled":""}>${claimed?"รับแล้ว":done?"รับรางวัล":"กำลังทำ"}</button></div>`}).join("")}</div></section>`;
-  document.querySelectorAll("[data-claim-mission]").forEach(btn=>btn.onclick=()=>claimMissionReward(btn.dataset.claimMission));openModal();
+  $("modalContent").innerHTML=`<section class="feature-panel mission-panel"><h2>👻 ภารกิจประจำวัน</h2><p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. ตามเวลาไทย</p><div class="mission-list">${
+    defs.map((def,index)=>{
+      const rawProgress=(def.id==="fishingWeight200"||def.id==="fishingWeight800") && fishingToday!==null
+        ? fishingToday
+        : Number(m.progress[def.id])||0;
+      const progress=Math.min(def.target,rawProgress);
+      const done=rawProgress>=def.target;
+      const claimed=Boolean(m.claimed[def.id]);
+      const display=(def.id==="fishingWeight200"||def.id==="fishingWeight800")
+        ? `${Number(rawProgress).toFixed(2)}/${def.target}`
+        : `${progress}/${def.target}`;
+      return `<div class="mission-item mission-item-v1"><span class="mission-number">${index+1}</span><span class="mission-text"><b>${safeHtml(def.title)}</b><small>${display} • รางวัล ${def.reward} กุศล</small></span><button type="button" data-claim-mission="${def.id}" ${!done||claimed?"disabled":""}>${claimed?"รับแล้ว":done?"รับรางวัล":"กำลังทำ"}</button></div>`;
+    }).join("")
+  }</div></section>`;
+
+  document.querySelectorAll("[data-claim-mission]").forEach(btn=>btn.onclick=()=>claimMissionReward(btn.dataset.claimMission));
+  openModal();
 }
 async function claimMissionReward(id){
   if(!cloudReady){message("ยังรับรางวัลไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
   const def=missionDefs().find(m=>m.id===id);if(!def)return;
   try{
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    const isFishing=id==="fishingWeight200"||id==="fishingWeight800";
+    const dateKey=currentBangkokDateKey();
+    const dailyRef=isFishing?fs.doc(db,"fishingDaily",dateKey):null;
     let nextState;
+
     await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember);ensureMissionStateFor(s);
+      const sSnap=await tx.get(ref);
+      if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sSnap.data(),currentMember);
+      ensureMissionStateFor(s);
+
+      let actualProgress=Number(s.missions.progress[id])||0;
+
+      if(isFishing){
+        const dSnap=await tx.get(dailyRef);
+        const dashboardWeight=Number(Number(dSnap.exists()?dSnap.data()?.scores?.[currentMemberKey]||0:0).toFixed(2));
+
+        /* Dashboard is authoritative for both fishing missions. */
+        s.missions.progress.fishingWeight200=dashboardWeight;
+        s.missions.progress.fishingWeight800=dashboardWeight;
+        actualProgress=dashboardWeight;
+      }
+
+      if(actualProgress<def.target)throw new Error("ภารกิจยังไม่สำเร็จ");
       if(s.missions.claimed[id])throw new Error("รับรางวัลภารกิจนี้แล้ว");
-      if((Number(s.missions.progress[id])||0)<def.target)throw new Error("ภารกิจยังไม่สำเร็จ");
-      s.missions.claimed[id]=true;s.merit=(Number(s.merit)||0)+Number(def.reward||0);nextState=s;
-      tx.set(ref,{...cloneData(s),updatedAt:fs.serverTimestamp()},{merge:false});
+
+      s.missions.claimed[id]=true;
+      s.merit=Number(s.merit||0)+Number(def.reward||0);
+      nextState=s;
+
+      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
       tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
     });
-    ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;updateMeritUI();showMissions();showWeatherToast(`🙏 รับ +${def.reward} กุศลแล้ว`);
-  }catch(error){message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่")}
-}
 
+    ownState=normalizeState(nextState,currentMember);
+    if(!visitContext)state=ownState;
+    updateMeritUI();
+    showMissions();
+    showWeatherToast(`🙏 รับ +${def.reward} กุศลแล้ว`);
+  }catch(error){
+    message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่");
+  }
+}
 function animalIsExpired(animal){return Boolean(animal&&gameNow()>=Number(animal.expiresAt||0))}
 function animalPlacedCount(type,s=ownState||state){return Array.isArray(s?.animals?.[type])?s.animals[type].filter(Boolean).length:0}
 function animalCapacityUsed(type,s=ownState||state){return animalPlacedCount(type,s)+(Number(s?.pendingAnimals?.[type])||0)+(Number(s?.purchasePendingCounts?.[type])||0)}
@@ -12794,16 +12860,450 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
 
   /* Also reconcile shortly after login so affected players do not need
      to catch another fish before today's mission is repaired. */
-  const v182StartBase=start;
-  start=async function(...args){
-    const r=await v182StartBase.apply(this,args);
-    setTimeout(()=>v182SyncFishingMissionFromDashboard().catch(()=>{}),1200);
+  /* V183: no login-time fishing mission overwrite.
+     Mission UI and reward claim read today's dashboard directly. */
+
+  window.YAINOO_BUILD="V182-FISHING-MISSION-SYNC";
+})();
+
+
+/* V183: Fishing missions display and reward validation use fishingDaily as source of truth. */
+window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
+
+
+/* ======================================================================
+   V184 — TRACTOR HARD FIX
+   Goal: make the tractor reliable for every member, even when an older
+   queued cloud save is stuck/failed. The tractor uses authoritative DB
+   state and a dedicated lock instead of inheriting an old tractorBusy flag.
+   ====================================================================== */
+(function YN_V184_TRACTOR_HARDFIX(){
+  let v184TractorRunning=false;
+  let v184Watchdog=0;
+
+  function v184ResetTractorButton(){
+    const btn=$("tractorBtn");
+    if(!btn)return;
+    if(!v184TractorRunning)btn.disabled=false;
+    btn.onclick=()=>{
+      if(typeof V29_setTools==="function")V29_setTools(false);
+      return v184RunTractor();
+    };
+  }
+
+  async function v184DrainOldSave(){
+    /* Cancel a not-yet-started stale save. The tractor transaction reads the
+       latest Firestore save itself and writes the full resulting state. */
+    if(typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer){
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer=null;
+    }
+
+    /* If a save is already in flight, wait briefly. Do not let one stuck
+       network write freeze the tractor forever. */
+    if(typeof cloudSaveInFlight!=="undefined"&&cloudSaveInFlight){
+      try{
+        await Promise.race([
+          cloudSaveInFlight,
+          new Promise(resolve=>setTimeout(resolve,2500))
+        ]);
+      }catch{}
+    }
+  }
+
+  async function v184RunTractor(){
+    if(v184TractorRunning)return;
+    if(visitContext)return message("🚜 รถไถใช้ไม่ได้","รถไถใช้ได้เฉพาะสวนของตัวเองค่ะ");
+    if(guardResting())return;
+    if(!cloudReady||!currentMemberKey)
+      return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล กรุณารอสักครู่แล้วกดอีกครั้ง");
+
+    v184TractorRunning=true;
+    tractorBusy=true;
+    const btn=$("tractorBtn");
+    if(btn)btn.disabled=true;
+    showTractorWorking();
+
+    /* Safety watchdog: never leave the button permanently disabled. */
+    clearTimeout(v184Watchdog);
+    v184Watchdog=setTimeout(()=>{
+      if(!v184TractorRunning)return;
+      v184TractorRunning=false;
+      tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+      console.warn("V184 tractor watchdog released UI");
+    },12000);
+
+    try{
+      await v184DrainOldSave();
+
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const start=page*12;
+
+      let next=null,newPlots=null,summary={},totalPlots=0;
+
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([
+          tx.get(saveRef),
+          tx.get(gardenRef)
+        ]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+        const s=normalizeState(sSnap.data(),currentMember);
+        const rawPlots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))
+          ?gSnap.data().plots
+          :s.plots;
+        const plots=(Array.isArray(rawPlots)?rawPlots:[]).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+        for(let i=start;i<Math.min(start+12,PLOT_COUNT);i++){
+          const p=plots[i];
+          if(!p)continue;
+          ensurePlotPhaseStandalone(p);
+
+          /* Owner may not harvest an active Take Over owned by somebody else. */
+          if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)
+            continue;
+          if(!p.crop||p.phase!=="ready")continue;
+
+          const key=p.crop;
+          const qty=p.angel?10:1;
+          grantHarvestYield(s,key,qty);
+          summary[key]=(summary[key]||0)+qty;
+          plots[i]=emptyPlot();
+          totalPlots++;
+        }
+
+        if(!totalPlots)
+          throw new Error(`ฟาร์ม ${page+1} ยังไม่มีพืชที่พร้อมเก็บเกี่ยว`);
+
+        incrementMissionOn(s,"harvestCrops",totalPlots);
+        s.plots=plots.map(normalizePlot);
+        next=s;
+        newPlots=s.plots;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        tx.set(gardenRef,{
+          memberKey:currentMemberKey,
+          displayName:currentProfileDisplayName(),
+          plots:cloneData(s.plots),
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      });
+
+      Y26_applyOwnState(next);
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      lastGardenHash=plotHash(newPlots);
+      saveLocalOnly(ownState);
+      draw();
+
+      /* Campaign scoring is deliberately secondary. It can fail without
+         cancelling harvested crops or inventory. */
+      if(typeof V181_campaignScoreLater==="function"){
+        try{V181_campaignScoreLater(summary)}catch{}
+      }
+
+      const rows=Object.entries(summary)
+        .map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`)
+        .join("<br>");
+      message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows||`เก็บ ${totalPlots} แปลงเรียบร้อย`);
+    }catch(error){
+      console.error("V184 tractor",error);
+      message("🚜 รถไถยังไม่ออก",error?.message||"กรุณาลองใหม่");
+    }finally{
+      clearTimeout(v184Watchdog);
+      v184Watchdog=0;
+      v184TractorRunning=false;
+      tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+      /* Rebind in case any older wrapper touched the handler while running. */
+      setTimeout(v184ResetTractorButton,0);
+    }
+  }
+
+  /* Rebind now and whenever the page becomes active again. */
+  v184ResetTractorButton();
+  window.addEventListener("pageshow",v184ResetTractorButton);
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden)v184ResetTractorButton();
+  });
+
+  /* draw() is called after farm-page changes. Keep the button healthy. */
+  const v184DrawBase=draw;
+  draw=function(){
+    const r=v184DrawBase();
+    v184ResetTractorButton();
     return r;
   };
 
-  /* start button may already have been bound to the previous start function. */
-  if($("startBtn"))$("startBtn").onclick=start;
+  window.YAINOO_BUILD="V184-TRACTOR-HARDFIX";
+})();
 
-  window.YAINOO_BUILD="V182-FISHING-MISSION-SYNC";
+
+
+/* ======================================================================
+   V186 — FISHING WEIGHT: ONE SOURCE FOR EVERY MEMBER
+   Dashboard + Mission must resolve the SAME member key and SAME daily DB doc.
+   ====================================================================== */
+(function YN_V186_FISHING_ALL_MEMBERS(){
+  function v186NormName(v){
+    return String(v||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+  }
+
+  function v186CanonicalMemberKey(){
+    /* The dashboard itself is built from memberKeyFromName(MEMBERS name).
+       Use the exact same rule for the logged-in member. */
+    const fromName=memberKeyFromName(currentMember||"");
+    if(fromName && fromName!=="member") return fromName;
+    if(currentMemberKey) return String(currentMemberKey);
+    return "";
+  }
+
+  function v186ResolveOwnKey(daily){
+    const scores=(daily&&daily.scores&&typeof daily.scores==="object")?daily.scores:{};
+    const names=(daily&&daily.names&&typeof daily.names==="object")?daily.names:{};
+
+    const candidates=[
+      v186CanonicalMemberKey(),
+      String(currentMemberKey||""),
+      v186NormName(currentMember||"")
+    ].filter(Boolean);
+
+    for(const key of candidates){
+      if(Object.prototype.hasOwnProperty.call(scores,key)) return key;
+    }
+
+    /* Repair old daily documents whose key was written differently:
+       resolve by the saved display name, then use that row's score. */
+    const wantedName=v186NormName(currentMember||"");
+    for(const [key,name] of Object.entries(names)){
+      if(v186NormName(name)===wantedName) return key;
+    }
+
+    return v186CanonicalMemberKey();
+  }
+
+  async function v186GetDaily(){
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"fishingDaily",currentBangkokDateKey());
+    let snap=null;
+
+    /* Prefer server so nobody sees a stale local/cache value. */
+    if(typeof fs.getDocFromServer==="function"){
+      try{ snap=await fs.getDocFromServer(ref); }catch{}
+    }
+    if(!snap) snap=await fs.getDoc(ref);
+
+    return {
+      db,fs,ref,
+      data:snap.exists()?snap.data():{dateKey:currentBangkokDateKey(),scores:{},names:{},ponds:{}}
+    };
+  }
+
+  async function v186OwnFishingWeight(){
+    const {data}=await v186GetDaily();
+    const key=v186ResolveOwnKey(data);
+    return {
+      key,
+      weight:Number(Number(data?.scores?.[key]||0).toFixed(2)),
+      daily:data
+    };
+  }
+
+  async function v186RepairSavedMission(weight){
+    if(!cloudReady||!currentMemberKey||!ownState)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      let next=null;
+
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(saveRef);
+        if(!ss.exists())return;
+        const s=normalizeState(ss.data(),currentMember);
+        ensureMissionStateFor(s);
+
+        const w=Number(Number(weight||0).toFixed(2));
+        const a=Number(s.missions.progress.fishingWeight200||0);
+        const b=Number(s.missions.progress.fishingWeight800||0);
+        if(Math.abs(a-w)<0.005 && Math.abs(b-w)<0.005){
+          next=s; return;
+        }
+
+        s.missions.progress.fishingWeight200=w;
+        s.missions.progress.fishingWeight800=w;
+        next=s;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+      });
+
+      if(next){
+        Y26_applyOwnState(next);
+        if(!visitContext)state=ownState;
+      }
+    }catch(e){
+      console.warn("V186 repair fishing mission save",e);
+    }
+  }
+
+  showMissions=async function(){
+    if(guardResting())return;
+
+    const target=ownState||state;
+    if(ensureMissionStateFor(target))save();
+
+    let fishWeight=null;
+    let fishError=false;
+
+    try{
+      if(cloudReady&&currentMemberKey){
+        const result=await v186OwnFishingWeight();
+        fishWeight=result.weight;
+        /* Repair is secondary. UI never waits on this write. */
+        v186RepairSavedMission(fishWeight);
+      }
+    }catch(e){
+      fishError=true;
+      console.warn("V186 fishing mission source",e);
+    }
+
+    const defs=missionDefs(),m=target.missions;
+
+    $("modalContent").innerHTML=`<section class="feature-panel mission-panel">
+      <h2>👻 ภารกิจประจำวัน</h2>
+      <p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. ตามเวลาไทย</p>
+      <div class="mission-list">${
+        defs.map((def,index)=>{
+          const isFish=def.id==="fishingWeight200"||def.id==="fishingWeight800";
+          const local=Number(m.progress[def.id])||0;
+          const raw=isFish ? fishWeight : local;
+          const claimed=Boolean(m.claimed[def.id]);
+          const done=raw!==null && Number(raw)>=Number(def.target);
+
+          const display=isFish
+            ? (raw===null
+                ? "กำลังอ่านน้ำหนักจาก Dashboard..."
+                : `${Number(raw).toFixed(2)}/${def.target}`)
+            : `${Math.min(def.target,local)}/${def.target}`;
+
+          return `<div class="mission-item mission-item-v1">
+            <span class="mission-number">${index+1}</span>
+            <span class="mission-text">
+              <b>${safeHtml(def.title)}</b>
+              <small>${display} • รางวัล ${def.reward} กุศล</small>
+            </span>
+            <button type="button" data-claim-mission="${def.id}"
+              ${!done||claimed?"disabled":""}>
+              ${claimed?"รับแล้ว":done?"รับรางวัล":"กำลังทำ"}
+            </button>
+          </div>`;
+        }).join("")
+      }</div>
+      ${fishError?'<p class="feature-subtitle">⚠️ อ่านน้ำหนักจาก Dashboard ไม่สำเร็จ กรุณาปิดแล้วเปิดภารกิจใหม่</p>':""}
+    </section>`;
+
+    document.querySelectorAll("[data-claim-mission]")
+      .forEach(btn=>btn.onclick=()=>claimMissionReward(btn.dataset.claimMission));
+
+    openModal();
+  };
+
+  /* Fishing mission reward must validate against the same DB row too. */
+  const v186OldClaimMission=claimMissionReward;
+  claimMissionReward=async function(id){
+    if(id!=="fishingWeight200" && id!=="fishingWeight800")
+      return v186OldClaimMission(id);
+
+    if(!cloudReady)return message("ยังรับรางวัลไม่ได้","กรุณาเชื่อม Firebase ก่อน");
+    const def=missionDefs().find(m=>m.id===id);
+    if(!def)return;
+
+    try{
+      const result=await v186OwnFishingWeight();
+      const actual=Number(result.weight||0);
+      if(actual<Number(def.target))
+        throw new Error(`น้ำหนักวันนี้ ${actual.toFixed(2)} lbs ยังไม่ถึงเป้าหมาย`);
+
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next=null;
+
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(saveRef);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        ensureMissionStateFor(s);
+
+        /* Re-check mission values from the SAME authoritative weight. */
+        s.missions.progress.fishingWeight200=actual;
+        s.missions.progress.fishingWeight800=actual;
+
+        if(s.missions.claimed[id])throw new Error("รับรางวัลภารกิจนี้แล้ว");
+        if(actual<Number(def.target))throw new Error("ภารกิจยังไม่สำเร็จ");
+
+        s.missions.claimed[id]=true;
+        s.merit=Number(s.merit||0)+Number(def.reward||0);
+        next=s;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        tx.set(profileRef,{
+          memberKey:currentMemberKey,
+          displayName:currentProfileDisplayName(),
+          merit:s.merit,
+          initialized:true,
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      });
+
+      Y26_applyOwnState(next);
+      if(!visitContext)state=ownState;
+      updateMeritUI();
+      showWeatherToast(`🙏 รับ +${def.reward} กุศลแล้ว`);
+      return showMissions();
+    }catch(error){
+      message("รับรางวัลไม่ได้",error?.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* Every path to the mission screen must use the newest function. */
+  function v186BindMission(){
+    if($("missionsNavBtn"))$("missionsNavBtn").onclick=()=>showMissions();
+  }
+  v186BindMission();
+
+  const v186Draw=draw;
+  draw=function(){
+    const r=v186Draw();
+    v186BindMission();
+    return r;
+  };
+
+  window.addEventListener("pageshow",v186BindMission);
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden)v186BindMission();
+  });
+
+  window.YAINOO_BUILD="V186-FISHING-ALL-MEMBERS";
 })();
 
