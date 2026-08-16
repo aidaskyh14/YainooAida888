@@ -12310,9 +12310,157 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   async function checkArenaFight(){if(arenaFinalizing)return;const f=(ownState||state)?.arena?.fight;if(!f||f.finishAt>NOW())return;if(f.win&&!f.scoreClaimed)return arenaWinResult();if(!f.win&&!f.penaltyApplied){arenaFinalizing=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember),x=s.arena.fight;if(!x||x.win||x.penaltyApplied)return;s.merit=Number(s.merit||0)-100;x.penaltyApplied=true;s.arena.cooldownUntil=Number(x.finishAt)+HOUR;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});if(next){Y26_applyOwnState(next);updateMeritUI()}}catch(e){console.warn("arena penalty",e)}finally{arenaFinalizing=false}}if(!(ownState||state)?.arena?.fight?.win)return arenaLoseResult()}
   function arenaWinResult(){const f=(ownState||state).arena.fight;if(document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-win"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-win.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-win.jpg?v=2'" alt="ชนะ"></div><h2>ขอแสดงความยินดี แมงกระพรุนคุณมันมีเลือดนักสู้จริงๆ</h2><strong>+${f.score} คะแนนสังเวียนมวยทะเลกระพรุน</strong><button id="ynuArenaClaimScore">รับคะแนน</button></section>`;$("ynuArenaClaimScore").onclick=claimArenaScore;openModal()}
   function arenaLoseResult(){const f=(ownState||state)?.arena?.fight;if(!f||!f.penaltyApplied||document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-lose"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-lose.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-lose.jpg?v=2'" alt="แพ้"></div><h2>ขอแสดงความเสียใจ แมงกระพรุนของคุณน็อคกลางการแข่งขัน</h2><strong>ส่งผลให้ คุณ -100 กุศล</strong><p>นี่ แมงกะพรุนหรือ ไก่ ค้าาาาา</p><button id="ynuArenaAccept">ยอมรับการตัดสิน</button></section>`;$("ynuArenaAccept").onclick=()=>clearArenaFight(false);openModal()}
-  async function claimArenaScore(){const f=(ownState||state)?.arena?.fight;if(!f||!f.win)return;try{const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),wRef=fs.doc(db,"jellyArenaWeekly",weekKey());let next;await fs.runTransaction(db,async tx=>{const [ss,ww]=await Promise.all([tx.get(sRef),tx.get(wRef)]),s=normalizeState(ss.data(),currentMember),x=s.arena.fight;if(!x||!x.win||x.scoreClaimed)throw new Error("รับคะแนนไปแล้ว");if(currentMember!=="Aida"){const w=ww.exists()?ww.data():{weekKey:weekKey(),scores:{},names:{}};w.scores=ensureObj(w.scores);w.names=ensureObj(w.names);w.scores[currentMemberKey]=Number(w.scores[currentMemberKey]||0)+Number(x.score||0);w.names[currentMemberKey]=currentProfileDisplayName();tx.set(wRef,{weekKey:weekKey(),scores:w.scores,names:w.names,updatedAt:fs.serverTimestamp()},{merge:false})}x.scoreClaimed=true;s.arena.cooldownUntil=Number(x.finishAt)+HOUR;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);clearArenaFight(true)}catch(e){message("รับคะแนนไม่ได้",e.message)}}
+  async function claimArenaScore(){
+    const f=(ownState||state)?.arena?.fight;
+    if(!f||!f.win)return;
+
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      const gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next=null,added=0;
+
+      /*
+        V191 FINAL:
+        Do not write jellyArenaWeekly here.
+        Current Firebase Rules reject some members on their first weekly score.
+        We cannot change Rules right now, so store this member's new weekly
+        arena points in their OWN garden document, which current Rules allow.
+      */
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+        const s=normalizeState(ss.data(),currentMember);
+        const x=s.arena?.fight;
+        if(!x||!x.win||x.scoreClaimed)throw new Error("รับคะแนนไปแล้ว");
+
+        added=Math.max(0,Number(x.score||0));
+        const wk=weekKey();
+        const gd=gg.exists()?gg.data():{};
+        const aw=(gd.arenaWeekly&&typeof gd.arenaWeekly==="object"&&!Array.isArray(gd.arenaWeekly))
+          ?gd.arenaWeekly:{};
+
+        const prevWeek=String(aw.weekKey||"");
+        const prevScore=prevWeek===wk?Number(aw.score||0):0;
+        const receipt=String(x.startedAt||x.finishAt||"")+"-"+String(x.score||0);
+        const receipts=(prevWeek===wk&&aw.receipts&&typeof aw.receipts==="object")
+          ?{...aw.receipts}:{};
+
+        if(receipts[receipt])throw new Error("คะแนนรอบนี้ถูกบันทึกแล้ว");
+
+        receipts[receipt]=true;
+        const arenaWeekly={
+          weekKey:wk,
+          score:prevScore+added,
+          receipts,
+          updatedAt:NOW()
+        };
+
+        x.scoreClaimed=true;
+        s.arena.cooldownUntil=Number(x.finishAt)+HOUR;
+        next=s;
+
+        tx.set(sRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        if(gg.exists()){
+          tx.update(gRef,{
+            arenaWeekly,
+            updatedAt:fs.serverTimestamp()
+          });
+        }else{
+          tx.set(gRef,{
+            memberKey:currentMemberKey,
+            displayName:currentProfileDisplayName(),
+            plots:cloneData(s.plots||[]),
+            arenaWeekly,
+            updatedAt:fs.serverTimestamp()
+          },{merge:false});
+        }
+      });
+
+      Y26_applyOwnState(next);
+      showWeatherToast(`🏆 รับ +${added} คะแนนสังเวียนแล้ว`);
+      clearArenaFight(true);
+    }catch(e){
+      console.error("V191 arena claim",e);
+      message("รับคะแนนไม่ได้",e.message||"กรุณาลองใหม่");
+    }
+  }
   async function clearArenaFight(){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);s.arena.fight=null;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();if(currentScene==="jellyfishArena")drawArena()}catch(e){console.warn(e)}}
-  function showArenaDashboard(){if(arenaBoardUnsub){arenaBoardUnsub();arenaBoardUnsub=null}$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-dashboard"><div class="ynu-arena-dash-title"><span>🏆</span><div><h2>คะแนนขึ้นสังเวียน</h2><p>คะแนนสะสมประจำสัปดาห์ • รีเซ็ตทุกวันพุธ เวลา 12:00 น.</p></div></div><div id="ynuArenaRows" class="ynu-score-table"></div></section>`;openModal();getFirebaseContext().then(({db,fs})=>{arenaBoardUnsub=fs.onSnapshot(fs.doc(db,"jellyArenaWeekly",weekKey()),snap=>{const d=snap.exists()?snap.data():{scores:{},names:{}},members=Object.keys(MEMBERS).filter(n=>n!=="Aida"),rows=members.map(n=>{const k=memberKeyFromName(n);return{name:n,key:k,score:Number(d.scores?.[k]||0)}}).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));const box=$("ynuArenaRows");if(box)box.innerHTML=`<div class="head"><b>อันดับ</b><b>ชื่อ</b><b>คะแนน</b></div>${rows.map((r,i)=>`<div class="ynu-rank-row rank-${i+1}"><span class="ynu-rank-no">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span>${esc(r.name)}</span><strong>${r.score}</strong></div>`).join("")}`})})}
+  function showArenaDashboard(){
+    if(arenaBoardUnsub){arenaBoardUnsub();arenaBoardUnsub=null}
+
+    $("modalContent").innerHTML=`<section class="feature-panel ynu-arena-dashboard">
+      <div class="ynu-arena-dash-title"><span>🏆</span><div>
+        <h2>คะแนนขึ้นสังเวียน</h2>
+        <p>คะแนนสะสมประจำสัปดาห์ • รีเซ็ตทุกวันพุธ เวลา 12:00 น.</p>
+      </div></div>
+      <div id="ynuArenaRows" class="ynu-score-table"></div>
+    </section>`;
+    openModal();
+
+    getFirebaseContext().then(({db,fs})=>{
+      let official={scores:{}};
+      let gardens=[];
+
+      function paint(){
+        const wk=weekKey();
+        const fallback={};
+
+        for(const gd of gardens){
+          const key=String(gd.memberKey||"");
+          const aw=gd.arenaWeekly;
+          if(!key||!aw||String(aw.weekKey||"")!==wk)continue;
+          fallback[key]=Number(aw.score||0);
+        }
+
+        const members=Object.keys(MEMBERS).filter(n=>n!=="Aida");
+        const rows=members.map(name=>{
+          const key=memberKeyFromName(name);
+          /*
+            Existing points already stored in jellyArenaWeekly stay valid.
+            New V191 points are stored in each member's own garden.
+            Add them together so nobody loses previous weekly points.
+          */
+          const score=Number(official.scores?.[key]||0)+Number(fallback[key]||0);
+          return{name,key,score};
+        }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+
+        const box=$("ynuArenaRows");
+        if(box)box.innerHTML=`<div class="head"><b>อันดับ</b><b>ชื่อ</b><b>คะแนน</b></div>${
+          rows.map((r,i)=>`<div class="ynu-rank-row rank-${i+1}">
+            <span class="ynu-rank-no">${i<3?["🥇","🥈","🥉"][i]:i+1}</span>
+            <span>${esc(r.name)}</span><strong>${r.score}</strong>
+          </div>`).join("")
+        }`;
+      }
+
+      const unsubs=[];
+
+      unsubs.push(fs.onSnapshot(
+        fs.doc(db,"jellyArenaWeekly",weekKey()),
+        snap=>{ official=snap.exists()?snap.data():{scores:{}}; paint(); },
+        error=>{ console.warn("V191 official arena board",error); paint(); }
+      ));
+
+      unsubs.push(fs.onSnapshot(
+        fs.collection(db,"gardens"),
+        snap=>{
+          gardens=[];
+          snap.forEach(docSnap=>gardens.push(docSnap.data()||{}));
+          paint();
+        },
+        error=>{ console.warn("V191 fallback arena board",error); paint(); }
+      ));
+
+      arenaBoardUnsub=()=>unsubs.forEach(fn=>{try{fn&&fn()}catch{}});
+    }).catch(e=>message("เปิดแดชบอร์ดไม่ได้",e.message||"กรุณาลองใหม่"));
+  }
 
   /* ---------- openScene routing ---------- */
   const _openScene=openScene;openScene=function(name){if(name==="fishingLobby")return openFishingLobby();if(name==="jellyfish2")return openJelly2();if(name==="jellyfishArena")return openArena();return _openScene(name)};
@@ -13750,3 +13898,188 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   window.YAINOO_BUILD="V188-AUTH-SESSION-REPAIR";
 })();
 
+
+;window.YAINOO_BUILD="V189-MOBILE-AUTH-HARDRESET";
+
+
+/* ======================================================================
+   V190 — TRACTOR PARTIAL FALLBACK (GITHUB ONLY)
+   If one or more plots in the current farm cause a Firestore permission
+   failure, do NOT fail the entire tractor action. Try ready plots one-by-one
+   and harvest whichever plots are actually writable.
+   ====================================================================== */
+(function YN_V190_TRACTOR_PARTIAL(){
+  let v190Running=false;
+
+  async function v190HarvestOne(index){
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let result=null;
+
+    await fs.runTransaction(db,async tx=>{
+      const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+      if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+      const s=normalizeState(sSnap.data(),currentMember);
+      const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+      const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
+      while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+      const p=plots[index];
+      if(!p)throw new Error("ไม่พบข้อมูลแปลง");
+      ensurePlotPhaseStandalone(p);
+
+      if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)
+        throw new Error("แปลงนี้ถูก Take Over");
+      if(!p.crop||p.phase!=="ready")
+        throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
+
+      const key=p.crop,qty=p.angel?10:1;
+      grantHarvestYield(s,key,qty);
+      incrementMissionOn(s,"harvestCrops",1);
+      plots[index]=emptyPlot();
+      s.plots=plots.map(normalizePlot);
+
+      tx.set(saveRef,{
+        ...cloneData(s),
+        activeSessionId:cloudSessionId,
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+
+      if(gSnap.exists()){
+        tx.update(gardenRef,{
+          plots:cloneData(s.plots),
+          updatedAt:fs.serverTimestamp()
+        });
+      }else{
+        tx.set(gardenRef,{
+          memberKey:currentMemberKey,
+          displayName:currentProfileDisplayName(),
+          plots:cloneData(s.plots),
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+      }
+
+      result={state:s,key,qty,plots:s.plots};
+    });
+
+    return result;
+  }
+
+  async function v190RunTractor(){
+    if(v190Running)return;
+    if(visitContext)return message("🚜 รถไถใช้ไม่ได้","รถไถใช้ได้เฉพาะสวนของตัวเองค่ะ");
+    if(guardResting())return;
+    if(!cloudReady||!currentMemberKey)
+      return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");
+
+    v190Running=true;
+    tractorBusy=true;
+    const btn=$("tractorBtn");
+    if(btn)btn.disabled=true;
+    showTractorWorking();
+
+    try{
+      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const start=page*12;
+      const end=Math.min(start+12,PLOT_COUNT);
+
+      /* First inspect the current local view and collect only ready plots.
+         Each ready plot is then attempted independently in Firestore. */
+      const candidates=[];
+      for(let i=start;i<end;i++){
+        const p=(state?.plots||[])[i];
+        if(!p)continue;
+        try{ ensurePlotPhaseStandalone(p) }catch{ continue }
+        if(p.crop&&p.phase==="ready")candidates.push(i);
+      }
+
+      if(!candidates.length)
+        throw new Error(`ฟาร์ม ${page+1} ยังไม่มีพืชที่พร้อมเก็บเกี่ยว`);
+
+      const summary={};
+      const failed=[];
+      let latestState=null;
+
+      for(const index of candidates){
+        try{
+          const r=await v190HarvestOne(index);
+          if(!r)continue;
+          latestState=r.state;
+          summary[r.key]=(summary[r.key]||0)+r.qty;
+
+          /* Update local view immediately after each successful plot so
+             mobile users see progress and the tractor never appears frozen. */
+          Y26_applyOwnState(r.state);
+          ownState=normalizeState(r.state,currentMember);
+          if(!visitContext)state=ownState;
+          lastGardenHash=plotHash(r.plots);
+          saveLocalOnly(ownState);
+          draw();
+        }catch(error){
+          failed.push({index,error});
+          console.warn("V190 tractor skipped plot",index,error);
+        }
+      }
+
+      const successCount=Object.values(summary).reduce((a,b)=>a+b,0);
+
+      if(!latestState){
+        const first=failed[0]?.error;
+        throw new Error(first?.message||"ไม่มีแปลงที่รถไถสามารถเก็บได้");
+      }
+
+      try{
+        if(typeof V181_campaignScoreLater==="function")
+          V181_campaignScoreLater(summary);
+      }catch{}
+
+      const rows=Object.entries(summary)
+        .map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`)
+        .join("<br>");
+
+      if(failed.length){
+        message(
+          "🚜 รถไถเก็บได้บางส่วน",
+          `${rows}<br><small>ข้าม ${failed.length} แปลงที่ Firestore ยังไม่อนุญาตให้เขียนชั่วคราว</small>`
+        );
+      }else{
+        message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+      }
+    }catch(error){
+      console.error("V190 tractor",error);
+      message("🚜 รถไถยังไม่ออก",error?.message||"กรุณาลองใหม่");
+    }finally{
+      v190Running=false;
+      tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+    }
+  }
+
+  function v190Bind(){
+    const btn=$("tractorBtn");
+    if(!btn)return;
+    if(!v190Running)btn.disabled=false;
+    btn.onclick=()=>{
+      if(typeof V29_setTools==="function")V29_setTools(false);
+      return v190RunTractor();
+    };
+  }
+
+  v190Bind();
+  const prevDraw=draw;
+  draw=function(){
+    const r=prevDraw();
+    requestAnimationFrame(v190Bind);
+    return r;
+  };
+  window.addEventListener("pageshow",v190Bind);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)v190Bind()});
+
+  window.YAINOO_BUILD="V190-TRACTOR-PARTIAL-FALLBACK";
+})();
+
+
+;window.YAINOO_BUILD="V191-FINAL";
