@@ -11599,17 +11599,121 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   async function friendCatAction(action){
     if(!visitContext||visitContext.memberKey===currentMemberKey)return message("ทำไม่ได้","แมวของตัวเองหยอกหรือตบหน้าไม่ได้ค่ะ");
     const targetKey=visitContext.memberKey,targetName=visitContext.name;
-    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),targetRef=fs.doc(db,"saves",targetKey),targetProf=fs.doc(db,"publicProfiles",targetKey),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));let ownNext;
-      await fs.runTransaction(db,async tx=>{const [oSnap,tSnap,pSnap]=await Promise.all([tx.get(ownRef),tx.get(targetRef),tx.get(targetProf)]);if(!oSnap.exists()||!tSnap.exists())throw new Error("ข้อมูลสมาชิกไม่พร้อม");const own=normalizeState(oSnap.data(),currentMember),target=normalizeState(tSnap.data(),targetName);resetDailyExtras(own);own.friendCatCooldowns=ensureObj(own.friendCatCooldowns);const now=NOW(),readyAt=Number(own.friendCatCooldowns[targetKey]||0);if(readyAt>now)throw new Error(`แมวบ้านนี้กำลังพักอยู่ • เล่นได้อีกใน ${fmt(readyAt-now)}`);own.friendCatCooldowns[targetKey]=now+(3*HOUR);let bonus="";if(action==="slap")target.merit=Number(target.merit||0)-10;else{target.merit=Number(target.merit||0)+2;const pool=[ANGEL_KEY,SATAN_KEY,DEED_KEY],key=pool[Math.floor(Math.random()*pool.length)];target.specials=ensureObj(target.specials);target.specials[key]=(Number(target.specials[key])||0)+1;bonus=key}
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const ownRef=fs.doc(db,"saves",currentMemberKey);
+      const targetRef=fs.doc(db,"saves",targetKey);
+      const targetProf=fs.doc(db,"publicProfiles",targetKey);
+      const mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));
+      let ownNext=null,targetMerit=0,bonusKey="",bonusLabel="";
+
+      /*
+        IMPORTANT:
+        The core action transaction writes ONLY:
+        1) current player's own save (cooldown)
+        2) target member's save (merit / one bonus field)
+        publicProfiles + mailbox are auxiliary and run AFTER the transaction.
+        Therefore an auxiliary permission problem can no longer cancel slap/tease.
+      */
+      await fs.runTransaction(db,async tx=>{
+        const [oSnap,tSnap]=await Promise.all([
+          tx.get(ownRef),
+          tx.get(targetRef)
+        ]);
+        if(!oSnap.exists()||!tSnap.exists())throw new Error("ข้อมูลสมาชิกไม่พร้อม");
+
+        const own=normalizeState(oSnap.data(),currentMember);
+        const target=normalizeState(tSnap.data(),targetName);
+        resetDailyExtras(own);
+
+        own.friendCatCooldowns=ensureObj(own.friendCatCooldowns);
+        const now=NOW();
+        const readyAt=Number(own.friendCatCooldowns[targetKey]||0);
+        if(readyAt>now)throw new Error(`แมวบ้านนี้กำลังพักอยู่ • เล่นได้อีกใน ${fmt(readyAt-now)}`);
+        own.friendCatCooldowns[targetKey]=now+(3*HOUR);
+
+        if(action==="slap"){
+          target.merit=Number(target.merit||0)-10;
+        }else{
+          target.merit=Number(target.merit||0)+2;
+          const pool=[ANGEL_KEY,SATAN_KEY,DEED_KEY];
+          bonusKey=pool[Math.floor(Math.random()*pool.length)];
+          target.specials=ensureObj(target.specials);
+          target.specials[bonusKey]=(Number(target.specials[bonusKey])||0)+1;
+          bonusLabel=SPECIAL_ITEMS?.[bonusKey]?.name||bonusKey;
+        }
+
+        targetMerit=target.merit;
         ownNext=own;
-        tx.set(ownRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        if(action==="slap")tx.update(targetRef,{merit:target.merit,updatedAt:fs.serverTimestamp()});
-        else tx.update(targetRef,{merit:target.merit,specials:cloneData(target.specials),updatedAt:fs.serverTimestamp()});
-        /* สมาชิกธรรมดาห้ามสร้าง publicProfiles ของคนอื่นตาม Rules:
-           ถ้ามี profile อยู่แล้วค่อย update; ถ้ายังไม่มีให้ข้าม ไม่ทำให้ transaction ทั้งก้อนล้ม */
-        if(pSnap.exists())tx.update(targetProf,{merit:target.merit,updatedAt:fs.serverTimestamp()});
-        tx.set(mailRef,{source:"friend",type:"friendCat",fromKey:currentMemberKey,fromName:currentMember,title:action==="slap"?'มีผู้หวังร้าย ”ตบหน้า“ แมวเหมียวของคุณ':'มีนางฟ้าใจดี ”มาหยอกเล่น“ กับแมวเหมียวของคุณ',message:action==="slap"?"กุศล -10":`กุศล +2${bonus?" • แมวของคุณดร็อปไอเท็มพิเศษ 1 ชิ้น":""}`,createdAt:fs.serverTimestamp(),read:false})});Y26_applyOwnState(ownNext);message(action==="slap"?"ตบหน้าเรียบร้อย":"หยอกเล่นเรียบร้อย",(action==="slap"?"เจ้าของบ้าน -10 กุศล":"เจ้าของบ้าน +2 กุศล • แมวดร็อปของพิเศษทันที 1 ชิ้น")+"<br>แมวบ้านนี้พัก 3 ชั่วโมงก่อนเล่นครั้งถัดไป")
-    }catch(e){message("ทำไม่ได้",e.message||"กรุณาลองใหม่")}
+
+        tx.set(
+          ownRef,
+          {...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},
+          {merge:false}
+        );
+
+        if(action==="slap"){
+          tx.update(targetRef,{
+            merit:target.merit,
+            updatedAt:fs.serverTimestamp()
+          });
+        }else{
+          const patch={
+            merit:target.merit,
+            updatedAt:fs.serverTimestamp()
+          };
+          /* Change only ONE nested special field.
+             Do not rewrite the whole specials map, because normal members'
+             Rules allow only the one bonus item changed by this tease. */
+          patch[`specials.${bonusKey}`]=target.specials[bonusKey];
+          tx.update(targetRef,patch);
+        }
+      });
+
+      Y26_applyOwnState(ownNext);
+
+      /* Auxiliary sync/notification: best-effort only.
+         Failure here must never roll back the already successful cat action. */
+      const aux=[];
+      if(typeof fs.updateDoc==="function"){
+        aux.push(
+          fs.updateDoc(targetProf,{
+            merit:targetMerit,
+            updatedAt:fs.serverTimestamp()
+          }).catch(()=>null)
+        );
+      }
+      if(typeof fs.setDoc==="function"){
+        aux.push(
+          fs.setDoc(mailRef,{
+            source:"friend",
+            type:"friendCat",
+            fromKey:currentMemberKey,
+            fromName:currentMember,
+            title:action==="slap"
+              ?'มีผู้หวังร้าย ”ตบหน้า“ แมวเหมียวของคุณ'
+              :'มีนางฟ้าใจดี ”มาหยอกเล่น“ กับแมวเหมียวของคุณ',
+            message:action==="slap"
+              ?"กุศล -10"
+              :`กุศล +2${bonusKey?` • แมวของคุณดร็อป ${bonusLabel||"ไอเท็มพิเศษ"} 1 ชิ้น`:""}`,
+            createdAt:fs.serverTimestamp(),
+            read:false
+          }).catch(()=>null)
+        );
+      }
+      if(aux.length)Promise.allSettled(aux);
+
+      message(
+        action==="slap"?"ตบหน้าเรียบร้อย":"หยอกเล่นเรียบร้อย",
+        (action==="slap"
+          ?"เจ้าของบ้าน -10 กุศล"
+          :`เจ้าของบ้าน +2 กุศล${bonusKey?` • ดร็อป ${esc(bonusLabel||"ไอเท็มพิเศษ")} ×1`:""}`)
+        +"<br>แมวบ้านนี้พัก 3 ชั่วโมงก่อนเล่นครั้งถัดไป"
+      );
+    }catch(e){
+      message("ทำไม่ได้",e.message||"กรุณาลองใหม่");
+    }
   }
   const _friendCatView=typeof Y26_showFriendCat==="function"?Y26_showFriendCat:null;
   if(_friendCatView)Y26_showFriendCat=function(cat){const r=_friendCatView(cat);if(!visitContext)return r;const panel=document.querySelector(".friend-cat-view");if(panel&&!panel.querySelector(".ynu-friend-cat-actions")){panel.insertAdjacentHTML("beforeend",`<div class="ynu-friend-cat-actions"><button id="ynuCatSlap" type="button">ตบหน้า</button><button id="ynuCatTease" type="button">หยอก</button></div>`);$("ynuCatSlap").onclick=()=>friendCatAction("slap");$("ynuCatTease").onclick=()=>friendCatAction("tease")}return r};
