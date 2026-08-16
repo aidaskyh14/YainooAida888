@@ -193,7 +193,9 @@
       signInWithEmailAndPassword,
       createUserWithEmailAndPassword,
       signOut,
-      onAuthStateChanged
+      onAuthStateChanged,
+      setPersistence,
+      inMemoryPersistence
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
     import {
       getFirestore,
@@ -229,6 +231,19 @@
     try {
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+
+      /*
+        V189 MOBILE AUTH HARD RESET
+        Use memory-only Firebase Auth persistence. Every page load gets a
+        fresh Firebase login instead of reusing a possibly corrupted/stale
+        device token from Safari/Messenger storage.
+      */
+      try {
+        await setPersistence(auth, inMemoryPersistence);
+      } catch (persistenceError) {
+        console.warn("V189 auth persistence fallback", persistenceError);
+      }
+
       const db = getFirestore(app);
 
       const bridge = {
@@ -279,6 +294,25 @@
           const snap=await getDoc(doc(db,"members",user.uid));
           return snap.exists()?{id:snap.id,...snap.data()}:null;
         },
+        async authDebug(){
+          const user=auth.currentUser;
+          if(!user)return {signedIn:false};
+          let member=null;
+          try{
+            const snap=await getDoc(doc(db,"members",user.uid));
+            member=snap.exists()?snap.data():null;
+          }catch(error){
+            member={error:String(error?.message||error)};
+          }
+          return {
+            signedIn:true,
+            uid:user.uid,
+            email:user.email||"",
+            memberKey:member?.memberKey||"",
+            role:member?.role||"",
+            memberError:member?.error||""
+          };
+        },
         firestore:{doc,getDoc,setDoc,updateDoc,deleteDoc,collection,addDoc,getDocs,query,where,orderBy,limit,runTransaction,writeBatch,serverTimestamp,onSnapshot,increment}
       };
 
@@ -296,7 +330,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=188-auth-session-repair-20260816"></script>
+  <script src="game-v189.js?v=189-mobile-auth-hardreset"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -350,6 +384,34 @@
   takeoverPlotTap=async function(i){return openTake(i)};
   try{DEED_ITEM.image='land-deed.png?v=181'}catch(e){}
   window.YAINOO_BUILD='V181-SMOOTH';
+})();
+</script>
+
+
+<script id="v189-auth-diagnostics">
+(function(){
+  async function v189Diag(){
+    try{
+      const bridge=window.firebaseBridge||await window.firebaseReady;
+      const d=bridge?.authDebug?await bridge.authDebug():null;
+      return d||{};
+    }catch(e){return {error:String(e?.message||e)}}
+  }
+
+  const oldMessage=window.message;
+  if(typeof oldMessage==="function"){
+    window.message=async function(title,body){
+      const text=String(body||"");
+      if(/Missing or insufficient permissions/i.test(text)){
+        const d=await v189Diag();
+        const extra=`<br><small style="display:block;margin-top:8px;opacity:.75">
+          V189 • email: ${String(d.email||"-")} • memberKey: ${String(d.memberKey||"-")}
+        </small>`;
+        return oldMessage(title,text+extra);
+      }
+      return oldMessage(title,body);
+    };
+  }
 })();
 </script>
 
