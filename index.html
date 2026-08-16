@@ -287,7 +287,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game-v180.js?v=180"></script>
+  <script src="game.js?v=180-clean"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -320,7 +320,7 @@
     if(p.crop&&p.phase==='ready'){harvest(i);return true;}
     if(!p.crop){
       const cards=Object.entries(CROPS).map(([k,c])=>`<button data-v179-plant="${k}" type="button"><img src="${c.selectImg}" alt="${safeHtml(c.name)}"><span>${safeHtml(c.name)}</span></button>`).join('');
-      $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">V180 TAKE OVER</div><h2>🌱 ปลูกในแปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-seed-grid">${cards}</div></section>`;
+      $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">TAKE OVER</div><h2>🌱 ปลูกในแปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-seed-grid">${cards}</div></section>`;
       document.querySelectorAll('[data-v179-plant]').forEach(b=>b.onclick=()=>window.YN_TAKEOVER_API.plant(i,b.dataset.v179Plant));openModal();return true;
     }
     const own=ownState||state,angelCount=Number(own&&own.specials&&own.specials.angelWingCapsule||0),bs=boosts();
@@ -328,7 +328,7 @@
     const worm=p.phase==='worm'?'<button id="v179Worm" class="danger-action">🪱 กำจัดหนอน</button>':'';
     const angel=!p.angel&&angelCount>0?`<button id="v179Angel" class="primary-spooky-action">🪽 ใช้ปีกนางฟ้า • มี ×${angelCount}</button>`:'';
     const boost=bs.length?`<div class="v179-boost-grid">${bs.map(([k,it])=>`<button data-v179-boost="${k}" type="button"><img src="${it.image}" alt="${safeHtml(it.name)}"><span>${safeHtml(it.name)}<small>เร่งโต ${it.boost}% • มี ×${Number(own.specials&&own.specials[k]||0)}</small></span></button>`).join('')}</div>`:'';
-    $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">V180 TAKE OVER</div><h2>📜 แปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-take-actions">${water}${worm}${angel}${boost||'<small>ไม่มีไอเท็มเร่งโตในกระเป๋า</small>'}</div></section>`;
+    $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">TAKE OVER</div><h2>📜 แปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-take-actions">${water}${worm}${angel}${boost||'<small>ไม่มีไอเท็มเร่งโตในกระเป๋า</small>'}</div></section>`;
     if($('v179Water'))$('v179Water').onclick=()=>{closeModal();window.YN_TAKEOVER_API.water(i)};
     if($('v179Worm'))$('v179Worm').onclick=()=>{closeModal();window.YN_TAKEOVER_API.worm(i)};
     if($('v179Angel'))$('v179Angel').onclick=()=>window.YN_TAKEOVER_API.angel(i);

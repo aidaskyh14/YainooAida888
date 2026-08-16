@@ -12032,6 +12032,17 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   /* ---------- lightweight background status checks ---------- */
   setInterval(()=>{try{const s=ownState||state;if(s){resetDailyExtras(s);if(s.arena?.fight&&s.arena.fight.finishAt<=NOW())checkArenaFight()}cleanupTakeovers()}catch(e){}},1000);
   setTimeout(()=>{mountManagerButton();bindDogPalace();rebindBottomNav()},80);
+  /* V180: expose Take Over actions for the cache-proof UI in index.html.
+     These functions live inside this IIFE, so previous inline UI could show
+     but its buttons could not call them. */
+  window.YN_TAKEOVER_API={
+    plant: plantTakeover,
+    water: takeoverWater,
+    worm: takeoverClearWorm,
+    angel: takeoverUseAngel,
+    boost: takeoverUseBoost
+  };
+
   console.info("YN V1.9 CLEANUP-14 loaded: TakeOver/overlays/friend-nav/shop/jelly-box/arena UI");
   console.info("YN AUG-15 BIG UPDATE loaded");
 })();
@@ -12854,3 +12865,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   window.YAINOO_BUILD="V178";
 })();
 
+
+;window.YAINOO_V179_JS_LOADED=true;
+
+;window.YAINOO_V180_CLEAN_LOADED=true;
