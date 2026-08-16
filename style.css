@@ -4151,3 +4151,148 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 
 /* ถ้าเซิร์ฟเวอร์ยังมีไฟล์ผลแข่งเป็น JPG ให้พื้นขาวกลืนกับแผงแทนการเห็นสี่เหลี่ยมขาว */
 .ynu-arena-status-icon img[src*=".jpg"]{mix-blend-mode:multiply!important}
+
+
+/* =====================================================================
+   TAKE OVER HOTFIX — compact modal + true transparent deed icon
+   ===================================================================== */
+
+/* ไอคอนโฉนดบนแปลง: ขนาดมาตรฐานเดียวกับบัวรดน้ำ/หนอน */
+.ynu-deed-overlay,
+.status-badge.ynu-deed-overlay{
+  right:1%!important;
+  top:3%!important;
+  width:clamp(30px,7.2vw,55px)!important;
+  height:clamp(30px,7.2vw,55px)!important;
+  max-width:55px!important;
+  max-height:55px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:drop-shadow(0 4px 5px rgba(38,18,45,.52))
+         drop-shadow(0 1px 1px rgba(255,231,174,.34))!important;
+}
+
+/* รูปโฉนดในหน้าต่างยืนยัน: ไม่มีกล่องขาว */
+.ynu-deed-confirm .ynu-deed-preview{
+  width:92px!important;
+  height:92px!important;
+  max-width:92px!important;
+  max-height:92px!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:drop-shadow(0 7px 7px rgba(49,24,57,.26))!important;
+}
+
+/* หน้าต่างจัดการแปลง Take Over ต้องกะทัดรัด ไม่กินเต็มจอ */
+.ynu-takeover-action{
+  width:min(420px,100%)!important;
+  max-width:420px!important;
+  max-height:72dvh!important;
+  margin:0 auto!important;
+  padding:4px 2px 2px!important;
+  overflow:auto!important;
+  text-align:center!important;
+}
+.ynu-takeover-action h2{
+  margin:2px 0 5px!important;
+  font-size:clamp(18px,5vw,24px)!important;
+}
+.ynu-takeover-action>p{
+  margin:3px auto 7px!important;
+  max-width:95%!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+}
+.ynu-takeover-action .primary-spooky-action,
+.ynu-takeover-action .secondary-action{
+  width:min(270px,90%)!important;
+  min-height:36px!important;
+  margin:5px auto!important;
+  padding:7px 10px!important;
+  font-size:11px!important;
+  border-radius:12px!important;
+}
+
+/* ไอเท็มเร่งโต: ห้ามใช้ขนาดจริงของรูป เพราะจะขยายเต็ม modal */
+.ynu-take-boost-grid{
+  width:100%!important;
+  max-height:42dvh!important;
+  margin:7px auto 0!important;
+  padding:2px!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+  overflow:auto!important;
+}
+.ynu-take-boost-grid>button{
+  min-width:0!important;
+  min-height:68px!important;
+  padding:6px!important;
+  border:1px solid rgba(172,126,79,.48)!important;
+  border-radius:12px!important;
+  background:linear-gradient(180deg,#fff6e9,#ead7c1)!important;
+  color:#4d3155!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  text-align:left!important;
+  box-shadow:0 4px 10px rgba(52,28,60,.10)!important;
+  overflow:hidden!important;
+}
+.ynu-take-boost-grid>button>img{
+  flex:0 0 52px!important;
+  width:52px!important;
+  height:52px!important;
+  max-width:52px!important;
+  max-height:52px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  filter:drop-shadow(0 3px 3px rgba(42,23,50,.20))!important;
+}
+.ynu-take-boost-grid>button>span{
+  min-width:0!important;
+  display:block!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  line-height:1.25!important;
+}
+.ynu-take-boost-grid>button>span>small{
+  display:block!important;
+  margin-top:2px!important;
+  font-size:8px!important;
+  font-weight:700!important;
+  opacity:.82!important;
+  line-height:1.25!important;
+}
+
+/* หน้าเลือกเมล็ดใน Take Over ให้เล็กและพอดีจอเช่นกัน */
+.ynu-seed-grid{
+  max-height:48dvh!important;
+}
+.ynu-seed-grid img{
+  width:48px!important;
+  height:48px!important;
+  max-width:48px!important;
+  max-height:48px!important;
+  background:transparent!important;
+}
+
+@media(max-width:390px){
+  .ynu-take-boost-grid{grid-template-columns:1fr 1fr!important;gap:6px!important}
+  .ynu-take-boost-grid>button{min-height:62px!important;padding:5px!important}
+  .ynu-take-boost-grid>button>img{flex-basis:46px!important;width:46px!important;height:46px!important;max-width:46px!important;max-height:46px!important}
+}
