@@ -12085,45 +12085,57 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const playerRef=fs.doc(db,"fishingPlayers",currentMemberKey);
       const saveRef=fs.doc(db,"saves",currentMemberKey);
       const dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
-      let next=null,claimedWeight=Number(x.totalWeight||0),claimKey="";
+      let next=null,claimedWeight=0;
 
+      /*
+        V194:
+        The old function caught its own permission error, so the V193 wrapper
+        never received an exception and its fallback never ran.
+        This is now fixed directly in the original claim function.
+      */
       await fs.runTransaction(db,async tx=>{
-        const [sl,pl,ss,dd]=await Promise.all([
-          tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)
+        const [sl,ss,dd]=await Promise.all([
+          tx.get(slotRef),
+          tx.get(saveRef),
+          tx.get(dailyRef)
         ]);
-        if(!sl.exists()||!ss.exists())throw new Error("ไม่พบรอบตกปลา");
 
-        const slot=sl.data()||{};
-        const canonicalKey=memberKeyFromName(currentMember||"");
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+        const slot=sl.exists()?sl.data():x;
+        const canonical=memberKeyFromName(currentMember||"");
         const ownerOk=
-          String(slot.ownerKey||"")===String(currentMemberKey||"")
-          || String(slot.ownerKey||"")===String(canonicalKey||"")
-          || String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
+          !sl.exists()
+          || String(slot.ownerKey||"")===String(currentMemberKey||"")
+          || String(slot.ownerKey||"")===String(canonical||"")
+          || String(slot.ownerName||"").trim().toLowerCase()
+             ===String(currentMember||"").trim().toLowerCase();
 
         if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
-        if(NOW()>Number(slot.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
+        if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))
+          throw new Error("ปลาได้หนีไปแล้ว");
 
         const s=normalizeState(ss.data(),currentMember);
-        const daily=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
-        daily.scores=ensureObj(daily.scores);
-        daily.names=ensureObj(daily.names);
-        daily.ponds=ensureObj(daily.ponds);
+        const d=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
+        d.scores=ensureObj(d.scores);
+        d.names=ensureObj(d.names);
+        d.ponds=ensureObj(d.ponds);
 
-        claimKey=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||0)}`;
+        const key=canonical||currentMemberKey;
+        const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
         s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
-        if(s.fishingClaimReceipts[claimKey])throw new Error("รอบนี้รับน้ำหนักไปแล้ว");
+        if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
 
-        const writeKey=canonicalKey||currentMemberKey;
         claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
-        daily.scores[writeKey]=Number((Number(daily.scores[writeKey]||0)+claimedWeight).toFixed(2));
-        daily.names[writeKey]=currentProfileDisplayName();
-        daily.ponds[writeKey]=Number(x.pondId);
+        d.scores[key]=Number((Number(d.scores[key]||0)+claimedWeight).toFixed(2));
+        d.names[key]=currentProfileDisplayName();
+        d.ponds[key]=Number(x.pondId||0);
 
         ensureMissionStateFor(s);
-        s.missions.progress.fishingWeight200=Number(daily.scores[writeKey]||0);
-        s.missions.progress.fishingWeight800=Number(daily.scores[writeKey]||0);
+        s.missions.progress.fishingWeight200=d.scores[key];
+        s.missions.progress.fishingWeight800=d.scores[key];
         s.fishingCooldownUntil=NOW()+5*MIN;
-        s.fishingClaimReceipts[claimKey]=NOW();
+        s.fishingClaimReceipts[receipt]=NOW();
         next=s;
 
         tx.set(saveRef,{
@@ -12134,29 +12146,17 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
 
         tx.set(dailyRef,{
           dateKey:DAILY_KEY(),
-          scores:daily.scores,
-          names:daily.names,
-          ponds:daily.ponds,
+          scores:d.scores,
+          names:d.names,
+          ponds:d.ponds,
           updatedAt:fs.serverTimestamp()
         },{merge:false});
-
-        /* Player record is owned by the member and is the reliable idempotency marker.
-           Do not make the fish reward depend on updating a legacy slot document. */
-        if(pl.exists()){
-          tx.set(playerRef,{
-            ...pl.data(),
-            status:"claimed",
-            claimedAt:NOW(),
-            claimDeadline:NOW(),
-            updatedAt:fs.serverTimestamp()
-          },{merge:false});
-        }
       });
 
       Y26_applyOwnState(next);
 
-      /* Best-effort cleanup only. A legacy slot permission issue must never
-         cancel the already-successful fish reward. */
+      /* Cleanup is best-effort only. A slot/player permission issue can no
+         longer cancel the fish weight already credited to save + dashboard. */
       try{
         await fs.updateDoc(slotRef,{
           status:"claimed",
@@ -12164,15 +12164,13 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
           claimDeadline:NOW(),
           updatedAt:fs.serverTimestamp()
         });
-      }catch(e){
-        console.warn("V187 slot cleanup skipped",e);
-      }
-      try{ await fs.deleteDoc(playerRef) }catch(e){ console.warn("V187 player cleanup skipped",e) }
+      }catch(e){console.warn("V194 slot cleanup",e)}
+      try{await fs.deleteDoc(playerRef)}catch(e){console.warn("V194 player cleanup",e)}
 
       closeModal();
       showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
     }catch(e){
-      console.error("V187 claimFishingV2",e);
+      console.error("V194 claim fish",e);
       message("รับปลาไม่ได้",e.message||"กรุณาลองใหม่");
     }
   }
@@ -14557,5 +14555,173 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   };
 
   window.YAINOO_BUILD="V193-CAMPAIGN-FISH-FIX";
+})();
+
+
+
+/* ======================================================================
+   V194 — MAMEAW DIRECT TRACTOR FIX
+   Restores V192's targeted 3-crop fallback AFTER V193, so it cannot be
+   overwritten again.
+   ====================================================================== */
+(function YN_V194_MAMEAW_TRACTOR(){
+  const SPECIAL=new Set(["mango","lychee","strawberry"]);
+  let busy=false;
+
+  async function minimalOne(index){
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let cropKey="",qty=0,plotsOut=null;
+
+    await fs.runTransaction(db,async tx=>{
+      const g=await tx.get(gardenRef);
+      if(!g.exists())throw new Error("ไม่พบข้อมูลสวน");
+
+      const plots=(Array.isArray(g.data()?.plots)?g.data().plots:[]).map(normalizePlot);
+      while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+
+      const p=plots[index];
+      try{ensurePlotPhaseStandalone(p)}catch{}
+      cropKey=String(p?.crop||"");
+
+      if(!SPECIAL.has(cropKey))throw new Error("ไม่ใช่พืชชุดซ่อม");
+      if(p?.takeover&&Number(p.takeover.until||0)>gameNow()&&p.takeover.by!==currentMemberKey)
+        throw new Error("แปลงนี้ถูก Take Over");
+      if(p?.phase!=="ready")throw new Error("ต้นนี้ยังไม่พร้อมเก็บ");
+
+      qty=p.angel?10:1;
+      plots[index]=emptyPlot();
+      plotsOut=plots.map(normalizePlot);
+
+      const patch={updatedAt:fs.serverTimestamp()};
+      patch[`bag.${cropKey}`]=fs.increment(qty);
+
+      tx.update(saveRef,patch);
+      tx.update(gardenRef,{
+        plots:cloneData(plotsOut),
+        updatedAt:fs.serverTimestamp()
+      });
+    });
+
+    const sSnap=await fs.getDoc(saveRef);
+    if(sSnap.exists()){
+      const s=normalizeState(sSnap.data(),currentMember);
+      s.plots=plotsOut||s.plots;
+      ownState=s;
+      if(!visitContext)state=ownState;
+      lastGardenHash=plotHash(s.plots);
+      saveLocalOnly(ownState);
+      draw();
+    }
+
+    return {cropKey,qty};
+  }
+
+  async function run(){
+    if(busy)return;
+    if(visitContext||guardResting())return;
+    if(!cloudReady||!currentMemberKey)return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล");
+
+    busy=true;tractorBusy=true;
+    const btn=$("tractorBtn");
+    if(btn)btn.disabled=true;
+    showTractorWorking();
+
+    try{
+      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+
+      /* Everyone except Mameaw Farm 1 keeps V193 normal path. */
+      if(String(currentMemberKey)!=="mameaw"||page!==0){
+        return normal?.();
+      }
+
+      const summary={},failed=[];
+      let success=0;
+
+      for(let i=0;i<12;i++){
+        const p=(state?.plots||[])[i];
+        if(!p)continue;
+        try{ensurePlotPhaseStandalone(p)}catch{}
+        if(p.phase!=="ready"||!SPECIAL.has(String(p.crop||"")))continue;
+
+        try{
+          const r=await minimalOne(i);
+          summary[r.cropKey]=(summary[r.cropKey]||0)+r.qty;
+          success++;
+        }catch(e){
+          failed.push({i,error:e});
+          console.warn("V194 Mameaw minimal harvest",i,e);
+        }
+      }
+
+      /* If no special ready crop exists, use normal tractor for the other crops. */
+      if(!success && !failed.length){
+        return normal?.();
+      }
+
+      if(success){
+        try{
+          if(typeof V181_campaignScoreLater==="function")
+            setTimeout(()=>V181_campaignScoreLater(summary),0);
+        }catch{}
+
+        const rows=Object.entries(summary)
+          .map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");
+
+        if(failed.length){
+          message("🚜 เก็บได้บางส่วน",
+            `${rows}<br><small>ยังมี ${failed.length} แปลงที่ Firestore ปฏิเสธ</small>`);
+        }else{
+          message("🚜 เก็บพืชแคมเปญเรียบร้อย",rows);
+        }
+        return;
+      }
+
+      throw failed[0]?.error||new Error("ยังเก็บพืชชุดนี้ไม่ได้");
+    }catch(e){
+      message("🚜 รถไถยังไม่ออก",e?.message||"กรุณาลองใหม่");
+    }finally{
+      busy=false;tractorBusy=false;
+      hideTractorWorking();
+      if(btn)btn.disabled=false;
+    }
+  }
+
+  let normal=null;
+  function bind(){
+    const btn=$("tractorBtn");
+    if(!btn)return;
+
+    if(!normal && typeof btn.onclick==="function"){
+      const old=btn.onclick;
+      normal=()=>old.call(btn);
+    }
+
+    btn.disabled=false;
+    btn.onclick=()=>{
+      if(typeof V29_setTools==="function")V29_setTools(false);
+
+      if(String(currentMemberKey)==="mameaw"&&Number(farmPlotPage||0)===0){
+        const hasSpecial=(state?.plots||[]).slice(0,12).some(p=>{
+          try{ensurePlotPhaseStandalone(p)}catch{}
+          return p?.phase==="ready"&&SPECIAL.has(String(p?.crop||""));
+        });
+        if(hasSpecial)return run();
+      }
+
+      return normal?.();
+    };
+  }
+
+  bind();
+  const oldDraw=draw;
+  draw=function(){
+    const r=oldDraw();
+    requestAnimationFrame(bind);
+    return r;
+  };
+
+  window.YAINOO_BUILD="V194-MAMEAW-DIRECTFIX";
 })();
 
