@@ -287,6 +287,62 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=178"></script>
+  <script src="game-v179.js?v=179"></script>
+
+<style id="v179-takeover-style">
+  .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
+  .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
+  .v179-take-panel p{font-size:13px!important;margin:0 0 9px!important}
+  .v179-take-actions{display:grid!important;gap:7px!important}
+  .v179-take-actions button{min-height:40px!important;border-radius:11px!important}
+  .v179-boost-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;max-height:34vh!important;overflow:auto!important}
+  .v179-boost-grid button{display:grid!important;grid-template-columns:42px 1fr!important;align-items:center!important;gap:6px!important;padding:6px!important;border:1px solid #d8b98f!important;border-radius:11px!important;background:#f7e7c9!important;color:#4f3558!important;text-align:left!important}
+  .v179-boost-grid img{width:40px!important;height:40px!important;max-width:40px!important;max-height:40px!important;object-fit:contain!important;background:transparent!important}
+  .v179-boost-grid span{font-size:10px!important;font-weight:800!important}
+  .v179-boost-grid small{display:block!important;font-size:8px!important;opacity:.8!important}
+  .v179-seed-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;max-height:48vh!important;overflow:auto!important}
+  .v179-seed-grid button{border:1px solid #d8b98f!important;border-radius:11px!important;background:#f7e7c9!important;padding:5px!important;color:#4f3558!important;font-size:9px!important;font-weight:800!important}
+  .v179-seed-grid img{display:block!important;width:48px!important;height:48px!important;max-width:48px!important;max-height:48px!important;object-fit:contain!important;margin:0 auto 2px!important;background:transparent!important}
+  #modalContent .v179-take-panel img{object-fit:contain!important}
+</style>
+<script id="v179-takeover-inline-fix">
+(function(){
+  function mine(p){return !!(p&&p.takeover&&Number(p.takeover.until||0)>gameNow()&&String(p.takeover.by||'')===String(currentMemberKey||''));}
+  function remainText(until){const ms=Math.max(0,Number(until||0)-gameNow()),t=Math.ceil(ms/1000),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h>0?`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+  function boosts(){const own=ownState||state,all={};if(typeof CAKE_ITEMS!=='undefined')Object.assign(all,CAKE_ITEMS);if(typeof COCONUT_ITEMS!=='undefined')Object.assign(all,COCONUT_ITEMS);if(typeof SPECIAL_ITEMS!=='undefined')Object.entries(SPECIAL_ITEMS).forEach(([k,v])=>{if(Number(v&&v.boost)>0)all[k]=v});return Object.entries(all).filter(([k,v])=>Number(v&&v.boost)>0&&Number(own&&own.specials&&own.specials[k]||0)>0);}
+
+  async function harvest(i){
+    try{const p0=state.plots[i],crop=p0.crop,qty=p0.angel?10:1,{db,fs}=await getFirebaseContext(),gRef=fs.doc(db,'gardens',visitContext.memberKey),sRef=fs.doc(db,'saves',currentMemberKey);let plots,next;await fs.runTransaction(db,async tx=>{const [g,s]=await Promise.all([tx.get(gRef),tx.get(sRef)]);plots=(g.data().plots||[]).map(normalizePlot);const q=plots[i];ensurePlotPhase(q);if(!mine(q)||q.phase!=='ready')throw new Error('แปลงนี้ไม่พร้อมเก็บ');const own=normalizeState(s.data(),currentMember);own.bag[crop]=(Number(own.bag[crop])||0)+qty;plots[i]={...emptyPlot(),takeover:q.takeover};next=own;tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();showWeatherToast(`🌾 เก็บ ${CROPS[crop].name} ×${qty} เข้ากระเป๋าคุณแล้ว`)}catch(e){message('เก็บไม่ได้',e.message||'กรุณาลองใหม่')}
+  }
+
+  function openTake(i){
+    const p=state&&state.plots&&state.plots[i];if(!mine(p))return false;ensurePlotPhase(p);
+    if(p.crop&&p.phase==='ready'){harvest(i);return true;}
+    if(!p.crop){
+      const cards=Object.entries(CROPS).map(([k,c])=>`<button data-v179-plant="${k}" type="button"><img src="${c.selectImg}" alt="${safeHtml(c.name)}"><span>${safeHtml(c.name)}</span></button>`).join('');
+      $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">V179 TAKE OVER</div><h2>🌱 ปลูกในแปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-seed-grid">${cards}</div></section>`;
+      document.querySelectorAll('[data-v179-plant]').forEach(b=>b.onclick=()=>plantTakeover(i,b.dataset.v179Plant));openModal();return true;
+    }
+    const own=ownState||state,angelCount=Number(own&&own.specials&&own.specials.angelWingCapsule||0),bs=boosts();
+    const water=p.phase==='needsWater'?'<button id="v179Water" class="primary-spooky-action">💧 รดน้ำแปลงนี้</button>':'';
+    const worm=p.phase==='worm'?'<button id="v179Worm" class="danger-action">🪱 กำจัดหนอน</button>':'';
+    const angel=!p.angel&&angelCount>0?`<button id="v179Angel" class="primary-spooky-action">🪽 ใช้ปีกนางฟ้า • มี ×${angelCount}</button>`:'';
+    const boost=bs.length?`<div class="v179-boost-grid">${bs.map(([k,it])=>`<button data-v179-boost="${k}" type="button"><img src="${it.image}" alt="${safeHtml(it.name)}"><span>${safeHtml(it.name)}<small>เร่งโต ${it.boost}% • มี ×${Number(own.specials&&own.specials[k]||0)}</small></span></button>`).join('')}</div>`:'';
+    $('modalContent').innerHTML=`<section class="feature-panel v179-take-panel"><div style="font-size:10px;font-weight:900;opacity:.6;margin-bottom:3px">V179 TAKE OVER</div><h2>📜 แปลง Take Over</h2><p>เหลือเวลา ${remainText(p.takeover.until)}</p><div class="v179-take-actions">${water}${worm}${angel}${boost||'<small>ไม่มีไอเท็มเร่งโตในกระเป๋า</small>'}</div></section>`;
+    if($('v179Water'))$('v179Water').onclick=()=>{closeModal();takeoverWater(i)};
+    if($('v179Worm'))$('v179Worm').onclick=()=>{closeModal();takeoverClearWorm(i)};
+    if($('v179Angel'))$('v179Angel').onclick=()=>takeoverUseAngel(i);
+    document.querySelectorAll('[data-v179-boost]').forEach(b=>b.onclick=()=>takeoverUseBoost(i,b.dataset.v179Boost));
+    openModal();return true;
+  }
+
+  const prior=tapPlot;
+  tapPlot=async function(i){if(visitContext&&openTake(i))return true;return prior(i)};
+  takeoverPlotTap=async function(i){return openTake(i)};
+  try{DEED_ITEM.image='land-deed.png?v=179'}catch(e){}
+  window.YAINOO_BUILD='V179';
+})();
+</script>
+
 </body>
 </html>
