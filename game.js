@@ -3116,7 +3116,7 @@ async function harvestOwnPlot(index){
         : s.plots).map(normalizePlot);
       const p=plots[index];
       ensurePlotPhaseStandalone(p);
-      if(!p?.crop||p.phase!=="ready")throw new Error("ต้นนี้ไม่พร้อมเก็บแล้ว กรุณารีเฟรชสวน");
+      if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังเก็บไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("ต้นนี้ไม่พร้อมเก็บแล้ว กรุณารีเฟรชสวน");
 
       cropKey=p.crop;
       grantHarvestYield(s,cropKey,1);
@@ -5531,7 +5531,7 @@ bulkHarvestCurrentPage=async function(){
       const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);
       const plots=(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots)?gardenSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
       for(let i=start;i<start+12;i++){
-        const p=plots[i];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="ready")continue;
+        const p=plots[i];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="ready")continue;
         const key=p.crop;grantHarvestYield(s,key,1);summary[key]=(summary[key]||0)+1;plots[i]=emptyPlot();total++;
       }
       if(!total)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");
@@ -8179,7 +8179,7 @@ collectAllDogDrops=collectAllDogDropsCurrentPen;
 /* 7) sprinkler */
 async function v15BulkWaterCurrentFarm(){
   if(visitContext||guardResting())return;const start=farmPlotPage*12,end=start+12,local=(ownState||state)?.plots?.slice(start,end)||[];
-  const candidates=local.map((p,i)=>({p,index:start+i})).filter(({p})=>{ensurePlotPhase(p);return p?.crop&&p.phase==="needsWater"});
+  const candidates=local.map((p,i)=>({p,index:start+i})).filter(({p})=>{ensurePlotPhase(p);return !(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)&&p?.crop&&p.phase==="needsWater"});
   if(!candidates.length){message("🚿 สปริงเกอร์","ไม่มีพืชพรรณ ที่ต้องการน้ำตอนนี้");return}
   const btn=$("sprinklerBtn");if(btn)btn.disabled=true;
   try{
@@ -8188,7 +8188,7 @@ async function v15BulkWaterCurrentFarm(){
     await fs.runTransaction(db,async tx=>{
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone);
-      for(let i=start;i<end;i++){const p=plots[i];if(!p?.crop||p.phase!=="needsWater")continue;const type=applyWaterOutcomeV11(p);if(type==="giant")giant++;else if(type==="normal")normal++;count++}
+      for(let i=start;i<end;i++){const p=plots[i];if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="needsWater")continue;const type=applyWaterOutcomeV11(p);if(type==="giant")giant++;else if(type==="normal")normal++;count++}
       if(!count)throw new Error("ไม่มีพืชพรรณ ที่ต้องการน้ำตอนนี้");s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
     });
@@ -8687,13 +8687,13 @@ async function Y26_plantCrop(index,key,button){
 
 harvestOwnPlot=async function(index){
   if(visitContext||guardResting()||!cloudReady)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,cropKey="",qty=1;
-    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");cropKey=p.crop;qty=p.angel?10:1;grantHarvestYield(s,cropKey,qty);plots[index]=emptyPlot();incrementMissionOn(s,"harvestCrops",1);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}${cropKey==="babyBamboo"?` และ ใบไผ่ ×${qty}`:""}`);
+    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),p=plots[index];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังใช้งานไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");cropKey=p.crop;qty=p.angel?10:1;grantHarvestYield(s,cropKey,qty);plots[index]=emptyPlot();incrementMissionOn(s,"harvestCrops",1);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}${cropKey==="babyBamboo"?` และ ใบไผ่ ×${qty}`:""}`);
   }catch(error){message("เก็บเกี่ยวไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
 };
 
 bulkHarvestCurrentPage=async function(){
   if(tractorBusy||visitContext||guardResting()||!cloudReady)return;tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;showTractorWorking();
-  try{await settlePendingCloudSave();const start=farmPlotPage*12,{db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,summary={},totalPlots=0;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());for(let i=start;i<start+12;i++){const p=plots[i];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="ready")continue;const qty=p.angel?10:1,key=p.crop;grantHarvestYield(s,key,qty);summary[key]=(summary[key]||0)+qty;plots[i]=emptyPlot();totalPlots++}if(!totalPlots)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");incrementMissionOn(s,"harvestCrops",totalPlots);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+  try{await settlePendingCloudSave();const start=farmPlotPage*12,{db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,summary={},totalPlots=0;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());for(let i=start;i<start+12;i++){const p=plots[i];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="ready")continue;const qty=p.angel?10:1,key=p.crop;grantHarvestYield(s,key,qty);summary[key]=(summary[key]||0)+qty;plots[i]=emptyPlot();totalPlots++}if(!totalPlots)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");incrementMissionOn(s,"harvestCrops",totalPlots);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
   }catch(error){message("🚜 รถไถยังไม่ออก",error.message||"กรุณาลองใหม่")}finally{hideTractorWorking();tractorBusy=false;if(btn)btn.disabled=false}
 };
 if($("tractorBtn"))$("tractorBtn").onclick=bulkHarvestCurrentPage;
@@ -9982,7 +9982,7 @@ harvestOwnPlot=async function(index){
             plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),
             p=plots[index];
       ensurePlotPhaseStandalone(p);
-      if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
+      if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังใช้งานไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
       cropKey=p.crop;qty=p.angel?10:1;
       grantHarvestYield(s,cropKey,qty);
       plots[index]=emptyPlot();
@@ -11500,7 +11500,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const DAY=24*60*60*1000, HOUR=60*60*1000, MIN=60*1000;
   const SATAN_KEY="satanWings", DEED_KEY="landDeed", ANGEL_KEY="angelWingCapsule";
   const SATAN_ITEM={name:"ปีกซาตาน",image:"item-satan-wings.png?v=1",price:99};
-  const DEED_ITEM={name:"โฉนดที่ดินขอคืนวัดได้บ่",image:"land-deed.png?v=3",price:129};
+  const DEED_ITEM={name:"โฉนดที่ดินขอคืนวัดได้บ่",image:"item-land-deed.png?v=1",price:129};
   const DAILY_KEY=()=>currentBangkokDateKey();
   const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
   function esc(s){return typeof safeHtml==="function"?safeHtml(String(s??"")):String(s??"")}
@@ -11614,7 +11614,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   }
   async function useDeed(index){
     if(!visitContext)return;const count=Number((ownState||state)?.specials?.[DEED_KEY])||0;if(!count)return message("คุณไม่มีโฉนดที่ดิน","ไปซื้อที่ร้านค้า → ของพิเศษก่อนนะคะ");
-    $("modalContent").innerHTML=`<section class="feature-panel ynu-confirm ynu-deed-confirm"><img class="ynu-deed-preview" src="${DEED_ITEM.image}" alt="โฉนด"><h2>${DEED_ITEM.name}</h2><p>ใช้โฉนด Take Over แปลงนี้ 2 ชั่วโมงหรือไม่</p><div><button id="ynuDeedYes">ใช้โฉนด</button><button id="ynuDeedNo">ยกเลิก</button></div></section>`;$("ynuDeedNo").onclick=closeModal;$("ynuDeedYes").onclick=async()=>{try{const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",visitContext.memberKey),sRef=fs.doc(db,"saves",currentMemberKey);let next,plots;await fs.runTransaction(db,async tx=>{const [g,o]=await Promise.all([tx.get(gRef),tx.get(sRef)]);if(!g.exists()||!o.exists())throw new Error("ข้อมูลไม่พร้อม");const own=normalizeState(o.data(),currentMember);if(Number(own.specials[DEED_KEY]||0)<1)throw new Error("คุณไม่มีโฉนดที่ดิน");plots=(g.data().plots||[]).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const now=NOW(),active=plots.filter(p=>p?.takeover?.by===currentMemberKey&&Number(p.takeover.until)>now).length;if(active>=3)throw new Error("คุณ Take Over ฟาร์มของเพื่อนคนนี้ครบ 3 แปลงแล้ว");const p=plots[index];if(p?.crop||takeoverActive(p))throw new Error("ใช้ได้เฉพาะแปลงว่างเท่านั้น");plots[index]={...emptyPlot(),takeover:{by:currentMemberKey,byName:currentProfileDisplayName(),until:now+2*HOUR}};own.specials[DEED_KEY]-=1;next=own;tx.set(gRef,{memberKey:visitContext.memberKey,displayName:visitContext.name,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();showWeatherToast("📜 Take Over แปลงนี้ 2 ชั่วโมงแล้ว") }catch(e){message("ใช้โฉนดไม่ได้",e.message||"กรุณาลองใหม่")}};openModal();
+    $("modalContent").innerHTML=`<section class="feature-panel ynu-confirm"><img src="${DEED_ITEM.image}" alt="โฉนด"><h2>${DEED_ITEM.name}</h2><p>ใช้โฉนด Take Over แปลงนี้ 2 ชั่วโมงหรือไม่</p><div><button id="ynuDeedYes">ใช้โฉนด</button><button id="ynuDeedNo">ยกเลิก</button></div></section>`;$("ynuDeedNo").onclick=closeModal;$("ynuDeedYes").onclick=async()=>{try{const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",visitContext.memberKey),sRef=fs.doc(db,"saves",currentMemberKey);let next,plots;await fs.runTransaction(db,async tx=>{const [g,o]=await Promise.all([tx.get(gRef),tx.get(sRef)]);if(!g.exists()||!o.exists())throw new Error("ข้อมูลไม่พร้อม");const own=normalizeState(o.data(),currentMember);if(Number(own.specials[DEED_KEY]||0)<1)throw new Error("คุณไม่มีโฉนดที่ดิน");plots=(g.data().plots||[]).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const now=NOW(),active=plots.filter(p=>p?.takeover?.by===currentMemberKey&&Number(p.takeover.until)>now).length;if(active>=3)throw new Error("คุณ Take Over ฟาร์มของเพื่อนคนนี้ครบ 3 แปลงแล้ว");const p=plots[index];if(p?.crop||takeoverActive(p))throw new Error("ใช้ได้เฉพาะแปลงว่างเท่านั้น");plots[index]={...emptyPlot(),takeover:{by:currentMemberKey,byName:currentProfileDisplayName(),until:now+2*HOUR}};own.specials[DEED_KEY]-=1;next=own;tx.set(gRef,{memberKey:visitContext.memberKey,displayName:visitContext.name,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(sRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);state.plots=plots.map(normalizePlot);closeModal();draw();showWeatherToast("📜 Take Over แปลงนี้ 2 ชั่วโมงแล้ว") }catch(e){message("ใช้โฉนดไม่ได้",e.message||"กรุณาลองใหม่")}};openModal();
   }
 
   async function takeoverWater(index){
@@ -11737,12 +11737,12 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   /* ---------- manage current farm (fast, optional; old per-plot remains) ---------- */
   function pageRange(){const p=Math.max(1,Math.min(3,(typeof farmPlotPage==="number"?farmPlotPage:0)+1));return[(p-1)*12,p*12]}
   function showGardenManager(){if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=pageRange();$("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">จัดการเฉพาะแปลง ${a+1}–${b} • การกดทีละแปลงแบบเดิมยังใช้ได้</p><div class="ynu-manager-grid"><button data-ynu-manager="plant">🌱 ปลูกทั้งหมด</button><button data-ynu-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-ynu-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-ynu-manager="worms">🪱 จัดการหนอนทั้งหมด</button></div></section>`;document.querySelectorAll("[data-ynu-manager]").forEach(b=>b.onclick=()=>({plant:showBulkSeed,boost:showBulkBoost,angel:bulkAngel,worms:bulkWorms}[b.dataset.ynuManager])());openModal()}
-  function showBulkSeed(){const [a,b]=pageRange(),empty=(ownState||state).plots.slice(a,b).filter(p=>!p?.crop).length;if(!empty)return message("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS).map(([k,c])=>`<button data-bulk-seed="${k}"><img src="${c.selectImg}" alt="${esc(c.name)}"><span>${esc(c.name)}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-seed]").forEach(x=>x.onclick=()=>bulkPlant(x.dataset.bulkSeed));openModal()}
-  async function bulkPlant(key){const [a,b]=pageRange(),c=CROPS[key];try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);let n=0,now=NOW();for(let i=a;i<b;i++)if(!plots[i]?.crop){plots[i]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel:false};n++}if(!n)throw new Error("ไม่มีแปลงว่าง");s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🌱 ปลูกพร้อมกันเรียบร้อย") }catch(e){message("ปลูกไม่ได้",e.message)}}
+  function showBulkSeed(){const [a,b]=pageRange(),empty=(ownState||state).plots.slice(a,b).filter(p=>!p?.crop&&!(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey)).length;if(!empty)return message("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS).map(([k,c])=>`<button data-bulk-seed="${k}"><img src="${c.selectImg}" alt="${esc(c.name)}"><span>${esc(c.name)}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-seed]").forEach(x=>x.onclick=()=>bulkPlant(x.dataset.bulkSeed));openModal()}
+  async function bulkPlant(key){const [a,b]=pageRange(),c=CROPS[key];try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);let n=0,now=NOW();for(let i=a;i<b;i++)if(!plots[i]?.crop&&!(plots[i]?.takeover&&Number(plots[i].takeover.until)>NOW()&&plots[i].takeover.by!==currentMemberKey)){plots[i]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel:false};n++}if(!n)throw new Error("ไม่มีแปลงว่าง");s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🌱 ปลูกพร้อมกันเรียบร้อย") }catch(e){message("ปลูกไม่ได้",e.message)}}
   function showBulkBoost(){const s=ownState||state,items=[...Object.entries(CAKE_ITEMS||{}),...Object.entries(COCONUT_ITEMS||{})].filter(([k])=>Number(s.specials?.[k]||0)>0);if(!items.length)return message("เร่งโตทั้งหมด","ไม่มีเค้กหรือมะพร้าวเร่งโตในกระเป๋า");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${items.map(([k,i])=>`<button data-bulk-boost="${k}"><img src="${i.image}" alt="${esc(i.name)}"><span>${esc(i.name)} • มี ×${s.specials[k]}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-boost]").forEach(x=>x.onclick=()=>bulkBoost(x.dataset.bulkBoost));openModal()}
-  async function bulkBoost(key){const [a,b]=pageRange(),item=SPECIAL_ITEMS[key]||CAKE_ITEMS[key]||COCONUT_ITEMS[key],s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.crop&&x.p.phase!=="ready");if(!targets.length)return message("เร่งโตทั้งหมด","ไม่มีแปลงที่เร่งโตได้");const available=Number(s0.specials?.[key]||0),n=Math.min(available,targets.length);if(n<targets.length)return message("ไอเท็มไม่พอ",`ต้องใช้ ${targets.length} ชิ้น แต่มี ${available} ชิ้น`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials[key]||0)<targets.length)throw new Error("ไอเท็มไม่พอ");for(const {i} of targets){const p=plots[i],crop=CROPS[p.crop],reduce=Math.max(MIN,Math.round(crop.totalMs*(Number(item.boost)||10)/100));p.phaseEndsAt=Math.max(NOW(),Number(p.phaseEndsAt||NOW())-reduce);ensurePlotPhase(p)}s.specials[key]-=targets.length;s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("⚡ เร่งโตพร้อมกันเรียบร้อย") }catch(e){message("ใช้ไม่ได้",e.message)}}
-  async function bulkAngel(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.crop&&!x.p.angel);if(!targets.length)return message("ปีกนางฟ้า","ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");const have=Number(s0.specials?.[ANGEL_KEY]||0);if(have<targets.length)return message("แคปซูลไม่พอ",`ต้องใช้ ${targets.length} แคปซูล แต่มี ${have}`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.[ANGEL_KEY]||0)<targets.length)throw new Error("แคปซูลไม่พอ");for(const {i} of targets)plots[i].angel=true;s.specials[ANGEL_KEY]-=targets.length;s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🪽 เปิดปีกนางฟ้าทั้งฟาร์มหน้านี้แล้ว") }catch(e){message("ใช้ไม่ได้",e.message)}}
-  async function bulkWorms(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.phase==="worm"),cost=targets.reduce((n,x)=>n+((typeof wormTypeOf==="function"&&wormTypeOf(x.p)==="giant")?12:5),0);if(!targets.length)return message("จัดการหนอนทั้งหมด","ไม่พบหนอนในฟาร์มหน้านี้");const have=Number(s0.specials?.wormKillerSpray||0);if(have<cost)return message("สเปรย์ไม่พอ",`พบหนอน ${targets.length} ตัว ต้องใช้ ${cost} ขวด • มี ${have}`);if(!confirm(`พบหนอน ${targets.length} ตัว ต้องใช้สเปรย์ ${cost} ขวด ยืนยันหรือไม่?`))return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.wormKillerSpray||0)<cost)throw new Error("สเปรย์ไม่พอ");for(const {i} of targets){const p=plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(MIN,c.totalMs-c.waterMs)}s.specials.wormKillerSpray-=cost;incrementMissionOn(s,"clearWorms",targets.length);s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast(`🪱 กำจัดหนอน ${targets.length} ตัวพร้อมกันแล้ว`) }catch(e){message("กำจัดไม่ได้",e.message)}}
+  async function bulkBoost(key){const [a,b]=pageRange(),item=SPECIAL_ITEMS[key]||CAKE_ITEMS[key]||COCONUT_ITEMS[key],s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.crop&&x.p.phase!=="ready"&&!(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey));if(!targets.length)return message("เร่งโตทั้งหมด","ไม่มีแปลงที่เร่งโตได้");const available=Number(s0.specials?.[key]||0),n=Math.min(available,targets.length);if(n<targets.length)return message("ไอเท็มไม่พอ",`ต้องใช้ ${targets.length} ชิ้น แต่มี ${available} ชิ้น`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials[key]||0)<targets.length)throw new Error("ไอเท็มไม่พอ");for(const {i} of targets){const p=plots[i],crop=CROPS[p.crop],reduce=Math.max(MIN,Math.round(crop.totalMs*(Number(item.boost)||10)/100));p.phaseEndsAt=Math.max(NOW(),Number(p.phaseEndsAt||NOW())-reduce);ensurePlotPhase(p)}s.specials[key]-=targets.length;s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("⚡ เร่งโตพร้อมกันเรียบร้อย") }catch(e){message("ใช้ไม่ได้",e.message)}}
+  async function bulkAngel(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.crop&&!x.p.angel&&!(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey));if(!targets.length)return message("ปีกนางฟ้า","ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");const have=Number(s0.specials?.[ANGEL_KEY]||0);if(have<targets.length)return message("แคปซูลไม่พอ",`ต้องใช้ ${targets.length} แคปซูล แต่มี ${have}`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.[ANGEL_KEY]||0)<targets.length)throw new Error("แคปซูลไม่พอ");for(const {i} of targets)plots[i].angel=true;s.specials[ANGEL_KEY]-=targets.length;s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🪽 เปิดปีกนางฟ้าทั้งฟาร์มหน้านี้แล้ว") }catch(e){message("ใช้ไม่ได้",e.message)}}
+  async function bulkWorms(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.phase==="worm"&&!(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey)),cost=targets.reduce((n,x)=>n+((typeof wormTypeOf==="function"&&wormTypeOf(x.p)==="giant")?12:5),0);if(!targets.length)return message("จัดการหนอนทั้งหมด","ไม่พบหนอนในฟาร์มหน้านี้");const have=Number(s0.specials?.wormKillerSpray||0);if(have<cost)return message("สเปรย์ไม่พอ",`พบหนอน ${targets.length} ตัว ต้องใช้ ${cost} ขวด • มี ${have}`);if(!confirm(`พบหนอน ${targets.length} ตัว ต้องใช้สเปรย์ ${cost} ขวด ยืนยันหรือไม่?`))return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.wormKillerSpray||0)<cost)throw new Error("สเปรย์ไม่พอ");for(const {i} of targets){const p=plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(MIN,c.totalMs-c.waterMs)}s.specials.wormKillerSpray-=cost;incrementMissionOn(s,"clearWorms",targets.length);s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast(`🪱 กำจัดหนอน ${targets.length} ตัวพร้อมกันแล้ว`) }catch(e){message("กำจัดไม่ได้",e.message)}}
   function mountManagerButton(){if($("ynuGardenManagerBtn"))return;const b=document.createElement("button");b.id="ynuGardenManagerBtn";b.className="ynu-garden-manager-button";b.type="button";b.innerHTML="🌱<b>จัดการทั้งสวน</b>";b.onclick=showGardenManager;$("gameScreen")?.appendChild(b)}setTimeout(mountManagerButton,0);
 
   /* ---------- Dog hotel bath / massage ---------- */
@@ -11789,13 +11789,74 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function j2Slot(i){const x=jelly2Cache?.slots?.[i];if(!x)return j2PlacePicker(i);j2Details(i,x)}
   function j2PlacePicker(i){const s=ownState||state,choices=[...Object.entries(JELLYFISH_TYPES).filter(([k])=>Number(s.specialAnimals?.[k]||0)>0).map(([k,v])=>({version:1,key:k,...v,count:s.specialAnimals[k]})),...Object.entries(Y26_JELLY_V2).filter(([k])=>Number(s.jellyfishV2?.[k]||0)>0).map(([k,v])=>({version:2,key:k,...v,count:s.jellyfishV2[k]}))];if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อน");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button data-j2-place="${x.version}:${x.key}"><img src="${x.image}"><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-j2-place]").forEach(b=>{const [v,k]=b.dataset.j2Place.split(":");b.onclick=()=>j2Place(i,k,Number(v))});openModal()}
   async function j2Place(i,key,version){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember);if(p.slots[i])throw new Error("ช่องนี้ไม่ว่างแล้ว");if(version===2){if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.jellyfishV2[key]--}else{if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.specialAnimals[key]--}const now=NOW();p.slots[i]={id:crypto.randomUUID?.()||`${currentMemberKey}-${now}`,version,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal()}catch(e){message("วางไม่ได้",e.message)}}
-  function j2Details(i,x){const ty=jtype(x),owner=x.ownerKey===currentMemberKey;if(!owner){if(Number(x.version)===1){$("modalContent").innerHTML=`<section class="feature-panel"><img class="cat-result-icon" src="${ty.image}"><h2>${esc(x.customName||ty.name)}</h2><button id="j2Poison">💊 วางยาถ่าย</button></section>`;$("j2Poison").onclick=()=>poisonJ2(i)}else message("แมงกะพรุน V2","V2 ของเพื่อนไม่สามารถวางยาได้");openModal();return}if(Number(x.version)===2){$("modalContent").innerHTML=`<section class="feature-panel"><img class="cat-result-icon" src="${ty.image}"><h2>${esc(x.customName||ty.name)}</h2><button id="j2FeedV2" ${x.cooldownUntil>NOW()?"disabled":""}>🍽️ ให้อาหาร V2</button></section>`;$("j2FeedV2").onclick=()=>j2FeedV2(i);openModal();return}const ready=Number(x.feedCount)>=5&&Number(x.cooldownUntil)<=NOW();$("modalContent").innerHTML=`<section class="feature-panel"><img class="cat-result-icon" src="${ty.image}"><h2>${esc(x.customName||ty.name)}</h2><p>ให้อาหาร ${x.feedCount}/5</p>${ready?'<button id="j2Love">💞 ท้ารัก</button>':'<button id="j2FeedV1">🍽️ ให้อาหาร</button>'}</section>`;if($("j2FeedV1"))$("j2FeedV1").onclick=()=>j2FeedV1(i);if($("j2Love"))$("j2Love").onclick=()=>claimJ2Love(i);openModal()}
-  async function j2FeedV1(i){const foods=RECIPES.filter(r=>dishCountInState(r.id,ownState||state)>0);if(!foods.length)return message("ไม่มีอาหาร","คราฟอาหารก่อนนะคะ");$("modalContent").innerHTML=`<section class="feature-panel"><h2>เลือกอาหาร</h2><div class="cat-feed-grid">${foods.map(r=>`<button data-j2-food="${r.id}"><img src="${r.image}"><span>${esc(r.name)}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-j2-food]").forEach(b=>b.onclick=()=>commitJ2V1(i,b.dataset.j2Food));openModal()}
-  async function commitJ2V1(i,recipeId){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.ownerKey!==currentMemberKey||x.version!==1)throw new Error("ไม่พบแมงกะพรุน");if(dishCountInState(recipeId,s)<1)throw new Error("อาหารหมดแล้ว");removeDishesFromState(s,recipeId,1);x.feedCount=Math.min(5,Number(x.feedCount||0)+1);incrementMissionOn(s,"feedJellyfish",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal()}catch(e){message("ให้อาหารไม่ได้",e.message)}}
+  function j2Details(i,x){
+    const ty=jtype(x),isOwner=x.ownerKey===currentMemberKey,cooldown=Math.max(0,Number(x.cooldownUntil||0)-NOW()),lax=Number((ownState||state)?.specials?.jellyfishLaxative||0);
+    if(Number(x.version)===2){
+      $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel"><img class="jelly-detail-img" src="${ty.image}" alt="${esc(ty.name)}"><h2>${esc(x.customName||ty.name)}</h2><p><b>เวอร์ชัน:</b> V2<br><b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br><b>อายุคงเหลือ:</b> ${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชั่วโมง<br>${cooldown>0?`<b>ให้อาหารได้อีก:</b> ${fmt(cooldown)}`:"<b>พร้อมให้อาหารแล้ว</b>"}</p><div class="jelly-action-grid"><button id="j2FeedV2" type="button" ${cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>${isOwner?'<button id="j2Rename">✏️ ตั้งชื่อ</button>':""}</div><p class="feature-subtitle">V2 ใช้กติกาเดียวกับบ่อ 1 • ไม่สามารถถูกวางยาถ่ายได้</p></section>`;
+      $("j2FeedV2").onclick=()=>j2FeedV2(i);
+      if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+      openModal();return;
+    }
+    const ready=Number(x.feedCount)>=5&&cooldown<=0;
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel"><img class="jelly-detail-img" src="${ty.image}" alt="${esc(ty.name)}"><h2>${esc(x.customName||ty.name)}</h2><p><b>เวอร์ชัน:</b> V1<br><b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br><b>อายุคงเหลือ:</b> ${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชั่วโมง<br><b>อาหาร:</b> ${Number(x.feedCount||0)}/5${cooldown>0?`<br><b>คูลดาวน์:</b> ${fmt(cooldown)}`:""}</p><div class="jelly-action-grid"><button id="j2FeedV1" type="button" ${ready||cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>${ready&&isOwner?'<button id="j2Love">💞 ท้ารัก</button>':""}${isOwner?'<button id="j2Rename">✏️ ตั้งชื่อ</button>':`<button id="j2Poison" class="danger-action" ${lax<1?"disabled":""}>🧪 ใช้ยาถ่าย ×1</button>`}</div></section>`;
+    if($("j2FeedV1"))$("j2FeedV1").onclick=()=>j2FeedV1(i);
+    if($("j2Love"))$("j2Love").onclick=()=>claimJ2Love(i);
+    if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+    if($("j2Poison"))$("j2Poison").onclick=()=>poisonJ2(i);
+    openModal();
+  }
+
+  async function j2Rename(i){
+    const x=jelly2Cache?.slots?.[i];if(!x||x.ownerKey!==currentMemberKey)return message("ตั้งชื่อไม่ได้","เฉพาะเจ้าของแมงกะพรุนเท่านั้น");
+    const ty=jtype(x),typed=window.prompt("ตั้งชื่อแมงกะพรุน",x.customName||ty.name);if(typed===null)return;const clean=typed.trim().slice(0,20);
+    try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2");await fs.runTransaction(db,async tx=>{const ps=await tx.get(pRef),p=normJ2(ps.data()),q=p.slots[i];if(!q||q.ownerKey!==currentMemberKey)throw new Error("คุณไม่ใช่เจ้าของ");q.customName=clean;tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});closeModal();showWeatherToast("✏️ เปลี่ยนชื่อแมงกะพรุนแล้ว")}catch(e){message("ตั้งชื่อไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  function j2FeedV1(i){
+    const s=ownState||state,plankton=Number(s?.bag?.hauntedPlankton)||0,truffle=Number(s?.animalProducts?.truffle)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-food-panel"><h2>🍽️ เลือกอาหารแมงกะพรุน</h2><p class="feature-subtitle">บ่อ 2 ใช้กติกาเดียวกับบ่อ 1 • ให้อาหารสำเร็จ +1 กุศล</p><div class="jelly-food-grid"><button data-j2-v1-food="plankton" ${plankton<1?"disabled":""}><b>แพลงก์ตอนหลอนปิ๊ ×1</b><small>มี ×${plankton}</small></button><button data-j2-v1-food="truffle" ${truffle<2?"disabled":""}><b>เห็ดทรัฟเฟิล ×2</b><small>มี ×${truffle}</small></button></div></section>`;
+    document.querySelectorAll("[data-j2-v1-food]").forEach(b=>b.onclick=()=>commitJ2V1(i,b.dataset.j2V1Food));openModal();
+  }
+
+  async function commitJ2V1(i,foodType){
+    try{
+      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{
+        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];
+        if(!x||Number(x.version)!==1)throw new Error("ไม่พบแมงกะพรุน V1");
+        if(Number(x.cooldownUntil||0)>NOW())throw new Error(`ยังอยู่ในคูลดาวน์ ${fmt(x.cooldownUntil-NOW())}`);
+        if(Number(x.feedCount||0)>=5)throw new Error("แมงกะพรุนอิ่มครบ 5/5 แล้ว");
+        if(foodType==="truffle"){if(Number(s.animalProducts?.truffle||0)<2)throw new Error("เห็ดทรัฟเฟิลไม่ครบ 2 ชิ้น");s.animalProducts.truffle-=2}
+        else{if(Number(s.bag?.hauntedPlankton||0)<1)throw new Error("ไม่มีแพลงก์ตอนหลอนปิ๊");s.bag.hauntedPlankton-=1}
+        s.merit=Number(s.merit||0)+1;x.feedCount=Math.min(5,Number(x.feedCount||0)+1);incrementMissionOn(s,"feedJellyfish",1);next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);updateMeritUI();closeModal();showWeatherToast("🍽️ ให้อาหารบ่อ 2 สำเร็จ • +1 กุศล");
+    }catch(e){message("ให้อาหารไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
   async function claimJ2Love(i){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,rewardText="";await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.ownerKey!==currentMemberKey||x.version!==1||Number(x.feedCount)<5||Number(x.cooldownUntil)>NOW())throw new Error("ยังท้ารักไม่ได้");rewardText=rollJellyLoveReward(s);x.feedCount=5;x.cooldownUntil=NOW()+JELLY_LOVE_COOLDOWN_MS;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();message("💞 ท้ารักสำเร็จ",rewardText||"ได้รับรางวัลแล้ว") }catch(e){message("ท้ารักไม่ได้",e.message)}}
-  async function poisonJ2(i){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.version!==1||x.ownerKey===currentMemberKey)throw new Error("วางยาไม่ได้");if(Number(s.specials?.jellyfishLaxative||0)<1)throw new Error("ไม่มียาถ่าย");s.specials.jellyfishLaxative--;x.expiresAt=Math.max(NOW(),Number(x.expiresAt)-JELLY_POISON_REDUCE_MS);if(x.expiresAt<=NOW())p.slots[i]=null;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();showWeatherToast("💊 วางยาถ่ายสำเร็จ") }catch(e){message("วางยาไม่ได้",e.message)}}
+  async function poisonJ2(i){
+    try{
+      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next,ownerKey="";
+      await fs.runTransaction(db,async tx=>{
+        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];
+        if(!x||Number(x.version)!==1)throw new Error("ยาถ่ายใช้กับแมงกะพรุน V1 เท่านั้น");
+        if(x.ownerKey===currentMemberKey)throw new Error("วางยาถ่ายแมงกะพรุนของตัวเองไม่ได้");
+        if(Number(s.specials?.jellyfishLaxative||0)<1)throw new Error("ไม่มียาถ่ายแมงกะพรุน");
+        s.specials.jellyfishLaxative--;ownerKey=x.ownerKey;x.expiresAt=Math.max(NOW(),Number(x.expiresAt)-JELLY_POISON_REDUCE_MS);if(x.expiresAt<=NOW())p.slots[i]=null;next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});
+        if(ownerKey)tx.set(fs.doc(fs.collection(db,"mailboxes",ownerKey,"items")),{source:"friend",type:"jellyPoison",fromKey:currentMemberKey,title:"มีคนใช้ยาถ่ายแมงกะพรุนของคุณ 🧪",text:"แมงกะพรุนในบ่อ 2 อายุลดลง 3 ชั่วโมง",read:false,createdAt:fs.serverTimestamp()});
+      });
+      Y26_applyOwnState(next);closeModal();showWeatherToast("🧪 ใช้ยาถ่ายในบ่อ 2 สำเร็จ • อายุลดลง 3 ชั่วโมง");
+    }catch(e){message("วางยาไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
   function j2FeedV2(i){const s=ownState||state,plank=Number(s.bag?.hauntedPlankton||0),fish=Number(s.coconutRiverItems?.fish4||0);$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍽️ เลือกอาหาร V2</h2><div class="cat-feed-grid"><button data-j2-v2="plankton" ${plank<50?"disabled":""}>แพลงก์ตอน ×50 • มี ${plank}</button><button data-j2-v2="fish4" ${fish<20?"disabled":""}>ปลาหมายเลข4 ×20 • มี ${fish}</button></div></section>`;document.querySelectorAll("[data-j2-v2]").forEach(b=>b.onclick=()=>commitJ2V2(i,b.dataset.j2V2));openModal()}
-  async function commitJ2V2(i,food){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.version!==2||x.ownerKey!==currentMemberKey||Number(x.cooldownUntil)>NOW())throw new Error("ให้อาหารไม่ได้");if(food==="fish4"){if(Number(s.coconutRiverItems?.fish4||0)<20)throw new Error("ปลาไม่พอ");s.coconutRiverItems.fish4-=20}else{if(Number(s.bag?.hauntedPlankton||0)<50)throw new Error("แพลงก์ตอนไม่พอ");s.bag.hauntedPlankton-=50}reward=rand(50,150);s.merit=Number(s.merit||0)+reward;x.cooldownUntil=NOW()+Y26_JELLY_V2_COOLDOWN_MS;incrementMissionOn(s,"feedJellyfish",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();message("ขอบคุณที่เลี้ยงดูเรา เป็นอย่างดี",`+${reward} กุศล`) }catch(e){message("ให้อาหารไม่ได้",e.message)}}
+  async function commitJ2V2(i,food){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];if(!x||x.version!==2||Number(x.cooldownUntil)>NOW())throw new Error("ให้อาหารไม่ได้");if(food==="fish4"){if(Number(s.coconutRiverItems?.fish4||0)<20)throw new Error("ปลาไม่พอ");s.coconutRiverItems.fish4-=20}else{if(Number(s.bag?.hauntedPlankton||0)<50)throw new Error("แพลงก์ตอนไม่พอ");s.bag.hauntedPlankton-=50}reward=rand(50,150);s.merit=Number(s.merit||0)+reward;x.cooldownUntil=NOW()+Y26_JELLY_V2_COOLDOWN_MS;incrementMissionOn(s,"feedJellyfish",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();message("ขอบคุณที่เลี้ยงดูเรา เป็นอย่างดี",`+${reward} กุศล`) }catch(e){message("ให้อาหารไม่ได้",e.message)}}
   const _drawJellyBase=drawJellyfishPond;
   drawJellyfishPond=function(pond){
     const r=_drawJellyBase(pond);
@@ -11867,3 +11928,186 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   console.info("YN V1.9 CLEANUP-14 loaded: TakeOver/overlays/friend-nav/shop/jelly-box/arena UI");
   console.info("YN AUG-15 BIG UPDATE loaded");
 })();
+
+
+/* =====================================================================
+   HOTFIX — TAKE OVER OWNER LOCK + POND 2 parity
+   Owner cannot touch a plot while another member holds active Take Over.
+   ===================================================================== */
+(function YN_TAKEOVER_OWNER_LOCK_FINAL(){
+  "use strict";
+  function ynLocked(p){
+    return Boolean(p?.takeover && Number(p.takeover.until)>gameNow() && String(p.takeover.by||"") && p.takeover.by!==currentMemberKey);
+  }
+  function ynLockedMessage(p){
+    const who=String(p?.takeover?.byName||"ผู้เล่นอื่น");
+    const ms=Math.max(0,Number(p?.takeover?.until||0)-gameNow());
+    const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);
+    message("📜 แปลงถูก Take Over อยู่",`${safeHtml(who)} เป็นผู้ถือสิทธิ์แปลงนี้ชั่วคราว<br>เจ้าของฟาร์มไม่สามารถปลูก รดน้ำ เร่งโต ใช้ไอเท็ม กำจัดหนอน หรือเก็บเกี่ยวได้<br>เหลือเวลา ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`);
+  }
+
+  const tapBase=tapPlot;
+  tapPlot=async function(index){
+    if(!visitContext){
+      const p=state?.plots?.[index];
+      if(ynLocked(p)){ynLockedMessage(p);return}
+    }
+    return tapBase(index);
+  };
+
+  /* Direct-action safety: block stale/open modals too. */
+  for(const name of ["waterPlot","clearWorm","useCropBoostOnPlot","useCoconutOnPlot"]){
+    const fn=globalThis[name];
+    if(typeof fn!=="function")continue;
+    globalThis[name]=function(index,...rest){
+      if(!visitContext){
+        const p=state?.plots?.[index];
+        if(ynLocked(p)){ynLockedMessage(p);return false}
+      }
+      return fn(index,...rest);
+    };
+  }
+})();
+
+
+/* =====================================================================
+   V169 HOTFIX — Jellyfish Pond 2 definitive details/actions
+   Same interaction rules as Pond 1 for V1; V2 keeps V2 food/cooldown.
+   ===================================================================== */
+(function YN_POND2_FINAL_UI(){
+  if(typeof j2Details!=="function")return;
+
+  j2Details=function(i,x){
+    if(!x)return;
+    const ty=jtype(x)||{}, isOwner=x.ownerKey===currentMemberKey;
+    const now=NOW(), cooldown=Math.max(0,Number(x.cooldownUntil||0)-now);
+    const hours=Math.max(0,Math.ceil((Number(x.expiresAt||0)-now)/HOUR));
+    const lax=Number((ownState||state)?.specials?.jellyfishLaxative||0);
+
+    if(Number(x.version)===2){
+      $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel">
+        <img class="jelly-detail-img" src="${ty.image||""}" alt="${esc(ty.name||"แมงกะพรุน")}">
+        <h2>${esc(x.customName||ty.name||"แมงกะพรุน")}</h2>
+        <p><b>เวอร์ชัน:</b> V2<br>
+        <b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br>
+        <b>อายุคงเหลือ:</b> ${hours} ชั่วโมง<br>
+        ${cooldown>0?`<b>ให้อาหารได้อีก:</b> ${fmt(cooldown)}`:"<b>สถานะ:</b> พร้อมให้อาหารแล้ว"}</p>
+        <div class="jelly-action-grid">
+          <button id="j2FeedV2" type="button" ${cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>
+          ${isOwner?'<button id="j2Rename">✏️ ตั้งชื่อ</button>':""}
+        </div>
+        <p class="feature-subtitle">V2 ไม่สามารถถูกวางยาถ่ายได้</p>
+      </section>`;
+      if($("j2FeedV2"))$("j2FeedV2").onclick=()=>j2FeedV2(i);
+      if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+      openModal();
+      return;
+    }
+
+    const feedCount=Math.max(0,Math.min(5,Number(x.feedCount)||0));
+    const ready=feedCount>=5&&cooldown<=0;
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel">
+      <img class="jelly-detail-img" src="${ty.image||""}" alt="${esc(ty.name||"แมงกะพรุน")}">
+      <h2>${esc(x.customName||ty.name||"แมงกะพรุน")}</h2>
+      <p><b>เวอร์ชัน:</b> V1<br>
+      <b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br>
+      <b>อายุคงเหลือ:</b> ${hours} ชั่วโมง<br>
+      <b>อาหาร:</b> ${feedCount}/5
+      ${cooldown>0?`<br><b>คูลดาวน์:</b> ${fmt(cooldown)}`:""}</p>
+      <div class="jelly-action-grid">
+        <button id="j2FeedV1" type="button" ${ready||cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>
+        ${ready&&isOwner?'<button id="j2Love" class="primary-spooky-action">💗 พร้อมท้ารัก</button>':""}
+        ${isOwner?'<button id="j2Rename">✏️ ตั้งชื่อ</button>':`<button id="j2Poison" class="danger-action" ${lax<1?"disabled":""}>🧪 วางยาถ่าย ×1</button>`}
+      </div>
+    </section>`;
+
+    if($("j2FeedV1"))$("j2FeedV1").onclick=()=>j2FeedV1(i);
+    if($("j2Love"))$("j2Love").onclick=()=>claimJ2Love(i);
+    if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+    if($("j2Poison"))$("j2Poison").onclick=()=>poisonJ2(i);
+    openModal();
+  };
+})();
+
+
+/* =====================================================================
+   V169 HOTFIX — Arena weekly score is committed at fight resolution.
+   "รับคะแนน" remains the acknowledgement/close button.
+   ===================================================================== */
+(function YN_ARENA_REALTIME_FINAL(){
+  let ynArenaCommitBusy=false;
+
+  async function ynCommitArenaWinScore(){
+    if(ynArenaCommitBusy)return false;
+    const local=(ownState||state)?.arena?.fight;
+    if(!local||!local.win||Number(local.finishAt)>NOW()||local.scoreCommitted)return Boolean(local?.scoreCommitted);
+
+    ynArenaCommitBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      const wRef=fs.doc(db,"jellyArenaWeekly",weekKey());
+      let next=null;
+
+      await fs.runTransaction(db,async tx=>{
+        const [ss,ww]=await Promise.all([tx.get(sRef),tx.get(wRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        const f=s?.arena?.fight;
+        if(!f||!f.win||Number(f.finishAt)>NOW())throw new Error("ผลการแข่งขันยังไม่พร้อม");
+        if(f.scoreCommitted){next=s;return;}
+
+        if(currentMember!=="Aida"){
+          const w=ww.exists()?ww.data():{weekKey:weekKey(),scores:{},names:{}};
+          w.scores=ensureObj(w.scores); w.names=ensureObj(w.names);
+          w.scores[currentMemberKey]=Number(w.scores[currentMemberKey]||0)+Math.max(1,Math.min(6,Number(f.score)||1));
+          w.names[currentMemberKey]=currentProfileDisplayName();
+          tx.set(wRef,{weekKey:weekKey(),scores:w.scores,names:w.names,updatedAt:fs.serverTimestamp()},{merge:false});
+        }
+
+        f.scoreCommitted=true;
+        f.scoreClaimed=true;
+        s.arena.cooldownUntil=Number(f.finishAt)+HOUR;
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next)Y26_applyOwnState(next);
+      return true;
+    }catch(e){
+      console.warn("arena realtime score commit",e);
+      return false;
+    }finally{
+      ynArenaCommitBusy=false;
+    }
+  }
+
+  const checkBase=checkArenaFight;
+  checkArenaFight=async function(){
+    const f=(ownState||state)?.arena?.fight;
+    if(f&&f.win&&Number(f.finishAt)<=NOW()&&!f.scoreCommitted){
+      await ynCommitArenaWinScore();
+    }
+    return checkBase();
+  };
+
+  /* Result button now acknowledges; if an old fight has not committed yet,
+     retry the commit first, then clear. */
+  claimArenaScore=async function(){
+    const f=(ownState||state)?.arena?.fight;
+    if(!f||!f.win)return;
+    const ok=f.scoreCommitted||await ynCommitArenaWinScore();
+    if(!ok){
+      message("รับคะแนนไม่ได้","ระบบยังบันทึกคะแนนขึ้น Dashboard ไม่สำเร็จ กรุณาลองอีกครั้ง");
+      return;
+    }
+    clearArenaFight(true);
+  };
+
+  const resultBase=arenaWinResult;
+  arenaWinResult=function(){
+    ynCommitArenaWinScore().catch(()=>{});
+    return resultBase();
+  };
+})();
+
