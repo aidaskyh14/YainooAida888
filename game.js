@@ -11595,7 +11595,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     const targetKey=visitContext.memberKey,targetName=visitContext.name;
     try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),targetRef=fs.doc(db,"saves",targetKey),targetProf=fs.doc(db,"publicProfiles",targetKey),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));let ownNext;
       await fs.runTransaction(db,async tx=>{const [oSnap,tSnap]=await Promise.all([tx.get(ownRef),tx.get(targetRef)]);if(!oSnap.exists()||!tSnap.exists())throw new Error("ข้อมูลสมาชิกไม่พร้อม");const own=normalizeState(oSnap.data(),currentMember),target=normalizeState(tSnap.data(),targetName);resetDailyExtras(own);if(own.friendCatDaily.targets.includes(targetKey))throw new Error("วันนี้คุณเล่นกับแมวบ้านนี้ไปแล้ว ต้องไปฟาร์มคนอื่นค่ะ");if(own.friendCatDaily.targets.length>=3)throw new Error("วันนี้ใช้สิทธิ์กับแมวบ้านเพื่อนครบ 3 ครั้งแล้วค่ะ");own.friendCatDaily.targets.push(targetKey);let bonus="";if(action==="slap")target.merit=Number(target.merit||0)-10;else{target.merit=Number(target.merit||0)+2;const pool=[ANGEL_KEY,SATAN_KEY,DEED_KEY],key=pool[Math.floor(Math.random()*pool.length)];target.specials=ensureObj(target.specials);target.specials[key]=(Number(target.specials[key])||0)+1;bonus=key}
-        ownNext=own;tx.set(ownRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.update(targetRef,{merit:target.merit,specials:cloneData(target.specials),updatedAt:fs.serverTimestamp()});tx.update(targetProf,{merit:target.merit,updatedAt:fs.serverTimestamp()});tx.set(mailRef,{source:"friend",type:"friendCat",fromKey:currentMemberKey,fromName:currentMember,title:action==="slap"?'มีผู้หวังร้าย ”ตบหน้า“ แมวเหมียวของคุณ':'มีนางฟ้าใจดี ”มาหยอกเล่น“ กับแมวเหมียวของคุณ',message:action==="slap"?"กุศล -10":`กุศล +2${bonus?" • แมวของคุณดร็อปไอเท็มพิเศษ 1 ชิ้น":""}`,createdAt:fs.serverTimestamp(),read:false})});Y26_applyOwnState(ownNext);message(action==="slap"?"ตบหน้าเรียบร้อย":"หยอกเล่นเรียบร้อย",action==="slap"?"เจ้าของบ้าน -10 กุศล":"เจ้าของบ้าน +2 กุศล • แมวดร็อปของพิเศษทันที 1 ชิ้น")
+        ownNext=own;tx.set(ownRef,{...cloneData(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(action==="slap")tx.update(targetRef,{merit:target.merit,updatedAt:fs.serverTimestamp()});else tx.update(targetRef,{merit:target.merit,specials:cloneData(target.specials),updatedAt:fs.serverTimestamp()});tx.set(targetProf,{merit:target.merit,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"friendCat",fromKey:currentMemberKey,fromName:currentMember,title:action==="slap"?'มีผู้หวังร้าย ”ตบหน้า“ แมวเหมียวของคุณ':'มีนางฟ้าใจดี ”มาหยอกเล่น“ กับแมวเหมียวของคุณ',message:action==="slap"?"กุศล -10":`กุศล +2${bonus?" • แมวของคุณดร็อปไอเท็มพิเศษ 1 ชิ้น":""}`,createdAt:fs.serverTimestamp(),read:false})});Y26_applyOwnState(ownNext);message(action==="slap"?"ตบหน้าเรียบร้อย":"หยอกเล่นเรียบร้อย",action==="slap"?"เจ้าของบ้าน -10 กุศล":"เจ้าของบ้าน +2 กุศล • แมวดร็อปของพิเศษทันที 1 ชิ้น")
     }catch(e){message("ทำไม่ได้",e.message||"กรุณาลองใหม่")}
   }
   const _friendCatView=typeof Y26_showFriendCat==="function"?Y26_showFriendCat:null;
@@ -11781,11 +11781,11 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   /* ---------- Jellyfish pond 2 ---------- */
   let jelly2Cache=null,jelly2Unsub=null;
   function emptyJ2(){return{slots:Array(12).fill(null)}}
-  function normJ2(d){const now=NOW(),slots=Array.isArray(d?.slots)?d.slots.slice(0,12):[];while(slots.length<12)slots.push(null);return{slots:slots.map(x=>{if(!x||typeof x!=="object")return null;if(Number(x.expiresAt||0)<=now)return null;return{...x,version:Number(x.version)||1,feedCount:Math.max(0,Math.min(5,Number(x.feedCount)||0)),cooldownUntil:Number(x.cooldownUntil)||0}})}}
+  function normJ2(d){const now=NOW(),slots=Array.isArray(d?.slots)?d.slots.slice(0,12):[];while(slots.length<12)slots.push(null);return{slots:slots.map(x=>{if(!x||typeof x!=="object")return null;if(Number(x.expiresAt||0)<=now)return null;const n={...x,version:Number(x.version)||1,feedCount:Math.max(0,Math.min(5,Number(x.feedCount)||0)),cooldownUntil:Number(x.cooldownUntil)||0};if(Number(n.version)===1&&n.cooldownUntil>0&&n.cooldownUntil<=now){n.cooldownUntil=0;n.feedCount=0}if(Number(n.version)===2&&n.cooldownUntil<=now)n.cooldownUntil=0;return n})}}
   function stopJ2(){if(jelly2Unsub){jelly2Unsub();jelly2Unsub=null}jelly2Cache=null}
   async function openJelly2(){$("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");if(jellyPondUnsubscribe)stopJellyPondSubscription();currentScene="jellyfish2";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");$("sceneScreen").style.backgroundImage='url("jellyfish-pond-02.png?v=2"),url("jellyfish-pond-2.jpg?v=1"),url("jellyfish-pond.jpg?v=1")';setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 1",backAction:()=>openScene("jellyfish"),nextText:"ไปที่สังเวียนมวยทะเล",nextAction:openArena});const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","jellyfishPond2");const snap=await fs.getDoc(ref);if(!snap.exists())await fs.setDoc(ref,{slots:Array(12).fill(null),updatedAt:fs.serverTimestamp()});jelly2Unsub=fs.onSnapshot(ref,s=>{jelly2Cache=normJ2(s.data());if(currentScene==="jellyfish2")drawJ2()});}
   function jtype(slot){return Number(slot.version)===2?(Y26_JELLY_V2[slot.typeKey]||{}):(JELLYFISH_TYPES[slot.typeKey]||{})}
-  function drawJ2(){if(currentScene!=="jellyfish2")return;const slots=jelly2Cache?.slots||Array(12).fill(null);$("sceneInteractiveLayer").innerHTML=`<div class="jelly-pond-banner">🪼 บ่อแมงกะพรุน 2 • ${slots.filter(Boolean).length}/12</div>${JELLY_SLOT_POSITIONS.map(([l,t],i)=>{const x=slots[i];if(!x)return `<button class="jelly-slot jelly-slot-empty" data-j2="${i}" style="left:${l}%;top:${t}%"></button>`;const ty=jtype(x);return `<button class="jelly-slot jelly-slot-owned ${Number(x.version)===2?"jelly-v2-slot":""}" data-j2="${i}" style="left:${l}%;top:${t}%"><img src="${ty.image}" alt="${esc(ty.name)}"><small>${esc(x.customName||ty.name)}<br>${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชม. • ${Number(x.version)===2?(x.cooldownUntil>NOW()?"คูลดาวน์":"พร้อมให้อาหาร"):`${x.feedCount||0}/5`}</small></button>`}).join("")}`;document.querySelectorAll("[data-j2]").forEach(b=>b.onclick=()=>j2Slot(Number(b.dataset.j2)))}
+  function drawJ2(){if(currentScene!=="jellyfish2")return;const slots=jelly2Cache?.slots||Array(12).fill(null);$("sceneInteractiveLayer").innerHTML=`<div class="jelly-pond-banner">🪼 บ่อแมงกะพรุน 2 • ${slots.filter(Boolean).length}/12</div>${JELLY_SLOT_POSITIONS.map(([l,t],i)=>{const x=slots[i];if(!x)return `<button class="jelly-slot jelly-slot-empty" data-j2="${i}" style="left:${l}%;top:${t}%"></button>`;const ty=jtype(x),v2=Number(x.version)===2,ready=!v2&&Number(x.feedCount||0)>=5&&Number(x.cooldownUntil||0)<=NOW(),cool=Number(x.cooldownUntil||0)>NOW();return `<button class="jelly-slot jelly-slot-owned ${v2?"jelly-v2-slot":""} ${ready?"jelly-ready-love":""}" data-j2="${i}" style="left:${l}%;top:${t}%"><img src="${ty.image}" alt="${esc(ty.name)}"><small>${esc(x.customName||ty.name)}<br>${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชม. • ${v2?(cool?"คูลดาวน์":"พร้อมให้อาหาร"):(cool?"คูลดาวน์":ready?"พร้อมท้ารัก":`${x.feedCount||0}/5`)}</small></button>`}).join("")}`;document.querySelectorAll("[data-j2]").forEach(b=>b.onclick=()=>j2Slot(Number(b.dataset.j2)))}
   function j2Slot(i){const x=jelly2Cache?.slots?.[i];if(!x)return j2PlacePicker(i);j2Details(i,x)}
   function j2PlacePicker(i){const s=ownState||state,choices=[...Object.entries(JELLYFISH_TYPES).filter(([k])=>Number(s.specialAnimals?.[k]||0)>0).map(([k,v])=>({version:1,key:k,...v,count:s.specialAnimals[k]})),...Object.entries(Y26_JELLY_V2).filter(([k])=>Number(s.jellyfishV2?.[k]||0)>0).map(([k,v])=>({version:2,key:k,...v,count:s.jellyfishV2[k]}))];if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อน");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button data-j2-place="${x.version}:${x.key}"><img src="${x.image}"><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-j2-place]").forEach(b=>{const [v,k]=b.dataset.j2Place.split(":");b.onclick=()=>j2Place(i,k,Number(v))});openModal()}
   async function j2Place(i,key,version){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember);if(p.slots[i])throw new Error("ช่องนี้ไม่ว่างแล้ว");if(version===2){if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.jellyfishV2[key]--}else{if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.specialAnimals[key]--}const now=NOW();p.slots[i]={id:crypto.randomUUID?.()||`${currentMemberKey}-${now}`,version,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal()}catch(e){message("วางไม่ได้",e.message)}}
@@ -12208,6 +12208,73 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     }catch(e){
       console.warn("pond2 refresh after feed",e);
     }
+  };
+})();
+
+
+
+/* =====================================================================
+   V172 — Pond 2 V1 exact parity with Pond 1 + friend-cat transaction fix
+   ===================================================================== */
+(function YN_V172_POND2_FINAL(){
+  const _j2DetailsV172=j2Details;
+  j2Details=function(i,x){
+    if(!x)return;
+    const ty=jtype(x)||{}, isOwner=String(x.ownerKey||"")===String(currentMemberKey||"");
+    const cooldown=Math.max(0,Number(x.cooldownUntil||0)-NOW());
+    if(Number(x.version)===2)return _j2DetailsV172(i,x);
+    const feedCount=Math.max(0,Math.min(5,Number(x.feedCount)||0));
+    const ready=feedCount>=5&&cooldown<=0;
+    const lax=Number((ownState||state)?.specials?.jellyfishLaxative||0);
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel">
+      <img class="jelly-detail-img" src="${ty.image||""}" alt="${esc(ty.name||"แมงกะพรุน")}">
+      <h2>${esc(x.customName||ty.name||"แมงกะพรุน")}</h2>
+      <p><b>เวอร์ชัน:</b> V1<br><b>เจ้าของ:</b> ${esc(x.ownerName||"ผู้เล่น")}<br><b>อายุคงเหลือ:</b> ${Math.max(0,Math.ceil((Number(x.expiresAt||0)-NOW())/HOUR))} ชั่วโมง<br><b>อาหาร:</b> ${feedCount}/5${cooldown>0?`<br><b>คูลดาวน์:</b> ${fmt(cooldown)}`:""}</p>
+      <div class="jelly-action-grid">
+        <button id="j2FeedV1" type="button" ${ready||cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>
+        ${ready?'<button id="j2Love" class="primary-spooky-action" type="button">💗 พร้อมท้ารัก</button>':""}
+        ${isOwner?'<button id="j2Rename" type="button">✏️ ตั้งชื่อ</button>':`<button id="j2Poison" class="danger-action" type="button" ${lax<1?"disabled":""}>🧪 ใช้ยาถ่าย ×1</button>`}
+      </div>
+    </section>`;
+    if($("j2FeedV1"))$("j2FeedV1").onclick=()=>j2FeedV1(i);
+    if($("j2Love"))$("j2Love").onclick=()=>claimJ2Love(i);
+    if($("j2Rename"))$("j2Rename").onclick=()=>j2Rename(i);
+    if($("j2Poison"))$("j2Poison").onclick=()=>poisonJ2(i);
+    openModal();
+  };
+
+  /* Exact pond-1 love cycle: owner only, 5/5 -> reward -> 0/5 + 1h cooldown. */
+  claimJ2Love=async function(i){
+    const cached=jelly2Cache?.slots?.[i];
+    if(cached&&cached.ownerKey!==currentMemberKey){message("กดไม่ได้","คุณไม่ใช่เจ้าของแมงกะพรุนตัวนี้");return}
+    try{
+      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next,pond,rewardText="";
+      await fs.runTransaction(db,async tx=>{
+        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember),x=p.slots[i];
+        if(!x)throw new Error("แมงกะพรุนหมดอายุแล้ว");
+        if(Number(x.version)!==1)throw new Error("ระบบท้ารักใช้กับ V1 เท่านั้น");
+        if(x.ownerKey!==currentMemberKey)throw new Error("คุณไม่ใช่เจ้าของแมงกะพรุนตัวนี้");
+        if(Number(x.feedCount||0)<5)throw new Error("ยังให้อาหารไม่ครบ 5/5");
+        if(Number(x.cooldownUntil||0)>NOW())throw new Error("ยังอยู่ในคูลดาวน์");
+        rewardText=rollJellyLoveReward(s);x.feedCount=0;x.cooldownUntil=NOW()+JELLY_LOVE_COOLDOWN_MS;next=s;pond=p;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);jelly2Cache=pond;updateMeritUI();closeModal();drawJ2();message("💗 ท้ารักสำเร็จ",`${rewardText||"ได้รับรางวัลแล้ว"}<br>พัก 1 ชั่วโมง แล้วจะกลับมาหิว 0/5 ใหม่`);
+    }catch(e){message("ท้ารักไม่ได้",e.message||"กรุณาลองใหม่")}
+  };
+
+  /* Replace previous broken refresh that called non-existent drawJellyPond2(). */
+  const _commitJ2V1V172=commitJ2V1;
+  commitJ2V1=async function(i,foodType){
+    await _commitJ2V1V172(i,foodType);
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","jellyfishPond2"),snap=await fs.getDoc(ref);
+      if(!snap.exists())return;
+      jelly2Cache=normJ2(snap.data());drawJ2();
+      const x=jelly2Cache?.slots?.[i];
+      if(x&&Number(x.version)===1&&Number(x.feedCount||0)>=5)j2Details(i,x);
+    }catch(e){console.warn("V172 pond2 refresh",e)}
   };
 })();
 
