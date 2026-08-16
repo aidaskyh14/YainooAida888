@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="th">
 <head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#21112d">
@@ -11,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=187">
+  <link rel="stylesheet" href="style.css?v=188">
 </head>
 <body>
   <main id="app">
@@ -176,7 +179,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=187"></script>
+  <script src="daily-missions.js?v=188"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -232,6 +235,12 @@
         auth,
         db,
         getCurrentUser(){ return auth.currentUser; },
+        async forceRefreshToken(){
+          const user=auth.currentUser;
+          if(!user)return null;
+          try{ await user.reload(); }catch{}
+          try{ return await user.getIdToken(true); }catch{ return null; }
+        },
         waitForAuth(){
           return new Promise(resolve=>{
             const unsubscribe=onAuthStateChanged(auth,user=>{
@@ -287,7 +296,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=187-mameaw-stability"></script>
+  <script src="game.js?v=188-auth-session-repair-20260816"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}

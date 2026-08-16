@@ -2202,22 +2202,67 @@ async function flushCloudSave(){
 async function ensureMemberAuth(member,code){
   const {bridge,db,fs}=await getFirebaseContext();
   const email=memberEmailFromName(member);
-  let user=bridge.getCurrentUser();
-  if(user&&String(user.email||"").toLowerCase()!==email.toLowerCase()){await bridge.signOut();user=null}
-  if(!user)user=await bridge.signInOrCreate(email,code);
-  const ref=fs.doc(db,"members",user.uid),snap=await fs.getDoc(ref);
   const memberKey=memberKeyFromName(member);
+  let user=bridge.getCurrentUser();
+
+  /*
+    V188:
+    Mameaw's account works on another phone but fails on her own phone.
+    That pattern points to a stale Firebase Auth session/token on that device,
+    not bad game data. Force a clean login for Mameaw at game entry.
+  */
+  const isMameaw=String(memberKey)==="mameaw";
+  if(isMameaw && user){
+    try{ await bridge.signOut(); }catch{}
+    user=null;
+  }
+
+  if(user&&String(user.email||"").toLowerCase()!==email.toLowerCase()){
+    await bridge.signOut();
+    user=null;
+  }
+
+  if(!user) user=await bridge.signInOrCreate(email,code);
+
+  /* Refresh ID token so newly-published Firestore Rules are applied on
+     devices that kept an older Firebase session alive for many hours/days. */
+  try{
+    if(typeof bridge.forceRefreshToken==="function")
+      await bridge.forceRefreshToken();
+    else if(user?.getIdToken)
+      await user.getIdToken(true);
+  }catch(error){
+    console.warn("V188 token refresh",error);
+  }
+
+  user=bridge.getCurrentUser()||user;
+  if(!user)throw new Error("Firebase Auth ยังไม่พร้อม");
+  if(String(user.email||"").toLowerCase()!==email.toLowerCase())
+    throw new Error("บัญชี Firebase ในเครื่องไม่ตรงกับสมาชิกที่เลือก");
+
+  const ref=fs.doc(db,"members",user.uid);
+  let snap=await fs.getDoc(ref);
+
   if(!snap.exists()){
-    await fs.setDoc(ref,{displayName:member,memberKey,role:"member",welcomeGiftClaimed:false,createdAt:fs.serverTimestamp()});
+    await fs.setDoc(ref,{
+      displayName:member,
+      memberKey,
+      role:"member",
+      welcomeGiftClaimed:false,
+      createdAt:fs.serverTimestamp()
+    });
+    snap=await fs.getDoc(ref);
   }else{
     const data=snap.data();
     if(data.role!=="member")throw new Error("บัญชีนี้ไม่ได้เป็นสมาชิกทั่วไป");
-    if(data.memberKey&&data.memberKey!==memberKey)throw new Error("บัญชี Firebase นี้ผูกกับสมาชิกรหัสอื่นแล้ว");
-    if(!data.memberKey)await fs.setDoc(ref,{memberKey,displayName:member},{merge:true});
+    if(data.memberKey&&data.memberKey!==memberKey)
+      throw new Error("บัญชี Firebase นี้ผูกกับสมาชิกรหัสอื่นแล้ว");
+    if(!data.memberKey)
+      await fs.setDoc(ref,{memberKey,displayName:member},{merge:true});
   }
+
   return user;
 }
-
 async function initializeOrLoadCloudState(member,memberKey){
   const {db,fs}=await getFirebaseContext();
   const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
@@ -13556,5 +13601,152 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)v187Bind()});
 
   window.YAINOO_BUILD="V187-MAMEAW-STABILITY";
+})();
+
+
+
+/* ======================================================================
+   V188 — AUTH SESSION REPAIR
+   Repairs stale-device Firebase Auth sessions before protected writes.
+   Particularly targets the Mameaw-device-only permission failure, while
+   remaining safe for every member.
+   ====================================================================== */
+(function YN_V188_AUTH_SESSION_REPAIR(){
+  let v188Refreshing=null;
+  let v188LastRefresh=0;
+
+  async function v188EnsureFreshSession(force=false){
+    if(!currentMember||currentMember==="Aida")return true;
+
+    const expectedKey=memberKeyFromName(currentMember);
+    const expectedEmail=memberEmailFromName(currentMember).toLowerCase();
+    const now=Date.now();
+
+    if(!force && now-v188LastRefresh<60*1000)return true;
+    if(v188Refreshing)return v188Refreshing;
+
+    v188Refreshing=(async()=>{
+      const bridge=await getFirebaseBridge();
+      if(!bridge)throw new Error("Firebase Auth ยังไม่พร้อม");
+
+      let user=bridge.getCurrentUser();
+      const code=MEMBERS[currentMember];
+
+      if(!user || String(user.email||"").toLowerCase()!==expectedEmail){
+        try{ if(user)await bridge.signOut(); }catch{}
+        user=await bridge.signInOrCreate(expectedEmail,code);
+      }
+
+      try{
+        if(typeof bridge.forceRefreshToken==="function")
+          await bridge.forceRefreshToken();
+        else if(user?.getIdToken)
+          await user.getIdToken(true);
+      }catch(error){
+        console.warn("V188 action token refresh",error);
+      }
+
+      user=bridge.getCurrentUser()||user;
+      if(!user)throw new Error("Firebase Auth หลุด กรุณาเข้าสู่เกมใหม่");
+      if(String(user.email||"").toLowerCase()!==expectedEmail)
+        throw new Error("Session ในเครื่องไม่ตรงกับบัญชีที่กำลังเล่น");
+
+      /* Verify that this UID's member document really maps to this memberKey. */
+      try{
+        const {db,fs}=await getFirebaseContext();
+        const memberRef=fs.doc(db,"members",user.uid);
+        const snap=await fs.getDoc(memberRef);
+        if(!snap.exists())throw new Error("ไม่พบข้อมูลสมาชิกของ Firebase Auth นี้");
+        const data=snap.data()||{};
+        if(data.role!=="member")throw new Error("Firebase Auth นี้ไม่ใช่บัญชีสมาชิก");
+        if(String(data.memberKey||"")!==String(expectedKey)){
+          throw new Error(`Session นี้ผูกกับ ${data.memberKey||"บัญชีอื่น"} ไม่ใช่ ${expectedKey}`);
+        }
+      }catch(error){
+        throw error;
+      }
+
+      v188LastRefresh=Date.now();
+      return true;
+    })();
+
+    try{return await v188Refreshing}
+    finally{v188Refreshing=null}
+  }
+
+  /* Wrap the final tractor handler from V187.
+     Mameaw gets a forced token refresh every tractor action; other members
+     refresh only when the session is older than one minute. */
+  const v188TractorButtonBind=()=>{
+    const btn=$("tractorBtn");
+    if(!btn)return;
+
+    const old=btn.onclick;
+    if(!old||old.__v188Wrapped)return;
+
+    const wrapped=async function(event){
+      try{
+        await v188EnsureFreshSession(String(currentMemberKey)==="mameaw");
+      }catch(error){
+        message("🚜 Firebase Session มีปัญหา",
+          `${error.message||"กรุณาเข้าสู่ระบบใหม่"}<br><small>ปิดเกมแล้วเข้าสู่ไอดีนี้ใหม่อีกครั้งหากยังไม่หาย</small>`);
+        return;
+      }
+      return old.call(this,event);
+    };
+    wrapped.__v188Wrapped=true;
+    btn.onclick=wrapped;
+  };
+
+  /*
+    Because draw() can re-bind tractor buttons, bind after every draw,
+    but do it through requestAnimationFrame to avoid adding extra full redraws.
+  */
+  const v188Draw=draw;
+  draw=function(){
+    const r=v188Draw();
+    requestAnimationFrame(v188TractorButtonBind);
+    return r;
+  };
+  requestAnimationFrame(v188TractorButtonBind);
+
+  /* Wrap the final V2 fish-claim function indirectly by intercepting the
+     claim button after fishingResultV2 renders. This avoids changing pond logic. */
+  const v188OldOpenModal=openModal;
+  openModal=function(){
+    const r=v188OldOpenModal();
+    requestAnimationFrame(()=>{
+      const btn=$("ynuClaimFish");
+      if(!btn||btn.__v188Wrapped)return;
+      const old=btn.onclick;
+      if(typeof old!=="function")return;
+
+      btn.onclick=async function(event){
+        btn.disabled=true;
+        try{
+          await v188EnsureFreshSession(String(currentMemberKey)==="mameaw");
+          return await old.call(this,event);
+        }catch(error){
+          message("รับปลาไม่ได้",
+            `${error.message||"Firebase Session มีปัญหา"}<br><small>กรุณาปิดเกมแล้วเข้าสู่ไอดีนี้ใหม่หากยังไม่หาย</small>`);
+        }finally{
+          btn.disabled=false;
+        }
+      };
+      btn.__v188Wrapped=true;
+    });
+    return r;
+  };
+
+  /* Also refresh the session when the browser/app returns from background.
+     This is useful for Messenger/Safari embedded browsers that suspend auth. */
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden && currentMember && currentMember!=="Aida"){
+      v188EnsureFreshSession(false).catch(error=>console.warn("V188 resume auth",error));
+    }
+  });
+
+  window.YN_V188_REFRESH_AUTH=()=>v188EnsureFreshSession(true);
+  window.YAINOO_BUILD="V188-AUTH-SESSION-REPAIR";
 })();
 
