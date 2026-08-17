@@ -15,7 +15,7 @@ window.DAILY_MISSIONS = [
   {id:"openMysteryBox", title:"เปิดกล่องสุ่มอะไรก็ได้ 5 กล่อง (แมงกะพรุน หมา หรือแมว)", target:5, reward:10},
   {id:"craftFood", title:"คราฟอาหารสำเร็จ เมนูอะไรก็ได้ 20 ครั้ง", target:20, reward:40},
   {id:"harvestCoconut", title:"สอยมะพร้าวสำเร็จ 5 ครั้ง", target:5, reward:20},
-  {id:"catchCoconutRiver", title:"จับกบและปลาในสวนมะพร้าวสำเร็จรวม 5 ครั้ง", target:5, reward:20},
+  {id:"catchCoconutRiver", title:"จับสัตว์น้ำในสวนมะพร้าวสำเร็จรวม 5 ครั้ง", target:5, reward:20},
   {id:"sendFriendGift", title:"ส่งของให้เพื่อน 5 ครั้ง", target:5, reward:5},
   {id:"bedActivity", title:"ทำกิจกรรมบนเตียง 1 ครั้ง", target:1, reward:5},
   {id:"clearWorms", title:"กำจัดหนอน 50 ครั้ง ทั้งในฟาร์มตัวเองและฟาร์มคนอื่น (นับรวม)", target:50, reward:30},

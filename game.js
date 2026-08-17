@@ -77,8 +77,8 @@ const SCENES={
   coconut:{image:"coconut-garden-scene.png?v=2"}
 };
 
-const REST_DURATIONS={sleep:6*60*60*1000,nap:3*60*60*1000,flirt:60*60*1000,introvert:45*60*1000};
-const REST_REWARDS={sleep:50,nap:12,flirt:3,introvert:1};
+const REST_DURATIONS={sleep:7*60*60*1000,nap:210*60*1000,flirt:60*60*1000,introvert:30*60*1000};
+const REST_REWARDS={sleep:100,nap:45,flirt:15,introvert:5};
 const HOUSE_WORSHIP_COOLDOWN=3*60*60*1000;
 const UNDERWATER_COOLDOWN=5*60*60*1000;
 const FRIENDLY_GHOST_COOLDOWN=2*60*60*1000;
@@ -107,7 +107,7 @@ const FORECAST_SLOTS=[
   {start:1260,end:1440,time:"21:00–00:00",emoji:"🌙",name:"นอนไหม ผีอยากอำ"}
 ];
 
-const PLOT_COUNT=36;
+const PLOT_COUNT=48;
 const RAIN_DURATION_MS=30*1000;
 const RAIN_INTERVAL_MS=4*60*60*1000;
 const $=id=>document.getElementById(id);
@@ -5267,7 +5267,7 @@ function ensureCatState(target){
   target.pendingCatBoxReward=target.pendingCatBoxReward&&typeof target.pendingCatBoxReward==="object"?target.pendingCatBoxReward:null;
   const now=gameNow();
   target.cats=target.cats.map(cat=>{
-    const typeKey=CAT_TYPES[cat?.typeKey]?cat.typeKey:"cat1",placedFarm=[1,2,3].includes(Number(cat?.placedFarm))?Number(cat.placedFarm):0,placedAt=Math.max(0,Number(cat?.placedAt)||0);
+    const typeKey=CAT_TYPES[cat?.typeKey]?cat.typeKey:"cat1",placedFarm=[1,2,3,4].includes(Number(cat?.placedFarm))?Number(cat.placedFarm):0,placedAt=Math.max(0,Number(cat?.placedAt)||0);
     return{
       id:String(cat?.id||newCatInstanceId()),typeKey,
       customName:String(cat?.customName||"").slice(0,20),placedFarm,placedAt,
@@ -6795,7 +6795,7 @@ function showNumber4BoxUse(){
     <p>มีอยู่ <b>×${count}</b><br>
     เปิด 1 กล่อง จะสุ่มได้ทั้ง<br>
     🐸 กบสวนมะพร้าวหมายเลข4 ×10–100<br>
-    🐟 ปลาสวนมะพร้าวหมายเลข4 ×10–100</p>
+    🐟 ปลาสวนมะพร้าวหมายเลข4 ×10–100<br>✨ มีโอกาสพิเศษได้ ปู/หอยเม่น/กุ้ง หมายเลข4 สูงสุด ×30</p>
     <button id="openNumber4BoxBtn" class="primary-spooky-action" type="button">เปิดกล่อง</button>
     <button id="cancelNumber4BoxBtn" class="secondary-action" type="button">ยังไม่เปิดตอนนี้</button>
   </section>`;
@@ -8771,7 +8771,7 @@ showFriends=async function(){
 };
 
 /* Farm 3 / plots 25–36 */
-currentFarmNo=function(){return Math.max(1,Math.min(3,Number(farmPlotPage||0)+1))};
+currentFarmNo=function(){return Math.max(1,Math.min(4,Number(farmPlotPage||0)+1))};
 setFarmPlotPage=function(page){
   farmPlotPage=Math.max(0,Math.min(2,Math.floor(Number(page)||0)));const screen=$("gameScreen");
   screen.classList.toggle("plot-page-2",farmPlotPage===1);screen.classList.toggle("plot-page-3",farmPlotPage===2);
@@ -8821,7 +8821,7 @@ castBlackMagicOnFriendPlot=async function(index){const p=state?.plots?.[index];i
 showPlaceCat=function(catId){const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;$("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}"><h2>วาง ${safeHtml(catType(cat).name)}</h2><p>ฟาร์ม 1 = แปลง 1–12<br>ฟาร์ม 2 = แปลง 13–24<br>ฟาร์ม 3 = แปลง 25–36<br>วางได้ฟาร์มละ 1 ตัว</p><div class="confirm-actions y26-three-farms"><button data-cat-farm="1" class="primary-spooky-action" type="button">ฟาร์ม 1</button><button data-cat-farm="2" class="primary-spooky-action" type="button">ฟาร์ม 2</button><button data-cat-farm="3" class="primary-spooky-action" type="button">ฟาร์ม 3</button></div><button id="catPlaceBackBtn" class="secondary-action" type="button">กลับ</button></section>`;document.querySelectorAll("[data-cat-farm]").forEach(b=>b.onclick=()=>placeCat(catId,Number(b.dataset.catFarm)));$("catPlaceBackBtn").onclick=()=>inventory("cats")};
 
 /* public cat snapshot for view-only friend visits (never exposes full saves) */
-function Y26_publicCats(s=ownState||state){return (s?.cats||[]).filter(c=>[1,2,3].includes(Number(c.placedFarm))).map(c=>({id:c.id,typeKey:c.typeKey,customName:c.customName||"",placedFarm:Number(c.placedFarm),expiresAt:Number(c.expiresAt)||0,nextFeedAt:Number(c.nextFeedAt)||0,medicineKey:c.medicineKey||"",medicineUntil:Number(c.medicineUntil)||0,lastPenaltyBucket:Number(c.lastPenaltyBucket)||0}))}
+function Y26_publicCats(s=ownState||state){return (s?.cats||[]).filter(c=>[1,2,3,4].includes(Number(c.placedFarm))).map(c=>({id:c.id,typeKey:c.typeKey,customName:c.customName||"",placedFarm:Number(c.placedFarm),expiresAt:Number(c.expiresAt)||0,nextFeedAt:Number(c.nextFeedAt)||0,medicineKey:c.medicineKey||"",medicineUntil:Number(c.medicineUntil)||0,lastPenaltyBucket:Number(c.lastPenaltyBucket)||0}))}
 async function Y26_syncPublicCats(){if(!cloudReady||!currentMemberKey||!ownState)return;try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),publicCats:cloneData(Y26_publicCats()),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("public cats sync",e)}}
 const Y26_placeCatBase=placeCat;placeCat=async function(catId,farm){const r=await Y26_placeCatBase(catId,farm);await Y26_syncPublicCats();return r};
 const Y26_releaseCatBase=releaseCat;releaseCat=async function(catId){const r=await Y26_releaseCatBase(catId);await Y26_syncPublicCats();return r};
@@ -8919,7 +8919,7 @@ const Y26_openSceneBase=openScene;
 openScene=function(sceneName){if(sceneName==="underwater"&&Y26_fishingClosed()){Y26_showFishingClosed();return}return Y26_openSceneBase(sceneName)};
 
 /* Four bed activities; navigation remains possible, gameplay guard stays active */
-const Y26_REST_LABELS={sleep:"นอน",nap:"งีบ",flirt:"ไล่ปูไต่กับผู้",introvert:"อินโทเวิร์ด ไม่อยากยุ่งกับใคร"};
+const Y26_REST_LABELS={sleep:"นอน",nap:"งีบ",flirt:"เล่นปู่ไต่กับผู้",introvert:"อินโทรเวิร์ด ไม่อยากยุ่งกับใคร"};
 showRestOptions=function(){if(isResting()){message("⏳ กำลังทำกิจกรรมบนเตียง",`เหลือเวลา ${formatLongCountdown(state.restUntil-gameNow())}`);return}$("modalContent").innerHTML=`<section class="feature-panel rest-option-panel"><h2>🛏️ กิจกรรมบนเตียง</h2><div class="rest-options"><button type="button" data-y26-rest="sleep"><b>นอน</b><small>6 ชั่วโมง • +50 กุศล</small></button><button type="button" data-y26-rest="nap"><b>งีบ</b><small>3 ชั่วโมง • +12 กุศล</small></button><button type="button" data-y26-rest="flirt"><b>ไล่ปูไต่กับผู้</b><small>1 ชั่วโมง • +3 กุศล</small></button><button type="button" data-y26-rest="introvert"><b>อินโทเวิร์ด ไม่อยากยุ่งกับใคร</b><small>45 นาที • +1 กุศล</small></button></div></section>`;document.querySelectorAll("[data-y26-rest]").forEach(b=>b.onclick=()=>showRestConfirmation(b.dataset.y26Rest));openModal()};
 showRestConfirmation=function(type){if(!REST_DURATIONS[type])return;$("modalContent").innerHTML=`<section class="feature-panel important-warning-panel"><div class="warning-symbol">⚠️</div><h2>ยืนยัน ${safeHtml(Y26_REST_LABELS[type])}</h2><p>ระหว่างกิจกรรมยังสามารถเปิดดูฉากต่าง ๆ ได้ แต่ไม่สามารถทำกิจกรรมในเกมจนกว่าเวลาจะครบ</p><p><b>เมื่อครบเวลาได้รับ ${REST_REWARDS[type]} กุศล</b></p><div class="confirm-actions"><button id="confirmRestBtn" class="danger-action" type="button">ยืนยัน</button><button id="cancelRestBtn" class="secondary-action" type="button">ยกเลิก</button></div></section>`;$("confirmRestBtn").onclick=async()=>{try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);if(Number(s.restUntil||0)>gameNow())throw new Error("กำลังทำกิจกรรมบนเตียงอยู่");s.restType=type;s.restUntil=gameNow()+REST_DURATIONS[type];s.restRewardPending=true;incrementMissionOn(s,"bedActivity",1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();renderHouseScene()}catch(error){message("เริ่มกิจกรรมไม่ได้",error.message||"กรุณาลองใหม่")}};$("cancelRestBtn").onclick=closeModal;openModal()};
 let Y26_restFinishBusy=false;
@@ -9409,7 +9409,7 @@ if($("visitHomeBtn"))$("visitHomeBtn").onclick=()=>returnFromFriendVisit();
    for friend visits. */
 function V30_publicCatsFromState(raw){
   const cats=Array.isArray(raw?.cats)?raw.cats:[];
-  return cats.filter(c=>[1,2,3].includes(Number(c?.placedFarm))).map(c=>({
+  return cats.filter(c=>[1,2,3,4].includes(Number(c?.placedFarm))).map(c=>({
     id:c.id,typeKey:c.typeKey,customName:c.customName||"",placedFarm:Number(c.placedFarm),
     expiresAt:Number(c.expiresAt)||0,nextFeedAt:Number(c.nextFeedAt)||0,
     medicineKey:c.medicineKey||"",medicineUntil:Number(c.medicineUntil)||0,
@@ -9808,33 +9808,24 @@ feedDog=async function(dogId,recipeId){return Y26_feedDog(dogId,"dish",recipeId)
    - Tool tray lowered/aligned
    ====================================================================== */
 const V36_CAMPAIGNS={
-  pumpkin:{
-    id:"pumpkin-48h",
-    title:"ปลูกฟักทองกันเถอะ",
-    heading:"ยอดสะสมการปลูกฟักทองของชาวสวน",
-    durationMs:48*60*60*1000,
-    background:"campaign_pumpkin_background.png?v=1",
-    crops:["pumpkin"],
-    scoreLabel:"ผลผลิตฟักทอง",
-    conditions:`มาช่วยกันปลูกฟักทองกองกอยให้เต็มสวนกันน๊า 🎃✨<br><br>
-      แคมเปญนี้เปิดให้ร่วมสนุกเป็นเวลา <b>48 ชั่วโมง</b> ใครเก็บเกี่ยวฟักทองกองกอยได้เยอะที่สุด ก็มีสิทธิ์ขึ้นอันดับบนตารางคะแนนค่ะ<br><br>
-      นับเฉพาะ <b>ผลผลิตที่เก็บเกี่ยวจากแปลงผักของตัวเองจริง ๆ</b> เท่านั้น จะปลูกอยู่ฟาร์ม 1 ฟาร์ม 2 หรือฟาร์ม 3 ก็ได้หมด ตั้งแต่แปลงที่ 1–36 🌱<br><br>
-      ถ้าแปลงไหนได้รับปีกนางฟ้าแล้วเก็บเกี่ยวได้ 10 ชิ้น ระบบจะนับให้ครบ <b>10 คะแนน</b> ตามผลผลิตจริงค่ะ<br><br>
-      ของที่ได้รับจากของขวัญ ร้านค้า Admin Gift หรือรางวัลอื่น ๆ <b>ไม่นับรวม</b> ในแคมเปญนี้นะคะ 💗 คะแนนจะอัปเดตแบบ real-time ทุกครั้งที่เก็บเกี่ยว`
-  },
-  icecream:{
-    id:"icecream-gold-72h",
-    title:"ไอติมดกทองมาละจ้า",
-    heading:'คะแนนรวม แคมเปญ “ไอติมดกทอง”',
-    durationMs:72*60*60*1000,
-    background:"campaign_icecream_gold_background.png?v=1",
-    crops:["mango","lychee","strawberry"],
-    scoreLabel:"ผลผลิตรวม",
-    conditions:`ถึงเวลารวมพลังปลูกผลไม้หวาน ๆ สำหรับร้านไอติมดกทองแล้วค่า 🍦💖<br><br>
-      แคมเปญนี้เปิดให้ร่วมสนุกเป็นเวลา <b>72 ชั่วโมง หรือ 3 วันเต็ม</b><br><br>
-      คะแนนนับจากผลผลิตที่เก็บเกี่ยวจริงของ <b>มะม่วงหน้าเน่า 🥭 ลิ้นจี่หลีหอม 🍒 และสตรอว์เบอร์รีมรกต 🍓</b> รวมกันทั้งหมด จากฟาร์มของตัวเอง 1–3 และแปลง 1–36<br><br>
-      ถ้าแปลงไหนมีปีกนางฟ้า ผลผลิตที่ได้เพิ่มจะนับตามจำนวนที่เก็บเกี่ยวจริง ✨<br><br>
-      ผลไม้จากของขวัญ ร้านค้า Admin Gift หรือรางวัลอื่น ๆ <b>ไม่นับรวม</b> ค่ะ ตารางคะแนนจะขยับแบบ real-time ตลอดทั้งแคมเปญ`
+  wildRabbit:{
+    id:"wild-rabbit-hungry-4d-v1",
+    title:"กระต่ายป่าหิวแล้ว",
+    heading:"ลำดับการให้อาหารกระต่ายป่า",
+    durationMs:4*24*60*60*1000,
+    background:"campaign-wild-rabbit-ranking-bg.jpeg?v=200",
+    rulesBackground:"campaign-wild-rabbit-rules-bg.jpeg?v=200",
+    rewardsBackground:"campaign-wild-rabbit-rewards-bg.jpeg?v=200",
+    crops:["madCarrot","angryCorn"],
+    scoreLabel:"แครอท + ข้าวโพด",
+    conditions:`ว้าวววววววว! กระต่ายป่าบุกสวนแล้ววว! 🐰<br><br>
+      เหล่ากระต่ายป่าจอมป่วนกำลังหิวโซ ได้กลิ่นของอร่อยจากสวนจนยกขบวนกันมารอแล้ว!<br><br>
+      <b>ชาวสวนจะมีของให้กระต่ายป่าไหมน๊า… นั่นสิ มีปล่าวววว?</b><br><br>
+      🥕 เก็บเกี่ยว <b>แครอทปรอทแตก</b> 1 ชิ้น = 1 คะแนน<br>
+      🌽 เก็บเกี่ยว <b>ข้าวโพดโกรธผัว</b> 1 ชิ้น = 1 คะแนน<br><br>
+      แคมเปญนี้เปิด <b>4 วัน</b> และนับเฉพาะผลผลิตที่เก็บเกี่ยวจากฟาร์มของตัวเองจริง ๆ ทั้งฟาร์ม 1–4<br>
+      เก็บด้วยมือหรือรถไถก็นับตามผลผลิตจริง และถ้ามีปีกนางฟ้าได้ผลผลิต ×10 ระบบก็นับครบ 10 คะแนน<br><br>
+      ของที่ได้จากของขวัญ ร้านค้า Admin Gift หรือรางวัลอื่น <b>ไม่นับเป็นคะแนนแคมเปญ</b> ค่ะ`
   }
 };
 let V36_campaignUnsub=null,V36_campaignTimer=null,V36_campaignProfileNames={},V36_campaignCurrentKey="";
@@ -10236,7 +10227,7 @@ setTimeout(()=>{try{V37_bindCampaignShortcuts()}catch(e){console.warn("campaign 
    Uses idle time and never blocks login/game interaction. */
 (function V41_prewarmCampaignArtwork(){
   const warm=()=>{
-    ["campaign_pumpkin_background.png?v=1","campaign_icecream_gold_background.png?v=1"].forEach(src=>{
+    ["campaign-wild-rabbit-ranking-bg.jpeg?v=200","campaign-wild-rabbit-rules-bg.jpeg?v=200","campaign-wild-rabbit-rewards-bg.jpeg?v=200"].forEach(src=>{
       const img=new Image();
       img.decoding="async";
       img.loading="eager";
@@ -10468,10 +10459,7 @@ setInterval(()=>{
    - CAT-11 movement/spawn correction
    ====================================================================== */
 
-const YN_NEW_BOAT_MENU_IDS=[
-  "boatNew1","boatNew2","boatNew3","boatNew4",
-  "boatNew5","boatNew6","boatNew7","boatNew8"
-];
+const YN_NEW_BOAT_MENU_IDS=["rabbitMenu1","rabbitMenu2","rabbitMenu3","rabbitMenu4","rabbitMenu5","rabbitMenu6"];
 function YN_newBoatMenus(){
   return YN_NEW_BOAT_MENU_IDS.map(recipeById).filter(Boolean);
 }
@@ -10557,12 +10545,12 @@ showBoatSupplyPicker=function(boatNo){
   const s=ownState||state;
   const available=YN_newBoatMenus().filter(item=>dishCountInState(item.id,s)>0);
   if(!available.length){
-    message("ไม่มีเสบียงเรือ","การแข่งขันเรือรอบนี้ใช้เฉพาะเมนูใหม่ 8 เมนูเท่านั้น กรุณาคราฟเมนูใหม่ก่อน");
+    message("ไม่มีเสบียงเรือ","การแข่งขันเรือรอบนี้ใช้เฉพาะเมนูใหม่ 6 เมนูเท่านั้น กรุณาคราฟเมนูใหม่ก่อน");
     return;
   }
   $("modalContent").innerHTML=`<section class="feature-panel boat-supply-picker yn-boat-supply-picker">
     <h2>🚣 ส่งเสบียงให้เรือ ${boatNo}</h2>
-    <p class="feature-subtitle">ใช้ได้เฉพาะเมนูใหม่ 8 เมนู • เลือก 1 จาน • ส่งสำเร็จ = เรือ +1</p>
+    <p class="feature-subtitle">ใช้ได้เฉพาะเมนูใหม่ 6 เมนู • เลือก 1 จาน • ส่งสำเร็จ = เรือ +1</p>
     <div class="boat-supply-grid">${available.map(item=>`
       <button type="button" data-send-yn-boat-menu="${item.id}">
         <img src="${item.image}" alt="${safeHtml(item.name)}">
@@ -11547,7 +11535,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     rainy:{label:"🌧️ เมนูหน้าฝน",title:"🌧️ เมนูหน้าฝน"},
     night:{label:"🌙 เมนูรอบดึก",title:"🌙 เมนูรอบดึก"}
   };
-  const YN_GENERAL_MENU_IDS=["r1","r2","r3","r4","r5","r6","r7","r8"];
+  const YN_GENERAL_MENU_IDS=["r1","r2","r3","r4","r5","r6","r7","r8","rabbitMenu1","rabbitMenu2","rabbitMenu3","rabbitMenu4","rabbitMenu5","rabbitMenu6"];
   const YN_SPECIAL_MENU_IDS=["boatNew1","boatNew2","boatNew3","boatNew4","boatNew5","boatNew6","boatNew7","boatNew8"];
   const YN_NIGHT_MENU_IDS=["n1","n2","n3","n4"];
   let YN_menuActiveCategory="home";
@@ -11953,7 +11941,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const _catchCoco=catchCoconutRiverCreature;catchCoconutRiverCreature=async function(index){const s=ownState||state;if(!s)return;const now=NOW(),h=s.coconutCatchHourly||{};if(!h.windowStart||now-Number(h.windowStart)>=HOUR){h.windowStart=now;h.count=0}s.coconutCatchHourly=h;if(Number(h.count||0)>=4)return message("พักก่อนน๊า","ชั่วโมงนี้เก็บกบ/ปลาครบ 4 ครั้งแล้วค่ะ");const before=(Number(s.coconutRiverItems?.frog1)||0)+(Number(s.coconutRiverItems?.frog2)||0)+(Number(s.coconutRiverItems?.frog3)||0)+(Number(s.coconutRiverItems?.frog4)||0)+(Number(s.coconutRiverItems?.fish1)||0)+(Number(s.coconutRiverItems?.fish2)||0)+(Number(s.coconutRiverItems?.fish3)||0)+(Number(s.coconutRiverItems?.fish4)||0);await _catchCoco(index);const nowS=ownState||state,after=(Number(nowS.coconutRiverItems?.frog1)||0)+(Number(nowS.coconutRiverItems?.frog2)||0)+(Number(nowS.coconutRiverItems?.frog3)||0)+(Number(nowS.coconutRiverItems?.frog4)||0)+(Number(nowS.coconutRiverItems?.fish1)||0)+(Number(nowS.coconutRiverItems?.fish2)||0)+(Number(nowS.coconutRiverItems?.fish3)||0)+(Number(nowS.coconutRiverItems?.fish4)||0);if(after>before){nowS.coconutCatchHourly=nowS.coconutCatchHourly||{windowStart:now,count:0};if(!nowS.coconutCatchHourly.windowStart||now-nowS.coconutCatchHourly.windowStart>=HOUR)nowS.coconutCatchHourly={windowStart:now,count:0};nowS.coconutCatchHourly.count=(Number(nowS.coconutCatchHourly.count)||0)+1;save()}};
 
   /* ---------- manage current farm (fast, optional; old per-plot remains) ---------- */
-  function pageRange(){const p=Math.max(1,Math.min(3,(typeof farmPlotPage==="number"?farmPlotPage:0)+1));return[(p-1)*12,p*12]}
+  function pageRange(){const p=Math.max(1,Math.min(4,(typeof farmPlotPage==="number"?farmPlotPage:0)+1));return[(p-1)*12,p*12]}
   function showGardenManager(){if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=pageRange();$("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">จัดการเฉพาะแปลง ${a+1}–${b} • การกดทีละแปลงแบบเดิมยังใช้ได้</p><div class="ynu-manager-grid"><button data-ynu-manager="plant">🌱 ปลูกทั้งหมด</button><button data-ynu-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-ynu-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-ynu-manager="worms">🪱 จัดการหนอนทั้งหมด</button></div></section>`;document.querySelectorAll("[data-ynu-manager]").forEach(b=>b.onclick=()=>({plant:showBulkSeed,boost:showBulkBoost,angel:bulkAngel,worms:bulkWorms}[b.dataset.ynuManager])());openModal()}
   function showBulkSeed(){const [a,b]=pageRange(),empty=(ownState||state).plots.slice(a,b).filter(p=>!p?.crop&&!(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey)).length;if(!empty)return message("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS).map(([k,c])=>`<button data-bulk-seed="${k}"><img src="${c.selectImg}" alt="${esc(c.name)}"><span>${esc(c.name)}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-seed]").forEach(x=>x.onclick=()=>bulkPlant(x.dataset.bulkSeed));openModal()}
   async function bulkPlant(key){const [a,b]=pageRange(),c=CROPS[key];try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);let n=0,now=NOW();for(let i=a;i<b;i++)if(!plots[i]?.crop&&!(plots[i]?.takeover&&Number(plots[i].takeover.until)>NOW()&&plots[i].takeover.by!==currentMemberKey)){plots[i]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel:false};n++}if(!n)throw new Error("ไม่มีแปลงว่าง");s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🌱 ปลูกพร้อมกันเรียบร้อย") }catch(e){message("ปลูกไม่ได้",e.message)}}
@@ -13229,7 +13217,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       const {db,fs}=await getFirebaseContext();
       const saveRef=fs.doc(db,"saves",currentMemberKey);
       const gardenRef=fs.doc(db,"gardens",currentMemberKey);
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
       const start=page*12;
 
       let next=null,newPlots=null,summary={},totalPlots=0;
@@ -13639,7 +13627,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       const {db,fs}=await getFirebaseContext();
       const saveRef=fs.doc(db,"saves",currentMemberKey);
       const gardenRef=fs.doc(db,"gardens",currentMemberKey);
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
       const start=page*12;
       let next=null,newPlots=null,summary={},totalPlots=0,skippedBroken=0;
 
@@ -13979,7 +13967,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
     showTractorWorking();
 
     try{
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
       const start=page*12;
       const end=Math.min(start+12,PLOT_COUNT);
 
@@ -14174,7 +14162,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
     showTractorWorking();
 
     try{
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
 
       /* Only special-case Mameaw Farm 1.
          Everyone else continues through the normal V191/V190 path. */
@@ -14375,7 +14363,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       const {db,fs}=await getFirebaseContext();
       const saveRef=fs.doc(db,"saves",currentMemberKey);
       const gardenRef=fs.doc(db,"gardens",currentMemberKey);
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
       const start=page*12;
       let next,newPlots,summary={},total=0;
 
@@ -14629,7 +14617,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
     showTractorWorking();
 
     try{
-      const page=Math.max(0,Math.min(2,Number(farmPlotPage)||0));
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0));
 
       /* Everyone except Mameaw Farm 1 keeps V193 normal path. */
       if(String(currentMemberKey)!=="mameaw"||page!==0){
@@ -14724,3 +14712,334 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
   window.YAINOO_BUILD="V194-MAMEAW-DIRECTFIX";
 })();
+
+
+/* ======================================================================
+   V200 — MAJOR UPDATE 6 TOPICS (2026-08-17)
+   Farm 4 / 4 crops / Wild Rabbit campaign / 6 menus / coconut animals /
+   house refresh.  Final overrides live here so older compatibility patches
+   stay intact while the current behaviour is explicit and lightweight.
+   ====================================================================== */
+(function YN_V200_MAJOR6(){
+  const M200_ADMIN=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const M200_CROP_KEYS=["madCarrot","angryCorn","clockworkMushroom","staringMelon"];
+  const M200_MENU_IDS=["rabbitMenu1","rabbitMenu2","rabbitMenu3","rabbitMenu4","rabbitMenu5","rabbitMenu6"];
+  const M200_NEW_RIVER_KEYS=[];
+  const M200_CAMPAIGN_KEY="wildRabbit";
+  const M200_CAMPAIGN_ID="wild-rabbit-hungry-4d-v1";
+
+  /* ---------- Topic 2: four fully fledged crops ---------- */
+  Object.assign(CROPS,{
+    madCarrot:{name:"แครอทปรอทแตก",icon:"🥕",selectImg:"crowned-ghost-carrot-seed.png?v=200",totalMs:60*60*1000,waterMs:20*60*1000,wormChance:.25,seedImg:"mad-carrot-seed.png?v=200",sproutImg:"mad-carrot-sprout.png?v=200",growImg:"mad-carrot-grow.png?v=200",readyImg:"mad-carrot-ready.png?v=200"},
+    angryCorn:{name:"ข้าวโพดโกรธผัว",icon:"🌽",selectImg:"ghost-corn-seed.png?v=200",totalMs:70*60*1000,waterMs:25*60*1000,wormChance:.25,seedImg:"angry-corn-seed.png?v=200",sproutImg:"angry-corn-sprout.png?v=200",growImg:"angry-corn-grow.png?v=200",readyImg:"angry-corn-ready.png?v=200"},
+    clockworkMushroom:{name:"เห็ดไขลาน",icon:"🍄",selectImg:"haunted-clockwork-mushroom-seed.png?v=200",totalMs:80*60*1000,waterMs:30*60*1000,wormChance:.25,seedImg:"clockwork-mushroom-seed.png?v=200",sproutImg:"clockwork-mushroom-sprout.png?v=200",growImg:"clockwork-mushroom-grow.png?v=200",readyImg:"clockwork-mushroom-ready.png?v=200"},
+    staringMelon:{name:"เมล่อนหล่อนมองหน้าชั้นทำไม?",icon:"🍈",selectImg:"spirit-melon-seed.png?v=200",totalMs:90*60*1000,waterMs:35*60*1000,wormChance:.25,seedImg:"staring-melon-seed.png?v=200",sproutImg:"staring-melon-sprout.png?v=200",growImg:"staring-melon-grow.png?v=200",readyImg:"staring-melon-ready.png?v=200"}
+  });
+
+  /* ---------- Topic 4: six general craft menus ---------- */
+  const M200_RECIPES=[
+    {id:"rabbitMenu1",name:"แครอทนมข้นราดสาดแสงเดือน",icon:"🥕",image:"01-carrot-condensed-milk-moonlight.jpeg?v=200",need:{madCarrot:50,cabbage:20,mango:15,milk:8,truffle:5},chance:50,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu2",name:"ข้าวโพดบูด ซู๊ดๆ",icon:"🌽",image:"02-spoiled-corn-sood-sood.jpeg?v=200",need:{angryCorn:50,morning:20,chili:15,egg:10,milk:5},chance:45,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu3",name:"ปลาเมล่อน วอนไหว้วอนอาราธนา",icon:"🐟",image:"03-melon-fish-prayer.jpeg?v=200",need:{staringMelon:45,mango:20,chili:15,fishMeat:10,egg:5},chance:40,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu4",name:"เห็ดไขลานสำราญทรวง",icon:"🍄",image:"04-clockwork-mushroom-delight.jpeg?v=200",need:{clockworkMushroom:45,pumpkin:20,morning:15,truffle:10,milk:8,egg:5},chance:35,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu5",name:"รวมมิตร โพดแคร์ แฮร่ แฮร่ แฮร่",icon:"🍲",image:"05-carrot-corn-mixed-care.jpeg?v=200",need:{madCarrot:35,angryCorn:35,chili:15,egg:8,fishMeat:8},chance:40,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu6",name:"แกงเห็ดเมล่อน เมล่อนเลย เฮ้ยๆๆ",icon:"🍈",image:"06-melon-clockwork-mushroom-curry.jpeg?v=200",need:{staringMelon:30,clockworkMushroom:30,pumpkin:20,cabbage:15,truffle:10,milk:8},chance:30,reward:[30,50],difficulty:"ยาก"}
+  ];
+  M200_RECIPES.forEach(r=>{if(!RECIPES.some(x=>x.id===r.id))RECIPES.push(r)});
+  try{YN_NEW_BOAT_MENU_IDS.splice(0,YN_NEW_BOAT_MENU_IDS.length,...M200_MENU_IDS)}catch{}
+
+  /* ---------- Topic 5: 12 new coconut-river animals ---------- */
+  const addRiver=(kind,label)=>{
+    for(let i=1;i<=4;i++){
+      const key=`${kind}${i}`,fileNo=String(i).padStart(2,"0");
+      COCONUT_RIVER_ITEMS[key]={kind,index:i,name:`${label}สวนมะพร้าว ${i}`,image:`coconut-river-${kind}-${fileNo}.png?v=200`};
+      M200_NEW_RIVER_KEYS.push(key);
+    }
+  };
+  addRiver("crab","ปู"); addRiver("urchin","หอยเม่น"); addRiver("shrimp","กุ้ง");
+
+  function M200_newQuickBonus(dateKey=currentBangkokDateKey()){
+    return {dateKey,frogClaimed:false,fishClaimed:false,crabClaimed:false,urchinClaimed:false,shrimpClaimed:false};
+  }
+  function M200_ensureState(s){
+    if(!s)return s;
+    s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+    M200_CROP_KEYS.forEach(k=>s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0)));
+    s.coconutRiverItems=s.coconutRiverItems&&typeof s.coconutRiverItems==="object"?s.coconutRiverItems:{};
+    Object.keys(COCONUT_RIVER_ITEMS).forEach(k=>s.coconutRiverItems[k]=Math.max(0,Math.floor(Number(s.coconutRiverItems[k])||0)));
+    const dk=currentBangkokDateKey();
+    if(!s.coconutQuickBonus||s.coconutQuickBonus.dateKey!==dk)s.coconutQuickBonus=M200_newQuickBonus(dk);
+    for(const k of ["frogClaimed","fishClaimed","crabClaimed","urchinClaimed","shrimpClaimed"])s.coconutQuickBonus[k]=Boolean(s.coconutQuickBonus[k]);
+    s.wildRabbitCampaign=s.wildRabbitCampaign&&typeof s.wildRabbitCampaign==="object"?s.wildRabbitCampaign:{};
+    if(s.wildRabbitCampaign.campaignId!==M200_CAMPAIGN_ID){
+      s.wildRabbitCampaign={campaignId:M200_CAMPAIGN_ID,carrotHarvested:0,cornHarvested:0,claimed:{}};
+    }
+    s.wildRabbitCampaign.carrotHarvested=Math.max(0,Math.floor(Number(s.wildRabbitCampaign.carrotHarvested)||0));
+    s.wildRabbitCampaign.cornHarvested=Math.max(0,Math.floor(Number(s.wildRabbitCampaign.cornHarvested)||0));
+    s.wildRabbitCampaign.claimed=s.wildRabbitCampaign.claimed&&typeof s.wildRabbitCampaign.claimed==="object"?s.wildRabbitCampaign.claimed:{};
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    s.specials.angelWing=Math.max(0,Math.floor(Number(s.specials.angelWing)||0));
+    return s;
+  }
+  const M200_normBase=normalizeState;
+  normalizeState=function(raw,player){return M200_ensureState(M200_normBase(raw,player))};
+  const M200_freshBase=fresh;
+  fresh=function(player){return M200_ensureState(M200_freshBase(player))};
+
+  /* A distinct campaign reward stock entry; icon uses the established angel art. */
+  SPECIAL_ITEMS.angelWing={name:"ปีกนางฟ้า",image:"icon_nangfa.png?v=1",kind:"angel",group:"angel",description:"ปีกนางฟ้าสำหรับคลังรางวัล"};
+
+  /* Admin stock guarantee for everything added in this release. */
+  const M200_adminStockBase=ensureAdminStock;
+  ensureAdminStock=function(target){
+    let changed=Boolean(M200_adminStockBase(target)); if(!target)return changed; M200_ensureState(target);
+    if(M200_ADMIN()){
+      M200_CROP_KEYS.forEach(k=>{if(Number(target.bag[k])!==ADMIN_STOCK_QTY){target.bag[k]=ADMIN_STOCK_QTY;changed=true}});
+      M200_MENU_IDS.forEach(id=>{const now=dishCountInState(id,target);if(now!==ADMIN_STOCK_QTY){target.dishInventory=target.dishInventory&&typeof target.dishInventory==="object"?target.dishInventory:{};target.dishInventory[id]=ADMIN_STOCK_QTY;changed=true}});
+      M200_NEW_RIVER_KEYS.forEach(k=>{if(Number(target.coconutRiverItems[k])!==ADMIN_STOCK_QTY){target.coconutRiverItems[k]=ADMIN_STOCK_QTY;changed=true}});
+      if(Number(target.specials.angelWing)!==ADMIN_STOCK_QTY){target.specials.angelWing=ADMIN_STOCK_QTY;changed=true}
+    }
+    return changed;
+  };
+
+  /* Make new items explicitly visible in Admin Gift even if an older catalog snapshot was static. */
+  const M200_catalogBase=adminGiftCatalog;
+  adminGiftCatalog=function(){
+    const list=M200_catalogBase();
+    const add=(type,key,name)=>{if(!list.some(e=>e?.type===type&&e?.key===key))list.push({type,key,name})};
+    M200_CROP_KEYS.forEach(k=>add("crop",k,CROPS[k].name));
+    M200_MENU_IDS.forEach(id=>add("dish",id,recipeById(id)?.name||id));
+    M200_NEW_RIVER_KEYS.forEach(k=>add("coconutRiver",k,COCONUT_RIVER_ITEMS[k].name));
+    add("special","angelWing","ปีกนางฟ้า");
+    return list;
+  };
+  const M200_addGiftBase=addGiftItemToState;
+  addGiftItemToState=function(s,gift){
+    M200_ensureState(s);
+    if(Array.isArray(gift?.items)){gift.items.forEach(x=>addGiftItemToState(s,{itemType:x.type,itemKey:x.key,qty:x.qty}));return}
+    const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,Math.floor(Number(gift?.qty)||1));
+    if(type==="crop"&&M200_CROP_KEYS.includes(key)){s.bag[key]=(Number(s.bag[key])||0)+qty;return}
+    if(type==="dish"&&M200_MENU_IDS.includes(key)){addDishToState(s,key,qty);return}
+    if(type==="coconutRiver"&&M200_NEW_RIVER_KEYS.includes(key)){s.coconutRiverItems[key]=(Number(s.coconutRiverItems[key])||0)+qty;return}
+    if(type==="special"&&key==="angelWing"){s.specials.angelWing=(Number(s.specials.angelWing)||0)+qty;return}
+    return M200_addGiftBase(s,gift);
+  };
+  const M200_removeGiftBase=removeGiftItemFromState;
+  removeGiftItemFromState=function(s,type,key,qty){
+    M200_ensureState(s);qty=Math.max(1,Math.floor(Number(qty)||1));
+    if(M200_ADMIN()&&((type==="crop"&&M200_CROP_KEYS.includes(key))||(type==="dish"&&M200_MENU_IDS.includes(key))||(type==="coconutRiver"&&M200_NEW_RIVER_KEYS.includes(key))||(type==="special"&&key==="angelWing"))){ensureAdminStock(s);return true}
+    if(type==="crop"&&M200_CROP_KEYS.includes(key)){if(Number(s.bag[key])<qty)return false;s.bag[key]-=qty;return true}
+    if(type==="dish"&&M200_MENU_IDS.includes(key))return removeDishesFromState(s,key,qty);
+    if(type==="coconutRiver"&&M200_NEW_RIVER_KEYS.includes(key)){if(Number(s.coconutRiverItems[key])<qty)return false;s.coconutRiverItems[key]-=qty;return true}
+    if(type==="special"&&key==="angelWing"){if(Number(s.specials.angelWing)<qty)return false;s.specials.angelWing-=qty;return true}
+    return M200_removeGiftBase(s,type,key,qty);
+  };
+  const M200_adminCountBase=adminEntryCount;
+  adminEntryCount=function(s,e){
+    M200_ensureState(s);
+    if(M200_ADMIN()&&((e?.type==="crop"&&M200_CROP_KEYS.includes(e.key))||(e?.type==="dish"&&M200_MENU_IDS.includes(e.key))||(e?.type==="coconutRiver"&&M200_NEW_RIVER_KEYS.includes(e.key))||(e?.type==="special"&&e.key==="angelWing")))return ADMIN_STOCK_QTY;
+    return M200_adminCountBase(s,e);
+  };
+
+  /* ---------- Topic 1: Farm 4 navigation + cat placement ---------- */
+  currentFarmNo=function(){return Math.max(1,Math.min(4,Number(farmPlotPage||0)+1))};
+  setFarmPlotPage=function(page){
+    farmPlotPage=Math.max(0,Math.min(3,Math.floor(Number(page)||0)));
+    const screen=$("gameScreen"); if(!screen)return;
+    screen.classList.toggle("plot-page-2",farmPlotPage===1);
+    screen.classList.toggle("plot-page-3",farmPlotPage===2);
+    screen.classList.toggle("plot-page-4",farmPlotPage===3);
+    $("plotPagePrevBtn")?.classList.toggle("hidden",farmPlotPage===0);
+    $("plotPageNextBtn")?.classList.toggle("hidden",farmPlotPage===3);
+    const prevLabels=["","กลับแปลง 1 ถึง 12","กลับแปลง 13 ถึง 24","กลับแปลง 25 ถึง 36"];
+    const nextLabels=["ไปแปลง 13 ถึง 24","ไปแปลง 25 ถึง 36","ไปแปลง 37 ถึง 48",""];
+    if($("plotPagePrevBtn"))$("plotPagePrevBtn").setAttribute("aria-label",prevLabels[farmPlotPage]||"กลับฟาร์มก่อนหน้า");
+    if($("plotPageNextBtn"))$("plotPageNextBtn").setAttribute("aria-label",nextLabels[farmPlotPage]||"ไปฟาร์มถัดไป");
+    activePlacedCatId="";try{clearAidaFarmPetActivity(true)}catch{};try{if(typeof V29_setTools==="function")V29_setTools(false)}catch{};if($("collectDropsBtn"))$("collectDropsBtn").classList.toggle("hidden",Boolean(visitContext));
+    draw();try{syncAidaFarmPet()}catch{};try{V29_syncVisitHud()}catch{};if(!visitContext)try{processCatDrops()}catch{};
+  };
+  if($("plotPageNextBtn"))$("plotPageNextBtn").onclick=()=>setFarmPlotPage(farmPlotPage+1);
+  if($("plotPagePrevBtn"))$("plotPagePrevBtn").onclick=()=>setFarmPlotPage(farmPlotPage-1);
+  showPlaceCat=function(catId){
+    const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;
+    $("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}"><h2>วาง ${safeHtml(catType(cat).name)}</h2><p>ฟาร์ม 1 = แปลง 1–12<br>ฟาร์ม 2 = แปลง 13–24<br>ฟาร์ม 3 = แปลง 25–36<br>ฟาร์ม 4 = แปลง 37–48<br>วางได้ฟาร์มละ 1 ตัว</p><div class="confirm-actions m200-four-farms">${[1,2,3,4].map(n=>`<button data-cat-farm="${n}" class="primary-spooky-action" type="button">ฟาร์ม ${n}</button>`).join("")}</div><button id="catPlaceBackBtn" class="secondary-action" type="button">กลับ</button></section>`;
+    document.querySelectorAll("[data-cat-farm]").forEach(b=>b.onclick=()=>placeCat(catId,Number(b.dataset.catFarm)));$("catPlaceBackBtn").onclick=()=>inventory("cats");
+  };
+
+  /* ---------- Topic 5: weighted coconut-river random ---------- */
+  randomCoconutRiverKey=function(){
+    const r=Math.random(); let kind=r<.12?"frog":r<.24?"fish":r<.50?"crab":r<.75?"urchin":"shrimp";
+    const q=Math.random(),index=q<.32?1:q<.62?2:q<.92?3:4;
+    return `${kind}${index}`;
+  };
+
+  const M200_FAST={
+    frog:{label:"กบ",claim:"frogClaimed",product:"milk",exchangeReward:20},
+    fish:{label:"ปลา",claim:"fishClaimed",product:"fishMeat",exchangeReward:30},
+    crab:{label:"ปู",claim:"crabClaimed",product:"egg",exchangeReward:30},
+    urchin:{label:"หอยเม่น",claim:"urchinClaimed",product:"truffle",exchangeReward:30},
+    shrimp:{label:"กุ้ง",claim:"shrimpClaimed",product:"milk",exchangeReward:30}
+  };
+  showCoconutFastBonus=function(){
+    const s=M200_ensureState(ownState||state);if(M200_ADMIN())ensureAdminStock(s);
+    const collectionBlock=kind=>[1,2,3,4].map(i=>{const k=`${kind}${i}`,it=COCONUT_RIVER_ITEMS[k];return `<div class="coconut-collection-item"><img src="${it.image}" alt="${safeHtml(it.name)}"><b>${safeHtml(it.name)}</b><span>×${Number(s.coconutRiverItems[k])||0}</span></div>`}).join("");
+    const section=(kind,cfg)=>{const ready=[1,2,3,4].every(i=>Number(s.coconutRiverItems[`${kind}${i}`])>=1),claimed=Boolean(s.coconutQuickBonus[cfg.claim]),item=COCONUT_RIVER_ITEMS[`${kind}4`],prod=ANIMAL_PRODUCTS[cfg.product];return `<section class="coconut-bonus-section"><h3>${safeHtml(cfg.label)}ครบ 4 ตัว → 50 กุศล</h3><div class="coconut-collection-grid">${collectionBlock(kind)}</div><button type="button" data-m200-fast-claim="${kind}" ${claimed||!ready?"disabled":""}>${claimed?"รับวันนี้แล้ว":"รับ 50 กุศล"}</button><div class="coconut-exchange-row coconut-exchange-row-v2"><div class="coconut-exchange-items"><div class="coconut-exchange-item"><img src="${item.image}" alt="${item.name}"><b>${item.name}</b><span>มี ×${Number(s.coconutRiverItems[`${kind}4`])||0} • ใช้ ×1</span></div><div class="coconut-exchange-plus">+</div><div class="coconut-exchange-item"><img src="${prod.image}" alt="${prod.name}"><b>${prod.name}</b><span>มี ×${Number(s.animalProducts?.[cfg.product])||0} • ใช้ ×10</span></div></div><div class="coconut-exchange-reward">→ ${cfg.exchangeReward} กุศล</div><button type="button" data-m200-fast-exchange="${kind}">แลก</button></div></section>`};
+    $("modalContent").innerHTML=`<section class="feature-panel m200-fast-panel"><h2>⚡ โบนัสคนมือไว</h2><p class="feature-subtitle">ครบหมายเลข 1–4 อย่างละ 1 ตัว → 50 กุศล • แต่ละประเภทรับได้วันละ 1 ครั้ง • รีเซ็ต 00:00 เวลาไทย</p>${Object.entries(M200_FAST).map(([k,v])=>section(k,v)).join("")}</section>`;
+    document.querySelectorAll("[data-m200-fast-claim]").forEach(b=>b.onclick=()=>claimCoconutCollection(b.dataset.m200FastClaim));
+    document.querySelectorAll("[data-m200-fast-exchange]").forEach(b=>b.onclick=()=>exchangeCoconutDuplicate(b.dataset.m200FastExchange));openModal();
+  };
+  claimCoconutCollection=async function(kind){
+    const cfg=M200_FAST[kind];if(!cfg)return;const dk=currentBangkokDateKey();
+    try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));if(s.coconutQuickBonus.dateKey!==dk)s.coconutQuickBonus=M200_newQuickBonus(dk);if(s.coconutQuickBonus[cfg.claim])throw new Error("คอลเล็กชั่นนี้รับรางวัลวันนี้แล้ว");const keys=[1,2,3,4].map(i=>`${kind}${i}`);if(!keys.every(k=>Number(s.coconutRiverItems[k])>=1))throw new Error("ยังมีไม่ครบทั้ง 4 หมายเลข อย่างละหนึ่ง");keys.forEach(k=>s.coconutRiverItems[k]-=1);s.coconutQuickBonus[cfg.claim]=true;s.merit=(Number(s.merit)||0)+50;if(M200_ADMIN())ensureAdminStock(s);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();showCoconutFastBonus();showWeatherToast("⚡ รับ +50 กุศลจากโบนัสคนมือไวแล้ว");
+    }catch(e){message("รับโบนัสไม่ได้",e.message||"กรุณาลองใหม่")}
+  };
+  exchangeCoconutDuplicate=async function(kind){
+    const cfg=M200_FAST[kind];if(!cfg)return;const itemKey=`${kind}4`,productKey=cfg.product;
+    try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));if(Number(s.coconutRiverItems[itemKey])<1)throw new Error(`${COCONUT_RIVER_ITEMS[itemKey].name} ยังไม่พอ`);if(Number(s.animalProducts?.[productKey])<10)throw new Error(`${ANIMAL_PRODUCTS[productKey].name} ต้องมี 10 ชิ้น`);s.coconutRiverItems[itemKey]-=1;s.animalProducts[productKey]-=10;s.merit=(Number(s.merit)||0)+cfg.exchangeReward;if(M200_ADMIN())ensureAdminStock(s);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();showCoconutFastBonus();showWeatherToast(`♻️ แลกสำเร็จ +${cfg.exchangeReward} กุศล`);
+    }catch(e){message("แลกไม่ได้",e.message||"กรุณาลองใหม่")}
+  };
+
+  /* Box #4 always gives frog4 + fish4; 20% total chance for one new #4, max 30. */
+  showNumber4BoxUse=function(){
+    const s=M200_ensureState(ensureNumber4BoxState(ownState||state)),count=Number(s.number4MysteryBoxes)||0;if(count<1)return message("ไม่มีกล่องสุ่ม","ตอนนี้คุณไม่มีกล่องสุ่มหมายเลข4");
+    $("modalContent").innerHTML=`<section class="feature-panel mystery-box-open-panel number4-box-open-panel"><img class="shop-animal-img" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}"><h2>${NUMBER4_BOX.name}</h2><p>มีอยู่ <b>×${count}</b><br>ทุกกล่องได้ กบ 4 + ปลา 4 ตามเดิม<br>และมีโอกาสรวมประมาณ 20% ได้ <b>ปู 4 / หอยเม่น 4 / กุ้ง 4</b> เพิ่ม ครั้งละไม่เกิน 30</p><button id="openNumber4BoxBtn" class="primary-spooky-action" type="button">เปิดกล่อง</button><button id="cancelNumber4BoxBtn" class="secondary-action" type="button">ยังไม่เปิดตอนนี้</button></section>`;openModal();$("openNumber4BoxBtn").onclick=openOneNumber4Box;$("cancelNumber4BoxBtn").onclick=()=>inventory("mysteryBoxes");
+  };
+  openOneNumber4Box=async function(){
+    if(!cloudReady)return message("เปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");const btn=$("openNumber4BoxBtn");if(btn)btn.disabled=true;
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,frogQty=0,fishQty=0,rareKey="",rareQty=0;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(s);if(Number(s.number4MysteryBoxes)<1)throw new Error("กล่องสุ่มหมายเลข4 หมดแล้ว");frogQty=randomNumber4Qty();fishQty=randomNumber4Qty();if(Math.random()<.20){rareKey=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)];rareQty=[10,20,30][Math.floor(Math.random()*3)]}if(!M200_ADMIN())s.number4MysteryBoxes-=1;else s.number4MysteryBoxes=ADMIN_STOCK_QTY;s.coconutRiverItems.frog4=(Number(s.coconutRiverItems.frog4)||0)+frogQty;s.coconutRiverItems.fish4=(Number(s.coconutRiverItems.fish4)||0)+fishQty;if(rareKey)s.coconutRiverItems[rareKey]=(Number(s.coconutRiverItems[rareKey])||0)+rareQty;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);
+      const rare=rareKey?`<div><img src="${COCONUT_RIVER_ITEMS[rareKey].image}" alt="${COCONUT_RIVER_ITEMS[rareKey].name}"><b>${COCONUT_RIVER_ITEMS[rareKey].name}</b><strong>×${rareQty}</strong></div>`:"";
+      $("modalContent").innerHTML=`<section class="feature-panel cat-box-result number4-box-result"><h2>🎉 ยินดีด้วยค่ะ</h2><img class="cat-result-icon" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}"><h3>คุณได้รับ</h3><div class="number4-reward-grid"><div><img src="${COCONUT_RIVER_ITEMS.frog4.image}"><b>${COCONUT_RIVER_ITEMS.frog4.name}</b><strong>×${frogQty}</strong></div><div><img src="${COCONUT_RIVER_ITEMS.fish4.image}"><b>${COCONUT_RIVER_ITEMS.fish4.name}</b><strong>×${fishQty}</strong></div>${rare}</div><p>เข้ากระเป๋า → อื่นๆจากสวนมะพร้าว เรียบร้อยแล้ว</p><button id="number4BoxDoneBtn" class="primary-spooky-action" type="button">เรียบร้อย</button></section>`;$("number4BoxDoneBtn").onclick=()=>inventory("mysteryBoxes");
+    }catch(e){message("เปิดกล่องไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}
+  };
+
+  /* ---------- Topic 3: Wild Rabbit campaign ---------- */
+  V36_rankHTML=function(scoreData){
+    return V36_sortedRows(scoreData).map((r,i)=>{const rank=i+1,top=rank<=5?` v36-rank-top-${rank}`:"",badge=rank===1?"👑":rank===2?"💎":rank===3?"🌹":rank===4?"⭐":rank===5?"✨":`#${rank}`;return `<article class="v36-rank-row${top}"><span class="v36-rank-no">${badge}</span><div class="v36-rank-name"><b>${safeHtml(r.name)}</b><small>อันดับ ${rank}</small></div><strong>${r.score.toLocaleString("th-TH")}</strong></article>`}).join("");
+  };
+  V37_bindCampaignShortcuts=function(){
+    const b=$("campaignWildRabbitBtn");if(!b)return;b.disabled=false;b.onclick=e=>{e.preventDefault();e.stopPropagation();V36_showCampaign(M200_CAMPAIGN_KEY);requestAnimationFrame(()=>closeHomeHudMenu())};
+  };
+  V37_bindCampaignShortcuts();setTimeout(V37_bindCampaignShortcuts,900);
+
+  V36_renderCampaignDashboard=function(c,meta,scoreData){
+    const mine=Number(scoreData?.scores?.[currentMemberKey])||0;
+    $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard m200-rabbit-campaign" style="--campaign-bg:url('${c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button><button id="v36CampaignConditions" type="button">เงื่อนไขแคมเปญ</button></header><div class="v36-campaign-title"><small>🐰 ${safeHtml(c.title)}</small><h2>${safeHtml(c.heading)}</h2><div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • แครอท + ข้าวโพดรวมกัน</div><div class="v36-my-score"><span>คะแนนรวมของคุณ</span><strong id="v36MyCampaignScore">${mine.toLocaleString("th-TH")}</strong></div></div><div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div><footer class="v42-campaign-footer-row"><button id="m200CampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของรางวัล</small></button><div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div></footer></div></section>`;
+    $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};$("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);$("m200CampaignGiftBtn").onclick=M200_showRewards;openModal();
+  };
+  V36_showCampaignConditions=function(c,meta){
+    V36_stopCampaignLive();$("modalContent").innerHTML=`<section class="feature-panel v36-campaign-conditions m200-rabbit-rules" style="--campaign-bg:url('${c.rulesBackground||c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36ConditionsBack" type="button">← กลับหน้าแคมเปญ</button><span>เงื่อนไขแคมเปญ</span></header><div class="v36-condition-card"><h2>🐰 ${safeHtml(c.title)}</h2><p>${c.conditions}</p></div><footer class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong>${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></footer></div></section>`;$("v36ConditionsBack").onclick=()=>V36_showCampaign(M200_CAMPAIGN_KEY);openModal();
+  };
+
+  /* Global scorer intentionally exists outside the old V181 IIFE lookup path. */
+  window.M200_campaignScoreLater=async function(summary){
+    if(!cloudReady||!currentMemberKey||currentMemberKey==="aida")return;
+    const addCarrot=Math.max(0,Math.floor(Number(summary?.madCarrot)||0)),addCorn=Math.max(0,Math.floor(Number(summary?.angryCorn)||0)),add=addCarrot+addCorn;if(!add)return;
+    try{const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",M200_CAMPAIGN_ID),scoreRef=fs.doc(db,"campaignScores",M200_CAMPAIGN_ID),saveRef=fs.doc(db,"saves",currentMemberKey);const meta=await fs.getDoc(metaRef);if(!meta.exists()||!V36_campaignActive(meta.data()||{}))return;let next;
+      await fs.runTransaction(db,async tx=>{const [ss,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const d=ss.exists()?ss.data():{campaignId:M200_CAMPAIGN_ID,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})},s=M200_ensureState(normalizeState(sv.data(),currentMember));scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;names[currentMemberKey]=currentProfileDisplayName();s.wildRabbitCampaign.carrotHarvested+=addCarrot;s.wildRabbitCampaign.cornHarvested+=addCorn;next=s;tx.set(scoreRef,{campaignId:M200_CAMPAIGN_ID,scores,names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+      if(next&&ownState){ownState.wildRabbitCampaign=cloneData(next.wildRabbitCampaign);if(!visitContext)state=ownState;saveLocalOnly(ownState)}
+    }catch(e){console.warn("V200 rabbit campaign score",e)}
+  };
+  /* Define the historic name globally so all later tractor/harvest wrappers call this scorer. */
+  window.V181_campaignScoreLater=window.M200_campaignScoreLater;
+
+  const M200_MILESTONES=[
+    {id:"m300",need:300,title:"กุศล 300",icon:"🙏"},
+    {id:"m750",need:750,title:"กุศล 1,000",icon:"🙏"},
+    {id:"m1000",need:1000,title:"กุศล 1,200",icon:"🙏"},
+    {id:"m2000",need:2000,title:"แมงกระพรุน V2 ×4 (เลือกตัวได้)",icon:"🪼",select:"jelly"},
+    {id:"m2500",need:2500,title:"กล่องสุ่มแมงกระพรุน + แมว + หมา อย่างละ 50",icon:"🎁"},
+    {id:"m3000",need:3000,title:"ชุดไอเท็มพิเศษ อย่างละ 100",icon:"✨"},
+    {id:"m5000",need:5000,title:"น้องหมา V1 เลือก 5 ตัว",icon:"🐶",select:"dogs"}
+  ];
+  function M200_rewardIcon(m){
+    if(m.id==="m300"||m.id==="m750"||m.id==="m1000")return `<span class="m200-emoji-icon">🙏</span>`;
+    if(m.id==="m2000"){const j=Object.values(Y26_JELLY_V2||{})[0];return j?`<img src="${j.image}" alt="แมงกระพรุน V2">`:`<span class="m200-emoji-icon">🪼</span>`}
+    if(m.id==="m2500")return `<div class="m200-mini-icons"><img src="${JELLY_BOX.image}"><img src="${CAT_BOX.image}"><img src="${DOG_BOX.image}"></div>`;
+    if(m.id==="m3000")return `<div class="m200-mini-icons"><img src="${FISHING_BAITS.bait4.image}"><img src="icon_nangfa.png?v=1"><img src="item-satan-wings.png?v=1"><img src="land-deed.png?v=181"><img src="angel_wing_capsule.png?v=1"></div>`;
+    if(m.id==="m5000"){const d=Object.values(DOG_TYPES||{})[0];return d?`<img src="${d.image}">`:`<span class="m200-emoji-icon">🐶</span>`}
+    return `<span class="m200-emoji-icon">🎁</span>`;
+  }
+  async function M200_loadOwnCampaignState(){
+    let s=M200_ensureState(ownState||state);if(cloudReady&&currentMemberKey){try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(snap.exists())s=M200_ensureState(normalizeState(snap.data(),currentMember))}catch{}}return s;
+  }
+  async function M200_showRewards(){
+    const s=await M200_loadOwnCampaignState(),w=s.wildRabbitCampaign,carrot=w.carrotHarvested,corn=w.cornHarvested;
+    const rows=M200_MILESTONES.map(m=>{const ok=carrot>=m.need&&corn>=m.need,claimed=Boolean(w.claimed[m.id]);return `<article class="m200-reward-row ${ok?"ready":""} ${claimed?"claimed":""}"><div class="m200-reward-icon">${M200_rewardIcon(m)}</div><div class="m200-reward-copy"><b>${safeHtml(m.title)}</b><small><span><img src="mad-carrot-ready.png?v=200"> ${carrot.toLocaleString("th-TH")} / ${m.need.toLocaleString("th-TH")}</span><span><img src="angry-corn-ready.png?v=200"> ${corn.toLocaleString("th-TH")} / ${m.need.toLocaleString("th-TH")}</span></small></div><button type="button" data-m200-claim="${m.id}" ${!ok||claimed?"disabled":""}>${claimed?"รับแล้ว ✓":ok?"รับรางวัล":"ยังไม่ถึง"}</button></article>`}).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel m200-rewards-panel" style="--campaign-bg:url('campaign-wild-rabbit-rewards-bg.jpeg?v=200')"><div class="m200-rewards-shade"></div><div class="m200-rewards-content"><header><button id="m200RewardsBack" type="button">← กลับ Rank</button><h2>🎁 รางวัลกระต่ายป่าหิวแล้ว</h2></header><div class="m200-crop-score"><div><img src="mad-carrot-ready.png?v=200"><span>แครอทปรอทแตก</span><b>${carrot.toLocaleString("th-TH")}</b></div><div><img src="angry-corn-ready.png?v=200"><span>ข้าวโพดโกรธผัว</span><b>${corn.toLocaleString("th-TH")}</b></div></div><div class="m200-reward-list">${rows}</div></div></section>`;
+    $("m200RewardsBack").onclick=()=>V36_showCampaign(M200_CAMPAIGN_KEY);document.querySelectorAll("[data-m200-claim]").forEach(b=>b.onclick=()=>M200_beginClaim(b.dataset.m200Claim));openModal();
+  }
+  window.M200_showRewards=M200_showRewards;
+  async function M200_beginClaim(id){const m=M200_MILESTONES.find(x=>x.id===id);if(!m)return;if(m.select==="jelly")return M200_chooseJelly(id);if(m.select==="dogs")return M200_chooseDogs(id);return M200_previewClaim(id,null)}
+  function M200_chooseJelly(id){
+    const rows=Object.entries(Y26_JELLY_V2||{}).map(([k,j])=>`<button type="button" data-m200-jelly="${k}"><img src="${j.image}" alt="${safeHtml(j.name)}"><b>${safeHtml(j.name)}</b><small>รับ ×4 ตัว</small></button>`).join("");$("modalContent").innerHTML=`<section class="feature-panel m200-select-panel"><h2>🪼 เลือกแมงกระพรุน V2</h2><p>เลือกแบบที่ต้องการ 1 แบบ แล้วรับแบบนั้นจำนวน 4 ตัว</p><div class="m200-select-grid">${rows}</div><button id="m200SelectBack" class="secondary-action">กลับ</button></section>`;document.querySelectorAll("[data-m200-jelly]").forEach(b=>b.onclick=()=>M200_previewClaim(id,{jellyKey:b.dataset.m200Jelly}));$("m200SelectBack").onclick=M200_showRewards;openModal();
+  }
+  function M200_chooseDogs(id){
+    const dogEntries=Object.entries(DOG_TYPES||{}).filter(([k])=>/^dog[1-8]$/.test(k));$("modalContent").innerHTML=`<section class="feature-panel m200-select-panel"><h2>🐶 เลือกน้องหมา V1 จำนวน 5 ตัว</h2><p>แตะเลือกให้ครบ 5 ตัว แล้วกดยืนยัน</p><div class="m200-select-grid m200-dog-select">${dogEntries.map(([k,d])=>`<button type="button" data-m200-dog="${k}"><img src="${d.image}" alt="${safeHtml(d.name)}"><b>${safeHtml(d.name)}</b><small class="m200-check">แตะเพื่อเลือก</small></button>`).join("")}</div><button id="m200ConfirmDogs" class="primary-spooky-action" disabled>ยืนยันการเลือก 0/5</button><button id="m200DogsBack" class="secondary-action">กลับ</button></section>`;const selected=new Set();document.querySelectorAll("[data-m200-dog]").forEach(b=>b.onclick=()=>{const k=b.dataset.m200Dog;if(selected.has(k)){selected.delete(k);b.classList.remove("selected")}else if(selected.size<5){selected.add(k);b.classList.add("selected")}const c=$("m200ConfirmDogs");c.disabled=selected.size!==5;c.textContent=`ยืนยันการเลือก ${selected.size}/5`});$("m200ConfirmDogs").onclick=()=>M200_previewClaim(id,{dogKeys:[...selected]});$("m200DogsBack").onclick=M200_showRewards;openModal();
+  }
+  function M200_previewClaim(id,choice){
+    const m=M200_MILESTONES.find(x=>x.id===id);if(!m)return;
+    let detail=`<div class="m200-preview-simple">${M200_rewardIcon(m)}<b>${safeHtml(m.title)}</b></div>`;
+    if(id==="m2000"&&choice?.jellyKey&&Y26_JELLY_V2[choice.jellyKey])detail=`<div class="m200-preview-simple"><img src="${Y26_JELLY_V2[choice.jellyKey].image}"><b>${safeHtml(Y26_JELLY_V2[choice.jellyKey].name)} ×4</b></div>`;
+    if(id==="m5000"&&Array.isArray(choice?.dogKeys))detail=`<div class="m200-popup-multi">${choice.dogKeys.map(k=>`<span><img src="${DOG_TYPES[k].image}">${safeHtml(DOG_TYPES[k].name)} ×1</span>`).join("")}</div>`;
+    $("modalContent").innerHTML=`<section class="feature-panel m200-reward-popup"><h2>รางวัลสำหรับคนเก่ง</h2><p>ยินดีด้วยนะคะ คุณได้รับ</p><div class="m200-popup-reward">${detail}</div><button id="m200ConfirmReceiveReward" class="primary-spooky-action">รับของรางวัล</button><button id="m200PreviewBack" class="secondary-action">กลับ</button></section>`;
+    $("m200ConfirmReceiveReward").onclick=()=>M200_claimReward(id,choice);$("m200PreviewBack").onclick=M200_showRewards;openModal();
+  }
+  async function M200_claimReward(id,choice){
+    const m=M200_MILESTONES.find(x=>x.id===id);if(!m)return;
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,rewardHTML="";
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember)),w=s.wildRabbitCampaign;if(w.claimed[id])throw new Error("รับรางวัลขั้นนี้ไปแล้ว");if(w.carrotHarvested<m.need||w.cornHarvested<m.need)throw new Error("คะแนนแครอทและข้าวโพดยังไม่ถึงทั้งสองฝั่ง");
+        if(id==="m300"){s.merit=(Number(s.merit)||0)+300;rewardHTML='<span class="m200-popup-emoji">🙏</span><b>กุศล ×300</b>'}
+        if(id==="m750"){s.merit=(Number(s.merit)||0)+1000;rewardHTML='<span class="m200-popup-emoji">🙏</span><b>กุศล ×1,000</b>'}
+        if(id==="m1000"){s.merit=(Number(s.merit)||0)+1200;rewardHTML='<span class="m200-popup-emoji">🙏</span><b>กุศล ×1,200</b>'}
+        if(id==="m2000"){const k=choice?.jellyKey;if(!Y26_JELLY_V2[k])throw new Error("กรุณาเลือกแมงกระพรุน V2");s.jellyfishV2[k]=(Number(s.jellyfishV2[k])||0)+4;rewardHTML=`<img src="${Y26_JELLY_V2[k].image}"><b>${safeHtml(Y26_JELLY_V2[k].name)} ×4</b>`}
+        if(id==="m2500"){s.mysteryBoxes=(Number(s.mysteryBoxes)||0)+50;s.catMysteryBoxes=(Number(s.catMysteryBoxes)||0)+50;s.dogMysteryBoxes=(Number(s.dogMysteryBoxes)||0)+50;rewardHTML=`<div class="m200-popup-multi"><span><img src="${JELLY_BOX.image}">กล่องสุ่มแมงกระพรุน ×50</span><span><img src="${CAT_BOX.image}">กล่องสุ่มแมว ×50</span><span><img src="${DOG_BOX.image}">กล่องสุ่มหมา ×50</span></div>`}
+        if(id==="m3000"){s.fishingBaits.bait4=(Number(s.fishingBaits.bait4)||0)+100;s.specials.angelWing=(Number(s.specials.angelWing)||0)+100;s.specials.satanWings=(Number(s.specials.satanWings)||0)+100;s.specials.landDeed=(Number(s.specials.landDeed)||0)+100;s.specials.angelWingCapsule=(Number(s.specials.angelWingCapsule)||0)+100;rewardHTML=`<div class="m200-popup-multi"><span><img src="${FISHING_BAITS.bait4.image}">เหยื่อตกปลามือโปร ×100</span><span><img src="icon_nangfa.png?v=1">ปีกนางฟ้า ×100</span><span><img src="item-satan-wings.png?v=1">ปีกซาตาน ×100</span><span><img src="land-deed.png?v=181">โฉนดที่ดิน ×100</span><span><img src="angel_wing_capsule.png?v=1">แคปซูลปีกนางฟ้า ×100</span></div>`}
+        if(id==="m5000"){const keys=Array.isArray(choice?.dogKeys)?choice.dogKeys:[];if(keys.length!==5||new Set(keys).size!==5||keys.some(k=>!DOG_TYPES[k]||!/^dog[1-8]$/.test(k)))throw new Error("กรุณาเลือกน้องหมาให้ครบ 5 ตัว");ensureDogState(s);keys.forEach(k=>s.dogs.push({id:newDogInstanceId(),typeKey:k,customName:"",placedHotel:false,placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,drops:[]}));rewardHTML=`<div class="m200-popup-multi">${keys.map(k=>`<span><img src="${DOG_TYPES[k].image}">${safeHtml(DOG_TYPES[k].name)} ×1</span>`).join("")}</div>`}
+        w.claimed[id]=true;if(M200_ADMIN())ensureAdminStock(s);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(["m300","m750","m1000"].includes(id))tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();saveLocalOnly(ownState);$("modalContent").innerHTML=`<section class="feature-panel m200-reward-popup"><h2>รับรางวัลเรียบร้อยแล้วค่ะ</h2><p>ของรางวัลถูกส่งเข้ากระเป๋า/คลังของคุณแล้ว</p><div class="m200-popup-reward">${rewardHTML}</div><button id="m200RewardDone" class="primary-spooky-action">เรียบร้อย</button></section>`;$("m200RewardDone").onclick=M200_showRewards;openModal();
+    }catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  /* ---------- Topic 6: refreshed house ---------- */
+  const M200_REST_META={
+    sleep:{image:"bed-option-sleep.png?v=200",title:"นอน",time:"7 ชั่วโมง",reward:100,desc:"พักยาวให้เต็มอิ่ม"},
+    nap:{image:"bed-option-nap.png?v=200",title:"งีบ",time:"3 ชั่วโมงครึ่ง",reward:45,desc:"พักสบาย ๆ ก่อนกลับสวน"},
+    flirt:{image:"bed-option-crab-chase.png?v=200",title:"เล่นปู่ไต่กับผู้",time:"1 ชั่วโมง",reward:15,desc:"กิจกรรมเบา ๆ บนเตียง"},
+    introvert:{image:"bed-option-introvert.png?v=200",title:"อินโทรเวิร์ต ไม่อยากยุ่งกับใคร",time:"30 นาที",reward:5,desc:"ขออยู่เงียบ ๆ คนเดียว"}
+  };
+  renderHouseScene=function(){
+    if(currentScene!=="house")return;setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm});const scene=$("sceneScreen");if(scene){scene.style.backgroundImage='url("ghost-house-interior 2.jpg?v=200"),url("ghost-house-interior.jpg?v=200")';scene.style.backgroundSize="100% 100%";scene.style.backgroundPosition="center";scene.style.backgroundRepeat="no-repeat"}
+    $("sceneInteractiveLayer").innerHTML=`<button id="m200BedHotspot" class="m200-house-hotspot m200-bed-hotspot" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="m200StoveHotspot" class="m200-house-hotspot m200-stove-hotspot" type="button" aria-label="เตาในห้องครัว"></button><button id="m200DiningHotspot" class="m200-house-hotspot m200-dining-hotspot" type="button" aria-label="โต๊ะอาหาร"></button>`;$("m200BedHotspot").onclick=showRestOptions;$("m200StoveHotspot").onclick=()=>message("เตาในห้องครัว","รอซีซั่นหน้านะคะ");$("m200DiningHotspot").onclick=()=>message("โต๊ะอาหาร","รอซีซั่นหน้านะคะ");try{Y26_applyRestViewLock()}catch{};
+  };
+  showRestOptions=function(){if(isResting())return M200_showRestStatus();const cards=Object.entries(M200_REST_META).map(([k,x])=>`<button class="v33-rest-card m200-rest-card" type="button" data-m200-rest="${k}"><img class="m200-rest-icon" src="${x.image}" alt="${safeHtml(x.title)}"><span class="v33-rest-copy"><b>${safeHtml(x.title)}</b><small>${safeHtml(x.time)} · +${x.reward} กุศล</small><em>${safeHtml(x.desc)}</em></span><span class="v33-rest-arrow">›</span></button>`).join("");$("modalContent").innerHTML=`<section class="feature-panel rest-option-panel v33-rest-panel m200-rest-panel"><div class="v33-rest-heading"><span class="v33-rest-heading-icon">🛏️</span><div><h2>กิจกรรมบนเตียง</h2><p>เลือกกิจกรรมที่ต้องการ</p></div></div><div class="rest-options v33-rest-options">${cards}</div></section>`;document.querySelectorAll("[data-m200-rest]").forEach(b=>b.onclick=()=>showRestConfirmation(b.dataset.m200Rest));openModal()};
+  showRestConfirmation=function(type){const m=M200_REST_META[type];if(!m)return;$("modalContent").innerHTML=`<section class="feature-panel important-warning-panel m200-rest-confirm"><img class="m200-rest-confirm-icon" src="${m.image}" alt="${safeHtml(m.title)}"><h2>ยืนยัน ${safeHtml(m.title)}</h2><p>ระหว่างกิจกรรมยังสามารถเข้าไปดูฉากอื่น ๆ ได้ แต่จะไม่สามารถปลูก เก็บเกี่ยว คราฟ หรือทำกิจกรรมในเกมจนกว่าเวลาจะครบ หรือจนกว่าจะยกเลิกกิจกรรม</p><p><b>ครบเวลาได้รับ ${m.reward} กุศล</b></p><div class="confirm-actions"><button id="confirmRestBtn" class="danger-action">ยืนยัน</button><button id="cancelRestBtn" class="secondary-action">ยกเลิก</button></div></section>`;$("confirmRestBtn").onclick=async()=>{try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));if(Number(s.restUntil)>gameNow())throw new Error("กำลังทำกิจกรรมบนเตียงอยู่");s.restType=type;s.restUntil=gameNow()+REST_DURATIONS[type];s.restRewardPending=true;incrementMissionOn(s,"bedActivity",1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();renderHouseScene()}catch(e){message("เริ่มกิจกรรมไม่ได้",e.message||"กรุณาลองใหม่")}};$("cancelRestBtn").onclick=closeModal;openModal()};
+  function M200_restLabel(){return M200_REST_META[(ownState||state)?.restType]?.title||"กิจกรรมบนเตียง"}
+  let M200_restStatusTimer=0;
+  function M200_showRestStatus(){
+    clearInterval(M200_restStatusTimer);const s=ownState||state,remaining=Math.max(0,Number(s?.restUntil||0)-gameNow());$("modalContent").innerHTML=`<section class="feature-panel m200-rest-status"><h2>⏳ กำลัง${safeHtml(M200_restLabel())}</h2><p>เวลาที่เหลือ</p><strong id="m200RestCountdown">${formatLongCountdown(remaining)}</strong><p>ระหว่างนี้ยังไม่สามารถทำกิจกรรมในเกมได้</p><button id="m200CancelRestOpen" class="danger-action">ยกเลิกกิจกรรมบนเตียงนี้</button></section>`;$("m200CancelRestOpen").onclick=M200_showCancelRest;openModal();M200_restStatusTimer=setInterval(()=>{const el=$("m200RestCountdown");if(!el){clearInterval(M200_restStatusTimer);M200_restStatusTimer=0;return}const left=Math.max(0,Number((ownState||state)?.restUntil||0)-gameNow());el.textContent=formatLongCountdown(left);if(left<=0){clearInterval(M200_restStatusTimer);M200_restStatusTimer=0;closeModal()}},1000);
+  }
+  function M200_showCancelRest(){
+    const s=M200_ensureState(ownState||state),need=["crab4","urchin4","shrimp4"],enough=need.every(k=>Number(s.coconutRiverItems[k])>=5);$("modalContent").innerHTML=`<section class="feature-panel m200-rest-cancel"><h2>สิ่งที่ต้องใช้ในการยกเลิกกิจกรรมนี้</h2><div class="m200-cancel-costs">${need.map(k=>{const it=COCONUT_RIVER_ITEMS[k],have=Number(s.coconutRiverItems[k])||0;return `<div class="${have>=5?"ok":"missing"}"><img src="${it.image}" alt="${it.name}"><b>${safeHtml(it.name)}</b><span>ต้องใช้ ×5 • มี ×${have}</span></div>`}).join("")}</div><p>ยกเลิกแล้วจะปลดล็อกทันที และ <b>ไม่ได้รับรางวัลกุศล</b> ของกิจกรรมนี้</p><button id="m200ConfirmCancelRest" class="danger-action" ${enough?"":"disabled"}>ยืนยันยกเลิกกิจกรรม</button><button id="m200BackRestStatus" class="secondary-action">กลับ</button></section>`;$("m200ConfirmCancelRest").onclick=M200_cancelRest;$("m200BackRestStatus").onclick=M200_showRestStatus;openModal();
+  }
+  async function M200_cancelRest(){
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));if(Number(s.restUntil)<=gameNow())throw new Error("กิจกรรมนี้จบไปแล้ว");for(const k of ["crab4","urchin4","shrimp4"])if(Number(s.coconutRiverItems[k])<5)throw new Error("ปู 4 หอยเม่น 4 และกุ้ง 4 ต้องมีอย่างละ 5");if(!M200_ADMIN())for(const k of ["crab4","urchin4","shrimp4"])s.coconutRiverItems[k]-=5;else ensureAdminStock(s);s.restUntil=0;s.restType=null;s.restRewardPending=false;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);clearInterval(M200_restStatusTimer);M200_restStatusTimer=0;closeModal();message("ยกเลิกกิจกรรมบนเตียงนี้แล้วค่ะ","คุณสามารถกลับไปทำกิจกรรมอื่นได้ตามปกติ")
+    }catch(e){message("ยกเลิกกิจกรรมไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  guardResting=function(){if(!isResting())return false;M200_showRestStatus();return true};
+
+  /* Keep house hotspots usable for viewing/cancelling while the gameplay layer is view-only. */
+  const M200_openSceneBase=openScene;
+  openScene=function(name){const r=M200_openSceneBase(name);if(name==="house")requestAnimationFrame(renderHouseScene);return r};
+
+  /* All six recipes are already in RECIPES: temple random menu and unified dog/cat food pickers consume RECIPES dynamically. */
+  setTimeout(()=>{try{if(M200_ADMIN())ensureAdminStock(ownState||state)}catch{}},1500);
+  window.YAINOO_BUILD="V200-MAJOR6";
+  console.info("V200 Major Update 6 topics loaded");
+})();
+
+/* Global alias used by post-V181 tractor/harvest wrappers. */
+async function V181_campaignScoreLater(summary){
+  if(typeof window.M200_campaignScoreLater==="function")return window.M200_campaignScoreLater(summary);
+}
