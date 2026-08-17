@@ -14725,3 +14725,215 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   window.YAINOO_BUILD="V194-MAMEAW-DIRECTFIX";
 })();
 
+
+
+/* ======================================================================
+   V195 — WIMAN DOG / AIDA PRIVATE TEST
+   - Only Aida can enter. Other members still see "โปรดติดตามซีซั่นต่อไป".
+   - DOG-01 is a private test entitlement for Aida; no Firestore rules change.
+   - Ludo sprite PNG files are used directly. No source resize/repacking.
+   ====================================================================== */
+(function YN_V195_WIMAN_DOG(){
+  const VERSION="195";
+  const BG=`wiman-dog-bg.jpeg?v=${VERSION}`;
+  const DOG={
+    id:"dog-01",
+    label:"DOG-01",
+    description:"น้องหมาโจรสลัดสีชมพู",
+    icon:`dog-01-icon.png?v=${VERSION}`,
+    sheets:{
+      idle:`dog-01-idle.png?v=${VERSION}`,
+      front:`dog-01-walk-front.png?v=${VERSION}`,
+      back:`dog-01-walk-back.png?v=${VERSION}`,
+      diag:`dog-01-walk-diag-right.png?v=${VERSION}`,
+      special:`dog-01-special.png?v=${VERSION}`
+    }
+  };
+  const NODES=[
+    [50,82],[39,77],[61,77],[31,69],[48,69],[68,69],
+    [31,60],[43,59],[57,59],[70,60],[36,51],[50,51],[64,51],
+    [40,43],[52,43],[61,43],[45,36.5],[55,36.5]
+  ];
+  let controller=null,runToken=0;
+
+  function isAida(){return String(currentMember||"")==="Aida"||String(currentMemberKey||"")==="aida"}
+  function storageKey(){return `yainoo-wiman-dog-v1:${String(currentMemberKey||currentMember||"aida")}`}
+  function placed(){try{return localStorage.getItem(storageKey())==="1"}catch{return false}}
+  function setPlaced(value){try{localStorage.setItem(storageKey(),value?"1":"0")}catch{}}
+  function rand(a,b){return a+Math.random()*(b-a)}
+  function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+  function preload(){[BG,DOG.icon,...Object.values(DOG.sheets)].forEach(src=>{const im=new Image();im.decoding="async";im.src=src})}
+
+  function setShortcutAppearance(btn){
+    if(!btn)return;
+    const small=btn.querySelector("small"),tail=btn.querySelector("i");
+    btn.classList.toggle("wiman-aida-unlocked",isAida());
+    if(isAida()){
+      if(small)small.textContent="พื้นที่ทดสอบส่วนตัวของ Aida";
+      if(tail)tail.textContent="›";
+    }else{
+      if(small)small.textContent="โปรดติดตามซีซั่นต่อไป";
+      if(tail)tail.textContent="🔒";
+    }
+  }
+
+  function bindShortcut(){
+    const btn=$("shortcutDogPalaceBtn");if(!btn)return;
+    setShortcutAppearance(btn);
+    btn.onclick=()=>{
+      if(typeof closeHomeHudMenu==="function")closeHomeHudMenu();
+      if(!isAida())return message("🏰 วิมานหมา","โปรดติดตามซีซั่นต่อไป");
+      openWimanDog();
+    };
+  }
+
+  function openWimanDog(){
+    if(!isAida())return message("🏰 วิมานหมา","โปรดติดตามซีซั่นต่อไป");
+    stopWimanDog();
+    if(typeof stopSceneTimer==="function")stopSceneTimer();
+    currentScene="wimanDog";
+    $("gameScreen")?.classList.add("hidden");
+    const scene=$("sceneScreen");
+    scene?.classList.remove("hidden");
+    if(scene){scene.dataset.scene="wimanDog";scene.style.backgroundImage=`url("${BG}")`}
+    setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm});
+    const layer=$("sceneInteractiveLayer");if(!layer)return;
+    layer.innerHTML=`
+      <button id="wimanDogInventoryBtn" class="wiman-dog-inventory-button" type="button"><span class="paw">🐾</span><span>หมาที่คุณมี</span></button>
+      <div id="wimanDogPetLayer" class="wiman-dog-pet-layer" aria-label="พื้นที่เดินเล่นของน้องหมา"></div>`;
+    $("wimanDogInventoryBtn").onclick=showInventory;
+    if(placed())mountDog();
+  }
+
+  function showInventory(){
+    if(!isAida())return;
+    const isPlaced=placed();
+    $("modalContent").innerHTML=`
+      <section class="feature-panel wiman-dog-inventory-panel">
+        <span class="wiman-dog-panel-kicker">WIMAN DOG</span>
+        <h2>🐾 หมาที่คุณมี</h2>
+        <p class="wiman-dog-panel-sub">ตอนนี้บัญชี Aida มีน้องหมาสำหรับทดสอบ 1 ตัว</p>
+        <article class="wiman-dog-card">
+          <div class="wiman-dog-card-art"><img src="${DOG.icon}" alt="${DOG.label}"></div>
+          <div class="wiman-dog-card-copy">
+            <b>${DOG.label}</b>
+            <span>${DOG.description}</span>
+            <span class="wiman-dog-status-pill">${isPlaced?"● กำลังเดินเล่นในวิมาน":"○ อยู่ในรายการของคุณ"}</span>
+            <button id="wimanDogPlaceBtn" class="${isPlaced?"is-placed":""}" type="button">${isPlaced?"เก็บหมากลับ":"วางหมา"}</button>
+          </div>
+        </article>
+        <p class="wiman-dog-panel-note">รอบทดสอบนี้เป็นพื้นที่ส่วนตัวของ Aida และไม่เปิดให้สมาชิกคนอื่นเข้าวิมานหมา</p>
+      </section>`;
+    openModal();
+    $("wimanDogPlaceBtn").onclick=()=>{
+      const next=!placed();setPlaced(next);closeModal();
+      if(currentScene!=="wimanDog")return;
+      if(next){mountDog();showWeatherToast("🐶 วาง DOG-01 ในวิมานหมาแล้ว")}
+      else{stopWimanDog();const layer=$("wimanDogPetLayer");if(layer)layer.innerHTML="";showWeatherToast("🐾 เก็บ DOG-01 กลับแล้ว")}
+    };
+  }
+
+  function framePosition(i){const col=i%4,row=Math.floor(i/4);return `${col*100/3}% ${row*100/3}%`}
+  function setFrame(c,kind,frame,faceLeft=false){
+    if(!c?.sprite)return;
+    c.kind=kind;
+    c.sprite.dataset.kind=kind;
+    c.sprite.classList.toggle("face-left",!!faceLeft);
+    c.sprite.style.backgroundImage=`url("${DOG.sheets[kind]}")`;
+    c.sprite.style.backgroundSize="400% 400%";
+    c.sprite.style.backgroundPosition=framePosition(frame%16);
+  }
+  function clearFrames(c){if(c?.frameTimer){clearInterval(c.frameTimer);c.frameTimer=0}}
+  function animateLoop(c,kind,faceLeft=false,ms=165){
+    clearFrames(c);let f=0;setFrame(c,kind,f,faceLeft);
+    c.frameTimer=setInterval(()=>{if(!controller||controller!==c)return clearFrames(c);f=(f+1)%16;setFrame(c,kind,f,faceLeft)},ms);
+  }
+  function playSpecial(c,done){
+    clearFrames(c);c.el.classList.remove("is-moving");let f=0;setFrame(c,"special",0,false);
+    c.frameTimer=setInterval(()=>{
+      if(!controller||controller!==c){clearFrames(c);return}
+      f++;
+      if(f>=16){clearFrames(c);setFrame(c,"idle",0,false);done?.();return}
+      setFrame(c,"special",f,false);
+    },95);
+  }
+
+  function mountDog(){
+    if(!isAida()||currentScene!=="wimanDog"||!placed())return;
+    stopWimanDog();
+    const layer=$("wimanDogPetLayer");if(!layer)return;
+    const el=document.createElement("div");el.className="wiman-dog-pet";el.setAttribute("role","button");el.setAttribute("aria-label","DOG-01");el.tabIndex=0;
+    el.innerHTML='<span class="wiman-dog-sprite" data-kind="idle"></span><span class="wiman-dog-touch-hint">แตะเล่นกับน้อง</span>';
+    layer.appendChild(el);
+    const sprite=el.querySelector(".wiman-dog-sprite");
+    const start=[50,78];el.style.left=`${start[0]}%`;el.style.top=`${start[1]}%`;
+    controller={el,sprite,x:start[0],y:start[1],node:-1,timer:0,frameTimer:0,kind:"idle"};
+    const c=controller;setFrame(c,"idle",0,false);animateLoop(c,"idle",false,185);
+    const touch=()=>{if(controller===c){if(c.timer)clearTimeout(c.timer);playSpecial(c,()=>scheduleNext(c,900))}};
+    el.onclick=touch;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();touch()}};
+    scheduleNext(c,rand(1400,2600));
+  }
+
+  function scheduleNext(c,delay){
+    if(!c||controller!==c)return;
+    if(c.timer)clearTimeout(c.timer);
+    c.timer=setTimeout(()=>{
+      if(controller!==c||currentScene!=="wimanDog"||!placed())return;
+      if(Math.random()<.20){playSpecial(c,()=>scheduleNext(c,rand(1400,2800)));return}
+      walkNext(c);
+    },delay);
+  }
+
+  function chooseNode(c){
+    let candidates=NODES.map((p,i)=>({p,i})).filter(x=>x.i!==c.node);
+    candidates=candidates.filter(x=>Math.hypot(x.p[0]-c.x,x.p[1]-c.y)>8);
+    return pick(candidates.length?candidates:NODES.map((p,i)=>({p,i})));
+  }
+
+  function walkNext(c){
+    if(!c||controller!==c)return;
+    const next=chooseNode(c),tx=next.p[0],ty=next.p[1],dx=tx-c.x,dy=ty-c.y;
+    const rect=$("sceneScreen")?.getBoundingClientRect();
+    const distPx=rect?Math.hypot(dx*rect.width/100,dy*rect.height/100):Math.hypot(dx,dy)*6;
+    /* Deliberately gentle pace: smaller/slower than the farm cats. */
+    const speed=rand(31,36),duration=Math.max(2200,Math.min(5600,distPx/speed*1000));
+    const ax=Math.abs(dx),ay=Math.abs(dy);let kind="diag",faceLeft=dx<0;
+    if(ay>ax*.92)kind=dy>0?"front":"back";
+    c.el.classList.add("is-moving");
+    animateLoop(c,kind,kind==="diag"&&faceLeft,125);
+    c.el.style.zIndex=String(30+Math.round(ty));
+    c.el.style.transition=`left ${duration}ms linear, top ${duration}ms linear`;
+    requestAnimationFrame(()=>{if(controller===c){c.el.style.left=`${tx}%`;c.el.style.top=`${ty}%`}});
+    c.timer=setTimeout(()=>{
+      if(controller!==c)return;
+      c.x=tx;c.y=ty;c.node=next.i;c.el.classList.remove("is-moving");c.el.style.transition="none";
+      animateLoop(c,"idle",false,185);
+      scheduleNext(c,rand(1500,3600));
+    },duration+35);
+  }
+
+  function stopWimanDog(){
+    runToken++;
+    const c=controller;controller=null;
+    if(c){if(c.timer)clearTimeout(c.timer);if(c.frameTimer)clearInterval(c.frameTimer);c.el?.remove()}
+  }
+
+  /* Clean the dog controller before leaving the scene. */
+  const previousReturnToFarm=returnToFarm;
+  returnToFarm=function(){if(currentScene==="wimanDog")stopWimanDog();return previousReturnToFarm()};
+  const previousOpenScene=openScene;
+  openScene=function(name){if(currentScene==="wimanDog"&&name!=="wimanDog")stopWimanDog();return previousOpenScene(name)};
+
+  /* Re-bind after the existing "coming soon" handler, including when the HUD opens. */
+  if(typeof openHomeHudMenu==="function"){
+    const previousOpenHomeHudMenu=openHomeHudMenu;
+    openHomeHudMenu=function(){const r=previousOpenHomeHudMenu();bindShortcut();return r};
+  }
+  bindShortcut();
+  setTimeout(bindShortcut,120);
+  setTimeout(bindShortcut,360);
+  preload();
+  window.YN_WIMAN_DOG={open:openWimanDog,inventory:showInventory,stop:stopWimanDog};
+  window.YAINOO_BUILD="V195-WIMAN-DOG";
+})();

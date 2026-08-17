@@ -4190,3 +4190,161 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
     backdrop-filter:none!important;
   }
 }
+
+
+/* ======================================================================
+   V195 — วิมานหมา Aida private test
+   ====================================================================== */
+#sceneScreen[data-scene="wimanDog"]{
+  background-color:#1b0f2b;
+  background-size:100% 100%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+#sceneScreen[data-scene="wimanDog"] .scene-back-button{
+  left:max(3.2%,env(safe-area-inset-left));
+  top:max(2.2%,env(safe-area-inset-top));
+  max-width:none;
+  min-height:42px;
+  padding:8px 15px 8px 13px;
+  border:1.5px solid rgba(255,221,171,.86);
+  border-radius:999px;
+  background:
+    radial-gradient(circle at 18% 20%,rgba(255,188,233,.28),transparent 34%),
+    linear-gradient(180deg,rgba(104,59,129,.97),rgba(50,28,72,.98));
+  color:#fff4d9;
+  font-size:clamp(10px,2.55vw,14px);
+  font-weight:950;
+  letter-spacing:.01em;
+  text-shadow:0 1px 2px rgba(13,5,23,.92);
+  box-shadow:0 6px 18px rgba(16,7,29,.38),inset 0 1px rgba(255,255,255,.18),0 0 0 1px rgba(104,50,131,.38);
+  backdrop-filter:blur(7px);
+}
+#sceneScreen[data-scene="wimanDog"] .scene-back-button::before{content:"‹";font-size:18px;line-height:0;margin-right:5px;vertical-align:-1px}
+#sceneScreen[data-scene="wimanDog"] .scene-back-button:active{transform:scale(.96)}
+
+.wiman-dog-inventory-button{
+  position:absolute;
+  z-index:80;
+  left:max(3.2%,env(safe-area-inset-left));
+  bottom:max(3.5%,env(safe-area-inset-bottom));
+  min-height:46px;
+  padding:8px 15px 8px 11px;
+  border:1.5px solid rgba(255,221,171,.9);
+  border-radius:999px;
+  background:
+    radial-gradient(circle at 18% 18%,rgba(255,174,222,.34),transparent 34%),
+    linear-gradient(180deg,rgba(119,62,139,.97),rgba(55,29,78,.98));
+  color:#fff5dc;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:clamp(10px,2.7vw,14px);
+  font-weight:950;
+  box-shadow:0 7px 20px rgba(18,8,30,.4),inset 0 1px rgba(255,255,255,.2),0 0 0 1px rgba(236,160,218,.18);
+  text-shadow:0 1px 2px rgba(16,5,24,.92);
+  backdrop-filter:blur(8px);
+  -webkit-tap-highlight-color:transparent;
+}
+.wiman-dog-inventory-button .paw{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:rgba(255,229,244,.16);font-size:17px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.wiman-dog-inventory-button:active{transform:scale(.96)}
+
+.wiman-dog-pet-layer{position:absolute;inset:0;z-index:34;overflow:hidden;pointer-events:none}
+.wiman-dog-pet{
+  --wiman-dog-size:clamp(42px,10.8vw,72px);
+  position:absolute;
+  width:var(--wiman-dog-size);
+  height:var(--wiman-dog-size);
+  transform:translate(-50%,-100%);
+  transform-origin:center bottom;
+  pointer-events:auto;
+  cursor:pointer;
+  touch-action:manipulation;
+  will-change:left,top;
+}
+.wiman-dog-pet::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  bottom:-1px;
+  width:47%;
+  height:10%;
+  border-radius:50%;
+  background:rgba(20,12,28,.52);
+  filter:blur(2.2px);
+  transform:translateX(-50%) scaleX(.96);
+  opacity:.94;
+  box-shadow:0 1px 3px rgba(10,4,18,.28);
+}
+.wiman-dog-pet.is-moving::before{animation:wimanDogShadowStep 1.45s ease-in-out infinite}
+@keyframes wimanDogShadowStep{
+  0%,50%,100%{transform:translateX(-50%) scaleX(.92);opacity:.86}
+  25%,75%{transform:translateX(-50%) scaleX(1.06);opacity:.98}
+}
+.wiman-dog-sprite{
+  position:absolute;
+  z-index:1;
+  left:50%;
+  bottom:1px;
+  width:100%;
+  height:100%;
+  background-repeat:no-repeat;
+  background-size:400% 400%;
+  background-position:0 0;
+  transform:translateX(-50%) scaleX(1);
+  transform-origin:center bottom;
+  image-rendering:auto;
+  filter:drop-shadow(0 2px 2px rgba(28,15,31,.16));
+  will-change:background-position,transform;
+}
+/* Ludo diagonal sheet has a 508×612 frame instead of 1024×1024.
+   Scale only at render time so the dog remains visually the same size.
+   The source PNG is never resized or altered. */
+.wiman-dog-sprite[data-kind="diag"]{width:66%;height:80%}
+.wiman-dog-sprite.face-left{transform:translateX(-50%) scaleX(-1)}
+.wiman-dog-touch-hint{
+  position:absolute;left:50%;bottom:96%;transform:translateX(-50%);padding:2px 5px;border-radius:999px;
+  background:rgba(48,28,62,.68);color:#fff2d7;font-size:7px;font-weight:850;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none
+}
+.wiman-dog-pet:active .wiman-dog-touch-hint{opacity:1}
+
+.wiman-dog-inventory-panel{max-width:430px;margin:auto;text-align:center;color:#53365f}
+.wiman-dog-inventory-panel .wiman-dog-panel-kicker{display:inline-block;margin-bottom:3px;padding:3px 8px;border-radius:999px;background:#f2e4ff;color:#75448a;font-size:9px;font-weight:950;letter-spacing:.07em}
+.wiman-dog-inventory-panel h2{margin:2px 0 4px;color:#5c3570;font-size:clamp(20px,5.5vw,27px)}
+.wiman-dog-inventory-panel .wiman-dog-panel-sub{margin:0 0 12px;color:#8b7392;font-size:11px;line-height:1.45}
+.wiman-dog-card{
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns:minmax(92px,34%) 1fr;
+  gap:10px;
+  align-items:center;
+  padding:10px;
+  border:1.5px solid #e1c1e7;
+  border-radius:19px;
+  background:
+    radial-gradient(circle at 8% 0%,rgba(251,189,228,.38),transparent 38%),
+    linear-gradient(150deg,#fffdfd,#fff4fb 58%,#f5edff);
+  box-shadow:0 8px 22px rgba(73,38,86,.13),inset 0 1px #fff;
+  text-align:left;
+}
+.wiman-dog-card::after{content:"";position:absolute;right:-35px;top:-44px;width:110px;height:110px;border-radius:50%;background:rgba(166,113,201,.08);pointer-events:none}
+.wiman-dog-card-art{position:relative;aspect-ratio:1;border-radius:16px;background:linear-gradient(145deg,#f7e8ff,#fff4f8);display:grid;place-items:center;border:1px solid rgba(186,134,202,.28);overflow:hidden}
+.wiman-dog-card-art img{width:92%;height:92%;object-fit:contain;display:block;filter:drop-shadow(0 5px 6px rgba(53,26,62,.13))}
+.wiman-dog-card-copy{position:relative;z-index:1;min-width:0}
+.wiman-dog-card-copy b{display:block;color:#5f3770;font-size:15px;margin-bottom:2px}
+.wiman-dog-card-copy span{display:block;color:#8b6b91;font-size:10px;line-height:1.35;margin-bottom:8px}
+.wiman-dog-status-pill{display:inline-flex!important;width:auto!important;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#f2e5f7;color:#765181!important;font-size:8px!important;font-weight:900;margin:0 0 7px!important}
+.wiman-dog-card button{
+  width:100%;min-height:39px;border:0;border-radius:12px;padding:7px 10px;
+  background:linear-gradient(180deg,#8c5aa6,#68407d);color:white;font-weight:950;font-size:11px;
+  box-shadow:0 5px 12px rgba(82,44,97,.22),inset 0 1px rgba(255,255,255,.2)
+}
+.wiman-dog-card button.is-placed{background:linear-gradient(180deg,#b7799f,#89546f)}
+.wiman-dog-card button:active{transform:scale(.98)}
+.wiman-dog-panel-note{margin:10px 4px 0;color:#9a819f;font-size:9px;line-height:1.4}
+.hud-menu-item.wiman-aida-unlocked{box-shadow:inset 0 0 0 1px rgba(222,160,226,.28)}
+.hud-menu-item.wiman-aida-unlocked>i{color:#ffd5f3!important}
+
+@media (prefers-reduced-motion:reduce){.wiman-dog-pet{transition:none!important}.wiman-dog-pet.is-moving::before{animation:none}}
