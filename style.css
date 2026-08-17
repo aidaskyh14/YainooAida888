@@ -4525,3 +4525,127 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   box-shadow:none!important;
   border:0!important;
 }
+
+/* ======================================================================
+   V207 — Farm 4 tool alignment + Rabbit campaign no-empty-tail
+   ====================================================================== */
+/* Farm 4: force ALL three quick tools onto the same bottom row.
+   This selector intentionally outranks the older farm-tools-open rules. */
+.game-screen.plot-page-4 .sprinkler-button,
+.game-screen.plot-page-4 .tractor-button,
+.game-screen.plot-page-4 .collect-drops-button,
+.game-screen.plot-page-4.farm-tools-open .sprinkler-button,
+.game-screen.plot-page-4.farm-tools-open .tractor-button,
+.game-screen.plot-page-4.farm-tools-open .collect-drops-button{
+  position:absolute!important;
+  top:auto!important;
+  bottom:3.0%!important;
+  right:auto!important;
+  transform:none!important;
+  translate:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  width:clamp(44px,11.8vw,54px)!important;
+  height:clamp(44px,11.8vw,54px)!important;
+  min-width:0!important;
+  max-width:54px!important;
+  max-height:54px!important;
+  z-index:145!important;
+}
+.game-screen.plot-page-4 .sprinkler-button,
+.game-screen.plot-page-4.farm-tools-open .sprinkler-button{left:55%!important}
+.game-screen.plot-page-4 .tractor-button,
+.game-screen.plot-page-4.farm-tools-open .tractor-button{left:71%!important}
+.game-screen.plot-page-4 .collect-drops-button,
+.game-screen.plot-page-4.farm-tools-open .collect-drops-button{left:87%!important}
+.game-screen.plot-page-4 .farm-tools-button{display:none!important}
+
+/* Rabbit ranking: size the modal to its real content instead of reserving a tall
+   empty purple tail below the reward/countdown row. */
+.modal-card:has(.m200-rabbit-campaign){
+  width:min(94vw,540px)!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:89dvh!important;
+  overflow:hidden!important;
+}
+.modal-card:has(.m200-rabbit-campaign)>#modalContent{
+  height:auto!important;
+  min-height:0!important;
+}
+.m200-rabbit-campaign{
+  height:auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-campaign .v36-campaign-content{
+  height:auto!important;
+  min-height:0!important;
+  display:grid!important;
+  grid-template-rows:32px 68px auto 46px!important;
+  padding:7px 8px!important;
+  gap:3px!important;
+}
+.m200-rabbit-campaign .v36-campaign-ranks{
+  height:auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  display:grid!important;
+  grid-template-rows:repeat(18,27px)!important;
+  gap:2px!important;
+  padding:1px 2px!important;
+}
+.m200-rabbit-campaign .v36-rank-row{
+  height:27px!important;
+  min-height:27px!important;
+  padding:0 7px!important;
+}
+.m200-rabbit-campaign .v42-campaign-footer-row{
+  height:44px!important;
+  min-height:44px!important;
+  margin:0!important;
+}
+
+/* Rabbit conditions: same cleanup — content ends with the countdown, no blank tail. */
+.modal-card:has(.m200-rabbit-rules){
+  width:min(94vw,540px)!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:89dvh!important;
+  overflow:hidden!important;
+}
+.modal-card:has(.m200-rabbit-rules)>#modalContent{
+  height:auto!important;
+  min-height:0!important;
+}
+.m200-rabbit-rules{
+  height:auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-rules .v36-campaign-content{
+  height:auto!important;
+  min-height:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+  padding:10px!important;
+}
+.m200-rabbit-rules .v36-condition-card{
+  margin:0!important;
+}
+.m200-rabbit-rules .v36-campaign-footer{
+  margin:0 auto!important;
+  flex:0 0 auto!important;
+}
+
+/* Smaller-height phones: keep all 18 visible without reintroducing scrolling. */
+@media(max-height:760px){
+  .m200-rabbit-campaign .v36-campaign-content{grid-template-rows:30px 60px auto 42px!important;padding:5px 7px!important;gap:2px!important}
+  .m200-rabbit-campaign .v36-campaign-ranks{grid-template-rows:repeat(18,23px)!important;gap:1px!important}
+  .m200-rabbit-campaign .v36-rank-row{height:23px!important;min-height:23px!important}
+  .m200-rabbit-campaign .v36-campaign-title h2{font-size:13px!important}
+  .m200-rabbit-campaign .v36-my-score{min-height:24px!important}
+  .m200-rabbit-campaign .v42-campaign-footer-row,.m200-rabbit-campaign .v36-campaign-footer{height:40px!important;min-height:40px!important}
+}
