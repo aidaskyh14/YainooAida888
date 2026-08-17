@@ -15035,8 +15035,8 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
   /* All six recipes are already in RECIPES: temple random menu and unified dog/cat food pickers consume RECIPES dynamically. */
   setTimeout(()=>{try{if(M200_ADMIN())ensureAdminStock(ownState||state)}catch{}},1500);
-  window.YAINOO_BUILD="V200-MAJOR6";
-  console.info("V200 Major Update 6 topics loaded");
+  window.YAINOO_BUILD="V202-MAJOR6-FOURFILES";
+  console.info("V202 Major Update 6 topics loaded — consolidated in game.js");
 })();
 
 /* Global alias used by post-V181 tractor/harvest wrappers. */
