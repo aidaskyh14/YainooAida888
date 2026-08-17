@@ -4690,3 +4690,33 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen.plot-page-4.farm-tools-open .collect-drops-button{
   left:82%!important;
 }
+
+
+/* ======================================================================
+   V209 — Farm 4 tools, hard-positioned row. ID specificity intentionally
+   beats every older generic farm-tool rule. Only plot-page-4 is affected.
+   ====================================================================== */
+.game-screen.plot-page-4 #sprinklerBtn,
+.game-screen.plot-page-4 #tractorBtn,
+.game-screen.plot-page-4 #collectDropsBtn{
+  position:absolute!important;
+  top:auto!important;
+  bottom:2.9%!important;
+  right:auto!important;
+  width:56px!important;
+  height:56px!important;
+  min-width:56px!important;
+  min-height:56px!important;
+  max-width:56px!important;
+  max-height:56px!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  z-index:160!important;
+  margin:0!important;
+  translate:none!important;
+  transform:translateX(-50%)!important;
+}
+.game-screen.plot-page-4 #sprinklerBtn{left:18%!important}
+.game-screen.plot-page-4 #tractorBtn{left:50%!important}
+.game-screen.plot-page-4 #collectDropsBtn{left:82%!important}

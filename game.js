@@ -14846,6 +14846,39 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
     return M200_adminCountBase(s,e);
   };
 
+  /* ---------- V209: Farm 4 tool placement, force inline after every draw ---------- */
+  function M209_applyFarm4ToolLayout(){
+    const page4=Number(farmPlotPage||0)===3;
+    const tools=[
+      ["sprinklerBtn","18%"],
+      ["tractorBtn","50%"],
+      ["collectDropsBtn","82%"]
+    ];
+    tools.forEach(([id,left])=>{
+      const el=$(id); if(!el)return;
+      const props=["position","top","bottom","left","right","width","height","max-width","max-height","min-width","min-height","opacity","visibility","pointer-events","z-index","margin","transform","translate"];
+      if(!page4){props.forEach(p=>el.style.removeProperty(p));return;}
+      el.style.setProperty("position","absolute","important");
+      el.style.setProperty("top","auto","important");
+      el.style.setProperty("bottom","2.9%","important");
+      el.style.setProperty("left",left,"important");
+      el.style.setProperty("right","auto","important");
+      el.style.setProperty("width","56px","important");
+      el.style.setProperty("height","56px","important");
+      el.style.setProperty("max-width","56px","important");
+      el.style.setProperty("max-height","56px","important");
+      el.style.setProperty("min-width","56px","important");
+      el.style.setProperty("min-height","56px","important");
+      el.style.setProperty("opacity","1","important");
+      el.style.setProperty("visibility","visible","important");
+      el.style.setProperty("pointer-events","auto","important");
+      el.style.setProperty("z-index","160","important");
+      el.style.setProperty("margin","0","important");
+      el.style.setProperty("translate","none","important");
+      el.style.setProperty("transform","translateX(-50%)","important");
+    });
+  }
+
   /* ---------- Topic 1: Farm 4 navigation + cat placement ---------- */
   currentFarmNo=function(){return Math.max(1,Math.min(4,Number(farmPlotPage||0)+1))};
   setFarmPlotPage=function(page){
@@ -14861,7 +14894,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
     if($("plotPagePrevBtn"))$("plotPagePrevBtn").setAttribute("aria-label",prevLabels[farmPlotPage]||"กลับฟาร์มก่อนหน้า");
     if($("plotPageNextBtn"))$("plotPageNextBtn").setAttribute("aria-label",nextLabels[farmPlotPage]||"ไปฟาร์มถัดไป");
     activePlacedCatId="";try{clearAidaFarmPetActivity(true)}catch{};try{if(typeof V29_setTools==="function")V29_setTools(false)}catch{};if($("collectDropsBtn"))$("collectDropsBtn").classList.toggle("hidden",Boolean(visitContext));
-    draw();try{syncAidaFarmPet()}catch{};try{V29_syncVisitHud()}catch{};if(!visitContext)try{processCatDrops()}catch{};
+    draw();M209_applyFarm4ToolLayout();try{syncAidaFarmPet()}catch{};try{V29_syncVisitHud()}catch{};if(!visitContext)try{processCatDrops()}catch{};
   };
   if($("plotPageNextBtn"))$("plotPageNextBtn").onclick=()=>setFarmPlotPage(farmPlotPage+1);
   if($("plotPagePrevBtn"))$("plotPagePrevBtn").onclick=()=>setFarmPlotPage(farmPlotPage-1);
