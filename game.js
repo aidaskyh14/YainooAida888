@@ -1,3 +1,4 @@
+/* BUILD: V205-CONFIRMED-FIXED */
 let MEMBERS={
   "Kung A":"KUNG2481","Ar Jane":"JANE7314","Blotto Bier":"BIER4826","Mameaw":"MEAW5937",
   "Para":"PARA1642","Porpla":"PORP8753","Pukkie":"PUKK3491","Opor":"OPOR6284",
@@ -14742,12 +14743,12 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
   /* ---------- Topic 4: six general craft menus ---------- */
   const M200_RECIPES=[
-    {id:"rabbitMenu1",name:"แครอทนมข้นราดสาดแสงเดือน",icon:"🥕",image:"01-carrot-condensed-milk-moonlight.jpeg?v=200",need:{madCarrot:50,cabbage:20,mango:15,milk:8,truffle:5},chance:50,reward:[30,50],difficulty:"ยาก"},
-    {id:"rabbitMenu2",name:"ข้าวโพดบูด ซู๊ดๆ",icon:"🌽",image:"02-spoiled-corn-sood-sood.jpeg?v=200",need:{angryCorn:50,morning:20,chili:15,egg:10,milk:5},chance:45,reward:[30,50],difficulty:"ยาก"},
-    {id:"rabbitMenu3",name:"ปลาเมล่อน วอนไหว้วอนอาราธนา",icon:"🐟",image:"03-melon-fish-prayer.jpeg?v=200",need:{staringMelon:45,mango:20,chili:15,fishMeat:10,egg:5},chance:40,reward:[30,50],difficulty:"ยาก"},
-    {id:"rabbitMenu4",name:"เห็ดไขลานสำราญทรวง",icon:"🍄",image:"04-clockwork-mushroom-delight.jpeg?v=200",need:{clockworkMushroom:45,pumpkin:20,morning:15,truffle:10,milk:8,egg:5},chance:35,reward:[30,50],difficulty:"ยาก"},
-    {id:"rabbitMenu5",name:"รวมมิตร โพดแคร์ แฮร่ แฮร่ แฮร่",icon:"🍲",image:"05-carrot-corn-mixed-care.jpeg?v=200",need:{madCarrot:35,angryCorn:35,chili:15,egg:8,fishMeat:8},chance:40,reward:[30,50],difficulty:"ยาก"},
-    {id:"rabbitMenu6",name:"แกงเห็ดเมล่อน เมล่อนเลย เฮ้ยๆๆ",icon:"🍈",image:"06-melon-clockwork-mushroom-curry.jpeg?v=200",need:{staringMelon:30,clockworkMushroom:30,pumpkin:20,cabbage:15,truffle:10,milk:8},chance:30,reward:[30,50],difficulty:"ยาก"}
+    {id:"rabbitMenu1",name:"แครอทนมข้นราดสาดแสงเดือน",icon:"🥕",image:"01-carrot-condensed-milk-moonlight.png?v=206",need:{madCarrot:50,cabbage:20,mango:15,milk:8,truffle:5},chance:50,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu2",name:"ข้าวโพดบูด ซู๊ดๆ",icon:"🌽",image:"02-spoiled-corn-sood-sood.png?v=206",need:{angryCorn:50,morning:20,chili:15,egg:10,milk:5},chance:45,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu3",name:"ปลาเมล่อน วอนไหว้วอนอาราธนา",icon:"🐟",image:"03-melon-fish-prayer.png?v=206",need:{staringMelon:45,mango:20,chili:15,fishMeat:10,egg:5},chance:40,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu4",name:"เห็ดไขลานสำราญทรวง",icon:"🍄",image:"04-clockwork-mushroom-delight.png?v=206",need:{clockworkMushroom:45,pumpkin:20,morning:15,truffle:10,milk:8,egg:5},chance:35,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu5",name:"รวมมิตร โพดแคร์ แฮร่ แฮร่ แฮร่",icon:"🍲",image:"05-carrot-corn-mixed-care.png?v=206",need:{madCarrot:35,angryCorn:35,chili:15,egg:8,fishMeat:8},chance:40,reward:[30,50],difficulty:"ยาก"},
+    {id:"rabbitMenu6",name:"แกงเห็ดเมล่อน เมล่อนเลย เฮ้ยๆๆ",icon:"🍈",image:"06-melon-clockwork-mushroom-curry.png?v=206",need:{staringMelon:30,clockworkMushroom:30,pumpkin:20,cabbage:15,truffle:10,milk:8},chance:30,reward:[30,50],difficulty:"ยาก"}
   ];
   M200_RECIPES.forEach(r=>{if(!RECIPES.some(x=>x.id===r.id))RECIPES.push(r)});
   try{YN_NEW_BOAT_MENU_IDS.splice(0,YN_NEW_BOAT_MENU_IDS.length,...M200_MENU_IDS)}catch{}

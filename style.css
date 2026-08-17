@@ -4402,3 +4402,126 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .m200-preview-simple{display:flex;flex-direction:column;align-items:center;gap:6px}.m200-preview-simple>img{width:78px!important;height:78px!important;object-fit:contain!important}.m200-preview-simple .m200-mini-icons img{width:34px!important;height:34px!important;object-fit:contain!important}
 
 /* V203: runtime-fixed Major Update 6, four-file build */
+
+/* ======================================================================
+   V206 — Farm 4 entry + compact rabbit campaign + transparent menu assets
+   ====================================================================== */
+/* Farm 3 MUST show the right arrow to Farm 4. Older CSS hid it. */
+.game-screen.plot-page-3 .plot-page-next{
+  display:grid!important;
+  right:2.6%!important;
+  left:auto!important;
+  top:48%!important;
+  transform:translateY(-50%)!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  z-index:140!important;
+}
+.game-screen.plot-page-4 .plot-page-next{display:none!important}
+.game-screen.plot-page-4 .plot-page-prev{
+  display:grid!important;
+  left:2.6%!important;
+  right:auto!important;
+  top:48%!important;
+  transform:translateY(-50%)!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  z-index:140!important;
+}
+
+/* Rabbit campaign: fit all 18 ranks AND keep rewards/countdown always visible. */
+.modal-card:has(.m200-rabbit-campaign){
+  width:min(96vw,540px)!important;
+  height:min(91dvh,720px)!important;
+  max-height:91dvh!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-campaign .v36-campaign-content{
+  height:100%!important;
+  padding:7px 8px!important;
+  gap:3px!important;
+  grid-template-rows:32px 72px minmax(0,1fr) 46px!important;
+}
+.m200-rabbit-campaign .v36-campaign-topbar{min-height:30px!important;gap:5px!important}
+.m200-rabbit-campaign .v36-campaign-topbar button{
+  min-height:29px!important;
+  padding:4px 8px!important;
+  font-size:9px!important;
+  border-radius:999px!important;
+}
+.m200-rabbit-campaign .v36-campaign-title{margin:0!important;padding:0 3px!important}
+.m200-rabbit-campaign .v36-campaign-title small{font-size:8px!important;line-height:1.05!important}
+.m200-rabbit-campaign .v36-campaign-title h2{font-size:clamp(13px,3.5vw,18px)!important;line-height:1.05!important;margin:1px 0!important}
+.m200-rabbit-campaign .v36-campaign-total-label{font-size:7.5px!important;line-height:1!important;margin:1px 0!important}
+.m200-rabbit-campaign .v36-my-score{min-height:28px!important;margin:2px auto 0!important;padding:2px 8px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important}
+.m200-rabbit-campaign .v36-my-score span{font-size:7.5px!important}.m200-rabbit-campaign .v36-my-score strong{font-size:15px!important}
+.m200-rabbit-campaign .v36-campaign-ranks{
+  min-height:0!important;
+  overflow:hidden!important;
+  display:grid!important;
+  grid-template-rows:repeat(18,minmax(0,1fr))!important;
+  gap:2px!important;
+  padding:1px 2px!important;
+}
+.m200-rabbit-campaign .v36-rank-row{
+  min-height:0!important;
+  height:auto!important;
+  padding:0 7px!important;
+  border-radius:7px!important;
+  display:grid!important;
+  grid-template-columns:29px minmax(0,1fr) 38px!important;
+  align-items:center!important;
+  line-height:1!important;
+}
+.m200-rabbit-campaign .v36-rank-no{font-size:8px!important}
+.m200-rabbit-campaign .v36-rank-name b{font-size:8.5px!important;line-height:1!important}
+.m200-rabbit-campaign .v36-rank-name small{display:none!important}
+.m200-rabbit-campaign .v36-rank-row>strong{font-size:10px!important}
+.m200-rabbit-campaign .v42-campaign-footer-row{
+  display:grid!important;
+  grid-template-columns:48px minmax(0,1fr)!important;
+  gap:6px!important;
+  margin:0!important;
+  height:44px!important;
+  min-height:44px!important;
+  align-items:stretch!important;
+  position:relative!important;
+  z-index:20!important;
+}
+.m200-rabbit-campaign #m200CampaignGiftBtn{
+  display:grid!important;
+  place-items:center!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  min-width:48px!important;
+  width:48px!important;
+  height:44px!important;
+  padding:2px!important;
+  border-radius:12px!important;
+}
+.m200-rabbit-campaign #m200CampaignGiftBtn span{font-size:21px!important;line-height:1!important}
+.m200-rabbit-campaign #m200CampaignGiftBtn small{font-size:6.5px!important;line-height:1!important}
+.m200-rabbit-campaign .v36-campaign-footer{height:44px!important;min-height:44px!important;padding:3px 7px!important;margin:0!important}
+.m200-rabbit-campaign .v36-campaign-footer span{font-size:7px!important}.m200-rabbit-campaign .v36-campaign-footer strong{font-size:13px!important}
+
+/* Six new dishes use PNG transparency; never paint a white image box behind them. */
+.recipe-card img[src*="carrot-condensed-milk"],
+.recipe-card img[src*="spoiled-corn"],
+.recipe-card img[src*="melon-fish-prayer"],
+.recipe-card img[src*="clockwork-mushroom-delight"],
+.recipe-card img[src*="carrot-corn-mixed-care"],
+.recipe-card img[src*="melon-clockwork-mushroom-curry"],
+.boat-supply-picker img[src*="carrot-condensed-milk"],
+.boat-supply-picker img[src*="spoiled-corn"],
+.boat-supply-picker img[src*="melon-fish-prayer"],
+.boat-supply-picker img[src*="clockwork-mushroom-delight"],
+.boat-supply-picker img[src*="carrot-corn-mixed-care"],
+.boat-supply-picker img[src*="melon-clockwork-mushroom-curry"]{
+  background:transparent!important;
+  box-shadow:none!important;
+  border:0!important;
+}
