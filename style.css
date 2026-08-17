@@ -4649,3 +4649,44 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   .m200-rabbit-campaign .v36-my-score{min-height:24px!important}
   .m200-rabbit-campaign .v42-campaign-footer-row,.m200-rabbit-campaign .v36-campaign-footer{height:40px!important;min-height:40px!important}
 }
+
+/* ======================================================================
+   V208 — Farm 4 tools: clean bottom row, evenly spaced, no overlap
+   Applies ONLY to plot-page-4.
+   ====================================================================== */
+.game-screen.plot-page-4 .sprinkler-button,
+.game-screen.plot-page-4 .tractor-button,
+.game-screen.plot-page-4 .collect-drops-button,
+.game-screen.plot-page-4.farm-tools-open .sprinkler-button,
+.game-screen.plot-page-4.farm-tools-open .tractor-button,
+.game-screen.plot-page-4.farm-tools-open .collect-drops-button{
+  position:absolute!important;
+  top:auto!important;
+  bottom:2.9%!important;
+  right:auto!important;
+  width:clamp(48px,12vw,58px)!important;
+  height:clamp(48px,12vw,58px)!important;
+  max-width:58px!important;
+  max-height:58px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  z-index:150!important;
+  margin:0!important;
+  translate:none!important;
+  transform:translateX(-50%)!important;
+}
+.game-screen.plot-page-4 .sprinkler-button,
+.game-screen.plot-page-4.farm-tools-open .sprinkler-button{
+  left:18%!important;
+}
+.game-screen.plot-page-4 .tractor-button,
+.game-screen.plot-page-4.farm-tools-open .tractor-button{
+  left:50%!important;
+}
+.game-screen.plot-page-4 .collect-drops-button,
+.game-screen.plot-page-4.farm-tools-open .collect-drops-button{
+  left:82%!important;
+}
