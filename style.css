@@ -4353,7 +4353,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
    V200 — Major Update 6 topics: compact/mobile-safe final visuals
    ====================================================================== */
 /* Farm 4 / plots 37–48 */
-.game-screen.plot-page-4{background-image:url("farm-04-plots-37-48.jpeg?v=200")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important}
+.game-screen.plot-page-4{background-image:url("farm-04-plots-37-48.jpeg?v=203")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important}
 .game-screen.plot-page-4 .profile-hud-card,.game-screen.plot-page-4 .weather-clock,.game-screen.plot-page-4 .rain-status,.game-screen.plot-page-4 .top-player-name-button,.game-screen.plot-page-4 .hud-menu-button,.game-screen.plot-page-4 #houseHotspot,.game-screen.plot-page-4 #wellHotspot,.game-screen.plot-page-4 #riverHotspot,.game-screen.plot-page-4 #friendlyGhostHotspot,.game-screen.plot-page-4 #coconutGardenHotspot,.game-screen.plot-page-4 .bottom-nav-hotspots{display:none!important}
 .game-screen.plot-page-4 .plot:nth-child(1),.game-screen.plot-page-4 .plot:nth-child(4),.game-screen.plot-page-4 .plot:nth-child(7),.game-screen.plot-page-4 .plot:nth-child(10){left:6.4%!important}
 .game-screen.plot-page-4 .plot:nth-child(2),.game-screen.plot-page-4 .plot:nth-child(5),.game-screen.plot-page-4 .plot:nth-child(8),.game-screen.plot-page-4 .plot:nth-child(11){left:37.2%!important}
@@ -4400,3 +4400,5 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 
 @media(max-width:390px){.m200-reward-row{grid-template-columns:48px minmax(0,1fr) 68px;padding:5px;gap:5px}.m200-reward-icon{width:46px;height:46px}.m200-reward-icon>img{width:43px!important;height:43px!important}.m200-reward-copy>b{font-size:9px}.m200-crop-score>div{grid-template-columns:36px 1fr}.m200-crop-score img{width:32px;height:32px}.m200-rest-card{grid-template-columns:46px minmax(0,1fr) 16px!important}}
 .m200-preview-simple{display:flex;flex-direction:column;align-items:center;gap:6px}.m200-preview-simple>img{width:78px!important;height:78px!important;object-fit:contain!important}.m200-preview-simple .m200-mini-icons img{width:34px!important;height:34px!important;object-fit:contain!important}
+
+/* V203: runtime-fixed Major Update 6, four-file build */

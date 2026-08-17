@@ -2966,8 +2966,10 @@ async function loginFirebaseAdmin(){
   }catch(error){console.error("Firebase Admin login failed",error);if(status)status.textContent=`เชื่อมไม่สำเร็จ: ${error.message||"กรุณาตรวจ Email/Password"}`;if(button)button.disabled=false}
 }
 async function logout(){
+  const leavingMember=currentMember;
   if(ticker)clearInterval(ticker);ticker=null;if(cloudReady){try{await flushCloudSave()}catch(error){console.warn(error)}}stopGameExtras();stopOnlineListeners();showAvatar("");$("gameScreen").classList.add("hidden");$("sceneScreen").classList.add("hidden");stopSceneTimer();currentScene=null;$("visitorBanner")?.remove();$("gameScreen").classList.remove("visiting-friend");$("loginScreen").classList.remove("hidden");$("memberCode").value="";
-  try{const bridge=await getFirebaseBridge();if(bridge?.getCurrentUser())await bridge.signOut()}catch{}
+  /* Aida keeps Firebase Admin signed in on this device. Members still sign out normally. */
+  if(leavingMember!=="Aida"){try{const bridge=await getFirebaseBridge();if(bridge?.getCurrentUser())await bridge.signOut()}catch{}}
   currentMember=null;currentMemberKey="";ownState=null;state=null;visitContext=null;cloudReady=false;adminProfile=null;const badge=$("notificationBadge");if(badge)badge.classList.add("hidden");
 }
 
@@ -12627,7 +12629,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     }
   }
 
-  const checkBase=checkArenaFight;
+  const checkBase=(typeof checkArenaFight==="function")?checkArenaFight:async()=>{};
   checkArenaFight=async function(){
     const f=(ownState||state)?.arena?.fight;
     if(f&&f.win&&Number(f.finishAt)<=NOW()&&!f.scoreCommitted){
@@ -12649,7 +12651,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     clearArenaFight(true);
   };
 
-  const resultBase=arenaWinResult;
+  const resultBase=(typeof arenaWinResult==="function")?arenaWinResult:()=>{};
   arenaWinResult=function(){
     ynCommitArenaWinScore().catch(()=>{});
     return resultBase();
@@ -12734,7 +12736,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
 
   /* After each V1 feeding, refresh pond data and reopen details
      so the 5/5 "พร้อมท้ารัก" button appears immediately. */
-  const feedBase = commitJ2V1;
+  const feedBase = (typeof commitJ2V1==="function")?commitJ2V1:async()=>{};
   commitJ2V1 = async function(i, foodType){
     const before = Number(jelly2Cache?.slots?.[i]?.feedCount)||0;
     await feedBase(i, foodType);
@@ -14727,6 +14729,8 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   const M200_NEW_RIVER_KEYS=[];
   const M200_CAMPAIGN_KEY="wildRabbit";
   const M200_CAMPAIGN_ID="wild-rabbit-hungry-4d-v1";
+  /* New house art is authoritative for this release. */
+  if(SCENES?.house)SCENES.house.image="ghost-house-interior 2.jpg?v=203";
 
   /* ---------- Topic 2: four fully fledged crops ---------- */
   Object.assign(CROPS,{
@@ -15035,8 +15039,8 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
   /* All six recipes are already in RECIPES: temple random menu and unified dog/cat food pickers consume RECIPES dynamically. */
   setTimeout(()=>{try{if(M200_ADMIN())ensureAdminStock(ownState||state)}catch{}},1500);
-  window.YAINOO_BUILD="V202-MAJOR6-FOURFILES";
-  console.info("V202 Major Update 6 topics loaded — consolidated in game.js");
+  window.YAINOO_BUILD="V203-MAJOR6-FIXED";
+  console.info("V203 Major Update 6 topics loaded — runtime blockers fixed");
 })();
 
 /* Global alias used by post-V181 tractor/harvest wrappers. */

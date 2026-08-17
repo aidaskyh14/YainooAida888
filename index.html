@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=202-major6-fourfiles">
+  <link rel="stylesheet" href="style.css?v=203-major6-fixed">
 </head>
 <body>
   <main id="app">
@@ -178,7 +178,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=202-major6-fourfiles"></script>
+  <script src="daily-missions.js?v=203-major6-fixed"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -194,7 +194,7 @@
       signOut,
       onAuthStateChanged,
       setPersistence,
-      inMemoryPersistence
+      browserLocalPersistence
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
     import {
       getFirestore,
@@ -233,12 +233,12 @@
 
       /*
         V189 MOBILE AUTH HARD RESET
-        Use memory-only Firebase Auth persistence. Every page load gets a
-        fresh Firebase login instead of reusing a possibly corrupted/stale
-        device token from Safari/Messenger storage.
+        Keep Firebase Auth on this device. Aida/Admin should authenticate once per
+        device and reuse the session on refresh/reopen unless the browser data
+        is cleared or Firebase invalidates the session.
       */
       try {
-        await setPersistence(auth, inMemoryPersistence);
+        await setPersistence(auth, browserLocalPersistence);
       } catch (persistenceError) {
         console.warn("V189 auth persistence fallback", persistenceError);
       }
@@ -329,8 +329,8 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=202-major6-fourfiles"></script>
-  
+  <script src="game.js?v=203-major6-fixed"></script>
+
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
