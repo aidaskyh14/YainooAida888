@@ -12056,25 +12056,82 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const FISH_PONDS={1:{name:"บ่อดอกบัวจันทรา",image:"fishing-pond-01-lotus-moon.jpg?v=1",pos:[[6,29,39,20],[55,29,39,20],[6,61,39,20],[55,61,39,20]]},2:{name:"บ่อฤดูหนาววิญญาณ",image:"fishing-pond-02-winter-spirit.jpg?v=1",pos:[[5,30,40,20],[55,30,40,20],[5,62,40,20],[55,62,40,20]]},3:{name:"บ่อสวนเห็ดภูต",image:"fishing-pond-03-fairy-mushroom.jpg?v=1",pos:[[5,31,40,20],[55,31,40,20],[5,63,40,20],[55,63,40,20]]}};
   let fishPondId=0,fishSlots=[],fishUnsub=null;
   function stopFishV2(){if(fishUnsub){fishUnsub();fishUnsub=null}fishSlots=[]}
-  async function persistPondChoice(id){const s=ownState||state;resetDailyExtras(s);if(s.fishingDailyChoice.pondId&&s.fishingDailyChoice.pondId!==id)throw new Error("วันนี้เลือกบ่อไปแล้ว");if(s.fishingDailyChoice.pondId===id)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),x=normalizeState(snap.data(),currentMember);resetDailyExtras(x);if(x.fishingDailyChoice.pondId&&x.fishingDailyChoice.pondId!==id)throw new Error("วันนี้เลือกบ่อไปแล้ว");x.fishingDailyChoice={dateKey:DAILY_KEY(),pondId:id};next=x;tx.set(ref,{...cloneData(x),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next)}
+  async function persistPondChoice(id){const s=ownState||state;resetDailyExtras(s);if(s.fishingDailyChoice.pondId&&s.fishingDailyChoice.pondId!==id)throw new Error("วันนี้เลือกบ่อไปแล้ว");if(s.fishingDailyChoice.pondId===id)return;const actorKey=(String(currentMemberKey||"")==="mameaw"||String(currentMember||"").toLowerCase()==="mameaw")?"mameaw":currentMemberKey;if(actorKey==="mameaw"){try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch(e){console.warn("V211 Mameaw pond token refresh",e)}}const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",actorKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const x=normalizeState(snap.data(),currentMember);resetDailyExtras(x);if(x.fishingDailyChoice.pondId&&x.fishingDailyChoice.pondId!==id)throw new Error("วันนี้เลือกบ่อไปแล้ว");x.fishingDailyChoice={dateKey:DAILY_KEY(),pondId:id};next=x;tx.set(ref,{...cloneData(x),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next)}
   function openFishingLobby(){stopFishV2();fishPondId=0;currentScene="fishingLobby";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");$("sceneScreen").classList.add("ynu-fishing-lobby-scene");$("sceneScreen").style.backgroundImage='url("fishing-lobby.jpg?v=1")';setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm});const s=normalizeState(ownState||state,currentMember);resetDailyExtras(s);const chosen=s.fishingDailyChoice.pondId;$("sceneInteractiveLayer").innerHTML=`<div class="ynu-fishing-welcome">ยินดีต้อนรับเข้าสู่ บ่อตกปลาของยัยหนู</div><div class="ynu-pond-choices">${Object.entries(FISH_PONDS).map(([id,p])=>`<button data-ynu-pond="${id}" ${chosen&&Number(id)!==chosen?"disabled":""}><b>บ่อ 0${id}</b><span>“${p.name}”</span>${chosen===Number(id)?'<small>วันนี้เลือกบ่อนี้แล้ว</small>':chosen?'<small>ล็อกถึง 00:00</small>':""}</button>`).join("")}</div><div class="ynu-fishing-lobby-actions"><button id="ynuCraftBait">คราฟเหยื่อตกปลา</button><button id="ynuFishBoard">แดชบอร์ดน้ำหนักปลาวันนี้</button></div>`;document.querySelectorAll("[data-ynu-pond]").forEach(b=>b.onclick=async()=>{try{const id=Number(b.dataset.ynuPond);await persistPondChoice(id);openFishingPond(id)}catch(e){message("เลือกบ่อไม่ได้",e.message)}});$("ynuCraftBait").onclick=showFishingBaitCraft;$("ynuFishBoard").onclick=()=>showFishingDashboardV2()}
   async function openFishingPond(id){$("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");const s=normalizeState(ownState||state,currentMember);resetDailyExtras(s);if(s.fishingDailyChoice.pondId!==id)return openFishingLobby();fishPondId=id;currentScene="fishingPondV2";$("sceneScreen").style.backgroundImage=`url("${FISH_PONDS[id].image}")`;setSceneNav({backText:"กลับหน้าล็อบบี้",backAction:openFishingLobby,nextText:"ไปที่แปลงผัก",nextAction:returnToFarm});subscribeFishV2();drawFishingV2()}
   function slotDocId(pond,slot){return `${DAILY_KEY()}-p${pond}-s${slot}`}
   function subscribeFishV2(){stopFishV2();getFirebaseContext().then(({db,fs})=>{fishUnsub=fs.onSnapshot(fs.collection(db,"fishingSlotsV2"),snap=>{fishSlots=[];snap.forEach(d=>{const x=d.data();if(x.dateKey===DAILY_KEY()&&Number(x.pondId)===fishPondId)fishSlots[Number(x.slot)-1]=x});if(currentScene==="fishingPondV2")drawFishingV2()})})}
   function activeSlot(x){return x&&Number(x.claimDeadline||0)>NOW()&&x.status!=="claimed"}
   function drawFishingV2(){if(currentScene!=="fishingPondV2")return;const p=FISH_PONDS[fishPondId];$("sceneInteractiveLayer").innerHTML=p.pos.map(([l,t,w,h],i)=>{const x=fishSlots[i];let text="";if(activeSlot(x)){if(NOW()<x.finishAt)text=`<span>${esc(x.ownerName)} กำลังตกปลา<br>${fmt(x.finishAt-NOW())}</span>`;else text=`<span>ปลาติดเบ็ดแล้ว • รับใน ${fmt(x.claimDeadline-NOW())}</span>`}return `<button class="ynu-fishing-dock" data-ynu-dock="${i+1}" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%">${text}</button>`}).join("");document.querySelectorAll("[data-ynu-dock]").forEach(b=>b.onclick=()=>openFishingDockV2(Number(b.dataset.ynuDock)))}
-  async function getFishingPlayerState(){const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"fishingPlayers",currentMemberKey));return snap.exists()?snap.data():null}
-  async function openFishingDockV2(slotNo){const x=fishSlots[slotNo-1];if(activeSlot(x)){if(x.ownerKey===currentMemberKey&&NOW()>=x.finishAt)return fishingResultV2(x);return message("แท่นนี้ไม่ว่าง",NOW()<x.finishAt?`${x.ownerName} กำลังตกปลา • เหลือ ${fmt(x.finishAt-NOW())}`:"กำลังรอเจ้าของรับปลา")}
-    try{const player=await getFishingPlayerState(),now=NOW();if(player&&Number(player.claimDeadline||0)>now)return message("กำลังตกปลาอยู่","หนึ่งคนตกได้แค่แท่นเดียวในเวลาเดียวกัน");const cool=Math.max(Number((ownState||state)?.fishingCooldownUntil||0),player?Number(player.claimDeadline||0)+5*MIN:0);if(cool>now)return message("พักก่อน",`ยังตกปลาไม่ได้ • กลับมาใหม่ใน ${fmt(cool-now)}`);showFishingBaitChoiceV2(slotNo)}catch(e){message("เปิดแท่นไม่ได้",e.message)}}
+  function fishingActorKey(){
+    return (String(currentMemberKey||"")==="mameaw" || String(currentMember||"").toLowerCase()==="mameaw") ? "mameaw" : currentMemberKey;
+  }
+  async function getFishingPlayerState(){
+    const {db,fs}=await getFirebaseContext();
+    const key=fishingActorKey();
+    const ref=fs.doc(db,"fishingPlayers",key);
+    const snap=await fs.getDoc(ref);
+    if(!snap.exists())return null;
+    const data=snap.data()||{};
+    if(String(key)==="mameaw" && Number(data.claimDeadline||0)<=NOW()){
+      try{await fs.deleteDoc(ref);return null}catch(e){console.warn("V210 clear stale Mameaw fishing lock",e)}
+    }
+    return data;
+  }
+  async function openFishingDockV2(slotNo){
+    const x=fishSlots[slotNo-1],actorKey=fishingActorKey();
+    if(activeSlot(x)){
+      if(String(x.ownerKey||"")===String(actorKey||"")&&NOW()>=x.finishAt)return fishingResultV2(x);
+      return message("แท่นนี้ไม่ว่าง",NOW()<x.finishAt?`${x.ownerName} กำลังตกปลา • เหลือ ${fmt(x.finishAt-NOW())}`:"กำลังรอเจ้าของรับปลา");
+    }
+    try{
+      const player=await getFishingPlayerState(),now=NOW();
+      if(player&&Number(player.claimDeadline||0)>now)return message("กำลังตกปลาอยู่","หนึ่งคนตกได้แค่แท่นเดียวในเวลาเดียวกัน");
+      const cool=Math.max(Number((ownState||state)?.fishingCooldownUntil||0),player?Number(player.claimDeadline||0)+5*MIN:0);
+      if(cool>now)return message("พักก่อน",`ยังตกปลาไม่ได้ • กลับมาใหม่ใน ${fmt(cool-now)}`);
+      showFishingBaitChoiceV2(slotNo);
+    }catch(e){message("เปิดแท่นไม่ได้",e.message)}
+  }
   function showFishingBaitChoiceV2(slotNo){const s=ensureV4State(ownState||state),cards=Object.entries(FISHING_BAITS).filter(([,b])=>Number(s.fishingBaits?.[b.id]||s.fishingBaits?.[Object.keys(FISHING_BAITS).find(k=>FISHING_BAITS[k]===b)]||0)>0||true).map(([k,b])=>`<button data-ynu-fish-bait="${k}" ${Number(s.fishingBaits?.[k]||0)<1?"disabled":""}><img src="${b.image}" alt="${esc(b.name)}"><span>${esc(b.name)}<small>มี ×${Number(s.fishingBaits?.[k]||0)} • ${Math.round(b.durationMs/60000)} นาที</small></span></button>`).join("");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 เลือกเหยื่อตกปลา</h2><div class="ynu-bait-list">${cards}</div></section>`;document.querySelectorAll("[data-ynu-fish-bait]").forEach(b=>b.onclick=()=>startFishingV2(slotNo,b.dataset.ynuFishBait));openModal()}
-  async function startFishingV2(slotNo,baitKey){const bait=FISHING_BAITS[baitKey];if(!bait)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(fishPondId,slotNo)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [sl,pl,ss]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef)]),now=NOW(),s=normalizeState(ss.data(),currentMember);resetDailyExtras(s);if(s.fishingDailyChoice.pondId!==fishPondId)throw new Error("วันนี้ไม่ได้เลือกบ่อนี้");if(pl.exists()&&Number(pl.data().claimDeadline||0)>now)throw new Error("กำลังตกปลาอยู่ที่แท่นอื่น");if(Number(s.fishingCooldownUntil||0)>now)throw new Error(`คูลดาวน์เหลือ ${fmt(s.fishingCooldownUntil-now)}`);if(sl.exists()&&activeSlot(sl.data()))throw new Error("แท่นนี้ไม่ว่างแล้ว");if(Number(s.fishingBaits?.[baitKey]||0)<1)throw new Error("เหยื่อหมดแล้ว");s.fishingBaits[baitKey]-=1;const roll=rollFishingCatches(baitKey),finish=now+bait.durationMs;newSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),baitKey,catches:roll.catches,totalWeight:roll.total,status:"fishing",startedAt:now,finishAt:finish,claimDeadline:finish+5*MIN};next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...newSlot,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(playerRef,{memberKey:currentMemberKey,pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`) }catch(e){message("เริ่มตกไม่ได้",e.message)}}
+  async function startFishingV2(slotNo,baitKey){
+    const bait=FISHING_BAITS[baitKey];if(!bait)return;
+    try{
+      await settlePendingCloudSave();
+      const actorKey=fishingActorKey();
+      if(String(actorKey)==="mameaw"){
+        try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch(e){console.warn("V210 Mameaw fishing token refresh",e)}
+      }
+      const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(fishPondId,slotNo)),playerRef=fs.doc(db,"fishingPlayers",actorKey),saveRef=fs.doc(db,"saves",actorKey);
+      let next,newSlot;
+      await fs.runTransaction(db,async tx=>{
+        const [sl,pl,ss]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef)]),now=NOW();
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);resetDailyExtras(s);
+        if(s.fishingDailyChoice.pondId!==fishPondId)throw new Error("วันนี้ไม่ได้เลือกบ่อนี้");
+        if(pl.exists()&&Number(pl.data().claimDeadline||0)>now)throw new Error("กำลังตกปลาอยู่ที่แท่นอื่น");
+        if(Number(s.fishingCooldownUntil||0)>now)throw new Error(`คูลดาวน์เหลือ ${fmt(s.fishingCooldownUntil-now)}`);
+        if(sl.exists()&&activeSlot(sl.data()))throw new Error("แท่นนี้ไม่ว่างแล้ว");
+        if(Number(s.fishingBaits?.[baitKey]||0)<1)throw new Error("เหยื่อหมดแล้ว");
+        s.fishingBaits[baitKey]-=1;
+        const roll=rollFishingCatches(baitKey),finish=now+bait.durationMs;
+        newSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:actorKey,ownerName:currentProfileDisplayName(),baitKey,catches:roll.catches,totalWeight:roll.total,status:"fishing",startedAt:now,finishAt:finish,claimDeadline:finish+5*MIN};
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(slotRef,{...newSlot,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(playerRef,{memberKey:actorKey,pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
+    }catch(e){message("เริ่มตกไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
   function fishingResultV2(x){const expired=NOW()>Number(x.claimDeadline||0);if(expired)return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 ปลาติดเบ็ดแล้ว</h2><div class="fishing-result-grid">${x.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}"><h3>${esc(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(x.totalWeight).toFixed(2)} lbs</div><p>รับภายใน ${fmt(x.claimDeadline-NOW())}</p><button id="ynuClaimFish">รับปลา</button></section>`;$("ynuClaimFish").onclick=()=>claimFishingV2(x);openModal()}
   async function claimFishingV2(x){
     try{
+      const actorKey=(String(currentMemberKey||"")==="mameaw"||String(currentMember||"").toLowerCase()==="mameaw")?"mameaw":currentMemberKey;
+      if(actorKey==="mameaw"){try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch(e){console.warn("V211 Mameaw claim token refresh",e)}}
       const {db,fs}=await getFirebaseContext();
       const slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(x.pondId,x.slot));
-      const playerRef=fs.doc(db,"fishingPlayers",currentMemberKey);
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const playerRef=fs.doc(db,"fishingPlayers",actorKey);
+      const saveRef=fs.doc(db,"saves",actorKey);
       const dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
       let next=null,claimedWeight=0;
 
@@ -12094,10 +12151,10 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
 
         const slot=sl.exists()?sl.data():x;
-        const canonical=memberKeyFromName(currentMember||"");
+        const canonical=actorKey||memberKeyFromName(currentMember||"");
         const ownerOk=
           !sl.exists()
-          || String(slot.ownerKey||"")===String(currentMemberKey||"")
+          || String(slot.ownerKey||"")===String(actorKey||"")
           || String(slot.ownerKey||"")===String(canonical||"")
           || String(slot.ownerName||"").trim().toLowerCase()
              ===String(currentMember||"").trim().toLowerCase();
@@ -12112,7 +12169,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         d.names=ensureObj(d.names);
         d.ponds=ensureObj(d.ponds);
 
-        const key=canonical||currentMemberKey;
+        const key=canonical||actorKey;
         const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
         s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
         if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
@@ -14973,12 +15030,15 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
   /* Global scorer intentionally exists outside the old V181 IIFE lookup path. */
   window.M200_campaignScoreLater=async function(summary){
-    if(!cloudReady||!currentMemberKey||currentMemberKey==="aida")return;
+    const actorKey=(String(currentMemberKey||"")==="mameaw"||String(currentMember||"").toLowerCase()==="mameaw")?"mameaw":currentMemberKey;
+    if(!cloudReady||!actorKey||actorKey==="aida")return;
     const addCarrot=Math.max(0,Math.floor(Number(summary?.madCarrot)||0)),addCorn=Math.max(0,Math.floor(Number(summary?.angryCorn)||0)),add=addCarrot+addCorn;if(!add)return;
-    try{const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",M200_CAMPAIGN_ID),scoreRef=fs.doc(db,"campaignScores",M200_CAMPAIGN_ID),saveRef=fs.doc(db,"saves",currentMemberKey);const meta=await fs.getDoc(metaRef);if(!meta.exists()||!V36_campaignActive(meta.data()||{}))return;let next;
-      await fs.runTransaction(db,async tx=>{const [ss,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const d=ss.exists()?ss.data():{campaignId:M200_CAMPAIGN_ID,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})},s=M200_ensureState(normalizeState(sv.data(),currentMember));scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;names[currentMemberKey]=currentProfileDisplayName();s.wildRabbitCampaign.carrotHarvested+=addCarrot;s.wildRabbitCampaign.cornHarvested+=addCorn;next=s;tx.set(scoreRef,{campaignId:M200_CAMPAIGN_ID,scores,names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+    try{
+      if(actorKey==="mameaw"){try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch(e){console.warn("V211 Mameaw campaign token refresh",e)}}
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",M200_CAMPAIGN_ID),scoreRef=fs.doc(db,"campaignScores",M200_CAMPAIGN_ID),saveRef=fs.doc(db,"saves",actorKey);const meta=await fs.getDoc(metaRef);if(!meta.exists()||!V36_campaignActive(meta.data()||{}))return;let next;
+      await fs.runTransaction(db,async tx=>{const [ss,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const d=ss.exists()?ss.data():{campaignId:M200_CAMPAIGN_ID,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})},s=M200_ensureState(normalizeState(sv.data(),currentMember));scores[actorKey]=(Number(scores[actorKey])||0)+add;names[actorKey]=currentProfileDisplayName();s.wildRabbitCampaign.carrotHarvested+=addCarrot;s.wildRabbitCampaign.cornHarvested+=addCorn;next=s;tx.set(scoreRef,{campaignId:M200_CAMPAIGN_ID,scores,names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
       if(next&&ownState){ownState.wildRabbitCampaign=cloneData(next.wildRabbitCampaign);if(!visitContext)state=ownState;saveLocalOnly(ownState)}
-    }catch(e){console.warn("V200 rabbit campaign score",e)}
+    }catch(e){console.warn("V211 rabbit campaign score",actorKey,e)}
   };
   /* Define the historic name globally so all later tractor/harvest wrappers call this scorer. */
   window.V181_campaignScoreLater=window.M200_campaignScoreLater;
@@ -15081,3 +15141,5 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 async function V181_campaignScoreLater(summary){
   if(typeof window.M200_campaignScoreLater==="function")return window.M200_campaignScoreLater(summary);
 }
+
+;window.YAINOO_BUILD="V211-MAMEAW-CAMPAIGN-FISHING-REPAIR";
