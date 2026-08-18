@@ -4751,7 +4751,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   left:0;
   top:0;
   z-index:4;
-  width:clamp(42px,11vw,70px);
+  width:clamp(38px,10vw,64px);
   aspect-ratio:1/2;
   transform:translate3d(0,0,0);
   transform-origin:center bottom;
@@ -4765,21 +4765,21 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   position:absolute;
   z-index:0;
   left:50%;
-  bottom:1.8%;
-  width:62%;
-  height:5.4%;
+  bottom:1.2%;
+  width:72%;
+  height:7%;
   border-radius:50%;
-  background:rgba(28,19,24,.58);
-  filter:blur(2.2px);
-  transform:translateX(-50%) scaleX(.96);
+  background:rgba(24,16,22,.74);
+  filter:blur(2.5px);
+  transform:translateX(-50%) scaleX(.97);
   transform-origin:center;
-  opacity:.94;
+  opacity:.98;
   pointer-events:none;
 }
 .aida-alpaca-test.is-walking::before{animation:alpacaShadowStep 1800ms ease-in-out infinite}
 @keyframes alpacaShadowStep{
-  0%,50%,100%{transform:translateX(-50%) scaleX(.94);opacity:.88}
-  25%,75%{transform:translateX(-50%) scaleX(1.03);opacity:.97}
+  0%,50%,100%{transform:translateX(-50%) scaleX(.95);opacity:.94}
+  25%,75%{transform:translateX(-50%) scaleX(1.04);opacity:1}
 }
 .aida-alpaca-sprite{
   position:absolute;

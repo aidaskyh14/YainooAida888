@@ -15426,10 +15426,10 @@ async function V181_campaignScoreLater(summary){
    - one alpaca with 4 wool stages; same four animation sheets per stage
    ====================================================================== */
 (function YN_V215_ALPACA_TEST(){
-  const VERSION="alpaca-test-v1";
+  const VERSION="alpaca-test-v3";
   const STORAGE_KEY="yainoo-alpaca-test-v1:aida";
   const WALK_PX_PER_SEC=12; // intentionally slow
-  const FRAME_MS=210;
+  const FRAME_MS=120; // smoother sprite playback; actual travel speed stays slow
   const ROWS=[41.2,53.7,66.2,78.8];
   const COLS=[15.5,49.8,84.0];
   const RATIOS={
@@ -15468,6 +15468,13 @@ async function V181_campaignScoreLater(summary){
     const suffix=kind==="idle"?"idle":`${kind}-walk`;
     return `alpaca-stage-${stage}-${suffix}.png?v=${VERSION}`;
   }
+  function preloadStage(stage=test.stage){
+    ["idle","front","back","side"].forEach(kind=>{
+      const img=new Image();
+      img.decoding="async";
+      img.src=asset(kind,stage);
+    });
+  }
   function point(index){
     const layer=$("aidaFarmPetLayer"),rect=layer?.getBoundingClientRect(),petRect=alpaca?.getBoundingClientRect();
     if(!rect||!petRect)return{x:0,y:0};
@@ -15477,18 +15484,30 @@ async function V181_campaignScoreLater(summary){
       y:rect.height*ROWS[row]/100-petRect.height*.91
     };
   }
-  function nextNode(index){
+  function nextStep(index){
     const rows=ROWS.length,cols=COLS.length,row=Math.floor(index/cols),col=index%cols;
-    const offsets=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[-1,1],[1,-1],[1,1]];
-    let choices=offsets.map(([dr,dc])=>({row:row+dr,col:col+dc}))
-      .filter(p=>p.row>=0&&p.row<rows&&p.col>=0&&p.col<cols)
-      .map(p=>p.row*cols+p.col);
-    const fresh=choices.filter(v=>v!==previousNode);if(fresh.length)choices=fresh;
-    return choices[Math.floor(Math.random()*choices.length)];
+    // Cardinal movement only. This keeps the sprite direction identical to travel direction.
+    // Front + back are intentionally more common than side walking.
+    let choices=[];
+    if(row>0)choices.push({next:(row-1)*cols+col,direction:"back",weight:34});
+    if(row<rows-1)choices.push({next:(row+1)*cols+col,direction:"front",weight:34});
+    if(col>0)choices.push({next:row*cols+(col-1),direction:"left",weight:16});
+    if(col<cols-1)choices.push({next:row*cols+(col+1),direction:"right",weight:16});
+    // Avoid immediately retracing the last path where possible, but never block movement.
+    choices=choices.map(c=>({...c,weight:c.next===previousNode?Math.max(2,c.weight*.28):c.weight}));
+    const total=choices.reduce((sum,c)=>sum+c.weight,0);
+    let pick=Math.random()*total;
+    for(const c of choices){pick-=c.weight;if(pick<=0)return c}
+    return choices[choices.length-1]||{next:index,direction:"front"};
   }
   function frame(index,kind,flip=false){
     if(!sprite)return;
-    const i=Math.max(0,Math.min(15,Math.floor(Number(index)||0))),col=i%4,row=Math.floor(i/4);
+    const raw=Math.max(0,Math.min(15,Math.floor(Number(index)||0)));
+    // Ludo's SIDE sheet is temporally reversed: the animal faces the travel
+    // direction but the leg cycle reads as moonwalking. Reverse SIDE frames only.
+    // Front, Back and Idle remain completely unchanged.
+    const i=kind==="side" ? 15-raw : raw;
+    const col=i%4,row=Math.floor(i/4);
     const ratio=RATIOS[test.stage]?.[kind]||.52;
     sprite.style.setProperty("--alpaca-frame-ratio",String(ratio));
     sprite.style.setProperty("--alpaca-flip",flip?"-1":"1");
@@ -15511,11 +15530,12 @@ async function V181_campaignScoreLater(summary){
   function move(token){
     if(token!==runToken||!alpaca||!test.out||!ownAdminFarm()){sync();return}
     clearInterval(frameTimer);frameTimer=0;
-    const next=nextNode(node),to=point(next),layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=alpaca.getBoundingClientRect();
+    const step=nextStep(node),next=step.next,to=point(next),layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=alpaca.getBoundingClientRect();
     const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(node);
     const dx=to.x-from.x,dy=to.y-from.y;
-    const direction=Math.abs(dy)>Math.abs(dx)*.72?(dy>0?"front":"back"):"side";
-    const flip=direction==="side"&&dx>0;
+    const direction=step.direction==="left"||step.direction==="right"?"side":step.direction;
+    // Side source artwork faces RIGHT. Flip only when traveling LEFT.
+    const flip=step.direction==="left";
     const distance=Math.max(1,Math.hypot(dx,dy));
     const duration=Math.max(5200,Math.min(12500,(distance/WALK_PX_PER_SEC)*1000));
     alpaca.classList.remove("is-idle");alpaca.classList.add("is-walking");
@@ -15534,6 +15554,7 @@ async function V181_campaignScoreLater(summary){
   }
   function create(){
     const layer=$("aidaFarmPetLayer");if(!layer||alpaca||!test.out||!ownAdminFarm())return;
+    preloadStage(test.stage);
     alpaca=document.createElement("div");alpaca.className="aida-alpaca-test is-idle";
     alpaca.setAttribute("role","button");alpaca.setAttribute("aria-label","เปิดข้อมูลอัลปาก้า");alpaca.tabIndex=0;
     sprite=document.createElement("div");sprite.className="aida-alpaca-sprite";alpaca.appendChild(sprite);layer.appendChild(alpaca);
@@ -15551,7 +15572,7 @@ async function V181_campaignScoreLater(summary){
     btn.classList.toggle("hidden",!ownAdminFarm());
   }
   function setStage(stage){
-    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));persist();
+    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));persist();preloadStage(test.stage);
     if(alpaca){clearInterval(frameTimer);frameTimer=0;frame(0,"idle");const token=runToken;idle(token)}
     showPanel();
   }
@@ -15591,6 +15612,6 @@ async function V181_campaignScoreLater(summary){
   returnToFarm=function(){const result=priorReturnToFarm();setTimeout(sync,0);return result};
   document.addEventListener("visibilitychange",()=>{if(document.hidden)stopActivity(true);else sync()});
   window.addEventListener("resize",()=>{if(alpaca){stopActivity(true);sync()}});
-  window.YAINOO_BUILD="V215-AIDA-ALPACA-MOVEMENT-TEST";
+  window.YAINOO_BUILD="V217-ALPACA-SIDE-SHADOW-PERFORMANCE";
   setTimeout(sync,500);
 })();
