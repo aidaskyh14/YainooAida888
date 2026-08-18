@@ -15415,3 +15415,182 @@ async function V181_campaignScoreLater(summary){
   setTimeout(run,1800);
   window.YAINOO_BUILD="V213-MAMEAW-HARVEST-FISHING-SYNC";
 })();
+
+
+/* ======================================================================
+   V215 — Aida-only Alpaca movement test
+   - Farm 1 only (plots 1–12)
+   - local visual state only; NO Firebase writes
+   - tiny dog/cat-like display scale
+   - intentionally slow walking + soft contact shadow
+   - one alpaca with 4 wool stages; same four animation sheets per stage
+   ====================================================================== */
+(function YN_V215_ALPACA_TEST(){
+  const VERSION="alpaca-test-v1";
+  const STORAGE_KEY="yainoo-alpaca-test-v1:aida";
+  const WALK_PX_PER_SEC=12; // intentionally slow
+  const FRAME_MS=210;
+  const ROWS=[41.2,53.7,66.2,78.8];
+  const COLS=[15.5,49.8,84.0];
+  const RATIOS={
+    1:{idle:1256/2336,front:1584/3280,side:1680/2840,back:1648/3288},
+    2:{idle:1264/2400,front:783/1536,side:1680/2792,back:1672/3280},
+    3:{idle:1224/2344,front:766/1536,side:1712/2800,back:1560/3240},
+    4:{idle:1272/2384,front:1792/3320,side:1744/2888,back:1608/3288}
+  };
+
+  let test={stage:1,out:false};
+  let alpaca=null,sprite=null,node=4,previousNode=-1;
+  let moveTimer=0,frameTimer=0,motion=null,runToken=0;
+
+  try{
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    if(saved&&typeof saved==="object"){
+      test.stage=Math.max(1,Math.min(4,Math.floor(Number(saved.stage)||1)));
+      test.out=Boolean(saved.out);
+    }
+  }catch{}
+
+  function persist(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(test))}catch{}
+  }
+  function ownAdminFarm(){
+    const screen=$("gameScreen");
+    return Boolean(
+      currentMember==="Aida" &&
+      String(currentMemberKey||memberKeyFromName(currentMember)||"")==="aida" &&
+      !visitContext &&
+      Number(farmPlotPage||0)===0 &&
+      screen && !screen.classList.contains("hidden")
+    );
+  }
+  function asset(kind,stage=test.stage){
+    const suffix=kind==="idle"?"idle":`${kind}-walk`;
+    return `alpaca-stage-${stage}-${suffix}.png?v=${VERSION}`;
+  }
+  function point(index){
+    const layer=$("aidaFarmPetLayer"),rect=layer?.getBoundingClientRect(),petRect=alpaca?.getBoundingClientRect();
+    if(!rect||!petRect)return{x:0,y:0};
+    const row=Math.floor(index/COLS.length),col=index%COLS.length;
+    return{
+      x:rect.width*COLS[col]/100-petRect.width/2,
+      y:rect.height*ROWS[row]/100-petRect.height*.91
+    };
+  }
+  function nextNode(index){
+    const rows=ROWS.length,cols=COLS.length,row=Math.floor(index/cols),col=index%cols;
+    const offsets=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[-1,1],[1,-1],[1,1]];
+    let choices=offsets.map(([dr,dc])=>({row:row+dr,col:col+dc}))
+      .filter(p=>p.row>=0&&p.row<rows&&p.col>=0&&p.col<cols)
+      .map(p=>p.row*cols+p.col);
+    const fresh=choices.filter(v=>v!==previousNode);if(fresh.length)choices=fresh;
+    return choices[Math.floor(Math.random()*choices.length)];
+  }
+  function frame(index,kind,flip=false){
+    if(!sprite)return;
+    const i=Math.max(0,Math.min(15,Math.floor(Number(index)||0))),col=i%4,row=Math.floor(i/4);
+    const ratio=RATIOS[test.stage]?.[kind]||.52;
+    sprite.style.setProperty("--alpaca-frame-ratio",String(ratio));
+    sprite.style.setProperty("--alpaca-flip",flip?"-1":"1");
+    sprite.style.backgroundImage=`url("${asset(kind)}")`;
+    sprite.style.backgroundSize="400% 400%";
+    sprite.style.backgroundPosition=`${col*(100/3)}% ${row*(100/3)}%`;
+  }
+  function stopActivity(remove=false){
+    runToken++;clearTimeout(moveTimer);clearInterval(frameTimer);moveTimer=0;frameTimer=0;
+    if(motion){try{motion.cancel()}catch{}motion=null}
+    if(remove){alpaca?.remove();alpaca=null;sprite=null}
+  }
+  function idle(token=runToken){
+    if(token!==runToken||!alpaca)return;
+    alpaca.classList.remove("is-walking");alpaca.classList.add("is-idle");
+    let i=0;frame(i,"idle");clearInterval(frameTimer);
+    frameTimer=setInterval(()=>{if(token!==runToken||!alpaca)return;i=(i+1)%16;frame(i,"idle")},260);
+    clearTimeout(moveTimer);moveTimer=setTimeout(()=>move(token),1900+Math.random()*1800);
+  }
+  function move(token){
+    if(token!==runToken||!alpaca||!test.out||!ownAdminFarm()){sync();return}
+    clearInterval(frameTimer);frameTimer=0;
+    const next=nextNode(node),to=point(next),layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=alpaca.getBoundingClientRect();
+    const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(node);
+    const dx=to.x-from.x,dy=to.y-from.y;
+    const direction=Math.abs(dy)>Math.abs(dx)*.72?(dy>0?"front":"back"):"side";
+    const flip=direction==="side"&&dx>0;
+    const distance=Math.max(1,Math.hypot(dx,dy));
+    const duration=Math.max(5200,Math.min(12500,(distance/WALK_PX_PER_SEC)*1000));
+    alpaca.classList.remove("is-idle");alpaca.classList.add("is-walking");
+    let i=0;frame(i,direction,flip);
+    frameTimer=setInterval(()=>{if(token!==runToken||!alpaca)return;i=(i+1)%16;frame(i,direction,flip)},FRAME_MS);
+    motion=alpaca.animate([
+      {transform:`translate3d(${from.x}px,${from.y}px,0)`},
+      {transform:`translate3d(${to.x}px,${to.y}px,0)`}
+    ],{duration,easing:"linear",fill:"forwards"});
+    motion.onfinish=()=>{
+      if(token!==runToken||!alpaca)return;
+      clearInterval(frameTimer);frameTimer=0;previousNode=node;node=next;
+      alpaca.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;motion=null;
+      idle(token);
+    };
+  }
+  function create(){
+    const layer=$("aidaFarmPetLayer");if(!layer||alpaca||!test.out||!ownAdminFarm())return;
+    alpaca=document.createElement("div");alpaca.className="aida-alpaca-test is-idle";
+    alpaca.setAttribute("role","button");alpaca.setAttribute("aria-label","เปิดข้อมูลอัลปาก้า");alpaca.tabIndex=0;
+    sprite=document.createElement("div");sprite.className="aida-alpaca-sprite";alpaca.appendChild(sprite);layer.appendChild(alpaca);
+    alpaca.onclick=showPanel;alpaca.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showPanel()}};
+    const start=point(node);alpaca.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;
+    const token=++runToken;idle(token);
+  }
+  function sync(){
+    syncButton();
+    if(!ownAdminFarm()||!test.out){stopActivity(true);return}
+    if(!alpaca)requestAnimationFrame(create);
+  }
+  function syncButton(){
+    const btn=$("alpacaTestBtn");if(!btn)return;
+    btn.classList.toggle("hidden",!ownAdminFarm());
+  }
+  function setStage(stage){
+    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));persist();
+    if(alpaca){clearInterval(frameTimer);frameTimer=0;frame(0,"idle");const token=runToken;idle(token)}
+    showPanel();
+  }
+  function sendOut(){
+    test.out=true;persist();closeModal();stopActivity(true);node=4;previousNode=-1;sync();showWeatherToast("🦙 ปล่อยอัลปาก้าเดินเล่นแล้ว • เดินช้า ๆ ในฟาร์ม 1");
+  }
+  function store(){
+    test.out=false;persist();closeModal();stopActivity(true);sync();showWeatherToast("🦙 เก็บอัลปาก้าแล้ว");
+  }
+  function showPanel(){
+    if(!ownAdminFarm())return;
+    const stageText=["","ระยะ 1 • เพิ่งตัดขน","ระยะ 2 • ขนเริ่มขึ้น","ระยะ 3 • ขนขึ้นเยอะ","ระยะ 4 • ขนเต็ม พร้อมตัด"][test.stage];
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-test-card">
+      <div class="alpaca-test-emoji">🦙</div>
+      <h2>อัลปาก้าที่คุณมี</h2>
+      <span class="alpaca-test-status">${safeHtml(stageText)} • ${test.out?"กำลังเดินเล่น":"เก็บอยู่"}</span>
+      <div class="alpaca-test-actions">
+        <button id="alpacaWalkBtn" class="alpaca-test-walk" type="button" ${test.out?"disabled":""}>เดินเล่น</button>
+        <button id="alpacaStoreBtn" class="alpaca-test-store" type="button" ${test.out?"":"disabled"}>เก็บ</button>
+      </div>
+      <span class="alpaca-stage-test-title">ทดสอบระยะขน (เฉพาะแอดมิน)</span>
+      <div class="alpaca-stage-test-grid">${[1,2,3,4].map(n=>`<button type="button" data-alpaca-stage="${n}" class="${test.stage===n?"active":""}">${n}</button>`).join("")}</div>
+      <small class="alpaca-test-note">รอบนี้เป็นโหมดทดสอบภาพเท่านั้น • ไม่บันทึกระบบอัลปาก้าลง Firebase และสมาชิกคนอื่นจะไม่เห็นปุ่มนี้</small>
+    </section>`;
+    openModal();
+    $("alpacaWalkBtn").onclick=sendOut;$("alpacaStoreBtn").onclick=store;
+    document.querySelectorAll("[data-alpaca-stage]").forEach(b=>b.onclick=()=>setStage(b.dataset.alpacaStage));
+  }
+
+  if($("alpacaTestBtn"))$("alpacaTestBtn").onclick=showPanel;
+
+  const priorDraw=draw;
+  draw=function(){const result=priorDraw();sync();return result};
+  const priorSetFarmPlotPage=setFarmPlotPage;
+  setFarmPlotPage=function(page){const result=priorSetFarmPlotPage(page);stopActivity(true);sync();return result};
+  const priorReturnToFarm=returnToFarm;
+  returnToFarm=function(){const result=priorReturnToFarm();setTimeout(sync,0);return result};
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)stopActivity(true);else sync()});
+  window.addEventListener("resize",()=>{if(alpaca){stopActivity(true);sync()}});
+  window.YAINOO_BUILD="V215-AIDA-ALPACA-MOVEMENT-TEST";
+  setTimeout(sync,500);
+})();

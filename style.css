@@ -4720,3 +4720,100 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen.plot-page-4 #sprinklerBtn{left:18%!important}
 .game-screen.plot-page-4 #tractorBtn{left:50%!important}
 .game-screen.plot-page-4 #collectDropsBtn{left:82%!important}
+
+
+/* ======================================================================
+   V215 — Aida-only Alpaca movement test (farm 1 / plots 1–12)
+   local visual test only: no member save / no Firebase writes
+   ====================================================================== */
+.alpaca-test-button{
+  position:absolute;
+  z-index:76;
+  left:3.4%;
+  top:32.2%;
+  min-height:30px;
+  padding:6px 10px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,248,231,.97),rgba(235,202,166,.97));
+  color:#543725;
+  font-size:clamp(9px,2.35vw,12px);
+  font-weight:900;
+  line-height:1.05;
+  box-shadow:0 4px 12px rgba(45,25,18,.28),inset 0 1px rgba(255,255,255,.75);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.alpaca-test-button:active{transform:scale(.96)}
+
+.aida-alpaca-test{
+  position:absolute;
+  left:0;
+  top:0;
+  z-index:4;
+  width:clamp(42px,11vw,70px);
+  aspect-ratio:1/2;
+  transform:translate3d(0,0,0);
+  transform-origin:center bottom;
+  will-change:transform;
+  pointer-events:auto;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.aida-alpaca-test::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  bottom:1.8%;
+  width:62%;
+  height:5.4%;
+  border-radius:50%;
+  background:rgba(28,19,24,.58);
+  filter:blur(2.2px);
+  transform:translateX(-50%) scaleX(.96);
+  transform-origin:center;
+  opacity:.94;
+  pointer-events:none;
+}
+.aida-alpaca-test.is-walking::before{animation:alpacaShadowStep 1800ms ease-in-out infinite}
+@keyframes alpacaShadowStep{
+  0%,50%,100%{transform:translateX(-50%) scaleX(.94);opacity:.88}
+  25%,75%{transform:translateX(-50%) scaleX(1.03);opacity:.97}
+}
+.aida-alpaca-sprite{
+  position:absolute;
+  z-index:1;
+  left:50%;
+  bottom:0;
+  height:100%;
+  width:auto;
+  aspect-ratio:var(--alpaca-frame-ratio,.52);
+  transform:translateX(-50%) scaleX(var(--alpaca-flip,1));
+  transform-origin:center bottom;
+  background-repeat:no-repeat;
+  background-size:400% 400%;
+  background-position:0 0;
+  image-rendering:auto;
+  filter:drop-shadow(0 2px 2px rgba(40,24,24,.12));
+  will-change:background-position,transform;
+  pointer-events:none;
+}
+.aida-alpaca-test.is-idle .aida-alpaca-sprite{filter:drop-shadow(0 2px 2px rgba(40,24,24,.10))}
+
+.alpaca-test-card{text-align:center}
+.alpaca-test-card .alpaca-test-emoji{font-size:42px;line-height:1;margin:4px 0 7px}
+.alpaca-test-card .alpaca-test-status{display:block;margin:6px 0 10px;color:#765a70;font-size:12px;font-weight:800}
+.alpaca-test-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.alpaca-test-actions button{min-height:42px;border:0;border-radius:12px;font-weight:900}
+.alpaca-test-walk{background:#e9c98e;color:#422d25}
+.alpaca-test-store{background:#8a4766;color:#fff}
+.alpaca-stage-test-title{display:block;margin:13px 0 6px;font-size:11px;color:#80677d;font-weight:900}
+.alpaca-stage-test-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.alpaca-stage-test-grid button{min-height:38px;border:1px solid #d1b69f;border-radius:10px;background:#fff8ec;color:#553b43;font-weight:900}
+.alpaca-stage-test-grid button.active{background:#6f456f;color:#fff;border-color:#6f456f}
+.alpaca-test-note{display:block;margin-top:10px;color:#8b7486;font-size:10px;line-height:1.35}
+.game-screen.plot-page-2 .alpaca-test-button,
+.game-screen.plot-page-3 .alpaca-test-button,
+.game-screen.plot-page-4 .alpaca-test-button{display:none!important}
+@media (prefers-reduced-motion:reduce){.aida-alpaca-test{will-change:auto}.aida-alpaca-test.is-walking::before{animation:none}}
