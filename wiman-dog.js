@@ -1,20 +1,44 @@
 /* ======================================================================
-   V197 — WIMAN DOG SAFE NAMESPACE
-   Separate file + separate asset namespace. Does NOT use dog-01-* assets.
+   V198 — WIMAN DOG MULTI TEST (DOG-01 ... DOG-08)
+   - Separate Wiman namespace; does NOT use dog-01-* assets.
+   - Multi-dog test only: place/remove, idle, walk front/back/diag, special.
+   - Keeps the existing Wiman shadow system from style.css unchanged.
+   - Dogs render ~12% larger than V197 for easier visual testing.
+   - Animation sheets are loaded on demand (no preload of all heavy sprites).
    ====================================================================== */
-(function YN_V197_WIMAN_DOG_SAFE(){
+(function YN_V198_WIMAN_DOG_MULTI_TEST(){
   "use strict";
 
-  const VERSION="197";
-  const ASSET={
-    bg:`wiman-palace-bg-v1.jpeg?v=${VERSION}`,
-    icon:`wiman-palace-dog01-icon.png?v=${VERSION}`,
-    idle:`wiman-palace-dog01-idle.png?v=${VERSION}`,
-    front:`wiman-palace-dog01-walk-front.png?v=${VERSION}`,
-    back:`wiman-palace-dog01-walk-back.png?v=${VERSION}`,
-    diag:`wiman-palace-dog01-walk-diag-right.png?v=${VERSION}`,
-    special:`wiman-palace-dog01-special.png?v=${VERSION}`
+  const VERSION="198";
+  const DOG_SIZE="clamp(47px,12.1vw,81px)"; // ~12% larger than V197
+
+  const bg=`wiman-palace-bg-v1.jpeg?v=${VERSION}`;
+
+  const makeAssets=n=>{
+    const nn=String(n).padStart(2,"0");
+    const base=`wiman-palace-dog${nn}`;
+    return {
+      icon:`${base}-icon.png?v=${VERSION}`,
+      idle:`${base}-idle.png?v=${VERSION}`,
+      front:`${base}-walk-front.png?v=${VERSION}`,
+      back:`${base}-walk-back.png?v=${VERSION}`,
+      diag:`${base}-walk-diag-right.png?v=${VERSION}`,
+      special:`${base}-special.png?v=${VERSION}`
+    };
   };
+
+  const DOGS=Array.from({length:8},(_,i)=>{
+    const n=i+1;
+    const nn=String(n).padStart(2,"0");
+    return {
+      id:`WIMAN-DOG-${nn}`,
+      n,
+      name:n===1?"น้องหมาโจรสลัดสีชมพู":`น้องหมาทดสอบตัวที่ ${n}`,
+      asset:makeAssets(n)
+    };
+  });
+
+  const DOG_BY_ID=new Map(DOGS.map(d=>[d.id,d]));
 
   const NODES=[
     [50,82],[39,77],[61,77],[31,69],[48,69],[68,69],
@@ -22,9 +46,16 @@
     [64,51],[40,43],[52,43],[61,43],[45,36.5],[55,36.5]
   ];
 
-  let controller=null;
+  // Spread initial positions so several dogs can be tested together.
+  const STARTS=[
+    [39,77],[61,77],[31,69],[48,69],
+    [68,69],[31,60],[50,59],[70,60]
+  ];
 
+  const controllers=new Map();
   const byId=id=>document.getElementById(id);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
 
   function isAida(){
     try{
@@ -34,15 +65,28 @@
     }catch(_){ return false; }
   }
 
-  function storageKey(){
-    let key="aida";
-    try{ key=String(currentMemberKey||currentMember||"aida"); }catch(_){}
-    return `yainoo-wiman-palace-dog01-v1:${key}`;
+  function memberStoragePart(){
+    try{return String(currentMemberKey||currentMember||"aida")}
+    catch(_){return "aida"}
   }
-  function placed(){try{return localStorage.getItem(storageKey())==="1"}catch(_){return false}}
-  function setPlaced(v){try{localStorage.setItem(storageKey(),v?"1":"0")}catch(_){}}
-  function rand(a,b){return a+Math.random()*(b-a)}
-  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+
+  function storageKey(dogId){
+    const dog=DOG_BY_ID.get(dogId);
+    const nn=String(dog?.n||1).padStart(2,"0");
+    // DOG-01 keeps the exact V197 key so the existing placement is preserved.
+    if(nn==="01")return `yainoo-wiman-palace-dog01-v1:${memberStoragePart()}`;
+    return `yainoo-wiman-palace-dog${nn}-v1:${memberStoragePart()}`;
+  }
+
+  function placed(dogId){
+    try{return localStorage.getItem(storageKey(dogId))==="1"}
+    catch(_){return false}
+  }
+
+  function setPlaced(dogId,v){
+    try{localStorage.setItem(storageKey(dogId),v?"1":"0")}
+    catch(_){}
+  }
 
   function refreshShortcut(){
     const btn=byId("shortcutDogPalaceBtn");
@@ -60,7 +104,7 @@
   }
 
   function leaveWiman(){
-    stopDog();
+    stopAllDogs();
     try{
       if(typeof currentScene!=="undefined")currentScene=null;
       if(typeof closeModal==="function")closeModal();
@@ -72,7 +116,7 @@
   function openWiman(){
     if(!isAida()){showComingSoon();return}
 
-    stopDog();
+    stopAllDogs();
     try{
       if(typeof stopSceneTimer==="function")stopSceneTimer();
       if(typeof currentScene!=="undefined")currentScene="wimanDogSafe";
@@ -83,7 +127,7 @@
     if(!scene)return;
     scene.classList.remove("hidden");
     scene.dataset.scene="wimanDogSafe";
-    scene.style.backgroundImage=`url("${ASSET.bg}")`;
+    scene.style.backgroundImage=`url("${bg}")`;
 
     const back=byId("sceneBackBtn");
     const next=byId("sceneNextBtn");
@@ -102,51 +146,80 @@
       </button>
       <div id="wimanDogPetLayer" class="wiman-dog-pet-layer" aria-label="พื้นที่เดินเล่นของน้องหมา"></div>
     `;
+
     byId("wimanDogInventoryBtn").onclick=showInventory;
-    if(placed())mountDog();
+
+    DOGS.forEach((dog,i)=>{
+      if(placed(dog.id))mountDog(dog,i);
+    });
+  }
+
+  function dogCardHTML(dog){
+    const active=placed(dog.id);
+    return `
+      <article class="wiman-dog-card" data-wiman-dog-card="${dog.id}">
+        <div class="wiman-dog-card-art">
+          <img src="${dog.asset.icon}" alt="${dog.id}" loading="lazy" decoding="async">
+        </div>
+        <div class="wiman-dog-card-copy">
+          <b>${dog.id}</b>
+          <span>${dog.name}</span>
+          <span class="wiman-dog-status-pill">${active?"● กำลังเดินเล่นในวิมาน":"○ อยู่ในรายการของคุณ"}</span>
+          <button data-wiman-dog-toggle="${dog.id}" class="${active?"is-placed":""}" type="button">
+            ${active?"เก็บหมากลับ":"วางหมา"}
+          </button>
+        </div>
+      </article>
+    `;
   }
 
   function showInventory(){
     if(!isAida())return;
-    const active=placed();
     const modalContent=byId("modalContent");
     if(!modalContent)return;
+
     modalContent.innerHTML=`
       <section class="feature-panel wiman-dog-inventory-panel">
-        <span class="wiman-dog-panel-kicker">WIMAN DOG</span>
+        <span class="wiman-dog-panel-kicker">WIMAN DOG TEST</span>
         <h2>🐾 หมาที่คุณมี</h2>
-        <p class="wiman-dog-panel-sub">น้องหมาสำหรับทดสอบในบัญชี Aida</p>
-        <article class="wiman-dog-card">
-          <div class="wiman-dog-card-art">
-            <img src="${ASSET.icon}" alt="WIMAN-DOG-01">
-          </div>
-          <div class="wiman-dog-card-copy">
-            <b>WIMAN-DOG-01</b>
-            <span>น้องหมาโจรสลัดสีชมพู</span>
-            <span class="wiman-dog-status-pill">${active?"● กำลังเดินเล่นในวิมาน":"○ อยู่ในรายการของคุณ"}</span>
-            <button id="wimanDogPlaceBtn" class="${active?"is-placed":""}" type="button">
-              ${active?"เก็บหมากลับ":"วางหมา"}
-            </button>
-          </div>
-        </article>
+        <p class="wiman-dog-panel-sub">DOG-01 ถึง DOG-08 • เลือกวางเพื่อทดสอบการเดินและแอนิเมชัน</p>
+        <div class="wiman-dog-test-list" style="display:grid;gap:10px;max-height:58vh;overflow:auto;padding:2px 3px 8px">
+          ${DOGS.map(dogCardHTML).join("")}
+        </div>
+        <p class="wiman-dog-panel-note">ไฟล์แอนิเมชันจะโหลดเมื่อมีการใช้งาน เพื่อลดการโหลดไฟล์ขนาดใหญ่พร้อมกัน</p>
       </section>
     `;
+
     if(typeof openModal==="function")openModal();
-    const place=byId("wimanDogPlaceBtn");
-    if(place)place.onclick=()=>{
-      const next=!placed();
-      setPlaced(next);
-      if(typeof closeModal==="function")closeModal();
-      if(next){
-        mountDog();
-        if(typeof showWeatherToast==="function")showWeatherToast("🐶 วางน้องหมาในวิมานแล้ว");
-      }else{
-        stopDog();
-        const layer=byId("wimanDogPetLayer");
-        if(layer)layer.innerHTML="";
-        if(typeof showWeatherToast==="function")showWeatherToast("🐾 เก็บน้องหมากลับแล้ว");
-      }
-    };
+
+    modalContent.querySelectorAll("[data-wiman-dog-toggle]").forEach(btn=>{
+      btn.onclick=()=>{
+        const dogId=btn.dataset.wimanDogToggle;
+        const dog=DOG_BY_ID.get(dogId);
+        if(!dog)return;
+
+        const next=!placed(dogId);
+        setPlaced(dogId,next);
+
+        if(next){
+          mountDog(dog,DOGS.indexOf(dog));
+          if(typeof showWeatherToast==="function")showWeatherToast(`🐶 วาง ${dogId} ในวิมานแล้ว`);
+        }else{
+          stopDog(dogId);
+          if(typeof showWeatherToast==="function")showWeatherToast(`🐾 เก็บ ${dogId} กลับแล้ว`);
+        }
+
+        // Refresh just this card without closing the list, making multi-dog tests quicker.
+        const card=modalContent.querySelector(`[data-wiman-dog-card="${dogId}"]`);
+        if(card){
+          const fresh=document.createElement("div");
+          fresh.innerHTML=dogCardHTML(dog).trim();
+          card.replaceWith(fresh.firstElementChild);
+          const newBtn=modalContent.querySelector(`[data-wiman-dog-toggle="${dogId}"]`);
+          if(newBtn)newBtn.onclick=btn.onclick;
+        }
+      };
+    });
   }
 
   function framePosition(i){
@@ -154,12 +227,16 @@
     return `${col*100/3}% ${row*100/3}%`;
   }
 
+  function alive(c){
+    return !!c && controllers.get(c.dog.id)===c;
+  }
+
   function setFrame(c,kind,frame,left=false){
-    if(!c?.sprite)return;
+    if(!alive(c)||!c.sprite)return;
     c.kind=kind;
     c.sprite.dataset.kind=kind;
     c.sprite.classList.toggle("face-left",!!left);
-    c.sprite.style.backgroundImage=`url("${ASSET[kind]}")`;
+    c.sprite.style.backgroundImage=`url("${c.dog.asset[kind]}")`;
     c.sprite.style.backgroundSize="400% 400%";
     c.sprite.style.backgroundPosition=framePosition(frame%16);
   }
@@ -173,19 +250,20 @@
     let f=0;
     setFrame(c,kind,f,left);
     c.frameTimer=setInterval(()=>{
-      if(controller!==c)return clearFrames(c);
+      if(!alive(c))return clearFrames(c);
       f=(f+1)%16;
       setFrame(c,kind,f,left);
     },ms);
   }
 
   function playSpecial(c,done){
+    if(!alive(c))return;
     clearFrames(c);
     c.el.classList.remove("is-moving");
     let f=0;
     setFrame(c,"special",0,false);
     c.frameTimer=setInterval(()=>{
-      if(controller!==c)return clearFrames(c);
+      if(!alive(c))return clearFrames(c);
       f++;
       if(f>=16){
         clearFrames(c);
@@ -197,29 +275,43 @@
     },105);
   }
 
-  function mountDog(){
-    if(!isAida()||!placed())return;
+  function mountDog(dog,index=0){
+    if(!isAida()||!dog||!placed(dog.id))return;
     const layer=byId("wimanDogPetLayer");
     if(!layer)return;
-    stopDog();
+
+    // Remount only this dog; never stop the other dogs.
+    stopDog(dog.id);
 
     const el=document.createElement("div");
     el.className="wiman-dog-pet";
+    el.dataset.wimanDogId=dog.id;
     el.tabIndex=0;
-    el.innerHTML='<span class="wiman-dog-sprite" data-kind="idle"></span><span class="wiman-dog-touch-hint">แตะเล่นกับน้อง</span>';
+
+    // Bigger visual size only. Shadow CSS remains exactly the same system/rules.
+    el.style.setProperty("--wiman-dog-size",DOG_SIZE);
+
+    el.innerHTML=`<span class="wiman-dog-sprite" data-kind="idle"></span><span class="wiman-dog-touch-hint">แตะเล่นกับน้อง</span>`;
     layer.appendChild(el);
 
     const sprite=el.querySelector(".wiman-dog-sprite");
-    const start=[50,78];
+    const start=STARTS[index%STARTS.length];
     el.style.left=`${start[0]}%`;
     el.style.top=`${start[1]}%`;
+    el.style.zIndex=String(30+Math.round(start[1]));
 
-    controller={el,sprite,x:start[0],y:start[1],node:-1,timer:0,frameTimer:0};
-    const c=controller;
+    const c={
+      dog,el,sprite,
+      x:start[0],y:start[1],
+      node:-1,timer:0,frameTimer:0
+    };
+    controllers.set(dog.id,c);
+
+    // Only the idle sheet is requested immediately for a placed dog.
     animateLoop(c,"idle",false,205);
 
     const touch=()=>{
-      if(controller!==c)return;
+      if(!alive(c))return;
       if(c.timer)clearTimeout(c.timer);
       playSpecial(c,()=>scheduleNext(c,1000));
     };
@@ -227,14 +319,16 @@
     el.onkeydown=e=>{
       if(e.key==="Enter"||e.key===" "){e.preventDefault();touch()}
     };
-    scheduleNext(c,rand(1600,3000));
+
+    // Stagger starts so 8 dogs do not move in lockstep.
+    scheduleNext(c,rand(1600,3200)+(index*120));
   }
 
   function scheduleNext(c,delay){
-    if(controller!==c)return;
+    if(!alive(c))return;
     if(c.timer)clearTimeout(c.timer);
     c.timer=setTimeout(()=>{
-      if(controller!==c||!placed())return;
+      if(!alive(c)||!placed(c.dog.id))return;
       if(Math.random()<.18)return playSpecial(c,()=>scheduleNext(c,rand(1700,3200)));
       walkNext(c);
     },delay);
@@ -248,13 +342,14 @@
   }
 
   function walkNext(c){
+    if(!alive(c))return;
     const next=chooseNode(c);
     const tx=next.p[0],ty=next.p[1];
     const dx=tx-c.x,dy=ty-c.y;
     const rect=byId("sceneScreen")?.getBoundingClientRect();
     const dist=rect?Math.hypot(dx*rect.width/100,dy*rect.height/100):Math.hypot(dx,dy)*6;
 
-    // Deliberately slower, small-farm friendly movement
+    // Same movement speed/range as DOG-01 V197.
     const duration=Math.max(3000,Math.min(7000,dist/rand(24,29)*1000));
 
     const ax=Math.abs(dx),ay=Math.abs(dy);
@@ -268,14 +363,14 @@
     c.el.style.transition=`left ${duration}ms linear, top ${duration}ms linear`;
 
     requestAnimationFrame(()=>{
-      if(controller===c){
+      if(alive(c)){
         c.el.style.left=`${tx}%`;
         c.el.style.top=`${ty}%`;
       }
     });
 
     c.timer=setTimeout(()=>{
-      if(controller!==c)return;
+      if(!alive(c))return;
       c.x=tx;c.y=ty;c.node=next.i;
       c.el.classList.remove("is-moving");
       c.el.style.transition="none";
@@ -284,17 +379,20 @@
     },duration+40);
   }
 
-  function stopDog(){
-    const c=controller;
-    controller=null;
+  function stopDog(dogId){
+    const c=controllers.get(dogId);
     if(!c)return;
+    controllers.delete(dogId);
     if(c.timer)clearTimeout(c.timer);
     if(c.frameTimer)clearInterval(c.frameTimer);
     c.el?.remove();
   }
 
-  // Capture-phase binding that runs after all original code is loaded.
-  // For Aida it blocks the legacy "coming soon" handler.
+  function stopAllDogs(){
+    [...controllers.keys()].forEach(stopDog);
+  }
+
+  // Capture-phase binding that runs after the original game code.
   document.addEventListener("click",e=>{
     const btn=e.target?.closest?.("#shortcutDogPalaceBtn");
     if(!btn)return;
@@ -306,23 +404,25 @@
     else showComingSoon();
   },true);
 
-  // Keep the visible lock/unlock state in sync with login/Admin state.
   refreshShortcut();
   setTimeout(refreshShortcut,250);
   setTimeout(refreshShortcut,1000);
   setInterval(refreshShortcut,1200);
 
-  // Preload only the Wiman namespace assets
-  Object.values(ASSET).forEach(src=>{
+  // Keep initial game load light: preload only the Wiman background.
+  // Icons load when inventory opens; heavy 4x4 animation sheets load on demand.
+  try{
     const img=new Image();
     img.decoding="async";
-    img.src=src;
-  });
+    img.src=bg;
+  }catch(_){}
 
   window.YN_WIMAN_DOG_SAFE={
     open:openWiman,
     inventory:showInventory,
     refresh:refreshShortcut,
-    stop:stopDog
+    stop:stopAllDogs,
+    stopDog,
+    dogs:DOGS.map(d=>d.id)
   };
 })();
