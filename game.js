@@ -1,4 +1,4 @@
-/* BUILD: V215-CAT13-16 */
+/* BUILD: V205-CONFIRMED-FIXED */
 let MEMBERS={
   "Kung A":"KUNG2481","Ar Jane":"JANE7314","Blotto Bier":"BIER4826","Mameaw":"MEAW5937",
   "Para":"PARA1642","Porpla":"PORP8753","Pukkie":"PUKK3491","Opor":"OPOR6284",
@@ -5052,12 +5052,8 @@ function aidaFarmPetBasePath(){
 }
 function aidaFarmPetImage(kind){
   const base=aidaFarmPetBasePath();
-  const isCat1316=aidaFarmPetType==="cat"&&aidaFarmPetNumber>=13&&aidaFarmPetNumber<=16;
-  const assetVersion=isCat1316?216:3;
-  if(kind==="pose")return `${base}-pose-sheet.png?v=${assetVersion}`;
-  // CAT-13..16 use the supplied diagonal sheet for the engine's forward route.
-  if(isCat1316&&kind==="front")kind="diag";
-  return `${base}-walk-${kind}.png?v=${assetVersion}`;
+  if(kind==="pose")return `${base}-pose-sheet.png?v=3`;
+  return `${base}-walk-${kind}.png?v=3`;
 }
 
 function aidaFarmPetOwnerKey(){return visitContext?String(visitContext.memberKey||memberKeyFromName(visitContext.name)):String(currentMemberKey||memberKeyFromName(currentMember))}
@@ -5068,28 +5064,12 @@ function shouldShowAidaFarmPet(){
 function setAidaFarmPetPose(index){
   if(!aidaFarmPetSprite)return;
   const col=index%4,row=Math.floor(index/4);
-  const isCat1316=aidaFarmPetType==="cat"&&aidaFarmPetNumber>=13&&aidaFarmPetNumber<=16;
   aidaFarmPet?.classList.remove("is-walking");
   const widePose=index===AIDA_FARM_PET_POSES.lie||index===AIDA_FARM_PET_POSES.sleep;
   aidaFarmPet?.style.setProperty("--pet-shadow-width",widePose?"76%":index===AIDA_FARM_PET_POSES.sit?"57%":"52%");
   aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
   aidaFarmPetSprite.classList.remove("is-walking","walk-front","walk-back","face-left");
   aidaFarmPetSprite.style.setProperty("--pet-art-scale","1");
-  // CAT-13..16 pose sheets use square 384x384 frames. Render them in a
-  // square viewport anchored to the feet so Maru and the other new cats
-  // are not stretched/cropped by the older 314:418 walk-frame container.
-  if(isCat1316){
-    aidaFarmPetSprite.style.inset="auto 0 0 0";
-    aidaFarmPetSprite.style.width="100%";
-    aidaFarmPetSprite.style.height="auto";
-    aidaFarmPetSprite.style.aspectRatio="1 / 1";
-    aidaFarmPetSprite.style.backgroundColor="transparent";
-  }else{
-    aidaFarmPetSprite.style.inset="0";
-    aidaFarmPetSprite.style.width="auto";
-    aidaFarmPetSprite.style.height="auto";
-    aidaFarmPetSprite.style.aspectRatio="auto";
-  }
   aidaFarmPetSprite.style.backgroundImage=`url("${aidaFarmPetImage("pose")}")`;
   aidaFarmPetSprite.style.backgroundSize="400% 300%";
   aidaFarmPetSprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
@@ -5097,14 +5077,6 @@ function setAidaFarmPetPose(index){
 function setAidaFarmPetWalkFrame(index,direction="right"){
   if(!aidaFarmPetSprite)return;
   const frame=((index%8)+8)%8,col=frame%4,row=Math.floor(frame/4);
-  // Restore the full 314:418 walk viewport after any square pose frame.
-  if(aidaFarmPetType==="cat"&&aidaFarmPetNumber>=13&&aidaFarmPetNumber<=16){
-    aidaFarmPetSprite.style.inset="0";
-    aidaFarmPetSprite.style.width="auto";
-    aidaFarmPetSprite.style.height="auto";
-    aidaFarmPetSprite.style.aspectRatio="auto";
-    aidaFarmPetSprite.style.backgroundColor="transparent";
-  }
   aidaFarmPet?.classList.add("is-walking");
   aidaFarmPet?.style.setProperty("--pet-shadow-width",direction==="front"||direction==="back"?"46%":"54%");
   aidaFarmPet?.style.setProperty("--pet-shadow-bottom","5.5%");
@@ -5275,11 +5247,7 @@ const CAT_TYPES={
   cat9:{number:9,name:"โมจิผี",image:"cat-09.png?v=1"},
   cat10:{number:10,name:"บูบู้",image:"cat-10.png?v=1"},
   cat11:{number:11,name:"เจียงเหมียว",image:"cat-11.png?v=1"},
-  cat12:{number:12,name:"พิงกี้บู",image:"cat-12.png?v=1"},
-  cat13:{number:13,name:"มูมู่",image:"cat-13.png?v=216"},
-  cat14:{number:14,name:"มารุ",image:"cat-14.png?v=216"},
-  cat15:{number:15,name:"โกโก้",image:"cat-15.png?v=216"},
-  cat16:{number:16,name:"ลูลู่",image:"cat-16.png?v=216"}
+  cat12:{number:12,name:"พิงกี้บู",image:"cat-12.png?v=1"}
 };
 const CAT_LIFETIME_MS=10*24*60*60*1000;
 const CAT_HUNGER_MS=4*60*60*1000;
@@ -10281,7 +10249,7 @@ console.info("TEMPLE_FIX_V2 loaded: instant-complete + scroll-preserve");
    earlier admin catalog wrappers. Does not change non-cat systems.
    ====================================================================== */
 (function ensureCat0912AdminGiftSupport(){
-  const CAT_ADMIN_KEYS=["cat9","cat10","cat12","cat13","cat14","cat15","cat16"];
+  const CAT_ADMIN_KEYS=["cat9","cat10","cat12"];
 
   const prevCatalog=adminGiftCatalog;
   adminGiftCatalog=function(){
@@ -15447,6 +15415,3 @@ async function V181_campaignScoreLater(summary){
   setTimeout(run,1800);
   window.YAINOO_BUILD="V213-MAMEAW-HARVEST-FISHING-SYNC";
 })();
-
-;window.YAINOO_BUILD="V216-CAT1316-DISPLAY-CACHE-FIX";
-console.info("V216 CAT13-16 display/cache fix loaded");
