@@ -1,16 +1,20 @@
 /* ======================================================================
-   V198 — WIMAN DOG MULTI TEST (DOG-01 ... DOG-08)
+   V199 — WIMAN DOG MULTI TEST / SIZE + PERFORMANCE
    - Separate Wiman namespace; does NOT use dog-01-* assets.
    - Multi-dog test only: place/remove, idle, walk front/back/diag, special.
    - Keeps the existing Wiman shadow system from style.css unchanged.
-   - Dogs render ~12% larger than V197 for easier visual testing.
+   - Dogs render clearly larger for easier visual testing.
+   - Diagonal pose is compensated in code so it no longer shrinks visually.
+   - One shared requestAnimationFrame drives all sprite frames (not one interval per dog).
    - Animation sheets are loaded on demand (no preload of all heavy sprites).
    ====================================================================== */
-(function YN_V198_WIMAN_DOG_MULTI_TEST(){
+(function YN_V199_WIMAN_DOG_MULTI_TEST(){
   "use strict";
 
-  const VERSION="198";
-  const DOG_SIZE="clamp(47px,12.1vw,81px)"; // ~12% larger than V197
+  const VERSION="199";
+  const DOG_SIZE="clamp(64px,16vw,110px)"; // clearly larger than V198
+  const DIAG_WIDTH="94%";   // keep diagonal frame aspect while compensating its smaller source canvas
+  const DIAG_HEIGHT="113%";
 
   const bg=`wiman-palace-bg-v1.jpeg?v=${VERSION}`;
 
@@ -53,6 +57,8 @@
   ];
 
   const controllers=new Map();
+  let animationRaf=0;
+
   const byId=id=>document.getElementById(id);
   const rand=(a,b)=>a+Math.random()*(b-a);
   const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -180,13 +186,13 @@
 
     modalContent.innerHTML=`
       <section class="feature-panel wiman-dog-inventory-panel">
-        <span class="wiman-dog-panel-kicker">WIMAN DOG TEST</span>
+        <span class="wiman-dog-panel-kicker">WIMAN DOG TEST V199</span>
         <h2>🐾 หมาที่คุณมี</h2>
         <p class="wiman-dog-panel-sub">DOG-01 ถึง DOG-08 • เลือกวางเพื่อทดสอบการเดินและแอนิเมชัน</p>
         <div class="wiman-dog-test-list" style="display:grid;gap:10px;max-height:58vh;overflow:auto;padding:2px 3px 8px">
           ${DOGS.map(dogCardHTML).join("")}
         </div>
-        <p class="wiman-dog-panel-note">ไฟล์แอนิเมชันจะโหลดเมื่อมีการใช้งาน เพื่อลดการโหลดไฟล์ขนาดใหญ่พร้อมกัน</p>
+        <p class="wiman-dog-panel-note">ทดสอบขนาด/ทิศทาง/ความลื่นไหล • ใช้วงรอบแอนิเมชันร่วมกันเพื่อลดภาระเมื่อวางหลายตัว</p>
       </section>
     `;
 
@@ -236,43 +242,68 @@
     c.kind=kind;
     c.sprite.dataset.kind=kind;
     c.sprite.classList.toggle("face-left",!!left);
+
+    // style.css V195 intentionally renders diagonal at 66% x 80%.
+    // Override it only at render time; source PNG files remain untouched.
+    if(kind==="diag"){
+      c.sprite.style.width=DIAG_WIDTH;
+      c.sprite.style.height=DIAG_HEIGHT;
+    }else{
+      c.sprite.style.width="100%";
+      c.sprite.style.height="100%";
+    }
+
     c.sprite.style.backgroundImage=`url("${c.dog.asset[kind]}")`;
     c.sprite.style.backgroundSize="400% 400%";
     c.sprite.style.backgroundPosition=framePosition(frame%16);
   }
 
-  function clearFrames(c){
-    if(c?.frameTimer){clearInterval(c.frameTimer);c.frameTimer=0}
+  function ensureAnimationRaf(){
+    if(animationRaf || !controllers.size)return;
+    animationRaf=requestAnimationFrame(animationTick);
+  }
+
+  function animationTick(now){
+    animationRaf=0;
+    if(!controllers.size)return;
+
+    controllers.forEach(c=>{
+      if(!alive(c)||!c.anim)return;
+      if(now<c.anim.nextAt)return;
+
+      // Do not "catch up" dozens of frames after a background-tab pause.
+      c.anim.nextAt=now+c.anim.ms;
+      c.anim.frame++;
+
+      if(c.anim.once && c.anim.frame>=16){
+        const done=c.anim.done;
+        setAnimation(c,"idle",false,205,false,null,now);
+        if(typeof done==="function")done();
+        return;
+      }
+
+      c.anim.frame%=16;
+      setFrame(c,c.anim.kind,c.anim.frame,c.anim.left);
+    });
+
+    if(controllers.size)animationRaf=requestAnimationFrame(animationTick);
+  }
+
+  function setAnimation(c,kind,left=false,ms=180,once=false,done=null,now=performance.now()){
+    if(!alive(c))return;
+    c.anim={kind,left,ms,once,done,frame:0,nextAt:now+ms};
+    setFrame(c,kind,0,left);
+    ensureAnimationRaf();
   }
 
   function animateLoop(c,kind,left=false,ms=180){
-    clearFrames(c);
-    let f=0;
-    setFrame(c,kind,f,left);
-    c.frameTimer=setInterval(()=>{
-      if(!alive(c))return clearFrames(c);
-      f=(f+1)%16;
-      setFrame(c,kind,f,left);
-    },ms);
+    setAnimation(c,kind,left,ms,false,null);
   }
 
   function playSpecial(c,done){
     if(!alive(c))return;
-    clearFrames(c);
     c.el.classList.remove("is-moving");
-    let f=0;
-    setFrame(c,"special",0,false);
-    c.frameTimer=setInterval(()=>{
-      if(!alive(c))return clearFrames(c);
-      f++;
-      if(f>=16){
-        clearFrames(c);
-        setFrame(c,"idle",0,false);
-        done?.();
-        return;
-      }
-      setFrame(c,"special",f,false);
-    },105);
+    setAnimation(c,"special",false,105,true,done);
   }
 
   function mountDog(dog,index=0){
@@ -303,7 +334,7 @@
     const c={
       dog,el,sprite,
       x:start[0],y:start[1],
-      node:-1,timer:0,frameTimer:0
+      node:-1,timer:0,anim:null
     };
     controllers.set(dog.id,c);
 
@@ -384,12 +415,21 @@
     if(!c)return;
     controllers.delete(dogId);
     if(c.timer)clearTimeout(c.timer);
-    if(c.frameTimer)clearInterval(c.frameTimer);
+    c.anim=null;
     c.el?.remove();
+
+    if(!controllers.size && animationRaf){
+      cancelAnimationFrame(animationRaf);
+      animationRaf=0;
+    }
   }
 
   function stopAllDogs(){
     [...controllers.keys()].forEach(stopDog);
+    if(animationRaf){
+      cancelAnimationFrame(animationRaf);
+      animationRaf=0;
+    }
   }
 
   // Capture-phase binding that runs after the original game code.
