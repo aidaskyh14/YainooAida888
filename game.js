@@ -12102,6 +12102,30 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch(e){console.warn("V210 Mameaw fishing token refresh",e)}
       }
       const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(fishPondId,slotNo)),playerRef=fs.doc(db,"fishingPlayers",actorKey),saveRef=fs.doc(db,"saves",actorKey);
+
+      /* V213: Mameaw uses direct rescue writes. This avoids an all-or-nothing
+         multi-document transaction being rejected by one legacy fishing doc. */
+      if(actorKey==="mameaw") {
+        const now=NOW();
+        const [ss,pl,sl]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(playerRef),fs.getDoc(slotRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);resetDailyExtras(s);
+        if(s.fishingDailyChoice.pondId!==fishPondId)throw new Error("วันนี้ไม่ได้เลือกบ่อนี้");
+        if(pl.exists()&&Number(pl.data().claimDeadline||0)>now)throw new Error("กำลังตกปลาอยู่ที่แท่นอื่น");
+        if(pl.exists()&&Number(pl.data().claimDeadline||0)<=now){try{await fs.deleteDoc(playerRef)}catch{}}
+        if(Number(s.fishingCooldownUntil||0)>now)throw new Error(`คูลดาวน์เหลือ ${fmt(s.fishingCooldownUntil-now)}`);
+        if(sl.exists()&&activeSlot(sl.data()))throw new Error("แท่นนี้ไม่ว่างแล้ว");
+        if(Number(s.fishingBaits?.[baitKey]||0)<1)throw new Error("เหยื่อหมดแล้ว");
+        s.fishingBaits[baitKey]-=1;
+        const roll=rollFishingCatches(baitKey),finish=now+bait.durationMs;
+        const directSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:"mameaw",ownerName:currentProfileDisplayName(),baitKey,catches:roll.catches,totalWeight:roll.total,status:"fishing",startedAt:now,finishAt:finish,claimDeadline:finish+5*MIN};
+        await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        await fs.setDoc(slotRef,{...directSlot,updatedAt:fs.serverTimestamp()},{merge:false});
+        await fs.setDoc(playerRef,{memberKey:"mameaw",pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false});
+        Y26_applyOwnState(s);closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
+        return;
+      }
+
       let next,newSlot;
       await fs.runTransaction(db,async tx=>{
         const [sl,pl,ss]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef)]),now=NOW();
@@ -12134,6 +12158,33 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const saveRef=fs.doc(db,"saves",actorKey);
       const dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
       let next=null,claimedWeight=0;
+
+      /* V213 direct Mameaw claim: save + daily first, cleanup after. */
+      if(actorKey==="mameaw") {
+        const [sl,ss,dd]=await Promise.all([fs.getDoc(slotRef),fs.getDoc(saveRef),fs.getDoc(dailyRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const slot=sl.exists()?sl.data():x;
+        if(String(slot.ownerKey||"")!=="mameaw")throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีมะเหมี่ยว");
+        if(NOW()<Number(slot.finishAt||x.finishAt||0))throw new Error("ปลายังไม่ติดเบ็ด");
+        if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
+        const s=normalizeState(ss.data(),currentMember);
+        const d=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
+        d.scores=ensureObj(d.scores);d.names=ensureObj(d.names);d.ponds=ensureObj(d.ponds);
+        const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
+        s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
+        if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
+        claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
+        d.scores.mameaw=Number((Number(d.scores.mameaw||0)+claimedWeight).toFixed(2));
+        d.names.mameaw=currentProfileDisplayName();d.ponds.mameaw=Number(x.pondId||0);
+        ensureMissionStateFor(s);s.missions.progress.fishingWeight200=d.scores.mameaw;s.missions.progress.fishingWeight800=d.scores.mameaw;
+        s.fishingCooldownUntil=NOW()+5*MIN;s.fishingClaimReceipts[receipt]=NOW();
+        await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        await fs.setDoc(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
+        try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("V213 mameaw slot cleanup",e)}
+        try{await fs.deleteDoc(playerRef)}catch(e){console.warn("V213 mameaw player cleanup",e)}
+        Y26_applyOwnState(s);closeModal();showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
+        return;
+      }
 
       /*
         V194:
@@ -14328,6 +14379,38 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
 
 
+/* V213 helper: keep Mameaw wild-rabbit counters and ranking synchronized. */
+function V213_mameawCampaignApplyToState(s,cropKey,qty){
+  if(String(currentMemberKey||"")!=="mameaw" && String(currentMember||"").toLowerCase()!=="mameaw")return;
+  if(!s||!(cropKey==="madCarrot"||cropKey==="angryCorn"))return;
+  const id="wild-rabbit-hungry-4d-v1";
+  s.wildRabbitCampaign=s.wildRabbitCampaign&&typeof s.wildRabbitCampaign==="object"?s.wildRabbitCampaign:{};
+  if(s.wildRabbitCampaign.campaignId!==id)s.wildRabbitCampaign={campaignId:id,carrotHarvested:0,cornHarvested:0,claimed:{}};
+  if(cropKey==="madCarrot")s.wildRabbitCampaign.carrotHarvested=(Number(s.wildRabbitCampaign.carrotHarvested)||0)+Math.max(0,Number(qty)||0);
+  if(cropKey==="angryCorn")s.wildRabbitCampaign.cornHarvested=(Number(s.wildRabbitCampaign.cornHarvested)||0)+Math.max(0,Number(qty)||0);
+}
+async function V213_syncMameawCampaignFromSave(){
+  if(String(currentMemberKey||"")!=="mameaw" && String(currentMember||"").toLowerCase()!=="mameaw")return;
+  try{
+    const bridge=await getFirebaseBridge();
+    if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken();
+    const {db,fs}=await getFirebaseContext();
+    const id="wild-rabbit-hungry-4d-v1";
+    const sv=await fs.getDoc(fs.doc(db,"saves","mameaw"));
+    if(!sv.exists())return;
+    const w=sv.data()?.wildRabbitCampaign||{};
+    const total=Math.max(0,Math.floor(Number(w.carrotHarvested)||0))+Math.max(0,Math.floor(Number(w.cornHarvested)||0));
+    const ref=fs.doc(db,"campaignScores",id),snap=await fs.getDoc(ref);
+    if(snap.exists()){
+      const d=snap.data()||{},scores={...(d.scores||{})},names={...(d.names||{})};
+      scores.mameaw=total; names.mameaw=currentProfileDisplayName();
+      await fs.setDoc(ref,{campaignId:id,scores,names,updatedAt:fs.serverTimestamp()},{merge:false});
+    }else{
+      await fs.setDoc(ref,{campaignId:id,scores:{mameaw:total},names:{mameaw:currentProfileDisplayName()},updatedAt:fs.serverTimestamp()},{merge:false});
+    }
+  }catch(e){console.warn("V213 campaign sync",e);try{showWeatherToast(`🐰 ซิงก์คะแนนมะเหมี่ยวยังไม่สำเร็จ: ${e?.message||"Firebase"}`)}catch{}}
+}
+
 /* ======================================================================
    V193 — CAMPAIGN-DECOUPLED HARVEST + MAMEAW FISH CLAIM
    ====================================================================== */
@@ -14366,6 +14449,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
         cropKey=p.crop;
         qty=p.angel?10:1;
         grantHarvestYield(s,cropKey,qty);
+        V213_mameawCampaignApplyToState(s,cropKey,qty);
         incrementMissionOn(s,"harvestCrops",1);
         plots[index]=emptyPlot();
         s.plots=plots.map(normalizePlot);
@@ -14400,6 +14484,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       draw();
 
       v193DeferredCampaign({[cropKey]:qty});
+      if(String(currentMemberKey||"")==="mameaw")setTimeout(()=>V213_syncMameawCampaignFromSave(),50);
       message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}`);
     }catch(e){
       message("เก็บเกี่ยวไม่ได้",e.message||"กรุณาลองใหม่");
@@ -14444,6 +14529,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
 
           const key=p.crop,qty=p.angel?10:1;
           grantHarvestYield(s,key,qty);
+          V213_mameawCampaignApplyToState(s,key,qty);
           summary[key]=(summary[key]||0)+qty;
           plots[i]=emptyPlot();
           total++;
@@ -14479,6 +14565,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       saveLocalOnly(ownState);
       draw();
       v193DeferredCampaign(summary);
+      if(String(currentMemberKey||"")==="mameaw")setTimeout(()=>V213_syncMameawCampaignFromSave(),50);
 
       const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");
       message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
@@ -15143,3 +15230,114 @@ async function V181_campaignScoreLater(summary){
 }
 
 ;window.YAINOO_BUILD="V211-MAMEAW-CAMPAIGN-FISHING-REPAIR";
+
+/* ======================================================================
+   V212 — MAMEAW WILD-RABBIT SCORE HARD FIX
+   - Keep harvest/tractor inventory flow unchanged.
+   - For Mameaw, write campaign ranking first with a narrow direct update.
+   - Update carrot/corn reward counters separately so one write cannot cancel
+     the other.
+   ====================================================================== */
+(function YN_V212_MAMEAW_CAMPAIGN_HARD_FIX(){
+  const CAMPAIGN_ID="wild-rabbit-hungry-4d-v1";
+
+  function v212ActorKey(){
+    return (String(currentMemberKey||"")==="mameaw" || String(currentMember||"").toLowerCase()==="mameaw")
+      ? "mameaw"
+      : currentMemberKey;
+  }
+
+  async function v212FreshMameawToken(){
+    if(v212ActorKey()!=="mameaw")return;
+    try{
+      const bridge=await getFirebaseBridge();
+      if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken();
+    }catch(e){console.warn("V212 Mameaw token refresh",e)}
+  }
+
+  async function v212WriteMameawScore(addCarrot,addCorn){
+    const add=addCarrot+addCorn;
+    if(add<=0)return;
+    await v212FreshMameawToken();
+    const {db,fs}=await getFirebaseContext();
+    const metaRef=fs.doc(db,"campaigns",CAMPAIGN_ID);
+    const scoreRef=fs.doc(db,"campaignScores",CAMPAIGN_ID);
+    const metaSnap=await fs.getDoc(metaRef);
+    if(metaSnap.exists() && typeof V36_campaignActive==="function" && !V36_campaignActive(metaSnap.data()||{}))return;
+
+    const scoreSnap=await fs.getDoc(scoreRef);
+    if(scoreSnap.exists()){
+      await fs.updateDoc(scoreRef,{
+        "scores.mameaw":fs.increment(add),
+        "names.mameaw":currentProfileDisplayName(),
+        updatedAt:fs.serverTimestamp()
+      });
+    }else{
+      await fs.setDoc(scoreRef,{
+        campaignId:CAMPAIGN_ID,
+        scores:{mameaw:add},
+        names:{mameaw:currentProfileDisplayName()},
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+    }
+
+    /* Reward counters live in saves/mameaw. Keep this independent from rank. */
+    const saveRef=fs.doc(db,"saves","mameaw");
+    try{
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);
+        if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=(typeof M200_ensureState==="function")
+          ? M200_ensureState(normalizeState(snap.data(),currentMember))
+          : normalizeState(snap.data(),currentMember);
+        if(!s.wildRabbitCampaign||s.wildRabbitCampaign.campaignId!==CAMPAIGN_ID){
+          s.wildRabbitCampaign={campaignId:CAMPAIGN_ID,carrotHarvested:0,cornHarvested:0,claimed:{}};
+        }
+        s.wildRabbitCampaign.carrotHarvested=(Number(s.wildRabbitCampaign.carrotHarvested)||0)+addCarrot;
+        s.wildRabbitCampaign.cornHarvested=(Number(s.wildRabbitCampaign.cornHarvested)||0)+addCorn;
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(next&&ownState){
+        ownState.wildRabbitCampaign=cloneData(next.wildRabbitCampaign);
+        if(!visitContext)state=ownState;
+        saveLocalOnly(ownState);
+      }
+    }catch(e){
+      console.warn("V212 Mameaw reward-counter update failed; rank already saved",e);
+    }
+  }
+
+  const previousScorer=window.M200_campaignScoreLater;
+  window.M200_campaignScoreLater=async function(summary){
+    const addCarrot=Math.max(0,Math.floor(Number(summary?.madCarrot)||0));
+    const addCorn=Math.max(0,Math.floor(Number(summary?.angryCorn)||0));
+    if(addCarrot+addCorn<=0)return;
+
+    if(v212ActorKey()==="mameaw"){
+      try{
+        await v212WriteMameawScore(addCarrot,addCorn);
+      }catch(e){
+        console.error("V212 Mameaw campaign score failed",e);
+        /* Do not hide the failure anymore; keep a visible diagnostic for Mameaw. */
+        try{showWeatherToast(`🐰 คะแนนแคมเปญยังไม่เข้า: ${e?.message||"Firebase ปฏิเสธ"}`)}catch{}
+      }
+      return;
+    }
+
+    if(typeof previousScorer==="function")return previousScorer(summary);
+  };
+
+  window.V181_campaignScoreLater=window.M200_campaignScoreLater;
+  window.YAINOO_BUILD="V212-MAMEAW-CAMPAIGN-HARD-FIX";
+})();
+
+
+/* V213 final reconciliation: Mameaw ranking follows saved harvest counters exactly. */
+(function YN_V213_FINAL(){
+  const run=()=>{if(String(currentMemberKey||"")==="mameaw")setTimeout(()=>V213_syncMameawCampaignFromSave(),800)};
+  window.addEventListener("pageshow",run);
+  setTimeout(run,1800);
+  window.YAINOO_BUILD="V213-MAMEAW-HARVEST-FISHING-SYNC";
+})();
