@@ -11947,96 +11947,170 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function pageRange(){const p=Math.max(1,Math.min(4,(typeof farmPlotPage==="number"?farmPlotPage:0)+1));return[(p-1)*12,p*12]}
   function showGardenManager(){if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=pageRange();$("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">จัดการเฉพาะแปลง ${a+1}–${b} • การกดทีละแปลงแบบเดิมยังใช้ได้</p><div class="ynu-manager-grid"><button data-ynu-manager="plant">🌱 ปลูกทั้งหมด</button><button data-ynu-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-ynu-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-ynu-manager="worms">🪱 จัดการหนอนทั้งหมด</button></div></section>`;document.querySelectorAll("[data-ynu-manager]").forEach(b=>b.onclick=()=>({plant:showBulkSeed,boost:showBulkBoost,angel:bulkAngel,worms:bulkWorms}[b.dataset.ynuManager])());openModal()}
   function showBulkSeed(){const [a,b]=pageRange(),empty=(ownState||state).plots.slice(a,b).filter(p=>!p?.crop&&!(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey)).length;if(!empty)return message("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS).map(([k,c])=>`<button data-bulk-seed="${k}"><img src="${c.selectImg}" alt="${esc(c.name)}"><span>${esc(c.name)}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-seed]").forEach(x=>x.onclick=()=>bulkPlant(x.dataset.bulkSeed));openModal()}
-  async function bulkPlant(key){const [a,b]=pageRange(),c=CROPS[key];try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);let n=0,now=NOW();for(let i=a;i<b;i++)if(!plots[i]?.crop&&!(plots[i]?.takeover&&Number(plots[i].takeover.until)>NOW()&&plots[i].takeover.by!==currentMemberKey)){plots[i]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel:false};n++}if(!n)throw new Error("ไม่มีแปลงว่าง");s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🌱 ปลูกพร้อมกันเรียบร้อย") }catch(e){message("ปลูกไม่ได้",e.message)}}
-  function showBulkBoost(){const s=ownState||state,items=[...Object.entries(CAKE_ITEMS||{}),...Object.entries(COCONUT_ITEMS||{})].filter(([k])=>Number(s.specials?.[k]||0)>0);if(!items.length)return message("เร่งโตทั้งหมด","ไม่มีเค้กหรือมะพร้าวเร่งโตในกระเป๋า");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${items.map(([k,i])=>`<button data-bulk-boost="${k}"><img src="${i.image}" alt="${esc(i.name)}"><span>${esc(i.name)} • มี ×${s.specials[k]}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-boost]").forEach(x=>x.onclick=()=>bulkBoost(x.dataset.bulkBoost));openModal()}
-  async function bulkBoost(key){
-    const [a,b]=pageRange();
-    const item=(SPECIAL_ITEMS||{})[key]||(CAKE_ITEMS||{})[key]||(COCONUT_ITEMS||{})[key];
-    if(!item||!Number(item.boost))return message("ใช้ไม่ได้","ไม่พบข้อมูลไอเท็มเร่งโต");
-    const s0=ownState||state;
-    const targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>
-      x.p?.crop &&
-      x.p.phase!=="ready" &&
-      !(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey)
-    );
-    if(!targets.length)return message("เร่งโตทั้งหมด","ไม่มีแปลงที่เร่งโตได้");
-    const available=Number(s0.specials?.[key]||0);
-    if(available<targets.length)return message("ไอเท็มไม่พอ",`ต้องใช้ ${targets.length} ชิ้น แต่มี ${available} ชิ้น`);
-
+  async function bulkPlant(key){
+    const [a,b]=pageRange(),c=CROPS[key];
+    if(!c)return message("ปลูกไม่ได้","ไม่พบข้อมูลพืช");
     try{
       await settlePendingCloudSave();
       const {db,fs}=await getFirebaseContext();
-      const sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
-      let next,applied=0;
-
+      const sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey),pRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next,planted=0,totalCost=0;
       await fs.runTransaction(db,async tx=>{
         const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
         if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(ss.data(),currentMember);
         const plots=(gg.exists()&&Array.isArray(gg.data()?.plots)?gg.data().plots:s.plots).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
-
-        for(const {i} of targets){
+        const targets=[];
+        for(let i=a;i<b;i++){
+          const p=plots[i];
+          if(!p?.crop && !(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey))targets.push(i);
+        }
+        if(!targets.length)throw new Error("ไม่มีแปลงว่างในฟาร์มหน้านี้");
+        const costEach=Number(c.seedCostMerit)||0;
+        totalCost=costEach*targets.length;
+        if(totalCost&&(Number(s.merit)||0)<totalCost)throw new Error(`ต้องใช้ ${totalCost} กุศล สำหรับ ${targets.length} แปลง • มี ${Number(s.merit)||0}`);
+        const now=NOW();
+        for(const i of targets){
+          s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;
+          const angel=s.angelPlantCounter>=30;
+          if(angel)s.angelPlantCounter=0;
+          plots[i]={crop:key,phase:"growing1",phaseEndsAt:now+c.waterMs,plantedAt:now,wateredAt:0,worm:false,angel};
+          planted++;
+        }
+        if(totalCost)s.merit-=totalCost;
+        s.plots=plots;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        if(totalCost)tx.set(pRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);lastGardenHash=plotHash(next.plots);state=ownState;closeModal();draw();updateMeritUI();
+      showWeatherToast(`🌱 ปลูก ${CROPS[key].name} พร้อมกัน ${planted} แปลงแล้ว`);
+    }catch(e){message("ปลูกไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  function showBulkBoost(){const s=ownState||state,items=[...Object.entries(CAKE_ITEMS||{}),...Object.entries(COCONUT_ITEMS||{})].filter(([k])=>Number(s.specials?.[k]||0)>0);if(!items.length)return message("เร่งโตทั้งหมด","ไม่มีเค้กหรือมะพร้าวเร่งโตในกระเป๋า");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${items.map(([k,i])=>`<button data-bulk-boost="${k}"><img src="${i.image}" alt="${esc(i.name)}"><span>${esc(i.name)} • มี ×${s.specials[k]}</span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-bulk-boost]").forEach(x=>x.onclick=()=>bulkBoost(x.dataset.bulkBoost));openModal()}
+  async function bulkBoost(key){
+    const [a,b]=pageRange();
+    const item=(SPECIAL_ITEMS||{})[key]||(CAKE_ITEMS||{})[key]||(COCONUT_ITEMS||{})[key];
+    if(!item||!Number(item.boost))return message("ใช้ไม่ได้","ไม่พบข้อมูลไอเท็มเร่งโต");
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,applied=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        const plots=(gg.exists()&&Array.isArray(gg.data()?.plots)?gg.data().plots:s.plots).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+        const now=NOW(),boost=Math.max(0,Math.min(100,Number(item.boost)||0));
+        const targets=[];
+        for(let i=a;i<b;i++){
           const p=plots[i];
           if(!p?.crop)continue;
-          ensurePlotPhase(p);
-          if(p.phase==="ready")continue;
-          if(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey)continue;
-
-          const crop=CROPS[p.crop],now=NOW(),boost=Math.max(0,Number(item.boost)||0);
-          if(boost>=100){
-            p.phase="ready";
-            p.phaseEndsAt=0;
-            p.wateredAt=Number(p.wateredAt)||now;
-            p.worm=false;
-            delete p.wormType;
-          }else{
-            const plantedAt=Number(p.plantedAt)||now;
-            const elapsed=Math.max(0,now-plantedAt);
-            const remaining=Math.max(0,Number(crop.totalMs||0)-elapsed);
-            const reduce=Math.max(MIN,Math.round(Number(crop.totalMs||0)*boost/100));
-            const newRemaining=Math.max(0,remaining-reduce);
-
-            /* Bulk boost also passes the watering step.
-               The player never has to spend one item, water, then spend again. */
-            p.wateredAt=now;
-            p.worm=false;
-            delete p.wormType;
-
-            if(newRemaining<=1000){
-              p.phase="ready";
-              p.phaseEndsAt=0;
-            }else{
-              p.phase="growing2";
-              p.phaseEndsAt=now+Math.max(MIN,newRemaining);
-            }
-          }
-          plots[i]=p;
-          applied++;
+          ensurePlotPhaseStandalone(p);
+          if(p.phase==="ready"||p.phase==="worm")continue;
+          if(p?.takeover&&Number(p.takeover.until)>now&&p.takeover.by!==currentMemberKey)continue;
+          if(!["growing1","needsWater","growing2"].includes(p.phase))continue;
+          targets.push(i);
         }
-
-        if(!applied)throw new Error("ไม่มีแปลงที่เร่งโตได้แล้ว");
-        if(Number(s.specials?.[key]||0)<applied)throw new Error(`ไอเท็มไม่พอ ต้องใช้ ${applied} ชิ้น`);
-        s.specials[key]-=applied;
-        s.plots=plots;
+        if(!targets.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");
+        if(Number(s.specials?.[key]||0)<targets.length)throw new Error(`ไอเท็มไม่พอ ต้องใช้ ${targets.length} ชิ้น • มี ${Number(s.specials?.[key]||0)}`);
+        for(const i of targets){
+          const p=plots[i],crop=CROPS[p.crop];
+          ensurePlotPhaseStandalone(p);
+          if(boost>=100){
+            p.phase="ready";p.phaseEndsAt=0;p.wateredAt=Number(p.wateredAt)||now;p.worm=false;delete p.wormType;
+          }else if(p.phase==="growing1"){
+            const firstRemain=Math.max(0,Number(p.phaseEndsAt||0)-now);
+            const secondStage=Math.max(MIN,Number(crop.totalMs||0)-Number(crop.waterMs||0));
+            const totalRemain=firstRemain+secondStage;
+            const newRemain=Math.max(0,Math.round(totalRemain*(1-boost/100)));
+            p.wateredAt=now;p.worm=false;delete p.wormType;
+            if(newRemain<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=now+Math.max(1000,newRemain)}
+          }else if(p.phase==="needsWater"){
+            const secondStage=Math.max(MIN,Number(crop.totalMs||0)-Number(crop.waterMs||0));
+            const newRemain=Math.max(0,Math.round(secondStage*(1-boost/100)));
+            p.wateredAt=now;p.worm=false;delete p.wormType;
+            if(newRemain<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=now+Math.max(1000,newRemain)}
+          }else if(p.phase==="growing2"){
+            const rem=Math.max(0,Number(p.phaseEndsAt||0)-now);
+            const newRemain=Math.max(0,Math.round(rem*(1-boost/100)));
+            if(newRemain<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phaseEndsAt=now+Math.max(1000,newRemain)}
+          }
+          plots[i]=p;applied++;
+        }
+        s.specials[key]-=applied;s.plots=plots;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
         next=s;
-
         tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
       });
-
-      Y26_applyOwnState(next);
-      lastGardenHash=plotHash(next.plots);
-      state=ownState;
-      closeModal();
-      draw();
-      showWeatherToast(`⚡ เร่งโต ${applied} แปลงเรียบร้อย • ไม่ต้องรดน้ำซ้ำ`);
-    }catch(e){
-      message("ใช้ไม่ได้",e.message||"กรุณาลองใหม่");
-    }
+      Y26_applyOwnState(next);lastGardenHash=plotHash(next.plots);state=ownState;closeModal();draw();
+      showWeatherToast(`⚡ เร่งโต ${applied} แปลงเรียบร้อย`);
+    }catch(e){message("ใช้ไม่ได้",e.message||"กรุณาลองใหม่")}
   }
-  async function bulkAngel(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.crop&&!x.p.angel&&!(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey));if(!targets.length)return message("ปีกนางฟ้า","ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");const have=Number(s0.specials?.[ANGEL_KEY]||0);if(have<targets.length)return message("แคปซูลไม่พอ",`ต้องใช้ ${targets.length} แคปซูล แต่มี ${have}`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.[ANGEL_KEY]||0)<targets.length)throw new Error("แคปซูลไม่พอ");for(const {i} of targets)plots[i].angel=true;s.specials[ANGEL_KEY]-=targets.length;s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast("🪽 เปิดปีกนางฟ้าทั้งฟาร์มหน้านี้แล้ว") }catch(e){message("ใช้ไม่ได้",e.message)}}
-  async function bulkWorms(){const [a,b]=pageRange(),s0=ownState||state,targets=s0.plots.slice(a,b).map((p,j)=>({p,i:a+j})).filter(x=>x.p?.phase==="worm"&&!(x.p?.takeover&&Number(x.p.takeover.until)>NOW()&&x.p.takeover.by!==currentMemberKey)),cost=targets.reduce((n,x)=>n+((typeof wormTypeOf==="function"&&wormTypeOf(x.p)==="giant")?12:5),0);if(!targets.length)return message("จัดการหนอนทั้งหมด","ไม่พบหนอนในฟาร์มหน้านี้");const have=Number(s0.specials?.wormKillerSpray||0);if(have<cost)return message("สเปรย์ไม่พอ",`พบหนอน ${targets.length} ตัว ต้องใช้ ${cost} ขวด • มี ${have}`);if(!confirm(`พบหนอน ${targets.length} ตัว ต้องใช้สเปรย์ ${cost} ขวด ยืนยันหรือไม่?`))return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]),s=normalizeState(ss.data(),currentMember),plots=(gg.data().plots||s.plots).map(normalizePlot);if(Number(s.specials?.wormKillerSpray||0)<cost)throw new Error("สเปรย์ไม่พอ");for(const {i} of targets){const p=plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(MIN,c.totalMs-c.waterMs)}s.specials.wormKillerSpray-=cost;incrementMissionOn(s,"clearWorms",targets.length);s.plots=plots;next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;closeModal();draw();showWeatherToast(`🪱 กำจัดหนอน ${targets.length} ตัวพร้อมกันแล้ว`) }catch(e){message("กำจัดไม่ได้",e.message)}}
+  async function bulkAngel(){
+    const [a,b]=pageRange();
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,applied=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember),plots=(gg.exists()&&Array.isArray(gg.data()?.plots)?gg.data().plots:s.plots).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+        const now=NOW(),targets=[];
+        for(let i=a;i<b;i++){
+          const p=plots[i];if(!p?.crop)continue;ensurePlotPhaseStandalone(p);
+          if(p.angel)continue;if(p?.takeover&&Number(p.takeover.until)>now&&p.takeover.by!==currentMemberKey)continue;targets.push(i);
+        }
+        if(!targets.length)throw new Error("ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");
+        if(Number(s.specials?.[ANGEL_KEY]||0)<targets.length)throw new Error(`แคปซูลไม่พอ ต้องใช้ ${targets.length} • มี ${Number(s.specials?.[ANGEL_KEY]||0)}`);
+        for(const i of targets){plots[i].angel=true;applied++}
+        s.specials[ANGEL_KEY]-=applied;s.plots=plots;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);lastGardenHash=plotHash(next.plots);state=ownState;closeModal();draw();showWeatherToast(`🪽 ใช้ปีกนางฟ้า ${applied} แปลงแล้ว`);
+    }catch(e){message("ใช้ไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  async function bulkWorms(){
+    const [a,b]=pageRange();
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next,cleared=0,totalCost=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember),plots=(gg.exists()&&Array.isArray(gg.data()?.plots)?gg.data().plots:s.plots).map(normalizePlot);
+        while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+        const now=NOW(),targets=[];
+        for(let i=a;i<b;i++){
+          const p=plots[i];if(!p?.crop)continue;ensurePlotPhaseStandalone(p);
+          if(p.phase!=="worm")continue;if(p?.takeover&&Number(p.takeover.until)>now&&p.takeover.by!==currentMemberKey)continue;
+          const giant=typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant";targets.push({i,cost:giant?12:5});
+        }
+        if(!targets.length)throw new Error("ไม่พบหนอนในฟาร์มหน้านี้");
+        totalCost=targets.reduce((n,x)=>n+x.cost,0);
+        if(Number(s.specials?.wormKillerSpray||0)<totalCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${totalCost} ขวด • มี ${Number(s.specials?.wormKillerSpray||0)}`);
+        for(const {i} of targets){const p=plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||now;p.phaseEndsAt=now+Math.max(MIN,Number(c.totalMs||0)-Number(c.waterMs||0));cleared++}
+        s.specials.wormKillerSpray-=totalCost;incrementMissionOn(s,"clearWorms",cleared);s.plots=plots;
+        if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      Y26_applyOwnState(next);lastGardenHash=plotHash(next.plots);state=ownState;closeModal();draw();showWeatherToast(`🪱 กำจัดหนอน ${cleared} ตัวแล้ว • ใช้สเปรย์ ${totalCost} ขวด`);
+    }catch(e){message("กำจัดไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
   function mountManagerButton(){if($("ynuGardenManagerBtn"))return;const b=document.createElement("button");b.id="ynuGardenManagerBtn";b.className="ynu-garden-manager-button";b.type="button";b.innerHTML="🌱<b>จัดการทั้งสวน</b>";b.onclick=showGardenManager;$("gameScreen")?.appendChild(b)}setTimeout(mountManagerButton,0);
 
   /* ---------- Dog hotel bath / massage ---------- */
