@@ -15445,14 +15445,13 @@ async function V181_campaignScoreLater(summary){
       4:{idle:476/900,front:472/900,side:636/900,back:464/900}
     },
     pink:{
-      /* Pink sheets were normalized to 640×900 with a 4×4 grid.
-         Each frame is therefore 160×225 => exact frame ratio 160/225.
-         Fix ONLY Idle + Front because these were visibly squeezed.
-         Side/Back values are intentionally left untouched. */
-      1:{idle:160/225,front:160/225,side:.663,back:.508},
-      2:{idle:160/225,front:160/225,side:.667,back:.502},
-      3:{idle:160/225,front:160/225,side:.627,back:.507},
-      4:{idle:160/225,front:160/225,side:.667,back:.495}
+      /* Pink sheets are 640×900 with a 4×4 grid: every frame is 160×225.
+         V228 fixes ONLY the BACK walk ratio that was visibly squeezed.
+         Idle, Front and Side remain exactly as already approved. */
+      1:{idle:160/225,front:160/225,side:.663,back:160/225},
+      2:{idle:160/225,front:160/225,side:.667,back:160/225},
+      3:{idle:160/225,front:160/225,side:.627,back:160/225},
+      4:{idle:160/225,front:160/225,side:.667,back:160/225}
     }
   };
 
@@ -16768,4 +16767,38 @@ async function V181_campaignScoreLater(summary){
 
   window.YAINOO_BUILD="V227-MISS-ALPACA-UNIVERSE";
   console.info("V227 Miss Alpaca Universe loaded");
+})();
+
+
+/* ======================================================================
+   V228 — MISS ALPACA STAGE TRIO + PINK BACK PROPORTION
+   - Adds ONLY the left/right 5×5 supporting contestants behind center.
+   - The approved black center contestant and its V227 animation are untouched.
+   - Pink farm-test correction above changes ONLY BACK-walk frame ratio.
+   ====================================================================== */
+(function YN_V228_MISS_ALPACA_STAGE_TRIO(){
+  const FRAMES=25;
+  const FRAME_MS=165;
+  let timer=null,frame=0;
+  function paint(){
+    const left=$("missAlpacaLeftSprite"),right=$("missAlpacaRightSprite");
+    if(!left||!right)return;
+    const row=Math.floor(frame/5),col=frame%5;
+    const pos=`${(col*25).toFixed(4)}% ${(row*25).toFixed(4)}%`;
+    left.style.backgroundPosition=pos;
+    right.style.backgroundPosition=pos;
+    frame=(frame+1)%FRAMES;
+  }
+  function start(){
+    if(timer)return;
+    paint();
+    timer=setInterval(()=>{
+      const screen=$("missAlpacaScreen"),main=$("missAlpacaMainView");
+      if(screen?.classList.contains("hidden")||main?.classList.contains("hidden"))return;
+      paint();
+    },FRAME_MS);
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});
+  else start();
+  window.YAINOO_BUILD="V228-MISS-ALPACA-STAGE-TRIO-PINK-BACK-FIX";
 })();

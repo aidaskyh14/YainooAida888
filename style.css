@@ -5137,6 +5137,33 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   font-size:clamp(9px,2.35vw,13px);
 }
 
+/* V228 — two supporting contestants behind the approved center alpaca.
+   Center .miss-alpaca-sprite is intentionally untouched. */
+.miss-alpaca-support-sprite{
+  position:absolute;
+  z-index:5;
+  bottom:24.0%;
+  width:clamp(150px,44vw,304px);
+  transform:translateX(-50%);
+  transform-origin:center bottom;
+  background-repeat:no-repeat;
+  background-size:500% 500%;
+  background-position:0 0;
+  filter:drop-shadow(0 4px 4px rgba(28,10,34,.22));
+  pointer-events:none;
+  will-change:background-position;
+}
+.miss-alpaca-left-sprite{
+  left:29.5%;
+  aspect-ratio:1232/1536;
+  background-image:url("miss-alpaca-universe-left-stage-spritesheet.png?v=1");
+}
+.miss-alpaca-right-sprite{
+  left:70.5%;
+  aspect-ratio:1310/1536;
+  background-image:url("miss-alpaca-universe-right-stage-spritesheet.png?v=1");
+}
+
 /* 4x4 sprite sheet, 16 frames. Keep the alpaca centered and pageant-sized. */
 .miss-alpaca-sprite{
   position:absolute;
@@ -5467,6 +5494,9 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .miss-alpaca-admin-sheet-card button.danger{background:#7e2f55;color:#fff}
 
 @media (min-width:700px){
+  .miss-alpaca-support-sprite{width:min(36vw,286px);bottom:23.8%}
+  .miss-alpaca-left-sprite{left:calc(50% - 145px)}
+  .miss-alpaca-right-sprite{left:calc(50% + 145px)}
   .miss-alpaca-sprite{width:min(46vw,360px);bottom:22.3%}
   .miss-alpaca-top-left-actions{left:calc(50% - 330px);width:190px}
   .miss-alpaca-farm-back{right:calc(50% - 330px)}
@@ -5475,5 +5505,5 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   .miss-alpaca-countdown-wrap{width:220px}
 }
 @media (prefers-reduced-motion:reduce){
-  .miss-alpaca-sprite{will-change:auto}
+  .miss-alpaca-sprite,.miss-alpaca-support-sprite{will-change:auto}
 }
