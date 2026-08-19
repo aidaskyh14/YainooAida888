@@ -5139,20 +5139,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 
 /* V228 — two supporting contestants behind the approved center alpaca.
    Center .miss-alpaca-sprite is intentionally untouched. */
-.miss-alpaca-support-sprite{
-  position:absolute;
-  z-index:5;
-  bottom:24.0%;
-  width:clamp(150px,44vw,304px);
-  transform:translateX(-50%);
-  transform-origin:center bottom;
-  background-repeat:no-repeat;
-  background-size:500% 500%;
-  background-position:0 0;
-  filter:drop-shadow(0 4px 4px rgba(28,10,34,.22));
-  pointer-events:none;
-  will-change:background-position;
-}
+.miss-alpaca-support-sprite{display:none!important}
 .miss-alpaca-left-sprite{
   left:29.5%;
   aspect-ratio:1024/1536;
@@ -5169,8 +5156,8 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   position:absolute;
   z-index:6;
   left:50%;
-  bottom:22.7%;
-  width:clamp(198px,55vw,380px);
+  bottom:24.5%;
+  width:clamp(178px,49vw,340px);
   aspect-ratio:474/644;
   transform:translateX(-50%);
   transform-origin:center bottom;
@@ -5497,7 +5484,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   .miss-alpaca-support-sprite{width:min(36vw,286px);bottom:23.8%}
   .miss-alpaca-left-sprite{left:calc(50% - 145px)}
   .miss-alpaca-right-sprite{left:calc(50% + 145px)}
-  .miss-alpaca-sprite{width:min(46vw,360px);bottom:22.3%}
+  .miss-alpaca-sprite{width:min(42vw,320px);bottom:24.0%}
   .miss-alpaca-top-left-actions{left:calc(50% - 330px);width:190px}
   .miss-alpaca-farm-back{right:calc(50% - 330px)}
   .miss-alpaca-reset-btn{left:calc(50% - 330px);width:150px}
@@ -5507,3 +5494,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 @media (prefers-reduced-motion:reduce){
   .miss-alpaca-sprite,.miss-alpaca-support-sprite{will-change:auto}
 }
+
+.miss-alpaca-left-sprite{display:none!important}
+
+.miss-alpaca-right-sprite{display:none!important}

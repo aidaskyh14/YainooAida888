@@ -16800,5 +16800,5 @@ async function V181_campaignScoreLater(summary){
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});
   else start();
-  window.YAINOO_BUILD="V234-MISS-ALPACA-NEW-SUPPORT-ANIMATION";
+  window.YAINOO_BUILD="V235-MISS-ALPACA-CENTER-ONLY";
 })();
