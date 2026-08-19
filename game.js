@@ -16347,7 +16347,7 @@ async function V181_campaignScoreLater(summary){
   let v227Top6Cache={};
 
   function v227IsAdmin(){
-    return currentMember==="Aida";
+    return currentMember==="Aida" && adminProfile?.role==="admin";
   }
 
   function v227Safe(value){
