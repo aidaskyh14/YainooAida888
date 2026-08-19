@@ -16320,3 +16320,452 @@ async function V181_campaignScoreLater(summary){
   window.YAINOO_BUILD="V226-GIFT-SYSTEM-CLEANUP";
   console.info("V226 gift system cleanup loaded");
 })();
+
+
+/* =========================================================
+   V227 • MISS ALPACA UNIVERSE
+   New shortcut/place only. No existing game system is modified.
+   ========================================================= */
+(function(){
+  const V227_DURATION_MS=30*60*60*1000;
+  const V227_SHARED_DOC="missAlpacaUniverse";
+  const V227_TOP6_COLLECTION="missAlpacaTop6";
+  const V227_HALL_COLLECTION="missAlpacaHall";
+  const V227_SPRITE_FRAMES=16;
+  const V227_SPRITE_FRAME_MS=165;
+
+  let v227MainUnsub=null;
+  let v227Top6Unsub=null;
+  let v227HallUnsub=null;
+  let v227Timer=null;
+  let v227SpriteTimer=null;
+  let v227SpriteFrame=0;
+  let v227Shared={topic:"",endAt:0};
+  let v227ExpiredNoticeShown=false;
+  let v227SelectedSlot=1;
+  let v227EditingHallId="";
+  let v227Top6Cache={};
+
+  function v227IsAdmin(){
+    return currentMember==="Aida";
+  }
+
+  function v227Safe(value){
+    if(typeof safeHtml==="function")return safeHtml(String(value??""));
+    return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+  }
+
+  function v227ShowView(name){
+    const main=$("missAlpacaMainView"),top6=$("missAlpacaTop6View"),hall=$("missAlpacaHallView");
+    if(!main||!top6||!hall)return;
+    main.classList.toggle("hidden",name!=="main");
+    top6.classList.toggle("hidden",name!=="top6");
+    hall.classList.toggle("hidden",name!=="hall");
+    if(name==="main")v227StartSprite();
+    else v227StopSprite();
+  }
+
+  function v227OpenFarm(){
+    v227StopSprite();
+    $("missAlpacaScreen")?.classList.add("hidden");
+    $("gameScreen")?.classList.remove("hidden");
+    try{closeHudMenu?.()}catch{}
+  }
+
+  function v227UpdateAdminVisibility(){
+    const admin=v227IsAdmin();
+    $("missAlpacaTopicEditBtn")?.classList.toggle("hidden",!admin);
+    $("missAlpacaResetBtn")?.classList.toggle("hidden",!admin);
+    $("missAlpacaHallAddBtn")?.classList.toggle("hidden",!admin);
+    document.querySelectorAll(".miss-alpaca-top6-slot").forEach(btn=>{
+      btn.classList.toggle("is-admin",admin);
+      btn.querySelector(".miss-alpaca-slot-admin")?.classList.toggle("hidden",!admin);
+    });
+    const shortcut=$("shortcutMissAlpacaBtn");
+    if(shortcut){
+      const icon=shortcut.querySelector("i");
+      const small=shortcut.querySelector("small");
+      if(icon)icon.textContent=admin?"›":"🔒";
+      if(small)small.textContent=admin?"เข้าสู่เวทีประกวดอัลปาก้า":"รอติดตามซีซั่นหน้านะคะ";
+    }
+  }
+
+  async function v227Context(){
+    const bridge=window.firebaseBridge||await window.firebaseReady;
+    if(!bridge?.db||!bridge?.firestore)throw new Error("ระบบข้อมูลส่วนกลางยังไม่พร้อม");
+    return {db:bridge.db,fs:bridge.firestore};
+  }
+
+  async function v227EnsureShared(){
+    const {db,fs}=await v227Context();
+    const ref=fs.doc(db,"shared",V227_SHARED_DOC);
+    const snap=await fs.getDoc(ref);
+    if(!snap.exists()&&v227IsAdmin()){
+      const payload={topic:"",endAt:gameNow()+V227_DURATION_MS,updatedAt:fs.serverTimestamp(),updatedBy:"Aida"};
+      await fs.setDoc(ref,payload,{merge:true});
+      v227Shared={topic:"",endAt:payload.endAt};
+    }
+  }
+
+  async function v227SubscribeMain(){
+    if(v227MainUnsub)return;
+    const {db,fs}=await v227Context();
+    const ref=fs.doc(db,"shared",V227_SHARED_DOC);
+    v227MainUnsub=fs.onSnapshot(ref,snap=>{
+      const data=snap.exists()?snap.data():{};
+      v227Shared={
+        topic:String(data.topic||""),
+        endAt:Number(data.endAt||0)
+      };
+      const topic=$("missAlpacaTopicText");
+      if(topic)topic.textContent=v227Shared.topic||"รอหัวข้อจากยัยหนู";
+      v227RenderCountdown();
+    },error=>console.warn("V227 main snapshot",error));
+  }
+
+  function v227FormatMs(ms){
+    const total=Math.max(0,Math.ceil(ms/1000));
+    const h=Math.floor(total/3600);
+    const m=Math.floor((total%3600)/60);
+    const s=total%60;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+
+  function v227RenderCountdown(){
+    const display=$("missAlpacaCountdown"),expired=$("missAlpacaExpired");
+    if(!display||!expired)return;
+    const endAt=Number(v227Shared.endAt||0);
+    const remain=endAt>0?Math.max(0,endAt-gameNow()):V227_DURATION_MS;
+    display.textContent=v227FormatMs(remain);
+    const isExpired=endAt>0&&remain<=0;
+    expired.classList.toggle("hidden",!isExpired);
+    if(isExpired&&!v227ExpiredNoticeShown&&!$("missAlpacaScreen")?.classList.contains("hidden")){
+      v227ExpiredNoticeShown=true;
+      setTimeout(()=>message("⏰ มิสอัลปาก้ายูนิเวิร์ส","หมดเวลาการส่งผลงาน รอลุ้นผลรางวัลน๊า"),60);
+    }
+    if(!isExpired)v227ExpiredNoticeShown=false;
+  }
+
+  function v227StartCountdown(){
+    clearInterval(v227Timer);
+    v227Timer=setInterval(v227RenderCountdown,1000);
+    v227RenderCountdown();
+  }
+
+  function v227StartSprite(){
+    const sprite=$("missAlpacaSprite");
+    if(!sprite)return;
+    clearInterval(v227SpriteTimer);
+    const paint=()=>{
+      const row=Math.floor(v227SpriteFrame/4);
+      const col=v227SpriteFrame%4;
+      sprite.style.backgroundPosition=`${(col*100/3).toFixed(4)}% ${(row*100/3).toFixed(4)}%`;
+      v227SpriteFrame=(v227SpriteFrame+1)%V227_SPRITE_FRAMES;
+    };
+    paint();
+    v227SpriteTimer=setInterval(paint,V227_SPRITE_FRAME_MS);
+  }
+
+  function v227StopSprite(){
+    clearInterval(v227SpriteTimer);
+    v227SpriteTimer=null;
+  }
+
+  async function v227Open(){
+    v227UpdateAdminVisibility();
+    if(!v227IsAdmin()){
+      message("👑 มิสอัลปาก้ายูนิเวิร์ส","รอติดตามซีซั่นหน้านะคะ");
+      return;
+    }
+    try{
+      await v227EnsureShared();
+      await Promise.all([v227SubscribeMain(),v227SubscribeTop6(),v227SubscribeHall()]);
+    }catch(error){
+      console.error("V227 open",error);
+      message("เปิดมิสอัลปาก้ายูนิเวิร์สไม่ได้",error.message||"กรุณาลองใหม่");
+      return;
+    }
+    try{closeHudMenu?.()}catch{}
+    $("gameScreen")?.classList.add("hidden");
+    $("missAlpacaScreen")?.classList.remove("hidden");
+    v227ShowView("main");
+    v227StartCountdown();
+  }
+
+  async function v227SaveTopic(){
+    if(!v227IsAdmin())return;
+    const input=$("missAlpacaTopicInput");
+    const topic=String(input?.value||"").trim().slice(0,120);
+    try{
+      const {db,fs}=await v227Context();
+      await fs.setDoc(fs.doc(db,"shared",V227_SHARED_DOC),{
+        topic,
+        updatedAt:fs.serverTimestamp(),
+        updatedBy:"Aida"
+      },{merge:true});
+      $("missAlpacaTopicEditor")?.classList.add("hidden");
+      showWeatherToast("👑 บันทึกหัวข้อแล้ว");
+    }catch(error){
+      message("บันทึกหัวข้อไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  async function v227ResetClock(){
+    if(!v227IsAdmin())return;
+    const ok=window.confirm("รีเซ็ตเวลาการประกวดกลับไปเป็น 30 ชั่วโมงใช่ไหมคะ?");
+    if(!ok)return;
+    try{
+      const {db,fs}=await v227Context();
+      await fs.setDoc(fs.doc(db,"shared",V227_SHARED_DOC),{
+        endAt:gameNow()+V227_DURATION_MS,
+        updatedAt:fs.serverTimestamp(),
+        updatedBy:"Aida"
+      },{merge:true});
+      v227ExpiredNoticeShown=false;
+      showWeatherToast("⏳ เริ่มนับถอยหลัง 30 ชั่วโมงใหม่แล้ว");
+    }catch(error){
+      message("รีเซ็ตเวลาไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  function v227ResizeTop6(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onerror=()=>reject(new Error("อ่านไฟล์รูปไม่สำเร็จ"));
+      reader.onload=()=>{
+        const image=new Image();
+        image.onerror=()=>reject(new Error("เปิดรูปไม่สำเร็จ"));
+        image.onload=()=>{
+          const maxW=700,maxH=900;
+          let w=image.naturalWidth||image.width,h=image.naturalHeight||image.height;
+          const scale=Math.min(1,maxW/w,maxH/h);
+          w=Math.max(1,Math.round(w*scale));
+          h=Math.max(1,Math.round(h*scale));
+          const canvas=document.createElement("canvas");
+          canvas.width=w;canvas.height=h;
+          const ctx=canvas.getContext("2d");
+          if(!ctx){reject(new Error("เตรียมรูปไม่สำเร็จ"));return}
+          ctx.drawImage(image,0,0,w,h);
+          /* WEBP keeps transparent PNG backgrounds while staying small enough for one Firestore slot document. */
+          let data=canvas.toDataURL("image/webp",.80);
+          if(data.length>700000)data=canvas.toDataURL("image/webp",.64);
+          if(data.length>900000){reject(new Error("รูปมีขนาดใหญ่เกินไป กรุณาเลือกรูปอื่น"));return}
+          resolve(data);
+        };
+        image.src=reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function v227RenderTop6(){
+    document.querySelectorAll(".miss-alpaca-top6-slot").forEach(btn=>{
+      const slot=String(btn.dataset.missSlot||"");
+      const img=btn.querySelector("img");
+      const data=v227Top6Cache[slot];
+      if(data?.imageData){
+        img.src=data.imageData;
+        btn.classList.add("has-image");
+      }else{
+        img.removeAttribute("src");
+        btn.classList.remove("has-image");
+      }
+    });
+  }
+
+  async function v227SubscribeTop6(){
+    if(v227Top6Unsub)return;
+    const {db,fs}=await v227Context();
+    v227Top6Unsub=fs.onSnapshot(fs.collection(db,V227_TOP6_COLLECTION),snap=>{
+      const next={};
+      snap.forEach(docSnap=>{
+        const d=docSnap.data()||{};
+        const slot=String(Number(d.slot)||String(docSnap.id).replace(/\D/g,""));
+        if(slot)next[slot]={id:docSnap.id,...d};
+      });
+      v227Top6Cache=next;
+      v227RenderTop6();
+    },error=>console.warn("V227 top6 snapshot",error));
+  }
+
+  async function v227HandleTop6File(event){
+    const file=event.target.files?.[0];
+    event.target.value="";
+    if(!file||!v227IsAdmin())return;
+    if(!file.type.startsWith("image/")){
+      message("เลือกรูปไม่ได้","กรุณาเลือกไฟล์รูปภาพ");
+      return;
+    }
+    try{
+      showWeatherToast("⏳ กำลังเตรียมรูป TOP 6...");
+      const imageData=await v227ResizeTop6(file);
+      const {db,fs}=await v227Context();
+      await fs.setDoc(fs.doc(db,V227_TOP6_COLLECTION,`slot-${v227SelectedSlot}`),{
+        slot:v227SelectedSlot,
+        imageData,
+        updatedAt:fs.serverTimestamp(),
+        updatedBy:"Aida"
+      },{merge:false});
+      $("missAlpacaSlotEditor")?.classList.add("hidden");
+      showWeatherToast(`🏆 อัปเดตอันดับ ${v227SelectedSlot} แล้ว`);
+    }catch(error){
+      message("อัปโหลดรูปไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  async function v227DeleteSlot(){
+    if(!v227IsAdmin())return;
+    const ok=window.confirm(`ลบรูปอันดับ ${v227SelectedSlot} ใช่ไหมคะ?`);
+    if(!ok)return;
+    try{
+      const {db,fs}=await v227Context();
+      await fs.deleteDoc(fs.doc(db,V227_TOP6_COLLECTION,`slot-${v227SelectedSlot}`));
+      $("missAlpacaSlotEditor")?.classList.add("hidden");
+      showWeatherToast(`🗑️ ลบรูปอันดับ ${v227SelectedSlot} แล้ว`);
+    }catch(error){
+      message("ลบรูปไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  function v227HallRow(item){
+    const admin=v227IsAdmin();
+    return `<div class="miss-alpaca-hall-row" data-hall-id="${v227Safe(item.id)}">
+      <span class="hall-topic">${v227Safe(item.topic||"-")}</span>
+      <span class="hall-winner">${v227Safe(item.winner||"-")}</span>
+      ${admin?`<span class="miss-alpaca-hall-row-admin"><button type="button" data-hall-edit="${v227Safe(item.id)}">✏️ แก้ไข</button><button type="button" data-hall-delete="${v227Safe(item.id)}">🗑️ ลบ</button></span>`:""}
+    </div>`;
+  }
+
+  function v227BindHallRows(){
+    document.querySelectorAll("[data-hall-edit]").forEach(btn=>{
+      btn.onclick=()=>{
+        const id=String(btn.dataset.hallEdit||"");
+        const row=v227HallItems.find(x=>x.id===id);
+        if(row)v227OpenHallEditor(row);
+      };
+    });
+    document.querySelectorAll("[data-hall-delete]").forEach(btn=>{
+      btn.onclick=()=>v227DeleteHall(String(btn.dataset.hallDelete||""));
+    });
+  }
+
+  let v227HallItems=[];
+  async function v227SubscribeHall(){
+    if(v227HallUnsub)return;
+    const {db,fs}=await v227Context();
+    const q=fs.query(fs.collection(db,V227_HALL_COLLECTION),fs.orderBy("createdAt","desc"));
+    v227HallUnsub=fs.onSnapshot(q,snap=>{
+      v227HallItems=[];
+      snap.forEach(docSnap=>v227HallItems.push({id:docSnap.id,...(docSnap.data()||{})}));
+      const list=$("missAlpacaHallList");
+      if(!list)return;
+      list.innerHTML=v227HallItems.length?v227HallItems.map(v227HallRow).join(""):'<div class="miss-alpaca-hall-empty">ยังไม่มีรายชื่อผู้ชนะ</div>';
+      v227BindHallRows();
+    },error=>console.warn("V227 hall snapshot",error));
+  }
+
+  function v227OpenHallEditor(item=null){
+    if(!v227IsAdmin())return;
+    v227EditingHallId=item?.id||"";
+    $("missAlpacaHallEditorTitle").textContent=item?"แก้ไขผู้ชนะ":"เพิ่มผู้ชนะ";
+    $("missAlpacaHallTopicInput").value=String(item?.topic||"");
+    $("missAlpacaHallWinnerInput").value=String(item?.winner||"");
+    $("missAlpacaHallEditor").classList.remove("hidden");
+  }
+
+  async function v227SaveHall(){
+    if(!v227IsAdmin())return;
+    const topic=String($("missAlpacaHallTopicInput")?.value||"").trim().slice(0,120);
+    const winner=String($("missAlpacaHallWinnerInput")?.value||"").trim().slice(0,80);
+    if(!topic||!winner){
+      message("ยังบันทึกไม่ได้","กรุณากรอกทั้งหัวข้อและผู้ชนะ");
+      return;
+    }
+    try{
+      const {db,fs}=await v227Context();
+      if(v227EditingHallId){
+        await fs.setDoc(fs.doc(db,V227_HALL_COLLECTION,v227EditingHallId),{
+          topic,winner,updatedAt:fs.serverTimestamp(),updatedBy:"Aida"
+        },{merge:true});
+      }else{
+        await fs.addDoc(fs.collection(db,V227_HALL_COLLECTION),{
+          topic,winner,createdAt:gameNow(),updatedAt:fs.serverTimestamp(),updatedBy:"Aida"
+        });
+      }
+      $("missAlpacaHallEditor").classList.add("hidden");
+      showWeatherToast(v227EditingHallId?"👑 แก้ไขทำเนียบแล้ว":"👑 เพิ่มผู้ชนะแล้ว");
+      v227EditingHallId="";
+    }catch(error){
+      message("บันทึกทำเนียบไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  async function v227DeleteHall(id){
+    if(!v227IsAdmin()||!id)return;
+    const row=v227HallItems.find(x=>x.id===id);
+    const ok=window.confirm(`ลบ "${row?.topic||"รายการนี้"}" ออกจากทำเนียบใช่ไหมคะ?`);
+    if(!ok)return;
+    try{
+      const {db,fs}=await v227Context();
+      await fs.deleteDoc(fs.doc(db,V227_HALL_COLLECTION,id));
+      showWeatherToast("🗑️ ลบรายการแล้ว");
+    }catch(error){
+      message("ลบรายการไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  function v227Bind(){
+    const shortcut=$("shortcutMissAlpacaBtn");
+    if(shortcut)shortcut.onclick=v227Open;
+
+    $("missAlpacaFarmBackBtn")?.addEventListener("click",v227OpenFarm);
+    $("missAlpacaTop6FarmBtn")?.addEventListener("click",v227OpenFarm);
+    $("missAlpacaHallFarmBtn")?.addEventListener("click",v227OpenFarm);
+
+    $("missAlpacaTop6Btn")?.addEventListener("click",()=>v227ShowView("top6"));
+    $("missAlpacaHallBtn")?.addEventListener("click",()=>v227ShowView("hall"));
+    $("missAlpacaTop6BackBtn")?.addEventListener("click",()=>v227ShowView("main"));
+    $("missAlpacaHallBackBtn")?.addEventListener("click",()=>v227ShowView("main"));
+
+    $("missAlpacaTopicEditBtn")?.addEventListener("click",()=>{
+      if(!v227IsAdmin())return;
+      $("missAlpacaTopicInput").value=v227Shared.topic||"";
+      $("missAlpacaTopicEditor").classList.remove("hidden");
+      setTimeout(()=>$("missAlpacaTopicInput")?.focus(),30);
+    });
+    $("missAlpacaTopicCancelBtn")?.addEventListener("click",()=>$("missAlpacaTopicEditor")?.classList.add("hidden"));
+    $("missAlpacaTopicSaveBtn")?.addEventListener("click",v227SaveTopic);
+    $("missAlpacaTopicInput")?.addEventListener("keydown",event=>{if(event.key==="Enter")v227SaveTopic()});
+    $("missAlpacaResetBtn")?.addEventListener("click",v227ResetClock);
+
+    document.querySelectorAll(".miss-alpaca-top6-slot").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        if(!v227IsAdmin())return;
+        v227SelectedSlot=Math.max(1,Math.min(6,Number(btn.dataset.missSlot)||1));
+        $("missAlpacaSlotEditorTitle").textContent=`จัดการอันดับ ${v227SelectedSlot}`;
+        $("missAlpacaSlotDeleteBtn").disabled=!v227Top6Cache[String(v227SelectedSlot)]?.imageData;
+        $("missAlpacaSlotEditor").classList.remove("hidden");
+      });
+    });
+    $("missAlpacaSlotReplaceBtn")?.addEventListener("click",()=>$("missAlpacaTop6Upload")?.click());
+    $("missAlpacaSlotDeleteBtn")?.addEventListener("click",v227DeleteSlot);
+    $("missAlpacaSlotCloseBtn")?.addEventListener("click",()=>$("missAlpacaSlotEditor")?.classList.add("hidden"));
+    $("missAlpacaTop6Upload")?.addEventListener("change",v227HandleTop6File);
+
+    $("missAlpacaHallAddBtn")?.addEventListener("click",()=>v227OpenHallEditor());
+    $("missAlpacaHallCancelBtn")?.addEventListener("click",()=>{
+      v227EditingHallId="";
+      $("missAlpacaHallEditor")?.classList.add("hidden");
+    });
+    $("missAlpacaHallSaveBtn")?.addEventListener("click",v227SaveHall);
+
+    v227UpdateAdminVisibility();
+    setInterval(v227UpdateAdminVisibility,1200);
+  }
+
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",v227Bind,{once:true});
+  else v227Bind();
+
+  window.YAINOO_BUILD="V227-MISS-ALPACA-UNIVERSE";
+  console.info("V227 Miss Alpaca Universe loaded");
+})();

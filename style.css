@@ -5048,3 +5048,432 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .friend-grass-confirm .primary-spooky-action,.friend-grass-confirm .secondary-action{width:100%;min-height:43px;margin-top:7px}
 .friend-grass-received .friend-grass-confirm-icon{animation:v221GrassReceived .45s ease-out}
 @keyframes v221GrassReceived{0%{transform:scale(.72);opacity:.2}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+
+
+/* =========================================================
+   V227 • MISS ALPACA UNIVERSE
+   Isolated styles only. Existing game systems are untouched.
+   ========================================================= */
+.miss-alpaca-screen{
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  background:#160d22;
+  isolation:isolate;
+  z-index:250;
+}
+.miss-alpaca-view{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+}
+.miss-alpaca-stage-art,
+.miss-alpaca-top6-art,
+.miss-alpaca-hall-art{
+  position:absolute;
+  inset:0;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.miss-alpaca-stage-art{background-image:url("miss-alpaca-universe-stage.jpeg?v=1")}
+.miss-alpaca-top6-art{background-image:url("miss-alpaca-universe-top6.jpeg?v=1")}
+.miss-alpaca-hall-art{background-image:url("miss-alpaca-universe-hall-of-fame.jpeg?v=1")}
+
+.miss-alpaca-glam-btn,
+.miss-alpaca-reset-btn,
+.miss-alpaca-hall-add{
+  border:1px solid rgba(255,225,154,.88);
+  background:
+    radial-gradient(circle at 18% 8%,rgba(255,255,255,.20),transparent 32%),
+    linear-gradient(180deg,rgba(99,47,124,.96),rgba(48,22,72,.98));
+  color:#fff1c5;
+  border-radius:999px;
+  box-shadow:0 4px 14px rgba(21,8,31,.38),inset 0 1px rgba(255,255,255,.18);
+  text-shadow:0 1px 2px rgba(20,7,25,.88);
+  font-weight:900;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.miss-alpaca-glam-btn:active,
+.miss-alpaca-reset-btn:active,
+.miss-alpaca-hall-add:active{transform:scale(.97)}
+
+.miss-alpaca-top-left-actions{
+  position:absolute;
+  z-index:12;
+  left:2.8%;
+  top:max(2.2%,env(safe-area-inset-top));
+  width:min(39%,190px);
+  display:grid;
+  gap:7px;
+}
+.miss-alpaca-top-left-actions .miss-alpaca-glam-btn{
+  min-height:36px;
+  padding:6px 10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  justify-content:flex-start;
+  font-size:clamp(10px,2.6vw,14px);
+}
+.miss-alpaca-top-left-actions span{font-size:1.05em}
+
+.miss-alpaca-farm-back{
+  position:absolute;
+  z-index:12;
+  right:2.8%;
+  top:max(2.2%,env(safe-area-inset-top));
+  min-height:36px;
+  max-width:31%;
+  padding:6px 10px;
+  display:flex;
+  gap:5px;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(9px,2.35vw,13px);
+}
+
+/* 4x4 sprite sheet, 16 frames. Keep the alpaca centered and pageant-sized. */
+.miss-alpaca-sprite{
+  position:absolute;
+  z-index:6;
+  left:50%;
+  bottom:22.7%;
+  width:clamp(198px,55vw,380px);
+  aspect-ratio:474/644;
+  transform:translateX(-50%);
+  transform-origin:center bottom;
+  background-image:url("miss-alpaca-universe-center-stage-spritesheet.png?v=1");
+  background-repeat:no-repeat;
+  background-size:400% 400%;
+  background-position:0 0;
+  filter:drop-shadow(0 5px 5px rgba(28,10,34,.28));
+  pointer-events:none;
+  will-change:background-position;
+}
+
+.miss-alpaca-countdown-wrap{
+  position:absolute;
+  z-index:12;
+  left:50%;
+  bottom:13.1%;
+  transform:translateX(-50%);
+  width:min(49%,240px);
+  padding:5px 10px;
+  border:1px solid rgba(255,222,143,.82);
+  border-radius:16px;
+  background:rgba(47,20,67,.86);
+  color:#fff3cf;
+  text-align:center;
+  box-shadow:0 5px 16px rgba(20,8,28,.30),inset 0 1px rgba(255,255,255,.12);
+  backdrop-filter:blur(4px);
+}
+.miss-alpaca-countdown-wrap small{
+  display:block;
+  font-size:clamp(8px,2vw,11px);
+  opacity:.78;
+  line-height:1;
+}
+.miss-alpaca-countdown-wrap strong{
+  display:block;
+  margin-top:2px;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.06em;
+  font-size:clamp(15px,4.3vw,23px);
+  line-height:1.05;
+}
+.miss-alpaca-expired{
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px solid rgba(255,224,150,.24);
+  font-size:clamp(8px,2.15vw,11px);
+  line-height:1.2;
+  color:#ffe7f1;
+  font-weight:850;
+}
+
+.miss-alpaca-topic-card{
+  position:absolute;
+  z-index:12;
+  left:27%;
+  right:4%;
+  bottom:max(2.2%,env(safe-area-inset-bottom));
+  min-height:56px;
+  padding:7px 38px 7px 12px;
+  border:1px solid rgba(255,218,133,.88);
+  border-radius:17px;
+  background:
+    radial-gradient(circle at 50% -20%,rgba(201,129,238,.28),transparent 54%),
+    rgba(48,20,69,.90);
+  color:#fff0c8;
+  box-shadow:0 5px 16px rgba(20,8,28,.32),inset 0 1px rgba(255,255,255,.13);
+  backdrop-filter:blur(5px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.miss-alpaca-topic-label{
+  color:#eecdfb;
+  font-size:clamp(8px,2vw,10px);
+  font-weight:900;
+  line-height:1;
+}
+#missAlpacaTopicText{
+  margin-top:3px;
+  display:block;
+  font-size:clamp(10px,2.8vw,15px);
+  line-height:1.18;
+  overflow-wrap:anywhere;
+}
+.miss-alpaca-mini-admin{
+  position:absolute;
+  right:7px;
+  top:50%;
+  transform:translateY(-50%);
+  width:29px;
+  height:29px;
+  padding:0;
+  border:1px solid rgba(255,222,145,.88);
+  border-radius:50%;
+  background:#6b397e;
+  color:#fff3c9;
+  cursor:pointer;
+}
+
+.miss-alpaca-reset-btn{
+  position:absolute;
+  z-index:13;
+  left:2.8%;
+  bottom:max(2.7%,env(safe-area-inset-bottom));
+  width:21%;
+  min-height:38px;
+  padding:5px 7px;
+  font-size:clamp(8px,2.15vw,11px);
+}
+
+/* ----- Top 6 ----- */
+.miss-alpaca-sub-back,
+.miss-alpaca-sub-farm{
+  position:absolute;
+  z-index:20;
+  top:max(1.5%,env(safe-area-inset-top));
+  min-height:34px;
+  padding:5px 10px;
+  font-size:clamp(9px,2.25vw,12px);
+}
+.miss-alpaca-sub-back{left:2.5%}
+.miss-alpaca-sub-farm{right:2.5%}
+
+.miss-alpaca-top6-slots{
+  position:absolute;
+  z-index:7;
+  inset:0;
+  pointer-events:none;
+}
+.miss-alpaca-top6-slot{
+  position:absolute;
+  padding:0;
+  border:0;
+  background:transparent;
+  overflow:hidden;
+  pointer-events:auto;
+  cursor:default;
+  border-radius:9%;
+}
+.miss-alpaca-top6-slot img{
+  display:none;
+  position:absolute;
+  inset:5%;
+  width:90%;
+  height:90%;
+  object-fit:contain;
+  object-position:center;
+  border-radius:6%;
+  filter:drop-shadow(0 3px 3px rgba(27,9,31,.28));
+}
+.miss-alpaca-top6-slot.has-image img{display:block}
+.miss-alpaca-top6-slot.is-admin{cursor:pointer}
+.miss-alpaca-top6-slot.is-admin:active{background:rgba(255,255,255,.06)}
+.miss-alpaca-slot-admin{
+  position:absolute;
+  right:5px;
+  bottom:5px;
+  padding:3px 7px;
+  border:1px solid rgba(255,224,153,.85);
+  border-radius:999px;
+  background:rgba(53,22,74,.88);
+  color:#fff0c7;
+  font-size:clamp(7px,1.8vw,9px);
+  font-weight:900;
+  pointer-events:none;
+}
+.miss-alpaca-top6-slot[data-miss-slot="1"]{left:17.2%;top:20.0%;width:30.6%;height:20.6%}
+.miss-alpaca-top6-slot[data-miss-slot="2"]{left:52.3%;top:20.0%;width:30.6%;height:20.6%}
+.miss-alpaca-top6-slot[data-miss-slot="3"]{left:17.2%;top:43.0%;width:30.6%;height:20.4%}
+.miss-alpaca-top6-slot[data-miss-slot="4"]{left:52.3%;top:43.0%;width:30.6%;height:20.4%}
+.miss-alpaca-top6-slot[data-miss-slot="5"]{left:17.2%;top:65.7%;width:30.6%;height:20.2%}
+.miss-alpaca-top6-slot[data-miss-slot="6"]{left:52.3%;top:65.7%;width:30.6%;height:20.2%}
+
+/* ----- Hall of Fame ----- */
+.miss-alpaca-hall-panel{
+  position:absolute;
+  z-index:8;
+  left:10%;
+  right:10%;
+  top:25%;
+  bottom:13%;
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+  border:1px solid rgba(255,221,143,.78);
+  border-radius:18px;
+  background:rgba(40,17,61,.73);
+  box-shadow:0 6px 18px rgba(17,6,24,.34),inset 0 1px rgba(255,255,255,.10);
+  backdrop-filter:blur(6px);
+}
+.miss-alpaca-hall-head{
+  display:grid;
+  grid-template-columns:1.35fr .85fr;
+  gap:8px;
+  padding:0 7px 7px;
+  color:#ffe5a3;
+  font-size:clamp(10px,2.6vw,14px);
+  font-weight:950;
+  border-bottom:1px solid rgba(255,223,154,.28);
+}
+.miss-alpaca-hall-list{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:7px 2px 14px;
+  scrollbar-width:thin;
+}
+.miss-alpaca-hall-row{
+  display:grid;
+  grid-template-columns:1.35fr .85fr;
+  gap:8px;
+  align-items:center;
+  min-height:45px;
+  margin-bottom:7px;
+  padding:7px 9px;
+  border:1px solid rgba(255,222,147,.38);
+  border-radius:12px;
+  background:rgba(82,37,103,.72);
+  color:#fff2d3;
+  font-size:clamp(9px,2.35vw,13px);
+}
+.miss-alpaca-hall-row .hall-topic{font-weight:850;overflow-wrap:anywhere}
+.miss-alpaca-hall-row .hall-winner{font-weight:950;color:#ffe2a1;overflow-wrap:anywhere}
+.miss-alpaca-hall-row-admin{
+  grid-column:1/-1;
+  display:flex;
+  justify-content:flex-end;
+  gap:6px;
+}
+.miss-alpaca-hall-row-admin button{
+  min-height:27px;
+  padding:3px 8px;
+  border:1px solid rgba(255,220,145,.55);
+  border-radius:999px;
+  background:rgba(42,18,62,.78);
+  color:#fff0c7;
+  font-size:10px;
+  font-weight:850;
+}
+.miss-alpaca-hall-empty{
+  margin:22px 8px;
+  text-align:center;
+  color:#ead7ec;
+  font-size:12px;
+}
+.miss-alpaca-hall-add{
+  position:absolute;
+  z-index:11;
+  left:50%;
+  bottom:max(4%,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  min-height:38px;
+  padding:6px 13px;
+  font-size:clamp(9px,2.5vw,12px);
+}
+.miss-alpaca-hall-add:active{transform:translateX(-50%) scale(.97)}
+
+/* ----- Admin editors ----- */
+.miss-alpaca-admin-sheet{
+  position:absolute;
+  z-index:60;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(13,5,20,.60);
+}
+.miss-alpaca-admin-sheet-card{
+  width:min(88%,390px);
+  padding:16px;
+  border:1px solid rgba(255,222,145,.86);
+  border-radius:20px;
+  background:linear-gradient(180deg,#4d245f,#281339);
+  color:#fff1cd;
+  box-shadow:0 12px 32px rgba(9,3,14,.52),inset 0 1px rgba(255,255,255,.14);
+}
+.miss-alpaca-admin-sheet-card>b{
+  display:block;
+  margin-bottom:10px;
+  text-align:center;
+  font-size:15px;
+}
+.miss-alpaca-admin-sheet-card label{
+  display:block;
+  margin-top:9px;
+  color:#f3d9fa;
+  font-size:11px;
+  font-weight:850;
+}
+.miss-alpaca-admin-sheet-card input{
+  width:100%;
+  margin-top:5px;
+  min-height:42px;
+  padding:8px 10px;
+  border:1px solid rgba(255,223,151,.52);
+  border-radius:12px;
+  outline:none;
+  background:rgba(255,255,255,.09);
+  color:#fff;
+}
+.miss-alpaca-admin-sheet-card>input{margin:4px 0 11px}
+.miss-alpaca-admin-sheet-card>div{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+.miss-alpaca-admin-sheet-actions.vertical{grid-template-columns:1fr!important}
+.miss-alpaca-admin-sheet-card button{
+  min-height:38px;
+  padding:7px 9px;
+  border:1px solid rgba(255,221,145,.60);
+  border-radius:12px;
+  background:#6d3c7d;
+  color:#fff2cf;
+  font-weight:900;
+}
+.miss-alpaca-admin-sheet-card button.danger{background:#7e2f55;color:#fff}
+
+@media (min-width:700px){
+  .miss-alpaca-sprite{width:min(46vw,360px);bottom:22.3%}
+  .miss-alpaca-top-left-actions{left:calc(50% - 330px);width:190px}
+  .miss-alpaca-farm-back{right:calc(50% - 330px)}
+  .miss-alpaca-reset-btn{left:calc(50% - 330px);width:150px}
+  .miss-alpaca-topic-card{left:calc(50% - 140px);right:auto;width:400px}
+  .miss-alpaca-countdown-wrap{width:220px}
+}
+@media (prefers-reduced-motion:reduce){
+  .miss-alpaca-sprite{will-change:auto}
+}

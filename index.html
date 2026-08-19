@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=V222-PINK-ALPACA-ONLY">
+  <link rel="stylesheet" href="style.css?v=V227-MISS-ALPACA-UNIVERSE">
 </head>
 <body>
   <main id="app">
@@ -91,6 +91,7 @@
             <div class="hud-menu-section-items">
               <button id="mainDogHotelBtn" class="hud-menu-item hud-menu-featured" type="button"><span>🐶</span><div><b>โรงแรมน้องหมา</b><small>ไปดูน้องหมาและเก็บของดรอป</small></div><i>›</i></button>
               <button id="shortcutDogPalaceBtn" class="hud-menu-item" type="button"><span>🏰</span><div><b>วิมานหมา</b><small>โปรดติดตามซีซั่นต่อไป</small></div><i>🔒</i></button>
+              <button id="shortcutMissAlpacaBtn" class="hud-menu-item miss-alpaca-shortcut" type="button"><span>👑</span><div><b>มิสอัลปาก้ายูนิเวิร์ส</b><small>เวทีประกวดอัลปาก้า</small></div><i>🔒</i></button>
               <button id="almsBtn" class="hud-menu-item activity-button alms-button" type="button"><span>🛕</span><div><b>วัดไทยในสวน</b><small>กำลังตรวจเวลา</small></div><i>›</i></button>
               <button id="shortcutFishingBtn" class="hud-menu-item" type="button"><span>🎣</span><div><b>บ่อตกปลา</b><small>ไปยังบ่อตกปลาบาดาล</small></div><i>›</i></button>
               <button id="shortcutJellyfishBtn" class="hud-menu-item" type="button"><span>🪼</span><div><b>บ่อแมงกะพรุน</b><small>ไปยังบ่อแมงกะพรุนส่วนกลาง</small></div><i>›</i></button>
@@ -154,6 +155,100 @@
       <button id="sceneBackBtn" class="scene-nav-button scene-back-button hidden" type="button"></button>
       <button id="sceneNextBtn" class="scene-nav-button scene-next-button hidden" type="button"></button>
       <div id="sceneInteractiveLayer" class="scene-interactive-layer"></div>
+    </section>
+
+
+    <!-- ===== Miss Alpaca Universe (V227) ===== -->
+    <section id="missAlpacaScreen" class="screen miss-alpaca-screen hidden" aria-label="มิสอัลปาก้ายูนิเวิร์ส">
+      <div id="missAlpacaMainView" class="miss-alpaca-view miss-alpaca-main-view">
+        <div class="miss-alpaca-stage-art" aria-hidden="true"></div>
+
+        <div id="missAlpacaSprite" class="miss-alpaca-sprite" aria-label="อัลปาก้านางงาม"></div>
+
+        <div class="miss-alpaca-top-left-actions">
+          <button id="missAlpacaTop6Btn" class="miss-alpaca-glam-btn" type="button"><span>🏆</span><b>TOP 6</b></button>
+          <button id="missAlpacaHallBtn" class="miss-alpaca-glam-btn" type="button"><span>👑</span><b>ทำเนียบผู้ชนะ</b></button>
+        </div>
+
+        <button id="missAlpacaFarmBackBtn" class="miss-alpaca-glam-btn miss-alpaca-farm-back" type="button"><span>🌿</span><b>กลับแปลงผัก</b></button>
+
+        <div class="miss-alpaca-countdown-wrap" aria-live="polite">
+          <small>เวลาที่เหลือ</small>
+          <strong id="missAlpacaCountdown">30:00:00</strong>
+          <div id="missAlpacaExpired" class="miss-alpaca-expired hidden">หมดเวลาการส่งผลงาน รอลุ้นผลรางวัลน๊า</div>
+        </div>
+
+        <div class="miss-alpaca-topic-card">
+          <span class="miss-alpaca-topic-label">หัวข้อ</span>
+          <strong id="missAlpacaTopicText">รอหัวข้อจากยัยหนู</strong>
+          <button id="missAlpacaTopicEditBtn" class="miss-alpaca-mini-admin hidden" type="button" aria-label="แก้ไขหัวข้อ">✏️</button>
+        </div>
+
+        <button id="missAlpacaResetBtn" class="miss-alpaca-reset-btn hidden" type="button">↻ รีเซ็ตเวลา</button>
+
+        <div id="missAlpacaTopicEditor" class="miss-alpaca-admin-sheet hidden" role="dialog" aria-modal="true" aria-label="แก้ไขหัวข้อ">
+          <div class="miss-alpaca-admin-sheet-card">
+            <b>แก้ไขหัวข้อการประกวด</b>
+            <input id="missAlpacaTopicInput" type="text" maxlength="120" placeholder="พิมพ์หัวข้อ">
+            <div>
+              <button id="missAlpacaTopicCancelBtn" type="button">ยกเลิก</button>
+              <button id="missAlpacaTopicSaveBtn" type="button">บันทึก</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="missAlpacaTop6View" class="miss-alpaca-view miss-alpaca-top6-view hidden">
+        <div class="miss-alpaca-top6-art" aria-hidden="true"></div>
+        <button id="missAlpacaTop6BackBtn" class="miss-alpaca-glam-btn miss-alpaca-sub-back" type="button">‹ กลับเวที</button>
+        <button id="missAlpacaTop6FarmBtn" class="miss-alpaca-glam-btn miss-alpaca-sub-farm" type="button">🌿 แปลงผัก</button>
+        <div id="missAlpacaTop6Slots" class="miss-alpaca-top6-slots" aria-label="TOP 6">
+          <button class="miss-alpaca-top6-slot" data-miss-slot="1" type="button" aria-label="อันดับ 1"><img alt="ผลงานอันดับ 1"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+          <button class="miss-alpaca-top6-slot" data-miss-slot="2" type="button" aria-label="อันดับ 2"><img alt="ผลงานอันดับ 2"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+          <button class="miss-alpaca-top6-slot" data-miss-slot="3" type="button" aria-label="อันดับ 3"><img alt="ผลงานอันดับ 3"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+          <button class="miss-alpaca-top6-slot" data-miss-slot="4" type="button" aria-label="อันดับ 4"><img alt="ผลงานอันดับ 4"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+          <button class="miss-alpaca-top6-slot" data-miss-slot="5" type="button" aria-label="อันดับ 5"><img alt="ผลงานอันดับ 5"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+          <button class="miss-alpaca-top6-slot" data-miss-slot="6" type="button" aria-label="อันดับ 6"><img alt="ผลงานอันดับ 6"><span class="miss-alpaca-slot-admin hidden">จัดการ</span></button>
+        </div>
+        <input id="missAlpacaTop6Upload" type="file" accept="image/*" hidden>
+        <div id="missAlpacaSlotEditor" class="miss-alpaca-admin-sheet hidden" role="dialog" aria-modal="true" aria-label="จัดการรูป TOP 6">
+          <div class="miss-alpaca-admin-sheet-card">
+            <b id="missAlpacaSlotEditorTitle">จัดการอันดับ</b>
+            <div class="miss-alpaca-admin-sheet-actions vertical">
+              <button id="missAlpacaSlotReplaceBtn" type="button">📷 อัปโหลด / เปลี่ยนรูป</button>
+              <button id="missAlpacaSlotDeleteBtn" class="danger" type="button">🗑️ ลบรูป</button>
+              <button id="missAlpacaSlotCloseBtn" type="button">ปิด</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="missAlpacaHallView" class="miss-alpaca-view miss-alpaca-hall-view hidden">
+        <div class="miss-alpaca-hall-art" aria-hidden="true"></div>
+        <button id="missAlpacaHallBackBtn" class="miss-alpaca-glam-btn miss-alpaca-sub-back" type="button">‹ กลับเวที</button>
+        <button id="missAlpacaHallFarmBtn" class="miss-alpaca-glam-btn miss-alpaca-sub-farm" type="button">🌿 แปลงผัก</button>
+
+        <div class="miss-alpaca-hall-panel">
+          <div class="miss-alpaca-hall-head">
+            <span>หัวข้อ</span><span>ผู้ชนะ</span>
+          </div>
+          <div id="missAlpacaHallList" class="miss-alpaca-hall-list" aria-live="polite"></div>
+        </div>
+
+        <button id="missAlpacaHallAddBtn" class="miss-alpaca-hall-add hidden" type="button">＋ เพิ่มผู้ชนะ</button>
+
+        <div id="missAlpacaHallEditor" class="miss-alpaca-admin-sheet hidden" role="dialog" aria-modal="true" aria-label="แก้ไขทำเนียบผู้ชนะ">
+          <div class="miss-alpaca-admin-sheet-card">
+            <b id="missAlpacaHallEditorTitle">เพิ่มผู้ชนะ</b>
+            <label>หัวข้อ<input id="missAlpacaHallTopicInput" type="text" maxlength="120"></label>
+            <label>ผู้ชนะ<input id="missAlpacaHallWinnerInput" type="text" maxlength="80"></label>
+            <div>
+              <button id="missAlpacaHallCancelBtn" type="button">ยกเลิก</button>
+              <button id="missAlpacaHallSaveBtn" type="button">บันทึก</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <div id="modeOverlay" class="mode-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modeOverlayTitle">
@@ -330,7 +425,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=V226-GIFT-SYSTEM-CLEANUP"></script>
+  <script src="game.js?v=V227-MISS-ALPACA-UNIVERSE"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
