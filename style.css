@@ -5028,3 +5028,23 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   color:#fff;
   box-shadow:0 3px 8px rgba(64,34,86,.22);
 }
+
+
+/* ======================================================================
+   V221 — Black alpaca selector + reliable grass interaction
+   ====================================================================== */
+.alpaca-color-test-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:6px 0 10px}
+.alpaca-color-test-grid button{min-height:40px;border:1px solid #d1b69f;border-radius:11px;background:#fff8ec;color:#553b43;font-weight:900}
+.alpaca-color-test-grid button.active{background:#6f456f;color:#fff;border-color:#6f456f;box-shadow:0 3px 9px rgba(61,31,67,.2)}
+
+/* Grass is appended directly to #gameScreen, not to the pet layer. */
+.friend-forage-drop{pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent;z-index:70!important}
+.friend-forage-drop:active{transform:translate(-50%,-50%) scale(.90)!important}
+.friend-forage-tip{pointer-events:none!important;z-index:69!important}
+.friend-grass-confirm{text-align:center;padding:16px 12px}
+.friend-grass-confirm-icon{display:block;width:clamp(92px,27vw,145px);height:clamp(92px,27vw,145px);object-fit:contain;margin:0 auto 6px;filter:drop-shadow(0 7px 9px rgba(34,20,14,.20))}
+.friend-grass-confirm h2{margin:5px 0 7px;font-size:clamp(18px,4.8vw,24px)}
+.friend-grass-confirm p{margin:0 0 14px;color:#765e69;font-size:12px}
+.friend-grass-confirm .primary-spooky-action,.friend-grass-confirm .secondary-action{width:100%;min-height:43px;margin-top:7px}
+.friend-grass-received .friend-grass-confirm-icon{animation:v221GrassReceived .45s ease-out}
+@keyframes v221GrassReceived{0%{transform:scale(.72);opacity:.2}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
