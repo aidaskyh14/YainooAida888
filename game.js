@@ -15445,10 +15445,14 @@ async function V181_campaignScoreLater(summary){
       4:{idle:476/900,front:472/900,side:636/900,back:464/900}
     },
     pink:{
-      1:{idle:.510,front:.488,side:.663,back:.508},
-      2:{idle:.522,front:.493,side:.667,back:.502},
-      3:{idle:.525,front:.507,side:.627,back:.507},
-      4:{idle:.543,front:.493,side:.667,back:.495}
+      /* Pink sheets were normalized to 640×900 with a 4×4 grid.
+         Each frame is therefore 160×225 => exact frame ratio 160/225.
+         Fix ONLY Idle + Front because these were visibly squeezed.
+         Side/Back values are intentionally left untouched. */
+      1:{idle:160/225,front:160/225,side:.663,back:.508},
+      2:{idle:160/225,front:160/225,side:.667,back:.502},
+      3:{idle:160/225,front:160/225,side:.627,back:.507},
+      4:{idle:160/225,front:160/225,side:.667,back:.495}
     }
   };
 
@@ -15562,7 +15566,7 @@ async function V181_campaignScoreLater(summary){
   const priorSetFarmPlotPage=setFarmPlotPage;setFarmPlotPage=function(page){const r=priorSetFarmPlotPage(page);clearAll();sync();return r};
   const priorReturnToFarm=returnToFarm;returnToFarm=function(){const r=priorReturnToFarm();setTimeout(sync,0);return r};
   document.addEventListener("visibilitychange",()=>{if(document.hidden)clearAll();else sync()});window.addEventListener("resize",()=>{if(pets.length){clearAll();sync()}});
-  window.YAINOO_BUILD="V222-PINK-ALPACA-ONLY";setTimeout(sync,500);
+  window.YAINOO_BUILD="V224-PINK-PROPORTION-FIX";setTimeout(sync,500);
 })();
 
 
@@ -15902,4 +15906,417 @@ async function V181_campaignScoreLater(summary){
 
   window.YAINOO_BUILD="V223-GIFT-PERMISSION-FIX";
   console.info("V223 admin global gift permission fix loaded");
+})();
+
+/* V224 — Pink alpaca proportion hotfix.
+   Only Pink Idle + Front frame aspect ratio was corrected.
+   No movement, shadow, side/back animation, gift, grass, campaign or other system changes. */
+
+
+/* ======================================================================
+   V225 — INDIVIDUAL ADMIN GIFT PERMISSION FIX
+   Scope: individual gift delivery only.
+   Global gifts remain on the working V223 broadcast path.
+
+   Problem:
+   Cross-user writes to mailboxes/<recipient>/items are rejected by current
+   Firestore rules. Aida can write broadcasts, and recipients can claim their
+   own broadcast claims/save.
+
+   Fix:
+   - Individual gifts become TARGETED broadcasts.
+   - fetchBroadcasts hides targeted broadcasts from everyone except targetKey.
+   - claimBroadcastGift additionally verifies targetKey before granting items.
+   ====================================================================== */
+(function V225_INDIVIDUAL_GIFT_PERMISSION_FIX(){
+  /* Hide targeted broadcasts from non-recipients everywhere that calls
+     fetchBroadcasts (notifications, badge, etc.). */
+  const V225_fetchBroadcastsBase=fetchBroadcasts;
+  fetchBroadcasts=async function(){
+    const rows=await V225_fetchBroadcastsBase();
+    return rows.filter(b=>!b?.targetKey || String(b.targetKey)===String(currentMemberKey||""));
+  };
+
+  /* Bundle gift to one member: use a targeted broadcast instead of
+     gifts + cross-user mailbox. */
+  sendAdminBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const targetSelect=$("adminBundleTarget");
+    const targetKey=String(targetSelect?.value||"");
+    const targetName=String(
+      targetSelect?.options?.[targetSelect.selectedIndex]?.textContent?.replace(" (ตัวเอง)","") || targetKey
+    );
+    const items=selectedAdminBundle(catalog,"admin-bundle");
+
+    if(!targetKey){message("ยังส่งไม่ได้","กรุณาเลือกสมาชิก");return}
+    if(!items.length){message("ยังส่งไม่ได้","กรุณาติ๊กของอย่างน้อย 1 รายการ");return}
+
+    const btn=$("adminSendBundleBtn");
+    const oldText=btn?.textContent||"ส่งให้คนนี้";
+    if(btn){btn.disabled=true;btn.textContent="กำลังส่ง..."}
+
+    try{
+      const cleanItems=items.map(i=>({
+        type:i.type,
+        key:i.key,
+        name:i.name,
+        qty:Math.max(1,Math.floor(Number(i.qty)||1))
+      }));
+
+      /* Validate that receiver inventory supports all item types before write. */
+      const sample=normalizeState(cloneData(ownState||state),currentMember||"Aida");
+      addGiftItemToState(sample,{items:cleanItems});
+
+      const summary=cleanItems.map(i=>`${i.name} ×${i.qty}`).join(" • ");
+      const {db,fs}=await getFirebaseContext();
+
+      const ref=await fs.addDoc(fs.collection(db,"broadcasts"),{
+        type:"gift",
+        bundle:true,
+        items:cleanItems,
+        title:"🎁 ของขวัญจากยัยหนู",
+        body:summary,
+        from:"Aida",
+        targetKey,
+        targetName,
+        deliveryMode:"targeted-broadcast-v225",
+        createdAt:fs.serverTimestamp()
+      });
+
+      const check=await fs.getDoc(ref);
+      if(!check.exists())throw new Error("ระบบยังไม่ยืนยันการบันทึกของขวัญ กรุณาลองใหม่");
+
+      showWeatherToast(`🎁 ส่งกล่องให้ ${targetName} สำเร็จแล้ว`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของไม่ได้",error.message||"กรุณาลองใหม่");
+    }finally{
+      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldText}
+    }
+  };
+
+  /* Old single-item Admin sender can still be reached by older UI wrappers.
+     Route it through the same targeted-broadcast path. */
+  sendAdminTargetGift=async function(targetKey,targetName,entry,qty){
+    if(!entry||adminProfile?.role!=="admin")return;
+    targetKey=String(targetKey||"");
+    targetName=String(targetName||targetKey);
+    qty=Math.max(1,Math.floor(Number(qty)||1));
+    if(!targetKey){message("ยังส่งไม่ได้","กรุณาเลือกสมาชิก");return}
+
+    try{
+      const item={type:entry.type,key:entry.key,name:entry.name,qty};
+      const sample=normalizeState(cloneData(ownState||state),currentMember||"Aida");
+      addGiftItemToState(sample,{items:[item]});
+
+      const {db,fs}=await getFirebaseContext();
+      const ref=await fs.addDoc(fs.collection(db,"broadcasts"),{
+        type:"gift",
+        bundle:true,
+        items:[item],
+        title:"🎁 ของขวัญจากยัยหนู",
+        body:`${entry.name} ×${qty}`,
+        from:"Aida",
+        targetKey,
+        targetName,
+        deliveryMode:"targeted-broadcast-v225",
+        createdAt:fs.serverTimestamp()
+      });
+      const check=await fs.getDoc(ref);
+      if(!check.exists())throw new Error("ระบบยังไม่ยืนยันการบันทึกของขวัญ กรุณาลองใหม่");
+
+      showWeatherToast(`🎁 ส่ง ${entry.name} ×${qty} ให้ ${targetName} แล้ว`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* Harden claim: targeted gift can only be claimed by its designated member.
+     Keep the existing working bundle/global behavior. */
+  claimBroadcastGift=async function(broadcastId,accept){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),
+        broadcastRef=fs.doc(db,"broadcasts",broadcastId),
+        claimRef=fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey),
+        saveRef=fs.doc(db,"saves",currentMemberKey);
+      let next;
+
+      await fs.runTransaction(db,async tx=>{
+        const [bSnap,cSnap,sSnap]=await Promise.all([
+          tx.get(broadcastRef),tx.get(claimRef),tx.get(saveRef)
+        ]);
+        if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+        if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");
+
+        const b=bSnap.data();
+        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+        if(b.targetKey && String(b.targetKey)!==String(currentMemberKey)){
+          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+        }
+        if(currentMember==="Aida"&&b.includeAida===false){
+          throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
+        }
+
+        const s=normalizeState(sSnap.data(),currentMember);
+        if(accept){
+          if(Array.isArray(b.items))addGiftItemToState(s,{items:b.items});
+          else addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});
+        }
+        next=s;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        tx.set(claimRef,{
+          memberKey:currentMemberKey,
+          status:accept?"accepted":"discarded",
+          resolvedAt:fs.serverTimestamp()
+        });
+      });
+
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      saveLocalOnly(ownState);
+      updateMeritUI();
+      broadcastClaimCache.set(
+        broadcastClaimCacheKey(broadcastId),
+        {memberKey:currentMemberKey,status:accept?"accepted":"discarded"}
+      );
+      showNotifications("yainoo");
+      showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(error){
+      message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  };
+
+  window.YAINOO_BUILD="V225-INDIVIDUAL-GIFT-PERMISSION-FIX";
+  console.info("V225 individual gift permission fix loaded");
+})();
+
+
+/* ======================================================================
+   V226 — GIFT SYSTEM CLEANUP
+   One runtime path for Admin gifts:
+     • one member  -> targeted broadcast
+     • everyone    -> global broadcast
+     • claim       -> one canonical broadcast claim function
+   Friend-to-friend gifts keep the existing gifts/mailbox path.
+   No alpaca/grass/campaign/farm changes.
+   ====================================================================== */
+(function V226_GIFT_SYSTEM_CLEANUP(){
+  function V226_cleanBundle(items){
+    return (Array.isArray(items)?items:[]).map(i=>({
+      type:String(i.type||""),
+      key:String(i.key||""),
+      name:String(i.name||i.key||"ของขวัญ"),
+      qty:Math.max(1,Math.floor(Number(i.qty)||1))
+    })).filter(i=>i.type&&i.key);
+  }
+
+  function V226_validateBundle(items){
+    if(!items.length)throw new Error("กรุณาติ๊กของอย่างน้อย 1 รายการ");
+    const sample=normalizeState(cloneData(ownState||state),currentMember||"Aida");
+    addGiftItemToState(sample,{items});
+  }
+
+  async function V226_writeAdminBroadcast({items,targetKey="",targetName="",includeAida=false}){
+    const clean=V226_cleanBundle(items);
+    V226_validateBundle(clean);
+
+    const {db,fs}=await getFirebaseContext();
+    const summary=clean.map(i=>`${i.name} ×${i.qty}`).join(" • ");
+
+    const payload={
+      type:"gift",
+      bundle:true,
+      items:clean,
+      title:"🎁 ของขวัญจากยัยหนู",
+      body:summary,
+      from:"Aida",
+      deliveryMode:targetKey?"targeted-broadcast-v226":"global-broadcast-v226",
+      createdAt:fs.serverTimestamp()
+    };
+    if(targetKey){
+      payload.targetKey=String(targetKey);
+      payload.targetName=String(targetName||targetKey);
+    }else{
+      payload.includeAida=Boolean(includeAida);
+    }
+
+    const ref=await fs.addDoc(fs.collection(db,"broadcasts"),payload);
+    const check=await fs.getDoc(ref);
+    if(!check.exists())throw new Error("ระบบยังไม่ยืนยันการบันทึกของขวัญ กรุณาลองใหม่");
+    return {id:ref.id,summary,clean};
+  }
+
+  /* CANONICAL: Admin bundle -> one member */
+  sendAdminBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const targetSelect=$("adminBundleTarget");
+    const targetKey=String(targetSelect?.value||"");
+    const targetName=String(
+      targetSelect?.options?.[targetSelect.selectedIndex]?.textContent?.replace(" (ตัวเอง)","")||targetKey
+    );
+    if(!targetKey){message("ยังส่งไม่ได้","กรุณาเลือกสมาชิก");return}
+
+    const btn=$("adminSendBundleBtn"),old=btn?.textContent||"ส่งให้คนนี้";
+    if(btn){btn.disabled=true;btn.textContent="กำลังส่ง..."}
+    try{
+      const items=V226_cleanBundle(selectedAdminBundle(catalog,"admin-bundle"));
+      await V226_writeAdminBroadcast({items,targetKey,targetName});
+      showWeatherToast(`🎁 ส่งกล่องให้ ${targetName} สำเร็จแล้ว`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของไม่ได้",error.message||"กรุณาลองใหม่");
+    }finally{
+      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=old}
+    }
+  };
+
+  /* CANONICAL: Admin bundle -> everyone */
+  sendAdminGlobalBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const btn=$("adminSendGlobalBundleBtn"),old=btn?.textContent||"ส่งชุดนี้ให้ทุกคน";
+    if(btn){btn.disabled=true;btn.textContent="กำลังส่งให้ทุกคน..."}
+    try{
+      const items=V226_cleanBundle(selectedAdminBundle(catalog,"admin-global"));
+      const includeAida=Boolean($("adminIncludeAida")?.checked);
+      await V226_writeAdminBroadcast({items,includeAida});
+      showWeatherToast(`🎁 ส่งชุดของขวัญให้ทุกคนสำเร็จแล้ว${includeAida?" • รวม Aida":""}`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่");
+    }finally{
+      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=old}
+    }
+  };
+
+  /* Compatibility: old one-item Admin UI -> same canonical targeted route */
+  sendAdminTargetGift=async function(targetKey,targetName,entry,qty){
+    if(!entry||adminProfile?.role!=="admin")return;
+    targetKey=String(targetKey||"");
+    if(!targetKey){message("ยังส่งไม่ได้","กรุณาเลือกสมาชิก");return}
+    try{
+      await V226_writeAdminBroadcast({
+        items:[{type:entry.type,key:entry.key,name:entry.name,qty}],
+        targetKey,
+        targetName:String(targetName||targetKey)
+      });
+      showWeatherToast(`🎁 ส่ง ${entry.name} ×${Math.max(1,Math.floor(Number(qty)||1))} ให้ ${targetName} แล้ว`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* Compatibility: old one-item global UI -> same canonical global route */
+  sendAdminGlobalGift=async function(entry,qty){
+    if(!entry||adminProfile?.role!=="admin")return;
+    try{
+      await V226_writeAdminBroadcast({
+        items:[{type:entry.type,key:entry.key,name:entry.name,qty}],
+        includeAida:false
+      });
+      showWeatherToast("🎁 ส่งของขวัญให้ทุกคนแล้ว");
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* CANONICAL broadcast listing: a targeted gift is visible only to target. */
+  const V226_fetchBroadcastsRaw=fetchBroadcasts;
+  fetchBroadcasts=async function(){
+    const rows=await V226_fetchBroadcastsRaw();
+    return rows.filter(b=>{
+      if(!b?.targetKey)return true;
+      return String(b.targetKey)===String(currentMemberKey||"");
+    });
+  };
+
+  /* CANONICAL claim for both targeted and global Admin broadcasts. */
+  claimBroadcastGift=async function(broadcastId,accept){
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
+      const claimRef=fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey);
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      let next;
+
+      await fs.runTransaction(db,async tx=>{
+        const [bSnap,cSnap,sSnap]=await Promise.all([
+          tx.get(broadcastRef),tx.get(claimRef),tx.get(saveRef)
+        ]);
+        if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+        if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");
+
+        const b=bSnap.data();
+        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+        if(b.targetKey && String(b.targetKey)!==String(currentMemberKey)){
+          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+        }
+        if(!b.targetKey && currentMember==="Aida" && b.includeAida===false){
+          throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
+        }
+
+        const s=normalizeState(sSnap.data(),currentMember);
+        if(accept){
+          if(Array.isArray(b.items)){
+            addGiftItemToState(s,{items:V226_cleanBundle(b.items)});
+          }else{
+            addGiftItemToState(s,{
+              itemType:b.itemType,itemKey:b.itemKey,qty:b.qty
+            });
+          }
+        }
+        next=s;
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        tx.set(claimRef,{
+          memberKey:currentMemberKey,
+          status:accept?"accepted":"discarded",
+          resolvedAt:fs.serverTimestamp()
+        });
+      });
+
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      saveLocalOnly(ownState);
+      updateMeritUI();
+      try{
+        broadcastClaimCache.set(
+          broadcastClaimCacheKey(broadcastId),
+          {memberKey:currentMemberKey,status:accept?"accepted":"discarded"}
+        );
+      }catch{}
+      await showNotifications("yainoo");
+      showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(error){
+      message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  };
+
+  /* Remove only obsolete audit UI that depends on the unsupported
+     adminGiftDeliveries collection. */
+  const V226_showAdminCenterBase=showAdminCenter;
+  showAdminCenter=async function(){
+    const result=await V226_showAdminCenterBase.apply(this,arguments);
+    const audit=$("v218GiftAuditBtn");
+    if(audit)audit.remove();
+    return result;
+  };
+
+  window.YAINOO_BUILD="V226-GIFT-SYSTEM-CLEANUP";
+  console.info("V226 gift system cleanup loaded");
 })();
