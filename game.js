@@ -15418,19 +15418,35 @@ async function V181_campaignScoreLater(summary){
 
 
 /* ======================================================================
-   V222 — Aida-only White + Black + Pink Alpaca stress test
+   V236 — Aida-only MIXED ALPACA WALK TEST
+   - Adds GREEN + BROWN to the existing White / Black / Pink test.
    - Aida only. No other member receives alpaca ownership/UI.
-   - Farm 1 only, 1–10 visible alpacas.
-   - Pink uses the exact same size, shadow, speed and movement engine as white/black.
-   - Side walk always travels in the direction the alpaca is facing.
+   - Farm 1 only.
+   - Each color has an independent quantity, so colors can walk together.
+   - Maximum 30 visible test alpacas total to keep mobile performance stable.
+   - All colors share the same movement speed, shadow and movement engine.
+   - Global wool stage applies to every test alpaca at the same time.
    ====================================================================== */
-(function YN_V222_ALPACA_PINK_STRESS_TEST(){
-  const VERSION="alpaca-v222";
-  const STORAGE_KEY="yainoo-alpaca-test-v3:aida";
+(function YN_V236_ALPACA_MIXED_STRESS_TEST(){
+  const VERSION="alpaca-v236";
+  const STORAGE_KEY="yainoo-alpaca-test-v4:aida";
+  const LEGACY_KEYS=["yainoo-alpaca-test-v3:aida","yainoo-alpaca-test-v2:aida"];
   const WALK_PX_PER_SEC=12;
   const FRAME_MS=120;
+  const MAX_TOTAL=30;
+  const MAX_PER_COLOR=10;
   const ROWS=[40.5,51.8,63.1,74.4,82.2];
   const COLS=[10.5,30.0,50.0,70.0,89.0];
+
+  const COLORS=["white","black","pink","green","brown"];
+  const COLOR_META={
+    white:{name:"สีขาว",emoji:"🤍"},
+    black:{name:"สีดำ",emoji:"🖤"},
+    pink:{name:"สีชมพู",emoji:"🩷"},
+    green:{name:"สีเขียว",emoji:"💚"},
+    brown:{name:"สีน้ำตาล",emoji:"🤎"}
+  };
+
   const RATIOS={
     white:{
       1:{idle:1256/2336,front:1584/3280,side:1680/2840,back:1648/3288},
@@ -15445,53 +15461,112 @@ async function V181_campaignScoreLater(summary){
       4:{idle:476/900,front:472/900,side:636/900,back:464/900}
     },
     pink:{
-      /* Pink sheets are 640×900 with a 4×4 grid: every frame is 160×225.
-         V228 fixes ONLY the BACK walk ratio that was visibly squeezed.
-         Idle, Front and Side remain exactly as already approved. */
       1:{idle:160/225,front:160/225,side:.663,back:160/225},
       2:{idle:160/225,front:160/225,side:.667,back:160/225},
       3:{idle:160/225,front:160/225,side:.627,back:160/225},
       4:{idle:160/225,front:160/225,side:.667,back:160/225}
+    },
+    /* Green and Brown were normalized to identical 640×900, 4×4 sheets.
+       Every frame is 160×225, so use the exact cell ratio to prevent squeezing. */
+    green:{
+      1:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      2:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      3:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      4:{idle:160/225,front:160/225,side:160/225,back:160/225}
+    },
+    brown:{
+      1:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      2:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      3:{idle:160/225,front:160/225,side:160/225,back:160/225},
+      4:{idle:160/225,front:160/225,side:160/225,back:160/225}
     }
   };
 
-  let test={stage:1,out:false,count:1,color:"white"};
+  let test={
+    stage:1,
+    out:false,
+    counts:{white:1,black:0,pink:0,green:0,brown:0}
+  };
   let pets=[];
+
+  function cleanCount(v){return Math.max(0,Math.min(MAX_PER_COLOR,Math.floor(Number(v)||0)))}
+  function totalCount(){return COLORS.reduce((sum,c)=>sum+cleanCount(test.counts[c]),0)}
+
   try{
-    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||localStorage.getItem("yainoo-alpaca-test-v2:aida")||"null");
+    let saved=null;
+    try{saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")}catch{}
+    if(!saved){
+      for(const key of LEGACY_KEYS){
+        try{
+          const candidate=JSON.parse(localStorage.getItem(key)||"null");
+          if(candidate){saved=candidate;break}
+        }catch{}
+      }
+    }
     if(saved&&typeof saved==="object"){
       test.stage=Math.max(1,Math.min(4,Math.floor(Number(saved.stage)||1)));
       test.out=Boolean(saved.out);
-      test.count=Math.max(1,Math.min(10,Math.floor(Number(saved.count)||1)));
-      test.color=["white","black","pink"].includes(saved.color)?saved.color:"white";
+      if(saved.counts&&typeof saved.counts==="object"){
+        COLORS.forEach(c=>test.counts[c]=cleanCount(saved.counts[c]));
+      }else{
+        const legacyColor=COLORS.includes(saved.color)?saved.color:"white";
+        COLORS.forEach(c=>test.counts[c]=0);
+        test.counts[legacyColor]=Math.max(1,Math.min(MAX_PER_COLOR,Math.floor(Number(saved.count)||1)));
+      }
+      if(totalCount()>MAX_TOTAL){
+        let left=MAX_TOTAL;
+        COLORS.forEach(c=>{
+          const n=Math.min(test.counts[c],left);
+          test.counts[c]=n;
+          left-=n;
+        });
+      }
     }
   }catch{}
   function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(test))}catch{}}
 
   function ownAdminFarm(){
     const screen=$("gameScreen");
-    return Boolean(currentMember==="Aida" && String(currentMemberKey||memberKeyFromName(currentMember)||"")==="aida" && !visitContext && Number(farmPlotPage||0)===0 && screen && !screen.classList.contains("hidden"));
+    return Boolean(
+      currentMember==="Aida" &&
+      String(currentMemberKey||memberKeyFromName(currentMember)||"")==="aida" &&
+      !visitContext &&
+      Number(farmPlotPage||0)===0 &&
+      screen &&
+      !screen.classList.contains("hidden")
+    );
   }
 
-  function asset(kind,stage=test.stage,color=test.color){
+  function asset(kind,stage=test.stage,color="white"){
     const suffix=kind==="idle"?"idle":`${kind}-walk`;
     if(color==="black")return `alpaca-black-stage-${stage}-${suffix}.png?v=${VERSION}`;
     if(color==="pink")return `alpaca-pink-stage-${stage}-${suffix}.png?v=${VERSION}`;
+    if(color==="green")return `alpaca-green-stage-${stage}-${suffix}.png?v=${VERSION}`;
+    if(color==="brown")return `alpaca-brown-stage-${stage}-${suffix}.png?v=${VERSION}`;
     return `alpaca-stage-${stage}-${suffix}.png?v=${VERSION}`;
   }
-  function preloadStage(stage=test.stage,color=test.color){["idle","front","back","side"].forEach(kind=>{const img=new Image();img.decoding="async";img.src=asset(kind,stage,color)})}
+
+  function preloadColor(color,stage=test.stage){
+    ["idle","front","back","side"].forEach(kind=>{
+      const img=new Image();
+      img.decoding="async";
+      img.src=asset(kind,stage,color);
+    });
+  }
+  function preloadActive(){
+    COLORS.forEach(c=>{if(cleanCount(test.counts[c])>0)preloadColor(c)});
+  }
 
   function frame(p,index,kind,flip=false){
     if(!p?.sprite)return;
     const raw=Math.max(0,Math.min(15,Math.floor(Number(index)||0)));
-    /* Approved side cycle uses reversed temporal playback for white, black and pink.
-       All colors use the same rule so side movement cannot moonwalk relative to travel. */
+    /* All side sheets use the approved reversed temporal playback. */
     const i=kind==="side" ? 15-raw : raw;
     const col=i%4,row=Math.floor(i/4);
-    const ratio=RATIOS[test.color]?.[test.stage]?.[kind]||.52;
+    const ratio=RATIOS[p.color]?.[test.stage]?.[kind]||160/225;
     p.sprite.style.setProperty("--alpaca-frame-ratio",String(ratio));
     p.sprite.style.setProperty("--alpaca-flip",flip?"-1":"1");
-    p.sprite.style.backgroundImage=`url("${asset(kind)}")`;
+    p.sprite.style.backgroundImage=`url("${asset(kind,test.stage,p.color)}")`;
     p.sprite.style.backgroundSize="400% 400%";
     p.sprite.style.backgroundPosition=`${col*(100/3)}% ${row*(100/3)}%`;
   }
@@ -15500,74 +15575,271 @@ async function V181_campaignScoreLater(summary){
     const layer=$("aidaFarmPetLayer"),rect=layer?.getBoundingClientRect(),petRect=p?.el?.getBoundingClientRect();
     if(!rect||!petRect)return{x:0,y:0};
     const row=Math.floor(index/COLS.length),col=index%COLS.length;
-    return{x:rect.width*COLS[col]/100-petRect.width/2,y:rect.height*ROWS[row]/100-petRect.height*.91};
+    return{
+      x:rect.width*COLS[col]/100-petRect.width/2,
+      y:rect.height*ROWS[row]/100-petRect.height*.91
+    };
   }
+
   function nextStep(p,index){
-    const rows=ROWS.length,cols=COLS.length,row=Math.floor(index/cols),col=index%cols;let choices=[];
+    const rows=ROWS.length,cols=COLS.length,row=Math.floor(index/cols),col=index%cols;
+    let choices=[];
     if(row>0)choices.push({next:(row-1)*cols+col,direction:"back",weight:34});
     if(row<rows-1)choices.push({next:(row+1)*cols+col,direction:"front",weight:34});
     if(col>0)choices.push({next:row*cols+(col-1),direction:"left",weight:16});
     if(col<cols-1)choices.push({next:row*cols+(col+1),direction:"right",weight:16});
     choices=choices.map(c=>({...c,weight:c.next===p.previousNode?Math.max(2,c.weight*.28):c.weight}));
-    let pick=Math.random()*choices.reduce((s,c)=>s+c.weight,0);for(const c of choices){pick-=c.weight;if(pick<=0)return c}return choices.at(-1)||{next:index,direction:"front"};
+    let pick=Math.random()*choices.reduce((s,c)=>s+c.weight,0);
+    for(const c of choices){pick-=c.weight;if(pick<=0)return c}
+    return choices.at(-1)||{next:index,direction:"front"};
   }
-  function stopPet(p,remove=false){if(!p)return;p.token++;clearTimeout(p.moveTimer);clearInterval(p.frameTimer);p.moveTimer=0;p.frameTimer=0;if(p.motion){try{p.motion.cancel()}catch{}p.motion=null}if(remove){p.el?.remove();p.el=null;p.sprite=null}}
+
+  function stopPet(p,remove=false){
+    if(!p)return;
+    p.token++;
+    clearTimeout(p.moveTimer);
+    clearInterval(p.frameTimer);
+    p.moveTimer=0;p.frameTimer=0;
+    if(p.motion){try{p.motion.cancel()}catch{}p.motion=null}
+    if(remove){p.el?.remove();p.el=null;p.sprite=null}
+  }
+
   function idle(p,delayExtra=0){
-    if(!p?.el||!test.out||!ownAdminFarm())return;const token=++p.token;
-    p.el.classList.remove("is-walking");p.el.classList.add("is-idle");let i=Math.floor(Math.random()*16);frame(p,i,"idle");clearInterval(p.frameTimer);
-    p.frameTimer=setInterval(()=>{if(token!==p.token||!p.el)return;i=(i+1)%16;frame(p,i,"idle")},260);
-    clearTimeout(p.moveTimer);p.moveTimer=setTimeout(()=>move(p,token),1700+Math.random()*2300+delayExtra);
+    if(!p?.el||!test.out||!ownAdminFarm())return;
+    const token=++p.token;
+    p.el.classList.remove("is-walking");
+    p.el.classList.add("is-idle");
+    let i=Math.floor(Math.random()*16);
+    frame(p,i,"idle");
+    clearInterval(p.frameTimer);
+    p.frameTimer=setInterval(()=>{
+      if(token!==p.token||!p.el)return;
+      i=(i+1)%16;
+      frame(p,i,"idle");
+    },260);
+    clearTimeout(p.moveTimer);
+    p.moveTimer=setTimeout(()=>move(p,token),1700+Math.random()*2300+delayExtra);
   }
+
   function move(p,token){
-    if(token!==p.token||!p.el||!test.out||!ownAdminFarm()){sync();return}clearInterval(p.frameTimer);p.frameTimer=0;
-    const step=nextStep(p,p.node),next=step.next,to=point(p,next),layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=p.el.getBoundingClientRect();
-    const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(p,p.node),dx=to.x-from.x,dy=to.y-from.y;
+    if(token!==p.token||!p.el||!test.out||!ownAdminFarm()){sync();return}
+    clearInterval(p.frameTimer);p.frameTimer=0;
+    const step=nextStep(p,p.node),next=step.next,to=point(p,next);
+    const layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=p.el.getBoundingClientRect();
+    const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(p,p.node);
+    const dx=to.x-from.x,dy=to.y-from.y;
     const direction=(step.direction==="left"||step.direction==="right")?"side":step.direction;
-    /* Source side art faces RIGHT. Flip only when actual translation is LEFT. */
     const flip=step.direction==="left";
     const duration=Math.max(5200,Math.min(12500,(Math.max(1,Math.hypot(dx,dy))/WALK_PX_PER_SEC)*1000));
-    p.el.classList.remove("is-idle");p.el.classList.add("is-walking");let i=Math.floor(Math.random()*16);frame(p,i,direction,flip);
-    p.frameTimer=setInterval(()=>{if(token!==p.token||!p.el)return;i=(i+1)%16;frame(p,i,direction,flip)},FRAME_MS);
-    p.motion=p.el.animate([{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],{duration,easing:"linear",fill:"forwards"});
-    p.motion.onfinish=()=>{if(token!==p.token||!p.el)return;clearInterval(p.frameTimer);p.frameTimer=0;p.previousNode=p.node;p.node=next;p.el.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;p.motion=null;idle(p)};
-  }
-  function createPet(index){
-    const layer=$("aidaFarmPetLayer");if(!layer)return null;
-    const p={index,node:(index*2+4)%(ROWS.length*COLS.length),previousNode:-1,el:null,sprite:null,moveTimer:0,frameTimer:0,motion:null,token:0};
-    const el=document.createElement("div");el.className="aida-alpaca-test is-idle";el.dataset.alpacaTestIndex=String(index+1);el.dataset.alpacaColor=test.color;el.tabIndex=0;
-    el.setAttribute("role","button");el.setAttribute("aria-label",`เปิดข้อมูลอัลปาก้า${test.color==="black"?"สีดำ":test.color==="pink"?"สีชมพู":"สีขาว"}ตัวที่ ${index+1}`);
-    const sprite=document.createElement("div");sprite.className="aida-alpaca-sprite";el.appendChild(sprite);layer.appendChild(el);p.el=el;p.sprite=sprite;
-    el.onclick=showPanel;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showPanel()}};
-    const start=point(p,p.node);el.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;frame(p,index%16,"idle");idle(p,index*260);return p;
-  }
-  function clearAll(){pets.forEach(p=>stopPet(p,true));pets=[]}
-  function createAll(){if(!test.out||!ownAdminFarm())return;preloadStage();clearAll();for(let i=0;i<test.count;i++){const p=createPet(i);if(p)pets.push(p)}}
-  function sync(){syncButton();if(!ownAdminFarm()||!test.out){clearAll();return}if(pets.length!==test.count)requestAnimationFrame(createAll)}
-  function syncButton(){const btn=$("alpacaTestBtn");if(!btn)return;btn.classList.toggle("hidden",!ownAdminFarm())}
-  function setStage(stage){test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));persist();preloadStage();if(test.out)createAll();showPanel()}
-  function setCount(count){test.count=Math.max(1,Math.min(10,Math.floor(Number(count)||1)));persist();if(test.out)createAll();showPanel()}
-  function setColor(color){test.color=["white","black","pink"].includes(color)?color:"white";persist();preloadStage();if(test.out)createAll();showPanel()}
-  function sendOut(){test.out=true;persist();closeModal();createAll();showWeatherToast(`🦙 ปล่อยอัลปาก้า${test.color==="black"?"สีดำ":test.color==="pink"?"สีชมพู":"สีขาว"} ${test.count} ตัวเดินเล่นแล้ว`)}
-  function store(){test.out=false;persist();closeModal();clearAll();sync();showWeatherToast("🦙 เก็บอัลปาก้าทดสอบทั้งหมดแล้ว")}
-  function showPanel(){
-    if(!ownAdminFarm())return;const stageText=["","ระยะ 1 • เพิ่งตัดขน","ระยะ 2 • ขนเริ่มขึ้น","ระยะ 3 • ขนขึ้นเยอะ","ระยะ 4 • ขนเต็ม พร้อมตัด"][test.stage],colorText=test.color==="black"?"สีดำ":test.color==="pink"?"สีชมพู":"สีขาว";
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-test-card"><div class="alpaca-test-emoji">🦙</div><h2>อัลปาก้าที่คุณมี</h2><span class="alpaca-test-status">${colorText} • ${safeHtml(stageText)} • ${test.out?`กำลังเดินเล่น ${test.count} ตัว`:"เก็บอยู่"}</span>
-      <div class="alpaca-test-actions"><button id="alpacaWalkBtn" class="alpaca-test-walk" type="button">${test.out?"รีเซ็ตการเดิน":"เดินเล่น"}</button><button id="alpacaStoreBtn" class="alpaca-test-store" type="button" ${test.out?"":"disabled"}>เก็บทั้งหมด</button></div>
-      <span class="alpaca-stage-test-title">สีอัลปาก้า</span><div class="alpaca-color-test-grid"><button type="button" data-alpaca-color="white" class="${test.color==="white"?"active":""}">🤍 สีขาว</button><button type="button" data-alpaca-color="black" class="${test.color==="black"?"active":""}">🖤 สีดำ</button><button type="button" data-alpaca-color="pink" class="${test.color==="pink"?"active":""}">🩷 สีชมพู</button></div>
-      <span class="alpaca-stage-test-title">จำนวนอัลปาก้าทดสอบพร้อมกัน</span><div class="alpaca-count-test-grid">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" data-alpaca-count="${n}" class="${test.count===n?"active":""}">${n}</button>`).join("")}</div>
-      <span class="alpaca-stage-test-title">ทดสอบระยะขน (ทุกตัวพร้อมกัน)</span><div class="alpaca-stage-test-grid">${[1,2,3,4].map(n=>`<button type="button" data-alpaca-stage="${n}" class="${test.stage===n?"active":""}">${n}</button>`).join("")}</div>
-      <small class="alpaca-test-note">เฉพาะ Aida เท่านั้น • ฟาร์ม 1 • สูงสุด 10 ตัว • สมาชิกอื่นไม่มีอัลปาก้าและไม่เห็นปุ่มนี้</small></section>`;
-    openModal();$("alpacaWalkBtn").onclick=sendOut;$("alpacaStoreBtn").onclick=store;
-    document.querySelectorAll("[data-alpaca-stage]").forEach(b=>b.onclick=()=>setStage(b.dataset.alpacaStage));document.querySelectorAll("[data-alpaca-count]").forEach(b=>b.onclick=()=>setCount(b.dataset.alpacaCount));document.querySelectorAll("[data-alpaca-color]").forEach(b=>b.onclick=()=>setColor(b.dataset.alpacaColor));
-  }
-  if($("alpacaTestBtn"))$("alpacaTestBtn").onclick=showPanel;
-  const priorDraw=draw;draw=function(){const r=priorDraw();sync();return r};
-  const priorSetFarmPlotPage=setFarmPlotPage;setFarmPlotPage=function(page){const r=priorSetFarmPlotPage(page);clearAll();sync();return r};
-  const priorReturnToFarm=returnToFarm;returnToFarm=function(){const r=priorReturnToFarm();setTimeout(sync,0);return r};
-  document.addEventListener("visibilitychange",()=>{if(document.hidden)clearAll();else sync()});window.addEventListener("resize",()=>{if(pets.length){clearAll();sync()}});
-  window.YAINOO_BUILD="V224-PINK-PROPORTION-FIX";setTimeout(sync,500);
-})();
 
+    p.el.classList.remove("is-idle");
+    p.el.classList.add("is-walking");
+    let i=Math.floor(Math.random()*16);
+    frame(p,i,direction,flip);
+    p.frameTimer=setInterval(()=>{
+      if(token!==p.token||!p.el)return;
+      i=(i+1)%16;
+      frame(p,i,direction,flip);
+    },FRAME_MS);
+
+    p.motion=p.el.animate(
+      [{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],
+      {duration,easing:"linear",fill:"forwards"}
+    );
+    p.motion.onfinish=()=>{
+      if(token!==p.token||!p.el)return;
+      clearInterval(p.frameTimer);p.frameTimer=0;
+      p.previousNode=p.node;p.node=next;
+      p.el.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;
+      p.motion=null;
+      idle(p);
+    };
+  }
+
+  function createPet(index,color){
+    const layer=$("aidaFarmPetLayer");
+    if(!layer)return null;
+    const p={
+      index,color,
+      node:(index*2+4)%(ROWS.length*COLS.length),
+      previousNode:-1,el:null,sprite:null,
+      moveTimer:0,frameTimer:0,motion:null,token:0
+    };
+    const meta=COLOR_META[color]||COLOR_META.white;
+    const el=document.createElement("div");
+    el.className="aida-alpaca-test is-idle";
+    el.dataset.alpacaTestIndex=String(index+1);
+    el.dataset.alpacaColor=color;
+    el.tabIndex=0;
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label",`เปิดข้อมูลอัลปาก้า${meta.name}ตัวที่ ${index+1}`);
+    const sprite=document.createElement("div");
+    sprite.className="aida-alpaca-sprite";
+    el.appendChild(sprite);
+    layer.appendChild(el);
+    p.el=el;p.sprite=sprite;
+    el.onclick=showPanel;
+    el.onkeydown=e=>{
+      if(e.key==="Enter"||e.key===" "){e.preventDefault();showPanel()}
+    };
+    const start=point(p,p.node);
+    el.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;
+    frame(p,index%16,"idle");
+    idle(p,index*190);
+    return p;
+  }
+
+  function clearAll(){pets.forEach(p=>stopPet(p,true));pets=[]}
+
+  function createAll(){
+    if(!test.out||!ownAdminFarm())return;
+    preloadActive();
+    clearAll();
+    let index=0;
+    COLORS.forEach(color=>{
+      const count=cleanCount(test.counts[color]);
+      for(let i=0;i<count;i++){
+        const p=createPet(index++,color);
+        if(p)pets.push(p);
+      }
+    });
+  }
+
+  function sync(){
+    syncButton();
+    if(!ownAdminFarm()||!test.out){clearAll();return}
+    if(pets.length!==totalCount())requestAnimationFrame(createAll);
+  }
+
+  function syncButton(){
+    const btn=$("alpacaTestBtn");
+    if(!btn)return;
+    btn.classList.toggle("hidden",!ownAdminFarm());
+  }
+
+  function setStage(stage){
+    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));
+    persist();
+    preloadActive();
+    if(test.out)createAll();
+    showPanel();
+  }
+
+  function setColorCount(color,value){
+    if(!COLORS.includes(color))return;
+    const wanted=cleanCount(value);
+    const others=COLORS.reduce((sum,c)=>sum+(c===color?0:cleanCount(test.counts[c])),0);
+    test.counts[color]=Math.min(wanted,Math.max(0,MAX_TOTAL-others));
+    persist();
+    if(test.out)createAll();
+    showPanel();
+  }
+
+  function changeColorCount(color,delta){
+    setColorCount(color,cleanCount(test.counts[color])+Number(delta||0));
+  }
+
+  function sendOut(){
+    if(totalCount()<=0){
+      message("ยังไม่มีอัลปาก้า","เลือกจำนวนอย่างน้อย 1 ตัวก่อนปล่อยเดิน");
+      return;
+    }
+    test.out=true;
+    persist();
+    closeModal();
+    createAll();
+    showWeatherToast(`🦙 ปล่อยอัลปาก้าคละสี ${totalCount()} ตัวเดินเล่นแล้ว`);
+  }
+
+  function store(){
+    test.out=false;
+    persist();
+    closeModal();
+    clearAll();
+    sync();
+    showWeatherToast("🦙 เก็บอัลปาก้าทดสอบทั้งหมดแล้ว");
+  }
+
+  function showPanel(){
+    if(!ownAdminFarm())return;
+    const stageText=["","ระยะ 1 • เพิ่งตัดขน","ระยะ 2 • ขนเริ่มขึ้น","ระยะ 3 • ขนขึ้นเยอะ","ระยะ 4 • ขนเต็ม พร้อมตัด"][test.stage];
+    const total=totalCount();
+
+    const colorRows=COLORS.map(color=>{
+      const meta=COLOR_META[color],count=cleanCount(test.counts[color]);
+      return `<div class="alpaca-mix-row" data-alpaca-mix-row="${color}">
+        <span class="alpaca-mix-name">${meta.emoji} ${meta.name}</span>
+        <div class="alpaca-mix-stepper">
+          <button type="button" data-alpaca-dec="${color}" aria-label="ลด ${meta.name}">−</button>
+          <input type="number" min="0" max="${MAX_PER_COLOR}" inputmode="numeric" value="${count}" data-alpaca-mix-count="${color}" aria-label="จำนวน ${meta.name}">
+          <button type="button" data-alpaca-inc="${color}" aria-label="เพิ่ม ${meta.name}">+</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-test-card">
+      <div class="alpaca-test-emoji">🦙</div>
+      <h2>อัลปาก้าที่คุณมี</h2>
+      <span class="alpaca-test-status">${safeHtml(stageText)} • ${test.out?`กำลังเดินคละสี ${total} ตัว`:`เลือกไว้ ${total} ตัว`}</span>
+
+      <div class="alpaca-test-actions">
+        <button id="alpacaWalkBtn" class="alpaca-test-walk" type="button">${test.out?"รีเซ็ตการเดิน":"เดินเล่น"}</button>
+        <button id="alpacaStoreBtn" class="alpaca-test-store" type="button" ${test.out?"":"disabled"}>เก็บทั้งหมด</button>
+      </div>
+
+      <span class="alpaca-stage-test-title">เลือกจำนวนแยกแต่ละสี</span>
+      <div class="alpaca-mix-list">${colorRows}</div>
+      <div class="alpaca-mix-total">รวม <b>${total}</b> / ${MAX_TOTAL} ตัว</div>
+
+      <span class="alpaca-stage-test-title">ทดสอบระยะขน (ทุกสีพร้อมกัน)</span>
+      <div class="alpaca-stage-test-grid">${[1,2,3,4].map(n=>`<button type="button" data-alpaca-stage="${n}" class="${test.stage===n?"active":""}">${n}</button>`).join("")}</div>
+
+      <small class="alpaca-test-note">เฉพาะ Aida เท่านั้น • ฟาร์ม 1 • ขาว / ดำ / ชมพู / เขียว / น้ำตาล วางคละกันได้ • สูงสุดรวม ${MAX_TOTAL} ตัว • สมาชิกอื่นไม่เห็นปุ่มนี้</small>
+    </section>`;
+
+    openModal();
+    $("alpacaWalkBtn").onclick=sendOut;
+    $("alpacaStoreBtn").onclick=store;
+
+    document.querySelectorAll("[data-alpaca-stage]").forEach(b=>b.onclick=()=>setStage(b.dataset.alpacaStage));
+    document.querySelectorAll("[data-alpaca-dec]").forEach(b=>b.onclick=()=>changeColorCount(b.dataset.alpacaDec,-1));
+    document.querySelectorAll("[data-alpaca-inc]").forEach(b=>b.onclick=()=>changeColorCount(b.dataset.alpacaInc,1));
+    document.querySelectorAll("[data-alpaca-mix-count]").forEach(input=>{
+      input.onchange=()=>setColorCount(input.dataset.alpacaMixCount,input.value);
+      input.onblur=()=>setColorCount(input.dataset.alpacaMixCount,input.value);
+    });
+  }
+
+  if($("alpacaTestBtn"))$("alpacaTestBtn").onclick=showPanel;
+
+  const priorDraw=draw;
+  draw=function(){const r=priorDraw();sync();return r};
+
+  const priorSetFarmPlotPage=setFarmPlotPage;
+  setFarmPlotPage=function(page){
+    const r=priorSetFarmPlotPage(page);
+    clearAll();sync();
+    return r;
+  };
+
+  const priorReturnToFarm=returnToFarm;
+  returnToFarm=function(){
+    const r=priorReturnToFarm();
+    setTimeout(sync,0);
+    return r;
+  };
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden)clearAll();
+    else sync();
+  });
+  window.addEventListener("resize",()=>{
+    if(pets.length){clearAll();sync()}
+  });
+
+  window.YAINOO_BUILD="V236-ALPACA-MIXED-GREEN-BROWN";
+  setTimeout(sync,500);
+})();
 
 /* ======================================================================
    V218 MAJOR FIX — ADMIN GIFT DELIVERY + CAMPAIGN SCROLL FOUNDATION

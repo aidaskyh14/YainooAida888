@@ -5498,3 +5498,15 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .miss-alpaca-left-sprite{display:none!important}
 
 .miss-alpaca-right-sprite{display:none!important}
+
+
+/* ===== V236 Aida Alpaca Mixed Test — quantity per color ===== */
+.alpaca-mix-list{display:grid;gap:7px;margin:7px 0 8px}
+.alpaca-mix-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 8px;border:1px solid rgba(130,92,111,.22);border-radius:12px;background:rgba(255,250,241,.82)}
+.alpaca-mix-name{text-align:left;color:#5b4053;font-size:12px;font-weight:900}
+.alpaca-mix-stepper{display:grid;grid-template-columns:34px 48px 34px;gap:4px;align-items:center}
+.alpaca-mix-stepper button{height:34px;border:0;border-radius:9px;background:#70466f;color:#fff;font-size:20px;font-weight:900;line-height:1}
+.alpaca-mix-stepper input{width:48px;height:34px;padding:0 3px;border:1px solid #cdb59e;border-radius:9px;background:#fff;color:#4c3644;text-align:center;font-weight:900;-moz-appearance:textfield}
+.alpaca-mix-stepper input::-webkit-outer-spin-button,.alpaca-mix-stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.alpaca-mix-total{margin:5px 0 11px;color:#73556d;font-size:12px;font-weight:800}
+.alpaca-mix-total b{font-size:15px;color:#5d3960}
