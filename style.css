@@ -5155,13 +5155,13 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 }
 .miss-alpaca-left-sprite{
   left:29.5%;
-  aspect-ratio:1232/1536;
-  background-image:url("miss-alpaca-universe-left-stage-spritesheet.png?v=1");
+  aspect-ratio:1024/1536;
+  background-image:url("miss-alpaca-universe-green-left-animation.png?v=234");
 }
 .miss-alpaca-right-sprite{
   left:70.5%;
-  aspect-ratio:1310/1536;
-  background-image:url("miss-alpaca-universe-right-stage-spritesheet.png?v=1");
+  aspect-ratio:1024/1536;
+  background-image:url("miss-alpaca-universe-red-right-animation.png?v=234");
 }
 
 /* 4x4 sprite sheet, 16 frames. Keep the alpaca centered and pageant-sized. */
