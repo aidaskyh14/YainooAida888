@@ -15821,3 +15821,85 @@ async function V181_campaignScoreLater(summary){
   const prevVisit=visitFriend;visitFriend=async function(){const r=await prevVisit.apply(this,arguments);setTimeout(()=>{try{renderDrops()}catch(e){console.warn("V221 visit grass",e)}},80);return r};
   window.YAINOO_BUILD="V221-BLACK-ALPACA-GRASS30";
 })();
+
+
+/* ======================================================================
+   V223 — ADMIN GLOBAL GIFT PERMISSION FIX
+   Scope: gift sending only. Do not touch alpaca/grass/campaign/other systems.
+
+   Why:
+   V218 changed "send to everyone" into one multi-user batch that writes
+   gifts + every recipient mailbox + adminGiftDeliveries. Firestore rejects
+   the whole batch when any one destination is not allowed by current rules.
+
+   Fix:
+   Restore the already-supported broadcasts path for global bundle gifts.
+   Every member claims the broadcast into their own save, using the existing
+   claimBroadcastGift bundle logic. This avoids cross-user mailbox writes and
+   the unsupported adminGiftDeliveries collection.
+   ====================================================================== */
+(function V223_ADMIN_GLOBAL_GIFT_PERMISSION_FIX(){
+  sendAdminGlobalBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const btn=$("adminSendGlobalBundleBtn");
+    const oldText=btn?.textContent||"ส่งชุดนี้ให้ทุกคน";
+    if(btn){btn.disabled=true;btn.textContent="กำลังส่งให้ทุกคน..."}
+    try{
+      const items=selectedAdminBundle(catalog,"admin-global");
+      const includeAida=Boolean($("adminIncludeAida")?.checked);
+      if(!items.length)throw new Error("กรุณาติ๊กของอย่างน้อย 1 รายการ");
+
+      /* Validate every item against the same inventory receiver used when a
+         member claims the gift. This prevents creating an unclaimable bundle. */
+      const sample=normalizeState(cloneData(ownState||state),currentMember||"Aida");
+      addGiftItemToState(sample,{items:items.map(i=>({type:i.type,key:i.key,name:i.name,qty:Math.max(1,Math.floor(Number(i.qty)||1))}))});
+
+      const {db,fs}=await getFirebaseContext();
+      const cleanItems=items.map(i=>({
+        type:i.type,
+        key:i.key,
+        name:i.name,
+        qty:Math.max(1,Math.floor(Number(i.qty)||1))
+      }));
+      const summary=cleanItems.map(i=>`${i.name} ×${i.qty}`).join(" • ");
+
+      /* Broadcasts is the existing collection already used by Admin notices
+         and by the existing member-side broadcast claim flow. */
+      const ref=await fs.addDoc(fs.collection(db,"broadcasts"),{
+        type:"gift",
+        bundle:true,
+        items:cleanItems,
+        title:"🎁 ของขวัญจากยัยหนู",
+        body:summary,
+        includeAida,
+        from:"Aida",
+        deliveryMode:"broadcast-v223",
+        createdAt:fs.serverTimestamp()
+      });
+
+      /* Verify the document exists before reporting success. */
+      const check=await fs.getDoc(ref);
+      if(!check.exists())throw new Error("ระบบยังไม่ยืนยันการบันทึกของขวัญ กรุณาลองใหม่");
+
+      showWeatherToast(`🎁 ส่งชุดของขวัญให้ทุกคนสำเร็จแล้ว${includeAida?" • รวม Aida":""}`);
+      await showAdminCenter();
+    }catch(error){
+      message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่");
+    }finally{
+      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldText}
+    }
+  };
+
+  /* The audit button points to adminGiftDeliveries, the same unsupported
+     collection that caused the permission failure. Hide only that button. */
+  const previousShowAdminCenter=showAdminCenter;
+  showAdminCenter=async function(){
+    const result=await previousShowAdminCenter.apply(this,arguments);
+    const audit=$("v218GiftAuditBtn");
+    if(audit)audit.remove();
+    return result;
+  };
+
+  window.YAINOO_BUILD="V223-GIFT-PERMISSION-FIX";
+  console.info("V223 admin global gift permission fix loaded");
+})();
