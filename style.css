@@ -4817,3 +4817,214 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen.plot-page-3 .alpaca-test-button,
 .game-screen.plot-page-4 .alpaca-test-button{display:none!important}
 @media (prefers-reduced-motion:reduce){.aida-alpaca-test{will-change:auto}.aida-alpaca-test.is-walking::before{animation:none}}
+
+
+/* ======================================================================
+   V218 MAJOR FIX — CAMPAIGN MUST SCROLL AT ANY ROSTER SIZE
+   Rank can be 18, 100 or more rows. Header/footer stay reachable.
+   ====================================================================== */
+.modal-card:has(.m200-rabbit-campaign),
+.modal-card:has(.m200-rabbit-rules),
+.modal-card:has(.m200-rewards-panel){
+  width:min(95vw,560px)!important;
+  height:min(91dvh,820px)!important;
+  max-height:91dvh!important;
+  min-height:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+.modal-card:has(.m200-rabbit-campaign)>#modalContent,
+.modal-card:has(.m200-rabbit-rules)>#modalContent,
+.modal-card:has(.m200-rewards-panel)>#modalContent{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+
+/* Ranking page: only the rank list scrolls; top controls and gift/footer stay put. */
+.m200-rabbit-campaign{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-campaign .v36-campaign-content{
+  height:100%!important;
+  min-height:0!important;
+  display:grid!important;
+  grid-template-rows:auto auto minmax(0,1fr) auto!important;
+  gap:5px!important;
+  padding:8px!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-campaign .v36-campaign-ranks{
+  min-height:0!important;
+  height:auto!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  display:flex!important;
+  flex-direction:column!important;
+  grid-template-rows:none!important;
+  gap:4px!important;
+  padding:3px 3px 14px!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  scrollbar-width:thin!important;
+}
+.m200-rabbit-campaign .v36-rank-row,
+.m200-rabbit-campaign .v36-rank-top-1,
+.m200-rabbit-campaign .v36-rank-top-2,
+.m200-rabbit-campaign .v36-rank-top-3{
+  flex:0 0 38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  padding:2px 8px!important;
+  grid-template-columns:34px minmax(0,1fr) 64px!important;
+}
+.m200-rabbit-campaign .v36-rank-no{font-size:10px!important}
+.m200-rabbit-campaign .v36-rank-name b{font-size:11px!important}
+.m200-rabbit-campaign .v36-rank-row>strong{font-size:13px!important}
+.m200-rabbit-campaign .v42-campaign-footer-row{
+  position:relative!important;
+  z-index:30!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+}
+.m200-rabbit-campaign #m200CampaignGiftBtn{pointer-events:auto!important;visibility:visible!important;opacity:1!important}
+
+/* Conditions page: condition text is the scroll container. */
+.m200-rabbit-rules{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-rules .v36-campaign-content{
+  height:100%!important;
+  min-height:0!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  gap:8px!important;
+  padding:10px!important;
+  overflow:hidden!important;
+}
+.m200-rabbit-rules .v36-condition-card{
+  min-height:0!important;
+  height:auto!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding-bottom:18px!important;
+}
+.m200-rabbit-rules .v36-campaign-footer{margin:0!important;flex:0 0 auto!important}
+
+/* Reward page: reward rows always scroll to the final claim button. */
+.m200-rewards-panel{height:100%!important;min-height:0!important;overflow:hidden!important}
+.m200-rewards-content{
+  height:100%!important;
+  min-height:0!important;
+  display:grid!important;
+  grid-template-rows:auto auto minmax(0,1fr)!important;
+  gap:8px!important;
+  padding:10px!important;
+  overflow:hidden!important;
+}
+.m200-reward-list{
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding:2px 2px calc(18px + env(safe-area-inset-bottom))!important;
+}
+
+/* Admin delivery audit */
+.v218-gift-audit{max-height:80dvh;overflow:auto;-webkit-overflow-scrolling:touch}
+.v218-audit-list{display:grid;gap:8px;margin:10px 0}
+.v218-audit-list article{display:grid;gap:4px;padding:10px;border-radius:12px;background:rgba(255,248,230,.85);border:1px solid rgba(90,53,58,.18)}
+.v218-audit-list article b{font-size:12px}.v218-audit-list article span{font-size:10px;line-height:1.35}.v218-audit-list article small{font-size:9px;opacity:.7}
+
+@media(max-height:700px){
+  .modal-card:has(.m200-rabbit-campaign),
+  .modal-card:has(.m200-rabbit-rules),
+  .modal-card:has(.m200-rewards-panel){height:94dvh!important;max-height:94dvh!important}
+  .m200-rabbit-campaign .v36-rank-row,
+  .m200-rabbit-campaign .v36-rank-top-1,
+  .m200-rabbit-campaign .v36-rank-top-2,
+  .m200-rabbit-campaign .v36-rank-top-3{flex-basis:34px!important;height:34px!important;min-height:34px!important}
+}
+
+
+/* ===================== V219 Friend Forage Drops ===================== */
+.friend-forage-drop{position:absolute;z-index:48;transform:translate(-50%,-50%);width:clamp(36px,9vw,56px);height:clamp(36px,9vw,56px);border:none;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.28));animation:friendForageBob 2.2s ease-in-out infinite}
+.friend-forage-drop img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.friend-forage-drop::after{content:"";position:absolute;left:50%;bottom:6%;width:62%;height:11%;transform:translateX(-50%);background:rgba(0,0,0,.28);border-radius:50%;filter:blur(3px);z-index:-1}
+.friend-forage-drop.friend-forage-green{width:clamp(36px,9vw,54px);height:clamp(36px,9vw,54px)}
+.friend-forage-drop.friend-forage-yellow{width:clamp(38px,9.5vw,56px);height:clamp(38px,9.5vw,56px)}
+.friend-forage-drop.friend-forage-red{width:clamp(40px,10vw,58px);height:clamp(40px,10vw,58px)}
+.friend-forage-drop[data-rarity="rare"]{animation-duration:1.95s}
+.friend-forage-tip{position:absolute;left:50%;top:5px;transform:translateX(-50%);z-index:55;padding:4px 10px;border-radius:999px;background:rgba(255,248,230,.92);border:1px solid rgba(104,64,37,.22);box-shadow:0 5px 14px rgba(36,18,10,.14);font-size:10px;font-weight:700;color:#694538;pointer-events:none;white-space:nowrap}
+@keyframes friendForageBob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-4px)}}
+
+
+/* ===================== V220 grass toast / use / alpaca count ===================== */
+.friend-grass-collect-toast{
+  position:fixed;
+  z-index:9999;
+  left:50%;
+  top:16%;
+  transform:translate(-50%,-14px) scale(.96);
+  opacity:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:min(88vw,380px);
+  padding:8px 13px 8px 9px;
+  border:1.5px solid rgba(177,124,63,.72);
+  border-radius:999px;
+  background:rgba(255,248,226,.97);
+  color:#5b3a36;
+  box-shadow:0 8px 24px rgba(31,17,22,.28);
+  font-size:clamp(11px,3vw,14px);
+  font-weight:750;
+  pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;
+}
+.friend-grass-collect-toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+.friend-grass-collect-toast img{
+  width:34px;height:34px;object-fit:contain;flex:0 0 34px;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.15));
+}
+.friend-grass-use-btn{
+  grid-column:1/-1;
+  min-height:34px;
+  border:0;
+  border-radius:10px;
+  background:linear-gradient(180deg,#7dbb61,#4d913e);
+  color:white;
+  font-weight:850;
+  box-shadow:0 3px 8px rgba(36,68,29,.2);
+}
+.friend-grass-use-btn:disabled{opacity:.45;filter:grayscale(.4)}
+
+.alpaca-count-test-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  margin:7px 0 12px;
+}
+.alpaca-count-test-grid button{
+  min-height:34px;
+  border:1px solid rgba(87,55,66,.18);
+  border-radius:10px;
+  background:#f4e5c8;
+  color:#523545;
+  font-weight:850;
+}
+.alpaca-count-test-grid button.active{
+  background:linear-gradient(180deg,#9d6ac0,#744497);
+  color:#fff;
+  box-shadow:0 3px 8px rgba(64,34,86,.22);
+}

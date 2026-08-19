@@ -15418,20 +15418,19 @@ async function V181_campaignScoreLater(summary){
 
 
 /* ======================================================================
-   V215 — Aida-only Alpaca movement test
+   V220 — Aida-only Alpaca 1–10 stress test
    - Farm 1 only (plots 1–12)
-   - local visual state only; NO Firebase writes
-   - tiny dog/cat-like display scale
-   - intentionally slow walking + soft contact shadow
-   - one alpaca with 4 wool stages; same four animation sheets per stage
+   - visual test state only; no alpaca ownership writes to Firebase
+   - choose 1–10 alpacas and let them move simultaneously
+   - same approved size, shadow, speed, front/back/side behavior
    ====================================================================== */
-(function YN_V215_ALPACA_TEST(){
-  const VERSION="alpaca-test-v3";
-  const STORAGE_KEY="yainoo-alpaca-test-v1:aida";
-  const WALK_PX_PER_SEC=12; // intentionally slow
-  const FRAME_MS=120; // smoother sprite playback; actual travel speed stays slow
-  const ROWS=[41.2,53.7,66.2,78.8];
-  const COLS=[15.5,49.8,84.0];
+(function YN_V220_ALPACA_STRESS_TEST(){
+  const VERSION="alpaca-test-v4";
+  const STORAGE_KEY="yainoo-alpaca-test-v2:aida";
+  const WALK_PX_PER_SEC=12;
+  const FRAME_MS=120;
+  const ROWS=[40.5,51.8,63.1,74.4,82.2];
+  const COLS=[10.5,30.0,50.0,70.0,89.0];
   const RATIOS={
     1:{idle:1256/2336,front:1584/3280,side:1680/2840,back:1648/3288},
     2:{idle:1264/2400,front:783/1536,side:1680/2792,back:1672/3280},
@@ -15439,21 +15438,21 @@ async function V181_campaignScoreLater(summary){
     4:{idle:1272/2384,front:1792/3320,side:1744/2888,back:1608/3288}
   };
 
-  let test={stage:1,out:false};
-  let alpaca=null,sprite=null,node=4,previousNode=-1;
-  let moveTimer=0,frameTimer=0,motion=null,runToken=0;
+  let test={stage:1,out:false,count:1};
+  let pets=[];
+  let globalToken=0;
 
   try{
-    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||localStorage.getItem("yainoo-alpaca-test-v1:aida")||"null");
     if(saved&&typeof saved==="object"){
       test.stage=Math.max(1,Math.min(4,Math.floor(Number(saved.stage)||1)));
       test.out=Boolean(saved.out);
+      test.count=Math.max(1,Math.min(10,Math.floor(Number(saved.count)||1)));
     }
   }catch{}
 
-  function persist(){
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(test))}catch{}
-  }
+  function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(test))}catch{}}
+
   function ownAdminFarm(){
     const screen=$("gameScreen");
     return Boolean(
@@ -15464,19 +15463,33 @@ async function V181_campaignScoreLater(summary){
       screen && !screen.classList.contains("hidden")
     );
   }
+
   function asset(kind,stage=test.stage){
     const suffix=kind==="idle"?"idle":`${kind}-walk`;
     return `alpaca-stage-${stage}-${suffix}.png?v=${VERSION}`;
   }
+
   function preloadStage(stage=test.stage){
     ["idle","front","back","side"].forEach(kind=>{
-      const img=new Image();
-      img.decoding="async";
-      img.src=asset(kind,stage);
+      const img=new Image(); img.decoding="async"; img.src=asset(kind,stage);
     });
   }
-  function point(index){
-    const layer=$("aidaFarmPetLayer"),rect=layer?.getBoundingClientRect(),petRect=alpaca?.getBoundingClientRect();
+
+  function frame(p,index,kind,flip=false){
+    if(!p?.sprite)return;
+    const raw=Math.max(0,Math.min(15,Math.floor(Number(index)||0)));
+    const i=kind==="side" ? 15-raw : raw;
+    const col=i%4,row=Math.floor(i/4);
+    const ratio=RATIOS[test.stage]?.[kind]||.52;
+    p.sprite.style.setProperty("--alpaca-frame-ratio",String(ratio));
+    p.sprite.style.setProperty("--alpaca-flip",flip?"-1":"1");
+    p.sprite.style.backgroundImage=`url("${asset(kind)}")`;
+    p.sprite.style.backgroundSize="400% 400%";
+    p.sprite.style.backgroundPosition=`${col*(100/3)}% ${row*(100/3)}%`;
+  }
+
+  function point(p,index){
+    const layer=$("aidaFarmPetLayer"),rect=layer?.getBoundingClientRect(),petRect=p?.el?.getBoundingClientRect();
     if(!rect||!petRect)return{x:0,y:0};
     const row=Math.floor(index/COLS.length),col=index%COLS.length;
     return{
@@ -15484,134 +15497,594 @@ async function V181_campaignScoreLater(summary){
       y:rect.height*ROWS[row]/100-petRect.height*.91
     };
   }
-  function nextStep(index){
+
+  function nextStep(p,index){
     const rows=ROWS.length,cols=COLS.length,row=Math.floor(index/cols),col=index%cols;
-    // Cardinal movement only. This keeps the sprite direction identical to travel direction.
-    // Front + back are intentionally more common than side walking.
     let choices=[];
     if(row>0)choices.push({next:(row-1)*cols+col,direction:"back",weight:34});
     if(row<rows-1)choices.push({next:(row+1)*cols+col,direction:"front",weight:34});
     if(col>0)choices.push({next:row*cols+(col-1),direction:"left",weight:16});
     if(col<cols-1)choices.push({next:row*cols+(col+1),direction:"right",weight:16});
-    // Avoid immediately retracing the last path where possible, but never block movement.
-    choices=choices.map(c=>({...c,weight:c.next===previousNode?Math.max(2,c.weight*.28):c.weight}));
+    choices=choices.map(c=>({...c,weight:c.next===p.previousNode?Math.max(2,c.weight*.28):c.weight}));
     const total=choices.reduce((sum,c)=>sum+c.weight,0);
     let pick=Math.random()*total;
     for(const c of choices){pick-=c.weight;if(pick<=0)return c}
     return choices[choices.length-1]||{next:index,direction:"front"};
   }
-  function frame(index,kind,flip=false){
-    if(!sprite)return;
-    const raw=Math.max(0,Math.min(15,Math.floor(Number(index)||0)));
-    // Ludo's SIDE sheet is temporally reversed: the animal faces the travel
-    // direction but the leg cycle reads as moonwalking. Reverse SIDE frames only.
-    // Front, Back and Idle remain completely unchanged.
-    const i=kind==="side" ? 15-raw : raw;
-    const col=i%4,row=Math.floor(i/4);
-    const ratio=RATIOS[test.stage]?.[kind]||.52;
-    sprite.style.setProperty("--alpaca-frame-ratio",String(ratio));
-    sprite.style.setProperty("--alpaca-flip",flip?"-1":"1");
-    sprite.style.backgroundImage=`url("${asset(kind)}")`;
-    sprite.style.backgroundSize="400% 400%";
-    sprite.style.backgroundPosition=`${col*(100/3)}% ${row*(100/3)}%`;
+
+  function stopPet(p,remove=false){
+    if(!p)return;
+    p.token++;
+    clearTimeout(p.moveTimer); clearInterval(p.frameTimer);
+    p.moveTimer=0; p.frameTimer=0;
+    if(p.motion){try{p.motion.cancel()}catch{} p.motion=null}
+    if(remove){p.el?.remove(); p.el=null; p.sprite=null}
   }
-  function stopActivity(remove=false){
-    runToken++;clearTimeout(moveTimer);clearInterval(frameTimer);moveTimer=0;frameTimer=0;
-    if(motion){try{motion.cancel()}catch{}motion=null}
-    if(remove){alpaca?.remove();alpaca=null;sprite=null}
+
+  function idle(p,delayExtra=0){
+    if(!p?.el||!test.out||!ownAdminFarm())return;
+    const token=++p.token;
+    p.el.classList.remove("is-walking"); p.el.classList.add("is-idle");
+    let i=Math.floor(Math.random()*16);
+    frame(p,i,"idle");
+    clearInterval(p.frameTimer);
+    p.frameTimer=setInterval(()=>{
+      if(token!==p.token||!p.el)return;
+      i=(i+1)%16; frame(p,i,"idle");
+    },260);
+    clearTimeout(p.moveTimer);
+    p.moveTimer=setTimeout(()=>move(p,token),1700+Math.random()*2300+delayExtra);
   }
-  function idle(token=runToken){
-    if(token!==runToken||!alpaca)return;
-    alpaca.classList.remove("is-walking");alpaca.classList.add("is-idle");
-    let i=0;frame(i,"idle");clearInterval(frameTimer);
-    frameTimer=setInterval(()=>{if(token!==runToken||!alpaca)return;i=(i+1)%16;frame(i,"idle")},260);
-    clearTimeout(moveTimer);moveTimer=setTimeout(()=>move(token),1900+Math.random()*1800);
-  }
-  function move(token){
-    if(token!==runToken||!alpaca||!test.out||!ownAdminFarm()){sync();return}
-    clearInterval(frameTimer);frameTimer=0;
-    const step=nextStep(node),next=step.next,to=point(next),layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=alpaca.getBoundingClientRect();
-    const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(node);
+
+  function move(p,token){
+    if(token!==p.token||!p.el||!test.out||!ownAdminFarm()){sync();return}
+    clearInterval(p.frameTimer);p.frameTimer=0;
+
+    const step=nextStep(p,p.node),next=step.next,to=point(p,next);
+    const layerRect=$("aidaFarmPetLayer")?.getBoundingClientRect(),petRect=p.el.getBoundingClientRect();
+    const from=layerRect?{x:petRect.left-layerRect.left,y:petRect.top-layerRect.top}:point(p,p.node);
     const dx=to.x-from.x,dy=to.y-from.y;
     const direction=step.direction==="left"||step.direction==="right"?"side":step.direction;
-    // Side source artwork faces RIGHT. Flip only when traveling LEFT.
     const flip=step.direction==="left";
     const distance=Math.max(1,Math.hypot(dx,dy));
     const duration=Math.max(5200,Math.min(12500,(distance/WALK_PX_PER_SEC)*1000));
-    alpaca.classList.remove("is-idle");alpaca.classList.add("is-walking");
-    let i=0;frame(i,direction,flip);
-    frameTimer=setInterval(()=>{if(token!==runToken||!alpaca)return;i=(i+1)%16;frame(i,direction,flip)},FRAME_MS);
-    motion=alpaca.animate([
-      {transform:`translate3d(${from.x}px,${from.y}px,0)`},
-      {transform:`translate3d(${to.x}px,${to.y}px,0)`}
-    ],{duration,easing:"linear",fill:"forwards"});
-    motion.onfinish=()=>{
-      if(token!==runToken||!alpaca)return;
-      clearInterval(frameTimer);frameTimer=0;previousNode=node;node=next;
-      alpaca.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;motion=null;
-      idle(token);
+
+    p.el.classList.remove("is-idle");p.el.classList.add("is-walking");
+    let i=Math.floor(Math.random()*16);
+    frame(p,i,direction,flip);
+    p.frameTimer=setInterval(()=>{
+      if(token!==p.token||!p.el)return;
+      i=(i+1)%16;frame(p,i,direction,flip);
+    },FRAME_MS);
+
+    p.motion=p.el.animate(
+      [{transform:`translate3d(${from.x}px,${from.y}px,0)`},{transform:`translate3d(${to.x}px,${to.y}px,0)`}],
+      {duration,easing:"linear",fill:"forwards"}
+    );
+
+    p.motion.onfinish=()=>{
+      if(token!==p.token||!p.el)return;
+      clearInterval(p.frameTimer);p.frameTimer=0;
+      p.previousNode=p.node;p.node=next;
+      p.el.style.transform=`translate3d(${to.x}px,${to.y}px,0)`;
+      p.motion=null;
+      idle(p);
     };
   }
-  function create(){
-    const layer=$("aidaFarmPetLayer");if(!layer||alpaca||!test.out||!ownAdminFarm())return;
-    preloadStage(test.stage);
-    alpaca=document.createElement("div");alpaca.className="aida-alpaca-test is-idle";
-    alpaca.setAttribute("role","button");alpaca.setAttribute("aria-label","เปิดข้อมูลอัลปาก้า");alpaca.tabIndex=0;
-    sprite=document.createElement("div");sprite.className="aida-alpaca-sprite";alpaca.appendChild(sprite);layer.appendChild(alpaca);
-    alpaca.onclick=showPanel;alpaca.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showPanel()}};
-    const start=point(node);alpaca.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;
-    const token=++runToken;idle(token);
+
+  function createPet(index){
+    const layer=$("aidaFarmPetLayer"); if(!layer)return null;
+    const p={
+      index,node:(index*2+4)%(ROWS.length*COLS.length),previousNode:-1,
+      el:null,sprite:null,moveTimer:0,frameTimer:0,motion:null,token:0
+    };
+    const el=document.createElement("div");
+    el.className="aida-alpaca-test is-idle";
+    el.dataset.alpacaTestIndex=String(index+1);
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label",`เปิดข้อมูลอัลปาก้าทดสอบตัวที่ ${index+1}`);
+    el.tabIndex=0;
+
+    const sprite=document.createElement("div");
+    sprite.className="aida-alpaca-sprite";
+    el.appendChild(sprite); layer.appendChild(el);
+    p.el=el;p.sprite=sprite;
+
+    el.onclick=showPanel;
+    el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showPanel()}};
+
+    const start=point(p,p.node);
+    el.style.transform=`translate3d(${start.x}px,${start.y}px,0)`;
+    frame(p,index%16,"idle");
+    idle(p,index*260);
+    return p;
   }
+
+  function clearAll(){
+    globalToken++;
+    pets.forEach(p=>stopPet(p,true));
+    pets=[];
+  }
+
+  function createAll(){
+    if(!test.out||!ownAdminFarm())return;
+    preloadStage(test.stage);
+    clearAll();
+    for(let i=0;i<test.count;i++){
+      const p=createPet(i);
+      if(p)pets.push(p);
+    }
+  }
+
   function sync(){
     syncButton();
-    if(!ownAdminFarm()||!test.out){stopActivity(true);return}
-    if(!alpaca)requestAnimationFrame(create);
+    if(!ownAdminFarm()||!test.out){clearAll();return}
+    if(pets.length!==test.count)requestAnimationFrame(createAll);
   }
+
   function syncButton(){
     const btn=$("alpacaTestBtn");if(!btn)return;
     btn.classList.toggle("hidden",!ownAdminFarm());
   }
+
   function setStage(stage){
-    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));persist();preloadStage(test.stage);
-    if(alpaca){clearInterval(frameTimer);frameTimer=0;frame(0,"idle");const token=runToken;idle(token)}
+    test.stage=Math.max(1,Math.min(4,Math.floor(Number(stage)||1)));
+    persist();preloadStage(test.stage);
+    if(test.out)createAll();
     showPanel();
   }
+
+  function setCount(count){
+    test.count=Math.max(1,Math.min(10,Math.floor(Number(count)||1)));
+    persist();
+    if(test.out)createAll();
+    showPanel();
+  }
+
   function sendOut(){
-    test.out=true;persist();closeModal();stopActivity(true);node=4;previousNode=-1;sync();showWeatherToast("🦙 ปล่อยอัลปาก้าเดินเล่นแล้ว • เดินช้า ๆ ในฟาร์ม 1");
+    test.out=true;persist();closeModal();createAll();
+    showWeatherToast(`🦙 ปล่อยอัลปาก้า ${test.count} ตัวเดินเล่นพร้อมกันแล้ว`);
   }
+
   function store(){
-    test.out=false;persist();closeModal();stopActivity(true);sync();showWeatherToast("🦙 เก็บอัลปาก้าแล้ว");
+    test.out=false;persist();closeModal();clearAll();sync();
+    showWeatherToast("🦙 เก็บอัลปาก้าทดสอบทั้งหมดแล้ว");
   }
+
   function showPanel(){
     if(!ownAdminFarm())return;
     const stageText=["","ระยะ 1 • เพิ่งตัดขน","ระยะ 2 • ขนเริ่มขึ้น","ระยะ 3 • ขนขึ้นเยอะ","ระยะ 4 • ขนเต็ม พร้อมตัด"][test.stage];
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-test-card">
       <div class="alpaca-test-emoji">🦙</div>
       <h2>อัลปาก้าที่คุณมี</h2>
-      <span class="alpaca-test-status">${safeHtml(stageText)} • ${test.out?"กำลังเดินเล่น":"เก็บอยู่"}</span>
+      <span class="alpaca-test-status">${safeHtml(stageText)} • ${test.out?`กำลังเดินเล่น ${test.count} ตัว`:"เก็บอยู่"}</span>
       <div class="alpaca-test-actions">
-        <button id="alpacaWalkBtn" class="alpaca-test-walk" type="button" ${test.out?"disabled":""}>เดินเล่น</button>
-        <button id="alpacaStoreBtn" class="alpaca-test-store" type="button" ${test.out?"":"disabled"}>เก็บ</button>
+        <button id="alpacaWalkBtn" class="alpaca-test-walk" type="button">${test.out?"รีเซ็ตการเดิน":"เดินเล่น"}</button>
+        <button id="alpacaStoreBtn" class="alpaca-test-store" type="button" ${test.out?"":"disabled"}>เก็บทั้งหมด</button>
       </div>
-      <span class="alpaca-stage-test-title">ทดสอบระยะขน (เฉพาะแอดมิน)</span>
+
+      <span class="alpaca-stage-test-title">จำนวนอัลปาก้าทดสอบพร้อมกัน</span>
+      <div class="alpaca-count-test-grid">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" data-alpaca-count="${n}" class="${test.count===n?"active":""}">${n}</button>`).join("")}</div>
+
+      <span class="alpaca-stage-test-title">ทดสอบระยะขน (ทุกตัวพร้อมกัน)</span>
       <div class="alpaca-stage-test-grid">${[1,2,3,4].map(n=>`<button type="button" data-alpaca-stage="${n}" class="${test.stage===n?"active":""}">${n}</button>`).join("")}</div>
-      <small class="alpaca-test-note">รอบนี้เป็นโหมดทดสอบภาพเท่านั้น • ไม่บันทึกระบบอัลปาก้าลง Firebase และสมาชิกคนอื่นจะไม่เห็นปุ่มนี้</small>
+      <small class="alpaca-test-note">โหมด Stress Test เฉพาะ Aida • สูงสุด 10 ตัวในฟาร์ม 1 • ยังไม่บันทึกการเป็นเจ้าของอัลปาก้าจริงลง Firebase</small>
     </section>`;
     openModal();
-    $("alpacaWalkBtn").onclick=sendOut;$("alpacaStoreBtn").onclick=store;
+    $("alpacaWalkBtn").onclick=sendOut;
+    $("alpacaStoreBtn").onclick=store;
     document.querySelectorAll("[data-alpaca-stage]").forEach(b=>b.onclick=()=>setStage(b.dataset.alpacaStage));
+    document.querySelectorAll("[data-alpaca-count]").forEach(b=>b.onclick=()=>setCount(b.dataset.alpacaCount));
   }
 
   if($("alpacaTestBtn"))$("alpacaTestBtn").onclick=showPanel;
 
   const priorDraw=draw;
   draw=function(){const result=priorDraw();sync();return result};
+
   const priorSetFarmPlotPage=setFarmPlotPage;
-  setFarmPlotPage=function(page){const result=priorSetFarmPlotPage(page);stopActivity(true);sync();return result};
+  setFarmPlotPage=function(page){const result=priorSetFarmPlotPage(page);clearAll();sync();return result};
+
   const priorReturnToFarm=returnToFarm;
   returnToFarm=function(){const result=priorReturnToFarm();setTimeout(sync,0);return result};
-  document.addEventListener("visibilitychange",()=>{if(document.hidden)stopActivity(true);else sync()});
-  window.addEventListener("resize",()=>{if(alpaca){stopActivity(true);sync()}});
-  window.YAINOO_BUILD="V217-ALPACA-SIDE-SHADOW-PERFORMANCE";
+
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)clearAll();else sync()});
+  window.addEventListener("resize",()=>{if(pets.length){clearAll();sync()}});
+
+  window.YAINOO_BUILD="V220-GRASS-INVENTORY-ALPACA10";
   setTimeout(sync,500);
+})();
+
+
+/* ======================================================================
+   V218 MAJOR FIX — ADMIN GIFT DELIVERY + CAMPAIGN SCROLL FOUNDATION
+   1) Recover pending gifts even when mailbox history is crowded/missing.
+   2) Admin global bundles are delivered as per-member gift documents.
+   3) Every new admin delivery has an audit record.
+   ====================================================================== */
+(function V218_MAJOR_GIFT_DELIVERY_FIX(){
+  const V218_GIFT_MAIL_LIMIT=200;
+  const V218_PENDING_GIFT_LIMIT=200;
+
+  function V218_memberNameByKey(key){
+    const found=Object.keys(MEMBERS).find(name=>memberKeyFromName(name)===String(key||""));
+    return found||String(key||"");
+  }
+  function V218_bundleSummary(items){
+    return (Array.isArray(items)?items:[]).map(i=>`${i.name||i.key} ×${Math.max(1,Number(i.qty)||1)}`).join(" • ");
+  }
+  function V218_validateGiftItems(items){
+    if(!Array.isArray(items)||!items.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");
+    // Test against a normalized clone before anything is written to Firebase.
+    const sample=normalizeState(cloneData(ownState||state),currentMember||"Aida");
+    for(const i of items)addGiftItemToState(sample,{itemType:i.type,itemKey:i.key,qty:i.qty});
+  }
+  function V218_lockButton(id,text){
+    const b=$(id);if(!b)return()=>{};
+    const oldText=b.textContent;b.disabled=true;b.textContent=text||"กำลังส่ง...";
+    return()=>{if(document.body.contains(b)){b.disabled=false;b.textContent=oldText}};
+  }
+
+  /* Mailbox recovery: merge normal mailbox entries with every PENDING gift
+     addressed to this member. If an old mailbox record disappeared or fell
+     outside the visible history, the gift still reappears and can be claimed. */
+  fetchMailboxItems=async function(){
+    if(!cloudReady||!currentMemberKey)return[];
+    const {db,fs}=await getFirebaseContext(),mailRef=fs.collection(db,"mailboxes",currentMemberKey,"items");
+    let rows=[];
+    try{
+      const snap=await fs.getDocs(fs.query(mailRef,fs.orderBy("createdAt","desc"),fs.limit(V218_GIFT_MAIL_LIMIT)));
+      snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    }catch(error){
+      const snap=await fs.getDocs(mailRef);snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+      rows=rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,V218_GIFT_MAIL_LIMIT);
+    }
+
+    try{
+      const giftsRef=fs.collection(db,"gifts");
+      let giftSnap;
+      try{
+        giftSnap=await fs.getDocs(fs.query(giftsRef,fs.where("toKey","==",currentMemberKey),fs.limit(V218_PENDING_GIFT_LIMIT)));
+      }catch(error){
+        console.warn("V218 pending gift recovery query",error);
+        giftSnap=null;
+      }
+      if(giftSnap){
+        const known=new Set(rows.map(x=>String(x.giftId||x.id)));
+        giftSnap.forEach(d=>{
+          const g=d.data()||{};
+          if(g.status!=="pending"||known.has(d.id))return;
+          const items=Array.isArray(g.items)?g.items:[{name:g.itemName||g.itemKey||"ของขวัญ",qty:g.qty||1}];
+          rows.push({
+            id:d.id,giftId:d.id,type:"gift",source:g.fromKey==="aida"?"yainoo":"friend",
+            fromKey:g.fromKey||"",fromName:g.fromName||"",
+            title:g.fromKey==="aida"?"ยัยหนูส่งกล่องของขวัญให้คุณ 🎁":"มีของขวัญส่งถึงคุณ 🎁",
+            text:V218_bundleSummary(items),read:false,resolved:false,recovered:true,createdAt:g.createdAt
+          });
+        });
+      }
+    }catch(error){console.warn("V218 recover pending gifts",error)}
+
+    return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt));
+  };
+
+  /* Individual admin send: atomic gift + mailbox + audit, then verify both
+     documents really exist before showing the success message. */
+  sendAdminBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const unlock=V218_lockButton("adminSendBundleBtn","กำลังตรวจและส่ง...");
+    try{
+      const targetSelect=$("adminBundleTarget"),targetKey=String(targetSelect?.value||"");
+      const targetName=V218_memberNameByKey(targetKey);
+      const validKeys=new Set(Object.keys(MEMBERS).map(memberKeyFromName));
+      const items=selectedAdminBundle(catalog,"admin-bundle");
+      if(!targetKey||!validKeys.has(targetKey))throw new Error("ไม่พบไอดีสมาชิกปลายทาง");
+      V218_validateGiftItems(items);
+
+      const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(fs.collection(db,"gifts"));
+      const mailRef=fs.doc(db,"mailboxes",targetKey,"items",giftRef.id);
+      const auditRef=fs.doc(db,"adminGiftDeliveries",giftRef.id);
+      const cleanItems=items.map(i=>({type:i.type,key:i.key,name:i.name,qty:Math.max(1,Math.floor(Number(i.qty)||1))}));
+      const summary=V218_bundleSummary(cleanItems),batch=fs.writeBatch(db);
+      batch.set(giftRef,{fromKey:"aida",fromName:"Aida",toKey:targetKey,toName:targetName,bundle:true,items:cleanItems,status:"pending",deliveryMode:"individual",createdAt:fs.serverTimestamp()});
+      batch.set(mailRef,{source:"yainoo",type:"gift",giftId:giftRef.id,fromKey:"aida",fromName:"Aida",title:"ยัยหนูส่งกล่องของขวัญให้คุณ 🎁",text:summary,read:false,resolved:false,createdAt:fs.serverTimestamp()});
+      batch.set(auditRef,{deliveryId:giftRef.id,mode:"individual",recipientCount:1,recipients:[targetKey],recipientNames:[targetName],items:cleanItems,status:"committed",createdAt:fs.serverTimestamp()});
+      await batch.commit();
+
+      const [giftCheck,mailCheck]=await Promise.all([fs.getDoc(giftRef),fs.getDoc(mailRef)]);
+      if(!giftCheck.exists()||!mailCheck.exists())throw new Error("ระบบบันทึกของขวัญไม่ครบ กรุณาส่งใหม่");
+      showWeatherToast(`✅ ส่งถึง ${targetName} แล้ว • ตรวจพบกล่องในระบบ`);
+      await showAdminCenter();
+    }catch(error){message("ส่งของไม่ได้",error.message||"กรุณาลองใหม่")}finally{unlock()}
+  };
+
+  /* Global admin send: no longer relies on one broadcast card. Create a real
+     pending gift + mailbox item for EVERY recipient. One batch supports the
+     current roster and 100-member future roster (<500 writes). */
+  sendAdminGlobalBundleGift=async function(catalog){
+    if(adminProfile?.role!=="admin")return;
+    const unlock=V218_lockButton("adminSendGlobalBundleBtn","กำลังส่งให้ทุกคน...");
+    try{
+      const items=selectedAdminBundle(catalog,"admin-global"),includeAida=Boolean($("adminIncludeAida")?.checked);
+      V218_validateGiftItems(items);
+      const recipients=Object.keys(MEMBERS).filter(name=>includeAida||name!=="Aida").map(name=>({name,key:memberKeyFromName(name)}));
+      if(!recipients.length)throw new Error("ไม่พบสมาชิกปลายทาง");
+      if(recipients.length*2+1>480)throw new Error("จำนวนสมาชิกมากเกินชุดส่งเดียว กรุณาแบ่งรอบ");
+
+      const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db),groupRef=fs.doc(fs.collection(db,"adminGiftDeliveries"));
+      const cleanItems=items.map(i=>({type:i.type,key:i.key,name:i.name,qty:Math.max(1,Math.floor(Number(i.qty)||1))}));
+      const summary=V218_bundleSummary(cleanItems);
+      const giftIds=[];
+      recipients.forEach(r=>{
+        const giftRef=fs.doc(fs.collection(db,"gifts")),mailRef=fs.doc(db,"mailboxes",r.key,"items",giftRef.id);
+        giftIds.push(giftRef.id);
+        batch.set(giftRef,{fromKey:"aida",fromName:"Aida",toKey:r.key,toName:r.name,bundle:true,items:cleanItems,status:"pending",deliveryMode:"global-member",deliveryGroupId:groupRef.id,createdAt:fs.serverTimestamp()});
+        batch.set(mailRef,{source:"yainoo",type:"gift",giftId:giftRef.id,fromKey:"aida",fromName:"Aida",title:"ยัยหนูส่งกล่องของขวัญให้คุณ 🎁",text:summary,read:false,resolved:false,deliveryGroupId:groupRef.id,createdAt:fs.serverTimestamp()});
+      });
+      batch.set(groupRef,{deliveryId:groupRef.id,mode:"global",recipientCount:recipients.length,recipients:recipients.map(r=>r.key),recipientNames:recipients.map(r=>r.name),giftIds,items:cleanItems,status:"committed",createdAt:fs.serverTimestamp()});
+      await batch.commit();
+      showWeatherToast(`✅ ส่งกล่องรายคนสำเร็จ ${recipients.length}/${recipients.length} ไอดี`);
+      await showAdminCenter();
+    }catch(error){message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่")}finally{unlock()}
+  };
+
+  /* Small audit viewer so Admin can verify what the app recorded. */
+  async function V218_showGiftAudit(){
+    try{
+      const {db,fs}=await getFirebaseContext();let rows=[];
+      try{
+        const snap=await fs.getDocs(fs.query(fs.collection(db,"adminGiftDeliveries"),fs.orderBy("createdAt","desc"),fs.limit(20)));
+        snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+      }catch(error){
+        const snap=await fs.getDocs(fs.collection(db,"adminGiftDeliveries"));snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+        rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt));rows=rows.slice(0,20);
+      }
+      $("modalContent").innerHTML=`<section class="feature-panel admin-panel v218-gift-audit"><h2>📦 ประวัติการส่งของล่าสุด</h2><p class="feature-subtitle">รายการนี้เป็นหลักฐานที่ Firebase บันทึกหลังส่งสำเร็จ</p><div class="v218-audit-list">${rows.length?rows.map(r=>`<article><b>${r.mode==="global"?`ส่งทุกคน ${Number(r.recipientCount)||0} ไอดี`:`ส่งให้ ${safeHtml((r.recipientNames||[])[0]||"สมาชิก")}`}</b><span>${safeHtml(V218_bundleSummary(r.items||[]))}</span><small>${bangkokTimeText(r.createdAt)} น. • ${safeHtml(r.status||"committed")}</small></article>`).join(""):'<p class="empty-feature">ยังไม่มีประวัติจากระบบ V218</p>'}</div><button id="v218AuditBack" class="secondary-action" type="button">กลับศูนย์แอดมิน</button></section>`;
+      $("v218AuditBack").onclick=showAdminCenter;openModal();
+    }catch(error){message("เปิดประวัติไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+  const V218_showAdminBase=showAdminCenter;
+  showAdminCenter=async function(){
+    await V218_showAdminBase();
+    const panel=document.querySelector(".admin-panel");
+    if(panel&&!$("v218GiftAuditBtn")){
+      const btn=document.createElement("button");btn.id="v218GiftAuditBtn";btn.type="button";btn.className="secondary-action";btn.textContent="📦 ตรวจประวัติการส่งของล่าสุด";
+      btn.onclick=V218_showGiftAudit;panel.insertBefore(btn,panel.children[2]||null);
+    }
+  };
+
+  window.YAINOO_BUILD="V218-MAJOR-GIFT-CAMPAIGN-SCROLL-FIX";
+  console.info("V218 major gift delivery recovery loaded");
+})();
+
+
+/* ======================================================================
+   V219 — Friend Farm Forage Drops (green / yellow / red)
+   - Only visible while visiting a friend's farm
+   - Never appears in your own farm
+   - Works on farms 1–4
+   - Aida's farm has noticeably better spawn odds, but still randomized hourly
+   - Drops are collectible-only items and go into Specials inventory
+   ====================================================================== */
+(function V219_FRIEND_FORAGE_FEATURE(){
+  const V219_FORAGE_ITEMS={
+    friendGrassGreen:{name:"หญ้าสีเขียว",image:"friend-grass-green.png?v=1",kind:"forage",group:"friendForage",description:"พบได้จากการเยี่ยมสวนเพื่อน • เจอบ่อยที่สุด"},
+    friendGrassYellow:{name:"หญ้าสีเหลือง",image:"friend-grass-yellow.png?v=1",kind:"forage",group:"friendForage",description:"พบได้จากการเยี่ยมสวนเพื่อน • เจอรองลงมา"},
+    friendGrassRed:{name:"หญ้าสีแดง",image:"friend-grass-red.png?v=1",kind:"forage",group:"friendForage",description:"พบได้จากการเยี่ยมสวนเพื่อน • หายากที่สุด"}
+  };
+  Object.assign(SPECIAL_ITEMS,V219_FORAGE_ITEMS);
+
+  const V219_POINTS={
+    1:[[18,28],[32,23],[50,28],[68,22],[22,49],[42,46],[62,50],[77,42],[31,68],[56,67]],
+    2:[[18,28],[32,23],[50,28],[68,22],[22,49],[42,46],[62,50],[77,42],[31,68],[56,67]],
+    3:[[18,28],[32,23],[50,28],[68,22],[22,49],[42,46],[62,50],[77,42],[31,68],[56,67]],
+    4:[[18,28],[32,23],[50,28],[68,22],[22,49],[42,46],[62,50],[77,42],[31,68],[56,67]]
+  };
+
+  function V219_hash(str){let h=2166136261>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  function V219_rng(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let x=Math.imul(t^t>>>15,1|t);x^=x+Math.imul(x^x>>>7,61|x);return ((x^x>>>14)>>>0)/4294967296}}
+  function V219_weightedKey(rand,pairs){const total=pairs.reduce((s,p)=>s+p[1],0);let roll=rand()*total;for(const [key,w] of pairs){roll-=w;if(roll<=0)return key}return pairs[pairs.length-1][0]}
+  function V219_shuffle(arr,rand){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+  function V219_farmNo(){try{return Math.max(1,Math.min(4,Number(typeof currentFarmNo==='function'?currentFarmNo():1)||1))}catch{return 1}}
+  function V219_hourKey(){return Math.floor(gameNow()/3600000)}
+  function V219_claimStore(stateObj){if(!stateObj.friendForageClaims||typeof stateObj.friendForageClaims!=="object")stateObj.friendForageClaims={};return stateObj.friendForageClaims}
+  function V219_pruneClaims(stateObj){const store=V219_claimStore(stateObj),nowHour=V219_hourKey();Object.keys(store).forEach(key=>{const m=String(key).match(/:(\d+)$/);if(m&&nowHour-Number(m[1])>72)delete store[key]})}
+  function V219_friendKey(){return String(visitContext?.memberKey||"")}
+  function V219_friendName(){return String(visitContext?.name||"")}
+  function V219_isAidaFarm(){return V219_friendKey()==='aida'||V219_friendName().toLowerCase()==='aida'}
+  function V219_dropId(slot){return `v219:${currentMemberKey}:${V219_friendKey()}:f${V219_farmNo()}:s${slot}:h${V219_hourKey()}`}
+  function V219_hasClaimed(id){const store=V219_claimStore(ownState||state||{});return Boolean(store[id])}
+  function V219_markClaimed(id){const s=ownState||state;if(!s)return;const store=V219_claimStore(s);store[id]=gameNow();V219_pruneClaims(s)}
+
+  function V219_buildDrops(){
+    if(!visitContext||!currentMemberKey)return[];
+    const seed=V219_hash(`${currentMemberKey}|${V219_friendKey()}|farm${V219_farmNo()}|hour${V219_hourKey()}`),rand=V219_rng(seed);
+    const isAida=V219_isAidaFarm();
+    let count=0;
+    if(isAida){if(rand()<0.72)count++;if(rand()<0.46)count++;if(rand()<0.22)count++;}
+    else{if(rand()<0.38)count++;if(rand()<0.14)count++;}
+    if(count<=0)return[];
+    const points=V219_shuffle(V219_POINTS[V219_farmNo()]||V219_POINTS[1],rand);
+    const drops=[];
+    for(let i=0;i<count;i++){
+      const itemKey=V219_weightedKey(rand,isAida?[["friendGrassGreen",64],["friendGrassYellow",24],["friendGrassRed",12]]:[["friendGrassGreen",72],["friendGrassYellow",21],["friendGrassRed",7]]);
+      const point=points[i%points.length]||[50,50];
+      const id=V219_dropId(i);
+      if(V219_hasClaimed(id))continue;
+      drops.push({
+        id,key:itemKey,name:V219_FORAGE_ITEMS[itemKey].name,image:V219_FORAGE_ITEMS[itemKey].image,
+        x:point[0]+(rand()*3-1.5),y:point[1]+(rand()*3-1.5),
+        rarity:itemKey==='friendGrassRed'?'rare':itemKey==='friendGrassYellow'?'uncommon':'common'
+      });
+    }
+    return drops;
+  }
+
+  function V219_clear(){document.querySelectorAll('.friend-forage-drop,.friend-forage-tip').forEach(n=>n.remove())}
+
+  function V219_render(){
+    V219_clear();
+    if(!visitContext)return;
+    const layer=$('aidaFarmPetLayer');
+    if(!layer)return;
+    const drops=V219_buildDrops();
+    if(!drops.length)return;
+    const tip=document.createElement('div');
+    tip.className='friend-forage-tip';
+    tip.textContent=V219_isAidaFarm()?'🌿 สวนไอด้ามีของดรอปให้ลุ้นมากขึ้น':'🌿 มีของดรอปซ่อนอยู่ในสวนเพื่อน';
+    layer.appendChild(tip);
+    drops.forEach(drop=>{
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className=`friend-forage-drop ${drop.key==='friendGrassGreen'?'friend-forage-green':drop.key==='friendGrassYellow'?'friend-forage-yellow':'friend-forage-red'}`;
+      btn.dataset.rarity=drop.rarity;
+      btn.style.left=`${drop.x}%`;
+      btn.style.top=`${drop.y}%`;
+      btn.innerHTML=`<img src="${drop.image}" alt="${safeHtml(drop.name)}">`;
+      btn.onclick=()=>V219_claim(drop);
+      layer.appendChild(btn);
+    });
+  }
+
+  async function V219_claim(drop){
+    if(!visitContext||!currentMemberKey)return;
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,'saves',currentMemberKey),profileRef=fs.doc(db,'publicProfiles',currentMemberKey);
+      let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+        const s=normalizeState(snap.data(),currentMember);
+        assertCurrentCloudSession(snap.data(),currentMember);
+        const store=V219_claimStore(s);
+        if(store[drop.id])throw new Error('ของดรอปชิ้นนี้ถูกเก็บไปแล้ว');
+        s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;
+        store[drop.id]=gameNow();V219_pruneClaims(s);
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);saveLocalOnly(ownState);V219_markClaimed(drop.id);V219_render();
+      const toast=document.createElement("div");
+      toast.className="friend-grass-collect-toast";
+      toast.innerHTML=`<img src="${drop.image}" alt=""><span>ได้รับ <b>${safeHtml(drop.name)}</b> ×1 แล้ว</span>`;
+      document.body.appendChild(toast);
+      requestAnimationFrame(()=>toast.classList.add("show"));
+      setTimeout(()=>{toast.classList.remove("show");setTimeout(()=>toast.remove(),260)},2200);
+    }catch(error){
+      message('เก็บของดรอปไม่ได้',error.message||'กรุณาลองใหม่');
+    }
+  }
+
+  const __v219_draw=draw;
+  draw=function(){const r=__v219_draw.apply(this,arguments);try{V219_render()}catch(error){console.warn('V219 render forage',error)}return r};
+  const __v219_return=returnFromFriendVisit;
+  returnFromFriendVisit=function(){V219_clear();return __v219_return.apply(this,arguments)};
+  const __v219_visit=visitFriend;
+  visitFriend=async function(){const r=await __v219_visit.apply(this,arguments);setTimeout(()=>{try{V219_render()}catch(error){console.warn('V219 visit render',error)}},60);return r};
+
+  window.YAINOO_BUILD='V219-FRIEND-FORAGE-DROPS';
+})();
+
+
+/* ======================================================================
+   V220 — Grass inventory/use/admin stock integration
+   ====================================================================== */
+(function V220_GRASS_INVENTORY_AND_ADMIN(){
+  const KEYS=["friendGrassGreen","friendGrassYellow","friendGrassRed"];
+  const KEYSET=new Set(KEYS);
+
+  async function ensureAdminGrassStock(){
+    if(currentMember!=="Aida"||adminProfile?.role!=="admin"||!ownState)return;
+    let changed=false;
+    if(!ownState.specials||typeof ownState.specials!=="object")ownState.specials={};
+    KEYS.forEach(key=>{
+      if((Number(ownState.specials[key])||0)<ADMIN_STOCK_QTY){
+        ownState.specials[key]=ADMIN_STOCK_QTY;changed=true;
+      }
+    });
+    if(changed){
+      state=ownState;saveLocalOnly(ownState);
+      try{await settlePendingCloudSave();save()}catch(error){console.warn("V220 admin grass stock save",error)}
+    }
+  }
+
+  function grassToast(key,text){
+    const item=SPECIAL_ITEMS[key];if(!item)return;
+    const toast=document.createElement("div");
+    toast.className="friend-grass-collect-toast";
+    toast.innerHTML=`<img src="${item.image}" alt=""><span>${safeHtml(text)}</span>`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(()=>toast.classList.add("show"));
+    setTimeout(()=>{toast.classList.remove("show");setTimeout(()=>toast.remove(),260)},2100);
+  }
+
+  async function useGrass(key){
+    if(!KEYSET.has(key)||!cloudReady||!currentMemberKey)return;
+    const item=SPECIAL_ITEMS[key];
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
+      let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
+        const have=Number(s.specials?.[key])||0;
+        if(have<1)throw new Error(`ไม่มี ${item.name} ในกระเป๋า`);
+        s.specials[key]=have-1;
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;
+      saveLocalOnly(ownState);
+      grassToast(key,`ใช้ ${item.name} ×1 แล้ว`);
+      inventory("specials");
+    }catch(error){message("ใช้หญ้าไม่ได้",error.message||"กรุณาลองใหม่")}
+  }
+
+  function injectGrassUseButtons(){
+    const panel=document.querySelector(".inventory-panel");
+    if(!panel)return;
+    panel.querySelectorAll(".inventory-item").forEach(card=>{
+      const img=card.querySelector("img");
+      if(!img)return;
+      const src=String(img.getAttribute("src")||"");
+      const key=KEYS.find(k=>src.includes(SPECIAL_ITEMS[k]?.image?.split("?")[0]||"__none__"));
+      if(!key||card.querySelector("[data-use-friend-grass]"))return;
+      const count=Number((ownState||state)?.specials?.[key])||0;
+      const btn=document.createElement("button");
+      btn.type="button";
+      btn.dataset.useFriendGrass=key;
+      btn.className="friend-grass-use-btn";
+      btn.textContent=count>0?"ใช้ ×1":"ไม่มี";
+      btn.disabled=count<=0;
+      btn.onclick=()=>useGrass(key);
+      card.appendChild(btn);
+    });
+  }
+
+  const priorInventory=inventory;
+  inventory=function(tab="crops"){
+    if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminGrassStock().catch(()=>{});
+    const result=priorInventory(tab);
+    if(tab==="specials")setTimeout(injectGrassUseButtons,0);
+    return result;
+  };
+
+  const priorAdminCenter=showAdminCenter;
+  showAdminCenter=async function(){
+    await ensureAdminGrassStock();
+    return priorAdminCenter.apply(this,arguments);
+  };
+
+  // Once admin profile/state are ready, seed the three new items to 9999 for Aida.
+  let tries=0;
+  const seedTimer=setInterval(()=>{
+    tries++;
+    if(currentMember==="Aida"&&adminProfile?.role==="admin"&&ownState){
+      ensureAdminGrassStock().finally(()=>clearInterval(seedTimer));
+    }else if(tries>40)clearInterval(seedTimer);
+  },500);
+
+  window.YAINOO_BUILD="V220-GRASS-INVENTORY-ALPACA10";
 })();
