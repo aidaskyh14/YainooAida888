@@ -41,7 +41,6 @@
       <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
       <div id="wildAlpacaLayer" class="wild-alpaca-layer" aria-label="อัลปาก้าเบบี้ที่ปล่อยเดินเล่น"></div>
       <button id="alpacaPenBtn" class="alpaca-entry-button hidden" type="button"><span>🦙</span><b>คอกอัลปาก้า</b></button>
-      <button id="releaseBabyAlpacaBtn" class="alpaca-release-button hidden" type="button"><span>🎀</span><b>ปล่อยอัลปาก้าเบบี้</b></button>
 <button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
       <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
@@ -114,6 +113,8 @@
             <div class="hud-menu-section-items">
               <button id="forecastBtn" class="hud-menu-item" type="button"><span>🔮</span><div><b>ดูพยากรณ์</b><small>เช็กสภาพอากาศของสวน</small></div><i>›</i></button>
               <button id="modeBtn" class="hud-menu-item" type="button"><span>🪄</span><div><b>เปลี่ยนโหมดสวน</b><small>เลือกบรรยากาศที่ต้องการ</small></div><i>›</i></button>
+              <button id="releaseBabyAlpacaBtn" class="hud-menu-item hidden" type="button"><span>🎀</span><div><b>ปล่อยอัลปาก้าเบบี้</b><small>Aida • เลือก 5 สี สูงสุดครั้งละ 10 ตัว</small></div><i>›</i></button>
+              <button id="manageReleasedAlpacaBtn" class="hud-menu-item hidden" type="button"><span>🧹</span><div><b>จัดการเบบี้ที่ปล่อย</b><small>Aida • ลบรายตัวหรือล้างทั้งหมด</small></div><i>›</i></button>
             </div>
           </section>
 
@@ -178,8 +179,9 @@
 
         <button id="alpacaMedicineHotspot" class="alpaca-building-hotspot alpaca-medicine-hotspot" type="button"><span>💊</span><b>คลังยาอัลปาก้า</b></button>
         <button id="alpacaFoodHotspot" class="alpaca-building-hotspot alpaca-food-hotspot" type="button"><span>🌾</span><b>คราฟอาหาร</b></button>
+        <div id="alpacaTroughVisual" class="alpaca-trough-visual" aria-hidden="true"></div>
         <button id="alpacaTroughHotspot" class="alpaca-trough-hotspot" type="button" aria-label="รางอาหารอัลปาก้า"></button>
-        <div id="alpacaTroughStock" class="alpaca-trough-stock"><span>อาหารในราง</span><strong>0 เสิร์ฟ</strong></div>
+        <div id="alpacaTroughStock" class="alpaca-trough-stock"><strong>0 เสิร์ฟ</strong></div>
 
         <div class="alpaca-pen-bottom-actions">
           <button id="alpacaManageBtn" type="button"><span>📋</span><b>จัดการอัลปาก้า</b></button>

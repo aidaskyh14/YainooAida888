@@ -5625,3 +5625,216 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .game-screen.plot-page-2 .alpaca-entry-button,.game-screen.plot-page-3 .alpaca-entry-button,.game-screen.plot-page-4 .alpaca-entry-button{display:flex!important}
 .game-screen.visiting-friend .alpaca-entry-button{display:none!important}
 .alpaca-sprite-preview{display:block;width:62px;max-height:76px;justify-self:center;align-self:center;background-repeat:no-repeat;background-size:400% 400%;background-position:0 0;filter:drop-shadow(0 4px 4px rgba(44,25,39,.18))}.alpaca-sprite-preview.large{width:clamp(72px,20vw,112px);max-height:128px}.alpaca-manage-card>.alpaca-sprite-preview,.alpaca-sire-card>.alpaca-sprite-preview{width:62px;max-height:70px}.alpaca-detail-hero>.alpaca-sprite-preview{background-color:#fff8eb;border:1px solid #ead8c1;border-radius:18px;background-origin:content-box;background-clip:content-box;padding:7px}.alpaca-release-color-grid .alpaca-sprite-preview{width:44px;max-height:56px}
+
+/* ======================================================================
+   ALPACA PEN FIX — alignment / normalized sprites / visible trough / grid
+   ====================================================================== */
+.alpaca-pen-name-button{
+  left:27%!important;
+  top:17.4%!important;
+  width:46%!important;
+  height:7.4%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 4%!important;
+  color:#6a4028!important;
+  font-family:"Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif!important;
+  font-size:clamp(14px,4vw,27px)!important;
+  font-weight:900!important;
+  line-height:1.05!important;
+  letter-spacing:.01em!important;
+  text-shadow:0 1px 0 rgba(255,246,215,.85),0 2px 2px rgba(76,42,23,.15)!important;
+  transform:rotate(-.5deg)!important;
+}
+.alpaca-pen-count{
+  top:26.4%!important;
+  font-family:"Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif!important;
+}
+.alpaca-building-hotspot{
+  width:26%!important;
+  justify-content:center!important;
+  top:35.7%!important;
+  font-family:"Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif!important;
+}
+.alpaca-medicine-hotspot{left:12%!important;right:auto!important}
+.alpaca-food-hotspot{right:12%!important;left:auto!important}
+
+/* Keep all adults the same visual height, regardless of source-sheet ratio. */
+.alpaca-pen-animal{
+  animation:none!important;
+  translate:-50% -86%;
+  overflow:visible;
+}
+.alpaca-pen-animal.adult{
+  width:clamp(72px,16vw,108px)!important;
+  height:clamp(100px,22.5vw,152px)!important;
+  aspect-ratio:auto!important;
+}
+.alpaca-pen-animal.baby{
+  width:clamp(38px,8.7vw,60px)!important;
+  height:clamp(53px,12.3vw,82px)!important;
+  aspect-ratio:auto!important;
+}
+.alpaca-pen-animal .alpaca-sprite,
+.wild-alpaca-baby .alpaca-sprite{
+  position:absolute!important;
+  left:50%!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:0!important;
+  height:100%!important;
+  width:auto!important;
+  aspect-ratio:var(--alpaca-frame-ratio,.711)!important;
+  transform:translateX(-50%) scaleX(var(--alpaca-flip,1))!important;
+  transform-origin:center bottom!important;
+  background-repeat:no-repeat!important;
+  background-size:400% 400%;
+  image-rendering:auto;
+  filter:drop-shadow(0 2px 2px rgba(40,24,24,.14));
+}
+.alpaca-status-stack{
+  top:-15px!important;
+  max-width:100px;
+  justify-content:center;
+  flex-wrap:nowrap;
+}
+.alpaca-pen-animal.baby .alpaca-status-stack{top:-12px!important}
+.alpaca-pen-animal.is-walking::after{opacity:.92}
+
+/* Visible 5-slot food placement directly on the trough artwork. */
+.alpaca-trough-visual{
+  position:absolute;
+  z-index:19;
+  left:21%;
+  right:21%;
+  bottom:10.2%;
+  height:10.5%;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:1.5%;
+  align-items:end;
+  pointer-events:none;
+}
+.alpaca-trough-visual-slot{
+  min-width:0;
+  height:100%;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+.alpaca-trough-visual-slot img{
+  display:block;
+  width:min(95%,58px);
+  height:min(95%,58px);
+  object-fit:contain;
+  filter:drop-shadow(0 3px 2px rgba(38,22,27,.28));
+}
+.alpaca-trough-hotspot{left:18%!important;right:18%!important;bottom:8.2%!important;height:17%!important;z-index:21!important}
+.alpaca-trough-stock{
+  left:auto!important;
+  right:18.5%!important;
+  bottom:8.8%!important;
+  translate:none!important;
+  padding:3px 7px!important;
+  min-width:0!important;
+  border-radius:999px!important;
+  pointer-events:none;
+}
+.alpaca-trough-stock strong{font-size:clamp(8px,2vw,11px)!important;line-height:1!important}
+
+/* 3 cards per row for 24-animal pen management. */
+.alpaca-manage-list{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  align-items:stretch;
+  max-height:58vh!important;
+}
+.alpaca-manage-card.compact{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:3px!important;
+  min-width:0!important;
+  padding:6px 4px!important;
+  text-align:center!important;
+  border-radius:13px!important;
+}
+.alpaca-manage-card.compact .alpaca-sprite-preview{
+  width:clamp(42px,12vw,64px)!important;
+  height:clamp(56px,16vw,84px)!important;
+  aspect-ratio:auto!important;
+  background-size:400% 400%;
+  background-position:0 0;
+  background-repeat:no-repeat;
+  margin:0 auto!important;
+}
+.alpaca-manage-card.compact h3{
+  width:100%;
+  margin:0!important;
+  font-size:clamp(8px,2.15vw,11px)!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.alpaca-manage-card.compact p{
+  margin:0!important;
+  font-size:clamp(6px,1.65vw,8px)!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  width:100%;
+}
+.alpaca-manage-mini-icons{height:19px;display:flex;align-items:center;justify-content:center;gap:1px}
+.alpaca-manage-mini-icons img{width:18px;height:18px;object-fit:contain}
+.alpaca-manage-open{
+  width:100%;
+  min-height:27px!important;
+  margin-top:auto;
+  border:0;
+  border-radius:8px;
+  background:#785087;
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}
+
+/* Released baby management in Aida shortcut. */
+.alpaca-wild-manage-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  max-height:50vh;
+  overflow:auto;
+  margin:8px 0;
+}
+.alpaca-wild-manage-grid article{
+  display:grid;
+  justify-items:center;
+  gap:3px;
+  border:1px solid #e0c9af;
+  border-radius:12px;
+  background:#fff8eb;
+  padding:6px 4px;
+}
+.alpaca-wild-manage-grid .alpaca-sprite-preview{width:46px;height:62px;aspect-ratio:auto;background-size:400% 400%;background-repeat:no-repeat}
+.alpaca-wild-manage-grid b{font-size:9px}.alpaca-wild-manage-grid small{font-size:7px;color:#8e7480}.alpaca-wild-manage-grid button{width:100%;min-height:28px;border:0;border-radius:8px;background:#a34c62;color:#fff;font-size:8px;font-weight:900}
+
+/* Wild babies use the same directional walker and normalized baby height. */
+.wild-alpaca-baby{
+  width:clamp(38px,8.7vw,60px)!important;
+  height:clamp(53px,12.3vw,82px)!important;
+  aspect-ratio:auto!important;
+  animation:none!important;
+  translate:-50% -86%;
+}
+.wild-alpaca-baby .wild-baby-badge{right:-3px!important;top:-8px!important}
+
+@media (max-width:390px){
+  .alpaca-pen-name-button{top:17.7%!important;left:26%!important;width:48%!important;font-size:clamp(13px,4vw,20px)!important}
+  .alpaca-pen-count{top:26.6%!important}
+  .alpaca-building-hotspot{top:35.8%!important;width:27%!important}
+  .alpaca-medicine-hotspot{left:10.5%!important}.alpaca-food-hotspot{right:10.5%!important}
+  .alpaca-trough-visual{left:20%!important;right:20%!important}
+}
