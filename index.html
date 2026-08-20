@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=V236-ALPACA-MIXED">
+  <link rel="stylesheet" href="style.css?v=ALPACA-PEN-SYSTEM">
 </head>
 <body>
   <main id="app">
@@ -39,7 +39,9 @@
         <div id="plots" class="plots"></div>
       </section>
       <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
-      <button id="alpacaTestBtn" class="alpaca-test-button hidden" type="button">🦙 อัลปาก้าที่คุณมี</button>
+      <div id="wildAlpacaLayer" class="wild-alpaca-layer" aria-label="อัลปาก้าเบบี้ที่ปล่อยเดินเล่น"></div>
+      <button id="alpacaPenBtn" class="alpaca-entry-button hidden" type="button"><span>🦙</span><b>คอกอัลปาก้า</b></button>
+      <button id="releaseBabyAlpacaBtn" class="alpaca-release-button hidden" type="button"><span>🎀</span><b>ปล่อยอัลปาก้าเบบี้</b></button>
 <button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
       <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
@@ -158,7 +160,37 @@
     </section>
 
 
-    <!-- ===== Miss Alpaca Universe (V227) ===== -->
+
+
+    <!-- ===== คอกอัลปาก้า ===== -->
+    <section id="alpacaPenScreen" class="screen alpaca-pen-screen hidden" aria-label="คอกอัลปาก้า">
+      <div id="alpacaPenStage" class="alpaca-pen-stage">
+        <button id="alpacaPenBackBtn" class="alpaca-pen-top-btn alpaca-pen-back" type="button"><span>🌿</span><b>กลับไปที่แปลงผัก</b></button>
+        <button id="alpacaPenSwitchBtn" class="alpaca-pen-top-btn alpaca-pen-switch" type="button"><b>ไปที่คอกต่อไป</b><span>›</span></button>
+        <button id="alpacaHappinessBtn" class="alpaca-happiness-button" type="button" aria-label="คะแนนความสุขรวม">
+          <img src="alpaca-blue-heart.png" alt="คะแนนความสุข"><span>ความสุขรวม</span><strong id="alpacaHappinessTotal">0</strong>
+        </button>
+        <button id="alpacaPenNameBtn" class="alpaca-pen-name-button" type="button">คอกอัลปาก้า</button>
+        <div id="alpacaPenCount" class="alpaca-pen-count">0 / 24</div>
+
+        <div id="alpacaPenEventLayer" class="alpaca-pen-event-layer" aria-label="เหตุการณ์ในคอก"></div>
+        <div id="alpacaPenAnimalLayer" class="alpaca-pen-animal-layer" aria-label="อัลปาก้าในคอก"></div>
+
+        <button id="alpacaMedicineHotspot" class="alpaca-building-hotspot alpaca-medicine-hotspot" type="button"><span>💊</span><b>คลังยาอัลปาก้า</b></button>
+        <button id="alpacaFoodHotspot" class="alpaca-building-hotspot alpaca-food-hotspot" type="button"><span>🌾</span><b>คราฟอาหาร</b></button>
+        <button id="alpacaTroughHotspot" class="alpaca-trough-hotspot" type="button" aria-label="รางอาหารอัลปาก้า"></button>
+        <div id="alpacaTroughStock" class="alpaca-trough-stock"><span>อาหารในราง</span><strong>0 เสิร์ฟ</strong></div>
+
+        <div class="alpaca-pen-bottom-actions">
+          <button id="alpacaManageBtn" type="button"><span>📋</span><b>จัดการอัลปาก้า</b></button>
+          <button id="alpacaFactoryBtn" type="button"><span>🏭</span><b>โรงงานแปรรูป</b></button>
+          <button id="alpacaAdminTestBtn" class="hidden" type="button"><span>🧪</span><b>ทดลอง</b></button>
+          <button id="alpacaRankBtn" class="hidden" type="button"><span>🏆</span><b>Rank</b></button>
+        </div>
+      </div>
+    </section>
+
+        <!-- ===== Miss Alpaca Universe (V227) ===== -->
     <section id="missAlpacaScreen" class="screen miss-alpaca-screen hidden" aria-label="มิสอัลปาก้ายูนิเวิร์ส">
       <div id="missAlpacaMainView" class="miss-alpaca-view miss-alpaca-main-view">
         <div class="miss-alpaca-stage-art" aria-hidden="true"></div>
@@ -428,7 +460,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=V236-ALPACA-MIXED"></script>
+  <script src="game.js?v=ALPACA-PEN-SYSTEM"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
