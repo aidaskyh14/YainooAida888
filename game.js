@@ -2078,6 +2078,15 @@ function ensureDailyLimitsFor(target){
 function incrementMissionOn(target,id,amount=1){
   if(!target)return;
   ensureMissionStateFor(target);
+  const alias={
+    openMysteryBox:"dailyOpenAnyBox",
+    feedJellyfish:"dailyFeedJellyfish",
+    collectAnimalProducts:"dailyCollectSpiritProducts",
+    craftFood:"dailyCraftFood",
+    stealFriendCrop:"dailyFriendMagicOrSteal",
+    blackMagicFriend:"dailyFriendMagicOrSteal"
+  };
+  id=alias[id]||id;
   const def=missionDefs().find(m=>m.id===id);if(!def)return;
   target.missions.progress[id]=Math.min(Number(def.target)||0,(Number(target.missions.progress[id])||0)+Math.max(0,Number(amount)||0));
 }
@@ -2430,8 +2439,8 @@ async function showMissions(){
 
       /* Keep save progress repaired too, but the UI below does NOT depend on it. */
       ensureMissionStateFor(target);
-      target.missions.progress.fishingWeight200=fishingToday;
-      target.missions.progress.fishingWeight800=fishingToday;
+      target.missions.progress.dailyFishingWeight500=fishingToday;
+      target.missions.progress.dailyFishingWeight500=fishingToday;
       save();
     }
   }catch(e){
@@ -2441,13 +2450,13 @@ async function showMissions(){
   const defs=missionDefs(),m=target.missions;
   $("modalContent").innerHTML=`<section class="feature-panel mission-panel"><h2>👻 ภารกิจประจำวัน</h2><p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. ตามเวลาไทย</p><div class="mission-list">${
     defs.map((def,index)=>{
-      const rawProgress=(def.id==="fishingWeight200"||def.id==="fishingWeight800") && fishingToday!==null
+      const rawProgress=(def.id==="dailyFishingWeight500"||def.id==="dailyFishingWeight500") && fishingToday!==null
         ? fishingToday
         : Number(m.progress[def.id])||0;
       const progress=Math.min(def.target,rawProgress);
       const done=rawProgress>=def.target;
       const claimed=Boolean(m.claimed[def.id]);
-      const display=(def.id==="fishingWeight200"||def.id==="fishingWeight800")
+      const display=(def.id==="dailyFishingWeight500"||def.id==="dailyFishingWeight500")
         ? `${Number(rawProgress).toFixed(2)}/${def.target}`
         : `${progress}/${def.target}`;
       return `<div class="mission-item mission-item-v1"><span class="mission-number">${index+1}</span><span class="mission-text"><b>${safeHtml(def.title)}</b><small>${display} • รางวัล ${def.reward} กุศล</small></span><button type="button" data-claim-mission="${def.id}" ${!done||claimed?"disabled":""}>${claimed?"รับแล้ว":done?"รับรางวัล":"กำลังทำ"}</button></div>`;
@@ -2463,7 +2472,7 @@ async function claimMissionReward(id){
   try{
     const {db,fs}=await getFirebaseContext();
     const ref=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
-    const isFishing=id==="fishingWeight200"||id==="fishingWeight800";
+    const isFishing=id==="dailyFishingWeight500"||id==="dailyFishingWeight500";
     const dateKey=currentBangkokDateKey();
     const dailyRef=isFishing?fs.doc(db,"fishingDaily",dateKey):null;
     let nextState;
@@ -2481,8 +2490,8 @@ async function claimMissionReward(id){
         const dashboardWeight=Number(Number(dSnap.exists()?dSnap.data()?.scores?.[currentMemberKey]||0:0).toFixed(2));
 
         /* Dashboard is authoritative for both fishing missions. */
-        s.missions.progress.fishingWeight200=dashboardWeight;
-        s.missions.progress.fishingWeight800=dashboardWeight;
+        s.missions.progress.dailyFishingWeight500=dashboardWeight;
+        s.missions.progress.dailyFishingWeight500=dashboardWeight;
         actualProgress=dashboardWeight;
       }
 
@@ -2574,7 +2583,7 @@ function collectAnimal(sceneName,index){
   if(animal.bonus){const merit=randInt(1,2);animal.bonus=false;s.merit+=merit;save();updateMeritUI();showAnimalDetails(sceneName,index);showWeatherToast(`⭐ +${merit} กุศล`);return}
   if(gameNow()<Number(animal.readyAt||0)){message("ยังผลิตไม่เสร็จ",`${item.productName} พร้อมใน ${formatHM(animal.readyAt-gameNow())}`);return}
   let qty=1;if(Math.random()<.12)qty=Math.random()<.82?2:3;
-  s.animalProducts[item.product]=(s.animalProducts[item.product]||0)+qty;animal.readyAt=gameNow()+item.productionMs;incrementMissionOn(s,"collectAnimalProducts",qty);save();closeModal();renderAnimalScene(sceneName);message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`);
+  s.animalProducts[item.product]=(s.animalProducts[item.product]||0)+qty;animal.readyAt=gameNow()+item.productionMs;incrementMissionOn(s,"collectAnimalProducts",1);save();closeModal();renderAnimalScene(sceneName);message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`);
 }
 function usePestleOnAnimal(sceneName,index,key){
   const s=ownState||state,item=PESTLE_ITEMS[key],animal=s.animals[sceneName][index];if(!item||!animal||animalIsExpired(animal)||specialCount(key)<=0)return;
@@ -4870,7 +4879,7 @@ function showFishingResultModal(slot){
   const now=gameNow(),expired=now>Number(slot.claimDeadline||0),owner=slot.ownerKey===currentMemberKey;$("modalContent").innerHTML=`<section class="feature-panel"><h2>${expired?"💨 ปลาหนีไปแล้ว":"🎣 สำเร็จ ปลาติดเบ็ดแล้วแม่!"}</h2>${expired?'<p class="feature-subtitle">ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด</p>':`<div class="fishing-result-grid">${slot.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><h3>${safeHtml(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(slot.totalWeight).toFixed(2)} lbs</div><p class="feature-subtitle">${owner?`เหลือเวลารับ ${fishingCountdown(slot.claimDeadline-now)}`:`ของ ${safeHtml(slot.ownerName)} • คุณดูผลได้แต่รับแทนไม่ได้`}</p>${owner?'<button id="claimFishingWeightBtn" class="fishing-claim-button" type="button">รับน้ำหนักเข้าการแข่งขัน</button>':""}`}</section>`;if($("claimFishingWeightBtn"))$("claimFishingWeightBtn").onclick=()=>claimFishingCatch(slot.slot-1);openModal();
 }
 async function claimFishingCatch(index){
-  const now=gameNow(),dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey),dailyRef=fs.doc(db,"fishingDaily",dateKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap,dailySnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)]);if(!slotSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบผลการตกปลา");const slot=normalizeFishingSlot(slotSnap.data(),index);if(slot.ownerKey!==currentMemberKey)throw new Error("ปลาชุดนี้ไม่ใช่ของคุณ");if(now<slot.finishAt)throw new Error("ปลายังไม่ติดเบ็ด");if(now>slot.claimDeadline)throw new Error("ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด");if(slot.status==="claimed")throw new Error("รับน้ำหนักรอบนี้แล้ว");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const daily=dailySnap.exists()?dailySnap.data():{scores:{},names:{}};daily.scores=daily.scores&&typeof daily.scores==="object"?daily.scores:{};daily.names=daily.names&&typeof daily.names==="object"?daily.names:{};daily.scores[currentMemberKey]=Number(((Number(daily.scores[currentMemberKey])||0)+slot.totalWeight).toFixed(2));daily.names[currentMemberKey]=currentMember;ensureMissionStateFor(s);s.missions.progress.fishingWeight200=Number(daily.scores[currentMemberKey]||0);s.missions.progress.fishingWeight800=Number(daily.scores[currentMemberKey]||0);slot.status="claimed";slot.claimedAt=now;next=s;newSlot=slot;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dailyRef,{dateKey,scores:daily.scores,names:daily.names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slot,updatedAt:fs.serverTimestamp()},{merge:false});if(playerSnap.exists())tx.delete(playerRef)});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=newSlot;closeModal();drawFishingPond();showWeatherToast(`🏆 รับน้ำหนัก ${Number(newSlot.totalWeight).toFixed(2)} lbs เข้าการแข่งขันแล้ว`)}catch(error){message("รับน้ำหนักไม่ได้",error.message||"กรุณาลองใหม่")}
+  const now=gameNow(),dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey),dailyRef=fs.doc(db,"fishingDaily",dateKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap,dailySnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)]);if(!slotSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบผลการตกปลา");const slot=normalizeFishingSlot(slotSnap.data(),index);if(slot.ownerKey!==currentMemberKey)throw new Error("ปลาชุดนี้ไม่ใช่ของคุณ");if(now<slot.finishAt)throw new Error("ปลายังไม่ติดเบ็ด");if(now>slot.claimDeadline)throw new Error("ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด");if(slot.status==="claimed")throw new Error("รับน้ำหนักรอบนี้แล้ว");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const daily=dailySnap.exists()?dailySnap.data():{scores:{},names:{}};daily.scores=daily.scores&&typeof daily.scores==="object"?daily.scores:{};daily.names=daily.names&&typeof daily.names==="object"?daily.names:{};daily.scores[currentMemberKey]=Number(((Number(daily.scores[currentMemberKey])||0)+slot.totalWeight).toFixed(2));daily.names[currentMemberKey]=currentMember;ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);slot.status="claimed";slot.claimedAt=now;next=s;newSlot=slot;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dailyRef,{dateKey,scores:daily.scores,names:daily.names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slot,updatedAt:fs.serverTimestamp()},{merge:false});if(playerSnap.exists())tx.delete(playerRef)});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=newSlot;closeModal();drawFishingPond();showWeatherToast(`🏆 รับน้ำหนัก ${Number(newSlot.totalWeight).toFixed(2)} lbs เข้าการแข่งขันแล้ว`)}catch(error){message("รับน้ำหนักไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 
 function previousBangkokDateKey(dateKey=currentBangkokDateKey()){const [y,m,d]=dateKey.split("-").map(Number),dt=new Date(Date.UTC(y,m-1,d)-86400000);return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`}
@@ -6830,6 +6839,7 @@ async function openOneNumber4Box(){
       fishQty=randomNumber4Qty();
 
       s.number4MysteryBoxes-=1;
+      incrementMissionOn(s,"openMysteryBox",1);
       s.coconutRiverItems.frog4=(Number(s.coconutRiverItems.frog4)||0)+frogQty;
       s.coconutRiverItems.fish4=(Number(s.coconutRiverItems.fish4)||0)+fishQty;
       next=cloneData(s);
@@ -8352,7 +8362,7 @@ async function v15CollectAllAnimalProducts(sceneName){
     await fs.runTransaction(db,async tx=>{
       const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
       (s.animals?.[sceneName]||[]).forEach(animal=>{if(!animal||animalIsExpired(animal)||gameNow()<Number(animal.readyAt||0))return;let qty=1;if(Math.random()<.12)qty=Math.random()<.82?2:3;total+=qty;animalsCollected++;animal.readyAt=gameNow()+item.productionMs});
-      if(!animalsCollected)throw new Error("ตอนนี้ยังไม่มีผลผลิตที่พร้อมเก็บ");s.animalProducts[item.product]=(Number(s.animalProducts[item.product])||0)+total;incrementMissionOn(s,"collectAnimalProducts",total);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(!animalsCollected)throw new Error("ตอนนี้ยังไม่มีผลผลิตที่พร้อมเก็บ");s.animalProducts[item.product]=(Number(s.animalProducts[item.product])||0)+total;incrementMissionOn(s,"collectAnimalProducts",animalsCollected);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderAnimalScene(sceneName);message("🧺 เก็บผลผลิตทั้งหมดแล้ว",`${item.productName} ×${total} เข้ากระเป๋าแล้ว`);
   }catch(error){message("เก็บผลผลิตทั้งหมดไม่ได้",error.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}
@@ -8794,7 +8804,7 @@ plantMenu=function(index){
 async function Y26_plantCrop(index,key,button){
   if(visitContext||guardResting())return;const crop=CROPS[key];if(!crop)return;if(button)button.disabled=true;
   try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,newPlots,angel=false;
-    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());if(plots[index]?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");const cost=Number(crop.seedCostMerit)||0;if(cost&&(Number(s.merit)||0)<cost)throw new Error(`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);if(cost)s.merit-=cost;s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;if(s.angelPlantCounter>=30){angel=true;s.angelPlantCounter=0}const now=gameNow();plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false,angel};s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});if(cost)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});});
+    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());if(plots[index]?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");const cost=Number(crop.seedCostMerit)||0;if(cost&&(Number(s.merit)||0)<cost)throw new Error(`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);if(cost)s.merit-=cost;incrementMissionOn(s,"dailyPlantCrops",1);s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;if(s.angelPlantCounter>=30){angel=true;s.angelPlantCounter=0}const now=gameNow();plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false,angel};s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});if(cost)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});});
     Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);closeModal();draw();
   }catch(error){message("ปลูกไม่ได้",error.message||"กรุณาลองใหม่")}finally{if(button)button.disabled=false}
 }
@@ -8955,7 +8965,7 @@ renderAnimalScene=function(type){if(!["chicken","fish","pig","cow"].includes(typ
 async function Y26_claimAnimalGift(type,index){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),g=s.animalMeritGifts[type];if(!g?.activeId||Number(g.animalIndex)!==index)throw new Error("กล่องนี้ถูกเก็บไปแล้ว");reward=randInt(20,40);s.merit=(Number(s.merit)||0)+reward;g.activeId="";g.animalIndex=-1;g.nextAt=Y26_nextAnimalGiftAt();next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();renderAnimalScene(type);message("🎁 ได้รับของขวัญจากสัตว์วิญญาณ",`ยินดีด้วยค่ะ คุณได้รับ <b>+${reward} กุศล</b> 🙏`)}catch(error){message("รับของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}}
 
 /* Collect single animal product cloud-safely and count actual pieces */
-collectAnimal=async function(sceneName,index){if(!cloudReady||!currentMemberKey)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0,item=animalById(sceneName);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),animal=s.animals?.[sceneName]?.[index];if(!item||!animal)throw new Error("ไม่พบสัตว์");if(animalIsExpired(animal))throw new Error("สัตว์หมดอายุแล้ว");if(gameNow()<Number(animal.readyAt||0))throw new Error(`${item.productName} ยังไม่พร้อม`);qty=1;if(Math.random()<.12)qty=Math.random()<.82?2:3;s.animalProducts[item.product]=(Number(s.animalProducts[item.product])||0)+qty;animal.readyAt=gameNow()+item.productionMs;incrementMissionOn(s,"collectAnimalProducts",qty);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();renderAnimalScene(sceneName);message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`)}catch(error){message("เก็บผลผลิตไม่ได้",error.message||"กรุณาลองใหม่")}};
+collectAnimal=async function(sceneName,index){if(!cloudReady||!currentMemberKey)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0,item=animalById(sceneName);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),animal=s.animals?.[sceneName]?.[index];if(!item||!animal)throw new Error("ไม่พบสัตว์");if(animalIsExpired(animal))throw new Error("สัตว์หมดอายุแล้ว");if(gameNow()<Number(animal.readyAt||0))throw new Error(`${item.productName} ยังไม่พร้อม`);qty=1;if(Math.random()<.12)qty=Math.random()<.82?2:3;s.animalProducts[item.product]=(Number(s.animalProducts[item.product])||0)+qty;animal.readyAt=gameNow()+item.productionMs;incrementMissionOn(s,"collectAnimalProducts",1);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();renderAnimalScene(sceneName);message("เก็บผลผลิตสำเร็จ",`${item.productName} ×${qty} เพิ่มเข้ากระเป๋าแล้ว`)}catch(error){message("เก็บผลผลิตไม่ได้",error.message||"กรุณาลองใหม่")}};
 
 /* Daily mission hooks not covered by existing current transactions */
 async function Y26_incrementMissionCloud(id,amount){if(!cloudReady||!currentMemberKey)return;await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);incrementMissionOn(s,id,amount);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next)}
@@ -12250,7 +12260,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
         d.scores.mameaw=Number((Number(d.scores.mameaw||0)+claimedWeight).toFixed(2));
         d.names.mameaw=currentProfileDisplayName();d.ponds.mameaw=Number(x.pondId||0);
-        ensureMissionStateFor(s);s.missions.progress.fishingWeight200=d.scores.mameaw;s.missions.progress.fishingWeight800=d.scores.mameaw;
+        ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=d.scores.mameaw;s.missions.progress.dailyFishingWeight500=d.scores.mameaw;
         s.fishingCooldownUntil=NOW()+5*MIN;s.fishingClaimReceipts[receipt]=NOW();
         await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -12305,8 +12315,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         d.ponds[key]=Number(x.pondId||0);
 
         ensureMissionStateFor(s);
-        s.missions.progress.fishingWeight200=d.scores[key];
-        s.missions.progress.fishingWeight800=d.scores[key];
+        s.missions.progress.dailyFishingWeight500=d.scores[key];
+        s.missions.progress.dailyFishingWeight500=d.scores[key];
         s.fishingCooldownUntil=NOW()+5*MIN;
         s.fishingClaimReceipts[receipt]=NOW();
         next=s;
@@ -12476,7 +12486,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   async function pickArenaJelly(){const list=await placedV2();if(!list.length)return message("ไม่มีนักมวย","ต้องวางแมงกะพรุน V2 ในบ่อ 1 หรือบ่อ 2 ก่อนจึงจะขึ้นสังเวียนได้");$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel"><h2>เลือกแมงกะพรุนของเรา</h2><div class="ynu-arena-picker">${list.map((x,i)=>`<button class="${arenaChoice.jelly?.id===x.id?"selected":""}" data-arena-jelly="${i}"><img src="${x.type.image}"><b>${esc(x.customName||x.type.name)}</b><small>บ่อ ${x.pond}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-jelly]").forEach(b=>b.onclick=()=>{arenaChoice.jelly=list[Number(b.dataset.arenaJelly)];closeModal();drawArena()});openModal()}
   function pickOpponent(){$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel"><h2>เลือกคู่แข่ง</h2><div class="ynu-arena-picker">${OPP.map((x,i)=>`<button class="${arenaChoice.opp===i?"selected":""}" data-arena-opp="${i}"><img src="${x.image}"><b>${x.name}</b></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-opp]").forEach(b=>b.onclick=()=>{arenaChoice.opp=Number(b.dataset.arenaOpp);closeModal();drawArena()});openModal()}
   function pickMove(){$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel ynu-arena-move-panel"><h2>เลือกท่าต่อสู้</h2><div class="ynu-move-picker">${MOVES.map(x=>`<button class="${arenaChoice.move===x.id?"selected":""}" data-arena-move="${x.id}"><img src="${x.image}"><small>${x.name}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-move]").forEach(b=>b.onclick=()=>{arenaChoice.move=Number(b.dataset.arenaMove);closeModal();drawArena()});openModal()}
-  async function startArenaFight(){if(!arenaChoice.jelly||arenaChoice.opp==null||!arenaChoice.move)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุนของเรา คู่แข่ง และท่าต่อสู้ก่อนค่ะ");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);resetDailyExtras(s);const now=NOW();if(s.arena.fight&&!s.arena.fight.claimed)throw new Error("มีผลการแข่งขันค้างอยู่");if(s.arena.dailyCount>=5)throw new Error("วันนี้แข่งขันครบ 5 รอบแล้วค่ะ");if(s.arena.cooldownUntil>now)throw new Error(`จะแข่งอยู่อย่างนั้น!!! รอก่อน ยังไม่ถึงเวลา\nกลับมาใหม่อีก ${fmt(s.arena.cooldownUntil-now)} นาที`);const out=arenaOutcome(arenaChoice.opp,arenaChoice.move);s.arena.dailyCount++;s.arena.fight={startedAt:now,finishAt:now+3*MIN,jellyId:arenaChoice.jelly.id,jellyName:arenaChoice.jelly.customName||arenaChoice.jelly.type.name,oppIndex:arenaChoice.opp,moveId:arenaChoice.move,win:out.win,score:out.score,penaltyApplied:false,scoreClaimed:false,ack:false};next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);arenaStatus()}catch(e){message("เริ่มต่อสู้ไม่ได้",String(e.message||e).replace(/\n/g,"<br>"))}}
+  async function startArenaFight(){if(!arenaChoice.jelly||arenaChoice.opp==null||!arenaChoice.move)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุนของเรา คู่แข่ง และท่าต่อสู้ก่อนค่ะ");try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);resetDailyExtras(s);const now=NOW();if(s.arena.fight&&!s.arena.fight.claimed)throw new Error("มีผลการแข่งขันค้างอยู่");if(s.arena.dailyCount>=5)throw new Error("วันนี้แข่งขันครบ 5 รอบแล้วค่ะ");if(s.arena.cooldownUntil>now)throw new Error(`จะแข่งอยู่อย่างนั้น!!! รอก่อน ยังไม่ถึงเวลา\nกลับมาใหม่อีก ${fmt(s.arena.cooldownUntil-now)} นาที`);const out=arenaOutcome(arenaChoice.opp,arenaChoice.move);s.arena.dailyCount++;incrementMissionOn(s,"dailySeaArenaFight",1);s.arena.fight={startedAt:now,finishAt:now+3*MIN,jellyId:arenaChoice.jelly.id,jellyName:arenaChoice.jelly.customName||arenaChoice.jelly.type.name,oppIndex:arenaChoice.opp,moveId:arenaChoice.move,win:out.win,score:out.score,penaltyApplied:false,scoreClaimed:false,ack:false};next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);arenaStatus()}catch(e){message("เริ่มต่อสู้ไม่ได้",String(e.message||e).replace(/\n/g,"<br>"))}}
   function arenaStatus(){const f=(ownState||state)?.arena?.fight;if(!f)return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-fighting"><div class="ynu-arena-status-icon"><img src="jellyfish-arena-overlay.png?v=2" alt="กำลังต่อสู้"></div><h2>กำลังต่อสู้</h2><p>การต่อสู้จะทราบผลใน <strong id="ynuArenaTimer">${fmt(f.finishAt-NOW())}</strong> นาที</p><small>ออกไปแปลงผักหรือออกจากเกมได้ เวลายังคงนับต่อ</small></section>`;openModal();const t=setInterval(()=>{const x=(ownState||state)?.arena?.fight;if(!x||x.finishAt<=NOW()){clearInterval(t);checkArenaFight()}else if($("ynuArenaTimer"))$("ynuArenaTimer").textContent=fmt(x.finishAt-NOW());else clearInterval(t)},1000)}
   async function checkArenaFight(){if(arenaFinalizing)return;const f=(ownState||state)?.arena?.fight;if(!f||f.finishAt>NOW())return;if(f.win&&!f.scoreClaimed)return arenaWinResult();if(!f.win&&!f.penaltyApplied){arenaFinalizing=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember),x=s.arena.fight;if(!x||x.win||x.penaltyApplied)return;s.merit=Number(s.merit||0)-100;x.penaltyApplied=true;s.arena.cooldownUntil=Number(x.finishAt)+HOUR;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});if(next){Y26_applyOwnState(next);updateMeritUI()}}catch(e){console.warn("arena penalty",e)}finally{arenaFinalizing=false}}if(!(ownState||state)?.arena?.fight?.win)return arenaLoseResult()}
   function arenaWinResult(){const f=(ownState||state).arena.fight;if(document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-win"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-win.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-win.jpg?v=2'" alt="ชนะ"></div><h2>ขอแสดงความยินดี แมงกระพรุนคุณมันมีเลือดนักสู้จริงๆ</h2><strong>+${f.score} คะแนนสังเวียนมวยทะเลกระพรุน</strong><button id="ynuArenaClaimScore">รับคะแนน</button></section>`;$("ynuArenaClaimScore").onclick=claimArenaScore;openModal()}
@@ -13276,8 +13286,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         const s=normalizeState(ss.data(),currentMember);
         ensureMissionStateFor(s);
 
-        const old200=Number(s.missions?.progress?.fishingWeight200||0);
-        const old800=Number(s.missions?.progress?.fishingWeight800||0);
+        const old200=Number(s.missions?.progress?.dailyFishingWeight500||0);
+        const old800=Number(s.missions?.progress?.dailyFishingWeight500||0);
 
         if(Math.abs(old200-dashboardWeight)<0.005 && Math.abs(old800-dashboardWeight)<0.005){
           next=s;
@@ -13286,8 +13296,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
 
         /* Both missions use the SAME "today" total shown by the dashboard.
            Only their completion targets differ (200.01 / 800.01 lbs). */
-        s.missions.progress.fishingWeight200=dashboardWeight;
-        s.missions.progress.fishingWeight800=dashboardWeight;
+        s.missions.progress.dailyFishingWeight500=dashboardWeight;
+        s.missions.progress.dailyFishingWeight500=dashboardWeight;
         next=s;
         changed=true;
 
@@ -13596,14 +13606,14 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
         ensureMissionStateFor(s);
 
         const w=Number(Number(weight||0).toFixed(2));
-        const a=Number(s.missions.progress.fishingWeight200||0);
-        const b=Number(s.missions.progress.fishingWeight800||0);
+        const a=Number(s.missions.progress.dailyFishingWeight500||0);
+        const b=Number(s.missions.progress.dailyFishingWeight500||0);
         if(Math.abs(a-w)<0.005 && Math.abs(b-w)<0.005){
           next=s; return;
         }
 
-        s.missions.progress.fishingWeight200=w;
-        s.missions.progress.fishingWeight800=w;
+        s.missions.progress.dailyFishingWeight500=w;
+        s.missions.progress.dailyFishingWeight500=w;
         next=s;
 
         tx.set(saveRef,{
@@ -13650,7 +13660,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       <p class="feature-subtitle">รีเซ็ตทุกวันเวลา 00:00 น. ตามเวลาไทย</p>
       <div class="mission-list">${
         defs.map((def,index)=>{
-          const isFish=def.id==="fishingWeight200"||def.id==="fishingWeight800";
+          const isFish=def.id==="dailyFishingWeight500"||def.id==="dailyFishingWeight500";
           const local=Number(m.progress[def.id])||0;
           const raw=isFish ? fishWeight : local;
           const claimed=Boolean(m.claimed[def.id]);
@@ -13687,7 +13697,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   /* Fishing mission reward must validate against the same DB row too. */
   const v186OldClaimMission=claimMissionReward;
   claimMissionReward=async function(id){
-    if(id!=="fishingWeight200" && id!=="fishingWeight800")
+    if(id!=="dailyFishingWeight500" && id!=="dailyFishingWeight500")
       return v186OldClaimMission(id);
 
     if(!cloudReady)return message("ยังรับรางวัลไม่ได้","กรุณาเชื่อม Firebase ก่อน");
@@ -13712,8 +13722,8 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
         ensureMissionStateFor(s);
 
         /* Re-check mission values from the SAME authoritative weight. */
-        s.missions.progress.fishingWeight200=actual;
-        s.missions.progress.fishingWeight800=actual;
+        s.missions.progress.dailyFishingWeight500=actual;
+        s.missions.progress.dailyFishingWeight500=actual;
 
         if(s.missions.claimed[id])throw new Error("รับรางวัลภารกิจนี้แล้ว");
         if(actual<Number(def.target))throw new Error("ภารกิจยังไม่สำเร็จ");
@@ -14727,8 +14737,8 @@ async function V213_syncMameawCampaignFromSave(){
             d.ponds[key]=Number(x.pondId||0);
 
             ensureMissionStateFor(s);
-            s.missions.progress.fishingWeight200=d.scores[key];
-            s.missions.progress.fishingWeight800=d.scores[key];
+            s.missions.progress.dailyFishingWeight500=d.scores[key];
+            s.missions.progress.dailyFishingWeight500=d.scores[key];
             s.fishingClaimReceipts[receipt]=Date.now();
             s.fishingCooldownUntil=Date.now()+5*60*1000;
             next=s;
@@ -15165,7 +15175,7 @@ async function V213_syncMameawCampaignFromSave(){
   openOneNumber4Box=async function(){
     if(!cloudReady)return message("เปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");const btn=$("openNumber4BoxBtn");if(btn)btn.disabled=true;
     try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,frogQty=0,fishQty=0,rareKey="",rareQty=0;
-      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(s);if(Number(s.number4MysteryBoxes)<1)throw new Error("กล่องสุ่มหมายเลข4 หมดแล้ว");frogQty=randomNumber4Qty();fishQty=randomNumber4Qty();if(Math.random()<.20){rareKey=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)];rareQty=[10,20,30][Math.floor(Math.random()*3)]}if(!M200_ADMIN())s.number4MysteryBoxes-=1;else s.number4MysteryBoxes=ADMIN_STOCK_QTY;s.coconutRiverItems.frog4=(Number(s.coconutRiverItems.frog4)||0)+frogQty;s.coconutRiverItems.fish4=(Number(s.coconutRiverItems.fish4)||0)+fishQty;if(rareKey)s.coconutRiverItems[rareKey]=(Number(s.coconutRiverItems[rareKey])||0)+rareQty;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(s);if(Number(s.number4MysteryBoxes)<1)throw new Error("กล่องสุ่มหมายเลข4 หมดแล้ว");frogQty=randomNumber4Qty();fishQty=randomNumber4Qty();if(Math.random()<.20){rareKey=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)];rareQty=[10,20,30][Math.floor(Math.random()*3)]}if(!M200_ADMIN())s.number4MysteryBoxes-=1;else s.number4MysteryBoxes=ADMIN_STOCK_QTY;incrementMissionOn(s,"openMysteryBox",1);s.coconutRiverItems.frog4=(Number(s.coconutRiverItems.frog4)||0)+frogQty;s.coconutRiverItems.fish4=(Number(s.coconutRiverItems.fish4)||0)+fishQty;if(rareKey)s.coconutRiverItems[rareKey]=(Number(s.coconutRiverItems[rareKey])||0)+rareQty;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);
       const rare=rareKey?`<div><img src="${COCONUT_RIVER_ITEMS[rareKey].image}" alt="${COCONUT_RIVER_ITEMS[rareKey].name}"><b>${COCONUT_RIVER_ITEMS[rareKey].name}</b><strong>×${rareQty}</strong></div>`:"";
       $("modalContent").innerHTML=`<section class="feature-panel cat-box-result number4-box-result"><h2>🎉 ยินดีด้วยค่ะ</h2><img class="cat-result-icon" src="${NUMBER4_BOX.image}" alt="${NUMBER4_BOX.name}"><h3>คุณได้รับ</h3><div class="number4-reward-grid"><div><img src="${COCONUT_RIVER_ITEMS.frog4.image}"><b>${COCONUT_RIVER_ITEMS.frog4.name}</b><strong>×${frogQty}</strong></div><div><img src="${COCONUT_RIVER_ITEMS.fish4.image}"><b>${COCONUT_RIVER_ITEMS.fish4.name}</b><strong>×${fishQty}</strong></div>${rare}</div><p>เข้ากระเป๋า → อื่นๆจากสวนมะพร้าว เรียบร้อยแล้ว</p><button id="number4BoxDoneBtn" class="primary-spooky-action" type="button">เรียบร้อย</button></section>`;$("number4BoxDoneBtn").onclick=()=>inventory("mysteryBoxes");
     }catch(e){message("เปิดกล่องไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}
@@ -15620,11 +15630,11 @@ async function V181_campaignScoreLater(summary){
     if(!visitContext||!currentMemberKey)return[];
     const rand=rng(hash(`${currentMemberKey}|${friendKey()}|farm${farmNo()}|round${roundKey()}`)),aida=isAidaFarm();let count=0;
     /* Same spawn balance as before, now rerolled every 30 minutes. */
-    if(aida){if(rand()<.72)count++;if(rand()<.46)count++;if(rand()<.22)count++;}else{if(rand()<.38)count++;if(rand()<.14)count++;}
+    if(aida){count=2+Math.floor(rand()*3);}else{if(rand()<.55)count++;if(rand()<.28)count++;if(rand()<.08)count++;}
     if(!count)return[];
     const points=shuffle(POINTS[farmNo()]||POINTS[1],rand),drops=[];
     for(let i=0;i<count;i++){
-      const key=weighted(rand,aida?[["friendGrassGreen",64],["friendGrassYellow",24],["friendGrassRed",12]]:[["friendGrassGreen",72],["friendGrassYellow",21],["friendGrassRed",7]]),pt=points[i%points.length]||[50,50],id=dropId(i);
+      const key=weighted(rand,[["friendGrassGreen",50],["friendGrassYellow",30],["friendGrassRed",20]]),pt=points[i%points.length]||[50,50],id=dropId(i);
       if(hasClaimed(id))continue;drops.push({id,key,name:ITEMS[key].name,image:ITEMS[key].image,x:pt[0]+(rand()*3-1.5),y:pt[1]+(rand()*3-1.5),rarity:key==="friendGrassRed"?"rare":key==="friendGrassYellow"?"uncommon":"common"});
     }
     return drops;
@@ -15644,7 +15654,7 @@ async function V181_campaignScoreLater(summary){
     if(!visitContext||!currentMemberKey)return;const btn=$("friendGrassConfirmBtn");if(btn){btn.disabled=true;btn.textContent="กำลังเข้ากระเป๋า..."}
     try{
       await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
-      await fs.runTransaction(db,async tx=>{const grassCampaignId="grass-harvest-7d-v1",metaRef=fs.doc(db,"campaigns",grassCampaignId),scoreRef=fs.doc(db,"campaignScores",grassCampaignId);const [snap,metaSnap,scoreSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef),tx.get(scoreRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();pruneClaims(s);if(metaSnap.exists()&&V36_campaignActive(metaSnap.data()||{})){const add=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1,d=scoreSnap.exists()?scoreSnap.data():{campaignId:grassCampaignId,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})};scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;names[currentMemberKey]=currentProfileDisplayName();tx.set(scoreRef,{campaignId:grassCampaignId,scores,names,updatedAt:fs.serverTimestamp()},{merge:false})}next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
+      await fs.runTransaction(db,async tx=>{const grassCampaignId="grass-harvest-7d-v1",metaRef=fs.doc(db,"campaigns",grassCampaignId),scoreRef=fs.doc(db,"campaignScores",grassCampaignId);const [snap,metaSnap,scoreSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef),tx.get(scoreRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();incrementMissionOn(s,"dailyCollectGrass",1);pruneClaims(s);if(metaSnap.exists()&&V36_campaignActive(metaSnap.data()||{})){const add=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1,d=scoreSnap.exists()?scoreSnap.data():{campaignId:grassCampaignId,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})};scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;names[currentMemberKey]=currentProfileDisplayName();tx.set(scoreRef,{campaignId:grassCampaignId,scores,names,updatedAt:fs.serverTimestamp()},{merge:false})}next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
       ownState=normalizeState(next,currentMember);saveLocalOnly(ownState);closeModal();renderDrops();showReceived(drop);
     }catch(error){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับเข้ากระเป๋า"}message("เก็บหญ้าไม่ได้",error.message||"กรุณาลองใหม่")}
   }
@@ -16680,7 +16690,7 @@ async function V181_campaignScoreLater(summary){
   const MALE_COOLDOWN_MS=3*HOUR;
   const BABY_PROCESS_MS=12*HOUR;
   const CAPTURE_MS=1*MINUTE;
-  const CAPTURE_CHANCE=.25;
+  const CAPTURE_CHANCE=.20;
   const CAPTURE_FAIL_MERIT=-500;
   const MAGIC_MUSHROOM_HOUR_MS=HOUR;
   const PEN_HOLE_ROUND_MS=3*HOUR;
@@ -16770,11 +16780,11 @@ async function V181_campaignScoreLater(summary){
   /* Pen-only roaming grid. Top row stays between the two buildings; lower rows
      spread animals through the middle/front while stopping before the trough. */
   const PEN_WALK_POINTS=[
-    [36,35],[43,35],[50,35],[57,35],[64,35],
-    [25,45],[38,46],[50,46],[62,46],[75,45],
-    [20,55],[35,56],[50,56],[65,56],[80,55],
-    [20,64],[35,65],[50,65],[65,65],[80,64],
-    [24,73],[38,73],[50,73],[62,73],[76,73]
+    [35,34],[42,34],[50,34],[58,34],[65,34],
+    [38,44],[44,45],[50,45],[56,45],[62,44],
+    [18,55],[34,56],[50,56],[66,56],[82,55],
+    [18,66],[34,67],[50,67],[66,67],[82,66],
+    [22,77],[36,78],[50,78],[64,78],[78,77]
   ];
   const EVENT_POINTS=[[18,29],[28,37],[43,31],[58,38],[73,30],[82,42],[22,54],[39,55],[58,53],[77,57],[28,68],[47,68],[67,69],[83,72]];
   const FRIEND_EVENT_POINTS=[[16,31],[29,27],[43,34],[59,29],[73,35],[84,44],[22,52],[39,49],[58,54],[76,57],[31,69],[51,67],[71,72]];
@@ -16792,6 +16802,7 @@ async function V181_campaignScoreLater(summary){
   let alpacaHeartbeatAt=0;
   const penWalkers=new Map();
   const wildWalkers=new Map();
+  const penWalkerMemory=new Map();
 
   function uid(prefix="alpaca"){return globalThis.crypto?.randomUUID?.()||`${prefix}-${gameNow()}-${Math.random().toString(36).slice(2)}`}
   function hash(str){let h=2166136261>>>0;for(let i=0;i<String(str).length;i++){h^=String(str).charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
@@ -16843,7 +16854,7 @@ async function V181_campaignScoreLater(summary){
   function spritePreview(color,stage=1,extra=""){const ratio=idleRatio(color,stage);return `<span class="alpaca-sprite-preview ${extra}" style="--alpaca-preview-ratio:${ratio};aspect-ratio:${ratio};background-image:url('${spriteAsset(color,stage,"idle")}')"></span>`}
 
   function defaultPen(i){return{name:`คอกอัลปาก้า ${i}`,happiness:0,happinessMedicineUses:0,trough:Array(5).fill(null),alpacas:[],events:[],eventClock:{mushRound:Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1}}}
-  function defaultAlpacaState(){return{initialized:false,nextSerial:1,pens:[defaultPen(1),defaultPen(2),defaultPen(3)],inventory:{food:{hayPack:0,pellet:0},medicine:{happinessPotion:0,coldVaccine:0,birthAccelerator:0},other:{magicMushroom:0},wool:{white:0,black:0,pink:0,brown:0,green:0,gold:0}},eventClaims:{},friendMushroomClaims:{},testSireCooldowns:{},captureDaily:{dateKey:currentBangkokDateKey(),attempts:0,success:0,pending:null,reward:null},vault:[],craftDaily:{dateKey:currentBangkokDateKey(),count:0},grassCampaignClaimed:0,lastLoginAt:0}}
+  function defaultAlpacaState(){return{initialized:false,nextSerial:1,pens:[defaultPen(1),defaultPen(2),defaultPen(3)],inventory:{food:{hayPack:0,pellet:0},medicine:{happinessPotion:0,coldVaccine:0,birthAccelerator:0},other:{magicMushroom:0},wool:{white:0,black:0,pink:0,brown:0,green:0,gold:0}},eventClaims:{},friendMushroomClaims:{},testSireCooldowns:{},captureDaily:{dateKey:currentBangkokDateKey(),quotaVersion:"capture-20260820-r2",attempts:0,success:0,pending:null,reward:null},vault:[],craftDaily:{dateKey:currentBangkokDateKey(),count:0},grassCampaignClaimed:0,lastLoginAt:0}}
   function normalizeTroughSlot(slot){if(!slot||typeof slot!=="object"||!FOOD[slot.foodKey])return null;const servings=Math.max(0,Math.floor(Number(slot.servings)||0));return servings>0?{foodKey:slot.foodKey,servings}:null}
   function normalizeAlpacaAnimal(raw,penIndex){
     const now=gameNow(),a=raw&&typeof raw==="object"?raw:{};
@@ -16872,8 +16883,10 @@ async function V181_campaignScoreLater(summary){
     a.eventClaims=a.eventClaims&&typeof a.eventClaims==="object"?a.eventClaims:{};a.friendMushroomClaims=a.friendMushroomClaims&&typeof a.friendMushroomClaims==="object"?a.friendMushroomClaims:{};a.testSireCooldowns=a.testSireCooldowns&&typeof a.testSireCooldowns==="object"?a.testSireCooldowns:{};
     a.pens=Array.isArray(a.pens)?a.pens.slice(0,3):[];while(a.pens.length<3)a.pens.push(defaultPen(a.pens.length+1));
     a.pens=a.pens.map((p,i)=>{const x=p&&typeof p==="object"?p:defaultPen(i+1);x.name=String(x.name||`คอกอัลปาก้า ${i+1}`).slice(0,20);x.happiness=Number.isFinite(Number(x.happiness))?Number(x.happiness):0;x.happinessMedicineUses=Math.max(0,Math.floor(Number(x.happinessMedicineUses)||0));x.trough=Array.isArray(x.trough)?x.trough.slice(0,5).map(normalizeTroughSlot):[];while(x.trough.length<5)x.trough.push(null);x.alpacas=Array.isArray(x.alpacas)?x.alpacas.map(v=>normalizeAlpacaAnimal(v,i+1)):[];x.events=Array.isArray(x.events)?x.events.filter(e=>e&&typeof e==="object"&&["hole","mushroom"].includes(e.type)&&e.id).slice(0,7).map(e=>({id:String(e.id),type:e.type,point:Array.isArray(e.point)?[Number(e.point[0])||50,Number(e.point[1])||50]:[50,50],createdAt:Number(e.createdAt)||gameNow()})):[];const ec=x.eventClock&&typeof x.eventClock==="object"?x.eventClock:{};x.eventClock={mushRound:Number.isFinite(Number(ec.mushRound))?Number(ec.mushRound):Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Number.isFinite(Number(ec.holeRound))?Number(ec.holeRound):Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1};return x});
-    const d=a.captureDaily&&typeof a.captureDaily==="object"?a.captureDaily:{};if(d.dateKey!==currentBangkokDateKey()){a.captureDaily={dateKey:currentBangkokDateKey(),attempts:0,success:0,pending:null,reward:null}}else{a.captureDaily={dateKey:d.dateKey,attempts:Math.max(0,Math.floor(Number(d.attempts)||0)),success:Math.max(0,Math.floor(Number(d.success)||0)),pending:d.pending&&typeof d.pending==="object"?d.pending:null,reward:d.reward&&typeof d.reward==="object"?d.reward:null}}
+    const d=a.captureDaily&&typeof a.captureDaily==="object"?a.captureDaily:{};const captureQuotaVersion="capture-20260820-r2";const resetCapture=d.quotaVersion!==captureQuotaVersion||d.dateKey!==currentBangkokDateKey();a.captureDaily=resetCapture?{dateKey:currentBangkokDateKey(),quotaVersion:captureQuotaVersion,attempts:0,success:0,pending:null,reward:d.reward&&typeof d.reward==="object"?d.reward:null}:{dateKey:d.dateKey,quotaVersion:captureQuotaVersion,attempts:Math.max(0,Math.floor(Number(d.attempts)||0)),success:Math.max(0,Math.floor(Number(d.success)||0)),pending:d.pending&&typeof d.pending==="object"?d.pending:null,reward:d.reward&&typeof d.reward==="object"?d.reward:null};
+    const legacyCaptureReward=a.captureDaily.reward;
     a.vault=Array.isArray(a.vault)?a.vault.filter(v=>v&&typeof v==="object"&&["adult","baby"].includes(v.type)&&COLORS.includes(v.color)).map(v=>({id:String(v.id||uid("vault")),type:v.type,color:v.color,sex:v.type==="adult"?(v.sex==="female"?"female":"male"):null,source:String(v.source||"reward"),createdAt:Number(v.createdAt)||gameNow(),bornAt:Number(v.bornAt)||gameNow(),readyProcessAt:Number(v.readyProcessAt)||((Number(v.bornAt)||gameNow())+BABY_PROCESS_MS)})):[];
+    if(legacyCaptureReward&&legacyCaptureReward.babyId){const recoveredId=`captured-${legacyCaptureReward.babyId}`;if(!a.vault.some(v=>v.id===recoveredId))a.vault.push({id:recoveredId,type:"baby",color:COLORS.includes(legacyCaptureReward.color)?legacyCaptureReward.color:"white",sex:null,source:"capture-recovery",createdAt:gameNow(),bornAt:Number(legacyCaptureReward.bornAt)||gameNow(),readyProcessAt:Number(legacyCaptureReward.readyProcessAt)||((Number(legacyCaptureReward.bornAt)||gameNow())+BABY_PROCESS_MS)});a.captureDaily.reward=null}
     const craft=a.craftDaily&&typeof a.craftDaily==="object"?a.craftDaily:{};a.craftDaily=craft.dateKey===currentBangkokDateKey()?{dateKey:craft.dateKey,count:Math.max(0,Math.floor(Number(craft.count)||0))}:{dateKey:currentBangkokDateKey(),count:0};
     a.grassCampaignClaimed=Math.max(0,Math.min(24,Math.floor(Number(a.grassCampaignClaimed)||0)));
     a.lastLoginAt=Number(a.lastLoginAt)||0;
@@ -16984,10 +16997,24 @@ async function V181_campaignScoreLater(summary){
     document.querySelectorAll(".alpaca-sprite[data-alpaca-animate]").forEach(el=>el.style.backgroundPosition=pos);
     alpacaSpriteFrame=(alpacaSpriteFrame+1)%16;
   }
-  function startSpriteTimer(){if(spriteTimer)return;spriteTimer=setInterval(renderAnimatedSprites,180)}
+  function tickWalkerSprites(){
+    const now=(globalThis.performance&&performance.now)?performance.now():Date.now();
+    for(const map of [penWalkers,wildWalkers])for(const w of map.values()){
+      if(!w?.sprite||!document.body.contains(w.el))continue;
+      if(now<Number(w.nextFrameAt||0))continue;
+      w.frame=(Number(w.frame)||0)+1;w.frame%=16;walkerFrame(w,w.frame,w.animKind||"idle",Boolean(w.flip));
+      w.nextFrameAt=now+(w.animKind==="idle"?300:180);
+    }
+  }
+  function startSpriteTimer(){if(spriteTimer)return;spriteTimer=setInterval(()=>{renderAnimatedSprites();tickWalkerSprites()},180)}
 
   function walkerRatio(color,stage,kind){return WALK_RATIO[color]?.[stage]?.[kind]||160/225}
-  function stopWalker(w){if(!w)return;w.token++;clearTimeout(w.moveTimer);clearInterval(w.frameTimer);w.moveTimer=0;w.frameTimer=0;if(w.motion){try{w.motion.cancel()}catch{}w.motion=null}if(w.el)w.el.style.transform=""}
+  function rememberWalkerPoint(w){
+    if(!w)return;let x=Number(w.x),y=Number(w.y);
+    if(w.motion&&w.fromPoint&&w.toPoint){try{const timing=w.motion.effect?.getComputedTiming?.(),p=Math.max(0,Math.min(1,Number(timing?.progress)||0));x=w.fromPoint[0]+(w.toPoint[0]-w.fromPoint[0])*p;y=w.fromPoint[1]+(w.toPoint[1]-w.fromPoint[1])*p}catch{}}
+    if(Number.isFinite(x)&&Number.isFinite(y)&&String(w.key).includes(":"))penWalkerMemory.set(w.key,[x,y]);
+  }
+  function stopWalker(w){if(!w)return;rememberWalkerPoint(w);w.token++;clearTimeout(w.moveTimer);w.moveTimer=0;if(w.motion){try{w.motion.cancel()}catch{}w.motion=null}if(w.el)w.el.style.transform=""}
   function clearWalkerMap(map){for(const w of map.values())stopWalker(w);map.clear()}
   function walkerFrame(w,index,kind="idle",flip=false){
     if(!w?.sprite)return;const raw=Math.max(0,Math.min(15,Math.floor(Number(index)||0))),i=kind==="side"?15-raw:raw,col=i%4,row=Math.floor(i/4);
@@ -17006,19 +17033,21 @@ async function V181_campaignScoreLater(summary){
     const filtered=choices.filter(x=>x.next!==w.previousNode),pool=filtered.length?filtered:choices;return pool[Math.floor(Math.random()*Math.max(1,pool.length))]||{next:w.node,dir:"front"};
   }
   function walkerIdle(w,delay=0){
-    if(!w?.el||!document.body.contains(w.el))return;const token=++w.token;w.el.classList.remove("is-walking");w.el.classList.add("is-idle");w.el.style.transform="";let i=Math.floor(Math.random()*16);walkerFrame(w,i,"idle");clearInterval(w.frameTimer);w.frameTimer=setInterval(()=>{if(token!==w.token||!w.el)return;i=(i+1)%16;walkerFrame(w,i,"idle")},320);clearTimeout(w.moveTimer);w.moveTimer=setTimeout(()=>walkerMove(w,token),Math.max(800,delay||1800+Math.random()*3000));
+    if(!w?.el||!document.body.contains(w.el))return;const token=++w.token;w.el.classList.remove("is-walking");w.el.classList.add("is-idle");w.el.style.transform="";w.animKind="idle";w.flip=false;w.frame=Math.floor(Math.random()*16);w.nextFrameAt=0;walkerFrame(w,w.frame,"idle");clearTimeout(w.moveTimer);w.moveTimer=setTimeout(()=>walkerMove(w,token),Math.max(450,delay||700+Math.random()*1600));
   }
   function walkerMove(w,token){
-    if(token!==w.token||!w?.el||!document.body.contains(w.el))return;clearInterval(w.frameTimer);w.frameTimer=0;const step=walkerNext(w),from=w.points[w.node]||w.points[0],to=w.points[step.next]||from,direction=(step.dir==="left"||step.dir==="right")?"side":step.dir,flip=step.dir==="left";w.el.classList.remove("is-idle");w.el.classList.add("is-walking");let i=Math.floor(Math.random()*16);walkerFrame(w,i,direction,flip);w.frameTimer=setInterval(()=>{if(token!==w.token||!w.el)return;i=(i+1)%16;walkerFrame(w,i,direction,flip)},180);const dx=to[0]-from[0],dy=to[1]-from[1],distance=Math.hypot(dx*10,dy*16),duration=Math.max(5600,Math.min(11000,5200+distance*36));
+    if(token!==w.token||!w?.el||!document.body.contains(w.el))return;const step=walkerNext(w),from=[Number(w.x),Number(w.y)],gridTo=w.points[step.next]||from,to=[Number(gridTo[0]),Number(gridTo[1])],direction=(step.dir==="left"||step.dir==="right")?"side":step.dir,flip=step.dir==="left";
+    w.el.classList.remove("is-idle");w.el.classList.add("is-walking");w.animKind=direction;w.flip=flip;w.frame=Math.floor(Math.random()*16);w.nextFrameAt=0;walkerFrame(w,w.frame,direction,flip);const dx=to[0]-from[0],dy=to[1]-from[1],distance=Math.hypot(dx*10,dy*16),duration=Math.max(4200,Math.min(9000,3600+distance*34));
     try{
       const host=w.el.parentElement,rect=host?.getBoundingClientRect?.(),dxPx=rect?rect.width*dx/100:0,dyPx=rect?rect.height*dy/100:0;
-      w.el.style.left=`${from[0]}%`;w.el.style.top=`${from[1]}%`;w.el.style.transform="translate3d(0,0,0)";
-      w.motion=w.el.animate([{transform:"translate3d(0,0,0)"},{transform:`translate3d(${dxPx}px,${dyPx}px,0)`}],{duration,easing:"linear",fill:"forwards"});
-      w.motion.onfinish=()=>{if(token!==w.token||!w.el)return;clearInterval(w.frameTimer);w.frameTimer=0;w.previousNode=w.node;w.node=step.next;w.el.style.left=`${to[0]}%`;w.el.style.top=`${to[1]}%`;w.el.style.transform="";w.motion=null;walkerIdle(w)}
-    }catch{w.el.style.left=`${to[0]}%`;w.el.style.top=`${to[1]}%`;w.el.style.transform="";w.previousNode=w.node;w.node=step.next;walkerIdle(w)}
+      w.el.style.left=`${from[0]}%`;w.el.style.top=`${from[1]}%`;w.el.style.transform="translate3d(0,0,0)";w.fromPoint=from;w.toPoint=to;w.motion=w.el.animate([{transform:"translate3d(0,0,0)"},{transform:`translate3d(${dxPx}px,${dyPx}px,0)`}],{duration,easing:"linear",fill:"none"});
+      w.motion.onfinish=()=>{if(token!==w.token||!w.el)return;const motion=w.motion;w.motion=null;try{motion?.cancel()}catch{}w.previousNode=w.node;w.node=step.next;w.x=to[0];w.y=to[1];w.fromPoint=null;w.toPoint=null;w.el.style.transform="";w.el.style.left=`${w.x}%`;w.el.style.top=`${w.y}%`;penWalkerMemory.set(w.key,[w.x,w.y]);walkerIdle(w,350+Math.random()*1200)};
+      w.motion.oncancel=()=>{};
+    }catch{w.previousNode=w.node;w.node=step.next;w.x=to[0];w.y=to[1];w.el.style.left=`${w.x}%`;w.el.style.top=`${w.y}%`;w.el.style.transform="";penWalkerMemory.set(w.key,[w.x,w.y]);walkerIdle(w,500)}
   }
+  function nearestWalkerNode(points,pt){let best=0,dist=Infinity;points.forEach((p,i)=>{const d=Math.hypot(Number(p[0])-Number(pt[0]),Number(p[1])-Number(pt[1]));if(d<dist){dist=d;best=i}});return best}
   function startWalker(map,key,el,sprite,animal,node,points,initialDelay=0){
-    const old=map.get(key);if(old)stopWalker(old);const w={key,el,sprite,color:animal.color,stage:animal.type==="baby"?1:animal.woolStage,node:node%points.length,previousNode:-1,points,moveTimer:0,frameTimer:0,motion:null,token:0};map.set(key,w);const pt=points[w.node];el.style.left=`${pt[0]}%`;el.style.top=`${pt[1]}%`;walkerIdle(w,initialDelay||900+Math.random()*2200);return w;
+    const old=map.get(key);if(old)stopWalker(old);const remembered=penWalkerMemory.get(key),start=remembered||points[node%points.length]||points[0],startNode=remembered?nearestWalkerNode(points,start):node%points.length,w={key,el,sprite,color:animal.color,stage:animal.type==="baby"?1:animal.woolStage,node:startNode,previousNode:-1,points,moveTimer:0,motion:null,token:0,x:Number(start[0]),y:Number(start[1]),frame:0,animKind:"idle",flip:false,nextFrameAt:0,fromPoint:null,toPoint:null};map.set(key,w);el.style.left=`${w.x}%`;el.style.top=`${w.y}%`;walkerIdle(w,initialDelay||400+Math.random()*1300);return w;
   }
 
   function syncEntryButtons(){
@@ -17044,9 +17073,13 @@ async function V181_campaignScoreLater(summary){
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
   }
   function renderPenAnimals(root,pen){
-    const layer=$("alpacaPenAnimalLayer");if(!layer)return;clearWalkerMap(penWalkers);layer.innerHTML="";const now=gameNow(),spreadStep=7,offset=(currentPen*3)%PEN_WALK_POINTS.length;
-    pen.alpacas.forEach((a,i)=>{const node=(offset+i*spreadStep)%PEN_WALK_POINTS.length,pt=PEN_WALK_POINTS[node],button=document.createElement("button");button.type="button";button.className=`alpaca-pen-animal ${a.type}`;button.style.left=`${pt[0]}%`;button.style.top=`${pt[1]}%`;button.dataset.alpacaColor=a.color;button.dataset.alpacaStage=String(a.type==="baby"?1:a.woolStage);
-      const stage=a.type==="baby"?1:a.woolStage,icons=statusIcons(a,pen,now);button.innerHTML=`<span class="alpaca-sprite" style="--alpaca-frame-ratio:${walkerRatio(a.color,stage,"idle")};background-image:url('${spriteAsset(a.color,stage,"idle")}')"></span><span class="alpaca-status-stack">${icons.map(s=>`<img src="${s.image}" alt="${safeHtml(s.label)}">`).join("")}</span>`;button.onclick=()=>showAlpacaDetail(currentPen,a.id);layer.appendChild(button);const sprite=button.querySelector(".alpaca-sprite"),group=i%3,delay=1100+group*1800+(i%8)*260;startWalker(penWalkers,`${currentPen}:${a.id}`,button,sprite,a,node,PEN_WALK_POINTS,delay)});
+    const layer=$("alpacaPenAnimalLayer");if(!layer)return;const now=gameNow(),spreadStep=7,offset=(currentPen*3)%PEN_WALK_POINTS.length,wanted=new Set();
+    pen.alpacas.forEach((a,i)=>{
+      const key=`${currentPen}:${a.id}`;wanted.add(key);const stage=a.type==="baby"?1:a.woolStage,icons=statusIcons(a,pen,now);let w=penWalkers.get(key),button=w?.el;
+      if(!button||!document.body.contains(button)){const node=(offset+i*spreadStep)%PEN_WALK_POINTS.length,pt=penWalkerMemory.get(key)||PEN_WALK_POINTS[node];button=document.createElement("button");button.type="button";button.className=`alpaca-pen-animal ${a.type}`;button.style.left=`${pt[0]}%`;button.style.top=`${pt[1]}%`;button.innerHTML=`<span class="alpaca-sprite"></span><span class="alpaca-status-stack"></span>`;button.onclick=()=>showAlpacaDetail(currentPen,a.id);layer.appendChild(button);w=startWalker(penWalkers,key,button,button.querySelector(".alpaca-sprite"),a,node,PEN_WALK_POINTS,700+(i%6)*220)}
+      button.dataset.alpacaColor=a.color;button.dataset.alpacaStage=String(stage);button.className=`alpaca-pen-animal ${a.type} ${button.classList.contains("is-walking")?"is-walking":"is-idle"}`;w.color=a.color;w.stage=stage;const stack=button.querySelector(".alpaca-status-stack");const html=icons.map(s=>`<img src="${s.image}" alt="${safeHtml(s.label)}">`).join("");if(stack&&stack.innerHTML!==html)stack.innerHTML=html;
+    });
+    for(const [key,w] of Array.from(penWalkers.entries()))if(!wanted.has(key)){stopWalker(w);w.el?.remove();penWalkers.delete(key)}
   }
 
   function eventClaimed(root,id){return Boolean(root.eventClaims?.[id])}
@@ -17189,7 +17222,7 @@ async function V181_campaignScoreLater(summary){
   async function useBirthAccelerator(penNo,id){try{await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,id);const now=gameNow();if(!a||a.type!=="adult"||a.sex!=="female"||a.pregnantUntil<=now)throw new Error("ตัวนี้ไม่ได้กำลังตั้งครรภ์");if(a.birthAccelUsed)throw new Error("ครรภ์นี้ใช้ยาเร่งคลอดไปแล้ว");if(s.alpaca.inventory.medicine.birthAccelerator<1)throw new Error("ไม่มียาเร่งคลอดในกระเป๋า");s.alpaca.inventory.medicine.birthAccelerator--;a.birthAccelUsed=true;const start=a.pregnancyStartedAt||now;a.pregnantUntil=Math.max(now,start+PREGNANCY_ACCEL_MS)});alpacaMessage("🍼 ใช้ยาเร่งคลอดแล้ว","เวลาตั้งครรภ์รอบนี้ลดเหลือรวม 3 ชั่วโมงค่ะ");showAlpacaDetail(penNo,id);renderPen()}catch(e){alpacaMessage("ใช้ยาเร่งคลอดไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function confirmMagicMushroom(ev,source="pen"){$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(ASSET.mushroom,"ยินดีด้วยนะ","คุณได้รับเห็ดวิเศษ ×1")}<p>กดยืนยันแล้วเห็ดวิเศษจะเข้า กระเป๋า → อัลปาก้า → อื่นๆ</p><button id="magicMushConfirm" class="primary-spooky-action" type="button">ยืนยัน</button><button id="magicMushCancel" class="secondary-action" type="button">ยังไม่เก็บ</button></section>`;openModal();$("magicMushConfirm").onclick=()=>source==="friend"?claimFriendMushroom(ev):claimPenMushroom(ev);$("magicMushCancel").onclick=closeModal}
-  async function claimPenMushroom(ev){try{await mutateOwn(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="mushroom");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("เห็ดดอกนี้ถูกเก็บไปแล้ว");p.events.splice(idx,1);s.alpaca.inventory.other.magicMushroom++;s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca)});closeModal();renderPen();alpacaMessage("🍄 ได้รับเห็ดวิเศษ","ยินดีด้วยนะ คุณได้รับ <b>เห็ดวิเศษ ×1</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว") }catch(e){alpacaMessage("เก็บเห็ดไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function claimPenMushroom(ev){try{await mutateOwn(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="mushroom");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("เห็ดดอกนี้ถูกเก็บไปแล้ว");p.events.splice(idx,1);s.alpaca.inventory.other.magicMushroom++;s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca)});closeModal();renderPenEvents(ownAlpaca());alpacaMessage("🍄 ได้รับเห็ดวิเศษ","ยินดีด้วยนะ คุณได้รับ <b>เห็ดวิเศษ ×1</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว") }catch(e){alpacaMessage("เก็บเห็ดไม่ได้",e.message||"กรุณาลองใหม่")}}
   function randomHoleReward(s){
     /* Same reward pool/quantities as the existing friendly ghost, but no ghost cooldown. */
     const pool=[
@@ -17208,7 +17241,7 @@ async function V181_campaignScoreLater(summary){
     else if(pick.type==="merit")s.merit=(Number(s.merit)||0)+qty;
     return{...pick,qty};
   }
-  async function claimPenHole(ev){try{const out=await mutateOwn(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="hole");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("หลุมนี้ถูกเปิดไปแล้ว");p.events.splice(idx,1);const reward=randomHoleReward(s);s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca);return reward},{updateProfile:true});const r=out.result,meta=r.image?`<img class="alpaca-hero-icon" src="${r.image}" alt="">`:`<div class="alpaca-hero-emoji">🙏</div>`;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${meta}<h2>หลุมสุ่มให้รางวัลแล้ว ✨</h2><div class="alpaca-big-reward"><b>${safeHtml(r.name)}</b><strong>×${r.qty}</strong></div><button id="holeRewardDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("holeRewardDone").onclick=()=>{closeModal();renderPen()}}catch(e){alpacaMessage("เปิดหลุมไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function claimPenHole(ev){try{const out=await mutateOwn(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="hole");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("หลุมนี้ถูกเปิดไปแล้ว");p.events.splice(idx,1);const reward=randomHoleReward(s);s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca);return reward},{updateProfile:true});renderPenEvents(ownAlpaca());const r=out.result,meta=r.image?`<img class="alpaca-hero-icon" src="${r.image}" alt="">`:`<div class="alpaca-hero-emoji">🙏</div>`;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${meta}<h2>หลุมสุ่มให้รางวัลแล้ว ✨</h2><div class="alpaca-big-reward"><b>${safeHtml(r.name)}</b><strong>×${r.qty}</strong></div><button id="holeRewardDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("holeRewardDone").onclick=()=>{closeModal();renderPenEvents(ownAlpaca())}}catch(e){alpacaMessage("เปิดหลุมไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   async function syncOwnMaleBreeders(){
     if(!cloudReady||!currentMemberKey||!ownState)return;
@@ -17275,14 +17308,30 @@ async function V181_campaignScoreLater(summary){
   async function deleteAllReleasedBabies(){if(!isAdmin()||!wildBabies.length)return;const ok=await alpacaConfirm("เรียกเบบี้กลับทั้งหมดไหมคะ?",`เบบี้ที่กำลังเดินอยู่ ${wildBabies.length} ตัวจะหายออกจากหน้าฟาร์ม`,{confirmText:"เรียกกลับทั้งหมด",danger:true});if(!ok){showReleaseBabyPanel();return}try{const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db);wildBabies.forEach(x=>batch.delete(fs.doc(db,"alpacaWildBabies",x.id)));await batch.commit();wildBabies=[];renderWildBabies();showReleaseBabyPanel()}catch(e){alpacaMessage("เรียกกลับทั้งหมดไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function availablePenIndexForCapture(root){return root.pens.findIndex(p=>p.alpacas.length<PEN_CAPACITY)}
-  async function beginCapture(b){const root=ownAlpaca();if(!root)return;const daily=root.captureDaily;if(daily.success>=1)return alpacaMessage("วันนี้ดักจับสำเร็จแล้ว","วันนี้คุณดักจับเบบี้สำเร็จครบ 1 ครั้งแล้วค่ะ");if(daily.attempts>=3)return alpacaMessage("ครบโควตาวันนี้แล้ว","แต่ละคนลองดักจับได้สูงสุด 3 ครั้งต่อวัน รีเซ็ตเวลา 00:00 น. ไทย");if(daily.pending)return resumeCaptureProgress();try{const willSucceed=Math.random()<CAPTURE_CHANCE,endAt=gameNow()+CAPTURE_MS;await mutateOwn(s=>{const d=s.alpaca.captureDaily;if(d.attempts>=3||d.success>=1)throw new Error("วันนี้ไม่มีสิทธิ์ดักจับเพิ่มแล้ว");d.attempts++;d.pending={babyId:b.id,color:b.color,bornAt:Number(b.bornAt)||gameNow(),readyProcessAt:Number(b.readyProcessAt)||((Number(b.bornAt)||gameNow())+BABY_PROCESS_MS),endAt,willSucceed}});showCaptureProgress()}catch(e){alpacaMessage("เริ่มดักจับไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function beginCapture(b){const root=ownAlpaca();if(!root)return;const daily=root.captureDaily;if(daily.success>=3||daily.attempts>=10)return alpacaMessage("วันนี้ใช้สิทธิ์ครบแล้ว","กลับมาลองใหม่ได้หลังรีเซ็ตรอบวันค่ะ");if(daily.pending)return resumeCaptureProgress();try{const willSucceed=Math.random()<CAPTURE_CHANCE,endAt=gameNow()+CAPTURE_MS;await mutateOwn(s=>{const d=s.alpaca.captureDaily;if(d.attempts>=10||d.success>=3)throw new Error("วันนี้ใช้สิทธิ์ดักจับครบแล้ว");d.attempts++;d.pending={babyId:b.id,color:b.color,bornAt:Number(b.bornAt)||gameNow(),readyProcessAt:Number(b.readyProcessAt)||((Number(b.bornAt)||gameNow())+BABY_PROCESS_MS),endAt,willSucceed}});showCaptureProgress()}catch(e){alpacaMessage("เริ่มดักจับไม่ได้",e.message||"กรุณาลองใหม่")}}
   function resumeCaptureProgress(){const p=ownAlpaca()?.captureDaily?.pending;if(!p)return;if(p.endAt<=gameNow())finalizeCapture();else showCaptureProgress()}
   function showCaptureProgress(){const p=ownAlpaca()?.captureDaily?.pending;if(!p)return;clearInterval(progressTimer);$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-progress-panel alpaca-capture-scene"><h2>กำลังดักจับอัลปาก้า</h2><div class="alpaca-progress-art capture"><span class="alpaca-capture-ring"></span><img src="${ASSET.captureProgress}" alt="กำลังดักจับอัลปาก้า"><span class="alpaca-fx-layer capture"><i>✦</i><i>✧</i><i>✦</i><i>✧</i></span></div><p>รอลุ้นผลการดักจับนะคะ</p><strong id="captureProgressCount" class="alpaca-progress-count">01:00</strong><button id="captureProgressClose" class="secondary-action" type="button">ปิดหน้าต่าง</button></section>`;openModal();const tick=()=>{const x=ownAlpaca()?.captureDaily?.pending,left=Math.max(0,Number(x?.endAt||0)-gameNow());if($("captureProgressCount"))$("captureProgressCount").textContent=`${String(Math.floor(Math.ceil(left/1000)/60)).padStart(2,"0")}:${String(Math.ceil(left/1000)%60).padStart(2,"0")}`;if(left<=0){clearInterval(progressTimer);progressTimer=0;finalizeCapture()}};tick();progressTimer=setInterval(tick,500);$("captureProgressClose").onclick=()=>{clearInterval(progressTimer);progressTimer=0;closeModal()}}
-  async function finalizeCapture(){const pending=ownAlpaca()?.captureDaily?.pending;if(!pending)return;if(!pending.willSucceed){try{await mutateOwn(s=>{const d=s.alpaca.captureDaily;if(!d.pending)return;d.pending=null;s.merit=(Number(s.merit)||0)+CAPTURE_FAIL_MERIT},{updateProfile:true});showCaptureFailure()}catch(e){alpacaMessage("สรุปผลไม่ได้",e.message||"กรุณาลองใหม่")}return}
-    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),wildRef=fs.doc(db,"alpacaWildBabies",pending.babyId);let next;await fs.runTransaction(db,async tx=>{const [os,ws]=await Promise.all([tx.get(ownRef),tx.get(wildRef)]);if(!os.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(os.data(),currentMember),d=s.alpaca.captureDaily;if(!d.pending||d.pending.babyId!==pending.babyId)throw new Error("รอบดักจับนี้ถูกสรุปไปแล้ว");if(!ws.exists()||ws.data()?.status!=="available"){d.pending=null;next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});return}d.pending=null;d.success=1;d.reward={babyId:pending.babyId,color:pending.color,bornAt:pending.bornAt,readyProcessAt:pending.readyProcessAt};next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(wildRef,{status:"reserved",capturedBy:currentMemberKey,capturedAt:gameNow(),updatedAt:fs.serverTimestamp()},{merge:true})});applyOwn(next);if(ownAlpaca().captureDaily.reward)showCaptureSuccess();else alpacaMessage("ช้าไปนิดนึงค่ะ","อัลปาก้าตัวนี้ถูกคนอื่นดักจับไปแล้ว • รอบนี้ไม่หักกุศล") }catch(e){alpacaMessage("สรุปผลไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function finalizeCapture(){
+    const pending=ownAlpaca()?.captureDaily?.pending;if(!pending)return;
+    try{
+      await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey),wildRef=fs.doc(db,"alpacaWildBabies",pending.babyId),mailRef=fs.doc(fs.collection(db,"mailboxes","aida","items"));let next=null,success=false;
+      await fs.runTransaction(db,async tx=>{
+        const [os,ws]=await Promise.all([tx.get(ownRef),tx.get(wildRef)]);if(!os.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(os.data(),currentMember),d=s.alpaca.captureDaily;if(!d.pending||d.pending.babyId!==pending.babyId)throw new Error("รอบดักจับนี้ถูกสรุปไปแล้ว");
+        const available=ws.exists()&&ws.data()?.status==="available";success=Boolean(pending.willSucceed&&available&&d.success<3);d.pending=null;
+        if(success){const baby=makeBaby(pending.color,Number(pending.bornAt)||gameNow(),"capture");baby.id=`captured-${pending.babyId}`;baby.readyProcessAt=Number(pending.readyProcessAt)||baby.readyProcessAt;if(!s.alpaca.vault.some(v=>v.id===baby.id))s.alpaca.vault.push({id:baby.id,type:"baby",color:baby.color,sex:null,source:"capture",createdAt:gameNow(),bornAt:baby.bornAt,readyProcessAt:baby.readyProcessAt});d.success=Math.min(3,Number(d.success||0)+1);incrementMissionOn(s,"dailyCaptureAidaAlpaca",1);tx.set(wildRef,{status:"reserved",capturedBy:currentMemberKey,capturedAt:gameNow(),updatedAt:fs.serverTimestamp()},{merge:true})}
+        else if(pending.willSucceed&&!available){/* someone else already got this baby: no merit penalty */}
+        else{s.merit=(Number(s.merit)||0)+CAPTURE_FAIL_MERIT}
+        next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+        const colorText=colorName(pending.color),title=success?`${currentProfileDisplayName()} ดักจับอัลปาก้าเบบี้${colorText}สำเร็จ`:`${currentProfileDisplayName()} พยายามดักจับอัลปาก้าเบบี้${colorText} แต่ไม่สำเร็จ`;tx.set(mailRef,{source:"friend",type:"alpacaCapture",fromKey:currentMemberKey,fromName:currentProfileDisplayName(),title,text:success?"ดักจับสำเร็จ":"ดักจับไม่สำเร็จ",read:false,createdAt:fs.serverTimestamp()})
+      });
+      applyOwn(next);
+      if(success){try{await fs.updateDoc(wildRef,{status:"captured",claimedBy:currentMemberKey,claimedAt:gameNow(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("capture final mark",e)}showCaptureSuccess(pending.color)}
+      else if(pending.willSucceed){alpacaMessage("ช้าไปนิดนึงค่ะ","อัลปาก้าตัวนี้ถูกคนอื่นดักจับไปแล้ว • รอบนี้ไม่หักกุศล")}else showCaptureFailure();
+    }catch(e){alpacaMessage("สรุปผลไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
   function showCaptureFailure(){$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-fail-panel alpaca-result-scene fail"><div class="alpaca-result-art"><img class="alpaca-hero-icon" src="${ASSET.captureFail}" alt="ดักจับไม่สำเร็จ"><span class="alpaca-fx-layer fail"><i>✕</i><i>·</i><i>✕</i><i>·</i></span></div><h2>เสียใจด้วยนะ</h2><p>อัลปาก้าตัวนี้ไม่ชอบคุณ<br>ทำให้คุณดักจับไม่สำเร็จ</p><div class="alpaca-callout danger"><b>-500 กุศล ฟรีๆ มู๊แงๆ</b><small>กุศลสามารถติดลบได้ค่ะ</small></div><button id="captureFailDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("captureFailDone").onclick=closeModal}
-  function showCaptureSuccess(){const r=ownAlpaca()?.captureDaily?.reward;if(!r)return;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel alpaca-result-scene success"><div class="alpaca-result-art"><img class="alpaca-hero-icon" src="${ASSET.captureSuccess}" alt="ดักจับสำเร็จ"><span class="alpaca-fx-layer success"><i>★</i><i>♥</i><i>✦</i><i>★</i><i>♥</i><i>✧</i></span></div><h2>ยินดีด้วยค่ะ</h2><p>คุณดักจับอัลปากาเบบี้ได้สำเร็จ</p><button id="captureReceiveBtn" class="primary-spooky-action" type="button">รับอัลปาก้า</button></section>`;openModal();$("captureReceiveBtn").onclick=claimCaptureReward}
-  async function claimCaptureReward(){const r=ownAlpaca()?.captureDaily?.reward;if(!r)return;const btn=$("captureReceiveBtn");if(btn){btn.disabled=true;btn.textContent="กำลังเข้าคลัง..."}try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),wildRef=fs.doc(db,"alpacaWildBabies",r.babyId);let next,placed=0;await fs.runTransaction(db,async tx=>{const [os,ws]=await Promise.all([tx.get(ownRef),tx.get(wildRef)]);if(!os.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(os.data(),currentMember),d=s.alpaca.captureDaily;if(!d.reward||d.reward.babyId!==r.babyId)throw new Error("รับเบบี้ไปแล้ว");const baby=makeBaby(r.color,Number(r.bornAt)||gameNow(),"capture");baby.id=`captured-${r.babyId}`;baby.readyProcessAt=Number(r.readyProcessAt)||baby.readyProcessAt;s.alpaca.vault.push({id:baby.id,type:"baby",color:baby.color,sex:null,source:"capture",createdAt:gameNow(),bornAt:baby.bornAt,readyProcessAt:baby.readyProcessAt});d.reward=null;next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(ws.exists())tx.set(wildRef,{status:"captured",claimedBy:currentMemberKey,claimedAt:gameNow(),updatedAt:fs.serverTimestamp()},{merge:true})});applyOwn(next);closeModal();alpacaMessage("🦙 รับเข้าคลังแล้ว","เบบี้อัลปาก้าเข้า <b>คลังอัลปาก้า</b> เรียบร้อยแล้วค่ะ")}catch(e){if(btn){btn.disabled=false;btn.textContent="รับอัลปาก้า"}alpacaMessage("ยังรับไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function showCaptureSuccess(color){$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel alpaca-result-scene success"><div class="alpaca-result-art"><img class="alpaca-hero-icon" src="${ASSET.captureSuccess}" alt="ดักจับสำเร็จ"><span class="alpaca-fx-layer success"><i>★</i><i>♥</i><i>✦</i><i>★</i><i>♥</i><i>✧</i></span></div><h2>ยินดีด้วยค่ะ</h2><p>คุณดักจับอัลปาก้าเบบี้สำเร็จ<br><small>เข้า “คลังอัลปาก้า” เรียบร้อยแล้ว</small></p><button id="captureReceiveBtn" class="primary-spooky-action" type="button">รับทราบ</button></section>`;openModal();$("captureReceiveBtn").onclick=closeModal}
+  async function claimCaptureReward(){closeModal()}
 
   const baseInventory=inventory;
   inventory=function(tab="crops"){
@@ -17316,7 +17365,7 @@ async function V181_campaignScoreLater(summary){
     if($("shortcutAlpacaPenBtn"))$("shortcutAlpacaPenBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}openPen(1)};if($("releaseBabyAlpacaBtn"))$("releaseBabyAlpacaBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}showReleaseBabyPanel()};if($("alpacaPenBackBtn"))$("alpacaPenBackBtn").onclick=closePen;if($("alpacaPenSwitchBtn"))$("alpacaPenSwitchBtn").onclick=showPenSelector;if($("alpacaHappinessBtn"))$("alpacaHappinessBtn").onclick=showHappinessBreakdown;if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").onclick=editPenName;if($("alpacaMedicineHotspot"))$("alpacaMedicineHotspot").onclick=()=>showCraft("medicine");if($("alpacaFoodHotspot"))$("alpacaFoodHotspot").onclick=()=>showCraft("food");if($("alpacaTroughHotspot"))$("alpacaTroughHotspot").onclick=showTrough;if($("alpacaManageBtn"))$("alpacaManageBtn").onclick=showManageAlpacas;if($("alpacaFactoryBtn"))$("alpacaFactoryBtn").onclick=showFactorySoon;if($("alpacaWarehouseBtn"))$("alpacaWarehouseBtn").onclick=showAlpacaWarehouse;if($("alpacaRankBtn"))$("alpacaRankBtn").onclick=showRank;
   }
 
-  const drawBase=draw;draw=function(){const r=drawBase.apply(this,arguments);setTimeout(()=>{try{syncEntryButtons();renderWildBabies();if(visitContext)renderFriendMushrooms()}catch(e){console.warn("alpaca draw hook",e)}},0);return r};
+  const drawBase=draw;draw=function(){const r=drawBase.apply(this,arguments);setTimeout(()=>{try{syncEntryButtons();if(isAidaFarmView()&&Number(farmPlotPage||0)===0)renderWildBabies();if(visitContext)renderFriendMushrooms()}catch(e){console.warn("alpaca draw hook",e)}},0);return r};
   const farmPageBase=setFarmPlotPage;setFarmPlotPage=function(page){const r=farmPageBase.apply(this,arguments);setTimeout(()=>{syncEntryButtons();renderWildBabies();renderFriendMushrooms()},0);return r};
   const visitBase=visitFriend;visitFriend=async function(){const r=await visitBase.apply(this,arguments);setTimeout(()=>{syncEntryButtons();renderWildBabies();renderFriendMushrooms()},100);return r};
   const returnBase=returnFromFriendVisit;returnFromFriendVisit=function(){clearFriendMushrooms();const r=returnBase.apply(this,arguments);setTimeout(()=>{syncEntryButtons();renderWildBabies()},0);return r};
@@ -17393,4 +17442,12 @@ async function V181_campaignScoreLater(summary){
   }
 
   console.info('ALPACA_RELEASE_OPEN_V1 loaded');
+})();
+
+
+/* RELEASE FINAL FIX — mobile visual viewport / fast pen layout */
+(function YN_FINAL_VISUAL_VIEWPORT(){
+  let raf=0;function sync(){raf=0;const vv=window.visualViewport,h=Math.max(320,Math.round(vv?.height||window.innerHeight||document.documentElement.clientHeight)),top=Math.max(0,Math.round(vv?.offsetTop||0));document.documentElement.style.setProperty("--yn-visible-vh",`${h}px`);document.documentElement.style.setProperty("--yn-visible-top",`${top}px`)}
+  function queue(){if(!raf)raf=requestAnimationFrame(sync)}
+  sync();window.addEventListener("resize",queue,{passive:true});window.visualViewport?.addEventListener("resize",queue,{passive:true});window.visualViewport?.addEventListener("scroll",queue,{passive:true});
 })();

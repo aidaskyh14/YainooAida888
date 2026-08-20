@@ -6525,3 +6525,31 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 }
 .alpaca-craft-success p{width:100%!important;text-align:center!important;margin:4px auto 2px!important}
 .alpaca-craft-success #receiveCraftedAlpaca{align-self:center!important;min-width:86px!important}
+
+
+/* ======================================================================
+   RELEASE FINAL FIX R2 — depth, touch reliability, mobile viewport
+   ====================================================================== */
+.alpaca-pen-screen{
+  inset:auto 0 auto 0!important;
+  top:var(--yn-visible-top,0px)!important;
+  height:var(--yn-visible-vh,100dvh)!important;
+  min-height:0!important;
+}
+.alpaca-pen-stage{height:100%!important;min-height:0!important}
+.alpaca-pen-event-layer{z-index:10!important;pointer-events:none!important}
+.alpaca-pen-animal-layer{z-index:16!important;pointer-events:none!important}
+.alpaca-pen-event{z-index:1!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.alpaca-pen-animal{z-index:2!important;pointer-events:auto!important}
+.alpaca-pen-event.mushroom{width:48px!important;height:48px!important;margin:-8px 0 0 -8px!important;display:grid!important;place-items:center!important}
+.alpaca-pen-event.mushroom img{width:clamp(23px,5.6vw,37px)!important;height:clamp(23px,5.6vw,37px)!important}
+.alpaca-pen-event.hole{width:54px!important;height:46px!important;margin:-8px 0 0 -8px!important;display:grid!important;place-items:center!important}
+.alpaca-pen-event.hole img{width:clamp(27px,6.2vw,42px)!important;height:clamp(20px,4.7vw,32px)!important}
+.alpaca-pen-bottom-actions{bottom:max(8px,env(safe-area-inset-bottom))!important}
+.alpaca-trough-visual{bottom:11.8%!important}
+.alpaca-trough-hotspot{bottom:10.8%!important}
+.alpaca-trough-stock{bottom:11.2%!important}
+.alpaca-pen-animal-layer,.alpaca-pen-event-layer{contain:layout paint style}
+.alpaca-pen-animal{will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.alpaca-pen-animal .alpaca-sprite{will-change:background-position;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+@media (prefers-reduced-motion:reduce){.alpaca-pen-animal{will-change:auto}.alpaca-pen-animal .alpaca-sprite{will-change:auto}}
