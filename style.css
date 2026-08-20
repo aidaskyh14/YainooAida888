@@ -6375,3 +6375,153 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   .grass-campaign-rewards .grass-rewards-content{padding-left:7px!important;padding-right:7px!important}
   .grass-campaign .v36-campaign-ranks{gap:4px 5px!important}
 }
+
+
+/* ======================================================================
+   RELEASE HOTFIX — grass campaign matches the previous campaign card size
+   and scrolls inside the card; crafted alpaca preview is centered.
+   ====================================================================== */
+.modal-card:has(.grass-campaign),
+.modal-card:has(.grass-campaign-rewards){
+  position:fixed!important;
+  inset:50% auto auto 50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:min(94vw,560px)!important;
+  height:min(88dvh,790px)!important;
+  min-height:0!important;
+  max-width:560px!important;
+  max-height:88dvh!important;
+  margin:0!important;
+  padding:0!important;
+  border-radius:20px!important;
+  overflow:hidden!important;
+  background:#21112d!important;
+}
+.modal-card:has(.grass-campaign)>#modalContent,
+.modal-card:has(.grass-campaign-rewards)>#modalContent{
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.grass-campaign,
+.grass-campaign-rewards{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  border-radius:20px!important;
+  overflow:hidden!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+.grass-campaign .v36-campaign-shade{
+  position:absolute!important;
+  inset:0!important;
+}
+.grass-campaign .v36-campaign-content,
+.grass-campaign-rewards .grass-rewards-content{
+  position:relative!important;
+  z-index:2!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding:10px 10px 14px!important;
+}
+.grass-campaign-dashboard .v36-campaign-content{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:5px!important;
+}
+.grass-campaign-dashboard .v36-campaign-ranks{
+  flex:0 0 auto!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:4px 6px!important;
+}
+.grass-campaign-dashboard .v36-rank-row,
+.grass-campaign-dashboard .v36-rank-top-1,
+.grass-campaign-dashboard .v36-rank-top-2,
+.grass-campaign-dashboard .v36-rank-top-3{
+  min-height:31px!important;
+  height:31px!important;
+  padding:4px 6px!important;
+}
+.grass-campaign-dashboard .v36-campaign-title{margin:3px 0 2px!important}
+.grass-campaign-dashboard .v36-campaign-title h2{font-size:clamp(16px,4.3vw,22px)!important;margin:3px 0 2px!important}
+.grass-campaign-dashboard .v36-campaign-title>small{font-size:9px!important;padding:4px 8px!important}
+.grass-campaign-dashboard .v36-campaign-total-label{font-size:8px!important}
+.grass-campaign-dashboard .v36-my-score{margin:3px auto!important;padding:4px 10px!important}
+.grass-campaign-dashboard .v42-campaign-footer-row{margin-top:5px!important;padding-bottom:0!important}
+.grass-campaign-rules .v36-condition-card{
+  width:94%!important;
+  max-width:500px!important;
+  margin:8px auto 10px!important;
+  padding:13px 14px 15px!important;
+}
+.grass-campaign-rules .v36-campaign-footer{
+  position:relative!important;
+  width:min(92%,420px)!important;
+  margin:8px auto 12px!important;
+}
+.grass-campaign-rewards .grass-reward-list{
+  overflow:visible!important;
+  max-height:none!important;
+}
+@media(max-width:390px){
+  .modal-card:has(.grass-campaign),
+  .modal-card:has(.grass-campaign-rewards){
+    width:94vw!important;
+    height:84dvh!important;
+    max-height:84dvh!important;
+    border-radius:18px!important;
+  }
+  .grass-campaign,
+  .grass-campaign-rewards{border-radius:18px!important}
+  .grass-campaign .v36-campaign-content,
+  .grass-campaign-rewards .grass-rewards-content{padding:8px 7px 12px!important}
+  .grass-campaign-dashboard .v36-rank-row,
+  .grass-campaign-dashboard .v36-rank-top-1,
+  .grass-campaign-dashboard .v36-rank-top-2,
+  .grass-campaign-dashboard .v36-rank-top-3{height:29px!important;min-height:29px!important}
+}
+
+.alpaca-craft-success{
+  text-align:center!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+}
+.alpaca-craft-success-preview{
+  width:100%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  margin:8px auto 10px!important;
+}
+.alpaca-craft-success-preview .alpaca-sprite-preview{
+  display:block!important;
+  margin:0 auto!important;
+  justify-self:auto!important;
+  align-self:auto!important;
+  width:clamp(86px,24vw,128px)!important;
+  min-height:108px!important;
+  max-height:140px!important;
+}
+.alpaca-craft-success p{width:100%!important;text-align:center!important;margin:4px auto 2px!important}
+.alpaca-craft-success #receiveCraftedAlpaca{align-self:center!important;min-width:86px!important}
