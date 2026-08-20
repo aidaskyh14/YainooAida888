@@ -6091,3 +6091,287 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 @media (prefers-reduced-motion:reduce){
   .alpaca-pen-weather .alpaca-weather-particle,.alpaca-pen-weather .alpaca-weather-sheet{animation-duration:8s!important}
 }
+
+/* ======================================================================
+   RELEASE HOTFIX UI R2 — compact warehouse + full-page scroll campaign
+   ====================================================================== */
+
+/* Warehouse: clean hierarchy, no squeezed vertical Thai title. */
+.modal-card:has(.alpaca-warehouse-panel){
+  width:min(94vw,680px)!important;
+  max-width:680px!important;
+  height:min(88dvh,820px)!important;
+  max-height:88dvh!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border-radius:24px!important;
+}
+.alpaca-warehouse-panel{
+  width:100%!important;
+  height:100%!important;
+  max-height:none!important;
+  min-height:0!important;
+  padding:14px 12px 12px!important;
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+  background:linear-gradient(180deg,#fffaf0 0%,#fff1df 48%,#fbe6ed 100%)!important;
+}
+.alpaca-warehouse-head{
+  flex:0 0 auto!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:9px!important;
+  padding:2px 38px 10px 2px!important;
+  border-bottom:1px solid rgba(115,69,81,.12)!important;
+}
+.alpaca-warehouse-title{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:9px!important;
+  min-width:0!important;
+  text-align:left!important;
+}
+.alpaca-warehouse-title-icon{
+  flex:0 0 auto!important;
+  display:grid!important;
+  place-items:center!important;
+  width:42px!important;height:42px!important;
+  border-radius:14px!important;
+  background:linear-gradient(180deg,#fff4d2,#ffd9e8)!important;
+  box-shadow:0 4px 10px rgba(78,42,66,.12)!important;
+  font-size:24px!important;
+}
+.alpaca-warehouse-title>div{min-width:0!important}
+.alpaca-warehouse-title h2{
+  margin:0!important;
+  font-size:clamp(21px,5.6vw,30px)!important;
+  line-height:1.08!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+  color:#583653!important;
+  text-align:left!important;
+}
+.alpaca-warehouse-title small{
+  margin-top:3px!important;
+  display:block!important;
+  font-size:clamp(10px,2.6vw,13px)!important;
+  line-height:1.25!important;
+  color:#8b6c78!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+}
+.alpaca-warehouse-actions{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:8px!important;
+}
+.alpaca-warehouse-actions button{
+  min-width:0!important;
+  min-height:38px!important;
+  border:1px solid rgba(113,72,75,.16)!important;
+  border-radius:13px!important;
+  padding:7px 8px!important;
+  font-size:clamp(11px,2.9vw,14px)!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  background:#fff7e6!important;
+  color:#5f3a50!important;
+  box-shadow:0 4px 9px rgba(65,31,55,.08)!important;
+}
+.alpaca-warehouse-actions .primary{
+  background:linear-gradient(180deg,#8e5798,#693875)!important;
+  color:#fff!important;
+}
+.alpaca-warehouse-grid{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-content:start!important;
+  gap:8px!important;
+  padding:10px 2px 18px!important;
+}
+.alpaca-warehouse-card{
+  min-width:0!important;
+  border-radius:17px!important;
+  padding:22px 5px 8px!important;
+}
+.alpaca-warehouse-card .alpaca-sprite-preview{
+  width:min(76px,18vw)!important;
+  min-height:78px!important;
+  max-height:95px!important;
+  background-size:400% 400%!important;
+  background-repeat:no-repeat!important;
+  background-position:0 0!important;
+}
+.alpaca-warehouse-card.is-baby .alpaca-sprite-preview{
+  width:min(54px,13vw)!important;
+  min-height:60px!important;
+  max-height:72px!important;
+}
+.alpaca-warehouse-card>b{font-size:clamp(10px,2.7vw,13px)!important;line-height:1.15!important}
+.alpaca-warehouse-card>small{font-size:clamp(8px,2.1vw,10px)!important;line-height:1.2!important}
+.alpaca-warehouse-card>button{font-size:clamp(9px,2.4vw,11px)!important;padding:7px 3px!important}
+.alpaca-warehouse-card .alpaca-age-badge{font-size:8px!important;padding:3px 5px!important}
+.alpaca-warehouse-panel .alpaca-empty-state{
+  grid-column:1/-1!important;
+  width:100%!important;
+  max-width:360px!important;
+  margin:28px auto 0!important;
+  padding:18px 16px!important;
+  border-radius:18px!important;
+  border:1.5px dashed rgba(120,78,91,.28)!important;
+  background:rgba(255,255,255,.58)!important;
+  color:#765766!important;
+  text-align:center!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+.alpaca-warehouse-panel .alpaca-empty-state small{display:block!important;margin-top:5px!important;font-size:10px!important;line-height:1.45!important}
+
+/* Campaign: the WHOLE campaign page scrolls. No nested rank/rules scroll, no dead strip. */
+.modal-card:has(.grass-campaign){
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:hidden!important;
+  background:#21112d!important;
+}
+.grass-campaign{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  background-image:var(--campaign-bg)!important;
+  background-size:cover!important;
+  background-position:center top!important;
+  background-repeat:no-repeat!important;
+  background-attachment:scroll!important;
+}
+.grass-campaign .v36-campaign-shade{position:fixed!important;inset:0!important;pointer-events:none!important}
+.grass-campaign .v36-campaign-content,
+.grass-campaign-rewards .grass-rewards-content{
+  position:relative!important;
+  z-index:2!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:100%!important;
+  overflow:visible!important;
+  box-sizing:border-box!important;
+  padding:max(12px,env(safe-area-inset-top)) 10px max(18px,env(safe-area-inset-bottom))!important;
+}
+.grass-campaign .v36-campaign-content{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:7px!important;
+}
+.grass-campaign .v36-campaign-topbar{
+  flex:0 0 auto!important;
+  width:100%!important;
+  gap:7px!important;
+}
+.grass-campaign .v36-campaign-topbar button,
+.grass-campaign .v36-campaign-topbar>span{
+  max-width:48%!important;
+  min-width:0!important;
+  padding:7px 9px!important;
+  font-size:clamp(10px,2.7vw,13px)!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.grass-campaign .v36-campaign-title{margin:5px 0 4px!important;flex:0 0 auto!important}
+.grass-campaign .v36-campaign-title h2{font-size:clamp(20px,5.4vw,29px)!important;margin:5px auto 3px!important}
+.grass-campaign .v36-campaign-title>small{font-size:clamp(9px,2.5vw,12px)!important;padding:4px 9px!important}
+.grass-campaign .v36-my-score{margin:5px auto!important;padding:5px 12px!important;min-height:0!important}
+.grass-campaign .v36-campaign-ranks{
+  flex:none!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px 7px!important;
+  padding:2px!important;
+}
+.grass-campaign .v36-rank-row,
+.grass-campaign .v36-rank-top-1,
+.grass-campaign .v36-rank-top-2,
+.grass-campaign .v36-rank-top-3{
+  min-height:36px!important;
+  height:auto!important;
+  padding:5px 7px!important;
+  border-radius:11px!important;
+}
+.grass-campaign .v36-rank-name b{font-size:clamp(10px,2.6vw,12px)!important}
+.grass-campaign .v36-rank-row>strong{font-size:clamp(12px,3vw,15px)!important}
+.grass-campaign .v42-campaign-footer-row{
+  flex:0 0 auto!important;
+  margin-top:8px!important;
+  padding-bottom:max(6px,env(safe-area-inset-bottom))!important;
+}
+.grass-campaign-rules .v36-condition-card{
+  flex:none!important;
+  width:94%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  margin:8px auto!important;
+  padding:14px 14px 16px!important;
+}
+.grass-campaign-rules .v36-campaign-footer{
+  position:relative!important;
+  inset:auto!important;
+  width:min(92%,420px)!important;
+  margin:8px auto 4px!important;
+  flex:0 0 auto!important;
+}
+.grass-campaign-rewards .grass-reward-list{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+.grass-campaign-rewards .grass-rewards-content header{
+  flex:0 0 auto!important;
+  position:relative!important;
+}
+
+@media (max-width:390px){
+  .modal-card:has(.alpaca-warehouse-panel){width:94vw!important;height:86dvh!important}
+  .alpaca-warehouse-panel{padding:11px 9px 10px!important}
+  .alpaca-warehouse-head{padding-right:34px!important}
+  .alpaca-warehouse-grid{gap:5px!important;padding-top:8px!important}
+  .alpaca-warehouse-card{padding-left:3px!important;padding-right:3px!important}
+  .grass-campaign .v36-campaign-content,
+  .grass-campaign-rewards .grass-rewards-content{padding-left:7px!important;padding-right:7px!important}
+  .grass-campaign .v36-campaign-ranks{gap:4px 5px!important}
+}
