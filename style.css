@@ -5838,3 +5838,174 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   .alpaca-medicine-hotspot{left:10.5%!important}.alpaca-food-hotspot{right:10.5%!important}
   .alpaca-trough-visual{left:20%!important;right:20%!important}
 }
+
+
+/* ======================================================================
+   ALPACA POLISH R2 — responsive sign / invisible buildings / cute cards /
+   spread walking / larger trough food / unified alpaca modal language
+   ====================================================================== */
+
+/* The pen name is anchored to the actual wooden sign in the 9:16 artwork. */
+.alpaca-pen-name-button{
+  left:25.5%!important;
+  top:14.65%!important;
+  width:49%!important;
+  height:6.55%!important;
+  padding:0 3%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:#684126!important;
+  font-family:"Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif!important;
+  font-size:clamp(15px,4.1vw,27px)!important;
+  font-weight:900!important;
+  line-height:1!important;
+  letter-spacing:.015em!important;
+  text-align:center!important;
+  text-shadow:0 1px 0 rgba(255,249,226,.95),0 2px 3px rgba(81,48,27,.18)!important;
+  transform:none!important;
+}
+
+/* Craft buttons disappear visually: the buildings themselves are the tap targets. */
+.alpaca-building-hotspot{
+  z-index:23!important;
+  border:0!important;
+  border-radius:18px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:transparent!important;
+  padding:0!important;
+  min-height:0!important;
+  font-size:0!important;
+  opacity:1!important;
+  -webkit-tap-highlight-color:transparent;
+}
+.alpaca-building-hotspot>*{display:none!important}
+.alpaca-medicine-hotspot{left:.5%!important;right:auto!important;top:20.5%!important;width:37.5%!important;height:23.5%!important}
+.alpaca-food-hotspot{left:auto!important;right:.5%!important;top:25.5%!important;width:36.5%!important;height:19.5%!important}
+.alpaca-building-hotspot:focus-visible{outline:2px dashed rgba(255,238,195,.72);outline-offset:-6px}
+
+/* Food art stays in the five correct slots, just a little fuller. */
+.alpaca-trough-visual-slot img{
+  width:min(108%,68px)!important;
+  height:min(108%,68px)!important;
+  max-width:none!important;
+  max-height:none!important;
+}
+
+/* Manage grid: never squeeze the source frames. Adult and baby cards read differently at a glance. */
+.alpaca-manage-card.compact{
+  position:relative!important;
+  overflow:hidden!important;
+  padding:24px 5px 7px!important;
+  border-width:1.5px!important;
+  box-shadow:0 5px 13px rgba(76,46,70,.10)!important;
+}
+.alpaca-manage-card.compact.is-adult{
+  border-color:#d7b36c!important;
+  background:linear-gradient(180deg,#fffaf0 0%,#fff3dc 68%,#f6e4c7 100%)!important;
+}
+.alpaca-manage-card.compact.is-baby{
+  border-color:#e6b8cd!important;
+  background:linear-gradient(180deg,#fff9fb 0%,#fff0f6 68%,#f7dfeb 100%)!important;
+}
+.alpaca-age-badge{
+  position:absolute;top:5px;left:50%;translate:-50% 0;z-index:2;
+  min-width:60%;padding:3px 6px;border-radius:999px;
+  font-size:clamp(6px,1.65vw,8px);font-weight:950;line-height:1;
+  white-space:nowrap;border:1px solid rgba(255,255,255,.82);
+  box-shadow:0 2px 5px rgba(63,38,56,.10)
+}
+.is-adult>.alpaca-age-badge{background:#805784;color:#fff8dd}
+.is-baby>.alpaca-age-badge{background:#e49bbb;color:#fff}
+.alpaca-manage-card.compact .alpaca-sprite-preview{
+  height:auto!important;
+  max-height:none!important;
+  aspect-ratio:var(--alpaca-preview-ratio,.6)!important;
+  background-size:400% 400%!important;
+  background-position:0 0!important;
+  flex:0 0 auto;
+}
+.alpaca-manage-card.compact .alpaca-sprite-preview.manage-adult{width:clamp(45px,12.2vw,62px)!important}
+.alpaca-manage-card.compact .alpaca-sprite-preview.manage-baby{width:clamp(32px,8.7vw,44px)!important;margin-top:8px!important;margin-bottom:7px!important}
+
+/* One cute visual language for every alpaca modal/notification. */
+.modal-card:has(.alpaca-panel){
+  width:min(600px,94vw)!important;
+  max-height:88svh!important;
+  padding:20px 14px 16px!important;
+  border:3px solid #c58a91!important;
+  border-radius:28px!important;
+  background:
+    radial-gradient(circle at 16% 4%,rgba(255,255,255,.9) 0 7%,transparent 8%),
+    linear-gradient(180deg,#fff9ee 0%,#fdebdc 46%,#f5d9df 100%)!important;
+  box-shadow:0 22px 58px rgba(43,23,43,.46),inset 0 0 0 3px rgba(255,255,255,.55)!important;
+  overflow:auto!important;
+}
+.modal-card:has(.alpaca-panel)>.close{
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(180deg,#9b6652,#744436)!important;color:#fff8e8!important;
+  border:2px solid rgba(255,238,207,.8)!important;box-shadow:0 4px 10px rgba(61,33,38,.25)!important
+}
+.alpaca-panel{
+  position:relative;
+  padding:10px 4px 2px;
+  color:#573e55!important;
+  font-family:"Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif!important;
+}
+.alpaca-panel::before{
+  content:"✦  🦙  ✦";display:block;margin:-2px auto 5px;color:#a66b91;
+  font-size:12px;letter-spacing:4px;opacity:.78
+}
+.alpaca-panel h2{color:#66416c!important;text-shadow:0 1px 0 #fff!important}
+.alpaca-panel p,.alpaca-panel .feature-subtitle{color:#8a6d7d!important}
+.alpaca-notice-icon{
+  width:64px;height:64px;margin:0 auto 6px;display:grid;place-items:center;border-radius:50%;
+  background:linear-gradient(180deg,#fff7fb,#f4d9e8);border:1px solid #e4b8ce;
+  box-shadow:0 6px 14px rgba(91,55,79,.13);font-size:34px
+}
+.alpaca-notice-icon.small{width:52px;height:52px;margin:0;font-size:28px;flex:0 0 auto}
+.alpaca-notice-copy{margin:8px auto 10px;padding:10px 12px;max-width:420px;border:1px solid #ead2c7;border-radius:14px;background:rgba(255,252,244,.82);font-size:11px;line-height:1.55;color:#755967}
+.alpaca-prompt-input{display:block;width:min(360px,92%);height:43px;margin:10px auto;border:1.5px solid #d8b5bf;border-radius:13px;background:#fffdf8;color:#5d4056;text-align:center;font:900 15px/1 "Thonburi","Sukhumvit Set","Noto Sans Thai",sans-serif;box-shadow:inset 0 2px 5px rgba(74,44,64,.07)}
+.alpaca-release-divider{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:13px 0 7px;padding:8px 10px;border-radius:12px;background:#efe0ef;color:#654466;font-size:10px;font-weight:900}
+.alpaca-release-panel>.primary-spooky-action{margin:4px auto 0}
+
+/* Event effects: love, capture tension, celebration, and failure are visually distinct. */
+.alpaca-progress-art,.alpaca-result-art{position:relative;isolation:isolate}
+.alpaca-fx-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;border-radius:inherit}
+.alpaca-fx-layer i{position:absolute;font-style:normal;line-height:1;filter:drop-shadow(0 2px 2px rgba(72,42,63,.16))}
+.alpaca-fx-layer.love i{color:#ec72a3;font-size:20px;animation:alpacaFxFloat 1.7s ease-in-out infinite}
+.alpaca-fx-layer.love i:nth-child(1){left:10%;bottom:12%}.alpaca-fx-layer.love i:nth-child(2){left:26%;bottom:2%;animation-delay:.3s;color:#f5b74e}.alpaca-fx-layer.love i:nth-child(3){right:22%;bottom:8%;animation-delay:.55s}.alpaca-fx-layer.love i:nth-child(4){right:8%;bottom:20%;animation-delay:.8s;color:#f6c75f}.alpaca-fx-layer.love i:nth-child(5){left:48%;bottom:0;animation-delay:1.05s}
+.alpaca-capture-ring{position:absolute;z-index:1;width:72%;aspect-ratio:1;border-radius:50%;border:2px dashed rgba(116,80,137,.48);box-shadow:0 0 0 7px rgba(213,188,229,.15);animation:alpacaCaptureRing 3.2s linear infinite}
+.alpaca-progress-art.capture img{z-index:2;position:relative;animation:alpacaCapturePulse .78s ease-in-out infinite alternate,alpacaCaptureNudge 2.6s ease-in-out infinite!important}
+.alpaca-fx-layer.capture i{color:#8d68b1;font-size:18px;animation:alpacaCaptureSpark 1.5s ease-in-out infinite}
+.alpaca-fx-layer.capture i:nth-child(1){left:8%;top:20%}.alpaca-fx-layer.capture i:nth-child(2){right:11%;top:17%;animation-delay:.35s}.alpaca-fx-layer.capture i:nth-child(3){left:16%;bottom:13%;animation-delay:.7s}.alpaca-fx-layer.capture i:nth-child(4){right:16%;bottom:16%;animation-delay:1s}
+.alpaca-result-art{width:min(60vw,210px);height:min(60vw,210px);margin:0 auto 2px;display:grid;place-items:center}
+.alpaca-result-art .alpaca-hero-icon{position:relative;z-index:2;margin:0!important;width:92%!important;height:92%!important}
+.alpaca-fx-layer.success i{color:#f1b53d;font-size:20px;animation:alpacaCelebrate 1.35s ease-out infinite}
+.alpaca-fx-layer.success i:nth-child(1){left:5%;top:42%}.alpaca-fx-layer.success i:nth-child(2){left:18%;top:5%;animation-delay:.2s;color:#e86c9a}.alpaca-fx-layer.success i:nth-child(3){right:19%;top:6%;animation-delay:.42s}.alpaca-fx-layer.success i:nth-child(4){right:3%;top:46%;animation-delay:.6s}.alpaca-fx-layer.success i:nth-child(5){left:28%;bottom:2%;animation-delay:.78s;color:#e86c9a}.alpaca-fx-layer.success i:nth-child(6){right:27%;bottom:1%;animation-delay:.94s}
+.alpaca-result-scene.fail{animation:alpacaFailScene .45s ease-out 1}
+.alpaca-result-scene.fail .alpaca-result-art{filter:saturate(.78) brightness(.94)}
+.alpaca-fx-layer.fail i{color:#9c6b7d;font-size:19px;opacity:.55;animation:alpacaFailDrift 1.8s ease-in-out infinite}
+.alpaca-fx-layer.fail i:nth-child(1){left:9%;top:24%}.alpaca-fx-layer.fail i:nth-child(2){right:15%;top:18%;animation-delay:.3s}.alpaca-fx-layer.fail i:nth-child(3){right:7%;bottom:24%;animation-delay:.6s}.alpaca-fx-layer.fail i:nth-child(4){left:18%;bottom:12%;animation-delay:.9s}
+@keyframes alpacaFxFloat{0%{translate:0 10px;opacity:0;scale:.8}35%{opacity:1}100%{translate:0 -52px;opacity:0;scale:1.15}}
+@keyframes alpacaCaptureRing{to{rotate:360deg}}
+@keyframes alpacaCaptureSpark{0%,100%{opacity:.25;scale:.75}50%{opacity:1;scale:1.25}}
+@keyframes alpacaCaptureNudge{0%,100%{translate:0 0}25%{translate:-2px 1px}50%{translate:2px -1px}75%{translate:-1px -1px}}
+@keyframes alpacaCelebrate{0%{opacity:0;scale:.6;translate:0 10px}35%{opacity:1;scale:1.2}100%{opacity:0;scale:.8;translate:0 -28px}}
+@keyframes alpacaFailScene{0%{translate:0 0}25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}100%{translate:0 0}}
+@keyframes alpacaFailDrift{0%,100%{opacity:.18;translate:0 0}50%{opacity:.65;translate:0 7px}}
+
+@media (max-width:390px){
+  .alpaca-pen-name-button{left:25%!important;top:14.8%!important;width:50%!important;height:6.4%!important;font-size:clamp(14px,4vw,20px)!important}
+  .alpaca-medicine-hotspot{left:.5%!important;top:20.8%!important;width:38%!important;height:23%!important}
+  .alpaca-food-hotspot{right:.5%!important;top:25.8%!important;width:37%!important;height:19%!important}
+  .alpaca-manage-card.compact{padding-top:22px!important}
+}
+
+.alpaca-wild-manage-grid .alpaca-sprite-preview{height:auto!important;max-height:none!important;aspect-ratio:var(--alpaca-preview-ratio,.711)!important}
+
+.alpaca-manage-preview-wrap{width:100%;display:flex;align-items:flex-end;justify-content:center;margin:0 auto 3px;overflow:visible}
+.alpaca-manage-card.compact.is-adult .alpaca-manage-preview-wrap{height:clamp(82px,21vw,110px)}
+.alpaca-manage-card.compact.is-baby .alpaca-manage-preview-wrap{height:clamp(54px,14vw,72px);margin-top:8px;margin-bottom:8px}
+.alpaca-manage-card.compact .alpaca-manage-preview-wrap .alpaca-sprite-preview{height:100%!important;width:auto!important;max-width:92%!important;max-height:none!important;aspect-ratio:var(--alpaca-preview-ratio,.6)!important;margin:0 auto!important}

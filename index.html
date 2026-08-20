@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=ALPACA-PEN-SYSTEM">
+  <link rel="stylesheet" href="style.css?v=ALPACA-PEN-POLISH-R2">
 </head>
 <body>
   <main id="app">
@@ -40,7 +40,6 @@
       </section>
       <div id="aidaFarmPetLayer" class="aida-farm-pet-layer" aria-hidden="true"></div>
       <div id="wildAlpacaLayer" class="wild-alpaca-layer" aria-label="อัลปาก้าเบบี้ที่ปล่อยเดินเล่น"></div>
-      <button id="alpacaPenBtn" class="alpaca-entry-button hidden" type="button"><span>🦙</span><b>คอกอัลปาก้า</b></button>
 <button id="plotPageNextBtn" class="plot-page-nav plot-page-next" type="button" aria-label="ไปแปลง 13 ถึง 24">›</button>
       <button id="plotPagePrevBtn" class="plot-page-nav plot-page-prev hidden" type="button" aria-label="กลับแปลง 1 ถึง 12">‹</button>
 
@@ -97,6 +96,7 @@
               <button id="shortcutFishingBtn" class="hud-menu-item" type="button"><span>🎣</span><div><b>บ่อตกปลา</b><small>ไปยังบ่อตกปลาบาดาล</small></div><i>›</i></button>
               <button id="shortcutJellyfishBtn" class="hud-menu-item" type="button"><span>🪼</span><div><b>บ่อแมงกะพรุน</b><small>ไปยังบ่อแมงกะพรุนส่วนกลาง</small></div><i>›</i></button>
               <button id="shortcutBoatRaceBtn" class="hud-menu-item" type="button"><span>🚣</span><div><b>เทศกาลเรือพาย</b><small>เข้าสู่การแข่งขันเรือพายโดยตรง</small></div><i>›</i></button>
+              <button id="shortcutAlpacaPenBtn" class="hud-menu-item hidden" type="button"><span>🦙</span><div><b>คอกอัลปาก้า</b><small>ไปดูและจัดการอัลปาก้าในคอก</small></div><i>›</i></button>
               <button id="shortcutSpiritBarnBtn" class="hud-menu-item" type="button"><span>👻</span><div><b>โรงเรือนสัตว์วิญญาณ</b><small>เข้าสู่โรงเรือนสัตว์วิญญาณ</small></div><i>›</i></button>
             </div>
           </section>
@@ -113,8 +113,7 @@
             <div class="hud-menu-section-items">
               <button id="forecastBtn" class="hud-menu-item" type="button"><span>🔮</span><div><b>ดูพยากรณ์</b><small>เช็กสภาพอากาศของสวน</small></div><i>›</i></button>
               <button id="modeBtn" class="hud-menu-item" type="button"><span>🪄</span><div><b>เปลี่ยนโหมดสวน</b><small>เลือกบรรยากาศที่ต้องการ</small></div><i>›</i></button>
-              <button id="releaseBabyAlpacaBtn" class="hud-menu-item hidden" type="button"><span>🎀</span><div><b>ปล่อยอัลปาก้าเบบี้</b><small>Aida • เลือก 5 สี สูงสุดครั้งละ 10 ตัว</small></div><i>›</i></button>
-              <button id="manageReleasedAlpacaBtn" class="hud-menu-item hidden" type="button"><span>🧹</span><div><b>จัดการเบบี้ที่ปล่อย</b><small>Aida • ลบรายตัวหรือล้างทั้งหมด</small></div><i>›</i></button>
+              <button id="releaseBabyAlpacaBtn" class="hud-menu-item hidden" type="button"><span>🎀</span><div><b>ปล่อยอัลปาก้าเบบี้</b><small>Aida • ปล่อย / ดู / เรียกกลับในปุ่มเดียว</small></div><i>›</i></button>
             </div>
           </section>
 
@@ -177,8 +176,8 @@
         <div id="alpacaPenEventLayer" class="alpaca-pen-event-layer" aria-label="เหตุการณ์ในคอก"></div>
         <div id="alpacaPenAnimalLayer" class="alpaca-pen-animal-layer" aria-label="อัลปาก้าในคอก"></div>
 
-        <button id="alpacaMedicineHotspot" class="alpaca-building-hotspot alpaca-medicine-hotspot" type="button"><span>💊</span><b>คลังยาอัลปาก้า</b></button>
-        <button id="alpacaFoodHotspot" class="alpaca-building-hotspot alpaca-food-hotspot" type="button"><span>🌾</span><b>คราฟอาหาร</b></button>
+        <button id="alpacaMedicineHotspot" class="alpaca-building-hotspot alpaca-medicine-hotspot" type="button" aria-label="กดอาคารซ้ายเพื่อคราฟยาอัลปาก้า"></button>
+        <button id="alpacaFoodHotspot" class="alpaca-building-hotspot alpaca-food-hotspot" type="button" aria-label="กดอาคารขวาเพื่อคราฟอาหารอัลปาก้า"></button>
         <div id="alpacaTroughVisual" class="alpaca-trough-visual" aria-hidden="true"></div>
         <button id="alpacaTroughHotspot" class="alpaca-trough-hotspot" type="button" aria-label="รางอาหารอัลปาก้า"></button>
         <div id="alpacaTroughStock" class="alpaca-trough-stock"><strong>0 เสิร์ฟ</strong></div>
@@ -462,7 +461,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=ALPACA-PEN-SYSTEM"></script>
+  <script src="game.js?v=ALPACA-PEN-POLISH-R2"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
