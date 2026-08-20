@@ -6009,3 +6009,85 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .alpaca-manage-card.compact.is-adult .alpaca-manage-preview-wrap{height:clamp(82px,21vw,110px)}
 .alpaca-manage-card.compact.is-baby .alpaca-manage-preview-wrap{height:clamp(54px,14vw,72px);margin-top:8px;margin-bottom:8px}
 .alpaca-manage-card.compact .alpaca-manage-preview-wrap .alpaca-sprite-preview{height:100%!important;width:auto!important;max-width:92%!important;max-height:none!important;aspect-ratio:var(--alpaca-preview-ratio,.6)!important;margin:0 auto!important}
+
+
+/* ===== ALPACA RELEASE OPEN V1 ===== */
+.alpaca-trough-visual-slot img{width:min(120%,78px)!important;height:min(120%,78px)!important;max-width:none!important;max-height:none!important}
+.alpaca-warehouse-panel{width:min(96vw,760px)!important;max-height:min(92dvh,900px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+.alpaca-warehouse-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:4px 2px 10px}.alpaca-warehouse-head h2{margin:0;text-align:center}.alpaca-warehouse-head small{display:block;text-align:center;opacity:.72}.alpaca-warehouse-head button{border:0;border-radius:12px;padding:8px 10px;font-weight:900;background:#fff1d4;color:#58344f}.alpaca-warehouse-head .primary{background:linear-gradient(180deg,#8d5299,#5c316f);color:white}
+.alpaca-warehouse-grid{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:4px}.alpaca-warehouse-card{position:relative;min-width:0;border:2px solid #ead5ad;border-radius:16px;background:linear-gradient(180deg,#fffdf6,#fff5e6);padding:20px 6px 8px;text-align:center;box-shadow:0 5px 12px rgba(71,42,51,.12)}.alpaca-warehouse-card.is-baby{background:linear-gradient(180deg,#fff4fb,#ffe8f3);border-color:#f1bed5}.alpaca-warehouse-card.is-adult{background:linear-gradient(180deg,#fffdf1,#f9ebcf);border-color:#dcbf83}.alpaca-warehouse-card .alpaca-sprite-preview{display:block!important;margin:0 auto 4px!important;width:min(84px,20vw)!important;height:auto!important;min-height:88px;background-size:400% 400%;background-position:0 0;background-repeat:no-repeat}.alpaca-warehouse-card.is-baby .alpaca-sprite-preview{width:min(58px,15vw)!important;min-height:68px}.alpaca-warehouse-card>b,.alpaca-warehouse-card>small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alpaca-warehouse-card>small{font-size:10px;opacity:.72;margin:3px 0 7px}.alpaca-warehouse-card>button{width:100%;border:0;border-radius:10px;padding:7px 4px;background:#754485;color:#fff;font-weight:900}.alpaca-warehouse-card .alpaca-age-badge{position:absolute;left:6px;top:6px;font-size:9px;border-radius:999px;padding:3px 6px;background:#6e3c93;color:#fff}.alpaca-warehouse-card.is-baby .alpaca-age-badge{background:#e56f9e}
+.alpaca-craft-alpaca-panel{width:min(94vw,660px)!important;max-height:91dvh!important;overflow:auto!important;-webkit-overflow-scrolling:touch}.alpaca-craft-limit{text-align:center;margin:7px 0;padding:7px;border-radius:12px;background:#f5e6c7}.alpaca-craft-ingredients{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.alpaca-craft-ingredient{min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 4px;border-radius:14px;border:2px solid #e4cda8;background:#fffaf0}.alpaca-craft-ingredient.missing{opacity:.58;border-color:#d99393}.alpaca-craft-ingredient.ok{border-color:#a7c987}.alpaca-craft-ingredient img,.alpaca-craft-merit{width:48px;height:48px;object-fit:contain;display:grid;place-items:center;font-size:34px}.alpaca-craft-ingredient b{font-size:10px;line-height:1.15}.alpaca-craft-ingredient small{font-size:9px;display:block;margin-top:3px}
+
+/* Grass campaign: exact full modal viewport, no dead strip, scroll only where content needs it. */
+.modal-card:has(.grass-campaign){width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:#21112d!important}.modal-card:has(.grass-campaign)>.modal-close{display:none!important}.grass-campaign{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;border-radius:0!important;background-image:var(--campaign-bg)!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;overflow:hidden!important}.grass-campaign .v36-campaign-shade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(20,10,24,.12),rgba(20,10,24,.28))!important}.grass-campaign .v36-campaign-content{position:relative!important;z-index:2!important;height:100%!important;min-height:0!important;display:grid!important;grid-template-rows:auto auto minmax(0,1fr) auto!important;gap:5px!important;padding:max(10px,env(safe-area-inset-top)) 9px max(8px,env(safe-area-inset-bottom))!important;overflow:hidden!important}.grass-campaign .v36-campaign-ranks{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:3px!important}.grass-campaign .v36-rank-row{min-height:34px!important}.grass-campaign .v42-campaign-footer-row{flex:0 0 auto!important;margin:0!important}.grass-campaign-rules .v36-campaign-content{display:flex!important;flex-direction:column!important;overflow:hidden!important}.grass-campaign-rules .v36-condition-card{min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;margin:auto 3% 6px!important;padding:14px!important}.grass-campaign-rewards .grass-rewards-content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:max(10px,env(safe-area-inset-top)) 10px max(8px,env(safe-area-inset-bottom));overflow:hidden}.grass-rewards-content header{display:flex;align-items:center;gap:8px}.grass-rewards-content header h2{font-size:clamp(15px,4vw,22px);margin:0;color:#4b284d;text-shadow:0 1px #fff}.grass-rewards-content header button{border:0;border-radius:999px;padding:8px 10px;background:#4b294e;color:#fff;font-weight:900}.grass-reward-summary{margin:7px auto;padding:7px 12px;border-radius:999px;background:rgba(255,249,226,.9);font-size:12px}.grass-reward-list{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;gap:6px;padding:3px}.grass-reward-row{display:grid;grid-template-columns:38px minmax(0,1fr) 68px;align-items:center;gap:7px;padding:8px;border-radius:14px;background:rgba(255,250,235,.92);border:2px solid rgba(126,83,75,.22);box-shadow:0 4px 10px rgba(49,26,42,.12)}.grass-reward-row.ready{border-color:#70a85c;box-shadow:0 0 0 2px rgba(167,223,127,.25)}.grass-reward-row.claimed{opacity:.64}.grass-reward-row>span{font-size:28px}.grass-reward-row b,.grass-reward-row small{display:block}.grass-reward-row small{font-size:10px;opacity:.7}.grass-reward-row button{border:0;border-radius:10px;padding:8px 4px;background:#754485;color:#fff;font-weight:900}.grass-reward-row button:disabled{background:#b8a9b6;color:#f7eff6}
+@media(max-width:390px){.alpaca-warehouse-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.alpaca-warehouse-head{grid-template-columns:1fr 1fr}.alpaca-warehouse-head>div{grid-column:1/-1;grid-row:1}.alpaca-warehouse-head #warehouseBackPen{grid-column:1}.alpaca-warehouse-head #warehouseCraftBtn{grid-column:2}.alpaca-craft-ingredients{grid-template-columns:repeat(3,minmax(0,1fr))}.grass-campaign .v36-campaign-content{padding-left:6px!important;padding-right:6px!important}}
+
+
+/* ======================================================================
+   ALPACA SMOOTH WEATHER R1 — GPU roaming + lightweight hourly weather
+   ====================================================================== */
+.alpaca-pen-animal-layer{
+  contain:layout paint style;
+  transform:translateZ(0);
+}
+.alpaca-pen-animal{
+  animation:none!important;
+  filter:none!important;
+  will-change:transform;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  contain:layout style;
+}
+.alpaca-pen-animal .alpaca-sprite{
+  filter:none!important;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.alpaca-pen-animal::after{filter:none!important;opacity:.38}
+
+.alpaca-pen-weather{
+  position:absolute;
+  inset:0;
+  z-index:14;
+  overflow:hidden;
+  pointer-events:none;
+  contain:strict;
+  transform:translateZ(0);
+}
+.alpaca-weather-particle,.alpaca-weather-sheet{
+  position:absolute;
+  display:block;
+  pointer-events:none;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  will-change:transform,opacity;
+}
+.alpaca-pen-weather.is-rain .alpaca-weather-particle{
+  left:var(--wx);top:-12%;width:1.5px;height:10%;border-radius:999px;background:rgba(219,237,255,.72);
+  transform:rotate(10deg) scale(var(--ws));animation:alpacaWeatherRain 1.05s linear infinite;animation-delay:var(--wd)
+}
+@keyframes alpacaWeatherRain{to{transform:translate3d(7vw,122vh,0) rotate(10deg) scale(var(--ws));opacity:.3}}
+.alpaca-pen-weather.is-snow .alpaca-weather-particle{
+  left:var(--wx);top:-6%;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.88);
+  transform:scale(var(--ws));animation:alpacaWeatherSnow 3.6s linear infinite;animation-delay:var(--wd)
+}
+@keyframes alpacaWeatherSnow{50%{transform:translate3d(4vw,55vh,0) scale(var(--ws))}to{transform:translate3d(-2vw,112vh,0) scale(var(--ws));opacity:.45}}
+.alpaca-pen-weather.is-leaves .alpaca-weather-particle{
+  left:-8%;top:calc(var(--wx) * .72);width:8px;height:5px;border-radius:80% 20% 70% 30%;background:rgba(210,160,71,.76);
+  transform:rotate(25deg) scale(var(--ws));animation:alpacaWeatherLeaves 4.4s linear infinite;animation-delay:var(--wd)
+}
+@keyframes alpacaWeatherLeaves{50%{transform:translate3d(58vw,6vh,0) rotate(220deg) scale(var(--ws))}to{transform:translate3d(118vw,-2vh,0) rotate(430deg) scale(var(--ws));opacity:.35}}
+.alpaca-pen-weather.is-mist .alpaca-weather-sheet{
+  inset:23% -25% 18%;background:linear-gradient(90deg,transparent,rgba(245,246,255,.22),rgba(255,255,255,.30),transparent);
+  opacity:.72;animation:alpacaWeatherMist 10s ease-in-out infinite alternate
+}
+@keyframes alpacaWeatherMist{from{transform:translate3d(-8%,0,0)}to{transform:translate3d(8%,1.5%,0)}}
+.alpaca-pen-weather.is-sun .alpaca-weather-sheet{
+  inset:0;background:radial-gradient(circle at 80% 10%,rgba(255,244,174,.32),transparent 32%),linear-gradient(115deg,transparent 20%,rgba(255,246,195,.14) 42%,transparent 64%);
+  animation:alpacaWeatherSun 4.8s ease-in-out infinite alternate
+}
+@keyframes alpacaWeatherSun{from{opacity:.48;transform:translate3d(-1%,0,0)}to{opacity:.82;transform:translate3d(1%,0,0)}}
+.alpaca-pen-weather.low-particles .alpaca-weather-particle:nth-child(even){display:none}
+@media (prefers-reduced-motion:reduce){
+  .alpaca-pen-weather .alpaca-weather-particle,.alpaca-pen-weather .alpaca-weather-sheet{animation-duration:8s!important}
+}
