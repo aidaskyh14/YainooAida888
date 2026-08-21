@@ -317,36 +317,68 @@
     });
   </script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-      createUserWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged,
-      setPersistence,
-      browserLocalPersistence
-    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc,
-      updateDoc,
-      deleteDoc,
-      collection,
-      addDoc,
-      getDocs,
-      query,
-      where,
-      orderBy,
-      limit,
-      runTransaction,
-      writeBatch,
-      serverTimestamp,
-      onSnapshot,
-      increment
-    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+    const FIREBASE_SOURCES = [
+      {
+        app: "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js",
+        auth: "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js",
+        firestore: "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+      },
+      {
+        app: "https://esm.sh/firebase@12.17.1/app",
+        auth: "https://esm.sh/firebase@12.17.1/auth",
+        firestore: "https://esm.sh/firebase@12.17.1/firestore"
+      }
+    ];
+
+    async function loadFirebaseModules(){
+      let lastError=null;
+      for(const source of FIREBASE_SOURCES){
+        try{
+          return await Promise.all([
+            import(source.app),
+            import(source.auth),
+            import(source.firestore)
+          ]);
+        }catch(error){
+          lastError=error;
+          console.warn("Firebase CDN load failed, trying fallback",source.app,error);
+        }
+      }
+      throw lastError||new Error("โหลด Firebase SDK ไม่สำเร็จ");
+    }
+
+    try {
+      const [appMod,authMod,fsMod] = await loadFirebaseModules();
+      const { initializeApp } = appMod;
+      const {
+        getAuth,
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged,
+        setPersistence,
+        browserLocalPersistence
+      } = authMod;
+      const {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        updateDoc,
+        deleteDoc,
+        collection,
+        addDoc,
+        getDocs,
+        query,
+        where,
+        orderBy,
+        limit,
+        runTransaction,
+        writeBatch,
+        serverTimestamp,
+        onSnapshot,
+        increment
+      } = fsMod;
 
     const firebaseConfig = {
       apiKey: "AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64",
@@ -358,7 +390,6 @@
       measurementId: "G-P3KRYBYF0C"
     };
 
-    try {
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
 
