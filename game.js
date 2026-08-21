@@ -7055,6 +7055,10 @@ craftRainyMenu=async function(id){
         ตอนนี้มีทั้งหมด <b>×${verifiedCount}</b><br>
         ได้รับ +${recipe.meritReward} กุศล</p>
       </section>`;
+      /* R13: return the transaction result itself. Campaign scoring must use
+         this success flag, not a before/after inventory comparison that can
+         fail when local state was stale. */
+      return {success:true,verifiedCount};
     }else{
       $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
         <h2>💨 คราฟไม่สำเร็จ</h2>
@@ -7062,6 +7066,7 @@ craftRainyMenu=async function(id){
         <h3>${safeHtml(recipe.name)}</h3>
         <p>วัตถุดิบทั้งหมดถูกใช้ไปแล้ว<br>ไม่ได้รับเมนูและไม่ได้รับกุศล</p>
       </section>`;
+      return {success:false};
     }
   }catch(error){
     message("คราฟเมนูหน้าฝนไม่ได้",error.message||"กรุณาลองใหม่");
@@ -17743,11 +17748,14 @@ async function V181_campaignScoreLater(summary){
   }
   if(typeof craftRainyMenu==="function"){
     const b=craftRainyMenu;craftRainyMenu=async function(id){
-      /* Rainy menus live in state.rainyMenus, not the normal dish inventory.
-         The previous campaign hook checked v240DishCount(), so a successful
-         rainy craft never appeared to increase and therefore scored 0. */
-      const before=rainyMenuCount(id,ownState||state),r=await b(id),after=rainyMenuCount(id,ownState||state);
-      if(after>before){await v240AddCampaignScore(V240_COOK_ID,4).catch(e=>console.warn("cooking rainy score",e))}
+      /* R13: score from the canonical Firestore craft transaction result.
+         Do not infer success from local inventory deltas; local state may be
+         stale and can make a real successful craft score 0. */
+      const r=await b(id);
+      if(r?.success===true){
+        await v240AddCampaignScore(V240_COOK_ID,4)
+          .catch(e=>{console.error("cooking rainy score",e);try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนนหน้าฝนยังไม่เข้า: ${e?.message||"Firebase ปฏิเสธ"}`)}catch{}});
+      }
       return r;
     }
   }
