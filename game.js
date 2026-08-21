@@ -17899,7 +17899,53 @@ async function V181_campaignScoreLater(summary){
     }
     await batch.commit();
   }
-  async function v240ShowAdminCenter(){if(!v240IsAdmin())return message("ไม่มีสิทธิ์","เมนูนี้เปิดเฉพาะ Aida/Admin");v240AdminTopup(ownState||state);const catalog=v240AdminCatalog(),cats=[...new Set(catalog.map(x=>x.category))],memberRows=Object.keys(MEMBERS).filter(n=>n!=="Aida");$("modalContent").innerHTML=`<section class="feature-panel v240-admin-center"><header><div><small>🛡️ Aida / Admin</small><h2>ศูนย์แอดมิน</h2></div><button id="v240AdminClose">×</button></header><p class="v240-admin-note">ไอเท็มใหม่ทั้งหมดของ Aida มีสต๊อก 9999 • ส่งคละหมวดในครั้งเดียวได้</p><div class="v240-admin-targets"><label><input id="v240AdminAll" type="checkbox"> สมาชิกทุกคน</label>${memberRows.map(n=>`<label><input type="checkbox" data-v240-admin-target="${memberKeyFromName(n)}">${v240Esc(n)}</label>`).join("")}</div><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-admin-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240AdminItems" class="v240-admin-items"></div><div id="v240AdminSelected" class="v240-admin-selected">ยังไม่ได้เลือกไอเท็ม</div><button id="v240AdminSend" class="primary-spooky-action">ส่งของที่เลือก</button><button id="v240AdminLegacy" class="secondary-action">คำขอซื้อ / เครื่องมือแอดมินเดิม</button></section>`;openModal();const picked=new Map();let cat=cats[0];const paint=()=>{const rows=catalog.filter(x=>x.category===cat);$("v240AdminItems").innerHTML=rows.map(e=>`<article><span>${v240GiftImage(e)?`<img src="${v240GiftImage(e)}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b></span><input type="number" min="1" max="9999" value="${picked.get(`${e.type}:${e.key}`)?.qty||1}" data-v240-admin-qty="${e._id}"><button data-v240-admin-pick="${e._id}" class="${picked.has(`${e.type}:${e.key}`)?"active":""}">${picked.has(`${e.type}:${e.key}`)?"เลือกแล้ว":"เลือก"}</button></article>`).join("");document.querySelectorAll("[data-v240-admin-pick]").forEach(b=>b.onclick=()=>{const e=catalog[Number(b.dataset.v240AdminPick)],q=Math.max(1,Math.min(9999,v240Int(document.querySelector(`[data-v240-admin-qty=\"${e._id}\"]`)?.value)||1)),k=`${e.type}:${e.key}`;if(picked.has(k))picked.delete(k);else picked.set(k,{...e,qty:q});paint();paintSelected()})};const paintSelected=()=>{$("v240AdminSelected").textContent=picked.size?`เลือกแล้ว ${picked.size} รายการ • เปลี่ยนหมวดได้โดยของไม่หาย`:"ยังไม่ได้เลือกไอเท็ม"};document.querySelectorAll("[data-v240-admin-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.v240AdminCat;document.querySelectorAll("[data-v240-admin-cat]").forEach(x=>x.classList.toggle("active",x===b));paint()});$("v240AdminAll").onchange=()=>document.querySelectorAll("[data-v240-admin-target]").forEach(x=>x.checked=$("v240AdminAll").checked);$("v240AdminSend").onclick=async()=>{try{const targets=[...document.querySelectorAll("[data-v240-admin-target]:checked")].map(x=>x.dataset.v240AdminTarget),items=[...picked.values()];if(!items.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");await v240SendAdminBundle(targets,items);message("ส่งของสำเร็จ",`ส่ง ${items.length} รายการให้ ${targets.length} คนแล้วค่ะ`)}catch(e){message("ส่งไม่ได้",e.message||"กรุณาลองใหม่")}};$("v240AdminLegacy").onclick=()=>{closeModal();v240AdminCenterBase?.()};$("v240AdminClose").onclick=closeModal;paint();paintSelected()}
+  async function v240ShowAdminCenter(){if(!v240IsAdmin())return message("ไม่มีสิทธิ์","เมนูนี้เปิดเฉพาะ Aida/Admin");v240AdminTopup(ownState||state);const catalog=v240AdminCatalog(),cats=[...new Set(catalog.map(x=>x.category))],memberRows=Object.keys(MEMBERS).filter(n=>n!=="Aida");$("modalContent").innerHTML=`<section class="feature-panel v240-admin-center"><header><div><small>🛡️ Aida / Admin</small><h2>ศูนย์แอดมิน</h2></div><button id="v240AdminClose">×</button></header><p class="v240-admin-note">ไอเท็มใหม่ทั้งหมดของ Aida มีสต๊อก 9999 • ส่งคละหมวดในครั้งเดียวได้</p><div class="v240-admin-targets"><label><input id="v240AdminAll" type="checkbox"> สมาชิกทุกคน</label>${memberRows.map(n=>`<label><input type="checkbox" data-v240-admin-target="${memberKeyFromName(n)}">${v240Esc(n)}</label>`).join("")}</div><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-admin-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240AdminItems" class="v240-admin-items"></div><div id="v240AdminSelected" class="v240-admin-selected">ยังไม่ได้เลือกไอเท็ม</div><button id="v240AdminSend" class="primary-spooky-action">ส่งของที่เลือก</button><button id="v240AdminLegacy" class="secondary-action">คำขอซื้อ / เครื่องมือแอดมินเดิม</button></section>`;openModal();const picked=new Map();let cat=cats[0];const paint=()=>{const rows=catalog.filter(x=>x.category===cat);$("v240AdminItems").innerHTML=rows.map(e=>`<article><span>${v240GiftImage(e)?`<img src="${v240GiftImage(e)}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b></span><input type="number" min="1" max="9999" value="${picked.get(`${e.type}:${e.key}`)?.qty||1}" data-v240-admin-qty="${e._id}"><button data-v240-admin-pick="${e._id}" class="${picked.has(`${e.type}:${e.key}`)?"active":""}">${picked.has(`${e.type}:${e.key}`)?"เลือกแล้ว":"เลือก"}</button></article>`).join("");
+
+    /* V250: quantity must stay synchronized even when Aida selects first
+       and types the amount afterward. The old UI only captured qty at the
+       exact moment the Select button was pressed, so 400 could silently
+       remain stored as 1. */
+    document.querySelectorAll("[data-v240-admin-qty]").forEach(input=>{
+      input.oninput=()=>{
+        const e=catalog[Number(input.dataset.v240AdminQty)];
+        if(!e)return;
+        const k=`${e.type}:${e.key}`;
+        if(!picked.has(k))return;
+        const q=Math.max(1,Math.min(9999,v240Int(input.value)||1));
+        picked.set(k,{...picked.get(k),...e,qty:q});
+        paintSelected();
+      };
+      input.onchange=input.oninput;
+    });
+
+    document.querySelectorAll("[data-v240-admin-pick]").forEach(b=>b.onclick=()=>{
+      const e=catalog[Number(b.dataset.v240AdminPick)],
+            input=b.closest("article")?.querySelector("[data-v240-admin-qty]"),
+            q=Math.max(1,Math.min(9999,v240Int(input?.value)||1)),
+            k=`${e.type}:${e.key}`;
+      if(picked.has(k))picked.delete(k);
+      else picked.set(k,{...e,qty:q});
+      paint();
+      paintSelected();
+    })
+  };const paintSelected=()=>{$("v240AdminSelected").textContent=picked.size?`เลือกแล้ว ${picked.size} รายการ • เปลี่ยนหมวดได้โดยของไม่หาย`:"ยังไม่ได้เลือกไอเท็ม"};document.querySelectorAll("[data-v240-admin-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.v240AdminCat;document.querySelectorAll("[data-v240-admin-cat]").forEach(x=>x.classList.toggle("active",x===b));paint()});$("v240AdminAll").onchange=()=>document.querySelectorAll("[data-v240-admin-target]").forEach(x=>x.checked=$("v240AdminAll").checked);$("v240AdminSend").onclick=async()=>{try{
+    /* Sync every currently visible selected quantity one final time before
+       building the broadcast payload. */
+    document.querySelectorAll("[data-v240-admin-qty]").forEach(input=>{
+      const e=catalog[Number(input.dataset.v240AdminQty)];
+      if(!e)return;
+      const k=`${e.type}:${e.key}`;
+      if(!picked.has(k))return;
+      const q=Math.max(1,Math.min(9999,v240Int(input.value)||1));
+      picked.set(k,{...picked.get(k),...e,qty:q});
+    });
+
+    const targets=[...document.querySelectorAll("[data-v240-admin-target]:checked")].map(x=>x.dataset.v240AdminTarget),
+          items=[...picked.values()].map(x=>({...x,qty:Math.max(1,Math.min(9999,v240Int(x.qty)||1))}));
+    if(!items.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");
+    await v240SendAdminBundle(targets,items);
+    message("ส่งของสำเร็จ",`ส่ง ${items.length} รายการให้ ${targets.length} คนแล้วค่ะ<br><small>${items.map(x=>`${v240Esc(x.name)} ×${x.qty}`).join(" • ")}</small>`)
+  }catch(e){message("ส่งไม่ได้",e.message||"กรุณาลองใหม่")}};$("v240AdminLegacy").onclick=()=>{closeModal();v240AdminCenterBase?.()};$("v240AdminClose").onclick=closeModal;paint();paintSelected()}
   const v240AdminCenterBase=typeof showAdminCenter==="function"?showAdminCenter:null;
   if(typeof showAdminCenter==="function")showAdminCenter=v240ShowAdminCenter;
 
@@ -18760,5 +18806,15 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 (function YN_V249_ADMIN_LARGE_STACK_GIFT_STABILITY(){
   window.YAINOO_BUILD="V249-ADMIN-LARGE-STACK-GIFT-STABILITY";
   console.info("V249 admin large-stack gift stability loaded");
+})();
+
+/* ======================================================================
+   V250 — ADMIN GIFT QUANTITY UI FIX
+   The selected quantity is now synchronized continuously and rechecked
+   immediately before sending. This specifically fixes 400 becoming 1.
+   ====================================================================== */
+(function YN_V250_ADMIN_GIFT_QUANTITY_UI_FIX(){
+  window.YAINOO_BUILD="V250-ADMIN-GIFT-QUANTITY-FIX";
+  console.info("V250 admin gift quantity UI fix loaded");
 })();
 
