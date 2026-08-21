@@ -7075,34 +7075,18 @@ craftRainyMenu=async function(id){
     updateMeritUI();
 
     if(success){
-      /* R16: rainy scoring uses its own transaction against the exact campaign
-         document used by the ranking UI. Preserve every other member's score
-         and verify this member increased by exactly +4 before reporting success. */
+      /* R17: use the exact same campaign increment writer that already works
+         for general/drink/special/night cooking. Do not maintain a second rainy-only
+         Firestore write implementation. */
       let campaignScored=false;
       let campaignError=null;
       try{
-        const campaignId="cooking-oldschool-20260826";
-        const scoreRef=fs.doc(db,"campaignScores",campaignId);
-        let expectedScore=0;
-        await fs.runTransaction(db,async tx=>{
-          const sc=await tx.get(scoreRef);
-          const data=sc.exists()?(sc.data()||{}):{};
-          const scores={...(data.scores&&typeof data.scores==="object"?data.scores:{})};
-          const names={...(data.names&&typeof data.names==="object"?data.names:{})};
-          const nightCounts={...(data.nightCounts&&typeof data.nightCounts==="object"?data.nightCounts:{})};
-          const before=Math.max(0,Math.floor(Number(scores[currentMemberKey])||0));
-          expectedScore=before+4;
-          scores[currentMemberKey]=expectedScore;
-          names[currentMemberKey]=currentProfileDisplayName();
-          tx.set(scoreRef,{campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:false});
-        });
-        const check=await fs.getDoc(scoreRef);
-        const actual=Math.max(0,Math.floor(Number(check.data()?.scores?.[currentMemberKey])||0));
-        if(actual<expectedScore)throw new Error(`ตรวจคะแนนหลังบันทึกไม่ผ่าน (${actual}/${expectedScore})`);
+        if(typeof window.YN_R7_campaignIncrement!=="function")throw new Error("ตัวเขียนคะแนนแคมเปญยังไม่พร้อม");
+        await window.YN_R7_campaignIncrement("cooking-oldschool-20260826",4);
         campaignScored=true;
       }catch(e){
         campaignError=e;
-        console.error("R16 rainy campaign score",e);
+        console.error("R17 rainy campaign score",e);
       }
       if(!campaignScored){
         try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนน +4 ยังไม่เข้า: ${campaignError?.message||"Firebase ปฏิเสธ"}`)}catch{}
@@ -16176,67 +16160,53 @@ async function V181_campaignScoreLater(summary){
   };
 
   /* CANONICAL claim for both targeted and global Admin broadcasts.
-     R15: claim state lives in the member's own save. This avoids the
-     broadcasts/{id}/claims permission path entirely. */
+     R17: use the same save pipeline as ordinary gameplay, because that is the
+     path already proven to save correctly for members. No claims subcollection
+     and no special gift-only transaction write. */
   claimBroadcastGift=async function(broadcastId,accept){
     try{
-      /* R16: a stale/failed background save must never block gift claiming.
-         The claim below re-reads the member save from Firestore and writes the
-         complete claimed state atomically, so it is safe to continue even if
-         settlePendingCloudSave() itself was rejected by an unrelated write. */
-      try{await settlePendingCloudSave()}catch(e){console.warn("R16 gift pre-save ignored",e)}
       const {db,fs}=await getFirebaseContext();
       const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      let next;
+      const bSnap=await fs.getDoc(broadcastRef);
+      if(!bSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
 
-      await fs.runTransaction(db,async tx=>{
-        const [bSnap,sSnap]=await Promise.all([
-          tx.get(broadcastRef),tx.get(saveRef)
-        ]);
-        if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+      const b=bSnap.data();
+      if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+      if(b.targetKey && String(b.targetKey)!==String(currentMemberKey)){
+        throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+      }
+      if(!b.targetKey && currentMember==="Aida" && b.includeAida===false){
+        throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
+      }
 
-        const b=bSnap.data();
-        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
-        if(b.targetKey && String(b.targetKey)!==String(currentMemberKey)){
-          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+      const s=normalizeState(cloneData(ownState||state),currentMember);
+      s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"
+        ? s.broadcastGiftClaims : {};
+      if(s.broadcastGiftClaims[broadcastId])throw new Error("คุณจัดการของขวัญนี้แล้ว");
+
+      if(accept){
+        if(Array.isArray(b.items)){
+          addGiftItemToState(s,{items:V226_cleanBundle(b.items)});
+        }else{
+          addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});
         }
-        if(!b.targetKey && currentMember==="Aida" && b.includeAida===false){
-          throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
-        }
+      }
+      s.broadcastGiftClaims[broadcastId]={
+        status:accept?"accepted":"discarded",
+        resolvedAt:gameNow()
+      };
 
-        const s=normalizeState(sSnap.data(),currentMember);
-        s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"
-          ? s.broadcastGiftClaims : {};
-        if(s.broadcastGiftClaims[broadcastId]){
-          throw new Error("คุณจัดการของขวัญนี้แล้ว");
-        }
-
-        if(accept){
-          if(Array.isArray(b.items)){
-            addGiftItemToState(s,{items:V226_cleanBundle(b.items)});
-          }else{
-            addGiftItemToState(s,{
-              itemType:b.itemType,itemKey:b.itemKey,qty:b.qty
-            });
-          }
-        }
-        s.broadcastGiftClaims[broadcastId]={
-          status:accept?"accepted":"discarded",
-          resolvedAt:gameNow()
-        };
-        next=s;
-
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      ownState=normalizeState(next,currentMember);
+      ownState=normalizeState(s,currentMember);
       if(!visitContext)state=ownState;
       saveLocalOnly(ownState);
+      save();
+      await settlePendingCloudSave();
+
+      /* Verify that the normal save pipeline actually persisted this claim. */
+      const verify=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));
+      const savedClaim=verify.data()?.broadcastGiftClaims?.[broadcastId];
+      if(!verify.exists()||!savedClaim)throw new Error("บันทึกการรับของขวัญยังไม่สำเร็จ");
+
       updateMeritUI();
       try{
         broadcastClaimCache.set(
@@ -18018,5 +17988,5 @@ console.info("V241 R6 campaign + friend grass hotfix loaded");
   console.info("V241 R7 campaign score hard fix loaded");
 })();
 
-;window.YAINOO_BUILD="R16-GIFT-RAINY-VERIFY";
-console.info("R16 gift + rainy verified-write patch loaded");
+;window.YAINOO_BUILD="R17-GIFT-RAINY-CANONICAL";
+console.info("R17 canonical gift save + rainy score writer loaded");
