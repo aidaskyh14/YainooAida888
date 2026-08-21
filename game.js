@@ -15659,10 +15659,10 @@ async function V181_campaignScoreLater(summary){
       await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
       const grassCampaignId="grass-harvest-7d-v1",metaRef=fs.doc(db,"campaigns",grassCampaignId),scoreRef=fs.doc(db,"campaignScores",grassCampaignId);
       let grassCampaignAdd=0;
-      await fs.runTransaction(db,async tx=>{const [snap,metaSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();incrementMissionOn(s,"dailyCollectGrass",1);pruneClaims(s);if(metaSnap.exists()&&V36_campaignActive(metaSnap.data()||{}))grassCampaignAdd=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
+      await fs.runTransaction(db,async tx=>{const [snap,metaSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();incrementMissionOn(s,"dailyCollectGrass",1);pruneClaims(s);if(!metaSnap.exists()||(metaSnap.data()||{}).active!==false)grassCampaignAdd=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
       ownState=normalizeState(next,currentMember);saveLocalOnly(ownState);
       /* Never let a ranking write block collecting grass. Score is a separate atomic merge. */
-      if(grassCampaignAdd>0){try{await fs.setDoc(scoreRef,{campaignId:grassCampaignId,scores:{[currentMemberKey]:fs.increment(grassCampaignAdd)},names:{[currentMemberKey]:currentProfileDisplayName()},updatedAt:fs.serverTimestamp()},{merge:true})}catch(scoreError){console.warn("grass campaign score",scoreError)}}
+      if(grassCampaignAdd>0){try{await window.YN_R7_campaignIncrement(grassCampaignId,grassCampaignAdd)}catch(scoreError){console.error("grass campaign score",scoreError);try{showWeatherToast(`🌾 คะแนนหญ้ายังไม่เข้า: ${scoreError?.message||"Firebase ปฏิเสธ"}`)}catch{}}}
       closeModal();renderDrops();showReceived(drop);
     }catch(error){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับเข้ากระเป๋า"}message("เก็บหญ้าไม่ได้",error.message||"กรุณาลองใหม่")}
   }
@@ -17693,33 +17693,24 @@ async function V181_campaignScoreLater(summary){
     if(!cloudReady||!currentMemberKey||currentMember==="Aida")return;
     amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;
     const cfg=campaignId===V240_COOK_ID?V240_CAMPAIGNS.cooking:V240_CAMPAIGNS.rainbow;if(v240Now()>cfg.endAt)return;
-    const {db,fs}=await getFirebaseContext(),scoreRef=fs.doc(db,"campaignScores",campaignId);
-    const scorePatch=()=>({
-      campaignId,
-      scores:{[currentMemberKey]:fs.increment(amount)},
-      names:{[currentMemberKey]:currentProfileDisplayName()},
-      ...(night?{nightCounts:{[currentMemberKey]:fs.increment(Math.max(0,Math.floor(Number(night)||0)))}}:{}),
-      updatedAt:fs.serverTimestamp()
-    });
-
-    /* Atomic merge touches only this member's nested score fields. It does not
-       rewrite other members, old campaign fields, or unrelated tie-break data. */
     if(!receipt){
-      await fs.setDoc(scoreRef,scorePatch(),{merge:true});
-      return;
+      return window.YN_R7_campaignIncrement(campaignId,amount,{night});
     }
-
-    /* Receipt campaigns keep anti-double-claim state in the member save. */
-    const saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),scoreRef=fs.doc(db,"campaignScores",campaignId);let next=null;
     await fs.runTransaction(db,async tx=>{
-      const sv=await tx.get(saveRef);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(sv.data(),currentMember);assertCurrentCloudSession(sv.data(),currentMember);
-      s.campaignReceipts=v240Obj(s.campaignReceipts);const rk=`${campaignId}:${receipt}`;
-      if(s.campaignReceipts[rk])return;
-      s.campaignReceipts[rk]=v240Now();
-      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      tx.set(scoreRef,scorePatch(),{merge:true});
-      next=s;
+      const [sv,sc]=await Promise.all([tx.get(saveRef),tx.get(scoreRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const st=normalizeState(sv.data(),currentMember);assertCurrentCloudSession(sv.data(),currentMember);
+      st.campaignReceipts=v240Obj(st.campaignReceipts);const rk=`${campaignId}:${receipt}`;if(st.campaignReceipts[rk])return;
+      st.campaignReceipts[rk]=v240Now();
+      tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(sc.exists()){
+        const patch={campaignId,[`scores.${currentMemberKey}`]:fs.increment(amount),[`names.${currentMemberKey}`]:currentProfileDisplayName(),updatedAt:fs.serverTimestamp()};
+        if(night)patch[`nightCounts.${currentMemberKey}`]=fs.increment(Math.max(0,Math.floor(Number(night)||0)));
+        tx.update(scoreRef,patch);
+      }else{
+        tx.set(scoreRef,{campaignId,scores:{[currentMemberKey]:amount},names:{[currentMemberKey]:currentProfileDisplayName()},...(night?{nightCounts:{[currentMemberKey]:Math.max(0,Math.floor(Number(night)||0))}}:{}),updatedAt:fs.serverTimestamp()},{merge:false});
+      }
+      next=st;
     });
     if(next)v240Apply(next);
   }
@@ -17900,3 +17891,49 @@ async function V181_campaignScoreLater(summary){
 
 ;window.YAINOO_BUILD="V241-R6-CAMPAIGN-GRASS-HOTFIX";
 console.info("V241 R6 campaign + friend grass hotfix loaded");
+
+
+/* ======================================================================
+   R7 — CAMPAIGN SCORE WRITE HARD FIX
+   - Use dotted field paths for existing campaignScores documents.
+   - Never replace another member's scores/names map.
+   - Legacy grass/rabbit scoring is not blocked by stale start/end metadata;
+     only an explicit active:false disables scoring.
+   ====================================================================== */
+(function YN_R7_CAMPAIGN_SCORE_HARD_FIX(){
+  async function campaignIncrement(campaignId,amount,{night=0}={}){
+    if(!cloudReady||!currentMemberKey||currentMember==="Aida")return;
+    amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"campaignScores",campaignId),snap=await fs.getDoc(ref);
+    const key=currentMemberKey,name=currentProfileDisplayName();
+    if(snap.exists()){
+      const patch={campaignId,[`scores.${key}`]:fs.increment(amount),[`names.${key}`]:name,updatedAt:fs.serverTimestamp()};
+      if(night)patch[`nightCounts.${key}`]=fs.increment(Math.max(0,Math.floor(Number(night)||0)));
+      await fs.updateDoc(ref,patch);
+    }else{
+      await fs.setDoc(ref,{campaignId,scores:{[key]:amount},names:{[key]:name},...(night?{nightCounts:{[key]:Math.max(0,Math.floor(Number(night)||0))}}:{}),updatedAt:fs.serverTimestamp()},{merge:false});
+    }
+  }
+  window.YN_R7_campaignIncrement=campaignIncrement;
+
+  async function rabbitScore(summary){
+    const addCarrot=Math.max(0,Math.floor(Number(summary?.madCarrot)||0)),addCorn=Math.max(0,Math.floor(Number(summary?.angryCorn)||0)),add=addCarrot+addCorn;
+    if(!add||!cloudReady||!currentMemberKey||currentMember==="Aida")return;
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns","wild-rabbit-hungry-4d-v1"),meta=await fs.getDoc(metaRef);
+      if(meta.exists()&&(meta.data()||{}).active===false)return;
+      if(String(currentMemberKey)==="mameaw"){try{const bridge=await getFirebaseBridge();if(typeof bridge?.forceRefreshToken==="function")await bridge.forceRefreshToken()}catch{}}
+      await campaignIncrement("wild-rabbit-hungry-4d-v1",add);
+      /* Reward counters are secondary. A counter-save failure must never undo rank score. */
+      try{
+        const saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
+        await fs.runTransaction(db,async tx=>{const sv=await tx.get(saveRef);if(!sv.exists())return;const st=(typeof M200_ensureState==="function")?M200_ensureState(normalizeState(sv.data(),currentMember)):normalizeState(sv.data(),currentMember);if(st.wildRabbitCampaign){st.wildRabbitCampaign.carrotHarvested=(Number(st.wildRabbitCampaign.carrotHarvested)||0)+addCarrot;st.wildRabbitCampaign.cornHarvested=(Number(st.wildRabbitCampaign.cornHarvested)||0)+addCorn;}next=st;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+        if(next&&ownState&&next.wildRabbitCampaign){ownState.wildRabbitCampaign=cloneData(next.wildRabbitCampaign);if(!visitContext)state=ownState;saveLocalOnly(ownState)}
+      }catch(counterError){console.warn("R7 rabbit reward counters",counterError)}
+    }catch(e){console.error("R7 rabbit campaign score",e);try{showWeatherToast(`🐰 คะแนนแคมเปญยังไม่เข้า: ${e?.message||"Firebase ปฏิเสธ"}`)}catch{}}
+  }
+  window.M200_campaignScoreLater=rabbitScore;
+  window.V181_campaignScoreLater=rabbitScore;
+  window.YAINOO_BUILD="V241-R7-CAMPAIGN-SCORE-HARD-FIX";
+  console.info("V241 R7 campaign score hard fix loaded");
+})();
