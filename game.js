@@ -18098,621 +18098,79 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 })();
 
 /* ======================================================================
-   V243 — GIFT + RAINY CAMPAIGN AUTHORITATIVE FIX
+   V246 — THREE GRASS FRIEND-GIFT FIX
+   Scope: only friendGrassGreen / friendGrassYellow / friendGrassRed.
 
-   Final authoritative paths:
-   1) Friend gift claim:
-      writes only own save + gift status + own mailbox item.
-   2) Aida broadcast gift claim:
-      writes only own save; no follow-up full save pipeline.
-   3) Rainy menu:
-      craft + +4 cooking-campaign score are committed in ONE transaction.
-
-   This intentionally bypasses older layered fallbacks for these actions only.
+   These three items live in s.specials and must be sent as normal
+   itemType:"special" gifts. Handle them explicitly before older wrapper
+   chains so they cannot fall through an incompatible inventory handler.
    ====================================================================== */
-(function YN_V243_GIFT_RAINY_AUTHORITATIVE_FIX(){
-  const COOK_CAMPAIGN_ID="cooking-oldschool-20260826";
+(function YN_V246_THREE_GRASS_FRIEND_GIFT_FIX(){
+  const GRASS_KEYS=new Set([
+    "friendGrassGreen",
+    "friendGrassYellow",
+    "friendGrassRed"
+  ]);
 
-  function V243_applyState(next){
-    ownState=normalizeState(next,currentMember);
-    if(!visitContext)state=ownState;
-    saveLocalOnly(ownState);
-    updateMeritUI();
+  const V246_removeGiftBase=removeGiftItemFromState;
+  removeGiftItemFromState=function(s,type,key,qty){
+    qty=Math.max(1,Math.floor(Number(qty)||1));
+
+    if(type==="special"&&GRASS_KEYS.has(String(key))){
+      s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+      const have=Math.max(0,Math.floor(Number(s.specials[key])||0));
+      if(have<qty)return false;
+      s.specials[key]=have-qty;
+      return true;
+    }
+
+    return V246_removeGiftBase(s,type,key,qty);
+  };
+
+  const V246_addGiftBase=addGiftItemToState;
+  addGiftItemToState=function(s,gift){
+    if(Array.isArray(gift?.items)){
+      gift.items.forEach(item=>addGiftItemToState(s,{
+        itemType:item.type,
+        itemKey:item.key,
+        qty:item.qty,
+        instance:item.instance
+      }));
+      return;
+    }
+
+    const type=gift?.itemType||gift?.type;
+    const key=gift?.itemKey||gift?.key;
+    const qty=Math.max(1,Math.floor(Number(gift?.qty)||1));
+
+    if(type==="special"&&GRASS_KEYS.has(String(key))){
+      s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+      s.specials[key]=Math.max(0,Math.floor(Number(s.specials[key])||0))+qty;
+      return;
+    }
+
+    return V246_addGiftBase(s,gift);
+  };
+
+  try{
+    const defs={
+      friendGrassGreen:{name:"หญ้าสีเขียว",image:"friend-grass-green.png?v=221"},
+      friendGrassYellow:{name:"หญ้าสีเหลือง",image:"friend-grass-yellow.png?v=221"},
+      friendGrassRed:{name:"หญ้าสีแดง",image:"friend-grass-red.png?v=221"}
+    };
+    Object.entries(defs).forEach(([key,d])=>{
+      SPECIAL_ITEMS[key]={
+        ...(SPECIAL_ITEMS[key]||{}),
+        ...d,
+        kind:"forage",
+        group:"friendForage"
+      };
+    });
+  }catch(error){
+    console.warn("V246 grass metadata",error);
   }
 
-  claimFriendGift=async function(giftId,accept,returnTab="friend"){
-    try{
-      await settlePendingCloudSave();
-
-      const {db,fs}=await getFirebaseContext();
-      const giftRef=fs.doc(db,"gifts",giftId);
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      const mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);
-      let next=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const [giftSnap,saveSnap]=await Promise.all([
-          tx.get(giftRef),
-          tx.get(saveRef)
-        ]);
-
-        if(!giftSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบของขวัญ");
-        const gift=giftSnap.data();
-
-        if(String(gift.toKey)!==String(currentMemberKey))
-          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-        if(gift.status!=="pending")
-          throw new Error("ของขวัญนี้ถูกจัดการแล้ว");
-
-        const s=normalizeState(saveSnap.data(),currentMember);
-        assertCurrentCloudSession(saveSnap.data(),currentMember);
-
-        if(accept)addGiftItemToState(s,gift);
-        next=s;
-
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-
-        tx.set(giftRef,{
-          status:accept?"claimed":"discarded",
-          resolvedAt:fs.serverTimestamp()
-        },{merge:true});
-
-        tx.set(mailRef,{
-          read:true,
-          resolved:true,
-          status:accept?"claimed":"discarded"
-        },{merge:true});
-      });
-
-      V243_applyState(next);
-      await showNotifications(returnTab);
-      showWeatherToast(accept?"🎁 รับของขวัญแล้ว":"🗑️ ทิ้งของขวัญแล้ว • ไม่คืนผู้ส่ง");
-    }catch(error){
-      console.error("V243 friend gift claim",error);
-      message(
-        "จัดการของขวัญไม่ได้",
-        `${error.message||"กรุณาลองใหม่"}<br><small>V243 • friend gift • memberKey: ${safeHtml(String(currentMemberKey||"-"))}</small>`
-      );
-    }
-  };
-
-  claimBroadcastGift=async function(broadcastId,accept){
-    try{
-      await settlePendingCloudSave();
-
-      const {db,fs}=await getFirebaseContext();
-      const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      let next=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const [bSnap,sSnap]=await Promise.all([
-          tx.get(broadcastRef),
-          tx.get(saveRef)
-        ]);
-
-        if(!bSnap.exists()||!sSnap.exists())
-          throw new Error("ไม่พบของขวัญจากยัยหนู");
-
-        const b=bSnap.data();
-
-        if(b.type!=="gift")
-          throw new Error("รายการนี้ไม่ใช่ของขวัญ");
-
-        if(b.targetKey&&String(b.targetKey)!==String(currentMemberKey))
-          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-        if(!b.targetKey&&currentMember==="Aida"&&b.includeAida===false)
-          throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
-
-        const s=normalizeState(sSnap.data(),currentMember);
-        assertCurrentCloudSession(sSnap.data(),currentMember);
-
-        s.broadcastGiftClaims=
-          s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"
-            ? s.broadcastGiftClaims
-            : {};
-
-        if(s.broadcastGiftClaims[broadcastId])
-          throw new Error("คุณจัดการของขวัญนี้แล้ว");
-
-        if(accept){
-          if(Array.isArray(b.items)){
-            b.items.forEach(item=>{
-              addGiftItemToState(s,{
-                itemType:item.type,
-                itemKey:item.key,
-                qty:item.qty
-              });
-            });
-          }else{
-            addGiftItemToState(s,{
-              itemType:b.itemType,
-              itemKey:b.itemKey,
-              qty:b.qty
-            });
-          }
-        }
-
-        s.broadcastGiftClaims[broadcastId]={
-          status:accept?"accepted":"discarded",
-          resolvedAt:gameNow()
-        };
-
-        next=s;
-
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      V243_applyState(next);
-
-      try{
-        broadcastClaimCache.set(
-          broadcastClaimCacheKey(broadcastId),
-          {memberKey:currentMemberKey,status:accept?"accepted":"discarded"}
-        );
-      }catch{}
-
-      await showNotifications("yainoo");
-      showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
-    }catch(error){
-      console.error("V243 broadcast gift claim",error);
-      message(
-        "จัดการของขวัญไม่ได้",
-        `${error.message||"กรุณาลองใหม่"}<br><small>V243 • Aida gift • memberKey: ${safeHtml(String(currentMemberKey||"-"))}</small>`
-      );
-    }
-  };
-
-  craftRainyMenu=async function(id){
-    const recipe=RAINY_MENU_BY_ID[id];
-    if(!recipe||!cloudReady)return;
-
-    const button=$("confirmRainyCraftBtn");
-    if(button)button.disabled=true;
-
-    try{
-      await settlePendingCloudSave();
-
-      const {db,fs}=await getFirebaseContext();
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      const profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
-      const scoreRef=fs.doc(db,"campaignScores",COOK_CAMPAIGN_ID);
-
-      let next=null;
-      let success=false;
-      let campaignAfter=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const [saveSnap,scoreSnap]=await Promise.all([
-          tx.get(saveRef),
-          tx.get(scoreRef)
-        ]);
-
-        if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
-        const s=normalizeState(saveSnap.data(),currentMember);
-        assertCurrentCloudSession(saveSnap.data(),currentMember);
-        ensureV4State(s);
-        ensureRainySeasonState(s);
-
-        if(!canCraftRainyMenu(recipe,s))
-          throw new Error("วัตถุดิบไม่ครบตามสูตรแล้ว กรุณาเปิดเมนูใหม่");
-
-        Object.entries(recipe.needRiver||{}).forEach(([key,qty])=>{
-          s.coconutRiverItems[key]=(Number(s.coconutRiverItems[key])||0)-qty;
-        });
-
-        Object.entries(recipe.needBag||{}).forEach(([key,qty])=>{
-          s.bag[key]=(Number(s.bag[key])||0)-qty;
-        });
-
-        Object.entries(recipe.needProducts||{}).forEach(([key,qty])=>{
-          s.animalProducts[key]=(Number(s.animalProducts[key])||0)-qty;
-        });
-
-        success=Math.random()*100<recipe.chance;
-
-        if(success){
-          s.rainyMenus[id]=Math.max(0,Math.floor(Number(s.rainyMenus[id])||0))+1;
-          s.merit=(Number(s.merit)||0)+recipe.meritReward;
-          incrementMissionOn(s,"craftFood",1);
-        }
-
-        next=s;
-
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-
-        if(success){
-          tx.set(profileRef,{
-            memberKey:currentMemberKey,
-            displayName:currentProfileDisplayName(),
-            merit:s.merit,
-            initialized:true,
-            updatedAt:fs.serverTimestamp()
-          },{merge:true});
-
-          if(currentMember!=="Aida"){
-            const key=String(currentMemberKey);
-            const name=currentProfileDisplayName();
-            const currentScore=Math.max(
-              0,
-              Math.floor(Number(scoreSnap.exists()?scoreSnap.data()?.scores?.[key]:0)||0)
-            );
-            campaignAfter=currentScore+4;
-
-            if(scoreSnap.exists()){
-              tx.update(scoreRef,{
-                campaignId:COOK_CAMPAIGN_ID,
-                [`scores.${key}`]:fs.increment(4),
-                [`names.${key}`]:name,
-                updatedAt:fs.serverTimestamp()
-              });
-            }else{
-              tx.set(scoreRef,{
-                campaignId:COOK_CAMPAIGN_ID,
-                scores:{[key]:4},
-                names:{[key]:name},
-                updatedAt:fs.serverTimestamp()
-              },{merge:false});
-            }
-          }
-        }
-      });
-
-      V243_applyState(next);
-
-      if(success){
-        const verifiedCount=rainyMenuCount(id,ownState);
-        $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
-          <h2>✨ คราฟสำเร็จ!</h2>
-          <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
-          <h3>${safeHtml(recipe.name)}</h3>
-          <p>เมนูหน้าฝนเข้ากระเป๋า ×1<br>
-          ตอนนี้มีทั้งหมด <b>×${verifiedCount}</b><br>
-          ได้รับ +${recipe.meritReward} กุศล<br>
-          ${currentMember!=="Aida"?`แคมเปญแม่ครัว <b>+4 คะแนน</b>${campaignAfter!==null?` • รวม ${campaignAfter}`:""}`:""}</p>
-        </section>`;
-
-        return {
-          success:true,
-          verifiedCount,
-          campaignScored:currentMember==="Aida"?false:true,
-          campaignScoreAfter:campaignAfter
-        };
-      }
-
-      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
-        <h2>💨 คราฟไม่สำเร็จ</h2>
-        <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
-        <h3>${safeHtml(recipe.name)}</h3>
-        <p>วัตถุดิบทั้งหมดถูกใช้ไปแล้ว<br>ไม่ได้รับเมนูและไม่ได้รับกุศล</p>
-      </section>`;
-
-      return {success:false};
-    }catch(error){
-      console.error("V243 rainy craft",error);
-      message(
-        "คราฟเมนูหน้าฝนไม่ได้",
-        `${error.message||"กรุณาลองใหม่"}<br><small>V243 • rainy campaign • memberKey: ${safeHtml(String(currentMemberKey||"-"))}</small>`
-      );
-    }finally{
-      if(button)button.disabled=false;
-    }
-  };
-
-  window.YAINOO_BUILD="V243-GIFT-RAINY-AUTHORITATIVE";
-  console.info("V243 gift + rainy authoritative fix loaded");
-})();
-
-/* ======================================================================
-   V244 — OWN-SAVE GIFT CLAIM + DIRECT RAINY SCORE
-
-   This patch removes the last multi-document permission dependency from
-   receiving friend gifts. The receiver's own save is the authoritative
-   claim record; gift/mailbox cleanup becomes best-effort only.
-
-   Rainy-menu scoring is also separated from profile writes and uses a direct
-   campaignScores dotted-field increment after the craft save commits.
-   ====================================================================== */
-(function YN_V244_OWN_SAVE_GIFT_AND_RAINY_SCORE(){
-  const COOK_CAMPAIGN_ID="cooking-oldschool-20260826";
-
-  function V244_applyOwn(next){
-    ownState=normalizeState(next,currentMember);
-    if(!visitContext)state=ownState;
-    saveLocalOnly(ownState);
-    updateMeritUI();
-  }
-
-  function V244_friendClaimStore(s){
-    s.friendGiftClaims=
-      s.friendGiftClaims&&typeof s.friendGiftClaims==="object"
-        ? s.friendGiftClaims
-        : {};
-    return s.friendGiftClaims;
-  }
-
-  claimFriendGift=async function(giftId,accept,returnTab="friend"){
-    let phase="start";
-    try{
-      await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext();
-
-      phase="read-gift";
-      const giftRef=fs.doc(db,"gifts",giftId);
-      const giftSnap=await fs.getDoc(giftRef);
-      if(!giftSnap.exists())throw new Error("ไม่พบของขวัญ");
-
-      const gift=giftSnap.data();
-      if(String(gift.toKey)!==String(currentMemberKey))
-        throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-      phase="claim-own-save";
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      let next=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const saveSnap=await tx.get(saveRef);
-        if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
-        const s=normalizeState(saveSnap.data(),currentMember);
-        assertCurrentCloudSession(saveSnap.data(),currentMember);
-        const claims=V244_friendClaimStore(s);
-
-        if(claims[giftId])
-          throw new Error("คุณจัดการของขวัญนี้แล้ว");
-
-        if(accept)addGiftItemToState(s,gift);
-
-        claims[giftId]={
-          status:accept?"accepted":"discarded",
-          resolvedAt:gameNow(),
-          fromKey:String(gift.fromKey||""),
-          itemType:String(gift.itemType||""),
-          itemKey:String(gift.itemKey||""),
-          qty:Math.max(1,Number(gift.qty)||1)
-        };
-
-        next=s;
-
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      V244_applyOwn(next);
-
-      /* Cleanup is intentionally non-blocking. The item is already safely
-         claimed in the receiver's own save, so a cleanup permission issue
-         can never take the received item away or create a duplicate claim. */
-      phase="cleanup";
-      const cleanup=[];
-      cleanup.push(
-        fs.setDoc(giftRef,{
-          status:accept?"claimed":"discarded",
-          resolvedAt:fs.serverTimestamp()
-        },{merge:true}).catch(e=>console.warn("V244 gift cleanup",e))
-      );
-
-      const mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);
-      cleanup.push(
-        fs.setDoc(mailRef,{
-          read:true,
-          resolved:true,
-          status:accept?"claimed":"discarded"
-        },{merge:true}).catch(e=>console.warn("V244 mailbox cleanup",e))
-      );
-
-      await Promise.allSettled(cleanup);
-
-      try{
-        const mail=await fs.getDoc(mailRef);
-        if(mail.exists()&&!mail.data()?.resolved){
-          console.warn("V244 mailbox remained unresolved after cleanup");
-        }
-      }catch{}
-
-      await showNotifications(returnTab);
-      showWeatherToast(
-        accept
-          ?"🎁 รับของขวัญแล้ว"
-          :"🗑️ ทิ้งของขวัญแล้ว • ไม่คืนผู้ส่ง"
-      );
-    }catch(error){
-      console.error("V244 friend gift",phase,error);
-      message(
-        "จัดการของขวัญไม่ได้",
-        `${error.message||"กรุณาลองใหม่"}<br><small>V244 • ${safeHtml(phase)} • memberKey: ${safeHtml(String(currentMemberKey||"-"))}</small>`
-      );
-    }
-  };
-
-  /* Make already-claimed friend gifts render as resolved even if mailbox
-     cleanup was denied by old Firestore data/rules. */
-  const V244_showNotificationsBase=showNotifications;
-  showNotifications=async function(tab="friend"){
-    if(tab==="friend"){
-      try{
-        const s=ownState||state;
-        const claims=s?.friendGiftClaims||{};
-        if(claims&&typeof claims==="object"){
-          const {db,fs}=await getFirebaseContext();
-          const pending=Object.entries(claims).slice(-120);
-          await Promise.allSettled(pending.map(async ([giftId,rec])=>{
-            const mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);
-            const snap=await fs.getDoc(mailRef).catch(()=>null);
-            if(!snap?.exists()||snap.data()?.resolved)return;
-            await fs.setDoc(mailRef,{
-              read:true,
-              resolved:true,
-              status:rec?.status==="accepted"?"claimed":"discarded"
-            },{merge:true}).catch(()=>{});
-          }));
-        }
-      }catch{}
-    }
-    return V244_showNotificationsBase.apply(this,arguments);
-  };
-
-  craftRainyMenu=async function(id){
-    const recipe=RAINY_MENU_BY_ID[id];
-    if(!recipe||!cloudReady)return;
-
-    const button=$("confirmRainyCraftBtn");
-    if(button)button.disabled=true;
-
-    let phase="start";
-    try{
-      await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext();
-
-      phase="craft-save";
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      let next=null;
-      let success=false;
-
-      await fs.runTransaction(db,async tx=>{
-        const saveSnap=await tx.get(saveRef);
-        if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
-        const s=normalizeState(saveSnap.data(),currentMember);
-        assertCurrentCloudSession(saveSnap.data(),currentMember);
-        ensureV4State(s);
-        ensureRainySeasonState(s);
-
-        if(!canCraftRainyMenu(recipe,s))
-          throw new Error("วัตถุดิบไม่ครบตามสูตรแล้ว กรุณาเปิดเมนูใหม่");
-
-        Object.entries(recipe.needRiver||{}).forEach(([key,qty])=>{
-          s.coconutRiverItems[key]=(Number(s.coconutRiverItems[key])||0)-qty;
-        });
-        Object.entries(recipe.needBag||{}).forEach(([key,qty])=>{
-          s.bag[key]=(Number(s.bag[key])||0)-qty;
-        });
-        Object.entries(recipe.needProducts||{}).forEach(([key,qty])=>{
-          s.animalProducts[key]=(Number(s.animalProducts[key])||0)-qty;
-        });
-
-        success=Math.random()*100<recipe.chance;
-
-        if(success){
-          s.rainyMenus[id]=Math.max(0,Math.floor(Number(s.rainyMenus[id])||0))+1;
-          s.merit=(Number(s.merit)||0)+recipe.meritReward;
-          incrementMissionOn(s,"craftFood",1);
-        }
-
-        next=s;
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      V244_applyOwn(next);
-
-      let campaignAfter=null;
-
-      if(success&&currentMember!=="Aida"){
-        phase="campaign-score";
-        const scoreRef=fs.doc(db,"campaignScores",COOK_CAMPAIGN_ID);
-        const key=String(currentMemberKey);
-        const name=currentProfileDisplayName();
-
-        const scoreSnap=await fs.getDoc(scoreRef);
-
-        if(scoreSnap.exists()){
-          await fs.updateDoc(scoreRef,{
-            campaignId:COOK_CAMPAIGN_ID,
-            [`scores.${key}`]:fs.increment(4),
-            [`names.${key}`]:name,
-            updatedAt:fs.serverTimestamp()
-          });
-        }else{
-          await fs.setDoc(scoreRef,{
-            campaignId:COOK_CAMPAIGN_ID,
-            scores:{[key]:4},
-            names:{[key]:name},
-            updatedAt:fs.serverTimestamp()
-          },{merge:false});
-        }
-
-        phase="verify-score";
-        const verify=await fs.getDoc(scoreRef);
-        campaignAfter=Math.max(
-          0,
-          Math.floor(Number(verify.data()?.scores?.[key])||0)
-        );
-
-        /* Profile merit synchronization is secondary and must not block
-           inventory or campaign score. */
-        const profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
-        fs.setDoc(profileRef,{
-          memberKey:currentMemberKey,
-          displayName:currentProfileDisplayName(),
-          merit:Number(ownState?.merit)||0,
-          initialized:true,
-          updatedAt:fs.serverTimestamp()
-        },{merge:true}).catch(e=>console.warn("V244 rainy profile sync",e));
-      }
-
-      if(success){
-        const verifiedCount=rainyMenuCount(id,ownState);
-        $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
-          <h2>✨ คราฟสำเร็จ!</h2>
-          <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
-          <h3>${safeHtml(recipe.name)}</h3>
-          <p>เมนูหน้าฝนเข้ากระเป๋า ×1<br>
-          ตอนนี้มีทั้งหมด <b>×${verifiedCount}</b><br>
-          ได้รับ +${recipe.meritReward} กุศล
-          ${currentMember!=="Aida"?`<br>แคมเปญแม่ครัว <b>+4 คะแนน</b>${campaignAfter!==null?` • รวม ${campaignAfter}`:""}`:""}
-          </p>
-        </section>`;
-        return {
-          success:true,
-          verifiedCount,
-          campaignScored:currentMember!=="Aida",
-          campaignScoreAfter:campaignAfter
-        };
-      }
-
-      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
-        <h2>💨 คราฟไม่สำเร็จ</h2>
-        <img src="${recipe.image}" alt="${safeHtml(recipe.name)}">
-        <h3>${safeHtml(recipe.name)}</h3>
-        <p>วัตถุดิบทั้งหมดถูกใช้ไปแล้ว<br>ไม่ได้รับเมนูและไม่ได้รับกุศล</p>
-      </section>`;
-
-      return {success:false};
-
-    }catch(error){
-      console.error("V244 rainy",phase,error);
-      message(
-        "คราฟเมนูหน้าฝนไม่ได้",
-        `${error.message||"กรุณาลองใหม่"}<br><small>V244 • ${safeHtml(phase)} • memberKey: ${safeHtml(String(currentMemberKey||"-"))}</small>`
-      );
-    }finally{
-      if(button)button.disabled=false;
-    }
-  };
-
-  window.YAINOO_BUILD="V244-OWN-SAVE-GIFT-DIRECT-RAINY";
-  console.info("V244 own-save gift + direct rainy score loaded");
+  window.YAINOO_BUILD="V246-THREE-GRASS-FRIEND-GIFT-FIX";
+  console.info("V246 three-grass friend-gift fix loaded");
 })();
 
