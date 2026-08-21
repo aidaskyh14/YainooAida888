@@ -7075,21 +7075,36 @@ craftRainyMenu=async function(id){
     updateMeritUI();
 
     if(success){
-      /* R14: score directly from the canonical successful rainy craft. */
+      /* R16: rainy scoring uses its own transaction against the exact campaign
+         document used by the ranking UI. Preserve every other member's score
+         and verify this member increased by exactly +4 before reporting success. */
       let campaignScored=false;
       let campaignError=null;
-      for(let attempt=0;attempt<2&&!campaignScored;attempt++){
-        try{
-          if(typeof window.YN_R7_campaignIncrement!=="function")throw new Error("ตัวนับแคมเปญยังไม่พร้อม");
-          await window.YN_R7_campaignIncrement("cooking-oldschool-20260826",4);
-          campaignScored=true;
-        }catch(e){
-          campaignError=e;
-          if(attempt===0)await new Promise(resolve=>setTimeout(resolve,180));
-        }
+      try{
+        const campaignId="cooking-oldschool-20260826";
+        const scoreRef=fs.doc(db,"campaignScores",campaignId);
+        let expectedScore=0;
+        await fs.runTransaction(db,async tx=>{
+          const sc=await tx.get(scoreRef);
+          const data=sc.exists()?(sc.data()||{}):{};
+          const scores={...(data.scores&&typeof data.scores==="object"?data.scores:{})};
+          const names={...(data.names&&typeof data.names==="object"?data.names:{})};
+          const nightCounts={...(data.nightCounts&&typeof data.nightCounts==="object"?data.nightCounts:{})};
+          const before=Math.max(0,Math.floor(Number(scores[currentMemberKey])||0));
+          expectedScore=before+4;
+          scores[currentMemberKey]=expectedScore;
+          names[currentMemberKey]=currentProfileDisplayName();
+          tx.set(scoreRef,{campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:false});
+        });
+        const check=await fs.getDoc(scoreRef);
+        const actual=Math.max(0,Math.floor(Number(check.data()?.scores?.[currentMemberKey])||0));
+        if(actual<expectedScore)throw new Error(`ตรวจคะแนนหลังบันทึกไม่ผ่าน (${actual}/${expectedScore})`);
+        campaignScored=true;
+      }catch(e){
+        campaignError=e;
+        console.error("R16 rainy campaign score",e);
       }
       if(!campaignScored){
-        console.error("R14 rainy campaign score",campaignError);
         try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนน +4 ยังไม่เข้า: ${campaignError?.message||"Firebase ปฏิเสธ"}`)}catch{}
       }
       const verifiedCount=rainyMenuCount(id,verified);
@@ -16165,7 +16180,11 @@ async function V181_campaignScoreLater(summary){
      broadcasts/{id}/claims permission path entirely. */
   claimBroadcastGift=async function(broadcastId,accept){
     try{
-      await settlePendingCloudSave();
+      /* R16: a stale/failed background save must never block gift claiming.
+         The claim below re-reads the member save from Firestore and writes the
+         complete claimed state atomically, so it is safe to continue even if
+         settlePendingCloudSave() itself was rejected by an unrelated write. */
+      try{await settlePendingCloudSave()}catch(e){console.warn("R16 gift pre-save ignored",e)}
       const {db,fs}=await getFirebaseContext();
       const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
       const saveRef=fs.doc(db,"saves",currentMemberKey);
@@ -17998,3 +18017,6 @@ console.info("V241 R6 campaign + friend grass hotfix loaded");
   window.YAINOO_BUILD="V241-R7-CAMPAIGN-SCORE-HARD-FIX";
   console.info("V241 R7 campaign score hard fix loaded");
 })();
+
+;window.YAINOO_BUILD="R16-GIFT-RAINY-VERIFY";
+console.info("R16 gift + rainy verified-write patch loaded");
