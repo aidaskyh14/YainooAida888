@@ -2,13 +2,72 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn(){ return request.auth != null; }
-    function memberPath(){ return /databases/$(database)/documents/members/$(request.auth.uid); }
-    function hasMemberProfile(){ return isSignedIn() && exists(memberPath()); }
-    function allowedMemberKey(k){ return k in ["kung-a","ar-jane","blotto-bier","mameaw","para","porpla","pukkie","opor","tangtang","sa","earn","mhai","gigs-gee","aimme","phon","hana","kongkwan","noona"]; }
-    function expectedMemberEmail(k){ return "member-" + k + "@yainoo.example.com"; }
-    function isMameaw(){ return isSignedIn() && request.auth.token.email is string && request.auth.token.email == "member-mameaw@yainoo.example.com"; }
-    function isMameawKey(k){ return isMameaw() && k == "mameaw"; }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath() {
+      return /databases/$(database)/documents/members/$(request.auth.uid);
+    }
+
+    function hasMemberProfile() {
+      return isSignedIn() && exists(memberPath());
+    }
+
+    function allowedMemberKey(memberKey) {
+      return memberKey in [
+        "kung-a",
+        "ar-jane",
+        "blotto-bier",
+        "mameaw",
+        "para",
+        "porpla",
+        "pukkie",
+        "opor",
+        "tangtang",
+        "sa",
+        "earn",
+        "mhai",
+        "gigs-gee",
+        "aimme",
+        "phon",
+        "hana",
+        "kongkwan",
+        "noona"
+      ];
+    }
+
+    function expectedMemberEmail(memberKey) {
+      return "member-" + memberKey + "@yainoo.example.com";
+    }
+
+    /* R12: direct Firebase-email ownership check.
+       Used for the user's own save and broadcast claim path so gift claims
+       do not depend on member-profile lookup/helper key derivation. */
+    function isEmailOwner(memberKey) {
+      return isSignedIn()
+        && allowedMemberKey(memberKey)
+        && request.auth.token.email is string
+        && request.auth.token.email == expectedMemberEmail(memberKey);
+    }
+
+    /* ============================================================
+       MAMEAW HARD RESCUE
+       ============================================================ */
+
+    function isMameaw() {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email
+          == "member-mameaw@yainoo.example.com";
+    }
+
+    function isMameawKey(memberKey) {
+      return isMameaw()
+        && memberKey == "mameaw";
+    }
+
     function emailMemberKey() {
       return isSignedIn()
         && request.auth.token.email is string
@@ -21,7 +80,11 @@ service cloud.firestore {
         : "";
     }
 
-    function profileMemberKey(){ return hasMemberProfile() ? get(memberPath()).data.memberKey : ""; }
+    function profileMemberKey() {
+      return hasMemberProfile()
+        ? get(memberPath()).data.memberKey
+        : "";
+    }
 
     function myMemberKey() {
       return isMameaw()
@@ -32,90 +95,841 @@ service cloud.firestore {
               : profileMemberKey()
           );
     }
-    function isMyKey(k){ return isSignedIn() && allowedMemberKey(k) && myMemberKey() == k; }
-    function isAdmin(){ return isSignedIn() && hasMemberProfile() && get(memberPath()).data.role == "admin"; }
 
-    function oldSpecialQty(key){ return resource.data.get("specials",{}).get(key,0); }
-    function newSpecialQty(key){ return request.resource.data.get("specials",{}).get(key,0); }
-    function isFriendCatSlap(){ return isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["merit","updatedAt"]) && request.resource.data.merit == resource.data.merit - 10; }
-    function isFriendCatTease(){
+    function isMyKey(memberKey) {
       return isSignedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["merit","specials","updatedAt"])
-        && request.resource.data.merit == resource.data.merit + 2
-        && request.resource.data.get("specials",{}) is map
-        && request.resource.data.get("specials",{}).diff(resource.data.get("specials",{})).affectedKeys().hasOnly(["angelWingCapsule","satanWings","landDeed"])
-        && ((newSpecialQty("angelWingCapsule")==oldSpecialQty("angelWingCapsule")+1 && newSpecialQty("satanWings")==oldSpecialQty("satanWings") && newSpecialQty("landDeed")==oldSpecialQty("landDeed"))
-          || (newSpecialQty("satanWings")==oldSpecialQty("satanWings")+1 && newSpecialQty("angelWingCapsule")==oldSpecialQty("angelWingCapsule") && newSpecialQty("landDeed")==oldSpecialQty("landDeed"))
-          || (newSpecialQty("landDeed")==oldSpecialQty("landDeed")+1 && newSpecialQty("angelWingCapsule")==oldSpecialQty("angelWingCapsule") && newSpecialQty("satanWings")==oldSpecialQty("satanWings")));
+        && allowedMemberKey(memberKey)
+        && myMemberKey() == memberKey;
     }
-    function isFriendAlpacaBreedingCredit(){ return isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["merit","updatedAt"]) && request.resource.data.merit == resource.data.merit + 150; }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(memberPath())
+        && get(memberPath()).data.role == "admin";
+    }
+
+    function oldSpecialQty(key) {
+      return resource.data
+        .get("specials", {})
+        .get(key, 0);
+    }
+
+    function newSpecialQty(key) {
+      return request.resource.data
+        .get("specials", {})
+        .get(key, 0);
+    }
+
+    function isFriendCatSlap() {
+      return isSignedIn()
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "merit",
+            "updatedAt"
+          ])
+        && request.resource.data.merit
+          == resource.data.merit - 10;
+    }
+
+    function isFriendCatTease() {
+      return isSignedIn()
+
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "merit",
+            "specials",
+            "updatedAt"
+          ])
+
+        && request.resource.data.merit
+          == resource.data.merit + 2
+
+        && request.resource.data
+          .get("specials", {}) is map
+
+        && request.resource.data
+          .get("specials", {})
+          .diff(
+            resource.data.get(
+              "specials",
+              {}
+            )
+          )
+          .affectedKeys()
+          .hasOnly([
+            "angelWingCapsule",
+            "satanWings",
+            "landDeed"
+          ])
+
+        && (
+          (
+            newSpecialQty("angelWingCapsule")
+              == oldSpecialQty("angelWingCapsule") + 1
+
+            && newSpecialQty("satanWings")
+              == oldSpecialQty("satanWings")
+
+            && newSpecialQty("landDeed")
+              == oldSpecialQty("landDeed")
+          )
+
+          ||
+
+          (
+            newSpecialQty("satanWings")
+              == oldSpecialQty("satanWings") + 1
+
+            && newSpecialQty("angelWingCapsule")
+              == oldSpecialQty("angelWingCapsule")
+
+            && newSpecialQty("landDeed")
+              == oldSpecialQty("landDeed")
+          )
+
+          ||
+
+          (
+            newSpecialQty("landDeed")
+              == oldSpecialQty("landDeed") + 1
+
+            && newSpecialQty("angelWingCapsule")
+              == oldSpecialQty("angelWingCapsule")
+
+            && newSpecialQty("satanWings")
+              == oldSpecialQty("satanWings")
+          )
+        );
+    }
+
+    /* Alpaca breeding payment: a friend may credit exactly +150 merit
+       to the selected sire owner. No other save/profile fields may change. */
+    function isFriendAlpacaBreedingCredit() {
+      return isSignedIn()
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "merit",
+            "updatedAt"
+          ])
+        && request.resource.data.merit
+          == resource.data.merit + 150;
+    }
+
+
+    /* ============================================================
+       MEMBERS
+       ============================================================ */
 
     match /members/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == "member" && allowedMemberKey(request.resource.data.memberKey) && request.auth.token.email == expectedMemberEmail(request.resource.data.memberKey);
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId && request.resource.data.role == resource.data.role && request.resource.data.memberKey == resource.data.memberKey && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["displayName","welcomeGiftClaimed"]));
-      allow delete: if isAdmin();
+
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == userId
+          || isAdmin()
+        );
+
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "member"
+        && allowedMemberKey(
+          request.resource.data.memberKey
+        )
+        && request.auth.token.email
+          == expectedMemberEmail(
+            request.resource.data.memberKey
+          );
+
+      allow update: if isAdmin()
+
+        || (
+          isSignedIn()
+          && request.auth.uid == userId
+
+          && request.resource.data.role
+            == resource.data.role
+
+          && request.resource.data.memberKey
+            == resource.data.memberKey
+
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "displayName",
+              "welcomeGiftClaimed"
+            ])
+        );
+
+      allow delete:
+        if isAdmin();
     }
+
+
+    /* ============================================================
+       SAVES
+       ============================================================ */
 
     match /saves/{memberKey} {
-      allow read, create: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey);
-      allow update: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey) || (isSignedIn() && memberKey != myMemberKey() && (isFriendCatSlap() || isFriendCatTease() || isFriendAlpacaBreedingCredit()));
-      allow delete: if isAdmin();
+
+      allow read, create:
+        if isMyKey(memberKey)
+        || isEmailOwner(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+
+      allow update:
+        if isMyKey(memberKey)
+
+        || isEmailOwner(memberKey)
+
+        || isAdmin()
+
+        || isMameawKey(memberKey)
+
+        || (
+          isSignedIn()
+
+          && memberKey != myMemberKey()
+
+          && (
+            isFriendCatSlap()
+            || isFriendCatTease()
+            || isFriendAlpacaBreedingCredit()
+          )
+        );
+
+      allow delete:
+        if isAdmin();
     }
+
+
+    /* ============================================================
+       GARDENS
+       ============================================================ */
 
     match /gardens/{memberKey} {
-      allow read: if isSignedIn();
-      allow create: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey);
-      allow update: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey) || (isSignedIn() && request.resource.data.memberKey == resource.data.memberKey && request.resource.data.displayName == resource.data.displayName && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["plots","updatedAt"]));
-      allow delete: if isAdmin();
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isMyKey(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+
+      allow update:
+        if isMyKey(memberKey)
+
+        || isAdmin()
+
+        || isMameawKey(memberKey)
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.memberKey
+            == resource.data.memberKey
+
+          && request.resource.data.displayName
+            == resource.data.displayName
+
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "plots",
+              "updatedAt"
+            ])
+        );
+
+      allow delete:
+        if isAdmin();
     }
+
+
+    /* ============================================================
+       PUBLIC PROFILES
+       ============================================================ */
 
     match /publicProfiles/{memberKey} {
-      allow read: if isSignedIn();
-      allow create: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey);
-      allow update: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey) || (isSignedIn() && memberKey != myMemberKey() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["merit","updatedAt"]) && (request.resource.data.merit == resource.data.merit - 10 || request.resource.data.merit == resource.data.merit + 2 || request.resource.data.merit == resource.data.merit + 150));
-      allow delete: if isAdmin();
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isMyKey(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+
+      allow update:
+        if isMyKey(memberKey)
+
+        || isAdmin()
+
+        || isMameawKey(memberKey)
+
+        || (
+          isSignedIn()
+
+          && memberKey != myMemberKey()
+
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "merit",
+              "updatedAt"
+            ])
+
+          && (
+            request.resource.data.merit
+              == resource.data.merit - 10
+
+            || request.resource.data.merit
+              == resource.data.merit + 2
+
+            || request.resource.data.merit
+              == resource.data.merit + 150
+          )
+        );
+
+      allow delete:
+        if isAdmin();
     }
+
+
+    /* ============================================================
+       MAILBOX
+       ============================================================ */
 
     match /mailboxes/{memberKey}/items/{itemId} {
-      allow read, update, delete: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey);
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.source == "friend" && request.resource.data.fromKey == myMemberKey());
+
+      allow read, update, delete:
+        if isMyKey(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+
+      allow create:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.source
+            == "friend"
+
+          && request.resource.data.fromKey
+            == myMemberKey()
+        );
     }
+
+
+    /* ============================================================
+       GIFTS
+       ============================================================ */
 
     match /gifts/{giftId} {
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.fromKey == myMemberKey() && request.resource.data.status == "pending" && request.resource.data.toKey is string && allowedMemberKey(request.resource.data.toKey) && request.resource.data.itemType in ["product","crop","dish","rainyMenu","boatDrink","special","jelly","jellyV2","fishingBait","medicine","alpacaFood","alpacaMedicine","alpacaOther","alpacaWool","alpacaFactoryProduct","alpacaInstance","catInstance","dogInstance","catMystery","dogMystery","mystery"]);
-      allow read: if isAdmin() || (isSignedIn() && (resource.data.fromKey == myMemberKey() || resource.data.toKey == myMemberKey()));
-      allow update: if isAdmin() || (isSignedIn() && resource.data.toKey == myMemberKey() && resource.data.status == "pending" && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","resolvedAt"]));
-      allow delete: if isAdmin();
+
+      allow create:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.fromKey
+            == myMemberKey()
+
+          && request.resource.data.status
+            == "pending"
+
+          && (
+            request.resource.data.itemType in [
+              "product",
+              "dish",
+              "rainyMenu"
+            ]
+
+            ||
+
+            (
+              request.resource.data.itemType
+                == "special"
+
+              && request.resource.data.itemKey
+                == "wormKillerSpray"
+            )
+          )
+        );
+
+      allow read:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && (
+            resource.data.fromKey
+              == myMemberKey()
+
+            ||
+
+            resource.data.toKey
+              == myMemberKey()
+          )
+        );
+
+      allow update:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && resource.data.toKey
+            == myMemberKey()
+
+          && resource.data.status
+            == "pending"
+
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "status",
+              "resolvedAt"
+            ])
+        );
+
+      allow delete:
+        if isAdmin();
     }
+
+
+    /* ============================================================
+       PURCHASE REQUESTS
+       ============================================================ */
 
     match /purchaseRequests/{requestId} {
-      allow create: if isSignedIn() && request.resource.data.memberKey == myMemberKey() && request.resource.data.status == "pending" && request.resource.data.qty is int && request.resource.data.qty >= 1 && ((request.resource.data.category == "mystery" && request.resource.data.qty <= 7) || (request.resource.data.category == "animal" && request.resource.data.qty <= 999) || (request.resource.data.category == "special" && request.resource.data.qty <= 10));
-      allow read: if isAdmin() || (isSignedIn() && resource.data.memberKey == myMemberKey());
-      allow update, delete: if isAdmin();
+
+      allow create:
+        if isSignedIn()
+
+        && request.resource.data.memberKey
+          == myMemberKey()
+
+        && request.resource.data.status
+          == "pending"
+
+        && request.resource.data.qty is int
+
+        && request.resource.data.qty >= 1
+
+        && (
+          (
+            request.resource.data.category
+              == "mystery"
+
+            && request.resource.data.qty <= 7
+          )
+
+          ||
+
+          (
+            request.resource.data.category
+              == "animal"
+
+            && request.resource.data.qty <= 999
+          )
+
+          ||
+
+          (
+            request.resource.data.category
+              == "special"
+
+            && request.resource.data.qty <= 10
+          )
+        );
+
+      allow read:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && resource.data.memberKey
+            == myMemberKey()
+        );
+
+      allow update, delete:
+        if isAdmin();
     }
 
-    match /shared/coconutGarden { allow read, create, update: if isSignedIn(); allow delete: if isAdmin(); }
-    match /shared/jellyfishPond { allow read: if isSignedIn(); allow create, update: if isSignedIn() && request.resource.data.keys().hasOnly(["slots","updatedAt"]) && request.resource.data.slots is list && request.resource.data.slots.size()==12; allow delete: if isAdmin(); }
-    match /shared/jellyfishPond2 { allow read: if isSignedIn(); allow create, update: if isSignedIn() && request.resource.data.keys().hasOnly(["slots","updatedAt"]) && request.resource.data.slots is list && request.resource.data.slots.size()==12; allow delete: if isAdmin(); }
+
+    /* ============================================================
+       SHARED COCONUT
+       ============================================================ */
+
+    match /shared/coconutGarden {
+
+      allow read, create, update:
+        if isSignedIn();
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       JELLYFISH POND 1
+       ============================================================ */
+
+    match /shared/jellyfishPond {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if isSignedIn()
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "slots",
+            "updatedAt"
+          ])
+
+        && request.resource.data.slots
+          is list
+
+        && request.resource.data.slots.size()
+          == 12;
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       JELLYFISH POND 2
+       ============================================================ */
+
+    match /shared/jellyfishPond2 {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if isSignedIn()
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "slots",
+            "updatedAt"
+          ])
+
+        && request.resource.data.slots
+          is list
+
+        && request.resource.data.slots.size()
+          == 12;
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       BOAT RACE
+       ============================================================ */
 
     match /shared/boatRace {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.keys().hasOnly(["boat1Progress","boat2Progress","boat3Progress","target","winner","seasonLocked","cooldowns","seasonId","updatedAt"]) && request.resource.data.boat1Progress==0 && request.resource.data.boat2Progress==0 && request.resource.data.boat3Progress==0 && request.resource.data.target==200 && request.resource.data.winner==null && request.resource.data.seasonLocked==false && request.resource.data.cooldowns is map && request.resource.data.seasonId is int && request.resource.data.seasonId>=1;
-      allow update: if isAdmin() || (isSignedIn() && resource.data.seasonLocked==false && request.resource.data.keys().hasOnly(["boat1Progress","boat2Progress","boat3Progress","target","winner","seasonLocked","cooldowns","seasonId","updatedAt"]) && request.resource.data.target==resource.data.target && request.resource.data.target==200 && request.resource.data.seasonId==resource.data.seasonId && request.resource.data.cooldowns is map && request.resource.data.cooldowns.diff(resource.data.cooldowns).affectedKeys().hasOnly([myMemberKey()]) && ((request.resource.data.boat1Progress==resource.data.boat1Progress+1 && request.resource.data.boat2Progress==resource.data.boat2Progress && request.resource.data.boat3Progress==resource.data.boat3Progress) || (request.resource.data.boat2Progress==resource.data.boat2Progress+1 && request.resource.data.boat1Progress==resource.data.boat1Progress && request.resource.data.boat3Progress==resource.data.boat3Progress) || (request.resource.data.boat3Progress==resource.data.boat3Progress+1 && request.resource.data.boat1Progress==resource.data.boat1Progress && request.resource.data.boat2Progress==resource.data.boat2Progress)) && request.resource.data.boat1Progress>=0 && request.resource.data.boat1Progress<=200 && request.resource.data.boat2Progress>=0 && request.resource.data.boat2Progress<=200 && request.resource.data.boat3Progress>=0 && request.resource.data.boat3Progress<=200 && ((request.resource.data.winner==resource.data.winner && request.resource.data.seasonLocked==resource.data.seasonLocked) || (resource.data.winner==null && request.resource.data.seasonLocked==true && ((request.resource.data.winner==1 && request.resource.data.boat1Progress==200)||(request.resource.data.winner==2 && request.resource.data.boat2Progress==200)||(request.resource.data.winner==3 && request.resource.data.boat3Progress==200)))));
-      allow delete: if isAdmin();
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isSignedIn()
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "boat1Progress",
+            "boat2Progress",
+            "boat3Progress",
+            "target",
+            "winner",
+            "seasonLocked",
+            "cooldowns",
+            "seasonId",
+            "updatedAt"
+          ])
+
+        && request.resource.data.boat1Progress == 0
+        && request.resource.data.boat2Progress == 0
+        && request.resource.data.boat3Progress == 0
+        && request.resource.data.target == 200
+        && request.resource.data.winner == null
+        && request.resource.data.seasonLocked == false
+        && request.resource.data.cooldowns is map
+        && request.resource.data.seasonId is int
+        && request.resource.data.seasonId >= 1;
+
+      allow update:
+        if isAdmin()
+
+        || (
+          isSignedIn()
+
+          && resource.data.seasonLocked == false
+
+          && request.resource.data.keys()
+            .hasOnly([
+              "boat1Progress",
+              "boat2Progress",
+              "boat3Progress",
+              "target",
+              "winner",
+              "seasonLocked",
+              "cooldowns",
+              "seasonId",
+              "updatedAt"
+            ])
+
+          && request.resource.data.target
+            == resource.data.target
+
+          && request.resource.data.target
+            == 200
+
+          && request.resource.data.seasonId
+            == resource.data.seasonId
+
+          && request.resource.data.cooldowns
+            is map
+
+          && request.resource.data.cooldowns
+            .diff(resource.data.cooldowns)
+            .affectedKeys()
+            .hasOnly([
+              myMemberKey()
+            ])
+
+          && (
+            (
+              request.resource.data.boat1Progress
+                == resource.data.boat1Progress + 1
+
+              && request.resource.data.boat2Progress
+                == resource.data.boat2Progress
+
+              && request.resource.data.boat3Progress
+                == resource.data.boat3Progress
+            )
+
+            ||
+
+            (
+              request.resource.data.boat2Progress
+                == resource.data.boat2Progress + 1
+
+              && request.resource.data.boat1Progress
+                == resource.data.boat1Progress
+
+              && request.resource.data.boat3Progress
+                == resource.data.boat3Progress
+            )
+
+            ||
+
+            (
+              request.resource.data.boat3Progress
+                == resource.data.boat3Progress + 1
+
+              && request.resource.data.boat1Progress
+                == resource.data.boat1Progress
+
+              && request.resource.data.boat2Progress
+                == resource.data.boat2Progress
+            )
+          )
+
+          && request.resource.data.boat1Progress >= 0
+          && request.resource.data.boat1Progress <= 200
+          && request.resource.data.boat2Progress >= 0
+          && request.resource.data.boat2Progress <= 200
+          && request.resource.data.boat3Progress >= 0
+          && request.resource.data.boat3Progress <= 200
+
+          && (
+            (
+              request.resource.data.winner
+                == resource.data.winner
+
+              && request.resource.data.seasonLocked
+                == resource.data.seasonLocked
+            )
+
+            ||
+
+            (
+              resource.data.winner == null
+
+              && request.resource.data.seasonLocked
+                == true
+
+              && (
+                (
+                  request.resource.data.winner == 1
+                  && request.resource.data.boat1Progress == 200
+                )
+
+                ||
+
+                (
+                  request.resource.data.winner == 2
+                  && request.resource.data.boat2Progress == 200
+                )
+
+                ||
+
+                (
+                  request.resource.data.winner == 3
+                  && request.resource.data.boat3Progress == 200
+                )
+              )
+            )
+          )
+        );
+
+      allow delete:
+        if isAdmin();
     }
 
-    match /fishingSlots/{slotId} { allow read: if isSignedIn(); allow create, update: if (isMameaw() && request.resource.data.ownerKey=="mameaw") || (isSignedIn() && request.resource.data.ownerKey==myMemberKey() && request.resource.data.slot is int && request.resource.data.slot>=1 && request.resource.data.slot<=6 && request.resource.data.catches is list && request.resource.data.catches.size()>=1 && request.resource.data.catches.size()<=3 && request.resource.data.totalWeight is number); allow delete: if isAdmin() || isMameaw(); }
-    match /fishingSlotsV2/{slotId} { allow read: if isSignedIn(); allow create, update: if (isMameaw() && request.resource.data.ownerKey=="mameaw") || (isSignedIn() && request.resource.data.ownerKey==myMemberKey() && request.resource.data.dateKey is string && request.resource.data.pondId is int && request.resource.data.pondId>=1 && request.resource.data.pondId<=3 && request.resource.data.slot is int && request.resource.data.slot>=1 && request.resource.data.slot<=4 && request.resource.data.catches is list && request.resource.data.catches.size()>=1 && request.resource.data.catches.size()<=3 && request.resource.data.totalWeight is number && request.resource.data.status in ["fishing","claimed"]); allow delete: if isAdmin() || isMameaw(); }
-    match /fishingPlayers/{memberKey} { allow read, create, update, delete: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey); }
 
-    /*
-      ============================================================
-      FISHING DAILY
-      - Restores the original Mameaw hard-rescue branch.
-      ============================================================
-    */
+    /* ============================================================
+       FISHING LEGACY
+       ============================================================ */
+
+    match /fishingSlots/{slotId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if (
+          isMameaw()
+          && request.resource.data.ownerKey == "mameaw"
+        )
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.ownerKey
+            == myMemberKey()
+
+          && request.resource.data.slot is int
+          && request.resource.data.slot >= 1
+          && request.resource.data.slot <= 6
+
+          && request.resource.data.catches is list
+          && request.resource.data.catches.size() >= 1
+          && request.resource.data.catches.size() <= 3
+
+          && request.resource.data.totalWeight
+            is number
+        );
+
+      allow delete:
+        if isAdmin()
+        || isMameaw();
+    }
+
+
+    /* ============================================================
+       FISHING V2
+       ============================================================ */
+
+    match /fishingSlotsV2/{slotId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if (
+          isMameaw()
+          && request.resource.data.ownerKey == "mameaw"
+        )
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.ownerKey
+            == myMemberKey()
+
+          && request.resource.data.dateKey
+            is string
+
+          && request.resource.data.pondId
+            is int
+
+          && request.resource.data.pondId >= 1
+          && request.resource.data.pondId <= 3
+
+          && request.resource.data.slot
+            is int
+
+          && request.resource.data.slot >= 1
+          && request.resource.data.slot <= 4
+
+          && request.resource.data.catches
+            is list
+
+          && request.resource.data.catches.size()
+            >= 1
+
+          && request.resource.data.catches.size()
+            <= 3
+
+          && request.resource.data.totalWeight
+            is number
+
+          && request.resource.data.status in [
+            "fishing",
+            "claimed"
+          ]
+        );
+
+      allow delete:
+        if isAdmin()
+        || isMameaw();
+    }
+
+
+    /* ============================================================
+       FISHING PLAYERS
+       ============================================================ */
+
+    match /fishingPlayers/{memberKey} {
+
+      allow read:
+        if isMyKey(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+
+      allow create, update, delete:
+        if isMyKey(memberKey)
+        || isAdmin()
+        || isMameawKey(memberKey);
+    }
+
+
+    /* ============================================================
+       FISHING DAILY
+       ============================================================ */
 
     match /fishingDaily/{dateKey} {
 
@@ -128,25 +942,37 @@ service cloud.firestore {
         || (
           isMameaw()
 
-          && request.resource.data.dateKey == dateKey
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
+          && request.resource.data.dateKey
+            == dateKey
 
-          && request.resource.data.scores.keys().hasOnly([
-            "mameaw"
-          ])
+          && request.resource.data.scores
+            is map
 
-          && request.resource.data.names.keys().hasOnly([
-            "mameaw"
-          ])
+          && request.resource.data.names
+            is map
+
+          && request.resource.data.scores.keys()
+            .hasOnly([
+              "mameaw"
+            ])
+
+          && request.resource.data.names.keys()
+            .hasOnly([
+              "mameaw"
+            ])
 
           && (
             !("ponds" in request.resource.data)
-            || (
+
+            ||
+
+            (
               request.resource.data.ponds is map
-              && request.resource.data.ponds.keys().hasOnly([
-                "mameaw"
-              ])
+
+              && request.resource.data.ponds.keys()
+                .hasOnly([
+                  "mameaw"
+                ])
             )
           )
         )
@@ -154,28 +980,39 @@ service cloud.firestore {
         || (
           isSignedIn()
 
-          && request.resource.data.dateKey == dateKey
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
+          && request.resource.data.dateKey
+            == dateKey
+
+          && request.resource.data.scores
+            is map
+
+          && request.resource.data.names
+            is map
 
           && (
             !("ponds" in request.resource.data)
             || request.resource.data.ponds is map
           )
 
-          && request.resource.data.scores.keys().hasOnly([
-            myMemberKey()
-          ])
+          && request.resource.data.scores.keys()
+            .hasOnly([
+              myMemberKey()
+            ])
 
-          && request.resource.data.names.keys().hasOnly([
-            myMemberKey()
-          ])
+          && request.resource.data.names.keys()
+            .hasOnly([
+              myMemberKey()
+            ])
 
           && (
             !("ponds" in request.resource.data)
-            || request.resource.data.ponds.keys().hasOnly([
-              myMemberKey()
-            ])
+
+            ||
+
+            request.resource.data.ponds.keys()
+              .hasOnly([
+                myMemberKey()
+              ])
           )
         );
 
@@ -185,7 +1022,8 @@ service cloud.firestore {
         || (
           isMameaw()
 
-          && request.resource.data.dateKey == dateKey
+          && request.resource.data.dateKey
+            == dateKey
 
           && request.resource.data
             .diff(resource.data)
@@ -197,13 +1035,23 @@ service cloud.firestore {
               "updatedAt"
             ])
 
-          && request.resource.data.get("scores", {}) is map
-          && request.resource.data.get("names", {}) is map
-          && request.resource.data.get("ponds", {}) is map
+          && request.resource.data
+            .get("scores", {}) is map
+
+          && request.resource.data
+            .get("names", {}) is map
+
+          && request.resource.data
+            .get("ponds", {}) is map
 
           && request.resource.data
             .get("scores", {})
-            .diff(resource.data.get("scores", {}))
+            .diff(
+              resource.data.get(
+                "scores",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               "mameaw"
@@ -211,7 +1059,12 @@ service cloud.firestore {
 
           && request.resource.data
             .get("names", {})
-            .diff(resource.data.get("names", {}))
+            .diff(
+              resource.data.get(
+                "names",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               "mameaw"
@@ -219,7 +1072,12 @@ service cloud.firestore {
 
           && request.resource.data
             .get("ponds", {})
-            .diff(resource.data.get("ponds", {}))
+            .diff(
+              resource.data.get(
+                "ponds",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               "mameaw"
@@ -229,8 +1087,11 @@ service cloud.firestore {
         || (
           isSignedIn()
 
-          && request.resource.data.dateKey == resource.data.dateKey
-          && request.resource.data.dateKey == dateKey
+          && request.resource.data.dateKey
+            == resource.data.dateKey
+
+          && request.resource.data.dateKey
+            == dateKey
 
           && request.resource.data
             .diff(resource.data)
@@ -242,8 +1103,11 @@ service cloud.firestore {
               "updatedAt"
             ])
 
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
+          && request.resource.data.scores
+            is map
+
+          && request.resource.data.names
+            is map
 
           && (
             !("ponds" in request.resource.data)
@@ -251,14 +1115,24 @@ service cloud.firestore {
           )
 
           && request.resource.data.scores
-            .diff(resource.data.get("scores", {}))
+            .diff(
+              resource.data.get(
+                "scores",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               myMemberKey()
             ])
 
           && request.resource.data.names
-            .diff(resource.data.get("names", {}))
+            .diff(
+              resource.data.get(
+                "names",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               myMemberKey()
@@ -266,8 +1140,16 @@ service cloud.firestore {
 
           && (
             !("ponds" in request.resource.data)
-            || request.resource.data.ponds
-              .diff(resource.data.get("ponds", {}))
+
+            ||
+
+            request.resource.data.ponds
+              .diff(
+                resource.data.get(
+                  "ponds",
+                  {}
+                )
+              )
               .affectedKeys()
               .hasOnly([
                 myMemberKey()
@@ -279,25 +1161,150 @@ service cloud.firestore {
         if isAdmin();
     }
 
-    match /fishingHistory/{dateKey} { allow read: if isSignedIn(); allow create, update: if isAdmin() || isMameaw() || (isSignedIn() && request.resource.data.dateKey==dateKey && request.resource.data.top3 is list && request.resource.data.top3.size()<=3); allow delete: if isAdmin(); }
-    match /coconutHistory/{historyId} { allow read: if isSignedIn(); allow create: if isSignedIn() && request.resource.data.memberKey==myMemberKey(); allow update, delete: if isAdmin(); }
+
+    /* ============================================================
+       FISHING HISTORY
+       ============================================================ */
+
+    match /fishingHistory/{dateKey} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if isAdmin()
+
+        || isMameaw()
+
+        || (
+          isSignedIn()
+
+          && request.resource.data.dateKey
+            == dateKey
+
+          && request.resource.data.top3
+            is list
+
+          && request.resource.data.top3.size()
+            <= 3
+        );
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       COCONUT HISTORY
+       ============================================================ */
+
+    match /coconutHistory/{historyId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isSignedIn()
+        && request.resource.data.memberKey
+          == myMemberKey();
+
+      allow update, delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       BROADCASTS
+       R12 FIX: ผู้รับของขวัญ + own save ใช้ Firebase email ตรงกับ memberKey
+       ============================================================ */
 
     match /broadcasts/{broadcastId} {
-      allow read: if isSignedIn(); allow create, update, delete: if isAdmin();
-      match /claims/{memberKey} { allow read, create: if isMyKey(memberKey) || isAdmin() || isMameawKey(memberKey); allow update, delete: if isAdmin(); }
-    }
-    match /templeMissions/{dateKey} { allow read, create, update: if isSignedIn(); allow delete: if isAdmin(); }
-    match /campaigns/{campaignId} { allow read: if isSignedIn(); allow create, update, delete: if isAdmin(); }
 
-    /*
-      ============================================================
-      CAMPAIGN SCORES
-      - Keeps the original Mameaw hard rescue.
-      - Supports nightCounts for the cooking campaign tie-breaker.
-      ============================================================
-    */
+      allow read:
+        if isSignedIn();
+
+      allow create, update, delete:
+        if isAdmin();
+
+      match /claims/{memberKey} {
+
+        allow read:
+          if isAdmin()
+          || isEmailOwner(memberKey);
+
+        allow create:
+          if isAdmin()
+          || (
+            isEmailOwner(memberKey)
+
+            && request.resource.data.memberKey
+              == memberKey
+
+            && request.resource.data.status in [
+              "accepted",
+              "discarded"
+            ]
+          );
+
+        allow update, delete:
+          if isAdmin();
+      }
+    }
+
+
+
+    /* ============================================================
+       TEMPLE
+       ============================================================ */
+
+    match /templeMissions/{dateKey} {
+
+      allow read, create, update:
+        if isSignedIn();
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       CAMPAIGNS
+       ============================================================ */
+
+    match /campaigns/{campaignId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update, delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       CAMPAIGN SCORES
+       R8 HARD FIX: signed-in members may write campaign score docs.
+       Score integrity/deduplication stays in game.js transactions/hooks.
+       ============================================================ */
 
     match /campaignScores/{campaignId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create, update:
+        if isSignedIn();
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       JELLY ARENA WEEKLY
+       ============================================================ */
+
+    match /jellyArenaWeekly/{weekKey} {
 
       allow read:
         if isSignedIn();
@@ -306,219 +1313,447 @@ service cloud.firestore {
         if isAdmin()
 
         || (
-          isMameaw()
-
-          && request.resource.data.campaignId == campaignId
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
-
-          && request.resource.data.scores.keys().hasOnly([
-            "mameaw"
-          ])
-
-          && request.resource.data.names.keys().hasOnly([
-            "mameaw"
-          ])
-
-          && (
-            !("nightCounts" in request.resource.data)
-            || (
-              request.resource.data.nightCounts is map
-              && request.resource.data.nightCounts.keys().hasOnly([
-                "mameaw"
-              ])
-            )
-          )
-
-          && request.resource.data.scores.get("mameaw", 0) is int
-          && request.resource.data.scores.get("mameaw", 0) >= 0
-        )
-
-        || (
           isSignedIn()
 
-          && request.resource.data.campaignId == campaignId
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
+          && request.resource.data.weekKey
+            == weekKey
 
-          && request.resource.data.scores.keys().hasOnly([
-            myMemberKey()
-          ])
+          && request.resource.data.scores
+            is map
 
-          && request.resource.data.names.keys().hasOnly([
-            myMemberKey()
-          ])
+          && request.resource.data.names
+            is map
 
-          && (
-            !("nightCounts" in request.resource.data)
-            || (
-              request.resource.data.nightCounts is map
-              && request.resource.data.nightCounts.keys().hasOnly([
-                myMemberKey()
-              ])
-            )
-          )
+          && request.resource.data.scores.keys()
+            .hasOnly([
+              myMemberKey()
+            ])
 
-          && request.resource.data.scores.get(myMemberKey(), 0) is int
-          && request.resource.data.scores.get(myMemberKey(), 0) >= 0
+          && request.resource.data.names.keys()
+            .hasOnly([
+              myMemberKey()
+            ])
+
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            ) is int
+
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            ) >= 1
+
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            ) <= 6
         );
 
       allow update:
         if isAdmin()
 
         || (
-          isMameaw()
-
-          && request.resource.data.campaignId == campaignId
-          && resource.data.get("campaignId", campaignId) == campaignId
-
-          && request.resource.data
-            .diff(resource.data)
-            .affectedKeys()
-            .hasOnly([
-              "campaignId",
-              "scores",
-              "names",
-              "nightCounts",
-              "updatedAt"
-            ])
-
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
-          && request.resource.data.get("nightCounts", {}) is map
-
-          && request.resource.data.scores
-            .diff(resource.data.get("scores", {}))
-            .affectedKeys()
-            .hasOnly([
-              "mameaw"
-            ])
-
-          && request.resource.data.names
-            .diff(resource.data.get("names", {}))
-            .affectedKeys()
-            .hasOnly([
-              "mameaw"
-            ])
-
-          && request.resource.data
-            .get("nightCounts", {})
-            .diff(resource.data.get("nightCounts", {}))
-            .affectedKeys()
-            .hasOnly([
-              "mameaw"
-            ])
-
-          && request.resource.data.scores.get("mameaw", 0) is int
-
-          && request.resource.data.scores.get("mameaw", 0)
-            >= resource.data.get("scores", {}).get("mameaw", 0)
-
-          && request.resource.data
-            .get("nightCounts", {})
-            .get("mameaw", 0)
-            >= resource.data
-              .get("nightCounts", {})
-              .get("mameaw", 0)
-        )
-
-        || (
           isSignedIn()
 
-          && request.resource.data.campaignId == campaignId
-          && resource.data.get("campaignId", campaignId) == campaignId
+          && request.resource.data.weekKey
+            == resource.data.weekKey
+
+          && request.resource.data.weekKey
+            == weekKey
 
           && request.resource.data
             .diff(resource.data)
             .affectedKeys()
             .hasOnly([
-              "campaignId",
               "scores",
               "names",
-              "nightCounts",
               "updatedAt"
             ])
 
-          && request.resource.data.scores is map
-          && request.resource.data.names is map
-          && request.resource.data.get("nightCounts", {}) is map
+          && request.resource.data.scores
+            is map
+
+          && request.resource.data.names
+            is map
 
           && request.resource.data.scores
-            .diff(resource.data.get("scores", {}))
+            .diff(
+              resource.data.get(
+                "scores",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               myMemberKey()
             ])
 
           && request.resource.data.names
-            .diff(resource.data.get("names", {}))
+            .diff(
+              resource.data.get(
+                "names",
+                {}
+              )
+            )
             .affectedKeys()
             .hasOnly([
               myMemberKey()
             ])
 
-          && request.resource.data
-            .get("nightCounts", {})
-            .diff(resource.data.get("nightCounts", {}))
-            .affectedKeys()
-            .hasOnly([
-              myMemberKey()
-            ])
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            ) is int
 
-          && request.resource.data.scores.get(myMemberKey(), 0) is int
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            )
+            >=
+            resource.data
+              .get(
+                "scores",
+                {}
+              )
+              .get(
+                myMemberKey(),
+                0
+              ) + 1
 
-          && request.resource.data.scores.get(myMemberKey(), 0)
-            >= resource.data.get("scores", {}).get(myMemberKey(), 0)
-
-          && request.resource.data
-            .get("nightCounts", {})
-            .get(myMemberKey(), 0)
-            >= resource.data
-              .get("nightCounts", {})
-              .get(myMemberKey(), 0)
+          && request.resource.data.scores
+            .get(
+              myMemberKey(),
+              0
+            )
+            <=
+            resource.data
+              .get(
+                "scores",
+                {}
+              )
+              .get(
+                myMemberKey(),
+                0
+              ) + 6
         );
 
       allow delete:
         if isAdmin();
     }
 
-    match /jellyArenaWeekly/{weekKey} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.weekKey==weekKey && request.resource.data.scores is map && request.resource.data.names is map && request.resource.data.scores.keys().hasOnly([myMemberKey()]) && request.resource.data.names.keys().hasOnly([myMemberKey()]) && request.resource.data.scores.get(myMemberKey(),0) is int && request.resource.data.scores.get(myMemberKey(),0)>=1 && request.resource.data.scores.get(myMemberKey(),0)<=6);
-      allow update: if isAdmin() || (isSignedIn() && request.resource.data.weekKey==resource.data.weekKey && request.resource.data.weekKey==weekKey && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["scores","names","updatedAt"]) && request.resource.data.scores is map && request.resource.data.names is map && request.resource.data.scores.diff(resource.data.get("scores",{})).affectedKeys().hasOnly([myMemberKey()]) && request.resource.data.names.diff(resource.data.get("names",{})).affectedKeys().hasOnly([myMemberKey()]) && request.resource.data.scores.get(myMemberKey(),0) is int && request.resource.data.scores.get(myMemberKey(),0)>=resource.data.get("scores",{}).get(myMemberKey(),0)+1 && request.resource.data.scores.get(myMemberKey(),0)<=resource.data.get("scores",{}).get(myMemberKey(),0)+6);
-      allow delete: if isAdmin();
-    }
 
-    match /shared/missAlpacaUniverse { allow read: if isAdmin(); allow create, update: if isAdmin() && request.resource.data.keys().hasOnly(["topic","endAt","updatedAt","updatedBy"]) && request.resource.data.topic is string && request.resource.data.topic.size()<=120 && request.resource.data.endAt is number && request.resource.data.endAt>=0 && request.resource.data.updatedBy=="Aida"; allow delete: if isAdmin(); }
-    match /missAlpacaTop6/{slotId} { allow read: if isAdmin(); allow create, update: if isAdmin() && slotId in ["slot-1","slot-2","slot-3","slot-4","slot-5","slot-6"] && request.resource.data.keys().hasOnly(["slot","imageData","updatedAt","updatedBy"]) && request.resource.data.slot is int && request.resource.data.slot>=1 && request.resource.data.slot<=6 && request.resource.data.imageData is string && request.resource.data.imageData.size()<=900000 && request.resource.data.updatedBy=="Aida"; allow delete: if isAdmin(); }
-    match /missAlpacaHall/{entryId} { allow read: if isAdmin(); allow create: if isAdmin() && request.resource.data.keys().hasOnly(["topic","winner","createdAt","updatedAt","updatedBy"]) && request.resource.data.topic is string && request.resource.data.topic.size()>0 && request.resource.data.topic.size()<=120 && request.resource.data.winner is string && request.resource.data.winner.size()>0 && request.resource.data.winner.size()<=80 && request.resource.data.createdAt is number && request.resource.data.updatedBy=="Aida"; allow update: if isAdmin() && request.resource.data.keys().hasOnly(["topic","winner","createdAt","updatedAt","updatedBy"]) && request.resource.data.createdAt==resource.data.createdAt && request.resource.data.topic is string && request.resource.data.topic.size()>0 && request.resource.data.topic.size()<=120 && request.resource.data.winner is string && request.resource.data.winner.size()>0 && request.resource.data.winner.size()<=80 && request.resource.data.updatedBy=="Aida"; allow delete: if isAdmin(); }
+    /* ============================================================
+       MISS ALPACA UNIVERSE
+       ADMIN ONLY - TEST SEASON
+       ============================================================ */
 
-    match /alpacaBreeders/{breederId} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.ownerKey==myMemberKey() && request.resource.data.alpacaId is string && request.resource.data.name is string && request.resource.data.color in ["white","black","pink","brown","green"] && request.resource.data.penNo is int && request.resource.data.penNo>=1 && request.resource.data.penNo<=3 && request.resource.data.cooldownUntil is number);
-      allow update: if isAdmin() || (isSignedIn() && resource.data.ownerKey==myMemberKey() && request.resource.data.ownerKey==resource.data.ownerKey && request.resource.data.alpacaId==resource.data.alpacaId) || (isSignedIn() && resource.data.ownerKey!=myMemberKey() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["cooldownUntil","lastUsedAt","lastUsedBy","updatedAt"]) && request.resource.data.lastUsedBy==myMemberKey() && request.resource.data.cooldownUntil is number && request.resource.data.cooldownUntil>resource.data.get("cooldownUntil",0));
-      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerKey==myMemberKey());
-    }
+    match /shared/missAlpacaUniverse {
 
-    match /alpacaWildBabies/{babyId} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin() && request.resource.data.status=="available" && request.resource.data.releasedBy=="aida" && request.resource.data.color in ["white","black","pink","brown","green"] && request.resource.data.releasedAt is number && request.resource.data.bornAt is number && request.resource.data.readyProcessAt is number;
-      allow update: if isAdmin() || (isSignedIn() && resource.data.status=="available" && request.resource.data.status=="reserved" && request.resource.data.capturedBy==myMemberKey() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","capturedBy","capturedAt","updatedAt"])) || (isSignedIn() && resource.data.status=="reserved" && resource.data.capturedBy==myMemberKey() && request.resource.data.status=="captured" && request.resource.data.claimedBy==myMemberKey() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","claimedBy","claimedAt","updatedAt"]));
-      allow delete: if isAdmin();
-    }
+      allow read:
+        if isAdmin();
 
-    /*
-      ============================================================
-      ADMIN GIFT DELIVERY AUDIT
-      Used by the current admin individual-send audit trail.
-      ============================================================
-    */
+      allow create, update:
+        if isAdmin()
 
-    match /adminGiftDeliveries/{deliveryId} {
-      allow read, create, update, delete:
+        && request.resource.data.keys()
+          .hasOnly([
+            "topic",
+            "endAt",
+            "updatedAt",
+            "updatedBy"
+          ])
+
+        && request.resource.data.topic is string
+        && request.resource.data.topic.size() <= 120
+
+        && request.resource.data.endAt is number
+        && request.resource.data.endAt >= 0
+
+        && request.resource.data.updatedBy
+          == "Aida";
+
+      allow delete:
         if isAdmin();
     }
 
-    match /{document=**} { allow read, write: if false; }
+
+    /* ============================================================
+       MISS ALPACA UNIVERSE - TOP 6
+       ============================================================ */
+
+    match /missAlpacaTop6/{slotId} {
+
+      allow read:
+        if isAdmin();
+
+      allow create, update:
+        if isAdmin()
+
+        && slotId in [
+          "slot-1",
+          "slot-2",
+          "slot-3",
+          "slot-4",
+          "slot-5",
+          "slot-6"
+        ]
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "slot",
+            "imageData",
+            "updatedAt",
+            "updatedBy"
+          ])
+
+        && request.resource.data.slot is int
+        && request.resource.data.slot >= 1
+        && request.resource.data.slot <= 6
+
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() <= 900000
+
+        && request.resource.data.updatedBy
+          == "Aida";
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       MISS ALPACA UNIVERSE - HALL OF FAME
+       ============================================================ */
+
+    match /missAlpacaHall/{entryId} {
+
+      allow read:
+        if isAdmin();
+
+      allow create:
+        if isAdmin()
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "topic",
+            "winner",
+            "createdAt",
+            "updatedAt",
+            "updatedBy"
+          ])
+
+        && request.resource.data.topic is string
+        && request.resource.data.topic.size() > 0
+        && request.resource.data.topic.size() <= 120
+
+        && request.resource.data.winner is string
+        && request.resource.data.winner.size() > 0
+        && request.resource.data.winner.size() <= 80
+
+        && request.resource.data.createdAt is number
+
+        && request.resource.data.updatedBy
+          == "Aida";
+
+      allow update:
+        if isAdmin()
+
+        && request.resource.data.keys()
+          .hasOnly([
+            "topic",
+            "winner",
+            "createdAt",
+            "updatedAt",
+            "updatedBy"
+          ])
+
+        && request.resource.data.createdAt
+          == resource.data.createdAt
+
+        && request.resource.data.topic is string
+        && request.resource.data.topic.size() > 0
+        && request.resource.data.topic.size() <= 120
+
+        && request.resource.data.winner is string
+        && request.resource.data.winner.size() > 0
+        && request.resource.data.winner.size() <= 80
+
+        && request.resource.data.updatedBy
+          == "Aida";
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* ============================================================
+       ALPACA BREEDERS
+       - Everyone signed in can browse available sires.
+       - Owners/Admin publish metadata.
+       - A breeding player may only advance cooldown fields on a friend's sire.
+       ============================================================ */
+
+    match /alpacaBreeders/{breederId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isAdmin()
+        || (
+          isSignedIn()
+          && request.resource.data.ownerKey == myMemberKey()
+          && request.resource.data.alpacaId is string
+          && request.resource.data.name is string
+          && request.resource.data.color in ["white","black","pink","brown","green"]
+          && request.resource.data.penNo is int
+          && request.resource.data.penNo >= 1
+          && request.resource.data.penNo <= 3
+          && request.resource.data.cooldownUntil is number
+        );
+
+      allow update:
+        if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.ownerKey == myMemberKey()
+          && request.resource.data.ownerKey == resource.data.ownerKey
+          && request.resource.data.alpacaId == resource.data.alpacaId
+        )
+        || (
+          isSignedIn()
+          && resource.data.ownerKey != myMemberKey()
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "cooldownUntil",
+              "lastUsedAt",
+              "lastUsedBy",
+              "updatedAt"
+            ])
+          && request.resource.data.lastUsedBy == myMemberKey()
+          && request.resource.data.cooldownUntil is number
+          && request.resource.data.cooldownUntil > resource.data.get("cooldownUntil", 0)
+        );
+
+      allow delete:
+        if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.ownerKey == myMemberKey()
+        );
+    }
+
+
+    /* ============================================================
+       AIDA WILD BABY ALPACAS
+       - Admin releases babies.
+       - Signed-in visitors can see them.
+       - A visitor can reserve only one available baby for themselves,
+         then confirm the same reservation as captured.
+       ============================================================ */
+
+    match /alpacaWildBabies/{babyId} {
+
+      allow read:
+        if isSignedIn();
+
+      allow create:
+        if isAdmin()
+        && request.resource.data.status == "available"
+        && request.resource.data.releasedBy == "aida"
+        && request.resource.data.color in ["white","black","pink","brown","green"]
+        && request.resource.data.releasedAt is number
+        && request.resource.data.bornAt is number
+        && request.resource.data.readyProcessAt is number;
+
+      allow update:
+        if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.status == "available"
+          && request.resource.data.status == "reserved"
+          && request.resource.data.capturedBy == myMemberKey()
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "status",
+              "capturedBy",
+              "capturedAt",
+              "updatedAt"
+            ])
+        )
+        || (
+          isSignedIn()
+          && resource.data.status == "reserved"
+          && resource.data.capturedBy == myMemberKey()
+          && request.resource.data.status == "captured"
+          && request.resource.data.claimedBy == myMemberKey()
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "status",
+              "claimedBy",
+              "claimedAt",
+              "updatedAt"
+            ])
+        );
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+
+    /* ============================================================
+       R18 MEMBER GIFT INBOX
+       New Admin -> member delivery path. Each recipient owns only
+       their inbox status change; Admin is the only sender.
+       ============================================================ */
+
+    match /memberGiftInbox/{memberKey}/items/{giftId} {
+
+      allow read:
+        if isAdmin()
+        || isEmailOwner(memberKey);
+
+      allow create:
+        if isAdmin()
+        && request.resource.data.targetKey == memberKey
+        && request.resource.data.status == "pending";
+
+      allow update:
+        if isAdmin()
+        || (
+          isEmailOwner(memberKey)
+          && resource.data.targetKey == memberKey
+          && resource.data.status == "pending"
+          && request.resource.data.targetKey == resource.data.targetKey
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(["status","resolvedAt"])
+          && request.resource.data.status in ["accepted","discarded"]
+        );
+
+      allow delete:
+        if isAdmin();
+    }
+
+    /* ============================================================
+       DEFAULT DENY
+       ============================================================ */
+
+    match /{document=**} {
+      allow read, write:
+        if false;
+    }
   }
 }
