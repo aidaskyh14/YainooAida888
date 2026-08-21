@@ -16722,29 +16722,33 @@ async function V181_campaignScoreLater(summary){
     hunger:"alpaca-food-plate.png",pregnant:"alpaca-pregnancy-icon.png",pellet:"alpaca-pellet-food.png",hay:"alpaca-hay-pack.png",
     vaccine:"alpaca-vaccine.png",cold:"alpaca-cold-icon.png",heart:"alpaca-blue-heart.png",happinessPotion:"alpaca-happiness-potion.png",
     bottle:"alpaca-baby-bottle.png",scissors:"alpaca-scissors.png",readyBreed:"alpaca-ready-to-breed-heart-bed.png",
-    meat:"alpaca-magic-mushroom.png",hole:"alpaca-hole.png",mushroom:"alpaca-ready-for-processing-meat.png",
+    meat:"alpaca-ready-for-processing-meat.png",hole:"alpaca-hole.png",mushroom:"alpaca-magic-mushroom.png",
     breedingProgress:"alpaca-breeding-in-progress.png",captureProgress:"alpaca-capture-in-progress.png",captureSuccess:"alpaca-capture-success.png",captureFail:"alpaca-capture-failed.png",
     birthAccelerator:"alpaca-pregnancy-icon.png"
   };
   const WOOL_ASSET={white:"alpaca-wool-white.png",green:"alpaca-wool-green.png",black:"alpaca-wool-black.png",brown:"alpaca-wool-brown.png",pink:"alpaca-wool-pink.png",gold:"alpaca-wool-gold.png"};
   const FOOD={
     hayPack:{name:"แพ็คหญ้าสดและหญ้าแห้ง",image:ASSET.hay,servings:6,durationMs:3*HOUR,happiness:4},
-    pellet:{name:"อาหารเม็ดอัลปาก้า",image:ASSET.pellet,servings:12,durationMs:8*HOUR,happiness:8}
+    pellet:{name:"อาหารเม็ดอัลปาก้า",image:ASSET.pellet,servings:12,durationMs:8*HOUR,happiness:8},
+    tricolorPudding:{name:"พุดดิ้งหญ้าสามสี",image:"alpaca_tricolor_pudding.png?v=240",servings:1,durationMs:3*HOUR,happiness:12}
   };
   const MEDICINE={
     happinessPotion:{name:"ยาเพิ่มความสุข",image:ASSET.happinessPotion,description:"ใช้กับคอกที่เลือก • สุ่มเพิ่มความสุข +1 ถึง +5 • สูงสุด 10 ครั้งต่อคอก"},
     coldVaccine:{name:"วัคซีนแก้ไข้หวัด",image:ASSET.vaccine,description:"รักษาอัลปาก้าตัวเต็มวัยที่เป็นหวัดทันที"},
-    birthAccelerator:{name:"ยาเร่งคลอด",image:ASSET.birthAccelerator,description:"ใช้ได้ 1 ครั้งต่อการตั้งครรภ์ • ลดเวลารวมจาก 6 ชม. เหลือ 3 ชม."}
+    birthAccelerator:{name:"ยาเร่งคลอด",image:ASSET.birthAccelerator,description:"ใช้ได้ 1 ครั้งต่อการตั้งครรภ์ • ลดเวลารวมจาก 6 ชม. เหลือ 3 ชม."},
+    woolGrowthMedicine:{name:"ยาเร่งขนอัลปาก้า",image:"alpaca_wool_growth_medicine.png?v=240",description:"ตัวเต็มวัย ขนระยะ 1–3 • ใช้ 1 ครั้งเลื่อนขน +1 ระยะ • คูลดาวน์ 30 นาทีต่อตัว"}
   };
   const CRAFT={
     food:{
       hayPack:{name:FOOD.hayPack.name,image:FOOD.hayPack.image,need:{friendGrassGreen:30,friendGrassYellow:20,friendGrassRed:10}},
-      pellet:{name:FOOD.pellet.name,image:FOOD.pellet.image,need:{friendGrassGreen:100,friendGrassYellow:50,friendGrassRed:30}}
+      pellet:{name:FOOD.pellet.name,image:FOOD.pellet.image,need:{friendGrassGreen:100,friendGrassYellow:50,friendGrassRed:30}},
+      tricolorPudding:{name:FOOD.tricolorPudding.name,image:FOOD.tricolorPudding.image,chance:70,need:{friendGrassGreen:150,friendGrassYellow:100,friendGrassRed:80,milk:30,egg:20}}
     },
     medicine:{
       happinessPotion:{name:MEDICINE.happinessPotion.name,image:MEDICINE.happinessPotion.image,need:{milk:50,egg:50,truffle:50,fishMeat:50,friendGrassGreen:100,friendGrassYellow:60,friendGrassRed:30,magicMushroom:1}},
       coldVaccine:{name:MEDICINE.coldVaccine.name,image:MEDICINE.coldVaccine.image,need:{milk:70,egg:60,truffle:70,fishMeat:60,friendGrassGreen:150,friendGrassYellow:100,friendGrassRed:50,magicMushroom:2}},
-      birthAccelerator:{name:MEDICINE.birthAccelerator.name,image:MEDICINE.birthAccelerator.image,need:{milk:100,egg:80,truffle:100,fishMeat:80,friendGrassGreen:200,friendGrassYellow:150,friendGrassRed:100,magicMushroom:5}}
+      birthAccelerator:{name:MEDICINE.birthAccelerator.name,image:MEDICINE.birthAccelerator.image,need:{milk:100,egg:80,truffle:100,fishMeat:80,friendGrassGreen:200,friendGrassYellow:150,friendGrassRed:100,magicMushroom:5}},
+      woolGrowthMedicine:{name:MEDICINE.woolGrowthMedicine.name,image:MEDICINE.woolGrowthMedicine.image,chance:30,need:{milk:80,egg:60,truffle:80,fishMeat:60,friendGrassGreen:150,friendGrassYellow:100,friendGrassRed:70,magicMushroom:3}}
     }
   };
   const SYSTEM_SIRES=[
@@ -16786,8 +16790,8 @@ async function V181_campaignScoreLater(summary){
     [18,66],[34,67],[50,67],[66,67],[82,66],
     [22,77],[36,78],[50,78],[64,78],[78,77]
   ];
-  const EVENT_POINTS=[[18,29],[28,37],[43,31],[58,38],[73,30],[82,42],[22,54],[39,55],[58,53],[77,57],[28,68],[47,68],[67,69],[83,72]];
-  const FRIEND_EVENT_POINTS=[[16,31],[29,27],[43,34],[59,29],[73,35],[84,44],[22,52],[39,49],[58,54],[76,57],[31,69],[51,67],[71,72]];
+  const EVENT_POINTS=[[20,48],[34,49],[49,48],[64,49],[79,48],[23,58],[38,58],[53,58],[68,58],[81,60],[27,69],[43,69],[59,69],[75,70]];
+  const FRIEND_EVENT_POINTS=[[20,48],[34,49],[49,48],[64,49],[79,48],[23,58],[38,58],[53,58],[68,58],[81,60],[27,69],[43,69],[59,69],[75,70]];
 
   let currentPen=1;
   let alpacaSpriteFrame=0;
@@ -16795,7 +16799,7 @@ async function V181_campaignScoreLater(summary){
   let penTickTimer=0;
   let progressTimer=0;
   let wildUnsub=null;
-  let wildBabies=[];
+  let wildBabies=[],wildRenderSignature="";
   let loginProcessedFor="";
   let processingTimers=false;
   let friendMushroomRenderTimer=0;
@@ -17006,7 +17010,16 @@ async function V181_campaignScoreLater(summary){
       w.nextFrameAt=now+(w.animKind==="idle"?300:180);
     }
   }
-  function startSpriteTimer(){if(spriteTimer)return;spriteTimer=setInterval(()=>{renderAnimatedSprites();tickWalkerSprites()},180)}
+  function alpacaAnimationVisible(){
+    if(document.hidden)return false;
+    const penOpen=Boolean($("alpacaPenScreen")&&!$("alpacaPenScreen").classList.contains("hidden"));
+    const wildOpen=Boolean($("wildAlpacaLayer")&&!$("wildAlpacaLayer").classList.contains("hidden")&&wildBabies.length);
+    return penOpen||wildOpen;
+  }
+  function startSpriteTimer(){
+    if(spriteTimer)return;
+    spriteTimer=setInterval(()=>{if(!alpacaAnimationVisible())return;renderAnimatedSprites();tickWalkerSprites()},220);
+  }
 
   function walkerRatio(color,stage,kind){return WALK_RATIO[color]?.[stage]?.[kind]||160/225}
   function rememberWalkerPoint(w){
@@ -17060,14 +17073,14 @@ async function V181_campaignScoreLater(summary){
   function openPen(penNo=1){
     if(!currentMemberKey)return;if(visitContext){alpacaMessage("คอกอัลปาก้า","กลับสวนของตัวเองก่อนนะคะ แล้วค่อยเข้าคอกอัลปาก้า");return}
     currentPen=Math.max(1,Math.min(3,Number(penNo)||1));closeModal();$("gameScreen")?.classList.add("hidden");$("sceneScreen")?.classList.add("hidden");$("missAlpacaScreen")?.classList.add("hidden");$("alpacaPenScreen")?.classList.remove("hidden");
-    processTimersCloud().finally(()=>renderPen());syncOwnMaleBreeders().catch(()=>{});startSpriteTimer();startAlpacaWeatherClock();
+    processTimersCloud().then(()=>renderPen()).catch(()=>renderPen());syncOwnMaleBreeders().catch(()=>{});startSpriteTimer();startAlpacaWeatherClock();
   }
   function closePen(){clearInterval(progressTimer);progressTimer=0;clearWalkerMap(penWalkers);stopAlpacaWeatherClock();$("alpacaPenScreen")?.classList.add("hidden");$("gameScreen")?.classList.remove("hidden");draw();syncEntryButtons()}
   function renderPen(){
     const root=ownAlpaca(),pen=penAt(root);if(!root||!pen)return;
     processAllTimers(root,gameNow());
     const stage=$("alpacaPenStage");if(stage)stage.style.setProperty("--alpaca-pen-bg",`url("alpaca-pen-${currentPen}.jpeg?v=${VERSION}")`);
-    if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));if($("alpacaPenCount"))$("alpacaPenCount").textContent=penCountText(pen);
+    if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));
     const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;const troughVisual=$("alpacaTroughVisual");if(troughVisual)troughVisual.innerHTML=pen.trough.map((slot,i)=>slot&&FOOD[slot.foodKey]?`<span class="alpaca-trough-visual-slot filled" data-trough-visual="${i}"><img src="${FOOD[slot.foodKey].image}" alt=""></span>`:`<span class="alpaca-trough-visual-slot" data-trough-visual="${i}"></span>`).join("");
     $("alpacaRankBtn")?.classList.remove("hidden");
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
@@ -17118,7 +17131,7 @@ async function V181_campaignScoreLater(summary){
 
   function showPenSelector(){
     const root=ownAlpaca();if(!root)return;
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.heart,"เลือกคอกอัลปาก้า","ไปดูคอกที่ต้องการได้เลยค่ะ")}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-alpaca-pen="${i+1}" class="${currentPen===i+1?"active":""}">คอก ${i+1}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}</small></button>`).join("")}</div><button id="alpacaPenPickerClose" class="secondary-action" type="button">ปิด</button></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.heart,"เลือกคอกอัลปาก้า","ไปดูคอกที่ต้องการได้เลยค่ะ")}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-alpaca-pen="${i+1}" class="${currentPen===i+1?"active":""}">คอก ${i+1}<small>${safeHtml(p.name)}</small></button>`).join("")}</div><button id="alpacaPenPickerClose" class="secondary-action" type="button">ปิด</button></section>`;
     openModal();document.querySelectorAll("[data-alpaca-pen]").forEach(b=>b.onclick=()=>{currentPen=Number(b.dataset.alpacaPen);closeModal();renderPen()});$("alpacaPenPickerClose").onclick=closeModal;
   }
   async function editPenName(){
@@ -17139,7 +17152,7 @@ async function V181_campaignScoreLater(summary){
   }
   function showManageAlpacas(){
     const root=ownAlpaca();if(!root)return;const all=[];root.pens.forEach((p,pi)=>p.alpacas.forEach(a=>all.push({a,penNo:pi+1})));
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("","จัดการอัลปาก้า",`มีทั้งหมด ${all.length} ตัว • คอกละ ${PEN_CAPACITY} ตัวตามปกติ`)}<div class="alpaca-manage-list">${all.length?all.map(x=>renderManageCard(x.a,x.penNo)).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคอกค่ะ</div>`}</div><button id="alpacaManageClose" class="secondary-action" type="button">ปิด</button></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("","จัดการอัลปาก้า","ดูจำนวนและสถานะอัลปาก้าทั้งหมดได้ที่นี่ค่ะ")}<div class="alpaca-manage-countbar"><b>🦙 ทั้งหมด ${all.length} ตัว</b><span>${root.pens.map((p,i)=>`คอก ${i+1} ${p.alpacas.length}/${PEN_CAPACITY}`).join(" • ")}</span></div><div class="alpaca-manage-list">${all.length?all.map(x=>renderManageCard(x.a,x.penNo)).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคอกค่ะ</div>`}</div><button id="alpacaManageClose" class="secondary-action" type="button">ปิด</button></section>`;
     openModal();document.querySelectorAll("[data-alpaca-open]").forEach(b=>b.onclick=()=>showAlpacaDetail(Number(b.dataset.alpacaPenno),b.dataset.alpacaOpen));$("alpacaManageClose").onclick=closeModal;
   }
 
@@ -17180,7 +17193,8 @@ async function V181_campaignScoreLater(summary){
 
   function showCraft(type){
     const configs=CRAFT[type],title=type==="food"?"คราฟอาหารอัลปาก้า":"คราฟยาอัลปาก้า";
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(type==="food"?ASSET.pellet:ASSET.happinessPotion,title,"แตะดูวัตถุดิบเมื่อต้องการ ไม่ต้องไล่อ่านสูตรยาว ๆ")}<div class="alpaca-craft-list">${Object.entries(configs).map(([key,c])=>`<article class="alpaca-craft-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><div><h3>${safeHtml(c.name)}</h3><p>${type==="food"?(key==="hayPack"?"6 เสิร์ฟ • อยู่ท้อง 3 ชม. • +4 ความสุข":"12 เสิร์ฟ • อยู่ท้อง 8 ชม. • +8 ความสุข"):(MEDICINE[key]?.description||"")}</p><div class="alpaca-card-actions"><button type="button" data-craft-detail="${type}:${key}">ดูวัตถุดิบ</button><button class="primary" type="button" data-craft-now="${type}:${key}">คราฟ</button></div></div></article>`).join("")}</div><button id="alpacaCraftClose" class="secondary-action" type="button">ปิด</button></section>`;
+    const foodDesc=key=>key==="hayPack"?"6 เสิร์ฟ • อยู่ท้อง 3 ชม. • +4 ความสุข":key==="pellet"?"12 เสิร์ฟ • อยู่ท้อง 8 ชม. • +8 ความสุข":"อยู่ท้อง 3 ชม. • ความสุขคอก +12 • สำเร็จ 70%";
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(type==="food"?ASSET.pellet:ASSET.happinessPotion,title,"แตะดูวัตถุดิบเมื่อต้องการ ไม่ต้องไล่อ่านสูตรยาว ๆ")}<div class="alpaca-craft-list">${Object.entries(configs).map(([key,c])=>`<article class="alpaca-craft-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><div><h3>${safeHtml(c.name)}</h3><p>${type==="food"?foodDesc(key):(MEDICINE[key]?.description||"")}${c.chance?` • สำเร็จ ${c.chance}%`:""}</p><div class="alpaca-card-actions"><button type="button" data-craft-detail="${type}:${key}">ดูวัตถุดิบ</button><button class="primary" type="button" data-craft-now="${type}:${key}">คราฟ</button></div></div></article>`).join("")}</div><button id="alpacaCraftClose" class="secondary-action" type="button">ปิด</button></section>`;
     openModal();document.querySelectorAll("[data-craft-detail]").forEach(b=>{const [t,k]=b.dataset.craftDetail.split(":");b.onclick=()=>showCraftDetails(t,k)});document.querySelectorAll("[data-craft-now]").forEach(b=>{const [t,k]=b.dataset.craftNow.split(":");b.onclick=()=>showCraftQuantity(t,k)});$("alpacaCraftClose").onclick=closeModal;
   }
   function ingredientGrid(config,qty=1){const s=ownState||state;return Object.entries(config.need).map(([key,base])=>{const meta=INGREDIENT_META[key],need=base*qty,have=ingredientCount(s,key),ok=have>=need;return `<div class="alpaca-ingredient ${ok?"":"missing"}"><img src="${meta.image}" alt="${safeHtml(meta.name)}"><div><b>${safeHtml(meta.name)} ${ok?"✓":""}</b><small>มี ${have} / ใช้ ${need}${ok?"":" • ไม่พอ"}</small></div></div>`}).join("")}
@@ -17190,7 +17204,11 @@ async function V181_campaignScoreLater(summary){
     const c=CRAFT[type]?.[key];if(!c)return;
     const s=ownState||state;
     for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)return alpacaMessage("คราฟไม่สำเร็จ",`${INGREDIENT_META[ik].name} ไม่พอ`)}
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(c.image,"คราฟสำเร็จ",safeHtml(c.name))}<div class="alpaca-big-qty">×${qty}</div><p>กดยืนยันเพื่อรับเข้ากระเป๋าอัลปาก้า</p><button id="alpacaCraftDone" class="primary-spooky-action" type="button">ยืนยันรับของ</button><button id="alpacaCraftCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
+    if(c.chance){
+      const ok=await alpacaConfirm(`คราฟ ${c.name}`,`วัตถุดิบจะถูกใช้ทันที • โอกาสสำเร็จ <b>${c.chance}%</b>`,{confirmText:"เริ่มคราฟ"});if(!ok)return showCraft(type);
+      try{const out=await mutateOwn(st=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(st,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(st,ik,base*qty);let won=0;for(let i=0;i<qty;i++)if(Math.random()*100<c.chance)won++;if(won){const bucket=st.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+won}return won});const won=Number(out.result)||0;if(won)alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${won}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁");else alpacaMessage("คราฟไม่สำเร็จ","วัตถุดิบถูกใช้ไปแล้ว ลองใหม่อีกครั้งนะคะ","💨")}catch(e){alpacaMessage("คราฟไม่สำเร็จ",e.message||"กรุณาลองใหม่")}return;
+    }
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(c.image,"พร้อมคราฟ",safeHtml(c.name))}<div class="alpaca-big-qty">×${qty}</div><p>กดยืนยันเพื่อคราฟและรับเข้ากระเป๋าอัลปาก้า</p><button id="alpacaCraftDone" class="primary-spooky-action" type="button">ยืนยันคราฟ</button><button id="alpacaCraftCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
     openModal();$("alpacaCraftDone").onclick=()=>commitAlpacaCraft(type,key,qty);$("alpacaCraftCancel").onclick=()=>showCraft(type);
   }
   async function commitAlpacaCraft(type,key,qty){
@@ -17214,7 +17232,9 @@ async function V181_campaignScoreLater(summary){
     if(tab==="wool")[...COLORS,"gold"].forEach(k=>rows.push({k,name:k==="gold"?"ขนทอง":`ขนอัลปาก้า${COLOR_META[k]?.short||""}`,image:WOOL_ASSET[k],qty:root.inventory.wool[k],action:null}));
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel inventory-panel"><h2>🦙 กระเป๋าอัลปาก้า</h2><div class="alpaca-inventory-subtabs">${Object.entries(groups).map(([k,label])=>`<button type="button" data-alpaca-inv="${k}" class="${tab===k?"active":""}">${label}</button>`).join("")}</div><div class="alpaca-inventory-grid">${rows.map(x=>`<article class="alpaca-inventory-item"><img src="${x.image}" alt="${safeHtml(x.name)}"><b>${safeHtml(x.name)}</b><strong>×${Number(x.qty)||0}</strong>${x.action?`<button type="button" data-use-alpaca-item="${x.k}">${x.action}</button>`:""}</article>`).join("")}</div><button id="alpacaInvClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-alpaca-inv]").forEach(b=>b.onclick=()=>showAlpacaInventory(b.dataset.alpacaInv));document.querySelectorAll("[data-use-alpaca-item]").forEach(b=>b.onclick=()=>useAlpacaMedicineFromInventory(b.dataset.useAlpacaItem));$("alpacaInvClose").onclick=closeModal;
   }
-  function useAlpacaMedicineFromInventory(key){if(key==="happinessPotion")return showHappinessPotionPenPicker();if(key==="coldVaccine")return showMedicineAnimalPicker("coldVaccine");if(key==="birthAccelerator")return showMedicineAnimalPicker("birthAccelerator")}
+  function useAlpacaMedicineFromInventory(key){if(key==="happinessPotion")return showHappinessPotionPenPicker();if(key==="coldVaccine")return showMedicineAnimalPicker("coldVaccine");if(key==="birthAccelerator")return showMedicineAnimalPicker("birthAccelerator");if(key==="woolGrowthMedicine")return showWoolGrowthPicker()}
+  function showWoolGrowthPicker(){const root=ownAlpaca();if((Number(root.inventory.medicine.woolGrowthMedicine)||0)<1)return alpacaMessage("ไม่มียา","ตอนนี้ไม่มียาเร่งขนอัลปาก้าค่ะ");const now=gameNow(),list=[];root.pens.forEach((p,pi)=>p.alpacas.filter(a=>a.type==="adult"&&a.woolStage>=1&&a.woolStage<=3).forEach(a=>list.push({a,penNo:pi+1,ready:Number(a.woolMedicineReadyAt||0)<=now})));if(!list.length)return alpacaMessage("ยังใช้ไม่ได้","ไม่มีอัลปาก้าตัวเต็มวัยที่ขนอยู่ระยะ 1–3 ค่ะ");$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(MEDICINE.woolGrowthMedicine.image,"ใช้ยาเร่งขนอัลปาก้า","เลือกตัวที่ต้องการ • ตัวเดิมใช้ซ้ำได้ทุก 30 นาที")}<div class="alpaca-manage-list">${list.map(x=>`<article class="alpaca-manage-card">${spritePreview(x.a.color,x.a.woolStage)}<div><h3>${safeHtml(x.a.name)}</h3><p>คอก ${x.penNo} • ขนระยะ ${x.a.woolStage}</p><button class="primary" type="button" data-wool-med="${x.penNo}:${x.a.id}" ${x.ready?"":"disabled"}>${x.ready?"ใช้ยา":`รอ ${fmt(Number(x.a.woolMedicineReadyAt||0)-now)}`}</button></div></article>`).join("")}</div><button id="woolMedBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-wool-med]").forEach(b=>{const [p,id]=b.dataset.woolMed.split(":");b.onclick=()=>useWoolGrowthMedicine(Number(p),id)});$("woolMedBack").onclick=()=>showAlpacaInventory("medicine")}
+  async function useWoolGrowthMedicine(penNo,id){try{const out=await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,id),now=gameNow();if(!a||a.type!=="adult")throw new Error("ใช้ได้เฉพาะอัลปาก้าตัวเต็มวัย");if(a.woolStage>=4)throw new Error("ขนระยะ 4 พร้อมตัดแล้ว ไม่ต้องใช้ยา");if(Number(a.woolMedicineReadyAt||0)>now)throw new Error(`ต้องรออีก ${fmt(a.woolMedicineReadyAt-now)}`);if((Number(s.alpaca.inventory.medicine.woolGrowthMedicine)||0)<1)throw new Error("ยาเร่งขนหมดแล้ว");s.alpaca.inventory.medicine.woolGrowthMedicine--;a.woolStage=Math.min(4,a.woolStage+1);a.woolStageEndsAt=a.woolStage<4?now+WOOL_STAGE_MS[a.woolStage]:0;a.woolMedicineReadyAt=now+30*MINUTE;return a.woolStage});alpacaMessage("✨ ขนขึ้นแล้ว",`ขนอัลปาก้าเลื่อนเป็น <b>ระยะ ${out.result}</b> แล้วค่ะ`,"🦙");renderPen()}catch(e){alpacaMessage("ใช้ยาไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showHappinessPotionPenPicker(){const root=ownAlpaca();if((Number(root.inventory.medicine.happinessPotion)||0)<1)return alpacaMessage("ไม่มียา","ตอนนี้ไม่มียาเพิ่มความสุขค่ะ");$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.happinessPotion,"ใช้ยาเพิ่มความสุข","เลือกคอกที่จะใช้ยา • จำกัดคอกละ 10 ครั้ง")}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-happy-potion-pen="${i+1}" ${p.happinessMedicineUses>=10?"disabled":""}>คอก ${i+1}<small>ใช้แล้ว ${p.happinessMedicineUses}/10 • ความสุข ${p.happiness}</small></button>`).join("")}</div><button id="happyPotionBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-happy-potion-pen]").forEach(b=>b.onclick=()=>useHappinessPotion(Number(b.dataset.happyPotionPen)));$("happyPotionBack").onclick=()=>showAlpacaInventory("medicine")}
   async function useHappinessPotion(penNo){try{const out=await mutateOwn(s=>{const root=s.alpaca,pen=penAt(root,penNo);if(root.inventory.medicine.happinessPotion<1)throw new Error("ไม่มียาเพิ่มความสุข");if(pen.happinessMedicineUses>=10)throw new Error("คอกนี้ใช้ยาเพิ่มความสุขครบ 10 ครั้งแล้ว");const add=1+Math.floor(Math.random()*5);root.inventory.medicine.happinessPotion--;pen.happinessMedicineUses++;pen.happiness+=add;return add});alpacaMessage("💙 ใช้ยาเรียบร้อย",`คอก ${penNo} ได้รับ <b>+${out.result} ความสุข</b>`);renderPen()}catch(e){alpacaMessage("ใช้ยาไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showMedicineAnimalPicker(key){const root=ownAlpaca(),list=[];root.pens.forEach((p,pi)=>p.alpacas.filter(a=>a.type==="adult"&&(key==="coldVaccine"?Boolean(a.sickAt):(a.sex==="female"&&a.pregnantUntil>gameNow()&&!a.birthAccelUsed))).forEach(a=>list.push({a,penNo:pi+1})));if(!list.length)return alpacaMessage("ยังใช้ไม่ได้",key==="coldVaccine"?"ยังไม่มีอัลปาก้าที่เป็นหวัดค่ะ":"ยังไม่มีแม่อัลปาก้าที่ตั้งครรภ์และใช้ยาได้ค่ะ");$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(MEDICINE[key].image,`ใช้${MEDICINE[key].name}`,"เลือกอัลปาก้าที่ต้องการ")}<div class="alpaca-manage-list">${list.map(x=>`<article class="alpaca-manage-card">${spritePreview(x.a.color,x.a.woolStage)}<div><h3>${safeHtml(x.a.name)}</h3><p>คอก ${x.penNo} • ${key==="coldVaccine"?"เป็นหวัด":"ตั้งครรภ์"}</p><div class="alpaca-card-actions"><button class="primary" type="button" data-med-animal="${x.penNo}:${x.a.id}">ใช้ยา</button></div></div></article>`).join("")}</div><button id="medPickerBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-med-animal]").forEach(b=>{const [p,id]=b.dataset.medAnimal.split(":");b.onclick=()=>key==="coldVaccine"?useVaccine(Number(p),id):useBirthAccelerator(Number(p),id)});$("medPickerBack").onclick=()=>showAlpacaInventory("medicine")}
@@ -17291,7 +17311,7 @@ async function V181_campaignScoreLater(summary){
   async function claimFriendMushroom(ev){if(!visitContext)return;try{await mutateOwn(s=>{if(s.alpaca.friendMushroomClaims[ev.id])throw new Error("เห็ดดอกนี้ถูกเก็บไปแล้ว");s.alpaca.inventory.other.magicMushroom++;s.alpaca.friendMushroomClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca)});closeModal();renderFriendMushrooms();alpacaMessage("🍄 ยินดีด้วยนะ","คุณได้รับ <b>เห็ดวิเศษ ×1</b><br>เข้ากระเป๋าอัลปาก้า → อื่นๆ เรียบร้อยแล้ว") }catch(e){alpacaMessage("เก็บเห็ดไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   async function subscribeWildBabies(){if(!cloudReady)return;try{if(wildUnsub){wildUnsub();wildUnsub=null}const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"alpacaWildBabies"),fs.where("status","==","available"));wildUnsub=fs.onSnapshot(q,snap=>{wildBabies=snap.docs.map(d=>({id:d.id,...d.data()}));renderWildBabies()},e=>console.warn("wild alpaca snapshot",e))}catch(e){console.warn("wild alpaca subscribe",e)}}
-  function renderWildBabies(){const layer=$("wildAlpacaLayer");if(!layer)return;clearWalkerMap(wildWalkers);layer.innerHTML="";const visible=isAidaFarmView()&&Number(farmPlotPage||0)===0&&$("gameScreen")&&!$("gameScreen").classList.contains("hidden");layer.classList.toggle("hidden",!visible);if(!visible)return;wildBabies.forEach((b,i)=>{const node=(i*3+2)%PEN_POINTS.length,pt=PEN_POINTS[node],btn=document.createElement("button");btn.type="button";btn.className="wild-alpaca-baby";btn.style.left=`${pt[0]}%`;btn.style.top=`${pt[1]}%`;btn.innerHTML=`<span class="alpaca-sprite" style="--alpaca-frame-ratio:${walkerRatio(b.color,1,"idle")};background-image:url('${spriteAsset(b.color,1,"idle")}')"></span><span class="wild-baby-badge"><img src="${gameNow()>=Number(b.readyProcessAt||0)?ASSET.meat:ASSET.bottle}" alt=""></span>`;btn.onclick=()=>showWildBaby(b);layer.appendChild(btn);startWalker(wildWalkers,`wild:${b.id}`,btn,btn.querySelector(".alpaca-sprite"),{color:b.color,type:"baby",woolStage:1},node,PEN_POINTS,1000+(i%10)*300)});}
+  function renderWildBabies(){const layer=$("wildAlpacaLayer");if(!layer)return;const visible=isAidaFarmView()&&Number(farmPlotPage||0)===0&&$("gameScreen")&&!$("gameScreen").classList.contains("hidden");layer.classList.toggle("hidden",!visible);if(!visible){if(wildWalkers.size){clearWalkerMap(wildWalkers);layer.innerHTML=""}wildRenderSignature="";return;}const signature=wildBabies.map(b=>`${b.id}:${b.color}:${gameNow()>=Number(b.readyProcessAt||0)?1:0}`).join("|");if(signature===wildRenderSignature&&layer.childElementCount===wildBabies.length){startSpriteTimer();return;}wildRenderSignature=signature;clearWalkerMap(wildWalkers);layer.innerHTML="";wildBabies.forEach((b,i)=>{const node=(i*3+2)%PEN_POINTS.length,pt=PEN_POINTS[node],btn=document.createElement("button");btn.type="button";btn.className="wild-alpaca-baby";btn.style.left=`${pt[0]}%`;btn.style.top=`${pt[1]}%`;btn.innerHTML=`<span class="alpaca-sprite" style="--alpaca-frame-ratio:${walkerRatio(b.color,1,"idle")};background-image:url('${spriteAsset(b.color,1,"idle")}')"></span><span class="wild-baby-badge"><img src="${gameNow()>=Number(b.readyProcessAt||0)?ASSET.meat:ASSET.bottle}" alt=""></span>`;btn.onclick=()=>showWildBaby(b);layer.appendChild(btn);startWalker(wildWalkers,`wild:${b.id}`,btn,btn.querySelector(".alpaca-sprite"),{color:b.color,type:"baby",woolStage:1},node,PEN_POINTS,1000+(i%10)*300)});startSpriteTimer();}
   function showWildBaby(b){const canCapture=Boolean(visitContext&&String(visitContext.memberKey)==="aida");$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><div class="alpaca-detail-hero">${spritePreview(b.color,1,"large")}<div><h2>เบบี้อัลปาก้า${COLOR_META[b.color]?.short||""}</h2><p>กำลังเดินเล่นอยู่หน้าฟาร์ม Aida</p></div></div>${canCapture?`<div class="alpaca-detail-actions"><button id="captureBabyBtn" class="primary" type="button">🧤 ดักจับอัลปาก้า</button><button id="wildBabyClose" type="button">ปิด</button></div>`:`<div class="alpaca-callout"><b>เบบี้จาก Aida</b><small>สมาชิกที่มาเยี่ยมบ้าน Aida สามารถลองดักจับได้</small></div><button id="wildBabyClose" class="secondary-action" type="button">ปิด</button>`}</section>`;openModal();if($("captureBabyBtn"))$("captureBabyBtn").onclick=()=>beginCapture(b);$("wildBabyClose").onclick=closeModal}
   function showReleaseBabyPanel(){
     if(!isAdmin())return;try{closeHomeHudMenu()}catch{}
@@ -17409,7 +17429,7 @@ async function V181_campaignScoreLater(summary){
   function start(){hookUi();startSpriteTimer();syncEntryButtons();setTimeout(()=>{subscribeWildBabies();periodic();syncOwnMaleBreeders().catch(()=>{})},1200);penTickTimer=setInterval(periodic,30*1000);friendMushroomRenderTimer=setInterval(()=>{if(visitContext)renderFriendMushrooms()},60*1000)}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 
-  window.YAINOO_BUILD="ALPACA-SMOOTH-WEATHER-R1";
+  window.YAINOO_BUILD="V240-ALPACA-PEN-PERFORMANCE-R2";
 })();
 
 
@@ -17451,3 +17471,371 @@ async function V181_campaignScoreLater(summary){
   function queue(){if(!raf)raf=requestAnimationFrame(sync)}
   sync();window.addEventListener("resize",queue,{passive:true});window.visualViewport?.addEventListener("resize",queue,{passive:true});window.visualViewport?.addEventListener("scroll",queue,{passive:true});
 })();
+
+
+/* ======================================================================
+   V240 — AUG 20 FULL UPDATE
+   Campaigns / Rainbow fish / Alpaca factory / new alpaca items / ranks /
+   gifting extensions / compact mobile UI and reliability guards.
+   ====================================================================== */
+(function YN_V240_FULL_UPDATE(){
+  "use strict";
+
+  const V240_VERSION="240";
+  const V240_HOUR=60*60*1000;
+  const V240_COLORS=["white","black","pink","brown","green"];
+  const V240_COLOR_TH={white:"ขาว",black:"ดำ",pink:"ชมพู",brown:"น้ำตาล",green:"เขียว",gold:"ทอง"};
+  const V240_COLOR_IMG={
+    white:"alpaca-stage-1-idle.png?v=240",black:"alpaca-black-stage-1-idle.png?v=240",pink:"alpaca-pink-stage-1-idle.png?v=240",brown:"alpaca-brown-stage-1-idle.png?v=240",green:"alpaca-green-stage-1-idle.png?v=240"
+  };
+  const V240_WOOL_IMG={white:"alpaca-wool-white.png",green:"alpaca-wool-green.png",black:"alpaca-wool-black.png",brown:"alpaca-wool-brown.png",pink:"alpaca-wool-pink.png",gold:"alpaca-wool-gold.png"};
+
+  const V240_ITEM={
+    processingLicense:{name:"ใบอนุญาตแปรรูป",image:"alpaca_processing_license.png?v=240"},
+    tricolorPudding:{name:"พุดดิ้งหญ้าสามสี",image:"alpaca_tricolor_pudding.png?v=240"},
+    woolGrowthMedicine:{name:"ยาเร่งขนอัลปาก้า",image:"alpaca_wool_growth_medicine.png?v=240"},
+    treasureBox:{name:"กล่องสมบัติอัลปาก้า",image:"alpaca_treasure_box.png?v=240"}
+  };
+
+  const V240_PRODUCTS={
+    meat1:{name:"สเต็กอัลปาก้าย่างแบมบรู๊ววว",image:"01_alpaca_steak_bambroo.png?v=240",side:"meat",hours:2,merit:120,happy:5,license:2,babies:1,bamboo:120,plankton:40},
+    meat2:{name:"เนื้ออัลปาก้ารมควันหลอนปิ๊",image:"02_smoked_alpaca_halonpi.png?v=240",side:"meat",hours:4,merit:250,happy:10,license:3,babies:1,bamboo:80,plankton:100},
+    meat3:{name:"ซุปอัลปาก้าหม้อวิญญาณ",image:"03_alpaca_spirit_pot_soup.png?v=240",side:"meat",hours:6,merit:450,happy:18,license:4,babies:2,bamboo:150,plankton:120},
+    meat4:{name:"ชุดเนื้ออัลปาก้าราชวงศ์",image:"04_royal_alpaca_meat_platter.png?v=240",side:"meat",hours:8,merit:700,happy:30,license:5,babies:3,bamboo:200,plankton:180},
+    wool1:{name:"กระเป๋าขนอัลปาก้าพาสเทล",image:"01_alpaca_pastel_bag.png?v=240",side:"wool",hours:2,merit:120,happy:5,license:2,woolAny:10,grassGreen:80,grassYellow:50,jellyV1:1},
+    wool2:{name:"ผ้าห่มอัลปาก้านุ่มฟู",image:"02_alpaca_fluffy_blanket.png?v=240",side:"wool",hours:4,merit:250,happy:10,license:3,woolAny:20,grassGreen:100,grassYellow:80,grassRed:50,jellyV1:2},
+    wool3:{name:"กระเป๋าหรูขนอัลปาก้าทองคำ",image:"03_alpaca_golden_luxury_bag.png?v=240",side:"wool",hours:6,merit:450,happy:18,license:4,woolGold:5,grassYellow:150,grassRed:80,jellyV1:3},
+    wool4:{name:"เสื้อคลุมราชวงศ์อัลปาก้าทอง",image:"04_alpaca_golden_royal_cloak.png?v=240",side:"wool",hours:8,merit:700,happy:30,license:5,woolGold:10,grassGreen:100,grassYellow:180,grassRed:120,jellyV1:5}
+  };
+
+  const V240_COOK_ID="cooking-oldschool-20260826";
+  const V240_RAINBOW_ID="rainbow-hunt-20260826";
+  const V240_COOK_END=Date.parse("2026-08-26T10:00:00+07:00");
+  const V240_RAINBOW_END=Date.parse("2026-08-26T12:00:00+07:00");
+  const V240_CAMPAIGNS={
+    cooking:{id:V240_COOK_ID,title:"สุดยอดแม่ครัว หัวโบราณ",endAt:V240_COOK_END,bgRank:"sud-yod-mae-krua-rank-bg.png?v=240",bgReward:"sud-yod-mae-krua-reward-bg.png?v=240",bgRules:"sud-yod-mae-krua-rules-bg.png?v=240"},
+    rainbow:{id:V240_RAINBOW_ID,title:"ตามล่าหาปลาสายรุ้ง",endAt:V240_RAINBOW_END,bgRank:"rainbow-fish-campaign-bg.jpeg?v=240",bgReward:"rainbow-fish-campaign-bg.jpeg?v=240",bgRules:"rainbow-fish-campaign-bg.jpeg?v=240"}
+  };
+
+  function v240Now(){return typeof gameNow==="function"?gameNow():Date.now()}
+  function v240Uid(prefix="v240"){return globalThis.crypto?.randomUUID?.()||`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+  function v240IsAdmin(){return currentMember==="Aida"&&adminProfile?.role==="admin"}
+  function v240Obj(x){return x&&typeof x==="object"&&!Array.isArray(x)?x:{}}
+  function v240Int(x){return Math.max(0,Math.floor(Number(x)||0))}
+  function v240Esc(x){return typeof safeHtml==="function"?safeHtml(x):String(x??"")}
+  function v240Countdown(ms){const t=Math.max(0,Math.ceil(Number(ms||0)/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return `${d?`${d}วัน `:""}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
+  function v240Apply(s){ownState=normalizeState(s,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch{}try{updateMeritUI()}catch{}}
+  function v240PenNo(){const stage=$("alpacaPenStage"),raw=stage?.style?.getPropertyValue("--alpaca-pen-bg")||getComputedStyle(stage||document.documentElement).getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(3,Number(m?.[1])||1))}
+
+  function v240EnsureState(s){
+    if(!s||typeof s!=="object")return s;
+    s.alpaca=v240Obj(s.alpaca);s.alpaca.inventory=v240Obj(s.alpaca.inventory);
+    s.alpaca.inventory.food=v240Obj(s.alpaca.inventory.food);s.alpaca.inventory.medicine=v240Obj(s.alpaca.inventory.medicine);s.alpaca.inventory.other=v240Obj(s.alpaca.inventory.other);s.alpaca.inventory.wool=v240Obj(s.alpaca.inventory.wool);
+    s.alpaca.inventory.food.tricolorPudding=v240Int(s.alpaca.inventory.food.tricolorPudding);
+    s.alpaca.inventory.medicine.woolGrowthMedicine=v240Int(s.alpaca.inventory.medicine.woolGrowthMedicine);
+    s.specials=v240Obj(s.specials);const __v240Lic=Math.max(v240Int(s.alpaca.inventory.other.processingLicense),v240Int(s.specials.processingLicense));s.alpaca.inventory.other.processingLicense=__v240Lic;s.specials.processingLicense=__v240Lic;
+    s.alpaca.inventory.other.treasureBox=v240Int(s.alpaca.inventory.other.treasureBox);
+    s.alpaca.factory=v240Obj(s.alpaca.factory);
+    s.alpaca.factory.babies=v240Obj(s.alpaca.factory.babies);V240_COLORS.forEach(c=>s.alpaca.factory.babies[c]=v240Int(s.alpaca.factory.babies[c]));
+    s.alpaca.factory.products=v240Obj(s.alpaca.factory.products);Object.keys(V240_PRODUCTS).forEach(k=>s.alpaca.factory.products[k]=v240Int(s.alpaca.factory.products[k]));
+    s.alpaca.factory.jobs=Array.isArray(s.alpaca.factory.jobs)?s.alpaca.factory.jobs:[];
+    s.alpaca.factory.history=Array.isArray(s.alpaca.factory.history)?s.alpaca.factory.history:[];
+    s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount);
+    s.alpaca.treasureDrops=v240Obj(s.alpaca.treasureDrops);[1,2,3].forEach(n=>{const k=`pen${n}`;s.alpaca.treasureDrops[k]=Array.isArray(s.alpaca.treasureDrops[k])?s.alpaca.treasureDrops[k]:[]});
+    s.alpaca.treasureClock=v240Obj(s.alpaca.treasureClock);
+    s.campaignClaims=v240Obj(s.campaignClaims);s.campaignClaims[V240_COOK_ID]=v240Obj(s.campaignClaims[V240_COOK_ID]);s.campaignClaims[V240_RAINBOW_ID]=v240Obj(s.campaignClaims[V240_RAINBOW_ID]);
+    s.campaignReceipts=v240Obj(s.campaignReceipts);
+    const dk=typeof currentBangkokDateKey==="function"?currentBangkokDateKey():"";
+    s.friendGiftDaily=v240Obj(s.friendGiftDaily);if(s.friendGiftDaily.dateKey!==dk)s.friendGiftDaily={dateKey:dk,count:0};s.friendGiftDaily.count=v240Int(s.friendGiftDaily.count);
+    return s;
+  }
+
+  const v240NormalizeBase=normalizeState;
+  normalizeState=function(raw,player){const s=v240NormalizeBase(raw,player);v240EnsureState(s);if(v240IsAdmin())v240AdminTopup(s);return s};
+  try{if(ownState)v240EnsureState(ownState);if(state)v240EnsureState(state)}catch{}
+
+  /* New processing-license item is part of Special Shop. Price follows the existing special-item request price. */
+  try{
+    if(!SPECIAL_ITEMS.processingLicense)SPECIAL_ITEMS.processingLicense={name:V240_ITEM.processingLicense.name,image:V240_ITEM.processingLicense.image,kind:"alpaca",group:"alpacaFactory",shopPrice:20};
+    if(Array.isArray(SPECIAL_SHOP_KEYS)&&!SPECIAL_SHOP_KEYS.includes("processingLicense"))SPECIAL_SHOP_KEYS.push("processingLicense");
+  }catch{}
+
+  function v240AdminTopup(s){
+    if(!s||!v240IsAdmin())return;
+    v240EnsureState(s);
+    s.specials=v240Obj(s.specials);s.specials.processingLicense=9999;
+    s.alpaca.inventory.other.processingLicense=9999;s.alpaca.inventory.other.treasureBox=9999;s.alpaca.inventory.food.tricolorPudding=9999;s.alpaca.inventory.medicine.woolGrowthMedicine=9999;
+    Object.keys(V240_PRODUCTS).forEach(k=>s.alpaca.factory.products[k]=9999);
+  }
+
+  /* ---------- Factory core ---------- */
+  function v240FactoryCounts(s=ownState||state){v240EnsureState(s);return s.alpaca.factory}
+  function v240TotalBabies(s=ownState||state){const b=v240FactoryCounts(s).babies;return V240_COLORS.reduce((n,c)=>n+v240Int(b[c]),0)}
+  function v240TotalNormalWool(s=ownState||state){const w=s?.alpaca?.inventory?.wool||{};return V240_COLORS.reduce((n,c)=>n+v240Int(w[c]),0)}
+  function v240TotalJellyV1(s=ownState||state){return Object.values(s?.specialAnimals||{}).reduce((n,x)=>n+v240Int(x),0)}
+  function v240TakeMapAcross(map,keys,qty){let left=qty;for(const k of keys){if(left<=0)break;const take=Math.min(v240Int(map[k]),left);map[k]=v240Int(map[k])-take;left-=take}return left===0}
+  function v240TakeJellyV1(s,qty){return v240TakeMapAcross(s.specialAnimals=v240Obj(s.specialAnimals),Object.keys(s.specialAnimals),qty)}
+  function v240NeedRows(r,s=ownState||state){
+    v240EnsureState(s);const rows=[];
+    if(r.babies)rows.push({name:"เบบี้อัลปาก้า (สีไหนก็ได้)",img:"alpaca-ready-for-processing-meat.png",have:v240TotalBabies(s),need:r.babies});
+    if(r.bamboo)rows.push({name:CROPS?.babyBamboo?.name||"เบบี้แบมบรู๊ววว",img:CROPS?.babyBamboo?.selectImg||CROPS?.babyBamboo?.readyImg||"",have:v240Int(s.bag?.babyBamboo),need:r.bamboo});
+    if(r.plankton)rows.push({name:CROPS?.hauntedPlankton?.name||"แพลงก์ตอนหลอนปิ๊",img:CROPS?.hauntedPlankton?.selectImg||CROPS?.hauntedPlankton?.readyImg||"",have:v240Int(s.bag?.hauntedPlankton),need:r.plankton});
+    if(r.woolAny)rows.push({name:"ขนอัลปาก้า (สีไหนก็ได้)",img:V240_WOOL_IMG.white,have:v240TotalNormalWool(s),need:r.woolAny});
+    if(r.woolGold)rows.push({name:"ขนอัลปาก้าสีทอง",img:V240_WOOL_IMG.gold,have:v240Int(s.alpaca.inventory.wool.gold),need:r.woolGold});
+    if(r.grassGreen)rows.push({name:"หญ้าสีเขียว",img:"friend-grass-green.png?v=221",have:v240Int(s.specials?.friendGrassGreen),need:r.grassGreen});
+    if(r.grassYellow)rows.push({name:"หญ้าสีเหลือง",img:"friend-grass-yellow.png?v=221",have:v240Int(s.specials?.friendGrassYellow),need:r.grassYellow});
+    if(r.grassRed)rows.push({name:"หญ้าสีแดง",img:"friend-grass-red.png?v=221",have:v240Int(s.specials?.friendGrassRed),need:r.grassRed});
+    if(r.jellyV1)rows.push({name:"แมงกะพรุน V1",img:Object.values(typeof JELLYFISH_TYPES!=="undefined"?JELLYFISH_TYPES:{})[0]?.image||"",have:v240TotalJellyV1(s),need:r.jellyV1});
+    rows.push({name:V240_ITEM.processingLicense.name,img:V240_ITEM.processingLicense.image,have:v240Int(s.alpaca.inventory.other.processingLicense),need:r.license});
+    return rows;
+  }
+  function v240CanStart(r,s=ownState||state){return v240NeedRows(r,s).every(x=>x.have>=x.need)}
+  function v240DeductRecipe(s,r){
+    v240EnsureState(s);
+    if(!v240CanStart(r,s))throw new Error("วัตถุดิบไม่ครบตามสูตร");
+    if(r.babies&&!v240TakeMapAcross(s.alpaca.factory.babies,V240_COLORS,r.babies))throw new Error("เบบี้อัลปาก้าไม่พอ");
+    if(r.bamboo)s.bag.babyBamboo=v240Int(s.bag?.babyBamboo)-r.bamboo;
+    if(r.plankton)s.bag.hauntedPlankton=v240Int(s.bag?.hauntedPlankton)-r.plankton;
+    if(r.woolAny&&!v240TakeMapAcross(s.alpaca.inventory.wool,V240_COLORS,r.woolAny))throw new Error("ขนอัลปาก้าไม่พอ");
+    if(r.woolGold)s.alpaca.inventory.wool.gold=v240Int(s.alpaca.inventory.wool.gold)-r.woolGold;
+    if(r.grassGreen)s.specials.friendGrassGreen=v240Int(s.specials?.friendGrassGreen)-r.grassGreen;
+    if(r.grassYellow)s.specials.friendGrassYellow=v240Int(s.specials?.friendGrassYellow)-r.grassYellow;
+    if(r.grassRed)s.specials.friendGrassRed=v240Int(s.specials?.friendGrassRed)-r.grassRed;
+    if(r.jellyV1&&!v240TakeJellyV1(s,r.jellyV1))throw new Error("แมงกะพรุน V1 ไม่พอ");
+    s.alpaca.inventory.other.processingLicense=v240Int(s.alpaca.inventory.other.processingLicense)-r.license;s.specials.processingLicense=s.alpaca.inventory.other.processingLicense;
+  }
+  async function v240MutateSave(mutator,{profile=false}={}){
+    if(!cloudReady||!currentMemberKey)throw new Error("Firebase ยังไม่พร้อม");await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,result;
+    await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);result=await mutator(s,tx,fs,db);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(profile)tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(s.merit)||0,alpacaFactoryClaimed:v240Int(s.alpaca.factory.claimedCount),alpacaHappiness:typeof alpacaTotalHappiness==="function"?alpacaTotalHappiness(s.alpaca):((s.alpaca?.pens||[]).reduce((n,p)=>n+(Number(p.happiness)||0),0)),alpacaHappinessPens:(s.alpaca?.pens||[]).map(p=>Number(p.happiness)||0),updatedAt:fs.serverTimestamp()},{merge:true})});
+    v240Apply(next);return{state:next,result};
+  }
+  async function v240StartFactory(productKey){const r=V240_PRODUCTS[productKey];if(!r)return;const penNo=v240PenNo();try{const out=await v240MutateSave(s=>{v240DeductRecipe(s,r);const now=v240Now(),job={id:v240Uid("factory"),productKey,penNo,status:"processing",startedAt:now,finishAt:now+r.hours*V240_HOUR,claimedAt:0};s.alpaca.factory.jobs.push(job);s.alpaca.factory.history.push({...job});if(s.alpaca.factory.history.length>120)s.alpaca.factory.history=s.alpaca.factory.history.slice(-120);return job});closeModal();v240ShowFactorySide(r.side);showWeatherToast(`🏭 เริ่มผลิต ${r.name} • คำสั่งจากคอก ${penNo}`)}catch(e){message("เริ่มผลิตไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function v240JobStatus(job){if(job.status==="claimed")return"รับแล้ว";return v240Now()>=Number(job.finishAt||0)?"พร้อมรับ":"กำลังผลิต"}
+  async function v240ClaimFactory(jobId){try{const out=await v240MutateSave(s=>{const job=s.alpaca.factory.jobs.find(j=>j.id===jobId);if(!job)throw new Error("ไม่พบงานแปรรูป");if(job.status==="claimed")throw new Error("งานนี้รับแล้ว");if(v240Now()<Number(job.finishAt||0))throw new Error("ยังผลิตไม่เสร็จ");const r=V240_PRODUCTS[job.productKey];if(!r)throw new Error("ไม่พบผลิตภัณฑ์");job.status="claimed";job.claimedAt=v240Now();s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;const p=s.alpaca.pens?.[Math.max(0,Math.min(2,Number(job.penNo)-1))];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=job.claimedAt}return{r,penNo:job.penNo}},{profile:true});const {r,penNo}=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${r.image}" alt="${v240Esc(r.name)}"><h2>ยินดีด้วยค่ะ</h2><p>คุณแปรรูป <b>${v240Esc(r.name)}</b> สำเร็จ</p><div class="v240-reward-lines"><span>🎁 ผลิตภัณฑ์ ×1</span><span>🙏 +${r.merit} กุศล</span><span>💙 ความสุขของคอก ${penNo} +${r.happy}</span></div><button id="v240FactoryClaimDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("v240FactoryClaimDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับผลิตภัณฑ์ไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ClaimAllFactory(){try{const out=await v240MutateSave(s=>{const now=v240Now(),done=s.alpaca.factory.jobs.filter(j=>j.status!=="claimed"&&now>=Number(j.finishAt||0));if(!done.length)throw new Error("ยังไม่มีผลิตภัณฑ์ที่พร้อมรับ");let merit=0;const happyByPen={1:0,2:0,3:0},products=[];done.forEach(job=>{const r=V240_PRODUCTS[job.productKey];if(!r)return;job.status="claimed";job.claimedAt=now;s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;merit+=r.merit;happyByPen[job.penNo]=(happyByPen[job.penNo]||0)+r.happy;const p=s.alpaca.pens?.[Number(job.penNo)-1];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=now}products.push(r)});return{count:done.length,merit,happyByPen,products}},{profile:true});const x=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${x.products.slice(0,6).map(r=>`<img src="${r.image}" alt="">`).join("")}</div><h2>รับผลิตภัณฑ์ทั้งหมดแล้ว ✨</h2><p>รับสำเร็จ <b>${x.count} รายการ</b> • +${x.merit} กุศล</p><div class="v240-reward-lines">${Object.entries(x.happyByPen).filter(([,n])=>n>0).map(([p,n])=>`<span>💙 คอก ${p} +${n} ความสุข</span>`).join("")}</div><button id="v240ClaimAllDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240ClaimAllDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับทั้งหมดไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  function v240IngredientHTML(r){return v240NeedRows(r).map(x=>`<article class="v240-ingredient ${x.have>=x.need?"ok":"missing"}">${x.img?`<img src="${x.img}" alt="">`:""}<div><b>${v240Esc(x.name)}</b><small>มี ${x.have} / ใช้ ${x.need}</small></div></article>`).join("")}
+  function v240ShowIngredients(key){const r=V240_PRODUCTS[key];if(!r)return;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal"><div class="v240-modal-head"><img src="${r.image}" alt=""><div><h2>${v240Esc(r.name)}</h2><small>ผลิตสำเร็จ 100% • ใช้เวลา ${r.hours} ชั่วโมง</small></div></div><div class="v240-ingredient-grid">${v240IngredientHTML(r)}</div><div class="v240-modal-actions"><button id="v240StartFromIngredients" class="primary-spooky-action" ${v240CanStart(r)?"":"disabled"}>เริ่มผลิต</button><button id="v240IngredientsBack">กลับ</button></div></section>`;openModal();$("v240StartFromIngredients").onclick=()=>v240StartFactory(key);$("v240IngredientsBack").onclick=()=>v240ShowFactorySide(r.side)}
+  function v240ProductCard(key,r){const active=(ownState||state)?.alpaca?.factory?.jobs?.filter(j=>j.productKey===key&&j.status!=="claimed")||[],pending=active[0],status=pending?v240JobStatus(pending):"";return `<article class="v240-product-card"><img src="${r.image}" alt="${v240Esc(r.name)}"><div class="v240-product-copy"><h3>${v240Esc(r.name)}</h3><small>${r.hours} ชม. • 100% • +${r.merit} กุศล • +${r.happy} 💙</small>${pending?`<div class="v240-mini-job"><b>${status}</b><span>${status==="กำลังผลิต"?v240Countdown(Number(pending.finishAt)-v240Now()):`คำสั่งจากคอก ${pending.penNo}`}</span></div>`:""}<div class="v240-card-actions"><button type="button" data-v240-need="${key}">ดูวัตถุดิบ</button><button class="primary" type="button" data-v240-start="${key}" ${v240CanStart(r)?"":"disabled"}>เริ่มผลิต</button></div></div></article>`}
+  function v240ShowFactorySide(side){const title=side==="meat"?"แปรรูปเนื้ออัลปาก้า":"ผลิตภัณฑ์จากขนอัลปาก้า",rows=Object.entries(V240_PRODUCTS).filter(([,r])=>r.side===side);$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal"><header class="v240-modal-title"><h2>${side==="meat"?"🥩":"🧶"} ${title}</h2><button id="v240FactoryModalClose">×</button></header><div class="v240-product-list">${rows.map(([k,r])=>v240ProductCard(k,r)).join("")}</div><button id="v240FactoryHistoryFromSide" class="secondary-action">ประวัติ / งานที่กำลังผลิต</button></section>`;openModal();document.querySelectorAll("[data-v240-need]").forEach(b=>b.onclick=()=>v240ShowIngredients(b.dataset.v240Need));document.querySelectorAll("[data-v240-start]").forEach(b=>b.onclick=()=>v240ShowIngredients(b.dataset.v240Start));$("v240FactoryModalClose").onclick=closeModal;$("v240FactoryHistoryFromSide").onclick=v240ShowFactoryHistory}
+  function v240ShowFactoryBag(){const s=normalizeState(ownState||state,currentMember),f=s.alpaca.factory,w=s.alpaca.inventory.wool;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal"><header class="v240-modal-title"><h2>🧺 คลังโรงงานแปรรูป</h2><button id="v240BagClose">×</button></header><h3>เบบี้อัลปาก้าพร้อมแปรรูป</h3><div class="v240-bag-grid">${V240_COLORS.map(c=>`<article><img src="${V240_COLOR_IMG[c]}" alt=""><b>เบบี้${V240_COLOR_TH[c]}</b><strong>×${v240Int(f.babies[c])}</strong></article>`).join("")}</div><h3>ขนอัลปาก้า</h3><div class="v240-bag-grid">${[...V240_COLORS,"gold"].map(c=>`<article><img src="${V240_WOOL_IMG[c]}" alt=""><b>ขน${V240_COLOR_TH[c]}</b><strong>×${v240Int(w[c])}</strong></article>`).join("")}</div><div class="v240-license-line"><img src="${V240_ITEM.processingLicense.image}" alt=""><b>${V240_ITEM.processingLicense.name}</b><strong>×${v240Int(s.alpaca.inventory.other.processingLicense)}</strong></div></section>`;openModal();$("v240BagClose").onclick=closeModal}
+  function v240ShowFactoryHistory(){const jobs=[...v240FactoryCounts().jobs].sort((a,b)=>Number(b.startedAt)-Number(a.startedAt)),ready=jobs.filter(j=>j.status!=="claimed"&&v240Now()>=Number(j.finishAt||0)).length;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal v240-history-modal"><header class="v240-modal-title"><h2>📜 รายการแปรรูป</h2><button id="v240HistoryClose">×</button></header>${ready?`<button id="v240ClaimAllFactory" class="primary-spooky-action v240-claim-all">รับทั้งหมด (${ready})</button>`:""}<div class="v240-history-list">${jobs.length?jobs.map(j=>{const r=V240_PRODUCTS[j.productKey],st=v240JobStatus(j),left=Math.max(0,Number(j.finishAt)-v240Now());return `<article class="v240-history-row"><img src="${r?.image||""}" alt=""><div><b>${v240Esc(r?.name||j.productKey)}</b><small>คำสั่งจากคอก ${j.penNo}</small><span class="${st==="พร้อมรับ"?"ready":""}">${st}${st==="กำลังผลิต"?` • ${v240Countdown(left)}`:""}</span></div>${st==="พร้อมรับ"?`<button data-v240-claim="${j.id}">กดรับผลิตภัณฑ์</button>`:""}</article>`}).join(""):`<div class="v240-empty">ยังไม่มีประวัติการแปรรูปค่ะ</div>`}</div></section>`;openModal();document.querySelectorAll("[data-v240-claim]").forEach(b=>b.onclick=()=>v240ClaimFactory(b.dataset.v240Claim));if($("v240ClaimAllFactory"))$("v240ClaimAllFactory").onclick=v240ClaimAllFactory;$("v240HistoryClose").onclick=closeModal}
+
+  function v240EnsureFactoryScreen(){if($("v240FactoryScreen"))return;const host=$("alpacaPenScreen");if(!host)return;host.insertAdjacentHTML("beforeend",`<div id="v240FactoryScreen" class="v240-factory-screen hidden"><button id="v240FactoryBack" class="v240-factory-back" type="button">← กลับคอกอัลปาก้า</button><button id="v240FactoryMeatHotspot" class="v240-machine-hotspot meat" type="button" aria-label="เครื่องแปรรูปเนื้ออัลปาก้า"></button><button id="v240FactoryWoolHotspot" class="v240-machine-hotspot wool" type="button" aria-label="เครื่องผลิตภัณฑ์จากขนอัลปาก้า"></button><button id="v240FactoryBagBtn" class="v240-factory-bag-btn" type="button"><span>🧺</span><b>คลังโรงงาน</b></button><button id="v240FactoryHistoryBtn" class="v240-factory-history-btn" type="button">📜 รายการแปรรูป</button><div id="v240FactoryJobsBar" class="v240-factory-jobs-bar"></div></div>`);$("v240FactoryBack").onclick=()=>v240CloseFactory();$("v240FactoryMeatHotspot").onclick=()=>v240ShowFactorySide("meat");$("v240FactoryWoolHotspot").onclick=()=>v240ShowFactorySide("wool");$("v240FactoryBagBtn").onclick=v240ShowFactoryBag;$("v240FactoryHistoryBtn").onclick=v240ShowFactoryHistory}
+  function v240OpenFactory(){v240EnsureFactoryScreen();$("v240FactoryScreen")?.classList.remove("hidden");v240RenderFactoryJobs();v240FactoryTimerStart()}
+  function v240CloseFactory(){$("v240FactoryScreen")?.classList.add("hidden");v240FactoryTimerStop();closeModal()}
+  let v240FactoryTimer=0;
+  function v240FactoryTimerStart(){v240FactoryTimerStop();v240FactoryTimer=setInterval(v240RenderFactoryJobs,1000)}
+  function v240FactoryTimerStop(){if(v240FactoryTimer)clearInterval(v240FactoryTimer);v240FactoryTimer=0}
+  function v240RenderFactoryJobs(){const bar=$("v240FactoryJobsBar");if(!bar)return;const jobs=(ownState||state)?.alpaca?.factory?.jobs?.filter(j=>j.status!=="claimed")||[],ready=jobs.filter(j=>v240Now()>=Number(j.finishAt||0)).length;bar.innerHTML=jobs.length?`<span>🏭 ${jobs.length} งาน</span><b>${ready?`พร้อมรับ ${ready}`:`กำลังผลิต`}</b>`:`<span>🏭 ยังไม่มีงานผลิต</span>`}
+
+  /* ---------- Baby -> factory, irreversible ---------- */
+  let v240LastAnimal=null;
+  function v240AnimalFromClick(target){const open=target.closest?.("[data-alpaca-open]");if(open)return{penNo:Number(open.dataset.alpacaPenno)||v240PenNo(),id:open.dataset.alpacaOpen};const btn=target.closest?.(".alpaca-pen-animal");if(!btn)return null;const penNo=v240PenNo(),nodes=[...btn.parentElement.querySelectorAll(".alpaca-pen-animal")],idx=nodes.indexOf(btn),a=(ownState||state)?.alpaca?.pens?.[penNo-1]?.alpacas?.[idx];return a?{penNo,id:a.id}:null}
+  async function v240SendBaby(penNo,id){const ok=await new Promise(resolve=>{$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="alpaca-ready-for-processing-meat.png" alt=""><h2>ส่งเข้าโรงงานแปรรูป?</h2><p>เมื่อยืนยัน เบบี้จะหายจากคอกและ <b>ไม่สามารถนำกลับมาได้</b></p><div class="v240-modal-actions"><button id="v240BabyYes" class="primary-spooky-action">ยืนยัน</button><button id="v240BabyNo">ยกเลิก</button></div></section>`;openModal();$("v240BabyYes").onclick=()=>{closeModal();resolve(true)};$("v240BabyNo").onclick=()=>{closeModal();resolve(false)}});if(!ok)return;try{const out=await v240MutateSave(s=>{const pen=s.alpaca.pens?.[penNo-1];if(!pen)throw new Error("ไม่พบคอก");const idx=pen.alpacas.findIndex(a=>a.id===id),a=pen.alpacas[idx];if(!a||a.type!=="baby")throw new Error("ไม่พบเบบี้อัลปาก้า");if(v240Now()<Number(a.readyProcessAt||0))throw new Error("เบบี้ยังไม่พร้อมเข้าโรงงาน");pen.alpacas.splice(idx,1);s.alpaca.factory.babies[a.color]=v240Int(s.alpaca.factory.babies[a.color])+1;return a});const a=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${V240_COLOR_IMG[a.color]}" alt=""><h2>ส่งเข้าโรงงานแล้วค่ะ</h2><p>เบบี้อัลปาก้าสี${V240_COLOR_TH[a.color]} เข้าคลังโรงงานแล้ว ×1</p><button id="v240BabySentDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240BabySentDone").onclick=closeModal;try{$("alpacaPenSwitchBtn")?.click();$("alpacaPenSwitchBtn")?.click()}catch{}}catch(e){message("ส่งเข้าโรงงานไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function v240InjectBabyFactoryButton(){if(!v240LastAnimal||$("v240SendBabyFactory"))return;const {penNo,id}=v240LastAnimal,a=(ownState||state)?.alpaca?.pens?.[penNo-1]?.alpacas?.find(x=>x.id===id);if(!a||a.type!=="baby"||v240Now()<Number(a.readyProcessAt||0))return;const actions=document.querySelector("#modalContent .alpaca-detail-actions");if(!actions)return;const b=document.createElement("button");b.id="v240SendBabyFactory";b.className="primary v240-send-baby";b.type="button";b.innerHTML='<img src="alpaca-ready-for-processing-meat.png" alt="">ส่งเข้าโรงงานแปรรูป';b.onclick=()=>v240SendBaby(penNo,id);actions.prepend(b)}
+  document.addEventListener("click",e=>{const x=v240AnimalFromClick(e.target);if(x){v240LastAnimal=x;setTimeout(v240InjectBabyFactoryButton,30)}},{capture:true,passive:true});
+  const v240ModalObserver=new MutationObserver(()=>{if(v240LastAnimal)queueMicrotask(v240InjectBabyFactoryButton)});if($("modalContent"))v240ModalObserver.observe($("modalContent"),{childList:true,subtree:true});
+
+  /* ---------- Treasure drops ---------- */
+  const V240_TREASURE_POINTS=[[22,45],[38,42],[55,44],[72,46],[28,58],[46,57],[64,58],[78,62],[30,71],[50,70],[69,72]];
+  async function v240ProcessTreasureDrops(){if(!cloudReady||!currentMemberKey||visitContext)return;const screen=$("alpacaPenScreen");if(!screen||screen.classList.contains("hidden"))return;try{const out=await v240MutateSave(s=>{const now=v240Now();let added=0;s.alpaca.pens.forEach((pen,pi)=>{pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{const key=a.id,last=Number(s.alpaca.treasureClock[key]||a.createdAt||now),elapsed=Math.floor((now-last)/(3*V240_HOUR));if(elapsed<1)return;s.alpaca.treasureClock[key]=last+elapsed*3*V240_HOUR;if(a.sickAt)return;const rounds=Math.min(4,elapsed);for(let z=0;z<rounds;z++){const qty=1+(Math.random()<.5?1:0);for(let q=0;q<qty;q++){const p=V240_TREASURE_POINTS[(Math.floor(Math.random()*V240_TREASURE_POINTS.length)+q)%V240_TREASURE_POINTS.length];s.alpaca.treasureDrops[`pen${pi+1}`].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++}}})});return added});if(out.result)v240RenderTreasureDrops()}catch(e){console.warn("V240 treasure",e)}}
+  async function v240CollectTreasure(id=null,all=false){const penNo=v240PenNo();try{const out=await v240MutateSave(s=>{const arr=s.alpaca.treasureDrops[`pen${penNo}`],take=all?arr.splice(0,arr.length):(()=>{const i=arr.findIndex(x=>x.id===id);return i>=0?arr.splice(i,1):[]})();if(!take.length)throw new Error("ตอนนี้ยังไม่มีกล่องสมบัติในคอกนี้ค่ะ");s.alpaca.inventory.other.treasureBox=v240Int(s.alpaca.inventory.other.treasureBox)+take.length;return take.length});v240RenderTreasureDrops();$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${V240_ITEM.treasureBox.image}" alt=""><h2>เก็บกล่องสำเร็จ</h2><p>กล่องสมบัติอัลปาก้า <b>×${out.result}</b> เข้ากระเป๋าแล้วค่ะ</p><button id="v240TreasureCollected" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240TreasureCollected").onclick=closeModal}catch(e){message("ยังเก็บไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function v240EnsureTreasureUI(){const stage=$("alpacaPenStage");if(!stage)return;if(!$("v240TreasureLayer")){stage.insertAdjacentHTML("beforeend",'<div id="v240TreasureLayer" class="v240-treasure-layer"></div><button id="v240CollectTreasureAll" class="v240-collect-treasure-all" type="button"><span>🧺</span><b>เก็บกล่อง</b></button>');$("v240CollectTreasureAll").onclick=()=>v240CollectTreasure(null,true)}}
+  function v240RenderTreasureDrops(){v240EnsureTreasureUI();const layer=$("v240TreasureLayer");if(!layer)return;const penNo=v240PenNo(),arr=(ownState||state)?.alpaca?.treasureDrops?.[`pen${penNo}`]||[];layer.innerHTML=arr.map(x=>`<button class="v240-treasure-drop" type="button" data-v240-treasure="${x.id}" style="left:${x.x}%;top:${x.y}%"><img src="${V240_ITEM.treasureBox.image}" alt="กล่องสมบัติ"></button>`).join("");document.querySelectorAll("[data-v240-treasure]").forEach(b=>b.onclick=()=>v240CollectTreasure(b.dataset.v240Treasure,false))}
+  let v240TreasureTimer=setInterval(()=>{v240RenderTreasureDrops();v240ProcessTreasureDrops()},30000);setTimeout(()=>{v240EnsureTreasureUI();v240ProcessTreasureDrops()},1200);
+
+  async function v240OpenTreasureBox(){try{const out=await v240MutateSave(s=>{if(v240Int(s.alpaca.inventory.other.treasureBox)<1)throw new Error("ไม่มีกล่องสมบัติอัลปาก้า");s.alpaca.inventory.other.treasureBox--;if(Math.random()>=.5)return null;const pool=[{type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:3,image:SPECIAL_ITEMS?.angelWingCapsule?.image||"angel_wing_capsule.png"},{type:"special",key:"satanWings",name:"ปีกซาตาน",qty:3,image:SPECIAL_ITEMS?.satanWings?.image||"devil-wing.png"},{type:"bait",key:"bait4",name:"เหยื่อตกปลามือโปร",qty:2,image:FISHING_BAITS?.bait4?.image||""},{type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:2,image:SPECIAL_ITEMS?.pestle100?.image||"pestle-boost-100.png"},{type:"special",key:"coconut100",name:"มะพร้าวสาวไอด้า",qty:2,image:SPECIAL_ITEMS?.coconut100?.image||"coconut-boost-100.png"},{type:"alpacaOther",key:"processingLicense",name:V240_ITEM.processingLicense.name,qty:3,image:V240_ITEM.processingLicense.image}],r=pool[Math.floor(Math.random()*pool.length)];if(r.type==="special"){s.specials=v240Obj(s.specials);s.specials[r.key]=v240Int(s.specials[r.key])+r.qty}else if(r.type==="bait"){s.fishingBaits=v240Obj(s.fishingBaits);s.fishingBaits[r.key]=v240Int(s.fishingBaits[r.key])+r.qty}else{s.alpaca.inventory.other.processingLicense=v240Int(s.alpaca.inventory.other.processingLicense)+r.qty;s.specials.processingLicense=s.alpaca.inventory.other.processingLicense}return r});const r=out.result;if(!r){$("modalContent").innerHTML='<section class="feature-panel v240-reward-popup"><img src="alpaca_treasure_box.png?v=240" alt=""><h2>เสียใจด้วยนะคะ กล่องนี้ไม่มีอะไร</h2><p>คุณมันดวงซวยจริงๆ</p><button id="v240EmptyBoxDone">ปิด</button></section>';openModal();$("v240EmptyBoxDone").onclick=closeModal;return}$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${r.image}" alt=""><h2>เปิดกล่องอัลปาก้าสำเร็จ!</h2><p>ยินดีด้วยค่ะ<br>รับ <b>${v240Esc(r.name)} ×${r.qty}</b></p><button id="v240BoxRewardDone" class="primary-spooky-action">กดรับ</button></section>`;openModal();$("v240BoxRewardDone").onclick=closeModal}catch(e){message("เปิดกล่องไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  /* ---------- Inventory enhancements ---------- */
+  function v240BindInventoryEnhancements(){
+    const content=$("modalContent");
+    if(!content)return;
+    if(content.querySelector(".alpaca-inventory-subtabs")&&!content.querySelector('[data-alpaca-inv="factory"]')){
+      const tabs=content.querySelector(".alpaca-inventory-subtabs");
+      const b=document.createElement("button");
+      b.type="button";
+      b.dataset.alpacaInv="factory";
+      b.textContent="ผลิตภัณฑ์โรงงาน";
+      b.onclick=()=>v240ShowFactoryProductsInventory();
+      tabs.appendChild(b);
+    }
+    const active=content.querySelector('.alpaca-inventory-subtabs button.active');
+    if(active&&active.dataset.alpacaInv==="other"&&!content.querySelector("#v240OtherExtra")){
+      const grid=content.querySelector(".alpaca-inventory-grid");
+      if(grid){
+        const s=normalizeState(ownState||state,currentMember);
+        grid.insertAdjacentHTML("beforeend",`<article id="v240OtherExtra" class="alpaca-inventory-item"><img src="${V240_ITEM.processingLicense.image}" alt=""><b>${V240_ITEM.processingLicense.name}</b><strong>×${v240Int(s.alpaca.inventory.other.processingLicense)}</strong></article><article class="alpaca-inventory-item"><img src="${V240_ITEM.treasureBox.image}" alt=""><b>${V240_ITEM.treasureBox.name}</b><strong>×${v240Int(s.alpaca.inventory.other.treasureBox)}</strong><button id="v240OpenTreasureBtn" type="button" ${v240Int(s.alpaca.inventory.other.treasureBox)?"":"disabled"}>เปิด</button></article>`);
+        if($("v240OpenTreasureBtn"))$("v240OpenTreasureBtn").onclick=v240OpenTreasureBox;
+      }
+    }
+  }
+  function v240ShowFactoryProductsInventory(){const f=v240FactoryCounts();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>🏭 ผลิตภัณฑ์จากโรงงานแปรรูป</h2><div class="alpaca-inventory-grid">${Object.entries(V240_PRODUCTS).map(([k,r])=>`<article class="alpaca-inventory-item"><img src="${r.image}" alt=""><b>${v240Esc(r.name)}</b><strong>×${v240Int(f.products[k])}</strong></article>`).join("")}</div><button id="v240FactoryInvClose" class="secondary-action">ปิด</button></section>`;openModal();$("v240FactoryInvClose").onclick=closeModal}
+  const v240InventoryObserver=new MutationObserver(()=>queueMicrotask(v240BindInventoryEnhancements));if($("modalContent"))v240InventoryObserver.observe($("modalContent"),{childList:true,subtree:true});
+
+  /* ---------- Happiness + factory admin rank ---------- */
+  async function v240ShowAlpacaRanks(tab="happiness"){if(!cloudReady)return message("Rank ยังไม่พร้อม","กำลังเชื่อมข้อมูล");try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),byKey={};snap.forEach(d=>byKey[d.id]=d.data());const members=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(name=>{const key=memberKeyFromName(name),p=byKey[key]||{};return{name,key,happiness:Number(p.alpacaHappiness)||0,factory:v240Int(p.alpacaFactoryClaimed)}});const factory=tab==="factory";const rows=members.sort((a,b)=>(factory?b.factory-a.factory:b.happiness-a.happiness)||a.name.localeCompare(b.name,"th"));$("modalContent").innerHTML=`<section class="feature-panel v240-rank-panel"><header><div><small>🦙 ระบบอัลปาก้า</small><h2>${factory?"Rank โรงงานแปรรูป":"Rank ความสุข"}</h2></div><button id="v240RankClose">×</button></header><div class="v240-rank-tabs"><button data-v240-rank="happiness" class="${!factory?"active":""}">ความสุข</button>${v240IsAdmin()?`<button data-v240-rank="factory" class="${factory?"active":""}">โรงงาน</button>`:""}</div>${factory?'<p class="v240-rank-note">นับเมื่อสมาชิกกดรับผลิตภัณฑ์สำเร็จเท่านั้น • Aida ไม่ร่วมอันดับ</p>':''}<div class="v240-rank-scroll">${rows.map((r,i)=>`<article class="v240-rank-row ${i<3?`top${i+1}`:""}"><strong>#${i+1}</strong><div><b>${v240Esc(r.name)}</b><small>${factory?"ผลิตและรับแล้ว":"ความสุขรวม"}</small></div><span>${factory?r.factory:r.happiness}</span></article>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-v240-rank]").forEach(b=>b.onclick=()=>v240ShowAlpacaRanks(b.dataset.v240Rank));$("v240RankClose").onclick=closeModal}catch(e){message("โหลด Rank ไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  /* ---------- Rainbow fish ---------- */
+  const V240_RAINBOW={fishKey:"rainbow5",name:"ปลาสายรุ้ง พี่ไม่ปลื้ม",image:"fishing-fish-rainbow-tier5.png?v=240",tier:5,min:8,max:12};
+  try{FISHING_FISH[V240_RAINBOW.fishKey]={name:V240_RAINBOW.name,image:V240_RAINBOW.image,tier:5,min:8,max:12}}catch{}
+  const v240RollFishBase=rollFishingCatches;
+  rollFishingCatches=function(baitKey){const base=v240RollFishBase(baitKey),chance={bait1:.80,bait2:.90,bait3:.20,bait4:.25,guardian:0,guardianBait:0}[baitKey]??0;if(chance<=0||Math.random()>=chance)return base;const count=Math.random()<.22?2:1;/* rainbow-specific double; existing fish count distribution remains untouched */const rainbow=Array.from({length:count},()=>({fishKey:V240_RAINBOW.fishKey,name:V240_RAINBOW.name,image:V240_RAINBOW.image,weight:Number((8+Math.random()*4).toFixed(2))}));const keep=(base.catches||[]).filter(c=>c.fishKey!==V240_RAINBOW.fishKey);const catches=[...rainbow,...keep].slice(0,3),total=Number(catches.reduce((n,c)=>n+Number(c.weight||0),0).toFixed(2));return{catches,total}};
+
+  async function Y24_recordRainbowCampaign(slot,receiptOverride=""){try{const rainbow=(slot?.catches||[]).filter(c=>c.fishKey===V240_RAINBOW.fishKey||c.name===V240_RAINBOW.name).length;if(!rainbow)return;const receipt=receiptOverride||`${slot.dateKey||currentBangkokDateKey()}:${slot.pondId||0}:${slot.slot||0}:${slot.startedAt||slot.finishAt||0}`;await v240AddCampaignScore(V240_RAINBOW_ID,rainbow,{receipt})}catch(e){console.warn("rainbow campaign score",e)}}
+  globalThis.Y24_recordRainbowCampaign=Y24_recordRainbowCampaign;
+
+  /* Attach campaign scoring to the final fish-claim button without changing fishing ownership/storage semantics. */
+  const v240OpenModalBase=openModal;
+  openModal=function(){const r=v240OpenModalBase();queueMicrotask(()=>{const btn=$("ynuClaimFish");if(btn&&!btn.__v240Rainbow){const cards=[...document.querySelectorAll("#modalContent .fishing-result-card")],count=cards.filter(c=>c.textContent.includes(V240_RAINBOW.name)).length,old=btn.onclick;btn.onclick=async ev=>{const before=Object.keys((ownState||state)?.fishingClaimReceipts||{}).length;const ret=await old?.call(btn,ev);setTimeout(async()=>{const afterState=normalizeState(ownState||state,currentMember),receipts=afterState.fishingClaimReceipts||{},keys=Object.keys(receipts);if(count>0&&keys.length>before){const receipt=keys.sort((a,b)=>Number(receipts[b])-Number(receipts[a]))[0];await v240AddCampaignScore(V240_RAINBOW_ID,count,{receipt}).catch(console.warn)}},120);return ret};btn.__v240Rainbow=true}});return r};
+
+  /* ---------- Campaign score core ---------- */
+  async function v240AddCampaignScore(campaignId,amount,{night=0,receipt=""}={}){if(!cloudReady||!currentMemberKey||currentMember==="Aida")return;amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;const cfg=campaignId===V240_COOK_ID?V240_CAMPAIGNS.cooking:V240_CAMPAIGNS.rainbow;if(v240Now()>cfg.endAt)return;const {db,fs}=await getFirebaseContext(),scoreRef=fs.doc(db,"campaignScores",campaignId),saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const [sc,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sv.data(),currentMember);if(receipt){s.campaignReceipts=v240Obj(s.campaignReceipts);const rk=`${campaignId}:${receipt}`;if(s.campaignReceipts[rk])return;s.campaignReceipts[rk]=v240Now()}const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;names[currentMemberKey]=currentProfileDisplayName();if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(scoreRef,{campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:false});next=s});if(next)v240Apply(next)}
+
+  const V240_GENERAL_IDS=new Set(["r1","r2","r3","r4","r5","r6","r7","r8","rabbitMenu1","rabbitMenu2","rabbitMenu3","rabbitMenu4","rabbitMenu5","rabbitMenu6"]);
+  const V240_NIGHT_IDS=new Set(["n1","n2","n3","n4"]),V240_SPECIAL_IDS=new Set(["boatNew1","boatNew2","boatNew3","boatNew4","boatNew5","boatNew6","boatNew7","boatNew8"]);
+  function v240DishCount(s,id){try{return typeof dishCountInState==="function"?dishCountInState(id,s):v240Int(s?.dishInventory?.[id]||s?.dishes?.[id])}catch{return 0}}
+  const v240CraftBase=craft;
+  craft=function(id){const before=v240DishCount(ownState||state,id),r=v240CraftBase(id);setTimeout(()=>{const after=v240DishCount(ownState||state,id);if(after>before){const pts=V240_NIGHT_IDS.has(id)?7:V240_SPECIAL_IDS.has(id)?3:V240_GENERAL_IDS.has(id)?1:1;v240AddCampaignScore(V240_COOK_ID,pts,{night:V240_NIGHT_IDS.has(id)?1:0}).catch(console.warn)}},50);return r};
+  if(typeof craftBoatDrink==="function"){const b=craftBoatDrink;craftBoatDrink=function(id){const before=v240Int((ownState||state)?.boatDrinks?.[id]),r=b(id);setTimeout(()=>{if(v240Int((ownState||state)?.boatDrinks?.[id])>before)v240AddCampaignScore(V240_COOK_ID,2).catch(console.warn)},50);return r}}
+  if(typeof craftRainyMenu==="function"){const b=craftRainyMenu;craftRainyMenu=async function(id){const before=v240DishCount(ownState||state,id),r=await b(id);setTimeout(()=>{if(v240DishCount(ownState||state,id)>before)v240AddCampaignScore(V240_COOK_ID,4).catch(console.warn)},50);return r}}
+
+  const V240_COOK_REWARDS=[
+    {need:100,rewards:[{type:"special",key:"pestle100",qty:200,name:"สากกะเบือไฮโซ"},{type:"special",key:"angelWingCapsule",qty:200,name:"แคปซูลปีกนางฟ้า"}]},
+    {need:300,rewards:[{type:"merit",qty:500,name:"กุศล"}]},
+    {need:500,rewards:[{type:"mysteryDog",qty:50,name:"กล่องสุ่มน้องหมา"},{type:"mysteryCat",qty:50,name:"กล่องสุ่มน้องแมว"},{type:"mysteryJelly",qty:50,name:"กล่องสุ่มแมงกะพรุน"}]},
+    {need:1000,rewards:[{type:"randomAlpaca",qty:2,name:"อัลปาก้าเต็มวัยสุ่ม"}]},
+    {need:1250,rewards:[{type:"merit",qty:1500,name:"กุศล"},{type:"special",key:"angelWingCapsule",qty:500,name:"แคปซูลปีกนางฟ้า"}]},
+    {need:1500,rewards:[{type:"special",key:"friendGrassGreen",qty:500,name:"หญ้าเขียว"},{type:"special",key:"friendGrassYellow",qty:500,name:"หญ้าเหลือง"},{type:"special",key:"friendGrassRed",qty:500,name:"หญ้าแดง"},{type:"randomAlpaca",qty:3,name:"อัลปาก้าเต็มวัยสุ่ม"}]},
+    {need:2000,rewards:[{type:"merit",qty:2500,name:"กุศล"},{type:"bait",key:"bait4",qty:300,name:"เหยื่อตกปลามือโปร"}]},
+    {need:2500,rewards:[{type:"merit",qty:3000,name:"กุศล"},{type:"special",key:"angelWingCapsule",qty:500,name:"แคปซูลปีกนางฟ้า"},{type:"special",key:"coconut100",qty:300,name:"มะพร้าวสาวไอด้า"}]},
+    {need:3000,rewards:[{type:"choiceJellyV2",qty:4,name:"แมงกะพรุน V2 เลือก 4 ตัว"},{type:"choiceDog",qty:5,name:"น้องหมา เลือก 5 ตัว"}]}
+  ];
+  const V240_RAINBOW_REWARDS=[
+    {need:30,rewards:[{type:"merit",qty:200,name:"กุศล"},{type:"special",key:"angelWingCapsule",qty:300,name:"แคปซูลปีกนางฟ้า"}]},
+    {need:50,rewards:[{type:"merit",qty:500,name:"กุศล"},{type:"randomAlpaca",qty:1,name:"อัลปาก้าเต็มวัยสุ่ม"}]},
+    {need:100,rewards:[{type:"merit",qty:1000,name:"กุศล"},{type:"special",key:"pestle100",qty:300,name:"สากกะเบือไฮโซ"},{type:"special",key:"coconut100",qty:300,name:"มะพร้าวสาวไอด้า"}]},
+    {need:150,rewards:[{type:"merit",qty:1200,name:"กุศล"},{type:"randomAlpaca",qty:3,name:"อัลปาก้าเต็มวัยสุ่ม"}]},
+    {need:200,rewards:[{type:"randomAlpaca",qty:1,name:"อัลปาก้าเต็มวัยสุ่ม"},{type:"bait",key:"bait4",qty:100,name:"เหยื่อตกปลามือโปร"}]},
+    {need:250,rewards:[{type:"randomAlpaca",qty:1,name:"อัลปาก้าเต็มวัยสุ่ม"},{type:"alpacaFood",key:"pellet",qty:100,name:"อาหารเม็ดอัลปาก้า"},{type:"special",key:"angelWingCapsule",qty:300,name:"แคปซูลปีกนางฟ้า"}]},
+    {need:300,rewards:[{type:"merit",qty:2000,name:"กุศล"}]}
+  ];
+  function v240RewardImage(r){
+    if(r.type==="randomAlpaca")return V240_COLOR_IMG.white;
+    if(r.type==="alpacaFood")return "alpaca-pellet-food.png";
+    if(r.type==="bait")return (typeof FISHING_BAITS!=="undefined"?FISHING_BAITS?.[r.key]?.image:"")||"";
+    if(r.type==="special")return (typeof SPECIAL_ITEMS!=="undefined"?SPECIAL_ITEMS?.[r.key]?.image:"")||"";
+    if(r.type.includes("Jelly"))return (typeof JELLY_BOX!=="undefined"?JELLY_BOX.image:"")||"";
+    if(r.type.includes("Dog"))return (typeof DOG_BOX!=="undefined"?DOG_BOX.image:"")||Object.values(typeof DOG_TYPES!=="undefined"?DOG_TYPES:{})[0]?.image||"";
+    if(r.type.includes("Cat"))return (typeof CAT_BOX!=="undefined"?CAT_BOX.image:"")||Object.values(typeof CAT_TYPES!=="undefined"?CAT_TYPES:{})[0]?.image||"";
+    return"";
+  }
+  function v240RandomAdult(){const color=V240_COLORS[Math.floor(Math.random()*V240_COLORS.length)],sex=Math.random()<.5?"male":"female";return{id:v240Uid("reward-alpaca"),type:"adult",color,sex,source:"campaign-v240",createdAt:v240Now()}}
+  function v240GrantReward(s,r){if(r.type==="merit"){s.merit=(Number(s.merit)||0)+r.qty;return[]}if(r.type==="special"){s.specials=v240Obj(s.specials);s.specials[r.key]=v240Int(s.specials[r.key])+r.qty;return[]}if(r.type==="bait"){s.fishingBaits=v240Obj(s.fishingBaits);s.fishingBaits[r.key]=v240Int(s.fishingBaits[r.key])+r.qty;return[]}if(r.type==="alpacaFood"){s.alpaca.inventory.food[r.key]=v240Int(s.alpaca.inventory.food[r.key])+r.qty;return[]}if(r.type==="mysteryJelly"){s.mysteryBoxes=v240Int(s.mysteryBoxes)+r.qty;return[]}if(r.type==="mysteryCat"){s.catMysteryBoxes=v240Int(s.catMysteryBoxes)+r.qty;return[]}if(r.type==="mysteryDog"){s.dogMysteryBoxes=v240Int(s.dogMysteryBoxes)+r.qty;return[]}if(r.type==="randomAlpaca"){const arr=[];for(let i=0;i<r.qty;i++){const a=v240RandomAdult();s.alpaca.vault.push(a);arr.push(a)}return arr}return[]}
+  async function v240CampaignScoreData(cfg){const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"campaignScores",cfg.id));return snap.exists()?snap.data():{scores:{},names:{},nightCounts:{}}}
+  function v240CampaignRankRows(cfg,d){return Object.keys(MEMBERS).filter(n=>n!=="Aida").map(name=>{const key=memberKeyFromName(name);return{name,key,score:v240Int(d.scores?.[key]),night:v240Int(d.nightCounts?.[key])}}).sort((a,b)=>b.score-a.score||(cfg.id===V240_COOK_ID?b.night-a.night:0)||a.name.localeCompare(b.name,"th"))}
+  function v240CampaignRules(cfg){return cfg.id===V240_COOK_ID?`<p>คราฟสำเร็จเท่านั้นจึงได้คะแนน</p><div class="v240-rule-chips"><span>🍽️ ทั่วไป +1</span><span>🥤 เครื่องดื่ม +2</span><span>👑 พิเศษ +3</span><span>🌧️ หน้าฝน +4</span><span>🌙 รอบดึก +7</span></div><p>คะแนนเท่ากัน ผู้ที่คราฟเมนูรอบดึกสำเร็จมากกว่าจะอยู่สูงกว่า</p>`:`<p>ยัยหนูแอบปล่อยปลาตัวใหม่ลงบ่อตกปลาแล้วน๊าาา 🎣✨</p><p>ชื่อว่า <b>“ปลาสายรุ้ง พี่ไม่ปลื้ม”</b></p><p>จะต้องใช้เหยื่อแบบไหน? ต้องไปตกที่บ่อไหน? หรือจริง ๆ แล้วต้องเลือกจังหวะเวลาให้ถูก งานนี้ไม่มีบอกใบ้ง่าย ๆ ลองค้นหากันเองนะคะ</p><p>นับคะแนนเฉพาะปลาสายรุ้งที่ <b>กดรับน้ำหนักสำเร็จ</b> เท่านั้น • 1 ตัว = 1 คะแนน</p>`}
+  async function v240ShowCampaign(kind,page="rank"){const cfg=V240_CAMPAIGNS[kind];if(!cfg)return;try{const d=await v240CampaignScoreData(cfg),rows=v240CampaignRankRows(cfg,d),mine=v240Int(d.scores?.[currentMemberKey]),bg=page==="rewards"?cfg.bgReward:page==="rules"?cfg.bgRules:cfg.bgRank,rewards=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,s=normalizeState(ownState||state,currentMember),claims=s.campaignClaims?.[cfg.id]||{};let body="";if(page==="rank")body=`<div class="v240-campaign-title"><h2>${v240Esc(cfg.title)}</h2><div>คะแนนของคุณ <b>${mine}</b></div></div><div class="v240-campaign-scroll v240-campaign-ranks">${rows.map((x,i)=>`<article><strong>#${i+1}</strong><span><b>${v240Esc(x.name)}</b>${cfg.id===V240_COOK_ID?`<small>รอบดึก ${x.night}</small>`:""}</span><em>${x.score}</em></article>`).join("")}</div>`;else if(page==="rules")body=`<div class="v240-campaign-scroll"><article class="v240-rules-card"><h2>📜 เงื่อนไข</h2>${v240CampaignRules(cfg)}</article></div>`;else body=`<div class="v240-campaign-scroll v240-reward-list">${rewards.map(x=>{const done=Boolean(claims[x.need]),ready=mine>=x.need;return `<article class="v240-milestone ${ready?"ready":""}"><strong>${x.need}</strong><div class="v240-milestone-rewards">${x.rewards.map(r=>`<span>${v240RewardImage(r)?`<img src="${v240RewardImage(r)}" alt="">`:"🙏"}<small>${v240Esc(r.name)} ×${r.qty}</small></span>`).join("")}</div><button data-v240-campaign-claim="${kind}:${x.need}" ${ready&&!done?"":"disabled"}>${done?"รับแล้ว":"รับรางวัล"}</button></article>`}).join("")}</div>`;$("modalContent").innerHTML=`<section class="feature-panel v240-campaign" style="--v240-campaign-bg:url('${bg}')"><div class="v240-campaign-shade"></div><div class="v240-campaign-inner"><header><button id="v240CampaignBack">← กลับฟาร์ม</button><button id="v240CampaignRules">เงื่อนไข</button></header>${body}<footer><button id="v240CampaignGift">🎁<small>รางวัล</small></button><div>⏳ <b id="v240CampaignCountdown">${v240Countdown(cfg.endAt-v240Now())}</b></div></footer></div></section>`;openModal();$("v240CampaignBack").onclick=closeModal;$("v240CampaignRules").onclick=()=>v240ShowCampaign(kind,"rules");$("v240CampaignGift").onclick=()=>v240ShowCampaign(kind,"rewards");document.querySelectorAll("[data-v240-campaign-claim]").forEach(b=>{const [k,n]=b.dataset.v240CampaignClaim.split(":");b.onclick=()=>v240ClaimCampaignReward(k,Number(n))});const timer=setInterval(()=>{const e=$("v240CampaignCountdown");if(!e){clearInterval(timer);return}e.textContent=v240Countdown(cfg.endAt-v240Now())},1000)}catch(e){message("เปิดแคมเปญไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ClaimCampaignReward(kind,need){const cfg=V240_CAMPAIGNS[kind],defs=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,def=defs.find(x=>x.need===need);if(!def)return;/* choice rewards use dedicated picker */if(def.rewards.some(r=>r.type==="choiceJellyV2"||r.type==="choiceDog"))return v240ShowChoiceReward(kind,need,def);try{const d=await v240CampaignScoreData(cfg),score=v240Int(d.scores?.[currentMemberKey]);if(score<need)throw new Error("คะแนนยังไม่ถึงรางวัลนี้");const out=await v240MutateSave(s=>{const claims=s.campaignClaims[cfg.id];if(claims[need])throw new Error("รางวัลนี้รับไปแล้ว");const alpacas=[];def.rewards.forEach(r=>alpacas.push(...v240GrantReward(s,r)));claims[need]=v240Now();return alpacas},{profile:true});const alpacas=out.result||[];$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${def.rewards.map(r=>{const img=v240RewardImage(r);return img?`<img src="${img}" alt="">`:""}).join("")}${alpacas.map(a=>`<img src="${V240_COLOR_IMG[a.color]}" alt="">`).join("")}</div><h2>ยินดีด้วยค่ะ</h2><div class="v240-reward-lines">${def.rewards.map(r=>`<span>${v240Esc(r.name)} ×${r.qty}</span>`).join("")}${alpacas.map(a=>`<span>อัลปาก้าสี${V240_COLOR_TH[a.color]} • ${a.sex==="female"?"เพศเมีย":"เพศผู้"}</span>`).join("")}</div><button id="v240CampaignRewardDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240CampaignRewardDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function v240JellyV2Defs(){try{return typeof Y26_JELLY_V2!=="undefined"?Y26_JELLY_V2:{}}catch{return{}}}
+  function v240DogDefs(){try{return typeof DOG_TYPES!=="undefined"?DOG_TYPES:{}}catch{return{}}}
+  function v240ShowChoiceReward(kind,need,def){const jelly=def.rewards.find(r=>r.type==="choiceJellyV2"),dog=def.rewards.find(r=>r.type==="choiceDog"),jdefs=v240JellyV2Defs(),ddefs=v240DogDefs();$("modalContent").innerHTML=`<section class="feature-panel v240-choice-reward"><h2>🎁 เลือกรางวัล ${need} คะแนน</h2>${jelly?`<h3>เลือกแมงกะพรุน V2 ให้ครบ 4 ตัว (เลือกซ้ำได้)</h3><div class="v240-choice-grid">${Object.entries(jdefs).map(([k,x])=>`<label><img src="${x.image}" alt=""><b>${v240Esc(x.name)}</b><input type="number" min="0" max="4" value="0" data-v240-jelly-choice="${k}"></label>`).join("")}</div>`:""}${dog?`<h3>เลือกน้องหมารวม 5 ตัว</h3><div class="v240-choice-grid">${Object.entries(ddefs).map(([k,x])=>`<label><img src="${x.image}" alt=""><b>${v240Esc(x.name)}</b><input type="number" min="0" max="5" value="0" data-v240-dog-choice="${k}"></label>`).join("")}</div>`:""}<button id="v240ChoiceConfirm" class="primary-spooky-action">ยืนยันรางวัล</button><button id="v240ChoiceBack">กลับ</button></section>`;openModal();$("v240ChoiceConfirm").onclick=()=>v240CommitChoiceReward(kind,need,def);$("v240ChoiceBack").onclick=()=>v240ShowCampaign(kind,"rewards")}
+  async function v240CommitChoiceReward(kind,need,def){const cfg=V240_CAMPAIGNS[kind],jelly=def.rewards.find(r=>r.type==="choiceJellyV2"),dog=def.rewards.find(r=>r.type==="choiceDog"),jc={},dc={};document.querySelectorAll("[data-v240-jelly-choice]").forEach(i=>jc[i.dataset.v240JellyChoice]=v240Int(i.value));document.querySelectorAll("[data-v240-dog-choice]").forEach(i=>dc[i.dataset.v240DogChoice]=v240Int(i.value));if(jelly&&Object.values(jc).reduce((a,b)=>a+b,0)!==4)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุน V2 รวมให้ครบ 4 ตัวค่ะ");if(dog&&Object.values(dc).reduce((a,b)=>a+b,0)!==5)return message("ยังเลือกไม่ครบ","เลือกน้องหมารวมให้ครบ 5 ตัวค่ะ");try{const d=await v240CampaignScoreData(cfg);if(v240Int(d.scores?.[currentMemberKey])<need)throw new Error("คะแนนยังไม่ถึง");await v240MutateSave(s=>{if(s.campaignClaims[cfg.id][need])throw new Error("รับรางวัลนี้แล้ว");if(jelly){s.jellyfishV2=v240Obj(s.jellyfishV2);Object.entries(jc).forEach(([k,n])=>s.jellyfishV2[k]=v240Int(s.jellyfishV2[k])+n)}if(dog){try{ensureDogState(s)}catch{}s.dogs=Array.isArray(s.dogs)?s.dogs:[];const defs=v240DogDefs();Object.entries(dc).forEach(([k,n])=>{for(let i=0;i<n;i++)s.dogs.push({id:v240Uid("campaign-dog"),typeKey:k,customName:"",placedFarm:0,placedPen:0,createdAt:v240Now(),expiresAt:v240Now()+30*24*V240_HOUR})})}s.campaignClaims[cfg.id][need]=v240Now()});$("modalContent").innerHTML='<section class="feature-panel v240-reward-popup"><h2>🎉 รับรางวัลเรียบร้อยแล้ว</h2><p>รางวัลถูกบันทึกเข้ากระเป๋า/คลังแล้วค่ะ</p><button id="v240ChoiceDone" class="primary-spooky-action">ยืนยัน</button></section>';openModal();$("v240ChoiceDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  function v240MountCampaignShortcuts(){const box=document.querySelector(".campaign-shortcut-section .hud-menu-section-items");if(!box)return;if(!$("v240CookingCampaignBtn")){box.insertAdjacentHTML("beforeend",'<button id="v240CookingCampaignBtn" class="hud-menu-item campaign-shortcut-item" type="button"><span>🍳</span><div><b>สุดยอดแม่ครัว หัวโบราณ</b><small>แคมเปญคราฟอาหาร</small></div><i>›</i></button><button id="v240RainbowCampaignBtn" class="hud-menu-item campaign-shortcut-item" type="button"><span>🌈</span><div><b>ตามล่าหาปลาสายรุ้ง</b><small>ปลาสายรุ้ง พี่ไม่ปลื้ม</small></div><i>›</i></button>');$("v240CookingCampaignBtn").onclick=()=>v240ShowCampaign("cooking","rank");$("v240RainbowCampaignBtn").onclick=()=>v240ShowCampaign("rainbow","rank")}}
+
+  /* ---------- Gift/admin extensions ---------- */
+  function v240FactoryProductMeta(key){return V240_PRODUCTS[key]||null}
+  if(typeof adminGiftCatalog==="function"){
+    const base=adminGiftCatalog;adminGiftCatalog=function(){const list=base(),push=(e)=>{if(!list.some(x=>x.type===e.type&&x.key===e.key))list.push(e)};push({type:"alpacaOther",key:"processingLicense",name:V240_ITEM.processingLicense.name,category:"อัลปาก้า"});push({type:"alpacaOther",key:"treasureBox",name:V240_ITEM.treasureBox.name,category:"อัลปาก้า"});push({type:"alpacaFood",key:"tricolorPudding",name:V240_ITEM.tricolorPudding.name,category:"อัลปาก้า"});push({type:"alpacaMedicine",key:"woolGrowthMedicine",name:V240_ITEM.woolGrowthMedicine.name,category:"อัลปาก้า"});Object.entries(V240_PRODUCTS).forEach(([k,r])=>push({type:"alpacaFactoryProduct",key:k,name:r.name,category:"ผลิตภัณฑ์โรงงาน"}));return list};
+  }
+  if(typeof adminEntryCount==="function"){
+    const base=adminEntryCount;adminEntryCount=function(s,e){if(v240IsAdmin()&&["alpacaOther","alpacaFood","alpacaMedicine","alpacaFactoryProduct","alpacaAdult","alpacaBaby","alpacaWool"].includes(e?.type))return 9999;return base(s,e)};
+  }
+  if(typeof removeGiftItemFromState==="function"){
+    const base=removeGiftItemFromState;removeGiftItemFromState=function(s,type,key,qty){v240EnsureState(s);qty=Math.max(1,v240Int(qty));if(v240IsAdmin()&&["alpacaOther","alpacaFood","alpacaMedicine","alpacaFactoryProduct","alpacaAdult","alpacaBaby","alpacaWool"].includes(type))return true;if(type==="alpacaFactoryProduct"){if(v240Int(s.alpaca.factory.products[key])<qty)return false;s.alpaca.factory.products[key]-=qty;return true}if(type==="alpacaOther"){if(v240Int(s.alpaca.inventory.other[key])<qty)return false;s.alpaca.inventory.other[key]-=qty;if(key==="processingLicense"){s.specials=v240Obj(s.specials);s.specials.processingLicense=s.alpaca.inventory.other.processingLicense}return true}if(type==="alpacaFood"){if(v240Int(s.alpaca.inventory.food[key])<qty)return false;s.alpaca.inventory.food[key]-=qty;return true}if(type==="alpacaMedicine"){if(v240Int(s.alpaca.inventory.medicine[key])<qty)return false;s.alpaca.inventory.medicine[key]-=qty;return true}if(type==="alpacaWool"){if(v240Int(s.alpaca.inventory.wool[key])<qty)return false;s.alpaca.inventory.wool[key]-=qty;return true}if(type==="fishingBait"){if(v240Int(s.fishingBaits?.[key])<qty)return false;s.fishingBaits[key]-=qty;return true}return base(s,type,key,qty)};
+  }
+  if(typeof addGiftItemToState==="function"){
+    const base=addGiftItemToState;addGiftItemToState=function(s,gift){v240EnsureState(s);if(Array.isArray(gift?.items)){gift.items.forEach(i=>addGiftItemToState(s,{itemType:i.type,itemKey:i.key,qty:i.qty,instance:i.instance}));return}const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,v240Int(gift?.qty)||1);if(type==="alpacaFactoryProduct"){s.alpaca.factory.products[key]=v240Int(s.alpaca.factory.products[key])+qty;return}if(type==="alpacaOther"){s.alpaca.inventory.other[key]=v240Int(s.alpaca.inventory.other[key])+qty;if(key==="processingLicense"){s.specials=v240Obj(s.specials);s.specials.processingLicense=s.alpaca.inventory.other.processingLicense}return}if(type==="alpacaFood"){s.alpaca.inventory.food[key]=v240Int(s.alpaca.inventory.food[key])+qty;return}if(type==="alpacaMedicine"){s.alpaca.inventory.medicine[key]=v240Int(s.alpaca.inventory.medicine[key])+qty;return}if(type==="alpacaWool"){s.alpaca.inventory.wool[key]=v240Int(s.alpaca.inventory.wool[key])+qty;return}if(type==="fishingBait"){s.fishingBaits=v240Obj(s.fishingBaits);s.fishingBaits[key]=v240Int(s.fishingBaits[key])+qty;return}if(type==="jellyV2"){s.jellyfishV2=v240Obj(s.jellyfishV2);s.jellyfishV2[key]=v240Int(s.jellyfishV2[key])+qty;return}if(type==="alpacaInstance"&&gift.instance){s.alpaca.vault.push(cloneData(gift.instance));return}
+      if(type==="catInstance"&&gift.instance){s.cats=Array.isArray(s.cats)?s.cats:[];s.cats.push(cloneData(gift.instance));return}
+      if(type==="dogInstance"&&gift.instance){s.dogs=Array.isArray(s.dogs)?s.dogs:[];s.dogs.push(cloneData(gift.instance));return}
+      return base(s,gift)};
+  }
+
+  function v240GiftImage(e){if(e.type==="alpacaFactoryProduct")return V240_PRODUCTS[e.key]?.image||"";if(e.type==="alpacaOther")return V240_ITEM[e.key]?.image||V240_ITEM.processingLicense.image;if(e.type==="alpacaFood"&&e.key==="tricolorPudding")return V240_ITEM.tricolorPudding.image;if(e.type==="alpacaMedicine"&&e.key==="woolGrowthMedicine")return V240_ITEM.woolGrowthMedicine.image;try{if(e.type==="crop")return CROPS[e.key]?.selectImg||"";if(e.type==="product")return ANIMAL_PRODUCTS[e.key]?.image||"";if(e.type==="dish")return recipeById(e.key)?.image||"";if(e.type==="special")return SPECIAL_ITEMS[e.key]?.image||"";if(e.type==="jelly")return JELLYFISH_TYPES[e.key]?.image||"";if(e.type==="boatDrink")return BOAT_DRINK_BY_ID[e.key]?.image||""}catch{}return""}
+  function v240CatalogCategory(e){if(e.category)return e.category;if(String(e.type).startsWith("alpaca"))return"อัลปาก้า";if(["crop"].includes(e.type))return"พืชพรรณ";if(["dish","boatDrink","rainyMenu"].includes(e.type))return"อาหาร";if(["jelly","jellyV2","animal","catInstance","dogInstance"].includes(e.type))return"สัตว์";return"ไอเท็ม"}
+  function v240AdminCatalog(){const list=typeof adminGiftCatalog==="function"?adminGiftCatalog():[];return list.map((e,i)=>({...e,_id:i,category:v240CatalogCategory(e)}))}
+  async function v240SendAdminBundle(targetKeys,items){if(!v240IsAdmin())return;const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db),targets=targetKeys.filter(Boolean);if(!targets.length)throw new Error("กรุณาเลือกสมาชิก");for(const key of targets){const ref=fs.doc(fs.collection(db,"gifts"));batch.set(ref,{fromKey:"aida",fromName:"Aida",toKey:key,toName:key,bundle:true,items:items.map(x=>({type:x.type,key:x.key,name:x.name,qty:x.qty})),status:"pending",createdAt:fs.serverTimestamp()})}await batch.commit()}
+  async function v240ShowAdminCenter(){if(!v240IsAdmin())return message("ไม่มีสิทธิ์","เมนูนี้เปิดเฉพาะ Aida/Admin");v240AdminTopup(ownState||state);const catalog=v240AdminCatalog(),cats=[...new Set(catalog.map(x=>x.category))],memberRows=Object.keys(MEMBERS).filter(n=>n!=="Aida");$("modalContent").innerHTML=`<section class="feature-panel v240-admin-center"><header><div><small>🛡️ Aida / Admin</small><h2>ศูนย์แอดมิน</h2></div><button id="v240AdminClose">×</button></header><p class="v240-admin-note">ไอเท็มใหม่ทั้งหมดของ Aida มีสต๊อก 9999 • ส่งคละหมวดในครั้งเดียวได้</p><div class="v240-admin-targets"><label><input id="v240AdminAll" type="checkbox"> สมาชิกทุกคน</label>${memberRows.map(n=>`<label><input type="checkbox" data-v240-admin-target="${memberKeyFromName(n)}">${v240Esc(n)}</label>`).join("")}</div><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-admin-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240AdminItems" class="v240-admin-items"></div><div id="v240AdminSelected" class="v240-admin-selected">ยังไม่ได้เลือกไอเท็ม</div><button id="v240AdminSend" class="primary-spooky-action">ส่งของที่เลือก</button><button id="v240AdminLegacy" class="secondary-action">คำขอซื้อ / เครื่องมือแอดมินเดิม</button></section>`;openModal();const picked=new Map();let cat=cats[0];const paint=()=>{const rows=catalog.filter(x=>x.category===cat);$("v240AdminItems").innerHTML=rows.map(e=>`<article><span>${v240GiftImage(e)?`<img src="${v240GiftImage(e)}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b></span><input type="number" min="1" max="9999" value="${picked.get(`${e.type}:${e.key}`)?.qty||1}" data-v240-admin-qty="${e._id}"><button data-v240-admin-pick="${e._id}" class="${picked.has(`${e.type}:${e.key}`)?"active":""}">${picked.has(`${e.type}:${e.key}`)?"เลือกแล้ว":"เลือก"}</button></article>`).join("");document.querySelectorAll("[data-v240-admin-pick]").forEach(b=>b.onclick=()=>{const e=catalog[Number(b.dataset.v240AdminPick)],q=Math.max(1,Math.min(9999,v240Int(document.querySelector(`[data-v240-admin-qty=\"${e._id}\"]`)?.value)||1)),k=`${e.type}:${e.key}`;if(picked.has(k))picked.delete(k);else picked.set(k,{...e,qty:q});paint();paintSelected()})};const paintSelected=()=>{$("v240AdminSelected").textContent=picked.size?`เลือกแล้ว ${picked.size} รายการ • เปลี่ยนหมวดได้โดยของไม่หาย`:"ยังไม่ได้เลือกไอเท็ม"};document.querySelectorAll("[data-v240-admin-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.v240AdminCat;document.querySelectorAll("[data-v240-admin-cat]").forEach(x=>x.classList.toggle("active",x===b));paint()});$("v240AdminAll").onchange=()=>document.querySelectorAll("[data-v240-admin-target]").forEach(x=>x.checked=$("v240AdminAll").checked);$("v240AdminSend").onclick=async()=>{try{const targets=[...document.querySelectorAll("[data-v240-admin-target]:checked")].map(x=>x.dataset.v240AdminTarget),items=[...picked.values()];if(!items.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");await v240SendAdminBundle(targets,items);message("ส่งของสำเร็จ",`ส่ง ${items.length} รายการให้ ${targets.length} คนแล้วค่ะ`)}catch(e){message("ส่งไม่ได้",e.message||"กรุณาลองใหม่")}};$("v240AdminLegacy").onclick=()=>{closeModal();v240AdminCenterBase?.()};$("v240AdminClose").onclick=closeModal;paint();paintSelected()}
+  const v240AdminCenterBase=typeof showAdminCenter==="function"?showAdminCenter:null;
+  if(typeof showAdminCenter==="function")showAdminCenter=v240ShowAdminCenter;
+
+  /* Member gift catalog: all stackable inventory + factory products + actual alpaca vault instances. Daily aggregate is 30. */
+  function v240MemberGiftEntries(s=ownState||state){s=normalizeState(s,currentMember);const rows=[];const add=(type,key,name,qty,image="",instance=null)=>{qty=v240Int(qty);if(qty>0)rows.push({type,key,name,qty,image,instance,category:v240CatalogCategory({type})})};Object.entries(s.bag||{}).forEach(([k,q])=>{if(CROPS?.[k])add("crop",k,CROPS[k].name,q,CROPS[k].selectImg||"")});Object.entries(s.animalProducts||{}).forEach(([k,q])=>add("product",k,ANIMAL_PRODUCTS?.[k]?.name||k,q,ANIMAL_PRODUCTS?.[k]?.image||""));try{RECIPES.forEach(r=>add("dish",r.id,r.name,v240DishCount(s,r.id),r.image))}catch{}Object.entries(s.specials||{}).forEach(([k,q])=>add("special",k,SPECIAL_ITEMS?.[k]?.name||k,q,SPECIAL_ITEMS?.[k]?.image||""));Object.entries(s.specialAnimals||{}).forEach(([k,q])=>add("jelly",k,JELLYFISH_TYPES?.[k]?.name||k,q,JELLYFISH_TYPES?.[k]?.image||""));Object.entries(s.jellyfishV2||{}).forEach(([k,q])=>{const d=v240JellyV2Defs()[k];add("jellyV2",k,d?.name||k,q,d?.image||"")});Object.entries(s.fishingBaits||{}).forEach(([k,q])=>add("fishingBait",k,FISHING_BAITS?.[k]?.name||k,q,FISHING_BAITS?.[k]?.image||""));Object.entries(s.alpaca.inventory.food||{}).forEach(([k,q])=>add("alpacaFood",k,k==="tricolorPudding"?V240_ITEM.tricolorPudding.name:k,q,k==="tricolorPudding"?V240_ITEM.tricolorPudding.image:""));Object.entries(s.alpaca.inventory.medicine||{}).forEach(([k,q])=>add("alpacaMedicine",k,k==="woolGrowthMedicine"?V240_ITEM.woolGrowthMedicine.name:k,q,k==="woolGrowthMedicine"?V240_ITEM.woolGrowthMedicine.image:""));Object.entries(s.alpaca.inventory.other||{}).forEach(([k,q])=>add("alpacaOther",k,k==="processingLicense"?V240_ITEM.processingLicense.name:k==="treasureBox"?V240_ITEM.treasureBox.name:k,q,k==="processingLicense"?V240_ITEM.processingLicense.image:k==="treasureBox"?V240_ITEM.treasureBox.image:""));Object.entries(s.alpaca.inventory.wool||{}).forEach(([k,q])=>add("alpacaWool",k,`ขนอัลปาก้าสี${V240_COLOR_TH[k]||k}`,q,V240_WOOL_IMG[k]||""));Object.entries(s.alpaca.factory.products||{}).forEach(([k,q])=>{const r=V240_PRODUCTS[k];if(r)add("alpacaFactoryProduct",k,r.name,q,r.image)});(s.alpaca.vault||[]).forEach(a=>add("alpacaInstance",a.id,`อัลปาก้า${a.type==="baby"?"เบบี้":"เต็มวัย"}สี${V240_COLOR_TH[a.color]||a.color}`,1,V240_COLOR_IMG[a.color]||"",a));return rows}
+
+
+  /* Member-to-member gifts: anything actually owned in bag/warehouse, 30 total/day. */
+  const v240GiftComposerBase=typeof showGiftComposer==="function"?showGiftComposer:null;
+  function v240MemberGiftEntriesFull(s=ownState||state){
+    const rows=v240MemberGiftEntries(s);
+    try{(s.cats||[]).filter(c=>!c.placedFarm).forEach(c=>rows.push({type:"catInstance",key:c.id,name:`น้องแมว ${typeof catDisplayName==="function"?catDisplayName(c):c.typeKey}`,qty:1,count:1,image:(typeof CAT_TYPES!=="undefined"?CAT_TYPES[c.typeKey]?.image:"")||"",instance:cloneData(c),category:"สัตว์"}))}catch{}
+    try{(s.dogs||[]).filter(d=>!d.placedHotel).forEach(d=>rows.push({type:"dogInstance",key:d.id,name:`น้องหมา ${typeof dogDisplayName==="function"?dogDisplayName(d):d.typeKey}`,qty:1,count:1,image:(typeof DOG_TYPES!=="undefined"?DOG_TYPES[d.typeKey]?.image:"")||"",instance:cloneData(d),category:"สัตว์"}))}catch{}
+    rows.forEach(r=>{if(r.count==null)r.count=r.qty||1;if(!r.image)r.image=v240GiftImage(r)});
+    return rows;
+  }
+  function v240RemoveGiftOwned(s,e,qty){
+    v240EnsureState(s);qty=Math.max(1,v240Int(qty)||1);
+    if(e.type==="alpacaInstance"){const i=s.alpaca.vault.findIndex(a=>a.id===e.key);if(i<0)return false;s.alpaca.vault.splice(i,1);return true}
+    if(e.type==="catInstance"){const i=(s.cats||[]).findIndex(a=>a.id===e.key&&!a.placedFarm);if(i<0)return false;s.cats.splice(i,1);return true}
+    if(e.type==="dogInstance"){const i=(s.dogs||[]).findIndex(a=>a.id===e.key&&!a.placedHotel);if(i<0)return false;s.dogs.splice(i,1);return true}
+    if(e.type==="alpacaWool"){if(v240Int(s.alpaca.inventory.wool[e.key])<qty)return false;s.alpaca.inventory.wool[e.key]-=qty;return true}
+    return removeGiftItemFromState(s,e.type,e.key,qty);
+  }
+  async function v240SendFriendGift(targetKey,targetName,entry,qty){
+    if(!entry||!cloudReady)return;
+    qty=Math.max(1,v240Int(qty)||1);
+    if(["alpacaInstance","catInstance","dogInstance"].includes(entry.type))qty=1;
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),giftRef=fs.doc(fs.collection(db,"gifts")),mailRef=fs.doc(db,"mailboxes",targetKey,"items",giftRef.id);let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);v240EnsureState(s);
+        const dk=currentBangkokDateKey();if(s.friendGiftDaily.dateKey!==dk)s.friendGiftDaily={dateKey:dk,count:0};
+        if(v240Int(s.friendGiftDaily.count)+qty>30)throw new Error(`วันนี้ส่งได้อีก ${Math.max(0,30-v240Int(s.friendGiftDaily.count))} ชิ้น/ตัว`);
+        if(!v240RemoveGiftOwned(s,entry,qty))throw new Error("ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
+        s.friendGiftDaily.count=v240Int(s.friendGiftDaily.count)+qty;next=s;
+        const gift={fromKey:currentMemberKey,fromName:currentMember,toKey:targetKey,toName:targetName,itemType:entry.type,itemKey:entry.key,itemName:entry.name,itemImage:entry.image||"",qty,status:"pending",createdAt:fs.serverTimestamp()};
+        if(entry.instance)gift.instance=cloneData(entry.instance);
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,gift);tx.set(mailRef,{source:"friend",type:"gift",giftId:giftRef.id,fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} ส่งของขวัญให้คุณ 🎁`,text:`${entry.name} ×${qty}`,read:false,createdAt:fs.serverTimestamp()});
+      });
+      v240Apply(next);showWeatherToast(`🎁 ส่ง ${entry.name} ×${qty} ให้ ${targetName} แล้ว`);closeModal();
+    }catch(e){message("ส่งของไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  showGiftComposer=function(targetKey,targetName){
+    const s=normalizeState(ownState||state,currentMember);v240EnsureState(s);const entries=v240MemberGiftEntriesFull(s),remain=Math.max(0,30-v240Int(s.friendGiftDaily.count));
+    if(!entries.length)return message("ยังไม่มีของที่ส่งได้","ของที่อยู่ในกระเป๋า/คลังและยังไม่ได้วางใช้งานจะขึ้นที่นี่ค่ะ");if(remain<=0)return message("ครบลิมิตวันนี้แล้ว","วันนี้ส่งครบ 30 ชิ้น/ตัวแล้วค่ะ");
+    const cats=[...new Set(entries.map(e=>e.category||"ไอเท็ม"))];let cat=cats[0];
+    $("modalContent").innerHTML=`<section class="feature-panel v240-member-gift"><header><div><small>🎁 ส่งของให้</small><h2>${v240Esc(targetName)}</h2></div><button id="v240GiftClose">×</button></header><p>วันนี้เหลือส่งได้ <b>${remain}</b> ชิ้น/ตัว</p><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-gift-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240GiftItems" class="v240-admin-items"></div></section>`;openModal();
+    const paint=()=>{$("v240GiftItems").innerHTML=entries.filter(e=>(e.category||"ไอเท็ม")===cat).map((e,i)=>{const real=entries.indexOf(e),max=Math.min(remain,v240Int(e.count||e.qty||1));return `<article><span>${e.image?`<img src="${e.image}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b><small>มี ×${v240Int(e.count||e.qty||1)}</small></span><input type="number" min="1" max="${max}" value="1" data-v240-gift-qty="${real}" ${["alpacaInstance","catInstance","dogInstance"].includes(e.type)?"disabled":""}><button data-v240-gift-send="${real}">ส่ง</button></article>`}).join("");document.querySelectorAll("[data-v240-gift-send]").forEach(b=>b.onclick=()=>{const e=entries[Number(b.dataset.v240GiftSend)],q=["alpacaInstance","catInstance","dogInstance"].includes(e.type)?1:Math.max(1,Math.min(remain,v240Int(document.querySelector(`[data-v240-gift-qty="${b.dataset.v240GiftSend}"]`)?.value)||1));v240SendFriendGift(targetKey,targetName,e,q)})};
+    document.querySelectorAll("[data-v240-gift-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.v240GiftCat;document.querySelectorAll("[data-v240-gift-cat]").forEach(x=>x.classList.toggle("active",x===b));paint()});$("v240GiftClose").onclick=closeModal;paint();
+  };
+
+  /* Dog/cat collected drops each have an independent 10% chance to add processing-license ×10. */
+  async function v240MaybeLicenseBonus(){if(Math.random()>=.10||!cloudReady||!currentMemberKey)return;try{await v240MutateSave(s=>{s.alpaca.inventory.other.processingLicense=v240Int(s.alpaca.inventory.other.processingLicense)+10;s.specials=v240Obj(s.specials);s.specials.processingLicense=v240Int(s.specials.processingLicense)+10;return 10});showWeatherToast("🎫 โบนัส! ใบอนุญาตแปรรูป ×10")}catch(e){console.warn("license bonus",e)}}
+  if(typeof claimCatDrop==="function"){const b=claimCatDrop;claimCatDrop=async function(...a){const r=await b(...a);v240MaybeLicenseBonus();return r}}
+  if(typeof claimDogDrop==="function"){const b=claimDogDrop;claimDogDrop=async function(...a){const r=await b(...a);v240MaybeLicenseBonus();return r}}
+
+  /* ---------- UI entry bindings + daily reset watcher ---------- */
+  function v240Bind(){v240EnsureFactoryScreen();v240EnsureTreasureUI();v240MountCampaignShortcuts();const fb=$("alpacaFactoryBtn");if(fb)fb.onclick=v240OpenFactory;const rb=$("alpacaRankBtn");if(rb)rb.onclick=()=>v240ShowAlpacaRanks("happiness");v240AdminTopup(ownState||state);v240RenderTreasureDrops()}
+  const v240DrawBase=draw;draw=function(){const r=v240DrawBase();requestAnimationFrame(v240Bind);return r};
+  setTimeout(v240Bind,500);
+  let v240LastDay="";setInterval(()=>{const dk=typeof currentBangkokDateKey==="function"?currentBangkokDateKey():"";if(v240LastDay&&dk!==v240LastDay&&ownState){ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);v240EnsureState(ownState);save().catch?.(()=>{})}v240LastDay=dk},15000);
+
+  /* Performance: only animate/render extra factory/drop UI when visible. */
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){v240FactoryTimerStop()}else if(!$("v240FactoryScreen")?.classList.contains("hidden")){v240FactoryTimerStart();v240RenderFactoryJobs()}},{passive:true});
+
+  globalThis.YN_V240={showFactory:v240OpenFactory,showCampaign:v240ShowCampaign,showRanks:v240ShowAlpacaRanks,memberGiftEntries:v240MemberGiftEntries,products:V240_PRODUCTS,items:V240_ITEM};
+  window.YAINOO_BUILD="V240-FULL-AUG20-UPDATE";
+})();
+
