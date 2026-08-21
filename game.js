@@ -11990,6 +11990,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
           planted++;
         }
         if(totalCost)s.merit-=totalCost;
+        /* Daily mission: bulk planting counts every plot actually planted. */
+        if(planted>0)incrementMissionOn(s,"dailyPlantCrops",planted);
         s.plots=plots;
         if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
         next=s;
@@ -17728,12 +17730,18 @@ async function V181_campaignScoreLater(summary){
   const V240_NIGHT_IDS=new Set(["n1","n2","n3","n4"]),V240_SPECIAL_IDS=new Set(["boatNew1","boatNew2","boatNew3","boatNew4","boatNew5","boatNew6","boatNew7","boatNew8"]);
   function v240DishCount(s,id){try{return typeof dishCountInState==="function"?dishCountInState(id,s):v240Int(s?.dishInventory?.[id]||s?.dishes?.[id])}catch{return 0}}
   const v240CraftBase=craft;
-  craft=function(id){
-    const before=v240DishCount(state,id),r=v240CraftBase(id),after=v240DishCount(state,id);
+  /* The active craft() implementation is async.  The old wrapper checked the
+     inventory before the Promise finished, so successful crafts looked like
+     failures to the campaign scorer.  Await the real craft first, then compare. */
+  craft=async function(id){
+    const before=v240DishCount(ownState||state,id);
+    const r=await v240CraftBase(id);
+    const after=v240DishCount(ownState||state,id);
     if(after>before){
       const pts=V240_NIGHT_IDS.has(id)?7:V240_SPECIAL_IDS.has(id)?3:V240_GENERAL_IDS.has(id)?1:1;
-      try{incrementMissionOn(state,"dailyCraftFood",1)}catch{}
-      v240AddCampaignScore(V240_COOK_ID,pts,{night:V240_NIGHT_IDS.has(id)?1:0}).catch(e=>console.warn("cooking campaign score",e));
+      /* dailyCraftFood is already persisted by the canonical craft transaction. */
+      await v240AddCampaignScore(V240_COOK_ID,pts,{night:V240_NIGHT_IDS.has(id)?1:0})
+        .catch(e=>console.warn("cooking campaign score",e));
     }
     return r;
   };
