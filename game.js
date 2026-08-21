@@ -18174,3 +18174,146 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   console.info("V246 three-grass friend-gift fix loaded");
 })();
 
+/* ======================================================================
+   V247 — GRASS GIFT EXACT QUANTITY FIX
+   Scope: friendGrassGreen / friendGrassYellow / friendGrassRed only.
+
+   Force the selected numeric quantity from the member-gift UI into the
+   Firestore gift document, and subtract exactly the same amount from sender.
+   All other gift types continue using the existing V240 flow unchanged.
+   ====================================================================== */
+(function YN_V247_GRASS_GIFT_EXACT_QTY(){
+  const GRASS_KEYS=new Set([
+    "friendGrassGreen",
+    "friendGrassYellow",
+    "friendGrassRed"
+  ]);
+
+  function V247_int(v){
+    return Math.max(0,Math.floor(Number(v)||0));
+  }
+
+  async function V247_sendGrassGift(targetKey,targetName,entry,requestedQty){
+    if(!entry||!GRASS_KEYS.has(String(entry.key))||!cloudReady)return;
+
+    const qty=Math.max(1,V247_int(requestedQty)||1);
+
+    try{
+      await settlePendingCloudSave();
+
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const giftRef=fs.doc(fs.collection(db,"gifts"));
+      const mailRef=fs.doc(db,"mailboxes",targetKey,"items",giftRef.id);
+      let next=null;
+
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);
+        if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+        const s=normalizeState(snap.data(),currentMember);
+        assertCurrentCloudSession(snap.data(),currentMember);
+
+        s.friendGiftDaily=
+          s.friendGiftDaily&&typeof s.friendGiftDaily==="object"
+            ? s.friendGiftDaily
+            : {dateKey:currentBangkokDateKey(),count:0};
+
+        const dk=currentBangkokDateKey();
+        if(s.friendGiftDaily.dateKey!==dk){
+          s.friendGiftDaily={dateKey:dk,count:0};
+        }
+
+        const sent=V247_int(s.friendGiftDaily.count);
+        const remain=Math.max(0,30-sent);
+        if(qty>remain)throw new Error(`วันนี้ส่งได้อีก ${remain} ชิ้น`);
+
+        s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+        const have=V247_int(s.specials[entry.key]);
+        if(have<qty)throw new Error(`หญ้ามีไม่พอ • มี ${have} ชิ้น`);
+
+        s.specials[entry.key]=have-qty;
+        s.friendGiftDaily.count=sent+qty;
+        try{incrementMissionOn(s,"sendFriendGift",1)}catch{}
+        next=s;
+
+        const gift={
+          fromKey:currentMemberKey,
+          fromName:currentMember,
+          toKey:targetKey,
+          toName:targetName,
+          itemType:"special",
+          itemKey:entry.key,
+          itemName:entry.name,
+          itemImage:entry.image||"",
+          qty:qty,
+          status:"pending",
+          createdAt:fs.serverTimestamp()
+        };
+
+        tx.set(saveRef,{
+          ...cloneData(s),
+          activeSessionId:cloudSessionId,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+
+        tx.set(giftRef,gift);
+
+        tx.set(mailRef,{
+          source:"friend",
+          type:"gift",
+          giftId:giftRef.id,
+          fromKey:currentMemberKey,
+          fromName:currentMember,
+          title:`${currentMember} ส่งของขวัญให้คุณ 🎁`,
+          text:`${entry.name} ×${qty}`,
+          read:false,
+          createdAt:fs.serverTimestamp()
+        });
+      });
+
+      ownState=normalizeState(next,currentMember);
+      if(!visitContext)state=ownState;
+      saveLocalOnly(ownState);
+      updateMeritUI();
+      closeModal();
+      showWeatherToast(`🎁 ส่ง ${entry.name} ×${qty} ให้ ${targetName} แล้ว`);
+    }catch(error){
+      console.error("V247 grass gift",error);
+      message("ส่งหญ้าไม่ได้",error.message||"กรุณาลองใหม่");
+    }
+  }
+
+  const V247_showGiftComposerBase=showGiftComposer;
+  showGiftComposer=function(targetKey,targetName){
+    const result=V247_showGiftComposerBase.apply(this,arguments);
+
+    try{
+      const s=normalizeState(ownState||state,currentMember);
+      const baseEntries=globalThis.YN_V240?.memberGiftEntries?.(s)||[];
+
+      document.querySelectorAll('[data-v240-gift-send]').forEach(btn=>{
+        const idx=Number(btn.dataset.v240GiftSend);
+        const entry=baseEntries[idx];
+        if(!entry||entry.type!=="special"||!GRASS_KEYS.has(String(entry.key)))return;
+
+        btn.onclick=()=>{
+          const input=document.querySelector(`[data-v240-gift-qty="${idx}"]`);
+          const raw=input?.value;
+          const remain=Math.max(0,30-V247_int(s.friendGiftDaily?.count));
+          const have=V247_int(s.specials?.[entry.key]);
+          const qty=Math.max(1,Math.min(remain,have,V247_int(raw)||1));
+          V247_sendGrassGift(targetKey,targetName,entry,qty);
+        };
+      });
+    }catch(error){
+      console.warn("V247 grass gift UI bind",error);
+    }
+
+    return result;
+  };
+
+  window.YAINOO_BUILD="V247-GRASS-GIFT-EXACT-QTY";
+  console.info("V247 grass gift exact quantity fix loaded");
+})();
+
