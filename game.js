@@ -15657,8 +15657,13 @@ async function V181_campaignScoreLater(summary){
     if(!visitContext||!currentMemberKey)return;const btn=$("friendGrassConfirmBtn");if(btn){btn.disabled=true;btn.textContent="กำลังเข้ากระเป๋า..."}
     try{
       await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
-      await fs.runTransaction(db,async tx=>{const grassCampaignId="grass-harvest-7d-v1",metaRef=fs.doc(db,"campaigns",grassCampaignId),scoreRef=fs.doc(db,"campaignScores",grassCampaignId);const [snap,metaSnap,scoreSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef),tx.get(scoreRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();incrementMissionOn(s,"dailyCollectGrass",1);pruneClaims(s);if(metaSnap.exists()&&V36_campaignActive(metaSnap.data()||{})){const add=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1,d=scoreSnap.exists()?scoreSnap.data():{campaignId:grassCampaignId,scores:{},names:{}},scores={...(d.scores||{})},names={...(d.names||{})};scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+add;names[currentMemberKey]=currentProfileDisplayName();tx.set(scoreRef,{campaignId:grassCampaignId,scores,names,updatedAt:fs.serverTimestamp()},{merge:false})}next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
-      ownState=normalizeState(next,currentMember);saveLocalOnly(ownState);closeModal();renderDrops();showReceived(drop);
+      const grassCampaignId="grass-harvest-7d-v1",metaRef=fs.doc(db,"campaigns",grassCampaignId),scoreRef=fs.doc(db,"campaignScores",grassCampaignId);
+      let grassCampaignAdd=0;
+      await fs.runTransaction(db,async tx=>{const [snap,metaSnap]=await Promise.all([tx.get(saveRef),tx.get(metaRef)]);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);const store=claimStore(s);if(store[drop.id])throw new Error("หญ้าชิ้นนี้ถูกเก็บไปแล้ว");if(!s.specials||typeof s.specials!=="object")s.specials={};s.specials[drop.key]=(Number(s.specials[drop.key])||0)+1;store[drop.id]=gameNow();incrementMissionOn(s,"dailyCollectGrass",1);pruneClaims(s);if(metaSnap.exists()&&V36_campaignActive(metaSnap.data()||{}))grassCampaignAdd=drop.key==="friendGrassRed"?5:drop.key==="friendGrassYellow"?3:1;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
+      ownState=normalizeState(next,currentMember);saveLocalOnly(ownState);
+      /* Never let a ranking write block collecting grass. Score is a separate atomic merge. */
+      if(grassCampaignAdd>0){try{await fs.setDoc(scoreRef,{campaignId:grassCampaignId,scores:{[currentMemberKey]:fs.increment(grassCampaignAdd)},names:{[currentMemberKey]:currentProfileDisplayName()},updatedAt:fs.serverTimestamp()},{merge:true})}catch(scoreError){console.warn("grass campaign score",scoreError)}}
+      closeModal();renderDrops();showReceived(drop);
     }catch(error){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับเข้ากระเป๋า"}message("เก็บหญ้าไม่ได้",error.message||"กรุณาลองใหม่")}
   }
   function showReceived(drop){
@@ -17689,38 +17694,31 @@ async function V181_campaignScoreLater(summary){
     amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;
     const cfg=campaignId===V240_COOK_ID?V240_CAMPAIGNS.cooking:V240_CAMPAIGNS.rainbow;if(v240Now()>cfg.endAt)return;
     const {db,fs}=await getFirebaseContext(),scoreRef=fs.doc(db,"campaignScores",campaignId);
+    const scorePatch=()=>({
+      campaignId,
+      scores:{[currentMemberKey]:fs.increment(amount)},
+      names:{[currentMemberKey]:currentProfileDisplayName()},
+      ...(night?{nightCounts:{[currentMemberKey]:fs.increment(Math.max(0,Math.floor(Number(night)||0)))}}:{}),
+      updatedAt:fs.serverTimestamp()
+    });
 
-    /* Cooking has no claim receipt.  Write ONLY campaignScores so a craft save
-       can never race with this transaction and overwrite the freshly crafted item. */
+    /* Atomic merge touches only this member's nested score fields. It does not
+       rewrite other members, old campaign fields, or unrelated tie-break data. */
     if(!receipt){
-      await fs.runTransaction(db,async tx=>{
-        const sc=await tx.get(scoreRef);
-        const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};
-        const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);
-        scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;
-        names[currentMemberKey]=currentProfileDisplayName();
-        if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;
-        tx.set(scoreRef,{...d,campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:true});
-      });
+      await fs.setDoc(scoreRef,scorePatch(),{merge:true});
       return;
     }
 
-    /* Receipt-based campaigns (rainbow fish) keep their anti-double-claim receipt. */
+    /* Receipt campaigns keep anti-double-claim state in the member save. */
     const saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
     await fs.runTransaction(db,async tx=>{
-      const [sc,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);
-      if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(sv.data(),currentMember);
+      const sv=await tx.get(saveRef);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sv.data(),currentMember);assertCurrentCloudSession(sv.data(),currentMember);
       s.campaignReceipts=v240Obj(s.campaignReceipts);const rk=`${campaignId}:${receipt}`;
       if(s.campaignReceipts[rk])return;
       s.campaignReceipts[rk]=v240Now();
-      const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};
-      const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);
-      scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;
-      names[currentMemberKey]=currentProfileDisplayName();
-      if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      tx.set(scoreRef,{...d,campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:true});
+      tx.set(scoreRef,scorePatch(),{merge:true});
       next=s;
     });
     if(next)v240Apply(next);
@@ -17746,16 +17744,16 @@ async function V181_campaignScoreLater(summary){
     return r;
   };
   if(typeof craftBoatDrink==="function"){
-    const b=craftBoatDrink;craftBoatDrink=function(id){
-      const target=ownState||state,before=v240Int(target?.boatDrinks?.[id]),r=b(id),after=v240Int((ownState||state)?.boatDrinks?.[id]);
-      if(after>before){try{incrementMissionOn(ownState||state,"dailyCraftFood",1)}catch{}v240AddCampaignScore(V240_COOK_ID,2).catch(e=>console.warn("cooking drink score",e))}
+    const b=craftBoatDrink;craftBoatDrink=async function(id){
+      const target=ownState||state,before=v240Int(target?.boatDrinks?.[id]),r=await b(id),after=v240Int((ownState||state)?.boatDrinks?.[id]);
+      if(after>before){await v240AddCampaignScore(V240_COOK_ID,2).catch(e=>console.warn("cooking drink score",e))}
       return r;
     }
   }
   if(typeof craftRainyMenu==="function"){
     const b=craftRainyMenu;craftRainyMenu=async function(id){
       const before=v240DishCount(ownState||state,id),r=await b(id),after=v240DishCount(ownState||state,id);
-      if(after>before){try{incrementMissionOn(ownState||state,"dailyCraftFood",1)}catch{}v240AddCampaignScore(V240_COOK_ID,4).catch(e=>console.warn("cooking rainy score",e))}
+      if(after>before){await v240AddCampaignScore(V240_COOK_ID,4).catch(e=>console.warn("cooking rainy score",e))}
       return r;
     }
   }
@@ -17899,3 +17897,6 @@ async function V181_campaignScoreLater(summary){
   window.YAINOO_BUILD="V240-FULL-AUG20-UPDATE";
 })();
 
+
+;window.YAINOO_BUILD="V241-R6-CAMPAIGN-GRASS-HOTFIX";
+console.info("V241 R6 campaign + friend grass hotfix loaded");
