@@ -7081,7 +7081,7 @@ craftRainyMenu=async function(id){
       for(let attempt=0;attempt<2&&!campaignScored;attempt++){
         try{
           if(typeof window.YN_R7_campaignIncrement!=="function")throw new Error("ตัวนับแคมเปญยังไม่พร้อม");
-          await window.YN_R7_campaignIncrement("sud-yod-mae-krua-hua-boran-v1",4);
+          await window.YN_R7_campaignIncrement("cooking-oldschool-20260826",4);
           campaignScored=true;
         }catch(e){
           campaignError=e;
@@ -16160,22 +16160,22 @@ async function V181_campaignScoreLater(summary){
     });
   };
 
-  /* CANONICAL claim for both targeted and global Admin broadcasts. */
+  /* CANONICAL claim for both targeted and global Admin broadcasts.
+     R15: claim state lives in the member's own save. This avoids the
+     broadcasts/{id}/claims permission path entirely. */
   claimBroadcastGift=async function(broadcastId,accept){
     try{
       await settlePendingCloudSave();
       const {db,fs}=await getFirebaseContext();
       const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
-      const claimRef=fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey);
       const saveRef=fs.doc(db,"saves",currentMemberKey);
       let next;
 
       await fs.runTransaction(db,async tx=>{
-        const [bSnap,cSnap,sSnap]=await Promise.all([
-          tx.get(broadcastRef),tx.get(claimRef),tx.get(saveRef)
+        const [bSnap,sSnap]=await Promise.all([
+          tx.get(broadcastRef),tx.get(saveRef)
         ]);
         if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
-        if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");
 
         const b=bSnap.data();
         if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
@@ -16187,6 +16187,12 @@ async function V181_campaignScoreLater(summary){
         }
 
         const s=normalizeState(sSnap.data(),currentMember);
+        s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"
+          ? s.broadcastGiftClaims : {};
+        if(s.broadcastGiftClaims[broadcastId]){
+          throw new Error("คุณจัดการของขวัญนี้แล้ว");
+        }
+
         if(accept){
           if(Array.isArray(b.items)){
             addGiftItemToState(s,{items:V226_cleanBundle(b.items)});
@@ -16196,6 +16202,10 @@ async function V181_campaignScoreLater(summary){
             });
           }
         }
+        s.broadcastGiftClaims[broadcastId]={
+          status:accept?"accepted":"discarded",
+          resolvedAt:gameNow()
+        };
         next=s;
 
         tx.set(saveRef,{
@@ -16203,12 +16213,6 @@ async function V181_campaignScoreLater(summary){
           activeSessionId:cloudSessionId,
           updatedAt:fs.serverTimestamp()
         },{merge:false});
-
-        tx.set(claimRef,{
-          memberKey:currentMemberKey,
-          status:accept?"accepted":"discarded",
-          resolvedAt:fs.serverTimestamp()
-        });
       });
 
       ownState=normalizeState(next,currentMember);
