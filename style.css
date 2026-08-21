@@ -6623,3 +6623,15 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 @media(max-width:390px){
   .modal-card:has(.v240-campaign){height:88dvh!important;max-height:88dvh!important}
 }
+
+
+/* V240-R4 alpaca ground-item fixes */
+.alpaca-pen-event-layer{z-index:9!important;pointer-events:none!important}
+.alpaca-pen-animal-layer{z-index:16!important;pointer-events:none!important}
+.alpaca-pen-event{z-index:1!important}
+.alpaca-pen-event.mushroom{width:34px!important;height:34px!important;margin:-5px 0 0 -5px!important}
+.alpaca-pen-event.mushroom img{width:25px!important;height:25px!important}
+.alpaca-pen-event.hole{width:44px!important;height:36px!important;margin:-6px 0 0 -6px!important}
+.alpaca-pen-event.hole img{width:34px!important;height:25px!important}
+.v240-treasure-layer{z-index:9!important;pointer-events:none!important}
+.v240-treasure-drop{width:31px!important;height:31px!important;margin:-15.5px 0 0 -15.5px!important;z-index:1!important}

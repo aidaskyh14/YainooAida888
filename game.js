@@ -9568,6 +9568,7 @@ Y26_plantCrop=async function(index,key,button){
       const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
       if(plots[index]?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");
       const realCost=Number(crop.seedCostMerit)||0;if(realCost&&(Number(s.merit)||0)<realCost)throw new Error(`${crop.name} ใช้ ${realCost} กุศล / 1 เมล็ด`);if(realCost)s.merit-=realCost;
+      incrementMissionOn(s,"dailyPlantCrops",1);
       s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;
       const now=gameNow();plots[index]={crop:key,phase:"growing1",phaseEndsAt:now+crop.waterMs,plantedAt:now,wateredAt:0,worm:false,angel};
       s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
@@ -16790,7 +16791,7 @@ async function V181_campaignScoreLater(summary){
     [18,66],[34,67],[50,67],[66,67],[82,66],
     [22,77],[36,78],[50,78],[64,78],[78,77]
   ];
-  const EVENT_POINTS=[[20,48],[34,49],[49,48],[64,49],[79,48],[23,58],[38,58],[53,58],[68,58],[81,60],[27,69],[43,69],[59,69],[75,70]];
+  const EVENT_POINTS=[[27,54],[40,54],[53,54],[66,54],[75,55],[25,61],[38,61],[51,61],[64,61],[75,62],[29,69],[43,69],[57,69],[71,70]];
   const FRIEND_EVENT_POINTS=[[20,48],[34,49],[49,48],[64,49],[79,48],[23,58],[38,58],[53,58],[68,58],[81,60],[27,69],[43,69],[59,69],[75,70]];
 
   let currentPen=1;
@@ -17629,7 +17630,7 @@ async function V181_campaignScoreLater(summary){
   const v240ModalObserver=new MutationObserver(()=>{if(v240LastAnimal)queueMicrotask(v240InjectBabyFactoryButton)});if($("modalContent"))v240ModalObserver.observe($("modalContent"),{childList:true,subtree:true});
 
   /* ---------- Treasure drops ---------- */
-  const V240_TREASURE_POINTS=[[22,45],[38,42],[55,44],[72,46],[28,58],[46,57],[64,58],[78,62],[30,71],[50,70],[69,72]];
+  const V240_TREASURE_POINTS=[[28,54],[41,54],[54,54],[67,54],[74,56],[28,61],[43,61],[58,61],[72,62],[34,69],[50,69],[66,70]];
   async function v240ProcessTreasureDrops(){if(!cloudReady||!currentMemberKey||visitContext)return;const screen=$("alpacaPenScreen");if(!screen||screen.classList.contains("hidden"))return;try{const out=await v240MutateSave(s=>{const now=v240Now();let added=0;s.alpaca.pens.forEach((pen,pi)=>{pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{const key=a.id,last=Number(s.alpaca.treasureClock[key]||a.createdAt||now),elapsed=Math.floor((now-last)/(3*V240_HOUR));if(elapsed<1)return;s.alpaca.treasureClock[key]=last+elapsed*3*V240_HOUR;if(a.sickAt)return;const rounds=Math.min(4,elapsed);for(let z=0;z<rounds;z++){const qty=1+(Math.random()<.5?1:0);for(let q=0;q<qty;q++){const p=V240_TREASURE_POINTS[(Math.floor(Math.random()*V240_TREASURE_POINTS.length)+q)%V240_TREASURE_POINTS.length];s.alpaca.treasureDrops[`pen${pi+1}`].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++}}})});return added});if(out.result)v240RenderTreasureDrops()}catch(e){console.warn("V240 treasure",e)}}
   async function v240CollectTreasure(id=null,all=false){const penNo=v240PenNo();try{const out=await v240MutateSave(s=>{const arr=s.alpaca.treasureDrops[`pen${penNo}`],take=all?arr.splice(0,arr.length):(()=>{const i=arr.findIndex(x=>x.id===id);return i>=0?arr.splice(i,1):[]})();if(!take.length)throw new Error("ตอนนี้ยังไม่มีกล่องสมบัติในคอกนี้ค่ะ");s.alpaca.inventory.other.treasureBox=v240Int(s.alpaca.inventory.other.treasureBox)+take.length;return take.length});v240RenderTreasureDrops();$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${V240_ITEM.treasureBox.image}" alt=""><h2>เก็บกล่องสำเร็จ</h2><p>กล่องสมบัติอัลปาก้า <b>×${out.result}</b> เข้ากระเป๋าแล้วค่ะ</p><button id="v240TreasureCollected" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240TreasureCollected").onclick=closeModal}catch(e){message("ยังเก็บไม่ได้",e.message||"กรุณาลองใหม่")}}
   function v240EnsureTreasureUI(){const stage=$("alpacaPenStage");if(!stage)return;if(!$("v240TreasureLayer")){stage.insertAdjacentHTML("beforeend",'<div id="v240TreasureLayer" class="v240-treasure-layer"></div><button id="v240CollectTreasureAll" class="v240-collect-treasure-all" type="button"><span>🧺</span><b>เก็บกล่อง</b></button>');$("v240CollectTreasureAll").onclick=()=>v240CollectTreasure(null,true)}}
@@ -17681,15 +17682,75 @@ async function V181_campaignScoreLater(summary){
   openModal=function(){const r=v240OpenModalBase();queueMicrotask(()=>{const btn=$("ynuClaimFish");if(btn&&!btn.__v240Rainbow){const cards=[...document.querySelectorAll("#modalContent .fishing-result-card")],count=cards.filter(c=>c.textContent.includes(V240_RAINBOW.name)).length,old=btn.onclick;btn.onclick=async ev=>{const before=Object.keys((ownState||state)?.fishingClaimReceipts||{}).length;const ret=await old?.call(btn,ev);setTimeout(async()=>{const afterState=normalizeState(ownState||state,currentMember),receipts=afterState.fishingClaimReceipts||{},keys=Object.keys(receipts);if(count>0&&keys.length>before){const receipt=keys.sort((a,b)=>Number(receipts[b])-Number(receipts[a]))[0];await v240AddCampaignScore(V240_RAINBOW_ID,count,{receipt}).catch(console.warn)}},120);return ret};btn.__v240Rainbow=true}});return r};
 
   /* ---------- Campaign score core ---------- */
-  async function v240AddCampaignScore(campaignId,amount,{night=0,receipt=""}={}){if(!cloudReady||!currentMemberKey||currentMember==="Aida")return;amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;const cfg=campaignId===V240_COOK_ID?V240_CAMPAIGNS.cooking:V240_CAMPAIGNS.rainbow;if(v240Now()>cfg.endAt)return;const {db,fs}=await getFirebaseContext(),scoreRef=fs.doc(db,"campaignScores",campaignId),saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const [sc,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sv.data(),currentMember);if(receipt){s.campaignReceipts=v240Obj(s.campaignReceipts);const rk=`${campaignId}:${receipt}`;if(s.campaignReceipts[rk])return;s.campaignReceipts[rk]=v240Now()}const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;names[currentMemberKey]=currentProfileDisplayName();if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(scoreRef,{campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:false});next=s});if(next)v240Apply(next)}
+  async function v240AddCampaignScore(campaignId,amount,{night=0,receipt=""}={}){
+    if(!cloudReady||!currentMemberKey||currentMember==="Aida")return;
+    amount=Math.max(0,Math.floor(Number(amount)||0));if(!amount)return;
+    const cfg=campaignId===V240_COOK_ID?V240_CAMPAIGNS.cooking:V240_CAMPAIGNS.rainbow;if(v240Now()>cfg.endAt)return;
+    const {db,fs}=await getFirebaseContext(),scoreRef=fs.doc(db,"campaignScores",campaignId);
+
+    /* Cooking has no claim receipt.  Write ONLY campaignScores so a craft save
+       can never race with this transaction and overwrite the freshly crafted item. */
+    if(!receipt){
+      await fs.runTransaction(db,async tx=>{
+        const sc=await tx.get(scoreRef);
+        const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};
+        const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);
+        scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;
+        names[currentMemberKey]=currentProfileDisplayName();
+        if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;
+        tx.set(scoreRef,{...d,campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      return;
+    }
+
+    /* Receipt-based campaigns (rainbow fish) keep their anti-double-claim receipt. */
+    const saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
+    await fs.runTransaction(db,async tx=>{
+      const [sc,sv]=await Promise.all([tx.get(scoreRef),tx.get(saveRef)]);
+      if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(sv.data(),currentMember);
+      s.campaignReceipts=v240Obj(s.campaignReceipts);const rk=`${campaignId}:${receipt}`;
+      if(s.campaignReceipts[rk])return;
+      s.campaignReceipts[rk]=v240Now();
+      const d=sc.exists()?sc.data():{campaignId,scores:{},names:{},nightCounts:{}};
+      const scores=v240Obj(d.scores),names=v240Obj(d.names),nightCounts=v240Obj(d.nightCounts);
+      scores[currentMemberKey]=v240Int(scores[currentMemberKey])+amount;
+      names[currentMemberKey]=currentProfileDisplayName();
+      if(night)nightCounts[currentMemberKey]=v240Int(nightCounts[currentMemberKey])+night;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(scoreRef,{...d,campaignId,scores,names,nightCounts,updatedAt:fs.serverTimestamp()},{merge:true});
+      next=s;
+    });
+    if(next)v240Apply(next);
+  }
 
   const V240_GENERAL_IDS=new Set(["r1","r2","r3","r4","r5","r6","r7","r8","rabbitMenu1","rabbitMenu2","rabbitMenu3","rabbitMenu4","rabbitMenu5","rabbitMenu6"]);
   const V240_NIGHT_IDS=new Set(["n1","n2","n3","n4"]),V240_SPECIAL_IDS=new Set(["boatNew1","boatNew2","boatNew3","boatNew4","boatNew5","boatNew6","boatNew7","boatNew8"]);
   function v240DishCount(s,id){try{return typeof dishCountInState==="function"?dishCountInState(id,s):v240Int(s?.dishInventory?.[id]||s?.dishes?.[id])}catch{return 0}}
   const v240CraftBase=craft;
-  craft=function(id){const before=v240DishCount(ownState||state,id),r=v240CraftBase(id);setTimeout(()=>{const after=v240DishCount(ownState||state,id);if(after>before){const pts=V240_NIGHT_IDS.has(id)?7:V240_SPECIAL_IDS.has(id)?3:V240_GENERAL_IDS.has(id)?1:1;v240AddCampaignScore(V240_COOK_ID,pts,{night:V240_NIGHT_IDS.has(id)?1:0}).catch(console.warn)}},50);return r};
-  if(typeof craftBoatDrink==="function"){const b=craftBoatDrink;craftBoatDrink=function(id){const before=v240Int((ownState||state)?.boatDrinks?.[id]),r=b(id);setTimeout(()=>{if(v240Int((ownState||state)?.boatDrinks?.[id])>before)v240AddCampaignScore(V240_COOK_ID,2).catch(console.warn)},50);return r}}
-  if(typeof craftRainyMenu==="function"){const b=craftRainyMenu;craftRainyMenu=async function(id){const before=v240DishCount(ownState||state,id),r=await b(id);setTimeout(()=>{if(v240DishCount(ownState||state,id)>before)v240AddCampaignScore(V240_COOK_ID,4).catch(console.warn)},50);return r}}
+  craft=function(id){
+    const before=v240DishCount(state,id),r=v240CraftBase(id),after=v240DishCount(state,id);
+    if(after>before){
+      const pts=V240_NIGHT_IDS.has(id)?7:V240_SPECIAL_IDS.has(id)?3:V240_GENERAL_IDS.has(id)?1:1;
+      try{incrementMissionOn(state,"dailyCraftFood",1)}catch{}
+      v240AddCampaignScore(V240_COOK_ID,pts,{night:V240_NIGHT_IDS.has(id)?1:0}).catch(e=>console.warn("cooking campaign score",e));
+    }
+    return r;
+  };
+  if(typeof craftBoatDrink==="function"){
+    const b=craftBoatDrink;craftBoatDrink=function(id){
+      const target=ownState||state,before=v240Int(target?.boatDrinks?.[id]),r=b(id),after=v240Int((ownState||state)?.boatDrinks?.[id]);
+      if(after>before){try{incrementMissionOn(ownState||state,"dailyCraftFood",1)}catch{}v240AddCampaignScore(V240_COOK_ID,2).catch(e=>console.warn("cooking drink score",e))}
+      return r;
+    }
+  }
+  if(typeof craftRainyMenu==="function"){
+    const b=craftRainyMenu;craftRainyMenu=async function(id){
+      const before=v240DishCount(ownState||state,id),r=await b(id),after=v240DishCount(ownState||state,id);
+      if(after>before){try{incrementMissionOn(ownState||state,"dailyCraftFood",1)}catch{}v240AddCampaignScore(V240_COOK_ID,4).catch(e=>console.warn("cooking rainy score",e))}
+      return r;
+    }
+  }
 
   const V240_COOK_REWARDS=[
     {need:100,rewards:[{type:"special",key:"pestle100",qty:200,name:"สากกะเบือไฮโซ"},{type:"special",key:"angelWingCapsule",qty:200,name:"แคปซูลปีกนางฟ้า"}]},
