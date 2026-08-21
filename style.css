@@ -6590,12 +6590,36 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 @media(prefers-reduced-motion:reduce){.v240-treasure-drop{animation:none}}
 
 
-/* ===== ALPACA PEN COUNT + PERFORMANCE R2 ===== */
-/* จำนวนอัลปาก้าไม่แสดงทับฉากคอกอีกต่อไป ดูได้ในหน้าจัดการอัลปาก้า */
-.alpaca-pen-count{display:none!important}
-.alpaca-manage-countbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;margin:6px 0 8px;padding:7px 9px;border:1px solid rgba(142,91,128,.22);border-radius:13px;background:rgba(255,248,237,.88);box-shadow:0 3px 9px rgba(58,28,55,.08);font-size:clamp(10px,2.55vw,12px);line-height:1.25}
-.alpaca-manage-countbar b{color:#65375f;font-size:clamp(11px,2.9vw,13px)}
-.alpaca-manage-countbar span{color:#80627a;font-size:clamp(9px,2.35vw,11px)}
-/* ลดงานวาดที่ไม่จำเป็นโดยยังรักษาคุณภาพ sprite เดิม */
-.alpaca-pen-animal-layer,.alpaca-pen-event-layer{content-visibility:auto}
-.alpaca-pen-animal,.alpaca-pen-animal .alpaca-sprite{transform-style:flat}
+/* ===== V240 R3: campaign mobile scrolling + touch reliability ===== */
+.modal-card:has(.v240-campaign){
+  width:min(94vw,520px)!important;
+  height:min(86dvh,820px)!important;
+  max-height:86dvh!important;
+  overflow:hidden!important;
+  padding:0!important;
+  touch-action:pan-y!important;
+}
+.modal-card:has(.v240-campaign)>#modalContent{
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.modal-card:has(.v240-campaign)>.close{display:none!important}
+.v240-campaign{height:100%!important;max-height:none!important;touch-action:pan-y!important}
+.v240-campaign-inner{grid-template-rows:auto auto minmax(0,1fr) auto!important;min-height:0!important;overflow:hidden!important;touch-action:pan-y!important}
+.v240-campaign-scroll{
+  min-height:0!important;
+  height:100%!important;
+  max-height:none!important;
+  overflow-y:scroll!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  touch-action:pan-y!important;
+  scrollbar-gutter:stable;
+}
+.v240-campaign-ranks article{touch-action:pan-y!important}
+@media(max-width:390px){
+  .modal-card:has(.v240-campaign){height:88dvh!important;max-height:88dvh!important}
+}
