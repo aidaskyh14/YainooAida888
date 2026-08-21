@@ -2827,7 +2827,10 @@ async function fetchBroadcasts(){
   if(!cloudReady)return[];const {db,fs}=await getFirebaseContext();try{const snap=await fs.getDocs(fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(50))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(fs.collection(db,"broadcasts")),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,50)}
 }
 async function fetchBroadcastClaim(broadcastId){
-  const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey));return snap.exists()?snap.data():null;
+  /* R14: keep broadcast claim state in the member's own save. */
+  const local=normalizeState(ownState||state,currentMember);
+  const rec=local?.broadcastGiftClaims?.[broadcastId];
+  return rec&&typeof rec==="object"?rec:null;
 }
 async function refreshNotificationBadge(force=false){
   const badge=$("notificationBadge");if(!badge)return;if(!cloudReady){badge.classList.add("hidden");return}
@@ -2883,14 +2886,40 @@ async function claimFriendGift(giftId,accept){
   }catch(error){message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 async function claimBroadcastGift(broadcastId,accept){
+  if(!cloudReady||!currentMemberKey)return;
   try{
-    const {db,fs}=await getFirebaseContext(),broadcastRef=fs.doc(db,"broadcasts",broadcastId),claimRef=fs.doc(db,"broadcasts",broadcastId,"claims",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey);let next;
+    const {db,fs}=await getFirebaseContext();
+    const broadcastRef=fs.doc(db,"broadcasts",broadcastId);
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    let next;
+
     await fs.runTransaction(db,async tx=>{
-      const [bSnap,cSnap,sSnap]=await Promise.all([tx.get(broadcastRef),tx.get(claimRef),tx.get(saveRef)]);if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");const b=bSnap.data();if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");const s=normalizeState(sSnap.data(),currentMember);if(accept)addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});next=s;
-      tx.set(saveRef,{...cloneData(s),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(claimRef,{memberKey:currentMemberKey,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()});
+      const [bSnap,sSnap]=await Promise.all([tx.get(broadcastRef),tx.get(saveRef)]);
+      if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+      const b=bSnap.data();
+      if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+
+      const s=normalizeState(sSnap.data(),currentMember);
+      assertCurrentCloudSession(sSnap.data(),currentMember);
+      s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims:{};
+      if(s.broadcastGiftClaims[broadcastId])throw new Error("คุณจัดการของขวัญนี้แล้ว");
+
+      if(accept)addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});
+      s.broadcastGiftClaims[broadcastId]={status:accept?"accepted":"discarded",resolvedAt:gameNow()};
+      next=s;
+
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
-    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;showNotifications("yainoo");showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
-  }catch(error){message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}
+
+    ownState=normalizeState(next,currentMember);
+    if(!visitContext)state=ownState;
+    saveLocalOnly(ownState);
+    broadcastClaimCache.delete(broadcastClaimCacheKey(broadcastId));
+    showNotifications("yainoo");
+    showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+  }catch(error){
+    message("จัดการของขวัญไม่ได้",`${error.message||"กรุณาลองใหม่"}\n\nR14 • email: ${cloudAuth?.currentUser?.email||"-"} • memberKey: ${currentMemberKey||"-"}`);
+  }
 }
 
 function adminGiftCatalog(){
@@ -7046,6 +7075,23 @@ craftRainyMenu=async function(id){
     updateMeritUI();
 
     if(success){
+      /* R14: score directly from the canonical successful rainy craft. */
+      let campaignScored=false;
+      let campaignError=null;
+      for(let attempt=0;attempt<2&&!campaignScored;attempt++){
+        try{
+          if(typeof window.YN_R7_campaignIncrement!=="function")throw new Error("ตัวนับแคมเปญยังไม่พร้อม");
+          await window.YN_R7_campaignIncrement("sud-yod-mae-krua-hua-boran-v1",4);
+          campaignScored=true;
+        }catch(e){
+          campaignError=e;
+          if(attempt===0)await new Promise(resolve=>setTimeout(resolve,180));
+        }
+      }
+      if(!campaignScored){
+        console.error("R14 rainy campaign score",campaignError);
+        try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนน +4 ยังไม่เข้า: ${campaignError?.message||"Firebase ปฏิเสธ"}`)}catch{}
+      }
       const verifiedCount=rainyMenuCount(id,verified);
       $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
         <h2>✨ คราฟสำเร็จ!</h2>
@@ -7058,7 +7104,7 @@ craftRainyMenu=async function(id){
       /* R13: return the transaction result itself. Campaign scoring must use
          this success flag, not a before/after inventory comparison that can
          fail when local state was stale. */
-      return {success:true,verifiedCount};
+      return {success:true,verifiedCount,campaignScored};
     }else{
       $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel rainy-craft-result">
         <h2>💨 คราฟไม่สำเร็จ</h2>
@@ -17752,9 +17798,9 @@ async function V181_campaignScoreLater(summary){
          Do not infer success from local inventory deltas; local state may be
          stale and can make a real successful craft score 0. */
       const r=await b(id);
-      if(r?.success===true){
+      if(r?.success===true&&!r?.campaignScored){
         await v240AddCampaignScore(V240_COOK_ID,4)
-          .catch(e=>{console.error("cooking rainy score",e);try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนนหน้าฝนยังไม่เข้า: ${e?.message||"Firebase ปฏิเสธ"}`)}catch{}});
+          .catch(e=>{console.error("cooking rainy score fallback",e);try{showWeatherToast(`🌧️ คราฟสำเร็จ แต่คะแนนหน้าฝนยังไม่เข้า: ${e?.message||"Firebase ปฏิเสธ"}`)}catch{}});
       }
       return r;
     }
