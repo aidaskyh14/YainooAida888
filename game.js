@@ -17743,7 +17743,10 @@ async function V181_campaignScoreLater(summary){
   }
   if(typeof craftRainyMenu==="function"){
     const b=craftRainyMenu;craftRainyMenu=async function(id){
-      const before=v240DishCount(ownState||state,id),r=await b(id),after=v240DishCount(ownState||state,id);
+      /* Rainy menus live in state.rainyMenus, not the normal dish inventory.
+         The previous campaign hook checked v240DishCount(), so a successful
+         rainy craft never appeared to increase and therefore scored 0. */
+      const before=rainyMenuCount(id,ownState||state),r=await b(id),after=rainyMenuCount(id,ownState||state);
       if(after>before){await v240AddCampaignScore(V240_COOK_ID,4).catch(e=>console.warn("cooking rainy score",e))}
       return r;
     }

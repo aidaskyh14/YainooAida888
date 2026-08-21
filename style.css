@@ -6635,3 +6635,58 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .alpaca-pen-event.hole img{width:34px!important;height:25px!important}
 .v240-treasure-layer{z-index:9!important;pointer-events:none!important}
 .v240-treasure-drop{width:31px!important;height:31px!important;margin:-15.5px 0 0 -15.5px!important;z-index:1!important}
+
+/* ===== R9: Admin Center mobile send-button visibility only ===== */
+.modal-card:has(.v240-admin-center){
+  height:min(88dvh,780px)!important;
+  max-height:88dvh!important;
+  overflow:hidden!important;
+  padding:12px!important;
+}
+.modal-card:has(.v240-admin-center)>#modalContent{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.v240-admin-center{
+  width:100%!important;
+  height:100%!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  display:grid!important;
+  grid-template-rows:auto auto auto auto minmax(0,1fr) auto auto!important;
+  gap:5px!important;
+}
+.v240-admin-center .v240-admin-items{
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  padding-bottom:8px!important;
+}
+.v240-admin-center #v240AdminSelected{
+  margin:0!important;
+  flex:0 0 auto!important;
+}
+.v240-admin-center #v240AdminSend,
+.v240-admin-center #v240AdminLegacy{
+  width:100%!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  position:relative!important;
+  z-index:5!important;
+}
+@media(max-width:430px){
+  .modal-card:has(.v240-admin-center){
+    width:94vw!important;
+    height:86dvh!important;
+    max-height:86dvh!important;
+  }
+  .v240-admin-center .v240-admin-targets,
+  .v240-admin-center .v240-admin-tabs{
+    flex:0 0 auto!important;
+  }
+}
