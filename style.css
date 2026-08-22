@@ -6690,3 +6690,78 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
     flex:0 0 auto!important;
   }
 }
+
+/* ======================================================================
+   V252 — HONEY DELIVERY + FUEL BAR (ADMIN TEST)
+   New selectors only; existing farm/HUD systems are not restyled.
+   ====================================================================== */
+.honey-fuel-hud{
+  position:absolute;z-index:89;left:2.35%;top:16.15%;width:36%;height:4.1%;
+  min-height:30px;padding:3px 7px 3px 4px;border:1.5px solid rgba(231,197,137,.92);
+  border-radius:999px;background:linear-gradient(180deg,rgba(70,43,76,.97),rgba(41,27,50,.97));
+  box-shadow:0 5px 11px rgba(28,13,34,.30),inset 0 1px rgba(255,244,214,.20);
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px;
+  color:#fff3d6;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.honey-fuel-hud:active{transform:scale(.985)}
+.honey-fuel-hud.is-active-trip{opacity:.78;cursor:default}
+.honey-fuel-icon{width:clamp(22px,5.4vw,31px);height:clamp(22px,5.4vw,31px);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))}
+.honey-fuel-center{min-width:0;display:grid;gap:2px}
+.honey-fuel-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(7px,1.75vw,10px);font-weight:850;line-height:1;color:#ffefd0}
+.honey-fuel-track{position:relative;height:8px;border-radius:999px;background:rgba(20,12,26,.62);box-shadow:inset 0 1px 3px rgba(0,0,0,.48);overflow:hidden}
+.honey-fuel-fill{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#f4a43c,#ffd865,#f6ef9b);transition:width .38s ease-out}
+.honey-fuel-percent{font-size:clamp(8px,2vw,11px);font-weight:950;color:#ffe7a7;min-width:28px;text-align:right}
+.honey-fuel-hud.is-ready{border-color:#ffe292;box-shadow:0 5px 12px rgba(28,13,34,.32),0 0 0 2px rgba(255,221,112,.12),inset 0 1px rgba(255,255,255,.2)}
+.honey-fuel-hud.is-ready .honey-fuel-status{color:#fff5bc}
+.honey-fuel-hud.is-ready .honey-fuel-fill{background:linear-gradient(90deg,#ffb54c,#ffe780,#fff7be)}
+
+.game-screen.plot-page-2 .honey-fuel-hud,.game-screen.plot-page-3 .honey-fuel-hud,.game-screen.plot-page-4 .honey-fuel-hud,.game-screen.visiting-friend .honey-fuel-hud{display:none!important}
+
+.honey-bike-layer{position:absolute;inset:0;z-index:69;overflow:hidden;pointer-events:none;contain:layout paint}
+.honey-bike{position:absolute;left:0;top:74.2%;width:clamp(92px,23vw,148px);aspect-ratio:.845;transform:translate3d(-180px,0,0);will-change:transform;pointer-events:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.honey-bike.is-parked{pointer-events:auto;cursor:pointer}
+.honey-bike-shadow{position:absolute;z-index:0;left:17%;bottom:2.5%;width:67%;height:8.5%;border-radius:50%;background:rgba(29,18,25,.43);filter:blur(3px);transform:scaleX(.94);opacity:.86;pointer-events:none}
+.honey-bike.is-riding .honey-bike-shadow{animation:honeyShadowRide .64s ease-in-out infinite}
+@keyframes honeyShadowRide{0%,100%{transform:scaleX(.92);opacity:.78}50%{transform:scaleX(1.03);opacity:.9}}
+.honey-bike-clip{position:absolute;z-index:2;inset:0;overflow:hidden;pointer-events:none}
+.honey-bike-sheet{position:absolute;left:0;top:0;width:400%;height:400%;max-width:none!important;max-height:none!important;object-fit:fill;transform:translate3d(0,0,0);transform-origin:top left;will-change:transform;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.honey-bike-exhaust{position:absolute;z-index:1;left:5%;bottom:24%;width:22px;height:16px;opacity:0;pointer-events:none}
+.honey-bike.is-riding .honey-bike-exhaust{opacity:1}
+.honey-bike-exhaust::before,.honey-bike-exhaust::after{content:"";position:absolute;left:6px;bottom:1px;width:8px;height:8px;border-radius:50%;background:rgba(236,235,240,.72);filter:blur(.6px);animation:honeySmokePuff 1.05s ease-out infinite}
+.honey-bike-exhaust::after{animation-delay:.48s;width:6px;height:6px;opacity:.78}
+@keyframes honeySmokePuff{0%{transform:translate3d(0,0,0) scale(.55);opacity:0}15%{opacity:.72}100%{transform:translate3d(-19px,-10px,0) scale(1.55);opacity:0}}
+.game-screen.plot-page-2 .honey-bike-layer,.game-screen.plot-page-3 .honey-bike-layer,.game-screen.plot-page-4 .honey-bike-layer,.game-screen.visiting-friend .honey-bike-layer{display:none!important}
+
+.honey-fuel-modal,.honey-send-modal,.honey-reward-modal{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",sans-serif;color:#4f3558}
+.honey-modal-hero{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;text-align:left;padding:3px 1px 9px}
+.honey-modal-hero img{width:62px;height:62px;object-fit:contain}
+.honey-modal-hero small,.honey-send-head small,.honey-reward-modal>small{font-size:9px;font-weight:850;color:#9a6f78;letter-spacing:.1px}
+.honey-modal-hero h2,.honey-send-head h2,.honey-reward-modal h2{margin:1px 0 2px;font-size:clamp(16px,4.4vw,22px);line-height:1.15;color:#5d355d}
+.honey-modal-hero p,.honey-send-head p{margin:2px 0;font-size:10px;color:#8b6a7a}
+.honey-modal-progress{position:relative;height:23px;margin:3px 0 12px;border-radius:999px;background:#efe4e9;overflow:hidden;box-shadow:inset 0 2px 4px rgba(82,49,78,.10)}
+.honey-modal-progress i{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:linear-gradient(90deg,#f1a84d,#ffd86f);transition:width .35s ease-out}
+.honey-modal-progress span{position:relative;z-index:2;display:grid;place-items:center;height:100%;font-size:9px;font-weight:950;color:#4f3558}
+.honey-fuel-qty-box{display:grid;grid-template-columns:38px 1fr 38px;gap:7px;align-items:center;margin:7px 0}
+.honey-fuel-qty-box>button{height:38px;border:1px solid #d7b7c6;border-radius:12px;background:#fff7f4;color:#754d6d;font-size:20px;font-weight:900}
+.honey-fuel-qty-box label{display:grid;gap:2px;text-align:center}.honey-fuel-qty-box label small{font-size:8px;color:#987584}.honey-fuel-qty-box input{width:100%;height:38px;border:1px solid #d7b7c6;border-radius:12px;background:#fff;text-align:center;color:#5d355d;font-size:14px;font-weight:900;outline:none}
+.honey-fuel-preview{min-height:31px;margin:7px 0 9px;display:flex;align-items:center;justify-content:center;gap:8px;padding:7px;border-radius:12px;background:#fff7ee;font-size:10px}.honey-fuel-preview span{color:#9a7883}.honey-fuel-preview b{color:#c3905b}.honey-fuel-preview strong{font-size:14px;color:#74506b}.honey-fuel-preview small{font-size:8px;color:#9b7b87}
+.honey-primary-btn{width:100%;min-height:42px;border:0;border-radius:14px;background:linear-gradient(180deg,#865477,#613852);color:#fff8e8;font-size:11px;font-weight:950;box-shadow:0 6px 12px rgba(76,43,67,.18),inset 0 1px rgba(255,255,255,.22)}
+.honey-primary-btn:disabled{opacity:.38;box-shadow:none}.honey-primary-btn:active:not(:disabled){transform:scale(.985)}
+.honey-mini-note{margin:7px 0 0;text-align:center;color:#9a7c88;font-size:8px;line-height:1.35}
+
+.honey-send-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;text-align:left;margin-bottom:8px}.honey-send-head>span{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#65405f;color:#fff3d6;font-size:9px;font-weight:950}
+.honey-send-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:7px}.honey-send-tabs button{min-width:0;padding:5px 2px;border:1px solid #dfc7cf;border-radius:10px;background:#fff8f4;color:#6c4a63}.honey-send-tabs button span,.honey-send-tabs button b{display:block}.honey-send-tabs button span{font-size:15px;line-height:1}.honey-send-tabs button b{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px}.honey-send-tabs button.active{background:#6c4566;color:#fff5df;border-color:#6c4566}
+.honey-send-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:44dvh;overflow-y:auto;overflow-x:hidden;padding:1px 1px 5px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.honey-send-item{min-width:0;display:grid;grid-template-columns:43px minmax(0,1fr);grid-template-rows:auto auto;gap:3px 6px;align-items:center;padding:6px;border:1px solid #e3ced4;border-radius:13px;background:#fffdfa;box-shadow:0 3px 8px rgba(77,46,68,.06)}
+.honey-send-item.picked{border-color:#c98aa8;background:#fff7fa;box-shadow:0 0 0 1px rgba(201,138,168,.15)}
+.honey-send-item>img{grid-row:1/3;width:41px;height:41px;object-fit:contain}.honey-send-item>div:nth-of-type(1){min-width:0}.honey-send-item>div:nth-of-type(1)>b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;color:#5a3d53}.honey-send-item>div:nth-of-type(1)>small{display:block;margin-top:2px;font-size:7px;color:#a17d8a}
+.honey-item-step{display:grid;grid-template-columns:25px 1fr 25px;gap:3px;align-items:center}.honey-item-step button{height:24px;border:1px solid #ddc1ce;border-radius:8px;background:#fff4ef;color:#734c68;font-size:15px;font-weight:900;line-height:1}.honey-item-step button:disabled{opacity:.28}.honey-item-step strong{text-align:center;font-size:9px;color:#5e3c57}
+.honey-picked-strip{display:flex;gap:4px;min-height:42px;margin:7px 0;overflow-x:auto;padding:3px;border-radius:11px;background:#f7edf1;-webkit-overflow-scrolling:touch}.honey-picked-strip>small{margin:auto;color:#a2838f;font-size:8px}.honey-picked-strip>span{flex:0 0 auto;display:grid;grid-template-columns:22px auto;grid-template-rows:1fr 1fr;column-gap:3px;align-items:center;max-width:105px;padding:3px 5px;border-radius:9px;background:#fff}.honey-picked-strip img{grid-row:1/3;width:21px;height:21px;object-fit:contain}.honey-picked-strip b{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px}.honey-picked-strip i{font-style:normal;font-size:7px;font-weight:900;color:#a05e80}.honey-empty-category{grid-column:1/-1;padding:20px 8px;text-align:center;color:#a38290;font-size:9px}
+
+.honey-reward-modal{text-align:center;padding-top:3px}.honey-reward-img{display:block;width:min(108px,28vw);height:min(108px,28vw);object-fit:contain;margin:0 auto 5px}.honey-reward-emoji{width:88px;height:88px;margin:0 auto 6px;display:grid;place-items:center;border-radius:50%;background:#fff2d7;font-size:42px}.honey-reward-modal h2{margin:3px 0 7px}.honey-reward-modal>p{margin:0 0 7px;font-size:9px;color:#987683}.honey-reward-card{display:flex;align-items:center;justify-content:center;gap:8px;margin:7px 0 12px;padding:10px;border:1px solid #ead1b0;border-radius:14px;background:linear-gradient(180deg,#fffaf0,#fff1de)}.honey-reward-card b{font-size:10px;color:#654458}.honey-reward-card strong{font-size:17px;color:#b66e4e}
+
+@media(max-width:390px){
+  .honey-fuel-hud{left:2.2%;width:37.5%;top:16.1%}
+  .honey-send-grid{gap:5px}.honey-send-item{grid-template-columns:38px minmax(0,1fr);padding:5px}.honey-send-item>img{width:36px;height:36px}
+}
+@media(prefers-reduced-motion:reduce){.honey-bike,.honey-bike-sheet,.honey-fuel-fill{will-change:auto}.honey-bike.is-riding .honey-bike-shadow,.honey-bike-exhaust::before,.honey-bike-exhaust::after{animation:none}}

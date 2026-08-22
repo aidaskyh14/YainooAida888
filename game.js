@@ -18835,3 +18835,612 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   console.info("V251 admin quantity source-of-truth loaded");
 })();
 
+/* ======================================================================
+   V252 — HONEY DELIVERY + FUEL BAR (ADMIN TEST)
+   Scope: Aida/Admin test only. Adds the new fuel-can special item, fuel HUD,
+   Honey motorbike arrival/idle/parcel/departure flow, delivery selection,
+   and hidden reward roll. Existing unrelated systems are left untouched.
+   ====================================================================== */
+(function YN_V252_HONEY_DELIVERY_ADMIN_TEST(){
+  "use strict";
+
+  const VERSION="V252-HONEY-FUEL-ADMIN-TEST";
+  const FUEL_KEY="honeyFuelCan";
+  const FUEL_NAME="แกลลอนน้ำมัน";
+  const FUEL_IMAGE="honey-fuel-can.png?v=252";
+  const FILL_MS=5*60*60*1000;
+  const READY_MS=2*60*60*1000;
+  const CYCLE_MS=FILL_MS+READY_MS;
+  const CAN_STEP_MS=FILL_MS/10; // 1 can = +10% = 30 minutes of fuel time.
+  const ADMIN_FUEL_START=9999;
+  const STOP_X_RATIO=.385;
+  const BIKE_TOP_RATIO=.742;
+  const SPRITE_FILES={
+    ride:"01_ride_in_and_out.png",
+    idle:"02_idle_parked.png",
+    receive:"03_receive_parcel.png",
+    place:"04_place_parcel_rear.png",
+    ready:"05_ready_to_depart.png"
+  };
+
+  try{
+    /* Keep this item out of legacy Object.keys(SPECIAL_ITEMS) random pools/shops.
+       It is injected explicitly into the Special inventory and Admin gift catalog below. */
+    Object.defineProperty(SPECIAL_ITEMS,FUEL_KEY,{
+      value:{
+        name:FUEL_NAME,
+        image:FUEL_IMAGE,
+        kind:"honeyFuel",
+        group:"honeyDelivery",
+        description:"ใช้เติมบาร์น้ำมันของน้องน้ำผึ้ง • 1 แกลลอน = 10%"
+      },
+      enumerable:false,configurable:true,writable:true
+    });
+  }catch(error){console.warn("V252 fuel item registration",error)}
+
+  /* Existing Aida stock maintenance dynamically loops over SPECIAL_ITEMS.
+     Preserve this new consumable's real quantity so using fuel actually deducts it. */
+  if(typeof ensureAdminStock==="function"){
+    const ensureAdminStockBase=ensureAdminStock;
+    ensureAdminStock=function(target){
+      const specials=target&&target.specials&&typeof target.specials==="object"?target.specials:null;
+      const hadFuel=Boolean(specials&&Object.prototype.hasOwnProperty.call(specials,FUEL_KEY));
+      const fuelBefore=hadFuel?Math.max(0,Math.floor(Number(specials[FUEL_KEY])||0)):0;
+      const changed=ensureAdminStockBase(target);
+      if(target&&target.specials&&typeof target.specials==="object"){
+        if(hadFuel)target.specials[FUEL_KEY]=fuelBefore;
+        else delete target.specials[FUEL_KEY];
+      }
+      return changed;
+    };
+  }
+
+  const num=v=>Math.max(0,Number(v)||0);
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const esc=v=>typeof safeHtml==="function"?safeHtml(v):String(v??"");
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isAdmin=()=>currentMember==="Aida"&&adminProfile?.role==="admin"&&String(currentMemberKey||"")==="aida";
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+
+  function ensureHoneyState(s,player=currentMember){
+    if(!s||typeof s!=="object")return s;
+    s.specials=obj(s.specials);
+    s.specials[FUEL_KEY]=int(s.specials[FUEL_KEY]);
+
+    /* During the first test round, only Aida receives the timer state. */
+    const shouldHaveTimer=String(player||s.player||"")==="Aida"||Boolean(s.honeyDelivery);
+    if(!shouldHaveTimer)return s;
+
+    let created=false;
+    if(!s.honeyDelivery||typeof s.honeyDelivery!=="object"){
+      s.honeyDelivery={};
+      created=true;
+    }
+    const h=s.honeyDelivery;
+    h.active=Boolean(h.active);
+    h.calledAt=num(h.calledAt);
+    h.reward=h.reward&&typeof h.reward==="object"?h.reward:null;
+    h.fuelReadyAt=num(h.fuelReadyAt);
+    h.fuelExpiresAt=num(h.fuelExpiresAt);
+    h.adminFuelSeeded=Boolean(h.adminFuelSeeded);
+    if(!h.active&&(!h.fuelReadyAt||!h.fuelExpiresAt)){
+      const t=now();
+      h.fuelReadyAt=t+FILL_MS;
+      h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
+      created=true;
+    }
+    if(String(player||s.player||"")==="Aida"&&isAdmin()&&!h.adminFuelSeeded){
+      s.specials[FUEL_KEY]=ADMIN_FUEL_START;
+      h.adminFuelSeeded=true;
+      created=true;
+    }
+    if(created)h.needsSeedPersist=true;
+    return s;
+  }
+
+  const freshBase=fresh;
+  fresh=function(player){return ensureHoneyState(freshBase(player),player)};
+  const normalizeBase=normalizeState;
+  normalizeState=function(raw,player){return ensureHoneyState(normalizeBase(raw,player),player)};
+
+  /* Guarantee the new item is available in the existing Admin gift catalog. */
+  if(typeof adminGiftCatalog==="function"){
+    const adminCatalogBase=adminGiftCatalog;
+    adminGiftCatalog=function(){
+      const list=adminCatalogBase();
+      if(!list.some(e=>e?.type==="special"&&e?.key===FUEL_KEY)){
+        list.push({type:"special",key:FUEL_KEY,name:FUEL_NAME,category:"ไอเท็ม"});
+      }
+      return list;
+    };
+  }
+
+  /* Show the fuel can in Bag → Special without adding it to unrelated legacy
+     special-item random pools or the normal Special Shop. */
+  if(typeof inventory==="function"){
+    const inventoryBase=inventory;
+    inventory=function(tab="crops"){
+      const result=inventoryBase.apply(this,arguments);
+      if(tab==="specials")setTimeout(()=>{
+        try{
+          const panel=document.querySelector(".inventory-panel"),grid=panel?.querySelector(".inventory-grid");
+          if(!grid||grid.querySelector('[data-honey-fuel-inventory="1"]'))return;
+          const count=int((ownState||state)?.specials?.[FUEL_KEY]);
+          if(count<=0&&currentMember!=="Aida")return;
+          const card=document.createElement("div");
+          card.className="inventory-item honey-fuel-inventory-item";
+          card.dataset.honeyFuelInventory="1";
+          card.innerHTML=`<img src="${FUEL_IMAGE}" alt="${FUEL_NAME}"><span>${FUEL_NAME}<small style="display:block">เติมน้ำมันน้องน้ำผึ้ง +10% / แกลลอน</small></span><b>×${count}</b>`;
+          grid.appendChild(card);
+          fuelImageFallback(card.querySelector("img"));
+        }catch(error){console.warn("V252 fuel inventory",error)}
+      },0);
+      return result;
+    };
+  }
+
+  function advanceFuelCycle(h,t=now()){
+    if(!h||h.active)return false;
+    let changed=false;
+    if(!num(h.fuelReadyAt)||!num(h.fuelExpiresAt)){
+      h.fuelReadyAt=t+FILL_MS;
+      h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
+      return true;
+    }
+    if(t>=num(h.fuelExpiresAt)){
+      const oldExpire=num(h.fuelExpiresAt);
+      const elapsed=Math.max(0,t-oldExpire);
+      const cycles=Math.floor(elapsed/CYCLE_MS);
+      const cycleStart=oldExpire+cycles*CYCLE_MS;
+      h.fuelReadyAt=cycleStart+FILL_MS;
+      h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
+      if(t>=h.fuelExpiresAt){
+        h.fuelReadyAt+=CYCLE_MS;
+        h.fuelExpiresAt+=CYCLE_MS;
+      }
+      changed=true;
+    }
+    return changed;
+  }
+
+  function fuelPercentExact(h,t=now()){
+    if(!h||h.active)return 0;
+    advanceFuelCycle(h,t);
+    if(t>=num(h.fuelReadyAt)&&t<num(h.fuelExpiresAt))return 100;
+    if(t>=num(h.fuelExpiresAt))return 0;
+    const remain=Math.max(0,num(h.fuelReadyAt)-t);
+    return Math.max(0,Math.min(100,100-(remain/FILL_MS)*100));
+  }
+  function fuelPercent(h,t=now()){return Math.max(0,Math.min(100,Math.floor(fuelPercentExact(h,t)+1e-7)))}
+  function fmtShort(ms){
+    const sec=Math.max(0,Math.ceil(num(ms)/1000));
+    const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+    if(h>0)return `${h}ชม. ${String(m).padStart(2,"0")}น.`;
+    return `${m} นาที`;
+  }
+
+  function applyOwn(next){
+    ownState=next;
+    if(!visitContext)state=ownState;
+    try{saveLocalOnly(ownState)}catch{}
+    try{updateMeritUI()}catch{}
+    renderFuelHud();
+  }
+
+  let persistBusy=false;
+  async function persistSeedOrTimer(){
+    if(persistBusy||!isAdmin()||!cloudReady||!currentMemberKey||!ownState)return;
+    const s=ensureHoneyState(ownState,"Aida"),h=s.honeyDelivery;
+    if(!h?.needsSeedPersist)return;
+    persistBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const clean={...h};delete clean.needsSeedPersist;
+      await fs.updateDoc(fs.doc(db,"saves",currentMemberKey),{
+        [`specials.${FUEL_KEY}`]:int(s.specials[FUEL_KEY]),
+        honeyDelivery:cloneData(clean)
+      });
+      h.needsSeedPersist=false;
+    }catch(error){console.warn("V252 seed persist",error)}
+    finally{persistBusy=false}
+  }
+
+  let cyclePersistBusy=false;
+  async function persistAdvancedCycle(){
+    if(cyclePersistBusy||!isAdmin()||!cloudReady||!ownState?.honeyDelivery)return;
+    cyclePersistBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const clean={...ownState.honeyDelivery};delete clean.needsSeedPersist;
+      await fs.updateDoc(fs.doc(db,"saves",currentMemberKey),{honeyDelivery:cloneData(clean)});
+    }catch(error){console.warn("V252 cycle persist",error)}
+    finally{cyclePersistBusy=false}
+  }
+
+  const hud=()=>$("honeyFuelHud");
+  const fill=()=>$("honeyFuelFill");
+  const pctLabel=()=>$("honeyFuelPercent");
+  const statusLabel=()=>$("honeyFuelStatus");
+  const bike=()=>$("honeyBike");
+  const bikeSheet=()=>$("honeyBikeSheet");
+
+  function firstFarmPageVisible(){
+    const g=$("gameScreen");
+    if(!g||g.classList.contains("hidden")||visitContext)return false;
+    return !g.classList.contains("plot-page-2")&&!g.classList.contains("plot-page-3")&&!g.classList.contains("plot-page-4");
+  }
+
+  function renderFuelHud(){
+    const el=hud();if(!el)return;
+    if(!isAdmin()||!firstFarmPageVisible()){
+      el.classList.add("hidden");
+      return;
+    }
+    el.classList.remove("hidden");
+    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;
+    if(!h)return;
+    const changed=advanceFuelCycle(h,now());
+    if(changed)persistAdvancedCycle();
+    if(h.active){
+      el.classList.add("is-active-trip");el.classList.remove("is-ready");
+      fill().style.width="0%";pctLabel().textContent="0%";
+      statusLabel().textContent="น้ำผึ้งอยู่ในสวน";
+      el.setAttribute("aria-label","น้องน้ำผึ้งกำลังรับฝากของ");
+      return;
+    }
+    el.classList.remove("is-active-trip");
+    const p=fuelPercent(h),ready=p>=100&&now()<num(h.fuelExpiresAt);
+    fill().style.width=`${p}%`;pctLabel().textContent=`${p}%`;
+    el.classList.toggle("is-ready",ready);
+    if(ready){
+      statusLabel().textContent=`เรียกน้ำผึ้ง • ${fmtShort(h.fuelExpiresAt-now())}`;
+      el.setAttribute("aria-label",`น้ำมันเต็ม 100 เปอร์เซ็นต์ กดเรียกน้ำผึ้ง ภายใน ${fmtShort(h.fuelExpiresAt-now())}`);
+    }else{
+      statusLabel().textContent="น้ำมันน้ำผึ้ง";
+      el.setAttribute("aria-label",`น้ำมันน้องน้ำผึ้ง ${p} เปอร์เซ็นต์ กดเพื่อเติมน้ำมัน`);
+    }
+    persistSeedOrTimer();
+  }
+
+  function fuelImageFallback(img){
+    if(!img)return;
+    img.onerror=()=>{
+      if(img.dataset.fallbackDone)return;
+      img.dataset.fallbackDone="1";
+      img.src="assets/pig-delivery/honey-fuel-can.png?v=252";
+    };
+  }
+
+  function showFuelModal(){
+    if(!isAdmin()||!ownState)return;
+    const s=ensureHoneyState(ownState,"Aida"),h=s.honeyDelivery;
+    advanceFuelCycle(h,now());
+    if(h.active)return message("🛵 น้ำผึ้งกำลังทำงาน","รอน้องส่งของเที่ยวนี้เสร็จก่อนนะคะ");
+    const exact=fuelPercentExact(h),p=Math.floor(exact),have=int(s.specials[FUEL_KEY]);
+    if(p>=100){callHoney();return}
+    const need=Math.max(1,Math.ceil((100-exact)/10));
+    const maxUse=Math.max(0,Math.min(have,need));
+    $("modalContent").innerHTML=`<section class="feature-panel honey-fuel-modal">
+      <div class="honey-modal-hero"><img id="honeyFuelModalImg" src="${FUEL_IMAGE}" alt="${FUEL_NAME}"><div><small>🛵 น้ำมันของน้ำผึ้ง</small><h2>เติมน้ำมัน</h2><p>ตอนนี้ <b>${p}%</b> • มีแกลลอน ×${have}</p></div></div>
+      <div class="honey-modal-progress"><i style="width:${p}%"></i><span>${p}%</span></div>
+      <div class="honey-fuel-qty-box">
+        <button id="honeyFuelMinus" type="button" aria-label="ลดจำนวน">−</button>
+        <label><small>จำนวนแกลลอน</small><input id="honeyFuelQty" type="number" inputmode="numeric" min="1" max="${Math.max(1,maxUse)}" value="${maxUse>0?Math.min(1,maxUse):1}"></label>
+        <button id="honeyFuelPlus" type="button" aria-label="เพิ่มจำนวน">+</button>
+      </div>
+      <div id="honeyFuelPreview" class="honey-fuel-preview"></div>
+      <button id="honeyFuelConfirm" class="honey-primary-btn" type="button" ${maxUse<=0?"disabled":""}>เติมน้ำมัน</button>
+      ${have<=0?'<p class="honey-mini-note">ตอนนี้ไม่มีแกลลอนน้ำมันในกระเป๋าค่ะ</p>':`<p class="honey-mini-note">1 แกลลอน = +10% • ใช้เท่าที่จำเป็นจนถึง 100%</p>`}
+    </section>`;
+    openModal();fuelImageFallback($("honeyFuelModalImg"));
+    const input=$("honeyFuelQty"),minus=$("honeyFuelMinus"),plus=$("honeyFuelPlus"),preview=$("honeyFuelPreview"),confirm=$("honeyFuelConfirm");
+    const sync=()=>{
+      let q=Math.max(1,int(input.value)||1);if(maxUse>0)q=Math.min(maxUse,q);input.value=q;
+      const use=maxUse>0?Math.min(q,maxUse):0,nextPct=Math.min(100,Math.floor(exact+use*10));
+      preview.innerHTML=`<span>${p}%</span><b>→</b><strong>${nextPct}%</strong>${use?`<small>ใช้ ${use} แกลลอน</small>`:""}`;
+      confirm.disabled=use<=0;
+    };
+    minus.onclick=()=>{input.value=Math.max(1,(int(input.value)||1)-1);sync()};
+    plus.onclick=()=>{input.value=Math.min(Math.max(1,maxUse),Math.max(1,int(input.value)||1)+1);sync()};
+    input.oninput=sync;input.onchange=sync;sync();
+    confirm.onclick=()=>refillFuel(int(input.value),confirm);
+  }
+
+  async function refillFuel(requested,button){
+    if(!isAdmin()||!cloudReady||!currentMemberKey)return;
+    requested=Math.max(1,int(requested)||1);
+    if(button)button.disabled=true;
+    try{
+      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,used=0,before=0,after=0;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();
+        advanceFuelCycle(h,t);if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
+        const exact=fuelPercentExact(h,t);before=Math.floor(exact);if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
+        const have=int(s.specials[FUEL_KEY]);if(have<=0)throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
+        const need=Math.max(1,Math.ceil((100-exact)/10));used=Math.min(requested,have,need);if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
+        s.specials[FUEL_KEY]=have-used;
+        h.fuelReadyAt=Math.max(t,num(h.fuelReadyAt)-used*CAN_STEP_MS);
+        if(h.fuelReadyAt<=t){h.fuelReadyAt=t;h.fuelExpiresAt=t+READY_MS}else h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
+        h.needsSeedPersist=false;after=fuelPercent(h,t);next=s;
+        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      applyOwn(next);closeModal();
+      showWeatherToast(`⛽ เติมน้ำมัน ${used} แกลลอน • ${before}% → ${after}%`);
+      if(after>=100)renderFuelHud();
+    }catch(error){message("เติมน้ำมันไม่ได้",error.message||"กรุณาลองใหม่")}
+    finally{if(button)button.disabled=false}
+  }
+
+  let frameTimer=0,moveRaf=0,transit=false,rewardShowing=false,currentBikeMode="";
+  function stopFrameTimer(){if(frameTimer){clearInterval(frameTimer);frameTimer=0}}
+  function stopMove(){if(moveRaf){cancelAnimationFrame(moveRaf);moveRaf=0}}
+  function paintFrame(frame){
+    const img=bikeSheet();if(!img)return;
+    const i=Math.max(0,Math.min(15,int(frame))),col=i%4,row=Math.floor(i/4);
+    img.style.transform=`translate3d(${-col*25}%,${-row*25}%,0)`;
+  }
+  function setSheet(file,loop=true,frameMs=135){
+    const img=bikeSheet();if(!img)return;
+    stopFrameTimer();paintFrame(0);
+    img.dataset.fallbackDone="";
+    img.onerror=()=>{
+      if(img.dataset.fallbackDone)return;
+      img.dataset.fallbackDone="1";
+      img.src=`${file}?v=252`;
+    };
+    img.src=`assets/pig-delivery/${file}?v=252`;
+    if(loop){let f=0;frameTimer=setInterval(()=>{f=(f+1)%16;paintFrame(f)},frameMs)}
+  }
+  function playSheetOnce(file,frameMs=130){
+    return new Promise(resolve=>{
+      const img=bikeSheet();if(!img){resolve();return}
+      stopFrameTimer();let f=0;setSheet(file,false);paintFrame(0);
+      frameTimer=setInterval(()=>{
+        f++;
+        if(f>=16){clearInterval(frameTimer);frameTimer=0;paintFrame(15);resolve();return}
+        paintFrame(f);
+      },frameMs);
+    });
+  }
+  function bikeStopX(){const screen=$("gameScreen");return Math.max(0,(screen?.clientWidth||window.innerWidth)*STOP_X_RATIO)}
+  function setBikeX(px){const b=bike();if(b)b.style.transform=`translate3d(${Math.round(px)}px,0,0)`}
+  function showBikeBase(){
+    const layer=$("honeyBikeLayer"),b=bike();if(!layer||!b)return;
+    layer.classList.remove("hidden");b.classList.remove("hidden");b.style.top=`${BIKE_TOP_RATIO*100}%`;
+  }
+  function hideBike(){const layer=$("honeyBikeLayer"),b=bike();stopFrameTimer();stopMove();if(b){b.classList.add("hidden");b.classList.remove("is-riding","is-parked")}if(layer)layer.classList.add("hidden")}
+  function showParkedBike(mode="idle"){
+    if(!isAdmin()||!firstFarmPageVisible())return;
+    showBikeBase();const b=bike();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
+    currentBikeMode=mode;
+    setSheet(mode==="ready"?SPRITE_FILES.ready:SPRITE_FILES.idle,true,mode==="ready"?155:175);
+  }
+  function moveBike(from,to,duration){
+    return new Promise(resolve=>{
+      stopMove();const start=performance.now();
+      const step=t=>{
+        const p=Math.max(0,Math.min(1,(t-start)/duration));
+        const eased=p<.82?(p/.82)*.86:.86+(1-Math.pow(1-(p-.82)/.18,3))*.14;
+        setBikeX(from+(to-from)*eased);
+        if(p<1)moveRaf=requestAnimationFrame(step);else{moveRaf=0;resolve()}
+      };
+      moveRaf=requestAnimationFrame(step);
+    });
+  }
+
+  async function callHoney(){
+    if(!isAdmin()||transit||!cloudReady||!currentMemberKey)return;
+    const local=ensureHoneyState(ownState||state,"Aida"),lh=local.honeyDelivery;
+    advanceFuelCycle(lh,now());if(lh.active)return;
+    if(fuelPercent(lh)<100)return showFuelModal();
+    transit=true;renderFuelHud();
+    try{
+      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();advanceFuelCycle(h,t);
+        if(h.active)throw new Error("น้ำผึ้งถูกเรียกมาแล้ว");
+        if(fuelPercent(h,t)<100||t>=num(h.fuelExpiresAt))throw new Error("น้ำมันยังไม่พร้อมเรียกน้ำผึ้ง");
+        h.active=true;h.calledAt=t;h.reward=null;h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;next=s;
+        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      applyOwn(next);closeModal();
+      showBikeBase();const b=bike(),screen=$("gameScreen"),start=-(b?.offsetWidth||110)-24,stop=bikeStopX();
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";setSheet(SPRITE_FILES.ride,true,115);
+      await moveBike(start,stop,5200);
+      b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";setSheet(SPRITE_FILES.idle,true,175);
+      showWeatherToast("🛵 น้ำผึ้งมาถึงแล้ว • แตะที่น้องเพื่อฝากของ");
+    }catch(error){hideBike();message("เรียกน้ำผึ้งไม่ได้",error.message||"กรุณาลองใหม่")}
+    finally{transit=false;renderFuelHud()}
+  }
+
+  function dishHave(s,id){try{return Math.max(0,int(dishCountInState(id,s)))}catch{return Math.max(0,int(s?.dishInventory?.[id]))}}
+  function rainyHave(s,id){try{return Math.max(0,int(rainyMenuCount(id,s)))}catch{return Math.max(0,int(s?.rainyMenus?.[id]))}}
+  function sendEntries(s=ownState||state){
+    const rows=[];
+    const add=(category,type,key,name,image,count)=>{count=int(count);if(count>0)rows.push({id:`${type}:${key}`,category,type,key,name,image,count})};
+    try{RECIPES.forEach(r=>add("food","dish",r.id,r.name,r.image,dishHave(s,r.id)))}catch{}
+    try{RAINY_SEASON_MENUS.forEach(r=>add("food","rainyMenu",r.id,r.name,r.image,rainyHave(s,r.id)))}catch{}
+    try{Object.entries(globalThis.YN_V240?.products||{}).forEach(([k,r])=>add("factory","factory",k,r.name,r.image,s?.alpaca?.factory?.products?.[k]))}catch{}
+    try{Object.entries(CROPS||{}).forEach(([k,r])=>add("crops","crop",k,r.name,r.selectImg||r.readyImg||"",s?.bag?.[k]))}catch{}
+    try{Object.entries(ANIMAL_PRODUCTS||{}).forEach(([k,r])=>add("products","product",k,r.name,r.image||"",s?.animalProducts?.[k]))}catch{}
+    return rows;
+  }
+
+  function showSendModal(){
+    if(!isAdmin()||transit)return;
+    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;
+    if(!h?.active)return message("น้ำผึ้งยังไม่มา","ต้องเรียกน้ำผึ้งให้มาจอดก่อนค่ะ");
+    if(h.reward){showRewardModal(h.reward);return}
+    const rows=sendEntries(s);if(!rows.length)return message("ยังไม่มีของให้ฝาก","ต้องมีอาหารคราฟ ของแปรรูปอัลปาก้า พืชพรรณ หรือวัตถุดิบสัตว์โลกวิญญาณอย่างน้อย 3 ชิ้น");
+    const selected=new Map();let category="food";
+    const cats=[
+      ["food","🍲","อาหารคราฟ"],["factory","🏭","แปรรูป"],["crops","🌱","พืชพรรณ"],["products","🥚","วัตถุดิบ"]
+    ];
+    $("modalContent").innerHTML=`<section class="feature-panel honey-send-modal">
+      <div class="honey-send-head"><div><small>🐷🛵 น้องน้ำผึ้ง</small><h2>ส่งของต้าวน้ำผึ้ง</h2><p>เลือกของรวม <b>3–10 ชิ้น</b></p></div><span id="honeySendTotal">0/10</span></div>
+      <div class="honey-send-tabs">${cats.map(([k,ic,n],i)=>`<button data-honey-cat="${k}" class="${i===0?"active":""}" type="button"><span>${ic}</span><b>${n}</b></button>`).join("")}</div>
+      <div id="honeySendItems" class="honey-send-grid"></div>
+      <div id="honeySendPicked" class="honey-picked-strip"><small>ยังไม่ได้เลือกของ</small></div>
+      <button id="honeySendConfirm" class="honey-primary-btn" type="button" disabled>ฝากด้วยนะน้ำผึ้ง</button>
+      <p class="honey-mini-note">ส่งชนิดเดียวหลายชิ้นได้ หรือคละหลายอย่างก็ได้</p>
+    </section>`;
+    openModal();
+    const total=()=>[...selected.values()].reduce((n,x)=>n+x.qty,0);
+    const paintPicked=()=>{
+      const t=total(),wrap=$("honeySendPicked"),btn=$("honeySendConfirm");$("honeySendTotal").textContent=`${t}/10`;
+      wrap.innerHTML=t?[...selected.values()].map(x=>`<span><img src="${x.image}" alt=""><b>${esc(x.name)}</b><i>×${x.qty}</i></span>`).join(""):'<small>ยังไม่ได้เลือกของ</small>';
+      btn.disabled=t<3||t>10;
+    };
+    const paintItems=()=>{
+      const list=rows.filter(x=>x.category===category),wrap=$("honeySendItems");
+      wrap.innerHTML=list.length?list.map(x=>{const q=selected.get(x.id)?.qty||0;return `<article class="honey-send-item ${q?"picked":""}"><img src="${x.image}" alt="${esc(x.name)}"><div><b>${esc(x.name)}</b><small>มี ×${x.count}</small></div><div class="honey-item-step"><button data-honey-minus="${x.id}" type="button" ${q<=0?"disabled":""}>−</button><strong>${q}</strong><button data-honey-plus="${x.id}" type="button" ${q>=x.count||total()>=10?"disabled":""}>+</button></div></article>`}).join(""):'<div class="honey-empty-category">หมวดนี้ยังไม่มีของในคลังค่ะ</div>';
+      wrap.querySelectorAll("[data-honey-plus]").forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.honeyPlus);if(!x||total()>=10)return;const cur=selected.get(x.id)?.qty||0;if(cur>=x.count)return;selected.set(x.id,{...x,qty:cur+1});paintItems();paintPicked()});
+      wrap.querySelectorAll("[data-honey-minus]").forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.honeyMinus);if(!x)return;const cur=selected.get(x.id)?.qty||0;if(cur<=1)selected.delete(x.id);else selected.set(x.id,{...x,qty:cur-1});paintItems();paintPicked()});
+    };
+    document.querySelectorAll("[data-honey-cat]").forEach(b=>b.onclick=()=>{category=b.dataset.honeyCat;document.querySelectorAll("[data-honey-cat]").forEach(x=>x.classList.toggle("active",x===b));paintItems()});
+    $("honeySendConfirm").onclick=()=>submitDelivery([...selected.values()],$("honeySendConfirm"));
+    paintItems();paintPicked();
+  }
+
+  function takeDeliveryItem(s,e,qty){
+    qty=Math.max(1,int(qty));
+    if(e.type==="crop"){if(int(s?.bag?.[e.key])<qty)return false;s.bag[e.key]-=qty;return true}
+    if(e.type==="product"){if(int(s?.animalProducts?.[e.key])<qty)return false;s.animalProducts[e.key]-=qty;return true}
+    if(e.type==="dish"){return typeof removeDishesFromState==="function"?removeDishesFromState(s,e.key,qty):false}
+    if(e.type==="rainyMenu"){if(rainyHave(s,e.key)<qty)return false;s.rainyMenus[e.key]-=qty;return true}
+    if(e.type==="factory"){const map=s?.alpaca?.factory?.products;if(!map||int(map[e.key])<qty)return false;map[e.key]-=qty;return true}
+    return false;
+  }
+
+  function rewardImage(type,key){
+    try{
+      if(type==="special")return SPECIAL_ITEMS?.[key]?.image||"";
+      if(type==="fishingBait")return FISHING_BAITS?.[key]?.image||"";
+      if(type==="alpacaFood"&&key==="pellet")return "alpaca-pellet-food.png";
+      if(type==="alpacaOther"&&key==="processingLicense")return "alpaca_processing_license.png?v=240";
+      if(type==="dogMystery")return DOG_BOX?.image||"";
+      if(type==="catMystery")return CAT_BOX?.image||"";
+      if(type==="alpacaWool"&&key==="gold")return "alpaca-wool-gold.png";
+    }catch{}
+    return"";
+  }
+
+  function rollReward(selections,calledAt){
+    const total=selections.reduce((n,x)=>n+int(x.qty),0);
+    const premium=selections.reduce((n,x)=>n+(["dish","rainyMenu","factory"].includes(x.type)?int(x.qty):0),0);
+    const d=new Date((num(calledAt)||now())+7*60*60*1000),hour=d.getUTCHours(),day=d.getUTCDate();
+    const timeLuck=(hour*7+day)%3; // hidden 0..2, depends on call time in Thailand.
+    const cargoLuck=(total>=8?1:0)+(premium>=Math.ceil(total/2)?1:0);
+    const meritWeight=Math.max(2,Math.min(6,2+timeLuck+cargoLuck));
+    const rewards=[
+      {type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:30,weight:10},
+      {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:30,weight:10},
+      {type:"fishingBait",key:"bait4",name:"เหยื่อตกปลามือโปร",qty:20,weight:10},
+      {type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:50,weight:10},
+      {type:"alpacaOther",key:"processingLicense",name:"ใบอนุญาตแปรรูป",qty:30,weight:10},
+      {type:"dogMystery",key:"dogBox",name:"กล่องสุ่มหมา",qty:20,weight:10},
+      {type:"catMystery",key:"catBox",name:"กล่องสุ่มแมว",qty:20,weight:10},
+      {type:"alpacaWool",key:"gold",name:"ขนอัลปาก้าสีทอง",qty:10,weight:10},
+      {type:"merit",key:"merit",name:"กุศล",qty:50+Math.floor(Math.random()*101),weight:meritWeight}
+    ];
+    let roll=Math.random()*rewards.reduce((n,r)=>n+r.weight,0),pick=rewards[0];
+    for(const r of rewards){roll-=r.weight;if(roll<0){pick=r;break}}
+    return{type:pick.type,key:pick.key,name:pick.name,qty:pick.qty,image:rewardImage(pick.type,pick.key)};
+  }
+
+  function grantReward(s,r){
+    if(r.type==="merit"){s.merit=num(s.merit)+int(r.qty);return}
+    if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มรางวัลยังไม่พร้อม");
+    addGiftItemToState(s,{itemType:r.type,itemKey:r.key,qty:r.qty});
+  }
+
+  async function submitDelivery(selections,button){
+    const total=selections.reduce((n,x)=>n+int(x.qty),0);if(total<3||total>10)return;
+    if(button)button.disabled=true;transit=true;
+    try{
+      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery;
+        if(!h.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(h.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
+        if(total<3||total>10)throw new Error("ต้องฝากของรวม 3–10 ชิ้น");
+        for(const e of selections){if(!takeDeliveryItem(s,e,int(e.qty)))throw new Error(`${e.name} ในคลังไม่พอ`)}
+        reward=rollReward(selections,h.calledAt);grantReward(s,reward);h.reward=cloneData(reward);next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:num(s.merit),initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      applyOwn(next);closeModal();
+      const b=bike();showBikeBase();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
+      await playSheetOnce(SPRITE_FILES.receive,125);
+      await playSheetOnce(SPRITE_FILES.place,125);
+      await playSheetOnce(SPRITE_FILES.ready,120);
+      currentBikeMode="ready";transit=false;showRewardModal(reward);
+    }catch(error){transit=false;message("ฝากของไม่ได้",error.message||"กรุณาลองใหม่");showParkedBike("idle")}
+    finally{if(button)button.disabled=false}
+  }
+
+  let rewardCloseBackup=null,modalBackdropBackup=null;
+  function restoreModalCloseHandlers(){
+    if(rewardCloseBackup!==null&&$("closeModal"))$("closeModal").onclick=rewardCloseBackup;
+    if(modalBackdropBackup!==null&&$("modal"))$("modal").onclick=modalBackdropBackup;
+    rewardCloseBackup=null;modalBackdropBackup=null;
+  }
+  function showRewardModal(reward){
+    if(!reward||rewardShowing)return;rewardShowing=true;
+    const img=reward.image?`<img class="honey-reward-img" src="${reward.image}" alt="${esc(reward.name)}">`:'<div class="honey-reward-emoji">🙏</div>';
+    $("modalContent").innerHTML=`<section class="feature-panel honey-reward-modal">${img}<small>🐷🛵 น้ำผึ้งฝากมาบอก</small><h2>ขอบคุณที่ไว้ใจ<br>ฝากของน้องน้ำผึ้ง</h2><p>น้องน้ำผึ้งใจดี รับไปเลย</p><div class="honey-reward-card"><b>${esc(reward.name)}</b><strong>${reward.type==="merit"?`+${int(reward.qty)}`:`×${int(reward.qty)}`}</strong></div><button id="honeyRewardThanks" class="honey-primary-btn" type="button">ขอบคุณนะน้ำผึ้ง</button></section>`;
+    openModal();
+    const done=()=>beginDeparture();
+    $("honeyRewardThanks").onclick=done;
+    const closeBtn=$("closeModal"),modal=$("modal");rewardCloseBackup=closeBtn?.onclick||closeModal;modalBackdropBackup=modal?.onclick||null;
+    if(closeBtn)closeBtn.onclick=done;
+    if(modal)modal.onclick=e=>{if(e.target===modal)done();else if(typeof modalBackdropBackup==="function")modalBackdropBackup.call(modal,e)};
+  }
+
+  async function beginDeparture(){
+    if(transit)return;transit=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();
+        h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=h.fuelReadyAt+READY_MS;h.needsSeedPersist=false;next=s;
+        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      applyOwn(next);restoreModalCloseHandlers();rewardShowing=false;closeModal();
+      showBikeBase();const b=bike(),start=bikeStopX(),screen=$("gameScreen"),end=(screen?.clientWidth||window.innerWidth)+(b?.offsetWidth||110)+30;
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";setSheet(SPRITE_FILES.ride,true,115);
+      await moveBike(start,end,4300);hideBike();renderFuelHud();
+    }catch(error){message("น้ำผึ้งยังออกเดินทางไม่ได้",error.message||"กรุณาลองใหม่")}
+    finally{transit=false}
+  }
+
+  function restoreHoneyPresence(){
+    if(!isAdmin()||!firstFarmPageVisible()){if(!transit)hideBike();return}
+    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;if(!h)return;
+    if(!h.active){if(!transit)hideBike();return}
+    if(transit)return;
+    if(h.reward){showParkedBike("ready");if(!rewardShowing)showRewardModal(h.reward)}
+    else showParkedBike("idle");
+  }
+
+  function bind(){
+    const h=hud(),b=bike();
+    if(h)h.onclick=()=>{if(!isAdmin())return;const s=ensureHoneyState(ownState||state,"Aida"),x=s?.honeyDelivery;if(!x)return;if(x.active)return;advanceFuelCycle(x,now());if(fuelPercent(x)>=100)callHoney();else showFuelModal()};
+    if(b)b.onclick=()=>{if(!isAdmin()||transit)return;const x=(ownState||state)?.honeyDelivery;if(!x?.active)return;if(x.reward)showRewardModal(x.reward);else showSendModal()};
+    fuelImageFallback($("honeyFuelIcon"));
+  }
+
+  bind();
+  setInterval(()=>{try{renderFuelHud();restoreHoneyPresence()}catch(error){console.warn("V252 honey tick",error)}},5000);
+  setTimeout(()=>{try{renderFuelHud();restoreHoneyPresence();persistSeedOrTimer()}catch{}},800);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderFuelHud();restoreHoneyPresence()}});
+  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal};
+  window.YAINOO_BUILD=VERSION;
+  console.info(`${VERSION} loaded`);
+})();
