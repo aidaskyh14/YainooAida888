@@ -18844,7 +18844,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 (function YN_V252_HONEY_DELIVERY_ADMIN_TEST(){
   "use strict";
 
-  const VERSION="V252-HONEY-FUEL-ADMIN-TEST";
+  const VERSION="V253-HONEY-CARGO-TRANSPARENT-FIX";
   const FUEL_KEY="honeyFuelCan";
   const FUEL_NAME="แกลลอนน้ำมัน";
   const FUEL_IMAGE="honey-fuel-can.png?v=252";
@@ -19181,16 +19181,45 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const i=Math.max(0,Math.min(15,int(frame))),col=i%4,row=Math.floor(i/4);
     img.style.transform=`translate3d(${-col*25}%,${-row*25}%,0)`;
   }
+  const transparentSheetCache=new Map();
+  async function transparentizeSheetUrl(url){
+    if(transparentSheetCache.has(url))return transparentSheetCache.get(url);
+    const promise=(async()=>{
+      try{
+        const res=await fetch(url,{cache:"force-cache"});if(!res.ok)throw new Error(`โหลด sprite ไม่สำเร็จ ${res.status}`);
+        const blob=await res.blob(),bitmap=await createImageBitmap(blob);
+        const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;
+        const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.drawImage(bitmap,0,0);bitmap.close?.();
+        const im=ctx.getImageData(0,0,canvas.width,canvas.height),d=im.data,w=canvas.width,h=canvas.height;
+        const seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
+        const nearWhite=i=>{const o=i*4,r=d[o],g=d[o+1],b=d[o+2],a=d[o+3];return a>0&&r>=220&&g>=220&&b>=220&&(Math.max(r,g,b)-Math.min(r,g,b)<=24)};
+        const push=i=>{if(i<0||i>=w*h||seen[i]||!nearWhite(i))return;seen[i]=1;queue[tail++]=i};
+        for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}
+        for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
+        while(head<tail){const i=queue[head++],x=i%w,y=(i/w)|0;if(x>0)push(i-1);if(x<w-1)push(i+1);if(y>0)push(i-w);if(y<h-1)push(i+w)}
+        for(let i=0;i<w*h;i++)if(seen[i])d[i*4+3]=0;
+        ctx.putImageData(im,0,0);
+        const out=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("แปลง sprite ไม่สำเร็จ")),"image/png"));
+        return URL.createObjectURL(out);
+      }catch(error){console.warn("V253 transparent sprite fallback",url,error);return url}
+    })();
+    transparentSheetCache.set(url,promise);return promise;
+  }
   function setSheet(file,loop=true,frameMs=135){
     const img=bikeSheet();if(!img)return;
     stopFrameTimer();paintFrame(0);
-    img.dataset.fallbackDone="";
-    img.onerror=()=>{
-      if(img.dataset.fallbackDone)return;
-      img.dataset.fallbackDone="1";
-      img.src=`${file}?v=252`;
-    };
-    img.src=`assets/pig-delivery/${file}?v=252`;
+    const primary=`assets/pig-delivery/${file}?v=253`,fallback=`${file}?v=253`;
+    const token=`${file}:${Date.now()}:${Math.random()}`;img.dataset.sheetToken=token;
+    (async()=>{
+      let src=await transparentizeSheetUrl(primary);
+      if(img.dataset.sheetToken!==token)return;
+      img.onerror=async()=>{
+        img.onerror=null;
+        const fb=await transparentizeSheetUrl(fallback);
+        if(img.dataset.sheetToken===token)img.src=fb;
+      };
+      img.src=src;
+    })();
     if(loop){let f=0;frameTimer=setInterval(()=>{f=(f+1)%16;paintFrame(f)},frameMs)}
   }
   function playSheetOnce(file,frameMs=130){
@@ -19262,11 +19291,11 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   function sendEntries(s=ownState||state){
     const rows=[];
     const add=(category,type,key,name,image,count)=>{count=int(count);if(count>0)rows.push({id:`${type}:${key}`,category,type,key,name,image,count})};
+    /* V253: Honey accepts ONLY crafted food and finished factory products.
+       Crops and animal-barn raw materials are intentionally excluded. */
     try{RECIPES.forEach(r=>add("food","dish",r.id,r.name,r.image,dishHave(s,r.id)))}catch{}
     try{RAINY_SEASON_MENUS.forEach(r=>add("food","rainyMenu",r.id,r.name,r.image,rainyHave(s,r.id)))}catch{}
     try{Object.entries(globalThis.YN_V240?.products||{}).forEach(([k,r])=>add("factory","factory",k,r.name,r.image,s?.alpaca?.factory?.products?.[k]))}catch{}
-    try{Object.entries(CROPS||{}).forEach(([k,r])=>add("crops","crop",k,r.name,r.selectImg||r.readyImg||"",s?.bag?.[k]))}catch{}
-    try{Object.entries(ANIMAL_PRODUCTS||{}).forEach(([k,r])=>add("products","product",k,r.name,r.image||"",s?.animalProducts?.[k]))}catch{}
     return rows;
   }
 
@@ -19275,10 +19304,10 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;
     if(!h?.active)return message("น้ำผึ้งยังไม่มา","ต้องเรียกน้ำผึ้งให้มาจอดก่อนค่ะ");
     if(h.reward){showRewardModal(h.reward);return}
-    const rows=sendEntries(s);if(!rows.length)return message("ยังไม่มีของให้ฝาก","ต้องมีอาหารคราฟ ของแปรรูปอัลปาก้า พืชพรรณ หรือวัตถุดิบสัตว์โลกวิญญาณอย่างน้อย 3 ชิ้น");
+    const rows=sendEntries(s);if(!rows.length)return message("ยังไม่มีของให้ฝาก","ต้องมีเมนูอาหารที่คราฟแล้ว หรือผลิตภัณฑ์จากโรงงานแปรรูปอย่างน้อย 3 ชิ้น");
     const selected=new Map();let category="food";
     const cats=[
-      ["food","🍲","อาหารคราฟ"],["factory","🏭","แปรรูป"],["crops","🌱","พืชพรรณ"],["products","🥚","วัตถุดิบ"]
+      ["food","🍲","อาหารคราฟ"],["factory","🏭","แปรรูป"]
     ];
     $("modalContent").innerHTML=`<section class="feature-panel honey-send-modal">
       <div class="honey-send-head"><div><small>🐷🛵 น้องน้ำผึ้ง</small><h2>ส่งของต้าวน้ำผึ้ง</h2><p>เลือกของรวม <b>3–10 ชิ้น</b></p></div><span id="honeySendTotal">0/10</span></div>
