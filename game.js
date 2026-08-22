@@ -16770,7 +16770,7 @@ async function V181_campaignScoreLater(summary){
     green:{1:{idle:160/225,front:160/225,side:160/225,back:160/225},2:{idle:160/225,front:160/225,side:160/225,back:160/225},3:{idle:160/225,front:160/225,side:160/225,back:160/225},4:{idle:160/225,front:160/225,side:160/225,back:160/225}},
     brown:{1:{idle:160/225,front:160/225,side:160/225,back:160/225},2:{idle:160/225,front:160/225,side:160/225,back:160/225},3:{idle:160/225,front:160/225,side:160/225,back:160/225},4:{idle:160/225,front:160/225,side:160/225,back:160/225}},
     goldenHoney:{1:{idle:160/225,front:160/225,side:160/225,back:160/225},2:{idle:160/225,front:160/225,side:160/225,back:160/225},3:{idle:160/225,front:160/225,side:160/225,back:160/225},4:{idle:160/225,front:160/225,side:160/225,back:160/225}},
-    thaiTea:{1:{idle:160/225,front:160/225,side:1872/2840,back:160/225},2:{idle:160/225,front:160/225,side:1872/2840,back:160/225},3:{idle:160/225,front:160/225,side:1872/2840,back:160/225},4:{idle:160/225,front:160/225,side:1872/2840,back:160/225}}
+    thaiTea:{1:{idle:160/225,front:160/225,side:160/225,back:160/225},2:{idle:160/225,front:160/225,side:160/225,back:160/225},3:{idle:160/225,front:160/225,side:160/225,back:160/225},4:{idle:160/225,front:160/225,side:160/225,back:160/225}}
   };
   const ASSET={
     hunger:"alpaca-food-plate.png",pregnant:"alpaca-pregnancy-icon.png",pellet:"alpaca-pellet-food.png",hay:"alpaca-hay-pack.png",
@@ -16924,7 +16924,10 @@ async function V181_campaignScoreLater(summary){
   function idleRatio(color,stage=1){return IDLE_RATIO[color]?.[stage]||160/225}
   function spritePreview(color,stage=1,extra=""){
     const ratio=idleRatio(color,stage),useColorIcon=(color==="thaiTea"||color==="goldenHoney")&&/(manage|warehouse|craft|reward|list)/i.test(String(extra||""));
-    if(useColorIcon){const icon=COLOR_META[color]?.icon||spriteAsset(color,stage,"idle");return `<span class="alpaca-sprite-preview alpaca-color-icon-preview ${extra}" style="--alpaca-preview-ratio:1;aspect-ratio:1;background-image:url('${icon}')"></span>`}
+    if(useColorIcon){
+      const icon=COLOR_META[color]?.icon||"";
+      return `<img class="alpaca-card-icon ${extra}" src="${icon}?v=263" alt="${safeHtml(colorName(color))}" loading="eager" decoding="async">`;
+    }
     return `<span class="alpaca-sprite-preview ${extra}" style="--alpaca-preview-ratio:${ratio};aspect-ratio:${ratio};background-image:url('${spriteAsset(color,stage,"idle")}')"></span>`
   }
 
@@ -17100,7 +17103,7 @@ async function V181_campaignScoreLater(summary){
     let sheet=w.sheet;if(!sheet||!sheet.isConnected){sheet=document.createElement("img");sheet.className="alpaca-sprite-sheet";sheet.alt="";sheet.draggable=false;w.sprite.replaceChildren(sheet);w.sheet=sheet;w.renderAssetKey=""}
     if(w.renderAssetKey!==assetKey){w.renderAssetKey=assetKey;sheet.src=asset}
     sheet.style.left=`-${col*100}%`;sheet.style.top=`-${row*100}%`;
-    if(w.color==="thaiTea"){sheet.style.transformOrigin=`${(col+.5)*25}% ${(row+.5)*25}%`;sheet.style.transform="translateZ(0) scale(1.012)"}else{sheet.style.transformOrigin="center";sheet.style.transform="translateZ(0)"}
+    sheet.style.transformOrigin="center";sheet.style.transform="translateZ(0)"
   }
   function walkerNodeBusy(w,node){for(const other of penWalkers.values()){if(!other||other===w)continue;if(other.node===node||other.reservedNode===node)return true}return false}
   function walkerNext(w){
