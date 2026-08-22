@@ -6850,3 +6850,57 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 /* V260 — keep front-farm magic mushroom visually small while retaining an easy tap target. */
 .friend-magic-mushroom{width:38px!important;height:38px!important;margin:-5px 0 0 -5px!important;display:grid!important;place-items:center!important}
 .friend-magic-mushroom img{width:20px!important;height:20px!important;object-fit:contain!important}
+
+
+/* ======================================================================
+   V261 — THAI TEA SPRITE CLIP + FULL-PEN PERFORMANCE HOTFIX
+   - Clip moving sprite sheets in a dedicated viewport.
+   - Animate sheet coordinates with an inner <img>, avoiding frame-edge bleed.
+   - Static list/manage previews for the two new colors use their icon assets.
+   ====================================================================== */
+.alpaca-pen-animal .alpaca-sprite,
+.wild-alpaca-baby .alpaca-sprite{
+  overflow:hidden!important;
+  contain:paint!important;
+  background-image:none!important;
+  background-size:auto!important;
+  background-position:0 0!important;
+  will-change:auto!important;
+}
+.alpaca-sprite-sheet{
+  position:absolute!important;
+  display:block!important;
+  left:0;
+  top:0;
+  width:400%!important;
+  height:400%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:fill!important;
+  user-select:none!important;
+  pointer-events:none!important;
+  -webkit-user-drag:none!important;
+  backface-visibility:hidden!important;
+  -webkit-backface-visibility:hidden!important;
+  will-change:left,top,transform;
+}
+.alpaca-sprite-preview.alpaca-color-icon-preview{
+  background-size:contain!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-color:transparent!important;
+}
+.alpaca-manage-preview-wrap .alpaca-color-icon-preview,
+.alpaca-warehouse-card .alpaca-color-icon-preview{
+  aspect-ratio:1/1!important;
+  height:auto!important;
+  min-height:0!important;
+}
+@media (max-width:430px){
+  .alpaca-sprite-sheet{will-change:transform}
+}
+
+
+/* V262 — wool growth medicine: direct per-alpaca action + compact inventory picker */
+.alpaca-detail-actions .wool-med-direct{padding:4px 6px;min-height:42px}.alpaca-detail-actions .wool-med-direct span{display:grid;gap:1px;min-width:0;text-align:left}.alpaca-detail-actions .wool-med-direct b{font-size:9px;line-height:1.05}.alpaca-detail-actions .wool-med-direct small{font-size:7px;line-height:1.05;opacity:.86}.alpaca-detail-actions .wool-med-direct:disabled{opacity:.58;filter:saturate(.65);cursor:not-allowed}.alpaca-wool-picker-compact{max-width:520px!important;padding:10px!important}.alpaca-mini-picker-head{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 8px}.alpaca-mini-picker-head>img{width:48px;height:48px;object-fit:contain}.alpaca-mini-picker-head h2{margin:0;font-size:clamp(16px,4.3vw,22px);color:#664166}.alpaca-mini-picker-head small{display:block;margin-top:2px;font-size:8px;color:#927b88}.alpaca-wool-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:min(54vh,430px);overflow:auto;padding:1px}.alpaca-wool-pick-card{min-width:0;border:1px solid #e0c8ac;border-radius:12px;background:#fff9ed;color:#583d55;padding:6px 4px;display:grid;justify-items:center;gap:2px}.alpaca-wool-pick-card .alpaca-sprite-preview{width:44px!important;max-height:54px!important}.alpaca-wool-pick-card b{max-width:100%;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.alpaca-wool-pick-card small{font-size:7px;color:#8b7480}.alpaca-wool-pick-card em{font-style:normal;font-size:8px;font-weight:900;color:#fff;background:#775080;border-radius:999px;padding:3px 8px}.alpaca-wool-pick-card:disabled{opacity:.48}.alpaca-wool-picker-compact .compact-back{display:block;width:auto!important;min-width:88px;margin:7px auto 0!important;padding:6px 14px!important;min-height:32px!important;font-size:9px!important}
+@media(max-width:390px){.alpaca-wool-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.alpaca-wool-picker-compact{padding:8px!important}.alpaca-mini-picker-head>img{width:42px;height:42px}}
