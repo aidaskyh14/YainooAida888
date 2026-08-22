@@ -6922,3 +6922,22 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 
 /* V264 — Thai Tea icon fallback remains visible even if the dedicated icon filename is not yet on CDN. */
 .alpaca-card-icon-fallback{object-fit:contain!important;object-position:center!important;clip-path:inset(0)!important}
+
+
+/* ======================================================================
+   V268 — factory tap zones + baby steak hit target
+   ====================================================================== */
+.v240-machine-hotspot.meat{left:0!important;top:10%!important;width:50%!important;height:78%!important}
+.v240-machine-hotspot.wool{right:0!important;top:10%!important;width:50%!important;height:78%!important}
+.v240-machine-hotspot{pointer-events:auto!important;touch-action:manipulation!important;z-index:6!important}
+.v240-product-card{position:relative;z-index:1;pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer}
+.v240-product-card *{pointer-events:auto}
+.v240-card-actions{position:relative;z-index:3}
+.v240-card-actions button{min-height:44px!important;padding:9px 11px!important;pointer-events:auto!important;touch-action:manipulation!important}
+.v240-ingredient-grid{pointer-events:auto!important;-webkit-overflow-scrolling:touch}
+.alpaca-status-stack.ready-factory{
+  pointer-events:auto!important;z-index:60!important;min-width:40px!important;min-height:40px!important;
+  padding:10px!important;margin:-10px!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  touch-action:manipulation!important;cursor:pointer!important;
+}
+.alpaca-status-stack.ready-factory .alpaca-ready-factory-icon{pointer-events:auto!important;cursor:pointer!important}
