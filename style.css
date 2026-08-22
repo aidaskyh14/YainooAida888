@@ -6809,3 +6809,44 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
 }
+
+/* ======================================================================
+   V260 — ALPACA 7 COLORS / FULL-PEN DENSITY + COMPACT UI
+   Keep food/medicine artwork sizes unchanged; shrink only pen actors/status/ground drops.
+   ====================================================================== */
+.alpaca-pen-animal{
+  z-index:var(--alpaca-depth,20)!important;
+  pointer-events:auto!important;
+}
+.alpaca-pen-animal.adult{
+  width:clamp(54px,12vw,81px)!important;
+  height:clamp(75px,16.9vw,114px)!important;
+}
+.alpaca-pen-animal.baby{
+  width:clamp(28px,6.5vw,44px)!important;
+  height:clamp(39px,9.2vw,60px)!important;
+}
+.alpaca-status-stack{top:-11px!important;gap:1px!important;max-width:72px!important}
+.alpaca-status-stack img{width:clamp(14px,3.5vw,22px)!important;height:clamp(14px,3.5vw,22px)!important}
+.alpaca-pen-animal.baby .alpaca-status-stack{top:-9px!important}
+.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(12px,3vw,18px)!important;height:clamp(12px,3vw,18px)!important}
+.alpaca-pen-event.mushroom{width:29px!important;height:29px!important;margin:-4px 0 0 -4px!important}
+.alpaca-pen-event.mushroom img{width:20px!important;height:20px!important}
+.alpaca-pen-event.hole{width:38px!important;height:31px!important;margin:-5px 0 0 -5px!important}
+.alpaca-pen-event.hole img{width:29px!important;height:21px!important}
+.v240-treasure-drop{width:27px!important;height:27px!important;margin:-13.5px 0 0 -13.5px!important}
+.wild-alpaca-baby{width:clamp(28px,6.6vw,45px)!important}
+
+/* New alpaca food/medicine use windows: compact, image-forward, no text wall. */
+.modal-card:has(.alpaca-use-special-panel){width:min(90vw,450px)!important;max-height:82dvh!important;overflow:hidden!important}
+.alpaca-use-special-panel{max-height:78dvh!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;padding:10px!important}
+.alpaca-use-special-panel .alpaca-panel-hero{flex:0 0 auto!important;margin-bottom:6px!important;padding:6px 8px!important}
+.alpaca-use-special-panel .alpaca-hero-icon{width:50px!important;height:50px!important}
+.alpaca-use-special-panel .alpaca-panel-hero h2{font-size:clamp(14px,3.8vw,18px)!important;margin:0 0 2px!important}
+.alpaca-use-special-panel .alpaca-panel-hero p{font-size:9px!important;line-height:1.3!important;margin:0!important}
+.alpaca-use-special-panel .alpaca-manage-list{min-height:0!important;max-height:55dvh!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding:2px!important}
+.alpaca-use-special-panel .alpaca-manage-card{min-height:74px!important;padding:6px!important}
+
+/* V260 — keep front-farm magic mushroom visually small while retaining an easy tap target. */
+.friend-magic-mushroom{width:38px!important;height:38px!important;margin:-5px 0 0 -5px!important;display:grid!important;place-items:center!important}
+.friend-magic-mushroom img{width:20px!important;height:20px!important;object-fit:contain!important}
