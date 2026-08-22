@@ -17516,7 +17516,7 @@ async function V181_campaignScoreLater(summary){
   async function craftOneAlpaca(){const btn=$("confirmAlpacaCraft");if(btn){btn.disabled=true;btn.textContent="กำลังคราฟ..."}try{const out=await mutateOwn(s=>{ensureCatState(s);ensureDogState(s);if(typeof Y26_ensureState==="function")Y26_ensureState(s);const root=s.alpaca,d=root.craftDaily;if(d.dateKey!==currentBangkokDateKey()){d.dateKey=currentBangkokDateKey();d.count=0}if(d.count>=5)throw new Error("วันนี้คราฟอัลปาก้าครบ 5 ตัวแล้วค่ะ");const counts=alpacaCraftCounts(s);for(const [k,n] of Object.entries(ALPACA_CRAFT_NEED))if(counts[k]<n)throw new Error(`${ALPACA_CRAFT_META[k].name} ไม่พอ`);if(!isAdmin()){if(!removeAnyV2(s,3))throw new Error("แมงกระพรุน V2 ไม่พอ");s.specials.landDeed-=50;if(!removeUnplaced(s,"cat",5))throw new Error("แมวไม่พอ");if(!removeUnplaced(s,"dog",5))throw new Error("หมาไม่พอ");s.merit-=500;s.animalProducts.egg-=250;s.animalProducts.milk-=250;s.animalProducts.truffle-=250;s.animalProducts.fishMeat-=250}else{root.inventory.food.hayPack=9999;root.inventory.food.pellet=9999;Object.keys(root.inventory.medicine).forEach(k=>root.inventory.medicine[k]=9999);root.inventory.other.magicMushroom=9999;[...COLORS,"gold"].forEach(k=>root.inventory.wool[k]=9999)}const color=randomCraftColor(),sex=Math.random()<.8?"male":"female",id=uid("vault-craft");root.vault.push({id,type:"adult",color,sex,source:"craft",createdAt:gameNow()});d.count++;return{id,color,sex}});const r=out.result;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel alpaca-craft-success"><h2>ยินดีด้วยค่ะ</h2><div class="alpaca-craft-success-preview">${warehouseSprite({type:"adult",color:r.color,sex:r.sex})}</div><p>คุณได้รับ <b>อัลปาก้า${COLOR_META[r.color]?.name||""} ${r.sex==="female"?"เพศเมีย":"เพศผู้"}</b></p><button id="receiveCraftedAlpaca" class="primary-spooky-action" type="button">รับ</button></section>`;openModal();$("receiveCraftedAlpaca").onclick=showAlpacaWarehouse;updateMeritUI()}catch(e){alpacaMessage("คราฟไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn){btn.disabled=false;btn.textContent="คราฟอัลปาก้า"}}}
 
   function hookUi(){
-    if($("shortcutAlpacaPenBtn"))$("shortcutAlpacaPenBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}openPen(1)};if($("releaseBabyAlpacaBtn"))$("releaseBabyAlpacaBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}showReleaseBabyPanel()};if($("alpacaPenBackBtn"))$("alpacaPenBackBtn").onclick=closePen;if($("alpacaPenSwitchBtn"))$("alpacaPenSwitchBtn").onclick=showPenSelector;if($("alpacaHappinessBtn"))$("alpacaHappinessBtn").onclick=showHappinessBreakdown;if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").onclick=editPenName;if($("alpacaMedicineHotspot"))$("alpacaMedicineHotspot").onclick=()=>showCraft("medicine");if($("alpacaFoodHotspot"))$("alpacaFoodHotspot").onclick=()=>showCraft("food");if($("alpacaTroughHotspot"))$("alpacaTroughHotspot").onclick=showTrough;if($("alpacaManageBtn"))$("alpacaManageBtn").onclick=showManageAlpacas;if($("alpacaFactoryBtn"))$("alpacaFactoryBtn").onclick=showFactorySoon;if($("alpacaWarehouseBtn"))$("alpacaWarehouseBtn").onclick=showAlpacaWarehouse;if($("alpacaRankBtn"))$("alpacaRankBtn").onclick=showRank;
+    if($("shortcutAlpacaPenBtn"))$("shortcutAlpacaPenBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}openPen(1)};if($("releaseBabyAlpacaBtn"))$("releaseBabyAlpacaBtn").onclick=()=>{try{closeHomeHudMenu()}catch{}showReleaseBabyPanel()};if($("alpacaPenBackBtn"))$("alpacaPenBackBtn").onclick=closePen;if($("alpacaPenSwitchBtn"))$("alpacaPenSwitchBtn").onclick=showPenSelector;if($("alpacaHappinessBtn"))$("alpacaHappinessBtn").onclick=showHappinessBreakdown;if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").onclick=editPenName;if($("alpacaWeatherBtn"))$("alpacaWeatherBtn").onclick=showAlpacaWeatherChooser;if($("alpacaMedicineHotspot"))$("alpacaMedicineHotspot").onclick=()=>showCraft("medicine");if($("alpacaFoodHotspot"))$("alpacaFoodHotspot").onclick=()=>showCraft("food");if($("alpacaTroughHotspot"))$("alpacaTroughHotspot").onclick=showTrough;if($("alpacaManageBtn"))$("alpacaManageBtn").onclick=showManageAlpacas;if($("alpacaFactoryBtn"))$("alpacaFactoryBtn").onclick=showFactorySoon;if($("alpacaWarehouseBtn"))$("alpacaWarehouseBtn").onclick=showAlpacaWarehouse;if($("alpacaRankBtn"))$("alpacaRankBtn").onclick=showRank;
   }
 
   const drawBase=draw;draw=function(){const r=drawBase.apply(this,arguments);setTimeout(()=>{try{syncEntryButtons();if(isAidaFarmView()&&Number(farmPlotPage||0)===0)renderWildBabies();if(visitContext)renderFriendMushrooms()}catch(e){console.warn("alpaca draw hook",e)}},0);return r};
@@ -17530,7 +17530,26 @@ async function V181_campaignScoreLater(summary){
      cannot create overlapping weather. Particles are automatically reduced in full pens. */
   const ALPACA_WEATHER_TYPES=["rain","snow","leaves","mist","sun"];
   const ALPACA_WEATHER_MS=60*1000;
-  let alpacaWeatherTimer=0,alpacaWeatherKey="";
+  let alpacaWeatherTimer=0,alpacaWeatherKey="",alpacaManualWeather=""; // ""=auto, normal/rain/snow=manual
+  function updateAlpacaWeatherButton(){
+    const b=$("alpacaWeatherBtn");if(!b)return;
+    b.textContent=alpacaManualWeather==="rain"?"🌧️":alpacaManualWeather==="snow"?"❄️":alpacaManualWeather==="normal"?"☀️":"🌦️";
+    b.setAttribute("aria-label",alpacaManualWeather==="rain"?"ฝนในคอก":alpacaManualWeather==="snow"?"หิมะในคอก":alpacaManualWeather==="normal"?"อากาศปกติในคอก":"อากาศอัตโนมัติในคอก");
+  }
+  function setAlpacaManualWeather(mode){
+    alpacaManualWeather=["normal","rain","snow"].includes(mode)?mode:"";
+    alpacaWeatherKey="";
+    if(alpacaManualWeather==="rain"||alpacaManualWeather==="snow")buildAlpacaWeather(alpacaManualWeather);
+    else clearAlpacaWeather();
+    updateAlpacaWeatherButton();
+    closeModal();
+  }
+  function showAlpacaWeatherChooser(){
+    const current=alpacaManualWeather||"auto";
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-weather-picker"><h2>🌦️ สภาพอากาศในคอก</h2><p>เป็นเอฟเฟกต์ภาพเท่านั้น • ไม่กระทบอัลปาก้าหรือโรงงาน</p><div class="alpaca-weather-picker-grid"><button type="button" data-alpaca-weather="auto" class="${current==="auto"?"active":""}"><span>🌦️</span>อัตโนมัติ</button><button type="button" data-alpaca-weather="normal" class="${current==="normal"?"active":""}"><span>☀️</span>ปกติ</button><button type="button" data-alpaca-weather="rain" class="${current==="rain"?"active":""}"><span>🌧️</span>เรียกฝน</button><button type="button" data-alpaca-weather="snow" class="${current==="snow"?"active":""}"><span>❄️</span>เรียกหิมะ</button></div></section>`;
+    openModal();
+    document.querySelectorAll("[data-alpaca-weather]").forEach(b=>b.onclick=()=>setAlpacaManualWeather(b.dataset.alpacaWeather));
+  }
   function alpacaWeatherPlan(now=gameNow()){
     const hour=Math.floor(now/HOUR),seed=hash(`${currentMemberKey||"guest"}:alpaca-weather:${hour}`),rand=rng(seed);
     const type=ALPACA_WEATHER_TYPES[Math.floor(rand()*ALPACA_WEATHER_TYPES.length)]||"rain";
@@ -17552,9 +17571,16 @@ async function V181_campaignScoreLater(summary){
   }
   function syncAlpacaWeather(){
     const open=!$("alpacaPenScreen")?.classList.contains("hidden");if(!open){clearAlpacaWeather();return}
+    if(alpacaManualWeather){
+      if(alpacaManualWeather==="normal"){if(alpacaWeatherKey)clearAlpacaWeather();updateAlpacaWeatherButton();return}
+      const manualKey=`manual:${alpacaManualWeather}`;
+      if(alpacaWeatherKey!==manualKey){buildAlpacaWeather(alpacaManualWeather);alpacaWeatherKey=manualKey}
+      updateAlpacaWeatherButton();return;
+    }
     const now=gameNow(),plan=alpacaWeatherPlan(now),active=now>=plan.startAt&&now<plan.endAt;
-    if(!active){if(alpacaWeatherKey)clearAlpacaWeather();return}
+    if(!active){if(alpacaWeatherKey)clearAlpacaWeather();updateAlpacaWeatherButton();return}
     if(alpacaWeatherKey!==plan.key){alpacaWeatherKey=plan.key;buildAlpacaWeather(plan.type)}
+    updateAlpacaWeatherButton();
   }
   function startAlpacaWeatherClock(){if(alpacaWeatherTimer)return;syncAlpacaWeather();alpacaWeatherTimer=setInterval(syncAlpacaWeather,10000)}
   function stopAlpacaWeatherClock(){if(alpacaWeatherTimer){clearInterval(alpacaWeatherTimer);alpacaWeatherTimer=0}clearAlpacaWeather()}
@@ -19628,5 +19654,5 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 window.YAINOO_BUILD="V260-ALPACA-SEVEN-COLOR-FINAL";
 console.info("V260 alpaca seven-color final update loaded");
 
-;window.YAINOO_BUILD="V268-FACTORY-BABY-ROOTFIX";
-console.info("V268 factory/baby rootfix loaded");
+;window.YAINOO_BUILD="V269-FACTORY-WAREHOUSE-SCROLL";
+console.info("V270 alpaca weather control loaded");

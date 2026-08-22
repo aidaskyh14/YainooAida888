@@ -6941,3 +6941,94 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
   touch-action:manipulation!important;cursor:pointer!important;
 }
 .alpaca-status-stack.ready-factory .alpaca-ready-factory-icon{pointer-events:auto!important;cursor:pointer!important}
+
+/* ======================================================================
+   V269 — processing factory warehouse: reliable vertical scroll on phones
+   Keep all V268 factory/baby/steak/mushroom behavior unchanged.
+   ====================================================================== */
+.v240-factory-modal{
+  width:min(92vw,520px)!important;
+  max-height:min(82dvh,760px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  touch-action:pan-y!important;
+  box-sizing:border-box!important;
+  padding-bottom:max(18px,env(safe-area-inset-bottom))!important;
+}
+.modal-card:has(.v240-factory-modal){
+  width:min(94vw,560px)!important;
+  max-height:88dvh!important;
+  overflow:hidden!important;
+  padding:12px!important;
+  touch-action:pan-y!important;
+}
+.modal-card:has(.v240-factory-modal)>#modalContent{
+  width:100%!important;
+  max-height:calc(88dvh - 24px)!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.v240-factory-modal .v240-modal-title{
+  position:sticky!important;
+  top:0!important;
+  z-index:8!important;
+  background:linear-gradient(180deg,#fff8ec 82%,rgba(255,248,236,.94))!important;
+  padding-top:2px!important;
+  padding-bottom:7px!important;
+}
+.v240-factory-modal .v240-bag-grid,
+.v240-factory-modal .v240-license-line{
+  touch-action:pan-y!important;
+}
+@media(max-height:700px){
+  .v240-factory-modal{max-height:86dvh!important}
+  .modal-card:has(.v240-factory-modal){max-height:92dvh!important}
+  .modal-card:has(.v240-factory-modal)>#modalContent{max-height:calc(92dvh - 24px)!important}
+}
+
+
+/* ======================================================================
+   V270 — compact manual weather control for Alpaca Pen
+   Visual only. Does not change hunger, happiness, wool, breeding or factory.
+   ====================================================================== */
+.alpaca-weather-control{
+  position:absolute;
+  z-index:34;
+  left:2.7%;
+  top:8.1%;
+  width:36px;
+  height:36px;
+  min-width:36px;
+  min-height:36px;
+  padding:0;
+  border:1.5px solid rgba(255,236,198,.92);
+  border-radius:50%;
+  background:linear-gradient(180deg,rgba(82,51,92,.96),rgba(53,31,66,.96));
+  color:#fff;
+  font-size:18px;
+  line-height:1;
+  display:grid;
+  place-items:center;
+  box-shadow:0 4px 12px rgba(35,18,42,.26);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.alpaca-weather-control:active{transform:scale(.94)}
+@media(max-width:390px){
+  .alpaca-weather-control{left:2.5%;top:8.4%;width:34px;height:34px;min-width:34px;min-height:34px;font-size:17px}
+}
+.alpaca-weather-picker{padding:4px 2px 2px;text-align:center}
+.alpaca-weather-picker h2{margin:2px 0 6px;color:#563557;font-size:clamp(20px,5.2vw,28px)}
+.alpaca-weather-picker p{margin:0 0 12px;color:#806b78;font-size:12px;font-weight:800}
+.alpaca-weather-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.alpaca-weather-picker-grid button{
+  min-height:68px;border:1px solid rgba(118,78,104,.22);border-radius:16px;
+  background:linear-gradient(180deg,#fffaf0,#f6e5cf);color:#54354f;font-weight:950;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent
+}
+.alpaca-weather-picker-grid button span{font-size:25px}
+.alpaca-weather-picker-grid button.active{outline:3px solid rgba(119,73,132,.28);background:linear-gradient(180deg,#f3e4ff,#ead3f3)}
+.alpaca-weather-picker-grid button:active{transform:scale(.98)}
