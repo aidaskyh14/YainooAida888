@@ -6919,3 +6919,6 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .alpaca-manage-preview-wrap .alpaca-card-icon{max-width:84%!important;max-height:84%!important}
 .alpaca-warehouse-card .alpaca-card-icon{width:56px!important;height:56px!important}
 .alpaca-craft-success-preview .alpaca-card-icon{width:74px!important;height:74px!important}
+
+/* V264 — Thai Tea icon fallback remains visible even if the dedicated icon filename is not yet on CDN. */
+.alpaca-card-icon-fallback{object-fit:contain!important;object-position:center!important;clip-path:inset(0)!important}
