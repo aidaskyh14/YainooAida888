@@ -16721,7 +16721,7 @@ async function V181_campaignScoreLater(summary){
 (function YN_ALPACA_PEN_SYSTEM(){
   "use strict";
 
-  const VERSION="alpaca-pen-v2-7colors";
+  const VERSION="alpaca-pen-v274-tea-resume-move";
   const PEN_CAPACITY=24;
   const BIRTH_OVERFLOW_CAP=25;
   const HOUR=60*60*1000;
@@ -17105,6 +17105,7 @@ async function V181_campaignScoreLater(summary){
     alpacaSpriteFrame=(alpacaSpriteFrame+1)%16;
   }
   function tickWalkerSprites(){
+    if(document.hidden)return;
     const now=(globalThis.performance&&performance.now)?performance.now():Date.now(),penVisible=!$("alpacaPenScreen")?.classList.contains("hidden"),gameVisible=!$("gameScreen")?.classList.contains("hidden");
     const maps=[];if(penVisible)maps.push(penWalkers);if(gameVisible)maps.push(wildWalkers);
     for(const map of maps)for(const w of map.values()){
@@ -17121,12 +17122,24 @@ async function V181_campaignScoreLater(summary){
   function preloadAlpacaSprite(url){
     if(!url)return Promise.resolve(false);
     const hit=alpacaSpritePreload.get(url);if(hit)return hit.promise;
-    const img=new Image(),entry={img,ready:false,promise:null};
-    entry.promise=new Promise(resolve=>{img.onload=()=>{entry.ready=true;try{img.decode?.().catch(()=>{})}catch{}resolve(true)};img.onerror=()=>resolve(false)});
-    img.decoding="async";img.src=url;alpacaSpritePreload.set(url,entry);return entry.promise;
+    const img=new Image(),entry={img,ready:false,failed:false,promise:null};
+    entry.promise=new Promise(resolve=>{
+      img.onload=async()=>{
+        try{if(typeof img.decode==="function")await img.decode()}catch{}
+        entry.ready=true;entry.failed=false;resolve(true);
+      };
+      img.onerror=()=>{entry.failed=true;entry.ready=false;resolve(false)};
+    });
+    img.decoding="async";img.loading="eager";img.src=url;alpacaSpritePreload.set(url,entry);return entry.promise;
   }
   function preloadWalkerStage(color,stage){
-    ["idle","front","side","back"].forEach(kind=>preloadAlpacaSprite(spriteAsset(color,stage,kind)));
+    return Promise.all(["idle","front","side","back"].map(kind=>preloadAlpacaSprite(spriteAsset(color,stage,kind))));
+  }
+  function preloadThaiTeaAssets(){
+    const jobs=[];
+    for(let stage=1;stage<=4;stage++)for(const kind of ["idle","front","side","back"])jobs.push(preloadAlpacaSprite(spriteAsset("thaiTea",stage,kind)));
+    jobs.push(preloadAlpacaSprite(COLOR_META.thaiTea.icon+"?v=274"));
+    return Promise.allSettled(jobs);
   }
   function rememberWalkerPoint(w){
     if(!w)return;let x=Number(w.x),y=Number(w.y);
@@ -17134,7 +17147,16 @@ async function V181_campaignScoreLater(summary){
     if(Number.isFinite(x)&&Number.isFinite(y)&&String(w.key).includes(":"))penWalkerMemory.set(w.key,[x,y]);
   }
   function stopWalker(w){if(!w)return;rememberWalkerPoint(w);w.token++;clearTimeout(w.moveTimer);w.moveTimer=0;w.reservedNode=-1;if(w.motion){try{w.motion.cancel()}catch{}w.motion=null}if(w.el)w.el.style.transform=""}
-  function clearWalkerMap(map){for(const w of map.values())stopWalker(w);map.clear()}
+  function clearWalkerMap(map){for(const w of map.values()){stopWalker(w);try{w.el?.remove()}catch{}}map.clear()}
+  function pauseWalkerMap(map){for(const w of map.values())stopWalker(w)}
+  function resumeWalkerMap(map){
+    for(const w of map.values()){
+      if(!w?.el||!document.body.contains(w.el))continue;
+      const remembered=penWalkerMemory.get(w.key);
+      if(remembered){w.x=Number(remembered[0]);w.y=Number(remembered[1]);w.node=nearestWalkerNode(w.points,remembered)}
+      w.el.style.left=`${w.x}%`;w.el.style.top=`${w.y}%`;w.el.style.transform="";w.fromPoint=null;w.toPoint=null;w.motion=null;syncWalkerDepth(w);walkerIdle(w,500+Math.random()*700);
+    }
+  }
   function applyWalkerFrame(w,asset,assetKey,col,row,flip,kind){
     if(!w?.sprite||!w.sheet)return;const sheet=w.sheet;
     w.sprite.style.setProperty("--alpaca-frame-ratio",String(walkerRatio(w.color,w.stage,kind)));
@@ -17170,6 +17192,7 @@ async function V181_campaignScoreLater(summary){
     if(!w?.el||!document.body.contains(w.el))return;const token=++w.token;w.reservedNode=-1;w.el.classList.remove("is-walking");w.el.classList.add("is-idle");w.el.style.transform="";syncWalkerDepth(w);w.animKind="idle";w.flip=false;w.frame=Math.floor(Math.random()*16);w.nextFrameAt=0;walkerFrame(w,w.frame,"idle");clearTimeout(w.moveTimer);w.moveTimer=setTimeout(()=>walkerMove(w,token),Math.max(450,delay||700+Math.random()*1600));
   }
   function walkerMove(w,token){
+    if(document.hidden){walkerIdle(w,900);return}
     if(token!==w.token||!w?.el||!document.body.contains(w.el))return;const step=walkerNext(w);if(!step){walkerIdle(w,500+Math.random()*900);return}w.reservedNode=step.next;const from=[Number(w.x),Number(w.y)],gridTo=w.points[step.next]||from,to=[Number(gridTo[0]),Number(gridTo[1])],direction=(step.dir==="left"||step.dir==="right")?"side":step.dir,flip=step.dir==="left";
     w.el.classList.remove("is-idle");w.el.classList.add("is-walking");w.animKind=direction;w.flip=flip;w.frame=Math.floor(Math.random()*16);w.nextFrameAt=0;walkerFrame(w,w.frame,direction,flip);const dx=to[0]-from[0],dy=to[1]-from[1],distance=Math.hypot(dx*10,dy*16),duration=Math.max(4200,Math.min(9000,3600+distance*34));
     try{
@@ -17315,8 +17338,8 @@ async function V181_campaignScoreLater(summary){
     const {pen,animal:a}=findOwnAnimal(penNo,id);if(!a||!pen)return;currentPen=penNo;const now=gameNow(),baby=a.type==="baby",img=spriteAsset(a.color,baby?1:a.woolStage,"idle");
     if(baby){
       const ready=now>=a.readyProcessAt;
-      $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><div class="alpaca-detail-hero">${spritePreview(a.color,1,"large")}<div><h2>เบบี้อัลปาก้า${COLOR_META[a.color]?.short||""}</h2><p>${colorName(a.color)}</p></div></div><div class="alpaca-status-row featured"><img src="${ready?PROCESSING_MEAT_ICON:ASSET.bottle}" alt=""><span><b>${ready?"พร้อมแปรรูป":"เบบี้อัลปาก้า"}</b><small>${ready?"พร้อมเข้าโรงงานแปรรูปแล้ว":`อีก ${fmt(a.readyProcessAt-now)} จะพร้อมแปรรูป`}</small></span></div><div class="alpaca-callout"><small>เบบี้ไม่มีเพศ • ไม่หิว • ไม่เป็นหวัด • ไม่ตัดขน • ไม่ผสมพันธุ์ และไม่โตเปลี่ยน Stage</small></div><div class="alpaca-detail-actions">${ready?`<button id="v240SendBabyFactoryDirect" class="primary v240-send-baby" type="button"><img src="${PROCESSING_MEAT_ICON}" alt="">ส่งเข้าโรงงานแปรรูป</button>`:""}<button id="alpacaReleaseAnimal" class="danger" type="button">ปล่อยอัลปาก้า</button><button id="alpacaDetailBack" type="button">กลับ</button></div></section>`;
-      openModal();if($("v240SendBabyFactoryDirect"))$("v240SendBabyFactoryDirect").onclick=()=>sendReadyBabyToFactory(penNo,id);$("alpacaReleaseAnimal").onclick=()=>releaseAlpaca(penNo,id);$("alpacaDetailBack").onclick=showManageAlpacas;return;
+      $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><div class="alpaca-detail-hero">${spritePreview(a.color,1,"large")}<div><h2>เบบี้อัลปาก้า${COLOR_META[a.color]?.short||""}</h2><p>${colorName(a.color)}</p></div></div><div class="alpaca-status-row featured"><img src="${ready?PROCESSING_MEAT_ICON:ASSET.bottle}" alt=""><span><b>${ready?"พร้อมแปรรูป":"เบบี้อัลปาก้า"}</b><small>${ready?"พร้อมเข้าโรงงานแปรรูปแล้ว":`อีก ${fmt(a.readyProcessAt-now)} จะพร้อมแปรรูป`}</small></span></div><div class="alpaca-callout"><small>เบบี้ไม่มีเพศ • ไม่หิว • ไม่เป็นหวัด • ไม่ตัดขน • ไม่ผสมพันธุ์ และไม่โตเปลี่ยน Stage</small></div><div class="alpaca-detail-actions">${ready?`<button id="v240SendBabyFactoryDirect" class="primary v240-send-baby" type="button"><img src="${PROCESSING_MEAT_ICON}" alt="">ส่งเข้าโรงงานแปรรูป</button>`:""}<button id="alpacaMovePenBtn" type="button">🔄 ย้ายคอก</button><button id="alpacaReleaseAnimal" class="danger" type="button">ปล่อยอัลปาก้า</button><button id="alpacaDetailBack" type="button">กลับ</button></div></section>`;
+      openModal();if($("v240SendBabyFactoryDirect"))$("v240SendBabyFactoryDirect").onclick=()=>sendReadyBabyToFactory(penNo,id);if($("alpacaMovePenBtn"))$("alpacaMovePenBtn").onclick=()=>showMoveAlpacaPenPicker(penNo,id);$("alpacaReleaseAnimal").onclick=()=>releaseAlpaca(penNo,id);$("alpacaDetailBack").onclick=showManageAlpacas;return;
     }
     const canBreed=a.sex==="female"&&!a.sickAt&&!a.breedingUntil&&!a.pregnantUntil&&a.breedReadyAt>0&&a.breedReadyAt<=now;
     const canVaccine=Boolean(a.sickAt),canAccel=a.sex==="female"&&a.pregnantUntil>now&&!a.birthAccelUsed,canShear=a.woolStage===4;
@@ -17324,9 +17347,23 @@ async function V181_campaignScoreLater(summary){
     const woolMedCooldown=Math.max(0,Number(a.woolMedicineReadyAt||0)-now);
     const canShowWoolMed=a.woolStage>=1&&a.woolStage<=3;
     const canUseWoolMed=canShowWoolMed&&woolMedQty>0&&woolMedCooldown<=0;
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><div class="alpaca-detail-hero">${spritePreview(a.color,a.woolStage,"large")}<div><h2>${safeHtml(a.name)}</h2><p>${colorName(a.color)} • ${sexLabel(a)} • คอก ${penNo}</p></div></div><div class="alpaca-status-list">${adultStatusCards(a,pen)}</div><div class="alpaca-detail-actions">${canShear?`<button id="alpacaShearBtn" class="primary" type="button"><img src="${ASSET.scissors}">ตัดขน</button>`:""}${canShowWoolMed?`<button id="alpacaWoolMedBtn" class="wool-med-direct${canUseWoolMed?" primary":""}" type="button" ${canUseWoolMed?"":"disabled"}><img src="${MEDICINE.woolGrowthMedicine.image}"><span><b>ใช้ยาเร่งขน</b><small>${woolMedQty<1?"ยาในคลังหมด":woolMedCooldown>0?`รอ ${fmt(woolMedCooldown)}`:`มี ×${woolMedQty}`}</small></span></button>`:""}${canBreed?`<button id="alpacaBreedBtn" class="primary" type="button"><img src="${ASSET.readyBreed}">ผสมพันธุ์</button>`:""}${canVaccine?`<button id="alpacaVaccineBtn" type="button"><img src="${ASSET.vaccine}">ใช้วัคซีน</button>`:""}${canAccel?`<button id="alpacaAccelBtn" type="button"><img src="${ASSET.birthAccelerator}">ใช้ยาเร่งคลอด</button>`:""}<button id="alpacaRenameBtn" type="button">✏️ เปลี่ยนชื่อ</button><button id="alpacaReleaseAnimal" class="danger" type="button">ปล่อยอัลปาก้า</button><button id="alpacaDetailBack" type="button">กลับ</button></div></section>`;
-    openModal();if($("alpacaShearBtn"))$("alpacaShearBtn").onclick=()=>shearAlpaca(penNo,id);if($("alpacaWoolMedBtn")&&canUseWoolMed)$("alpacaWoolMedBtn").onclick=()=>useWoolGrowthMedicine(penNo,id,{returnToDetail:true});if($("alpacaBreedBtn"))$("alpacaBreedBtn").onclick=()=>showBreedingSires(penNo,id);if($("alpacaVaccineBtn"))$("alpacaVaccineBtn").onclick=()=>useVaccine(penNo,id);if($("alpacaAccelBtn"))$("alpacaAccelBtn").onclick=()=>useBirthAccelerator(penNo,id);$("alpacaRenameBtn").onclick=()=>renameAlpaca(penNo,id);$("alpacaReleaseAnimal").onclick=()=>releaseAlpaca(penNo,id);$("alpacaDetailBack").onclick=showManageAlpacas;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><div class="alpaca-detail-hero">${spritePreview(a.color,a.woolStage,"large")}<div><h2>${safeHtml(a.name)}</h2><p>${colorName(a.color)} • ${sexLabel(a)} • คอก ${penNo}</p></div></div><div class="alpaca-status-list">${adultStatusCards(a,pen)}</div><div class="alpaca-detail-actions">${canShear?`<button id="alpacaShearBtn" class="primary" type="button"><img src="${ASSET.scissors}">ตัดขน</button>`:""}${canShowWoolMed?`<button id="alpacaWoolMedBtn" class="wool-med-direct${canUseWoolMed?" primary":""}" type="button" ${canUseWoolMed?"":"disabled"}><img src="${MEDICINE.woolGrowthMedicine.image}"><span><b>ใช้ยาเร่งขน</b><small>${woolMedQty<1?"ยาในคลังหมด":woolMedCooldown>0?`รอ ${fmt(woolMedCooldown)}`:`มี ×${woolMedQty}`}</small></span></button>`:""}${canBreed?`<button id="alpacaBreedBtn" class="primary" type="button"><img src="${ASSET.readyBreed}">ผสมพันธุ์</button>`:""}${canVaccine?`<button id="alpacaVaccineBtn" type="button"><img src="${ASSET.vaccine}">ใช้วัคซีน</button>`:""}${canAccel?`<button id="alpacaAccelBtn" type="button"><img src="${ASSET.birthAccelerator}">ใช้ยาเร่งคลอด</button>`:""}<button id="alpacaRenameBtn" type="button">✏️ เปลี่ยนชื่อ</button><button id="alpacaMovePenBtn" type="button">🔄 ย้ายคอก</button><button id="alpacaReleaseAnimal" class="danger" type="button">ปล่อยอัลปาก้า</button><button id="alpacaDetailBack" type="button">กลับ</button></div></section>`;
+    openModal();if($("alpacaShearBtn"))$("alpacaShearBtn").onclick=()=>shearAlpaca(penNo,id);if($("alpacaWoolMedBtn")&&canUseWoolMed)$("alpacaWoolMedBtn").onclick=()=>useWoolGrowthMedicine(penNo,id,{returnToDetail:true});if($("alpacaBreedBtn"))$("alpacaBreedBtn").onclick=()=>showBreedingSires(penNo,id);if($("alpacaVaccineBtn"))$("alpacaVaccineBtn").onclick=()=>useVaccine(penNo,id);if($("alpacaAccelBtn"))$("alpacaAccelBtn").onclick=()=>useBirthAccelerator(penNo,id);$("alpacaRenameBtn").onclick=()=>renameAlpaca(penNo,id);if($("alpacaMovePenBtn"))$("alpacaMovePenBtn").onclick=()=>showMoveAlpacaPenPicker(penNo,id);$("alpacaReleaseAnimal").onclick=()=>releaseAlpaca(penNo,id);$("alpacaDetailBack").onclick=showManageAlpacas;
   }
+  function showMoveAlpacaPenPicker(fromPenNo,id){
+    const root=ownAlpaca(),found=findOwnAnimal(fromPenNo,id),a=found?.animal;if(!root||!a)return showManageAlpacas();
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`ย้าย${a.type==="baby"?"เบบี้อัลปาก้า":"อัลปาก้า"}`,`ตอนนี้อยู่คอก ${fromPenNo} • เลือกคอกใหม่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>{const n=i+1,same=n===Number(fromPenNo),full=p.alpacas.length>=PEN_CAPACITY;return `<button type="button" data-move-alpaca-pen="${n}" ${same||full?"disabled":""}>คอก ${n}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}${same?" • คอกปัจจุบัน":full?" • เต็ม":""}</small></button>`}).join("")}</div><button id="alpacaMoveBack" class="secondary-action" type="button">กลับ</button></section>`;
+    openModal();document.querySelectorAll("[data-move-alpaca-pen]").forEach(b=>b.onclick=()=>moveAlpacaBetweenPens(fromPenNo,Number(b.dataset.moveAlpacaPen),id));$("alpacaMoveBack").onclick=()=>showAlpacaDetail(fromPenNo,id);
+  }
+  async function moveAlpacaBetweenPens(fromPenNo,toPenNo,id){
+    fromPenNo=Math.max(1,Math.min(3,Number(fromPenNo)||1));toPenNo=Math.max(1,Math.min(3,Number(toPenNo)||1));if(fromPenNo===toPenNo)return showAlpacaDetail(fromPenNo,id);
+    try{
+      await mutateOwn(s=>{const root=s.alpaca,from=penAt(root,fromPenNo),to=penAt(root,toPenNo);if(!from||!to)throw new Error("ไม่พบคอกอัลปาก้า");if(to.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${toPenNo} เต็มแล้ว`);const idx=from.alpacas.findIndex(x=>x.id===id);if(idx<0)throw new Error("ไม่พบอัลปาก้าตัวนี้");const [animal]=from.alpacas.splice(idx,1);if(animal.type==="adult")animal.penIndex=toPenNo;to.alpacas.push(animal)});
+      penWalkerMemory.delete(`${fromPenNo}:${id}`);const old=penWalkers.get(`${fromPenNo}:${id}`);if(old){stopWalker(old);try{old.el?.remove()}catch{}penWalkers.delete(`${fromPenNo}:${id}`)}
+      currentPen=toPenNo;closeModal();renderPen();syncOwnMaleBreeders().catch(()=>{});alpacaMessage("ย้ายคอกเรียบร้อย",`ย้ายอัลปาก้าไป <b>คอก ${toPenNo}</b> แล้วค่ะ`);
+    }catch(e){alpacaMessage("ย้ายคอกไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
   async function renameAlpaca(penNo,id){const {animal}=findOwnAnimal(penNo,id);if(!animal||animal.type!=="adult")return;const typed=await alpacaPrompt("ตั้งชื่ออัลปาก้า",animal.name,24);if(typed===null)return;const clean=typed.trim().slice(0,24);if(!clean)return;try{await mutateOwn(s=>{const x=findAnimal(s,penNo,id).animal;if(!x)throw new Error("ไม่พบอัลปาก้า");x.name=clean});showAlpacaDetail(penNo,id);syncOwnMaleBreeders().catch(()=>{})}catch(e){alpacaMessage("เปลี่ยนชื่อไม่ได้",e.message||"กรุณาลองใหม่")}}
   async function releaseAlpaca(penNo,id){
     const {animal}=findOwnAnimal(penNo,id);if(!animal)return;const ok=await alpacaConfirm("ปล่อยอัลปาก้าตัวนี้ไหมคะ?","เมื่อลบแล้วอัลปาก้าตัวนี้จะหายจากคอกถาวร",{confirmText:"ปล่อยออก",danger:true});if(!ok)return;
@@ -17603,11 +17640,29 @@ async function V181_campaignScoreLater(summary){
   function startAlpacaWeatherClock(){if(alpacaWeatherTimer)return;syncAlpacaWeather();alpacaWeatherTimer=setInterval(syncAlpacaWeather,10000)}
   function stopAlpacaWeatherClock(){if(alpacaWeatherTimer){clearInterval(alpacaWeatherTimer);alpacaWeatherTimer=0}clearAlpacaWeather()}
 
+  let alpacaVisibilityResumeTimer=0;
+  document.addEventListener("visibilitychange",()=>{
+    const penOpen=!$("alpacaPenScreen")?.classList.contains("hidden");
+    if(document.hidden){
+      clearTimeout(alpacaVisibilityResumeTimer);alpacaVisibilityResumeTimer=0;
+      if(penOpen){pauseWalkerMap(penWalkers);if(spriteTimer){clearInterval(spriteTimer);spriteTimer=0}stopAlpacaWeatherClock()}
+      return;
+    }
+    if(!penOpen)return;
+    clearTimeout(alpacaVisibilityResumeTimer);alpacaVisibilityResumeTimer=setTimeout(()=>{
+      const layer=$("alpacaPenAnimalLayer");if(layer){
+        const live=new Set([...penWalkers.values()].map(w=>w?.el).filter(Boolean));
+        layer.querySelectorAll(".alpaca-pen-animal").forEach(el=>{if(!live.has(el))el.remove()});
+      }
+      resumeWalkerMap(penWalkers);renderPen();startSpriteTimer();startAlpacaWeatherClock();
+    },180);
+  },{passive:true});
+
   function periodic(){if(cloudReady&&currentMemberKey&&ownState){if(!wildUnsub)subscribeWildBabies().catch(()=>{});processLoginAbsence().catch(()=>{});processTimersCloud().catch(()=>{});touchAlpacaHeartbeat().catch(()=>{});if(ownAlpaca()?.captureDaily?.pending?.endAt<=gameNow())finalizeCapture().catch(()=>{});syncEntryButtons();renderWildBabies();if(visitContext)renderFriendMushrooms()}}
-  function start(){hookUi();startSpriteTimer();syncEntryButtons();setTimeout(()=>{subscribeWildBabies();periodic();syncOwnMaleBreeders().catch(()=>{})},1200);penTickTimer=setInterval(periodic,30*1000);friendMushroomRenderTimer=setInterval(()=>{if(visitContext)renderFriendMushrooms()},60*1000)}
+  function start(){hookUi();startSpriteTimer();syncEntryButtons();preloadThaiTeaAssets().catch(()=>{});setTimeout(()=>{subscribeWildBabies();periodic();syncOwnMaleBreeders().catch(()=>{})},1200);penTickTimer=setInterval(periodic,30*1000);friendMushroomRenderTimer=setInterval(()=>{if(visitContext)renderFriendMushrooms()},60*1000)}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 
-  window.YAINOO_BUILD="V261-THAI-TEA-SPRITE-PERF-HOTFIX";
+  window.YAINOO_BUILD="V274-ALPACA-TEA-RESUME-MOVE";
 })();
 
 
@@ -19679,3 +19734,5 @@ console.info("V260 alpaca seven-color final update loaded");
 
 ;window.YAINOO_BUILD="V269-FACTORY-WAREHOUSE-SCROLL";
 console.info("V272 unified admin alpaca inventory topup loaded");
+
+console.info("V274 alpaca Thai Tea preload + resume dedupe + move pens loaded");
