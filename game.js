@@ -18844,7 +18844,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 (function YN_V252_HONEY_DELIVERY_ADMIN_TEST(){
   "use strict";
 
-  const VERSION="V253-HONEY-CARGO-TRANSPARENT-FIX";
+  const VERSION="V256-HONEY-SMOOTH-TRANSITION";
   const FUEL_KEY="honeyFuelCan";
   const FUEL_NAME="แกลลอนน้ำมัน";
   const FUEL_IMAGE="honey-fuel-can.png?v=252";
@@ -19181,54 +19181,51 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const i=Math.max(0,Math.min(15,int(frame))),col=i%4,row=Math.floor(i/4);
     img.style.transform=`translate3d(${-col*25}%,${-row*25}%,0)`;
   }
-  const transparentSheetCache=new Map();
-  async function transparentizeSheetUrl(url){
-    if(transparentSheetCache.has(url))return transparentSheetCache.get(url);
+  /* V256 — sprite sheets are already transparent PNGs.
+     Load them directly, pre-decode before switching, and never rebuild them through
+     a canvas. This prevents white/rectangular frame artifacts on iOS Safari. */
+  const honeySheetCache=new Map();
+  function honeySheetCandidates(file){return[`assets/pig-delivery/${file}?v=256`,`${file}?v=256`]}
+  function preloadHoneySheet(file){
+    if(honeySheetCache.has(file))return honeySheetCache.get(file);
     const promise=(async()=>{
-      try{
-        const res=await fetch(url,{cache:"force-cache"});if(!res.ok)throw new Error(`โหลด sprite ไม่สำเร็จ ${res.status}`);
-        const blob=await res.blob(),bitmap=await createImageBitmap(blob);
-        const canvas=document.createElement("canvas");canvas.width=bitmap.width;canvas.height=bitmap.height;
-        const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.drawImage(bitmap,0,0);bitmap.close?.();
-        const im=ctx.getImageData(0,0,canvas.width,canvas.height),d=im.data,w=canvas.width,h=canvas.height;
-        const seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
-        const nearWhite=i=>{const o=i*4,r=d[o],g=d[o+1],b=d[o+2],a=d[o+3];return a>0&&r>=220&&g>=220&&b>=220&&(Math.max(r,g,b)-Math.min(r,g,b)<=24)};
-        const push=i=>{if(i<0||i>=w*h||seen[i]||!nearWhite(i))return;seen[i]=1;queue[tail++]=i};
-        for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}
-        for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
-        while(head<tail){const i=queue[head++],x=i%w,y=(i/w)|0;if(x>0)push(i-1);if(x<w-1)push(i+1);if(y>0)push(i-w);if(y<h-1)push(i+w)}
-        for(let i=0;i<w*h;i++)if(seen[i])d[i*4+3]=0;
-        ctx.putImageData(im,0,0);
-        const out=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("แปลง sprite ไม่สำเร็จ")),"image/png"));
-        return URL.createObjectURL(out);
-      }catch(error){console.warn("V253 transparent sprite fallback",url,error);return url}
+      for(const src of honeySheetCandidates(file)){
+        try{
+          const test=new Image();test.decoding="async";test.src=src;
+          if(typeof test.decode==="function")await test.decode();
+          else await new Promise((resolve,reject)=>{test.onload=resolve;test.onerror=reject});
+          return src;
+        }catch{}
+      }
+      return honeySheetCandidates(file)[0];
     })();
-    transparentSheetCache.set(url,promise);return promise;
+    honeySheetCache.set(file,promise);return promise;
   }
-  function setSheet(file,loop=true,frameMs=135){
+  Object.values(SPRITE_FILES).forEach(file=>preloadHoneySheet(file).catch(()=>{}));
+
+  async function setSheet(file,loop=true,frameMs=135){
     const img=bikeSheet();if(!img)return;
-    stopFrameTimer();paintFrame(0);
-    const primary=`assets/pig-delivery/${file}?v=253`,fallback=`${file}?v=253`;
+    stopFrameTimer();
     const token=`${file}:${Date.now()}:${Math.random()}`;img.dataset.sheetToken=token;
-    (async()=>{
-      let src=await transparentizeSheetUrl(primary);
-      if(img.dataset.sheetToken!==token)return;
-      img.onerror=async()=>{
-        img.onerror=null;
-        const fb=await transparentizeSheetUrl(fallback);
-        if(img.dataset.sheetToken===token)img.src=fb;
-      };
+    const src=await preloadHoneySheet(file);
+    if(img.dataset.sheetToken!==token)return;
+    if(img.getAttribute("src")!==src){
+      img.style.opacity="0";
       img.src=src;
-    })();
+      try{if(typeof img.decode==="function")await img.decode()}catch{}
+      if(img.dataset.sheetToken!==token)return;
+    }
+    paintFrame(0);
+    requestAnimationFrame(()=>{if(img.dataset.sheetToken===token)img.style.opacity="1"});
     if(loop){let f=0;frameTimer=setInterval(()=>{f=(f+1)%16;paintFrame(f)},frameMs)}
   }
-  function playSheetOnce(file,frameMs=130){
-    return new Promise(resolve=>{
-      const img=bikeSheet();if(!img){resolve();return}
-      stopFrameTimer();let f=0;setSheet(file,false);paintFrame(0);
+  async function playSheetOnce(file,frameMs=130,holdMs=110){
+    const img=bikeSheet();if(!img)return;
+    await setSheet(file,false);let f=0;paintFrame(0);
+    await new Promise(resolve=>{
       frameTimer=setInterval(()=>{
         f++;
-        if(f>=16){clearInterval(frameTimer);frameTimer=0;paintFrame(15);resolve();return}
+        if(f>=16){clearInterval(frameTimer);frameTimer=0;paintFrame(15);setTimeout(resolve,holdMs);return}
         paintFrame(f);
       },frameMs);
     });
@@ -19278,9 +19275,9 @@ console.info("R17 canonical gift save + rainy score writer loaded");
       });
       applyOwn(next);closeModal();
       showBikeBase();const b=bike(),screen=$("gameScreen"),start=-(b?.offsetWidth||110)-24,stop=bikeStopX();
-      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";setSheet(SPRITE_FILES.ride,true,115);
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,115);
       await moveBike(start,stop,5200);
-      b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";setSheet(SPRITE_FILES.idle,true,175);
+      b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";await setSheet(SPRITE_FILES.idle,true,175);
       showWeatherToast("🛵 น้ำผึ้งมาถึงแล้ว • แตะที่น้องเพื่อฝากของ");
     }catch(error){hideBike();message("เรียกน้ำผึ้งไม่ได้",error.message||"กรุณาลองใหม่")}
     finally{transit=false;renderFuelHud()}
@@ -19405,9 +19402,9 @@ console.info("R17 canonical gift save + rainy score writer loaded");
       });
       applyOwn(next);closeModal();
       const b=bike();showBikeBase();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
-      await playSheetOnce(SPRITE_FILES.receive,125);
-      await playSheetOnce(SPRITE_FILES.place,125);
-      await playSheetOnce(SPRITE_FILES.ready,120);
+      await playSheetOnce(SPRITE_FILES.receive,72,120);
+      await playSheetOnce(SPRITE_FILES.place,78,140);
+      await playSheetOnce(SPRITE_FILES.ready,82,180);
       currentBikeMode="ready";transit=false;showRewardModal(reward);
     }catch(error){transit=false;message("ฝากของไม่ได้",error.message||"กรุณาลองใหม่");showParkedBike("idle")}
     finally{if(button)button.disabled=false}
@@ -19443,7 +19440,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
       });
       applyOwn(next);restoreModalCloseHandlers();rewardShowing=false;closeModal();
       showBikeBase();const b=bike(),start=bikeStopX(),screen=$("gameScreen"),end=(screen?.clientWidth||window.innerWidth)+(b?.offsetWidth||110)+30;
-      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";setSheet(SPRITE_FILES.ride,true,115);
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,115);
       await moveBike(start,end,4300);hideBike();renderFuelHud();
     }catch(error){message("น้ำผึ้งยังออกเดินทางไม่ได้",error.message||"กรุณาลองใหม่")}
     finally{transit=false}

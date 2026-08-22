@@ -6793,3 +6793,19 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .honey-bike-sheet{
   background:transparent!important;
 }
+
+/* V256 — Honey sprite transition polish.
+   1px inset prevents GPU sampling from the neighbouring 4x4 cell on iOS Safari. */
+.honey-bike-clip{
+  inset:1px!important;
+  overflow:hidden!important;
+  clip-path:inset(.5px);
+  -webkit-clip-path:inset(.5px);
+}
+.honey-bike-sheet{
+  opacity:1;
+  transition:opacity .075s linear;
+  image-rendering:auto;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
