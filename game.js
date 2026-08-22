@@ -16775,8 +16775,12 @@ async function V181_campaignScoreLater(summary){
   /* V264 — mushroom/meat are kept as two independent semantic assets.
      The two historical PNG filenames contain the opposite artwork on the live site,
      so do NOT infer meaning from the filename or share one alias between the systems. */
-  const MAGIC_MUSHROOM_ICON="alpaca-magic-mushroom.png?v=265";
-  const PROCESSING_MEAT_ICON="alpaca-ready-for-processing-meat.png?v=265";
+  /* V266 — IMPORTANT: the live GitHub files have historical names whose artwork is reversed.
+     Keep semantics fixed here instead of trusting the filename:
+     - magic mushroom artwork lives in alpaca-ready-for-processing-meat.png
+     - processing-meat/steak artwork lives in alpaca-magic-mushroom.png */
+  const MAGIC_MUSHROOM_ICON="alpaca-ready-for-processing-meat.png?v=266";
+  const PROCESSING_MEAT_ICON="alpaca-magic-mushroom.png?v=266";
   const ASSET={
     hunger:"alpaca-food-plate.png",pregnant:"alpaca-pregnancy-icon.png",pellet:"alpaca-pellet-food.png",hay:"alpaca-hay-pack.png",
     vaccine:"alpaca-vaccine.png",cold:"alpaca-cold-icon.png",heart:"alpaca-blue-heart.png",happinessPotion:"alpaca-happiness-potion.png",
@@ -17702,7 +17706,10 @@ async function V181_campaignScoreLater(summary){
     rows.push({name:V240_ITEM.processingLicense.name,img:V240_ITEM.processingLicense.image,have:v240Int(s.alpaca.inventory.other.processingLicense),need:r.license});
     return rows;
   }
-  function v240CanStart(r,s=ownState||state){return v240NeedRows(r,s).every(x=>x.have>=x.need)}
+  function v240CanStart(r,s=ownState||state){
+    try{return v240NeedRows(r,s).every(x=>x.have>=x.need)}
+    catch(e){console.warn("v266 factory availability check",e);return false}
+  }
   function v240DeductRecipe(s,r){
     v240EnsureState(s);
     if(!v240CanStart(r,s))throw new Error("วัตถุดิบไม่ครบตามสูตร");
@@ -17734,7 +17741,23 @@ async function V181_campaignScoreLater(summary){
   function v240ShowFactoryBag(){const s=normalizeState(ownState||state,currentMember),f=s.alpaca.factory,w=s.alpaca.inventory.wool;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal"><header class="v240-modal-title"><h2>🧺 คลังโรงงานแปรรูป</h2><button id="v240BagClose">×</button></header><h3>เบบี้อัลปาก้าพร้อมแปรรูป</h3><div class="v240-bag-grid">${V240_COLORS.map(c=>`<article><img src="${V240_COLOR_IMG[c]}" alt=""><b>เบบี้${V240_COLOR_TH[c]}</b><strong>×${v240Int(f.babies[c])}</strong></article>`).join("")}</div><h3>ขนอัลปาก้า</h3><div class="v240-bag-grid">${[...V240_COLORS,"gold"].map(c=>`<article><img src="${V240_WOOL_IMG[c]}" alt=""><b>ขน${V240_COLOR_TH[c]}</b><strong>×${v240Int(w[c])}</strong></article>`).join("")}</div><div class="v240-license-line"><img src="${V240_ITEM.processingLicense.image}" alt=""><b>${V240_ITEM.processingLicense.name}</b><strong>×${v240Int(s.alpaca.inventory.other.processingLicense)}</strong></div></section>`;openModal();$("v240BagClose").onclick=closeModal}
   function v240ShowFactoryHistory(){const jobs=[...v240FactoryCounts().jobs].sort((a,b)=>Number(b.startedAt)-Number(a.startedAt)),ready=jobs.filter(j=>j.status!=="claimed"&&v240Now()>=Number(j.finishAt||0)).length;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal v240-history-modal"><header class="v240-modal-title"><h2>📜 รายการแปรรูป</h2><button id="v240HistoryClose">×</button></header>${ready?`<button id="v240ClaimAllFactory" class="primary-spooky-action v240-claim-all">รับทั้งหมด (${ready})</button>`:""}<div class="v240-history-list">${jobs.length?jobs.map(j=>{const r=V240_PRODUCTS[j.productKey],st=v240JobStatus(j),left=Math.max(0,Number(j.finishAt)-v240Now());return `<article class="v240-history-row"><img src="${r?.image||""}" alt=""><div><b>${v240Esc(r?.name||j.productKey)}</b><small>คำสั่งจากคอก ${j.penNo}</small><span class="${st==="พร้อมรับ"?"ready":""}">${st}${st==="กำลังผลิต"?` • ${v240Countdown(left)}`:""}</span></div>${st==="พร้อมรับ"?`<button data-v240-claim="${j.id}">กดรับผลิตภัณฑ์</button>`:""}</article>`}).join(""):`<div class="v240-empty">ยังไม่มีประวัติการแปรรูปค่ะ</div>`}</div></section>`;openModal();document.querySelectorAll("[data-v240-claim]").forEach(b=>b.onclick=()=>v240ClaimFactory(b.dataset.v240Claim));if($("v240ClaimAllFactory"))$("v240ClaimAllFactory").onclick=v240ClaimAllFactory;$("v240HistoryClose").onclick=closeModal}
 
-  function v240EnsureFactoryScreen(){if($("v240FactoryScreen"))return;const host=$("alpacaPenScreen");if(!host)return;host.insertAdjacentHTML("beforeend",`<div id="v240FactoryScreen" class="v240-factory-screen hidden"><button id="v240FactoryBack" class="v240-factory-back" type="button">← กลับคอกอัลปาก้า</button><button id="v240FactoryMeatHotspot" class="v240-machine-hotspot meat" type="button" aria-label="เครื่องแปรรูปเนื้ออัลปาก้า"></button><button id="v240FactoryWoolHotspot" class="v240-machine-hotspot wool" type="button" aria-label="เครื่องผลิตภัณฑ์จากขนอัลปาก้า"></button><button id="v240FactoryBagBtn" class="v240-factory-bag-btn" type="button"><span>🧺</span><b>คลังโรงงาน</b></button><button id="v240FactoryHistoryBtn" class="v240-factory-history-btn" type="button">📜 รายการแปรรูป</button><div id="v240FactoryJobsBar" class="v240-factory-jobs-bar"></div></div>`);$("v240FactoryBack").onclick=()=>v240CloseFactory();$("v240FactoryMeatHotspot").onclick=()=>v240ShowFactorySide("meat");$("v240FactoryWoolHotspot").onclick=()=>v240ShowFactorySide("wool");$("v240FactoryBagBtn").onclick=v240ShowFactoryBag;$("v240FactoryHistoryBtn").onclick=v240ShowFactoryHistory}
+  function v240EnsureFactoryScreen(){
+    if($("v240FactoryScreen"))return;
+    const host=$("alpacaPenScreen");if(!host)return;
+    host.insertAdjacentHTML("beforeend",`<div id="v240FactoryScreen" class="v240-factory-screen hidden"><button id="v240FactoryBack" class="v240-factory-back" type="button">← กลับคอกอัลปาก้า</button><button id="v240FactoryMeatHotspot" class="v240-machine-hotspot meat" type="button" aria-label="เครื่องแปรรูปเนื้ออัลปาก้า"></button><button id="v240FactoryWoolHotspot" class="v240-machine-hotspot wool" type="button" aria-label="เครื่องผลิตภัณฑ์จากขนอัลปาก้า"></button><button id="v240FactoryBagBtn" class="v240-factory-bag-btn" type="button"><span>🧺</span><b>คลังโรงงาน</b></button><button id="v240FactoryHistoryBtn" class="v240-factory-history-btn" type="button">📜 รายการแปรรูป</button><div id="v240FactoryJobsBar" class="v240-factory-jobs-bar"></div></div>`);
+    const screen=$("v240FactoryScreen"),meat=$("v240FactoryMeatHotspot"),wool=$("v240FactoryWoolHotspot");
+    $("v240FactoryBack").onclick=()=>v240CloseFactory();
+    meat.onclick=e=>{e.preventDefault();e.stopPropagation();v240ShowFactorySide("meat")};
+    wool.onclick=e=>{e.preventDefault();e.stopPropagation();v240ShowFactorySide("wool")};
+    $("v240FactoryBagBtn").onclick=v240ShowFactoryBag;$("v240FactoryHistoryBtn").onclick=v240ShowFactoryHistory;
+    /* V266 mobile fallback: if a transparent hotspot misses a tap, the factory
+       background itself routes the left half to meat and right half to wool. */
+    screen.addEventListener("click",e=>{
+      if(e.target!==screen)return;
+      const rect=screen.getBoundingClientRect(),x=e.clientX-rect.left;
+      if(x<rect.width*.5)v240ShowFactorySide("meat");else v240ShowFactorySide("wool");
+    });
+  }
   function v240OpenFactory(){v240EnsureFactoryScreen();$("v240FactoryScreen")?.classList.remove("hidden");v240RenderFactoryJobs();v240FactoryTimerStart()}
   function v240CloseFactory(){$("v240FactoryScreen")?.classList.add("hidden");v240FactoryTimerStop();closeModal()}
   let v240FactoryTimer=0;

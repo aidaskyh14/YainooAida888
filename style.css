@@ -6563,7 +6563,7 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .v240-factory-back{left:max(3%,env(safe-area-inset-left));top:max(2.2%,env(safe-area-inset-top))}
 .v240-factory-bag-btn{left:50%;top:47%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:7px 11px}.v240-factory-bag-btn span{font-size:17px}
 .v240-factory-history-btn{left:50%;bottom:9.5%;transform:translateX(-50%)}
-.v240-machine-hotspot{position:absolute;z-index:5;border:0;background:transparent;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.v240-machine-hotspot:active{background:rgba(255,255,255,.07)}
+.v240-machine-hotspot{position:absolute;z-index:6;border:0;background:transparent;-webkit-tap-highlight-color:transparent;touch-action:manipulation;pointer-events:auto!important;cursor:pointer}.v240-machine-hotspot:active{background:rgba(255,255,255,.07)}
 .v240-machine-hotspot.meat{left:1%;top:17%;width:48%;height:68%}.v240-machine-hotspot.wool{right:1%;top:17%;width:48%;height:68%}
 .v240-factory-jobs-bar{position:absolute;z-index:11;left:50%;bottom:4.3%;transform:translateX(-50%);display:flex;gap:7px;align-items:center;max-width:82%;padding:5px 10px;border-radius:999px;background:rgba(61,34,32,.82);color:#fff7e8;font-size:clamp(9px,2.3vw,12px);white-space:nowrap}
 .v240-factory-modal,.v240-rank-panel,.v240-admin-center,.v240-member-gift,.v240-choice-reward{width:min(92vw,520px);max-height:min(82dvh,760px);overflow:hidden;border-radius:20px;padding:12px;background:linear-gradient(180deg,#fff8ec,#f8e8da);border:2px solid rgba(167,102,69,.45);color:#512d3c;font-family:"Ayuthaya","Thonburi","Noto Sans Thai",sans-serif}
