@@ -7061,3 +7061,20 @@ button[data-busy="1"]{opacity:.72!important;cursor:progress!important}
 /* Isolate each moving alpaca from the rest of the pen layout/paint work. */
 .alpaca-pen-animal{contain:layout paint style}
 .fast-action-pressed{transform:scale(.975)!important;filter:brightness(1.04)!important;transition:transform .06s linear,filter .06s linear!important}
+
+/* ======================================================================
+   V278 — ALPACA STATUS ICON CLIP FIX
+   V277 used paint containment on each moving alpaca for performance.
+   Paint containment clips children that sit above the animal box, which
+   cuts off breeding / pregnancy / wool-ready status icons. Keep layout
+   isolation, but allow status badges to paint outside the animal bounds.
+   Sprite-sheet clipping remains isolated inside .alpaca-sprite.
+   ====================================================================== */
+.alpaca-pen-animal{
+  contain:layout style!important;
+  overflow:visible!important;
+}
+.alpaca-status-stack{
+  overflow:visible!important;
+  contain:none!important;
+}

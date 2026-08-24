@@ -19779,5 +19779,5 @@ console.info("V276 arena cloud pending recovery loaded");
   document.addEventListener("pointercancel",e=>{const b=e.target?.closest?.(selector);b?.classList?.remove("fast-action-pressed")},{passive:true});
 })();
 
-window.YAINOO_BUILD="V277-RESPONSIVE-TAP-PERFORMANCE";
-console.info("V277 responsive tap + performance hotfix loaded");
+window.YAINOO_BUILD="V278-ALPACA-STATUS-ICON-CLIP-FIX";
+console.info("V278 alpaca status icon clip fix loaded");
