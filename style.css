@@ -7032,3 +7032,32 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .alpaca-weather-picker-grid button span{font-size:25px}
 .alpaca-weather-picker-grid button.active{outline:3px solid rgba(119,73,132,.28);background:linear-gradient(180deg,#f3e4ff,#ead3f3)}
 .alpaca-weather-picker-grid button:active{transform:scale(.98)}
+
+/* ======================================================================
+   V277 — RESPONSIVE TAP + PERFORMANCE HOTFIX
+   ====================================================================== */
+/* Larger touch target while keeping the grass artwork visually compact. */
+.friend-forage-drop{
+  width:clamp(58px,15vw,76px)!important;
+  height:clamp(58px,15vw,76px)!important;
+  margin:0!important;
+  display:grid!important;
+  place-items:center!important;
+  contain:layout paint style;
+}
+.friend-forage-drop.friend-forage-green,
+.friend-forage-drop.friend-forage-yellow,
+.friend-forage-drop.friend-forage-red{
+  width:clamp(58px,15vw,76px)!important;
+  height:clamp(58px,15vw,76px)!important;
+}
+.friend-forage-drop img{
+  width:clamp(38px,9.5vw,56px)!important;
+  height:clamp(38px,9.5vw,56px)!important;
+}
+.friend-forage-drop.is-tapped{animation-play-state:paused!important;filter:brightness(1.08) drop-shadow(0 3px 6px rgba(0,0,0,.24))!important}
+/* Frequent transactional actions should visually acknowledge a tap immediately. */
+button[data-busy="1"]{opacity:.72!important;cursor:progress!important}
+/* Isolate each moving alpaca from the rest of the pen layout/paint work. */
+.alpaca-pen-animal{contain:layout paint style}
+.fast-action-pressed{transform:scale(.975)!important;filter:brightness(1.04)!important;transition:transform .06s linear,filter .06s linear!important}
