@@ -8162,6 +8162,7 @@ returnFromFriendVisit=function(){
 
 const V15_PET_HUNGER_MS=4*60*60*1000;
 const V15_TEMPLE_OPEN_MINUTE=0;
+// V283: group temple signup has no per-hour quota.
 const V15_TEMPLE_CLOSE_MINUTE=24*60;
 const V15_SOLO_DURATION_MS=30*60*1000;
 const V15_SOLO_COOLDOWN_MS=10*60*1000;
@@ -8654,7 +8655,7 @@ async function v15RenderGroupPanel(){
   const day=v15TempleCache||await v15LoadTempleDay();
   if(currentScene!=="templeGroup")return;
 
-  layer.innerHTML=`<section class="temple-mission-board"><div class="temple-board-head"><div><small>วัดไทยในสวน</small><h2>มิชชั่นหมู่</h2></div><span>45 นาที • สูงสุด 5 งาน/ชั่วโมง</span></div><div class="temple-mission-grid">${day.groupSlots.map(v15GroupCard).join("")}</div></section>`;
+  layer.innerHTML=`<section class="temple-mission-board"><div class="temple-board-head"><div><small>วัดไทยในสวน</small><h2>มิชชั่นหมู่</h2></div><span>45 นาที • ลงชื่อได้ไม่จำกัด</span></div><div class="temple-mission-grid">${day.groupSlots.map(v15GroupCard).join("")}</div></section>`;
 
   document.querySelectorAll("[data-group-join]").forEach(b=>b.onclick=()=>v15JoinGroup(Number(b.dataset.groupJoin)));
   document.querySelectorAll("[data-group-send]").forEach(b=>b.onclick=()=>v15SendGroup(Number(b.dataset.groupSend),b.dataset.reqId));
@@ -8673,8 +8674,8 @@ async function v15JoinGroup(slotIndex){
   try{
     await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,started=false;
     await fs.runTransaction(db,async tx=>{
-      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]),day=v15RefreshTempleDay(dSnap.exists()?cloneData(dSnap.data()):v15NewTempleDay(currentBangkokDateKey()));if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);v15EnsureTemplePlayerState(s);if(s.templeHourly.group.count>=5)throw new Error("ชั่วโมงนี้คุณลงชื่อภารกิจหมู่ครบ 5 ครั้งแล้ว พักก่อนนะคะ");const slot=day.groupSlots[slotIndex];if(!slot||!["open","active"].includes(slot.status))throw new Error("ภารกิจนี้จบหรือพักอยู่");if(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&gameNow()>=Number(slot.deadlineAt||0))throw new Error("หมดเวลาภารกิจแล้ว");slot.participants=Array.isArray(slot.participants)?slot.participants:[];if(slot.participants.some(p=>p.key===currentMemberKey))throw new Error("คุณลงชื่อภารกิจนี้แล้ว");
-      slot.participants.push({key:currentMemberKey,name:currentMember,joinedAt:gameNow()});s.templeHourly.group.count++;if(slot.status==="open"&&slot.participants.length>=Math.max(1,Number(slot.requiredPeople)||1)){const now=gameNow(),attemptId=`${day.dateKey}-group-${slotIndex}-${slot.cycle}-${now}`;slot.status="active";slot.attemptId=attemptId;slot.requirements=v15GroupRequirements(attemptId,slotIndex);slot.sent={};slot.rewardTotal=v15GroupReward(slotIndex,attemptId);slot.startedAt=now;slot.deadlineAt=now+V15_GROUP_DURATION_MS;started=true}nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]),day=v15RefreshTempleDay(dSnap.exists()?cloneData(dSnap.data()):v15NewTempleDay(currentBangkokDateKey()));if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);v15EnsureTemplePlayerState(s);const slot=day.groupSlots[slotIndex];if(!slot||!["open","active"].includes(slot.status))throw new Error("ภารกิจนี้จบหรือพักอยู่");if(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&gameNow()>=Number(slot.deadlineAt||0))throw new Error("หมดเวลาภารกิจแล้ว");slot.participants=Array.isArray(slot.participants)?slot.participants:[];if(slot.participants.some(p=>p.key===currentMemberKey))throw new Error("คุณลงชื่อภารกิจนี้แล้ว");
+      slot.participants.push({key:currentMemberKey,name:currentMember,joinedAt:gameNow()});if(slot.status==="open"&&slot.participants.length>=Math.max(1,Number(slot.requiredPeople)||1)){const now=gameNow(),attemptId=`${day.dateKey}-group-${slotIndex}-${slot.cycle}-${now}`;slot.status="active";slot.attemptId=attemptId;slot.requirements=v15GroupRequirements(attemptId,slotIndex);slot.sent={};slot.rewardTotal=v15GroupReward(slotIndex,attemptId);slot.startedAt=now;slot.deadlineAt=now+V15_GROUP_DURATION_MS;started=true}nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);showWeatherToast(started?"👥 ทีมครบแล้ว • ภารกิจเริ่ม 45 นาที":"👥 ลงชื่อภารกิจหมู่แล้ว");
   }catch(error){message("ลงชื่อไม่ได้",error.message||"กรุณาลองใหม่")}
