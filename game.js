@@ -19846,3 +19846,47 @@ console.info("V281 friend gift daily limit =", FRIEND_GIFT_DAILY_LIMIT);
 console.info("V284 multi mystery box opening loaded");
 
 console.info("V285 multi-box mobile selector loaded");
+
+/* =====================================================================
+   V286 — FORCE MULTI-BOX ENTRYPOINTS
+   Root cause fix: later inventory wrappers in this legacy bundle can
+   re-bind the three "ใช้งาน" buttons back to single-open handlers.
+   Intercept only the inventory entry buttons at capture phase so every
+   route always opens the quantity chooser. Reward logic remains the
+   existing V284/V285 multi-open implementation.
+   ===================================================================== */
+(function YN_V286_FORCE_MULTI_BOX_ENTRYPOINTS(){
+  const OPENERS={
+    useJellyBoxBtn:()=>showJellyBoxUse(),
+    useCatBoxBtn:()=>showCatBoxUse(),
+    useDogBoxBtn:()=>showDogBoxUse()
+  };
+  document.addEventListener("click",function(e){
+    const btn=e.target?.closest?.("#useJellyBoxBtn,#useCatBoxBtn,#useDogBoxBtn");
+    if(!btn)return;
+    const fn=OPENERS[btn.id];
+    if(typeof fn!=="function")return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    fn();
+  },true);
+
+  function rebind(){
+    Object.entries(OPENERS).forEach(([id,fn])=>{
+      const b=document.getElementById(id);
+      if(!b||b.dataset.v286MultiBound==="1")return;
+      b.dataset.v286MultiBound="1";
+      b.onclick=(ev)=>{ev?.preventDefault?.();fn()};
+      b.textContent="เลือกจำนวนเปิด";
+    });
+  }
+  const root=document.getElementById("modalContent");
+  if(root){
+    const mo=new MutationObserver(()=>queueMicrotask(rebind));
+    mo.observe(root,{childList:true,subtree:true});
+  }
+  queueMicrotask(rebind);
+  window.YAINOO_BUILD="V286-MULTI-BOX-FORCED";
+  console.info("V286 forced multi-box entrypoints loaded");
+})();
