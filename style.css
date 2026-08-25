@@ -7078,3 +7078,6 @@ button[data-busy="1"]{opacity:.72!important;cursor:progress!important}
   overflow:visible!important;
   contain:none!important;
 }
+
+/* V285 multi mystery box mobile picker */
+.multi-box-presets{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}.multi-box-presets button{min-width:58px;min-height:42px;padding:8px 12px;border-radius:12px;font-weight:800;touch-action:manipulation}.mystery-box-open-panel input[type=number],.alpaca-inventory-item input[type=number]{min-height:42px;font-size:16px;text-align:center}
