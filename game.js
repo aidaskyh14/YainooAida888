@@ -8506,10 +8506,17 @@ function v15RefreshTempleDay(day,now=gameNow()){
     if(slot.status==="cooldown"&&now>=Number(slot.cooldownUntil||0)&&canRespawn)day.soloSlots[i]=v15NewSoloSlot(day.dateKey,i,(Number(slot.cycle)||0)+1);
   });
   day.groupSlots.forEach((slot,i)=>{
-    /* 16:00: ทีมที่ยังลงชื่อไม่ครบถูกปิดเฉย ๆ ไม่มีโทษ */
+    /* V281 — วัดเปิด 24 ชม.: กู้สล็อตกลุ่มที่เคยถูกเวอร์ชันเก่าปิดตอน 16:00
+       สถานะ closed/incomplete ไม่มีผู้เล่นค้างและไม่มีบทลงโทษ จึงเปิดเป็นงานใหม่ทันที */
+    if(isToday&&slot.status==="closed"&&slot.lastResult==="incomplete"){
+      day.groupSlots[i]=v15NewGroupSlot(day.dateKey,i,(Number(slot.cycle)||0)+1);
+      slot=day.groupSlots[i];
+    }
+
+    /* compatibility เผื่อมี build เก่าที่ยังใช้เวลาปิดวัด */
     if(templeClosedToday&&slot.status==="open"&&(slot.participants||[]).length){slot.status="closed";slot.lastResult="incomplete";slot.participants=[];slot.requirements=[];slot.sent={}}
 
-    /* ใหม่: ของครบทุกอย่างเมื่อไร = สำเร็จทันที ไม่ต้องรอ 45 นาทีหมด */
+    /* ของครบทุกอย่างเมื่อไร = สำเร็จทันที ไม่ต้องรอ 45 นาทีหมด */
     if(slot.status==="active"&&v15AllReqDone(slot)){
       v15CompleteGroupSlot(day,slot,i,now);
     }
@@ -19824,8 +19831,8 @@ console.info("V276 arena cloud pending recovery loaded");
   }
 })();
 
-window.YAINOO_BUILD="V280-FRIEND-GIFT-200-DAY";
-console.info("V280 friend gift 200/day loaded");
+window.YAINOO_BUILD="V281-FRIEND-GIFT-200-DAY";
+console.info("V281 friend gift 200/day loaded");
 
-/* V280 — FRIEND GIFT DAILY LIMIT 200 */
-console.info("V280 friend gift daily limit =", FRIEND_GIFT_DAILY_LIMIT);
+/* V281 — FRIEND GIFT DAILY LIMIT 200 */
+console.info("V281 friend gift daily limit =", FRIEND_GIFT_DAILY_LIMIT);
