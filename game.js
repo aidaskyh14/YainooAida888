@@ -17360,13 +17360,28 @@ async function V181_campaignScoreLater(summary){
 
   function renderManageCard(a,penNo){
     const baby=a.type==="baby",stage=baby?1:a.woolStage,title=baby?`เบบี้อัลปาก้า${COLOR_META[a.color]?.short||""}`:a.name,pen=penAt(ownAlpaca(),penNo),icons=statusIcons(a,pen,gameNow());
-    return `<article class="alpaca-manage-card compact ${baby?"is-baby":"is-adult"}"><span class="alpaca-age-badge">${baby?"เบบี้":"ตัวเต็มวัย"}</span><div class="alpaca-manage-preview-wrap">${spritePreview(a.color,stage,baby?"manage-baby":"manage-adult")}</div><h3>${safeHtml(title)}</h3><p>${baby?`${COLOR_META[a.color]?.short||""} • เบบี้`:`${sexLabel(a)} • ${COLOR_META[a.color]?.short||""} • S${a.woolStage}`}</p><div class="alpaca-manage-mini-icons">${icons.map(x=>`<img src="${x.image}" alt="${safeHtml(x.label)}">`).join("")}</div><button class="primary alpaca-manage-open" type="button" data-alpaca-open="${safeHtml(a.id)}" data-alpaca-penno="${penNo}">ดูสถานะ</button></article>`;
+    return `<article class="alpaca-manage-card compact ${baby?"is-baby":"is-adult"}"><label class="v288-batch-check" title="เลือกขาย"><input type="checkbox" data-alpaca-batch-sell="${penNo}:${safeHtml(a.id)}"><span>เลือก</span></label><span class="alpaca-age-badge">${baby?"เบบี้":"ตัวเต็มวัย"}</span><div class="alpaca-manage-preview-wrap">${spritePreview(a.color,stage,baby?"manage-baby":"manage-adult")}</div><h3>${safeHtml(title)}</h3><p>${baby?`${COLOR_META[a.color]?.short||""} • เบบี้`:`${sexLabel(a)} • ${COLOR_META[a.color]?.short||""} • S${a.woolStage}`}</p><div class="alpaca-manage-mini-icons">${icons.map(x=>`<img src="${x.image}" alt="${safeHtml(x.label)}">`).join("")}</div><button class="primary alpaca-manage-open" type="button" data-alpaca-open="${safeHtml(a.id)}" data-alpaca-penno="${penNo}">ดูสถานะ</button></article>`;
   }
   function showManageAlpacas(){
     const root=ownAlpaca();if(!root)return;const all=[];root.pens.forEach((p,pi)=>p.alpacas.forEach(a=>all.push({a,penNo:pi+1})));
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("","จัดการอัลปาก้า",`มีทั้งหมด ${all.length} ตัว • คอกละ ${PEN_CAPACITY} ตัวตามปกติ`)}<div class="alpaca-manage-list">${all.length?all.map(x=>renderManageCard(x.a,x.penNo)).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคอกค่ะ</div>`}</div><button id="alpacaManageClose" class="secondary-action" type="button">ปิด</button></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("","จัดการอัลปาก้า",`มีทั้งหมด ${all.length} ตัว • จิ้มเลือกหลายตัวแล้วขายพร้อมกันได้`)}${all.length?`<div class="v288-batch-toolbar"><button id="alpacaBatchSelectAll" type="button">เลือกทั้งหมด</button><b>เลือกแล้ว <span id="alpacaBatchCount">0</span> ตัว</b><button id="alpacaBatchSellBtn" class="danger-action" type="button" disabled>ขายที่เลือก</button></div>`:""}<div class="alpaca-manage-list">${all.length?all.map(x=>renderManageCard(x.a,x.penNo)).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคอกค่ะ</div>`}</div><button id="alpacaManageClose" class="secondary-action" type="button">ปิด</button></section>`;
     openModal();document.querySelectorAll("[data-alpaca-open]").forEach(b=>b.onclick=()=>showAlpacaDetail(Number(b.dataset.alpacaPenno),b.dataset.alpacaOpen));$("alpacaManageClose").onclick=closeModal;
+    const checks=[...document.querySelectorAll("[data-alpaca-batch-sell]")],countEl=$("alpacaBatchCount"),sellBtn=$("alpacaBatchSellBtn");
+    const sync=()=>{const n=checks.filter(x=>x.checked).length;if(countEl)countEl.textContent=n;if(sellBtn){sellBtn.disabled=n<1;sellBtn.textContent=n?`ขายที่เลือก (${n})`:"ขายที่เลือก"}};
+    checks.forEach(c=>c.onchange=sync);if($("alpacaBatchSelectAll"))$("alpacaBatchSelectAll").onclick=()=>{const on=checks.some(c=>!c.checked);checks.forEach(c=>c.checked=on);sync()};if(sellBtn)sellBtn.onclick=()=>sellSelectedPenAlpacas(checks.filter(c=>c.checked).map(c=>c.dataset.alpacaBatchSell));
   }
+  async function sellSelectedPenAlpacas(keys){
+    keys=[...new Set((keys||[]).filter(Boolean))];if(!keys.length)return;
+    const root=ownAlpaca(),preview=[];let expected=0;
+    keys.forEach(k=>{const [p,id]=String(k).split(":");const a=root?.pens?.[Number(p)-1]?.alpacas?.find(x=>x.id===id);if(a){preview.push({penNo:Number(p),id,type:a.type});expected+=a.type==="baby"?50:200}});
+    if(!preview.length)return alpacaMessage("ขายไม่ได้","ไม่พบอัลปาก้าที่เลือกค่ะ");
+    const ok=await alpacaConfirm(`ขายอัลปาก้า ${preview.length} ตัวไหมคะ?`,`ขายพร้อมกันครั้งเดียว • ได้รวม <b>${expected} กุศล</b><br><small>เมื่อลบแล้วจะเอากลับคืนไม่ได้</small>`,{confirmText:`ขาย ${preview.length} ตัว`,danger:true});if(!ok)return;
+    try{
+      const out=await mutateOwn(st=>{let reward=0,removed=0;preview.forEach(x=>{const p=penAt(st.alpaca,x.penNo),i=p.alpacas.findIndex(a=>a.id===x.id);if(i<0)return;reward+=p.alpacas[i].type==="baby"?50:200;p.alpacas.splice(i,1);removed++});if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
+      updateMeritUI();renderPen();syncOwnMaleBreeders().catch(()=>{});showWeatherToast(`🦙 ขาย ${out.result.removed} ตัวแล้ว • +${out.result.reward} กุศล`);showManageAlpacas();
+    }catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
 
   function adultStatusCards(a,pen){
     const now=gameNow(),hungry=now>=a.nextHungryAt,rows=[
@@ -17598,9 +17613,23 @@ async function V181_campaignScoreLater(summary){
   function warehouseSprite(item){return spritePreview(item.color,1,item.type==="baby"?"manage-baby warehouse-preview":"manage-adult warehouse-preview")}
   function showAlpacaWarehouse(){
     const root=ownAlpaca();if(!root)return;const list=Array.isArray(root.vault)?root.vault:[];
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-warehouse-panel"><header class="alpaca-warehouse-head"><div class="alpaca-warehouse-title"><span class="alpaca-warehouse-title-icon">🦙</span><div><h2>คลังอัลปาก้า</h2><small>ยังไม่ได้วางลงคอก <b>${list.length}</b> ตัว</small></div></div><div class="alpaca-warehouse-actions"><button id="warehouseBackPen" type="button">← กลับคอก</button><button id="warehouseCraftBtn" class="primary" type="button">คราฟอัลปาก้า ✨</button></div></header><div class="alpaca-warehouse-grid">${list.length?list.map(v=>`<article class="alpaca-warehouse-card ${v.type==="baby"?"is-baby":"is-adult"}"><span class="alpaca-age-badge">${v.type==="baby"?"เบบี้":"ตัวเต็มวัย"}</span>${warehouseSprite(v)}<b>${v.type==="baby"?`เบบี้อัลปาก้า${COLOR_META[v.color]?.short||""}`:`อัลปาก้า${COLOR_META[v.color]?.short||""}`}</b><small>${v.type==="baby"?"รอวางเข้าคอก • ไม่มีเพศ":`${sexLabel(v)} • ${colorName(v.color)}`}</small><button type="button" data-vault-place="${safeHtml(v.id)}">วางเข้าคอก</button><button type="button" class="danger-action" data-vault-sell="${safeHtml(v.id)}">ขาย +${v.type==="baby"?50:200} กุศล</button></article>`).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคลังค่ะ<br><small>รางวัลแคมเปญ / เบบี้ที่จับได้ / อัลปาก้าที่ได้รับ / อัลปาก้าที่คราฟ จะมาอยู่ตรงนี้ก่อน</small></div>`}</div></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-warehouse-panel"><header class="alpaca-warehouse-head"><div class="alpaca-warehouse-title"><span class="alpaca-warehouse-title-icon">🦙</span><div><h2>คลังอัลปาก้า</h2><small>ยังไม่ได้วางลงคอก <b>${list.length}</b> ตัว</small></div></div><div class="alpaca-warehouse-actions"><button id="warehouseBackPen" type="button">← กลับคอก</button><button id="warehouseCraftBtn" class="primary" type="button">คราฟอัลปาก้า ✨</button></div></header>${list.length?`<div class="v288-batch-toolbar"><button id="vaultBatchSelectAll" type="button">เลือกทั้งหมด</button><b>เลือกแล้ว <span id="vaultBatchCount">0</span> ตัว</b><button id="vaultBatchSellBtn" class="danger-action" type="button" disabled>ขายที่เลือก</button></div>`:""}<div class="alpaca-warehouse-grid">${list.length?list.map(v=>`<article class="alpaca-warehouse-card ${v.type==="baby"?"is-baby":"is-adult"}"><label class="v288-batch-check" title="เลือกขาย"><input type="checkbox" data-vault-batch-sell="${safeHtml(v.id)}"><span>เลือก</span></label><span class="alpaca-age-badge">${v.type==="baby"?"เบบี้":"ตัวเต็มวัย"}</span>${warehouseSprite(v)}<b>${v.type==="baby"?`เบบี้อัลปาก้า${COLOR_META[v.color]?.short||""}`:`อัลปาก้า${COLOR_META[v.color]?.short||""}`}</b><small>${v.type==="baby"?"รอวางเข้าคอก • ไม่มีเพศ":`${sexLabel(v)} • ${colorName(v.color)}`}</small><button type="button" data-vault-place="${safeHtml(v.id)}">วางเข้าคอก</button><button type="button" class="danger-action" data-vault-sell="${safeHtml(v.id)}">ขาย +${v.type==="baby"?50:200} กุศล</button></article>`).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคลังค่ะ<br><small>รางวัลแคมเปญ / เบบี้ที่จับได้ / อัลปาก้าที่ได้รับ / อัลปาก้าที่คราฟ จะมาอยู่ตรงนี้ก่อน</small></div>`}</div></section>`;
     openModal();$("warehouseBackPen").onclick=()=>{closeModal();renderPen()};$("warehouseCraftBtn").onclick=showAlpacaCraft;document.querySelectorAll("[data-vault-place]").forEach(b=>b.onclick=()=>showVaultPenPicker(b.dataset.vaultPlace));document.querySelectorAll("[data-vault-sell]").forEach(b=>b.onclick=()=>sellVaultAlpaca(b.dataset.vaultSell));
+    const checks=[...document.querySelectorAll("[data-vault-batch-sell]")],countEl=$("vaultBatchCount"),sellBtn=$("vaultBatchSellBtn");
+    const sync=()=>{const n=checks.filter(x=>x.checked).length;if(countEl)countEl.textContent=n;if(sellBtn){sellBtn.disabled=n<1;sellBtn.textContent=n?`ขายที่เลือก (${n})`:"ขายที่เลือก"}};
+    checks.forEach(c=>c.onchange=sync);if($("vaultBatchSelectAll"))$("vaultBatchSelectAll").onclick=()=>{const on=checks.some(c=>!c.checked);checks.forEach(c=>c.checked=on);sync()};if(sellBtn)sellBtn.onclick=()=>sellSelectedVaultAlpacas(checks.filter(c=>c.checked).map(c=>c.dataset.vaultBatchSell));
   }
+  async function sellSelectedVaultAlpacas(ids){
+    ids=[...new Set((ids||[]).filter(Boolean))];if(!ids.length)return;
+    const root=ownAlpaca(),selected=(root?.vault||[]).filter(v=>ids.includes(v.id));if(!selected.length)return alpacaMessage("ขายไม่ได้","ไม่พบอัลปาก้าที่เลือกค่ะ");
+    const expected=selected.reduce((n,v)=>n+(v.type==="baby"?50:200),0);
+    const ok=await alpacaConfirm(`ขายอัลปาก้าในคลัง ${selected.length} ตัวไหมคะ?`,`ขายพร้อมกันครั้งเดียว • ได้รวม <b>${expected} กุศล</b><br><small>เมื่อลบแล้วจะเอากลับคืนไม่ได้</small>`,{confirmText:`ขาย ${selected.length} ตัว`,danger:true});if(!ok)return;
+    try{
+      const out=await mutateOwn(st=>{let reward=0,removed=0;for(let i=st.alpaca.vault.length-1;i>=0;i--){const v=st.alpaca.vault[i];if(!ids.includes(v.id))continue;reward+=v.type==="baby"?50:200;st.alpaca.vault.splice(i,1);removed++}if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
+      updateMeritUI();showWeatherToast(`🦙 ขาย ${out.result.removed} ตัวแล้ว • +${out.result.reward} กุศล`);showAlpacaWarehouse();
+    }catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
   async function sellVaultAlpaca(vaultId){const item=ownAlpaca()?.vault?.find(v=>v.id===vaultId);if(!item)return;const reward=item.type==="baby"?50:200,ok=await alpacaConfirm("ขายอัลปาก้าในคลังไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;try{await mutateOwn(st=>{const idx=st.alpaca.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const got=st.alpaca.vault[idx].type==="baby"?50:200;st.alpaca.vault.splice(idx,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`);showAlpacaWarehouse()}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showVaultPenPicker(vaultId){const root=ownAlpaca(),item=root?.vault?.find(v=>v.id===vaultId);if(!item)return showAlpacaWarehouse();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`วาง${item.type==="baby"?"เบบี้":"อัลปาก้า"}เข้าคอก`,`เลือกคอกที่ยังมีพื้นที่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-vault-pen="${i+1}" ${p.alpacas.length>=PEN_CAPACITY?"disabled":""}>คอก ${i+1}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}</small></button>`).join("")}</div><button id="vaultPenBack" class="secondary-action" type="button">กลับคลัง</button></section>`;openModal();document.querySelectorAll("[data-vault-pen]").forEach(b=>b.onclick=()=>placeVaultAlpaca(vaultId,Number(b.dataset.vaultPen)));$("vaultPenBack").onclick=showAlpacaWarehouse}
   async function placeVaultAlpaca(vaultId,penNo){try{await mutateOwn(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||gameNow(),item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||gameNow()}pen.alpacas.push(a);root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
@@ -19901,7 +19930,52 @@ console.info("V285 multi-box mobile selector loaded");
     mo.observe(root,{childList:true,subtree:true});
   }
   queueMicrotask(rebind);
-  window.YAINOO_BUILD="V287-COST-BATCH";
+  window.YAINOO_BUILD="V288-MULTI-SELECT-PET-SELL";
   console.info("V286 forced multi-box entrypoints loaded");
 console.info("V287 Firebase cost + batch optimization loaded");
 })();
+
+
+/* =====================================================================
+   V288 — MULTI-SELECT PET SELL
+   Dogs / cats can be ticked and sold in one Firestore transaction.
+   Existing single-sell buttons remain available.
+   ===================================================================== */
+(function YN_V288_MULTI_SELECT_PET_SELL(){
+  function selectedIds(selector){return [...document.querySelectorAll(selector)].filter(x=>x.checked).map(x=>x.value).filter(Boolean)}
+  function toolbar(kind,label){
+    const grid=document.querySelector(".inventory-panel .inventory-grid");if(!grid||document.getElementById(`v288-${kind}-toolbar`))return null;
+    const bar=document.createElement("div");bar.id=`v288-${kind}-toolbar`;bar.className="v288-batch-toolbar v288-pet-toolbar";
+    bar.innerHTML=`<button type="button" data-v288-selectall="${kind}">เลือกทั้งหมด</button><b>เลือกแล้ว <span data-v288-count="${kind}">0</span> ตัว</b><button type="button" class="danger-action" data-v288-batchsell="${kind}" disabled>ขาย${label}ที่เลือก</button>`;
+    grid.parentElement.insertBefore(bar,grid);return bar;
+  }
+  function decorate(kind){
+    const panel=document.querySelector(".inventory-panel");if(!panel)return;
+    const active=panel.querySelector(`[data-inventory-tab="${kind}"].active`);if(!active)return;
+    const isCat=kind==="cats",list=isCat?(ensureCatState(ownState||state).cats||[]):(ensureDogState(ownState||state).dogs||[]);
+    const cards=[...panel.querySelectorAll(".inventory-grid .cat-inventory-item")];
+    if(!cards.length||!list.length)return;
+    toolbar(kind,isCat?"แมว":"หมา");
+    cards.forEach((card,i)=>{const pet=list[i];if(!pet||card.querySelector(`[data-v288-pet="${kind}"]`))return;const lab=document.createElement("label");lab.className="v288-batch-check v288-pet-check";lab.innerHTML=`<input type="checkbox" data-v288-pet="${kind}" value="${safeHtml(pet.id)}"><span>เลือก</span>`;card.prepend(lab)});
+    const checks=[...panel.querySelectorAll(`[data-v288-pet="${kind}"]`)],count=panel.querySelector(`[data-v288-count="${kind}"]`),sell=panel.querySelector(`[data-v288-batchsell="${kind}"]`),all=panel.querySelector(`[data-v288-selectall="${kind}"]`);
+    const sync=()=>{const n=checks.filter(c=>c.checked).length;if(count)count.textContent=n;if(sell){sell.disabled=n<1;sell.textContent=n?`ขาย${isCat?"แมว":"หมา"}ที่เลือก (${n})`:`ขาย${isCat?"แมว":"หมา"}ที่เลือก`}};
+    checks.forEach(c=>c.onchange=sync);if(all)all.onclick=()=>{const on=checks.some(c=>!c.checked);checks.forEach(c=>c.checked=on);sync()};if(sell)sell.onclick=()=>isCat?v288SellCats(selectedIds('[data-v288-pet="cats"]')):v288SellDogs(selectedIds('[data-v288-pet="dogs"]'));sync();
+  }
+  async function v288SellCats(ids){
+    ids=[...new Set((ids||[]).filter(Boolean))];if(!ids.length)return;const rewardRolls=new Map(ids.map(id=>[id,randInt(20,50)])),expected=[...rewardRolls.values()].reduce((a,b)=>a+b,0);
+    if(!confirm(`ขายน้องแมว ${ids.length} ตัวพร้อมกันไหม?\nได้กุศลรวม ${expected}\nเมื่อลบแล้วจะเอากลับคืนไม่ได้`))return;
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,removed=0,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember);for(let i=st.cats.length-1;i>=0;i--){const c=st.cats[i];if(!rewardRolls.has(c.id))continue;reward+=rewardRolls.get(c.id)||0;st.cats.splice(i,1);removed++}if(!removed)throw new Error("ไม่พบแมวที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;next=st;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);updateMeritUI();try{syncAidaFarmPet()}catch{}inventory("cats");showWeatherToast(`🐱 ขาย ${removed} ตัวแล้ว • +${reward} กุศล`)}catch(e){message("ขายน้องแมวไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  async function v288SellDogs(ids){
+    ids=[...new Set((ids||[]).filter(Boolean))];if(!ids.length)return;const rewardRolls=new Map(ids.map(id=>[id,randInt(20,50)])),expected=[...rewardRolls.values()].reduce((a,b)=>a+b,0);
+    if(!confirm(`ขายน้องหมา ${ids.length} ตัวพร้อมกันไหม?\nได้กุศลรวม ${expected}\nเมื่อลบแล้วจะเอากลับคืนไม่ได้`))return;
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,removed=0,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember);for(let i=st.dogs.length-1;i>=0;i--){const d=st.dogs[i];if(!rewardRolls.has(d.id))continue;reward+=rewardRolls.get(d.id)||0;st.dogs.splice(i,1);removed++}if(!removed)throw new Error("ไม่พบน้องหมาที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;next=st;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);updateMeritUI();if(currentScene==="dogHotel"){try{renderDogHotelScene()}catch{}}else inventory("dogs");showWeatherToast(`🐶 ขาย ${removed} ตัวแล้ว • +${reward} กุศล`)}catch(e){message("ขายน้องหมาไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  window.v288SellCats=v288SellCats;window.v288SellDogs=v288SellDogs;
+  const root=document.getElementById("modalContent");if(root){const mo=new MutationObserver(()=>queueMicrotask(()=>{decorate("cats");decorate("dogs")}));mo.observe(root,{childList:true,subtree:true})}
+  document.addEventListener("click",()=>queueMicrotask(()=>{decorate("cats");decorate("dogs")}),true);
+  queueMicrotask(()=>{decorate("cats");decorate("dogs")});
+  window.YAINOO_BUILD="V288-MULTI-SELECT-PET-SELL";
+  console.info("V288 multi-select pet sell loaded");
+})();
+

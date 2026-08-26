@@ -7081,3 +7081,16 @@ button[data-busy="1"]{opacity:.72!important;cursor:progress!important}
 
 /* V285 multi mystery box mobile picker */
 .multi-box-presets{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}.multi-box-presets button{min-width:58px;min-height:42px;padding:8px 12px;border-radius:12px;font-weight:800;touch-action:manipulation}.mystery-box-open-panel input[type=number],.alpaca-inventory-item input[type=number]{min-height:42px;font-size:16px;text-align:center}
+
+
+/* V288 — multi-select pet/alpaca selling */
+.v288-batch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:12;margin:8px 0 12px;padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 4px 16px rgba(0,0,0,.12);backdrop-filter:blur(8px)}
+.v288-batch-toolbar button{min-height:40px;padding:8px 11px;border-radius:11px;font-weight:800;touch-action:manipulation}
+.v288-batch-toolbar b{font-size:13px;text-align:center;white-space:nowrap}
+.v288-batch-check{display:flex!important;align-items:center!important;gap:5px!important;width:max-content!important;min-height:34px!important;padding:5px 8px!important;border-radius:10px!important;background:rgba(255,255,255,.92)!important;box-shadow:0 2px 8px rgba(0,0,0,.12)!important;font-size:12px!important;font-weight:800!important;cursor:pointer!important;z-index:8!important}
+.v288-batch-check input{width:20px!important;height:20px!important;margin:0!important;accent-color:#d94b6c}
+.v288-pet-check{position:absolute!important;top:7px!important;left:7px!important}
+.cat-inventory-item{position:relative}
+.alpaca-manage-card,.alpaca-warehouse-card{position:relative}
+.alpaca-manage-card>.v288-batch-check,.alpaca-warehouse-card>.v288-batch-check{position:absolute!important;top:7px!important;left:7px!important}
+@media(max-width:430px){.v288-batch-toolbar{gap:5px;padding:7px}.v288-batch-toolbar button{padding:7px 8px;font-size:12px}.v288-batch-toolbar b{font-size:11px}.v288-batch-check span{display:none}.v288-batch-check{padding:5px!important}}
