@@ -20444,11 +20444,31 @@ console.info("V291 maintenance mode loaded");
     try{const rows=[];document.querySelectorAll("[data-s2-spend-today]").forEach(i=>{const name=i.dataset.s2SpendToday,totalInput=document.querySelector(`[data-s2-spend-total="${CSS.escape(name)}"]`),today=Math.max(0,Math.floor(Number(i.value)||0)),total=Math.max(0,Math.floor(Number(totalInput?.value)||0));if(today||total)rows.push({name,today,total})});const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"shared","topSpenders"),{rows,updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});showWeatherToast("💎 บันทึก Top Spenders แล้ว");showTopSpenders()}catch(e){btn.disabled=false;message("บันทึกไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
+  async function loadSeason1Rows(){
+    const bridge=await getFirebaseBridge();if(!bridge)return [];
+    const {db,firestore:fs}=bridge,snap=await fs.getDoc(fs.doc(db,"shared","season1Results"));
+    return snap.exists()&&Array.isArray(snap.data().rows)?snap.data().rows.slice():[];
+  }
+  async function snapshotSeason1ResultsFromProfiles(){
+    if(adminProfile?.role!=="admin"){message("ไม่มีสิทธิ์","เฉพาะ Aida/Admin เท่านั้นค่ะ");return}
+    const btn=$("s2SnapshotSeason1Btn");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก..."}
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),rows=[];
+      snap.forEach(d=>{const x=d.data()||{},name=String(x.displayName||x.name||S2_DYNAMIC_NAMES[d.id]||d.id||"").trim(),merit=Math.max(0,Math.floor(Number(x.merit)||0));if(name&&d.id!=="aida")rows.push({memberKey:d.id,name,merit})});
+      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0)||String(a.name).localeCompare(String(b.name),"th"));
+      if(!rows.length)throw new Error("ไม่พบคะแนนผู้เล่นใน publicProfiles");
+      await fs.setDoc(fs.doc(db,"shared","season1Results"),{rows,locked:true,snapshotAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});
+      showWeatherToast(`🏆 บันทึกผลงานซีซั่น 1 แล้ว ${rows.length} คน`);
+      showSeason1ResultsLive();
+    }catch(e){if(btn){btn.disabled=false;btn.textContent="🏆 บันทึกคะแนนปัจจุบันเป็นผล Season 1"}message("บันทึกผลงานซีซั่น 1 ไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
   async function showSeason1ResultsLive(){
     try{
-      const bridge=await getFirebaseBridge();let rows=[];if(bridge){const {db,firestore:fs}=bridge,snap=await fs.getDoc(fs.doc(db,"shared","season1Results"));if(snap.exists()&&Array.isArray(snap.data().rows))rows=snap.data().rows.slice()}
-      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));const html=rows.length?rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${s2Esc(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join(""):`<div class="s2-season1-empty"><span>🏆</span><b>ผลงานซีซั่น 1</b><p>ยังไม่ได้บันทึกผลสรุปซีซั่น 1</p></div>`;
+      const rows=await loadSeason1Rows();
+      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));
+      const html=rows.length?rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${s2Esc(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join(""):`<div class="s2-season1-empty"><span>🏆</span><b>ผลงานซีซั่น 1</b><p>ยังไม่ได้บันทึกผลสรุปซีซั่น 1</p>${adminProfile?.role==="admin"?'<button id="s2SnapshotSeason1Btn" class="s2-season1-snapshot-btn" type="button">🏆 บันทึกคะแนนปัจจุบันเป็นผล Season 1</button>':""}</div>`;
       $("modalContent").innerHTML=`<section class="feature-panel s2-season1-panel"><header><small>HALL OF FAME</small><h2>🏆 ผลงานซีซั่น 1</h2><p>อันดับและคะแนนกุศลจากซีซั่นแรก</p></header><div class="s2-season1-list">${html}</div></section>`;openModal();
+      if($("s2SnapshotSeason1Btn"))$("s2SnapshotSeason1Btn").onclick=snapshotSeason1ResultsFromProfiles;
     }catch(e){message("เปิดผลงานซีซั่น 1 ไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
@@ -20465,8 +20485,8 @@ console.info("V291 maintenance mode loaded");
   window.YN_S2_REFRESH_DIRECTORY=refreshLoginDirectory;
   refreshLoginDirectory();
   setTimeout(refreshLoginDirectory,1200);
-  window.YAINOO_BUILD="S2V005-FAST-NOTIFICATIONS";
-  console.info("Season 2 V005 fast notifications loaded");
+  window.YAINOO_BUILD="S2V006-SEASON1-RESULTS-SNAPSHOT";
+  console.info("Season 2 V006 season1 results snapshot loaded");
 })();
 (function YN_S2V004_DIRECTORY_RETRY(){
   const retry=()=>{try{const btn=document.getElementById("startBtn");if(btn&&typeof start==="function")btn.onclick=start}catch{}};
