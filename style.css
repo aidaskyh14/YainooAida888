@@ -7118,3 +7118,63 @@ button[data-busy="1"]{opacity:.72!important;cursor:progress!important}
 .v290-qty-sell>img{display:block;width:96px;height:96px;object-fit:contain;margin:0 auto}
 .inventory-tabs .v290-active{font-weight:800;box-shadow:inset 0 -3px currentColor}
 @media(max-width:420px){.v290-pet-type-grid{grid-template-columns:1fr}.v290-pet-type-card{grid-template-columns:52px 1fr}.v290-pet-type-card>img{width:52px;height:52px}.v290-detail-grid{grid-template-columns:1fr 1fr}.v290-pet-detail-card{min-width:0}}
+
+
+/* =====================================================================
+   SEASON 2 V001 — LOGIN HOME / compact mobile-first
+   ===================================================================== */
+.login-screen{background:#171522}
+.season2-login-board{background:#171522}
+.season2-login-art{object-fit:cover!important;object-position:center center!important}
+.season2-login-card{
+  position:absolute;z-index:5;left:50%;bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));
+  transform:translateX(-50%);width:min(86vw,330px);padding:9px 10px 10px;
+  border:1px solid rgba(255,236,194,.7);border-radius:18px;
+  background:linear-gradient(180deg,rgba(55,34,25,.78),rgba(35,24,24,.82));
+  box-shadow:0 8px 24px rgba(0,0,0,.26),inset 0 0 0 1px rgba(255,255,255,.12);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)
+}
+.season2-login-label{display:block;margin:1px 4px 3px;color:#fff4d8;font-size:11px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.season2-login-control{
+  position:static!important;display:block!important;width:100%!important;height:39px!important;margin:0 0 7px!important;
+  padding:0 12px!important;border:1px solid rgba(244,210,155,.72)!important;border-radius:12px!important;
+  background:rgba(255,249,230,.94)!important;color:#51382e!important;font-size:13px!important;font-weight:800!important;
+  text-shadow:none!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)!important;-webkit-appearance:none;appearance:none
+}
+select.season2-login-control{padding-right:34px!important;background-image:linear-gradient(45deg,transparent 50%,#7a5439 50%),linear-gradient(135deg,#7a5439 50%,transparent 50%)!important;background-position:calc(100% - 16px) 16px,calc(100% - 11px) 16px!important;background-size:5px 5px,5px 5px!important;background-repeat:no-repeat!important}
+.season2-login-control:focus{outline:2px solid rgba(255,213,128,.62)!important;outline-offset:1px}
+.season2-start-btn{
+  display:block;width:100%;min-height:42px;border:1px solid #c89250;border-radius:14px;
+  background:linear-gradient(180deg,#9d693c,#704325);color:#fff8df;font-size:14px;font-weight:900;
+  letter-spacing:.2px;text-shadow:0 1px 2px rgba(44,20,7,.75);box-shadow:0 4px 0 #4d2d1b,0 7px 15px rgba(0,0,0,.22);
+  -webkit-tap-highlight-color:transparent
+}
+.season2-start-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #4d2d1b,0 4px 9px rgba(0,0,0,.2)}
+.season2-login-error{position:static!important;width:100%!important;min-height:0;margin:7px 0 0!important;color:#ffe8c9!important;font-size:11px!important;line-height:1.35;text-align:center!important;text-shadow:0 1px 2px rgba(0,0,0,.8)!important}
+.season1-results-btn{
+  position:absolute;z-index:7;right:max(10px,env(safe-area-inset-right));top:max(10px,calc(env(safe-area-inset-top) + 6px));
+  max-width:44vw;min-height:34px;padding:7px 11px;border:1px solid rgba(252,224,169,.86);border-radius:999px;
+  background:rgba(69,43,30,.78);color:#fff4d8;font-size:clamp(10px,2.8vw,13px);font-weight:900;
+  box-shadow:0 5px 15px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.12);text-shadow:0 1px 2px rgba(0,0,0,.65);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);white-space:nowrap
+}
+.season1-results-btn:active{transform:scale(.97)}
+.modal-card:has(.s2-season1-panel){width:min(90vw,390px)!important;max-height:80dvh!important;padding:14px 12px 12px!important;border-radius:20px!important;border:2px solid #b78755!important;background:linear-gradient(180deg,#fff8e6,#f0ddbb)!important}
+.modal-card:has(.s2-season1-panel)>.close{width:31px;height:31px;font-size:20px;right:9px;top:9px}
+.s2-season1-panel{padding:2px!important;margin:0!important;text-align:center}
+.s2-season1-panel header{padding:4px 30px 9px}
+.s2-season1-panel header small{font-size:9px;font-weight:900;letter-spacing:1.5px;color:#9b704c}
+.s2-season1-panel header h2{margin:3px 0 2px!important;font-size:18px!important;color:#5b3a32!important}
+.s2-season1-panel header p{margin:0;font-size:10px;color:#8c6b5a}
+.s2-season1-list{display:grid;gap:6px;max-height:58dvh;overflow:auto;-webkit-overflow-scrolling:touch;padding:3px}
+.s2-season1-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:7px;padding:8px 9px;border:1px solid #e2c9a5;border-radius:13px;background:rgba(255,253,244,.92);text-align:left}
+.s2-season1-rank{text-align:center;font-size:15px;font-weight:900;color:#765640}
+.s2-season1-row b{display:block;font-size:12px;color:#50352f}.s2-season1-row small{display:block;font-size:9px;color:#967761}.s2-season1-row strong{font-size:13px;color:#72482d}
+.s2-season1-row.top{padding:10px;border-width:2px;box-shadow:0 4px 11px rgba(91,56,31,.12)}
+.s2-season1-row.top-1{border-color:#d9a52e;background:linear-gradient(135deg,#fff9d7,#fff0ad)}
+.s2-season1-row.top-2{border-color:#aaa9a3;background:linear-gradient(135deg,#fff,#eae8e3)}
+.s2-season1-row.top-3{border-color:#bd7b4b;background:linear-gradient(135deg,#fff1df,#efd0ae)}
+.s2-season1-empty{padding:20px 12px 18px;border:1px dashed #c6a67f;border-radius:15px;background:rgba(255,255,255,.48);color:#755644}
+.s2-season1-empty>span{display:block;font-size:32px}.s2-season1-empty b{display:block;margin:5px 0;font-size:14px}.s2-season1-empty p{margin:0;font-size:11px;line-height:1.5}
+@media(max-height:700px){.season2-login-card{bottom:max(8px,env(safe-area-inset-bottom));padding:7px 9px 8px}.season2-login-label{font-size:9px}.season2-login-control{height:34px!important;margin-bottom:5px!important;font-size:12px!important}.season2-start-btn{min-height:37px;font-size:13px}.season1-results-btn{top:max(7px,env(safe-area-inset-top));min-height:31px;padding:6px 9px}}
+@media(min-width:700px){.season2-login-card{width:330px}.season1-results-btn{right:18px;top:18px}}

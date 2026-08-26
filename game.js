@@ -259,7 +259,7 @@ async function loadMembers(){
     });
     if(Object.keys(loaded).length)MEMBERS=loaded;
   }catch(error){console.warn("ใช้รายชื่อสำรอง")}
-  $("memberSelect").innerHTML=Object.keys(MEMBERS).map(name=>`<option value="${name}">${name}</option>`).join("");
+  $("memberSelect").innerHTML=`<option value="" selected disabled>เลือกชื่อผู้เล่น</option>`+Object.keys(MEMBERS).map(name=>`<option value="${name}">${name}</option>`).join("");
 }
 
 /* ===== รูปโปรไฟล์และชื่อโปรไฟล์ ===== */
@@ -996,6 +996,7 @@ function craft(id){
 function start(){
   const member=$("memberSelect").value;
   const code=$("memberCode").value.trim();
+  if(!member){$("loginError").textContent="กรุณาเลือกชื่อผู้เล่นก่อนค่ะ";return}
   if(MAINTENANCE_MODE && member!==MAINTENANCE_ADMIN_MEMBER){
     $("loginError").textContent="🔧 ขออภัย กำลังปิดปรับปรุงระบบ • เตรียมพบกับ Season ใหม่เร็ว ๆ นี้ค่ะ";
     return;
@@ -20239,3 +20240,26 @@ console.info("V287 Firebase cost + batch optimization loaded");
 })();
 
 console.info("V291 maintenance mode loaded");
+
+
+/* =====================================================================
+   SEASON 2 V001 — LOGIN HOME
+   - New Season 2 login artwork
+   - Neutral player placeholder (no member preselected)
+   - Public Season 1 results button shell before login
+   - Compact mobile-first login UI
+   ===================================================================== */
+(function YN_SEASON2_V001_LOGIN_HOME(){
+  const SEASON1_RESULTS=[];
+  function escS2(x){return typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function season1Results(){
+    const rows=SEASON1_RESULTS.slice().sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));
+    const html=rows.length?rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${escS2(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join(""):`<div class="s2-season1-empty"><span>🏆</span><b>ผลงานซีซั่น 1</b><p>หน้าแสดงผลพร้อมแล้วค่ะ<br>รอใส่อันดับและคะแนนกุศลสรุปสุดท้ายของซีซั่น 1</p></div>`;
+    $("modalContent").innerHTML=`<section class="feature-panel s2-season1-panel"><header><small>HALL OF FAME</small><h2>🏆 ผลงานซีซั่น 1</h2><p>ความทรงจำจากซีซั่นแรกของในสวนของยัยหนู</p></header><div class="s2-season1-list">${html}</div></section>`;
+    openModal();
+  }
+  const btn=$("season1ResultsBtn");if(btn)btn.onclick=season1Results;
+  const select=$("memberSelect");if(select&&!select.value)select.selectedIndex=0;
+  window.YAINOO_BUILD="S2V001-LOGIN-HOME";
+  console.info("Season 2 V001 login home loaded");
+})();

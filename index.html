@@ -14,23 +14,29 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=V291-MAINTENANCE">
+  <link rel="stylesheet" href="style.css?v=S2V001-LOGIN-HOME">
 </head>
 <body>
   <main id="app">
     <section id="loginScreen" class="screen login-screen">
-      <div class="art-board" aria-label="หน้าเข้าสวนของยัยหนู">
-        <img class="login-art" src="login-art.jpg?v=21" alt="ในสวนของยัยหนู">
+      <div class="art-board season2-login-board" aria-label="หน้าเข้าสวนของยัยหนู ซีซั่น 2">
+        <img class="login-art season2-login-art" src="season2-login-bg.jpg?v=S2V001" alt="ในสวนของยัยหนู ซีซั่น 2">
 
-        <select id="memberSelect" class="hotspot member-field" aria-label="ชื่อสมาชิก"></select>
-        <input id="memberCode" class="hotspot code-field" type="password" placeholder="กรอกรหัสสมาชิก" aria-label="รหัสสมาชิก">
-        <button id="startBtn" class="tap-area start-area" type="button" aria-label="เริ่มเล่น"></button>
+        <button id="season1ResultsBtn" class="season1-results-btn" type="button">🏆 ผลงานซีซั่น 1</button>
+
+        <div class="season2-login-card" aria-label="เข้าสู่สวน">
+          <label class="season2-login-label" for="memberSelect">ชื่อผู้เล่น</label>
+          <select id="memberSelect" class="member-field season2-login-control" aria-label="ชื่อผู้เล่น"></select>
+          <label class="season2-login-label" for="memberCode">รหัสผ่าน</label>
+          <input id="memberCode" class="code-field season2-login-control" type="password" placeholder="กรอกรหัสผ่าน" aria-label="รหัสผ่าน">
+          <button id="startBtn" class="season2-start-btn" type="button">เข้าสู่สวน</button>
+          <p id="loginError" class="login-error season2-login-error" aria-live="polite"></p>
+        </div>
+
         <button id="howBtn" class="tap-area how-area" type="button" aria-label="วิธีเล่น"></button>
         <button id="menuBtn" class="tap-area menu-area" type="button" aria-label="สมุดเมนู"></button>
         <button id="settingsBtn" class="tap-area settings-area" type="button" aria-label="ตั้งค่า"></button>
         <button id="rewardBtn" class="tap-area reward-area" type="button" aria-label="ของรางวัล"></button>
-
-        <p id="loginError" class="login-error" aria-live="polite"></p>
       </div>
     </section>
 
@@ -507,7 +513,7 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=V291-MAINTENANCE"></script>
+  <script src="game.js?v=S2V001-LOGIN-HOME"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -593,8 +599,8 @@
 </script>
 
   <script src="wiman-dog.js?v=197-wiman-safe"></script>
-  <script id="v244-final-build-marker">window.YAINOO_BUILD="V291-MAINTENANCE";</script>
-<script id="v272-final-build-marker">window.YAINOO_BUILD="V291-MAINTENANCE";</script>
-<script id="v284-final-build-marker">window.YAINOO_BUILD="V291-MAINTENANCE";</script>
+  <script id="v244-final-build-marker">window.YAINOO_BUILD="S2V001-LOGIN-HOME";</script>
+<script id="v272-final-build-marker">window.YAINOO_BUILD="S2V001-LOGIN-HOME";</script>
+<script id="v284-final-build-marker">window.YAINOO_BUILD="S2V001-LOGIN-HOME";</script>
 </body>
 </html>
