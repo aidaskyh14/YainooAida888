@@ -19979,3 +19979,251 @@ console.info("V287 Firebase cost + batch optimization loaded");
   console.info("V288 multi-select pet sell loaded");
 })();
 
+
+/* =====================================================================
+   V289 — LARGE INVENTORY / PET PAGINATION PERFORMANCE
+   - Fast-path cats/dogs inventory: render only 48 records per page
+   - Avoid mapping 10,000+ pet records into DOM at once
+   - Lazy-load pet images
+   - Page-local multi-select sell remains one Firestore transaction
+   - Other inventory tabs keep existing behavior
+   ===================================================================== */
+(function YN_V289_LARGE_INVENTORY_PERFORMANCE(){
+  const PAGE_SIZE=48;
+  let catPage=0,dogPage=0;
+  const previousInventory=inventory;
+
+  const tabs=[
+    ["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],
+    ["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],
+    ["boatDrinks","🩷 เสบียงเรือ"],["rainyMenus","🌧️ เมนูหน้าฝน"],["specials","🕯️ ของพิเศษ"],
+    ["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"],["cats","🐱 น้องแมว"],["dogs","🐶 น้องหมา"]
+  ];
+  const esc=x=>typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  function rawPets(kind){
+    const s=ownState||state||{};
+    return Array.isArray(s[kind])?s[kind]:[];
+  }
+  function pageCount(total){return Math.max(1,Math.ceil(total/PAGE_SIZE))}
+  function clampPage(p,total){return Math.max(0,Math.min(pageCount(total)-1,p|0))}
+
+  function petCard(kind,pet){
+    const isCat=kind==="cats";
+    const t=isCat?catType(pet):dogType(pet);
+    const name=isCat?catDisplayName(pet):dogDisplayName(pet);
+    const placed=isCat?!!pet.placedFarm:!!pet.placedHotel;
+    const placedText=isCat?(pet.placedFarm?`วางที่ฟาร์ม ${pet.placedFarm}`:"อยู่ในกระเป๋า"):(pet.placedHotel?"อยู่โรงแรมน้องหมา":"อยู่ในกระเป๋า");
+    const id=esc(pet.id);
+    const placeBtn=isCat
+      ?(placed?'':`<button type="button" data-v289-place-cat="${id}">วางแมว</button>`)
+      :(placed?'<button type="button" disabled>วางแล้ว</button>':`<button type="button" data-v289-place-dog="${id}">วางน้องหมา</button>`);
+    /* Preserve old cat behavior: cats already placed on a farm are not sold from bag. */
+    const canSell=!isCat||!placed;
+    return `<article class="inventory-item v289-pet-card">
+      ${canSell?`<label class="v289-pet-check"><input type="checkbox" data-v289-pet-select="${kind}" value="${id}"><span>เลือก</span></label>`:""}
+      <img loading="lazy" decoding="async" src="${esc(t?.image||"")}" alt="${esc(t?.name||"")}">
+      <span>${esc(name)}<small>${esc(t?.name||"")} • ${esc(placedText)}</small></span>
+      <b>${placed?(isCat?"🏡":"🏨"):(isCat?"🎒":"🐶")}</b>
+      <div class="cat-inventory-actions">${placeBtn}${canSell?`<button class="danger-action" type="button" data-v289-single-sell="${kind}" data-pet-id="${id}">ขาย / ลบ +กุศล</button>`:""}</div>
+    </article>`;
+  }
+
+  function renderPetInventory(kind){
+    if(typeof guardResting==="function"&&guardResting())return;
+    const isCat=kind==="cats",pets=rawPets(kind),total=pets.length;
+    let p=isCat?catPage:dogPage;p=clampPage(p,total);if(isCat)catPage=p;else dogPage=p;
+    const start=p*PAGE_SIZE,end=Math.min(total,start+PAGE_SIZE),slice=pets.slice(start,end),pages=pageCount(total);
+    const label=isCat?"แมว":"หมา";
+    const body=slice.length?slice.map(x=>petCard(kind,x)).join(""):`<p class="empty-feature">ยังไม่มีน้อง${label}ในกระเป๋า</p>`;
+    const nav=total>PAGE_SIZE?`<div class="v289-pagebar"><button type="button" data-v289-page="prev" ${p<=0?"disabled":""}>← ก่อนหน้า</button><b>หน้า ${p+1}/${pages}</b><span>${start+1}–${end} จาก ${total.toLocaleString()} ตัว</span><button type="button" data-v289-page="next" ${p>=pages-1?"disabled":""}>ถัดไป →</button></div>`:`<div class="v289-pagebar single"><span>ทั้งหมด ${total.toLocaleString()} ตัว</span></div>`;
+    const sellable=slice.filter(x=>!isCat||!x.placedFarm).length;
+    $("modalContent").innerHTML=`<section class="feature-panel inventory-panel v289-large-pet-inventory">
+      <h2>🎒 กระเป๋าผี</h2>
+      <div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,l])=>`<button type="button" data-inventory-tab="${k}" class="${k===kind?"v289-active":""}">${l}</button>`).join("")}</div>
+      <div class="v289-batch-toolbar"><button id="v289SelectPage" type="button" ${sellable?"":"disabled"}>เลือกหน้านี้</button><b>เลือกแล้ว <span id="v289SelectedCount">0</span> ตัว</b><button id="v289SellSelected" class="danger-action" type="button" disabled>ขาย${label}ที่เลือก</button></div>
+      ${nav}<div class="inventory-grid v289-pet-grid">${body}</div>${nav}
+    </section>`;
+    openModal();
+    bind(kind);
+  }
+
+  function bind(kind){
+    const isCat=kind==="cats";
+    document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+    document.querySelectorAll('[data-v289-page="prev"]').forEach(b=>b.onclick=()=>{if(isCat)catPage--;else dogPage--;renderPetInventory(kind)});
+    document.querySelectorAll('[data-v289-page="next"]').forEach(b=>b.onclick=()=>{if(isCat)catPage++;else dogPage++;renderPetInventory(kind)});
+    document.querySelectorAll("[data-v289-place-cat]").forEach(b=>b.onclick=()=>showPlaceCat(b.dataset.v289PlaceCat));
+    document.querySelectorAll("[data-v289-place-dog]").forEach(b=>b.onclick=()=>showDogPlaceConfirm(b.dataset.v289PlaceDog));
+    document.querySelectorAll('[data-v289-single-sell="cats"]').forEach(b=>b.onclick=()=>releaseCat(b.dataset.petId));
+    document.querySelectorAll('[data-v289-single-sell="dogs"]').forEach(b=>b.onclick=()=>releaseDog(b.dataset.petId));
+    const checks=[...document.querySelectorAll(`[data-v289-pet-select="${kind}"]`)],count=$("v289SelectedCount"),sell=$("v289SellSelected"),all=$("v289SelectPage");
+    const sync=()=>{const n=checks.filter(c=>c.checked).length;if(count)count.textContent=n;if(sell){sell.disabled=n<1;sell.textContent=n?`ขาย${isCat?"แมว":"หมา"}ที่เลือก (${n})`:`ขาย${isCat?"แมว":"หมา"}ที่เลือก`}};
+    checks.forEach(c=>c.onchange=sync);
+    if(all)all.onclick=()=>{const on=checks.some(c=>!c.checked);checks.forEach(c=>c.checked=on);all.textContent=on?"ยกเลิกเลือกหน้านี้":"เลือกหน้านี้";sync()};
+    if(sell)sell.onclick=()=>{const ids=checks.filter(c=>c.checked).map(c=>c.value);return isCat?window.v288SellCats?.(ids):window.v288SellDogs?.(ids)};
+    sync();
+  }
+
+  inventory=function(tab="crops"){
+    if(tab==="cats"||tab==="dogs")return renderPetInventory(tab);
+    return previousInventory(tab);
+  };
+
+  window.YAINOO_BUILD="V289-LARGE-INVENTORY-PERFORMANCE";
+  console.info("V289 large inventory pagination performance loaded");
+})();
+
+
+/* =====================================================================
+   V290 — HUGE PET INVENTORY FAST PATH
+   Fix the real 10k+ cat/dog slowdown:
+   - ensureCatState/ensureDogState no longer rebuild 10k arrays on every UI click
+   - compact pet inventory starts with type summaries (max 12 cat / 8 dog cards)
+   - drill-down renders only 24 individual pets per page
+   - bulk sell by quantity uses one Firestore transaction
+   - rebind the main inventory button to the latest inventory implementation
+   ===================================================================== */
+(function YN_V290_HUGE_PET_INVENTORY_FAST_PATH(){
+  const CAT_PAGE_SIZE=24,DOG_PAGE_SIZE=24;
+  const originalEnsureCatState=ensureCatState;
+  const originalEnsureDogState=ensureDogState;
+  let catCache={arr:null,len:-1,nextExpiry:0},dogCache={arr:null,len:-1,nextExpiry:0};
+
+  function nextExpiryOf(arr,flag){
+    let next=0;const now=Date.now();
+    if(!Array.isArray(arr))return 0;
+    for(let i=0;i<arr.length;i++){
+      const x=arr[i];if(!x||!x[flag])continue;
+      const t=Number(x.expiresAt)||0;if(t>now&&(!next||t<next))next=t;
+    }
+    return next;
+  }
+  function markCat(target){const a=Array.isArray(target?.cats)?target.cats:[];catCache={arr:a,len:a.length,nextExpiry:nextExpiryOf(a,"placedFarm")}}
+  function markDog(target){const a=Array.isArray(target?.dogs)?target.dogs:[];dogCache={arr:a,len:a.length,nextExpiry:nextExpiryOf(a,"placedHotel")}}
+  if(typeof ownState!=="undefined"&&ownState){markCat(ownState);markDog(ownState)}
+  else if(typeof state!=="undefined"&&state){markCat(state);markDog(state)}
+
+  ensureCatState=function(target){
+    if(!target)return target;
+    const a=target.cats,now=Date.now();
+    target.catMysteryBoxes=Math.max(0,Math.floor(Number(target.catMysteryBoxes)||0));
+    target.pendingCatBoxReward=target.pendingCatBoxReward&&typeof target.pendingCatBoxReward==="object"?target.pendingCatBoxReward:null;
+    if(Array.isArray(a)&&a===catCache.arr&&a.length===catCache.len&&(!catCache.nextExpiry||now<catCache.nextExpiry))return target;
+    const out=originalEnsureCatState(target);markCat(out);return out;
+  };
+  ensureDogState=function(target){
+    if(!target)return target;
+    const a=target.dogs,now=Date.now();
+    target.dogMysteryBoxes=Math.max(0,Math.floor(Number(target.dogMysteryBoxes)||0));
+    target.pendingDogBoxReward=target.pendingDogBoxReward&&typeof target.pendingDogBoxReward==="object"?target.pendingDogBoxReward:null;
+    if(!target.specials||typeof target.specials!=="object")target.specials={};
+    target.specials.wormKillerSpray=Math.max(0,Math.floor(Number(target.specials.wormKillerSpray)||0));
+    if(Array.isArray(a)&&a===dogCache.arr&&a.length===dogCache.len&&(!dogCache.nextExpiry||now<dogCache.nextExpiry))return target;
+    const out=originalEnsureDogState(target);markDog(out);return out;
+  };
+
+  const previousInventoryV290=inventory;
+  let detailKind="",detailType="",detailPage=0;
+  let groupCache={cats:{arr:null,len:-1,groups:null},dogs:{arr:null,len:-1,groups:null}};
+  const tabs=[
+    ["crops","🌱 พืชพรรณ"],["products","🐾 ผลผลิตสัตว์"],["food","🍲 อาหาร"],
+    ["fishingBaits","🎣 เหยื่อตกปลา"],["coconutRiver","🌴 อื่นๆจากสวนมะพร้าว"],
+    ["boatDrinks","🩷 เสบียงเรือ"],["rainyMenus","🌧️ เมนูหน้าฝน"],["specials","🕯️ ของพิเศษ"],
+    ["specialAnimals","🪼 สัตว์พิเศษ"],["mysteryBoxes","🎲 กล่องสุ่ม"],["cats","🐱 น้องแมว"],["dogs","🐶 น้องหมา"]
+  ];
+  const esc=x=>typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  function pets(kind){const s=ownState||state||{};return Array.isArray(s[kind])?s[kind]:[]}
+  function defs(kind){return kind==="cats"?CAT_TYPES:DOG_TYPES}
+  function isPlaced(kind,p){return kind==="cats"?!!p?.placedFarm:!!p?.placedHotel}
+  function groups(kind){
+    const arr=pets(kind),cache=groupCache[kind];
+    if(cache.arr===arr&&cache.len===arr.length&&cache.groups)return cache.groups;
+    const m=new Map();
+    const d=defs(kind);
+    Object.keys(d).forEach(k=>m.set(k,{key:k,total:0,bag:0,placed:0,items:[]}));
+    for(let i=0;i<arr.length;i++){
+      const p=arr[i];if(!p)continue;const key=d[p.typeKey]?p.typeKey:Object.keys(d)[0];let g=m.get(key);
+      if(!g){g={key,total:0,bag:0,placed:0,items:[]};m.set(key,g)}
+      g.total++;if(isPlaced(kind,p))g.placed++;else g.bag++;g.items.push(p);
+    }
+    const out=[...m.values()].filter(g=>g.total>0);
+    cache.arr=arr;cache.len=arr.length;cache.groups=out;return out;
+  }
+  function invalidate(kind){groupCache[kind]={arr:null,len:-1,groups:null}}
+
+  function renderSummary(kind){
+    if(typeof guardResting==="function"&&guardResting())return;
+    detailKind="";detailType="";detailPage=0;
+    const d=defs(kind),gs=groups(kind),total=pets(kind).length,label=kind==="cats"?"แมว":"หมา",emoji=kind==="cats"?"🐱":"🐶";
+    const cards=gs.length?gs.map(g=>{const t=d[g.key];return `<article class="v290-pet-type-card">
+      <img loading="lazy" decoding="async" src="${esc(t?.image||"")}" alt="${esc(t?.name||"")}">
+      <div><b>${esc(t?.name||g.key)}</b><span>ทั้งหมด ${g.total.toLocaleString()} • ในกระเป๋า ${g.bag.toLocaleString()}${g.placed?` • วางแล้ว ${g.placed.toLocaleString()}`:""}</span></div>
+      <div class="v290-type-actions"><button type="button" data-v290-detail="${kind}:${esc(g.key)}">ดู / เลือกรายตัว</button><button type="button" class="danger-action" data-v290-qtysell="${kind}:${esc(g.key)}" ${g.bag<1?"disabled":""}>ขายหลายตัว</button></div>
+    </article>`}).join(""):`<p class="empty-feature">ยังไม่มีน้อง${label}ในกระเป๋า</p>`;
+    $("modalContent").innerHTML=`<section class="feature-panel inventory-panel v290-huge-pet-summary"><h2>🎒 กระเป๋าผี</h2>
+      <div class="inventory-tabs inventory-tabs-v2">${tabs.map(([k,l])=>`<button type="button" data-inventory-tab="${k}" class="${k===kind?"v290-active":""}">${l}</button>`).join("")}</div>
+      <div class="v290-summary-head"><b>${emoji} น้อง${label}ทั้งหมด ${total.toLocaleString()} ตัว</b><small>โหมดประหยัดเครื่อง • ไม่โหลดสัตว์ทุกตัวพร้อมกัน</small></div>
+      <div class="v290-pet-type-grid">${cards}</div></section>`;
+    openModal();
+    document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+    document.querySelectorAll("[data-v290-detail]").forEach(b=>b.onclick=()=>{const [k,t]=b.dataset.v290Detail.split(":");detailKind=k;detailType=t;detailPage=0;renderDetail()});
+    document.querySelectorAll("[data-v290-qtysell]").forEach(b=>b.onclick=()=>{const [k,t]=b.dataset.v290Qtysell.split(":");showQtySell(k,t)});
+  }
+
+  function detailItems(kind,type){const g=groups(kind).find(x=>x.key===type);return g?g.items:[]}
+  function petCard(kind,p){
+    const cat=kind==="cats",t=cat?catType(p):dogType(p),name=cat?catDisplayName(p):dogDisplayName(p),placed=isPlaced(kind,p),id=esc(p.id);
+    const place=cat?(placed?"":`<button type="button" data-v290-place-cat="${id}">วางแมว</button>`):(placed?'<button type="button" disabled>วางแล้ว</button>':`<button type="button" data-v290-place-dog="${id}">วางน้องหมา</button>`);
+    return `<article class="inventory-item v290-pet-detail-card">${!placed?`<label class="v290-check"><input type="checkbox" data-v290-select value="${id}"><span>เลือก</span></label>`:""}<img loading="lazy" decoding="async" src="${esc(t?.image||"")}" alt="${esc(t?.name||"")}"><span>${esc(name)}<small>${placed?"วางใช้งานอยู่":"อยู่ในกระเป๋า"}</small></span><div class="cat-inventory-actions">${place}${!placed?`<button class="danger-action" type="button" data-v290-single="${kind}" data-id="${id}">ขาย / ลบ</button>`:""}</div></article>`;
+  }
+  function renderDetail(){
+    const kind=detailKind,type=detailType;if(!kind||!type)return renderSummary(kind||"cats");
+    const arr=detailItems(kind,type),size=kind==="cats"?CAT_PAGE_SIZE:DOG_PAGE_SIZE,pages=Math.max(1,Math.ceil(arr.length/size));detailPage=Math.max(0,Math.min(pages-1,detailPage));
+    const start=detailPage*size,end=Math.min(arr.length,start+size),slice=arr.slice(start,end),t=defs(kind)[type],label=kind==="cats"?"แมว":"หมา";
+    $("modalContent").innerHTML=`<section class="feature-panel inventory-panel v290-pet-detail"><div class="v290-detail-head"><button id="v290BackSummary" type="button">← กลับ</button><div><b>${esc(t?.name||type)}</b><small>${arr.length.toLocaleString()} ตัว • แสดงครั้งละ ${size}</small></div></div>
+      <div class="v290-batch"><button id="v290SelectPage" type="button">เลือกหน้านี้</button><b>เลือก <span id="v290Count">0</span></b><button id="v290SellSelected" class="danger-action" type="button" disabled>ขาย${label}ที่เลือก</button></div>
+      <div class="v290-page"><button data-v290-page="prev" ${detailPage<=0?"disabled":""}>← ก่อนหน้า</button><span>หน้า ${detailPage+1}/${pages} • ${arr.length?start+1:0}–${end}</span><button data-v290-page="next" ${detailPage>=pages-1?"disabled":""}>ถัดไป →</button></div>
+      <div class="inventory-grid v290-detail-grid">${slice.map(p=>petCard(kind,p)).join("")||'<p class="empty-feature">ไม่มีสัตว์ในกลุ่มนี้</p>'}</div></section>`;
+    openModal();
+    $("v290BackSummary").onclick=()=>renderSummary(kind);
+    document.querySelector('[data-v290-page="prev"]')?.addEventListener("click",()=>{detailPage--;renderDetail()});
+    document.querySelector('[data-v290-page="next"]')?.addEventListener("click",()=>{detailPage++;renderDetail()});
+    document.querySelectorAll("[data-v290-place-cat]").forEach(b=>b.onclick=()=>showPlaceCat(b.dataset.v290PlaceCat));
+    document.querySelectorAll("[data-v290-place-dog]").forEach(b=>b.onclick=()=>showDogPlaceConfirm(b.dataset.v290PlaceDog));
+    document.querySelectorAll('[data-v290-single="cats"]').forEach(b=>b.onclick=()=>releaseCat(b.dataset.id));
+    document.querySelectorAll('[data-v290-single="dogs"]').forEach(b=>b.onclick=()=>releaseDog(b.dataset.id));
+    const checks=[...document.querySelectorAll("[data-v290-select]")],count=$("v290Count"),sell=$("v290SellSelected"),all=$("v290SelectPage");
+    const sync=()=>{const n=checks.filter(c=>c.checked).length;if(count)count.textContent=n;if(sell){sell.disabled=n<1;sell.textContent=n?`ขาย${label}ที่เลือก (${n})`:`ขาย${label}ที่เลือก`}};checks.forEach(c=>c.onchange=sync);
+    if(all)all.onclick=()=>{const on=checks.some(c=>!c.checked);checks.forEach(c=>c.checked=on);sync()};
+    if(sell)sell.onclick=async()=>{const ids=checks.filter(c=>c.checked).map(c=>c.value);if(!ids.length)return;await (kind==="cats"?window.v288SellCats?.(ids):window.v288SellDogs?.(ids));invalidate(kind);};sync();
+  }
+
+  function showQtySell(kind,type){
+    const g=groups(kind).find(x=>x.key===type),available=g?.bag||0,t=defs(kind)[type],label=kind==="cats"?"แมว":"หมา";if(!available)return;
+    const preset=[1,10,50,100,500].filter(n=>n<=available);if(!preset.includes(available))preset.push(available);
+    $("modalContent").innerHTML=`<section class="feature-panel v290-qty-sell"><img loading="lazy" decoding="async" src="${esc(t?.image||"")}" alt=""><h2>ขาย ${esc(t?.name||type)}</h2><p>ในกระเป๋า ${available.toLocaleString()} ตัว<br>เลือกจำนวนที่จะขายพร้อมกัน</p><div class="multi-box-presets">${preset.map(n=>`<button type="button" data-v290-q="${n}">${n===available?`ทั้งหมด (${n})`:`×${n}`}</button>`).join("")}</div><label class="gift-qty-label">จำนวน <input id="v290Qty" type="number" inputmode="numeric" min="1" max="${available}" value="${Math.min(10,available)}"></label><button id="v290QtyConfirm" class="danger-action" type="button">ขาย${label}ตามจำนวน</button><button id="v290QtyCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;openModal();
+    document.querySelectorAll("[data-v290-q]").forEach(b=>b.onclick=()=>{$("v290Qty").value=b.dataset.v290Q});
+    $("v290QtyCancel").onclick=()=>renderSummary(kind);$("v290QtyConfirm").onclick=()=>sellQty(kind,type,Math.max(1,Math.min(available,Math.floor(Number($("v290Qty").value)||1))));
+  }
+  async function sellQty(kind,type,qty){
+    qty=Math.max(1,Math.floor(Number(qty)||1));const label=kind==="cats"?"แมว":"หมา";
+    const rewards=Array.from({length:qty},()=>randInt(20,50)),expected=rewards.reduce((a,b)=>a+b,0);
+    if(!confirm(`ขายน้อง${label} ${qty} ตัวพร้อมกันไหม?\nได้กุศลรวม ${expected}\nเมื่อลบแล้วจะเอากลับคืนไม่ได้`))return;
+    try{
+      await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,removed=0,reward=0;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember),arr=kind==="cats"?st.cats:st.dogs;
+        for(let i=arr.length-1;i>=0&&removed<qty;i--){const p=arr[i];if(!p||p.typeKey!==type||isPlaced(kind,p))continue;reward+=rewards[removed]||0;arr.splice(i,1);removed++}
+        if(removed<qty)throw new Error(`มีน้อง${label}ในกระเป๋าไม่พอ`);st.merit=(Number(st.merit)||0)+reward;next=st;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);updateMeritUI();invalidate(kind);if(kind==="cats")try{syncAidaFarmPet()}catch{};showWeatherToast(`${kind==="cats"?"🐱":"🐶"} ขาย ${removed} ตัวแล้ว • +${reward} กุศล`);renderSummary(kind);
+    }catch(e){message(`ขายน้อง${label}ไม่ได้`,e.message||"กรุณาลองใหม่")}
+  }
+
+  inventory=function(tab="crops"){
+    if(tab==="cats"||tab==="dogs")return renderSummary(tab);
+    return previousInventoryV290(tab);
+  };
+  const invBtn=$("inventoryNavBtn");if(invBtn)invBtn.onclick=()=>inventory("crops");
+  window.YAINOO_BUILD="V290-HUGE-PET-INVENTORY-FAST";
+  console.info("V290 huge pet inventory fast path loaded");
+})();
