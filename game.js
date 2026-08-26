@@ -20263,3 +20263,159 @@ console.info("V291 maintenance mode loaded");
   window.YAINOO_BUILD="S2V001-LOGIN-HOME";
   console.info("Season 2 V001 login home loaded");
 })();
+
+/* =====================================================================
+   SEASON 2 V002 — DYNAMIC MEMBERS / APPROVAL / TOP SPENDERS
+   - One login surface for legacy + new approved players
+   - New player signup -> pending -> Aida/Admin approval
+   - Approved names appear automatically without editing game files
+   - Legacy Season 1 saves stay on their existing memberKey
+   - Top Spenders is live Firestore data; members read, Admin edits
+   ===================================================================== */
+(function YN_SEASON2_V002_MEMBER_SYSTEM(){
+  const LEGACY_CODES={...MEMBERS};
+  const S2_DYNAMIC_KEYS=Object.create(null);
+  const S2_DYNAMIC_NAMES=Object.create(null);
+  const DYNAMIC_SENTINEL="__S2_DYNAMIC__";
+  const originalMemberKeyFromName=memberKeyFromName;
+  const originalMemberEmailFromName=memberEmailFromName;
+
+  function s2Esc(x){return typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function s2MemberEmail(memberKey){return `member-${memberKey}@${MEMBER_EMAIL_DOMAIN}`}
+  function s2RandomKey(){
+    try{const a=new Uint32Array(3);crypto.getRandomValues(a);return "s2-"+Array.from(a,x=>x.toString(36)).join("").slice(0,18)}catch{return "s2-"+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+  }
+  function isDynamicName(name){return MEMBERS[name]===DYNAMIC_SENTINEL&&Boolean(S2_DYNAMIC_KEYS[name])}
+
+  memberKeyFromName=function(name){return S2_DYNAMIC_KEYS[name]||originalMemberKeyFromName(name)};
+  memberEmailFromName=function(name){return S2_DYNAMIC_KEYS[name]?s2MemberEmail(S2_DYNAMIC_KEYS[name]):originalMemberEmailFromName(name)};
+
+  async function fetchDirectory(){
+    try{
+      const bridge=await getFirebaseBridge();if(!bridge)return [];
+      const {db,firestore:fs}=bridge,snap=await fs.getDocs(fs.collection(db,"loginDirectory")),rows=[];
+      snap.forEach(d=>{const x=d.data()||{};if(x.status==="approved"&&x.displayName&&x.memberKey)rows.push({displayName:String(x.displayName),memberKey:String(x.memberKey)})});
+      return rows.sort((a,b)=>a.displayName.localeCompare(b.displayName,"th"));
+    }catch(e){console.warn("S2 directory",e);return []}
+  }
+  async function refreshLoginDirectory(){
+    const rows=await fetchDirectory();
+    Object.keys(MEMBERS).forEach(n=>{if(MEMBERS[n]===DYNAMIC_SENTINEL)delete MEMBERS[n]});
+    Object.keys(S2_DYNAMIC_KEYS).forEach(k=>delete S2_DYNAMIC_KEYS[k]);Object.keys(S2_DYNAMIC_NAMES).forEach(k=>delete S2_DYNAMIC_NAMES[k]);
+    for(const row of rows){if(LEGACY_CODES[row.displayName])continue;MEMBERS[row.displayName]=DYNAMIC_SENTINEL;S2_DYNAMIC_KEYS[row.displayName]=row.memberKey;S2_DYNAMIC_NAMES[row.memberKey]=row.displayName}
+    const select=$("memberSelect");if(!select)return;
+    const previous=select.value;
+    select.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'+Object.keys(MEMBERS).map(name=>`<option value="${s2Esc(name)}">${s2Esc(name)}</option>`).join("");
+    if(previous&&Object.prototype.hasOwnProperty.call(MEMBERS,previous))select.value=previous;
+  }
+
+  async function dynamicLogin(member,code){
+    const key=S2_DYNAMIC_KEYS[member];if(!key)throw new Error("ไม่พบบัญชีที่อนุมัติแล้ว");
+    const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase ยังไม่พร้อม");
+    let user=bridge.getCurrentUser();const email=s2MemberEmail(key);
+    if(user&&String(user.email||"").toLowerCase()!==email.toLowerCase()){await bridge.signOut();user=null}
+    if(!user)user=await bridge.signIn(email,code);
+    try{await bridge.forceRefreshToken?.()}catch{}
+    const profile=await bridge.getSignedInMember();
+    if(!profile)throw new Error("บัญชีนี้ยังไม่ได้รับการอนุมัติจากแอดมิน");
+    if(profile.role!=="member"||profile.status!=="approved"||profile.memberKey!==key)throw new Error("บัญชีนี้ยังไม่ได้รับการอนุมัติจากแอดมิน");
+    return {user,profile,key};
+  }
+
+  const previousStart=start;
+  start=async function(){
+    const member=$("memberSelect")?.value||"",code=$("memberCode")?.value.trim()||"";
+    if(!member){$("loginError").textContent="กรุณาเลือกชื่อผู้เล่นก่อนค่ะ";return}
+    if(!code){$("loginError").textContent="กรุณากรอกรหัสผ่านค่ะ";return}
+    if(MAINTENANCE_MODE&&member!==MAINTENANCE_ADMIN_MEMBER){$("loginError").textContent="🔧 ขออภัย กำลังปิดปรับปรุงระบบ • เตรียมพบกับ Season ใหม่เร็ว ๆ นี้ค่ะ";return}
+    if(!isDynamicName(member))return previousStart();
+    try{
+      stopOnlineListeners();cloudReady=false;adminProfile=null;visitContext=null;currentMember=member;currentMemberKey=S2_DYNAMIC_KEYS[member];ownState=fresh(member);state=ownState;$("loginError").textContent="กำลังเชื่อมข้อมูลส่วนกลาง...";
+      await dynamicLogin(member,code);await initializeOrLoadCloudState(member,currentMemberKey);enterGameScreen();showWeatherToast("☁️ โหลดเซฟส่วนกลางแล้ว");
+    }catch(error){console.error("S2 login",error);currentMember=null;currentMemberKey="";ownState=state=null;$("loginError").textContent=error?.code==="auth/invalid-credential"?"ชื่อผู้เล่นหรือรหัสผ่านไม่ถูกต้อง":String(error.message||"เข้าสู่ระบบไม่สำเร็จ")}
+  };
+
+  function signupTermsHTML(){return `<div class="s2-terms"><b>เงื่อนไขการสมัคร</b><ol><li>1 คนต่อ 1 บัญชี ห้ามสมัครหลายบัญชีเพื่อรับสิทธิ์หรือรางวัลซ้ำ</li><li>ห้ามใช้ชื่อเลียนแบบสมาชิกเดิม แอดมิน หรือชื่อที่ไม่เหมาะสม</li><li>ห้ามใช้บั๊ก โปรแกรมช่วยเล่น หรือแก้ไขข้อมูลเพื่อเอาเปรียบผู้เล่นอื่น</li><li>ห้ามซื้อขาย/แลกเปลี่ยนบัญชี หรือขอรหัสผ่านของผู้เล่นอื่น</li><li>ห้ามคุกคาม รบกวน หรือสร้างปัญหาให้ผู้เล่นอื่น</li><li>หากพบข้อผิดพลาด กรุณาแจ้งแอดมินและห้ามนำบั๊กไปใช้หาผลประโยชน์</li><li>บัญชีใหม่ต้องได้รับการอนุมัติจากแอดมินก่อนเข้าเล่น</li><li>แอดมินสามารถระงับหรือยกเลิกบัญชีที่ฝ่าฝืนกติกาได้</li><li>กติกาและระบบเกมอาจปรับเปลี่ยนตามความเหมาะสมของแต่ละ Season</li></ol></div>`}
+  function showSignup(){
+    $("modalContent").innerHTML=`<section class="feature-panel s2-signup-panel"><h2>🌱 สมัครสมาชิก</h2><p class="feature-subtitle">สมัครแล้วรอ Aida อนุมัติก่อนเข้าเล่นค่ะ</p><div class="s2-form-grid"><label>ชื่อผู้เล่น<input id="s2SignupName" maxlength="16" autocomplete="nickname" placeholder="2–16 ตัวอักษร"></label><label>รหัสผ่าน<input id="s2SignupPass" type="password" minlength="6" maxlength="32" autocomplete="new-password" placeholder="อย่างน้อย 6 ตัว"></label><label>ยืนยันรหัสผ่าน<input id="s2SignupPass2" type="password" minlength="6" maxlength="32" autocomplete="new-password" placeholder="พิมพ์รหัสอีกครั้ง"></label>${signupTermsHTML()}<label class="s2-terms-check"><input id="s2TermsAccept" type="checkbox"><span>ฉันอ่านและยอมรับเงื่อนไขการสมัครแล้ว</span></label><button id="s2SubmitSignup" class="primary-spooky-action" type="button">ส่งคำขอสมัคร</button><p id="s2SignupStatus"></p></div></section>`;openModal();$("s2SubmitSignup").onclick=submitSignup;
+  }
+  async function submitSignup(){
+    const name=$("s2SignupName")?.value.trim()||"",pass=$("s2SignupPass")?.value||"",pass2=$("s2SignupPass2")?.value||"",status=$("s2SignupStatus"),btn=$("s2SubmitSignup");
+    if(name.length<2||name.length>16){status.textContent="ชื่อผู้เล่นต้องยาว 2–16 ตัวอักษร";return}if(LEGACY_CODES[name]||S2_DYNAMIC_KEYS[name]){status.textContent="ชื่อนี้มีผู้ใช้อยู่แล้วค่ะ";return}if(pass.length<6){status.textContent="รหัสผ่านต้องมีอย่างน้อย 6 ตัว";return}if(pass!==pass2){status.textContent="รหัสผ่านสองช่องไม่ตรงกัน";return}if(!$("s2TermsAccept")?.checked){status.textContent="กรุณายอมรับเงื่อนไขก่อนสมัคร";return}
+    btn.disabled=true;status.textContent="กำลังส่งคำขอ...";
+    try{
+      const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase ยังไม่พร้อม");
+      if(bridge.getCurrentUser())await bridge.signOut();
+      const memberKey=s2RandomKey(),email=s2MemberEmail(memberKey),user=await bridge.signInOrCreate(email,pass),{db,firestore:fs}=bridge;
+      await fs.setDoc(fs.doc(db,"membershipApplications",user.uid),{uid:user.uid,displayName:name,memberKey,email,status:"pending",acceptedTerms:true,createdAt:fs.serverTimestamp()},{merge:false});
+      await bridge.signOut();
+      $("modalContent").innerHTML=`<section class="feature-panel s2-application-panel"><h2>✅ ส่งคำขอแล้ว</h2><p><b>${s2Esc(name)}</b></p><p>กรุณารอ Aida อนุมัติค่ะ<br>เมื่ออนุมัติแล้วชื่อของคุณจะขึ้นในช่อง <b>เลือกชื่อผู้เล่น</b> อัตโนมัติ</p><button id="s2SignupDone" class="primary-spooky-action">รับทราบ</button></section>`;$("s2SignupDone").onclick=closeModal;
+    }catch(e){console.error("S2 signup",e);try{(await getFirebaseBridge())?.signOut()}catch{};btn.disabled=false;status.textContent=String(e.message||"สมัครไม่สำเร็จ")}
+  }
+
+  async function pendingApplications(){
+    const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending"))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+  }
+  async function approveApplication(id,approve){
+    if(adminProfile?.role!=="admin")return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"membershipApplications",id),snap=await fs.getDoc(ref);if(!snap.exists())throw new Error("ไม่พบคำขอ");const a=snap.data();
+      if(a.status!=="pending")throw new Error("คำขอนี้ถูกจัดการแล้ว");
+      const batch=fs.writeBatch(db);
+      if(approve){
+        batch.set(fs.doc(db,"members",id),{memberKey:a.memberKey,displayName:a.displayName,role:"member",status:"approved",welcomeGiftClaimed:false,approvedAt:fs.serverTimestamp(),approvedBy:"Aida"},{merge:true});
+        batch.set(fs.doc(db,"loginDirectory",a.memberKey),{memberKey:a.memberKey,displayName:a.displayName,status:"approved",approvedAt:fs.serverTimestamp()},{merge:false});
+      }
+      batch.set(ref,{status:approve?"approved":"rejected",resolvedAt:fs.serverTimestamp(),resolvedBy:"Aida"},{merge:true});await batch.commit();await refreshLoginDirectory();showWeatherToast(approve?`✅ อนุมัติ ${a.displayName} แล้ว`:`❌ ปฏิเสธ ${a.displayName} แล้ว`);showAdminCenter();
+    }catch(e){message("จัดการคำขอไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function allLoginNames(){
+    await refreshLoginDirectory();return Object.keys(MEMBERS).filter(n=>n!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+  }
+  async function loadSpenders(){
+    try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"shared","topSpenders"));return snap.exists()?snap.data():{rows:[],updatedAt:null}}catch{return {rows:[],updatedAt:null}}
+  }
+  async function showTopSpenders(){
+    try{
+      const data=await loadSpenders(),rows=Array.isArray(data.rows)?data.rows.slice():[];rows.sort((a,b)=>(Number(b.total)||0)-(Number(a.total)||0)||(Number(b.today)||0)-(Number(a.today)||0));
+      $("modalContent").innerHTML=`<section class="feature-panel s2-spenders-panel"><h2>💎 Top Spenders</h2><p class="feature-subtitle">อันดับผู้สนับสนุน Season 2 • อัปเดตโดย Aida</p><div class="s2-spenders-list">${rows.length?rows.map((r,i)=>`<article class="s2-spender-row ${i<3?`top${i+1}`:""}"><span>${i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}</span><div><b>${s2Esc(r.name)}</b><small>วันนี้ ${Number(r.today||0).toLocaleString()} แพ็ก</small></div><strong>${Number(r.total||0).toLocaleString()}<br><small>สะสม</small></strong></article>`).join(""):'<p class="empty-feature">ยังไม่มีข้อมูล Top Spenders</p>'}</div>${adminProfile?.role==="admin"?'<button id="s2EditSpenders" class="primary-spooky-action" type="button">✏️ แก้ไขข้อมูล</button>':""}</section>`;openModal();if($("s2EditSpenders"))$("s2EditSpenders").onclick=editTopSpenders;
+    }catch(e){message("เปิด Top Spenders ไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  async function editTopSpenders(){
+    const [names,data]=await Promise.all([allLoginNames(),loadSpenders()]),byName=new Map((Array.isArray(data.rows)?data.rows:[]).map(r=>[String(r.name),r]));
+    $("modalContent").innerHTML=`<section class="feature-panel s2-spenders-panel"><h2>✏️ แก้ Top Spenders</h2><p class="feature-subtitle">แก้แล้วกดบันทึกครั้งเดียว ทุกคนจะเห็นข้อมูลล่าสุด</p><div class="s2-editor-head"><span>ผู้เล่น</span><span>วันนี้</span><span>สะสม</span></div><div class="s2-spender-editor">${names.map(name=>{const r=byName.get(name)||{};return `<label class="s2-spender-edit-row"><b>${s2Esc(name)}</b><input type="number" min="0" value="${Math.max(0,Number(r.today)||0)}" data-s2-spend-today="${s2Esc(name)}"><input type="number" min="0" value="${Math.max(0,Number(r.total)||0)}" data-s2-spend-total="${s2Esc(name)}"></label>`}).join("")}</div><button id="s2SaveSpenders" class="primary-spooky-action" type="button">บันทึก</button></section>`;openModal();$("s2SaveSpenders").onclick=saveTopSpenders;
+  }
+  async function saveTopSpenders(){
+    if(adminProfile?.role!=="admin")return;const btn=$("s2SaveSpenders");btn.disabled=true;
+    try{const rows=[];document.querySelectorAll("[data-s2-spend-today]").forEach(i=>{const name=i.dataset.s2SpendToday,totalInput=document.querySelector(`[data-s2-spend-total="${CSS.escape(name)}"]`),today=Math.max(0,Math.floor(Number(i.value)||0)),total=Math.max(0,Math.floor(Number(totalInput?.value)||0));if(today||total)rows.push({name,today,total})});const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"shared","topSpenders"),{rows,updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});showWeatherToast("💎 บันทึก Top Spenders แล้ว");showTopSpenders()}catch(e){btn.disabled=false;message("บันทึกไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  async function showSeason1ResultsLive(){
+    try{
+      const bridge=await getFirebaseBridge();let rows=[];if(bridge){const {db,firestore:fs}=bridge,snap=await fs.getDoc(fs.doc(db,"shared","season1Results"));if(snap.exists()&&Array.isArray(snap.data().rows))rows=snap.data().rows.slice()}
+      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));const html=rows.length?rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${s2Esc(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join(""):`<div class="s2-season1-empty"><span>🏆</span><b>ผลงานซีซั่น 1</b><p>ยังไม่ได้บันทึกผลสรุปซีซั่น 1</p></div>`;
+      $("modalContent").innerHTML=`<section class="feature-panel s2-season1-panel"><header><small>HALL OF FAME</small><h2>🏆 ผลงานซีซั่น 1</h2><p>อันดับและคะแนนกุศลจากซีซั่นแรก</p></header><div class="s2-season1-list">${html}</div></section>`;openModal();
+    }catch(e){message("เปิดผลงานซีซั่น 1 ไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  const previousAdminCenter=showAdminCenter;
+  showAdminCenter=async function(){
+    await previousAdminCenter();if(adminProfile?.role!=="admin")return;
+    try{const apps=await pendingApplications(),panel=document.querySelector(".admin-panel");if(!panel)return;panel.insertAdjacentHTML("afterbegin",`<div class="admin-section"><h3>🌱 คำขอสมัครสมาชิก (${apps.length})</h3><div class="admin-request-list">${apps.length?apps.map(a=>`<div class="s2-app-card"><b>${s2Esc(a.displayName)}</b><small>รออนุมัติ • ${s2Esc(a.memberKey)}</small><div class="actions"><button type="button" data-s2-approve="${a.id}">อนุมัติ</button><button type="button" data-s2-reject="${a.id}">ปฏิเสธ</button></div></div>`).join(""):'<p class="empty-feature">ไม่มีคำขอสมัครค้าง</p>'}</div></div>`);document.querySelectorAll("[data-s2-approve]").forEach(b=>b.onclick=()=>approveApplication(b.dataset.s2Approve,true));document.querySelectorAll("[data-s2-reject]").forEach(b=>b.onclick=()=>approveApplication(b.dataset.s2Reject,false))}catch(e){console.warn("S2 admin applications",e)}
+  };
+
+  const signupBtn=$("season2SignupBtn");if(signupBtn)signupBtn.onclick=showSignup;
+  const resultsBtn=$("season1ResultsBtn");if(resultsBtn)resultsBtn.onclick=showSeason1ResultsLive;
+  const spendBtn=$("shortcutTopSpendersBtn");if(spendBtn)spendBtn.onclick=()=>{try{$("hudMenuDrawer")?.classList.add("hidden");$("hudMenuBackdrop")?.classList.add("hidden")}catch{}showTopSpenders()};
+  const startBtn=$("startBtn");if(startBtn)startBtn.onclick=start;
+  window.YN_S2_REFRESH_DIRECTORY=refreshLoginDirectory;
+  refreshLoginDirectory();
+  setTimeout(refreshLoginDirectory,1200);
+  window.YAINOO_BUILD="S2V003-MEMBER-SYSTEM";
+  console.info("Season 2 V003 dynamic member system loaded");
+})();
+(function YN_S2V003_DIRECTORY_RETRY(){
+  const retry=()=>{try{const btn=document.getElementById("startBtn");if(btn&&typeof start==="function")btn.onclick=start}catch{}};
+  setTimeout(retry,250);setTimeout(retry,1200);
+})();
