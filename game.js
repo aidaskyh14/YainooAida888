@@ -114,6 +114,12 @@ const RAIN_INTERVAL_MS=4*60*60*1000;
 const $=id=>document.getElementById(id);
 
 let currentMember=null;
+
+/* V291: Maintenance Mode
+   true  = only Aida/Admin may enter the game
+   false = normal member login resumes with all existing data untouched */
+const MAINTENANCE_MODE=true;
+const MAINTENANCE_ADMIN_MEMBER="Aida";
 let state=null;
 let ticker=null;
 let thaiClockTimer=null;
@@ -990,6 +996,10 @@ function craft(id){
 function start(){
   const member=$("memberSelect").value;
   const code=$("memberCode").value.trim();
+  if(MAINTENANCE_MODE && member!==MAINTENANCE_ADMIN_MEMBER){
+    $("loginError").textContent="🔧 ขออภัย กำลังปิดปรับปรุงระบบ • เตรียมพบกับ Season ใหม่เร็ว ๆ นี้ค่ะ";
+    return;
+  }
   if(MEMBERS[member]!==code){$("loginError").textContent="ชื่อสมาชิกหรือรหัสไม่ถูกต้อง";return}
   currentMember=member;
   state=load(member);
@@ -20227,3 +20237,5 @@ console.info("V287 Firebase cost + batch optimization loaded");
   window.YAINOO_BUILD="V290-HUGE-PET-INVENTORY-FAST";
   console.info("V290 huge pet inventory fast path loaded");
 })();
+
+console.info("V291 maintenance mode loaded");
