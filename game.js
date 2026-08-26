@@ -2831,12 +2831,42 @@ async function fetchBroadcastClaimCached(broadcastId){
   return claim||null;
 }
 
+const notificationDataCache={mail:null,broadcasts:null,at:0};
+const NOTIFICATION_CACHE_MS=30000;
 async function fetchMailboxItems(){
-  if(!cloudReady||!currentMemberKey)return[];const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"mailboxes",currentMemberKey,"items");
-  try{const snap=await fs.getDocs(fs.query(ref,fs.orderBy("createdAt","desc"),fs.limit(60))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(ref),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,100)}
+  if(!cloudReady||!currentMemberKey)return[];
+  const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"mailboxes",currentMemberKey,"items");
+  try{
+    const snap=await fs.getDocs(fs.query(ref,fs.orderBy("createdAt","desc"),fs.limit(40))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows;
+  }catch(error){
+    console.warn("mailbox ordered query fallback",error);
+    const snap=await fs.getDocs(fs.query(ref,fs.limit(40))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt));
+  }
 }
 async function fetchBroadcasts(){
-  if(!cloudReady)return[];const {db,fs}=await getFirebaseContext();try{const snap=await fs.getDocs(fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(50))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows}catch{const snap=await fs.getDocs(fs.collection(db,"broadcasts")),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt)).slice(0,50)}
+  if(!cloudReady)return[];
+  const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"broadcasts");
+  try{
+    const snap=await fs.getDocs(fs.query(ref,fs.orderBy("createdAt","desc"),fs.limit(30))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));return rows;
+  }catch(error){
+    console.warn("broadcast ordered query fallback",error);
+    const snap=await fs.getDocs(fs.query(ref,fs.limit(30))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    return rows.sort((a,b)=>timestampMillis(b.createdAt)-timestampMillis(a.createdAt));
+  }
+}
+async function fetchNotificationData(force=false){
+  const now=Date.now();
+  if(!force&&notificationDataCache.mail&&notificationDataCache.broadcasts&&now-notificationDataCache.at<NOTIFICATION_CACHE_MS){
+    return {mail:notificationDataCache.mail,broadcasts:notificationDataCache.broadcasts};
+  }
+  const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);
+  notificationDataCache.mail=mail;notificationDataCache.broadcasts=broadcasts;notificationDataCache.at=Date.now();
+  return {mail,broadcasts};
 }
 async function fetchBroadcastClaim(broadcastId){
   /* R14: keep broadcast claim state in the member's own save. */
@@ -2853,7 +2883,12 @@ async function refreshNotificationBadge(force=false){
     try{
       const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);let count=mail.filter(x=>!x.read).length;const lastSeen=Number((ownState||state)?.lastSeenYainooAt)||0;count+=broadcasts.filter(b=>timestampMillis(b.createdAt)>lastSeen).length;
       if(currentMember==="Aida"&&adminProfile?.role==="admin"){
-        const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending")));count+=snap.size;
+        const {db,fs}=await getFirebaseContext();
+        const [purchaseSnap,memberSnap]=await Promise.all([
+          fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending"))),
+          fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending")))
+        ]);
+        count+=purchaseSnap.size+memberSnap.size;
       }
       badge.textContent=String(count);badge.classList.toggle("hidden",count<=0);notificationBadgeLastAt=Date.now();
     }catch(error){console.warn("notification badge",error)}
@@ -2868,25 +2903,43 @@ async function markMailboxRead(items){
 }
 async function showNotifications(tab="friend"){
   if(!cloudReady){message("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
+  const adminEntry=currentMember==="Aida"&&adminProfile?.role==="admin"?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
+  const renderShell=(body)=>{
+    $("modalContent").innerHTML=`<section class="feature-panel notification-panel"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${adminEntry}<div class="notification-list">${body}</div></section>`;
+    document.querySelectorAll("[data-notification-tab]").forEach(btn=>btn.onclick=()=>showNotifications(btn.dataset.notificationTab));
+    if($("adminCenterBtn"))$("adminCenterBtn").onclick=showAdminCenter;
+  };
+  /* S2V005: open the panel immediately. Network reads continue after the modal is visible. */
+  renderShell('<p class="empty-feature s2-notification-loading">กำลังโหลดการแจ้งเตือน…</p>');
+  openModal();
+  const requestId=(showNotifications._requestId=(Number(showNotifications._requestId)||0)+1);
   try{
-    const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);const friendItems=mail.filter(x=>x.source==="friend"),yainooItems=mail.filter(x=>x.source==="yainoo");
+    const {mail,broadcasts}=await fetchNotificationData(false);
+    if(requestId!==showNotifications._requestId)return;
+    const friendItems=mail.filter(x=>x.source==="friend"),yainooItems=mail.filter(x=>x.source==="yainoo");
     let body="";
     if(tab==="friend"){
       body=friendItems.length?friendItems.map(item=>`<div class="notification-card ${item.read?"":"unread"}"><b>${safeHtml(item.title||"แจ้งเตือนจากเพื่อน")}</b>${item.text?`<span>${safeHtml(item.text)}</span>`:""}<small>${bangkokTimeText(item.createdAt)} น.</small>${item.type==="gift"?`<div class="notification-actions">${item.resolved?`<button disabled>${item.status==="claimed"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-gift="${item.giftId||item.id}" data-gift-action="accept">รับของขวัญ</button><button type="button" data-claim-gift="${item.giftId||item.id}" data-gift-action="discard">ทิ้ง</button>`}</div>`:""}</div>`).join(""):'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากเพื่อน</p>';
-      await markMailboxRead(friendItems);
+      markMailboxRead(friendItems);
     }else{
-      const broadcastCards=[];
-      for(const b of broadcasts){const claim=b.type==="gift"?await fetchBroadcastClaim(b.id):null;broadcastCards.push(`<div class="notification-card"><b>${safeHtml(b.title||"ข้อความจากยัยหนู")}</b>${b.body?`<span>${safeHtml(b.body)}</span>`:""}${b.type==="gift"?`<span>🎁 ${safeHtml(b.itemName)} ×${Number(b.qty)||1}</span><div class="notification-actions">${claim?`<button disabled>${claim.status==="accepted"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="accept">รับของขวัญ</button><button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="discard">ทิ้ง</button>`}</div>`:""}<small>${bangkokTimeText(b.createdAt)} น.</small></div>`)}
+      const broadcastCards=broadcasts.map(b=>{
+        const claim=b.type==="gift"?((ownState||state)?.broadcastGiftClaims?.[b.id]||null):null;
+        return `<div class="notification-card"><b>${safeHtml(b.title||"ข้อความจากยัยหนู")}</b>${b.body?`<span>${safeHtml(b.body)}</span>`:""}${b.type==="gift"?`<span>🎁 ${safeHtml(b.itemName)} ×${Number(b.qty)||1}</span><div class="notification-actions">${claim?`<button disabled>${claim.status==="accepted"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="accept">รับของขวัญ</button>`+`<button type="button" data-claim-broadcast="${b.id}" data-broadcast-action="discard">ทิ้ง</button>`}</div>`:""}<small>${bangkokTimeText(b.createdAt)} น.</small></div>`;
+      });
       body=[...yainooItems.map(item=>`<div class="notification-card ${item.read?"":"unread"}"><b>${safeHtml(item.title||"แจ้งเตือนจากยัยหนู")}</b>${item.text?`<span>${safeHtml(item.text)}</span>`:""}<small>${bangkokTimeText(item.createdAt)} น.</small></div>`),...broadcastCards].join("")||'<p class="empty-feature">ยังไม่มีแจ้งเตือนจากยัยหนู</p>';
-      await markMailboxRead(yainooItems);(ownState||state).lastSeenYainooAt=gameNow();save();
+      markMailboxRead(yainooItems);
+      (ownState||state).lastSeenYainooAt=gameNow();save();
     }
-    $("modalContent").innerHTML=`<section class="feature-panel notification-panel"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${currentMember==="Aida"&&adminProfile?.role==="admin"?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':""}<div class="notification-list">${body}</div></section>`;
-    document.querySelectorAll("[data-notification-tab]").forEach(btn=>btn.onclick=()=>showNotifications(btn.dataset.notificationTab));
+    renderShell(body);
     document.querySelectorAll("[data-claim-gift]").forEach(btn=>btn.onclick=()=>claimFriendGift(btn.dataset.claimGift,btn.dataset.giftAction==="accept"));
     document.querySelectorAll("[data-claim-broadcast]").forEach(btn=>btn.onclick=()=>claimBroadcastGift(btn.dataset.claimBroadcast,btn.dataset.broadcastAction==="accept"));
-    if($("adminCenterBtn"))$("adminCenterBtn").onclick=showAdminCenter;openModal();refreshNotificationBadge();
-  }catch(error){message("เปิดการแจ้งเตือนไม่ได้",error.message||"กรุณาลองใหม่")}
+    refreshNotificationBadge();
+  }catch(error){
+    if(requestId!==showNotifications._requestId)return;
+    renderShell(`<p class="empty-feature">โหลดการแจ้งเตือนไม่สำเร็จ<br><small>${safeHtml(error.message||"กรุณาลองใหม่")}</small></p>`);
+  }
 }
+
 async function claimFriendGift(giftId,accept){
   try{
     const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",giftId),saveRef=fs.doc(db,"saves",currentMemberKey),mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);let next;
@@ -2894,7 +2947,7 @@ async function claimFriendGift(giftId,accept){
       const [giftSnap,saveSnap]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);if(!giftSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบของขวัญ");const gift=giftSnap.data();if(gift.toKey!==currentMemberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");if(gift.status!=="pending")throw new Error("ของขวัญนี้ถูกจัดการแล้ว");const s=normalizeState(saveSnap.data(),currentMember);
       if(accept)addGiftItemToState(s,gift);next=s;tx.set(saveRef,{...cloneData(s),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{read:true,resolved:true,status:accept?"claimed":"discarded"},{merge:true});
     });
-    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;showNotifications("friend");showWeatherToast(accept?"🎁 รับของขวัญแล้ว":"🗑️ ทิ้งของขวัญแล้ว • ไม่คืนผู้ส่ง");
+    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;notificationDataCache.at=0;showNotifications("friend");showWeatherToast(accept?"🎁 รับของขวัญแล้ว":"🗑️ ทิ้งของขวัญแล้ว • ไม่คืนผู้ส่ง");
   }catch(error){message("จัดการของขวัญไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 async function claimBroadcastGift(broadcastId,accept){
@@ -2927,7 +2980,7 @@ async function claimBroadcastGift(broadcastId,accept){
     if(!visitContext)state=ownState;
     saveLocalOnly(ownState);
     broadcastClaimCache.delete(broadcastClaimCacheKey(broadcastId));
-    showNotifications("yainoo");
+    notificationDataCache.at=0;showNotifications("yainoo");
     showWeatherToast(accept?"🎁 รับของขวัญจากยัยหนูแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
   }catch(error){
     message("จัดการของขวัญไม่ได้",`${error.message||"กรุณาลองใหม่"}\n\nR14 • email: ${cloudAuth?.currentUser?.email||"-"} • memberKey: ${currentMemberKey||"-"}`);
@@ -20379,7 +20432,7 @@ console.info("V291 maintenance mode loaded");
   async function showTopSpenders(){
     try{
       const data=await loadSpenders(),rows=Array.isArray(data.rows)?data.rows.slice():[];rows.sort((a,b)=>(Number(b.total)||0)-(Number(a.total)||0)||(Number(b.today)||0)-(Number(a.today)||0));
-      $("modalContent").innerHTML=`<section class="feature-panel s2-spenders-panel"><h2>💎 Top Spenders</h2><p class="feature-subtitle">อันดับผู้สนับสนุน Season 2 • อัปเดตโดย Aida</p><div class="s2-spenders-list">${rows.length?rows.map((r,i)=>`<article class="s2-spender-row ${i<3?`top${i+1}`:""}"><span>${i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}</span><div><b>${s2Esc(r.name)}</b><small>วันนี้ ${Number(r.today||0).toLocaleString()} แพ็ก</small></div><strong>${Number(r.total||0).toLocaleString()}<br><small>สะสม</small></strong></article>`).join(""):'<p class="empty-feature">ยังไม่มีข้อมูล Top Spenders</p>'}</div>${adminProfile?.role==="admin"?'<button id="s2EditSpenders" class="primary-spooky-action" type="button">✏️ แก้ไขข้อมูล</button>':""}</section>`;openModal();if($("s2EditSpenders"))$("s2EditSpenders").onclick=editTopSpenders;
+      $("modalContent").innerHTML=`<section class="feature-panel s2-spenders-panel"><header class="s2-spenders-head"><div><small>SEASON 2</small><h2>💎 Top Spenders</h2></div><span>อัปเดตโดย Aida</span></header><div class="s2-spenders-columns"><span>อันดับ / ผู้เล่น</span><span>วันนี้</span><span>สะสม</span></div><div class="s2-spenders-list">${rows.length?rows.map((r,i)=>`<article class="s2-spender-row ${i<3?`top${i+1}`:""}"><span class="s2-spender-rank">${i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}</span><b>${s2Esc(r.name)}</b><small>${Number(r.today||0).toLocaleString()}</small><strong>${Number(r.total||0).toLocaleString()}</strong></article>`).join(""):'<p class="empty-feature">ยังไม่มีข้อมูล Top Spenders</p>'}</div>${adminProfile?.role==="admin"?'<button id="s2EditSpenders" class="s2-spenders-edit-btn" type="button">✏️ แก้ไขข้อมูล</button>':""}</section>`;openModal();if($("s2EditSpenders"))$("s2EditSpenders").onclick=editTopSpenders;
     }catch(e){message("เปิด Top Spenders ไม่ได้",e.message||"กรุณาลองใหม่")}
   }
   async function editTopSpenders(){
@@ -20412,10 +20465,10 @@ console.info("V291 maintenance mode loaded");
   window.YN_S2_REFRESH_DIRECTORY=refreshLoginDirectory;
   refreshLoginDirectory();
   setTimeout(refreshLoginDirectory,1200);
-  window.YAINOO_BUILD="S2V003-MEMBER-SYSTEM";
-  console.info("Season 2 V003 dynamic member system loaded");
+  window.YAINOO_BUILD="S2V005-FAST-NOTIFICATIONS";
+  console.info("Season 2 V005 fast notifications loaded");
 })();
-(function YN_S2V003_DIRECTORY_RETRY(){
+(function YN_S2V004_DIRECTORY_RETRY(){
   const retry=()=>{try{const btn=document.getElementById("startBtn");if(btn&&typeof start==="function")btn.onclick=start}catch{}};
   setTimeout(retry,250);setTimeout(retry,1200);
 })();

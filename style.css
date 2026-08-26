@@ -7288,3 +7288,65 @@ select.season2-login-control{
   .season2-signup-btn{min-height:21px!important;margin-top:3px!important;font-size:9px!important}
   .season1-results-btn{min-height:26px!important}
 }
+
+
+/* ============================================================
+   SEASON 2 V004 — compact Top Spenders + admin signup notice
+   ============================================================ */
+.s2-spenders-panel{
+  width:min(92vw,390px)!important;
+  max-height:min(78dvh,620px)!important;
+  overflow:hidden!important;
+  padding:13px 12px 11px!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,#fffdf8 0%,#fff7e9 100%)!important;
+  box-shadow:0 14px 36px rgba(86,55,35,.18)!important;
+}
+.s2-spenders-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:0 2px 8px;border-bottom:1px dashed #dfc7a7}
+.s2-spenders-head>div{min-width:0}
+.s2-spenders-head small{display:block;font-size:8px;letter-spacing:1.2px;color:#b48a61;font-weight:900}
+.s2-spenders-head h2{margin:1px 0 0!important;font-size:16px!important;line-height:1.1;color:#624334}
+.s2-spenders-head>span{font-size:8.5px;color:#a07d68;white-space:nowrap}
+.s2-spenders-columns{display:grid;grid-template-columns:minmax(0,1fr) 58px 64px;gap:5px;padding:7px 8px 4px;font-size:8px;font-weight:900;color:#a0806c;text-align:right}
+.s2-spenders-columns span:first-child{text-align:left}
+.s2-spenders-list{
+  display:grid!important;
+  gap:5px!important;
+  max-height:min(52dvh,420px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain;
+  padding:2px 3px 8px 1px;
+  scrollbar-width:thin;
+}
+.s2-spender-row{
+  display:grid!important;
+  grid-template-columns:29px minmax(0,1fr) 58px 64px!important;
+  align-items:center!important;
+  gap:5px!important;
+  min-height:38px!important;
+  padding:5px 7px!important;
+  border-radius:11px!important;
+  border:1px solid #ead7bc!important;
+  background:rgba(255,252,245,.95)!important;
+  box-shadow:0 2px 5px rgba(102,67,42,.06)!important;
+}
+.s2-spender-row.top1{background:linear-gradient(90deg,#fff8d8,#fff2b5)!important;border-color:#e6bd55!important}
+.s2-spender-row.top2{background:linear-gradient(90deg,#fff,#f0f1f3)!important;border-color:#c9cbd0!important}
+.s2-spender-row.top3{background:linear-gradient(90deg,#fff3e8,#f4d6bb)!important;border-color:#d8a57c!important}
+.s2-spender-rank{font-size:14px!important;text-align:center;line-height:1}
+.s2-spender-row b{font-size:10.5px!important;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#5b4035}
+.s2-spender-row>small{font-size:9px!important;text-align:right!important;color:#967661!important}
+.s2-spender-row>strong{font-size:10.5px!important;text-align:right!important;color:#6e4a39!important}
+.s2-spenders-edit-btn{display:block;margin:8px auto 0!important;width:auto!important;min-width:118px!important;min-height:33px!important;padding:6px 13px!important;border:0!important;border-radius:999px!important;background:linear-gradient(180deg,#f7d9a9,#e9bd7c)!important;color:#5b3d2e!important;font-size:10px!important;font-weight:900!important;box-shadow:0 3px 8px rgba(104,72,43,.13)!important}
+.s2-spender-editor{max-height:min(48dvh,390px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;padding-right:2px}
+.s2-app-card{box-shadow:0 2px 7px rgba(99,68,44,.07)}
+@media(max-width:390px){
+  .s2-spenders-panel{width:min(93vw,350px)!important;padding:11px 9px 10px!important}
+  .s2-spenders-columns,.s2-spender-row{grid-template-columns:minmax(0,1fr) 48px 56px!important}
+  .s2-spender-row{grid-template-columns:26px minmax(0,1fr) 48px 56px!important;gap:3px!important;padding:5px!important}
+  .s2-spenders-columns{grid-template-columns:minmax(0,1fr) 48px 56px!important}
+  .s2-spender-row b{font-size:10px!important}
+  .s2-spender-row>small,.s2-spender-row>strong{font-size:8.5px!important}
+}
