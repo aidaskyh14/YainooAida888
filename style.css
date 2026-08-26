@@ -7350,7 +7350,3 @@ select.season2-login-control{
   .s2-spender-row b{font-size:10px!important}
   .s2-spender-row>small,.s2-spender-row>strong{font-size:8.5px!important}
 }
-
-/* SEASON 2 V006 — Season 1 results snapshot */
-.s2-season1-snapshot-btn{margin:12px auto 0;min-height:34px;padding:7px 12px;border:1px solid #c89c59;border-radius:12px;background:linear-gradient(180deg,#fff8d9,#f1d59e);color:#674328;font-size:10px;font-weight:900;box-shadow:0 3px 8px rgba(93,61,35,.12)}
-.s2-season1-snapshot-btn:disabled{opacity:.65}

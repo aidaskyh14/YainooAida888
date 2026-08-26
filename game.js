@@ -259,7 +259,12 @@ async function loadMembers(){
     });
     if(Object.keys(loaded).length)MEMBERS=loaded;
   }catch(error){console.warn("ใช้รายชื่อสำรอง")}
-  $("memberSelect").innerHTML=`<option value="" selected disabled>เลือกชื่อผู้เล่น</option>`+Object.keys(MEMBERS).map(name=>`<option value="${name}">${name}</option>`).join("");
+  const loginNames=Object.keys(MEMBERS);
+  const adminNames=loginNames.filter(name=>name==="Aida");
+  const playerNames=loginNames.filter(name=>name!=="Aida");
+  $("memberSelect").innerHTML=`<option value="" selected disabled>เลือกชื่อผู้เล่น</option>`
+    +(adminNames.length?`<optgroup label="ผู้ดูแลระบบ">${adminNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"")
+    +(playerNames.length?`<optgroup label="ผู้เล่น">${playerNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"");
 }
 
 /* ===== รูปโปรไฟล์และชื่อโปรไฟล์ ===== */
@@ -20303,7 +20308,13 @@ console.info("V291 maintenance mode loaded");
    - Compact mobile-first login UI
    ===================================================================== */
 (function YN_SEASON2_V001_LOGIN_HOME(){
-  const SEASON1_RESULTS=[];
+  const SEASON1_RESULTS=[
+    {name:"Earn Pilaiwan",merit:369245},
+    {name:"Porpla Napassorn",merit:359478},
+    {name:"ของขวัญ บิวตี้ช้อป",merit:341610},
+    {name:"Mhai Maneetanawat",merit:245472},
+    {name:"Pukkie F",merit:232609}
+  ];
   function escS2(x){return typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
   function season1Results(){
     const rows=SEASON1_RESULTS.slice().sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));
@@ -20358,7 +20369,12 @@ console.info("V291 maintenance mode loaded");
     for(const row of rows){if(LEGACY_CODES[row.displayName])continue;MEMBERS[row.displayName]=DYNAMIC_SENTINEL;S2_DYNAMIC_KEYS[row.displayName]=row.memberKey;S2_DYNAMIC_NAMES[row.memberKey]=row.displayName}
     const select=$("memberSelect");if(!select)return;
     const previous=select.value;
-    select.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'+Object.keys(MEMBERS).map(name=>`<option value="${s2Esc(name)}">${s2Esc(name)}</option>`).join("");
+    const names=Object.keys(MEMBERS);
+    const admins=names.filter(name=>name==="Aida");
+    const players=names.filter(name=>name!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+    select.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'
+      +(admins.length?`<optgroup label="ผู้ดูแลระบบ">${admins.map(name=>`<option value="${s2Esc(name)}">${s2Esc(name)}</option>`).join("")}</optgroup>`:"")
+      +(players.length?`<optgroup label="ผู้เล่น">${players.map(name=>`<option value="${s2Esc(name)}">${s2Esc(name)}</option>`).join("")}</optgroup>`:"");
     if(previous&&Object.prototype.hasOwnProperty.call(MEMBERS,previous))select.value=previous;
   }
 
@@ -20444,32 +20460,23 @@ console.info("V291 maintenance mode loaded");
     try{const rows=[];document.querySelectorAll("[data-s2-spend-today]").forEach(i=>{const name=i.dataset.s2SpendToday,totalInput=document.querySelector(`[data-s2-spend-total="${CSS.escape(name)}"]`),today=Math.max(0,Math.floor(Number(i.value)||0)),total=Math.max(0,Math.floor(Number(totalInput?.value)||0));if(today||total)rows.push({name,today,total})});const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"shared","topSpenders"),{rows,updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});showWeatherToast("💎 บันทึก Top Spenders แล้ว");showTopSpenders()}catch(e){btn.disabled=false;message("บันทึกไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
-  async function loadSeason1Rows(){
-    const bridge=await getFirebaseBridge();if(!bridge)return [];
-    const {db,firestore:fs}=bridge,snap=await fs.getDoc(fs.doc(db,"shared","season1Results"));
-    return snap.exists()&&Array.isArray(snap.data().rows)?snap.data().rows.slice():[];
-  }
-  async function snapshotSeason1ResultsFromProfiles(){
-    if(adminProfile?.role!=="admin"){message("ไม่มีสิทธิ์","เฉพาะ Aida/Admin เท่านั้นค่ะ");return}
-    const btn=$("s2SnapshotSeason1Btn");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก..."}
-    try{
-      const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),rows=[];
-      snap.forEach(d=>{const x=d.data()||{},name=String(x.displayName||x.name||S2_DYNAMIC_NAMES[d.id]||d.id||"").trim(),merit=Math.max(0,Math.floor(Number(x.merit)||0));if(name&&d.id!=="aida")rows.push({memberKey:d.id,name,merit})});
-      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0)||String(a.name).localeCompare(String(b.name),"th"));
-      if(!rows.length)throw new Error("ไม่พบคะแนนผู้เล่นใน publicProfiles");
-      await fs.setDoc(fs.doc(db,"shared","season1Results"),{rows,locked:true,snapshotAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});
-      showWeatherToast(`🏆 บันทึกผลงานซีซั่น 1 แล้ว ${rows.length} คน`);
-      showSeason1ResultsLive();
-    }catch(e){if(btn){btn.disabled=false;btn.textContent="🏆 บันทึกคะแนนปัจจุบันเป็นผล Season 1"}message("บันทึกผลงานซีซั่น 1 ไม่ได้",e.message||"กรุณาลองใหม่")}
-  }
+  const S2_SEASON1_FALLBACK=[
+    {name:"Earn Pilaiwan",merit:369245},
+    {name:"Porpla Napassorn",merit:359478},
+    {name:"ของขวัญ บิวตี้ช้อป",merit:341610},
+    {name:"Mhai Maneetanawat",merit:245472},
+    {name:"Pukkie F",merit:232609}
+  ];
   async function showSeason1ResultsLive(){
+    /* Season 1 is public history. Use the fixed final Top 5 immediately;
+       a Firestore record may override it later without requiring a code update. */
+    let rows=S2_SEASON1_FALLBACK.map(r=>({...r}));
     try{
-      const rows=await loadSeason1Rows();
-      rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));
-      const html=rows.length?rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${s2Esc(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join(""):`<div class="s2-season1-empty"><span>🏆</span><b>ผลงานซีซั่น 1</b><p>ยังไม่ได้บันทึกผลสรุปซีซั่น 1</p>${adminProfile?.role==="admin"?'<button id="s2SnapshotSeason1Btn" class="s2-season1-snapshot-btn" type="button">🏆 บันทึกคะแนนปัจจุบันเป็นผล Season 1</button>':""}</div>`;
-      $("modalContent").innerHTML=`<section class="feature-panel s2-season1-panel"><header><small>HALL OF FAME</small><h2>🏆 ผลงานซีซั่น 1</h2><p>อันดับและคะแนนกุศลจากซีซั่นแรก</p></header><div class="s2-season1-list">${html}</div></section>`;openModal();
-      if($("s2SnapshotSeason1Btn"))$("s2SnapshotSeason1Btn").onclick=snapshotSeason1ResultsFromProfiles;
-    }catch(e){message("เปิดผลงานซีซั่น 1 ไม่ได้",e.message||"กรุณาลองใหม่")}
+      const bridge=await getFirebaseBridge();if(bridge){const {db,firestore:fs}=bridge,snap=await fs.getDoc(fs.doc(db,"shared","season1Results"));if(snap.exists()&&Array.isArray(snap.data().rows)&&snap.data().rows.length)rows=snap.data().rows.slice()}
+    }catch(e){console.warn("S2 season1 results fallback",e)}
+    rows.sort((a,b)=>(Number(b.merit)||0)-(Number(a.merit)||0));
+    const html=rows.map((r,i)=>`<article class="s2-season1-row ${i<3?`top top-${i+1}`:""}"><span class="s2-season1-rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div><b>${s2Esc(r.name)}</b><small>คะแนนกุศล</small></div><strong>${Number(r.merit||0).toLocaleString()}</strong></article>`).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel s2-season1-panel"><header><small>HALL OF FAME</small><h2>🏆 ผลงานซีซั่น 1</h2><p>Top 5 คะแนนกุศลจากซีซั่นแรก</p></header><div class="s2-season1-list">${html}</div></section>`;openModal();
   }
 
   const previousAdminCenter=showAdminCenter;
@@ -20485,8 +20492,8 @@ console.info("V291 maintenance mode loaded");
   window.YN_S2_REFRESH_DIRECTORY=refreshLoginDirectory;
   refreshLoginDirectory();
   setTimeout(refreshLoginDirectory,1200);
-  window.YAINOO_BUILD="S2V006-SEASON1-RESULTS-SNAPSHOT";
-  console.info("Season 2 V006 season1 results snapshot loaded");
+  window.YAINOO_BUILD="S2V006-SEASON1-LOGIN-GROUPS";
+  console.info("Season 2 V006 season1 results + grouped login loaded");
 })();
 (function YN_S2V004_DIRECTORY_RETRY(){
   const retry=()=>{try{const btn=document.getElementById("startBtn");if(btn&&typeof start==="function")btn.onclick=start}catch{}};
