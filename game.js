@@ -17343,21 +17343,24 @@ async function V181_campaignScoreLater(summary){
     const troughVisual=$("alpacaTroughVisual");
     if(troughVisual){
       troughVisual.innerHTML=pen.trough.map((slot,i)=>slot&&FOOD[slot.foodKey]?`<span class="alpaca-trough-visual-slot filled" data-trough-visual="${i}"><img src="${FOOD[slot.foodKey].image}" alt=""></span>`:`<span class="alpaca-trough-visual-slot" data-trough-visual="${i}"></span>`).join("");
-      /* S2V004: lock food art to the physical side troughs: 8 left + 8 right.
-         Inline !important is deliberate so older Season 1/2 CSS cannot push food back to the top corners. */
-      const troughTops=[34.5,40.6,46.7,52.8,58.9,65.0,71.1,77.2];
+      /* S2V005: lock food art to the real Season 2 side trough rails.
+         Use center-point coordinates + translate so the food sits on the wood trough,
+         not drifting upward or inward onto the grass. */
+      const troughCentersY=[36.1,42.0,47.9,53.8,59.7,65.6,71.5,77.4];
+      const leftTroughX="9.7%",rightTroughX="90.3%";
       troughVisual.querySelectorAll(".alpaca-trough-visual-slot").forEach((el,i)=>{
         const row=i%8;
-        el.style.setProperty("top",`${troughTops[row]}%`,"important");
+        el.style.setProperty("top",`${troughCentersY[row]}%`,"important");
         el.style.setProperty("bottom","auto","important");
-        el.style.setProperty("width","clamp(17px,4vw,26px)","important");
-        el.style.setProperty("height","clamp(17px,4vw,26px)","important");
+        el.style.setProperty("width","clamp(15px,3.45vw,23px)","important");
+        el.style.setProperty("height","clamp(15px,3.45vw,23px)","important");
+        el.style.setProperty("transform","translate(-50%,-50%)","important");
         if(i<8){
-          el.style.setProperty("left","11.5%","important");
+          el.style.setProperty("left",leftTroughX,"important");
           el.style.setProperty("right","auto","important");
         }else{
-          el.style.setProperty("right","11.5%","important");
-          el.style.setProperty("left","auto","important");
+          el.style.setProperty("left",rightTroughX,"important");
+          el.style.setProperty("right","auto","important");
         }
       });
     }
@@ -17556,14 +17559,14 @@ async function V181_campaignScoreLater(summary){
     for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)return alpacaMessage("คราฟไม่สำเร็จ",`${INGREDIENT_META[ik].name} ไม่พอ`)}
     if(c.chance){
       const ok=await alpacaConfirm(`คราฟ ${c.name}`,`วัตถุดิบจะถูกใช้ทันที • โอกาสสำเร็จ <b>${c.chance}%</b>`,{confirmText:"เริ่มคราฟ"});if(!ok)return showCraft(type);
-      try{const out=await mutateOwn(st=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(st,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(st,ik,base*qty);let won=0;for(let i=0;i<qty;i++)if(Math.random()*100<c.chance)won++;if(won){const bucket=st.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+won}return won});const won=Number(out.result)||0;if(won)alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${won}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁");else alpacaMessage("คราฟไม่สำเร็จ","วัตถุดิบถูกใช้ไปแล้ว ลองใหม่อีกครั้งนะคะ","💨")}catch(e){alpacaMessage("คราฟไม่สำเร็จ",e.message||"กรุณาลองใหม่")}return;
+      try{const out=mutateOwnFast(st=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(st,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(st,ik,base*qty);let won=0;for(let i=0;i<qty;i++)if(Math.random()*100<c.chance)won++;if(won){const bucket=st.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+won}return won});const won=Number(out.result)||0;if(won)alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${won}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁");else alpacaMessage("คราฟไม่สำเร็จ","วัตถุดิบถูกใช้ไปแล้ว ลองใหม่อีกครั้งนะคะ","💨")}catch(e){alpacaMessage("คราฟไม่สำเร็จ",e.message||"กรุณาลองใหม่")}return;
     }
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(c.image,"พร้อมคราฟ",safeHtml(c.name))}<div class="alpaca-big-qty">×${qty}</div><p>กดยืนยันเพื่อคราฟและรับเข้ากระเป๋าอัลปาก้า</p><button id="alpacaCraftDone" class="primary-spooky-action" type="button">ยืนยันคราฟ</button><button id="alpacaCraftCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
     openModal();$("alpacaCraftDone").onclick=()=>commitAlpacaCraft(type,key,qty);$("alpacaCraftCancel").onclick=()=>showCraft(type);
   }
   async function commitAlpacaCraft(type,key,qty){
     const c=CRAFT[type]?.[key],btn=$("alpacaCraftDone");if(!c)return;if(btn){btn.disabled=true;btn.textContent="กำลังเข้ากระเป๋า..."}
-    try{await mutateOwn(s=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(s,ik,base*qty);const bucket=s.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+qty});alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${qty}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁")}catch(e){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับของ"}alpacaMessage("คราฟไม่สำเร็จ",e.message||"วัตถุดิบไม่เพียงพอ")}
+    try{mutateOwnFast(s=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(s,ik,base*qty);const bucket=s.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+qty});alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${qty}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁")}catch(e){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับของ"}alpacaMessage("คราฟไม่สำเร็จ",e.message||"วัตถุดิบไม่เพียงพอ")}
   }
 
   function showTrough(){
@@ -17747,7 +17750,7 @@ async function V181_campaignScoreLater(summary){
   function randomCraftColor(){const r=Math.random()*100;return r<35?"white":r<58?"brown":r<73?"black":r<83?"pink":r<90?"green":r<95?"goldenHoney":"thaiTea"}
   function removeAnyV2(s,n){for(const k of Object.keys(s.jellyfishV2||{})){const take=Math.min(n,Number(s.jellyfishV2[k])||0);s.jellyfishV2[k]-=take;n-=take;if(n<=0)return true}return false}
   function removeUnplaced(s,kind,n){const arr=kind==="cat"?s.cats:s.dogs;for(let i=arr.length-1;i>=0&&n>0;i--){const free=kind==="cat"?!arr[i]?.placedFarm:!arr[i]?.placedHotel;if(free){arr.splice(i,1);n--}}return n===0}
-  async function craftOneAlpaca(){const btn=$("confirmAlpacaCraft");if(btn){btn.disabled=true;btn.textContent="กำลังคราฟ..."}try{const out=await mutateOwn(s=>{ensureCatState(s);ensureDogState(s);if(typeof Y26_ensureState==="function")Y26_ensureState(s);const root=s.alpaca,d=root.craftDaily;if(d.dateKey!==currentBangkokDateKey()){d.dateKey=currentBangkokDateKey();d.count=0}if(d.count>=5)throw new Error("วันนี้คราฟอัลปาก้าครบ 5 ตัวแล้วค่ะ");const counts=alpacaCraftCounts(s);for(const [k,n] of Object.entries(ALPACA_CRAFT_NEED))if(counts[k]<n)throw new Error(`${ALPACA_CRAFT_META[k].name} ไม่พอ`);if(!isAdmin()){if(!removeAnyV2(s,3))throw new Error("แมงกระพรุน V2 ไม่พอ");s.specials.landDeed-=50;if(!removeUnplaced(s,"cat",5))throw new Error("แมวไม่พอ");if(!removeUnplaced(s,"dog",5))throw new Error("หมาไม่พอ");s.merit-=500;s.animalProducts.egg-=250;s.animalProducts.milk-=250;s.animalProducts.truffle-=250;s.animalProducts.fishMeat-=250}else{root.inventory.food.hayPack=9999;root.inventory.food.pellet=9999;Object.keys(root.inventory.medicine).forEach(k=>root.inventory.medicine[k]=9999);root.inventory.other.magicMushroom=9999;[...COLORS,"gold"].forEach(k=>root.inventory.wool[k]=9999)}const color=randomCraftColor(),sex=Math.random()<.8?"male":"female",id=uid("vault-craft");root.vault.push({id,type:"adult",color,sex,source:"craft",createdAt:gameNow()});d.count++;return{id,color,sex}});const r=out.result;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel alpaca-craft-success"><h2>ยินดีด้วยค่ะ</h2><div class="alpaca-craft-success-preview">${warehouseSprite({type:"adult",color:r.color,sex:r.sex})}</div><p>คุณได้รับ <b>อัลปาก้า${COLOR_META[r.color]?.name||""} ${r.sex==="female"?"เพศเมีย":"เพศผู้"}</b></p><button id="receiveCraftedAlpaca" class="primary-spooky-action" type="button">รับ</button></section>`;openModal();$("receiveCraftedAlpaca").onclick=showAlpacaWarehouse;updateMeritUI()}catch(e){alpacaMessage("คราฟไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn){btn.disabled=false;btn.textContent="คราฟอัลปาก้า"}}}
+  async function craftOneAlpaca(){const btn=$("confirmAlpacaCraft");if(btn){btn.disabled=true;btn.textContent="กำลังคราฟ..."}try{const out=mutateOwnFast(s=>{ensureCatState(s);ensureDogState(s);if(typeof Y26_ensureState==="function")Y26_ensureState(s);const root=s.alpaca,d=root.craftDaily;if(d.dateKey!==currentBangkokDateKey()){d.dateKey=currentBangkokDateKey();d.count=0}if(d.count>=5)throw new Error("วันนี้คราฟอัลปาก้าครบ 5 ตัวแล้วค่ะ");const counts=alpacaCraftCounts(s);for(const [k,n] of Object.entries(ALPACA_CRAFT_NEED))if(counts[k]<n)throw new Error(`${ALPACA_CRAFT_META[k].name} ไม่พอ`);if(!isAdmin()){if(!removeAnyV2(s,3))throw new Error("แมงกระพรุน V2 ไม่พอ");s.specials.landDeed-=50;if(!removeUnplaced(s,"cat",5))throw new Error("แมวไม่พอ");if(!removeUnplaced(s,"dog",5))throw new Error("หมาไม่พอ");s.merit-=500;s.animalProducts.egg-=250;s.animalProducts.milk-=250;s.animalProducts.truffle-=250;s.animalProducts.fishMeat-=250}else{root.inventory.food.hayPack=9999;root.inventory.food.pellet=9999;Object.keys(root.inventory.medicine).forEach(k=>root.inventory.medicine[k]=9999);root.inventory.other.magicMushroom=9999;[...COLORS,"gold"].forEach(k=>root.inventory.wool[k]=9999)}const color=randomCraftColor(),sex=Math.random()<.8?"male":"female",id=uid("vault-craft");root.vault.push({id,type:"adult",color,sex,source:"craft",createdAt:gameNow()});d.count++;return{id,color,sex}});const r=out.result;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel alpaca-craft-success"><h2>ยินดีด้วยค่ะ</h2><div class="alpaca-craft-success-preview">${warehouseSprite({type:"adult",color:r.color,sex:r.sex})}</div><p>คุณได้รับ <b>อัลปาก้า${COLOR_META[r.color]?.name||""} ${r.sex==="female"?"เพศเมีย":"เพศผู้"}</b></p><button id="receiveCraftedAlpaca" class="primary-spooky-action" type="button">รับ</button></section>`;openModal();$("receiveCraftedAlpaca").onclick=showAlpacaWarehouse;updateMeritUI()}catch(e){alpacaMessage("คราฟไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn){btn.disabled=false;btn.textContent="คราฟอัลปาก้า"}}}
 
   globalThis.YN_ALPACA_CORE={showCraft,showTrough,showRank,showAlpacaWarehouse,renderPen};
 

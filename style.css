@@ -7577,3 +7577,37 @@ select.season2-login-control{
 /* Trough modal still has 16 slots; empty slots do not show a floating plus. */
 .alpaca-trough-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
 .alpaca-trough-slot.empty{font-size:0!important;color:transparent!important}
+
+
+/* ======================================================================
+   S2V005 ALPACA HOTFIX — slight size reduction, real side-trough food
+   2026-08-27
+   ====================================================================== */
+.s2-trough-hotspot{
+  top:30.5%!important;
+  height:51%!important;
+  width:13.5%!important;
+}
+.s2-trough-hotspot.left{left:5.8%!important;right:auto!important}
+.s2-trough-hotspot.right{right:5.8%!important;left:auto!important}
+
+.alpaca-trough-visual-slot{
+  width:clamp(15px,3.45vw,23px)!important;
+  height:clamp(15px,3.45vw,23px)!important;
+  transform:translate(-50%,-50%)!important;
+}
+.alpaca-trough-visual-slot img{
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.34))!important;
+}
+
+/* ลดลงแค่นิดเดียวจากรอบก่อน เพื่อให้ใส่ได้แน่นขึ้นแต่ไม่เล็กเกินไป */
+.alpaca-pen-animal.adult{
+  width:clamp(31px,8.2vw,56px)!important;
+}
+.alpaca-pen-animal.baby{
+  width:clamp(20px,5.15vw,35px)!important;
+}
+.alpaca-status-stack{top:-6px!important;max-width:52px!important}
+.alpaca-status-stack img{width:clamp(9px,2.2vw,14px)!important;height:clamp(9px,2.2vw,14px)!important}
+.alpaca-pen-animal.baby .alpaca-status-stack{top:-5px!important}
+.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(8px,1.95vw,12px)!important;height:clamp(8px,1.95vw,12px)!important}
