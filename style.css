@@ -7492,76 +7492,88 @@ select.season2-login-control{
 
 
 /* ======================================================================
-   S2V004 ALPACA FIX4 — compact actors / warehouse / visible side trough
+   S2V004 ALPACA FIX — side trough lock + larger roaming alpacas
+   2026-08-27
    ====================================================================== */
-#alpacaPenNameBtn{display:none!important}
-.alpaca-pen-animal.adult{width:clamp(18px,4.05vw,28px)!important;height:clamp(25px,5.75vw,40px)!important}
-.alpaca-pen-animal.baby{width:clamp(11px,2.55vw,17px)!important;height:clamp(16px,3.65vw,25px)!important}
-.alpaca-status-stack{top:-4px!important;gap:0!important;max-width:32px!important}
-.alpaca-status-stack img{width:clamp(6px,1.35vw,9px)!important;height:clamp(6px,1.35vw,9px)!important}
-.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(5px,1.15vw,8px)!important;height:clamp(5px,1.15vw,8px)!important}
-.alpaca-warehouse-card .alpaca-sprite-preview{width:34px!important;height:48px!important;min-width:34px!important;min-height:48px!important;max-width:34px!important;max-height:48px!important;margin:5px auto!important}
-.alpaca-warehouse-card.is-baby .alpaca-sprite-preview{width:24px!important;height:34px!important;min-width:24px!important;min-height:34px!important;max-width:24px!important;max-height:34px!important}
-.alpaca-manage-card.compact.is-adult .alpaca-manage-preview-wrap{height:48px!important}
-.alpaca-manage-card.compact.is-baby .alpaca-manage-preview-wrap{height:32px!important}
-.alpaca-manage-card.compact .alpaca-manage-preview-wrap .alpaca-sprite-preview{height:100%!important;width:auto!important;max-width:52px!important}
-.alpaca-detail-hero>.alpaca-sprite-preview.large{width:46px!important;max-width:46px!important;height:65px!important;max-height:65px!important}
-.alpaca-trough-visual{position:absolute!important;inset:0!important;display:block!important;visibility:visible!important;opacity:1!important;z-index:27!important;pointer-events:none!important}
-.alpaca-trough-visual-slot{position:absolute!important;width:18px!important;height:18px!important;margin:0!important;background:transparent!important;border:0!important}
-.alpaca-trough-visual-slot.filled{display:grid!important;place-items:center!important;visibility:visible!important;opacity:1!important}
-.alpaca-trough-visual-slot.filled img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;visibility:visible!important;opacity:1!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))!important}
-.alpaca-trough-visual-slot:nth-child(-n+8){left:10.5%!important}
-.alpaca-trough-visual-slot:nth-child(n+9){right:10.5%!important}
-.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:34%!important}
-.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:40.1%!important}
-.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:46.2%!important}
-.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:52.3%!important}
-.alpaca-trough-visual-slot:nth-child(5),.alpaca-trough-visual-slot:nth-child(13){top:58.4%!important}
-.alpaca-trough-visual-slot:nth-child(6),.alpaca-trough-visual-slot:nth-child(14){top:64.5%!important}
-.alpaca-trough-visual-slot:nth-child(7),.alpaca-trough-visual-slot:nth-child(15){top:70.6%!important}
-.alpaca-trough-visual-slot:nth-child(8),.alpaca-trough-visual-slot:nth-child(16){top:76.7%!important}
-#modalContent .alpaca-inventory-item>img{width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;object-fit:contain!important}
 
+/* The old center-bottom trough is never used in Season 2. */
+#alpacaTroughHotspot{display:none!important}
+.alpaca-trough-stock{display:none!important}
 
-/* ======================================================================
-   S2V005 ALPACA FIX5 — balanced scale / real side-trough renderer
-   ====================================================================== */
-.alpaca-pen-animal.adult{
-  width:clamp(42px,8vw,58px)!important;
-  height:clamp(59px,11.3vw,82px)!important;
-}
-.alpaca-pen-animal.baby{
-  width:clamp(27px,5.2vw,38px)!important;
-  height:clamp(38px,7.3vw,53px)!important;
-}
-/* Status icons were already approved smaller in FIX4; keep them unchanged. */
-.alpaca-trough-visual{z-index:40!important;overflow:visible!important;pointer-events:none!important}
-.alpaca-trough-visual-slot.filled{
+/* Two physical side troughs: invisible tap zones only. */
+.s2-trough-hotspot{
   position:absolute!important;
-  width:clamp(23px,4.5vw,32px)!important;
-  height:clamp(23px,4.5vw,32px)!important;
-  transform:translate(-50%,-50%)!important;
-  display:grid!important;
-  place-items:center!important;
+  z-index:30!important;
+  top:31%!important;
+  height:50%!important;
+  width:16%!important;
+  border:0!important;
+  background:transparent!important;
+  border-radius:16px!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.s2-trough-hotspot.left{left:5.5%!important;right:auto!important}
+.s2-trough-hotspot.right{right:5.5%!important;left:auto!important}
+
+/* Full-stage visual layer. JS also writes inline !important coordinates so this
+   remains correct even if an older cached stylesheet is still present. */
+.alpaca-trough-visual{
+  position:absolute!important;
+  inset:0!important;
+  z-index:26!important;
+  display:block!important;
   visibility:visible!important;
   opacity:1!important;
+  pointer-events:none!important;
 }
-.alpaca-trough-visual-slot.filled img{
-  width:100%!important;height:100%!important;display:block!important;
-  object-fit:contain!important;opacity:1!important;visibility:visible!important;
-  filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))!important;
+.alpaca-trough-visual-slot{
+  position:absolute!important;
+  margin:0!important;
+  display:grid!important;
+  place-items:center!important;
+  width:clamp(17px,4vw,26px)!important;
+  height:clamp(17px,4vw,26px)!important;
+  background:transparent!important;
+  border:0!important;
+  pointer-events:none!important;
 }
-/* Inline left/top from renderPen is the single source of truth in S2V005. */
-.alpaca-trough-visual-slot.filled.left,
-.alpaca-trough-visual-slot.filled.right{right:auto!important}
-/* Normalize every warehouse sprite source, including Golden Honey / Thai Tea img icons. */
-.alpaca-warehouse-card .alpaca-sprite-preview,
-.alpaca-warehouse-card .alpaca-card-icon{
-  width:34px!important;height:48px!important;min-width:34px!important;min-height:48px!important;
-  max-width:34px!important;max-height:48px!important;object-fit:contain!important;margin:5px auto!important;
+.alpaca-trough-visual-slot img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))!important;
 }
-.alpaca-warehouse-card.is-baby .alpaca-sprite-preview,
-.alpaca-warehouse-card.is-baby .alpaca-card-icon{
-  width:24px!important;height:34px!important;min-width:24px!important;min-height:34px!important;
-  max-width:24px!important;max-height:34px!important;
+.alpaca-trough-visual-slot:nth-child(-n+8){left:11.5%!important;right:auto!important}
+.alpaca-trough-visual-slot:nth-child(n+9){right:11.5%!important;left:auto!important}
+.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:34.5%!important}
+.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:40.6%!important}
+.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:46.7%!important}
+.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:52.8%!important}
+.alpaca-trough-visual-slot:nth-child(5),.alpaca-trough-visual-slot:nth-child(13){top:58.9%!important}
+.alpaca-trough-visual-slot:nth-child(6),.alpaca-trough-visual-slot:nth-child(14){top:65%!important}
+.alpaca-trough-visual-slot:nth-child(7),.alpaca-trough-visual-slot:nth-child(15){top:71.1%!important}
+.alpaca-trough-visual-slot:nth-child(8),.alpaca-trough-visual-slot:nth-child(16){top:77.2%!important}
+
+/* Roaming alpacas: visibly larger than the previous S2V002 build. */
+.alpaca-pen-animal.adult{
+  width:clamp(34px,9vw,62px)!important;
+  height:auto!important;
+  aspect-ratio:.58!important;
 }
+.alpaca-pen-animal.baby{
+  width:clamp(22px,5.8vw,40px)!important;
+  height:auto!important;
+  aspect-ratio:.71!important;
+}
+.alpaca-status-stack{top:-7px!important;gap:1px!important;max-width:58px!important}
+.alpaca-status-stack img{width:clamp(10px,2.5vw,16px)!important;height:clamp(10px,2.5vw,16px)!important}
+.alpaca-pen-animal.baby .alpaca-status-stack{top:-6px!important}
+.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(9px,2.15vw,14px)!important;height:clamp(9px,2.15vw,14px)!important}
+
+/* Trough modal still has 16 slots; empty slots do not show a floating plus. */
+.alpaca-trough-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
+.alpaca-trough-slot.empty{font-size:0!important;color:transparent!important}

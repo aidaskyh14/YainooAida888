@@ -2181,22 +2181,25 @@ async function getFirebaseContext(){
   const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");
   return{bridge,db:bridge.db,fs:bridge.firestore};
 }
-let cloudSaveInFlight=Promise.resolve();
-function queueCloudSave(delayMs=1500){
+let cloudSaveInFlight=null;
+function queueCloudSave(){
   if(!cloudReady||!currentMemberKey||visitContext)return;
   if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
   cloudSaveTimer=setTimeout(()=>{
     cloudSaveTimer=null;
     flushCloudSave().catch(error=>console.error("บันทึก Firebase ไม่สำเร็จ",error));
-  },Math.max(0,Number(delayMs)||0));
+  },1500);
 }
 async function settlePendingCloudSave(){
   if(cloudSaveTimer){
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer=null;
     await flushCloudSave();
+    return;
   }
-  try{await cloudSaveInFlight}catch{}
+  if(cloudSaveInFlight){
+    try{await cloudSaveInFlight}catch{}
+  }
 }
 function saveLocalOnly(target=ownState||state){
   if(!target)return;
@@ -2211,23 +2214,16 @@ function save(){
 }
 async function flushCloudSave(){
   if(!cloudReady||!currentMemberKey||!ownState)return;
+  const {db,fs}=await getFirebaseContext();
   ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);
-  const memberKeySnapshot=currentMemberKey;
-  const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;
-  const currentHash=plotHash(payload.plots);
-  const displayName=currentProfileDisplayName();
-  const merit=Number(payload.merit)||0;
-  cloudSaveInFlight=Promise.resolve(cloudSaveInFlight).catch(()=>{}).then(async()=>{
-    const {db,fs}=await getFirebaseContext();
-    const out=cloneData(payload);out.updatedAt=fs.serverTimestamp();
-    await fs.setDoc(fs.doc(db,"saves",memberKeySnapshot),out,{merge:false});
-    if(currentHash!==lastGardenHash){
-      await fs.setDoc(fs.doc(db,"gardens",memberKeySnapshot),{memberKey:memberKeySnapshot,displayName,plots:cloneData(payload.plots),updatedAt:fs.serverTimestamp()},{merge:true});
-      lastGardenHash=currentHash;
-    }
-    await fs.setDoc(fs.doc(db,"publicProfiles",memberKeySnapshot),{memberKey:memberKeySnapshot,displayName,merit,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
-  });
-  return cloudSaveInFlight;
+  const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.updatedAt=fs.serverTimestamp();
+  await fs.setDoc(fs.doc(db,"saves",currentMemberKey),payload,{merge:false});
+  const currentHash=plotHash(ownState.plots);
+  if(currentHash!==lastGardenHash){
+    await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    lastGardenHash=currentHash;
+  }
+  await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
 }
 
 async function ensureMemberAuth(member,code){
@@ -16838,7 +16834,7 @@ async function V181_campaignScoreLater(summary){
 (function YN_ALPACA_PEN_SYSTEM(){
   "use strict";
 
-  const VERSION="alpaca-pen-v274-tea-resume-move";
+  const VERSION="alpaca-pen-v275-s2v004-trough-scale";
   const PEN_CAPACITY=24;
   const BIRTH_OVERFLOW_CAP=25;
   const HOUR=60*60*1000;
@@ -17060,7 +17056,7 @@ async function V181_campaignScoreLater(summary){
 
   function defaultPen(i){return{name:`คอกอัลปาก้า ${i}`,happiness:0,happinessMedicineUses:0,trough:Array(16).fill(null),alpacas:[],events:[],eventClock:{mushRound:Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1}}}
   function defaultAlpacaState(){return{initialized:false,nextSerial:1,pens:[defaultPen(1),defaultPen(2),defaultPen(3),defaultPen(4),defaultPen(5)],inventory:{food:{hayPack:0,pellet:0,tricolorPudding:0,braisedEgg:0},medicine:{happinessPotion:0,coldVaccine:0,birthAccelerator:0,woolGrowthMedicine:0,breedingBoostPotion:0},other:{magicMushroom:0},wool:{white:0,black:0,pink:0,brown:0,green:0,goldenHoney:0,thaiTea:0,gold:0}},eventClaims:{},friendMushroomClaims:{},testSireCooldowns:{},captureDaily:{dateKey:currentBangkokDateKey(),quotaVersion:"capture-20260820-r2",attempts:0,success:0,pending:null,reward:null},vault:[],craftDaily:{dateKey:currentBangkokDateKey(),count:0},grassCampaignClaimed:0,lastLoginAt:0}}
-  function normalizeTroughSlot(slot){if(!slot||typeof slot!=="object"||!FOOD[slot.foodKey]||(FOOD[slot.foodKey].direct&&!FOOD[slot.foodKey].trough))return null;const servings=Math.max(0,Math.floor(Number(slot.servings)||0));return servings>0?{foodKey:slot.foodKey,servings,placedAt:Math.max(0,Number(slot.placedAt)||0)}:null}
+  function normalizeTroughSlot(slot){if(!slot||typeof slot!=="object"||!FOOD[slot.foodKey]||(FOOD[slot.foodKey].direct&&!FOOD[slot.foodKey].trough))return null;const servings=Math.max(0,Math.floor(Number(slot.servings)||0));return servings>0?{foodKey:slot.foodKey,servings}:null}
   function normalizeAlpacaAnimal(raw,penIndex){
     const now=gameNow(),a=raw&&typeof raw==="object"?raw:{};
     const type=a.type==="baby"?"baby":"adult",color=COLORS.includes(a.color)?a.color:"white";
@@ -17139,11 +17135,9 @@ async function V181_campaignScoreLater(summary){
   function makeAdult(a,color,sex,stage=1){const now=gameNow(),s=Math.max(1,Math.min(4,Number(stage)||1));return{id:uid("alpaca"),type:"adult",color:COLORS.includes(color)?color:"white",sex:sex==="female"?"female":"male",name:nextAdultName(a),createdAt:now,woolStage:s,woolStageEndsAt:s<4?now+WOOL_STAGE_MS[s]:0,everSheared:false,lastShearedAt:0,nextHungryAt:now+HUNGER_BASE_MS,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,breederCooldownUntil:0}}
   function makeBaby(color,bornAt=gameNow(),source="birth"){return{id:uid("baby"),type:"baby",color:COLORS.includes(color)?color:"white",bornAt,readyProcessAt:bornAt+BABY_PROCESS_MS,source}}
 
-  function consumeTrough(pen,now=gameNow()){
+  function consumeTrough(pen){
     for(let i=0;i<pen.trough.length;i++){
       const slot=pen.trough[i];if(!slot||!FOOD[slot.foodKey]||slot.servings<=0)continue;
-      /* S2V004: keep newly placed food visible briefly before hungry adults auto-eat. */
-      if(Number(slot.placedAt||0)>0&&now-Number(slot.placedAt)<30000)continue;
       const foodKey=slot.foodKey,meta=FOOD[foodKey];slot.servings--;if(slot.servings<=0)pen.trough[i]=null;return {...meta,foodKey};
     }
     return null;
@@ -17157,7 +17151,7 @@ async function V181_campaignScoreLater(summary){
       if(a.breedingUntil>0&&now>=a.breedingUntil){const breedingEnd=a.breedingUntil;a.breedingUntil=0;a.pregnancyStartedAt=breedingEnd;a.pregnantUntil=breedingEnd+PREGNANCY_MS;a.birthAccelUsed=false;a.breedReadyAt=0;a.breedingSire=null;pen.happiness+=8;changed=true}
       if(a.pregnantUntil>0&&now>=a.pregnantUntil&&pen.alpacas.length<BIRTH_OVERFLOW_CAP){const color=COLORS[Math.floor(Math.random()*COLORS.length)];pen.alpacas.push(makeBaby(color,now,"birth"));a.pregnancyStartedAt=0;a.pregnantUntil=0;a.birthAccelUsed=false;a.breedReadyAt=now+FEMALE_AFTER_BIRTH_READY_MS;pen.happiness+=15;changed=true}
       if(now>=Number(a.nextHungryAt||0)){
-        const meal=consumeTrough(pen,now);
+        const meal=consumeTrough(pen);
         if(meal){a.nextHungryAt=now+meal.durationMs;a.hungrySince=0;a.hungerPenaltyBuckets=0;pen.happiness+=meal.happiness;if(meal.foodKey==="braisedEgg")reduceWoolWait(a,2*HOUR,now);changed=true}
         else{
           if(!a.hungrySince){a.hungrySince=Number(a.nextHungryAt)||now;a.hungerPenaltyBuckets=0;changed=true}
@@ -17344,15 +17338,28 @@ async function V181_campaignScoreLater(summary){
     processAllTimers(root,gameNow());
     const stage=$("alpacaPenStage");if(stage)stage.style.setProperty("--alpaca-pen-bg",`url("alpaca-pen-${currentPen}.jpeg?v=${VERSION}")`);
     if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));if($("alpacaPenCount"))$("alpacaPenCount").textContent=penCountText(pen);
-    const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;
+    const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);
+    if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;
     const troughVisual=$("alpacaTroughVisual");
     if(troughVisual){
-      const ys=[35.2,41.2,47.2,53.2,59.2,65.2,71.2,77.2];
-      troughVisual.innerHTML=pen.trough.map((slot,i)=>{
-        if(!slot||!FOOD[slot.foodKey])return"";
-        const side=i<8?"left":"right",row=i%8,x=side==="left"?14.2:85.8;
-        return `<span class="alpaca-trough-visual-slot filled ${side}" data-trough-visual="${i}" style="left:${x}%;top:${ys[row]}%"><img src="${FOOD[slot.foodKey].image}" alt="${safeHtml(FOOD[slot.foodKey].name)}"></span>`;
-      }).join("");
+      troughVisual.innerHTML=pen.trough.map((slot,i)=>slot&&FOOD[slot.foodKey]?`<span class="alpaca-trough-visual-slot filled" data-trough-visual="${i}"><img src="${FOOD[slot.foodKey].image}" alt=""></span>`:`<span class="alpaca-trough-visual-slot" data-trough-visual="${i}"></span>`).join("");
+      /* S2V004: lock food art to the physical side troughs: 8 left + 8 right.
+         Inline !important is deliberate so older Season 1/2 CSS cannot push food back to the top corners. */
+      const troughTops=[34.5,40.6,46.7,52.8,58.9,65.0,71.1,77.2];
+      troughVisual.querySelectorAll(".alpaca-trough-visual-slot").forEach((el,i)=>{
+        const row=i%8;
+        el.style.setProperty("top",`${troughTops[row]}%`,"important");
+        el.style.setProperty("bottom","auto","important");
+        el.style.setProperty("width","clamp(17px,4vw,26px)","important");
+        el.style.setProperty("height","clamp(17px,4vw,26px)","important");
+        if(i<8){
+          el.style.setProperty("left","11.5%","important");
+          el.style.setProperty("right","auto","important");
+        }else{
+          el.style.setProperty("right","11.5%","important");
+          el.style.setProperty("left","auto","important");
+        }
+      });
     }
     $("alpacaRankBtn")?.classList.toggle("hidden",!(currentMember==="Aida"&&adminProfile?.role==="admin"));
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
@@ -17407,16 +17414,17 @@ async function V181_campaignScoreLater(summary){
     applyOwn(next);return{state:next,result};
   }
 
-  /* S2V005: one save lane only. UI changes locally first, then the existing
-     cloud queue persists the newest state. Cloud transactions always call
-     settlePendingCloudSave() first, so an older cloud snapshot cannot overwrite it. */
-  globalThis.YN_ALPACA_FAST_PERSIST=null;
+  /* S2 FIX2: low-risk pen actions update locally first, then use the existing queued cloud save.
+     Cross-player / economy-sensitive actions still keep their original Firestore transactions. */
   function mutateOwnFast(mutator){
     if(!currentMemberKey||!ownState)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
-    const next=normalizeState(cloneData(ownState),currentMember);topupAdminAlpacaInventory(next);
-    const result=mutator(next);topupAdminAlpacaInventory(next);applyOwn(next);
+    const next=normalizeState(cloneData(ownState),currentMember);
+    topupAdminAlpacaInventory(next);
+    const result=mutator(next);
+    topupAdminAlpacaInventory(next);
+    applyOwn(next);
     try{saveLocalOnly(next)}catch{}
-    if(!visitContext)queueCloudSave(120);
+    try{queueCloudSave()}catch{}
     return{state:next,result};
   }
 
@@ -17548,14 +17556,14 @@ async function V181_campaignScoreLater(summary){
     for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)return alpacaMessage("คราฟไม่สำเร็จ",`${INGREDIENT_META[ik].name} ไม่พอ`)}
     if(c.chance){
       const ok=await alpacaConfirm(`คราฟ ${c.name}`,`วัตถุดิบจะถูกใช้ทันที • โอกาสสำเร็จ <b>${c.chance}%</b>`,{confirmText:"เริ่มคราฟ"});if(!ok)return showCraft(type);
-      try{const out=mutateOwnFast(st=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(st,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(st,ik,base*qty);let won=0;for(let i=0;i<qty;i++)if(Math.random()*100<c.chance)won++;if(won){const bucket=st.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+won}return won});const won=Number(out.result)||0;if(won)alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${won}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁");else alpacaMessage("คราฟไม่สำเร็จ","วัตถุดิบถูกใช้ไปแล้ว ลองใหม่อีกครั้งนะคะ","💨")}catch(e){alpacaMessage("คราฟไม่สำเร็จ",e.message||"กรุณาลองใหม่")}return;
+      try{const out=await mutateOwn(st=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(st,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(st,ik,base*qty);let won=0;for(let i=0;i<qty;i++)if(Math.random()*100<c.chance)won++;if(won){const bucket=st.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+won}return won});const won=Number(out.result)||0;if(won)alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${won}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁");else alpacaMessage("คราฟไม่สำเร็จ","วัตถุดิบถูกใช้ไปแล้ว ลองใหม่อีกครั้งนะคะ","💨")}catch(e){alpacaMessage("คราฟไม่สำเร็จ",e.message||"กรุณาลองใหม่")}return;
     }
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(c.image,"พร้อมคราฟ",safeHtml(c.name))}<div class="alpaca-big-qty">×${qty}</div><p>กดยืนยันเพื่อคราฟและรับเข้ากระเป๋าอัลปาก้า</p><button id="alpacaCraftDone" class="primary-spooky-action" type="button">ยืนยันคราฟ</button><button id="alpacaCraftCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
     openModal();$("alpacaCraftDone").onclick=()=>commitAlpacaCraft(type,key,qty);$("alpacaCraftCancel").onclick=()=>showCraft(type);
   }
   async function commitAlpacaCraft(type,key,qty){
     const c=CRAFT[type]?.[key],btn=$("alpacaCraftDone");if(!c)return;if(btn){btn.disabled=true;btn.textContent="กำลังเข้ากระเป๋า..."}
-    try{mutateOwnFast(s=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(s,ik,base*qty);const bucket=s.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+qty});alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${qty}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁")}catch(e){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับของ"}alpacaMessage("คราฟไม่สำเร็จ",e.message||"วัตถุดิบไม่เพียงพอ")}
+    try{await mutateOwn(s=>{for(const [ik,base] of Object.entries(c.need)){const need=base*qty;if(ingredientCount(s,ik)<need)throw new Error(`${INGREDIENT_META[ik].name} ไม่พอ`)}for(const [ik,base] of Object.entries(c.need))takeIngredient(s,ik,base*qty);const bucket=s.alpaca.inventory[type];bucket[key]=(Number(bucket[key])||0)+qty});alpacaMessage("✨ คราฟสำเร็จ",`ได้รับ <b>${safeHtml(c.name)} ×${qty}</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว`,"🎁")}catch(e){if(btn){btn.disabled=false;btn.textContent="ยืนยันรับของ"}alpacaMessage("คราฟไม่สำเร็จ",e.message||"วัตถุดิบไม่เพียงพอ")}
   }
 
   function showTrough(){
@@ -17563,7 +17571,7 @@ async function V181_campaignScoreLater(summary){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"รางอาหารอัลปาก้า","แตะช่องเพื่อเติมอาหารจากกระเป๋า • ตัวเต็มวัยจะกินอัตโนมัติ")}<div class="alpaca-trough-grid">${pen.trough.map((slot,i)=>slot?`<button class="alpaca-trough-slot" data-trough-slot="${i}" type="button"><img src="${FOOD[slot.foodKey].image}"><b>${safeHtml(FOOD[slot.foodKey].name)}</b><small>${slot.servings} เสิร์ฟ</small></button>`:`<button class="alpaca-trough-slot empty" data-trough-slot="${i}" type="button" aria-label="ช่องอาหารว่าง">+</button>`).join("")}</div><p class="alpaca-mini-note">แพ็คหญ้า 1 ชิ้น = 6 เสิร์ฟ • อาหารเม็ด 1 ชิ้น = 12 เสิร์ฟ</p><button id="alpacaTroughClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-trough-slot]").forEach(b=>b.onclick=()=>showTroughFoodPicker(Number(b.dataset.troughSlot)));$("alpacaTroughClose").onclick=closeModal;
   }
   function showTroughFoodPicker(slotIndex){const inv=ownAlpaca()?.inventory?.food||{},available=Object.entries(FOOD).filter(([k,m])=>(!m.direct||m.trough)&&(Number(inv[k])||0)>0);if(!available.length){alpacaMessage("คุณไม่มีอาหาร","ตอนนี้ไม่มีอาหารอัลปาก้าในกระเป๋าค่ะ");return}$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"เลือกอาหารใส่ราง",`ช่องที่ ${slotIndex+1}`)}<div class="alpaca-inventory-grid">${available.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${safeHtml(m.name)}</b><strong>×${Number(inv[k])||0}</strong><small>${m.servings} เสิร์ฟ/ชิ้น</small><button type="button" data-fill-trough="${k}">ใส่ช่องนี้</button></article>`).join("")}</div><button id="troughPickerBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-fill-trough]").forEach(b=>b.onclick=()=>fillTroughSlot(slotIndex,b.dataset.fillTrough));$("troughPickerBack").onclick=showTrough}
-  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings,placedAt:gameNow()}});renderPen();showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings}});renderPen();showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function showAlpacaInventory(tab="food"){
     const root=ownAlpaca();if(!root)return;const groups={food:"อาหารอัลปาก้า",medicine:"ยาอัลปาก้า",other:"อื่นๆ",wool:"ผลผลิตอัลปาก้า"};
@@ -17729,7 +17737,7 @@ async function V181_campaignScoreLater(summary){
 
   async function sellVaultAlpaca(vaultId){const item=ownAlpaca()?.vault?.find(v=>v.id===vaultId);if(!item)return;const reward=item.type==="baby"?50:200,ok=await alpacaConfirm("ขายอัลปาก้าในคลังไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;try{await mutateOwn(st=>{const idx=st.alpaca.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const got=st.alpaca.vault[idx].type==="baby"?50:200;st.alpaca.vault.splice(idx,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`);showAlpacaWarehouse()}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showVaultPenPicker(vaultId){const root=ownAlpaca(),item=root?.vault?.find(v=>v.id===vaultId);if(!item)return showAlpacaWarehouse();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`วาง${item.type==="baby"?"เบบี้":"อัลปาก้า"}เข้าคอก`,`เลือกคอกที่ยังมีพื้นที่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-vault-pen="${i+1}" ${p.alpacas.length>=PEN_CAPACITY?"disabled":""}>คอก ${i+1}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}</small></button>`).join("")}</div><button id="vaultPenBack" class="secondary-action" type="button">กลับคลัง</button></section>`;openModal();document.querySelectorAll("[data-vault-pen]").forEach(b=>b.onclick=()=>placeVaultAlpaca(vaultId,Number(b.dataset.vaultPen)));$("vaultPenBack").onclick=showAlpacaWarehouse}
-  async function placeVaultAlpaca(vaultId,penNo){try{penNo=Math.max(1,Math.min(5,Number(penNo)||1));mutateOwnFast(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||gameNow(),item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||gameNow()}pen.alpacas.push(a);if(a.type==="adult"&&root.treasureClock)root.treasureClock[a.id]=gameNow();root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function placeVaultAlpaca(vaultId,penNo){try{penNo=Math.max(1,Math.min(5,Number(penNo)||1));mutateOwnFast(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||gameNow(),item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||gameNow()}pen.alpacas.push(a);root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
   function countUnplacedPets(s,kind){const arr=kind==="cat"?(s.cats||[]):(s.dogs||[]);return arr.filter(x=>kind==="cat"?!x.placedFarm:!x.placedHotel).length}
   function totalJellyV2(s){return Object.values(s.jellyfishV2||{}).reduce((n,v)=>n+(Number(v)||0),0)}
   function alpacaCraftCounts(s){const admin=isAdmin();return{jellyV2:admin?9999:totalJellyV2(s),landDeed:admin?9999:Number(s.specials?.landDeed)||0,cats:admin?9999:countUnplacedPets(s,"cat"),dogs:admin?9999:countUnplacedPets(s,"dog"),merit:admin?9999:Number(s.merit)||0,egg:admin?9999:Number(s.animalProducts?.egg)||0,milk:admin?9999:Number(s.animalProducts?.milk)||0,truffle:admin?9999:Number(s.animalProducts?.truffle)||0,fishMeat:admin?9999:Number(s.animalProducts?.fishMeat)||0}}
@@ -18033,8 +18041,7 @@ async function V181_campaignScoreLater(summary){
     const base=ownState||state;if(!base)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
     const next=normalizeState(cloneData(base),currentMember);v240EnsureState(next);v240AdminTopup(next);
     const result=mutator(next);v240AdminTopup(next);v240Apply(next);
-    try{saveLocalOnly(next)}catch{}
-    if(!visitContext)queueCloudSave(120);
+    try{saveLocalOnly(next)}catch{}try{queueCloudSave()}catch{}
     return{state:next,result};
   }
   async function v240StartFactory(productKey){const r=V240_PRODUCTS[productKey];if(!r)return;const penNo=v240PenNo();try{const out=v240MutateFast(s=>{v240DeductRecipe(s,r);const now=v240Now(),job={id:v240Uid("factory"),productKey,penNo,status:"processing",startedAt:now,finishAt:now+r.hours*V240_HOUR,claimedAt:0};s.alpaca.factory.jobs.push(job);s.alpaca.factory.history.push({...job});if(s.alpaca.factory.history.length>120)s.alpaca.factory.history=s.alpaca.factory.history.slice(-120);return job});closeModal();v240ShowFactorySide(r.side);showWeatherToast(`🏭 เริ่มผลิต ${r.name} • คำสั่งจากคอก ${penNo}`)}catch(e){message("เริ่มผลิตไม่ได้",e.message||"กรุณาลองใหม่")}}
@@ -18120,8 +18127,7 @@ async function V181_campaignScoreLater(summary){
             return;
           }
           adults.forEach(a=>{
-            const key=a.id;if(!Number(s.alpaca.treasureClock[key])){s.alpaca.treasureClock[key]=now;changed=true;return}
-            const last=Number(s.alpaca.treasureClock[key]),elapsed=Math.floor((now-last)/(3*V240_HOUR));
+            const key=a.id,last=Number(s.alpaca.treasureClock[key]||a.createdAt||now),elapsed=Math.floor((now-last)/(3*V240_HOUR));
             if(elapsed<1)return;
             s.alpaca.treasureClock[key]=last+elapsed*3*V240_HOUR;changed=true;
             if(a.sickAt)return;
@@ -18133,7 +18139,7 @@ async function V181_campaignScoreLater(summary){
                 s.alpaca.treasureDrops[dropKey].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++;changed=true;
               }
             }
-            if(s.alpaca.treasureDrops[dropKey].length>4)s.alpaca.treasureDrops[dropKey]=s.alpaca.treasureDrops[dropKey].slice(-4);
+            if(s.alpaca.treasureDrops[dropKey].length>8)s.alpaca.treasureDrops[dropKey]=s.alpaca.treasureDrops[dropKey].slice(-8);
           });
         });
         return{added,changed};
@@ -20680,6 +20686,6 @@ console.info("V291 maintenance mode loaded");
   setTimeout(()=>{bindSceneHotspots();periodic()},250);
   setInterval(periodic,10000);
 
-  window.YAINOO_BUILD="S2V004-ALPACA-FIX4-PERSIST";
-  console.info("S2V004 alpaca fix4 persist loaded");
+  window.YAINOO_BUILD="S2V003-ALPACA-FIX3-FAST";
+  console.info("S2V003 alpaca fix3 fast loaded");
 })();
