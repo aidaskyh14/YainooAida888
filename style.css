@@ -7442,3 +7442,50 @@ select.season2-login-control{
   .alpaca-medicine-hotspot{left:8%!important}.alpaca-food-hotspot{right:8%!important}
   .s2-trough-hotspot{width:16%!important}.s2-trough-hotspot.left{left:6%!important}.s2-trough-hotspot.right{right:6%!important}
 }
+
+/* ======================================================================
+   S2V002 ALPACA FIX2 — smaller actors + faster tap surfaces
+   ====================================================================== */
+#alpacaPenNameBtn{display:none!important}
+
+/* Scene scale: intentionally much smaller than FIX1. */
+.alpaca-pen-animal.adult{width:clamp(27px,6.15vw,43px)!important}
+.alpaca-pen-animal.baby{width:clamp(17px,3.85vw,27px)!important}
+.alpaca-status-stack{top:-5px!important;gap:0!important;max-width:44px!important}
+.alpaca-status-stack img{width:clamp(8px,1.85vw,12px)!important;height:clamp(8px,1.85vw,12px)!important}
+.alpaca-pen-animal.baby .alpaca-status-stack{top:-4px!important}
+.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(7px,1.65vw,10px)!important;height:clamp(7px,1.65vw,10px)!important}
+
+/* Drops/events stay visually secondary and have a slightly larger invisible hit target. */
+.alpaca-pen-event{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.alpaca-pen-event.mushroom{width:26px!important;height:26px!important;margin:-7px 0 0 -7px!important}
+.alpaca-pen-event.mushroom img{width:12px!important;height:12px!important;pointer-events:none!important}
+.alpaca-pen-event.hole{width:29px!important;height:25px!important;margin:-7px 0 0 -7px!important}
+.alpaca-pen-event.hole img{width:17px!important;height:13px!important;pointer-events:none!important}
+.v240-treasure-drop{width:28px!important;height:28px!important;margin:-14px 0 0 -14px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.v240-treasure-drop img{width:15px!important;height:15px!important;pointer-events:none!important}
+
+/* Make all Alpaca UI taps acknowledge immediately. */
+#alpacaPenScreen button,
+#modalContent .alpaca-panel button,
+#modalContent .v240-factory-modal button,
+.v240-machine-hotspot,
+.s2-trough-hotspot{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+#alpacaPenScreen button:active,
+#modalContent .alpaca-panel button:active,
+#modalContent .v240-factory-modal button:active{transform:scale(.975)}
+
+/* New processing-room machine hit zones, above decorative layers. */
+.v240-machine-hotspot{z-index:30!important;pointer-events:auto!important}
+.v240-machine-hotspot.meat{left:3%!important;top:25%!important;width:47%!important;height:52%!important}
+.v240-machine-hotspot.wool{right:2%!important;top:25%!important;width:47%!important;height:52%!important}
+
+/* Side troughs remain invisible but easy to tap. */
+.s2-trough-hotspot{z-index:30!important;top:31%!important;height:50%!important;width:15%!important}
+.s2-trough-hotspot.left{left:7%!important}.s2-trough-hotspot.right{right:7%!important}
+
+/* Food art itself is small enough not to cover the roaming area. */
+.alpaca-trough-visual-slot{width:clamp(13px,3vw,20px)!important;height:clamp(13px,3vw,20px)!important}
+
+/* Rank is a real admin control, not covered by scene hotspots. */
+#alpacaRankBtn{position:relative;z-index:80!important;pointer-events:auto!important}
