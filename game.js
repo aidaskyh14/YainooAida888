@@ -20599,12 +20599,19 @@ console.info("V291 maintenance mode loaded");
   }
 
   /* Factory interior keeps all original recipes; only scene/hotspot placement changes. */
-  function factoryScene(){const f=$("v240FactoryScreen");if(f)f.style.backgroundImage='url("alpaca-processing-factory-interior.jpeg?v=S2V001")'}
+  function factoryScene(){
+    const f=$("v240FactoryScreen");if(!f)return;
+    const wanted='url("alpaca-processing-factory-interior.jpeg?v=S2V001")';
+    if(f.style.backgroundImage!==wanted)f.style.backgroundImage=wanted;
+  }
 
   function periodic(){bindSceneHotspots();paintBroken();factoryScene();const r=$("alpacaRankBtn");if(r)r.classList.toggle("hidden",!isS2Admin())}
   setTimeout(periodic,700);setInterval(periodic,2500);
-  const obs=new MutationObserver(()=>{if(!$("alpacaPenScreen")?.classList.contains("hidden")){paintBroken();bindSceneHotspots();factoryScene()}});const host=$("alpacaPenScreen");if(host)obs.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:["class","style"]});
+  /* S2V001-FIX1: observe DOM insertions only. Watching style/class here caused a feedback
+     loop when the pen/factory renderer wrote styles during the observer callback. */
+  const obs=new MutationObserver(()=>{if(!$("alpacaPenScreen")?.classList.contains("hidden")){paintBroken();bindSceneHotspots();factoryScene()}});
+  const host=$("alpacaPenScreen");if(host)obs.observe(host,{subtree:true,childList:true});
 
-  window.YAINOO_BUILD="S2V001-ALPACA-FIVE-PENS";
-  console.info("S2V001 alpaca five pens loaded");
+  window.YAINOO_BUILD="S2V001-FIX1-ALPACA-FIVE-PENS";
+  console.info("S2V001 FIX1 alpaca five pens loaded");
 })();
