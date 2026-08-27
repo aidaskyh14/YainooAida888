@@ -7613,18 +7613,23 @@ select.season2-login-control{
 .alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(8px,1.95vw,12px)!important;height:clamp(8px,1.95vw,12px)!important}
 
 
-/* S2V006 — trough visual + warehouse white/black size correction */
-.alpaca-trough-visual-slot{width:clamp(16px,3.7vw,24px)!important;height:clamp(16px,3.7vw,24px)!important}
-.alpaca-warehouse-card .warehouse-preview.warehouse-white,
-.alpaca-warehouse-card .warehouse-preview.warehouse-black{
-  width:min(64px,15vw)!important;
-  min-height:70px!important;
+/* FINAL warehouse normalization: white/black source sheets contain larger subjects. */
+.alpaca-warehouse-card .alpaca-sprite-preview.alpaca-color-white,
+.alpaca-warehouse-card .alpaca-sprite-preview.alpaca-color-black{
+  width:min(58px,13.8vw)!important;
+  min-height:64px!important;
   max-height:76px!important;
-  margin:4px auto 8px!important;
+  transform:scale(.86)!important;
+  transform-origin:center bottom!important;
+  margin-top:6px!important;
+  margin-bottom:0!important;
 }
-.alpaca-craft-success-preview .warehouse-preview.warehouse-white,
-.alpaca-craft-success-preview .warehouse-preview.warehouse-black{
-  width:min(68px,16vw)!important;
-  min-height:72px!important;
-  max-height:82px!important;
+.alpaca-craft-success-preview .alpaca-sprite-preview.alpaca-color-white,
+.alpaca-craft-success-preview .alpaca-sprite-preview.alpaca-color-black{
+  transform:scale(.82)!important;
+  transform-origin:center!important;
 }
+
+/* Hide legacy trough art; JS now draws only filled foods directly over the physical rails. */
+#alpacaTroughVisual{display:none!important;visibility:hidden!important;opacity:0!important}
+#s2PhysicalTroughFoodLayer{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:none!important}
