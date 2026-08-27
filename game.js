@@ -16853,8 +16853,8 @@ async function V181_campaignScoreLater(summary){
   const CAPTURE_MS=1*MINUTE;
   const CAPTURE_CHANCE=.20;
   const CAPTURE_FAIL_MERIT=-500;
-  const MAGIC_MUSHROOM_HOUR_MS=HOUR;
-  const PEN_HOLE_ROUND_MS=3*HOUR;
+  const MAGIC_MUSHROOM_HOUR_MS=8*HOUR;
+  const PEN_HOLE_ROUND_MS=12*HOUR;
 
   const COLORS=["white","black","pink","brown","green","goldenHoney","thaiTea"];
   const COLOR_META={
@@ -16971,13 +16971,13 @@ async function V181_campaignScoreLater(summary){
   /* Pen-only roaming grid. Top row stays between the two buildings; lower rows
      spread animals through the middle/front while stopping before the trough. */
   const PEN_WALK_POINTS=[
-    [35,34],[42,34],[50,34],[58,34],[65,34],
-    [38,44],[44,45],[50,45],[56,45],[62,44],
-    [18,55],[34,56],[50,56],[66,56],[82,55],
-    [18,66],[34,67],[50,67],[66,67],[82,66],
-    [22,77],[36,78],[50,78],[64,78],[78,77]
+    [34,36],[42,36],[50,36],[58,36],[66,36],
+    [34,46],[42,47],[50,47],[58,47],[66,46],
+    [33,57],[42,58],[50,58],[58,58],[67,57],
+    [34,68],[42,69],[50,69],[58,69],[66,68],
+    [37,78],[43,78],[50,78],[57,78],[63,78]
   ];
-  const EVENT_POINTS=[[27,54],[40,54],[53,54],[66,54],[75,55],[25,61],[38,61],[51,61],[64,61],[75,62],[29,69],[43,69],[57,69],[71,70]];
+  const EVENT_POINTS=[[36,45],[46,43],[56,45],[64,48],[38,57],[49,56],[60,58],[40,68],[51,67],[61,69],[43,77],[55,77]];
   const FRIEND_EVENT_POINTS=[[20,48],[34,49],[49,48],[64,49],[79,48],[23,58],[38,58],[53,58],[68,58],[81,60],[27,69],[43,69],[59,69],[75,70]];
 
   let currentPen=1;
@@ -17003,7 +17003,7 @@ async function V181_campaignScoreLater(summary){
   function fmt(ms){return typeof formatLongCountdown==="function"?formatLongCountdown(ms):`${Math.max(0,Math.ceil(ms/60000))} นาที`}
   function isAdmin(){return currentMember==="Aida"&&String(currentMemberKey||"")==="aida"&&adminProfile?.role==="admin"}
   function isOwnFarm(){return !visitContext&&Boolean(currentMemberKey)}
-  function penAt(a,index=currentPen){return a?.pens?.[Math.max(0,Math.min(2,Number(index)-1))]||null}
+  function penAt(a,index=currentPen){return a?.pens?.[Math.max(0,Math.min(4,Number(index)-1))]||null}
   function alpacaTotalHappiness(a){return (a?.pens||[]).reduce((sum,p)=>sum+(Number(p.happiness)||0),0)}
   function penCountText(p){const n=p?.alpacas?.length||0;return `${n} / ${PEN_CAPACITY}${n>PEN_CAPACITY?" • เกินความจุจากการคลอด":""}`}
   function currentFarmIndex(){try{return Math.max(1,Math.min(4,Number(typeof currentFarmNo==="function"?currentFarmNo():Number(farmPlotPage||0)+1)||1))}catch{return 1}}
@@ -17054,8 +17054,8 @@ async function V181_campaignScoreLater(summary){
     return `<span class="alpaca-sprite-preview ${extra}" style="--alpaca-preview-ratio:${ratio};aspect-ratio:${ratio};background-image:url('${spriteAsset(color,stage,"idle")}')"></span>`
   }
 
-  function defaultPen(i){return{name:`คอกอัลปาก้า ${i}`,happiness:0,happinessMedicineUses:0,trough:Array(5).fill(null),alpacas:[],events:[],eventClock:{mushRound:Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1}}}
-  function defaultAlpacaState(){return{initialized:false,nextSerial:1,pens:[defaultPen(1),defaultPen(2),defaultPen(3)],inventory:{food:{hayPack:0,pellet:0,tricolorPudding:0,braisedEgg:0},medicine:{happinessPotion:0,coldVaccine:0,birthAccelerator:0,woolGrowthMedicine:0,breedingBoostPotion:0},other:{magicMushroom:0},wool:{white:0,black:0,pink:0,brown:0,green:0,goldenHoney:0,thaiTea:0,gold:0}},eventClaims:{},friendMushroomClaims:{},testSireCooldowns:{},captureDaily:{dateKey:currentBangkokDateKey(),quotaVersion:"capture-20260820-r2",attempts:0,success:0,pending:null,reward:null},vault:[],craftDaily:{dateKey:currentBangkokDateKey(),count:0},grassCampaignClaimed:0,lastLoginAt:0}}
+  function defaultPen(i){return{name:`คอกอัลปาก้า ${i}`,happiness:0,happinessMedicineUses:0,trough:Array(16).fill(null),alpacas:[],events:[],eventClock:{mushRound:Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1}}}
+  function defaultAlpacaState(){return{initialized:false,nextSerial:1,pens:[defaultPen(1),defaultPen(2),defaultPen(3),defaultPen(4),defaultPen(5)],inventory:{food:{hayPack:0,pellet:0,tricolorPudding:0,braisedEgg:0},medicine:{happinessPotion:0,coldVaccine:0,birthAccelerator:0,woolGrowthMedicine:0,breedingBoostPotion:0},other:{magicMushroom:0},wool:{white:0,black:0,pink:0,brown:0,green:0,goldenHoney:0,thaiTea:0,gold:0}},eventClaims:{},friendMushroomClaims:{},testSireCooldowns:{},captureDaily:{dateKey:currentBangkokDateKey(),quotaVersion:"capture-20260820-r2",attempts:0,success:0,pending:null,reward:null},vault:[],craftDaily:{dateKey:currentBangkokDateKey(),count:0},grassCampaignClaimed:0,lastLoginAt:0}}
   function normalizeTroughSlot(slot){if(!slot||typeof slot!=="object"||!FOOD[slot.foodKey]||(FOOD[slot.foodKey].direct&&!FOOD[slot.foodKey].trough))return null;const servings=Math.max(0,Math.floor(Number(slot.servings)||0));return servings>0?{foodKey:slot.foodKey,servings}:null}
   function normalizeAlpacaAnimal(raw,penIndex){
     const now=gameNow(),a=raw&&typeof raw==="object"?raw:{};
@@ -17082,8 +17082,8 @@ async function V181_campaignScoreLater(summary){
     a.inventory.other=a.inventory.other&&typeof a.inventory.other==="object"?a.inventory.other:{};a.inventory.other.magicMushroom=Math.max(0,Math.floor(Number(a.inventory.other.magicMushroom)||0));
     a.inventory.wool=a.inventory.wool&&typeof a.inventory.wool==="object"?a.inventory.wool:{};[...COLORS,"gold"].forEach(k=>a.inventory.wool[k]=Math.max(0,Math.floor(Number(a.inventory.wool[k])||0)));
     a.eventClaims=a.eventClaims&&typeof a.eventClaims==="object"?a.eventClaims:{};a.friendMushroomClaims=a.friendMushroomClaims&&typeof a.friendMushroomClaims==="object"?a.friendMushroomClaims:{};a.testSireCooldowns=a.testSireCooldowns&&typeof a.testSireCooldowns==="object"?a.testSireCooldowns:{};
-    a.pens=Array.isArray(a.pens)?a.pens.slice(0,3):[];while(a.pens.length<3)a.pens.push(defaultPen(a.pens.length+1));
-    a.pens=a.pens.map((p,i)=>{const x=p&&typeof p==="object"?p:defaultPen(i+1);x.name=String(x.name||`คอกอัลปาก้า ${i+1}`).slice(0,20);x.happiness=Number.isFinite(Number(x.happiness))?Number(x.happiness):0;x.happinessMedicineUses=Math.max(0,Math.floor(Number(x.happinessMedicineUses)||0));x.trough=Array.isArray(x.trough)?x.trough.slice(0,5).map(normalizeTroughSlot):[];while(x.trough.length<5)x.trough.push(null);x.alpacas=Array.isArray(x.alpacas)?x.alpacas.map(v=>normalizeAlpacaAnimal(v,i+1)):[];x.events=Array.isArray(x.events)?x.events.filter(e=>e&&typeof e==="object"&&["hole","mushroom"].includes(e.type)&&e.id).slice(0,7).map(e=>({id:String(e.id),type:e.type,point:Array.isArray(e.point)?[Number(e.point[0])||50,Number(e.point[1])||50]:[50,50],createdAt:Number(e.createdAt)||gameNow()})):[];const ec=x.eventClock&&typeof x.eventClock==="object"?x.eventClock:{};x.eventClock={mushRound:Number.isFinite(Number(ec.mushRound))?Number(ec.mushRound):Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Number.isFinite(Number(ec.holeRound))?Number(ec.holeRound):Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1};return x});
+    a.pens=Array.isArray(a.pens)?a.pens.slice(0,5):[];while(a.pens.length<5)a.pens.push(defaultPen(a.pens.length+1));
+    a.pens=a.pens.map((p,i)=>{const x=p&&typeof p==="object"?p:defaultPen(i+1);x.name=String(x.name||`คอกอัลปาก้า ${i+1}`).slice(0,20);x.happiness=Number.isFinite(Number(x.happiness))?Number(x.happiness):0;x.happinessMedicineUses=Math.max(0,Math.floor(Number(x.happinessMedicineUses)||0));x.trough=Array.isArray(x.trough)?x.trough.slice(0,16).map(normalizeTroughSlot):[];while(x.trough.length<16)x.trough.push(null);x.alpacas=Array.isArray(x.alpacas)?x.alpacas.map(v=>normalizeAlpacaAnimal(v,i+1)):[];x.events=Array.isArray(x.events)?x.events.filter(e=>e&&typeof e==="object"&&["hole","mushroom"].includes(e.type)&&e.id).slice(0,7).map(e=>({id:String(e.id),type:e.type,point:Array.isArray(e.point)?[Number(e.point[0])||50,Number(e.point[1])||50]:[50,50],createdAt:Number(e.createdAt)||gameNow()})):[];const ec=x.eventClock&&typeof x.eventClock==="object"?x.eventClock:{};x.eventClock={mushRound:Number.isFinite(Number(ec.mushRound))?Number(ec.mushRound):Math.floor(gameNow()/MAGIC_MUSHROOM_HOUR_MS)-1,holeRound:Number.isFinite(Number(ec.holeRound))?Number(ec.holeRound):Math.floor(gameNow()/PEN_HOLE_ROUND_MS)-1};return x});
     const d=a.captureDaily&&typeof a.captureDaily==="object"?a.captureDaily:{};const captureQuotaVersion="capture-20260820-r2";const resetCapture=d.quotaVersion!==captureQuotaVersion||d.dateKey!==currentBangkokDateKey();a.captureDaily=resetCapture?{dateKey:currentBangkokDateKey(),quotaVersion:captureQuotaVersion,attempts:0,success:0,pending:null,reward:d.reward&&typeof d.reward==="object"?d.reward:null}:{dateKey:d.dateKey,quotaVersion:captureQuotaVersion,attempts:Math.max(0,Math.floor(Number(d.attempts)||0)),success:Math.max(0,Math.floor(Number(d.success)||0)),pending:d.pending&&typeof d.pending==="object"?d.pending:null,reward:d.reward&&typeof d.reward==="object"?d.reward:null};
     const legacyCaptureReward=a.captureDaily.reward;
     a.vault=Array.isArray(a.vault)?a.vault.filter(v=>v&&typeof v==="object"&&["adult","baby"].includes(v.type)&&COLORS.includes(v.color)).map(v=>({id:String(v.id||uid("vault")),type:v.type,color:v.color,sex:v.type==="adult"?(v.sex==="female"?"female":"male"):null,source:String(v.source||"reward"),createdAt:Number(v.createdAt)||gameNow(),bornAt:Number(v.bornAt)||gameNow(),readyProcessAt:Number(v.readyProcessAt)||((Number(v.bornAt)||gameNow())+BABY_PROCESS_MS)})):[];
@@ -17163,11 +17163,11 @@ async function V181_campaignScoreLater(summary){
     return changed;
   }
   function refreshPenEventSpawns(root,pen,penNo,now){
-    let changed=false;pen.events=Array.isArray(pen.events)?pen.events.slice(0,7):[];pen.eventClock=pen.eventClock||{};
+    let changed=false;pen.events=Array.isArray(pen.events)?pen.events.slice(0,2):[];pen.eventClock=pen.eventClock||{};
     const used=()=>new Set(pen.events.map(e=>`${Math.round(e.point?.[0]||0)}:${Math.round(e.point?.[1]||0)}`));
-    const addEvents=(type,count,seed)=>{const rand=rng(seed),points=shuffle(EVENT_POINTS,rand),occupied=used();for(const pt0 of points){if(count<=0||pen.events.length>=7)break;let pt=[pt0[0]+(rand()*2.2-1.1),pt0[1]+(rand()*2.2-1.1)],key=`${Math.round(pt[0])}:${Math.round(pt[1])}`;if(occupied.has(key))continue;occupied.add(key);pen.events.push({id:uid(type==="hole"?"penhole":"penmush"),type,point:pt,createdAt:now});count--;changed=true}};
-    const holeRound=Math.floor(now/PEN_HOLE_ROUND_MS);if(Number(pen.eventClock.holeRound)!==holeRound){pen.eventClock.holeRound=holeRound;const rand=rng(hash(`${currentMemberKey}|pen${penNo}|hole|${holeRound}`));addEvents("hole",4+Math.floor(rand()*2),hash(`${currentMemberKey}|pen${penNo}|holepoints|${holeRound}`));changed=true}
-    const mushRound=Math.floor(now/MAGIC_MUSHROOM_HOUR_MS);if(Number(pen.eventClock.mushRound)!==mushRound){pen.eventClock.mushRound=mushRound;const rand=rng(hash(`${currentMemberKey}|pen${penNo}|mush|${mushRound}`));addEvents("mushroom",1+Math.floor(rand()*2),hash(`${currentMemberKey}|pen${penNo}|mushpoints|${mushRound}`));changed=true}
+    const addEvents=(type,count,seed)=>{const rand=rng(seed),points=shuffle(EVENT_POINTS,rand),occupied=used();for(const pt0 of points){if(count<=0||pen.events.length>=2)break;let pt=[pt0[0]+(rand()*2.2-1.1),pt0[1]+(rand()*2.2-1.1)],key=`${Math.round(pt[0])}:${Math.round(pt[1])}`;if(occupied.has(key))continue;occupied.add(key);pen.events.push({id:uid(type==="hole"?"penhole":"penmush"),type,point:pt,createdAt:now});count--;changed=true}};
+    const holeRound=Math.floor(now/PEN_HOLE_ROUND_MS);if(Number(pen.eventClock.holeRound)!==holeRound){pen.eventClock.holeRound=holeRound;const rand=rng(hash(`${currentMemberKey}|pen${penNo}|hole|${holeRound}`));if(rand()<.45)addEvents("hole",1,hash(`${currentMemberKey}|pen${penNo}|holepoints|${holeRound}`));changed=true}
+    const mushRound=Math.floor(now/MAGIC_MUSHROOM_HOUR_MS);if(Number(pen.eventClock.mushRound)!==mushRound){pen.eventClock.mushRound=mushRound;const rand=rng(hash(`${currentMemberKey}|pen${penNo}|mush|${mushRound}`));if(rand()<.55)addEvents("mushroom",1,hash(`${currentMemberKey}|pen${penNo}|mushpoints|${mushRound}`));changed=true}
     return changed;
   }
   function processAllTimers(root,now=gameNow()){let changed=false;root.pens.forEach((p,i)=>{if(processPenTimers(root,p,now))changed=true;if(refreshPenEventSpawns(root,p,i+1,now))changed=true});return changed}
@@ -17329,7 +17329,7 @@ async function V181_campaignScoreLater(summary){
 
   function openPen(penNo=1){
     if(!currentMemberKey)return;if(visitContext){alpacaMessage("คอกอัลปาก้า","กลับสวนของตัวเองก่อนนะคะ แล้วค่อยเข้าคอกอัลปาก้า");return}
-    currentPen=Math.max(1,Math.min(3,Number(penNo)||1));closeModal();clearWalkerMap(wildWalkers);$("gameScreen")?.classList.add("hidden");$("sceneScreen")?.classList.add("hidden");$("missAlpacaScreen")?.classList.add("hidden");$("alpacaPenScreen")?.classList.remove("hidden");
+    currentPen=Math.max(1,Math.min(5,Number(penNo)||1));closeModal();clearWalkerMap(wildWalkers);$("gameScreen")?.classList.add("hidden");$("sceneScreen")?.classList.add("hidden");$("missAlpacaScreen")?.classList.add("hidden");$("alpacaPenScreen")?.classList.remove("hidden");
     renderPen();processTimersCloud().catch(()=>{});syncOwnMaleBreeders().catch(()=>{});startSpriteTimer();startAlpacaWeatherClock();
   }
   function closePen(){clearInterval(progressTimer);progressTimer=0;if(spriteTimer){clearInterval(spriteTimer);spriteTimer=0;}clearWalkerMap(penWalkers);stopAlpacaWeatherClock();$("alpacaPenScreen")?.classList.add("hidden");$("gameScreen")?.classList.remove("hidden");draw();syncEntryButtons();setTimeout(()=>{try{renderWildBabies();startSpriteTimer()}catch{}},0)}
@@ -17339,7 +17339,7 @@ async function V181_campaignScoreLater(summary){
     const stage=$("alpacaPenStage");if(stage)stage.style.setProperty("--alpaca-pen-bg",`url("alpaca-pen-${currentPen}.jpeg?v=${VERSION}")`);
     if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));if($("alpacaPenCount"))$("alpacaPenCount").textContent=penCountText(pen);
     const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;const troughVisual=$("alpacaTroughVisual");if(troughVisual)troughVisual.innerHTML=pen.trough.map((slot,i)=>slot&&FOOD[slot.foodKey]?`<span class="alpaca-trough-visual-slot filled" data-trough-visual="${i}"><img src="${FOOD[slot.foodKey].image}" alt=""></span>`:`<span class="alpaca-trough-visual-slot" data-trough-visual="${i}"></span>`).join("");
-    $("alpacaRankBtn")?.classList.remove("hidden");
+    $("alpacaRankBtn")?.classList.toggle("hidden",!(currentMember==="Aida"&&adminProfile?.role==="admin"));
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
   }
   function sendReadyBabyToFactory(penNo,id){
@@ -17375,7 +17375,7 @@ async function V181_campaignScoreLater(summary){
   function pruneEventClaims(root){const cut=gameNow()-7*24*HOUR;Object.keys(root.eventClaims||{}).forEach(k=>{if(Number(root.eventClaims[k])<cut)delete root.eventClaims[k]});const cutFriend=gameNow()-7*24*HOUR;Object.keys(root.friendMushroomClaims||{}).forEach(k=>{if(Number(root.friendMushroomClaims[k])<cutFriend)delete root.friendMushroomClaims[k]})}
   function buildPenEvents(root,penNo){
     const pen=penAt(root,penNo);if(!pen)return[];refreshPenEventSpawns(root,pen,penNo,gameNow());
-    return (pen.events||[]).slice(0,7).flatMap(ev=>{
+    return (pen.events||[]).slice(0,2).flatMap(ev=>{
       if(ev.type==="hole")return[{...ev,image:ASSET.hole,label:"หลุมสุ่ม"}];
       if(ev.type==="mushroom")return[{...ev,image:MAGIC_MUSHROOM_ICON,label:"เห็ดวิเศษ"}];
       return[];
@@ -17421,7 +17421,7 @@ async function V181_campaignScoreLater(summary){
   }
   function showHappinessBreakdown(){
     const root=ownAlpaca();if(!root)return;const total=alpacaTotalHappiness(root);
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.heart,"คะแนนความสุขอัลปาก้า",`รวมทั้ง 3 คอก ${total} คะแนน`)}<div class="alpaca-detail-grid">${root.pens.map((p,i)=>`<div><span>คอก ${i+1}</span><strong>${Number(p.happiness)||0}</strong><small>${safeHtml(p.name)}</small></div>`).join("")}</div><button id="alpacaHappyClose" class="primary-spooky-action" type="button">ตกลง</button></section>`;openModal();$("alpacaHappyClose").onclick=closeModal;
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.heart,"คะแนนความสุขอัลปาก้า",`รวมทั้ง 5 คอก ${total} คะแนน`)}<div class="alpaca-detail-grid">${root.pens.map((p,i)=>`<div><span>คอก ${i+1}</span><strong>${Number(p.happiness)||0}</strong><small>${safeHtml(p.name)}</small></div>`).join("")}</div><button id="alpacaHappyClose" class="primary-spooky-action" type="button">ตกลง</button></section>`;openModal();$("alpacaHappyClose").onclick=closeModal;
   }
   function showFactorySoon(){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(PROCESSING_MEAT_ICON,"โรงงานแปรรูป","ระบบนี้กำลังเตรียมเปิดค่ะ")}<div class="alpaca-callout"><b>ติดตามตอนต่อไปนะ ✨</b><small>เบบี้ที่ขึ้นไอคอนรูปเนื้อจะใช้กับระบบนี้ในอนาคต</small></div><button id="alpacaFactoryClose" class="primary-spooky-action" type="button">รับทราบ</button></section>`;openModal();$("alpacaFactoryClose").onclick=closeModal;
@@ -17484,7 +17484,7 @@ async function V181_campaignScoreLater(summary){
     openModal();document.querySelectorAll("[data-move-alpaca-pen]").forEach(b=>b.onclick=()=>moveAlpacaBetweenPens(fromPenNo,Number(b.dataset.moveAlpacaPen),id));$("alpacaMoveBack").onclick=()=>showAlpacaDetail(fromPenNo,id);
   }
   async function moveAlpacaBetweenPens(fromPenNo,toPenNo,id){
-    fromPenNo=Math.max(1,Math.min(3,Number(fromPenNo)||1));toPenNo=Math.max(1,Math.min(3,Number(toPenNo)||1));if(fromPenNo===toPenNo)return showAlpacaDetail(fromPenNo,id);
+    fromPenNo=Math.max(1,Math.min(5,Number(fromPenNo)||1));toPenNo=Math.max(1,Math.min(5,Number(toPenNo)||1));if(fromPenNo===toPenNo)return showAlpacaDetail(fromPenNo,id);
     try{
       await mutateOwn(s=>{const root=s.alpaca,from=penAt(root,fromPenNo),to=penAt(root,toPenNo);if(!from||!to)throw new Error("ไม่พบคอกอัลปาก้า");if(to.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${toPenNo} เต็มแล้ว`);const idx=from.alpacas.findIndex(x=>x.id===id);if(idx<0)throw new Error("ไม่พบอัลปาก้าตัวนี้");const [animal]=from.alpacas.splice(idx,1);if(animal.type==="adult")animal.penIndex=toPenNo;to.alpacas.push(animal)});
       penWalkerMemory.delete(`${fromPenNo}:${id}`);const old=penWalkers.get(`${fromPenNo}:${id}`);if(old){stopWalker(old);try{old.el?.remove()}catch{}penWalkers.delete(`${fromPenNo}:${id}`)}
@@ -17616,11 +17616,11 @@ async function V181_campaignScoreLater(summary){
     }catch(e){alpacaMessage("ผสมพันธุ์ไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showBreedingProgress(penNo,femaleId){clearInterval(progressTimer);$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-progress-panel alpaca-love-scene"><h2>กำลังผสมพันธุ์ 💗</h2><div class="alpaca-progress-art"><img src="${ASSET.breedingProgress}" alt="กำลังผสมพันธุ์"><span class="alpaca-love-fx"></span><span class="alpaca-fx-layer love"><i>♥</i><i>✦</i><i>♥</i><i>✧</i><i>♥</i></span></div><p>กำลังป๊าบๆ อย่างน่ารัก รอสักครู่นะคะ</p><strong id="breedingProgressCount" class="alpaca-progress-count">00:30</strong><button id="breedingProgressClose" class="secondary-action" type="button">ปิดหน้าต่าง</button></section>`;openModal();const tick=()=>{const {animal:a}=findOwnAnimal(penNo,femaleId),left=Math.max(0,Number(a?.breedingUntil||0)-gameNow());if($("breedingProgressCount"))$("breedingProgressCount").textContent=`00:${String(Math.ceil(left/1000)).padStart(2,"0")}`;if(left<=0){clearInterval(progressTimer);progressTimer=0;processTimersCloud().finally(()=>{alpacaMessage("💗 ผสมพันธุ์สำเร็จ","แม่อัลปาก้าเข้าสู่ช่วงตั้งครรภ์แล้วค่ะ","💞");renderPen()})}};tick();progressTimer=setInterval(tick,500);$("breedingProgressClose").onclick=()=>{clearInterval(progressTimer);progressTimer=0;closeModal()}}
 
-  function showRank(){$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>💙 อันดับคะแนนความสุข</h2><p>กำลังโหลดคะแนนจากสมาชิก...</p></section>`;openModal();loadRank().catch(e=>alpacaMessage("โหลดอันดับไม่ได้",e.message||"กรุณาลองใหม่"))}
-  async function loadRank(){const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),rows=[];snap.docs.forEach(d=>{const raw=d.data()||{};rows.push({key:d.id,name:raw.displayName||raw.memberName||d.id,total:Number(raw.alpacaHappiness)||0,pens:Array.isArray(raw.alpacaHappinessPens)?raw.alpacaHappinessPens.slice(0,3):[0,0,0]})});rows.sort((a,b)=>b.total-a.total||String(a.name).localeCompare(String(b.name),"th"));$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>💙 อันดับคะแนนความสุข</h2><div class="alpaca-rank-list">${rows.map((r,i)=>`<button class="alpaca-rank-row" type="button" data-rank-key="${r.key}"><strong>${i+1}</strong><span><b>${safeHtml(r.name)}</b><small>คอก 1 ${Number(r.pens[0])||0} • คอก 2 ${Number(r.pens[1])||0} • คอก 3 ${Number(r.pens[2])||0}</small></span><b>${r.total}</b></button>`).join("")}</div><button id="rankClose" class="secondary-action" type="button">ปิด</button></section>`;$("rankClose").onclick=closeModal}
+  function showRank(){if(!(currentMember==="Aida"&&adminProfile?.role==="admin"))return;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>💙 อันดับคะแนนความสุข</h2><p>กำลังโหลดคะแนนจากสมาชิก...</p></section>`;openModal();loadRank().catch(e=>alpacaMessage("โหลดอันดับไม่ได้",e.message||"กรุณาลองใหม่"))}
+  async function loadRank(){const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),rows=[];snap.docs.forEach(d=>{const raw=d.data()||{};rows.push({key:d.id,name:raw.displayName||raw.memberName||d.id,total:Number(raw.alpacaHappiness)||0,pens:Array.isArray(raw.alpacaHappinessPens)?raw.alpacaHappinessPens.slice(0,5):[0,0,0,0,0]})});rows.sort((a,b)=>b.total-a.total||String(a.name).localeCompare(String(b.name),"th"));$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>💙 อันดับคะแนนความสุข</h2><div class="alpaca-rank-list">${rows.map((r,i)=>`<button class="alpaca-rank-row" type="button" data-rank-key="${r.key}"><strong>${i+1}</strong><span><b>${safeHtml(r.name)}</b><small>${r.pens.map((v,i)=>`คอก ${i+1} ${Number(v)||0}`).join(" • ")}</small></span><b>${r.total}</b></button>`).join("")}</div><button id="rankClose" class="secondary-action" type="button">ปิด</button></section>`;$("rankClose").onclick=closeModal}
 
   function showAdminTest(){if(!isAdmin())return;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>🧪 Alpha Test อัลปาก้า</h2><p>ทดสอบระบบโดยไม่ต้องรอเวลา • คอก ${currentPen}</p><div class="alpaca-admin-form"><label>สี<select id="testAlpacaColor">${COLORS.map(c=>`<option value="${c}">${colorName(c)}</option>`).join("")}</select></label><label>เพศ<select id="testAlpacaSex"><option value="female">ตัวเมีย</option><option value="male">ตัวผู้</option></select></label><label>Stage<select id="testAlpacaStage"><option>1</option><option>2</option><option>3</option><option>4</option></select></label></div><div class="alpaca-admin-test-grid"><button data-admin-test="adult">➕ วางตัวเต็มวัย</button><button data-admin-test="baby">🍼 วางเบบี้</button><button data-admin-test="hungry">🍽️ ทำตัวโตให้หิวทันที</button><button data-admin-test="cold">🤧 ทำตัวโตให้เป็นหวัด</button><button data-admin-test="cure">💉 ล้างหวัดทั้งหมด</button><button data-admin-test="ready">💗 ทำตัวเมียพร้อมผสม</button><button data-admin-test="pregnant">🤰 ทำตัวเมียท้องทันที</button><button data-admin-test="birth">🍼 คลอดตอนนี้</button><button data-admin-test="baby12">🥩 เบบี้พร้อมแปรรูป</button><button data-admin-test="stage4">✂️ ทำตัวโต Stage 4</button><button data-admin-test="fill">🌾 เติมรางทดสอบ</button><button data-admin-test="happyplus">💙 ความสุข +100</button><button data-admin-test="happyminus">💔 ความสุข -100</button><button data-admin-test="happy9999">💙 ตั้งความสุข 9999</button><button data-admin-test="move">🔀 ย้ายตัวแรกไปคอกถัดไป</button><button data-admin-test="shearfirst">✂️ ตัดขนตัวแรกทันที</button><button data-admin-test="resettrough">🧹 ล้างรางอาหาร</button><button data-admin-test="clearpreg">🧹 ล้างตั้งครรภ์</button><button data-admin-test="clear">🗑️ ล้างอัลปาก้าคอกนี้</button><button data-admin-test="reset">↻ รีเซ็ตคอกนี้ทั้งหมด</button></div><button id="adminTestClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-admin-test]").forEach(b=>b.onclick=()=>runAdminTest(b.dataset.adminTest));$("adminTestClose").onclick=closeModal}
-  async function runAdminTest(action){if(!isAdmin())return;const color=$("testAlpacaColor")?.value||"white",sex=$("testAlpacaSex")?.value||"female",stage=Number($("testAlpacaStage")?.value)||1;try{await mutateOwn(s=>{const root=s.alpaca,pen=penAt(root,currentPen),now=gameNow();if(action==="adult"){if(pen.alpacas.length>=PEN_CAPACITY)throw new Error("คอกเต็มแล้ว");pen.alpacas.push(makeAdult(root,color,sex,stage))}else if(action==="baby"){if(pen.alpacas.length>=PEN_CAPACITY)throw new Error("คอกเต็มแล้ว");pen.alpacas.push(makeBaby(color,now,"admin-test"))}else if(action==="hungry")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.nextHungryAt=now-1;a.hungrySince=now;a.hungerPenaltyBuckets=0});else if(action==="cold")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{if(!a.sickAt){a.sickAt=now;a.sickPenaltyBuckets=0;pen.happiness-=5}});else if(action==="cure")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.sickAt=0;a.sickPenaltyBuckets=0});else if(action==="ready")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedReadyAt=now;a.breedingUntil=0;a.pregnantUntil=0});else if(action==="pregnant")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedReadyAt=0;a.breedingUntil=0;a.pregnancyStartedAt=now;a.pregnantUntil=now+PREGNANCY_MS;a.birthAccelUsed=false});else if(action==="birth")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female"&&a.pregnantUntil>0).forEach(a=>a.pregnantUntil=now-1);else if(action==="baby12")pen.alpacas.filter(a=>a.type==="baby").forEach(a=>a.readyProcessAt=now-1);else if(action==="stage4")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.woolStage=4;a.woolStageEndsAt=0});else if(action==="fill"){pen.trough=[{foodKey:"hayPack",servings:99},{foodKey:"pellet",servings:99},{foodKey:"hayPack",servings:99},{foodKey:"pellet",servings:99},{foodKey:"hayPack",servings:99}]}else if(action==="happyplus")pen.happiness+=100;else if(action==="happyminus")pen.happiness-=100;else if(action==="happy9999")pen.happiness=9999;else if(action==="move"){if(!pen.alpacas.length)throw new Error("ไม่มีอัลปาก้าให้ย้าย");const targetNo=currentPen===3?1:currentPen+1,target=penAt(root,targetNo);if(target.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${targetNo} เต็มแล้ว`);target.alpacas.push(pen.alpacas.shift())}else if(action==="shearfirst"){const a=pen.alpacas.find(x=>x.type==="adult");if(!a)throw new Error("ไม่มีอัลปาก้าตัวเต็มวัย");root.inventory.wool[a.color]=(Number(root.inventory.wool[a.color])||0)+1;if(Math.random()<.25)root.inventory.wool.gold=(Number(root.inventory.wool.gold)||0)+1;a.woolStage=1;a.woolStageEndsAt=now+WOOL_STAGE_MS[1];a.everSheared=true;a.lastShearedAt=now;if(a.sex==="female"&&!a.pregnantUntil&&!a.breedingUntil&&a.breedReadyAt<=0)a.breedReadyAt=now+FEMALE_FIRST_READY_MS;pen.happiness+=6}else if(action==="resettrough")pen.trough=Array(5).fill(null);else if(action==="clearpreg")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedingUntil=0;a.pregnancyStartedAt=0;a.pregnantUntil=0;a.birthAccelUsed=false});else if(action==="clear")pen.alpacas=[];else if(action==="reset")root.pens[currentPen-1]=defaultPen(currentPen);processAllTimers(root,now)});renderPen();showAdminTest();syncOwnMaleBreeders().catch(()=>{})}catch(e){alpacaMessage("ทดสอบไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function runAdminTest(action){if(!isAdmin())return;const color=$("testAlpacaColor")?.value||"white",sex=$("testAlpacaSex")?.value||"female",stage=Number($("testAlpacaStage")?.value)||1;try{await mutateOwn(s=>{const root=s.alpaca,pen=penAt(root,currentPen),now=gameNow();if(action==="adult"){if(pen.alpacas.length>=PEN_CAPACITY)throw new Error("คอกเต็มแล้ว");pen.alpacas.push(makeAdult(root,color,sex,stage))}else if(action==="baby"){if(pen.alpacas.length>=PEN_CAPACITY)throw new Error("คอกเต็มแล้ว");pen.alpacas.push(makeBaby(color,now,"admin-test"))}else if(action==="hungry")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.nextHungryAt=now-1;a.hungrySince=now;a.hungerPenaltyBuckets=0});else if(action==="cold")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{if(!a.sickAt){a.sickAt=now;a.sickPenaltyBuckets=0;pen.happiness-=5}});else if(action==="cure")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.sickAt=0;a.sickPenaltyBuckets=0});else if(action==="ready")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedReadyAt=now;a.breedingUntil=0;a.pregnantUntil=0});else if(action==="pregnant")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedReadyAt=0;a.breedingUntil=0;a.pregnancyStartedAt=now;a.pregnantUntil=now+PREGNANCY_MS;a.birthAccelUsed=false});else if(action==="birth")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female"&&a.pregnantUntil>0).forEach(a=>a.pregnantUntil=now-1);else if(action==="baby12")pen.alpacas.filter(a=>a.type==="baby").forEach(a=>a.readyProcessAt=now-1);else if(action==="stage4")pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{a.woolStage=4;a.woolStageEndsAt=0});else if(action==="fill"){pen.trough=[{foodKey:"hayPack",servings:99},{foodKey:"pellet",servings:99},{foodKey:"hayPack",servings:99},{foodKey:"pellet",servings:99},{foodKey:"hayPack",servings:99}]}else if(action==="happyplus")pen.happiness+=100;else if(action==="happyminus")pen.happiness-=100;else if(action==="happy9999")pen.happiness=9999;else if(action==="move"){if(!pen.alpacas.length)throw new Error("ไม่มีอัลปาก้าให้ย้าย");const targetNo=currentPen===5?1:currentPen+1,target=penAt(root,targetNo);if(target.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${targetNo} เต็มแล้ว`);target.alpacas.push(pen.alpacas.shift())}else if(action==="shearfirst"){const a=pen.alpacas.find(x=>x.type==="adult");if(!a)throw new Error("ไม่มีอัลปาก้าตัวเต็มวัย");root.inventory.wool[a.color]=(Number(root.inventory.wool[a.color])||0)+1;if(Math.random()<.25)root.inventory.wool.gold=(Number(root.inventory.wool.gold)||0)+1;a.woolStage=1;a.woolStageEndsAt=now+WOOL_STAGE_MS[1];a.everSheared=true;a.lastShearedAt=now;if(a.sex==="female"&&!a.pregnantUntil&&!a.breedingUntil&&a.breedReadyAt<=0)a.breedReadyAt=now+FEMALE_FIRST_READY_MS;pen.happiness+=6}else if(action==="resettrough")pen.trough=Array(16).fill(null);else if(action==="clearpreg")pen.alpacas.filter(a=>a.type==="adult"&&a.sex==="female").forEach(a=>{a.breedingUntil=0;a.pregnancyStartedAt=0;a.pregnantUntil=0;a.birthAccelUsed=false});else if(action==="clear")pen.alpacas=[];else if(action==="reset")root.pens[currentPen-1]=defaultPen(currentPen);processAllTimers(root,now)});renderPen();showAdminTest();syncOwnMaleBreeders().catch(()=>{})}catch(e){alpacaMessage("ทดสอบไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function buildFriendMushrooms(){
     if(!visitContext||!currentMemberKey)return[];const friendKey=String(visitContext.memberKey||""),round=Math.floor(gameNow()/HOUR),rand=rng(hash(`${currentMemberKey}|${friendKey}|magic|${round}`)),count=1+Math.floor(rand()*3),points=shuffle(FRIEND_EVENT_POINTS,rand),out=[];const store=ownAlpaca()?.friendMushroomClaims||{};for(let i=0;i<count;i++){const id=`friendmush:${currentMemberKey}:${friendKey}:r${round}:s${i}`;if(store[id])continue;const p=points[i%points.length];out.push({id,type:"friend",image:MAGIC_MUSHROOM_ICON,point:p,friendKey})}return out
@@ -17907,7 +17907,7 @@ async function V181_campaignScoreLater(summary){
   function v240Esc(x){return typeof safeHtml==="function"?safeHtml(x):String(x??"")}
   function v240Countdown(ms){const t=Math.max(0,Math.ceil(Number(ms||0)/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return `${d?`${d}วัน `:""}${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
   function v240Apply(s){ownState=normalizeState(s,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch{}try{updateMeritUI()}catch{}}
-  function v240PenNo(){const stage=$("alpacaPenStage"),raw=stage?.style?.getPropertyValue("--alpaca-pen-bg")||getComputedStyle(stage||document.documentElement).getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(3,Number(m?.[1])||1))}
+  function v240PenNo(){const stage=$("alpacaPenStage"),raw=stage?.style?.getPropertyValue("--alpaca-pen-bg")||getComputedStyle(stage||document.documentElement).getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))}
 
   function v240EnsureState(s){
     if(!s||typeof s!=="object")return s;
@@ -17923,7 +17923,7 @@ async function V181_campaignScoreLater(summary){
     s.alpaca.factory.jobs=Array.isArray(s.alpaca.factory.jobs)?s.alpaca.factory.jobs:[];
     s.alpaca.factory.history=Array.isArray(s.alpaca.factory.history)?s.alpaca.factory.history:[];
     s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount);
-    s.alpaca.treasureDrops=v240Obj(s.alpaca.treasureDrops);[1,2,3].forEach(n=>{const k=`pen${n}`;s.alpaca.treasureDrops[k]=Array.isArray(s.alpaca.treasureDrops[k])?s.alpaca.treasureDrops[k]:[]});
+    s.alpaca.treasureDrops=v240Obj(s.alpaca.treasureDrops);[1,2,3,4,5].forEach(n=>{const k=`pen${n}`;s.alpaca.treasureDrops[k]=Array.isArray(s.alpaca.treasureDrops[k])?s.alpaca.treasureDrops[k]:[]});
     s.alpaca.treasureClock=v240Obj(s.alpaca.treasureClock);
     s.campaignClaims=v240Obj(s.campaignClaims);s.campaignClaims[V240_COOK_ID]=v240Obj(s.campaignClaims[V240_COOK_ID]);s.campaignClaims[V240_RAINBOW_ID]=v240Obj(s.campaignClaims[V240_RAINBOW_ID]);
     s.campaignReceipts=v240Obj(s.campaignReceipts);
@@ -18001,8 +18001,8 @@ async function V181_campaignScoreLater(summary){
   }
   async function v240StartFactory(productKey){const r=V240_PRODUCTS[productKey];if(!r)return;const penNo=v240PenNo();try{const out=await v240MutateSave(s=>{v240DeductRecipe(s,r);const now=v240Now(),job={id:v240Uid("factory"),productKey,penNo,status:"processing",startedAt:now,finishAt:now+r.hours*V240_HOUR,claimedAt:0};s.alpaca.factory.jobs.push(job);s.alpaca.factory.history.push({...job});if(s.alpaca.factory.history.length>120)s.alpaca.factory.history=s.alpaca.factory.history.slice(-120);return job});closeModal();v240ShowFactorySide(r.side);showWeatherToast(`🏭 เริ่มผลิต ${r.name} • คำสั่งจากคอก ${penNo}`)}catch(e){message("เริ่มผลิตไม่ได้",e.message||"กรุณาลองใหม่")}}
   function v240JobStatus(job){if(job.status==="claimed")return"รับแล้ว";return v240Now()>=Number(job.finishAt||0)?"พร้อมรับ":"กำลังผลิต"}
-  async function v240ClaimFactory(jobId){try{const out=await v240MutateSave(s=>{const job=s.alpaca.factory.jobs.find(j=>j.id===jobId);if(!job)throw new Error("ไม่พบงานแปรรูป");if(job.status==="claimed")throw new Error("งานนี้รับแล้ว");if(v240Now()<Number(job.finishAt||0))throw new Error("ยังผลิตไม่เสร็จ");const r=V240_PRODUCTS[job.productKey];if(!r)throw new Error("ไม่พบผลิตภัณฑ์");job.status="claimed";job.claimedAt=v240Now();s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;const p=s.alpaca.pens?.[Math.max(0,Math.min(2,Number(job.penNo)-1))];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=job.claimedAt}return{r,penNo:job.penNo}},{profile:true});const {r,penNo}=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${r.image}" alt="${v240Esc(r.name)}"><h2>ยินดีด้วยค่ะ</h2><p>คุณแปรรูป <b>${v240Esc(r.name)}</b> สำเร็จ</p><div class="v240-reward-lines"><span>🎁 ผลิตภัณฑ์ ×1</span><span>🙏 +${r.merit} กุศล</span><span>💙 ความสุขของคอก ${penNo} +${r.happy}</span></div><button id="v240FactoryClaimDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("v240FactoryClaimDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับผลิตภัณฑ์ไม่ได้",e.message||"กรุณาลองใหม่")}}
-  async function v240ClaimAllFactory(){try{const out=await v240MutateSave(s=>{const now=v240Now(),done=s.alpaca.factory.jobs.filter(j=>j.status!=="claimed"&&now>=Number(j.finishAt||0));if(!done.length)throw new Error("ยังไม่มีผลิตภัณฑ์ที่พร้อมรับ");let merit=0;const happyByPen={1:0,2:0,3:0},products=[];done.forEach(job=>{const r=V240_PRODUCTS[job.productKey];if(!r)return;job.status="claimed";job.claimedAt=now;s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;merit+=r.merit;happyByPen[job.penNo]=(happyByPen[job.penNo]||0)+r.happy;const p=s.alpaca.pens?.[Number(job.penNo)-1];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=now}products.push(r)});return{count:done.length,merit,happyByPen,products}},{profile:true});const x=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${x.products.slice(0,6).map(r=>`<img src="${r.image}" alt="">`).join("")}</div><h2>รับผลิตภัณฑ์ทั้งหมดแล้ว ✨</h2><p>รับสำเร็จ <b>${x.count} รายการ</b> • +${x.merit} กุศล</p><div class="v240-reward-lines">${Object.entries(x.happyByPen).filter(([,n])=>n>0).map(([p,n])=>`<span>💙 คอก ${p} +${n} ความสุข</span>`).join("")}</div><button id="v240ClaimAllDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240ClaimAllDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับทั้งหมดไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ClaimFactory(jobId){try{const out=await v240MutateSave(s=>{const job=s.alpaca.factory.jobs.find(j=>j.id===jobId);if(!job)throw new Error("ไม่พบงานแปรรูป");if(job.status==="claimed")throw new Error("งานนี้รับแล้ว");if(v240Now()<Number(job.finishAt||0))throw new Error("ยังผลิตไม่เสร็จ");const r=V240_PRODUCTS[job.productKey];if(!r)throw new Error("ไม่พบผลิตภัณฑ์");job.status="claimed";job.claimedAt=v240Now();s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;const p=s.alpaca.pens?.[Math.max(0,Math.min(4,Number(job.penNo)-1))];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=job.claimedAt}return{r,penNo:job.penNo}},{profile:true});const {r,penNo}=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${r.image}" alt="${v240Esc(r.name)}"><h2>ยินดีด้วยค่ะ</h2><p>คุณแปรรูป <b>${v240Esc(r.name)}</b> สำเร็จ</p><div class="v240-reward-lines"><span>🎁 ผลิตภัณฑ์ ×1</span><span>🙏 +${r.merit} กุศล</span><span>💙 ความสุขของคอก ${penNo} +${r.happy}</span></div><button id="v240FactoryClaimDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("v240FactoryClaimDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับผลิตภัณฑ์ไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ClaimAllFactory(){try{const out=await v240MutateSave(s=>{const now=v240Now(),done=s.alpaca.factory.jobs.filter(j=>j.status!=="claimed"&&now>=Number(j.finishAt||0));if(!done.length)throw new Error("ยังไม่มีผลิตภัณฑ์ที่พร้อมรับ");let merit=0;const happyByPen={1:0,2:0,3:0,4:0,5:0},products=[];done.forEach(job=>{const r=V240_PRODUCTS[job.productKey];if(!r)return;job.status="claimed";job.claimedAt=now;s.alpaca.factory.products[job.productKey]=v240Int(s.alpaca.factory.products[job.productKey])+1;s.merit=(Number(s.merit)||0)+r.merit;merit+=r.merit;happyByPen[job.penNo]=(happyByPen[job.penNo]||0)+r.happy;const p=s.alpaca.pens?.[Number(job.penNo)-1];if(p)p.happiness=(Number(p.happiness)||0)+r.happy;s.alpaca.factory.claimedCount=v240Int(s.alpaca.factory.claimedCount)+1;const h=s.alpaca.factory.history.find(x=>x.id===job.id);if(h){h.status="claimed";h.claimedAt=now}products.push(r)});return{count:done.length,merit,happyByPen,products}},{profile:true});const x=out.result;$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${x.products.slice(0,6).map(r=>`<img src="${r.image}" alt="">`).join("")}</div><h2>รับผลิตภัณฑ์ทั้งหมดแล้ว ✨</h2><p>รับสำเร็จ <b>${x.count} รายการ</b> • +${x.merit} กุศล</p><div class="v240-reward-lines">${Object.entries(x.happyByPen).filter(([,n])=>n>0).map(([p,n])=>`<span>💙 คอก ${p} +${n} ความสุข</span>`).join("")}</div><button id="v240ClaimAllDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240ClaimAllDone").onclick=()=>{closeModal();v240ShowFactoryHistory()};v240RenderFactoryJobs()}catch(e){message("รับทั้งหมดไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function v240IngredientHTML(r){return v240NeedRows(r).map(x=>`<article class="v240-ingredient ${x.have>=x.need?"ok":"missing"}">${x.img?`<img src="${x.img}" alt="">`:""}<div><b>${v240Esc(x.name)}</b><small>มี ${x.have} / ใช้ ${x.need}</small></div></article>`).join("")}
   function v240ShowIngredients(key){const r=V240_PRODUCTS[key];if(!r)return;$("modalContent").innerHTML=`<section class="feature-panel v240-factory-modal"><div class="v240-modal-head"><img src="${r.image}" alt=""><div><h2>${v240Esc(r.name)}</h2><small>ผลิตสำเร็จ 100% • ใช้เวลา ${r.hours} ชั่วโมง</small></div></div><div class="v240-ingredient-grid">${v240IngredientHTML(r)}</div><div class="v240-modal-actions"><button id="v240StartFromIngredients" class="primary-spooky-action" ${v240CanStart(r)?"":"disabled"}>เริ่มผลิต</button><button id="v240IngredientsBack">กลับ</button></div></section>`;openModal();$("v240StartFromIngredients").onclick=()=>v240StartFactory(key);$("v240IngredientsBack").onclick=()=>v240ShowFactorySide(r.side)}
@@ -18065,7 +18065,7 @@ async function V181_campaignScoreLater(summary){
 
   /* ---------- Treasure drops ---------- */
   const V240_TREASURE_POINTS=[[28,54],[41,54],[54,54],[67,54],[74,56],[28,61],[43,61],[58,61],[72,62],[34,69],[50,69],[66,70]];
-  async function v240ProcessTreasureDrops(){if(!cloudReady||!currentMemberKey||visitContext)return;const screen=$("alpacaPenScreen");if(!screen||screen.classList.contains("hidden"))return;try{const out=await v240MutateSave(s=>{const now=v240Now();let added=0;s.alpaca.pens.forEach((pen,pi)=>{pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{const key=a.id,last=Number(s.alpaca.treasureClock[key]||a.createdAt||now),elapsed=Math.floor((now-last)/(3*V240_HOUR));if(elapsed<1)return;s.alpaca.treasureClock[key]=last+elapsed*3*V240_HOUR;if(a.sickAt)return;const rounds=Math.min(4,elapsed);for(let z=0;z<rounds;z++){const qty=1+(Math.random()<.5?1:0);for(let q=0;q<qty;q++){const p=V240_TREASURE_POINTS[(Math.floor(Math.random()*V240_TREASURE_POINTS.length)+q)%V240_TREASURE_POINTS.length];s.alpaca.treasureDrops[`pen${pi+1}`].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++}}})});return added});if(out.result)v240RenderTreasureDrops()}catch(e){console.warn("V240 treasure",e)}}
+  async function v240ProcessTreasureDrops(){if(!cloudReady||!currentMemberKey||visitContext)return;const screen=$("alpacaPenScreen");if(!screen||screen.classList.contains("hidden"))return;try{const out=await v240MutateSave(s=>{const now=v240Now();let added=0;s.alpaca.pens.forEach((pen,pi)=>{if(pen?.broken)return;pen.alpacas.filter(a=>a.type==="adult").forEach(a=>{const key=a.id,last=Number(s.alpaca.treasureClock[key]||a.createdAt||now),elapsed=Math.floor((now-last)/(3*V240_HOUR));if(elapsed<1)return;s.alpaca.treasureClock[key]=last+elapsed*3*V240_HOUR;if(a.sickAt)return;const rounds=Math.min(4,elapsed);for(let z=0;z<rounds;z++){const qty=1+(Math.random()<.5?1:0);for(let q=0;q<qty;q++){const p=V240_TREASURE_POINTS[(Math.floor(Math.random()*V240_TREASURE_POINTS.length)+q)%V240_TREASURE_POINTS.length];s.alpaca.treasureDrops[`pen${pi+1}`].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++}}})});return added});if(out.result)v240RenderTreasureDrops()}catch(e){console.warn("V240 treasure",e)}}
   async function v240CollectTreasure(id=null,all=false){const penNo=v240PenNo();try{const out=await v240MutateSave(s=>{const arr=s.alpaca.treasureDrops[`pen${penNo}`],take=all?arr.splice(0,arr.length):(()=>{const i=arr.findIndex(x=>x.id===id);return i>=0?arr.splice(i,1):[]})();if(!take.length)throw new Error("ตอนนี้ยังไม่มีกล่องสมบัติในคอกนี้ค่ะ");s.alpaca.inventory.other.treasureBox=v240Int(s.alpaca.inventory.other.treasureBox)+take.length;return take.length});v240RenderTreasureDrops();$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${V240_ITEM.treasureBox.image}" alt=""><h2>เก็บกล่องสำเร็จ</h2><p>กล่องสมบัติอัลปาก้า <b>×${out.result}</b> เข้ากระเป๋าแล้วค่ะ</p><button id="v240TreasureCollected" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240TreasureCollected").onclick=closeModal}catch(e){message("ยังเก็บไม่ได้",e.message||"กรุณาลองใหม่")}}
   function v240EnsureTreasureUI(){const stage=$("alpacaPenStage");if(!stage)return;if(!$("v240TreasureLayer")){stage.insertAdjacentHTML("beforeend",'<div id="v240TreasureLayer" class="v240-treasure-layer"></div><button id="v240CollectTreasureAll" class="v240-collect-treasure-all" type="button"><span>🧺</span><b>เก็บกล่อง</b></button>');$("v240CollectTreasureAll").onclick=()=>v240CollectTreasure(null,true)}}
   function v240RenderTreasureDrops(){v240EnsureTreasureUI();const layer=$("v240TreasureLayer");if(!layer)return;const penNo=v240PenNo(),arr=(ownState||state)?.alpaca?.treasureDrops?.[`pen${penNo}`]||[];layer.innerHTML=arr.map(x=>`<button class="v240-treasure-drop" type="button" data-v240-treasure="${x.id}" style="left:${x.x}%;top:${x.y}%"><img src="${V240_ITEM.treasureBox.image}" alt="กล่องสมบัติ"></button>`).join("");document.querySelectorAll("[data-v240-treasure]").forEach(b=>b.onclick=()=>v240CollectTreasure(b.dataset.v240Treasure,false))}
@@ -20498,4 +20498,113 @@ console.info("V291 maintenance mode loaded");
 (function YN_S2V004_DIRECTORY_RETRY(){
   const retry=()=>{try{const btn=document.getElementById("startBtn");if(btn&&typeof start==="function")btn.onclick=start}catch{}};
   setTimeout(retry,250);setTimeout(retry,1200);
+})();
+
+/* ======================================================================
+   SEASON 2 • ALPACA PEN V001
+   Five pens / 16-slot side troughs / 8h broken-pen repair / new scene hooks.
+   ====================================================================== */
+(function YN_S2_ALPACA_PEN_V001(){
+  "use strict";
+  const HOUR=60*60*1000, BREAK_MS=8*HOUR;
+  const MATERIALS={
+    materialStone:{name:"หิน",image:"item-stone.png",need:100},
+    materialWood:{name:"ไม้",image:"item-wood.png",need:100},
+    materialSteel:{name:"เหล็ก",image:"item-steel.png",need:50},
+    materialRope:{name:"เชือก",image:"item-rope.png",need:50}
+  };
+  const isS2Admin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const int=x=>Math.max(0,Math.floor(Number(x)||0));
+  const activeState=()=>ownState||state;
+  const currentPenNo=()=>{const raw=$("alpacaPenStage")?.style?.getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d+)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))};
+  const applyState=s=>{ownState=normalizeState(s,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch{}};
+
+  /* Existing saves migrate safely: keep pens 1-3, add pens 4-5, expand each trough to 16. */
+  const normalizeBase=normalizeState;
+  normalizeState=function(raw,player){
+    const s=normalizeBase(raw,player);s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    Object.keys(MATERIALS).forEach(k=>s.specials[k]=int(s.specials[k]));
+    if(isS2Admin())Object.keys(MATERIALS).forEach(k=>s.specials[k]=9999);
+    if(s.alpaca&&Array.isArray(s.alpaca.pens)){
+      while(s.alpaca.pens.length<5)s.alpaca.pens.push({name:`คอกอัลปาก้า ${s.alpaca.pens.length+1}`,happiness:0,happinessMedicineUses:0,trough:Array(16).fill(null),alpacas:[],events:[],eventClock:{}});
+      s.alpaca.pens=s.alpaca.pens.slice(0,5).map((p,i)=>{p=p&&typeof p==="object"?p:{};p.name=String(p.name||`คอกอัลปาก้า ${i+1}`);p.trough=Array.isArray(p.trough)?p.trough.slice(0,16):[];while(p.trough.length<16)p.trough.push(null);if(!Number.isFinite(Number(p.lastVisitedAt)))p.lastVisitedAt=gameNow();p.lastVisitedAt=Number(p.lastVisitedAt)||gameNow();p.broken=Boolean(p.broken);return p});
+    }
+    return s;
+  };
+  try{if(ownState)applyState(ownState);if(state&&!ownState)state=normalizeState(state,currentMember)}catch(e){console.warn("S2 alpaca migration",e)}
+
+  try{
+    Object.entries(MATERIALS).forEach(([key,m])=>{if(typeof SPECIAL_ITEMS==="object"&&!SPECIAL_ITEMS[key])SPECIAL_ITEMS[key]={name:m.name,image:m.image,kind:"material",group:"season2Material"}});
+  }catch{}
+
+  async function mutateSave(mutator){
+    if(!cloudReady||!currentMemberKey)throw new Error("Firebase ยังไม่พร้อม");
+    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
+    await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);mutator(s);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+    applyState(next);return next;
+  }
+
+  function ensureRepairOverlay(){
+    const stage=$("alpacaPenStage");if(!stage)return null;let box=$("s2BrokenPenOverlay");
+    if(!box){stage.insertAdjacentHTML("beforeend",'<div id="s2BrokenPenOverlay" class="s2-broken-pen-overlay hidden"><img src="decor-broken-pen.png" alt="คอกพัง"><b>คอกพัง</b><button id="s2RepairPenBtn" type="button">ซ่อมคอก</button></div>');box=$("s2BrokenPenOverlay");$("s2RepairPenBtn").onclick=showRepair}
+    return box;
+  }
+  function paintBroken(){
+    const n=currentPenNo(),p=activeState()?.alpaca?.pens?.[n-1],stage=$("alpacaPenStage"),box=ensureRepairOverlay();if(!stage||!p)return;
+    stage.classList.toggle("s2-pen-broken",Boolean(p.broken));box?.classList.toggle("hidden",!p.broken);
+    const rank=$("alpacaRankBtn");if(rank)rank.classList.toggle("hidden",!isS2Admin());
+  }
+  async function touchPen(n=currentPenNo()){
+    try{await mutateSave(s=>{const p=s.alpaca?.pens?.[n-1];if(!p)return;const now=gameNow(),last=Number(p.lastVisitedAt)||now;if(!p.broken&&now-last>=BREAK_MS)p.broken=true;if(!p.broken)p.lastVisitedAt=now});paintBroken()}catch(e){console.warn("S2 touch pen",e)}
+  }
+
+  function repairRows(){
+    const s=activeState();return Object.entries(MATERIALS).map(([k,m])=>{const have=int(s?.specials?.[k]),ok=have>=m.need;return `<article class="s2-repair-item ${ok?"ready":"missing"}"><img src="${m.image}" alt="${safeHtml(m.name)}"><div><b>${safeHtml(m.name)}</b><small>มี ${have.toLocaleString("th-TH")}</small></div><strong>${m.need}</strong></article>`}).join("")
+  }
+  function showRepair(){
+    const n=currentPenNo(),p=activeState()?.alpaca?.pens?.[n-1];if(!p?.broken)return;const enough=Object.entries(MATERIALS).every(([k,m])=>int(activeState()?.specials?.[k])>=m.need);
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel s2-repair-panel"><div class="alpaca-panel-hero"><img class="alpaca-hero-icon" src="decor-broken-pen.png" alt=""><div><h2>ซ่อมคอก ${n}</h2><p>ต้องซ่อมก่อนจึงจะใช้งานคอกได้</p></div></div><div class="s2-repair-grid">${repairRows()}</div><button id="s2RepairConfirm" class="primary-spooky-action" type="button" ${enough?"":"disabled"}>ซ่อมคอก</button><button id="s2RepairClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();$("s2RepairConfirm").onclick=repairPen;$("s2RepairClose").onclick=closeModal;
+  }
+  async function repairPen(){
+    const n=currentPenNo(),b=$("s2RepairConfirm");if(b){b.disabled=true;b.textContent="กำลังซ่อม..."}
+    try{await mutateSave(s=>{const p=s.alpaca?.pens?.[n-1];if(!p?.broken)throw new Error("คอกนี้ซ่อมแล้ว");for(const [k,m] of Object.entries(MATERIALS))if(int(s.specials?.[k])<m.need)throw new Error(`${m.name}ไม่พอ`);for(const [k,m] of Object.entries(MATERIALS))s.specials[k]=int(s.specials[k])-m.need;p.broken=false;p.lastVisitedAt=gameNow()});closeModal();paintBroken();showWeatherToast?.(`🔨 ซ่อมคอก ${n} สำเร็จแล้ว`)}catch(e){message("ซ่อมคอกไม่ได้",e.message||"วัตถุดิบไม่ครบ")}
+  }
+
+  /* Broken pens block every pen action except leaving/switching pens and repairing. */
+  document.addEventListener("click",ev=>{
+    const stage=$("alpacaPenStage");if(!stage||!stage.classList.contains("s2-pen-broken"))return;
+    if(ev.target?.closest?.("#alpacaPenBackBtn,#alpacaPenSwitchBtn,#s2RepairPenBtn,#s2BrokenPenOverlay"))return;
+    if(ev.target?.closest?.("#alpacaPenStage")){ev.preventDefault();ev.stopImmediatePropagation();showRepair()}
+  },true);
+
+  /* Detect entry and pen changes after the existing Season 1 handlers have rendered. */
+  document.addEventListener("click",ev=>{
+    if(ev.target?.closest?.("#shortcutAlpacaPenBtn"))setTimeout(()=>touchPen(1),80);
+    const pick=ev.target?.closest?.("[data-alpaca-pen]");if(pick)setTimeout(()=>touchPen(Math.max(1,Math.min(5,Number(pick.dataset.alpacaPen)||1))),80);
+  },false);
+
+  /* Left building = processing factory. Right building = one combined food/medicine craft hub. */
+  let oldFoodHandler=null,oldMedicineHandler=null,oldTroughHandler=null;
+  function showCraftHub(){
+    if($("alpacaPenStage")?.classList.contains("s2-pen-broken"))return showRepair();
+    $("modalContent").innerHTML='<section class="feature-panel alpaca-panel s2-craft-hub"><h2>🦙 โรงเรือนคราฟอัลปาก้า</h2><p>เลือกสิ่งที่ต้องการคราฟ</p><div class="s2-craft-hub-grid"><button id="s2CraftFood"><img src="alpaca-hay-pack.png" alt=""><b>คราฟอาหาร</b></button><button id="s2CraftMedicine"><img src="alpaca-happiness-potion.png" alt=""><b>คราฟยา</b></button></div><button id="s2CraftHubClose" class="secondary-action">ปิด</button></section>';openModal();$("s2CraftFood").onclick=()=>oldFoodHandler?.call($("alpacaFoodHotspot"));$("s2CraftMedicine").onclick=()=>oldMedicineHandler?.call($("alpacaMedicineHotspot"));$("s2CraftHubClose").onclick=closeModal;
+  }
+  function bindSceneHotspots(){
+    const left=$("alpacaMedicineHotspot"),right=$("alpacaFoodHotspot"),old=$("alpacaTroughHotspot");if(!left||!right||!old)return;
+    if(!oldMedicineHandler&&typeof left.onclick==="function")oldMedicineHandler=left.onclick;if(!oldFoodHandler&&typeof right.onclick==="function")oldFoodHandler=right.onclick;if(!oldTroughHandler&&typeof old.onclick==="function")oldTroughHandler=old.onclick;
+    left.setAttribute("aria-label","โรงงานแปรรูปอัลปาก้า");left.onclick=()=>{$("alpacaPenStage")?.classList.contains("s2-pen-broken")?showRepair():globalThis.YN_V240?.showFactory?.()};
+    right.setAttribute("aria-label","อาคารคราฟอาหารและยาอัลปาก้า");right.onclick=showCraftHub;
+    old.classList.add("hidden");
+    const stage=$("alpacaPenStage");if(stage&&!$("s2TroughLeft")){stage.insertAdjacentHTML("beforeend",'<button id="s2TroughLeft" class="s2-trough-hotspot left" type="button" aria-label="รางอาหารซ้าย"></button><button id="s2TroughRight" class="s2-trough-hotspot right" type="button" aria-label="รางอาหารขวา"></button>');$("s2TroughLeft").onclick=()=>oldTroughHandler?.call(old);$("s2TroughRight").onclick=()=>oldTroughHandler?.call(old)}
+  }
+
+  /* Factory interior keeps all original recipes; only scene/hotspot placement changes. */
+  function factoryScene(){const f=$("v240FactoryScreen");if(f)f.style.backgroundImage='url("alpaca-processing-factory-interior.jpeg?v=S2V001")'}
+
+  function periodic(){bindSceneHotspots();paintBroken();factoryScene();const r=$("alpacaRankBtn");if(r)r.classList.toggle("hidden",!isS2Admin())}
+  setTimeout(periodic,700);setInterval(periodic,2500);
+  const obs=new MutationObserver(()=>{if(!$("alpacaPenScreen")?.classList.contains("hidden")){paintBroken();bindSceneHotspots();factoryScene()}});const host=$("alpacaPenScreen");if(host)obs.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:["class","style"]});
+
+  window.YAINOO_BUILD="S2V001-ALPACA-FIVE-PENS";
+  console.info("S2V001 alpaca five pens loaded");
 })();
