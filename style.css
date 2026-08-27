@@ -7489,4 +7489,35 @@ select.season2-login-control{
 
 /* Rank is a real admin control, not covered by scene hotspots. */
 #alpacaRankBtn{position:relative;z-index:80!important;pointer-events:auto!important}
-\n\n/* ======================================================================\n   S2V003 ALPACA FIX3 — true small actor boxes / compact previews / trough paint\n   ====================================================================== */\n.alpaca-pen-animal.adult{width:clamp(22px,5vw,34px)!important;height:clamp(31px,7vw,48px)!important}\n.alpaca-pen-animal.baby{width:clamp(14px,3.15vw,22px)!important;height:clamp(20px,4.45vw,31px)!important}\n.alpaca-status-stack{top:-4px!important;max-width:36px!important}\n.alpaca-status-stack img{width:clamp(7px,1.55vw,10px)!important;height:clamp(7px,1.55vw,10px)!important}\n.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(6px,1.35vw,9px)!important;height:clamp(6px,1.35vw,9px)!important}\n\n/* Warehouse/manage previews must stay uniform and much smaller on phones. */\n.alpaca-warehouse-card .alpaca-sprite-preview{width:clamp(34px,8vw,48px)!important;min-height:48px!important;max-height:58px!important}\n.alpaca-warehouse-card.is-baby .alpaca-sprite-preview{width:clamp(25px,5.8vw,34px)!important;min-height:36px!important;max-height:42px!important}\n.alpaca-manage-card.compact.is-adult .alpaca-manage-preview-wrap{height:clamp(48px,11vw,62px)!important}\n.alpaca-manage-card.compact.is-baby .alpaca-manage-preview-wrap{height:clamp(34px,8vw,44px)!important}\n.alpaca-manage-card.compact .alpaca-manage-preview-wrap .alpaca-sprite-preview{max-width:70%!important}\n.alpaca-detail-hero>.alpaca-sprite-preview.large{width:clamp(48px,11vw,64px)!important;max-height:76px!important}\n\n/* Food art is placed directly on the two physical side troughs. */\n.alpaca-trough-visual{display:block!important;visibility:visible!important;opacity:1!important;z-index:26!important}\n.alpaca-trough-visual-slot{z-index:1!important}\n.alpaca-trough-visual-slot.filled{display:grid!important;visibility:visible!important;opacity:1!important}\n.alpaca-trough-visual-slot.filled img{display:block!important;visibility:visible!important;opacity:1!important}\n.alpaca-trough-visual-slot:nth-child(-n+8){left:10.7%!important}\n.alpaca-trough-visual-slot:nth-child(n+9){right:10.7%!important}\n.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:34%!important}\n.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:40.1%!important}\n.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:46.2%!important}\n.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:52.3%!important}\n.alpaca-trough-visual-slot:nth-child(5),.alpaca-trough-visual-slot:nth-child(13){top:58.4%!important}\n.alpaca-trough-visual-slot:nth-child(6),.alpaca-trough-visual-slot:nth-child(14){top:64.5%!important}\n.alpaca-trough-visual-slot:nth-child(7),.alpaca-trough-visual-slot:nth-child(15){top:70.6%!important}\n.alpaca-trough-visual-slot:nth-child(8),.alpaca-trough-visual-slot:nth-child(16){top:76.7%!important}\n.alpaca-trough-visual-slot{width:clamp(15px,3.5vw,23px)!important;height:clamp(15px,3.5vw,23px)!important}\n\n/* Reduce modal image weight/layout pressure for alpaca inventory cards. */\n#modalContent .alpaca-inventory-item>img{width:clamp(38px,9vw,52px)!important;height:clamp(38px,9vw,52px)!important;object-fit:contain!important}\n
+
+
+/* ======================================================================
+   S2V004 ALPACA FIX4 — compact actors / warehouse / visible side trough
+   ====================================================================== */
+#alpacaPenNameBtn{display:none!important}
+.alpaca-pen-animal.adult{width:clamp(18px,4.05vw,28px)!important;height:clamp(25px,5.75vw,40px)!important}
+.alpaca-pen-animal.baby{width:clamp(11px,2.55vw,17px)!important;height:clamp(16px,3.65vw,25px)!important}
+.alpaca-status-stack{top:-4px!important;gap:0!important;max-width:32px!important}
+.alpaca-status-stack img{width:clamp(6px,1.35vw,9px)!important;height:clamp(6px,1.35vw,9px)!important}
+.alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(5px,1.15vw,8px)!important;height:clamp(5px,1.15vw,8px)!important}
+.alpaca-warehouse-card .alpaca-sprite-preview{width:34px!important;height:48px!important;min-width:34px!important;min-height:48px!important;max-width:34px!important;max-height:48px!important;margin:5px auto!important}
+.alpaca-warehouse-card.is-baby .alpaca-sprite-preview{width:24px!important;height:34px!important;min-width:24px!important;min-height:34px!important;max-width:24px!important;max-height:34px!important}
+.alpaca-manage-card.compact.is-adult .alpaca-manage-preview-wrap{height:48px!important}
+.alpaca-manage-card.compact.is-baby .alpaca-manage-preview-wrap{height:32px!important}
+.alpaca-manage-card.compact .alpaca-manage-preview-wrap .alpaca-sprite-preview{height:100%!important;width:auto!important;max-width:52px!important}
+.alpaca-detail-hero>.alpaca-sprite-preview.large{width:46px!important;max-width:46px!important;height:65px!important;max-height:65px!important}
+.alpaca-trough-visual{position:absolute!important;inset:0!important;display:block!important;visibility:visible!important;opacity:1!important;z-index:27!important;pointer-events:none!important}
+.alpaca-trough-visual-slot{position:absolute!important;width:18px!important;height:18px!important;margin:0!important;background:transparent!important;border:0!important}
+.alpaca-trough-visual-slot.filled{display:grid!important;place-items:center!important;visibility:visible!important;opacity:1!important}
+.alpaca-trough-visual-slot.filled img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;visibility:visible!important;opacity:1!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))!important}
+.alpaca-trough-visual-slot:nth-child(-n+8){left:10.5%!important}
+.alpaca-trough-visual-slot:nth-child(n+9){right:10.5%!important}
+.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:34%!important}
+.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:40.1%!important}
+.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:46.2%!important}
+.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:52.3%!important}
+.alpaca-trough-visual-slot:nth-child(5),.alpaca-trough-visual-slot:nth-child(13){top:58.4%!important}
+.alpaca-trough-visual-slot:nth-child(6),.alpaca-trough-visual-slot:nth-child(14){top:64.5%!important}
+.alpaca-trough-visual-slot:nth-child(7),.alpaca-trough-visual-slot:nth-child(15){top:70.6%!important}
+.alpaca-trough-visual-slot:nth-child(8),.alpaca-trough-visual-slot:nth-child(16){top:76.7%!important}
+#modalContent .alpaca-inventory-item>img{width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;object-fit:contain!important}
