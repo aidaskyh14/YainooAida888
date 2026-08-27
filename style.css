@@ -7633,3 +7633,24 @@ select.season2-login-control{
 /* Hide legacy trough art; JS now draws only filled foods directly over the physical rails. */
 #alpacaTroughVisual{display:none!important;visibility:hidden!important;opacity:0!important}
 #s2PhysicalTroughFoodLayer{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:none!important}
+
+/* FINAL SIDE-TROUGH FIX: legacy food layer is retired.
+   Food is now rendered by #alpacaTroughFoodFixed directly under alpacaPenStage. */
+#alpacaTroughVisual{display:none!important}
+#alpacaTroughFoodFixed{
+  position:absolute!important;
+  inset:0!important;
+  z-index:45!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#alpacaTroughFoodFixed img{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  max-width:none!important;
+  max-height:none!important;
+}

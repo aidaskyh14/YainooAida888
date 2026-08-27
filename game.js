@@ -151,6 +151,14 @@ function assertCurrentCloudSession(raw,player){
   if(!raw||!cloudSessionId||!ownPlayerKeyMatches(player))return;
   const remoteSession=String(raw.activeSessionId||"");
   if(remoteSession&&remoteSession!==cloudSessionId){
+    /* Aida is the owner/admin. A duplicate initialization on the same device used to
+       invalidate her own session and trigger the Firebase Admin login modal.
+       Keep strict session protection for members, but let Aida re-bind cleanly. */
+    if(currentMember==="Aida"||adminProfile?.role==="admin"){
+      cloudSessionId=remoteSession;
+      cloudSessionSuperseded=false;
+      return;
+    }
     throw new Error("เซสชันเครื่องนี้เก่าแล้ว กรุณาเข้าสู่เกมใหม่เพื่อโหลดข้อมูลล่าสุด");
   }
 }
@@ -3045,33 +3053,85 @@ async function completeAidaCloudSession(profile){
   const {db,fs}=await getFirebaseContext(),user=(await getFirebaseBridge()).getCurrentUser();if(!user)throw new Error("ยังไม่ได้เข้าสู่ Firebase Admin");
   currentMemberKey="aida";adminProfile={...profile,role:"admin",memberKey:"aida"};await fs.setDoc(fs.doc(db,"members",user.uid),{memberKey:"aida",displayName:"Aida"},{merge:true});await initializeOrLoadCloudState("Aida","aida");await seedPublicProfilesAsAdmin();draw();refreshNotificationBadge();return ownState;
 }
+async function getAdminProfileWithRetry(bridge,attempts=3){
+  let lastError=null;
+  for(let i=0;i<attempts;i++){
+    try{
+      await bridge.waitForAuth();
+      const user=bridge.getCurrentUser();
+      if(!user)return null;
+      const profile=await bridge.getSignedInMember();
+      if(profile)return profile;
+    }catch(error){lastError=error}
+    if(i<attempts-1)await new Promise(resolve=>setTimeout(resolve,350*(i+1)));
+  }
+  if(lastError)throw lastError;
+  return null;
+}
+
 async function start(){
   const member=$("memberSelect").value,code=$("memberCode").value.trim();if(MEMBERS[member]!==code){$("loginError").textContent="ชื่อสมาชิกหรือรหัสไม่ถูกต้อง";return}
-  stopOnlineListeners();cloudReady=false;adminProfile=null;visitContext=null;currentMember=member;currentMemberKey=memberKeyFromName(member);ownState=fresh(member);state=ownState;$("loginError").textContent="กำลังเชื่อมข้อมูลส่วนกลาง...";
+  const loginBtn=$("startBtn");if(loginBtn){loginBtn.disabled=true;loginBtn.textContent="กำลังเข้าสวน..."}
+  stopOnlineListeners();cloudReady=false;adminProfile=null;visitContext=null;currentMember=member;currentMemberKey=memberKeyFromName(member);ownState=fresh(member);state=ownState;$("loginError").textContent="กำลังโหลดข้อมูล...";
   if(member==="Aida"){
     try{
-      const bridge=await getFirebaseBridge();await bridge?.waitForAuth();const profile=bridge?await bridge.getSignedInMember():null;if(profile?.role==="admin"){await completeAidaCloudSession(profile);enterGameScreen();showWeatherToast("🔥 Firebase Admin เชื่อมต่อแล้ว");return}
-    }catch(error){console.warn("Aida session",error)}
-    enterGameScreen();setTimeout(()=>checkFirebaseAdminConnection(),250);return;
+      const bridge=await getFirebaseBridge();
+      if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");
+      const profile=await getAdminProfileWithRetry(bridge,3);
+      if(profile?.role==="admin"){
+        await completeAidaCloudSession(profile);
+        enterGameScreen();showWeatherToast("🔥 Firebase Admin พร้อมใช้งาน");return;
+      }
+      /* If Firebase has no signed-in user, enter the farm but ask for login once.
+         Never sign out a valid cached user merely because one profile read was slow. */
+      enterGameScreen();
+      setTimeout(()=>checkFirebaseAdminConnection({silent:true}),500);
+      return;
+    }catch(error){
+      console.warn("Aida Firebase startup retry",error);
+      enterGameScreen();
+      setTimeout(()=>checkFirebaseAdminConnection({silent:true}),700);
+      return;
+    }finally{if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="เข้าสู่สวน"}}
   }
   try{
     await ensureMemberAuth(member,code);await initializeOrLoadCloudState(member,currentMemberKey);enterGameScreen();showWeatherToast("☁️ โหลดเซฟส่วนกลางแล้ว");
   }catch(error){console.error("member cloud login",error);currentMember=null;currentMemberKey="";ownState=state=null;$("loginError").textContent=`เชื่อม Firebase ไม่สำเร็จ: ${error.message||"กรุณาลองใหม่"}`}
+  finally{if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="เข้าสู่สวน"}}
 }
-async function checkFirebaseAdminConnection(){
-  if(currentMember!=="Aida")return;const bridge=await getFirebaseBridge();if(!bridge){message("Firebase ยังไม่เชื่อม","โหลด Firebase SDK ไม่สำเร็จ");return}
+async function checkFirebaseAdminConnection(options={}){
+  if(currentMember!=="Aida")return;
+  const silent=Boolean(options?.silent);
+  const bridge=await getFirebaseBridge();
+  if(!bridge){if(!silent)message("Firebase ยังไม่เชื่อม","โหลด Firebase SDK ไม่สำเร็จ");return}
   try{
-    await bridge.waitForAuth();const user=bridge.getCurrentUser();if(!user){firebaseAdminLoginForm("เข้าสู่ระบบ Firebase Admin เพื่อเปิดเซฟกลางและศูนย์แอดมิน");return}
-    const profile=await bridge.getSignedInMember();if(profile?.role==="admin"){await completeAidaCloudSession(profile);showWeatherToast("🔥 Firebase Admin เชื่อมต่อแล้ว");return}
-    await bridge.signOut();firebaseAdminLoginForm("บัญชี Firebase ที่ค้างอยู่ไม่มีสิทธิ์ admin กรุณาเข้าสู่บัญชี Aida/Admin");
-  }catch(error){console.error(error);firebaseAdminLoginForm("ยังตรวจสิทธิ์ Firebase ไม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง")}
+    const profile=await getAdminProfileWithRetry(bridge,3);
+    const user=bridge.getCurrentUser();
+    if(!user){firebaseAdminLoginForm("เข้าสู่ระบบ Firebase Admin เพื่อเปิดเซฟกลางและศูนย์แอดมิน");return}
+    if(profile?.role==="admin"){
+      adminProfile={...profile,role:"admin",memberKey:"aida"};
+      /* Only initialize if Aida cloud state is not already active. This prevents a
+         second initialization from replacing activeSessionId a moment after login. */
+      if(!cloudReady||currentMemberKey!=="aida"||!ownState){await completeAidaCloudSession(profile)}
+      showWeatherToast("🔥 Firebase Admin พร้อมใช้งาน");return;
+    }
+    /* A signed-in user without an admin profile is a real permission mismatch. */
+    firebaseAdminLoginForm("บัญชี Firebase ที่เชื่อมอยู่ไม่มีสิทธิ์ admin กรุณาเข้าสู่บัญชี Aida/Admin");
+  }catch(error){
+    console.error("Firebase Admin background check",error);
+    /* Transient read/session errors must not force a password popup. Keep the farm
+       usable and retry quietly instead. */
+    if(silent){setTimeout(()=>{if(currentMember==="Aida")checkFirebaseAdminConnection({silent:false})},1800);return}
+    showWeatherToast("🔥 Firebase กำลังเชื่อมใหม่อัตโนมัติ");
+    setTimeout(()=>{if(currentMember==="Aida")checkFirebaseAdminConnection({silent:true})},1800);
+  }
 }
 async function loginFirebaseAdmin(){
   const email=$("firebaseAdminEmail")?.value.trim()||"",password=$("firebaseAdminPassword")?.value||"",status=$("firebaseAdminStatus"),button=$("firebaseAdminLoginBtn");if(!email||!password){if(status)status.textContent="กรุณากรอก Email และ Password ให้ครบ";return}
   if(status)status.textContent="กำลังเชื่อม Firebase...";if(button)button.disabled=true;
   try{
     const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");await bridge.signIn(email,password);const profile=await bridge.getSignedInMember();if(!profile)throw new Error("ไม่พบเอกสาร members ของบัญชีนี้");if(profile.role!=="admin"){await bridge.signOut();throw new Error("บัญชีนี้ไม่มีสิทธิ์ admin")}
-    await completeAidaCloudSession(profile);closeModal();message("🔥 Firebase เชื่อมสำเร็จ",`ชื่อ: ${profile.displayName||"Aida"}<br>สิทธิ์: admin<br>เซฟกลาง V1 พร้อมใช้งาน`);
+    await completeAidaCloudSession(profile);closeModal();showWeatherToast("🔥 Firebase Admin พร้อมใช้งาน");
   }catch(error){console.error("Firebase Admin login failed",error);if(status)status.textContent=`เชื่อมไม่สำเร็จ: ${error.message||"กรุณาตรวจ Email/Password"}`;if(button)button.disabled=false}
 }
 async function logout(){
@@ -4148,7 +4208,13 @@ async function flushCloudSave(){
       const snap=await tx.get(saveRef);
       if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const remoteSession=String(snap.data()?.activeSessionId||"");
-      if(remoteSession&&remoteSession!==cloudSessionId)throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
+      if(remoteSession&&remoteSession!==cloudSessionId){
+        if(currentMember==="Aida"||adminProfile?.role==="admin"){
+          cloudSessionId=remoteSession;
+          payload.activeSessionId=remoteSession;
+          cloudSessionSuperseded=false;
+        }else throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
+      }
       tx.set(saveRef,{...payload,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     const currentHash=plotHash(ownState.plots);
@@ -17362,6 +17428,43 @@ async function V181_campaignScoreLater(summary){
     });
   }
 
+  function renderFixedSideTroughFood(pen){
+    const stage=$("alpacaPenStage");if(!stage||!pen)return;
+    let layer=$("alpacaTroughFoodFixed");
+    if(!layer){
+      layer=document.createElement("div");
+      layer.id="alpacaTroughFoodFixed";
+      layer.setAttribute("aria-hidden","true");
+      stage.appendChild(layer);
+    }
+    layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";
+    layer.innerHTML="";
+    const y=[36.2,42.0,47.8,53.6,59.4,65.2,71.0,76.8];
+    const xLeft=10.8,xRight=89.2;
+    (pen.trough||[]).slice(0,16).forEach((slot,i)=>{
+      if(!slot||!FOOD[slot.foodKey]||Number(slot.servings||0)<=0)return;
+      const img=document.createElement("img");
+      img.src=FOOD[slot.foodKey].image;
+      img.alt="";
+      const side=i<8?"left":"right",row=i%8;
+      const x=side==="left"?xLeft:xRight;
+      img.style.cssText=[
+        "position:absolute",
+        `left:${x}%`,
+        `top:${y[row]}%`,
+        "width:clamp(16px,3.8vw,25px)",
+        "height:clamp(16px,3.8vw,25px)",
+        "object-fit:contain",
+        "transform:translate(-50%,-50%)",
+        "display:block",
+        "opacity:1",
+        "visibility:visible",
+        "filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))"
+      ].join(";");
+      layer.appendChild(img);
+    });
+  }
+
   function renderPen(){
     const root=ownAlpaca(),pen=penAt(root);if(!root||!pen)return;
     processAllTimers(root,gameNow());
@@ -17395,6 +17498,7 @@ async function V181_campaignScoreLater(summary){
     }
     renderPhysicalTroughFood(pen);
     $("alpacaRankBtn")?.classList.toggle("hidden",!(currentMember==="Aida"&&adminProfile?.role==="admin"));
+    renderFixedSideTroughFood(pen);
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
     /* S2V007: expose the real selected pen and immediately refresh pen-scoped overlays.
        This prevents treasure visuals from a previous pen lingering after switching pens. */
@@ -17608,7 +17712,7 @@ async function V181_campaignScoreLater(summary){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"รางอาหารอัลปาก้า","แตะช่องเพื่อเติมอาหารจากกระเป๋า • ตัวเต็มวัยจะกินอัตโนมัติ")}<div class="alpaca-trough-grid">${pen.trough.map((slot,i)=>slot?`<button class="alpaca-trough-slot" data-trough-slot="${i}" type="button"><img src="${FOOD[slot.foodKey].image}"><b>${safeHtml(FOOD[slot.foodKey].name)}</b><small>${slot.servings} เสิร์ฟ</small></button>`:`<button class="alpaca-trough-slot empty" data-trough-slot="${i}" type="button" aria-label="ช่องอาหารว่าง">+</button>`).join("")}</div><p class="alpaca-mini-note">แพ็คหญ้า 1 ชิ้น = 6 เสิร์ฟ • อาหารเม็ด 1 ชิ้น = 12 เสิร์ฟ</p><button id="alpacaTroughClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-trough-slot]").forEach(b=>b.onclick=()=>showTroughFoodPicker(Number(b.dataset.troughSlot)));$("alpacaTroughClose").onclick=closeModal;
   }
   function showTroughFoodPicker(slotIndex){const inv=ownAlpaca()?.inventory?.food||{},available=Object.entries(FOOD).filter(([k,m])=>(!m.direct||m.trough)&&(Number(inv[k])||0)>0);if(!available.length){alpacaMessage("คุณไม่มีอาหาร","ตอนนี้ไม่มีอาหารอัลปาก้าในกระเป๋าค่ะ");return}$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"เลือกอาหารใส่ราง",`ช่องที่ ${slotIndex+1}`)}<div class="alpaca-inventory-grid">${available.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${safeHtml(m.name)}</b><strong>×${Number(inv[k])||0}</strong><small>${m.servings} เสิร์ฟ/ชิ้น</small><button type="button" data-fill-trough="${k}">ใส่ช่องนี้</button></article>`).join("")}</div><button id="troughPickerBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-fill-trough]").forEach(b=>b.onclick=()=>fillTroughSlot(slotIndex,b.dataset.fillTrough));$("troughPickerBack").onclick=showTrough}
-  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings}});renderPen();showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings}});renderPen();renderFixedSideTroughFood(penAt(ownAlpaca(),currentPen));showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function showAlpacaInventory(tab="food"){
     const root=ownAlpaca();if(!root)return;const groups={food:"อาหารอัลปาก้า",medicine:"ยาอัลปาก้า",other:"อื่นๆ",wool:"ผลผลิตอัลปาก้า"};
@@ -20731,4 +20835,6 @@ console.info("V291 maintenance mode loaded");
 })();
 
 
-/* ALPACA SAVE + PEN FIX — crafted alpacas wait for cloud commit; treasure drops are pen-scoped. */
+/* FIREBASE ADMIN STABILITY FIX: Aida session rebind + retry + no transient password popup. */
+
+/* BUILD: FINAL-TROUGH-DIRECT — side food is rendered directly on alpacaPenStage. */
