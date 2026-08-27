@@ -7521,3 +7521,47 @@ select.season2-login-control{
 .alpaca-trough-visual-slot:nth-child(7),.alpaca-trough-visual-slot:nth-child(15){top:70.6%!important}
 .alpaca-trough-visual-slot:nth-child(8),.alpaca-trough-visual-slot:nth-child(16){top:76.7%!important}
 #modalContent .alpaca-inventory-item>img{width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;object-fit:contain!important}
+
+
+/* ======================================================================
+   S2V005 ALPACA FIX5 — balanced scale / real side-trough renderer
+   ====================================================================== */
+.alpaca-pen-animal.adult{
+  width:clamp(42px,8vw,58px)!important;
+  height:clamp(59px,11.3vw,82px)!important;
+}
+.alpaca-pen-animal.baby{
+  width:clamp(27px,5.2vw,38px)!important;
+  height:clamp(38px,7.3vw,53px)!important;
+}
+/* Status icons were already approved smaller in FIX4; keep them unchanged. */
+.alpaca-trough-visual{z-index:40!important;overflow:visible!important;pointer-events:none!important}
+.alpaca-trough-visual-slot.filled{
+  position:absolute!important;
+  width:clamp(23px,4.5vw,32px)!important;
+  height:clamp(23px,4.5vw,32px)!important;
+  transform:translate(-50%,-50%)!important;
+  display:grid!important;
+  place-items:center!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+.alpaca-trough-visual-slot.filled img{
+  width:100%!important;height:100%!important;display:block!important;
+  object-fit:contain!important;opacity:1!important;visibility:visible!important;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))!important;
+}
+/* Inline left/top from renderPen is the single source of truth in S2V005. */
+.alpaca-trough-visual-slot.filled.left,
+.alpaca-trough-visual-slot.filled.right{right:auto!important}
+/* Normalize every warehouse sprite source, including Golden Honey / Thai Tea img icons. */
+.alpaca-warehouse-card .alpaca-sprite-preview,
+.alpaca-warehouse-card .alpaca-card-icon{
+  width:34px!important;height:48px!important;min-width:34px!important;min-height:48px!important;
+  max-width:34px!important;max-height:48px!important;object-fit:contain!important;margin:5px auto!important;
+}
+.alpaca-warehouse-card.is-baby .alpaca-sprite-preview,
+.alpaca-warehouse-card.is-baby .alpaca-card-icon{
+  width:24px!important;height:34px!important;min-width:24px!important;min-height:34px!important;
+  max-width:24px!important;max-height:34px!important;
+}

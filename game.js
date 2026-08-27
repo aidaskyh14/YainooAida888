@@ -2181,25 +2181,22 @@ async function getFirebaseContext(){
   const bridge=await getFirebaseBridge();if(!bridge)throw new Error("Firebase SDK ยังไม่พร้อม");
   return{bridge,db:bridge.db,fs:bridge.firestore};
 }
-let cloudSaveInFlight=null;
-function queueCloudSave(){
+let cloudSaveInFlight=Promise.resolve();
+function queueCloudSave(delayMs=1500){
   if(!cloudReady||!currentMemberKey||visitContext)return;
   if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
   cloudSaveTimer=setTimeout(()=>{
     cloudSaveTimer=null;
     flushCloudSave().catch(error=>console.error("บันทึก Firebase ไม่สำเร็จ",error));
-  },1500);
+  },Math.max(0,Number(delayMs)||0));
 }
 async function settlePendingCloudSave(){
   if(cloudSaveTimer){
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer=null;
     await flushCloudSave();
-    return;
   }
-  if(cloudSaveInFlight){
-    try{await cloudSaveInFlight}catch{}
-  }
+  try{await cloudSaveInFlight}catch{}
 }
 function saveLocalOnly(target=ownState||state){
   if(!target)return;
@@ -2214,16 +2211,23 @@ function save(){
 }
 async function flushCloudSave(){
   if(!cloudReady||!currentMemberKey||!ownState)return;
-  const {db,fs}=await getFirebaseContext();
   ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);
-  const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.updatedAt=fs.serverTimestamp();
-  await fs.setDoc(fs.doc(db,"saves",currentMemberKey),payload,{merge:false});
-  const currentHash=plotHash(ownState.plots);
-  if(currentHash!==lastGardenHash){
-    await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});
-    lastGardenHash=currentHash;
-  }
-  await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(ownState.merit)||0,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
+  const memberKeySnapshot=currentMemberKey;
+  const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;
+  const currentHash=plotHash(payload.plots);
+  const displayName=currentProfileDisplayName();
+  const merit=Number(payload.merit)||0;
+  cloudSaveInFlight=Promise.resolve(cloudSaveInFlight).catch(()=>{}).then(async()=>{
+    const {db,fs}=await getFirebaseContext();
+    const out=cloneData(payload);out.updatedAt=fs.serverTimestamp();
+    await fs.setDoc(fs.doc(db,"saves",memberKeySnapshot),out,{merge:false});
+    if(currentHash!==lastGardenHash){
+      await fs.setDoc(fs.doc(db,"gardens",memberKeySnapshot),{memberKey:memberKeySnapshot,displayName,plots:cloneData(payload.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      lastGardenHash=currentHash;
+    }
+    await fs.setDoc(fs.doc(db,"publicProfiles",memberKeySnapshot),{memberKey:memberKeySnapshot,displayName,merit,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
+  });
+  return cloudSaveInFlight;
 }
 
 async function ensureMemberAuth(member,code){
@@ -17340,7 +17344,16 @@ async function V181_campaignScoreLater(summary){
     processAllTimers(root,gameNow());
     const stage=$("alpacaPenStage");if(stage)stage.style.setProperty("--alpaca-pen-bg",`url("alpaca-pen-${currentPen}.jpeg?v=${VERSION}")`);
     if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));if($("alpacaPenCount"))$("alpacaPenCount").textContent=penCountText(pen);
-    const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;const troughVisual=$("alpacaTroughVisual");if(troughVisual)troughVisual.innerHTML=pen.trough.map((slot,i)=>slot&&FOOD[slot.foodKey]?`<span class="alpaca-trough-visual-slot filled" data-trough-visual="${i}"><img src="${FOOD[slot.foodKey].image}" alt=""></span>`:`<span class="alpaca-trough-visual-slot" data-trough-visual="${i}"></span>`).join("");
+    const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);if($("alpacaTroughStock"))$("alpacaTroughStock").innerHTML=`<strong>${servings} เสิร์ฟ</strong>`;
+    const troughVisual=$("alpacaTroughVisual");
+    if(troughVisual){
+      const ys=[35.2,41.2,47.2,53.2,59.2,65.2,71.2,77.2];
+      troughVisual.innerHTML=pen.trough.map((slot,i)=>{
+        if(!slot||!FOOD[slot.foodKey])return"";
+        const side=i<8?"left":"right",row=i%8,x=side==="left"?14.2:85.8;
+        return `<span class="alpaca-trough-visual-slot filled ${side}" data-trough-visual="${i}" style="left:${x}%;top:${ys[row]}%"><img src="${FOOD[slot.foodKey].image}" alt="${safeHtml(FOOD[slot.foodKey].name)}"></span>`;
+      }).join("");
+    }
     $("alpacaRankBtn")?.classList.toggle("hidden",!(currentMember==="Aida"&&adminProfile?.role==="admin"));
     renderPenAnimals(root,pen);renderPenEvents(root,pen);renderAnimatedSprites();syncAlpacaWeather();
   }
@@ -17394,22 +17407,16 @@ async function V181_campaignScoreLater(summary){
     applyOwn(next);return{state:next,result};
   }
 
-  /* S2V004: instant local response + serialized background persistence. */
-  let alpacaFastPersistChain=Promise.resolve();
-  function persistAlpacaSnapshot(snapshot){
-    if(!cloudReady||!currentMemberKey||visitContext)return;
-    const payload=cloneData(snapshot);payload.launchVersion=LAUNCH_VERSION;payload.activeSessionId=cloudSessionId;
-    alpacaFastPersistChain=alpacaFastPersistChain.catch(()=>{}).then(async()=>{
-      const {db,fs}=await getFirebaseContext();const out=cloneData(payload);out.updatedAt=fs.serverTimestamp();
-      await fs.setDoc(fs.doc(db,"saves",currentMemberKey),out,{merge:false});
-    }).catch(e=>console.warn("S2 alpaca fast persist",e));
-  }
-  globalThis.YN_ALPACA_FAST_PERSIST=persistAlpacaSnapshot;
+  /* S2V005: one save lane only. UI changes locally first, then the existing
+     cloud queue persists the newest state. Cloud transactions always call
+     settlePendingCloudSave() first, so an older cloud snapshot cannot overwrite it. */
+  globalThis.YN_ALPACA_FAST_PERSIST=null;
   function mutateOwnFast(mutator){
     if(!currentMemberKey||!ownState)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
     const next=normalizeState(cloneData(ownState),currentMember);topupAdminAlpacaInventory(next);
     const result=mutator(next);topupAdminAlpacaInventory(next);applyOwn(next);
-    try{saveLocalOnly(next)}catch{}persistAlpacaSnapshot(next);
+    try{saveLocalOnly(next)}catch{}
+    if(!visitContext)queueCloudSave(120);
     return{state:next,result};
   }
 
@@ -18026,7 +18033,8 @@ async function V181_campaignScoreLater(summary){
     const base=ownState||state;if(!base)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
     const next=normalizeState(cloneData(base),currentMember);v240EnsureState(next);v240AdminTopup(next);
     const result=mutator(next);v240AdminTopup(next);v240Apply(next);
-    try{saveLocalOnly(next)}catch{}try{globalThis.YN_ALPACA_FAST_PERSIST?.(next)}catch{}
+    try{saveLocalOnly(next)}catch{}
+    if(!visitContext)queueCloudSave(120);
     return{state:next,result};
   }
   async function v240StartFactory(productKey){const r=V240_PRODUCTS[productKey];if(!r)return;const penNo=v240PenNo();try{const out=v240MutateFast(s=>{v240DeductRecipe(s,r);const now=v240Now(),job={id:v240Uid("factory"),productKey,penNo,status:"processing",startedAt:now,finishAt:now+r.hours*V240_HOUR,claimedAt:0};s.alpaca.factory.jobs.push(job);s.alpaca.factory.history.push({...job});if(s.alpaca.factory.history.length>120)s.alpaca.factory.history=s.alpaca.factory.history.slice(-120);return job});closeModal();v240ShowFactorySide(r.side);showWeatherToast(`🏭 เริ่มผลิต ${r.name} • คำสั่งจากคอก ${penNo}`)}catch(e){message("เริ่มผลิตไม่ได้",e.message||"กรุณาลองใหม่")}}
@@ -18125,7 +18133,7 @@ async function V181_campaignScoreLater(summary){
                 s.alpaca.treasureDrops[dropKey].push({id:v240Uid("treasure"),x:p[0]+(Math.random()*4-2),y:p[1]+(Math.random()*3-1.5),createdAt:now});added++;changed=true;
               }
             }
-            if(s.alpaca.treasureDrops[dropKey].length>8)s.alpaca.treasureDrops[dropKey]=s.alpaca.treasureDrops[dropKey].slice(-8);
+            if(s.alpaca.treasureDrops[dropKey].length>4)s.alpaca.treasureDrops[dropKey]=s.alpaca.treasureDrops[dropKey].slice(-4);
           });
         });
         return{added,changed};
