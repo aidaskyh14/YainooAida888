@@ -17333,9 +17333,9 @@ async function V181_campaignScoreLater(summary){
     renderPen();processTimersCloud().catch(()=>{});syncOwnMaleBreeders().catch(()=>{});startSpriteTimer();startAlpacaWeatherClock();
   }
   function closePen(){clearInterval(progressTimer);progressTimer=0;if(spriteTimer){clearInterval(spriteTimer);spriteTimer=0;}clearWalkerMap(penWalkers);stopAlpacaWeatherClock();$("alpacaPenScreen")?.classList.add("hidden");$("gameScreen")?.classList.remove("hidden");draw();syncEntryButtons();setTimeout(()=>{try{renderWildBabies();startSpriteTimer()}catch{}},0)}
-  function renderPen(){
+  function renderPen(skipTimerProcessing=false){
     const root=ownAlpaca(),pen=penAt(root);if(!root||!pen)return;
-    processAllTimers(root,gameNow());
+    if(!skipTimerProcessing)processAllTimers(root,gameNow());
     const stage=$("alpacaPenStage");if(stage)stage.style.setProperty("--alpaca-pen-bg",`url("alpaca-pen-${currentPen}.jpeg?v=${VERSION}")`);
     if($("alpacaPenNameBtn"))$("alpacaPenNameBtn").textContent=pen.name;if($("alpacaHappinessTotal"))$("alpacaHappinessTotal").textContent=String(alpacaTotalHappiness(root));if($("alpacaPenCount"))$("alpacaPenCount").textContent=penCountText(pen);
     const servings=pen.trough.reduce((n,s)=>n+(Number(s?.servings)||0),0);
@@ -17346,14 +17346,14 @@ async function V181_campaignScoreLater(summary){
       /* S2V005: lock food art to the real Season 2 side trough rails.
          Use center-point coordinates + translate so the food sits on the wood trough,
          not drifting upward or inward onto the grass. */
-      const troughCentersY=[36.1,42.0,47.9,53.8,59.7,65.6,71.5,77.4];
-      const leftTroughX="9.7%",rightTroughX="90.3%";
+      const troughCentersY=[35.0,40.8,46.6,52.4,58.2,64.0,69.8,75.6];
+      const leftTroughX="14.2%",rightTroughX="85.8%";
       troughVisual.querySelectorAll(".alpaca-trough-visual-slot").forEach((el,i)=>{
         const row=i%8;
         el.style.setProperty("top",`${troughCentersY[row]}%`,"important");
         el.style.setProperty("bottom","auto","important");
-        el.style.setProperty("width","clamp(15px,3.45vw,23px)","important");
-        el.style.setProperty("height","clamp(15px,3.45vw,23px)","important");
+        el.style.setProperty("width","clamp(16px,3.7vw,24px)","important");
+        el.style.setProperty("height","clamp(16px,3.7vw,24px)","important");
         el.style.setProperty("transform","translate(-50%,-50%)","important");
         if(i<8){
           el.style.setProperty("left",leftTroughX,"important");
@@ -17574,7 +17574,7 @@ async function V181_campaignScoreLater(summary){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"รางอาหารอัลปาก้า","แตะช่องเพื่อเติมอาหารจากกระเป๋า • ตัวเต็มวัยจะกินอัตโนมัติ")}<div class="alpaca-trough-grid">${pen.trough.map((slot,i)=>slot?`<button class="alpaca-trough-slot" data-trough-slot="${i}" type="button"><img src="${FOOD[slot.foodKey].image}"><b>${safeHtml(FOOD[slot.foodKey].name)}</b><small>${slot.servings} เสิร์ฟ</small></button>`:`<button class="alpaca-trough-slot empty" data-trough-slot="${i}" type="button" aria-label="ช่องอาหารว่าง">+</button>`).join("")}</div><p class="alpaca-mini-note">แพ็คหญ้า 1 ชิ้น = 6 เสิร์ฟ • อาหารเม็ด 1 ชิ้น = 12 เสิร์ฟ</p><button id="alpacaTroughClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-trough-slot]").forEach(b=>b.onclick=()=>showTroughFoodPicker(Number(b.dataset.troughSlot)));$("alpacaTroughClose").onclick=closeModal;
   }
   function showTroughFoodPicker(slotIndex){const inv=ownAlpaca()?.inventory?.food||{},available=Object.entries(FOOD).filter(([k,m])=>(!m.direct||m.trough)&&(Number(inv[k])||0)>0);if(!available.length){alpacaMessage("คุณไม่มีอาหาร","ตอนนี้ไม่มีอาหารอัลปาก้าในกระเป๋าค่ะ");return}$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"เลือกอาหารใส่ราง",`ช่องที่ ${slotIndex+1}`)}<div class="alpaca-inventory-grid">${available.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${safeHtml(m.name)}</b><strong>×${Number(inv[k])||0}</strong><small>${m.servings} เสิร์ฟ/ชิ้น</small><button type="button" data-fill-trough="${k}">ใส่ช่องนี้</button></article>`).join("")}</div><button id="troughPickerBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-fill-trough]").forEach(b=>b.onclick=()=>fillTroughSlot(slotIndex,b.dataset.fillTrough));$("troughPickerBack").onclick=showTrough}
-  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings}});renderPen();showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function fillTroughSlot(slotIndex,foodKey){try{mutateOwnFast(s=>{const pen=penAt(s.alpaca,currentPen),have=Number(s.alpaca.inventory.food[foodKey])||0;if(!FOOD[foodKey]||(FOOD[foodKey].direct&&!FOOD[foodKey].trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");if(have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");s.alpaca.inventory.food[foodKey]=have-1;pen.trough[slotIndex]={foodKey,servings:FOOD[foodKey].servings}});renderPen(true);showTrough()}catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function showAlpacaInventory(tab="food"){
     const root=ownAlpaca();if(!root)return;const groups={food:"อาหารอัลปาก้า",medicine:"ยาอัลปาก้า",other:"อื่นๆ",wool:"ผลผลิตอัลปาก้า"};
@@ -17718,7 +17718,7 @@ async function V181_campaignScoreLater(summary){
   if($("inventoryNavBtn"))$("inventoryNavBtn").onclick=()=>inventory();
 
 
-  function warehouseSprite(item){return spritePreview(item.color,1,item.type==="baby"?"manage-baby warehouse-preview":"manage-adult warehouse-preview")}
+  function warehouseSprite(item){return spritePreview(item.color,1,item.type==="baby"?`manage-baby warehouse-preview warehouse-${item.color}`:`manage-adult warehouse-preview warehouse-${item.color}`)}
   function showAlpacaWarehouse(){
     const root=ownAlpaca();if(!root)return;const list=Array.isArray(root.vault)?root.vault:[];
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-warehouse-panel"><header class="alpaca-warehouse-head"><div class="alpaca-warehouse-title"><span class="alpaca-warehouse-title-icon">🦙</span><div><h2>คลังอัลปาก้า</h2><small>ยังไม่ได้วางลงคอก <b>${list.length}</b> ตัว</small></div></div><div class="alpaca-warehouse-actions"><button id="warehouseBackPen" type="button">← กลับคอก</button><button id="warehouseCraftBtn" class="primary" type="button">คราฟอัลปาก้า ✨</button></div></header>${list.length?`<div class="v288-batch-toolbar"><button id="vaultBatchSelectAll" type="button">เลือกทั้งหมด</button><b>เลือกแล้ว <span id="vaultBatchCount">0</span> ตัว</b><button id="vaultBatchSellBtn" class="danger-action" type="button" disabled>ขายที่เลือก</button></div>`:""}<div class="alpaca-warehouse-grid">${list.length?list.map(v=>`<article class="alpaca-warehouse-card ${v.type==="baby"?"is-baby":"is-adult"}"><label class="v288-batch-check" title="เลือกขาย"><input type="checkbox" data-vault-batch-sell="${safeHtml(v.id)}"><span>เลือก</span></label><span class="alpaca-age-badge">${v.type==="baby"?"เบบี้":"ตัวเต็มวัย"}</span>${warehouseSprite(v)}<b>${v.type==="baby"?`เบบี้อัลปาก้า${COLOR_META[v.color]?.short||""}`:`อัลปาก้า${COLOR_META[v.color]?.short||""}`}</b><small>${v.type==="baby"?"รอวางเข้าคอก • ไม่มีเพศ":`${sexLabel(v)} • ${colorName(v.color)}`}</small><button type="button" data-vault-place="${safeHtml(v.id)}">วางเข้าคอก</button><button type="button" class="danger-action" data-vault-sell="${safeHtml(v.id)}">ขาย +${v.type==="baby"?50:200} กุศล</button></article>`).join(""):`<div class="alpaca-empty-state">ยังไม่มีอัลปาก้าในคลังค่ะ<br><small>รางวัลแคมเปญ / เบบี้ที่จับได้ / อัลปาก้าที่ได้รับ / อัลปาก้าที่คราฟ จะมาอยู่ตรงนี้ก่อน</small></div>`}</div></section>`;

@@ -7611,3 +7611,20 @@ select.season2-login-control{
 .alpaca-status-stack img{width:clamp(9px,2.2vw,14px)!important;height:clamp(9px,2.2vw,14px)!important}
 .alpaca-pen-animal.baby .alpaca-status-stack{top:-5px!important}
 .alpaca-pen-animal.baby .alpaca-status-stack img{width:clamp(8px,1.95vw,12px)!important;height:clamp(8px,1.95vw,12px)!important}
+
+
+/* S2V006 — trough visual + warehouse white/black size correction */
+.alpaca-trough-visual-slot{width:clamp(16px,3.7vw,24px)!important;height:clamp(16px,3.7vw,24px)!important}
+.alpaca-warehouse-card .warehouse-preview.warehouse-white,
+.alpaca-warehouse-card .warehouse-preview.warehouse-black{
+  width:min(64px,15vw)!important;
+  min-height:70px!important;
+  max-height:76px!important;
+  margin:4px auto 8px!important;
+}
+.alpaca-craft-success-preview .warehouse-preview.warehouse-white,
+.alpaca-craft-success-preview .warehouse-preview.warehouse-black{
+  width:min(68px,16vw)!important;
+  min-height:72px!important;
+  max-height:82px!important;
+}
