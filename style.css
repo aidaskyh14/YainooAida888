@@ -8017,3 +8017,50 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
   .ynu-pond-choices button small{font-size:6.5px!important}
   .s2-boat-lane{width:5.9%!important}
 }
+
+
+/* =====================================================================
+   SEASON 2 ROUND 8 — NEW BACKGROUNDS / HOTSPOTS / 4-PEN HOTEL
+   ===================================================================== */
+/* Jelly arena buttons now align to the two circular wooden platforms. */
+.ynu-arena-zone{top:43%!important;bottom:auto!important;width:35%!important;height:20%!important;border:0!important;background:transparent!important}
+.ynu-arena-zone.left{left:5.5%!important}.ynu-arena-zone.right{right:5.5%!important}
+.ynu-arena-picked.mine{left:22%!important;top:52%!important}.ynu-arena-picked.opp{right:22%!important;top:52%!important}
+.jelly-fast-loading,.temple-fast-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;padding:10px 16px;border-radius:999px;background:rgba(57,34,70,.88);color:#fff4dc;font-weight:900;font-size:clamp(9px,2.4vw,13px);pointer-events:none}
+.s2-four-hotel-pens{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.s2-meow-woof-hotel .dog-hotel-pet-layer{overflow:visible!important}
+.s2-hotel-cat{position:absolute;z-index:16;width:clamp(50px,13.5vw,86px);aspect-ratio:1/1.2;transform:translate(-50%,-50%);border:0;background:transparent;padding:0;pointer-events:auto;cursor:pointer}
+.s2-hotel-cat img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(20,12,20,.35))}
+.s2-hotel-cat small{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);padding:2px 5px;border-radius:999px;background:rgba(49,31,57,.88);color:#fff1d0;font-size:clamp(6px,1.55vw,9px);font-weight:900;white-space:nowrap}
+.s2-cat-hotel-move{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}.s2-cat-hotel-move button{min-height:34px}
+#alpacaTroughFoodFixed .s2-fixed-trough-food{min-width:19px!important}
+@media(max-width:430px){.ynu-arena-zone{height:18%!important}.s2-hotel-cat{width:clamp(46px,12.5vw,72px)}}
+
+/* S2 Round 8 final: retired mode chooser is never displayed. */
+#modeOverlay{display:none!important}
+
+
+/* =====================================================================
+   S2 MEOW-WOOF HOTEL • PET SCALE / DIRT-YARD CLIP
+   ===================================================================== */
+.s2-meow-woof-hotel .dog-hotel-pet-layer,
+.s2-meow-woof-hotel .dog-hotel-drop-layer{
+  overflow:hidden!important;
+}
+.s2-meow-woof-hotel .dog-hotel-pet{
+  width:clamp(30px,7vw,48px)!important;
+  max-width:48px!important;
+}
+.s2-meow-woof-hotel .s2-hotel-cat{
+  width:clamp(30px,7vw,48px)!important;
+  max-width:48px!important;
+}
+.s2-meow-woof-hotel .dog-hotel-name,
+.s2-meow-woof-hotel .s2-hotel-cat small{
+  font-size:clamp(5px,1.15vw,7px)!important;
+  padding:1px 3px!important;
+}
+@media(max-width:430px){
+  .s2-meow-woof-hotel .dog-hotel-pet,
+  .s2-meow-woof-hotel .s2-hotel-cat{width:clamp(28px,6.6vw,44px)!important;max-width:44px!important}
+}
