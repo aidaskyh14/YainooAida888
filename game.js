@@ -21220,7 +21220,7 @@ window.YAINOO_BUILD="S2-R2-SPEED-UI-ASSETS";
   const validPen=n=>Math.max(1,Math.min(4,Math.floor(Number(n)||1)));
 
   /* ---------- Fish trap: inventory + Admin send, no random pool ---------- */
-  SPECIAL_ITEMS[FISH_TRAP_KEY]={name:"กับดักปลา",image:"fish-trap.jpeg",kind:"resource",group:"fishTrap",description:"กับดักปลา • รอเปิดใช้งาน",excludeRandom:true};
+  SPECIAL_ITEMS[FISH_TRAP_KEY]={name:"กับดักปลา",image:"fish-trap.png",kind:"resource",group:"fishTrap",description:"กับดักปลา • รอเปิดใช้งาน",excludeRandom:true};
   const r8AdminGiftBase=adminGiftCatalog;
   adminGiftCatalog=function(){const list=r8AdminGiftBase();if(!list.some(e=>e.type==="special"&&e.key===FISH_TRAP_KEY))list.push({type:"special",key:FISH_TRAP_KEY,name:"กับดักปลา"});return list};
   if(ownState?.specials&&!(FISH_TRAP_KEY in ownState.specials))ownState.specials[FISH_TRAP_KEY]=0;
@@ -21445,7 +21445,7 @@ window.YAINOO_BUILD="S2-R2-SPEED-UI-ASSETS";
   const preloadList=[
     "jellyfish-season2-pond.jpeg","jellyfish-season2-arena.jpeg",
     "temple-season2-entrance.jpeg","temple-season2-inside.jpeg",
-    "meow-woof-hotel.jpeg","fish-trap.jpeg",
+    "meow-woof-hotel.jpeg","fish-trap.png",
     "fishing-lobby-season2.jpeg","fishing-pond-01-season2.jpeg",
     "fishing-pond-02-season2.jpeg","fishing-pond-03-season2.jpeg",
     "boat-race-season2-background.jpeg"
@@ -21536,4 +21536,157 @@ console.info("S2 MEMBERSHIP REALTIME ADMIN NOTIFICATION FIX loaded");
 
   window.YAINOO_BUILD="S2-HOTEL-SMALL-GROUND-PETS";
   console.info("S2 hotel small ground-only pets loaded");
+})();
+
+console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
+
+
+/* =====================================================================
+   S2 URGENT RUNTIME FIX — hotel placement / jelly connection / admin signup
+   2026-08-28
+   ===================================================================== */
+(function S2_URGENT_RUNTIME_FIX(){
+  const S2U_pen=n=>Math.max(1,Math.min(4,Number(n)||1));
+  let S2U_membershipRefreshBusy=false;
+  let S2U_jellyConnectSeq=0;
+
+  /* ---------- Fast, durable Meow-Woof Hotel placement ----------
+     The previous placement path re-normalized the save repeatedly inside a
+     transaction and could lose the requested pen. This path paints locally
+     immediately, commits the same state to the owner's save, and rolls back
+     if Firestore rejects the write. */
+  async function S2U_commitOwnState(next){
+    const {db,fs}=await getFirebaseContext();
+    const ref=fs.doc(db,"saves",currentMemberKey);
+    await fs.setDoc(ref,{...cloneData(next),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+  }
+
+  placeDogInHotel=async function(dogId,pen=1){
+    pen=S2U_pen(pen);
+    if(!ownState||!currentMemberKey)return;
+    const before=cloneData(ownState);
+    try{
+      const next=normalizeState(cloneData(ownState),currentMember);
+      ensureDogState(next);ensureCatState(next);
+      const dog=(next.dogs||[]).find(d=>String(d.id)===String(dogId));
+      if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
+      if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโฮเทลแล้ว");
+      const total=dogsInHotelPen(pen,next).length+((next.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&S2U_pen(c.hotelPen)===pen).length);
+      if(total>=DOG_HOTEL_MAX)throw new Error(`คอก ${pen} เต็มแล้ว`);
+      const now=gameNow();
+      Object.assign(dog,{placedHotel:true,hotelPen:pen,placedAt:now,expiresAt:now+DOG_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+DOG_DROP_INTERVAL_MS,drops:[]});
+      ownState=next;state=ownState;saveLocalOnly(ownState);closeModal();currentDogHotelPen=pen;openScene("dogHotel");
+      showWeatherToast(`🐶 วางน้องหมาที่คอก ${pen} แล้ว`);
+      try{await S2U_commitOwnState(next)}catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);if(currentScene==="dogHotel")renderDogHotelScene();throw e}
+    }catch(e){message("วางน้องหมาไม่ได้",e.message||"กรุณาลองใหม่")}
+  };
+
+  placeCatInHotel=async function(catId,pen){
+    pen=S2U_pen(pen);
+    if(!ownState||!currentMemberKey)return;
+    const before=cloneData(ownState);
+    try{
+      const next=normalizeState(cloneData(ownState),currentMember);
+      ensureDogState(next);ensureCatState(next);
+      const cat=(next.cats||[]).find(c=>String(c.id)===String(catId));
+      if(!cat)throw new Error("ไม่พบแมวตัวนี้");
+      if(Number(cat.placedFarm)>0||cat.placedHotel||Number(cat.placedFarm)===-1)throw new Error("แมวตัวนี้ถูกวางแล้ว");
+      const total=dogsInHotelPen(pen,next).length+((next.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&S2U_pen(c.hotelPen)===pen).length);
+      if(total>=DOG_HOTEL_MAX)throw new Error(`คอก ${pen} เต็มแล้ว`);
+      const now=gameNow();
+      /* Preserve hotel state through legacy cat normalizers. */
+      Object.assign(cat,{placedFarm:-1,placedHotel:true,hotelPen:pen,placedAt:now,expiresAt:now+CAT_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+CAT_DROP_INTERVAL_MS,drops:[]});
+      ownState=next;state=ownState;saveLocalOnly(ownState);closeModal();currentDogHotelPen=pen;openScene("dogHotel");
+      showWeatherToast(`🐱 วางแมวที่คอก ${pen} แล้ว`);
+      try{await S2U_commitOwnState(next)}catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);if(currentScene==="dogHotel")renderDogHotelScene();throw e}
+    }catch(e){message("วางแมวไม่ได้",e.message||"กรุณาลองใหม่")}
+  };
+
+  /* Rebind cat placement buttons because the Round-8 function was closed over
+     the older local placeCatInHotel declaration. */
+  const S2U_showPlaceCatBase=showPlaceCat;
+  showPlaceCat=function(catId){
+    const s0=ensureCatState(ensureDogState(ownState||state)),cat=s0?.cats?.find(c=>c.id===catId);if(!cat)return S2U_showPlaceCatBase(catId);
+    $("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt="${catType(cat).name}"><h2>วาง ${safeHtml(catDisplayName(cat))}</h2><p>เลือกวางที่ฟาร์ม หรือ เหมียวโฮ่งโฮเทล</p><h3>🌱 ฟาร์ม</h3><div class="confirm-actions m200-four-farms">${[1,2,3,4].map(n=>`<button data-s2u-cat-farm="${n}" class="primary-spooky-action" type="button">ฟาร์ม ${n}</button>`).join("")}</div><h3>🐶🐱 เหมียวโฮ่งโฮเทล</h3><div class="dog-pen-choice-grid s2-four-hotel-pens">${[1,2,3,4].map(p=>{const n=dogsInHotelPen(p,s0).length+(s0.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&S2U_pen(c.hotelPen)===p).length;return `<button data-s2u-cat-hotel="${p}" class="primary-spooky-action" type="button" ${n>=DOG_HOTEL_MAX?"disabled":""}>คอก ${p} • ${n}/${DOG_HOTEL_MAX}</button>`}).join("")}</div><button id="catPlaceBackBtn" class="secondary-action" type="button">กลับ</button></section>`;
+    document.querySelectorAll("[data-s2u-cat-farm]").forEach(b=>b.onclick=()=>placeCat(catId,Number(b.dataset.s2uCatFarm)));
+    document.querySelectorAll("[data-s2u-cat-hotel]").forEach(b=>b.onclick=()=>placeCatInHotel(catId,Number(b.dataset.s2uCatHotel)));
+    $("catPlaceBackBtn").onclick=()=>inventory("cats");openModal();
+  };
+
+  /* ---------- Jellyfish: never leave the screen stuck on connecting ---------- */
+  async function S2U_connectJellyfish(seq){
+    const started=Date.now();
+    while(seq===S2U_jellyConnectSeq&&currentScene==="jellyfish"&&!cloudReady&&Date.now()-started<12000){await new Promise(r=>setTimeout(r,120))}
+    if(seq!==S2U_jellyConnectSeq||currentScene!=="jellyfish")return;
+    if(!cloudReady){
+      showWeatherToast("🪼 Firebase กำลังเชื่อมใหม่ • ลองแตะบ่อได้อีกครั้งในครู่เดียว");
+      setTimeout(()=>{if(currentScene==="jellyfish")renderJellyfishScene()},500);
+      return;
+    }
+    try{
+      ensureJellyPondSubscription();
+      const pond=await Promise.race([loadSharedJellyPond(),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),4500))]);
+      if(seq!==S2U_jellyConnectSeq||currentScene!=="jellyfish")return;
+      jellyPondCache=pond;drawJellyfishPond(pond);ensureJellyPondSubscription();
+    }catch(e){
+      console.warn("fast jelly reconnect",e);
+      if(currentScene==="jellyfish")ensureJellyPondSubscription();
+    }
+  }
+  renderJellyfishScene=function(){
+    $("sceneScreen").style.backgroundImage='url("jellyfish-season2-pond.jpeg")';
+    setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm});
+    /* Paint the 12 slots immediately; network sync follows in background. */
+    drawJellyfishPond(jellyPondCache||emptyJellyPond());
+    const seq=++S2U_jellyConnectSeq;S2U_connectJellyfish(seq);
+  };
+
+  /* ---------- Membership applications: query immediately + realtime ---------- */
+  async function S2U_refreshMembershipApplications(showToast=false){
+    if(S2U_membershipRefreshBusy||adminProfile?.role!=="admin"||!cloudReady)return adminMembershipPendingCache;
+    S2U_membershipRefreshBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const snap=await fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending")));
+      const rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+      const old=new Set((adminMembershipPendingCache||[]).map(x=>x.id));
+      adminMembershipPendingCache=rows;adminMembershipListenerReady=true;adminMembershipKnownIds=new Set(rows.map(x=>x.id));
+      notificationBadgeLastAt=0;
+      const added=rows.filter(x=>!old.has(x.id));
+      if(showToast&&added.length)showWeatherToast(`🌱 คำขอสมัครใหม่ • ${added[added.length-1].displayName||"สมาชิกใหม่"}`);
+      return rows;
+    }catch(e){console.warn("membership immediate refresh",e);return adminMembershipPendingCache||[]}
+    finally{S2U_membershipRefreshBusy=false}
+  }
+
+  const S2U_startNotificationsBase=startNotificationPolling;
+  startNotificationPolling=function(){
+    S2U_startNotificationsBase();
+    if(adminProfile?.role==="admin"){
+      S2U_refreshMembershipApplications(true).then(()=>refreshNotificationBadge(true));
+      setTimeout(()=>startAdminMembershipApplicationListener(),0);
+    }
+  };
+
+  const S2U_showNotificationsBase=showNotifications;
+  showNotifications=function(tab="friend"){
+    if(adminProfile?.role==="admin"){
+      /* Open existing UI immediately and refresh pending membership in parallel. */
+      const r=S2U_showNotificationsBase(tab);
+      S2U_refreshMembershipApplications(false).then(()=>{if(tab==="yainoo"&&$("modal")&&!$("modal").classList.contains("hidden"))S2U_showNotificationsBase("yainoo")});
+      return r;
+    }
+    return S2U_showNotificationsBase(tab);
+  };
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState!=="visible")return;
+    if(adminProfile?.role==="admin")S2U_refreshMembershipApplications(true).then(()=>refreshNotificationBadge(true));
+    if(currentScene==="jellyfish")renderJellyfishScene();
+  });
+  window.addEventListener("focus",()=>{if(adminProfile?.role==="admin")S2U_refreshMembershipApplications(true).then(()=>refreshNotificationBadge(true))});
+
+  /* Faster notification cache; do not make every tap wait for a fresh network read. */
+  window.YAINOO_BUILD="S2-URGENT-RUNTIME-FIX";
+  console.info("S2 urgent runtime fix loaded");
 })();
