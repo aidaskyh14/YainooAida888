@@ -7908,3 +7908,49 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
   .boat-lane-progress{min-width:42px!important}
   .s2-boat-admin-actions{top:11.5%!important}
 }
+
+
+/* =====================================================================
+   LOGIN MOBILE FIT FIX — iOS Safari / compact portrait screens
+   Keep the entire login UI inside the visible browser viewport.
+   ===================================================================== */
+#loginScreen.login-screen,
+#loginScreen .season2-login-board{
+  width:100vw!important;
+  height:100svh!important;
+  min-height:100svh!important;
+  max-height:100svh!important;
+  overflow:hidden!important;
+}
+#loginScreen .season2-login-art{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+}
+#loginScreen .season2-login-card{
+  bottom:max(18px,calc(env(safe-area-inset-bottom) + 14px))!important;
+  max-height:34svh!important;
+}
+@media (max-width:430px){
+  #loginScreen .season2-login-card{
+    width:min(74vw,276px)!important;
+    bottom:max(22px,calc(env(safe-area-inset-bottom) + 18px))!important;
+  }
+}
+@media (max-height:760px){
+  #loginScreen .season2-login-card{
+    width:min(70vw,260px)!important;
+    padding:6px 8px 7px!important;
+    bottom:max(16px,calc(env(safe-area-inset-bottom) + 12px))!important;
+  }
+  #loginScreen .season2-login-label{font-size:9px!important}
+  #loginScreen .season2-login-control{
+    height:30px!important;
+    min-height:30px!important;
+    margin-bottom:4px!important;
+    font-size:10.5px!important;
+  }
+  #loginScreen .season2-start-btn{min-height:31px!important;font-size:10.5px!important}
+  #loginScreen .season2-signup-btn{min-height:20px!important;margin-top:3px!important;font-size:9px!important}
+}
