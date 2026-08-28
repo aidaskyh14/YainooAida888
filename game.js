@@ -21690,3 +21690,189 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   window.YAINOO_BUILD="S2-URGENT-RUNTIME-FIX";
   console.info("S2 urgent runtime fix loaded");
 })();
+
+
+/* =====================================================================
+   S2 LATEST FIX — PET WALK / SCALE + MEMBERSHIP APPROVAL NOTIFICATION
+   2026-08-28
+   ===================================================================== */
+(function S2_LATEST_PET_AND_MEMBERSHIP_FIX(){
+  const S2F_GROUND=[
+    [37,40],[50,39],[63,41],
+    [34,49],[44,48],[56,49],[66,48],
+    [37,58],[49,57],[62,59],
+    [35,67],[46,66],[58,67],[65,65],
+    [40,74],[52,73],[62,74]
+  ];
+  const pt=n=>S2F_GROUND[((Number(n)||0)%S2F_GROUND.length+S2F_GROUND.length)%S2F_GROUND.length];
+  const penOf=x=>Math.max(1,Math.min(4,Number(x)||1));
+
+  /* Prefer the current root sprite set first. This prevents dog #1 / ปุยนุ่น
+     from resolving an older archived pet-assets/dogs/dog-01 sprite set. */
+  const s2DogBaseCache=new Map();
+  resolveDogAssetBase=function(number){
+    number=Math.max(1,Math.min(8,Number(number)||1));
+    if(s2DogBaseCache.has(number))return Promise.resolve(s2DogBaseCache.get(number));
+    const n=String(number).padStart(2,"0"),base=`dog-${n}`;
+    const candidates=[base,`pet-assets/dogs/${base}`,`dogs/${base}`,`pet-assets/${base}`];
+    return new Promise(resolve=>{let i=0;const next=()=>{if(i>=candidates.length){s2DogBaseCache.set(number,base);resolve(base);return}const candidate=candidates[i++],img=new Image(),timer=setTimeout(()=>{img.onload=img.onerror=null;next()},900);img.onload=()=>{clearTimeout(timer);s2DogBaseCache.set(number,candidate);resolve(candidate)};img.onerror=()=>{clearTimeout(timer);next()};img.src=`${candidate}-pose-sheet.png?v=5`};next()});
+  };
+
+  /* Dogs: slower natural walk, same dirt-only area. */
+  moveDogHotelPet=function(c){
+    if(currentScene!=="dogHotel"||!dogHotelControllers.has(c.id)||!c?.el?.isConnected)return;
+    let next=Math.floor(Math.random()*S2F_GROUND.length),current=((Number(c.node)||0)%S2F_GROUND.length+S2F_GROUND.length)%S2F_GROUND.length;
+    if(next===current)next=(next+1)%S2F_GROUND.length;
+    const [x1,y1]=pt(current),[x2,y2]=pt(next),dx=x2-x1,dy=y2-y1;
+    const kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0;
+    const distance=Math.hypot(dx,dy),duration=Math.max(6500,Math.min(11500,5200+distance*260));
+    let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);
+    c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},210);
+    try{c.motion?.cancel?.()}catch{}
+    c.motion=c.el.animate([{left:`${x1}%`,top:`${y1}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
+    c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;if(!c.el?.isConnected)return;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;c.node=next;c.motion=null;c.timer=setTimeout(()=>moveDogHotelPet(c),1800+Math.random()*2600)};
+  };
+
+  function catAssetBase(number){
+    number=Math.max(1,Math.min(12,Number(number)||1));
+    const n=String(number).padStart(2,"0"),base=`cat-${n}`;
+    return [base,`pet-assets/cats/${base}`,`cats/${base}`,`pet-assets/${base}`];
+  }
+  const catBaseCache=new Map();
+  function resolveCatBase(number){
+    if(catBaseCache.has(number))return Promise.resolve(catBaseCache.get(number));
+    const candidates=catAssetBase(number);
+    return new Promise(resolve=>{let i=0;const next=()=>{if(i>=candidates.length){resolve("");return}const base=candidates[i++],img=new Image(),timer=setTimeout(()=>{img.onload=img.onerror=null;next()},900);img.onload=()=>{clearTimeout(timer);catBaseCache.set(number,base);resolve(base)};img.onerror=()=>{clearTimeout(timer);next()};img.src=`${base}-pose-sheet.png?v=5`};next()});
+  }
+  function catWalkFrame(sprite,base,frame,kind,left){
+    if(!sprite||!base)return;frame=((frame%8)+8)%8;const col=frame%4,row=Math.floor(frame/4);
+    sprite.classList.toggle("face-left",!!left);
+    sprite.style.backgroundImage=`url("${base}-walk-${kind}.png?v=5")`;
+    sprite.style.backgroundSize="400% 200%";
+    sprite.style.backgroundPosition=`${col*100/3}% ${row*100}%`;
+  }
+  function stopHotelCatMotion(el){
+    clearTimeout(el?._s2CatWalkTimer);clearInterval(el?._s2CatFrameTimer);try{el?._s2CatMotion?.cancel?.()}catch{}
+    if(el){el._s2CatWalkTimer=0;el._s2CatFrameTimer=0;el._s2CatMotion=null}
+  }
+  function catsInCurrentHotelPen(){
+    const arr=Array.isArray(ownState?.cats)?ownState.cats:[];
+    return arr.filter(c=>Number(c?.placedFarm)===-1&&c?.placedHotel&&penOf(c.hotelPen)===penOf(currentDogHotelPen));
+  }
+  function startAnimatedHotelCat(el,cat,startIndex){
+    if(!el||!cat)return;stopHotelCatMotion(el);
+    let node=startIndex%S2F_GROUND.length;const [sx,sy]=pt(node);el.style.left=`${sx}%`;el.style.top=`${sy}%`;el.style.transition="none";
+    const fallback=el.querySelector("img");let sprite=el.querySelector(".s2-hotel-cat-sprite");
+    if(!sprite){sprite=document.createElement("span");sprite.className="s2-hotel-cat-sprite";el.insertBefore(sprite,fallback||el.firstChild)}
+    resolveCatBase(catType(cat).number).then(base=>{
+      if(!base||!el.isConnected||currentScene!=="dogHotel")return;
+      fallback?.classList.add("sprite-ready");
+      const step=()=>{
+        if(!el.isConnected||currentScene!=="dogHotel")return;
+        let next=Math.floor(Math.random()*S2F_GROUND.length);if(next===node)next=(next+1)%S2F_GROUND.length;
+        const [x1,y1]=pt(node),[x2,y2]=pt(next),dx=x2-x1,dy=y2-y1;
+        const kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),left=kind==="side"&&dx<0;
+        const distance=Math.hypot(dx,dy),duration=Math.max(6800,Math.min(11800,5400+distance*270));
+        let frame=0;catWalkFrame(sprite,base,0,kind,left);clearInterval(el._s2CatFrameTimer);
+        el._s2CatFrameTimer=setInterval(()=>{frame=(frame+1)%8;catWalkFrame(sprite,base,frame,kind,left)},210);
+        try{el._s2CatMotion?.cancel?.()}catch{}
+        el._s2CatMotion=el.animate([{left:`${x1}%`,top:`${y1}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
+        el._s2CatMotion.onfinish=()=>{clearInterval(el._s2CatFrameTimer);el._s2CatFrameTimer=0;if(!el.isConnected)return;el.style.left=`${x2}%`;el.style.top=`${y2}%`;node=next;el._s2CatMotion=null;el._s2CatWalkTimer=setTimeout(step,1900+Math.random()*2600)};
+      };
+      el._s2CatWalkTimer=setTimeout(step,700+Math.random()*900);
+    });
+  }
+
+  /* Upgrade the hotel cats created by the existing renderer to real 4-direction
+     sprite animation instead of dragging a static PNG across the screen. */
+  const renderHotelBase=renderDogHotelScene;
+  renderDogHotelScene=function(){
+    const r=renderHotelBase();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if(currentScene!=="dogHotel")return;
+      const cats=catsInCurrentHotelPen(),dogs=dogsInHotelPen(currentDogHotelPen);
+      document.querySelectorAll("#dogHotelPetLayer .s2-hotel-cat").forEach((el,i)=>{
+        clearTimeout(el._s2CatWalkTimer);startAnimatedHotelCat(el,cats[i],dogs.length+i);
+      });
+    }));
+    return r;
+  };
+
+  /* ---------- Membership approval: visible in notifications, not hidden in Admin Center ---------- */
+  async function fetchPendingApps(){
+    if(adminProfile?.role!=="admin")return [];
+    const {db,fs}=await getFirebaseContext();
+    const snap=await fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending"))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+    adminMembershipPendingCache=rows;adminMembershipListenerReady=true;return rows;
+  }
+  async function resolveMembershipApp(id,approve){
+    if(adminProfile?.role!=="admin")return;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"membershipApplications",id),snap=await fs.getDoc(ref);
+    if(!snap.exists())throw new Error("ไม่พบคำขอสมัคร");const a=snap.data();if(a.status!=="pending")return;
+    const batch=fs.writeBatch(db);
+    if(approve){
+      batch.set(fs.doc(db,"members",id),{memberKey:a.memberKey,displayName:a.displayName,role:"member",status:"approved",welcomeGiftClaimed:false,approvedAt:fs.serverTimestamp(),approvedBy:"Aida"},{merge:true});
+      batch.set(fs.doc(db,"loginDirectory",a.memberKey),{memberKey:a.memberKey,displayName:a.displayName,status:"approved",approvedAt:fs.serverTimestamp()},{merge:false});
+    }
+    batch.set(ref,{status:approve?"approved":"rejected",resolvedAt:fs.serverTimestamp(),resolvedBy:"Aida"},{merge:true});
+    await batch.commit();
+    try{await window.YN_S2_REFRESH_DIRECTORY?.()}catch{}
+    notificationBadgeLastAt=0;await fetchPendingApps();refreshNotificationBadge(true);
+    showWeatherToast(approve?`✅ อนุมัติ ${a.displayName} แล้ว`:`❌ ไม่อนุมัติ ${a.displayName}`);
+  }
+  function appCards(rows){
+    return rows.map(a=>`<div class="notification-card unread s2-membership-direct-card"><b>🌱 ${safeHtml(a.displayName||"สมาชิกใหม่")}</b><span>ขอสมัครสมาชิกใหม่</span><small>${safeHtml(a.memberKey||"")}</small><div class="notification-actions"><button type="button" data-s2f-app-approve="${safeHtml(a.id)}">อนุมัติ</button><button type="button" class="danger-action" data-s2f-app-reject="${safeHtml(a.id)}">ไม่อนุมัติ</button></div></div>`).join("");
+  }
+  function bindAppButtons(){
+    document.querySelectorAll("[data-s2f-app-approve]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{await resolveMembershipApp(b.dataset.s2fAppApprove,true);showNotifications("yainoo")}catch(e){message("อนุมัติไม่ได้",e.message||"กรุณาลองใหม่")}});
+    document.querySelectorAll("[data-s2f-app-reject]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{await resolveMembershipApp(b.dataset.s2fAppReject,false);showNotifications("yainoo")}catch(e){message("จัดการไม่ได้",e.message||"กรุณาลองใหม่")}});
+  }
+  const notifBase=showNotifications;
+  showNotifications=async function(tab="friend"){
+    if(adminProfile?.role!=="admin"||tab!=="yainoo")return notifBase(tab);
+    const [_,apps]=await Promise.all([Promise.resolve(notifBase(tab)),fetchPendingApps().catch(()=>[])]);
+    const list=document.querySelector(".notification-list");
+    if(list&&apps.length){list.insertAdjacentHTML("afterbegin",appCards(apps));bindAppButtons()}
+    return _;
+  };
+
+  /* Also make Admin Center reliable even if an older wrapper rendered first. */
+  const adminBase=showAdminCenter;
+  showAdminCenter=async function(){
+    await adminBase();if(adminProfile?.role!=="admin")return;
+    const apps=await fetchPendingApps().catch(()=>[]),panel=document.querySelector(".admin-panel");if(!panel)return;
+    panel.querySelectorAll(".s2f-membership-section").forEach(n=>n.remove());
+    const sec=document.createElement("div");sec.className="admin-section s2f-membership-section";
+    sec.innerHTML=`<h3>🌱 คำขอสมัครสมาชิก (${apps.length})</h3><div class="admin-request-list">${apps.length?appCards(apps):'<p class="empty-feature">ไม่มีคำขอสมัครค้าง</p>'}</div>`;
+    panel.insertBefore(sec,panel.firstChild);bindAppButtons();
+  };
+
+  /* A true realtime listener: pending request -> badge + compact approval popup. */
+  let popupId="";
+  function showIncomingAppPopup(a){
+    if(!a||popupId===a.id||document.querySelector(`[data-s2f-popup-id="${CSS.escape(a.id)}"]`))return;popupId=a.id;
+    $("modalContent").innerHTML=`<section class="feature-panel s2-membership-popup" data-s2f-popup-id="${safeHtml(a.id)}"><h2>🌱 คำขอสมัครสมาชิกใหม่</h2><p><b>${safeHtml(a.displayName||"สมาชิกใหม่")}</b></p><p>ต้องการอนุมัติบัญชีนี้หรือไม่?</p><div class="confirm-actions"><button id="s2fPopupApprove" class="primary-spooky-action" type="button">อนุมัติ</button><button id="s2fPopupReject" class="danger-action" type="button">ไม่อนุมัติ</button></div></section>`;openModal();
+    $("s2fPopupApprove").onclick=async()=>{const b=$("s2fPopupApprove");b.disabled=true;try{await resolveMembershipApp(a.id,true);closeModal();popupId=""}catch(e){b.disabled=false;message("อนุมัติไม่ได้",e.message||"กรุณาลองใหม่")}};
+    $("s2fPopupReject").onclick=async()=>{const b=$("s2fPopupReject");b.disabled=true;try{await resolveMembershipApp(a.id,false);closeModal();popupId=""}catch(e){b.disabled=false;message("จัดการไม่ได้",e.message||"กรุณาลองใหม่")}};
+  }
+  startAdminMembershipApplicationListener=function(){
+    stopAdminMembershipApplicationListener();if(!cloudReady||adminProfile?.role!=="admin")return;
+    getFirebaseContext().then(({db,fs})=>{
+      const q=fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending"));let initial=true;
+      adminMembershipApplicationUnsubscribe=fs.onSnapshot(q,snap=>{
+        const old=new Set((adminMembershipPendingCache||[]).map(x=>x.id)),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+        adminMembershipPendingCache=rows;adminMembershipListenerReady=true;notificationBadgeLastAt=0;refreshNotificationBadge(true);
+        const added=rows.filter(x=>!old.has(x.id));
+        if(initial){initial=false;if(rows.length)showWeatherToast(`🌱 มีคำขอสมัคร ${rows.length} รายรออนุมัติ`)}
+        else if(added.length){showWeatherToast(`🌱 คำขอสมัครใหม่ • ${added[0].displayName||"สมาชิกใหม่"}`);showIncomingAppPopup(added[0])}
+      },e=>console.warn("membership realtime",e));
+    }).catch(e=>console.warn("membership realtime init",e));
+  };
+  if(adminProfile?.role==="admin")setTimeout(()=>startAdminMembershipApplicationListener(),0);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&adminProfile?.role==="admin"){fetchPendingApps().then(rows=>{notificationBadgeLastAt=0;refreshNotificationBadge(true);if(rows.length)showWeatherToast(`🌱 มีคำขอสมัคร ${rows.length} รายรออนุมัติ`)})}});
+
+  window.YAINOO_BUILD="S2-PET-MOTION-MEMBERSHIP-DIRECT-APPROVAL";
+  console.info("S2 latest pet motion + membership direct approval loaded");
+})();

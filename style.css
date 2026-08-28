@@ -8064,3 +8064,27 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
   .s2-meow-woof-hotel .dog-hotel-pet,
   .s2-meow-woof-hotel .s2-hotel-cat{width:clamp(28px,6.6vw,44px)!important;max-width:44px!important}
 }
+
+
+/* S2 latest pet scale: dogs and cats equal and clearly visible, still yard-safe. */
+.s2-meow-woof-hotel .dog-hotel-pet,
+.s2-meow-woof-hotel .s2-hotel-cat{
+  width:clamp(66px,15vw,92px)!important;
+  max-width:92px!important;
+}
+.s2-meow-woof-hotel .s2-hotel-cat{aspect-ratio:314/418!important}
+.s2-hotel-cat-sprite{
+  position:absolute;inset:0;z-index:2;background-repeat:no-repeat;background-size:400% 200%;
+  background-position:0 0;transform-origin:center bottom;filter:drop-shadow(0 2px 2px rgba(40,24,24,.18));
+  backface-visibility:hidden;pointer-events:none;
+}
+.s2-hotel-cat-sprite.face-left{transform:scaleX(-1)}
+.s2-hotel-cat img.sprite-ready{opacity:0!important}
+.s2-meow-woof-hotel .dog-hotel-name,
+.s2-meow-woof-hotel .s2-hotel-cat small{font-size:clamp(7px,1.55vw,10px)!important;padding:2px 5px!important}
+@media(max-width:430px){
+  .s2-meow-woof-hotel .dog-hotel-pet,
+  .s2-meow-woof-hotel .s2-hotel-cat{width:clamp(62px,14.5vw,82px)!important;max-width:82px!important}
+}
+.s2-membership-popup{max-width:420px!important;margin:auto!important}
+.s2-membership-direct-card .notification-actions{display:flex;gap:8px;flex-wrap:wrap}
