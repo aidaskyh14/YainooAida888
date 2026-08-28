@@ -21691,260 +21691,285 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   console.info("S2 urgent runtime fix loaded");
 })();
 
-
 /* =====================================================================
-   S2 HOTFIX 2026-08-28
-   Fixes:
-   1) lock hotel dog sprites to the correct dog sheets (especially dog #1)
-   2) slow dog/cat walking and give hotel cats a proper walking animation
-   3) enlarge/re-align alpaca trough food along the side rails
-   4) add approve/reject membership actions in Aida notifications
-   5) make jellyfish pond 2 empty-slot placement reliable and easier to tap
+   S2 FINAL DATA / PET / JELLY / ADMIN HOTFIX — 2026-08-28
+   This patch intentionally runs last and supersedes older Round-8 hotfixes.
    ===================================================================== */
-window.S2_applyPostWimanHotfix=(function(){
-  let installed=false;
-  const HOTEL_POINTS=[
-    [34,39],[50,38],[66,40],
-    [31,48],[43,47],[57,48],[69,47],
-    [35,57],[49,56],[64,58],
-    [31,66],[43,65],[57,66],[69,64],
-    [37,74],[52,73],[64,75]
-  ];
-  const J2_SLOT_POINTS=[
-    [27.5,30.0],[50.0,29.4],[72.5,30.0],
-    [27.5,42.0],[50.0,41.3],[72.5,42.0],
-    [27.5,54.0],[50.0,53.4],[72.5,54.0],
-    [27.5,66.0],[50.0,65.4],[72.5,66.0]
-  ];
-  const hotelCatControllers=new Map();
-  const hotelCatBaseCache=new Map();
-  const localJelly2Pending=new Map();
-  let jelly2ObserverStarted=false;
-  let jelly2AlignTimer=0;
-  let focusRefreshBound=false;
+(function S2_FINAL_FIX_20260828(){
+  "use strict";
+  const BUILD="S2-FINAL-DATA-PETS-20260828";
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-  function esc(v){return typeof safeHtml==="function"?safeHtml(v):String(v??"")}
-  function now(){return typeof gameNow==="function"?gameNow():Date.now()}
-  function getState(){
-    try{return typeof ensureCatState==="function"&&typeof ensureDogState==="function"?ensureCatState(ensureDogState(ownState||state)):(ownState||state)}
-    catch(_){return ownState||state}
-  }
-  function validPen(n){n=Math.floor(Number(n)||1);return n<1?1:n>4?4:n}
-  function dogListInPen(pen,s=getState()){pen=validPen(pen);return Array.isArray(s?.dogs)?s.dogs.filter(d=>d&&d.placedHotel&&validPen(d.hotelPen)===pen):[]}
-  function catListInPen(pen,s=getState()){pen=validPen(pen);return Array.isArray(s?.cats)?s.cats.filter(c=>c&&c.placedHotel&&Number(c.placedFarm)===-1&&validPen(c.hotelPen)===pen):[]}
-  function catAssetPath(base,kind){if(kind==="pose")return `${base}-pose-sheet.png?v=S2-HOTFIX-20260828`;return `${base}-walk-${kind}.png?v=S2-HOTFIX-20260828`}
-  function nextHotelNode(current,prev){
-    const size=HOTEL_POINTS.length;
-    let choices=[...Array(size).keys()].filter(i=>i!==current&&i!==prev);
-    if(!choices.length)choices=[...Array(size).keys()].filter(i=>i!==current);
-    return choices[Math.floor(Math.random()*choices.length)] ?? ((current+1)%size);
-  }
-  function stopHotelCatMotion(){
-    hotelCatControllers.forEach(ctrl=>{
-      try{clearTimeout(ctrl.timer)}catch(_){ }
-      try{clearInterval(ctrl.frameTimer)}catch(_){ }
-      try{ctrl.motion?.cancel?.()}catch(_){ }
-      ctrl.timer=0;ctrl.frameTimer=0;ctrl.motion=null;
-    });
-    hotelCatControllers.clear();
-    document.querySelectorAll("#dogHotelPetLayer .s2-hotel-cat").forEach(el=>{try{clearTimeout(el._s2CatWalkTimer)}catch(_){ }});
-  }
-  function resolveHotelCatAssetBase(number){
-    const n=Math.max(1,Math.min(12,Math.floor(Number(number)||1)));
-    if(hotelCatBaseCache.has(n))return Promise.resolve(hotelCatBaseCache.get(n));
-    const id=String(n).padStart(2,"0");
-    const candidates=[`pet-assets/cats/cat-${id}`,`cat-${id}`,`pet-assets/cat-${id}`,`cats/cat-${id}`];
-    return new Promise(resolve=>{
-      let index=0;
-      const tryNext=()=>{
-        if(index>=candidates.length){hotelCatBaseCache.set(n,candidates[0]);resolve(candidates[0]);return}
-        const candidate=candidates[index++],img=new Image(),t=setTimeout(()=>{img.onload=img.onerror=null;tryNext()},2000);
-        img.onload=()=>{clearTimeout(t);hotelCatBaseCache.set(n,candidate);resolve(candidate)};
-        img.onerror=()=>{clearTimeout(t);tryNext()};
-        img.src=catAssetPath(candidate,"pose");
-      };
-      tryNext();
-    });
-  }
-  function hotelCatSetPose(ctrl,index){
-    if(!ctrl?.sprite)return;
-    const pose=((Number(index)||0)%12+12)%12,col=pose%4,row=Math.floor(pose/4);
-    ctrl.el.classList.remove("is-walking");
-    ctrl.sprite.classList.remove("is-walking","walk-front","walk-back","face-left");
-    ctrl.sprite.style.backgroundImage=`url("${catAssetPath(ctrl.base||`pet-assets/cats/cat-${String(Math.max(1,Math.min(12,Number(catType(ctrl.cat).number)||1))).padStart(2,'0')}`,"pose")}")`;
-    ctrl.sprite.style.backgroundSize="400% 300%";
-    ctrl.sprite.style.backgroundPosition=`${col*(100/3)}% ${row*50}%`;
-  }
-  function hotelCatSetWalkFrame(ctrl,frame,kind,faceLeft){
-    if(!ctrl?.sprite)return;
-    const f=((Number(frame)||0)%8+8)%8,col=f%4,row=Math.floor(f/4);
-    ctrl.el.classList.add("is-walking");
-    ctrl.sprite.classList.add("is-walking");
-    ctrl.sprite.classList.toggle("walk-front",kind==="front");
-    ctrl.sprite.classList.toggle("walk-back",kind==="back");
-    ctrl.sprite.classList.toggle("face-left",!!faceLeft && kind==="side");
-    const walkKind=kind==="front"?"front":kind==="back"?"back":"side";
-    ctrl.sprite.style.backgroundImage=`url("${catAssetPath(ctrl.base||`pet-assets/cats/cat-${String(Math.max(1,Math.min(12,Number(catType(ctrl.cat).number)||1))).padStart(2,'0')}`,walkKind)}")`;
-    ctrl.sprite.style.backgroundSize="400% 200%";
-    ctrl.sprite.style.backgroundPosition=`${col*(100/3)}% ${row*100}%`;
-  }
-  function moveHotelCat(ctrl){
-    if(currentScene!=="dogHotel"||!ctrl?.el?.isConnected)return;
-    const current=((Number(ctrl.node)||0)%HOTEL_POINTS.length+HOTEL_POINTS.length)%HOTEL_POINTS.length;
-    const next=nextHotelNode(current,Number(ctrl.prevNode)||-1);
-    const [x1,y1]=HOTEL_POINTS[current], [x2,y2]=HOTEL_POINTS[next];
-    const dx=x2-x1,dy=y2-y1;
-    const kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back");
-    const faceLeft=kind==="side"&&dx<0;
-    const distance=Math.hypot(dx,dy);
-    const duration=Math.max(5400,Math.min(9800,4200+distance*165));
-    let frame=0;
-    hotelCatSetWalkFrame(ctrl,0,kind,faceLeft);
-    clearInterval(ctrl.frameTimer);
-    ctrl.frameTimer=setInterval(()=>{frame=(frame+1)%8;hotelCatSetWalkFrame(ctrl,frame,kind,faceLeft)},200);
-    try{ctrl.motion?.cancel?.()}catch(_){ }
-    ctrl.motion=ctrl.el.animate([{left:`${x1}%`,top:`${y1}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
-    ctrl.motion.onfinish=()=>{
-      clearInterval(ctrl.frameTimer);ctrl.frameTimer=0;
-      if(!ctrl.el?.isConnected)return;
-      ctrl.el.style.left=`${x2}%`;ctrl.el.style.top=`${y2}%`;
-      ctrl.prevNode=current;ctrl.node=next;ctrl.motion=null;
-      hotelCatSetPose(ctrl,Math.floor(Math.random()*12));
-      ctrl.timer=setTimeout(()=>moveHotelCat(ctrl),1800+Math.random()*1800);
+  /* -----------------------------------------------------------------
+     1) Admin stock must NEVER force merit. Season 2 merit starts at 300.
+     ----------------------------------------------------------------- */
+  if(typeof ensureAdminStock==="function"){
+    const stockBase=ensureAdminStock;
+    ensureAdminStock=function(target){
+      if(!target)return stockBase(target);
+      const keepMerit=Number(target.merit)||0;
+      /* Let the legacy admin-stock stack see merit as already full so it does
+         not report a fake change on every render/save, then restore real merit. */
+      target.merit=ADMIN_STOCK_QTY;
+      const changed=stockBase(target);
+      target.merit=keepMerit;
+      return changed;
     };
   }
-  function mountAnimatedHotelCats(){
-    if(currentScene!=="dogHotel")return;
-    const layer=document.getElementById("dogHotelPetLayer");
-    if(!layer)return;
-    stopHotelCatMotion();
-    layer.querySelectorAll(".s2-hotel-cat").forEach(n=>n.remove());
-    const s=getState(),pen=validPen((typeof currentDogHotelPen!=="undefined"?currentDogHotelPen:1)||1),dogs=dogListInPen(pen,s),cats=catListInPen(pen,s);
-    cats.forEach((cat,index)=>{
-      const node=(dogs.length+index)%HOTEL_POINTS.length,[x,y]=HOTEL_POINTS[node],btn=document.createElement("button");
-      btn.type="button";
-      btn.className="s2-hotel-cat s2-hotel-cat-animated";
-      btn.style.left=`${x}%`;btn.style.top=`${y}%`;
-      btn.innerHTML=`<img class="s2-hotel-cat-fallback" src="${catType(cat).image}" alt="${esc(catDisplayName(cat))}"><span class="s2-hotel-cat-sprite"></span><small>${esc(catDisplayName(cat))}</small>`;
-      btn.onclick=()=>showPlacedCatMenu(cat.id);
-      layer.appendChild(btn);
-      const ctrl={id:String(cat.id),cat,el:btn,sprite:btn.querySelector(".s2-hotel-cat-sprite"),fallback:btn.querySelector(".s2-hotel-cat-fallback"),base:"",node,prevNode:-1,timer:0,frameTimer:0,motion:null};
-      hotelCatControllers.set(ctrl.id,ctrl);
-      resolveHotelCatAssetBase(catType(cat).number).then(base=>{
-        if(currentScene!=="dogHotel"||!hotelCatControllers.has(ctrl.id)||!btn.isConnected)return;
-        ctrl.base=base;
-        hotelCatSetPose(ctrl,Math.floor(Math.random()*12));
-        ctrl.fallback?.classList.add("sprite-ready");
-        ctrl.timer=setTimeout(()=>moveHotelCat(ctrl),1400+Math.random()*1500);
+
+  /* -----------------------------------------------------------------
+     2) Durable save queue.
+     Root cause fixed here: an older speed patch replaced the serialized
+     transaction saver with an un-serialized batch write. That allowed a
+     stale queued state to overwrite a newer transaction after app switching.
+     ----------------------------------------------------------------- */
+  let s2Dirty=false;
+  let s2SaveSeq=0;
+  let s2FlushRequested=false;
+  const dirtyMarkerKey=()=>currentMemberKey?`yainoo-s2-dirty:${currentMemberKey}`:"";
+
+  function markDirty(){
+    if(!ownState||!currentMemberKey||visitContext)return;
+    const rev=Math.max(Number(ownState.clientSaveRevision)||0,s2SaveSeq)+1;
+    s2SaveSeq=rev;
+    ownState.clientSaveRevision=rev;
+    ownState.clientLocalEditAt=Date.now();
+    s2Dirty=true;
+    try{localStorage.setItem(dirtyMarkerKey(),JSON.stringify({rev,at:ownState.clientLocalEditAt}))}catch(_){ }
+    try{saveLocalOnly(ownState)}catch(_){ }
+  }
+  function clearDirtyMarker(){
+    try{const k=dirtyMarkerKey();if(k)localStorage.removeItem(k)}catch(_){ }
+  }
+
+  queueCloudSave=function(){
+    if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;
+    markDirty();
+    if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
+    cloudSaveTimer=setTimeout(()=>{
+      cloudSaveTimer=null;
+      flushCloudSave().catch(e=>console.error("S2 durable save failed",e));
+    },90);
+  };
+
+  save=function(){
+    const target=ownState||state;if(!target)return;
+    if(!visitContext){ownState=target;state=target}
+    if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(target);
+    try{saveLocalOnly(target)}catch(_){ }
+    queueCloudSave();
+  };
+
+  async function runOneDurableFlush(){
+    if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;
+    const {db,fs}=await getFirebaseContext();
+    ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);try{ensureBoatState(ownState)}catch(_){ }
+    if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(ownState);
+
+    const snapshot=cloneData(ownState);
+    const targetRevision=Math.max(Number(snapshot.clientSaveRevision)||0,s2SaveSeq);
+    snapshot.clientSaveRevision=targetRevision;
+    snapshot.activeSessionId=cloudSessionId;
+    snapshot.launchVersion=LAUNCH_VERSION;
+    const saveRef=fs.doc(db,"saves",currentMemberKey);
+    const gardenHash=plotHash(snapshot.plots||[]);
+    const merit=Number(snapshot.merit)||0;
+    s2Dirty=false;
+
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const remoteSession=String(snap.data()?.activeSessionId||"");
+      if(remoteSession&&remoteSession!==cloudSessionId){
+        if(currentMember==="Aida"||adminProfile?.role==="admin"){
+          cloudSessionId=remoteSession;
+          snapshot.activeSessionId=remoteSession;
+          cloudSessionSuperseded=false;
+        }else{
+          throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
+        }
+      }
+      tx.set(saveRef,{...snapshot,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(gardenHash!==lastGardenHash){
+        tx.set(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(snapshot.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true});
+      }
+      tx.set(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit,initialized:true,uid:(await getFirebaseBridge()).getCurrentUser()?.uid||"",updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+
+    if(gardenHash!==lastGardenHash)lastGardenHash=gardenHash;
+    lastPublishedMerit=merit;
+    if((Number(ownState?.clientSaveRevision)||0)<=targetRevision&&!s2Dirty)clearDirtyMarker();
+  }
+
+  flushCloudSave=function(){
+    if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return Promise.resolve();
+    s2FlushRequested=true;
+    if(cloudSaveInFlight)return cloudSaveInFlight;
+    cloudSaveInFlight=(async()=>{
+      try{
+        do{
+          s2FlushRequested=false;
+          await runOneDurableFlush();
+        }while((s2Dirty||s2FlushRequested)&&cloudReady&&!cloudSessionSuperseded);
+      }finally{
+        cloudSaveInFlight=null;
+      }
+    })();
+    return cloudSaveInFlight;
+  };
+
+  settlePendingCloudSave=async function(){
+    if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null;s2FlushRequested=true}
+    let guard=0;
+    while(guard++<6){
+      if((s2Dirty||s2FlushRequested)&&cloudReady&&!cloudSessionSuperseded)await flushCloudSave();
+      else if(cloudSaveInFlight)await cloudSaveInFlight;
+      else break;
+    }
+  };
+
+  /* Recover a locally completed action if Safari suspended before Firestore finished. */
+  const initBase=initializeOrLoadCloudState;
+  initializeOrLoadCloudState=async function(member,memberKey){
+    let pendingMarker=null,pendingLocal=null;
+    try{
+      pendingMarker=localStorage.getItem(`yainoo-s2-dirty:${memberKey}`);
+      if(pendingMarker)pendingLocal=localStorage.getItem(`yainoo-v5:${member}`);
+    }catch(_){ }
+    const loaded=await initBase(member,memberKey);
+    s2SaveSeq=Math.max(s2SaveSeq,Number(ownState?.clientSaveRevision)||0);
+    if(pendingMarker&&pendingLocal){
+      try{
+        const recovered=normalizeState(JSON.parse(pendingLocal),member);
+        recovered.activeSessionId=cloudSessionId;
+        recovered.clientSaveRevision=Math.max(Number(recovered.clientSaveRevision)||0,Number(ownState?.clientSaveRevision)||0)+1;
+        recovered.clientLocalEditAt=Math.max(Number(recovered.clientLocalEditAt)||0,Date.now());
+        ownState=recovered;state=ownState;s2SaveSeq=recovered.clientSaveRevision;s2Dirty=true;
+        saveLocalOnly(ownState);updateMeritUI();
+        await flushCloudSave();
+        console.info("S2 recovered an unfinished local save");
+      }catch(e){console.warn("S2 local recovery skipped",e)}
+    }
+    return ownState||loaded;
+  };
+
+  /* Replace the save listener so an older cloud snapshot cannot overwrite dirty local state. */
+  subscribeOwnGarden=function(){
+    if(ownGardenUnsubscribe){try{ownGardenUnsubscribe()}catch(_){ }ownGardenUnsubscribe=null}
+    if(ownSaveUnsubscribe){try{ownSaveUnsubscribe()}catch(_){ }ownSaveUnsubscribe=null}
+    if(!cloudReady||!currentMemberKey)return;
+    getFirebaseContext().then(({db,fs})=>{
+      ownGardenUnsubscribe=fs.onSnapshot(fs.doc(db,"gardens",currentMemberKey),snap=>{
+        if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites)return;
+        const remote=snap.data();if(!Array.isArray(remote.plots))return;
+        const hash=plotHash(remote.plots);if(hash===lastGardenHash)return;
+        /* Never replace local plots while an unsaved full-state mutation exists. */
+        if(s2Dirty||cloudSaveTimer||cloudSaveInFlight)return;
+        ownState.plots=remote.plots.map(normalizePlot);lastGardenHash=hash;
+        if(!visitContext){state=ownState;draw()}
+        saveLocalOnly(ownState);
+      },e=>console.warn("garden listener",e));
+
+      ownSaveUnsubscribe=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{
+        if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites)return;
+        const raw=snap.data(),remoteSession=String(raw.activeSessionId||"");
+        if(cloudSessionId&&remoteSession&&remoteSession!==cloudSessionId){
+          if(currentMember==="Aida"||adminProfile?.role==="admin"){
+            cloudSessionId=remoteSession;cloudSessionSuperseded=false;cloudReady=true;
+          }else{
+            if(!cloudSessionSuperseded){cloudSessionSuperseded=true;cloudReady=false;message("ข้อมูลถูกเปิดจากอีกเครื่องแล้ว","เครื่องนี้หยุดบันทึกเพื่อป้องกันข้อมูลเก่าทับข้อมูลใหม่ค่ะ")}
+            return;
+          }
+        }
+        const localRev=Number(ownState.clientSaveRevision)||0,remoteRev=Number(raw.clientSaveRevision)||0;
+        if((s2Dirty||cloudSaveTimer||cloudSaveInFlight)&&remoteRev<localRev)return;
+        if(remoteRev<localRev)return;
+        const remote=normalizeState(raw,currentMember);remote.plots=ownState.plots;
+        const preservedPlots=ownState.plots;
+        Object.keys(ownState).forEach(k=>{if(k!=="plots"&&!(k in remote))delete ownState[k]});
+        Object.assign(ownState,remote);ownState.plots=preservedPlots;
+        s2SaveSeq=Math.max(s2SaveSeq,remoteRev);
+        if(!visitContext){state=ownState;updateMeritUI();draw();if(currentScene&&["chicken","fish","pig","cow"].includes(currentScene))renderAnimalScene(currentScene)}
+        saveLocalOnly(ownState);refreshNotificationBadge();
+      },e=>console.warn("save listener",e));
+    }).catch(e=>console.warn("subscribe own data",e));
+  };
+
+  function flushOnBackground(){
+    if(!currentMemberKey)return;
+    if(s2Dirty||cloudSaveTimer){
+      if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}
+      s2FlushRequested=true;flushCloudSave().catch(()=>{});
+    }
+  }
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden)flushOnBackground();
+    else{
+      Promise.resolve(getFirebaseBridge()).then(bridge=>{
+        if(currentMemberKey&&bridge?.getCurrentUser?.()&&!cloudSessionSuperseded){cloudReady=true;if(s2Dirty)flushCloudSave().catch(()=>{})}
       }).catch(()=>{});
-    });
-  }
+    }
+  },{passive:true});
+  window.addEventListener("pagehide",flushOnBackground,{passive:true});
+  window.addEventListener("pageshow",()=>{if(currentMemberKey&&!cloudSessionSuperseded&&s2Dirty)flushCloudSave().catch(()=>{})},{passive:true});
 
-  function applyDogFixes(){
-    if(applyDogFixes.done)return; applyDogFixes.done=true;
-    const originalResolver=typeof resolveDogAssetBase==="function"?resolveDogAssetBase:null;
-    if(originalResolver){
-      resolveDogAssetBase=function(number){
-        const n=Math.max(1,Math.min(8,Math.floor(Number(number)||1)));
-        const preferred=`pet-assets/dogs/dog-${String(n).padStart(2,"0")}`;
-        return new Promise(resolve=>{
-          const img=new Image(),t=setTimeout(()=>fallback(),1800);
-          let finished=false;
-          const done=(value)=>{if(finished)return;finished=true;clearTimeout(t);try{dogAssetBaseCache?.set?.(n,value)}catch(_){ }resolve(value)};
-          const fallback=()=>{
-            if(typeof originalResolver==="function"){
-              Promise.resolve(originalResolver(n)).then(base=>done(base||preferred)).catch(()=>done(preferred));
-            }else done(preferred);
-          };
-          img.onload=()=>done(preferred);
-          img.onerror=()=>fallback();
-          img.src=`${preferred}-pose-sheet.png?v=S2-HOTFIX-20260828`;
-        });
-      };
+  /* -----------------------------------------------------------------
+     3) One-time Season 2 merit reset: every existing save -> 300 merit.
+        All inventory/storage/pets/etc. are untouched.
+     ----------------------------------------------------------------- */
+  async function resetEveryoneMerit300Once(){
+    if(currentMember!=="Aida"||adminProfile?.role!=="admin"||!cloudReady)return;
+    const marker="s2MeritReset300V1Done";
+    if(ownState?.[marker])return;
+    const {db,fs}=await getFirebaseContext();
+    const aidaRef=fs.doc(db,"saves","aida"),aidaSnap=await fs.getDoc(aidaRef);
+    if(aidaSnap.data()?.[marker]){
+      ownState[marker]=true;ownState.merit=300;saveLocalOnly(ownState);updateMeritUI();return;
     }
-    if(typeof dogAssetPath==="function"){
-      dogAssetPath=function(base,kind){
-        const root=String(base||"");
-        if(kind==="pose")return `${root}-pose-sheet.png?v=S2-HOTFIX-20260828`;
-        return `${root}-walk-${kind}.png?v=S2-HOTFIX-20260828`;
-      };
+    const savesSnap=await fs.getDocs(fs.collection(db,"saves"));
+    let batch=fs.writeBatch(db),ops=0;
+    const commits=[];
+    for(const docSnap of savesSnap.docs){
+      const data=docSnap.data()||{},key=docSnap.id;
+      const patch={merit:300,updatedAt:fs.serverTimestamp()};
+      if(key==="aida")patch[marker]=true;
+      batch.set(docSnap.ref,patch,{merge:true});ops++;
+      batch.set(fs.doc(db,"publicProfiles",key),{memberKey:key,displayName:String(data.player||data.displayName||key),merit:300,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});ops++;
+      if(ops>=430){commits.push(batch.commit());batch=fs.writeBatch(db);ops=0}
     }
-    moveDogHotelPet=function(c){
-      if(currentScene!=="dogHotel"||typeof dogHotelControllers==="undefined"||!dogHotelControllers.has(c.id)||!c?.el?.isConnected)return;
-      let next=Math.floor(Math.random()*HOTEL_POINTS.length);
-      const current=((Number(c.node)||0)%HOTEL_POINTS.length+HOTEL_POINTS.length)%HOTEL_POINTS.length;
-      if(next===current)next=(next+1)%HOTEL_POINTS.length;
-      const [x1,y1]=HOTEL_POINTS[current],[x2,y2]=HOTEL_POINTS[next],dx=x2-x1,dy=y2-y1;
-      const kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0;
-      const distance=Math.hypot(dx,dy),duration=Math.max(4300,Math.min(9200,3400+distance*170));
-      let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);
-      c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},205);
-      try{c.motion?.cancel?.()}catch(_){ }
-      c.motion=c.el.animate([{left:`${x1}%`,top:`${y1}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
-      c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;if(!c.el?.isConnected)return;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;c.node=next;c.motion=null;if(typeof scheduleDogMove==="function")scheduleDogMove(c);};
-    };
-    if(typeof renderDogHotelScene==="function" && !renderDogHotelScene.__s2hotfixWrapped){
-      const baseRender=renderDogHotelScene;
-      const wrapped=function(){
-        const result=baseRender.apply(this,arguments);
-        if(currentScene==="dogHotel")requestAnimationFrame(()=>requestAnimationFrame(()=>mountAnimatedHotelCats()));
-        return result;
-      };
-      wrapped.__s2hotfixWrapped=true;
-      renderDogHotelScene=wrapped;
-    }
-    if(typeof openScene==="function" && !openScene.__s2hotfixWrapped){
-      const baseOpen=openScene;
-      const wrapped=function(){
-        const target=arguments[0];
-        if(target!=="dogHotel")stopHotelCatMotion();
-        const result=baseOpen.apply(this,arguments);
-        if(target==="dogHotel")requestAnimationFrame(()=>requestAnimationFrame(()=>mountAnimatedHotelCats()));
-        return result;
-      };
-      wrapped.__s2hotfixWrapped=true;
-      openScene=wrapped;
-    }
-    if(typeof returnToFarm==="function" && !returnToFarm.__s2hotfixWrapped){
-      const baseReturn=returnToFarm;
-      const wrapped=function(){stopHotelCatMotion();return baseReturn.apply(this,arguments)};
-      wrapped.__s2hotfixWrapped=true;
-      returnToFarm=wrapped;
-    }
+    if(ops)commits.push(batch.commit());
+    await Promise.all(commits);
+    ownState.merit=300;ownState[marker]=true;lastPublishedMerit=300;saveLocalOnly(ownState);updateMeritUI();
+    showWeatherToast("⭐️ รีเซ็ตกุศลผู้เล่นทุกคนเป็น 300 แล้ว • คลังและกระเป๋าไม่ถูกแตะ");
   }
+  const aidaSessionBase=completeAidaCloudSession;
+  completeAidaCloudSession=async function(profile){
+    const result=await aidaSessionBase(profile);
+    try{await resetEveryoneMerit300Once()}catch(e){console.error("merit reset",e);message("รีเซ็ตกุศลไม่สำเร็จ",e.message||"กรุณาลองใหม่")}
+    return result;
+  };
+  window.S2_RESET_ALL_MERIT_300=resetEveryoneMerit300Once;
 
-  function applyTroughFix(){
-    renderFixedSideTroughFood=function(pen){
-      const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");
-      if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}
-      layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
-      const y=[36.1,40.9,45.9,50.9,56.0,61.2,66.4,71.6];
-      const xL=[18.2,17.6,17.0,16.4,15.8,15.2,14.6,14.0];
-      const xR=[81.8,82.4,83.0,83.6,84.2,84.8,85.4,86.0];
-      const w=[30,30,31,31,32,32,33,33];
-      (pen.trough||[]).slice(0,16).forEach((slot,i)=>{
-        if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;
-        const side=i<8?"left":"right",j=i%8,img=document.createElement("img");
-        img.className=`s2-fixed-trough-food ${side}`;
-        img.src=FOOD[slot.foodKey].image;img.alt="";
-        img.style.cssText=`position:absolute;left:${side==="left"?xL[j]:xR[j]}%;top:${y[j]}%;width:clamp(${w[j]}px,5.45vw,39px);height:auto;transform:translate(-50%,-50%);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.26));`;
-        layer.appendChild(img);
-      });
-    };
+  /* -----------------------------------------------------------------
+     4) Membership application: realtime + approve/reject directly inside
+        Aida's Notifications panel, regardless of the selected tab.
+     ----------------------------------------------------------------- */
+  async function queryPendingMembers(){
+    if(adminProfile?.role!=="admin"||!cloudReady)return [];
+    const {db,fs}=await getFirebaseContext();
+    const snap=await fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending"))),rows=[];
+    snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+    adminMembershipPendingCache=rows;adminMembershipListenerReady=true;adminMembershipKnownIds=new Set(rows.map(x=>x.id));
+    return rows;
   }
-
-  function bindNotificationRefreshEvents(){
-    if(focusRefreshBound)return;focusRefreshBound=true;
-    window.addEventListener("focus",()=>{try{refreshNotificationBadge(true)}catch(_){ }},{passive:true});
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden){try{refreshNotificationBadge(true)}catch(_){ }}});
-  }
-  async function hotfixHandleMembership(id,approve){
+  async function resolveMemberApplication(id,approve,button){
     if(adminProfile?.role!=="admin")return;
+    if(button){button.disabled=true;button.textContent=approve?"กำลังอนุมัติ...":"กำลังปฏิเสธ..."}
     try{
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"membershipApplications",id),snap=await fs.getDoc(ref);
-      if(!snap.exists())throw new Error("ไม่พบคำขอ");
-      const a=snap.data()||{};
-      if(a.status!=="pending")throw new Error("คำขอนี้ถูกจัดการแล้ว");
+      if(!snap.exists())throw new Error("ไม่พบคำขอสมัคร");
+      const a=snap.data()||{};if(a.status!=="pending")throw new Error("คำขอนี้ถูกจัดการแล้ว");
       const batch=fs.writeBatch(db);
       if(approve){
         batch.set(fs.doc(db,"members",id),{memberKey:a.memberKey,displayName:a.displayName,role:"member",status:"approved",welcomeGiftClaimed:false,approvedAt:fs.serverTimestamp(),approvedBy:"Aida"},{merge:true});
@@ -21952,172 +21977,215 @@ window.S2_applyPostWimanHotfix=(function(){
       }
       batch.set(ref,{status:approve?"approved":"rejected",resolvedAt:fs.serverTimestamp(),resolvedBy:"Aida"},{merge:true});
       await batch.commit();
-      adminMembershipPendingCache=(adminMembershipPendingCache||[]).filter(x=>String(x.id)!==String(id));
-      adminMembershipKnownIds=new Set((adminMembershipPendingCache||[]).map(x=>x.id));
-      notificationBadgeLastAt=0;
-      try{if(typeof window.YN_S2_REFRESH_DIRECTORY==="function")await window.YN_S2_REFRESH_DIRECTORY()}catch(_){ }
-      try{showWeatherToast(approve?`✅ อนุมัติ ${a.displayName||"สมาชิกใหม่"} แล้ว`:`❌ ปฏิเสธ ${a.displayName||"สมาชิกใหม่"} แล้ว`)}catch(_){ }
-      try{refreshNotificationBadge(true)}catch(_){ }
-      try{renderInlineMembershipCards()}catch(_){ }
-    }catch(error){message("จัดการคำขอไม่ได้",error.message||"กรุณาลองใหม่")}
+      await queryPendingMembers();
+      try{await window.YN_S2_REFRESH_DIRECTORY?.()}catch(_){ }
+      notificationBadgeLastAt=0;refreshNotificationBadge(true);
+      injectMemberApplications();
+      showWeatherToast(approve?`✅ อนุมัติ ${a.displayName||"สมาชิกใหม่"} แล้ว`:`❌ ปฏิเสธ ${a.displayName||"สมาชิกใหม่"} แล้ว`);
+    }catch(e){message("จัดการคำขอไม่ได้",e.message||"กรุณาลองใหม่");if(button)button.disabled=false}
   }
-  function renderInlineMembershipCards(){
+  function injectMemberApplications(loading=false){
     if(adminProfile?.role!=="admin")return;
-    const panel=document.querySelector(".notification-panel .notification-list");
-    const active=document.querySelector("[data-notification-tab].active")?.dataset?.notificationTab;
-    if(!panel||active!=="yainoo")return;
-    panel.querySelectorAll(".s2-hotfix-membership-wrap").forEach(n=>n.remove());
-    panel.querySelectorAll(".s2-membership-alert-card").forEach(n=>n.remove());
-    const rows=Array.isArray(adminMembershipPendingCache)?adminMembershipPendingCache.slice():[];
-    const wrap=document.createElement("div");
-    wrap.className="s2-hotfix-membership-wrap";
-    wrap.innerHTML=`<div class="notification-card unread s2-hotfix-membership-card"><b>🌱 คำขอสมัครสมาชิก (${rows.length})</b><span>${rows.length?"อนุมัติหรือปฏิเสธได้จากตรงนี้ทันที":"ตอนนี้ไม่มีคำขอค้าง"}</span>${rows.length?`<div class="s2-hotfix-membership-list">${rows.map(a=>`<div class="s2-hotfix-membership-item"><div><strong>${esc(a.displayName||"สมาชิกใหม่")}</strong><small>${esc(a.memberKey||"")}</small></div><div class="notification-actions"><button type="button" data-s2-hotfix-app="${esc(a.id)}" data-s2-hotfix-approve="1">อนุมัติ</button><button type="button" data-s2-hotfix-app="${esc(a.id)}" data-s2-hotfix-approve="0">ปฏิเสธ</button></div></div>`).join("")}</div>`:`<div class="notification-actions"><button id="openPendingMembershipBtn" type="button">เปิดศูนย์แอดมิน</button></div>`}</div>`;
-    panel.prepend(wrap);
-    wrap.querySelectorAll("[data-s2-hotfix-app]").forEach(btn=>btn.onclick=()=>hotfixHandleMembership(btn.dataset.s2HotfixApp,btn.dataset.s2HotfixApprove==="1"));
-    wrap.querySelector("#openPendingMembershipBtn")?.addEventListener("click",()=>{try{showAdminCenter()}catch(_){ }});
+    const list=document.querySelector(".notification-panel .notification-list");if(!list)return;
+    list.querySelectorAll(".s2-final-member-requests,.s2-membership-alert-card").forEach(n=>n.remove());
+    const rows=Array.isArray(adminMembershipPendingCache)?adminMembershipPendingCache:[];
+    if(!rows.length&&!loading)return;
+    const box=document.createElement("div");box.className="notification-card unread s2-final-member-requests";
+    box.innerHTML=loading&&!rows.length
+      ?`<b>🌱 คำขอสมัครสมาชิก</b><span>กำลังตรวจคำขอที่รออนุมัติ...</span>`
+      :`<b>🌱 คำขอสมัครสมาชิก (${rows.length})</b><span>กดอนุมัติหรือปฏิเสธได้ตรงนี้เลย</span><div class="s2-final-member-list">${rows.map(a=>`<div class="s2-final-member-row"><div><strong>${safeHtml(a.displayName||"สมาชิกใหม่")}</strong><small>${safeHtml(a.memberKey||"")}</small></div><div class="notification-actions"><button type="button" data-s2-member-id="${safeHtml(a.id)}" data-s2-member-action="approve">อนุมัติ</button><button type="button" data-s2-member-id="${safeHtml(a.id)}" data-s2-member-action="reject">ปฏิเสธ</button></div></div>`).join("")}</div>`;
+    list.prepend(box);
+    box.querySelectorAll("[data-s2-member-id]").forEach(btn=>btn.onclick=()=>resolveMemberApplication(btn.dataset.s2MemberId,btn.dataset.s2MemberAction==="approve",btn));
   }
-  function applyNotificationFix(){
-    bindNotificationRefreshEvents();
-    if(typeof showNotifications==="function" && !showNotifications.__s2hotfixWrapped){
-      const baseShow=showNotifications;
-      const wrapped=function(tab="friend"){
-        const res=baseShow.apply(this,arguments);
-        if(adminProfile?.role==="admin" && tab==="yainoo"){
-          [40,180,600,1200].forEach(ms=>setTimeout(()=>{try{renderInlineMembershipCards()}catch(_){ }},ms));
-        }
-        return res;
-      };
-      wrapped.__s2hotfixWrapped=true;
-      showNotifications=wrapped;
-    }
-    if(typeof startNotificationPolling==="function" && !startNotificationPolling.__s2hotfixWrapped){
-      const baseStart=startNotificationPolling;
-      const wrapped=function(){const r=baseStart.apply(this,arguments);setTimeout(()=>{try{refreshNotificationBadge(true)}catch(_){ }},400);return r};
-      wrapped.__s2hotfixWrapped=true;
-      startNotificationPolling=wrapped;
-    }
-  }
-
-  function normJ2(data){
-    const HOUR=60*60*1000;
-    const slots=Array.isArray(data?.slots)?data.slots.slice(0,12):[];
-    while(slots.length<12)slots.push(null);
-    return {slots:slots.map(x=>{
-      if(!x||typeof x!=="object")return null;
-      if(Number(x.expiresAt||0)<=now())return null;
-      const n={...x,version:Number(x.version)||1,feedCount:Math.max(0,Math.min(5,Number(x.feedCount)||0)),cooldownUntil:Number(x.cooldownUntil)||0};
-      if(Number(n.version)===1 && n.cooldownUntil>0 && n.cooldownUntil<=now()){n.cooldownUntil=0;n.feedCount=0}
-      if(Number(n.version)===2 && n.cooldownUntil<=now())n.cooldownUntil=0;
-      return n;
-    })};
-  }
-  function applyJelly2Alignment(){
-    if(currentScene!=="jellyfish2")return;
-    document.querySelectorAll("[data-j2]").forEach((btn,idx)=>{
-      const p=J2_SLOT_POINTS[idx]; if(!p)return;
-      btn.style.left=`${p[0]}%`; btn.style.top=`${p[1]}%`;
-    });
-  }
-  function startJelly2AlignmentWatcher(){
-    if(jelly2ObserverStarted)return; jelly2ObserverStarted=true;
-    const layer=document.getElementById("sceneInteractiveLayer");
-    if(layer && typeof MutationObserver!=="undefined"){
-      const mo=new MutationObserver(()=>{if(currentScene==="jellyfish2")setTimeout(applyJelly2Alignment,0)});
-      mo.observe(layer,{childList:true,subtree:true,attributes:true});
-    }
-    jelly2AlignTimer=setInterval(()=>{if(currentScene==="jellyfish2")applyJelly2Alignment()},1200);
-  }
-  function buildJellyPickerChoiceList(){
-    const s=getState();
-    const v1=Object.entries(JELLYFISH_TYPES||{}).filter(([k])=>Number(s?.specialAnimals?.[k]||0)>0).map(([k,v])=>({version:1,key:k,name:v.name,image:v.image,count:Number(s.specialAnimals[k]||0)}));
-    const v2=Object.entries(Y26_JELLY_V2||{}).filter(([k])=>Number(s?.jellyfishV2?.[k]||0)>0).map(([k,v])=>({version:2,key:k,name:v.name,image:v.image,count:Number(s.jellyfishV2[k]||0)}));
-    return [...v1,...v2];
-  }
-  function openHotfixJelly2Placement(index){
-    const choices=buildJellyPickerChoiceList();
-    if(!choices.length){message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อน");return}
-    const modal=document.getElementById("modalContent");
-    if(!modal)return;
-    modal.innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><p class="feature-subtitle">แตะช่องว่างเพื่อวางได้ทันที • วางแล้วจะแสดงบนบ่อเลย</p><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-s2-hotfix-j2-place="${index}:${x.version}:${esc(x.key)}"><img src="${x.image}" alt="${esc(x.name)}"><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;
-    modal.querySelectorAll("[data-s2-hotfix-j2-place]").forEach(btn=>btn.onclick=()=>{
-      const [slot,v,key]=btn.dataset.s2HotfixJ2Place.split(":");
-      hotfixPlaceJelly2(Number(slot),key,Number(v));
-    });
-    openModal();
-  }
-  function paintLocalJelly2Slot(index,slot){
-    const btn=document.querySelector(`[data-j2="${index}"]`); if(!btn||!slot)return;
-    const defs=Number(slot.version)===2?(Y26_JELLY_V2||{}):(JELLYFISH_TYPES||{}),ty=defs?.[slot.typeKey]||{};
-    btn.classList.remove("jelly-slot-empty");
-    btn.classList.add("jelly-slot-owned");
-    if(Number(slot.version)===2)btn.classList.add("jelly-v2-slot");
-    btn.dataset.s2LocalJ2Owned="1";
-    btn.innerHTML=`<img src="${ty.image||''}" alt="${esc(ty.name||'แมงกะพรุน')}"><small>${esc(slot.customName||ty.name||'แมงกะพรุน')}<br>${Math.max(0,Math.ceil((Number(slot.expiresAt||0)-now())/3600000))} ชม. • ${Number(slot.version)===2?"พร้อมให้อาหาร":`${Number(slot.feedCount||0)}/5`}</small>`;
-    applyJelly2Alignment();
-  }
-  async function hotfixPlaceJelly2(index,key,version){
-    try{
-      await settlePendingCloudSave?.();
-      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);
-      let next,pond;
-      await fs.runTransaction(db,async tx=>{
-        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]);
-        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const p=normJ2(ps.exists()?ps.data():null),s=normalizeState(ss.data(),currentMember);
-        if(p.slots[index])throw new Error("ช่องนี้ไม่ว่างแล้ว");
-        if(Number(version)===2){
-          if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุน V2 หมดแล้ว");
-          s.jellyfishV2[key]-=1;
-          if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(s);
-        }else{
-          if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุน V1 หมดแล้ว");
-          s.specialAnimals[key]-=1;
-        }
-        const placedAt=now();
-        p.slots[index]={id:(globalThis.crypto?.randomUUID?.()||`${currentMemberKey}-${placedAt}-${Math.random().toString(36).slice(2)}`),version:Number(version)||1,typeKey:key,ownerKey:currentMemberKey,ownerName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,customName:"",placedAt,expiresAt:placedAt+(Number(version)===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};
-        next=s; pond=p;
-        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      if(typeof Y26_applyOwnState==="function")Y26_applyOwnState(next); else {ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){ }}
-      localJelly2Pending.set(index,pond.slots[index]);
-      paintLocalJelly2Slot(index,pond.slots[index]);
-      closeModal();
-      showWeatherToast(`🪼 วาง ${(Number(version)===2?(Y26_JELLY_V2?.[key]?.name):(JELLYFISH_TYPES?.[key]?.name))||'แมงกะพรุน'} แล้ว`);
-      setTimeout(()=>localJelly2Pending.delete(index),7000);
-    }catch(error){message("วางไม่ได้",error.message||"กรุณาลองใหม่")}
-  }
-  function applyJelly2Fix(){
-    startJelly2AlignmentWatcher();
-    document.addEventListener("click",event=>{
-      const btn=event.target?.closest?.("[data-j2]");
-      if(!btn||currentScene!=="jellyfish2")return;
-      const index=Number(btn.dataset.j2);
-      if(btn.classList.contains("jelly-slot-empty")){
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        openHotfixJelly2Placement(index);
-        return;
-      }
-      if(btn.dataset.s2LocalJ2Owned==="1"||localJelly2Pending.has(index)){
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        showWeatherToast("🪼 บ่อกำลังซิงก์ข้อมูล กรุณาแตะอีกครั้งในอีกสักครู่");
-      }
-    },true);
-  }
-
-  return function(){
-    if(!installed){
-      installed=true;
-      applyDogFixes();
-      applyTroughFix();
-      applyNotificationFix();
-      applyJelly2Fix();
-      console.info("S2 hotfix 2026-08-28 applied");
-    }
-    try{if(currentScene==="dogHotel")requestAnimationFrame(()=>requestAnimationFrame(()=>mountAnimatedHotelCats()));}catch(_){ }
-    try{if(currentScene==="jellyfish2")setTimeout(applyJelly2Alignment,0);}catch(_){ }
+  startAdminMembershipApplicationListener=function(){
+    stopAdminMembershipApplicationListener();
+    if(!cloudReady||adminProfile?.role!=="admin")return;
+    getFirebaseContext().then(({db,fs})=>{
+      const q=fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending"));
+      adminMembershipApplicationUnsubscribe=fs.onSnapshot(q,snap=>{
+        const before=new Set((adminMembershipPendingCache||[]).map(x=>x.id)),rows=[];
+        snap.forEach(d=>rows.push({id:d.id,...d.data()}));rows.sort((a,b)=>timestampMillis(a.createdAt)-timestampMillis(b.createdAt));
+        adminMembershipPendingCache=rows;adminMembershipListenerReady=true;adminMembershipKnownIds=new Set(rows.map(x=>x.id));
+        const added=rows.filter(x=>!before.has(x.id));
+        if(added.length)showWeatherToast(`🌱 มีคำขอสมัครใหม่ • ${added[added.length-1].displayName||"สมาชิกใหม่"}`);
+        notificationBadgeLastAt=0;refreshNotificationBadge(true);injectMemberApplications();
+      },e=>{adminMembershipListenerReady=false;console.warn("membership listener",e)});
+    }).catch(e=>console.warn("membership listener init",e));
   };
+  const notifyBase=showNotifications;
+  showNotifications=function(tab="friend"){
+    const result=notifyBase.apply(this,arguments);
+    if(adminProfile?.role==="admin"){
+      setTimeout(()=>injectMemberApplications(true),20);
+      queryPendingMembers().then(()=>injectMemberApplications(false)).catch(()=>injectMemberApplications(false));
+      Promise.resolve(result).finally(()=>setTimeout(()=>injectMemberApplications(false),30));
+    }
+    return result;
+  };
+
+  /* -----------------------------------------------------------------
+     5) Meow-Woof Hotel: correct dog sprite mapping, real cat sprite walk,
+        much slower movement, larger matching size, resume from same position.
+     ----------------------------------------------------------------- */
+  const HOTEL_POINTS=[
+    [35,39],[50,39],[65,40],
+    [31,48],[43,48],[57,48],[69,48],
+    [34,57],[48,57],[62,58],
+    [31,66],[43,65],[57,66],[69,65],
+    [36,74],[50,73],[64,74]
+  ];
+  const catHotelControllers=new Map();
+  const catBaseCache=new Map();
+  let hotelPositionStore={};
+  try{hotelPositionStore=JSON.parse(sessionStorage.getItem("s2-hotel-position-v3")||"{}")||{}}catch(_){hotelPositionStore={}}
+  function storePositions(){try{sessionStorage.setItem("s2-hotel-position-v3",JSON.stringify(hotelPositionStore))}catch(_){ }}
+  function petKey(kind,id,pen){return `${kind}:${id}:p${pen}`}
+  function validHotelPoint(p){return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))&&p.x>=27&&p.x<=73&&p.y>=35&&p.y<=78}
+  function dogPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETFINAL`:`${base}-walk-${kind}.png?v=S2PETFINAL`}
+  function catPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETFINAL`:`${base}-walk-${kind}.png?v=S2PETFINAL`}
+
+  resolveDogAssetBase=function(number){
+    const n=Math.max(1,Math.min(8,Math.floor(Number(number)||1))),id=String(n).padStart(2,"0");
+    if(dogAssetBaseCache.has(`final-${n}`))return Promise.resolve(dogAssetBaseCache.get(`final-${n}`));
+    const candidates=[`pet-assets/dogs/dog-${id}`,`dog-${id}`,`dogs/dog-${id}`,`pet-assets/dog-${id}`];
+    return new Promise(resolve=>{
+      let i=0;const next=()=>{
+        if(i>=candidates.length){resolve("");return}
+        const base=candidates[i++],img=new Image(),timer=setTimeout(()=>{img.onload=img.onerror=null;next()},1800);
+        img.onload=()=>{clearTimeout(timer);dogAssetBaseCache.set(`final-${n}`,base);resolve(base)};
+        img.onerror=()=>{clearTimeout(timer);next()};img.src=dogPath(base,"pose");
+      };next();
+    });
+  };
+  dogAssetPath=function(base,kind){return dogPath(base,kind)};
+  function resolveCatBase(number){
+    const n=Math.max(1,Math.min(12,Math.floor(Number(number)||1)));if(catBaseCache.has(n))return Promise.resolve(catBaseCache.get(n));
+    const id=String(n).padStart(2,"0"),candidates=[`pet-assets/cats/cat-${id}`,`cat-${id}`,`cats/cat-${id}`,`pet-assets/cat-${id}`];
+    return new Promise(resolve=>{let i=0;const next=()=>{if(i>=candidates.length){resolve("");return}const base=candidates[i++],img=new Image(),timer=setTimeout(()=>{img.onload=img.onerror=null;next()},1800);img.onload=()=>{clearTimeout(timer);catBaseCache.set(n,base);resolve(base)};img.onerror=()=>{clearTimeout(timer);next()};img.src=catPath(base,"pose")};next()});
+  }
+  function setCatPose(c,pose){if(!c.base)return;const p=((pose||0)%12+12)%12,col=p%4,row=Math.floor(p/4);c.sprite.classList.remove("is-walking","face-left");c.sprite.style.backgroundImage=`url("${catPath(c.base,"pose")}")`;c.sprite.style.backgroundSize="400% 300%";c.sprite.style.backgroundPosition=`${col*100/3}% ${row*50}%`}
+  function setCatWalk(c,frame,kind,faceLeft){if(!c.base)return;const f=((frame||0)%8+8)%8,col=f%4,row=Math.floor(f/4),walkKind=kind==="front"?"front":kind==="back"?"back":"side";c.sprite.classList.add("is-walking");c.sprite.classList.toggle("face-left",kind==="side"&&faceLeft);c.sprite.style.backgroundImage=`url("${catPath(c.base,walkKind)}")`;c.sprite.style.backgroundSize="400% 200%";c.sprite.style.backgroundPosition=`${col*100/3}% ${row*100}%`}
+  function nextPoint(current){let next=Math.floor(Math.random()*HOTEL_POINTS.length);if(next===current)next=(next+1)%HOTEL_POINTS.length;return next}
+  function saveControllerPosition(c){
+    if(!c?.el?.isConnected)return;const layer=document.getElementById("dogHotelPetLayer");if(!layer)return;const lr=layer.getBoundingClientRect(),r=c.el.getBoundingClientRect();if(!lr.width||!lr.height)return;
+    const x=((r.left+r.width/2-lr.left)/lr.width)*100,y=((r.top+r.height/2-lr.top)/lr.height)*100;
+    c.x=Math.max(27,Math.min(73,x));c.y=Math.max(35,Math.min(78,y));hotelPositionStore[c.key]={x:c.x,y:c.y,node:c.node};storePositions();
+  }
+  function stopOne(c,preserve=true){if(!c)return;if(preserve)saveControllerPosition(c);clearTimeout(c.timer);clearInterval(c.frameTimer);try{c.motion?.cancel?.()}catch(_){ }c.timer=0;c.frameTimer=0;c.motion=null;if(c.el?.isConnected){c.el.style.left=`${c.x}%`;c.el.style.top=`${c.y}%`}}
+  stopDogHotelMotion=function(){dogHotelControllers.forEach(c=>stopOne(c,true));catHotelControllers.forEach(c=>stopOne(c,true));dogHotelControllers.clear();catHotelControllers.clear()};
+
+  function scheduleDogSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;dogSetPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveDogSlow(c),2600+Math.random()*2800)}
+  function moveDogSlow(c){
+    if(currentScene!=="dogHotel"||!c.el?.isConnected||document.hidden)return;
+    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(7600,Math.min(13800,6500+distance*260));
+    let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},225);
+    c.motion=c.el.animate([{left:`${c.x}%`,top:`${c.y}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
+    c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;c.x=x2;c.y=y2;c.node=next;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;hotelPositionStore[c.key]={x:x2,y:y2,node:next};storePositions();c.motion=null;scheduleDogSlow(c)};
+  }
+  function scheduleCatSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;setCatPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveCatSlow(c),2800+Math.random()*3200)}
+  function moveCatSlow(c){
+    if(currentScene!=="dogHotel"||!c.el?.isConnected||document.hidden)return;
+    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(8200,Math.min(14800,7100+distance*280));
+    let frame=0;setCatWalk(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;setCatWalk(c,frame,kind,faceLeft)},235);
+    c.motion=c.el.animate([{left:`${c.x}%`,top:`${c.y}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
+    c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;c.x=x2;c.y=y2;c.node=next;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;hotelPositionStore[c.key]={x:x2,y:y2,node:next};storePositions();c.motion=null;scheduleCatSlow(c)};
+  }
+  async function mountFinalHotelPets(){
+    if(currentScene!=="dogHotel")return;const layer=document.getElementById("dogHotelPetLayer");if(!layer)return;
+    stopDogHotelMotion();layer.querySelectorAll(".dog-hotel-pet,.s2-hotel-cat").forEach(n=>n.remove());
+    const pen=Math.max(1,Math.min(4,Number(currentDogHotelPen)||1)),dogs=dogsInHotelPen(pen),cats=(ownState?.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&Math.max(1,Math.min(4,Number(c.hotelPen)||1))===pen);
+    dogs.forEach((dog,index)=>{
+      const key=petKey("dog",dog.id,pen),stored=hotelPositionStore[key],fallbackPoint=HOTEL_POINTS[index%HOTEL_POINTS.length],node=validHotelPoint(stored)?Math.max(0,Math.min(HOTEL_POINTS.length-1,Number(stored.node)||0)):index%HOTEL_POINTS.length,x=validHotelPoint(stored)?Number(stored.x):fallbackPoint[0],y=validHotelPoint(stored)?Number(stored.y):fallbackPoint[1];
+      const el=document.createElement("button");el.type="button";el.className="dog-hotel-pet s2-final-hotel-dog";el.dataset.dogId=dog.id;el.style.left=`${x}%`;el.style.top=`${y}%`;el.innerHTML=`<img class="dog-hotel-fallback-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}"><span class="dog-hotel-sprite"></span><span class="dog-hotel-name">${safeHtml(dogDisplayName(dog))}</span>`;el.onclick=()=>showPlacedDogMenu(dog.id);layer.appendChild(el);
+      const c={id:dog.id,key,el,sprite:el.querySelector(".dog-hotel-sprite"),fallback:el.querySelector(".dog-hotel-fallback-icon"),base:"",node,x,y,timer:0,frameTimer:0,motion:null};dogHotelControllers.set(dog.id,c);
+      resolveDogAssetBase(dogType(dog).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;dogSetPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveDogSlow(c),2200+Math.random()*2200)}).catch(()=>{});
+    });
+    cats.forEach((cat,index)=>{
+      const baseIndex=dogs.length+index,key=petKey("cat",cat.id,pen),stored=hotelPositionStore[key],fallbackPoint=HOTEL_POINTS[baseIndex%HOTEL_POINTS.length],node=validHotelPoint(stored)?Math.max(0,Math.min(HOTEL_POINTS.length-1,Number(stored.node)||0)):baseIndex%HOTEL_POINTS.length,x=validHotelPoint(stored)?Number(stored.x):fallbackPoint[0],y=validHotelPoint(stored)?Number(stored.y):fallbackPoint[1];
+      const el=document.createElement("button");el.type="button";el.className="s2-hotel-cat s2-final-hotel-cat";el.style.left=`${x}%`;el.style.top=`${y}%`;el.innerHTML=`<img class="s2-final-cat-fallback" src="${catType(cat).image}" alt="${safeHtml(catDisplayName(cat))}"><span class="s2-final-cat-sprite"></span><small>${safeHtml(catDisplayName(cat))}</small>`;el.onclick=()=>showPlacedCatMenu(cat.id);layer.appendChild(el);
+      const c={id:cat.id,key,cat,el,sprite:el.querySelector(".s2-final-cat-sprite"),fallback:el.querySelector(".s2-final-cat-fallback"),base:"",node,x,y,timer:0,frameTimer:0,motion:null};catHotelControllers.set(cat.id,c);
+      resolveCatBase(catType(cat).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;setCatPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveCatSlow(c),2400+Math.random()*2400)}).catch(()=>{});
+    });
+  }
+  mountDogHotelPetsForPen=mountFinalHotelPets;mountDogHotelPets=mountFinalHotelPets;
+  const hotelRenderBase=renderDogHotelScene;
+  renderDogHotelScene=function(){const r=hotelRenderBase.apply(this,arguments);if(currentScene==="dogHotel"){setTimeout(()=>{if(currentScene==="dogHotel")mountFinalHotelPets()},45)}return r};
+  document.addEventListener("visibilitychange",()=>{
+    if(currentScene!=="dogHotel")return;
+    if(document.hidden){dogHotelControllers.forEach(c=>stopOne(c,true));catHotelControllers.forEach(c=>stopOne(c,true))}
+    else setTimeout(()=>{if(currentScene==="dogHotel")mountFinalHotelPets()},120);
+  },{passive:true});
+
+  /* -----------------------------------------------------------------
+     6) Alpaca trough: larger food and aligned to the actual side rails.
+     ----------------------------------------------------------------- */
+  renderFixedSideTroughFood=function(pen){
+    const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");
+    if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}
+    layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
+    const ys=[39.0,44.0,49.0,54.0,59.0,64.0,69.0,74.0];
+    const xl=[15.7,15.2,14.7,14.2,13.7,13.2,12.7,12.2],xr=xl.map(x=>100-x);
+    (pen.trough||[]).slice(0,16).forEach((slot,i)=>{
+      if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;
+      const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";
+      img.style.cssText=`position:absolute;left:${left?xl[j]:xr[j]}%;top:${ys[j]}%;width:clamp(31px,5.9vw,43px);height:auto;transform:translate(-50%,-50%);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));`;
+      layer.appendChild(img);
+    });
+  };
+
+  /* Repair is already a Firestore transaction; this extra flush protects it from
+     any queued local pen timestamp write immediately after navigation. */
+  document.addEventListener("click",e=>{
+    if(!e.target?.closest?.("#s2RepairConfirm"))return;
+    setTimeout(()=>{try{if(ownState){saveLocalOnly(ownState);queueCloudSave();flushCloudSave().catch(()=>{})}}catch(_){ }},700);
+  },{passive:true});
+
+  /* -----------------------------------------------------------------
+     7) Jellyfish: immediate empty-slot picker + reliable pond-2 commit.
+        Position/size are finalized by CSS below.
+     ----------------------------------------------------------------- */
+  async function placeJelly2Final(index,key,version,button){
+    if(button){button.disabled=true;button.textContent="กำลังวาง..."}
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next,placed;
+      await fs.runTransaction(db,async tx=>{
+        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const raw=ps.exists()?ps.data():{},slots=Array.isArray(raw.slots)?raw.slots.slice(0,12):[];while(slots.length<12)slots.push(null);
+        if(slots[index])throw new Error("ช่องนี้มีแมงกะพรุนแล้ว");
+        const s=normalizeState(ss.data(),currentMember);assertCurrentCloudSession(ss.data(),currentMember);
+        if(version===2){if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุน V2 หมดแล้ว");s.jellyfishV2[key]-=1}else{if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุน V1 หมดแล้ว");s.specialAnimals[key]-=1}
+        const t=gameNow();placed={id:(crypto.randomUUID?.()||`${currentMemberKey}-${t}`),version,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:t,expiresAt:t+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};slots[index]=placed;next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(typeof Y26_applyOwnState==="function")Y26_applyOwnState(next);else{ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState)}
+      closeModal();showWeatherToast(`🪼 วาง ${(version===2?Y26_JELLY_V2?.[key]?.name:JELLYFISH_TYPES?.[key]?.name)||"แมงกะพรุน"} แล้ว`);
+      const slot=document.querySelector(`[data-j2="${index}"]`);if(slot){const ty=version===2?Y26_JELLY_V2?.[key]:JELLYFISH_TYPES?.[key];slot.classList.remove("jelly-slot-empty");slot.classList.add("jelly-slot-owned");slot.innerHTML=`<img src="${ty?.image||""}" alt=""><small>${safeHtml(ty?.name||"แมงกะพรุน")}<br>กำลังซิงก์...</small>`}
+    }catch(e){message("วางแมงกะพรุนไม่ได้",e.message||"กรุณาลองใหม่");if(button)button.disabled=false}
+  }
+  function openJelly2PickerFinal(index){
+    const s=ownState||state,choices=[];
+    Object.entries(JELLYFISH_TYPES||{}).forEach(([k,j])=>{const count=Number(s?.specialAnimals?.[k]||0);if(count>0)choices.push({version:1,key:k,...j,count})});
+    Object.entries(Y26_JELLY_V2||{}).forEach(([k,j])=>{const count=Number(s?.jellyfishV2?.[k]||0);if(count>0)choices.push({version:2,key:k,...j,count})});
+    if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อนค่ะ");
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-s2-j2-final="${x.version}:${safeHtml(x.key)}"><img src="${x.image}" alt=""><b>${safeHtml(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;
+    document.querySelectorAll("[data-s2-j2-final]").forEach(btn=>btn.onclick=()=>{const [v,k]=btn.dataset.s2J2Final.split(":");placeJelly2Final(index,k,Number(v),btn)});openModal();
+  }
+  document.addEventListener("click",e=>{
+    if(currentScene==="jellyfish"){
+      const b=e.target?.closest?.("[data-jelly-slot]");if(b&&b.classList.contains("jelly-slot-empty")){e.preventDefault();e.stopImmediatePropagation();showJellyPlacement(Number(b.dataset.jellySlot));return}
+    }
+    if(currentScene==="jellyfish2"){
+      const b=e.target?.closest?.("[data-j2]");if(b&&b.classList.contains("jelly-slot-empty")){e.preventDefault();e.stopImmediatePropagation();openJelly2PickerFinal(Number(b.dataset.j2));return}
+    }
+  },true);
+
+  /* Whenever Aida returns from another app, refresh only live/notification data;
+     do not repaint pets from their original spawn points. */
+  window.addEventListener("focus",()=>{
+    if(adminProfile?.role==="admin")queryPendingMembers().then(()=>{injectMemberApplications();refreshNotificationBadge(true)}).catch(()=>{});
+  },{passive:true});
+
+  window.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
 })();
-window.S2_applyPostWimanHotfix();

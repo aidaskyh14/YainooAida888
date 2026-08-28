@@ -8175,3 +8175,58 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 .jelly-slot[data-j2].jelly-slot-owned small{
   max-width:145%!important;
 }
+
+/* =====================================================================
+   S2 FINAL FIX — PET SCALE / JELLY POSITIONS / ARENA / ADMIN REQUESTS
+   ===================================================================== */
+.s2-meow-woof-hotel .dog-hotel-pet,
+.s2-meow-woof-hotel .s2-hotel-cat{
+  width:clamp(44px,11.5vw,76px)!important;
+  max-width:76px!important;
+  overflow:visible!important;
+}
+.s2-meow-woof-hotel .dog-hotel-pet .dog-hotel-sprite,
+.s2-meow-woof-hotel .dog-hotel-pet .dog-hotel-fallback-icon{
+  width:100%!important;height:100%!important;inset:0!important;object-fit:contain!important;
+}
+.s2-final-hotel-cat{position:absolute;z-index:22;aspect-ratio:1/1.08;transform:translate(-50%,-50%);border:0;background:transparent;padding:0;pointer-events:auto;cursor:pointer}
+.s2-final-hotel-cat::before{content:"";position:absolute;left:50%;bottom:7%;width:54%;height:9%;transform:translateX(-50%);border-radius:50%;background:rgba(20,13,22,.28);filter:blur(1.6px);pointer-events:none}
+.s2-final-cat-fallback,.s2-final-cat-sprite{position:absolute;z-index:2;inset:0;width:100%;height:100%;object-fit:contain;background-repeat:no-repeat;background-position:0 0;transform-origin:center bottom;filter:drop-shadow(0 2px 2px rgba(40,24,24,.2));pointer-events:none}
+.s2-final-cat-fallback{transition:opacity .16s ease}.s2-final-cat-fallback.sprite-ready{opacity:0}
+.s2-final-cat-sprite.face-left{transform:scaleX(-1)}
+.s2-final-hotel-cat small,.s2-meow-woof-hotel .dog-hotel-name{font-size:clamp(7px,1.65vw,10px)!important;padding:2px 5px!important}
+@media(max-width:430px){.s2-meow-woof-hotel .dog-hotel-pet,.s2-meow-woof-hotel .s2-hotel-cat{width:clamp(42px,11.2vw,66px)!important;max-width:66px!important}}
+
+/* Both Season-2 jellyfish ponds use the same 3x4 water grid. Move every slot
+   down into the water and away from the building; shrink animals slightly. */
+.jelly-slot{width:15.5%!important;height:12.5%!important}
+[data-jelly-slot="0"],[data-j2="0"]{left:34%!important;top:41.5%!important}
+[data-jelly-slot="1"],[data-j2="1"]{left:51.5%!important;top:41.5%!important}
+[data-jelly-slot="2"],[data-j2="2"]{left:69%!important;top:41.5%!important}
+[data-jelly-slot="3"],[data-j2="3"]{left:34%!important;top:52%!important}
+[data-jelly-slot="4"],[data-j2="4"]{left:51.5%!important;top:52%!important}
+[data-jelly-slot="5"],[data-j2="5"]{left:69%!important;top:52%!important}
+[data-jelly-slot="6"],[data-j2="6"]{left:34%!important;top:62.5%!important}
+[data-jelly-slot="7"],[data-j2="7"]{left:51.5%!important;top:62.5%!important}
+[data-jelly-slot="8"],[data-j2="8"]{left:69%!important;top:62.5%!important}
+[data-jelly-slot="9"],[data-j2="9"]{left:34%!important;top:73%!important}
+[data-jelly-slot="10"],[data-j2="10"]{left:51.5%!important;top:73%!important}
+[data-jelly-slot="11"],[data-j2="11"]{left:69%!important;top:73%!important}
+.jelly-slot-owned img,.jelly-slot-owned:not(.jelly-v2-slot) img,.jelly-slot-owned.jelly-v2-slot img{display:block!important;width:82%!important;height:68%!important;margin:0 auto!important;object-fit:contain!important}
+.jelly-slot-owned small{bottom:-4px!important;font-size:clamp(6px,1.35vw,8px)!important;max-width:145%!important}
+
+/* Sea arena: place our jelly and opponent on the two wooden circular platforms. */
+.ynu-arena-zone{top:42%!important;bottom:auto!important;height:19%!important;width:33%!important}
+.ynu-arena-zone.left{left:12%!important}.ynu-arena-zone.right{right:12%!important}
+.ynu-arena-picked{top:43.5%!important;width:22%!important}
+.ynu-arena-picked.mine{left:16.5%!important}.ynu-arena-picked.opp{right:16.5%!important}
+.ynu-arena-picked img{height:clamp(86px,21vw,118px)!important;width:100%!important;object-fit:contain!important}
+
+/* Direct membership approval inside Aida notifications. */
+.s2-final-member-requests{border:2px solid rgba(132,196,129,.72)!important;background:linear-gradient(180deg,rgba(55,79,60,.93),rgba(45,39,56,.96))!important}
+.s2-final-member-list{display:grid;gap:8px;margin-top:8px}
+.s2-final-member-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:8px;border-radius:12px;background:rgba(255,255,255,.07)}
+.s2-final-member-row strong,.s2-final-member-row small{display:block}.s2-final-member-row small{opacity:.75;margin-top:2px}
+.s2-final-member-row .notification-actions{display:flex;gap:5px;flex:0 0 auto}.s2-final-member-row .notification-actions button{min-height:34px;padding:6px 9px}
+
+#alpacaTroughFoodFixed .s2-fixed-trough-food{min-width:31px!important;max-width:43px!important}
