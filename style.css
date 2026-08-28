@@ -8064,3 +8064,114 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
   .s2-meow-woof-hotel .dog-hotel-pet,
   .s2-meow-woof-hotel .s2-hotel-cat{width:clamp(28px,6.6vw,44px)!important;max-width:44px!important}
 }
+
+
+/* =====================================================================
+   S2 HOTFIX 2026-08-28
+   ===================================================================== */
+.s2-meow-woof-hotel .dog-hotel-pet{
+  width:clamp(38px,8.8vw,60px)!important;
+  max-width:60px!important;
+}
+.s2-meow-woof-hotel .dog-hotel-pet .dog-hotel-sprite{
+  width:104%!important;
+  height:88%!important;
+}
+.s2-meow-woof-hotel .s2-hotel-cat{
+  position:absolute;
+  z-index:22;
+  width:clamp(36px,8.2vw,58px);
+  max-width:58px;
+  aspect-ratio:1/1;
+  transform:translate(-50%,-50%);
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  padding:0;
+}
+.s2-meow-woof-hotel .s2-hotel-cat::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:8%;
+  width:56%;
+  height:14%;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:rgba(24,16,20,.22);
+  filter:blur(1px);
+  pointer-events:none;
+}
+.s2-hotel-cat .s2-hotel-cat-fallback,
+.s2-hotel-cat .s2-hotel-cat-sprite{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:108%;
+  height:96%;
+  object-fit:contain;
+  pointer-events:none;
+}
+.s2-hotel-cat .s2-hotel-cat-fallback{
+  transition:opacity .18s ease;
+}
+.s2-hotel-cat .s2-hotel-cat-fallback.sprite-ready{
+  opacity:0;
+}
+.s2-hotel-cat .s2-hotel-cat-sprite{
+  background-repeat:no-repeat;
+  background-position:0 0;
+}
+.s2-hotel-cat .s2-hotel-cat-sprite.face-left{transform:translate(-50%,-50%) scaleX(-1)}
+.s2-hotel-cat small{
+  position:absolute;
+  left:50%;
+  bottom:-10px;
+  transform:translateX(-50%);
+  padding:2px 6px;
+  border-radius:999px;
+  background:rgba(46,35,52,.82);
+  color:#fff7e2;
+  font-size:clamp(7px,1.65vw,9px);
+  font-weight:900;
+  line-height:1;
+  white-space:nowrap;
+  pointer-events:none;
+}
+#alpacaTroughFoodFixed .s2-fixed-trough-food{
+  image-rendering:auto;
+}
+.notification-card.s2-hotfix-membership-card{
+  border-color:rgba(129,187,126,.55);
+}
+.s2-hotfix-membership-list{
+  display:grid;
+  gap:8px;
+  margin-top:8px;
+}
+.s2-hotfix-membership-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+}
+.s2-hotfix-membership-item strong{
+  display:block;
+  color:#fff4d3;
+}
+.s2-hotfix-membership-item small{
+  display:block;
+  margin-top:2px;
+  opacity:.78;
+}
+.jelly-slot[data-j2]{
+  width:20.5%!important;
+  height:16.2%!important;
+}
+.jelly-slot[data-j2].jelly-slot-owned small{
+  max-width:145%!important;
+}
