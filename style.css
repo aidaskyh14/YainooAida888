@@ -8230,3 +8230,35 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 .s2-final-member-row .notification-actions{display:flex;gap:5px;flex:0 0 auto}.s2-final-member-row .notification-actions button{min-height:34px;padding:6px 9px}
 
 #alpacaTroughFoodFixed .s2-fixed-trough-food{min-width:31px!important;max-width:43px!important}
+
+
+/* =====================================================================
+   S2 FOLLOW-UP — click map / arena / shadows / upper trough
+   ===================================================================== */
+/* Original jelly buttons remain the visuals. The click-map supplies 12
+   non-overlapping touch targets, so every empty slot is tappable. */
+.s2-jelly-clickmap{position:absolute;inset:0;z-index:70;pointer-events:none}
+.s2-jelly-hit{position:absolute;width:15.8%;height:9.2%;transform:translate(-50%,-50%);border:0;background:transparent;padding:0;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.jelly-slot-empty{pointer-events:auto!important;z-index:42!important;touch-action:manipulation!important}
+.jelly-slot-owned{z-index:12!important}
+
+/* Move both fighters slightly upward and farther outward onto the wood decks. */
+.ynu-arena-picked{top:40.2%!important}
+.ynu-arena-picked.mine{left:12.8%!important}
+.ynu-arena-picked.opp{right:12.8%!important}
+.ynu-arena-zone{top:39.3%!important}
+.ynu-arena-zone.left{left:8.5%!important}.ynu-arena-zone.right{right:8.5%!important}
+
+/* Strong, consistent ground contact shadows for every hotel dog and cat. */
+.s2-meow-woof-hotel .s2-final-hotel-dog::before,
+.s2-meow-woof-hotel .s2-final-hotel-cat::before{
+  content:""!important;display:block!important;position:absolute!important;z-index:0!important;
+  left:50%!important;bottom:5%!important;width:58%!important;height:10%!important;
+  transform:translateX(-50%)!important;border-radius:50%!important;
+  background:rgba(24,16,20,.42)!important;filter:blur(2.1px)!important;opacity:.9!important;pointer-events:none!important;
+}
+.s2-meow-woof-hotel .dog-hotel-sprite,.s2-meow-woof-hotel .dog-hotel-fallback-icon,
+.s2-meow-woof-hotel .s2-final-cat-sprite,.s2-meow-woof-hotel .s2-final-cat-fallback{z-index:2!important}
+
+/* Only the two upper trough placements move down; lower six remain unchanged. */
+#alpacaTroughFoodFixed .s2-fixed-trough-food{filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))!important}

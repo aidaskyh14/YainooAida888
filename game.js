@@ -22037,11 +22037,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const catHotelControllers=new Map();
   const catBaseCache=new Map();
   let hotelPositionStore={};
-  try{hotelPositionStore=JSON.parse(sessionStorage.getItem("s2-hotel-position-v3")||"{}")||{}}catch(_){hotelPositionStore={}}
-  function storePositions(){try{sessionStorage.setItem("s2-hotel-position-v3",JSON.stringify(hotelPositionStore))}catch(_){ }}
+  try{hotelPositionStore=JSON.parse(localStorage.getItem("s2-hotel-position-v4")||sessionStorage.getItem("s2-hotel-position-v3")||"{}")||{}}catch(_){hotelPositionStore={}}
+  function storePositions(){try{localStorage.setItem("s2-hotel-position-v4",JSON.stringify(hotelPositionStore));sessionStorage.setItem("s2-hotel-position-v3",JSON.stringify(hotelPositionStore))}catch(_){ }}
   function petKey(kind,id,pen){return `${kind}:${id}:p${pen}`}
   function validHotelPoint(p){return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))&&p.x>=27&&p.x<=73&&p.y>=35&&p.y<=78}
-  function dogPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETFINAL`:`${base}-walk-${kind}.png?v=S2PETFINAL`}
+  function dogPath(base,kind){if(kind==="front"&&/(^|\/)dog-01$/.test(String(base||"")))return `dog-01-walk-front-fixed.png?v=S2DOG01FRONT2`;return kind==="pose"?`${base}-pose-sheet.png?v=S2PETSMOOTH2`:`${base}-walk-${kind}.png?v=S2PETSMOOTH2`}
   function catPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETFINAL`:`${base}-walk-${kind}.png?v=S2PETFINAL`}
 
   resolveDogAssetBase=function(number){
@@ -22065,7 +22065,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function setCatPose(c,pose){if(!c.base)return;const p=((pose||0)%12+12)%12,col=p%4,row=Math.floor(p/4);c.sprite.classList.remove("is-walking","face-left");c.sprite.style.backgroundImage=`url("${catPath(c.base,"pose")}")`;c.sprite.style.backgroundSize="400% 300%";c.sprite.style.backgroundPosition=`${col*100/3}% ${row*50}%`}
   function setCatWalk(c,frame,kind,faceLeft){if(!c.base)return;const f=((frame||0)%8+8)%8,col=f%4,row=Math.floor(f/4),walkKind=kind==="front"?"front":kind==="back"?"back":"side";c.sprite.classList.add("is-walking");c.sprite.classList.toggle("face-left",kind==="side"&&faceLeft);c.sprite.style.backgroundImage=`url("${catPath(c.base,walkKind)}")`;c.sprite.style.backgroundSize="400% 200%";c.sprite.style.backgroundPosition=`${col*100/3}% ${row*100}%`}
-  function nextPoint(current){let next=Math.floor(Math.random()*HOTEL_POINTS.length);if(next===current)next=(next+1)%HOTEL_POINTS.length;return next}
+  function nextPoint(current){const i=Math.max(0,Math.min(HOTEL_POINTS.length-1,Number(current)||0)),[x,y]=HOTEL_POINTS[i];const near=HOTEL_POINTS.map((p,n)=>({n,d:Math.hypot(p[0]-x,p[1]-y)})).filter(v=>v.n!==i&&v.d>=8&&v.d<=22).sort((a,b)=>a.d-b.d).slice(0,6);const pool=near.length?near:HOTEL_POINTS.map((p,n)=>({n,d:Math.hypot(p[0]-x,p[1]-y)})).filter(v=>v.n!==i).sort((a,b)=>a.d-b.d).slice(0,5);return pool[Math.floor(Math.random()*pool.length)]?.n??((i+1)%HOTEL_POINTS.length)}
   function saveControllerPosition(c){
     if(!c?.el?.isConnected)return;const layer=document.getElementById("dogHotelPetLayer");if(!layer)return;const lr=layer.getBoundingClientRect(),r=c.el.getBoundingClientRect();if(!lr.width||!lr.height)return;
     const x=((r.left+r.width/2-lr.left)/lr.width)*100,y=((r.top+r.height/2-lr.top)/lr.height)*100;
@@ -22074,19 +22074,19 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function stopOne(c,preserve=true){if(!c)return;if(preserve)saveControllerPosition(c);clearTimeout(c.timer);clearInterval(c.frameTimer);try{c.motion?.cancel?.()}catch(_){ }c.timer=0;c.frameTimer=0;c.motion=null;if(c.el?.isConnected){c.el.style.left=`${c.x}%`;c.el.style.top=`${c.y}%`}}
   stopDogHotelMotion=function(){dogHotelControllers.forEach(c=>stopOne(c,true));catHotelControllers.forEach(c=>stopOne(c,true));dogHotelControllers.clear();catHotelControllers.clear()};
 
-  function scheduleDogSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;dogSetPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveDogSlow(c),2600+Math.random()*2800)}
+  function scheduleDogSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;dogSetPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveDogSlow(c),280+Math.random()*520)}
   function moveDogSlow(c){
     if(currentScene!=="dogHotel"||!c.el?.isConnected||document.hidden)return;
-    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(7600,Math.min(13800,6500+distance*260));
-    let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},225);
+    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(9800,Math.min(17200,8500+distance*360));
+    let frame=0;dogSetWalkFrame(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;dogSetWalkFrame(c,frame,kind,faceLeft)},255);
     c.motion=c.el.animate([{left:`${c.x}%`,top:`${c.y}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
     c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;c.x=x2;c.y=y2;c.node=next;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;hotelPositionStore[c.key]={x:x2,y:y2,node:next};storePositions();c.motion=null;scheduleDogSlow(c)};
   }
-  function scheduleCatSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;setCatPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveCatSlow(c),2800+Math.random()*3200)}
+  function scheduleCatSlow(c){if(currentScene!=="dogHotel"||!c.el?.isConnected)return;setCatPose(c,Math.floor(Math.random()*12));c.timer=setTimeout(()=>moveCatSlow(c),320+Math.random()*580)}
   function moveCatSlow(c){
     if(currentScene!=="dogHotel"||!c.el?.isConnected||document.hidden)return;
-    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(8200,Math.min(14800,7100+distance*280));
-    let frame=0;setCatWalk(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;setCatWalk(c,frame,kind,faceLeft)},235);
+    const next=nextPoint(c.node),[x2,y2]=HOTEL_POINTS[next],dx=x2-c.x,dy=y2-c.y,kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back"),faceLeft=kind==="side"&&dx<0,distance=Math.hypot(dx,dy),duration=Math.max(10400,Math.min(18400,9000+distance*390));
+    let frame=0;setCatWalk(c,0,kind,faceLeft);clearInterval(c.frameTimer);c.frameTimer=setInterval(()=>{frame=(frame+1)%8;setCatWalk(c,frame,kind,faceLeft)},265);
     c.motion=c.el.animate([{left:`${c.x}%`,top:`${c.y}%`},{left:`${x2}%`,top:`${y2}%`}],{duration,easing:"linear",fill:"forwards"});
     c.motion.onfinish=()=>{clearInterval(c.frameTimer);c.frameTimer=0;c.x=x2;c.y=y2;c.node=next;c.el.style.left=`${x2}%`;c.el.style.top=`${y2}%`;hotelPositionStore[c.key]={x:x2,y:y2,node:next};storePositions();c.motion=null;scheduleCatSlow(c)};
   }
@@ -22098,13 +22098,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       const key=petKey("dog",dog.id,pen),stored=hotelPositionStore[key],fallbackPoint=HOTEL_POINTS[index%HOTEL_POINTS.length],node=validHotelPoint(stored)?Math.max(0,Math.min(HOTEL_POINTS.length-1,Number(stored.node)||0)):index%HOTEL_POINTS.length,x=validHotelPoint(stored)?Number(stored.x):fallbackPoint[0],y=validHotelPoint(stored)?Number(stored.y):fallbackPoint[1];
       const el=document.createElement("button");el.type="button";el.className="dog-hotel-pet s2-final-hotel-dog";el.dataset.dogId=dog.id;el.style.left=`${x}%`;el.style.top=`${y}%`;el.innerHTML=`<img class="dog-hotel-fallback-icon" src="${dogType(dog).image}" alt="${safeHtml(dogDisplayName(dog))}"><span class="dog-hotel-sprite"></span><span class="dog-hotel-name">${safeHtml(dogDisplayName(dog))}</span>`;el.onclick=()=>showPlacedDogMenu(dog.id);layer.appendChild(el);
       const c={id:dog.id,key,el,sprite:el.querySelector(".dog-hotel-sprite"),fallback:el.querySelector(".dog-hotel-fallback-icon"),base:"",node,x,y,timer:0,frameTimer:0,motion:null};dogHotelControllers.set(dog.id,c);
-      resolveDogAssetBase(dogType(dog).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;dogSetPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveDogSlow(c),2200+Math.random()*2200)}).catch(()=>{});
+      resolveDogAssetBase(dogType(dog).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;dogSetPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveDogSlow(c),650+Math.random()*850)}).catch(()=>{});
     });
     cats.forEach((cat,index)=>{
       const baseIndex=dogs.length+index,key=petKey("cat",cat.id,pen),stored=hotelPositionStore[key],fallbackPoint=HOTEL_POINTS[baseIndex%HOTEL_POINTS.length],node=validHotelPoint(stored)?Math.max(0,Math.min(HOTEL_POINTS.length-1,Number(stored.node)||0)):baseIndex%HOTEL_POINTS.length,x=validHotelPoint(stored)?Number(stored.x):fallbackPoint[0],y=validHotelPoint(stored)?Number(stored.y):fallbackPoint[1];
       const el=document.createElement("button");el.type="button";el.className="s2-hotel-cat s2-final-hotel-cat";el.style.left=`${x}%`;el.style.top=`${y}%`;el.innerHTML=`<img class="s2-final-cat-fallback" src="${catType(cat).image}" alt="${safeHtml(catDisplayName(cat))}"><span class="s2-final-cat-sprite"></span><small>${safeHtml(catDisplayName(cat))}</small>`;el.onclick=()=>showPlacedCatMenu(cat.id);layer.appendChild(el);
       const c={id:cat.id,key,cat,el,sprite:el.querySelector(".s2-final-cat-sprite"),fallback:el.querySelector(".s2-final-cat-fallback"),base:"",node,x,y,timer:0,frameTimer:0,motion:null};catHotelControllers.set(cat.id,c);
-      resolveCatBase(catType(cat).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;setCatPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveCatSlow(c),2400+Math.random()*2400)}).catch(()=>{});
+      resolveCatBase(catType(cat).number).then(base=>{if(!base||currentScene!=="dogHotel"||!el.isConnected)return;c.base=base;setCatPose(c,Math.floor(Math.random()*12));c.fallback?.classList.add("sprite-ready");c.timer=setTimeout(()=>moveCatSlow(c),750+Math.random()*900)}).catch(()=>{});
     });
   }
   mountDogHotelPetsForPen=mountFinalHotelPets;mountDogHotelPets=mountFinalHotelPets;
@@ -22123,8 +22123,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");
     if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}
     layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
-    const ys=[39.0,44.0,49.0,54.0,59.0,64.0,69.0,74.0];
-    const xl=[15.7,15.2,14.7,14.2,13.7,13.2,12.7,12.2],xr=xl.map(x=>100-x);
+    const ys=[42.1,46.6,49.0,54.0,59.0,64.0,69.0,74.0];
+    const xl=[15.3,15.0,14.7,14.2,13.7,13.2,12.7,12.2],xr=xl.map(x=>100-x);
     (pen.trough||[]).slice(0,16).forEach((slot,i)=>{
       if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;
       const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";
@@ -22171,14 +22171,20 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     $("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-s2-j2-final="${x.version}:${safeHtml(x.key)}"><img src="${x.image}" alt=""><b>${safeHtml(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;
     document.querySelectorAll("[data-s2-j2-final]").forEach(btn=>btn.onclick=()=>{const [v,k]=btn.dataset.s2J2Final.split(":");placeJelly2Final(index,k,Number(v),btn)});openModal();
   }
-  document.addEventListener("click",e=>{
+  let s2LastJellyTapAt=0;
+  function s2HandleJellyTap(e){
+    if(Date.now()-s2LastJellyTapAt<180)return;
     if(currentScene==="jellyfish"){
-      const b=e.target?.closest?.("[data-jelly-slot]");if(b&&b.classList.contains("jelly-slot-empty")){e.preventDefault();e.stopImmediatePropagation();showJellyPlacement(Number(b.dataset.jellySlot));return}
+      const b=e.target?.closest?.("[data-jelly-slot]");
+      if(b&&!b.querySelector("img")){s2LastJellyTapAt=Date.now();e.preventDefault();e.stopImmediatePropagation();showJellyPlacement(Number(b.dataset.jellySlot));return}
     }
     if(currentScene==="jellyfish2"){
-      const b=e.target?.closest?.("[data-j2]");if(b&&b.classList.contains("jelly-slot-empty")){e.preventDefault();e.stopImmediatePropagation();openJelly2PickerFinal(Number(b.dataset.j2));return}
+      const b=e.target?.closest?.("[data-j2]");
+      if(b&&!b.querySelector("img")){s2LastJellyTapAt=Date.now();e.preventDefault();e.stopImmediatePropagation();openJelly2PickerFinal(Number(b.dataset.j2));return}
     }
-  },true);
+  }
+  document.addEventListener("pointerup",s2HandleJellyTap,true);
+  document.addEventListener("click",s2HandleJellyTap,true);
 
   /* Whenever Aida returns from another app, refresh only live/notification data;
      do not repaint pets from their original spawn points. */
@@ -22188,4 +22194,55 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   window.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 FOLLOW-UP FIX — 2026-08-28 19:xx
+   - 12/12 jellyfish slots get their own non-overlapping transparent hitboxes.
+   - Alpaca repair updates the screen immediately, then saves in background.
+   ===================================================================== */
+(function S2_FOLLOWUP_TOUCH_AND_REPAIR(){
+  "use strict";
+  const GRID=[[34,41.5],[51.5,41.5],[69,41.5],[34,52],[51.5,52],[69,52],[34,62.5],[51.5,62.5],[69,62.5],[34,73],[51.5,73],[69,73]];
+  let paintQueued=false;
+  function installJellyClickMap(){
+    if(currentScene!=="jellyfish"&&currentScene!=="jellyfish2")return;
+    const layer=document.getElementById("sceneInteractiveLayer");if(!layer)return;
+    let map=layer.querySelector(".s2-jelly-clickmap");
+    if(!map){map=document.createElement("div");map.className="s2-jelly-clickmap";layer.appendChild(map)}
+    if(map.children.length!==12){
+      map.innerHTML="";
+      GRID.forEach(([x,y],i)=>{const b=document.createElement("button");b.type="button";b.className="s2-jelly-hit";b.style.left=`${x}%`;b.style.top=`${y}%`;b.dataset.hitIndex=String(i);b.setAttribute("aria-label",`ช่องแมงกะพรุน ${i+1}`);b.onclick=e=>{e.preventDefault();e.stopPropagation();const target=currentScene==="jellyfish2"?document.querySelector(`[data-j2="${i}"]`):document.querySelector(`[data-jelly-slot="${i}"]`);target?.click()};map.appendChild(b)})
+    }
+  }
+  function queueClickMap(){if(paintQueued)return;paintQueued=true;requestAnimationFrame(()=>{paintQueued=false;installJellyClickMap()})}
+  const layer=document.getElementById("sceneInteractiveLayer");
+  if(layer&&typeof MutationObserver!=="undefined")new MutationObserver(queueClickMap).observe(layer,{childList:true,subtree:true});
+  document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutJellyfishBtn,#ynuJelly2Btn"))setTimeout(installJellyClickMap,35)},false);
+  window.addEventListener("focus",()=>setTimeout(installJellyClickMap,40),{passive:true});
+
+  const MATERIALS={materialStone:100,materialWood:100,materialSteel:50,materialRope:50};
+  function currentPenNumber(){const raw=document.getElementById("alpacaPenStage")?.style?.getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d+)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))}
+  function fastRepair(){
+    const s=ownState||state,n=currentPenNumber(),p=s?.alpaca?.pens?.[n-1];
+    if(!p?.broken)return;
+    for(const [k,need] of Object.entries(MATERIALS))if((Number(s.specials?.[k])||0)<need){message("ซ่อมคอกไม่ได้",`${k} ไม่พอ`);return}
+    for(const [k,need] of Object.entries(MATERIALS))s.specials[k]=Math.max(0,(Number(s.specials[k])||0)-need);
+    p.broken=false;p.lastVisitedAt=gameNow();
+    ownState=normalizeState(s,currentMember);if(!visitContext)state=ownState;
+    try{saveLocalOnly(ownState)}catch(_){ }
+    closeModal();
+    const stage=document.getElementById("alpacaPenStage"),overlay=document.getElementById("s2BrokenPenOverlay");stage?.classList.remove("s2-pen-broken");overlay?.classList.add("hidden");
+    showWeatherToast?.(`🔨 ซ่อมคอก ${n} สำเร็จแล้ว`);
+    try{queueCloudSave();setTimeout(()=>flushCloudSave().catch(err=>{console.error("fast repair save",err);message("บันทึกการซ่อมไม่สำเร็จ","ระบบจะลองบันทึกอีกครั้งเมื่อเชื่อมต่อค่ะ")}),0)}catch(err){console.error("fast repair queue",err)}
+  }
+  document.addEventListener("click",e=>{
+    const btn=e.target?.closest?.("#s2RepairConfirm");if(!btn)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    btn.disabled=true;btn.textContent="ซ่อมแล้ว";fastRepair();
+  },true);
+
+  setTimeout(installJellyClickMap,100);
+  window.YAINOO_BUILD="S2-FOLLOWUP-JELLY-PET-REPAIR";
 })();
