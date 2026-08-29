@@ -22550,3 +22550,172 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   window.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* ======================================================================
+   S2 FARM RENOVATION — 2026-08-29
+   - Four new farm backgrounds + compact organized controls
+   - 12 smaller plot hotspots/visuals per farm, preserving crop/magic/steal logic
+   - Per-farm fruit trees + collect-all fruit inventory
+   - Farm 1: two 12-slot player markets + shop name + visitor purchases
+   - Farm 2: one private fishing dock with persistent pending reward
+   - Farms 2–4: future farm-pet placeholder; Farm 3 parrots; Farm 4 panda
+   - Cats/dogs may be placed only in Meow-Woof Hotel
+   - Legacy coconut-garden/river jelly hotspots removed from farm scene
+   ====================================================================== */
+(function YN_S2_FARM_RENOVATION(){
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const esc=x=>typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"");
+  const ADMIN=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const FARM_FRUITS={
+    1:{key:"peach",name:"ลูกพีช",image:"fruit-peach.png?v=S2F1",count:8,duration:6*60*60*1000},
+    2:{key:"apple",name:"แอปเปิ้ล",image:"fruit-apple.png?v=S2F1",count:8,duration:7*60*60*1000},
+    3:{key:"orange",name:"ส้ม",image:"fruit-orange.png?v=S2F1",count:8,duration:8*60*60*1000},
+    4:{key:"cherry",name:"เชอร์รี่",image:"fruit-cherry.png?v=S2F1",count:6,duration:3*60*60*1000}
+  };
+  const FARM_BACKGROUNDS={1:"farm-01-season2.png?v=S2F1",2:"farm-02-season2.png?v=S2F1",3:"farm-03-season2.png?v=S2F1",4:"farm-04-season2.png?v=S2F1"};
+  const TREE_POS={
+    1:[[2,35,15,10],[83,35,15,10],[1,46,15,10],[84,46,15,10],[1,57,15,10],[84,57,15,10],[0,82,14,12],[86,82,14,12]],
+    2:[[2,25,15,11],[83,25,15,11],[2,38,15,11],[83,38,15,11],[2,50,15,11],[83,50,15,11],[1,61,15,11],[84,61,15,11]],
+    3:[[2,24,15,11],[83,24,15,11],[2,38,15,11],[83,38,15,11],[2,50,15,11],[83,50,15,11],[1,61,15,11],[84,61,15,11]],
+    4:[[2,25,18,13],[80,25,18,13],[2,42,18,13],[80,42,18,13],[2,57,18,13],[80,57,18,13]]
+  };
+  const MARKET_SLOT_POS=[
+    [12.5,27.2],[41.5,27.2],[70.5,27.2],
+    [12.5,39.3],[41.5,39.3],[70.5,39.3],
+    [12.5,51.4],[41.5,51.4],[70.5,51.4],
+    [12.5,63.5],[41.5,63.5],[70.5,63.5]
+  ];
+  const FISH_QTY={bait1:[1,3],bait2:[2,5],bait3:[3,8],bait4:[5,10]};
+  const FISH_RARITY={
+    bait1:[.60,.30,.09,.01], bait2:[.40,.35,.20,.05],
+    bait3:[.20,.35,.32,.13], bait4:[.08,.22,.35,.35]
+  };
+  const FISH_KIND=[ ["fish",.35],["shrimp",.20],["crab",.18],["frog",.15],["urchin",.12] ];
+
+  function farmNo(){return Math.max(1,Math.min(4,Number(farmPlotPage||0)+1))}
+  function ensureFarmState(s){
+    if(!s)return s;
+    s.farmFruits=s.farmFruits&&typeof s.farmFruits==="object"?s.farmFruits:{};
+    Object.values(FARM_FRUITS).forEach(f=>s.farmFruits[f.key]=Math.max(0,Math.floor(Number(s.farmFruits[f.key])||0)));
+    s.farmTrees=s.farmTrees&&typeof s.farmTrees==="object"?s.farmTrees:{};
+    Object.entries(FARM_FRUITS).forEach(([n,f])=>{
+      let a=Array.isArray(s.farmTrees[n])?s.farmTrees[n].slice(0,f.count):[];
+      while(a.length<f.count)a.push({readyAt:0});
+      s.farmTrees[n]=a.map(x=>({readyAt:Math.max(0,Number(x?.readyAt)||0)}));
+    });
+    s.farm2Fishing=s.farm2Fishing&&typeof s.farm2Fishing==="object"?s.farm2Fishing:{};
+    if(!s.farm2Fishing.pending||typeof s.farm2Fishing.pending!=="object")s.farm2Fishing.pending=null;
+    return s;
+  }
+  const normalizeBase=normalizeState;normalizeState=function(raw,player){return ensureFarmState(normalizeBase(raw,player))};
+  const freshBase=fresh;fresh=function(player){return ensureFarmState(freshBase(player))};
+
+  /* New fruit items become first-class gift/admin items. */
+  const adminCatalogBase=adminGiftCatalog;
+  adminGiftCatalog=function(){const list=adminCatalogBase();Object.values(FARM_FRUITS).forEach(f=>{if(!list.some(e=>e.type==="farmFruit"&&e.key===f.key))list.push({type:"farmFruit",key:f.key,name:f.name})});return list};
+  const addGiftBase=addGiftItemToState;
+  addGiftItemToState=function(s,gift){ensureFarmState(s);const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,Math.floor(Number(gift?.qty)||1));if(type==="farmFruit"){const f=Object.values(FARM_FRUITS).find(x=>x.key===key);if(!f)throw new Error("ไม่พบผลไม้");s.farmFruits[key]=(Number(s.farmFruits[key])||0)+qty;return}return addGiftBase(s,gift)};
+  const removeGiftBase=removeGiftItemFromState;
+  removeGiftItemFromState=function(s,type,key,qty){ensureFarmState(s);qty=Math.max(1,Math.floor(Number(qty)||1));if(type==="farmFruit"){if(ADMIN()){s.farmFruits[key]=ADMIN_STOCK_QTY;return true}if((Number(s.farmFruits[key])||0)<qty)return false;s.farmFruits[key]-=qty;return true}return removeGiftBase(s,type,key,qty)};
+  const adminCountBase=adminEntryCount;
+  adminEntryCount=function(s,e){ensureFarmState(s);if(e?.type==="farmFruit")return ADMIN()?ADMIN_STOCK_QTY:Number(s.farmFruits[e.key])||0;return adminCountBase(s,e)};
+  const adminStockBase=ensureAdminStock;
+  ensureAdminStock=function(s){const c=adminStockBase(s);if(!s)return c;ensureFarmState(s);let changed=Boolean(c);if(ADMIN())Object.values(FARM_FRUITS).forEach(f=>{if(Number(s.farmFruits[f.key])!==ADMIN_STOCK_QTY){s.farmFruits[f.key]=ADMIN_STOCK_QTY;changed=true}});return changed};
+
+  /* Member gift catalog also sees fruit inventory. */
+  if(typeof v240MemberGiftEntriesFull==="function"){
+    const memberGiftBase=v240MemberGiftEntriesFull;
+    v240MemberGiftEntriesFull=function(s=ownState||state){s=ensureFarmState(normalizeState(s,currentMember));const rows=memberGiftBase(s),seen=new Set(rows.map(r=>`${r.type}:${r.key}`));Object.values(FARM_FRUITS).forEach(f=>{const q=Number(s.farmFruits[f.key])||0;if(q>0&&!seen.has(`farmFruit:${f.key}`))rows.push({type:"farmFruit",key:f.key,name:f.name,qty:q,count:q,image:f.image,category:"ผลไม้"})});return rows};
+  }
+
+  /* Inventory fruit tab. */
+  const inventoryBase=inventory;
+  inventory=function(tab="crops"){
+    if(tab==="farmFruits"){
+      const s=ensureFarmState(ownState||state);const body=Object.values(FARM_FRUITS).map(f=>`<div class="inventory-item"><img src="${f.image}" alt="${f.name}"><span>${f.name}</span><b>×${Number(s.farmFruits[f.key])||0}</b></div>`).join("");
+      $("modalContent").innerHTML=`<section class="feature-panel inventory-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2"><button type="button" data-inventory-tab="crops">🌱 พืชพรรณ</button><button type="button" data-inventory-tab="farmFruits" class="active">🍑 ผลไม้</button></div><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));openModal();return;
+    }
+    const r=inventoryBase(tab);requestAnimationFrame(()=>{const tabs=document.querySelector(".inventory-tabs");if(tabs&&!tabs.querySelector('[data-inventory-tab="farmFruits"]')){const b=document.createElement("button");b.type="button";b.dataset.inventoryTab="farmFruits";b.textContent="🍑 ผลไม้";b.onclick=()=>inventory("farmFruits");tabs.appendChild(b)}});return r;
+  };
+
+  function formatRemain(ms){ms=Math.max(0,Number(ms)||0);const h=Math.floor(ms/3600000),m=Math.ceil((ms%3600000)/60000);return h?`${h} ชม. ${m} นาที`:`${m} นาที`}
+  function treeStatus(index){const f=FARM_FRUITS[farmNo()],s=ensureFarmState(visitContext?state:(ownState||state)),t=s?.farmTrees?.[farmNo()]?.[index];if(!f||!t)return;const rem=Math.max(0,Number(t.readyAt||0)-NOW());message(`🌳 ${f.name}`,rem?`ผลไม้กำลังโต • เหลือ ${formatRemain(rem)}<br><small>เก็บพร้อมกันผ่านปุ่ม “เก็บผลไม้” ในเครื่องมือ</small>`:`พร้อมเก็บแล้วค่ะ 🍃<br><small>กด “เก็บผลไม้” ในเครื่องมือเพื่อเก็บต้นที่พร้อมทั้งหมด</small>`)}
+  async function collectFarmFruit(){
+    if(visitContext)return message("เก็บผลไม้ไม่ได้","เก็บผลไม้ได้เฉพาะฟาร์มของตัวเองค่ะ");
+    const n=farmNo(),f=FARM_FRUITS[n];if(!f||!cloudReady)return;
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureFarmState(normalizeState(snap.data(),currentMember));assertCurrentCloudSession(snap.data(),currentMember);const now=NOW();s.farmTrees[n].forEach(t=>{if(Number(t.readyAt||0)<=now){qty++;t.readyAt=now+f.duration}});if(!qty)throw new Error("ตอนนี้ยังไม่มีผลไม้ที่พร้อมเก็บ");s.farmFruits[f.key]=(Number(s.farmFruits[f.key])||0)+qty;if(ADMIN())ensureAdminStock(s);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);syncFarmUI();message("🍎 เก็บผลไม้เรียบร้อย",`<div class="s2-fruit-result"><img src="${f.image}" alt="${f.name}"><b>${f.name} ×${qty}</b><small>เข้ากระเป๋า → ผลไม้แล้ว</small></div>`)}catch(e){message("เก็บผลไม้ไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+
+  /* Cats/dogs: only hotel placement. Existing farm cats are returned to bag on normalize. */
+  const catEnsureBase=typeof ensureCatState==="function"?ensureCatState:null;
+  if(catEnsureBase)ensureCatState=function(s){const r=catEnsureBase(s);(r?.cats||[]).forEach(c=>{if(Number(c.placedFarm)>0){c.placedFarm=0;c.placedHotel=false;c.hotelPen=0;c.placedAt=0;c.expiresAt=0;c.nextFeedAt=0;c.nextDropAt=0;c.drops=[]}});return r};
+  showPlaceCat=function(catId){const s=ensureCatState(ownState||state),cat=s.cats.find(c=>c.id===catId);if(!cat)return;$("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${catType(cat).image}" alt=""><h2>🐱 ${esc(catDisplayName(cat))}</h2><p>ซีซั่นนี้น้องแมววางได้เฉพาะ <b>เหมียวโฮ่งโฮเทล</b></p><div class="dog-pen-choice-grid s2-four-hotel-pens">${[1,2,3,4].map(p=>{let n=0;try{n=hotelPetCount(p,s)}catch{}return `<button data-s2farm-cat-hotel="${p}" class="primary-spooky-action" type="button" ${n>=DOG_HOTEL_MAX?"disabled":""}>คอก ${p} • ${n}/${DOG_HOTEL_MAX}</button>`}).join("")}</div><button id="catPlaceBackBtn" class="secondary-action" type="button">กลับ</button></section>`;document.querySelectorAll("[data-s2farm-cat-hotel]").forEach(b=>b.onclick=()=>placeCatInHotel(catId,Number(b.dataset.s2farmCatHotel)));$("catPlaceBackBtn").onclick=()=>inventory("cats");openModal()};
+
+  /* One persistent private fishing dock on Farm 2. */
+  function weighted(arr){let r=Math.random();for(const [k,w] of arr){r-=w;if(r<=0)return k}return arr[arr.length-1][0]}
+  function rarityFor(bait){let r=Math.random(),a=FISH_RARITY[bait]||FISH_RARITY.bait1;for(let i=0;i<a.length;i++){r-=a[i];if(r<=0)return i+1}return 1}
+  function homeFishingReward(bait){const kind=weighted(FISH_KIND),idx=rarityFor(bait),key=`${kind}${idx}`,it=COCONUT_RIVER_ITEMS[key],range=FISH_QTY[bait]||[1,3],qty=randInt(range[0],range[1]);return{type:"coconutRiver",key,name:it?.name||key,image:it?.image||"",qty,bait}}
+  function showHomeFishing(){
+    if(farmNo()!==2)return;const s=ensureFarmState(ownState||state),p=s.farm2Fishing.pending;
+    if(p){$("modalContent").innerHTML=`<section class="feature-panel s2-home-fishing"><img src="${p.image}" alt=""><h2>🎣 มีของรอรับ</h2><b>${esc(p.name)} ×${p.qty}</b><p>รางวัลนี้จะค้างอยู่จนกว่าคุณจะกดรับ</p><button id="s2ClaimHomeFish" class="primary-spooky-action">รับเข้ากระเป๋า</button></section>`;$("s2ClaimHomeFish").onclick=claimHomeFishing;openModal();return}
+    const rows=Object.entries(FISHING_BAITS).map(([k,b])=>`<button data-s2-home-bait="${k}" ${(Number(s.fishingBaits?.[k])||0)<1?"disabled":""}><img src="${b.image}" alt=""><span><b>${b.name}</b><small>มี ×${Number(s.fishingBaits?.[k])||0} • ได้ ${FISH_QTY[k][0]}–${FISH_QTY[k][1]} ชิ้น</small></span></button>`).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel s2-home-fishing"><h2>🎣 แท่นตกปลาฟาร์ม2</h2><p class="feature-subtitle">ระบบนี้เป็นของฟาร์มคุณเอง • ไม่เกี่ยวกับบ่อตกปลาของยัยหนู</p><div class="s2-home-bait-grid">${rows}</div></section>`;document.querySelectorAll("[data-s2-home-bait]").forEach(b=>b.onclick=()=>startHomeFishing(b.dataset.s2HomeBait));openModal();
+  }
+  async function startHomeFishing(bait){
+    if(!FISHING_BAITS[bait]||!cloudReady)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,reward;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureFarmState(normalizeState(snap.data(),currentMember));if(s.farm2Fishing.pending)throw new Error("ยังมีของรอรับอยู่");if((Number(s.fishingBaits?.[bait])||0)<1)throw new Error("เหยื่อตกปลาหมดแล้ว");s.fishingBaits[bait]-=1;reward=homeFishingReward(bait);s.farm2Fishing.pending=reward;if(ADMIN())ensureAdminStock(s);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);showHomeFishing()}catch(e){message("ตกปลาไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  async function claimHomeFishing(){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,p;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureFarmState(normalizeState(snap.data(),currentMember));p=s.farm2Fishing.pending;if(!p)throw new Error("ไม่มีของรอรับ");s.coconutRiverItems[p.key]=(Number(s.coconutRiverItems[p.key])||0)+Number(p.qty||1);s.farm2Fishing.pending=null;if(ADMIN())ensureAdminStock(s);next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();message("🎣 รับของเรียบร้อย",`<div class="s2-fruit-result"><img src="${p.image}" alt=""><b>${esc(p.name)} ×${p.qty}</b><small>เข้ากระเป๋าแล้ว</small></div>`)}catch(e){message("รับของไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  /* Market helpers. */
+  function marketPrice(entry){
+    const type=String(entry?.type||"");let base={crop:10,product:28,dish:55,special:80,jelly:140,jellyV2:300,fishingBait:45,coconutRiver:45,medicine:25,mystery:80,catMystery:200,dogMystery:200,number4Mystery:100,animal:140,catInstance:260,dogInstance:280,alpacaFood:45,alpacaMedicine:85,alpacaOther:100,alpacaWool:55,alpacaFactoryProduct:180,alpacaInstance:350,farmFruit:20}[type]||50;
+    try{if(type==="special"&&SPECIAL_ITEMS?.[entry.key]?.shopPrice)base=Number(SPECIAL_ITEMS[entry.key].shopPrice)||base;if(type==="medicine"&&Y26_MEDICINES?.[entry.key]?.price)base=Number(Y26_MEDICINES[entry.key].price)||base;if(type==="fishingBait"){const n=Number(String(entry.key).replace(/\D/g,""))||1;base=[20,40,75,125][n-1]||45}if(type==="coconutRiver"){const n=COCONUT_RIVER_ITEMS?.[entry.key]?.index||1;base=[18,35,65,120][n-1]||45}}catch{}
+    return{min:Math.max(1,Math.round(base*.65)),mid:base,max:Math.max(2,Math.round(base*1.45))};
+  }
+  function marketDocDefault(ownerKey,ownerName){return{memberKey:ownerKey,ownerName:ownerName||"",shopName:"ร้านของฉัน",shop1:Array(12).fill(null),shop2:Array(12).fill(null)}}
+  async function fetchMarket(ownerKey,ownerName){const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",ownerKey),snap=await fs.getDoc(ref);return snap.exists()?{...marketDocDefault(ownerKey,ownerName),...snap.data()} : marketDocDefault(ownerKey,ownerName)}
+  function marketEntries(){const s=ensureFarmState(ownState||state);let rows=[];try{rows=typeof v240MemberGiftEntriesFull==="function"?v240MemberGiftEntriesFull(s):giftableEntries(s)}catch{}return rows.filter(e=>!(e.type==="dogInstance"&&String(e.name||"").includes("ปุยเมฆ")))}
+  async function openMarket(shopNo){
+    shopNo=shopNo===2?2:1;const ownerKey=visitContext?.memberKey||currentMemberKey,ownerName=visitContext?.name||currentMember;try{const data=await fetchMarket(ownerKey,ownerName);renderMarket(shopNo,data,ownerKey,ownerName)}catch(e){message("เปิดร้านไม่ได้",e.message||"กรุณาลองใหม่")}
+  }
+  function ensureMarketScreen(){let s=$("s2MarketScreen");if(s)return s;s=document.createElement("section");s.id="s2MarketScreen";s.className="s2-market-screen hidden";s.innerHTML=`<button id="s2MarketBack" class="s2-market-back" type="button">‹</button><button id="s2MarketTitle" class="s2-market-title" type="button"></button><div id="s2MarketSlots"></div><div id="s2MarketFooter"></div>`;document.body.appendChild(s);$("s2MarketBack").onclick=()=>s.classList.add("hidden");return s}
+  function renderMarket(shopNo,data,ownerKey,ownerName){const screen=ensureMarketScreen(),own=ownerKey===currentMemberKey&&!visitContext,slots=Array.isArray(data[`shop${shopNo}`])?data[`shop${shopNo}`]:Array(12).fill(null);screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;$("s2MarketTitle").textContent=data.shopName||"ร้านของฉัน";$("s2MarketTitle").onclick=own?()=>renameMarket(data):null;$("s2MarketSlots").innerHTML=slots.map((x,i)=>{if(!x)return `<button class="s2-market-slot empty" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%">${own?'<span>＋</span>':''}</button>`;const sold=x.status==="sold";return `<button class="s2-market-slot ${sold?"sold":""}" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%"><img src="${x.image||""}" alt=""><small>×${x.qty}</small><b>${sold?"SOLD":`${x.price} 🙏`}</b></button>`}).join("");document.querySelectorAll("[data-market-slot]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.marketSlot),x=slots[i];if(own){if(!x)showMarketListing(shopNo,i,data);else showOwnerMarketSlot(shopNo,i,x,data)}else if(x&&!x.status)buyMarketSlot(shopNo,i,x,ownerKey,ownerName)});$("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b><button type="button" id="s2SwitchMarket">ไปร้าน ${shopNo===1?2:1}</button>`;$("s2SwitchMarket").onclick=()=>openMarket(shopNo===1?2:1);screen.classList.remove("hidden")}
+  async function renameMarket(data){const name=prompt("ตั้งชื่อร้าน (ใช้ชื่อเดียวกันทั้ง 2 ร้าน)",data.shopName||"");if(name==null)return;const v=String(name).trim().slice(0,40);if(!v)return;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.setDoc(ref,{memberKey:currentMemberKey,ownerName:currentMember,shopName:v,updatedAt:fs.serverTimestamp()},{merge:true});openMarket(Number($("s2MarketScreen").dataset.shop)||1)}catch(e){message("ตั้งชื่อไม่ได้",e.message||"กรุณาลองใหม่")}}
+  function showMarketListing(shopNo,slot,data){const entries=marketEntries();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><h2>🧺 เลือกของวางขาย</h2><p>1 สล็อตวางได้ 1 ชนิด • สูงสุด 10 ชิ้น • วางแล้วของออกจากกระเป๋าทันที</p><div class="s2-market-picker">${entries.map((e,i)=>`<button data-s2-market-pick="${i}"><img src="${e.image||""}" alt=""><span><b>${esc(e.name)}</b><small>มี ×${Number(e.count??e.qty)||1}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-s2-market-pick]").forEach(b=>b.onclick=()=>marketListingOptions(shopNo,slot,entries[Number(b.dataset.s2MarketPick)]));openModal()}
+  function marketListingOptions(shopNo,slot,e){const maxQty=Math.min(10,Math.max(1,Number(e.count??e.qty)||1)),p=marketPrice(e);$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${e.image||""}" alt=""><h2>${esc(e.name)}</h2><label>จำนวน <input id="s2MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="s2MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="s2MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="s2ConfirmListing" class="primary-spooky-action">วางขาย</button></section>`;const paint=()=>{const q=Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1));$("s2MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$("s2MarketPrice").min=String(p.min*q);$("s2MarketPrice").max=String(p.max*q)};$("s2MarketQty").oninput=paint;paint();$("s2ConfirmListing").onclick=()=>createMarketListing(shopNo,slot,e,Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1)),Number($("s2MarketPrice").value)||0,p)}
+  async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureFarmState(normalizeState(ss.data(),currentMember)),m=ms.exists()?{...marketDocDefault(currentMemberKey,currentMember),...ms.data()}:marketDocDefault(currentMemberKey,currentMember),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!v240RemoveGiftOwned(s,e,qty))throw new Error("ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();openMarket(shopNo)}catch(err){message("วางขายไม่ได้",err.message||"กรุณาลองใหม่")}}
+  function showOwnerMarketSlot(shopNo,slot,x,data){$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${x.image||""}" alt=""><h2>${esc(x.name)} ×${x.qty}</h2><p>${x.status==="sold"?"ขายแล้ว":"ราคา "+x.price+" กุศล"}</p><button id="s2DeleteMarketSlot" class="danger-action">ลบออกจากสล็อต${x.status==="sold"?"":" • ของจะไม่คืนกระเป๋า"}</button></section>`;$("s2DeleteMarketSlot").onclick=()=>deleteMarketSlot(shopNo,slot);openModal()}
+  async function deleteMarketSlot(shopNo,slot){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const m=snap.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})});closeModal();openMarket(shopNo)}catch(e){message("ลบไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function buyMarketSlot(shopNo,slot,x,ownerKey,ownerName){if(ownerKey===currentMemberKey)return;const ok=confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`);if(!ok)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;await fs.runTransaction(db,async tx=>{const [ms,bs,ss]=await Promise.all([tx.get(marketRef),tx.get(buyerRef),tx.get(sellerRef)]);if(!ms.exists()||!bs.exists()||!ss.exists())throw new Error("ข้อมูลร้านไม่ครบ");const m=ms.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const buyer=ensureFarmState(normalizeState(bs.data(),currentMember));if(Number(buyer.merit||0)<Number(cur.price||0))throw new Error("กุศลไม่พอ");const seller=cloneData(ss.data()||{});addGiftItemToState(buyer,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});buyer.merit-=Number(cur.price)||0;seller.merit=Number(seller.merit||0)+(Number(cur.price)||0);cur.status="sold";cur.soldAt=NOW();cur.buyerKey=currentMemberKey;cur.buyerName=currentMember;arr[slot]=cur;m[`shop${shopNo}`]=arr;next=buyer;tx.set(buyerRef,{...cloneData(buyer),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(sellerRef,{...cloneData(seller),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const who=ADMIN()?"น้ำผึ้ง":currentMember;tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:who,title:`${who} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();openMarket(shopNo);message("🛍️ ซื้อเรียบร้อย",`${esc(x.name)} ×${x.qty} เข้ากระเป๋าแล้ว`)}catch(e){message("ซื้อไม่ได้",e.message||"กรุณาลองใหม่")}}
+
+  function mountFarmUI(){
+    const g=$("gameScreen");if(!g||$("s2FarmHotspots"))return;
+    const layer=document.createElement("div");layer.id="s2FarmHotspots";layer.className="s2-farm-hotspots";g.appendChild(layer);
+    const dock=document.createElement("div");dock.id="s2FarmDock";dock.className="s2-farm-dock";dock.innerHTML=`<button id="s2FarmSelectBtn">🌙<b>ฟาร์ม</b></button><button id="s2FarmToolsToggle">🧺<b>เครื่องมือ</b></button><div id="s2FarmSelectMenu" class="s2-farm-pop hidden">${[1,2,3,4].map(n=>`<button data-s2-farm="${n}">ฟาร์ม${n}</button>`).join("")}</div><div id="s2FarmToolsMenu" class="s2-farm-pop s2-tools-pop hidden"><button data-s2-tool="sprinkler">🚿<small>รดน้ำ</small></button><button data-s2-tool="tractor">🚜<small>รถไถ</small></button><button data-s2-tool="drops">🧺<small>เก็บดรอป</small></button><button data-s2-tool="fruit">🍎<small>เก็บผลไม้</small></button><button data-s2-tool="manage">🌱<small>จัดการสวน</small></button></div>`;g.appendChild(dock);
+    $("s2FarmSelectBtn").onclick=()=>{$("s2FarmSelectMenu").classList.toggle("hidden");$("s2FarmToolsMenu").classList.add("hidden")};$("s2FarmToolsToggle").onclick=()=>{$("s2FarmToolsMenu").classList.toggle("hidden");$("s2FarmSelectMenu").classList.add("hidden")};document.querySelectorAll("[data-s2-farm]").forEach(b=>b.onclick=()=>{setFarmPlotPage(Number(b.dataset.s2Farm)-1);$("s2FarmSelectMenu").classList.add("hidden")});document.querySelectorAll("[data-s2-tool]").forEach(b=>b.onclick=()=>{const k=b.dataset.s2Tool;$("s2FarmToolsMenu").classList.add("hidden");if(k==="fruit")return collectFarmFruit();if(k==="manage")return $("ynuGardenManagerBtn")?.click();if(k==="sprinkler")return $("sprinklerBtn")?.click();if(k==="tractor")return $("tractorBtn")?.click();if(k==="drops")return $("collectDropsBtn")?.click()});
+    document.addEventListener("pointerdown",e=>{if(!dock.contains(e.target)){$("s2FarmSelectMenu")?.classList.add("hidden");$("s2FarmToolsMenu")?.classList.add("hidden")}},true);
+  }
+
+  function syncFarmUI(){
+    mountFarmUI();const g=$("gameScreen");if(!g)return;const n=farmNo();g.style.backgroundImage=`url("${FARM_BACKGROUNDS[n]}")`;g.dataset.s2Farm=String(n);
+    /* Remove legacy scene hotspots that no longer exist in farm art. */
+    ["coconutGardenHotspot","riverHotspot","wellHotspot","friendlyGhostHotspot"].forEach(id=>$(id)?.classList.add("s2-retired-hotspot"));
+    /* House only on farm 1; keep old house system. */
+    if($("houseHotspot"))$("houseHotspot").classList.toggle("s2-hide",n!==1);
+    const layer=$("s2FarmHotspots");if(!layer)return;layer.innerHTML="";
+    (TREE_POS[n]||[]).forEach((p,i)=>{const b=document.createElement("button");b.className="s2-tree-hotspot";b.style.cssText=`left:${p[0]}%;top:${p[1]}%;width:${p[2]}%;height:${p[3]}%`;b.ariaLabel=`ต้น${FARM_FRUITS[n].name} ${i+1}`;b.onclick=()=>treeStatus(i);layer.appendChild(b)});
+    if(n===1){[["market1",9,68,28,12],["market2",63,68,28,12]].forEach(([k,x,y,w,h],i)=>{const b=document.createElement("button");b.className="s2-scene-hotspot";b.style.cssText=`left:${x}%;top:${y}%;width:${w}%;height:${h}%`;b.ariaLabel=`ร้านค้า ${i+1}`;b.onclick=()=>openMarket(i+1);layer.appendChild(b)})}
+    if(n===2){const fish=document.createElement("button");fish.className="s2-scene-hotspot";fish.style.cssText="left:52%;top:22%;width:38%;height:20%";fish.ariaLabel="แท่นตกปลา";fish.onclick=showHomeFishing;layer.appendChild(fish)}
+    if(n===3){const p=document.createElement("button");p.className="s2-scene-hotspot";p.style.cssText="left:13%;top:14%;width:74%;height:26%";p.onclick=()=>message("🦜 พื้นที่นกแก้ว","คุณยังไม่มีนกแก้ว");layer.appendChild(p)}
+    if(n===4){const p=document.createElement("button");p.className="s2-scene-hotspot";p.style.cssText="left:18%;top:13%;width:64%;height:27%";p.onclick=()=>message("🐼 ป่าไผ่","คุณยังไม่มีแพนด้า");layer.appendChild(p)}
+    if(n>=2){const a=document.createElement("button");a.className="s2-scene-hotspot";a.style.cssText="left:7%;top:69%;width:86%;height:27%";a.onclick=()=>message("🐾 สัตว์รักษ์ฟาร์ม","คุณยังไม่มีสัตว์รักษ์ฟาร์ม");layer.appendChild(a)}
+    /* Honey rides centered on the new Farm 1 road. */
+    if($("honeyBike"))$("honeyBike").style.top=n===1?"80.1%":"";
+  }
+
+  const pageBase=setFarmPlotPage;setFarmPlotPage=function(page){const r=pageBase(page);requestAnimationFrame(syncFarmUI);return r};
+  const drawBase=draw;draw=function(){const r=drawBase();requestAnimationFrame(syncFarmUI);return r};
+  setTimeout(()=>{mountFarmUI();syncFarmUI()},600);
+  window.YN_S2_FARM={collectFruit:collectFarmFruit,openMarket,homeFishing:showHomeFishing};
+  window.YAINOO_BUILD="S2-FARM-RENOVATION-20260829";
+})();
