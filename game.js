@@ -1,4 +1,4 @@
-/* BUILD: V205-CONFIRMED-FIXED */
+/* BUILD: S2-R9-ALL-SYSTEMS */
 let MEMBERS={
   "Kung A":"KUNG2481","Ar Jane":"JANE7314","Blotto Bier":"BIER4826","Mameaw":"MEAW5937",
   "Para":"PARA1642","Porpla":"PORP8753","Pukkie":"PUKK3491","Opor":"OPOR6284",
@@ -45,17 +45,17 @@ const RECIPES=[
 ];
 
 const SHOP_ITEMS=[
-  {id:"chicken",image:"01-chicken-ghost.png?v=1",name:"ไก่เปรต",product:"egg",productName:"ไข่เปรต",productImage:"01-pret-egg.png?v=1",productionMs:3*60*60*1000},
-  {id:"fish",image:"03-pig-ghost.png?v=1",name:"ปลาสะกดจิต",product:"fishMeat",productName:"เนื้อปลาผี",productImage:"03-ghost-fish-meat.png?v=1",productionMs:90*60*1000},
-  {id:"pig",image:"02-fish-ghost.png?v=1",name:"หมูผี",product:"truffle",productName:"เห็ดทรัฟเฟิลหลอน",productImage:"02-haunted-truffle.png?v=1",productionMs:6*60*60*1000},
-  {id:"cow",image:"04-cow-ghost.png?v=1",name:"วัววิญญาณ",product:"milk",productName:"นมวัวอาฆาต",productImage:"04-vengeful-cow-milk.png?v=1",productionMs:5*60*60*1000}
+  {id:"chicken",image:"chicken_chicken.png?v=S2R9",name:"ไก่เปรต",product:"egg",productName:"ไข่เปรต",productImage:"chicken_egg.png?v=S2R9",productionMs:3*60*60*1000},
+  {id:"fish",image:"fish_03_blue_fish.png?v=S2R9",name:"ปลาสะกดจิต",product:"fishMeat",productName:"เนื้อปลาผี",productImage:"fish_02_salmon.png?v=S2R9",productionMs:90*60*1000},
+  {id:"pig",image:"pig_pig_transparent.png?v=S2R9",name:"หมูผี",product:"truffle",productName:"เห็ดทรัฟเฟิลหลอน",productImage:"pig_truffle_transparent.png?v=S2R9",productionMs:6*60*60*1000},
+  {id:"cow",image:"cow_cow.png?v=S2R9",name:"วัววิญญาณ",product:"milk",productName:"นมวัวอาฆาต",productImage:"cow_milk.png?v=S2R9",productionMs:5*60*60*1000}
 ];
 
 const ANIMAL_PRODUCTS={
-  egg:{name:"ไข่เปรต",icon:"🥚",image:"01-pret-egg.png?v=1"},
-  fishMeat:{name:"เนื้อปลาผี",icon:"🐟",image:"03-ghost-fish-meat.png?v=1"},
-  truffle:{name:"เห็ดทรัฟเฟิลหลอน",icon:"🍄",image:"02-haunted-truffle.png?v=1"},
-  milk:{name:"นมวัวอาฆาต",icon:"🥛",image:"04-vengeful-cow-milk.png?v=1"}
+  egg:{name:"ไข่เปรต",icon:"🥚",image:"chicken_egg.png?v=S2R9"},
+  fishMeat:{name:"เนื้อปลาผี",icon:"🐟",image:"fish_02_salmon.png?v=S2R9"},
+  truffle:{name:"เห็ดทรัฟเฟิลหลอน",icon:"🍄",image:"pig_truffle_transparent.png?v=S2R9"},
+  milk:{name:"นมวัวอาฆาต",icon:"🥛",image:"cow_milk.png?v=S2R9"}
 };
 
 const COCONUT_ITEMS={
@@ -69,10 +69,10 @@ const COCONUT_TREE_COOLDOWN=90*60*1000;
 const SCENES={
   house:{image:"ghost-house-interior.jpg?v=1"},
   underwater:{image:"underwater-city-scene.jpg?v=1"},
-  chicken:{image:"01_chicken_coop.jpg?v=1"},
-  fish:{image:"02_fish_pond.jpg?v=1"},
-  pig:{image:"03_pig_pen.jpg?v=1"},
-  cow:{image:"04_cow_barn.jpg?v=1"},
+  chicken:{image:"spirit-chicken-season2.jpeg?v=S2R9"},
+  fish:{image:"spirit-fish-season2.jpeg?v=S2R9"},
+  pig:{image:"spirit-pig-season2.jpeg?v=S2R9"},
+  cow:{image:"spirit-cow-season2.jpeg?v=S2R9"},
   almsSeated:{image:"01_monks-seated-bowls.png?v=1"},
   almsBlessing:{image:"02_monks-standing-blessing.png?v=1"},
   coconut:{image:"coconut-garden-scene.png?v=2"}
@@ -8414,10 +8414,10 @@ SCENES.templeSolo={image:V15_TEMPLE_INSIDE_IMAGE};
 SCENES.templeGroup={image:V15_TEMPLE_INSIDE_IMAGE};
 
 const V15_ANIMAL_ASSETS={
-  chicken:{scene:"ghost_animal_school_chicken_pen.png?v=1",animal:"ghost_animal_school_chicken.png?v=1"},
-  fish:{scene:"ghost_animal_school_fish_pond.png?v=1",animal:"ghost_animal_school_fish.png?v=1"},
-  pig:{scene:"ghost_animal_school_pig_pen.png?v=1",animal:"ghost_animal_school_pig.png?v=1"},
-  cow:{scene:"ghost_animal_school_cow_pen.png?v=1",animal:"ghost_animal_school_cow.png?v=1"}
+  chicken:{scene:"spirit-chicken-season2.jpeg?v=S2R9",animal:"chicken_chicken.png?v=S2R9"},
+  fish:{scene:"spirit-fish-season2.jpeg?v=S2R9",animal:"fish_03_blue_fish.png?v=S2R9"},
+  pig:{scene:"spirit-pig-season2.jpeg?v=S2R9",animal:"pig_pig_transparent.png?v=S2R9"},
+  cow:{scene:"spirit-cow-season2.jpeg?v=S2R9",animal:"cow_cow.png?v=S2R9"}
 };
 const V15_ANIMAL_SLOT_POSITIONS=[
   [10.5,24.3],[38.5,24.3],[66.5,24.3],
@@ -9333,44 +9333,33 @@ setInterval(()=>{Y26_applyRestViewLock();const rs=ownState||state;if(rs?.restRew
    in one Firestore transaction so fast repeated taps/local saves cannot restore
    consumed stock or lose newly crafted stock. Gameplay odds/rewards are unchanged. */
 craftCoconut=async function(key){
-  const item=COCONUT_ITEMS[key];if(!item||item.locked||guardResting()||!cloudReady)return;
-  try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next,success=false;
-    await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
-      if(!item.need||!Object.entries(item.need).every(([k,n])=>(Number(s.animalProducts?.[k])||0)>=n))throw new Error("วัตถุดิบยังไม่ครบ");
-      Object.entries(item.need).forEach(([k,n])=>s.animalProducts[k]-=n);
-      success=Math.random()*100<item.chance;if(success)s.specials[key]=(Number(s.specials[key])||0)+1;
-      if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
-      next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-    });
-    Y26_applyOwnState(next);updateMeritUI();
-    if(success)message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>เก็บไว้ใน กระเป๋า → ของพิเศษ แล้ว`);
-    else message("คราฟไม่สำเร็จ","รอบนี้คราฟไม่สำเร็จ วัตถุดิบที่ใช้ถูกหักไปแล้วค่ะ");
-  }catch(error){message("คราฟไม่ได้",error.message||"กรุณาลองใหม่")}
+  const item=COCONUT_ITEMS[key];if(!item||item.locked||guardResting())return;
+  const s=ownState||state;if(!s)return;
+  if(!cloudReady){message("ยังคราฟไม่ได้","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");return}
+  if(!item.need||!Object.entries(item.need).every(([k,n])=>(Number(s.animalProducts?.[k])||0)>=n)){message("วัตถุดิบยังไม่ครบ","วัตถุดิบยังไม่ครบ");return}
+  Object.entries(item.need).forEach(([k,n])=>s.animalProducts[k]-=n);
+  const success=Math.random()*100<item.chance;
+  if(success)s.specials[key]=(Number(s.specials[key])||0)+1;
+  if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+  save();
+  if(success)message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>เก็บไว้ใน กระเป๋า → ของพิเศษ แล้ว`);
+  else message("คราฟไม่สำเร็จ","รอบนี้คราฟไม่สำเร็จ วัตถุดิบที่ใช้ถูกหักไปแล้วค่ะ");
 };
 
 craftPestle=async function(key){
-  const item=PESTLE_ITEMS[key];if(!item||item.locked||guardResting()||!cloudReady)return;
-  try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
-    await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
-      if(item.dishAny&&totalDishCount(s)<item.dishAny)throw new Error(`ต้องมีอาหารที่คราฟแล้วอย่างน้อย ${item.dishAny} ชิ้น`);
-      if(item.meritNeed&&(Number(s.merit)||0)<item.meritNeed)throw new Error(`ต้องใช้ ${item.meritNeed} คะแนนกุศล`);
-      if(!Object.entries(item.need||{}).every(([k,n])=>(Number(s.animalProducts?.[k])||0)>=n))throw new Error("ผลผลิตสัตว์ยังไม่ครบตามสูตร");
-      if(item.dishAny&&!consumeAnyDishes(s,item.dishAny))throw new Error("หักอาหารจากกระเป๋าไม่สำเร็จ");
-      if(item.meritNeed)s.merit-=item.meritNeed;Object.entries(item.need||{}).forEach(([k,n])=>s.animalProducts[k]-=n);s.specials[key]=(Number(s.specials[key])||0)+1;
-      if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
-      next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      if(item.meritNeed)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-    });
-    Y26_applyOwnState(next);updateMeritUI();message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>โอกาสสำเร็จ 100%`);
-  }catch(error){message("คราฟไม่ได้",error.message||"กรุณาลองใหม่")}
+  const item=PESTLE_ITEMS[key];if(!item||item.locked||guardResting())return;
+  const s=ownState||state;if(!s)return;
+  if(!cloudReady){message("ยังคราฟไม่ได้","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");return}
+  if(item.dishAny&&totalDishCount(s)<item.dishAny){message("วัตถุดิบยังไม่ครบ",`ต้องมีอาหารที่คราฟแล้วอย่างน้อย ${item.dishAny} ชิ้น`);return}
+  if(item.meritNeed&&(Number(s.merit)||0)<item.meritNeed){message("กุศลไม่พอ",`ต้องใช้ ${item.meritNeed} คะแนนกุศล`);return}
+  if(!Object.entries(item.need||{}).every(([k,n])=>(Number(s.animalProducts?.[k])||0)>=n)){message("วัตถุดิบยังไม่ครบ","ผลผลิตสัตว์ยังไม่ครบตามสูตร");return}
+  if(item.dishAny&&!consumeAnyDishes(s,item.dishAny)){message("คราฟไม่ได้","หักอาหารจากกระเป๋าไม่สำเร็จ");return}
+  if(item.meritNeed)s.merit-=item.meritNeed;
+  Object.entries(item.need||{}).forEach(([k,n])=>s.animalProducts[k]-=n);
+  s.specials[key]=(Number(s.specials[key])||0)+1;
+  if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+  save();updateMeritUI();
+  message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>โอกาสสำเร็จ 100%`);
 };
 
 useCropBoostOnPlot=async function(index,key){
@@ -10821,36 +10810,28 @@ ingredientText=function(recipe){
 
 /* Cloud-safe craft override for crop + animal-product recipes. */
 craft=async function(id){
-  const recipe=recipeById(id);if(!recipe||!cloudReady)return;
+  const recipe=recipeById(id);if(!recipe)return;
   if(recipe.night&&!isNightCraftOpen()){message("ยังคราฟไม่ได้","เมนูรอบดึกเปิดเวลา 22:00–02:00");return}
-  try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext();
-    const saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
-    let next,success=false,reward=0;
-    await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
-      if(!canCraftRecipeFromState(recipe,s))throw new Error("วัตถุดิบไม่ครบตามสูตร");
-      for(const [key,count] of Object.entries(recipe.need||{})){
-        if(!YN_consumeRecipeIngredient(s,key,count))throw new Error("วัตถุดิบไม่ครบตามสูตร");
-      }
-      success=Math.random()*100<recipe.chance;
-      if(success){
-        reward=randInt(recipe.reward[0],recipe.reward[1]);
-        addDishToState(s,recipe.id,1);
-        s.merit=(Number(s.merit)||0)+reward;
-        incrementMissionOn(s,"craftFood",1);
-      }
-      next=s;
-      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      if(success)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-    });
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();
-    $("modalContent").innerHTML=success
-      ? `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`
-      : `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
-  }catch(error){message("คราฟอาหารไม่ได้",error.message||"กรุณาลองใหม่")}
+  const s=ownState||state;if(!s)return;
+  if(!cloudReady){message("ยังคราฟไม่ได้","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");return}
+  if(!canCraftRecipeFromState(recipe,s)){message("คราฟอาหารไม่ได้","วัตถุดิบไม่ครบตามสูตร");return}
+  for(const [key,count] of Object.entries(recipe.need||{})){
+    if(!YN_consumeRecipeIngredient(s,key,count)){message("คราฟอาหารไม่ได้","วัตถุดิบไม่ครบตามสูตร");return}
+  }
+  const success=Math.random()*100<recipe.chance;
+  let reward=0;
+  if(success){
+    reward=randInt(recipe.reward[0],recipe.reward[1]);
+    addDishToState(s,recipe.id,1);
+    s.merit=(Number(s.merit)||0)+reward;
+    incrementMissionOn(s,"craftFood",1);
+  }
+  if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+  save();updateMeritUI();
+  $("modalContent").innerHTML=success
+    ? `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`
+    : `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
+  return {success,reward};
 };
 
 /* ---------- BOAT RACE: ONLY the 8 new menus ---------- */
@@ -17220,10 +17201,10 @@ async function V181_campaignScoreLater(summary){
     friendGrassGreen:{name:"หญ้าสีเขียว",image:"friend-grass-green.png?v=221",bucket:"specials"},
     friendGrassYellow:{name:"หญ้าสีเหลือง",image:"friend-grass-yellow.png?v=221",bucket:"specials"},
     friendGrassRed:{name:"หญ้าสีแดง",image:"friend-grass-red.png?v=221",bucket:"specials"},
-    egg:{name:"ไข่เปรต",image:"01-pret-egg.png?v=1",bucket:"animalProducts"},
-    fishMeat:{name:"เนื้อปลาผี",image:"03-ghost-fish-meat.png?v=1",bucket:"animalProducts"},
-    truffle:{name:"เห็ดทรัฟเฟิลหลอน",image:"02-haunted-truffle.png?v=1",bucket:"animalProducts"},
-    milk:{name:"นมวัวอาฆาต",image:"04-vengeful-cow-milk.png?v=1",bucket:"animalProducts"},
+    egg:{name:"ไข่เปรต",image:"chicken_egg.png?v=S2R9",bucket:"animalProducts"},
+    fishMeat:{name:"เนื้อปลาผี",image:"fish_02_salmon.png?v=S2R9",bucket:"animalProducts"},
+    truffle:{name:"เห็ดทรัฟเฟิลหลอน",image:"pig_truffle_transparent.png?v=S2R9",bucket:"animalProducts"},
+    milk:{name:"นมวัวอาฆาต",image:"cow_milk.png?v=S2R9",bucket:"animalProducts"},
     magicMushroom:{name:"เห็ดวิเศษ",image:MAGIC_MUSHROOM_ICON,bucket:"alpacaOther"},
     strawberry:{name:CROPS?.strawberry?.name||"สตรอว์เบอร์รีมรกต",image:CROPS?.strawberry?.selectImg||"07_emerald_strawberry.png?v=1",bucket:"bag"},
     shrimp1:{name:COCONUT_RIVER_ITEMS?.shrimp1?.name||"กุ้งสวนมะพร้าว 1",image:COCONUT_RIVER_ITEMS?.shrimp1?.image||"coconut-river-shrimp-01.png?v=200",bucket:"coconutRiver"},
@@ -17629,9 +17610,10 @@ async function V181_campaignScoreLater(summary){
     let layer=$("alpacaTroughFoodFixed");if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}
     layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
     /* Follow the perspective/curve of the physical side rails instead of pairing food in straight columns. */
-    const y=[36.6,41.9,47.2,52.5,57.8,63.1,68.4,73.7];
-    const xL=[13.7,13.3,12.9,12.4,11.9,11.4,11.0,10.7];
-    const xR=[86.3,86.7,87.1,87.6,88.1,88.6,89.0,89.3];
+    /* Season 2: keep the four lower positions exactly as approved; only move the upper four inward/down to sit on the rail perspective. */
+    const y=[43.8,47.6,51.2,55.2,57.8,63.1,68.4,73.7];
+    const xL=[17.3,16.4,15.6,14.8,11.9,11.4,11.0,10.7];
+    const xR=[82.7,83.6,84.4,85.2,88.1,88.6,89.0,89.3];
     (pen.trough||[]).slice(0,16).forEach((slot,i)=>{
       if(!slot||!FOOD[slot.foodKey]||Number(slot.servings||0)<=0)return;const side=i<8?0:1,row=i%8,item=FOOD[slot.foodKey],img=document.createElement("img");
       img.src=item.image;img.alt="";img.className="s2-fixed-trough-food";img.style.cssText=`position:absolute;left:${side===0?xL[row]:xR[row]}%;top:${y[row]}%;width:clamp(17px,4.15vw,27px);height:clamp(17px,4.15vw,27px);object-fit:contain;transform:translate(-50%,-50%) rotate(${side===0?-3:3}deg);`;layer.appendChild(img);
@@ -18057,7 +18039,7 @@ async function V181_campaignScoreLater(summary){
   function totalJellyV2(s){return Object.values(s.jellyfishV2||{}).reduce((n,v)=>n+(Number(v)||0),0)}
   function alpacaCraftCounts(s){const admin=isAdmin();return{jellyV2:admin?9999:totalJellyV2(s),landDeed:admin?9999:Number(s.specials?.landDeed)||0,cats:admin?9999:countUnplacedPets(s,"cat"),dogs:admin?9999:countUnplacedPets(s,"dog"),merit:admin?9999:Number(s.merit)||0,egg:admin?9999:Number(s.animalProducts?.egg)||0,milk:admin?9999:Number(s.animalProducts?.milk)||0,truffle:admin?9999:Number(s.animalProducts?.truffle)||0,fishMeat:admin?9999:Number(s.animalProducts?.fishMeat)||0}}
   const ALPACA_CRAFT_NEED={jellyV2:3,landDeed:50,cats:5,dogs:5,merit:500,egg:250,milk:250,truffle:250,fishMeat:250};
-  const ALPACA_CRAFT_META={jellyV2:{name:"แมงกระพรุน V2",image:(Object.values(Y26_JELLY_V2||{})[0]||{}).image||"chubby-jellyfish-1.png"},landDeed:{name:"โฉนดที่ดิน",image:"land-deed.png?v=181"},cats:{name:"แมว",image:(Object.values(CAT_TYPES||{})[0]||{}).image||""},dogs:{name:"หมา",image:(Object.values(DOG_TYPES||{})[0]||{}).image||""},merit:{name:"กุศล",image:""},egg:{name:"ไข่เปรต",image:"01-pret-egg.png?v=1"},milk:{name:"นมวัวอาฆาต",image:"04-vengeful-cow-milk.png?v=1"},truffle:{name:"เห็ดทรัฟเฟิลหลอน",image:"02-haunted-truffle.png?v=1"},fishMeat:{name:"เนื้อปลาผี",image:"03-ghost-fish-meat.png?v=1"}};
+  const ALPACA_CRAFT_META={jellyV2:{name:"แมงกระพรุน V2",image:(Object.values(Y26_JELLY_V2||{})[0]||{}).image||"chubby-jellyfish-1.png"},landDeed:{name:"โฉนดที่ดิน",image:"land-deed.png?v=181"},cats:{name:"แมว",image:(Object.values(CAT_TYPES||{})[0]||{}).image||""},dogs:{name:"หมา",image:(Object.values(DOG_TYPES||{})[0]||{}).image||""},merit:{name:"กุศล",image:""},egg:{name:"ไข่เปรต",image:"chicken_egg.png?v=S2R9"},milk:{name:"นมวัวอาฆาต",image:"cow_milk.png?v=S2R9"},truffle:{name:"เห็ดทรัฟเฟิลหลอน",image:"pig_truffle_transparent.png?v=S2R9"},fishMeat:{name:"เนื้อปลาผี",image:"fish_02_salmon.png?v=S2R9"}};
   function showAlpacaCraft(){if(guardResting())return;const s=ownState||state,root=ownAlpaca();if(!s||!root)return;const counts=alpacaCraftCounts(s),used=Math.max(0,Number(root.craftDaily?.count)||0),remain=Math.max(0,5-used);const rows=Object.entries(ALPACA_CRAFT_NEED).map(([k,need])=>{const m=ALPACA_CRAFT_META[k],have=counts[k],ok=have>=need;return `<article class="alpaca-craft-ingredient ${ok?"ok":"missing"}">${m.image?`<img src="${m.image}" alt="${safeHtml(m.name)}">`:`<span class="alpaca-craft-merit">🙏</span>`}<div><b>${safeHtml(m.name)}</b><small>มี ${have.toLocaleString("th-TH")} / ใช้ ${need.toLocaleString("th-TH")}</small></div></article>`}).join("");const enough=Object.entries(ALPACA_CRAFT_NEED).every(([k,n])=>counts[k]>=n)&&remain>0;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-craft-alpaca-panel"><div class="alpaca-panel-hero"><div class="alpaca-notice-icon">🦙</div><div><h2>คราฟอัลปาก้า</h2><p>คราฟสำเร็จ 100% • ได้อัลปาก้า 1 ตัว • สูงสุดวันละ 5 ตัว</p></div></div><div class="alpaca-craft-limit">วันนี้คราฟแล้ว <b>${used}/5</b> • เหลือ ${remain} ครั้ง</div><div class="alpaca-craft-ingredients">${rows}</div><button id="confirmAlpacaCraft" class="primary-spooky-action" type="button" ${enough?"":"disabled"}>คราฟอัลปาก้า</button><button id="alpacaCraftBack" class="secondary-action" type="button">กลับคลังอัลปาก้า</button></section>`;openModal();$("confirmAlpacaCraft").onclick=craftOneAlpaca;$("alpacaCraftBack").onclick=showAlpacaWarehouse}
   function randomCraftColor(){const r=Math.random()*100;return r<35?"white":r<58?"brown":r<73?"black":r<83?"pink":r<90?"green":r<95?"goldenHoney":"thaiTea"}
   function removeAnyV2(s,n){for(const k of Object.keys(s.jellyfishV2||{})){const take=Math.min(n,Number(s.jellyfishV2[k])||0);s.jellyfishV2[k]-=take;n-=take;if(n<=0)return true}return false}
@@ -22245,4 +22227,327 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   setTimeout(installJellyClickMap,100);
   window.YAINOO_BUILD="S2-FOLLOWUP-JELLY-PET-REPAIR";
+})();
+
+/* =====================================================================
+   SEASON 2 R9 — ALL-SYSTEMS UPDATE (2026-08-29)
+   - Spirit animal barns rebuilt for Season 2 (4 scenes / 12 products / rail drops)
+   - Local-first care actions + durable inventory collection
+   - Dog-01 hard asset isolation, smoother hotel controls / scale
+   - Alpaca rank reset + rank binding + trough top-row correction
+   - Jellyfish fast pick/place + fast V2 craft
+   - Arena score acknowledgement persistence across app switching
+   ===================================================================== */
+(function YN_S2_R9_ALL_SYSTEMS(){
+  "use strict";
+  const BUILD="S2-R9-ALL-SYSTEMS";
+  const SPIRIT_TYPES=["chicken","fish","pig","cow"];
+  const R9_HOUR=60*60*1000;
+  const R9_MIN=60*1000;
+  const esc=x=>typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const uid=(prefix="r9")=>globalThis.crypto?.randomUUID?.()||`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  /* -----------------------------------------------------------------
+     A) Spirit-animal Season 2 assets and product catalog.
+     Existing Season 1 product keys remain intact for recipe compatibility.
+     ----------------------------------------------------------------- */
+  Object.assign(ANIMAL_PRODUCTS,{
+    egg:{name:"ไข่เปรต",icon:"🥚",image:"chicken_egg.png?v=S2R9"},
+    hellFeather:{name:"ขนนกนรก",icon:"🪶",image:"chicken_feather.png?v=S2R9"},
+    revivedDrumstick:{name:"น่องไก่คืนชีพ",icon:"🍗",image:"chicken_chicken_leg.png?v=S2R9"},
+    fishMeat:{name:"เนื้อปลาผี",icon:"🐟",image:"fish_02_salmon.png?v=S2R9"},
+    illusionRoe:{name:"ไข่ปลามายา",icon:"🫧",image:"fish_04_fish_roe.png?v=S2R9"},
+    darkMoonScale:{name:"เกล็ดปลาจันทรามืด",icon:"🌙",image:"fish_01_fish_scales.png?v=S2R9"},
+    truffle:{name:"เห็ดทรัฟเฟิลหลอน",icon:"🍄",image:"pig_truffle_transparent.png?v=S2R9"},
+    shadowPork:{name:"เนื้อหมูเงามรณะ",icon:"🥩",image:"pig_meat_transparent.png?v=S2R9"},
+    infernalGoldenTrotter:{name:"คากิทองอเวจี",icon:"✨",image:"pig_golden_trotter_transparent.png?v=S2R9"},
+    milk:{name:"นมวัวอาฆาต",icon:"🥛",image:"cow_milk.png?v=S2R9"},
+    eclipseCheese:{name:"ชีสจันทร์ดับ",icon:"🧀",image:"cow_cheese.png?v=S2R9"},
+    deathMistCream:{name:"ครีมหมอกมรณะ",icon:"☁️",image:"cow_cream.png?v=S2R9"}
+  });
+
+  const R9_SPIRIT={
+    chicken:{scene:"spirit-chicken-season2.jpeg?v=S2R9",animal:"chicken_chicken.png?v=S2R9",products:["egg","hellFeather","revivedDrumstick"],slots:[[21.5,37.0],[50,37.0],[79,37.0],[21.5,50.8],[50,50.8],[79,50.8],[21.5,64.2],[50,64.2],[79,64.2]]},
+    fish:{scene:"spirit-fish-season2.jpeg?v=S2R9",animal:"fish_03_blue_fish.png?v=S2R9",products:["fishMeat","illusionRoe","darkMoonScale"],slots:[[22.5,45.0],[50.5,45.0],[78.5,45.0],[22.5,56.3],[50.5,56.3],[78.5,56.3],[22.5,68.2],[50.5,68.2],[78.5,68.2]]},
+    pig:{scene:"spirit-pig-season2.jpeg?v=S2R9",animal:"pig_pig_transparent.png?v=S2R9",products:["truffle","shadowPork","infernalGoldenTrotter"],slots:[[20.5,40.6],[50,40.6],[79.5,40.6],[20.5,55.1],[50,55.1],[79.5,55.1],[20.5,70.4],[50,70.4],[79.5,70.4]]},
+    cow:{scene:"spirit-cow-season2.jpeg?v=S2R9",animal:"cow_cow.png?v=S2R9",products:["milk","eclipseCheese","deathMistCream"],slots:[[20.5,42.8],[50,42.8],[79.5,42.8],[20.5,56.3],[50,56.3],[79.5,56.3],[20.5,69.8],[50,69.8],[79.5,69.8]]}
+  };
+  SPIRIT_TYPES.forEach(type=>{
+    const cfg=R9_SPIRIT[type],item=animalById(type);
+    if(SCENES[type])SCENES[type].image=cfg.scene;
+    if(V15_ANIMAL_ASSETS?.[type]){V15_ANIMAL_ASSETS[type].scene=cfg.scene;V15_ANIMAL_ASSETS[type].animal=cfg.animal}
+    if(item){item.image=cfg.animal;item.product=cfg.products[0];item.productName=ANIMAL_PRODUCTS[cfg.products[0]].name;item.productImage=ANIMAL_PRODUCTS[cfg.products[0]].image}
+  });
+  animalImageForStyle=function(sceneName){return R9_SPIRIT[sceneName]?.animal||animalById(sceneName)?.image||""};
+
+  /* State migration is additive: no old inventory is removed. */
+  const normalizeBase=normalizeState;
+  normalizeState=function(raw,player){
+    const s=normalizeBase(raw,player);
+    s.animalProducts=s.animalProducts&&typeof s.animalProducts==="object"?s.animalProducts:{};
+    Object.keys(ANIMAL_PRODUCTS).forEach(k=>s.animalProducts[k]=Math.max(0,Number(s.animalProducts[k])||0));
+    s.spiritDrops=s.spiritDrops&&typeof s.spiritDrops==="object"?s.spiritDrops:{};
+    SPIRIT_TYPES.forEach(type=>{
+      s.spiritDrops[type]=Array.isArray(s.spiritDrops[type])?s.spiritDrops[type].filter(d=>d&&ANIMAL_PRODUCTS[d.productKey]):[];
+      const arr=Array.isArray(s.animals?.[type])?s.animals[type]:[];
+      arr.forEach(a=>{if(a&&typeof a==="object")a.forcedCommonProduct=Boolean(a.forcedCommonProduct)});
+    });
+    s.pendingJellyPlacements=s.pendingJellyPlacements&&typeof s.pendingJellyPlacements==="object"?s.pendingJellyPlacements:{};
+    return s;
+  };
+  const freshBase=fresh;
+  fresh=function(player){const s=normalizeState(freshBase(player),player);return s};
+
+  /* Existing Aida stock marker may already be seeded; always expose new products to Admin. */
+  if(typeof ensureAdminStock==="function"){
+    const adminStockBase=ensureAdminStock;
+    ensureAdminStock=function(target){
+      const changedBase=adminStockBase(target);let changed=Boolean(changedBase);
+      if(currentMember==="Aida"&&adminProfile?.role==="admin"&&target){
+        target.animalProducts=target.animalProducts&&typeof target.animalProducts==="object"?target.animalProducts:{};
+        Object.keys(ANIMAL_PRODUCTS).forEach(k=>{if((Number(target.animalProducts[k])||0)<ADMIN_STOCK_QTY){target.animalProducts[k]=ADMIN_STOCK_QTY;changed=true}});
+      }
+      return changed;
+    };
+  }
+
+  function spiritRollProduct(type,forced=false){
+    const keys=R9_SPIRIT[type]?.products||[];if(!keys.length)return"";
+    if(forced)return keys[0];
+    const r=Math.random()*100;return r<60?keys[0]:r<90?keys[1]:keys[2];
+  }
+  function spiritDropPosition(type,index,total){
+    const t=total<=1?.5:index/Math.max(1,total-1),stack=Math.floor(index/18)%4;
+    if(type==="chicken")return{x:15+t*70,y:84.0+Math.sin(Math.PI*t)*3.7-stack*.55};
+    if(type==="fish")return{x:14+t*72,y:84.2-stack*.55};
+    if(type==="pig")return{x:15+t*70,y:88.0-stack*.55};
+    return{x:15+t*70,y:88.0-stack*.55};
+  }
+  function processSpiritProductionOn(s,now=gameNow()){
+    if(!s?.animals)return false;let changed=false;
+    if(!s.spiritDrops||typeof s.spiritDrops!=="object")s.spiritDrops={};
+    SPIRIT_TYPES.forEach(type=>{
+      const item=animalById(type);if(!item)return;
+      if(!Array.isArray(s.spiritDrops[type]))s.spiritDrops[type]=[];
+      (s.animals[type]||[]).forEach((animal,animalIndex)=>{
+        if(!animal||animalIsExpired(animal))return;
+        let ready=Math.max(1,Number(animal.readyAt)||now+item.productionMs),guard=0;
+        while(now>=ready&&guard++<192){
+          const productKey=spiritRollProduct(type,Boolean(animal.forcedCommonProduct));
+          animal.forcedCommonProduct=false;
+          s.spiritDrops[type].push({id:uid(`spirit-${type}`),productKey,animalIndex,createdAt:ready});
+          ready+=item.productionMs;changed=true;
+        }
+        animal.readyAt=ready;
+      });
+    });
+    return changed;
+  }
+  const processAnimalBase=processAnimalSystems;
+  processAnimalSystems=function(){
+    const s=ownState||state;if(s&&processSpiritProductionOn(s)){if(!visitContext){ownState=s;state=s}save()}
+    try{return processAnimalBase()}catch(_){return undefined}
+  };
+
+  function spiritDropHTML(type){
+    const drops=(ownState||state)?.spiritDrops?.[type]||[],visible=drops.slice(-72),hidden=Math.max(0,drops.length-visible.length),n=visible.length;
+    return `<div class="r9-spirit-drop-rail r9-${type}-rail" aria-label="รางผลผลิต ${type}">${visible.map((d,i)=>{const p=ANIMAL_PRODUCTS[d.productKey],pos=spiritDropPosition(type,i,n);return `<button type="button" class="r9-spirit-drop" data-r9-spirit-drop="${esc(d.id)}" style="left:${pos.x}%;top:${pos.y}%" title="${esc(p?.name||"")}"><img src="${p?.image||""}" alt="${esc(p?.name||"")}"></button>`}).join("")}${hidden?`<span class="r9-spirit-more">+${hidden}</span>`:""}</div>`;
+  }
+  function spiritSlotHTML(type,index){
+    const s=ownState||state,cfg=R9_SPIRIT[type],item=animalById(type),animal=s?.animals?.[type]?.[index],pos=cfg.slots[index]||[50,50];
+    if(animal){const expired=animalIsExpired(animal),remain=Math.max(0,Number(animal.readyAt||0)-gameNow());return `<div class="animal-slot-wrap r9-spirit-slot animal-${type} ${expired?"animal-expired":""}" style="left:${pos[0]}%;top:${pos[1]}%"><button class="animal-owned-slot" data-owned-animal="${index}" type="button" aria-label="${esc(item.name)}"><img src="${cfg.animal}" alt="${esc(item.name)}"></button><small class="r9-spirit-timer">${expired?"หมดอายุ":formatHM(remain)}</small></div>`}
+    return `<button class="animal-add-slot animal-empty-slot r9-spirit-empty" type="button" data-animal-slot="${index}" style="left:${pos[0]}%;top:${pos[1]}%" aria-label="วาง ${esc(item?.name||"สัตว์")} ช่อง ${index+1}"></button>`;
+  }
+  function renderSpiritScene(type){
+    if(!SPIRIT_TYPES.includes(type))return;
+    setSceneNav(v15AnimalNav(type));const s=ownState||state,produced=processSpiritProductionOn(s);if(!visitContext){ownState=s;state=s}if(produced)save()
+    const waiting=Math.max(0,Number(s?.pendingAnimals?.[type])||0),count=animalPlacedCount(type,s);
+    $("sceneInteractiveLayer").innerHTML=`<div class="r9-spirit-status"><b>${esc(animalById(type)?.name||"")}</b><small>รอวาง ×${waiting} • ${count}/9</small></div><button id="r9SpiritCareBtn" class="r9-spirit-care" type="button"><span>💗</span><b>เทคแคร์สัตว์</b></button><div class="animal-slots r9-spirit-slots">${Array.from({length:9},(_,i)=>spiritSlotHTML(type,i)).join("")}</div>${spiritDropHTML(type)}`;
+    document.querySelectorAll("[data-animal-slot]").forEach(b=>b.onclick=()=>showAnimalApprovalChoices(type,Number(b.dataset.animalSlot)));
+    document.querySelectorAll("[data-owned-animal]").forEach(b=>b.onclick=()=>showAnimalDetails(type,Number(b.dataset.ownedAnimal)));
+    document.querySelectorAll("[data-r9-spirit-drop]").forEach(b=>b.onclick=e=>{e.stopPropagation();collectOneSpiritDrop(type,b.dataset.r9SpiritDrop)});
+    $("r9SpiritCareBtn").onclick=()=>showSpiritCare(type);
+    stopSceneTimer();sceneTimer=setInterval(()=>{if(currentScene===type)renderSpiritScene(type)},10000);
+    try{saveLocalOnly(s)}catch(_){ }
+  }
+  renderAnimalScene=function(type){return renderSpiritScene(type)};
+
+  showAnimalDetails=function(type,index){
+    const s=ownState||state,item=animalById(type),a=s?.animals?.[type]?.[index];if(!item||!a)return;
+    const expired=animalIsExpired(a),life=expired?"0 วัน 0 ชม.":formatAnimalLife(a.expiresAt-gameNow()),remain=Math.max(0,Number(a.readyAt||0)-gameNow()),products=(R9_SPIRIT[type]?.products||[]).map(k=>ANIMAL_PRODUCTS[k]?.name).filter(Boolean).join(" • ");
+    $("modalContent").innerHTML=`<section class="feature-panel animal-detail-panel r9-spirit-detail"><button class="v15-card-x" id="animalDetailCloseBtn" type="button">×</button><img class="animal-detail-img" src="${R9_SPIRIT[type]?.animal||item.image}" alt="${esc(item.name)}"><h2>${esc(a.name||item.name)}</h2><p><b>อายุคงเหลือ:</b> ${life}<br><b>ผลผลิตรอบถัดไป:</b> ${expired?"หยุดผลิตแล้ว":formatHM(remain)}<br><small>สุ่ม: ${esc(products)} • 60% / 30% / 10%</small></p><div class="animal-detail-actions">${expired?'<button id="removeExpiredAnimalBtn" class="danger-action" type="button">นำออกจากคอก</button>':'<button id="renameAnimalBtn" class="secondary-action" type="button">ตั้งชื่อ</button>'}</div>${!expired?animalPestleHTML(type,index):""}</section>`;
+    openModal();$("animalDetailCloseBtn").onclick=closeModal;if(expired){$("removeExpiredAnimalBtn").onclick=()=>removeExpiredAnimal(type,index);return}$("renameAnimalBtn").onclick=()=>renameAnimal(type,index);document.querySelectorAll("[data-use-pestle]").forEach(btn=>btn.onclick=()=>usePestleOnAnimal(type,index,btn.dataset.usePestle));
+  };
+
+  /* Pestle remains usable per animal, but any accelerated cycle gives product #1 only. */
+  usePestleOnAnimal=function(type,index,key){
+    const s=ownState||state,item=PESTLE_ITEMS[key],a=s?.animals?.[type]?.[index];if(!item||!a||animalIsExpired(a))return;
+    if(specialCount(key)<1)return message("สากกะเบือไม่เพียงพอ","ไม่มีสากกะเบือชนิดนี้ในกระเป๋าแล้วค่ะ");
+    processSpiritProductionOn(s);const rem=Math.max(0,Number(a.readyAt||0)-gameNow());if(rem<=0)return message("ผลผลิตพร้อมแล้ว","ไม่จำเป็นต้องใช้สากกะเบือ");
+    a.readyAt=item.boost===100?gameNow():gameNow()+Math.max(1000,Math.round(rem*(1-item.boost/100)));a.forcedCommonProduct=true;s.specials[key]=Math.max(0,(Number(s.specials[key])||0)-1);processSpiritProductionOn(s);save();closeModal();renderSpiritScene(type);showWeatherToast(`🥄 ใช้ ${item.name} แล้ว • รอบนี้ออก ${ANIMAL_PRODUCTS[R9_SPIRIT[type].products[0]].name}`);
+  };
+
+  function showSpiritCare(type){
+    const drops=(ownState||state)?.spiritDrops?.[type]?.length||0;
+    $("modalContent").innerHTML=`<section class="feature-panel r9-spirit-care-panel"><button id="r9SpiritCareClose" class="v15-card-x" type="button">×</button><header><span>💗</span><div><small>${esc(animalById(type)?.name||"")}</small><h2>เทคแคร์สัตว์</h2></div></header><div class="r9-spirit-care-actions"><button id="r9BoostAllSpirit" type="button"><span>🥄</span><div><b>เร่งผลผลิตทั้งหมด</b><small>ใช้สากชนิดเดียวกัน ×9</small></div></button><button id="r9CollectAllSpirit" type="button"><span>🧺</span><div><b>เก็บผลผลิตทั้งหมด</b><small>บนรางตอนนี้ ×${drops}</small></div></button></div></section>`;openModal();$("r9SpiritCareClose").onclick=closeModal;$("r9BoostAllSpirit").onclick=()=>showSpiritPestlePicker(type);$("r9CollectAllSpirit").onclick=()=>collectAllSpiritDrops(type);
+  }
+  function showSpiritPestlePicker(type){
+    const s=ownState||state;
+    $("modalContent").innerHTML=`<section class="feature-panel r9-spirit-pestle-panel"><button id="r9PestleBack" class="v15-card-x" type="button">×</button><h2>🥄 เร่งผลผลิตทั้งหมด</h2><p>ต้องมีสัตว์ครบ 9 ตัว และมีสากชนิดที่เลือกอย่างน้อย 9 อัน</p><div class="r9-spirit-pestle-grid">${Object.entries(PESTLE_ITEMS).map(([key,p])=>`<button type="button" data-r9-pestle-all="${key}"><img src="${p.image}" alt="${esc(p.name)}"><span><b>${esc(p.name)}</b><small>เร่ง ${p.boost}% • มี ×${Number(s?.specials?.[key])||0}</small></span></button>`).join("")}</div></section>`;openModal();$("r9PestleBack").onclick=()=>showSpiritCare(type);document.querySelectorAll("[data-r9-pestle-all]").forEach(b=>b.onclick=()=>boostAllSpirit(type,b.dataset.r9PestleAll));
+  }
+  function boostAllSpirit(type,key){
+    const s=ownState||state,p=PESTLE_ITEMS[key];if(!p)return;processSpiritProductionOn(s);
+    const active=(s?.animals?.[type]||[]).filter(a=>a&&!animalIsExpired(a));
+    if(active.length!==9)return message("ยังเร่งทั้งหมดไม่ได้","ต้องมีสัตว์ที่ใช้งานอยู่ครบ 9 ตัวก่อนค่ะ");
+    if((Number(s?.specials?.[key])||0)<9)return message("ขออภัย จำนวนสากกะเบือไม่เพียงพอ","ต้องมีสากกะเบือชนิดที่เลือกอย่างน้อย 9 อันค่ะ");
+    s.specials[key]-=9;const now=gameNow();active.forEach(a=>{const rem=Math.max(0,Number(a.readyAt||0)-now);a.readyAt=p.boost===100?now:now+Math.max(1000,Math.round(rem*(1-p.boost/100)));a.forcedCommonProduct=true});processSpiritProductionOn(s);save();closeModal();renderSpiritScene(type);showWeatherToast(`🥄 เร่งสัตว์ทั้ง 9 ตัวแล้ว • ใช้ ${p.name} ×9`);
+  }
+  function collectOneSpiritDrop(type,id){
+    const s=ownState||state,list=s?.spiritDrops?.[type];if(!Array.isArray(list))return;const i=list.findIndex(d=>String(d.id)===String(id));if(i<0)return;const d=list[i],p=ANIMAL_PRODUCTS[d.productKey];list.splice(i,1);s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+1;incrementMissionOn(s,"collectAnimalProducts",1);save();renderSpiritScene(type);showWeatherToast(`🧺 ${p?.name||"ผลผลิต"} ×1 เข้ากระเป๋าแล้ว`);
+  }
+  function collectAllSpiritDrops(type){
+    const s=ownState||state,list=Array.isArray(s?.spiritDrops?.[type])?s.spiritDrops[type]:[];if(!list.length)return message("ยังไม่มีผลผลิต","ตอนนี้รางยังว่างอยู่ค่ะ");
+    const summary={};list.forEach(d=>{if(!ANIMAL_PRODUCTS[d.productKey])return;s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+1;summary[d.productKey]=(summary[d.productKey]||0)+1});const total=Object.values(summary).reduce((a,b)=>a+b,0);s.spiritDrops[type]=[];incrementMissionOn(s,"collectAnimalProducts",total);save();renderSpiritScene(type);
+    $("modalContent").innerHTML=`<section class="feature-panel r9-spirit-reward"><h2>🧺 เก็บเข้ากระเป๋าแล้ว</h2><div>${Object.entries(summary).map(([k,n])=>`<article><img src="${ANIMAL_PRODUCTS[k].image}" alt=""><span><b>${esc(ANIMAL_PRODUCTS[k].name)}</b><small>×${n}</small></span></article>`).join("")}</div><button id="r9SpiritRewardDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;openModal();$("r9SpiritRewardDone").onclick=closeModal;
+  }
+
+  /* -----------------------------------------------------------------
+     B) Dog #1 asset isolation + hotel combined-capacity assertion/UI polish.
+     ----------------------------------------------------------------- */
+  if(typeof resolveDogAssetBase==="function"){
+    const dogResolveBase=resolveDogAssetBase;
+    resolveDogAssetBase=async function(number){if(Number(number)===1)return"dog-01";return dogResolveBase(number)};
+  }
+  if(typeof dogAssetPath==="function"){
+    const dogPathBase=dogAssetPath;
+    dogAssetPath=function(base,kind){
+      if(String(base)==="dog-01"){
+        if(kind==="pose")return"dog-01-pose-sheet.png?v=S2R9";
+        if(kind==="front")return"dog-01-walk-front.png?v=S2R9";
+        if(kind==="back")return"dog-01-walk-back.png?v=S2R9";
+        if(kind==="side")return"dog-01-walk-side.png?v=S2R9";
+      }
+      return dogPathBase(base,kind);
+    };
+  }
+  function r9HotelTotal(pen){try{return typeof hotelPetCount==="function"?hotelPetCount(pen):(dogsInHotelPen(pen).length+(ownState?.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&Number(c.hotelPen)===pen).length)}catch{return 0}}
+  function organizeHotelTools(){
+    if(currentScene!=="dogHotel")return;const screen=$("dogHotelScreen")||document.body,old=$("s2HotelToolRail");if(old)old.remove();
+    const collect=$("dogPenCollectAllBtn"),member=$("dogMemberCheckBtn"),care=document.querySelector(".ynu-dog-care-buttons");if(!collect&&!member&&!care)return;
+    const rail=document.createElement("div");rail.id="s2HotelToolRail";rail.className="s2-hotel-tool-rail";rail.innerHTML='<small class="s2-hotel-tool-title">เครื่องมือ</small>';
+    if(member){member.innerHTML='<span>📋</span><small>สมาชิก</small>';rail.appendChild(member)}
+    if(collect){collect.innerHTML='<span>🧺</span><small>เก็บ</small>';rail.appendChild(collect)}
+    if(care)rail.appendChild(care);screen.appendChild(rail);
+    const badge=$("s2HotelCapacityBadge")||document.createElement("div");badge.id="s2HotelCapacityBadge";badge.className="s2-hotel-capacity-badge";badge.textContent=`คอก ${Math.max(1,Math.min(4,Number(currentDogHotelPen)||1))} • ${r9HotelTotal(Math.max(1,Math.min(4,Number(currentDogHotelPen)||1)))}/15 ตัวรวม`;if(!badge.isConnected)screen.appendChild(badge);
+  }
+  if(typeof renderDogHotelScene==="function"){
+    const hotelBase=renderDogHotelScene;
+    renderDogHotelScene=function(){const r=hotelBase.apply(this,arguments);setTimeout(organizeHotelTools,80);return r};
+  }
+
+  /* -----------------------------------------------------------------
+     C) Alpaca: only upper 4 trough positions move; lower 4 are preserved.
+        Rank screen is forced to V240 2-tab UI for Admin.
+     ----------------------------------------------------------------- */
+  if(typeof renderFixedSideTroughFood==="function"){
+    renderFixedSideTroughFood=function(pen){
+      const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
+      /* indexes 4-7 EXACTLY preserve the last approved lower positions */
+      const ys=[43.8,47.6,51.2,55.2,57.8,63.1,68.4,73.7];
+      const xl=[17.3,16.4,15.6,14.8,11.9,11.4,11.0,10.7],xr=[82.7,83.6,84.4,85.2,88.1,88.6,89.0,89.3];
+      (pen.trough||[]).slice(0,16).forEach((slot,i)=>{if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";img.style.cssText=`position:absolute;left:${left?xl[j]:xr[j]}%;top:${ys[j]}%;width:clamp(31px,5.9vw,43px);height:auto;transform:translate(-50%,-50%);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));`;layer.appendChild(img)});
+    };
+  }
+  function bindR9Rank(){const b=$("alpacaRankBtn");if(b&&globalThis.YN_V240?.showRanks)b.onclick=()=>globalThis.YN_V240.showRanks("happiness")}
+  setTimeout(bindR9Rank,250);document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn"))setTimeout(bindR9Rank,100)},false);
+
+  async function resetAlpacaRanksZeroOnce(){
+    if(currentMember!=="Aida"||adminProfile?.role!=="admin"||!cloudReady)return;
+    const marker="s2AlpacaRanksZeroV1Done",{db,fs}=await getFirebaseContext(),aidaRef=fs.doc(db,"saves","aida"),aidaSnap=await fs.getDoc(aidaRef);if(aidaSnap.data()?.[marker])return;
+    const snaps=await fs.getDocs(fs.collection(db,"saves"));let batch=fs.writeBatch(db),ops=0,commits=[];
+    const commitBatch=()=>{if(!ops)return;commits.push(batch.commit());batch=fs.writeBatch(db);ops=0};
+    for(const d of snaps.docs){const data=d.data()||{},alp=data.alpaca&&typeof data.alpaca==="object"?cloneData(data.alpaca):null,patch={updatedAt:fs.serverTimestamp()};if(alp){if(Array.isArray(alp.pens))alp.pens=alp.pens.map(p=>p&&typeof p==="object"?{...p,happiness:0}:p);alp.factory=alp.factory&&typeof alp.factory==="object"?{...alp.factory,claimedCount:0}:{claimedCount:0};patch.alpaca=alp}if(d.id==="aida")patch[marker]=true;batch.set(d.ref,patch,{merge:true});ops++;batch.set(fs.doc(db,"publicProfiles",d.id),{memberKey:d.id,displayName:String(data.player||data.displayName||d.id),alpacaHappiness:0,alpacaHappinessPens:[0,0,0,0,0],alpacaFactoryClaimed:0,updatedAt:fs.serverTimestamp()},{merge:true});ops++;if(ops>=400)commitBatch()}
+    commitBatch();await Promise.all(commits);
+    if(ownState?.alpaca){(ownState.alpaca.pens||[]).forEach(p=>{if(p)p.happiness=0});if(ownState.alpaca.factory)ownState.alpaca.factory.claimedCount=0}if(ownState){ownState[marker]=true;saveLocalOnly(ownState)}showWeatherToast("🏆 รีเซ็ต Rank ความสุขและ Rank แปรรูปเป็น 0 แล้ว");
+  }
+
+  /* -----------------------------------------------------------------
+     D) Jellyfish: picker is memory-only and opens immediately.
+        Placement is optimistic, durable and idempotently retried.
+     ----------------------------------------------------------------- */
+  const jellyBusy=new Set();
+  function jellyTypeInfo(version,key){return Number(version)===2?Y26_JELLY_V2?.[key]:JELLYFISH_TYPES?.[key]}
+  function jellyCount(s,version,key){return Number(version)===2?Number(s?.jellyfishV2?.[key]||0):Number(s?.specialAnimals?.[key]||0)}
+  function adjustJellyCount(s,version,key,delta){if(Number(version)===2){s.jellyfishV2=s.jellyfishV2||{};s.jellyfishV2[key]=Math.max(0,Number(s.jellyfishV2[key]||0)+delta)}else{s.specialAnimals=s.specialAnimals||{};s.specialAnimals[key]=Math.max(0,Number(s.specialAnimals[key]||0)+delta)}}
+  function paintOptimisticJelly(pond,index,placed){const selector=pond===2?`[data-j2="${index}"]`:`[data-jelly-slot="${index}"]`,el=document.querySelector(selector),ty=jellyTypeInfo(placed.version,placed.typeKey);if(!el)return;el.classList.remove("jelly-slot-empty");el.classList.add("jelly-slot-owned","r9-jelly-syncing");el.innerHTML=`<img src="${ty?.image||""}" alt="${esc(ty?.name||"แมงกะพรุน")}"><small>${esc(ty?.name||"แมงกะพรุน")}<br>กำลังบันทึก…</small>`}
+  async function commitPendingJellyPlacement(pending){
+    const key=`${pending.pond}:${pending.index}`,s=ownState||state;if(jellyBusy.has(key)||!pending||!currentMemberKey)return;jellyBusy.add(key);
+    try{
+      await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared",pending.pond===2?"jellyfishPond2":"jellyfishPond");
+      let committedSlots=null;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),raw=snap.exists()?snap.data():{},slots=Array.isArray(raw.slots)?raw.slots.slice(0,12):[];while(slots.length<12)slots.push(null);const existing=slots[pending.index];if(existing&&String(existing.id)!==String(pending.placed.id))throw new Error("ช่องนี้มีแมงกะพรุนแล้ว");if(!existing)slots[pending.index]=pending.placed;committedSlots=slots;tx.set(ref,{slots,updatedAt:fs.serverTimestamp()},{merge:false})});
+      const cur=ownState||state;if(cur?.pendingJellyPlacements)delete cur.pendingJellyPlacements[pending.id];save();
+      if(pending.pond===1&&committedSlots){jellyPondCache=normalizeJellyPond({slots:committedSlots},true);if(currentScene==="jellyfish")drawJellyfishPond(jellyPondCache)}
+      document.querySelectorAll(".r9-jelly-syncing").forEach(x=>x.classList.remove("r9-jelly-syncing"));showWeatherToast(`🪼 วาง ${jellyTypeInfo(pending.version,pending.typeKey)?.name||"แมงกะพรุน"} แล้ว`);
+    }catch(e){
+      const cur=ownState||state;if(cur?.pendingJellyPlacements?.[pending.id]){adjustJellyCount(cur,pending.version,pending.typeKey,1);delete cur.pendingJellyPlacements[pending.id];save()}message("วางแมงกะพรุนไม่ได้",e.message||"กรุณาเลือกช่องใหม่");
+    }finally{jellyBusy.delete(key)}
+  }
+  function beginFastJellyPlacement(pond,index,version,key){
+    const s=ownState||state;if(!s||jellyCount(s,version,key)<1)return message("แมงกะพรุนหมดแล้ว","ตัวที่เลือกไม่มีอยู่ในกระเป๋าแล้วค่ะ");const pkey=`${pond}:${index}`;if(jellyBusy.has(pkey))return;
+    const now=gameNow(),id=uid("jelly"),placed={id,version:Number(version),typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(Number(version)===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};const pending={id,pond,index:Number(index),version:Number(version),typeKey:key,placed,createdAt:now};
+    adjustJellyCount(s,version,key,-1);s.pendingJellyPlacements=s.pendingJellyPlacements||{};s.pendingJellyPlacements[id]=pending;save();closeModal();paintOptimisticJelly(pond,index,placed);setTimeout(()=>commitPendingJellyPlacement(pending),0);
+  }
+  function openFastJellyPicker(pond,index){
+    const s=ownState||state,choices=[];Object.entries(JELLYFISH_TYPES||{}).forEach(([key,j])=>{const count=jellyCount(s,1,key);if(count>0)choices.push({version:1,key,...j,count})});Object.entries(Y26_JELLY_V2||{}).forEach(([key,j])=>{const count=jellyCount(s,2,key);if(count>0)choices.push({version:2,key,...j,count})});if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อนค่ะ");
+    $("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel r9-fast-jelly-picker"><h2>🪼 เลือกแมงกะพรุน</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-r9-fast-jelly="${x.version}:${esc(x.key)}"><img src="${x.image}" alt=""><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-r9-fast-jelly]").forEach(b=>b.onclick=()=>{const [v,k]=b.dataset.r9FastJelly.split(":");beginFastJellyPlacement(pond,index,Number(v),k)});
+  }
+  document.addEventListener("pointerup",e=>{
+    const hit=e.target?.closest?.(".s2-jelly-hit");if(!hit||!(currentScene==="jellyfish"||currentScene==="jellyfish2"))return;e.preventDefault();e.stopImmediatePropagation();const i=Number(hit.dataset.hitIndex);const occupied=currentScene==="jellyfish2"?document.querySelector(`[data-j2="${i}"] img`):document.querySelector(`[data-jelly-slot="${i}"] img`);if(!occupied)openFastJellyPicker(currentScene==="jellyfish2"?2:1,i);
+  },true);
+  document.addEventListener("click",e=>{const hit=e.target?.closest?.(".s2-jelly-hit");if(hit){e.preventDefault();e.stopImmediatePropagation()}},true);
+
+  /* V2 craft: local-first; durable save queue guarantees recovery after app switching. */
+  V28_craftJellyV2=function(){
+    const chosen=V28_selectedJellyV1,s=ownState||state;if(!chosen)return;if((Number(s?.specialAnimals?.[chosen])||0)<5)return message("คราฟไม่ได้","แมงกะพรุน V1 ที่เลือกไม่ครบ 5 ตัว");if((Number(s?.bag?.hauntedPlankton)||0)<100)return message("คราฟไม่ได้","แพลงก์ตอนหลอนปิ๊ไม่ครบ 100 ชิ้น");s.specialAnimals[chosen]-=5;s.bag.hauntedPlankton-=100;const keys=Object.keys(Y26_JELLY_V2),resultKey=keys[Math.floor(Math.random()*keys.length)];s.jellyfishV2[resultKey]=(Number(s.jellyfishV2[resultKey])||0)+1;V28_selectedJellyV1="";save();closeModal();message("ยินดีด้วยค่ะ",`คุณได้รับแมงกะพรุน ${esc(Y26_JELLY_V2[resultKey].name)}<br><small>บันทึกเข้ากระเป๋าแล้ว</small>`);
+  };
+
+  function retryPendingJellies(){const s=ownState||state;if(!s?.pendingJellyPlacements)return;Object.values(s.pendingJellyPlacements).forEach(p=>{if(p?.pond&&Number.isFinite(Number(p.index)))commitPendingJellyPlacement(p)})}
+  window.addEventListener("pageshow",()=>setTimeout(retryPendingJellies,250),{passive:true});window.addEventListener("online",()=>setTimeout(retryPendingJellies,100),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(retryPendingJellies,200)},{passive:true});
+
+  /* -----------------------------------------------------------------
+     E) Arena score acknowledgement: close immediately and keep an idempotent
+        local pending receipt until garden weekly score is committed.
+     ----------------------------------------------------------------- */
+  function r9WeekKey(){const now=Date.now(),d=new Date(now+7*R9_HOUR),day=d.getUTCDay(),daysSinceWed=(day+4)%7,wed=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-daysSinceWed,5,0,0));if(now<wed.getTime())wed.setUTCDate(wed.getUTCDate()-7);return `${wed.getUTCFullYear()}-${String(wed.getUTCMonth()+1).padStart(2,"0")}-${String(wed.getUTCDate()).padStart(2,"0")}`}
+  const arenaPendingKey=()=>currentMemberKey?`yainoo-arena-score-pending:${currentMemberKey}`:"";
+  function readArenaPending(){try{const raw=localStorage.getItem(arenaPendingKey());return raw?JSON.parse(raw):null}catch{return null}}
+  function writeArenaPending(x){try{if(x)localStorage.setItem(arenaPendingKey(),JSON.stringify(x));else localStorage.removeItem(arenaPendingKey())}catch(_){ }}
+  let arenaReceiptBusy=false;
+  async function commitArenaReceipt(p){
+    if(!p||arenaReceiptBusy||!cloudReady||!currentMemberKey)return false;arenaReceiptBusy=true;
+    try{const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",currentMemberKey);await fs.runTransaction(db,async tx=>{const gg=await tx.get(gRef),gd=gg.exists()?gg.data():{},aw=gd.arenaWeekly&&typeof gd.arenaWeekly==="object"?gd.arenaWeekly:{},wk=p.weekKey,prev=String(aw.weekKey||"")===wk?Number(aw.score||0):0,receipts=String(aw.weekKey||"")===wk&&aw.receipts&&typeof aw.receipts==="object"?{...aw.receipts}:{};if(!receipts[p.receipt]){receipts[p.receipt]=true;const arenaWeekly={weekKey:wk,score:prev+Math.max(0,Number(p.score)||0),receipts,updatedAt:Date.now()};if(gg.exists())tx.update(gRef,{arenaWeekly,updatedAt:fs.serverTimestamp()});else tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData((ownState||state)?.plots||[]),arenaWeekly,updatedAt:fs.serverTimestamp()},{merge:false})}});writeArenaPending(null);return true}catch(e){console.warn("R9 arena receipt pending",e);return false}finally{arenaReceiptBusy=false}}
+  function acknowledgeArenaNow(){
+    const s=ownState||state,f=s?.arena?.fight;if(!f||!f.win)return;const p={score:Math.max(0,Number(f.score)||0),finishAt:Number(f.finishAt)||Date.now(),receipt:`${f.startedAt||f.finishAt||Date.now()}-${f.score||0}`,weekKey:r9WeekKey()};writeArenaPending(p);s.arena.cooldownUntil=Number(f.finishAt||Date.now())+R9_HOUR;s.arena.fight=null;save();closeModal();showWeatherToast(`🏆 รับ ${p.score} คะแนนแล้ว • กำลังซิงก์`);setTimeout(()=>commitArenaReceipt(p),0);
+  }
+  document.addEventListener("click",e=>{const b=e.target?.closest?.("#ynuArenaClaimScore");if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();b.disabled=true;acknowledgeArenaNow()},true);
+  function retryArenaReceipt(){const p=readArenaPending();if(p)commitArenaReceipt(p)}
+  window.addEventListener("pageshow",()=>setTimeout(retryArenaReceipt,200),{passive:true});window.addEventListener("online",()=>setTimeout(retryArenaReceipt,100),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(retryArenaReceipt,160)},{passive:true});
+
+  /* -----------------------------------------------------------------
+     F) Initialization hooks: recover pending work, bind rank, one-time reset.
+     Preserve all previous durable-save and membership logic by wrapping last.
+     ----------------------------------------------------------------- */
+  const initR9Base=initializeOrLoadCloudState;
+  initializeOrLoadCloudState=async function(member,memberKey){const result=await initR9Base(member,memberKey);ownState=normalizeState(ownState||result,member);if(!visitContext)state=ownState;processSpiritProductionOn(ownState);saveLocalOnly(ownState);setTimeout(()=>{retryPendingJellies();retryArenaReceipt();bindR9Rank()},50);return ownState};
+  if(typeof completeAidaCloudSession==="function"){
+    const completeR9Base=completeAidaCloudSession;
+    completeAidaCloudSession=async function(profile){const result=await completeR9Base(profile);setTimeout(()=>resetAlpacaRanksZeroOnce().catch(e=>{console.error("alpaca rank reset",e);message("รีเซ็ต Rank อัลปาก้าไม่สำเร็จ",e.message||"กรุณาลองใหม่")}),120);setTimeout(bindR9Rank,50);return result};
+  }
+
+  /* Fast visual press feedback for every actionable button; does not block clicks. */
+  document.addEventListener("pointerdown",e=>{const b=e.target?.closest?.("button:not(:disabled)");if(!b)return;b.classList.add("r9-tap-now");setTimeout(()=>b.classList.remove("r9-tap-now"),110)},{passive:true,capture:true});
+
+  window.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
 })();
