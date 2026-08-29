@@ -5766,7 +5766,6 @@ delete SCENES.panda;
 SPECIAL_ITEMS.wormKillerSpray={name:"สเปรย์ฆ่าหนอน",image:"worm-killer-spray.png?v=1",kind:"resource",description:"ใช้กำจัดหนอนในฟาร์มเพื่อนเท่านั้น • 1 ขวดต่อ 1 แปลง"};
 
 const DOG_TYPES={
-  dog1:{number:1,name:"ปุยเมฆ",image:"dog-01.png?v=1"},
   dog2:{number:2,name:"พ่อมดจิ๋ว",image:"dog-02.png?v=1"},
   dog3:{number:3,name:"หมีตุ๊บตั๊บ",image:"dog-03.png?v=1"},
   dog4:{number:4,name:"รัตติกาล",image:"dog-04.png?v=1"},
@@ -5800,12 +5799,13 @@ function ensureDogState(target){
   target.dogMysteryBoxes=Math.max(0,Math.floor(Number(target.dogMysteryBoxes)||0));
   target.dogs=Array.isArray(target.dogs)?target.dogs.filter(Boolean):[];
   target.pendingDogBoxReward=target.pendingDogBoxReward&&typeof target.pendingDogBoxReward==="object"?target.pendingDogBoxReward:null;
+  if(target.pendingDogBoxReward?.kind==="dog"&&target.pendingDogBoxReward?.typeKey==="dog1")target.pendingDogBoxReward=null;
   if(!target.specials||typeof target.specials!=="object")target.specials={};
   target.specials.wormKillerSpray=Math.max(0,Math.floor(Number(target.specials.wormKillerSpray)||0));
   const now=gameNow();
 
-  target.dogs=target.dogs.map(dog=>{
-    const typeKey=DOG_TYPES[dog?.typeKey]?dog.typeKey:"dog1";
+  target.dogs=target.dogs.filter(dog=>String(dog?.typeKey||"")!=="dog1").map(dog=>{
+    const typeKey=DOG_TYPES[dog?.typeKey]?dog.typeKey:"dog2";
     const placedHotel=Boolean(dog?.placedHotel);
     const placedAt=Math.max(0,Number(dog?.placedAt)||0);
 
@@ -5846,7 +5846,7 @@ const __normalizeStateBeforeDogsV10=normalizeState;
 normalizeState=function(raw,player){return ensureDogState(__normalizeStateBeforeDogsV10(raw,player))};
 const __ensureV4StateBeforeDogsV10=ensureV4State;
 ensureV4State=function(target){return ensureDogState(__ensureV4StateBeforeDogsV10(target))};
-function dogType(dog){return DOG_TYPES[dog?.typeKey]||DOG_TYPES.dog1}
+function dogType(dog){return DOG_TYPES[dog?.typeKey]||DOG_TYPES.dog2}
 function dogDisplayName(dog){return dog?.customName||dogType(dog).name}
 function dogLifeText(dog){const ms=Math.max(0,Number(dog?.expiresAt||0)-gameNow()),days=Math.floor(ms/86400000),hours=Math.ceil((ms%86400000)/3600000);return `${days} วัน ${hours} ชม.`}
 function placedDogs(s=ownState||state){ensureDogState(s);return (s?.dogs||[]).filter(d=>d.placedHotel)}
@@ -6093,7 +6093,7 @@ function randomDogDrop(dog){
     return DOG_DROP_POOL.find(item=>item.id===(Math.random()<0.5?"frog4":"fish4"));
   }
 
-  /* dog-01 ถึง dog-07:
+  /* dog-02 ถึง dog-07:
      15% หนอนไจแอนท์ (ดรอปเสีย)
      10% ยาถ่ายแมงกะพรุน
      75% พูลดรอปปกติเดิม
@@ -22023,7 +22023,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function storePositions(){try{localStorage.setItem("s2-hotel-position-v4",JSON.stringify(hotelPositionStore));sessionStorage.setItem("s2-hotel-position-v3",JSON.stringify(hotelPositionStore))}catch(_){ }}
   function petKey(kind,id,pen){return `${kind}:${id}:p${pen}`}
   function validHotelPoint(p){return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))&&p.x>=27&&p.x<=73&&p.y>=35&&p.y<=78}
-  function dogPath(base,kind){if(kind==="front"&&/(^|\/)dog-01$/.test(String(base||"")))return `dog-01-walk-front-fixed.png?v=S2DOG01FRONT2`;return kind==="pose"?`${base}-pose-sheet.png?v=S2PETSMOOTH2`:`${base}-walk-${kind}.png?v=S2PETSMOOTH2`}
+  function dogPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETSMOOTH2`:`${base}-walk-${kind}.png?v=S2PETSMOOTH2`}
   function catPath(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=S2PETFINAL`:`${base}-walk-${kind}.png?v=S2PETFINAL`}
 
   resolveDogAssetBase=function(number){
@@ -22267,8 +22267,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   });
 
   const R9_SPIRIT={
-    chicken:{scene:"spirit-chicken-season2.jpeg?v=S2R9",animal:"chicken_chicken.png?v=S2R9",products:["egg","hellFeather","revivedDrumstick"],slots:[[21.5,37.0],[50,37.0],[79,37.0],[21.5,50.8],[50,50.8],[79,50.8],[21.5,64.2],[50,64.2],[79,64.2]]},
-    fish:{scene:"spirit-fish-season2.jpeg?v=S2R9",animal:"fish_03_blue_fish.png?v=S2R9",products:["fishMeat","illusionRoe","darkMoonScale"],slots:[[22.5,45.0],[50.5,45.0],[78.5,45.0],[22.5,56.3],[50.5,56.3],[78.5,56.3],[22.5,68.2],[50.5,68.2],[78.5,68.2]]},
+    chicken:{scene:"spirit-chicken-season2.jpeg?v=S2R9",animal:"chicken_chicken.png?v=S2R9",products:["egg","hellFeather","revivedDrumstick"],slots:[[21.5,35.8],[50,35.8],[79,35.8],[21.5,49.6],[50,49.6],[79,49.6],[21.5,63.0],[50,63.0],[79,63.0]]},
+    fish:{scene:"spirit-fish-season2.jpeg?v=S2R9",animal:"fish_03_blue_fish.png?v=S2R9",products:["fishMeat","illusionRoe","darkMoonScale"],slots:[[22.5,43.8],[50.5,43.8],[78.5,43.8],[22.5,55.1],[50.5,55.1],[78.5,55.1],[22.5,67.0],[50.5,67.0],[78.5,67.0]]},
     pig:{scene:"spirit-pig-season2.jpeg?v=S2R9",animal:"pig_pig_transparent.png?v=S2R9",products:["truffle","shadowPork","infernalGoldenTrotter"],slots:[[20.5,40.6],[50,40.6],[79.5,40.6],[20.5,55.1],[50,55.1],[79.5,55.1],[20.5,70.4],[50,70.4],[79.5,70.4]]},
     cow:{scene:"spirit-cow-season2.jpeg?v=S2R9",animal:"cow_cow.png?v=S2R9",products:["milk","eclipseCheese","deathMistCream"],slots:[[20.5,42.8],[50,42.8],[79.5,42.8],[20.5,56.3],[50,56.3],[79.5,56.3],[20.5,69.8],[50,69.8],[79.5,69.8]]}
   };
@@ -22318,8 +22318,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function spiritDropPosition(type,index,total){
     const t=total<=1?.5:index/Math.max(1,total-1),stack=Math.floor(index/18)%4;
-    if(type==="chicken")return{x:15+t*70,y:84.0+Math.sin(Math.PI*t)*3.7-stack*.55};
-    if(type==="fish")return{x:14+t*72,y:84.2-stack*.55};
+    if(type==="chicken")return{x:15+t*70,y:82.6+Math.sin(Math.PI*t)*3.5-stack*.55};
+    if(type==="fish")return{x:14+t*72,y:82.8-stack*.55};
     if(type==="pig")return{x:15+t*70,y:88.0-stack*.55};
     return{x:15+t*70,y:88.0-stack*.55};
   }
@@ -22412,27 +22412,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
 
   /* -----------------------------------------------------------------
-     B) Dog #1 asset isolation + hotel combined-capacity assertion/UI polish.
+     B) Hotel combined-capacity assertion/UI polish.
+        Dog #1 (ปุยเมฆ) is retired and no dog-01 asset is requested.
      ----------------------------------------------------------------- */
-  if(typeof resolveDogAssetBase==="function"){
-    const dogResolveBase=resolveDogAssetBase;
-    resolveDogAssetBase=async function(number){if(Number(number)===1)return"dog-01";return dogResolveBase(number)};
-  }
-  if(typeof dogAssetPath==="function"){
-    const dogPathBase=dogAssetPath;
-    dogAssetPath=function(base,kind){
-      if(String(base)==="dog-01"){
-        if(kind==="pose")return"dog-01-pose-sheet.png?v=S2R9";
-        if(kind==="front")return"dog-01-walk-front.png?v=S2R9";
-        if(kind==="back")return"dog-01-walk-back.png?v=S2R9";
-        if(kind==="side")return"dog-01-walk-side.png?v=S2R9";
-      }
-      return dogPathBase(base,kind);
-    };
-  }
   function r9HotelTotal(pen){try{return typeof hotelPetCount==="function"?hotelPetCount(pen):(dogsInHotelPen(pen).length+(ownState?.cats||[]).filter(c=>Number(c.placedFarm)===-1&&c.placedHotel&&Number(c.hotelPen)===pen).length)}catch{return 0}}
   function organizeHotelTools(){
-    if(currentScene!=="dogHotel")return;const screen=$("dogHotelScreen")||document.body,old=$("s2HotelToolRail");if(old)old.remove();
+    if(currentScene!=="dogHotel"){document.getElementById("s2HotelToolRail")?.remove();document.getElementById("s2HotelCapacityBadge")?.remove();return}const screen=$("sceneScreen");if(!screen)return;const old=$("s2HotelToolRail");if(old)old.remove();
     const collect=$("dogPenCollectAllBtn"),member=$("dogMemberCheckBtn"),care=document.querySelector(".ynu-dog-care-buttons");if(!collect&&!member&&!care)return;
     const rail=document.createElement("div");rail.id="s2HotelToolRail";rail.className="s2-hotel-tool-rail";rail.innerHTML='<small class="s2-hotel-tool-title">เครื่องมือ</small>';
     if(member){member.innerHTML='<span>📋</span><small>สมาชิก</small>';rail.appendChild(member)}
@@ -22444,6 +22429,20 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const hotelBase=renderDogHotelScene;
     renderDogHotelScene=function(){const r=hotelBase.apply(this,arguments);setTimeout(organizeHotelTools,80);return r};
   }
+  const r9OpenSceneBase=openScene;
+  openScene=function(sceneName){
+    if(sceneName!=="dogHotel"){
+      document.getElementById("s2HotelToolRail")?.remove();
+      document.getElementById("s2HotelCapacityBadge")?.remove();
+    }
+    return r9OpenSceneBase.apply(this,arguments);
+  };
+  const r9ReturnFarmBase=returnToFarm;
+  returnToFarm=function(){
+    document.getElementById("s2HotelToolRail")?.remove();
+    document.getElementById("s2HotelCapacityBadge")?.remove();
+    return r9ReturnFarmBase.apply(this,arguments);
+  };
 
   /* -----------------------------------------------------------------
      C) Alpaca: only upper 4 trough positions move; lower 4 are preserved.
@@ -22453,7 +22452,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     renderFixedSideTroughFood=function(pen){
       const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";
       /* indexes 4-7 EXACTLY preserve the last approved lower positions */
-      const ys=[43.8,47.6,51.2,55.2,57.8,63.1,68.4,73.7];
+      const ys=[36.0,41.8,47.2,52.6,57.8,63.1,68.4,73.7];
       const xl=[17.3,16.4,15.6,14.8,11.9,11.4,11.0,10.7],xr=[82.7,83.6,84.4,85.2,88.1,88.6,89.0,89.3];
       (pen.trough||[]).slice(0,16).forEach((slot,i)=>{if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";img.style.cssText=`position:absolute;left:${left?xl[j]:xr[j]}%;top:${ys[j]}%;width:clamp(31px,5.9vw,43px);height:auto;transform:translate(-50%,-50%);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));`;layer.appendChild(img)});
     };
