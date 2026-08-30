@@ -8414,3 +8414,28 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 
 /* Honey stays on one fixed horizontal road line through the whole ride. */
 .game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important}
+
+/* ===== S2 R11 STABILITY + UI CLEANUP ===== */
+/* The wooden house sign is decorative only. Keep the DOM node for legacy JS safety, but never show/click it. */
+#topPlayerNameButton{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
+/* Hotel tools: evenly spaced, compact, no overlap on all 4 pens. */
+.s2-hotel-tool-rail{right:1.4%!important;top:31%!important;width:52px!important;padding:7px 5px!important;gap:9px!important;border-radius:23px!important}
+.s2-hotel-tool-rail>button,.s2-hotel-tool-rail .ynu-dog-care-buttons button{width:40px!important;height:40px!important;margin:0!important;flex:0 0 40px!important}
+.s2-hotel-tool-rail .ynu-dog-care-buttons{gap:9px!important;width:100%!important;justify-items:center!important}
+.s2-hotel-tool-title{line-height:1!important;margin:0 0 1px!important}
+
+/* Alpaca side trough: the upper four pairs were visually too low. Lift them without moving lower slots. */
+.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:31.5%!important}
+.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:37.6%!important}
+.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:43.7%!important}
+.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:49.8%!important}
+
+/* Bottom navigation: softer floating glass/wood card, smaller and cleaner. */
+.s2-main-nav{left:4%!important;right:4%!important;bottom:1.1%!important;height:40px!important;padding:3px!important;gap:3px!important;border-radius:18px!important;background:linear-gradient(180deg,rgba(72,45,78,.86),rgba(39,25,47,.90))!important;box-shadow:0 6px 17px rgba(10,5,15,.28),inset 0 1px rgba(255,241,210,.13)!important}
+.s2-main-nav button{border-radius:13px!important;background:rgba(255,238,201,.07)!important;font-size:15px!important}
+.s2-main-nav small{font-size:6.7px!important;color:#fff0cf!important}
+
+/* Market bottom wooden sign: true optical center + friendlier Thai type. */
+.s2-market-title{display:grid!important;place-items:center!important;left:10%!important;right:10%!important;bottom:7.1%!important;height:8.8%!important;padding:0 7%!important;font-family:"Thonburi","Noto Sans Thai",sans-serif!important;font-size:clamp(13px,3.7vw,23px)!important;font-weight:850!important;line-height:1.12!important;color:#5a3526!important;text-shadow:0 1px 0 rgba(255,245,218,.85)!important}
+.s2-market-loading{top:48%!important;font-size:9px!important}
