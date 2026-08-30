@@ -8415,27 +8415,141 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 /* Honey stays on one fixed horizontal road line through the whole ride. */
 .game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important}
 
-/* ===== S2 R11 STABILITY + UI CLEANUP ===== */
-/* The wooden house sign is decorative only. Keep the DOM node for legacy JS safety, but never show/click it. */
-#topPlayerNameButton{display:none!important;visibility:hidden!important;pointer-events:none!important}
+/* =====================================================================
+   S2 R12 — VERIFIED UI / ALIGNMENT / SPEED FIXES
+   ===================================================================== */
+/* Farm plot alignment measured from the supplied Farm 1/3/4 art. Farm 2 untouched. */
+.game-screen[data-s2-farm="1"] .plot{width:14.4%!important;height:6.75%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+1){left:16.9%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+2){left:33.1%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+3){left:49.4%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n){left:65.9%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(-n+4){top:46.6%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(n+5):nth-child(-n+8){top:54.8%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(n+9){top:63.0%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+1),.game-screen[data-s2-farm="4"] .plot:nth-child(4n+1){left:16.8%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+2),.game-screen[data-s2-farm="4"] .plot:nth-child(4n+2){left:32.8%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+3),.game-screen[data-s2-farm="4"] .plot:nth-child(4n+3){left:48.9%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n),.game-screen[data-s2-farm="4"] .plot:nth-child(4n){left:65.0%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(-n+4),.game-screen[data-s2-farm="4"] .plot:nth-child(-n+4){top:46.5%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(n+5):nth-child(-n+8),.game-screen[data-s2-farm="4"] .plot:nth-child(n+5):nth-child(-n+8){top:54.5%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(n+9),.game-screen[data-s2-farm="4"] .plot:nth-child(n+9){top:62.6%!important}
 
-/* Hotel tools: evenly spaced, compact, no overlap on all 4 pens. */
-.s2-hotel-tool-rail{right:1.4%!important;top:31%!important;width:52px!important;padding:7px 5px!important;gap:9px!important;border-radius:23px!important}
-.s2-hotel-tool-rail>button,.s2-hotel-tool-rail .ynu-dog-care-buttons button{width:40px!important;height:40px!important;margin:0!important;flex:0 0 40px!important}
-.s2-hotel-tool-rail .ynu-dog-care-buttons{gap:9px!important;width:100%!important;justify-items:center!important}
-.s2-hotel-tool-title{line-height:1!important;margin:0 0 1px!important}
+/* Cute compact bottom dock. */
+.s2-main-nav{left:4%!important;right:4%!important;bottom:1.15%!important;height:39px!important;gap:5px!important;padding:4px 5px!important;border-radius:19px!important;background:linear-gradient(180deg,rgba(74,48,82,.90),rgba(42,28,50,.94))!important;border:1.5px solid rgba(247,220,169,.72)!important;box-shadow:0 6px 17px rgba(18,9,24,.35),inset 0 1px rgba(255,245,217,.16)!important}
+.s2-main-nav button{border:1px solid rgba(255,238,203,.13)!important;border-radius:14px!important;background:linear-gradient(180deg,rgba(255,240,205,.13),rgba(255,240,205,.04))!important;font-size:15px!important;gap:1px!important}
+.s2-main-nav small{font-size:6.6px!important;color:#fff1d0!important}
+.s2-farm-dock{bottom:4.8%!important;right:3%!important}
+.s2-farm-dock>button{height:34px!important;min-width:49px!important;border-radius:16px!important;background:linear-gradient(180deg,#6f467f,#432c50)!important;border:1.5px solid #e2c78f!important}
+.s2-farm-pop{border-radius:16px!important;background:rgba(49,32,58,.96)!important;box-shadow:0 8px 20px rgba(18,8,24,.34)!important}
 
-/* Alpaca side trough: the upper four pairs were visually too low. Lift them without moving lower slots. */
-.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:31.5%!important}
-.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:37.6%!important}
-.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:43.7%!important}
-.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:49.8%!important}
+/* Market: shift slots left to match the supplied 3x4 wooden frames. */
+.s2-market-slot{width:22.5%!important;height:10.2%!important}
+.s2-market-title{left:16%!important;right:16%!important;bottom:12.0%!important;height:6.6%!important;font-size:clamp(14px,3.6vw,23px)!important;display:grid!important;place-items:center!important;line-height:1.05!important}
+#s2MarketFooter{top:2.4%!important;right:4%!important}
+.s2-market-loading{top:47%!important}
 
-/* Bottom navigation: softer floating glass/wood card, smaller and cleaner. */
-.s2-main-nav{left:4%!important;right:4%!important;bottom:1.1%!important;height:40px!important;padding:3px!important;gap:3px!important;border-radius:18px!important;background:linear-gradient(180deg,rgba(72,45,78,.86),rgba(39,25,47,.90))!important;box-shadow:0 6px 17px rgba(10,5,15,.28),inset 0 1px rgba(255,241,210,.13)!important}
-.s2-main-nav button{border-radius:13px!important;background:rgba(255,238,201,.07)!important;font-size:15px!important}
-.s2-main-nav small{font-size:6.7px!important;color:#fff0cf!important}
+/* Honey bike: fixed Y axis. Parked sprite gets a tiny visual compensation only; X remains untouched. */
+.game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important;bottom:auto!important}
+.game-screen[data-s2-farm="1"] #honeyBike.is-riding,.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:80.35%!important}
+.game-screen[data-s2-farm="1"] #honeyBike.is-parked .honey-bike-clip{transform:translateY(4.5%)!important}
 
-/* Market bottom wooden sign: true optical center + friendlier Thai type. */
-.s2-market-title{display:grid!important;place-items:center!important;left:10%!important;right:10%!important;bottom:7.1%!important;height:8.8%!important;padding:0 7%!important;font-family:"Thonburi","Noto Sans Thai",sans-serif!important;font-size:clamp(13px,3.7vw,23px)!important;font-weight:850!important;line-height:1.12!important;color:#5a3526!important;text-shadow:0 1px 0 rgba(255,245,218,.85)!important}
-.s2-market-loading{top:48%!important;font-size:9px!important}
+/* Meow-Woof Hotel tools: one compact toggle, contents expand only when requested. */
+.s2-hotel-tool-rail{right:2%!important;top:35%!important;width:auto!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;display:block!important}
+.s2-hotel-tool-toggle{width:48px!important;height:48px!important;border:1.5px solid #e9cf9e!important;border-radius:50%!important;background:linear-gradient(180deg,#7a4d88,#4d3158)!important;color:#fff3d8!important;display:grid!important;place-items:center!important;gap:0!important;box-shadow:0 5px 12px rgba(24,12,30,.3)!important}
+.s2-hotel-tool-toggle span{font-size:18px!important}.s2-hotel-tool-toggle small{font-size:6px!important;font-weight:900!important}
+.s2-hotel-tool-items{margin-top:5px;padding:5px 4px;border:1.5px solid rgba(255,230,192,.88);border-radius:22px;background:linear-gradient(180deg,rgba(74,48,82,.94),rgba(45,31,52,.95));display:grid;justify-items:center;gap:5px;box-shadow:0 7px 18px rgba(27,15,32,.3)}
+.s2-hotel-tool-rail.is-collapsed .s2-hotel-tool-items{display:none!important}
+.s2-hotel-tool-items>button,.s2-hotel-tool-items .ynu-dog-care-buttons button{position:static!important;width:40px!important;height:40px!important;min-width:0!important;border-radius:50%!important;padding:2px!important}
+.s2-hotel-tool-items .ynu-dog-care-buttons{position:static!important;display:grid!important;gap:5px!important}
+
+/* Alpaca upper trough food markers: move the upper four pairs upward. */
+.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:30.5%!important}
+.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:36.4%!important}
+.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:42.3%!important}
+.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:48.2%!important}
+
+/* Retired editable house sign stays invisible/non-interactive. */
+#topPlayerNameButton{display:none!important;pointer-events:none!important}
+
+/* All modal close/confirm controls feel immediate on touch. */
+#closeModal,.feature-panel button,.modal button{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+button.r9-tap-now{transform:scale(.97)!important;transition:transform .07s ease!important}
+
+/* ===== S2 R12 VERIFIED UI/PERFORMANCE CORRECTIONS ===== */
+/* Honey: one straight road line, no parked jump. */
+.game-screen[data-s2-farm="1"] #honeyBike,
+.game-screen[data-s2-farm="1"] #honeyBike.is-riding,
+.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:80.35%!important;bottom:auto!important;margin:0!important}
+.game-screen[data-s2-farm="1"] #honeyBike .honey-bike-clip{transform:none!important}
+
+/* Market: align 3x4 centers to the wooden frames and lift the name onto the sign. */
+.s2-market-slot{width:20.5%!important;height:9.5%!important}
+.s2-market-title{left:15%!important;right:15%!important;bottom:14.2%!important;height:6.2%!important;font-size:clamp(14px,3.45vw,22px)!important;display:grid!important;place-items:center!important;line-height:1!important;font-family:"Thonburi","Noto Sans Thai",sans-serif!important;font-weight:850!important}
+
+/* Farm UI: compact floating dock; tools never remain spread across the screen. */
+.s2-main-nav{left:4%!important;right:4%!important;bottom:1.1%!important;height:39px!important;padding:3px!important;gap:3px!important;border-radius:18px!important;background:rgba(45,29,54,.72)!important}
+.s2-main-nav button{border-radius:13px!important;font-size:14px!important;background:rgba(255,239,204,.08)!important}
+.s2-main-nav small{font-size:6.6px!important}
+.s2-farm-dock{right:3%!important;bottom:5.5%!important}
+.s2-farm-dock>button{min-width:49px!important;height:34px!important;border-radius:15px!important}
+.s2-tools-pop{grid-template-columns:repeat(2,50px)!important;gap:5px!important;padding:6px!important}
+
+/* Meow-Woof Hotel: compact collapsed tool button, tidy expanded rail. */
+.s2-hotel-tool-rail{right:2.2%!important;top:33%!important}
+.s2-hotel-tool-toggle{width:44px!important;height:44px!important}
+.s2-hotel-tool-items{gap:6px!important;padding:6px 4px!important}
+.s2-hotel-tool-items>button,.s2-hotel-tool-items .ynu-dog-care-buttons button{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;margin:0!important}
+
+/* Alpaca upper trough items: lift the first four positions on both sides. */
+.alpaca-trough-visual-slot:nth-child(1),.alpaca-trough-visual-slot:nth-child(9){top:29.5%!important}
+.alpaca-trough-visual-slot:nth-child(2),.alpaca-trough-visual-slot:nth-child(10){top:35.6%!important}
+.alpaca-trough-visual-slot:nth-child(3),.alpaca-trough-visual-slot:nth-child(11){top:41.7%!important}
+.alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:47.8%!important}
+
+/* All primary modal controls: immediate tap affordance, no long CSS transitions. */
+button,.primary-spooky-action,.secondary-action,.danger-action{transition:transform .08s ease,opacity .08s ease!important}
+button:active,.primary-spooky-action:active,.secondary-action:active,.danger-action:active{transform:scale(.97)}
+
+/* R12 house wooden sign is decorative only. */
+#topPlayerNameButton{display:none!important;pointer-events:none!important}
+
+/* ======================================================================
+   S2 R13 UI / HONEY / TROUGH FINAL OVERRIDES — 2026-08-30
+   ====================================================================== */
+/* Honey travels on one horizontal baseline only. */
+.game-screen[data-s2-farm="1"] #honeyBike,
+.game-screen[data-s2-farm="1"] #honeyBike.is-riding,
+.game-screen[data-s2-farm="1"] #honeyBike.is-parked{
+  top:80.35%!important;bottom:auto!important;margin:0!important;
+}
+.game-screen[data-s2-farm="1"] #honeyBike .honey-bike-clip{transform:none!important}
+.honey-bike.is-riding,.honey-bike.is-parked{animation:none!important}
+
+/* Side trough hit areas follow the two side rails, not the middle floor. */
+.s2-trough-hotspot{top:32%!important;height:47%!important;width:16%!important}
+.s2-trough-hotspot.left{left:3.5%!important;right:auto!important}
+.s2-trough-hotspot.right{right:3.5%!important;left:auto!important}
+
+/* Bottom navigation and farm controls stay compact. */
+.s2-main-nav{gap:3px!important;padding:5px 6px!important}
+.s2-main-nav>button{min-width:0!important;min-height:38px!important;padding:3px 4px!important;border-radius:12px!important}
+.s2-main-nav>button small{font-size:7px!important}
+.s2-farm-dock{gap:5px!important}
+#s2FarmSelectBtn,#s2FarmToolsToggle{min-height:38px!important;padding:4px 8px!important;border-radius:14px!important}
+.s2-farm-pop{max-width:min(280px,76vw)!important;padding:6px!important;gap:5px!important;border-radius:16px!important}
+.s2-tools-pop button{min-height:38px!important;padding:4px!important;border-radius:12px!important}
+
+/* Hotel tool rail: one small toggle, items hidden until opened. */
+.s2-hotel-tool-rail{right:1.5%!important;top:34%!important;width:auto!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;display:block!important}
+.s2-hotel-tool-toggle{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;padding:2px!important;border-radius:50%!important;display:grid!important;place-items:center!important}
+.s2-hotel-tool-toggle span{font-size:17px!important;line-height:1!important}.s2-hotel-tool-toggle small{font-size:6px!important;line-height:1!important}
+.s2-hotel-tool-items{margin-top:4px!important;padding:5px 4px!important;display:grid!important;justify-items:center!important;gap:5px!important;border-radius:18px!important}
+.s2-hotel-tool-rail.is-collapsed .s2-hotel-tool-items{display:none!important}
+.s2-hotel-tool-items>button,.s2-hotel-tool-items .ynu-dog-care-buttons button{position:static!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;margin:0!important;padding:2px!important;border-radius:50%!important}
+
+@media(max-width:430px){
+  .s2-main-nav>button{min-height:35px!important}
+  .s2-hotel-tool-toggle{width:39px!important;height:39px!important;min-width:39px!important;min-height:39px!important}
+  .s2-hotel-tool-items>button,.s2-hotel-tool-items .ynu-dog-care-buttons button{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important}
+}
