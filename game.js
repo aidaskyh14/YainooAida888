@@ -376,22 +376,20 @@ async function handleAvatarUpload(event){
 
 /* ===== ชื่ออิสระบนป้ายไม้ ===== */
 function updateTopPlayerName(){
+  /* R10.2: the decorative house sign is intentionally non-editable now.
+     The button was removed from index.html, so never let legacy code crash startup. */
+  const button=$("topPlayerNameButton");
+  if(!button)return;
   const key=topPlayerNameKey();
-  $("topPlayerNameButton").textContent=key?(localStorage.getItem(key)||"แตะเพื่อตั้งชื่อ"):"แตะเพื่อตั้งชื่อ";
+  button.textContent=key?(localStorage.getItem(key)||""):"";
 }
 
 function setupTopPlayerName(){
-  $("topPlayerNameButton").onclick=()=>{
-    if(!currentMember)return;
-    const key=topPlayerNameKey();
-    const oldName=localStorage.getItem(key)||"";
-    const typed=window.prompt("พิมพ์ข้อความบนป้ายไม้",oldName);
-    if(typed===null)return;
-    const clean=typed.trim().slice(0,24);
-    if(!clean)return;
-    localStorage.setItem(key,clean);
-    updateTopPlayerName();
-  };
+  /* Name editing on the wooden house sign was removed by design. */
+  const button=$("topPlayerNameButton");
+  if(!button)return;
+  button.onclick=null;
+  button.disabled=true;
 }
 
 /* ===== เวลาไทยและพยากรณ์ ===== */
