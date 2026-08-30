@@ -255,9 +255,30 @@ function parseLine(line){
   return cells;
 }
 
+function renderMemberLoginOptions(){
+  const select=$("memberSelect");
+  if(!select)return;
+  const previous=select.value;
+  const loginNames=Object.keys(MEMBERS||{});
+  const adminNames=loginNames.filter(name=>name==="Aida");
+  const playerNames=loginNames.filter(name=>name!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+  select.innerHTML=`<option value="" selected disabled>เลือกชื่อผู้เล่น</option>`
+    +(adminNames.length?`<optgroup label="ผู้ดูแลระบบ">${adminNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"")
+    +(playerNames.length?`<optgroup label="ผู้เล่น">${playerNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"");
+  if(previous&&Object.prototype.hasOwnProperty.call(MEMBERS,previous))select.value=previous;
+}
+
 async function loadMembers(){
+  /* Login must never wait for the optional CSV/network request.
+     Paint the built-in member directory immediately, then refresh in background. */
+  renderMemberLoginOptions();
   try{
-    const response=await fetch("member-codes.csv?v=5",{cache:"no-store"});
+    const controller=typeof AbortController!=="undefined"?new AbortController():null;
+    const timeout=controller?setTimeout(()=>controller.abort(),1800):0;
+    let response;
+    try{
+      response=await fetch("member-codes.csv?v=5",{cache:"no-store",...(controller?{signal:controller.signal}:{})});
+    }finally{if(timeout)clearTimeout(timeout)}
     if(!response.ok)throw new Error("โหลดรายชื่อไม่สำเร็จ");
     const text=(await response.text()).replace(/^\uFEFF/,"");
     const loaded={};
@@ -265,14 +286,10 @@ async function loadMembers(){
       const [name,code]=parseLine(row);
       if(name&&code)loaded[name]=code;
     });
-    if(Object.keys(loaded).length)MEMBERS=loaded;
-  }catch(error){console.warn("ใช้รายชื่อสำรอง")}
-  const loginNames=Object.keys(MEMBERS);
-  const adminNames=loginNames.filter(name=>name==="Aida");
-  const playerNames=loginNames.filter(name=>name!=="Aida");
-  $("memberSelect").innerHTML=`<option value="" selected disabled>เลือกชื่อผู้เล่น</option>`
-    +(adminNames.length?`<optgroup label="ผู้ดูแลระบบ">${adminNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"")
-    +(playerNames.length?`<optgroup label="ผู้เล่น">${playerNames.map(name=>`<option value="${name}">${name}</option>`).join("")}</optgroup>`:"");
+    /* Never let an incomplete CSV erase the built-in legacy members. */
+    if(Object.keys(loaded).length)MEMBERS={...MEMBERS,...loaded};
+  }catch(error){console.warn("ใช้รายชื่อสำรอง",error?.name||error)}
+  renderMemberLoginOptions();
 }
 
 /* ===== รูปโปรไฟล์และชื่อโปรไฟล์ ===== */
@@ -22678,4 +22695,32 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   /* Cached admin rank: show last result immediately, refresh in background. */
   if(globalThis.YN_V240){const base=globalThis.YN_V240.showRanks;globalThis.YN_V240.showRanks=async function(tab="happiness"){if(!(currentMember==="Aida"&&adminProfile?.role==="admin"))return;const ck="yainoo-r10-alpaca-rank",cached=(()=>{try{return JSON.parse(localStorage.getItem(ck)||"null")}catch{return null}})();const paint=rows=>{const factory=tab==="factory",sorted=[...rows].sort((a,b)=>(factory?b.factory-a.factory:b.happiness-a.happiness)||String(a.name).localeCompare(String(b.name),"th"));$("modalContent").innerHTML=`<section class="feature-panel v240-rank-panel"><header><div><small>🦙 Admin Rank</small><h2>${factory?"คะแนนแปรรูป":"คะแนนความสุข"}</h2></div><button id="v240RankClose">×</button></header><div class="v240-rank-tabs"><button data-r10-rank="happiness" class="${!factory?"active":""}">ความสุข</button><button data-r10-rank="factory" class="${factory?"active":""}">แปรรูป</button></div><div class="v240-rank-scroll">${sorted.map((r,i)=>`<article class="v240-rank-row ${i<3?`top${i+1}`:""}"><strong>#${i+1}</strong><div><b>${r.name}</b><small>${factory?"ผลิตและรับแล้ว":"ความสุขรวม"}</small></div><span>${factory?r.factory:r.happiness}</span></article>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-r10-rank]").forEach(b=>b.onclick=()=>globalThis.YN_V240.showRanks(b.dataset.r10Rank));$("v240RankClose").onclick=closeModal};if(cached?.rows)paint(cached.rows);else{$("modalContent").innerHTML='<section class="feature-panel v240-rank-panel"><h2>🏆 Rank อัลปาก้า</h2><p>กำลังอ่านคะแนนล่าสุด…</p></section>';openModal()}try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles")),by={};snap.forEach(d=>by[d.id]=d.data());const rows=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(name=>{const k=memberKeyFromName(name),p=by[k]||{};return{name,happiness:Number(p.alpacaHappiness)||0,factory:Number(p.alpacaFactoryClaimed)||0}});try{localStorage.setItem(ck,JSON.stringify({at:Date.now(),rows}))}catch{}paint(rows)}catch(e){if(!cached?.rows)message("โหลด Rank ไม่ได้",e.message||"กรุณาลองใหม่")}}}
   window.YAINOO_BUILD="S2-R10-PERFORMANCE-HOTFIX-20260830";
+})();
+
+
+/* ======================================================================
+   S2 R10.1 LOGIN DIRECTORY HOTFIX — 2026-08-30
+   Keep the login selector usable even when member-codes.csv / Firestore is slow.
+   ====================================================================== */
+(function YN_S2_R101_LOGIN_HOTFIX(){
+  const ensure=()=>{
+    try{
+      if(typeof renderMemberLoginOptions==="function")renderMemberLoginOptions();
+      const select=document.getElementById("memberSelect");
+      if(select&&select.querySelectorAll("option:not([disabled])").length===0){
+        const names=Object.keys(MEMBERS||{});
+        if(names.length){
+          const admins=names.filter(n=>n==="Aida");
+          const players=names.filter(n=>n!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+          select.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'+
+            (admins.length?`<optgroup label="ผู้ดูแลระบบ">${admins.map(n=>`<option value="${n}">${n}</option>`).join("")}</optgroup>`:"")+
+            (players.length?`<optgroup label="ผู้เล่น">${players.map(n=>`<option value="${n}">${n}</option>`).join("")}</optgroup>`:"");
+        }
+      }
+    }catch(e){console.warn("R10.1 login options",e)}
+  };
+  ensure();
+  document.addEventListener("DOMContentLoaded",ensure,{once:true});
+  setTimeout(ensure,250);setTimeout(ensure,1200);setTimeout(ensure,2500);
+  window.YAINOO_BUILD="S2-R10.1-LOGIN-HOTFIX-20260830";
 })();
