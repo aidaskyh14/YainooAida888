@@ -8414,30 +8414,3 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 
 /* Honey stays on one fixed horizontal road line through the whole ride. */
 .game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important}
-
-/* =====================================================================
-   S2 R10 UI POLISH — 2026-08-30
-   ===================================================================== */
-/* House wooden sign is decorative only. */
-.top-player-name-button{display:none!important;pointer-events:none!important}
-
-/* Cute compact bottom dock: less visual weight, more spacing, still thumb-friendly. */
-.s2-main-nav{left:4%!important;right:4%!important;bottom:1.15%!important;height:39px!important;gap:5px!important;padding:4px 5px!important;border-radius:19px!important;background:linear-gradient(180deg,rgba(60,39,67,.78),rgba(39,26,47,.82))!important;border:1px solid rgba(255,229,183,.52)!important;box-shadow:0 5px 14px rgba(15,8,20,.28)!important}
-.s2-main-nav button{border-radius:13px!important;background:rgba(255,240,207,.07)!important;font-size:15px!important;gap:2px!important}
-.s2-main-nav small{font-size:6.7px!important;color:#fff0d0!important;letter-spacing:.01em!important}
-.s2-main-nav button:active{background:rgba(255,231,190,.19)!important;transform:scale(.95)!important}
-
-/* Hotel tools: one clean vertical rail; no overlapping nested buttons. */
-.s2-hotel-tool-rail{right:2.4%!important;top:31%!important;width:50px!important;padding:7px 4px 8px!important;gap:8px!important;border-radius:25px!important;overflow:visible!important}
-.s2-hotel-tool-title{font-size:7px!important;line-height:1.1!important;margin-bottom:1px!important}
-.s2-hotel-tool-rail>button,.s2-hotel-tool-rail .ynu-dog-care-buttons button{width:40px!important;height:40px!important;margin:0!important;position:static!important;transform:none!important}
-.s2-hotel-tool-rail .ynu-dog-care-buttons{position:static!important;display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:40px!important;margin:0!important;padding:0!important}
-@media(max-width:430px){.s2-hotel-tool-rail{right:1.8%!important;width:46px!important;gap:7px!important}.s2-hotel-tool-rail>button,.s2-hotel-tool-rail .ynu-dog-care-buttons button{width:36px!important;height:36px!important}.s2-hotel-tool-rail .ynu-dog-care-buttons{width:36px!important}}
-
-/* Alpaca side troughs: move upper interaction/food line upward. */
-.s2-trough-hotspot{top:27.5%!important;height:51%!important}
-#alpacaTroughFoodFixed .s2-fixed-trough-food:nth-child(-n+4){transform:translateY(-24px)!important}
-
-/* Market wooden sign: centered typography on the supplied bottom plaque. */
-.s2-market-title{left:13%!important;right:13%!important;bottom:8.1%!important;height:7.1%!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0 3%!important;font-family:"Thonburi","Noto Serif Thai","Noto Sans Thai",serif!important;font-size:clamp(14px,3.7vw,23px)!important;font-weight:900!important;line-height:1.05!important;color:#5a3423!important;text-shadow:0 1px 0 rgba(255,245,210,.85)!important}
-#s2MarketFooter{top:2.8%!important;right:3.5%!important;left:auto!important;justify-content:flex-end!important}
