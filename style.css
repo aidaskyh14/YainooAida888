@@ -8336,3 +8336,81 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 
 /* Two shops share one interior art; each has its own 12 slots. */
 .s2-market-screen{position:fixed;inset:0;z-index:995;background:#25170f url("player-market-shop.jpeg?v=S2F1") center/100% 100% no-repeat;overflow:hidden}.s2-market-screen.hidden{display:none!important}.s2-market-back{position:absolute;z-index:10;left:2.8%;top:2%;width:38px;height:38px;border:1px solid #e8c887;border-radius:50%;background:rgba(61,37,27,.86);color:#fff0cb;font-size:29px;line-height:1}.s2-market-title{position:absolute;z-index:10;left:14%;right:14%;bottom:7.4%;height:8.2%;border:0;background:transparent;color:#5b3524;font-family:"Ayuthaya","Thonburi",serif;font-weight:900;font-size:clamp(13px,4vw,25px);text-align:center;text-shadow:0 1px rgba(255,244,207,.8)}#s2MarketSlots{position:absolute;inset:0}.s2-market-slot{position:absolute;width:17.5%;height:9.5%;border:0;background:transparent;transform:translate(-50%,-50%);padding:2px}.s2-market-slot img{width:70%;height:67%;object-fit:contain;display:block;margin:auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))}.s2-market-slot small{position:absolute;right:2px;top:2px;min-width:17px;padding:1px 3px;border-radius:8px;background:#4e2b24;color:#fff6dd;font-size:8px;font-weight:900}.s2-market-slot b{position:absolute;left:3%;right:3%;bottom:0;padding:1px 2px;border-radius:8px;background:rgba(65,38,25,.85);color:#ffe9ad;font-size:7px}.s2-market-slot.empty span{font-size:22px;color:rgba(255,234,188,.45)}.s2-market-slot.sold img{filter:grayscale(1) brightness(.48);opacity:.7}.s2-market-slot.sold b{background:rgba(39,34,35,.9);color:#ddd}.s2-market-slot.sold::after{content:"SOLD";position:absolute;inset:28% 4% auto;transform:rotate(-9deg);color:#e9e9e9;font-size:11px;font-weight:950;text-shadow:0 2px #222}#s2MarketFooter{position:absolute;left:3%;right:3%;top:3%;display:flex;justify-content:flex-end;gap:6px;align-items:center;color:#ffe9b5;font-size:9px}#s2MarketFooter button{border:1px solid #e1bd79;border-radius:10px;background:#6b4531;color:#fff0c9;padding:5px 8px;font-size:8px}.s2-market-listing{text-align:center}.s2-market-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:48vh;overflow:auto}.s2-market-picker button{display:flex;align-items:center;gap:5px;border:1px solid #d9b981;border-radius:11px;background:#fff6e3;padding:5px;text-align:left}.s2-market-picker img{width:35px;height:35px;object-fit:contain}.s2-market-picker span,.s2-market-picker b,.s2-market-picker small{display:block;min-width:0}.s2-market-picker b{font-size:9px}.s2-market-picker small{font-size:7px;color:#7e664e}.s2-market-preview{width:82px;height:82px;object-fit:contain}.s2-market-listing label{display:grid;gap:3px;text-align:left;font-size:9px;margin:8px 0}.s2-market-listing input{width:100%;height:36px;border:1px solid #cfad75;border-radius:10px;padding:0 10px;background:#fffaf0;font-size:13px}
+
+/* ===== S2 FARM HOTFIX 7 — 2026-08-29 ===== */
+/* Farm 2 coordinates were confirmed visually correct. Farms 1/3/4 use their own measured coordinates. */
+.game-screen[data-s2-farm="1"] .plot{width:14.4%!important;height:6.75%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+1){left:16.6%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+2){left:33.7%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n+3){left:50.8%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(4n){left:67.9%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(-n+4){top:46.2%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(n+5):nth-child(-n+8){top:54.1%!important}
+.game-screen[data-s2-farm="1"] .plot:nth-child(n+9){top:62.1%!important}
+
+/* Farm 2: intentionally keep the already-correct S2F1 coordinates. */
+
+.game-screen[data-s2-farm="3"] .plot{width:14.6%!important;height:6.75%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+1){left:16.6%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+2){left:33.2%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n+3){left:49.3%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(4n){left:65.8%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(-n+4){top:46.6%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(n+5):nth-child(-n+8){top:54.5%!important}
+.game-screen[data-s2-farm="3"] .plot:nth-child(n+9){top:62.4%!important}
+
+.game-screen[data-s2-farm="4"] .plot{width:14.6%!important;height:6.75%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(4n+1){left:16.7%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(4n+2){left:33.2%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(4n+3){left:49.3%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(4n){left:65.7%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(-n+4){top:46.45%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(n+5):nth-child(-n+8){top:54.35%!important}
+.game-screen[data-s2-farm="4"] .plot:nth-child(n+9){top:62.3%!important}
+
+/* Crop art must sit inside the smaller beds, centered and less dominant. */
+.game-screen .plot-inner{justify-content:center!important;padding:0!important}
+.game-screen .crop{height:69%!important;align-items:center!important;justify-content:center!important}
+.game-screen .crop img.crop-img{width:clamp(27px,6.6vw,53px)!important;height:clamp(27px,6.6vw,53px)!important;object-position:center!important;margin:auto!important}
+.game-screen .crop img.stage-seed{width:clamp(18px,4.2vw,34px)!important;height:clamp(18px,4.2vw,34px)!important}
+.game-screen .crop img.stage-sprout{width:clamp(22px,4.9vw,40px)!important;height:clamp(22px,4.9vw,40px)!important}
+.game-screen .crop img.stage-grow{width:clamp(26px,5.7vw,46px)!important;height:clamp(26px,5.7vw,46px)!important}
+.game-screen .crop img.stage-ready{width:clamp(30px,6.7vw,54px)!important;height:clamp(30px,6.7vw,54px)!important;transform:none!important}
+.game-screen .crop-name{max-width:92%!important;margin-top:-2%!important;font-size:clamp(4.5px,1.05vw,7px)!important;line-height:1!important}
+.game-screen .timer{font-size:clamp(4.5px,1vw,7px)!important;line-height:1!important}
+.game-screen .status-badge,.game-screen .angel-status-badge{width:clamp(14px,3.3vw,25px)!important;height:clamp(14px,3.3vw,25px)!important;right:2%!important;top:2%!important}
+.game-screen .plot-black-magic-overlay{inset:-2%!important;transform:scale(.66)!important;transform-origin:center!important}
+.game-screen .plot-black-magic-badge{font-size:clamp(4.5px,1vw,7px)!important;padding:1px 3px!important}
+
+/* Always hide legacy scattered tools, including Farm 4 inline legacy placement. */
+.game-screen #tractorBtn,.game-screen #sprinklerBtn,.game-screen #collectDropsBtn,.game-screen #farmToolsBtn,.game-screen #ynuGardenManagerBtn{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;width:1px!important;height:1px!important;left:-120px!important;right:auto!important;top:-120px!important;bottom:auto!important;transform:none!important
+}
+
+/* Compact organized controls, kept above the persistent 5-button navigation. */
+.s2-farm-dock{right:2.3%!important;bottom:5.9%!important;gap:5px!important}
+.s2-farm-dock>button{min-width:52px!important;height:36px!important;border-radius:13px!important;font-size:13px!important;padding:2px 7px!important}
+.s2-farm-dock>button b{font-size:7.5px!important}
+.s2-farm-pop{bottom:42px!important}
+.s2-tools-pop{grid-template-columns:repeat(3,46px)!important}
+.s2-tools-pop button{height:45px!important;font-size:17px!important}
+.s2-tools-pop small{font-size:6.7px!important}
+
+.s2-main-nav{position:absolute;z-index:176;left:2.5%;right:2.5%;bottom:.7%;height:42px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px;border:1px solid rgba(255,230,183,.60);border-radius:16px;background:rgba(39,25,47,.86);box-shadow:0 5px 16px rgba(14,7,19,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.s2-main-nav button{min-width:0;border:0;border-radius:11px;background:rgba(247,223,174,.11);color:#fff2ce;font-size:16px;line-height:1;padding:2px 1px;display:grid;place-items:center;align-content:center;gap:1px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.s2-main-nav button:active{transform:scale(.96);background:rgba(247,223,174,.23)}
+.s2-main-nav small{display:block;font-size:7px;line-height:1;font-weight:800;white-space:nowrap}
+
+/* Market slots aligned to the wooden frames in the supplied shop art. */
+.s2-market-slot{width:23.5%!important;height:10.4%!important;padding:2px!important}
+.s2-market-slot.empty span{font-size:18px!important}
+.s2-market-slot img{width:62%!important;height:64%!important}
+.s2-market-slot small{font-size:7px!important;right:5%!important;top:5%!important}
+.s2-market-slot b{font-size:6.5px!important;left:8%!important;right:8%!important;bottom:3%!important}
+.s2-market-loading{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);padding:9px 13px;border-radius:13px;background:rgba(58,34,24,.78);color:#ffe9b5;font-size:10px;font-weight:800}
+
+.s2-home-fish-countdown{display:block;margin:8px auto;padding:7px 13px;width:max-content;border-radius:999px;background:#4b2f50;color:#fff2c9;font-size:18px;letter-spacing:.06em}
+.s2-home-fishing>small{display:block;margin-top:7px;font-size:8px;color:#80684d}
+
+/* Honey stays on one fixed horizontal road line through the whole ride. */
+.game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important}
