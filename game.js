@@ -6007,46 +6007,15 @@ inventory=function(tab="crops"){
 };
 
 function showDogPlaceConfirm(dogId){const s=ensureDogState(ownState||state),dog=s.dogs.find(d=>d.id===dogId);if(!dog)return;const count=placedDogs(s).length;$("modalContent").innerHTML=`<section class="feature-panel cat-place-panel"><img class="cat-result-icon" src="${dogType(dog).image}" alt="${dogType(dog).name}"><h2>${safeHtml(dogDisplayName(dog))}</h2><p>เหมียวโฮ่งโฮเทลวางได้สูงสุด ${DOG_HOTEL_MAX} ตัว<br>ตอนนี้วางแล้ว ${count}/${DOG_HOTEL_MAX}</p><button id="placeDogHotelBtn" class="primary-spooky-action" type="button" ${count>=DOG_HOTEL_MAX?"disabled":""}>วางที่เหมียวโฮ่งโฮเทล</button><button id="releaseDogHereBtn" class="danger-action" type="button">ขาย / ลบ +กุศล</button></section>`;$("placeDogHotelBtn").onclick=()=>placeDogInHotel(dogId);$("releaseDogHereBtn").onclick=()=>releaseDog(dogId);openModal()}
-async function placeDogInHotel(dogId){
+async function placeDogInHotel(dogId,pen=currentDogHotelPen||1){
   try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
-    await fs.runTransaction(db,async tx=>{
-      const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(snap.data(),currentMember);assertCurrentCloudSession(snap.data(),currentMember);
-      // สำคัญ: ห้ามเรียก placedDogs(s) หลังจับ reference dog เพราะ placedDogs() normalize/remap dogs array
-      // แล้ว reference เดิมจะหลุดจาก s.dogs ทำให้ placedHotel ไม่ถูกบันทึกจริง
-      const hotelCount=(s.dogs||[]).filter(d=>d?.placedHotel).length;
-      const dog=s.dogs.find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");
-      if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
-      if(hotelCount>=DOG_HOTEL_MAX)throw new Error("เหมียวโฮ่งโฮเทลเต็มแล้ว วางได้สูงสุด 15 ตัว");
-      const now=gameNow();Object.assign(dog,{placedHotel:true,placedAt:now,expiresAt:now+DOG_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+DOG_DROP_INTERVAL_MS,drops:[]});
-      next=cloneData(s);
-      tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-    });
-
-    // ยืนยัน state ที่ transaction เพิ่งเขียนก่อนเปิดโรงแรม
-    let committed=normalizeState(next,currentMember);
-    let committedDog=committed.dogs.find(d=>d.id===dogId);
-    if(!committedDog?.placedHotel)throw new Error("บันทึกตำแหน่งน้องหมาไม่สำเร็จ กรุณาลองใหม่");
-
-    // อ่าน Firestore ซ้ำหนึ่งครั้ง เพื่อกัน state ในเครื่องเก่าทับค่าหลัง transaction
-    try{
-      const verifySnap=await fs.getDoc(ref);
-      if(verifySnap.exists()){
-        const verified=normalizeState(verifySnap.data(),currentMember);
-        const verifiedDog=verified.dogs.find(d=>d.id===dogId);
-        if(verifiedDog?.placedHotel)committed=verified;
-      }
-    }catch(error){console.warn("verify dog placement",error)}
-
-    ownState=committed;state=ownState;saveLocalOnly(ownState);closeModal();
-    if(placedDogs(ownState).length<1)throw new Error("วางน้องหมาแล้วแต่ข้อมูลโรงแรมยังไม่พร้อม กรุณากดอีกครั้ง");
-    openScene("dogHotel");
-    requestAnimationFrame(()=>{if(currentScene==="dogHotel")renderDogHotelScene()});
-    setTimeout(()=>{if(currentScene==="dogHotel")renderDogHotelScene()},180);
-    showWeatherToast("🐶 วางน้องหมาในโรงแรมแล้ว • เริ่มนับอายุ 10 วัน");
-  }catch(error){message("วางน้องหมาไม่ได้",error.message||"กรุณาลองใหม่")}
+    pen=Math.max(1,Math.min(4,Number(pen)||1));const s=normalizeState(cloneData(ownState||state),currentMember);ensureDogState(s);ensureCatState(s);
+    const dog=(s.dogs||[]).find(d=>d.id===dogId);if(!dog)throw new Error("ไม่พบน้องหมาตัวนี้");if(dog.placedHotel)throw new Error("น้องหมาตัวนี้อยู่ในโรงแรมแล้ว");
+    const count=(s.dogs||[]).filter(d=>d.placedHotel&&Number(d.hotelPen||1)===pen).length+(s.cats||[]).filter(c=>c.placedHotel&&Number(c.hotelPen||1)===pen).length;if(count>=DOG_HOTEL_MAX)throw new Error(`คอก ${pen} เต็มแล้ว`);
+    const t=gameNow();Object.assign(dog,{placedHotel:true,hotelPen:pen,placedAt:t,expiresAt:t+DOG_LIFETIME_MS,nextFeedAt:t,nextDropAt:t+DOG_DROP_INTERVAL_MS,drops:[]});
+    s.hotelPetPenMap=s.hotelPetPenMap&&typeof s.hotelPetPenMap==="object"?s.hotelPetPenMap:{};s.hotelPetPenMap[String(dog.id)]=pen;
+    ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}closeModal();try{currentDogHotelPen=pen}catch(_){}openScene("dogHotel");showWeatherToast(`🐶 วางน้องหมาที่คอก ${pen} แล้ว`);
+  }catch(e){message("วางน้องหมาไม่ได้",e.message||"กรุณาลองใหม่")}
 }
 async function releaseDog(dogId){const reward=randInt(20,50);if(!confirm(`ขายน้องหมาตัวนี้ไหม?\nเมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ ${reward} กุศล`))return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember),idx=st.dogs.findIndex(d=>d.id===dogId);if(idx<0)throw new Error("ไม่พบน้องหมาตัวนี้");st.dogs.splice(idx,1);st.merit=(Number(st.merit)||0)+reward;next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();else inventory("dogs");showWeatherToast(`🐶 ขายน้องหมาแล้ว • +${reward} กุศล`) }catch(error){message("ขายน้องหมาไม่ได้",error.message||"กรุณาลองใหม่")}}
 
@@ -8314,7 +8283,6 @@ async function castBlackMagicOnFriendPlot(index){
   if(!visitContext||!cloudReady||!currentMemberKey){message('ยังเล่นของไม่ได้','กรุณาเชื่อม Firebase ก่อน');return}
   const targetKey=visitContext.memberKey,targetName=visitContext.name;
   try{
-    await settlePendingCloudSave();
     const {db,fs}=await getFirebaseContext(),gardenRef=fs.doc(db,'gardens',targetKey),ownSaveRef=fs.doc(db,'saves',currentMemberKey),mailRef=fs.doc(fs.collection(db,'mailboxes',targetKey,'items'));
     let nextOwn,newPlots;
     await fs.runTransaction(db,async tx=>{
@@ -8731,7 +8699,7 @@ function v15RefreshTempleDay(day,now=gameNow()){
   if(!day||typeof day!=="object")return v15NewTempleDay(currentBangkokDateKey());
   day.soloSlots=Array.isArray(day.soloSlots)?day.soloSlots:[];day.groupSlots=Array.isArray(day.groupSlots)?day.groupSlots:[];day.outcomes=day.outcomes&&typeof day.outcomes==="object"?day.outcomes:{};
   while(day.soloSlots.length<6)day.soloSlots.push(v15NewSoloSlot(day.dateKey,day.soloSlots.length,0));while(day.groupSlots.length<6)day.groupSlots.push(v15NewGroupSlot(day.dateKey,day.groupSlots.length,0));day.soloSlots=day.soloSlots.slice(0,6);day.groupSlots=day.groupSlots.slice(0,6);
-  const isToday=day.dateKey===currentBangkokDateKey(),canRespawn=isToday&&v15TempleIsOpen(),templeClosedToday=isToday&&v15BangkokMinute()>=V15_TEMPLE_CLOSE_MINUTE;
+  const isToday=day.dateKey===currentBangkokDateKey(),canRespawn=isToday&&v15TempleIsOpen(),templeClosedToday=isToday&&!v15TempleIsOpen();
   day.soloSlots.forEach((slot,i)=>{
     if(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&now>=slot.deadlineAt){
       const id=slot.attemptId||`${day.dateKey}-solo-${i}-${slot.cycle}`;
@@ -9220,8 +9188,12 @@ drawJellyfishPond=function(pond){const slots=pond?.slots||Array(12).fill(null),o
 function Y26_showJellyCraft(){const s=Y26_ensureState(ownState||state),v1Total=Object.keys(JELLYFISH_TYPES).reduce((n,k)=>n+(Number(s.specialAnimals[k])||0),0),plank=Number(s.bag?.hauntedPlankton)||0;$("modalContent").innerHTML=`<section class="feature-panel jelly-v2-craft-panel"><h2>👑 คราฟแมงกะพรุนตัวแม่</h2><p>ใช้แมงกะพรุน V1 ตัวไหนก็ได้รวม <b>5 ตัว</b><br>แพลงก์ตอนหลอนปิ๊ <b>×100</b><br>อัตราคราฟสำเร็จ <b>100%</b> • สุ่ม 1 ใน 4 ตัว V2</p><div class="jelly-craft-stock">V1 มีรวม ${v1Total} • แพลงก์ตอนมี ${plank}</div><button id="confirmJellyV2CraftBtn" class="primary-spooky-action" type="button" ${v1Total<5||plank<100?"disabled":""}>คราฟ</button></section>`;$("confirmJellyV2CraftBtn").onclick=Y26_craftJellyV2;openModal()}
 async function Y26_craftJellyV2(){const btn=$("confirmJellyV2CraftBtn");if(btn)btn.disabled=true;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next,resultKey="";await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);let need=5;for(const k of Object.keys(JELLYFISH_TYPES)){const have=Number(s.specialAnimals[k])||0,take=Math.min(have,need);s.specialAnimals[k]=have-take;need-=take;if(!need)break}if(need>0)throw new Error("แมงกะพรุน V1 ไม่ครบ 5 ตัว");if((Number(s.bag.hauntedPlankton)||0)<100)throw new Error("แพลงก์ตอนหลอนปิ๊ไม่ครบ 100 ชิ้น");s.bag.hauntedPlankton-=100;const keys=Object.keys(Y26_JELLY_V2);resultKey=keys[Math.floor(Math.random()*keys.length)];s.jellyfishV2[resultKey]=(Number(s.jellyfishV2[resultKey])||0)+1;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);message("ยินดีด้วยค่ะ",`คุณได้รับแมงกะพรุน ${safeHtml(Y26_JELLY_V2[resultKey].name)}`)}catch(error){message("คราฟไม่ได้",error.message||"กรุณาลองใหม่")}finally{if(btn)btn.disabled=false}}
 
-showJellyPlacement=function(index){const s=Y26_ensureState(ownState||state),v1=Object.entries(JELLYFISH_TYPES).filter(([k])=>(Number(s.specialAnimals[k])||0)>0),v2=Object.entries(Y26_JELLY_V2).filter(([k])=>(Number(s.jellyfishV2[k])||0)>0);if(!v1.length&&!v2.length){message("ยังไม่มีแมงกะพรุน","แมงกะพรุนจะอยู่ในกระเป๋าก่อน และยังไม่เริ่มนับอายุจนกว่าจะวาง");return}const block=(title,list,version)=>`<h3>${title}</h3><div class="jelly-picker-grid">${list.map(([k,j])=>`<button type="button" data-y26-place-jelly="${k}" data-jelly-version="${version}"><img src="${j.image}" alt="${j.name}"><b>${j.name}</b><small>มี ×${version===2?s.jellyfishV2[k]:s.specialAnimals[k]}</small></button>`).join("")}</div>`;$("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงสล็อต ${index+1}</h2>${v1.length?block("แมงกะพรุน V1",v1,1):""}${v2.length?block("แมงกะพรุน V2",v2,2):""}</section>`;document.querySelectorAll("[data-y26-place-jelly]").forEach(b=>b.onclick=()=>Y26_placeJellyfish(index,b.dataset.y26PlaceJelly,Number(b.dataset.jellyVersion)));openModal()};
-async function Y26_placeJellyfish(index,typeKey,version){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),pondRef=fs.doc(db,"shared","jellyfishPond"),saveRef=fs.doc(db,"saves",currentMemberKey);let next,pond;await fs.runTransaction(db,async tx=>{const [pSnap,sSnap]=await Promise.all([tx.get(pondRef),tx.get(saveRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const p=normalizeJellyPond(pSnap.exists()?pSnap.data():null,true),s=normalizeState(sSnap.data(),currentMember);if(p.slots[index])throw new Error("สล็อตนี้มีแมงกะพรุนแล้ว");if(version===2){if((Number(s.jellyfishV2[typeKey])||0)<1)throw new Error("แมงกะพรุน V2 ตัวนี้หมดแล้ว");s.jellyfishV2[typeKey]-=1;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s)}else{if((Number(s.specialAnimals[typeKey])||0)<1)throw new Error("แมงกะพรุน V1 ตัวนี้หมดแล้ว");s.specialAnimals[typeKey]-=1}const now=gameNow();p.slots[index]={id:(globalThis.crypto?.randomUUID?.()||`${currentMemberKey}-${now}-${Math.random()}`),version,typeKey,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};next=s;pond=p;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pondRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);jellyPondCache=pond;closeModal();drawJellyfishPond(pond);showWeatherToast(`🪼 วาง ${Y26_jellyType(pond.slots[index]).name} แล้ว`)}catch(error){message("วางแมงกะพรุนไม่ได้",error.message||"กรุณาลองใหม่")}}
+showJellyPlacement=function(index){const s=Y26_ensureState(ownState||state),v1=[],v2=Object.entries(Y26_JELLY_V2).filter(([k])=>(Number(s.jellyfishV2[k])||0)>0);if(!v2.length){message("ยังไม่มีแมงกะพรุน","แมงกะพรุนจะอยู่ในกระเป๋าก่อน และยังไม่เริ่มนับอายุจนกว่าจะวาง");return}const block=(title,list,version)=>`<h3>${title}</h3><div class="jelly-picker-grid">${list.map(([k,j])=>`<button type="button" data-y26-place-jelly="${k}" data-jelly-version="${version}"><img src="${j.image}" alt="${j.name}"><b>${j.name}</b><small>มี ×${version===2?s.jellyfishV2[k]:s.specialAnimals[k]}</small></button>`).join("")}</div>`;$("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงสล็อต ${index+1}</h2>${v2.length?block("แมงกะพรุน V2",v2,2):""}</section>`;document.querySelectorAll("[data-y26-place-jelly]").forEach(b=>b.onclick=()=>Y26_placeJellyfish(index,b.dataset.y26PlaceJelly,Number(b.dataset.jellyVersion)));openModal()};
+async function Y26_placeJellyfish(index,typeKey,version){
+  if(Number(version)!==2)return message("วางไม่ได้","บ่อนี้วางได้เฉพาะแมงกะพรุน V2 เท่านั้นค่ะ");const type=Y26_JELLY_V2?.[typeKey];if(!type)return;
+  const before=cloneData(ownState||state),local=normalizeState(cloneData(ownState||state),currentMember);if(Number(local.jellyfishV2?.[typeKey]||0)<1)return message("วางไม่ได้","แมงกะพรุน V2 ตัวนี้หมดแล้ว");local.jellyfishV2[typeKey]-=1;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(local);ownState=local;state=local;saveLocalOnly(local);const temp=normalizeJellyPond(jellyPondCache||null,true),t=gameNow(),placed={id:(globalThis.crypto?.randomUUID?.()||`${currentMemberKey}-${t}-${Math.random()}`),version:2,typeKey,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:t,expiresAt:t+Y26_JELLY_V2_LIFETIME_MS,feedCount:0,cooldownUntil:0};if(temp.slots[index]){ownState=normalizeState(before,currentMember);state=ownState;return message("วางไม่ได้","สล็อตนี้มีแมงกะพรุนแล้ว")}temp.slots[index]=placed;jellyPondCache=temp;closeModal();drawJellyfishPond(temp);showWeatherToast(`🪼 วาง ${type.name} แล้ว`);
+  try{const {db,fs}=await getFirebaseContext(),pondRef=fs.doc(db,"shared","jellyfishPond"),saveRef=fs.doc(db,"saves",currentMemberKey);let next,pond;await fs.runTransaction(db,async tx=>{const [pSnap,sSnap]=await Promise.all([tx.get(pondRef),tx.get(saveRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const pp=normalizeJellyPond(pSnap.exists()?pSnap.data():null,true),st=normalizeState(sSnap.data(),currentMember);if(pp.slots[index])throw new Error("สล็อตนี้มีแมงกะพรุนแล้ว");if(Number(st.jellyfishV2?.[typeKey]||0)<1)throw new Error("แมงกะพรุน V2 ตัวนี้หมดแล้ว");st.jellyfishV2[typeKey]-=1;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(st);pp.slots[index]=placed;next=st;pond=pp;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pondRef,{slots:pp.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);jellyPondCache=pond;drawJellyfishPond(pond)}catch(error){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);jellyPondCache=null;try{renderJellyfishScene()}catch(_){}message("วางแมงกะพรุนไม่ได้",`${error.message||"กรุณาลองใหม่"}<br>ระบบคืนแมงกะพรุนเข้ากระเป๋าแล้ว`)}
+}
 
 showJellyDetails=function(index,slot){const type=Y26_jellyType(slot);if(!type)return;const v2=slot.version===2,isOwner=slot.ownerKey===currentMemberKey,cooldown=Math.max(0,Number(slot.cooldownUntil||0)-gameNow());if(v2){$("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel"><img class="jelly-detail-img" src="${type.image}" alt="${type.name}"><h2>${safeHtml(slot.customName||type.name)}</h2><p><b>เวอร์ชัน:</b> V2<br><b>เจ้าของ:</b> ${safeHtml(slot.ownerName)}<br><b>อายุคงเหลือ:</b> ${jellyHoursLeft(slot)} ชั่วโมง<br>${cooldown>0?`<b>ให้อาหารได้อีก:</b> ${formatHM(cooldown)}`:"<b>พร้อมให้อาหารแล้ว</b>"}</p><div class="jelly-action-grid"><button id="feedJellyV2Btn" type="button" ${cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>${isOwner?'<button id="renameJellyBtn" type="button">✏️ ตั้งชื่อ</button>':""}</div><p class="feature-subtitle">V2 ไม่สามารถถูกวางยาได้</p></section>`;openModal();if($("feedJellyV2Btn"))$("feedJellyV2Btn").onclick=()=>Y26_showJellyV2Food(index);if($("renameJellyBtn"))$("renameJellyBtn").onclick=()=>renameJellyfish(index);return}const lax=specialCount("jellyfishLaxative"),ready=slot.feedCount>=5&&cooldown<=0;$("modalContent").innerHTML=`<section class="feature-panel jelly-detail-panel"><img class="jelly-detail-img" src="${type.image}" alt="${type.name}"><h2>${safeHtml(slot.customName||type.name)}</h2><p><b>เวอร์ชัน:</b> V1<br><b>เจ้าของ:</b> ${safeHtml(slot.ownerName)}<br><b>อายุคงเหลือ:</b> ${jellyHoursLeft(slot)} ชั่วโมง<br><b>อาหาร:</b> ${slot.feedCount}/5${cooldown>0?`<br><b>คูลดาวน์:</b> ${formatHM(cooldown)}`:""}</p><div class="jelly-action-grid"><button id="feedJellyBtn" type="button" ${ready||cooldown>0?"disabled":""}>🍽️ ให้อาหาร</button>${ready?'<button id="jellyLoveBtn" class="primary-spooky-action" type="button">💗 พร้อมท้ารัก</button>':""}${isOwner?'<button id="renameJellyBtn" type="button">✏️ ตั้งชื่อ</button>':""}${!isOwner?`<button id="poisonJellyBtn" class="danger-action" type="button" ${lax<=0?"disabled":""}>🧪 ใช้ยาถ่าย ×1</button>`:""}</div></section>`;openModal();if($("feedJellyBtn"))$("feedJellyBtn").onclick=()=>showJellyFoodChoices(index);if($("jellyLoveBtn"))$("jellyLoveBtn").onclick=()=>claimJellyLove(index);if($("renameJellyBtn"))$("renameJellyBtn").onclick=()=>renameJellyfish(index);if($("poisonJellyBtn"))$("poisonJellyBtn").onclick=()=>poisonJellyfish(index)};
 function Y26_showJellyV2Food(index){const s=ownState||state,plank=Number(s?.bag?.hauntedPlankton)||0,fish4=Number(s?.coconutRiverItems?.fish4)||0;$("modalContent").innerHTML=`<section class="feature-panel jelly-food-panel"><h2>🍽️ เลือกอาหารแมงกะพรุน V2</h2><p>ให้อาหารครั้งเดียว • รับกุศลสุ่ม 50–150 • คูลดาวน์ 90 นาที</p><div class="jelly-food-grid"><button type="button" data-y26-jv2-food="plankton" ${plank<50?"disabled":""}><b>แพลงก์ตอนหลอนปิ๊ ×50</b><small>มี ×${plank}</small></button><button type="button" data-y26-jv2-food="fish4" ${fish4<20?"disabled":""}><b>ปลาสวนมะพร้าวหมายเลข4 ×20</b><small>มี ×${fish4}</small></button></div></section>`;document.querySelectorAll("[data-y26-jv2-food]").forEach(b=>b.onclick=()=>Y26_feedJellyV2(index,b.dataset.y26Jv2Food));openModal()}
@@ -12267,10 +12239,10 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function careMeta(type){return type==="bath"?{title:"อาบน้ำหมา",image:"dog-bath-status.png?v=1",done:"อาบน้ำเสร็จเรียบร้อย",tail:"เอาไว้มาอาบอีกน๊าาา"}:{title:"นวดตัวหมา",image:"dog-massage-status.png?v=1",done:"นวดตัวเสร็จเรียบร้อย",tail:"เอาไว้แวะมาหาหนูอีกน๊า แม่ๆ"}}
   function dogCareState(type,pen=currentDogHotelPen,s=ownState||state){s=normalizeState(s,currentMember);resetDailyExtras(s);return s.dogCare[`pen${pen}`][type]}
   function showDogCare(type,pen=currentDogHotelPen){const a=dogCareState(type,pen),m=careMeta(type),now=NOW();if(a.finishAt>now)return dogCareStatus(type,pen);if(a.finishAt&&a.finishAt<=now&&!a.claimed)return dogCareResult(type,pen);if(a.count>=4)return message(m.title,"วันนี้ทำครบ 4 ครั้งแล้วค่ะ");if(a.cooldownUntil>now)return message(m.title,`ตอนนี้ยังไม่สามารถ${m.title} ได้อีก<br>กลับมาใหม่ใน ${fmt(a.cooldownUntil-now)}`);const count=dogsInHotelPen(pen).length;if(!count)return message(m.title,"คอกนี้ยังไม่มีน้องหมา");$("modalContent").innerHTML=`<section class="feature-panel ynu-dog-care"><img src="${m.image}" alt="${m.title}"><h2>${m.title}</h2><p>น้องหมาในคอก ${pen} จำนวน ${count} ตัว<br>ใช้เวลา 5 นาที</p><button id="ynuStartDogCare">เริ่ม${m.title}</button></section>`;$("ynuStartDogCare").onclick=()=>startDogCare(type,pen);openModal()}
-  async function startDogCare(type,pen){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);resetDailyExtras(s);const a=s.dogCare[`pen${pen}`][type],now=NOW();if(a.count>=4)throw new Error("วันนี้ทำครบ 4 ครั้งแล้ว");if(a.cooldownUntil>now)throw new Error("ตอนนี้ยังไม่สามารถทำได้อีก");const dogs=dogsInHotelPen(pen,s),reward=dogs.reduce(n=>n+rand(3,10),0);a.startedAt=now;a.finishAt=now+5*MIN;a.reward=reward;a.claimed=false;a.count++;a.cooldownUntil=a.finishAt+2*HOUR;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);dogCareStatus(type,pen)}catch(e){message("เริ่มไม่ได้",e.message)}}
+  async function startDogCare(type,pen){try{const s=normalizeState(cloneData(ownState||state),currentMember);resetDailyExtras(s);const a=s.dogCare[`pen${pen}`][type],t=NOW();if(a.count>=4)throw new Error("วันนี้ทำครบ 4 ครั้งแล้ว");if(a.cooldownUntil>t)throw new Error("ตอนนี้ยังไม่สามารถทำได้อีก");const dogs=dogsInHotelPen(pen,s);if(!dogs.length)throw new Error("คอกนี้ยังไม่มีน้องหมา");const reward=dogs.reduce(n=>n+rand(3,10),0);a.startedAt=t;a.finishAt=t+5*MIN;a.reward=reward;a.claimed=false;a.count++;a.cooldownUntil=a.finishAt+2*HOUR;ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}dogCareStatus(type,pen)}catch(e){message("เริ่มไม่ได้",e.message||"กรุณาลองใหม่")}}
   function dogCareStatus(type,pen){const a=dogCareState(type,pen),m=careMeta(type);$("modalContent").innerHTML=`<section class="feature-panel ynu-dog-care ynu-dog-care-status"><img src="${m.image}" alt="${m.title}"><h2>${m.title}</h2><p>กำลัง${m.title}...</p><strong id="ynuDogCareTimer">${fmt(a.finishAt-NOW())}</strong><small>ออกไปทำอย่างอื่นหรือออกจากเกมได้ เวลายังคงนับต่อ</small></section>`;openModal();const t=setInterval(()=>{const x=dogCareState(type,pen);if(x.finishAt<=NOW()){clearInterval(t);dogCareResult(type,pen)}else if($("ynuDogCareTimer"))$("ynuDogCareTimer").textContent=fmt(x.finishAt-NOW());else clearInterval(t)},1000)}
   function dogCareResult(type,pen){const a=dogCareState(type,pen),m=careMeta(type);$("modalContent").innerHTML=`<section class="feature-panel ynu-dog-care"><img src="${m.image}" alt="${m.title}"><h2>${m.done}</h2><strong>ได้รับ +${a.reward} กุศล</strong><p>${m.tail}</p><button id="ynuClaimDogCare">รับกุศล</button></section>`;$("ynuClaimDogCare").onclick=()=>claimDogCare(type,pen);openModal()}
-  async function claimDogCare(type,pen){try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember),a=s.dogCare[`pen${pen}`][type];if(a.claimed||!a.finishAt||a.finishAt>NOW())throw new Error("ยังไม่มีรางวัลให้รับ");reward=Number(a.reward)||0;s.merit=Number(s.merit||0)+reward;a.claimed=true;a.startedAt=0;a.finishAt=0;a.reward=0;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();showWeatherToast(`🙏 รับ +${reward} กุศลแล้ว`)}catch(e){message("รับไม่ได้",e.message)}}
+  async function claimDogCare(type,pen){try{const s=normalizeState(cloneData(ownState||state),currentMember),a=s.dogCare[`pen${pen}`][type];if(a.claimed||!a.finishAt||a.finishAt>NOW())throw new Error("ยังไม่มีรางวัลให้รับ");const reward=Number(a.reward)||0;s.merit=Number(s.merit||0)+reward;a.claimed=true;a.startedAt=0;a.finishAt=0;a.reward=0;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);updateMeritUI();try{save()}catch(_){}closeModal();showWeatherToast(`🙏 รับ +${reward} กุศลแล้ว`)}catch(e){message("รับไม่ได้",e.message||"กรุณาลองใหม่")}}
   const _renderDog=renderDogHotelScene;renderDogHotelScene=function(){const r=_renderDog();if(currentScene!=="dogHotel")return r;const layer=$("sceneInteractiveLayer");if(layer&&!$("ynuDogBathBtn")){layer.insertAdjacentHTML("beforeend",`<div class="ynu-dog-care-buttons"><button id="ynuDogBathBtn" title="อาบน้ำหมา">💧</button><button id="ynuDogMassageBtn" title="นวดตัวหมา">🖐️</button></div>`);$("ynuDogBathBtn").onclick=()=>showDogCare("bath",currentDogHotelPen);$("ynuDogMassageBtn").onclick=()=>showDogCare("massage",currentDogHotelPen)}return r};
 
   /* ---------- Wiman dog coming soon ---------- */
@@ -12606,7 +12578,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function jtype(slot){return Number(slot.version)===2?(Y26_JELLY_V2[slot.typeKey]||{}):(JELLYFISH_TYPES[slot.typeKey]||{})}
   function drawJ2(){if(currentScene!=="jellyfish2")return;const slots=jelly2Cache?.slots||Array(12).fill(null);$("sceneInteractiveLayer").innerHTML=`<div class="jelly-pond-banner">🪼 บ่อแมงกะพรุน 2 • ${slots.filter(Boolean).length}/12</div>${JELLY_SLOT_POSITIONS.map(([l,t],i)=>{const x=slots[i];if(!x)return `<button class="jelly-slot jelly-slot-empty" data-j2="${i}" style="left:${l}%;top:${t}%"></button>`;const ty=jtype(x),v2=Number(x.version)===2,ready=!v2&&Number(x.feedCount||0)>=5&&Number(x.cooldownUntil||0)<=NOW(),cool=Number(x.cooldownUntil||0)>NOW();return `<button class="jelly-slot jelly-slot-owned ${v2?"jelly-v2-slot":""} ${ready?"jelly-ready-love":""}" data-j2="${i}" style="left:${l}%;top:${t}%"><img src="${ty.image}" alt="${esc(ty.name)}"><small>${esc(x.customName||ty.name)}<br>${Math.max(0,Math.ceil((x.expiresAt-NOW())/HOUR))} ชม. • ${v2?(cool?"คูลดาวน์":"พร้อมให้อาหาร"):(cool?"คูลดาวน์":ready?"พร้อมท้ารัก":`${x.feedCount||0}/5`)}</small></button>`}).join("")}`;document.querySelectorAll("[data-j2]").forEach(b=>b.onclick=()=>j2Slot(Number(b.dataset.j2)))}
   function j2Slot(i){const x=jelly2Cache?.slots?.[i];if(!x)return j2PlacePicker(i);j2Details(i,x)}
-  function j2PlacePicker(i){const s=ownState||state,choices=[...Object.entries(JELLYFISH_TYPES).filter(([k])=>Number(s.specialAnimals?.[k]||0)>0).map(([k,v])=>({version:1,key:k,...v,count:s.specialAnimals[k]})),...Object.entries(Y26_JELLY_V2).filter(([k])=>Number(s.jellyfishV2?.[k]||0)>0).map(([k,v])=>({version:2,key:k,...v,count:s.jellyfishV2[k]}))];if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อน");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button data-j2-place="${x.version}:${x.key}"><img src="${x.image}"><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-j2-place]").forEach(b=>{const [v,k]=b.dataset.j2Place.split(":");b.onclick=()=>j2Place(i,k,Number(v))});openModal()}
+  function j2PlacePicker(i){const s=ownState||state,choices=[...Object.entries(Y26_JELLY_V2).filter(([k])=>Number(s.jellyfishV2?.[k]||0)>0).map(([k,v])=>({version:2,key:k,...v,count:s.jellyfishV2[k]}))];if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อน");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button data-j2-place="${x.version}:${x.key}"><img src="${x.image}"><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-j2-place]").forEach(b=>{const [v,k]=b.dataset.j2Place.split(":");b.onclick=()=>j2Place(i,k,Number(v))});openModal()}
   async function j2Place(i,key,version){try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]),p=normJ2(ps.data()),s=normalizeState(ss.data(),currentMember);if(p.slots[i])throw new Error("ช่องนี้ไม่ว่างแล้ว");if(version===2){if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.jellyfishV2[key]--}else{if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุนหมดแล้ว");s.specialAnimals[key]--}const now=NOW();p.slots[i]={id:crypto.randomUUID?.()||`${currentMemberKey}-${now}`,version,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots:p.slots,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal()}catch(e){message("วางไม่ได้",e.message)}}
   function j2Details(i,x){
     const ty=jtype(x),isOwner=x.ownerKey===currentMemberKey,cooldown=Math.max(0,Number(x.cooldownUntil||0)-NOW()),lax=Number((ownState||state)?.specials?.jellyfishLaxative||0);
@@ -19530,6 +19502,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   const esc=v=>typeof safeHtml==="function"?safeHtml(v):String(v??"");
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const isAdmin=()=>currentMember==="Aida"&&adminProfile?.role==="admin"&&String(currentMemberKey||"")==="aida";
+  const honeyEnabled=()=>Boolean(currentMemberKey&&currentMember&&!visitContext);
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
 
   function ensureHoneyState(s,player=currentMember){
@@ -19537,8 +19510,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     s.specials=obj(s.specials);
     s.specials[FUEL_KEY]=int(s.specials[FUEL_KEY]);
 
-    /* During the first test round, only Aida receives the timer state. */
-    const shouldHaveTimer=String(player||s.player||"")==="Aida"||Boolean(s.honeyDelivery);
+    /* R14: Honey delivery is enabled for every signed-in member. */
+    const shouldHaveTimer=Boolean(player||s.player||currentMemberKey)||Boolean(s.honeyDelivery);
     if(!shouldHaveTimer)return s;
 
     let created=false;
@@ -19659,8 +19632,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   let persistBusy=false;
   async function persistSeedOrTimer(){
-    if(persistBusy||!isAdmin()||!cloudReady||!currentMemberKey||!ownState)return;
-    const s=ensureHoneyState(ownState,"Aida"),h=s.honeyDelivery;
+    if(persistBusy||!honeyEnabled()||!cloudReady||!currentMemberKey||!ownState)return;
+    const s=ensureHoneyState(ownState,currentMember),h=s.honeyDelivery;
     if(!h?.needsSeedPersist)return;
     persistBusy=true;
     try{
@@ -19677,7 +19650,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   let cyclePersistBusy=false;
   async function persistAdvancedCycle(){
-    if(cyclePersistBusy||!isAdmin()||!cloudReady||!ownState?.honeyDelivery)return;
+    if(cyclePersistBusy||!honeyEnabled()||!cloudReady||!ownState?.honeyDelivery)return;
     cyclePersistBusy=true;
     try{
       const {db,fs}=await getFirebaseContext();
@@ -19702,12 +19675,12 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   function renderFuelHud(){
     const el=hud();if(!el)return;
-    if(!isAdmin()||!firstFarmPageVisible()){
+    if(!honeyEnabled()||!firstFarmPageVisible()){
       el.classList.add("hidden");
       return;
     }
     el.classList.remove("hidden");
-    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;
+    const s=ensureHoneyState(ownState||state,currentMember),h=s?.honeyDelivery;
     if(!h)return;
     const changed=advanceFuelCycle(h,now());
     if(changed)persistAdvancedCycle();
@@ -19742,8 +19715,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function showFuelModal(){
-    if(!isAdmin()||!ownState)return;
-    const s=ensureHoneyState(ownState,"Aida"),h=s.honeyDelivery;
+    if(!honeyEnabled()||!ownState)return;
+    const s=ensureHoneyState(ownState,currentMember),h=s.honeyDelivery;
     advanceFuelCycle(h,now());
     if(h.active)return message("🛵 น้ำผึ้งกำลังทำงาน","รอน้องส่งของเที่ยวนี้เสร็จก่อนนะคะ");
     const exact=fuelPercentExact(h),p=Math.floor(exact),have=int(s.specials[FUEL_KEY]);
@@ -19777,28 +19750,22 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   async function refillFuel(requested,button){
-    if(!isAdmin()||!cloudReady||!currentMemberKey)return;
+    if(!honeyEnabled()||!currentMemberKey||!ownState)return;
     requested=Math.max(1,int(requested)||1);
     if(button)button.disabled=true;
     try{
-      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,used=0,before=0,after=0;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();
-        advanceFuelCycle(h,t);if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
-        const exact=fuelPercentExact(h,t);before=Math.floor(exact);if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
-        const have=int(s.specials[FUEL_KEY]);if(have<=0)throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
-        const need=Math.max(1,Math.ceil((100-exact)/10));used=Math.min(requested,have,need);if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
-        s.specials[FUEL_KEY]=have-used;
-        h.fuelReadyAt=Math.max(t,num(h.fuelReadyAt)-used*CAN_STEP_MS);
-        if(h.fuelReadyAt<=t){h.fuelReadyAt=t;h.fuelExpiresAt=t+READY_MS}else h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
-        h.needsSeedPersist=false;after=fuelPercent(h,t);next=s;
-        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      applyOwn(next);closeModal();
+      const s=ensureHoneyState(ownState,currentMember),h=s.honeyDelivery,t=now();
+      advanceFuelCycle(h,t);if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
+      const exact=fuelPercentExact(h,t),before=Math.floor(exact);if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
+      const have=int(s.specials[FUEL_KEY]);if(have<=0)throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
+      const need=Math.max(1,Math.ceil((100-exact)/10)),used=Math.min(requested,have,need);if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
+      if(isAdmin())s.specials[FUEL_KEY]=ADMIN_STOCK_QTY;else s.specials[FUEL_KEY]=have-used;
+      h.fuelReadyAt=Math.max(t,num(h.fuelReadyAt)-used*CAN_STEP_MS);
+      if(h.fuelReadyAt<=t){h.fuelReadyAt=t;h.fuelExpiresAt=t+READY_MS}else h.fuelExpiresAt=h.fuelReadyAt+READY_MS;
+      h.needsSeedPersist=false;const after=fuelPercent(h,t);
+      if(isAdmin())s.specials[FUEL_KEY]=ADMIN_STOCK_QTY;
+      applyOwn(s);try{save()}catch(_){} closeModal();renderFuelHud();
       showWeatherToast(`⛽ เติมน้ำมัน ${used} แกลลอน • ${before}% → ${after}%`);
-      if(after>=100)renderFuelHud();
     }catch(error){message("เติมน้ำมันไม่ได้",error.message||"กรุณาลองใหม่")}
     finally{if(button)button.disabled=false}
   }
@@ -19864,11 +19831,11 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   function setBikeX(px){const b=bike();if(b)b.style.transform=`translate3d(${Math.round(px)}px,0,0)`}
   function showBikeBase(){
     const layer=$("honeyBikeLayer"),b=bike();if(!layer||!b)return;
-    layer.classList.remove("hidden");b.classList.remove("hidden");b.style.setProperty("top", firstFarmPageVisible()?"80.35%":`${BIKE_TOP_RATIO*100}%`, "important");
+    layer.classList.remove("hidden");b.classList.remove("hidden");b.style.setProperty("top", firstFarmPageVisible()?"74.2%":`${BIKE_TOP_RATIO*100}%`, "important");
   }
   function hideBike(){const layer=$("honeyBikeLayer"),b=bike();stopFrameTimer();stopMove();if(b){b.classList.add("hidden");b.classList.remove("is-riding","is-parked")}if(layer)layer.classList.add("hidden")}
   function showParkedBike(mode="idle"){
-    if(!isAdmin()||!firstFarmPageVisible())return;
+    if(!honeyEnabled()||!firstFarmPageVisible())return;
     showBikeBase();const b=bike();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
     currentBikeMode=mode;
     setSheet(mode==="ready"?SPRITE_FILES.ready:SPRITE_FILES.idle,true,mode==="ready"?155:175);
@@ -19887,28 +19854,18 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   async function callHoney(){
-    if(!isAdmin()||transit||!cloudReady||!currentMemberKey)return;
-    const local=ensureHoneyState(ownState||state,"Aida"),lh=local.honeyDelivery;
-    advanceFuelCycle(lh,now());if(lh.active)return;
-    if(fuelPercent(lh)<100)return showFuelModal();
-    transit=true;renderFuelHud();
+    if(!honeyEnabled()||transit||!currentMemberKey)return;
+    const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery,t=now();
+    advanceFuelCycle(h,t);if(h.active)return;if(fuelPercent(h,t)<100)return showFuelModal();
+    transit=true;
     try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();advanceFuelCycle(h,t);
-        if(h.active)throw new Error("น้ำผึ้งถูกเรียกมาแล้ว");
-        if(fuelPercent(h,t)<100||t>=num(h.fuelExpiresAt))throw new Error("น้ำมันยังไม่พร้อมเรียกน้ำผึ้ง");
-        h.active=true;h.calledAt=t;h.reward=null;h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;next=s;
-        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      applyOwn(next);closeModal();
-      showBikeBase();const b=bike(),screen=$("gameScreen"),start=-(b?.offsetWidth||110)-24,stop=bikeStopX();
-      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,115);
-      await moveBike(start,stop,1850);
-      b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";await setSheet(SPRITE_FILES.idle,true,175);
-      showWeatherToast("🛵 น้ำผึ้งมาถึงแล้ว • แตะที่น้องเพื่อฝากของ");
-    }catch(error){hideBike();message("เรียกน้ำผึ้งไม่ได้",error.message||"กรุณาลองใหม่")}
+      h.active=true;h.calledAt=t;h.reward=null;h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;
+      applyOwn(s);try{save()}catch(_){} closeModal();renderFuelHud();
+      showBikeBase();const b=bike(),start=-(b?.offsetWidth||110)-24,stop=bikeStopX();
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,105);
+      await moveBike(start,stop,1350);b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";await setSheet(SPRITE_FILES.idle,true,165);
+      showWeatherToast("🛵 น้ำผึ้งมาถึงแล้ว • แตะที่รถเพื่อฝากของ");
+    }catch(error){message("เรียกน้ำผึ้งไม่ได้",error.message||"กรุณาลองใหม่")}
     finally{transit=false;renderFuelHud()}
   }
 
@@ -19926,8 +19883,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function showSendModal(){
-    if(!isAdmin()||transit)return;
-    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;
+    if(!honeyEnabled()||transit)return;
+    const s=ensureHoneyState(ownState||state,currentMember),h=s?.honeyDelivery;
     if(!h?.active)return message("น้ำผึ้งยังไม่มา","ต้องเรียกน้ำผึ้งให้มาจอดก่อนค่ะ");
     if(h.reward){showRewardModal(h.reward);return}
     const rows=sendEntries(s);if(!rows.length)return message("ยังไม่มีของให้ฝาก","ต้องมีเมนูอาหารที่คราฟแล้ว หรือผลิตภัณฑ์จากโรงงานแปรรูปอย่างน้อย 3 ชิ้น");
@@ -20017,23 +19974,12 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const total=selections.reduce((n,x)=>n+int(x.qty),0);if(total<3||total>10)return;
     if(button)button.disabled=true;transit=true;
     try{
-      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery;
-        if(!h.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(h.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
-        if(total<3||total>10)throw new Error("ต้องฝากของรวม 3–10 ชิ้น");
-        for(const e of selections){if(!takeDeliveryItem(s,e,int(e.qty)))throw new Error(`${e.name} ในคลังไม่พอ`)}
-        reward=rollReward(selections,h.calledAt);grantReward(s,reward);h.reward=cloneData(reward);next=s;
-        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:num(s.merit),initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-      });
-      applyOwn(next);closeModal();
+      const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery;if(!h?.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(h.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
+      for(const e of selections){if(!takeDeliveryItem(s,e,int(e.qty)))throw new Error(`${e.name} ในคลังไม่พอ`)}
+      const reward=rollReward(selections,h.calledAt);grantReward(s,reward);h.reward=cloneData(reward);if(isAdmin())ensureAdminStock(s);
+      applyOwn(s);try{save()}catch(_){} closeModal();
       const b=bike();showBikeBase();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
-      await playSheetOnce(SPRITE_FILES.receive,38,45);
-      await playSheetOnce(SPRITE_FILES.place,40,50);
-      await playSheetOnce(SPRITE_FILES.ready,42,55);
+      await playSheetOnce(SPRITE_FILES.receive,34,35);await playSheetOnce(SPRITE_FILES.place,36,40);await playSheetOnce(SPRITE_FILES.ready,38,45);
       currentBikeMode="ready";transit=false;showRewardModal(reward);
     }catch(error){transit=false;message("ฝากของไม่ได้",error.message||"กรุณาลองใหม่");showParkedBike("idle")}
     finally{if(button)button.disabled=false}
@@ -20060,24 +20006,19 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   async function beginDeparture(){
     if(transit)return;transit=true;
     try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=ensureHoneyState(normalizeState(snap.data(),currentMember),"Aida"),h=s.honeyDelivery,t=now();
-        h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=h.fuelReadyAt+READY_MS;h.needsSeedPersist=false;next=s;
-        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      applyOwn(next);restoreModalCloseHandlers();rewardShowing=false;closeModal();
+      const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery,t=now();
+      h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=h.fuelReadyAt+READY_MS;h.needsSeedPersist=false;
+      if(isAdmin())ensureAdminStock(s);applyOwn(s);try{save()}catch(_){} restoreModalCloseHandlers();rewardShowing=false;closeModal();
       showBikeBase();const b=bike(),start=bikeStopX(),screen=$("gameScreen"),end=(screen?.clientWidth||window.innerWidth)+(b?.offsetWidth||110)+30;
-      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,115);
-      await moveBike(start,end,1700);hideBike();renderFuelHud();
+      setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,105);
+      await moveBike(start,end,1350);hideBike();renderFuelHud();
     }catch(error){message("น้ำผึ้งยังออกเดินทางไม่ได้",error.message||"กรุณาลองใหม่")}
     finally{transit=false}
   }
 
   function restoreHoneyPresence(){
-    if(!isAdmin()||!firstFarmPageVisible()){if(!transit)hideBike();return}
-    const s=ensureHoneyState(ownState||state,"Aida"),h=s?.honeyDelivery;if(!h)return;
+    if(!honeyEnabled()||!firstFarmPageVisible()){if(!transit)hideBike();return}
+    const s=ensureHoneyState(ownState||state,currentMember),h=s?.honeyDelivery;if(!h)return;
     if(!h.active){if(!transit)hideBike();return}
     if(transit)return;
     if(h.reward){showParkedBike("ready");if(!rewardShowing)showRewardModal(h.reward)}
@@ -20086,8 +20027,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   function bind(){
     const h=hud(),b=bike();
-    if(h)h.onclick=()=>{if(!isAdmin())return;const s=ensureHoneyState(ownState||state,"Aida"),x=s?.honeyDelivery;if(!x)return;if(x.active)return;advanceFuelCycle(x,now());if(fuelPercent(x)>=100)callHoney();else showFuelModal()};
-    if(b)b.onclick=()=>{if(!isAdmin()||transit)return;const x=(ownState||state)?.honeyDelivery;if(!x?.active)return;if(x.reward)showRewardModal(x.reward);else showSendModal()};
+    if(h)h.onclick=()=>{if(!honeyEnabled())return;const s=ensureHoneyState(ownState||state,currentMember),x=s?.honeyDelivery;if(!x)return;if(x.active)return;advanceFuelCycle(x,now());if(fuelPercent(x)>=100)callHoney();else showFuelModal()};
+    if(b)b.onclick=()=>{if(!honeyEnabled()||transit)return;const x=(ownState||state)?.honeyDelivery;if(!x?.active)return;if(x.reward)showRewardModal(x.reward);else showSendModal()};
     fuelImageFallback($("honeyFuelIcon"));
   }
 
@@ -20956,7 +20897,6 @@ sendBoatSupply=async function(boatNo,menuId){
   if(pressed?.dataset.busy==="1")return;
   if(pressed){pressed.dataset.busy="1";pressed.disabled=true;pressed.querySelector("small")?.insertAdjacentHTML("beforeend","<br>กำลังส่ง...")}
   try{
-    if(cloudSaveTimer||cloudSaveInFlight)await settlePendingCloudSave();
     const {db,fs}=await getFirebaseContext(),raceRef=fs.doc(db,"shared","boatRace"),saveRef=fs.doc(db,"saves",currentMemberKey);
     let nextState=null,nextRace=null,winner=null;
     await fs.runTransaction(db,async tx=>{
@@ -21096,7 +21036,8 @@ window.YAINOO_BUILD="S2-R2-SPEED-UI-ASSETS";
     const cached=S2_boatGhostCache?.[`ghost${ghostNo}`];if(cached){if(cached.claimedBy===currentMemberKey&&!cached.used&&(cached.reward==="bomb"||cached.reward==="oil"))return S2_showGhostTarget(ghostNo,cached.reward);message("ปลาผีตัวนี้ถูกกดแล้ว",`${cached.claimedName} เป็นคนกดล่าสุด • รอ Aida เซ็ตปลาผีใหม่`);return}
     const reward=S2_rollGhostReward(),meritAmount=reward==="merit"?80+Math.floor(Math.random()*41):0,now=gameNow();
     try{
-      if(ghostBtn){ghostBtn.dataset.busy="1";ghostBtn.disabled=true;const label=ghostBtn.querySelector("span");if(label)label.textContent="กำลังสุ่ม..."}
+      if(ghostBtn){ghostBtn.dataset.busy="1";ghostBtn.disabled=true;const label=ghostBtn.querySelector("span");if(label)label.textContent="ได้รางวัลแล้ว ✓"}
+      const previewMeta=S2_GHOST_REWARD_META[reward];$("modalContent").innerHTML=`<section class="feature-panel s2-ghost-reward-popup">${S2_ghostIcon(previewMeta)}<h2>สุ่มได้ ${safeHtml(previewMeta?.name||reward)}</h2><p>${reward==="merit"?`+${meritAmount} กุศล`:"กำลังยืนยันสิทธิ์รางวัล…"}</p><div class="r14-fast-sync">บันทึกอัตโนมัติ</div></section>`;openModal();
       const {db,fs}=await getFirebaseContext(),ghostRef=fs.doc(db,"shared","boatGhosts"),entry={claimedBy:currentMemberKey,claimedName:currentProfileDisplayName(),claimedAt:now,reward,used:reward==="pillow"||reward==="merit",meritAmount,targetBoat:0};
       let nextState=null;
       if(reward==="bomb"||reward==="oil"){
@@ -21165,7 +21106,7 @@ window.YAINOO_BUILD="S2-R2-SPEED-UI-ASSETS";
     document.querySelectorAll("[data-r8-cat-farm]").forEach(b=>b.onclick=()=>placeCat(catId,Number(b.dataset.r8CatFarm)));document.querySelectorAll("[data-r8-cat-hotel]").forEach(b=>b.onclick=()=>placeCatInHotel(catId,Number(b.dataset.r8CatHotel)));$("catPlaceBackBtn").onclick=()=>inventory("cats");openModal();
   };
   async function placeCatInHotel(catId,pen){
-    pen=validPen(pen);try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),cat=s.cats.find(c=>c.id===catId);if(!cat)throw new Error("ไม่พบแมวตัวนี้");if(cat.placedFarm||cat.placedHotel)throw new Error("แมวตัวนี้ถูกวางแล้ว");if(hotelPetCount(pen,s)>=DOG_HOTEL_MAX)throw new Error(`คอก ${pen} เต็มแล้ว`);const now=gameNow();Object.assign(cat,{placedFarm:-1,placedHotel:true,hotelPen:pen,placedAt:now,expiresAt:now+CAT_LIFETIME_MS,nextFeedAt:now,nextDropAt:now+CAT_DROP_INTERVAL_MS,drops:[]});next=cloneData(s);tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();currentDogHotelPen=pen;openScene("dogHotel");showWeatherToast(`🐱 วางแมวที่คอก ${pen} แล้ว`)}catch(e){message("วางแมวไม่ได้",e.message||"กรุณาลองใหม่")}
+    pen=validPen(pen);try{const s=normalizeState(cloneData(ownState||state),currentMember);ensureCatState(s);ensureDogState(s);const cat=(s.cats||[]).find(c=>c.id===catId);if(!cat)throw new Error("ไม่พบแมวตัวนี้");if(cat.placedFarm||cat.placedHotel)throw new Error("แมวตัวนี้ถูกวางแล้ว");if(hotelPetCount(pen,s)>=DOG_HOTEL_MAX)throw new Error(`คอก ${pen} เต็มแล้ว`);const t=gameNow();Object.assign(cat,{placedFarm:-1,placedHotel:true,hotelPen:pen,placedAt:t,expiresAt:t+CAT_LIFETIME_MS,nextFeedAt:t,nextDropAt:t+CAT_DROP_INTERVAL_MS,drops:[]});s.hotelPetPenMap=s.hotelPetPenMap&&typeof s.hotelPetPenMap==="object"?s.hotelPetPenMap:{};s.hotelPetPenMap[String(cat.id)]=pen;ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}closeModal();currentDogHotelPen=pen;openScene("dogHotel");showWeatherToast(`🐱 วางแมวที่คอก ${pen} แล้ว`)}catch(e){message("วางแมวไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
   /* Dog drops must work in all four pens. */
@@ -21182,7 +21123,7 @@ window.YAINOO_BUILD="S2-R2-SPEED-UI-ASSETS";
   };
 
   async function collectAllHotelDropsCurrentPen(){
-    const pen=validPen(currentDogHotelPen);try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,total=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember);dogsInHotelPen(pen,s).forEach(d=>{(d.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(item&&item.type!=="badDrop"){applyPetDropReward(s,item);total++}});d.drops=[]});hotelCatsInPen(pen,s).forEach(c=>{(c.drops||[]).forEach(drop=>{const item=CAT_DROP_POOL.find(x=>x.id===drop.itemId);if(item){applyPetDropReward(s,item);total++}});c.drops=[]});if(!total&&!dogsInHotelPen(pen,s).some(d=>(d.drops||[]).length)){}next=cloneData(s);tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);renderDogHotelDropsForPen();showWeatherToast(total?`🧺 เก็บของคอก ${pen} แล้ว ${total} ชิ้น`:`🧺 คอก ${pen} ไม่มีของดรอป`)}catch(e){message("เก็บของดรอปไม่ได้",e.message||"กรุณาลองใหม่")}
+    const pen=validPen(currentDogHotelPen);try{const s=normalizeState(cloneData(ownState||state),currentMember);let total=0;dogsInHotelPen(pen,s).forEach(d=>{(d.drops||[]).forEach(drop=>{const item=DOG_DROP_POOL.find(x=>x.id===drop.itemId);if(item&&item.type!=="badDrop"){applyPetDropReward(s,item);total++}});d.drops=[]});hotelCatsInPen(pen,s).forEach(c=>{(c.drops||[]).forEach(drop=>{const item=CAT_DROP_POOL.find(x=>x.id===drop.itemId);if(item){applyPetDropReward(s,item);total++}});c.drops=[]});if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}renderDogHotelDropsForPen();showWeatherToast(total?`🧺 เก็บของคอก ${pen} แล้ว ${total} ชิ้น`:`🧺 คอก ${pen} ไม่มีของดรอป`)}catch(e){message("เก็บของดรอปไม่ได้",e.message||"กรุณาลองใหม่")}
   }
   collectAllDogDrops=collectAllHotelDropsCurrentPen;
 
@@ -21586,7 +21527,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     cloudSaveTimer=setTimeout(()=>{
       cloudSaveTimer=null;
       flushCloudSave().catch(e=>console.error("S2 durable save failed",e));
-    },220);
+    },650);
   };
 
   save=function(){
@@ -21723,29 +21664,57 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         All inventory/storage/pets/etc. are untouched.
      ----------------------------------------------------------------- */
   async function resetEveryoneMerit300Once(){
+    /* R14 targeted Season-2 migration:
+       - Aida stays infinite (9999).
+       - Every other existing save keeps all Season-1 inventory except crop bag entries.
+       - Crop bag entries reset to 0 and merit resets to 300.
+       - One admin-triggered batch makes this true immediately for existing accounts. */
     if(currentMember!=="Aida"||adminProfile?.role!=="admin"||!cloudReady)return;
-    const marker="s2MeritReset300V1Done";
-    if(ownState?.[marker])return;
+    const marker="season2R14TargetedReset20260831";
     const {db,fs}=await getFirebaseContext();
     const aidaRef=fs.doc(db,"saves","aida"),aidaSnap=await fs.getDoc(aidaRef);
     if(aidaSnap.data()?.[marker]){
-      ownState[marker]=true;ownState.merit=300;saveLocalOnly(ownState);updateMeritUI();return;
+      if(ownState){
+        ownState.merit=9999;
+        ownState[marker]=true;
+        try{ensureAdminStock(ownState)}catch(_){}
+        saveLocalOnly(ownState);updateMeritUI();
+      }
+      return;
     }
     const savesSnap=await fs.getDocs(fs.collection(db,"saves"));
     let batch=fs.writeBatch(db),ops=0;
     const commits=[];
+    const cropKeys=Object.keys(CROPS||{});
     for(const docSnap of savesSnap.docs){
       const data=docSnap.data()||{},key=docSnap.id;
-      const patch={merit:300,updatedAt:fs.serverTimestamp()};
-      if(key==="aida")patch[marker]=true;
+      let patch;
+      if(key==="aida"){
+        patch={merit:9999,[marker]:true,updatedAt:fs.serverTimestamp()};
+      }else{
+        const bag={...(data.bag&&typeof data.bag==="object"?data.bag:{})};
+        cropKeys.forEach(k=>bag[k]=0);
+        patch={bag,merit:300,[marker]:true,updatedAt:fs.serverTimestamp()};
+      }
       batch.set(docSnap.ref,patch,{merge:true});ops++;
-      batch.set(fs.doc(db,"publicProfiles",key),{memberKey:key,displayName:String(data.player||data.displayName||key),merit:300,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});ops++;
+      batch.set(fs.doc(db,"publicProfiles",key),{
+        memberKey:key,
+        displayName:String(data.player||data.displayName||key),
+        merit:key==="aida"?9999:300,
+        initialized:true,
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});ops++;
       if(ops>=430){commits.push(batch.commit());batch=fs.writeBatch(db);ops=0}
     }
     if(ops)commits.push(batch.commit());
     await Promise.all(commits);
-    ownState.merit=300;ownState[marker]=true;lastPublishedMerit=300;saveLocalOnly(ownState);updateMeritUI();
-    showWeatherToast("⭐️ รีเซ็ตกุศลผู้เล่นทุกคนเป็น 300 แล้ว • คลังและกระเป๋าไม่ถูกแตะ");
+    if(ownState){
+      ownState.merit=9999;
+      ownState[marker]=true;
+      try{ensureAdminStock(ownState)}catch(_){}
+      saveLocalOnly(ownState);updateMeritUI();
+    }
+    showWeatherToast("🌱 Season 2: รีเซ็ตเฉพาะพืชพรรณเป็น 0 • กุศลผู้เล่นเป็น 300 • ของเดิมหมวดอื่นคงเดิม");
   }
   const aidaSessionBase=completeAidaCloudSession;
   completeAidaCloudSession=async function(profile){
@@ -21950,31 +21919,16 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         Position/size are finalized by CSS below.
      ----------------------------------------------------------------- */
   async function placeJelly2Final(index,key,version,button){
-    if(button){button.disabled=true;button.textContent="กำลังวาง..."}
-    try{
-      await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next,placed;
-      await fs.runTransaction(db,async tx=>{
-        const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const raw=ps.exists()?ps.data():{},slots=Array.isArray(raw.slots)?raw.slots.slice(0,12):[];while(slots.length<12)slots.push(null);
-        if(slots[index])throw new Error("ช่องนี้มีแมงกะพรุนแล้ว");
-        const s=normalizeState(ss.data(),currentMember);assertCurrentCloudSession(ss.data(),currentMember);
-        if(version===2){if(Number(s.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุน V2 หมดแล้ว");s.jellyfishV2[key]-=1}else{if(Number(s.specialAnimals?.[key]||0)<1)throw new Error("แมงกะพรุน V1 หมดแล้ว");s.specialAnimals[key]-=1}
-        const t=gameNow();placed={id:(crypto.randomUUID?.()||`${currentMemberKey}-${t}`),version,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:t,expiresAt:t+(version===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};slots[index]=placed;next=s;
-        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      if(typeof Y26_applyOwnState==="function")Y26_applyOwnState(next);else{ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState)}
-      closeModal();showWeatherToast(`🪼 วาง ${(version===2?Y26_JELLY_V2?.[key]?.name:JELLYFISH_TYPES?.[key]?.name)||"แมงกะพรุน"} แล้ว`);
-      const slot=document.querySelector(`[data-j2="${index}"]`);if(slot){const ty=version===2?Y26_JELLY_V2?.[key]:JELLYFISH_TYPES?.[key];slot.classList.remove("jelly-slot-empty");slot.classList.add("jelly-slot-owned");slot.innerHTML=`<img src="${ty?.image||""}" alt=""><small>${safeHtml(ty?.name||"แมงกะพรุน")}<br>กำลังซิงก์...</small>`}
-    }catch(e){message("วางแมงกะพรุนไม่ได้",e.message||"กรุณาลองใหม่");if(button)button.disabled=false}
+    if(Number(version)!==2)return message("วางไม่ได้","บ่อนี้วางได้เฉพาะแมงกะพรุน V2 เท่านั้นค่ะ");
+    const ty=Y26_JELLY_V2?.[key];if(!ty)return message("วางไม่ได้","ไม่พบแมงกะพรุน V2");
+    if(button){button.disabled=true;button.textContent="วางแล้ว ✓"}
+    const before=cloneData(ownState||state),local=normalizeState(cloneData(ownState||state),currentMember);if(Number(local.jellyfishV2?.[key]||0)<1){if(button)button.disabled=false;return message("วางไม่ได้","แมงกะพรุน V2 หมดแล้ว")}
+    local.jellyfishV2[key]-=1;ownState=local;state=local;saveLocalOnly(local);const slot=document.querySelector(`[data-j2="${index}"]`);if(slot){slot.classList.remove("jelly-slot-empty");slot.classList.add("jelly-slot-owned");slot.innerHTML=`<img src="${ty.image||""}" alt=""><small>${safeHtml(ty.name||"แมงกะพรุน V2")}<br>กำลังบันทึก…</small>`}closeModal();showWeatherToast(`🪼 วาง ${ty.name||"แมงกะพรุน V2"} แล้ว`);
+    try{const {db,fs}=await getFirebaseContext(),pRef=fs.doc(db,"shared","jellyfishPond2"),sRef=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ps,ss]=await Promise.all([tx.get(pRef),tx.get(sRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const raw=ps.exists()?ps.data():{},slots=Array.isArray(raw.slots)?raw.slots.slice(0,12):[];while(slots.length<12)slots.push(null);if(slots[index])throw new Error("ช่องนี้มีแมงกะพรุนแล้ว");const st=normalizeState(ss.data(),currentMember);if(Number(st.jellyfishV2?.[key]||0)<1)throw new Error("แมงกะพรุน V2 หมดแล้ว");st.jellyfishV2[key]-=1;const t=gameNow(),placed={id:(crypto.randomUUID?.()||`${currentMemberKey}-${t}`),version:2,typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:t,expiresAt:t+Y26_JELLY_V2_LIFETIME_MS,feedCount:0,cooldownUntil:0};slots[index]=placed;next=st;tx.set(sRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pRef,{slots,updatedAt:fs.serverTimestamp()},{merge:false})});if(typeof Y26_applyOwnState==="function")Y26_applyOwnState(next);else{ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState)};if(slot?.isConnected){slot.querySelector("small")?.replaceChildren(document.createTextNode(ty.name||"แมงกะพรุน V2"))}}
+    catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);try{renderJellyfishPond2()}catch(_){}message("วางแมงกะพรุนไม่ได้",e.message||"กรุณาลองใหม่");if(button?.isConnected){button.disabled=false;button.textContent="เลือก"}}
   }
   function openJelly2PickerFinal(index){
-    const s=ownState||state,choices=[];
-    Object.entries(JELLYFISH_TYPES||{}).forEach(([k,j])=>{const count=Number(s?.specialAnimals?.[k]||0);if(count>0)choices.push({version:1,key:k,...j,count})});
-    Object.entries(Y26_JELLY_V2||{}).forEach(([k,j])=>{const count=Number(s?.jellyfishV2?.[k]||0);if(count>0)choices.push({version:2,key:k,...j,count})});
-    if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อนค่ะ");
-    $("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุนลงบ่อ 2</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-s2-j2-final="${x.version}:${safeHtml(x.key)}"><img src="${x.image}" alt=""><b>${safeHtml(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;
-    document.querySelectorAll("[data-s2-j2-final]").forEach(btn=>btn.onclick=()=>{const [v,k]=btn.dataset.s2J2Final.split(":");placeJelly2Final(index,k,Number(v),btn)});openModal();
+    const s=ownState||state,choices=[];Object.entries(Y26_JELLY_V2||{}).forEach(([k,j])=>{const count=Number(s?.jellyfishV2?.[k]||0);if(count>0)choices.push({version:2,key:k,...j,count})});if(!choices.length)return message("ยังไม่มีแมงกะพรุน V2","บ่อนี้วางได้เฉพาะแมงกะพรุน V2 เท่านั้นค่ะ");$("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel"><h2>🪼 เลือกแมงกะพรุน V2 ลงบ่อ</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-s2-j2-final="2:${safeHtml(x.key)}"><img src="${x.image}" alt=""><b>${safeHtml(x.name)}</b><small>V2 • มี ×${x.count}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-s2-j2-final]").forEach(btn=>btn.onclick=()=>{const [,k]=btn.dataset.s2J2Final.split(":");placeJelly2Final(index,k,2,btn)});openModal();
   }
   let s2LastJellyTapAt=0;
   function s2HandleJellyTap(e){
@@ -22316,12 +22270,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     }finally{jellyBusy.delete(key)}
   }
   function beginFastJellyPlacement(pond,index,version,key){
-    const s=ownState||state;if(!s||jellyCount(s,version,key)<1)return message("แมงกะพรุนหมดแล้ว","ตัวที่เลือกไม่มีอยู่ในกระเป๋าแล้วค่ะ");const pkey=`${pond}:${index}`;if(jellyBusy.has(pkey))return;
+    if(Number(version)!==2)return message("วางไม่ได้","บ่อนี้อนุญาตให้วางเฉพาะแมงกะพรุน V2 เท่านั้นค่ะ");
+    const s=ownState||state;if(!s||jellyCount(s,2,key)<1)return message("แมงกะพรุนหมดแล้ว","แมงกะพรุน V2 ที่เลือกไม่มีอยู่ในกระเป๋าแล้วค่ะ");version=2;const pkey=`${pond}:${index}`;if(jellyBusy.has(pkey))return;
     const now=gameNow(),id=uid("jelly"),placed={id,version:Number(version),typeKey:key,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),customName:"",placedAt:now,expiresAt:now+(Number(version)===2?Y26_JELLY_V2_LIFETIME_MS:JELLY_LIFETIME_MS),feedCount:0,cooldownUntil:0};const pending={id,pond,index:Number(index),version:Number(version),typeKey:key,placed,createdAt:now};
     adjustJellyCount(s,version,key,-1);s.pendingJellyPlacements=s.pendingJellyPlacements||{};s.pendingJellyPlacements[id]=pending;save();closeModal();paintOptimisticJelly(pond,index,placed);setTimeout(()=>commitPendingJellyPlacement(pending),0);
   }
   function openFastJellyPicker(pond,index){
-    const s=ownState||state,choices=[];Object.entries(JELLYFISH_TYPES||{}).forEach(([key,j])=>{const count=jellyCount(s,1,key);if(count>0)choices.push({version:1,key,...j,count})});Object.entries(Y26_JELLY_V2||{}).forEach(([key,j])=>{const count=jellyCount(s,2,key);if(count>0)choices.push({version:2,key,...j,count})});if(!choices.length)return message("ยังไม่มีแมงกะพรุน","ต้องมีแมงกะพรุนในกระเป๋าก่อนค่ะ");
+    const s=ownState||state,choices=[];Object.entries(Y26_JELLY_V2||{}).forEach(([key,j])=>{const count=jellyCount(s,2,key);if(count>0)choices.push({version:2,key,...j,count})});if(!choices.length)return message("ยังไม่มีแมงกะพรุน V2","บ่อนี้วางได้เฉพาะแมงกะพรุน V2 • ต้องมี V2 ในกระเป๋าก่อนค่ะ");
     $("modalContent").innerHTML=`<section class="feature-panel jelly-place-panel r9-fast-jelly-picker"><h2>🪼 เลือกแมงกะพรุน</h2><div class="jelly-picker-grid">${choices.map(x=>`<button type="button" data-r9-fast-jelly="${x.version}:${esc(x.key)}"><img src="${x.image}" alt=""><b>${esc(x.name)}</b><small>V${x.version} • มี ×${x.count}</small></button>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-r9-fast-jelly]").forEach(b=>b.onclick=()=>{const [v,k]=b.dataset.r9FastJelly.split(":");beginFastJellyPlacement(pond,index,Number(v),k)});
   }
   document.addEventListener("pointerup",e=>{
@@ -22488,13 +22443,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function stopHomeFishTimer(){if(homeFishTimer){clearInterval(homeFishTimer);homeFishTimer=0}}
   function weighted(arr){let r=Math.random();for(const [k,w] of arr){r-=w;if(r<=0)return k}return arr[arr.length-1][0]}
   function rarityFor(bait){let r=Math.random(),a=FISH_RARITY[bait]||FISH_RARITY.bait1;for(let i=0;i<a.length;i++){r-=a[i];if(r<=0)return i+1}return 1}
-  function homeFishingReward(bait){const kind=weighted(FISH_KIND),idx=rarityFor(bait),key=`${kind}${idx}`,it=COCONUT_RIVER_ITEMS[key],range=FISH_QTY[bait]||[1,3],qty=randInt(range[0],range[1]);return{type:"coconutRiver",key,name:it?.name||key,image:it?.image||"",qty,bait}}
+  function homeFishingReward(bait){const range=FISH_QTY[bait]||[1,3],total=randInt(range[0],range[1]),maxKinds=Math.min(3,total),kindCount=Math.max(1,Math.min(maxKinds,1+Math.floor(Math.random()*maxKinds))),picked=[],used=new Set();while(picked.length<kindCount){const kind=weighted(FISH_KIND),idx=rarityFor(bait),key=`${kind}${idx}`;if(used.has(key)&&used.size<12)continue;used.add(key);const it=COCONUT_RIVER_ITEMS[key];picked.push({type:"coconutRiver",key,name:it?.name||key,image:it?.image||"",qty:1,bait})}let left=total-kindCount;while(left-->0)picked[Math.floor(Math.random()*picked.length)].qty++;return picked}
   function homeFishCountdown(ms){ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),sec=Math.floor((ms%60000)/1000);return `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
   function showHomeFishing(){
     if(farmNo()!==2)return;stopHomeFishTimer();const s=ensureFarmState(ownState||state),p=s.farm2Fishing.pending,now=NOW();
     if(p){
       if(Number(p.readyAt||0)>now){$("modalContent").innerHTML=`<section class="feature-panel s2-home-fishing"><img src="${FISHING_BAITS[p.bait]?.image||""}" alt=""><h2>🎣 กำลังตกปลา…</h2><p>เบ็ดถูกหย่อนลงน้ำแล้ว</p><strong id="s2HomeFishCountdown" class="s2-home-fish-countdown">${homeFishCountdown(p.readyAt-now)}</strong><small>ปิดหน้าต่างได้ เวลายังคงเดินต่อค่ะ</small></section>`;openModal();homeFishTimer=setInterval(()=>{const el=$("s2HomeFishCountdown");if(!el){stopHomeFishTimer();return}const left=Number(p.readyAt||0)-NOW();if(left<=0){stopHomeFishTimer();showHomeFishing();return}el.textContent=homeFishCountdown(left)},500);return}
-      const r=p.reward||p;$("modalContent").innerHTML=`<section class="feature-panel s2-home-fishing"><img src="${r.image}" alt=""><h2>🎣 ปลาติดแล้ว!</h2><b>${esc(r.name)} ×${r.qty}</b><p>รางวัลนี้จะค้างอยู่จนกว่าคุณจะกดรับ</p><button id="s2ClaimHomeFish" class="primary-spooky-action">รับเข้ากระเป๋า</button></section>`;$("s2ClaimHomeFish").onclick=claimHomeFishing;openModal();return
+      const rs=Array.isArray(p.rewards)?p.rewards:(Array.isArray(p.reward)?p.reward:[p.reward||p]);$("modalContent").innerHTML=`<section class="feature-panel s2-home-fishing"><h2>🎣 ปลาติดแล้ว!</h2><div class="r14-fish-reward-grid">${rs.map(r=>`<div><img src="${r.image}" alt=""><b>${esc(r.name)}</b><small>×${r.qty}</small></div>`).join("")}</div><p>รางวัลนี้จะค้างอยู่จนกว่าคุณจะกดรับ</p><button id="s2ClaimHomeFish" class="primary-spooky-action">รับเข้ากระเป๋า</button></section>`;$("s2ClaimHomeFish").onclick=claimHomeFishing;openModal();return
     }
     const available=Object.entries(FISHING_BAITS).filter(([k])=>Boolean(FISH_QTY[k]));
     const rows=available.map(([k,b])=>`<button data-s2-home-bait="${k}" ${(Number(s.fishingBaits?.[k])||0)<1?"disabled":""}><img src="${b.image}" alt=""><span><b>${b.name}</b><small>มี ×${Number(s.fishingBaits?.[k])||0} • ${Math.round((b.durationMs||60000)/60000)} นาที • ได้ ${FISH_QTY[k][0]}–${FISH_QTY[k][1]} ชิ้น</small></span></button>`).join("");
@@ -22503,12 +22458,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function startHomeFishing(bait){
     const def=FISHING_BAITS[bait],s=ensureFarmState(ownState||state);if(!def||!FISH_QTY[bait]||!s)return;
     if(s.farm2Fishing.pending)return showHomeFishing();if((Number(s.fishingBaits?.[bait])||0)<1)return message("ตกปลาไม่ได้","เหยื่อตกปลาหมดแล้ว");
-    s.fishingBaits[bait]-=1;const reward=homeFishingReward(bait),startedAt=NOW(),readyAt=startedAt+Math.max(1000,Number(def.durationMs)||60000);
-    s.farm2Fishing.pending={status:"fishing",bait,startedAt,readyAt,reward};if(ADMIN())ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);try{save()}catch(e){console.warn("home fishing save queued",e)}showHomeFishing();
+    s.fishingBaits[bait]-=1;const rewards=homeFishingReward(bait),startedAt=NOW(),readyAt=startedAt+Math.max(1000,Number(def.durationMs)||60000);
+    s.farm2Fishing.pending={status:"fishing",bait,startedAt,readyAt,rewards};if(ADMIN())ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);try{save()}catch(e){console.warn("home fishing save queued",e)}showHomeFishing();
   }
   function claimHomeFishing(){
-    const s=ensureFarmState(ownState||state),p=s?.farm2Fishing?.pending;if(!p)return message("รับของไม่ได้","ไม่มีของรอรับ");if(Number(p.readyAt||0)>NOW())return showHomeFishing();const r=p.reward||p;
-    s.coconutRiverItems=s.coconutRiverItems||{};s.coconutRiverItems[r.key]=(Number(s.coconutRiverItems[r.key])||0)+Number(r.qty||1);s.farm2Fishing.pending=null;if(ADMIN())ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);try{save()}catch(e){console.warn("home fishing claim queued",e)}stopHomeFishTimer();closeModal();message("🎣 รับของเรียบร้อย",`<div class="s2-fruit-result"><img src="${r.image}" alt=""><b>${esc(r.name)} ×${r.qty}</b><small>เข้ากระเป๋าแล้ว</small></div>`);
+    const s=ensureFarmState(ownState||state),p=s?.farm2Fishing?.pending;if(!p)return message("รับของไม่ได้","ไม่มีของรอรับ");if(Number(p.readyAt||0)>NOW())return showHomeFishing();const rs=Array.isArray(p.rewards)?p.rewards:(Array.isArray(p.reward)?p.reward:[p.reward||p]);
+    s.coconutRiverItems=s.coconutRiverItems||{};rs.forEach(r=>{s.coconutRiverItems[r.key]=(Number(s.coconutRiverItems[r.key])||0)+Number(r.qty||1)});s.farm2Fishing.pending=null;if(ADMIN())ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);try{save()}catch(e){console.warn("home fishing claim queued",e)}stopHomeFishTimer();closeModal();message("🎣 รับของเรียบร้อย",`<div class="r14-fish-reward-grid">${rs.map(r=>`<div><img src="${r.image}" alt=""><b>${esc(r.name)}</b><small>×${r.qty}</small></div>`).join("")}</div><small>เข้ากระเป๋าแล้ว</small>`);
   }
 
   /* Market helpers. */
@@ -22526,13 +22481,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return{min:Math.max(1,Math.round(base*.65)),mid:base,max:Math.max(2,Math.round(base*1.45))};
   }
   function marketDocDefault(ownerKey,ownerName){return{memberKey:ownerKey,ownerName:ownerName||"",shopName:"ร้านของฉัน",shop1:Array(12).fill(null),shop2:Array(12).fill(null)}}
-  async function fetchMarket(ownerKey,ownerName){const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",ownerKey),snap=await fs.getDoc(ref);return snap.exists()?{...marketDocDefault(ownerKey,ownerName),...snap.data()} : marketDocDefault(ownerKey,ownerName)}
+  async function fetchMarket(ownerKey,ownerName){const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",ownerKey),snap=await fs.getDoc(ref),data=snap.exists()?{...marketDocDefault(ownerKey,ownerName),...snap.data()}:marketDocDefault(ownerKey,ownerName);try{localStorage.setItem(`s2-market-cache:${ownerKey}`,JSON.stringify(data))}catch(_){}return data}
   let marketEntriesMemo={at:0,rev:-1,rows:[]};
   function marketEntries(){const st=ensureFarmState(ownState||state),rev=Number(st?.clientSaveRevision)||0,now=Date.now();if(marketEntriesMemo.rev===rev&&now-marketEntriesMemo.at<15000)return marketEntriesMemo.rows;let rows=[];try{rows=typeof v240MemberGiftEntriesFull==="function"?v240MemberGiftEntriesFull(st):giftableEntries(st)}catch{}rows=rows.filter(e=>!(e.type==="dogInstance"&&String(e.name||"").includes("ปุยเมฆ"))&&!(e.type==="catInstance"&&e.instance?.placedHotel)&&!(e.type==="dogInstance"&&e.instance?.placedHotel));marketEntriesMemo={at:now,rev,rows};return rows}
   const marketCache=new Map();
   async function openMarket(shopNo){
     shopNo=shopNo===2?2:1;const ownerKey=visitContext?.memberKey||currentMemberKey,ownerName=visitContext?.name||currentMember;
-    const screen=ensureMarketScreen(),cached=marketCache.get(ownerKey);
+    const screen=ensureMarketScreen();let cached=marketCache.get(ownerKey);if(!cached)try{const raw=localStorage.getItem(`s2-market-cache:${ownerKey}`);if(raw){cached=JSON.parse(raw);marketCache.set(ownerKey,cached)}}catch(_){}
     if(cached)renderMarket(shopNo,cached,ownerKey,ownerName);
     else{screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;$("s2MarketTitle").textContent="กำลังเปิดร้าน…";$("s2MarketSlots").innerHTML='<div class="s2-market-loading">🧺 กำลังโหลดสินค้า…</div>';$("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b>`;screen.classList.remove("hidden")}
     try{const data=await fetchMarket(ownerKey,ownerName);marketCache.set(ownerKey,data);renderMarket(shopNo,data,ownerKey,ownerName)}catch(e){if(!cached)message("เปิดร้านไม่ได้",e.message||"กรุณาลองใหม่")}
@@ -22540,12 +22495,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function ensureMarketScreen(){let s=$("s2MarketScreen");if(s)return s;s=document.createElement("section");s.id="s2MarketScreen";s.className="s2-market-screen hidden";s.innerHTML=`<button id="s2MarketBack" class="s2-market-back" type="button">‹</button><button id="s2MarketTitle" class="s2-market-title" type="button"></button><div id="s2MarketSlots"></div><div id="s2MarketFooter"></div>`;document.body.appendChild(s);$("s2MarketBack").onclick=()=>s.classList.add("hidden");return s}
   function renderMarket(shopNo,data,ownerKey,ownerName){const screen=ensureMarketScreen(),own=ownerKey===currentMemberKey&&!visitContext,slots=Array.isArray(data[`shop${shopNo}`])?data[`shop${shopNo}`]:Array(12).fill(null);screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;$("s2MarketTitle").textContent=data.shopName||"ร้านของฉัน";$("s2MarketTitle").onclick=own?()=>renameMarket(data):null;$("s2MarketSlots").innerHTML=slots.map((x,i)=>{if(!x)return `<button class="s2-market-slot empty" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%">${own?'<span>＋</span>':''}</button>`;const sold=x.status==="sold";return `<button class="s2-market-slot ${sold?"sold":""}" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%"><img src="${x.image||""}" alt=""><small>×${x.qty}</small><b>${sold?"SOLD":`${x.price} 🙏`}</b></button>`}).join("");document.querySelectorAll("[data-market-slot]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.marketSlot),x=slots[i];if(own){if(!x)showMarketListing(shopNo,i,data);else showOwnerMarketSlot(shopNo,i,x,data)}else if(x&&x.status==="active")buyMarketSlot(shopNo,i,x,ownerKey,ownerName)});$("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b><button type="button" id="s2SwitchMarket">ไปร้าน ${shopNo===1?2:1}</button>`;$("s2SwitchMarket").onclick=()=>openMarket(shopNo===1?2:1);screen.classList.remove("hidden")}
   async function renameMarket(data){const name=prompt("ตั้งชื่อร้าน (ใช้ชื่อเดียวกันทั้ง 2 ร้าน)",data.shopName||"");if(name==null)return;const v=String(name).trim().slice(0,40);if(!v)return;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.setDoc(ref,{memberKey:currentMemberKey,ownerName:currentMember,shopName:v,updatedAt:fs.serverTimestamp()},{merge:true});marketCache.delete(currentMemberKey);openMarket(Number($("s2MarketScreen").dataset.shop)||1)}catch(e){message("ตั้งชื่อไม่ได้",e.message||"กรุณาลองใหม่")}}
-  function showMarketListing(shopNo,slot,data){const entries=marketEntries();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><h2>🧺 เลือกของวางขาย</h2><p>1 สล็อตวางได้ 1 ชนิด • สูงสุด 10 ชิ้น • วางแล้วของออกจากกระเป๋าทันที</p><div class="s2-market-picker">${entries.map((e,i)=>`<button data-s2-market-pick="${i}"><img src="${e.image||""}" alt=""><span><b>${esc(e.name)}</b><small>มี ×${Number(e.count??e.qty)||1}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-s2-market-pick]").forEach(b=>b.onclick=()=>marketListingOptions(shopNo,slot,entries[Number(b.dataset.s2MarketPick)]));openModal()}
+  function showMarketListing(shopNo,slot,data){const entries=marketEntries();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r14MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r14MarketCount"></small><div id="r14MarketPicker" class="s2-market-picker"></div></section>`;const input=$("r14MarketSearch"),wrap=$("r14MarketPicker"),count=$("r14MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found.slice(0,60);count.textContent=`พบ ${found.length} รายการ${found.length>60?" • แสดง 60 รายการแรก พิมพ์ค้นหาเพื่อเจอเร็วขึ้น":""}`;wrap.innerHTML=view.map(e=>`<button data-r14-market-id="${entries.indexOf(e)}"><img src="${e.image||""}" alt=""><span><b>${esc(e.name)}</b><small>มี ×${Number(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r14-market-id]").forEach(b=>b.onclick=()=>marketListingOptions(shopNo,slot,entries[Number(b.dataset.r14MarketId)]))};input.oninput=paint;paint();openModal()}
   function marketListingOptions(shopNo,slot,e){const maxQty=Math.min(10,Math.max(1,Number(e.count??e.qty)||1)),p=marketPrice(e);$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${e.image||""}" alt=""><h2>${esc(e.name)}</h2><label>จำนวน <input id="s2MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="s2MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="s2MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="s2ConfirmListing" class="primary-spooky-action">วางขาย</button></section>`;const paint=()=>{const q=Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1));$("s2MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$("s2MarketPrice").min=String(p.min*q);$("s2MarketPrice").max=String(p.max*q)};$("s2MarketQty").oninput=paint;paint();$("s2ConfirmListing").onclick=()=>createMarketListing(shopNo,slot,e,Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1)),Number($("s2MarketPrice").value)||0,p)}
-  async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureFarmState(normalizeState(ss.data(),currentMember)),m=ms.exists()?{...marketDocDefault(currentMemberKey,currentMember),...ms.data()}:marketDocDefault(currentMemberKey,currentMember),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketOwnedItem(s,e,qty))throw new Error("ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);marketCache.delete(currentMemberKey);closeModal();openMarket(shopNo)}catch(err){message("วางขายไม่ได้",err.message||"กรุณาลองใหม่")}}
+  async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);const before=normalizeState(cloneData(ownState||state),currentMember),s=ensureFarmState(normalizeState(cloneData(ownState||state),currentMember)),m={...marketDocDefault(currentMemberKey,currentMember),...(marketCache.get(currentMemberKey)||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketOwnedItem(s,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}marketCache.set(currentMemberKey,m);try{localStorage.setItem(`s2-market-cache:${currentMemberKey}`,JSON.stringify(m))}catch(_){}closeModal();renderMarket(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} ขายแล้ว`);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:false})}catch(err){ownState=before;state=before;saveLocalOnly(before);try{save()}catch(_){}marketCache.delete(currentMemberKey);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}}
   function showOwnerMarketSlot(shopNo,slot,x,data){$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${x.image||""}" alt=""><h2>${esc(x.name)} ×${x.qty}</h2><p>${x.status==="sold"?"ขายแล้ว":"ราคา "+x.price+" กุศล"}</p><button id="s2DeleteMarketSlot" class="danger-action">ลบออกจากสล็อต${x.status==="sold"?"":" • ของจะไม่คืนกระเป๋า"}</button></section>`;$("s2DeleteMarketSlot").onclick=()=>deleteMarketSlot(shopNo,slot);openModal()}
   async function deleteMarketSlot(shopNo,slot){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const m=snap.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})});marketCache.delete(currentMemberKey);closeModal();openMarket(shopNo)}catch(e){message("ลบไม่ได้",e.message||"กรุณาลองใหม่")}}
-  async function buyMarketSlot(shopNo,slot,x,ownerKey,ownerName){if(ownerKey===currentMemberKey)return;const ok=confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`);if(!ok)return;try{const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;await fs.runTransaction(db,async tx=>{const [ms,bs,ss]=await Promise.all([tx.get(marketRef),tx.get(buyerRef),tx.get(sellerRef)]);if(!ms.exists()||!bs.exists()||!ss.exists())throw new Error("ข้อมูลร้านไม่ครบ");const m=ms.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const buyer=ensureFarmState(normalizeState(bs.data(),currentMember));if(Number(buyer.merit||0)<Number(cur.price||0))throw new Error("กุศลไม่พอ");const seller=cloneData(ss.data()||{});addGiftItemToState(buyer,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});buyer.merit-=Number(cur.price)||0;seller.merit=Number(seller.merit||0)+(Number(cur.price)||0);cur.status="sold";cur.soldAt=NOW();cur.buyerKey=currentMemberKey;cur.buyerName=currentMember;arr[slot]=cur;m[`shop${shopNo}`]=arr;next=buyer;tx.set(buyerRef,{...cloneData(buyer),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(sellerRef,{...cloneData(seller),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const who=ADMIN()?"น้ำผึ้ง":currentMember;tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:who,title:`${who} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();marketCache.delete(ownerKey);openMarket(shopNo);message("🛍️ ซื้อเรียบร้อย",`${esc(x.name)} ×${x.qty} เข้ากระเป๋าแล้ว`)}catch(e){message("ซื้อไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function buyMarketSlot(shopNo,slot,x,ownerKey,ownerName){if(ownerKey===currentMemberKey)return;const ok=confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`);if(!ok)return;showWeatherToast("🛍️ กำลังยืนยันการซื้อ…");try{const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;await fs.runTransaction(db,async tx=>{const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");const m=ms.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const buyer=ensureFarmState(normalizeState(bs.data(),currentMember));if(!ADMIN()&&Number(buyer.merit||0)<Number(cur.price||0))throw new Error("กุศลไม่พอ");addGiftItemToState(buyer,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!ADMIN())buyer.merit-=Number(cur.price)||0;else ensureAdminStock(buyer);cur.status="sold";cur.soldAt=NOW();cur.buyerKey=currentMemberKey;cur.buyerName=currentMember;arr[slot]=null;m[`shop${shopNo}`]=arr;next=buyer;tx.set(buyerRef,{...cloneData(buyer),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(Number(cur.price)||0),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const who=ADMIN()?"น้ำผึ้ง":currentMember;tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:who,title:`${who} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว • สต๊อก/กุศล Aida คงที่ 9999`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();marketCache.delete(ownerKey);try{localStorage.removeItem(`s2-market-cache:${ownerKey}`)}catch(_){}openMarket(shopNo);message("🛍️ ซื้อเรียบร้อย",`${esc(x.name)} ×${x.qty} เข้ากระเป๋าแล้ว`) }catch(e){message("ซื้อไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function mountFarmUI(){
     const g=$("gameScreen");if(!g||$("s2FarmHotspots"))return;
@@ -22739,9 +22694,153 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
      --------------------------------------------------------------- */
   function bindRank(){const b=$("alpacaRankBtn");if(!b)return;const admin=currentMember==="Aida"&&adminProfile?.role==="admin";b.classList.toggle("hidden",!admin);if(admin&&globalThis.YN_V240?.showRanks)b.onclick=()=>globalThis.YN_V240.showRanks("happiness")}
 
-  setInterval(()=>{try{lockHoneyAxis();rebindFarmManager();rebindFarmTools();compactHotelTools();bindRank()}catch(_){ }},1200);
+  setInterval(()=>{try{lockHoneyAxis();rebindFarmManager();rebindFarmTools();compactHotelTools();bindRank()}catch(_){ }},5000);
   setTimeout(()=>{lockHoneyAxis();rebindFarmManager();rebindFarmTools();compactHotelTools();bindRank()},80);
   globalThis.YN_R13={collectFruitFast,showManagerFast,lockHoneyAxis};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R14 — FULL 22-TOPIC STABILITY / INVENTORY / UI BATCH — 2026-08-31
+   Runs LAST and intentionally supersedes R13 runtime behavior.
+   ====================================================================== */
+(function S2_R14_FULL_BATCH_20260831(){
+  "use strict";
+  const BUILD="S2-R14-FULL-BATCH-20260831";
+  const ADMIN=()=>currentMember==="Aida"&&adminProfile?.role==="admin"&&String(currentMemberKey||"")==="aida";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const own=()=>ownState||state;
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+  const farmPage=()=>Math.max(0,Math.min(3,Number(farmPlotPage)||0));
+  const range=()=>[farmPage()*12,Math.min(PLOT_COUNT,(farmPage()+1)*12)];
+  const blocked=p=>Boolean(p?.takeover&&Number(p.takeover.until)>NOW()&&p.takeover.by!==currentMemberKey);
+  const fastCommit=(s,{paint=true}={})=>{if(!s)return;ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{updateMeritUI()}catch(_){}if(paint)try{draw()}catch(_){}try{save()}catch(_){} };
+
+  /* 20 + 21 — Aida infinite stock; one-time targeted Season-2 reset for everyone else. */
+  const RESET_MARK="season2R14TargetedReset20260831";
+  const normalizeBeforeR14=normalizeState;
+  const legacyAdminStock=typeof ensureAdminStock==="function"?ensureAdminStock:null;
+  function r14AdminTopup(s){
+    if(!s||!ADMIN())return false;let ch=false;
+    if(Number(s.merit)!==9999){s.merit=9999;ch=true}
+    try{if(legacyAdminStock)legacyAdminStock(s)}catch(_){}
+    const maps=[s.bag,s.specials,s.animalProducts,s.medicines,s.jellyfishV2,s.fishingBaits,s.coconutRiverItems,s.farmFruits,s.rainyMenus,s?.alpaca?.inventory?.food,s?.alpaca?.inventory?.medicine,s?.alpaca?.inventory?.wool,s?.alpaca?.factory?.products];
+    maps.forEach(m=>{if(!m||typeof m!=="object"||Array.isArray(m))return;Object.keys(m).forEach(k=>{if(typeof m[k]==="number"&&m[k]!==9999){m[k]=9999;ch=true}})});
+    if(s.specials){s.specials.honeyFuelCan=9999}
+    if("catMysteryBoxes" in s)s.catMysteryBoxes=9999;if("dogMysteryBoxes" in s)s.dogMysteryBoxes=9999;
+    return ch;
+  }
+  function r14SeasonReset(s,player){
+    if(!s||String(player||currentMember)==="Aida"||s[RESET_MARK])return false;
+    s.bag=obj(s.bag);try{Object.keys(CROPS||{}).forEach(k=>s.bag[k]=0)}catch(_){}
+    s.merit=300;s[RESET_MARK]=true;return true;
+  }
+  normalizeState=function(raw,player){const s=normalizeBeforeR14(raw,player);if(String(player||currentMember)==="Aida")r14AdminTopup(s);else r14SeasonReset(s,player);return s};
+  if(legacyAdminStock){
+    ensureAdminStock=function(s){const c=legacyAdminStock(s);if(ADMIN())return r14AdminTopup(s)||c;return c};
+  }
+  const saveBeforeR14=save;save=function(){const s=own();if(s){if(ADMIN())r14AdminTopup(s);else r14SeasonReset(s,currentMember)}return saveBeforeR14.apply(this,arguments)};
+
+  /* 3 — Fast own harvest + restore Worm Manager. */
+  const oldHarvest=typeof harvestOwnPlot==="function"?harvestOwnPlot:null;
+  harvestOwnPlot=async function(index){
+    if(visitContext||guardResting())return;index=Math.floor(Number(index));const s=own(),p=s?.plots?.[index];if(!s||!p?.crop||blocked(p))return;
+    try{ensurePlotPhaseStandalone(p)}catch(_){} if(p.phase!=="ready")return oldHarvest?oldHarvest(index):undefined;
+    const c=CROPS[p.crop],qty=Math.max(1,Number(c?.yield||1));s.bag=s.bag||{};s.bag[p.crop]=(Number(s.bag[p.crop])||0)+qty;s.plots[index]=emptyPlot();try{incrementMissionOn(s,"dailyHarvestCrops",qty)}catch(_){}if(ADMIN())r14AdminTopup(s);fastCommit(s);showWeatherToast(`🌾 เก็บ ${c?.name||"ผลผลิต"} ×${qty} เข้ากระเป๋าแล้ว`);
+  };
+  function bulkHarvestR14(){
+    const s=own();if(!s||visitContext)return;const [a,b]=range(),got={};let plots=0;
+    for(let i=a;i<b;i++){const p=s.plots?.[i];if(!p?.crop||blocked(p))continue;try{ensurePlotPhaseStandalone(p)}catch(_){}if(p.phase!=="ready")continue;const k=p.crop,q=Math.max(1,Number(CROPS[k]?.yield||1));s.bag[k]=(Number(s.bag[k])||0)+q;got[k]=(got[k]||0)+q;s.plots[i]=emptyPlot();plots++}
+    if(!plots)return message("🚜 รถไถ","ยังไม่มีแปลงพร้อมเก็บค่ะ");try{incrementMissionOn(s,"dailyHarvestCrops",Object.values(got).reduce((a,b)=>a+b,0))}catch(_){}if(ADMIN())r14AdminTopup(s);fastCommit(s);showWeatherToast(`🚜 เก็บเกี่ยว ${plots} แปลงเข้ากระเป๋าแล้ว`);
+  }
+  function wormManagerR14(){
+    const s=own(),[a,b]=range(),targets=[];for(let i=a;i<b;i++){const p=s?.plots?.[i];if(p?.worm&&!blocked(p))targets.push(i)}
+    if(!targets.length)return message("🐛 จัดการหนอน","ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
+    $("modalContent").innerHTML=`<section class="feature-panel"><h2>🐛 จัดการหนอนทั้งสวน</h2><p>พบ ${targets.length} แปลง</p><div class="ynu-manager-grid"><button id="r14WormMerit">🙏 ใช้กุศล</button><button id="r14WormSpray">🧴 ใช้สเปรย์กำจัดหนอน</button></div></section>`;openModal();
+    $("r14WormMerit").onclick=()=>{const cost=targets.reduce((sum,i)=>sum+((typeof wormTypeOf==="function"&&wormTypeOf(s.plots[i])==="giant")?2:1),0);if(!ADMIN()&&(Number(s.merit)||0)<cost)return message("กุศลไม่พอ",`ต้องใช้ ${cost} กุศล`);if(!ADMIN())s.merit-=cost;targets.forEach(i=>{const p=s.plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))});try{incrementMissionOn(s,"clearWorms",targets.length)}catch(_){}if(ADMIN())r14AdminTopup(s);closeModal();fastCommit(s);showWeatherToast(`🐛 กำจัดหนอน ${targets.length} แปลงแล้ว • ใช้ ${cost} กุศล`)};
+    $("r14WormSpray").onclick=()=>{const key="wormKillerSpray",cost=targets.reduce((sum,i)=>sum+((typeof wormTypeOf==="function"&&wormTypeOf(s.plots[i])==="giant")?12:5),0),have=Number(s.specials?.[key]||0);if(!ADMIN()&&have<cost)return message("สเปรย์ไม่พอ",`ต้องใช้สเปรย์ ${cost} ขวด • มี ${have}`);s.specials=obj(s.specials);if(!ADMIN())s.specials[key]=have-cost;targets.forEach(i=>{const p=s.plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))});try{incrementMissionOn(s,"clearWorms",targets.length)}catch(_){}if(ADMIN())r14AdminTopup(s);closeModal();fastCommit(s);showWeatherToast(`🧴 กำจัดหนอน ${targets.length} แปลงแล้ว • ใช้สเปรย์ ${cost} ขวด`)};
+  }
+  function managerR14(){
+    if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=range();
+    $("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">เฉพาะแปลง ${a+1}–${b}</p><div class="ynu-manager-grid"><button data-r14-manager="plant">🌱 ปลูกทั้งหมด</button><button data-r14-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-r14-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-r14-manager="worm">🐛 จัดการหนอน</button></div></section>`;
+    const openR13Action=action=>{closeModal();setTimeout(()=>{globalThis.YN_R13?.showManagerFast?.();setTimeout(()=>document.querySelector(`[data-r13-manager="${action}"]`)?.click(),0)},0)};
+    document.querySelector('[data-r14-manager="plant"]').onclick=()=>openR13Action("plant");
+    document.querySelector('[data-r14-manager="boost"]').onclick=()=>openR13Action("boost");
+    document.querySelector('[data-r14-manager="angel"]').onclick=()=>openR13Action("angel");
+    document.querySelector('[data-r14-manager="worm"]').onclick=wormManagerR14;openModal();
+  }
+  function rebindGarden(){
+    const m=$("ynuGardenManagerBtn");if(m)m.onclick=managerR14;
+    const t=$("tractorBtn");if(t)t.onclick=bulkHarvestR14;
+    document.querySelectorAll('[data-s2-tool="tractor"]').forEach(b=>b.onclick=()=>{$("s2FarmToolsMenu")?.classList.add("hidden");bulkHarvestR14()});
+    document.querySelectorAll('[data-s2-tool="manage"]').forEach(b=>b.onclick=()=>{$("s2FarmToolsMenu")?.classList.add("hidden");managerR14()});
+  }
+
+  /* 10 — fruit: retain instant speed and guarantee inventory state. */
+  function collectFruitR14(){
+    if(visitContext)return message("เก็บผลไม้ไม่ได้","เก็บได้เฉพาะฟาร์มของตัวเองค่ะ");const s=own(),n=farmPage()+1,defs={1:["peach","ลูกพีช","fruit-peach.png?v=S2F1",21600000],2:["apple","แอปเปิ้ล","fruit-apple.png?v=S2F1",25200000],3:["orange","ส้ม","fruit-orange.png?v=S2F1",28800000],4:["cherry","เชอร์รี่","fruit-cherry.png?v=S2F1",10800000]},f=defs[n],trees=s?.farmTrees?.[n];if(!f||!Array.isArray(trees))return;
+    const t=NOW();let q=0;trees.forEach(x=>{if(Number(x?.readyAt||0)<=t){q++;x.readyAt=t+f[3]}});if(!q)return message("เก็บผลไม้ไม่ได้","ตอนนี้ยังไม่มีผลไม้พร้อมเก็บ");s.farmFruits=obj(s.farmFruits);s.farmFruits[f[0]]=(Number(s.farmFruits[f[0]])||0)+q;if(ADMIN())r14AdminTopup(s);fastCommit(s,{paint:false});try{window.YN_S2_FARM.collectFruit=collectFruitR14}catch(_){}message("🍎 เก็บผลไม้เรียบร้อย",`<div class="s2-fruit-result"><img src="${f[2]}"><b>${f[1]} ×${q}</b><small>ในกระเป๋าตอนนี้ ×${s.farmFruits[f[0]]}</small></div>`);
+  }
+
+  /* 5/6 — compact bottom-left navigation, using farm-selector visual language. */
+  function compactMainNav(){
+    const nav=$("s2MainNav");if(!nav||nav.dataset.r14==="1")return;nav.dataset.r14="1";nav.classList.add("r14-main-nav","is-collapsed");
+    const toggle=document.createElement("button");toggle.type="button";toggle.className="r14-main-nav-toggle";toggle.innerHTML="☰<small>เมนู</small>";nav.prepend(toggle);toggle.onclick=e=>{e.stopPropagation();nav.classList.toggle("is-collapsed")};
+    nav.querySelector('[data-s2-main="garden"]')?.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();nav.classList.add("is-collapsed");try{confirmReturnToLogin()}catch(_){location.reload()}},true);
+  }
+  document.addEventListener("pointerdown",e=>{const n=$("s2MainNav");if(n&&!n.contains(e.target))n.classList.add("is-collapsed")},true);
+
+  /* 7/8 — hotel tools + strict per-pen persistence. */
+  function ensureHotelPenMap(s){
+    if(!s)return;s.hotelPetPenMap=obj(s.hotelPetPenMap);s.hotelDropPenMap=obj(s.hotelDropPenMap);
+    ["dogs","cats"].forEach(kind=>(s[kind]||[]).forEach(p=>{const id=String(p.id||"");if(!id)return;if(p.placedHotel){let pen=Number(s.hotelPetPenMap[id]||p.hotelPen);if(!(pen>=1&&pen<=4))pen=1;p.hotelPen=pen;s.hotelPetPenMap[id]=pen;(p.drops||[]).forEach((d,i)=>{const dk=String(d.id||`${id}:${i}:${d.createdAt||0}`);let dp=Number(s.hotelDropPenMap[dk]||d.hotelPen||pen);if(!(dp>=1&&dp<=4))dp=pen;d.hotelPen=dp;s.hotelDropPenMap[dk]=dp})}else{delete s.hotelPetPenMap[id]}}));
+  }
+  const catBase=typeof ensureCatState==="function"?ensureCatState:null;if(catBase)ensureCatState=function(s){const r=catBase(s);ensureHotelPenMap(r);return r};
+  const dogBase=typeof ensureDogState==="function"?ensureDogState:null;if(dogBase)ensureDogState=function(s){const r=dogBase(s);ensureHotelPenMap(r);return r};
+  function compactHotel(){const rail=$("s2HotelToolRail");if(!rail)return;rail.classList.add("r14-hotel-tools");if(!rail.dataset.r14Setup){rail.dataset.r14Setup="1";rail.classList.add("is-collapsed")}const tog=rail.querySelector(".s2-hotel-tool-toggle");if(tog&&!tog.dataset.r14){tog.dataset.r14="1";tog.onclick=e=>{e.stopPropagation();rail.classList.toggle("is-collapsed")}}}
+
+  /* 11/13 — trough alignment and drop cleanup. */
+  function cleanAlpacaDrops(){const s=own(),pens=s?.alpaca?.pens,drops=s?.alpaca?.treasureDrops;if(!Array.isArray(pens)||!drops)return;let ch=false;pens.forEach((p,i)=>{const has=Array.isArray(p.alpacas)&&p.alpacas.length>0,k=`pen${i+1}`;if(!has&&Array.isArray(drops[k])&&drops[k].length){drops[k]=[];ch=true}});if(ch){try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}}}
+  function alignTrough(){document.querySelectorAll(".s2-fixed-trough-food").forEach((el,i)=>{const idx=i%8;if(idx<4)el.style.setProperty("top",`${27.0+idx*6.1}%`,"important");el.style.setProperty("transform",`translate(-50%,-50%) rotate(${el.classList.contains("left")?-7:7}deg)`,"important")})}
+
+  /* 4 — friend magic visual must cover the whole plot. Performance listeners are kept single-bound. */
+  function friendVisual(){document.querySelectorAll(".plot-black-magic-overlay,.black-magic-overlay").forEach(el=>el.classList.add("r14-full-plot-magic"))}
+
+  /* 14/18 — fishing state already remains local-first; show multi reward handled above. */
+
+  /* 17 — boat giant-fish taps: immediate pressed feedback and prevent double taps. */
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("[data-s2-ghost]");if(!b)return;b.classList.add("r14-instant-pressed");b.disabled=true;setTimeout(()=>{b.disabled=false;b.classList.remove("r14-instant-pressed")},850)},true);
+
+  /* 19 — arena result: X behaves as acknowledge/claim, and claim jumps to Dashboard immediately. */
+  document.addEventListener("click",e=>{if(e.target?.id==="closeModal"&&$("ynuArenaClaimScore")){e.preventDefault();e.stopImmediatePropagation();$("ynuArenaClaimScore")?.click()}},true);
+  document.addEventListener("click",e=>{if(e.target?.id==="ynuArenaClaimScore")setTimeout(()=>{try{showArenaDashboard()}catch(_){}},0)},true);
+
+  /* 19 (temple in consolidated list) — closed 06:00–10:59, open 11:00 onward + overnight. */
+  try{
+    v15TempleIsOpen=function(){const d=new Date(NOW()+7*60*60*1000),m=d.getUTCHours()*60+d.getUTCMinutes();return m<360||m>=660};
+    v15TempleClosedText=function(){return "ปิดวัด 06:00–10:59 น. • เปิดตั้งแต่ 11:00 น. เป็นต้นไป"};
+    v15ShowTempleClosed=function(){message("🛕 วัดไทยในสวน","ช่วง 06:00–10:59 น. ปิดวัดและไม่อนุญาตให้เข้า • เปิดอีกครั้ง 11:00 น. ค่ะ")};
+    v15UpdateTempleButton=function(){const btn=$("almsBtn");if(!btn)return;const b=btn.querySelector("b"),small=btn.querySelector("small");if(b)b.textContent="วัดไทยในสวน";if(small)small.textContent=v15TempleIsOpen()?"เปิดอยู่ • ปิด 06:00–10:59":"ปิด 06:00–10:59 • เปิด 11:00"};
+  }catch(_){}
+
+  /* Honey road/fuel UI + reliable tap target. */
+  function honeyUi(){
+    const b=$("honeyBike");if(b){b.style.setProperty("top","74.2%","important");b.style.setProperty("bottom","auto","important");b.style.setProperty("margin","0","important");b.querySelector(".honey-bike-clip")?.style.setProperty("transform","none","important")}
+    const h=$("honeyFuelHud");if(h&&!h.dataset.r14){h.dataset.r14="1";h.classList.add("r14-honey-compact");h.title="แตะเพื่อเติมน้ำมันหรือเรียกน้องน้ำผึ้ง";}
+  }
+
+  /* global rebind after legacy draw patches without adding duplicate intervals/listeners. */
+  const drawR14Base=draw;draw=function(){const r=drawR14Base.apply(this,arguments);requestAnimationFrame(()=>{rebindGarden();compactMainNav();compactHotel();friendVisual();honeyUi();alignTrough();cleanAlpacaDrops()});return r};
+  setTimeout(()=>{rebindGarden();compactMainNav();compactHotel();friendVisual();honeyUi();alignTrough();cleanAlpacaDrops();try{window.YN_S2_FARM.collectFruit=collectFruitR14}catch(_){}},120);
+
+  /* expose stable fast actions for testing */
+  globalThis.YN_R14={bulkHarvest:bulkHarvestR14,collectFruit:collectFruitR14,wormManager:wormManagerR14,manager:managerR14,adminTopup:r14AdminTopup};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+(function S2_R14_TROUGH_FINAL(){
+  if(typeof renderFixedSideTroughFood!=="function")return;
+  renderFixedSideTroughFood=function(pen){const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";const ys=[27.0,33.1,39.2,45.3,57.8,63.1,68.4,73.7],xl=[18.8,18.0,17.2,16.4,11.9,11.4,11.0,10.7],xr=[81.2,82.0,82.8,83.6,88.1,88.6,89.0,89.3];(pen.trough||[]).slice(0,16).forEach((slot,i)=>{if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";img.style.cssText=`position:absolute;left:${left?xl[j]:xr[j]}%;top:${ys[j]}%;width:clamp(31px,5.9vw,43px);height:auto;transform:translate(-50%,-50%) rotate(${left?-7:7}deg);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));`;layer.appendChild(img)})};
 })();
