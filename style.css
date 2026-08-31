@@ -8645,3 +8645,89 @@ button:active,.primary-spooky-action:active,.secondary-action:active,.danger-act
   text-align:center!important;
   margin:0!important;
 }
+
+/* ======================================================================
+   S2 R15 — 23 TOPIC POLISH + FISH-TRAP UI — 2026-08-31
+   ====================================================================== */
+button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+/* Remove the legacy full-width invisible bottom navigation completely.
+   The compact R14/R15 menu remains the only navigation surface. */
+#gameScreen .bottom-nav-hotspots{display:none!important;pointer-events:none!important;visibility:hidden!important}
+#gameScreen .bottom-nav-hotspots *{pointer-events:none!important}
+
+/* Compact bottom-left menu: no ghost border/container when collapsed. */
+#s2MainNav.r14-main-nav.r15-clean-main-nav{left:2.2%!important;bottom:2.4%!important;right:auto!important;overflow:visible!important;border:0!important;outline:0!important}
+#s2MainNav.r14-main-nav.r15-clean-main-nav.is-collapsed{width:74px!important;height:48px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;pointer-events:none!important}
+#s2MainNav.r14-main-nav.r15-clean-main-nav.is-collapsed::before,#s2MainNav.r14-main-nav.r15-clean-main-nav.is-collapsed::after{display:none!important;content:none!important}
+#s2MainNav.r14-main-nav.r15-clean-main-nav .r14-main-nav-toggle{pointer-events:auto!important;min-height:48px!important;height:48px!important;border:1.5px solid rgba(239,210,164,.9)!important;border-radius:20px!important;box-shadow:0 5px 15px rgba(20,10,30,.34)!important;overflow:hidden!important}
+
+/* R15 ordered top HUD: profile left, clock/status center, shortcuts and fuel right. */
+.game-screen .profile-hud-card{left:1.7%!important;top:1.45%!important;transform:scale(.72)!important;transform-origin:top left!important;z-index:86!important}
+.game-screen .weather-clock{left:50%!important;right:auto!important;top:1.55%!important;transform:translateX(-50%) scale(.82)!important;transform-origin:top center!important;z-index:86!important}
+.game-screen .rain-status{left:50%!important;right:auto!important;top:6.15%!important;transform:translateX(-50%) scale(.80)!important;transform-origin:top center!important;z-index:86!important}
+.game-screen .hud-menu-button{right:1.7%!important;left:auto!important;top:1.55%!important;transform:scale(.74)!important;transform-origin:top right!important;z-index:87!important}
+.honey-fuel-hud.r14-honey-compact.r15-honey-hud{left:auto!important;right:2.0%!important;top:7.2%!important;transform:none!important;width:min(30vw,132px)!important;height:32px!important;min-height:32px!important;padding:4px 7px 4px 5px!important;z-index:87!important;box-shadow:0 4px 12px rgba(17,10,28,.28)!important}
+.honey-fuel-hud.r15-honey-hud .honey-fuel-icon{width:21px!important;height:21px!important}
+.honey-fuel-hud.r15-honey-hud .honey-fuel-percent{font-size:10px!important;min-width:27px!important}
+.honey-fuel-hud.r15-honey-hud .honey-fuel-track{height:5px!important}
+
+/* Honey motorcycle is locked to the dirt road. Only X animation may move it. */
+.game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked,
+.game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked.is-riding,
+.game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked.is-parked{top:69.4%!important;bottom:auto!important;margin:0!important}
+#honeyBike.r15-road-locked .honey-bike-clip{transform:none!important}
+#honeyBike.r15-road-locked.is-parked::after{content:""!important;position:absolute!important;inset:-28% -24%!important;pointer-events:auto!important;background:transparent!important}
+
+/* Hotel tools: one clean 2×N panel, no nested/scattered legacy placement. */
+#s2HotelToolRail.r15-hotel-tools{right:1.8%!important;top:33%!important;width:48px!important;max-width:none!important;display:block!important;overflow:visible!important;z-index:96!important}
+#s2HotelToolRail.r15-hotel-tools .s2-hotel-tool-toggle{position:relative!important;width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;margin:0!important;z-index:2!important}
+#s2HotelToolRail.r15-hotel-tools .s2-hotel-tool-items{position:absolute!important;right:0!important;top:53px!important;width:116px!important;padding:7px!important;margin:0!important;display:grid!important;grid-template-columns:repeat(2,50px)!important;grid-auto-rows:50px!important;gap:6px!important;align-items:center!important;justify-items:center!important;border:1.5px solid rgba(255,231,193,.92)!important;border-radius:19px!important;background:linear-gradient(180deg,rgba(76,47,87,.97),rgba(43,28,52,.98))!important;box-shadow:0 8px 20px rgba(22,12,30,.32)!important;transform:none!important}
+#s2HotelToolRail.r15-hotel-tools.is-collapsed .s2-hotel-tool-items{display:none!important}
+#s2HotelToolRail.r15-hotel-tools .s2-hotel-tool-items>.r15-hotel-tool-item{position:relative!important;inset:auto!important;transform:none!important;width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;max-width:50px!important;max-height:50px!important;margin:0!important;padding:3px!important;border-radius:15px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;overflow:hidden!important;font-size:13px!important;line-height:1!important}
+#s2HotelToolRail.r15-hotel-tools .r15-hotel-tool-item span,#s2HotelToolRail.r15-hotel-tools .r15-hotel-tool-item img{max-width:25px!important;max-height:25px!important;object-fit:contain!important}
+#s2HotelToolRail.r15-hotel-tools .r15-hotel-tool-item small,#s2HotelToolRail.r15-hotel-tools .r15-hotel-tool-item b{display:block!important;max-width:45px!important;font-size:6.5px!important;line-height:1.05!important;white-space:normal!important;text-align:center!important;overflow:hidden!important}
+
+/* Market: move usable content slightly left, center + hitbox, lift the name plaque into the sign. */
+#s2MarketSlots{transform:translateX(-2.3%)!important;transform-origin:center!important}
+.s2-market-slot.r15-market-slot,.s2-market-slot{width:23.2%!important;height:11.0%!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;cursor:pointer!important;touch-action:manipulation!important;pointer-events:auto!important}
+.s2-market-slot.empty .s2-market-plus,.s2-market-slot.empty>span{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;font-size:25px!important;color:rgba(255,234,188,.72)!important;line-height:1!important;pointer-events:none!important}
+#s2MarketTitle.s2-market-title{left:47.7%!important;right:auto!important;bottom:10.0%!important;width:70%!important;height:5.8%!important;transform:translateX(-50%)!important;display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1.1!important;padding:0!important;margin:0!important;overflow:hidden!important}
+#s2MarketFooter{right:3%!important;left:3%!important;top:2.3%!important;align-items:center!important}
+.r15-market-listing .s2-market-picker button,.s2-market-picker button{min-height:50px!important;touch-action:manipulation!important}
+
+/* Tractor feedback appears immediately, but state/inventory remain fast R14 behavior. */
+#tractorWorkingOverlay.r15-tractor-flash{display:grid!important;opacity:1!important;pointer-events:none!important}
+#tractorWorkingOverlay.r15-tractor-flash .tractor-working-card{animation:r15TractorPop .72s ease both!important}
+@keyframes r15TractorPop{0%{transform:translateY(18px) scale(.92);opacity:0}18%{transform:translateY(0) scale(1);opacity:1}78%{opacity:1}100%{transform:translateY(-8px) scale(.98);opacity:0}}
+.r15-ghost-pressed{transform:scale(.95)!important;filter:brightness(1.15)!important}
+
+/* Farm-1 fish traps — 3 hidden water hotspots; no visible plus sign. */
+.r15-fish-trap-layer{position:absolute;inset:0;z-index:89;pointer-events:none;overflow:visible}
+.r15-fish-trap-layer.hidden{display:none!important}
+.r15-fish-trap-slot{position:absolute;top:92.2%;width:10.5%;height:5.3%;transform:translate(-50%,-50%);border:0!important;background:transparent!important;padding:0!important;margin:0!important;pointer-events:auto;overflow:visible;border-radius:999px;touch-action:manipulation;box-shadow:none!important}
+.r15-fish-trap-slot:nth-child(1){left:38.8%}.r15-fish-trap-slot:nth-child(2){left:50%}.r15-fish-trap-slot:nth-child(3){left:61.2%}
+.r15-fish-trap-slot.empty{opacity:1!important;background:transparent!important}
+.r15-fish-trap-slot.empty::before,.r15-fish-trap-slot.empty::after{display:none!important;content:none!important}
+.r15-fish-trap-img{position:absolute;left:50%;top:57%;transform:translate(-50%,-50%);width:clamp(18px,4.2vw,29px);height:auto;max-height:76%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.40));pointer-events:none}
+.r15-trap-timer,.r15-trap-ready{position:absolute;left:50%;top:-5px;transform:translate(-50%,-100%);padding:2px 5px;border:1px solid rgba(255,230,187,.76);border-radius:999px;background:rgba(48,30,66,.88);color:#fff4d3;font-size:clamp(5px,1.15vw,8px);font-weight:900;line-height:1;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,.22);pointer-events:none}
+.r15-trap-ready{background:rgba(74,40,105,.95);color:#fff8cc}
+.r15-trap-reward-icons{position:absolute;left:50%;bottom:84%;transform:translateX(-50%);display:flex;align-items:flex-end;justify-content:center;gap:1px;min-width:54px;pointer-events:none}
+.r15-trap-reward-icons span{position:relative;width:clamp(16px,3.2vw,23px);height:clamp(16px,3.2vw,23px);display:block}
+.r15-trap-reward-icons img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.42))}
+.r15-trap-reward-icons i{position:absolute;right:-3px;bottom:-2px;min-width:10px;padding:1px 2px;border-radius:7px;background:#4e2b68;color:#fff;font-size:5px;font-style:normal;font-weight:900;line-height:1}
+.r15-fish-trap-place,.r15-fish-trap-claim{text-align:center}
+.r15-fish-trap-place>img{width:86px;height:86px;object-fit:contain;margin:auto}
+.r15-fish-trap-place>small{display:block;margin:7px 0 12px;color:#765d6c}
+.r15-fish-trap-shop .ynu-shop-image-box img{object-fit:contain!important}
+
+@media(max-width:430px){
+  .game-screen .profile-hud-card{transform:scale(.68)!important}
+  .game-screen .weather-clock{transform:translateX(-50%) scale(.76)!important}
+  .game-screen .rain-status{transform:translateX(-50%) scale(.73)!important;top:5.9%!important}
+  .game-screen .hud-menu-button{transform:scale(.69)!important}
+  .honey-fuel-hud.r14-honey-compact.r15-honey-hud{width:118px!important;right:1.6%!important;top:7.0%!important}
+  #s2HotelToolRail.r15-hotel-tools .s2-hotel-tool-items{width:108px!important;grid-template-columns:repeat(2,46px)!important;grid-auto-rows:46px!important}
+  #s2HotelToolRail.r15-hotel-tools .s2-hotel-tool-items>.r15-hotel-tool-item{width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important}
+  .r15-fish-trap-slot{top:92.4%;width:11%;height:5.7%}
+}

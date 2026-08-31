@@ -22844,3 +22844,333 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   if(typeof renderFixedSideTroughFood!=="function")return;
   renderFixedSideTroughFood=function(pen){const stage=document.getElementById("alpacaPenStage");if(!stage||!pen)return;let layer=document.getElementById("alpacaTroughFoodFixed");if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodFixed";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}layer.style.cssText="position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;";layer.innerHTML="";const ys=[27.0,33.1,39.2,45.3,57.8,63.1,68.4,73.7],xl=[18.8,18.0,17.2,16.4,11.9,11.4,11.0,10.7],xr=[81.2,82.0,82.8,83.6,88.1,88.6,89.0,89.3];(pen.trough||[]).slice(0,16).forEach((slot,i)=>{if(!slot||!FOOD?.[slot.foodKey]||Number(slot.servings||0)<=0)return;const left=i<8,j=i%8,img=document.createElement("img");img.className=`s2-fixed-trough-food ${left?"left":"right"}`;img.src=FOOD[slot.foodKey].image;img.alt="";img.style.cssText=`position:absolute;left:${left?xl[j]:xr[j]}%;top:${ys[j]}%;width:clamp(31px,5.9vw,43px);height:auto;transform:translate(-50%,-50%) rotate(${left?-7:7}deg);object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));`;layer.appendChild(img)})};
 })();
+
+/* ======================================================================
+   S2 R15 — 23 TOPIC POLISH + FISH-TRAP SYSTEM — 2026-08-31
+   Goals: preserve R14 fast planting/harvest/fuel, remove legacy hitboxes,
+   finish HUD/Hotel/Market/Boat/Honey polish, and add Farm-1 fish traps.
+   ====================================================================== */
+(function S2_R15_23_TOPIC_POLISH_FISH_TRAP(){
+  const BUILD="S2-R15-23-TOPIC-FISH-TRAP-20260831";
+  const FT_KEY="fishTrap";
+  const FT_IMAGE="fish-trap.png";
+  const FT_PRICE=300;
+  const FT_MAX=3;
+  const FT_LIFE_MS=3*24*60*60*1000;
+  const FT_ROUND_MS=10*60*1000;
+  const $r=id=>document.getElementById(id);
+  const n=v=>Number(v)||0;
+  const i=v=>Math.max(0,Math.floor(Number(v)||0));
+  const admin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const html=s=>typeof safeHtml==="function"?safeHtml(String(s??"")):String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  const clone=v=>typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v));
+  const own=()=>ownState||state;
+  const stamp=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const farmOneVisible=()=>{
+    const g=$r("gameScreen");
+    return Boolean(g&&!g.classList.contains("hidden")&&!visitContext&&Number(farmPlotPage||0)===0);
+  };
+  function localCommit(s,{paint=true}={}){
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly(s)}catch(_){ }
+    if(paint)try{draw()}catch(_){ }
+    try{save()}catch(_){ }
+  }
+
+  /* ---------- 1) Fish-trap persistent state + Admin stock ---------- */
+  function normReward(r){
+    const key=String(r?.key||"");
+    if(!COCONUT_RIVER_ITEMS?.[key])return null;
+    const qty=Math.max(1,Math.min(4,i(r?.qty)||1));
+    return {key,qty};
+  }
+  function normTrap(t,slot){
+    if(!t||typeof t!=="object")return null;
+    const placedAt=Math.max(0,n(t.placedAt)),expiresAt=Math.max(0,n(t.expiresAt));
+    if(!placedAt||!expiresAt)return null;
+    const rewards=(Array.isArray(t.rewards)?t.rewards:[]).map(normReward).filter(Boolean).slice(0,4);
+    return {
+      id:String(t.id||`ft-${slot+1}-${placedAt}`),slot:slot+1,placedAt,expiresAt,
+      cycleStartedAt:Math.max(0,n(t.cycleStartedAt)||placedAt),
+      readyAt:Math.max(0,n(t.readyAt)),rewards
+    };
+  }
+  function ensureFishTrapState(s){
+    if(!s)return s;
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    s.specials[FT_KEY]=Math.max(0,i(s.specials[FT_KEY]));
+    const src=Array.isArray(s.fishTraps)?s.fishTraps.slice(0,FT_MAX):[];
+    while(src.length<FT_MAX)src.push(null);
+    s.fishTraps=src.map((t,idx)=>normTrap(t,idx));
+    return s;
+  }
+  const r15FreshBase=fresh;
+  fresh=function(player){return ensureFishTrapState(r15FreshBase(player))};
+  const r15NormalizeBase=normalizeState;
+  normalizeState=function(raw,player){return ensureFishTrapState(r15NormalizeBase(raw,player))};
+  if(SPECIAL_ITEMS?.[FT_KEY]){
+    Object.assign(SPECIAL_ITEMS[FT_KEY],{name:"ไซดักปลา",image:FT_IMAGE,kind:"resource",group:"fishTrap",description:"ไซดักปลา • อายุใช้งาน 3 วัน • รอบดัก 10 นาที",excludeRandom:true,shopPrice:FT_PRICE});
+  }else if(typeof SPECIAL_ITEMS!=="undefined"){
+    SPECIAL_ITEMS[FT_KEY]={name:"ไซดักปลา",image:FT_IMAGE,kind:"resource",group:"fishTrap",description:"ไซดักปลา • อายุใช้งาน 3 วัน • รอบดัก 10 นาที",excludeRandom:true,shopPrice:FT_PRICE};
+  }
+  if(typeof ensureAdminStock==="function"){
+    const r15AdminBase=ensureAdminStock;
+    ensureAdminStock=function(s){
+      const changed=Boolean(r15AdminBase(s));if(!s)return changed;
+      ensureFishTrapState(s);
+      if(admin()&&Number(s.specials?.[FT_KEY])!==9999){s.specials[FT_KEY]=9999;return true}
+      return changed;
+    };
+  }
+  /* Fish traps are personal-use equipment; exclude from market/gift transfers so the 3-unit cap cannot be bypassed. */
+  if(typeof giftableEntries==="function"){
+    const gb=giftableEntries;giftableEntries=function(s){return gb(s).filter(e=>!(e?.type==="special"&&e?.key===FT_KEY))};
+  }
+  if(typeof v240MemberGiftEntriesFull==="function"){
+    const gf=v240MemberGiftEntriesFull;v240MemberGiftEntriesFull=function(s){return gf(s).filter(e=>!(e?.type==="special"&&e?.key===FT_KEY))};
+  }
+
+  /* ---------- 2) Bottom legacy hitbox cleanup + Top HUD ---------- */
+  function polishHudAndLegacy(){
+    const legacy=document.querySelector("#gameScreen .bottom-nav-hotspots");
+    if(legacy){legacy.style.setProperty("display","none","important");legacy.style.setProperty("pointer-events","none","important");legacy.querySelectorAll("button").forEach(b=>b.style.setProperty("pointer-events","none","important"))}
+    const nav=$r("s2MainNav");if(nav){nav.classList.add("r15-clean-main-nav");if(nav.classList.contains("is-collapsed"))nav.style.pointerEvents="none";const t=nav.querySelector(".r14-main-nav-toggle");if(t)t.style.pointerEvents="auto"}
+    const fuel=$r("honeyFuelHud");if(fuel){fuel.classList.add("r15-honey-hud");fuel.title="น้ำมันน้องน้ำผึ้ง"}
+    const bike=$r("honeyBike");if(bike){bike.classList.add("r15-road-locked");bike.style.setProperty("top","69.4%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("margin","0","important");bike.querySelector(".honey-bike-clip")?.style.setProperty("transform","none","important")}
+    /* While Honey is in the garden, show a meaningful full-tank/working state instead of a confusing 0%. */
+    const h=ensureFishTrapState(own())?.honeyDelivery;
+    if(fuel&&h?.active&&!fuel.classList.contains("hidden")){
+      $r("honeyFuelFill")?.style.setProperty("width","100%","important");
+      if($r("honeyFuelPercent"))$r("honeyFuelPercent").textContent="100%";
+      if($r("honeyFuelStatus"))$r("honeyFuelStatus").textContent="กำลังส่งของ";
+      fuel.setAttribute("aria-label","น้องน้ำผึ้งกำลังทำงาน • น้ำมันเที่ยวนี้พร้อมแล้ว");
+    }
+  }
+
+  /* ---------- 3) Hotel tool panel: flatten nested legacy controls ---------- */
+  function polishHotelToolsR15(){
+    const rail=$r("s2HotelToolRail");if(!rail)return;
+    rail.classList.add("r15-hotel-tools");
+    const items=rail.querySelector(".s2-hotel-tool-items");if(!items)return;
+    items.querySelectorAll(".ynu-dog-care-buttons").forEach(w=>{[...w.children].forEach(ch=>items.appendChild(ch));w.remove()});
+    [...items.children].forEach((ch,idx)=>{ch.classList.add("r15-hotel-tool-item");ch.style.removeProperty("left");ch.style.removeProperty("right");ch.style.removeProperty("top");ch.style.removeProperty("bottom");ch.style.removeProperty("transform");ch.dataset.r15HotelOrder=String(idx)});
+    const toggle=rail.querySelector(".s2-hotel-tool-toggle");if(toggle&&!toggle.dataset.r15){toggle.dataset.r15="1";toggle.onclick=e=>{e.preventDefault();e.stopPropagation();rail.classList.toggle("is-collapsed")}}
+  }
+
+  /* ---------- 4) Alpaca trough visual: spread every rendered food item across the full rails ---------- */
+  function polishTroughDomR15(){
+    const layer=$r("alpacaTroughFoodFixed");if(!layer)return;
+    const imgs=[...layer.querySelectorAll(".s2-fixed-trough-food")];if(!imgs.length)return;
+    const sides=[[],[]];
+    imgs.forEach((img,idx)=>{const side=idx%2;img.classList.toggle("left",side===0);img.classList.toggle("right",side===1);sides[side].push(img)});
+    const yMin=27.5,yMax=74.0;
+    sides.forEach((list,side)=>list.forEach((img,j)=>{
+      const frac=list.length<=1?.5:j/(list.length-1),y=yMin+(yMax-yMin)*frac;
+      const xTop=side===0?18.7:81.3,xBottom=side===0?10.8:89.2;
+      const x=xTop+(xBottom-xTop)*((y-yMin)/(yMax-yMin));
+      img.style.setProperty("left",`${x}%`,"important");
+      img.style.setProperty("top",`${y}%`,"important");
+      img.style.setProperty("transform",`translate(-50%,-50%) rotate(${side===0?-7:7}deg)`,"important");
+    }));
+  }
+
+  /* ---------- 5) Tractor: restore visual feedback without slowing the already-fast harvest ---------- */
+  function tractorFx(){
+    try{showTractorWorking()}catch(_){ }
+    const ov=$r("tractorWorkingOverlay");if(ov){ov.classList.remove("hidden");ov.classList.add("r15-tractor-flash")}
+    clearTimeout(window.__r15TractorFxTimer);window.__r15TractorFxTimer=setTimeout(()=>{try{hideTractorWorking()}catch(_){ }ov?.classList.remove("r15-tractor-flash")},720);
+  }
+  document.addEventListener("pointerdown",e=>{
+    const t=e.target.closest?.('[data-s2-tool="tractor"],#tractorBtn');if(!t)return;
+    const s=own(),page=Number(farmPlotPage||0),a=page*12,b=a+12,ready=Boolean(s?.plots?.slice(a,b).some(p=>{try{if(p?.crop)ensurePlotPhaseStandalone(p)}catch(_){}return p?.crop&&p.phase==="ready"}));
+    if(ready)tractorFx();
+  },true);
+
+  /* ---------- 6) Boat festival: giant fish once-tap + close supply modal immediately ---------- */
+  document.addEventListener("pointerdown",e=>{
+    const b=e.target.closest?.("[data-s2-ghost]");if(!b)return;
+    const ghostNo=Number(b.dataset.s2Ghost);if(!(ghostNo>=1&&ghostNo<=6))return;
+    e.preventDefault();e.stopImmediatePropagation();
+    b.classList.add("r15-ghost-pressed");
+    try{b.disabled=false;S2_claimBoatGhost(ghostNo)}catch(err){console.warn("R15 ghost",err)}
+    setTimeout(()=>b?.classList.remove("r15-ghost-pressed"),320);
+  },true);
+  if(typeof sendBoatSupply==="function"){
+    const boatSendBase=sendBoatSupply;
+    sendBoatSupply=function(boatNo,menuId){
+      try{closeModal();showWeatherToast(`🚣 ส่งเสบียงให้เรือ ${boatNo} แล้ว • กำลังบันทึก…`)}catch(_){ }
+      return boatSendBase(boatNo,menuId);
+    };
+  }
+
+  /* ---------- 7) Market R15: cache-first own shop + atomic end-to-end writes ---------- */
+  const MARKET_POS=[[27.2,33.4],[53.8,33.4],[80.4,33.4],[27.2,45.7],[53.8,45.7],[80.4,45.7],[27.2,58.0],[53.8,58.0],[80.4,58.0],[27.2,70.3],[53.8,70.3],[80.4,70.3]];
+  const marketCacheR15=new Map();
+  const marketPendingR15=new Set();
+  const marketKey=k=>`s2-r15-market-cache:${k}`;
+  function marketDefault(ownerKey,ownerName){return{memberKey:ownerKey,ownerName:ownerName||"",shopName:"ร้านของฉัน",shop1:Array(12).fill(null),shop2:Array(12).fill(null)}}
+  function loadMarketLocal(k){if(marketCacheR15.has(k))return marketCacheR15.get(k);try{const v=localStorage.getItem(marketKey(k));if(v){const d=JSON.parse(v);marketCacheR15.set(k,d);return d}}catch(_){}return null}
+  function saveMarketLocal(k,d){marketCacheR15.set(k,d);try{localStorage.setItem(marketKey(k),JSON.stringify(d))}catch(_){}}
+  function marketScreenR15(){
+    let s=$r("s2MarketScreen");if(!s){s=document.createElement("section");s.id="s2MarketScreen";s.className="s2-market-screen hidden";s.innerHTML='<button id="s2MarketBack" class="s2-market-back" type="button">‹</button><button id="s2MarketTitle" class="s2-market-title" type="button"></button><div id="s2MarketSlots"></div><div id="s2MarketFooter"></div>';document.body.appendChild(s)}
+    $r("s2MarketBack").onclick=()=>s.classList.add("hidden");return s;
+  }
+  function marketEntriesR15(){
+    const st=ensureFishTrapState(own());let rows=[];try{rows=typeof v240MemberGiftEntriesFull==="function"?v240MemberGiftEntriesFull(st):giftableEntries(st)}catch(_){ }
+    return rows.filter(e=>!(e?.type==="special"&&e?.key===FT_KEY)&&!(e.type==="dogInstance"&&String(e.name||"").includes("ปุยเมฆ"))&&!(e.type==="catInstance"&&e.instance?.placedHotel)&&!(e.type==="dogInstance"&&e.instance?.placedHotel));
+  }
+  function removeMarketItemR15(s,e,qty){
+    qty=Math.max(1,i(qty)||1);
+    if(e?.type==="alpacaInstance"){const at=s?.alpaca?.vault?.findIndex(a=>a.id===e.key)??-1;if(at<0)return false;s.alpaca.vault.splice(at,1);return true}
+    if(e?.type==="catInstance"){const at=(s.cats||[]).findIndex(a=>a.id===e.key&&!a.placedFarm&&!a.placedHotel);if(at<0)return false;s.cats.splice(at,1);return true}
+    if(e?.type==="dogInstance"){const at=(s.dogs||[]).findIndex(a=>a.id===e.key&&!a.placedHotel);if(at<0)return false;s.dogs.splice(at,1);return true}
+    if(e?.type==="alpacaWool"){const m=s?.alpaca?.inventory?.wool;if(!m||n(m[e.key])<qty)return false;m[e.key]-=qty;return true}
+    return typeof removeGiftItemFromState==="function"?removeGiftItemFromState(s,e.type,e.key,qty):false;
+  }
+  function marketPriceR15(e){
+    const type=String(e?.type||"");let base={crop:10,product:28,dish:55,special:80,jelly:140,jellyV2:300,fishingBait:45,coconutRiver:45,medicine:25,mystery:80,catMystery:200,dogMystery:200,number4Mystery:100,animal:140,catInstance:260,dogInstance:280,alpacaFood:45,alpacaMedicine:85,alpacaOther:100,alpacaWool:55,alpacaFactoryProduct:180,alpacaInstance:350,farmFruit:20}[type]||50;
+    try{if(type==="special"&&SPECIAL_ITEMS?.[e.key]?.shopPrice)base=n(SPECIAL_ITEMS[e.key].shopPrice)||base;if(type==="medicine"&&Y26_MEDICINES?.[e.key]?.price)base=n(Y26_MEDICINES[e.key].price)||base;if(type==="fishingBait"){const x=n(String(e.key).replace(/\D/g,""))||1;base=[20,40,75,125][x-1]||45}if(type==="coconutRiver"){const x=COCONUT_RIVER_ITEMS?.[e.key]?.index||1;base=[18,35,65,120][x-1]||45}}catch(_){}
+    return{min:Math.max(1,Math.round(base*.65)),mid:base,max:Math.max(2,Math.round(base*1.45))};
+  }
+  async function fetchMarketR15(k,name){
+    const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"farmMarkets",k));
+    const d=snap.exists()?{...marketDefault(k,name),...snap.data()}:marketDefault(k,name);saveMarketLocal(k,d);return d;
+  }
+  function renderMarketR15(shopNo,data,ownerKey,ownerName){
+    const screen=marketScreenR15(),isOwn=ownerKey===currentMemberKey&&!visitContext,arr=Array.isArray(data?.[`shop${shopNo}`])?data[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
+    screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;screen.classList.add("r15-market");
+    const title=$r("s2MarketTitle");title.textContent=data?.shopName||"ร้านของฉัน";title.onclick=isOwn?()=>renameMarketR15(data):null;
+    $r("s2MarketSlots").innerHTML=arr.map((x,idx)=>{const [l,t]=MARKET_POS[idx]||[50,50];if(!x)return `<button class="s2-market-slot empty r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%" aria-label="ช่องวางสินค้า ${idx+1}">${isOwn?'<span class="s2-market-plus">＋</span>':''}</button>`;return `<button class="s2-market-slot r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%"><img src="${html(x.image||"")}" alt=""><small>×${i(x.qty)||1}</small><b>${x.status==="sold"?"ขายแล้ว":`${i(x.price)} 🙏`}</b></button>`}).join("");
+    $r("s2MarketSlots").querySelectorAll("[data-r15-market-slot]").forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.r15MarketSlot),x=arr[idx];if(isOwn){if(!x)showMarketListingR15(shopNo,idx,data);else showOwnerMarketR15(shopNo,idx,x,data)}else if(x&&x.status==="active")buyMarketR15(shopNo,idx,x,ownerKey,ownerName)});
+    const foot=$r("s2MarketFooter");foot.innerHTML=`<b>ร้าน ${shopNo}/2</b><button id="r15MarketSwitch" type="button">ไปร้าน ${shopNo===1?2:1}</button>`;$r("r15MarketSwitch").onclick=()=>openMarketR15(shopNo===1?2:1);
+    screen.classList.remove("hidden");
+  }
+  async function openMarketR15(shopNo=1){
+    shopNo=Number(shopNo)===2?2:1;const ownerKey=visitContext?.memberKey||currentMemberKey,ownerName=visitContext?.name||currentMember;if(!ownerKey)return;
+    const screen=marketScreenR15();screen.dataset.owner=ownerKey;screen.dataset.shop=String(shopNo);let cached=loadMarketLocal(ownerKey);
+    if(!cached&&ownerKey===currentMemberKey){cached=marketDefault(ownerKey,ownerName);saveMarketLocal(ownerKey,cached)}
+    if(cached)renderMarketR15(shopNo,cached,ownerKey,ownerName);else{screen.dataset.shop=String(shopNo);$r("s2MarketTitle").textContent="กำลังเปิดร้าน…";$r("s2MarketSlots").innerHTML='<div class="s2-market-loading">🧺 กำลังโหลดสินค้า…</div>';$r("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b>`;screen.classList.remove("hidden")}
+    try{const data=await fetchMarketR15(ownerKey,ownerName);if(!marketPendingR15.has(ownerKey)&&screen.dataset.owner===ownerKey)renderMarketR15(shopNo,data,ownerKey,ownerName)}catch(err){if(!cached)message("เปิดร้านไม่ได้",err.message||"กรุณาลองใหม่")}
+  }
+  function showMarketListingR15(shopNo,slot,data){
+    const entries=marketEntriesR15();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");
+    $r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing r15-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r15MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r15MarketCount"></small><div id="r15MarketPicker" class="s2-market-picker"></div></section>`;
+    const input=$r("r15MarketSearch"),wrap=$r("r15MarketPicker"),count=$r("r15MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found.slice(0,80);count.textContent=`พบ ${found.length} รายการ`;wrap.innerHTML=view.map((e,idx)=>`<button type="button" data-r15-market-entry="${entries.indexOf(e)}"><img src="${html(e.image||"")}" alt=""><span><b>${html(e.name)}</b><small>มี ×${i(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r15-market-entry]").forEach(b=>b.onclick=()=>marketOptionsR15(shopNo,slot,entries[Number(b.dataset.r15MarketEntry)],data))};input.oninput=paint;paint();openModal();
+  }
+  function marketOptionsR15(shopNo,slot,e,data){
+    const maxQty=Math.min(10,Math.max(1,i(e.count??e.qty)||1)),p=marketPriceR15(e);$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(e.image||"")}" alt=""><h2>${html(e.name)}</h2><label>จำนวน <input id="r15MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="r15MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="r15MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="r15MarketConfirm" class="primary-spooky-action">วางขาย</button></section>`;
+    const paint=()=>{const q=Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1));$r("r15MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$r("r15MarketPrice").min=String(p.min*q);$r("r15MarketPrice").max=String(p.max*q)};$r("r15MarketQty").oninput=paint;paint();$r("r15MarketConfirm").onclick=()=>createMarketR15(shopNo,slot,e,Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1)),i($r("r15MarketPrice").value),p,data);
+  }
+  async function createMarketR15(shopNo,slot,e,qty,price,p,data){
+    const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`ตั้งราคาได้ ${min}–${max} กุศล`);
+    const before=normalizeState(clone(own()),currentMember),optimistic=normalizeState(clone(own()),currentMember),m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
+    if(arr[slot])return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(optimistic,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
+    const listing={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
+    ownState=optimistic;state=optimistic;saveLocalOnly(optimistic);saveMarketLocal(currentMemberKey,m);marketPendingR15.add(currentMemberKey);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} แล้ว • กำลังบันทึก…`);
+    try{
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let nextState,nextMarket;
+      await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(ss.data(),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),a=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(a.length<12)a.push(null);if(a[slot])throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false})});
+      ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ`);
+    }catch(err){ownState=before;state=before;saveLocalOnly(before);const rollback=loadMarketLocal(currentMemberKey)||marketDefault(currentMemberKey,currentMember);if(Array.isArray(rollback[`shop${shopNo}`]))rollback[`shop${shopNo}`][slot]=null;saveMarketLocal(currentMemberKey,rollback);renderMarketR15(shopNo,rollback,currentMemberKey,currentMember);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}
+    finally{marketPendingR15.delete(currentMemberKey)}
+  }
+  function showOwnerMarketR15(shopNo,slot,x,data){$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(x.image||"")}" alt=""><h2>${html(x.name)} ×${i(x.qty)}</h2><p>ราคา ${i(x.price)} กุศล</p><button id="r15DeleteMarket" class="danger-action">ลบออกจากสล็อต • ของจะไม่คืนกระเป๋า</button></section>`;$r("r15DeleteMarket").onclick=()=>deleteMarketR15(shopNo,slot,data);openModal()}
+  async function deleteMarketR15(shopNo,slot,data){const m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},a=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);a[slot]=null;m[`shop${shopNo}`]=a;saveMarketLocal(currentMemberKey,m);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);const md=snap.exists()?snap.data():marketDefault(currentMemberKey,currentMember),arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})})}catch(err){message("ลบไม่ได้",err.message||"กรุณาลองใหม่")}}
+  async function renameMarketR15(data){const name=prompt("ตั้งชื่อร้าน (ใช้ชื่อเดียวกันทั้ง 2 ร้าน)",data?.shopName||"");if(name==null)return;const v=String(name).trim().slice(0,40);if(!v)return;const m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})};m.shopName=v;saveMarketLocal(currentMemberKey,m);renderMarketR15(Number($r("s2MarketScreen")?.dataset.shop)||1,m,currentMemberKey,currentMember);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{memberKey:currentMemberKey,ownerName:currentMember,shopName:v,updatedAt:fs.serverTimestamp()},{merge:true})}catch(err){message("ตั้งชื่อไม่ได้",err.message||"กรุณาลองใหม่")}}
+  async function buyMarketR15(shopNo,slot,x,ownerKey,ownerName){
+    if(ownerKey===currentMemberKey)return;if(!confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`))return;
+    const before=normalizeState(clone(own()),currentMember),buyer=normalizeState(clone(own()),currentMember),m={...marketDefault(ownerKey,ownerName),...(loadMarketLocal(ownerKey)||{})},a=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);
+    try{if(!admin()&&n(buyer.merit)<n(x.price))throw new Error("กุศลไม่พอ");addGiftItemToState(buyer,{itemType:x.type,itemKey:x.key,qty:x.qty,instance:x.instance});if(!admin())buyer.merit-=n(x.price);else ensureAdminStock(buyer);a[slot]=null;m[`shop${shopNo}`]=a;ownState=buyer;state=buyer;saveLocalOnly(buyer);updateMeritUI();saveMarketLocal(ownerKey,m);marketPendingR15.add(ownerKey);renderMarketR15(shopNo,m,ownerKey,ownerName);showWeatherToast(`🛍️ ${x.name} ×${x.qty} เข้ากระเป๋าแล้ว • กำลังบันทึก…`);
+      const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;
+      await fs.runTransaction(db,async tx=>{const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");const md=ms.data(),arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const st=normalizeState(bs.data(),currentMember);if(!admin()&&n(st.merit)<n(cur.price))throw new Error("กุศลไม่พอ");addGiftItemToState(st,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!admin())st.merit-=n(cur.price);else ensureAdminStock(st);arr[slot]=null;next=st;tx.set(buyerRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(n(cur.price)),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว • สต๊อก/กุศล Aida คงที่ 9999`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);
+    }catch(err){ownState=before;state=before;saveLocalOnly(before);updateMeritUI();marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){}message("ซื้อไม่ได้",err.message||"กรุณาลองใหม่");openMarketR15(shopNo)}finally{marketPendingR15.delete(ownerKey)}
+  }
+  /* Own/visited Farm-1 shop hotspots are intercepted before legacy slow handlers. */
+  document.addEventListener("click",e=>{const b=e.target.closest?.('.s2-scene-hotspot[aria-label^="ร้านค้า"]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const num=String(b.getAttribute("aria-label")||"").includes("2")?2:1;openMarketR15(num)},true);
+  try{window.YN_S2_FARM=window.YN_S2_FARM||{};window.YN_S2_FARM.openMarket=openMarketR15}catch(_){ }
+
+  /* ---------- 8) Fish-trap shop ---------- */
+  function activeTrapCount(s){return ensureFishTrapState(s)?.fishTraps?.filter(Boolean).length||0}
+  function totalTrapCount(s){s=ensureFishTrapState(s);return admin()?9999:i(s?.specials?.[FT_KEY])+activeTrapCount(s)}
+  let fishTrapBuyBusy=false;
+  async function buyFishTrap(qty){
+    if(fishTrapBuyBusy)return;const cur=ensureFishTrapState(own());if(!cur)return;
+    if(admin()){cur.specials[FT_KEY]=9999;saveLocalOnly(cur);return showWeatherToast("🪤 สต๊อก Aida = 9999")}
+    const remain=Math.max(0,FT_MAX-totalTrapCount(cur));qty=Math.max(1,Math.min(remain,i(qty)||1));if(remain<=0)return message("ซื้อไซดักปลาไม่ได้","คุณมีไซครบสูงสุด 3 อันแล้วค่ะ");const cost=FT_PRICE*qty;if(n(cur.merit)<cost)return message("กุศลไม่พอ",`ต้องใช้ ${cost} กุศล • มี ${i(cur.merit)}`);
+    fishTrapBuyBusy=true;const before=normalizeState(clone(cur),currentMember),optimistic=normalizeState(clone(cur),currentMember);optimistic.merit-=cost;optimistic.specials[FT_KEY]=i(optimistic.specials[FT_KEY])+qty;ownState=optimistic;state=optimistic;saveLocalOnly(optimistic);updateMeritUI();showWeatherToast(`🪤 ซื้อไซดักปลา ×${qty} • เข้ากระเป๋า → ของพิเศษแล้ว`);showShop("specials");
+    try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember),remaining=Math.max(0,FT_MAX-(i(st.specials?.[FT_KEY])+activeTrapCount(st)));if(qty>remaining)throw new Error("คุณมีไซครบสูงสุด 3 อันแล้ว");if(n(st.merit)<cost)throw new Error("กุศลไม่พอ");st.merit-=cost;st.specials[FT_KEY]=i(st.specials[FT_KEY])+qty;next=st;tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();showShop("specials")}
+    catch(err){ownState=before;state=before;saveLocalOnly(before);updateMeritUI();message("ซื้อไซดักปลาไม่ได้",`${err.message||"กรุณาลองใหม่"}<br>คืนกุศลแล้วค่ะ`);showShop("specials")}
+    finally{fishTrapBuyBusy=false}
+  }
+  function appendFishTrapShop(){
+    const grid=document.querySelector(".shop-panel .shop-grid,.shop-grid");if(!grid)return;
+    [...grid.querySelectorAll(".shop-card")].forEach(c=>{if(!c.classList.contains("r15-fish-trap-shop")&&(/fish-trap\.png/i.test(c.innerHTML)||/กับดักปลา|ไซดักปลา/.test(c.textContent)))c.remove()});
+    if(grid.querySelector(".r15-fish-trap-shop"))return;const s=ensureFishTrapState(own()),active=activeTrapCount(s),bag=admin()?9999:i(s?.specials?.[FT_KEY]),remain=admin()?99:Math.max(0,FT_MAX-(active+bag));
+    const c=document.createElement("article");c.className="shop-card ynu-shop-card r15-fish-trap-shop";c.innerHTML=`<div class="ynu-shop-image-box"><img src="${FT_IMAGE}" alt="ไซดักปลา"></div><h3>ไซดักปลา</h3><small>ใช้เฉพาะฟาร์ม 1 • อายุ 3 วัน • ดักรอบละ 10 นาที</small><div class="ynu-shop-price">🙏 ${FT_PRICE} กุศล / อัน</div><small>${admin()?"Aida stock ×9999":`ในกระเป๋า ×${bag} • วางใช้อยู่ ${active}/3`}</small><label class="ynu-qty">จำนวน <input id="r15FishTrapBuyQty" type="number" min="1" max="${Math.max(1,remain)}" value="1" ${remain<=0&&!admin()?"disabled":""}></label><button id="r15FishTrapBuyBtn" class="ynu-buy-btn" type="button" ${remain<=0&&!admin()?"disabled":""}>${admin()?"สต๊อก 9999":remain>0?"ซื้อด้วยกุศล":"มีครบ 3 อันแล้ว"}</button>`;grid.prepend(c);$r("r15FishTrapBuyBtn").onclick=()=>buyFishTrap($r("r15FishTrapBuyQty")?.value||1);
+  }
+  const r15ShopBase=showShop;showShop=function(tab){
+    const r=r15ShopBase.apply(this,arguments);
+    if(tab==="specials"){
+      const paint=()=>{try{appendFishTrapShop()}catch(_){ }};
+      setTimeout(paint,0);setTimeout(paint,80);setTimeout(paint,240);
+      if(r&&typeof r.finally==="function")r.finally(paint);
+    }
+    return r;
+  };
+
+  /* ---------- 9) Fish-trap Farm 1 runtime ---------- */
+  function rollFishTrapRewards(){
+    const species=["fish","frog","shrimp","crab","urchin"],total=1+Math.floor(Math.random()*4),kindCount=total===1?1:2+Math.floor(Math.random()*(Math.min(total,4)-1));
+    const shuffled=species.slice().sort(()=>Math.random()-.5).slice(0,Math.min(kindCount,species.length));const rows=shuffled.map(kind=>({key:`${kind}${1+Math.floor(Math.random()*4)}`,qty:1}));let left=total-rows.length;while(left-->0)rows[Math.floor(Math.random()*rows.length)].qty++;
+    return rows.map(normReward).filter(Boolean);
+  }
+  function fmtTrap(ms){const sec=Math.max(0,Math.ceil(n(ms)/1000)),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return h>0?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
+  function trapLayer(){let l=$r("r15FishTrapLayer");if(!l){l=document.createElement("div");l.id="r15FishTrapLayer";l.className="r15-fish-trap-layer hidden";for(let idx=0;idx<3;idx++){const b=document.createElement("button");b.type="button";b.className="r15-fish-trap-slot empty";b.dataset.r15FishTrapSlot=String(idx);b.setAttribute("aria-label",`จุดวางไซดักปลา ${idx+1}`);l.appendChild(b)}$r("gameScreen")?.appendChild(l)}return l}
+  function cleanupExpiredTraps(s,t=stamp()){
+    let changed=false;ensureFishTrapState(s).fishTraps.forEach((trap,idx)=>{if(!trap)return;if(t<trap.expiresAt)return;const ready=trap.readyAt>0&&t>=trap.readyAt&&trap.readyAt<=trap.expiresAt&&trap.rewards?.length;if(!ready){s.fishTraps[idx]=null;changed=true}});return changed;
+  }
+  function renderFishTraps(){
+    const layer=trapLayer(),visible=farmOneVisible();layer.classList.toggle("hidden",!visible);if(!visible)return;
+    const s=ensureFishTrapState(own());if(!s)return;const t=stamp(),expiredChanged=cleanupExpiredTraps(s,t);if(expiredChanged){try{saveLocalOnly(s);save()}catch(_){ }}
+    [...layer.querySelectorAll("[data-r15-fish-trap-slot]")].forEach((b,idx)=>{const trap=s.fishTraps[idx];b.className="r15-fish-trap-slot";b.innerHTML="";b.onclick=null;
+      if(!trap){b.classList.add("empty");b.setAttribute("aria-label",`จุดวางไซดักปลา ${idx+1} • ว่าง`);b.onclick=()=>showPlaceTrap(idx);return}
+      const ready=trap.readyAt>0&&t>=trap.readyAt&&trap.rewards?.length>0;b.classList.toggle("ready",ready);b.setAttribute("aria-label",ready?`ไซช่อง ${idx+1} พร้อมเก็บแล้ว`:`ไซช่อง ${idx+1} กำลังดักสัตว์น้ำ`);
+      const trapImg=`<img class="r15-fish-trap-img" src="${FT_IMAGE}" alt="ไซดักปลา">`;
+      if(ready){const icons=trap.rewards.map(r=>{const meta=COCONUT_RIVER_ITEMS?.[r.key];return meta?`<span><img src="${meta.image}" alt="${html(meta.name)}"><i>${i(r.qty)>1?`×${i(r.qty)}`:""}</i></span>`:""}).join("");b.innerHTML=`${trapImg}<span class="r15-trap-reward-icons">${icons}</span><small class="r15-trap-ready">พร้อมเก็บแล้ว</small>`;b.onclick=()=>showTrapClaim(idx)}
+      else{const left=trap.readyAt>t?trap.readyAt-t:Math.max(0,trap.expiresAt-t),label=trap.readyAt>t?fmtTrap(left):`หมดอายุ ${fmtTrap(left)}`;b.innerHTML=`${trapImg}<small class="r15-trap-timer">${label}</small>`;b.onclick=()=>removeTrapPrompt(idx)}
+    });
+  }
+  function showPlaceTrap(idx){
+    const s=ensureFishTrapState(own());if(!s||s.fishTraps[idx])return renderFishTraps();const have=admin()?9999:i(s.specials?.[FT_KEY]);if(have<=0)return message("ไม่มีไซดักปลา","ตอนนี้ไม่มีไซดักปลาในกระเป๋าค่ะ");
+    $r("modalContent").innerHTML=`<section class="feature-panel r15-fish-trap-place"><img src="${FT_IMAGE}" alt="ไซดักปลา"><h2>วางไซดักปลา • ช่อง ${idx+1}</h2><p>มีในกระเป๋า <b>×${have}</b></p><small>วางแล้วเริ่มนับ 10 นาทีทันที • ไซมีอายุ 3 วัน</small><button id="r15ConfirmPlaceTrap" class="primary-spooky-action" type="button">วางไซช่อง ${idx+1}</button></section>`;openModal();$r("r15ConfirmPlaceTrap").onclick=()=>placeTrap(idx);
+  }
+  function placeTrap(idx){
+    const s=ensureFishTrapState(own());if(!s||s.fishTraps[idx])return;if(!admin()&&i(s.specials?.[FT_KEY])<1)return message("ไม่มีไซดักปลา","ตอนนี้ไม่มีไซดักปลาในกระเป๋าค่ะ");const t=stamp();if(!admin())s.specials[FT_KEY]-=1;else s.specials[FT_KEY]=9999;s.fishTraps[idx]={id:`ft-${currentMemberKey||"p"}-${t}-${idx}`,slot:idx+1,placedAt:t,expiresAt:t+FT_LIFE_MS,cycleStartedAt:t,readyAt:t+FT_ROUND_MS,rewards:rollFishTrapRewards()};closeModal();localCommit(s,{paint:false});renderFishTraps();showWeatherToast(`🪤 วางไซช่อง ${idx+1} แล้ว • 10:00`);
+  }
+  function removeTrapPrompt(idx){const s=ensureFishTrapState(own()),trap=s?.fishTraps?.[idx];if(!trap)return;if(!confirm("ต้องการนำไซออก ใช่หรือไม่"))return;s.fishTraps[idx]=null;if(admin())s.specials[FT_KEY]=9999;localCommit(s,{paint:false});renderFishTraps();showWeatherToast("🪤 นำไซออกแล้ว • ไซอันนี้สิ้นสุดการใช้งาน")}
+  function showTrapClaim(idx){
+    const s=ensureFishTrapState(own()),trap=s?.fishTraps?.[idx],t=stamp();if(!trap||trap.readyAt>t||!trap.rewards?.length)return renderFishTraps();const rows=trap.rewards.map(r=>({r,meta:COCONUT_RIVER_ITEMS?.[r.key]})).filter(x=>x.meta);$r("modalContent").innerHTML=`<section class="feature-panel r15-fish-trap-claim"><h2>🎣 ยินดีด้วยค่ะ คุณได้รับสัตว์น้ำ</h2><div class="r14-fish-reward-grid">${rows.map(({r,meta})=>`<div><img src="${meta.image}" alt="${html(meta.name)}"><b>${html(meta.name)}</b><small>×${i(r.qty)}</small></div>`).join("")}</div><button id="r15ClaimTrapReward" class="primary-spooky-action" type="button">รับเข้ากระเป๋า</button></section>`;openModal();$r("r15ClaimTrapReward").onclick=()=>claimTrap(idx);
+  }
+  function claimTrap(idx){
+    const s=ensureFishTrapState(own()),trap=s?.fishTraps?.[idx],t=stamp();if(!trap||trap.readyAt>t||!trap.rewards?.length)return; s.coconutRiverItems=s.coconutRiverItems&&typeof s.coconutRiverItems==="object"?s.coconutRiverItems:{};trap.rewards.forEach(r=>s.coconutRiverItems[r.key]=i(s.coconutRiverItems[r.key])+i(r.qty));const expired=t>=trap.expiresAt;
+    if(expired)s.fishTraps[idx]=null;else if(t+FT_ROUND_MS<=trap.expiresAt){trap.cycleStartedAt=t;trap.readyAt=t+FT_ROUND_MS;trap.rewards=rollFishTrapRewards()}else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
+    if(admin())s.specials[FT_KEY]=9999;closeModal();localCommit(s,{paint:false});renderFishTraps();message("🎣 รับเรียบร้อย","สัตว์น้ำทั้งหมดเข้ากระเป๋าแล้วค่ะ"+(expired?"<br>ไซครบอายุ 3 วันและถูกนำออกแล้ว":"<br>ไซเริ่มนับรอบใหม่แล้ว"));
+  }
+
+  /* ---------- 10) Global UI/performance polish + rebind after legacy draw ---------- */
+  function applyR15(){
+    polishHudAndLegacy();polishHotelToolsR15();polishTroughDomR15();renderFishTraps();
+    try{if(admin()&&ownState){ensureFishTrapState(ownState);ownState.specials[FT_KEY]=9999}}catch(_){ }
+  }
+  const drawR15Base=draw;draw=function(){const r=drawR15Base.apply(this,arguments);requestAnimationFrame(applyR15);return r};
+  document.addEventListener("pointerdown",e=>{const nav=$r("s2MainNav");if(nav&&nav.classList.contains("is-collapsed")){nav.style.pointerEvents="none";nav.querySelector(".r14-main-nav-toggle")?.style.setProperty("pointer-events","auto")}},true);
+  document.addEventListener("click",e=>{const nav=$r("s2MainNav");if(nav)setTimeout(()=>{nav.style.pointerEvents=nav.classList.contains("is-collapsed")?"none":"auto";nav.querySelector(".r14-main-nav-toggle")?.style.setProperty("pointer-events","auto")},0)},true);
+  document.addEventListener("click",e=>{if(e.target.closest?.("#mainDogHotelBtn,#s2HotelToolRail,.s2-hotel-tool-toggle"))setTimeout(polishHotelToolsR15,40)},true);
+  setInterval(()=>{try{polishHudAndLegacy();polishHotelToolsR15();polishTroughDomR15();renderFishTraps()}catch(_){ }},1000);
+  setTimeout(applyR15,100);
+
+  globalThis.YN_R15={BUILD,openMarket:openMarketR15,renderFishTraps,buyFishTrap,ensureFishTrapState};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
