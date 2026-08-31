@@ -23174,3 +23174,179 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* ================================================================
+   R16 — HOUSE + HOME FOOD + FORTUNE + HEDGEHOG + POST-R15 STABILITY
+   Build: S2-R16-HOUSE-HEDGEHOG-STABILITY
+   ================================================================ */
+(()=>{
+  const BUILD="S2-R16-HOUSE-HEDGEHOG-STABILITY";
+  const $16=id=>document.getElementById(id);
+  const isAdmin16=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const now16=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const safe16=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  const clone16=v=>typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v));
+  const own16=()=>ownState||state;
+  const int16=v=>Math.max(0,Math.floor(Number(v)||0));
+  const dayKey16=(t=now16())=>{const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+
+  /* ---------- persistent new state ---------- */
+  const HOME_FOODS={
+    hf1:{name:"ข้าวผัดไข่เปรต",image:"home-food-01-ghost-egg-fried-rice.png",chance:45,products:{egg:20,shadowPork:15},crops:{morning:30,chili:20}},
+    hf2:{name:"ซุปทรัฟเฟิลหลอน",image:"home-food-02-haunted-truffle-soup.png",chance:40,products:{truffle:20,deathMistCream:15},crops:{cabbage:30,pumpkin:25}},
+    hf3:{name:"ปลาผีย่างเกล็ดจันทร์",image:"home-food-03-moon-scale-ghost-fish.png",chance:35,products:{fishMeat:25,darkMoonScale:12},crops:{mango:25,chili:25}},
+    hf4:{name:"สตูว์คากิทองนรก",image:"home-food-04-infernal-trotter-stew.png",chance:30,products:{infernalGoldenTrotter:15,shadowPork:20,truffle:15},crops:{pumpkin:35,cabbage:25}},
+    hf5:{name:"ไข่อบชีสสุริยคราส",image:"home-food-06-eclipse-cheese-egg-bake.png",chance:35,products:{egg:20,eclipseCheese:15,milk:15},crops:{morning:25,strawberry:20}},
+    hf6:{name:"น่องไก่คืนชีพอบครีม",image:"home-food-05-revived-drumstick-cream.png",chance:25,products:{revivedDrumstick:18,deathMistCream:15,eclipseCheese:12},crops:{mango:30,grape:25}},
+    hf7:{name:"ไข่ปลาลวงตาราดนมอาฆาต",image:"home-food-07-illusion-roe-milk.png",chance:25,products:{illusionRoe:18,milk:20,darkMoonScale:12},crops:{lychee:30,gooseberry:25}},
+    hf8:{name:"จานรวมวิญญาณต้องห้าม",image:"home-food-08-forbidden-spirit-platter.png",chance:15,products:{hellFeather:15,darkMoonScale:15,infernalGoldenTrotter:15,eclipseCheese:15},crops:{banana:30,gooseberry:30,grape:25,strawberry:25}}
+  };
+  const HEDGE_ITEMS={
+    fang:{name:"เขี้ยวเม่น",image:"hedgehog-fang.png"},
+    fur:{name:"ขนเม่น",image:"hedgehog-fur.png"},
+    claw:{name:"เล็บเม่น",image:"hedgehog-claw.png"},
+    tail:{name:"หางเม่น",image:"hedgehog-tail.png"}
+  };
+  const FORTUNES=[
+    {id:"merit",name:"ดวงเศรษฐีมาเยือน",text:"วันนี้กุศลจากระบบที่รองรับเพิ่ม 10%",icon:"🙏"},
+    {id:"growth",name:"ดวงชาวสวนมือทอง",text:"พืชที่ปลูกวันนี้เติบโตเร็วขึ้น 10%",icon:"🌱"},
+    {id:"fish",name:"ดวงนักตกปลาผู้โชคดี",text:"มีโอกาส 15% ได้สัตว์น้ำเพิ่มจากไซดักปลา",icon:"🎣"},
+    {id:"pet",name:"ดวงสัตว์เลี้ยงเอ็นดู",text:"รอบดรอปสัตว์ที่กำลังรออยู่เร็วขึ้น 15%",icon:"🐾"},
+    {id:"craft",name:"ดวงนักคราฟท์เทพ",text:"โอกาสคราฟอาหารบ้านสำเร็จเพิ่ม 10%",icon:"🍳"},
+    {id:"boat",name:"ดวงเรือพาโชค",text:"ส่งเสบียงเรือมีโอกาส 15% ได้ความคืบหน้าเพิ่มอีก 1",icon:"🚣"},
+    {id:"treasure",name:"ดวงขุมทรัพย์ลับ",text:"ของดรอปเม่นมีโอกาส 10% ได้เพิ่มอีก 1 ชิ้น",icon:"🎁"},
+    {id:"friend",name:"ดวงเพื่อนรักมาเยือน",text:"กิจกรรมเยี่ยมเพื่อนของวันนี้ได้รับโบนัสกุศล 10% ในจุดที่รองรับ",icon:"👭"},
+    {id:"neutral",name:"ดวงวันนี้กลาง ๆ",text:"รับกุศลปลอบใจ +20 ทันที",icon:"🌤️"},
+    {id:"unlucky",name:"ดวงซวยนิด ๆ แต่ยังน่ารัก",text:"โอกาสคราฟอาหารบ้านลดลง 5% วันนี้",icon:"🫠"}
+  ];
+  function ensureR16State(s){
+    if(!s||typeof s!=="object")return s;
+    s.homeFoods=s.homeFoods&&typeof s.homeFoods==="object"?s.homeFoods:{};Object.keys(HOME_FOODS).forEach(k=>s.homeFoods[k]=int16(s.homeFoods[k]));
+    s.hedgehogItems=s.hedgehogItems&&typeof s.hedgehogItems==="object"?s.hedgehogItems:{};Object.keys(HEDGE_ITEMS).forEach(k=>s.hedgehogItems[k]=int16(s.hedgehogItems[k]));
+    s.houseFortune=s.houseFortune&&typeof s.houseFortune==="object"?s.houseFortune:{day:"",id:"",at:0};
+    s.houseFortune.day=String(s.houseFortune.day||"");s.houseFortune.id=String(s.houseFortune.id||"");s.houseFortune.at=Number(s.houseFortune.at)||0;
+    s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};
+    s.hedgehog.enabled=Boolean(s.hedgehog.enabled);s.hedgehog.lastDropAt=Number(s.hedgehog.lastDropAt)||now16();
+    s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map(d=>({id:String(d.id||`hd-${Math.random()}`),type:HEDGE_ITEMS[d.type]?d.type:"fur",room:["bedroom","kitchen","living","basement"].includes(d.room)?d.room:"living",x:Number(d.x)||50,y:Number(d.y)||80,at:Number(d.at)||now16()})):[];
+    if(isAdmin16()){
+      Object.keys(HOME_FOODS).forEach(k=>s.homeFoods[k]=9999);
+      Object.keys(HEDGE_ITEMS).forEach(k=>s.hedgehogItems[k]=9999);
+    }
+    return s;
+  }
+  const norm16Base=normalizeState;normalizeState=function(raw,player){return ensureR16State(norm16Base(raw,player))};
+  const fresh16Base=fresh;fresh=function(player){return ensureR16State(fresh16Base(player))};
+  if(typeof ensureAdminStock==="function"){
+    const admin16Base=ensureAdminStock;ensureAdminStock=function(s){const r=admin16Base(s);ensureR16State(s);if(isAdmin16()){Object.keys(HOME_FOODS).forEach(k=>s.homeFoods[k]=9999);Object.keys(HEDGE_ITEMS).forEach(k=>s.hedgehogItems[k]=9999)}return r};
+  }
+
+  function commit16(s,{flush=false,drawNow=false}={}){if(!s)return;ensureR16State(s);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}if(drawNow)try{draw()}catch(_){}if(flush)setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},0)}
+
+  /* ---------- inventory + transfer support ---------- */
+  if(typeof addGiftItemToState==="function"){
+    const add16=addGiftItemToState;addGiftItemToState=function(s,g){ensureR16State(s);const type=g?.itemType||g?.type,key=g?.itemKey||g?.key,qty=Math.max(1,int16(g?.qty)||1);if(type==="homeFood"&&HOME_FOODS[key]){s.homeFoods[key]+=qty;return}if(type==="hedgehogItem"&&HEDGE_ITEMS[key]){s.hedgehogItems[key]+=qty;return}return add16(s,g)};
+  }
+  if(typeof removeGiftItemFromState==="function"){
+    const rem16=removeGiftItemFromState;removeGiftItemFromState=function(s,type,key,qty){ensureR16State(s);qty=Math.max(1,int16(qty)||1);if(type==="homeFood"&&HOME_FOODS[key]){if(isAdmin16()){s.homeFoods[key]=9999;return true}if(s.homeFoods[key]<qty)return false;s.homeFoods[key]-=qty;return true}if(type==="hedgehogItem"&&HEDGE_ITEMS[key]){if(isAdmin16()){s.hedgehogItems[key]=9999;return true}if(s.hedgehogItems[key]<qty)return false;s.hedgehogItems[key]-=qty;return true}return rem16(s,type,key,qty)};
+  }
+  if(typeof adminGiftCatalog==="function"){
+    const cat16=adminGiftCatalog;adminGiftCatalog=function(){const list=cat16();Object.entries(HOME_FOODS).forEach(([k,x])=>{if(!list.some(e=>e.type==="homeFood"&&e.key===k))list.push({type:"homeFood",key:k,name:x.name})});Object.entries(HEDGE_ITEMS).forEach(([k,x])=>{if(!list.some(e=>e.type==="hedgehogItem"&&e.key===k))list.push({type:"hedgehogItem",key:k,name:x.name})});return list};
+  }
+  if(typeof adminEntryCount==="function"){
+    const cnt16=adminEntryCount;adminEntryCount=function(s,e){ensureR16State(s);if(e?.type==="homeFood")return isAdmin16()?9999:int16(s.homeFoods[e.key]);if(e?.type==="hedgehogItem")return isAdmin16()?9999:int16(s.hedgehogItems[e.key]);return cnt16(s,e)};
+  }
+  if(typeof v240MemberGiftEntriesFull==="function"){
+    const gift16=v240MemberGiftEntriesFull;v240MemberGiftEntriesFull=function(s=own16()){s=ensureR16State(s);const rows=gift16(s),seen=new Set(rows.map(r=>`${r.type}:${r.key}`));Object.entries(HOME_FOODS).forEach(([k,x])=>{const q=int16(s.homeFoods[k]);if(q>0&&!seen.has(`homeFood:${k}`))rows.push({type:"homeFood",key:k,name:x.name,image:x.image,count:q,qty:q,category:"อาหารบ้าน"})});Object.entries(HEDGE_ITEMS).forEach(([k,x])=>{const q=int16(s.hedgehogItems[k]);if(q>0&&!seen.has(`hedgehogItem:${k}`))rows.push({type:"hedgehogItem",key:k,name:x.name,image:x.image,count:q,qty:q,category:"ของเม่น"})});return rows};
+  }
+  const inv16Base=inventory;inventory=function(tab="crops"){
+    const s=ensureR16State(own16());
+    if(tab==="homeFoods"||tab==="hedgehogItems"){
+      const meta=tab==="homeFoods"?HOME_FOODS:HEDGE_ITEMS,title=tab==="homeFoods"?"🍳 อาหารบ้าน":"🦔 ของเม่น";
+      const body=Object.entries(meta).map(([k,x])=>`<div class="inventory-item"><img src="${x.image}" alt="${safe16(x.name)}"><span>${safe16(x.name)}</span><b>×${int16(s[tab][k])}</b></div>`).join("");
+      $16("modalContent").innerHTML=`<section class="feature-panel inventory-panel r16-scroll-panel"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2"><button data-inventory-tab="crops">🌱 พืชพรรณ</button><button data-inventory-tab="homeFoods" class="${tab==="homeFoods"?"active":""}">🍳 อาหารบ้าน</button><button data-inventory-tab="hedgehogItems" class="${tab==="hedgehogItems"?"active":""}">🦔 ของเม่น</button></div><h3 class="r16-mini-title">${title}</h3><div class="inventory-grid">${body}</div></section>`;document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));openModal();return;
+    }
+    const r=inv16Base(tab);requestAnimationFrame(()=>{const tabs=document.querySelector(".inventory-tabs");if(tabs&&!tabs.querySelector('[data-inventory-tab="homeFoods"]')){const a=document.createElement("button");a.type="button";a.dataset.inventoryTab="homeFoods";a.textContent="🍳 อาหารบ้าน";a.onclick=()=>inventory("homeFoods");tabs.appendChild(a)}if(tabs&&!tabs.querySelector('[data-inventory-tab="hedgehogItems"]')){const a=document.createElement("button");a.type="button";a.dataset.inventoryTab="hedgehogItems";a.textContent="🦔 ของเม่น";a.onclick=()=>inventory("hedgehogItems");tabs.appendChild(a)}});return r;
+  };
+
+  /* ---------- house UI ---------- */
+  let houseMode16="main",hedgehogMoveTimer16=0,hedgehogFrameTimer16=0;
+  const HOUSE_BG_MAIN="house-interior-season2.jpeg",HOUSE_BG_BASE="house-basement-season2.jpeg";
+  function setHouseBg16(mode){const sc=$16("sceneScreen");if(!sc)return;sc.style.backgroundImage=`url("${mode==="basement"?HOUSE_BG_BASE:HOUSE_BG_MAIN}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
+  function compactMsg16(title,text){$16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal"><h2>${title}</h2><p>${text}</p></section>`;openModal()}
+
+  function recipeNeedHTML16(r){const s=ensureR16State(own16());const rows=[];Object.entries(r.products).forEach(([k,q])=>{const m=ANIMAL_PRODUCTS?.[k]||{name:k,image:""};rows.push(`<div><img src="${m.image||""}"><span>${safe16(m.name)}</span><b>${int16(s.animalProducts?.[k])}/${q}</b></div>`)});Object.entries(r.crops).forEach(([k,q])=>{const m=CROPS?.[k]||{name:k,selectImg:""};rows.push(`<div><img src="${m.selectImg||m.readyImg||""}"><span>${safe16(m.name)}</span><b>${int16(s.bag?.[k])}/${q}</b></div>`)});return rows.join("")}
+  function effectiveCraftChance16(r){const f=ensureR16State(own16()).houseFortune;if(f.day!==dayKey16())return r.chance;return Math.max(1,Math.min(95,r.chance+(f.id==="craft"?10:0)-(f.id==="unlucky"?5:0)))}
+  function openHomeKitchen16(){
+    const s=ensureR16State(own16());$16("modalContent").innerHTML=`<section class="feature-panel r16-home-kitchen r16-scroll-panel"><h2>🍳 อาหารบ้าน</h2><p class="feature-subtitle">อาหารบ้าน Season 2 • ใช้เป็นเสบียงเรือทั้ง 4 ลำ</p><div class="r16-home-food-grid">${Object.entries(HOME_FOODS).map(([k,r])=>`<button type="button" data-r16-food="${k}"><img src="${r.image}" alt="${safe16(r.name)}"><span><b>${safe16(r.name)}</b><small>สำเร็จ ${effectiveCraftChance16(r)}% • มี ×${int16(s.homeFoods[k])}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r16-food]").forEach(b=>b.onclick=()=>openHomeRecipe16(b.dataset.r16Food));openModal();
+  }
+  function openHomeRecipe16(key){const r=HOME_FOODS[key],s=ensureR16State(own16());if(!r)return;$16("modalContent").innerHTML=`<section class="feature-panel r16-home-recipe r16-scroll-panel"><img class="r16-food-hero" src="${r.image}" alt="${safe16(r.name)}"><h2>${safe16(r.name)}</h2><div class="r16-chance-pill">โอกาสคราฟสำเร็จ ${effectiveCraftChance16(r)}%</div><div class="r16-need-grid">${recipeNeedHTML16(r)}</div><div class="r16-qty-row"><button id="r16QtyMinus" type="button">−</button><strong id="r16CraftQty">1</strong><button id="r16QtyPlus" type="button">＋</button></div><small>คราฟได้ครั้งละ 1–10 ชิ้น • ถ้าพลาดหักวัตถุดิบ 50%</small><button id="r16CraftHomeFood" class="primary-spooky-action" type="button">คราฟ</button><button id="r16BackKitchen" class="secondary-action" type="button">กลับเมนูอาหารบ้าน</button></section>`;let q=1;const paint=()=>{$16("r16CraftQty").textContent=String(q);$16("r16QtyMinus").disabled=q<=1;$16("r16QtyPlus").disabled=q>=10};$16("r16QtyMinus").onclick=()=>{q=Math.max(1,q-1);paint()};$16("r16QtyPlus").onclick=()=>{q=Math.min(10,q+1);paint()};$16("r16CraftHomeFood").onclick=()=>craftHomeFood16(key,q);$16("r16BackKitchen").onclick=openHomeKitchen16;paint();openModal()}
+  function enoughForFull16(s,r,qty){return Object.entries(r.products).every(([k,n])=>int16(s.animalProducts?.[k])>=n*qty)&&Object.entries(r.crops).every(([k,n])=>int16(s.bag?.[k])>=n*qty)}
+  function craftHomeFood16(key,qty){
+    qty=Math.max(1,Math.min(10,int16(qty)||1));const r=HOME_FOODS[key],s=ensureR16State(own16());if(!r)return;if(!isAdmin16()&&!enoughForFull16(s,r,qty))return message("วัตถุดิบยังไม่ครบ",`ต้องมีวัตถุดิบพอสำหรับ ${qty} ชิ้นก่อนเริ่มคราฟค่ะ`);
+    const chance=effectiveCraftChance16(r);let success=0,fail=0;for(let x=0;x<qty;x++){const ok=Math.random()*100<chance;ok?success++:fail++;if(!isAdmin16()){const factor=ok?1:.5;Object.entries(r.products).forEach(([k,n])=>s.animalProducts[k]=Math.max(0,(Number(s.animalProducts[k])||0)-Math.ceil(n*factor)));Object.entries(r.crops).forEach(([k,n])=>s.bag[k]=Math.max(0,(Number(s.bag[k])||0)-Math.ceil(n*factor)))} }
+    if(success)s.homeFoods[key]+=success;if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});
+    $16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-craft-result"><img src="${r.image}" alt="${safe16(r.name)}"><h2>${success?"✨ คราฟเสร็จแล้วค่ะ":"💨 คราฟไม่สำเร็จ"}</h2><p><b>${safe16(r.name)}</b></p><div class="r16-result-chips"><span>สำเร็จ ${success}</span><span>ไม่สำเร็จ ${fail}</span></div><small>ชิ้นที่สำเร็จเข้ากระเป๋า → อาหารบ้านแล้ว • ชิ้นที่พลาดหักวัตถุดิบ 50%</small><button id="r16CraftResultDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;$16("r16CraftResultDone").onclick=openHomeKitchen16;openModal();
+  }
+
+  function fortune16(){const s=ensureR16State(own16()),today=dayKey16();if(s.houseFortune.day===today&&s.houseFortune.id){return compactMsg16("🔮 ดูดวงวันนี้",`คุณดูดวงของวันนี้ไปแล้ว จะกดอีกหาพระแสงอะไรคะ ไปนอน<br><small>${safe16(FORTUNES.find(x=>x.id===s.houseFortune.id)?.name||"")}</small>`)}const f=FORTUNES[Math.floor(Math.random()*FORTUNES.length)];s.houseFortune={day:today,id:f.id,at:now16()};if(f.id==="neutral"&&!isAdmin16())s.merit=(Number(s.merit)||0)+20;if(f.id==="pet")acceleratePetDrops16(s,.15);if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});updateMeritUI?.();$16("modalContent").innerHTML=`<section class="feature-panel r16-fortune-modal"><div class="r16-fortune-orb">${f.icon}</div><h2>${safe16(f.name)}</h2><p>${safe16(f.text)}</p><small>ดวงนี้มีผลจริงจนถึง 00:00 น. และจะยังอยู่แม้ออกจากเกมค่ะ</small></section>`;openModal();applyFortunePersistent16(s)}
+  function acceleratePetDrops16(s,p){const t=now16();[...(s.dogs||[]),...(s.cats||[])].forEach(x=>{if(Number(x.nextDropAt)>t)x.nextDropAt=t+(x.nextDropAt-t)*(1-p)});(s.alpaca?.pens||[]).forEach(pn=>(pn.alpacas||[]).forEach(x=>{if(Number(x.nextDropAt)>t)x.nextDropAt=t+(x.nextDropAt-t)*(1-p)}))}
+  function applyFortunePersistent16(s=ensureR16State(own16())){if(!s)return;const today=dayKey16();if(s.houseFortune.day!==today)return;let changed=false;if(s.houseFortune.id==="growth"){(s.plots||[]).forEach(p=>{if(!p?.crop||!Number(p.phaseEndsAt)||p.r16FortuneGrowthDay===today)return;const t=now16();if(p.phaseEndsAt>t)p.phaseEndsAt=t+(p.phaseEndsAt-t)*.9;p.r16FortuneGrowthDay=today;changed=true})}if(changed)commit16(s)}
+
+  /* ---------- Hedgehog ---------- */
+  const DROP_MS16=30*60*1000;
+  const HEDGE_SPRITES={idle:"hedgehog-idle.png",side:"hedgehog-walk-side.png",back:"hedgehog-walk-back.png",eat:"hedgehog-eat.png",sleep:"hedgehog-sleep.png",action:"hedgehog-action.png"};
+  const roomRanges16={bedroom:{x:[20,80],y:[8,30]},kitchen:{x:[18,82],y:[38,62]},living:{x:[17,83],y:[72,92]},basement:{x:[20,80],y:[20,88]}};
+  function randBetween16(a,b){return a+Math.random()*(b-a)}
+  function makeHedgeDrop16(s,at=now16()){const types=Object.keys(HEDGE_ITEMS),rooms=["bedroom","kitchen","living","basement"],room=rooms[Math.floor(Math.random()*rooms.length)],rg=roomRanges16[room],type=types[Math.floor(Math.random()*types.length)];s.hedgehog.drops.push({id:`hd-${at}-${Math.random().toString(36).slice(2,7)}`,type,room,x:randBetween16(...rg.x),y:randBetween16(...rg.y),at});if(s.houseFortune?.day===dayKey16()&&s.houseFortune.id==="treasure"&&Math.random()<.10){const type2=types[Math.floor(Math.random()*types.length)];s.hedgehog.drops.push({id:`hd-${at}-b-${Math.random().toString(36).slice(2,7)}`,type:type2,room,x:randBetween16(...rg.x),y:randBetween16(...rg.y),at})}}
+  function processHedgeDrops16(s=ensureR16State(own16())){if(!s?.hedgehog?.enabled)return false;const t=now16();let last=Number(s.hedgehog.lastDropAt)||t,changed=false;while(t-last>=DROP_MS16){last+=DROP_MS16;makeHedgeDrop16(s,last);changed=true}s.hedgehog.lastDropAt=last;if(changed)commit16(s,{flush:true});return changed}
+  function renderHedgeDrops16(){const layer=$16("r16HedgeDropLayer"),s=ensureR16State(own16());if(!layer||!s)return;processHedgeDrops16(s);const rooms=houseMode16==="basement"?["basement"]:["bedroom","kitchen","living"];layer.innerHTML=s.hedgehog.drops.filter(d=>rooms.includes(d.room)).map(d=>{const m=HEDGE_ITEMS[d.type];return `<button class="r16-hedge-drop" type="button" data-r16-hdrop="${safe16(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe16(m.name)}"></button>`}).join("")}
+  function collectAllHedge16(){const s=ensureR16State(own16()),drops=s.hedgehog.drops.slice();if(!drops.length)return compactMsg16("🦔 ของเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{s.hedgehogItems[d.type]+=1;got[d.type]=(got[d.type]||0)+1});s.hedgehog.drops=[];if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});renderHedgeDrops16();$16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-hedge-collect"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS[k].image}"><b>${safe16(HEDGE_ITEMS[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ของทั้งหมดเข้า กระเป๋า → ของเม่น เรียบร้อยแล้ว ต่อให้กด × ปิดหน้าต่าง ของก็ถูกบันทึกแล้วค่ะ</small><button id="r16HedgeCollectDone" class="primary-spooky-action">รับทราบ</button></section>`;$16("r16HedgeCollectDone").onclick=closeModal;openModal()}
+  function stopHedgeMotion16(){clearTimeout(hedgehogMoveTimer16);clearInterval(hedgehogFrameTimer16);hedgehogMoveTimer16=0;hedgehogFrameTimer16=0}
+  function animateHedgeSheet16(el,sheet="side"){if(!el)return;let f=0;el.style.backgroundImage=`url("${HEDGE_SPRITES[sheet]}")`;el.style.backgroundSize="400% 400%";clearInterval(hedgehogFrameTimer16);hedgehogFrameTimer16=setInterval(()=>{f=(f+1)%16;const c=f%4,r=Math.floor(f/4);el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`},150)}
+  function wanderHedge16(){const el=$16("r16Hedgehog");if(!el||currentScene!=="house")return;const rg=houseMode16==="basement"?roomRanges16.basement:roomRanges16[["bedroom","kitchen","living"][Math.floor(Math.random()*3)]],x=randBetween16(...rg.x),y=randBetween16(...rg.y),oldX=parseFloat(el.style.left)||50;el.classList.toggle("face-left",x<oldX);animateHedgeSheet16(el,"side");el.style.transition="left 4.6s linear, top 4.6s linear";requestAnimationFrame(()=>{el.style.left=`${x}%`;el.style.top=`${y}%`});hedgehogMoveTimer16=setTimeout(()=>{clearInterval(hedgehogFrameTimer16);animateHedgeSheet16(el,"idle");hedgehogMoveTimer16=setTimeout(wanderHedge16,1300+Math.random()*1700)},4700)}
+  function enableHedge16(){const s=ensureR16State(own16());s.hedgehog.enabled=true;if(!Number(s.hedgehog.lastDropAt))s.hedgehog.lastDropAt=now16();commit16(s,{flush:true});renderHouseScene16()}
+
+  function renderHouseMain16(){
+    setHouseBg16("main");const layer=$16("sceneInteractiveLayer");if(!layer)return;const s=ensureR16State(own16());processHedgeDrops16(s);
+    layer.innerHTML=`
+      <button id="r16BedHotspot" class="r16-house-hotspot r16-bed-hotspot" type="button" aria-label="กิจกรรมบนเตียง"></button>
+      <button id="r16StoveHotspot" class="r16-house-hotspot r16-stove-hotspot" type="button" aria-label="อาหารบ้าน"></button>
+      <button id="r16FortuneHotspot" class="r16-house-hotspot r16-fortune-hotspot" type="button" aria-label="ดูดวงห้องรับแขก"></button>
+      <div id="r16HedgeDropLayer" class="r16-hedge-drop-layer"></div>
+      ${s.hedgehog.enabled?'<button id="r16Hedgehog" class="r16-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}
+      <div class="r16-house-actions"><button id="r16CollectHedge" type="button">🧺 เก็บทั้งหมด</button><button id="r16TestHedge" type="button">🦔 ทดสอบเม่น</button><button id="r16BasementBtn" type="button">⬇️ ห้องใต้ดิน</button></div>`;
+    $16("r16BedHotspot").onclick=showRestOptions;$16("r16StoveHotspot").onclick=openHomeKitchen16;$16("r16FortuneHotspot").onclick=fortune16;$16("r16CollectHedge").onclick=collectAllHedge16;$16("r16TestHedge").onclick=enableHedge16;$16("r16BasementBtn").onclick=()=>{houseMode16="basement";renderHouseScene16()};renderHedgeDrops16();if(s.hedgehog.enabled){const h=$16("r16Hedgehog");h.style.left="52%";h.style.top="82%";h.onclick=e=>{e.stopPropagation();const x=Math.max(15,Math.min(85,(e.clientX/window.innerWidth)*100));h.style.left=`${x}%`;animateHedgeSheet16(h,"side")};wanderHedge16()}
+  }
+  function renderHouseBasement16(){setHouseBg16("basement");const layer=$16("sceneInteractiveLayer"),s=ensureR16State(own16());processHedgeDrops16(s);layer.innerHTML=`<div id="r16HedgeDropLayer" class="r16-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r16Hedgehog" class="r16-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r16-house-actions"><button id="r16CollectHedge" type="button">🧺 เก็บทั้งหมด</button><button id="r16TestHedge" type="button">🦔 ทดสอบเม่น</button><button id="r16HouseUpBtn" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;$16("r16CollectHedge").onclick=collectAllHedge16;$16("r16TestHedge").onclick=enableHedge16;$16("r16HouseUpBtn").onclick=()=>{houseMode16="main";renderHouseScene16()};renderHedgeDrops16();if(s.hedgehog.enabled){const h=$16("r16Hedgehog");h.style.left="50%";h.style.top="82%";wanderHedge16()}}
+  function renderHouseScene16(){if(currentScene!=="house")return;stopHedgeMotion16();setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm});houseMode16==="basement"?renderHouseBasement16():renderHouseMain16();try{Y26_applyRestViewLock?.()}catch(_){} }
+  renderHouseScene=renderHouseScene16;
+  const open16Base=openScene;openScene=function(name){if(name!=="house")houseMode16="main";const r=open16Base.apply(this,arguments);if(name==="house")requestAnimationFrame(renderHouseScene16);return r};
+
+  /* ---------- Boat supplies now use 8 Home Foods ---------- */
+  showBoatSupplyPicker=function(boatNo){const race=boatRaceCache;if(!race)return;if(race.seasonLocked)return message("ซีซั่นจบแล้ว","ซีซั่นนี้มีผู้ชนะแล้ว รอ Aida รีเซ็ตค่ะ");const rem=boatCooldownRemaining(race,boatNo);if(rem>0)return message("เรือลำนี้ยังพักอยู่",`ส่งเรือ ${boatNo} ได้อีกใน ${formatHM(rem)}`);const s=ensureR16State(own16()),available=Object.entries(HOME_FOODS).filter(([k])=>int16(s.homeFoods[k])>0||isAdmin16());if(!available.length)return message("ไม่มีเสบียงเรือ","Season 2 ใช้เฉพาะอาหารบ้าน 8 เมนู กรุณาคราฟอาหารบ้านก่อนค่ะ");$16("modalContent").innerHTML=`<section class="feature-panel boat-supply-picker r16-boat-supply r16-scroll-panel"><h2>🚣 ส่งเสบียงให้เรือ ${boatNo}</h2><p class="feature-subtitle">Season 2 • เลือกอาหารบ้าน 1 จาน</p><div class="boat-supply-grid">${available.map(([k,x])=>`<button data-r16-boat-food="${k}" type="button"><img src="${x.image}" alt="${safe16(x.name)}"><b>${safe16(x.name)}</b><small>มี ×${isAdmin16()?9999:int16(s.homeFoods[k])}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r16-boat-food]").forEach(b=>b.onclick=()=>sendBoatSupply(boatNo,b.dataset.r16BoatFood));openModal()};
+  sendBoatSupply=async function(boatNo,foodKey){const food=HOME_FOODS[foodKey];if(!food||![1,2,3,4].includes(Number(boatNo))||guardResting())return;const s=ensureR16State(own16());if(!isAdmin16()&&int16(s.homeFoods[foodKey])<1)return message("ไม่มีเสบียง","อาหารบ้านเมนูนี้หมดแล้วค่ะ");const before=clone16(s),meritReward=typeof boatRewardRoll==="function"?boatRewardRoll():0;if(!isAdmin16())s.homeFoods[foodKey]-=1;else s.homeFoods[foodKey]=9999;commit16(s);closeModal();showWeatherToast(`🚣 ส่ง ${food.name} ให้เรือ ${boatNo} แล้ว • กำลังบันทึก…`);try{const {db,fs}=await getFirebaseContext(),raceRef=fs.doc(db,"shared","boatRace"),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,nextRace,winner=null;await fs.runTransaction(db,async tx=>{const [rs,ss]=await Promise.all([tx.get(raceRef),tx.get(saveRef)]);if(!rs.exists()||!ss.exists())throw new Error("ข้อมูลการแข่งขันยังไม่พร้อม");const race=normalizeBoatRace(rs.data()),st=ensureR16State(normalizeState(ss.data(),currentMember));assertCurrentCloudSession(ss.data(),currentMember);if(race.seasonLocked||race.winner)throw new Error("การแข่งขันจบแล้ว");const last=timestampMillis(race.cooldowns?.[currentMemberKey]?.[boatCooldownKey(boatNo)]),rem=Math.max(0,last+BOAT_COOLDOWN_MS-now16());if(rem>0)throw new Error(`เรือ ${boatNo} ต้องรออีก ${formatHM(rem)}`);if(!isAdmin16()&&int16(st.homeFoods[foodKey])<1)throw new Error("อาหารบ้านเมนูนี้หมดแล้ว");if(!isAdmin16())st.homeFoods[foodKey]-=1;else st.homeFoods[foodKey]=9999;const meritBonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="merit"?Math.ceil(meritReward*.10):0;if(!isAdmin16())st.merit=(Number(st.merit)||0)+meritReward+meritBonus;const k=boatProgressKey(boatNo),bonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="boat"&&Math.random()<.15?1:0;race[k]=Math.min(race.target,(Number(race[k])||0)+1+bonus);race.cooldowns=race.cooldowns||{};race.cooldowns[currentMemberKey]=race.cooldowns[currentMemberKey]||{};race.cooldowns[currentMemberKey][boatCooldownKey(boatNo)]=fs.serverTimestamp();if(race[k]>=race.target){race.winner=boatNo;race.seasonLocked=true;winner=boatNo}nextState=st;nextRace=race;tx.set(saveRef,{...clone16(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(raceRef,{...race,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);boatRaceCache=nextRace;drawBoatRace(nextRace);updateMeritUI?.();message("🚣 ส่งเสบียงสำเร็จ",`${safe16(food.name)} ถูกหักจากกระเป๋าแล้ว${meritReward?`<br>+${meritReward} กุศล${(nextState?.houseFortune?.id==="merit"&&nextState?.houseFortune?.day===dayKey16())?" + โบนัส 10%":""}`:""}${winner?`<br>🏁 เรือ ${boatNo} ชนะแล้ว!`:""}`)}catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);message("ส่งเสบียงไม่สำเร็จ",`${e.message||"กรุณาลองใหม่"}<br>คืนอาหารเข้ากระเป๋าแล้วค่ะ`)}};
+
+  /* ---------- R15 bug fixes ---------- */
+  function fixedTrough16(){const layer=$16("alpacaTroughFoodFixed");if(!layer)return;const imgs=[...layer.querySelectorAll(".s2-fixed-trough-food")];if(!imgs.length)return;const left=[],right=[];imgs.forEach((im,idx)=>(idx%2?right:left).push(im));const ys=[34,40,46,52,58,64,70,76];[[left,false],[right,true]].forEach(([list,isR])=>list.forEach((im,j)=>{const y=ys[j%ys.length],frac=j/Math.max(1,ys.length-1),x=isR?82+5*frac:18-5*frac;im.style.setProperty("left",`${x}%`,"important");im.style.setProperty("top",`${y}%`,"important");im.style.setProperty("transform",`translate(-50%,-50%) rotate(${isR?6:-6}deg)`,"important")}))}
+  function fixHotelStatus16(){if(currentScene!=="dogHotel")return;const s=ensureR16State(own16()),pen=Math.max(1,Math.min(4,Number(currentDogHotelPen)||1)),dogs=typeof dogsInHotelPen==="function"?dogsInHotelPen(pen,s):[],cats=(s.cats||[]).filter(c=>c.placedHotel&&Number(c.hotelPen)===pen);document.querySelectorAll("#dogHotelPetLayer .dog-hotel-pet").forEach(el=>{if(!el.querySelector(".r16-pet-shadow"))el.insertAdjacentHTML("afterbegin",'<span class="r16-pet-shadow"></span>');const dog=dogs.find(d=>String(d.id)===String(el.dataset.dogId));if(dog&&!el.querySelector(".r16-pet-status")){const st=typeof Y26_petStatus==="function"?Y26_petStatus(dog):null;if(st?.kind==="hungry"||st?.kind==="angry")el.insertAdjacentHTML("beforeend",`<span class="r16-pet-status ${st.kind}">${st.kind==="hungry"?"🍽️":"😡"}</span>`)}});document.querySelectorAll("#dogHotelPetLayer .s2-hotel-cat").forEach((el,idx)=>{if(!el.querySelector(".r16-pet-shadow"))el.insertAdjacentHTML("afterbegin",'<span class="r16-pet-shadow"></span>');const cat=cats[idx];if(cat){el.dataset.r16CatId=cat.id;if(!el.querySelector(".r16-pet-status")){const st=typeof Y26_petStatus==="function"?Y26_petStatus(cat):null;if(st?.kind==="hungry"||st?.kind==="angry")el.insertAdjacentHTML("beforeend",`<span class="r16-pet-status ${st.kind}">${st.kind==="hungry"?"🍽️":"😡"}</span>`)}}})}
+  function rebindWorm16(){const b=$16("ynuGardenManagerBtn");if(b&&globalThis.YN_R14?.manager&&b.dataset.r16!=="1"){b.dataset.r16="1";b.onclick=e=>{e.preventDefault();e.stopPropagation();globalThis.YN_R14.manager()}}}
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("#s2MarketScreen .r15-market-slot.empty");if(!b)return;const sc=$16("s2MarketScreen");if(!sc||sc.classList.contains("hidden")||sc.dataset.owner!==currentMemberKey)return;e.preventDefault();e.stopImmediatePropagation();const slot=Number(b.dataset.r15MarketSlot),shop=Number(sc.dataset.shop)||1;try{const data=JSON.parse(localStorage.getItem(`s2-r15-market-cache:${currentMemberKey}`)||"null")||{shop1:Array(12).fill(null),shop2:Array(12).fill(null)};const entryFn=globalThis.YN_R15?.openMarket;/* force existing slot onclick synchronously */b.click()}catch(_){}},true);
+  /* Harden market plus hitboxes so one tap actually lands. */
+  document.addEventListener("click",e=>{const plus=e.target.closest?.(".s2-market-plus");if(!plus)return;plus.parentElement?.click?.()},true);
+
+  /* Fish-trap separate local mirror + immediate cloud flush prevents navigation/app suspension loss. */
+  const trapMirrorKey16=()=>currentMemberKey?`s2-r16-fishtrap:${currentMemberKey}`:"";let trapSig16="";
+  function syncTrapMirror16(){const s=own16();if(!s||!currentMemberKey||visitContext)return;try{const arr=Array.isArray(s.fishTraps)?clone16(s.fishTraps):[];const sig=JSON.stringify(arr);const key=trapMirrorKey16(),raw=localStorage.getItem(key),old=raw?JSON.parse(raw):null;if(sig!==trapSig16){trapSig16=sig;localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),traps:arr}));if(arr.some(Boolean))setTimeout(()=>flushCloudSave?.(),0)}else if(old&&Array.isArray(old.traps)&&old.traps.some(Boolean)&&!arr.some(Boolean)&&Date.now()-Number(old.savedAt||0)<7*24*3600000){s.fishTraps=clone16(old.traps);ownState=s;state=s;saveLocalOnly(s);save();trapSig16=JSON.stringify(s.fishTraps)}}catch(_){} }
+  window.addEventListener("pagehide",()=>{try{syncTrapMirror16();flushCloudSave?.()}catch(_){} });document.addEventListener("visibilitychange",()=>{if(document.hidden){try{syncTrapMirror16();flushCloudSave?.()}catch(_){}}else setTimeout(syncTrapMirror16,80)});
+
+  /* Honey: preserve active trip locally and lock motorcycle to one straight Y axis. */
+  const honeyMirrorKey16=()=>currentMemberKey?`s2-r16-honey:${currentMemberKey}`:"";let honeySig16="";
+  function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(sig!==honeySig16){honeySig16=sig;localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}else if(old?.h?.active&&!h.active&&Date.now()-Number(old.savedAt||0)<30*60*1000){s.honeyDelivery=clone16(old.h);ownState=s;state=s;saveLocalOnly(s);save()}}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("transform","translateY(0)","important");bike.style.setProperty("transition","left 2.8s linear","important")}}
+
+  function postR16(){try{ensureR16State(own16());applyFortunePersistent16();fixedTrough16();fixHotelStatus16();rebindWorm16();syncTrapMirror16();syncHoney16();if(currentScene==="house")renderHedgeDrops16()}catch(e){console.warn("R16 tick",e)}}
+  const draw16Base=draw;draw=function(){const r=draw16Base.apply(this,arguments);requestAnimationFrame(postR16);return r};
+  setInterval(postR16,900);setTimeout(postR16,100);
+  globalThis.YN_R16={BUILD,HOME_FOODS,HEDGE_ITEMS,FORTUNES,openKitchen:openHomeKitchen16,fortune:fortune16,renderHouse:renderHouseScene16,collectHedge:collectAllHedge16};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
