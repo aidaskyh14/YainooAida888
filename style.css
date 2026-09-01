@@ -9162,3 +9162,19 @@ button:active,[role="button"]:active,.r17-flower-plot:active,.r17-wine-machine:a
   height:clamp(32px,8vw,46px)!important;
   object-fit:contain!important;
 }
+
+/* ======================================================================
+   S2 R18 HOTFIX — 2026-08-31
+   ====================================================================== */
+.s2-market-plus,.r15-market-slot.empty>span{display:none!important}
+.r15-market-slot.empty{background:transparent!important;pointer-events:auto!important;cursor:pointer!important}
+#s2MarketTitle.s2-market-title{font-size:clamp(27px,7vw,46px)!important;font-weight:950!important;line-height:1!important;height:8.5%!important;bottom:8.6%!important;text-shadow:0 2px 0 rgba(255,245,214,.9),0 3px 6px rgba(65,36,24,.18)!important}
+.r17-flower-plant{width:44%!important;height:54%!important;left:50%!important;bottom:24%!important;object-position:center center!important;transform:translateX(-50%)!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.24)) drop-shadow(0 0 4px rgba(255,231,163,.28))!important}
+.r17-flower-plot.is-ready .r17-flower-plant{filter:drop-shadow(0 2px 2px rgba(0,0,0,.25)) drop-shadow(0 0 6px rgba(255,220,112,.62))!important}
+.r17-hedgehog{width:4.7%!important;transition:none!important}
+.r17-hedge-drop{width:7.2%!important;min-width:30px!important;max-width:48px!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+.r17-hedge-drop::before{content:""!important;position:absolute!important;left:32%!important;right:32%!important;top:32%!important;bottom:32%!important;border:1px solid rgba(255,237,183,.88)!important;border-radius:999px!important;background:rgba(64,43,72,.25)!important;box-shadow:0 0 7px rgba(255,220,120,.55)!important;pointer-events:none!important}
+.r17-hedge-drop img{width:36%!important;height:36%!important;position:relative!important;z-index:2!important}
+.r17-hedge-drop-layer{z-index:72!important}.r17-hedge-drop{z-index:73!important;pointer-events:auto!important}
+#alpacaTroughFoodR18{position:absolute!important;inset:0!important;z-index:66!important;pointer-events:none!important;overflow:visible!important}
+#alpacaTroughFoodR18 img{position:absolute!important;display:block!important;visibility:visible!important;opacity:1!important;width:clamp(22px,4.8vw,34px)!important;height:clamp(22px,4.8vw,34px)!important;object-fit:contain!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.32))!important}

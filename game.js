@@ -12255,6 +12255,10 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     3:{name:"บ่อตกปลาของยัยหนู 03",image:"fishing-pond-03-season2.jpeg",pos:[[7,33.5,31,13.5],[63,33.5,31,13.5],[7,55.5,31,13.5],[63,55.5,31,13.5]]}
   };
   let fishPondId=0,fishSlots=[],fishUnsub=null;
+  const fishMirrorKeyV2=()=>currentMemberKey?`s2-fishing-v2-active:${currentMemberKey}`:"";
+  function loadFishMirrorV2(){try{const raw=localStorage.getItem(fishMirrorKeyV2());if(!raw)return null;const x=JSON.parse(raw);if(!x||x.dateKey!==DAILY_KEY()||Number(x.claimDeadline||0)<=NOW()){localStorage.removeItem(fishMirrorKeyV2());return null}return x}catch(_){return null}}
+  function saveFishMirrorV2(x){try{if(x&&String(x.ownerKey||"")===String(fishingActorKey()))localStorage.setItem(fishMirrorKeyV2(),JSON.stringify(x))}catch(_){}}
+  function clearFishMirrorV2(){try{localStorage.removeItem(fishMirrorKeyV2())}catch(_){}}
   function stopFishV2(){if(fishUnsub){fishUnsub();fishUnsub=null}fishSlots=[]}
   function fishingAdminBypass(){return currentMember==="Aida"&&adminProfile?.role==="admin"}
   async function persistPondChoice(id){
@@ -12295,7 +12299,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     if(!fishingAdminBypass()&&Number(st.fishingDailyChoice.pondId)!==Number(id))return openFishingLobby();
     fishPondId=id;currentScene="fishingPondV2";$("sceneScreen").style.backgroundImage=`url("${FISH_PONDS[id].image}")`;
     setSceneNav({backText:"กลับหน้าล็อบบี้",backAction:openFishingLobby,nextText:"ไปที่แปลงผัก",nextAction:returnToFarm});
-    subscribeFishV2();drawFishingV2();
+    const localActive=loadFishMirrorV2();if(localActive&&Number(localActive.pondId)===Number(id))fishSlots[Number(localActive.slot)-1]=localActive;
+    drawFishingV2();subscribeFishV2();
   }
   function slotDocId(pond,slot){return `${DAILY_KEY()}-p${pond}-s${slot}`}
   function subscribeFishV2(){
@@ -12307,6 +12312,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       fishUnsub=fs.onSnapshot(q,snap=>{
         fishSlots=[];
         snap.forEach(d=>{const x=d.data();if(Number(x.pondId)===fishPondId)fishSlots[Number(x.slot)-1]=x});
+        const localActive=loadFishMirrorV2();if(localActive&&Number(localActive.pondId)===Number(fishPondId)&&!fishSlots[Number(localActive.slot)-1])fishSlots[Number(localActive.slot)-1]=localActive;
         if(currentScene==="fishingPondV2")drawFishingV2();
       },e=>console.warn("fishing V2 listener",e));
     }).catch(e=>console.warn("fishing V2 subscribe",e));
@@ -12352,7 +12358,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
        of truth; on failure this optimistic slot is rolled back. */
     const optimisticActor=fishingActorKey(),optimisticNow=NOW(),priorVisual=fishSlots[slotNo-1]||null;
     const optimisticSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:optimisticActor,ownerName:currentProfileDisplayName(),baitKey,catches:[],totalWeight:0,status:"fishing",startedAt:optimisticNow,finishAt:optimisticNow+bait.durationMs,claimDeadline:optimisticNow+bait.durationMs+5*MIN,__optimistic:true};
-    fishSlots[slotNo-1]=optimisticSlot;drawFishingV2();closeModal();
+    fishSlots[slotNo-1]=optimisticSlot;saveFishMirrorV2(optimisticSlot);drawFishingV2();closeModal();
     try{
       /* The rod is already visible. Finish any queued own-save first so the
          fishing transaction cannot overwrite a newer local farm/inventory save. */
@@ -12382,7 +12388,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(slotRef,{...directSlot,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(playerRef,{memberKey:"mameaw",pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false});
-        Y26_applyOwnState(s);fishSlots[slotNo-1]=directSlot;drawFishingV2();closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
+        Y26_applyOwnState(s);fishSlots[slotNo-1]=directSlot;saveFishMirrorV2(directSlot);drawFishingV2();closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
         return;
       }
 
@@ -12404,9 +12410,9 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         tx.set(slotRef,{...newSlot,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(playerRef,{memberKey:actorKey,pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false});
       });
-      Y26_applyOwnState(next);fishSlots[slotNo-1]=newSlot;drawFishingV2();closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
+      Y26_applyOwnState(next);fishSlots[slotNo-1]=newSlot;saveFishMirrorV2(newSlot);drawFishingV2();closeModal();showWeatherToast(`🎣 เริ่มตกปลาแล้ว • ${Math.round(bait.durationMs/60000)} นาที`);
     }catch(e){
-      if(fishSlots[slotNo-1]?.__optimistic)fishSlots[slotNo-1]=priorVisual;
+      if(fishSlots[slotNo-1]?.__optimistic){fishSlots[slotNo-1]=priorVisual;if(!priorVisual)clearFishMirrorV2()}
       drawFishingV2();
       message("เริ่มตกไม่ได้",e.message||"กรุณาลองใหม่")
     }
@@ -23028,8 +23034,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const screen=marketScreenR15(),isOwn=ownerKey===currentMemberKey&&!visitContext,arr=Array.isArray(data?.[`shop${shopNo}`])?data[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
     screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;screen.classList.add("r15-market");
     const title=$r("s2MarketTitle");title.textContent=data?.shopName||"ร้านของฉัน";title.onclick=isOwn?()=>renameMarketR15(data):null;
-    $r("s2MarketSlots").innerHTML=arr.map((x,idx)=>{const [l,t]=MARKET_POS[idx]||[50,50];if(!x)return `<button class="s2-market-slot empty r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%" aria-label="ช่องวางสินค้า ${idx+1}">${isOwn?'<span class="s2-market-plus">＋</span>':''}</button>`;return `<button class="s2-market-slot r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%"><img src="${html(x.image||"")}" alt=""><small>×${i(x.qty)||1}</small><b>${x.status==="sold"?"ขายแล้ว":`${i(x.price)} 🙏`}</b></button>`}).join("");
-    $r("s2MarketSlots").querySelectorAll("[data-r15-market-slot]").forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.r15MarketSlot),x=arr[idx];if(isOwn){if(!x)showMarketListingR15(shopNo,idx,data);else showOwnerMarketR15(shopNo,idx,x,data)}else if(x&&x.status==="active")buyMarketR15(shopNo,idx,x,ownerKey,ownerName)});
+    $r("s2MarketSlots").innerHTML=arr.map((x,idx)=>{const [l,t]=MARKET_POS[idx]||[50,50];if(!x)return `<button class="s2-market-slot empty r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%" aria-label="ช่องวางสินค้า ${idx+1}"></button>`;return `<button class="s2-market-slot r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%"><img src="${html(x.image||"")}" alt=""><small>×${i(x.qty)||1}</small><b>${x.status==="sold"?"ขายแล้ว":`${i(x.price)} 🙏`}</b></button>`}).join("");
+    $r("s2MarketSlots").querySelectorAll("[data-r15-market-slot]").forEach(b=>{const activate=(ev)=>{if(ev){ev.preventDefault();ev.stopPropagation()}if(b.dataset.r18Busy==="1")return;b.dataset.r18Busy="1";setTimeout(()=>{if(b)b.dataset.r18Busy="0"},220);const idx=Number(b.dataset.r15MarketSlot),x=arr[idx];if(isOwn){if(!x)showMarketListingR15(shopNo,idx,data);else showOwnerMarketR15(shopNo,idx,x,data)}else if(x&&x.status==="active")buyMarketR15(shopNo,idx,x,ownerKey,ownerName)};b.onpointerup=activate;b.onclick=(ev)=>{if(ev?.pointerType)return;activate(ev)}});
     const foot=$r("s2MarketFooter");foot.innerHTML=`<b>ร้าน ${shopNo}/2</b><button id="r15MarketSwitch" type="button">ไปร้าน ${shopNo===1?2:1}</button>`;$r("r15MarketSwitch").onclick=()=>openMarketR15(shopNo===1?2:1);
     screen.classList.remove("hidden");
   }
@@ -23371,7 +23377,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     blood:{name:"ไวน์องุ่นโลหิต",image:"wine-blood-grape.png",duration:8*60*60*1000,crops:{grape:60,chili:15,mango:25},sugar:20},
     eclipse:{name:"ไวน์ราชันสุริยคราส",image:"wine-eclipse-king.png",duration:12*60*60*1000,crops:{grape:80,strawberry:30,lychee:30,gooseberry:30},sugar:30}
   };
-  const FLOWER_POS17=[[23,56],[50,56],[76,56],[23,74],[50,74],[76,74]];
+  const FLOWER_POS17=[[23,52.5],[50,52.5],[76,52.5],[23,69.5],[50,69.5],[76,69.5]];
   const WINE_POS17=[[42,27],[62,27],[81,27]];
   const HEDGE_DROP_MS17=30*60*1000;
   const HEDGE_SPRITES17={idle:"hedgehog-idle.png",side:"hedgehog-walk-side.png",back:"hedgehog-walk-back.png",action:"hedgehog-action.png"};
@@ -23467,22 +23473,24 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 ทดลองหมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>b.onclick=()=>{const k=b.dataset.r17Wine,w=WINES17[k];$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;$17("r17StartWine").onclick=()=>startWine17(idx,k);openModal()});openModal()}
   function openWineTest17(){if(!isAdmin17())return;const s=ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><h2>🧪 ทดลองระบบไวน์</h2><p>ทดสอบครบวงจร • เริ่มหมัก / เวลาจริง / พร้อมรับทันที / รับเข้ากระเป๋า</p><div class="r17-machine-list">${s.wineMachines.map((m,i)=>`<button type="button" data-r17-machine="${i}"><b>เครื่อง ${i+1}</b><small>${m?(wineReady17(m)?"พร้อมรับ":`${WINES17[m.wine].name} • ${fmtMs17(m.readyAt-now17())}`):"ว่าง"}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-machine]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17Machine)));openModal()}
 
-  /* ---------- Hedgehog: basement only, small, shadow, slow continuous safe corridors ---------- */
-  let hedgeMoveTimer17=0,hedgeFrameTimer17=0;
-  function stopHedge17(){clearTimeout(hedgeMoveTimer17);clearInterval(hedgeFrameTimer17);hedgeMoveTimer17=0;hedgeFrameTimer17=0}
-  function animateHedge17(el,sheet="side",left=false){if(!el)return;let f=0;el.style.backgroundImage=`url("${HEDGE_SPRITES17[sheet]||HEDGE_SPRITES17.side}")`;el.style.backgroundSize="400% 400%";el.classList.toggle("face-left",Boolean(left));clearInterval(hedgeFrameTimer17);hedgeFrameTimer17=setInterval(()=>{f=(f+1)%16;const c=f%4,r=Math.floor(f/4);el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`},190)}
-  function persistHedgeVisualPos17(){const el=$17("r17Hedgehog"),layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!el||!layer||!s)return;const a=layer.getBoundingClientRect(),b=el.getBoundingClientRect();if(a.width&&a.height){s.hedgehog.pos.x=((b.left+b.width/2-a.left)/a.width)*100;s.hedgehog.pos.y=((b.top+b.height/2-a.top)/a.height)*100;s.hedgehog.pos.node=nearestNode17(s.hedgehog.pos.x,s.hedgehog.pos.y);try{saveLocalOnly(s)}catch(_){} }}
-  function moveHedge17(){const el=$17("r17Hedgehog"),s=ensureR17State(own17());if(!el||currentScene!=="house"||houseMode17!=="basement"||document.hidden)return;const pos=s.hedgehog.pos||{x:8,y:86,node:6},node=nearestNode17(pos.x,pos.y),choices=WALK_ADJ17[node]||[8],next=choices[Math.floor(Math.random()*choices.length)],target=WALK_NODES17[next],dx=target[0]-pos.x,dy=target[1]-pos.y,dist=Math.hypot(dx,dy),duration=Math.max(6500,Math.min(14500,dist*420));animateHedge17(el,Math.abs(dy)>Math.abs(dx)?"back":"side",dx<0);el.style.transition=`left ${duration}ms linear, top ${duration}ms linear`;requestAnimationFrame(()=>{el.style.left=`${target[0]}%`;el.style.top=`${target[1]}%`});hedgeMoveTimer17=setTimeout(()=>{const st=ensureR17State(own17());st.hedgehog.pos={x:target[0],y:target[1],node:next};try{saveLocalOnly(st);save()}catch(_){}moveHedge17()},duration+80)}
+  /* ---------- Hedgehog R18: basement only, continuous RAF motion + persistent segment ---------- */
+  let hedgeMoveTimer17=0,hedgeFrameTimer17=0,hedgeRaf17=0;
+  function stopHedge17(){clearTimeout(hedgeMoveTimer17);clearInterval(hedgeFrameTimer17);cancelAnimationFrame(hedgeRaf17);hedgeMoveTimer17=0;hedgeFrameTimer17=0;hedgeRaf17=0}
+  function animateHedge17(el,sheet="side",left=false){if(!el)return;let f=0;el.style.backgroundImage=`url("${HEDGE_SPRITES17[sheet]||HEDGE_SPRITES17.side}")`;el.style.backgroundSize="400% 400%";el.classList.toggle("face-left",Boolean(left));clearInterval(hedgeFrameTimer17);hedgeFrameTimer17=setInterval(()=>{f=(f+1)%16;const c=f%4,r=Math.floor(f/4);el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`},240)}
+  function currentHedgePoint17(s,t=now17()){const h=s?.hedgehog||{},mo=h.motion;if(mo&&Number(mo.duration)>0){const q=Math.max(0,Math.min(1,(t-Number(mo.startedAt||t))/Number(mo.duration))),x=Number(mo.fromX)+(Number(mo.toX)-Number(mo.fromX))*q,y=Number(mo.fromY)+(Number(mo.toY)-Number(mo.fromY))*q;return{x,y,done:q>=1,node:q>=1?Number(mo.toNode):nearestNode17(x,y)}}return{x:Number(h.pos?.x)||8,y:Number(h.pos?.y)||86,done:true,node:Number(h.pos?.node)||nearestNode17(Number(h.pos?.x)||8,Number(h.pos?.y)||86)}}
+  function persistHedgeVisualPos17(){const s=ensureR17State(own17());if(!s)return;const p=currentHedgePoint17(s);s.hedgehog.pos={x:p.x,y:p.y,node:p.node};try{saveLocalOnly(s)}catch(_){}}
+  function chooseHedgeMotion17(s){const p=currentHedgePoint17(s),node=nearestNode17(p.x,p.y),choices=WALK_ADJ17[node]||[8],next=choices[Math.floor(Math.random()*choices.length)],target=WALK_NODES17[next],dx=target[0]-p.x,dy=target[1]-p.y,dist=Math.hypot(dx,dy),duration=Math.max(9000,Math.min(22000,dist*650));s.hedgehog.motion={fromX:p.x,fromY:p.y,toX:target[0],toY:target[1],fromNode:node,toNode:next,startedAt:now17(),duration};s.hedgehog.pos={x:p.x,y:p.y,node};try{saveLocalOnly(s);save()}catch(_){}return s.hedgehog.motion}
+  function moveHedge17(){cancelAnimationFrame(hedgeRaf17);const el=$17("r17Hedgehog"),s=ensureR17State(own17());if(!el||currentScene!=="house"||houseMode17!=="basement"||document.hidden)return;let mo=s.hedgehog.motion;if(!mo||now17()>=Number(mo.startedAt)+Number(mo.duration)){if(mo){s.hedgehog.pos={x:Number(mo.toX),y:Number(mo.toY),node:Number(mo.toNode)};s.hedgehog.motion=null}mo=chooseHedgeMotion17(s)}const dx=Number(mo.toX)-Number(mo.fromX),dy=Number(mo.toY)-Number(mo.fromY);animateHedge17(el,Math.abs(dy)>Math.abs(dx)?"back":"side",dx<0);const frame=()=>{if(currentScene!=="house"||houseMode17!=="basement"||document.hidden||!el.isConnected)return;const st=ensureR17State(own17()),p=currentHedgePoint17(st);el.style.left=`${p.x}%`;el.style.top=`${p.y}%`;if(p.done){st.hedgehog.pos={x:p.x,y:p.y,node:Number(st.hedgehog.motion?.toNode??p.node)};st.hedgehog.motion=null;try{saveLocalOnly(st)}catch(_){}hedgeMoveTimer17=setTimeout(moveHedge17,500+Math.random()*800);return}hedgeRaf17=requestAnimationFrame(frame)};frame()}
   function generateHedgeDrops17(s){if(!s?.hedgehog?.enabled)return false;let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;while(t-last>=HEDGE_DROP_MS17&&count<2000){last+=HEDGE_DROP_MS17;const keys=Object.keys(HEDGE_ITEMS17),pt=safeDropPoint17(count);s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});changed=true;count++}s.hedgehog.lastDropAt=last;if(changed)commit17(s);return changed}
   function collectHedgeDrop17(id){const s=ensureR17State(own17()),idx=s.hedgehog.drops.findIndex(d=>d.id===id);if(idx<0)return;const d=s.hedgehog.drops[idx],m=HEDGE_ITEMS17[d.type];s.hedgehogItems=s.hedgehogItems||{};if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+1;else s.hedgehogItems[d.type]=9999;s.hedgehog.drops.splice(idx,1);commit17(s);renderHedgeDrops17();showWeatherToast?.(`🦔 ${m.name} ×1 เข้ากระเป๋าแล้ว`)}
   function collectAllHedge17(){const s=ensureR17State(own17()),drops=s.hedgehog.drops.slice();if(!drops.length)return message("🦔 ของดรอปเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{got[d.type]=(got[d.type]||0)+1;if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+1;else s.hedgehogItems[d.type]=9999});s.hedgehog.drops=[];commit17(s);renderHedgeDrops17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS17[k].image}"><b>${safe17(HEDGE_ITEMS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>เข้ากระเป๋า → ของเม่น เรียบร้อยแล้ว</small><button id="r17HedgeDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17HedgeDone").onclick=closeModal;openModal()}
-  function renderHedgeDrops17(){const layer=$17("r17HedgeDropLayer"),s=ensureR17State(own17());if(!layer||!s)return;generateHedgeDrops17(s);layer.innerHTML=s.hedgehog.drops.map(d=>{const m=HEDGE_ITEMS17[d.type];return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}"></button>`}).join("");layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();collectHedgeDrop17(b.dataset.r17Hdrop)})}
+  function renderHedgeDrops17(){const layer=$17("r17HedgeDropLayer"),s=ensureR17State(own17());if(!layer||!s)return;generateHedgeDrops17(s);layer.innerHTML=s.hedgehog.drops.map(d=>{const m=HEDGE_ITEMS17[d.type];return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}"></button>`}).join("");layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>{const take=e=>{e.preventDefault();e.stopPropagation();if(b.dataset.taken==="1")return;b.dataset.taken="1";collectHedgeDrop17(b.dataset.r17Hdrop)};b.onpointerup=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}})}
   function enableHedge17(){const s=ensureR17State(own17());s.hedgehog.enabled=true;if(!Number(s.hedgehog.lastDropAt))s.hedgehog.lastDropAt=now17();commit17(s);renderHouse17();showWeatherToast?.("🦔 เปิดโหมดทดสอบเม่นแล้ว")}
 
   /* ---------- House renderer ---------- */
   function setHouseBg17(mode){const sc=$17("sceneScreen");if(!sc)return;sc.style.backgroundImage=`url("${mode==="basement"?"house-basement-season2.jpeg":"house-interior-season2.jpeg"}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
   function renderHouseMain17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
-  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>isAdmin17()?`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`:"").join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button>${isAdmin17()?'<button id="r17TestHedge" type="button">🦔 ทดสอบเม่น</button><button id="r17WineTest" type="button">🍷 ทดลองระบบไวน์</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;layer.querySelectorAll("[data-r17-plot]").forEach(b=>b.onclick=()=>openFlowerPlot17(Number(b.dataset.r17Plot)));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17MachineHot)));$17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=s.hedgehog.pos||{x:8,y:86};h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
+  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>isAdmin17()?`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`:"").join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button>${isAdmin17()?'<button id="r17TestHedge" type="button">🦔 ทดสอบเม่น</button><button id="r17WineTest" type="button">🍷 ทดลองระบบไวน์</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;layer.querySelectorAll("[data-r17-plot]").forEach(b=>b.onclick=()=>openFlowerPlot17(Number(b.dataset.r17Plot)));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17MachineHot)));$17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   try{renderHouseScene=renderHouse17}catch(_){}
 
@@ -23520,6 +23528,34 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
   globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,openWineTest:openWineTest17};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R18 — ALPACA TROUGH VISUAL RESCUE
+   Rebuild from the canonical hidden trough slots. This avoids depending on
+   any older overlay implementation and keeps both rails visible after render.
+   ====================================================================== */
+(()=>{
+  const BUILD="S2-R18-HOTFIX";
+  const POSY=[35.5,41.3,47.1,52.9,58.7,64.5,70.3,76.1];
+  const POSL=[16.8,16.0,15.2,14.4,13.6,12.8,12.0,11.2];
+  const POSR=[83.2,84.0,84.8,85.6,86.4,87.2,88.0,88.8];
+  function repaintTroughR18(){
+    const screen=document.getElementById("alpacaPenScreen"),stage=document.getElementById("alpacaPenStage"),src=document.getElementById("alpacaTroughVisual");
+    if(!screen||screen.classList.contains("hidden")||!stage||!src)return;
+    let layer=document.getElementById("alpacaTroughFoodR18");
+    if(!layer){layer=document.createElement("div");layer.id="alpacaTroughFoodR18";layer.setAttribute("aria-hidden","true");stage.appendChild(layer)}
+    const slots=[...src.querySelectorAll("[data-trough-visual]")];
+    const sig=slots.map((el,i)=>{const im=el.querySelector("img");return im?`${i}:${im.getAttribute("src")||""}`:""}).join("|");
+    if(layer.dataset.sig===sig)return;layer.dataset.sig=sig;layer.innerHTML="";
+    slots.forEach((el,i)=>{const srcImg=el.querySelector("img");if(!srcImg)return;const row=i%8,right=i>=8,img=srcImg.cloneNode(true);img.removeAttribute("style");img.style.left=`${right?POSR[row]:POSL[row]}%`;img.style.top=`${POSY[row]}%`;img.style.transform=`translate(-50%,-50%) rotate(${right?5:-5}deg)`;layer.appendChild(img)});
+  }
+  setInterval(repaintTroughR18,350);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(repaintTroughR18,80)});
+  window.addEventListener("pageshow",()=>setTimeout(repaintTroughR18,80));
+  globalThis.YN_R18={BUILD,repaintTrough:repaintTroughR18};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
