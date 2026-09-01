@@ -4962,8 +4962,8 @@ html.standalone-app .sprinkler-button{translate:0 var(--standalone-safe-top)}htm
 .friend-forage-drop img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
 .friend-forage-drop::after{content:"";position:absolute;left:50%;bottom:6%;width:62%;height:11%;transform:translateX(-50%);background:rgba(0,0,0,.28);border-radius:50%;filter:blur(3px);z-index:-1}
 .friend-forage-drop.friend-forage-green{width:clamp(36px,9vw,54px);height:clamp(36px,9vw,54px)}
-.friend-forage-drop.friend-forage-yellow{width:clamp(38px,9.5vw,56px);height:clamp(38px,9.5vw,56px)}
-.friend-forage-drop.friend-forage-red{width:clamp(40px,10vw,58px);height:clamp(40px,10vw,58px)}
+.friend-forage-drop.friend-forage-yellow{width:clamp(36px,9vw,54px);height:clamp(36px,9vw,54px)}
+.friend-forage-drop.friend-forage-red{width:clamp(36px,9vw,54px);height:clamp(36px,9vw,54px)}
 .friend-forage-drop[data-rarity="rare"]{animation-duration:1.95s}
 .friend-forage-tip{position:absolute;left:50%;top:5px;transform:translateX(-50%);z-index:55;padding:4px 10px;border-radius:999px;background:rgba(255,248,230,.92);border:1px solid rgba(104,64,37,.22);box-shadow:0 5px 14px rgba(36,18,10,.14);font-size:10px;font-weight:700;color:#694538;pointer-events:none;white-space:nowrap}
 @keyframes friendForageBob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-4px)}}
@@ -7668,7 +7668,7 @@ button,
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
 }
-button:active:not(:disabled){transform:scale(.985)}
+button:active:not(:disabled){filter:brightness(1.035);opacity:.97}
 button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!important}
 
 /* ---------- Fishing V2 ---------- */
@@ -8413,7 +8413,7 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 .s2-home-fishing>small{display:block;margin-top:7px;font-size:8px;color:#80684d}
 
 /* Honey stays on one fixed horizontal road line through the whole ride. */
-.game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important}
+.game-screen[data-s2-farm="1"] #honeyBike{top:68.7%!important}
 
 /* =====================================================================
    S2 R12 — VERIFIED UI / ALIGNMENT / SPEED FIXES
@@ -8450,8 +8450,8 @@ button.is-busy{opacity:.72!important;cursor:wait!important;pointer-events:none!i
 .s2-market-loading{top:47%!important}
 
 /* Honey bike: fixed Y axis. Parked sprite gets a tiny visual compensation only; X remains untouched. */
-.game-screen[data-s2-farm="1"] #honeyBike{top:80.35%!important;bottom:auto!important}
-.game-screen[data-s2-farm="1"] #honeyBike.is-riding,.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:80.35%!important}
+.game-screen[data-s2-farm="1"] #honeyBike{top:68.7%!important;bottom:auto!important}
+.game-screen[data-s2-farm="1"] #honeyBike.is-riding,.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:68.7%!important}
 .game-screen[data-s2-farm="1"] #honeyBike.is-parked .honey-bike-clip{transform:translateY(4.5%)!important}
 
 /* Meow-Woof Hotel tools: one compact toggle, contents expand only when requested. */
@@ -8480,7 +8480,7 @@ button.r9-tap-now{transform:scale(.97)!important;transition:transform .07s ease!
 /* Honey: one straight road line, no parked jump. */
 .game-screen[data-s2-farm="1"] #honeyBike,
 .game-screen[data-s2-farm="1"] #honeyBike.is-riding,
-.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:80.35%!important;bottom:auto!important;margin:0!important}
+.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:68.7%!important;bottom:auto!important;margin:0!important}
 .game-screen[data-s2-farm="1"] #honeyBike .honey-bike-clip{transform:none!important}
 
 /* Market: align 3x4 centers to the wooden frames and lift the name onto the sign. */
@@ -8508,8 +8508,8 @@ button.r9-tap-now{transform:scale(.97)!important;transition:transform .07s ease!
 .alpaca-trough-visual-slot:nth-child(4),.alpaca-trough-visual-slot:nth-child(12){top:47.8%!important}
 
 /* All primary modal controls: immediate tap affordance, no long CSS transitions. */
-button,.primary-spooky-action,.secondary-action,.danger-action{transition:transform .08s ease,opacity .08s ease!important}
-button:active,.primary-spooky-action:active,.secondary-action:active,.danger-action:active{transform:scale(.97)}
+button,.primary-spooky-action,.secondary-action,.danger-action{transition:filter .06s linear,opacity .06s linear!important}
+button:active,.primary-spooky-action:active,.secondary-action:active,.danger-action:active{filter:brightness(1.04);opacity:.96}
 
 /* R12 house wooden sign is decorative only. */
 #topPlayerNameButton{display:none!important;pointer-events:none!important}
@@ -8561,7 +8561,7 @@ button:active,.primary-spooky-action:active,.secondary-action:active,.danger-act
 /* Honey stays on the dirt road; parked bike gets a generous invisible tap target. */
 .game-screen[data-s2-farm="1"] #honeyBike,
 .game-screen[data-s2-farm="1"] #honeyBike.is-riding,
-.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:74.2%!important;bottom:auto!important;margin:0!important}
+.game-screen[data-s2-farm="1"] #honeyBike.is-parked{top:68.7%!important;bottom:auto!important;margin:0!important}
 #honeyBike.is-parked::after{content:"";position:absolute;inset:-22% -18%;pointer-events:auto}
 #honeyBike .honey-bike-clip{transform:none!important}
 
@@ -8675,7 +8675,7 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 /* Honey motorcycle is locked to the dirt road. Only X animation may move it. */
 .game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked,
 .game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked.is-riding,
-.game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked.is-parked{top:69.4%!important;bottom:auto!important;margin:0!important}
+.game-screen[data-s2-farm="1"] #honeyBike.r15-road-locked.is-parked{top:68.7%!important;bottom:auto!important;margin:0!important}
 #honeyBike.r15-road-locked .honey-bike-clip{transform:none!important}
 #honeyBike.r15-road-locked.is-parked::after{content:""!important;position:absolute!important;inset:-28% -24%!important;pointer-events:auto!important;background:transparent!important}
 
@@ -8747,9 +8747,418 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r16-boat-supply .boat-supply-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.r16-boat-supply .boat-supply-grid button{min-height:120px;padding:8px;border-radius:18px}.r16-boat-supply .boat-supply-grid img{width:72px;height:72px;object-fit:contain}.r16-boat-supply .boat-supply-grid b{font-size:11px;line-height:1.25}.r16-boat-supply .boat-supply-grid small{font-size:10px}
 .r16-pet-shadow{position:absolute;left:18%;right:18%;bottom:4%;height:12%;border-radius:50%;background:rgba(0,0,0,.25);filter:blur(2px);z-index:-1;pointer-events:none}.r16-pet-status{position:absolute;left:50%;top:-23%;transform:translateX(-50%);z-index:20;display:grid;place-items:center;min-width:28px;height:28px;padding:0 5px;border-radius:999px;background:#fff;border:2px solid #6c3b73;font-size:15px;box-shadow:0 3px 7px rgba(0,0,0,.25);pointer-events:none}.r16-pet-status.angry{background:#fff0f0}
 #alpacaTroughFoodFixed .s2-fixed-trough-food{transition:none!important}
-#honeyBike{top:68.7%!important;bottom:auto!important;transform:translateY(0)!important;transition-property:left!important;transition-timing-function:linear!important}
+#honeyBike{top:68.7%!important;bottom:auto!important;transition-property:left!important;transition-timing-function:linear!important}
 /* Market: one-tap hit areas and small left centering correction. */
 #s2MarketScreen.r15-market{transform:translateX(-1.2%)!important}.r15-market-slot.empty{min-width:14vw!important;min-height:9vh!important;touch-action:manipulation!important}.s2-market-plus{display:grid!important;place-items:center!important;width:100%!important;height:100%!important;font-size:32px!important;pointer-events:auto!important}
 /* Garden manager: 4 compact buttons, including worm manager. */
 .ynu-manager-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}.ynu-manager-grid button{min-height:62px!important;font-size:12px!important}
 @media(max-width:430px){.r16-home-food-grid,.r16-need-grid,.r16-boat-supply .boat-supply-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.r16-house-actions{bottom:1.5%;right:2%}.r16-house-actions button{font-size:10px;min-height:35px}.r16-hedgehog{width:9%}}
+
+/* ======================================================================
+   S2 R17 — BASEMENT / FLOWERS / WINE / HEDGEHOG / FAST TAP POLISH
+   2026-08-31
+   ====================================================================== */
+
+/* Global interaction contract: every visible control gets immediate touch feedback. */
+button,[role="button"],.r17-flower-plot,.r17-wine-machine,.r17-hedge-drop{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+button:active,[role="button"]:active,.r17-flower-plot:active,.r17-wine-machine:active,.r17-hedge-drop:active{
+  filter:brightness(1.04);
+  opacity:.96;
+}
+
+/* R17 owns the house art edge-to-edge. */
+#sceneScreen{
+  background-repeat:no-repeat;
+  background-position:center;
+}
+#sceneInteractiveLayer{
+  overflow:visible;
+}
+
+/* ---------------- House main floor ---------------- */
+.r17-house-hotspot{
+  position:absolute!important;
+  z-index:24!important;
+  border:0!important;
+  outline:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+}
+.r17-bed{left:25%!important;top:7%!important;width:50%!important;height:28%!important}
+.r17-kitchen{left:25%!important;top:36%!important;width:50%!important;height:29%!important}
+.r17-fortune{left:22%!important;top:67%!important;width:56%!important;height:29%!important}
+
+.r17-house-actions{
+  position:absolute!important;
+  right:2.2%!important;
+  bottom:1.6%!important;
+  z-index:82!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:5px!important;
+  pointer-events:none!important;
+}
+.r17-house-actions button{
+  pointer-events:auto!important;
+  min-height:35px!important;
+  max-width:min(46vw,180px)!important;
+  padding:7px 10px!important;
+  border:1.5px solid rgba(243,212,164,.94)!important;
+  border-radius:15px!important;
+  background:linear-gradient(180deg,rgba(91,55,105,.96),rgba(56,34,72,.98))!important;
+  color:#fff8e9!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  line-height:1.08!important;
+  text-shadow:0 1px 1px rgba(0,0,0,.25)!important;
+  box-shadow:0 4px 11px rgba(14,8,24,.28)!important;
+  white-space:nowrap!important;
+}
+.r17-basement-actions{
+  right:1.7%!important;
+  bottom:1.1%!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,max-content)!important;
+  gap:4px!important;
+  align-items:end!important;
+  justify-items:end!important;
+}
+.r17-basement-actions button{
+  min-height:31px!important;
+  max-width:155px!important;
+  padding:6px 8px!important;
+  font-size:8.2px!important;
+  border-radius:13px!important;
+}
+
+/* ---------------- Six flower plots ---------------- */
+.r17-flower-plot{
+  position:absolute!important;
+  width:22.4%!important;
+  height:16.6%!important;
+  transform:translate(-50%,-50%)!important;
+  z-index:40!important;
+  border:0!important;
+  outline:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  cursor:pointer!important;
+}
+.r17-flower-plot>span{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:24px!important;
+  height:24px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid rgba(244,223,180,.68)!important;
+  border-radius:999px!important;
+  background:rgba(58,35,64,.48)!important;
+  color:rgba(255,243,215,.82)!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  opacity:.55!important;
+  pointer-events:none!important;
+}
+.r17-flower-plant{
+  position:absolute!important;
+  left:50%!important;
+  bottom:-2%!important;
+  width:82%!important;
+  height:92%!important;
+  transform:translateX(-50%)!important;
+  object-fit:contain!important;
+  object-position:center bottom!important;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.28))!important;
+  pointer-events:none!important;
+}
+.r17-flower-plot small{
+  position:absolute!important;
+  left:50%!important;
+  top:3%!important;
+  transform:translate(-50%,-100%)!important;
+  max-width:94%!important;
+  padding:2px 5px!important;
+  border:1px solid rgba(241,214,170,.76)!important;
+  border-radius:999px!important;
+  background:rgba(52,31,61,.84)!important;
+  color:#fff6df!important;
+  font-size:6.6px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.22)!important;
+  pointer-events:none!important;
+}
+.r17-flower-plot.is-ready .r17-flower-plant{
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.27)) drop-shadow(0 0 5px rgba(255,223,126,.55))!important;
+}
+.r17-flower-plot.is-ready small{
+  background:rgba(105,68,36,.92)!important;
+  color:#fff5ba!important;
+}
+
+/* ---------------- Wine machine test hotspots ---------------- */
+.r17-wine-machine{
+  position:absolute!important;
+  width:17.2%!important;
+  height:26%!important;
+  transform:translate(-50%,-50%)!important;
+  z-index:43!important;
+  border:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+}
+.r17-wine-machine span{
+  position:absolute!important;
+  left:50%!important;
+  bottom:3%!important;
+  transform:translateX(-50%)!important;
+  padding:2px 5px!important;
+  max-width:95%!important;
+  border:1px solid rgba(235,196,139,.8)!important;
+  border-radius:999px!important;
+  background:rgba(58,34,70,.86)!important;
+  color:#fff4d7!important;
+  font-size:6.4px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  pointer-events:none!important;
+}
+.r17-wine-machine.is-ready span{
+  background:rgba(111,73,30,.94)!important;
+  box-shadow:0 0 8px rgba(255,217,107,.44)!important;
+  color:#fff7b6!important;
+}
+
+/* ---------------- Hedgehog: basement only ---------------- */
+.r17-hedgehog{
+  position:absolute!important;
+  width:5.5%!important;
+  aspect-ratio:1/1!important;
+  transform:translate(-50%,-50%)!important;
+  z-index:57!important;
+  border:0!important;
+  outline:0!important;
+  padding:0!important;
+  margin:0!important;
+  background-color:transparent!important;
+  background-repeat:no-repeat!important;
+  image-rendering:auto!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.20))!important;
+  will-change:left,top,background-position!important;
+  cursor:pointer!important;
+  transition-timing-function:linear!important;
+}
+.r17-hedgehog.face-left{transform:translate(-50%,-50%) scaleX(-1)!important}
+.r17-hedgehog::after{
+  content:""!important;
+  position:absolute!important;
+  left:17%!important;
+  right:17%!important;
+  bottom:3%!important;
+  height:15%!important;
+  z-index:-1!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.25)!important;
+  filter:blur(2px)!important;
+  transform:scaleX(1.06)!important;
+  pointer-events:none!important;
+}
+
+.r17-hedge-drop-layer{
+  position:absolute!important;
+  inset:0!important;
+  z-index:54!important;
+  pointer-events:none!important;
+}
+.r17-hedge-drop{
+  position:absolute!important;
+  width:2.7%!important;
+  min-width:14px!important;
+  max-width:23px!important;
+  aspect-ratio:1/1!important;
+  transform:translate(-50%,-50%)!important;
+  z-index:55!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:1px!important;
+  margin:0!important;
+  border:1px solid rgba(255,234,171,.82)!important;
+  border-radius:999px!important;
+  background:rgba(58,39,67,.28)!important;
+  box-shadow:0 0 0 1px rgba(255,246,207,.20),0 0 7px rgba(255,218,119,.42)!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.30))!important;
+  pointer-events:auto!important;
+  cursor:pointer!important;
+}
+.r17-hedge-drop img{
+  width:92%!important;
+  height:92%!important;
+  object-fit:contain!important;
+  pointer-events:none!important;
+}
+
+/* ---------------- Flower / wine modal UI ---------------- */
+.r17-flower-modal,.r17-wine-modal,.r17-compact-result{
+  max-height:min(74vh,650px)!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+.r17-flower-picker,.r17-wine-picker{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+.r17-flower-picker button,.r17-wine-picker button{
+  min-height:82px!important;
+  display:grid!important;
+  grid-template-columns:48px 1fr!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:7px!important;
+  border-radius:15px!important;
+  text-align:left!important;
+  overflow:hidden!important;
+}
+.r17-flower-picker img,.r17-wine-picker img{
+  width:46px!important;
+  height:55px!important;
+  object-fit:contain!important;
+}
+.r17-flower-picker b,.r17-wine-picker b{font-size:10px!important;line-height:1.08!important}
+.r17-flower-picker small,.r17-wine-picker small{display:block!important;margin-top:3px!important;font-size:7.5px!important;line-height:1.12!important;opacity:.82!important}
+.r17-flower-hero,.r17-wine-hero,.r17-compact-result>img{
+  display:block!important;
+  width:min(36vw,135px)!important;
+  height:min(32vw,120px)!important;
+  object-fit:contain!important;
+  margin:0 auto 5px!important;
+}
+.r17-stage-test{
+  margin-top:9px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:5px!important;
+}
+.r17-stage-test small{grid-column:1/-1!important;font-size:8px!important;font-weight:900!important;opacity:.76!important}
+.r17-stage-test button{min-height:34px!important;padding:5px!important;border-radius:12px!important;font-size:8px!important}
+.r17-wine-needs{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px!important;
+  margin:7px 0!important;
+}
+.r17-wine-needs>div{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:5px!important;
+  padding:6px 7px!important;
+  border-radius:11px!important;
+  background:rgba(89,56,91,.09)!important;
+  font-size:8px!important;
+}
+.r17-machine-list{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+.r17-machine-list button{min-height:70px!important;padding:7px 5px!important;border-radius:14px!important}
+.r17-machine-list b,.r17-machine-list small{display:block!important;font-size:8px!important;line-height:1.12!important}
+.r17-machine-list small{margin-top:4px!important;opacity:.8!important}
+.r17-flower-summary,.r17-compact-result .r16-hedge-summary{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+.r17-flower-summary>div,.r17-compact-result .r16-hedge-summary>div{
+  display:grid!important;
+  grid-template-columns:36px 1fr auto!important;
+  align-items:center!important;
+  gap:5px!important;
+  padding:6px!important;
+  border-radius:12px!important;
+  background:rgba(114,77,108,.09)!important;
+}
+.r17-flower-summary img,.r17-compact-result .r16-hedge-summary img{
+  width:34px!important;
+  height:34px!important;
+  object-fit:contain!important;
+}
+.r17-flower-summary b,.r17-flower-summary span,.r17-compact-result .r16-hedge-summary b,.r17-compact-result .r16-hedge-summary span{font-size:8px!important}
+
+/* ---------------- Hotel shadow/status restoration ---------------- */
+#dogHotelPetLayer .dog-hotel-pet,#dogHotelPetLayer .s2-hotel-cat{overflow:visible!important}
+.r17-pet-shadow{
+  position:absolute!important;
+  left:22%!important;
+  right:22%!important;
+  bottom:2%!important;
+  height:10%!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.24)!important;
+  filter:blur(2px)!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+}
+.r17-pet-status{
+  position:absolute!important;
+  left:50%!important;
+  top:-8%!important;
+  transform:translate(-50%,-100%)!important;
+  width:21px!important;
+  height:21px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid rgba(255,235,200,.92)!important;
+  border-radius:999px!important;
+  background:rgba(71,46,80,.93)!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.27)!important;
+  font-size:12px!important;
+  line-height:1!important;
+  z-index:12!important;
+  pointer-events:none!important;
+}
+.r17-pet-status.angry{background:rgba(116,50,58,.94)!important}
+
+/* R17 removes the old toolbar hit layer from the DOM; this is only a defensive fallback. */
+#gameScreen .bottom-nav-hotspots{display:none!important;visibility:hidden!important;pointer-events:none!important;width:0!important;height:0!important}
+
+/* Honey bike: never pin transform; X movement is JS translate3d. */
+#honeyBike{transition-property:left,transform!important;transition-timing-function:linear!important}
+
+@media(max-width:430px){
+  .r17-hedgehog{width:5.8%!important}
+  .r17-hedge-drop{width:2.9%!important;min-width:11px!important}
+  .r17-basement-actions{grid-template-columns:repeat(2,max-content)!important;gap:3px!important}
+  .r17-basement-actions button{min-height:29px!important;padding:5px 7px!important;font-size:7.4px!important}
+  .r17-flower-picker,.r17-wine-picker{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .r17-flower-picker button,.r17-wine-picker button{grid-template-columns:42px 1fr!important;min-height:76px!important;padding:6px!important}
+  .r17-flower-picker img,.r17-wine-picker img{width:40px!important;height:48px!important}
+}
+
+/* R17 friend-grass art normalization: generous touch target, compact artwork. */
+.friend-forage-drop.friend-forage-yellow img,
+.friend-forage-drop.friend-forage-red img{
+  width:clamp(32px,8vw,46px)!important;
+  height:clamp(32px,8vw,46px)!important;
+  object-fit:contain!important;
+}
