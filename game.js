@@ -23196,6 +23196,18 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const b=e.target.closest?.("#s2MainNav [data-s2-main]");if(!b)return;
     e.preventDefault();e.stopImmediatePropagation();act(b.dataset.s2Main);
   },true);
-  function label(){document.querySelectorAll('#s2MainNav [data-s2-main="missions"] small').forEach(x=>x.textContent="ผู้ใหญ่บ้าน")}
-  const mo=new MutationObserver(label);if(document.documentElement)mo.observe(document.documentElement,{childList:true,subtree:true});setTimeout(label,0);
+  function label(){
+    document.querySelectorAll('#s2MainNav [data-s2-main="missions"] small').forEach(x=>{
+      if(x.textContent!=="ผู้ใหญ่บ้าน")x.textContent="ผู้ใหญ่บ้าน";
+    });
+  }
+  // R19.1.1 emergency fix:
+  // Do NOT observe the whole document and write textContent from that observer.
+  // That created a self-triggering MutationObserver loop on the login page,
+  // saturating the main thread so login/buttons appeared completely unresponsive.
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",label,{once:true});
+  }else{
+    label();
+  }
 })();
