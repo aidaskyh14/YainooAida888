@@ -18120,7 +18120,7 @@ async function V181_campaignScoreLater(summary){
         const dk=currentBangkokDateKey();if(s.friendGiftDaily.dateKey!==dk)s.friendGiftDaily={dateKey:dk,count:0};
         if(v240Int(s.friendGiftDaily.count)+qty>30)throw new Error(`วันนี้ส่งได้อีก ${Math.max(0,30-v240Int(s.friendGiftDaily.count))} ชิ้น/ตัว`);
         if(!v240RemoveGiftOwned(s,entry,qty))throw new Error("ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
-        s.friendGiftDaily.count=v240Int(s.friendGiftDaily.count)+qty;next=s;
+        s.friendGiftDaily.count=v240Int(s.friendGiftDaily.count)+qty;try{incrementMissionOn(s,"sendFriendGift",1)}catch(_){}next=s;
         const gift={fromKey:currentMemberKey,fromName:currentMember,toKey:targetKey,toName:targetName,itemType:entry.type,itemKey:entry.key,itemName:entry.name,itemImage:entry.image||"",qty,status:"pending",createdAt:fs.serverTimestamp()};
         if(entry.instance)gift.instance=cloneData(entry.instance);
         tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,gift);tx.set(mailRef,{source:"friend",type:"gift",giftId:giftRef.id,fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} ส่งของขวัญให้คุณ 🎁`,text:`${entry.name} ×${qty}`,read:false,createdAt:fs.serverTimestamp()});
@@ -22573,14 +22573,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function showMarketListingR15(shopNo,slot,data){
     const entries=marketEntriesR15();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");
     $r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing r15-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r15MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r15MarketCount"></small><div id="r15MarketPicker" class="s2-market-picker"></div></section>`;
-    const input=$r("r15MarketSearch"),wrap=$r("r15MarketPicker"),count=$r("r15MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found.slice(0,80);count.textContent=`พบ ${found.length} รายการ`;wrap.innerHTML=view.map((e,idx)=>`<button type="button" data-r15-market-entry="${entries.indexOf(e)}"><img src="${html(e.image||"")}" alt=""><span><b>${html(e.name)}</b><small>มี ×${i(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r15-market-entry]").forEach(b=>b.onclick=()=>marketOptionsR15(shopNo,slot,entries[Number(b.dataset.r15MarketEntry)],data))};input.oninput=paint;paint();openModal();
+    const input=$r("r15MarketSearch"),wrap=$r("r15MarketPicker"),count=$r("r15MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found;count.textContent=`พบ ${found.length} รายการ`;wrap.innerHTML=view.map((e,idx)=>`<button type="button" data-r15-market-entry="${entries.indexOf(e)}"><img src="${html(e.image||"")}" alt=""><span><b>${html(e.name)}</b><small>มี ×${i(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r15-market-entry]").forEach(b=>b.onclick=()=>marketOptionsR15(shopNo,slot,entries[Number(b.dataset.r15MarketEntry)],data))};input.oninput=paint;paint();openModal();
   }
   function marketOptionsR15(shopNo,slot,e,data){
     const maxQty=Math.min(10,Math.max(1,i(e.count??e.qty)||1)),p=marketPriceR15(e);$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(e.image||"")}" alt=""><h2>${html(e.name)}</h2><label>จำนวน <input id="r15MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="r15MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="r15MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="r15MarketConfirm" class="primary-spooky-action">วางขาย</button></section>`;
-    const paint=()=>{const q=Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1));$r("r15MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$r("r15MarketPrice").min=String(p.min*q);$r("r15MarketPrice").max=String(p.max*q)};$r("r15MarketQty").oninput=paint;paint();$r("r15MarketConfirm").onclick=()=>createMarketR15(shopNo,slot,e,Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1)),i($r("r15MarketPrice").value),p,data);
+    const paint=()=>{const q=Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1));$r("r15MarketRange").textContent=`ตั้งได้ 1–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$r("r15MarketPrice").min="1";$r("r15MarketPrice").max=String(p.max*q)};$r("r15MarketQty").oninput=paint;paint();$r("r15MarketConfirm").onclick=()=>createMarketR15(shopNo,slot,e,Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1)),i($r("r15MarketPrice").value),p,data);
   }
   async function createMarketR15(shopNo,slot,e,qty,price,p,data){
-    const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`ตั้งราคาได้ ${min}–${max} กุศล`);
+    const min=1,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`ตั้งราคาได้ ${min}–${max} กุศล`);
     const before=normalizeState(clone(own()),currentMember),optimistic=normalizeState(clone(own()),currentMember),m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
     if(arr[slot])return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(optimistic,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
     const listing={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
@@ -23115,7 +23115,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     {id:"gardenFood",action:"craftFood",title:n=>`คราฟอาหารเมนูในสวน ${n} ครั้ง`,m:[8,11,15]},
     {id:"homeFood",action:"homeFoodCraft",title:n=>`คราฟอาหารบ้านสำเร็จ ${n} จาน`,m:[8,10,12]},
     {id:"spiritProduct",action:"collectAnimalProducts",title:n=>`เก็บผลผลิตสัตว์โลกวิญญาณ ${n} ชิ้น`,m:[12,16,20]},
-    {id:"alpacaShear",action:"alpacaShear",title:n=>`ตัดขนอัลปาก้า ${n} ครั้ง`,m:[90,120,150]},
+    {id:"alpacaShear",action:"alpacaShear",title:n=>`ตัดขนอัลปาก้า ${n} ครั้ง`,m:[8,12,16]},
     {id:"flowers",action:"flowerHarvest",title:n=>`เก็บดอกไม้รวม ${n} ดอก`,m:[10,15,20]},
     {id:"hedgehog",action:"hedgehogCollect",title:n=>`เก็บของดรอปเม่น ${n} ชิ้น`,m:[4,6,8]},
     {id:"wineStart",action:"wineStart",title:n=>`เริ่มหมักไวน์ ${n} เครื่อง`,m:[1,2,3]},
@@ -23126,7 +23126,6 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     {id:"boxes",action:"openMysteryBox",title:n=>`เปิดกล่องสุ่ม ${n} กล่อง`,m:[5,8,10]},
     {id:"friendWater",action:"waterFriends",title:n=>`ช่วยรดน้ำสวนเพื่อน ${n} ครั้ง`,m:[8,12,15]},
     {id:"worms",action:"clearWorms",title:n=>`กำจัดหนอนรวม ${n} ตัว`,m:[10,15,20]},
-    {id:"river",action:"catchCoconutRiver",title:n=>`จับสัตว์น้ำในสวนมะพร้าว ${n} ตัว`,m:[5,8,10]},
     {id:"arena",action:"dailySeaArenaFight",title:n=>`แข่งขันสนามสัตว์น้ำ ${n} รอบ`,m:[3,4,5]},
     {id:"temple",action:"templeSoloSuccess",title:n=>`ทำภารกิจวัดสำเร็จ ${n} ครั้ง`,m:[2,3,4]}
   ];
@@ -23479,5 +23478,386 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   document.addEventListener("pointerup",clearPressed,true);document.addEventListener("pointercancel",clearPressed,true);
 
   globalThis.YN_R20={BUILD,getGardenDirty:()=>[...gardenDirty],persistFriendGardenAction};
+  console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R21 — FORBIDDEN FOREST + HOUSE LEVELS + RESOURCE TOOLS + UX/COST PASS
+   2026-09-02
+   - Local-first interactions; cloud writes are batched after close taps.
+   - Timed state uses timestamps so iOS app switching never resets timers.
+   - New persistent state is merged into saves; Season-1 inventory is never reset.
+   ====================================================================== */
+(function YN_R21_FOREST_HOUSE(){
+  "use strict";
+  const BUILD="S2-R21-FOREST-HOUSE-20260902";
+  const $=id=>document.getElementById(id);
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const num=v=>Math.max(0,Number(v)||0);
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isAdmin=()=>currentMember==="Aida"&&String(currentMemberKey||"")==="aida"&&adminProfile?.role==="admin";
+  const TOOLS={
+    wood:{name:"เนื้อไม้",image:"item-wood.png"},
+    stone:{name:"ก้อนหิน",image:"item-stone.png"},
+    steel:{name:"เหล็ก",image:"item-steel.png"},
+    rope:{name:"เชือก",image:"item-rope.png"}
+  };
+  const TREE_IMAGES=["tree-01-twisted-pine.webp","tree-02-evergreen.webp","tree-03-broadleaf.webp","tree-04-birch.webp"];
+  const ROCK_IMAGES=["rock-01-basalt-pillars.webp","rock-02-tall-monolith.webp","rock-03-boulder-cluster.webp","rock-04-flat-rock-stack.webp"];
+  const FOREST_BG="forbidden-forest-level1.jpeg";
+  const HOUSE_BG={1:"house-interior-season2.jpeg",2:"house-level2.jpeg",3:"house-level3.jpeg"};
+  const HOUSE_META={1:"บ้านทั่วไปของผู้ก่อร่าง",2:"บ้านเศรษฐีหัดเข้าสังคม",3:"บ้านไฮโซ"};
+  const FOREST_ROUND=2*60*60*1000;
+  const FRIEND_RESOURCE_ROUND=45*60*1000;
+  const FOREST_POINTS=[[18,23],[31,20],[45,25],[61,20],[75,24],[24,35],[39,37],[57,35],[72,38],[17,49],[31,51],[48,48],[64,51],[79,49],[24,63],[39,65],[56,63],[72,66],[18,78],[33,80],[49,77],[65,80],[79,76],[29,90],[55,89],[72,90]];
+  const FRIEND_POINTS={
+    1:[[12,23],[22,29],[83,23],[89,39],[12,50],[88,57],[15,71],[83,73],[25,84],[70,84]],
+    2:[[14,25],[28,20],[74,22],[86,34],[14,48],[84,51],[17,68],[79,70],[29,84],[66,84]],
+    3:[[13,24],[27,29],[74,25],[86,39],[14,55],[83,55],[17,72],[78,72],[30,86],[65,85]],
+    4:[[13,25],[27,22],[73,23],[86,36],[15,51],[84,53],[17,69],[79,70],[28,84],[66,84]]
+  };
+  function ensure(s){
+    if(!s)return s;
+    s.warehouseTools=s.warehouseTools&&typeof s.warehouseTools==="object"?s.warehouseTools:{};
+    Object.keys(TOOLS).forEach(k=>{s.warehouseTools[k]=Number.isFinite(Number(s.warehouseTools[k]))?Math.max(0,Number(s.warehouseTools[k])):0});
+    if(isAdmin())Object.keys(TOOLS).forEach(k=>s.warehouseTools[k]=9999);
+    s.friendResourceClaims=s.friendResourceClaims&&typeof s.friendResourceClaims==="object"?s.friendResourceClaims:{};
+    s.forbiddenForest=s.forbiddenForest&&typeof s.forbiddenForest==="object"?s.forbiddenForest:{};
+    const f=s.forbiddenForest;
+    f.nodes=Array.isArray(f.nodes)?f.nodes.filter(x=>x&&["wood","stone"].includes(x.kind)):[];
+    f.nextSpawnAt=Number(f.nextSpawnAt)||0;f.lastSpawnAt=Number(f.lastSpawnAt)||0;
+    s.houseUpgrade=s.houseUpgrade&&typeof s.houseUpgrade==="object"?s.houseUpgrade:{};
+    const h=s.houseUpgrade;
+    h.level=Math.min(3,Math.max(1,int(h.level)||1));
+    h.status=["idle","upgrading"].includes(h.status)?h.status:"idle";
+    h.targetLevel=Math.min(3,Math.max(0,int(h.targetLevel)||0));
+    h.startedAt=Number(h.startedAt)||0;h.readyAt=Number(h.readyAt)||0;
+    if(h.status==="upgrading"&&h.readyAt&&now()>=h.readyAt){h.level=Math.max(h.level,h.targetLevel||h.level);h.status="idle";h.targetLevel=0;h.startedAt=0;h.readyAt=0;h.completedAt=now();}
+    return s;
+  }
+  const normBase=typeof normalizeState==="function"?normalizeState:null;
+  if(normBase)normalizeState=function(raw,player){return ensure(normBase(raw,player))};
+  const freshBase=typeof fresh==="function"?fresh:null;
+  if(freshBase)fresh=function(player){return ensure(freshBase(player))};
+  function own(){return ensure(ownState||state)}
+  function commit(s,{flush=false}={}){ensure(s);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}if(flush)setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},0)}
+  function toolQty(s,k){return isAdmin()?9999:int(ensure(s).warehouseTools[k])}
+  function addTool(s,k,q){ensure(s);if(isAdmin()){s.warehouseTools[k]=9999;return}s.warehouseTools[k]=int(s.warehouseTools[k])+int(q)}
+  function removeTool(s,k,q){ensure(s);if(isAdmin()){s.warehouseTools[k]=9999;return true}q=int(q);if(int(s.warehouseTools[k])<q)return false;s.warehouseTools[k]-=q;return true}
+
+  /* ---------- Inventory category: อุปกรณ์การคลัง ---------- */
+  if(typeof inventory==="function"){
+    const invBase=inventory;
+    inventory=function(tab="crops"){
+      const s=own();
+      if(tab==="warehouseTools"){
+        $("modalContent").innerHTML=`<section class="feature-panel inventory-panel r21-compact-scroll"><h2>🎒 กระเป๋าผี</h2><div class="inventory-tabs inventory-tabs-v2"><button data-inventory-tab="crops">🌱 พืชพรรณ</button><button data-inventory-tab="warehouseTools" class="active">🧰 อุปกรณ์การคลัง</button></div><h3 class="r21-mini-title">🧰 อุปกรณ์การคลัง</h3><div class="inventory-grid">${Object.entries(TOOLS).map(([k,x])=>`<div class="inventory-item"><img src="${x.image}" alt="${esc(x.name)}"><span>${esc(x.name)}</span><b>×${toolQty(s,k)}</b></div>`).join("")}</div></section>`;
+        document.querySelectorAll("[data-inventory-tab]").forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));openModal();return;
+      }
+      const r=invBase(tab);requestAnimationFrame(()=>{const tabs=document.querySelector(".inventory-tabs");if(tabs&&!tabs.querySelector('[data-inventory-tab="warehouseTools"]')){const b=document.createElement("button");b.type="button";b.dataset.inventoryTab="warehouseTools";b.textContent="🧰 อุปกรณ์การคลัง";b.onclick=()=>inventory("warehouseTools");tabs.appendChild(b)}});return r;
+    };
+  }
+  if(typeof removeGiftItemFromState==="function"){
+    const rb=removeGiftItemFromState;removeGiftItemFromState=function(s,type,key,qty){if(type==="warehouseTool")return removeTool(ensure(s),key,qty);return rb(s,type,key,qty)};
+  }
+  if(typeof addGiftItemToState==="function"){
+    const ab=addGiftItemToState;addGiftItemToState=function(s,gift){const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,int(gift?.qty)||1);if(type==="warehouseTool"){addTool(ensure(s),key,qty);return}return ab(s,gift)};
+  }
+  if(typeof v240MemberGiftEntriesFull==="function"){
+    const gb=v240MemberGiftEntriesFull;v240MemberGiftEntriesFull=function(s=own()){s=ensure(s);const rows=gb(s),seen=new Set(rows.map(r=>`${r.type}:${r.key}`));Object.entries(TOOLS).forEach(([k,x])=>{const q=toolQty(s,k);if(q>0&&!seen.has(`warehouseTool:${k}`))rows.push({type:"warehouseTool",key:k,name:x.name,image:x.image,count:q,qty:q,category:"อุปกรณ์การคลัง"})});return rows};
+  }
+  if(typeof adminGiftCatalog==="function"){
+    const cb=adminGiftCatalog;adminGiftCatalog=function(){const rows=cb(),seen=new Set(rows.map(r=>`${r.type}:${r.key}`));Object.entries(TOOLS).forEach(([k,x])=>{if(!seen.has(`warehouseTool:${k}`))rows.push({type:"warehouseTool",key:k,name:x.name,image:x.image})});return rows};
+  }
+
+  /* ---------- Friend farm: trees + rocks, zero extra reads ---------- */
+  function hash(str){let h=2166136261>>>0;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+  function rng(seed){let x=seed>>>0;return()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
+  function friendFarmNo(){try{return Math.min(4,Math.max(1,Number(currentFarmPage)||Number(farmPage)||1))}catch{return 1}}
+  function friendKey(){return String(visitContext?.memberKey||"")}
+  function friendRound(){return Math.floor(now()/FRIEND_RESOURCE_ROUND)}
+  function claimId(kind,slot){return `r21:${friendKey()}:f${friendFarmNo()}:${kind}:s${slot}:r${friendRound()}`}
+  function pruneFriendClaims(s){const min=friendRound()-96;Object.keys(s.friendResourceClaims).forEach(k=>{const m=k.match(/:r(\d+)$/);if(m&&Number(m[1])<min)delete s.friendResourceClaims[k]})}
+  function friendNodes(){if(!visitContext||!friendKey())return[];const farm=friendFarmNo(),R=rng(hash(`${currentMemberKey}|${friendKey()}|${farm}|${friendRound()}|resource`)),pts=FRIEND_POINTS[farm]||FRIEND_POINTS[1],s=own(),out=[];const count=3+Math.floor(R()*3);for(let i=0;i<count;i++){const kind=R()<.5?"wood":"stone",id=claimId(kind,i);if(s.friendResourceClaims[id])continue;const p=pts[i%pts.length];out.push({id,kind,x:p[0]+(R()*2-1),y:p[1]+(R()*2-1),image:(kind==="wood"?TREE_IMAGES:ROCK_IMAGES)[Math.floor(R()*4)]})}return out}
+  function renderFriendResources(){
+    const host=$("sceneInteractiveLayer");if(!host||!visitContext||currentScene)return;
+    if(host.dataset.r21FriendKey===`${friendKey()}:${friendFarmNo()}:${friendRound()}`&&host.querySelector(".r21-friend-resource"))return;
+    host.querySelectorAll(".r21-friend-resource").forEach(x=>x.remove());host.dataset.r21FriendKey=`${friendKey()}:${friendFarmNo()}:${friendRound()}`;
+    friendNodes().forEach(n=>{const b=document.createElement("button");b.type="button";b.className=`r21-friend-resource r21-${n.kind}`;b.style.left=`${n.x}%`;b.style.top=`${n.y}%`;b.innerHTML=`<img src="${n.image}" alt="${n.kind==="wood"?"ต้นไม้":"ก้อนหิน"}">`;b.onclick=e=>{e.preventDefault();e.stopPropagation();collectFriendNode(n,b)};host.appendChild(b)});
+  }
+  function collectFriendNode(n,b){const s=own();if(s.friendResourceClaims[n.id])return;b?.remove();const q=1+Math.floor(Math.random()*3);s.friendResourceClaims[n.id]=now();addTool(s,n.kind,q);pruneFriendClaims(s);commit(s);showWeatherToast?.(`${n.kind==="wood"?"🪵 เนื้อไม้":"🪨 ก้อนหิน"} ×${q} เข้ากระเป๋าแล้ว`)}
+
+  /* ---------- Forbidden Forest ---------- */
+  function newNode(kind,i,t,R){const p=FOREST_POINTS[i%FOREST_POINTS.length];return{id:`ff-${t}-${i}-${Math.random().toString(36).slice(2,6)}`,kind,image:(kind==="wood"?TREE_IMAGES:ROCK_IMAGES)[Math.floor(R()*4)],x:p[0]+(R()*2.2-1.1),y:p[1]+(R()*2.2-1.1),spawnedAt:t}}
+  function processForest(s=own()){
+    const f=ensure(s).forbiddenForest,t=now();let changed=false;
+    if(!f.nextSpawnAt){f.nextSpawnAt=t;changed=true}
+    let safety=0;while(t>=f.nextSpawnAt&&safety++<12){const R=rng(hash(`${currentMemberKey}|forest|${f.nextSpawnAt}`)),empty=f.nodes.length===0,add=empty?10+Math.floor(R()*11):3+Math.floor(R()*4),room=Math.max(0,30-f.nodes.length),count=Math.min(add,room);for(let i=0;i<count;i++)f.nodes.push(newNode(R()<.5?"wood":"stone",f.nodes.length+i,f.nextSpawnAt,R));f.lastSpawnAt=f.nextSpawnAt;f.nextSpawnAt+=FOREST_ROUND;changed=true}
+    if(changed){try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}}
+    return f;
+  }
+  function forestCountdown(){const f=processForest(own()),ms=Math.max(0,f.nextSpawnAt-now()),h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),sec=Math.floor((ms%60000)/1000);return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
+  function openForbiddenForest(){
+    if(!isAdmin())return message("🔒 ป่าต้องห้าม","สถานที่นี้ยังอยู่ในช่วงทดลองค่ะ");
+    try{$("hudMenuDrawer")?.classList.add("hidden");$("hudMenuBackdrop")?.classList.add("hidden")}catch(_){}
+    stopSceneTimer?.();currentScene="forbiddenForest";$("gameScreen")?.classList.add("hidden");$("sceneScreen")?.classList.remove("hidden");const sc=$("sceneScreen");sc.style.backgroundImage=`url("${FOREST_BG}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat";renderForest();
+  }
+  function renderForest(){if(currentScene!=="forbiddenForest")return;const f=processForest(own()),layer=$("sceneInteractiveLayer");if(!layer)return;setSceneNav?.({backText:"กลับฟาร์ม",backAction:returnToFarm});layer.innerHTML=`<div class="r21-forest-status"><span>🌲 ป่าต้องห้าม</span><small>รอบถัดไป <b id="r21ForestCountdown">${forestCountdown()}</b> • เหลือ ${f.nodes.length} จุด</small></div>${f.nodes.map(n=>`<button class="r21-forest-node r21-${n.kind}" type="button" data-r21-node="${esc(n.id)}" style="left:${n.x}%;top:${n.y}%"><img src="${n.image}" alt="${n.kind==="wood"?"ต้นไม้":"ก้อนหิน"}"></button>`).join("")}<div class="r21-forest-actions"><button id="r21ForestBack">กลับฟาร์ม</button><button id="r21ForestCollectAll">เก็บทั้งหมด</button><button id="r21ForestCraft">คราฟอุปกรณ์</button></div>`;
+    layer.querySelectorAll("[data-r21-node]").forEach(b=>b.onclick=()=>collectForestNode(b.dataset.r21Node));$("r21ForestBack").onclick=returnToFarm;$("r21ForestCollectAll").onclick=collectForestAll;$("r21ForestCraft").onclick=openCraftTools;
+    clearInterval(window.__r21ForestTick);window.__r21ForestTick=setInterval(()=>{if(currentScene!=="forbiddenForest"){clearInterval(window.__r21ForestTick);return}const x=$("r21ForestCountdown");if(x)x.textContent=forestCountdown();const ff=processForest(own());if(Number(layer.dataset.r21Count||-1)!==ff.nodes.length){layer.dataset.r21Count=String(ff.nodes.length);renderForest()}},1000);
+  }
+  function collectForestNode(id){const s=own(),f=processForest(s),i=f.nodes.findIndex(n=>n.id===id);if(i<0)return;const n=f.nodes[i],q=1+Math.floor(Math.random()*3);f.nodes.splice(i,1);addTool(s,n.kind,q);commit(s);renderForest();showWeatherToast?.(`${n.kind==="wood"?"🪵 เนื้อไม้":"🪨 ก้อนหิน"} ×${q} เข้ากระเป๋าแล้ว`)}
+  function collectForestAll(){const s=own(),f=processForest(s);if(!f.nodes.length)return message("🧺 เก็บทั้งหมด","ตอนนี้ไม่มีไม้หรือก้อนหินให้เก็บค่ะ");let wood=0,stone=0;for(const n of f.nodes){const q=1+Math.floor(Math.random()*3);if(n.kind==="wood")wood+=q;else stone+=q}f.nodes=[];addTool(s,"wood",wood);addTool(s,"stone",stone);commit(s,{flush:true});renderForest();message("🧺 เก็บทั้งหมดแล้ว",`🪵 เนื้อไม้ ×${wood}<br>🪨 ก้อนหิน ×${stone}<br><small>เข้ากระเป๋า → อุปกรณ์การคลังเรียบร้อยแล้ว</small>`)}
+  function woolTotal(s){const w=s?.alpaca?.inventory?.wool||{};return Object.values(w).reduce((a,b)=>a+int(b),0)}
+  function consumeAnyWool(s,q){if(isAdmin())return true;const w=s?.alpaca?.inventory?.wool||{};if(woolTotal(s)<q)return false;for(const k of Object.keys(w)){const take=Math.min(q,int(w[k]));w[k]-=take;q-=take;if(q<=0)break}return q<=0}
+  function jellyTotalV1(s){return Object.values(s?.specialAnimals||{}).reduce((a,b)=>a+int(b),0)}
+  function consumeAnyJellyV1(s,q=1){if(isAdmin())return true;const m=s.specialAnimals||{};if(jellyTotalV1(s)<q)return false;for(const k of Object.keys(m)){const take=Math.min(q,int(m[k]));m[k]-=take;q-=take;if(q<=0)break}return q<=0}
+  function openCraftTools(){const s=own();$("modalContent").innerHTML=`<section class="feature-panel r21-craft-tools"><h2>🧰 คราฟอุปกรณ์</h2><div class="r21-craft-grid"><article><img src="item-rope.png"><div><b>เชือก</b><small>ไม้ 20 + ขนอัลปาก้าสีใดก็ได้ 2</small><em>สำเร็จ 100% • ได้ 1–5 ชิ้น</em></div><button data-r21-craft="rope">คราฟ</button></article><article><img src="item-steel.png"><div><b>เหล็ก</b><small>ก้อนหิน 20 + แมงกระพรุน V1 ใดก็ได้ 1</small><em>สำเร็จ 100% • ได้ 2–8 ชิ้น</em></div><button data-r21-craft="steel">คราฟ</button></article></div><p class="r21-stock-line">มี: 🪵 ${toolQty(s,"wood")} • 🪨 ${toolQty(s,"stone")} • 🧵 ${toolQty(s,"rope")} • ⚙️ ${toolQty(s,"steel")}</p></section>`;document.querySelectorAll("[data-r21-craft]").forEach(b=>b.onclick=()=>craftTool(b.dataset.r21Craft));openModal()}
+  function craftTool(kind){const s=own();let got=0;if(kind==="rope"){if(toolQty(s,"wood")<20||woolTotal(s)<2&&!isAdmin())return message("คราฟเชือกไม่ได้","ต้องใช้เนื้อไม้ 20 และขนอัลปาก้าสีใดก็ได้ 2 ชิ้น");if(!removeTool(s,"wood",20)||!consumeAnyWool(s,2))return;got=1+Math.floor(Math.random()*5);addTool(s,"rope",got)}else{if(toolQty(s,"stone")<20||jellyTotalV1(s)<1&&!isAdmin())return message("คราฟเหล็กไม่ได้","ต้องใช้ก้อนหิน 20 และแมงกระพรุน V1 ตัวใดก็ได้ 1 ตัว");if(!removeTool(s,"stone",20)||!consumeAnyJellyV1(s,1))return;got=2+Math.floor(Math.random()*7);addTool(s,"steel",got)}commit(s,{flush:true});const x=TOOLS[kind];$("modalContent").innerHTML=`<section class="feature-panel r21-craft-result"><img src="${x.image}" alt=""><h2>✨ คราฟสำเร็จ</h2><p>${esc(x.name)} ×${got}</p><small>ของถูกบันทึกเข้ากระเป๋า → อุปกรณ์การคลังแล้ว<br>กดรับหรือกด × ปิดก็ไม่ทำให้ของหาย</small><button id="r21CraftDone" class="primary-spooky-action">รับ</button></section>`;$("r21CraftDone").onclick=openCraftTools;openModal()}
+
+  /* ---------- House level / irreversible step upgrade ---------- */
+  function houseLevel(s=own()){ensure(s);return s.houseUpgrade.level}
+  function houseName(level=houseLevel()){return HOUSE_META[level]||HOUSE_META[1]}
+  function sumPlants(s){return Object.entries(s.bag||{}).reduce((n,[k,q])=>n+(typeof CROPS!=="undefined"&&CROPS?.[k]?int(q):0),0)}
+  function consumePlants(s,q){if(isAdmin())return true;if(sumPlants(s)<q)return false;const keys=Object.keys(s.bag||{}).filter(k=>typeof CROPS!=="undefined"&&CROPS?.[k]).sort();for(const k of keys){const take=Math.min(q,int(s.bag[k]));s.bag[k]-=take;q-=take;if(q<=0)break}return q<=0}
+  const UPGRADE={2:{merit:500,plants:5000,stone:2000,wood:2000,steel:300,rope:300,ms:6*3600000},3:{merit:1500,plants:12000,stone:5000,wood:5000,steel:1000,rope:1000,ms:12*3600000}};
+  function upgradeReady(s,target){const r=UPGRADE[target];return isAdmin()||(num(s.merit)>=r.merit&&sumPlants(s)>=r.plants&&toolQty(s,"stone")>=r.stone&&toolQty(s,"wood")>=r.wood&&toolQty(s,"steel")>=r.steel&&toolQty(s,"rope")>=r.rope)}
+  function upgradeRemaining(s=own()){return Math.max(0,Number(s.houseUpgrade.readyAt||0)-now())}
+  function fmt(ms){ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),sec=Math.floor((ms%60000)/1000);return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
+  function startHouseUpgrade(target){const s=own(),h=s.houseUpgrade;if(!isAdmin())return message("🔒 อัปเกรดบ้าน","ช่วงทดลองระบบเปิดให้ Aida/Admin ก่อนค่ะ");if(h.status==="upgrading")return showHouseUpgrade();if(target!==h.level+1||!UPGRADE[target])return message("อัปเกรดไม่ได้","บ้านต้องอัปเกรดตามลำดับ Lv.1 → Lv.2 → Lv.3 เท่านั้น");if(!upgradeReady(s,target))return message("วัตถุดิบไม่ครบ","ยังมีวัตถุดิบไม่ครบสำหรับการอัปเกรดค่ะ");const r=UPGRADE[target];if(!isAdmin()){s.merit-=r.merit;consumePlants(s,r.plants);removeTool(s,"stone",r.stone);removeTool(s,"wood",r.wood);removeTool(s,"steel",r.steel);removeTool(s,"rope",r.rope)}h.status="upgrading";h.targetLevel=target;h.startedAt=now();h.readyAt=h.startedAt+r.ms;commit(s,{flush:true});closeModal();decorateHouse();showWeatherToast?.(`🏠 เริ่มอัปเกรดเป็น Lv.${target} แล้ว`)}
+  function finishHouseNow(){if(!isAdmin())return;const s=own(),h=s.houseUpgrade;if(h.status!=="upgrading")return;h.readyAt=now();ensure(s);commit(s,{flush:true});closeModal();decorateHouse();message("🏠 อัปเกรดเสร็จแล้ว",`บ้านของคุณเป็น <b>Lv.${houseLevel(s)} — ${esc(houseName())}</b> แล้วค่ะ`)}
+  function showHouseUpgrade(){const s=own(),h=s.houseUpgrade,l=h.level;if(h.status==="upgrading"){$("modalContent").innerHTML=`<section class="feature-panel r21-house-upgrade"><h2>🏠 อยู่ระหว่างการอัพเกรดบ้าน</h2><p>กรุณารอ <b id="r21HouseTimer">${fmt(upgradeRemaining(s))}</b></p><small>ออกไปตอบแชทหรือเปลี่ยนแอปได้ เวลาอัปเกรดยังคงเดินต่อจาก timestamp จริง</small>${isAdmin()?'<button id="r21HouseSpeed" class="primary-spooky-action">⚡ เร่งอัปเกรดทันที</button>':""}</section>`;if($("r21HouseSpeed"))$("r21HouseSpeed").onclick=finishHouseNow;openModal();return}if(l>=3)return message("🏡 บ้านไฮโซ","บ้านของคุณอยู่ Level 3 ซึ่งเป็นระดับสูงสุดในตอนนี้ค่ะ");const target=l+1,r=UPGRADE[target];$("modalContent").innerHTML=`<section class="feature-panel r21-house-upgrade"><h2>🏠 อัปเกรดบ้าน Lv.${l} → Lv.${target}</h2><p><b>${esc(HOUSE_META[target])}</b></p><div class="r21-upgrade-needs"><span>🙏 กุศล <b>${r.merit}</b></span><span>🌱 พืชพรรณคละได้ <b>${r.plants}</b></span><span>🪨 ก้อนหิน <b>${r.stone}</b></span><span>🪵 เนื้อไม้ <b>${r.wood}</b></span><span>⚙️ เหล็ก <b>${r.steel}</b></span><span>🧵 เชือก <b>${r.rope}</b></span></div><small>ใช้เวลา ${target===2?"6":"12"} ชั่วโมง • อัปเกรดแล้วไม่สามารถย้อนกลับได้</small><button id="r21HouseUpgradeGo" class="primary-spooky-action" ${!upgradeReady(s,target)?"disabled":""}>เริ่มอัปเกรด</button></section>`;$("r21HouseUpgradeGo").onclick=()=>startHouseUpgrade(target);openModal()}
+  function decorateHouse(){if(currentScene!=="house"||visitContext)return;const sc=$("sceneScreen"),layer=$("sceneInteractiveLayer");if(!sc||!layer)return;const main=!!$("r17Bed")||layer.dataset.r17HouseMode==="main";if(!main)return;const s=own(),h=s.houseUpgrade,l=houseLevel(s);sc.style.backgroundImage=`url("${HOUSE_BG[l]}")`;sc.style.backgroundSize="100% 100%";if(!$("r21HouseUpgradeBtn")){const actions=layer.querySelector(".r17-house-actions")||layer;const b=document.createElement("button");b.id="r21HouseUpgradeBtn";b.type="button";b.className="r21-house-upgrade-btn";b.textContent=h.status==="upgrading"?`⏳ อัปเกรด ${fmt(upgradeRemaining(s))}`:l>=3?"🏡 Lv.3 บ้านไฮโซ":"⬆️ อัปเกรดบ้าน";b.onclick=showHouseUpgrade;actions.appendChild(b)}else $("r21HouseUpgradeBtn").textContent=h.status==="upgrading"?`⏳ อัปเกรด ${fmt(upgradeRemaining(s))}`:l>=3?"🏡 Lv.3 บ้านไฮโซ":"⬆️ อัปเกรดบ้าน"}
+
+  /* ---------- Rank: house level, 60s read cache ---------- */
+  let profileCache={at:0,rows:null};
+  async function showFriendsR21(){
+    const nowMs=Date.now();let profileMap={};
+    if(profileCache.rows&&nowMs-profileCache.at<60000)profileMap=clone(profileCache.rows);else{try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(d=>profileMap[d.id]=d.data());profileCache={at:nowMs,rows:clone(profileMap)}}catch(e){console.warn("R21 rank load",e)}}
+    const names=Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{});if(!names.includes("Aida"))names.unshift("Aida");const rows=names.map(name=>{const key=typeof memberKeyFromName==="function"?memberKeyFromName(name):name.toLowerCase(),p=profileMap[key]||{},level=Math.min(3,Math.max(1,int(p.houseLevel)||1));return{name,key,merit:int(p.merit),initialized:p.initialized!==false,level}}).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name));
+    $("modalContent").innerHTML=`<section class="feature-panel friends-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">ข้อมูล Rank ใช้ cache 60 วินาทีเพื่อลดการอ่านฐานข้อมูล</p><div class="friend-list friend-rank-list">${rows.map((r,i)=>`<div class="friend-row friend-rank-row"><span class="friend-rank">#${i+1}</span><span class="friend-avatar">👻</span><span class="friend-info"><b>${esc(r.name)}</b><small>🙏 ${r.merit} กุศล</small><small class="r21-house-rank">🏠 Lv.${r.level} — ${esc(HOUSE_META[r.level])}</small></span>${r.name===currentMember?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${r.key}" data-friend-name="${esc(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${r.key}" data-friend-name="${esc(r.name)}">ส่งของ</button></span>`}</div>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-visit-friend]").forEach(b=>b.onclick=()=>visitFriend?.(b.dataset.visitFriend,b.dataset.friendName));document.querySelectorAll("[data-gift-friend]").forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.giftFriend,b.dataset.friendName));
+  }
+  showFriends=showFriendsR21;
+
+  /* Publish houseLevel only when changed: no extra write on every tap. */
+  let publishedHouseLevel=null;
+  async function publishHouseLevel(){if(!cloudReady||!currentMemberKey||!ownState)return;const l=houseLevel(ownState);if(publishedHouseLevel===l)return;try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{houseLevel:l,houseName:HOUSE_META[l],updatedAt:fs.serverTimestamp()},{merge:true});publishedHouseLevel=l;profileCache.at=0}catch(e){console.warn("R21 publish house level",e)}}
+
+  /* ---------- Remove Miss Universe Alpaca, not just hide ---------- */
+  function purgeMissAlpaca(){const b=$("shortcutMissAlpacaBtn");if(b)b.remove();document.querySelectorAll('.miss-alpaca-shortcut,[id*="MissAlpaca"],[id*="missAlpaca"]').forEach(x=>x.remove())}
+  purgeMissAlpaca();
+
+  /* ---------- Shortcut + iPhone fast tap ---------- */
+  function mountForestShortcut(){const box=document.querySelector(".hud-menu-section-items");if(!box||$("shortcutForbiddenForestBtn"))return;const b=document.createElement("button");b.id="shortcutForbiddenForestBtn";b.className="hud-menu-item r21-forest-shortcut";b.type="button";b.innerHTML=`<span>🌲</span><div><b>ป่าต้องห้าม</b><small>${isAdmin()?"ทดลองเก็บไม้ • หิน • คราฟอุปกรณ์":"🔒 อยู่ระหว่างการทดลอง"}</small></div><i>›</i>`;b.onclick=openForbiddenForest;box.appendChild(b)}
+  document.addEventListener("pointerup",e=>{const b=e.target.closest?.("#shortcutForbiddenForestBtn,#r21ForestBack,#r21ForestCollectAll,#r21ForestCraft,#r21HouseUpgradeBtn");if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(b.id==="shortcutForbiddenForestBtn")openForbiddenForest();else if(b.id==="r21ForestBack")returnToFarm();else if(b.id==="r21ForestCollectAll")collectForestAll();else if(b.id==="r21ForestCraft")openCraftTools();else showHouseUpgrade()},true);
+
+  /* ---------- Performance/cost pass ----------
+     UI commits locally immediately; 900ms cloud debounce batches rapid taps.
+     Visibility flush only persists existing dirty state, never reinitializes UI. */
+  let r21Timer=null;
+  queueCloudSave=function(){if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;if(r21Timer)clearTimeout(r21Timer);if(cloudSaveTimer)clearTimeout(cloudSaveTimer);r21Timer=setTimeout(()=>{r21Timer=null;cloudSaveTimer=null;flushCloudSave().then(()=>publishHouseLevel()).catch(e=>console.error("R21 batched save",e))},900)};
+
+  /* Existing direct action mission aliases: one real completed send counts once. */
+  if(typeof incrementMissionOn==="function"){
+    const ib=incrementMissionOn;incrementMissionOn=function(s,id,amount=1){const aliases={sendMemberGift:"sendFriendGift",memberGift:"sendFriendGift",giftSent:"sendFriendGift",boatSend:"boatSupply",sendBoatSupply:"boatSupply"};return ib(s,aliases[id]||id,amount)};
+  }
+
+  /* Draw/open hooks without a self-triggering MutationObserver. */
+  const drawBase=draw;draw=function(){const r=drawBase.apply(this,arguments);requestAnimationFrame(()=>{mountForestShortcut();purgeMissAlpaca();renderFriendResources();decorateHouse()});return r};
+  const openBase=openScene;openScene=function(name){const r=openBase.apply(this,arguments);requestAnimationFrame(()=>{mountForestShortcut();decorateHouse()});return r};
+  const returnBase=returnToFarm;returnToFarm=function(){clearInterval(window.__r21ForestTick);const r=returnBase.apply(this,arguments);requestAnimationFrame(()=>{renderFriendResources();mountForestShortcut()});return r};
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){try{const s=own();ensure(s);saveLocalOnly(s);queueCloudSave()}catch(_){}}else{setTimeout(()=>{ensure(own());if(currentScene==="forbiddenForest")renderForest();else{decorateHouse();renderFriendResources()}},80)}},{passive:true});
+  window.addEventListener("pageshow",()=>setTimeout(()=>{ensure(own());mountForestShortcut();if(currentScene==="forbiddenForest")renderForest();else{decorateHouse();renderFriendResources()}},80),{passive:true});
+  setInterval(()=>{try{mountForestShortcut();purgeMissAlpaca();if(currentScene==="house")decorateHouse();if(visitContext&&!currentScene)renderFriendResources();if(ownState?.houseUpgrade?.status==="upgrading"&&now()>=Number(ownState.houseUpgrade.readyAt||0)){ensure(ownState);commit(ownState);decorateHouse();publishHouseLevel()}}catch(e){console.warn("R21 tick",e)}},1500);
+
+  globalThis.YN_R21={BUILD,openForbiddenForest,renderForest,openCraftTools,showHouseUpgrade,TOOLS,HOUSE_META,ensure};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R22 — FULL CHECKLIST HARDENING / FAST-TAP / CONTINUITY / LOW-WRITE PASS
+   2026-09-02
+   This layer does not reset legacy inventory. It hardens the systems already
+   present in R20/R21 and closes the remaining checklist gaps without adding
+   polling reads.
+   ====================================================================== */
+(function YN_R22_FULL_HARDENING(){
+  "use strict";
+  const BUILD="S2-R22-FULL-HARDENING-20260902";
+  const $=id=>document.getElementById(id);
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const n=v=>Math.max(0,Number(v)||0);
+  const i=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isAdmin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+
+  /* ---------- 1) Critical state continuity shadow ----------
+     A tiny local shadow protects timed/placed systems from iOS suspension and
+     stale/default rewrites. It is only used to restore a section when the live
+     section is obviously empty while the recent shadow contains real data. */
+  const CRITICAL_KEYS=[
+    "animals","alpaca","dogs","cats","fishTraps","flowerPlots","wineMachines",
+    "hedgehog","forbiddenForest","houseUpgrade","farm2Fishing","dogCare"
+  ];
+  const shadowKey=()=>`yn:s2:r22:critical:${String(currentMemberKey||currentMember||"guest")}`;
+  function nonEmpty(v){
+    if(Array.isArray(v))return v.some(x=>x!=null&&x!==false);
+    if(v&&typeof v==="object")return Object.keys(v).some(k=>{const x=v[k];return Array.isArray(x)?x.some(Boolean):(x&&typeof x==="object"?Object.keys(x).length>0:Number(x)>0||Boolean(x))});
+    return Boolean(v);
+  }
+  function writeCriticalShadow(s){
+    if(!s||visitContext||!currentMemberKey)return;
+    try{const data={savedAt:Date.now(),data:{}};CRITICAL_KEYS.forEach(k=>{if(s[k]!==undefined)data.data[k]=clone(s[k])});localStorage.setItem(shadowKey(),JSON.stringify(data))}catch(_){ }
+  }
+  function restoreCriticalShadow(s){
+    if(!s||visitContext||!currentMemberKey)return s;
+    try{
+      const raw=localStorage.getItem(shadowKey());if(!raw)return s;
+      const box=JSON.parse(raw);if(!box||Date.now()-Number(box.savedAt||0)>7*24*3600000)return s;
+      const d=box.data||{};let changed=false;
+      for(const k of CRITICAL_KEYS){
+        if(d[k]===undefined)continue;
+        /* Never replace real live data. Restore only an obvious collapse. */
+        if(!nonEmpty(s[k])&&nonEmpty(d[k])){s[k]=clone(d[k]);changed=true}
+      }
+      if(changed){try{saveLocalOnly(s)}catch(_){} console.warn("R22 restored collapsed critical state from local continuity shadow")}
+    }catch(_){ }
+    return s;
+  }
+  const r22NormBase=typeof normalizeState==="function"?normalizeState:null;
+  if(r22NormBase)normalizeState=function(raw,player){return restoreCriticalShadow(r22NormBase(raw,player))};
+
+  /* ---------- 2) Fast local-first save + lower Firestore cost ----------
+     Close taps are bundled into one write. A background transition gets one
+     best-effort flush so a 2–3 minute app switch does not lose the latest tap. */
+  let saveTimer=null,lastBackgroundFlush=0;
+  const r22FlushBase=typeof flushCloudSave==="function"?flushCloudSave:null;
+  queueCloudSave=function(){
+    if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;
+    if(saveTimer)clearTimeout(saveTimer);if(typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer)clearTimeout(cloudSaveTimer);
+    saveTimer=setTimeout(()=>{saveTimer=null;try{r22FlushBase?.()}catch(e){console.warn("R22 save",e)}},320);
+  };
+  async function backgroundFlush(){
+    if(!cloudReady||!currentMemberKey||visitContext)return;
+    writeCriticalShadow(ownState||state);
+    const t=Date.now();if(t-lastBackgroundFlush<1200)return;lastBackgroundFlush=t;
+    try{await r22FlushBase?.()}catch(e){console.warn("R22 background flush",e)}
+  }
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){backgroundFlush();return}
+    const s=restoreCriticalShadow(ownState||state);if(s){ownState=s;if(!visitContext)state=s}
+    setTimeout(()=>{try{draw?.()}catch(_){}},60);
+  },{passive:true});
+  window.addEventListener("pagehide",()=>{writeCriticalShadow(ownState||state);backgroundFlush()},{passive:true});
+  window.addEventListener("pageshow",()=>{const s=restoreCriticalShadow(ownState||state);if(s){ownState=s;if(!visitContext)state=s}setTimeout(()=>{try{draw?.()}catch(_){}},60)},{passive:true});
+
+  /* ---------- 3) Individual planting: true local-first per plot ----------
+     No read-before-write transaction per tap. R20's dirty-plot publisher merges
+     only changed plot indices with the latest garden, so rapid plot 1/2/3 taps
+     cannot overwrite one another. "ปลูกทั้งหมด" is intentionally untouched. */
+  if(typeof Y26_plantCrop==="function"){
+    Y26_plantCrop=function(index,key,button){
+      if(visitContext||guardResting?.())return;
+      const crop=CROPS?.[key],s=ownState||state;if(!crop||!s)return;
+      s.plots=Array.isArray(s.plots)?s.plots:[];while(s.plots.length<PLOT_COUNT)s.plots.push(emptyPlot());
+      try{ensurePlotPhaseStandalone?.(s.plots[index])}catch(_){}
+      if(s.plots[index]?.crop)return message("ปลูกไม่ได้","แปลงนี้ถูกปลูกไปแล้ว");
+      const cost=Number(crop.seedCostMerit)||0;if(cost&&Number(s.merit||0)<cost)return message("ปลูกไม่ได้",`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);
+      if(button)button.disabled=true;
+      if(cost)s.merit=Number(s.merit||0)-cost;
+      s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;
+      const t=now();s.plots[index]={crop:key,phase:"growing1",phaseEndsAt:t+crop.waterMs,plantedAt:t,wateredAt:0,worm:false,angel};
+      try{incrementMissionOn?.(s,"dailyPlantCrops",1)}catch(_){}
+      ownState=s;state=s;try{saveLocalOnly(s)}catch(_){};writeCriticalShadow(s);
+      closeModal?.();draw?.();updateMeritUI?.();showWeatherToast?.(`🌱 ปลูก ${crop.name} แปลง ${index+1} แล้ว`);
+      try{save?.()}catch(_){};if(button)setTimeout(()=>button.disabled=false,80);
+    };
+  }
+
+  /* ---------- 4) Mission action aliases: one real action = one count ---------- */
+  if(typeof incrementMissionOn==="function"){
+    const missionBase=incrementMissionOn;
+    incrementMissionOn=function(s,id,amount=1){
+      const aliases={
+        sendMemberGift:"sendFriendGift",memberGift:"sendFriendGift",giftSent:"sendFriendGift",friendGift:"sendFriendGift",
+        boatSend:"boatSupply",sendBoatSupply:"boatSupply",boatSupplySent:"boatSupply",
+        gardenFoodCraft:"craftFood",craftGardenFood:"craftFood",homeCraft:"homeFoodCraft",
+        collectGrassFriend:"dailyCollectGrass",friendGrass:"dailyCollectGrass",
+        wormClear:"clearWorms",friendWormClear:"clearWorms"
+      };
+      return missionBase(s,aliases[id]||id,amount);
+    };
+  }
+
+  /* ---------- 5) One-tap collection helpers ---------- */
+  function mountFriendResourceAll(){
+    const host=$("sceneInteractiveLayer");if(!host||!visitContext||currentScene)return;
+    const nodes=[...host.querySelectorAll(".r21-friend-resource")];
+    let b=$("r22FriendResourceAll");
+    if(!nodes.length){b?.remove();return}
+    if(!b){b=document.createElement("button");b.id="r22FriendResourceAll";b.className="r22-mini-all";b.type="button";b.textContent="🧺 เก็บไม้/หินทั้งหมด";host.appendChild(b)}
+    b.onclick=e=>{e.preventDefault();e.stopPropagation();const list=[...host.querySelectorAll(".r21-friend-resource")];if(!list.length)return;list.forEach(x=>x.click());b.remove()};
+  }
+  function r22RollTrapRewards(){
+    const species=["fish","frog","shrimp","crab","urchin"],total=1+Math.floor(Math.random()*4),maxKinds=Math.min(4,total),kindCount=maxKinds<=1?1:2+Math.floor(Math.random()*(maxKinds-1));
+    const pool=species.slice().sort(()=>Math.random()-.5).slice(0,Math.min(kindCount,species.length)),rows=pool.map(kind=>({key:`${kind}${1+Math.floor(Math.random()*4)}`,qty:1}));
+    let left=total-rows.length;while(left-->0&&rows.length)rows[Math.floor(Math.random()*rows.length)].qty++;return rows;
+  }
+  function collectReadyFishTrapsAll(){
+    const s=ownState||state;if(!s||!Array.isArray(s.fishTraps))return;
+    const t=now();let total=0;s.coconutRiverItems=s.coconutRiverItems&&typeof s.coconutRiverItems==="object"?s.coconutRiverItems:{};
+    for(let idx=0;idx<s.fishTraps.length;idx++){
+      const trap=s.fishTraps[idx];if(!trap||Number(trap.readyAt||0)>t||!Array.isArray(trap.rewards)||!trap.rewards.length)continue;
+      trap.rewards.forEach(r=>{const q=i(r.qty)||1;s.coconutRiverItems[r.key]=i(s.coconutRiverItems[r.key])+q;total+=q});
+      if(t>=Number(trap.expiresAt||0))s.fishTraps[idx]=null;
+      else if(t+30*60*1000<=Number(trap.expiresAt||0)){trap.cycleStartedAt=t;trap.readyAt=t+30*60*1000;trap.rewards=r22RollTrapRewards()}
+      else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
+    }
+    if(!total)return message("🎣 เก็บไซทั้งหมด","ตอนนี้ยังไม่มีไซที่พร้อมเก็บค่ะ");
+    ownState=s;state=s;saveLocalOnly?.(s);writeCriticalShadow(s);save?.();globalThis.YN_R15?.renderFishTraps?.();message("🎣 เก็บไซทั้งหมดแล้ว",`สัตว์น้ำรวม ×${total} เข้ากระเป๋าเรียบร้อยแล้วค่ะ`);
+  }
+  function mountTrapCollectAll(){
+    const layer=$("r15FishTrapLayer");if(!layer||layer.classList.contains("hidden")){$("r22TrapAll")?.remove();return}
+    const ready=!!layer.querySelector(".r15-fish-trap-slot.ready");let b=$("r22TrapAll");
+    if(!ready){b?.remove();return}if(!b){b=document.createElement("button");b.id="r22TrapAll";b.className="r22-trap-all";b.type="button";b.textContent="🧺 เก็บไซทั้งหมด";layer.appendChild(b)}b.onclick=collectReadyFishTrapsAll;
+  }
+
+  /* ---------- 6) All four farms: manager always exposes worm-all ---------- */
+  function ensureManagerButton(){
+    if(visitContext)return;const game=$("gameScreen");if(!game)return;
+    if(!$("ynuGardenManagerBtn")&&globalThis.YN_R14?.manager){const b=document.createElement("button");b.id="ynuGardenManagerBtn";b.className="ynu-garden-manager-button";b.type="button";b.innerHTML="🌱<b>จัดการทั้งสวน</b>";b.onclick=()=>globalThis.YN_R14.manager();game.appendChild(b)}
+  }
+
+  /* ---------- 7) House upgrade timer text refresh ---------- */
+  function refreshHouseTimer(){
+    const el=$("r21HouseTimer"),s=ownState||state,h=s?.houseUpgrade;if(!el||h?.status!=="upgrading")return;
+    const left=Math.max(0,Number(h.readyAt||0)-now()),sec=Math.ceil(left/1000),hh=Math.floor(sec/3600),mm=Math.floor((sec%3600)/60),ss=sec%60;el.textContent=`${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+  }
+
+  /* ---------- 8) Remove Miss Universe Alpaca leftovers ---------- */
+  function purgeMiss(){
+    document.querySelectorAll('#shortcutMissAlpacaBtn,.miss-alpaca-shortcut,[data-shortcut*="missAlpaca"],[id^="missAlpaca"],[id^="MissAlpaca"]').forEach(x=>x.remove());
+  }
+
+  /* ---------- 9) Asset alpha sanity: warn only, never replace user files ---------- */
+  function auditAlphaAssets(){
+    ["tree-01-twisted-pine.webp","tree-02-evergreen.webp","tree-03-broadleaf.webp","tree-04-birch.webp","rock-01-basalt-pillars.webp","rock-02-tall-monolith.webp","rock-03-boulder-cluster.webp","rock-04-flat-rock-stack.webp"].forEach(src=>{
+      const im=new Image();im.decoding="async";im.src=src;im.onerror=()=>console.warn("R22 asset missing/unreadable",src);
+    });
+  }
+
+  /* ---------- 10) Universal instant tap feedback ---------- */
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("button,[role=button]");if(!b||b.disabled)return;b.classList.add("r22-tap-now");setTimeout(()=>b.classList.remove("r22-tap-now"),140)},{passive:true,capture:true});
+
+  /* ---------- 11) Periodic UI-only tick; no Firebase reads ---------- */
+  const r22DrawBase=typeof draw==="function"?draw:null;
+  if(r22DrawBase)draw=function(){const r=r22DrawBase.apply(this,arguments);requestAnimationFrame(()=>{ensureManagerButton();mountFriendResourceAll();mountTrapCollectAll();purgeMiss();refreshHouseTimer()});return r};
+  setInterval(()=>{try{refreshHouseTimer();mountFriendResourceAll();mountTrapCollectAll();purgeMiss();writeCriticalShadow(ownState||state)}catch(_){}},1500);
+  setTimeout(()=>{ensureManagerButton();auditAlphaAssets();purgeMiss();writeCriticalShadow(ownState||state)},120);
+
+  globalThis.YN_R22={BUILD,writeCriticalShadow,restoreCriticalShadow,collectReadyFishTrapsAll};
+  globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
