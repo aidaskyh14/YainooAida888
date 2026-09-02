@@ -23981,3 +23981,320 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   globalThis.YN_R23={BUILD,rewardToast,renderFriendNodes,publishHouseLevel};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+/* ======================================================================
+   S2 R24 — PERSISTENCE-FIRST PICKUP / MARKET / PETS / HONEY
+   2026-09-02
+   Scope: fixes the post-R23 pickup only. No image generation/asset edits.
+   ====================================================================== */
+(function YN_R24_PERSISTENCE_FIRST(){
+  "use strict";
+  const BUILD="S2-R24-PERSISTENCE-FIRST-20260902";
+  const $=id=>document.getElementById(id);
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const eq=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch{return false}};
+  const nonEmpty=v=>{
+    if(Array.isArray(v))return v.some(Boolean);
+    if(v&&typeof v==="object")return Object.keys(v).some(k=>nonEmpty(v[k]));
+    return v!==undefined&&v!==null&&v!==false&&v!==0&&v!=="";
+  };
+
+  /* ------------------------------------------------------------------
+     1) Full market catalog.
+     R23 still inherited a legacy catalog whose actual rendered result could
+     stop at the old inventory surface. Build from the CURRENT state plus all
+     known stackable inventory registries. The market picker has no hard cap.
+     ------------------------------------------------------------------ */
+  if(typeof v240MemberGiftEntriesFull==="function"){
+    const baseCatalog=v240MemberGiftEntriesFull;
+    v240MemberGiftEntriesFull=function(s=ownState||state){
+      s=typeof normalizeState==="function"?normalizeState(s,currentMember):s;
+      let rows=[];try{rows=baseCatalog(s)||[]}catch(_){rows=[]}
+      const seen=new Set();
+      const out=[];
+      const add=(type,key,name,count,image="",category="ทั้งหมด",instance=null)=>{
+        count=admin()?9999:iv(count);
+        if(!count||key==null||!type)return;
+        const sig=`${type}:${String(key)}`;if(seen.has(sig))return;seen.add(sig);
+        out.push({type,key,name:String(name||key),count,qty:count,image:image||"",category,instance});
+      };
+      for(const e of rows){if(!e||!e.type||e.key==null)continue;add(e.type,e.key,e.name,e.count??e.qty,e.image,e.category,e.instance)}
+      /* Aida/Admin owns the complete supported catalog at ×9999.  Pulling the
+         same registry used by Admin Gift prevents the market from silently
+         stopping at the legacy 49-entry inventory surface. */
+      if(admin()&&typeof adminGiftCatalog==="function"){
+        try{for(const e of (adminGiftCatalog()||[])){if(!e||!e.type||e.key==null||e.type==="merit")continue;add(e.type,e.key,e.name,9999,e.image||"",e.category||"ทั้งหมด",e.instance||null)}}catch(_){}
+      }
+      try{Object.entries(CROPS||{}).forEach(([k,m])=>add("crop",k,m.name,s?.bag?.[k],m.selectImg||m.image||"","พืชพรรณ"))}catch(_){}
+      try{Object.entries(ANIMAL_PRODUCTS||{}).forEach(([k,m])=>add("product",k,m.name,s?.animalProducts?.[k],m.image||"","ผลผลิตสัตว์"))}catch(_){}
+      try{(RECIPES||[]).forEach(m=>add("dish",m.id,m.name,typeof dishCountInState==="function"?dishCountInState(m.id,s):s?.dishInventory?.[m.id],m.image||"","อาหาร"))}catch(_){}
+      try{Object.entries(SPECIAL_ITEMS||{}).forEach(([k,m])=>add("special",k,m.name,s?.specials?.[k],m.image||"","ของพิเศษ"))}catch(_){}
+      try{Object.entries(JELLYFISH_TYPES||{}).forEach(([k,m])=>add("jelly",k,m.name,s?.specialAnimals?.[k],m.image||"","แมงกะพรุน V1"))}catch(_){}
+      try{Object.entries(globalThis.Y26_JELLY_V2||{}).forEach(([k,m])=>add("jellyV2",k,m.name,s?.jellyfishV2?.[k],m.image||"","แมงกะพรุน V2"))}catch(_){}
+      try{Object.entries(FISHING_BAITS||{}).forEach(([k,m])=>add("fishingBait",k,m.name,s?.fishingBaits?.[k],m.image||"","เหยื่อตกปลา"))}catch(_){}
+      try{Object.entries(COCONUT_RIVER_ITEMS||{}).forEach(([k,m])=>add("coconutRiver",k,m.name,s?.coconutRiverItems?.[k],m.image||"","สัตว์น้ำ"))}catch(_){}
+      try{Object.entries(globalThis.Y26_MEDICINES||{}).forEach(([k,m])=>add("medicine",k,m.name,s?.medicines?.[k],m.image||"","ยา"))}catch(_){}
+      try{(BOAT_SUPPLY_DRINKS||[]).forEach(m=>add("boatDrink",m.id,m.name,s?.boatDrinks?.[m.id],m.image||"","เครื่องดื่ม"))}catch(_){}
+      try{(RAINY_SEASON_MENUS||[]).forEach(m=>add("rainyMenu",m.id,m.name,s?.rainyMenus?.[m.id],m.image||"","เมนูหน้าฝน"))}catch(_){}
+      try{Object.values(globalThis.YN_S2_FARM?.FRUITS||{}).forEach(m=>add("farmFruit",m.key,m.name,s?.farmFruits?.[m.key],m.image||"","ผลไม้"))}catch(_){}
+      try{Object.entries(globalThis.YN_R21?.TOOLS||{}).forEach(([k,m])=>add("warehouseTool",k,m.name,s?.warehouseTools?.[k],m.image||"","อุปกรณ์การคลัง"))}catch(_){}
+      /* Keep all newer extension rows (home food, flowers, wine, hedgehog,
+         alpaca factory etc.) from the inherited catalog. */
+      return out.filter(e=>iv(e.count??e.qty)>0);
+    };
+  }
+
+  /* ------------------------------------------------------------------
+     2) Remove the front-page "เก็บไซทั้งหมด" button completely.
+     Individual trap collection remains unchanged.
+     ------------------------------------------------------------------ */
+  function purgeTrapAll(){document.querySelectorAll("#r22TrapAll,.r22-trap-all").forEach(x=>x.remove())}
+  purgeTrapAll();
+
+  /* ------------------------------------------------------------------
+     3) Persistence repair.
+     - House level is monotonic: never downgrade after it has reached a level.
+     - Already placed spirit animals / alpacas / hotel pets cannot disappear
+       because a default or stale state was written after refresh/deploy.
+     - Honey active trip survives refresh/app switching.
+     We keep legitimate UNPLACED inventory removals sellable/giftable.
+     ------------------------------------------------------------------ */
+  function animalAlive(a){if(!a)return false;const exp=Number(a.expiresAt||0);return !exp||exp>now()}
+  function mergeSpirit(local,remote){
+    local=local&&typeof local==="object"?local:{};remote=remote&&typeof remote==="object"?remote:{};
+    const out=clone(local);for(const k of new Set([...Object.keys(remote),...Object.keys(local)])){
+      const la=Array.isArray(local[k])?local[k].slice():[],ra=Array.isArray(remote[k])?remote[k]:[];
+      const n=Math.max(9,la.length,ra.length);while(la.length<n)la.push(null);
+      for(let i=0;i<n;i++)if(!la[i]&&animalAlive(ra[i]))la[i]=clone(ra[i]);
+      out[k]=la;
+    }return out;
+  }
+  function mergePetArray(local,remote,kind){
+    const l=Array.isArray(local)?local.map(clone):[],r=Array.isArray(remote)?remote:[];
+    const map=new Map(l.filter(x=>x?.id).map(x=>[String(x.id),x]));
+    for(const rp of r){if(!rp?.id)continue;const id=String(rp.id),lp=map.get(id);
+      const remotePlaced=kind==="cat"?Boolean(rp.placedHotel||rp.placedFarm):Boolean(rp.placedHotel);
+      if(!lp){if(remotePlaced)l.push(clone(rp));continue}
+      if(kind==="cat"){
+        if(rp.placedHotel&&!lp.placedHotel){lp.placedHotel=true;lp.hotelPen=rp.hotelPen;lp.placedAt=Math.max(Number(lp.placedAt)||0,Number(rp.placedAt)||0)}
+        if(rp.placedFarm&&!lp.placedFarm){lp.placedFarm=rp.placedFarm;lp.placedAt=Math.max(Number(lp.placedAt)||0,Number(rp.placedAt)||0)}
+      }else if(rp.placedHotel&&!lp.placedHotel){lp.placedHotel=true;lp.hotelPen=rp.hotelPen;lp.placedAt=Math.max(Number(lp.placedAt)||0,Number(rp.placedAt)||0)}
+    }return l;
+  }
+  function mergeAlpaca(local,remote){
+    if(!remote||typeof remote!=="object")return local;
+    if(!local||typeof local!=="object")return clone(remote);
+    const out=clone(local),rp=Array.isArray(remote.pens)?remote.pens:[],lp=Array.isArray(out.pens)?out.pens:[];
+    while(lp.length<rp.length)lp.push(clone(rp[lp.length]));
+    for(let pi=0;pi<rp.length;pi++){
+      const rr=rp[pi],ll=lp[pi]||(lp[pi]={});
+      const ra=Array.isArray(rr?.alpacas)?rr.alpacas:[],la=Array.isArray(ll?.alpacas)?ll.alpacas:[];
+      const ids=new Set(la.map(a=>String(a?.id||"")));
+      for(const a of ra){if(a?.id&&!ids.has(String(a.id))&&animalAlive(a)){la.push(clone(a));ids.add(String(a.id))}}
+      ll.alpacas=la;
+      /* Trough slots are placement state too: keep a remote occupied slot if a
+         stale local renderer accidentally reset it. */
+      for(const key of ["troughLeft","troughRight","leftTrough","rightTrough"]){
+        if(!nonEmpty(ll[key])&&nonEmpty(rr?.[key]))ll[key]=clone(rr[key]);
+      }
+    }
+    out.pens=lp;return out;
+  }
+  function mergeHouse(local,remote){
+    const l=local&&typeof local==="object"?clone(local):{},r=remote&&typeof remote==="object"?remote:{};
+    const ll=Math.max(1,iv(l.level)||1),rl=Math.max(1,iv(r.level)||1);if(rl>ll){Object.assign(l,clone(r));return l}
+    l.level=Math.max(ll,rl);
+    if(r.status==="upgrading"&&Number(r.readyAt||0)>Number(l.readyAt||0))Object.assign(l,clone(r));
+    if(Number(r.completedAt||0)>Number(l.completedAt||0)&&rl>=l.level)Object.assign(l,clone(r));
+    return l;
+  }
+  function mergeHoney(local,remote){
+    const l=local&&typeof local==="object"?clone(local):{},r=remote&&typeof remote==="object"?remote:{};
+    if(r.active&&!l.active)return clone(r);
+    if(r.active&&l.active&&Number(r.calledAt||0)>Number(l.calledAt||0))return clone(r);
+    if(r.reward&&!l.reward&&r.active)return clone(r);
+    return l;
+  }
+  function protectPersistent(local,remote){
+    if(!local||!remote)return local;
+    local.houseUpgrade=mergeHouse(local.houseUpgrade,remote.houseUpgrade);
+    local.animals=mergeSpirit(local.animals,remote.animals);
+    local.alpaca=mergeAlpaca(local.alpaca,remote.alpaca);
+    local.cats=mergePetArray(local.cats,remote.cats,"cat");
+    local.dogs=mergePetArray(local.dogs,remote.dogs,"dog");
+    local.honeyDelivery=mergeHoney(local.honeyDelivery,remote.honeyDelivery);
+    if(!nonEmpty(local.hotelPetPenMap)&&nonEmpty(remote.hotelPetPenMap))local.hotelPetPenMap=clone(remote.hotelPetPenMap);
+    if(!nonEmpty(local.hotelDropPenMap)&&nonEmpty(remote.hotelDropPenMap))local.hotelDropPenMap=clone(remote.hotelDropPenMap);
+    return local;
+  }
+
+  /* One authoritative save subscriber: never apply an older whole-save snapshot
+     to active local state. Unlike the old listener, this listener also protects
+     placed systems if a bad remote document is encountered. */
+  let r24SaveUnsub=null,r24GardenUnsub=null,r24SaveTimer=null,r24Flush=null,r24Revision=0;
+  const localKey=()=>`yn:r24:last-good:${String(currentMemberKey||currentMember||"guest")}`;
+  function persistLocalGood(s){if(!s||visitContext)return;try{localStorage.setItem(localKey(),JSON.stringify({at:Date.now(),state:clone(s)}))}catch(_){} }
+  function restoreLocalGood(s){
+    if(!s||visitContext)return s;try{const raw=localStorage.getItem(localKey());if(!raw)return s;const box=JSON.parse(raw);if(!box?.state||Date.now()-Number(box.at||0)>14*86400000)return s;return protectPersistent(s,box.state)}catch{return s}
+  }
+  if(typeof normalizeState==="function"){
+    const norm=normalizeState;normalizeState=function(raw,player){return restoreLocalGood(norm(raw,player))};
+  }
+
+  const oldFlush=typeof flushCloudSave==="function"?flushCloudSave:null;
+  flushCloudSave=async function(){
+    if(!cloudReady||!currentMemberKey||!ownState||visitContext||cloudSessionSuperseded)return;
+    if(r24Flush)return r24Flush;
+    r24Flush=(async()=>{
+      try{
+        const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let merged;
+        await fs.runTransaction(db,async tx=>{
+          const snap=await tx.get(ref),remote=snap.exists()?snap.data():{},local=protectPersistent(clone(ownState),remote);
+          r24Revision=Math.max(r24Revision,Number(remote.clientSaveRevision)||0,Number(local.clientSaveRevision)||0)+1;
+          local.clientSaveRevision=r24Revision;local.clientLocalEditAt=Date.now();local.activeSessionId=cloudSessionId;
+          merged={...clone(remote),...local};protectPersistent(merged,remote);
+          tx.set(ref,{...merged,updatedAt:fs.serverTimestamp()},{merge:false});
+        });
+        ownState=typeof normalizeState==="function"?normalizeState(merged,currentMember):merged;if(!visitContext)state=ownState;
+        try{saveLocalOnly(ownState)}catch(_){}persistLocalGood(ownState);
+        /* Keep public profile cheap: only one merge write after the authoritative
+           state write, and it includes house level for Rank. */
+        try{await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(ownState.merit)||0,houseLevel:Math.max(1,iv(ownState?.houseUpgrade?.level)||1),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R24 profile publish",e)}
+      }catch(e){console.warn("R24 authoritative save failed",e);throw e}
+      finally{r24Flush=null}
+    })();return r24Flush;
+  };
+  queueCloudSave=function(){
+    if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;
+    persistLocalGood(ownState||state);if(r24SaveTimer)clearTimeout(r24SaveTimer);
+    r24SaveTimer=setTimeout(()=>{r24SaveTimer=null;flushCloudSave().catch(()=>{})},420);
+  };
+  save=function(){const s=ownState||state;if(!s)return;if(!visitContext){ownState=s;state=s}try{saveLocalOnly(s)}catch(_){}persistLocalGood(s);queueCloudSave()};
+  settlePendingCloudSave=async function(){if(r24SaveTimer){clearTimeout(r24SaveTimer);r24SaveTimer=null}if(r24Flush)await r24Flush;else await flushCloudSave()};
+
+  /* Reconcile once after cloud login BEFORE normal play. This also prevents a
+     previous deploy's local default from immediately winning over a valid cloud
+     placement. */
+  if(typeof initializeOrLoadCloudState==="function"){
+    const init=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,key){
+      const result=await init(member,key);
+      try{
+        const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"saves",key));
+        if(snap.exists()){
+          const remote=snap.data(),cur=ownState||result,merged=protectPersistent(typeof normalizeState==="function"?normalizeState(remote,member):clone(remote),cur);
+          ownState=merged;if(!visitContext)state=ownState;r24Revision=Math.max(Number(remote.clientSaveRevision)||0,Number(merged.clientSaveRevision)||0);try{saveLocalOnly(ownState)}catch(_){}persistLocalGood(ownState);
+        }
+      }catch(e){console.warn("R24 login reconcile",e)}
+      return ownState||result;
+    };
+  }
+
+  subscribeOwnGarden=function(){
+    try{if(ownGardenUnsubscribe){ownGardenUnsubscribe();ownGardenUnsubscribe=null}}catch(_){}
+    try{if(typeof ownSaveUnsubscribe!=="undefined"&&ownSaveUnsubscribe){ownSaveUnsubscribe();ownSaveUnsubscribe=null}}catch(_){}
+    try{r24SaveUnsub?.();r24GardenUnsub?.()}catch(_){}r24SaveUnsub=r24GardenUnsub=null;
+    if(!cloudReady||!currentMemberKey)return;
+    getFirebaseContext().then(({db,fs})=>{
+      r24GardenUnsub=fs.onSnapshot(fs.doc(db,"gardens",currentMemberKey),snap=>{
+        if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites||r24SaveTimer||r24Flush)return;
+        const p=snap.data()?.plots;if(!Array.isArray(p))return;ownState.plots=p.map(normalizePlot);if(!visitContext){state=ownState;try{draw()}catch(_){}}try{saveLocalOnly(ownState)}catch(_){}
+      },e=>console.warn("R24 garden listener",e));
+      r24SaveUnsub=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{
+        if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites||r24SaveTimer||r24Flush)return;
+        const raw=snap.data(),rr=Number(raw.clientSaveRevision)||0,lr=Number(ownState.clientSaveRevision)||0;if(rr<lr)return;
+        const preservedPlots=ownState.plots;let next=typeof normalizeState==="function"?normalizeState(raw,currentMember):clone(raw);next=protectPersistent(next,ownState);next.plots=preservedPlots;ownState=next;if(!visitContext)state=ownState;r24Revision=Math.max(r24Revision,rr);persistLocalGood(ownState);try{saveLocalOnly(ownState)}catch(_){}try{updateMeritUI();draw()}catch(_){}
+      },e=>console.warn("R24 save listener",e));
+      try{ownGardenUnsubscribe=r24GardenUnsub}catch(_){}try{ownSaveUnsubscribe=r24SaveUnsub}catch(_){}
+    }).catch(e=>console.warn("R24 subscribe",e));
+  };
+
+  /* ------------------------------------------------------------------
+     4) Honey continuity mirror. Save only on meaningful state signature changes,
+        never per animation frame. Active/reward trip wins over an empty reset.
+     ------------------------------------------------------------------ */
+  const honeyKey=()=>`yn:r24:honey:${String(currentMemberKey||currentMember||"guest")}`;
+  let lastHoneySig="";
+  function syncHoneyMirror(){
+    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h||visitContext)return;
+    try{
+      const raw=localStorage.getItem(honeyKey()),old=raw?JSON.parse(raw):null;
+      if(old?.h?.active&&!h.active&&Date.now()-Number(old.at||0)<6*3600000){s.honeyDelivery=clone(old.h);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}queueCloudSave()}
+      const sig=JSON.stringify(s.honeyDelivery);if(sig!==lastHoneySig){lastHoneySig=sig;localStorage.setItem(honeyKey(),JSON.stringify({at:Date.now(),h:clone(s.honeyDelivery)}))}
+    }catch(_){}
+  }
+
+  /* ------------------------------------------------------------------
+     5) Smooth 3/5-hedgehog rendering.
+     R23 recreated four DOM nodes every 900ms, which is why one original hedgehog
+     stayed smooth while the extra four visibly jumped. R24 keeps persistent DOM
+     nodes and moves all extras from ONE requestAnimationFrame loop. No cloud save
+     is done per frame.
+     ------------------------------------------------------------------ */
+  const HEDGE_COUNT={1:1,2:3,3:5};
+  let hedgeRaf=0,lastHedgePersist=0;
+  const hedgePts=[[29,78],[39,83],[49,76],[60,83],[70,78],[31,68],[44,71],[58,69],[71,72],[51,88]];
+  function houseLevel(){return Math.max(1,Math.min(3,iv((ownState||state)?.houseUpgrade?.level)||1))}
+  function hedgeState(){const s=ownState||state;if(!s)return[];s.houseHedgehogs=Array.isArray(s.houseHedgehogs)?s.houseHedgehogs:[];const need=Math.max(0,(HEDGE_COUNT[houseLevel()]||1)-1);while(s.houseHedgehogs.length<need){const j=s.houseHedgehogs.length,p=hedgePts[j%hedgePts.length],t=now();s.houseHedgehogs.push({id:`house-hedge-${j+2}`,x:p[0],y:p[1],tx:p[0],ty:p[1],startedAt:t,duration:1})}return s.houseHedgehogs.slice(0,need)}
+  function newMotion(h,t){const p=hedgePts[Math.floor(Math.random()*hedgePts.length)];h.x=Number(h.tx??h.x??50);h.y=Number(h.ty??h.y??80);h.tx=p[0];h.ty=p[1];h.startedAt=t;h.duration=4200+Math.floor(Math.random()*2600)}
+  function ensureHedgeDom(layer,h){let el=layer.querySelector(`[data-r24-hedge="${h.id}"]`);if(!el){el=document.createElement("button");el.type="button";el.className="r17-hedgehog r24-extra-hedgehog";el.dataset.r24Hedge=h.id;el.style.backgroundImage='url("hedgehog-walk-side.png")';el.style.backgroundSize="400% 400%";layer.insertBefore(el,layer.querySelector(".r17-house-actions")||null)}return el}
+  function hedgeFrame(tPerf){
+    hedgeRaf=requestAnimationFrame(hedgeFrame);
+    const layer=$("sceneInteractiveLayer"),s=ownState||state;if(!layer||!s||currentScene!=="house"||layer.dataset.r17HouseMode!=="basement"){document.querySelectorAll(".r24-extra-hedgehog").forEach(x=>x.remove());return}
+    const t=now(),list=hedgeState(),active=new Set();let dirty=false;
+    for(const h of list){active.add(h.id);if(!h.startedAt||t>=Number(h.startedAt)+Math.max(1,Number(h.duration))){newMotion(h,t);dirty=true}const r=Math.max(0,Math.min(1,(t-Number(h.startedAt))/Math.max(1,Number(h.duration)))),x=Number(h.x)+(Number(h.tx)-Number(h.x))*r,y=Number(h.y)+(Number(h.ty)-Number(h.y))*r,el=ensureHedgeDom(layer,h);el.style.left=`${x}%`;el.style.top=`${y}%`;el.style.backgroundPosition=`${(Math.floor(t/165)%4)*100/3}% ${(Math.floor(t/660)%4)*100/3}%`;el.classList.toggle("face-left",Number(h.tx)<Number(h.x))}
+    layer.querySelectorAll(".r24-extra-hedgehog").forEach(el=>{if(!active.has(el.dataset.r24Hedge))el.remove()});
+    if(dirty&&t-lastHedgePersist>4500){lastHedgePersist=t;try{saveLocalOnly(s)}catch(_){}persistLocalGood(s);queueCloudSave()}
+  }
+  if(!hedgeRaf)hedgeRaf=requestAnimationFrame(hedgeFrame);
+
+  /* ------------------------------------------------------------------
+     6) Cat optical-size normalization: every cat uses the same fixed visual box.
+     This neutralizes source PNG canvas/padding differences without touching assets.
+     ------------------------------------------------------------------ */
+  function normalizeCats(){document.querySelectorAll(".s2-final-hotel-cat,.s2-hotel-cat").forEach(el=>el.classList.add("r24-cat-equal"))}
+
+  /* ------------------------------------------------------------------
+     7) UI cleanup + background/app continuity.
+     ------------------------------------------------------------------ */
+  function tick(){try{purgeTrapAll();normalizeCats();syncHoneyMirror();persistLocalGood(ownState||state)}catch(e){console.warn("R24 tick",e)}}
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){persistLocalGood(ownState||state);if(r24SaveTimer){clearTimeout(r24SaveTimer);r24SaveTimer=null}flushCloudSave().catch(()=>{})}else{syncHoneyMirror();setTimeout(()=>{try{draw()}catch(_){}},50)}},{passive:true});
+  window.addEventListener("pagehide",()=>{persistLocalGood(ownState||state);flushCloudSave().catch(()=>{})},{passive:true});
+  window.addEventListener("pageshow",()=>{syncHoneyMirror();setTimeout(()=>{try{draw()}catch(_){}},50)},{passive:true});
+  setInterval(tick,1200);setTimeout(tick,80);
+
+  globalThis.YN_R24={BUILD,protectPersistent,purgeTrapAll};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* R24.1 — recover the ENTIRE most recent local mutation if Safari/backgrounding
+   happened before the authoritative cloud transaction completed. This is what
+   keeps upgrade material deductions and placed animals together as one state. */
+(function YN_R24_PENDING_RECOVERY(){
+  "use strict";
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const pkey=(k=currentMemberKey)=>`yn:r24:pending:${String(k||currentMember||"guest")}`;
+  const saveBase=save,flushBase=flushCloudSave,initBase=initializeOrLoadCloudState;
+  function putPending(){if(!currentMemberKey||visitContext||!ownState)return;try{localStorage.setItem(pkey(),JSON.stringify({at:Date.now(),state:clone(ownState)}))}catch(_){} }
+  function clearPending(){try{localStorage.removeItem(pkey())}catch(_){} }
+  save=function(){putPending();return saveBase.apply(this,arguments)};
+  flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);clearPending();return r};
+  initializeOrLoadCloudState=async function(member,key){
+    let pending=null;try{const raw=localStorage.getItem(pkey(key));if(raw){const box=JSON.parse(raw);if(box?.state&&Date.now()-Number(box.at||0)<48*3600000)pending=box.state}}catch(_){}
+    const r=await initBase(member,key);
+    if(pending){
+      try{
+        const cloudRev=Math.max(0,Number((ownState||r)?.clientSaveRevision)||0),pendingRev=Math.max(0,Number(pending?.clientSaveRevision)||0);
+        /* A strictly newer cloud revision wins. Equal revisions still allow
+           recovery because a local mutation can happen after the last cloud
+           commit but before the next revision is allocated. */
+        if(cloudRev<=pendingRev){
+          const recovered=typeof normalizeState==="function"?normalizeState(pending,member):clone(pending);ownState=recovered;if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch(_){}await flushCloudSave();console.info("R24 recovered pending full state");
+        }else{clearPending();console.info("R24 ignored stale pending state",{cloudRev,pendingRev})}
+      }catch(e){console.warn("R24 pending recovery skipped",e)}
+    }
+    return ownState||r;
+  };
+})();
