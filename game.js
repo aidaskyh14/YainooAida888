@@ -22842,7 +22842,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   /* ---------- Boat supplies now use 8 Home Foods ---------- */
   showBoatSupplyPicker=function(boatNo){const race=boatRaceCache;if(!race)return;if(race.seasonLocked)return message("ซีซั่นจบแล้ว","ซีซั่นนี้มีผู้ชนะแล้ว รอ Aida รีเซ็ตค่ะ");const rem=boatCooldownRemaining(race,boatNo);if(rem>0)return message("เรือลำนี้ยังพักอยู่",`ส่งเรือ ${boatNo} ได้อีกใน ${formatHM(rem)}`);const s=ensureR16State(own16()),available=Object.entries(HOME_FOODS).filter(([k])=>int16(s.homeFoods[k])>0||isAdmin16());if(!available.length)return message("ไม่มีเสบียงเรือ","Season 2 ใช้เฉพาะอาหารบ้าน 8 เมนู กรุณาคราฟอาหารบ้านก่อนค่ะ");$16("modalContent").innerHTML=`<section class="feature-panel boat-supply-picker r16-boat-supply r16-scroll-panel"><h2>🚣 ส่งเสบียงให้เรือ ${boatNo}</h2><p class="feature-subtitle">Season 2 • เลือกอาหารบ้าน 1 จาน</p><div class="boat-supply-grid">${available.map(([k,x])=>`<button data-r16-boat-food="${k}" type="button"><img src="${x.image}" alt="${safe16(x.name)}"><b>${safe16(x.name)}</b><small>มี ×${isAdmin16()?9999:int16(s.homeFoods[k])}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r16-boat-food]").forEach(b=>b.onclick=()=>sendBoatSupply(boatNo,b.dataset.r16BoatFood));openModal()};
-  sendBoatSupply=async function(boatNo,foodKey){const food=HOME_FOODS[foodKey];if(!food||![1,2,3,4].includes(Number(boatNo))||guardResting())return;const s=ensureR16State(own16());if(!isAdmin16()&&int16(s.homeFoods[foodKey])<1)return message("ไม่มีเสบียง","อาหารบ้านเมนูนี้หมดแล้วค่ะ");const before=clone16(s),meritReward=typeof boatRewardRoll==="function"?boatRewardRoll():0;if(!isAdmin16())s.homeFoods[foodKey]-=1;else s.homeFoods[foodKey]=9999;commit16(s);closeModal();showWeatherToast(`🚣 ส่ง ${food.name} ให้เรือ ${boatNo} แล้ว • กำลังบันทึก…`);try{const {db,fs}=await getFirebaseContext(),raceRef=fs.doc(db,"shared","boatRace"),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,nextRace,winner=null;await fs.runTransaction(db,async tx=>{const [rs,ss]=await Promise.all([tx.get(raceRef),tx.get(saveRef)]);if(!rs.exists()||!ss.exists())throw new Error("ข้อมูลการแข่งขันยังไม่พร้อม");const race=normalizeBoatRace(rs.data()),st=ensureR16State(normalizeState(ss.data(),currentMember));assertCurrentCloudSession(ss.data(),currentMember);if(race.seasonLocked||race.winner)throw new Error("การแข่งขันจบแล้ว");const last=timestampMillis(race.cooldowns?.[currentMemberKey]?.[boatCooldownKey(boatNo)]),rem=Math.max(0,last+BOAT_COOLDOWN_MS-now16());if(rem>0)throw new Error(`เรือ ${boatNo} ต้องรออีก ${formatHM(rem)}`);if(!isAdmin16()&&int16(st.homeFoods[foodKey])<1)throw new Error("อาหารบ้านเมนูนี้หมดแล้ว");if(!isAdmin16())st.homeFoods[foodKey]-=1;else st.homeFoods[foodKey]=9999;const meritBonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="merit"?Math.ceil(meritReward*.10):0;if(!isAdmin16())st.merit=(Number(st.merit)||0)+meritReward+meritBonus;const k=boatProgressKey(boatNo),bonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="boat"&&Math.random()<.15?1:0;race[k]=Math.min(race.target,(Number(race[k])||0)+1+bonus);race.cooldowns=race.cooldowns||{};race.cooldowns[currentMemberKey]=race.cooldowns[currentMemberKey]||{};race.cooldowns[currentMemberKey][boatCooldownKey(boatNo)]=fs.serverTimestamp();if(race[k]>=race.target){race.winner=boatNo;race.seasonLocked=true;winner=boatNo}nextState=st;nextRace=race;tx.set(saveRef,{...clone16(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(raceRef,{...race,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);boatRaceCache=nextRace;drawBoatRace(nextRace);updateMeritUI?.();message("🚣 ส่งเสบียงสำเร็จ",`${safe16(food.name)} ถูกหักจากกระเป๋าแล้ว${meritReward?`<br>+${meritReward} กุศล${(nextState?.houseFortune?.id==="merit"&&nextState?.houseFortune?.day===dayKey16())?" + โบนัส 10%":""}`:""}${winner?`<br>🏁 เรือ ${boatNo} ชนะแล้ว!`:""}`)}catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);message("ส่งเสบียงไม่สำเร็จ",`${e.message||"กรุณาลองใหม่"}<br>คืนอาหารเข้ากระเป๋าแล้วค่ะ`)}};
+  sendBoatSupply=async function(boatNo,foodKey){const food=HOME_FOODS[foodKey];if(!food||![1,2,3,4].includes(Number(boatNo))||guardResting())return;const s=ensureR16State(own16());if(!isAdmin16()&&int16(s.homeFoods[foodKey])<1)return message("ไม่มีเสบียง","อาหารบ้านเมนูนี้หมดแล้วค่ะ");const before=clone16(s),meritReward=typeof boatRewardRoll==="function"?boatRewardRoll():0;if(!isAdmin16())s.homeFoods[foodKey]-=1;else s.homeFoods[foodKey]=9999;commit16(s);closeModal();showWeatherToast(`🚣 ส่ง ${food.name} ให้เรือ ${boatNo} แล้ว • กำลังบันทึก…`);try{const {db,fs}=await getFirebaseContext(),raceRef=fs.doc(db,"shared","boatRace"),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,nextRace,winner=null;await fs.runTransaction(db,async tx=>{const [rs,ss]=await Promise.all([tx.get(raceRef),tx.get(saveRef)]);if(!rs.exists()||!ss.exists())throw new Error("ข้อมูลการแข่งขันยังไม่พร้อม");const race=normalizeBoatRace(rs.data()),st=ensureR16State(normalizeState(ss.data(),currentMember));assertCurrentCloudSession(ss.data(),currentMember);if(race.seasonLocked||race.winner)throw new Error("การแข่งขันจบแล้ว");const last=timestampMillis(race.cooldowns?.[currentMemberKey]?.[boatCooldownKey(boatNo)]),rem=Math.max(0,last+BOAT_COOLDOWN_MS-now16());if(rem>0)throw new Error(`เรือ ${boatNo} ต้องรออีก ${formatHM(rem)}`);if(!isAdmin16()&&int16(st.homeFoods[foodKey])<1)throw new Error("อาหารบ้านเมนูนี้หมดแล้ว");if(!isAdmin16())st.homeFoods[foodKey]-=1;else st.homeFoods[foodKey]=9999;try{incrementMissionOn(st,"boatSupply",1)}catch(_){}const meritBonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="merit"?Math.ceil(meritReward*.10):0;if(!isAdmin16())st.merit=(Number(st.merit)||0)+meritReward+meritBonus;const k=boatProgressKey(boatNo),bonus=st.houseFortune?.day===dayKey16()&&st.houseFortune.id==="boat"&&Math.random()<.15?1:0;race[k]=Math.min(race.target,(Number(race[k])||0)+1+bonus);race.cooldowns=race.cooldowns||{};race.cooldowns[currentMemberKey]=race.cooldowns[currentMemberKey]||{};race.cooldowns[currentMemberKey][boatCooldownKey(boatNo)]=fs.serverTimestamp();if(race[k]>=race.target){race.winner=boatNo;race.seasonLocked=true;winner=boatNo}nextState=st;nextRace=race;tx.set(saveRef,{...clone16(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(raceRef,{...race,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);boatRaceCache=nextRace;drawBoatRace(nextRace);updateMeritUI?.();message("🚣 ส่งเสบียงสำเร็จ",`${safe16(food.name)} ถูกหักจากกระเป๋าแล้ว${meritReward?`<br>+${meritReward} กุศล${(nextState?.houseFortune?.id==="merit"&&nextState?.houseFortune?.day===dayKey16())?" + โบนัส 10%":""}`:""}${winner?`<br>🏁 เรือ ${boatNo} ชนะแล้ว!`:""}`)}catch(e){ownState=normalizeState(before,currentMember);state=ownState;saveLocalOnly(ownState);message("ส่งเสบียงไม่สำเร็จ",`${e.message||"กรุณาลองใหม่"}<br>คืนอาหารเข้ากระเป๋าแล้วค่ะ`)}};
 
   /* ---------- R15 bug fixes ---------- */
   function fixedTrough16(){
@@ -23210,4 +23210,274 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }else{
     label();
   }
+})();
+
+
+/* =====================================================================
+   R20 • SAVE / GARDEN / FRIEND ACTION / INPUT RESPONSIVENESS STABILITY
+   2026-09-01
+   Goals:
+   - stop stale cloud snapshots from replacing current animals or current plots
+   - make own-garden rapid planting durable across consecutive taps
+   - make friend watering / worm clearing feel immediate (optimistic UI)
+   - keep mission tracking wired to real completed actions
+   - strengthen iPhone pointer handling for market + alpaca trough + compact nav
+   ===================================================================== */
+(function YN_R20_STABILITY(){
+  const BUILD="S2-R20-STABILITY";
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch{return false}};
+  let gardenBase=null;
+  let gardenDirty=new Set();
+  let gardenFlushBusy=false;
+  let gardenListenerUnsub=null;
+  let r20CloudTimer=null;
+
+  function ensureGardenBase(){
+    if(!gardenBase&&Array.isArray(ownState?.plots))gardenBase=clone(ownState.plots);
+  }
+  function markGardenDirty(){
+    if(visitContext||!Array.isArray(ownState?.plots))return;
+    ensureGardenBase();
+    if(!gardenBase)return;
+    ownState.plots.forEach((p,i)=>{if(!same(p,gardenBase[i]))gardenDirty.add(i)});
+  }
+  function currentAnimalCounts(s){
+    const spirit=["chicken","fish","pig","cow"].reduce((n,k)=>n+(Array.isArray(s?.animals?.[k])?s.animals[k].filter(Boolean).length:0),0);
+    const alp=(s?.alpaca?.pens||[]).reduce((n,p)=>n+(Array.isArray(p?.alpacas)?p.alpacas.length:0),0);
+    const dogs=Array.isArray(s?.dogs)?s.dogs.filter(Boolean).length:0;
+    const cats=Array.isArray(s?.cats)?s.cats.filter(Boolean).length:0;
+    return{spirit,alp,dogs,cats};
+  }
+  function protectCatastrophicAnimalReset(local,remote){
+    if(!local||!remote)return local;
+    const a=currentAnimalCounts(local),b=currentAnimalCounts(remote);
+    const collapsed=Object.keys(a).filter(k=>b[k]>0&&a[k]===0);
+    /* A real user removal may empty ONE system. A simultaneous collapse of 2+
+       independent systems is treated as a stale/default overwrite. */
+    if(collapsed.length<2)return local;
+    console.error("R20 blocked destructive animal reset",{local:a,remote:b,collapsed});
+    if(collapsed.includes("spirit"))local.animals=clone(remote.animals);
+    if(collapsed.includes("alp"))local.alpaca=clone(remote.alpaca);
+    if(collapsed.includes("dogs"))local.dogs=clone(remote.dogs);
+    if(collapsed.includes("cats"))local.cats=clone(remote.cats);
+    return local;
+  }
+
+  /* Shorter queue: UI is local-first, cloud writes still batch close taps. */
+  queueCloudSave=function(){
+    if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;
+    markGardenDirty();
+    if(r20CloudTimer)clearTimeout(r20CloudTimer);
+    if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
+    r20CloudTimer=setTimeout(()=>{
+      r20CloudTimer=null;cloudSaveTimer=null;
+      flushCloudSave().catch(e=>console.error("R20 save",e));
+    },160);
+  };
+
+  const r20SaveBase=save;
+  save=function(){
+    const t=ownState||state;if(!t)return;
+    if(!visitContext){ownState=t;state=t;markGardenDirty()}
+    try{if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(t)}catch(_){}
+    try{saveLocalOnly(t)}catch(_){}
+    queueCloudSave();
+  };
+
+  /* Merge current cloud top-level keys, then apply local current state.
+     This prevents a newer subsystem that exists only in cloud from being deleted
+     by a stale full-document write. */
+  flushCloudSave=async function(){
+    if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;
+    if(cloudSaveInFlight)return cloudSaveInFlight;
+    cloudSaveInFlight=(async()=>{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      let mergedPayload=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);
+        const remote=snap.exists()?snap.data():{};
+        const local=clone(ownState);
+        protectCatastrophicAnimalReset(local,remote);
+        mergedPayload={...clone(remote),...local};
+        mergedPayload.launchVersion=typeof LAUNCH_VERSION!=="undefined"?LAUNCH_VERSION:mergedPayload.launchVersion;
+        mergedPayload.activeSessionId=cloudSessionId;
+        tx.set(saveRef,{...mergedPayload,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      /* Plot-safe publish: only locally changed plot indices replace the latest
+         remote garden. Friend actions on other plots are preserved. */
+      if(gardenDirty.size&&Array.isArray(ownState.plots)){
+        gardenFlushBusy=true;
+        const gref=fs.doc(db,"gardens",currentMemberKey);
+        let mergedPlots=clone(ownState.plots);
+        await fs.runTransaction(db,async tx=>{
+          const gs=await tx.get(gref);
+          const remotePlots=Array.isArray(gs.data()?.plots)?gs.data().plots.map(normalizePlot):clone(ownState.plots);
+          const next=remotePlots.slice(0,PLOT_COUNT);
+          while(next.length<PLOT_COUNT)next.push(emptyPlot());
+          gardenDirty.forEach(i=>{if(i>=0&&i<PLOT_COUNT)next[i]=clone(ownState.plots[i])});
+          mergedPlots=next.map(normalizePlot);
+          tx.set(gref,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:clone(mergedPlots),updatedAt:fs.serverTimestamp()},{merge:true});
+        });
+        ownState.plots=mergedPlots;
+        if(!visitContext)state=ownState;
+        gardenBase=clone(mergedPlots);
+        lastGardenHash=plotHash(mergedPlots);
+        gardenDirty.clear();
+        gardenFlushBusy=false;
+      }
+
+      const merit=Number(ownState.merit)||0;
+      if(lastPublishedMerit===null||lastPublishedMerit!==merit){
+        await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+        lastPublishedMerit=merit;
+      }
+      if(mergedPayload){
+        /* Keep current object references used by open modals; do not replace ownState
+           with a brand new default-normalized object after every save. */
+        try{saveLocalOnly(ownState)}catch(_){}
+      }
+    })();
+    try{return await cloudSaveInFlight}finally{cloudSaveInFlight=null}
+  };
+
+  /* Do NOT subscribe to the full save document during active play. Many feature
+     transactions already update local state explicitly; re-applying a slightly
+     older whole-save snapshot was the source of disappearing animals. */
+  subscribeOwnGarden=function(){
+    if(ownGardenUnsubscribe){try{ownGardenUnsubscribe()}catch{}ownGardenUnsubscribe=null}
+    if(typeof ownSaveUnsubscribe!=="undefined"&&ownSaveUnsubscribe){try{ownSaveUnsubscribe()}catch{}ownSaveUnsubscribe=null}
+    if(gardenListenerUnsub){try{gardenListenerUnsub()}catch{}gardenListenerUnsub=null}
+    if(!cloudReady||!currentMemberKey)return;
+    getFirebaseContext().then(({db,fs})=>{
+      gardenListenerUnsub=fs.onSnapshot(fs.doc(db,"gardens",currentMemberKey),snap=>{
+        if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites)return;
+        const rp=snap.data()?.plots;if(!Array.isArray(rp))return;
+        const remote=rp.map(normalizePlot);
+        if(!gardenBase)gardenBase=clone(remote);
+        if(gardenDirty.size||gardenFlushBusy){
+          /* Merge remote changes only into plots this device has NOT changed. */
+          remote.forEach((p,i)=>{if(!gardenDirty.has(i))ownState.plots[i]=clone(p)});
+          gardenBase=clone(remote);
+        }else{
+          ownState.plots=clone(remote);gardenBase=clone(remote);lastGardenHash=plotHash(remote);
+        }
+        if(!visitContext){state=ownState;draw()}
+        try{saveLocalOnly(ownState)}catch(_){}
+      },e=>console.warn("R20 garden listener",e));
+      ownGardenUnsubscribe=gardenListenerUnsub;
+    }).catch(()=>{});
+  };
+
+  const initBase=initializeOrLoadCloudState;
+  initializeOrLoadCloudState=async function(member,key){
+    const r=await initBase(member,key);
+    gardenBase=clone(ownState?.plots||[]);gardenDirty.clear();gardenFlushBusy=false;
+    return r;
+  };
+
+  /* -------- Friend garden local-first actions -------- */
+  const friendTapFallback=tapFriendPlot;
+  function friendActionPreview(index,mode){
+    const p=state?.plots?.[index];if(!p)return null;
+    const before=clone(p),crop=CROPS[p.crop];if(!crop)return null;
+    if(mode==="water"){
+      p.wateredAt=gameNow();
+      if(Math.random()<Number(crop.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}
+      else{p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs)}
+    }else{
+      p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
+    }
+    state.plots[index]=p;draw();return before;
+  }
+  async function persistFriendGardenAction(index,mode,method=""){
+    if(!visitContext||!cloudReady)return;
+    const targetKey=visitContext.memberKey,targetName=visitContext.name;
+    const before=clone(state?.plots?.[index]);
+    const ownBefore=clone(ownState);
+    if(mode==="worm"){
+      if(method==="spray"&&Number(ownState?.specials?.wormKillerSpray||0)<1)return message("กำจัดหนอนไม่สำเร็จ","สเปรย์ฆ่าหนอนหมดแล้ว");
+      if(method!=="spray"&&Number(ownState?.merit||0)<1)return message("กำจัดหนอนไม่สำเร็จ","กุศลไม่พอ");
+    }
+    const preview=friendActionPreview(index,mode);
+    if(!preview)return;
+    showWeatherToast(mode==="water"?"💧 รดน้ำให้เพื่อนแล้ว • กำลังบันทึก…":"🐛 กำจัดหนอนให้เพื่อนแล้ว • กำลังบันทึก…");
+    try{
+      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"gardens",targetKey),mail=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));
+      let finalPlots;
+      await fs.runTransaction(db,async tx=>{
+        const gs=await tx.get(gref);if(!gs.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
+        const plots=(gs.data().plots||[]).map(ensurePlotPhaseStandalone),p=plots[index],crop=CROPS[p?.crop];if(!p?.crop||!crop)throw new Error("แปลงนี้ว่างแล้ว");
+        if(mode==="water"){
+          if(p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");
+          p.wateredAt=gameNow();if(Math.random()<Number(crop.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs)}
+        }else{
+          if(p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");
+          p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
+        }
+        plots[index]=p;finalPlots=plots;
+        tx.set(gref,{memberKey:targetKey,displayName:targetName,plots:clone(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(mail,{source:"friend",type:mode==="water"?"friendWater":"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:mode==="water"?`${currentMember} เข้ามารดน้ำพืชพันธุ์ให้คุณ 💧`:`${currentMember} เข้ามากำจัดหนอนให้คุณ 🐛`,text:method==="spray"?"ใช้สเปรย์ฆ่าหนอน":"",read:false,createdAt:fs.serverTimestamp()});
+      });
+      state.plots=finalPlots.map(normalizePlot);
+      if(mode==="water")incrementOwnMission("waterFriends",1);else{
+        if(method==="spray")ownState.specials.wormKillerSpray=Math.max(0,Number(ownState.specials.wormKillerSpray||0)-1);
+        else ownState.merit=Math.max(0,Number(ownState.merit||0)-1);
+        incrementOwnMission("clearWorms",1);updateMeritUI();
+      }
+      saveLocalOnly(ownState);queueCloudSave();draw();closeModal();
+      showWeatherToast(mode==="water"?"💧 บันทึกรดน้ำให้เพื่อนแล้ว":"🐛 บันทึกกำจัดหนอนให้เพื่อนแล้ว");
+    }catch(e){
+      if(before&&state?.plots)state.plots[index]=normalizePlot(before);
+      if(ownBefore)ownState=normalizeState(ownBefore,currentMember);
+      draw();updateMeritUI();message(mode==="water"?"รดน้ำไม่สำเร็จ":"กำจัดหนอนไม่สำเร็จ",e.message||"กรุณาลองใหม่");
+    }
+  }
+  tapFriendPlot=async function(index){
+    if(!visitContext)return;
+    const p=state?.plots?.[index];ensurePlotPhase(p);
+    if(p?.phase==="needsWater")return persistFriendGardenAction(index,"water");
+    if(p?.phase==="worm"){
+      const sprays=Number(ownState?.specials?.wormKillerSpray||0);
+      $("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 หนอนบ้านเพื่อน</h2><p>เลือกวิธีกำจัดหนอนแปลงนี้</p><div class="friend-worm-actions"><button id="r20FriendWormMerit" class="danger-action" type="button">ใช้ 1 กุศลกำจัดหนอน</button><button id="r20FriendWormSpray" class="primary-spooky-action" type="button" ${sprays<1?"disabled":""}><img src="worm-killer-spray.png?v=1" alt=""><span>ใช้สเปรย์ฆ่าหนอน<br><small>มี ×${sprays} • ใช้ ×1</small></span></button></div></section>`;
+      openModal();
+      $("r20FriendWormMerit").onclick=()=>persistFriendGardenAction(index,"worm","merit");
+      $("r20FriendWormSpray").onclick=()=>persistFriendGardenAction(index,"worm","spray");
+      return;
+    }
+    return friendTapFallback(index);
+  };
+
+  /* -------- Input reliability on iPhone -------- */
+  let lastFastTap=0;
+  document.addEventListener("pointerup",e=>{
+    const t=e.target.closest?.("#alpacaPenScreen #s2TroughLeft,#alpacaPenScreen #s2TroughRight,#alpacaPenScreen #alpacaTroughHotspot");
+    if(!t)return;const n=Date.now();if(n-lastFastTap<180)return;lastFastTap=n;e.preventDefault();e.stopImmediatePropagation();globalThis.YN_ALPACA_CORE?.showTrough?.();
+  },true);
+  document.addEventListener("pointerup",e=>{
+    const b=e.target.closest?.(".alpaca-trough-grid [data-trough-slot],.alpaca-inventory-grid [data-fill-trough]");
+    if(!b||b.dataset.r20Tap==="1")return;
+    b.dataset.r20Tap="1";setTimeout(()=>delete b.dataset.r20Tap,180);
+    e.preventDefault();e.stopImmediatePropagation();
+    if(typeof b.onclick==="function")b.onclick.call(b,e);
+  },true);
+
+  /* Market slots: pointerup is the primary input; fallback to the element's own
+     handler so all 24 slots use exactly the same listing logic. */
+  document.addEventListener("pointerup",e=>{
+    const b=e.target.closest?.("#s2MarketSlots [data-r15-market-slot],#s2MarketSlots [data-market-slot]");if(!b)return;
+    if(b.dataset.r20MarketTap==="1")return;b.dataset.r20MarketTap="1";setTimeout(()=>delete b.dataset.r20MarketTap,220);
+    if(typeof b.onpointerup==="function")return; /* R15 handler already reliable */
+    e.preventDefault();e.stopImmediatePropagation();if(typeof b.onclick==="function")b.onclick.call(b,e);
+  },true);
+
+  /* Keep all button interactions visually immediate. */
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("button,[role=button]");if(b&&!b.disabled)b.classList.add("r20-pressed")},true);
+  const clearPressed=e=>{const b=e.target.closest?.("button,[role=button]");b?.classList.remove("r20-pressed")};
+  document.addEventListener("pointerup",clearPressed,true);document.addEventListener("pointercancel",clearPressed,true);
+
+  globalThis.YN_R20={BUILD,getGardenDirty:()=>[...gardenDirty],persistFriendGardenAction};
+  console.info(BUILD,"loaded");
 })();

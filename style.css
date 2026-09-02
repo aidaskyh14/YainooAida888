@@ -9201,3 +9201,16 @@ body:has(#s2MarketScreen:not(.hidden)) .modal{z-index:2147483000!important}
 .r19-mission-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:7px 0;font-size:11px}.r19-mission-top>b{font-size:13px}.r19-mission-top span{padding:4px 7px;border-radius:999px;background:#f4df86;font-weight:900}
 .r19-mission-list{display:grid;gap:6px}.r19-mission-list article{display:flex;gap:7px;align-items:center;padding:7px;border:1px solid #dfbf94;border-radius:12px;background:#fff9ea}.r19-mission-list article.done{background:#e9f6df;border-color:#a4cb87}.r19-mission-list i{display:grid;place-items:center;flex:0 0 25px;height:25px;border-radius:50%;background:#79506d;color:#fff;font-style:normal;font-size:11px;font-weight:900}.r19-mission-list span{display:grid;gap:2px;min-width:0;flex:1}.r19-mission-list b{font-size:11px}.r19-mission-list small{font-size:9px;color:#795b69}.r19-mission-list em{display:block;height:4px;border-radius:999px;background:#eadcc8;overflow:hidden}.r19-mission-list u{display:block;height:100%;background:#7ebb63;text-decoration:none;transition:width .15s linear}
 .r19-village-panel>footer{display:flex;justify-content:space-between;margin-top:8px;font-size:9px;color:#7d5c6d}
+
+
+/* ===== R20 responsiveness / friend plot / modal polish ===== */
+button,[role="button"],.plot,.s2-market-slot{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button.r20-pressed,[role="button"].r20-pressed{transform:scale(.985)!important;filter:brightness(1.04)!important;transition:transform .05s linear,filter .05s linear!important}
+.modal,.feature-panel,.weather-toast{animation-duration:.12s!important;transition-duration:.12s!important}
+/* Friend magic/toy frame must visually cover the plot, not sit as a narrow center badge. */
+.game-screen.visiting-friend .plot-black-magic-overlay{inset:-16%!important;transform:scale(.92)!important;transform-origin:center!important;pointer-events:none!important}
+.game-screen.visiting-friend .plot-black-magic-overlay img{width:116%!important;height:116%!important;object-fit:contain!important}
+/* Alpaca trough modal + side rail hit areas stay above decorative layers. */
+#alpacaPenScreen #s2TroughLeft,#alpacaPenScreen #s2TroughRight,#alpacaPenScreen #alpacaTroughHotspot{z-index:80!important;pointer-events:auto!important;touch-action:manipulation!important}
+.alpaca-trough-grid .alpaca-trough-slot,.alpaca-inventory-grid [data-fill-trough]{touch-action:manipulation!important;pointer-events:auto!important}
+body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
