@@ -9618,3 +9618,59 @@ button.r9-tap-now{transform:scale(.97)!important;transition:transform 70ms ease-
 /* Alpaca royal variants use the same body footprint as existing walkers. */
 .alpaca-color-prince,.alpaca-color-princess{filter:drop-shadow(0 5px 5px rgba(0,0,0,.28))}
 
+
+/* ======================================================================
+   S2 R32 — SEASON OPENING VISUAL FINAL PASS
+   ====================================================================== */
+/* Obsolete test controls: gameplay is live for everyone. Hotel animation test is intentionally kept. */
+#r17TestHedge,#r16TestHedge,#r17WineTest,#r26TestHamster,.r26-hamster-test{display:none!important}
+
+/* Crops: slightly right of previous anchor + deeper soft aura, same vertical baseline. */
+.game-screen .crop img.crop-img{
+  transform:translateX(5%)!important;
+  filter:drop-shadow(0 4px 4px rgba(20,12,8,.45)) drop-shadow(0 0 6px rgba(255,229,157,.42)) drop-shadow(0 0 11px rgba(255,245,214,.24))!important;
+}
+.game-screen .crop img.stage-ready{transform:translateX(5%)!important}
+
+/* Forbidden forest resources: steady halo, no blinking. */
+.r21-forest-node::before{content:""!important;position:absolute!important;inset:13%!important;border-radius:50%!important;background:radial-gradient(circle,rgba(255,236,164,.33),rgba(180,231,158,.16) 48%,transparent 74%)!important;filter:blur(4px)!important;opacity:.95!important;animation:none!important;pointer-events:none!important}
+.r21-forest-node img{filter:drop-shadow(0 4px 4px rgba(0,0,0,.38)) drop-shadow(0 0 7px rgba(255,235,160,.48))!important;animation:none!important}
+
+/* Hamsters: animation unchanged; only slightly smaller and more dimensional. */
+.r25-hamster{width:clamp(30px,7.6vw,44px)!important;height:clamp(30px,7.6vw,44px)!important}
+.r25-hamster-shadow{width:68%!important;height:16%!important;bottom:3%!important;opacity:.72!important;filter:blur(1.7px)!important;background:rgba(32,19,15,.42)!important}
+.r25-hamster-sprite{filter:drop-shadow(0 3px 2px rgba(28,18,14,.32)) drop-shadow(0 0 3px rgba(255,234,198,.18))!important}
+
+/* Royal alpacas: fixed aura without flashing. */
+.alpaca-pen-animal[data-alpaca-color="prince"]::before,.alpaca-pen-animal[data-alpaca-color="princess"]::before{
+  content:"";position:absolute;left:50%;top:50%;width:92%;height:92%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:-1;
+  background:radial-gradient(circle,rgba(255,236,168,.30),rgba(225,191,255,.18) 52%,transparent 76%);filter:blur(5px);animation:none!important
+}
+.alpaca-pen-animal[data-alpaca-color="prince"] .alpaca-sprite,.alpaca-pen-animal[data-alpaca-color="princess"] .alpaca-sprite{filter:drop-shadow(0 4px 3px rgba(18,13,25,.35)) drop-shadow(0 0 5px rgba(255,226,151,.30))!important}
+
+/* HOTEL BLOCKER: smaller real visible body, no clipping/debug outline, status above the head. */
+#dogHotelPetLayer{overflow:visible!important;contain:none!important}
+.s2-final-hotel-dog,.s2-final-hotel-cat,.r31-hotel-test-pet{
+  width:clamp(46px,11.3vw,70px)!important;height:clamp(50px,12.2vw,76px)!important;
+  overflow:visible!important;clip-path:none!important;mask:none!important;border:0!important;outline:0!important;box-shadow:none!important;padding:0!important;background:transparent!important;contain:none!important
+}
+.s2-final-hotel-dog .dog-hotel-fallback-icon,.s2-final-hotel-cat .s2-final-cat-fallback,.r31-hotel-test-pet>img{width:92%!important;height:92%!important;max-width:none!important;max-height:none!important;object-fit:contain!important;overflow:visible!important;clip-path:none!important}
+.s2-final-hotel-dog .dog-hotel-sprite,.s2-final-hotel-cat .s2-final-cat-sprite,.r31-hotel-test-pet .dog-hotel-sprite,.r31-hotel-test-pet .s2-final-cat-sprite{inset:3%!important;width:94%!important;height:94%!important;overflow:visible!important}
+.s2-final-hotel-dog::before,.s2-final-hotel-cat::before,.r31-hotel-test-pet::before{width:62%!important;height:10%!important;bottom:1%!important;background:rgba(25,17,20,.32)!important;filter:blur(2px)!important}
+.r31-hotel-test-pet{outline:none!important;outline-offset:0!important}
+.r31-hotel-status,.r32-hotel-status,.r17-pet-status{position:absolute!important;left:50%!important;top:-13px!important;transform:translateX(-50%)!important;z-index:80!important;display:block!important;min-width:21px!important;min-height:21px!important;font-size:16px!important;line-height:21px!important;text-align:center!important;overflow:visible!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))!important;pointer-events:none!important}
+.s2-meow-woof-hotel .dog-hotel-name,.s2-final-hotel-cat small,.r31-hotel-test-pet small{font-size:clamp(6px,1.4vw,8.5px)!important;padding:1px 4px!important;white-space:nowrap!important}
+
+/* Mysterious shop: compact cards, real icons, internally scrollable list. */
+.r31-mysterious{width:min(92vw,430px)!important;max-height:82vh!important;overflow:hidden!important;padding:13px!important;display:flex!important;flex-direction:column!important}
+.r31-mysterious header{grid-template-columns:62px 1fr!important;gap:8px!important;flex:0 0 auto!important}
+.r31-mysterious header img{width:60px!important;height:60px!important}.r31-mysterious header h2{font-size:22px!important;margin:1px 0!important}.r31-mysterious header small,.r31-mysterious header b{font-size:10px!important}
+.r31-mysterious-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;margin-top:8px!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:1px 2px 9px!important;min-height:0!important}
+.r31-mysterious-grid article{grid-template-columns:42px minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:5px 7px!important;padding:7px!important;border-radius:11px!important;align-items:center!important}
+.r31-mysterious-grid article .r32-mystery-item-img{grid-row:1/2;width:40px!important;height:40px!important;object-fit:contain!important;border-radius:9px!important;background:rgba(255,255,255,.08)!important}
+.r31-mysterious-grid article>div{min-width:0!important}.r31-mysterious-grid article b{font-size:9px!important;line-height:1.15!important;display:block!important}.r31-mysterious-grid article small{font-size:8px!important}.r31-mysterious-grid article strong{font-size:10px!important;display:block!important}.r31-mysterious-grid article button{grid-column:1/-1!important;font-size:9px!important;min-height:30px!important;padding:5px!important}
+
+/* Hedge crafting: cute readable cards instead of stacked text. */
+.r32-hedge-craft-menu{width:min(91vw,390px)!important;max-height:78vh!important;overflow:auto!important;padding:15px!important}
+.r32-hedge-craft-menu>header{display:flex!important;align-items:center!important;gap:9px!important;margin-bottom:10px!important;text-align:left!important}.r32-hedge-craft-menu>header>span{font-size:32px!important}.r32-hedge-craft-menu h2{font-size:17px!important;margin:0!important}.r32-hedge-craft-menu header small{font-size:9px!important;opacity:.72!important}
+.r32-hedge-craft-cards{display:grid!important;gap:9px!important}.r32-hedge-craft-cards>button{display:grid!important;grid-template-columns:62px minmax(0,1fr)!important;gap:10px!important;align-items:center!important;text-align:left!important;padding:9px 10px!important;border-radius:15px!important;background:linear-gradient(180deg,#fffaf0,#f8e8d0)!important;border:1px solid #d7b78a!important;box-shadow:0 5px 12px rgba(64,35,28,.09)!important;color:#56384d!important}.r32-hedge-craft-cards img{width:58px!important;height:58px!important;object-fit:contain!important}.r32-hedge-craft-cards b{display:block!important;font-size:12px!important}.r32-hedge-craft-cards small{display:block!important;font-size:9px!important;line-height:1.35!important;margin-top:3px!important;color:#7a5c68!important}
