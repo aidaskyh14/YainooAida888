@@ -25853,3 +25853,69 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return fullRender.apply(this,arguments);
   };
 })();
+
+/* ======================================================================
+   R32.1 HOTFIX — MEOW-WOOF HOTEL HUD ENTRY ONLY
+   Fix regression where the visible Hotel shortcut can lose/override its
+   click binding after later runtime wrappers. No gameplay/economy changes.
+   ====================================================================== */
+(function YN_R32_1_HOTEL_ENTRY_HOTFIX(){
+  "use strict";
+  const $h=id=>document.getElementById(id);
+  let entering=false;
+
+  function enterHotelFromHud(){
+    if(entering)return;
+    entering=true;
+    try{
+      try{if(typeof closeHomeHudMenu==="function")closeHomeHudMenu()}catch(_){ }
+      if(typeof guardResting==="function"&&guardResting())return;
+      if(typeof currentDogHotelPen!=="undefined")currentDogHotelPen=1;
+      if(typeof openScene!=="function")throw new Error("ไม่พบตัวเปิดฉาก Hotel");
+      openScene("dogHotel");
+
+      /* Defensive recovery: if a later router wrapper failed to paint the
+         Hotel layer, call the final Hotel renderer once without changing
+         any state or inventory. */
+      requestAnimationFrame(()=>{
+        try{
+          if(currentScene==="dogHotel"&&!$h("dogHotelPetLayer")&&typeof renderDogHotelScene==="function")renderDogHotelScene();
+        }catch(error){console.error("R32.1 hotel render recovery",error)}
+      });
+    }catch(error){
+      console.error("R32.1 hotel entry",error);
+      try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",error?.message||"กรุณาลองใหม่")}catch(_){ }
+    }finally{
+      setTimeout(()=>{entering=false},250);
+    }
+  }
+
+  function bindHotelShortcut(){
+    const b=$h("mainDogHotelBtn");
+    if(!b)return;
+    b.disabled=false;
+    b.style.pointerEvents="auto";
+    b.onclick=enterHotelFromHud;
+    b.dataset.r321HotelEntry="1";
+  }
+
+  /* Re-bind whenever the HUD menu is rebuilt. */
+  try{
+    if(typeof bindHomeHudMenu==="function"){
+      const base=bindHomeHudMenu;
+      bindHomeHudMenu=function(){const r=base.apply(this,arguments);bindHotelShortcut();return r};
+    }
+  }catch(_){ }
+
+  bindHotelShortcut();
+  document.addEventListener("click",event=>{
+    const b=event.target?.closest?.("#mainDogHotelBtn");
+    if(!b)return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    enterHotelFromHud();
+  },true);
+  setTimeout(bindHotelShortcut,250);
+  setTimeout(bindHotelShortcut,1200);
+})();
