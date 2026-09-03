@@ -22705,21 +22705,34 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function claimTrap(idx){
     idx=Math.max(0,Math.min(2,Number(idx)||0));if(r32TrapClaimBusy.has(idx))return;r32TrapClaimBusy.add(idx);
     const claimBtn=$r("r15ClaimTrapReward");if(claimBtn){claimBtn.disabled=true;claimBtn.textContent="กำลังรับ..."}
+    const before=cloneData(ownState||state);let summary=[];
     try{
-      await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next=null,summary=[];
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=ensureFishTrapState(normalizeState(snap.data(),currentMember)),trap=st?.fishTraps?.[idx],t=stamp();
-        if(!trap||Number(trap.readyAt||0)>t||!trap.rewards?.length)throw new Error("รอบนี้ถูกรับไปแล้ว หรือยังไม่พร้อมรับ");
-        st.coconutRiverItems=st.coconutRiverItems&&typeof st.coconutRiverItems==="object"?st.coconutRiverItems:{};
-        summary=trap.rewards.map(r=>({key:r.key,qty:i(r.qty)}));summary.forEach(r=>st.coconutRiverItems[r.key]=i(st.coconutRiverItems[r.key])+r.qty);
-        const expired=t>=Number(trap.expiresAt||0);
-        if(expired)st.fishTraps[idx]=null;else if(t+FT_ROUND_MS<=trap.expiresAt){trap.cycleStartedAt=t;trap.readyAt=t+FT_ROUND_MS;trap.rewards=rollFishTrapRewards()}else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
-        if(admin())st.specials[FT_KEY]=9999;next=st;tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);closeModal();renderFishTraps();
-      const rows=summary.map(r=>`${COCONUT_RIVER_ITEMS?.[r.key]?.name||r.key} ×${r.qty}`).join("<br>");message("🎣 รับเรียบร้อย",`${rows}<br><small>เข้ากระเป๋าและบันทึกแล้ว • ไซเริ่มนับรอบใหม่ทันที</small>`);
-    }catch(e){message("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่");renderFishTraps()}
-    finally{r32TrapClaimBusy.delete(idx);if(claimBtn){claimBtn.disabled=false;claimBtn.textContent="รับเข้ากระเป๋า"}}
+      /* R32.4: one tap, local state changes immediately, then ONE Firestore update.
+         The old path waited for a pending full-save + transaction read + transaction
+         write, which made the fish trap feel frozen for several seconds. */
+      const st=ensureFishTrapState(normalizeState(cloneData(ownState||state),currentMember)),trap=st?.fishTraps?.[idx],t=stamp();
+      if(!trap||Number(trap.readyAt||0)>t||!trap.rewards?.length)throw new Error("รอบนี้ถูกรับไปแล้ว หรือยังไม่พร้อมรับ");
+      st.coconutRiverItems=st.coconutRiverItems&&typeof st.coconutRiverItems==="object"?st.coconutRiverItems:{};
+      summary=trap.rewards.map(r=>({key:r.key,qty:i(r.qty)}));summary.forEach(r=>st.coconutRiverItems[r.key]=i(st.coconutRiverItems[r.key])+r.qty);
+      const expired=t>=Number(trap.expiresAt||0);
+      if(expired)st.fishTraps[idx]=null;else if(t+FT_ROUND_MS<=trap.expiresAt){trap.cycleStartedAt=t;trap.readyAt=t+FT_ROUND_MS;trap.rewards=rollFishTrapRewards()}else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
+      if(admin())st.specials[FT_KEY]=9999;
+      st.clientSaveRevision=Math.max(Number(st.clientSaveRevision)||0,Number(before?.clientSaveRevision)||0)+1;
+      st.clientLocalEditAt=Date.now();st.activeSessionId=cloudSessionId;
+      ownState=st;state=ownState;saveLocalOnly(ownState);try{writeCriticalShadow?.(ownState)}catch(_){}
+      closeModal();renderFishTraps();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
+      const patch={fishTraps:cloneData(st.fishTraps),coconutRiverItems:cloneData(st.coconutRiverItems),clientSaveRevision:st.clientSaveRevision,clientLocalEditAt:st.clientLocalEditAt,activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()};
+      if(admin())patch.specials=cloneData(st.specials);
+      await fs.updateDoc(saveRef,patch);
+      const rows=summary.map(r=>`${COCONUT_RIVER_ITEMS?.[r.key]?.name||r.key} ×${r.qty}`).join("<br>");
+      message("🎣 รับเรียบร้อย",`${rows}<br><small>เข้ากระเป๋าและบันทึกแล้ว • ไซเริ่มนับรอบใหม่ทันที</small>`);
+    }catch(e){
+      /* If the one cloud write fails, restore the pre-claim snapshot so a reward
+         can never appear saved locally while Firestore rejected it. */
+      if(before){ownState=normalizeState(before,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){}renderFishTraps()}
+      message("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่");
+    }finally{r32TrapClaimBusy.delete(idx);if(claimBtn){claimBtn.disabled=false;claimBtn.textContent="รับเข้ากระเป๋า"}}
   }
 
   /* ---------- 10) Global UI/performance polish + rebind after legacy draw ---------- */
@@ -25855,7 +25868,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 })();
 
 /* ======================================================================
-   R32.1 HOTFIX — MEOW-WOOF HOTEL HUD ENTRY ONLY
+   R32.4 HOTFIX — MEOW-WOOF HOTEL ENTRY + CACHE BUST
    Fix regression where the visible Hotel shortcut can lose/override its
    click binding after later runtime wrappers. No gameplay/economy changes.
    ====================================================================== */
@@ -25869,7 +25882,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     entering=true;
     try{
       try{if(typeof closeHomeHudMenu==="function")closeHomeHudMenu()}catch(_){ }
-      /* R32.3: bypass the accumulated openScene wrapper chain completely.
+      /* R32.4: bypass the accumulated openScene wrapper chain completely.
          Hotel used to work before those wrappers accumulated; direct scene
          activation makes the HUD entry deterministic and does not touch
          Firestore or inventory. */
@@ -25885,13 +25898,17 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       screen.style.backgroundImage=`url("${bg}")`;
       layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
       if(typeof renderDogHotelScene!=="function")throw new Error("ไม่พบตัววาด Hotel");
-      renderDogHotelScene();
+      try{renderDogHotelScene()}catch(renderError){
+        console.error("R32.4 hotel initial render",renderError);
+        layer.innerHTML=`<div class="r323-hotel-loading">🐶🐱 Hotel เปิดฉากแล้ว แต่ตัววาดมีปัญหา<br><small>${String(renderError?.message||renderError)}</small></div>`;
+        throw renderError;
+      }
       requestAnimationFrame(()=>{
         try{if(currentScene==="dogHotel"&&!$h("dogHotelPetLayer"))renderDogHotelScene()}
-        catch(error){console.error("R32.3 hotel render recovery",error);try{message("Hotel โหลดไม่สำเร็จ",error?.message||"เกิดข้อผิดพลาดที่ตัววาด Hotel")}catch(_){}}
+        catch(error){console.error("R32.4 hotel render recovery",error);try{message("Hotel โหลดไม่สำเร็จ",error?.message||"เกิดข้อผิดพลาดที่ตัววาด Hotel")}catch(_){}}
       });
     }catch(error){
-      console.error("R32.3 hotel entry",error);
+      console.error("R32.4 hotel entry",error);
       try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",error?.message||"กรุณาลองใหม่")}catch(_){ }
     }finally{
       setTimeout(()=>{entering=false},250);
@@ -25916,14 +25933,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }catch(_){ }
 
   bindHotelShortcut();
-  document.addEventListener("click",event=>{
-    const b=event.target?.closest?.("#mainDogHotelBtn");
-    if(!b)return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    enterHotelFromHud();
-  },true);
+  const hotelEntryCapture=event=>{
+    const b=event.target?.closest?.("#mainDogHotelBtn");if(!b)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();enterHotelFromHud();
+  };
+  document.addEventListener("pointerup",hotelEntryCapture,true);
+  document.addEventListener("click",hotelEntryCapture,true);
   setTimeout(bindHotelShortcut,250);
   setTimeout(bindHotelShortcut,1200);
 })();
@@ -26026,7 +26041,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
       rescueRender();
       setTimeout(()=>{if(currentScene==="dogHotel"&&!byId("dogHotelPetLayer"))rescueRender()},0);
-    }catch(e){console.error("R32.3 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
+    }catch(e){console.error("R32.4 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
   }
   function bind(){const b=byId("mainDogHotelBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.onclick=enterHotel}
   bind();setTimeout(bind,200);setTimeout(bind,900);
@@ -26041,3 +26056,5 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
    intentionally retained, but its entry function now activates sceneScreen
    directly, bypassing every legacy openScene wrapper. */
 console.info("S2-R32.3 Hotel direct-entry hotfix loaded");
+
+;globalThis.YAINOO_HOTFIX_BUILD="S2-R32.4-20260903";console.info("S2-R32.4 hotel/fishtrap hotfix loaded");
