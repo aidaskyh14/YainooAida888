@@ -17066,6 +17066,29 @@ async function V181_campaignScoreLater(summary){
     const next=normalizeState(cloneData(ownState),currentMember);topupAdminAlpacaInventory(next);const result=mutator(next);topupAdminAlpacaInventory(next);applyOwn(next);saveLocalOnly(next);queueCloudSave();return{state:next,result};
   }
 
+  /* R32.6: durable economy mutation for SELL actions.
+     Read authoritative save -> remove sold instance/stock -> add merit -> commit once.
+     Success UI must only happen after this promise resolves. */
+  async function mutateOwnSale(mutator){
+    if(!currentMemberKey||!ownState)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
+    try{await settlePendingCloudSave?.()}catch(_){}
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let next,result;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const st=normalizeState(snap.data(),currentMember);
+      ensureAlpacaState(st);
+      result=mutator(st);
+      next=cloneData(st);
+      tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(st.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();
+    return{state:ownState,result};
+  }
+
   /* S2 FIX2: low-risk pen actions update locally first, then use the existing queued cloud save.
      Cross-player / economy-sensitive actions still keep their original Firestore transactions. */
   function mutateOwnFast(mutator){
@@ -17134,7 +17157,7 @@ async function V181_campaignScoreLater(summary){
     if(!preview.length)return alpacaMessage("ขายไม่ได้","ไม่พบอัลปาก้าที่เลือกค่ะ");
     const ok=await alpacaConfirm(`ขายอัลปาก้า ${preview.length} ตัวไหมคะ?`,`ขายพร้อมกันครั้งเดียว • ได้รวม <b>${expected} กุศล</b><br><small>เมื่อลบแล้วจะเอากลับคืนไม่ได้</small>`,{confirmText:`ขาย ${preview.length} ตัว`,danger:true});if(!ok)return;
     try{
-      const out=await mutateOwn(st=>{let reward=0,removed=0;preview.forEach(x=>{const p=penAt(st.alpaca,x.penNo),i=p.alpacas.findIndex(a=>a.id===x.id);if(i<0)return;reward+=p.alpacas[i].type==="baby"?50:200;p.alpacas.splice(i,1);removed++});if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
+      const out=await mutateOwnSale(st=>{let reward=0,removed=0;preview.forEach(x=>{const p=penAt(st.alpaca,x.penNo),i=p.alpacas.findIndex(a=>a.id===x.id);if(i<0)return;reward+=p.alpacas[i].type==="baby"?50:200;p.alpacas.splice(i,1);removed++});if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
       updateMeritUI();renderPen();syncOwnMaleBreeders().catch(()=>{});showWeatherToast(`🦙 ขาย ${out.result.removed} ตัวแล้ว • +${out.result.reward} กุศล`);showManageAlpacas();
     }catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
   }
@@ -17183,7 +17206,7 @@ async function V181_campaignScoreLater(summary){
   async function renameAlpaca(penNo,id){const {animal}=findOwnAnimal(penNo,id);if(!animal||animal.type!=="adult")return;const typed=await alpacaPrompt("ตั้งชื่ออัลปาก้า",animal.name,24);if(typed===null)return;const clean=typed.trim().slice(0,24);if(!clean)return;try{await mutateOwn(s=>{const x=findAnimal(s,penNo,id).animal;if(!x)throw new Error("ไม่พบอัลปาก้า");x.name=clean});showAlpacaDetail(penNo,id);syncOwnMaleBreeders().catch(()=>{})}catch(e){alpacaMessage("เปลี่ยนชื่อไม่ได้",e.message||"กรุณาลองใหม่")}}
   async function releaseAlpaca(penNo,id){
     const {animal}=findOwnAnimal(penNo,id);if(!animal)return;const reward=animal.type==="baby"?50:200;const ok=await alpacaConfirm("ขายอัลปาก้าตัวนี้ไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;
-    try{await mutateOwn(st=>{const p=penAt(st.alpaca,penNo),i=p.alpacas.findIndex(x=>x.id===id);if(i<0)throw new Error("ไม่พบอัลปาก้า");const got=p.alpacas[i].type==="baby"?50:200;p.alpacas.splice(i,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();closeModal();renderPen();syncOwnMaleBreeders().catch(()=>{});showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`)}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
+    try{await mutateOwnSale(st=>{const p=penAt(st.alpaca,penNo),i=p.alpacas.findIndex(x=>x.id===id);if(i<0)throw new Error("ไม่พบอัลปาก้า");const got=p.alpacas[i].type==="baby"?50:200;p.alpacas.splice(i,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();closeModal();renderPen();syncOwnMaleBreeders().catch(()=>{});showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`)}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
   async function shearAlpaca(penNo,id){
@@ -17383,12 +17406,12 @@ async function V181_campaignScoreLater(summary){
     const expected=selected.reduce((n,v)=>n+(v.type==="baby"?50:200),0);
     const ok=await alpacaConfirm(`ขายอัลปาก้าในคลัง ${selected.length} ตัวไหมคะ?`,`ขายพร้อมกันครั้งเดียว • ได้รวม <b>${expected} กุศล</b><br><small>เมื่อลบแล้วจะเอากลับคืนไม่ได้</small>`,{confirmText:`ขาย ${selected.length} ตัว`,danger:true});if(!ok)return;
     try{
-      const out=await mutateOwn(st=>{let reward=0,removed=0;for(let i=st.alpaca.vault.length-1;i>=0;i--){const v=st.alpaca.vault[i];if(!ids.includes(v.id))continue;reward+=v.type==="baby"?50:200;st.alpaca.vault.splice(i,1);removed++}if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
+      const out=await mutateOwnSale(st=>{let reward=0,removed=0;for(let i=st.alpaca.vault.length-1;i>=0;i--){const v=st.alpaca.vault[i];if(!ids.includes(v.id))continue;reward+=v.type==="baby"?50:200;st.alpaca.vault.splice(i,1);removed++}if(!removed)throw new Error("ไม่พบอัลปาก้าที่เลือกแล้ว");st.merit=(Number(st.merit)||0)+reward;return{reward,removed}});
       updateMeritUI();showWeatherToast(`🦙 ขาย ${out.result.removed} ตัวแล้ว • +${out.result.reward} กุศล`);showAlpacaWarehouse();
     }catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
-  async function sellVaultAlpaca(vaultId){const item=ownAlpaca()?.vault?.find(v=>v.id===vaultId);if(!item)return;const reward=item.type==="baby"?50:200,ok=await alpacaConfirm("ขายอัลปาก้าในคลังไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;try{await mutateOwn(st=>{const idx=st.alpaca.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const got=st.alpaca.vault[idx].type==="baby"?50:200;st.alpaca.vault.splice(idx,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`);showAlpacaWarehouse()}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function sellVaultAlpaca(vaultId){const item=ownAlpaca()?.vault?.find(v=>v.id===vaultId);if(!item)return;const reward=item.type==="baby"?50:200,ok=await alpacaConfirm("ขายอัลปาก้าในคลังไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;try{await mutateOwnSale(st=>{const idx=st.alpaca.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const got=st.alpaca.vault[idx].type==="baby"?50:200;st.alpaca.vault.splice(idx,1);st.merit=(Number(st.merit)||0)+got});updateMeritUI();showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`);showAlpacaWarehouse()}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showVaultPenPicker(vaultId){const root=ownAlpaca(),item=root?.vault?.find(v=>v.id===vaultId);if(!item)return showAlpacaWarehouse();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`วาง${item.type==="baby"?"เบบี้":"อัลปาก้า"}เข้าคอก`,`เลือกคอกที่ยังมีพื้นที่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-vault-pen="${i+1}" ${p.alpacas.length>=PEN_CAPACITY?"disabled":""}>คอก ${i+1}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}</small></button>`).join("")}</div><button id="vaultPenBack" class="secondary-action" type="button">กลับคลัง</button></section>`;openModal();document.querySelectorAll("[data-vault-pen]").forEach(b=>b.onclick=()=>placeVaultAlpaca(vaultId,Number(b.dataset.vaultPen)));$("vaultPenBack").onclick=showAlpacaWarehouse}
   async function placeVaultAlpaca(vaultId,penNo){try{penNo=Math.max(1,Math.min(5,Number(penNo)||1));mutateOwnFast(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||gameNow(),item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||gameNow()}pen.alpacas.push(a);root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
   function countUnplacedPets(s,kind){const arr=kind==="cat"?(s.cats||[]):(s.dogs||[]);return arr.filter(x=>kind==="cat"?!x.placedFarm:!x.placedHotel).length}
@@ -22701,38 +22724,31 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function showTrapClaim(idx){
     const s=ensureFishTrapState(own()),trap=s?.fishTraps?.[idx],t=stamp();if(!trap||trap.readyAt>t||!trap.rewards?.length)return renderFishTraps();const rows=trap.rewards.map(r=>({r,meta:COCONUT_RIVER_ITEMS?.[r.key]})).filter(x=>x.meta);$r("modalContent").innerHTML=`<section class="feature-panel r15-fish-trap-claim"><h2>🎣 ยินดีด้วยค่ะ คุณได้รับสัตว์น้ำ</h2><div class="r14-fish-reward-grid">${rows.map(({r,meta})=>`<div><img src="${meta.image}" alt="${html(meta.name)}"><b>${html(meta.name)}</b><small>×${i(r.qty)}</small></div>`).join("")}</div><button id="r15ClaimTrapReward" class="primary-spooky-action" type="button">รับเข้ากระเป๋า</button></section>`;openModal();$r("r15ClaimTrapReward").onclick=()=>claimTrap(idx);
   }
-  const r32TrapClaimBusy=new Set();
-  async function claimTrap(idx){
-    idx=Math.max(0,Math.min(2,Number(idx)||0));if(r32TrapClaimBusy.has(idx))return;r32TrapClaimBusy.add(idx);
-    const claimBtn=$r("r15ClaimTrapReward");if(claimBtn){claimBtn.disabled=true;claimBtn.textContent="กำลังรับ..."}
-    const before=cloneData(ownState||state);let summary=[];
+  const r325TrapClaimBusy=new Set();
+  function claimTrap(idx){
+    idx=Math.max(0,Math.min(2,Number(idx)||0)); if(r325TrapClaimBusy.has(idx))return;
+    const s=ensureFishTrapState(own()),trap=s?.fishTraps?.[idx],t=stamp();
+    if(!trap||trap.readyAt>t||!trap.rewards?.length)return;
+    r325TrapClaimBusy.add(idx);
+    const btn=$r("r15ClaimTrapReward"); if(btn){btn.disabled=true;btn.textContent="รับแล้ว ✓"}
     try{
-      /* R32.4: one tap, local state changes immediately, then ONE Firestore update.
-         The old path waited for a pending full-save + transaction read + transaction
-         write, which made the fish trap feel frozen for several seconds. */
-      const st=ensureFishTrapState(normalizeState(cloneData(ownState||state),currentMember)),trap=st?.fishTraps?.[idx],t=stamp();
-      if(!trap||Number(trap.readyAt||0)>t||!trap.rewards?.length)throw new Error("รอบนี้ถูกรับไปแล้ว หรือยังไม่พร้อมรับ");
-      st.coconutRiverItems=st.coconutRiverItems&&typeof st.coconutRiverItems==="object"?st.coconutRiverItems:{};
-      summary=trap.rewards.map(r=>({key:r.key,qty:i(r.qty)}));summary.forEach(r=>st.coconutRiverItems[r.key]=i(st.coconutRiverItems[r.key])+r.qty);
-      const expired=t>=Number(trap.expiresAt||0);
-      if(expired)st.fishTraps[idx]=null;else if(t+FT_ROUND_MS<=trap.expiresAt){trap.cycleStartedAt=t;trap.readyAt=t+FT_ROUND_MS;trap.rewards=rollFishTrapRewards()}else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
-      if(admin())st.specials[FT_KEY]=9999;
-      st.clientSaveRevision=Math.max(Number(st.clientSaveRevision)||0,Number(before?.clientSaveRevision)||0)+1;
-      st.clientLocalEditAt=Date.now();st.activeSessionId=cloudSessionId;
-      ownState=st;state=ownState;saveLocalOnly(ownState);try{writeCriticalShadow?.(ownState)}catch(_){}
-      closeModal();renderFishTraps();
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
-      const patch={fishTraps:cloneData(st.fishTraps),coconutRiverItems:cloneData(st.coconutRiverItems),clientSaveRevision:st.clientSaveRevision,clientLocalEditAt:st.clientLocalEditAt,activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()};
-      if(admin())patch.specials=cloneData(st.specials);
-      await fs.updateDoc(saveRef,patch);
+      s.coconutRiverItems=s.coconutRiverItems&&typeof s.coconutRiverItems==="object"?s.coconutRiverItems:{};
+      const summary=trap.rewards.map(r=>({key:r.key,qty:i(r.qty)}));
+      summary.forEach(r=>s.coconutRiverItems[r.key]=i(s.coconutRiverItems[r.key])+r.qty);
+      const expired=t>=trap.expiresAt;
+      if(expired)s.fishTraps[idx]=null;
+      else if(t+FT_ROUND_MS<=trap.expiresAt){trap.cycleStartedAt=t;trap.readyAt=t+FT_ROUND_MS;trap.rewards=rollFishTrapRewards()}
+      else{trap.cycleStartedAt=t;trap.readyAt=0;trap.rewards=[]}
+      if(admin())s.specials[FT_KEY]=9999;
+      /* UX first: commit locally and close immediately. Cloud save is queued once,
+         so the player never waits on a Firestore round-trip or taps repeatedly. */
+      saveLocalOnly(s); try{writeCriticalShadow?.(s)}catch(_){}
+      try{queueCloudSave?.()}catch(e){console.warn("R32.5 fish trap queue",e)}
+      closeModal(); renderFishTraps();
       const rows=summary.map(r=>`${COCONUT_RIVER_ITEMS?.[r.key]?.name||r.key} ×${r.qty}`).join("<br>");
-      message("🎣 รับเรียบร้อย",`${rows}<br><small>เข้ากระเป๋าและบันทึกแล้ว • ไซเริ่มนับรอบใหม่ทันที</small>`);
-    }catch(e){
-      /* If the one cloud write fails, restore the pre-claim snapshot so a reward
-         can never appear saved locally while Firestore rejected it. */
-      if(before){ownState=normalizeState(before,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){}renderFishTraps()}
-      message("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่");
-    }finally{r32TrapClaimBusy.delete(idx);if(claimBtn){claimBtn.disabled=false;claimBtn.textContent="รับเข้ากระเป๋า"}}
+      message("🎣 รับเรียบร้อย",`${rows}<br><small>เข้ากระเป๋าแล้ว • ไซเริ่มนับรอบใหม่ทันที</small>`);
+    }catch(e){console.error("R32.5 fish trap claim",e);message("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่")}
+    finally{setTimeout(()=>r325TrapClaimBusy.delete(idx),700)}
   }
 
   /* ---------- 10) Global UI/performance polish + rebind after legacy draw ---------- */
@@ -25557,10 +25573,28 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function dailyPrice(key,min,max){const h=hash31(`${dateKey()}|mysterious|${key}`);return min+(h%(max-min+1))}
   function sellCount(s,type,key){return type==="wine"?int(s.wines?.[key]):int(s.alpaca?.factory?.products?.[key])}
   async function sellOne(type,key){
-    const s=ensure31(own());if(s.r31Mysterious.sold>=2)return toast("ขายครบแล้ว","วันนี้ขายของในร้านค้าลึกลับครบ 2 ชิ้นแล้วค่ะ");
-    const row=MYSTERY_SELL.find(x=>x[0]===type&&x[1]===key);if(!row)return;if(sellCount(s,type,key)<1&&!isAdmin())return toast("ไม่มีสินค้า","ของชิ้นนี้ไม่มีอยู่ในกระเป๋าค่ะ");
-    const price=dailyPrice(key,row[3],row[4]);if(!isAdmin()){if(type==="wine")s.wines[key]-=1;else s.alpaca.factory.products[key]-=1;s.merit=(Number(s.merit)||0)+price}else ensureAdminStock?.(s);
-    s.r31Mysterious.sold++;persist(s,{flush:true});try{await settlePendingCloudSave?.();await flushCloudSave?.()}catch(e){console.warn("R32 mysterious sale save",e)}try{updateMeritUI()}catch(_){}showWeatherToast?.(`🔮 ขาย ${row[2]} • +${price} กุศล`);openMysteriousShop();
+    const local=ensure31(own());if(local.r31Mysterious.sold>=2)return toast("ขายครบแล้ว","วันนี้ขายของในร้านค้าลึกลับครบ 2 ชิ้นแล้วค่ะ");
+    const row=MYSTERY_SELL.find(x=>x[0]===type&&x[1]===key);if(!row)return;if(sellCount(local,type,key)<1&&!isAdmin())return toast("ไม่มีสินค้า","ของชิ้นนี้ไม่มีอยู่ในกระเป๋าค่ะ");
+    const price=dailyPrice(key,row[3],row[4]);
+    try{
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=ensure31(normalizeState(snap.data(),currentMember));
+        if(Number(st.r31Mysterious?.sold||0)>=2)throw new Error("วันนี้ขายครบ 2 ชิ้นแล้วค่ะ");
+        if(!isAdmin()){
+          if(type==="wine"){if((Number(st.wines?.[key])||0)<1)throw new Error("สินค้านี้หมดแล้ว");st.wines[key]-=1}
+          else{if((Number(st.alpaca?.factory?.products?.[key])||0)<1)throw new Error("สินค้านี้หมดแล้ว");st.alpaca.factory.products[key]-=1}
+          st.merit=(Number(st.merit)||0)+price;
+        }else ensureAdminStock?.(st);
+        st.r31Mysterious.sold=(Number(st.r31Mysterious.sold)||0)+1;next=cloneData(st);
+        tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(st.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();
+      showWeatherToast?.(`🔮 ขาย ${row[2]} • +${price} กุศล`);openMysteriousShop();
+    }catch(e){message?.("ขายไม่ได้",e?.message||"กรุณาลองใหม่")}
   }
   function openMysteriousShop(){
     const s=ensure31(own()),left=Math.max(0,2-s.r31Mysterious.sold);
@@ -25785,7 +25819,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const dogs=(s?.dogs||[]).filter(d=>d.placedHotel&&Number(s.hotelPetPenMap?.[String(d.id)]||d.hotelPen||1)===pen),cats=(s?.cats||[]).filter(c=>c.placedHotel&&Number(s.hotelPetPenMap?.[String(c.id)]||c.hotelPen||1)===pen),t=now();
     [...document.querySelectorAll("#dogHotelPetLayer .dog-hotel-pet")].forEach(el=>{const p=dogs.find(x=>String(x.id)===String(el.dataset.dogId));if(!p)return;let b=el.querySelector(".r31-hotel-status,.r32-hotel-status");if(!b){b=document.createElement("span");b.className="r32-hotel-status";el.appendChild(b)}b.textContent=Number(p.medicineUntil||0)>t?"💊":Number(p.nextFeedAt||0)&&t>=Number(p.nextFeedAt)+3600000?"😡":Number(p.nextFeedAt||0)&&t>=Number(p.nextFeedAt)?"🍽️":""});
     [...document.querySelectorAll("#dogHotelPetLayer .s2-hotel-cat:not(.r31-hotel-test-pet)")].forEach((el,i)=>{const p=cats.find(x=>String(x.id)===String(el.dataset.catId))||cats[i];if(!p)return;let b=el.querySelector(".r31-hotel-status,.r32-hotel-status");if(!b){b=document.createElement("span");b.className="r32-hotel-status";el.appendChild(b)}b.textContent=Number(p.medicineUntil||0)>t?"💊":Number(p.nextFeedAt||0)&&t>=Number(p.nextFeedAt)+3600000?"😡":Number(p.nextFeedAt||0)&&t>=Number(p.nextFeedAt)?"🍽️":""})}
-  const hotelObserver=new MutationObserver(()=>{try{hotelPolish()}catch(_){}});hotelObserver.observe(document.documentElement,{subtree:true,childList:true});setInterval(hotelPolish,800);
+  /* R32.5: disabled global Hotel MutationObserver + interval.
+     It could self-trigger while rewriting Hotel status nodes and lock the scene render.
+     Hotel returns to the proven R31 renderer/motion path. */
 
   /* ---------- 7) Critical receipt flush helper ---------- */
   async function flushCritical(){try{const s=ownState||state;if(s){saveLocalOnly?.(s);save?.()}await settlePendingCloudSave?.();await flushCloudSave?.();return true}catch(e){console.warn("R32 critical save",e);return false}}
@@ -25826,235 +25862,65 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   };
 })();
 
-/* R32 HOTEL FINAL: keep the pet layer alive while staying in the same pen.
-   Rebuilding the layer is reserved for a real pen/roster change. This prevents
-   the 60-second refresh/drop/status paths from teleporting every pet. */
-(function YN_R32_HOTEL_STABLE_LAYER(){
-  "use strict";
-  if(typeof renderDogHotelScene!=="function")return;
-  const fullRender=renderDogHotelScene;
-  const pen4=n=>Math.max(1,Math.min(4,Math.floor(Number(n)||1)));
-  function snapshot(){
-    const pen=pen4(currentDogHotelPen),s=ownState||state;
-    const dogs=typeof dogsInHotelPen==="function"?dogsInHotelPen(pen,s):[];
-    const cats=(s?.cats||[]).filter(c=>Number(c?.placedFarm)===-1&&c?.placedHotel&&pen4(s?.hotelPetPenMap?.[String(c.id)]||c.hotelPen||1)===pen);
-    return {pen,s,dogs,cats,signature:`${pen}|d:${dogs.map(x=>x.id).join(",")}|c:${cats.map(x=>x.id).join(",")}`};
-  }
-  renderDogHotelScene=function(){
-    if(currentScene!=="dogHotel")return fullRender.apply(this,arguments);
-    const x=snapshot(),layer=document.getElementById("dogHotelPetLayer"),eng=globalThis.YN_R31_HOTEL_ENGINE;
-    const controllersOK=!!layer&&!!eng&&x.dogs.every(d=>eng.dogHotelControllers?.has?.(d.id))&&x.cats.every(c=>eng.catHotelControllers?.has?.(c.id));
-    if(layer?.dataset?.r31HotelSignature===x.signature&&controllersOK){
-      currentDogHotelPen=x.pen;
-      try{processDogDrops?.()}catch(_){}
-      try{processCatDrops?.()}catch(_){}
-      try{
-        setSceneNav({
-          backText:x.pen>1?`กลับคอก ${x.pen-1}`:"กลับไปที่แปลงผัก",
-          backAction:x.pen>1?()=>setDogHotelPen(x.pen-1):returnToFarm,
-          nextText:x.pen<4?`ไปคอก ${x.pen+1}`:"กลับไปที่แปลงผัก",
-          nextAction:x.pen<4?()=>setDogHotelPen(x.pen+1):returnToFarm
-        });
-      }catch(_){}
-      const badge=document.querySelector(".dog-hotel-counter");
-      if(badge)badge.textContent=`🐶🐱 เหมียวโฮ่งโฮเทล • คอก ${x.pen} • ${x.dogs.length+x.cats.length}/${DOG_HOTEL_MAX}`;
-      const check=document.getElementById("dogMemberCheckBtn");if(check){check.textContent="เช็คสมาชิกเหมียวโฮ่ง";check.onclick=showDogHotelRoster}
-      const basket=document.getElementById("dogPenCollectAllBtn");if(basket&&typeof collectAllHotelDropsCurrentPen==="function")basket.onclick=collectAllHotelDropsCurrentPen;
-      try{renderDogHotelDropsForPen?.()}catch(_){}
-      return;
-    }
-    return fullRender.apply(this,arguments);
-  };
-})();
+/* R32.5 HOTEL ROLLBACK: R32 stable-layer override removed.
+   Use the existing R31 Hotel renderer that previously opened correctly. */
 
 /* ======================================================================
-   R32.4 HOTFIX — MEOW-WOOF HOTEL ENTRY + CACHE BUST
-   Fix regression where the visible Hotel shortcut can lose/override its
-   click binding after later runtime wrappers. No gameplay/economy changes.
+   R32.5 HOTEL RESTORE — proven R31 entry/render path
+   - No capture-phase interception
+   - No direct scene DOM takeover
+   - No rescue renderer override
+   - Re-bind normal Hotel button to the game's normal openScene("dogHotel")
    ====================================================================== */
-(function YN_R32_1_HOTEL_ENTRY_HOTFIX(){
-  "use strict";
-  const $h=id=>document.getElementById(id);
-  let entering=false;
-
-  function enterHotelFromHud(){
-    if(entering)return;
-    entering=true;
-    try{
-      try{if(typeof closeHomeHudMenu==="function")closeHomeHudMenu()}catch(_){ }
-      /* R32.4: bypass the accumulated openScene wrapper chain completely.
-         Hotel used to work before those wrappers accumulated; direct scene
-         activation makes the HUD entry deterministic and does not touch
-         Firestore or inventory. */
-      if(typeof currentDogHotelPen!=="undefined")currentDogHotelPen=1;
-      if(typeof stopSceneTimer==="function")stopSceneTimer();
-      currentScene="dogHotel";
-      const game=$h("gameScreen"),screen=$h("sceneScreen"),layer=$h("sceneInteractiveLayer");
-      if(!screen||!layer)throw new Error("ไม่พบหน้าฉาก Hotel");
-      if(game)game.classList.add("hidden");
-      screen.classList.remove("hidden");
-      screen.dataset.scene="dogHotel";
-      const bg=(typeof SCENES!=="undefined"&&SCENES?.dogHotel?.image)?SCENES.dogHotel.image:"meow-woof-hotel.jpeg";
-      screen.style.backgroundImage=`url("${bg}")`;
-      layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
-      if(typeof renderDogHotelScene!=="function")throw new Error("ไม่พบตัววาด Hotel");
-      try{renderDogHotelScene()}catch(renderError){
-        console.error("R32.4 hotel initial render",renderError);
-        layer.innerHTML=`<div class="r323-hotel-loading">🐶🐱 Hotel เปิดฉากแล้ว แต่ตัววาดมีปัญหา<br><small>${String(renderError?.message||renderError)}</small></div>`;
-        throw renderError;
-      }
-      requestAnimationFrame(()=>{
-        try{if(currentScene==="dogHotel"&&!$h("dogHotelPetLayer"))renderDogHotelScene()}
-        catch(error){console.error("R32.4 hotel render recovery",error);try{message("Hotel โหลดไม่สำเร็จ",error?.message||"เกิดข้อผิดพลาดที่ตัววาด Hotel")}catch(_){}}
-      });
-    }catch(error){
-      console.error("R32.4 hotel entry",error);
-      try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",error?.message||"กรุณาลองใหม่")}catch(_){ }
-    }finally{
-      setTimeout(()=>{entering=false},250);
-    }
-  }
-
-  function bindHotelShortcut(){
-    const b=$h("mainDogHotelBtn");
+(function YN_R32_5_HOTEL_RESTORE(){
+  const bind=()=>{
+    const b=document.getElementById("mainDogHotelBtn");
     if(!b)return;
     b.disabled=false;
     b.style.pointerEvents="auto";
-    b.onclick=enterHotelFromHud;
-    b.dataset.r321HotelEntry="1";
-  }
-
-  /* Re-bind whenever the HUD menu is rebuilt. */
-  try{
-    if(typeof bindHomeHudMenu==="function"){
-      const base=bindHomeHudMenu;
-      bindHomeHudMenu=function(){const r=base.apply(this,arguments);bindHotelShortcut();return r};
-    }
-  }catch(_){ }
-
-  bindHotelShortcut();
-  const hotelEntryCapture=event=>{
-    const b=event.target?.closest?.("#mainDogHotelBtn");if(!b)return;
-    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();enterHotelFromHud();
+    b.onclick=()=>{try{if(!guardResting())openScene("dogHotel")}catch(e){console.error("R32.5 Hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}};
   };
-  document.addEventListener("pointerup",hotelEntryCapture,true);
-  document.addEventListener("click",hotelEntryCapture,true);
-  setTimeout(bindHotelShortcut,250);
-  setTimeout(bindHotelShortcut,1200);
+  bind(); setTimeout(bind,250); setTimeout(bind,1200);
+  globalThis.YAINOO_HOTFIX_BUILD="S2-R32.5-HOTEL-R31-RESTORE";
+  console.info("S2-R32.5 Hotel R31 restore loaded");
 })();
 
-/* ======================================================================
-   R32.2 HOTEL RESCUE — single authoritative Hotel renderer
-   Fix: tapping Hotel changed scene but legacy render wrapper chain could abort
-   before painting anything. This renderer intentionally bypasses that chain.
-   No Firestore Rules / economy changes.
-   ====================================================================== */
-(function YN_R32_2_HOTEL_RESCUE(){
-  "use strict";
-  const byId=id=>document.getElementById(id);
-  const pen4=n=>Math.max(1,Math.min(4,Math.floor(Number(n)||1)));
+;globalThis.YAINOO_BUILD="S2-R32.5-HOTEL-RESTORE-FISHFAST";console.info("S2-R32.5 loaded");
 
-  function hotelDogs(pen,s=ownState||state){
-    try{return typeof dogsInHotelPen==="function"?dogsInHotelPen(pen,s):[]}catch(_){return []}
-  }
-  function hotelCats(pen,s=ownState||state){
+
+/* =====================================================================
+   S2 R32.6 LAUNCH CRITICAL — HOTEL ENTRY + SELL DURABILITY
+   ===================================================================== */
+(function YN_R32_6_LAUNCH_CRITICAL(){
+  function forceHotelEntry(){
+    try{closeHomeHudMenu?.()}catch(_){}
+    try{closeModal?.()}catch(_){}
+    try{stopSceneTimer?.()}catch(_){}
+    currentScene="dogHotel";
+    const game=document.getElementById("gameScreen"),scene=document.getElementById("sceneScreen"),layer=document.getElementById("sceneInteractiveLayer");
+    if(game)game.classList.add("hidden");
+    if(scene){scene.classList.remove("hidden");scene.dataset.scene="dogHotel";scene.style.backgroundImage=`url("${SCENES?.dogHotel?.image||"meow-woof-hotel.jpeg"}")`;}
     try{
-      const map=s?.hotelPetPenMap||{};
-      return (s?.cats||[]).filter(c=>Number(c?.placedFarm)===-1&&c?.placedHotel&&pen4(map[String(c.id)]||c.hotelPen||1)===pen);
-    }catch(_){return []}
+      if(typeof renderDogHotelScene!=="function")throw new Error("ไม่พบตัววาด Hotel");
+      renderDogHotelScene();
+    }catch(e){
+      console.error("R32.6 Hotel renderer",e);
+      if(layer)layer.innerHTML=`<section class="feature-panel" style="margin:18px"><h2>🏨 Hotel โหลดไม่สำเร็จ</h2><p>${String(e?.message||e)}</p><button type="button" id="r326HotelBack">กลับฟาร์ม</button></section>`;
+      document.getElementById("r326HotelBack")?.addEventListener("click",()=>{try{returnToFarm()}catch(_){location.reload()}});
+    }
   }
-  function countPets(pen){return hotelDogs(pen).length+hotelCats(pen).length}
-
-  function mountPetsSafe(){
-    try{
-      if(typeof mountFinalHotelPets==="function")return mountFinalHotelPets();
-      if(typeof mountDogHotelPetsForPen==="function")return mountDogHotelPetsForPen();
-      if(typeof mountDogHotelPets==="function")return mountDogHotelPets();
-    }catch(e){console.error("R32.2 hotel pets",e)}
-  }
-  function mountDropsSafe(){
-    try{
-      if(typeof renderDogHotelDropsForPen==="function")return renderDogHotelDropsForPen();
-      if(typeof renderDogHotelDrops==="function")return renderDogHotelDrops();
-    }catch(e){console.error("R32.2 hotel drops",e)}
-  }
-
-  function rescueRender(){
-    if(currentScene!=="dogHotel")return;
-    const screen=byId("sceneScreen"),layer=byId("sceneInteractiveLayer");
-    if(!screen||!layer){console.error("R32.2 Hotel: scene DOM missing");return}
-    currentDogHotelPen=pen4(typeof currentDogHotelPen!=="undefined"?currentDogHotelPen:1);
-    const pen=currentDogHotelPen,max=(typeof DOG_HOTEL_MAX!=="undefined"?DOG_HOTEL_MAX:6),count=countPets(pen);
-
-    try{processDogDrops?.()}catch(e){console.warn("R32.2 dog drops process",e)}
-    try{processCatDrops?.()}catch(e){console.warn("R32.2 cat drops process",e)}
-
-    screen.classList.add("s2-meow-woof-hotel");
-    try{if(typeof HOTEL_BG!=="undefined"&&HOTEL_BG)screen.style.backgroundImage=`url("${HOTEL_BG}")`}catch(_){ }
-    try{
-      setSceneNav({
-        backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",
-        backAction:pen>1?()=>{currentDogHotelPen=pen-1;rescueRender()}:returnToFarm,
-        nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",
-        nextAction:pen<4?()=>{currentDogHotelPen=pen+1;rescueRender()}:returnToFarm
-      });
-    }catch(e){console.warn("R32.2 hotel nav",e)}
-
-    layer.innerHTML=`
-      <div class="dog-hotel-counter">🐶🐱 เหมียวโฮ่งโฮเทล • คอก ${pen} • ${count}/${max}</div>
-      <div id="dogHotelPetLayer" class="dog-hotel-pet-layer" data-r322-pen="${pen}"></div>
-      <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>
-      <div class="r322-hotel-actions">
-        <button id="dogMemberCheckBtn" type="button">🐶🐱 เช็คสมาชิกเหมียวโฮ่ง</button>
-        <button id="dogPenCollectAllBtn" type="button">🧺 เก็บของดรอปทั้งหมด</button>
-      </div>`;
-
-    const roster=byId("dogMemberCheckBtn");
-    if(roster)roster.onclick=()=>{try{showDogHotelRoster()}catch(e){console.error(e)}};
-    const collect=byId("dogPenCollectAllBtn");
-    if(collect)collect.onclick=()=>{try{typeof collectAllHotelDropsCurrentPen==="function"?collectAllHotelDropsCurrentPen():collectAllDogDrops?.()}catch(e){console.error(e)}};
-
-    mountPetsSafe();
-    mountDropsSafe();
-    requestAnimationFrame(()=>{if(currentScene==="dogHotel"){mountPetsSafe();mountDropsSafe();try{globalThis.YN_R32?.repairHotelPenMap?.(ownState||state)}catch(_){}}});
-  }
-
-  /* Replace the entire legacy wrapper stack with one renderer. */
-  renderDogHotelScene=rescueRender;
-
-  /* Make router dispatch deterministic even if an older renderScene wrapper was captured. */
-  try{
-    const previousRenderScene=renderScene;
-    renderScene=function(){if(currentScene==="dogHotel"){rescueRender();return}return previousRenderScene.apply(this,arguments)};
-  }catch(_){ }
-
-  function enterHotel(){
-    try{
-      try{closeHomeHudMenu?.()}catch(_){ }
-      currentDogHotelPen=1;
-      if(typeof stopSceneTimer==="function")stopSceneTimer();
-      currentScene="dogHotel";
-      const game=byId("gameScreen"),screen=byId("sceneScreen"),layer=byId("sceneInteractiveLayer");
-      if(!screen||!layer)throw new Error("ไม่พบหน้าฉาก Hotel");
-      if(game)game.classList.add("hidden");screen.classList.remove("hidden");screen.dataset.scene="dogHotel";
-      const bg=(typeof SCENES!=="undefined"&&SCENES?.dogHotel?.image)?SCENES.dogHotel.image:"meow-woof-hotel.jpeg";screen.style.backgroundImage=`url("${bg}")`;
-      layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
-      rescueRender();
-      setTimeout(()=>{if(currentScene==="dogHotel"&&!byId("dogHotelPetLayer"))rescueRender()},0);
-    }catch(e){console.error("R32.4 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
-  }
-  function bind(){const b=byId("mainDogHotelBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.onclick=enterHotel}
-  bind();setTimeout(bind,200);setTimeout(bind,900);
-
-  globalThis.YN_R32_2_HOTEL_RESCUE={render:rescueRender,enter:enterHotel};
-  globalThis.YAINOO_BUILD="S2-R32.3-HOTEL-DIRECT-ENTRY";
-  console.info("S2-R32.2 Hotel Rescue loaded");
+  /* Capture phase + stopImmediatePropagation guarantees old Hotel handlers cannot cancel/override this one. */
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#mainDogHotelBtn");if(!b)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();forceHotelEntry();
+  },true);
+  const bind=()=>{const b=document.getElementById("mainDogHotelBtn");if(!b)return;b.onclick=null;b.dataset.r326Hotel="1"};
+  bind();setInterval(bind,1200);
+  globalThis.YN_FORCE_HOTEL_ENTRY=forceHotelEntry;
+  globalThis.YAINOO_BUILD="S2-R32.6-LAUNCH-CRITICAL";
+  console.info("S2-R32.6 launch critical loaded");
 })();
 
 
-/* R32.3 final hotel entry guarantee: the existing R32.1 capture handler is
-   intentionally retained, but its entry function now activates sceneScreen
-   directly, bypassing every legacy openScene wrapper. */
-console.info("S2-R32.3 Hotel direct-entry hotfix loaded");
-
-;globalThis.YAINOO_HOTFIX_BUILD="S2-R32.4-20260903";console.info("S2-R32.4 hotel/fishtrap hotfix loaded");
+/* R32.7 marker: critical sale durability + Hotel forced entry retained from R32.6. */
+globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch critical loaded");
