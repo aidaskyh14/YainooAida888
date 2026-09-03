@@ -9699,3 +9699,34 @@ button.r9-tap-now{transform:scale(.97)!important;transition:transform 70ms ease-
 @media (max-height:720px){
   #r31FriendCollectAll{bottom:calc(env(safe-area-inset-bottom, 0px) + 84px)!important}
 }
+
+/* =====================================================================
+   S2 R32.9 — HOTEL FINAL VISUALS
+   Stable nodes only. Legacy dog/cat/status nodes are hidden inside the final
+   Hotel layer so old 900ms/1000ms status refreshers cannot cause flicker.
+   ===================================================================== */
+.r329-hotel-final #dogHotelPetLayer{overflow:visible!important;contain:none!important;pointer-events:none!important;z-index:22!important}
+.r329-hotel-final #dogHotelPetLayer>.dog-hotel-pet,
+.r329-hotel-final #dogHotelPetLayer>.s2-hotel-cat,
+.r329-hotel-final #dogHotelPetLayer>.r31-hotel-test-pet{display:none!important}
+.r329-hotel-final #dogHotelPetLayer .r16-pet-status,
+.r329-hotel-final #dogHotelPetLayer .r17-pet-status,
+.r329-hotel-final #dogHotelPetLayer .r31-hotel-status,
+.r329-hotel-final #dogHotelPetLayer .r32-hotel-status,
+.r329-hotel-final #dogHotelPetLayer .farm-pet-status-wrap,
+.r329-hotel-final #dogHotelPetLayer .dog-status-wrap{display:none!important}
+.r329-hotel-pet{position:absolute!important;width:clamp(40px,10.5vw,56px)!important;height:clamp(50px,13vw,70px)!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;transform:translate(-50%,-50%) translateZ(0)!important;pointer-events:auto!important;overflow:visible!important;contain:none!important;will-change:left,top;touch-action:manipulation;-webkit-tap-highlight-color:transparent;z-index:24}
+.r329-hotel-pet:active{filter:brightness(.96)}
+.r329-hotel-shadow{position:absolute;z-index:0;left:50%;bottom:5%;width:60%;height:10%;transform:translateX(-50%);border-radius:50%;background:rgba(18,12,16,.34);filter:blur(1.8px);pointer-events:none}
+.r329-hotel-fallback,.r329-hotel-sprite{position:absolute!important;z-index:2!important;left:50%!important;top:50%!important;width:92%!important;height:92%!important;transform:translate(-50%,-50%) translateZ(0)!important;transform-origin:center center!important;object-fit:contain!important;background-repeat:no-repeat!important;backface-visibility:hidden!important;transition:none!important;animation:none!important;pointer-events:none!important;filter:drop-shadow(0 2px 2px rgba(15,10,13,.32))}
+.r329-hotel-fallback{opacity:1!important}.r329-hotel-fallback.is-ready{opacity:0!important}
+.r329-hotel-sprite.face-left{transform:translate(-50%,-50%) scaleX(-1) translateZ(0)!important}
+.r329-hotel-name{position:absolute;z-index:5;left:50%;bottom:-5px;transform:translateX(-50%);max-width:135%;padding:1px 4px;border-radius:999px;background:rgba(47,29,55,.86);color:#fff2d8;font-size:clamp(5.5px,1.35vw,8px);font-weight:850;line-height:1.1;white-space:nowrap;pointer-events:none;text-shadow:0 1px 1px rgba(0,0,0,.45)}
+.r329-hotel-status{position:absolute!important;z-index:12!important;left:50%!important;top:-12px!important;width:23px!important;height:23px!important;min-width:23px!important;min-height:23px!important;transform:translateX(-50%)!important;display:grid!important;place-items:center!important;border-radius:999px!important;background:rgba(255,251,240,.97)!important;font-size:15px!important;line-height:1!important;overflow:visible!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))!important;pointer-events:none!important;transition:none!important;animation:none!important;opacity:1!important}
+.r329-hotel-status.is-empty{visibility:hidden!important}
+.r329-hotel-counter{position:absolute;left:50%;top:7.4%;z-index:50;transform:translateX(-50%);padding:5px 10px;border:1px solid rgba(242,209,158,.72);border-radius:999px;background:rgba(50,31,58,.90);color:#fff3dc;font-size:clamp(7px,1.85vw,10px);font-weight:850;white-space:nowrap;pointer-events:none}
+.r329-hotel-tools{position:absolute;right:2%;top:15%;z-index:70;display:grid;gap:5px;width:48px}
+.r329-hotel-tools button{width:46px;min-height:43px;padding:4px 2px;border:1px solid rgba(237,207,164,.75);border-radius:13px;background:rgba(54,31,64,.92);color:#fff;font-size:16px;font-weight:850;box-shadow:0 2px 6px rgba(0,0,0,.22)}
+.r329-hotel-tools button small{display:block;font-size:6px;line-height:1.05;margin-top:1px}
+.r329-test-panel label{display:grid;gap:4px;margin:7px 0;text-align:left}.r329-test-panel select{width:100%;padding:8px;border-radius:10px}.r329-test-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.r329-test-actions button{padding:9px;border:0;border-radius:11px;background:#6b3d72;color:#fff;font-weight:800;font-size:10px}
+@media(max-width:430px){.r329-hotel-pet{width:clamp(38px,10.2vw,48px)!important;height:clamp(47px,12.5vw,60px)!important}.r329-hotel-tools{right:1.3%;width:43px}.r329-hotel-tools button{width:41px;min-height:39px;font-size:14px}.r329-hotel-status{top:-11px!important;width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;font-size:14px!important}}

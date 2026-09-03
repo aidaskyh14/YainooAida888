@@ -25924,3 +25924,189 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
 /* R32.7 marker: critical sale durability + Hotel forced entry retained from R32.6. */
 globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch critical loaded");
+
+/* =====================================================================
+   S2 R32.9 — MEOW-WOOF HOTEL FINAL MOTION ENGINE
+   2026-09-03
+   Goal: one persistent DOM node per pet, one RAF loop, no remount jitter,
+   no legacy status-node churn, normalized optical size, stable emoji.
+   ===================================================================== */
+(function YN_R32_9_HOTEL_FINAL(){
+  "use strict";
+  const BUILD="S2-R32.9-HOTEL-FINAL-20260903";
+  const $=id=>document.getElementById(id);
+  const clampPen=n=>Math.max(1,Math.min(4,Math.floor(Number(n)||1)));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  const eng=globalThis.YN_R31_HOTEL_ENGINE||{};
+  const controllers=new Map();
+  const testPets={1:[],2:[],3:[],4:[]};
+  const POINTS=[
+    [34,39],[47,39],[60,40],[70,40],
+    [31,49],[43,48],[56,49],[68,49],
+    [34,58],[48,58],[62,59],
+    [31,67],[44,66],[57,67],[69,66],
+    [37,75],[51,74],[64,75]
+  ];
+  let raf=0,lastStatusAt=0,lastPen=0;
+  let posStore={};
+  const posKey=()=>`yn:r329:hotel-pos:${String(currentMemberKey||currentMember||"guest")}`;
+  try{posStore=JSON.parse(localStorage.getItem(posKey())||"{}")||{}}catch(_){posStore={}}
+  function savePos(){try{localStorage.setItem(posKey(),JSON.stringify(posStore))}catch(_){}}
+  function isAdmin(){return currentMember==="Aida"&&adminProfile?.role==="admin"}
+  function stateNow(){return ownState||state||{} }
+  function petPen(p){const m=Number(stateNow()?.hotelPetPenMap?.[String(p?.id)]);return clampPen(m||p?.hotelPen||1)}
+  function realPets(pen){
+    const s=stateNow();let dogs=[],cats=[];
+    try{dogs=typeof dogsInHotelPen==="function"?dogsInHotelPen(pen,s):(s.dogs||[]).filter(d=>d?.placedHotel&&petPen(d)===pen)}catch(_){dogs=(s.dogs||[]).filter(d=>d?.placedHotel&&petPen(d)===pen)}
+    try{cats=(s.cats||[]).filter(c=>c?.placedHotel&&Number(c?.placedFarm)===-1&&petPen(c)===pen)}catch(_){cats=[]}
+    return [
+      ...dogs.map(p=>({key:`dog:${p.id}`,kind:"dog",id:p.id,pet:p,type:typeof dogType==="function"?dogType(p):null,name:typeof dogDisplayName==="function"?dogDisplayName(p):(p.customName||"น้องหมา"),test:false})),
+      ...cats.map(p=>({key:`cat:${p.id}`,kind:"cat",id:p.id,pet:p,type:typeof catType==="function"?catType(p):null,name:typeof catDisplayName==="function"?catDisplayName(p):(p.customName||"น้องแมว"),test:false}))
+    ];
+  }
+  function allPets(pen){
+    const real=realPets(pen),tests=(testPets[pen]||[]).map(p=>({key:p.key,kind:p.kind,id:p.key,pet:null,type:p.kind==="dog"?DOG_TYPES?.[p.typeKey]:CAT_TYPES?.[p.typeKey],name:`ทดสอบ ${p.kind==="dog"?DOG_TYPES?.[p.typeKey]?.name:CAT_TYPES?.[p.typeKey]?.name||""}`,test:true,typeKey:p.typeKey}));
+    return [...real,...tests];
+  }
+  function statusEmoji(p){
+    if(!p)return "";const t=now(),med=Number(p.medicineUntil||0),feed=Number(p.nextFeedAt||0);
+    if(med>t)return "💊";
+    if(feed>0&&t>=feed+60*60*1000)return "😡";
+    if(feed>0&&t>=feed)return "🍽️";
+    return "";
+  }
+  function validPos(v){return v&&Number.isFinite(Number(v.x))&&Number.isFinite(Number(v.y))&&Number(v.x)>=28&&Number(v.x)<=72&&Number(v.y)>=36&&Number(v.y)<=78}
+  function nearestNode(x,y){let best=0,bd=Infinity;POINTS.forEach((p,i)=>{const d=Math.hypot(p[0]-x,p[1]-y);if(d<bd){bd=d;best=i}});return best}
+  function nextNode(node){
+    node=Math.max(0,Math.min(POINTS.length-1,Number(node)||0));const [x,y]=POINTS[node];
+    const pool=POINTS.map((p,i)=>({i,d:Math.hypot(p[0]-x,p[1]-y)})).filter(v=>v.i!==node&&v.d>=8&&v.d<=18);
+    const use=pool.length?pool:POINTS.map((p,i)=>({i,d:Math.hypot(p[0]-x,p[1]-y)})).filter(v=>v.i!==node).sort((a,b)=>a.d-b.d).slice(0,6);
+    return use[Math.floor(Math.random()*use.length)]?.i??((node+1)%POINTS.length);
+  }
+  function path(base,kind){return kind==="pose"?`${base}-pose-sheet.png?v=R329HOTEL`:`${base}-walk-${kind}.png?v=R329HOTEL`}
+  function load(src){return new Promise(resolve=>{const im=new Image(),tm=setTimeout(()=>{im.onload=im.onerror=null;resolve(false)},2800);im.onload=()=>{clearTimeout(tm);resolve(true)};im.onerror=()=>{clearTimeout(tm);resolve(false)};im.src=src})}
+  async function resolveAssets(c){
+    let base="";
+    try{
+      if(c.kind==="dog"&&eng.resolveDogAssetBase)base=await eng.resolveDogAssetBase(Number(c.type?.number)||1);
+      if(c.kind==="cat"&&eng.resolveCatBase)base=await eng.resolveCatBase(Number(c.type?.number)||1);
+    }catch(_){base=""}
+    if(!base||!c.el?.isConnected||!controllers.has(c.key))return;
+    c.base=base;
+    await Promise.all([path(base,"pose"),path(base,"front"),path(base,"back"),path(base,"side")].map(load));
+    if(!c.el?.isConnected||!controllers.has(c.key))return;
+    c.ready=true;c.fallback.classList.add("is-ready");setPose(c,Math.floor(Math.random()*12));
+  }
+  function setPose(c,pose=0){
+    if(!c.ready||!c.base)return;c.mode="pose";const p=((pose%12)+12)%12,col=p%4,row=Math.floor(p/4);
+    if(c.asset!=="pose"){c.sprite.style.backgroundImage=`url("${path(c.base,"pose")}")`;c.sprite.style.backgroundSize="400% 300%";c.asset="pose"}
+    c.sprite.classList.remove("face-left");c.sprite.style.backgroundPosition=`${col*100/3}% ${row*50}%`;
+  }
+  function setWalk(c,frame,kind,faceLeft){
+    if(!c.ready||!c.base)return;kind=kind==="front"?"front":kind==="back"?"back":"side";c.mode="walk";
+    if(c.asset!==kind){c.sprite.style.backgroundImage=`url("${path(c.base,kind)}")`;c.sprite.style.backgroundSize="400% 200%";c.asset=kind}
+    const f=((frame%8)+8)%8,col=f%4,row=Math.floor(f/4);c.sprite.style.backgroundPosition=`${col*100/3}% ${row*100}%`;c.sprite.classList.toggle("face-left",kind==="side"&&!!faceLeft);
+  }
+  function startMove(c,t){
+    const next=nextNode(c.node),[tx,ty]=POINTS[next],dx=tx-c.x,dy=ty-c.y,dist=Math.hypot(dx,dy);
+    c.fromX=c.x;c.fromY=c.y;c.toX=tx;c.toY=ty;c.toNode=next;c.moveStart=t;c.moveDuration=Math.max(4200,Math.min(7600,3500+dist*190));
+    c.kind=Math.abs(dx)>=Math.abs(dy)?"side":(dy>0?"front":"back");c.faceLeft=c.kind==="side"&&dx<0;c.frame=0;c.lastFrameAt=t;c.moving=true;
+    setWalk(c,0,c.kind,c.faceLeft);
+  }
+  function finishMove(c,t){
+    c.x=c.toX;c.y=c.toY;c.node=c.toNode;c.moving=false;c.waitUntil=t+850+Math.random()*1300;c.poseIndex=Math.floor(Math.random()*12);setPose(c,c.poseIndex);
+    posStore[c.key]={x:c.x,y:c.y,node:c.node};savePos();
+  }
+  function paintStatus(c){
+    const e=c.test?"":statusEmoji(c.pet);if(c.status.dataset.emoji===e)return;c.status.dataset.emoji=e;c.status.textContent=e;c.status.classList.toggle("is-empty",!e);
+  }
+  function frame(t){
+    raf=requestAnimationFrame(frame);
+    if(currentScene!=="dogHotel"||document.hidden)return;
+    if(t-lastStatusAt>950){lastStatusAt=t;controllers.forEach(paintStatus)}
+    controllers.forEach(c=>{
+      if(!c.el?.isConnected)return;
+      if(c.moving){
+        const p=Math.max(0,Math.min(1,(t-c.moveStart)/c.moveDuration));
+        /* linear travel prevents the visible stop/start lurch from old easing */
+        c.x=c.fromX+(c.toX-c.fromX)*p;c.y=c.fromY+(c.toY-c.fromY)*p;
+        if(t-c.lastFrameAt>=185){c.lastFrameAt=t;c.frame=(c.frame+1)%8;setWalk(c,c.frame,c.kind,c.faceLeft)}
+        if(p>=1)finishMove(c,t);
+      }else if(t>=c.waitUntil){startMove(c,t)}
+      c.el.style.left=`${c.x}%`;c.el.style.top=`${c.y}%`;
+    });
+  }
+  function stopAll(){
+    controllers.forEach(c=>{posStore[c.key]={x:c.x,y:c.y,node:c.node}});savePos();controllers.clear();if(raf){cancelAnimationFrame(raf);raf=0}
+  }
+  function createPet(desc,index,pen){
+    const layer=$("dogHotelPetLayer");if(!layer)return null;
+    const stored=posStore[desc.key],fallbackPoint=POINTS[index%POINTS.length],x=validPos(stored)?Number(stored.x):fallbackPoint[0],y=validPos(stored)?Number(stored.y):fallbackPoint[1],node=validPos(stored)?nearestNode(x,y):index%POINTS.length;
+    const el=document.createElement("button");el.type="button";el.className=`r329-hotel-pet r329-${desc.kind}${desc.test?" is-test":""}`;el.dataset.r329Key=desc.key;el.style.left=`${x}%`;el.style.top=`${y}%`;
+    const fallback=desc.type?.image||"";
+    el.innerHTML=`<span class="r329-hotel-shadow"></span><img class="r329-hotel-fallback" src="${esc(fallback)}" alt=""><span class="r329-hotel-sprite"></span><span class="r329-hotel-name">${esc(desc.name)}</span><span class="r329-hotel-status is-empty" data-emoji=""></span>`;
+    if(!desc.test)el.onclick=()=>desc.kind==="dog"?showPlacedDogMenu(desc.id):showPlacedCatMenu(desc.id);
+    layer.appendChild(el);
+    const c={...desc,pen,el,fallback:el.querySelector(".r329-hotel-fallback"),sprite:el.querySelector(".r329-hotel-sprite"),status:el.querySelector(".r329-hotel-status"),x,y,node,moving:false,waitUntil:performance.now()+600+Math.random()*1000,ready:false,base:"",asset:"",frame:0,lastFrameAt:0};
+    controllers.set(desc.key,c);paintStatus(c);resolveAssets(c);return c;
+  }
+  function syncPets(){
+    if(currentScene!=="dogHotel")return;const layer=$("dogHotelPetLayer");if(!layer)return;const pen=clampPen(currentDogHotelPen),list=allPets(pen),want=new Set(list.map(x=>x.key));
+    /* Remove any legacy pet nodes that can still be mounted by old wrappers. */
+    layer.querySelectorAll(".dog-hotel-pet,.s2-hotel-cat,.r31-hotel-test-pet").forEach(n=>n.remove());
+    [...controllers.entries()].forEach(([k,c])=>{if(!want.has(k)||c.pen!==pen){c.el?.remove();controllers.delete(k)}});
+    list.forEach((d,i)=>{let c=controllers.get(d.key);if(!c){createPet(d,i,pen);return}c.pet=d.pet;c.type=d.type;c.name=d.name;c.test=d.test;c.el.querySelector(".r329-hotel-name").textContent=d.name;paintStatus(c)});
+    if(!raf)raf=requestAnimationFrame(frame);
+  }
+  function countPen(pen){return realPets(pen).length}
+  function ensureSkeleton(){
+    const pen=clampPen(currentDogHotelPen),scene=$("sceneScreen"),layer=$("sceneInteractiveLayer");if(!scene||!layer)return false;
+    scene.classList.add("dog-hotel-scene","s2-meow-woof-hotel","r329-hotel-final");
+    try{const bg=typeof HOTEL_BG!=="undefined"&&HOTEL_BG?HOTEL_BG:(SCENES?.dogHotel?.image||"meow-woof-hotel.jpeg");scene.style.backgroundImage=`url("${bg}")`}catch(_){scene.style.backgroundImage='url("meow-woof-hotel.jpeg")'}
+    const same=layer.dataset.r329HotelPen===String(pen)&&!!$("dogHotelPetLayer")&&!!$("dogHotelDropLayer");
+    if(!same){stopAll();layer.dataset.r329HotelPen=String(pen);layer.innerHTML=`
+      <div class="r329-hotel-counter">🐶🐱 เหมียวโฮ่งโฮเทล • คอก <b>${pen}</b> • <span id="r329HotelCount">${countPen(pen)}</span>/${Number(DOG_HOTEL_MAX)||15}</div>
+      <div class="r329-hotel-tools">
+        <button id="dogMemberCheckBtn" type="button">📋<small>สมาชิก</small></button>
+        <button id="dogPenCollectAllBtn" type="button">🧺<small>เก็บ</small></button>
+        <button id="r329BathBtn" type="button">💧<small>อาบน้ำ</small></button>
+        <button id="r329MassageBtn" type="button">🖐️<small>นวด</small></button>
+        ${isAdmin()?'<button id="r329HotelTestBtn" type="button">🧪<small>ทดสอบ</small></button>':""}
+      </div>
+      <div id="dogHotelPetLayer" class="dog-hotel-pet-layer r329-hotel-pet-layer"></div>
+      <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>`;
+    }
+    const cnt=$("r329HotelCount");if(cnt)cnt.textContent=String(countPen(pen));
+    try{setSceneNav({backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",backAction:pen>1?()=>setDogHotelPen(pen-1):returnToFarm,nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",nextAction:pen<4?()=>setDogHotelPen(pen+1):returnToFarm})}catch(_){ }
+    const m=$("dogMemberCheckBtn");if(m)m.onclick=()=>showDogHotelRoster();
+    const b=$("dogPenCollectAllBtn");if(b)b.onclick=()=>{try{collectAllDogDrops()}catch(e){console.warn(e)}};
+    const bath=$("r329BathBtn");if(bath)bath.onclick=()=>{try{showDogCare("bath",pen)}catch(e){console.warn(e)}};
+    const massage=$("r329MassageBtn");if(massage)massage.onclick=()=>{try{showDogCare("massage",pen)}catch(e){console.warn(e)}};
+    const test=$("r329HotelTestBtn");if(test)test.onclick=showTest;
+    lastPen=pen;return true;
+  }
+  function renderHotelFinal(){
+    if(currentScene!=="dogHotel")return;if(!ensureSkeleton())return;syncPets();
+    try{renderDogHotelDropsForPen()}catch(e){console.warn("R32.9 hotel drops",e)}
+  }
+  function showTest(){
+    if(!isAdmin())return;const pen=clampPen(currentDogHotelPen),dogs=Object.entries(DOG_TYPES||{}),cats=Object.entries(CAT_TYPES||{});
+    $("modalContent").innerHTML=`<section class="feature-panel r329-test-panel"><h2>🧪 ทดสอบ Animation หมา/แมว</h2><p>ใช้ motion engine เดียวกับตัวจริง • ไม่หักสต๊อก • ไม่บันทึก</p><label>ประเภท<select id="r329TestKind"><option value="dog">หมา</option><option value="cat">แมว</option></select></label><label>ตัว<select id="r329TestType"></select></label><div class="r329-test-actions"><button id="r329AddTest" type="button">วางทดสอบคอก ${pen}</button><button id="r329ClearTest" type="button">ล้างตัวทดสอบคอกนี้</button></div></section>`;openModal();
+    const kind=$("r329TestKind"),sel=$("r329TestType"),paint=()=>{const rows=kind.value==="dog"?dogs:cats;sel.innerHTML=rows.map(([k,v])=>`<option value="${esc(k)}">${esc(v.name||k)}</option>`).join("")};paint();kind.onchange=paint;
+    $("r329AddTest").onclick=()=>{const k=kind.value,t=sel.value,key=`test:${k}:${t}:${Date.now()}:${Math.random().toString(36).slice(2,5)}`;testPets[pen].push({key,kind:k,typeKey:t});closeModal();renderHotelFinal()};
+    $("r329ClearTest").onclick=()=>{testPets[pen]=[];closeModal();renderHotelFinal()};
+  }
+  const oldStop=typeof stopDogHotelMotion==="function"?stopDogHotelMotion:null;
+  stopDogHotelMotion=function(){stopAll();try{oldStop?.()}catch(_){}};
+  renderDogHotelScene=renderHotelFinal;
+  mountDogHotelPetsForPen=syncPets;
+  mountDogHotelPets=syncPets;
+  if(globalThis.YN_R31)globalThis.YN_R31.showHotelTest=showTest;
+  document.addEventListener("visibilitychange",()=>{if(currentScene!=="dogHotel")return;if(document.hidden){controllers.forEach(c=>{posStore[c.key]={x:c.x,y:c.y,node:c.node}});savePos()}else setTimeout(renderHotelFinal,80)},{passive:true});
+  window.addEventListener("pagehide",()=>{if(currentScene==="dogHotel"){controllers.forEach(c=>{posStore[c.key]={x:c.x,y:c.y,node:c.node}});savePos()}},{passive:true});
+  setTimeout(()=>{if(currentScene==="dogHotel")renderHotelFinal()},60);
+  globalThis.YN_R329_HOTEL={render:renderHotelFinal,sync:syncPets,controllers,testPets};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
