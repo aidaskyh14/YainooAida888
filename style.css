@@ -9426,3 +9426,20 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
 #honeyBike.is-parked::after{content:""!important;position:absolute!important;inset:-42% -38%!important;pointer-events:auto!important;background:transparent!important;border-radius:42%!important}
 #honeyBike.r27-honey-pressed{filter:brightness(.96)!important}
 #honeyBikeLayer{z-index:90!important}
+
+/* ======================================================================
+   S2 R28 — stability / management polish
+   ====================================================================== */
+.r28-food-hub{width:min(90vw,370px)!important}.r28-food-hub>p{text-align:center;font-size:11px}.r28-food-hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.r28-food-hub-grid button{min-height:90px;border:1px solid #d4af7a;border-radius:16px;background:#fff5dd;color:#50364c;font-size:26px}.r28-food-hub-grid b,.r28-food-hub-grid small{display:block}.r28-food-hub-grid b{font-size:12px;margin-top:4px}.r28-food-hub-grid small{font-size:9px;opacity:.72;margin-top:3px}
+.r28-guardian-manage{display:grid;gap:6px;margin-top:9px}.r28-guardian-manage article{display:grid;grid-template-columns:42px minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:6px;border:1px solid #dcc29a;border-radius:12px;background:#fff7e6}.r28-guardian-manage article .r25-hamster-preview{width:38px;height:38px}.r28-guardian-manage article div{min-width:0}.r28-guardian-manage article b,.r28-guardian-manage article small{display:block}.r28-guardian-manage article b{font-size:10px}.r28-guardian-manage article small{font-size:8px;opacity:.7}.r28-guardian-manage article button{padding:6px 7px!important;min-height:31px!important;font-size:9px!important}.r28-guardian-storage{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}.r28-guardian-storage>small{grid-column:1/-1}.r28-guardian-storage button{font-size:9px!important;padding:7px!important}.r28-empty-guardian{text-align:center;font-size:9px!important;opacity:.7}
+/* Green source sheets originally arrived RGB; R28 upload contains alpha-clean replacements. */
+.r25-hamster-sprite.r25-no-alpha{mix-blend-mode:normal!important}
+/* Keep hamster movement visually smooth and avoid layout-heavy left/top repaint. */
+.r25-hamster{transition:none!important}
+/* Honey parked target gets a generous invisible touch halo without moving the art. */
+.honey-bike.is-parked::after{content:"";position:absolute;left:-22%;right:-22%;top:-28%;bottom:-28%;border-radius:50%;background:transparent;pointer-events:auto}
+/* R28 hamster direct management */
+#r25GuardianPetLayer .r25-hamster{pointer-events:auto!important;border:0!important;padding:0!important;background:transparent!important;appearance:none;-webkit-appearance:none;touch-action:manipulation}
+#r25GuardianPetLayer .r25-hamster:active{transform:translate(-50%,-50%) scale(.96)}
+#r25GuardianPetLayer .r25-hamster.r26-test-hamster{pointer-events:none!important}
+.r28-hamster-one{display:flex;align-items:center;gap:10px;padding:8px;margin:7px 0;background:#fff7e6;border:1px solid #dcc29a;border-radius:13px}.r28-hamster-one .r25-hamster-preview{flex:0 0 52px;width:52px;height:52px}.r28-hamster-one div{min-width:0}.r28-hamster-one b,.r28-hamster-one small{display:block}.r28-hamster-one-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.r28-hamster-one-actions #r28BackGuardian{grid-column:1/-1}

@@ -21463,7 +21463,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(Date.now()-s2LastJellyTapAt<180)return;
     if(currentScene==="jellyfish"){
       const b=e.target?.closest?.("[data-jelly-slot]");
-      if(b&&!b.querySelector("img")){s2LastJellyTapAt=Date.now();e.preventDefault();e.stopImmediatePropagation();showJellyPlacement(Number(b.dataset.jellySlot));return}
+      if(b&&!b.querySelector("img")){s2LastJellyTapAt=Date.now();e.preventDefault();e.stopImmediatePropagation();openJellySlot(Number(b.dataset.jellySlot));return}
     }
     if(currentScene==="jellyfish2"){
       const b=e.target?.closest?.("[data-j2]");
@@ -22021,11 +22021,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     try{const data=await fetchMarket(ownerKey,ownerName);marketCache.set(ownerKey,data);renderMarket(shopNo,data,ownerKey,ownerName)}catch(e){if(!cached)message("เปิดร้านไม่ได้",e.message||"กรุณาลองใหม่")}
   }
   function ensureMarketScreen(){let s=$("s2MarketScreen");if(s)return s;s=document.createElement("section");s.id="s2MarketScreen";s.className="s2-market-screen hidden";s.innerHTML=`<button id="s2MarketBack" class="s2-market-back" type="button">‹</button><button id="s2MarketTitle" class="s2-market-title" type="button"></button><div id="s2MarketSlots"></div><div id="s2MarketFooter"></div>`;document.body.appendChild(s);$("s2MarketBack").onclick=()=>s.classList.add("hidden");return s}
-  function renderMarket(shopNo,data,ownerKey,ownerName){const screen=ensureMarketScreen(),own=ownerKey===currentMemberKey&&!visitContext,slots=Array.isArray(data[`shop${shopNo}`])?data[`shop${shopNo}`]:Array(12).fill(null);screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;$("s2MarketTitle").textContent=data.shopName||"ร้านของฉัน";$("s2MarketTitle").onclick=own?()=>renameMarket(data):null;$("s2MarketSlots").innerHTML=slots.map((x,i)=>{if(!x)return `<button class="s2-market-slot empty" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%">${own?'<span>＋</span>':''}</button>`;const sold=x.status==="sold";return `<button class="s2-market-slot ${sold?"sold":""}" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%"><img src="${x.image||""}" alt=""><small>×${x.qty}</small><b>${sold?"SOLD":`${x.price} 🙏`}</b></button>`}).join("");document.querySelectorAll("[data-market-slot]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.marketSlot),x=slots[i];if(own){if(!x)showMarketListing(shopNo,i,data);else showOwnerMarketSlot(shopNo,i,x,data)}else if(x&&x.status==="active")buyMarketSlot(shopNo,i,x,ownerKey,ownerName)});$("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b><button type="button" id="s2SwitchMarket">ไปร้าน ${shopNo===1?2:1}</button>`;$("s2SwitchMarket").onclick=()=>openMarket(shopNo===1?2:1);screen.classList.remove("hidden")}
+  function renderMarket(shopNo,data,ownerKey,ownerName){const screen=ensureMarketScreen(),own=ownerKey===currentMemberKey&&!visitContext,slots=Array.isArray(data[`shop${shopNo}`])?data[`shop${shopNo}`]:Array(12).fill(null);screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;$("s2MarketTitle").textContent=data.shopName||"ร้านของฉัน";$("s2MarketTitle").onclick=own?()=>renameMarket(data):null;$("s2MarketSlots").innerHTML=slots.map((x,i)=>{if(!x)return `<button class="s2-market-slot empty" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%">${own?'<span>＋</span>':''}</button>`;const sold=x.status==="sold";return `<button class="s2-market-slot ${sold?"sold":""}" data-market-slot="${i}" style="left:${MARKET_SLOT_POS[i][0]}%;top:${MARKET_SLOT_POS[i][1]}%"><img src="${(x.image||globalThis.YN_R28_marketImage?.(x)||"")}" alt=""><small>×${x.qty}</small><b>${sold?"SOLD":`${x.price} 🙏`}</b></button>`}).join("");document.querySelectorAll("[data-market-slot]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.marketSlot),x=slots[i];if(own){if(!x)showMarketListing(shopNo,i,data);else showOwnerMarketSlot(shopNo,i,x,data)}else if(x&&x.status==="active")buyMarketSlot(shopNo,i,x,ownerKey,ownerName)});$("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b><button type="button" id="s2SwitchMarket">ไปร้าน ${shopNo===1?2:1}</button>`;$("s2SwitchMarket").onclick=()=>openMarket(shopNo===1?2:1);screen.classList.remove("hidden")}
   async function renameMarket(data){const name=prompt("ตั้งชื่อร้าน (ใช้ชื่อเดียวกันทั้ง 2 ร้าน)",data.shopName||"");if(name==null)return;const v=String(name).trim().slice(0,40);if(!v)return;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.setDoc(ref,{memberKey:currentMemberKey,ownerName:currentMember,shopName:v,updatedAt:fs.serverTimestamp()},{merge:true});marketCache.delete(currentMemberKey);openMarket(Number($("s2MarketScreen").dataset.shop)||1)}catch(e){message("ตั้งชื่อไม่ได้",e.message||"กรุณาลองใหม่")}}
-  function showMarketListing(shopNo,slot,data){const entries=marketEntries();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r14MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r14MarketCount"></small><div id="r14MarketPicker" class="s2-market-picker"></div></section>`;const input=$("r14MarketSearch"),wrap=$("r14MarketPicker"),count=$("r14MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found.slice(0,60);count.textContent=`พบ ${found.length} รายการ${found.length>60?" • แสดง 60 รายการแรก พิมพ์ค้นหาเพื่อเจอเร็วขึ้น":""}`;wrap.innerHTML=view.map(e=>`<button data-r14-market-id="${entries.indexOf(e)}"><img src="${e.image||""}" alt=""><span><b>${esc(e.name)}</b><small>มี ×${Number(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r14-market-id]").forEach(b=>b.onclick=()=>marketListingOptions(shopNo,slot,entries[Number(b.dataset.r14MarketId)]))};input.oninput=paint;paint();openModal()}
-  function marketListingOptions(shopNo,slot,e){const maxQty=Math.min(10,Math.max(1,Number(e.count??e.qty)||1)),p=marketPrice(e);$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${e.image||""}" alt=""><h2>${esc(e.name)}</h2><label>จำนวน <input id="s2MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="s2MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="s2MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="s2ConfirmListing" class="primary-spooky-action">วางขาย</button></section>`;const paint=()=>{const q=Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1));$("s2MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$("s2MarketPrice").min=String(p.min*q);$("s2MarketPrice").max=String(p.max*q)};$("s2MarketQty").oninput=paint;paint();$("s2ConfirmListing").onclick=()=>createMarketListing(shopNo,slot,e,Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1)),Number($("s2MarketPrice").value)||0,p)}
-  async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);const before=normalizeState(cloneData(ownState||state),currentMember),s=ensureFarmState(normalizeState(cloneData(ownState||state),currentMember)),m={...marketDocDefault(currentMemberKey,currentMember),...(marketCache.get(currentMemberKey)||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketOwnedItem(s,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}marketCache.set(currentMemberKey,m);try{localStorage.setItem(`s2-market-cache:${currentMemberKey}`,JSON.stringify(m))}catch(_){}closeModal();renderMarket(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} ขายแล้ว`);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:false})}catch(err){ownState=before;state=before;saveLocalOnly(before);try{save()}catch(_){}marketCache.delete(currentMemberKey);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}}
+  function showMarketListing(shopNo,slot,data){const entries=marketEntries();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r14MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r14MarketCount"></small><div id="r14MarketPicker" class="s2-market-picker"></div></section>`;const input=$("r14MarketSearch"),wrap=$("r14MarketPicker"),count=$("r14MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found.slice(0,60);count.textContent=`พบ ${found.length} รายการ${found.length>60?" • แสดง 60 รายการแรก พิมพ์ค้นหาเพื่อเจอเร็วขึ้น":""}`;wrap.innerHTML=view.map(e=>`<button data-r14-market-id="${entries.indexOf(e)}"><img src="${(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><span><b>${esc(e.name)}</b><small>มี ×${Number(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r14-market-id]").forEach(b=>b.onclick=()=>marketListingOptions(shopNo,slot,entries[Number(b.dataset.r14MarketId)]))};input.oninput=paint;paint();openModal()}
+  function marketListingOptions(shopNo,slot,e){const maxQty=Math.min(10,Math.max(1,Number(e.count??e.qty)||1)),p=marketPrice(e);$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><h2>${esc(e.name)}</h2><label>จำนวน <input id="s2MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="s2MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="s2MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="s2ConfirmListing" class="primary-spooky-action">วางขาย</button></section>`;const paint=()=>{const q=Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1));$("s2MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$("s2MarketPrice").min=String(p.min*q);$("s2MarketPrice").max=String(p.max*q)};$("s2MarketQty").oninput=paint;paint();$("s2ConfirmListing").onclick=()=>createMarketListing(shopNo,slot,e,Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1)),Number($("s2MarketPrice").value)||0,p)}
+  async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);const before=normalizeState(cloneData(ownState||state),currentMember),s=ensureFarmState(normalizeState(cloneData(ownState||state),currentMember)),m={...marketDocDefault(currentMemberKey,currentMember),...(marketCache.get(currentMemberKey)||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketOwnedItem(s,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}marketCache.set(currentMemberKey,m);try{localStorage.setItem(`s2-market-cache:${currentMemberKey}`,JSON.stringify(m))}catch(_){}closeModal();renderMarket(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} ขายแล้ว`);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:false})}catch(err){ownState=before;state=before;saveLocalOnly(before);try{save()}catch(_){}marketCache.delete(currentMemberKey);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}}
   function showOwnerMarketSlot(shopNo,slot,x,data){$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${x.image||""}" alt=""><h2>${esc(x.name)} ×${x.qty}</h2><p>${x.status==="sold"?"ขายแล้ว":"ราคา "+x.price+" กุศล"}</p><button id="s2DeleteMarketSlot" class="danger-action">ลบออกจากสล็อต${x.status==="sold"?"":" • ของจะไม่คืนกระเป๋า"}</button></section>`;$("s2DeleteMarketSlot").onclick=()=>deleteMarketSlot(shopNo,slot);openModal()}
   async function deleteMarketSlot(shopNo,slot){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const m=snap.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})});marketCache.delete(currentMemberKey);closeModal();openMarket(shopNo)}catch(e){message("ลบไม่ได้",e.message||"กรุณาลองใหม่")}}
   async function buyMarketSlot(shopNo,slot,x,ownerKey,ownerName){if(ownerKey===currentMemberKey)return;const ok=confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`);if(!ok)return;showWeatherToast("🛍️ กำลังยืนยันการซื้อ…");try{const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;await fs.runTransaction(db,async tx=>{const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");const m=ms.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const buyer=ensureFarmState(normalizeState(bs.data(),currentMember));if(!ADMIN()&&Number(buyer.merit||0)<Number(cur.price||0))throw new Error("กุศลไม่พอ");addGiftItemToState(buyer,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!ADMIN())buyer.merit-=Number(cur.price)||0;else ensureAdminStock(buyer);cur.status="sold";cur.soldAt=NOW();cur.buyerKey=currentMemberKey;cur.buyerName=currentMember;arr[slot]=null;m[`shop${shopNo}`]=arr;next=buyer;tx.set(buyerRef,{...cloneData(buyer),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(Number(cur.price)||0),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const who=ADMIN()?"น้ำผึ้ง":currentMember;tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:who,title:`${who} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว • สต๊อก/กุศล Aida คงที่ 9999`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();marketCache.delete(ownerKey);try{localStorage.removeItem(`s2-market-cache:${ownerKey}`)}catch(_){}openMarket(shopNo);message("🛍️ ซื้อเรียบร้อย",`${esc(x.name)} ×${x.qty} เข้ากระเป๋าแล้ว`) }catch(e){message("ซื้อไม่ได้",e.message||"กรุณาลองใหม่")}}
@@ -22558,7 +22558,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const screen=marketScreenR15(),isOwn=ownerKey===currentMemberKey&&!visitContext,arr=Array.isArray(data?.[`shop${shopNo}`])?data[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
     screen.dataset.shop=String(shopNo);screen.dataset.owner=ownerKey;screen.classList.add("r15-market");
     const title=$r("s2MarketTitle");title.textContent=data?.shopName||"ร้านของฉัน";title.onclick=isOwn?()=>renameMarketR15(data):null;
-    $r("s2MarketSlots").innerHTML=arr.map((x,idx)=>{const [l,t]=MARKET_POS[idx]||[50,50];if(!x)return `<button class="s2-market-slot empty r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%" aria-label="ช่องวางสินค้า ${idx+1}"></button>`;return `<button class="s2-market-slot r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%"><img src="${html(x.image||"")}" alt=""><small>×${i(x.qty)||1}</small><b>${x.status==="sold"?"ขายแล้ว":`${i(x.price)} 🙏`}</b></button>`}).join("");
+    $r("s2MarketSlots").innerHTML=arr.map((x,idx)=>{const [l,t]=MARKET_POS[idx]||[50,50];if(!x)return `<button class="s2-market-slot empty r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%" aria-label="ช่องวางสินค้า ${idx+1}"></button>`;return `<button class="s2-market-slot r15-market-slot" type="button" data-r15-market-slot="${idx}" style="left:${l}%;top:${t}%"><img src="${html(x.image||globalThis.YN_R28_marketImage?.(x)||"")}" alt=""><small>×${i(x.qty)||1}</small><b>${x.status==="sold"?"ขายแล้ว":`${i(x.price)} 🙏`}</b></button>`}).join("");
     $r("s2MarketSlots").querySelectorAll("[data-r15-market-slot]").forEach(b=>{const activate=(ev)=>{if(ev){ev.preventDefault();ev.stopPropagation()}if(b.dataset.r18Busy==="1")return;b.dataset.r18Busy="1";setTimeout(()=>{if(b)b.dataset.r18Busy="0"},220);const idx=Number(b.dataset.r15MarketSlot),x=arr[idx];if(isOwn){if(!x)showMarketListingR15(shopNo,idx,data);else showOwnerMarketR15(shopNo,idx,x,data)}else if(x&&x.status==="active")buyMarketR15(shopNo,idx,x,ownerKey,ownerName)};b.onpointerup=activate;b.onclick=(ev)=>{if(ev?.pointerType)return;activate(ev)}});
     const foot=$r("s2MarketFooter");foot.innerHTML=`<b>ร้าน ${shopNo}/2</b><button id="r15MarketSwitch" type="button">ไปร้าน ${shopNo===1?2:1}</button>`;$r("r15MarketSwitch").onclick=()=>openMarketR15(shopNo===1?2:1);
     screen.classList.remove("hidden");
@@ -22573,17 +22573,17 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function showMarketListingR15(shopNo,slot,data){
     const entries=marketEntriesR15();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");
     $r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing r15-market-listing"><h2>🧺 เลือกของวางขาย</h2><input id="r15MarketSearch" class="r14-market-search" placeholder="ค้นหาชื่อสินค้า…"><small id="r15MarketCount"></small><div id="r15MarketPicker" class="s2-market-picker"></div></section>`;
-    const input=$r("r15MarketSearch"),wrap=$r("r15MarketPicker"),count=$r("r15MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found;count.textContent=`พบ ${found.length} รายการ`;wrap.innerHTML=view.map((e,idx)=>`<button type="button" data-r15-market-entry="${entries.indexOf(e)}"><img src="${html(e.image||"")}" alt=""><span><b>${html(e.name)}</b><small>มี ×${i(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r15-market-entry]").forEach(b=>b.onclick=()=>marketOptionsR15(shopNo,slot,entries[Number(b.dataset.r15MarketEntry)],data))};input.oninput=paint;paint();openModal();
+    const input=$r("r15MarketSearch"),wrap=$r("r15MarketPicker"),count=$r("r15MarketCount");const paint=()=>{const q=String(input.value||"").trim().toLowerCase(),found=entries.filter(e=>!q||String(e.name||"").toLowerCase().includes(q)),view=found;count.textContent=`พบ ${found.length} รายการ`;wrap.innerHTML=view.map((e,idx)=>`<button type="button" data-r15-market-entry="${entries.indexOf(e)}"><img src="${html(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><span><b>${html(e.name)}</b><small>มี ×${i(e.count??e.qty)||1}</small></span></button>`).join("");wrap.querySelectorAll("[data-r15-market-entry]").forEach(b=>b.onclick=()=>marketOptionsR15(shopNo,slot,entries[Number(b.dataset.r15MarketEntry)],data))};input.oninput=paint;paint();openModal();
   }
   function marketOptionsR15(shopNo,slot,e,data){
-    const maxQty=Math.min(10,Math.max(1,i(e.count??e.qty)||1)),p=marketPriceR15(e);$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(e.image||"")}" alt=""><h2>${html(e.name)}</h2><label>จำนวน <input id="r15MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="r15MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="r15MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="r15MarketConfirm" class="primary-spooky-action">วางขาย</button></section>`;
+    const maxQty=Math.min(10,Math.max(1,i(e.count??e.qty)||1)),p=marketPriceR15(e);$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><h2>${html(e.name)}</h2><label>จำนวน <input id="r15MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="r15MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="r15MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="r15MarketConfirm" class="primary-spooky-action">วางขาย</button></section>`;
     const paint=()=>{const q=Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1));$r("r15MarketRange").textContent=`ตั้งได้ 1–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$r("r15MarketPrice").min="1";$r("r15MarketPrice").max=String(p.max*q)};$r("r15MarketQty").oninput=paint;paint();$r("r15MarketConfirm").onclick=()=>createMarketR15(shopNo,slot,e,Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1)),i($r("r15MarketPrice").value),p,data);
   }
   async function createMarketR15(shopNo,slot,e,qty,price,p,data){
     const min=1,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`ตั้งราคาได้ ${min}–${max} กุศล`);
     const before=normalizeState(clone(own()),currentMember),optimistic=normalizeState(clone(own()),currentMember),m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
     if(arr[slot])return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(optimistic,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
-    const listing={type:e.type,key:e.key,name:e.name,image:e.image||"",qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
+    const listing={type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
     ownState=optimistic;state=optimistic;saveLocalOnly(optimistic);saveMarketLocal(currentMemberKey,m);marketPendingR15.add(currentMemberKey);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} แล้ว • กำลังบันทึก…`);
     try{
       const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let nextState,nextMarket;
@@ -23122,11 +23122,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     {id:"wineClaim",action:"wineClaim",title:n=>`รับไวน์ที่หมักสำเร็จ ${n} ขวด`,m:[1,2,3]},
     {id:"boat",action:"boatSupply",title:n=>`ส่งเสบียงเรือ ${n} ครั้ง`,m:[8,11,15]},
     {id:"grass",action:"dailyCollectGrass",title:n=>`เก็บหญ้าตามบ้านเพื่อน ${n} ครั้ง`,m:[10,15,20]},
-    {id:"gift",action:"sendFriendGift",title:n=>`ส่งของให้สมาชิก ${n} ครั้ง`,m:[3,5,8]},
     {id:"boxes",action:"openMysteryBox",title:n=>`เปิดกล่องสุ่ม ${n} กล่อง`,m:[5,8,10]},
     {id:"friendWater",action:"waterFriends",title:n=>`ช่วยรดน้ำสวนเพื่อน ${n} ครั้ง`,m:[8,12,15]},
     {id:"worms",action:"clearWorms",title:n=>`กำจัดหนอนรวม ${n} ตัว`,m:[10,15,20]},
-    {id:"arena",action:"dailySeaArenaFight",title:n=>`แข่งขันสนามสัตว์น้ำ ${n} รอบ`,m:[3,4,5]},
     {id:"temple",action:"templeSoloSuccess",title:n=>`ทำภารกิจวัดสำเร็จ ${n} ครั้ง`,m:[2,3,4]}
   ];
   function dayKey(){try{return currentBangkokDateKey()}catch{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}}
@@ -23135,7 +23133,16 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function hash(str){let h=2166136261>>>0;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
   function rand(seed){let x=seed>>>0;return()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
   function missionSet(memberKey,date){const R=rand(hash(`${SEASON_ID}|${memberKey}|${date}`)),pool=MISSION_POOL.slice(),out=[];for(let idx=0;idx<6;idx++){const j=Math.floor(R()*pool.length),def=pool.splice(j,1)[0],tier=idx<2?0:idx<4?1:2,target=def.m[tier];out.push({key:`${date}:${idx}:${def.id}`,id:def.id,action:def.action,aliases:def.aliases||[],title:def.title(target),target,progress:0,rewarded:false})}return out}
-  function ensureVillage(s){if(!s)return s;s.villageSeason2=s.villageSeason2&&typeof s.villageSeason2==="object"?s.villageSeason2:{};const v=s.villageSeason2;v.seasonId=SEASON_ID;v.villageId=VILLAGES[v.villageId]?v.villageId:"";v.chosenAt=Number(v.chosenAt)||0;v.missStreak=int(v.missStreak);v.daily=v.daily&&typeof v.daily==="object"?v.daily:null;settleDay(s);return s}
+  const MISSION_DEF_BY_ID=new Map(MISSION_POOL.map(x=>[x.id,x]));
+  function sanitizeDailyMissions(s){
+    const v=s?.villageSeason2,d=v?.daily;if(!d||!Array.isArray(d.missions))return;
+    if(!d.missions.some(m=>!MISSION_DEF_BY_ID.has(String(m?.id||""))))return;
+    const freshSet=missionSet(currentMemberKey||s.player||"player",String(d.dateKey||dayKey()));
+    const oldById=new Map(d.missions.filter(m=>MISSION_DEF_BY_ID.has(String(m?.id||""))).map(m=>[m.id,m]));
+    d.missions=freshSet.map(m=>{const old=oldById.get(m.id);if(!old)return m;const progress=Math.min(Number(m.target)||0,Math.max(0,Number(old.progress)||0));return {...m,progress,rewarded:Boolean(old.rewarded)&&progress>=Number(m.target)};});
+    d.bonusAwarded=Boolean(d.bonusAwarded)&&d.missions.every(m=>Number(m.progress)>=Number(m.target));
+  }
+  function ensureVillage(s){if(!s)return s;s.villageSeason2=s.villageSeason2&&typeof s.villageSeason2==="object"?s.villageSeason2:{};const v=s.villageSeason2;v.seasonId=SEASON_ID;v.villageId=VILLAGES[v.villageId]?v.villageId:"";v.chosenAt=Number(v.chosenAt)||0;v.missStreak=int(v.missStreak);v.daily=v.daily&&typeof v.daily==="object"?v.daily:null;settleDay(s);sanitizeDailyMissions(s);return s}
   function applyPenalty(s){const v=s.villageSeason2,d=v.daily;if(!d||d.penaltyApplied)return;const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>int(m.progress)>=int(m.target));if(all){v.missStreak=0;d.penaltyApplied=true;return}v.missStreak=int(v.missStreak)+1;const penalty=v.missStreak*50;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=Math.max(0,(Number(s.merit)||0)-penalty);d.penaltyApplied=true;d.penalty=penalty}
   function settleDay(s){const v=s.villageSeason2,today=dayKey();if(!v.daily){v.daily={dateKey:today,missions:missionSet(currentMemberKey||s.player||"player",today),bonusAwarded:false,penaltyApplied:false};return}
     let old=String(v.daily.dateKey||today),gap=Math.max(0,Math.floor(dayNum(today)-dayNum(old)));if(gap<=0)return;
@@ -24014,12 +24021,15 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       s=typeof normalizeState==="function"?normalizeState(s,currentMember):s;
       let rows=[];try{rows=baseCatalog(s)||[]}catch(_){rows=[]}
       const seen=new Set();
-      const out=[];
+      const out=[],bySig=new Map();
       const add=(type,key,name,count,image="",category="ทั้งหมด",instance=null)=>{
         count=admin()?9999:iv(count);
         if(!count||key==null||!type)return;
-        const sig=`${type}:${String(key)}`;if(seen.has(sig))return;seen.add(sig);
-        out.push({type,key,name:String(name||key),count,qty:count,image:image||"",category,instance});
+        const sig=`${type}:${String(key)}`;
+        if(seen.has(sig)){
+          const ex=bySig.get(sig);if(ex){if(!ex.image&&image)ex.image=image;if((!ex.name||ex.name===String(ex.key))&&name)ex.name=String(name);if(!ex.category&&category)ex.category=category;ex.count=Math.max(iv(ex.count),count);ex.qty=ex.count}return;
+        }
+        seen.add(sig);const row={type,key,name:String(name||key),count,qty:count,image:image||"",category,instance};out.push(row);bySig.set(sig,row);
       };
       for(const e of rows){if(!e||!e.type||e.key==null)continue;add(e.type,e.key,e.name,e.count??e.qty,e.image,e.category,e.instance)}
       /* Aida/Admin owns the complete supported catalog at ×9999.  Pulling the
@@ -24125,10 +24135,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function mergeFarmGuardians(local,remote){
     const out=local&&typeof local==="object"?clone(local):{},r=remote&&typeof remote==="object"?remote:{};
     for(const n of ["2","3","4"]){
-      const lg=out[n]&&typeof out[n]==="object"?out[n]:(out[n]={hamsters:[]}),rg=r[n]&&typeof r[n]==="object"?r[n]:{};
-      const la=Array.isArray(lg.hamsters)?lg.hamsters:[],ra=Array.isArray(rg.hamsters)?rg.hamsters:[],by=new Map(la.filter(Boolean).map(h=>[String(h.id||""),h]));
-      for(const h of ra){if(!h?.id)continue;const id=String(h.id),lh=by.get(id);if(!lh){if(la.length<6){la.push(clone(h));by.set(id,la[la.length-1])}}else if(Number(h.updatedAt||0)>Number(lh.updatedAt||0)){Object.assign(lh,clone(h))}}
-      lg.hamsters=la.filter(Boolean).slice(0,6);out[n]=lg;
+      const lg=out[n]&&typeof out[n]==="object"?out[n]:(out[n]={hamsters:[],stored:[],removedIds:[]}),rg=r[n]&&typeof r[n]==="object"?r[n]:{};
+      const removed=new Set([...(lg.removedIds||[]),...(rg.removedIds||[])].map(String));lg.removedIds=[...removed].slice(-60);
+      const mergeList=(a,b,max)=>{const la=(Array.isArray(a)?a:[]).filter(h=>h?.id&&!removed.has(String(h.id))),by=new Map(la.map(h=>[String(h.id),h]));for(const h of (Array.isArray(b)?b:[])){if(!h?.id||removed.has(String(h.id)))continue;const id=String(h.id),lh=by.get(id);if(!lh){if(la.length<max){la.push(clone(h));by.set(id,la[la.length-1])}}else if(Number(h.updatedAt||0)>Number(lh.updatedAt||0))Object.assign(lh,clone(h))}return la.filter(Boolean).slice(0,max)};
+      lg.hamsters=mergeList(lg.hamsters,rg.hamsters,6);const active=new Set(lg.hamsters.map(h=>String(h.id)));lg.stored=mergeList(lg.stored,rg.stored,30).filter(h=>!active.has(String(h.id)));out[n]=lg;
     }return out;
   }
   function protectPersistent(local,remote){
@@ -24478,11 +24488,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     s.farmGuardians=s.farmGuardians&&typeof s.farmGuardians==="object"?s.farmGuardians:{};
     [2,3,4].forEach(n=>{
       const key=String(n),g=s.farmGuardians[key]&&typeof s.farmGuardians[key]==="object"?s.farmGuardians[key]:{};
-      g.hamsters=Array.isArray(g.hamsters)?g.hamsters.filter(Boolean).slice(0,6):[];
-      g.hamsters=g.hamsters.map((h,i)=>{
-        const x=clamp(h.x??h.tx??(24+i*8),B.minX,B.maxX),y=clamp(h.y??h.ty??(78+(i%3)*4),B.minY,B.maxY);
-        return{id:String(h.id||uid()),color:COLORS[h.color]?h.color:"gray",x,y,fromX:clamp(h.fromX??x,B.minX,B.maxX),fromY:clamp(h.fromY??y,B.minY,B.maxY),tx:clamp(h.tx??x,B.minX,B.maxX),ty:clamp(h.ty??y,B.minY,B.maxY),mode:h.mode==="walk"?"walk":"idle",action:["idle","cute","walk_forward","walk_back","walk_side"].includes(h.action)?h.action:"idle",faceLeft:Boolean(h.faceLeft),motionStartedAt:Number(h.motionStartedAt)||0,duration:Math.max(700,Number(h.duration)||1800),idleUntil:Number(h.idleUntil)||0,frameSeed:Number(h.frameSeed)||Math.floor(Math.random()*10000),updatedAt:Number(h.updatedAt)||0};
-      });
+      g.removedIds=Array.isArray(g.removedIds)?[...new Set(g.removedIds.map(String))].slice(-60):[];
+      const removed=new Set(g.removedIds);
+      const norm=(h,i)=>{const x=clamp(h.x??h.tx??(24+i*8),B.minX,B.maxX),y=clamp(h.y??h.ty??(78+(i%3)*4),B.minY,B.maxY);return{id:String(h.id||uid()),color:COLORS[h.color]?h.color:"gray",x,y,fromX:clamp(h.fromX??x,B.minX,B.maxX),fromY:clamp(h.fromY??y,B.minY,B.maxY),tx:clamp(h.tx??x,B.minX,B.maxX),ty:clamp(h.ty??y,B.minY,B.maxY),mode:h.mode==="walk"?"walk":"idle",action:["idle","cute","walk_forward","walk_back","walk_side"].includes(h.action)?h.action:"idle",faceLeft:Boolean(h.faceLeft),motionStartedAt:Number(h.motionStartedAt)||0,duration:Math.max(700,Number(h.duration)||1800),idleUntil:Number(h.idleUntil)||0,frameSeed:Number(h.frameSeed)||Math.floor(Math.random()*10000),updatedAt:Number(h.updatedAt)||0};};
+      g.hamsters=(Array.isArray(g.hamsters)?g.hamsters:[]).filter(h=>h&&h.id&&!removed.has(String(h.id))).slice(0,6).map(norm);
+      g.stored=(Array.isArray(g.stored)?g.stored:[]).filter(h=>h&&h.id&&!removed.has(String(h.id))).slice(0,30).map(norm);
       s.farmGuardians[key]=g;
     });
     s.farmGuardiansUpdatedAt=Number(s.farmGuardiansUpdatedAt)||0;
@@ -24536,9 +24546,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function preview(color){const img=color==="green"?COLORS.green.cute:COLORS[color].idle;return `<span class="r25-hamster-preview" style="background-image:url('${esc(img)}')"></span>`}
   function showGuardianMenu(){
-    if(!guardianVisible())return;const n=farmNo(),count=guardians().length;
-    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel"><h2>🐾 สัตว์รักษ์ฟาร์ม</h2><small>ฟาร์ม ${n} • วางแล้ว ${count}/6 ตัว</small><button id="r25ChooseHamster" class="r25-guardian-type" type="button">🐹 <b>แฮมสเตอร์</b><span>เลือกสีและวางบนพื้นทรายด้านล่าง</span></button>${isAdmin()?'<button id="r26TestHamster" class="r25-guardian-type r26-hamster-test" type="button">🧪 <b>ทดลองแฮมสเตอร์</b><span>ทดสอบการเดิน/ทิศ/แอนิเมชัน โดยไม่บันทึกลงฟาร์มจริง</span></button>':''}</section>`;
+    if(!guardianVisible())return;const n=farmNo(),s=ensureGuardianState(own()),g=s.farmGuardians[String(n)],arr=g.hamsters||[],stored=g.stored||[],count=arr.length;
+    const rows=arr.length?`<div class="r28-guardian-manage">${arr.map((h,i)=>`<article><span class="r25-hamster-preview" style="background-image:url('${esc((COLORS[h.color]||COLORS.gray).idle)}')"></span><div><b>${esc((COLORS[h.color]||COLORS.gray).name)} #${i+1}</b><small>กำลังเดินในฟาร์ม ${n}</small></div><button type="button" data-r28-ham-store="${esc(h.id)}">เก็บ</button><button type="button" data-r28-ham-delete="${esc(h.id)}" class="danger-action">ลบ</button></article>`).join("")}</div>`:`<p class="r28-empty-guardian">ยังไม่มีแฮมสเตอร์ที่วางในฟาร์มนี้</p>`;
+    const storedRows=stored.length?`<div class="r28-guardian-storage"><small>เก็บไว้ ${stored.length} ตัว</small>${stored.map(h=>`<button type="button" data-r28-ham-restore="${esc(h.id)}" ${count>=6?"disabled":""}>🐹 ${(COLORS[h.color]||COLORS.gray).name} • วางกลับ</button>`).join("")}</div>`:"";
+    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel"><h2>🐾 สัตว์รักษ์ฟาร์ม</h2><small>ฟาร์ม ${n} • วางแล้ว ${count}/6 ตัว</small><button id="r25ChooseHamster" class="r25-guardian-type" type="button">🐹 <b>แฮมสเตอร์</b><span>เลือกสีและวางบนพื้นทรายด้านล่าง</span></button>${isAdmin()?'<button id="r26TestHamster" class="r25-guardian-type r26-hamster-test" type="button">🧪 <b>ทดลองแฮมสเตอร์</b><span>ทดสอบการเดิน/ทิศ/แอนิเมชัน โดยไม่บันทึกลงฟาร์มจริง</span></button>':''}${rows}${storedRows}</section>`;
     openModal();$("r25ChooseHamster").onclick=showHamsterColors;const tb=$("r26TestHamster");if(tb)tb.onclick=showHamsterTest;
+    document.querySelectorAll("[data-r28-ham-store]").forEach(b=>b.onclick=()=>storeHamster(b.dataset.r28HamStore));
+    document.querySelectorAll("[data-r28-ham-delete]").forEach(b=>b.onclick=()=>deleteHamster(b.dataset.r28HamDelete));
+    document.querySelectorAll("[data-r28-ham-restore]").forEach(b=>b.onclick=()=>restoreHamster(b.dataset.r28HamRestore));
   }
   function showHamsterColors(){
     const n=farmNo(),count=guardians().length;
@@ -24556,6 +24571,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel r26-test-panel"><h2>🧪 ทดลองแฮมสเตอร์</h2><small>เฉพาะ Aida • ตัวทดลองไม่ถูกบันทึกลงข้อมูลจริง</small><div class="r26-test-actions"><button type="button" data-r26-test-count="1">ทดลอง 1 ตัว</button><button type="button" data-r26-test-count="3">ทดลอง 3 ตัว</button><button type="button" data-r26-test-count="6">ทดลอง 6 ตัว</button><button type="button" id="r26ClearHamsterTest">ล้างตัวทดลอง</button></div><p>ใช้เช็กพื้นที่ทราย ทิศทาง เงา การเดินพร้อมกัน และความสมูทของ Sprite</p></section>`;
     openModal();document.querySelectorAll("[data-r26-test-count]").forEach(b=>b.onclick=()=>{makeTestHamsters(Number(b.dataset.r26TestCount));closeModal?.()});const c=$("r26ClearHamsterTest");if(c)c.onclick=()=>{clearTestHamsters();closeModal?.()};
   }
+  function guardianBucket(){const s=ensureGuardianState(own());return s?.farmGuardians?.[String(farmNo())]||null}
+  function storeHamster(id){const g=guardianBucket();if(!g)return;const i=(g.hamsters||[]).findIndex(h=>String(h.id)===String(id));if(i<0)return;const [h]=g.hamsters.splice(i,1);h.updatedAt=Date.now();g.stored=g.stored||[];g.stored.push(h);commitGuardian(true);syncHamsterDom();showWeatherToast?.("🐹 เก็บแฮมสเตอร์ออกจากฟาร์มแล้ว");showGuardianMenu()}
+  function deleteHamster(id){const g=guardianBucket();if(!g||!window.confirm("ลบแฮมสเตอร์ตัวนี้ออกจากระบบใช่ไหม?"))return;g.removedIds=g.removedIds||[];g.removedIds.push(String(id));g.hamsters=(g.hamsters||[]).filter(h=>String(h.id)!==String(id));g.stored=(g.stored||[]).filter(h=>String(h.id)!==String(id));commitGuardian(true);syncHamsterDom();showWeatherToast?.("🗑️ ลบแฮมสเตอร์แล้ว");showGuardianMenu()}
+  function restoreHamster(id){const g=guardianBucket();if(!g||g.hamsters.length>=6)return;const i=(g.stored||[]).findIndex(h=>String(h.id)===String(id));if(i<0)return;const [h]=g.stored.splice(i,1),p=freePoint(g.hamsters);Object.assign(h,{x:p.x,y:p.y,fromX:p.x,fromY:p.y,tx:p.x,ty:p.y,mode:"idle",action:"idle",idleUntil:now()+200,updatedAt:Date.now()});g.hamsters.push(h);commitGuardian(true);syncHamsterDom();showWeatherToast?.("🐹 วางแฮมสเตอร์กลับลงฟาร์มแล้ว");showGuardianMenu()}
   function freePoint(existing){
     for(let t=0;t<40;t++){const x=B.minX+4+Math.random()*(B.maxX-B.minX-8),y=B.minY+2+Math.random()*(B.maxY-B.minY-4);if(existing.every(h=>Math.hypot((Number(h.x)||0)-x,(Number(h.y)||0)-y)>7))return{x,y}}
     return{x:B.minX+8+Math.random()*(B.maxX-B.minX-16),y:B.minY+3+Math.random()*(B.maxY-B.minY-6)};
@@ -24572,9 +24591,15 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function planWalk(h,all,t){
     const p=targetFor(h,all),dx=p.x-h.x,dy=p.y-h.y,dist=Math.max(1,Math.hypot(dx,dy));h.fromX=h.x;h.fromY=h.y;h.tx=p.x;h.ty=p.y;h.motionStartedAt=t;h.duration=Math.max(2600,Math.min(6500,dist*310));h.mode="walk";h.faceLeft=dx<0;h.action=Math.abs(dx)>Math.abs(dy)*.82?"walk_side":dy<0?"walk_back":"walk_forward";h.updatedAt=Date.now();if(!h.r26Test)guardianDirty=true;
   }
+  function showHamsterManage(id){
+    const g=guardianBucket(),h=(g?.hamsters||[]).find(x=>String(x.id)===String(id));if(!h)return showGuardianMenu();
+    const meta=COLORS[h.color]||COLORS.gray;
+    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel r28-hamster-manage-one"><h2>🐹 จัดการแฮมสเตอร์</h2><div class="r28-hamster-one"><span class="r25-hamster-preview" style="background-image:url('${esc(meta.idle)}')"></span><div><b>${esc(meta.name)}</b><small>ฟาร์ม ${farmNo()} • เดินอยู่บริเวณพื้นทรายด้านล่าง</small></div></div><div class="r28-hamster-one-actions"><button id="r28StoreOne" type="button">📦 เก็บไว้</button><button id="r28DeleteOne" type="button" class="danger-action">🗑️ ลบ</button><button id="r28BackGuardian" type="button" class="secondary-action">กลับ</button></div></section>`;
+    openModal();$("r28StoreOne").onclick=()=>storeHamster(id);$("r28DeleteOne").onclick=()=>deleteHamster(id);$("r28BackGuardian").onclick=showGuardianMenu;
+  }
   function syncHamsterDom(){
     const layer=ensurePetLayer();if(!layer||!guardianVisible())return;const arr=visualGuardians(),ids=new Set(arr.map(h=>h.id));layer.querySelectorAll(".r25-hamster").forEach(el=>{if(!ids.has(el.dataset.hamId))el.remove()});
-    arr.forEach(h=>{preloadHamsterColor(h.color);let el=layer.querySelector(`[data-ham-id="${CSS.escape(h.id)}"]`);if(!el){el=document.createElement("div");el.className="r25-hamster";el.dataset.hamId=h.id;el.innerHTML='<span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite"></span>';layer.appendChild(el)}});
+    arr.forEach(h=>{preloadHamsterColor(h.color);let el=layer.querySelector(`[data-ham-id="${CSS.escape(h.id)}"]`);if(!el){el=document.createElement("button");el.type="button";el.className="r25-hamster";el.dataset.hamId=h.id;el.setAttribute("aria-label","จัดการแฮมสเตอร์");el.innerHTML='<span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite"></span>';layer.appendChild(el)}el.onclick=h.r26Test?null:()=>showHamsterManage(h.id);el.classList.toggle("r26-test-hamster",Boolean(h.r26Test));});
   }
   function spriteFrame(el,h,t){
     const meta=COLORS[h.color]||COLORS.gray,action=meta[h.action]?h.action:"idle",sprite=el.querySelector(".r25-hamster-sprite"),ms=(action==="idle"||action==="cute")?210:135,frame=Math.floor((t+h.frameSeed)/ms)%16,col=frame%4,row=Math.floor(frame/4);sprite.style.backgroundImage=`url('${meta[action]}')`;sprite.style.backgroundPosition=`${col*100/3}% ${row*100/3}%`;sprite.classList.toggle("face-left",action==="walk_side"&&h.faceLeft);sprite.classList.toggle("r25-no-alpha",h.color==="green"&&["idle","walk_back","walk_forward"].includes(action));
@@ -24587,7 +24612,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
           let rx=h.x,ry=h.y;
           if(h.mode==="walk"){
             const p=Math.max(0,Math.min(1,(clock-h.motionStartedAt)/Math.max(1,h.duration)));const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;rx=h.fromX+(h.tx-h.fromX)*ease;ry=h.fromY+(h.ty-h.fromY)*ease;
-            if(p>=1){h.x=h.tx;h.y=h.ty;h.fromX=h.x;h.fromY=h.y;h.mode="idle";h.action=Math.random()<.28?"cute":"idle";h.idleUntil=clock+900+Math.random()*1700;h.updatedAt=Date.now();if(!h.r26Test)guardianDirty=true;rx=h.x;ry=h.y}
+            if(p>=1){h.x=h.tx;h.y=h.ty;h.fromX=h.x;h.fromY=h.y;h.mode="idle";h.action=Math.random()<.28?"cute":"idle";h.idleUntil=clock+260+Math.random()*540;h.updatedAt=Date.now();if(!h.r26Test)guardianDirty=true;rx=h.x;ry=h.y}
           }else if(clock>=Number(h.idleUntil||0)){planWalk(h,arr,clock)}
           const el=layer?.querySelector(`[data-ham-id="${CSS.escape(h.id)}"]`);if(!el)continue;el.style.left=`${clamp(rx,B.minX,B.maxX)}%`;el.style.top=`${clamp(ry,B.minY,B.maxY)}%`;el.style.zIndex=String(70+Math.round(ry));spriteFrame(el,h,t);
         }
@@ -24615,7 +24640,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   setInterval(()=>{try{isolateHouseBackground();mountGuardianUI()}catch(_){}},1200);
   setTimeout(()=>{try{ensureGuardianState(own());mountGuardianUI();isolateHouseBackground()}catch(_){}},120);
-  globalThis.YN_R25={BUILD,fullMarketEntries,ensureGuardianState,isolateHouseBackground,showGuardianMenu,showHamsterTest,COLORS};
+  globalThis.YN_R25={BUILD,fullMarketEntries,ensureGuardianState,isolateHouseBackground,showGuardianMenu,showHamsterTest,showHamsterManage,COLORS};
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
@@ -24771,4 +24796,136 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   setTimeout(resume,100);
   globalThis.YN_R27={BUILD,sanitizeHoneyState,finalizeHoneyClaim,reconcileHarvestOverlay,hardenGuardianHotspot};
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R28 — STABILITY / REGRESSION REPAIR
+   2026-09-03
+   - Restores craft-food entry and separates garden/home food flows.
+   - Fresh-authority jelly slot taps, no stale 0/12 vs visual mismatch.
+   - Honey claim is acknowledged synchronously and never resurrected.
+   - Market images use a stronger resolver before falling back.
+   - Resume hooks reconcile UI without restarting timed state.
+   ====================================================================== */
+(function YN_R28_STABILITY(){
+  "use strict";
+  const BUILD="S2-R28-STABILITY-20260903";
+  const $=id=>document.getElementById(id);
+  const now=()=>Date.now();
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  /* ---------- Craft-food entry: one stable shortcut, two real systems ---------- */
+  function openCraftFoodHub(){
+    if(!$('modalContent'))return;
+    $('modalContent').innerHTML=`<section class="feature-panel r28-food-hub"><h2>🍳 สถานที่คราฟอาหาร</h2><p>เลือกประเภทที่ต้องการคราฟ</p><div class="r28-food-hub-grid"><button id="r28GardenFood" type="button">🌿<b>คราฟอาหารในสวน</b><small>เมนูในสวนเดิมทั้งหมด</small></button><button id="r28HomeFood" type="button">🏠<b>คราฟอาหารบ้าน</b><small>อาหารบ้าน Season 2</small></button></div></section>`;
+    openModal();
+    $('r28GardenFood').onclick=()=>{try{closeHomeHudMenu?.()}catch(_){};try{showMenu?.()}catch(e){console.warn('R28 garden food',e)}};
+    $('r28HomeFood').onclick=()=>{try{closeHomeHudMenu?.()}catch(_){};try{globalThis.YN_R16?.openKitchen?.()}catch(e){console.warn('R28 home food',e)}};
+  }
+  function bindCraftShortcut(){const b=$('shortcutCraftFoodBtn');if(b)b.onclick=()=>{try{closeHomeHudMenu?.()}catch(_){};openCraftFoodHub()}}
+
+  /* ---------- Market image resolver ---------- */
+  const ALPACA_IMG={
+    processingLicense:"alpaca_processing_license.png?v=240",tricolorPudding:"alpaca_tricolor_pudding.png?v=240",woolGrowthMedicine:"alpaca_wool_growth_medicine.png?v=240",treasureBox:"alpaca_treasure_box.png?v=240",braisedEgg:"alpaca-braised-egg.png",breedingBoostPotion:"alpaca-breeding-boost-potion.png",
+    hayPack:"alpaca-hay-pack.png",pellet:"alpaca-pellet-food.png",happinessPotion:"alpaca-happiness-potion.png",coldVaccine:"alpaca-vaccine.png",birthAccelerator:"alpaca-pregnancy-icon.png",
+    white:"alpaca-wool-white.png",green:"alpaca-wool-green.png",black:"alpaca-wool-black.png",brown:"alpaca-wool-brown.png",pink:"alpaca-wool-pink.png",goldenHoney:"alpaca-golden-honey-wool.png",thaiTea:"alpaca-thai-tea-wool.png",gold:"alpaca-wool-gold.png",
+    meat1:"01_alpaca_steak_bambroo.png?v=240",meat2:"02_smoked_alpaca_halonpi.png?v=240",meat3:"03_alpaca_spirit_pot_soup.png?v=240",meat4:"04_royal_alpaca_meat_platter.png?v=240",wool1:"01_alpaca_pastel_bag.png?v=240",wool2:"02_alpaca_fluffy_blanket.png?v=240",wool3:"03_alpaca_golden_luxury_bag.png?v=240",wool4:"04_alpaca_golden_royal_cloak.png?v=240"
+  };
+  const imageNameCache=new Map();
+  function rememberRegistry(reg){
+    if(!reg)return;const vals=Array.isArray(reg)?reg:Object.values(reg);for(const x of vals){if(!x||typeof x!=="object")continue;const name=String(x.name||x.label||"").trim(),img=String(x.image||x.selectImg||x.productImage||x.bag||x.ready||"").trim();if(name&&img&&!imageNameCache.has(name))imageNameCache.set(name,img)}
+  }
+  function buildImageCache(){
+    if(imageNameCache.size)return;
+    const regs=[globalThis.CROPS,globalThis.ANIMAL_PRODUCTS,globalThis.SPECIAL_ITEMS,globalThis.JELLYFISH_TYPES,globalThis.FISHING_BAITS,globalThis.COCONUT_RIVER_ITEMS,globalThis.CAT_TYPES,globalThis.DOG_TYPES,globalThis.Y26_MEDICINES,globalThis.RAINY_SEASON_MENUS,globalThis.BOAT_SUPPLY_DRINKS,globalThis.RECIPES,globalThis.SHOP_ITEMS];
+    regs.forEach(rememberRegistry);
+  }
+  const ALPACA_COLOR_IMG={white:"alpaca-stage-1-idle.png?v=240",black:"alpaca-black-stage-1-idle.png?v=240",pink:"alpaca-pink-stage-1-idle.png?v=240",brown:"alpaca-brown-stage-1-idle.png?v=240",green:"alpaca-green-stage-1-idle.png?v=240",goldenHoney:"alpaca-golden-honey-icon.png",thaiTea:"alpaca-thai-tea-icon.png",gold:"alpaca-wool-gold.png"};
+  const ALPACA_FOOD_IMG={hayPack:"alpaca-hay-pack.png",pellet:"alpaca-pellet-food.png",braisedEgg:"alpaca-braised-egg.png",tricolorPudding:"alpaca_tricolor_pudding.png?v=240"};
+  const ALPACA_MED_IMG={happinessPotion:"alpaca-happiness-potion.png",coldVaccine:"alpaca-vaccine.png",birthAccelerator:"alpaca-pregnancy-icon.png",breedingBoostPotion:"alpaca-breeding-boost-potion.png",woolGrowthMedicine:"alpaca_wool_growth_medicine.png?v=240"};
+  function marketImage(e){
+    if(!e)return"";if(e.image)return e.image;buildImageCache();const key=String(e.key??""),type=String(e.type||""),name=String(e.name||"").trim();
+    if(type==="alpacaAdult"||type==="alpacaBaby"){const c=key.split(":")[0];return ALPACA_COLOR_IMG[c]||"alpaca-stage-1-idle.png?v=240"}
+    if(type==="alpacaFood")return ALPACA_FOOD_IMG[key]||ALPACA_IMG[key]||"alpaca-food-plate.png";
+    if(type==="alpacaMedicine")return ALPACA_MED_IMG[key]||ALPACA_IMG[key]||"alpaca-happiness-potion.png";
+    if(type==="alpacaOther")return key==="magicMushroom"?"alpaca-magic-mushroom.png?v=268":(ALPACA_IMG[key]||"alpaca_treasure_box.png?v=240");
+    if(type==="alpacaFactoryProduct")return ALPACA_IMG[key]||"alpaca_processing_license.png?v=240";
+    if(type==="alpacaWool")return ALPACA_IMG[key]||"alpaca-wool-white.png";
+    if(type.startsWith("alpaca"))return ALPACA_IMG[key]||ALPACA_COLOR_IMG[key.split(":")[0]]||"alpaca-stage-1-idle.png?v=240";
+    const byName=imageNameCache.get(name);if(byName)return byName;
+    try{
+      if(type==="crop")return CROPS?.[key]?.selectImg||CROPS?.[key]?.image||"";
+      if(type==="product")return ANIMAL_PRODUCTS?.[key]?.image||"";
+      if(type==="dish")return (RECIPES||[]).find(x=>String(x.id)===key)?.image||"";
+      if(type==="special")return SPECIAL_ITEMS?.[key]?.image||"";
+      if(type==="jelly")return JELLYFISH_TYPES?.[key]?.image||"";
+      if(type==="jellyV2")return globalThis.Y26_JELLY_V2?.[key]?.image||"";
+      if(type==="fishingBait")return FISHING_BAITS?.[key]?.image||"";
+      if(type==="coconutRiver")return COCONUT_RIVER_ITEMS?.[key]?.image||"";
+      if(type==="medicine")return globalThis.Y26_MEDICINES?.[key]?.image||"";
+      if(type==="boatDrink")return (BOAT_SUPPLY_DRINKS||[]).find(x=>String(x.id)===key)?.image||"";
+      if(type==="rainyMenu")return (RAINY_SEASON_MENUS||[]).find(x=>String(x.id)===key)?.image||"";
+      if(type==="cat")return CAT_TYPES?.[key]?.image||"";
+      if(type==="dog")return DOG_TYPES?.[key]?.image||"";
+    }catch(_){}
+    return"";
+  }
+  globalThis.YN_R28_marketImage=marketImage;
+  function repairMarketImages(root=document){
+    root.querySelectorAll?.('#r15MarketPicker button').forEach(b=>{const img=b.querySelector('img');if(!img)return;const name=b.querySelector('b')?.textContent?.trim();if(img.getAttribute('src'))return;const found=imageNameCache.get(name||"");if(found)img.src=found});
+  }
+
+  /* ---------- Jelly pond: cloud-authoritative slot before each tap ---------- */
+  let jellyTapBusy=false;
+  async function freshJellyTap(index){
+    if(jellyTapBusy)return;jellyTapBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,'shared','jellyfishPond'));
+      const pond=normalizeJellyPond(snap.exists()?snap.data():null,true);jellyPondCache=pond;
+      if(currentScene==='jellyfish')drawJellyfishPond(pond);
+      const slot=pond.slots?.[index]||null;if(slot)showJellyDetails(index,slot);else showJellyPlacement(index);
+    }catch(e){message('เปิดสล็อตไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{jellyTapBusy=false}
+  }
+  if(typeof openJellySlot==='function')openJellySlot=freshJellyTap;
+  async function reconcileJelly(){if(currentScene!=='jellyfish'||!cloudReady)return;try{const p=await loadSharedJellyPond();jellyPondCache=p;drawJellyfishPond(p);ensureJellyPondSubscription?.()}catch(e){console.warn('R28 jelly reconcile',e)}}
+
+  /* ---------- Honey: acknowledge reward before legacy UI can be reopened ---------- */
+  const honeyKey=()=>currentMemberKey?`yn:honey-claimed:${currentMemberKey}`:"";
+  function honeyClaimedAt(){try{return Number(localStorage.getItem(honeyKey())||0)}catch(_){return 0}}
+  function acknowledgeHoney(){
+    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return false;const trip=Number(h.calledAt||0)||Number(h.r27LastClaimedTrip||0)||now();
+    try{localStorage.setItem(honeyKey(),String(Math.max(honeyClaimedAt(),trip)))}catch(_){}
+    h.active=false;h.reward=null;h.calledAt=0;h.r28ClaimedTrip=Math.max(Number(h.r28ClaimedTrip||0),trip);h.r28ClaimedAt=now();
+    if(!Number(h.fuelReadyAt||0)){h.fuelReadyAt=now()+30*60*1000;h.fuelExpiresAt=h.fuelReadyAt+10*60*1000}
+    ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){};try{save()}catch(_){};
+    // Persist the completed trip as a narrow top-level merge immediately. This
+    // prevents an older whole-save snapshot/poller from resurrecting the same reward.
+    if(currentMemberKey&&!visitContext){getFirebaseContext().then(({db,fs})=>fs.setDoc(fs.doc(db,"saves",currentMemberKey),{honeyDelivery:clone(h),updatedAt:fs.serverTimestamp()},{merge:true})).catch(e=>console.warn("R28 honey durable clear",e))}
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},10);return true;
+  }
+  document.addEventListener('pointerdown',e=>{if(!document.querySelector('.honey-reward-modal'))return;const ack=e.target?.closest?.('#honeyRewardThanks,#closeModal')||e.target===$('modal');if(ack)acknowledgeHoney()},true);
+  function suppressHoneyGhost(){
+    const s=ownState||state,h=s?.honeyDelivery,c=honeyClaimedAt();if(!h||!c)return;
+    const trip=Number(h.calledAt||0);if(h.active&&trip&&trip<=c){h.active=false;h.calledAt=0;h.reward=null;try{saveLocalOnly(s)}catch(_){};try{save()}catch(_){} }
+    if(document.querySelector('.honey-reward-modal')&&!h.reward){try{closeModal()}catch(_){}}
+  }
+
+  /* ---------- Village mission migration: remove invalid legacy missions now ---------- */
+  let missionMigrationSig="";
+  function persistMissionMigration(){
+    const s=ownState||state;if(!s||visitContext||typeof ensureVillage!=="function")return;
+    const before=JSON.stringify(s.villageSeason2?.daily?.missions||[]);try{ensureVillage(s)}catch(_){return}const after=JSON.stringify(s.villageSeason2?.daily?.missions||[]);
+    if(before!==after||after!==missionMigrationSig){missionMigrationSig=after;try{saveLocalOnly(s)}catch(_){};if(before!==after){try{save()}catch(_){}setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},30)}}
+  }
+
+  /* ---------- Resume: reconcile only current systems, never reset them ---------- */
+  function resume(){bindCraftShortcut();repairMarketImages();suppressHoneyGhost();persistMissionMigration();reconcileJelly();try{globalThis.YN_R27?.hardenGuardianHotspot?.()}catch(_){};try{globalThis.YN_R25?.isolateHouseBackground?.()}catch(_){} }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(resume,35)},{passive:true});
+  window.addEventListener('pageshow',()=>setTimeout(resume,35),{passive:true});
+  document.addEventListener('pointerup',()=>{bindCraftShortcut();repairMarketImages()},{passive:true});
+  setTimeout(resume,80);
+  globalThis.YN_R28={BUILD,openCraftFoodHub,marketImage,reconcileJelly,acknowledgeHoney};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,'loaded');
 })();
