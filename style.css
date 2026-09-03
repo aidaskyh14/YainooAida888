@@ -9516,3 +9516,105 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
 /* Faster button acknowledgement across inventory/reward flows. */
 button:not(:disabled){touch-action:manipulation}
 button.r9-tap-now{transform:scale(.97)!important;transition:transform 70ms ease-out!important}
+
+
+/* =====================================================================
+   S2 R31 — full feature batch visual layer
+   ===================================================================== */
+
+/* Crops: bigger but stay centered on every plot. Never move the anchor down. */
+.game-screen .crop{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  transform-origin:50% 50%!important;
+}
+.game-screen .crop img.crop-img{
+  width:clamp(38px,9.2vw,72px)!important;height:clamp(38px,9.2vw,72px)!important;
+  margin:auto!important;object-fit:contain!important;object-position:center!important;
+  transform:none!important;transform-origin:50% 50%!important;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.34)) drop-shadow(0 0 7px rgba(255,232,170,.28))!important;
+}
+.game-screen .crop img.stage-seed{width:clamp(27px,6.2vw,48px)!important;height:clamp(27px,6.2vw,48px)!important;transform:none!important}
+.game-screen .crop img.stage-sprout{width:clamp(32px,7.1vw,56px)!important;height:clamp(32px,7.1vw,56px)!important;transform:none!important}
+.game-screen .crop img.stage-grow{width:clamp(37px,8.2vw,64px)!important;height:clamp(37px,8.2vw,64px)!important;transform:none!important}
+.game-screen .crop img.stage-ready{width:clamp(43px,9.6vw,78px)!important;height:clamp(43px,9.6vw,78px)!important;transform:none!important}
+
+/* Friend forage: smaller silhouette + soft non-neon aura. */
+.friend-forage-drop,.friend-magic-mushroom,.r21-friend-resource,.r23-friend-resource{
+  transform:translate(-50%,-50%) scale(.78)!important;transform-origin:center!important;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.32)) drop-shadow(0 0 7px rgba(255,224,143,.58))!important;
+}
+.friend-forage-drop img,.friend-magic-mushroom img,.r21-friend-resource img,.r23-friend-resource img{
+  object-fit:contain!important;
+}
+#r31FriendCollectAll{
+  position:absolute;right:3.5%;bottom:15.5%;z-index:420;border:0;border-radius:999px;
+  padding:9px 13px;background:rgba(40,28,55,.92);color:#fff;font-weight:900;font-size:12px;
+  box-shadow:0 5px 14px rgba(0,0,0,.3),0 0 0 2px rgba(255,226,150,.55) inset;
+}
+
+/* R31 general compact panels */
+.r31-craft-panel,.r31-craft-menu,.r31-result,.r31-box-result,.r31-therapy,.r31-therapy-result,
+.r31-mysterious,.r31-friend-summary,.r31-hotel-test{
+  max-height:78vh;overflow:auto;text-align:center
+}
+.r31-jigsaw-grid,.r31-disc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+.r31-jigsaw-grid article,.r31-disc-grid button,.r31-craft-menu>button,.r31-test-pens button{
+  border:0;border-radius:14px;background:rgba(255,255,255,.92);padding:8px;box-shadow:0 3px 10px rgba(0,0,0,.14)
+}
+.r31-jigsaw-grid img{width:68px;height:68px;object-fit:contain}
+.r31-result-img{width:min(180px,48vw);height:auto;object-fit:contain}
+.r31-big-emoji{font-size:54px}
+.r31-stock-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0}
+.r31-stock-row span{background:rgba(255,255,255,.78);border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}
+
+/* New mystery-box cards */
+.r31-box-shop>img,.r31-box-inventory>img{object-fit:contain!important}
+.r31-box-shop>img{width:100%!important;height:110px!important}
+.r31-box-shop button,.r31-box-inventory button,.r31-box-actions button{border:0;border-radius:10px;padding:7px 10px;font-weight:900}
+.r31-box-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.r31-box-result>div,.r31-friend-summary>div{display:grid;gap:5px;margin:10px 0}
+.r31-box-result article,.r31-friend-summary article{display:flex;justify-content:space-between;gap:8px;background:rgba(255,255,255,.82);padding:7px 9px;border-radius:10px}
+
+/* Mysterious shop */
+.r31-mysterious header{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;text-align:left}
+.r31-mysterious header img{width:92px;height:92px;object-fit:contain}
+.r31-mysterious-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+.r31-mysterious-grid article{display:grid;gap:4px;background:rgba(33,20,45,.92);color:#fff;border-radius:13px;padding:8px;text-align:left}
+.r31-mysterious-grid article strong{color:#ffd778}.r31-mysterious-grid button{border:0;border-radius:9px;padding:7px;font-weight:900}
+.r31-mysterious-shortcut>span{font-size:23px}
+
+/* Music therapy */
+.r31-disc-grid button{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;text-align:left}
+.r31-disc-grid img{width:64px;height:64px;object-fit:contain}
+.r31-disc-result{width:min(170px,46vw);height:auto;object-fit:contain}
+.r31-therapy-result>div{display:grid;gap:6px}
+.r31-therapy-result article{display:grid;grid-template-columns:40px 1fr auto;gap:6px;align-items:center;background:rgba(255,255,255,.84);border-radius:10px;padding:6px;text-align:left}
+.r31-therapy-result article img{width:38px;height:38px;object-fit:contain}
+.r9-spirit-care-actions{grid-template-columns:1fr!important}.r9-spirit-care-actions #r31SpiritTherapy span{font-size:22px}
+
+/* Hotel: visible body sizes normalized; status is never clipped. */
+#dogHotelPetLayer{overflow:visible!important}
+.s2-final-hotel-dog,.s2-final-hotel-cat,.r31-hotel-test-pet{
+  width:clamp(64px,16vw,108px)!important;height:clamp(68px,17vw,114px)!important;overflow:visible!important
+}
+.s2-final-hotel-dog .dog-hotel-fallback-icon,.s2-final-hotel-cat .s2-final-cat-fallback,
+.r31-hotel-test-pet>img{
+  width:82%!important;height:82%!important;left:9%!important;top:4%!important;object-fit:contain!important;object-position:center!important
+}
+.r31-hotel-status{
+  position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:99;min-width:24px;height:24px;
+  display:grid;place-items:center;border-radius:999px;background:rgba(255,255,255,.96);font-size:15px;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.25));pointer-events:none
+}
+.r31-hotel-test-btn{
+  position:absolute;right:3%;top:9%;z-index:500;border:0;border-radius:999px;padding:8px 11px;
+  background:rgba(36,27,55,.94);color:#fff;font-weight:900;font-size:10px;box-shadow:0 3px 10px rgba(0,0,0,.3)
+}
+.r31-hotel-test label{display:grid;gap:4px;text-align:left;margin:7px 0}
+.r31-hotel-test select{width:100%;padding:8px;border-radius:10px}
+.r31-test-pens{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}
+.r31-hotel-test-pet{outline:2px dashed rgba(255,215,90,.75);outline-offset:2px}
+
+/* Alpaca royal variants use the same body footprint as existing walkers. */
+.alpaca-color-prince,.alpaca-color-princess{filter:drop-shadow(0 5px 5px rgba(0,0,0,.28))}
+
