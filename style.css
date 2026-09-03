@@ -9674,3 +9674,28 @@ button.r9-tap-now{transform:scale(.97)!important;transition:transform 70ms ease-
 .r32-hedge-craft-menu{width:min(91vw,390px)!important;max-height:78vh!important;overflow:auto!important;padding:15px!important}
 .r32-hedge-craft-menu>header{display:flex!important;align-items:center!important;gap:9px!important;margin-bottom:10px!important;text-align:left!important}.r32-hedge-craft-menu>header>span{font-size:32px!important}.r32-hedge-craft-menu h2{font-size:17px!important;margin:0!important}.r32-hedge-craft-menu header small{font-size:9px!important;opacity:.72!important}
 .r32-hedge-craft-cards{display:grid!important;gap:9px!important}.r32-hedge-craft-cards>button{display:grid!important;grid-template-columns:62px minmax(0,1fr)!important;gap:10px!important;align-items:center!important;text-align:left!important;padding:9px 10px!important;border-radius:15px!important;background:linear-gradient(180deg,#fffaf0,#f8e8d0)!important;border:1px solid #d7b78a!important;box-shadow:0 5px 12px rgba(64,35,28,.09)!important;color:#56384d!important}.r32-hedge-craft-cards img{width:58px!important;height:58px!important;object-fit:contain!important}.r32-hedge-craft-cards b{display:block!important;font-size:12px!important}.r32-hedge-craft-cards small{display:block!important;font-size:9px!important;line-height:1.35!important;margin-top:3px!important;color:#7a5c68!important}
+
+/* ======================================================================
+   R32.8 — Friend visit Collect All placement hotfix
+   Keep the useful action, but move it away from the right-side farm/tool
+   navigation and reserve a compact centered hitbox above the bottom nav.
+   ====================================================================== */
+.game-screen.visiting-friend #r31FriendCollectAll,
+#gameScreen.visiting-friend #r31FriendCollectAll,
+#r31FriendCollectAll{
+  left:50%!important;
+  right:auto!important;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 96px)!important;
+  top:auto!important;
+  transform:translateX(-50%)!important;
+  min-width:124px!important;
+  max-width:154px!important;
+  padding:9px 14px!important;
+  white-space:nowrap!important;
+  z-index:360!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+@media (max-height:720px){
+  #r31FriendCollectAll{bottom:calc(env(safe-area-inset-bottom, 0px) + 84px)!important}
+}
