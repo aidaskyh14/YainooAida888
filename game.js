@@ -25919,3 +25919,106 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   setTimeout(bindHotelShortcut,250);
   setTimeout(bindHotelShortcut,1200);
 })();
+
+/* ======================================================================
+   R32.2 HOTEL RESCUE — single authoritative Hotel renderer
+   Fix: tapping Hotel changed scene but legacy render wrapper chain could abort
+   before painting anything. This renderer intentionally bypasses that chain.
+   No Firestore Rules / economy changes.
+   ====================================================================== */
+(function YN_R32_2_HOTEL_RESCUE(){
+  "use strict";
+  const byId=id=>document.getElementById(id);
+  const pen4=n=>Math.max(1,Math.min(4,Math.floor(Number(n)||1)));
+
+  function hotelDogs(pen,s=ownState||state){
+    try{return typeof dogsInHotelPen==="function"?dogsInHotelPen(pen,s):[]}catch(_){return []}
+  }
+  function hotelCats(pen,s=ownState||state){
+    try{
+      const map=s?.hotelPetPenMap||{};
+      return (s?.cats||[]).filter(c=>Number(c?.placedFarm)===-1&&c?.placedHotel&&pen4(map[String(c.id)]||c.hotelPen||1)===pen);
+    }catch(_){return []}
+  }
+  function countPets(pen){return hotelDogs(pen).length+hotelCats(pen).length}
+
+  function mountPetsSafe(){
+    try{
+      if(typeof mountFinalHotelPets==="function")return mountFinalHotelPets();
+      if(typeof mountDogHotelPetsForPen==="function")return mountDogHotelPetsForPen();
+      if(typeof mountDogHotelPets==="function")return mountDogHotelPets();
+    }catch(e){console.error("R32.2 hotel pets",e)}
+  }
+  function mountDropsSafe(){
+    try{
+      if(typeof renderDogHotelDropsForPen==="function")return renderDogHotelDropsForPen();
+      if(typeof renderDogHotelDrops==="function")return renderDogHotelDrops();
+    }catch(e){console.error("R32.2 hotel drops",e)}
+  }
+
+  function rescueRender(){
+    if(currentScene!=="dogHotel")return;
+    const screen=byId("sceneScreen"),layer=byId("sceneInteractiveLayer");
+    if(!screen||!layer){console.error("R32.2 Hotel: scene DOM missing");return}
+    currentDogHotelPen=pen4(typeof currentDogHotelPen!=="undefined"?currentDogHotelPen:1);
+    const pen=currentDogHotelPen,max=(typeof DOG_HOTEL_MAX!=="undefined"?DOG_HOTEL_MAX:6),count=countPets(pen);
+
+    try{processDogDrops?.()}catch(e){console.warn("R32.2 dog drops process",e)}
+    try{processCatDrops?.()}catch(e){console.warn("R32.2 cat drops process",e)}
+
+    screen.classList.add("s2-meow-woof-hotel");
+    try{if(typeof HOTEL_BG!=="undefined"&&HOTEL_BG)screen.style.backgroundImage=`url("${HOTEL_BG}")`}catch(_){ }
+    try{
+      setSceneNav({
+        backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",
+        backAction:pen>1?()=>{currentDogHotelPen=pen-1;rescueRender()}:returnToFarm,
+        nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",
+        nextAction:pen<4?()=>{currentDogHotelPen=pen+1;rescueRender()}:returnToFarm
+      });
+    }catch(e){console.warn("R32.2 hotel nav",e)}
+
+    layer.innerHTML=`
+      <div class="dog-hotel-counter">🐶🐱 เหมียวโฮ่งโฮเทล • คอก ${pen} • ${count}/${max}</div>
+      <div id="dogHotelPetLayer" class="dog-hotel-pet-layer" data-r322-pen="${pen}"></div>
+      <div id="dogHotelDropLayer" class="dog-hotel-drop-layer"></div>
+      <div class="r322-hotel-actions">
+        <button id="dogMemberCheckBtn" type="button">🐶🐱 เช็คสมาชิกเหมียวโฮ่ง</button>
+        <button id="dogPenCollectAllBtn" type="button">🧺 เก็บของดรอปทั้งหมด</button>
+      </div>`;
+
+    const roster=byId("dogMemberCheckBtn");
+    if(roster)roster.onclick=()=>{try{showDogHotelRoster()}catch(e){console.error(e)}};
+    const collect=byId("dogPenCollectAllBtn");
+    if(collect)collect.onclick=()=>{try{typeof collectAllHotelDropsCurrentPen==="function"?collectAllHotelDropsCurrentPen():collectAllDogDrops?.()}catch(e){console.error(e)}};
+
+    mountPetsSafe();
+    mountDropsSafe();
+    requestAnimationFrame(()=>{if(currentScene==="dogHotel"){mountPetsSafe();mountDropsSafe();try{globalThis.YN_R32?.repairHotelPenMap?.(ownState||state)}catch(_){}}});
+  }
+
+  /* Replace the entire legacy wrapper stack with one renderer. */
+  renderDogHotelScene=rescueRender;
+
+  /* Make router dispatch deterministic even if an older renderScene wrapper was captured. */
+  try{
+    const previousRenderScene=renderScene;
+    renderScene=function(){if(currentScene==="dogHotel"){rescueRender();return}return previousRenderScene.apply(this,arguments)};
+  }catch(_){ }
+
+  function enterHotel(){
+    try{
+      try{closeHomeHudMenu?.()}catch(_){ }
+      if(typeof guardResting==="function"&&guardResting())return;
+      currentDogHotelPen=1;
+      if(typeof openScene==="function")openScene("dogHotel");
+      else{currentScene="dogHotel";rescueRender()}
+      setTimeout(()=>{if(currentScene==="dogHotel"&&!byId("dogHotelPetLayer"))rescueRender()},0);
+    }catch(e){console.error("R32.2 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
+  }
+  function bind(){const b=byId("mainDogHotelBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.onclick=enterHotel}
+  bind();setTimeout(bind,200);setTimeout(bind,900);
+
+  globalThis.YN_R32_2_HOTEL_RESCUE={render:rescueRender,enter:enterHotel};
+  globalThis.YAINOO_BUILD="S2-R32.2-HOTEL-RESCUE";
+  console.info("S2-R32.2 Hotel Rescue loaded");
+})();
