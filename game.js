@@ -25869,21 +25869,29 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     entering=true;
     try{
       try{if(typeof closeHomeHudMenu==="function")closeHomeHudMenu()}catch(_){ }
-      if(typeof guardResting==="function"&&guardResting())return;
+      /* R32.3: bypass the accumulated openScene wrapper chain completely.
+         Hotel used to work before those wrappers accumulated; direct scene
+         activation makes the HUD entry deterministic and does not touch
+         Firestore or inventory. */
       if(typeof currentDogHotelPen!=="undefined")currentDogHotelPen=1;
-      if(typeof openScene!=="function")throw new Error("ไม่พบตัวเปิดฉาก Hotel");
-      openScene("dogHotel");
-
-      /* Defensive recovery: if a later router wrapper failed to paint the
-         Hotel layer, call the final Hotel renderer once without changing
-         any state or inventory. */
+      if(typeof stopSceneTimer==="function")stopSceneTimer();
+      currentScene="dogHotel";
+      const game=$h("gameScreen"),screen=$h("sceneScreen"),layer=$h("sceneInteractiveLayer");
+      if(!screen||!layer)throw new Error("ไม่พบหน้าฉาก Hotel");
+      if(game)game.classList.add("hidden");
+      screen.classList.remove("hidden");
+      screen.dataset.scene="dogHotel";
+      const bg=(typeof SCENES!=="undefined"&&SCENES?.dogHotel?.image)?SCENES.dogHotel.image:"meow-woof-hotel.jpeg";
+      screen.style.backgroundImage=`url("${bg}")`;
+      layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
+      if(typeof renderDogHotelScene!=="function")throw new Error("ไม่พบตัววาด Hotel");
+      renderDogHotelScene();
       requestAnimationFrame(()=>{
-        try{
-          if(currentScene==="dogHotel"&&!$h("dogHotelPetLayer")&&typeof renderDogHotelScene==="function")renderDogHotelScene();
-        }catch(error){console.error("R32.1 hotel render recovery",error)}
+        try{if(currentScene==="dogHotel"&&!$h("dogHotelPetLayer"))renderDogHotelScene()}
+        catch(error){console.error("R32.3 hotel render recovery",error);try{message("Hotel โหลดไม่สำเร็จ",error?.message||"เกิดข้อผิดพลาดที่ตัววาด Hotel")}catch(_){}}
       });
     }catch(error){
-      console.error("R32.1 hotel entry",error);
+      console.error("R32.3 hotel entry",error);
       try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",error?.message||"กรุณาลองใหม่")}catch(_){ }
     }finally{
       setTimeout(()=>{entering=false},250);
@@ -26008,17 +26016,28 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function enterHotel(){
     try{
       try{closeHomeHudMenu?.()}catch(_){ }
-      if(typeof guardResting==="function"&&guardResting())return;
       currentDogHotelPen=1;
-      if(typeof openScene==="function")openScene("dogHotel");
-      else{currentScene="dogHotel";rescueRender()}
+      if(typeof stopSceneTimer==="function")stopSceneTimer();
+      currentScene="dogHotel";
+      const game=byId("gameScreen"),screen=byId("sceneScreen"),layer=byId("sceneInteractiveLayer");
+      if(!screen||!layer)throw new Error("ไม่พบหน้าฉาก Hotel");
+      if(game)game.classList.add("hidden");screen.classList.remove("hidden");screen.dataset.scene="dogHotel";
+      const bg=(typeof SCENES!=="undefined"&&SCENES?.dogHotel?.image)?SCENES.dogHotel.image:"meow-woof-hotel.jpeg";screen.style.backgroundImage=`url("${bg}")`;
+      layer.innerHTML='<div class="r323-hotel-loading">🐶🐱 กำลังเปิดเหมียวโฮ่งโฮเทล…</div>';
+      rescueRender();
       setTimeout(()=>{if(currentScene==="dogHotel"&&!byId("dogHotelPetLayer"))rescueRender()},0);
-    }catch(e){console.error("R32.2 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
+    }catch(e){console.error("R32.3 hotel entry",e);try{message("เข้าเหมียวโฮ่งโฮเทลไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}}
   }
   function bind(){const b=byId("mainDogHotelBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.onclick=enterHotel}
   bind();setTimeout(bind,200);setTimeout(bind,900);
 
   globalThis.YN_R32_2_HOTEL_RESCUE={render:rescueRender,enter:enterHotel};
-  globalThis.YAINOO_BUILD="S2-R32.2-HOTEL-RESCUE";
+  globalThis.YAINOO_BUILD="S2-R32.3-HOTEL-DIRECT-ENTRY";
   console.info("S2-R32.2 Hotel Rescue loaded");
 })();
+
+
+/* R32.3 final hotel entry guarantee: the existing R32.1 capture handler is
+   intentionally retained, but its entry function now activates sceneScreen
+   directly, bypassing every legacy openScene wrapper. */
+console.info("S2-R32.3 Hotel direct-entry hotfix loaded");
