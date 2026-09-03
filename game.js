@@ -22859,7 +22859,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   /* Honey: preserve active trip locally and lock motorcycle to one straight Y axis. */
   const honeyMirrorKey16=()=>currentMemberKey?`s2-r16-honey:${currentMemberKey}`:"";let honeySig16="";
-  function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(sig!==honeySig16){honeySig16=sig;localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}else if(old?.h?.active&&!h.active&&Date.now()-Number(old.savedAt||0)<30*60*1000){s.honeyDelivery=clone16(old.h);ownState=s;state=s;saveLocalOnly(s);save()}}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");/* R17: preserve inline translate3d transform used by Honey movement. */bike.style.setProperty("transition-timing-function","linear","important")}}
+  function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(h.active&&claimedAt&&Number(h.calledAt||0)&&Number(h.calledAt||0)<=claimedAt){h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=Number(h.fuelReadyAt)||Date.now()+30*60*1000;h.fuelExpiresAt=Number(h.fuelExpiresAt)||h.fuelReadyAt+10*60*1000}if(sig!==honeySig16){honeySig16=JSON.stringify(h);localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}/* R27: never resurrect a completed trip from the legacy mirror. */}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("transition","none","important")}}
 
   function postR16(){try{ensureR16State(own16());applyFortunePersistent16();fixedTrough16();fixHotelStatus16();rebindWorm16();syncTrapMirror16();syncHoney16();if(currentScene==="house")renderHedgeDrops16()}catch(e){console.warn("R16 tick",e)}}
   const draw16Base=draw;draw=function(){const r=draw16Base.apply(this,arguments);requestAnimationFrame(postR16);return r};
@@ -24113,6 +24113,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function mergeHoney(local,remote){
     const l=local&&typeof local==="object"?clone(local):{},r=remote&&typeof remote==="object"?remote:{};
+    let claimedAt=0;try{claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0)}catch(_){}
+    const staleClaimed=x=>Boolean(claimedAt&&x?.active&&Number(x.calledAt||0)&&Number(x.calledAt||0)<=claimedAt);
+    if(staleClaimed(l)){l.active=false;l.calledAt=0;l.reward=null}
+    if(staleClaimed(r))return l;
     if(r.active&&!l.active)return clone(r);
     if(r.active&&l.active&&Number(r.calledAt||0)>Number(l.calledAt||0))return clone(r);
     if(r.reward&&!l.reward&&r.active)return clone(r);
@@ -24232,7 +24236,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const s=ownState||state,h=s?.honeyDelivery;if(!s||!h||visitContext)return;
     try{
       const raw=localStorage.getItem(honeyKey()),old=raw?JSON.parse(raw):null;
-      if(old?.h?.active&&!h.active&&Date.now()-Number(old.at||0)<6*3600000){s.honeyDelivery=clone(old.h);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}queueCloudSave()}
+      const claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0);if(old?.h?.active&&!h.active&&Date.now()-Number(old.at||0)<6*3600000&&(!claimedAt||Number(old.h.calledAt||0)>claimedAt)){s.honeyDelivery=clone(old.h);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}queueCloudSave()}
       const sig=JSON.stringify(s.honeyDelivery);if(sig!==lastHoneySig){lastHoneySig=sig;localStorage.setItem(honeyKey(),JSON.stringify({at:Date.now(),h:clone(s.honeyDelivery)}))}
     }catch(_){}
   }
@@ -24645,5 +24649,126 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(sceneIsolation,20)},{passive:true});
 
   globalThis.YN_R26={BUILD,FALLBACK,armMarketImages,sceneIsolation};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R27 — RUNTIME FIX: Honey duplicate reward / app-resume / Guardian tap
+   2026-09-03
+   ====================================================================== */
+(function YN_R27_RUNTIME_HARDENING(){
+  "use strict";
+  const BUILD="S2-R27-RUNTIME-HARDENING-20260903";
+  const $=id=>document.getElementById(id);
+  const now=()=>Date.now();
+  const honeyClaimKey=()=>currentMemberKey?`yn:honey-claimed:${currentMemberKey}`:"";
+  const currentHoney=()=> (ownState||state)?.honeyDelivery||null;
+
+  function claimedAt(){try{return Number(localStorage.getItem(honeyClaimKey())||0)}catch(_){return 0}}
+  function markHoneyClaimed(){
+    const h=currentHoney();if(!h)return 0;
+    const trip=Number(h.calledAt||0)||now();
+    try{localStorage.setItem(honeyClaimKey(),String(Math.max(claimedAt(),trip)))}catch(_){}
+    return trip;
+  }
+  function sanitizeHoneyState({persist=false}={}){
+    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return false;
+    const c=claimedAt(),trip=Number(h.calledAt||0);
+    if(!(c&&h.active&&trip&&trip<=c))return false;
+    h.active=false;h.calledAt=0;h.reward=null;
+    const t=now();if(!Number(h.fuelReadyAt||0)){h.fuelReadyAt=t+30*60*1000;h.fuelExpiresAt=h.fuelReadyAt+10*60*1000}
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly(s)}catch(_){}
+    if(persist){try{save()}catch(_){}setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},20)}
+    return true;
+  }
+  async function finalizeHoneyClaim(){
+    const trip=markHoneyClaimed();
+    // Let the legacy departure handler update the reward-bearing inventory first,
+    // then make the completed trip durable and flush it immediately.
+    await new Promise(r=>setTimeout(r,40));
+    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return;
+    h.active=false;h.reward=null;h.calledAt=0;
+    const t=now();if(!Number(h.fuelReadyAt||0)){h.fuelReadyAt=t+30*60*1000;h.fuelExpiresAt=h.fuelReadyAt+10*60*1000}
+    h.r27LastClaimedTrip=Math.max(Number(h.r27LastClaimedTrip||0),trip);
+    h.r27ClaimedAt=t;
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly(s)}catch(_){}
+    try{save()}catch(_){}
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},20);
+    try{localStorage.setItem(`s2-r16-honey:${currentMemberKey}`,JSON.stringify({savedAt:t,h:cloneData(h)}))}catch(_){}
+    try{localStorage.setItem(`yn:r24:honey:${currentMemberKey}`,JSON.stringify({at:t,h:cloneData(h)}))}catch(_){}
+  }
+
+  // Claim/close/backdrop are all acknowledgements. Persist completion once only.
+  let honeyFinalizeBusy=false;
+  document.addEventListener("click",e=>{
+    const rewardModal=document.querySelector(".honey-reward-modal");if(!rewardModal)return;
+    const ack=e.target?.closest?.("#honeyRewardThanks,#closeModal");
+    const backdrop=e.target===$("modal");
+    if(!ack&&!backdrop)return;
+    if(honeyFinalizeBusy)return;honeyFinalizeBusy=true;
+    setTimeout(async()=>{try{await finalizeHoneyClaim()}finally{honeyFinalizeBusy=false}},0);
+  },false);
+
+  // Bigger, reliable motorcycle hit area and no click-through to the farm below.
+  let bikeTapLock=0;
+  function bindHoneyBikeCapture(){
+    const b=$("honeyBike");if(!b||b.dataset.r27Tap==="1")return;b.dataset.r27Tap="1";
+    b.addEventListener("pointerdown",e=>{if(!b.classList.contains("is-parked"))return;e.preventDefault();e.stopPropagation();b.classList.add("r27-honey-pressed")},{passive:false});
+    b.addEventListener("click",e=>{if(!b.classList.contains("is-parked"))return;e.preventDefault();e.stopImmediatePropagation();const t=now();if(t-bikeTapLock<450)return;bikeTapLock=t;b.classList.remove("r27-honey-pressed");try{const fn=b.onclick;if(typeof fn==="function")fn.call(b,e)}catch(err){console.warn("R27 honey bike tap",err)}},{capture:true});
+  }
+
+  // If iOS suspends a setTimeout while an all-harvest overlay is open, never leave
+  // a permanent blocking overlay on resume. The underlying save/transaction may
+  // still finish; this only releases the stale UI lock.
+  function reconcileHarvestOverlay(){
+    const ov=$("tractorWorkingOverlay");if(!ov||ov.classList.contains("hidden"))return;
+    const started=Number(ov.dataset.r27StartedAt||0);
+    if(!started){ov.dataset.r27StartedAt=String(now());return}
+    if(now()-started<1800)return;
+    ov.classList.add("hidden");delete ov.dataset.r27StartedAt;
+    try{tractorBusy=false}catch(_){}
+    const b=$("tractorBtn");if(b)b.disabled=false;
+    try{draw()}catch(_){}
+    try{showWeatherToast?.("🚜 กลับเข้าเกมแล้ว • ปลดหน้าจอเก็บเกี่ยวที่ค้างให้แล้ว")}catch(_){}
+  }
+  try{
+    const oldShow=showTractorWorking;
+    showTractorWorking=function(){const r=oldShow.apply(this,arguments);const ov=$("tractorWorkingOverlay");if(ov)ov.dataset.r27StartedAt=String(now());return r};
+    const oldHide=hideTractorWorking;
+    hideTractorWorking=function(){const r=oldHide.apply(this,arguments);const ov=$("tractorWorkingOverlay");if(ov)delete ov.dataset.r27StartedAt;return r};
+  }catch(_){}
+
+  // Guardian hotspot must be pointer-active even though its parent overlay is pointer-events:none.
+  function hardenGuardianHotspot(){
+    const g=$("gameScreen"),layer=$("s2FarmHotspots");if(!g||!layer)return;
+    const farm=Number(g.dataset.s2Farm||0)||((Number(farmPlotPage||0))+1);
+    if(farm<2||farm>4||visitContext)return;
+    let b=$("r25GuardianHotspot");
+    if(!b){try{globalThis.YN_R25?.showGuardianMenu&&globalThis.YN_R25?.isolateHouseBackground?.()}catch(_){};return}
+    b.style.setProperty("pointer-events","auto","important");
+    b.style.setProperty("z-index","120","important");
+    b.classList.add("s2-scene-hotspot");
+  }
+  // Capture the whole lower-sand hotspot so legacy overlays cannot swallow it.
+  document.addEventListener("pointerup",e=>{
+    const b=e.target?.closest?.("#r25GuardianHotspot");if(!b)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    try{globalThis.YN_R25?.showGuardianMenu?.()}catch(err){console.warn("R27 guardian open",err)}
+  },true);
+
+  function resume(){
+    sanitizeHoneyState({persist:true});
+    bindHoneyBikeCapture();hardenGuardianHotspot();
+    setTimeout(reconcileHarvestOverlay,80);setTimeout(reconcileHarvestOverlay,1900);
+  }
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)resume()},{passive:true});
+  window.addEventListener("pageshow",resume,{passive:true});
+  document.addEventListener("pointerup",()=>{bindHoneyBikeCapture();hardenGuardianHotspot()},{passive:true});
+  setInterval(()=>{try{sanitizeHoneyState({persist:false});bindHoneyBikeCapture();hardenGuardianHotspot()}catch(_){}},1500);
+  setTimeout(resume,100);
+  globalThis.YN_R27={BUILD,sanitizeHoneyState,finalizeHoneyClaim,reconcileHarvestOverlay,hardenGuardianHotspot};
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();

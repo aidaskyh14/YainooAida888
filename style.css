@@ -9417,3 +9417,12 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
 .r26-test-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
 .r26-test-actions button{min-height:40px!important;border-radius:12px!important;font-size:10px!important;touch-action:manipulation!important}
 @media(max-width:390px){.r25-hamster-colors{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+
+/* S2 R27 runtime hardening */
+#r25GuardianHotspot{pointer-events:auto!important;z-index:120!important;cursor:pointer!important}
+#honeyBike{transition:none!important}
+#honeyBike.is-parked{pointer-events:auto!important;z-index:110!important;cursor:pointer!important}
+#honeyBike.is-parked::after{content:""!important;position:absolute!important;inset:-42% -38%!important;pointer-events:auto!important;background:transparent!important;border-radius:42%!important}
+#honeyBike.r27-honey-pressed{filter:brightness(.96)!important}
+#honeyBikeLayer{z-index:90!important}
