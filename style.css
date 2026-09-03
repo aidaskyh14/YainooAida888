@@ -9466,3 +9466,53 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
 .r25-hamster{width:clamp(34px,8.6vw,50px)!important;height:clamp(34px,8.6vw,50px)!important;transition:none!important;contain:layout paint!important}.r25-hamster-sprite{background-size:400% 400%!important;transition:none!important;filter:drop-shadow(0 2px 2px rgba(20,12,20,.20))}.r25-hamster-shadow{width:60%!important;height:14%!important;bottom:5%!important;opacity:.65!important}
 /* Meow-Woof: one status badge only and a shared visual footprint. */
 .s2-meow-woof-hotel .dog-hotel-pet,.s2-meow-woof-hotel .s2-hotel-cat{width:clamp(66px,17vw,94px)!important;height:clamp(78px,20vw,112px)!important;aspect-ratio:auto!important;overflow:visible!important}.s2-meow-woof-hotel .farm-pet-status-wrap,.s2-meow-woof-hotel .dog-status-wrap{display:none!important}.s2-meow-woof-hotel .r17-pet-status{display:grid!important}.s2-meow-woof-hotel .dog-hotel-sprite,.s2-meow-woof-hotel .s2-final-cat-sprite{transition:none!important;backface-visibility:hidden!important}
+
+
+/* ======================================================================
+   S2 R30 — USER-REPORTED STABILITY VISUALS — 2026-09-03
+   ====================================================================== */
+/* Meow-Woof: dog/cat share one visual footprint. Inner art is normalized so
+   transparent padding in source sheets cannot make one species look tiny. */
+.s2-meow-woof-hotel .dog-hotel-pet,
+.s2-meow-woof-hotel .s2-hotel-cat{
+  width:clamp(64px,16.2vw,90px)!important;
+  height:clamp(76px,19.2vw,106px)!important;
+  max-width:90px!important;
+  aspect-ratio:auto!important;
+  transform:translate(-50%,-50%) translateZ(0);
+  backface-visibility:hidden!important;
+  contain:layout paint!important;
+}
+.s2-meow-woof-hotel .dog-hotel-sprite,
+.s2-meow-woof-hotel .dog-hotel-fallback-icon,
+.s2-meow-woof-hotel .s2-final-cat-sprite,
+.s2-meow-woof-hotel .s2-final-cat-fallback,
+.s2-meow-woof-hotel .r24-cat-equal .s2-final-cat-sprite,
+.s2-meow-woof-hotel .r24-cat-equal .s2-final-cat-fallback{
+  position:absolute!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;
+  width:82%!important;height:88%!important;object-fit:contain!important;
+  transform:translate(-50%,-50%) translateZ(0)!important;transform-origin:center center!important;
+  backface-visibility:hidden!important;
+}
+.s2-meow-woof-hotel .dog-hotel-sprite.face-left,
+.s2-meow-woof-hotel .s2-final-cat-sprite.face-left,
+.s2-meow-woof-hotel .r24-cat-equal .s2-final-cat-sprite.face-left{transform:translate(-50%,-50%) scaleX(-1) translateZ(0)!important}
+
+/* Ground drops must be clearly smaller than pets. */
+.s2-meow-woof-hotel .dog-hotel-drop-layer .dog-drop-item.cat-drop-item{
+  width:clamp(23px,5.5vw,34px)!important;height:clamp(23px,5.5vw,34px)!important;
+  animation:catDropBlinkR30 .9s ease-in-out infinite alternate!important;
+}
+.s2-meow-woof-hotel .dog-hotel-drop-layer .dog-drop-item.cat-drop-item img{width:100%!important;height:82%!important;filter:drop-shadow(0 1px 3px rgba(255,238,129,.72))!important}
+.s2-meow-woof-hotel .dog-hotel-drop-layer .dog-drop-item.cat-drop-item small{top:76%!important;font-size:clamp(5px,1.15vw,7px)!important;padding:1px 3px!important;max-width:105px!important}
+@keyframes catDropBlinkR30{from{opacity:.72;transform:translate(-50%,-50%) scale(.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1.04)}}
+.r30-drop-row{display:grid;grid-template-columns:38px 1fr;gap:8px;align-items:center;padding:5px 7px;margin:4px 0;border-radius:10px;background:rgba(255,246,225,.88)}
+.r30-drop-row img{width:36px;height:36px;object-fit:contain}.r30-drop-row span{display:flex;justify-content:space-between;align-items:center;gap:8px}.r30-drop-row b{font-size:11px}.r30-drop-row small{font-size:10px;font-weight:900}.r30-drop-bad{margin-top:7px;padding:6px;border-radius:9px;background:rgba(110,62,68,.12);font-size:10px}
+
+/* Hamsters: movement is driven by left/top; keep compositor hints light and stable. */
+.r25-hamster{transition:none!important;backface-visibility:hidden!important;contain:layout paint!important}
+.r25-hamster-sprite{transition:none!important;backface-visibility:hidden!important}
+
+/* Faster button acknowledgement across inventory/reward flows. */
+button:not(:disabled){touch-action:manipulation}
+button.r9-tap-now{transform:scale(.97)!important;transition:transform 70ms ease-out!important}
