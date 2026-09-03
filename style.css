@@ -9301,3 +9301,98 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
   display:flex!important;align-items:center!important;justify-content:center!important;
   padding:0!important;margin:0!important;text-align:center!important;line-height:1.12!important;
 }
+
+/* ======================================================================
+   S2 R25 — isolation / full market / forest one-tap / guardian hamsters
+   ====================================================================== */
+/* The user circled the upper area of the wooden plaque. Move the existing
+   text substantially upward without changing its chosen font size. */
+#s2MarketTitle,
+#s2MarketTitle.s2-market-title{
+  left:50%!important;right:auto!important;width:82%!important;
+  bottom:13.0%!important;height:7.0%!important;
+  transform:translateX(-50%)!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:0!important;margin:0!important;text-align:center!important;line-height:1.08!important;
+}
+
+/* Forbidden Forest: larger invisible touch target, same visual size, soft
+   ground contact shadow. No source image is edited. */
+.r21-forest-node{
+  width:13%!important;aspect-ratio:1!important;
+  touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
+  isolation:isolate;
+}
+.r21-forest-node::before{
+  content:"";position:absolute;z-index:0;left:50%;bottom:14%;
+  width:58%;height:14%;transform:translateX(-50%);border-radius:50%;
+  background:rgba(10,15,18,.34);filter:blur(4px);opacity:.72;pointer-events:none;
+}
+.r21-forest-node img{
+  position:absolute!important;z-index:1;left:13.5%!important;top:13.5%!important;
+  width:73%!important;height:73%!important;margin:0!important;object-fit:contain!important;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.20))!important;pointer-events:none!important;
+}
+.r21-forest-node.r25-node-taking{pointer-events:none!important;opacity:.62!important;transform:translate(-50%,-50%) scale(.94)!important}
+
+/* Guardian farm layer. Hamsters never own pointer events, so farm controls
+   remain fast even with six animated pets. */
+#r25GuardianPetLayer{position:absolute;inset:0;z-index:66;pointer-events:none;overflow:hidden}
+#r25GuardianPetLayer.hidden{display:none!important}
+#r25GuardianHotspot{
+  left:7%!important;top:69%!important;width:86%!important;height:27%!important;
+  border:0!important;background:transparent!important;border-radius:22px!important;
+  touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
+}
+#r25GuardianHotspot.hidden{display:none!important}
+.r25-hamster{
+  position:absolute;width:clamp(28px,7.2vw,44px);height:clamp(28px,7.2vw,44px);
+  transform:translate(-50%,-50%) translateZ(0);pointer-events:none;will-change:left,top;
+  contain:layout paint style;
+}
+.r25-hamster-shadow{
+  position:absolute;z-index:0;left:50%;bottom:3%;width:66%;height:18%;
+  transform:translateX(-50%);border-radius:50%;background:rgba(13,20,24,.32);
+  filter:blur(2.8px);opacity:.72;
+}
+.r25-hamster-sprite{
+  position:absolute;z-index:1;inset:0;background-repeat:no-repeat;background-size:400% 400%;
+  background-position:0 0;transform:translateZ(0);transform-origin:center center;
+  image-rendering:auto;backface-visibility:hidden;will-change:background-position,transform;
+}
+.r25-hamster-sprite.face-left{transform:scaleX(-1) translateZ(0)}
+
+.r25-guardian-panel{width:min(90vw,360px)!important;max-height:72vh!important;overflow:auto!important;-webkit-overflow-scrolling:touch;padding:15px!important}
+.r25-guardian-panel h2{font-size:18px!important;margin:1px 0 3px!important}
+.r25-guardian-panel>small{display:block;text-align:center;font-size:11px;opacity:.75;margin-bottom:9px}
+.r25-guardian-panel>p{font-size:10px;line-height:1.35;text-align:center;opacity:.76;margin:8px 2px 0}
+.r25-guardian-type{
+  width:100%;display:grid!important;grid-template-columns:auto 1fr!important;grid-template-rows:auto auto!important;
+  column-gap:8px!important;align-items:center!important;text-align:left!important;padding:10px 12px!important;
+  border-radius:14px!important;min-height:56px!important;touch-action:manipulation!important;
+}
+.r25-guardian-type>b{font-size:14px}.r25-guardian-type>span{grid-column:2;font-size:10px;opacity:.72}
+.r25-hamster-colors{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+.r25-hamster-colors button{
+  min-width:0;padding:7px 4px 8px!important;border-radius:13px!important;display:grid!important;
+  justify-items:center!important;gap:3px!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
+}
+.r25-hamster-colors button:disabled{opacity:.42!important;pointer-events:none!important}
+.r25-hamster-colors b{font-size:10px!important;white-space:nowrap}
+.r25-hamster-preview{
+  width:46px;height:46px;display:block;background-repeat:no-repeat;background-size:400% 400%;background-position:0 0;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.20));
+}
+
+/* Direct-action controls should never inherit the old 300ms-tap behavior. */
+.r21-forest-node,#r25GuardianHotspot,.r25-guardian-panel button,#s2MarketScreen button,.r15-market-listing button{
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+@media(max-width:430px){
+  .r21-forest-node{width:13.5%!important}.r21-forest-node img{left:14.8%!important;top:14.8%!important;width:70.4%!important;height:70.4%!important}
+  .r25-hamster{width:clamp(27px,7.5vw,39px);height:clamp(27px,7.5vw,39px)}
+  .r25-hamster-preview{width:42px;height:42px}
+}
+/* Three supplied green sheets are RGB (no alpha). Blend only those states so
+   their white sheet background does not render as a white square on sand. */
+.r25-hamster-sprite.r25-no-alpha{mix-blend-mode:multiply}
