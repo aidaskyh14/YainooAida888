@@ -9396,3 +9396,24 @@ body:has(#alpacaPenScreen:not(.hidden)) .modal{z-index:1400!important}
 /* Three supplied green sheets are RGB (no alpha). Blend only those states so
    their white sheet background does not render as a white square on sand. */
 .r25-hamster-sprite.r25-no-alpha{mix-blend-mode:multiply}
+
+/* ======================================================================
+   S2 R26 — pickup polish
+   ====================================================================== */
+/* User requested the shop plaque text just a tiny bit lower than R25. */
+#s2MarketTitle,#s2MarketTitle.s2-market-title{bottom:12.4%!important}
+
+/* Broken or unmapped market art must never leave an empty white box. */
+.r15-market-listing .s2-market-picker img.r26-market-fallback,
+#s2MarketSlots img.r26-market-fallback,
+.s2-market-preview.r26-market-fallback{
+  background:#f6ead1!important;border:1px solid rgba(158,117,75,.18)!important;
+  border-radius:9px!important;padding:3px!important;opacity:.86!important;
+}
+
+/* Five colors fit compactly on mobile. */
+.r25-hamster-colors{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.r26-hamster-test{margin-top:8px!important;background:linear-gradient(180deg,#fff7df,#f1dfba)!important}
+.r26-test-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+.r26-test-actions button{min-height:40px!important;border-radius:12px!important;font-size:10px!important;touch-action:manipulation!important}
+@media(max-width:390px){.r25-hamster-colors{grid-template-columns:repeat(2,minmax(0,1fr))!important}}

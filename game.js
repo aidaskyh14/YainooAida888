@@ -22053,7 +22053,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(n===2){const fish=document.createElement("button");fish.className="s2-scene-hotspot";fish.style.cssText="left:52%;top:22%;width:38%;height:20%";fish.ariaLabel="แท่นตกปลา";fish.onclick=showHomeFishing;layer.appendChild(fish)}
     if(n===3){const p=document.createElement("button");p.className="s2-scene-hotspot";p.style.cssText="left:13%;top:14%;width:74%;height:26%";p.onclick=()=>message("🦜 พื้นที่นกแก้ว","คุณยังไม่มีนกแก้ว");layer.appendChild(p)}
     if(n===4){const p=document.createElement("button");p.className="s2-scene-hotspot";p.style.cssText="left:18%;top:13%;width:64%;height:27%";p.onclick=()=>message("🐼 ป่าไผ่","คุณยังไม่มีแพนด้า");layer.appendChild(p)}
-    if(n>=2){const a=document.createElement("button");a.className="s2-scene-hotspot";a.style.cssText="left:7%;top:69%;width:86%;height:27%";a.onclick=()=>message("🐾 สัตว์รักษ์ฟาร์ม","คุณยังไม่มีสัตว์รักษ์ฟาร์ม");layer.appendChild(a)}
+    if(n>=2){const a=document.createElement("button");a.className="s2-scene-hotspot r26-guardian-legacy-anchor";a.style.cssText="left:7%;top:69%;width:86%;height:27%";a.setAttribute("aria-label","สัตว์รักษ์ฟาร์ม");a.onclick=()=>{if(globalThis.YN_R25?.showGuardianMenu)globalThis.YN_R25.showGuardianMenu();else message("🐾 สัตว์รักษ์ฟาร์ม","กำลังโหลดระบบสัตว์รักษ์ฟาร์ม กรุณาลองอีกครั้ง")};layer.appendChild(a)}
     /* Honey vertical path is locked inside the Honey animation itself. */
   }
 
@@ -24387,6 +24387,17 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       try{if(e.type==="medicine")return Y26_MEDICINES?.[e.key]?.image||""}catch(_){}
       try{if(e.type==="farmFruit")return globalThis.YN_S2_FARM?.FRUITS?.[e.key]?.image||""}catch(_){}
       try{if(e.type==="warehouseTool")return globalThis.YN_R21?.TOOLS?.[e.key]?.image||""}catch(_){}
+      try{if(e.type==="dish")return (RECIPES||[]).find(x=>String(x.id)===String(e.key))?.image||""}catch(_){}
+      try{if(e.type==="boatDrink")return (BOAT_SUPPLY_DRINKS||[]).find(x=>String(x.id)===String(e.key))?.image||""}catch(_){}
+      try{if(e.type==="rainyMenu")return (RAINY_SEASON_MENUS||[]).find(x=>String(x.id)===String(e.key))?.image||""}catch(_){}
+      try{if(e.type==="animal")return (SHOP_ITEMS||[]).find(x=>String(x.id)===String(e.key))?.image||""}catch(_){}
+      try{if(e.type==="cat")return CAT_TYPES?.[e.key]?.image||""}catch(_){}
+      try{if(e.type==="dog")return DOG_TYPES?.[e.key]?.image||""}catch(_){}
+      try{if(e.type==="catMystery")return CAT_BOX?.image||""}catch(_){}
+      try{if(e.type==="dogMystery")return DOG_BOX?.image||""}catch(_){}
+      try{if(e.type==="mystery")return JELLY_BOX?.image||""}catch(_){}
+      try{if(e.type==="hedgehogItem")return globalThis.YN_R16?.HEDGE_ITEMS?.[e.key]?.image||""}catch(_){}
+      try{if(e.type==="homeFood")return globalThis.YN_R16?.HOME_FOODS?.[e.key]?.image||""}catch(_){}
       return "";
     };
     const add=(e,countOverride)=>{
@@ -24449,7 +24460,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const COLORS={
     gray:{name:"สีเทา",idle:"gray_hamster_idle.webp",cute:"gray_hamster_cute.webp",walk_forward:"gray_hamster_walk_forward.webp",walk_back:"gray_hamster_walk_back.webp",walk_side:"gray_hamster_walk_side.webp"},
     pink:{name:"สีชมพู",idle:"pink_hamster_idle.webp",cute:"pink_hamster_cute.webp",walk_forward:"pink_hamster_walk_forward.webp",walk_back:"pink_hamster_walk_back.webp",walk_side:"pink_hamster_walk_side.webp"},
-    green:{name:"สีเขียว",idle:"green_hamster_idle.webp",cute:"green_hamster_cute.webp",walk_forward:"green_hamster_walk_forward.webp",walk_back:"green_hamster_walk_back.webp",walk_side:"green_hamster_walk_side.webp"}
+    green:{name:"สีเขียว",idle:"green_hamster_idle.webp",cute:"green_hamster_cute.webp",walk_forward:"green_hamster_walk_forward.webp",walk_back:"green_hamster_walk_back.webp",walk_side:"green_hamster_walk_side.webp"},
+    orange:{name:"สีส้ม",idle:"orange_hamster_idle.webp",cute:"orange_hamster_cute.webp",walk_forward:"orange_hamster_walk_forward.webp",walk_back:"orange_hamster_walk_back.webp",walk_side:"orange_hamster_walk_side.webp"},
+    mint:{name:"สีมินท์",idle:"mint_hamster_idle.webp",cute:"mint_hamster_cute.webp",walk_forward:"mint_hamster_walk_forward.webp",walk_back:"mint_hamster_walk_back.webp",walk_side:"mint_hamster_walk_side.webp"}
   };
   const PRELOADED_COLORS=new Set();
   function preloadHamsterColor(color){if(PRELOADED_COLORS.has(color)||!COLORS[color])return;PRELOADED_COLORS.add(color);for(const [k,src] of Object.entries(COLORS[color])){if(k==="name"||!src)continue;try{const im=new Image();im.decoding="async";im.src=src}catch(_){}}}
@@ -24478,6 +24491,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const base=fresh;fresh=function(player){return ensureGuardianState(base(player))};
   }
   function guardians(){const s=ensureGuardianState(own());return s?.farmGuardians?.[String(farmNo())]?.hamsters||[]}
+  let guardianTestFarm=0,guardianTestHamsters=[];
+  function visualGuardians(){return guardians().concat(guardianTestFarm===farmNo()?guardianTestHamsters:[])}
   function guardianVisible(){const g=$("gameScreen");return Boolean(g&&!g.classList.contains("hidden")&&!visitContext&&farmNo()>=2&&farmNo()<=4)}
 
   let guardianDirty=false,lastLocal=0,lastCloud=0,raf=0;
@@ -24497,24 +24512,45 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function ensurePetLayer(){
     const game=$("gameScreen");if(!game)return null;let layer=$("r25GuardianPetLayer");if(!layer){layer=document.createElement("div");layer.id="r25GuardianPetLayer";game.appendChild(layer)}return layer;
   }
+  function purgeLegacyGuardianHotspots(layer){
+    if(!layer)return;layer.querySelectorAll("button").forEach(x=>{
+      if(x.id==="r25GuardianHotspot")return;
+      let src="";try{src=String(x.onclick||"")}catch(_){}
+      const css=String(x.getAttribute("style")||"");
+      if(src.includes("สัตว์รักษ์ฟาร์ม")||src.includes("คุณยังไม่มีสัตว์รักษ์ฟาร์ม")||(/left:\s*7%/.test(css)&&/top:\s*69%/.test(css)&&/width:\s*86%/.test(css)&&/height:\s*27%/.test(css))){
+        try{x.remove()}catch(_){}
+      }
+    });
+  }
   function ensureGuardianHotspot(){
-    const layer=$("s2FarmHotspots");if(!layer)return null;let b=$("r25GuardianHotspot");if(!b){b=document.createElement("button");b.id="r25GuardianHotspot";b.type="button";b.setAttribute("aria-label","สัตว์รักษ์ฟาร์ม");b.onclick=showGuardianMenu;layer.appendChild(b)}return b;
+    const layer=$("s2FarmHotspots");if(!layer)return null;purgeLegacyGuardianHotspots(layer);let b=$("r25GuardianHotspot");if(!b){b=document.createElement("button");b.id="r25GuardianHotspot";b.type="button";b.setAttribute("aria-label","สัตว์รักษ์ฟาร์ม");layer.appendChild(b)}b.onclick=showGuardianMenu;return b;
   }
   function mountGuardianUI(){
     const pet=ensurePetLayer(),hot=ensureGuardianHotspot(),show=guardianVisible();
     if(pet)pet.classList.toggle("hidden",!show);if(hot)hot.classList.toggle("hidden",!show);
-    if(show)syncHamsterDom();else if(pet)pet.innerHTML="";
+    if(show)syncHamsterDom();else{if(pet)pet.innerHTML="";guardianTestHamsters=[];guardianTestFarm=0}
   }
   function preview(color){const img=color==="green"?COLORS.green.cute:COLORS[color].idle;return `<span class="r25-hamster-preview" style="background-image:url('${esc(img)}')"></span>`}
   function showGuardianMenu(){
     if(!guardianVisible())return;const n=farmNo(),count=guardians().length;
-    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel"><h2>🐾 สัตว์รักษ์ฟาร์ม</h2><small>ฟาร์ม ${n} • วางแล้ว ${count}/6 ตัว</small><button id="r25ChooseHamster" class="r25-guardian-type" type="button">🐹 <b>แฮมสเตอร์</b><span>เลือกสีและวางบนพื้นทรายด้านล่าง</span></button></section>`;
-    openModal();$("r25ChooseHamster").onclick=showHamsterColors;
+    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel"><h2>🐾 สัตว์รักษ์ฟาร์ม</h2><small>ฟาร์ม ${n} • วางแล้ว ${count}/6 ตัว</small><button id="r25ChooseHamster" class="r25-guardian-type" type="button">🐹 <b>แฮมสเตอร์</b><span>เลือกสีและวางบนพื้นทรายด้านล่าง</span></button>${isAdmin()?'<button id="r26TestHamster" class="r25-guardian-type r26-hamster-test" type="button">🧪 <b>ทดลองแฮมสเตอร์</b><span>ทดสอบการเดิน/ทิศ/แอนิเมชัน โดยไม่บันทึกลงฟาร์มจริง</span></button>':''}</section>`;
+    openModal();$("r25ChooseHamster").onclick=showHamsterColors;const tb=$("r26TestHamster");if(tb)tb.onclick=showHamsterTest;
   }
   function showHamsterColors(){
     const n=farmNo(),count=guardians().length;
     $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel"><h2>🐹 เลือกแฮมสเตอร์</h2><small id="r25GuardianCount">ฟาร์ม ${n} • ${count}/6 ตัว</small><div class="r25-hamster-colors">${Object.entries(COLORS).map(([k,v])=>`<button type="button" data-r25-hamster="${k}" ${count>=6?"disabled":""}>${preview(k)}<b>${v.name}</b></button>`).join("")}</div><p>เดินเล่นเฉพาะพื้นทรายด้านล่าง • สูงสุด 6 ตัวต่อฟาร์ม</p></section>`;
     openModal();document.querySelectorAll("[data-r25-hamster]").forEach(b=>b.onclick=()=>addHamster(b.dataset.r25Hamster));
+  }
+  function makeTestHamsters(count){
+    guardianTestFarm=farmNo();guardianTestHamsters=[];const keys=Object.keys(COLORS);
+    for(let i=0;i<Math.max(1,Math.min(6,Number(count)||1));i++){const p=freePoint(guardianTestHamsters),t=now(),color=keys[i%keys.length];guardianTestHamsters.push({id:`r26-test-${i}-${Date.now()}`,color,x:p.x,y:p.y,fromX:p.x,fromY:p.y,tx:p.x,ty:p.y,mode:"idle",action:i%3===0?"cute":"idle",faceLeft:false,motionStartedAt:0,duration:1800,idleUntil:t+200+i*160,frameSeed:Math.floor(Math.random()*10000),updatedAt:t,r26Test:true})}
+    syncHamsterDom();showWeatherToast?.(`🧪 ทดลองแฮมสเตอร์ ${guardianTestHamsters.length} ตัว • ไม่บันทึก`);
+  }
+  function clearTestHamsters(){guardianTestHamsters=[];guardianTestFarm=0;syncHamsterDom();showWeatherToast?.("🧪 ล้างแฮมสเตอร์ทดลองแล้ว")}
+  function showHamsterTest(){
+    if(!isAdmin()||!guardianVisible())return;
+    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel r26-test-panel"><h2>🧪 ทดลองแฮมสเตอร์</h2><small>เฉพาะ Aida • ตัวทดลองไม่ถูกบันทึกลงข้อมูลจริง</small><div class="r26-test-actions"><button type="button" data-r26-test-count="1">ทดลอง 1 ตัว</button><button type="button" data-r26-test-count="3">ทดลอง 3 ตัว</button><button type="button" data-r26-test-count="6">ทดลอง 6 ตัว</button><button type="button" id="r26ClearHamsterTest">ล้างตัวทดลอง</button></div><p>ใช้เช็กพื้นที่ทราย ทิศทาง เงา การเดินพร้อมกัน และความสมูทของ Sprite</p></section>`;
+    openModal();document.querySelectorAll("[data-r26-test-count]").forEach(b=>b.onclick=()=>{makeTestHamsters(Number(b.dataset.r26TestCount));closeModal?.()});const c=$("r26ClearHamsterTest");if(c)c.onclick=()=>{clearTestHamsters();closeModal?.()};
   }
   function freePoint(existing){
     for(let t=0;t<40;t++){const x=B.minX+4+Math.random()*(B.maxX-B.minX-8),y=B.minY+2+Math.random()*(B.maxY-B.minY-4);if(existing.every(h=>Math.hypot((Number(h.x)||0)-x,(Number(h.y)||0)-y)>7))return{x,y}}
@@ -24530,10 +24566,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return freePoint([]);
   }
   function planWalk(h,all,t){
-    const p=targetFor(h,all),dx=p.x-h.x,dy=p.y-h.y,dist=Math.max(1,Math.hypot(dx,dy));h.fromX=h.x;h.fromY=h.y;h.tx=p.x;h.ty=p.y;h.motionStartedAt=t;h.duration=Math.max(2600,Math.min(6500,dist*310));h.mode="walk";h.faceLeft=dx<0;h.action=Math.abs(dx)>Math.abs(dy)*.82?"walk_side":dy<0?"walk_back":"walk_forward";h.updatedAt=Date.now();guardianDirty=true;
+    const p=targetFor(h,all),dx=p.x-h.x,dy=p.y-h.y,dist=Math.max(1,Math.hypot(dx,dy));h.fromX=h.x;h.fromY=h.y;h.tx=p.x;h.ty=p.y;h.motionStartedAt=t;h.duration=Math.max(2600,Math.min(6500,dist*310));h.mode="walk";h.faceLeft=dx<0;h.action=Math.abs(dx)>Math.abs(dy)*.82?"walk_side":dy<0?"walk_back":"walk_forward";h.updatedAt=Date.now();if(!h.r26Test)guardianDirty=true;
   }
   function syncHamsterDom(){
-    const layer=ensurePetLayer();if(!layer||!guardianVisible())return;const arr=guardians(),ids=new Set(arr.map(h=>h.id));layer.querySelectorAll(".r25-hamster").forEach(el=>{if(!ids.has(el.dataset.hamId))el.remove()});
+    const layer=ensurePetLayer();if(!layer||!guardianVisible())return;const arr=visualGuardians(),ids=new Set(arr.map(h=>h.id));layer.querySelectorAll(".r25-hamster").forEach(el=>{if(!ids.has(el.dataset.hamId))el.remove()});
     arr.forEach(h=>{preloadHamsterColor(h.color);let el=layer.querySelector(`[data-ham-id="${CSS.escape(h.id)}"]`);if(!el){el=document.createElement("div");el.className="r25-hamster";el.dataset.hamId=h.id;el.innerHTML='<span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite"></span>';layer.appendChild(el)}});
   }
   function spriteFrame(el,h,t){
@@ -24542,12 +24578,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function guardianLoop(t){
     try{
       if(guardianVisible()){
-        const clock=now(),arr=guardians(),layer=ensurePetLayer();syncHamsterDom();
+        const clock=now(),arr=visualGuardians(),layer=ensurePetLayer();syncHamsterDom();
         for(const h of arr){
           let rx=h.x,ry=h.y;
           if(h.mode==="walk"){
             const p=Math.max(0,Math.min(1,(clock-h.motionStartedAt)/Math.max(1,h.duration)));const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;rx=h.fromX+(h.tx-h.fromX)*ease;ry=h.fromY+(h.ty-h.fromY)*ease;
-            if(p>=1){h.x=h.tx;h.y=h.ty;h.fromX=h.x;h.fromY=h.y;h.mode="idle";h.action=Math.random()<.28?"cute":"idle";h.idleUntil=clock+900+Math.random()*1700;h.updatedAt=Date.now();guardianDirty=true;rx=h.x;ry=h.y}
+            if(p>=1){h.x=h.tx;h.y=h.ty;h.fromX=h.x;h.fromY=h.y;h.mode="idle";h.action=Math.random()<.28?"cute":"idle";h.idleUntil=clock+900+Math.random()*1700;h.updatedAt=Date.now();if(!h.r26Test)guardianDirty=true;rx=h.x;ry=h.y}
           }else if(clock>=Number(h.idleUntil||0)){planWalk(h,arr,clock)}
           const el=layer?.querySelector(`[data-ham-id="${CSS.escape(h.id)}"]`);if(!el)continue;el.style.left=`${clamp(rx,B.minX,B.maxX)}%`;el.style.top=`${clamp(ry,B.minY,B.maxY)}%`;el.style.zIndex=String(70+Math.round(ry));spriteFrame(el,h,t);
         }
@@ -24565,7 +24601,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const base=draw;draw=function(){const r=base.apply(this,arguments);requestAnimationFrame(()=>{isolateHouseBackground();mountGuardianUI()});return r};
   }
   if(typeof setFarmPlotPage==="function"){
-    const base=setFarmPlotPage;setFarmPlotPage=function(){cloudGuardianSave(false);const r=base.apply(this,arguments);requestAnimationFrame(mountGuardianUI);return r};
+    const base=setFarmPlotPage;setFarmPlotPage=function(){cloudGuardianSave(false);guardianTestHamsters=[];guardianTestFarm=0;const r=base.apply(this,arguments);requestAnimationFrame(mountGuardianUI);return r};
   }
   document.addEventListener("visibilitychange",()=>{
     if(document.hidden){localGuardianSave();cloudGuardianSave(true)}else{setTimeout(()=>{mountGuardianUI();isolateHouseBackground()},45)}
@@ -24575,6 +24611,39 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   setInterval(()=>{try{isolateHouseBackground();mountGuardianUI()}catch(_){}},1200);
   setTimeout(()=>{try{ensureGuardianState(own());mountGuardianUI();isolateHouseBackground()}catch(_){}},120);
-  globalThis.YN_R25={BUILD,fullMarketEntries,ensureGuardianState,isolateHouseBackground};
+  globalThis.YN_R25={BUILD,fullMarketEntries,ensureGuardianState,isolateHouseBackground,showGuardianMenu,showHamsterTest,COLORS};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R26 — PICKUP HARDENING / 5-COLOR GUARDIANS / MARKET IMAGE FALLBACK
+   2026-09-03
+   ====================================================================== */
+(function YN_R26_PICKUP(){
+  "use strict";
+  const BUILD="S2-R26-PICKUP-20260903";
+  const $=id=>document.getElementById(id);
+  const FALLBACK=`data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#f6ead1"/><path d="M17 25h30l-4 25H21z" fill="#c99a5c"/><path d="M23 25c1-9 17-9 18 0" fill="none" stroke="#8b6040" stroke-width="4"/><circle cx="25" cy="35" r="2" fill="#8b6040"/><circle cx="39" cy="35" r="2" fill="#8b6040"/></svg>')}`;
+  function marketFallback(img){if(!img||img.dataset.r26Fallback==="1")return;img.dataset.r26Fallback="1";img.src=FALLBACK;img.classList.add("r26-market-fallback")}
+  function armMarketImages(root=document){root.querySelectorAll?.('#r15MarketPicker img,#s2MarketSlots img,.s2-market-preview').forEach(img=>{if(!img.getAttribute("src")){marketFallback(img);return}img.addEventListener("error",()=>marketFallback(img),{once:true})})}
+  document.addEventListener("error",e=>{const img=e.target;if(img?.tagName==="IMG"&&img.matches?.('#r15MarketPicker img,#s2MarketSlots img,.s2-market-preview'))marketFallback(img)},true);
+  document.addEventListener("pointerup",()=>requestAnimationFrame(()=>armMarketImages()),{passive:true});
+  armMarketImages();
+
+  /* Kill the obsolete empty guardian hotspot at capture phase as a last-line
+     regression guard. The current R25/R26 menu is the only valid owner. */
+  function legacyGuardianButton(b){if(!b||b.id==="r25GuardianHotspot")return false;let src="";try{src=String(b.onclick||"")}catch(_){}const css=String(b.getAttribute?.("style")||"");return src.includes("คุณยังไม่มีสัตว์รักษ์ฟาร์ม")||src.includes("สัตว์รักษ์ฟาร์ม")||(/left:\s*7%/.test(css)&&/top:\s*69%/.test(css)&&/width:\s*86%/.test(css)&&/height:\s*27%/.test(css))}
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("#s2FarmHotspots button");if(!legacyGuardianButton(b))return;e.preventDefault();e.stopImmediatePropagation();try{globalThis.YN_R25?.showGuardianMenu?.()}catch(err){console.warn("R26 guardian redirect",err)}},true);
+  document.addEventListener("click",e=>{const b=e.target.closest?.("#s2FarmHotspots button");if(!legacyGuardianButton(b))return;e.preventDefault();e.stopImmediatePropagation();try{globalThis.YN_R25?.showGuardianMenu?.()}catch(_){}},true);
+
+  /* House-level visual must never bleed into a non-house screen, including
+     spirit animal and Meow-Woof transitions that bypass openScene(). */
+  function sceneIsolation(){const sc=$("sceneScreen");if(!sc)return;const layer=$("sceneInteractiveLayer"),isUpper=currentScene==="house"&&!visitContext&&layer?.dataset?.r17HouseMode!=="basement";if(!isUpper){sc.classList.remove("r23-house-level-bg");sc.style.removeProperty("--r23-house-bg")}}
+  document.addEventListener("pointerup",()=>requestAnimationFrame(sceneIsolation),{passive:true,capture:true});
+  window.addEventListener("pageshow",()=>setTimeout(sceneIsolation,20),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(sceneIsolation,20)},{passive:true});
+
+  globalThis.YN_R26={BUILD,FALLBACK,armMarketImages,sceneIsolation};
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
