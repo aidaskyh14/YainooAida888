@@ -265,7 +265,7 @@ async function loadMembers(){
       const [name,code]=parseLine(row);
       if(name&&code)loaded[name]=code;
     });
-    if(Object.keys(loaded).length)MEMBERS=loaded;
+    if(Object.keys(loaded).length)MEMBERS={...MEMBERS,...loaded}; /* R34.11.12: never wipe approved dynamic login names */
   }catch(error){console.warn("ใช้รายชื่อสำรอง")}
   const loginNames=Object.keys(MEMBERS);
   const adminNames=loginNames.filter(name=>name==="Aida");
@@ -29527,4 +29527,129 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,[data-pen],[data-alpaca-pen],#plotPageNextBtn,#plotPagePrevBtn,[data-s2-farm]"))setTimeout(()=>{discSync(true);renderDisc();repairHouseEntry()},100)},false);
   setTimeout(()=>{repairHouseEntry();publishFromSaveTruth();discSync(true);startDiscLive()},700);
   globalThis.YN_R341111={BUILD,publishFarmTruth,publishFromSaveTruth,discSync,renderDisc,repairHouseEntry};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.11.12 — LOGIN DIRECTORY / SERVER FARM MIRROR / HOTEL FEED ALL
+   2026-09-04
+   - Preserve + live-subscribe approved dynamic login names.
+   - Mirror owner /saves -> /publicFarmState without applying remote save to local play.
+   - Friend viewer reads publicFarmState only after server mirror is established.
+   - Hotel feed-all is standalone and does not depend on older R34.11 globals.
+   ===================================================================== */
+(function YN_R341112_FINAL(){
+  "use strict";
+  const BUILD="S2-R34.11.12-LOGIN-FRIEND-HOTEL-AUTHORITATIVE-20260904";
+  const $=id=>document.getElementById(id);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const tnow=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  const isAdminNow=()=>{try{return typeof isAdmin==="function"?Boolean(isAdmin()):(currentMember==="Aida"||currentMemberKey==="aida")}catch(_){return currentMember==="Aida"||currentMemberKey==="aida"}};
+
+  /* A) LOGIN — retry/live directory. loadMembers() can no longer wipe dynamic rows. */
+  let dirUnsub=null,dirStartBusy=false;
+  function renderDirectoryRows(rows){
+    if(!Array.isArray(rows))return;
+    try{
+      const legacy=new Set(Object.keys(MEMBERS||{}).filter(n=>MEMBERS[n]!=="__S2_DYNAMIC__"));
+      /* Ask the existing V002 directory mapper to rebuild its key maps first when available. */
+      if(typeof window.YN_S2_REFRESH_DIRECTORY==="function"){
+        Promise.resolve(window.YN_S2_REFRESH_DIRECTORY()).catch(()=>{});
+        return;
+      }
+      const sel=$("memberSelect");if(!sel)return;
+      const names=[...legacy];
+      for(const r of rows){if(r?.status==="approved"&&r?.displayName&&!names.includes(String(r.displayName)))names.push(String(r.displayName))}
+      names.sort((a,b)=>a==="Aida"?-1:b==="Aida"?1:a.localeCompare(b,"th"));
+      sel.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'+
+        `<optgroup label="ผู้ดูแลระบบ">${names.filter(n=>n==="Aida").map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`+
+        `<optgroup label="ผู้เล่น">${names.filter(n=>n!=="Aida").map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`;
+    }catch(e){console.warn("R34.11.12 render directory",e)}
+  }
+  async function startDirectoryLive(){
+    if(dirStartBusy)return;dirStartBusy=true;
+    try{
+      const bridge=await getFirebaseBridge();if(!bridge)return;
+      const {db,firestore:fs}=bridge;
+      try{dirUnsub?.()}catch(_){}
+      dirUnsub=fs.onSnapshot(fs.collection(db,"loginDirectory"),snap=>{
+        const rows=[];snap.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+        /* Existing V002 owns S2_DYNAMIC_KEYS; always let it refresh against the same directory. */
+        try{window.YN_S2_REFRESH_DIRECTORY?.()}catch(_){}
+        setTimeout(()=>renderDirectoryRows(rows),30);
+      },e=>console.warn("R34.11.12 directory live",e));
+    }catch(e){console.warn("R34.11.12 directory start",e)}finally{dirStartBusy=false}
+  }
+  async function backfillApprovedDirectory(){
+    if(!isAdminNow()||!cloudReady)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const q=fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","approved"));
+      const snap=await fs.getDocs(q),batch=fs.writeBatch(db);let n=0;
+      for(const d of snap.docs||[]){const a=d.data()||{};if(!a.memberKey||!a.displayName)continue;const ref=fs.doc(db,"loginDirectory",String(a.memberKey));const exists=await fs.getDoc(ref);if(!exists.exists()){batch.set(ref,{memberKey:String(a.memberKey),displayName:String(a.displayName),status:"approved",approvedAt:a.resolvedAt||a.approvedAt||fs.serverTimestamp()},{merge:false});n++}}
+      if(n)await batch.commit();
+      if(n)try{window.YN_S2_REFRESH_DIRECTORY?.()}catch(_){}
+    }catch(e){console.warn("R34.11.12 directory backfill",e)}
+  }
+  /* Firebase may become ready after this IIFE. Retry instead of one-shot startup. */
+  [50,300,900,2000,5000].forEach(ms=>setTimeout(startDirectoryLive,ms));
+  window.addEventListener("pageshow",()=>setTimeout(startDirectoryLive,80),{passive:true});
+
+  /* B) OWNER FARM MIRROR — server save is mirrored to publicFarmState on every server update. */
+  let saveMirrorUnsub=null,mirrorBusy=false,mirrorQueued=null;
+  function hamsFromSave(s){const out={"2":[],"3":[],"4":[]};for(const f of [2,3,4])out[String(f)]=(s?.farmGuardians?.[String(f)]?.hamsters||[]).filter(h=>h?.id).slice(0,6).map(h=>({id:String(h.id),color:String(h.color||"gray"),x:Number(h.x??h.tx??50)||50,y:Number(h.y??h.ty??82)||82,faceLeft:Boolean(h.faceLeft),updatedAt:Number(h.updatedAt)||0}));return out}
+  async function mirrorSaveToPublic(raw){
+    if(!raw||visitContext||!cloudReady||!currentMemberKey)return;
+    if(mirrorBusy){mirrorQueued=cp(raw);return}mirrorBusy=true;
+    try{
+      const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,plots=(Array.isArray(raw.plots)?raw.plots:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));while(plots.length<n)plots.push(typeof emptyPlot==="function"?emptyPlot():{});
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(fs.doc(db,"publicFarmState",currentMemberKey),{
+        memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+        plots:cp(plots),publicHamsters:cp(hamsFromSave(raw)),clientSaveRevision:Number(raw.clientSaveRevision)||0,
+        publicSeq:Date.now(),publicVersion:"R34.11.12-save-mirror",updatedAt:fs.serverTimestamp()
+      },{merge:true});
+    }catch(e){console.warn("R34.11.12 save->public",e)}finally{mirrorBusy=false;if(mirrorQueued){const q=mirrorQueued;mirrorQueued=null;setTimeout(()=>mirrorSaveToPublic(q),30)}}
+  }
+  async function startSaveMirror(){
+    if(!cloudReady||!currentMemberKey||visitContext)return;
+    try{saveMirrorUnsub?.()}catch(_){}
+    try{const {db,fs}=await getFirebaseContext();saveMirrorUnsub=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{if(snap.exists())mirrorSaveToPublic(snap.data()||{})},e=>console.warn("R34.11.12 save mirror listen",e))}catch(e){console.warn("R34.11.12 save mirror",e)}
+  }
+  const initBase112=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase112)initializeOrLoadCloudState=async function(){const r=await initBase112.apply(this,arguments);setTimeout(startSaveMirror,20);setTimeout(backfillApprovedDirectory,120);setTimeout(startDirectoryLive,180);return r};
+
+  /* Friend viewer now uses ONLY the publicFarmState generated from the owner's server save. */
+  let fvUnsub=null;
+  function applyPublicFriend(raw,key,name){
+    if(!visitContext||String(visitContext.memberKey)!==String(key)||!raw)return;
+    const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,a=(Array.isArray(raw.plots)?raw.plots:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));while(a.length<n)a.push(typeof emptyPlot==="function"?emptyPlot():{});
+    state.plots=a;const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:cp(hm[String(f)]||[]),stored:[],removedIds:[]};
+    try{draw?.()}catch(_){};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},20)
+  }
+  visitFriend=async function(key,name){
+    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;
+    try{
+      try{fvUnsub?.()}catch(_){};const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"publicFarmState",key),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(!snap.exists())throw new Error("เพื่อนยังไม่มีข้อมูลฟาร์มสาธารณะ กรุณาให้เพื่อนเข้าเกมหนึ่งครั้งหลังอัปเดต");
+      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};state=typeof fresh==="function"?fresh(name):{};applyPublicFriend(snap.data()||{},key,name);try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){};
+      fvUnsub=fs.onSnapshot(ref,s=>{if(s.exists())applyPublicFriend(s.data()||{},key,name)},e=>console.warn("R34.11.12 friend live",e));
+    }catch(e){message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+
+  /* C) HOTEL FEED ALL — completely standalone implementation. */
+  let feedBusy112=false;
+  function petPen112(s,p){const m=s?.hotelPetPenMap||{};return Math.max(1,Math.min(4,Number(m[String(p?.id)]||p?.hotelPen||1)||1))}
+  function hungry112(s){try{globalThis.YN_R32?.repairHotelPenMap?.(s)}catch(_){}const t=tnow(),dogs=(s?.dogs||[]).filter(p=>p?.placedHotel).map(p=>({kind:"dog",p})),cats=(s?.cats||[]).filter(p=>p?.placedHotel&&Number(p?.placedFarm)===-1).map(p=>({kind:"cat",p}));return dogs.concat(cats).filter(x=>t>=Number(x.p?.nextFeedAt||0))}
+  function dishQty112(s,id){try{return typeof dishCountInState==="function"?Number(dishCountInState(id,s))||0:Number(s?.dishes?.[id]||s?.cooked?.[id]||0)||0}catch(_){return 0}}
+  async function feedChosen112(id){if(feedBusy112||!cloudReady||!currentMemberKey)return;feedBusy112=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,count=0;await fs.runTransaction(db,async tx=>{const ss=await tx.get(ref);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(ss.data(),currentMember),h=hungry112(s);count=h.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องที่หิวแล้ว");if(dishQty112(s,id)<count)throw new Error(`อาหารเมนูนี้ไม่พอ ต้องใช้ ${count} ถาด`);if(typeof removeDishesFromState!=="function"||!removeDishesFromState(s,id,count))throw new Error("หักอาหารไม่สำเร็จ");const t=tnow();for(const x of h)x.p.nextFeedAt=t+(x.kind==="dog"?Number(typeof DOG_HUNGER_MS!=="undefined"?DOG_HUNGER_MS:21600000):Number(typeof CAT_HUNGER_MS!=="undefined"?CAT_HUNGER_MS:21600000));s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};closeModal?.();try{globalThis.YN_R329_HOTEL?.render?.()}catch(_){};showWeatherToast?.(`🍽️ ให้อาหารทั้งหมด ${count} ตัวแล้ว • ใช้ ${count} ถาด`)}catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่")}finally{feedBusy112=false}}
+  function showFeedAll112(){
+    if(visitContext)return;const s=ownState||state,h=hungry112(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมาหรือแมวที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];
+    $("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมด</h2><p>หมา/แมวที่หิว <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><p>เลือกเมนูที่ต้องการใช้เอง ระบบจะไม่สุ่มหยิบเมนูอื่น</p><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=dishQty112(s,r.id);return `<button type="button" data-r341112-food="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r341112FoodCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;openModal();document.querySelectorAll("[data-r341112-food]").forEach(b=>b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();feedChosen112(b.dataset.r341112Food)});$("r341112FoodCancel").onpointerdown=e=>{e.preventDefault();closeModal()};
+  }
+  document.addEventListener("pointerdown",e=>{const b=e.target?.closest?.("#r3411HotelFeedAll");if(!b)return;e.preventDefault();e.stopImmediatePropagation();showFeedAll112()},true);
+  document.addEventListener("click",e=>{if(e.target?.closest?.("#r3411HotelFeedAll")){e.preventDefault();e.stopImmediatePropagation()}},true);
+
+  window.YN_R341112={BUILD,startDirectoryLive,startSaveMirror,showFeedAll:showFeedAll112};
+  window.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
