@@ -27242,7 +27242,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   const BUILD="S2-R34.9.1-EARN-ARENA-RECOVERY-20260904";
   const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
   const HOUR_MS=60*60*1000;
-  const isEarn=()=>String(currentMemberKey||"").toLowerCase()==="earn"||String(currentMember||"").toLowerCase()==="earn";
+  const isEarn=()=>false; /* R34.9.6: obsolete local-only Earn interceptor disabled */
   const live=()=>ownState||state;
   let busy=false;
 
@@ -27374,7 +27374,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   "use strict";
   const BUILD="S2-R34.9.3-EARN-ARENA-NEW-USER-ALPACA-FIX-20260904";
   const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
-  const isEarn=()=>String(currentMemberKey||"").toLowerCase()==="earn"||String(currentMember||"").toLowerCase()==="earn";
+  const isEarn=()=>false; /* R34.9.6: obsolete local-only Earn interceptor disabled */
   let interceptBusy=false;
 
   function completedEarnWin(){
@@ -27438,5 +27438,587 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YN_R3493={BUILD,recover};
+  console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.9.4 — EARN CACHE-BYPASS + ABSOLUTE ARENA RESULT ESCAPE
+   2026-09-04
+   Scope: Earn arena only. No other gameplay systems are changed.
+   - Window-capture intercept runs before every document handler.
+   - Earn's completed win is acknowledged LOCAL-FIRST and the modal closes now.
+   - NO synchronous Firestore write is allowed on this Earn acknowledgement path.
+     This intentionally prevents Missing/insufficient-permissions from trapping UI.
+   - A durable local receipt prevents the exact result from reappearing on reload.
+   - Optional public score mirror is best-effort and never surfaces an error.
+   ===================================================================== */
+(function YN_R3494_EARN_ABSOLUTE_ARENA_ESCAPE(){
+  "use strict";
+  const BUILD="S2-R34.9.4-EARN-CACHE-BYPASS-ARENA-FIX-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isEarn=()=>false; /* R34.9.6: obsolete local-only Earn interceptor disabled */
+  const live=()=>ownState||state;
+  const scoreOf=f=>Math.max(1,Math.min(6,Math.floor(Number(f?.score)||1)));
+  const sig=f=>[Number(f?.startedAt||0),Number(f?.finishAt||0),String(f?.jellyId||""),scoreOf(f)].join(":");
+  const key=()=>`yainoo:r3494:earn-arena:${String(currentMemberKey||"earn").toLowerCase()}`;
+  const read=()=>{try{return JSON.parse(localStorage.getItem(key())||"{}")||{}}catch(_){return {}}};
+  const write=v=>{try{localStorage.setItem(key(),JSON.stringify(v||{}))}catch(_){}};
+  let busy=false;
+
+  function completed(){const f=live()?.arena?.fight;return isEarn()&&f&&f.win&&Number(f.finishAt||0)<=NOW()?f:null}
+  function hardClose(){
+    try{closeModal?.()}catch(_){}
+    try{document.getElementById("modal")?.classList.add("hidden")}catch(_){}
+    try{document.getElementById("modalBackdrop")?.classList.add("hidden")}catch(_){}
+    try{if(currentScene==="jellyfishArena")drawArena?.()}catch(_){}
+  }
+  function localAck(f,reason){
+    const s=live();if(!s||!f)return false;
+    s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+    const signature=sig(f),box=read();
+    box.receipts=box.receipts&&typeof box.receipts==="object"?box.receipts:{};
+    if(!box.receipts[signature]){
+      box.receipts[signature]={score:scoreOf(f),at:Date.now(),reason:String(reason||"ack")};
+      box.score=(Number(box.score)||0)+scoreOf(f);
+    }
+    box.last=signature;box.updatedAt=Date.now();write(box);
+    s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,Number(f.finishAt||NOW())+60*60*1000);
+    s.arena.earnRecovered=s.arena.earnRecovered&&typeof s.arena.earnRecovered==="object"?s.arena.earnRecovered:{};
+    s.arena.earnRecovered.score=Math.max(Number(s.arena.earnRecovered.score)||0,Number(box.score)||0);
+    s.arena.earnRecovered.updatedAt=Date.now();
+    s.arena.fight=null;
+    if(ownState)ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    return true;
+  }
+  async function escape(reason="ack"){
+    if(!isEarn()||busy){hardClose();return false}
+    const f=completed();
+    if(!f){hardClose();return false}
+    busy=true;
+    try{
+      const score=scoreOf(f);localAck(f,reason);hardClose();
+      try{showWeatherToast?.(`🏆 รับ +${score} คะแนนสังเวียนแล้ว`)}catch(_){}
+      /* Optional mirror only. Never await it, never show its error, never reopen UI. */
+      try{
+        const wk=typeof weekKey==="function"?String(weekKey()):"";
+        if(wk&&globalThis.YN_R349?.publishGardenArena349){
+          Promise.resolve(globalThis.YN_R349.publishGardenArena349(score,wk,`r3494-${sig(f)}`)).catch(()=>{});
+        }
+      }catch(_){}
+      return true;
+    }finally{busy=false}
+  }
+
+  function intercept(e){
+    if(!isEarn())return;
+    const claim=e.target?.closest?.("#ynuArenaClaimScore");
+    const close=e.target?.closest?.("#closeModal");
+    if(!claim&&!(close&&document.getElementById("ynuArenaClaimScore")))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(e.type==="pointerdown"||e.type==="click")escape(claim?"receive":"close").catch(()=>hardClose());
+  }
+  window.addEventListener("pointerdown",intercept,true);
+  window.addEventListener("pointerup",intercept,true);
+  window.addEventListener("click",intercept,true);
+
+  /* Never allow the old Earn result to render if this exact receipt was dismissed. */
+  function sweep(){
+    if(!isEarn())return;
+    const f=live()?.arena?.fight;if(!f||!f.win||Number(f.finishAt||0)>NOW())return;
+    const box=read(),signature=sig(f);
+    if(box.receipts?.[signature]){localAck(f,"sweep");hardClose();return}
+  }
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);setTimeout(sweep,0);return r};
+  const checkBase=typeof checkArenaFight==="function"?checkArenaFight:null;
+  if(checkBase)checkArenaFight=async function(){const f=completed();if(f){await escape("pre-render");return}return checkBase.apply(this,arguments)};
+  const resultBase=typeof arenaWinResult==="function"?arenaWinResult:null;
+  if(resultBase)arenaWinResult=function(){const f=completed();if(f){escape("render").catch(()=>hardClose());return}return resultBase.apply(this,arguments)};
+  window.addEventListener("pageshow",()=>setTimeout(sweep,0),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(sweep,0)},{passive:true});
+
+  globalThis.YN_R3494={BUILD,escape};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.9.5 — OWN FARM WORM CLEAR PERMISSION FIX — 2026-09-04
+   Scope: ONLY clearWorm on the signed-in player's own farm.
+   Keep save + garden authoritative in the transaction. publicProfiles is
+   best-effort and can never roll back worm removal.
+   ===================================================================== */
+(function YN_R3495_WORM_CLEAR_FIX(){
+  "use strict";
+  const BUILD="S2-R34.9.5-WORM-CLEAR-PERMISSION-FIX-20260904";
+
+  clearWorm=async function(index){
+    if(!state||visitContext)return;
+    const local=state.plots?.[index];
+    if(!local?.crop||local.phase!=="worm")return;
+    const initialCost=(typeof wormTypeOf==="function"&&wormTypeOf(local)==="giant")?2:1;
+
+    /* Preserve offline/local behaviour exactly. */
+    if(!cloudReady||!currentMemberKey){
+      const crop=CROPS[local.crop],s=ownState||state;
+      s.merit=(Number(s.merit)||0)-initialCost;
+      local.phase="growing2";local.worm=false;
+      try{delete local.wormType}catch(_){}
+      local.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
+      try{incrementOwnMission("clearWorms",1)}catch(_){}
+      save();draw();updateMeritUI();
+      message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${initialCost} กุศล`);
+      return;
+    }
+
+    try{
+      await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      let next=null,newPlots=null,actualCost=initialCost;
+
+      /* Critical mutation only: own save + own public garden plots. */
+      await fs.runTransaction(db,async tx=>{
+        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sSnap.data(),currentMember);
+        assertCurrentCloudSession(sSnap.data(),currentMember);
+        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone);
+        const p=plots[index];
+        if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");
+        actualCost=(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?2:1;
+        const crop=CROPS[p.crop];
+        s.merit=(Number(s.merit)||0)-actualCost;
+        p.phase="growing2";p.worm=false;
+        try{delete p.wormType}catch(_){}
+        p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
+        plots[index]=p;
+        s.plots=plots.map(normalizePlot);
+        try{incrementMissionOn(s,"clearWorms",1)}catch(_){}
+        newPlots=s.plots;next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+
+      ownState=normalizeState(next,currentMember);state=ownState;
+      try{lastGardenHash=plotHash(newPlots)}catch(_){}
+      try{saveLocalOnly(ownState)}catch(_){}
+      updateMeritUI();draw();
+      message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${actualCost} กุศล`);
+
+      /* Non-critical mirror. A permission error here is intentionally ignored. */
+      try{
+        const {db,fs}=await getFirebaseContext();
+        Promise.resolve(fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{
+          memberKey:currentMemberKey,
+          displayName:currentProfileDisplayName(),
+          merit:Number(ownState?.merit)||0,
+          initialized:true,
+          updatedAt:fs.serverTimestamp()
+        },{merge:true})).catch(e=>console.warn("R34.9.5 public profile mirror skipped",e));
+      }catch(_){}
+    }catch(error){
+      console.error("R34.9.5 clear worm",error);
+      message("กำจัดหนอนไม่สำเร็จ",error?.message||"กรุณาลองใหม่");
+    }
+  };
+
+  globalThis.YN_R3495={BUILD};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.9.6 — JELLY ARENA DASHBOARD ATOMIC CLAIM FIX — 2026-09-04
+   Scope: jellyfish arena score claim only.
+   - Dashboard score is authoritative again: a claim succeeds ONLY if the
+     weekly leaderboard write and the member save write succeed atomically.
+   - Repairs legacy/malformed weekly documents by always writing weekKey and
+     normalizing this member's old score to an integer before adding 1..6.
+   - Clears arena.fight in the same transaction, so a successful dashboard
+     commit cannot reopen the result popup.
+   - Replaces the older Earn local-only escape layers above.
+   ===================================================================== */
+(function YN_R3496_ARENA_DASHBOARD_ATOMIC(){
+  "use strict";
+  const BUILD="S2-R34.9.6-ARENA-DASHBOARD-ATOMIC-FIX-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const HOUR_MS=60*60*1000;
+  let busy=false;
+
+  function wk(){try{return String(weekKey?.()||"")}catch(_){return ""}}
+  function scoreOf(f){return Math.max(1,Math.min(6,Math.floor(Number(f?.score)||1)))}
+  function display(){try{return String(currentProfileDisplayName?.()||currentMember||currentMemberKey||"")}catch(_){return String(currentMember||currentMemberKey||"")}}
+
+  async function atomicClaim(){
+    if(busy)return false;
+    const local=(ownState||state)?.arena?.fight;
+    if(!local||!local.win){try{closeModal?.()}catch(_){}return false}
+    if(Number(local.finishAt||0)>NOW())return false;
+    const week=wk();
+    if(!week){message?.("รับคะแนนไม่ได้","ไม่สามารถระบุสัปดาห์ของสังเวียนได้");return false}
+    busy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      const wRef=fs.doc(db,"jellyArenaWeekly",week);
+      let next=null,added=0,total=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,ww]=await Promise.all([tx.get(sRef),tx.get(wRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        const f=s?.arena?.fight;
+        if(!f||!f.win){next=s;return}
+        if(Number(f.finishAt||0)>NOW())throw new Error("ผลการแข่งขันยังไม่พร้อม");
+
+        added=scoreOf(f);
+        const oldDoc=ww.exists()?(ww.data()||{}):{};
+        const oldScores=oldDoc.scores&&typeof oldDoc.scores==="object"&&!Array.isArray(oldDoc.scores)?{...oldDoc.scores}:{};
+        const oldNames=oldDoc.names&&typeof oldDoc.names==="object"&&!Array.isArray(oldDoc.names)?{...oldDoc.names}:{};
+        const prevRaw=oldScores[currentMemberKey];
+        const prev=Number.isFinite(Number(prevRaw))?Math.max(0,Math.floor(Number(prevRaw))):0;
+        total=prev+added;
+        oldScores[currentMemberKey]=total;
+        oldNames[currentMemberKey]=display();
+
+        /* Always set weekKey. R34.9.6 rules allow repairing a missing/wrong
+           legacy weekKey while still limiting members to their own score/name. */
+        tx.set(wRef,{weekKey:week,scores:oldScores,names:oldNames,updatedAt:fs.serverTimestamp()},{merge:true});
+
+        s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+        s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,Number(f.finishAt||NOW())+HOUR_MS);
+        s.arena.lastClaimed={weekKey:week,score:added,total,at:Date.now(),fightStartedAt:Number(f.startedAt)||0,jellyId:String(f.jellyId||"")};
+        s.arena.fight=null;
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next){
+        try{Y26_applyOwnState(next)}catch(_){ownState=next;if(!visitContext)state=next}
+        try{saveLocalOnly?.(next)}catch(_){}
+      }
+      try{closeModal?.()}catch(_){}
+      try{if(currentScene==="jellyfishArena")drawArena?.()}catch(_){}
+      try{showWeatherToast?.(`🏆 รับ +${added} คะแนนแล้ว • Dashboard รวม ${total}`)}catch(_){}
+      return true;
+    }catch(e){
+      console.error("R34.9.6 arena atomic claim",e);
+      message?.("รับคะแนนไม่ได้",`${e?.message||"กรุณาลองใหม่"}<br><small>R34.9.6 • คะแนนจะยังไม่ถูกล้างจนกว่า Dashboard จะบันทึกสำเร็จ</small>`);
+      return false;
+    }finally{busy=false}
+  }
+
+  claimArenaScore=atomicClaim;
+
+  /* The legacy capture handler calls claimArenaScore dynamically. Rebind the
+     visible button too, so both routes converge on exactly one transaction. */
+  const resultBase=typeof arenaWinResult==="function"?arenaWinResult:null;
+  if(resultBase)arenaWinResult=function(){
+    const r=resultBase.apply(this,arguments);
+    setTimeout(()=>{const b=document.getElementById("ynuArenaClaimScore");if(b)b.onclick=atomicClaim},0);
+    return r;
+  };
+
+  globalThis.YN_R3496={BUILD,atomicClaim};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.9.7 — JELLY ARENA OWN-GARDEN SCORE FIX — 2026-09-04
+   Scope: jellyfish arena score claim + arena dashboard only.
+   WHY: shared jellyArenaWeekly writes can be rejected by Firestore rules for
+   one member. Every signed-in member can safely write their own /gardens doc,
+   while all signed-in members may read gardens. Store the authoritative arena
+   weekly score there and build the Dashboard from those per-member records.
+   ===================================================================== */
+(function YN_R3497_ARENA_GARDEN_SCORE(){
+  "use strict";
+  const BUILD="S2-R34.9.7-ARENA-GARDEN-SCORE-FIX-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const HOUR=60*60*1000;
+  let claimBusy=false;
+
+  const esc=x=>typeof safeHtml==="function"?safeHtml(String(x??"")):String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  function week(){try{return String(weekKey?.()||"")}catch(_){return ""}}
+  function scoreOf(f){return Math.max(1,Math.min(6,Math.floor(Number(f?.score)||1)))}
+  function nameOf(){try{return String(currentProfileDisplayName?.()||currentMember||currentMemberKey||"")}catch(_){return String(currentMember||currentMemberKey||"")}}
+  function receiptOf(f){return `${Number(f?.startedAt)||0}:${Number(f?.finishAt)||0}:${String(f?.jellyId||"")}:${scoreOf(f)}`}
+
+  async function claimViaOwnGarden(){
+    if(claimBusy)return false;
+    const local=(ownState||state)?.arena?.fight;
+    if(!local||!local.win){try{closeModal?.()}catch(_){}return false}
+    if(Number(local.finishAt||0)>NOW())return false;
+    const wk=week();if(!wk){message?.("รับคะแนนไม่ได้","ไม่สามารถระบุสัปดาห์การแข่งขันได้");return false}
+    claimBusy=true;
+    const visibleBtn=document.getElementById("ynuArenaClaimScore");
+    if(visibleBtn){visibleBtn.disabled=true;visibleBtn.textContent="กำลังรับคะแนน…"}
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      const legacyRef=fs.doc(db,"jellyArenaWeekly",wk); // read-only migration source
+      let next=null,added=0,total=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg,lw]=await Promise.all([tx.get(saveRef),tx.get(gardenRef),tx.get(legacyRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember),f=s?.arena?.fight;
+        if(!f||!f.win){next=s;return}
+        if(Number(f.finishAt||0)>NOW())throw new Error("ผลการแข่งขันยังไม่พร้อม");
+        added=scoreOf(f);
+        const rid=receiptOf(f);
+        const gd=gg.exists()?(gg.data()||{}):{};
+        const aw=gd.arenaWeekly&&typeof gd.arenaWeekly==="object"&&!Array.isArray(gd.arenaWeekly)?{...gd.arenaWeekly}:{};
+        const same=String(aw.weekKey||"")===wk;
+        const receipts=same&&aw.receipts&&typeof aw.receipts==="object"&&!Array.isArray(aw.receipts)?{...aw.receipts}:{};
+        const gardenPrev=same?Math.max(0,Math.floor(Number(aw.score)||0)):0;
+        const ld=lw.exists()?(lw.data()||{}):{};
+        const legacyPrev=Math.max(0,Math.floor(Number(ld?.scores?.[currentMemberKey])||0));
+        const base=Math.max(gardenPrev,legacyPrev);
+        if(receipts[rid]) total=Math.max(base,gardenPrev);
+        else {receipts[rid]=true;total=base+added}
+        const arenaWeekly={weekKey:wk,score:total,receipts,name:nameOf(),updatedAt:Date.now()};
+        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:nameOf(),arenaWeekly,updatedAt:fs.serverTimestamp()},{merge:true});
+        s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+        s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,Number(f.finishAt||NOW())+HOUR);
+        s.arena.lastClaimed={weekKey:wk,score:added,total,at:Date.now(),fightStartedAt:Number(f.startedAt)||0,jellyId:String(f.jellyId||""),storage:"gardens"};
+        s.arena.fight=null;next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(next){try{Y26_applyOwnState(next)}catch(_){ownState=next;if(!visitContext)state=next}try{saveLocalOnly?.(next)}catch(_){}}
+      try{closeModal?.()}catch(_){}
+      try{if(currentScene==="jellyfishArena")drawArena?.()}catch(_){}
+      try{showWeatherToast?.(`🏆 รับ +${added} คะแนนแล้ว • Dashboard รวม ${total}`)}catch(_){}
+      return true;
+    }catch(e){
+      console.error("R34.9.7 arena garden claim",e);
+      message?.("รับคะแนนไม่ได้",`${e?.message||"กรุณาลองใหม่"}<br><small>R34.9.7 • คะแนนยังไม่ถูกล้าง</small>`);
+      return false;
+    }finally{
+      claimBusy=false;
+      const b=document.getElementById("ynuArenaClaimScore");if(b){b.disabled=false;b.textContent="รับคะแนน"}
+    }
+  }
+
+  /* Replace every dynamic route with the own-garden claim. */
+  claimArenaScore=claimViaOwnGarden;
+
+  /* Mobile hard-bind at WINDOW capture phase. This fires before old document
+     listeners and before onclick, fixing the video symptom where tapping the
+     visible Receive Score button produced no action. */
+  let lastTap=0;
+  function intercept(e){
+    const target=e.target?.closest?.("#ynuArenaClaimScore");
+    const closing=e.target?.closest?.("#closeModal")&&document.getElementById("ynuArenaClaimScore");
+    if(!target&&!closing)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();
+    const now=Date.now();if(now-lastTap<450)return;lastTap=now;
+    claimViaOwnGarden();
+  }
+  window.addEventListener("pointerup",intercept,true);
+  window.addEventListener("click",intercept,true);
+
+  const winBase=typeof arenaWinResult==="function"?arenaWinResult:null;
+  if(winBase)arenaWinResult=function(){
+    const r=winBase.apply(this,arguments);
+    setTimeout(()=>{const b=document.getElementById("ynuArenaClaimScore");if(b){b.disabled=false;b.onclick=claimViaOwnGarden}},0);
+    return r;
+  };
+
+  /* Dashboard: read all per-member garden arenaWeekly records. Also read the
+     old shared weekly doc as a migration fallback and take max per member so
+     previous points do not disappear. */
+  showArenaDashboard=async function(){
+    if(typeof arenaBoardUnsub!=="undefined"&&arenaBoardUnsub){try{arenaBoardUnsub()}catch(_){}arenaBoardUnsub=null}
+    $("modalContent").innerHTML=`<section class="feature-panel ynu-arena-dashboard"><div class="ynu-arena-dash-title"><span>🏆</span><div><h2>คะแนนมวยทะเล</h2><p>คะแนนสะสมประจำสัปดาห์ • รีเซ็ตทุกวันพุธ เวลา 12:00 น.</p></div></div><div id="ynuArenaRows" class="ynu-score-table"><p class="r29-empty">กำลังโหลดคะแนน…</p></div></section>`;
+    openModal();
+    try{
+      const {db,fs}=await getFirebaseContext(),wk=week();
+      const [gardensSnap,legacySnap]=await Promise.all([fs.getDocs(fs.collection(db,"gardens")),fs.getDoc(fs.doc(db,"jellyArenaWeekly",wk)).catch(()=>null)]);
+      const scores={},names={};
+      if(legacySnap?.exists?.()){
+        const d=legacySnap.data()||{};Object.entries(d.scores||{}).forEach(([k,v])=>scores[k]=Math.max(0,Math.floor(Number(v)||0)));Object.assign(names,d.names||{});
+      }
+      gardensSnap.forEach(doc=>{
+        const d=doc.data()||{},aw=d.arenaWeekly||{};if(String(aw.weekKey||"")!==wk)return;
+        const k=String(d.memberKey||doc.id),v=Math.max(0,Math.floor(Number(aw.score)||0));
+        scores[k]=Math.max(Number(scores[k])||0,v);names[k]=String(aw.name||d.displayName||names[k]||k);
+      });
+      const keys=new Set([...Object.keys(scores),...Object.keys(names)]);
+      const rows=[...keys].map(k=>({key:k,name:names[k]||k,score:Number(scores[k])||0})).filter(x=>x.key!=="aida"&&x.score>0).sort((a,b)=>b.score-a.score||String(a.name).localeCompare(String(b.name),"th"));
+      const box=$("ynuArenaRows");if(box)box.innerHTML=`<div class="head"><b>อันดับ</b><b>ชื่อ</b><b>คะแนน</b></div>${rows.length?rows.map((r,i)=>`<div class="ynu-rank-row rank-${i+1}"><span class="ynu-rank-no">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span>${esc(r.name)}</span><strong>${r.score}</strong></div>`).join(""):'<p class="r29-empty">ยังไม่มีคะแนนสัปดาห์นี้ค่ะ</p>'}`;
+    }catch(e){console.warn("R34.9.7 arena dashboard",e);const box=$("ynuArenaRows");if(box)box.innerHTML='<p class="r29-empty">โหลด Rank ไม่สำเร็จ กรุณาลองใหม่</p>'}
+  };
+
+  globalThis.YN_R3497={BUILD,claimViaOwnGarden};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* S2 R34.9.8 — DEPLOY LOAD FIX: canonical game.js filename + cache-busting index query. */
+(function(){globalThis.YAINOO_BUILD="S2-R34.9.8-GLOBAL-ARENA-LOAD-FIX-20260904";console.info(globalThis.YAINOO_BUILD,"loaded");})();
+
+/* =====================================================================
+   S2 R34.9.9 — INSTANT ARENA AUTO-SCORE — 2026-09-04
+   Scope: jellyfish arena battle resolution only.
+   - No 3-minute wait.
+   - No Receive Score / Accept Result buttons.
+   - Result is resolved and persisted immediately when Start Battle is tapped.
+   - Win score is written atomically to the member's own gardens/{memberKey}
+     arenaWeekly record and the save; loss penalty is written to the save.
+   - The old arena fight popup state is not created at all for new fights.
+   ===================================================================== */
+(function YN_R3499_INSTANT_ARENA(){
+  "use strict";
+  const BUILD="S2-R34.9.9-INSTANT-ARENA-AUTO-SCORE-20260904";
+  const NOW9=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const HOUR9=60*60*1000;
+  let busy9=false;
+
+  function week9(){try{return String(weekKey?.()||"")}catch(_){return ""}}
+  function name9(){try{return String(currentProfileDisplayName?.()||currentMember||currentMemberKey||"")}catch(_){return String(currentMember||currentMemberKey||"")}}
+  function score9(n){return Math.max(1,Math.min(6,Math.floor(Number(n)||1)))}
+  function receipt9(now,jellyId,score){return `instant:${now}:${String(jellyId||"")}:${score9(score)}`}
+
+  async function finalizeLegacyPending9(){
+    const f=(ownState||state)?.arena?.fight;
+    if(!f)return false;
+    /* Old completed fights from previous builds are auto-finished now too. */
+    if(Number(f.finishAt||0)>NOW9())f.finishAt=NOW9();
+    if(f.win){
+      if(typeof globalThis.YN_R3497?.claimViaOwnGarden==="function"){
+        await globalThis.YN_R3497.claimViaOwnGarden();
+        return true;
+      }
+      if(typeof claimArenaScore==="function"){
+        await claimArenaScore();
+        return true;
+      }
+    }else{
+      try{
+        const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;
+        await fs.runTransaction(db,async tx=>{
+          const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+          const s=normalizeState(snap.data(),currentMember),x=s?.arena?.fight;if(!x)return;
+          if(!x.penaltyApplied)s.merit=(Number(s.merit)||0)-100;
+          s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,NOW9()+HOUR9);
+          s.arena.fight=null;next=s;
+          tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        });
+        if(next){try{Y26_applyOwnState(next)}catch(_){ownState=next;if(!visitContext)state=next}try{saveLocalOnly?.(next)}catch(_){}try{updateMeritUI?.()}catch(_){}}
+        try{closeModal?.()}catch(_){};try{drawArena?.()}catch(_){}
+        try{showWeatherToast?.("🥊 แพ้การแข่งขัน • -100 กุศล") }catch(_){}
+        return true;
+      }catch(e){console.warn("R34.9.9 legacy loss finalize",e);return false}
+    }
+    return false;
+  }
+
+  startArenaFight=async function(){
+    if(busy9)return;
+    if(!arenaChoice?.jelly||arenaChoice.opp==null||!arenaChoice.move){
+      return message?.("ยังเลือกไม่ครบ","เลือกแมงกะพรุนของเรา คู่แข่ง และท่าต่อสู้ก่อนค่ะ");
+    }
+    busy9=true;
+    const startBtn=document.getElementById("ynuArenaStart");if(startBtn){startBtn.disabled=true;startBtn.textContent="กำลังตัดสิน…"}
+    try{
+      await settlePendingCloudSave?.();
+      await syncArenaFromCloud?.();
+      if((ownState||state)?.arena?.fight){await finalizeLegacyPending9();return}
+
+      const now=NOW9();
+      const out=arenaOutcome(arenaChoice.opp,arenaChoice.move);
+      const added=out.win?score9(out.score):0;
+      const wk=week9();
+      if(out.win&&!wk)throw new Error("ไม่สามารถระบุสัปดาห์การแข่งขันได้");
+
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey);
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      const legacyRef=out.win?fs.doc(db,"jellyArenaWeekly",wk):null;
+      let next=null,total=0;
+
+      await fs.runTransaction(db,async tx=>{
+        const reads=[tx.get(saveRef),tx.get(gardenRef)];
+        if(legacyRef)reads.push(tx.get(legacyRef));
+        const snaps=await Promise.all(reads),ss=snaps[0],gg=snaps[1],lw=legacyRef?snaps[2]:null;
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        try{assertCurrentCloudSession?.(ss.data(),currentMember)}catch(e){throw e}
+        resetDailyExtras?.(s);
+        if(s.arena?.fight)throw new Error("มีผลการแข่งขันเก่าค้างอยู่ กรุณากดเริ่มอีกครั้ง");
+        if((Number(s.arena?.dailyCount)||0)>=5)throw new Error("วันนี้แข่งขันครบ 5 รอบแล้วค่ะ");
+        if(Number(s.arena?.cooldownUntil||0)>now)throw new Error(`ยังไม่ถึงเวลาแข่งขันรอบถัดไป\nกลับมาใหม่อีก ${fmt(Number(s.arena.cooldownUntil)-now)} นาที`);
+
+        s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+        s.arena.dailyCount=(Number(s.arena.dailyCount)||0)+1;
+        try{incrementMissionOn?.(s,"dailySeaArenaFight",1)}catch(_){}
+        s.arena.cooldownUntil=now+HOUR9;
+        s.arena.fight=null;
+
+        if(out.win){
+          const gd=gg.exists()?(gg.data()||{}):{};
+          const aw=gd.arenaWeekly&&typeof gd.arenaWeekly==="object"&&!Array.isArray(gd.arenaWeekly)?{...gd.arenaWeekly}:{};
+          const same=String(aw.weekKey||"")===wk;
+          const receipts=same&&aw.receipts&&typeof aw.receipts==="object"&&!Array.isArray(aw.receipts)?{...aw.receipts}:{};
+          const gardenPrev=same?Math.max(0,Math.floor(Number(aw.score)||0)):0;
+          const legacyData=lw?.exists?.()?(lw.data()||{}):{};
+          const legacyPrev=Math.max(0,Math.floor(Number(legacyData?.scores?.[currentMemberKey])||0));
+          const base=Math.max(gardenPrev,legacyPrev),rid=receipt9(now,arenaChoice.jelly.id,added);
+          if(!receipts[rid]){receipts[rid]=true;total=base+added}else total=base;
+          tx.set(gardenRef,{memberKey:currentMemberKey,displayName:name9(),arenaWeekly:{weekKey:wk,score:total,receipts,name:name9(),updatedAt:Date.now()},updatedAt:fs.serverTimestamp()},{merge:true});
+          s.arena.lastClaimed={weekKey:wk,score:added,total,at:Date.now(),fightStartedAt:now,jellyId:String(arenaChoice.jelly.id||""),storage:"gardens",instant:true};
+        }else{
+          s.merit=(Number(s.merit)||0)-100;
+          s.arena.lastResult={win:false,score:0,penalty:100,at:Date.now(),instant:true};
+        }
+
+        next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next){try{Y26_applyOwnState(next)}catch(_){ownState=next;if(!visitContext)state=next}try{saveLocalOnly?.(next)}catch(_){}try{updateMeritUI?.()}catch(_){}}
+      try{closeModal?.()}catch(_){}
+      try{drawArena?.()}catch(_){}
+      if(out.win){
+        try{showWeatherToast?.(`🏆 ชนะ! +${added} คะแนน • Dashboard รวม ${total}`)}catch(_){}
+      }else{
+        try{showWeatherToast?.("🥊 แพ้การแข่งขัน • -100 กุศล") }catch(_){}
+      }
+    }catch(e){
+      console.error("R34.9.9 instant arena",e);
+      message?.("เริ่มต่อสู้ไม่ได้",String(e?.message||e||"กรุณาลองใหม่").replace(/\n/g,"<br>"));
+    }finally{
+      busy9=false;
+      const b=document.getElementById("ynuArenaStart");if(b){b.disabled=false;b.textContent="เริ่มการต่อสู้"}
+    }
+  };
+
+  /* Rebind after every arena draw so the Start button always reaches R34.9.9. */
+  const drawBase9=typeof drawArena==="function"?drawArena:null;
+  if(drawBase9)drawArena=function(){
+    const r=drawBase9.apply(this,arguments);
+    const b=document.getElementById("ynuArenaStart");if(b)b.onclick=startArenaFight;
+    return r;
+  };
+
+  /* If an old 3-minute fight is encountered, resolve it immediately instead of
+     showing the countdown/result-claim flow. */
+  const statusBase9=typeof arenaStatus==="function"?arenaStatus:null;
+  if(statusBase9)arenaStatus=function(){finalizeLegacyPending9().catch(e=>console.warn("R34.9.9 legacy pending",e))};
+  const checkBase9=typeof checkArenaFight==="function"?checkArenaFight:null;
+  if(checkBase9)checkArenaFight=async function(){
+    if((ownState||state)?.arena?.fight)return finalizeLegacyPending9();
+    return checkBase9.apply(this,arguments);
+  };
+
+  globalThis.YN_R3499={BUILD,startArenaFight,finalizeLegacyPending9};
+  globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
