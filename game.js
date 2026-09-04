@@ -8826,22 +8826,40 @@ async function v15AcceptSolo(slotIndex){
 }
 async function v15SendSolo(slotIndex,reqId){
   try{
-    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState;
+    if(v15SendSolo._busy)return;v15SendSolo._busy=true;
+    const live=normalizeState(cloneData(ownState||state),currentMember),{db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey());
+    let consumeReq=null,consumeQty=0;
     await fs.runTransaction(db,async tx=>{
-      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex],s=normalizeState(sSnap.data(),currentMember);if(!slot||slot.status!=="active"||slot.ownerKey!==currentMemberKey)throw new Error("คุณไม่ได้เป็นผู้รับภารกิจนี้");if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
-      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error("ไม่พบเสบียงนี้");const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,req.qty-sent),have=v15ReqHave(s,req),qty=Math.min(remain,have);if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");if(!v15ConsumeReq(s,req,qty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;if(v15AllReqDone(slot))slot.status="completed";nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      const dSnap=await tx.get(dayRef);if(!dSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
+      const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex];
+      if(!slot||slot.status!=="active"||slot.ownerKey!==currentMemberKey)throw new Error("คุณไม่ได้เป็นผู้รับภารกิจนี้");if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
+      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error("ไม่พบเสบียงนี้");
+      const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,req.qty-sent),have=v15ReqHave(live,req),qty=Math.min(remain,have);if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");
+      slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;if(v15AllReqDone(slot))slot.status="completed";consumeReq=req;consumeQty=qty;
+      tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
     });
-    ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);showWeatherToast("🍱 ส่งเสบียงแล้ว");
+    if(!consumeReq||consumeQty<=0)throw new Error("ไม่พบรายการที่จะส่ง");
+    const next=normalizeState(cloneData(ownState||state),currentMember);if(!v15ConsumeReq(next,consumeReq,consumeQty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");
+    ownState=next;if(!visitContext)state=next;saveLocalOnly(next);try{save()}catch(_){};try{await flushCloudSave?.()}catch(e){console.warn("R34.11.6 temple inventory flush",e)}
+    showWeatherToast(`🍱 ส่งเสบียงแล้ว ×${consumeQty}`);
   }catch(error){message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}
+  finally{v15SendSolo._busy=false}
 }
 async function v15ClaimSolo(slotIndex){
   try{
-    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,reward=0;
+    if(v15ClaimSolo._busy)return;v15ClaimSolo._busy=true;
+    const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let reward=0;
     await fs.runTransaction(db,async tx=>{
-      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex],s=normalizeState(sSnap.data(),currentMember);if(!slot||slot.status!=="completed"||slot.ownerKey!==currentMemberKey)throw new Error("ยังรับรางวัลไม่ได้");reward=Number(slot.reward)||50;s.merit=(Number(s.merit)||0)+reward;incrementMissionOn(s,"templeSoloSuccess",1);slot.status="cooldown";slot.lastResult="success";slot.cooldownUntil=gameNow()+V15_SOLO_COOLDOWN_MS;slot.requirements=[];slot.sent={};next=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      const dSnap=await tx.get(dayRef);if(!dSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
+      const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex];if(!slot||slot.status!=="completed"||slot.ownerKey!==currentMemberKey)throw new Error("ยังรับรางวัลไม่ได้");
+      reward=Number(slot.reward)||50;slot.status="cooldown";slot.lastResult="success";slot.cooldownUntil=gameNow()+V15_SOLO_COOLDOWN_MS;slot.requirements=[];slot.sent={};
+      tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
     });
-    ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();message("ยินดีด้วยค่ะ คุณทำภารกิจสำเร็จ",`ได้รับ +${reward} กุศล<br>ภารกิจใหม่กำลังมาใน 10.00 นาที`);
+    const next=normalizeState(cloneData(ownState||state),currentMember);next.merit=(Number(next.merit)||0)+reward;incrementMissionOn(next,"templeSoloSuccess",1);ownState=next;if(!visitContext)state=next;saveLocalOnly(next);try{save()}catch(_){};try{await flushCloudSave?.()}catch(_){}
+    try{await fs.setDoc(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:next.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11.6 temple profile",e)}
+    updateMeritUI();message("ยินดีด้วยค่ะ คุณทำภารกิจสำเร็จ",`ได้รับ +${reward} กุศล<br>ภารกิจใหม่กำลังมาใน 10.00 นาที`);
   }catch(error){message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่")}
+  finally{v15ClaimSolo._busy=false}
 }
 function v15GroupCard(slot,i){
   const now=gameNow(),parts=Array.isArray(slot.participants)?slot.participants:[],me=parts.some(p=>p.key===currentMemberKey);
@@ -8894,64 +8912,18 @@ async function v15JoinGroup(slotIndex){
 }
 async function v15SendGroup(slotIndex,reqId){
   try{
-    await settlePendingCloudSave();
-    const {db,fs}=await getFirebaseContext(),
-          dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),
-          saveRef=fs.doc(db,"saves",currentMemberKey);
-    let nextState,completedNow=false;
-
+    if(v15SendGroup._busy)return;v15SendGroup._busy=true;
+    const live=normalizeState(cloneData(ownState||state),currentMember),{db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey());let consumeReq=null,consumeQty=0,completedNow=false;
     await fs.runTransaction(db,async tx=>{
-      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);
-      if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
-
-      const day=v15RefreshTempleDay(cloneData(dSnap.data())),
-            slot=day.groupSlots[slotIndex],
-            s=normalizeState(sSnap.data(),currentMember);
-
-      if(!slot||slot.status!=="active")throw new Error("ภารกิจนี้ยังไม่เริ่มหรือจบแล้ว");
-      if(!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error("คุณไม่ได้อยู่ในทีมนี้");
-      if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
-
-      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);
-      if(!req)throw new Error("ไม่พบเสบียงนี้");
-
-      const sent=Number(slot.sent?.[reqId])||0,
-            remain=Math.max(0,req.qty-sent),
-            have=v15ReqHave(s,req),
-            qty=Math.min(remain,have);
-
-      if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");
-      if(!v15ConsumeReq(s,req,qty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");
-
-      slot.sent=slot.sent||{};
-      slot.sent[reqId]=sent+qty;
-
-      /* ถ้าของชิ้นนี้ทำให้ครบทุก requirement:
-         สร้างผลสำเร็จ + เริ่ม cooldown 15 นาทีทันทีใน transaction เดียวกัน */
-      if(v15AllReqDone(slot)){
-        completedNow=v15CompleteGroupSlot(day,slot,slotIndex,gameNow());
-      }
-
-      nextState=s;
-      tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
-      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      const dSnap=await tx.get(dayRef);if(!dSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.groupSlots[slotIndex];
+      if(!slot||slot.status!=="active")throw new Error("ภารกิจนี้ยังไม่เริ่มหรือจบแล้ว");if(!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error("คุณไม่ได้อยู่ในทีมนี้");if(gameNow()>=slot.deadlineAt)throw new Error("หมดเวลาภารกิจแล้ว");
+      const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error("ไม่พบเสบียงนี้");const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,req.qty-sent),have=v15ReqHave(live,req),qty=Math.min(remain,have);if(qty<=0)throw new Error("ของในกระเป๋าไม่พอ");
+      slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;consumeReq=req;consumeQty=qty;if(v15AllReqDone(slot))completedNow=v15CompleteGroupSlot(day,slot,slotIndex,gameNow());tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
     });
-
-    ownState=normalizeState(nextState,currentMember);
-    state=ownState;
-    saveLocalOnly(ownState);
-
-    if(completedNow){
-      /* ผู้ส่งคนสุดท้ายรับส่วนแบ่งทันที และสมาชิกคนอื่นจะรับผ่าน
-         realtime/outcome sync โดยไม่ต้องรอ timer 45 นาที */
-      await v15ApplyOwnTempleOutcomes();
-      showWeatherToast("✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที");
-    }else{
-      showWeatherToast("🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว");
-    }
-  }catch(error){
-    message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่");
-  }
+    const next=normalizeState(cloneData(ownState||state),currentMember);if(!v15ConsumeReq(next,consumeReq,consumeQty))throw new Error("หักของจากกระเป๋าไม่สำเร็จ");ownState=next;if(!visitContext)state=next;saveLocalOnly(next);try{save()}catch(_){};try{await flushCloudSave?.()}catch(_){}
+    if(completedNow){await v15ApplyOwnTempleOutcomes();showWeatherToast("✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที")}else showWeatherToast(`🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว ×${consumeQty}`);
+  }catch(error){message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}
+  finally{v15SendGroup._busy=false}
 }
 
 const __renderSceneBeforeTempleV15=renderScene;
@@ -20166,11 +20138,12 @@ console.info("V291 maintenance mode loaded");
   "use strict";
   const HOUR=60*60*1000, BREAK_MS=8*HOUR;
   const MATERIALS={
-    materialStone:{name:"หิน",image:"item-stone.png",need:100},
-    materialWood:{name:"ไม้",image:"item-wood.png",need:100},
-    materialSteel:{name:"เหล็ก",image:"item-steel.png",need:50},
-    materialRope:{name:"เชือก",image:"item-rope.png",need:50}
+    stone:{name:"ก้อนหิน",image:"item-stone.png",need:100},
+    wood:{name:"เนื้อไม้",image:"item-wood.png",need:100},
+    steel:{name:"เหล็ก",image:"item-steel.png",need:50},
+    rope:{name:"เชือก",image:"item-rope.png",need:50}
   };
+  const LEGACY_MATERIAL_KEYS={stone:"materialStone",wood:"materialWood",steel:"materialSteel",rope:"materialRope"};
   const isS2Admin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
   const int=x=>Math.max(0,Math.floor(Number(x)||0));
   const activeState=()=>ownState||state;
@@ -20181,8 +20154,15 @@ console.info("V291 maintenance mode loaded");
   const normalizeBase=normalizeState;
   normalizeState=function(raw,player){
     const s=normalizeBase(raw,player);s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
-    Object.keys(MATERIALS).forEach(k=>s.specials[k]=int(s.specials[k]));
-    if(isS2Admin())Object.keys(MATERIALS).forEach(k=>s.specials[k]=9999);
+    s.warehouseTools=s.warehouseTools&&typeof s.warehouseTools==="object"?s.warehouseTools:{};
+    /* R34.11.8: one canonical stock only. Legacy Season-2 materialStone/materialWood/
+       materialSteel/materialRope are migrated into warehouseTools and removed from specials.
+       Use max(), not sum(), because old builds sometimes mirrored the same stock twice. */
+    for(const [tool,legacy] of Object.entries(LEGACY_MATERIAL_KEYS)){
+      const canonical=int(s.warehouseTools[tool]),oldQty=int(s.specials[legacy]);
+      s.warehouseTools[tool]=isS2Admin()?9999:Math.max(canonical,oldQty);
+      if(Object.prototype.hasOwnProperty.call(s.specials,legacy))delete s.specials[legacy];
+    }
     if(s.alpaca&&Array.isArray(s.alpaca.pens)){
       while(s.alpaca.pens.length<5)s.alpaca.pens.push({name:`คอกอัลปาก้า ${s.alpaca.pens.length+1}`,happiness:0,happinessMedicineUses:0,trough:Array(16).fill(null),alpacas:[],events:[],eventClock:{}});
       s.alpaca.pens=s.alpaca.pens.slice(0,5).map((p,i)=>{p=p&&typeof p==="object"?p:{};p.name=String(p.name||`คอกอัลปาก้า ${i+1}`);p.trough=Array.isArray(p.trough)?p.trough.slice(0,16):[];while(p.trough.length<16)p.trough.push(null);if(!Number.isFinite(Number(p.lastVisitedAt)))p.lastVisitedAt=gameNow();p.lastVisitedAt=Number(p.lastVisitedAt)||gameNow();p.broken=Boolean(p.broken);return p});
@@ -20192,7 +20172,9 @@ console.info("V291 maintenance mode loaded");
   try{if(ownState)applyState(ownState);if(state&&!ownState)state=normalizeState(state,currentMember)}catch(e){console.warn("S2 alpaca migration",e)}
 
   try{
-    Object.entries(MATERIALS).forEach(([key,m])=>{if(typeof SPECIAL_ITEMS==="object"&&!SPECIAL_ITEMS[key])SPECIAL_ITEMS[key]={name:m.name,image:m.image,kind:"material",group:"season2Material"}});
+    /* Materials live only in กระเป๋าผี > อุปกรณ์การคลัง. Remove the duplicate
+       legacy cards from ของพิเศษ so repair/upgrade/craft all read one stock. */
+    ["materialStone","materialWood","materialSteel","materialRope"].forEach(k=>{if(typeof SPECIAL_ITEMS==="object"&&SPECIAL_ITEMS[k])delete SPECIAL_ITEMS[k]});
   }catch{}
 
   async function mutateSave(mutator){
@@ -20217,15 +20199,15 @@ console.info("V291 maintenance mode loaded");
   }
 
   function repairRows(){
-    const s=activeState();return Object.entries(MATERIALS).map(([k,m])=>{const have=int(s?.specials?.[k]),ok=have>=m.need;return `<article class="s2-repair-item ${ok?"ready":"missing"}"><img src="${m.image}" alt="${safeHtml(m.name)}"><div><b>${safeHtml(m.name)}</b><small>มี ${have.toLocaleString("th-TH")}</small></div><strong>${m.need}</strong></article>`}).join("")
+    const s=activeState();return Object.entries(MATERIALS).map(([k,m])=>{const have=int(s?.warehouseTools?.[k]),ok=have>=m.need;return `<article class="s2-repair-item ${ok?"ready":"missing"}"><img src="${m.image}" alt="${safeHtml(m.name)}"><div><b>${safeHtml(m.name)}</b><small>มี ${have.toLocaleString("th-TH")}</small></div><strong>${m.need}</strong></article>`}).join("")
   }
   function showRepair(){
-    const n=currentPenNo(),p=activeState()?.alpaca?.pens?.[n-1];if(!p?.broken)return;const enough=Object.entries(MATERIALS).every(([k,m])=>int(activeState()?.specials?.[k])>=m.need);
+    const n=currentPenNo(),p=activeState()?.alpaca?.pens?.[n-1];if(!p?.broken)return;const enough=Object.entries(MATERIALS).every(([k,m])=>int(activeState()?.warehouseTools?.[k])>=m.need);
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel s2-repair-panel"><div class="alpaca-panel-hero"><img class="alpaca-hero-icon" src="decor-broken-pen.png" alt=""><div><h2>ซ่อมคอก ${n}</h2><p>ต้องซ่อมก่อนจึงจะใช้งานคอกได้</p></div></div><div class="s2-repair-grid">${repairRows()}</div><button id="s2RepairConfirm" class="primary-spooky-action" type="button" ${enough?"":"disabled"}>ซ่อมคอก</button><button id="s2RepairClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();$("s2RepairConfirm").onclick=repairPen;$("s2RepairClose").onclick=closeModal;
   }
   async function repairPen(){
     const n=currentPenNo(),b=$("s2RepairConfirm");if(b){b.disabled=true;b.textContent="กำลังซ่อม..."}
-    try{await mutateSave(s=>{const p=s.alpaca?.pens?.[n-1];if(!p?.broken)throw new Error("คอกนี้ซ่อมแล้ว");for(const [k,m] of Object.entries(MATERIALS))if(int(s.specials?.[k])<m.need)throw new Error(`${m.name}ไม่พอ`);for(const [k,m] of Object.entries(MATERIALS))s.specials[k]=int(s.specials[k])-m.need;p.broken=false;p.lastVisitedAt=gameNow()});closeModal();paintBroken();showWeatherToast?.(`🔨 ซ่อมคอก ${n} สำเร็จแล้ว`)}catch(e){message("ซ่อมคอกไม่ได้",e.message||"วัตถุดิบไม่ครบ")}
+    try{await mutateSave(s=>{const p=s.alpaca?.pens?.[n-1];if(!p?.broken)throw new Error("คอกนี้ซ่อมแล้ว");s.warehouseTools=s.warehouseTools&&typeof s.warehouseTools==="object"?s.warehouseTools:{};for(const [k,m] of Object.entries(MATERIALS))if(int(s.warehouseTools?.[k])<m.need)throw new Error(`${m.name}ไม่พอ`);for(const [k,m] of Object.entries(MATERIALS))s.warehouseTools[k]=int(s.warehouseTools[k])-m.need;p.broken=false;p.lastVisitedAt=gameNow();s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1});closeModal();paintBroken();showWeatherToast?.(`🔨 ซ่อมคอก ${n} สำเร็จแล้ว`)}catch(e){message("ซ่อมคอกไม่ได้",e.message||"วัตถุดิบไม่ครบ")}
   }
 
   /* Broken pens block every pen action except leaving/switching pens and repairing. */
@@ -21507,11 +21489,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     showWeatherToast?.(`🔨 ซ่อมคอก ${n} สำเร็จแล้ว`);
     try{queueCloudSave();setTimeout(()=>flushCloudSave().catch(err=>{console.error("fast repair save",err);message("บันทึกการซ่อมไม่สำเร็จ","ระบบจะลองบันทึกอีกครั้งเมื่อเชื่อมต่อค่ะ")}),0)}catch(err){console.error("fast repair queue",err)}
   }
-  document.addEventListener("click",e=>{
-    const btn=e.target?.closest?.("#s2RepairConfirm");if(!btn)return;
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-    btn.disabled=true;btn.textContent="ซ่อมแล้ว";fastRepair();
-  },true);
+  /* R34.11.7: removed stale local-first repair interceptor. The original repairPen()
+     above is the only repair path and commits inventory + broken=false atomically. */
 
   setTimeout(installJellyClickMap,100);
   window.YAINOO_BUILD="S2-FOLLOWUP-JELLY-PET-REPAIR";
@@ -23212,43 +23191,44 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return s;
   }
   function queueMissionCloud(s,id,delta){
-    if(!cloudReady||!currentMemberKey||!s||!delta)return;const memberKey=String(currentMemberKey),action=String(id||"");
+    if(!cloudReady||!currentMemberKey||!delta)return;
+    const memberKey=String(currentMemberKey),action=String(id||""),date=dayKey();
     missionCloudChain=missionCloudChain.catch(()=>{}).then(async()=>{
-      ensureVillage(s);const localDaily=s.villageSeason2?.daily;if(!s.villageSeason2?.villageId||!localDaily)return;
-      const date=String(localDaily.dateKey||dayKey()),template=missionSet(memberKey,date),matches=template.filter(m=>actionMatches(m,action));
+      const template=missionSet(memberKey,date),matches=template.filter(m=>actionMatches(m,action));
       if(!matches.length)return;
+      let villageId="";
+      try{villageId=String(s?.villageSeason2?.villageId||(ownState||state)?.villageSeason2?.villageId||"")}catch(_){}
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,MISSION_COLLECTION,memberKey);
       await fs.runTransaction(db,async tx=>{
         const snap=await tx.get(ref),old=snap.exists()?snap.data()||{}:{},same=String(old.dateKey||"")===date;
         const p=same&&old.progress&&typeof old.progress==="object"?{...old.progress}:{};
         const r=same&&old.rewarded&&typeof old.rewarded==="object"?{...old.rewarded}:{};
         if(!same){for(const m of template){p[m.id]=0;r[m.id]=false}}
-        for(const m of matches){const before=Math.max(0,Number(p[m.id])||0),after=Math.min(Number(m.target)||0,before+delta);p[m.id]=after;
-          /* local tracker still owns merit rewards; this durable flag only keeps UI
-             from visually reverting after a reload. */
-          const lm=(localDaily.missions||[]).find(x=>x.id===m.id);if(lm?.rewarded===true)r[m.id]=true;
+        for(const m of matches){
+          const before=Math.max(0,Number(p[m.id])||0),after=Math.min(Number(m.target)||0,before+Math.max(0,Number(delta)||0));
+          p[m.id]=after;
+          if(after>=Number(m.target)||0)r[m.id]=true;
         }
-        tx.set(ref,{memberKey,dateKey:date,villageId:String(s.villageSeason2?.villageId||""),progress:p,rewarded:r,bonusAwarded:Boolean(localDaily.bonusAwarded)||Boolean(same&&old.bonusAwarded),updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(ref,{memberKey,dateKey:date,villageId,progress:p,rewarded:r,bonusAwarded:Boolean(same&&old.bonusAwarded),updatedAt:fs.serverTimestamp()},{merge:false});
       });
-    }).catch(e=>console.warn("R34.11.5 mission cloud",e));
+      /* Pull the durable counters back into the currently loaded owner state immediately. */
+      try{const live=ownState||(!visitContext?state:null);if(live)await readMissionCloud(live,{seed:false})}catch(_){}
+    }).catch(e=>console.warn("R34.11.6 mission cloud",e));
   }
 
   function track(s,id,amount=1){
-    ensureVillage(s);let v=s.villageSeason2;
-    /* Cloud transactions can briefly read a save from before the village choice
-       was mirrored. The currently loaded owner's village is authoritative for
-       their own mission counter. */
-    if(!v.villageId){
-      const liveV=(ownState||state)?.villageSeason2;
-      if(liveV?.villageId&&VILLAGES[liveV.villageId]){
-        v.villageId=liveV.villageId;v.chosenAt=Number(liveV.chosenAt)||Number(v.chosenAt)||gameNow();
-      }
+    if(!s)return;ensureVillage(s);const v=s.villageSeason2,d=v?.daily,delta=Math.max(0,Number(amount)||0);if(!d||!delta)return;
+    let reward=0;
+    for(const m of d.missions||[]){
+      if(!actionMatches(m,id)||m.rewarded)continue;
+      const before=Number(m.progress)||0;m.progress=Math.min(Number(m.target)||0,before+delta);
+      if(before<Number(m.target)&&m.progress>=Number(m.target)){m.rewarded=true;reward+=30}
     }
-    if(!v.villageId)return;
-    const d=v.daily,delta=Math.max(0,Number(amount)||0);if(!delta)return;let reward=0;
-    for(const m of d.missions||[]){if(!actionMatches(m,id)||m.rewarded)continue;const before=Number(m.progress)||0;m.progress=Math.min(Number(m.target)||0,before+delta);if(before<Number(m.target)&&m.progress>=Number(m.target)){m.rewarded=true;reward+=30}}
     if(reward&&!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+reward;
-    const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>Number(m.progress)>=Number(m.target));if(all&&!d.bonusAwarded){d.bonusAwarded=true;v.missStreak=0;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+300;reward+=300}
+    const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>Number(m.progress)>=Number(m.target));
+    if(all&&!d.bonusAwarded){d.bonusAwarded=true;v.missStreak=0;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+300;reward+=300}
+    /* Keep the visible owner copy in sync even when an action used a transaction clone. */
+    try{const live=ownState||(!visitContext?state:null);if(live&&live!==s){ensureVillage(live);const ld=live.villageSeason2?.daily;if(ld&&String(ld.dateKey)===String(d.dateKey)){for(const m of ld.missions||[]){const src=(d.missions||[]).find(x=>x.id===m.id);if(src){m.progress=Math.max(Number(m.progress)||0,Number(src.progress)||0);m.rewarded=Boolean(m.rewarded||src.rewarded)}}if(d.bonusAwarded)ld.bonusAwarded=true}}}catch(_){}
     if(reward){try{updateMeritUI?.()}catch(_){}queueMicrotask(()=>{try{showWeatherToast?.(`🙏 ภารกิจผู้ใหญ่บ้าน +${reward} กุศล`)}catch(_){}})}
     queueMissionCloud(s,id,delta);
   }
@@ -24348,11 +24328,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   };
   queueCloudSave=function(){
     if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;
-    const cur=ownState||state;persistLocalGood(cur);if(r24SaveTimer)clearTimeout(r24SaveTimer);
-    /* Rank/merit/house/alpaca changes get a fast cloud turn. High-frequency
-       gameplay such as farming is coalesced longer to avoid one write per tap. */
+    const cur=ownState||state;persistLocalGood(cur);
+    /* R34.11.8: throttle instead of endless debounce. The first tap schedules a
+       cloud write and later taps join that write instead of postponing it forever. */
+    if(r24SaveTimer)return;
     const sig=r34ProfileSignature(cur),priority=sig!==r34QueueSig;r34QueueSig=sig;
-    r24SaveTimer=setTimeout(()=>{r24SaveTimer=null;flushCloudSave().catch(()=>{})},priority?160:650);
+    r24SaveTimer=setTimeout(()=>{r24SaveTimer=null;flushCloudSave().catch(()=>{})},priority?80:180);
   };
   save=function(){const s=ownState||state;if(!s)return;if(!visitContext){ownState=s;state=s}try{saveLocalOnly(s)}catch(_){}persistLocalGood(s);queueCloudSave()};
   settlePendingCloudSave=async function(){if(r24SaveTimer){clearTimeout(r24SaveTimer);r24SaveTimer=null}if(r24Flush)await r24Flush;else await flushCloudSave()};
@@ -26168,6 +26149,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
       <div class="r329-hotel-tools">
         <button id="dogMemberCheckBtn" type="button">📋<small>สมาชิก</small></button>
         <button id="dogPenCollectAllBtn" type="button">🧺<small>เก็บ</small></button>
+        <button id="r3411HotelFeedAll" type="button">🍽️<small>ให้อาหารทั้งหมด</small></button>
         <button id="r329BathBtn" type="button">💧<small>อาบน้ำ</small></button>
         <button id="r329MassageBtn" type="button">🖐️<small>นวด</small></button>
         ${isAdmin()&&localStorage.getItem("yn:dev-mode")==="1"?'<button id="r329HotelTestBtn" type="button">🧪<small>ทดสอบ</small></button>':""}
@@ -26179,6 +26161,11 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     try{setSceneNav({backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",backAction:pen>1?()=>setDogHotelPen(pen-1):returnToFarm,nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",nextAction:pen<4?()=>setDogHotelPen(pen+1):returnToFarm})}catch(_){ }
     const m=$("dogMemberCheckBtn");if(m)m.onclick=()=>showDogHotelRoster();
     const b=$("dogPenCollectAllBtn");if(b)b.onclick=()=>{try{collectAllDogDrops()}catch(e){console.warn(e)}};
+    const feedAll=$("r3411HotelFeedAll");if(feedAll)feedAll.onclick=()=>{
+      const fn=globalThis.YN_R3411?.showFeedAllHotel||globalThis.YN_R34117?.showFeedAllHotel;
+      if(typeof fn==="function")return fn();
+      try{message("🍽️ ให้อาหารทั้งหมด","ระบบให้อาหารทั้งหมดกำลังโหลด กรุณากดอีกครั้งค่ะ")}catch(_){}
+    };
     const bath=$("r329BathBtn");if(bath)bath.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("bath",pen)}catch(e){console.warn("R34.9.2 hotel bath",e)}};
     const massage=$("r329MassageBtn");if(massage)massage.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("massage",pen)}catch(e){console.warn("R34.9.2 hotel massage",e)}};
     const test=$("r329HotelTestBtn");if(test)test.onclick=showTest;
@@ -28735,7 +28722,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   const html=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}catch(_){return String(v??"")}};
   const admin=()=>{try{return typeof isAdmin==="function"?Boolean(isAdmin()):(currentMember==="Aida"||currentMemberKey==="aida")}catch(_){return currentMember==="Aida"||currentMemberKey==="aida"}};
-  const owner=()=>ownState||(!visitContext?state:null);
+  const owner=()=>visitContext?(ownState||state):(state||ownState);
   const normPlots=arr=>{const out=(Array.isArray(arr)?arr:[]).slice(0,typeof PLOT_COUNT==="number"?PLOT_COUNT:48).map(p=>typeof normalizePlot==="function"?normalizePlot(clone(p)):clone(p));const count=typeof PLOT_COUNT==="number"?PLOT_COUNT:48;while(out.length<count)out.push(typeof emptyPlot==="function"?emptyPlot():{});return out};
   const plotSig=arr=>{try{return typeof plotHash==="function"?plotHash(arr):JSON.stringify(arr)}catch(_){return JSON.stringify(arr||[])}};
   const farmNo=()=>Math.max(1,Math.min(4,(Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)+1));
@@ -28840,16 +28827,23 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     stopFriendLive();if(!visitContext||!cloudReady||!targetKey)return;
     try{
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",targetKey);
-      friendGardenUnsub=fs.onSnapshot(ref,snap=>{
-        if(!visitContext||String(visitContext.memberKey)!==String(targetKey)||!snap.exists())return;
+      const applyGarden=snap=>{
+        if(!visitContext||!snap?.exists?.())return;
+        const activeKey=String(visitContext.memberKey||visitContext.key||targetKey);
+        if(activeKey!==String(targetKey))return;
         const g=snap.data()||{};
         if(Array.isArray(g.plots)){state.plots=normPlots(g.plots).map(phasePlot)}
         visitContext.publicHamsters=g.publicHamsters&&typeof g.publicHamsters==="object"?clone(g.publicHamsters):{"2":[],"3":[],"4":[]};
         state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
         for(const n of [2,3,4])state.farmGuardians[String(n)]={hamsters:clone(visitContext.publicHamsters[String(n)]||[]),stored:[],removedIds:[]};
         try{draw?.()}catch(_){};setTimeout(renderFriendHamstersAnimated,0);
-      },e=>console.warn("R34.11 friend live",e));
-    }catch(e){console.warn("R34.11 start friend live",e)}
+      };
+      try{
+        const first=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+        applyGarden(first);
+      }catch(e){console.warn("R34.11.6 friend first read",e)}
+      friendGardenUnsub=fs.onSnapshot(ref,applyGarden,e=>console.warn("R34.11.6 friend live",e));
+    }catch(e){console.warn("R34.11.6 start friend live",e)}
   }
   const visit3411=typeof visitFriend==="function"?visitFriend:null;
   if(visit3411)visitFriend=async function(targetKey,targetName){const r=await visit3411.apply(this,arguments);if(visitContext)await startFriendLive(String(visitContext.memberKey||targetKey));return r};
@@ -29072,7 +29066,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   }
   function showFeedAllHotel(){
     if(visitContext)return;const s=owner(),hungry=allHungryHotelPets(s),need=hungry.length;if(!need)return message("🍽️ ให้อาหารทั้งโฮเทล","ตอนนี้ไม่มีน้องที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];
-    $("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมดทั้งโฮเทล</h2><p>มีหมา/แมวที่หิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเอง 1 เมนู ระบบจะใช้เมนูที่คุณเลือกเท่านั้น และจะไม่หยิบเมนูอื่นไปแทน</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r3411-feed-menu="${html(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${html(r.name)}</b><small>มี ×${q} • ต้องใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r3411FeedAllCancel" class="secondary-action">ยกเลิก</button></section>`;openModal();document.querySelectorAll("[data-r3411-feed-menu]").forEach(b=>b.onclick=()=>commitFeedAllHotel(b.dataset.r3411FeedMenu));$("r3411FeedAllCancel").onclick=closeModal;
+    $("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมดทั้งโฮเทล</h2><p>มีหมา/แมวที่หิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเอง 1 เมนู ระบบจะใช้เมนูที่คุณเลือกเท่านั้น และจะไม่หยิบเมนูอื่นไปแทน</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r3411-feed-menu="${html(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${html(r.name)}</b><small>มี ×${q} • ต้องใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r3411FeedAllCancel" class="secondary-action">ยกเลิก</button></section>`;openModal();document.querySelectorAll("[data-r3411-feed-menu]").forEach(b=>b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();commitFeedAllHotel(b.dataset.r3411FeedMenu)});$("r3411FeedAllCancel").onpointerdown=e=>{e.preventDefault();closeModal()};
   }
   let feedAllBusy=false;
   async function commitFeedAllHotel(recipeId){
@@ -29084,7 +29078,12 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
       try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{merit:Number(ownState.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11 hotel merit mirror",e)}
     }catch(e){message("ให้อาหารทั้งคอกไม่ได้",e?.message||"กรุณาลองใหม่")}finally{feedAllBusy=false}
   }
-  function mountHotelFeedAll(){if(currentScene!=="dogHotel")return;const tools=document.querySelector(".r329-hotel-tools");if(!tools||$("r3411HotelFeedAll"))return;const b=document.createElement("button");b.id="r3411HotelFeedAll";b.type="button";b.innerHTML="🍽️<small>ให้อาหารทั้งหมด</small>";b.onclick=showFeedAllHotel;tools.prepend(b)}
+  function mountHotelFeedAll(){
+    if(currentScene!=="dogHotel")return;
+    const host=document.querySelector(".r329-hotel-tools")||$("s2HotelToolRail")||$("sceneInteractiveLayer");if(!host||$("r3411HotelFeedAll"))return;
+    const b=document.createElement("button");b.id="r3411HotelFeedAll";b.className=host.id==="sceneInteractiveLayer"?"r34118-hotel-feed-all-float":"";b.type="button";b.innerHTML="🍽️<small>ให้อาหารทั้งหมด</small>";
+    b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();showFeedAllHotel()};host.prepend(b)
+  }
   if(globalThis.YN_R329_HOTEL?.render){const base=globalThis.YN_R329_HOTEL.render;globalThis.YN_R329_HOTEL.render=function(){const r=base.apply(this,arguments);setTimeout(mountHotelFeedAll,0);return r}}
   setInterval(mountHotelFeedAll,800);
 
@@ -29107,7 +29106,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
    ===================================================================== */
 (function YN_R34113_STRICT_GARDEN_WORM_RANK(){
   "use strict";
-  const BUILD="S2-R34.11.5-ALL-VILLAGE-MISSIONS-RULES-20260904";
+  const BUILD="S2-R34.11.6-LIVE-GARDEN-MISSIONS-TEMPLE-20260904";
   const $=id=>document.getElementById(id);
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
@@ -29210,7 +29209,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
         if(method==="spray"){own.specials=own.specials||{};const have=Number(own.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sprayCost} ขวด`);own.specials.wormKillerSpray=have-sprayCost}
         else own.merit=(Number(own.merit)||0)-meritCost;
       }
-      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"gardens",target);let nextPlots=null;
+      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"publicFarmState",target);let nextPlots=null;
       /* Critical transaction contains ONLY the friend's garden. No mailbox/profile/save can reject it. */
       await fs.runTransaction(db,async tx=>{
         const gs=await tx.get(gref);if(!gs.exists())throw new Error("ข้อมูลสวนเพื่อนไม่พร้อม");const plots=normPlots(gs.data()?.plots),remote=phase(plots[index]),src=isWorm(remote)?remote:visible;plots[index]=cure(src);nextPlots=plots;tx.update(gref,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
@@ -29259,4 +29258,165 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
 
 
 /* R34.11.5 final build marker */
-try{globalThis.YAINOO_BUILD="S2-R34.11.5-ALL-VILLAGE-MISSIONS-RULES-20260904";console.info(globalThis.YAINOO_BUILD,"loaded")}catch(_){}
+try{globalThis.YAINOO_BUILD="S2-R34.11.6-LIVE-GARDEN-MISSIONS-TEMPLE-20260904";console.info(globalThis.YAINOO_BUILD,"loaded")}catch(_){}
+
+
+/* R34.11.6 final marker */
+globalThis.YAINOO_BUILD="S2-R34.11.6-LIVE-GARDEN-MISSIONS-TEMPLE-20260904";
+console.info(globalThis.YAINOO_BUILD,"loaded");
+
+
+/* =====================================================================
+   S2 R34.11.7 — DEDICATED PUBLIC FARM / DURABLE CLAIM / HOTEL + REPAIR FINAL
+   2026-09-04
+   - publicFarmState is the only authoritative source used by the newest friend view.
+     Legacy /gardens writers may continue for compatibility but cannot blank this view.
+   - visitor reasserts the newest public state so older garden listeners cannot repaint empties.
+   - gift claims flush pending saves, retry conflicts, then reload the committed save from server.
+   - hotel Feed All button is mounted in the R32.9 source skeleton (not injected later).
+   - stale local-first alpaca repair interception is removed; durable repairPen transaction wins.
+   ===================================================================== */
+(function YN_R34117_FINAL(){
+  "use strict";
+  const BUILD="S2-R34.11.7-PUBLIC-FARM-CLAIM-HOTEL-REPAIR-20260904";
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const norm=raw=>{const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,a=Array.isArray(raw)?raw.slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p)):[];while(a.length<n)a.push(typeof emptyPlot==="function"?emptyPlot():{});return a};
+  const pSig=a=>{try{return typeof plotHash==="function"?plotHash(a||[]):JSON.stringify(a||[])}catch(_){return JSON.stringify(a||[])}};
+  const liveOwner=()=>{
+    if(visitContext)return ownState||state;
+    const a=state,b=ownState;if(!a)return b;if(!b)return a;if(a===b)return a;
+    const ar=Number(a?.clientSaveRevision)||0,br=Number(b?.clientSaveRevision)||0;
+    if(ar!==br)return ar>br?a:b;
+    return a;
+  };
+  function hamsters(s){
+    const out={"2":[],"3":[],"4":[]};
+    try{globalThis.YN_R25?.ensureGuardianState?.(s)}catch(_){}
+    for(const f of [2,3,4])out[String(f)]=(s?.farmGuardians?.[String(f)]?.hamsters||[]).filter(Boolean).slice(0,6).map(h=>({
+      id:String(h?.id||""),color:String(h?.color||"gray"),x:Number(h?.x??h?.tx??50)||50,y:Number(h?.y??h?.ty??82)||82,
+      faceLeft:Boolean(h?.faceLeft),updatedAt:Number(h?.updatedAt)||0
+    })).filter(h=>h.id);
+    return out;
+  }
+  const hSig=m=>JSON.stringify(Object.entries(m||{}).map(([f,a])=>[f,(a||[]).map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y)])]));
+  let pubAck="",pubBusy=false,pubAgain=false;
+  async function publishPublicFarm(force=false,source=null){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;
+    let s=source||liveOwner();if(!s)return false;
+    const plots=norm(s.plots),h=hamsters(s),sig=pSig(plots)+"|"+hSig(h);if(!force&&sig===pubAck)return false;
+    if(pubBusy){pubAgain=true;return false}pubBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"publicFarmState",currentMemberKey);
+      await fs.setDoc(ref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(plots),publicHamsters:cp(h),publicVersion:"R34.11.8",updatedAt:fs.serverTimestamp()},{merge:true});
+      pubAck=sig;return true;
+    }catch(e){console.warn("R34.11.7 public farm publish",e);return false}
+    finally{pubBusy=false;if(pubAgain){pubAgain=false;setTimeout(()=>publishPublicFarm(false),80)}}
+  }
+  async function publishFromServerSave(){
+    if(!cloudReady||!currentMemberKey||visitContext)return;
+    try{const {db,fs}=await getFirebaseContext(),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(fs.doc(db,"saves",currentMemberKey)):await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(snap.exists()){const s=typeof normalizeState==="function"?normalizeState(snap.data(),currentMember):snap.data();await publishPublicFarm(true,s)}}catch(e){console.warn("R34.11.7 publish server save",e)}
+  }
+  setInterval(()=>{try{publishPublicFarm(false)}catch(_){}},900);
+  window.addEventListener("focus",()=>setTimeout(()=>publishPublicFarm(true,state||ownState),100),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishPublicFarm(true,state||ownState),130)},{passive:true});
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);pubAck="";try{await publishFromServerSave()}catch(_){}return r};
+  const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;
+  if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);try{await publishPublicFarm(true,ownState||liveOwner())}catch(_){}return r};
+
+  /* New friend view reads ONLY publicFarmState. A small reassert loop prevents any older
+     /gardens listener from repainting the screen with an empty legacy snapshot. */
+  let friendUnsub=null,friendGardenUnsub=null,reassertTimer=0,friendCache=null,friendGardenCache=null,friendKey="";
+  function stopFriendPublic(){try{friendUnsub?.()}catch(_){}try{friendGardenUnsub?.()}catch(_){}friendUnsub=null;friendGardenUnsub=null;clearInterval(reassertTimer);reassertTimer=0;friendCache=null;friendGardenCache=null;friendKey=""}
+  function stampMs(v){try{if(v&&typeof v.toMillis==="function")return v.toMillis();if(v&&typeof v.seconds==="number")return v.seconds*1000;return Number(v)||0}catch(_){return 0}}
+  function occupiedPlots(arr){return norm(arr).reduce((n,p)=>n+(p&&p.crop?1:0),0)}
+  function bestFriendData(){
+    const pub=friendCache||null,g=friendGardenCache||null;if(!pub&&!g)return null;
+    const pc=occupiedPlots(pub?.plots),gc=occupiedPlots(g?.plots);
+    /* R34.11.9: publicFarmState is authoritative. Gardens is only a migration fallback
+       when the dedicated public document does not exist yet or is still completely blank. */
+    let chosen=pub||g;if(pub&&pc===0&&g&&gc>0)chosen=g;
+    const hPub=pub?.publicHamsters&&typeof pub.publicHamsters==="object"?pub.publicHamsters:null;
+    const hGarden=g?.publicHamsters&&typeof g.publicHamsters==="object"?g.publicHamsters:null;
+    return {...cp(chosen||{}),publicHamsters:cp(hPub||hGarden||{"2":[],"3":[],"4":[]})};
+  }
+  function applyFriendData(data,key){
+    if(!visitContext||String(visitContext.memberKey||"")!==String(key)||!data)return;
+    state.plots=norm(data.plots);
+    const hm=data.publicHamsters&&typeof data.publicHamsters==="object"?cp(data.publicHamsters):{"2":[],"3":[],"4":[]};
+    visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
+    for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:cp(hm[String(f)]||[]),stored:[],removedIds:[]};
+    try{draw?.()}catch(_){};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},0);
+  }
+  function refreshFriendFromCaches(){const data=bestFriendData();if(data)applyFriendData(data,friendKey)}
+  async function startFriendPublic(key){
+    stopFriendPublic();if(!visitContext||!cloudReady||!key)return;friendKey=String(key);
+    try{
+      const {db,fs}=await getFirebaseContext(),pref=fs.doc(db,"publicFarmState",friendKey),gref=fs.doc(db,"gardens",friendKey);
+      const readServer=async ref=>typeof fs.getDocFromServer==="function"?fs.getDocFromServer(ref):fs.getDoc(ref);
+      const [ps,gs]=await Promise.allSettled([readServer(pref),readServer(gref)]);
+      if(ps.status==="fulfilled"&&ps.value?.exists?.())friendCache=ps.value.data()||{};
+      if(gs.status==="fulfilled"&&gs.value?.exists?.())friendGardenCache=gs.value.data()||{};
+      refreshFriendFromCaches();
+      friendUnsub=fs.onSnapshot(pref,s=>{if(s.exists()){friendCache=s.data()||{};refreshFriendFromCaches()}},e=>console.warn("R34.11.8 public friend live",e));
+      friendGardenUnsub=fs.onSnapshot(gref,s=>{if(s.exists()){friendGardenCache=s.data()||{};refreshFriendFromCaches()}},e=>console.warn("R34.11.8 garden friend live",e));
+      reassertTimer=setInterval(()=>{if(visitContext&&String(visitContext.memberKey||"")===friendKey)refreshFriendFromCaches()},500);
+    }catch(e){console.warn("R34.11.8 friend public start",e)}
+  }
+  /* R34.11.9: FINAL standalone friend entry. Do not call any legacy visitFriend wrapper. */
+  visitFriend=async function(targetKey,targetName){
+    if(!cloudReady){message("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
+    targetKey=String(targetKey||"");targetName=String(targetName||targetKey);if(!targetKey)return;
+    try{
+      stopFriendPublic();
+      const {db,fs}=await getFirebaseContext(),pref=fs.doc(db,"publicFarmState",targetKey),gref=fs.doc(db,"gardens",targetKey);
+      const readServer=async ref=>typeof fs.getDocFromServer==="function"?fs.getDocFromServer(ref):fs.getDoc(ref);
+      const [ps,gs]=await Promise.allSettled([readServer(pref),readServer(gref)]);
+      friendCache=ps.status==="fulfilled"&&ps.value?.exists?.()?ps.value.data()||{}:null;
+      friendGardenCache=gs.status==="fulfilled"&&gs.value?.exists?.()?gs.value.data()||{}:null;
+      const first=bestFriendData();if(!first)throw new Error("เพื่อนคนนี้ยังไม่มีข้อมูลสวนสาธารณะ");
+      ownState=ownState||state;visitContext={memberKey:targetKey,name:targetName,publicHamsters:{"2":[],"3":[],"4":[]}};friendKey=targetKey;
+      state=typeof fresh==="function"?fresh(targetName):{};applyFriendData(first,targetKey);
+      try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList?.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(targetName)}catch(_){};try{draw?.()}catch(_){};
+      friendUnsub=fs.onSnapshot(pref,s=>{friendCache=s.exists()?s.data()||{}:null;refreshFriendFromCaches()},e=>console.warn("R34.11.9 public friend live",e));
+      friendGardenUnsub=fs.onSnapshot(gref,s=>{friendGardenCache=s.exists()?s.data()||{}:null;refreshFriendFromCaches()},e=>console.warn("R34.11.9 garden fallback live",e));
+      reassertTimer=setInterval(()=>{if(visitContext&&String(visitContext.memberKey||"")===friendKey)refreshFriendFromCaches()},350);
+    }catch(e){stopFriendPublic();message("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+  const returnBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;if(returnBase)returnFromFriendVisit=function(){stopFriendPublic();return returnBase.apply(this,arguments)};
+  const farmBase=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;if(farmBase)setFarmPlotPage=function(){const r=farmBase.apply(this,arguments);if(visitContext)setTimeout(refreshFriendFromCaches,20);return r};
+
+  /* Durable gift claim. The gift is never marked claimed unless addGiftItemToState and
+     the save write are part of the same successful transaction. */
+  const claimBusy=new Set();
+  async function committedSave(ref,fs){try{const snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(snap.exists()){ownState=normalizeState(snap.data(),currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};return ownState}}catch(e){console.warn("R34.11.7 claim reload",e)}return null}
+  async function retryTx(fn){let last;for(let i=0;i<4;i++){try{return await fn()}catch(e){last=e;const m=String(e?.message||"");if(!/aborted|version|required base|conflict|contention/i.test(m)||i===3)throw e;await sleep(90+90*i)}}throw last}
+  claimFriendGift=async function(giftId,accept){
+    const k="f:"+giftId;if(claimBusy.has(k)||!cloudReady||!currentMemberKey)return;claimBusy.add(k);
+    try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",giftId),saveRef=fs.doc(db,"saves",currentMemberKey),mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);let next=null;
+      await retryTx(()=>fs.runTransaction(db,async tx=>{const [g,sn]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);if(!g.exists()||!sn.exists())throw new Error("ไม่พบของขวัญ");const gift=g.data();if(gift.toKey!==currentMemberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");if(gift.status!=="pending")throw new Error("ของขวัญนี้ถูกจัดการแล้ว");const s=normalizeState(sn.data(),currentMember);try{assertCurrentCloudSession?.(sn.data(),currentMember)}catch(e){throw e}if(accept)addGiftItemToState(s,gift);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=s;tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{read:true,resolved:true,status:accept?"claimed":"discarded"},{merge:true})}));
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}await committedSave(saveRef,fs);notificationDataCache.at=0;showNotifications?.("friend");showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(e){message("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}finally{claimBusy.delete(k)}
+  };
+  claimBroadcastGift=async function(broadcastId,accept){
+    const k="b:"+broadcastId;if(claimBusy.has(k)||!cloudReady||!currentMemberKey)return;claimBusy.add(k);
+    try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),bRef=fs.doc(db,"broadcasts",broadcastId),saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
+      await retryTx(()=>fs.runTransaction(db,async tx=>{const [b,sn]=await Promise.all([tx.get(bRef),tx.get(saveRef)]);if(!b.exists()||!sn.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");const gift=b.data();if(gift.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");const s=normalizeState(sn.data(),currentMember);try{assertCurrentCloudSession?.(sn.data(),currentMember)}catch(e){throw e}s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims:{};if(s.broadcastGiftClaims[broadcastId])throw new Error("คุณจัดการของขวัญนี้แล้ว");if(accept)addGiftItemToState(s,{itemType:gift.itemType,itemKey:gift.itemKey,qty:gift.qty,items:gift.items,instance:gift.instance});s.broadcastGiftClaims[broadcastId]={status:accept?"accepted":"discarded",resolvedAt:Date.now()};s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=s;tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}));
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}await committedSave(saveRef,fs);try{broadcastClaimCache?.delete?.(broadcastClaimCacheKey?.(broadcastId))}catch(_){};notificationDataCache.at=0;showNotifications?.("yainoo");showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(e){message("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}finally{claimBusy.delete(k)}
+  };
+
+  /* R32.9 source now owns the button; expose the already-correct menu/count flow. */
+  function showFeedAllHotel(){return globalThis.YN_R3411?.showFeedAllHotel?.()}
+  globalThis.YN_R34117={BUILD,publishPublicFarm,publishFromServerSave,startFriendPublic,showFeedAllHotel};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* R34.11.7 final marker */
+globalThis.YAINOO_BUILD="S2-R34.11.7-PUBLIC-FARM-CLAIM-HOTEL-REPAIR-20260904";
+console.info(globalThis.YAINOO_BUILD,"loaded");
+
+
+/* R34.11.9 final marker — standalone authoritative friend visit */
+try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.info(globalThis.YAINOO_BUILD,"loaded")}catch(_){}

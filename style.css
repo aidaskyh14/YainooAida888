@@ -9884,7 +9884,7 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r3411-disc-drop img{width:100%;height:100%;object-fit:contain;pointer-events:none}.r3411-disc-drop small{position:absolute;right:-5px;bottom:-4px;min-width:20px;padding:2px 4px;border-radius:10px;background:#613d27;color:white;font-weight:900;font-size:10px;pointer-events:none}
 @keyframes r3411DropFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-6px) scale(1.04)}}
 
-#r3411HotelFeedAll{min-width:62px!important;touch-action:manipulation!important}
+#r3411HotelFeedAll{min-width:0!important;width:46px!important;touch-action:manipulation!important}
 .r3411-feed-all-panel>p{font-size:16px}.r3411-feed-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.r3411-feed-menu-grid button{display:flex;align-items:center;gap:8px;text-align:left;min-height:72px;padding:8px;border-radius:14px}.r3411-feed-menu-grid button img{width:48px;height:48px;object-fit:contain;flex:0 0 auto}.r3411-feed-menu-grid button span{display:flex;flex-direction:column;min-width:0}.r3411-feed-menu-grid button small{font-size:10px;opacity:.75}.r3411-feed-menu-grid button:disabled{opacity:.36;filter:grayscale(.6)}
 
 #r34RoyalDiscLayer,#r34HamsterDiscLayer{display:none!important}
@@ -9906,3 +9906,21 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r34113-rank-panel .r34113-rank-top-2{border:3px solid #aab5c3!important;background:linear-gradient(135deg,#fbfdff,#d9e0e8)!important;box-shadow:0 0 0 3px rgba(229,236,244,.5),0 9px 22px rgba(82,94,110,.2)!important}
 .r34113-rank-panel .r34113-rank-top-3{border:3px solid #b97650!important;background:linear-gradient(135deg,#fff0e4,#dea37d)!important;box-shadow:0 0 0 3px rgba(238,187,148,.36),0 9px 22px rgba(111,66,42,.2)!important}
 .r34113-rank-panel .r34113-rank-top-1 .friend-info small,.r34113-rank-panel .r34113-rank-top-2 .friend-info small,.r34113-rank-panel .r34113-rank-top-3 .friend-info small{font-size:13px!important;font-weight:950!important}
+
+/* R34.11.7 hotel feed-all source button */
+@media(max-width:430px){#r3411HotelFeedAll{width:41px!important;min-width:0!important}}
+
+/* R34.11.8 — always-visible Hotel feed-all fallback button */
+#r3411HotelFeedAll.r34118-hotel-feed-all-float{
+  position:absolute !important;
+  right:3.5% !important;
+  top:13.5% !important;
+  z-index:560 !important;
+  min-width:118px !important;
+  min-height:56px !important;
+  border-radius:18px !important;
+  padding:8px 12px !important;
+  touch-action:manipulation !important;
+  pointer-events:auto !important;
+}
+#r3411HotelFeedAll.r34118-hotel-feed-all-float small{display:block !important;font-size:12px !important;line-height:1.15 !important}
