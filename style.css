@@ -9838,3 +9838,15 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 
 /* Production means production: no normal visible test controls. */
 #r17TestHedge,#r16TestHedge,#r17WineTest,#r26TestHamster,#r329HotelTestBtn,.r26-hamster-test,.r31-hotel-test-btn{display:none!important}
+
+/* S2 R35 urgent polish: compact scrollable reward panels + tidy basement actions */
+.r34-reward-panel,.r31-box-result,.r31-therapy-result,.r30-drop-summary,.tractor-summary-panel{
+  max-height:min(72vh,560px);overflow:auto;-webkit-overflow-scrolling:touch;
+}
+.r34-reward-panel h2,.r31-box-result h2,.r31-therapy-result h2{font-size:clamp(18px,4.2vw,24px);line-height:1.2}
+.r17-basement-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;align-items:stretch!important;max-width:min(94vw,360px)!important}
+.r17-basement-actions>button{min-height:42px!important;margin:0!important;font-size:12px!important;line-height:1.2!important;padding:8px 10px!important}
+.r17-basement-actions>#r17HouseUp{grid-column:1/-1!important}
+@supports(padding:max(0px)){.r17-basement-actions{margin-bottom:max(8px,env(safe-area-inset-bottom))!important}}
+
+/* BUILD S2-R35-URGENT-LAUNCH-20260903 */
