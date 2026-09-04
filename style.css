@@ -9769,3 +9769,72 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r33-locked::after{content:attr(data-r33-lock-label);position:absolute!important;left:50%!important;bottom:4px!important;transform:translateX(-50%)!important;max-width:92%!important;padding:3px 6px!important;border-radius:999px!important;background:rgba(20,17,34,.88)!important;color:#f5e9ff!important;font-size:7px!important;font-weight:900!important;line-height:1.05!important;white-space:nowrap!important;z-index:999!important;pointer-events:none!important;box-shadow:0 2px 5px rgba(0,0,0,.28)!important}
 /* All former experimental buttons are absent from ordinary gameplay. */
 #r17TestHedge,#r16TestHedge,#r17WineTest,#r26TestHamster,.r26-hamster-test{display:none!important}
+
+/* =====================================================================
+   S2 R34 — PRODUCTION READY UI / COMPACT CLAIMS / BASEMENT ORGANIZATION
+   ===================================================================== */
+/* The crop offset/depth from R33 remains locked: right-shifted, dark navy/
+   purple depth only. Repeat here so no legacy warm halo wins cascade order. */
+.game-screen .crop img.crop-img,
+.game-screen .crop img.stage-ready{
+  transform:translateX(6%)!important;
+  filter:drop-shadow(0 5px 4px rgba(8,10,25,.60)) drop-shadow(0 0 5px rgba(35,30,78,.32))!important;
+}
+
+/* Lock modal: key shortcut + free progression are equal, readable choices. */
+.r34-lock-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:7px!important;margin:10px 0 7px!important}
+.r34-lock-actions button{min-height:38px!important;border-radius:12px!important;padding:7px 8px!important;font-size:10px!important;font-weight:900!important;line-height:1.2!important}
+.r34-lock-actions #r34FreeUnlock{border:1px solid rgba(142,212,164,.62)!important;background:linear-gradient(180deg,rgba(47,100,75,.96),rgba(30,70,55,.98))!important;color:#f0fff5!important}
+.r34-free-unlock-card{margin-top:8px;padding:10px;border-radius:14px;background:rgba(26,23,43,.90);border:1px solid rgba(220,201,161,.35);text-align:left;color:#fff}
+.r34-free-unlock-card h3{font-size:13px;margin:0 0 3px}.r34-free-unlock-card p{font-size:9px;line-height:1.35;margin:0 0 8px;opacity:.82}
+.r34-free-reqs{display:grid;gap:5px;max-height:38vh;overflow:auto;overscroll-behavior:contain;padding-right:2px}
+.r34-free-reqs>div{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 7px;border-radius:10px;background:rgba(255,255,255,.07);font-size:9px}
+.r34-free-reqs>div.ok{box-shadow:inset 3px 0 rgba(100,220,145,.72)}.r34-free-reqs>div.miss{box-shadow:inset 3px 0 rgba(229,129,129,.66)}
+.r34-free-reqs b{white-space:nowrap;font-size:9px}.r34-free-unlock-card>button{width:100%;margin-top:8px;min-height:38px;font-size:10px}
+
+/* Reward/claim panels: compact, scrollable and safe on small iPhones. */
+.r34-reward-panel{width:min(91vw,390px)!important;max-height:min(78dvh,620px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;text-align:center!important;padding:13px!important}
+.r34-reward-panel h2{font-size:18px!important;margin:3px 0 5px!important}.r34-reward-panel p{font-size:10px!important;line-height:1.4!important;margin:4px 0!important}.r34-reward-panel>small{font-size:8.5px!important;line-height:1.35!important;margin:5px 0!important;opacity:.78}
+.r34-reward-hero{display:block;width:min(25vw,92px)!important;height:min(25vw,92px)!important;object-fit:contain!important;margin:0 auto 2px!important;filter:drop-shadow(0 4px 5px rgba(10,8,24,.34))!important}
+.r34-reward-scroll{display:grid!important;gap:5px!important;min-height:0!important;max-height:42dvh!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:3px 2px 6px!important;margin:6px 0!important}
+.r34-reward-scroll article{display:grid!important;grid-template-columns:38px minmax(0,1fr) auto!important;gap:7px!important;align-items:center!important;padding:6px 8px!important;border-radius:11px!important;background:rgba(255,255,255,.82)!important;text-align:left!important;font-size:9px!important;color:#503b52!important}
+.r34-reward-scroll article img{width:36px!important;height:36px!important;object-fit:contain!important}.r34-reward-scroll article b{font-size:9.5px!important;line-height:1.2!important}.r34-reward-scroll article span{font-size:11px!important;font-weight:950!important;white-space:nowrap!important}
+.r34-reward-panel>button{flex:0 0 auto!important;min-height:38px!important;margin-top:5px!important}
+
+/* Real-time music-disc floor drops. The layer never blocks gameplay except on
+   its actual collectible buttons. */
+.r34-drop-layer{position:absolute!important;inset:0!important;z-index:78!important;pointer-events:none!important;overflow:visible!important}
+.r34-disc-drop{position:absolute!important;transform:translate(-50%,-50%)!important;width:clamp(34px,8.8vw,52px)!important;height:clamp(34px,8.8vw,52px)!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.r34-disc-drop img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;filter:drop-shadow(0 4px 4px rgba(8,8,20,.48))!important;pointer-events:none!important}
+.r34-disc-drop small{position:absolute!important;right:-5px!important;bottom:-3px!important;min-width:18px!important;padding:2px 4px!important;border-radius:999px!important;background:rgba(42,29,55,.94)!important;color:#fff!important;font-size:7px!important;font-weight:950!important;line-height:1.15!important;pointer-events:none!important}
+.r34-disc-drop:active{transform:translate(-50%,-50%) scale(.91)!important}
+
+/* Basement lower-right tools: compact 2-column control dock. Navigation is a
+   full-width final row so actions do not visually collide with 'กลับขึ้นบ้าน'. */
+.r17-basement-actions{
+  right:max(7px,calc(env(safe-area-inset-right,0px) + 5px))!important;
+  bottom:max(7px,calc(env(safe-area-inset-bottom,0px) + 5px))!important;
+  width:min(62vw,250px)!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  padding:6px!important;
+  border-radius:15px!important;
+  background:rgba(25,19,38,.55)!important;
+  backdrop-filter:blur(5px)!important;
+  box-shadow:0 6px 18px rgba(8,7,18,.22)!important;
+  pointer-events:none!important;
+}
+.r17-basement-actions button{
+  width:100%!important;max-width:none!important;min-width:0!important;min-height:32px!important;
+  padding:6px 5px!important;border-radius:11px!important;font-size:7.8px!important;line-height:1.15!important;
+  white-space:normal!important;text-align:center!important;pointer-events:auto!important;
+}
+.r17-basement-actions #r17HouseUp{grid-column:1/-1!important;min-height:34px!important;background:linear-gradient(180deg,rgba(54,75,101,.97),rgba(35,48,72,.98))!important}
+.r17-basement-actions #r29HouseCollectAll{grid-column:1/-1!important}
+@media(max-width:390px){.r17-basement-actions{width:min(64vw,230px)!important;gap:4px!important;padding:5px!important}.r17-basement-actions button{font-size:7.2px!important;padding:5px 4px!important}}
+
+/* Production means production: no normal visible test controls. */
+#r17TestHedge,#r16TestHedge,#r17WineTest,#r26TestHamster,#r329HotelTestBtn,.r26-hamster-test,.r31-hotel-test-btn{display:none!important}
