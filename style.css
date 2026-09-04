@@ -9856,3 +9856,7 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r17-wine-machine{z-index:65!important}
 .r17-hedge-drop-layer{pointer-events:none!important}
 .r17-hedge-drop{pointer-events:auto!important}
+
+/* S2 R34.10.9 — basement one-tap hardening */
+.r17-flower-plot,.r17-wine-machine,.r17-flower-picker button,.r17-wine-picker button,#r17HarvestOne,#r17StartWine,#r17WineClaim{touch-action:none!important;-webkit-tap-highlight-color:transparent!important;pointer-events:auto!important;}
+.r17-flower-plot>*,.r17-wine-machine>*,.r17-flower-picker button>*,.r17-wine-picker button>*{pointer-events:none!important;}
