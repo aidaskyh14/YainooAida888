@@ -9924,3 +9924,10 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
   pointer-events:auto !important;
 }
 #r3411HotelFeedAll.r34118-hotel-feed-all-float small{display:block !important;font-size:12px !important;line-height:1.15 !important}
+
+/* R34.11.11 authoritative disc layers */
+#r34RoyalDiscLayer,#r34HamsterDiscLayer,#r3411RoyalDropLayer,#r3411HamsterDropLayer{display:none!important}
+#r341111RoyalDropLayer,#r341111HamsterDropLayer{position:absolute;inset:0;z-index:245;pointer-events:none}
+.r341111-disc{position:absolute;transform:translate(-50%,-50%);border:0;background:transparent;pointer-events:auto;z-index:246;min-width:44px;min-height:44px}
+.r341111-disc img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
+.r341111-disc small{display:block;background:#4b294d;color:#fff;border-radius:999px;padding:2px 7px;font-weight:700}
