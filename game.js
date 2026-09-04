@@ -26831,3 +26831,260 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
 /* S2 R34.3 — FORBIDDEN FOREST HARD LOCK HOTFIX */
 (function(){globalThis.YAINOO_BUILD="S2-R34.3-FOREST-HARD-LOCK-20260903";console.info(globalThis.YAINOO_BUILD,"loaded");})();
+
+
+/* =====================================================================
+   S2 R34.4 — CRITICAL STABILITY HOTFIX
+   2026-09-03
+   - Bulk watering uses the same visible plot authority and accepts planted
+     growing1 / needsWater crops, so one tap waters all eligible plots.
+   - Hamster placement is inventory-authorized: no real hamster instance,
+     no placement. Legacy free color-spawn UI is blocked.
+   - Friend visits publish/read placed hamsters from owner public state on
+     both gardens + publicProfiles, and render Farm 2/3/4 reliably.
+   ===================================================================== */
+(function YN_R344_CRITICAL_STABILITY(){
+  "use strict";
+  const BUILD="S2-R34.4-CRITICAL-STABILITY-20260903";
+  const $=id=>document.getElementById(id);
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const farmNo=()=>Math.max(1,Math.min(4,Number(typeof currentFarmNo==="function"?currentFarmNo():(Number(farmPlotPage)||0)+1)||1));
+  const own=()=>ownState||state;
+  const admin=()=>Boolean(currentMember==="Aida"||adminProfile?.role==="admin");
+
+  /* -----------------------------
+     A) BULK WATER — ONE AUTHORITY
+     ----------------------------- */
+  let waterBusy=false;
+  function r344EligibleWaterPlot(p){
+    if(!p?.crop)return false;
+    try{ensurePlotPhase?.(p)}catch(_){try{ensurePlotPhaseStandalone?.(p)}catch(__){}}
+    if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)return false;
+    /* Bulk sprinkler is intentionally usable immediately after planting.
+       A crop that is already growing2/worm/ready has already passed watering. */
+    return p.phase==="growing1"||p.phase==="needsWater";
+  }
+  function r344ApplyWater(p){
+    if(typeof applyWaterOutcomeV11==="function")return applyWaterOutcomeV11(p);
+    const crop=CROPS?.[p.crop];if(!crop)return null;
+    p.wateredAt=gameNow();p.phase="growing2";p.worm=false;delete p.wormType;
+    p.phaseEndsAt=gameNow()+Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));
+    return null;
+  }
+  async function r344BulkWaterCurrentFarm(){
+    if(waterBusy||visitContext||guardResting?.())return;
+    const s=own();if(!s?.plots)return;
+    const start=Math.max(0,Number(farmPlotPage)||0)*12,end=Math.min(start+12,s.plots.length);
+    const targets=[];
+    for(let i=start;i<end;i++)if(r344EligibleWaterPlot(s.plots[i]))targets.push(i);
+    if(!targets.length){
+      const planted=s.plots.slice(start,end).filter(p=>p?.crop).length;
+      message?.("🚿 รดน้ำทั้งหมด",planted?"พืชในฟาร์มนี้ผ่านขั้นรดน้ำแล้วค่ะ":"ฟาร์มนี้ยังไม่มีพืชที่ปลูกอยู่ค่ะ");
+      return;
+    }
+    waterBusy=true;const btn=$("sprinklerBtn");if(btn)btn.disabled=true;
+    const before=new Map(targets.map(i=>[i,clone(s.plots[i])]));
+    let normal=0,giant=0,none=0;
+    try{
+      /* optimistic/local-first so 12 plots respond to one tap immediately */
+      for(const i of targets){
+        const type=r344ApplyWater(s.plots[i]);
+        if(type==="giant")giant++;else if(type==="normal")normal++;else none++;
+      }
+      ownState=s;if(!visitContext)state=s;
+      try{saveLocalOnly?.(s)}catch(_){}
+      try{draw?.()}catch(_){}
+      showWeatherToast?.(`🚿 กำลังรดน้ำ ${targets.length} แปลง…`);
+
+      if(!cloudReady||!currentMemberKey){
+        try{save?.()}catch(_){}
+        showWeatherToast?.(`🚿 รดน้ำแล้ว ${targets.length} แปลง • เข้าคิวบันทึกแล้ว`);
+        return;
+      }
+
+      /* Flush any earlier rapid planting first. This uses the current local
+         state, so planting + watering are serialized rather than overwriting. */
+      try{await settlePendingCloudSave?.()}catch(e){console.warn("R34.4 pre-water flush",e)}
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gs]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const remote=normalizeState(ss.data(),currentMember);
+        const gplots=(gs.exists()&&Array.isArray(gs.data()?.plots)?gs.data().plots:remote.plots||[]).map(normalizePlot);
+        while(gplots.length<PLOT_COUNT)gplots.push(emptyPlot());
+        remote.plots=Array.isArray(remote.plots)?remote.plots.map(normalizePlot):gplots.map(normalizePlot);
+        while(remote.plots.length<PLOT_COUNT)remote.plots.push(emptyPlot());
+        for(const i of targets){
+          const latest=clone((ownState||state)?.plots?.[i]);
+          if(!latest?.crop)continue;
+          gplots[i]=normalizePlot(clone(latest));
+          remote.plots[i]=normalizePlot(clone(latest));
+        }
+        tx.set(saveRef,{...clone(remote),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:clone(gplots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      try{lastGardenHash=plotHash?.((ownState||state).plots)||lastGardenHash}catch(_){}
+      showWeatherToast?.(`🚿 รดน้ำแล้ว ${targets.length} แปลง • บันทึกแล้ว`);
+    }catch(e){
+      console.error("R34.4 bulk water",e);
+      /* rollback only plots that are still the optimistic watering result;
+         never overwrite a newer action the player already performed. */
+      const cur=own();
+      for(const [i,old] of before.entries()){
+        const p=cur?.plots?.[i];
+        if(p?.crop===old?.crop&&["growing2","worm"].includes(String(p?.phase||"")))cur.plots[i]=old;
+      }
+      try{saveLocalOnly?.(cur);draw?.()}catch(_){}
+      message?.("รดน้ำทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่");
+    }finally{
+      waterBusy=false;if(btn)btn.disabled=false;
+    }
+  }
+  function bindWaterButton(){
+    const b=$("sprinklerBtn");if(b)b.onclick=r344BulkWaterCurrentFarm;
+  }
+  bindWaterButton();
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.('[data-s2-tool="sprinkler"]');
+    if(!b)return;
+    /* tool drawer may call the hidden legacy button; rebinding before that
+       click guarantees the R34.4 handler is the only action used. */
+    bindWaterButton();
+  },true);
+
+  /* -----------------------------------
+     B) HAMSTER INVENTORY AUTHORIZATION
+     ----------------------------------- */
+  function ensureHamState(s){
+    if(!s)return s;
+    try{globalThis.YN_R25?.ensureGuardianState?.(s)}catch(_){}
+    s.farmGuardianInventory=Array.isArray(s.farmGuardianInventory)?s.farmGuardianInventory:[];
+    return s;
+  }
+  function bagHamsters(s=ensureHamState(own())){return Array.isArray(s?.farmGuardianInventory)?s.farmGuardianInventory.filter(h=>h?.id):[]}
+  function hamsterMeta(h){const colors=globalThis.YN_R25?.COLORS||{};return colors[h?.color]||colors.gray||{name:h?.color||"แฮมสเตอร์",idle:"gray_hamster_idle.webp"}}
+  function openOwnedHamsterPicker(){
+    const s=ensureHamState(own()),arr=bagHamsters(s),farm=farmNo(),cap=globalThis.YN_R33?.hamsterCap?.(s)||6,count=s?.farmGuardians?.[String(farm)]?.hamsters?.length||0;
+    if(farm<2||farm>4)return;
+    if(!arr.length){
+      $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel r344-owned-hamster"><h2>🐹 แฮมสเตอร์ในกระเป๋า</h2><p class="r344-empty-hamster">ยังไม่มีแฮมสเตอร์ที่สามารถวางได้ค่ะ</p><small>ต้องได้รับแฮมสเตอร์จริงจากการคราฟ / Gift / ซื้อ / รางวัลก่อน จึงจะวางในฟาร์มได้</small></section>`;
+      openModal?.();return;
+    }
+    const rows=arr.map(h=>{const m=hamsterMeta(h);return `<button type="button" class="r344-owned-hamster-row" data-r29-guardian-reward="${String(h.id).replace(/"/g,"&quot;")}" ${count>=cap?"disabled":""}><span class="r25-hamster-preview" style="background-image:url('${m.idle||m.cute||"gray_hamster_idle.webp"}')"></span><span><b>แฮมสเตอร์${m.name||""}</b><small>มีตัวจริงในกระเป๋า • แตะเพื่อวาง Farm ${farm}</small></span></button>`}).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel r25-guardian-panel r344-owned-hamster"><h2>🐹 เลือกแฮมสเตอร์จากกระเป๋า</h2><small>Farm ${farm} • วางแล้ว ${count}/${cap} • ในกระเป๋า ${arr.length} ตัว</small><div class="r344-owned-hamster-list">${rows}</div></section>`;
+    openModal?.();
+  }
+  function decorateGuardianMenu(){
+    const choose=$("r25ChooseHamster");if(!choose)return;
+    const count=bagHamsters().length;
+    choose.innerHTML=`🐹 <b>แฮมสเตอร์ในกระเป๋า</b><span>${count?`มี ${count} ตัว • แตะเพื่อเลือกวาง`:"ยังไม่มีแฮมสเตอร์ให้วาง"}</span>`;
+    choose.disabled=count<1;
+    choose.classList.toggle("r344-no-owned-hamster",count<1);
+  }
+  document.addEventListener("click",e=>{
+    const choose=e.target?.closest?.("#r25ChooseHamster");
+    if(choose){
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+      if(!bagHamsters().length){decorateGuardianMenu();showWeatherToast?.("🐹 ยังไม่มีแฮมสเตอร์ในกระเป๋า");return}
+      openOwnedHamsterPicker();return;
+    }
+    /* hard stop for legacy free color-spawn UI. There is no legitimate
+       production path that should create a new hamster from a color button. */
+    const free=e.target?.closest?.("[data-r25-hamster]");
+    if(free){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();message?.("วางแฮมสเตอร์ไม่ได้","ต้องมีแฮมสเตอร์ตัวจริงในกระเป๋าก่อนค่ะ");}
+  },true);
+  const mo=new MutationObserver(()=>decorateGuardianMenu());
+  if($("modalContent"))mo.observe($("modalContent"),{childList:true,subtree:true});
+  setTimeout(decorateGuardianMenu,100);
+
+  /* -----------------------------------------
+     C) FRIEND VISIT — PUBLIC PLACED HAMSTERS
+     ----------------------------------------- */
+  let publicSig="",publishTimer=0;
+  function publicMap(s=ensureHamState(own())){
+    const out={"2":[],"3":[],"4":[]},guards=s?.farmGuardians||{};
+    for(const n of [2,3,4]){
+      const arr=Array.isArray(guards[String(n)]?.hamsters)?guards[String(n)].hamsters:[];
+      out[String(n)]=arr.filter(h=>h?.id).slice(0,6).map(h=>({
+        id:String(h.id),color:String(h.color||"gray"),x:Number(h.x??h.tx??50)||50,y:Number(h.y??h.ty??82)||82,faceLeft:Boolean(h.faceLeft),updatedAt:Number(h.updatedAt)||0
+      }));
+    }
+    return out;
+  }
+  function mapSig(m=publicMap()){return JSON.stringify(Object.entries(m).map(([k,a])=>[k,a.map(h=>[h.id,h.color])]));}
+  async function publishPublicHamsters(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext||!own())return;
+    const map=publicMap(),sig=mapSig(map);if(!force&&sig===publicSig)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),payload={memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,publicHamsters:clone(map),publicHamstersVersion:"R34.4",publicHamstersUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()};
+      await Promise.all([
+        fs.setDoc(fs.doc(db,"gardens",currentMemberKey),payload,{merge:true}),
+        fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),payload,{merge:true})
+      ]);
+      publicSig=sig;
+    }catch(e){console.warn("R34.4 public hamster publish",e)}
+  }
+  function schedulePublish(force=true){
+    if(publishTimer)clearTimeout(publishTimer);
+    publishTimer=setTimeout(()=>{publishTimer=0;publishPublicHamsters(force)},force?120:700);
+  }
+  /* Every real placement/removal/store/restore path changes one of these
+     controls. Publish after the local mutation, not on animation frames. */
+  document.addEventListener("click",e=>{
+    if(e.target?.closest?.("[data-r29-guardian-reward],[data-r28-ham-restore],[data-r28-ham-store],[data-r28-ham-delete],#r28StoreOne,#r28DeleteOne")){
+      schedulePublish(true);setTimeout(()=>publishPublicHamsters(true),900);
+    }
+  },false);
+  const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;
+  if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);await publishPublicHamsters(false);return r};
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);publicSig="";await publishPublicHamsters(true);return r};
+
+  const FRIEND_LAYER="r344FriendHamsterLayer";
+  function clearFriendLayer(){$(FRIEND_LAYER)?.remove();$("r342FriendHamsterLayer")?.remove()}
+  function choosePublicMap(g,p){
+    const gm=g?.publicHamsters&&typeof g.publicHamsters==="object"?g.publicHamsters:null,pm=p?.publicHamsters&&typeof p.publicHamsters==="object"?p.publicHamsters:null;
+    const count=m=>m?Object.values(m).reduce((n,a)=>n+(Array.isArray(a)?a.length:0),0):0;
+    return clone(count(gm)>=count(pm)?(gm||pm||{"2":[],"3":[],"4":[]}):(pm||gm||{"2":[],"3":[],"4":[]}));
+  }
+  function renderFriendPublicHamsters(){
+    $("r342FriendHamsterLayer")?.remove();
+    const screen=$("gameScreen");if(!screen||!visitContext){clearFriendLayer();return}
+    const n=farmNo();if(n<2||n>4){clearFriendLayer();return}
+    const arr=Array.isArray(visitContext.publicHamsters?.[String(n)])?visitContext.publicHamsters[String(n)]:[];
+    let layer=$(FRIEND_LAYER);if(!layer){layer=document.createElement("div");layer.id=FRIEND_LAYER;screen.appendChild(layer)}
+    const colors=globalThis.YN_R25?.COLORS||{};
+    layer.innerHTML=arr.map(h=>{const m=colors[h.color]||colors.gray||{},src=m.idle||"gray_hamster_idle.webp";return `<span class="r344-friend-hamster r25-hamster" style="left:${Math.max(14,Math.min(86,Number(h.x)||50))}%;top:${Math.max(75,Math.min(91,Number(h.y)||82))}%" aria-hidden="true"><span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite${h.faceLeft?" face-left":""}" style="background-image:url('${src}');background-position:0 0"></span></span>`}).join("");
+  }
+  const visitBase=typeof visitFriend==="function"?visitFriend:null;
+  if(visitBase)visitFriend=async function(targetKey,targetName){
+    const r=await visitBase.apply(this,arguments);if(!visitContext)return r;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const [gs,ps]=await Promise.all([fs.getDoc(fs.doc(db,"gardens",targetKey)),fs.getDoc(fs.doc(db,"publicProfiles",targetKey))]);
+      const g=gs.exists()?gs.data()||{}:{},p=ps.exists()?ps.data()||{}:{};
+      visitContext.publicHamsters=choosePublicMap(g,p);
+      state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
+      for(const n of [2,3,4])state.farmGuardians[String(n)]={hamsters:clone(visitContext.publicHamsters[String(n)]||[]),stored:[],removedIds:[]};
+      try{globalThis.YN_R25?.ensureGuardianState?.(state)}catch(_){}
+    }catch(e){console.warn("R34.4 friend hamster load",e)}
+    setTimeout(renderFriendPublicHamsters,30);return r;
+  };
+  const pageBase=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;
+  if(pageBase)setFarmPlotPage=function(){const r=pageBase.apply(this,arguments);if(visitContext)setTimeout(renderFriendPublicHamsters,20);return r};
+  const drawBase=typeof draw==="function"?draw:null;
+  if(drawBase)draw=function(){const r=drawBase.apply(this,arguments);if(visitContext)setTimeout(renderFriendPublicHamsters,0);return r};
+  const returnBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(returnBase)returnFromFriendVisit=function(){clearFriendLayer();return returnBase.apply(this,arguments)};
+
+  /* Re-publish existing placements once after load and whenever the app resumes.
+     Signature gating prevents writes when nothing changed. */
+  setTimeout(()=>publishPublicHamsters(true),500);
+  window.addEventListener("pageshow",()=>{if(visitContext)setTimeout(renderFriendPublicHamsters,40);else schedulePublish(false)},{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){if(visitContext)setTimeout(renderFriendPublicHamsters,40);else schedulePublish(false)}},{passive:true});
+  setInterval(()=>{if(!visitContext)publishPublicHamsters(false)},15000);
+
+  globalThis.YN_R344={BUILD,r344BulkWaterCurrentFarm,publishPublicHamsters,renderFriendPublicHamsters,openOwnedHamsterPicker};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
