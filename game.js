@@ -27093,3 +27093,122 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.9 — JELLY ARENA CLAIM PERMISSION FIX — 2026-09-04
+   Scope: jellyfish arena result acknowledgement ONLY.
+   - Do not let the legacy V169 jellyArenaWeekly write block score claiming.
+   - Persist the finished fight on the member-owned save first.
+   - Close the result exactly once for both Receive Score and X.
+   - Best-effort publish the weekly receipt to the already-public gardens doc;
+     a publish failure must never reopen the result modal.
+   ===================================================================== */
+(function YN_R349_JELLY_ARENA_CLAIM_ONLY(){
+  "use strict";
+  const BUILD="S2-R34.9-JELLY-ARENA-CLAIM-PERMISSION-FIX-20260904";
+  const NOW349=()=>typeof NOW==="function"?NOW():(typeof gameNow==="function"?gameNow():Date.now());
+  const HOUR349=typeof HOUR!=="undefined"?Number(HOUR):60*60*1000;
+  let claimBusy349=false;
+
+  function week349(){
+    try{return typeof weekKey==="function"?String(weekKey()):""}catch(_){return ""}
+  }
+  function receipt349(f){
+    return `arena-${String(f?.startedAt||f?.finishAt||0)}-${String(f?.jellyId||"")}-${String(f?.score||0)}`;
+  }
+
+  /* V169 wraps checkArenaFight and attempts the forbidden jellyArenaWeekly
+     transaction before showing the result. Mark only the in-memory commit flag
+     before entering that wrapper so it skips that legacy write. scoreClaimed is
+     deliberately left false so the normal win-result UI still appears. */
+  const check349=typeof checkArenaFight==="function"?checkArenaFight:null;
+  if(check349)checkArenaFight=async function(){
+    const f=(ownState||state)?.arena?.fight;
+    if(f&&f.win&&Number(f.finishAt||0)<=NOW349()&&!f.scoreCommitted){
+      f.scoreCommitted=true;
+    }
+    return check349.apply(this,arguments);
+  };
+
+  async function publishGardenArena349(score,wk,receipt){
+    if(!score||!wk||!currentMemberKey)return false;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const gRef=fs.doc(db,"gardens",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const gg=await tx.get(gRef),gd=gg.exists()?gg.data()||{}:{};
+        const old=gd.arenaWeekly&&typeof gd.arenaWeekly==="object"?gd.arenaWeekly:{};
+        const same=String(old.weekKey||"")===wk;
+        const receipts=same&&old.receipts&&typeof old.receipts==="object"?{...old.receipts}:{};
+        if(receipts[receipt])return;
+        receipts[receipt]=true;
+        const arenaWeekly={weekKey:wk,score:(same?Number(old.score)||0:0)+score,receipts,updatedAt:Date.now()};
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,arenaWeekly,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      return true;
+    }catch(e){
+      console.warn("R34.9 arena public receipt deferred",e);
+      return false;
+    }
+  }
+
+  claimArenaScore=async function(){
+    if(claimBusy349)return;
+    const local=(ownState||state)?.arena?.fight;
+    if(!local||!local.win){try{closeModal?.()}catch(_){}return}
+    claimBusy349=true;
+    const score=Math.max(1,Math.min(6,Math.floor(Number(local.score)||1)));
+    const wk=week349();
+    const receipt=receipt349(local);
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey);
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(sRef);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(ss.data(),currentMember);
+        const f=s?.arena?.fight;
+        if(!f||!f.win){next=s;return}
+        if(Number(f.finishAt||0)>NOW349())throw new Error("ผลการแข่งขันยังไม่พร้อม");
+
+        /* Keep a durable member-owned weekly receipt. This write is intentionally
+           inside the player's save and does not depend on jellyArenaWeekly rules. */
+        s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+        const old=s.arena.weeklyReceipt&&typeof s.arena.weeklyReceipt==="object"?s.arena.weeklyReceipt:{};
+        const same=String(old.weekKey||"")===wk;
+        const receipts=same&&old.receipts&&typeof old.receipts==="object"?{...old.receipts}:{};
+        let total=same?Number(old.score)||0:0;
+        if(!receipts[receipt]){receipts[receipt]=true;total+=score}
+        s.arena.weeklyReceipt={weekKey:wk,score:total,receipts,updatedAt:Date.now()};
+        s.arena.cooldownUntil=Number(f.finishAt||NOW349())+HOUR349;
+        /* Clear the completed fight in the same authoritative save transaction.
+           This is the key that prevents the result modal from reopening. */
+        s.arena.fight=null;
+        next=s;
+        tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next){
+        try{Y26_applyOwnState(next)}catch(_){ownState=next;if(!visitContext)state=next}
+        try{saveLocalOnly?.(next)}catch(_){}
+      }
+      try{closeModal?.()}catch(_){}
+      try{if(currentScene==="jellyfishArena")drawArena?.()}catch(_){}
+      try{showWeatherToast?.(`🏆 รับ +${score} คะแนนสังเวียนแล้ว`)}catch(_){}
+
+      /* Public score publishing is secondary. Never hold the UI/result hostage
+         to a Firestore rule on a leaderboard/public document. */
+      publishGardenArena349(score,wk,receipt).catch(()=>{});
+    }catch(e){
+      console.error("R34.9 arena claim save",e);
+      try{message?.("รับคะแนนไม่ได้",e?.message||"กรุณาลองใหม่")}catch(_){}
+    }finally{claimBusy349=false}
+  };
+
+  /* The existing R34.7 close-button capture listener calls claimArenaScore(), so
+     both X and Receive Score now converge on this one authoritative path. */
+  globalThis.YN_R349={BUILD,publishGardenArena349};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
