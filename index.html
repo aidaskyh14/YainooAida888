@@ -423,8 +423,48 @@
       if(standalone) document.documentElement.classList.add("standalone-app");
     })();
   </script>
-  <script src="game.js?v=S2-R34.10.1-JELLY-ARENA-HARD-KILL"></script>
-  <script>window.YAINOO_BUILD="S2-R34.10.1-JELLY-ARENA-HARD-KILL-20260904"; console.info(window.YAINOO_BUILD,"index-marker");</script>
+
+  <script id="r34103-arena-preload-kill">
+  (function(){
+    "use strict";
+    const ARENA_SELECTOR = "#ynuArenaClaimScore,#ynuArenaAccept,.ynu-arena-status,.ynu-arena-dashboard,.ynu-arena-choice-panel,.ynu-fighting";
+    const ARENA_TEXT = /คะแนนสังเวียนมวยทะเล|รับคะแนน|แมงกะพรุนคุณมันมีเลือดนักสู้|กำลังต่อสู้|คะแนนมวยทะเล|สังเวียนมวยทะเลกระพรุน/;
+    function isArenaModal(){
+      const c=document.getElementById("modalContent");
+      if(!c)return false;
+      return !!c.querySelector(ARENA_SELECTOR) || ARENA_TEXT.test(c.textContent||"");
+    }
+    function kill(){
+      if(!isArenaModal())return false;
+      const modal=document.getElementById("modal");
+      const c=document.getElementById("modalContent");
+      if(c)c.replaceChildren();
+      if(modal){
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden","true");
+        modal.style.setProperty("display","none","important");
+        modal.style.setProperty("pointer-events","none","important");
+      }
+      return true;
+    }
+    function arm(){
+      const modal=document.getElementById("modal");
+      const c=document.getElementById("modalContent");
+      if(!modal||!c)return requestAnimationFrame(arm);
+      const obs=new MutationObserver(kill);
+      obs.observe(c,{childList:true,subtree:true,characterData:true});
+      obs.observe(modal,{attributes:true,attributeFilter:["class","style"]});
+      window.addEventListener("pageshow",kill,{passive:true});
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)kill()},{passive:true});
+      setInterval(kill,250);
+      kill();
+    }
+    arm();
+    window.__YAINOO_ARENA_REMOVED__=true;
+  })();
+  </script>
+  <script src="game.js?v=S2-R34.10.2-SOURCE-LEVEL-ARENA-REMOVAL"></script>
+  <script>window.YAINOO_BUILD="S2-R34.10.3-INDEX-LEVEL-ARENA-BLOCK-20260904"; console.info(window.YAINOO_BUILD,"index-marker");</script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
