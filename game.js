@@ -28120,3 +28120,82 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.10.1 — JELLY ARENA HARD KILL-SWITCH — 2026-09-04
+   Prevents any legacy arena result/status modal from rendering at login
+   or later. Keeps all non-arena jellyfish systems intact.
+   ===================================================================== */
+(function YN_R34101_ARENA_HARD_KILL(){
+  "use strict";
+  const BUILD="S2-R34.10.1-JELLY-ARENA-HARD-KILL-20260904";
+  const $id=id=>document.getElementById(id);
+  const isArenaMarkup=()=>{
+    const c=$id("modalContent");
+    if(!c)return false;
+    return Boolean(c.querySelector?.("#ynuArenaClaimScore,#ynuArenaAccept,.ynu-arena-status,.ynu-arena-dashboard,.ynu-arena-choice-panel,.ynu-fighting") || /คะแนนสังเวียนมวยทะเล|แมงกะพรุนคุณมันมีเลือดนักสู้|กำลังต่อสู้/.test(c.textContent||""));
+  };
+  function scrub(){
+    for(const s of [typeof ownState!=="undefined"?ownState:null,typeof state!=="undefined"?state:null]){
+      if(!s||typeof s!=="object")continue;
+      s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+      s.arena.fight=null;
+    }
+    try{saveLocalOnly?.(ownState||state)}catch(_){}
+  }
+  function forceHideArenaModal(){
+    if(!isArenaMarkup())return false;
+    scrub();
+    const modal=$id("modal");
+    if(modal){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");modal.style.display="none";}
+    const c=$id("modalContent");if(c)c.innerHTML="";
+    return true;
+  }
+
+  /* Block the modal before it becomes visible, even when an old callback fires
+     during login/bootstrap. */
+  if(typeof openModal==="function"){
+    const baseOpen=openModal;
+    openModal=function(){
+      if(isArenaMarkup()){forceHideArenaModal();return false;}
+      return baseOpen.apply(this,arguments);
+    };
+  }
+
+  /* Last-resort DOM guard for callbacks that directly manipulate the modal. */
+  const target=$id("modalContent");
+  if(target&&typeof MutationObserver!=="undefined"){
+    const ob=new MutationObserver(()=>{if(isArenaMarkup())forceHideArenaModal()});
+    ob.observe(target,{childList:true,subtree:true,characterData:true});
+  }
+
+  /* Neutralize legacy functions on the global binding again, after every prior patch. */
+  const dead=async()=>{scrub();forceHideArenaModal();return false};
+  globalThis.startArenaFight=dead;
+  globalThis.checkArenaFight=dead;
+  globalThis.claimArenaScore=dead;
+  globalThis.arenaWinResult=()=>{scrub();forceHideArenaModal()};
+  globalThis.arenaLoseResult=()=>{scrub();forceHideArenaModal()};
+  globalThis.arenaStatus=()=>{scrub();forceHideArenaModal()};
+  globalThis.showArenaDashboard=()=>{scrub();forceHideArenaModal()};
+
+  /* Capture any stale arena controls before document-level legacy handlers. */
+  for(const type of ["pointerdown","pointerup","click"]){
+    window.addEventListener(type,e=>{
+      if(!e.target?.closest?.("#ynuArenaClaimScore,#ynuArenaAccept,#ynuArenaStart,#ynuArenaBoard"))return;
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();scrub();forceHideArenaModal();
+    },true);
+  }
+
+  /* Run immediately — important for a stale result already restored on the login page. */
+  scrub();forceHideArenaModal();
+  queueMicrotask?.(()=>forceHideArenaModal());
+  setTimeout(forceHideArenaModal,0);
+  setTimeout(forceHideArenaModal,50);
+  window.addEventListener("pageshow",()=>setTimeout(forceHideArenaModal,0),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(forceHideArenaModal,0)},{passive:true});
+
+  globalThis.YN_R34101={BUILD,forceHideArenaModal};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
