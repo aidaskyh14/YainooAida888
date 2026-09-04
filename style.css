@@ -9843,3 +9843,40 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 #r342FriendHamsterLayer{position:absolute;inset:0;z-index:67;pointer-events:none;overflow:hidden}
 #r342FriendHamsterLayer .r342-friend-hamster{pointer-events:none!important;border:0!important;background:transparent!important}
 #r342FriendHamsterLayer .r25-hamster-sprite{background-size:400% 400%!important}
+
+
+/* S2 R34.4 — owned hamster picker + reliable friend hamster overlay */
+.r344-owned-hamster-list{display:grid;gap:7px;margin-top:9px}
+.r344-owned-hamster-row{display:grid!important;grid-template-columns:46px minmax(0,1fr)!important;gap:9px!important;align-items:center!important;text-align:left!important;width:100%!important;padding:7px 9px!important;border-radius:13px!important}
+.r344-owned-hamster-row .r25-hamster-preview{width:42px!important;height:42px!important}
+.r344-owned-hamster-row span:last-child b,.r344-owned-hamster-row span:last-child small{display:block!important}
+.r344-owned-hamster-row span:last-child small{font-size:9px!important;opacity:.72!important;margin-top:2px!important}
+.r344-empty-hamster{text-align:center!important;padding:12px 8px!important;margin:8px 0!important;border-radius:12px!important;background:rgba(255,255,255,.45)!important}
+#r25ChooseHamster.r344-no-owned-hamster{opacity:.5!important;cursor:not-allowed!important}
+#r344FriendHamsterLayer{position:absolute;inset:0;z-index:180;pointer-events:none;overflow:hidden}
+#r344FriendHamsterLayer .r344-friend-hamster{pointer-events:none!important;border:0!important;background:transparent!important}
+#r344FriendHamsterLayer .r25-hamster-sprite{background-size:400% 400%!important}
+
+
+/* =====================================================================
+   S2 R34.5 — Farm 2/3/4 interaction + compact hamster control +
+   animated friend hamsters. The old 86%-wide invisible hamster hotspot
+   must never cover plots/tools again.
+   ===================================================================== */
+.r26-guardian-legacy-anchor{display:none!important;visibility:hidden!important;pointer-events:none!important;width:0!important;height:0!important}
+.game-screen:not(.visiting-friend) .plot{pointer-events:auto!important;touch-action:manipulation!important}
+.game-screen:not(.visiting-friend) #s2FarmDock,.game-screen:not(.visiting-friend) #s2MainNav{pointer-events:auto!important;touch-action:manipulation!important}
+#r25GuardianHotspot{
+  left:auto!important;right:2.6%!important;top:auto!important;bottom:10.1%!important;
+  width:auto!important;min-width:88px!important;height:36px!important;
+  padding:5px 10px!important;border:1.5px solid rgba(244,218,169,.94)!important;
+  border-radius:15px!important;background:linear-gradient(180deg,rgba(104,61,118,.98),rgba(59,36,76,.98))!important;
+  color:#fff4dc!important;font-size:10px!important;font-weight:900!important;line-height:1!important;
+  box-shadow:0 5px 14px rgba(18,9,24,.32)!important;white-space:nowrap!important;
+  pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer!important;
+}
+#r25GuardianHotspot.hidden{display:none!important}
+#r342FriendHamsterLayer,#r344FriendHamsterLayer{display:none!important;pointer-events:none!important}
+#r345FriendHamsterLayer{position:absolute;inset:0;z-index:67;pointer-events:none;overflow:hidden}
+#r345FriendHamsterLayer .r345-friend-hamster{pointer-events:none!important;border:0!important;background:transparent!important}
+#r345FriendHamsterLayer .r25-hamster-sprite{background-size:400% 400%!important}
