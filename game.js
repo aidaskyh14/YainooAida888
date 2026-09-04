@@ -28149,3 +28149,103 @@ console.info(window.YAINOO_BUILD,"loaded");
 
 /* R34.10.4 final marker: arena removed, worm clear repaired */
 globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
+
+
+/* =====================================================================
+   S2 R34.10.5 — AUTHORITATIVE WORM CLEAR (SAVE + GARDEN) — 2026-09-04
+   Fixes own-farm worm removal for both single plot and bulk manager.
+   The live plot state may be newer in gardens than saves; always read both,
+   use garden plots when present, then commit the repaired plots back to both.
+   No publicProfiles write is part of the critical transaction.
+   ===================================================================== */
+(function YN_R34105_WORM_AUTHORITATIVE(){
+  "use strict";
+  const BUILD="S2-R34.10.5-WORM-AUTHORITATIVE-FIX-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const cp=v=>typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v));
+  const costOf=p=>(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?2:1;
+  const cure=p=>{const c=CROPS?.[p.crop];p.phase="growing2";p.worm=false;try{delete p.wormType}catch(_){};p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0));return p};
+  const normalizePlots=raw=>{const a=Array.isArray(raw)?raw.map(normalizePlot):[];while(a.length<PLOT_COUNT)a.push(emptyPlot());return a};
+
+  clearWorm=async function(index){
+    if(visitContext||guardResting?.())return;
+    index=Math.floor(Number(index));
+    const local=(ownState||state)?.plots?.[index];
+    if(!local?.crop)return;
+    try{ensurePlotPhaseStandalone(local)}catch(_){}
+    if(local.phase!=="worm"&&!local.worm)return message("กำจัดหนอนไม่ได้","แปลงนี้ไม่มีหนอนแล้วค่ะ");
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกออนไลน์ยังไม่พร้อม กรุณาลองใหม่");
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext();
+      const sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next=null,used=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember);
+        const source=(gg.exists()&&Array.isArray(gg.data()?.plots))?gg.data().plots:st.plots;
+        const plots=normalizePlots(source),p=plots[index];
+        try{ensurePlotPhaseStandalone(p)}catch(_){}
+        if(!p?.crop|| (p.phase!=="worm"&&!p.worm))throw new Error("หนอนถูกกำจัดไปแล้ว หรือข้อมูลแปลงยังไม่ตรงกัน");
+        used=costOf(p);st.merit=(Number(st.merit)||0)-used;cure(p);plots[index]=normalizePlot(p);st.plots=plots;
+        try{incrementMissionOn(st,"clearWorms",1)}catch(_){}
+        if(currentMember==="Aida"&&adminProfile?.role==="admin")try{ensureAdminStock(st)}catch(_){}
+        next=st;
+        tx.set(sRef,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:cp(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){};try{lastGardenHash=plotHash(ownState.plots)}catch(_){};draw();updateMeritUI();closeModal();
+      showWeatherToast?.(`🐛 กำจัดหนอนแล้ว • ใช้ ${used} กุศล`);
+    }catch(e){console.error("R34.10.5 single worm",e);message("กำจัดหนอนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+
+  async function bulk(useSpray=false){
+    if(visitContext||guardResting?.())return;
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกออนไลน์ยังไม่พร้อม กรุณาลองใหม่");
+      await settlePendingCloudSave?.();
+      const page=Math.max(0,Math.min(3,Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)),a=page*12,b=a+12;
+      const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next=null,count=0,total=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember),source=(gg.exists()&&Array.isArray(gg.data()?.plots))?gg.data().plots:st.plots,plots=normalizePlots(source),targets=[];
+        for(let i=a;i<b;i++){const p=plots[i];try{ensurePlotPhaseStandalone(p)}catch(_){};if(p?.crop&&(p.phase==="worm"||p.worm))targets.push(i)}
+        if(!targets.length)throw new Error("ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
+        total=targets.reduce((sum,i)=>sum+(useSpray?((typeof wormTypeOf==="function"&&wormTypeOf(plots[i])==="giant")?12:5):costOf(plots[i])),0);
+        if(useSpray){st.specials=st.specials||{};const have=Number(st.specials.wormKillerSpray)||0;if(!(currentMember==="Aida"&&adminProfile?.role==="admin")&&have<total)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${total} ขวด • มี ${have}`);if(!(currentMember==="Aida"&&adminProfile?.role==="admin"))st.specials.wormKillerSpray=have-total}
+        else if(!(currentMember==="Aida"&&adminProfile?.role==="admin"))st.merit=(Number(st.merit)||0)-total;
+        targets.forEach(i=>{cure(plots[i]);plots[i]=normalizePlot(plots[i])});count=targets.length;st.plots=plots;try{incrementMissionOn(st,"clearWorms",count)}catch(_){};if(currentMember==="Aida"&&adminProfile?.role==="admin")try{ensureAdminStock(st)}catch(_){};next=st;
+        tx.set(sRef,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:cp(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){};try{lastGardenHash=plotHash(ownState.plots)}catch(_){};draw();updateMeritUI();closeModal();showWeatherToast?.(`${useSpray?"🧴":"🐛"} กำจัดหนอน ${count} แปลงแล้ว • ใช้ ${total} ${useSpray?"ขวด":"กุศล"}`);
+    }catch(e){console.error("R34.10.5 bulk worm",e);message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+  }
+
+  function bindBulkOverride(){
+    if(!globalThis.YN_R14)return;
+    globalThis.YN_R14.wormManager=function(){
+      const page=Math.max(0,Math.min(3,Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)),a=page*12,b=a+12,s=ownState||state;
+      let n=0;for(let i=a;i<b;i++){const p=s?.plots?.[i];try{ensurePlotPhaseStandalone(p)}catch(_){};if(p?.crop&&(p.phase==="worm"||p.worm))n++}
+      if(!n)return message("🐛 จัดการหนอน","ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
+      $("modalContent").innerHTML=`<section class="feature-panel"><h2>🐛 จัดการหนอนทั้งสวน</h2><p>พบ ${n} แปลง</p><div class="ynu-manager-grid"><button id="r34105WormMerit">🙏 ใช้กุศล</button><button id="r34105WormSpray">🧴 ใช้สเปรย์กำจัดหนอน</button></div></section>`;openModal();
+      $("r34105WormMerit").onclick=()=>bulk(false);$("r34105WormSpray").onclick=()=>bulk(true);
+    };
+    /* Rebind manager so the worm button calls the new manager, not the closed-over R14 function. */
+    const oldManager=globalThis.YN_R14.manager;
+    globalThis.YN_R14.manager=function(){
+      if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");
+      const page=Math.max(0,Math.min(3,Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)),a=page*12,b=a+12;
+      $("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">เฉพาะแปลง ${a+1}–${b}</p><div class="ynu-manager-grid"><button data-r14-manager="plant">🌱 ปลูกทั้งหมด</button><button data-r14-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-r14-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-r14-manager="worm">🐛 จัดการหนอน</button></div></section>`;
+      openModal();
+      document.querySelector('[data-r14-manager="plant"]').onclick=()=>{closeModal();oldManager?.();setTimeout(()=>document.querySelector('[data-r14-manager="plant"]')?.click(),0)};
+      document.querySelector('[data-r14-manager="boost"]').onclick=()=>{closeModal();oldManager?.();setTimeout(()=>document.querySelector('[data-r14-manager="boost"]')?.click(),0)};
+      document.querySelector('[data-r14-manager="angel"]').onclick=()=>{closeModal();oldManager?.();setTimeout(()=>document.querySelector('[data-r14-manager="angel"]')?.click(),0)};
+      document.querySelector('[data-r14-manager="worm"]').onclick=globalThis.YN_R14.wormManager;
+    };
+  }
+  bindBulkOverride();
+  globalThis.YN_R34105={BUILD,bulk};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
