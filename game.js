@@ -28022,3 +28022,180 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.10.0 — REMOVE JELLYFISH ARENA COMPLETELY — 2026-09-04
+   - Removes only Jellyfish Arena / sea-boxing competition.
+   - Keeps Jellyfish Pond 1/2, feeding, crafting, naming, love, poison, etc.
+   - Clears stale arena.fight so legacy "รับคะแนน" popups cannot return.
+   ===================================================================== */
+(function YN_R34100_REMOVE_JELLY_ARENA(){
+  "use strict";
+  const BUILD="S2-R34.10.0-REMOVE-JELLY-ARENA-20260904";
+  const $id=id=>document.getElementById(id);
+
+  function scrubArenaLocal(){
+    for(const s of [typeof ownState!=="undefined"?ownState:null,typeof state!=="undefined"?state:null]){
+      if(!s||typeof s!=="object")continue;
+      s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+      s.arena.fight=null;
+    }
+    try{saveLocalOnly?.(ownState||state)}catch(_){}
+  }
+
+  async function scrubArenaCloud(){
+    if(!globalThis.cloudReady||!globalThis.currentMemberKey)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const ref=fs.doc(db,"saves",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())return;
+        const s=normalizeState(snap.data(),currentMember);
+        s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+        if(!s.arena.fight)return;
+        s.arena.fight=null;
+        tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+    }catch(e){console.warn(BUILD,"clear stale arena fight",e)}
+  }
+
+  function closeLegacyArenaPopup(){
+    const claim=$id("ynuArenaClaimScore"),result=document.querySelector?.(".ynu-arena-status");
+    if(claim||result){try{closeModal?.()}catch(_){} scrubArenaLocal();}
+  }
+
+  function hideArenaEntry(){
+    if(String(globalThis.currentScene||"")==="jellyfish2"){
+      const next=$id("sceneNextBtn");
+      if(next){next.classList.add("hidden");next.style.display="none";next.onclick=null;}
+    }
+    document.querySelectorAll?.('[data-scene="jellyfishArena"],[data-open-arena],#ynuArenaBoard,#ynuArenaStart').forEach(el=>{
+      el.classList.add("hidden");el.style.display="none";
+    });
+  }
+
+  /* Any legacy route to the arena is redirected back to Pond 2. */
+  const openSceneBase=typeof openScene==="function"?openScene:null;
+  if(openSceneBase)openScene=function(name){
+    if(String(name)==="jellyfishArena"){
+      scrubArenaLocal();closeLegacyArenaPopup();
+      return openSceneBase.call(this,"jellyfish2");
+    }
+    const r=openSceneBase.apply(this,arguments);setTimeout(hideArenaEntry,0);return r;
+  };
+
+  /* Neutralize every legacy arena action/result hook. */
+  globalThis.startArenaFight=async function(){scrubArenaLocal();try{closeModal?.()}catch(_){};return false};
+  globalThis.checkArenaFight=async function(){scrubArenaLocal();closeLegacyArenaPopup();return false};
+  globalThis.claimArenaScore=async function(){scrubArenaLocal();closeLegacyArenaPopup();return false};
+  globalThis.arenaWinResult=function(){scrubArenaLocal();closeLegacyArenaPopup()};
+  globalThis.arenaLoseResult=function(){scrubArenaLocal();closeLegacyArenaPopup()};
+  globalThis.arenaStatus=function(){scrubArenaLocal();closeLegacyArenaPopup()};
+  globalThis.showArenaDashboard=function(){scrubArenaLocal();try{closeModal?.()}catch(_){}};
+
+  /* Block Pond 2's old direct nextAction=openArena before it can fire. */
+  for(const type of ["pointerdown","pointerup","click"]){
+    window.addEventListener(type,e=>{
+      const next=e.target?.closest?.("#sceneNextBtn");
+      const arenaButton=e.target?.closest?.("#ynuArenaStart,#ynuArenaBoard,#ynuArenaClaimScore,#ynuArenaAccept");
+      if(!(arenaButton||(next&&String(globalThis.currentScene||"")==="jellyfish2")))return;
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+      scrubArenaLocal();closeLegacyArenaPopup();hideArenaEntry();
+    },true);
+  }
+
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){
+    const r=await initBase.apply(this,arguments);
+    scrubArenaLocal();
+    setTimeout(()=>{scrubArenaCloud();closeLegacyArenaPopup();hideArenaEntry()},80);
+    return r;
+  };
+
+  window.addEventListener("pageshow",()=>setTimeout(()=>{scrubArenaLocal();closeLegacyArenaPopup();hideArenaEntry();scrubArenaCloud()},120),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{scrubArenaLocal();closeLegacyArenaPopup();hideArenaEntry()},80)},{passive:true});
+  setInterval(()=>{closeLegacyArenaPopup();hideArenaEntry()},700);
+
+  globalThis.YN_R34100={BUILD,scrubArenaCloud};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.10.1 — JELLY ARENA HARD KILL-SWITCH — 2026-09-04
+   Prevents any legacy arena result/status modal from rendering at login
+   or later. Keeps all non-arena jellyfish systems intact.
+   ===================================================================== */
+(function YN_R34101_ARENA_HARD_KILL(){
+  "use strict";
+  const BUILD="S2-R34.10.1-JELLY-ARENA-HARD-KILL-20260904";
+  const $id=id=>document.getElementById(id);
+  const isArenaMarkup=()=>{
+    const c=$id("modalContent");
+    if(!c)return false;
+    return Boolean(c.querySelector?.("#ynuArenaClaimScore,#ynuArenaAccept,.ynu-arena-status,.ynu-arena-dashboard,.ynu-arena-choice-panel,.ynu-fighting") || /คะแนนสังเวียนมวยทะเล|แมงกะพรุนคุณมันมีเลือดนักสู้|กำลังต่อสู้/.test(c.textContent||""));
+  };
+  function scrub(){
+    for(const s of [typeof ownState!=="undefined"?ownState:null,typeof state!=="undefined"?state:null]){
+      if(!s||typeof s!=="object")continue;
+      s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+      s.arena.fight=null;
+    }
+    try{saveLocalOnly?.(ownState||state)}catch(_){}
+  }
+  function forceHideArenaModal(){
+    if(!isArenaMarkup())return false;
+    scrub();
+    const modal=$id("modal");
+    if(modal){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");modal.style.display="none";}
+    const c=$id("modalContent");if(c)c.innerHTML="";
+    return true;
+  }
+
+  /* Block the modal before it becomes visible, even when an old callback fires
+     during login/bootstrap. */
+  if(typeof openModal==="function"){
+    const baseOpen=openModal;
+    openModal=function(){
+      if(isArenaMarkup()){forceHideArenaModal();return false;}
+      return baseOpen.apply(this,arguments);
+    };
+  }
+
+  /* Last-resort DOM guard for callbacks that directly manipulate the modal. */
+  const target=$id("modalContent");
+  if(target&&typeof MutationObserver!=="undefined"){
+    const ob=new MutationObserver(()=>{if(isArenaMarkup())forceHideArenaModal()});
+    ob.observe(target,{childList:true,subtree:true,characterData:true});
+  }
+
+  /* Neutralize legacy functions on the global binding again, after every prior patch. */
+  const dead=async()=>{scrub();forceHideArenaModal();return false};
+  globalThis.startArenaFight=dead;
+  globalThis.checkArenaFight=dead;
+  globalThis.claimArenaScore=dead;
+  globalThis.arenaWinResult=()=>{scrub();forceHideArenaModal()};
+  globalThis.arenaLoseResult=()=>{scrub();forceHideArenaModal()};
+  globalThis.arenaStatus=()=>{scrub();forceHideArenaModal()};
+  globalThis.showArenaDashboard=()=>{scrub();forceHideArenaModal()};
+
+  /* Capture any stale arena controls before document-level legacy handlers. */
+  for(const type of ["pointerdown","pointerup","click"]){
+    window.addEventListener(type,e=>{
+      if(!e.target?.closest?.("#ynuArenaClaimScore,#ynuArenaAccept,#ynuArenaStart,#ynuArenaBoard"))return;
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();scrub();forceHideArenaModal();
+    },true);
+  }
+
+  /* Run immediately — important for a stale result already restored on the login page. */
+  scrub();forceHideArenaModal();
+  queueMicrotask?.(()=>forceHideArenaModal());
+  setTimeout(forceHideArenaModal,0);
+  setTimeout(forceHideArenaModal,50);
+  window.addEventListener("pageshow",()=>setTimeout(forceHideArenaModal,0),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(forceHideArenaModal,0)},{passive:true});
+
+  globalThis.YN_R34101={BUILD,forceHideArenaModal};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
