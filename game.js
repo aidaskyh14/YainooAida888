@@ -25134,7 +25134,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     }
   }
   function score(key,delta,receipt){
-    delta=Math.max(0,Number(delta)||0);if(!delta||!currentMemberKey||visitContext||!C[key])return Promise.resolve(false);
+    delta=Math.max(0,Number(delta)||0);if(!delta||!currentMemberKey||visitContext||!C[key]||ADMIN())return Promise.resolve(false);
     return new Promise(resolve=>{const q=campaignScoreQueues.get(key)||[],eventAt=now(),id=`${Date.now()}-${Math.random().toString(36).slice(2)}`;q.push({id,delta,receipt:String(receipt||''),eventAt,resolve});campaignScoreQueues.set(key,q);const old=campaignScoreTimers.get(key);if(old)clearTimeout(old);const t=setTimeout(()=>flushCampaignScoreQueue(key),220);campaignScoreTimers.set(key,t)});
   }
   document.addEventListener('visibilitychange',()=>{if(document.hidden)for(const k of campaignScoreQueues.keys())flushCampaignScoreQueue(k)},{passive:true});
@@ -25142,7 +25142,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   function rankHTML(rows){
     if(!rows.length)return '<p class="r29-empty">ยังไม่มีผู้เล่นทำคะแนนค่ะ</p>';
-    return rows.sort((a,b)=>b.score-a.score||a.reachedAtMs-b.reachedAtMs).map((r,i)=>`<article class="r29-rank-row ${i<3?'top':''}"><span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`}</span><div><b>${esc(r.displayName||r.memberKey)}</b><small>${r.memberKey===currentMemberKey?'คุณ':''}</small></div><strong>${Number(r.score||0).toLocaleString('th-TH')}</strong></article>`).join('');
+    return rows.filter(r=>String(r?.memberKey||'').toLowerCase()!=='aida'&&String(r?.displayName||'').toLowerCase()!=='aida').sort((a,b)=>b.score-a.score||a.reachedAtMs-b.reachedAtMs).map((r,i)=>`<article class="r29-rank-row ${i<3?'top':''}"><span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`}</span><div><b>${esc(r.displayName||r.memberKey)}</b><small>${r.memberKey===currentMemberKey?'คุณ':''}</small></div><strong>${Number(r.score||0).toLocaleString('th-TH')}</strong></article>`).join('');
   }
   async function showCampaign(key){
     const c=C[key];if(!c)return;currentKey=key;stopLive();let meta=await getMeta(key);const started=Boolean(meta?.startedAtMs),isActive=active(meta),ended=started&&now()>=Number(meta.endAtMs||0);
@@ -26659,14 +26659,14 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   function resumeAll(force=false){
     if(!currentMemberKey||visitContext)return;const t=Date.now();if(!force&&t-lastResume<10000)return;lastResume=t;const s=ensure(live());if(!s)return;
     let changed=cleanupDirtyR34;if(s.hedgehog&&Array.isArray(s.hedgehog.drops)){const n=s.hedgehog.drops.length;s.hedgehog.drops=s.hedgehog.drops.filter(d=>HEDGE_VALID.has(String(d?.type||"")));if(n!==s.hedgehog.drops.length)changed=true}
-    try{processDogDrops?.()}catch(e){console.warn("R34 dog drops",e)}try{processCatDrops?.()}catch(e){console.warn("R34 cat drops",e)}try{globalThis.YN_V240_PROCESS_TREASURE?.()}catch(e){console.warn("R34 alpaca treasure drops",e)}try{processRoyalDrops()}catch(e){console.warn("R34 royal drops",e)}try{processHamsterDrops()}catch(e){console.warn("R34 hamster drops",e)}
+    try{processDogDrops?.()}catch(e){console.warn("R34 dog drops",e)}try{processCatDrops?.()}catch(e){console.warn("R34 cat drops",e)}try{globalThis.YN_V240_PROCESS_TREASURE?.()}catch(e){console.warn("R34 alpaca treasure drops",e)}/* R34.11: royal/hamster disc production is cloud-authoritative below; legacy local producers disabled. */
     if(changed){cleanupDirtyR34=false;try{saveLocalOnly?.(s);save?.()}catch(_){cleanupDirtyR34=true}}cleanupUI();renderRoyalDrops();renderHamsterDrops();try{updateMeritUI?.()}catch(_){}
   }
   const obs=new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)cleanupUI(n)});obs.observe(document.documentElement,{subtree:true,childList:true});
   document.addEventListener("visibilitychange",()=>{if(document.hidden){try{flushCloudSave?.()}catch(_){}}else setTimeout(()=>resumeAll(true),80)},{passive:true});
   window.addEventListener("pageshow",()=>setTimeout(()=>resumeAll(true),100),{passive:true});window.addEventListener("focus",()=>setTimeout(()=>resumeAll(),60),{passive:true});window.addEventListener("online",()=>setTimeout(()=>resumeAll(true),120),{passive:true});
   setInterval(()=>resumeAll(),30000);
-  if(typeof setFarmPlotPage==="function"){const base=setFarmPlotPage;setFarmPlotPage=function(){const r=base.apply(this,arguments);setTimeout(()=>{processHamsterDrops();renderHamsterDrops()},40);return r}}
+  if(typeof setFarmPlotPage==="function"){const base=setFarmPlotPage;setFarmPlotPage=function(){const r=base.apply(this,arguments);setTimeout(()=>{renderHamsterDrops()},40);return r}}
   if(typeof openScene==="function"){const base=openScene;openScene=function(){const r=base.apply(this,arguments);setTimeout(()=>{resumeAll();renderRoyalDrops()},70);return r}}
 
   /* Production UI: no Aida-only test buttons. */
@@ -28487,6 +28487,8 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   }
 
   function run(force=false){
+    /* R34.11: disabled — this legacy local runner could overwrite newer cloud state. */
+    return false;
     if(!currentMemberKey||visitContext)return false;const s=ensure(live());if(!s)return false;
     const t=now(),changed=repairRoyal(s,t)|repairHamster(s,t);
     if(changed){try{saveLocalOnly?.(s)}catch(_){}schedulePersist()}
@@ -28515,6 +28517,540 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
    ====================================================================== */
 (()=>{
   const BUILD="S2-R34.10.9-BASEMENT-ONE-TAP-WINE-RECIPE-CLEANUP";
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.10.10 — AUTHORITATIVE ROYAL ALPACA + HAMSTER DISC DROPS
+   2026-09-04
+   - Royal adult prince/princess: pink therapy disc x2 / animal / 1 hour.
+   - Every placed hamster: rock therapy disc x1 / animal / 3 hours.
+   - Cloud transaction is authoritative; avoids local movement/save races.
+   - One-time recovery drop for currently placed eligible animals.
+   ===================================================================== */
+(function YN_R341010_AUTHORITATIVE_DISC_DROPS(){
+  "use strict";
+  const BUILD="S2-R34.10.10-AUTHORITATIVE-ANIMAL-DROPS-20260904";
+  const HOUR=3600000, ROYAL_MS=HOUR, HAM_MS=3*HOUR;
+  const RECOVERY="R34.10.10-drop-recovery";
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  let busy=false,lastRun=0;
+
+  function ensure(s){
+    if(!s||typeof s!=="object")return s;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};
+    s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};
+    for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];
+    s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};
+    s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};
+    for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];
+    s.dropRepairMarks=s.dropRepairMarks&&typeof s.dropRepairMarks==="object"?s.dropRepairMarks:{};
+    return s;
+  }
+
+  function compute(s,t){
+    ensure(s);let changed=false;
+    const royals=[];
+    (Array.isArray(s.alpaca?.pens)?s.alpaca.pens:[]).forEach((pen,pi)=>{
+      for(const a of (Array.isArray(pen?.alpacas)?pen.alpacas:[])){
+        if(a?.type!=="adult"||!["prince","princess"].includes(String(a?.color||""))||!a?.id)continue;
+        royals.push({a,pen:pi+1});
+      }
+    });
+    const hams=[];
+    for(const farm of [2,3,4])for(const h of (s?.farmGuardians?.[String(farm)]?.hamsters||[]))if(h?.id)hams.push({h,farm});
+
+    /* One-time recovery proves the feature immediately without changing future cadence. */
+    if(!s.dropRepairMarks[RECOVERY]){
+      for(const {a,pen} of royals){
+        const arr=s.alpaca.royalDiscDrops[`pen${pen}`],id=String(a.id),did=`r341010-recovery-royal-${id}`;
+        if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,animalId:id,qty:2,createdAt:t,recovery:true});
+        s.alpaca.royalDiscClock[id]=t;
+      }
+      for(const {h,farm} of hams){
+        const arr=s.hamsterDiscDrops[String(farm)],id=String(h.id),did=`r341010-recovery-ham-${id}`;
+        if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,hamsterId:id,farm,qty:1,createdAt:t,recovery:true});
+        s.hamsterDiscClock[id]=t;
+      }
+      s.dropRepairMarks[RECOVERY]=t;changed=true;
+    }
+
+    const activeRoyal=new Set();
+    for(const {a,pen} of royals){
+      const id=String(a.id),arr=s.alpaca.royalDiscDrops[`pen${pen}`];activeRoyal.add(id);
+      let last=Number(s.alpaca.royalDiscClock[id]);if(!Number.isFinite(last)||last<=0||last>t){last=t;s.alpaca.royalDiscClock[id]=t;changed=true}
+      const due=Math.floor((t-last)/ROYAL_MS);if(due>0){
+        const rounds=Math.min(due,48);
+        for(let r=1;r<=rounds;r++){const at=last+r*ROYAL_MS,did=`r341010-royal-${id}-${at}`;if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,animalId:id,qty:2,createdAt:at})}
+        if(arr.length>96)arr.splice(0,arr.length-96);s.alpaca.royalDiscClock[id]=last+due*ROYAL_MS;changed=true;
+      }
+    }
+    for(const id of Object.keys(s.alpaca.royalDiscClock))if(!activeRoyal.has(id)){delete s.alpaca.royalDiscClock[id];changed=true}
+
+    const activeHam=new Set();
+    for(const {h,farm} of hams){
+      const id=String(h.id),arr=s.hamsterDiscDrops[String(farm)];activeHam.add(id);
+      let last=Number(s.hamsterDiscClock[id]);if(!Number.isFinite(last)||last<=0||last>t){last=t;s.hamsterDiscClock[id]=t;changed=true}
+      const due=Math.floor((t-last)/HAM_MS);if(due>0){
+        const rounds=Math.min(due,48);
+        for(let r=1;r<=rounds;r++){const at=last+r*HAM_MS,did=`r341010-ham-${id}-${at}`;if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,hamsterId:id,farm,qty:1,createdAt:at})}
+        if(arr.length>120)arr.splice(0,arr.length-120);s.hamsterDiscClock[id]=last+due*HAM_MS;changed=true;
+      }
+    }
+    for(const id of Object.keys(s.hamsterDiscClock))if(!activeHam.has(id)){delete s.hamsterDiscClock[id];changed=true}
+    return changed;
+  }
+
+  async function run(force=false){
+    if(busy||!cloudReady||!currentMemberKey||visitContext)return false;
+    const t0=Date.now();if(!force&&t0-lastRun<20000)return false;lastRun=t0;busy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,changed=false;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())return;
+        const st=ensure(normalizeState(snap.data(),currentMember));changed=compute(st,now());next=st;
+        if(changed)tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(next){ownState=ensure(normalizeState(next,currentMember));if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
+      try{globalThis.YN_R3411?.renderDrops?.()}catch(e){console.warn("R34.11 disc render",e)}
+      return changed;
+    }catch(e){console.warn("R34.10.10 authoritative drop sync",e);return false}
+    finally{busy=false}
+  }
+
+  document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,#plotPageNextBtn,#plotPagePrevBtn,[data-pen],[data-alpaca-pen]"))setTimeout(()=>run(true),120)},false);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>run(true),180)},{passive:true});
+  window.addEventListener("pageshow",()=>setTimeout(()=>run(true),220),{passive:true});
+  window.addEventListener("focus",()=>setTimeout(()=>run(false),150),{passive:true});
+  setInterval(()=>run(false),30000);
+  setTimeout(()=>run(true),900);
+
+  globalThis.YN_R341010={BUILD,run,compute};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.11.0 — LIVE FRIEND STATE / RANK / FAST FARM / DISC DROPS / HOTEL BULK FEED
+   2026-09-04
+   - gardens is a live public mirror of the owner's authoritative save plots.
+   - friend visits subscribe to current plots + actually placed hamsters.
+   - friend worm/water writes only plots+updatedAt on the target garden.
+   - Aida/Admin pinned above #1; member ranks start at #1; Top 3 highlighted.
+   - one physical tap for main plots/crop choices/boost/trough controls.
+   - local revision-first crop actions prevent stale listener rollback while preserving inventory.
+   - cloud-authoritative royal alpaca + hamster disc drops with direct visible collection.
+   - Meow-Woof Hotel: feed all hungry pets in current pen using a user-selected dish.
+   ===================================================================== */
+(function YN_R3411_ALL_SYSTEM_REPAIR(){
+  "use strict";
+  const BUILD="S2-R34.11.0-LIVE-SYNC-FAST-ACTIONS-DROPS-HOTEL-20260904";
+  const $=id=>document.getElementById(id);
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const html=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}catch(_){return String(v??"")}};
+  const admin=()=>{try{return typeof isAdmin==="function"?Boolean(isAdmin()):(currentMember==="Aida"||currentMemberKey==="aida")}catch(_){return currentMember==="Aida"||currentMemberKey==="aida"}};
+  const owner=()=>ownState||(!visitContext?state:null);
+  const normPlots=arr=>{const out=(Array.isArray(arr)?arr:[]).slice(0,typeof PLOT_COUNT==="number"?PLOT_COUNT:48).map(p=>typeof normalizePlot==="function"?normalizePlot(clone(p)):clone(p));const count=typeof PLOT_COUNT==="number"?PLOT_COUNT:48;while(out.length<count)out.push(typeof emptyPlot==="function"?emptyPlot():{});return out};
+  const plotSig=arr=>{try{return typeof plotHash==="function"?plotHash(arr):JSON.stringify(arr)}catch(_){return JSON.stringify(arr||[])}};
+  const farmNo=()=>Math.max(1,Math.min(4,(Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)+1));
+  const penNo=()=>{const direct=Number(globalThis.YN_ALPACA_CURRENT_PEN);if(Number.isFinite(direct)&&direct>=1&&direct<=5)return direct;const st=$("alpacaPenStage"),raw=st?.style?.getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))};
+
+  /* ---------- A) Owner public mirror: plots + actually placed hamsters ---------- */
+  function publicHamsters(s=owner()){
+    const out={"2":[],"3":[],"4":[]};
+    try{globalThis.YN_R25?.ensureGuardianState?.(s)}catch(_){}
+    for(const n of [2,3,4]){
+      out[String(n)]=(s?.farmGuardians?.[String(n)]?.hamsters||[]).filter(Boolean).slice(0,6).map(h=>({
+        id:String(h?.id||""),color:String(h?.color||"gray"),
+        x:Math.max(14,Math.min(86,Number(h?.x??h?.tx??50)||50)),
+        y:Math.max(75,Math.min(91,Number(h?.y??h?.ty??82)||82)),
+        faceLeft:Boolean(h?.faceLeft),updatedAt:Number(h?.updatedAt)||0
+      })).filter(h=>h.id);
+    }
+    return out;
+  }
+  const hamSig=m=>JSON.stringify(Object.entries(m||{}).map(([k,a])=>[k,(a||[]).map(h=>[h.id,h.color])]))
+  let publicAck="",publicBusy=false,publicAgain=false,publicTimer=0;
+  async function publishOwnerPublic(force=false){
+    const s=owner();if(!s||visitContext||!cloudReady||!currentMemberKey)return false;
+    const plots=normPlots(s.plots),hams=publicHamsters(s),sig=`${plotSig(plots)}|${hamSig(hams)}`;
+    if(!force&&sig===publicAck)return false;
+    if(publicBusy){publicAgain=true;return false}publicBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{
+        memberKey:currentMemberKey,
+        displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+        plots:clone(plots),publicHamsters:clone(hams),publicOutdoorVersion:"R34.11.0",
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
+      publicAck=sig;try{lastGardenHash=plotSig(plots)}catch(_){};return true;
+    }catch(e){console.warn("R34.11 public mirror",e);return false}
+    finally{publicBusy=false;if(publicAgain){publicAgain=false;setTimeout(()=>publishOwnerPublic(false),120)}}
+  }
+  function schedulePublic(force=false){clearTimeout(publicTimer);publicTimer=setTimeout(()=>publishOwnerPublic(force),force?20:140)}
+
+  /* Every meaningful local plot/placement state change is mirrored without relying on older lastGardenHash layers. */
+  let observedOwnerSig="";
+  setInterval(()=>{
+    try{
+      const s=owner();if(!s||visitContext||!cloudReady||!currentMemberKey)return;
+      const sig=`${plotSig(s.plots)}|${hamSig(publicHamsters(s))}`;
+      if(sig!==observedOwnerSig){observedOwnerSig=sig;schedulePublic(false)}
+    }catch(e){console.warn("R34.11 mirror watch",e)}
+  },700);
+  const init3411=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(init3411)initializeOrLoadCloudState=async function(){const r=await init3411.apply(this,arguments);publicAck="";observedOwnerSig="";setTimeout(()=>publishOwnerPublic(true),100);setTimeout(()=>ensureDiscDrops(true),300);return r};
+
+  /* ---------- B) Friend visit: true live garden subscription ---------- */
+  let friendGardenUnsub=null,friendAnimRAF=0,friendAnimControllers=[];
+  function stopFriendLive(){try{friendGardenUnsub?.()}catch(_){}friendGardenUnsub=null;if(friendAnimRAF)cancelAnimationFrame(friendAnimRAF);friendAnimRAF=0;friendAnimControllers=[];$("r3411FriendHamsterLayer")?.remove();$("r342FriendHamsterLayer")?.remove()}
+  function phasePlot(p){const x=typeof ensurePlotPhaseStandalone==="function"?ensurePlotPhaseStandalone(clone(p)):clone(p);return typeof normalizePlot==="function"?normalizePlot(x):x}
+
+  function renderFriendHamstersAnimated(){
+    $("r342FriendHamsterLayer")?.remove();
+    if(!visitContext){$("r3411FriendHamsterLayer")?.remove();return}
+    const f=farmNo();if(f<2||f>4){$("r3411FriendHamsterLayer")?.remove();return}
+    const map=visitContext.publicHamsters||{},arr=Array.isArray(map[String(f)])?map[String(f)]:[],screen=$("gameScreen");if(!screen)return;
+    let layer=$("r3411FriendHamsterLayer");if(!layer){layer=document.createElement("div");layer.id="r3411FriendHamsterLayer";screen.appendChild(layer)}
+    if(friendAnimRAF)cancelAnimationFrame(friendAnimRAF);friendAnimRAF=0;friendAnimControllers=[];layer.innerHTML="";
+    const colors=globalThis.YN_R25?.COLORS||{};
+    arr.forEach((h,i)=>{
+      const meta=colors[h.color]||colors.gray;if(!meta)return;
+      const el=document.createElement("span");el.className="r3411-friend-hamster r25-hamster";el.innerHTML='<span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite"></span>';layer.appendChild(el);
+      const x=Math.max(15,Math.min(85,Number(h.x)||35+i*7)),y=Math.max(77,Math.min(90,Number(h.y)||82));
+      friendAnimControllers.push({el,sprite:el.querySelector(".r25-hamster-sprite"),meta,color:String(h.color||"gray"),x,y,fx:x,fy:y,tx:x,ty:y,start:0,dur:0,wait:performance.now()+300+i*120,action:"idle",seed:Math.random()*10000,faceLeft:false});
+    });
+    const chooseTarget=(c,t)=>{
+      c.fx=c.x;c.fy=c.y;c.tx=18+Math.random()*64;c.ty=78+Math.random()*10;c.start=t;c.dur=3200+Math.random()*3500;
+      const dx=c.tx-c.x,dy=c.ty-c.y;c.faceLeft=dx<0;
+      c.action=Math.abs(dx)>Math.abs(dy)*0.9?"walk_side":dy<0?"walk_back":"walk_forward";
+      if(!c.meta[c.action])c.action="idle";
+    };
+    const tick=t=>{
+      if(!visitContext||farmNo()!==f||!document.body.contains(layer)){friendAnimRAF=0;return}
+      for(const c of friendAnimControllers){
+        if(c.start&&t<c.start+c.dur){const q=Math.max(0,Math.min(1,(t-c.start)/c.dur)),ease=q*q*(3-2*q);c.x=c.fx+(c.tx-c.fx)*ease;c.y=c.fy+(c.ty-c.fy)*ease}
+        else if(c.start){c.x=c.tx;c.y=c.ty;c.start=0;c.action=Math.random()<.22&&c.meta.cute?"cute":"idle";c.wait=t+500+Math.random()*1700}
+        else if(t>=c.wait)chooseTarget(c,t);
+        c.el.style.left=`${c.x}%`;c.el.style.top=`${c.y}%`;
+        const action=c.meta[c.action]?c.action:"idle",asset=c.meta[action]||c.meta.idle,ms=(action==="idle"||action==="cute")?260:190,fr=Math.floor((t+c.seed)/ms)%16,col=fr%4,row=Math.floor(fr/4);
+        c.sprite.style.backgroundImage=`url('${asset}')`;c.sprite.style.backgroundPosition=`${col*100/3}% ${row*100/3}%`;c.sprite.classList.toggle("face-left",action==="walk_side"&&c.faceLeft);c.sprite.classList.toggle("r25-no-alpha",c.color==="green"&&["idle","walk_back","walk_forward"].includes(action));
+      }
+      friendAnimRAF=requestAnimationFrame(tick);
+    };
+    friendAnimRAF=requestAnimationFrame(tick);
+  }
+
+  async function startFriendLive(targetKey){
+    stopFriendLive();if(!visitContext||!cloudReady||!targetKey)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",targetKey);
+      friendGardenUnsub=fs.onSnapshot(ref,snap=>{
+        if(!visitContext||String(visitContext.memberKey)!==String(targetKey)||!snap.exists())return;
+        const g=snap.data()||{};
+        if(Array.isArray(g.plots)){state.plots=normPlots(g.plots).map(phasePlot)}
+        visitContext.publicHamsters=g.publicHamsters&&typeof g.publicHamsters==="object"?clone(g.publicHamsters):{"2":[],"3":[],"4":[]};
+        state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
+        for(const n of [2,3,4])state.farmGuardians[String(n)]={hamsters:clone(visitContext.publicHamsters[String(n)]||[]),stored:[],removedIds:[]};
+        try{draw?.()}catch(_){};setTimeout(renderFriendHamstersAnimated,0);
+      },e=>console.warn("R34.11 friend live",e));
+    }catch(e){console.warn("R34.11 start friend live",e)}
+  }
+  const visit3411=typeof visitFriend==="function"?visitFriend:null;
+  if(visit3411)visitFriend=async function(targetKey,targetName){const r=await visit3411.apply(this,arguments);if(visitContext)await startFriendLive(String(visitContext.memberKey||targetKey));return r};
+  const return3411=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(return3411)returnFromFriendVisit=function(){stopFriendLive();return return3411.apply(this,arguments)};
+  const setFarm3411=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;
+  if(setFarm3411)setFarmPlotPage=function(){const r=setFarm3411.apply(this,arguments);if(visitContext)setTimeout(renderFriendHamstersAnimated,30);else setTimeout(renderDrops,30);return r};
+
+  /* Friend watering/worm: target garden mutation is rules-safe (plots + updatedAt only).
+     Mailbox notification is best-effort and can never cancel the critical garden action. */
+  tapFriendPlot=async function(index){
+    if(!visitContext||!cloudReady)return;
+    const visible=phasePlot(state?.plots?.[index]);
+    if(visible?.phase==="ready"){
+      if(["babyBamboo","hauntedPlankton"].includes(visible.crop))return message("ขโมยไม่ได้","พืชชนิดนี้เป็นพืชคุ้มครอง ขโมยไม่ได้เด็ดขาด");
+      if(typeof showStealConfirmation==="function")return showStealConfirmation(index);
+    }
+    const visibleWorm=Boolean(visible?.crop&&(visible.phase==="worm"||visible.worm));
+    const visibleWater=Boolean(visible?.crop&&visible.phase==="needsWater");
+    if(!visibleWorm&&!visibleWater)return message("เยี่ยมสวนเพื่อน","คุณสามารถรดน้ำ กำจัดหนอน หรือขโมยต้นที่พร้อมเก็บได้");
+    const action=visibleWorm?"worm":"water",targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
+    try{
+      const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",targetKey),myRef=fs.doc(db,"saves",currentMemberKey);let nextOwn=null,newPlots=null;
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ms]=await Promise.all([tx.get(gRef),tx.get(myRef)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
+        const plots=normPlots(gs.data()?.plots),remote=phasePlot(plots[index]),p=(remote?.crop?remote:visible);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        const own=normalizeState(ms.data(),currentMember);
+        if(action==="worm"){
+          if(!(p.phase==="worm"||p.worm))throw new Error("สถานะหนอนเพิ่งเปลี่ยน กรุณาแตะแปลงอีกครั้ง");
+          const crop=CROPS[p.crop];p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));incrementMissionOn?.(own,"clearWorms",1);
+        }else{
+          if(p.phase!=="needsWater")throw new Error("สถานะต้นไม้เพิ่งเปลี่ยน กรุณาแตะแปลงอีกครั้ง");
+          const crop=CROPS[p.crop],finalMs=Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));p.wateredAt=now();
+          if(Math.random()<Number(crop?.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+finalMs}incrementMissionOn?.(own,"waterFriends",1);
+        }
+        plots[index]=typeof normalizePlot==="function"?normalizePlot(p):p;newPlots=plots;nextOwn=own;
+        /* Do NOT write memberKey/displayName here: friend update rules require them unchanged. */
+        tx.update(gRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
+        tx.set(myRef,{...clone(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextOwn,currentMember);state.plots=normPlots(newPlots);try{saveLocalOnly?.(ownState)}catch(_){};draw?.();showWeatherToast?.(action==="worm"?"🐛 กำจัดหนอนให้เพื่อนแล้ว":"💧 รดน้ำให้เพื่อนแล้ว");
+      /* Notification is deliberately outside the transaction. */
+      try{const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mailRef,{source:"friend",type:action==="worm"?"friendWorm":"friendWater",fromKey:currentMemberKey,fromName:currentMember,title:action==="worm"?`${currentMember} เข้ามากำจัดหนอนให้คุณ 🐛`:`${currentMember} เข้ามารดน้ำพืชพันธุ์ให้คุณ 💧`,text:"",read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11 friend mail best effort",e)}
+    }catch(e){message("ช่วยสวนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+  };
+
+  /* ---------- C) Restore Season-1 style Rank semantics ---------- */
+  showFriends=async function(){
+    if(typeof guardResting==="function"&&guardResting())return;
+    let profileMap={};
+    if(cloudReady)try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(d=>profileMap[d.id]=d.data()||{})}catch(e){console.warn("R34.11 rank",e)}
+    const names=Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{}),aidaName=names.find(n=>String(n).toLowerCase()==="aida")||"Aida";
+    const memberRows=names.filter(n=>String(n).toLowerCase()!=="aida").map(name=>{const key=memberKeyFromName(name),p=profileMap[key]||{};return{name,key,merit:Number(p.merit??300)||0,initialized:p.initialized!==false,level:Math.max(0,Math.min(3,Number(p.houseLevel)||0))}}).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name));
+    const aidaKey=typeof memberKeyFromName==="function"?memberKeyFromName(aidaName):"aida",ap=profileMap[aidaKey]||{},aida={name:aidaName,key:aidaKey,merit:Number(ap.merit??(currentMember==="Aida"?owner()?.merit:0))||0,initialized:ap.initialized!==false,level:Math.max(0,Math.min(3,Number(ap.houseLevel)||0))};
+    const actionHTML=r=>r.name===currentMember?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${html(r.key)}" data-friend-name="${html(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${html(r.key)}" data-friend-name="${html(r.name)}">ส่งของ</button></span>`;
+    const row=(r,rank,adminRow=false)=>`<div class="friend-row friend-rank-row ${adminRow?"r3411-rank-admin":rank<=3?`r3411-rank-top-${rank}`:""}"><span class="friend-rank ${adminRow?"admin-rank-badge":""}">${adminRow?"ADMIN":`#${rank}`}</span><span class="friend-avatar">${adminRow?"👑":"👻"}</span><span class="friend-info"><b>${html(r.name)}</b><small class="r3411-rank-score">🙏 ${Number(r.merit).toLocaleString("th-TH")} กุศล</small>${typeof HOUSE_META!=="undefined"?`<small>🏠 Lv.${r.level}${HOUSE_META?.[r.level]?` — ${html(HOUSE_META[r.level])}`:""}</small>`:""}</span>${actionHTML(r)}</div>`;
+    $("modalContent").innerHTML=`<section class="feature-panel friends-panel r3411-rank-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">Aida / Admin อยู่บนสุดและไม่นับอันดับ • สมาชิกคนแรกเริ่มที่อันดับ 1</p><div class="friend-list friend-rank-list">${row(aida,0,true)}${memberRows.map((r,i)=>row(r,i+1,false)).join("")}</div></section>`;
+    openModal();document.querySelectorAll("[data-visit-friend]").forEach(b=>b.onclick=()=>visitFriend(b.dataset.visitFriend,b.dataset.friendName));document.querySelectorAll("[data-gift-friend]").forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.giftFriend,b.dataset.friendName));
+  };
+
+  /* ---------- D) Local revision-first, one-tap crop actions ---------- */
+  function fastCommitState(s,{drawNow=true,publish=true}={}){
+    if(!s||visitContext)return s;
+    s.clientSaveRevision=Math.max(Number(s.clientSaveRevision)||0,Number(owner()?.clientSaveRevision)||0)+1;
+    ownState=s;state=s;try{saveLocalOnly?.(s)}catch(_){};try{save?.()}catch(e){console.warn("R34.11 queue save",e)}
+    try{updateMeritUI?.()}catch(_){};if(drawNow)try{draw?.()}catch(_){};if(publish)schedulePublic(false);return s;
+  }
+  Y26_plantCrop=async function(index,key,button){
+    if(visitContext||guardResting?.())return false;const crop=CROPS?.[key],src=owner();if(!crop||!src)return false;const s=normalizeState(clone(src),currentMember),p=s.plots?.[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){}
+    if(p?.crop)return message("ปลูกไม่ได้","แปลงนี้ถูกปลูกไปแล้ว");const cost=Number(crop.seedCostMerit)||0;if(cost&&!admin()&&Number(s.merit)<cost)return message("ปลูกไม่ได้",`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);
+    if(cost&&!admin())s.merit-=cost;try{incrementMissionOn?.(s,"dailyPlantCrops",1)}catch(_){}s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;const t=now();s.plots[index]={crop:key,phase:"growing1",phaseEndsAt:t+Number(crop.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel};if(admin())try{ensureAdminStock?.(s)}catch(_){}
+    fastCommitState(s);closeModal?.();if(cost)try{globalThis.YN_R32?.flushCritical?.()}catch(_){};return true;
+  };
+  harvestOwnPlot=async function(index){
+    if(visitContext||!cloudReady||!currentMemberKey)return false;const src=owner();if(!src)return false;const s=normalizeState(clone(src),currentMember),p=s.plots?.[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){}
+    if(p?.takeover&&Number(p.takeover.until||0)>now()&&p.takeover.by!==currentMemberKey)return message("เก็บเกี่ยวไม่ได้","แปลงนี้กำลังถูก Take Over");if(!p?.crop||p.phase!=="ready")return message("เก็บเกี่ยวไม่ได้","แปลงนี้ยังไม่พร้อมเก็บ");
+    const cropKey=p.crop,qty=p.angel?10:1;try{grantHarvestYield(s,cropKey,qty)}catch(e){return message("เก็บเกี่ยวไม่ได้",e?.message||"เพิ่มผลผลิตไม่ได้")};try{V213_mameawCampaignApplyToState?.(s,cropKey,qty)}catch(_){};try{incrementMissionOn?.(s,"harvestCrops",1)}catch(_){};s.plots[index]=emptyPlot();if(admin())try{ensureAdminStock?.(s)}catch(_){};fastCommitState(s);try{if(typeof v193DeferredCampaign==="function")v193DeferredCampaign({[cropKey]:qty});else if(typeof V181_campaignScoreLater==="function")setTimeout(()=>V181_campaignScoreLater({[cropKey]:qty}),0)}catch(_){};showWeatherToast?.(`🌾 เก็บ ${CROPS?.[cropKey]?.name||cropKey} ×${qty} เข้ากระเป๋าแล้ว`);return true;
+  };
+  useCropBoostOnPlot=async function(index,key){
+    if(visitContext||guardResting?.()||!cloudReady)return false;const item=SPECIAL_ITEMS?.[key];if(!item||item.kind!=="crop")return false;const s=normalizeState(clone(owner()),currentMember),p=s.plots?.[index];if(!p?.crop)return false;try{ensurePlotPhaseStandalone?.(p)}catch(_){};const have=Number(s.specials?.[key])||0;if(!admin()&&have<1)return message("ใช้ไอเท็มไม่ได้","ไอเท็มในกระเป๋าหมดแล้ว");
+    if(Number(item.boost)===100){p.phase="ready";p.phaseEndsAt=0;p.worm=false}else{if(!["growing1","growing2"].includes(p.phase))return message("ยังใช้ไอเท็มนี้ไม่ได้","ไอเท็มเร่งโตใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");const rem=Math.max(0,Number(p.phaseEndsAt||0)-now());p.phaseEndsAt=now()+Math.max(1000,Math.round(rem*(1-Number(item.boost||0)/100)))}
+    if(!admin())s.specials[key]=have-1;else try{ensureAdminStock?.(s)}catch(_){};fastCommitState(s);closeModal?.();showWeatherToast?.(`⚡ ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%`);return true;
+  };
+
+  /* One physical iPhone tap invokes the existing closure-bound handler once. */
+  const fastSelectors="#plots [data-plot-index],[data-y26-crop],[data-use-crop-boost],.alpaca-trough-slot,[data-fill-trough]";
+  let suppressClickUntil=0,suppressEl=null;
+  document.addEventListener("pointerup",e=>{
+    const el=e.target?.closest?.(fastSelectors);if(!el||el.disabled)return;const fn=el.onclick;if(typeof fn!=="function")return;
+    e.preventDefault();e.stopImmediatePropagation();suppressEl=el;suppressClickUntil=performance.now()+450;try{fn.call(el,e)}catch(err){console.warn("R34.11 fast tap",err)}
+  },true);
+  document.addEventListener("click",e=>{const el=e.target?.closest?.(fastSelectors);if(el&&el===suppressEl&&performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();suppressEl=null}},true);
+
+  /* ---------- E) Alpaca trough: bulk fill empty slots with one chosen food ---------- */
+  const ALPACA_TROUGH_FOOD={
+    hayPack:{name:"แพ็คหญ้าสดและหญ้าแห้ง",image:"alpaca-hay-pack.png",servings:6},
+    pellet:{name:"อาหารเม็ดอัลปาก้า",image:"alpaca-pellet-food.png",servings:12},
+    tricolorPudding:{name:"พุดดิ้งหญ้าสามสี",image:"alpaca_tricolor_pudding.png?v=240",servings:1},
+    braisedEgg:{name:"ไข่พะโล้อัลปาก้า",image:"alpaca-braised-egg.png",servings:1}
+  };
+  function showBulkTroughPicker(){
+    if(visitContext)return;const s=owner(),pno=penNo(),pen=s?.alpaca?.pens?.[pno-1],food=s?.alpaca?.inventory?.food||{};if(!pen)return;
+    const empty=(pen.trough||[]).map((v,i)=>v?null:i).filter(v=>v!==null),meta=ALPACA_TROUGH_FOOD,rows=Object.entries(meta).filter(([k,m])=>(!m.direct||m.trough)&&(Number(food[k])||0)>0);if(!empty.length)return message("รางอาหาร","ทั้ง 16 ช่องมีอาหารแล้วค่ะ");if(!rows.length)return message("คุณไม่มีอาหาร","ตอนนี้ไม่มีอาหารอัลปาก้าที่ใส่รางได้ค่ะ");
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel r3411-trough-bulk"><h2>⚡ เติมรางทีเดียว</h2><p>คอก ${pno} • ช่องว่าง <b>${empty.length}</b>/16</p><small>เลือกอาหาร 1 ชนิด ระบบจะเติมช่องว่างให้มากที่สุดตามจำนวนที่มี และหักของจริงจากกระเป๋า</small><div class="alpaca-inventory-grid">${rows.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${html(m.name)}</b><strong>×${Number(food[k])||0}</strong><small>${Number(m.servings)||0} เสิร์ฟ/ชิ้น</small><button type="button" data-r3411-fill-all="${html(k)}">ใช้เติม ${Math.min(empty.length,Number(food[k])||0)} ช่อง</button></article>`).join("")}</div><button id="r3411TroughBack" class="secondary-action">กลับ</button></section>`;openModal();document.querySelectorAll("[data-r3411-fill-all]").forEach(b=>b.onclick=()=>fillAllTrough(b.dataset.r3411FillAll));$("r3411TroughBack").onclick=()=>globalThis.YN_ALPACA_CORE?.showTrough?.();
+  }
+  function fillAllTrough(foodKey){
+    const s=normalizeState(clone(owner()),currentMember),pno=penNo(),pen=s?.alpaca?.pens?.[pno-1],meta=ALPACA_TROUGH_FOOD[foodKey];if(!pen||!meta)return;pen.trough=Array.isArray(pen.trough)?pen.trough.slice(0,16):Array(16).fill(null);while(pen.trough.length<16)pen.trough.push(null);const empties=pen.trough.map((x,i)=>x?null:i).filter(x=>x!==null),have=Number(s.alpaca?.inventory?.food?.[foodKey])||0,count=admin()?empties.length:Math.min(empties.length,have);if(count<1)return message("เติมไม่ได้","อาหารชนิดนี้ไม่พอค่ะ");for(let j=0;j<count;j++)pen.trough[empties[j]]={foodKey,servings:Number(meta.servings)||1};if(!admin())s.alpaca.inventory.food[foodKey]=have-count;fastCommitState(s,{drawNow:false});closeModal?.();try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){};showWeatherToast?.(`🦙 เติมราง ${count} ช่องแล้ว`)
+  }
+  function injectBulkTrough(){const grid=document.querySelector(".alpaca-trough-grid");if(!grid||$("r3411FillTroughAll"))return;const b=document.createElement("button");b.id="r3411FillTroughAll";b.type="button";b.className="primary-spooky-action r3411-fill-trough-all";b.textContent="⚡ เติมช่องว่างทั้งหมด";b.onclick=showBulkTroughPicker;grid.insertAdjacentElement("afterend",b)}
+  const alpacaCore=globalThis.YN_ALPACA_CORE;if(alpacaCore?.showTrough){const base=alpacaCore.showTrough;alpacaCore.showTrough=function(){const r=base.apply(this,arguments);setTimeout(injectBulkTrough,0);return r}}
+
+  /* ---------- F) Cloud-authoritative royal alpaca + hamster disc drops ---------- */
+  const HOUR=3600000,ROYAL_MS=HOUR,HAM_MS=3*HOUR,DROP_RECOVERY="R34.11.0-disc-recovery";let dropBusy=false,dropLast=0;
+  function ensureDropState(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];
+    s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];s.dropRepairMarks=s.dropRepairMarks&&typeof s.dropRepairMarks==="object"?s.dropRepairMarks:{};return s;
+  }
+  function computeDrops(s,t){
+    ensureDropState(s);let changed=false;const royals=[],hams=[];
+    (s.alpaca?.pens||[]).forEach((pen,pi)=>(pen?.alpacas||[]).forEach(a=>{if(a?.type==="adult"&&["prince","princess"].includes(String(a.color||""))&&a.id)royals.push({a,pen:pi+1})}));
+    for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[]))if(h?.id)hams.push({h,f});
+    if(!s.dropRepairMarks[DROP_RECOVERY]){
+      for(const {a,pen} of royals){const arr=s.alpaca.royalDiscDrops[`pen${pen}`],id=String(a.id);if(!arr.length)arr.push({id:`r3411-recovery-royal-${id}`,animalId:id,qty:2,createdAt:t,recovery:true});if(!Number(s.alpaca.royalDiscClock[id]))s.alpaca.royalDiscClock[id]=t}
+      for(const {h,f} of hams){const arr=s.hamsterDiscDrops[String(f)],id=String(h.id);if(!arr.length)arr.push({id:`r3411-recovery-ham-${id}`,hamsterId:id,farm:f,qty:1,createdAt:t,recovery:true});if(!Number(s.hamsterDiscClock[id]))s.hamsterDiscClock[id]=t}
+      s.dropRepairMarks[DROP_RECOVERY]=t;changed=true;
+    }
+    const activeR=new Set();for(const {a,pen} of royals){const id=String(a.id),arr=s.alpaca.royalDiscDrops[`pen${pen}`];activeR.add(id);let last=Number(s.alpaca.royalDiscClock[id]);if(!Number.isFinite(last)||last<=0||last>t){const anchor=Number(a.dropStartedAt||a.placedAt||a.createdAt||a.bornAt);last=Number.isFinite(anchor)&&anchor>0&&anchor<=t?anchor:t-ROYAL_MS;s.alpaca.royalDiscClock[id]=last;changed=true}const due=Math.floor((t-last)/ROYAL_MS);if(due>0){for(let r=1;r<=Math.min(due,48);r++){const at=last+r*ROYAL_MS,did=`r3411-royal-${id}-${at}`;if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,animalId:id,qty:2,createdAt:at})}if(arr.length>96)arr.splice(0,arr.length-96);s.alpaca.royalDiscClock[id]=last+due*ROYAL_MS;changed=true}}
+    for(const id of Object.keys(s.alpaca.royalDiscClock))if(!activeR.has(id)){delete s.alpaca.royalDiscClock[id];changed=true}
+    const activeH=new Set();for(const {h,f} of hams){const id=String(h.id),arr=s.hamsterDiscDrops[String(f)];activeH.add(id);let last=Number(s.hamsterDiscClock[id]);if(!Number.isFinite(last)||last<=0||last>t){const anchor=Number(h.dropStartedAt||h.placedAt||h.createdAt);last=Number.isFinite(anchor)&&anchor>0&&anchor<=t?anchor:t-HAM_MS;s.hamsterDiscClock[id]=last;changed=true}const due=Math.floor((t-last)/HAM_MS);if(due>0){for(let r=1;r<=Math.min(due,48);r++){const at=last+r*HAM_MS,did=`r3411-ham-${id}-${at}`;if(!arr.some(d=>String(d?.id)===did))arr.push({id:did,hamsterId:id,farm:f,qty:1,createdAt:at})}if(arr.length>120)arr.splice(0,arr.length-120);s.hamsterDiscClock[id]=last+due*HAM_MS;changed=true}}
+    for(const id of Object.keys(s.hamsterDiscClock))if(!activeH.has(id)){delete s.hamsterDiscClock[id];changed=true}return changed;
+  }
+  async function ensureDiscDrops(force=false){
+    if(dropBusy||visitContext||!cloudReady||!currentMemberKey)return false;const rt=Date.now();if(!force&&rt-dropLast<20000)return false;dropLast=rt;dropBusy=true;
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,changed=false;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const st=ensureDropState(normalizeState(snap.data(),currentMember));changed=computeDrops(st,now());next=st;if(changed)tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+      if(next){/* Preserve newer local plots if an action landed between settle and transaction completion. */const local=owner(),localRev=Number(local?.clientSaveRevision)||0,remoteRev=Number(next?.clientSaveRevision)||0;if(local&&localRev>remoteRev){next.plots=clone(local.plots);next.bag=clone(local.bag);next.specials={...next.specials,...clone(local.specials)}}ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
+      renderDrops();return changed;
+    }catch(e){console.warn("R34.11 disc sync",e);return false}finally{dropBusy=false}
+  }
+  function renderDrops(){
+    /* Royal alpaca — actual current pen */
+    const alpStage=$("alpacaPenStage"),alpVisible=alpStage&&!$("alpacaPenScreen")?.classList.contains("hidden");let rl=$("r3411RoyalDropLayer");if(alpVisible&&!visitContext){if(!rl){rl=document.createElement("div");rl.id="r3411RoyalDropLayer";rl.className="r3411-drop-layer";alpStage.appendChild(rl)}const p=penNo(),arr=ensureDropState(owner())?.alpaca?.royalDiscDrops?.[`pen${p}`]||[];rl.innerHTML=arr.slice(-8).map((d,i)=>`<button type="button" class="r3411-disc-drop royal" data-r3411-royal="${p}" style="left:${29+(i%4)*14}%;top:${57+Math.floor(i/4)*10}%"><img src="therapy-disc-pink.png" alt="แผ่นเพลงบำบัดหัวใจหวาน"><small>×${Number(d.qty)||2}</small></button>`).join("");rl.querySelectorAll("[data-r3411-royal]").forEach(b=>b.onclick=()=>globalThis.YN_R34?.claimRoyalDrops?.(Number(b.dataset.r3411Royal)))}else rl?.remove();
+    /* Hamster — actual current Farm 2/3/4 */
+    const gs=$("gameScreen"),f=farmNo();let hl=$("r3411HamsterDropLayer");if(gs&&!gs.classList.contains("hidden")&&!visitContext&&f>=2&&f<=4){if(!hl){hl=document.createElement("div");hl.id="r3411HamsterDropLayer";hl.className="r3411-drop-layer r3411-ham-drop-layer";gs.appendChild(hl)}const arr=ensureDropState(owner())?.hamsterDiscDrops?.[String(f)]||[];hl.innerHTML=arr.slice(-10).map((d,i)=>`<button type="button" class="r3411-disc-drop hamster" data-r3411-ham="${f}" style="left:${29+(i%5)*11}%;top:${67+Math.floor(i/5)*8}%"><img src="therapy-disc-rock.png" alt="แผ่นเพลงบำบัดพลังร็อก"><small>×${Number(d.qty)||1}</small></button>`).join("");hl.querySelectorAll("[data-r3411-ham]").forEach(b=>b.onclick=()=>globalThis.YN_R34?.claimHamsterDrops?.(Number(b.dataset.r3411Ham)))}else hl?.remove();
+  }
+  setInterval(()=>ensureDiscDrops(false),30000);setInterval(renderDrops,1800);window.addEventListener("focus",()=>setTimeout(()=>ensureDiscDrops(true),150),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>ensureDiscDrops(true),180)},{passive:true});
+
+  /* ---------- G) Meow-Woof Hotel: feed all hungry pets, user chooses dish ---------- */
+  function hotelPenOf(s,pet){const map=s?.hotelPetPenMap||{};return Math.max(1,Math.min(4,Number(map[String(pet?.id)]||pet?.hotelPen||1)||1))}
+  function petsInHotelPen(s,pno){try{globalThis.YN_R32?.repairHotelPenMap?.(s)}catch(_){}const dogs=(s?.dogs||[]).filter(d=>d?.placedHotel&&hotelPenOf(s,d)===pno).map(p=>({kind:"dog",p}));const cats=(s?.cats||[]).filter(c=>c?.placedHotel&&Number(c?.placedFarm)===-1&&hotelPenOf(s,c)===pno).map(p=>({kind:"cat",p}));return dogs.concat(cats)}
+  function hungryHotelPets(s,pno,t=now()){return petsInHotelPen(s,pno).filter(x=>t>=Number(x.p?.nextFeedAt||0))}
+  function allHungryHotelPets(s,t=now()){
+    try{globalThis.YN_R32?.repairHotelPenMap?.(s)}catch(_){}
+    const dogs=(s?.dogs||[]).filter(d=>d?.placedHotel).map(p=>({kind:"dog",p}));
+    const cats=(s?.cats||[]).filter(c=>c?.placedHotel&&Number(c?.placedFarm)===-1).map(p=>({kind:"cat",p}));
+    return dogs.concat(cats).filter(x=>t>=Number(x.p?.nextFeedAt||0));
+  }
+  function showFeedAllHotel(){
+    if(visitContext)return;const s=owner(),hungry=allHungryHotelPets(s),need=hungry.length;if(!need)return message("🍽️ ให้อาหารทั้งโฮเทล","ตอนนี้ไม่มีน้องที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];
+    $("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมดทั้งโฮเทล</h2><p>มีหมา/แมวที่หิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเอง 1 เมนู ระบบจะใช้เมนูที่คุณเลือกเท่านั้น และจะไม่หยิบเมนูอื่นไปแทน</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r3411-feed-menu="${html(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${html(r.name)}</b><small>มี ×${q} • ต้องใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r3411FeedAllCancel" class="secondary-action">ยกเลิก</button></section>`;openModal();document.querySelectorAll("[data-r3411-feed-menu]").forEach(b=>b.onclick=()=>commitFeedAllHotel(b.dataset.r3411FeedMenu));$("r3411FeedAllCancel").onclick=closeModal;
+  }
+  let feedAllBusy=false;
+  async function commitFeedAllHotel(recipeId){
+    if(feedAllBusy||!cloudReady||!currentMemberKey)return;feedAllBusy=true;
+    try{
+      await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,count=0,reward=0;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),hungry=allHungryHotelPets(s,now());count=hungry.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องที่หิวแล้ว");if(typeof dishCountInState!=="function"||dishCountInState(recipeId,s)<count)throw new Error(`อาหารเมนูนี้ไม่พอ ต้องใช้ ${count} ถาด`);if(!removeDishesFromState(s,recipeId,count))throw new Error("หักอาหารไม่สำเร็จ");const t=now();for(const x of hungry){const add=20+Math.floor(Math.random()*31);reward+=add;x.p.nextFeedAt=t+(x.kind==="dog"?Number(typeof DOG_HUNGER_MS!=="undefined"?DOG_HUNGER_MS:6*3600000):Number(typeof CAT_HUNGER_MS!=="undefined"?CAT_HUNGER_MS:6*3600000))}s.merit=(Number(s.merit)||0)+reward;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=s;tx.set(ref,{...clone(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);closeModal?.();try{globalThis.YN_R329_HOTEL?.render?.()}catch(_){};updateMeritUI?.();showWeatherToast?.(`🍽️ ให้อาหารทั้งโฮเทล ${count} ตัวแล้ว • ใช้ ${count} ถาด`);
+      try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{merit:Number(ownState.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11 hotel merit mirror",e)}
+    }catch(e){message("ให้อาหารทั้งคอกไม่ได้",e?.message||"กรุณาลองใหม่")}finally{feedAllBusy=false}
+  }
+  function mountHotelFeedAll(){if(currentScene!=="dogHotel")return;const tools=document.querySelector(".r329-hotel-tools");if(!tools||$("r3411HotelFeedAll"))return;const b=document.createElement("button");b.id="r3411HotelFeedAll";b.type="button";b.innerHTML="🍽️<small>ให้อาหารทั้งหมด</small>";b.onclick=showFeedAllHotel;tools.prepend(b)}
+  if(globalThis.YN_R329_HOTEL?.render){const base=globalThis.YN_R329_HOTEL.render;globalThis.YN_R329_HOTEL.render=function(){const r=base.apply(this,arguments);setTimeout(mountHotelFeedAll,0);return r}}
+  setInterval(mountHotelFeedAll,800);
+
+  /* Repaint helpers after legacy DOM rebuilds. */
+  const observer=new MutationObserver(()=>{try{if(visitContext){$("r342FriendHamsterLayer")?.remove();if(!$("r3411FriendHamsterLayer"))renderFriendHamstersAnimated()}injectBulkTrough();mountHotelFeedAll()}catch(_){}});observer.observe(document.documentElement,{childList:true,subtree:true});
+
+  setTimeout(()=>{schedulePublic(true);ensureDiscDrops(true);mountHotelFeedAll();injectBulkTrough();renderDrops()},700);
+  globalThis.YN_R3411={BUILD,publishOwnerPublic,startFriendLive,renderFriendHamstersAnimated,renderDrops,ensureDiscDrops,showFeedAllHotel,showBulkTroughPicker};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   R34.11.1 • FRIEND SINGLE-WORM + VILLAGE MISSION + ADMIN COMPETITION FIX
+   2026-09-04
+   ====================================================================== */
+(function YN_R34111_CRITICAL_FIXES(){
+  "use strict";
+  const BUILD="S2-R34.11.1-WORM-MISSION-ADMIN-RANK-20260904";
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>String(currentMember||"").toLowerCase()==="aida"||String(currentMemberKey||"").toLowerCase()==="aida"||adminProfile?.role==="admin";
+
+  /* A) Village mission bridge.
+     Some Season-2 actions still call the retired DAILY_MISSIONS counter. If the
+     old wrapper does not advance the active Village mission, advance it exactly once. */
+  if(typeof incrementMissionOn==="function"&&globalThis.YN_R19?.track){
+    const beforeInc=incrementMissionOn;
+    const alias={
+      collectGrassFriend:"dailyCollectGrass",friendGrass:"dailyCollectGrass",
+      wormClear:"clearWorms",friendWormClear:"clearWorms",
+      harvestCrops:"harvestCrops",dailyHarvestCrops:"harvestCrops",
+      dailyPlantCrops:"dailyPlantCrops",plantCrops:"dailyPlantCrops",
+      gardenFoodCraft:"craftFood",craftGardenFood:"craftFood",
+      homeCraft:"homeFoodCraft",boatSend:"boatSupply",sendBoatSupply:"boatSupply",
+      collectAnimalProducts:"collectAnimalProducts",alpacaShear:"alpacaShear",
+      flowerHarvest:"flowerHarvest",hedgehogCollect:"hedgehogCollect",
+      wineStart:"wineStart",wineClaim:"wineClaim",waterFriends:"waterFriends",
+      clearWorms:"clearWorms",openMysteryBox:"openMysteryBox",templeSoloSuccess:"templeSoloSuccess"
+    };
+    function villageProgress(s,id){
+      try{
+        const d=s?.villageSeason2?.daily,m=(d?.missions||[]).find(x=>x.action===id||(x.aliases||[]).includes(id));
+        return m?Number(m.progress)||0:null;
+      }catch(_){return null}
+    }
+    incrementMissionOn=function(s,id,amount=1){
+      const mapped=alias[id]||id,before=villageProgress(s,mapped),r=beforeInc(s,mapped,amount),after=villageProgress(s,mapped);
+      if(before!==null&&after===before){
+        try{globalThis.YN_R19.track(s,mapped,amount)}catch(e){console.warn("R34.11.1 village mission bridge",e)}
+      }
+      return r;
+    };
+  }
+
+  /* B) Friend single-plot worm/giant-worm action.
+     The visible live plot is allowed to prove the worm exists; the remote garden
+     is still read inside the transaction and only plots+updatedAt are mutated. */
+  function wormKind(p){
+    try{return typeof wormTypeOf==="function"?wormTypeOf(p):(p?.wormType==="giant"?"giant":"normal")}catch(_){return p?.wormType==="giant"?"giant":"normal"}
+  }
+  function livePlot(index){
+    const raw=state?.plots?.[index];if(!raw)return null;const p=clone(raw);
+    try{if(typeof ensurePlotPhaseStandalone==="function")ensurePlotPhaseStandalone(p);else if(typeof ensurePlotPhase==="function")ensurePlotPhase(p)}catch(_){}
+    return p;
+  }
+  async function clearOne(index,method){
+    if(!visitContext||!cloudReady||!currentMemberKey)return;
+    const visible=livePlot(index);if(!visible?.crop||!(visible.phase==="worm"||visible.worm))return message("กำจัดหนอนไม่ได้","แปลงนี้ไม่มีหนอนแล้ว");
+    const targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
+    let giant=wormKind(visible)==="giant",sprayCost=giant?5:1,meritCost=giant?2:1,nextOwn=null,newPlots=null;
+    try{
+      const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",targetKey),myRef=fs.doc(db,"saves",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ms]=await Promise.all([tx.get(gRef),tx.get(myRef)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
+        const plots=(Array.isArray(gs.data()?.plots)?gs.data().plots:[]).map(x=>{const q=clone(x);try{ensurePlotPhaseStandalone?.(q)}catch(_){}return q});
+        let p=plots[index];
+        /* A stale garden mirror must not reject a worm currently rendered by the live visit. */
+        if(!p?.crop||String(p.crop)!==String(visible.crop)||!(p.phase==="worm"||p.worm))p=clone(visible);
+        if(!p?.crop||!(p.phase==="worm"||p.worm))throw new Error("สถานะแปลงเปลี่ยนแล้ว กรุณาแตะอีกครั้ง");
+        giant=wormKind(p)==="giant";sprayCost=giant?5:1;meritCost=giant?2:1;
+        const own=normalizeState(ms.data(),currentMember);try{assertCurrentCloudSession?.(ms.data(),currentMember)}catch(_){}
+        if(method==="spray"){
+          own.specials=own.specials||{};const have=Number(own.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ฆ่าหนอนไม่พอ ต้องใช้ ${sprayCost} ขวด`);own.specials.wormKillerSpray=have-sprayCost;
+        }else own.merit=(Number(own.merit)||0)-meritCost;
+        const crop=CROPS?.[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=now()+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));plots[index]=typeof normalizePlot==="function"?normalizePlot(p):p;
+        try{incrementMissionOn?.(own,"clearWorms",1)}catch(_){}
+        newPlots=plots;nextOwn=own;
+        tx.update(gRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
+        tx.set(myRef,{...clone(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextOwn,currentMember);state.plots=newPlots.map(x=>typeof normalizePlot==="function"?normalizePlot(x):x);try{saveLocalOnly?.(ownState)}catch(_){};closeModal?.();updateMeritUI?.();draw?.();
+      showWeatherToast?.(method==="spray"?`🧴 ใช้สเปรย์ ×${sprayCost} กำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้เพื่อนแล้ว`:`🐛 ใช้ ${meritCost} กุศลกำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้เพื่อนแล้ว`);
+      try{const {db,fs}=await getFirebaseContext(),mail=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mail,{source:"friend",type:"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} เข้ามากำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้คุณ 🐛`,text:method==="spray"?`ใช้สเปรย์ฆ่าหนอน ×${sprayCost}`:`ใช้กุศล ×${meritCost}`,read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11.1 friend worm mail",e)}
+    }catch(e){message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+  }
+  function showOne(index){
+    const p=livePlot(index);if(!p?.crop||!(p.phase==="worm"||p.worm))return false;
+    const giant=wormKind(p)==="giant",sprayCost=giant?5:1,meritCost=giant?2:1,sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel ${giant?"giant-worm-panel":""}"><h2>${giant?"🐛 หนอนไจแอนท์บ้านเพื่อน":"🐛 หนอนบ้านเพื่อน"}</h2>${giant?'<img class="giant-worm-preview" src="giant-worm.png?v=1" alt="หนอนไจแอนท์">':""}<p>กำจัดเฉพาะแปลงนี้</p><div class="friend-worm-actions"><button id="r34111WormMerit" class="danger-action" type="button">ใช้ ${meritCost} กุศล</button><button id="r34111WormSpray" class="primary-spooky-action" type="button" ${sprays<sprayCost?"disabled":""}><img src="worm-killer-spray.png?v=1" alt=""><span>ใช้สเปรย์ ×${sprayCost}<br><small>มี ×${sprays}</small></span></button></div></section>`;
+    $("r34111WormMerit").onclick=()=>clearOne(index,"merit");$("r34111WormSpray").onclick=()=>clearOne(index,"spray");openModal();return true;
+  }
+  const friendTapBase=typeof tapFriendPlot==="function"?tapFriendPlot:null;
+  if(friendTapBase)tapFriendPlot=async function(index){if(visitContext&&showOne(Number(index)))return;return friendTapBase.apply(this,arguments)};
+  let wormTapLock=0;
+  document.addEventListener("pointerup",e=>{
+    if(!visitContext)return;const el=e.target?.closest?.("#plots [data-plot-index],[data-plot-index]");if(!el)return;const idx=Number(el.dataset.plotIndex);if(!Number.isFinite(idx))return;const p=livePlot(idx);if(!p?.crop||!(p.phase==="worm"||p.worm))return;const t=Date.now();if(t-wormTapLock<250)return;wormTapLock=t;e.preventDefault();e.stopImmediatePropagation();showOne(idx);
+  },true);
+
+  /* C) Admin is an operator, never a campaign contestant. Historical Aida rows are
+     hidden by the source-level rank filters above; make campaign UIs explicit too. */
+  function markAdminCampaignUI(){
+    if(!admin())return;
+    document.querySelectorAll(".r29-my-score,.v36-my-score,.v240-campaign-title").forEach(el=>{
+      const txt=el.textContent||"";if(!/คะแนนของคุณ|คะแนนรวมของคุณ/.test(txt))return;
+      el.innerHTML='<span style="font-weight:800">👑 ADMIN</span><strong style="display:block">ไม่เข้าร่วมการแข่งขัน</strong>';
+    });
+  }
+  const mo=new MutationObserver(()=>markAdminCampaignUI());mo.observe(document.documentElement,{subtree:true,childList:true});setTimeout(markAdminCampaignUI,100);
+  globalThis.YN_R34111={BUILD,showFriendWorm:showOne,clearFriendWorm:clearOne};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
