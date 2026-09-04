@@ -28249,3 +28249,256 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   bindBulkOverride();
   globalThis.YN_R34105={BUILD,bulk};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.10.6 — LIVE WORM + FRESH FRIEND GARDEN — 2026-09-04
+   1) Single/bulk worm clear trusts the live plot the player is actually seeing.
+      Remote garden/save are persistence targets, not permission to deny a visible worm.
+   2) Publish public garden plots whenever the live plot signature changes.
+   3) Friend visit re-fetches the latest public garden after all legacy wrappers finish.
+   ===================================================================== */
+(function YN_R34106_LIVE_WORM_FRIEND_GARDEN(){
+  "use strict";
+  const BUILD="S2-R34.10.6-LIVE-WORM-FRESH-FRIEND-GARDEN-20260904";
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const live=()=>ownState||state;
+  const isAdmin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const wormCost=p=>(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?2:1;
+  const sprayCost=p=>(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?12:5;
+  const normalizePlots=raw=>{const a=Array.isArray(raw)?raw.map(normalizePlot):[];while(a.length<PLOT_COUNT)a.push(emptyPlot());return a};
+  const cure=p=>{const c=CROPS?.[p?.crop];if(!p||!c)return p;p.phase="growing2";p.worm=false;try{delete p.wormType}catch(_){};p.phaseEndsAt=now()+Math.max(60000,Number(c.totalMs||0)-Number(c.waterMs||0));return p};
+
+  /* Own single plot: if the live UI says worm, that tap is authoritative. */
+  clearWorm=async function(index){
+    if(visitContext||guardResting?.())return;
+    index=Math.floor(Number(index));
+    const local=live()?.plots?.[index];
+    try{ensurePlotPhaseStandalone?.(local)}catch(_){}
+    if(!local?.crop||(local.phase!=="worm"&&!local.worm))return message("กำจัดหนอนไม่ได้","แปลงนี้ไม่มีหนอนค่ะ");
+    const localWorm=clone(local),used=wormCost(localWorm);
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกออนไลน์ยังไม่พร้อม กรุณาลองใหม่");
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember);
+        try{assertCurrentCloudSession?.(ss.data(),currentMember)}catch(e){throw e}
+        /* Preserve the newest full plot set we have locally; this prevents an old garden
+           snapshot from erasing newly planted crops. */
+        const livePlots=normalizePlots(live()?.plots),savePlots=normalizePlots(st.plots),gardenPlots=gg.exists()?normalizePlots(gg.data()?.plots):[];
+        const plots=savePlots;
+        for(let i=0;i<PLOT_COUNT;i++){
+          const lp=livePlots[i];
+          if(lp?.crop)plots[i]=clone(lp);
+          else if(!plots[i]?.crop&&gardenPlots[i]?.crop)plots[i]=clone(gardenPlots[i]);
+        }
+        /* Use the exact worm the player tapped, even if garden propagation was late. */
+        plots[index]=cure(clone(localWorm));
+        st.merit=(Number(st.merit)||0)-used;st.plots=plots.map(normalizePlot);
+        try{incrementMissionOn?.(st,"clearWorms",1)}catch(_){}
+        if(isAdmin())try{ensureAdminStock?.(st)}catch(_){}
+        next=st;
+        tx.set(sRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:clone(st.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){};try{lastGardenHash=plotHash(ownState.plots)}catch(_){};updateMeritUI?.();draw?.();closeModal?.();showWeatherToast?.(`🐛 กำจัดหนอนแล้ว • ใช้ ${used} กุศล`);
+    }catch(e){console.error("R34.10.6 single worm",e);message("กำจัดหนอนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+
+  async function bulkClear(useSpray=false){
+    if(visitContext||guardResting?.())return;
+    const s0=live();if(!s0)return;
+    const page=Math.max(0,Math.min(3,Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)),a=page*12,b=a+12;
+    const livePlots=normalizePlots(s0.plots),targets=[];
+    for(let i=a;i<b;i++){const p=livePlots[i];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(p?.crop&&(p.phase==="worm"||p.worm))targets.push(i)}
+    if(!targets.length)return message("🐛 จัดการหนอน","ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกออนไลน์ยังไม่พร้อม กรุณาลองใหม่");
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next=null,total=0;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,gg]=await Promise.all([tx.get(sRef),tx.get(gRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember),savePlots=normalizePlots(st.plots),gardenPlots=gg.exists()?normalizePlots(gg.data()?.plots):[];
+        const plots=savePlots;for(let i=0;i<PLOT_COUNT;i++){if(livePlots[i]?.crop)plots[i]=clone(livePlots[i]);else if(!plots[i]?.crop&&gardenPlots[i]?.crop)plots[i]=clone(gardenPlots[i])}
+        total=targets.reduce((sum,i)=>sum+(useSpray?sprayCost(livePlots[i]):wormCost(livePlots[i])),0);
+        if(useSpray){st.specials=st.specials||{};const have=Number(st.specials.wormKillerSpray)||0;if(!isAdmin()&&have<total)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${total} ขวด • มี ${have}`);if(!isAdmin())st.specials.wormKillerSpray=have-total}
+        else if(!isAdmin())st.merit=(Number(st.merit)||0)-total;
+        targets.forEach(i=>{plots[i]=cure(clone(livePlots[i]))});st.plots=plots.map(normalizePlot);try{incrementMissionOn?.(st,"clearWorms",targets.length)}catch(_){};if(isAdmin())try{ensureAdminStock?.(st)}catch(_){};next=st;
+        tx.set(sRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:clone(st.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){};try{lastGardenHash=plotHash(ownState.plots)}catch(_){};updateMeritUI?.();draw?.();closeModal?.();showWeatherToast?.(`${useSpray?"🧴":"🐛"} กำจัดหนอน ${targets.length} แปลงแล้ว • ใช้ ${total} ${useSpray?"ขวด":"กุศล"}`);
+    }catch(e){console.error("R34.10.6 bulk worm",e);message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+  }
+
+  function installManager(){
+    if(!globalThis.YN_R14)return;
+    globalThis.YN_R14.wormManager=function(){
+      if(visitContext)return message("จัดการหนอน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");
+      const page=Math.max(0,Math.min(3,Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)),a=page*12,b=a+12,s=live();let n=0;
+      for(let i=a;i<b;i++){const p=s?.plots?.[i];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(p?.crop&&(p.phase==="worm"||p.worm))n++}
+      if(!n)return message("🐛 จัดการหนอน","ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
+      $("modalContent").innerHTML=`<section class="feature-panel"><h2>🐛 จัดการหนอนทั้งสวน</h2><p>พบ ${n} แปลง</p><div class="ynu-manager-grid"><button id="r34106WormMerit">🙏 ใช้กุศล</button><button id="r34106WormSpray">🧴 ใช้สเปรย์กำจัดหนอน</button></div></section>`;openModal();
+      $("r34106WormMerit").onclick=()=>bulkClear(false);$("r34106WormSpray").onclick=()=>bulkClear(true);
+    };
+  }
+  installManager();
+
+  /* Public plots: do not rely on lastGardenHash from older layers because some
+     layers set it before/without a successful garden write. */
+  let publicPlotSig="",publishTimer=null,publishBusy=false,publishAgain=false;
+  const sig=()=>{try{return plotHash?.(live()?.plots||[])||JSON.stringify(live()?.plots||[])}catch(_){return JSON.stringify(live()?.plots||[])}};
+  async function publishPlots(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext||!live())return;
+    const s=sig();if(!force&&s===publicPlotSig)return;if(publishBusy){publishAgain=true;return}publishBusy=true;
+    try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:clone(live().plots||[]),publicPlotsVersion:"R34.10.6",updatedAt:fs.serverTimestamp()},{merge:true});publicPlotSig=s;try{lastGardenHash=s}catch(_){}}
+    catch(e){console.warn("R34.10.6 public plot publish",e)}finally{publishBusy=false;if(publishAgain){publishAgain=false;setTimeout(()=>publishPlots(false),80)}}
+  }
+  function schedulePublish(){if(visitContext)return;if(publishTimer)clearTimeout(publishTimer);publishTimer=setTimeout(()=>{publishTimer=null;publishPlots(false)},180)}
+  const saveBase=typeof save==="function"?save:null;if(saveBase)save=function(){const r=saveBase.apply(this,arguments);schedulePublish();return r};
+  const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);await publishPlots(false);return r};
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);publicPlotSig="";setTimeout(()=>publishPlots(true),80);return r};
+
+  /* Friend view: after every older visit wrapper has completed, fetch the garden
+     one final time and replace only plot display data with the newest public copy. */
+  const visitBase=typeof visitFriend==="function"?visitFriend:null;
+  if(visitBase)visitFriend=async function(targetKey,targetName){
+    const r=await visitBase.apply(this,arguments);if(!visitContext)return r;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",targetKey);let snap;
+      if(typeof fs.getDocFromServer==="function")snap=await fs.getDocFromServer(ref);else snap=await fs.getDoc(ref);
+      if(snap?.exists?.()){
+        const g=snap.data()||{};if(Array.isArray(g.plots)){state.plots=normalizePlots(g.plots);draw?.()}
+      }
+    }catch(e){console.warn("R34.10.6 friend fresh plots",e)}
+    return r;
+  };
+
+  globalThis.YN_R34106={BUILD,publishPlots,bulkClear};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.10.7 — ALPACA + HAMSTER DROP CLOCK / VISIBILITY REPAIR
+   2026-09-04
+   - Repairs stale/missing drop clocks from durable animal timestamps.
+   - Persists generated drops immediately so reloads do not restart timers.
+   - Forces drop rendering after farm/pen navigation and visibility resume.
+   ===================================================================== */
+(function YN_R34107_DROP_REPAIR(){
+  "use strict";
+  const BUILD="S2-R34.10.7-ALPACA-HAMSTER-DROP-REPAIR-20260904";
+  const HOUR=3600000, ROYAL_MS=HOUR, HAM_MS=3*HOUR;
+  const $=id=>document.getElementById(id);
+  const live=()=>ownState||state;
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  let persistTimer=null,persistBusy=false;
+
+  function ensure(s=live()){
+    if(!s||typeof s!=="object")return s;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};
+    s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};
+    for(let i=1;i<=5;i++)s.alpaca.royalDiscDrops[`pen${i}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${i}`])?s.alpaca.royalDiscDrops[`pen${i}`]:[];
+    s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};
+    s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};
+    for(const i of [2,3,4])s.hamsterDiscDrops[String(i)]=Array.isArray(s.hamsterDiscDrops[String(i)])?s.hamsterDiscDrops[String(i)]:[];
+    return s;
+  }
+
+  function durableAnchor(obj,t,interval){
+    const candidates=[obj?.dropStartedAt,obj?.placedAt,obj?.createdAt,obj?.bornAt].map(Number).filter(x=>Number.isFinite(x)&&x>0&&x<=t);
+    if(candidates.length)return Math.max(...candidates);
+    /* Existing placed animals from older builds have no durable placement field.
+       Give them one completed interval as recovery instead of silently restarting. */
+    return t-interval;
+  }
+
+  function repairRoyal(s,t){
+    let changed=false;const active=new Set(),pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[];
+    pens.forEach((pen,pi)=>{
+      const key=`pen${pi+1}`,arr=s.alpaca.royalDiscDrops[key];
+      for(const a of (pen?.alpacas||[])){
+        if(a?.type!=="adult"||!["prince","princess"].includes(String(a.color||"")))continue;
+        const id=String(a.id||"");if(!id)continue;active.add(id);
+        let last=Number(s.alpaca.royalDiscClock[id]);
+        if(!Number.isFinite(last)||last<=0||last>t){last=durableAnchor(a,t,ROYAL_MS);s.alpaca.royalDiscClock[id]=last;changed=true}
+        const due=Math.floor((t-last)/ROYAL_MS);if(due<1)continue;
+        const rounds=Math.min(due,24);
+        for(let r=0;r<rounds;r++){
+          const at=last+(r+1)*ROYAL_MS,idDrop=`r34107-royal-${id}-${at}`;
+          if(!arr.some(d=>String(d?.id)===idDrop))arr.push({id:idDrop,animalId:id,qty:2,createdAt:at});
+        }
+        if(arr.length>48)arr.splice(0,arr.length-48);
+        s.alpaca.royalDiscClock[id]=last+due*ROYAL_MS;changed=true;
+      }
+    });
+    for(const id of Object.keys(s.alpaca.royalDiscClock))if(!active.has(id)){delete s.alpaca.royalDiscClock[id];changed=true}
+    return changed;
+  }
+
+  function repairHamster(s,t){
+    let changed=false;const active=new Set();
+    for(const farm of [2,3,4]){
+      const g=s?.farmGuardians?.[String(farm)],arr=s.hamsterDiscDrops[String(farm)];
+      for(const h of (g?.hamsters||[])){
+        const id=String(h?.id||"");if(!id)continue;active.add(id);
+        let last=Number(s.hamsterDiscClock[id]);
+        if(!Number.isFinite(last)||last<=0||last>t){last=durableAnchor(h,t,HAM_MS);s.hamsterDiscClock[id]=last;changed=true}
+        const due=Math.floor((t-last)/HAM_MS);if(due<1)continue;
+        const rounds=Math.min(due,24);
+        for(let r=0;r<rounds;r++){
+          const at=last+(r+1)*HAM_MS,idDrop=`r34107-ham-${id}-${at}`;
+          if(!arr.some(d=>String(d?.id)===idDrop))arr.push({id:idDrop,hamsterId:id,farm,qty:1,createdAt:at});
+        }
+        if(arr.length>60)arr.splice(0,arr.length-60);
+        s.hamsterDiscClock[id]=last+due*HAM_MS;changed=true;
+      }
+    }
+    for(const id of Object.keys(s.hamsterDiscClock))if(!active.has(id)){delete s.hamsterDiscClock[id];changed=true}
+    return changed;
+  }
+
+  async function persist(){
+    if(persistBusy||!cloudReady||!currentMemberKey||visitContext||!live())return;
+    persistBusy=true;
+    try{
+      const s=ensure(live());
+      try{saveLocalOnly?.(s)}catch(_){}
+      /* Use the existing durable save path; it already owns session/revision rules. */
+      try{save?.()}catch(_){}
+      try{await flushCloudSave?.()}catch(e){console.warn("R34.10.7 drop flush",e)}
+    }finally{persistBusy=false}
+  }
+  function schedulePersist(){clearTimeout(persistTimer);persistTimer=setTimeout(()=>persist(),80)}
+
+  function forceRender(){
+    try{globalThis.YN_R34?.processRoyalDrops?.()}catch(e){console.warn("R34.10.7 royal render",e)}
+    try{globalThis.YN_R34?.processHamsterDrops?.()}catch(e){console.warn("R34.10.7 hamster render",e)}
+    const rl=$("r34RoyalDiscLayer"),hl=$("r34HamsterDiscLayer");
+    if(rl){rl.style.setProperty("z-index","240","important");rl.style.setProperty("display","block","important")}
+    if(hl){hl.style.setProperty("z-index","240","important");hl.style.setProperty("display","block","important")}
+  }
+
+  function run(force=false){
+    if(!currentMemberKey||visitContext)return false;const s=ensure(live());if(!s)return false;
+    const t=now(),changed=repairRoyal(s,t)|repairHamster(s,t);
+    if(changed){try{saveLocalOnly?.(s)}catch(_){}schedulePersist()}
+    forceRender();return Boolean(changed);
+  }
+
+  document.addEventListener("click",e=>{
+    if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,#plotPageNextBtn,#plotPagePrevBtn,[data-pen],[data-alpaca-pen]"))setTimeout(()=>run(true),100);
+  },false);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>run(true),120)},{passive:true});
+  window.addEventListener("pageshow",()=>setTimeout(()=>run(true),160),{passive:true});
+  window.addEventListener("focus",()=>setTimeout(()=>run(false),100),{passive:true});
+  setInterval(()=>run(false),15000);
+  setTimeout(()=>run(true),450);
+
+  globalThis.YN_R34107={BUILD,run,repairRoyal,repairHamster};
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();

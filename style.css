@@ -9843,3 +9843,7 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 #r342FriendHamsterLayer{position:absolute;inset:0;z-index:67;pointer-events:none;overflow:hidden}
 #r342FriendHamsterLayer .r342-friend-hamster{pointer-events:none!important;border:0!important;background:transparent!important}
 #r342FriendHamsterLayer .r25-hamster-sprite{background-size:400% 400%!important}
+
+/* R34.10.7 — keep generated alpaca/hamster drops above animal/farm layers */
+#r34RoyalDiscLayer,#r34HamsterDiscLayer{z-index:240!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:none!important}
+#r34RoyalDiscLayer .r34-disc-drop,#r34HamsterDiscLayer .r34-disc-drop{z-index:241!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
