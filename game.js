@@ -27088,3 +27088,205 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+
+/* =====================================================================
+   S2 R34.5 — OWN FARM INTERACTION RECOVERY + FRIEND HAMSTER MOTION
+   2026-09-03
+   - Recover Farm 2/3/4 controls after account switch / stale friend context.
+   - Remove giant legacy invisible guardian hitbox and expose a compact button.
+   - Friend-visit hamsters animate locally without extra Firebase writes.
+   ===================================================================== */
+(function YN_R345_FARM_VISITOR_HOTFIX(){
+  "use strict";
+  const BUILD="S2-R34.5-FARM-VISITOR-HOTFIX-20260903";
+  const $=id=>document.getElementById(id);
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||a));
+  const farmNo=()=>Math.max(1,Math.min(4,Number(typeof currentFarmNo==="function"?currentFarmNo():(Number(farmPlotPage)||0)+1)||1));
+  const B={minX:14,maxX:86,minY:75,maxY:91};
+
+  /* A) Account/login bootstrap is always an OWN session. A stale friend
+     context must never survive into the next signed-in member. */
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){
+    const r=await initBase.apply(this,arguments);
+    visitContext=null;
+    if(ownState)state=ownState;
+    $("gameScreen")?.classList.remove("visiting-friend");
+    $("visitorBanner")?.remove();
+    setTimeout(repairOwnFarmUI,0);
+    return r;
+  };
+
+  function clearStaleOwnContext(){
+    const screen=$("gameScreen");
+    if(!screen)return;
+    /* During a real friend visit the class and context are both present.
+       Anything else is stale state from an account switch/return path. */
+    if(visitContext&&!screen.classList.contains("visiting-friend")){
+      visitContext=null;
+      if(ownState)state=ownState;
+    }
+    if(!visitContext){
+      screen.classList.remove("visiting-friend");
+      $("visitorBanner")?.remove();
+    }
+  }
+
+  function legacyGuardian(el){
+    if(!el||el.id==="r25GuardianHotspot")return false;
+    const cls=String(el.className||"");
+    const css=String(el.getAttribute?.("style")||"");
+    let src="";try{src=String(el.onclick||"")}catch(_){ }
+    return cls.includes("r26-guardian-legacy-anchor")||
+      src.includes("สัตว์รักษ์ฟาร์ม")||
+      (/left:\s*7%/.test(css)&&/top:\s*69%/.test(css)&&/width:\s*86%/.test(css)&&/height:\s*27%/.test(css));
+  }
+
+  function cleanupGuardianHitboxes(){
+    const layer=$("s2FarmHotspots");
+    if(!layer)return;
+    layer.querySelectorAll("button").forEach(b=>{if(legacyGuardian(b))b.remove()});
+  }
+
+  function ensureCompactGuardianButton(){
+    if(visitContext)return;
+    const n=farmNo(),layer=$("s2FarmHotspots");
+    if(!layer)return;
+    cleanupGuardianHitboxes();
+    let b=$("r25GuardianHotspot");
+    if(n<2||n>4){if(b)b.classList.add("hidden");return}
+    if(!b){
+      b=document.createElement("button");b.id="r25GuardianHotspot";b.type="button";layer.appendChild(b);
+    }
+    b.classList.remove("hidden");
+    b.setAttribute("aria-label","แฮมสเตอร์");
+    b.textContent="🐹 แฮมสเตอร์";
+    b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();globalThis.YN_R25?.showGuardianMenu?.()};
+  }
+
+  function repairOwnFarmUI(){
+    clearStaleOwnContext();
+    if(visitContext)return;
+    const screen=$("gameScreen");if(!screen||screen.classList.contains("hidden"))return;
+    /* Old friend overlays are display-only and must never sit on an owner session. */
+    ["r342FriendHamsterLayer","r344FriendHamsterLayer","r345FriendHamsterLayer"].forEach(id=>$(id)?.remove());
+    cleanupGuardianHitboxes();
+    ensureCompactGuardianButton();
+    screen.querySelectorAll(".plot").forEach(p=>{p.style.pointerEvents="auto";p.style.touchAction="manipulation"});
+    ["s2FarmDock","s2MainNav"].forEach(id=>{const el=$(id);if(el){el.style.pointerEvents="auto";el.style.touchAction="manipulation"}});
+  }
+
+  /* Run after every farm switch/draw because legacy syncFarmUI may recreate
+     the obsolete 86%-wide invisible guardian anchor after page render. */
+  const pageBase=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;
+  if(pageBase)setFarmPlotPage=function(){
+    clearStaleOwnContext();
+    const r=pageBase.apply(this,arguments);
+    setTimeout(()=>{if(!visitContext)repairOwnFarmUI();else syncFriendMotion(true)},0);
+    setTimeout(()=>{if(!visitContext)repairOwnFarmUI();else syncFriendMotion(false)},80);
+    return r;
+  };
+  const drawBase=typeof draw==="function"?draw:null;
+  if(drawBase)draw=function(){
+    const r=drawBase.apply(this,arguments);
+    setTimeout(()=>{if(!visitContext)repairOwnFarmUI();else syncFriendMotion(false)},0);
+    return r;
+  };
+
+  /* Mutation cleanup guarantees the huge legacy hotspot cannot come back and
+     steal taps from plots/tools after a later renderer runs. */
+  const game=$("gameScreen");
+  if(game){
+    const mo=new MutationObserver(()=>{if(!visitContext){cleanupGuardianHitboxes();ensureCompactGuardianButton()}});
+    mo.observe(game,{childList:true,subtree:true});
+  }
+
+  /* B) FRIEND HAMSTER MOTION — purely local presentation.
+     Public Firestore data remains placement-only; no animation-frame writes. */
+  let friendRAF=0,friendFarm=0;
+  const friendMotion=new Map();
+  function friendLayer(){
+    const screen=$("gameScreen");if(!screen)return null;
+    let layer=$("r345FriendHamsterLayer");
+    if(!layer){layer=document.createElement("div");layer.id="r345FriendHamsterLayer";screen.appendChild(layer)}
+    return layer;
+  }
+  function clearFriendMotion(){
+    friendMotion.clear();friendFarm=0;
+    $("r345FriendHamsterLayer")?.remove();
+  }
+  function freeTarget(exceptId){
+    for(let i=0;i<24;i++){
+      const x=B.minX+4+Math.random()*(B.maxX-B.minX-8),y=B.minY+2+Math.random()*(B.maxY-B.minY-4);
+      let ok=true;for(const [id,m] of friendMotion){if(id===exceptId)continue;if(Math.hypot((m.tx??m.x)-x,(m.ty??m.y)-y)<7){ok=false;break}}
+      if(ok)return{x,y};
+    }
+    return{x:B.minX+8+Math.random()*(B.maxX-B.minX-16),y:B.minY+3+Math.random()*(B.maxY-B.minY-6)};
+  }
+  function seedFriendMotion(h,t){
+    const x=clamp(h.x??50,B.minX,B.maxX),y=clamp(h.y??82,B.minY,B.maxY);
+    return{id:String(h.id),color:String(h.color||"gray"),x,y,fromX:x,fromY:y,tx:x,ty:y,mode:"idle",action:"idle",faceLeft:Boolean(h.faceLeft),startedAt:t,duration:5200,idleUntil:t+300+Math.random()*900,seed:Math.floor(Math.random()*10000)};
+  }
+  function planFriendWalk(m,t){
+    const p=freeTarget(m.id),dx=p.x-m.x,dy=p.y-m.y,dist=Math.max(1,Math.hypot(dx,dy));
+    m.fromX=m.x;m.fromY=m.y;m.tx=p.x;m.ty=p.y;m.startedAt=t;m.duration=Math.max(4300,Math.min(9000,dist*440));m.mode="walk";m.faceLeft=dx<0;m.action=Math.abs(dx)>Math.abs(dy)*.82?"walk_side":dy<0?"walk_back":"walk_forward";
+  }
+  function sprite(el,m,t){
+    const colors=globalThis.YN_R25?.COLORS||{},meta=colors[m.color]||colors.gray||{};
+    const action=meta[m.action]?m.action:"idle",src=meta[action]||meta.idle||"gray_hamster_idle.webp",sp=el.querySelector(".r25-hamster-sprite");if(!sp)return;
+    const frame=Math.floor((t+m.seed)/((action==="idle"||action==="cute")?260:190))%16,col=frame%4,row=Math.floor(frame/4);
+    sp.style.backgroundImage=`url('${src}')`;sp.style.backgroundPosition=`${col*100/3}% ${row*100/3}%`;
+    sp.classList.toggle("face-left",action==="walk_side"&&m.faceLeft);
+    sp.classList.toggle("r25-no-alpha",m.color==="green"&&["idle","walk_back","walk_forward"].includes(action));
+  }
+  function syncFriendMotion(reset=false){
+    if(!visitContext){clearFriendMotion();return}
+    const n=farmNo();if(n<2||n>4){clearFriendMotion();return}
+    /* Hide static overlays from R34.2/R34.4; R34.5 owns visitor animation. */
+    $("r342FriendHamsterLayer")?.remove();$("r344FriendHamsterLayer")?.remove();
+    const arr=Array.isArray(visitContext.publicHamsters?.[String(n)])?visitContext.publicHamsters[String(n)]:[];
+    const t=performance.now();if(reset||friendFarm!==n){friendMotion.clear();friendFarm=n}
+    const ids=new Set(arr.filter(h=>h?.id).map(h=>String(h.id)));
+    for(const id of [...friendMotion.keys()])if(!ids.has(id))friendMotion.delete(id);
+    for(const h of arr)if(h?.id&&!friendMotion.has(String(h.id)))friendMotion.set(String(h.id),seedFriendMotion(h,t));
+    const layer=friendLayer();if(!layer)return;
+    layer.querySelectorAll("[data-r345-friend-ham]").forEach(el=>{if(!ids.has(String(el.dataset.r345FriendHam)))el.remove()});
+    for(const [id,m] of friendMotion){
+      let el=layer.querySelector(`[data-r345-friend-ham="${CSS.escape(id)}"]`);
+      if(!el){el=document.createElement("span");el.className="r345-friend-hamster r25-hamster";el.dataset.r345FriendHam=id;el.innerHTML='<span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite"></span>';layer.appendChild(el)}
+    }
+  }
+  function friendLoop(t){
+    try{
+      if(visitContext&&$("gameScreen")&&!$("gameScreen").classList.contains("hidden")){
+        syncFriendMotion(false);const layer=$("r345FriendHamsterLayer"),clock=performance.now();
+        for(const [id,m] of friendMotion){
+          let x=m.x,y=m.y;
+          if(m.mode==="walk"){
+            const p=Math.max(0,Math.min(1,(clock-m.startedAt)/Math.max(1,m.duration))),ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+            x=m.fromX+(m.tx-m.fromX)*ease;y=m.fromY+(m.ty-m.fromY)*ease;
+            if(p>=1){m.x=m.tx;m.y=m.ty;m.fromX=m.x;m.fromY=m.y;m.mode="idle";m.action=Math.random()<.25?"cute":"idle";m.idleUntil=clock+650+Math.random()*1100;x=m.x;y=m.y}
+          }else if(clock>=m.idleUntil){planFriendWalk(m,clock)}
+          const el=layer?.querySelector(`[data-r345-friend-ham="${CSS.escape(id)}"]`);if(!el)continue;
+          el.style.left=`${clamp(x,B.minX,B.maxX)}%`;el.style.top=`${clamp(y,B.minY,B.maxY)}%`;el.style.zIndex=String(70+Math.round(y));sprite(el,m,t);
+        }
+      }else if(!visitContext)clearFriendMotion();
+    }catch(e){console.warn("R34.5 friend hamster motion",e)}
+    friendRAF=requestAnimationFrame(friendLoop);
+  }
+  friendRAF=requestAnimationFrame(friendLoop);
+
+  const visitBase=typeof visitFriend==="function"?visitFriend:null;
+  if(visitBase)visitFriend=async function(){const r=await visitBase.apply(this,arguments);setTimeout(()=>syncFriendMotion(true),40);return r};
+  const returnBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(returnBase)returnFromFriendVisit=function(){clearFriendMotion();const r=returnBase.apply(this,arguments);setTimeout(repairOwnFarmUI,20);return r};
+
+  window.addEventListener("pageshow",()=>setTimeout(()=>{if(visitContext)syncFriendMotion(true);else repairOwnFarmUI()},50),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{if(visitContext)syncFriendMotion(false);else repairOwnFarmUI()},50)},{passive:true});
+  setInterval(()=>{if(!visitContext)repairOwnFarmUI()},1000);
+
+  globalThis.YN_R345={BUILD,repairOwnFarmUI,syncFriendMotion};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
