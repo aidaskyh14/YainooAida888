@@ -12568,7 +12568,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     $("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");if(jellyPondUnsubscribe)stopJellyPondSubscription();
     currentScene="jellyfish2";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");
     $("sceneScreen").style.backgroundImage='url("jellyfish-season2-pond.jpeg")';
-    setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 1",backAction:()=>openScene("jellyfish"),nextText:"ไปที่สังเวียนมวยทะเล",nextAction:openArena});
+    setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 1",backAction:()=>openScene("jellyfish")});
     drawJ2();
     try{
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared","jellyfishPond2");
@@ -12711,47 +12711,23 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       return fresh;
     }catch(e){console.warn("arena cloud sync",e);return ownState||state}
   }
-  async function openArena(){
-    $("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");stopJ2();currentScene="jellyfishArena";$("gameScreen").classList.add("hidden");$("sceneScreen").classList.remove("hidden");
-    $("sceneScreen").style.backgroundImage='url("jellyfish-season2-arena.jpeg")';
-    setSceneNav({backText:"กลับไปที่บ่อแมงกะพรุน 2",backAction:openJelly2,nextText:"กลับไปที่แปลงผัก",nextAction:returnToFarm});
-    drawArena();
-    syncArenaFromCloud().then(()=>{if(currentScene!=="jellyfishArena")return;drawArena();const f=(ownState||state)?.arena?.fight;if(!f)return;if(Number(f.finishAt||0)>NOW())return arenaStatus();if(arenaLegacyResolved(f))return clearArenaFight(true);return checkArenaFight()}).catch(()=>{});
-  }
+  async function openArena(){return openJelly2()}
   function drawArena(){if(currentScene!=="jellyfishArena")return;$("sceneInteractiveLayer").innerHTML=`<button class="ynu-arena-zone left" id="ynuArenaMine" aria-label="เลือกแมงกะพรุนของเรา"></button><button class="ynu-arena-zone right" id="ynuArenaOpp" aria-label="เลือกคู่แข่ง"></button><div class="ynu-arena-actions"><button id="ynuArenaMove">เลือกท่าต่อสู้</button><button id="ynuArenaStart">เริ่มการต่อสู้</button></div><button id="ynuArenaBoard" class="ynu-arena-board">แดชบอร์ด</button>${arenaChoice.jelly?`<div class="ynu-arena-picked mine"><img src="${arenaChoice.jelly.type.image}"><small>${esc(arenaChoice.jelly.customName||arenaChoice.jelly.type.name)}</small></div>`:""}${arenaChoice.opp!=null?`<div class="ynu-arena-picked opp"><img src="${OPP[arenaChoice.opp].image}"><small>${OPP[arenaChoice.opp].name}</small></div>`:""}`;$("ynuArenaMine").onclick=pickArenaJelly;$("ynuArenaOpp").onclick=pickOpponent;$("ynuArenaMove").onclick=pickMove;$("ynuArenaStart").onclick=startArenaFight;$("ynuArenaBoard").onclick=showArenaDashboard}
   async function pickArenaJelly(){const list=await placedV2();if(!list.length)return message("ไม่มีนักมวย","ต้องวางแมงกะพรุน V2 ในบ่อ 1 หรือบ่อ 2 ก่อนจึงจะขึ้นสังเวียนได้");$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel"><h2>เลือกแมงกะพรุนของเรา</h2><div class="ynu-arena-picker">${list.map((x,i)=>`<button class="${arenaChoice.jelly?.id===x.id?"selected":""}" data-arena-jelly="${i}"><img src="${x.type.image}"><b>${esc(x.customName||x.type.name)}</b><small>บ่อ ${x.pond}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-jelly]").forEach(b=>b.onclick=()=>{arenaChoice.jelly=list[Number(b.dataset.arenaJelly)];closeModal();drawArena()});openModal()}
   function pickOpponent(){$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel"><h2>เลือกคู่แข่ง</h2><div class="ynu-arena-picker">${OPP.map((x,i)=>`<button class="${arenaChoice.opp===i?"selected":""}" data-arena-opp="${i}"><img src="${x.image}"><b>${x.name}</b></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-opp]").forEach(b=>b.onclick=()=>{arenaChoice.opp=Number(b.dataset.arenaOpp);closeModal();drawArena()});openModal()}
   function pickMove(){$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-choice-panel ynu-arena-move-panel"><h2>เลือกท่าต่อสู้</h2><div class="ynu-move-picker">${MOVES.map(x=>`<button class="${arenaChoice.move===x.id?"selected":""}" data-arena-move="${x.id}"><img src="${x.image}"><small>${x.name}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-arena-move]").forEach(b=>b.onclick=()=>{arenaChoice.move=Number(b.dataset.arenaMove);closeModal();drawArena()});openModal()}
-  async function startArenaFight(){if(!arenaChoice.jelly||arenaChoice.opp==null||!arenaChoice.move)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุนของเรา คู่แข่ง และท่าต่อสู้ก่อนค่ะ");try{await settlePendingCloudSave();await syncArenaFromCloud();const localPending=(ownState||state)?.arena?.fight;if(localPending){if(Number(localPending.finishAt||0)>NOW())return arenaStatus();return checkArenaFight()}const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);resetDailyExtras(s);const now=NOW();const pending=s.arena.fight;if(pending){if(arenaLegacyResolved(pending)||arenaFightMalformed(pending)){s.arena.fight=null}else{throw new Error("ARENA_PENDING_RECOVER")}}if(s.arena.dailyCount>=5)throw new Error("วันนี้แข่งขันครบ 5 รอบแล้วค่ะ");if(s.arena.cooldownUntil>now)throw new Error(`จะแข่งอยู่อย่างนั้น!!! รอก่อน ยังไม่ถึงเวลา\nกลับมาใหม่อีก ${fmt(s.arena.cooldownUntil-now)} นาที`);const out=arenaOutcome(arenaChoice.opp,arenaChoice.move);s.arena.dailyCount++;incrementMissionOn(s,"dailySeaArenaFight",1);s.arena.fight={startedAt:now,finishAt:now+3*MIN,jellyId:arenaChoice.jelly.id,jellyName:arenaChoice.jelly.customName||arenaChoice.jelly.type.name,oppIndex:arenaChoice.opp,moveId:arenaChoice.move,win:out.win,score:out.score,penaltyApplied:false,scoreClaimed:false,ack:false};next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);arenaStatus()}catch(e){if(String(e.message||e).includes("ARENA_PENDING_RECOVER")){await syncArenaFromCloud();const f=(ownState||state)?.arena?.fight;if(f){if(Number(f.finishAt||0)>NOW())return arenaStatus();return checkArenaFight()}return drawArena()}message("เริ่มต่อสู้ไม่ได้",String(e.message||e).replace(/\n/g,"<br>"))}}
-  function arenaStatus(){const f=(ownState||state)?.arena?.fight;if(!f)return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-fighting"><div class="ynu-arena-status-icon"><img src="jellyfish-arena-overlay.png?v=2" alt="กำลังต่อสู้"></div><h2>กำลังต่อสู้</h2><p>การต่อสู้จะทราบผลใน <strong id="ynuArenaTimer">${fmt(f.finishAt-NOW())}</strong> นาที</p><small>ออกไปแปลงผักหรือออกจากเกมได้ เวลายังคงนับต่อ</small></section>`;openModal();const t=setInterval(()=>{const x=(ownState||state)?.arena?.fight;if(!x||x.finishAt<=NOW()){clearInterval(t);checkArenaFight()}else if($("ynuArenaTimer"))$("ynuArenaTimer").textContent=fmt(x.finishAt-NOW());else clearInterval(t)},1000)}
-  async function checkArenaFight(){if(arenaFinalizing)return;const f=(ownState||state)?.arena?.fight;if(!f||f.finishAt>NOW())return;if(f.win&&f.scoreClaimed)return clearArenaFight(true);if(f.win&&!f.scoreClaimed)return arenaWinResult();if(!f.win&&!f.penaltyApplied){arenaFinalizing=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),prof=fs.doc(db,"publicProfiles",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember),x=s.arena.fight;if(!x||x.win||x.penaltyApplied)return;s.merit=Number(s.merit||0)-100;x.penaltyApplied=true;s.arena.cooldownUntil=Number(x.finishAt)+HOUR;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(prof,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,updatedAt:fs.serverTimestamp()},{merge:true})});if(next){Y26_applyOwnState(next);updateMeritUI()}}catch(e){console.warn("arena penalty",e)}finally{arenaFinalizing=false}}if(!(ownState||state)?.arena?.fight?.win)return arenaLoseResult()}
-  function arenaWinResult(){const f=(ownState||state).arena.fight;if(document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-win"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-win.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-win.jpg?v=2'" alt="ชนะ"></div><h2>ขอแสดงความยินดี แมงกระพรุนคุณมันมีเลือดนักสู้จริงๆ</h2><strong>+${f.score} คะแนนสังเวียนมวยทะเลกระพรุน</strong><button id="ynuArenaClaimScore">รับคะแนน</button></section>`;$("ynuArenaClaimScore").onclick=claimArenaScore;openModal()}
-  function arenaLoseResult(){const f=(ownState||state)?.arena?.fight;if(!f||!f.penaltyApplied||document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-lose"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-lose.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-lose.jpg?v=2'" alt="แพ้"></div><h2>ขอแสดงความเสียใจ แมงกระพรุนของคุณน็อคกลางการแข่งขัน</h2><strong>ส่งผลให้ คุณ -100 กุศล</strong><p>นี่ แมงกะพรุนหรือ ไก่ ค้าาาาา</p><button id="ynuArenaAccept">ยอมรับการตัดสิน</button></section>`;$("ynuArenaAccept").onclick=()=>clearArenaFight(false);openModal()}
-  async function claimArenaScore(){
-    const f=(ownState||state)?.arena?.fight;
-    if(!f||!f.win)return;
-    try{
-      const {db,fs}=await getFirebaseContext();
-      const sRef=fs.doc(db,"saves",currentMemberKey), wk=weekKey(), wRef=fs.doc(db,"jellyArenaWeekly",wk);
-      let next=null,added=0;
-      await fs.runTransaction(db,async tx=>{
-        const [ss,ws]=await Promise.all([tx.get(sRef),tx.get(wRef)]);
-        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const st=normalizeState(ss.data(),currentMember),x=st.arena?.fight;
-        if(!x||!x.win||x.scoreClaimed)throw new Error("รับคะแนนไปแล้ว");
-        added=Math.max(1,Math.min(6,Math.floor(Number(x.score)||0)));
-        x.scoreClaimed=true;st.arena.cooldownUntil=Number(x.finishAt||NOW())+HOUR;next=st;
-        tx.set(sRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        const prev=ws.exists()?ws.data():{},scores=prev.scores&&typeof prev.scores==="object"?{...prev.scores}:{},names=prev.names&&typeof prev.names==="object"?{...prev.names}:{};
-        scores[currentMemberKey]=(Number(scores[currentMemberKey])||0)+added;names[currentMemberKey]=currentProfileDisplayName();
-        if(ws.exists())tx.update(wRef,{scores,names,updatedAt:fs.serverTimestamp()});
-        else tx.set(wRef,{weekKey:wk,scores:{[currentMemberKey]:added},names:{[currentMemberKey]:currentProfileDisplayName()},updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      Y26_applyOwnState(next);try{saveLocalOnly(next)}catch(_){}
-      showWeatherToast(`🏆 รับ +${added} คะแนนมวยทะเลแล้ว • Rank อัปเดตแล้ว`);
-      clearArenaFight(true);
-    }catch(e){console.error("R34 arena claim",e);message("รับคะแนนไม่ได้",e.message||"กรุณาลองใหม่")}
+  async function startArenaFight(){return false}
+  function arenaStatus(){return false}
+  async function checkArenaFight(){
+    const s=ownState||state;
+    if(s?.arena?.fight){s.arena.fight=null;try{saveLocalOnly?.(s)}catch(_){}}
+    const c=$("modalContent");
+    if(c&&c.querySelector?.("#ynuArenaClaimScore,#ynuArenaAccept,.ynu-arena-status,.ynu-arena-dashboard")){try{closeModal?.()}catch(_){ } c.innerHTML=""}
+    return false;
   }
+  function arenaWinResult(){return checkArenaFight()}
+  function arenaLoseResult(){const f=(ownState||state)?.arena?.fight;if(!f||!f.penaltyApplied||document.querySelector(".ynu-arena-status.ynu-result"))return;$("modalContent").innerHTML=`<section class="feature-panel ynu-arena-status ynu-result ynu-lose"><div class="ynu-arena-status-icon"><img src="jellyfish-battle-lose.png?v=2" onerror="this.onerror=null;this.src='jellyfish-battle-lose.jpg?v=2'" alt="แพ้"></div><h2>ขอแสดงความเสียใจ แมงกระพรุนของคุณน็อคกลางการแข่งขัน</h2><strong>ส่งผลให้ คุณ -100 กุศล</strong><p>นี่ แมงกะพรุนหรือ ไก่ ค้าาาาา</p><button id="ynuArenaAccept">ยอมรับการตัดสิน</button></section>`;$("ynuArenaAccept").onclick=()=>clearArenaFight(false);openModal()}
+  async function claimArenaScore(){return checkArenaFight()}
   async function clearArenaFight(){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeState(snap.data(),currentMember);s.arena.fight=null;next=s;tx.set(ref,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);closeModal();if(currentScene==="jellyfishArena")drawArena()}catch(e){console.warn(e)}}
   function showArenaDashboard(){
     if(arenaBoardUnsub){try{arenaBoardUnsub()}catch(_){}arenaBoardUnsub=null}
@@ -12766,7 +12742,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   }
 
   /* ---------- openScene routing ---------- */
-  const _openScene=openScene;openScene=function(name){if(name==="fishingLobby")return openFishingLobby();if(name==="jellyfish2")return openJelly2();if(name==="jellyfishArena")return openArena();return _openScene(name)};
+  const _openScene=openScene;openScene=function(name){if(name==="fishingLobby")return openFishingLobby();if(name==="jellyfish2")return openJelly2();if(name==="jellyfishArena")return openJelly2();return _openScene(name)};
   if($("wellHotspot"))$("wellHotspot").onclick=openFishingLobby;
   if($("shortcutFishingBtn"))$("shortcutFishingBtn").onclick=openFishingLobby;
 
@@ -12774,7 +12750,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const _returnFarm=returnToFarm;returnToFarm=function(){$("sceneScreen")?.classList.remove("ynu-fishing-lobby-scene");stopFishV2();stopJ2();if(arenaBoardUnsub){arenaBoardUnsub();arenaBoardUnsub=null}return _returnFarm()};
 
   /* ---------- lightweight background status checks ---------- */
-  setInterval(()=>{try{const s=ownState||state;if(s){resetDailyExtras(s);if(s.arena?.fight&&s.arena.fight.finishAt<=NOW())checkArenaFight()}cleanupTakeovers()}catch(e){}},1000);
+  setInterval(()=>{try{const s=ownState||state;if(s){resetDailyExtras(s);if(s.arena?.fight){s.arena.fight=null;try{saveLocalOnly?.(s)}catch(_){}}}cleanupTakeovers()}catch(e){}},1000);
   setTimeout(()=>{mountManagerButton();bindDogPalace();rebindBottomNav()},80);
   /* V180: expose Take Over actions for the cache-proof UI in index.html.
      These functions live inside this IIFE, so previous inline UI could show
@@ -22283,11 +22259,23 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(!plots)return message("🚜 รถไถ","ยังไม่มีแปลงพร้อมเก็บค่ะ");try{incrementMissionOn(s,"dailyHarvestCrops",Object.values(got).reduce((a,b)=>a+b,0))}catch(_){}if(ADMIN())r14AdminTopup(s);fastCommit(s);showWeatherToast(`🚜 เก็บเกี่ยว ${plots} แปลงเข้ากระเป๋าแล้ว`);
   }
   function wormManagerR14(){
-    const s=own(),[a,b]=range(),targets=[];for(let i=a;i<b;i++){const p=s?.plots?.[i];if(p?.worm&&!blocked(p))targets.push(i)}
+    const s=own(),[a,b]=range(),targets=[];for(let i=a;i<b;i++){const p=s?.plots?.[i];if(p&&!blocked(p)&&(p.phase==="worm"||p.worm))targets.push(i)}
     if(!targets.length)return message("🐛 จัดการหนอน","ฟาร์มหน้านี้ไม่มีหนอนค่ะ");
     $("modalContent").innerHTML=`<section class="feature-panel"><h2>🐛 จัดการหนอนทั้งสวน</h2><p>พบ ${targets.length} แปลง</p><div class="ynu-manager-grid"><button id="r14WormMerit">🙏 ใช้กุศล</button><button id="r14WormSpray">🧴 ใช้สเปรย์กำจัดหนอน</button></div></section>`;openModal();
-    $("r14WormMerit").onclick=()=>{const cost=targets.reduce((sum,i)=>sum+((typeof wormTypeOf==="function"&&wormTypeOf(s.plots[i])==="giant")?2:1),0);if(!ADMIN()&&(Number(s.merit)||0)<cost)return message("กุศลไม่พอ",`ต้องใช้ ${cost} กุศล`);if(!ADMIN())s.merit-=cost;targets.forEach(i=>{const p=s.plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))});try{incrementMissionOn(s,"clearWorms",targets.length)}catch(_){}if(ADMIN())r14AdminTopup(s);closeModal();fastCommit(s);showWeatherToast(`🐛 กำจัดหนอน ${targets.length} แปลงแล้ว • ใช้ ${cost} กุศล`)};
-    $("r14WormSpray").onclick=()=>{const key="wormKillerSpray",cost=targets.reduce((sum,i)=>sum+((typeof wormTypeOf==="function"&&wormTypeOf(s.plots[i])==="giant")?12:5),0),have=Number(s.specials?.[key]||0);if(!ADMIN()&&have<cost)return message("สเปรย์ไม่พอ",`ต้องใช้สเปรย์ ${cost} ขวด • มี ${have}`);s.specials=obj(s.specials);if(!ADMIN())s.specials[key]=have-cost;targets.forEach(i=>{const p=s.plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))});try{incrementMissionOn(s,"clearWorms",targets.length)}catch(_){}if(ADMIN())r14AdminTopup(s);closeModal();fastCommit(s);showWeatherToast(`🧴 กำจัดหนอน ${targets.length} แปลงแล้ว • ใช้สเปรย์ ${cost} ขวด`)};
+    const doBulk=async(useSpray)=>{
+      const base=own();if(!base)return;const snap=normalizeState(cloneData(base),currentMember),valid=targets.filter(i=>{const p=snap.plots?.[i];return p&&!blocked(p)&&(p.phase==="worm"||p.worm)});if(!valid.length)return message("🐛 จัดการหนอน","หนอนถูกกำจัดไปแล้วค่ะ");
+      const cost=valid.reduce((sum,i)=>sum+((typeof wormTypeOf==="function"&&wormTypeOf(snap.plots[i])==="giant")?(useSpray?12:2):(useSpray?5:1)),0);
+      if(useSpray){const have=Number(snap.specials?.wormKillerSpray||0);if(!ADMIN()&&have<cost)return message("สเปรย์ไม่พอ",`ต้องใช้สเปรย์ ${cost} ขวด • มี ${have}`);snap.specials=obj(snap.specials);if(!ADMIN())snap.specials.wormKillerSpray=have-cost}
+      else {if(!ADMIN()&&(Number(snap.merit)||0)<cost)return message("กุศลไม่พอ",`ต้องใช้ ${cost} กุศล`);if(!ADMIN())snap.merit-=cost}
+      valid.forEach(i=>{const p=snap.plots[i],c=CROPS[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=NOW()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))});try{incrementMissionOn(snap,"clearWorms",valid.length)}catch(_){};if(ADMIN())r14AdminTopup(snap);
+      closeModal();ownState=snap;if(!visitContext)state=snap;try{saveLocalOnly(snap)}catch(_){};draw();updateMeritUI();
+      try{
+        if(cloudReady&&currentMemberKey){const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);await fs.setDoc(ref,{...cloneData(snap),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});try{await globalThis.YN_R34104?.mirrorGarden?.(snap.plots)}catch(_){}}
+        else try{save()}catch(_){}
+        showWeatherToast(`${useSpray?"🧴":"🐛"} กำจัดหนอน ${valid.length} แปลงแล้ว • ใช้ ${cost} ${useSpray?"ขวด":"กุศล"}`)
+      }catch(e){console.error("R34.10.4 bulk worm",e);message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+    };
+    $("r14WormMerit").onclick=()=>doBulk(false);$("r14WormSpray").onclick=()=>doBulk(true);
   }
   function managerR14(){
     if(visitContext)return message("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=range();
@@ -27550,85 +27538,39 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
    Keep save + garden authoritative in the transaction. publicProfiles is
    best-effort and can never roll back worm removal.
    ===================================================================== */
-(function YN_R3495_WORM_CLEAR_FIX(){
+(function YN_R34104_WORM_CLEAR_FIX(){
   "use strict";
-  const BUILD="S2-R34.9.5-WORM-CLEAR-PERMISSION-FIX-20260904";
-
+  const BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
+  const live=()=>ownState||state;
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const wormCost=p=>(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?2:1;
+  const finishWorm=p=>{const c=CROPS?.[p.crop];p.phase="growing2";p.worm=false;try{delete p.wormType}catch(_){};p.phaseEndsAt=now()+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0));return p};
+  async function mirrorGarden(plots){
+    try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.10.4 worm garden mirror skipped",e)}
+  }
   clearWorm=async function(index){
-    if(!state||visitContext)return;
-    const local=state.plots?.[index];
-    if(!local?.crop||local.phase!=="worm")return;
-    const initialCost=(typeof wormTypeOf==="function"&&wormTypeOf(local)==="giant")?2:1;
-
-    /* Preserve offline/local behaviour exactly. */
-    if(!cloudReady||!currentMemberKey){
-      const crop=CROPS[local.crop],s=ownState||state;
-      s.merit=(Number(s.merit)||0)-initialCost;
-      local.phase="growing2";local.worm=false;
-      try{delete local.wormType}catch(_){}
-      local.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
-      try{incrementOwnMission("clearWorms",1)}catch(_){}
-      save();draw();updateMeritUI();
-      message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${initialCost} กุศล`);
-      return;
-    }
-
+    if(visitContext)return;index=Math.floor(Number(index));const src=live(),local=src?.plots?.[index];if(!local?.crop)return;
+    try{ensurePlotPhaseStandalone(local)}catch(_){};if(local.phase!=="worm"&&!local.worm)return;
+    const initial=wormCost(local);
+    /* Local-first visual response so the tap never feels dead. */
+    const optimistic=normalizeState(cloneData(src),currentMember),op=optimistic.plots[index];
+    optimistic.merit=(Number(optimistic.merit)||0)-initial;finishWorm(op);try{incrementMissionOn(optimistic,"clearWorms",1)}catch(_){}
+    ownState=optimistic;if(!visitContext)state=optimistic;try{saveLocalOnly(optimistic)}catch(_){};try{draw()}catch(_){};try{updateMeritUI()}catch(_){};
     try{
-      await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext();
-      const saveRef=fs.doc(db,"saves",currentMemberKey);
-      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
-      let next=null,newPlots=null,actualCost=initialCost;
-
-      /* Critical mutation only: own save + own public garden plots. */
+      if(!cloudReady||!currentMemberKey){try{save()}catch(_){};message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${initial} กุศล`);return}
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,actual=initial;
       await fs.runTransaction(db,async tx=>{
-        const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
-        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=normalizeState(sSnap.data(),currentMember);
-        assertCurrentCloudSession(sSnap.data(),currentMember);
-        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone);
-        const p=plots[index];
-        if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");
-        actualCost=(typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant")?2:1;
-        const crop=CROPS[p.crop];
-        s.merit=(Number(s.merit)||0)-actualCost;
-        p.phase="growing2";p.worm=false;
-        try{delete p.wormType}catch(_){}
-        p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);
-        plots[index]=p;
-        s.plots=plots.map(normalizePlot);
-        try{incrementMissionOn(s,"clearWorms",1)}catch(_){}
-        newPlots=s.plots;next=s;
-        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(snap.data(),currentMember),p=st.plots?.[index];if(!p?.crop)throw new Error("ไม่พบแปลงนี้");try{ensurePlotPhaseStandalone(p)}catch(_){}
+        if(p.phase!=="worm"&&!p.worm){next=st;return}
+        actual=wormCost(p);st.merit=(Number(st.merit)||0)-actual;finishWorm(p);try{incrementMissionOn(st,"clearWorms",1)}catch(_){};next=st;
+        tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
       });
-
-      ownState=normalizeState(next,currentMember);state=ownState;
-      try{lastGardenHash=plotHash(newPlots)}catch(_){}
-      try{saveLocalOnly(ownState)}catch(_){}
-      updateMeritUI();draw();
-      message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${actualCost} กุศล`);
-
-      /* Non-critical mirror. A permission error here is intentionally ignored. */
-      try{
-        const {db,fs}=await getFirebaseContext();
-        Promise.resolve(fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{
-          memberKey:currentMemberKey,
-          displayName:currentProfileDisplayName(),
-          merit:Number(ownState?.merit)||0,
-          initialized:true,
-          updatedAt:fs.serverTimestamp()
-        },{merge:true})).catch(e=>console.warn("R34.9.5 public profile mirror skipped",e));
-      }catch(_){}
-    }catch(error){
-      console.error("R34.9.5 clear worm",error);
-      message("กำจัดหนอนไม่สำเร็จ",error?.message||"กรุณาลองใหม่");
-    }
+      if(next){ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly(ownState)}catch(_){};try{draw()}catch(_){};try{updateMeritUI()}catch(_){};mirrorGarden(ownState.plots)}
+      message("🐛 ไล่หนอนสำเร็จ",`ใช้ ${actual} กุศล`);
+    }catch(e){console.error("R34.10.4 clear worm",e);/* restore server state on failure */try{await initializeOrLoadCloudState?.()}catch(_){};message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
   };
-
-  globalThis.YN_R3495={BUILD};
-  globalThis.YAINOO_BUILD=BUILD;
-  console.info(BUILD,"loaded");
+  globalThis.YN_R34104={BUILD,mirrorGarden};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
 
@@ -28199,3 +28141,11 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* S2 R34.10.2 — SOURCE-LEVEL ARENA REMOVAL */
+window.YAINOO_BUILD="S2-R34.10.2-SOURCE-LEVEL-ARENA-REMOVAL-20260904";
+console.info(window.YAINOO_BUILD,"loaded");
+
+
+/* R34.10.4 final marker: arena removed, worm clear repaired */
+globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
