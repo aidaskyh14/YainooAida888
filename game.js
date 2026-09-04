@@ -2103,6 +2103,10 @@ function ensureDailyLimitsFor(target){
 function incrementMissionOn(target,id,amount=1){
   if(!target)return;
   ensureMissionStateFor(target);
+  /* R34.11.5: preserve the real action name for the Season 2 village mission
+     engine. The old daily-mission aliases below are legacy-only and must not
+     rename actions before the village mission tracker sees them. */
+  const villageMissionAction=String(id||"");
   const alias={
     openMysteryBox:"dailyOpenAnyBox",
     feedJellyfish:"dailyFeedJellyfish",
@@ -2118,7 +2122,7 @@ function incrementMissionOn(target,id,amount=1){
   /* Season 2 village missions are the active mission system. Call them from the
      one function every real game action already uses instead of relying on a
      late wrapper that can be bypassed by old closures. */
-  try{globalThis.YN_R19?.track?.(target,id,delta)}catch(e){console.warn("R34.11.2 village mission track",e)}
+  try{globalThis.YN_R19?.track?.(target,villageMissionAction,delta)}catch(e){console.warn("R34.11.5 village mission track",e)}
 }
 function incrementOwnMission(id,amount=1){
   const target=ownState||state;if(!target)return;
@@ -23140,9 +23144,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const MISSION_POOL=[
     {id:"plant",action:"dailyPlantCrops",title:n=>`ปลูกพืช ${n} แปลง`,m:[50,70,90]},
     {id:"harvest",action:"harvestCrops",aliases:["dailyHarvestCrops"],title:n=>`เก็บเกี่ยวพืช ${n} ครั้ง`,m:[80,110,150]},
-    {id:"gardenFood",action:"craftFood",title:n=>`คราฟอาหารเมนูในสวน ${n} ครั้ง`,m:[8,11,15]},
+    {id:"gardenFood",action:"craftFood",aliases:["dailyCraftFood"],title:n=>`คราฟอาหารเมนูในสวน ${n} ครั้ง`,m:[8,11,15]},
     {id:"homeFood",action:"homeFoodCraft",title:n=>`คราฟอาหารบ้านสำเร็จ ${n} จาน`,m:[8,10,12]},
-    {id:"spiritProduct",action:"collectAnimalProducts",title:n=>`เก็บผลผลิตสัตว์โลกวิญญาณ ${n} ชิ้น`,m:[12,16,20]},
+    {id:"spiritProduct",action:"collectAnimalProducts",aliases:["dailyCollectSpiritProducts"],title:n=>`เก็บผลผลิตสัตว์โลกวิญญาณ ${n} ชิ้น`,m:[12,16,20]},
     {id:"alpacaShear",action:"alpacaShear",title:n=>`ตัดขนอัลปาก้า ${n} ครั้ง`,m:[8,12,16]},
     {id:"flowers",action:"flowerHarvest",title:n=>`เก็บดอกไม้รวม ${n} ดอก`,m:[10,15,20]},
     {id:"hedgehog",action:"hedgehogCollect",title:n=>`เก็บของดรอปเม่น ${n} ชิ้น`,m:[4,6,8]},
@@ -23150,7 +23154,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     {id:"wineClaim",action:"wineClaim",title:n=>`รับไวน์ที่หมักสำเร็จ ${n} ขวด`,m:[1,2,3]},
     {id:"boat",action:"boatSupply",title:n=>`ส่งเสบียงเรือ ${n} ครั้ง`,m:[8,11,15]},
     {id:"grass",action:"dailyCollectGrass",title:n=>`เก็บหญ้าตามบ้านเพื่อน ${n} ครั้ง`,m:[10,15,20]},
-    {id:"boxes",action:"openMysteryBox",title:n=>`เปิดกล่องสุ่ม ${n} กล่อง`,m:[5,8,10]},
+    {id:"boxes",action:"openMysteryBox",aliases:["dailyOpenAnyBox"],title:n=>`เปิดกล่องสุ่ม ${n} กล่อง`,m:[5,8,10]},
     {id:"friendWater",action:"waterFriends",title:n=>`ช่วยรดน้ำสวนเพื่อน ${n} ครั้ง`,m:[8,12,15]},
     {id:"worms",action:"clearWorms",title:n=>`กำจัดหนอนรวม ${n} ตัว`,m:[10,15,20]},
     {id:"temple",action:"templeSoloSuccess",title:n=>`ทำภารกิจวัดสำเร็จ ${n} ครั้ง`,m:[2,3,4]}
@@ -23181,6 +23185,54 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const freshBase=typeof fresh==="function"?fresh:null;if(freshBase)fresh=function(player){const s=freshBase(player);ensureVillage(s);return s};
   const normalizeBase=typeof normalizeState==="function"?normalizeState:null;if(normalizeBase)normalizeState=function(raw,player){const s=normalizeBase(raw,player);ensureVillage(s);return s};
   function actionMatches(m,id){return m.action===id||(m.aliases||[]).includes(id)}
+
+  /* R34.11.5 — mission progress is no longer trusted to the giant saves document.
+     Every real action increments a small per-player Firestore document. This
+     prevents unrelated save writers from restoring mission progress back to 0. */
+  const MISSION_COLLECTION="villageMissionProgress";
+  let missionCloudChain=Promise.resolve();
+  const progressMap=d=>Object.fromEntries((d?.missions||[]).map(m=>[String(m.id),Math.max(0,Number(m.progress)||0)]));
+  const rewardedMap=d=>Object.fromEntries((d?.missions||[]).map(m=>[String(m.id),Boolean(m.rewarded)]));
+  function mergeCloudMissionIntoState(s,data){
+    if(!s||!data)return s;ensureVillage(s);const d=s.villageSeason2?.daily;if(!d||String(data.dateKey||"")!==String(d.dateKey||""))return s;
+    const p=data.progress&&typeof data.progress==="object"?data.progress:{},r=data.rewarded&&typeof data.rewarded==="object"?data.rewarded:{};
+    for(const m of d.missions||[]){
+      const cp=Math.max(0,Number(p[m.id])||0);m.progress=Math.min(Number(m.target)||0,Math.max(Number(m.progress)||0,cp));
+      if(r[m.id]===true)m.rewarded=true;
+    }
+    if(data.bonusAwarded===true)d.bonusAwarded=true;
+    if(!s.villageSeason2.villageId&&VILLAGES[data.villageId])s.villageSeason2.villageId=data.villageId;
+    return s;
+  }
+  async function readMissionCloud(s,{seed=true}={}){
+    if(!cloudReady||!currentMemberKey||!s)return s;ensureVillage(s);const d=s.villageSeason2?.daily;if(!d)return s;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,MISSION_COLLECTION,currentMemberKey),snap=await fs.getDoc(ref);
+    if(snap.exists()&&String(snap.data()?.dateKey||"")===String(d.dateKey||"")){mergeCloudMissionIntoState(s,snap.data()||{});return s}
+    if(seed){await fs.setDoc(ref,{memberKey:currentMemberKey,dateKey:String(d.dateKey||dayKey()),villageId:String(s.villageSeason2?.villageId||""),progress:progressMap(d),rewarded:rewardedMap(d),bonusAwarded:Boolean(d.bonusAwarded),updatedAt:fs.serverTimestamp()},{merge:false})}
+    return s;
+  }
+  function queueMissionCloud(s,id,delta){
+    if(!cloudReady||!currentMemberKey||!s||!delta)return;const memberKey=String(currentMemberKey),action=String(id||"");
+    missionCloudChain=missionCloudChain.catch(()=>{}).then(async()=>{
+      ensureVillage(s);const localDaily=s.villageSeason2?.daily;if(!s.villageSeason2?.villageId||!localDaily)return;
+      const date=String(localDaily.dateKey||dayKey()),template=missionSet(memberKey,date),matches=template.filter(m=>actionMatches(m,action));
+      if(!matches.length)return;
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,MISSION_COLLECTION,memberKey);
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref),old=snap.exists()?snap.data()||{}:{},same=String(old.dateKey||"")===date;
+        const p=same&&old.progress&&typeof old.progress==="object"?{...old.progress}:{};
+        const r=same&&old.rewarded&&typeof old.rewarded==="object"?{...old.rewarded}:{};
+        if(!same){for(const m of template){p[m.id]=0;r[m.id]=false}}
+        for(const m of matches){const before=Math.max(0,Number(p[m.id])||0),after=Math.min(Number(m.target)||0,before+delta);p[m.id]=after;
+          /* local tracker still owns merit rewards; this durable flag only keeps UI
+             from visually reverting after a reload. */
+          const lm=(localDaily.missions||[]).find(x=>x.id===m.id);if(lm?.rewarded===true)r[m.id]=true;
+        }
+        tx.set(ref,{memberKey,dateKey:date,villageId:String(s.villageSeason2?.villageId||""),progress:p,rewarded:r,bonusAwarded:Boolean(localDaily.bonusAwarded)||Boolean(same&&old.bonusAwarded),updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+    }).catch(e=>console.warn("R34.11.5 mission cloud",e));
+  }
+
   function track(s,id,amount=1){
     ensureVillage(s);let v=s.villageSeason2;
     /* Cloud transactions can briefly read a save from before the village choice
@@ -23198,12 +23250,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(reward&&!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+reward;
     const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>Number(m.progress)>=Number(m.target));if(all&&!d.bonusAwarded){d.bonusAwarded=true;v.missStreak=0;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+300;reward+=300}
     if(reward){try{updateMeritUI?.()}catch(_){}queueMicrotask(()=>{try{showWeatherToast?.(`🙏 ภารกิจผู้ใหญ่บ้าน +${reward} กุศล`)}catch(_){}})}
+    queueMissionCloud(s,id,delta);
   }
-  /* incrementMissionOn calls track directly at source level in R34.11.2. */
+  /* incrementMissionOn calls track directly at source level; cloud progress is
+     independently persisted by queueMissionCloud. */
   function commit(s){ensureVillage(s);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}try{updateMeritUI?.()}catch(_){}}
   function chooseVillage(id){if(!VILLAGES[id])return;const s=ensureVillage(ownState||state);if(s.villageSeason2.villageId)return showVillage();const v=VILLAGES[id];$("modalContent").innerHTML=`<section class="r19-village-confirm"><img src="${v.image}" alt=""><h2>${esc(v.name)}</h2><b>${esc(v.chief)}</b><p>เลือกแล้วจะไม่สามารถเปลี่ยนหมู่บ้านได้จนกว่าจะจบซีซัน ต้องการยืนยันหรือไม่</p><div><button id="r19VillageYes" class="primary-spooky-action">ยืนยัน</button><button id="r19VillageNo" class="secondary-action">ย้อนกลับ</button></div></section>`;$("r19VillageYes").onclick=()=>{s.villageSeason2.villageId=id;s.villageSeason2.chosenAt=gameNow();commit(s);showVillage()};$("r19VillageNo").onclick=showVillage;openModal()}
   function chooseUI(){$("modalContent").innerHTML=`<section class="r19-village-pick"><h2>🏘️ เลือกผู้ใหญ่บ้าน</h2><p>เลือกหมู่บ้านประจำตัวสำหรับซีซันนี้</p><div class="r19-village-grid">${Object.entries(VILLAGES).map(([id,v])=>`<button data-r19-village="${id}" type="button"><img src="${v.image}" alt="${esc(v.chief)}"><span><b>${esc(v.name)}</b><small>${esc(v.chief)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r19-village]").forEach(b=>b.onclick=()=>chooseVillage(b.dataset.r19Village));openModal()}
-  function showVillage(){const s=ensureVillage(ownState||state),v=s.villageSeason2;if(!v.villageId)return chooseUI();const meta=VILLAGES[v.villageId],d=v.daily,done=(d.missions||[]).filter(m=>Number(m.progress)>=Number(m.target)).length;$("modalContent").innerHTML=`<section class="r19-village-panel"><header><img src="${meta.image}" alt=""><span><h2>${esc(meta.name)}</h2><b>${esc(meta.chief)}</b></span></header><div class="r19-limit-box"><b>ข้อจำกัดหมู่บ้าน</b>${meta.limits.map(x=>`<small>• ${esc(x)}</small>`).join("")}</div><div class="r19-mission-top"><b>ภารกิจวันนี้ ${done}/6</b><span>ครบ 6 ข้อ +300 กุศล</span></div><div class="r19-mission-list">${(d.missions||[]).map((m,n)=>{const p=Math.min(Number(m.target),Number(m.progress)||0),ok=p>=Number(m.target);return`<article class="${ok?"done":""}"><i>${n+1}</i><span><b>${esc(m.title)}</b><small>${p}/${m.target} • ${ok?"ได้รับ +30 แล้ว":"สำเร็จ +30 กุศล"}</small><em><u style="width:${Math.min(100,p/Math.max(1,m.target)*100)}%"></u></em></span></article>`}).join("")}</div><footer><span>ไม่ครบต่อเนื่อง: ${int(v.missStreak)} วัน</span><span>รีเซ็ต 00:00 น.</span></footer></section>`;openModal()}
+  async function showVillage(){const s=ensureVillage(ownState||state),v=s.villageSeason2;if(!v.villageId)return chooseUI();try{await readMissionCloud(s,{seed:true});ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}}catch(e){console.warn("R34.11.5 mission read",e)}const meta=VILLAGES[v.villageId],d=v.daily,done=(d.missions||[]).filter(m=>Number(m.progress)>=Number(m.target)).length;$("modalContent").innerHTML=`<section class="r19-village-panel"><header><img src="${meta.image}" alt=""><span><h2>${esc(meta.name)}</h2><b>${esc(meta.chief)}</b></span></header><div class="r19-limit-box"><b>ข้อจำกัดหมู่บ้าน</b>${meta.limits.map(x=>`<small>• ${esc(x)}</small>`).join("")}</div><div class="r19-mission-top"><b>ภารกิจวันนี้ ${done}/6</b><span>ครบ 6 ข้อ +300 กุศล</span></div><div class="r19-mission-list">${(d.missions||[]).map((m,n)=>{const p=Math.min(Number(m.target),Number(m.progress)||0),ok=p>=Number(m.target);return`<article class="${ok?"done":""}"><i>${n+1}</i><span><b>${esc(m.title)}</b><small>${p}/${m.target} • ${ok?"ได้รับ +30 แล้ว":"สำเร็จ +30 กุศล"}</small><em><u style="width:${Math.min(100,p/Math.max(1,m.target)*100)}%"></u></em></span></article>`}).join("")}</div><footer><span>ไม่ครบต่อเนื่อง: ${int(v.missStreak)} วัน</span><span>รีเซ็ต 00:00 น.</span></footer></section>`;openModal()}
   function blocked(activity){/* R33: village choice no longer blocks real Season 2 features; access is governed only by explicit permanent-key locks. */return false}
   function blockedMsg(){message("ขออภัยค่ะ","หมู่บ้านของคุณไม่สามารถทำกิจกรรมนี้ได้ในเวลานี้")}
   // Wrap global entry points that exist outside private closures.
@@ -23226,7 +23280,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   if(typeof flushCloudSave==="function"){
     flushCloudSave=async function(){if(!cloudReady||!currentMemberKey||!ownState)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);ensureVillage(ownState);const payload=clone(ownState);payload.launchVersion=typeof LAUNCH_VERSION!=="undefined"?LAUNCH_VERSION:payload.launchVersion;payload.updatedAt=fs.serverTimestamp();const snap=await fs.getDoc(ref);if(snap.exists())protect(payload,snap.data());await fs.setDoc(ref,payload,{merge:false});ownState=normalizeState(payload,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);try{const currentHash=plotHash(ownState.plots);if(currentHash!==lastGardenHash){await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:clone(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});lastGardenHash=currentHash}}catch(e){console.warn("R19 garden publish",e)}}
   }
-  globalThis.YN_R19={BUILD,VILLAGES,showVillage,blocked,track};
+  globalThis.YN_R19={BUILD,VILLAGES,showVillage,blocked,track,readMissionCloud};
   console.info(BUILD,"loaded");
 })();
 
@@ -23728,8 +23782,18 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function showFriendsR21(){
     const nowMs=Date.now();let profileMap={};
     if(profileCache.rows&&nowMs-profileCache.at<60000)profileMap=clone(profileCache.rows);else{try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(d=>profileMap[d.id]=d.data());profileCache={at:nowMs,rows:clone(profileMap)}}catch(e){console.warn("R21 rank load",e)}}
-    const names=Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{});if(!names.includes("Aida"))names.unshift("Aida");const rows=names.map(name=>{const key=typeof memberKeyFromName==="function"?memberKeyFromName(name):name.toLowerCase(),p=profileMap[key]||{},level=Math.min(3,Math.max(0,int(p.houseLevel)));return{name,key,merit:int(p.merit),initialized:p.initialized!==false,level}}).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name));
-    $("modalContent").innerHTML=`<section class="feature-panel friends-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">ข้อมูล Rank ใช้ cache 60 วินาทีเพื่อลดการอ่านฐานข้อมูล</p><div class="friend-list friend-rank-list">${rows.map((r,i)=>`<div class="friend-row friend-rank-row"><span class="friend-rank">#${i+1}</span><span class="friend-avatar">👻</span><span class="friend-info"><b>${esc(r.name)}</b><small>🙏 ${r.merit} กุศล</small><small class="r21-house-rank">🏠 Lv.${r.level} — ${esc(HOUSE_META[r.level])}</small></span>${r.name===currentMember?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${r.key}" data-friend-name="${esc(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${r.key}" data-friend-name="${esc(r.name)}">ส่งของ</button></span>`}</div>`).join("")}</div></section>`;openModal();document.querySelectorAll("[data-visit-friend]").forEach(b=>b.onclick=()=>visitFriend?.(b.dataset.visitFriend,b.dataset.friendName));document.querySelectorAll("[data-gift-friend]").forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.giftFriend,b.dataset.friendName));
+    const names=Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{});
+    const adminName=names.find(n=>String(n).toLowerCase()==="aida")||"Aida";
+    const adminKey=typeof memberKeyFromName==="function"?memberKeyFromName(adminName):"aida";
+    const memberRows=names.filter(n=>String(n).toLowerCase()!=="aida").map(name=>{
+      const key=typeof memberKeyFromName==="function"?memberKeyFromName(name):name.toLowerCase(),p=profileMap[key]||{},level=Math.min(3,Math.max(0,int(p.houseLevel)));
+      return{name:String(p.displayName||name),key,merit:int(p.merit),initialized:p.initialized!==false,level};
+    }).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name,"th"));
+    const ap=profileMap[adminKey]||{},adminLevel=Math.min(3,Math.max(0,int(ap.houseLevel)));
+    const adminActions=currentMemberKey===adminKey?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${adminKey}" data-friend-name="${safeHtml(adminName)}">เยี่ยมสวน</button><button type="button" data-gift-friend="${adminKey}" data-friend-name="${safeHtml(adminName)}">ส่งของ</button></span>`;
+    const adminRow=`<div class="friend-row friend-rank-row" style="border:2px solid #c89a37;background:linear-gradient(135deg,#fff8dc,#f3dfaa);box-shadow:0 0 0 2px rgba(200,154,55,.18) inset"><span class="friend-rank" style="min-width:64px;font-weight:900;color:#8b5b13">ADMIN</span><span class="friend-avatar" aria-hidden="true">👑</span><span class="friend-info"><b>${safeHtml(ap.displayName||adminName)}</b><small style="font-weight:800;color:#8b5b13">ผู้ดูแลระบบ • ไม่เข้าร่วม Rank • ไม่มีคะแนนแข่งขัน</small><small class="r21-house-rank">🏠 Lv.${adminLevel} — ${safeHtml(HOUSE_META[adminLevel])}</small></span>${adminActions}</div>`;
+    const memberHtml=memberRows.map((r,i)=>{const rank=i+1;const topStyle=rank===1?'border:2px solid #d4af37;background:linear-gradient(135deg,#fff9d9,#f7e7a7);box-shadow:0 4px 14px rgba(212,175,55,.28)':rank===2?'border:2px solid #aeb7c3;background:linear-gradient(135deg,#fbfcff,#e4e8ee);box-shadow:0 4px 14px rgba(150,160,175,.24)':rank===3?'border:2px solid #b87333;background:linear-gradient(135deg,#fff1e5,#e8bf9c);box-shadow:0 4px 14px rgba(184,115,51,.24)':'';const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'👻';return `<div class="friend-row friend-rank-row" style="${topStyle}"><span class="friend-rank">#${rank}</span><span class="friend-avatar" aria-hidden="true">${medal}</span><span class="friend-info"><b>${safeHtml(r.name)}</b><small>🙏 ${r.merit} กุศล</small><small class="r21-house-rank">🏠 Lv.${r.level} — ${safeHtml(HOUSE_META[r.level])}</small></span>${r.key===currentMemberKey?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${r.key}" data-friend-name="${safeHtml(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${r.key}" data-friend-name="${safeHtml(r.name)}">ส่งของ</button></span>`}</div>`}).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel friends-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">ADMIN อยู่บนสุดและไม่นับอันดับ • ผู้เล่นคนแรกเริ่มที่ #1</p><div class="friend-list friend-rank-list">${adminRow}${memberHtml}</div></section>`;openModal();document.querySelectorAll("[data-visit-friend]").forEach(b=>b.onclick=()=>visitFriend?.(b.dataset.visitFriend,b.dataset.friendName));document.querySelectorAll("[data-gift-friend]").forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.giftFriend,b.dataset.friendName));
   }
   showFriends=showFriendsR21;
 
@@ -25656,10 +25720,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   /* ---------- Friend visit: one-tap collect all ---------- */
   async function collectFriendAll(){
-    if(!visitContext)return;const s=ensure31(own()),summary={};let total=0;
+    if(!visitContext)return;const s=ensure31(own()),summary={};let total=0,grassCollected=0;
     try{
       const api=globalThis.YN_R31_GRASS_API,drops=api?.buildDrops?.()||[],store=api?.claimStore?.(s)||{};
-      drops.forEach(d=>{if(store[d.id])return;store[d.id]=now();s.specials[d.key]=int(s.specials[d.key])+1;summary[d.name]=(summary[d.name]||0)+1;total++});api?.pruneClaims?.(s)
+      drops.forEach(d=>{if(store[d.id])return;store[d.id]=now();s.specials[d.key]=int(s.specials[d.key])+1;summary[d.name]=(summary[d.name]||0)+1;total++;grassCollected++});api?.pruneClaims?.(s);
+      if(grassCollected>0)try{incrementMissionOn(s,"dailyCollectGrass",grassCollected)}catch(e){console.warn("R34.11.5 collect-all grass mission",e)}
     }catch(_){}
     try{
       const api=globalThis.YN_R31_MUSH_API,drops=api?.buildFriendMushrooms?.()||[];s.alpaca=s.alpaca||{};s.alpaca.friendMushroomClaims=s.alpaca.friendMushroomClaims||{};s.alpaca.inventory=s.alpaca.inventory||{};s.alpaca.inventory.other=s.alpaca.inventory.other||{};
@@ -29042,7 +29107,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
    ===================================================================== */
 (function YN_R34113_STRICT_GARDEN_WORM_RANK(){
   "use strict";
-  const BUILD="S2-R34.11.3-STRICT-GARDEN-WORM-RANK-20260904";
+  const BUILD="S2-R34.11.5-ALL-VILLAGE-MISSIONS-RULES-20260904";
   const $=id=>document.getElementById(id);
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
@@ -29191,3 +29256,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   globalThis.YN_R34113={BUILD,strictPublish,startFriend,rankScreen,showWorm,clearOwn,clearFriend};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
+
+
+/* R34.11.5 final build marker */
+try{globalThis.YAINOO_BUILD="S2-R34.11.5-ALL-VILLAGE-MISSIONS-RULES-20260904";console.info(globalThis.YAINOO_BUILD,"loaded")}catch(_){}
