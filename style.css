@@ -9888,3 +9888,12 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r3411-feed-all-panel>p{font-size:16px}.r3411-feed-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.r3411-feed-menu-grid button{display:flex;align-items:center;gap:8px;text-align:left;min-height:72px;padding:8px;border-radius:14px}.r3411-feed-menu-grid button img{width:48px;height:48px;object-fit:contain;flex:0 0 auto}.r3411-feed-menu-grid button span{display:flex;flex-direction:column;min-width:0}.r3411-feed-menu-grid button small{font-size:10px;opacity:.75}.r3411-feed-menu-grid button:disabled{opacity:.36;filter:grayscale(.6)}
 
 #r34RoyalDiscLayer,#r34HamsterDiscLayer{display:none!important}
+
+/* R34.11.2 source-level Rank/admin clarity */
+.r3411-rank-admin{position:relative;border:2px solid rgba(255,205,91,.95)!important;box-shadow:0 0 0 2px rgba(255,242,185,.45),0 8px 22px rgba(73,42,13,.18)!important}
+.r3411-rank-admin .admin-rank-badge{font-weight:900;letter-spacing:.08em}
+.r3411-rank-top-1{border:2px solid rgba(218,163,35,.95)!important;box-shadow:0 0 0 2px rgba(255,225,119,.35)!important}
+.r3411-rank-top-2{border:2px solid rgba(170,180,194,.95)!important;box-shadow:0 0 0 2px rgba(230,235,241,.4)!important}
+.r3411-rank-top-3{border:2px solid rgba(183,112,63,.95)!important;box-shadow:0 0 0 2px rgba(226,173,125,.35)!important}
+.admin-not-competing{font-weight:800!important}
+.admin-not-competing strong{font-size:.92em!important;white-space:normal!important}

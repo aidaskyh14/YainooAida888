@@ -2112,8 +2112,13 @@ function incrementMissionOn(target,id,amount=1){
     blackMagicFriend:"dailyFriendMagicOrSteal"
   };
   id=alias[id]||id;
-  const def=missionDefs().find(m=>m.id===id);if(!def)return;
-  target.missions.progress[id]=Math.min(Number(def.target)||0,(Number(target.missions.progress[id])||0)+Math.max(0,Number(amount)||0));
+  const delta=Math.max(0,Number(amount)||0);
+  const def=missionDefs().find(m=>m.id===id);
+  if(def)target.missions.progress[id]=Math.min(Number(def.target)||0,(Number(target.missions.progress[id])||0)+delta);
+  /* Season 2 village missions are the active mission system. Call them from the
+     one function every real game action already uses instead of relying on a
+     late wrapper that can be bypassed by old closures. */
+  try{globalThis.YN_R19?.track?.(target,id,delta)}catch(e){console.warn("R34.11.2 village mission track",e)}
 }
 function incrementOwnMission(id,amount=1){
   const target=ownState||state;if(!target)return;
@@ -10249,7 +10254,7 @@ async function V36_showCampaign(key){
       const rank=$("v36CampaignRanks");
       if(rank)rank.innerHTML=V36_rankHTML(data);
       const mine=$("v36MyCampaignScore");
-      if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
+      if(mine)mine.textContent=(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")?"—":(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
     }
 
     /* Real-time updates after the first lightweight read. */
@@ -10260,7 +10265,7 @@ async function V36_showCampaign(key){
       const rank=$("v36CampaignRanks");
       if(rank)rank.innerHTML=V36_rankHTML(data);
       const mine=$("v36MyCampaignScore");
-      if(mine)mine.textContent=(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
+      if(mine)mine.textContent=(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")?"—":(Number(data?.scores?.[currentMemberKey])||0).toLocaleString("th-TH");
     },error=>console.warn("campaign realtime",error));
 
   }catch(error){
@@ -10283,7 +10288,7 @@ function V36_renderCampaignDashboard(c,meta,scoreData){
         <small>🎯 ${safeHtml(c.title)}</small>
         <h2>${safeHtml(c.heading)}</h2>
         <div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • อัปเดตแบบ Real-time</div>
-        <div class="v36-my-score"><span>คะแนนของคุณ</span><strong id="v36MyCampaignScore">${Number(scoreData?.scores?.[currentMemberKey])||0}</strong></div>
+        ${(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")?`<div class="v36-my-score admin-not-competing"><span>👑 ADMIN</span><strong id="v36MyCampaignScore">ไม่เข้าร่วมการแข่งขัน</strong></div>`:`<div class="v36-my-score"><span>คะแนนของคุณ</span><strong id="v36MyCampaignScore">${Number(scoreData?.scores?.[currentMemberKey])||0}</strong></div>`}
       </div>
       <div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div>
       <footer class="v36-campaign-footer">
@@ -15288,7 +15293,7 @@ async function V213_syncMameawCampaignFromSave(){
 
   V36_renderCampaignDashboard=function(c,meta,scoreData){
     const mine=Number(scoreData?.scores?.[currentMemberKey])||0;
-    $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard m200-rabbit-campaign" style="--campaign-bg:url('${c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button><button id="v36CampaignConditions" type="button">เงื่อนไขแคมเปญ</button></header><div class="v36-campaign-title"><small>🐰 ${safeHtml(c.title)}</small><h2>${safeHtml(c.heading)}</h2><div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • แครอท + ข้าวโพดรวมกัน</div><div class="v36-my-score"><span>คะแนนรวมของคุณ</span><strong id="v36MyCampaignScore">${mine.toLocaleString("th-TH")}</strong></div></div><div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div><footer class="v42-campaign-footer-row"><button id="m200CampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของรางวัล</small></button><div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div></footer></div></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard m200-rabbit-campaign" style="--campaign-bg:url('${c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button><button id="v36CampaignConditions" type="button">เงื่อนไขแคมเปญ</button></header><div class="v36-campaign-title"><small>🐰 ${safeHtml(c.title)}</small><h2>${safeHtml(c.heading)}</h2><div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เริ่มต้นทุกคนที่ 0 • แครอท + ข้าวโพดรวมกัน</div>${(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")?`<div class="v36-my-score admin-not-competing"><span>👑 ADMIN</span><strong id="v36MyCampaignScore">ไม่เข้าร่วมการแข่งขัน</strong></div>`:`<div class="v36-my-score"><span>คะแนนรวมของคุณ</span><strong id="v36MyCampaignScore">${mine.toLocaleString("th-TH")}</strong></div>`}</div><div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div><footer class="v42-campaign-footer-row"><button id="m200CampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของรางวัล</small></button><div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div></footer></div></section>`;
     $("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};$("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);$("m200CampaignGiftBtn").onclick=M200_showRewards;openModal();
   };
   V36_showCampaignConditions=function(c,meta){
@@ -17413,13 +17418,13 @@ async function V181_campaignScoreLater(summary){
   bindGrassCampaign();setTimeout(bindGrassCampaign,500);setTimeout(bindGrassCampaign,1600);
 
   const oldRender=V36_renderCampaignDashboard,oldConditions=V36_showCampaignConditions;
-  V36_renderCampaignDashboard=function(c,meta,scoreData){if(c?.id!==GRASS_ID)return oldRender(c,meta,scoreData);const mine=Number(scoreData?.scores?.[currentMemberKey])||0;$("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard grass-campaign grass-campaign-ranking" style="--campaign-bg:url('${c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button><button id="v36CampaignConditions" type="button">เงื่อนไข</button></header><div class="v36-campaign-title"><small>🌾 ${safeHtml(c.title)}</small><h2>${safeHtml(c.heading)}</h2><div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เขียว 1 • เหลือง 3 • แดง 5 คะแนน</div><div class="v36-my-score"><span>คะแนนรวมของคุณ</span><strong id="v36MyCampaignScore">${mine.toLocaleString("th-TH")}</strong></div></div><div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div><footer class="v42-campaign-footer-row"><button id="grassCampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของรางวัล</small></button><div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div></footer></div></section>`;$("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};$("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);$("grassCampaignGiftBtn").onclick=showGrassRewards;openModal()};
+  V36_renderCampaignDashboard=function(c,meta,scoreData){if(c?.id!==GRASS_ID)return oldRender(c,meta,scoreData);const mine=Number(scoreData?.scores?.[currentMemberKey])||0;$("modalContent").innerHTML=`<section class="feature-panel v36-campaign-dashboard grass-campaign grass-campaign-ranking" style="--campaign-bg:url('${c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36CampaignBackFarm" type="button">← กลับไปแปลงผัก</button><button id="v36CampaignConditions" type="button">เงื่อนไข</button></header><div class="v36-campaign-title"><small>🌾 ${safeHtml(c.title)}</small><h2>${safeHtml(c.heading)}</h2><div id="v36CampaignLiveStatus" class="v36-campaign-total-label">เขียว 1 • เหลือง 3 • แดง 5 คะแนน</div>${(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")?`<div class="v36-my-score admin-not-competing"><span>👑 ADMIN</span><strong id="v36MyCampaignScore">ไม่เข้าร่วมการแข่งขัน</strong></div>`:`<div class="v36-my-score"><span>คะแนนรวมของคุณ</span><strong id="v36MyCampaignScore">${mine.toLocaleString("th-TH")}</strong></div>`}</div><div id="v36CampaignRanks" class="v36-campaign-ranks">${V36_rankHTML(scoreData)}</div><footer class="v42-campaign-footer-row"><button id="grassCampaignGiftBtn" class="v42-campaign-gift" type="button"><span>🎁</span><small>ของรางวัล</small></button><div class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong id="v36CampaignCountdown">${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></div></footer></div></section>`;$("v36CampaignBackFarm").onclick=()=>{V36_stopCampaignLive();V36_campaignCurrentKey="";closeModal()};$("v36CampaignConditions").onclick=()=>V36_showCampaignConditions(c,meta,scoreData);$("grassCampaignGiftBtn").onclick=showGrassRewards;openModal()};
   V36_showCampaignConditions=function(c,meta,scoreData){if(c?.id!==GRASS_ID)return oldConditions(c,meta,scoreData);V36_stopCampaignLive();$("modalContent").innerHTML=`<section class="feature-panel v36-campaign-conditions grass-campaign grass-campaign-rules" style="--campaign-bg:url('${c.rulesBackground||c.background}')"><div class="v36-campaign-shade"></div><div class="v36-campaign-content"><header class="v36-campaign-topbar"><button id="v36ConditionsBack" type="button">← กลับหน้าแคมเปญ</button><span>เงื่อนไขแคมเปญ</span></header><div class="v36-condition-card"><h2>🌾 ${safeHtml(c.title)}</h2><p>${c.conditions}</p></div><footer class="v36-campaign-footer"><span>⏳ เวลาที่เหลือ</span><strong>${V36_formatCountdown(Number(meta.endAtMs)-gameNow())}</strong></footer></div></section>`;$("v36ConditionsBack").onclick=()=>V36_showCampaign(GRASS_KEY);openModal()};
 
   function grassVaultSprite(color){const f=color==="black"?`alpaca-black-stage-1-idle.png?v=236`:color==="pink"?`alpaca-pink-stage-1-idle.png?v=236`:color==="green"?`alpaca-green-stage-1-idle.png?v=236`:color==="brown"?`alpaca-brown-stage-1-idle.png?v=236`:color==="goldenHoney"?`alpaca-golden-honey-icon.png`:color==="thaiTea"?`alpaca-thai-tea-icon.png`:`alpaca-stage-1-idle.png?v=236`;return `<span class="alpaca-sprite-preview manage-adult" style="background-image:url('${f}')"></span>`}
   function randomReward(){const r=Math.random()*100,color=r<35?"white":r<58?"brown":r<73?"black":r<83?"pink":r<90?"green":r<95?"goldenHoney":"thaiTea",sex=Math.random()<.8?"male":"female";return{color,sex}}
   async function grassScore(){try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"campaignScores",GRASS_ID));return Number(snap.data()?.scores?.[currentMemberKey])||0}catch{return 0}}
-  async function showGrassRewards(){const score=await grassScore(),s=normalizeState(ownState||state,currentMember),claimed=Math.max(0,Math.min(24,Number(s.alpaca?.grassCampaignClaimed)||0)),eligible=Math.min(24,Math.floor(score/500));const rows=Array.from({length:24},(_,i)=>{const n=i+1,need=n*500,done=n<=claimed,ready=n<=eligible&&!done;return `<article class="grass-reward-row ${ready?"ready":""} ${done?"claimed":""}"><span>🦙</span><div><b>${need.toLocaleString("th-TH")} คะแนน</b><small>อัลปาก้า 1 ตัว</small></div><button type="button" data-grass-claim="${n}" ${ready?"":"disabled"}>${done?"รับแล้ว":"รับ"}</button></article>`}).join("");$("modalContent").innerHTML=`<section class="feature-panel grass-campaign grass-campaign-rewards" style="--campaign-bg:url('campaign-grass-rewards-bg.jpeg?v=1')"><div class="v36-campaign-shade"></div><div class="grass-rewards-content"><header><button id="grassRewardsBack" type="button">← กลับ Rank</button><h2>🎁 ของรางวัล “ขอเกี่ยวหญ้าแหน่”</h2></header><div class="grass-reward-summary">คะแนนของคุณ <b>${score.toLocaleString("th-TH")}</b> • รับแล้ว ${claimed}/24 ตัว</div><div class="grass-reward-list">${rows}</div></div></section>`;openModal();$("grassRewardsBack").onclick=()=>V36_showCampaign(GRASS_KEY);document.querySelectorAll("[data-grass-claim]").forEach(b=>b.onclick=()=>claimGrassReward(Number(b.dataset.grassClaim),score))}
+  async function showGrassRewards(){if(currentMemberKey==="aida"||currentMember==="Aida"||adminProfile?.role==="admin")return message("👑 ADMIN","แอดมินไม่เข้าร่วมการแข่งขันและไม่รับรางวัลแคมเปญค่ะ");const score=await grassScore(),s=normalizeState(ownState||state,currentMember),claimed=Math.max(0,Math.min(24,Number(s.alpaca?.grassCampaignClaimed)||0)),eligible=Math.min(24,Math.floor(score/500));const rows=Array.from({length:24},(_,i)=>{const n=i+1,need=n*500,done=n<=claimed,ready=n<=eligible&&!done;return `<article class="grass-reward-row ${ready?"ready":""} ${done?"claimed":""}"><span>🦙</span><div><b>${need.toLocaleString("th-TH")} คะแนน</b><small>อัลปาก้า 1 ตัว</small></div><button type="button" data-grass-claim="${n}" ${ready?"":"disabled"}>${done?"รับแล้ว":"รับ"}</button></article>`}).join("");$("modalContent").innerHTML=`<section class="feature-panel grass-campaign grass-campaign-rewards" style="--campaign-bg:url('campaign-grass-rewards-bg.jpeg?v=1')"><div class="v36-campaign-shade"></div><div class="grass-rewards-content"><header><button id="grassRewardsBack" type="button">← กลับ Rank</button><h2>🎁 ของรางวัล “ขอเกี่ยวหญ้าแหน่”</h2></header><div class="grass-reward-summary">คะแนนของคุณ <b>${score.toLocaleString("th-TH")}</b> • รับแล้ว ${claimed}/24 ตัว</div><div class="grass-reward-list">${rows}</div></div></section>`;openModal();$("grassRewardsBack").onclick=()=>V36_showCampaign(GRASS_KEY);document.querySelectorAll("[data-grass-claim]").forEach(b=>b.onclick=()=>claimGrassReward(Number(b.dataset.grassClaim),score))}
   async function claimGrassReward(n,knownScore){try{const r=randomReward(),out=await (async()=>{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),scoreRef=fs.doc(db,"campaignScores",GRASS_ID);let next;await fs.runTransaction(db,async tx=>{const [sv,sc]=await Promise.all([tx.get(saveRef),tx.get(scoreRef)]);if(!sv.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sv.data(),currentMember),score=Number(sc.data()?.scores?.[currentMemberKey])||0,claimed=Math.max(0,Number(s.alpaca.grassCampaignClaimed)||0);if(n!==claimed+1)throw new Error("กรุณารับรางวัลตามลำดับ");if(n>24||score<n*500)throw new Error("คะแนนยังไม่ถึงรางวัลนี้");s.alpaca.vault.push({id:(crypto.randomUUID?.()||`campaign-${gameNow()}-${Math.random()}`),type:"adult",color:r.color,sex:r.sex,source:"campaign-grass",createdAt:gameNow()});s.alpaca.grassCampaignClaimed=n;next=s;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);return next})();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel"><h2>ยินดีด้วยค่ะ</h2>${grassVaultSprite(r.color)}<p>คุณได้รับ <b>อัลปาก้า${r.color==="white"?"สีขาว":r.color==="brown"?"สีน้ำตาล":r.color==="black"?"สีดำ":r.color==="pink"?"สีชมพู":r.color==="green"?"สีเขียว":r.color==="goldenHoney"?"สี Golden Honey":"สีชาไทย"} ${r.sex==="female"?"เพศเมีย":"เพศผู้"}</b></p><small>อัลปาก้าเข้า “คลังอัลปาก้า” แล้วค่ะ</small><button id="grassRewardDone" class="primary-spooky-action" type="button">รับ</button></section>`;openModal();$("grassRewardDone").onclick=showGrassRewards}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   /* Admin gifts: alpacas + alpaca items all share the existing gift delivery flow. */
@@ -17859,12 +17864,12 @@ async function V181_campaignScoreLater(summary){
   async function v240CampaignScoreData(cfg){const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"campaignScores",cfg.id));return snap.exists()?snap.data():{scores:{},names:{},nightCounts:{}}}
   function v240CampaignRankRows(cfg,d){return Object.keys(MEMBERS).filter(n=>n!=="Aida").map(name=>{const key=memberKeyFromName(name);return{name,key,score:v240Int(d.scores?.[key]),night:v240Int(d.nightCounts?.[key])}}).sort((a,b)=>b.score-a.score||(cfg.id===V240_COOK_ID?b.night-a.night:0)||a.name.localeCompare(b.name,"th"))}
   function v240CampaignRules(cfg){return cfg.id===V240_COOK_ID?`<p>คราฟสำเร็จเท่านั้นจึงได้คะแนน</p><div class="v240-rule-chips"><span>🍽️ ทั่วไป +1</span><span>🥤 เครื่องดื่ม +2</span><span>👑 พิเศษ +3</span><span>🌧️ หน้าฝน +4</span><span>🌙 รอบดึก +7</span></div><p>คะแนนเท่ากัน ผู้ที่คราฟเมนูรอบดึกสำเร็จมากกว่าจะอยู่สูงกว่า</p>`:`<p>ยัยหนูแอบปล่อยปลาตัวใหม่ลงบ่อตกปลาแล้วน๊าาา 🎣✨</p><p>ชื่อว่า <b>“ปลาสายรุ้ง พี่ไม่ปลื้ม”</b></p><p>จะต้องใช้เหยื่อแบบไหน? ต้องไปตกที่บ่อไหน? หรือจริง ๆ แล้วต้องเลือกจังหวะเวลาให้ถูก งานนี้ไม่มีบอกใบ้ง่าย ๆ ลองค้นหากันเองนะคะ</p><p>นับคะแนนเฉพาะปลาสายรุ้งที่ <b>กดรับน้ำหนักสำเร็จ</b> เท่านั้น • 1 ตัว = 1 คะแนน</p>`}
-  async function v240ShowCampaign(kind,page="rank"){const cfg=V240_CAMPAIGNS[kind];if(!cfg)return;try{const d=await v240CampaignScoreData(cfg),rows=v240CampaignRankRows(cfg,d),mine=v240Int(d.scores?.[currentMemberKey]),bg=page==="rewards"?cfg.bgReward:page==="rules"?cfg.bgRules:cfg.bgRank,rewards=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,s=normalizeState(ownState||state,currentMember),claims=s.campaignClaims?.[cfg.id]||{};let body="";if(page==="rank")body=`<div class="v240-campaign-title"><h2>${v240Esc(cfg.title)}</h2><div>คะแนนของคุณ <b>${mine}</b></div></div><div class="v240-campaign-scroll v240-campaign-ranks">${rows.map((x,i)=>`<article><strong>#${i+1}</strong><span><b>${v240Esc(x.name)}</b>${cfg.id===V240_COOK_ID?`<small>คะแนนคราฟอาหารรวม</small>`:""}</span><em>${x.score}</em></article>`).join("")}</div>`;else if(page==="rules")body=`<div class="v240-campaign-scroll"><article class="v240-rules-card"><h2>📜 เงื่อนไข</h2>${v240CampaignRules(cfg)}</article></div>`;else body=`<div class="v240-campaign-scroll v240-reward-list">${rewards.map(x=>{const done=Boolean(claims[x.need]),ready=mine>=x.need;return `<article class="v240-milestone ${ready?"ready":""}"><strong>${x.need}</strong><div class="v240-milestone-rewards">${x.rewards.map(r=>`<span>${v240RewardImage(r)?`<img src="${v240RewardImage(r)}" alt="">`:"🙏"}<small>${v240Esc(r.name)} ×${r.qty}</small></span>`).join("")}</div><button data-v240-campaign-claim="${kind}:${x.need}" ${ready&&!done?"":"disabled"}>${done?"รับแล้ว":"รับรางวัล"}</button></article>`}).join("")}</div>`;$("modalContent").innerHTML=`<section class="feature-panel v240-campaign" style="--v240-campaign-bg:url('${bg}')"><div class="v240-campaign-shade"></div><div class="v240-campaign-inner"><header><button id="v240CampaignBack">← กลับฟาร์ม</button><button id="v240CampaignRules">เงื่อนไข</button></header>${body}<footer><button id="v240CampaignGift">🎁<small>รางวัล</small></button><div>⏳ <b id="v240CampaignCountdown">${v240Countdown(cfg.endAt-v240Now())}</b></div></footer></div></section>`;openModal();$("v240CampaignBack").onclick=closeModal;$("v240CampaignRules").onclick=()=>v240ShowCampaign(kind,"rules");$("v240CampaignGift").onclick=()=>v240ShowCampaign(kind,"rewards");document.querySelectorAll("[data-v240-campaign-claim]").forEach(b=>{const [k,n]=b.dataset.v240CampaignClaim.split(":");b.onclick=()=>v240ClaimCampaignReward(k,Number(n))});const timer=setInterval(()=>{const e=$("v240CampaignCountdown");if(!e){clearInterval(timer);return}e.textContent=v240Countdown(cfg.endAt-v240Now())},1000)}catch(e){message("เปิดแคมเปญไม่ได้",e.message||"กรุณาลองใหม่")}}
-  async function v240ClaimCampaignReward(kind,need){const cfg=V240_CAMPAIGNS[kind],defs=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,def=defs.find(x=>x.need===need);if(!def)return;/* choice rewards use dedicated picker */if(def.rewards.some(r=>r.type==="choiceJellyV2"||r.type==="choiceDog"))return v240ShowChoiceReward(kind,need,def);try{const d=await v240CampaignScoreData(cfg),score=v240Int(d.scores?.[currentMemberKey]);if(score<need)throw new Error("คะแนนยังไม่ถึงรางวัลนี้");const out=await v240MutateSave(s=>{const claims=s.campaignClaims[cfg.id];if(claims[need])throw new Error("รางวัลนี้รับไปแล้ว");const alpacas=[];def.rewards.forEach(r=>alpacas.push(...v240GrantReward(s,r)));claims[need]=v240Now();return alpacas},{profile:true});const alpacas=out.result||[];$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${def.rewards.map(r=>{const img=v240RewardImage(r);return img?`<img src="${img}" alt="">`:""}).join("")}${alpacas.map(a=>`<img src="${V240_COLOR_IMG[a.color]}" alt="">`).join("")}</div><h2>ยินดีด้วยค่ะ</h2><div class="v240-reward-lines">${def.rewards.map(r=>`<span>${v240Esc(r.name)} ×${r.qty}</span>`).join("")}${alpacas.map(a=>`<span>อัลปาก้าสี${V240_COLOR_TH[a.color]} • ${a.sex==="female"?"เพศเมีย":"เพศผู้"}</span>`).join("")}</div><button id="v240CampaignRewardDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240CampaignRewardDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ShowCampaign(kind,page="rank"){const cfg=V240_CAMPAIGNS[kind];if(!cfg)return;try{const d=await v240CampaignScoreData(cfg),rows=v240CampaignRankRows(cfg,d),mine=v240Int(d.scores?.[currentMemberKey]),bg=page==="rewards"?cfg.bgReward:page==="rules"?cfg.bgRules:cfg.bgRank,rewards=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,s=normalizeState(ownState||state,currentMember),claims=s.campaignClaims?.[cfg.id]||{};let body="";if(page==="rank")body=`<div class="v240-campaign-title"><h2>${v240Esc(cfg.title)}</h2>${v240IsAdmin()?`<div class="admin-not-competing">👑 ADMIN • ไม่เข้าร่วมการแข่งขัน</div>`:`<div>คะแนนของคุณ <b>${mine}</b></div>`}</div><div class="v240-campaign-scroll v240-campaign-ranks">${rows.map((x,i)=>`<article><strong>#${i+1}</strong><span><b>${v240Esc(x.name)}</b>${cfg.id===V240_COOK_ID?`<small>คะแนนคราฟอาหารรวม</small>`:""}</span><em>${x.score}</em></article>`).join("")}</div>`;else if(page==="rules")body=`<div class="v240-campaign-scroll"><article class="v240-rules-card"><h2>📜 เงื่อนไข</h2>${v240CampaignRules(cfg)}</article></div>`;else body=`<div class="v240-campaign-scroll v240-reward-list">${rewards.map(x=>{const done=Boolean(claims[x.need]),ready=mine>=x.need;return `<article class="v240-milestone ${ready?"ready":""}"><strong>${x.need}</strong><div class="v240-milestone-rewards">${x.rewards.map(r=>`<span>${v240RewardImage(r)?`<img src="${v240RewardImage(r)}" alt="">`:"🙏"}<small>${v240Esc(r.name)} ×${r.qty}</small></span>`).join("")}</div><button data-v240-campaign-claim="${kind}:${x.need}" ${ready&&!done?"":"disabled"}>${done?"รับแล้ว":"รับรางวัล"}</button></article>`}).join("")}</div>`;$("modalContent").innerHTML=`<section class="feature-panel v240-campaign" style="--v240-campaign-bg:url('${bg}')"><div class="v240-campaign-shade"></div><div class="v240-campaign-inner"><header><button id="v240CampaignBack">← กลับฟาร์ม</button><button id="v240CampaignRules">เงื่อนไข</button></header>${body}<footer><button id="v240CampaignGift">🎁<small>รางวัล</small></button><div>⏳ <b id="v240CampaignCountdown">${v240Countdown(cfg.endAt-v240Now())}</b></div></footer></div></section>`;openModal();$("v240CampaignBack").onclick=closeModal;$("v240CampaignRules").onclick=()=>v240ShowCampaign(kind,"rules");$("v240CampaignGift").onclick=()=>v240ShowCampaign(kind,"rewards");document.querySelectorAll("[data-v240-campaign-claim]").forEach(b=>{const [k,n]=b.dataset.v240CampaignClaim.split(":");b.onclick=()=>v240ClaimCampaignReward(k,Number(n))});const timer=setInterval(()=>{const e=$("v240CampaignCountdown");if(!e){clearInterval(timer);return}e.textContent=v240Countdown(cfg.endAt-v240Now())},1000)}catch(e){message("เปิดแคมเปญไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240ClaimCampaignReward(kind,need){if(v240IsAdmin())return message("👑 ADMIN","แอดมินไม่เข้าร่วมการแข่งขันและไม่รับรางวัลแคมเปญค่ะ");const cfg=V240_CAMPAIGNS[kind],defs=kind==="cooking"?V240_COOK_REWARDS:V240_RAINBOW_REWARDS,def=defs.find(x=>x.need===need);if(!def)return;/* choice rewards use dedicated picker */if(def.rewards.some(r=>r.type==="choiceJellyV2"||r.type==="choiceDog"))return v240ShowChoiceReward(kind,need,def);try{const d=await v240CampaignScoreData(cfg),score=v240Int(d.scores?.[currentMemberKey]);if(score<need)throw new Error("คะแนนยังไม่ถึงรางวัลนี้");const out=await v240MutateSave(s=>{const claims=s.campaignClaims[cfg.id];if(claims[need])throw new Error("รางวัลนี้รับไปแล้ว");const alpacas=[];def.rewards.forEach(r=>alpacas.push(...v240GrantReward(s,r)));claims[need]=v240Now();return alpacas},{profile:true});const alpacas=out.result||[];$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><div class="v240-multi-icons">${def.rewards.map(r=>{const img=v240RewardImage(r);return img?`<img src="${img}" alt="">`:""}).join("")}${alpacas.map(a=>`<img src="${V240_COLOR_IMG[a.color]}" alt="">`).join("")}</div><h2>ยินดีด้วยค่ะ</h2><div class="v240-reward-lines">${def.rewards.map(r=>`<span>${v240Esc(r.name)} ×${r.qty}</span>`).join("")}${alpacas.map(a=>`<span>อัลปาก้าสี${V240_COLOR_TH[a.color]} • ${a.sex==="female"?"เพศเมีย":"เพศผู้"}</span>`).join("")}</div><button id="v240CampaignRewardDone" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240CampaignRewardDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
   function v240JellyV2Defs(){try{return typeof Y26_JELLY_V2!=="undefined"?Y26_JELLY_V2:{}}catch{return{}}}
   function v240DogDefs(){try{return typeof DOG_TYPES!=="undefined"?DOG_TYPES:{}}catch{return{}}}
   function v240ShowChoiceReward(kind,need,def){const jelly=def.rewards.find(r=>r.type==="choiceJellyV2"),dog=def.rewards.find(r=>r.type==="choiceDog"),jdefs=v240JellyV2Defs(),ddefs=v240DogDefs();$("modalContent").innerHTML=`<section class="feature-panel v240-choice-reward"><h2>🎁 เลือกรางวัล ${need} คะแนน</h2>${jelly?`<h3>เลือกแมงกะพรุน V2 ให้ครบ 4 ตัว (เลือกซ้ำได้)</h3><div class="v240-choice-grid">${Object.entries(jdefs).map(([k,x])=>`<label><img src="${x.image}" alt=""><b>${v240Esc(x.name)}</b><input type="number" min="0" max="4" value="0" data-v240-jelly-choice="${k}"></label>`).join("")}</div>`:""}${dog?`<h3>เลือกน้องหมารวม 5 ตัว</h3><div class="v240-choice-grid">${Object.entries(ddefs).map(([k,x])=>`<label><img src="${x.image}" alt=""><b>${v240Esc(x.name)}</b><input type="number" min="0" max="5" value="0" data-v240-dog-choice="${k}"></label>`).join("")}</div>`:""}<button id="v240ChoiceConfirm" class="primary-spooky-action">ยืนยันรางวัล</button><button id="v240ChoiceBack">กลับ</button></section>`;openModal();$("v240ChoiceConfirm").onclick=()=>v240CommitChoiceReward(kind,need,def);$("v240ChoiceBack").onclick=()=>v240ShowCampaign(kind,"rewards")}
-  async function v240CommitChoiceReward(kind,need,def){const cfg=V240_CAMPAIGNS[kind],jelly=def.rewards.find(r=>r.type==="choiceJellyV2"),dog=def.rewards.find(r=>r.type==="choiceDog"),jc={},dc={};document.querySelectorAll("[data-v240-jelly-choice]").forEach(i=>jc[i.dataset.v240JellyChoice]=v240Int(i.value));document.querySelectorAll("[data-v240-dog-choice]").forEach(i=>dc[i.dataset.v240DogChoice]=v240Int(i.value));if(jelly&&Object.values(jc).reduce((a,b)=>a+b,0)!==4)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุน V2 รวมให้ครบ 4 ตัวค่ะ");if(dog&&Object.values(dc).reduce((a,b)=>a+b,0)!==5)return message("ยังเลือกไม่ครบ","เลือกน้องหมารวมให้ครบ 5 ตัวค่ะ");try{const d=await v240CampaignScoreData(cfg);if(v240Int(d.scores?.[currentMemberKey])<need)throw new Error("คะแนนยังไม่ถึง");await v240MutateSave(s=>{if(s.campaignClaims[cfg.id][need])throw new Error("รับรางวัลนี้แล้ว");if(jelly){s.jellyfishV2=v240Obj(s.jellyfishV2);Object.entries(jc).forEach(([k,n])=>s.jellyfishV2[k]=v240Int(s.jellyfishV2[k])+n)}if(dog){try{ensureDogState(s)}catch{}s.dogs=Array.isArray(s.dogs)?s.dogs:[];const defs=v240DogDefs();Object.entries(dc).forEach(([k,n])=>{for(let i=0;i<n;i++)s.dogs.push({id:v240Uid("campaign-dog"),typeKey:k,customName:"",placedFarm:0,placedPen:0,createdAt:v240Now(),expiresAt:v240Now()+30*24*V240_HOUR})})}s.campaignClaims[cfg.id][need]=v240Now()});$("modalContent").innerHTML='<section class="feature-panel v240-reward-popup"><h2>🎉 รับรางวัลเรียบร้อยแล้ว</h2><p>รางวัลถูกบันทึกเข้ากระเป๋า/คลังแล้วค่ะ</p><button id="v240ChoiceDone" class="primary-spooky-action">ยืนยัน</button></section>';openModal();$("v240ChoiceDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function v240CommitChoiceReward(kind,need,def){if(v240IsAdmin())return message("👑 ADMIN","แอดมินไม่เข้าร่วมการแข่งขันและไม่รับรางวัลแคมเปญค่ะ");const cfg=V240_CAMPAIGNS[kind],jelly=def.rewards.find(r=>r.type==="choiceJellyV2"),dog=def.rewards.find(r=>r.type==="choiceDog"),jc={},dc={};document.querySelectorAll("[data-v240-jelly-choice]").forEach(i=>jc[i.dataset.v240JellyChoice]=v240Int(i.value));document.querySelectorAll("[data-v240-dog-choice]").forEach(i=>dc[i.dataset.v240DogChoice]=v240Int(i.value));if(jelly&&Object.values(jc).reduce((a,b)=>a+b,0)!==4)return message("ยังเลือกไม่ครบ","เลือกแมงกะพรุน V2 รวมให้ครบ 4 ตัวค่ะ");if(dog&&Object.values(dc).reduce((a,b)=>a+b,0)!==5)return message("ยังเลือกไม่ครบ","เลือกน้องหมารวมให้ครบ 5 ตัวค่ะ");try{const d=await v240CampaignScoreData(cfg);if(v240Int(d.scores?.[currentMemberKey])<need)throw new Error("คะแนนยังไม่ถึง");await v240MutateSave(s=>{if(s.campaignClaims[cfg.id][need])throw new Error("รับรางวัลนี้แล้ว");if(jelly){s.jellyfishV2=v240Obj(s.jellyfishV2);Object.entries(jc).forEach(([k,n])=>s.jellyfishV2[k]=v240Int(s.jellyfishV2[k])+n)}if(dog){try{ensureDogState(s)}catch{}s.dogs=Array.isArray(s.dogs)?s.dogs:[];const defs=v240DogDefs();Object.entries(dc).forEach(([k,n])=>{for(let i=0;i<n;i++)s.dogs.push({id:v240Uid("campaign-dog"),typeKey:k,customName:"",placedFarm:0,placedPen:0,createdAt:v240Now(),expiresAt:v240Now()+30*24*V240_HOUR})})}s.campaignClaims[cfg.id][need]=v240Now()});$("modalContent").innerHTML='<section class="feature-panel v240-reward-popup"><h2>🎉 รับรางวัลเรียบร้อยแล้ว</h2><p>รางวัลถูกบันทึกเข้ากระเป๋า/คลังแล้วค่ะ</p><button id="v240ChoiceDone" class="primary-spooky-action">ยืนยัน</button></section>';openModal();$("v240ChoiceDone").onclick=()=>v240ShowCampaign(kind,"rewards")}catch(e){message("รับรางวัลไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function v240MountCampaignShortcuts(){const box=document.querySelector(".campaign-shortcut-section .hud-menu-section-items");if(!box)return;if(!$("v240CookingCampaignBtn")){box.insertAdjacentHTML("beforeend",'<button id="v240CookingCampaignBtn" class="hud-menu-item campaign-shortcut-item" type="button"><span>🍳</span><div><b>สุดยอดแม่ครัว หัวโบราณ</b><small>แคมเปญคราฟอาหาร</small></div><i>›</i></button><button id="v240RainbowCampaignBtn" class="hud-menu-item campaign-shortcut-item" type="button"><span>🌈</span><div><b>ตามล่าหาปลาสายรุ้ง</b><small>ปลาสายรุ้ง พี่ไม่ปลื้ม</small></div><i>›</i></button>');$("v240CookingCampaignBtn").onclick=()=>v240ShowCampaign("cooking","rank");$("v240RainbowCampaignBtn").onclick=()=>v240ShowCampaign("rainbow","rank")}}
 
@@ -23176,12 +23181,25 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const freshBase=typeof fresh==="function"?fresh:null;if(freshBase)fresh=function(player){const s=freshBase(player);ensureVillage(s);return s};
   const normalizeBase=typeof normalizeState==="function"?normalizeState:null;if(normalizeBase)normalizeState=function(raw,player){const s=normalizeBase(raw,player);ensureVillage(s);return s};
   function actionMatches(m,id){return m.action===id||(m.aliases||[]).includes(id)}
-  function track(s,id,amount=1){ensureVillage(s);const v=s.villageSeason2;if(!v.villageId)return;const d=v.daily,delta=Math.max(0,Number(amount)||0);if(!delta)return;let reward=0;for(const m of d.missions||[]){if(!actionMatches(m,id)||m.rewarded)continue;const before=Number(m.progress)||0;m.progress=Math.min(Number(m.target)||0,before+delta);if(before<Number(m.target)&&m.progress>=Number(m.target)){m.rewarded=true;reward+=30}}
+  function track(s,id,amount=1){
+    ensureVillage(s);let v=s.villageSeason2;
+    /* Cloud transactions can briefly read a save from before the village choice
+       was mirrored. The currently loaded owner's village is authoritative for
+       their own mission counter. */
+    if(!v.villageId){
+      const liveV=(ownState||state)?.villageSeason2;
+      if(liveV?.villageId&&VILLAGES[liveV.villageId]){
+        v.villageId=liveV.villageId;v.chosenAt=Number(liveV.chosenAt)||Number(v.chosenAt)||gameNow();
+      }
+    }
+    if(!v.villageId)return;
+    const d=v.daily,delta=Math.max(0,Number(amount)||0);if(!delta)return;let reward=0;
+    for(const m of d.missions||[]){if(!actionMatches(m,id)||m.rewarded)continue;const before=Number(m.progress)||0;m.progress=Math.min(Number(m.target)||0,before+delta);if(before<Number(m.target)&&m.progress>=Number(m.target)){m.rewarded=true;reward+=30}}
     if(reward&&!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+reward;
     const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>Number(m.progress)>=Number(m.target));if(all&&!d.bonusAwarded){d.bonusAwarded=true;v.missStreak=0;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+300;reward+=300}
     if(reward){try{updateMeritUI?.()}catch(_){}queueMicrotask(()=>{try{showWeatherToast?.(`🙏 ภารกิจผู้ใหญ่บ้าน +${reward} กุศล`)}catch(_){}})}
   }
-  const incBase=typeof incrementMissionOn==="function"?incrementMissionOn:null;if(incBase)incrementMissionOn=function(s,id,amount=1){const r=incBase(s,id,amount);try{track(s,id,amount)}catch(e){console.warn("R19 mission track",e)}return r};
+  /* incrementMissionOn calls track directly at source level in R34.11.2. */
   function commit(s){ensureVillage(s);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}try{updateMeritUI?.()}catch(_){}}
   function chooseVillage(id){if(!VILLAGES[id])return;const s=ensureVillage(ownState||state);if(s.villageSeason2.villageId)return showVillage();const v=VILLAGES[id];$("modalContent").innerHTML=`<section class="r19-village-confirm"><img src="${v.image}" alt=""><h2>${esc(v.name)}</h2><b>${esc(v.chief)}</b><p>เลือกแล้วจะไม่สามารถเปลี่ยนหมู่บ้านได้จนกว่าจะจบซีซัน ต้องการยืนยันหรือไม่</p><div><button id="r19VillageYes" class="primary-spooky-action">ยืนยัน</button><button id="r19VillageNo" class="secondary-action">ย้อนกลับ</button></div></section>`;$("r19VillageYes").onclick=()=>{s.villageSeason2.villageId=id;s.villageSeason2.chosenAt=gameNow();commit(s);showVillage()};$("r19VillageNo").onclick=showVillage;openModal()}
   function chooseUI(){$("modalContent").innerHTML=`<section class="r19-village-pick"><h2>🏘️ เลือกผู้ใหญ่บ้าน</h2><p>เลือกหมู่บ้านประจำตัวสำหรับซีซันนี้</p><div class="r19-village-grid">${Object.entries(VILLAGES).map(([id,v])=>`<button data-r19-village="${id}" type="button"><img src="${v.image}" alt="${esc(v.chief)}"><span><b>${esc(v.name)}</b><small>${esc(v.chief)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r19-village]").forEach(b=>b.onclick=()=>chooseVillage(b.dataset.r19Village));openModal()}
@@ -25146,18 +25164,19 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   async function showCampaign(key){
     const c=C[key];if(!c)return;currentKey=key;stopLive();let meta=await getMeta(key);const started=Boolean(meta?.startedAtMs),isActive=active(meta),ended=started&&now()>=Number(meta.endAtMs||0);
-    $('modalContent').innerHTML=`<section class="feature-panel r29-campaign" style="--r29-bg:url('${c.bg}')"><div class="r29-campaign-shade"></div><div class="r29-campaign-ui"><header><button id="r29Back">← กลับ</button><button id="r29Rules">เงื่อนไข</button></header><div class="r29-campaign-title"><small>${c.icon} แคมเปญ</small><h2>${esc(c.title)}</h2><span id="r29CampaignStatus">${!started?'ยังไม่เปิดแคมเปญ':ended?'แคมเปญจบแล้ว':isActive?'กำลังนับคะแนน':'รอเวลาเริ่ม'}</span></div><div class="r29-my-score">คะแนนของคุณ <strong id="r29MyScore">0</strong></div><div id="r29Ranks" class="r29-ranks"><p class="r29-empty">กำลังโหลดอันดับ…</p></div><footer><button id="r29Gift">🎁<small>ของรางวัล</small></button><div><small>⏳ เวลาที่เหลือ</small><strong id="r29Countdown">${started?fmt(Number(meta.endAtMs)-now()):'ยังไม่เริ่ม'}</strong></div></footer>${ADMIN()&&(!started||ended||meta?.active===false)?`<button id="r29StartCampaign" class="r29-start">▶ ${started?"เริ่มรอบใหม่":"เริ่มแคมเปญนี้"}</button>`:''}</div></section>`;
+    $('modalContent').innerHTML=`<section class="feature-panel r29-campaign" style="--r29-bg:url('${c.bg}')"><div class="r29-campaign-shade"></div><div class="r29-campaign-ui"><header><button id="r29Back">← กลับ</button><button id="r29Rules">เงื่อนไข</button></header><div class="r29-campaign-title"><small>${c.icon} แคมเปญ</small><h2>${esc(c.title)}</h2><span id="r29CampaignStatus">${!started?'ยังไม่เปิดแคมเปญ':ended?'แคมเปญจบแล้ว':isActive?'กำลังนับคะแนน':'รอเวลาเริ่ม'}</span></div>${ADMIN()?`<div class="r29-my-score admin-not-competing">👑 ADMIN <strong id="r29MyScore">ไม่เข้าร่วมการแข่งขัน</strong></div>`:`<div class="r29-my-score">คะแนนของคุณ <strong id="r29MyScore">0</strong></div>`}<div id="r29Ranks" class="r29-ranks"><p class="r29-empty">กำลังโหลดอันดับ…</p></div><footer><button id="r29Gift">🎁<small>ของรางวัล</small></button><div><small>⏳ เวลาที่เหลือ</small><strong id="r29Countdown">${started?fmt(Number(meta.endAtMs)-now()):'ยังไม่เริ่ม'}</strong></div></footer>${ADMIN()&&(!started||ended||meta?.active===false)?`<button id="r29StartCampaign" class="r29-start">▶ ${started?"เริ่มรอบใหม่":"เริ่มแคมเปญนี้"}</button>`:''}</div></section>`;
     openModal();$('r29Back').onclick=()=>{stopLive();closeModal()};$('r29Rules').onclick=()=>showRules(key);$('r29Gift').onclick=()=>showRewards(key);if($('r29StartCampaign'))$('r29StartCampaign').onclick=()=>startCampaign(key);
     try{
       const {db,fs}=await getFirebaseContext(),col=fs.collection(db,'campaigns',c.id,'scores');
-      unsub=fs.onSnapshot(col,snap=>{const rows=[];snap.forEach(d=>rows.push(d.data()));const mine=rows.find(r=>r.memberKey===currentMemberKey)?.score||0;if($('r29MyScore'))$('r29MyScore').textContent=Number(mine).toLocaleString('th-TH');if($('r29Ranks'))$('r29Ranks').innerHTML=rankHTML(rows)},e=>{if($('r29Ranks'))$('r29Ranks').innerHTML='<p class="r29-empty">เชื่อมต่ออันดับไม่ได้ กรุณาลองใหม่</p>';console.warn(e)});
+      unsub=fs.onSnapshot(col,snap=>{const rows=[];snap.forEach(d=>rows.push(d.data()));const mine=rows.find(r=>r.memberKey===currentMemberKey)?.score||0;if($('r29MyScore'))$('r29MyScore').textContent=ADMIN()?'ไม่เข้าร่วมการแข่งขัน':Number(mine).toLocaleString('th-TH');if($('r29Ranks'))$('r29Ranks').innerHTML=rankHTML(rows)},e=>{if($('r29Ranks'))$('r29Ranks').innerHTML='<p class="r29-empty">เชื่อมต่ออันดับไม่ได้ กรุณาลองใหม่</p>';console.warn(e)});
     }catch(e){console.warn(e)}
     timer=setInterval(()=>{if(currentKey!==key)return stopLive();const left=meta?.startedAtMs?Math.max(0,Number(meta.endAtMs)-now()):0;if($('r29Countdown'))$('r29Countdown').textContent=meta?.startedAtMs?fmt(left):'ยังไม่เริ่ม';if($('r29CampaignStatus'))$('r29CampaignStatus').textContent=!meta?.startedAtMs?'ยังไม่เปิดแคมเปญ':left<=0?'แคมเปญจบแล้ว':'กำลังนับคะแนน'},1000);
   }
   function showRules(key){const c=C[key];$('modalContent').innerHTML=`<section class="feature-panel r29-campaign-page"><button id="r29PageBack">← กลับหน้าอันดับ</button><div class="r29-page-scroll">${c.rules}<p><b>ระยะเวลา 9 วัน</b> เริ่มนับจากเวลาที่ Aida กดเริ่มแคมเปญนี้</p></div></section>`;openModal();$('r29PageBack').onclick=()=>showCampaign(key)}
-  async function currentScore(key){try{const c=C[key],{db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,'campaigns',c.id,'scores',currentMemberKey));return s.exists()?Number(s.data().score)||0:0}catch{return 0}}
+  async function currentScore(key){if(ADMIN())return 0;try{const c=C[key],{db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,'campaigns',c.id,'scores',currentMemberKey));return s.exists()?Number(s.data().score)||0:0}catch{return 0}}
   async function currentRun(key){try{const c=C[key],{db,fs}=await getFirebaseContext(),m=await fs.getDoc(fs.doc(db,'campaigns',c.id));return m.exists()?Number(m.data()?.startedAtMs)||0:0}catch{return 0}}
   async function showRewards(key){
+    if(ADMIN())return message('👑 ADMIN','แอดมินไม่เข้าร่วมการแข่งขันและไม่รับรางวัลแคมเปญค่ะ');
     const [scoreNow,run]=await Promise.all([currentScore(key),currentRun(key)]),s=ensureR29State(stateRef()),claimed=Number(s.campaignRewardRunsR29?.[key]||0)===run?(s.campaignRewardsR29?.[key]||{}):{};
     $('modalContent').innerHTML=`<section class="feature-panel r29-campaign-page"><button id="r29PageBack">← กลับหน้าอันดับ</button><h2>🎁 รางวัล • ${esc(C[key].title)}</h2><p class="r29-score-now">คะแนนตอนนี้ <b>${scoreNow.toLocaleString('th-TH')}</b></p><div class="r29-reward-list">${REWARDS[key].map(r=>{const done=Boolean(claimed[r.need]),ready=scoreNow>=r.need;return `<article class="${ready?'ready':''} ${done?'claimed':''}"><div><b>${r.need.toLocaleString('th-TH')} ${C[key].scoreLabel}</b>${r.items.map(x=>`<small>• ${esc(itemText(x))}</small>`).join('')}</div><button data-r29-claim="${r.need}" ${!ready||done?'disabled':''}>${done?'รับแล้ว':ready?'รับรางวัล':'ยังไม่ถึง'}</button></article>`}).join('')}</div></section>`;
     openModal();$('r29PageBack').onclick=()=>showCampaign(key);document.querySelectorAll('[data-r29-claim]').forEach(b=>b.onclick=()=>claimReward(key,Number(b.dataset.r29Claim)));
@@ -28766,42 +28785,75 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   const setFarm3411=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;
   if(setFarm3411)setFarmPlotPage=function(){const r=setFarm3411.apply(this,arguments);if(visitContext)setTimeout(renderFriendHamstersAnimated,30);else setTimeout(renderDrops,30);return r};
 
-  /* Friend watering/worm: target garden mutation is rules-safe (plots + updatedAt only).
-     Mailbox notification is best-effort and can never cancel the critical garden action. */
-  tapFriendPlot=async function(index){
-    if(!visitContext||!cloudReady)return;
-    const visible=phasePlot(state?.plots?.[index]);
-    if(visible?.phase==="ready"){
-      if(["babyBamboo","hauntedPlankton"].includes(visible.crop))return message("ขโมยไม่ได้","พืชชนิดนี้เป็นพืชคุ้มครอง ขโมยไม่ได้เด็ดขาด");
-      if(typeof showStealConfirmation==="function")return showStealConfirmation(index);
-    }
-    const visibleWorm=Boolean(visible?.crop&&(visible.phase==="worm"||visible.worm));
-    const visibleWater=Boolean(visible?.crop&&visible.phase==="needsWater");
-    if(!visibleWorm&&!visibleWater)return message("เยี่ยมสวนเพื่อน","คุณสามารถรดน้ำ กำจัดหนอน หรือขโมยต้นที่พร้อมเก็บได้");
-    const action=visibleWorm?"worm":"water",targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
+  /* Friend watering/worm — source-level single-plot action. */
+  const r34112WormKind=p=>{try{return typeof wormTypeOf==="function"?wormTypeOf(p):(p?.wormType==="giant"?"giant":"normal")}catch(_){return p?.wormType==="giant"?"giant":"normal"}};
+  function r34112CureWorm(p){const q=phasePlot(p),crop=CROPS?.[q?.crop];if(!q?.crop||!crop)return q;q.phase="growing2";q.worm=false;delete q.wormType;q.phaseEndsAt=now()+Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));return q}
+  let r34112FriendWormBusy=false;
+  async function r34112ClearFriendWorm(index,method){
+    if(r34112FriendWormBusy||!visitContext||!cloudReady||!currentMemberKey)return;r34112FriendWormBusy=true;
+    const visible=phasePlot(state?.plots?.[index]),targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
+    if(!visible?.crop||!(visible.phase==="worm"||visible.worm)){r34112FriendWormBusy=false;return message("กำจัดหนอนไม่ได้","แปลงนี้ไม่มีหนอนแล้ว")}
+    const giant=r34112WormKind(visible)==="giant",meritCost=giant?2:1,sprayCost=giant?5:1;
     try{
       const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",targetKey),myRef=fs.doc(db,"saves",currentMemberKey);let nextOwn=null,newPlots=null;
       await fs.runTransaction(db,async tx=>{
         const [gs,ms]=await Promise.all([tx.get(gRef),tx.get(myRef)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
-        const plots=normPlots(gs.data()?.plots),remote=phasePlot(plots[index]),p=(remote?.crop?remote:visible);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        const plots=normPlots(gs.data()?.plots),remote=phasePlot(plots[index]);
+        /* If the visitor is visibly looking at a worm but the mirror is one beat
+           behind, replace only this target slot — never the whole remote garden. */
+        const source=(remote?.crop&&(remote.phase==="worm"||remote.worm))?remote:visible;
+        if(!source?.crop||!(source.phase==="worm"||source.worm))throw new Error("สถานะแปลงเปลี่ยนแล้ว กรุณาแตะอีกครั้ง");
         const own=normalizeState(ms.data(),currentMember);
-        if(action==="worm"){
-          if(!(p.phase==="worm"||p.worm))throw new Error("สถานะหนอนเพิ่งเปลี่ยน กรุณาแตะแปลงอีกครั้ง");
-          const crop=CROPS[p.crop];p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));incrementMissionOn?.(own,"clearWorms",1);
-        }else{
-          if(p.phase!=="needsWater")throw new Error("สถานะต้นไม้เพิ่งเปลี่ยน กรุณาแตะแปลงอีกครั้ง");
-          const crop=CROPS[p.crop],finalMs=Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));p.wateredAt=now();
-          if(Math.random()<Number(crop?.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+finalMs}incrementMissionOn?.(own,"waterFriends",1);
+        if(!admin()){
+          if(method==="spray"){
+            own.specials=own.specials||{};const have=Number(own.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sprayCost} ขวด`);own.specials.wormKillerSpray=have-sprayCost;
+          }else{
+            const have=Number(own.merit)||0;if(have<meritCost)throw new Error(`กุศลไม่พอ ต้องใช้ ${meritCost}`);own.merit=have-meritCost;
+          }
         }
-        plots[index]=typeof normalizePlot==="function"?normalizePlot(p):p;newPlots=plots;nextOwn=own;
-        /* Do NOT write memberKey/displayName here: friend update rules require them unchanged. */
+        plots[index]=typeof normalizePlot==="function"?normalizePlot(r34112CureWorm(source)):r34112CureWorm(source);
+        incrementMissionOn(own,"clearWorms",1);nextOwn=own;newPlots=plots;
+        /* Friend rules permit only plots + updatedAt on the target garden. */
         tx.update(gRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
         tx.set(myRef,{...clone(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
       });
-      ownState=normalizeState(nextOwn,currentMember);state.plots=normPlots(newPlots);try{saveLocalOnly?.(ownState)}catch(_){};draw?.();showWeatherToast?.(action==="worm"?"🐛 กำจัดหนอนให้เพื่อนแล้ว":"💧 รดน้ำให้เพื่อนแล้ว");
-      /* Notification is deliberately outside the transaction. */
-      try{const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mailRef,{source:"friend",type:action==="worm"?"friendWorm":"friendWater",fromKey:currentMemberKey,fromName:currentMember,title:action==="worm"?`${currentMember} เข้ามากำจัดหนอนให้คุณ 🐛`:`${currentMember} เข้ามารดน้ำพืชพันธุ์ให้คุณ 💧`,text:"",read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11 friend mail best effort",e)}
-    }catch(e){message("ช่วยสวนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+      ownState=normalizeState(nextOwn,currentMember);state.plots=normPlots(newPlots);try{saveLocalOnly?.(ownState)}catch(_){};closeModal?.();draw?.();updateMeritUI?.();
+      showWeatherToast?.(`${giant?"🐛 หนอนไจแอนท์":"🐛 หนอน"}ถูกกำจัดแล้ว • ${admin()?"ADMIN":method==="spray"?`สเปรย์ ×${sprayCost}`:`กุศล ×${meritCost}`}`);
+      if(!admin()&&method!=="spray")try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{merit:Number(ownState.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11.2 friend worm profile",e)}
+      try{const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mailRef,{source:"friend",type:"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} เข้ามากำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้คุณ 🐛`,text:admin()?"ADMIN":method==="spray"?`ใช้สเปรย์ ×${sprayCost}`:`ใช้กุศล ×${meritCost}`,read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11.2 friend worm mail",e)}
+    }catch(e){message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+    finally{r34112FriendWormBusy=false}
+  }
+  function r34112ShowFriendWorm(index,visible=phasePlot(state?.plots?.[index])){
+    if(!visible?.crop||!(visible.phase==="worm"||visible.worm))return false;
+    const giant=r34112WormKind(visible)==="giant",meritCost=giant?2:1,sprayCost=giant?5:1,sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel ${giant?"giant-worm-panel":""}"><h2>${giant?"🐛 หนอนไจแอนท์บ้านเพื่อน":"🐛 หนอนบ้านเพื่อน"}</h2>${giant?'<img class="giant-worm-preview" src="giant-worm.png?v=1" alt="หนอนไจแอนท์">':""}<p>กำจัดเฉพาะแปลง #${index+1}</p><div class="friend-worm-actions"><button id="r34112FriendWormMerit" class="danger-action" type="button">${admin()?"ADMIN กำจัด":"ใช้ "+meritCost+" กุศล"}</button><button id="r34112FriendWormSpray" class="primary-spooky-action" type="button" ${!admin()&&sprays<sprayCost?"disabled":""}><img src="worm-killer-spray.png?v=1" alt=""><span>ใช้สเปรย์ ×${sprayCost}<br><small>มี ×${sprays}</small></span></button></div></section>`;
+    openModal();$("r34112FriendWormMerit").onclick=()=>r34112ClearFriendWorm(index,"merit");$("r34112FriendWormSpray").onclick=()=>r34112ClearFriendWorm(index,"spray");return true;
+  }
+  tapFriendPlot=async function(index){
+    if(!visitContext||!cloudReady)return;
+    const visible=phasePlot(state?.plots?.[index]);
+    if(!visible?.crop)return message("เยี่ยมสวนเพื่อน","แปลงนี้ว่างอยู่");
+    if(visible.phase==="worm"||visible.worm)return r34112ShowFriendWorm(index,visible);
+    if(visible.phase==="ready"){
+      if(["babyBamboo","hauntedPlankton"].includes(visible.crop))return message("ขโมยไม่ได้","พืชชนิดนี้เป็นพืชคุ้มครอง ขโมยไม่ได้เด็ดขาด");
+      if(typeof showStealConfirmation==="function")return showStealConfirmation(index);
+    }
+    if(visible.phase!=="needsWater")return message("เยี่ยมสวนเพื่อน","คุณสามารถรดน้ำ กำจัดหนอน หรือขโมยต้นที่พร้อมเก็บได้");
+    const targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
+    try{
+      const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",targetKey),myRef=fs.doc(db,"saves",currentMemberKey);let nextOwn=null,newPlots=null,type="";
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ms]=await Promise.all([tx.get(gRef),tx.get(myRef)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
+        const plots=normPlots(gs.data()?.plots),remote=phasePlot(plots[index]),p=(remote?.crop?remote:visible);if(!p?.crop||p.phase!=="needsWater")throw new Error("สถานะต้นไม้เปลี่ยนแล้ว กรุณาแตะอีกครั้ง");
+        const own=normalizeState(ms.data(),currentMember),crop=CROPS[p.crop],finalMs=Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));p.wateredAt=now();
+        if(Math.random()<Number(crop?.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0;type="worm"}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+finalMs;type="ok"}
+        incrementMissionOn(own,"waterFriends",1);plots[index]=typeof normalizePlot==="function"?normalizePlot(p):p;nextOwn=own;newPlots=plots;
+        tx.update(gRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});tx.set(myRef,{...clone(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextOwn,currentMember);state.plots=normPlots(newPlots);try{saveLocalOnly?.(ownState)}catch(_){};draw?.();showWeatherToast?.(type==="worm"?"💧 รดน้ำแล้ว • เจอหนอน!":"💧 รดน้ำให้เพื่อนแล้ว");
+      try{const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mailRef,{source:"friend",type:"friendWater",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} เข้ามารดน้ำพืชพันธุ์ให้คุณ 💧`,text:type==="worm"?"หลังรดน้ำพบหนอน":"",read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11.2 friend water mail",e)}
+    }catch(e){message("รดน้ำให้เพื่อนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
   };
 
   /* ---------- C) Restore Season-1 style Rank semantics ---------- */
@@ -28813,7 +28865,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     const memberRows=names.filter(n=>String(n).toLowerCase()!=="aida").map(name=>{const key=memberKeyFromName(name),p=profileMap[key]||{};return{name,key,merit:Number(p.merit??300)||0,initialized:p.initialized!==false,level:Math.max(0,Math.min(3,Number(p.houseLevel)||0))}}).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name));
     const aidaKey=typeof memberKeyFromName==="function"?memberKeyFromName(aidaName):"aida",ap=profileMap[aidaKey]||{},aida={name:aidaName,key:aidaKey,merit:Number(ap.merit??(currentMember==="Aida"?owner()?.merit:0))||0,initialized:ap.initialized!==false,level:Math.max(0,Math.min(3,Number(ap.houseLevel)||0))};
     const actionHTML=r=>r.name===currentMember?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${html(r.key)}" data-friend-name="${html(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${html(r.key)}" data-friend-name="${html(r.name)}">ส่งของ</button></span>`;
-    const row=(r,rank,adminRow=false)=>`<div class="friend-row friend-rank-row ${adminRow?"r3411-rank-admin":rank<=3?`r3411-rank-top-${rank}`:""}"><span class="friend-rank ${adminRow?"admin-rank-badge":""}">${adminRow?"ADMIN":`#${rank}`}</span><span class="friend-avatar">${adminRow?"👑":"👻"}</span><span class="friend-info"><b>${html(r.name)}</b><small class="r3411-rank-score">🙏 ${Number(r.merit).toLocaleString("th-TH")} กุศล</small>${typeof HOUSE_META!=="undefined"?`<small>🏠 Lv.${r.level}${HOUSE_META?.[r.level]?` — ${html(HOUSE_META[r.level])}`:""}</small>`:""}</span>${actionHTML(r)}</div>`;
+    const row=(r,rank,adminRow=false)=>`<div class="friend-row friend-rank-row ${adminRow?"r3411-rank-admin":rank<=3?`r3411-rank-top-${rank}`:""}"><span class="friend-rank ${adminRow?"admin-rank-badge":""}">${adminRow?"ADMIN":`#${rank}`}</span><span class="friend-avatar">${adminRow?"👑":"👻"}</span><span class="friend-info"><b>${html(r.name)}</b>${adminRow?'<small class="r3411-rank-score">👑 ผู้ดูแลระบบ • ไม่นับอันดับ</small>':`<small class="r3411-rank-score">🙏 ${Number(r.merit).toLocaleString("th-TH")} กุศล</small>`}${typeof HOUSE_META!=="undefined"?`<small>🏠 Lv.${r.level}${HOUSE_META?.[r.level]?` — ${html(HOUSE_META[r.level])}`:""}</small>`:""}</span>${actionHTML(r)}</div>`;
     $("modalContent").innerHTML=`<section class="feature-panel friends-panel r3411-rank-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">Aida / Admin อยู่บนสุดและไม่นับอันดับ • สมาชิกคนแรกเริ่มที่อันดับ 1</p><div class="friend-list friend-rank-list">${row(aida,0,true)}${memberRows.map((r,i)=>row(r,i+1,false)).join("")}</div></section>`;
     openModal();document.querySelectorAll("[data-visit-friend]").forEach(b=>b.onclick=()=>visitFriend(b.dataset.visitFriend,b.dataset.friendName));document.querySelectorAll("[data-gift-friend]").forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.giftFriend,b.dataset.friendName));
   };
@@ -28840,6 +28892,35 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     if(visitContext||guardResting?.()||!cloudReady)return false;const item=SPECIAL_ITEMS?.[key];if(!item||item.kind!=="crop")return false;const s=normalizeState(clone(owner()),currentMember),p=s.plots?.[index];if(!p?.crop)return false;try{ensurePlotPhaseStandalone?.(p)}catch(_){};const have=Number(s.specials?.[key])||0;if(!admin()&&have<1)return message("ใช้ไอเท็มไม่ได้","ไอเท็มในกระเป๋าหมดแล้ว");
     if(Number(item.boost)===100){p.phase="ready";p.phaseEndsAt=0;p.worm=false}else{if(!["growing1","growing2"].includes(p.phase))return message("ยังใช้ไอเท็มนี้ไม่ได้","ไอเท็มเร่งโตใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");const rem=Math.max(0,Number(p.phaseEndsAt||0)-now());p.phaseEndsAt=now()+Math.max(1000,Math.round(rem*(1-Number(item.boost||0)/100)))}
     if(!admin())s.specials[key]=have-1;else try{ensureAdminStock?.(s)}catch(_){};fastCommitState(s);closeModal?.();showWeatherToast?.(`⚡ ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%`);return true;
+  };
+
+  /* Own single-plot worm action: intercept the real tapPlot path, not a DOM-only patch. */
+  const r34112TapBeforeWorm=tapPlot;const r34112OwnWormBusy=new Set();
+  async function r34112ClearOwnWorm(index,method){
+    index=Math.floor(Number(index));if(r34112OwnWormBusy.has(index)||visitContext)return;r34112OwnWormBusy.add(index);
+    try{
+      const s=normalizeState(clone(owner()),currentMember),p=s.plots?.[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){}
+      if(!p?.crop||!(p.phase==="worm"||p.worm))throw new Error("แปลงนี้ไม่มีหนอนแล้ว");
+      const giant=r34112WormKind(p)==="giant",meritCost=giant?2:1,sprayCost=giant?12:5;
+      if(!admin()){
+        if(method==="spray"){s.specials=s.specials||{};const have=Number(s.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sprayCost} ขวด`);s.specials.wormKillerSpray=have-sprayCost}
+        else{const have=Number(s.merit)||0;if(have<meritCost)throw new Error(`กุศลไม่พอ ต้องใช้ ${meritCost}`);s.merit=have-meritCost}
+      }
+      s.plots[index]=typeof normalizePlot==="function"?normalizePlot(r34112CureWorm(p)):r34112CureWorm(p);incrementMissionOn(s,"clearWorms",1);if(admin())try{ensureAdminStock?.(s)}catch(_){};fastCommitState(s);closeModal?.();
+      /* Force this one critical action to cloud now so another queued old action
+         cannot resurrect the worm. */
+      try{await flushCloudSave?.()}catch(e){console.warn("R34.11.2 single worm flush",e)}
+      try{await publishOwnerPublic(true)}catch(_){};draw?.();showWeatherToast?.(`${giant?"🐛 หนอนไจแอนท์":"🐛 หนอน"}ถูกกำจัดแล้ว`);
+    }catch(e){message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+    finally{r34112OwnWormBusy.delete(index)}
+  }
+  function r34112ShowOwnWorm(index,p){
+    const giant=r34112WormKind(p)==="giant",meritCost=giant?2:1,sprayCost=giant?12:5,sprays=Number(owner()?.specials?.wormKillerSpray)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel ${giant?"giant-worm-panel":""}"><h2>${giant?"🐛 หนอนไจแอนท์":"🐛 หนอน"}</h2>${giant?'<img class="giant-worm-preview" src="giant-worm.png?v=1" alt="หนอนไจแอนท์">':""}<p>กำจัดเฉพาะแปลง #${index+1}</p><div class="friend-worm-actions"><button id="r34112OwnWormMerit" class="danger-action" type="button">${admin()?"ADMIN กำจัด":"ใช้ "+meritCost+" กุศล"}</button><button id="r34112OwnWormSpray" class="primary-spooky-action" type="button" ${!admin()&&sprays<sprayCost?"disabled":""}>🧴 ใช้สเปรย์ ×${sprayCost}</button></div></section>`;openModal();$("r34112OwnWormMerit").onclick=()=>r34112ClearOwnWorm(index,"merit");$("r34112OwnWormSpray").onclick=()=>r34112ClearOwnWorm(index,"spray");
+  }
+  tapPlot=async function(index){
+    if(!visitContext){const p=owner()?.plots?.[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){};const locked=Boolean(p?.takeover&&Number(p.takeover.until||0)>now()&&p.takeover.by!==currentMemberKey),cursed=typeof plotHasBlackMagic==="function"&&plotHasBlackMagic(p);if(p?.crop&&(p.phase==="worm"||p.worm)&&!locked&&!cursed)return r34112ShowOwnWorm(Number(index),p)}
+    return r34112TapBeforeWorm.apply(this,arguments)
   };
 
   /* One physical iPhone tap invokes the existing closure-bound handler once. */
@@ -28943,114 +29024,6 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
 })();
 
 
-/* ======================================================================
-   R34.11.1 • FRIEND SINGLE-WORM + VILLAGE MISSION + ADMIN COMPETITION FIX
-   2026-09-04
-   ====================================================================== */
-(function YN_R34111_CRITICAL_FIXES(){
-  "use strict";
-  const BUILD="S2-R34.11.1-WORM-MISSION-ADMIN-RANK-20260904";
-  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
-  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
-  const admin=()=>String(currentMember||"").toLowerCase()==="aida"||String(currentMemberKey||"").toLowerCase()==="aida"||adminProfile?.role==="admin";
-
-  /* A) Village mission bridge.
-     Some Season-2 actions still call the retired DAILY_MISSIONS counter. If the
-     old wrapper does not advance the active Village mission, advance it exactly once. */
-  if(typeof incrementMissionOn==="function"&&globalThis.YN_R19?.track){
-    const beforeInc=incrementMissionOn;
-    const alias={
-      collectGrassFriend:"dailyCollectGrass",friendGrass:"dailyCollectGrass",
-      wormClear:"clearWorms",friendWormClear:"clearWorms",
-      harvestCrops:"harvestCrops",dailyHarvestCrops:"harvestCrops",
-      dailyPlantCrops:"dailyPlantCrops",plantCrops:"dailyPlantCrops",
-      gardenFoodCraft:"craftFood",craftGardenFood:"craftFood",
-      homeCraft:"homeFoodCraft",boatSend:"boatSupply",sendBoatSupply:"boatSupply",
-      collectAnimalProducts:"collectAnimalProducts",alpacaShear:"alpacaShear",
-      flowerHarvest:"flowerHarvest",hedgehogCollect:"hedgehogCollect",
-      wineStart:"wineStart",wineClaim:"wineClaim",waterFriends:"waterFriends",
-      clearWorms:"clearWorms",openMysteryBox:"openMysteryBox",templeSoloSuccess:"templeSoloSuccess"
-    };
-    function villageProgress(s,id){
-      try{
-        const d=s?.villageSeason2?.daily,m=(d?.missions||[]).find(x=>x.action===id||(x.aliases||[]).includes(id));
-        return m?Number(m.progress)||0:null;
-      }catch(_){return null}
-    }
-    incrementMissionOn=function(s,id,amount=1){
-      const mapped=alias[id]||id,before=villageProgress(s,mapped),r=beforeInc(s,mapped,amount),after=villageProgress(s,mapped);
-      if(before!==null&&after===before){
-        try{globalThis.YN_R19.track(s,mapped,amount)}catch(e){console.warn("R34.11.1 village mission bridge",e)}
-      }
-      return r;
-    };
-  }
-
-  /* B) Friend single-plot worm/giant-worm action.
-     The visible live plot is allowed to prove the worm exists; the remote garden
-     is still read inside the transaction and only plots+updatedAt are mutated. */
-  function wormKind(p){
-    try{return typeof wormTypeOf==="function"?wormTypeOf(p):(p?.wormType==="giant"?"giant":"normal")}catch(_){return p?.wormType==="giant"?"giant":"normal"}
-  }
-  function livePlot(index){
-    const raw=state?.plots?.[index];if(!raw)return null;const p=clone(raw);
-    try{if(typeof ensurePlotPhaseStandalone==="function")ensurePlotPhaseStandalone(p);else if(typeof ensurePlotPhase==="function")ensurePlotPhase(p)}catch(_){}
-    return p;
-  }
-  async function clearOne(index,method){
-    if(!visitContext||!cloudReady||!currentMemberKey)return;
-    const visible=livePlot(index);if(!visible?.crop||!(visible.phase==="worm"||visible.worm))return message("กำจัดหนอนไม่ได้","แปลงนี้ไม่มีหนอนแล้ว");
-    const targetKey=String(visitContext.memberKey||""),targetName=visitContext.name||"เพื่อน";
-    let giant=wormKind(visible)==="giant",sprayCost=giant?5:1,meritCost=giant?2:1,nextOwn=null,newPlots=null;
-    try{
-      const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",targetKey),myRef=fs.doc(db,"saves",currentMemberKey);
-      await fs.runTransaction(db,async tx=>{
-        const [gs,ms]=await Promise.all([tx.get(gRef),tx.get(myRef)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
-        const plots=(Array.isArray(gs.data()?.plots)?gs.data().plots:[]).map(x=>{const q=clone(x);try{ensurePlotPhaseStandalone?.(q)}catch(_){}return q});
-        let p=plots[index];
-        /* A stale garden mirror must not reject a worm currently rendered by the live visit. */
-        if(!p?.crop||String(p.crop)!==String(visible.crop)||!(p.phase==="worm"||p.worm))p=clone(visible);
-        if(!p?.crop||!(p.phase==="worm"||p.worm))throw new Error("สถานะแปลงเปลี่ยนแล้ว กรุณาแตะอีกครั้ง");
-        giant=wormKind(p)==="giant";sprayCost=giant?5:1;meritCost=giant?2:1;
-        const own=normalizeState(ms.data(),currentMember);try{assertCurrentCloudSession?.(ms.data(),currentMember)}catch(_){}
-        if(method==="spray"){
-          own.specials=own.specials||{};const have=Number(own.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ฆ่าหนอนไม่พอ ต้องใช้ ${sprayCost} ขวด`);own.specials.wormKillerSpray=have-sprayCost;
-        }else own.merit=(Number(own.merit)||0)-meritCost;
-        const crop=CROPS?.[p.crop];p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=now()+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0));plots[index]=typeof normalizePlot==="function"?normalizePlot(p):p;
-        try{incrementMissionOn?.(own,"clearWorms",1)}catch(_){}
-        newPlots=plots;nextOwn=own;
-        tx.update(gRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
-        tx.set(myRef,{...clone(own),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      ownState=normalizeState(nextOwn,currentMember);state.plots=newPlots.map(x=>typeof normalizePlot==="function"?normalizePlot(x):x);try{saveLocalOnly?.(ownState)}catch(_){};closeModal?.();updateMeritUI?.();draw?.();
-      showWeatherToast?.(method==="spray"?`🧴 ใช้สเปรย์ ×${sprayCost} กำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้เพื่อนแล้ว`:`🐛 ใช้ ${meritCost} กุศลกำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้เพื่อนแล้ว`);
-      try{const {db,fs}=await getFirebaseContext(),mail=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));await fs.setDoc(mail,{source:"friend",type:"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} เข้ามากำจัด${giant?"หนอนไจแอนท์":"หนอน"}ให้คุณ 🐛`,text:method==="spray"?`ใช้สเปรย์ฆ่าหนอน ×${sprayCost}`:`ใช้กุศล ×${meritCost}`,read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.11.1 friend worm mail",e)}
-    }catch(e){message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
-  }
-  function showOne(index){
-    const p=livePlot(index);if(!p?.crop||!(p.phase==="worm"||p.worm))return false;
-    const giant=wormKind(p)==="giant",sprayCost=giant?5:1,meritCost=giant?2:1,sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;
-    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel ${giant?"giant-worm-panel":""}"><h2>${giant?"🐛 หนอนไจแอนท์บ้านเพื่อน":"🐛 หนอนบ้านเพื่อน"}</h2>${giant?'<img class="giant-worm-preview" src="giant-worm.png?v=1" alt="หนอนไจแอนท์">':""}<p>กำจัดเฉพาะแปลงนี้</p><div class="friend-worm-actions"><button id="r34111WormMerit" class="danger-action" type="button">ใช้ ${meritCost} กุศล</button><button id="r34111WormSpray" class="primary-spooky-action" type="button" ${sprays<sprayCost?"disabled":""}><img src="worm-killer-spray.png?v=1" alt=""><span>ใช้สเปรย์ ×${sprayCost}<br><small>มี ×${sprays}</small></span></button></div></section>`;
-    $("r34111WormMerit").onclick=()=>clearOne(index,"merit");$("r34111WormSpray").onclick=()=>clearOne(index,"spray");openModal();return true;
-  }
-  const friendTapBase=typeof tapFriendPlot==="function"?tapFriendPlot:null;
-  if(friendTapBase)tapFriendPlot=async function(index){if(visitContext&&showOne(Number(index)))return;return friendTapBase.apply(this,arguments)};
-  let wormTapLock=0;
-  document.addEventListener("pointerup",e=>{
-    if(!visitContext)return;const el=e.target?.closest?.("#plots [data-plot-index],[data-plot-index]");if(!el)return;const idx=Number(el.dataset.plotIndex);if(!Number.isFinite(idx))return;const p=livePlot(idx);if(!p?.crop||!(p.phase==="worm"||p.worm))return;const t=Date.now();if(t-wormTapLock<250)return;wormTapLock=t;e.preventDefault();e.stopImmediatePropagation();showOne(idx);
-  },true);
-
-  /* C) Admin is an operator, never a campaign contestant. Historical Aida rows are
-     hidden by the source-level rank filters above; make campaign UIs explicit too. */
-  function markAdminCampaignUI(){
-    if(!admin())return;
-    document.querySelectorAll(".r29-my-score,.v36-my-score,.v240-campaign-title").forEach(el=>{
-      const txt=el.textContent||"";if(!/คะแนนของคุณ|คะแนนรวมของคุณ/.test(txt))return;
-      el.innerHTML='<span style="font-weight:800">👑 ADMIN</span><strong style="display:block">ไม่เข้าร่วมการแข่งขัน</strong>';
-    });
-  }
-  const mo=new MutationObserver(()=>markAdminCampaignUI());mo.observe(document.documentElement,{subtree:true,childList:true});setTimeout(markAdminCampaignUI,100);
-  globalThis.YN_R34111={BUILD,showFriendWorm:showOne,clearFriendWorm:clearOne};
-  globalThis.YAINOO_BUILD=BUILD;
-  console.info(BUILD,"loaded");
-})();
+/* R34.11.2 source-level correction marker */
+globalThis.YAINOO_BUILD="S2-R34.11.2-SOURCE-WORM-MISSION-ADMIN-20260904";
+console.info(globalThis.YAINOO_BUILD,"loaded");
