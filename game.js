@@ -17259,17 +17259,26 @@ async function V181_campaignScoreLater(summary){
   async function finalizeCapture(){
     const pending=ownAlpaca()?.captureDaily?.pending;if(!pending)return;
     try{
-      await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey),wildRef=fs.doc(db,"alpacaWildBabies",pending.babyId),mailRef=fs.doc(fs.collection(db,"mailboxes","aida","items"));let next=null,success=false;
+      await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey),wildRef=fs.doc(db,"alpacaWildBabies",pending.babyId);let next=null,success=false;
+      /* R34.9.3: the authoritative capture transaction contains ONLY the two
+         documents required for ownership: the player's save + the released baby.
+         New accounts must not lose a capture because an optional profile/mail
+         write has stricter Firestore rules. */
       await fs.runTransaction(db,async tx=>{
         const [os,ws]=await Promise.all([tx.get(ownRef),tx.get(wildRef)]);if(!os.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(os.data(),currentMember),d=s.alpaca.captureDaily;if(!d.pending||d.pending.babyId!==pending.babyId)throw new Error("รอบดักจับนี้ถูกสรุปไปแล้ว");
         const available=ws.exists()&&ws.data()?.status==="available";success=Boolean(pending.willSucceed&&available&&d.success<3);d.pending=null;
         if(success){const baby=makeBaby(pending.color,Number(pending.bornAt)||gameNow(),"capture");baby.id=`captured-${pending.babyId}`;baby.readyProcessAt=Number(pending.readyProcessAt)||baby.readyProcessAt;if(!s.alpaca.vault.some(v=>v.id===baby.id))s.alpaca.vault.push({id:baby.id,type:"baby",color:baby.color,sex:null,source:"capture",createdAt:gameNow(),bornAt:baby.bornAt,readyProcessAt:baby.readyProcessAt});d.success=Math.min(3,Number(d.success||0)+1);incrementMissionOn(s,"dailyCaptureAidaAlpaca",1);tx.set(wildRef,{status:"reserved",capturedBy:currentMemberKey,capturedAt:gameNow(),updatedAt:fs.serverTimestamp()},{merge:true})}
         else if(pending.willSucceed&&!available){/* someone else already got this baby: no merit penalty */}
         else{s.merit=(Number(s.merit)||0)+CAPTURE_FAIL_MERIT}
-        next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-        const colorText=colorName(pending.color),title=success?`${currentProfileDisplayName()} ดักจับอัลปาก้าเบบี้${colorText}สำเร็จ`:`${currentProfileDisplayName()} พยายามดักจับอัลปาก้าเบบี้${colorText} แต่ไม่สำเร็จ`;tx.set(mailRef,{source:"friend",type:"alpacaCapture",fromKey:currentMemberKey,fromName:currentProfileDisplayName(),title,text:success?"ดักจับสำเร็จ":"ดักจับไม่สำเร็จ",read:false,createdAt:fs.serverTimestamp()})
+        next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
       });
       applyOwn(next);
+      /* Optional mirrors/notifications happen AFTER the capture commit and can
+         never roll back a new player's captured alpaca. */
+      Promise.resolve().then(async()=>{
+        try{await fs.setDoc(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(next?.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.9.3 capture profile mirror deferred",e)}
+        try{const mailRef=fs.doc(fs.collection(db,"mailboxes","aida","items")),colorText=colorName(pending.color),title=success?`${currentProfileDisplayName()} ดักจับอัลปาก้าเบบี้${colorText}สำเร็จ`:`${currentProfileDisplayName()} พยายามดักจับอัลปาก้าเบบี้${colorText} แต่ไม่สำเร็จ`;await fs.setDoc(mailRef,{source:"friend",type:"alpacaCapture",fromKey:currentMemberKey,fromName:currentProfileDisplayName(),title,text:success?"ดักจับสำเร็จ":"ดักจับไม่สำเร็จ",read:false,createdAt:fs.serverTimestamp()})}catch(e){console.warn("R34.9.3 capture mailbox deferred",e)}
+      });
       if(success){try{await fs.updateDoc(wildRef,{status:"captured",claimedBy:currentMemberKey,claimedAt:gameNow(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("capture final mark",e)}showCaptureSuccess(pending.color)}
       else if(pending.willSucceed){alpacaMessage("ช้าไปนิดนึงค่ะ","อัลปาก้าตัวนี้ถูกคนอื่นดักจับไปแล้ว • รอบนี้ไม่หักกุศล")}else showCaptureFailure();
     }catch(e){alpacaMessage("สรุปผลไม่ได้",e.message||"กรุณาลองใหม่")}
@@ -27351,3 +27360,83 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
 /* S2 R34.9.2 — MEOW-WOOF HOTEL CARE BUTTON SCOPE FIX — 2026-09-04 */
 (function(){globalThis.YAINOO_BUILD="S2-R34.9.2-HOTEL-CARE-BUTTON-FIX-20260904";console.info(globalThis.YAINOO_BUILD,"loaded");})();
+
+
+/* =====================================================================
+   S2 R34.9.3 — EARN ARENA EARLY INTERCEPT + NEW ACCOUNT CAPTURE SAFETY
+   2026-09-04
+   Scope:
+   - Earn only: intercept completed arena wins BEFORE legacy document handlers.
+   - Alpaca capture core transaction was hardened above; optional mirrors cannot
+     invalidate a new member's capture.
+   ===================================================================== */
+(function YN_R3493_EARN_EARLY_ARENA_GUARD(){
+  "use strict";
+  const BUILD="S2-R34.9.3-EARN-ARENA-NEW-USER-ALPACA-FIX-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isEarn=()=>String(currentMemberKey||"").toLowerCase()==="earn"||String(currentMember||"").toLowerCase()==="earn";
+  let interceptBusy=false;
+
+  function completedEarnWin(){
+    const f=(ownState||state)?.arena?.fight;
+    return Boolean(isEarn()&&f&&f.win&&Number(f.finishAt||0)<=NOW());
+  }
+  function closeNow(){
+    try{closeModal?.()}catch(_){}
+    try{const m=document.getElementById("modal");if(m)m.classList.add("hidden")}catch(_){}
+  }
+  async function recover(reason){
+    if(!completedEarnWin()||interceptBusy){closeNow();return false}
+    interceptBusy=true;
+    try{
+      const api=globalThis.YN_R3491;
+      if(api?.recoverEarnFight){
+        await api.recoverEarnFight(`r3493-${reason}`);
+      }else{
+        /* Absolute local backstop. Never allow the legacy result loop. */
+        const s=ownState||state,f=s?.arena?.fight;
+        if(s?.arena&&f){s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,Number(f.finishAt||NOW())+60*60*1000);s.arena.fight=null;try{saveLocalOnly?.(s)}catch(_){}}
+        closeNow();
+      }
+      return true;
+    }finally{interceptBusy=false}
+  }
+
+  /* Window capture runs before the older document-capture pointerup handler.
+     This is the ordering bug that R34.9.1 could not stop. */
+  function earlyEvent(e){
+    if(!isEarn())return;
+    const claim=e.target?.closest?.("#ynuArenaClaimScore");
+    const close=e.target?.closest?.("#closeModal");
+    if(!claim&&!(close&&document.getElementById("ynuArenaClaimScore")))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(e.type==="pointerdown"||e.type==="click")recover(claim?"claim":"close").catch(err=>{console.warn(BUILD,err);closeNow()});
+  }
+  window.addEventListener("pointerdown",earlyEvent,true);
+  window.addEventListener("pointerup",earlyEvent,true);
+  window.addEventListener("click",earlyEvent,true);
+
+  /* More important than the buttons: a completed Earn win is recovered before
+     checkArenaFight can ask V169 to write jellyArenaWeekly or render the modal. */
+  const checkBase=typeof checkArenaFight==="function"?checkArenaFight:null;
+  if(checkBase)checkArenaFight=async function(){
+    if(completedEarnWin()){await recover("pre-render");return}
+    return checkBase.apply(this,arguments);
+  };
+  const resultBase=typeof arenaWinResult==="function"?arenaWinResult:null;
+  if(resultBase)arenaWinResult=function(){
+    if(completedEarnWin()){recover("result-render").catch(()=>{});return}
+    return resultBase.apply(this,arguments);
+  };
+
+  /* Cloud snapshots can reintroduce Earn's old stuck fight. Sweep it after the
+     authoritative state loader and whenever the app resumes. */
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);if(completedEarnWin())setTimeout(()=>recover("post-load").catch(()=>{}),0);return r};
+  window.addEventListener("pageshow",()=>{if(completedEarnWin())setTimeout(()=>recover("pageshow").catch(()=>{}),0)},{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&completedEarnWin())setTimeout(()=>recover("resume").catch(()=>{}),0)},{passive:true});
+
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YN_R3493={BUILD,recover};
+  console.info(BUILD,"loaded");
+})();
