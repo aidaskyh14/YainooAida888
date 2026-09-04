@@ -16344,7 +16344,6 @@ async function V181_campaignScoreLater(summary){
   const PEN_HOLE_ROUND_MS=12*HOUR;
 
   const COLORS=["white","black","pink","brown","green","goldenHoney","thaiTea","prince","princess"];
-  const NORMAL_BIRTH_COLORS=["white","black","pink","brown","green","goldenHoney","thaiTea"];
   const COLOR_META={
     white:{name:"สีขาว",short:"ขาว",emoji:"🤍",icon:"alpaca-stage-1-idle.png"},
     black:{name:"สีดำ",short:"ดำ",emoji:"🖤",icon:"alpaca-black-stage-1-idle.png"},
@@ -16557,14 +16556,14 @@ async function V181_campaignScoreLater(summary){
     const now=gameNow(),a=raw&&typeof raw==="object"?raw:{};
     const type=a.type==="baby"?"baby":"adult",color=COLORS.includes(a.color)?a.color:"white";
     if(type==="baby")return{id:String(a.id||uid("baby")),type:"baby",color,bornAt:Number(a.bornAt)||now,readyProcessAt:Number(a.readyProcessAt)||((Number(a.bornAt)||now)+BABY_PROCESS_MS),source:a.source||"birth"};
-    let sex=a.sex==="female"?"female":"male";if(color==="prince")sex="male";if(color==="princess")sex="female";const stage=Math.max(1,Math.min(4,Math.floor(Number(a.woolStage)||1))),created=Number(a.createdAt)||now;
+    const sex=a.sex==="female"?"female":"male",stage=Math.max(1,Math.min(4,Math.floor(Number(a.woolStage)||1))),created=Number(a.createdAt)||now;
     return{
       id:String(a.id||uid("adult")),type:"adult",color,sex,name:String(a.name||""),createdAt:created,
       woolStage:stage,woolStageEndsAt:stage<4?(Number(a.woolStageEndsAt)||now+WOOL_STAGE_MS[stage]):0,everSheared:Boolean(a.everSheared),lastShearedAt:Number(a.lastShearedAt)||0,
       nextHungryAt:Number(a.nextHungryAt)||now+HUNGER_BASE_MS,hungrySince:Number(a.hungrySince)||0,hungerPenaltyBuckets:Math.max(0,Math.floor(Number(a.hungerPenaltyBuckets)||0)),
       sickAt:Number(a.sickAt)||0,sickPenaltyBuckets:Math.max(0,Math.floor(Number(a.sickPenaltyBuckets)||0)),
       breedReadyAt:Number(a.breedReadyAt)||0,breedingUntil:Number(a.breedingUntil)||0,breedingSire:a.breedingSire&&typeof a.breedingSire==="object"?a.breedingSire:null,
-      pregnancyStartedAt:Number(a.pregnancyStartedAt)||0,pregnantUntil:Number(a.pregnantUntil)||0,birthAccelUsed:Boolean(a.birthAccelUsed),pregnancySireColor:String(a.pregnancySireColor||""),
+      pregnancyStartedAt:Number(a.pregnancyStartedAt)||0,pregnantUntil:Number(a.pregnantUntil)||0,birthAccelUsed:Boolean(a.birthAccelUsed),pregnancyRoyal:Boolean(a.pregnancyRoyal),
       breederCooldownUntil:Number(a.breederCooldownUntil)||0,penIndex:penIndex
     };
   }
@@ -16628,7 +16627,7 @@ async function V181_campaignScoreLater(summary){
   function ownAlpaca(){const s=ownState||state;if(!s)return null;ensureAlpacaState(s);topupAdminAlpacaInventory(s);return s.alpaca}
   function applyOwn(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);try{updateMeritUI()}catch{}return ownState}
   function nextAdultName(a){const n=Math.max(1,Math.floor(Number(a.nextSerial)||1));a.nextSerial=n+1;return `อัลปาก้า${String(n).padStart(4,"0")}`}
-  function makeAdult(a,color,sex,stage=1){const now=gameNow(),s=Math.max(1,Math.min(4,Number(stage)||1));return{id:uid("alpaca"),type:"adult",color:COLORS.includes(color)?color:"white",sex:sex==="female"?"female":"male",name:nextAdultName(a),createdAt:now,woolStage:s,woolStageEndsAt:s<4?now+WOOL_STAGE_MS[s]:0,everSheared:false,lastShearedAt:0,nextHungryAt:now+HUNGER_BASE_MS,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,pregnancySireColor:"",breederCooldownUntil:0}}
+  function makeAdult(a,color,sex,stage=1){const now=gameNow(),s=Math.max(1,Math.min(4,Number(stage)||1));return{id:uid("alpaca"),type:"adult",color:COLORS.includes(color)?color:"white",sex:sex==="female"?"female":"male",name:nextAdultName(a),createdAt:now,woolStage:s,woolStageEndsAt:s<4?now+WOOL_STAGE_MS[s]:0,everSheared:false,lastShearedAt:0,nextHungryAt:now+HUNGER_BASE_MS,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,pregnancyRoyal:false,breederCooldownUntil:0}}
   function makeBaby(color,bornAt=gameNow(),source="birth"){return{id:uid("baby"),type:"baby",color:COLORS.includes(color)?color:"white",bornAt,readyProcessAt:bornAt+BABY_PROCESS_MS,source}}
 
   function consumeTrough(pen){
@@ -16644,13 +16643,8 @@ async function V181_campaignScoreLater(summary){
     for(const a of [...pen.alpacas]){
       if(a.type!=="adult")continue;
       if(advanceWool(a,now))changed=true;
-      if(a.breedingUntil>0&&now>=a.breedingUntil){const breedingEnd=a.breedingUntil;a.breedingUntil=0;a.pregnancyStartedAt=breedingEnd;a.pregnantUntil=breedingEnd+PREGNANCY_MS;a.birthAccelUsed=false;a.breedReadyAt=0;a.pregnancySireColor=String(a.breedingSire?.color||"");a.breedingSire=null;pen.happiness+=8;changed=true}
-      if(a.pregnantUntil>0&&now>=a.pregnantUntil&&pen.alpacas.length<BIRTH_OVERFLOW_CAP){
-        /* Royal babies are exclusive: ONLY Princess mother + Prince sire can create them.
-           Every ordinary pairing is restricted to the seven normal colors. */
-        const royalPair=a.color==="princess"&&a.pregnancySireColor==="prince";
-        const color=royalPair?(Math.random()<.5?"prince":"princess"):NORMAL_BIRTH_COLORS[Math.floor(Math.random()*NORMAL_BIRTH_COLORS.length)];
-        pen.alpacas.push(makeBaby(color,now,royalPair?"royal-birth":"birth"));a.pregnancyStartedAt=0;a.pregnantUntil=0;a.birthAccelUsed=false;a.pregnancySireColor="";a.breedReadyAt=now+FEMALE_AFTER_BIRTH_READY_MS;pen.happiness+=15;changed=true}
+      if(a.breedingUntil>0&&now>=a.breedingUntil){const breedingEnd=a.breedingUntil,sireColor=String(a.breedingSire?.color||"");a.breedingUntil=0;a.pregnancyStartedAt=breedingEnd;a.pregnantUntil=breedingEnd+PREGNANCY_MS;a.birthAccelUsed=false;a.breedReadyAt=0;a.pregnancyRoyal=(a.color==="princess"&&sireColor==="prince");a.breedingSire=null;pen.happiness+=8;changed=true}
+      if(a.pregnantUntil>0&&now>=a.pregnantUntil&&pen.alpacas.length<BIRTH_OVERFLOW_CAP){const normalColors=COLORS.filter(c=>c!=="prince"&&c!=="princess"),color=a.pregnancyRoyal?(Math.random()<.5?"prince":"princess"):(normalColors[Math.floor(Math.random()*normalColors.length)]||"white");pen.alpacas.push(makeBaby(color,now,a.pregnancyRoyal?"royal-birth":"birth"));a.pregnancyStartedAt=0;a.pregnantUntil=0;a.birthAccelUsed=false;a.pregnancyRoyal=false;a.breedReadyAt=now+FEMALE_AFTER_BIRTH_READY_MS;pen.happiness+=15;changed=true}
       if(now>=Number(a.nextHungryAt||0)){
         const meal=consumeTrough(pen);
         if(meal){a.nextHungryAt=now+meal.durationMs;a.hungrySince=0;a.hungerPenaltyBuckets=0;pen.happiness+=meal.happiness;if(meal.foodKey==="braisedEgg")reduceWoolWait(a,2*HOUR,now);changed=true}
@@ -17202,24 +17196,22 @@ async function V181_campaignScoreLater(summary){
   }
   async function showBreedingSires(penNo,femaleId){
     const {animal:female}=findOwnAnimal(penNo,femaleId),now=gameNow();if(!female||female.type!=="adult"||female.sex!=="female")return;if(female.sickAt)return alpacaMessage("ผสมพันธุ์ไม่ได้","รักษาอาการหวัดก่อนนะคะ");if(female.breedReadyAt<=0||female.breedReadyAt>now||female.pregnantUntil||female.breedingUntil)return alpacaMessage("ยังไม่พร้อม","แม่อัลปาก้ายังไม่พร้อมผสมพันธุ์ค่ะ");let friend=[];
-    try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"alpacaBreeders"));friend=snap.docs.map(d=>({id:d.id,...d.data(),system:false,fee:150})).filter(x=>x.ownerKey!==currentMemberKey&&x.ownerKey!=="aida"&&x.available!==false&&Number(x.cooldownUntil||0)<=now).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"th"))}catch(e){console.warn("load breeders",e)}
-    
-    const ownRoyal=[];
-    if(female.color==="princess"){
-      const root=ownAlpaca();
-      root?.pens?.forEach((p,pi)=>(p.alpacas||[]).forEach(m=>{if(m?.type==="adult"&&m.sex==="male"&&m.color==="prince"&&!m.sickAt&&Number(m.breederCooldownUntil||0)<=now)ownRoyal.push({id:`own-prince:${pi+1}:${m.id}`,alpacaId:m.id,penNo:pi+1,name:m.name||"อัลปาก้าเจ้าชาย",color:"prince",system:false,own:true,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),fee:0})}));
-    }
-    const sires=[...ownRoyal,...SYSTEM_SIRES.map(x=>({...x,system:true,ownerName:"Aida"})),...friend];
-    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.readyBreed,"รายชื่ออัลปาก้าตัวผู้ที่พร้อมผสมพันธุ์",`แม่พันธุ์ ${safeHtml(female.name)}`)}<div class="alpaca-sire-list">${sires.map((s,i)=>`<article class="alpaca-sire-card">${s.system?`<img src="${s.image}" alt="${safeHtml(s.name)}">`:spritePreview(s.color,1)}<div><h3>${String(i+1).padStart(2,"0")} ${safeHtml(s.name)}</h3><p>${s.own?"เจ้าชายของคุณ • พร้อมผสมพันธุ์":s.system?"พ่อพันธุ์ของ Aida • พร้อมตลอด":`เจ้าของ ${safeHtml(s.ownerName||s.ownerKey)} • พร้อมผสมพันธุ์`} • ${s.fee?`${s.fee} กุศล`:"ไม่เสียกุศล"}</p><div class="alpaca-card-actions"><button class="primary" type="button" data-select-sire="${safeHtml(s.id)}">เลือกพ่อพันธุ์</button></div></div></article>`).join("")}</div><button id="sireListBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-select-sire]").forEach(b=>b.onclick=()=>{const sire=sires.find(x=>x.id===b.dataset.selectSire);if(sire)confirmBreed(penNo,femaleId,sire)});$("sireListBack").onclick=()=>showAlpacaDetail(penNo,femaleId)
+    try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"alpacaBreeders"));friend=snap.docs.map(d=>({id:d.id,...d.data(),system:false,fee:150})).filter(x=>x.ownerKey!==currentMemberKey&&x.available!==false&&Number(x.cooldownUntil||0)<=now).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"th"))}catch(e){console.warn("load breeders",e)}
+    const royalMother=female.color==="princess";
+    const ownRoyal=[];if(royalMother){const root=ownAlpaca();root?.pens?.forEach((p,pi)=>p.alpacas?.filter(a=>a?.type==="adult"&&a.sex==="male"&&a.color==="prince"&&!a.sickAt&&Number(a.breederCooldownUntil||0)<=now).forEach(a=>ownRoyal.push({id:a.id,name:a.name,color:"prince",system:false,local:true,ownerKey:currentMemberKey,ownerName:currentProfileDisplayName(),penNo:pi+1,fee:0})))}
+    friend=friend.filter(x=>royalMother?x.color==="prince":x.color!=="prince"&&x.color!=="princess");
+    const systemSires=royalMother?[]:SYSTEM_SIRES.filter(x=>x.color!=="prince"&&x.color!=="princess").map(x=>({...x,system:true,ownerName:"Aida"}));
+    const sires=[...ownRoyal,...systemSires,...friend];
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.readyBreed,"รายชื่ออัลปาก้าตัวผู้ที่พร้อมผสมพันธุ์",`แม่พันธุ์ ${safeHtml(female.name)}`)}<div class="alpaca-sire-list">${sires.map((s,i)=>`<article class="alpaca-sire-card">${s.system?`<img src="${s.image}" alt="${safeHtml(s.name)}">`:spritePreview(s.color,1)}<div><h3>${String(i+1).padStart(2,"0")} ${safeHtml(s.name)}</h3><p>${s.local?"เจ้าชายของคุณ • พร้อมผสมพันธุ์":s.system?"พ่อพันธุ์ของ Aida • พร้อมตลอด":`เจ้าของ ${safeHtml(s.ownerName||s.ownerKey)} • พร้อมผสมพันธุ์`} • ${s.fee} กุศล</p><div class="alpaca-card-actions"><button class="primary" type="button" data-select-sire="${safeHtml(s.id)}">เลือกพ่อพันธุ์</button></div></div></article>`).join("")}</div><button id="sireListBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-select-sire]").forEach(b=>b.onclick=()=>{const sire=sires.find(x=>x.id===b.dataset.selectSire);if(sire)confirmBreed(penNo,femaleId,sire)});$("sireListBack").onclick=()=>showAlpacaDetail(penNo,femaleId)
   }
-  function confirmBreed(penNo,femaleId,sire){const {animal:female}=findOwnAnimal(penNo,femaleId);if(!female)return;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(sire.system?sire.image:ASSET.readyBreed,"ยืนยันการผสมพันธุ์",`คุณเลือกพ่อพันธุ์ “${safeHtml(sire.name)}” ให้กับ ${safeHtml(female.name)}`)}<div class="alpaca-callout"><b>${sire.fee?`ค่าผสมพันธุ์ครั้งนี้ ${sire.fee} กุศล`:"คู่ราชวงศ์ของคุณ • ไม่เสียกุศล"}</b><small>${sire.own?"Princess + Prince เท่านั้นที่สามารถให้กำเนิด Baby Prince / Baby Princess":sire.system?"กุศลจะถูกใช้เป็นค่าระบบ":"กุศลจะโอนไปยังเจ้าของพ่อพันธุ์"}</small></div><div class="alpaca-detail-actions"><button id="breedConfirmBtn" class="primary" type="button">ยืนยัน</button><button id="breedCancelBtn" type="button">ยกเลิก</button></div></section>`;openModal();$("breedConfirmBtn").onclick=()=>startBreeding(penNo,femaleId,sire);$("breedCancelBtn").onclick=()=>showBreedingSires(penNo,femaleId)}
+  function confirmBreed(penNo,femaleId,sire){const {animal:female}=findOwnAnimal(penNo,femaleId);if(!female)return;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(sire.system?sire.image:ASSET.readyBreed,"ยืนยันการผสมพันธุ์",`คุณเลือกพ่อพันธุ์ “${safeHtml(sire.name)}” ให้กับ ${safeHtml(female.name)}`)}<div class="alpaca-callout"><b>ค่าผสมพันธุ์ครั้งนี้ ${sire.fee} กุศล</b><small>${sire.system?"กุศลจะถูกใช้เป็นค่าระบบ":"กุศลจะโอนไปยังเจ้าของพ่อพันธุ์"}</small></div><div class="alpaca-detail-actions"><button id="breedConfirmBtn" class="primary" type="button">ยืนยัน</button><button id="breedCancelBtn" type="button">ยกเลิก</button></div></section>`;openModal();$("breedConfirmBtn").onclick=()=>startBreeding(penNo,femaleId,sire);$("breedCancelBtn").onclick=()=>showBreedingSires(penNo,femaleId)}
   async function startBreeding(penNo,femaleId,sire){const btn=$("breedConfirmBtn");if(btn){btn.disabled=true;btn.textContent="กำลังยืนยัน..."}try{
-      if(sire.own){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),{animal:male}=findAnimal(s,Number(sire.penNo),sire.alpacaId),now=gameNow();if(!a||a.sex!=="female"||a.color!=="princess"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("อัลปาก้าเจ้าหญิงยังไม่พร้อม");if(!male||male.type!=="adult"||male.sex!=="male"||male.color!=="prince"||male.sickAt||Number(male.breederCooldownUntil||0)>now)throw new Error("อัลปาก้าเจ้าชายยังไม่พร้อม");male.breederCooldownUntil=now+MALE_COOLDOWN_MS;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:male.id,name:male.name||"เจ้าชาย",color:"prince",system:false,ownerKey:currentMemberKey,own:true}})}
-      else if(sire.system){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),now=gameNow();if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if((Number(s.merit)||0)<sire.fee)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");s.merit-=sire.fee;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:String(sire.color||""),system:true}})}
-      else if(sire.mock&&isAdmin()){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),now=gameNow();if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if((Number(s.merit)||0)<150)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");s.merit-=150;s.alpaca.testSireCooldowns[sire.id]=now+MALE_COOLDOWN_MS;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:String(sire.color||""),system:false,ownerKey:sire.ownerKey,mock:true}})}
+      if(sire.local){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),{animal:m}=findAnimal(s,Number(sire.penNo)||1,sire.id),now=gameNow();if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if(a.color!=="princess"||!m||m.type!=="adult"||m.sex!=="male"||m.color!=="prince"||m.sickAt)throw new Error("อัลปาก้าราชวงศ์ต้องเป็น เจ้าชาย + เจ้าหญิง เท่านั้น");if(Number(m.breederCooldownUntil||0)>now)throw new Error("อัลปาก้าเจ้าชายยังพักผสมพันธุ์อยู่");m.breederCooldownUntil=now+MALE_COOLDOWN_MS;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:m.id,name:m.name,color:"prince",system:false,local:true,ownerKey:currentMemberKey}})}
+      else if(sire.system){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),now=gameNow();if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if(a.color==="princess")throw new Error("อัลปาก้าเจ้าหญิงต้องผสมกับอัลปาก้าเจ้าชายเท่านั้น");if((Number(s.merit)||0)<sire.fee)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");s.merit-=sire.fee;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:sire.color||"",system:true}})}
+      else if(sire.mock&&isAdmin()){await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,femaleId),now=gameNow();if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if((Number(s.merit)||0)<150)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");s.merit-=150;s.alpaca.testSireCooldowns[sire.id]=now+MALE_COOLDOWN_MS;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:sire.color||"",system:false,ownerKey:sire.ownerKey,mock:true}})}
       else{
         await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ownRef=fs.doc(db,"saves",currentMemberKey),ownProf=fs.doc(db,"publicProfiles",currentMemberKey),breederRef=fs.doc(db,"alpacaBreeders",sire.id),ownerRef=fs.doc(db,"saves",sire.ownerKey),ownerProf=fs.doc(db,"publicProfiles",sire.ownerKey);let next;
-        await fs.runTransaction(db,async tx=>{const [os,bs]=await Promise.all([tx.get(ownRef),tx.get(breederRef)]);if(!os.exists()||!bs.exists())throw new Error("ข้อมูลพ่อพันธุ์ไม่พร้อม");const b=bs.data(),now=gameNow();if(Number(b.cooldownUntil||0)>now)throw new Error("พ่อพันธุ์ตัวนี้เพิ่งถูกใช้ กรุณาเลือกตัวอื่น");const s=normalizeState(os.data(),currentMember),{animal:a}=findAnimal(s,penNo,femaleId);if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if((Number(s.merit)||0)<150)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");s.merit-=150;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:String(b.color||sire.color||""),system:false,ownerKey:sire.ownerKey};next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(ownProf,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});tx.update(ownerRef,{merit:fs.increment(150),updatedAt:fs.serverTimestamp()});tx.update(ownerProf,{merit:fs.increment(150),updatedAt:fs.serverTimestamp()});tx.set(breederRef,{cooldownUntil:now+MALE_COOLDOWN_MS,lastUsedAt:now,lastUsedBy:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:true})});applyOwn(next)
+        await fs.runTransaction(db,async tx=>{const [os,bs]=await Promise.all([tx.get(ownRef),tx.get(breederRef)]);if(!os.exists()||!bs.exists())throw new Error("ข้อมูลพ่อพันธุ์ไม่พร้อม");const b=bs.data(),now=gameNow();if(Number(b.cooldownUntil||0)>now)throw new Error("พ่อพันธุ์ตัวนี้เพิ่งถูกใช้ กรุณาเลือกตัวอื่น");const s=normalizeState(os.data(),currentMember),{animal:a}=findAnimal(s,penNo,femaleId);if(!a||a.sex!=="female"||a.sickAt||a.breedReadyAt<=0||a.breedReadyAt>now||a.pregnantUntil||a.breedingUntil)throw new Error("แม่อัลปาก้าไม่พร้อมแล้ว");if((Number(s.merit)||0)<150)throw new Error("กุศลไม่พอสำหรับค่าผสมพันธุ์");if(a.color==="princess"&&b.color!=="prince")throw new Error("อัลปาก้าเจ้าหญิงต้องผสมกับอัลปาก้าเจ้าชายเท่านั้น");if(a.color!=="princess"&&b.color==="prince")throw new Error("อัลปาก้าเจ้าชายผสมได้เฉพาะกับอัลปาก้าเจ้าหญิง");s.merit-=150;a.breedingUntil=now+BREEDING_SCENE_MS;a.breedingSire={id:sire.id,name:sire.name,color:b.color||sire.color||"",system:false,ownerKey:sire.ownerKey};next=s;tx.set(ownRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(ownProf,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});tx.update(ownerRef,{merit:fs.increment(150),updatedAt:fs.serverTimestamp()});tx.update(ownerProf,{merit:fs.increment(150),updatedAt:fs.serverTimestamp()});tx.set(breederRef,{cooldownUntil:now+MALE_COOLDOWN_MS,lastUsedAt:now,lastUsedBy:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:true})});applyOwn(next)
       }
       showBreedingProgress(penNo,femaleId);syncOwnMaleBreeders().catch(()=>{});
     }catch(e){alpacaMessage("ผสมพันธุ์ไม่ได้",e.message||"กรุณาลองใหม่")}}
@@ -17873,7 +17865,7 @@ async function V181_campaignScoreLater(summary){
     if(r.type.includes("Cat"))return (typeof CAT_BOX!=="undefined"?CAT_BOX.image:"")||Object.values(typeof CAT_TYPES!=="undefined"?CAT_TYPES:{})[0]?.image||"";
     return"";
   }
-  function v240RandomAdult(){const pool=V240_COLORS.filter(c=>c!=="prince"&&c!=="princess"),color=pool[Math.floor(Math.random()*pool.length)],sex=Math.random()<.5?"male":"female";return{id:v240Uid("reward-alpaca"),type:"adult",color,sex,source:"campaign-v240",createdAt:v240Now()}}
+  function v240RandomAdult(){const pool=V240_COLORS.filter(c=>c!=="prince"&&c!=="princess"),color=pool[Math.floor(Math.random()*pool.length)]||"white",sex=Math.random()<.5?"male":"female";return{id:v240Uid("reward-alpaca"),type:"adult",color,sex,source:"campaign-v240",createdAt:v240Now()}}
   function v240GrantReward(s,r){if(r.type==="merit"){s.merit=(Number(s.merit)||0)+r.qty;return[]}if(r.type==="special"){s.specials=v240Obj(s.specials);s.specials[r.key]=v240Int(s.specials[r.key])+r.qty;return[]}if(r.type==="bait"){s.fishingBaits=v240Obj(s.fishingBaits);s.fishingBaits[r.key]=v240Int(s.fishingBaits[r.key])+r.qty;return[]}if(r.type==="alpacaFood"){s.alpaca.inventory.food[r.key]=v240Int(s.alpaca.inventory.food[r.key])+r.qty;return[]}if(r.type==="mysteryJelly"){s.mysteryBoxes=v240Int(s.mysteryBoxes)+r.qty;return[]}if(r.type==="mysteryCat"){s.catMysteryBoxes=v240Int(s.catMysteryBoxes)+r.qty;return[]}if(r.type==="mysteryDog"){s.dogMysteryBoxes=v240Int(s.dogMysteryBoxes)+r.qty;return[]}if(r.type==="randomAlpaca"){const arr=[];for(let i=0;i<r.qty;i++){const a=v240RandomAdult();s.alpaca.vault.push(a);arr.push(a)}return arr}return[]}
   async function v240CampaignScoreData(cfg){const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"campaignScores",cfg.id));return snap.exists()?snap.data():{scores:{},names:{},nightCounts:{}}}
   function v240CampaignRankRows(cfg,d){return Object.keys(MEMBERS).filter(n=>n!=="Aida").map(name=>{const key=memberKeyFromName(name);return{name,key,score:v240Int(d.scores?.[key]),night:v240Int(d.nightCounts?.[key])}}).sort((a,b)=>b.score-a.score||(cfg.id===V240_COOK_ID?b.night-a.night:0)||a.name.localeCompare(b.name,"th"))}
@@ -23627,21 +23619,41 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return f;
   }
   function forestCountdown(){const f=processForest(own()),ms=Math.max(0,f.nextSpawnAt-now()),h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),sec=Math.floor((ms%60000)/1000);return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
+  function forestUnlockedR343(){
+    try{
+      if(currentMember==="Aida"||currentMemberKey==="aida"||adminProfile?.role==="admin")return true;
+      return Boolean((ownState||state)?.s2Unlocks?.mystic);
+    }catch(_){return false}
+  }
+  function showForestLockR343(){
+    try{globalThis.YN_R33_SHOW_LOCK?.("mysticKey")}catch(_){}
+    if(!globalThis.YN_R33_SHOW_LOCK)message?.("🔒 ป่าต้องห้าม","พื้นที่นี้ยังล็อกอยู่ ต้องปลดด้วยกุญแจหรือเส้นทางสายฟรีก่อนค่ะ");
+  }
+  function guardForbiddenForestR343(){
+    if(forestUnlockedR343())return true;
+    try{stopSceneTimer?.();clearInterval(window.__r21ForestTick)}catch(_){}
+    if(currentScene==="forbiddenForest")currentScene=null;
+    try{$("sceneScreen")?.classList.add("hidden");$("gameScreen")?.classList.remove("hidden")}catch(_){}
+    showForestLockR343();
+    return false;
+  }
   function openForbiddenForest(){
+    if(!guardForbiddenForestR343())return;
     try{$("hudMenuDrawer")?.classList.add("hidden");$("hudMenuBackdrop")?.classList.add("hidden")}catch(_){}
     stopSceneTimer?.();currentScene="forbiddenForest";$("gameScreen")?.classList.add("hidden");$("sceneScreen")?.classList.remove("hidden");const sc=$("sceneScreen");sc.style.backgroundImage=`url("${FOREST_BG}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat";renderForest();
   }
-  function renderForest(){if(currentScene!=="forbiddenForest")return;const f=processForest(own()),layer=$("sceneInteractiveLayer");if(!layer)return;setSceneNav?.({backText:"กลับฟาร์ม",backAction:returnToFarm});layer.innerHTML=`<div class="r21-forest-status"><span>🌲 ป่าต้องห้าม</span><small>รอบถัดไป <b id="r21ForestCountdown">${forestCountdown()}</b> • เหลือ ${f.nodes.length} จุด</small></div>${f.nodes.map(n=>`<button class="r21-forest-node r21-${n.kind}" type="button" data-r21-node="${esc(n.id)}" style="left:${n.x}%;top:${n.y}%"><img src="${n.image}" alt="${n.kind==="wood"?"ต้นไม้":"ก้อนหิน"}"></button>`).join("")}<div class="r21-forest-actions"><button id="r21ForestBack">กลับฟาร์ม</button><button id="r21ForestCollectAll">เก็บทั้งหมด</button><button id="r21ForestCraft">คราฟอุปกรณ์</button></div>`;
+  function renderForest(){if(currentScene!=="forbiddenForest")return;if(!guardForbiddenForestR343())return;const f=processForest(own()),layer=$("sceneInteractiveLayer");if(!layer)return;setSceneNav?.({backText:"กลับฟาร์ม",backAction:returnToFarm});layer.innerHTML=`<div class="r21-forest-status"><span>🌲 ป่าต้องห้าม</span><small>รอบถัดไป <b id="r21ForestCountdown">${forestCountdown()}</b> • เหลือ ${f.nodes.length} จุด</small></div>${f.nodes.map(n=>`<button class="r21-forest-node r21-${n.kind}" type="button" data-r21-node="${esc(n.id)}" style="left:${n.x}%;top:${n.y}%"><img src="${n.image}" alt="${n.kind==="wood"?"ต้นไม้":"ก้อนหิน"}"></button>`).join("")}<div class="r21-forest-actions"><button id="r21ForestBack">กลับฟาร์ม</button><button id="r21ForestCollectAll">เก็บทั้งหมด</button><button id="r21ForestCraft">คราฟอุปกรณ์</button></div>`;
     layer.querySelectorAll("[data-r21-node]").forEach(b=>b.onclick=()=>collectForestNode(b.dataset.r21Node));$("r21ForestBack").onclick=returnToFarm;$("r21ForestCollectAll").onclick=collectForestAll;$("r21ForestCraft").onclick=openCraftTools;
     clearInterval(window.__r21ForestTick);window.__r21ForestTick=setInterval(()=>{if(currentScene!=="forbiddenForest"){clearInterval(window.__r21ForestTick);return}const x=$("r21ForestCountdown");if(x)x.textContent=forestCountdown();const ff=processForest(own());if(Number(layer.dataset.r21Count||-1)!==ff.nodes.length){layer.dataset.r21Count=String(ff.nodes.length);renderForest()}},1000);
   }
-  function collectForestNode(id){const s=own(),f=processForest(s),i=f.nodes.findIndex(n=>n.id===id);if(i<0)return;const n=f.nodes[i],q=1+Math.floor(Math.random()*3);f.nodes.splice(i,1);addTool(s,n.kind,q);commit(s);renderForest();const x=TOOLS[n.kind];globalThis.YN_R23_rewardToast?.(n.kind==="wood"?"🪵":"🪨",`ได้รับ${x.name}`,q,x.image)||showWeatherToast?.(`${n.kind==="wood"?"🪵 เนื้อไม้":"🪨 ก้อนหิน"} ×${q} เข้ากระเป๋าแล้ว`)}
-  function collectForestAll(){const s=own(),f=processForest(s);if(!f.nodes.length)return message("🧺 เก็บทั้งหมด","ตอนนี้ไม่มีไม้หรือก้อนหินให้เก็บค่ะ");let wood=0,stone=0;for(const n of f.nodes){const q=1+Math.floor(Math.random()*3);if(n.kind==="wood")wood+=q;else stone+=q}f.nodes=[];addTool(s,"wood",wood);addTool(s,"stone",stone);commit(s,{flush:true});renderForest();message("🧺 เก็บทั้งหมดแล้ว",`🪵 เนื้อไม้ ×${wood}<br>🪨 ก้อนหิน ×${stone}<br><small>เข้ากระเป๋า → อุปกรณ์การคลังเรียบร้อยแล้ว</small>`)}
+  function collectForestNode(id){if(!guardForbiddenForestR343())return;const s=own(),f=processForest(s),i=f.nodes.findIndex(n=>n.id===id);if(i<0)return;const n=f.nodes[i],q=1+Math.floor(Math.random()*3);f.nodes.splice(i,1);addTool(s,n.kind,q);commit(s);renderForest();const x=TOOLS[n.kind];globalThis.YN_R23_rewardToast?.(n.kind==="wood"?"🪵":"🪨",`ได้รับ${x.name}`,q,x.image)||showWeatherToast?.(`${n.kind==="wood"?"🪵 เนื้อไม้":"🪨 ก้อนหิน"} ×${q} เข้ากระเป๋าแล้ว`)}
+  function collectForestAll(){if(!guardForbiddenForestR343())return;const s=own(),f=processForest(s);if(!f.nodes.length)return message("🧺 เก็บทั้งหมด","ตอนนี้ไม่มีไม้หรือก้อนหินให้เก็บค่ะ");let wood=0,stone=0;for(const n of f.nodes){const q=1+Math.floor(Math.random()*3);if(n.kind==="wood")wood+=q;else stone+=q}f.nodes=[];addTool(s,"wood",wood);addTool(s,"stone",stone);commit(s,{flush:true});renderForest();message("🧺 เก็บทั้งหมดแล้ว",`🪵 เนื้อไม้ ×${wood}<br>🪨 ก้อนหิน ×${stone}<br><small>เข้ากระเป๋า → อุปกรณ์การคลังเรียบร้อยแล้ว</small>`)}
   function woolTotal(s){const w=s?.alpaca?.inventory?.wool||{};return Object.values(w).reduce((a,b)=>a+int(b),0)}
   function consumeAnyWool(s,q){if(isAdmin())return true;const w=s?.alpaca?.inventory?.wool||{};if(woolTotal(s)<q)return false;for(const k of Object.keys(w)){const take=Math.min(q,int(w[k]));w[k]-=take;q-=take;if(q<=0)break}return q<=0}
   function jellyTotalV1(s){return Object.values(s?.specialAnimals||{}).reduce((a,b)=>a+int(b),0)}
   function consumeAnyJellyV1(s,q=1){if(isAdmin())return true;const m=s.specialAnimals||{};if(jellyTotalV1(s)<q)return false;for(const k of Object.keys(m)){const take=Math.min(q,int(m[k]));m[k]-=take;q-=take;if(q<=0)break}return q<=0}
   function openCraftTools(){
+    if(currentScene==="forbiddenForest"&&!guardForbiddenForestR343())return;
     const s=own();
     $("modalContent").innerHTML=`<section class="feature-panel r21-craft-tools r23-craft-tools"><h2>🧰 คราฟอุปกรณ์</h2><p class="r23-craft-note">เลือกจำนวนครั้งได้สูงสุด 10 ครั้ง • กดครั้งเดียว ระบบรวมวัตถุดิบและผลลัพธ์ให้เลย</p><div class="r21-craft-grid"><article><img src="item-rope.png"><div><b>เชือก</b><small>ต่อ 1 ครั้ง: ไม้ 20 + ขนอัลปาก้าสีใดก็ได้ 2</small><em>สำเร็จ 100% • ได้ 1–5 ชิ้น/ครั้ง</em><label class="r23-craft-qty">จำนวนครั้ง <input data-r23-craft-qty="rope" type="number" min="1" max="10" value="1"></label></div><button data-r21-craft="rope">คราฟเชือก</button></article><article><img src="item-steel.png"><div><b>เหล็ก</b><small>ต่อ 1 ครั้ง: ก้อนหิน 20 + แมงกระพรุน V1 ใดก็ได้ 1</small><em>สำเร็จ 100% • ได้ 2–8 ชิ้น/ครั้ง</em><label class="r23-craft-qty">จำนวนครั้ง <input data-r23-craft-qty="steel" type="number" min="1" max="10" value="1"></label></div><button data-r21-craft="steel">คราฟเหล็ก</button></article></div><p class="r21-stock-line">มี: 🪵 ${toolQty(s,"wood")} • 🪨 ${toolQty(s,"stone")} • 🧵 ${toolQty(s,"rope")} • ⚙️ ${toolQty(s,"steel")}</p></section>`;
     document.querySelectorAll("[data-r21-craft]").forEach(b=>b.onclick=()=>{const kind=b.dataset.r21Craft,input=document.querySelector(`[data-r23-craft-qty="${kind}"]`),qty=Math.max(1,Math.min(10,int(input?.value)||1));craftTool(kind,qty,b)});openModal()
@@ -25238,59 +25250,38 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function tractorSummaryHTML(summary){return Object.entries(summary).map(([k,q])=>`<div><b>${safeHtml(CROPS?.[k]?.name||k)}</b> ×${Number(q)||0}</div>`).join("")}
   async function r30Tractor(){
     if(tractorLock||visitContext||guardResting())return;
-    if(!cloudReady||!currentMemberKey)return message("🚜 รถไถยังไม่พร้อม","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้งในอีกสักครู่");
     const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0)),a=page*12,b=Math.min(a+12,PLOT_COUNT);
-    tractorLock=true;tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;
-    let started=Date.now();
+    tractorLock=true;tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;try{showTractorWorking?.()}catch(_){}
     try{
-      /* R35: flush prior rapid plant/boost actions first.  The local state after this
-         flush is the authority; do NOT re-import the separate garden document because
-         an older garden snapshot was the source of the disappearing-crop tractor bug. */
       await settlePendingCloudSave?.();
-      let local=normalizeState(cloneData(ownState||state),currentMember);
-      const ready=[];
-      for(let x=a;x<b;x++){
-        const plot=local.plots?.[x];if(!plot)continue;
-        try{ensurePlotPhaseStandalone(plot)}catch(_){try{ensurePlotPhase(plot)}catch(__){}}
-        if(!plot.crop||plot.phase!=="ready")continue;
-        if(plot.takeover&&Number(plot.takeover.until||0)>gameNow()&&plot.takeover.by!==currentMemberKey)continue;
-        ready.push(x);
-      }
-      if(!ready.length)throw new Error("ฟาร์มหน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยวค่ะ");
-      try{showTractorWorking?.()}catch(_){}
       const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
       let next=null,summary={},plots=0;
       await fs.runTransaction(db,async tx=>{
-        const ss=await tx.get(saveRef);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const remote=normalizeState(ss.data(),currentMember),remoteRev=Number(remote.clientSaveRevision)||0,localRev=Number(local.clientSaveRevision)||0;
-        /* If another committed action is newer, use it; otherwise keep the just-flushed
-           local state.  This makes latest-state win without importing a stale garden doc. */
-        const st=remoteRev>localRev?remote:local;
+        const [ss,gs]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember),gardenPlots=(gs.exists()&&Array.isArray(gs.data()?.plots)?gs.data().plots:st.plots).map(normalizePlot);
+        st.plots=cloneData(gardenPlots);
         for(let x=a;x<b;x++){
-          const plot=st.plots?.[x];if(!plot)continue;
-          try{ensurePlotPhaseStandalone(plot)}catch(_){try{ensurePlotPhase(plot)}catch(__){}}
-          if(!plot.crop||plot.phase!=="ready")continue;
+          const plot=st.plots?.[x];if(!plot||!cropReady(plot))continue;
           if(plot.takeover&&Number(plot.takeover.until||0)>gameNow()&&plot.takeover.by!==currentMemberKey)continue;
           const k=plot.crop,q=plot.angel?10:Math.max(1,Number(CROPS?.[k]?.yield||1));
           if(typeof grantHarvestYield==="function")grantHarvestYield(st,k,q);else{st.bag=st.bag||{};st.bag[k]=(Number(st.bag[k])||0)+q}
           summary[k]=(summary[k]||0)+q;st.plots[x]=emptyPlot();plots++;
         }
-        if(!plots)throw new Error("พืชพร้อมเก็บถูกเปลี่ยนสถานะก่อนรถไถทำงาน กรุณาลองอีกครั้ง");
+        if(!plots)throw new Error("ฟาร์มหน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยวค่ะ");
         try{incrementMissionOn(st,"harvestCrops",plots)}catch(_){}try{incrementMissionOn(st,"dailyHarvestCrops",Object.values(summary).reduce((n,q)=>n+Number(q||0),0))}catch(_){}
-        const rev=Math.max(Number(st.clientSaveRevision)||0,localRev,remoteRev)+1;st.clientSaveRevision=rev;st.clientSaveAt=Date.now();next=cloneData(st);
+        const rev=Math.max(Number(st.clientSaveRevision)||0,Number(ownState?.clientSaveRevision)||0)+1;st.clientSaveRevision=rev;st.clientSaveAt=Date.now();
+        next=st;
         tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(gardenRef,{plots:cloneData(st.plots),clientSaveRevision:rev,updatedAt:fs.serverTimestamp()},{merge:false});
       });
-      /* Keep the tractor visible briefly so one tap visibly feels like a tractor action. */
-      const wait=Math.max(0,650-(Date.now()-started));if(wait)await new Promise(r=>setTimeout(r,wait));
       ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);try{lastGardenHash=gardenHash(ownState.plots)}catch(_){}draw();
-      try{if(typeof V181_campaignScoreLater==="function")await V181_campaignScoreLater(summary)}catch(e){console.warn("R35 tractor campaign",e)}
-      message("🚜 รอบนี้รถไถได้รับ",`${tractorSummaryHTML(summary)}<small style="display:block;margin-top:7px">ผลผลิตเข้ากระเป๋าจริง • แปลงถูกเคลียร์ • บันทึกเรียบร้อยแล้ว</small>`);
+      try{if(typeof V181_campaignScoreLater==="function")await V181_campaignScoreLater(summary)}catch(e){console.warn("R32 tractor campaign",e)}
+      message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",`${tractorSummaryHTML(summary)}<small style="display:block;margin-top:7px">เข้ากระเป๋าและเคลียร์แปลงเรียบร้อย • บันทึกแล้ว</small>`);
     }catch(e){message("🚜 รถไถเก็บเกี่ยวไม่ได้",e?.message||"กรุณาลองใหม่")}
     finally{try{hideTractorWorking?.()}catch(_){}tractorBusy=false;tractorLock=false;if(btn)btn.disabled=false}
   }
   function tractorCapture(e){const b=e.target?.closest?.('#tractorBtn,[data-s2-tool="tractor"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();try{$("s2FarmToolsMenu")?.classList.add("hidden")}catch(_){}r30Tractor()}
-  document.addEventListener("pointerup",tractorCapture,true);
+  /* R34.1: legacy pointer-up tractor hook disabled; R33/R34 fast handler is the single tractor authority. */
   document.addEventListener("click",e=>{const b=e.target?.closest?.('#tractorBtn,[data-s2-tool="tractor"]');if(b){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}},true);
   bulkHarvestCurrentPage=r30Tractor;
 
@@ -25531,9 +25522,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       summary[`🧩 จิ๊กซอว์ #${idx+1}`]=(summary[`🧩 จิ๊กซอว์ #${idx+1}`]||0)+1;
       summary["⛽ แกลลอนน้ำมันรถน้องน้ำผึ้ง"]=(summary["⛽ แกลลอนน้ำมันรถน้องน้ำผึ้ง"]||0)+fuel;
     }
-    if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});
-    try{await settlePendingCloudSave?.();await flushCloudSave?.()}catch(e){return message("เปิดกล่องไม่สำเร็จ","บันทึกรางวัลไม่สำเร็จ กรุณาลองใหม่")}
-    showBoxSummary("🎁 เปิดกล่องแฮมสเตอร์แล้ว",summary);
+    if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await settlePendingCloudSave?.()}catch(e){console.warn("R34.1 hamster box save",e)}try{updateMeritUI()}catch(_){}showBoxSummary("🎁 เปิดกล่องแฮมสเตอร์แล้ว",summary);
   }
   function plantQty(){return Math.random()<.88?30+Math.floor(Math.random()*91):150+Math.floor(Math.random()*101)}
   async function openPlantBoxes(qty){
@@ -26294,6 +26283,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     if(key){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showLock33(key)}
   }
   window.addEventListener("pointerdown",captureLocks33,true);window.addEventListener("click",captureLocks33,true);
+  globalThis.YN_R33_SHOW_LOCK=showLock33;globalThis.YN_R33_HAS_UNLOCK=hasUnlock33;
 
   /* ---------- Hamster 3 -> 6 capacity ---------- */
   function guardianCount33(){try{const farm=Math.max(2,Math.min(4,Number(typeof currentFarmNo==="function"?currentFarmNo():(Number(farmPlotPage)||0)+1)||2));return live33()?.farmGuardians?.[String(farm)]?.hamsters?.length||0}catch(_){return 0}}
@@ -26302,26 +26292,40 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
   /* ---------- Fast local-first tractor: no read/transaction before the UI changes ---------- */
   let tractorBusy33=false;
-  function fastTractor33(){
+  async function fastTractor33(){
     if(tractorBusy33||visitContext||guardResting?.())return;tractorBusy33=true;
-    const s=ensureR33State(live33());if(!s){tractorBusy33=false;return}
-    const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0)),a=page*12,b=Math.min(a+12,Number(PLOT_COUNT)||48),got={};let harvested=0,totalYield=0;
-    for(let i=a;i<b;i++){
-      const p=s.plots?.[i];if(!p?.crop)continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){try{ensurePlotPhase?.(p)}catch(__){}}
-      if(p.phase!=="ready")continue;if(p.takeover&&Number(p.takeover.until)>now33()&&p.takeover.by!==currentMemberKey)continue;
-      const k=p.crop,c=CROPS?.[k],base=Math.max(1,Number(c?.yield)||1),mult=p.angel?10:1,q=base*mult;
-      s.bag=s.bag||{};s.bag[k]=int33(s.bag[k])+q;got[k]=(got[k]||0)+q;totalYield+=q;harvested++;s.plots[i]=emptyPlot();
-    }
-    if(!harvested){tractorBusy33=false;return message?.("🚜 รถไถ","ฟาร์มหน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยวค่ะ")} 
-    ownState=s;if(!visitContext)state=s;try{incrementMissionOn?.(s,"harvestCrops",harvested)}catch(_){}try{incrementMissionOn?.(s,"dailyHarvestCrops",totalYield)}catch(_){}
-    try{saveLocalOnly(s)}catch(_){}try{draw?.()}catch(_){}try{save?.()}catch(_){}
-    try{showTractorWorking?.()}catch(_){}
-    setTimeout(()=>{
-      try{hideTractorWorking?.()}catch(_){}
+    const btn=$33("tractorBtn");if(btn)btn.disabled=true;try{showTractorWorking?.()}catch(_){}
+    let before=null;
+    try{
+      /* Finish any older crop save first so it cannot overwrite this harvest later. */
+      try{await settlePendingCloudSave?.()}catch(e){console.warn("R34.1 tractor settle",e)}
+      const s=ensureR33State(live33());if(!s)throw new Error("ไม่พบข้อมูลฟาร์ม");before=clone33(s);
+      const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0)),a=page*12,b=Math.min(a+12,Number(PLOT_COUNT)||48),got={};let harvested=0,totalYield=0;
+      for(let i=a;i<b;i++){
+        const p=s.plots?.[i];if(!p?.crop)continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){try{ensurePlotPhase?.(p)}catch(__){}}
+        if(p.phase!=="ready")continue;if(p.takeover&&Number(p.takeover.until)>now33()&&p.takeover.by!==currentMemberKey)continue;
+        const k=p.crop,c=CROPS?.[k],base=Math.max(1,Number(c?.yield)||1),mult=p.angel?10:1,q=base*mult;
+        if(typeof grantHarvestYield==="function")grantHarvestYield(s,k,q);else{s.bag=s.bag||{};s.bag[k]=int33(s.bag[k])+q}
+        got[k]=(got[k]||0)+q;totalYield+=q;harvested++;s.plots[i]=emptyPlot();
+      }
+      if(!harvested)throw new Error("ฟาร์มหน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยวค่ะ");
+      try{incrementMissionOn?.(s,"harvestCrops",harvested)}catch(_){}try{incrementMissionOn?.(s,"dailyHarvestCrops",totalYield)}catch(_){}
+      s.clientSaveRevision=Math.max(Number(s.clientSaveRevision)||0,Number(before?.clientSaveRevision)||0)+1;s.clientSaveAt=Date.now();
+      ownState=s;if(!visitContext)state=s;saveLocalOnly(s);try{draw?.()}catch(_){}
+      /* One atomic cloud batch: bag + cleared plots + merit/profile view. Success is shown only after commit. */
+      const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      batch.set(saveRef,{...clone33(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      batch.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone33(s.plots),clientSaveRevision:s.clientSaveRevision,updatedAt:fs.serverTimestamp()},{merge:true});
+      batch.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      await batch.commit();try{lastGardenHash=plotHash?.(s.plots)||lastGardenHash}catch(_){}
+      try{if(typeof V181_campaignScoreLater==="function")V181_campaignScoreLater(got)}catch(e){console.warn("R34.1 tractor campaign",e)}
       const rows=Object.entries(got).map(([k,q])=>`<article><img src="${CROPS?.[k]?.readyImg||CROPS?.[k]?.selectImg||""}" alt=""><b>${safe33(CROPS?.[k]?.name||k)}</b><span>×${q}</span></article>`).join("");
-      if($33("modalContent"))$33("modalContent").innerHTML=`<section class="feature-panel r34-reward-panel"><h2>🚜 รอบนี้ได้รับ</h2><p>เก็บเกี่ยว ${harvested} แปลง • ผลผลิตรวม ${totalYield} ชิ้น</p><div class="r34-reward-scroll">${rows}</div><small>ผลผลิตเข้ากระเป๋าและเข้าคิวบันทึกแล้วค่ะ</small><button id="r34TractorDone" class="primary-spooky-action">รับทราบ</button></section>`;
-      if($33("r34TractorDone"))$33("r34TractorDone").onclick=closeModal;try{openModal?.()}catch(_){}tractorBusy33=false;
-    },720);
+      if($33("modalContent"))$33("modalContent").innerHTML=`<section class="feature-panel r34-reward-panel"><h2>🚜 รอบนี้ได้รับ</h2><p>เก็บเกี่ยว ${harvested} แปลง • ผลผลิตรวม ${totalYield} ชิ้น</p><div class="r34-reward-scroll">${rows}</div><small>ผลผลิตเข้ากระเป๋าและบันทึกเรียบร้อยแล้วค่ะ</small><button id="r34TractorDone" class="primary-spooky-action">รับทราบ</button></section>`;
+      if($33("r34TractorDone"))$33("r34TractorDone").onclick=closeModal;try{openModal?.()}catch(_){}
+    }catch(e){
+      if(before){ownState=ensureR33State(normalizeState(clone33(before),currentMember),currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState);draw?.()}catch(_){}}
+      message?.("🚜 รถไถเก็บเกี่ยวไม่ได้",e?.message||"กรุณาลองใหม่");
+    }finally{try{hideTractorWorking?.()}catch(_){}tractorBusy33=false;if(btn)btn.disabled=false}
   }
   function tractorCapture33(e){const b=e.target?.closest?.("#tractorBtn,[data-s2-tool='tractor']");if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();try{$33("s2FarmToolsMenu")?.classList.add("hidden")}catch(_){}fastTractor33()}
   window.addEventListener("pointerdown",tractorCapture33,true);window.addEventListener("click",tractorCapture33,true);try{bulkHarvestCurrentPage=fastTractor33}catch(_){}
@@ -26664,9 +26668,166 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 })();
 
 
-/* S2 R35 URGENT HOTFIX — login open / tractor authority / hamster fuel / royal alpaca exclusivity */
-(function YN_S2_R35_URGENT(){
-  const BUILD="S2-R35-URGENT-LAUNCH-20260903";
-  try{globalThis.YAINOO_BUILD=BUILD}catch(_){}
+/* S2 R34.1 — URGENT LOGIN / TRACTOR / HAMSTER BOX / ROYAL ALPACA HOTFIX */
+(function(){
+  globalThis.YAINOO_BUILD="S2-R34.1-URGENT-HOTFIX-20260903";
+  console.info(globalThis.YAINOO_BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.2 — ACCOUNT SWITCH / RAPID PLANT / FRIEND HAMSTER VISIBILITY
+   2026-09-03
+   ===================================================================== */
+(function YN_R342_CRITICAL_HOTFIX(){
+  "use strict";
+  const BUILD="S2-R34.2-ACCOUNT-PLANT-FRIEND-HOTFIX-20260903";
+  const $=id=>document.getElementById(id);
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const farmNo=()=>Math.max(1,Math.min(4,Number(typeof currentFarmNo==="function"?currentFarmNo():(Number(farmPlotPage)||0)+1)||1));
+
+  /* ---------------------------------------------------------------
+     1) ACCOUNT SWITCH
+     Session ownership is enforced only after the new account has fully
+     bootstrapped. The login bootstrap intentionally reads the previous
+     activeSessionId before stamping a new one, so treating that first read
+     as a conflict made every normal account switch look like a stale device.
+     --------------------------------------------------------------- */
+  const sessionAssertBase=typeof assertCurrentCloudSession==="function"?assertCurrentCloudSession:null;
+  assertCurrentCloudSession=function(raw,player){
+    if(!cloudReady)return; // bootstrap read: old activeSessionId is expected
+    return sessionAssertBase?.(raw,player);
+  };
+
+  const logoutBase=typeof logout==="function"?logout:null;
+  if(logoutBase)logout=async function(){
+    try{await settlePendingCloudSave?.()}catch(e){console.warn("R34.2 pre-logout flush",e)}
+    try{return await logoutBase.apply(this,arguments)}finally{
+      try{stopOnlineListeners?.()}catch(_){}
+      cloudSessionId="";
+      cloudSessionSuperseded=false;
+      cloudSaveInFlight=null;
+      lastGardenHash="";
+      lastPublishedMerit=null;
+      SERVER_CLOCK_OFFSET_MS=0;SERVER_CLOCK_EPOCH_MS=0;SERVER_CLOCK_PERF_BASE=0;
+    }
+  };
+
+  /* ---------------------------------------------------------------
+     2) RAPID INDIVIDUAL PLANTING
+     Choose a crop once, then every empty-plot tap for the next 25 seconds
+     plants that same crop immediately. This turns a 12-plot burst into
+     12 plot taps instead of reopening the seed modal 12 times. The actual
+     crop mutation remains the existing R22 local-first authoritative flow.
+     --------------------------------------------------------------- */
+  let quickCropKey="",quickCropUntil=0;
+  const quickKeyStore=()=>`yn:r342:quickCrop:${currentMemberKey||currentMember||"guest"}`;
+  try{quickCropKey=String(sessionStorage.getItem(quickKeyStore())||"")}catch(_){}
+  function armQuickCrop(key){
+    if(!CROPS?.[key])return;
+    quickCropKey=String(key);quickCropUntil=Date.now()+25000;
+    try{sessionStorage.setItem(quickKeyStore(),quickCropKey)}catch(_){}
+  }
+  const plantBase=typeof Y26_plantCrop==="function"?Y26_plantCrop:null;
+  if(plantBase)Y26_plantCrop=function(index,key,button){armQuickCrop(key);return plantBase.call(this,index,key,button)};
+
+  const tapBase=typeof tapPlot==="function"?tapPlot:null;
+  if(tapBase)tapPlot=async function(index){
+    if(!visitContext&&!guardResting?.()){
+      const s=ownState||state,p=s?.plots?.[index];
+      try{ensurePlotPhase?.(p)}catch(_){}
+      if(p&&!p.crop&&quickCropKey&&CROPS?.[quickCropKey]&&Date.now()<quickCropUntil){
+        quickCropUntil=Date.now()+25000;
+        return Y26_plantCrop(index,quickCropKey,null);
+      }
+    }
+    return tapBase.apply(this,arguments);
+  };
+
+  /* ---------------------------------------------------------------
+     3) FRIEND PUBLIC HAMSTERS
+     Save only public placed hamster instances to /gardens, which is already
+     readable by signed-in visitors. Stored inventory remains private.
+     The signature ignores walking coordinates so movement does not create
+     extra Firestore writes; placement/removal/color changes do publish.
+     --------------------------------------------------------------- */
+  let lastPublicHamsterSig="";
+  function publicHamsters(s=ownState||state){
+    const out={"2":[],"3":[],"4":[]},guards=s?.farmGuardians||{};
+    for(const n of [2,3,4]){
+      const arr=Array.isArray(guards[String(n)]?.hamsters)?guards[String(n)].hamsters:[];
+      out[String(n)]=arr.filter(Boolean).slice(0,6).map(h=>({
+        id:String(h.id||""),color:String(h.color||"gray"),
+        x:Number(h.x??h.tx??50)||50,y:Number(h.y??h.ty??82)||82,
+        faceLeft:Boolean(h.faceLeft),updatedAt:Number(h.updatedAt)||0
+      })).filter(h=>h.id);
+    }
+    return out;
+  }
+  function publicHamsterSig(s=ownState||state){
+    const p=publicHamsters(s);return JSON.stringify(Object.fromEntries(Object.entries(p).map(([k,a])=>[k,a.map(h=>[h.id,h.color])])));
+  }
+  async function syncPublicHamsters(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext||!ownState)return;
+    const sig=publicHamsterSig(ownState);if(!force&&sig===lastPublicHamsterSig)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{
+        memberKey:currentMemberKey,displayName:currentProfileDisplayName?.()||currentMember,
+        publicHamsters:clone(publicHamsters(ownState)),publicOutdoorVersion:"R34.2",updatedAt:fs.serverTimestamp()
+      },{merge:true});
+      lastPublicHamsterSig=sig;
+    }catch(e){console.warn("R34.2 public hamster sync",e)}
+  }
+
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){
+    const r=await initBase.apply(this,arguments);
+    lastPublicHamsterSig="";await syncPublicHamsters(true);return r;
+  };
+  const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;
+  if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);await syncPublicHamsters(false);return r};
+
+  const FRIEND_LAYER_ID="r342FriendHamsterLayer";
+  function clearFriendHamsters(){const l=$(FRIEND_LAYER_ID);if(l)l.remove()}
+  function renderFriendHamsters(){
+    const screen=$("gameScreen");if(!screen||!visitContext){clearFriendHamsters();return}
+    const n=farmNo();if(n<2||n>4){clearFriendHamsters();return}
+    const map=visitContext.publicHamsters||{},arr=Array.isArray(map[String(n)])?map[String(n)]:[];
+    let layer=$(FRIEND_LAYER_ID);if(!layer){layer=document.createElement("div");layer.id=FRIEND_LAYER_ID;screen.appendChild(layer)}
+    const colors=globalThis.YN_R25?.COLORS||{};
+    layer.innerHTML=arr.map(h=>{const meta=colors[h.color]||colors.gray||{},src=meta.idle||"gray_hamster_idle.webp";return `<span class="r342-friend-hamster r25-hamster" style="left:${Math.max(14,Math.min(86,Number(h.x)||50))}%;top:${Math.max(75,Math.min(91,Number(h.y)||82))}%" aria-hidden="true"><span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite${h.faceLeft?" face-left":""}" style="background-image:url('${src}');background-position:0 0"></span></span>`}).join("");
+  }
+
+  const visitBase=typeof visitFriend==="function"?visitFriend:null;
+  if(visitBase)visitFriend=async function(targetKey,targetName){
+    const r=await visitBase.apply(this,arguments);
+    if(!visitContext)return r;
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"gardens",targetKey));
+      const g=snap.exists()?snap.data()||{}:{};
+      visitContext.publicHamsters=g.publicHamsters&&typeof g.publicHamsters==="object"?clone(g.publicHamsters):{"2":[],"3":[],"4":[]};
+      /* Mirror into visitor state as public display data only. */
+      state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
+      for(const n of [2,3,4])state.farmGuardians[String(n)]={hamsters:clone(visitContext.publicHamsters[String(n)]||[]),stored:[],removedIds:[]};
+      try{globalThis.YN_R25?.ensureGuardianState?.(state)}catch(_){}
+    }catch(e){console.warn("R34.2 friend hamster load",e)}
+    setTimeout(renderFriendHamsters,40);return r;
+  };
+  const farmPageBase=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;
+  if(farmPageBase)setFarmPlotPage=function(){const r=farmPageBase.apply(this,arguments);setTimeout(renderFriendHamsters,30);return r};
+  const returnFriendBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(returnFriendBase)returnFromFriendVisit=function(){clearFriendHamsters();return returnFriendBase.apply(this,arguments)};
+  const drawBase=typeof draw==="function"?draw:null;
+  if(drawBase)draw=function(){const r=drawBase.apply(this,arguments);if(visitContext)setTimeout(renderFriendHamsters,0);return r};
+
+  window.addEventListener("pageshow",()=>{if(visitContext)setTimeout(renderFriendHamsters,50)},{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&visitContext)setTimeout(renderFriendHamsters,50)},{passive:true});
+
+  globalThis.YN_R342={BUILD,syncPublicHamsters,renderFriendHamsters,armQuickCrop};
+  globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+
+/* S2 R34.3 — FORBIDDEN FOREST HARD LOCK HOTFIX */
+(function(){globalThis.YAINOO_BUILD="S2-R34.3-FOREST-HARD-LOCK-20260903";console.info(globalThis.YAINOO_BUILD,"loaded");})();
