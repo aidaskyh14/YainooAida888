@@ -12236,6 +12236,10 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   async function startDogCare(type,pen){try{const s=normalizeState(cloneData(ownState||state),currentMember);resetDailyExtras(s);const a=s.dogCare[`pen${pen}`][type],t=NOW();if(a.count>=4)throw new Error("วันนี้ทำครบ 4 ครั้งแล้ว");if(a.cooldownUntil>t)throw new Error("ตอนนี้ยังไม่สามารถทำได้อีก");const dogs=dogsInHotelPen(pen,s),cats=(s.cats||[]).filter(c=>c.placedHotel&&Number((s.hotelPetPenMap?.[String(c.id)]||c.hotelPen||1))===Number(pen)),pets=dogs.concat(cats);if(!pets.length)throw new Error("คอกนี้ยังไม่มีน้องหมาหรือน้องแมว");const reward=pets.reduce(n=>n+rand(3,10),0);a.startedAt=t;a.finishAt=t+5*MIN;a.reward=reward;a.claimed=false;a.count++;a.cooldownUntil=a.finishAt+2*HOUR;ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}dogCareStatus(type,pen)}catch(e){message("เริ่มไม่ได้",e.message||"กรุณาลองใหม่")}}
   function dogCareStatus(type,pen){const a=dogCareState(type,pen),m=careMeta(type);$("modalContent").innerHTML=`<section class="feature-panel ynu-dog-care ynu-dog-care-status"><img src="${m.image}" alt="${m.title}"><h2>${m.title}</h2><p>กำลัง${m.title}...</p><strong id="ynuDogCareTimer">${fmt(a.finishAt-NOW())}</strong><small>ออกไปทำอย่างอื่นหรือออกจากเกมได้ เวลายังคงนับต่อ</small></section>`;openModal();const t=setInterval(()=>{const x=dogCareState(type,pen);if(x.finishAt<=NOW()){clearInterval(t);dogCareResult(type,pen)}else if($("ynuDogCareTimer"))$("ynuDogCareTimer").textContent=fmt(x.finishAt-NOW());else clearInterval(t)},1000)}
   function dogCareResult(type,pen){const a=dogCareState(type,pen),m=careMeta(type);$("modalContent").innerHTML=`<section class="feature-panel ynu-dog-care"><img src="${m.image}" alt="${m.title}"><h2>${m.done}</h2><strong>ได้รับ +${a.reward} กุศล</strong><p>${m.tail}</p><button id="ynuClaimDogCare">รับกุศล</button></section>`;$("ynuClaimDogCare").onclick=()=>claimDogCare(type,pen);openModal()}
+  /* R34.9.2: expose the existing hotel-care flow for later hotel renderers.
+     R32.9 lives in a different IIFE, so direct showDogCare(...) calls there
+     were ReferenceError'd and silently caught, making Bath/Massage look dead. */
+  globalThis.YN_DOG_CARE_SHOW=(type,pen)=>showDogCare(type,pen);
   async function claimDogCare(type,pen){try{const s=normalizeState(cloneData(ownState||state),currentMember),a=s.dogCare[`pen${pen}`][type];if(a.claimed||!a.finishAt||a.finishAt>NOW())throw new Error("ยังไม่มีรางวัลให้รับ");const reward=Number(a.reward)||0;s.merit=Number(s.merit||0)+reward;a.claimed=true;a.startedAt=0;a.finishAt=0;a.reward=0;if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);ownState=s;state=s;saveLocalOnly(s);updateMeritUI();try{save()}catch(_){}closeModal();showWeatherToast(`🙏 รับ +${reward} กุศลแล้ว`)}catch(e){message("รับไม่ได้",e.message||"กรุณาลองใหม่")}}
   const _renderDog=renderDogHotelScene;renderDogHotelScene=function(){const r=_renderDog();if(currentScene!=="dogHotel")return r;const layer=$("sceneInteractiveLayer");if(layer&&!$("ynuDogBathBtn")){layer.insertAdjacentHTML("beforeend",`<div class="ynu-dog-care-buttons"><button id="ynuDogBathBtn" title="อาบน้ำสัตว์">💧</button><button id="ynuDogMassageBtn" title="นวดตัวสัตว์">🖐️</button></div>`);$("ynuDogBathBtn").onclick=()=>showDogCare("bath",currentDogHotelPen);$("ynuDogMassageBtn").onclick=()=>showDogCare("massage",currentDogHotelPen)}return r};
 
@@ -26091,8 +26095,8 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     try{setSceneNav({backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",backAction:pen>1?()=>setDogHotelPen(pen-1):returnToFarm,nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",nextAction:pen<4?()=>setDogHotelPen(pen+1):returnToFarm})}catch(_){ }
     const m=$("dogMemberCheckBtn");if(m)m.onclick=()=>showDogHotelRoster();
     const b=$("dogPenCollectAllBtn");if(b)b.onclick=()=>{try{collectAllDogDrops()}catch(e){console.warn(e)}};
-    const bath=$("r329BathBtn");if(bath)bath.onclick=()=>{try{showDogCare("bath",pen)}catch(e){console.warn(e)}};
-    const massage=$("r329MassageBtn");if(massage)massage.onclick=()=>{try{showDogCare("massage",pen)}catch(e){console.warn(e)}};
+    const bath=$("r329BathBtn");if(bath)bath.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("bath",pen)}catch(e){console.warn("R34.9.2 hotel bath",e)}};
+    const massage=$("r329MassageBtn");if(massage)massage.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("massage",pen)}catch(e){console.warn("R34.9.2 hotel massage",e)}};
     const test=$("r329HotelTestBtn");if(test)test.onclick=showTest;
     lastPen=pen;return true;
   }
@@ -27212,3 +27216,138 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.9.1 — EARN-ONLY ARENA STUCK RESULT RECOVERY — 2026-09-04
+   Scope: ONLY memberKey "earn" / member "Earn".
+   Purpose:
+   - Never let a forbidden leaderboard write trap Earn in the win modal.
+   - Receive Score and X both acknowledge locally first and close immediately.
+   - Preserve an idempotent recovered score receipt in Earn's own state.
+   - Best-effort use the normal game save queue; cloud/public score publishing
+     is secondary and can never reopen or block the result modal.
+   No other account or game system is changed.
+   ===================================================================== */
+(function YN_R3491_EARN_ARENA_RECOVERY(){
+  "use strict";
+  const BUILD="S2-R34.9.1-EARN-ARENA-RECOVERY-20260904";
+  const NOW=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const HOUR_MS=60*60*1000;
+  const isEarn=()=>String(currentMemberKey||"").toLowerCase()==="earn"||String(currentMember||"").toLowerCase()==="earn";
+  const live=()=>ownState||state;
+  let busy=false;
+
+  function sig(f){
+    return [Number(f?.startedAt||0),Number(f?.finishAt||0),String(f?.jellyId||""),Number(f?.score||0)].join(":");
+  }
+  const suppressKey=()=>`yainoo:earn-arena-dismissed:${currentMemberKey||"earn"}`;
+  function readSuppressed(){try{return String(localStorage.getItem(suppressKey())||"")}catch(_){return ""}}
+  function writeSuppressed(v){try{localStorage.setItem(suppressKey(),String(v||""))}catch(_){}}
+
+  function absorbScore(s,f){
+    if(!s||!f)return;
+    s.arena=s.arena&&typeof s.arena==="object"?s.arena:{};
+    const key=sig(f),score=Math.max(1,Math.min(6,Math.floor(Number(f.score)||1)));
+    const box=s.arena.earnRecovered&&typeof s.arena.earnRecovered==="object"?s.arena.earnRecovered:{};
+    const receipts=box.receipts&&typeof box.receipts==="object"?{...box.receipts}:{};
+    if(!receipts[key]){
+      receipts[key]=score;
+      box.score=(Number(box.score)||0)+score;
+    }
+    box.receipts=receipts;box.updatedAt=Date.now();
+    s.arena.earnRecovered=box;
+    s.arena.cooldownUntil=Math.max(Number(s.arena.cooldownUntil)||0,Number(f.finishAt||NOW())+HOUR_MS);
+  }
+
+  function closeArenaUI(){
+    try{closeModal?.()}catch(_){}
+    try{const m=document.getElementById("modal");if(m)m.classList.add("hidden")}catch(_){}
+    try{if(currentScene==="jellyfishArena")drawArena?.()}catch(_){}
+  }
+
+  async function recoverEarnFight(reason="ack"){
+    if(!isEarn()||busy)return false;
+    const s=live(),f=s?.arena?.fight;
+    if(!f||!f.win||Number(f.finishAt||0)>NOW()){closeArenaUI();return false}
+    busy=true;
+    const signature=sig(f);
+    try{
+      /* UI/local state first. This guarantees no loop even if every remote write fails. */
+      absorbScore(s,f);
+      writeSuppressed(signature);
+      s.arena.fight=null;
+      if(ownState)ownState=s;
+      if(!visitContext)state=s;
+      try{saveLocalOnly?.(s)}catch(_){}
+      closeArenaUI();
+      try{showWeatherToast?.(`🏆 รับ +${Math.max(1,Math.min(6,Math.floor(Number(f.score)||1)))} คะแนนสังเวียนแล้ว`)}catch(_){}
+
+      /* Use the game's existing authorized save path only; never call the legacy
+         jellyArenaWeekly transaction from this Earn-specific recovery. */
+      try{save?.()}catch(e){console.warn("R34.9.1 Earn normal save deferred",e)}
+      try{setTimeout(()=>flushCloudSave?.().catch?.(()=>{}),0)}catch(_){}
+
+      /* If R34.9 public-garden publisher is available, it is best-effort only. */
+      try{
+        const wk=typeof weekKey==="function"?String(weekKey()):"";
+        if(wk&&globalThis.YN_R349?.publishGardenArena349){
+          Promise.resolve(globalThis.YN_R349.publishGardenArena349(Math.max(1,Math.min(6,Math.floor(Number(f.score)||1))),wk,`earn-recover-${signature}`)).catch(()=>{});
+        }
+      }catch(_){}
+      console.info(BUILD,"recovered",reason,signature);
+      return true;
+    }finally{busy=false}
+  }
+
+  /* Capture before all legacy handlers. Earn never reaches the forbidden claim path. */
+  document.addEventListener("click",e=>{
+    if(!isEarn())return;
+    const receive=e.target?.closest?.("#ynuArenaClaimScore");
+    const close=e.target?.closest?.("#closeModal");
+    if(!receive&&!(close&&document.getElementById("ynuArenaClaimScore")))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    recoverEarnFight(receive?"receive":"close").catch(err=>{console.warn(BUILD,err);closeArenaUI()});
+  },true);
+  document.addEventListener("pointerup",e=>{
+    if(!isEarn()||!e.target?.closest?.("#ynuArenaClaimScore"))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+  },true);
+
+  /* Existing stuck fight from cloud: if this exact result was already dismissed on
+     this device, suppress it again immediately after load instead of re-rendering. */
+  function suppressPreviouslyDismissed(){
+    if(!isEarn())return;
+    const s=live(),f=s?.arena?.fight;if(!f||!f.win||Number(f.finishAt||0)>NOW())return;
+    if(readSuppressed()===sig(f)){
+      absorbScore(s,f);s.arena.fight=null;
+      if(ownState)ownState=s;if(!visitContext)state=s;
+      try{saveLocalOnly?.(s)}catch(_){}
+      closeArenaUI();try{save?.()}catch(_){}
+    }
+  }
+
+  const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initBase)initializeOrLoadCloudState=async function(){
+    const r=await initBase.apply(this,arguments);
+    if(isEarn())setTimeout(suppressPreviouslyDismissed,20);
+    return r;
+  };
+
+  /* Extra backstop before result rendering. Other members use the original function. */
+  const resultBase=typeof arenaWinResult==="function"?arenaWinResult:null;
+  if(resultBase)arenaWinResult=function(){
+    if(isEarn()){
+      const f=live()?.arena?.fight;
+      if(f&&readSuppressed()===sig(f)){recoverEarnFight("render-backstop").catch(()=>{});return}
+    }
+    return resultBase.apply(this,arguments);
+  };
+
+  globalThis.YN_R3491={BUILD,recoverEarnFight};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* S2 R34.9.2 — MEOW-WOOF HOTEL CARE BUTTON SCOPE FIX — 2026-09-04 */
+(function(){globalThis.YAINOO_BUILD="S2-R34.9.2-HOTEL-CARE-BUTTON-FIX-20260904";console.info(globalThis.YAINOO_BUILD,"loaded");})();
