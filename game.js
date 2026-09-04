@@ -1984,7 +1984,7 @@ function bindEvents(){
   $("inventoryNavBtn").onclick=inventory;
   $("shopNavBtn").onclick=showShop;
   $("missionsNavBtn").onclick=showMissions;
-  $("friendsNavBtn").onclick=showFriends;
+  $("friendsNavBtn").onclick=()=>showFriends();
   $("menuNavBtn").onclick=showMenu;
   setupProfile();
   setupTopPlayerName();
@@ -3216,7 +3216,7 @@ function renderScene(){
   if(currentScene==="house"){renderHouseScene();return}if(currentScene==="underwater"){renderUnderwaterScene();return}if(currentScene==="almsSeated"||currentScene==="almsBlessing"){renderAlmsScene();return}if(currentScene==="coconut"){renderCoconutScene();return}renderAnimalScene(currentScene);
 }
 function bindEvents(){
-  $("startBtn").onclick=start;$("howBtn").onclick=showHow;$("menuBtn").onclick=showMenu;$("settingsBtn").onclick=showSettings;$("rewardBtn").onclick=showRewards;$("closeModal").onclick=closeModal;$("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};$("forecastBtn").onclick=showForecast;if($("modeBtn"))$("modeBtn").onclick=showModeChooser;if($("notificationBtn"))$("notificationBtn").onclick=()=>showNotifications("friend");if($("almsBtn"))$("almsBtn").onclick=showAlms;if($("challengeBtn"))$("challengeBtn").onclick=challengeFarm;if($("friendlyGhostHotspot"))$("friendlyGhostHotspot").onclick=friendlyGhostReward;if($("coconutGardenHotspot"))$("coconutGardenHotspot").onclick=()=>{if(!guardResting())openScene("coconut")};if($("riverHotspot"))$("riverHotspot").onclick=()=>{if(!guardResting())openScene("jellyfish")};$("closeModeOverlay").onclick=closeModeChooser;$("modeOverlay").onclick=event=>{if(event.target===$("modeOverlay"))closeModeChooser()};document.querySelectorAll("[data-mode-choice]").forEach(button=>{button.onclick=()=>{const mode=button.dataset.modeChoice;applyFarmMode(mode);closeModeChooser();showWeatherToast(`เปลี่ยนเป็นโหมด ${FARM_MODES[mode].name} แล้ว`)}});$("houseHotspot").onclick=showHouseChoices;$("wellHotspot").onclick=showWellChoices;$("gardenNavBtn").onclick=confirmReturnToLogin;$("inventoryNavBtn").onclick=inventory;$("shopNavBtn").onclick=showShop;$("missionsNavBtn").onclick=showMissions;$("friendsNavBtn").onclick=showFriends;$("menuNavBtn").onclick=showMenu;setupProfile();setupTopPlayerName();
+  $("startBtn").onclick=start;$("howBtn").onclick=showHow;$("menuBtn").onclick=showMenu;$("settingsBtn").onclick=showSettings;$("rewardBtn").onclick=showRewards;$("closeModal").onclick=closeModal;$("modal").onclick=event=>{if(event.target===$("modal"))closeModal()};$("forecastBtn").onclick=showForecast;if($("modeBtn"))$("modeBtn").onclick=showModeChooser;if($("notificationBtn"))$("notificationBtn").onclick=()=>showNotifications("friend");if($("almsBtn"))$("almsBtn").onclick=showAlms;if($("challengeBtn"))$("challengeBtn").onclick=challengeFarm;if($("friendlyGhostHotspot"))$("friendlyGhostHotspot").onclick=friendlyGhostReward;if($("coconutGardenHotspot"))$("coconutGardenHotspot").onclick=()=>{if(!guardResting())openScene("coconut")};if($("riverHotspot"))$("riverHotspot").onclick=()=>{if(!guardResting())openScene("jellyfish")};$("closeModeOverlay").onclick=closeModeChooser;$("modeOverlay").onclick=event=>{if(event.target===$("modeOverlay"))closeModeChooser()};document.querySelectorAll("[data-mode-choice]").forEach(button=>{button.onclick=()=>{const mode=button.dataset.modeChoice;applyFarmMode(mode);closeModeChooser();showWeatherToast(`เปลี่ยนเป็นโหมด ${FARM_MODES[mode].name} แล้ว`)}});$("houseHotspot").onclick=showHouseChoices;$("wellHotspot").onclick=showWellChoices;$("gardenNavBtn").onclick=confirmReturnToLogin;$("inventoryNavBtn").onclick=inventory;$("shopNavBtn").onclick=showShop;$("missionsNavBtn").onclick=showMissions;$("friendsNavBtn").onclick=()=>showFriends();$("menuNavBtn").onclick=showMenu;setupProfile();setupTopPlayerName();
 }
 
 /* ======================================================================
@@ -28699,13 +28699,21 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     if(publicBusy){publicAgain=true;return false}publicBusy=true;
     try{
       const {db,fs}=await getFirebaseContext();
-      await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{
-        memberKey:currentMemberKey,
-        displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
-        plots:clone(plots),publicHamsters:clone(hams),publicOutdoorVersion:"R34.11.0",
-        updatedAt:fs.serverTimestamp()
-      },{merge:true});
-      publicAck=sig;try{lastGardenHash=plotSig(plots)}catch(_){};return true;
+      const gardenRef=fs.doc(db,"gardens",currentMemberKey);
+      /* R34.11.3: plots are critical public state. Write ONLY plots+updatedAt first,
+         so an optional hamster/public field can never reject the crop mirror. */
+      try{
+        if(typeof fs.updateDoc==="function")await fs.updateDoc(gardenRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
+        else await fs.setDoc(gardenRef,{plots:clone(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      }catch(plotErr){
+        await fs.setDoc(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(plots),updatedAt:fs.serverTimestamp()},{merge:true});
+      }
+      publicAck=`${plotSig(plots)}|PLOTS`;
+      try{lastGardenHash=plotSig(plots)}catch(_){}
+      /* Optional outdoor hamster publication is isolated. If this field is denied,
+         crops still remain live for friend visits. */
+      try{await fs.setDoc(gardenRef,{publicHamsters:clone(hams),publicOutdoorVersion:"R34.11.3",updatedAt:fs.serverTimestamp()},{merge:true})}catch(hamErr){console.warn("R34.11.3 hamster mirror optional",hamErr)}
+      publicAck=sig;return true;
     }catch(e){console.warn("R34.11 public mirror",e);return false}
     finally{publicBusy=false;if(publicAgain){publicAgain=false;setTimeout(()=>publishOwnerPublic(false),120)}}
   }
@@ -29023,7 +29031,163 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
+/* =====================================================================
+   S2 R34.11.3 — STRICT PUBLIC GARDEN / SINGLE WORM / RANK REBIND
+   2026-09-04
+   - plots publish independently of the general save debounce.
+   - friend view always subscribes to the current gardens document.
+   - plot DOM is rebound after every draw, so single-worm taps cannot fall
+     through to a stale handler captured by an older build.
+   - friends/rank navigation is rebound after load; Aida is ADMIN only.
+   ===================================================================== */
+(function YN_R34113_STRICT_GARDEN_WORM_RANK(){
+  "use strict";
+  const BUILD="S2-R34.11.3-STRICT-GARDEN-WORM-RANK-20260904";
+  const $=id=>document.getElementById(id);
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const me=()=>ownState||(!visitContext?state:null);
+  const admin=()=>{try{return typeof isAdmin==="function"?Boolean(isAdmin()):(currentMember==="Aida"||currentMemberKey==="aida")}catch(_){return currentMember==="Aida"||currentMemberKey==="aida"}};
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  function normPlots(raw){
+    const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,a=Array.isArray(raw)?raw.slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(clone(p)):clone(p)):[];
+    while(a.length<n)a.push(typeof emptyPlot==="function"?emptyPlot():{crop:null,phase:"empty",phaseEndsAt:0,plantedAt:0,wateredAt:0,worm:false});return a;
+  }
+  function sig(raw){try{return typeof plotHash==="function"?plotHash(raw||[]):JSON.stringify(raw||[])}catch(_){return JSON.stringify(raw||[])}}
+  function phase(p){try{return typeof ensurePlotPhaseStandalone==="function"?ensurePlotPhaseStandalone(clone(p)):clone(p)}catch(_){return clone(p)}}
+  function isWorm(p){const q=phase(p);return Boolean(q?.crop&&(q.phase==="worm"||q.worm))}
+  function giant(p){try{return typeof wormTypeOf==="function"&&wormTypeOf(phase(p))==="giant"}catch(_){return phase(p)?.wormType==="giant"}}
+  function cure(p){const q=phase(p),crop=CROPS?.[q?.crop];if(!q?.crop||!crop)return q;q.phase="growing2";q.worm=false;try{delete q.wormType}catch(_){};q.phaseEndsAt=now()+Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));return typeof normalizePlot==="function"?normalizePlot(q):q}
 
-/* R34.11.2 source-level correction marker */
-globalThis.YAINOO_BUILD="S2-R34.11.2-SOURCE-WORM-MISSION-ADMIN-20260904";
-console.info(globalThis.YAINOO_BUILD,"loaded");
+  /* ---------- Strict owner -> gardens plot mirror, independent from save debounce ---------- */
+  let strictAck="",strictBusy=false,strictAgain=false;
+  async function writeGardenPlots(plots,key=currentMemberKey){
+    if(!cloudReady||!key)return false;const a=normPlots(plots),{db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",key);
+    try{
+      if(typeof fs.updateDoc==="function")await fs.updateDoc(ref,{plots:clone(a),updatedAt:fs.serverTimestamp()});
+      else await fs.setDoc(ref,{plots:clone(a),updatedAt:fs.serverTimestamp()},{merge:true});
+      return true;
+    }catch(e){
+      /* Creation fallback is expected only for the owner. */
+      if(String(key)!==String(currentMemberKey))throw e;
+      await fs.setDoc(ref,{memberKey:key,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(a),updatedAt:fs.serverTimestamp()},{merge:true});return true;
+    }
+  }
+  async function strictPublish(force=false){
+    const s=me();if(!s||visitContext||!cloudReady||!currentMemberKey)return false;const h=sig(s.plots);if(!force&&h===strictAck)return false;if(strictBusy){strictAgain=true;return false}strictBusy=true;
+    try{const ok=await writeGardenPlots(s.plots,currentMemberKey);if(ok){strictAck=h;try{lastGardenHash=h}catch(_){}}return ok}
+    catch(e){console.warn("R34.11.3 strict plot publish",e);return false}
+    finally{strictBusy=false;if(strictAgain){strictAgain=false;setTimeout(()=>strictPublish(false),40)}}
+  }
+  /* No debounce: check local state only; Firestore write happens only when signature changes. */
+  setInterval(()=>{try{if(!visitContext&&me()&&sig(me().plots)!==strictAck)strictPublish(false)}catch(_){}},450);
+  window.addEventListener("focus",()=>setTimeout(()=>strictPublish(true),80),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>strictPublish(true),100)},{passive:true});
+
+  /* Make durable save completion also guarantee public plots, but never let public mirror
+     failure make the main save fail. */
+  const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;
+  if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);try{await strictPublish(true)}catch(_){}return r};
+
+  /* ---------- Friend live garden: immediate server read + snapshot ---------- */
+  let friendUnsub=null,friendKey="";
+  function stopFriend(){try{friendUnsub?.()}catch(_){}friendUnsub=null;friendKey=""}
+  function applyFriendGarden(data,key){
+    if(!visitContext||String(visitContext.memberKey)!==String(key)||!Array.isArray(data?.plots))return;
+    state.plots=normPlots(data.plots).map(phase);try{draw?.()}catch(_){};
+  }
+  async function startFriend(key){
+    stopFriend();if(!visitContext||!cloudReady||!key)return;friendKey=String(key);
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",friendKey);
+      try{const first=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(first?.exists?.())applyFriendGarden(first.data()||{},friendKey)}catch(e){console.warn("R34.11.3 friend initial",e)}
+      friendUnsub=fs.onSnapshot(ref,snap=>{if(snap.exists())applyFriendGarden(snap.data()||{},friendKey)},e=>console.warn("R34.11.3 friend listener",e));
+    }catch(e){console.warn("R34.11.3 start friend",e)}
+  }
+  const visitBase=typeof visitFriend==="function"?visitFriend:null;
+  if(visitBase)visitFriend=async function(targetKey,targetName){const r=await visitBase.apply(this,arguments);if(visitContext)await startFriend(String(visitContext.memberKey||targetKey));return r};
+  const returnBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(returnBase)returnFromFriendVisit=function(){stopFriend();return returnBase.apply(this,arguments)};
+
+  /* ---------- Partial own-save update for one plot action ---------- */
+  async function persistOwnAction(s,{merit=false,specials=false,missions=true}={}){
+    if(!cloudReady||!currentMemberKey)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),payload={plots:clone(normPlots(s.plots)),updatedAt:fs.serverTimestamp()};
+    if(merit)payload.merit=Number(s.merit)||0;if(specials)payload.specials=clone(s.specials||{});if(missions&&s.villageSeason2)payload.villageSeason2=clone(s.villageSeason2);if(Number.isFinite(Number(s.clientSaveRevision)))payload.clientSaveRevision=Number(s.clientSaveRevision);
+    if(typeof fs.updateDoc==="function")await fs.updateDoc(ref,payload);else await fs.setDoc(ref,payload,{merge:true});
+  }
+  function mission(s){try{incrementMissionOn?.(s,"clearWorms",1)}catch(_){}}
+
+  /* ---------- Single worm: dedicated implementation ---------- */
+  const busyOwn=new Set();let busyFriend=false;
+  async function clearOwn(index,method){
+    index=Math.floor(Number(index));if(busyOwn.has(index)||visitContext)return;busyOwn.add(index);
+    try{
+      const base=me();if(!base)throw new Error("ไม่พบข้อมูลสวน");const s=normalizeState(clone(base),currentMember),p=phase(s.plots?.[index]);if(!isWorm(p))throw new Error("แปลงนี้ไม่มีหนอนแล้ว");const isG=giant(p),meritCost=isG?2:1,sprayCost=isG?12:5;
+      if(!admin()){
+        if(method==="spray"){s.specials=s.specials||{};const have=Number(s.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sprayCost} ขวด`);s.specials.wormKillerSpray=have-sprayCost}
+        else s.merit=(Number(s.merit)||0)-meritCost; /* merit may go negative, matching original game rule */
+      }
+      s.plots[index]=cure(p);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;mission(s);if(admin())try{ensureAdminStock?.(s)}catch(_){};
+      ownState=s;state=s;try{saveLocalOnly?.(s)}catch(_){};closeModal?.();draw?.();updateMeritUI?.();
+      /* Garden first prevents an old garden snapshot from resurrecting the worm. */
+      await writeGardenPlots(s.plots,currentMemberKey);strictAck=sig(s.plots);
+      await persistOwnAction(s,{merit:method!=="spray",specials:method==="spray",missions:true});
+      if(!admin()&&method!=="spray")try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{merit:Number(s.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
+      showWeatherToast?.(`${isG?"🐛 หนอนไจแอนท์":"🐛 หนอน"} แปลง #${index+1} ถูกกำจัดแล้ว`);
+    }catch(e){message("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}finally{busyOwn.delete(index)}
+  }
+  async function clearFriend(index,method){
+    if(busyFriend||!visitContext||!cloudReady||!currentMemberKey)return;busyFriend=true;
+    try{
+      const visible=phase(state?.plots?.[index]);if(!isWorm(visible))throw new Error("แปลงนี้ไม่มีหนอนแล้ว");const isG=giant(visible),meritCost=isG?2:1,sprayCost=isG?5:1,target=String(visitContext.memberKey||"");
+      const own=normalizeState(clone(ownState||state),currentMember);
+      if(!admin()){
+        if(method==="spray"){own.specials=own.specials||{};const have=Number(own.specials.wormKillerSpray)||0;if(have<sprayCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sprayCost} ขวด`);own.specials.wormKillerSpray=have-sprayCost}
+        else own.merit=(Number(own.merit)||0)-meritCost;
+      }
+      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"gardens",target);let nextPlots=null;
+      /* Critical transaction contains ONLY the friend's garden. No mailbox/profile/save can reject it. */
+      await fs.runTransaction(db,async tx=>{
+        const gs=await tx.get(gref);if(!gs.exists())throw new Error("ข้อมูลสวนเพื่อนไม่พร้อม");const plots=normPlots(gs.data()?.plots),remote=phase(plots[index]),src=isWorm(remote)?remote:visible;plots[index]=cure(src);nextPlots=plots;tx.update(gref,{plots:clone(plots),updatedAt:fs.serverTimestamp()});
+      });
+      state.plots=normPlots(nextPlots);mission(own);own.clientSaveRevision=(Number(own.clientSaveRevision)||0)+1;ownState=own;try{saveLocalOnly?.(own)}catch(_){};closeModal?.();draw?.();updateMeritUI?.();
+      /* Visitor's cost/mission is secondary and cannot roll the friend action back. */
+      try{await persistOwnAction(own,{merit:method!=="spray",specials:method==="spray",missions:true})}catch(e){console.warn("R34.11.3 visitor cost save",e);try{save?.()}catch(_){}}
+      if(!admin()&&method!=="spray")try{await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{merit:Number(own.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
+      showWeatherToast?.(`${isG?"🐛 หนอนไจแอนท์":"🐛 หนอน"} บ้านเพื่อน แปลง #${index+1} ถูกกำจัดแล้ว`);
+    }catch(e){message("กำจัดหนอนบ้านเพื่อนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}finally{busyFriend=false}
+  }
+  function showWorm(index,friend=false){
+    const p=phase((friend?state:me())?.plots?.[index]);if(!isWorm(p))return false;const isG=giant(p),meritCost=isG?2:1,sprayCost=friend?(isG?5:1):(isG?12:5),sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;
+    $("modalContent").innerHTML=`<section class="feature-panel confirm-panel r34113-worm-panel"><h2>${isG?"🐛 หนอนไจแอนท์":"🐛 หนอน"}${friend?"บ้านเพื่อน":""}</h2><p>กำจัดเฉพาะ <b>แปลง #${index+1}</b></p><div class="friend-worm-actions"><button id="r34113WormMerit" class="danger-action" type="button">${admin()?"ADMIN กำจัด":`ใช้ ${meritCost} กุศล`}</button><button id="r34113WormSpray" class="primary-spooky-action" type="button" ${!admin()&&sprays<sprayCost?"disabled":""}>🧴 ใช้สเปรย์ ×${sprayCost}<br><small>มี ×${sprays}</small></button></div></section>`;openModal();
+    $("r34113WormMerit").onclick=()=>friend?clearFriend(index,"merit"):clearOwn(index,"merit");$("r34113WormSpray").onclick=()=>friend?clearFriend(index,"spray"):clearOwn(index,"spray");return true;
+  }
+
+  /* Rebind actual plot DOM after every draw. This is the handler the R34.11 fast-tap
+     layer reads from element.onclick, so it cannot reach an older tapPlot anymore. */
+  const tapBase=typeof tapPlot==="function"?tapPlot:null;
+  function routePlot(index){const p=phase((visitContext?state:me())?.plots?.[index]);if(isWorm(p))return showWorm(index,Boolean(visitContext));return tapBase?.(index)}
+  function bindPlots(){document.querySelectorAll('#plots [data-plot-index]').forEach(b=>{const i=Number(b.dataset.plotIndex);if(Number.isInteger(i))b.onclick=()=>routePlot(i)})}
+  const drawBase=typeof draw==="function"?draw:null;if(drawBase)draw=function(){const r=drawBase.apply(this,arguments);requestAnimationFrame(bindPlots);return r};
+  const plotObs=new MutationObserver(()=>bindPlots());try{plotObs.observe($("plots")||document.body,{childList:true,subtree:true})}catch(_){}setTimeout(bindPlots,0);
+
+  /* ---------- Rank: hard rebind the actual nav button after all legacy setup ---------- */
+  async function rankScreen(){
+    if(typeof guardResting==="function"&&guardResting())return;let profiles={};
+    if(cloudReady)try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(d=>profiles[d.id]=d.data()||{})}catch(e){console.warn("R34.11.3 rank load",e)}
+    const names=Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{}),adminName=names.find(n=>String(n).toLowerCase()==="aida")||"Aida",adminKey=typeof memberKeyFromName==="function"?memberKeyFromName(adminName):"aida";
+    const rows=names.filter(n=>String(n).toLowerCase()!=="aida").map(name=>{const key=memberKeyFromName(name),p=profiles[key]||{};return{name:String(p.displayName||name),base:name,key,merit:Number(p.merit??300)||0,initialized:Boolean(p.initialized)}}).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name,"th"));
+    const actions=r=>r.key===currentMemberKey?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-r34113-visit="${esc(r.key)}" data-r34113-name="${esc(r.name)}" ${!r.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-r34113-gift="${esc(r.key)}" data-r34113-name="${esc(r.name)}">ส่งของ</button></span>`;
+    const adminRow=`<div class="friend-row friend-rank-row r34113-rank-admin"><span class="friend-rank r34113-admin-badge">ADMIN</span><span class="friend-avatar">👑</span><span class="friend-info"><b>${esc(profiles[adminKey]?.displayName||adminName)}</b><small>ผู้ดูแลระบบ • ไม่เข้าร่วม Rank • ไม่แจกอันดับ</small></span>${currentMemberKey===adminKey?'<span class="friend-self">คุณ</span>':actions({key:adminKey,name:adminName,initialized:true})}</div>`;
+    const memberRows=rows.map((r,i)=>{const rank=i+1;return `<div class="friend-row friend-rank-row ${rank<=3?`r34113-rank-top-${rank}`:""}"><span class="friend-rank">#${rank}</span><span class="friend-avatar">${rank===1?"🥇":rank===2?"🥈":rank===3?"🥉":"👻"}</span><span class="friend-info"><b>${esc(r.name)}</b><small>🙏 ${r.merit.toLocaleString("th-TH")} กุศล</small></span>${actions(r)}</div>`}).join("");
+    $("modalContent").innerHTML=`<section class="feature-panel friends-panel r34113-rank-panel"><h2>👥 เพื่อน & Rank กุศล</h2><p class="feature-subtitle">ADMIN อยู่บนสุดนอกการแข่งขัน • ผู้เล่นคนแรกคืออันดับ #1</p><div class="friend-list friend-rank-list">${adminRow}${memberRows}</div></section>`;openModal();
+    document.querySelectorAll('[data-r34113-visit]').forEach(b=>b.onclick=()=>visitFriend(b.dataset.r34113Visit,b.dataset.r34113Name));document.querySelectorAll('[data-r34113-gift]').forEach(b=>b.onclick=()=>showGiftComposer?.(b.dataset.r34113Gift,b.dataset.r34113Name));
+  }
+  try{showFriends=rankScreen}catch(_){}
+  function bindRank(){const b=$("friendsNavBtn");if(b)b.onclick=()=>rankScreen();document.querySelectorAll('#s2MainNav [data-s2-main="friends"]').forEach(x=>x.onclick=()=>rankScreen())}
+  setInterval(bindRank,1200);setTimeout(bindRank,0);
+
+  setTimeout(()=>strictPublish(true),350);
+  globalThis.YN_R34113={BUILD,strictPublish,startFriend,rankScreen,showWorm,clearOwn,clearFriend};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+

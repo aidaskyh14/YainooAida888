@@ -9897,3 +9897,12 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r3411-rank-top-3{border:2px solid rgba(183,112,63,.95)!important;box-shadow:0 0 0 2px rgba(226,173,125,.35)!important}
 .admin-not-competing{font-weight:800!important}
 .admin-not-competing strong{font-size:.92em!important;white-space:normal!important}
+
+
+/* R34.11.3 strict Rank presentation */
+.r34113-rank-panel .r34113-rank-admin{border:3px solid #d8a43d!important;background:linear-gradient(135deg,#fff5c7,#e9c66f)!important;box-shadow:0 0 0 3px rgba(255,229,145,.42),0 10px 24px rgba(96,62,18,.22)!important}
+.r34113-rank-panel .r34113-admin-badge{min-width:62px!important;width:auto!important;padding:7px 9px!important;border-radius:999px!important;background:#5b3a1d!important;color:#fff5c9!important;font-weight:1000!important;font-size:10px!important;letter-spacing:.08em!important}
+.r34113-rank-panel .r34113-rank-top-1{border:3px solid #e1ad2f!important;background:linear-gradient(135deg,#fff8cf,#f1cf65)!important;box-shadow:0 0 0 3px rgba(255,225,107,.4),0 9px 24px rgba(145,99,15,.25)!important}
+.r34113-rank-panel .r34113-rank-top-2{border:3px solid #aab5c3!important;background:linear-gradient(135deg,#fbfdff,#d9e0e8)!important;box-shadow:0 0 0 3px rgba(229,236,244,.5),0 9px 22px rgba(82,94,110,.2)!important}
+.r34113-rank-panel .r34113-rank-top-3{border:3px solid #b97650!important;background:linear-gradient(135deg,#fff0e4,#dea37d)!important;box-shadow:0 0 0 3px rgba(238,187,148,.36),0 9px 22px rgba(111,66,42,.2)!important}
+.r34113-rank-panel .r34113-rank-top-1 .friend-info small,.r34113-rank-panel .r34113-rank-top-2 .friend-info small,.r34113-rank-panel .r34113-rank-top-3 .friend-info small{font-size:13px!important;font-weight:950!important}
