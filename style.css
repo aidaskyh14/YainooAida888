@@ -9931,3 +9931,8 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r341111-disc{position:absolute;transform:translate(-50%,-50%);border:0;background:transparent;pointer-events:auto;z-index:246;min-width:44px;min-height:44px}
 .r341111-disc img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
 .r341111-disc small{display:block;background:#4b294d;color:#fff;border-radius:999px;padding:2px 7px;font-weight:700}
+
+/* S2 R34.11.13 — basement visual hit areas */
+.r17-flower-plot{width:25.5%!important;height:19.5%!important;}
+.r17-wine-machine{width:20.5%!important;height:31%!important;}
+#sceneInteractiveLayer[data-r17-house-mode="basement"]{touch-action:none!important;}

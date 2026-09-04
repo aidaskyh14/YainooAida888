@@ -23026,7 +23026,16 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   /* ---------- House renderer ---------- */
   function setHouseBg17(mode){const sc=$17("sceneScreen");if(!sc)return;const lv=Math.min(3,Math.max(1,Number((ownState||state)?.houseUpgrade?.level)||1)),bg=mode==="basement"?"house-basement-season2.jpeg":lv===3?"house-level3.jpeg":lv===2?"house-level2.jpeg":"house-interior-season2.jpeg";sc.style.backgroundImage=`url("${bg}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
   function renderHouseMain17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
-  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;fn()};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));$17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
+  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;fn()};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
+    /* R34.11.13: iPhone coordinate fallback. The whole visual plot/machine area is tappable,
+       even when the transparent DOM button misses the finger by a few pixels. */
+    layer.onpointerdown=e=>{
+      if(e.target?.closest?.("button,[role=button]"))return;const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;
+      let best=null;FLOWER_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/13.5,dy=Math.abs(y-py)/10.5,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"flower",i,d}});
+      WINE_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/11.5,dy=Math.abs(y-py)/16.5,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"wine",i,d}});
+      if(!best)return;e.preventDefault();e.stopPropagation();if(best.kind==="flower")openFlowerPlot17(best.i);else openWineMachine17(best.i);
+    };
+    $17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   try{renderHouseScene=renderHouse17}catch(_){}
 
@@ -29540,7 +29549,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
    ===================================================================== */
 (function YN_R341112_FINAL(){
   "use strict";
-  const BUILD="S2-R34.11.12-LOGIN-FRIEND-HOTEL-AUTHORITATIVE-20260904";
+  const BUILD="S2-R34.11.13-FRIEND-LIVE-BASEMENT-TOUCH-20260904";
   const $=id=>document.getElementById(id);
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   const tnow=()=>typeof gameNow==="function"?gameNow():Date.now();
@@ -29613,31 +29622,14 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     }catch(e){console.warn("R34.11.12 save->public",e)}finally{mirrorBusy=false;if(mirrorQueued){const q=mirrorQueued;mirrorQueued=null;setTimeout(()=>mirrorSaveToPublic(q),30)}}
   }
   async function startSaveMirror(){
-    if(!cloudReady||!currentMemberKey||visitContext)return;
-    try{saveMirrorUnsub?.()}catch(_){}
-    try{const {db,fs}=await getFirebaseContext();saveMirrorUnsub=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{if(snap.exists())mirrorSaveToPublic(snap.data()||{})},e=>console.warn("R34.11.12 save mirror listen",e))}catch(e){console.warn("R34.11.12 save mirror",e)}
+    // R34.11.13: disabled. Server /saves can lag behind the live plot state and
+    // must never overwrite publicFarmState after the owner has already changed plots.
+    try{saveMirrorUnsub?.()}catch(_){};saveMirrorUnsub=null;return false;
   }
   const initBase112=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
-  if(initBase112)initializeOrLoadCloudState=async function(){const r=await initBase112.apply(this,arguments);setTimeout(startSaveMirror,20);setTimeout(backfillApprovedDirectory,120);setTimeout(startDirectoryLive,180);return r};
+  if(initBase112)initializeOrLoadCloudState=async function(){const r=await initBase112.apply(this,arguments);setTimeout(publishLiveFarm112,20);setTimeout(backfillApprovedDirectory,120);setTimeout(startDirectoryLive,180);return r};
 
-  /* Friend viewer now uses ONLY the publicFarmState generated from the owner's server save. */
-  let fvUnsub=null;
-  function applyPublicFriend(raw,key,name){
-    if(!visitContext||String(visitContext.memberKey)!==String(key)||!raw)return;
-    const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,a=(Array.isArray(raw.plots)?raw.plots:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));while(a.length<n)a.push(typeof emptyPlot==="function"?emptyPlot():{});
-    state.plots=a;const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:cp(hm[String(f)]||[]),stored:[],removedIds:[]};
-    try{draw?.()}catch(_){};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},20)
-  }
-  visitFriend=async function(key,name){
-    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;
-    try{
-      try{fvUnsub?.()}catch(_){};const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"publicFarmState",key),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(!snap.exists())throw new Error("เพื่อนยังไม่มีข้อมูลฟาร์มสาธารณะ กรุณาให้เพื่อนเข้าเกมหนึ่งครั้งหลังอัปเดต");
-      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};state=typeof fresh==="function"?fresh(name):{};applyPublicFriend(snap.data()||{},key,name);try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){};
-      fvUnsub=fs.onSnapshot(ref,s=>{if(s.exists())applyPublicFriend(s.data()||{},key,name)},e=>console.warn("R34.11.12 friend live",e));
-    }catch(e){message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
-  };
-
-  /* C) HOTEL FEED ALL — completely standalone implementation. */
+  /* B2) LIVE OWNER FARM — authoritative public state comes from the state currently\n     rendered/edited by the owner, never from a delayed /saves snapshot. */\n  let livePubBusy112=false,livePubQueued112=false,livePubSig112="";\n  function liveOwner112(){\n    if(visitContext)return null;\n    const a=state,b=ownState;\n    if(a&&b&&a!==b){\n      const ar=Number(a.clientSaveRevision)||0,br=Number(b.clientSaveRevision)||0;\n      if(ar!==br)return ar>br?a:b;\n      const ac=(a.plots||[]).reduce((n,p)=>n+(p?.crop?1:0),0),bc=(b.plots||[]).reduce((n,p)=>n+(p?.crop?1:0),0);\n      if(ac!==bc)return ac>bc?a:b;\n    }\n    return a||b;\n  }\n  function liveFarmPayload112(s){\n    const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,plots=(Array.isArray(s?.plots)?s.plots:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));\n    while(plots.length<n)plots.push(typeof emptyPlot==="function"?emptyPlot():{});\n    return {plots,publicHamsters:hamsFromSave(s||{}),clientSaveRevision:Number(s?.clientSaveRevision)||0};\n  }\n  function liveFarmSig112(s){\n    try{const p=liveFarmPayload112(s);return JSON.stringify([p.clientSaveRevision,p.plots.map(x=>[x?.crop||"",x?.phase||"",Number(x?.plantedAt||x?.at||0),Number(x?.phaseEndsAt||0),Boolean(x?.worm),x?.wormType||""]),Object.entries(p.publicHamsters).map(([f,a])=>[f,a.map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y)])])])}catch(_){return String(Date.now())}\n  }\n  async function publishLiveFarm112(force=false){\n    if(visitContext||!cloudReady||!currentMemberKey)return false;const s=liveOwner112();if(!s)return false;const sig=liveFarmSig112(s);if(!force&&sig===livePubSig112)return false;if(livePubBusy112){livePubQueued112=true;return false}livePubBusy112=true;\n    try{const {db,fs}=await getFirebaseContext(),p=liveFarmPayload112(s);await fs.setDoc(fs.doc(db,"publicFarmState",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(p.plots),publicHamsters:cp(p.publicHamsters),clientSaveRevision:p.clientSaveRevision,publicSeq:Date.now(),publicVersion:"R34.11.13-live-owner",updatedAt:fs.serverTimestamp()},{merge:true});livePubSig112=sig;return true}catch(e){console.warn("R34.11.13 live public farm",e);return false}finally{livePubBusy112=false;if(livePubQueued112){livePubQueued112=false;setTimeout(()=>publishLiveFarm112(false),25)}}\n  }\n  let liveObserved112="";setInterval(()=>{if(visitContext)return;const s=liveOwner112();if(!s)return;const sig=liveFarmSig112(s);if(sig!==liveObserved112){liveObserved112=sig;setTimeout(()=>publishLiveFarm112(false),10)}},180);\n  document.addEventListener("pointerup",e=>{if(visitContext)return;if(e.target?.closest?.(".plot,[data-plot-index],[data-s2-farm],#plotPageNextBtn,#plotPagePrevBtn"))setTimeout(()=>publishLiveFarm112(true),8)},true);\n\n  /* Friend viewer: publicFarmState is primary; /gardens is migration fallback only.\n     A populated source beats a stale blank source. Hamsters are always merged from\n     publicFarmState when available. */\n  let fvUnsubs=[],friend112={public:null,garden:null},friend112Key="",friend112Name="";\n  function stopFriend112(){for(const u of fvUnsubs){try{u?.()}catch(_){}}fvUnsubs=[];friend112={public:null,garden:null};friend112Key="";friend112Name=""}\n  function stamp112(raw){const u=raw?.updatedAt;let t=0;try{t=typeof u?.toMillis==="function"?u.toMillis():(Number(u?.seconds)||0)*1000}catch(_){}return Math.max(Number(raw?.publicSeq)||0,t,Number(raw?.clientSaveRevision)||0)}\n  function occupied112(raw){return (Array.isArray(raw?.plots)?raw.plots:[]).reduce((n,p)=>n+(p?.crop?1:0),0)}\n  function chooseFriend112(){\n    const p=friend112.public,g=friend112.garden;if(!p&&!g)return null;if(p&&!g)return cp(p);if(g&&!p)return cp(g);\n    const po=occupied112(p),go=occupied112(g);let chosen;if(po&&!go)chosen=p;else if(go&&!po)chosen=g;else chosen=stamp112(p)>=stamp112(g)?p:g;\n    const out=cp(chosen||{});if(p?.publicHamsters&&typeof p.publicHamsters==="object")out.publicHamsters=cp(p.publicHamsters);else if(g?.publicHamsters&&typeof g.publicHamsters==="object")out.publicHamsters=cp(g.publicHamsters);return out;\n  }\n  function applyPublicFriend(raw,key,name){\n    if(!visitContext||String(visitContext.memberKey)!==String(key)||!raw)return;\n    const n=typeof PLOT_COUNT==="number"?PLOT_COUNT:48,a=(Array.isArray(raw.plots)?raw.plots:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));while(a.length<n)a.push(typeof emptyPlot==="function"?emptyPlot():{});\n    state.plots=a;const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:cp(hm[String(f)]||[]),stored:[],removedIds:[]};\n    try{draw?.()}catch(_){};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},15);\n  }\n  function refreshFriend112(){const raw=chooseFriend112();if(raw&&friend112Key&&visitContext)applyPublicFriend(raw,friend112Key,friend112Name)}\n  visitFriend=async function(key,name){\n    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;\n    try{stopFriend112();const {db,fs}=await getFirebaseContext(),pref=fs.doc(db,"publicFarmState",key),gref=fs.doc(db,"gardens",key);const read=async ref=>{try{const x=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);return x.exists()?x.data()||{}:null}catch(_){return null}};\n      const [p,g]=await Promise.all([read(pref),read(gref)]);friend112={public:p,garden:g};const first=chooseFriend112();if(!first)throw new Error("ยังไม่มีข้อมูลฟาร์มของเพื่อน");\n      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};friend112Key=key;friend112Name=name;state=typeof fresh==="function"?fresh(name):{};applyPublicFriend(first,key,name);try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){};\n      fvUnsubs.push(fs.onSnapshot(pref,x=>{friend112.public=x.exists()?x.data()||{}:null;refreshFriend112()},e=>console.warn("R34.11.13 friend public",e)));fvUnsubs.push(fs.onSnapshot(gref,x=>{friend112.garden=x.exists()?x.data()||{}:null;refreshFriend112()},e=>console.warn("R34.11.13 friend garden",e)));\n    }catch(e){stopFriend112();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}\n  };\n  /* C) HOTEL FEED ALL — completely standalone implementation. */
   let feedBusy112=false;
   function petPen112(s,p){const m=s?.hotelPetPenMap||{};return Math.max(1,Math.min(4,Number(m[String(p?.id)]||p?.hotelPen||1)||1))}
   function hungry112(s){try{globalThis.YN_R32?.repairHotelPenMap?.(s)}catch(_){}const t=tnow(),dogs=(s?.dogs||[]).filter(p=>p?.placedHotel).map(p=>({kind:"dog",p})),cats=(s?.cats||[]).filter(p=>p?.placedHotel&&Number(p?.placedFarm)===-1).map(p=>({kind:"cat",p}));return dogs.concat(cats).filter(x=>t>=Number(x.p?.nextFeedAt||0))}
@@ -29650,6 +29642,163 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   document.addEventListener("pointerdown",e=>{const b=e.target?.closest?.("#r3411HotelFeedAll");if(!b)return;e.preventDefault();e.stopImmediatePropagation();showFeedAll112()},true);
   document.addEventListener("click",e=>{if(e.target?.closest?.("#r3411HotelFeedAll")){e.preventDefault();e.stopImmediatePropagation()}},true);
 
-  window.YN_R341112={BUILD,startDirectoryLive,startSaveMirror,showFeedAll:showFeedAll112};
+  window.YN_R341112={BUILD,startDirectoryLive,startSaveMirror,publishLiveFarm:publishLiveFarm112,showFeedAll:showFeedAll112};
   window.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R34.11.14 — SEASON-1 STYLE FRIEND GARDEN (GARDENS ONLY)
+   - /gardens/{memberKey} is the one public outdoor source.
+   - Owner publishes live 48 plots + placed hamsters directly to /gardens.
+   - Visitor reads/subscribes ONLY /gardens/{friend}; no publicFarmState/saves race.
+   - Never applies /gardens back into owner live state.
+   ====================================================================== */
+(function YN_R341114_SEASON1_FRIEND(){
+  "use strict";
+  const BUILD="S2-R34.11.14-SEASON1-FRIEND-GARDENS-20260904";
+  const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const plotCount=()=>typeof PLOT_COUNT==="number"?PLOT_COUNT:48;
+  function normPlots(a){
+    const n=plotCount(),out=(Array.isArray(a)?a:[]).slice(0,n).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));
+    while(out.length<n)out.push(typeof emptyPlot==="function"?emptyPlot():{});
+    return out;
+  }
+  function liveOwner(){
+    if(visitContext)return null;
+    // state is what the owner is editing/rendering right now. ownState is fallback only.
+    return state||ownState||null;
+  }
+  function hamsterMap(s){
+    const out={"2":[],"3":[],"4":[]},fg=s?.farmGuardians||{};
+    for(const f of [2,3,4]){
+      const arr=Array.isArray(fg[String(f)]?.hamsters)?fg[String(f)].hamsters:[];
+      out[String(f)]=arr.filter(h=>h&&h.id).map(h=>({
+        id:String(h.id),color:String(h.color||"mint"),
+        x:Number.isFinite(Number(h.x))?Number(h.x):50,
+        y:Number.isFinite(Number(h.y))?Number(h.y):55,
+        dir:Number(h.dir)||1,pose:String(h.pose||"idle")
+      }));
+    }
+    return out;
+  }
+  function pubSig(s){
+    try{
+      const ps=normPlots(s?.plots),hm=hamsterMap(s);
+      return JSON.stringify([
+        ps.map(p=>[p?.crop||"",p?.phase||"",Number(p?.plantedAt||p?.at||0),Number(p?.phaseEndsAt||0),Boolean(p?.worm),p?.wormType||"",Boolean(p?.wateredAt)]),
+        Object.entries(hm).map(([f,a])=>[f,a.map(h=>[h.id,h.color])])
+      ]);
+    }catch(_){return String(Date.now())}
+  }
+  let publishing=false,queued=false,lastSig="";
+  async function publishGarden(force=false){
+    if(visitContext||!cloudReady||!currentMemberKey)return false;
+    const s=liveOwner();if(!s)return false;
+    const sig=pubSig(s);if(!force&&sig===lastSig)return false;
+    if(publishing){queued=true;return false}publishing=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const payload={
+        memberKey:currentMemberKey,
+        displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+        plots:cp(normPlots(s.plots)),
+        publicHamsters:cp(hamsterMap(s)),
+        publicOutdoorVersion:"R34.11.14-gardens-only",
+        clientSaveRevision:Number(s.clientSaveRevision)||0,
+        updatedAt:fs.serverTimestamp()
+      };
+      await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),payload,{merge:true});
+      lastSig=sig;
+      try{lastGardenHash=typeof plotHash==="function"?plotHash(payload.plots):lastGardenHash}catch(_){}
+      return true;
+    }catch(e){console.warn("R34.11.14 garden publish",e);return false}
+    finally{publishing=false;if(queued){queued=false;setTimeout(()=>publishGarden(false),30)}}
+  }
+
+  // Stop garden->owner rollback. Owner state continues to be governed by /saves.
+  if(typeof subscribeOwnGarden==="function"){
+    subscribeOwnGarden=function(){
+      try{if(ownGardenUnsubscribe){ownGardenUnsubscribe();ownGardenUnsubscribe=null}}catch(_){}
+      try{if(typeof gardenListenerUnsub!=="undefined"&&gardenListenerUnsub){gardenListenerUnsub();gardenListenerUnsub=null}}catch(_){}
+      try{if(typeof r24GardenUnsub!=="undefined"&&r24GardenUnsub){r24GardenUnsub();r24GardenUnsub=null}}catch(_){}
+      try{if(typeof ownSaveUnsubscribe!=="undefined"&&ownSaveUnsubscribe){ownSaveUnsubscribe();ownSaveUnsubscribe=null}}catch(_){}
+      if(!cloudReady||!currentMemberKey)return;
+      // save listener only; never let /gardens overwrite owner's current plots.
+      getFirebaseContext().then(({db,fs})=>{
+        try{
+          ownSaveUnsubscribe=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{
+            if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites)return;
+            const raw=snap.data()||{},rr=Number(raw.clientSaveRevision)||0,lr=Number(ownState.clientSaveRevision)||0;
+            if(rr<lr)return;
+            const currentPlots=state&&!visitContext?cp(state.plots):cp(ownState.plots);
+            let next=typeof normalizeState==="function"?normalizeState(raw,currentMember):cp(raw);
+            // The screen currently being edited wins for plots until its own save commits.
+            if(Array.isArray(currentPlots))next.plots=normPlots(currentPlots);
+            ownState=next;if(!visitContext)state=ownState;
+            try{saveLocalOnly?.(ownState)}catch(_){}
+          },e=>console.warn("R34.11.14 save listener",e));
+        }catch(e){console.warn("R34.11.14 subscribe saves",e)}
+        setTimeout(()=>publishGarden(true),40);
+      }).catch(e=>console.warn("R34.11.14 subscribe",e));
+    };
+  }
+
+  // Publish immediately when the actual outdoor state changes; no debounce chain.
+  let observed="";
+  setInterval(()=>{
+    if(visitContext||!cloudReady||!currentMemberKey)return;
+    const s=liveOwner();if(!s)return;const sig=pubSig(s);
+    if(sig!==observed){observed=sig;setTimeout(()=>publishGarden(false),8)}
+  },160);
+  document.addEventListener("pointerup",e=>{
+    if(visitContext)return;
+    if(e.target?.closest?.(".plot,[data-plot-index],[data-s2-farm],[data-hamster-id],[data-guardian-hamster],#plotPageNextBtn,#plotPagePrevBtn"))setTimeout(()=>publishGarden(true),5);
+  },true);
+
+  // Also publish after the normal cloud save, but the live screen remains the source.
+  if(typeof flushCloudSave==="function"){
+    const baseFlush=flushCloudSave;
+    flushCloudSave=async function(){const r=await baseFlush.apply(this,arguments);try{await publishGarden(true)}catch(_){}return r};
+  }
+
+  let friendUnsub=null,friendKey="",friendName="";
+  function stopFriendGarden(){try{friendUnsub?.()}catch(_){}friendUnsub=null;friendKey="";friendName=""}
+  function applyGarden(raw,key,name){
+    if(!visitContext||String(visitContext.memberKey)!==String(key)||!raw)return;
+    state.plots=normPlots(raw.plots);
+    const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};
+    visitContext.publicHamsters=hm;
+    state.farmGuardians=state.farmGuardians&&typeof state.farmGuardians==="object"?state.farmGuardians:{};
+    for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:cp(hm[String(f)]||[]),stored:[],removedIds:[]};
+    try{draw?.()}catch(_){}
+    setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},15);
+  }
+  visitFriend=async function(key,name){
+    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");
+    key=String(key||"");name=String(name||key);if(!key)return;
+    try{
+      stopFriendGarden();
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",key);
+      const snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+      if(!snap.exists())throw new Error("ยังไม่มีข้อมูลสวนของเพื่อน");
+      const raw=snap.data()||{};
+      ownState=ownState||state;
+      visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};
+      friendKey=key;friendName=name;
+      state=typeof fresh==="function"?fresh(name):{};
+      applyGarden(raw,key,name);
+      try{closeModal?.()}catch(_){}
+      try{$("gameScreen")?.classList?.add("visiting-friend")}catch(_){}
+      try{showVisitorBanner?.(name)}catch(_){}
+      friendUnsub=fs.onSnapshot(ref,s=>{if(s.exists())applyGarden(s.data()||{},key,name)},e=>console.warn("R34.11.14 friend garden live",e));
+    }catch(e){stopFriendGarden();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+
+  // Clean up this direct listener when returning to our own farm.
+  setInterval(()=>{if(!visitContext&&friendUnsub)stopFriendGarden()},500);
+
+  window.YN_R341114={BUILD,publishGarden,stopFriendGarden};
+  window.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
 })();
