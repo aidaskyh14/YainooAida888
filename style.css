@@ -9847,3 +9847,12 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 /* R34.10.7 — keep generated alpaca/hamster drops above animal/farm layers */
 #r34RoyalDiscLayer,#r34HamsterDiscLayer{z-index:240!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:none!important}
 #r34RoyalDiscLayer .r34-disc-drop,#r34HamsterDiscLayer .r34-disc-drop{z-index:241!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+
+
+/* R34.10.8 — basement touch reliability */
+.r17-hedgehog,.r23-extra-hedgehog,.r24-extra-hedgehog{pointer-events:none!important}
+.r17-flower-plot,.r17-wine-machine{pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.r17-flower-plot{z-index:64!important}
+.r17-wine-machine{z-index:65!important}
+.r17-hedge-drop-layer{pointer-events:none!important}
+.r17-hedge-drop{pointer-events:auto!important}
