@@ -21821,9 +21821,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const s=ownState||state,f=s?.arena?.fight;if(!f||!f.win)return;
     try{await claimArenaScore()}catch(e){console.warn("R34 arena acknowledge",e);message("รับคะแนนไม่ได้",e?.message||"กรุณาลองใหม่")}
   }
+  /* R34.7: removed duplicate capture pointer/click handlers for #ynuArenaClaimScore.
+     arenaWinResult already binds the button once through onclick=claimArenaScore. */
   let arenaClaimTapAt=0;
-  document.addEventListener("pointerup",e=>{const b=e.target?.closest?.("#ynuArenaClaimScore");if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();arenaClaimTapAt=Date.now();b.disabled=true;acknowledgeArenaNow()},true);
-  document.addEventListener("click",e=>{const b=e.target?.closest?.("#ynuArenaClaimScore");if(!b)return;if(Date.now()-arenaClaimTapAt<700){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}},true);
   function retryArenaReceipt(){const p=readArenaPending();if(p)writeArenaPending(null)}
   window.addEventListener("pageshow",()=>setTimeout(retryArenaReceipt,200),{passive:true});window.addEventListener("online",()=>setTimeout(retryArenaReceipt,100),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(retryArenaReceipt,160)},{passive:true});
 
@@ -22329,9 +22329,15 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   /* 17 — boat giant-fish taps: immediate pressed feedback and prevent double taps. */
   document.addEventListener("pointerdown",e=>{const b=e.target.closest?.("[data-s2-ghost]");if(!b)return;b.classList.add("r14-instant-pressed");b.disabled=true;setTimeout(()=>{b.disabled=false;b.classList.remove("r14-instant-pressed")},850)},true);
 
-  /* 19 — arena result: X behaves as acknowledge/claim, and claim jumps to Dashboard immediately. */
-  document.addEventListener("click",e=>{if(e.target?.id==="closeModal"&&$("ynuArenaClaimScore")){e.preventDefault();e.stopImmediatePropagation();$("ynuArenaClaimScore")?.click()}},true);
-  document.addEventListener("click",e=>{if(e.target?.id==="ynuArenaClaimScore")setTimeout(()=>{try{showArenaDashboard()}catch(_){}},0)},true);
+  /* 19 — R34.7 arena result acknowledgement.
+     Keep one acknowledgement path only. The result score is committed by the
+     arena resolution hotfix; both X and the Receive Score button simply finish
+     that acknowledgement and close the result. Never auto-open Dashboard. */
+  document.addEventListener("click",e=>{
+    if(e.target?.id!=="closeModal"||!$("ynuArenaClaimScore"))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    try{claimArenaScore?.()}catch(err){console.warn("R34.7 arena close acknowledge",err);closeModal?.()}
+  },true);
 
   /* 19 (temple in consolidated list) — closed 06:00–10:59, open 11:00 onward + overnight. */
   try{
@@ -26269,7 +26275,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   function showLock33(key){const d=KEY_DEFS[key];if(!d)return;if(isAida33())return;const q=keyQty33(key);$33("modalContent").innerHTML=`<section class="feature-panel r33-lock-panel"><img src="${d.image}" alt="${safe33(d.name)}"><h2>🔒 พื้นที่นี้ยังล็อกอยู่</h2><h3>${safe33(d.name)}</h3><p>${safe33(d.detail)}</p><small>กุญแจในกระเป๋า ×${q}</small><div class="r34-lock-actions"><button id="r33UnlockNow" class="primary-spooky-action" type="button" ${q<1?"disabled":""}>${q>0?"ใช้กุญแจปลดทันที":"ยังไม่มีกุญแจ"}</button><button id="r34FreeUnlock" type="button">🌱 ปลดล็อกด้วยการเล่นฟรี</button></div><div id="r34FreeUnlockReq"></div></section>`;const b=$33("r33UnlockNow");if(b)b.onclick=()=>useUpgradeKey33(key);const f=$33("r34FreeUnlock");if(f)f.onclick=()=>globalThis.YN_R34?.showFreeUnlock?.(key);openModal?.()}
 
   /* ---------- Area locks ---------- */
-  if(typeof setFarmPlotPage==="function"){const base=setFarmPlotPage;setFarmPlotPage=function(page){const target=Math.max(0,Math.min(3,Math.floor(Number(page)||0)))+1;if(target>=3&&!hasUnlock33("territory")){showLock33("territoryKey");return}return base.apply(this,arguments)}}
+  if(typeof setFarmPlotPage==="function"){const base=setFarmPlotPage;setFarmPlotPage=function(page){const target=Math.max(0,Math.min(3,Math.floor(Number(page)||0)))+1;if(!visitContext&&target>=3&&!hasUnlock33("territory")){showLock33("territoryKey");return}return base.apply(this,arguments)}}
   if(typeof setDogHotelPen==="function"){const base=setDogHotelPen;setDogHotelPen=function(pen){pen=Math.max(1,Math.min(4,Math.floor(Number(pen)||1)));if(pen>1&&!hasUnlock33("petExpansion")){showLock33("petKey");return}return base.apply(this,arguments)}}
 
   /* Capture selectors whose legacy onclick closures bypass reassigned functions. */
@@ -26713,35 +26719,14 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   };
 
   /* ---------------------------------------------------------------
-     2) RAPID INDIVIDUAL PLANTING
-     Choose a crop once, then every empty-plot tap for the next 25 seconds
-     plants that same crop immediately. This turns a 12-plot burst into
-     12 plot taps instead of reopening the seed modal 12 times. The actual
-     crop mutation remains the existing R22 local-first authoritative flow.
+     2) INDIVIDUAL PLANTING — R34.7 FIX
+     Each empty plot tap must open its own seed picker. Do not remember or
+     auto-repeat the crop selected for the previous plot. Bulk planting is
+     handled by its separate existing flow and is intentionally untouched.
      --------------------------------------------------------------- */
   let quickCropKey="",quickCropUntil=0;
-  const quickKeyStore=()=>`yn:r342:quickCrop:${currentMemberKey||currentMember||"guest"}`;
-  try{quickCropKey=String(sessionStorage.getItem(quickKeyStore())||"")}catch(_){}
-  function armQuickCrop(key){
-    if(!CROPS?.[key])return;
-    quickCropKey=String(key);quickCropUntil=Date.now()+25000;
-    try{sessionStorage.setItem(quickKeyStore(),quickCropKey)}catch(_){}
-  }
-  const plantBase=typeof Y26_plantCrop==="function"?Y26_plantCrop:null;
-  if(plantBase)Y26_plantCrop=function(index,key,button){armQuickCrop(key);return plantBase.call(this,index,key,button)};
-
-  const tapBase=typeof tapPlot==="function"?tapPlot:null;
-  if(tapBase)tapPlot=async function(index){
-    if(!visitContext&&!guardResting?.()){
-      const s=ownState||state,p=s?.plots?.[index];
-      try{ensurePlotPhase?.(p)}catch(_){}
-      if(p&&!p.crop&&quickCropKey&&CROPS?.[quickCropKey]&&Date.now()<quickCropUntil){
-        quickCropUntil=Date.now()+25000;
-        return Y26_plantCrop(index,quickCropKey,null);
-      }
-    }
-    return tapBase.apply(this,arguments);
-  };
+  function armQuickCrop(){ quickCropKey=""; quickCropUntil=0; }
+  try{sessionStorage.removeItem(`yn:r342:quickCrop:${currentMemberKey||currentMember||"guest"}`)}catch(_){}
 
   /* ---------------------------------------------------------------
      3) FRIEND PUBLIC HAMSTERS
@@ -26844,7 +26829,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
    ====================================================================== */
 (function YN_R346_STABLE_BASE(){
   "use strict";
-  const BUILD="S2-R34.6-STABLE-BASE-20260904";
+  const BUILD="S2-R34.7-PLANT-FRIEND-JELLY-FIX-20260904";
   const $id=id=>document.getElementById(id);
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   const live=()=>ownState||state;
@@ -26943,6 +26928,15 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
       layer.innerHTML=arr.map(h=>{const meta=colors[h.color]||colors.gray||{},src=meta.idle||"gray_hamster_idle.webp";return `<span class="r342-friend-hamster r25-hamster" style="left:${Math.max(14,Math.min(86,Number(h.x)||50))}%;top:${Math.max(75,Math.min(91,Number(h.y)||82))}%" aria-hidden="true"><span class="r25-hamster-shadow"></span><span class="r25-hamster-sprite${h.faceLeft?" face-left":""}" style="background-image:url('${src}');background-position:0 0"></span></span>`}).join("");
     }catch(e){console.warn("R34.6 friend hamster",e)}
   }
+  /* R34.7: initial friend visit must fetch and render public hamsters immediately,
+     not only after the visitor changes farm pages. */
+  const visit346=typeof visitFriend==="function"?visitFriend:null;
+  if(visit346)visitFriend=async function(){
+    const r=await visit346.apply(this,arguments);
+    if(visitContext)setTimeout(loadAndRenderFriend346,60);
+    return r;
+  };
+
   /* Publish after real inventory/placement commits, without touching farm navigation wrappers. */
   document.addEventListener("click",e=>{
     const b=e.target?.closest?.("[data-r29-guardian-reward],[data-r28-ham-store],[data-r28-ham-restore],[data-r28-ham-delete]");
@@ -27017,6 +27011,85 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   },true);
 
   globalThis.YN_R346={BUILD,publishHamsters346,loadAndRenderFriend346,waterAll346,forestAllowed346};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.8 — HAMSTER OWNERSHIP HARD LOCK — 2026-09-04
+   Rules:
+   - No account (including Admin/Aida) may create/place a hamster from the
+     legacy color picker unless a real hamster instance already exists.
+   - Real placement is ONLY from farmGuardianInventory or stored owned hamster.
+   - Friend visits are display-only: visitors may see the owner's placed
+     hamsters on Farms 2/3/4, but cannot create/place/edit any hamster.
+   ===================================================================== */
+(function YN_R348_HAMSTER_OWNERSHIP_HARD_LOCK(){
+  "use strict";
+  const BUILD="S2-R34.8-HAMSTER-OWNERSHIP-HARD-LOCK-20260904";
+  const $id=id=>document.getElementById(id);
+  const live=()=>ownState||state;
+  function ensure(s=live()){
+    if(!s||typeof s!=="object")return s;
+    try{globalThis.YN_R25?.ensureGuardianState?.(s)}catch(_){}
+    s.farmGuardianInventory=Array.isArray(s.farmGuardianInventory)?s.farmGuardianInventory:[];
+    return s;
+  }
+  function inventoryCount(){return ensure()?.farmGuardianInventory?.length||0}
+  function hardenMenu(){
+    if(visitContext)return;
+    const choose=$id("r25ChooseHamster");
+    if(!choose)return;
+    /* Legacy picker manufactures a new hamster by color; never allow it. */
+    choose.disabled=true;
+    choose.style.display="none";
+    const panel=choose.closest?.(".r25-guardian-panel");
+    if(panel&&!panel.querySelector(".r348-hamster-rule")){
+      const note=document.createElement("p");
+      note.className="r346-no-hamster r348-hamster-rule";
+      const q=inventoryCount();
+      note.textContent=q
+        ?`มีแฮมสเตอร์จริงในคลัง ${q} ตัว • เลือกวางจากรายการแฮมสเตอร์ในคลังด้านล่างเท่านั้น`
+        :"ยังไม่มีแฮมสเตอร์จริงในคลัง • ต้องคราฟ / ได้รับ Gift / ซื้อ / รับรางวัลก่อนจึงจะวางได้";
+      choose.insertAdjacentElement("afterend",note);
+    }
+  }
+
+  /* Wrap the final guardian menu regardless of account role. */
+  if(globalThis.YN_R25?.showGuardianMenu){
+    const base=globalThis.YN_R25.showGuardianMenu;
+    globalThis.YN_R25.showGuardianMenu=function(){
+      const r=base.apply(this,arguments);
+      setTimeout(hardenMenu,0);
+      return r;
+    };
+  }
+
+  /* Absolute capture-phase backstop. This also covers Admin/Aida. */
+  document.addEventListener("click",e=>{
+    const legacy=e.target?.closest?.("#r25ChooseHamster,[data-r25-hamster]");
+    if(!legacy)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(visitContext)return;
+    const q=inventoryCount();
+    message?.(q?"วางแฮมสเตอร์":"ยังไม่มีแฮมสเตอร์",
+      q?"เลือกแฮมสเตอร์ตัวจริงจากรายการในคลังด้านล่างค่ะ":"คุณยังไม่มีแฮมสเตอร์จริงในคลัง ต้องคราฟ / ได้รับ / ซื้อ / รับรางวัลก่อนค่ะ");
+  },true);
+
+  /* Visitors are display-only. Block every known placement/storage mutation UI. */
+  document.addEventListener("click",e=>{
+    if(!visitContext)return;
+    const mutation=e.target?.closest?.("[data-r29-guardian-reward],[data-r28-ham-restore],[data-r28-ham-store],[data-r28-ham-delete],#r25ChooseHamster,[data-r25-hamster]");
+    if(!mutation)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+  },true);
+
+  /* Re-harden after modal rendering. */
+  const mo=new MutationObserver(()=>{if(!visitContext&&$id("r25ChooseHamster"))hardenMenu()});
+  const modal=$id("modalContent");if(modal)mo.observe(modal,{childList:true,subtree:true});
+
+  globalThis.YN_R348={BUILD,hardenMenu,inventoryCount};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
