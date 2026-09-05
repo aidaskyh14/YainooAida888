@@ -23035,13 +23035,21 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   if(typeof ensureAdminStock==="function"){
     const admin17Base=ensureAdminStock;ensureAdminStock=function(s){const r=admin17Base(s);ensureR17State(s);return r};
   }
+  let commitCloudTimer17=0;
   function commit17(s,{cloud=true}={}){
-    if(!s)return;ensureR17State(s);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
-    ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}writeBasementMirror17(s);
-    /* One save pipeline for flowers, wine AND hedgehog. The old narrow merge did
-       not persist hedgehog/drops and could race the full-save writer. */
-    try{save?.()}catch(_){}
-    if(cloud&&cloudReady&&currentMemberKey){Promise.resolve().then(()=>flushCloudSave?.()).catch(e=>console.warn("R34.12 basement flush",e))}
+    if(!s)return;
+    ensureR17State(s);
+    s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+    s.clientLocalEditAt=Date.now();
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly(s)}catch(_){}
+    writeBasementMirror17(s);
+    if(!cloud||!cloudReady||!currentMemberKey)return;
+    clearTimeout(commitCloudTimer17);
+    commitCloudTimer17=setTimeout(async()=>{
+      try{try{save?.()}catch(_){};await flushCloudSave?.()}
+      catch(e){console.warn("R34.12.10 basement coalesced flush",e)}
+    },220);
   }
 
   /* ---------- New inventory + gifting: every new item can be sent ---------- */
@@ -23113,7 +23121,15 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function generateHedgeDrops17(s){if(!s?.hedgehog?.enabled)return false;let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;while(t-last>=HEDGE_DROP_MS17&&count<2000){last+=HEDGE_DROP_MS17;const keys=["fur","fang","claw","tail"],pt=safeDropPoint17(count);s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});changed=true;count++}s.hedgehog.lastDropAt=last;if(changed)commit17(s);return changed}
   function collectHedgeDrop17(id){const s=ensureR17State(own17()),idx=s.hedgehog.drops.findIndex(d=>d.id===id);if(idx<0)return;const d=s.hedgehog.drops[idx],m=HEDGE_ITEMS17[d.type];s.hedgehogItems=s.hedgehogItems||{};const r29HedgeGain=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+r29HedgeGain;else s.hedgehogItems[d.type]=9999;s.hedgehog.drops.splice(idx,1);try{incrementMissionOn(s,"hedgehogCollect",1)}catch(_){}commit17(s);renderHedgeDrops17();showWeatherToast?.(`🦔 ${m.name} ×1 เข้ากระเป๋าแล้ว`)}
   function collectAllHedge17(){const s=ensureR17State(own17()),drops=s.hedgehog.drops.slice();if(!drops.length)return message("🦔 ของดรอปเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{const r29Gain=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);got[d.type]=(got[d.type]||0)+r29Gain;if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+r29Gain;else s.hedgehogItems[d.type]=9999});s.hedgehog.drops=[];try{incrementMissionOn(s,"hedgehogCollect",drops.length)}catch(_){}commit17(s);renderHedgeDrops17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS17[k].image}"><b>${safe17(HEDGE_ITEMS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>เข้ากระเป๋า → ของเม่น เรียบร้อยแล้ว</small><button id="r17HedgeDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17HedgeDone").onclick=closeModal;openModal()}
-  function renderHedgeDrops17(){const layer=$17("r17HedgeDropLayer"),s=ensureR17State(own17());if(!layer||!s)return;generateHedgeDrops17(s);layer.innerHTML=s.hedgehog.drops.map(d=>{const m=HEDGE_ITEMS17[d.type];return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}"></button>`}).join("");layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>{const take=e=>{e.preventDefault();e.stopPropagation();if(b.dataset.taken==="1")return;b.dataset.taken="1";collectHedgeDrop17(b.dataset.r17Hdrop)};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}})}
+  function renderHedgeDrops17(){
+    const layer=$17("r17HedgeDropLayer"),s=ensureR17State(own17());if(!layer||!s)return;
+    generateHedgeDrops17(s);
+    const all=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops:[],shown=all.slice(-24),sig=shown.map(d=>String(d.id)).join("|");
+    if(layer.dataset.r17DropSig===sig)return;
+    layer.dataset.r17DropSig=sig;
+    layer.innerHTML=shown.map(d=>{const m=HEDGE_ITEMS17[d.type];return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}"></button>`}).join("");
+    layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>{let fired=false;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();if(fired)return;fired=true;collectHedgeDrop17(b.dataset.r17Hdrop)};b.style.touchAction="manipulation";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}});
+  }
   function enableHedge17(){const s=ensureR17State(own17());s.hedgehog.enabled=true;if(!Number(s.hedgehog.lastDropAt))s.hedgehog.lastDropAt=now17();commit17(s);renderHouse17();showWeatherToast?.("🦔 เปิดโหมดทดสอบเม่นแล้ว")}
 
   /* ---------- House renderer ---------- */
@@ -23128,7 +23144,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       WINE_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/11.5,dy=Math.abs(y-py)/16.5,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"wine",i,d}});
       if(!best)return;e.preventDefault();e.stopPropagation();if(best.kind==="flower")openFlowerPlot17(best.i);else openWineMachine17(best.i);
     };
-    $17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
+    bindBasementTap17($17("r17HarvestAll"),harvestAllFlowers17);bindBasementTap17($17("r17CollectHedge"),collectAllHedge17);if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   /* R34.11.21: window-capture one-tap path. Window fires before every legacy document handler. */
   window.addEventListener("pointerdown",e=>{
@@ -24186,7 +24202,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function ensureHedgeReward(){const s=houseState();if(!s)return;const h=s.houseUpgrade,l=level();if(!Number.isFinite(Number(h.hedgehogRewardLevel))){h.hedgehogRewardLevel=l;try{saveLocalOnly(s)}catch(_){}return}const old=Math.max(1,iv(h.hedgehogRewardLevel)||1);if(l>old){h.hedgehogRewardLevel=l;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}const add=Math.max(0,(HEDGE_COUNT[l]||1)-(HEDGE_COUNT[old]||1));if(add>0)message("🏠 อัปเกรดบ้านสำเร็จ!",`ได้รับเม่นเพิ่ม <b>${add} ตัว</b><br>ตอนนี้บ้าน Lv.${l} มีเม่นประจำบ้านรวม <b>${HEDGE_COUNT[l]} ตัว</b> แล้วค่ะ`)}}
   function ensureExtraHedgeState(s,count){s.houseHedgehogs=Array.isArray(s.houseHedgehogs)?s.houseHedgehogs:[];while(s.houseHedgehogs.length<Math.max(0,count-1)){const i=s.houseHedgehogs.length;s.houseHedgehogs.push({id:`house-hedge-${i+2}`,x:35+i*11,y:82-(i%2)*7,tx:35+i*11,ty:82-(i%2)*7,startedAt:0,duration:0})}return s.houseHedgehogs.slice(0,Math.max(0,count-1))}
   function nextHedgeMotion(h){const pts=[[28,79],[38,84],[48,77],[59,84],[69,78],[31,68],[46,70],[61,69],[72,72]],p=pts[Math.floor(Math.random()*pts.length)],t=now();h.x=Number(h.tx??h.x??50);h.y=Number(h.ty??h.y??80);h.tx=p[0];h.ty=p[1];h.startedAt=t;h.duration=3800+Math.floor(Math.random()*2200)}
-  function renderExtraHedgehogs(){const layer=$("sceneInteractiveLayer"),s=houseState();if(!layer||!s||currentScene!=="house"||layer.dataset.r17HouseMode!=="basement")return;const total=HEDGE_COUNT[level()]||1,list=ensureExtraHedgeState(s,total);layer.querySelectorAll(".r23-extra-hedgehog").forEach(x=>x.remove());const t=now();let dirty=false;for(const h of list){if(!h.startedAt||t>=h.startedAt+h.duration){nextHedgeMotion(h);dirty=true}const ratio=Math.max(0,Math.min(1,(t-h.startedAt)/Math.max(1,h.duration))),x=Number(h.x)+(Number(h.tx)-Number(h.x))*ratio,y=Number(h.y)+(Number(h.ty)-Number(h.y))*ratio,b=document.createElement("button");b.type="button";b.className="r17-hedgehog r23-extra-hedgehog";b.style.left=`${x}%`;b.style.top=`${y}%`;b.style.backgroundImage='url("hedgehog-walk-side.png")';b.style.backgroundSize="400% 400%";b.style.backgroundPosition=`${((Math.floor(t/180)%4)*100/3)}% ${((Math.floor(t/720)%4)*100/3)}%`;if(Number(h.tx)<Number(h.x))b.classList.add("face-left");layer.insertBefore(b,layer.querySelector(".r17-house-actions")||null)}if(dirty)try{saveLocalOnly(s)}catch(_){}}
+  function renderExtraHedgehogs(){return}
 
   /* ---------- Main tick is UI/timestamp only: no Firebase reads ---------- */
   function uiTick(){
@@ -28789,24 +28805,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     return changed;
   }
 
-  async function run(force=false){
-    if(busy||!cloudReady||!currentMemberKey||visitContext)return false;
-    const t0=Date.now();if(!force&&t0-lastRun<20000)return false;lastRun=t0;busy=true;
-    try{
-      try{await settlePendingCloudSave?.()}catch(_){}
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,changed=false;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(ref);if(!snap.exists())return;
-        const st=ensure(normalizeState(snap.data(),currentMember));changed=compute(st,now());
-        if(changed)st.clientSaveRevision=Math.max(Number(st.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;next=st;
-        if(changed)tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-      });
-      if(next){ownState=ensure(normalizeState(next,currentMember));if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
-      try{globalThis.YN_R3411?.renderDrops?.()}catch(e){console.warn("R34.11 disc render",e)}
-      return changed;
-    }catch(e){console.warn("R34.10.10 authoritative drop sync",e);return false}
-    finally{busy=false}
-  }
+  async function run(force=false){return false}
 
   document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,#plotPageNextBtn,#plotPagePrevBtn,[data-pen],[data-alpaca-pen]"))setTimeout(()=>run(true),120)},false);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>run(true),180)},{passive:true});
@@ -29164,12 +29163,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
       renderDrops();return changed;
     }catch(e){console.warn("R34.11 disc sync",e);return false}finally{dropBusy=false}
   }
-  function renderDrops(){
-    /* Royal alpaca — actual current pen */
-    const alpStage=$("alpacaPenStage"),alpVisible=alpStage&&!$("alpacaPenScreen")?.classList.contains("hidden");let rl=$("r3411RoyalDropLayer");if(alpVisible&&!visitContext){if(!rl){rl=document.createElement("div");rl.id="r3411RoyalDropLayer";rl.className="r3411-drop-layer";alpStage.appendChild(rl)}const p=penNo(),arr=ensureDropState(owner())?.alpaca?.royalDiscDrops?.[`pen${p}`]||[];rl.innerHTML=arr.slice(-8).map((d,i)=>`<button type="button" class="r3411-disc-drop royal" data-r3411-royal="${p}" style="left:${29+(i%4)*14}%;top:${57+Math.floor(i/4)*10}%"><img src="therapy-disc-pink.png" alt="แผ่นเพลงบำบัดหัวใจหวาน"><small>×${Number(d.qty)||2}</small></button>`).join("");rl.querySelectorAll("[data-r3411-royal]").forEach(b=>b.onclick=()=>globalThis.YN_R34?.claimRoyalDrops?.(Number(b.dataset.r3411Royal)))}else rl?.remove();
-    /* Hamster — actual current Farm 2/3/4 */
-    const gs=$("gameScreen"),f=farmNo();let hl=$("r3411HamsterDropLayer");if(gs&&!gs.classList.contains("hidden")&&!visitContext&&f>=2&&f<=4){if(!hl){hl=document.createElement("div");hl.id="r3411HamsterDropLayer";hl.className="r3411-drop-layer r3411-ham-drop-layer";gs.appendChild(hl)}const arr=ensureDropState(owner())?.hamsterDiscDrops?.[String(f)]||[];hl.innerHTML=arr.slice(-10).map((d,i)=>`<button type="button" class="r3411-disc-drop hamster" data-r3411-ham="${f}" style="left:${29+(i%5)*11}%;top:${67+Math.floor(i/5)*8}%"><img src="therapy-disc-rock.png" alt="แผ่นเพลงบำบัดพลังร็อก"><small>×${Number(d.qty)||1}</small></button>`).join("");hl.querySelectorAll("[data-r3411-ham]").forEach(b=>b.onclick=()=>globalThis.YN_R34?.claimHamsterDrops?.(Number(b.dataset.r3411Ham)))}else hl?.remove();
-  }
+  function renderDrops(){return}
   setInterval(()=>ensureDiscDrops(false),30000);setInterval(renderDrops,1800);window.addEventListener("focus",()=>setTimeout(()=>ensureDiscDrops(true),150),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>ensureDiscDrops(true),180)},{passive:true});
 
   /* ---------- G) Meow-Woof Hotel: feed all hungry pets, user chooses dish ---------- */
@@ -30603,11 +30597,7 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
   const HOUR=3600000,ROYAL_MS=HOUR,HAM_MS=3*HOUR,DROP_MARK="R34.12.0-recovery";let discBusy=false;
   function ensureDiscState(s){s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];s.dropRepairMarks=s.dropRepairMarks&&typeof s.dropRepairMarks==="object"?s.dropRepairMarks:{};return s}
   function dedupeAlpacaState(s){const seen=new Set();let changed=false;(s?.alpaca?.pens||[]).forEach((pen,pi)=>{const keep=[];for(const a of (pen?.alpacas||[])){const id=String(a?.id||"");if(!id||seen.has(id)){changed=true;continue}seen.add(id);if(a.type==="adult")a.penIndex=pi+1;keep.push(a)}pen.alpacas=keep});return changed}
-  async function syncAnimalDiscs(force=false){if(discBusy||visitContext||!cloudReady||!currentMemberKey)return;discBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const s=ensureDiscState(normalizeState(snap.data(),currentMember)),t=now();let changed=dedupeAlpacaState(s),royals=[],hams=[];(s.alpaca?.pens||[]).forEach((pen,pi)=>(pen?.alpacas||[]).forEach(a=>{if(a?.id&&a.type==="adult"&&["prince","princess"].includes(String(a.color||"")))royals.push({id:String(a.id),pen:pi+1})}));for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[]))if(h?.id)hams.push({id:String(h.id),farm:f});
-        if(!s.dropRepairMarks[DROP_MARK]){for(const r of royals){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`];if(!arr.some(d=>String(d.animalId)===r.id))arr.push({id:`r34120-royal-recovery-${r.id}`,animalId:r.id,qty:2,createdAt:t,recovery:true});s.alpaca.royalDiscClock[r.id]=t}for(const h of hams){const arr=s.hamsterDiscDrops[String(h.farm)];if(!arr.some(d=>String(d.hamsterId)===h.id))arr.push({id:`r34120-ham-recovery-${h.id}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:t,recovery:true});s.hamsterDiscClock[h.id]=t}s.dropRepairMarks[DROP_MARK]=t;changed=true}
-        for(const r of royals){let last=Number(s.alpaca.royalDiscClock[r.id])||t;const due=Math.floor((t-last)/ROYAL_MS);if(due>0){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`],rounds=Math.min(due,24);for(let i=0;i<rounds;i++)arr.push({id:`r34120-royal-${r.id}-${last+(i+1)*ROYAL_MS}`,animalId:r.id,qty:2,createdAt:last+(i+1)*ROYAL_MS});s.alpaca.royalDiscClock[r.id]=last+due*ROYAL_MS;changed=true}}
-        for(const h of hams){let last=Number(s.hamsterDiscClock[h.id])||t;const due=Math.floor((t-last)/HAM_MS);if(due>0){const arr=s.hamsterDiscDrops[String(h.farm)],rounds=Math.min(due,24);for(let i=0;i<rounds;i++)arr.push({id:`r34120-ham-${h.id}-${last+(i+1)*HAM_MS}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:last+(i+1)*HAM_MS});s.hamsterDiscClock[h.id]=last+due*HAM_MS;changed=true}}
-        if(changed||force){s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+(changed?1:0);next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}else next=cp(s)});if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}renderDiscLayers()}catch(e){console.warn(BUILD,"disc sync",e)}finally{discBusy=false}}
+  async function syncAnimalDiscs(force=false){return false}
   function renderDiscLayers(){document.querySelectorAll("#r34RoyalDiscLayer,#r3411RoyalDropLayer,#r34HamsterDiscLayer,#r3411HamsterDropLayer").forEach(x=>x.remove());if(visitContext)return;const s=ensureDiscState(ownState||state);const stage=$("alpacaPenStage"),alpVisible=stage&&!$("alpacaPenScreen")?.classList.contains("hidden");if(alpVisible){const p=currentPenNo(),arr=s?.alpaca?.royalDiscDrops?.[`pen${p}`]||[];if(arr.length){let layer=$("r34120RoyalDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34120RoyalDiscLayer";layer.className="r3411-drop-layer";stage.appendChild(layer)}layer.innerHTML=arr.slice(-8).map((d,i)=>`<button class="r3411-disc-drop royal" data-r34120-royal="${p}" style="left:${29+(i%4)*14}%;top:${57+Math.floor(i/4)*10}%"><img src="therapy-disc-pink.png"><small>×${Number(d.qty)||2}</small></button>`).join("")}}else $("r34120RoyalDiscLayer")?.remove();const f=Math.max(1,Math.min(4,(Number(farmPlotPage)||0)+1)),screen=$("gameScreen"),harr=f>=2?(s?.hamsterDiscDrops?.[String(f)]||[]):[];if(screen&&!screen.classList.contains("hidden")&&harr.length){let layer=$("r34120HamDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34120HamDiscLayer";layer.className="r3411-drop-layer r3411-ham-drop-layer";screen.appendChild(layer)}layer.innerHTML=harr.slice(-10).map((d,i)=>`<button class="r3411-disc-drop hamster" data-r34120-ham="${f}" style="left:${29+(i%5)*11}%;top:${67+Math.floor(i/5)*8}%"><img src="therapy-disc-rock.png"><small>×${Number(d.qty)||1}</small></button>`).join("")}else $("r34120HamDiscLayer")?.remove()}
   async function claimDiscs(kind,no){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const s=ensureDiscState(normalizeState(snap.data(),currentMember));s.specials=s.specials||{};if(kind==="royal"){const arr=s.alpaca.royalDiscDrops[`pen${no}`]||[];qty=arr.reduce((n,d)=>n+(Number(d.qty)||2),0);if(!qty)throw new Error("รับไปแล้ว");s.specials.therapyDiscPink=admin()?9999:(Number(s.specials.therapyDiscPink)||0)+qty;s.alpaca.royalDiscDrops[`pen${no}`]=[]}else{const arr=s.hamsterDiscDrops[String(no)]||[];qty=arr.reduce((n,d)=>n+(Number(d.qty)||1),0);if(!qty)throw new Error("รับไปแล้ว");s.specials.therapyDiscRock=admin()?9999:(Number(s.specials.therapyDiscRock)||0)+qty;s.hamsterDiscDrops[String(no)]=[]}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);renderDiscLayers();showWeatherToast?.(`💿 รับแผ่นเสียง ×${qty} แล้ว`)}catch(e){message?.("รับของดรอปไม่ได้",e?.message||"กรุณาลองใหม่")}}
   window.addEventListener("pointerdown",e=>{const r=e.target?.closest?.("[data-r34120-royal]"),h=e.target?.closest?.("[data-r34120-ham]");if(!r&&!h)return;e.preventDefault();e.stopImmediatePropagation();if(r)claimDiscs("royal",Number(r.dataset.r34120Royal));else claimDiscs("ham",Number(h.dataset.r34120Ham))},true);
@@ -30746,13 +30736,7 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
 
   /* ---- hotel: brand-new id so old capture listeners cannot intercept it ---- */
   function removeLegacyHotelButtons(){document.querySelectorAll("#r3411HotelFeedAll,#r34120HotelFeedAll").forEach(b=>{if(b.id!==FINAL_HOTEL_ID)b.remove()})}
-  function mountFinalHotel(){
-    if(currentScene!=="dogHotel"){ $(FINAL_HOTEL_ID)?.remove(); return }
-    removeLegacyHotelButtons();
-    const host=document.querySelector(".r329-hotel-tools")||$("s2HotelToolRail")||$("sceneInteractiveLayer");if(!host)return;
-    let b=$(FINAL_HOTEL_ID);if(!b){b=document.createElement("button");b.id=FINAL_HOTEL_ID;b.type="button";b.innerHTML="🍽️<small>ให้อาหารทั้งหมด</small>";host.prepend(b)}
-    b.disabled=false;b.style.cssText+=";position:relative;z-index:2147483646;pointer-events:auto;touch-action:manipulation;min-height:48px";
-  }
+  function mountFinalHotel(){return}
   function openFinalFeedAll(){
     const fn=globalThis.YN_R341200?.showHotelFeedAll||globalThis.YN_R341112?.showFeedAll||globalThis.YN_R3411?.showFeedAllHotel;
     if(typeof fn==="function")return fn();
@@ -30830,13 +30814,7 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
   /* HARD hotel button lives on body so hotel re-render cannot delete or cover it. */
   const HID="yn124HotelFeedAll";
   function hotelFn(){return globalThis.YN_R341200?.showHotelFeedAll||globalThis.YN_R3411?.showFeedAllHotel}
-  function mountHotelHard(){
-    if(currentScene!=="dogHotel"){ $(HID)?.remove(); return }
-    let b=$(HID);if(!b){b=document.createElement("button");b.id=HID;b.type="button";b.innerHTML="🍽️ ให้อาหารหมา+แมวทั้งหมด";document.body.appendChild(b)}
-    b.style.cssText="position:fixed;right:12px;bottom:104px;z-index:2147483647;min-height:48px;padding:10px 14px;border-radius:16px;font-weight:800;pointer-events:auto;touch-action:manipulation";b.disabled=false;
-    const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();const fn=hotelFn();if(typeof fn==="function")fn();else try{message?.("ให้อาหารทั้งหมด","ไม่พบฟังก์ชันโฮเทล") }catch(_){}};
-    b.onpointerup=go;b.ontouchend=go;b.onclick=go;
-  }
+  function mountHotelHard(){return}
   /* Also expose the same action at top of roster modal. */
   const roster124=typeof showDogHotelRoster==="function"?showDogHotelRoster:null;if(roster124)showDogHotelRoster=function(){const r=roster124.apply(this,arguments);setTimeout(()=>{const panel=document.querySelector("#modalContent .dog-roster-panel");if(!panel||panel.querySelector("#yn124RosterFeedAll"))return;const b=document.createElement("button");b.id="yn124RosterFeedAll";b.type="button";b.className="primary-spooky-action";b.textContent="🍽️ ให้อาหารทั้งหมด";panel.insertBefore(b,panel.children[2]||panel.firstChild);b.onclick=()=>hotelFn()?.()},0);return r};
 
@@ -30852,8 +30830,6 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
     else if(t?.matches?.("[data-r17-hdrop]")){key=`drop:${t.dataset.r17Hdrop}`;fn=()=>a.collectHedgeOne?.(t.dataset.r17Hdrop)}
     else if(t?.id==="r17CollectHedge"){key="drop:all";fn=()=>a.collectHedge?.()}
     if(!fn)return false;const tm=Date.now();if(key===baseLast&&tm-baseAt<350)return true;baseLast=key;baseAt=tm;e?.preventDefault?.();e?.stopPropagation?.();try{fn()}catch(err){console.warn(BUILD,"basement",err)}return true}
-  window.addEventListener("touchend",e=>{const t=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot],[data-r17-plant],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-hdrop],#r17CollectHedge");if(t)basementAction(t,e)},true);
-  window.addEventListener("click",e=>{const t=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot],[data-r17-plant],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-hdrop],#r17CollectHedge");if(t)basementAction(t,e)},true);
 
   setInterval(mountHotelHard,300);window.addEventListener("pageshow",()=>setTimeout(()=>{publishOwnerNow(true);repairAllGardensFromSaves();mountHotelHard()},180),{passive:true});setTimeout(()=>{publishOwnerNow(true);repairAllGardensFromSaves();mountHotelHard()},600);
   globalThis.YN_R341204={BUILD,publishOwnerNow,repairAllGardensFromSaves,mountHotelHard};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
@@ -31081,13 +31057,7 @@ console.info(window.YAINOO_BUILD,"loaded");
       ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();try{renderDogHotelScene?.()}catch(_){try{draw?.()}catch(__){}};showWeatherToast?.(`🍽️ ให้อาหารหมา+แมวทั้งหมด ${count} ตัวแล้ว`);
     }catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่")}finally{hotelBusy=false}
   }
-  function mountHotel127(){
-    /* remove every historical feed-all button so there is exactly one */
-    document.querySelectorAll("#r3411HotelFeedAll,#r34120HotelFeedAll,#ynFinalHotelFeedAll,#yn124HotelFeedAll,#yn124RosterFeedAll").forEach(n=>n.remove());
-    if(currentScene!=="dogHotel"){$(HOTEL_ID)?.remove();return}
-    let b=$(HOTEL_ID);if(!b){b=document.createElement("button");b.id=HOTEL_ID;b.type="button";b.textContent="🍽️ ให้อาหารหมา+แมวทั้งหมด";document.body.appendChild(b)}
-    b.style.cssText="position:fixed;right:12px;bottom:104px;z-index:2147483647;min-height:52px;padding:11px 15px;border-radius:16px;font-weight:900;pointer-events:auto;touch-action:manipulation";b.disabled=false;
-  }
+  function mountHotel127(){return}
   window.addEventListener("pointerdown",e=>{const b=e.target?.closest?.(`#${HOTEL_ID}`);if(!b)return;e.preventDefault();e.stopImmediatePropagation();openHotelAll127()},true);
   window.addEventListener("touchend",e=>{const b=e.target?.closest?.(`#${HOTEL_ID}`);if(!b)return;e.preventDefault();e.stopImmediatePropagation();openHotelAll127()},true);
   window.addEventListener("click",e=>{const b=e.target?.closest?.(`#${HOTEL_ID}`);if(!b)return;e.preventDefault();e.stopImmediatePropagation()},true);
@@ -31124,7 +31094,7 @@ console.info(window.YAINOO_BUILD,"loaded");
   function openHotel128(){if(visitContext)return;const s=own();if(!s)return message?.("ให้อาหารทั้งหมด","ยังโหลดข้อมูลไม่เสร็จค่ะ");const h=hungryHotel128(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมา/แมวที่หิวค่ะ");const rs=Array.isArray(RECIPES)?RECIPES:[];$("modalContent").innerHTML=`<section class="feature-panel"><h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2><p>หิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><div class="cat-feed-grid">${rs.map(r=>{const q=typeof dishCountInState==="function"?Number(dishCountInState(r.id,s))||0:0;return `<button type="button" data-yn128-menu="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="yn128HotelCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;openModal?.();document.querySelectorAll("[data-yn128-menu]").forEach(b=>{const fire=e=>once(`hotel-menu:${b.dataset.yn128Menu}`,()=>commitHotel128(b.dataset.yn128Menu),e);b.onpointerdown=fire;b.ontouchstart=fire;b.onclick=e=>e.preventDefault()});$("yn128HotelCancel").onclick=()=>closeModal?.()}
   async function commitHotel128(recipeId){if(hotelBusy||!cloudReady||!currentMemberKey)return;hotelBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,count=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),h=hungryHotel128(s);count=h.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องที่หิวแล้ว");if(typeof dishCountInState!=="function"||Number(dishCountInState(recipeId,s))<count)throw new Error(`อาหารไม่พอ ต้องใช้ ${count} ถาด`);if(typeof removeDishesFromState!=="function"||!removeDishesFromState(s,recipeId,count))throw new Error("หักอาหารไม่สำเร็จ");const t=now();for(const x of h){x.pet.nextFeedAt=t+Number(typeof V15_PET_HUNGER_MS!=="undefined"?V15_PET_HUNGER_MS:14400000);x.pet.lastPenaltyBucket=0}try{incrementMissionOn?.(s,"feedOwnPets",count)}catch(_){}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cp(s);tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();try{renderDogHotelScene?.()}catch(_){try{draw?.()}catch(__){}}showWeatherToast?.(`🍽️ ให้อาหารทั้งหมด ${count} ตัวแล้ว`)}catch(err){message?.("ให้อาหารทั้งหมดไม่ได้",err?.message||"กรุณาลองใหม่")}finally{hotelBusy=false}}
   function hotelVisible(){return currentScene==="dogHotel"||!!document.querySelector("#dogHotelPetLayer,.dog-hotel-pet-layer")}
-  function mountHotel128(){const b=$(HOTEL_ID);if(b)b.remove()}
+  function mountHotel128(){return}
 
   /* ---------- Honey: unique overlay on HUD + live-state refill ---------- */
   const HONEY_ID="yn128HoneyRefuelHit";
@@ -31137,29 +31107,8 @@ console.info(window.YAINOO_BUILD,"loaded");
   /* ---------- Basement: overlay hitboxes with unique selectors ---------- */
   const BASE_ID="yn128BasementFastLayer";
   function rectStyle(target,root){const a=target.getBoundingClientRect(),b=root.getBoundingClientRect();return `position:absolute;left:${a.left-b.left}px;top:${a.top-b.top}px;width:${a.width}px;height:${a.height}px;pointer-events:auto;touch-action:none;background:transparent;border:0;padding:0;margin:0;z-index:50;`}
-  function rebindBasementModal(){
-    const a=globalThis.YN_R17;if(!a)return;
-    document.querySelectorAll("[data-r17-plant]").forEach(b=>{
-      const key=b.dataset.r17Plant,idx=Number(b.dataset.r17PlantPlot);
-      b.removeAttribute("data-r17-plant");b.removeAttribute("data-r17-plant-plot");b.dataset.yn128Plant=key;
-      const fire=e=>once(`flower-plant:${idx}:${key}`,()=>a.plantFlower?.(idx,key),e);
-      b.style.touchAction="none";b.onpointerdown=fire;b.ontouchstart=fire;b.onclick=e=>e.preventDefault();
-    });
-    document.querySelectorAll("[data-r17-wine]").forEach(b=>{
-      const key=b.dataset.r17Wine,idx=Number(b.dataset.r17WineMachine),w=a.WINES?.[key];
-      b.removeAttribute("data-r17-wine");b.removeAttribute("data-r17-wine-machine");b.dataset.yn128Wine=key;
-      const choose=e=>once(`wine-pick:${idx}:${key}`,()=>{
-        if(!w)return;const s=own()||{},needs=Object.entries(w.crops||{}).map(([ck,q])=>`<div><span>${esc(CROPS?.[ck]?.name||ck)}</span><b>${Number(s.bag?.[ck])||0}/${q}</b></div>`).join("");
-        $("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image||""}"><h2>${esc(w.name||key)}</h2><div class="r17-wine-needs">${needs}</div><p>เวลาหมัก ${typeof formatHM==="function"?formatHM(w.duration):Math.round(Number(w.duration||0)/60000)+" นาที"}</p><button id="yn128StartWineDirect" class="primary-spooky-action" type="button">เริ่มหมักเครื่อง ${idx+1}</button></section>`;
-        const sb=$("yn128StartWineDirect"),go=ev=>once(`wine-start:${idx}:${key}`,()=>a.startWine?.(idx,key),ev);sb.onpointerdown=go;sb.ontouchstart=go;sb.onclick=ev=>ev.preventDefault();openModal?.();
-      },e);
-      b.style.touchAction="none";b.onpointerdown=choose;b.ontouchstart=choose;b.onclick=e=>e.preventDefault();
-    });
-    const hs=$("r17HarvestOne");if(hs){const idx=Number(hs.dataset.r17HarvestOne);hs.removeAttribute("data-r17-harvest-one");hs.id="yn128HarvestOne";const fire=e=>once(`harvest:${idx}`,()=>a.harvestFlower?.(idx),e);hs.style.touchAction="none";hs.onpointerdown=fire;hs.ontouchstart=fire;hs.onclick=e=>e.preventDefault()}
-    const wc=$("r17WineClaim");if(wc){const idx=Number(wc.dataset.r17WineClaim);wc.removeAttribute("data-r17-wine-claim");wc.id="yn128WineClaim";const fire=e=>once(`wine-claim:${idx}`,()=>a.claimWine?.(idx),e);wc.style.touchAction="none";wc.onpointerdown=fire;wc.ontouchstart=fire;wc.onclick=e=>e.preventDefault()}
-    const sw=$("r17StartWine");if(sw){const key=sw.dataset.r17StartWine,idx=Number(sw.dataset.r17StartMachine);sw.removeAttribute("data-r17-start-wine");sw.removeAttribute("data-r17-start-machine");sw.id="yn128StartWine";const fire=e=>once(`wine-start:${idx}:${key}`,()=>a.startWine?.(idx,key),e);sw.style.touchAction="none";sw.onpointerdown=fire;sw.ontouchstart=fire;sw.onclick=e=>e.preventDefault()}
-  }
-  function mountBasement128(){const root=$("sceneInteractiveLayer"),a=globalThis.YN_R17;if(currentScene!=="house"||visitContext||!root||root.dataset.r17HouseMode!=="basement"||!a){$(BASE_ID)?.remove();return}let layer=$(BASE_ID);if(!layer){layer=document.createElement("div");layer.id=BASE_ID;layer.style.cssText="position:absolute;inset:0;z-index:2147483000;pointer-events:none;";root.appendChild(layer)}const spec=[];root.querySelectorAll("[data-r17-plot]").forEach(t=>spec.push([`p${t.dataset.r17Plot}`,t,()=>a.openFlowerPlot?.(Number(t.dataset.r17Plot))]));root.querySelectorAll("[data-r17-machine-hot]").forEach(t=>spec.push([`w${t.dataset.r17MachineHot}`,t,()=>a.openWineMachine?.(Number(t.dataset.r17MachineHot))]));root.querySelectorAll("[data-r17-hdrop]").forEach(t=>spec.push([`d${t.dataset.r17Hdrop}`,t,()=>a.collectHedgeOne?.(t.dataset.r17Hdrop)]));const all=$("r17CollectHedge");if(all)spec.push(["all",all,()=>a.collectHedge?.()]);const live=new Set();for(const [key,target,fn] of spec){live.add(key);let b=layer.querySelector(`[data-yn128-key="${CSS.escape(key)}"]`);if(!b){b=document.createElement("button");b.type="button";b.dataset.yn128Key=key;layer.appendChild(b)}b.style.cssText=rectStyle(target,root);const fire=e=>once(`base:${key}`,()=>{fn();setTimeout(rebindBasementModal,0)},e);b.onpointerdown=fire;b.ontouchstart=fire;b.onclick=e=>e.preventDefault()}layer.querySelectorAll("[data-yn128-key]").forEach(b=>{if(!live.has(b.dataset.yn128Key))b.remove()});rebindBasementModal()}
+  function rebindBasementModal(){return}
+  function mountBasement128(){return}
 
   /* ---------- Own plots: bind pointerdown once, bypass slow synthesized click ---------- */
   function bindFastPlots(){if(visitContext)return;document.querySelectorAll("#plots [data-plot-index],#plots .plot[data-index]").forEach(b=>{if(b.dataset.yn128Fast==="1")return;b.dataset.yn128Fast="1";const idx=Number(b.dataset.plotIndex??b.dataset.index);if(!Number.isFinite(idx))return;const fire=e=>once(`plot:${idx}`,()=>{const p=(state||ownState)?.plots?.[idx];try{ensurePlotPhase?.(p)}catch(_){}if(p?.crop&&(p.phase==="worm"||p.worm)){openFastWorm128(idx);return}tapPlot?.(idx)},e);b.onpointerdown=fire;b.ontouchstart=fire;b.onclick=e=>e.preventDefault()})}
@@ -31169,15 +31118,203 @@ console.info(window.YAINOO_BUILD,"loaded");
   function rewardImage128(label){label=String(label||"");try{for(const [k,x] of Object.entries(CROPS||{}))if(label.includes(x?.name||"__"))return x?.readyImg||x?.selectImg||x?.seedImg||""}catch(_){}try{for(const x of Object.values(DOG_TYPES||{}))if(label.includes(x?.name||"__"))return x?.image||""}catch(_){}try{for(const x of Object.values(CAT_TYPES||{}))if(label.includes(x?.name||"__"))return x?.image||""}catch(_){}const map=[["จิ๊กซอว์ #1","hamster-jigsaw-1.png"],["จิ๊กซอว์ #2","hamster-jigsaw-2.png"],["จิ๊กซอว์ #3","hamster-jigsaw-3.png"],["จิ๊กซอว์ #4","hamster-jigsaw-4.png"],["แกลลอนน้ำมัน","honey-fuel-can.png"],["น้ำมันรถน้ำผึ้ง","honey-fuel-can.png"],["กุศล","merit-icon.png"]];return map.find(([n])=>label.includes(n))?.[1]||""}
   function fillRewardIcons128(){document.querySelectorAll(".r31-box-result article,.box-reward-summary article,.m200-popup-multi span").forEach(row=>{if(row.querySelector("img"))return;const src=rewardImage128(row.textContent);if(!src)return;const img=document.createElement("img");img.src=src;img.alt="";img.style.cssText="width:44px;height:44px;object-fit:contain;flex:0 0 auto;";row.prepend(img)})}
 
-  const mo=new MutationObserver(()=>{mountHotel128();mountHoney128();mountBasement128();bindFastPlots();rebindBasementModal();fillRewardIcons128()});mo.observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(()=>{mountHotel128();mountHoney128();mountBasement128();bindFastPlots();fillRewardIcons128()},180);
-  window.addEventListener("pageshow",()=>setTimeout(()=>{mountHotel128();mountHoney128();mountBasement128();bindFastPlots()},80),{passive:true});
+  /* R34.12.10: no document-wide observer / 180ms hotel+basement DOM churn. */
+  setInterval(()=>{mountHoney128();bindFastPlots();fillRewardIcons128()},700);
+  window.addEventListener("pageshow",()=>setTimeout(()=>{mountHoney128();bindFastPlots();fillRewardIcons128()},100),{passive:true});
   globalThis.YN_R341208={BUILD,openHotel128,openHoney128,mountBasement128};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
-;(()=>{
-  const LEGACY=["r3411HotelFeedAll","r34120HotelFeedAll","ynFinalHotelFeedAll","yn124HotelFeedAll","yn124RosterFeedAll","yn127HotelFeedAll","yn128HotelFeedAllHard"];
-  const clean=()=>LEGACY.forEach(id=>{const n=document.getElementById(id);if(n)n.remove()});
-  clean();setInterval(clean,1200);
-  globalThis.YAINOO_BUILD="S2-R34.12.9-HOTEL-MASTER-FEED-20260905";
+/* =====================================================================
+   S2 R34.12.10 — HOTEL / BASEMENT / MUSIC DISC SINGLE PATH
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.10-HOTEL-BASEMENT-DISC-SINGLE-PATH-20260905";
+  const $=id=>document.getElementById(id);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const tnow=()=>typeof gameNow==="function"?gameNow():Date.now();
+
+  let hotelBusy=false;
+  function hotelHungry(s,t=tnow()){
+    try{ensureDogHotelPenState?.(s);ensureCatState?.(s)}catch(_){}
+    const out=[];
+    for(const p of (s?.dogs||[])){const alive=!Number(p?.expiresAt)||Number(p.expiresAt)>t;if(p?.placedHotel&&alive&&YN_petCanFeed?.(p,t))out.push({kind:"dog",id:String(p.id||"")})}
+    for(const p of (s?.cats||[])){const alive=!Number(p?.expiresAt)||Number(p.expiresAt)>t;if((p?.placedHotel||Number(p?.placedFarm)===-1)&&alive&&YN_petCanFeed?.(p,t))out.push({kind:"cat",id:String(p.id||"")})}
+    return out.filter(x=>x.id);
+  }
+  function canonicalFeedAll(){
+    if(visitContext)return message?.("ให้อาหารทั้งหมดไม่ได้","กลับสวนของตัวเองก่อนค่ะ");
+    const s=ownState||state,need=hotelHungry(s).length;if(!need)return message?.("🍽️ ยังไม่ต้องให้อาหาร","ตอนนี้ไม่มีหมาหรือแมวที่หิวในโฮเทลค่ะ");
+    const mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel yn-feed-all-panel"><h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2><p class="yn-feed-all-need">ต้องใช้ <b>${need} ถาด</b> สำหรับสัตว์ที่หิว ${need} ตัว</p><p class="feature-subtitle">เลือกอาหารเมนูเดียว • 1 ถาดต่อ 1 ตัว • รวมทุกคอก</p><div class="cat-feed-grid">${YN_petFoodCards?.(s,need)||""}</div><button id="yn1210FeedCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
+    $("yn1210FeedCancel").onclick=()=>closeModal?.();
+    mc.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>{let fired=false;const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();if(fired)return;fired=true;canonicalFeedCommit(b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey)};b.style.touchAction="manipulation";b.onpointerdown=go;b.onclick=e=>{if(e?.pointerType)return;go(e)}});
+    openModal?.();
+  }
+  async function canonicalFeedCommit(foodType,key){
+    if(hotelBusy)return;hotelBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next=null,count=0,rewardTotal=0,penalties=0;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(snap.data(),currentMember),t=tnow(),targets=hotelHungry(s,t);count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");if(!YN_consumePetFood?.(s,foodType,key,count))throw new Error(`เมนูนี้ต้องมีอย่างน้อย ${count} ถาด`);const dogs=new Map((s.dogs||[]).map(p=>[String(p?.id||""),p])),cats=new Map((s.cats||[]).map(p=>[String(p?.id||""),p]));for(const x of targets){const p=x.kind==="dog"?dogs.get(x.id):cats.get(x.id);if(!p)continue;if(YN_petIsAngry?.(p,t)&&Number(p.lastPenaltyBucket||0)<1){s.merit=(Number(s.merit)||0)-30;penalties++}const reward=typeof randInt==="function"?randInt(20,50):20;rewardTotal+=reward;s.merit=(Number(s.merit)||0)+reward;p.nextFeedAt=t+(typeof YN_PET_HUNGER_MS!=="undefined"?YN_PET_HUNGER_MS:14400000);p.lastPenaltyBucket=0;if(x.kind==="dog"&&typeof DOG_DROP_INTERVAL_MS!=="undefined")p.nextDropAt=t+DOG_DROP_INTERVAL_MS;if(x.kind==="cat"&&typeof CAT_DROP_INTERVAL_MS!=="undefined")p.nextDropAt=t+CAT_DROP_INTERVAL_MS}try{incrementMissionOn?.(s,"feedOwnPets",count)}catch(_){}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cp(s);tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}closeModal?.();try{renderDogHotelScene?.()}catch(_){};try{updateMeritUI?.()}catch(_){};message?.("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`ใช้อาหาร ${count} ถาด • หมา/แมว ${count} ตัว<br>ได้รับรวม +${rewardTotal} กุศล${penalties?`<br>สถานะโกรธ ${penalties} ตัว ถูกหัก -${penalties*30} กุศล`:""}`);
+    }catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่")}finally{hotelBusy=false}
+  }
+  if(globalThis.YN_R341200)globalThis.YN_R341200.showHotelFeedAll=canonicalFeedAll;
+  if(globalThis.YN_R3411)globalThis.YN_R3411.showFeedAllHotel=canonicalFeedAll;
+  function patchHotelButtons(){for(const id of ["r3411HotelFeedAll","ynHotelMasterFeedAll"]){const b=$(id);if(!b)continue;b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";if(id==="ynHotelMasterFeedAll"){let fired=false;const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();if(fired)return;fired=true;canonicalFeedAll();setTimeout(()=>fired=false,250)};b.onpointerdown=go;b.onclick=e=>{if(e?.pointerType)return;go(e)}}}}
+  setInterval(patchHotelButtons,900);window.addEventListener("pageshow",()=>setTimeout(patchHotelButtons,100),{passive:true});
+
+  const ROYAL_MS=3600000,HAM_MS=10800000;let discBusy=false,lastDisc=0;
+  function ensureDisc(s){s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];return s}
+  function discCalc(s,t){ensureDisc(s);let changed=false;const royals=[];for(let pi=0;pi<(s.alpaca?.pens||[]).length;pi++)for(const a of (s.alpaca.pens[pi]?.alpacas||[]))if(a?.id&&a.type==="adult"&&["prince","princess"].includes(String(a.color||"")))royals.push({id:String(a.id),pen:pi+1});const hams=[];for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[]))if(h?.id)hams.push({id:String(h.id),farm:f});
+    for(const r of royals){const moved=[];for(let p=1;p<=5;p++){const arr=s.alpaca.royalDiscDrops[`pen${p}`];for(let i=arr.length-1;i>=0;i--)if(String(arr[i]?.animalId||"")===r.id&&p!==r.pen)moved.push(...arr.splice(i,1))}if(moved.length){const dst=s.alpaca.royalDiscDrops[`pen${r.pen}`],ids=new Set(dst.map(d=>String(d.id)));for(const d of moved)if(!ids.has(String(d.id))){dst.push(d);ids.add(String(d.id))}changed=true}}
+    for(const h of hams){const moved=[];for(const f of [2,3,4]){const arr=s.hamsterDiscDrops[String(f)];for(let i=arr.length-1;i>=0;i--)if(String(arr[i]?.hamsterId||"")===h.id&&f!==h.farm)moved.push(...arr.splice(i,1))}if(moved.length){const dst=s.hamsterDiscDrops[String(h.farm)],ids=new Set(dst.map(d=>String(d.id)));for(const d of moved)if(!ids.has(String(d.id))){d.farm=h.farm;dst.push(d);ids.add(String(d.id))}changed=true}}
+    const activeR=new Set();for(const r of royals){activeR.add(r.id);let last=Number(s.alpaca.royalDiscClock[r.id]);if(!Number.isFinite(last)||last<=0||last>t){last=t-ROYAL_MS;s.alpaca.royalDiscClock[r.id]=last;changed=true}const due=Math.floor((t-last)/ROYAL_MS);if(due>0){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`];for(let k=1;k<=Math.min(due,24);k++){const at=last+k*ROYAL_MS,id=`r341210-royal-${r.id}-${at}`;if(!arr.some(d=>String(d.id)===id))arr.push({id,animalId:r.id,qty:2,createdAt:at})}s.alpaca.royalDiscClock[r.id]=last+due*ROYAL_MS;if(arr.length>96)arr.splice(0,arr.length-96);changed=true}}for(const id of Object.keys(s.alpaca.royalDiscClock))if(!activeR.has(id)){delete s.alpaca.royalDiscClock[id];changed=true}
+    const activeH=new Set();for(const h of hams){activeH.add(h.id);let last=Number(s.hamsterDiscClock[h.id]);if(!Number.isFinite(last)||last<=0||last>t){last=t-HAM_MS;s.hamsterDiscClock[h.id]=last;changed=true}const due=Math.floor((t-last)/HAM_MS);if(due>0){const arr=s.hamsterDiscDrops[String(h.farm)];for(let k=1;k<=Math.min(due,24);k++){const at=last+k*HAM_MS,id=`r341210-ham-${h.id}-${at}`;if(!arr.some(d=>String(d.id)===id))arr.push({id,hamsterId:h.id,farm:h.farm,qty:1,createdAt:at})}s.hamsterDiscClock[h.id]=last+due*HAM_MS;if(arr.length>120)arr.splice(0,arr.length-120);changed=true}}for(const id of Object.keys(s.hamsterDiscClock))if(!activeH.has(id)){delete s.hamsterDiscClock[id];changed=true}return changed}
+  async function syncDiscs(force=false){if(discBusy||visitContext||!cloudReady||!currentMemberKey)return false;const n=Date.now();if(!force&&n-lastDisc<12000)return false;lastDisc=n;discBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let fields=null,changed=false;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const s=ensureDisc(normalizeState(snap.data(),currentMember));changed=discCalc(s,tnow());if(!changed)return;fields={royalDiscDrops:cp(s.alpaca.royalDiscDrops),royalDiscClock:cp(s.alpaca.royalDiscClock),hamsterDiscDrops:cp(s.hamsterDiscDrops),hamsterDiscClock:cp(s.hamsterDiscClock)};tx.update(ref,{"alpaca.royalDiscDrops":fields.royalDiscDrops,"alpaca.royalDiscClock":fields.royalDiscClock,hamsterDiscDrops:fields.hamsterDiscDrops,hamsterDiscClock:fields.hamsterDiscClock,updatedAt:fs.serverTimestamp()})});if(fields){const s=ensureDisc(ownState||state);s.alpaca.royalDiscDrops=cp(fields.royalDiscDrops);s.alpaca.royalDiscClock=cp(fields.royalDiscClock);s.hamsterDiscDrops=cp(fields.hamsterDiscDrops);s.hamsterDiscClock=cp(fields.hamsterDiscClock);ownState=s;if(!visitContext)state=s;try{saveLocalOnly?.(s)}catch(_){};try{globalThis.YN_R341200?.renderDiscLayers?.()}catch(_){}}return changed}catch(e){console.warn(BUILD,"disc sync",e);return false}finally{discBusy=false}}
+  setInterval(()=>syncDiscs(false),15000);window.addEventListener("pageshow",()=>setTimeout(()=>syncDiscs(true),250),{passive:true});window.addEventListener("focus",()=>setTimeout(()=>syncDiscs(false),180),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>syncDiscs(true),180)},{passive:true});setTimeout(()=>syncDiscs(true),900);
+  globalThis.YN_R341210={BUILD,canonicalFeedAll,syncDiscs,discCalc};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.12.11 — HONEY REFUEL UNIVERSAL INPUT
+   Fix: some devices/users cannot tap refuel HUD/modal because old overlays
+   and handlers intercept events. Use one delegated capture path on the real
+   HUD and a server+live reconciliation for fuel-can quantity.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.11-HONEY-REFUEL-UNIVERSAL";
+  let busy=false,lastAt=0;
+  const cp11=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v??null))}};
+  function own11(){return visitContext?ownState:(state||ownState)}
+  function admin11(){return currentMember==="Aida"&&adminProfile?.role==="admin"}
+  function pct11(h){return Math.max(0,Math.min(100,Math.floor(Number(h?.fuelPercentStored)||0)))}
+  function liveCan11(s){return admin11()?9999:Math.max(0,Math.floor(Number(s?.specials?.honeyFuelCan)||0))}
+  async function loadCanonical11(){
+    const local=own11(); if(!local||!currentMemberKey)return {s:local,server:null,have:liveCan11(local)};
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));
+      const raw=snap.exists()?snap.data():null;
+      const server=raw?normalizeState(raw,currentMember):null;
+      const localHave=liveCan11(local),serverHave=liveCan11(server);
+      /* Do not let a delayed server snapshot erase cans visible in the live game. */
+      const have=admin11()?9999:Math.max(localHave,serverHave);
+      return {s:local,server,have,db,fs};
+    }catch(_){return {s:local,server:null,have:liveCan11(local)}}
+  }
+  async function open11(){
+    if(visitContext)return;
+    const {s,server,have}=await loadCanonical11();
+    if(!s)return message?.("เติมน้ำมันไม่ได้","ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ");
+    s.specials=s.specials||{};s.honeyDelivery=s.honeyDelivery&&typeof s.honeyDelivery==="object"?s.honeyDelivery:{};
+    const localPct=pct11(s.honeyDelivery),serverPct=pct11(server?.honeyDelivery);
+    /* Prefer the higher non-active fuel value; never resurrect an active trip. */
+    if(!s.honeyDelivery.active && server?.honeyDelivery && !server.honeyDelivery.active && serverPct>localPct)s.honeyDelivery.fuelPercentStored=serverPct;
+    const p=pct11(s.honeyDelivery);
+    if(s.honeyDelivery.active)return message?.("🛵 น้ำผึ้งกำลังทำงาน","รอเที่ยวนี้เสร็จก่อนค่ะ");
+    if(p>=100){try{return typeof callHoney==="function"?callHoney():message?.("น้ำมันเต็มแล้ว","เรียกน้ำผึ้งได้แล้วค่ะ")}catch(_){return}}
+    const need=Math.max(1,Math.ceil((100-p)/10)),max=Math.max(0,Math.min(have,need));
+    const mc=document.getElementById("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel honey-fuel-modal"><h2>⛽ เติมน้ำมันน้ำผึ้ง</h2><p>ตอนนี้ <b>${p}%</b> • มีแกลลอน ×${have}</p><label>จำนวน <input id="yn1211HoneyQty" type="number" inputmode="numeric" min="1" max="${Math.max(1,max)}" value="1"></label><button id="yn1211HoneyConfirm" class="honey-primary-btn" type="button" ${max?"":"disabled"}>เติมน้ำมัน</button></section>`;
+    openModal?.();
+  }
+  async function refill11(qty){
+    if(busy||!currentMemberKey||visitContext)return;busy=true;
+    try{
+      const x=await loadCanonical11(),s=x.s;if(!s)throw new Error("ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ");
+      s.specials=s.specials||{};s.honeyDelivery=s.honeyDelivery&&typeof s.honeyDelivery==="object"?s.honeyDelivery:{};
+      if(s.honeyDelivery.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่ค่ะ");
+      const before=pct11(s.honeyDelivery),have=x.have;
+      if(have<=0&&!admin11())throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋าค่ะ");
+      const used=Math.max(0,Math.min(Math.max(1,Math.floor(Number(qty)||1)),Math.ceil((100-before)/10),have));
+      if(!used)throw new Error("น้ำมันเต็มแล้วค่ะ");
+      const after=Math.min(100,before+used*10);
+      /* Reconcile local count upward only when server proves a higher value. */
+      if(!admin11())s.specials.honeyFuelCan=Math.max(0,have-used);
+      s.honeyDelivery.fuelPercentStored=after;s.honeyDelivery.fuelReadyAt=0;s.honeyDelivery.fuelExpiresAt=0;
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      ownState=s;if(!visitContext)state=s;try{saveLocalOnly?.(s)}catch(_){}
+      try{closeModal?.()}catch(_){}
+      const f=document.getElementById("honeyFuelFill"),pl=document.getElementById("honeyFuelPercent"),sl=document.getElementById("honeyFuelStatus");
+      if(f)f.style.width=`${after}%`;if(pl)pl.textContent=`${after}%`;if(sl)sl.textContent=after>=100?"เรียกน้ำผึ้ง":"น้ำมันน้ำผึ้ง";
+      showWeatherToast?.(`⛽ เติม ${used} แกลลอน • ${before}% → ${after}%`);
+      try{
+        const {db,fs}=x.db&&x.fs?x:await getFirebaseContext();
+        await fs.setDoc(fs.doc(db,"saves",currentMemberKey),{
+          [`specials.honeyFuelCan`]: admin11()?Number(s.specials.honeyFuelCan||9999):Number(s.specials.honeyFuelCan)||0,
+          honeyDelivery:cp11(s.honeyDelivery),clientSaveRevision:Number(s.clientSaveRevision)||1,
+          clientLocalEditAt:Number(s.clientLocalEditAt)||Date.now(),updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      }catch(err){console.warn(BUILD,"persist",err);try{setTimeout(()=>flushCloudSave?.(),80)}catch(_){}}
+    }catch(err){message?.("เติมน้ำมันไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}finally{busy=false}
+  }
+  function intercept(e){
+    const t=e.target?.closest?.("#honeyFuelHud,#yn128HoneyRefuelHit,#honeyFuelConfirm,#yn128HoneyConfirm,#yn1211HoneyConfirm");
+    if(!t)return;
+    const now=Date.now();if(now-lastAt<220){e.preventDefault?.();e.stopImmediatePropagation?.();return}lastAt=now;
+    e.preventDefault?.();e.stopImmediatePropagation?.();
+    if(t.id==="honeyFuelHud"||t.id==="yn128HoneyRefuelHit")open11();
+    else {const q=Number(document.getElementById("yn1211HoneyQty")?.value||document.getElementById("yn128HoneyQty")?.value||document.getElementById("honeyFuelQty")?.value||1);refill11(q)}
+  }
+  window.addEventListener("pointerdown",intercept,true);
+  window.addEventListener("touchstart",intercept,{capture:true,passive:false});
+  /* Keep the legacy transparent overlay from blocking the actual HUD. */
+  setInterval(()=>{const o=document.getElementById("yn128HoneyRefuelHit");if(o)o.style.pointerEvents="none";const h=document.getElementById("honeyFuelHud");if(h){h.style.pointerEvents="auto";h.style.touchAction="manipulation"}},1200);
+  globalThis.YN_HONEY_REFUEL_1211={open:open11,refill:refill11};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.12.12 — HONEY REFUEL PHYSICAL BUTTON
+   Android/iOS fallback: a real fixed button above all game layers.
+   This deliberately does not reuse legacy HUD/overlay ids.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.12-HONEY-REFUEL-PHYSICAL-BUTTON";
+  const BTN_ID="ynHoneyRefuelUniversalBtn";
+  let busy=false,lastTap=0;
+  const admin=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
+  const live=()=>visitContext?ownState:(state||ownState);
+  const pct=h=>Math.max(0,Math.min(100,Math.floor(Number(h?.fuelPercentStored)||0)));
+  function mount(){
+    let b=document.getElementById(BTN_ID);
+    const hud=document.getElementById("honeyFuelHud");
+    if(visitContext||!hud||hud.classList.contains("hidden")){b?.remove();return}
+    if(!b){
+      b=document.createElement("button");b.id=BTN_ID;b.type="button";b.textContent="⛽ เติมน้ำมัน";
+      b.setAttribute("aria-label","เติมน้ำมันน้ำผึ้ง");document.body.appendChild(b);
+    }
+    const r=hud.getBoundingClientRect();
+    const w=Math.max(96,Math.min(132,r.width||120));
+    const left=Math.max(8,Math.min(innerWidth-w-8,(r.right||innerWidth-8)-w));
+    const top=Math.min(innerHeight-54,Math.max(8,(r.bottom||64)+6));
+    b.style.cssText=`position:fixed;left:${left}px;top:${top}px;width:${w}px;height:40px;z-index:2147483647!important;pointer-events:auto!important;touch-action:manipulation!important;border:2px solid #f6d58b;border-radius:16px;background:#5b315f;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 12px #0008;display:block!important;opacity:1!important;`;
+  }
+  async function canonical(){
+    const s=live(); if(!s||!currentMemberKey)return {s,have:0};
+    s.specials=s.specials||{};s.honeyDelivery=s.honeyDelivery&&typeof s.honeyDelivery==="object"?s.honeyDelivery:{};
+    let have=admin()?9999:Math.max(0,Number(s.specials.honeyFuelCan)||0),server=null,db=null,fs=null;
+    try{const c=await getFirebaseContext();db=c.db;fs=c.fs;const snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(snap.exists()){server=normalizeState(snap.data(),currentMember);have=admin()?9999:Math.max(have,Math.max(0,Number(server?.specials?.honeyFuelCan)||0));const sp=pct(server?.honeyDelivery);if(!s.honeyDelivery.active&&!server?.honeyDelivery?.active&&sp>pct(s.honeyDelivery))s.honeyDelivery.fuelPercentStored=sp}}catch(_){}
+    return {s,have,server,db,fs};
+  }
+  async function open(){
+    if(visitContext)return;const x=await canonical(),s=x.s;if(!s)return message?.("เติมน้ำมันไม่ได้","ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ");
+    if(s.honeyDelivery.active)return message?.("🛵 น้ำผึ้งกำลังทำงาน","รอเที่ยวนี้เสร็จก่อนค่ะ");
+    const p=pct(s.honeyDelivery);if(p>=100){try{return typeof callHoney==="function"?callHoney():message?.("น้ำมันเต็มแล้ว","เรียกน้ำผึ้งได้แล้วค่ะ")}catch(_){return}}
+    const need=Math.max(1,Math.ceil((100-p)/10)),max=Math.max(0,Math.min(x.have,need));
+    const mc=document.getElementById("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel honey-fuel-modal"><h2>⛽ เติมน้ำมันน้ำผึ้ง</h2><p>ตอนนี้ <b>${p}%</b> • มีแกลลอน ×${x.have}</p><label>จำนวน <input id="yn1212HoneyQty" type="number" inputmode="numeric" min="1" max="${Math.max(1,max)}" value="1"></label><button id="yn1212HoneyConfirm" class="honey-primary-btn" type="button" ${max?"":"disabled"}>เติมน้ำมัน</button></section>`;openModal?.();
+  }
+  async function refill(){
+    if(busy||visitContext||!currentMemberKey)return;busy=true;
+    try{const x=await canonical(),s=x.s;if(!s)throw new Error("ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ");if(s.honeyDelivery.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่ค่ะ");const before=pct(s.honeyDelivery),have=x.have;if(have<=0&&!admin())throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋าค่ะ");const qty=Math.max(1,Math.floor(Number(document.getElementById("yn1212HoneyQty")?.value)||1)),used=Math.max(0,Math.min(qty,Math.ceil((100-before)/10),have));if(!used)throw new Error("น้ำมันเต็มแล้วค่ะ");const after=Math.min(100,before+used*10);if(!admin())s.specials.honeyFuelCan=Math.max(0,have-used);s.honeyDelivery.fuelPercentStored=after;s.honeyDelivery.fuelReadyAt=0;s.honeyDelivery.fuelExpiresAt=0;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();ownState=s;if(!visitContext)state=s;try{saveLocalOnly?.(s)}catch(_){};closeModal?.();try{const {db,fs}=x.db&&x.fs?x:await getFirebaseContext();await fs.setDoc(fs.doc(db,"saves",currentMemberKey),{specials:{...(x.server?.specials||{}),...(s.specials||{}),honeyFuelCan:admin()?Number(s.specials.honeyFuelCan||9999):Number(s.specials.honeyFuelCan)||0},honeyDelivery:structuredClone?s.honeyDelivery:JSON.parse(JSON.stringify(s.honeyDelivery)),clientSaveRevision:Number(s.clientSaveRevision)||1,clientLocalEditAt:Number(s.clientLocalEditAt)||Date.now(),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"persist",e);try{setTimeout(()=>flushCloudSave?.(),80)}catch(_){}}const f=document.getElementById("honeyFuelFill"),pl=document.getElementById("honeyFuelPercent"),sl=document.getElementById("honeyFuelStatus");if(f)f.style.width=`${after}%`;if(pl)pl.textContent=`${after}%`;if(sl)sl.textContent=after>=100?"เรียกน้ำผึ้ง":"น้ำมันน้ำผึ้ง";showWeatherToast?.(`⛽ เติม ${used} แกลลอน • ${before}% → ${after}%`)}catch(e){message?.("เติมน้ำมันไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy=false}
+  }
+  function fire(e){const t=e.target?.closest?.(`#${BTN_ID},#yn1212HoneyConfirm`);if(!t)return;const n=Date.now();if(n-lastTap<250){e.preventDefault?.();return}lastTap=n;e.preventDefault?.();e.stopImmediatePropagation?.();if(t.id===BTN_ID)open();else refill()}
+  window.addEventListener("pointerdown",fire,true);window.addEventListener("touchend",fire,{capture:true,passive:false});window.addEventListener("click",fire,true);
+  setInterval(mount,500);window.addEventListener("resize",mount,{passive:true});window.addEventListener("pageshow",()=>setTimeout(mount,50),{passive:true});setTimeout(mount,100);
+  globalThis.YN_HONEY_REFUEL_1212={open,refill,mount};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
