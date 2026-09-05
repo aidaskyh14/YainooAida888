@@ -19150,8 +19150,9 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function showFuelModal(){
-    if(!honeyEnabled()||!ownState)return;
-    const s=ensureHoneyState((!visitContext&&state)?state:ownState,currentMember),h=s.honeyDelivery;
+    if(!honeyEnabled())return;
+    const base=(!visitContext&&state)?state:ownState;if(!base)return;
+    const s=ensureHoneyState(base,currentMember),h=s.honeyDelivery;
     advanceFuelCycle(h,now());
     if(h.active)return message("🛵 น้ำผึ้งกำลังทำงาน","รอน้องส่งของเที่ยวนี้เสร็จก่อนนะคะ");
     const exact=fuelPercentExact(h),p=Math.floor(exact),have=int(s.specials[FUEL_KEY]);
@@ -19185,45 +19186,45 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   async function refillFuel(requested,button){
-    if(!honeyEnabled()||!currentMemberKey)return;
+    if(!honeyEnabled()||!currentMemberKey||visitContext)return;
     requested=Math.max(1,int(requested)||1);
     if(button)button.disabled=true;
+    const base=state||ownState;
+    if(!base){if(button)button.disabled=false;return message("เติมน้ำมันไม่ได้","ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ")}
+    const s=ensureHoneyState(base,currentMember),h=s.honeyDelivery,t=now();
+    advanceFuelCycle(h,t);
+    if(h.active){if(button)button.disabled=false;return message("🛵 น้ำผึ้งกำลังทำงาน","รอน้องส่งของเที่ยวนี้เสร็จก่อนนะคะ")}
+    const exact=fuelPercentExact(h,t),before=Math.floor(exact);
+    if(exact>=100){if(button)button.disabled=false;closeModal();renderFuelHud();return callHoney()}
+    s.specials=s.specials||{};
+    const have=int(s.specials[FUEL_KEY]);
+    if(have<=0&&!isAdmin()){if(button)button.disabled=false;return message("เติมน้ำมันไม่ได้","ไม่มีแกลลอนน้ำมันในกระเป๋าค่ะ")}
+    const need=Math.max(1,Math.ceil((100-exact)/10));
+    const used=Math.min(requested,isAdmin()?requested:have,need);
+    if(used<=0){if(button)button.disabled=false;return message("เติมน้ำมันไม่ได้","ไม่มีน้ำมันให้เติมค่ะ")}
+    const nextHave=isAdmin()?ADMIN_STOCK_QTY:Math.max(0,have-used);
+    const after=Math.min(100,before+used*10);
+    s.specials[FUEL_KEY]=nextHave;
+    h.fuelPercentStored=after;h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;
+    s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+    s.clientLocalEditAt=Date.now();
+    applyOwn(s);
+    closeModal();renderFuelHud();showWeatherToast(`⛽ เติมน้ำมัน ${used} แกลลอน • ${before}% → ${after}%`);
     try{
       const {db,fs}=await getFirebaseContext();
-      const ref=fs.doc(db,"saves",currentMemberKey);
-      let committed=null,before=0,after=0,used=0;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(ref);
-        if(!snap.exists())throw new Error("ไม่พบข้อมูลผู้เล่น กรุณาเข้าเกมใหม่อีกครั้ง");
-        const server=ensureHoneyState(normalizeState(snap.data(),currentMember),currentMember);
-        const h=server.honeyDelivery,t=now();
-        advanceFuelCycle(h,t);
-        if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
-        const exact=fuelPercentExact(h,t);before=Math.floor(exact);
-        if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
-        server.specials=server.specials||{};
-        const have=int(server.specials[FUEL_KEY]);
-        if(have<=0&&!isAdmin())throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
-        const need=Math.max(1,Math.ceil((100-exact)/10));
-        used=Math.min(requested,isAdmin()?requested:have,need);
-        if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
-        if(isAdmin())server.specials[FUEL_KEY]=ADMIN_STOCK_QTY;
-        else server.specials[FUEL_KEY]=Math.max(0,have-used);
-        h.fuelPercentStored=Math.min(100,before+used*10);
-        h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;
-        after=fuelPercent(h,t);
-        committed=server;
-        tx.set(ref,{specials:cloneData(server.specials),honeyDelivery:cloneData(h),clientSaveRevision:(Number(server.clientSaveRevision)||0)+1,updatedAt:fs.serverTimestamp()},{merge:true});
-      });
-      if(committed){
-        committed.clientSaveRevision=(Number(committed.clientSaveRevision)||0)+1;
-        applyOwn(committed);
-      }
-      closeModal();renderFuelHud();
-      showWeatherToast(`⛽ เติมน้ำมัน ${used} แกลลอน • ${before}% → ${after}%`);
+      await fs.setDoc(fs.doc(db,"saves",currentMemberKey),{
+        specials:{[FUEL_KEY]:nextHave},
+        honeyDelivery:cloneData(h),
+        clientSaveRevision:Number(s.clientSaveRevision)||1,
+        clientLocalEditAt:Number(s.clientLocalEditAt)||Date.now(),
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
     }catch(error){
-      console.error("R34.12.3 honey refill",error);
-      message("เติมน้ำมันไม่ได้",error.message||"กรุณาลองใหม่");
+      console.error("R34.12.6 honey durable refill",error);
+      try{saveLocalOnly(s)}catch(_){}
+      try{save()}catch(_){}
+      try{setTimeout(()=>flushCloudSave?.(),80)}catch(_){}
+      showWeatherToast("⛽ เติมสำเร็จบนหน้าจอ • กำลังซิงก์ขึ้นเซิร์ฟเวอร์อีกครั้ง");
     }finally{if(button)button.disabled=false}
   }
 
@@ -19500,7 +19501,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   setInterval(()=>{try{renderFuelHud();restoreHoneyPresence()}catch(error){console.warn("V252 honey tick",error)}},5000);
   setTimeout(()=>{try{renderFuelHud();restoreHoneyPresence();persistSeedOrTimer()}catch{}},800);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderFuelHud();restoreHoneyPresence()}});
-  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal};
+  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal,refill:refillFuel};
   window.YAINOO_BUILD=VERSION;
   console.info(`${VERSION} loaded`);
 })();
@@ -30943,3 +30944,8 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
   window.addEventListener("pageshow",()=>setTimeout(()=>publishLive(true),150),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishLive(true),100)},{passive:true});setTimeout(()=>publishLive(true),400);
   globalThis.YN_R341205={BUILD,publishLive,injectFriend};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+
+/* S2 R34.12.6 — HONEY REFUEL LIVE STATE */
+window.YAINOO_BUILD="S2-R34.12.6-HONEY-REFUEL-LIVE";
+console.info(window.YAINOO_BUILD,"loaded");
