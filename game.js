@@ -31747,6 +31747,8 @@ console.info(window.YAINOO_BUILD,"loaded");
      immediately instead of restarting their clock after deployment.
    ===================================================================== */
 (()=>{
+  /* R34.14: superseded by the single canonical controller at EOF. */
+  return;
   "use strict";
   const BUILD="S2-R34.12.20-BOTTOM-MENU-HOTEL-HONEY-DROP-V4";
   const $=id=>document.getElementById(id);
@@ -31952,6 +31954,8 @@ console.info(window.YAINOO_BUILD,"loaded");
    Static buttons live in index.html so scene re-renderers cannot delete them.
    ===================================================================== */
 (()=>{
+  /* R34.14: superseded by the single canonical controller at EOF. */
+  return;
   "use strict";
   const BUILD="S2-R34.13.1-MENU-HOTEL-DISCSTATE";
   const $=id=>document.getElementById(id);
@@ -32117,6 +32121,8 @@ console.info(window.YAINOO_BUILD,"loaded");
      cannot erase pending drops or clocks.
    ===================================================================== */
 (()=>{
+  /* R34.14: superseded by the single canonical controller at EOF. */
+  return;
   "use strict";
   const BUILD="S2-R34.13.1-MENU-HOTEL-DISCSTATE";
   const $=id=>document.getElementById(id);
@@ -32201,6 +32207,8 @@ console.info(window.YAINOO_BUILD,"loaded");
      per-animal countdown / visible pending disc icons.
    ============================================================ */
 (function YN_R34132_DIRECT_CONTROLS(){
+  /* R34.14: superseded by the single canonical controller at EOF. */
+  return;
   const BUILD="S2-R34.13.3-MENU-HOTEL-DROP-FINAL";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
@@ -32293,74 +32301,180 @@ console.info(window.YAINOO_BUILD,"loaded");
 
 
 /* =====================================================================
-   S2 R34.13.3 — CANONICAL MENU / HOTEL BULK FEED / ANIMAL DROP CLOCKS
-   - No top-right honey bar exists. Honey refuel is menu-only.
-   - Hotel bulk feed is a separate, unique bottom button.
-   - Aida has a real menu item for force-drop testing.
-   - Royal alpaca + hamster clocks/pending drops live in animalDiscState.
+   S2 R34.14.0 — HONEY / HOTEL / DISC DROP + RESPONSIVENESS PASS
+   2026-09-05
+   Canonical owner for the three systems fixed in this release.
+   - Honey is menu-only, opens immediately, shows % + cans, refills in-place,
+     and exposes the existing "เรียกน้ำผึ้ง" action when fuel reaches 100%.
+   - Hotel feed-all supports MIXED food selections from real inventory;
+     selected portions must equal the number of hungry pets.
+   - Royal alpaca + hamster discs use one Firestore timer/pending document,
+     recover from placement/birth timestamps, and render/claim without a
+     sub-second network polling loop.
+   - Redundant R34.12.20/R34.13.0/.1/.2 controllers above are retired.
    ===================================================================== */
 (()=>{
   "use strict";
-  const BUILD="S2-R34.13.3-MENU-HOTEL-DROP-FINAL";
+  const BUILD="S2-R34.14.0-HONEY-HOTEL-DROPS-PERF-20260905";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const R_MS=60*60*1000,H_MS=3*60*60*1000;
-  let feedBusy=false,honeyBusy=false,dropBusy=false,dropCache=null,lastSync=0;
-  const isAdminNow=()=>{try{return String(currentMember||"")==="Aida"||String(currentMemberKey||"").toLowerCase()==="aida"||adminProfile?.role==="admin"||(typeof isAdmin==="function"&&isAdmin())}catch(_){return false}};
+  const DROP_SYNC_MS=60*1000;
+  let honeyBusy=false,feedBusy=false,dropBusy=false,dropCache=null,lastDropSync=0,lastUiSecond=-1;
+  let feedDraft={need:0,items:[]};
+
+  const admin=()=>{try{return String(currentMember||"")==="Aida"||String(currentMemberKey||"").toLowerCase()==="aida"||adminProfile?.role==="admin"||(typeof isAdmin==="function"&&isAdmin())}catch(_){return false}};
   const live=()=>visitContext?null:(state||ownState||null);
   const farmNo=()=>Math.max(1,Math.min(4,(Number(typeof farmPlotPage!=="undefined"?farmPlotPage:0)||0)+1));
   const penNo=()=>{try{return Math.max(1,Math.min(5,Number(typeof currentAlpacaPen==="function"?currentAlpacaPen():1)||1))}catch(_){return 1}};
-  const fmt=ms=>{ms=Math.max(0,Math.floor(Number(ms)||0));const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000);return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`};
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  function fmt(ms){ms=Math.max(0,Math.floor(Number(ms)||0));const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);return h?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
 
-  function removeAllOldHoneyUI(){
-    $("honeyFuelHud")?.remove();
-    for(const id of ["core13HoneyBtn","yn1220HoneyDockBtn","yn1219HoneyFuelPhysical","ynHoneyRefuelUniversalBtn","yn128HoneyRefuelHit","yn1219HoneyDockBtn","yn1212HoneyFuelPhysical"]){$(id)?.remove()}
+  /* ----------------------- PERFORMANCE / UI OWNERSHIP ----------------------- */
+  function retireLegacyDom(){
+    for(const id of ["honeyFuelHud","core13HoneyBtn","yn1220HoneyDockBtn","yn1219HoneyFuelPhysical","ynHoneyRefuelUniversalBtn","yn128HoneyRefuelHit","yn1219HoneyDockBtn","yn1212HoneyFuelPhysical","yn1220HotelFeedDockBtn","yn1220AdminDropBtn","core13AdminDropFarmBtn","core13AdminDropAlpacaBtn"]){$(id)?.remove()}
+    document.querySelectorAll(".r34131-disc-float,#yn1220RoyalDropLayer,#yn1220HamDropLayer,.core13-drop-btn").forEach(n=>n.remove());
   }
-  function fuelPct(s){const h=s?.honeyDelivery||{};try{return Math.max(0,Math.min(100,Math.floor(typeof fuelPercentExact==="function"?fuelPercentExact(h,now()):Number(h.fuelPercentStored??h.fuelPercent??0)||0)))}catch(_){return Math.max(0,Math.min(100,Math.floor(Number(h.fuelPercentStored??h.fuelPercent??0)||0)))}}
   function syncMenu(){
     const nav=$("s2MainNav");if(!nav)return;
-    let h=nav.querySelector('[data-s2-main="honey"]');if(!h){h=document.createElement("button");h.type="button";h.dataset.s2Main="honey";h.innerHTML='⛽<small>เติมน้ำมัน</small>';nav.insertBefore(h,nav.querySelector('.r14-main-nav-toggle')||null)}
-    h.innerHTML='⛽<small>เติมน้ำมัน</small>';h.style.display="";h.style.pointerEvents="auto";
-    let d=nav.querySelector('[data-s2-main="disc-test"]');if(!d){d=document.createElement("button");d.type="button";d.dataset.s2Main="disc-test";d.innerHTML='🧪<small>ทดสอบดรอป</small>';nav.insertBefore(d,nav.querySelector('.r14-main-nav-toggle')||null)}
-    d.style.display=isAdminNow()?"":"none";d.style.pointerEvents=isAdminNow()?"auto":"none";
+    let h=nav.querySelector('[data-s2-main="honey"]');if(!h){h=document.createElement("button");h.type="button";h.dataset.s2Main="honey";nav.insertBefore(h,nav.querySelector('.r14-main-nav-toggle')||null)}
+    h.innerHTML='⛽<small>เติมน้ำมัน</small>';h.style.display="";h.style.pointerEvents="auto";h.disabled=false;
+    let d=nav.querySelector('[data-s2-main="disc-test"]');
+    if(admin()){
+      if(!d){d=document.createElement("button");d.type="button";d.dataset.s2Main="disc-test";nav.insertBefore(d,nav.querySelector('.r14-main-nav-toggle')||null)}
+      d.innerHTML='🧪<small>ทดสอบดรอป</small>';d.style.display="";d.style.pointerEvents="auto";d.disabled=false;
+    }else d?.remove();
   }
-  async function openHoney(){
-    if(visitContext||!currentMemberKey)return;
-    const s=live();if(!s)return message?.("เติมน้ำมันไม่ได้","ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");
-    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};s.honeyDelivery=s.honeyDelivery&&typeof s.honeyDelivery==="object"?s.honeyDelivery:{};
-    let have=isAdminNow()?9999:Math.max(0,Number(s.specials.honeyFuelCan)||0);
-    try{const {db,fs}=await getFirebaseContext(),q=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(q.exists())have=isAdminNow()?9999:Math.max(have,Number(q.data()?.specials?.honeyFuelCan)||0)}catch(_){}
-    const p=fuelPct(s),max=Math.min(have,Math.max(0,Math.ceil((100-p)/10))),mc=$("modalContent");if(!mc)return;
-    mc.innerHTML=`<section class="feature-panel honey-fuel-modal"><h2>⛽ เติมน้ำมันน้ำผึ้ง</h2><p>น้ำมันตอนนี้ <b>${p}%</b></p><p>มีแกลลอน <b>×${have}</b> • 1 แกลลอน = +10%</p><label>จำนวน <input id="r34133HoneyQty" type="number" inputmode="numeric" min="1" max="${Math.max(1,max)}" value="1"></label><button id="r34133HoneyConfirm" class="honey-primary-btn" type="button" ${max?"":"disabled"}>ยืนยันเติมน้ำมัน</button><button id="r34133HoneyClose" class="secondary-action" type="button">ปิด</button></section>`;openModal?.();
+  function hideLegacyHotelFeed(){
+    const keep=$("r34133HotelFeedBtn");
+    document.querySelectorAll("button").forEach(b=>{if(b===keep)return;const txt=String(b.textContent||"").replace(/\s+/g," ").trim();if(txt.includes("ให้อาหารหมา+แมวทั้งหมด")||txt==="ให้อาหารทั้งหมด"){b.style.display="none";b.style.pointerEvents="none"}});
   }
-  async function refuel(){
+  function syncHotelButton(){const b=$("r34133HotelFeedBtn");if(!b)return;const show=!visitContext&&currentScene==="dogHotel"&&!$("sceneScreen")?.classList.contains("hidden");b.classList.toggle("hidden",!show);b.style.display=show?"block":"none";b.style.pointerEvents=show?"auto":"none";if(show)hideLegacyHotelFeed()}
+
+  /* ----------------------------- HONEY ----------------------------- */
+  function honeyState(s=live()){if(!s)return null;s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};s.honeyDelivery=s.honeyDelivery&&typeof s.honeyDelivery==="object"?s.honeyDelivery:{};return s}
+  function fuelPct(s){const h=s?.honeyDelivery||{};try{return Math.max(0,Math.min(100,Math.floor(typeof fuelPercentExact==="function"?fuelPercentExact(h,now()):Number(h.fuelPercentStored??h.fuelPercent??0)||0)))}catch(_){return Math.max(0,Math.min(100,Math.floor(Number(h.fuelPercentStored??h.fuelPercent??0)||0)))}}
+  function honeyHave(s){return admin()?9999:int(s?.specials?.honeyFuelCan)}
+  function drawHoneyModal(s=honeyState()){
+    if(!s)return message?.("เติมน้ำมันไม่ได้","ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");
+    const p=fuelPct(s),have=honeyHave(s),active=!!s.honeyDelivery.active,max=Math.min(have,Math.max(0,Math.ceil((100-p)/10))),mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel honey-fuel-modal r34140-honey-modal">
+      <h2>⛽ เติมน้ำมันน้ำผึ้ง</h2>
+      <div class="r34140-honey-status"><strong>${active?"🛵 กำลังส่งของ":`${p}%`}</strong><span>มีแกลลอน ×${have}</span></div>
+      <div class="r34140-progress"><i style="width:${p}%"></i><b>${p}%</b></div>
+      ${active?'<p class="honey-mini-note">น้ำผึ้งกำลังอยู่ในเที่ยวส่งของ รอให้เที่ยวนี้จบก่อนค่ะ</p>':`
+      <div class="r34140-qty"><button id="r34140HoneyMinus" type="button">−</button><label>จำนวนแกลลอน<input id="r34140HoneyQty" type="number" inputmode="numeric" min="1" max="${Math.max(1,max)}" value="1"></label><button id="r34140HoneyPlus" type="button">+</button></div>
+      <p id="r34140HoneyPreview" class="honey-mini-note"></p>
+      <button id="r34140HoneyConfirm" class="honey-primary-btn" type="button" ${max?"":"disabled"}>⛽ เติมน้ำมัน</button>
+      <button id="r34140HoneyCall" class="primary-spooky-action" type="button" ${p>=100?"":"disabled"}>🛵 เรียกน้ำผึ้ง</button>`}
+      <button id="r34140HoneyClose" class="secondary-action" type="button">ปิด</button>
+    </section>`;
+    openModal?.();
+    if(active)return;
+    const q=$("r34140HoneyQty"),minus=$("r34140HoneyMinus"),plus=$("r34140HoneyPlus"),preview=$("r34140HoneyPreview");
+    const sync=()=>{let n=Math.max(1,int(q?.value)||1);if(max)n=Math.min(max,n);if(q)q.value=String(n);const use=max?Math.min(max,n):0;if(preview)preview.textContent=use?`1 แกลลอน = +10% • ${p}% → ${Math.min(100,p+use*10)}%`:(p>=100?"น้ำมันเต็ม 100% แล้ว สามารถเรียกน้ำผึ้งได้เลย":"ไม่มีแกลลอนสำหรับเติม")};
+    if(minus)minus.onclick=()=>{q.value=String(Math.max(1,int(q.value)-1));sync()};if(plus)plus.onclick=()=>{q.value=String(Math.min(Math.max(1,max),int(q.value)+1));sync()};if(q)q.oninput=sync;sync();
+  }
+  function openHoney(){if(visitContext||!currentMemberKey)return;drawHoneyModal()}
+  async function persistHoneyPartial(s){const {db,fs}=await getFirebaseContext();await fs.updateDoc(fs.doc(db,"saves",currentMemberKey),{"specials.honeyFuelCan":int(s.specials.honeyFuelCan),honeyDelivery:cp(s.honeyDelivery),clientSaveRevision:Number(s.clientSaveRevision)||1,clientLocalEditAt:Number(s.clientLocalEditAt)||Date.now(),updatedAt:fs.serverTimestamp()})}
+  async function refuelHoney(){
     if(honeyBusy||visitContext||!currentMemberKey)return;honeyBusy=true;
-    try{const s=live();if(!s)throw new Error("ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");s.specials=s.specials||{};s.honeyDelivery=s.honeyDelivery||{};const before=fuelPct(s),have=isAdminNow()?9999:Math.max(0,Number(s.specials.honeyFuelCan)||0),ask=Math.max(1,Math.floor(Number($("r34133HoneyQty")?.value)||1)),use=Math.min(ask,have,Math.max(0,Math.ceil((100-before)/10)));if(use<1)throw new Error(before>=100?"น้ำมันเต็ม 100% แล้วค่ะ":"ไม่มีแกลลอนน้ำมันค่ะ");if(!isAdminNow())s.specials.honeyFuelCan=have-use;s.honeyDelivery.fuelPercentStored=Math.min(100,before+use*10);s.honeyDelivery.fuelReadyAt=0;s.honeyDelivery.fuelExpiresAt=0;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();ownState=s;state=s;try{saveLocalOnly?.(s)}catch(_){}const {db,fs}=await getFirebaseContext();await fs.updateDoc(fs.doc(db,"saves",currentMemberKey),{"specials.honeyFuelCan":Number(s.specials.honeyFuelCan)||0,honeyDelivery:cp(s.honeyDelivery),clientSaveRevision:s.clientSaveRevision,clientLocalEditAt:s.clientLocalEditAt,updatedAt:fs.serverTimestamp()});closeModal?.();message?.("⛽ เติมน้ำมันแล้ว",`${before}% → ${s.honeyDelivery.fuelPercentStored}% • ใช้ ${use} แกลลอน`)}catch(e){message?.("เติมน้ำมันไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{honeyBusy=false}
+    try{
+      const s=honeyState();if(!s)throw new Error("ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");if(s.honeyDelivery.active)throw new Error("น้ำผึ้งกำลังส่งของอยู่ค่ะ");
+      const before=fuelPct(s),have=honeyHave(s),want=Math.max(1,int($("r34140HoneyQty")?.value)||1),use=Math.min(want,have,Math.max(0,Math.ceil((100-before)/10)));if(use<1)throw new Error(before>=100?"น้ำมันเต็ม 100% แล้วค่ะ":"ไม่มีแกลลอนน้ำมันค่ะ");
+      if(!admin())s.specials.honeyFuelCan=Math.max(0,have-use);else s.specials.honeyFuelCan=9999;
+      const after=Math.min(100,before+use*10),t=now();s.honeyDelivery.fuelPercentStored=after;s.honeyDelivery.fuelAutoBasePct=after;s.honeyDelivery.fuelAutoBaseAt=t;s.honeyDelivery.fuelReadyAt=after>=100?t:0;s.honeyDelivery.fuelExpiresAt=0;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();ownState=s;state=s;try{saveLocalOnly?.(s)}catch(_){}
+      drawHoneyModal(s);showWeatherToast?.(`⛽ เติม ${use} แกลลอน • ${before}% → ${after}%`);
+      try{await persistHoneyPartial(s)}catch(e){console.warn(BUILD,"honey save",e);try{setTimeout(()=>flushCloudSave?.(),80)}catch(_){}}
+    }catch(e){message?.("เติมน้ำมันไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{honeyBusy=false}
+  }
+  function callHoneyNow(){
+    if(visitContext||!currentMemberKey)return;const s=honeyState();if(!s)return;if(s.honeyDelivery.active)return message?.("🛵 น้ำผึ้งกำลังส่งของ","รอเที่ยวนี้จบก่อนค่ะ");if(fuelPct(s)<100)return message?.("เรียกน้ำผึ้งไม่ได้","น้ำมันต้องเต็ม 100% ก่อนค่ะ");
+    try{if(globalThis.YN_HONEY_DELIVERY?.call)return globalThis.YN_HONEY_DELIVERY.call();if(typeof callHoney==="function")return callHoney();message?.("เรียกน้ำผึ้งไม่ได้","ไม่พบระบบเรียกน้ำผึ้งเดิมค่ะ")}catch(e){message?.("เรียกน้ำผึ้งไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
   }
 
-  function hideLegacyFeed(){
-    const rail=$("s2HotelToolRail");if(rail)rail.querySelectorAll("button").forEach(b=>{if((b.textContent||"").replace(/\s+/g," ").includes("ให้อาหารทั้งหมด")){b.style.display="none";b.style.pointerEvents="none"}});
-    for(const id of ["r3411HotelFeedAll","r34120HotelFeedAll","ynHotelMasterFeedAll","yn127HotelFeedAll","yn128HotelFeedAllHard","ynHotelPhysicalMasterFeed","yn1219HotelFeedAllPhysical","core13HotelFeedBtn","r34131HotelFeedBtn"]){const n=$(id);if(n){n.style.display="none";n.style.pointerEvents="none"}}
+  /* ----------------------------- HOTEL BULK FEED ----------------------------- */
+  function hotelPenOf(s,p){const id=String(p?.id||"");let pen=Number(s?.hotelPetPenMap?.[id]||p?.hotelPen||1);return pen>=1&&pen<=4?pen:1}
+  function hungry(s,t=now()){
+    const out=[],pen=Math.max(1,Math.min(4,Number(typeof currentDogHotelPen!=="undefined"?currentDogHotelPen:1)||1));
+    for(const p of (s?.dogs||[])){if(!p?.id||!p?.placedHotel||hotelPenOf(s,p)!==pen)continue;if(Number(p.expiresAt||0)>0&&Number(p.expiresAt)<=t)continue;if(Number(p.medicineUntil||0)>t)continue;let can=Number(p.nextFeedAt||0)<=t;try{if(typeof YN_petCanFeed==="function")can=!!YN_petCanFeed(p,t)}catch(_){}if(can)out.push({kind:"dog",id:String(p.id)})}
+    for(const p of (s?.cats||[])){if(!p?.id||!(p.placedHotel||Number(p.placedFarm)===-1)||hotelPenOf(s,p)!==pen)continue;if(Number(p.expiresAt||0)>0&&Number(p.expiresAt)<=t)continue;if(Number(p.medicineUntil||0)>t)continue;let can=Number(p.nextFeedAt||0)<=t;try{if(typeof YN_petCanFeed==="function")can=!!YN_petCanFeed(p,t)}catch(_){}if(can)out.push({kind:"cat",id:String(p.id)})}
+    return out;
   }
-  function syncHotelButton(){const b=$("r34133HotelFeedBtn");if(!b)return;const show=!visitContext&&currentScene==="dogHotel"&&!$("sceneScreen")?.classList.contains("hidden");b.classList.toggle("hidden",!show);b.style.display=show?"block":"none";b.style.pointerEvents=show?"auto":"none";if(show)hideLegacyFeed()}
-  function hungry(s,t=now()){const out=[];for(const p of (s?.dogs||[])){if(!p?.id||!p?.placedHotel)continue;if(Number(p.expiresAt||0)>0&&Number(p.expiresAt)<=t)continue;let can=Number(p.nextFeedAt||0)<=t;try{if(typeof YN_petCanFeed==="function")can=!!YN_petCanFeed(p,t)}catch(_){}if(can)out.push({kind:"dog",id:String(p.id)})}for(const p of (s?.cats||[])){if(!p?.id||!(p.placedHotel||Number(p.placedFarm)===-1))continue;if(Number(p.expiresAt||0)>0&&Number(p.expiresAt)<=t)continue;let can=Number(p.nextFeedAt||0)<=t;try{if(typeof YN_petCanFeed==="function")can=!!YN_petCanFeed(p,t)}catch(_){}if(can)out.push({kind:"cat",id:String(p.id)})}return out}
-  function foods(s){try{const r=typeof YN_petFoodEntries==="function"?(YN_petFoodEntries(s)||[]):[];if(r.length)return r}catch(_){}const rec=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];return rec.map(r=>({type:"dish",key:r.id,name:r.name,image:r.image,count:typeof dishCountInState==="function"?(Number(dishCountInState(r.id,s))||0):(Number(s?.dishInventory?.[r.id])||0)}))}
-  function openFeed(){const s=live();if(!s)return message?.("ให้อาหารทั้งหมดไม่ได้","ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");const need=hungry(s).length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมาหรือแมวที่หิวค่ะ");const mc=$("modalContent"),rows=foods(s);if(!mc)return;mc.innerHTML=`<section class="feature-panel"><h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2><p>มีหมา+แมวหิว <b>${need} ตัว</b></p><p>ต้องใช้อาหาร <b>${need} ถาด</b> • เลือกเมนูเดียว</p><div class="cat-feed-grid">${rows.map(f=>`<button type="button" data-r34133-feed="1" data-ft="${String(f.type||"dish")}" data-fk="${String(f.key||"")}" ${Number(f.count)<need?"disabled":""}><img src="${f.image||""}" alt=""><span><b>${typeof safeHtml==="function"?safeHtml(f.name):String(f.name||"")}</b><small>มี ×${Number(f.count)||0} • ต้องใช้ ×${need}</small></span></button>`).join("")||'<p class="empty-feature">ยังไม่มีอาหารที่คราฟไว้</p>'}</div><button id="r34133FeedClose" class="secondary-action" type="button">ปิด</button></section>`;openModal?.()}
-  async function feedAll(ft,fk){if(feedBusy||!currentMemberKey)return;feedBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),pref=fs.doc(db,"publicProfiles",currentMemberKey);let next=null,count=0;await fs.runTransaction(db,async tx=>{const q=await tx.get(ref);if(!q.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(q.data(),currentMember),t=now(),targets=hungry(s,t);count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");let ok=false;try{if(typeof YN_consumePetFood==="function")ok=!!YN_consumePetFood(s,ft,fk,count)}catch(_){}if(!ok&&String(ft)==="dish"&&typeof removeDishesFromState==="function")ok=!!removeDishesFromState(s,fk,count);if(!ok)throw new Error(`อาหารไม่พอ ต้องใช้ ${count} ถาด`);const dm=new Map((s.dogs||[]).map(x=>[String(x.id),x])),cm=new Map((s.cats||[]).map(x=>[String(x.id),x])),wait=Number(typeof YN_PET_HUNGER_MS!=="undefined"?YN_PET_HUNGER_MS:(typeof V15_PET_HUNGER_MS!=="undefined"?V15_PET_HUNGER_MS:14400000));for(const x of targets){const p=x.kind==="dog"?dm.get(x.id):cm.get(x.id);if(p){p.nextFeedAt=t+wait;p.lastPenaltyBucket=0}}try{incrementMissionOn?.(s,"feedOwnPets",count)}catch(_){}next=cp(s);tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}closeModal?.();try{renderDogHotelScene?.()}catch(_){}message?.("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`ให้อาหาร ${count} ตัว • ใช้ ${count} ถาด`)}catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{feedBusy=false}}
+  function foodRows(s){
+    try{const rows=typeof YN_petFoodEntries==="function"?(YN_petFoodEntries(s)||[]):[];if(rows.length)return rows.filter(x=>int(x.count)>0).map(x=>({...x,count:int(x.count)}))}catch(_){}
+    const rec=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];return rec.map(r=>({type:"dish",key:r.id,name:r.name,image:r.image,count:typeof dishCountInState==="function"?int(dishCountInState(r.id,s)):int(s?.dishInventory?.[r.id])})).filter(x=>x.count>0);
+  }
+  function selectionTotal(){return feedDraft.items.reduce((n,x)=>n+int(x.qty),0)}
+  function renderFeedPicker(){
+    const mc=$("modalContent");if(!mc)return;const total=selectionTotal(),need=feedDraft.need;
+    mc.innerHTML=`<section class="feature-panel r34140-feed-panel"><h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2><p>ตอนนี้หิว <b>${need} ตัว</b> • ต้องเลือกอาหารรวม <b>${need} ถาด</b></p><div class="r34140-feed-total ${total===need?"ok":""}">เลือกแล้ว ${total}/${need} ถาด</div><div class="r34140-food-list">${feedDraft.items.map((f,i)=>`<article class="r34140-food-row"><img src="${esc(f.image||"")}" alt=""><span><b>${esc(f.name)}</b><small>มี ×${int(f.count)}</small></span><div><button type="button" data-r34140-food-minus="${i}" ${!int(f.qty)?"disabled":""}>−</button><strong>${int(f.qty)}</strong><button type="button" data-r34140-food-plus="${i}" ${(int(f.qty)>=int(f.count)||total>=need)?"disabled":""}>＋</button></div></article>`).join("")||'<p class="empty-feature">ยังไม่มีอาหารในกระเป๋าค่ะ</p>'}</div><button id="r34140FeedConfirm" class="primary-spooky-action" type="button" ${total===need&&need>0?"":"disabled"}>ยืนยันให้อาหารทั้งหมด</button><button id="r34140FeedClose" class="secondary-action" type="button">ปิด</button></section>`;openModal?.();
+  }
+  function openFeed(){const s=live();if(!s)return message?.("ให้อาหารทั้งหมดไม่ได้","ข้อมูลผู้เล่นยังไม่พร้อมค่ะ");const need=hungry(s).length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมาหรือแมวที่หิวค่ะ");feedDraft={need,items:foodRows(s).map(x=>({...x,qty:0}))};renderFeedPicker()}
+  function alterFeed(i,delta){const x=feedDraft.items[i];if(!x)return;const total=selectionTotal();if(delta>0&&total>=feedDraft.need)return;x.qty=Math.max(0,Math.min(int(x.count),int(x.qty)+delta));renderFeedPicker()}
+  function consumeFood(s,type,key,qty){qty=int(qty);if(!qty)return true;let ok=false;try{if(typeof YN_consumePetFood==="function")ok=!!YN_consumePetFood(s,type,key,qty)}catch(_){}if(!ok&&String(type)==="dish"&&typeof removeDishesFromState==="function")ok=!!removeDishesFromState(s,key,qty);return ok}
+  async function confirmFeed(){
+    if(feedBusy||visitContext||!currentMemberKey)return;const picks=feedDraft.items.filter(x=>int(x.qty)>0).map(x=>({type:String(x.type||"dish"),key:String(x.key||""),name:String(x.name||""),qty:int(x.qty)}));if(picks.reduce((n,x)=>n+x.qty,0)!==feedDraft.need)return message?.("เลือกอาหารยังไม่ครบ",`ต้องเลือกอาหารรวม ${feedDraft.need} ถาดค่ะ`);feedBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),pref=fs.doc(db,"publicProfiles",currentMemberKey);let next=null,count=0;
+      await fs.runTransaction(db,async tx=>{
+        const q=await tx.get(ref);if(!q.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(q.data(),currentMember),t=now(),targets=hungry(s,t);count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");if(picks.reduce((n,x)=>n+x.qty,0)!==count)throw new Error(`จำนวนสัตว์ที่หิวเปลี่ยนแล้ว ตอนนี้ต้องใช้อาหาร ${count} ถาด กรุณาเลือกใหม่`);
+        for(const p of picks)if(!consumeFood(s,p.type,p.key,p.qty))throw new Error(`อาหาร ${p.name||p.key} ไม่พอสำหรับจำนวนที่เลือก`);
+        const dm=new Map((s.dogs||[]).map(x=>[String(x.id),x])),cm=new Map((s.cats||[]).map(x=>[String(x.id),x])),wait=Number(typeof YN_PET_HUNGER_MS!=="undefined"?YN_PET_HUNGER_MS:(typeof V15_PET_HUNGER_MS!=="undefined"?V15_PET_HUNGER_MS:14400000));
+        for(const x of targets){const p=x.kind==="dog"?dm.get(x.id):cm.get(x.id);if(p){p.nextFeedAt=t+wait;p.lastPenaltyBucket=0}}
+        try{incrementMissionOn?.(s,"feedOwnPets",count)}catch(_){}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cp(s);tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}closeModal?.();try{renderDogHotelScene?.()}catch(_){}message?.("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`ให้อาหารหมา+แมว ${count} ตัว • ใช้อาหารรวม ${count} ถาด`);
+    }catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{feedBusy=false}
+  }
 
-  function emptyDrop(){return{version:"r34133",royalClock:{},hamClock:{},royalByPen:{"1":[],"2":[],"3":[],"4":[],"5":[]},hamByFarm:{"2":[],"3":[],"4":[]}}}
-  function normDrop(raw){const d=raw&&typeof raw==="object"?cp(raw):emptyDrop();d.royalClock=d.royalClock&&typeof d.royalClock==="object"?d.royalClock:{};d.hamClock=d.hamClock&&typeof d.hamClock==="object"?d.hamClock:{};d.royalByPen=d.royalByPen&&typeof d.royalByPen==="object"?d.royalByPen:{};d.hamByFarm=d.hamByFarm&&typeof d.hamByFarm==="object"?d.hamByFarm:{};for(let i=1;i<=5;i++)d.royalByPen[String(i)]=Array.isArray(d.royalByPen[String(i)])?d.royalByPen[String(i)]:[];for(const i of [2,3,4])d.hamByFarm[String(i)]=Array.isArray(d.hamByFarm[String(i)])?d.hamByFarm[String(i)]:[];return d}
+  /* ----------------------------- ANIMAL DISC DROPS ----------------------------- */
+  function emptyDrop(){return{version:"r34140",royalClock:{},hamClock:{},royalByPen:{"1":[],"2":[],"3":[],"4":[],"5":[]},hamByFarm:{"2":[],"3":[],"4":[]}}}
+  function normDrop(raw){const d=raw&&typeof raw==="object"?cp(raw):emptyDrop();d.royalClock=d.royalClock&&typeof d.royalClock==="object"?d.royalClock:{};d.hamClock=d.hamClock&&typeof d.hamClock==="object"?d.hamClock:{};d.royalByPen=d.royalByPen&&typeof d.royalByPen==="object"?d.royalByPen:{};d.hamByFarm=d.hamByFarm&&typeof d.hamByFarm==="object"?d.hamByFarm:{};for(let p=1;p<=5;p++)d.royalByPen[String(p)]=Array.isArray(d.royalByPen[String(p)])?d.royalByPen[String(p)]:[];for(const f of [2,3,4])d.hamByFarm[String(f)]=Array.isArray(d.hamByFarm[String(f)])?d.hamByFarm[String(f)]:[];return d}
   function royalLike(a){const c=String(a?.color||"").toLowerCase(),n=String(a?.name||"");return a?.type==="adult"&&(c==="prince"||c==="princess"||n.includes("เจ้าชาย")||n.includes("เจ้าหญิง")||a?.royal===true||a?.isRoyal===true)}
-  function scan(s){const royals=[],hams=[],sr=new Set(),sh=new Set();for(let pi=0;pi<(s?.alpaca?.pens||[]).length;pi++)for(const a of (s.alpaca.pens[pi]?.alpacas||[])){const id=String(a?.id||"");if(id&&!sr.has(id)&&royalLike(a)){sr.add(id);royals.push({id,pen:pi+1})}}for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[])){const id=String(h?.id||"");if(id&&!sh.has(id)){sh.add(id);hams.push({id,farm:f})}}return{royals,hams}}
-  async function syncDrop(force=false){if(dropBusy||visitContext||!currentMemberKey)return null;dropBusy=true;try{const owner=live(),{db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),dref=fs.doc(db,"animalDiscState",currentMemberKey),sq=await fs.getDoc(sref);if(!sq.exists())throw new Error("ไม่พบเซฟสมาชิก");const cloud=normalizeState(sq.data(),currentMember),foundLive=owner?scan(owner):{royals:[],hams:[]},foundCloud=scan(cloud),rmap=new Map([...foundCloud.royals,...foundLive.royals].map(x=>[x.id,x])),hmap=new Map([...foundCloud.hams,...foundLive.hams].map(x=>[x.id,x])),found={royals:[...rmap.values()],hams:[...hmap.values()]},dq=await fs.getDoc(dref),d=normDrop(dq.exists()?dq.data():null),t=now();let createdR=0,createdH=0;for(const r of found.royals){let last=Number(d.royalClock[r.id])||0;if(!last||force){const arr=d.royalByPen[String(r.pen)];arr.push({id:`r34133-r-${r.id}-${t}-${Math.random()}`,animalId:r.id,qty:2,createdAt:t,forced:force,recovery:!last});d.royalClock[r.id]=t;createdR+=2}else{const due=Math.min(24,Math.floor((t-last)/R_MS));if(due>0){const arr=d.royalByPen[String(r.pen)];for(let i=1;i<=due;i++){arr.push({id:`r34133-r-${r.id}-${last+i*R_MS}`,animalId:r.id,qty:2,createdAt:last+i*R_MS});createdR+=2}d.royalClock[r.id]=last+due*R_MS}}}for(const h of found.hams){let last=Number(d.hamClock[h.id])||0;if(!last||force){const arr=d.hamByFarm[String(h.farm)];arr.push({id:`r34133-h-${h.id}-${t}-${Math.random()}`,hamsterId:h.id,qty:1,createdAt:t,forced:force,recovery:!last});d.hamClock[h.id]=t;createdH++}else{const due=Math.min(24,Math.floor((t-last)/H_MS));if(due>0){const arr=d.hamByFarm[String(h.farm)];for(let i=1;i<=due;i++){arr.push({id:`r34133-h-${h.id}-${last+i*H_MS}`,hamsterId:h.id,qty:1,createdAt:last+i*H_MS});createdH++}d.hamClock[h.id]=last+due*H_MS}}}await fs.setDoc(dref,{...d,memberKey:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:false});dropCache=d;renderDrops();lastSync=Date.now();return{found,createdR,createdH}}catch(e){console.warn(BUILD,"drop sync",e);if(force)message?.("ทดสอบดรอปไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return null}finally{dropBusy=false}}
-  function pending(arr,key){const m=new Map();for(const x of arr||[]){const id=String(x?.[key]||"");if(id)m.set(id,(m.get(id)||0)+(Number(x.qty)||1))}return m}
-  function renderDrops(){document.querySelectorAll('.r34133-drop-clock,.r34133-drop-disc').forEach(n=>n.remove());if(!dropCache||visitContext)return;const s=live();if(!s)return;const t=now(),p=penNo(),f=farmNo(),ra=pending(dropCache.royalByPen[String(p)],'animalId'),ha=f>=2?pending(dropCache.hamByFarm[String(f)],'hamsterId'):new Map();const alp=(s?.alpaca?.pens||[])[p-1]?.alpacas||[],els=[...document.querySelectorAll('#alpacaPenAnimalLayer .alpaca-pen-animal')];els.forEach((el,i)=>{const a=alp[i];if(!a||!royalLike(a))return;const qty=ra.get(String(a.id))||0,last=Number(dropCache.royalClock[String(a.id)])||t,lab=document.createElement('span');lab.className='r34133-drop-clock';lab.textContent=qty?`💿 ×${qty}`:`⏱ ${fmt(last+R_MS-t)}`;el.appendChild(lab);if(qty){const b=document.createElement('button');b.type='button';b.className='r34133-drop-disc';b.dataset.r34133Claim='royal';b.dataset.scope=String(p);b.innerHTML='💿';el.appendChild(b)}});if(f>=2){for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[])){const el=document.querySelector(`#r25GuardianPetLayer [data-ham-id="${CSS.escape(String(h.id))}"]`);if(!el)continue;const qty=ha.get(String(h.id))||0,last=Number(dropCache.hamClock[String(h.id)])||t,lab=document.createElement('span');lab.className='r34133-drop-clock';lab.textContent=qty?`💿 ×${qty}`:`⏱ ${fmt(last+H_MS-t)}`;el.appendChild(lab);if(qty){const b=document.createElement('button');b.type='button';b.className='r34133-drop-disc';b.dataset.r34133Claim='ham';b.dataset.scope=String(f);b.innerHTML='💿';el.appendChild(b)}}}}
-  async function claim(kind,scope){if(dropBusy||!currentMemberKey)return;dropBusy=true;try{const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),dref=fs.doc(db,"animalDiscState",currentMemberKey);let qty=0,newQty=0,next=null;await fs.runTransaction(db,async tx=>{const [ss,ds]=await Promise.all([tx.get(sref),tx.get(dref)]);if(!ss.exists()||!ds.exists())throw new Error("ไม่พบข้อมูลดรอป");const d=normDrop(ds.data()),arr=kind==="royal"?d.royalByPen[String(scope)]:d.hamByFarm[String(scope)];qty=arr.reduce((n,x)=>n+(Number(x.qty)||1),0);if(!qty)throw new Error("ไม่มีของดรอปค้างอยู่");const save=normalizeState(ss.data(),currentMember),key=kind==="royal"?"therapyDiscPink":"therapyDiscRock";save.specials=save.specials||{};newQty=isAdminNow()?9999:(Number(save.specials[key])||0)+qty;arr.splice(0,arr.length);tx.update(sref,{[`specials.${key}`]:newQty,updatedAt:fs.serverTimestamp()});tx.set(dref,{...d,memberKey:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:false});next=d});dropCache=next;const s=live();if(s){s.specials=s.specials||{};s.specials[kind==="royal"?"therapyDiscPink":"therapyDiscRock"]=newQty;try{saveLocalOnly?.(s)}catch(_){}}renderDrops();message?.("💿 รับเรียบร้อย",`${kind==="royal"?"แผ่นเพลงบำบัดหัวใจหวาน":"แผ่นเพลงบำบัดพลังร็อก"} ×${qty}`)}catch(e){message?.("รับดรอปไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{dropBusy=false}}
+  function anchor(obj,t,interval){const vals=[obj?.dropStartedAt,obj?.placedAt,obj?.createdAt,obj?.bornAt,obj?.updatedAt].map(Number).filter(x=>Number.isFinite(x)&&x>0&&x<=t);return vals.length?Math.max(...vals):t-interval}
+  function scan(s){const royals=[],hams=[],sr=new Set(),sh=new Set(),t=now();for(let pi=0;pi<(s?.alpaca?.pens||[]).length;pi++)for(const a of (s.alpaca.pens[pi]?.alpacas||[])){const id=String(a?.id||"");if(id&&!sr.has(id)&&royalLike(a)){sr.add(id);royals.push({id,pen:pi+1,anchor:anchor(a,t,R_MS)})}}for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[])){const id=String(h?.id||"");if(id&&!sh.has(id)){sh.add(id);hams.push({id,farm:f,anchor:anchor(h,t,H_MS)})}}return{royals,hams}}
+  function addDue(arr,idKey,id,last,t,interval,qty,prefix,limit=24){const due=Math.min(limit,Math.max(0,Math.floor((t-last)/interval)));for(let i=1;i<=due;i++)arr.push({id:`${prefix}-${id}-${last+i*interval}`,[idKey]:id,qty,createdAt:last+i*interval});return due}
+  async function syncDrop(force=false){
+    if(dropBusy||visitContext||!currentMemberKey)return null;if(!force&&Date.now()-lastDropSync<DROP_SYNC_MS)return null;dropBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),dref=fs.doc(db,"animalDiscState",currentMemberKey);let result=null;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,ds]=await Promise.all([tx.get(sref),tx.get(dref)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const cloud=normalizeState(ss.data(),currentMember),local=live(),fc=scan(cloud),fl=local?scan(local):{royals:[],hams:[]},rmap=new Map([...fc.royals,...fl.royals].map(x=>[x.id,x])),hmap=new Map([...fc.hams,...fl.hams].map(x=>[x.id,x])),found={royals:[...rmap.values()],hams:[...hmap.values()]},d=normDrop(ds.exists()?ds.data():null),t=now(),aliveR=new Set(found.royals.map(x=>x.id)),aliveH=new Set(found.hams.map(x=>x.id));let createdR=0,createdH=0;
+        for(const r of found.royals){for(let p=1;p<=5;p++)if(p!==r.pen)d.royalByPen[String(p)]=d.royalByPen[String(p)].filter(x=>String(x?.animalId)!==r.id);const arr=d.royalByPen[String(r.pen)];let last=Number(d.royalClock[r.id]);if(!Number.isFinite(last)||last<=0||last>t)last=r.anchor;if(force){arr.push({id:`r34140-r-${r.id}-${t}-${Math.random()}`,animalId:r.id,qty:2,createdAt:t,forced:true});createdR+=2;d.royalClock[r.id]=t}else{const due=addDue(arr,"animalId",r.id,last,t,R_MS,2,"r34140-r");if(due){createdR+=due*2;d.royalClock[r.id]=last+due*R_MS}else d.royalClock[r.id]=last}}
+        for(const h of found.hams){for(const f of [2,3,4])if(f!==h.farm)d.hamByFarm[String(f)]=d.hamByFarm[String(f)].filter(x=>String(x?.hamsterId)!==h.id);const arr=d.hamByFarm[String(h.farm)];let last=Number(d.hamClock[h.id]);if(!Number.isFinite(last)||last<=0||last>t)last=h.anchor;if(force){arr.push({id:`r34140-h-${h.id}-${t}-${Math.random()}`,hamsterId:h.id,qty:1,createdAt:t,forced:true});createdH++;d.hamClock[h.id]=t}else{const due=addDue(arr,"hamsterId",h.id,last,t,H_MS,1,"r34140-h");if(due){createdH+=due;d.hamClock[h.id]=last+due*H_MS}else d.hamClock[h.id]=last}}
+        for(const id of Object.keys(d.royalClock))if(!aliveR.has(id))delete d.royalClock[id];for(const id of Object.keys(d.hamClock))if(!aliveH.has(id))delete d.hamClock[id];for(let p=1;p<=5;p++)d.royalByPen[String(p)]=d.royalByPen[String(p)].filter(x=>aliveR.has(String(x?.animalId||""))).slice(-160);for(const f of [2,3,4])d.hamByFarm[String(f)]=d.hamByFarm[String(f)].filter(x=>aliveH.has(String(x?.hamsterId||""))).slice(-160);d.version="r34140";tx.set(dref,{...d,memberKey:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:false});result={d,found,createdR,createdH};
+      });
+      dropCache=result.d;lastDropSync=Date.now();renderDropVisuals(true);return result;
+    }catch(e){console.warn(BUILD,"drop sync",e);if(force)message?.("ทดสอบดรอปไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return null}finally{dropBusy=false}
+  }
+  function pending(arr,key){const m=new Map();for(const x of arr||[]){const id=String(x?.[key]||"");if(id)m.set(id,(m.get(id)||0)+int(x.qty||1))}return m}
+  function ensureBadge(el,kind,id,scope,qty,leftMs){if(!el)return;let wrap=el.querySelector(`.r34140-drop-wrap[data-drop-kind="${kind}"]`);if(!wrap){wrap=document.createElement("span");wrap.className="r34140-drop-wrap";wrap.dataset.dropKind=kind;wrap.innerHTML='<span class="r34140-drop-clock"></span><button class="r34140-drop-disc" type="button">💿</button>';el.appendChild(wrap)}const lab=wrap.querySelector(".r34140-drop-clock"),btn=wrap.querySelector(".r34140-drop-disc");lab.textContent=qty?`พร้อมรับ ×${qty}`:`⏱ ${fmt(leftMs)}`;btn.hidden=!qty;btn.dataset.r34140Claim=kind;btn.dataset.scope=String(scope);btn.dataset.ownerId=id}
+  function renderDropVisuals(force=false){
+    if(visitContext||!dropCache){document.querySelectorAll(".r34140-drop-wrap").forEach(n=>n.remove());return}const sec=Math.floor(now()/1000);if(!force&&sec===lastUiSecond)return;lastUiSecond=sec;const s=live();if(!s)return;const t=now(),p=penNo(),f=farmNo(),ra=pending(dropCache.royalByPen[String(p)],"animalId"),ha=f>=2?pending(dropCache.hamByFarm[String(f)],"hamsterId"):new Map();
+    if(!$("alpacaPenScreen")?.classList.contains("hidden")){const alp=(s?.alpaca?.pens||[])[p-1]?.alpacas||[],els=[...document.querySelectorAll("#alpacaPenAnimalLayer .alpaca-pen-animal")];els.forEach((el,i)=>{const a=alp[i];if(!a||!royalLike(a)){el.querySelector('.r34140-drop-wrap[data-drop-kind="royal"]')?.remove();return}const id=String(a.id),qty=ra.get(id)||0,last=Number(dropCache.royalClock[id])||t;ensureBadge(el,"royal",id,p,qty,last+R_MS-t)})}
+    if(f>=2&&!$("gameScreen")?.classList.contains("hidden")){const byId=new Map((s?.farmGuardians?.[String(f)]?.hamsters||[]).map(h=>[String(h?.id||""),h]));for(const [id,h] of byId){let el=null;try{el=document.querySelector(`#r25GuardianPetLayer [data-ham-id="${CSS.escape(id)}"]`)}catch(_){}if(!el)continue;const qty=ha.get(id)||0,last=Number(dropCache.hamClock[id])||t;ensureBadge(el,"ham",id,f,qty,last+H_MS-t)}}
+  }
+  async function claimDrop(kind,scope){
+    if(dropBusy||visitContext||!currentMemberKey)return;dropBusy=true;
+    try{const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),dref=fs.doc(db,"animalDiscState",currentMemberKey);let qty=0,newQty=0,next=null;await fs.runTransaction(db,async tx=>{const [ss,ds]=await Promise.all([tx.get(sref),tx.get(dref)]);if(!ss.exists()||!ds.exists())throw new Error("ไม่พบข้อมูลดรอป");const d=normDrop(ds.data()),arr=kind==="royal"?d.royalByPen[String(scope)]:d.hamByFarm[String(scope)];qty=arr.reduce((n,x)=>n+int(x?.qty||1),0);if(!qty)throw new Error("ไม่มีของดรอปค้างอยู่");const save=normalizeState(ss.data(),currentMember),key=kind==="royal"?"therapyDiscPink":"therapyDiscRock";newQty=admin()?9999:int(save?.specials?.[key])+qty;arr.splice(0,arr.length);tx.update(sref,{[`specials.${key}`]:newQty,updatedAt:fs.serverTimestamp()});tx.set(dref,{...d,memberKey:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:false});next=d});dropCache=next;const s=live();if(s){s.specials=s.specials||{};s.specials[kind==="royal"?"therapyDiscPink":"therapyDiscRock"]=newQty;try{saveLocalOnly?.(s)}catch(_){}}renderDropVisuals(true);message?.("💿 รับเรียบร้อย",`${kind==="royal"?"แผ่นเพลงบำบัดหัวใจหวาน":"แผ่นเพลงบำบัดพลังร็อก"} ×${qty}`)}catch(e){message?.("รับดรอปไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{dropBusy=false}
+  }
   async function forceDrop(){const r=await syncDrop(true);if(r)message?.("🧪 ทดสอบดรอป",`พบเจ้าชาย/เจ้าหญิง ${r.found.royals.length} ตัว • แฮมสเตอร์ ${r.found.hams.length} ตัว<br>สร้างแผ่นหวาน ${r.createdR} • แผ่นร็อก ${r.createdH}`);return r}
 
-  window.addEventListener("pointerdown",e=>{const t=e.target?.closest?.('#r34133HotelFeedBtn,#r34133HoneyConfirm,#r34133HoneyClose,#r34133FeedClose,[data-r34133-feed="1"],[data-r34133-claim]');if(!t)return;e.preventDefault();e.stopImmediatePropagation();if(t.id==="r34133HotelFeedBtn")return openFeed();if(t.id==="r34133HoneyConfirm")return refuel();if(t.id==="r34133HoneyClose"||t.id==="r34133FeedClose")return closeModal?.();if(t.matches('[data-r34133-feed="1"]'))return feedAll(t.dataset.ft,t.dataset.fk);if(t.matches('[data-r34133-claim]'))return claim(t.dataset.r34133Claim,Number(t.dataset.scope)||1)},true);
-  function tick(){removeAllOldHoneyUI();syncMenu();syncHotelButton();hideLegacyFeed();renderDrops();if(Date.now()-lastSync>15000)syncDrop(false)}
-  setInterval(tick,750);setTimeout(()=>{tick();syncDrop(false)},300);window.addEventListener("pageshow",()=>setTimeout(()=>{tick();syncDrop(false)},80),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{tick();syncDrop(false)},80)},{passive:true});
-  globalThis.YN_R34133={BUILD,openHoney,openFeed,forceDrop,syncDrop,claim};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+  /* ----------------------------- EVENT ROUTER ----------------------------- */
+  document.addEventListener("click",e=>{
+    const t=e.target?.closest?.("#r34140HoneyConfirm,#r34140HoneyCall,#r34140HoneyClose,#r34140FeedConfirm,#r34140FeedClose,[data-r34140-food-minus],[data-r34140-food-plus],[data-r34140-claim]");if(!t)return;e.preventDefault();
+    if(t.id==="r34140HoneyConfirm")return refuelHoney();if(t.id==="r34140HoneyCall")return callHoneyNow();if(t.id==="r34140HoneyClose"||t.id==="r34140FeedClose")return closeModal?.();if(t.id==="r34140FeedConfirm")return confirmFeed();if(t.matches("[data-r34140-food-minus]"))return alterFeed(Number(t.dataset.r34140FoodMinus),-1);if(t.matches("[data-r34140-food-plus]"))return alterFeed(Number(t.dataset.r34140FoodPlus),1);if(t.matches("[data-r34140-claim]"))return claimDrop(t.dataset.r34140Claim,Number(t.dataset.scope)||1)
+  },true);
+  function bindStatic(){const b=$("r34133HotelFeedBtn");if(b&&!b.dataset.r34140Bound){b.dataset.r34140Bound="1";b.onclick=e=>{e.preventDefault();openFeed()}}}
+  function lightTick(){retireLegacyDom();syncMenu();syncHotelButton();bindStatic();renderDropVisuals(false)}
+  setInterval(lightTick,1000);
+  setInterval(()=>{if(!document.hidden&&!visitContext&&currentMemberKey)syncDrop(false)},DROP_SYNC_MS);
+  setTimeout(()=>{lightTick();syncDrop(false)},250);
+  window.addEventListener("pageshow",()=>setTimeout(()=>{lightTick();syncDrop(false)},100),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{lightTick();syncDrop(false)},100)},{passive:true});
+  globalThis.YN_R34133={BUILD,openHoney,openFeed,forceDrop,syncDrop,claim:claimDrop};
+  globalThis.YN_R34140=globalThis.YN_R34133;
+  globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
