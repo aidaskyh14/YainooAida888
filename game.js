@@ -12141,7 +12141,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   };
 
   /* Expired Take Over crops disappear. */
-  let lastTakeCleanup=0;async function cleanupTakeovers(){if(!cloudReady||NOW()-lastTakeCleanup<30000)return;const src=state;if(!src?.plots?.some(p=>p?.takeover&&Number(p.takeover.until)<=NOW()))return;lastTakeCleanup=NOW();const key=visitContext?.memberKey||currentMemberKey;if(!key)return;try{const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",key);let plots;await fs.runTransaction(db,async tx=>{const g=await tx.get(gRef);if(!g.exists())return;plots=(g.data().plots||[]).map(normalizePlot);let changed=false;plots=plots.map(p=>{if(p?.takeover&&Number(p.takeover.until)<=NOW()){changed=true;return emptyPlot()}return p});if(changed)tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});if(plots){state.plots=plots;if(!visitContext&&ownState)ownState.plots=plots;draw()}}catch(e){console.warn("takeover cleanup",e)}}
+  let lastTakeCleanup=0;async function cleanupTakeovers(){if(!cloudReady||NOW()-lastTakeCleanup<30000)return;const src=state;if(!src?.plots?.some(p=>p?.takeover&&Number(p.takeover.until)<=NOW()))return;lastTakeCleanup=NOW();const key=visitContext?.memberKey||currentMemberKey;if(!key)return;try{const {db,fs}=await getFirebaseContext(),gRef=fs.doc(db,"gardens",key);let plots;await fs.runTransaction(db,async tx=>{const g=await tx.get(gRef);if(!g.exists())return;plots=(g.data().plots||[]).map(normalizePlot);let changed=false;plots=plots.map(p=>{if(p?.takeover&&Number(p.takeover.until)<=NOW()){changed=true;return emptyPlot()}return p});if(changed)tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});if(plots&&visitContext){state.plots=plots;draw()}else if(plots&&!visitContext){/* R34.12.4: gardens is public mirror only; never roll owner plots backward */ try{globalThis.YN_R341204?.publishOwnerNow?.(true)}catch(_){}}}catch(e){console.warn("takeover cleanup",e)}}
 
   /* ---------- standard plot overlay sizing + labels ---------- */
   const _drawOverlay=draw;draw=function(){const r=_drawOverlay();document.querySelectorAll("#plots .status-badge,#plots .angel-status-badge").forEach(x=>x.classList.add("ynu-plot-overlay"));state?.plots?.forEach((p,i)=>{const b=document.querySelector(`#plots [data-plot-index="${i}"]`)||document.querySelectorAll("#plots .plot")[i];if(!b)return;if(takeoverActive(p)){b.classList.add("ynu-takeover-plot");let icon=b.querySelector(".ynu-deed-overlay");if(!icon){icon=document.createElement("img");icon.className="status-badge ynu-plot-overlay ynu-deed-overlay";icon.src=DEED_ITEM.image;icon.alt="โฉนด Take Over";b.appendChild(icon)}let e=b.querySelector(".ynu-takeover-label");if(!e){e=document.createElement("span");e.className="ynu-takeover-label";b.appendChild(e)}e.textContent=`${p.takeover.byName} ได้เทคโอเวอร์แปลงนี้ • ${fmt(p.takeover.until-NOW())}`}});cleanupTakeovers();return r};
@@ -19151,7 +19151,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   function showFuelModal(){
     if(!honeyEnabled()||!ownState)return;
-    const s=ensureHoneyState(ownState,currentMember),h=s.honeyDelivery;
+    const s=ensureHoneyState((!visitContext&&state)?state:ownState,currentMember),h=s.honeyDelivery;
     advanceFuelCycle(h,now());
     if(h.active)return message("🛵 น้ำผึ้งกำลังทำงาน","รอน้องส่งของเที่ยวนี้เสร็จก่อนนะคะ");
     const exact=fuelPercentExact(h),p=Math.floor(exact),have=int(s.specials[FUEL_KEY]);
@@ -19185,24 +19185,46 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   async function refillFuel(requested,button){
-    if(!honeyEnabled()||!currentMemberKey||!ownState)return;
+    if(!honeyEnabled()||!currentMemberKey)return;
     requested=Math.max(1,int(requested)||1);
     if(button)button.disabled=true;
     try{
-      const s=ensureHoneyState(ownState,currentMember),h=s.honeyDelivery,t=now();
-      advanceFuelCycle(h,t);if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
-      const exact=fuelPercentExact(h,t),before=Math.floor(exact);if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
-      const have=int(s.specials[FUEL_KEY]);if(have<=0)throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
-      const need=Math.max(1,Math.ceil((100-exact)/10)),used=Math.min(requested,have,need);if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
-      if(isAdmin())s.specials[FUEL_KEY]=ADMIN_STOCK_QTY;else s.specials[FUEL_KEY]=have-used;
-      h.fuelPercentStored=Math.min(100,before+used*10);
-      h.fuelReadyAt=0;h.fuelExpiresAt=0;
-      h.needsSeedPersist=false;const after=fuelPercent(h,t);
-      if(isAdmin())s.specials[FUEL_KEY]=ADMIN_STOCK_QTY;
-      applyOwn(s);try{save()}catch(_){};await persistHoneyNow(s);closeModal();renderFuelHud();
+      const {db,fs}=await getFirebaseContext();
+      const ref=fs.doc(db,"saves",currentMemberKey);
+      let committed=null,before=0,after=0,used=0;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);
+        if(!snap.exists())throw new Error("ไม่พบข้อมูลผู้เล่น กรุณาเข้าเกมใหม่อีกครั้ง");
+        const server=ensureHoneyState(normalizeState(snap.data(),currentMember),currentMember);
+        const h=server.honeyDelivery,t=now();
+        advanceFuelCycle(h,t);
+        if(h.active)throw new Error("น้ำผึ้งกำลังทำงานอยู่");
+        const exact=fuelPercentExact(h,t);before=Math.floor(exact);
+        if(exact>=100)throw new Error("น้ำมันเต็มแล้ว กดเรียกน้ำผึ้งได้เลย");
+        server.specials=server.specials||{};
+        const have=int(server.specials[FUEL_KEY]);
+        if(have<=0&&!isAdmin())throw new Error("ไม่มีแกลลอนน้ำมันในกระเป๋า");
+        const need=Math.max(1,Math.ceil((100-exact)/10));
+        used=Math.min(requested,isAdmin()?requested:have,need);
+        if(used<=0)throw new Error("ไม่มีน้ำมันให้เติม");
+        if(isAdmin())server.specials[FUEL_KEY]=ADMIN_STOCK_QTY;
+        else server.specials[FUEL_KEY]=Math.max(0,have-used);
+        h.fuelPercentStored=Math.min(100,before+used*10);
+        h.fuelReadyAt=0;h.fuelExpiresAt=0;h.needsSeedPersist=false;
+        after=fuelPercent(h,t);
+        committed=server;
+        tx.set(ref,{specials:cloneData(server.specials),honeyDelivery:cloneData(h),clientSaveRevision:(Number(server.clientSaveRevision)||0)+1,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      if(committed){
+        committed.clientSaveRevision=(Number(committed.clientSaveRevision)||0)+1;
+        applyOwn(committed);
+      }
+      closeModal();renderFuelHud();
       showWeatherToast(`⛽ เติมน้ำมัน ${used} แกลลอน • ${before}% → ${after}%`);
-    }catch(error){message("เติมน้ำมันไม่ได้",error.message||"กรุณาลองใหม่")}
-    finally{if(button)button.disabled=false}
+    }catch(error){
+      console.error("R34.12.3 honey refill",error);
+      message("เติมน้ำมันไม่ได้",error.message||"กรุณาลองใหม่");
+    }finally{if(button)button.disabled=false}
   }
 
   let frameTimer=0,moveRaf=0,transit=false,rewardShowing=false,currentBikeMode="";
@@ -19469,7 +19491,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
 
   function bind(){
     const h=hud(),b=bike();
-    if(h){h.onclick=null;h.onpointerup=e=>{e?.preventDefault?.();if(!honeyEnabled())return;const s=ensureHoneyState(ownState||state,currentMember),x=s?.honeyDelivery;if(!x||x.active)return;if(fuelPercent(x)>=100)callHoney();else showFuelModal()}}
+    if(h){h.onclick=null;h.onpointerup=e=>{e?.preventDefault?.();if(!honeyEnabled())return;const s=ensureHoneyState((!visitContext&&state)?state:ownState,currentMember),x=s?.honeyDelivery;if(!x||x.active)return;if(fuelPercent(x)>=100)callHoney();else showFuelModal()}}
     if(b){b.onclick=null;b.onpointerup=e=>{e?.preventDefault?.();if(!honeyEnabled()||transit)return;const x=(ownState||state)?.honeyDelivery;if(!x?.active)return;if(x.reward)showRewardModal(x.reward);else showSendModal()}}
     fuelImageFallback($("honeyFuelIcon"));
   }
@@ -25414,7 +25436,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       let next=null,summary={},plots=0;
       await fs.runTransaction(db,async tx=>{
         const [ss,gs]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const st=normalizeState(ss.data(),currentMember),gardenPlots=(gs.exists()&&Array.isArray(gs.data()?.plots)?gs.data().plots:st.plots).map(normalizePlot);
+        const st=normalizeState(ss.data(),currentMember),gardenPlots=(Array.isArray(st.plots)?st.plots:[]).map(normalizePlot);
+        /* R34.12.4: /saves is owner truth; never restore tractor state from /gardens. */
         st.plots=cloneData(gardenPlots);
         for(let x=a;x<b;x++){
           const plot=st.plots?.[x];if(!plot||!cropReady(plot))continue;
@@ -29955,7 +29978,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     while(out.length<n)out.push(typeof emptyPlot==="function"?emptyPlot():{});
     return out;
   }
-  function ownerLive(){return visitContext?null:(state||ownState||null)}
+  function ownerLive(){if(visitContext)return null;const a=state,b=ownState;if(!a)return b||null;if(!b)return a;const ra=Number(a.clientSaveRevision)||0,rb=Number(b.clientSaveRevision)||0,ta=Number(a.clientLocalEditAt||a.clientSaveAt)||0,tb=Number(b.clientLocalEditAt||b.clientSaveAt)||0;if(ra!==rb)return ra>rb?a:b;if(ta!==tb)return ta>tb?a:b;return a}
   function hamsters(s){
     const out={"2":[],"3":[],"4":[]},fg=s?.farmGuardians||{};
     for(const f of [2,3,4]){
@@ -30544,7 +30567,7 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
   /* ---------- 4. HOTEL FEED-ALL: NEW ID, no legacy blocker can catch it ---------- */
   const HOTEL_ID="r34120HotelFeedAll";let hotelBusy=false;
   function hotelHungry(s,t=now()){const dogs=(s?.dogs||[]).filter(d=>d?.placedHotel).map(p=>({kind:"dog",p})),cats=(s?.cats||[]).filter(c=>c?.placedHotel&&Number(c?.placedFarm)===-1).map(p=>({kind:"cat",p}));return dogs.concat(cats).filter(x=>t>=Number(x.p?.nextFeedAt||0))}
-  function showHotelFeedAll(){if(visitContext)return;const s=ownState||state,h=hotelHungry(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมา/แมวที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];$("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมด</h2><p>หมา/แมวหิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเดียว ระบบใช้เฉพาะเมนูที่เลือก</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r34120-hotel-menu="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r34120HotelCancel" class="secondary-action">ยกเลิก</button></section>`;openModal?.();document.querySelectorAll("[data-r34120-hotel-menu]").forEach(b=>b.onclick=()=>commitHotelFeedAll(b.dataset.r34120HotelMenu));$("r34120HotelCancel").onclick=()=>closeModal?.()}
+  function showHotelFeedAll(){if(visitContext)return;const s=state||ownState,h=hotelHungry(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมา/แมวที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];$("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมด</h2><p>หมา/แมวหิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเดียว ระบบใช้เฉพาะเมนูที่เลือก</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r34120-hotel-menu="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r34120HotelCancel" class="secondary-action">ยกเลิก</button></section>`;openModal?.();document.querySelectorAll("[data-r34120-hotel-menu]").forEach(b=>b.onclick=()=>commitHotelFeedAll(b.dataset.r34120HotelMenu));$("r34120HotelCancel").onclick=()=>closeModal?.()}
   async function commitHotelFeedAll(recipeId){if(hotelBusy||!cloudReady||!currentMemberKey)return;hotelBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,count=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const s=normalizeState(snap.data(),currentMember),hungry=hotelHungry(s);count=hungry.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องที่หิวแล้ว");if(typeof dishCountInState!=="function"||dishCountInState(recipeId,s)<count)throw new Error(`อาหารไม่พอ ต้องใช้ ${count} ถาด`);if(typeof removeDishesFromState!=="function"||!removeDishesFromState(s,recipeId,count))throw new Error("หักอาหารไม่สำเร็จ");const t=now();for(const x of hungry)x.p.nextFeedAt=t+(x.kind==="dog"?Number(typeof DOG_HUNGER_MS!=="undefined"?DOG_HUNGER_MS:21600000):Number(typeof CAT_HUNGER_MS!=="undefined"?CAT_HUNGER_MS:21600000));s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();try{globalThis.YN_R329_HOTEL?.render?.()}catch(_){try{draw?.()}catch(__){}};showWeatherToast?.(`🍽️ ให้อาหารทั้งหมด ${count} ตัวแล้ว`)}catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่")}finally{hotelBusy=false}}
   function mountHotelButton(){
     if(currentScene!=="dogHotel"){$(HOTEL_ID)?.remove();return}
@@ -30733,4 +30756,190 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
   globalThis.YN_R341202={BUILD,publishOwnerHard,applyFriendHard,mountFinalHotel};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   R34.12.3 — HONEY REFUEL HARD INPUT
+   One pointerdown path for fuel HUD and confirm button.
+   ====================================================================== */
+(()=>{
+  const BUILD="S2-R34.12.3-HONEY-REFUEL-HARD";
+  let last=0;
+  const hit=(e)=>{
+    const t=e.target?.closest?.("#honeyFuelHud,#honeyFuelConfirm");
+    if(!t)return;
+    const now=Date.now();if(now-last<180){e.preventDefault?.();e.stopImmediatePropagation?.();return;}last=now;
+    e.preventDefault?.();e.stopImmediatePropagation?.();
+    if(t.id==="honeyFuelHud"){
+      try{globalThis.YN_HONEY_DELIVERY?.openFuel?.()}catch(err){console.error(BUILD,"openFuel",err)}
+      return;
+    }
+    if(t.id==="honeyFuelConfirm"){
+      const q=Math.max(1,Number(document.getElementById("honeyFuelQty")?.value)||1);
+      // Use the modal's authoritative onclick, now backed by a Firestore transaction.
+      try{t.onclick?.({type:"r34123",preventDefault(){},stopPropagation(){}})}catch(err){console.error(BUILD,"confirm",err)}
+    }
+  };
+  window.addEventListener("pointerdown",hit,true);
+  window.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.12.4 — FRIEND REPAIR + HOTEL HARD BUTTON + BASEMENT TOUCH
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.4-FRIEND-HOTEL-BASEMENT-HARD-20260904";
+  const $=id=>document.getElementById(id);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const norm48=a=>{const out=(Array.isArray(a)?a:[]).slice(0,48).map(x=>typeof normalizePlot==="function"?normalizePlot(cp(x)):cp(x));while(out.length<48)out.push(typeof emptyPlot==="function"?emptyPlot():{});return out};
+  function freshestOwner(){if(visitContext)return null;const a=state,b=ownState;if(!a)return b||null;if(!b)return a;const ra=Number(a.clientSaveRevision)||0,rb=Number(b.clientSaveRevision)||0,ta=Number(a.clientLocalEditAt||a.clientSaveAt)||0,tb=Number(b.clientLocalEditAt||b.clientSaveAt)||0;if(ra!==rb)return ra>rb?a:b;if(ta!==tb)return ta>tb?a:b;const ca=norm48(a.plots).filter(p=>p?.crop).length,cb=norm48(b.plots).filter(p=>p?.crop).length;return ca>=cb?a:b}
+  function publicHamsters(s){const out={"2":[],"3":[],"4":[]};for(const f of [2,3,4]){const arr=s?.farmGuardians?.[String(f)]?.hamsters||[];out[String(f)]=(Array.isArray(arr)?arr:[]).filter(Boolean).map(cp)}return out}
+  let publishBusy=false,publishQueued=false;
+  async function publishOwnerNow(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;const live=freshestOwner();if(!live)return false;
+    if(publishBusy){publishQueued=true;return false}publishBusy=true;
+    try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(norm48(live.plots)),publicHamsters:cp(publicHamsters(live)),ownerRevision:Number(live.clientSaveRevision)||0,ownerLocalEditAt:Number(live.clientLocalEditAt||live.clientSaveAt)||Date.now(),publicVersion:"R34.12.4",updatedAt:fs.serverTimestamp()},{merge:true});return true}catch(e){console.warn(BUILD,"publish owner",e);return false}finally{publishBusy=false;if(publishQueued){publishQueued=false;setTimeout(()=>publishOwnerNow(true),0)}}
+  }
+  /* Publish after every actual save request, but coalesce taps into one write. */
+  let pubTimer=0;function queuePublish(ms=90){clearTimeout(pubTimer);pubTimer=setTimeout(()=>publishOwnerNow(true),ms)}
+  const save124=typeof save==="function"?save:null;if(save124)save=function(){const r=save124.apply(this,arguments);if(!visitContext)queuePublish(80);return r};
+  const flush124=typeof flushCloudSave==="function"?flushCloudSave:null;if(flush124)flushCloudSave=async function(){const r=await flush124.apply(this,arguments);if(!visitContext)await publishOwnerNow(true);return r};
+
+  /* Aida repairs every stale/blank garden from the current persisted /saves once. */
+  let repairRan=false;
+  async function repairAllGardensFromSaves(){if(repairRan||!cloudReady)return;let admin=false;try{admin=typeof isAdmin==="function"?!!isAdmin():(currentMemberKey==="aida")}catch(_){admin=currentMemberKey==="aida"}if(!admin)return;repairRan=true;
+    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves"));let n=0;for(const d of sn.docs){const raw=d.data()||{},key=String(d.id||raw.memberKey||"");if(!key)continue;const st=typeof normalizeState==="function"?normalizeState(raw,raw.player||key):raw;await fs.setDoc(fs.doc(db,"gardens",key),{memberKey:key,displayName:String(raw.player||raw.displayName||key),plots:cp(norm48(st.plots)),publicHamsters:cp(publicHamsters(st)),ownerRevision:Number(st.clientSaveRevision)||0,ownerLocalEditAt:Number(st.clientLocalEditAt||st.clientSaveAt)||0,publicVersion:"R34.12.4-admin-repair",updatedAt:fs.serverTimestamp()},{merge:true});n++}console.info(BUILD,"repaired gardens",n)}catch(e){repairRan=false;console.warn(BUILD,"admin garden repair",e)}}
+
+  /* HARD hotel button lives on body so hotel re-render cannot delete or cover it. */
+  const HID="yn124HotelFeedAll";
+  function hotelFn(){return globalThis.YN_R341200?.showHotelFeedAll||globalThis.YN_R3411?.showFeedAllHotel}
+  function mountHotelHard(){
+    if(currentScene!=="dogHotel"){ $(HID)?.remove(); return }
+    let b=$(HID);if(!b){b=document.createElement("button");b.id=HID;b.type="button";b.innerHTML="🍽️ ให้อาหารหมา+แมวทั้งหมด";document.body.appendChild(b)}
+    b.style.cssText="position:fixed;right:12px;bottom:104px;z-index:2147483647;min-height:48px;padding:10px 14px;border-radius:16px;font-weight:800;pointer-events:auto;touch-action:manipulation";b.disabled=false;
+    const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();const fn=hotelFn();if(typeof fn==="function")fn();else try{message?.("ให้อาหารทั้งหมด","ไม่พบฟังก์ชันโฮเทล") }catch(_){}};
+    b.onpointerup=go;b.ontouchend=go;b.onclick=go;
+  }
+  /* Also expose the same action at top of roster modal. */
+  const roster124=typeof showDogHotelRoster==="function"?showDogHotelRoster:null;if(roster124)showDogHotelRoster=function(){const r=roster124.apply(this,arguments);setTimeout(()=>{const panel=document.querySelector("#modalContent .dog-roster-panel");if(!panel||panel.querySelector("#yn124RosterFeedAll"))return;const b=document.createElement("button");b.id="yn124RosterFeedAll";b.type="button";b.className="primary-spooky-action";b.textContent="🍽️ ให้อาหารทั้งหมด";panel.insertBefore(b,panel.children[2]||panel.firstChild);b.onclick=()=>hotelFn()?.()},0);return r};
+
+  /* Basement: use touchend/click on the actual target; no pointerdown-only dependency. */
+  let baseLast="",baseAt=0;
+  function basementAction(t,e){const a=globalThis.YN_R17;if(!a||currentScene!=="house"||visitContext)return false;let key="",fn=null;
+    if(t?.matches?.("[data-r17-plot]")){const i=Number(t.dataset.r17Plot);key=`p:${i}`;fn=()=>a.openFlowerPlot?.(i)}
+    else if(t?.matches?.("[data-r17-machine-hot]")){const i=Number(t.dataset.r17MachineHot);key=`m:${i}`;fn=()=>a.openWineMachine?.(i)}
+    else if(t?.matches?.("[data-r17-plant]")){const i=Number(t.dataset.r17PlantPlot),k=t.dataset.r17Plant;key=`plant:${i}:${k}`;fn=()=>a.plantFlower?.(i,k)}
+    else if(t?.id==="r17StartWine"){const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;key=`start:${i}:${k}`;fn=()=>a.startWine?.(i,k)}
+    else if(t?.id==="r17WineClaim"){const i=Number(t.dataset.r17WineClaim);key=`claim:${i}`;fn=()=>a.claimWine?.(i)}
+    else if(t?.id==="r17HarvestOne"){const i=Number(t.dataset.r17HarvestOne);key=`harvest:${i}`;fn=()=>a.harvestFlower?.(i)}
+    else if(t?.matches?.("[data-r17-hdrop]")){key=`drop:${t.dataset.r17Hdrop}`;fn=()=>a.collectHedgeOne?.(t.dataset.r17Hdrop)}
+    else if(t?.id==="r17CollectHedge"){key="drop:all";fn=()=>a.collectHedge?.()}
+    if(!fn)return false;const tm=Date.now();if(key===baseLast&&tm-baseAt<350)return true;baseLast=key;baseAt=tm;e?.preventDefault?.();e?.stopPropagation?.();try{fn()}catch(err){console.warn(BUILD,"basement",err)}return true}
+  window.addEventListener("touchend",e=>{const t=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot],[data-r17-plant],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-hdrop],#r17CollectHedge");if(t)basementAction(t,e)},true);
+  window.addEventListener("click",e=>{const t=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot],[data-r17-plant],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-hdrop],#r17CollectHedge");if(t)basementAction(t,e)},true);
+
+  setInterval(mountHotelHard,300);window.addEventListener("pageshow",()=>setTimeout(()=>{publishOwnerNow(true);repairAllGardensFromSaves();mountHotelHard()},180),{passive:true});setTimeout(()=>{publishOwnerNow(true);repairAllGardensFromSaves();mountHotelHard()},600);
+  globalThis.YN_R341204={BUILD,publishOwnerNow,repairAllGardensFromSaves,mountHotelHard};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R34.12.5 — LIVE GARDEN BY AUTH UID (single final friend path)
+   - Uses a fresh collection keyed by Firebase Auth UID, so static member-key
+     allowlists and every historical /gardens/publicFarmState writer cannot
+     blank the visible friend farm.
+   - The final visitFriend is standalone and does not call any legacy wrapper.
+   - The final draw wrapper restores the live friend snapshot BEFORE render.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.5-LIVE-GARDEN-UID-20260904";
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const $=id=>document.getElementById(id);
+  const now=()=>{try{return typeof gameNow==="function"?gameNow():Date.now()}catch(_){return Date.now()}};
+  const norm48=a=>{const out=(Array.isArray(a)?a:[]).slice(0,48).map(x=>{try{return typeof normalizePlot==="function"?normalizePlot(cp(x)):cp(x)}catch(_){return cp(x)}});while(out.length<48)out.push(typeof emptyPlot==="function"?emptyPlot():{});return out};
+  function hamsters(s){const out={"2":[],"3":[],"4":[]};for(const f of [2,3,4]){const a=s?.farmGuardians?.[String(f)]?.hamsters||[];out[String(f)]=(Array.isArray(a)?a:[]).filter(Boolean).map(cp)}return out}
+  function sig(s){try{return JSON.stringify({p:norm48(s?.plots),h:hamsters(s)})}catch(_){return""}}
+
+  let myUid="",pubBusy=false,pubAgain=false,lastSig="";
+  async function uid(){if(myUid)return myUid;const {bridge}=await getFirebaseContext();const d=await bridge.authDebug?.();myUid=String(d?.uid||"");return myUid}
+  function ownerScreenState(){return visitContext?null:(state||ownState||null)}
+  async function publishLive(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;const s=ownerScreenState();if(!s)return false;const sg=sig(s);if(!force&&sg===lastSig)return true;
+    if(pubBusy){pubAgain=true;return false}pubBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),u=await uid();if(!u)throw new Error("ไม่พบ Firebase uid");
+      const payload={ownerUid:u,memberKey:String(currentMemberKey),displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(norm48(s.plots)),publicHamsters:cp(hamsters(s)),ownerRevision:Number(s.clientSaveRevision)||0,ownerLocalEditAt:Number(s.clientLocalEditAt||s.clientSaveAt)||Date.now(),publicVersion:"R34.12.5",updatedAt:fs.serverTimestamp()};
+      await fs.setDoc(fs.doc(db,"liveGardens",u),payload,{merge:true});
+      // Compatibility mirror for existing worm/steal systems. Failure here must not
+      // invalidate the new live-garden write.
+      try{await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{memberKey:String(currentMemberKey),displayName:payload.displayName,plots:cp(payload.plots),publicHamsters:cp(payload.publicHamsters),ownerRevision:payload.ownerRevision,ownerLocalEditAt:payload.ownerLocalEditAt,publicVersion:"R34.12.5-mirror",updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"legacy garden mirror",e)}
+      lastSig=sg;return true;
+    }catch(e){console.warn(BUILD,"publish",e);return false}
+    finally{pubBusy=false;if(pubAgain){pubAgain=false;setTimeout(()=>publishLive(true),10)}}
+  }
+
+  // Publish exactly what the owner currently sees. This runs after owner-side
+  // plot changes regardless of the old save debounce chain.
+  const drawOwnerBase=typeof draw==="function"?draw:null;
+  let friendRaw=null,friendKey="",friendName="",friendDocRef=null,friendUnsub=null,friendToken=0;
+  function injectFriend(){
+    if(!visitContext||!friendRaw||String(visitContext.memberKey||"")!==friendKey)return;
+    state.plots=norm48(friendRaw.plots);
+    const hm=friendRaw.publicHamsters&&typeof friendRaw.publicHamsters==="object"?cp(friendRaw.publicHamsters):{"2":[],"3":[],"4":[]};
+    visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};
+    for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:Array.isArray(hm[String(f)])?cp(hm[String(f)]):[],stored:[],removedIds:[]};
+  }
+  if(drawOwnerBase)draw=function(){
+    if(visitContext)injectFriend();
+    const r=drawOwnerBase.apply(this,arguments);
+    if(!visitContext)setTimeout(()=>publishLive(false),0);
+    else injectFriend();
+    return r;
+  };
+  setInterval(()=>{if(!visitContext){const s=ownerScreenState();if(s&&sig(s)!==lastSig)publishLive(true)}},500);
+
+  function stopFriend(){try{friendUnsub?.()}catch(_){}friendUnsub=null;friendRaw=null;friendKey="";friendName="";friendDocRef=null;friendToken++}
+  function pickQuerySnap(qs){let best=null;qs?.forEach?.(d=>{const x=d.data()||{};if(!best||Number(x.ownerLocalEditAt||0)>Number(best.data.ownerLocalEditAt||0))best={ref:d.ref,data:x}});return best}
+  function applyFriend(raw,token){if(token!==friendToken||!visitContext||String(visitContext.memberKey||"")!==friendKey)return;friendRaw=cp(raw||{});injectFriend();try{drawOwnerBase?.()}catch(_){try{draw?.()}catch(__){}};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},0)}
+
+  visitFriend=async function(key,name){
+    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;
+    stopFriend();const token=friendToken;
+    try{
+      const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"liveGardens"),fs.where("memberKey","==",key),fs.limit(5));
+      const qs=await fs.getDocs(q),best=pickQuerySnap(qs);if(!best)throw new Error("เพื่อนคนนี้ยังไม่ได้เปิดเกมหลังอัปเดตระบบสวนล่าสุด");
+      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};friendKey=key;friendName=name;friendDocRef=best.ref;state=typeof fresh==="function"?fresh(name):{};state.plots=norm48([]);
+      applyFriend(best.data,token);try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList?.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){}
+      friendUnsub=fs.onSnapshot(q,s=>{const b=pickQuerySnap(s);if(b){friendDocRef=b.ref;applyFriend(b.data,token)}},e=>console.warn(BUILD,"friend live",e));
+    }catch(e){stopFriend();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+  const ret=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;if(ret)returnFromFriendVisit=function(){stopFriend();return ret.apply(this,arguments)};
+  const page=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;if(page)setFarmPlotPage=function(){injectFriend();const r=page.apply(this,arguments);injectFriend();return r};
+
+  // Final friend worm/water path uses the exact live-garden document being rendered,
+  // then mirrors the same plot array + marker to legacy /gardens so the owner's
+  // existing reconciliation code can import that single friend action into /saves.
+  let friendActionBusy125=false;
+  function cure(p){const q=typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p),crop=CROPS?.[q?.crop];if(!q?.crop||!crop)return q;q.phase="growing2";q.worm=false;delete q.wormType;q.phaseEndsAt=now()+Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));return q}
+  async function friendAction125(index,mode,method="merit"){
+    if(friendActionBusy125||!visitContext||!friendDocRef||!currentMemberKey)return;friendActionBusy125=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),myRef=fs.doc(db,"saves",currentMemberKey);let plotsOut=null,mineOut=null;
+      await fs.runTransaction(db,async tx=>{const [ls,ms]=await Promise.all([tx.get(friendDocRef),tx.get(myRef)]);if(!ls.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");const d=ls.data()||{},plots=norm48(d.plots),p=plots[index],mine=normalizeState(ms.data(),currentMember);try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        if(mode==="water"){if(p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");const crop=CROPS[p.crop],remain=Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));p.wateredAt=now();if(Math.random()<Number(crop.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+remain}try{incrementMissionOn?.(mine,"waterFriends",1)}catch(_){}}
+        else{if(!(p.phase==="worm"||p.worm))throw new Error("หนอนถูกกำจัดไปแล้ว");const giant=p?.wormType==="giant",mCost=giant?2:1,sCost=giant?12:5;let adminNow=false;try{adminNow=typeof isAdmin==="function"&&isAdmin()}catch(_){}if(!adminNow){if(method==="spray"){mine.specials=mine.specials||{};const have=Number(mine.specials.wormKillerSpray)||0;if(have<sCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sCost} ขวด`);mine.specials.wormKillerSpray=have-sCost}else{const have=Number(mine.merit)||0;if(have<mCost)throw new Error(`กุศลไม่พอ ต้องใช้ ${mCost}`);mine.merit=have-mCost}}plots[index]=cure(p);try{incrementMissionOn?.(mine,"clearWorms",1)}catch(_){}}
+        plotsOut=plots;mine.clientSaveRevision=(Number(mine.clientSaveRevision)||0)+1;mineOut=cp(mine);tx.set(friendDocRef,{plots:cp(plots),friendActionAtClient:Date.now(),friendActionBy:String(currentMemberKey),friendActionType:mode,friendActionIndex:index,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(myRef,{...cp(mine),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      try{await fs.setDoc(fs.doc(db,"gardens",friendKey),{memberKey:friendKey,displayName:friendName,plots:cp(plotsOut),friendActionAtClient:Date.now(),friendActionBy:String(currentMemberKey),friendActionType:mode,friendActionIndex:index,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"friend action legacy mirror",e)}
+      ownState=normalizeState(mineOut,currentMember);friendRaw={...(friendRaw||{}),plots:cp(plotsOut)};injectFriend();closeModal?.();draw?.();updateMeritUI?.();showWeatherToast?.(mode==="water"?"💧 รดน้ำให้เพื่อนแล้ว":"🐛 กำจัดหนอนให้เพื่อนแล้ว");
+    }catch(e){message?.(mode==="water"?"รดน้ำให้เพื่อนไม่สำเร็จ":"กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}finally{friendActionBusy125=false}
+  }
+  tapFriendPlot=async function(index){if(!visitContext)return;index=Number(index);const p=norm48(state?.plots)[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!p?.crop)return message?.("เยี่ยมสวนเพื่อน","แปลงนี้ว่างอยู่");if(p.phase==="worm"||p.worm){const giant=p?.wormType==="giant",sCost=giant?12:5,mCost=giant?2:1,sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 ${giant?"หนอนไจแอนท์":"หนอน"}บ้านเพื่อน</h2><p>กำจัดเฉพาะแปลง #${index+1}</p><div class="friend-worm-actions"><button id="r34125FriendWormMerit" class="danger-action">ใช้ ${mCost} กุศล</button><button id="r34125FriendWormSpray" class="primary-spooky-action" ${sprays<sCost?"disabled":""}>🧴 ใช้สเปรย์ ×${sCost}</button></div></section>`;openModal?.();$("r34125FriendWormMerit").onclick=()=>friendAction125(index,"worm","merit");$("r34125FriendWormSpray").onclick=()=>friendAction125(index,"worm","spray");return}if(p.phase==="needsWater")return friendAction125(index,"water");if(p.phase==="ready"){try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",friendKey),{memberKey:friendKey,displayName:friendName,plots:cp(norm48(friendRaw?.plots)),updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}if(typeof showStealConfirmation==="function")return showStealConfirmation(index)}return message?.("เยี่ยมสวนเพื่อน","ต้นนี้ยังไม่มีกิจกรรมที่ทำได้ตอนนี้")};
+
+  window.addEventListener("pageshow",()=>setTimeout(()=>publishLive(true),150),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishLive(true),100)},{passive:true});setTimeout(()=>publishLive(true),400);
+  globalThis.YN_R341205={BUILD,publishLive,injectFriend};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();

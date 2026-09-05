@@ -9936,3 +9936,8 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r17-flower-plot{width:25.5%!important;height:19.5%!important;}
 .r17-wine-machine{width:20.5%!important;height:31%!important;}
 #sceneInteractiveLayer[data-r17-house-mode="basement"]{touch-action:none!important;}
+
+/* R34.12.4 input hardening */
+.r17-flower-plot,.r17-wine-machine{pointer-events:auto!important;touch-action:manipulation!important;}
+.r17-flower-plot>* , .r17-wine-machine>*{pointer-events:none!important;}
+#yn124HotelFeedAll{font-family:inherit!important;}
