@@ -9982,65 +9982,9 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 #s2MainNav [data-s2-main="honey"],#s2MainNav [data-s2-main="disc-test"]{pointer-events:auto!important;touch-action:manipulation!important}
 
 
-/* =====================================================================
-   S2 R34.14.0 — Honey / Hotel bulk feed / Disc drop canonical UI
-   ===================================================================== */
-.r34140-honey-modal{max-width:min(92vw,560px)}
-.r34140-honey-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;padding:12px 14px;border-radius:16px;background:rgba(91,53,110,.10)}
-.r34140-honey-status strong{font-size:clamp(22px,6vw,34px);color:#633b76}
-.r34140-honey-status span{font-weight:850;color:#694b5f}
-.r34140-progress{position:relative;height:28px;margin:10px 0 14px;border-radius:999px;overflow:hidden;background:#eadcc9;border:1px solid #bd9873}
-.r34140-progress i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#d79044,#f2c55d);border-radius:inherit}
-.r34140-progress b{position:absolute;inset:0;display:grid;place-items:center;color:#4b2d42;text-shadow:0 1px #fff;font-weight:950}
-.r34140-qty{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:8px;align-items:stretch;margin:12px 0}
-.r34140-qty>button{border:0;border-radius:14px;background:#6e3c93;color:#fff;font-size:25px;font-weight:900;min-height:48px}
-.r34140-qty label{display:grid;grid-template-columns:1fr 92px;align-items:center;gap:8px;padding:8px 12px;border:1px solid #c9a77f;border-radius:14px;background:#fffaf0;font-weight:850}
-.r34140-qty input{width:100%;min-width:0;padding:8px;border:1px solid #c9a77f;border-radius:10px;text-align:center;background:#fff}
-.r34140-feed-panel{max-height:min(82dvh,760px);overflow:auto;-webkit-overflow-scrolling:touch}
-.r34140-feed-total{position:sticky;top:0;z-index:2;margin:8px 0 10px;padding:9px 12px;border-radius:999px;background:#f6d8c7;color:#6a3d4e;text-align:center;font-weight:950;box-shadow:0 4px 10px rgba(65,35,40,.12)}
-.r34140-feed-total.ok{background:#dff2d4;color:#315f34}
-.r34140-food-list{display:grid;gap:8px;margin:10px 0 14px}
-.r34140-food-row{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid #cda77e;border-radius:15px;background:#fffaf0}
-.r34140-food-row>img{width:54px;height:54px;object-fit:contain}
-.r34140-food-row>span{min-width:0}.r34140-food-row>span b,.r34140-food-row>span small{display:block}.r34140-food-row>span b{font-size:13px}.r34140-food-row>span small{opacity:.72;font-size:11px;margin-top:3px}
-.r34140-food-row>div{display:grid;grid-template-columns:36px 34px 36px;align-items:center;gap:4px}.r34140-food-row>div button{width:36px;height:36px;border:0;border-radius:10px;background:#704390;color:#fff;font-size:19px;font-weight:900}.r34140-food-row>div button:disabled{opacity:.35}.r34140-food-row>div strong{text-align:center;font-size:15px}
-.r34140-drop-wrap{position:absolute;z-index:280;left:50%;top:-10px;transform:translate(-50%,-100%);display:flex;align-items:center;gap:4px;pointer-events:none;white-space:nowrap}
-.r34140-drop-clock{display:block;padding:3px 6px;border-radius:999px;background:rgba(38,20,48,.88);color:#fff6d9;font-size:clamp(8px,2.1vw,11px);font-weight:900;box-shadow:0 2px 7px rgba(0,0,0,.32)}
-.r34140-drop-disc{pointer-events:auto;touch-action:manipulation;width:30px;height:30px;border:1.5px solid #f3d28a;border-radius:50%;background:#fff5db;font-size:17px;line-height:1;box-shadow:0 3px 9px rgba(0,0,0,.3)}
-.r34140-drop-disc[hidden]{display:none!important}
-#r34133HotelFeedBtn{pointer-events:auto;touch-action:manipulation}
-
-
-/* =====================================================================
-   S2 R34.15.0 CLEAN — Honey / Hotel / physical therapy-disc drops
-   ===================================================================== */
-.r3415-hotel-feed-all{
-  position:fixed!important;left:50%!important;bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px))!important;
-  transform:translateX(-50%)!important;z-index:2147483500!important;min-width:min(88vw,390px)!important;
-  min-height:52px!important;padding:10px 18px!important;border:2px solid #f2d49a!important;border-radius:18px!important;
-  background:linear-gradient(180deg,#684083,#412653)!important;color:#fff8e8!important;font-weight:900!important;
-  box-shadow:0 10px 25px rgba(23,9,29,.42)!important;pointer-events:auto!important;touch-action:manipulation!important;
-}
-.r3415-honey-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 10px;padding:10px 12px;border-radius:14px;background:rgba(95,55,111,.10)}
-.r3415-honey-summary strong{font-size:clamp(22px,6vw,34px)}.r3415-honey-summary span{font-weight:800}
-.r3415-fuelbar{position:relative;height:25px;border-radius:999px;overflow:hidden;background:#e6d7ca;border:1px solid #a98268;margin:8px 0 14px}
-.r3415-fuelbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#d56372,#f0a45b);border-radius:inherit}
-.r3415-fuelbar b{position:absolute;inset:0;display:grid;place-items:center;color:#442536;text-shadow:0 1px 0 #fff;font-size:12px}
-.r3415-step{display:grid;grid-template-columns:46px 1fr 46px;gap:8px;align-items:center;margin:10px 0}
-.r3415-step button{height:44px;border:0;border-radius:12px;background:#684083;color:#fff;font-size:24px;font-weight:900}
-.r3415-step input{width:100%;height:44px;border:1px solid #c3a17e;border-radius:12px;text-align:center;font-weight:900;background:#fffdf7;color:#43253e}
-.r3415-feed-total{margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:#5c3970;color:#fff;text-align:center;font-weight:900}
-.r3415-feed-list{display:grid;gap:8px;max-height:48vh;overflow:auto;padding:2px 2px 8px}
-.r3415-feed-row{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:9px;padding:8px;border:1px solid #c6a584;border-radius:13px;background:#fff9e9}
-.r3415-feed-row>img{width:48px;height:48px;object-fit:contain}.r3415-feed-row div:nth-child(2){min-width:0}.r3415-feed-row b,.r3415-feed-row small{display:block}.r3415-feed-row small{opacity:.72}
-.r3415-food-step{display:grid;grid-template-columns:34px 28px 34px;align-items:center;gap:4px}.r3415-food-step button{height:34px;border:0;border-radius:9px;background:#694482;color:#fff;font-size:20px;font-weight:900}.r3415-food-step button:disabled{opacity:.35}.r3415-food-step strong{text-align:center}
-
-.alpaca-pen-animal,.r25-hamster{overflow:visible!important}
-.r3415-drop-clock{position:absolute;left:50%;bottom:88%;transform:translateX(-50%);z-index:330;min-width:max-content;padding:3px 7px;border-radius:999px;background:rgba(40,20,48,.9);border:1px solid rgba(255,224,166,.85);color:#fff7d9;font-size:clamp(8px,2.1vw,11px);font-weight:900;line-height:1.1;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.28)}
-.r3415-drop-cloud{position:absolute;z-index:335;left:50%;top:66%;width:122px;height:78px;transform:translate(-50%,0);pointer-events:none;overflow:visible}
-.r3415-drop-cloud button{--drop-i:0;position:absolute;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:transparent;pointer-events:auto;touch-action:manipulation;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4));animation:r3415DropBob 1.6s ease-in-out infinite;animation-delay:calc(var(--drop-i) * -90ms)}
-.r3415-drop-cloud button img{display:block;width:100%;height:100%;object-fit:contain}
-.r3415-drop-cloud button:nth-child(1){left:4px;top:28px}.r3415-drop-cloud button:nth-child(2){left:28px;top:44px}.r3415-drop-cloud button:nth-child(3){left:52px;top:32px}.r3415-drop-cloud button:nth-child(4){left:76px;top:45px}.r3415-drop-cloud button:nth-child(5){left:92px;top:18px}.r3415-drop-cloud button:nth-child(6){left:40px;top:10px}.r3415-drop-cloud button:nth-child(7){left:66px;top:5px}.r3415-drop-cloud button:nth-child(8){left:12px;top:3px}
-.r3415-drop-cloud.ham{width:108px;height:70px;top:70%;transform:translate(-50%,0) scale(.88)}
-@keyframes r3415DropBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
-@media (prefers-reduced-motion:reduce){.r3415-drop-cloud button{animation:none}}
+/* ===== S2-R34.17 critical isolated UI ===== */
+#ynR3417BuildBadge{position:fixed;z-index:2147483647;top:max(6px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:5px 10px;border:2px solid #ffd978;border-radius:999px;background:#351744;color:#fff8cf;font:900 11px/1.1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.34);pointer-events:none;white-space:nowrap}
+.r3417-hotel-feed-all{position:fixed!important;left:50%!important;bottom:max(88px,calc(env(safe-area-inset-bottom) + 78px))!important;transform:translateX(-50%)!important;z-index:2147483500!important;min-width:min(88vw,390px)!important;min-height:54px!important;padding:10px 18px!important;border:2px solid #f1d08d!important;border-radius:18px!important;background:linear-gradient(180deg,#72458f,#46275c)!important;color:#fff8e8!important;font-weight:950!important;box-shadow:0 10px 24px rgba(23,9,29,.42)!important;pointer-events:auto!important;touch-action:manipulation!important}
+.r3417-honey-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0;padding:10px 12px;border-radius:14px;background:#f4e7f5}.r3417-honey-head strong{font-size:28px}.r3417-honey-head span{font-weight:850}.r3417-fuel{height:26px;position:relative;overflow:hidden;border:1px solid #b38d74;border-radius:999px;background:#e7d8ca;margin:10px 0 14px}.r3417-fuel i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#d86279,#f0ab59)}.r3417-fuel b{position:absolute;inset:0;display:grid;place-items:center;color:#442536;font-size:12px}.r3417-step{display:grid;grid-template-columns:46px 1fr 46px;gap:8px;margin:10px 0}.r3417-step button{height:44px;border:0;border-radius:12px;background:#71478b;color:#fff;font-size:24px;font-weight:950}.r3417-step input{min-width:0;height:44px;border:1px solid #c4a281;border-radius:12px;background:#fffdf7;text-align:center;font-weight:950}.r3417-ready{padding:10px;border-radius:12px;background:#e5f4dd;color:#315b31;font-weight:900;text-align:center}
+.r3417-feed-total{margin:8px 0 10px;padding:9px;border-radius:12px;background:#5c3970;color:#fff;text-align:center;font-weight:950}.r3417-feed-list{display:grid;gap:8px;max-height:48vh;overflow:auto;padding:2px 2px 8px}.r3417-food-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px;border:1px solid #c6a584;border-radius:13px;background:#fff9e9}.r3417-food-row>img{width:48px;height:48px;object-fit:contain}.r3417-food-row>span{min-width:0}.r3417-food-row>span b,.r3417-food-row>span small{display:block}.r3417-food-row>span small{opacity:.7}.r3417-food-row>div{display:grid;grid-template-columns:34px 28px 34px;align-items:center;gap:4px}.r3417-food-row>div button{height:34px;border:0;border-radius:9px;background:#694482;color:#fff;font-size:20px;font-weight:950}.r3417-food-row>div button:disabled{opacity:.35}.r3417-food-row>div strong{text-align:center}
+.r3417-drop-layer{position:absolute!important;inset:0!important;z-index:2147482000!important;overflow:visible!important;pointer-events:none!important}.r3417-drop-cluster{position:absolute;width:1px;height:1px;overflow:visible;pointer-events:none}.r3417-drop-cluster>span{position:absolute;left:0;top:-36px;transform:translateX(-50%);min-width:max-content;padding:3px 7px;border:1px solid #f1d28c;border-radius:999px;background:rgba(44,22,52,.92);color:#fff6dc;font-size:10px;font-weight:950;box-shadow:0 2px 7px rgba(0,0,0,.35)}.r3417-drop-cluster>button{position:absolute;width:31px;height:31px;padding:0;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));animation:r3417disc 1.45s ease-in-out infinite}.r3417-drop-cluster>button img{display:block;width:100%;height:100%;object-fit:contain}.r3417-drop-cluster.ham>button{width:28px;height:28px}@keyframes r3417disc{0%,100%{transform:translate(-50%,-50%) rotate(-5deg)}50%{transform:translate(-50%,calc(-50% - 5px)) rotate(5deg)}}@media(prefers-reduced-motion:reduce){.r3417-drop-cluster>button{animation:none}}

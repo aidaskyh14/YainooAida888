@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS">
+  <link rel="stylesheet" href="style.css?v=S2-R34.17-ROOT-OVERWRITE">
 </head>
 <body>
   <main id="app">
@@ -462,8 +462,21 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-  <script src="game.js?v=S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS"></script>
-  <script>window.YAINOO_BUILD="S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS-20260905"; console.info(window.YAINOO_BUILD,"index-marker");</script>
+  <script id="r3417-pre-router">
+  (function(){
+    window.__R3417_PENDING_ACTIONS=window.__R3417_PENDING_ACTIONS||[];
+    function badge(){let b=document.getElementById('ynR3417BuildBadge');if(!b){b=document.createElement('div');b.id='ynR3417BuildBadge';document.body.appendChild(b)}b.textContent='R34.17 INDEX';}
+    if(document.body)badge();else document.addEventListener('DOMContentLoaded',badge,{once:true});
+    const SEL='[data-s2-main="honey"],[data-s2-main="disc-test"],[data-r3417-action]';let lastKey='',lastAt=0;
+    function action(el){if(el.matches('[data-s2-main="honey"]'))return 'honey';if(el.matches('[data-s2-main="disc-test"]'))return 'disc-test';return el.dataset.r3417Action||'';}
+    function guard(e){const el=e.target&&e.target.closest?e.target.closest(SEL):null;if(!el)return;const a=action(el);if(!a)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(e.type==='pointerdown'||e.type==='touchstart'){const n=Date.now(),k=a+':' +(el.dataset.owner||'')+':' +(el.dataset.scope||'')+':' +(el.dataset.index||'');if(k===lastKey&&n-lastAt<220)return;lastKey=k;lastAt=n;setTimeout(()=>{if(window.YN_R3417&&typeof window.YN_R3417.route==='function')window.YN_R3417.route(a,el);else window.__R3417_PENDING_ACTIONS.push({action:a,el:null})},0)}}
+    window.addEventListener('pointerdown',guard,true);window.addEventListener('pointerup',guard,true);window.addEventListener('click',guard,true);window.addEventListener('touchstart',guard,{capture:true,passive:false});window.addEventListener('touchend',guard,{capture:true,passive:false});
+  })();
+  </script>
+
+  <script src="game.js?v=S2-R34.17-ROOT-OVERWRITE"></script>
+  <script src="critical-r3417.js?v=S2-R34.17-ROOT-OVERWRITE"></script>
+  <script>window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904"; console.info(window.YAINOO_BUILD,"index-marker");</script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -516,7 +529,7 @@
   tapPlot=async function(i){if(visitContext&&openTake(i))return true;return prior(i)};
   takeoverPlotTap=async function(i){return openTake(i)};
   try{DEED_ITEM.image='land-deed.png?v=181'}catch(e){}
-  window.YAINOO_BUILD="S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS-20260905";
+  window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";
 })();
 </script>
 
@@ -547,6 +560,6 @@
   }
 })();
 </script>
-  <script id="s2-final-build-marker">window.YAINOO_BUILD="S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS-20260905";</script>
+  <script id="s2-final-build-marker">window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";</script>
 </body>
 </html>
