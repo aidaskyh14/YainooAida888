@@ -2316,7 +2316,7 @@ async function initializeOrLoadCloudState(member,memberKey){
     loaded=fresh(member);
     await fs.setDoc(saveRef,{...cloneData(loaded),updatedAt:fs.serverTimestamp()},{merge:false});
   }
-  if(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots))loaded.plots=gardenSnap.data().plots.map(normalizePlot);
+  /* R34.12.0: /saves is authoritative for the owner. /gardens is outbound public state only. */
   ownState=normalizeState(loaded,member);state=ownState;
   lastGardenHash=plotHash(ownState.plots);
   await fs.setDoc(gardenRef,{memberKey,displayName:currentProfileDisplayName(),plots:cloneData(ownState.plots),updatedAt:fs.serverTimestamp()},{merge:true});
@@ -3401,7 +3401,7 @@ async function initializeOrLoadCloudState(member,memberKey){
   let loaded;
   if(saveSnap.exists())loaded=normalizeState(saveSnap.data(),member);
   else{loaded=fresh(member);await fs.setDoc(saveRef,{...cloneData(loaded),updatedAt:fs.serverTimestamp()},{merge:false})}
-  if(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots))loaded.plots=gardenSnap.data().plots.map(normalizePlot);
+  /* R34.12.0: /saves is authoritative for the owner. /gardens is outbound public state only. */
   ownState=normalizeState(loaded,member);state=ownState;lastGardenHash=plotHash(ownState.plots);lastPublishedMerit=Number(ownState.merit)||0;
   // ถ้ามี garden อยู่แล้ว ห้ามเขียนทับตอน login เพราะอาจชนกับเพื่อนที่กำลังรดน้ำ/กำจัดหนอน/ขโมย
   if(!gardenSnap.exists()){
@@ -3467,9 +3467,7 @@ async function harvestOwnPlot(index){
       assertCurrentCloudSession(saveSnap.data(),currentMember);
 
       // ใช้ garden กลางเป็น source of truth ของแปลงเมื่อมีอยู่
-      const plots=(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots)
-        ? gardenSnap.data().plots
-        : s.plots).map(normalizePlot);
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);
       const p=plots[index];
       ensurePlotPhaseStandalone(p);
       if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังเก็บไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("ต้นนี้ไม่พร้อมเก็บแล้ว กรุณารีเฟรชสวน");
@@ -4255,7 +4253,7 @@ async function initializeOrLoadCloudState(member,memberKey){
   await stampActiveSessionFast(saveRef,fs);
   let loaded=normalizeState(saveSnap.data(),member);
   loaded.activeSessionId=cloudSessionId;
-  if(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots))loaded.plots=gardenSnap.data().plots.map(normalizePlot);
+  /* R34.12.0: /saves is authoritative for the owner. /gardens is outbound public state only. */
   ownState=normalizeState(loaded,member);state=ownState;lastGardenHash=plotHash(ownState.plots);lastPublishedMerit=Number(ownState.merit)||0;
   cloudReady=true;
   const localKey=stateKey();if(localKey)localStorage.setItem(localKey,JSON.stringify(ownState));
@@ -5926,7 +5924,7 @@ bulkHarvestCurrentPage=async function(){
     const transaction=fs.runTransaction(db,async tx=>{
       const [saveSnap,gardenSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);
-      const plots=(gardenSnap.exists()&&Array.isArray(gardenSnap.data()?.plots)?gardenSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
       for(let i=start;i<start+12;i++){
         const p=plots[i];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="ready")continue;
         const key=p.crop;grantHarvestYield(s,key,1);summary[key]=(summary[key]||0)+1;plots[i]=emptyPlot();total++;
@@ -6795,7 +6793,7 @@ waterPlot=async function(index){
     await fs.runTransaction(db,async tx=>{
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
-      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone),p=plots[index];
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(ensurePlotPhaseStandalone),p=plots[index];
       if(!p?.crop||p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");
       type=applyWaterOutcomeV11(p);plots[index]=p;s.plots=plots.map(normalizePlot);newPlots=s.plots;next=s;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -6818,7 +6816,7 @@ clearWorm=async function(index){
     await fs.runTransaction(db,async tx=>{
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
-      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone),p=plots[index];
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(ensurePlotPhaseStandalone),p=plots[index];
       if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");
       const actualCost=wormTypeOf(p)==="giant"?2:1,crop=CROPS[p.crop];s.merit=(Number(s.merit)||0)-actualCost;p.phase="growing2";p.worm=false;delete p.wormType;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);plots[index]=p;s.plots=plots.map(normalizePlot);incrementMissionOn(s,"clearWorms",1);newPlots=s.plots;next=s;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -8254,7 +8252,7 @@ async function removeBlackMagicFromOwnPlot(index){
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
       if(!sSnap.exists())throw new Error('ไม่พบเซฟสมาชิก');
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
-      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(p=>normalizeBlackMagicPlot(ensurePlotPhaseStandalone(p)));
+      const plots=s.plots.map(p=>normalizeBlackMagicPlot(ensurePlotPhaseStandalone(p)));
       const p=plots[index];
       if(!p?.crop||!plotHasBlackMagic(p))throw new Error('แปลงนี้ไม่มีมนต์ดำแล้ว');
       const eggHave=Number(s.animalProducts?.egg)||0,milkHave=Number(s.animalProducts?.milk)||0;
@@ -8576,7 +8574,7 @@ async function v15BulkWaterCurrentFarm(){
     await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,count=0,giant=0,normal=0;
     await fs.runTransaction(db,async tx=>{
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-      const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(ensurePlotPhaseStandalone);
+      const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);const plots=(Array.isArray(s.plots)?s.plots:[]).map(ensurePlotPhaseStandalone);
       for(let i=start;i<end;i++){const p=plots[i];if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="needsWater")continue;const type=applyWaterOutcomeV11(p);if(type==="giant")giant++;else if(type==="normal")normal++;count++}
       if(!count)throw new Error("ไม่มีพืชพรรณ ที่ต้องการน้ำตอนนี้");s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true});
@@ -9069,13 +9067,13 @@ async function Y26_plantCrop(index,key,button){
 
 harvestOwnPlot=async function(index){
   if(visitContext||guardResting()||!cloudReady)return;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,cropKey="",qty=1;
-    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),p=plots[index];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังใช้งานไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");cropKey=p.crop;qty=p.angel?10:1;grantHarvestYield(s,cropKey,qty);plots[index]=emptyPlot();incrementMissionOn(s,"harvestCrops",1);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}${cropKey==="babyBamboo"?` และ ใบไผ่ ×${qty}`:""}`);
+    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=s.plots.map(normalizePlot),p=plots[index];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังใช้งานไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");cropKey=p.crop;qty=p.angel?10:1;grantHarvestYield(s,cropKey,qty);plots[index]=emptyPlot();incrementMissionOn(s,"harvestCrops",1);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();message("เก็บเกี่ยวสำเร็จ",`ได้ ${CROPS[cropKey].name} ×${qty}${cropKey==="babyBamboo"?` และ ใบไผ่ ×${qty}`:""}`);
   }catch(error){message("เก็บเกี่ยวไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
 };
 
 bulkHarvestCurrentPage=async function(){
   if(tractorBusy||visitContext||guardResting()||!cloudReady)return;tractorBusy=true;const btn=$("tractorBtn");if(btn)btn.disabled=true;showTractorWorking();
-  try{await settlePendingCloudSave();const start=farmPlotPage*12,{db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,summary={},totalPlots=0;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());for(let i=start;i<start+12;i++){const p=plots[i];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="ready")continue;const qty=p.angel?10:1,key=p.crop;grantHarvestYield(s,key,qty);summary[key]=(summary[key]||0)+qty;plots[i]=emptyPlot();totalPlots++}if(!totalPlots)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");incrementMissionOn(s,"harvestCrops",totalPlots);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
+  try{await settlePendingCloudSave();const start=farmPlotPage*12,{db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,summary={},totalPlots=0;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=s.plots.map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());for(let i=start;i<start+12;i++){const p=plots[i];ensurePlotPhaseStandalone(p);if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)continue;if(!p?.crop||p.phase!=="ready")continue;const qty=p.angel?10:1,key=p.crop;grantHarvestYield(s,key,qty);summary[key]=(summary[key]||0)+qty;plots[i]=emptyPlot();totalPlots++}if(!totalPlots)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บเกี่ยว");incrementMissionOn(s,"harvestCrops",totalPlots);s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();const rows=Object.entries(summary).map(([k,q])=>`${safeHtml(CROPS[k]?.name||k)} ${q}x`).join("<br>");message("🚜 เก็บเกี่ยวพืชผลทั้งหมดแล้ว",rows);
   }catch(error){message("🚜 รถไถยังไม่ออก",error.message||"กรุณาลองใหม่")}finally{hideTractorWorking();tractorBusy=false;if(btn)btn.disabled=false}
 };
 if($("tractorBtn"))$("tractorBtn").onclick=bulkHarvestCurrentPage;
@@ -9329,7 +9327,7 @@ useCropBoostOnPlot=async function(index,key){
     await fs.runTransaction(db,async tx=>{
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);if((Number(s.specials?.[key])||0)<1)throw new Error("ไอเท็มในกระเป๋าหมดแล้ว");
-      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
       if(item.boost===100){p.phase="ready";p.phaseEndsAt=0;p.worm=false}
       else{if(p.phase!=="growing1"&&p.phase!=="growing2")throw new Error("ไอเท็ม 10% / 20% / 50% ใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");const rem=Math.max(0,Number(p.phaseEndsAt||0)-gameNow());p.phaseEndsAt=gameNow()+Math.max(1000,Math.round(rem*(1-item.boost/100)))}
       s.specials[key]-=1;plots[index]=p;s.plots=plots.map(normalizePlot);if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);next=s;newPlots=s.plots;
@@ -9350,7 +9348,7 @@ waterPlot=async function(index){
   if(visitContext||guardResting()||!cloudReady)return;
   try{
     await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);let next,newPlots,worm=false;
-    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");const crop=CROPS[p.crop],finalMs=Math.max(60000,crop.totalMs-crop.waterMs);p.wateredAt=gameNow();worm=Math.random()<Number(crop.wormChance||0);if(worm){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+finalMs}plots[index]=p;s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();showWeatherToast(worm?"🐛 เจอหนอนหลังรดน้ำ!":"💧 รดน้ำแล้ว ต้นกำลังโต")
+    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=s.plots.map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");const crop=CROPS[p.crop],finalMs=Math.max(60000,crop.totalMs-crop.waterMs);p.wateredAt=gameNow();worm=Math.random()<Number(crop.wormChance||0);if(worm){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+finalMs}plots[index]=p;s.plots=plots.map(normalizePlot);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);draw();showWeatherToast(worm?"🐛 เจอหนอนหลังรดน้ำ!":"💧 รดน้ำแล้ว ต้นกำลังโต")
   }catch(error){message("รดน้ำไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 
@@ -9358,7 +9356,7 @@ clearWorm=async function(index){
   if(visitContext||guardResting()||!cloudReady)return;
   try{
     await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,newPlots;
-    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");const crop=CROPS[p.crop];s.merit=(Number(s.merit)||0)-1;p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);incrementMissionOn(s,"clearWorms",1);plots[index]=p;s.plots=plots.map(normalizePlot);if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);updateMeritUI();draw();message("🐛 ไล่หนอนสำเร็จ",`ใช้ 1 กุศล • คงเหลือ ${ownState.merit} กุศล`)
+    await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember),plots=s.plots.map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop||p.phase!=="worm")throw new Error("หนอนถูกกำจัดไปแล้ว");const crop=CROPS[p.crop];s.merit=(Number(s.merit)||0)-1;p.phase="growing2";p.worm=false;p.phaseEndsAt=gameNow()+Math.max(60000,crop.totalMs-crop.waterMs);incrementMissionOn(s,"clearWorms",1);plots[index]=p;s.plots=plots.map(normalizePlot);if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);next=s;newPlots=s.plots;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);lastGardenHash=plotHash(newPlots);updateMeritUI();draw();message("🐛 ไล่หนอนสำเร็จ",`ใช้ 1 กุศล • คงเหลือ ${ownState.merit} กุศล`)
   }catch(error){message("กำจัดหนอนไม่ได้",error.message||"กรุณาลองใหม่")}
 };
 
@@ -9816,7 +9814,7 @@ Y26_plantCrop=async function(index,key,button){
       const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
       if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
-      const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
+      const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
       if(plots[index]?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");
       const realCost=Number(crop.seedCostMerit)||0;if(realCost&&(Number(s.merit)||0)<realCost)throw new Error(`${crop.name} ใช้ ${realCost} กุศล / 1 เมล็ด`);if(realCost)s.merit-=realCost;
       incrementMissionOn(s,"dailyPlantCrops",1);
@@ -10346,7 +10344,7 @@ harvestOwnPlot=async function(index){
       const campaignPairs=await V36_campaignTxReads(tx,fs,db);
       if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember),
-            plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot),
+            plots=s.plots.map(normalizePlot),
             p=plots[index];
       ensurePlotPhaseStandalone(p);
       if(p?.takeover&&Number(p.takeover.until)>gameNow()&&p.takeover.by!==currentMemberKey)throw new Error(`แปลงนี้ถูก ${p.takeover.byName||"ผู้เล่นอื่น"} Take Over อยู่ • เจ้าของฟาร์มยังใช้งานไม่ได้`);if(!p?.crop||p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
@@ -10379,7 +10377,7 @@ bulkHarvestCurrentPage=async function(){
       const campaignPairs=await V36_campaignTxReads(tx,fs,db);
       if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(sSnap.data(),currentMember),
-            plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+            plots=s.plots.map(normalizePlot);
       while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
       for(let i=start;i<start+12;i++){
         const p=plots[i];ensurePlotPhaseStandalone(p);
@@ -11371,7 +11369,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(sSnap.data(),currentMember);assertCurrentCloudSession(sSnap.data(),currentMember);
         if((Number(s.specials?.[key])||0)<1)throw new Error("ไอเท็มในกระเป๋าหมดแล้ว");
-        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+        const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
         const p=plots[index];ensurePlotPhaseStandalone(p);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
         if(item.boost===100){p.phase="ready";p.phaseEndsAt=0;p.worm=false}
@@ -12149,7 +12147,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   const _drawOverlay=draw;draw=function(){const r=_drawOverlay();document.querySelectorAll("#plots .status-badge,#plots .angel-status-badge").forEach(x=>x.classList.add("ynu-plot-overlay"));state?.plots?.forEach((p,i)=>{const b=document.querySelector(`#plots [data-plot-index="${i}"]`)||document.querySelectorAll("#plots .plot")[i];if(!b)return;if(takeoverActive(p)){b.classList.add("ynu-takeover-plot");let icon=b.querySelector(".ynu-deed-overlay");if(!icon){icon=document.createElement("img");icon.className="status-badge ynu-plot-overlay ynu-deed-overlay";icon.src=DEED_ITEM.image;icon.alt="โฉนด Take Over";b.appendChild(icon)}let e=b.querySelector(".ynu-takeover-label");if(!e){e=document.createElement("span");e.className="ynu-takeover-label";b.appendChild(e)}e.textContent=`${p.takeover.byName} ได้เทคโอเวอร์แปลงนี้ • ${fmt(p.takeover.until-NOW())}`}});cleanupTakeovers();return r};
 
   /* ---------- own worm spray: 5 small / 12 giant ---------- */
-  async function sprayOwnWorm(index){const p=(ownState||state)?.plots?.[index];if(!p?.crop||p.phase!=="worm")return;const giant=typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant",cost=giant?12:5;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(sRef),tx.get(gRef)]);const s=normalizeState(sSnap.data(),currentMember);if(Number(s.specials?.wormKillerSpray||0)<cost)throw new Error(`สเปรย์แก้หนอนไม่พอ ต้องใช้ ${cost} ขวด`);const plots=(gSnap.data().plots||s.plots).map(normalizePlot),q=plots[index];if(q.phase!=="worm")throw new Error("หนอนหายไปแล้ว");s.specials.wormKillerSpray-=cost;const c=CROPS[q.crop];q.phase="growing2";q.worm=false;delete q.wormType;q.phaseEndsAt=NOW()+Math.max(MIN,c.totalMs-c.waterMs);s.plots=plots;incrementMissionOn(s,"clearWorms",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;draw();showWeatherToast(`🪱 กำจัดหนอนแล้ว • ใช้สเปรย์ ${cost} ขวด`)}catch(e){message("กำจัดไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function sprayOwnWorm(index){const p=(ownState||state)?.plots?.[index];if(!p?.crop||p.phase!=="worm")return;const giant=typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant",cost=giant?12:5;try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,"saves",currentMemberKey),gRef=fs.doc(db,"gardens",currentMemberKey);let next;await fs.runTransaction(db,async tx=>{const [sSnap,gSnap]=await Promise.all([tx.get(sRef),tx.get(gRef)]);const s=normalizeState(sSnap.data(),currentMember);if(Number(s.specials?.wormKillerSpray||0)<cost)throw new Error(`สเปรย์แก้หนอนไม่พอ ต้องใช้ ${cost} ขวด`);const plots=s.plots.map(normalizePlot),q=plots[index];if(q.phase!=="worm")throw new Error("หนอนหายไปแล้ว");s.specials.wormKillerSpray-=cost;const c=CROPS[q.crop];q.phase="growing2";q.worm=false;delete q.wormType;q.phaseEndsAt=NOW()+Math.max(MIN,c.totalMs-c.waterMs);s.plots=plots;incrementMissionOn(s,"clearWorms",1);next=s;tx.set(sRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gRef,{plots:cloneData(plots),updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);state=ownState;draw();showWeatherToast(`🪱 กำจัดหนอนแล้ว • ใช้สเปรย์ ${cost} ขวด`)}catch(e){message("กำจัดไม่ได้",e.message||"กรุณาลองใหม่")}}
   const _tapWorm=tapPlot;tapPlot=async function(index){if(!visitContext){const p=(ownState||state)?.plots?.[index];if(p){ensurePlotPhase(p);if(p.phase==="worm"&&Number((ownState||state)?.specials?.wormKillerSpray||0)>0){const giant=typeof wormTypeOf==="function"&&wormTypeOf(p)==="giant",cost=giant?12:5;$("modalContent").innerHTML=`<section class="feature-panel ynu-confirm"><h2>🪱 ${giant?"ไจแอนท์หนอน":"หนอนเล็ก"}</h2><p>ใช้สเปรย์แก้หนอน ${cost} ขวด เพื่อกำจัดทันทีไหม?</p><div><button id="ynuSprayWorm">ใช้สเปรย์</button><button id="ynuOldWorm">วิธีเดิม</button></div></section>`;$("ynuSprayWorm").onclick=()=>{closeModal();sprayOwnWorm(index)};$("ynuOldWorm").onclick=()=>{closeModal();_tapWorm(index)};openModal();return}}}return _tapWorm(index)};
 
   /* ---------- coconut frog/fish total 4 per rolling hour ---------- */
@@ -13171,7 +13169,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(sSnap.data(),currentMember);
-        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+        const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
         const p=plots[index];
         ensurePlotPhaseStandalone(p);
@@ -13222,7 +13220,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(sSnap.data(),currentMember);
-        const plots=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots)?gSnap.data().plots:s.plots).map(normalizePlot);
+        const plots=(Array.isArray(s.plots)?s.plots:[]).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
 
         for(let i=start;i<Math.min(start+12,PLOT_COUNT);i++){
@@ -13905,7 +13903,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
 
         const s=normalizeState(sSnap.data(),currentMember);
-        const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+        const raw=Array.isArray(s.plots)?s.plots:[];
         const plots=(Array.isArray(raw)?raw:[]).map(p=>normalizePlot(p));
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
 
@@ -14177,7 +14175,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
       if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
 
       const s=normalizeState(sSnap.data(),currentMember);
-      const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+      const raw=Array.isArray(s.plots)?s.plots:[];
       const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
       while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
 
@@ -14594,7 +14592,7 @@ async function V213_syncMameawCampaignFromSave(){
         const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(sSnap.data(),currentMember);
-        const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+        const raw=Array.isArray(s.plots)?s.plots:[];
         const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
 
@@ -14674,7 +14672,7 @@ async function V213_syncMameawCampaignFromSave(){
         const [sSnap,gSnap]=await Promise.all([tx.get(saveRef),tx.get(gardenRef)]);
         if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const s=normalizeState(sSnap.data(),currentMember);
-        const raw=(gSnap.exists()&&Array.isArray(gSnap.data()?.plots))?gSnap.data().plots:s.plots;
+        const raw=Array.isArray(s.plots)?s.plots:[];
         const plots=(Array.isArray(raw)?raw:[]).map(normalizePlot);
         while(plots.length<PLOT_COUNT)plots.push(emptyPlot());
 
@@ -17047,6 +17045,14 @@ async function V181_campaignScoreLater(summary){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`ย้าย${a.type==="baby"?"เบบี้อัลปาก้า":"อัลปาก้า"}`,`ตอนนี้อยู่คอก ${fromPenNo} • เลือกคอกใหม่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>{const n=i+1,same=n===Number(fromPenNo),full=p.alpacas.length>=PEN_CAPACITY;return `<button type="button" data-move-alpaca-pen="${n}" ${same||full?"disabled":""}>คอก ${n}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}${same?" • คอกปัจจุบัน":full?" • เต็ม":""}</small></button>`}).join("")}</div><button id="alpacaMoveBack" class="secondary-action" type="button">กลับ</button></section>`;
     openModal();document.querySelectorAll("[data-move-alpaca-pen]").forEach(b=>b.onclick=()=>moveAlpacaBetweenPens(fromPenNo,Number(b.dataset.moveAlpacaPen),id));$("alpacaMoveBack").onclick=()=>showAlpacaDetail(fromPenNo,id);
   }
+  function alpacaCloneKey121(a){
+    if(!a||a.type!=="adult")return "";const born=Number(a.createdAt)||0;if(!born||!a.name)return "";
+    return [String(a.type),String(a.color||""),String(a.sex||""),String(a.name||""),born,String(a.source||"")].join("|");
+  }
+  function dedupeAlpacaPens121(root){
+    if(!root||!Array.isArray(root.pens))return false;const ids=new Set(),keys=new Set();let changed=false;
+    for(const pen of root.pens){const keep=[];for(const a of (pen.alpacas||[])){const id=String(a?.id||""),key=alpacaCloneKey121(a);if((id&&ids.has(id))||(key&&keys.has(key))){changed=true;continue}if(id)ids.add(id);if(key)keys.add(key);keep.push(a)}pen.alpacas=keep}return changed;
+  }
   async function moveAlpacaBetweenPens(fromPenNo,toPenNo,id){
     fromPenNo=Math.max(1,Math.min(5,Number(fromPenNo)||1));toPenNo=Math.max(1,Math.min(5,Number(toPenNo)||1));if(fromPenNo===toPenNo)return showAlpacaDetail(fromPenNo,id);
     if(!cloudReady||!currentMemberKey)return alpacaMessage("ย้ายคอกไม่ได้","กรุณาเชื่อม Firebase ก่อน");
@@ -17055,13 +17061,16 @@ async function V181_campaignScoreLater(summary){
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,moved=null;
       await fs.runTransaction(db,async tx=>{
         const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const st=normalizeState(snap.data(),currentMember),root=st.alpaca,to=penAt(root,toPenNo);if(!root||!to)throw new Error("ไม่พบคอกอัลปาก้า");
-        if(to.alpacas.length>=PEN_CAPACITY&&!to.alpacas.some(x=>String(x?.id)===String(id)))throw new Error(`คอก ${toPenNo} เต็มแล้ว`);
+        const st=normalizeState(snap.data(),currentMember),root=st.alpaca;if(!root)throw new Error("ไม่พบคอกอัลปาก้า");
         let animal=null;
         for(const pen of root.pens){const hit=(pen.alpacas||[]).find(x=>String(x?.id)===String(id));if(hit&&!animal)animal=cloneData(hit)}
         if(!animal)throw new Error("ไม่พบอัลปาก้าตัวนี้");
-        /* Remove ALL copies first, then insert exactly one copy into target. */
-        for(const pen of root.pens)pen.alpacas=(pen.alpacas||[]).filter(x=>String(x?.id)!==String(id));
+        const cloneKey=alpacaCloneKey121(animal);
+        /* Remove same-id AND legacy clone-with-new-id copies before capacity check. */
+        for(const pen of root.pens)pen.alpacas=(pen.alpacas||[]).filter(x=>String(x?.id)!==String(id)&&!(cloneKey&&alpacaCloneKey121(x)===cloneKey));
+        dedupeAlpacaPens121(root);
+        const to=penAt(root,toPenNo);if(!to)throw new Error("ไม่พบคอกอัลปาก้า");
+        if(to.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${toPenNo} เต็มแล้ว`);
         if(animal.type==="adult")animal.penIndex=toPenNo;to.alpacas.push(animal);moved=animal;
         st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=cloneData(st);
         tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -20984,6 +20993,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   let s2SaveSeq=0;
   let s2FlushRequested=false;
   let s2LastPublishedAlpacaSig=null;
+  const s2FriendFarmHashes={1:null,2:null,3:null,4:null};
   const dirtyMarkerKey=()=>currentMemberKey?`yainoo-s2-dirty:${currentMemberKey}`:"";
 
   function markDirty(){
@@ -21019,15 +21029,44 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   };
 
   async function runOneDurableFlush(){
-    if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;const {db,fs}=await getFirebaseContext();ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);try{ensureBoatState(ownState)}catch(_){ }
+    if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;
+    const {db,fs}=await getFirebaseContext();
+    ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);try{ensureBoatState(ownState)}catch(_){ }
     if(currentMember==="Aida"&&adminProfile?.role==="admin"&&typeof ensureAdminStock==="function")ensureAdminStock(ownState);
-    const snapshot=cloneData(ownState),targetRevision=Math.max(Number(snapshot.clientSaveRevision)||0,s2SaveSeq);snapshot.clientSaveRevision=targetRevision;snapshot.activeSessionId=cloudSessionId;snapshot.launchVersion=LAUNCH_VERSION;
+    const snapshot=cloneData(ownState),targetRevision=Math.max(Number(snapshot.clientSaveRevision)||0,s2SaveSeq);
+    snapshot.clientSaveRevision=targetRevision;snapshot.activeSessionId=cloudSessionId;snapshot.launchVersion=LAUNCH_VERSION;
     const gardenHash=plotHash(snapshot.plots||[]),merit=Number(snapshot.merit)||0,batch=fs.writeBatch(db);s2Dirty=false;
     const alpacaHappiness=typeof alpacaTotalHappiness==="function"&&snapshot.alpaca?alpacaTotalHappiness(snapshot.alpaca):Number(snapshot?.alpacaHappiness)||0,alpacaFactoryClaimed=Number(snapshot?.alpaca?.factory?.claimedCount)||0,alpacaHappinessPens=Array.isArray(snapshot?.alpaca?.pens)?snapshot.alpaca.pens.map(p=>Number(p.happiness)||0):[],alpacaSig=JSON.stringify([alpacaHappiness,alpacaFactoryClaimed,alpacaHappinessPens]);
     const publishProfile=lastPublishedMerit===null||merit!==lastPublishedMerit||s2LastPublishedAlpacaSig!==alpacaSig;
-    batch.set(fs.doc(db,"saves",currentMemberKey),{...snapshot,updatedAt:fs.serverTimestamp()},{merge:false});if(gardenHash!==lastGardenHash)batch.set(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(snapshot.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true});
+    batch.set(fs.doc(db,"saves",currentMemberKey),{...snapshot,updatedAt:fs.serverTimestamp()},{merge:false});
+    if(gardenHash!==lastGardenHash)batch.set(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),plots:cloneData(snapshot.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true});
+
+    /* R34.11.21: Friend view is committed in the SAME batch as /saves.
+       A successful player save therefore cannot leave Friend Farm on an older revision. */
+    const committedFriendHashes={};
+    for(let f=1;f<=4;f++){
+      const start=(f-1)*12,plots=cloneData((Array.isArray(snapshot.plots)?snapshot.plots:[]).slice(start,start+12));
+      while(plots.length<12)plots.push(typeof emptyPlot==="function"?emptyPlot():{});
+      const rawHs=f>=2&&f<=4&&Array.isArray(snapshot?.farmGuardians?.[String(f)]?.hamsters)?snapshot.farmGuardians[String(f)].hamsters:[];
+      const publicHamsters=rawHs.filter(h=>h&&h.id).slice(0,6).map(h=>({
+        id:String(h.id),color:String(h.color||"mint"),x:Number.isFinite(Number(h.x))?Number(h.x):50,y:Number.isFinite(Number(h.y))?Number(h.y):55,
+        dir:Number(h.dir)||1,pose:String(h.pose||h.action||"idle"),action:String(h.action||h.pose||"idle"),updatedAt:Number(h.updatedAt)||0
+      }));
+      const hash=JSON.stringify([plots.map(q=>[q?.crop||q?.cropKey||"",q?.phase||"",Number(q?.plantedAt||q?.at||0),Number(q?.phaseEndsAt||q?.readyAt||0),Boolean(q?.worm),q?.wormType||"",Number(q?.wateredAt||0)]),publicHamsters.map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y),h.pose])]);
+      if(hash!==s2FriendFarmHashes[f]){
+        batch.set(fs.doc(db,"friendFarmState",currentMemberKey,"farms",String(f)),{
+          memberKey:currentMemberKey,farmNo:f,displayName:currentProfileDisplayName(),plots,publicHamsters,
+          clientSaveRevision:targetRevision,clientLocalEditAt:Number(snapshot.clientLocalEditAt)||0,publicSeq:Date.now(),version:"R34.11.21",updatedAt:fs.serverTimestamp()
+        },{merge:false});
+        committedFriendHashes[f]=hash;
+      }
+    }
     if(publishProfile)batch.set(fs.doc(db,"publicProfiles",currentMemberKey),{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit,alpacaHappiness,alpacaFactoryClaimed,alpacaHappinessPens,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-    await batch.commit();if(gardenHash!==lastGardenHash)lastGardenHash=gardenHash;if(publishProfile){lastPublishedMerit=merit;s2LastPublishedAlpacaSig=alpacaSig}if((Number(ownState?.clientSaveRevision)||0)<=targetRevision&&!s2Dirty)clearDirtyMarker();
+    await batch.commit();
+    if(gardenHash!==lastGardenHash)lastGardenHash=gardenHash;
+    for(const [f,h] of Object.entries(committedFriendHashes))s2FriendFarmHashes[Number(f)]=h;
+    if(publishProfile){lastPublishedMerit=merit;s2LastPublishedAlpacaSig=alpacaSig}
+    if((Number(ownState?.clientSaveRevision)||0)<=targetRevision&&!s2Dirty)clearDirtyMarker();
   }
 
   flushCloudSave=function(){
@@ -22946,7 +22985,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};s.specials.wineSugar=int17(s.specials.wineSugar);
     s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};
     /* R17 migration: the house hedgehog now lives in every player's basement; only debug controls stay Aida-only. */
-    if(!s.hedgehogBasementR17)s.hedgehogBasementR17=true;s.hedgehog.enabled=isAdmin17()?true:Boolean(s.hedgehog.enabled);s.hedgehog.lastDropAt=Number(s.hedgehog.lastDropAt)||now17();
+    if(!s.hedgehogBasementR17)s.hedgehogBasementR17=true;s.hedgehog.enabled=true;s.hedgehog.lastDropAt=Number(s.hedgehog.lastDropAt)||now17();
     s.hedgehog.pos=s.hedgehog.pos&&typeof s.hedgehog.pos==="object"?{x:Number(s.hedgehog.pos.x)||8,y:Number(s.hedgehog.pos.y)||86,node:nearestNode17(Number(s.hedgehog.pos.x)||8,Number(s.hedgehog.pos.y)||86)}:{x:8,y:86,node:6};
     s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map((d,i)=>{const pt=(d.room==="basement"&&Number.isFinite(Number(d.x))&&Number.isFinite(Number(d.y)))?{x:Number(d.x),y:Number(d.y)}:safeDropPoint17(i);return{id:String(d.id||`hd17-${now17()}-${i}`),type:HEDGE_ITEMS17[d.type]?d.type:"fur",room:"basement",x:pt.x,y:pt.y,at:Number(d.at)||now17()}}):[];
     mergeBasementMirror17(s);
@@ -22961,7 +23000,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   if(typeof ensureAdminStock==="function"){
     const admin17Base=ensureAdminStock;ensureAdminStock=function(s){const r=admin17Base(s);ensureR17State(s);return r};
   }
-  function commit17(s,{cloud=true}={}){if(!s)return;ensureR17State(s);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}writeBasementMirror17(s);if(cloud&&cloudReady&&currentMemberKey){Promise.resolve().then(async()=>{try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);await fs.setDoc(ref,{flowerPlots:clone17(s.flowerPlots||[]),flowers:clone17(s.flowers||{}),wineMachines:clone17(s.wineMachines||[]),wines:clone17(s.wines||{}),bag:clone17(s.bag||{}),clientSaveRevision:Number(s.clientSaveRevision)||0,updatedAt:fs.serverTimestamp()},{merge:true});try{globalThis.YN_R34117?.publishPublicFarm?.(true,state||s)}catch(_){}}catch(e){console.warn("R34.11.10 basement durable save",e);try{save()}catch(_){}try{flushCloudSave?.()}catch(_){}}})}else{try{save()}catch(_){}}}
+  function commit17(s,{cloud=true}={}){
+    if(!s)return;ensureR17State(s);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+    ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}writeBasementMirror17(s);
+    /* One save pipeline for flowers, wine AND hedgehog. The old narrow merge did
+       not persist hedgehog/drops and could race the full-save writer. */
+    try{save?.()}catch(_){}
+    if(cloud&&cloudReady&&currentMemberKey){Promise.resolve().then(()=>flushCloudSave?.()).catch(e=>console.warn("R34.12 basement flush",e))}
+  }
 
   /* ---------- New inventory + gifting: every new item can be sent ---------- */
   if(typeof addGiftItemToState==="function"){
@@ -23007,18 +23053,18 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
      Any player who owns/unlocks the house can choose a flower directly and plant it.
      No flowerSeeds stock is required or consumed. */
   function plantFlower17(idx,key){const s=ensureR17State(own17()),f=FLOWERS17[key];if(!f||s.flowerPlots[idx])return;const t=now17();s.flowerPlots[idx]={flower:key,plantedAt:t,readyAt:t+f.totalMs,testStage:""};commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🌱 ปลูก${f.name} แปลง ${idx+1} แล้ว`)}
-  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;plantFlower17(idx,b.dataset.r17Plant)};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}});openModal()}
+  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}" data-r17-plant-plot="${idx}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;plantFlower17(idx,b.dataset.r17Plant)};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}});openModal()}
   function harvestFlower17(idx,{quiet=false}={}){const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p||flowerStage17(p)!=="ready")return false;const f=FLOWERS17[p.flower],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,qty=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0),r29FlowerReceipt=`flower:${currentMemberKey}:${idx}:${p.plantedAt||0}`;if(!isAdmin17())s.flowers[p.flower]+=qty;else s.flowers[p.flower]=9999;try{incrementMissionOn(s,"flowerHarvest",qty)}catch(_){}s.flowerPlots[idx]=null;commit17(s);try{globalThis.YN_R29?.scoreFlower?.(p.flower,1,r29FlowerReceipt)}catch(_){}renderHouse17();if(!quiet){$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${f.ready}"><h2>🌸 เก็บเกี่ยวแล้ว</h2><p>${safe17(f.name)} ×${qty}</p><small>เข้ากระเป๋า → ดอกไม้ เรียบร้อยแล้ว</small><button id="r17FlowerDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;$17("r17FlowerDone").onclick=closeModal;openModal()}return{key:p.flower,qty}}
   function harvestAllFlowers17(){const s=ensureR17State(own17()),ready=[];s.flowerPlots.forEach((p,i)=>{if(p&&flowerStage17(p)==="ready")ready.push(i)});if(!ready.length)return message("🌸 เก็บเกี่ยวทั้งหมด","ยังไม่มีดอกไม้พร้อมเก็บค่ะ");const got={},r29FlowerScores=[];ready.forEach(i=>{const p=s.flowerPlots[i],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,q=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0);if(!isAdmin17())s.flowers[p.flower]+=q;else s.flowers[p.flower]=9999;got[p.flower]=(got[p.flower]||0)+q;r29FlowerScores.push([p.flower,`flower:${currentMemberKey}:${i}:${p.plantedAt||0}`]);s.flowerPlots[i]=null});try{incrementMissionOn(s,"flowerHarvest",Object.values(got).reduce((a,b)=>a+b,0))}catch(_){}commit17(s);r29FlowerScores.forEach(([k,r])=>{try{globalThis.YN_R29?.scoreFlower?.(k,1,r)}catch(_){}});renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🌸 เก็บเกี่ยวทั้งหมดแล้ว</h2><div class="r17-flower-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${FLOWERS17[k].ready}"><b>${safe17(FLOWERS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ดอกไม้ทั้งหมดเข้ากระเป๋าแล้วค่ะ</small><button id="r17FlowerAllDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17FlowerAllDone").onclick=closeModal;openModal()}
-  function openFlowerPlot17(idx){const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p)return openPlantPicker17(idx);const f=FLOWERS17[p.flower],st=flowerStage17(p);$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal"><img class="r17-flower-hero" src="${flowerImg17(p)}"><h2>${safe17(f.name)} • แปลง ${idx+1}</h2><p>${safe17(flowerStatus17(p))}</p>${st==="ready"?'<button id="r17HarvestOne" class="primary-spooky-action" type="button">🌸 เก็บเกี่ยว</button>':""}${isAdmin17()?`<div class="r17-stage-test"><small>โหมดทดสอบ Aida</small><button data-r17-stage="seed">เมล็ด</button><button data-r17-stage="sprout">ต้นอ่อน</button><button data-r17-stage="grown">ต้นโต</button><button data-r17-stage="ready">พร้อมเก็บ</button><button data-r17-stage="real">เวลาจริง</button></div>`:""}</section>`;if($17("r17HarvestOne")){const b=$17("r17HarvestOne");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();harvestFlower17(idx)};b.onclick=e=>{if(!e?.pointerType)harvestFlower17(idx)}};document.querySelectorAll("[data-r17-stage]").forEach(b=>b.onclick=()=>{const q=ensureR17State(own17()).flowerPlots[idx];if(!q)return;const v=b.dataset.r17Stage;q.testStage=v==="real"?"":v;commit17(own17());closeModal();renderHouse17();showWeatherToast?.(`🧪 แปลง ${idx+1}: ${b.textContent}`)});openModal()}
+  function openFlowerPlot17(idx){const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p)return openPlantPicker17(idx);const f=FLOWERS17[p.flower],st=flowerStage17(p);$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal"><img class="r17-flower-hero" src="${flowerImg17(p)}"><h2>${safe17(f.name)} • แปลง ${idx+1}</h2><p>${safe17(flowerStatus17(p))}</p>${st==="ready"?`<button id="r17HarvestOne" data-r17-harvest-one="${idx}" class="primary-spooky-action" type="button">🌸 เก็บเกี่ยว</button>`:""}${isAdmin17()?`<div class="r17-stage-test"><small>โหมดทดสอบ Aida</small><button data-r17-stage="seed">เมล็ด</button><button data-r17-stage="sprout">ต้นอ่อน</button><button data-r17-stage="grown">ต้นโต</button><button data-r17-stage="ready">พร้อมเก็บ</button><button data-r17-stage="real">เวลาจริง</button></div>`:""}</section>`;if($17("r17HarvestOne")){const b=$17("r17HarvestOne");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();harvestFlower17(idx)};b.onclick=e=>{if(!e?.pointerType)harvestFlower17(idx)}};document.querySelectorAll("[data-r17-stage]").forEach(b=>b.onclick=()=>{const q=ensureR17State(own17()).flowerPlots[idx];if(!q)return;const v=b.dataset.r17Stage;q.testStage=v==="real"?"":v;commit17(own17());closeModal();renderHouse17();showWeatherToast?.(`🧪 แปลง ${idx+1}: ${b.textContent}`)});openModal()}
 
   /* ---------- Wine: real state, Admin/Aida test UI only until approved ---------- */
   function wineReady17(m){return m&&now17()>=Number(m.readyAt||0)}
   function wineNeed17(w){const s=ensureR17State(own17());return Object.entries(w.crops).map(([k,q])=>`<div><span>${safe17(CROPS?.[k]?.name||k)}</span><b>${isAdmin17()?9999:int17(s.bag?.[k])}/${q}</b></div>`).join("")}
   function startWine17(idx,key){const s=ensureR17State(own17()),w=WINES17[key];if(!w||s.wineMachines[idx])return;const enough=Object.entries(w.crops).every(([k,q])=>int17(s.bag?.[k])>=q);if(!enough&&!isAdmin17())return message("วัตถุดิบไม่พอ","ยังเริ่มหมักไวน์สูตรนี้ไม่ได้ค่ะ");if(!isAdmin17()){Object.entries(w.crops).forEach(([k,q])=>s.bag[k]-=q)}const t=now17();const houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),wineFactor=houseLv>=3?.80:houseLv>=2?.90:1;s.wineMachines[idx]={wine:key,startedAt:t,readyAt:t+Math.round(w.duration*wineFactor)};try{incrementMissionOn(s,"wineStart",1)}catch(_){}commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🍷 เริ่มหมัก ${w.name} • เครื่อง ${idx+1}`)}
   function claimWine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(!m||!wineReady17(m))return;const w=WINES17[m.wine];if(!isAdmin17())s.wines[m.wine]+=1;else s.wines[m.wine]=9999;const r29WineReceipt=`wine:${currentMemberKey}:${idx}:${m.startedAt||0}:${m.wine}`;s.wineMachines[idx]=null;try{incrementMissionOn(s,"wineClaim",1)}catch(_){}commit17(s);try{globalThis.YN_R29?.scoreWine?.(m.wine,r29WineReceipt)}catch(_){}renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${w.image}"><h2>🍷 หมักเสร็จแล้ว</h2><p>${safe17(w.name)} ×1</p><small>เข้ากระเป๋า → ไวน์ เรียบร้อยแล้ว</small><button id="r17WineDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17WineDone").onclick=closeModal;openModal()}
-  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?'<button id="r17WineClaim" class="primary-spooky-action">รับเข้ากระเป๋า</button>':(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();claimWine17(idx)};b.onclick=e=>{if(!e?.pointerType)claimWine17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
-    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=e=>{e?.preventDefault?.();e?.stopPropagation?.();const k=b.dataset.r17Wine,w=WINES17[k];$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;const sb=$17("r17StartWine");sb.style.touchAction="none";sb.onpointerdown=ev=>{ev.preventDefault();ev.stopPropagation();startWine17(idx,k)};sb.onclick=ev=>{if(!ev?.pointerType)startWine17(idx,k)};openModal()};b.style.touchAction="none";b.onpointerdown=choose;b.onclick=e=>{if(!e?.pointerType)choose(e)}});openModal()}
+  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();claimWine17(idx)};b.onclick=e=>{if(!e?.pointerType)claimWine17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
+    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}" data-r17-wine-machine="${idx}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=e=>{e?.preventDefault?.();e?.stopPropagation?.();const k=b.dataset.r17Wine,w=WINES17[k];$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${k}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;const sb=$17("r17StartWine");sb.style.touchAction="none";sb.onpointerdown=ev=>{ev.preventDefault();ev.stopPropagation();startWine17(idx,k)};sb.onclick=ev=>{if(!ev?.pointerType)startWine17(idx,k)};openModal()};b.style.touchAction="none";b.onpointerdown=choose;b.onclick=e=>{if(!e?.pointerType)choose(e)}});openModal()}
   function openWineTest17(){if(!isAdmin17())return;const s=ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><h2>🧪 ทดลองระบบไวน์</h2><p>ทดสอบครบวงจร • เริ่มหมัก / เวลาจริง / พร้อมรับทันที / รับเข้ากระเป๋า</p><div class="r17-machine-list">${s.wineMachines.map((m,i)=>`<button type="button" data-r17-machine="${i}"><b>เครื่อง ${i+1}</b><small>${m?(wineReady17(m)?"พร้อมรับ":`${WINES17[m.wine].name} • ${fmtMs17(m.readyAt-now17())}`):"ว่าง"}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-machine]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17Machine)));openModal()}
 
   /* ---------- Hedgehog R18: basement only, continuous RAF motion + persistent segment ---------- */
@@ -23049,6 +23095,17 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     };
     $17("r17HarvestAll").onclick=harvestAllFlowers17;$17("r17CollectHedge").onclick=collectAllHedge17;if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
+  /* R34.11.21: window-capture one-tap path. Window fires before every legacy document handler. */
+  window.addEventListener("pointerdown",e=>{
+    if(currentScene!=="house"||houseMode17!=="basement"||visitContext)return;
+    const direct=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot]");
+    if(direct){e.preventDefault();e.stopImmediatePropagation();if(direct.hasAttribute("data-r17-plot"))openFlowerPlot17(Number(direct.dataset.r17Plot));else openWineMachine17(Number(direct.dataset.r17MachineHot));return}
+    const layer=$17("sceneInteractiveLayer");if(!layer||!layer.contains(e.target)||e.target?.closest?.(".r17-house-actions,.r17-hedge-drop,#r17Hedgehog"))return;
+    const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;let best=null;
+    FLOWER_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/15,dy=Math.abs(y-py)/12,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"flower",i,d}});
+    WINE_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/13,dy=Math.abs(y-py)/18,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"wine",i,d}});
+    if(!best)return;e.preventDefault();e.stopImmediatePropagation();best.kind==="flower"?openFlowerPlot17(best.i):openWineMachine17(best.i);
+  },true);
   try{renderHouseScene=renderHouse17}catch(_){}
 
   /* ---------- Garden manager: all farms must expose the same 4-button manager ---------- */
@@ -23084,7 +23141,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function tick17(){try{ensureR17State(own17());removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&houseMode17==="basement"){renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=own17()?.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(label)label.textContent="แปลงว่าง";return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=own17()?.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
-  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,openWineTest:openWineTest17};
+  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
@@ -24218,18 +24275,24 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(!remote||typeof remote!=="object")return local;
     if(!local||typeof local!=="object")return clone(remote);
     const out=clone(local),rp=Array.isArray(remote.pens)?remote.pens:[],lp=Array.isArray(out.pens)?out.pens:[];
-    while(lp.length<rp.length)lp.push(clone(rp[lp.length]));
+    while(lp.length<Math.max(5,rp.length))lp.push({alpacas:[],trough:Array(16).fill(null)});
+    /* One alpaca id may exist in ONE pen only. A stale remote copy from pen 1
+       must never be re-added after the same animal was moved to pen 2..5. */
+    const globalLocalIds=new Set();
+    for(const pen of lp){for(const a of (Array.isArray(pen?.alpacas)?pen.alpacas:[])){if(a?.id)globalLocalIds.add(String(a.id))}}
     for(let pi=0;pi<rp.length;pi++){
-      const rr=rp[pi],ll=lp[pi]||(lp[pi]={});
-      const ra=Array.isArray(rr?.alpacas)?rr.alpacas:[],la=Array.isArray(ll?.alpacas)?ll.alpacas:[];
-      const ids=new Set(la.map(a=>String(a?.id||"")));
-      for(const a of ra){if(a?.id&&!ids.has(String(a.id))&&animalAlive(a)){la.push(clone(a));ids.add(String(a.id))}}
+      const rr=rp[pi]||{},ll=lp[pi]||(lp[pi]={});
+      const la=Array.isArray(ll.alpacas)?ll.alpacas:[],ra=Array.isArray(rr.alpacas)?rr.alpacas:[];
+      for(const a of ra){const id=String(a?.id||"");if(!id||globalLocalIds.has(id)||!animalAlive(a))continue;la.push(clone(a));globalLocalIds.add(id)}
       ll.alpacas=la;
-      /* Trough slots are placement state too: keep a remote occupied slot if a
-         stale local renderer accidentally reset it. */
-      for(const key of ["troughLeft","troughRight","leftTrough","rightTrough"]){
-        if(!nonEmpty(ll[key])&&nonEmpty(rr?.[key]))ll[key]=clone(rr[key]);
-      }
+      for(const key of ["troughLeft","troughRight","leftTrough","rightTrough"]){if(!nonEmpty(ll[key])&&nonEmpty(rr?.[key]))ll[key]=clone(rr[key])}
+    }
+    /* Repair historical duplicates already saved across multiple pens. Keep the
+       first canonical occurrence only and stamp the actual pen index. */
+    const seen=new Set();
+    for(let pi=0;pi<lp.length;pi++){
+      const pen=lp[pi]||(lp[pi]={});const arr=Array.isArray(pen.alpacas)?pen.alpacas:[];
+      pen.alpacas=arr.filter(a=>{const id=String(a?.id||"");if(!id)return false;if(seen.has(id))return false;seen.add(id);if(a?.type==="adult")a.penIndex=pi+1;return true});
     }
     out.pens=lp;return out;
   }
@@ -24321,6 +24384,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
           local.clientSaveRevision=r24Revision;local.clientLocalEditAt=Date.now();local.activeSessionId=cloudSessionId;
           merged={...clone(remote),...local};protectPersistent(merged,remote);
           tx.set(ref,{...merged,updatedAt:fs.serverTimestamp()},{merge:false});
+          const hm={"2":[],"3":[],"4":[]};
+          for(const f of [2,3,4]){const a=Array.isArray(merged?.farmGuardians?.[String(f)]?.hamsters)?merged.farmGuardians[String(f)].hamsters:[];hm[String(f)]=a.filter(h=>h&&h.id).map(h=>clone(h))}
+          tx.set(fs.doc(db,"gardens",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(Array.isArray(merged.plots)?merged.plots:[]),publicHamsters:hm,ownerRevision:Number(merged.clientSaveRevision)||0,ownerLocalEditAt:Number(merged.clientLocalEditAt)||0,publicVersion:"R34.12.0",updatedAt:fs.serverTimestamp()},{merge:true});
         });
         ownState=typeof normalizeState==="function"?normalizeState(merged,currentMember):merged;if(!visitContext)state=ownState;
         try{saveLocalOnly(ownState)}catch(_){}persistLocalGood(ownState);
@@ -24385,7 +24451,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       r24SaveUnsub=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),snap=>{
         if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites||r24SaveTimer||r24Flush)return;
         const raw=snap.data(),rr=Number(raw.clientSaveRevision)||0,lr=Number(ownState.clientSaveRevision)||0;if(rr<lr)return;
-        const preservedPlots=ownState.plots;let next=typeof normalizeState==="function"?normalizeState(raw,currentMember):clone(raw);next=protectPersistent(next,ownState);next.plots=preservedPlots;ownState=next;if(!visitContext)state=ownState;r24Revision=Math.max(r24Revision,rr);persistLocalGood(ownState);try{saveLocalOnly(ownState)}catch(_){}try{updateMeritUI();draw()}catch(_){}
+        const preservedPlots=ownState.plots;let next=typeof normalizeState==="function"?normalizeState(raw,currentMember):clone(raw);next=protectPersistent(next,ownState);if(!(rr>lr&&Array.isArray(raw.plots)))next.plots=preservedPlots;ownState=next;if(!visitContext)state=ownState;r24Revision=Math.max(r24Revision,rr);persistLocalGood(ownState);try{saveLocalOnly(ownState)}catch(_){}try{updateMeritUI();draw()}catch(_){}
       },e=>console.warn("R24 save listener",e));
       try{ownGardenUnsubscribe=r24GardenUnsub}catch(_){}try{ownSaveUnsubscribe=r24SaveUnsub}catch(_){}
     }).catch(e=>console.warn("R24 subscribe",e));
@@ -26177,7 +26243,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     try{setSceneNav({backText:pen>1?`กลับคอก ${pen-1}`:"กลับไปที่แปลงผัก",backAction:pen>1?()=>setDogHotelPen(pen-1):returnToFarm,nextText:pen<4?`ไปคอก ${pen+1}`:"กลับไปที่แปลงผัก",nextAction:pen<4?()=>setDogHotelPen(pen+1):returnToFarm})}catch(_){ }
     const m=$("dogMemberCheckBtn");if(m)m.onclick=()=>showDogHotelRoster();
     const b=$("dogPenCollectAllBtn");if(b)b.onclick=()=>{try{collectAllDogDrops()}catch(e){console.warn(e)}};
-    const feedAll=$("r3411HotelFeedAll");if(feedAll){const runFeedAll=e=>{e?.preventDefault?.();e?.stopPropagation?.();const fn=globalThis.YN_R341112?.showFeedAll||globalThis.YN_R3411?.showFeedAllHotel||globalThis.YN_R34117?.showFeedAllHotel;if(typeof fn==="function")return fn();try{message("🍽️ ให้อาหารทั้งหมด","กำลังโหลดข้อมูลโฮเทล กรุณาลองอีกครั้งค่ะ")}catch(_){}};feedAll.style.touchAction="manipulation";feedAll.onpointerdown=runFeedAll;feedAll.onclick=runFeedAll;}
+    const feedAll=$("r3411HotelFeedAll");if(feedAll){feedAll.style.touchAction="manipulation";feedAll.onpointerdown=null;feedAll.onclick=null;}
     const bath=$("r329BathBtn");if(bath)bath.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("bath",pen)}catch(e){console.warn("R34.9.2 hotel bath",e)}};
     const massage=$("r329MassageBtn");if(massage)massage.onclick=()=>{try{globalThis.YN_DOG_CARE_SHOW?.("massage",pen)}catch(e){console.warn("R34.9.2 hotel massage",e)}};
     const test=$("r329HotelTestBtn");if(test)test.onclick=showTest;
@@ -28616,7 +28682,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   "use strict";
   const BUILD="S2-R34.10.10-AUTHORITATIVE-ANIMAL-DROPS-20260904";
   const HOUR=3600000, ROYAL_MS=HOUR, HAM_MS=3*HOUR;
-  const RECOVERY="R34.10.10-drop-recovery";
+  const RECOVERY="R34.11.21-drop-recovery";
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
   let busy=false,lastRun=0;
@@ -28688,15 +28754,15 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
   }
 
   async function run(force=false){
-    /* R34.11.11: retired. Dedicated /animalDiscState is the only producer now. */
-    return false;
     if(busy||!cloudReady||!currentMemberKey||visitContext)return false;
     const t0=Date.now();if(!force&&t0-lastRun<20000)return false;lastRun=t0;busy=true;
     try{
+      try{await settlePendingCloudSave?.()}catch(_){}
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,changed=false;
       await fs.runTransaction(db,async tx=>{
         const snap=await tx.get(ref);if(!snap.exists())return;
-        const st=ensure(normalizeState(snap.data(),currentMember));changed=compute(st,now());next=st;
+        const st=ensure(normalizeState(snap.data(),currentMember));changed=compute(st,now());
+        if(changed)st.clientSaveRevision=Math.max(Number(st.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;next=st;
         if(changed)tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
       });
       if(next){ownState=ensure(normalizeState(next,currentMember));if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
@@ -29317,7 +29383,7 @@ console.info(globalThis.YAINOO_BUILD,"loaded");
   }
   const hSig=m=>JSON.stringify(Object.entries(m||{}).map(([f,a])=>[f,(a||[]).map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y)])]));
   let pubAck="",pubBusy=false,pubAgain=false;
-  async function publishPublicFarm(force=false,source=null){
+  async function publishPublicFarm(force=false,source=null){if(globalThis.YN_R341200_GARDENS_ONLY)return false;
     if(!cloudReady||!currentMemberKey||visitContext)return false;
     let s=source||liveOwner();if(!s)return false;
     const plots=norm(s.plots),h=hamsters(s),sig=pSig(plots)+"|"+hSig(h);if(!force&&sig===pubAck)return false;
@@ -29490,7 +29556,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   function placedHamsters(s){const out={"2":[],"3":[],"4":[]};try{globalThis.YN_R25?.ensureGuardianState?.(s)}catch(_){};for(const f of [2,3,4])out[String(f)]=(s?.farmGuardians?.[String(f)]?.hamsters||[]).filter(h=>h?.id).slice(0,6).map(h=>({id:String(h.id),color:String(h.color||"gray"),x:Number(h.x??h.tx??50)||50,y:Number(h.y??h.ty??82)||82,faceLeft:Boolean(h.faceLeft),updatedAt:Number(h.updatedAt)||0}));return out}
   let pubBusy=false,pubQueued=false,pubLast="";
   function pubSig(s){try{return JSON.stringify([Number(s?.clientSaveRevision)||0,(s?.plots||[]).map(p=>[p?.crop||"",p?.phase||"",Number(p?.plantedAt||p?.at||0),Number(p?.phaseEndsAt||0),Boolean(p?.worm),p?.wormType||""]),Object.entries(placedHamsters(s)).map(([f,a])=>[f,a.map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y)])])])}catch(_){return String(Date.now())}}
-  async function publishFarmTruth(force=false,source=null){
+  async function publishFarmTruth(force=false,source=null){if(globalThis.YN_R341200_GARDENS_ONLY)return false;
     if(visitContext||!cloudReady||!currentMemberKey)return false;const s=source||freshestOwner();if(!s)return false;const sig=pubSig(s);if(!force&&sig===pubLast)return false;if(pubBusy){pubQueued=true;return false}pubBusy=true;
     try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"publicFarmState",currentMemberKey);await fs.setDoc(ref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(normPlots(s.plots)),publicHamsters:clone(placedHamsters(s)),clientSaveRevision:Number(s.clientSaveRevision)||0,publicSeq:Date.now(),publicVersion:"R34.11.11",updatedAt:fs.serverTimestamp()},{merge:true});pubLast=sig;return true}catch(e){console.warn("R34.11.11 public farm publish",e);return false}finally{pubBusy=false;if(pubQueued){pubQueued=false;setTimeout(()=>publishFarmTruth(false),60)}}
   }
@@ -29532,12 +29598,14 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     for(const a of e.royal){let c=rmap.get(a.id);if(!c){d.royalPending.push({id:`r341111-r-${a.id}-${t}`,animalId:a.id,pen:a.pen,qty:2,createdAt:t,recovery:true});c={id:a.id,pen:a.pen,nextAt:t+ROYAL_MS};changed=true}else{c={...c,pen:a.pen};while(t>=Number(c.nextAt||0)){const at=Number(c.nextAt)||t;d.royalPending.push({id:`r341111-r-${a.id}-${at}`,animalId:a.id,pen:a.pen,qty:2,createdAt:at});c.nextAt=at+ROYAL_MS;changed=true}}nextR.push(c)}
     for(const h of e.ham){let c=hmap.get(h.id);if(!c){d.hamsterPending.push({id:`r341111-h-${h.id}-${t}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:t,recovery:true});c={id:h.id,farm:h.farm,nextAt:t+HAM_MS};changed=true}else{c={...c,farm:h.farm};while(t>=Number(c.nextAt||0)){const at=Number(c.nextAt)||t;d.hamsterPending.push({id:`r341111-h-${h.id}-${at}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:at});c.nextAt=at+HAM_MS;changed=true}}nextH.push(c)}
     d.royalClocks=nextR;d.hamsterClocks=nextH;if(d.royalPending.length>300)d.royalPending=d.royalPending.slice(-300);if(d.hamsterPending.length>300)d.hamsterPending=d.hamsterPending.slice(-300);return changed}
-  async function discSync(force=false){if(discBusy||visitContext||!cloudReady||!currentMemberKey)return false;const t=Date.now();if(!force&&t-lastDiscRun<15000)return false;lastDiscRun=t;discBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"animalDiscState",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),d=cleanDisc(snap.exists()?snap.data():{});computeDisc(d,now());d.memberKey=currentMemberKey;d.updatedAt=fs.serverTimestamp();next=clone(d);tx.set(ref,d,{merge:false})});discCache=next;renderDisc();return true}catch(e){console.warn("R34.11.11 disc sync",e);return false}finally{discBusy=false}}
+  async function discSync(force=false){return false}
   function currentPen(){const st=$("alpacaPenStage"),raw=st?.style?.getPropertyValue("--alpaca-pen-bg")||"",m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(5,Number(globalThis.YN_ALPACA_CURRENT_PEN)||Number(m?.[1])||1))}
   function currentFarm(){return Math.max(1,Math.min(4,(Number(farmPlotPage)||0)+1))}
-  function renderDisc(){document.querySelectorAll("#r34RoyalDiscLayer,#r34HamsterDiscLayer,#r3411RoyalDropLayer,#r3411HamsterDropLayer").forEach(x=>x.remove());if(visitContext||!discCache)return;const d=cleanDisc(discCache),stage=$("alpacaPenStage"),pen=currentPen();let rl=$("r341111RoyalDropLayer");if(stage&&!$("alpacaPenScreen")?.classList.contains("hidden")){if(!rl){rl=document.createElement("div");rl.id="r341111RoyalDropLayer";rl.className="r3411-drop-layer";stage.appendChild(rl)}const arr=d.royalPending.filter(x=>Number(x.pen)===pen);rl.innerHTML=arr.slice(-8).map((x,i)=>`<button type="button" class="r341111-disc royal" data-r341111-royal="${pen}" style="left:${29+(i%4)*14}%;top:${57+Math.floor(i/4)*10}%"><img src="therapy-disc-pink.png" alt="แผ่นเพลงบำบัดหัวใจหวาน"><small>×${Number(x.qty)||2}</small></button>`).join("");rl.querySelectorAll("[data-r341111-royal]").forEach(b=>b.onclick=()=>claimDisc("royal",Number(b.dataset.r341111Royal)))}else rl?.remove();const f=currentFarm(),screen=$("gameScreen");let hl=$("r341111HamsterDropLayer");if(screen&&!screen.classList.contains("hidden")&&f>=2&&f<=4){if(!hl){hl=document.createElement("div");hl.id="r341111HamsterDropLayer";hl.className="r3411-drop-layer r3411-ham-drop-layer";screen.appendChild(hl)}const arr=d.hamsterPending.filter(x=>Number(x.farm)===f);hl.innerHTML=arr.slice(-10).map((x,i)=>`<button type="button" class="r341111-disc hamster" data-r341111-ham="${f}" style="left:${29+(i%5)*11}%;top:${67+Math.floor(i/5)*8}%"><img src="therapy-disc-rock.png" alt="แผ่นเพลงบำบัดพลังร็อก"><small>×${Number(x.qty)||1}</small></button>`).join("");hl.querySelectorAll("[data-r341111-ham]").forEach(b=>b.onclick=()=>claimDisc("hamster",Number(b.dataset.r341111Ham)))}else hl?.remove()}
+  function renderDisc(){document.querySelectorAll("#r341111RoyalDropLayer,#r341111HamsterDropLayer").forEach(x=>x.remove())}
+
   async function claimDisc(type,where){if(discBusy||visitContext)return;discBusy=true;try{try{await settlePendingCloudSave?.()}catch(_){}const {db,fs}=await getFirebaseContext(),dref=fs.doc(db,"animalDiscState",currentMemberKey),sref=fs.doc(db,"saves",currentMemberKey);let nextSave=null,nextDisc=null,qty=0;for(let attempt=0;attempt<5;attempt++){try{await fs.runTransaction(db,async tx=>{const [ds,ss]=await Promise.all([tx.get(dref),tx.get(sref)]);if(!ss.exists())throw new Error("ไม่พบเซฟ");const d=cleanDisc(ds.exists()?ds.data():{}),arr=type==="royal"?d.royalPending:d.hamsterPending,pick=arr.filter(x=>Number(type==="royal"?x.pen:x.farm)===Number(where));qty=pick.reduce((n,x)=>n+(Number(x.qty)||1),0);if(!qty)throw new Error("ของดรอปนี้ถูกรับไปแล้ว");const s=normalizeState(ss.data(),currentMember);s.specials=s.specials||{};const key=type==="royal"?"therapyDiscPink":"therapyDiscRock";s.specials[key]=isAdminNow()?9999:(Number(s.specials[key])||0)+qty;if(type==="royal")d.royalPending=arr.filter(x=>Number(x.pen)!==Number(where));else d.hamsterPending=arr.filter(x=>Number(x.farm)!==Number(where));d.memberKey=currentMemberKey;d.updatedAt=fs.serverTimestamp();s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;nextSave=clone(s);nextDisc=clone(d);tx.set(sref,{...clone(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dref,d,{merge:false})});break}catch(e){if(attempt===4||!/aborted|version|required base|conflict|contention/i.test(String(e?.message||"")))throw e;await new Promise(r=>setTimeout(r,80+attempt*100))}}ownState=normalizeState(nextSave,currentMember);if(!visitContext)state=ownState;discCache=nextDisc;try{saveLocalOnly?.(ownState)}catch(_){};renderDisc();closeModal?.();message?.("💿 รับเรียบร้อย",`${type==="royal"?"แผ่นเพลงบำบัดหัวใจหวาน":"แผ่นเพลงบำบัดพลังร็อก"} ×${qty} เข้ากระเป๋าแล้วค่ะ`)}catch(e){message?.("รับไม่ได้",e?.message||"กรุณาลองใหม่")}finally{discBusy=false}}
-  async function startDiscLive(){if(!cloudReady||!currentMemberKey||visitContext)return;try{discUnsub?.()}catch(_){};try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"animalDiscState",currentMemberKey);discUnsub=fs.onSnapshot(ref,s=>{discCache=cleanDisc(s.exists()?s.data():{});renderDisc()},e=>console.warn("R34.11.11 disc live",e))}catch(e){console.warn("R34.11.11 disc listener",e)}}
+  async function startDiscLive(){return false}
+
   setInterval(()=>discSync(false),20000);setInterval(renderDisc,1500);window.addEventListener("focus",()=>{setTimeout(()=>{publishFromSaveTruth();discSync(true);startDiscLive();repairHouseEntry()},100)},{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{publishFromSaveTruth();discSync(true);startDiscLive();repairHouseEntry()},120)},{passive:true});
   document.addEventListener("click",e=>{if(e.target?.closest?.("#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,[data-pen],[data-alpaca-pen],#plotPageNextBtn,#plotPagePrevBtn,[data-s2-farm]"))setTimeout(()=>{discSync(true);renderDisc();repairHouseEntry()},100)},false);
   setTimeout(()=>{repairHouseEntry();publishFromSaveTruth();discSync(true);startDiscLive()},700);
@@ -29657,7 +29725,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   function liveFarmSig112(s){
     try{const p=liveFarmPayload112(s);return JSON.stringify([p.clientSaveRevision,p.plots.map(x=>[x?.crop||"",x?.phase||"",Number(x?.plantedAt||x?.at||0),Number(x?.phaseEndsAt||0),Boolean(x?.worm),x?.wormType||""]),Object.entries(p.publicHamsters).map(([f,a])=>[f,a.map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y)])])])}catch(_){return String(Date.now())}
   }
-  async function publishLiveFarm112(force=false){
+  async function publishLiveFarm112(force=false){if(globalThis.YN_R341200_GARDENS_ONLY)return false;
     if(visitContext||!cloudReady||!currentMemberKey)return false;const s=liveOwner112();if(!s)return false;const sig=liveFarmSig112(s);if(!force&&sig===livePubSig112)return false;if(livePubBusy112){livePubQueued112=true;return false}livePubBusy112=true;
     try{const {db,fs}=await getFirebaseContext(),p=liveFarmPayload112(s);await fs.setDoc(fs.doc(db,"publicFarmState",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(p.plots),publicHamsters:cp(p.publicHamsters),clientSaveRevision:p.clientSaveRevision,publicSeq:Date.now(),publicVersion:"R34.11.13-live-owner",updatedAt:fs.serverTimestamp()},{merge:true});livePubSig112=sig;return true}catch(e){console.warn("R34.11.13 live public farm",e);return false}finally{livePubBusy112=false;if(livePubQueued112){livePubQueued112=false;setTimeout(()=>publishLiveFarm112(false),25)}}
   }
@@ -29701,7 +29769,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     if(visitContext)return;const s=ownState||state,h=hungry112(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมาหรือแมวที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];
     $("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมด</h2><p>หมา/แมวที่หิว <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><p>เลือกเมนูที่ต้องการใช้เอง ระบบจะไม่สุ่มหยิบเมนูอื่น</p><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=dishQty112(s,r.id);return `<button type="button" data-r341112-food="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r341112FoodCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;openModal();document.querySelectorAll("[data-r341112-food]").forEach(b=>b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();feedChosen112(b.dataset.r341112Food)});$("r341112FoodCancel").onpointerdown=e=>{e.preventDefault();closeModal()};
   }
-  document.addEventListener("pointerdown",e=>{const b=e.target?.closest?.("#r3411HotelFeedAll");if(!b)return;e.preventDefault();e.stopImmediatePropagation();showFeedAll112()},true);
+  window.addEventListener("pointerdown",e=>{const b=e.target?.closest?.("#r3411HotelFeedAll");if(!b)return;e.preventDefault();e.stopImmediatePropagation();showFeedAll112()},true);
   document.addEventListener("click",e=>{if(e.target?.closest?.("#r3411HotelFeedAll")){e.preventDefault();e.stopImmediatePropagation()}},true);
 
   window.YN_R341112={BUILD,startDirectoryLive,startSaveMirror,publishLiveFarm:publishLiveFarm112,showFeedAll:showFeedAll112};
@@ -29718,6 +29786,8 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
    ====================================================================== */
 (function YN_R341114_SEASON1_FRIEND(){
   "use strict";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
   const BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";
   const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const plotCount=()=>typeof PLOT_COUNT==="number"?PLOT_COUNT:48;
@@ -29875,6 +29945,8 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
    ====================================================================== */
 (function YN_R341116_SELF_HEAL_GARDEN(){
   "use strict";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
   const BUILD="S2-R34.11.16-SELF-HEAL-GARDENS-20260904";
   const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const count=()=>typeof PLOT_COUNT==="number"?PLOT_COUNT:48;
@@ -29980,6 +30052,8 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
    ====================================================================== */
 (function YN_R341117_SOURCE_CLEANUP(){
   "use strict";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
   const BUILD="S2-R34.11.17-SOURCE-CLEANUP-20260904";
   function heal(){
     try{globalThis.YN_R341116?.ensureOwnWatch?.()}catch(_){}
@@ -29997,6 +30071,8 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
    ====================================================================== */
 (function YN_R341118_DIAG(){
   "use strict";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
   const BUILD="S2-R34.11.18-ADMIN-FRIEND-DIAGNOSTICS-20260904";
   const isAida=()=>{try{return String(currentMemberKey||"")==="aida"||String(currentMember||"").toLowerCase()==="aida"||Boolean(typeof isAdmin==="function"&&isAdmin())}catch(_){return false}};
   const cp=v=>{try{return JSON.parse(JSON.stringify(v))}catch(_){return v}};
@@ -30049,7 +30125,9 @@ globalThis.YAINOO_BUILD="S2-R34.11.19-HONEY-AUTHORITATIVE";
    ====================================================================== */
 (function YN_R341120_FRIEND_FARM_V2(){
   "use strict";
-  const BUILD="S2-R34.11.20-FRIEND-FARM-V2-20260904";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
+  const BUILD="S2-R34.11.21-AUTHORITATIVE-CORE-20260904";
   const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const N=12;
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
@@ -30058,10 +30136,8 @@ globalThis.YAINOO_BUILD="S2-R34.11.19-HONEY-AUTHORITATIVE";
   function scoreState(x){if(!x)return[-1,-1,-1];return [Number(x.clientSaveRevision)||0,Number(x.clientLocalEditAt)||0,Number(x.updatedAtClient)||0]}
   function ownerLive(){
     if(visitContext)return null;
-    const a=state,b=ownState;if(!a)return b||null;if(!b)return a;
-    const A=scoreState(a),B=scoreState(b);
-    for(let i=0;i<A.length;i++){if(A[i]!==B[i])return A[i]>B[i]?a:b}
-    return a;
+    /* ownState is the canonical durable owner state. Never prefer a visitor/render clone. */
+    return ownState||state||null;
   }
   function farmPlots(s,f){const start=(f-1)*N;return norm12((Array.isArray(s?.plots)?s.plots:[]).slice(start,start+N))}
   function farmHamsters(s,f){
@@ -30079,21 +30155,17 @@ globalThis.YAINOO_BUILD="S2-R34.11.19-HONEY-AUTHORITATIVE";
       for(let f=1;f<=4;f++){
         const sg=sigFarm(s,f);if(!force&&sg===last[f])continue;
         const ref=fs.doc(db,"friendFarmState",currentMemberKey,"farms",String(f));
-        jobs.push(fs.setDoc(ref,{memberKey:currentMemberKey,farmNo:f,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(farmPlots(s,f)),publicHamsters:cp(farmHamsters(s,f)),clientSaveRevision:Number(s.clientSaveRevision)||0,clientLocalEditAt:Number(s.clientLocalEditAt)||0,publicSeq:Date.now(),version:"R34.11.20",updatedAt:fs.serverTimestamp()},{merge:true}).then(()=>{last[f]=sg}));
+        jobs.push(fs.setDoc(ref,{memberKey:currentMemberKey,farmNo:f,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(farmPlots(s,f)),publicHamsters:cp(farmHamsters(s,f)),clientSaveRevision:Number(s.clientSaveRevision)||0,clientLocalEditAt:Number(s.clientLocalEditAt)||0,publicSeq:Date.now(),version:"R34.11.21",updatedAt:fs.serverTimestamp()},{merge:true}).then(()=>{last[f]=sg}));
       }
       if(jobs.length)await Promise.all(jobs);return true;
     }catch(e){console.warn("R34.11.20 publish friend farms",e);return false}
     finally{busy=false;if(again){again=false;setTimeout(()=>publishAll(true),30)}}
   }
 
-  // Publish from the live owner state. The new collection is isolated from all legacy garden writers.
-  let watchSig="";
-  setInterval(()=>{if(visitContext||!cloudReady||!currentMemberKey)return;const s=ownerLive();if(!s)return;let z="";try{z=[1,2,3,4].map(f=>sigFarm(s,f)).join("|")}catch(_){}if(z!==watchSig){watchSig=z;publishAll(false)}},120);
-  document.addEventListener("pointerup",()=>{if(!visitContext)setTimeout(()=>publishAll(true),5)},{passive:true,capture:true});
+  // Retry until a successful publish. `last[f]` changes only after Firestore confirms the write.
+  setInterval(()=>{if(!visitContext&&cloudReady&&currentMemberKey)publishAll(false)},1200);
   window.addEventListener("pageshow",()=>setTimeout(()=>publishAll(true),80),{passive:true});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishAll(true),60)},{passive:true});
-  if(typeof save==="function"){const b=save;save=function(){const r=b.apply(this,arguments);if(!visitContext)setTimeout(()=>publishAll(true),10);return r}}
-  if(typeof flushCloudSave==="function"){const b=flushCloudSave;flushCloudSave=async function(){const r=await b.apply(this,arguments);if(!visitContext)await publishAll(true);return r}}
 
   let unsubs=[],visitKey="",visitName="",farmDocs={};
   function stop(){for(const u of unsubs){try{u?.()}catch(_){}}unsubs=[];visitKey="";visitName="";farmDocs={}}
@@ -30106,17 +30178,392 @@ globalThis.YAINOO_BUILD="S2-R34.11.19-HONEY-AUTHORITATIVE";
     try{draw?.()}catch(_){};setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},10);
   }
   async function readFarm(fs,db,key,f){const ref=fs.doc(db,"friendFarmState",key,"farms",String(f));try{const q=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);return {ref,raw:q.exists()?q.data()||{}:null}}catch(e){return {ref,raw:null,error:e}}}
+  function adminViewer(){try{return currentMember==="Aida"||adminProfile?.role==="admin"||(typeof isAdmin==="function"&&isAdmin())}catch(_){return currentMember==="Aida"}}
+  function farmRawFromSave(s,f){return {memberKey:visitKey||"",farmNo:f,displayName:visitName||"",plots:farmPlots(s,f),publicHamsters:farmHamsters(s,f),clientSaveRevision:Number(s?.clientSaveRevision)||0,clientLocalEditAt:Number(s?.clientLocalEditAt)||0,publicSeq:Date.now(),version:"R34.11.21-save-truth"}}
+  async function repairFriendDocsFromSave(fs,db,key,name,s){try{const batch=fs.writeBatch(db);for(let f=1;f<=4;f++){const raw={...farmRawFromSave(s,f),memberKey:key,displayName:name};batch.set(fs.doc(db,"friendFarmState",key,"farms",String(f)),{...raw,updatedAt:fs.serverTimestamp()},{merge:false})}await batch.commit()}catch(e){console.warn("R34.11.21 admin friend repair",e)}}
   visitFriend=async function(key,name){
     if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;
     try{
-      stop();const {db,fs}=await getFirebaseContext();const rows=await Promise.all([1,2,3,4].map(f=>readFarm(fs,db,key,f)));
-      const exists=rows.some(x=>x.raw);if(!exists)throw new Error("เพื่อนยังไม่มีข้อมูลฟาร์มเวอร์ชันปัจจุบัน กรุณาให้เพื่อนเข้าเกมหนึ่งครั้งหลังอัปเดต");
+      stop();const {db,fs}=await getFirebaseContext();
+      let rows=await Promise.all([1,2,3,4].map(f=>readFarm(fs,db,key,f)));
+      let saveRef=null,saveRaw=null;
+      if(adminViewer()){
+        saveRef=fs.doc(db,"saves",key);
+        try{const q=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(saveRef):await fs.getDoc(saveRef);if(q.exists())saveRaw=q.data()||null}catch(e){console.warn("R34.11.21 admin direct save read",e)}
+      }
+      if(!rows.some(x=>x.raw)&&!saveRaw)throw new Error("ยังไม่มีข้อมูลฟาร์มปัจจุบันของเพื่อน");
       ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};visitKey=key;visitName=name;state=typeof fresh==="function"?fresh(name):{};state.plots=Array.from({length:48},()=>blank());
-      rows.forEach((x,i)=>{if(x.raw)applyFarmDoc(i+1,x.raw)});
+      /* For Aida/Admin, /saves is the canonical truth and wins immediately. */
+      if(saveRaw){for(let f=1;f<=4;f++)applyFarmDoc(f,{...farmRawFromSave(saveRaw,f),memberKey:key,displayName:name});repairFriendDocsFromSave(fs,db,key,name,saveRaw)}
+      else rows.forEach((x,i)=>{if(x.raw)applyFarmDoc(i+1,x.raw)});
       try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList?.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){};
-      rows.forEach((x,i)=>{unsubs.push(fs.onSnapshot(x.ref,q=>{if(q.exists())applyFarmDoc(i+1,q.data()||{})},e=>console.warn("R34.11.20 friend farm live",i+1,e)))});
+      rows.forEach((x,i)=>{unsubs.push(fs.onSnapshot(x.ref,q=>{if(q.exists()&&!saveRef)applyFarmDoc(i+1,q.data()||{})},e=>console.warn("R34.11.21 friend farm live",i+1,e)))});
+      if(saveRef)unsubs.push(fs.onSnapshot(saveRef,q=>{if(!q.exists())return;const sv=q.data()||{};for(let f=1;f<=4;f++)applyFarmDoc(f,{...farmRawFromSave(sv,f),memberKey:key,displayName:name})},e=>console.warn("R34.11.21 admin friend save live",e)));
     }catch(e){stop();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
   };
   setInterval(()=>{if(!visitContext&&unsubs.length)stop()},350);
   globalThis.YN_R341120={BUILD,publishAll,stop};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R34.11.22 — FRIEND GARDEN SINGLE-TRUTH
+   Public outdoor truth = /gardens/{memberKey} only.
+   - owner publishes current 48 plots + placed hamsters
+   - visitor reads/subscribes only /gardens
+   - friend plot actions mark the garden so owner imports that explicit action
+   - no friendFarmState dependency in the active friend-view path
+   ====================================================================== */
+(function YN_R341122_FRIEND_GARDEN_SINGLE_TRUTH(){
+  "use strict";
+  /* R34.12.0: disabled obsolete overlapping module; consolidated core below owns this path. */
+  return;
+  const BUILD="S2-R34.11.22-FRIEND-GARDEN-SINGLE-TRUTH-20260904";
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const blank=()=>typeof emptyPlot==="function"?emptyPlot():({crop:null,phase:"empty",phaseEndsAt:0,plantedAt:0,wateredAt:0,worm:false});
+  const norm48=a=>{const out=(Array.isArray(a)?a:[]).slice(0,48).map(p=>typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p));while(out.length<48)out.push(blank());return out};
+  const owner=()=>!visitContext?(ownState||state||null):null;
+  function hamsterMap(s){
+    const out={"2":[],"3":[],"4":[]};
+    for(const f of [2,3,4]){
+      const a=Array.isArray(s?.farmGuardians?.[String(f)]?.hamsters)?s.farmGuardians[String(f)].hamsters:[];
+      out[String(f)]=a.filter(h=>h&&h.id).slice(0,6).map(h=>({
+        id:String(h.id),color:String(h.color||"mint"),x:Number.isFinite(+h.x)?+h.x:50,y:Number.isFinite(+h.y)?+h.y:55,
+        dir:Number(h.dir)||1,pose:String(h.pose||h.action||"idle"),action:String(h.action||h.pose||"idle"),updatedAt:Number(h.updatedAt)||Date.now()
+      }));
+    }
+    return out;
+  }
+  function sig(s){try{return JSON.stringify([norm48(s?.plots).map(p=>[p?.crop||"",p?.phase||"",+p?.plantedAt||0,+p?.phaseEndsAt||0,!!p?.worm,+p?.wateredAt||0]),Object.entries(hamsterMap(s)).map(([k,a])=>[k,a.map(h=>[h.id,h.color,Math.round(h.x),Math.round(h.y),h.pose])])])}catch(_){return ""}}
+  let lastSig="",publishing=false,publishAgain=false;
+  async function publishGarden(force=false){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;
+    const s=owner();if(!s)return false;const sg=sig(s);if(!force&&sg&&sg===lastSig)return true;
+    if(publishing){publishAgain=true;return false}publishing=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(fs.doc(db,"gardens",currentMemberKey),{
+        memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+        plots:cp(norm48(s.plots)),publicHamsters:cp(hamsterMap(s)),ownerRevision:Number(s.clientSaveRevision)||0,
+        ownerLocalEditAt:Number(s.clientLocalEditAt)||0,publicVersion:"R34.11.22",ownerPublicSeq:Date.now(),updatedAt:fs.serverTimestamp()
+      },{merge:true});
+      lastSig=sg;return true;
+    }catch(e){console.error("R34.11.22 garden publish failed",e);return false}
+    finally{publishing=false;if(publishAgain){publishAgain=false;setTimeout(()=>publishGarden(true),30)}}
+  }
+
+  /* Keep the public garden hot while owner is playing. Signature prevents needless writes. */
+  setInterval(()=>{if(!visitContext&&cloudReady&&currentMemberKey)publishGarden(false)},700);
+  window.addEventListener("pageshow",()=>setTimeout(()=>publishGarden(true),50),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishGarden(true),50)},{passive:true});
+  const flush121=typeof flushCloudSave==="function"?flushCloudSave:null;
+  if(flush121)flushCloudSave=async function(){const r=await flush121.apply(this,arguments);await publishGarden(true);return r};
+
+  /* Explicit friend-action reconciliation only. Ordinary old garden snapshots never overwrite owner state. */
+  let ownerGardenUnsub=null,lastFriendActionAt=0;
+  async function armOwnerGardenActionListener(){
+    if(ownerGardenUnsub||!cloudReady||!currentMemberKey||visitContext)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",currentMemberKey);
+      ownerGardenUnsub=fs.onSnapshot(ref,q=>{
+        if(visitContext||!q.exists())return;const g=q.data()||{},at=Number(g.friendActionAtClient)||0;
+        if(!at||at<=lastFriendActionAt)return;lastFriendActionAt=at;
+        const s=owner(),idx=Number(g.friendActionIndex);if(!s||!Array.isArray(g.plots)||!Number.isInteger(idx)||idx<0||idx>=48)return;
+        s.plots=norm48(s.plots);s.plots[idx]=typeof normalizePlot==="function"?normalizePlot(cp(g.plots[idx])):cp(g.plots[idx]);s.lastAppliedFriendActionAt=at;s.clientLocalEditAt=Math.max(Number(s.clientLocalEditAt)||0,Date.now());
+        ownState=s;state=s;try{saveLocalOnly?.(s)}catch(_){};try{save?.()}catch(_){};try{draw?.()}catch(_){}
+      },e=>console.warn("R34.11.22 owner friend-action listener",e));
+    }catch(e){console.warn("R34.11.22 arm owner listener",e)}
+  }
+  setInterval(()=>{if(!visitContext)armOwnerGardenActionListener()},1200);
+
+  /* Final active visitor path: only /gardens. */
+  let visitUnsub=null,visitKey="",visitName="";
+  function stopVisitSub(){try{visitUnsub?.()}catch(_){}visitUnsub=null;visitKey="";visitName=""}
+  function applyGarden(raw){
+    if(!visitContext||String(visitContext.memberKey)!==String(visitKey)||!raw)return;
+    state.plots=norm48(raw.plots);
+    const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};
+    visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};
+    for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:Array.isArray(hm[String(f)])?cp(hm[String(f)]):[],stored:[],removedIds:[]};
+    try{draw?.()}catch(_){};
+    setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){try{globalThis.YN_R342?.renderFriendHamsters?.()}catch(__){}}},10);
+  }
+  visitFriend=async function(key,name){
+    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");
+    key=String(key||"");name=String(name||key);if(!key)return;
+    try{
+      stopVisitSub();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",key);
+      const q=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+      if(!q.exists())throw new Error("เพื่อนยังไม่มีข้อมูลสวนสาธารณะ");
+      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};visitKey=key;visitName=name;
+      state=typeof fresh==="function"?fresh(name):{};state.plots=Array.from({length:48},blank);
+      applyGarden(q.data()||{});
+      try{closeModal?.()}catch(_){};try{document.getElementById("gameScreen")?.classList?.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){}
+      visitUnsub=fs.onSnapshot(ref,s=>{if(s.exists())applyGarden(s.data()||{})},e=>console.warn("R34.11.22 friend garden live",e));
+    }catch(e){stopVisitSub();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+
+  const returnBase=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;
+  if(returnBase)returnFromFriendVisit=function(){stopVisitSub();const r=returnBase.apply(this,arguments);setTimeout(()=>{armOwnerGardenActionListener();publishGarden(true)},30);return r};
+
+  /* Existing friend watering/worm logic already changes /gardens. Add an explicit marker so owner imports only that action. */
+  const tapBase=typeof tapFriendPlot==="function"?tapFriendPlot:null;
+  if(tapBase)tapFriendPlot=async function(index){
+    const ctx=visitContext?{key:String(visitContext.memberKey||""),type:(state?.plots?.[index]?.phase==="worm"?"worm":"water")}:null;
+    const r=await tapBase.apply(this,arguments);
+    if(ctx?.key){
+      try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"gardens",ctx.key),{friendActionAtClient:Date.now(),friendActionBy:String(currentMemberKey||""),friendActionType:ctx.type,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11.22 friend action marker",e)}
+    }
+    return r;
+  };
+
+  globalThis.YN_R341122={BUILD,publishGarden,applyGarden};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.11.23 — BASEMENT + HEDGEHOG AUTHORITATIVE INPUT
+   - One delegated pointer path for every basement action.
+   - Does not depend on closure-bound onclick handlers that may be replaced.
+   - Hedgehog individual drops are collectible even if a transparent overlay
+     sits above the visual item; collect-all remains available as fallback.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.11.23-BASEMENT-HEDGEHOG-INPUT-20260904";
+  let lastKey="",lastAt=0;
+  const api=()=>globalThis.YN_R17;
+  function fireOnce(key,fn,e){
+    const now=performance.now();
+    if(key===lastKey&&now-lastAt<260)return;
+    lastKey=key;lastAt=now;
+    try{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.()}catch(_){}
+    try{fn()}catch(err){console.warn(BUILD,key,err);try{message?.("ทำรายการไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}}
+  }
+  document.addEventListener("pointerdown",e=>{
+    const a=api();if(!a)return;
+    const t=e.target?.closest?.("[data-r17-hdrop],[data-r17-plant],[data-r17-wine],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-plot],[data-r17-machine-hot],#r17CollectHedge");
+    if(!t)return;
+    if(t.matches("[data-r17-hdrop]"))return fireOnce(`hedge:${t.dataset.r17Hdrop}`,()=>a.collectHedgeOne?.(t.dataset.r17Hdrop),e);
+    if(t.matches("[data-r17-plant]")){const i=Number(t.dataset.r17PlantPlot);return fireOnce(`plant:${i}:${t.dataset.r17Plant}`,()=>a.plantFlower?.(i,t.dataset.r17Plant),e)}
+    if(t.matches("[data-r17-wine]")){const i=Number(t.dataset.r17WineMachine),k=t.dataset.r17Wine;return fireOnce(`winepick:${i}:${k}`,()=>{
+      /* Let the normal picker render its confirmation screen once. */
+      const old=t.onpointerdown||t.onclick;if(typeof old==="function")old.call(t,e);
+    },e)}
+    if(t.id==="r17StartWine"){const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;return fireOnce(`winestart:${i}:${k}`,()=>a.startWine?.(i,k),e)}
+    if(t.id==="r17WineClaim"){const i=Number(t.dataset.r17WineClaim);return fireOnce(`wineclaim:${i}`,()=>a.claimWine?.(i),e)}
+    if(t.id==="r17HarvestOne"){const i=Number(t.dataset.r17HarvestOne);return fireOnce(`flowerharvest:${i}`,()=>a.harvestFlower?.(i),e)}
+    if(t.matches("[data-r17-plot]")){const i=Number(t.dataset.r17Plot);return fireOnce(`plot:${i}`,()=>a.openFlowerPlot?.(i),e)}
+    if(t.matches("[data-r17-machine-hot]")){const i=Number(t.dataset.r17MachineHot);return fireOnce(`machine:${i}`,()=>a.openWineMachine?.(i),e)}
+    if(t.id==="r17CollectHedge")return fireOnce("hedge:all",()=>a.collectHedge?.(),e);
+  },true);
+  /* Click is suppressed only for controls already consumed by pointerdown. */
+  document.addEventListener("click",e=>{
+    const t=e.target?.closest?.("[data-r17-hdrop],[data-r17-plant],[data-r17-wine],#r17StartWine,#r17WineClaim,#r17HarvestOne,[data-r17-plot],[data-r17-machine-hot],#r17CollectHedge");
+    if(t&&performance.now()-lastAt<500){e.preventDefault();e.stopImmediatePropagation()}
+  },true);
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YN_R341123={BUILD};
+  console.info(BUILD,"loaded");
+})();
+
+globalThis.YN_R341200_GARDENS_ONLY=true;
+
+/* ======================================================================
+   S2 R34.12.0 — CORE REBUILD / ONE TRUTH PATH
+   Friend garden • hotel feed-all • single worm • alpaca bulk/move repair
+   basement persistence • durable gifts • royal/hamster disc drops
+   ====================================================================== */
+(function YN_R341200_CORE_REBUILD(){
+  "use strict";
+  const BUILD="S2-R34.12.0-CORE-REBUILD-20260904";
+  const $=id=>document.getElementById(id);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>{try{return typeof isAdmin==="function"?Boolean(isAdmin()):(currentMemberKey==="aida"||currentMember==="Aida")}catch(_){return currentMemberKey==="aida"||currentMember==="Aida"}};
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  const nplot=p=>{try{return typeof normalizePlot==="function"?normalizePlot(cp(p)):cp(p)||{}}catch(_){return cp(p)||{}}};
+  function norm48(a){const out=(Array.isArray(a)?a:[]).slice(0,48).map(nplot);while(out.length<48)out.push(typeof emptyPlot==="function"?emptyPlot():{});return out}
+  function publicHamsters(s){const out={"2":[],"3":[],"4":[]};for(const f of [2,3,4]){const arr=Array.isArray(s?.farmGuardians?.[String(f)]?.hamsters)?s.farmGuardians[String(f)].hamsters:[];out[String(f)]=arr.filter(h=>h&&h.id).map(cp)}return out}
+
+  /* ---------- 1. OWNER SAVE -> PUBLIC GARDEN, SAME CURRENT STATE ---------- */
+  async function forceGardenFromSave(){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;
+    try{
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),gref=fs.doc(db,"gardens",currentMemberKey);
+      const ss=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(sref):await fs.getDoc(sref);if(!ss.exists())return false;
+      const s=normalizeState(ss.data(),currentMember);
+      await fs.setDoc(gref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(norm48(s.plots)),publicHamsters:cp(publicHamsters(s)),ownerRevision:Number(s.clientSaveRevision)||0,ownerLocalEditAt:Number(s.clientLocalEditAt)||0,publicVersion:"R34.12.0",updatedAt:fs.serverTimestamp()},{merge:true});
+      return true;
+    }catch(e){console.warn(BUILD,"forceGardenFromSave",e);return false}
+  }
+
+  /* Apply exactly ONE friend-mutated slot before the owner republishes. */
+  async function reconcilePendingFriendAction(){
+    if(!cloudReady||!currentMemberKey||visitContext)return false;
+    try{
+      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"gardens",currentMemberKey),sref=fs.doc(db,"saves",currentMemberKey);
+      let next=null,changed=false;
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ss]=await Promise.all([tx.get(gref),tx.get(sref)]);if(!gs.exists()||!ss.exists())return;
+        const g=gs.data()||{},s=normalizeState(ss.data(),currentMember),at=Number(g.friendActionAtClient)||0,done=Number(s.lastAppliedFriendActionAt)||0,idx=Number(g.friendActionIndex);
+        if(!at||at<=done||!Number.isInteger(idx)||idx<0||idx>=48||!Array.isArray(g.plots))return;
+        const plots=norm48(s.plots);plots[idx]=nplot(g.plots[idx]);s.plots=plots;s.lastAppliedFriendActionAt=at;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cp(s);changed=true;
+        tx.set(sref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(gref,{ownerRevision:Number(s.clientSaveRevision)||0,ownerLocalEditAt:Number(s.clientLocalEditAt)||0,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      if(changed&&next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};try{draw?.()}catch(_){}}
+      return changed;
+    }catch(e){console.warn(BUILD,"reconcile friend action",e);return false}
+  }
+
+  /* Keep friend water/worm actions durable while the owner is online.
+     Observe only the marker; reconcile exactly that slot into /saves, then
+     republish the authoritative save back to /gardens. */
+  let friendActionWatchUnsub=null,friendActionWatchKey="",friendActionWatchBusy=false;
+  async function armFriendActionWatch(){
+    if(!cloudReady||!currentMemberKey||visitContext)return;
+    if(friendActionWatchUnsub&&friendActionWatchKey===String(currentMemberKey))return;
+    try{friendActionWatchUnsub?.()}catch(_){}friendActionWatchUnsub=null;friendActionWatchKey=String(currentMemberKey);
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",currentMemberKey);
+      friendActionWatchUnsub=fs.onSnapshot(ref,async snap=>{
+        if(!snap.exists()||visitContext||friendActionWatchBusy)return;
+        const g=snap.data()||{},at=Number(g.friendActionAtClient)||0,done=Number((ownState||state)?.lastAppliedFriendActionAt)||0;
+        if(!at||at<=done)return;friendActionWatchBusy=true;
+        try{const changed=await reconcilePendingFriendAction();if(changed)await forceGardenFromSave()}
+        catch(e){console.warn(BUILD,"friend action live reconcile",e)}
+        finally{friendActionWatchBusy=false}
+      },e=>console.warn(BUILD,"friend action watch",e));
+    }catch(e){console.warn(BUILD,"arm friend action watch",e)}
+  }
+
+  const initCore=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
+  if(initCore)initializeOrLoadCloudState=async function(){
+    const r=await initCore.apply(this,arguments);
+    try{await reconcilePendingFriendAction()}catch(_){}
+    try{await flushCloudSave?.()}catch(_){}
+    try{await forceGardenFromSave()}catch(_){}
+    try{await armFriendActionWatch()}catch(_){}
+    setTimeout(()=>syncAnimalDiscs(true),400);
+    setTimeout(()=>startPendingGiftLive(),550);
+    return ownState||r;
+  };
+
+  /* ---------- 2. SEASON-1 STYLE FRIEND VIEW: /gardens ONLY ---------- */
+  let friendUnsub=null,friendKey="",friendName="",friendRaw=null;
+  function stopFriendLive(){try{friendUnsub?.()}catch(_){}friendUnsub=null;friendKey="";friendName="";friendRaw=null}
+  function applyFriendGarden(raw){
+    if(!visitContext||String(visitContext.memberKey||"")!==friendKey||!raw)return;
+    friendRaw=raw;state.plots=norm48(raw.plots);
+    const hm=raw.publicHamsters&&typeof raw.publicHamsters==="object"?cp(raw.publicHamsters):{"2":[],"3":[],"4":[]};
+    visitContext.publicHamsters=hm;state.farmGuardians=state.farmGuardians||{};
+    for(const f of [2,3,4])state.farmGuardians[String(f)]={hamsters:Array.isArray(hm[String(f)])?cp(hm[String(f)]):[],stored:[],removedIds:[]};
+    try{draw?.()}catch(_){}
+    setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){try{globalThis.YN_R342?.renderFriendHamsters?.()}catch(__){}}},20);
+  }
+  visitFriend=async function(key,name){
+    if(!cloudReady)return message?.("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");key=String(key||"");name=String(name||key);if(!key)return;
+    try{
+      stopFriendLive();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"gardens",key),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+      if(!snap.exists())throw new Error("เพื่อนคนนี้ยังไม่มีข้อมูลสวนบนเซิร์ฟเวอร์");
+      ownState=ownState||state;visitContext={memberKey:key,name,publicHamsters:{"2":[],"3":[],"4":[]}};friendKey=key;friendName=name;state=typeof fresh==="function"?fresh(name):{};state.plots=norm48([]);
+      applyFriendGarden(snap.data()||{});try{closeModal?.()}catch(_){};try{$("gameScreen")?.classList?.add("visiting-friend")}catch(_){};try{showVisitorBanner?.(name)}catch(_){}
+      friendUnsub=fs.onSnapshot(ref,s=>{if(s.exists())applyFriendGarden(s.data()||{})},e=>console.warn(BUILD,"friend live",e));
+    }catch(e){stopFriendLive();message?.("เข้าเยี่ยมสวนไม่ได้",e?.message||"กรุณาลองใหม่")}
+  };
+  const returnFriendCore=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;if(returnFriendCore)returnFromFriendVisit=function(){stopFriendLive();return returnFriendCore.apply(this,arguments)};
+  const farmPageCore=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;if(farmPageCore)setFarmPlotPage=function(){const r=farmPageCore.apply(this,arguments);if(visitContext&&friendRaw)setTimeout(()=>applyFriendGarden(friendRaw),15);return r};
+
+  function cureWorm(p){const q=nplot(p),crop=CROPS?.[q?.crop];if(!q?.crop||!crop)return q;q.phase="growing2";q.worm=false;delete q.wormType;q.phaseEndsAt=now()+Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));return q}
+  function wormKind(p){try{return typeof wormTypeOf==="function"?wormTypeOf(p):(p?.wormType==="giant"?"giant":"normal")}catch(_){return p?.wormType==="giant"?"giant":"normal"}}
+  let friendActionBusy=false;
+  async function doFriendGardenAction(index,mode,method="merit"){
+    if(friendActionBusy||!visitContext||!cloudReady||!currentMemberKey)return;friendActionBusy=true;
+    const targetKey=String(visitContext.memberKey||""),targetName=String(visitContext.name||targetKey);
+    try{
+      const {db,fs}=await getFirebaseContext(),gref=fs.doc(db,"gardens",targetKey),myref=fs.doc(db,"saves",currentMemberKey),mail=fs.doc(fs.collection(db,"mailboxes",targetKey,"items"));let nextMine=null,nextPlots=null;
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ms]=await Promise.all([tx.get(gref),tx.get(myref)]);if(!gs.exists()||!ms.exists())throw new Error("ข้อมูลสวนไม่พร้อม");
+        const plots=norm48(gs.data()?.plots),p=plots[index],mine=normalizeState(ms.data(),currentMember);if(!p?.crop)throw new Error("แปลงนี้ว่างแล้ว");
+        if(mode==="water"){
+          try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(p.phase!=="needsWater")throw new Error("ต้นนี้ไม่ต้องการน้ำแล้ว");const crop=CROPS[p.crop],remain=Math.max(60000,Number(crop.totalMs||0)-Number(crop.waterMs||0));p.wateredAt=now();if(Math.random()<Number(crop.wormChance||0)){p.phase="worm";p.worm=true;p.phaseEndsAt=0}else{p.phase="growing2";p.worm=false;p.phaseEndsAt=now()+remain}try{incrementMissionOn?.(mine,"waterFriends",1)}catch(_){}
+        }else{
+          try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!(p.phase==="worm"||p.worm))throw new Error("หนอนถูกกำจัดไปแล้ว");const giant=wormKind(p)==="giant",mCost=giant?2:1,sCost=giant?12:5;if(!admin()){if(method==="spray"){mine.specials=mine.specials||{};const have=Number(mine.specials.wormKillerSpray)||0;if(have<sCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sCost} ขวด`);mine.specials.wormKillerSpray=have-sCost}else{const have=Number(mine.merit)||0;if(have<mCost)throw new Error(`กุศลไม่พอ ต้องใช้ ${mCost}`);mine.merit=have-mCost}}plots[index]=cureWorm(p);try{incrementMissionOn?.(mine,"clearWorms",1)}catch(_){}
+        }
+        nextPlots=plots;mine.clientSaveRevision=(Number(mine.clientSaveRevision)||0)+1;nextMine=cp(mine);
+        tx.set(gref,{memberKey:targetKey,displayName:targetName,plots:cp(plots),friendActionAtClient:Date.now(),friendActionBy:String(currentMemberKey||""),friendActionType:mode,friendActionIndex:index,updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(myref,{...cp(mine),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(mail,{source:"friend",type:mode==="water"?"friendWater":"friendWorm",fromKey:currentMemberKey,fromName:currentMember,title:mode==="water"?`${currentMember} เข้ามารดน้ำพืชพันธุ์ให้คุณ 💧`:`${currentMember} เข้ามากำจัดหนอนให้คุณ 🐛`,text:"",read:false,createdAt:fs.serverTimestamp()});
+      });
+      ownState=normalizeState(nextMine,currentMember);state.plots=norm48(nextPlots);try{saveLocalOnly?.(ownState)}catch(_){};try{draw?.()}catch(_){};try{updateMeritUI?.()}catch(_){};closeModal?.();showWeatherToast?.(mode==="water"?"💧 รดน้ำให้เพื่อนแล้ว":"🐛 กำจัดหนอนให้เพื่อนแล้ว");
+    }catch(e){message?.(mode==="water"?"รดน้ำให้เพื่อนไม่สำเร็จ":"กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}
+    finally{friendActionBusy=false}
+  }
+  tapFriendPlot=async function(index){
+    if(!visitContext)return;index=Number(index);const p=nplot(state?.plots?.[index]);try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!p?.crop)return message?.("เยี่ยมสวนเพื่อน","แปลงนี้ว่างอยู่");
+    if(p.phase==="worm"||p.worm){const giant=wormKind(p)==="giant",spray=Number((ownState||state)?.specials?.wormKillerSpray)||0,sCost=giant?12:5,mCost=giant?2:1;$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 ${giant?"หนอนไจแอนท์":"หนอน"}บ้านเพื่อน</h2><p>กำจัดเฉพาะแปลง #${index+1}</p><div class="friend-worm-actions"><button id="r34120FriendWormMerit" class="danger-action">${admin()?"ADMIN กำจัด":`ใช้ ${mCost} กุศล`}</button><button id="r34120FriendWormSpray" class="primary-spooky-action" ${!admin()&&spray<sCost?"disabled":""}>🧴 ใช้สเปรย์ ×${sCost}</button></div></section>`;openModal?.();$("r34120FriendWormMerit").onclick=()=>doFriendGardenAction(index,"worm","merit");$("r34120FriendWormSpray").onclick=()=>doFriendGardenAction(index,"worm","spray");return}
+    if(p.phase==="needsWater")return doFriendGardenAction(index,"water");
+    if(p.phase==="ready"&&typeof showStealConfirmation==="function")return showStealConfirmation(index);
+    return message?.("เยี่ยมสวนเพื่อน","ต้นนี้ยังไม่มีกิจกรรมที่ทำได้ตอนนี้");
+  };
+
+  /* ---------- 3. OWN SINGLE WORM: direct transaction on save + garden ---------- */
+  let ownWormBusy=false;
+  async function clearOwnWorm(index,method){if(ownWormBusy||visitContext)return;ownWormBusy=true;try{
+    await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",currentMemberKey),gref=fs.doc(db,"gardens",currentMemberKey);let next=null;
+    await fs.runTransaction(db,async tx=>{const ss=await tx.get(sref);if(!ss.exists())throw new Error("ไม่พบเซฟ");const s=normalizeState(ss.data(),currentMember),plots=norm48(s.plots),p=plots[index];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!p?.crop||!(p.phase==="worm"||p.worm))throw new Error("แปลงนี้ไม่มีหนอนแล้ว");const giant=wormKind(p)==="giant",mCost=giant?2:1,sCost=giant?12:5;if(!admin()){if(method==="spray"){s.specials=s.specials||{};const have=Number(s.specials.wormKillerSpray)||0;if(have<sCost)throw new Error(`สเปรย์ไม่พอ ต้องใช้ ${sCost} ขวด`);s.specials.wormKillerSpray=have-sCost}else{const have=Number(s.merit)||0;if(have<mCost)throw new Error(`กุศลไม่พอ ต้องใช้ ${mCost}`);s.merit=have-mCost}}plots[index]=cureWorm(p);s.plots=plots;try{incrementMissionOn?.(s,"clearWorms",1)}catch(_){};s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cp(s);tx.set(sref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(plots),publicHamsters:cp(publicHamsters(s)),ownerRevision:Number(s.clientSaveRevision)||0,updatedAt:fs.serverTimestamp()},{merge:true})});
+    ownState=normalizeState(next,currentMember);state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};closeModal?.();draw?.();updateMeritUI?.();showWeatherToast?.("🐛 กำจัดหนอนแปลงนี้แล้ว");
+  }catch(e){message?.("กำจัดหนอนไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}finally{ownWormBusy=false}}
+  function showOwnWorm(index){const p=(ownState||state)?.plots?.[index],giant=wormKind(p)==="giant",sCost=giant?12:5,mCost=giant?2:1,sprays=Number((ownState||state)?.specials?.wormKillerSpray)||0;$("modalContent").innerHTML=`<section class="feature-panel confirm-panel"><h2>🐛 ${giant?"หนอนไจแอนท์":"หนอน"}</h2><p>กำจัดเฉพาะแปลง #${index+1}</p><div class="friend-worm-actions"><button id="r34120OwnWormMerit" class="danger-action">${admin()?"ADMIN กำจัด":`ใช้ ${mCost} กุศล`}</button><button id="r34120OwnWormSpray" class="primary-spooky-action" ${!admin()&&sprays<sCost?"disabled":""}>🧴 ใช้สเปรย์ ×${sCost}</button></div></section>`;openModal?.();$("r34120OwnWormMerit").onclick=()=>clearOwnWorm(index,"merit");$("r34120OwnWormSpray").onclick=()=>clearOwnWorm(index,"spray")}
+  window.addEventListener("pointerdown",e=>{if(visitContext)return;const b=e.target?.closest?.("#plots [data-plot-index]");if(!b)return;const i=Number(b.dataset.plotIndex),p=(ownState||state)?.plots?.[i];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(!(p?.crop&&(p.phase==="worm"||p.worm)))return;e.preventDefault();e.stopImmediatePropagation();showOwnWorm(i)},true);
+
+  /* ---------- 4. HOTEL FEED-ALL: NEW ID, no legacy blocker can catch it ---------- */
+  const HOTEL_ID="r34120HotelFeedAll";let hotelBusy=false;
+  function hotelHungry(s,t=now()){const dogs=(s?.dogs||[]).filter(d=>d?.placedHotel).map(p=>({kind:"dog",p})),cats=(s?.cats||[]).filter(c=>c?.placedHotel&&Number(c?.placedFarm)===-1).map(p=>({kind:"cat",p}));return dogs.concat(cats).filter(x=>t>=Number(x.p?.nextFeedAt||0))}
+  function showHotelFeedAll(){if(visitContext)return;const s=ownState||state,h=hotelHungry(s),need=h.length;if(!need)return message?.("🍽️ ให้อาหารทั้งหมด","ตอนนี้ไม่มีหมา/แมวที่หิวค่ะ");const recipes=Array.isArray(typeof RECIPES!=="undefined"?RECIPES:[])?RECIPES:[];$("modalContent").innerHTML=`<section class="feature-panel r3411-feed-all-panel"><h2>🍽️ ให้อาหารทั้งหมด</h2><p>หมา/แมวหิวรวม <b>${need} ตัว</b> • ต้องใช้อาหาร <b>${need} ถาด</b></p><small>เลือกเมนูเดียว ระบบใช้เฉพาะเมนูที่เลือก</small><div class="r3411-feed-menu-grid">${recipes.map(r=>{const q=typeof dishCountInState==="function"?dishCountInState(r.id,s):0;return `<button type="button" data-r34120-hotel-menu="${esc(r.id)}" ${q<need?"disabled":""}><img src="${r.image||""}" alt=""><span><b>${esc(r.name)}</b><small>มี ×${q} • ใช้ ×${need}</small></span></button>`}).join("")}</div><button id="r34120HotelCancel" class="secondary-action">ยกเลิก</button></section>`;openModal?.();document.querySelectorAll("[data-r34120-hotel-menu]").forEach(b=>b.onclick=()=>commitHotelFeedAll(b.dataset.r34120HotelMenu));$("r34120HotelCancel").onclick=()=>closeModal?.()}
+  async function commitHotelFeedAll(recipeId){if(hotelBusy||!cloudReady||!currentMemberKey)return;hotelBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,count=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const s=normalizeState(snap.data(),currentMember),hungry=hotelHungry(s);count=hungry.length;if(!count)throw new Error("ตอนนี้ไม่มีน้องที่หิวแล้ว");if(typeof dishCountInState!=="function"||dishCountInState(recipeId,s)<count)throw new Error(`อาหารไม่พอ ต้องใช้ ${count} ถาด`);if(typeof removeDishesFromState!=="function"||!removeDishesFromState(s,recipeId,count))throw new Error("หักอาหารไม่สำเร็จ");const t=now();for(const x of hungry)x.p.nextFeedAt=t+(x.kind==="dog"?Number(typeof DOG_HUNGER_MS!=="undefined"?DOG_HUNGER_MS:21600000):Number(typeof CAT_HUNGER_MS!=="undefined"?CAT_HUNGER_MS:21600000));s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();try{globalThis.YN_R329_HOTEL?.render?.()}catch(_){try{draw?.()}catch(__){}};showWeatherToast?.(`🍽️ ให้อาหารทั้งหมด ${count} ตัวแล้ว`)}catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่")}finally{hotelBusy=false}}
+  function mountHotelButton(){document.getElementById("r3411HotelFeedAll")?.remove();if(currentScene!=="dogHotel"){$(HOTEL_ID)?.remove();return}if($(HOTEL_ID))return;const host=document.querySelector(".r329-hotel-tools")||$("s2HotelToolRail")||$("sceneInteractiveLayer");if(!host)return;const b=document.createElement("button");b.id=HOTEL_ID;b.type="button";b.innerHTML="🍽️<small>ให้อาหารทั้งหมด</small>";b.style.cssText="position:relative;z-index:9999;touch-action:manipulation;min-height:44px";host.prepend(b)}
+  window.addEventListener("pointerdown",e=>{const b=e.target?.closest?.(`#${HOTEL_ID}`);if(!b)return;e.preventDefault();e.stopImmediatePropagation();showHotelFeedAll()},true);
+
+  /* ---------- 5. ALPACA TROUGH BULK: NEW ID, one tap instead of 16 slots ---------- */
+  const TROUGH_ID="r34120FillTroughAll";const TROUGH_FOOD={hayPack:{name:"แพ็คหญ้าสดและหญ้าแห้ง",image:"alpaca-hay-pack.png",servings:6},pellet:{name:"อาหารเม็ดอัลปาก้า",image:"alpaca-pellet-food.png",servings:12},tricolorPudding:{name:"พุดดิ้งหญ้าสามสี",image:"alpaca_tricolor_pudding.png?v=240",servings:1},braisedEgg:{name:"ไข่พะโล้อัลปาก้า",image:"alpaca-braised-egg.png",servings:1}};
+  function currentPenNo(){const stage=$("alpacaPenStage");let raw="";try{raw=stage?.style?.getPropertyValue("--alpaca-pen-bg")||getComputedStyle(stage).getPropertyValue("--alpaca-pen-bg")||""}catch(_){}const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))}
+  function showBulkTrough(){const s=ownState||state,pno=currentPenNo(),pen=s?.alpaca?.pens?.[pno-1],food=s?.alpaca?.inventory?.food||{};if(!pen)return;pen.trough=Array.isArray(pen.trough)?pen.trough:Array(16).fill(null);while(pen.trough.length<16)pen.trough.push(null);const empty=pen.trough.filter(x=>!x).length;if(!empty)return message?.("รางอาหาร","ทั้ง 16 ช่องมีอาหารแล้วค่ะ");const rows=Object.entries(TROUGH_FOOD).filter(([k])=>(Number(food[k])||0)>0);if(!rows.length)return message?.("คุณไม่มีอาหาร","ไม่มีอาหารอัลปาก้าที่ใช้เติมรางได้ค่ะ");$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>⚡ เติมรางทั้งหมด</h2><p>คอก ${pno} • ว่าง ${empty}/16 ช่อง</p><div class="alpaca-inventory-grid">${rows.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${m.name}</b><strong>×${Number(food[k])||0}</strong><button data-r34120-trough="${k}">เติมช่องว่างทั้งหมด</button></article>`).join("")}</div></section>`;openModal?.();document.querySelectorAll("[data-r34120-trough]").forEach(b=>b.onclick=()=>fillBulkTrough(b.dataset.r34120Trough))}
+  async function fillBulkTrough(foodKey){try{const s=normalizeState(cp(ownState||state),currentMember),pno=currentPenNo(),pen=s?.alpaca?.pens?.[pno-1],meta=TROUGH_FOOD[foodKey];if(!pen||!meta)throw new Error("ไม่พบคอก");pen.trough=Array.isArray(pen.trough)?pen.trough.slice(0,16):Array(16).fill(null);while(pen.trough.length<16)pen.trough.push(null);const empties=pen.trough.map((x,i)=>x?null:i).filter(x=>x!==null),have=Number(s.alpaca?.inventory?.food?.[foodKey])||0,count=admin()?empties.length:Math.min(empties.length,have);if(!count)throw new Error("อาหารชนิดนี้หมดแล้ว");for(let j=0;j<count;j++)pen.trough[empties[j]]={foodKey,servings:meta.servings};if(!admin())s.alpaca.inventory.food[foodKey]=have-count;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;ownState=s;if(!visitContext)state=s;saveLocalOnly?.(s);save?.();await flushCloudSave?.();closeModal?.();globalThis.YN_ALPACA_CORE?.renderPen?.();showWeatherToast?.(`🦙 เติมราง ${count} ช่องแล้ว`)}catch(e){message?.("เติมรางไม่ได้",e?.message||"กรุณาลองใหม่")}}
+  function mountTroughButton(){const grid=document.querySelector(".alpaca-trough-grid");if(!grid){$(TROUGH_ID)?.remove();return}$("r3411FillTroughAll")?.remove();if($(TROUGH_ID))return;const b=document.createElement("button");b.id=TROUGH_ID;b.type="button";b.className="primary-spooky-action";b.textContent="⚡ เติมช่องว่างทั้งหมด";b.style.cssText="width:100%;min-height:44px;margin-top:10px;touch-action:manipulation";grid.insertAdjacentElement("afterend",b)}
+  window.addEventListener("pointerdown",e=>{if(!e.target?.closest?.(`#${TROUGH_ID}`))return;e.preventDefault();e.stopImmediatePropagation();showBulkTrough()},true);
+
+  /* ---------- 6. ROYAL ALPACA + HAMSTER THERAPY DISC, /saves ONLY ---------- */
+  const HOUR=3600000,ROYAL_MS=HOUR,HAM_MS=3*HOUR,DROP_MARK="R34.12.0-recovery";let discBusy=false;
+  function ensureDiscState(s){s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];s.dropRepairMarks=s.dropRepairMarks&&typeof s.dropRepairMarks==="object"?s.dropRepairMarks:{};return s}
+  function dedupeAlpacaState(s){const seen=new Set();let changed=false;(s?.alpaca?.pens||[]).forEach((pen,pi)=>{const keep=[];for(const a of (pen?.alpacas||[])){const id=String(a?.id||"");if(!id||seen.has(id)){changed=true;continue}seen.add(id);if(a.type==="adult")a.penIndex=pi+1;keep.push(a)}pen.alpacas=keep});return changed}
+  async function syncAnimalDiscs(force=false){if(discBusy||visitContext||!cloudReady||!currentMemberKey)return;discBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const s=ensureDiscState(normalizeState(snap.data(),currentMember)),t=now();let changed=dedupeAlpacaState(s),royals=[],hams=[];(s.alpaca?.pens||[]).forEach((pen,pi)=>(pen?.alpacas||[]).forEach(a=>{if(a?.id&&a.type==="adult"&&["prince","princess"].includes(String(a.color||"")))royals.push({id:String(a.id),pen:pi+1})}));for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[]))if(h?.id)hams.push({id:String(h.id),farm:f});
+        if(!s.dropRepairMarks[DROP_MARK]){for(const r of royals){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`];if(!arr.some(d=>String(d.animalId)===r.id))arr.push({id:`r34120-royal-recovery-${r.id}`,animalId:r.id,qty:2,createdAt:t,recovery:true});s.alpaca.royalDiscClock[r.id]=t}for(const h of hams){const arr=s.hamsterDiscDrops[String(h.farm)];if(!arr.some(d=>String(d.hamsterId)===h.id))arr.push({id:`r34120-ham-recovery-${h.id}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:t,recovery:true});s.hamsterDiscClock[h.id]=t}s.dropRepairMarks[DROP_MARK]=t;changed=true}
+        for(const r of royals){let last=Number(s.alpaca.royalDiscClock[r.id])||t;const due=Math.floor((t-last)/ROYAL_MS);if(due>0){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`],rounds=Math.min(due,24);for(let i=0;i<rounds;i++)arr.push({id:`r34120-royal-${r.id}-${last+(i+1)*ROYAL_MS}`,animalId:r.id,qty:2,createdAt:last+(i+1)*ROYAL_MS});s.alpaca.royalDiscClock[r.id]=last+due*ROYAL_MS;changed=true}}
+        for(const h of hams){let last=Number(s.hamsterDiscClock[h.id])||t;const due=Math.floor((t-last)/HAM_MS);if(due>0){const arr=s.hamsterDiscDrops[String(h.farm)],rounds=Math.min(due,24);for(let i=0;i<rounds;i++)arr.push({id:`r34120-ham-${h.id}-${last+(i+1)*HAM_MS}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:last+(i+1)*HAM_MS});s.hamsterDiscClock[h.id]=last+due*HAM_MS;changed=true}}
+        if(changed||force){s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+(changed?1:0);next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}else next=cp(s)});if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}renderDiscLayers()}catch(e){console.warn(BUILD,"disc sync",e)}finally{discBusy=false}}
+  function renderDiscLayers(){document.querySelectorAll("#r34RoyalDiscLayer,#r3411RoyalDropLayer,#r34HamsterDiscLayer,#r3411HamsterDropLayer").forEach(x=>x.remove());if(visitContext)return;const s=ensureDiscState(ownState||state);const stage=$("alpacaPenStage"),alpVisible=stage&&!$("alpacaPenScreen")?.classList.contains("hidden");if(alpVisible){const p=currentPenNo(),arr=s?.alpaca?.royalDiscDrops?.[`pen${p}`]||[];if(arr.length){let layer=$("r34120RoyalDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34120RoyalDiscLayer";layer.className="r3411-drop-layer";stage.appendChild(layer)}layer.innerHTML=arr.slice(-8).map((d,i)=>`<button class="r3411-disc-drop royal" data-r34120-royal="${p}" style="left:${29+(i%4)*14}%;top:${57+Math.floor(i/4)*10}%"><img src="therapy-disc-pink.png"><small>×${Number(d.qty)||2}</small></button>`).join("")}}else $("r34120RoyalDiscLayer")?.remove();const f=Math.max(1,Math.min(4,(Number(farmPlotPage)||0)+1)),screen=$("gameScreen"),harr=f>=2?(s?.hamsterDiscDrops?.[String(f)]||[]):[];if(screen&&!screen.classList.contains("hidden")&&harr.length){let layer=$("r34120HamDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34120HamDiscLayer";layer.className="r3411-drop-layer r3411-ham-drop-layer";screen.appendChild(layer)}layer.innerHTML=harr.slice(-10).map((d,i)=>`<button class="r3411-disc-drop hamster" data-r34120-ham="${f}" style="left:${29+(i%5)*11}%;top:${67+Math.floor(i/5)*8}%"><img src="therapy-disc-rock.png"><small>×${Number(d.qty)||1}</small></button>`).join("")}else $("r34120HamDiscLayer")?.remove()}
+  async function claimDiscs(kind,no){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const s=ensureDiscState(normalizeState(snap.data(),currentMember));s.specials=s.specials||{};if(kind==="royal"){const arr=s.alpaca.royalDiscDrops[`pen${no}`]||[];qty=arr.reduce((n,d)=>n+(Number(d.qty)||2),0);if(!qty)throw new Error("รับไปแล้ว");s.specials.therapyDiscPink=admin()?9999:(Number(s.specials.therapyDiscPink)||0)+qty;s.alpaca.royalDiscDrops[`pen${no}`]=[]}else{const arr=s.hamsterDiscDrops[String(no)]||[];qty=arr.reduce((n,d)=>n+(Number(d.qty)||1),0);if(!qty)throw new Error("รับไปแล้ว");s.specials.therapyDiscRock=admin()?9999:(Number(s.specials.therapyDiscRock)||0)+qty;s.hamsterDiscDrops[String(no)]=[]}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cp(s);tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);renderDiscLayers();showWeatherToast?.(`💿 รับแผ่นเสียง ×${qty} แล้ว`)}catch(e){message?.("รับของดรอปไม่ได้",e?.message||"กรุณาลองใหม่")}}
+  window.addEventListener("pointerdown",e=>{const r=e.target?.closest?.("[data-r34120-royal]"),h=e.target?.closest?.("[data-r34120-ham]");if(!r&&!h)return;e.preventDefault();e.stopImmediatePropagation();if(r)claimDiscs("royal",Number(r.dataset.r34120Royal));else claimDiscs("ham",Number(h.dataset.r34120Ham))},true);
+
+  /* ---------- 7. DURABLE ADMIN GIFTS: one pending doc per recipient ---------- */
+  async function canonicalRecipients(includeAida=false){const map=new Map();try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"loginDirectory"));snap.forEach(d=>{const x=d.data()||{},key=String(x.memberKey||d.id||"");if(key&&String(x.status||"approved")==="approved")map.set(key,String(x.displayName||key))})}catch(e){console.warn(BUILD,"directory recipients",e)}try{for(const name of Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{})){const key=String(memberKeyFromName(name)||"");if(key&&!map.has(key))map.set(key,name)}}catch(_){}if(!includeAida)map.delete("aida");return [...map].map(([key,name])=>({key,name}))}
+  function cleanBundle(items){return (Array.isArray(items)?items:[]).map(i=>({type:String(i.type||""),key:String(i.key||""),name:String(i.name||i.key||"ของขวัญ"),qty:Math.max(1,Math.floor(Number(i.qty)||1))})).filter(i=>i.type&&i.key)}
+  async function writeGiftTo(targetKey,targetName,items){const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(fs.collection(db,"gifts")),mailRef=fs.doc(db,"mailboxes",targetKey,"items",giftRef.id),batch=fs.writeBatch(db),clean=cleanBundle(items);if(!clean.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");batch.set(giftRef,{fromKey:"aida",fromName:"Aida",toKey:String(targetKey),toName:String(targetName||targetKey),bundle:true,items:clean,status:"pending",deliveryMode:"durable-r34120",createdAt:fs.serverTimestamp()});batch.set(mailRef,{source:"yainoo",type:"gift",giftId:giftRef.id,fromKey:"aida",fromName:"Aida",title:"ยัยหนูส่งกล่องของขวัญให้คุณ 🎁",text:clean.map(i=>`${i.name} ×${i.qty}`).join(" • "),read:false,resolved:false,createdAt:fs.serverTimestamp()});await batch.commit();return giftRef.id}
+  sendAdminBundleGift=async function(catalog){if(!admin())return;try{const sel=$("adminBundleTarget"),key=String(sel?.value||""),name=String(sel?.options?.[sel.selectedIndex]?.textContent?.replace(" (ตัวเอง)","")||key),items=cleanBundle(selectedAdminBundle(catalog,"admin-bundle"));if(!key)throw new Error("กรุณาเลือกสมาชิก");await writeGiftTo(key,name,items);showWeatherToast?.(`🎁 ส่งถึง ${name} แล้ว`);await showAdminCenter?.()}catch(e){message?.("ส่งของไม่ได้",e?.message||"กรุณาลองใหม่")}};
+  sendAdminGlobalBundleGift=async function(catalog){if(!admin())return;const btn=$("adminSendGlobalBundleBtn"),old=btn?.textContent||"ส่งชุดนี้ให้ทุกคน";if(btn){btn.disabled=true;btn.textContent="กำลังส่งและยืนยันรายคน..."}try{const items=cleanBundle(selectedAdminBundle(catalog,"admin-global")),rows=await canonicalRecipients(Boolean($("adminIncludeAida")?.checked));if(!items.length)throw new Error("กรุณาเลือกของอย่างน้อย 1 รายการ");if(!rows.length)throw new Error("ไม่พบรายชื่อผู้รับ");let ok=0,failed=[];for(const r of rows){try{await writeGiftTo(r.key,r.name,items);ok++}catch(e){failed.push(r.name)}}if(failed.length)throw new Error(`ส่งสำเร็จ ${ok} คน • ล้มเหลว ${failed.length} คน: ${failed.slice(0,6).join(", ")}`);showWeatherToast?.(`🎁 ส่งของขวัญค้างรับได้ถาวรให้ ${ok} คนแล้ว`);await showAdminCenter?.()}catch(e){message?.("ส่งของขวัญไม่สำเร็จ",e?.message||"กรุณาลองใหม่")}finally{if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=old}}};
+
+  let giftLiveUnsub=null;
+  async function startPendingGiftLive(){if(giftLiveUnsub||!cloudReady||!currentMemberKey)return;try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",currentMemberKey));giftLiveUnsub=fs.onSnapshot(q,snap=>{let changed=false;snap.forEach(d=>{if(d.data()?.status==="pending")changed=true});if(changed){try{notificationDataCache.at=0}catch(_){};try{refreshNotificationBadge?.(true)}catch(_){}}},e=>console.warn(BUILD,"gift live",e))}catch(e){console.warn(BUILD,"gift live start",e)}}
+
+  /* ---------- 8. BASEMENT one-tap delegated path + full-save commit already source-fixed ---------- */
+  let basementTapAt=0;
+  window.addEventListener("pointerdown",e=>{if(currentScene!=="house"||visitContext)return;const a=globalThis.YN_R17;if(!a)return;const t=e.target?.closest?.("[data-r17-hdrop],[data-r17-plot],[data-r17-machine-hot],#r17CollectHedge");if(!t)return;const tm=performance.now();if(tm-basementTapAt<120)return;basementTapAt=tm;e.preventDefault();e.stopImmediatePropagation();if(t.hasAttribute("data-r17-hdrop"))a.collectHedgeOne?.(t.dataset.r17Hdrop);else if(t.hasAttribute("data-r17-plot"))a.openFlowerPlot?.(Number(t.dataset.r17Plot));else if(t.hasAttribute("data-r17-machine-hot"))a.openWineMachine?.(Number(t.dataset.r17MachineHot));else a.collectHedge?.()},true);
+
+  /* ---------- UI/watchdog ---------- */
+  function uiTick(){try{mountHotelButton();mountTroughButton();renderDiscLayers()}catch(e){console.warn(BUILD,"ui",e)}}
+  setInterval(uiTick,500);setInterval(()=>syncAnimalDiscs(false),30000);window.addEventListener("pageshow",()=>{setTimeout(()=>{armFriendActionWatch();forceGardenFromSave();syncAnimalDiscs(true);startPendingGiftLive();uiTick()},150)},{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{armFriendActionWatch();forceGardenFromSave();syncAnimalDiscs(true);uiTick()},120)},{passive:true});setTimeout(()=>{armFriendActionWatch();uiTick();syncAnimalDiscs(true);startPendingGiftLive()},700);
+
+  globalThis.YN_R341200={BUILD,forceGardenFromSave,reconcilePendingFriendAction,syncAnimalDiscs,showHotelFeedAll,showBulkTrough};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
