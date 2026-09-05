@@ -1,3 +1,23 @@
+/* S2 R34.16 PRE-BOOT LEGACY INPUT GUARD
+   Blocks only legacy Honey/Hotel/Disc capture listeners registered by old hotfixes.
+   The original addEventListener is restored before the R34.15 clean owner registers. */
+(()=>{
+  const orig=EventTarget.prototype.addEventListener;
+  globalThis.__YN_ORIG_ADD_EVENT_LISTENER=orig;
+  const legacyTokens=[
+    'r3411HotelFeedAll','ynHotelPhysicalMasterFeed','yn1219HotelFeedAllPhysical','ynFinalHotelFeedAll','yn127HotelFeedAll','yn128HotelFeedAllHard',
+    'ynHoneyRefuelUniversalBtn','yn1219HoneyFuelPhysical','yn128HoneyRefuelHit','yn1212Honey','yn1211Honey','yn1219Honey',
+    'data-yn1218-claim','data-r34131-claim','data-r34133-claim','animalDiscState',
+    'data-s2-main="honey"','data-s2-main=\"honey\"','data-s2-main="disc-test"','data-s2-main=\"disc-test\"'
+  ];
+  EventTarget.prototype.addEventListener=function(type,listener,options){
+    try{
+      const s=typeof listener==='function'?Function.prototype.toString.call(listener):'';
+      if((type==='pointerdown'||type==='pointerup'||type==='touchstart'||type==='touchend'||type==='click')&&legacyTokens.some(t=>s.includes(t)))return;
+    }catch(_){}
+    return orig.call(this,type,listener,options);
+  };
+})();
 /* BUILD: S2-R9-ALL-SYSTEMS */
 let MEMBERS={
   "Kung A":"KUNG2481","Ar Jane":"JANE7314","Blotto Bier":"BIER4826","Mameaw":"MEAW5937",
@@ -32305,6 +32325,8 @@ console.info(window.YAINOO_BUILD,"loaded");
 
 
 
+/* S2 R34.16: restore native listener registration for the single clean owner below. */
+if(globalThis.__YN_ORIG_ADD_EVENT_LISTENER){EventTarget.prototype.addEventListener=globalThis.__YN_ORIG_ADD_EVENT_LISTENER;}
 /* =====================================================================
    S2 R34.15.0 — CLEAN HONEY / HOTEL / ROYAL+HAMSTER DROP OWNER
    2026-09-05
@@ -32316,8 +32338,11 @@ console.info(window.YAINOO_BUILD,"loaded");
    ===================================================================== */
 (()=>{
   "use strict";
-  const BUILD="S2-R34.15.0-CLEAN-HONEY-HOTEL-DROPS-20260905";
+  const BUILD="S2-R34.16.0-TRUE-OWNER-HONEY-HOTEL-DROPS-20260905";
   const $=id=>document.getElementById(id);
+  function mountBuildBadge(){let b=document.getElementById("ynR3416BuildBadge");if(!b){b=document.createElement("div");b.id="ynR3416BuildBadge";b.textContent="R34.16";document.body.appendChild(b)}b.style.cssText="position:fixed;right:6px;bottom:6px;z-index:2147483647;background:#201128;color:#fff7c7;border:1px solid #d9a94c;border-radius:999px;padding:3px 7px;font:700 10px/1.2 sans-serif;opacity:.9;pointer-events:none";}
+  setTimeout(mountBuildBadge,50);
+
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const int=v=>Math.max(0,Math.floor(Number(v)||0));
