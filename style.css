@@ -10009,3 +10009,38 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r34140-drop-disc{pointer-events:auto;touch-action:manipulation;width:30px;height:30px;border:1.5px solid #f3d28a;border-radius:50%;background:#fff5db;font-size:17px;line-height:1;box-shadow:0 3px 9px rgba(0,0,0,.3)}
 .r34140-drop-disc[hidden]{display:none!important}
 #r34133HotelFeedBtn{pointer-events:auto;touch-action:manipulation}
+
+
+/* =====================================================================
+   S2 R34.15.0 CLEAN — Honey / Hotel / physical therapy-disc drops
+   ===================================================================== */
+.r3415-hotel-feed-all{
+  position:fixed!important;left:50%!important;bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px))!important;
+  transform:translateX(-50%)!important;z-index:2147483500!important;min-width:min(88vw,390px)!important;
+  min-height:52px!important;padding:10px 18px!important;border:2px solid #f2d49a!important;border-radius:18px!important;
+  background:linear-gradient(180deg,#684083,#412653)!important;color:#fff8e8!important;font-weight:900!important;
+  box-shadow:0 10px 25px rgba(23,9,29,.42)!important;pointer-events:auto!important;touch-action:manipulation!important;
+}
+.r3415-honey-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 10px;padding:10px 12px;border-radius:14px;background:rgba(95,55,111,.10)}
+.r3415-honey-summary strong{font-size:clamp(22px,6vw,34px)}.r3415-honey-summary span{font-weight:800}
+.r3415-fuelbar{position:relative;height:25px;border-radius:999px;overflow:hidden;background:#e6d7ca;border:1px solid #a98268;margin:8px 0 14px}
+.r3415-fuelbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#d56372,#f0a45b);border-radius:inherit}
+.r3415-fuelbar b{position:absolute;inset:0;display:grid;place-items:center;color:#442536;text-shadow:0 1px 0 #fff;font-size:12px}
+.r3415-step{display:grid;grid-template-columns:46px 1fr 46px;gap:8px;align-items:center;margin:10px 0}
+.r3415-step button{height:44px;border:0;border-radius:12px;background:#684083;color:#fff;font-size:24px;font-weight:900}
+.r3415-step input{width:100%;height:44px;border:1px solid #c3a17e;border-radius:12px;text-align:center;font-weight:900;background:#fffdf7;color:#43253e}
+.r3415-feed-total{margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:#5c3970;color:#fff;text-align:center;font-weight:900}
+.r3415-feed-list{display:grid;gap:8px;max-height:48vh;overflow:auto;padding:2px 2px 8px}
+.r3415-feed-row{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:9px;padding:8px;border:1px solid #c6a584;border-radius:13px;background:#fff9e9}
+.r3415-feed-row>img{width:48px;height:48px;object-fit:contain}.r3415-feed-row div:nth-child(2){min-width:0}.r3415-feed-row b,.r3415-feed-row small{display:block}.r3415-feed-row small{opacity:.72}
+.r3415-food-step{display:grid;grid-template-columns:34px 28px 34px;align-items:center;gap:4px}.r3415-food-step button{height:34px;border:0;border-radius:9px;background:#694482;color:#fff;font-size:20px;font-weight:900}.r3415-food-step button:disabled{opacity:.35}.r3415-food-step strong{text-align:center}
+
+.alpaca-pen-animal,.r25-hamster{overflow:visible!important}
+.r3415-drop-clock{position:absolute;left:50%;bottom:88%;transform:translateX(-50%);z-index:330;min-width:max-content;padding:3px 7px;border-radius:999px;background:rgba(40,20,48,.9);border:1px solid rgba(255,224,166,.85);color:#fff7d9;font-size:clamp(8px,2.1vw,11px);font-weight:900;line-height:1.1;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.28)}
+.r3415-drop-cloud{position:absolute;z-index:335;left:50%;top:66%;width:122px;height:78px;transform:translate(-50%,0);pointer-events:none;overflow:visible}
+.r3415-drop-cloud button{--drop-i:0;position:absolute;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:transparent;pointer-events:auto;touch-action:manipulation;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4));animation:r3415DropBob 1.6s ease-in-out infinite;animation-delay:calc(var(--drop-i) * -90ms)}
+.r3415-drop-cloud button img{display:block;width:100%;height:100%;object-fit:contain}
+.r3415-drop-cloud button:nth-child(1){left:4px;top:28px}.r3415-drop-cloud button:nth-child(2){left:28px;top:44px}.r3415-drop-cloud button:nth-child(3){left:52px;top:32px}.r3415-drop-cloud button:nth-child(4){left:76px;top:45px}.r3415-drop-cloud button:nth-child(5){left:92px;top:18px}.r3415-drop-cloud button:nth-child(6){left:40px;top:10px}.r3415-drop-cloud button:nth-child(7){left:66px;top:5px}.r3415-drop-cloud button:nth-child(8){left:12px;top:3px}
+.r3415-drop-cloud.ham{width:108px;height:70px;top:70%;transform:translate(-50%,0) scale(.88)}
+@keyframes r3415DropBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.r3415-drop-cloud button{animation:none}}
