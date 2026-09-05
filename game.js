@@ -11635,44 +11635,31 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   function YN_showFeedAllDogsPicker(){
     const s=ownState||state,targets=YN_hungryHotelPetsAll(s),need=targets.length;
     if(!need){message("🍽️ ยังไม่ต้องให้อาหาร","ตอนนี้ไม่มีหมาหรือแมวที่หิวในโฮเทลค่ะ");return}
+    const foods=YN_petFoodEntries(s);
     $("modalContent").innerHTML=`<section class="feature-panel yn-feed-all-panel">
-      <button id="ynBackDogRoster" class="secondary-action yn-compact-back" type="button">← กลับ</button>
-      <h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2>
-      <p class="yn-feed-all-need">ต้องการ <b>${need} ถาด</b> สำหรับหมา/แมวที่หิว ${need} ตัว</p>
-      <p class="feature-subtitle">เลือกเมนูเดียว • ใช้ 1 ถาดต่อสัตว์ 1 ตัว • รวมทุกคอก</p>
-      <div class="cat-feed-grid">${YN_petFoodCards(s,need)}</div>
+      <button id="ynBackDogRoster" class="secondary-action yn-compact-back" type="button">← กลับสมาชิกมะหมา</button>
+      <h2>🍽️ ให้อาหารทั้งหมด</h2>
+      <p class="yn-feed-all-need">สัตว์ที่หิวทั้งหมด <b>${need} ตัว</b> • เลือกอาหารรวมให้ครบ <b>${need} ถาด</b></p>
+      <p class="feature-subtitle">เลือกคละหลายเมนูได้ • ระบบจะไม่หยิบอาหารเอง</p>
+      <div id="ynBulkFoodList" class="yn-bulk-food-list">${foods.map(f=>`<article class="yn-bulk-food-row"><img src="${f.image}" alt="${safeHtml(f.name)}"><div><b>${safeHtml(f.name)}</b><small>มี ×${f.count}</small></div><div class="yn-bulk-stepper"><button type="button" data-bulk-minus="${f.type}|${f.key}">−</button><input data-bulk-qty="${f.type}|${f.key}" type="number" min="0" max="${f.count}" value="0" inputmode="numeric"><button type="button" data-bulk-plus="${f.type}|${f.key}">+</button></div></article>`).join("")||'<p class="empty-feature">ยังไม่มีอาหารหรือเครื่องดื่มที่คราฟไว้</p>'}</div>
+      <div class="yn-bulk-total">เลือกแล้ว <b id="ynBulkSelected">0</b> / ${need} ถาด</div>
+      <button id="ynBulkConfirm" class="primary-spooky-action" type="button" disabled>ยืนยันให้อาหารทั้งหมด</button>
     </section>`;
     $("ynBackDogRoster").onclick=showDogHotelRoster;
-    document.querySelectorAll("[data-yn-pet-feed-key]").forEach(b=>{
-      const fire=e=>{e?.preventDefault?.();e?.stopPropagation?.();YN_feedAllDogs(b.dataset.ynPetFeedType,b.dataset.ynPetFeedKey)};
-      b.onpointerdown=fire;b.ontouchstart=fire;b.onclick=e=>e.preventDefault();
-    });
+    const inputs=[...document.querySelectorAll('[data-bulk-qty]')];
+    const refresh=()=>{let total=0;inputs.forEach(i=>{const max=Math.max(0,Number(i.max)||0);i.value=String(Math.max(0,Math.min(max,Math.floor(Number(i.value)||0))));total+=Number(i.value)||0});$("ynBulkSelected").textContent=String(total);$("ynBulkConfirm").disabled=total!==need};
+    document.querySelectorAll('[data-bulk-minus]').forEach(b=>b.onclick=()=>{const i=document.querySelector(`[data-bulk-qty="${CSS.escape(b.dataset.bulkMinus)}"]`);if(i){i.value=Math.max(0,(Number(i.value)||0)-1);refresh()}});
+    document.querySelectorAll('[data-bulk-plus]').forEach(b=>b.onclick=()=>{const i=document.querySelector(`[data-bulk-qty="${CSS.escape(b.dataset.bulkPlus)}"]`);if(i){i.value=Math.min(Number(i.max)||0,(Number(i.value)||0)+1);refresh()}});
+    inputs.forEach(i=>i.oninput=refresh);
+    $("ynBulkConfirm").onclick=()=>{const picks=inputs.map(i=>{const [type,key]=i.dataset.bulkQty.split('|');return{type,key,qty:Math.max(0,Math.floor(Number(i.value)||0))}}).filter(x=>x.qty>0);YN_feedAllDogsMixed(picks)};
     openModal();
   }
-  async function YN_feedAllDogs(foodType,key){
+  async function YN_feedAllDogsMixed(picks){
     if(visitContext)return message("ให้อาหารทั้งหมดไม่ได้","กลับสวนของตัวเองก่อนค่ะ");
     try{
       await settlePendingCloudSave();
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
-      let next,count=0,penalties=0,rewardTotal=0;
-      await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-        const s=normalizeState(snap.data(),currentMember),t=gameNow(),targets=YN_hungryHotelPetsAll(s,t);
-        count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");
-        if(!YN_consumePetFood(s,foodType,key,count))throw new Error(`เมนูนี้ต้องมีอย่างน้อย ${count} ถาด`);
-        targets.forEach(({kind,pet})=>{
-          if(YN_petIsAngry(pet,t)&&Number(pet.lastPenaltyBucket||0)<1){s.merit=(Number(s.merit)||0)-30;penalties++}
-          const reward=randInt(20,50);rewardTotal+=reward;s.merit=(Number(s.merit)||0)+reward;
-          pet.nextFeedAt=t+YN_PET_HUNGER_MS;pet.lastPenaltyBucket=0;
-          if(kind==="dog")pet.nextDropAt=t+DOG_DROP_INTERVAL_MS;
-          else if(typeof CAT_DROP_INTERVAL_MS!=="undefined")pet.nextDropAt=t+CAT_DROP_INTERVAL_MS;
-        });
-        incrementMissionOn(s,"feedOwnPets",count);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=cloneData(s);
-        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
-      });
-      Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();
-      message("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`ใช้อาหาร ${count} ถาด • หมา/แมว ${count} ตัว<br>ได้รับรวม +${rewardTotal} กุศล${penalties?`<br>สถานะโกรธ ${penalties} ตัว ถูกหัก -${penalties*30} กุศล`:""}<br>หิวอีกใน 4 ชั่วโมง`);
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,count=0,penalties=0,rewardTotal=0;
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(snap.data(),currentMember),t=gameNow(),targets=YN_hungryHotelPetsAll(st,t);count=targets.length;if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");const total=picks.reduce((n,x)=>n+x.qty,0);if(total!==count)throw new Error(`ต้องเลือกอาหารให้ครบ ${count} ถาด`);for(const p of picks)if(!YN_consumePetFood(st,p.type,p.key,p.qty))throw new Error("อาหารที่เลือกมีจำนวนไม่พอแล้ว");targets.forEach(({kind,pet})=>{if(YN_petIsAngry(pet,t)&&Number(pet.lastPenaltyBucket||0)<1){st.merit=(Number(st.merit)||0)-30;penalties++}const reward=randInt(20,50);rewardTotal+=reward;st.merit=(Number(st.merit)||0)+reward;pet.nextFeedAt=t+YN_PET_HUNGER_MS;pet.lastPenaltyBucket=0;pet.nextDropAt=t+(kind==="dog"?DOG_DROP_INTERVAL_MS:CAT_DROP_INTERVAL_MS)});incrementMissionOn(st,"feedOwnPets",count);st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=cloneData(st);tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});Y26_applyOwnState(next);updateMeritUI();closeModal();if(currentScene==="dogHotel")renderDogHotelScene();message("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`หมา+แมว ${count} ตัว • ใช้อาหารรวม ${count} ถาด${penalties?`<br>หักสถานะโกรธ ${penalties} ตัว`:""}`)
     }catch(error){message("ให้อาหารทั้งหมดไม่ได้",error.message||"กรุณาลองใหม่")}
   }
 
@@ -11696,7 +11683,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       <p class="feature-subtitle">น้องหมา ${dogs.length}/${DOG_HOTEL_MAX} • หิว ${hungryCount} ตัว<br>เลือกให้อาหารทีละตัวได้เหมือนเดิม</p>
       <div class="dog-roster-list">${rows}</div>
     </section>`;
-    {const feedAll=$("ynHotelMasterFeedAll");if(feedAll){const fire=e=>{e?.preventDefault?.();e?.stopPropagation?.();YN_showFeedAllDogsPicker()};feedAll.onpointerdown=fire;feedAll.ontouchstart=fire;feedAll.onclick=e=>e.preventDefault()}}
+    {const feedAll=$("ynHotelMasterFeedAll");if(feedAll){feedAll.onclick=e=>{e.preventDefault();YN_showFeedAllDogsPicker()}}}
     document.querySelectorAll("[data-v35-dog-feed]").forEach(b=>b.onclick=()=>showDogRosterFoodPicker(b.dataset.v35DogFeed));
     document.querySelectorAll("[data-v35-dog-medicine]").forEach(b=>b.onclick=()=>V35_showDogMedicinePicker(b.dataset.v35DogMedicine));
     document.querySelectorAll("[data-y26-dog-penalty]").forEach(b=>b.onclick=()=>Y26_applyPetPenalty("dog",b.dataset.y26DogPenalty));
@@ -19558,7 +19545,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   setInterval(()=>{try{renderFuelHud();restoreHoneyPresence()}catch(error){console.warn("V252 honey tick",error)}},5000);
   setTimeout(()=>{try{renderFuelHud();restoreHoneyPresence();persistSeedOrTimer()}catch{}},800);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderFuelHud();restoreHoneyPresence()}});
-  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal,refill:refillFuel};
+  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal,refill:refillFuel};window.YN_HONEY_LEGACY_OPEN=showFuelModal;
   window.YAINOO_BUILD=VERSION;
   console.info(`${VERSION} loaded`);
 })();
@@ -22130,7 +22117,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const layer=document.createElement("div");layer.id="s2FarmHotspots";layer.className="s2-farm-hotspots";g.appendChild(layer);
     const dock=document.createElement("div");dock.id="s2FarmDock";dock.className="s2-farm-dock";dock.innerHTML=`<button id="s2FarmSelectBtn">🌙<b>ฟาร์ม</b></button><button id="s2FarmToolsToggle">🧺<b>เครื่องมือ</b></button><div id="s2FarmSelectMenu" class="s2-farm-pop hidden">${[1,2,3,4].map(n=>`<button data-s2-farm="${n}">ฟาร์ม${n}</button>`).join("")}</div><div id="s2FarmToolsMenu" class="s2-farm-pop s2-tools-pop hidden"><button data-s2-tool="sprinkler">🚿<small>รดน้ำ</small></button><button data-s2-tool="tractor">🚜<small>รถไถ</small></button><button data-s2-tool="drops">🧺<small>เก็บดรอป</small></button><button data-s2-tool="fruit">🍎<small>เก็บผลไม้</small></button><button data-s2-tool="manage">🌱<small>จัดการสวน</small></button></div>`;g.appendChild(dock);
     const mainNav=document.createElement("nav");mainNav.id="s2MainNav";mainNav.className="s2-main-nav";mainNav.innerHTML=`<button data-s2-main="garden">🌱<small>สวน</small></button><button data-s2-main="inventory">🎒<small>กระเป๋า</small></button><button data-s2-main="shop">🛍️<small>ร้านค้า</small></button><button data-s2-main="missions">📋<small>ภารกิจ</small></button><button data-s2-main="friends">👥<small>เพื่อน</small></button><button data-s2-main="honey">⛽<small>เติมน้ำมัน</small></button><button data-s2-main="disc-test" data-admin-only="1" style="display:none">🧪<small>ทดสอบดรอป</small></button>`;g.appendChild(mainNav);
-    const navMap={garden:"gardenNavBtn",inventory:"inventoryNavBtn",shop:"shopNavBtn",missions:"missionsNavBtn",friends:"friendsNavBtn"};mainNav.querySelectorAll("[data-s2-main]").forEach(b=>b.onclick=()=>{const k=b.dataset.s2Main;if(k==="honey")return globalThis.YN_R34133?.openHoney?.();if(k==="disc-test")return globalThis.YN_R34133?.forceDrop?.();return $(navMap[k])?.click()});
+    const navMap={garden:"gardenNavBtn",inventory:"inventoryNavBtn",shop:"shopNavBtn",missions:"missionsNavBtn",friends:"friendsNavBtn"};mainNav.querySelectorAll("[data-s2-main]").forEach(b=>b.onclick=()=>{const k=b.dataset.s2Main;if(k==="honey")return globalThis.YN_HONEY_DELIVERY?.openFuel?.();if(k==="disc-test")return globalThis.YN_R3419_DISC?.forceVisibleDrops?.();return $(navMap[k])?.click()});
     $("s2FarmSelectBtn").onclick=()=>{$("s2FarmSelectMenu").classList.toggle("hidden");$("s2FarmToolsMenu").classList.add("hidden")};$("s2FarmToolsToggle").onclick=()=>{$("s2FarmToolsMenu").classList.toggle("hidden");$("s2FarmSelectMenu").classList.add("hidden")};document.querySelectorAll("[data-s2-farm]").forEach(b=>b.onclick=()=>{setFarmPlotPage(Number(b.dataset.s2Farm)-1);$("s2FarmSelectMenu").classList.add("hidden")});document.querySelectorAll("[data-s2-tool]").forEach(b=>b.onclick=()=>{const k=b.dataset.s2Tool;$("s2FarmToolsMenu").classList.add("hidden");if(k==="fruit")return collectFarmFruit();if(k==="manage")return $("ynuGardenManagerBtn")?.click();if(k==="sprinkler")return $("sprinklerBtn")?.click();if(k==="tractor")return $("tractorBtn")?.click();if(k==="drops")return $("collectDropsBtn")?.click()});
     document.addEventListener("pointerdown",e=>{if(!dock.contains(e.target)){$("s2FarmSelectMenu")?.classList.add("hidden");$("s2FarmToolsMenu")?.classList.add("hidden")}},true);
   }
@@ -26874,23 +26861,23 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   function currentAlpacaPen(){const stage=$("alpacaPenStage");const raw=stage?.style?.getPropertyValue("--alpaca-pen-bg")||getComputedStyle(stage||document.documentElement).getPropertyValue("--alpaca-pen-bg")||"";const m=String(raw).match(/alpaca-pen-(\d)/);return Math.max(1,Math.min(5,Number(m?.[1])||1))}
   function processRoyalDrops(){
     if(visitContext||!currentMemberKey)return false;const s=ensure(live());if(!s?.alpaca?.pens)return false;const t=now();let changed=false;const activeIds=new Set();
-    s.alpaca.pens.forEach((pen,pi)=>{const key=`pen${pi+1}`,royals=(pen?.alpacas||[]).filter(a=>a?.type==="adult"&&["prince","princess"].includes(String(a.color||"")));royals.forEach(a=>activeIds.add(String(a.id)));if(!royals.length){if(s.alpaca.royalDiscDrops[key].length){s.alpaca.royalDiscDrops[key]=[];changed=true}return}for(const a of royals){const id=String(a.id),last=Number(s.alpaca.royalDiscClock[id]);if(!last){s.alpaca.royalDiscClock[id]=t;changed=true;continue}const due=Math.floor((t-last)/ROYAL_MS);if(due<1)continue;const rounds=Math.min(due,24),arr=s.alpaca.royalDiscDrops[key];for(let r=0;r<rounds;r++)arr.push({id:`r34-royal-${id}-${last+(r+1)*ROYAL_MS}`,animalId:id,qty:2,createdAt:last+(r+1)*ROYAL_MS});if(arr.length>48)arr.splice(0,arr.length-48);s.alpaca.royalDiscClock[id]=last+due*ROYAL_MS;changed=true}}
+    s.alpaca.pens.forEach((pen,pi)=>{const key=`pen${pi+1}`,royals=(pen?.alpacas||[]).filter(a=>a?.type==="adult"&&["prince","princess"].includes(String(a.color||"")));royals.forEach(a=>activeIds.add(String(a.id)));if(!royals.length){if(s.alpaca.royalDiscDrops[key].length){s.alpaca.royalDiscDrops[key]=[];changed=true}return}for(const a of royals){const id=String(a.id);let last=Number(s.alpaca.royalDiscClock[id]);if(!last){const anchor=[a.placedAt,a.createdAt,a.bornAt].map(Number).filter(x=>Number.isFinite(x)&&x>0&&x<=t);last=anchor.length?Math.max(...anchor):t-ROYAL_MS;s.alpaca.royalDiscClock[id]=last;changed=true}const due=Math.floor((t-last)/ROYAL_MS);if(due<1)continue;const rounds=Math.min(due,24),arr=s.alpaca.royalDiscDrops[key];for(let r=0;r<rounds;r++)arr.push({id:`r34-royal-${id}-${last+(r+1)*ROYAL_MS}`,animalId:id,qty:2,createdAt:last+(r+1)*ROYAL_MS});if(arr.length>48)arr.splice(0,arr.length-48);s.alpaca.royalDiscClock[id]=last+due*ROYAL_MS;changed=true}}
     );for(const id of Object.keys(s.alpaca.royalDiscClock))if(!activeIds.has(id)){delete s.alpaca.royalDiscClock[id];changed=true}
     if(changed){try{saveLocalOnly?.(s);save?.()}catch(_){}}renderRoyalDrops();return changed;
   }
-  function renderRoyalDrops(){const stage=$("alpacaPenStage");if(!stage||$("alpacaPenScreen")?.classList.contains("hidden"))return;let layer=$("r34RoyalDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34RoyalDiscLayer";layer.className="r34-drop-layer";stage.appendChild(layer)}const pen=currentAlpacaPen(),arr=ensure(live())?.alpaca?.royalDiscDrops?.[`pen${pen}`]||[];layer.innerHTML=arr.slice(-8).map((d,i)=>`<button type="button" class="r34-disc-drop royal" data-r34-royal="1" style="left:${30+(i%4)*13}%;top:${58+Math.floor(i/4)*9}%"><img src="therapy-disc-pink.png" alt="แผ่นเสียง"><small>×2</small></button>`).join("");layer.querySelectorAll("[data-r34-royal]").forEach(b=>b.onclick=()=>showRoyalClaim(pen))}
+  function renderRoyalDrops(){const stage=$("alpacaPenStage");if(!stage||$("alpacaPenScreen")?.classList.contains("hidden"))return;let layer=$("r34RoyalDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34RoyalDiscLayer";layer.className="r34-drop-layer";stage.appendChild(layer)}const pen=currentAlpacaPen(),arr=ensure(live())?.alpaca?.royalDiscDrops?.[`pen${pen}`]||[];layer.innerHTML=arr.slice(-16).map((d,i)=>`<button type="button" class="r34-disc-drop royal" data-r34-royal="1" style="left:${22+(i%6)*11}%;top:${57+Math.floor(i/6)*7}%"><img src="therapy-disc-pink.png" alt="แผ่นเสียง"><small>×2</small></button>`).join("");layer.querySelectorAll("[data-r34-royal]").forEach(b=>b.onclick=()=>showRoyalClaim(pen))}
   function showRoyalClaim(pen=currentAlpacaPen()){const arr=ensure(live())?.alpaca?.royalDiscDrops?.[`pen${pen}`]||[],qty=arr.reduce((n,d)=>n+int(d.qty||2),0);if(!qty)return;$("modalContent").innerHTML=`<section class="feature-panel r34-reward-panel"><img class="r34-reward-hero" src="therapy-disc-pink.png" alt=""><h2>💿 ของดรอปคอก ${pen}</h2><p>อัลปาก้าเจ้าชาย/เจ้าหญิงดรอปแผ่นเพลงบำบัดหัวใจหวาน <b>×${qty}</b></p><button id="r34RoyalClaim" class="primary-spooky-action">รับเข้ากระเป๋า</button></section>`;$("r34RoyalClaim").onclick=()=>claimRoyalDrops(pen);openModal?.()}
   let royalClaimBusy=false;
   async function claimRoyalDrops(pen){if(royalClaimBusy)return;royalClaimBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const st=ensure(normalizeState(snap.data(),currentMember)),arr=st.alpaca.royalDiscDrops[`pen${pen}`]||[];qty=arr.reduce((n,d)=>n+int(d.qty||2),0);if(!qty)throw new Error("ของดรอปนี้ถูกรับไปแล้ว");st.specials=st.specials||{};st.specials.therapyDiscPink=admin()?9999:int(st.specials.therapyDiscPink)+qty;st.alpaca.royalDiscDrops[`pen${pen}`]=[];next=st;tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=ensure(normalizeState(next,currentMember));if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();renderRoyalDrops();message?.("💿 รับเรียบร้อย",`แผ่นเพลงบำบัดหัวใจหวาน ×${qty} เข้ากระเป๋าจริงแล้วค่ะ`)}catch(e){message?.("รับไม่ได้",e?.message||"กรุณาลองใหม่")}finally{royalClaimBusy=false}}
 
   function processHamsterDrops(){
     if(visitContext||!currentMemberKey)return false;const s=ensure(live());if(!s?.farmGuardians)return false;const t=now();let changed=false,activeIds=new Set();
-    for(const farm of [2,3,4]){const hs=(s.farmGuardians[String(farm)]?.hamsters||[]).filter(Boolean),arr=s.hamsterDiscDrops[String(farm)];if(!hs.length){if(arr.length){s.hamsterDiscDrops[String(farm)]=[];changed=true}continue}for(const h of hs){const id=String(h.id||"");if(!id)continue;activeIds.add(id);const last=Number(s.hamsterDiscClock[id]);if(!last){s.hamsterDiscClock[id]=t;changed=true;continue}const due=Math.floor((t-last)/HAM_MS);if(due<1)continue;const rounds=Math.min(due,24);for(let r=0;r<rounds;r++)arr.push({id:`r34-ham-${id}-${last+(r+1)*HAM_MS}`,hamsterId:id,farm,qty:1,createdAt:last+(r+1)*HAM_MS});if(arr.length>60)arr.splice(0,arr.length-60);s.hamsterDiscClock[id]=last+due*HAM_MS;changed=true}}
+    for(const farm of [2,3,4]){const hs=(s.farmGuardians[String(farm)]?.hamsters||[]).filter(Boolean),arr=s.hamsterDiscDrops[String(farm)];if(!hs.length){if(arr.length){s.hamsterDiscDrops[String(farm)]=[];changed=true}continue}for(const h of hs){const id=String(h.id||"");if(!id)continue;activeIds.add(id);let last=Number(s.hamsterDiscClock[id]);if(!last){const anchor=[h.placedAt,h.createdAt,h.bornAt,h.updatedAt].map(Number).filter(x=>Number.isFinite(x)&&x>0&&x<=t);last=anchor.length?Math.max(...anchor):t-HAM_MS;s.hamsterDiscClock[id]=last;changed=true}const due=Math.floor((t-last)/HAM_MS);if(due<1)continue;const rounds=Math.min(due,24);for(let r=0;r<rounds;r++)arr.push({id:`r34-ham-${id}-${last+(r+1)*HAM_MS}`,hamsterId:id,farm,qty:1,createdAt:last+(r+1)*HAM_MS});if(arr.length>60)arr.splice(0,arr.length-60);s.hamsterDiscClock[id]=last+due*HAM_MS;changed=true}}
     for(const id of Object.keys(s.hamsterDiscClock))if(!activeIds.has(id)){delete s.hamsterDiscClock[id];changed=true}
     if(changed){try{saveLocalOnly?.(s);save?.()}catch(_){}}renderHamsterDrops();return changed;
   }
   function currentFarm(){return Math.max(1,Math.min(4,(Number(farmPlotPage)||0)+1))}
-  function renderHamsterDrops(){const screen=$("gameScreen");if(!screen||screen.classList.contains("hidden"))return;let layer=$("r34HamsterDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34HamsterDiscLayer";layer.className="r34-drop-layer r34-hamster-drop-layer";screen.appendChild(layer)}const farm=currentFarm(),arr=farm>=2?(ensure(live())?.hamsterDiscDrops?.[String(farm)]||[]):[];layer.innerHTML=arr.slice(-10).map((d,i)=>`<button type="button" class="r34-disc-drop hamster" data-r34-ham="1" style="left:${31+(i%5)*10}%;top:${67+Math.floor(i/5)*7}%"><img src="therapy-disc-rock.png" alt="แผ่นเสียง"></button>`).join("");layer.querySelectorAll("[data-r34-ham]").forEach(b=>b.onclick=()=>showHamsterClaim(farm))}
+  function renderHamsterDrops(){const screen=$("gameScreen");if(!screen||screen.classList.contains("hidden"))return;let layer=$("r34HamsterDiscLayer");if(!layer){layer=document.createElement("div");layer.id="r34HamsterDiscLayer";layer.className="r34-drop-layer r34-hamster-drop-layer";screen.appendChild(layer)}const farm=currentFarm(),arr=farm>=2?(ensure(live())?.hamsterDiscDrops?.[String(farm)]||[]):[];layer.innerHTML=arr.slice(-18).map((d,i)=>`<button type="button" class="r34-disc-drop hamster" data-r34-ham="1" style="left:${24+(i%6)*10}%;top:${72+Math.floor(i/6)*5}%"><img src="therapy-disc-rock.png" alt="แผ่นเสียง"></button>`).join("");layer.querySelectorAll("[data-r34-ham]").forEach(b=>b.onclick=()=>showHamsterClaim(farm))}
   function showHamsterClaim(farm=currentFarm()){const arr=ensure(live())?.hamsterDiscDrops?.[String(farm)]||[],qty=arr.reduce((n,d)=>n+int(d.qty||1),0);if(!qty)return;$("modalContent").innerHTML=`<section class="feature-panel r34-reward-panel"><img class="r34-reward-hero" src="therapy-disc-rock.png" alt=""><h2>🐹 ของดรอป Farm ${farm}</h2><p>แฮมสเตอร์ในฟาร์มนี้ดรอปแผ่นเพลงบำบัดพลังร็อก <b>×${qty}</b></p><small>1 ตัว = 1 แผ่น ทุก 3 ชั่วโมง • นับเวลาจริง</small><button id="r34HamClaim" class="primary-spooky-action">รับเข้ากระเป๋า</button></section>`;$("r34HamClaim").onclick=()=>claimHamsterDrops(farm);openModal?.()}
   let hamClaimBusy=false;
   async function claimHamsterDrops(farm){if(hamClaimBusy)return;hamClaimBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ");const st=ensure(normalizeState(snap.data(),currentMember)),arr=st.hamsterDiscDrops[String(farm)]||[];qty=arr.reduce((n,d)=>n+int(d.qty||1),0);if(!qty)throw new Error("ของดรอปนี้ถูกรับไปแล้ว");st.specials=st.specials||{};st.specials.therapyDiscRock=admin()?9999:int(st.specials.therapyDiscRock)+qty;st.hamsterDiscDrops[String(farm)]=[];next=st;tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});ownState=ensure(normalizeState(next,currentMember));if(!visitContext)state=ownState;saveLocalOnly?.(ownState);closeModal?.();renderHamsterDrops();message?.("💿 รับเรียบร้อย",`แผ่นเพลงบำบัดพลังร็อก ×${qty} เข้ากระเป๋าจริงแล้วค่ะ`)}catch(e){message?.("รับไม่ได้",e?.message||"กรุณาลองใหม่")}finally{hamClaimBusy=false}}
@@ -26907,7 +26894,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   function resumeAll(force=false){
     if(!currentMemberKey||visitContext)return;const t=Date.now();if(!force&&t-lastResume<10000)return;lastResume=t;const s=ensure(live());if(!s)return;
     let changed=cleanupDirtyR34;if(s.hedgehog&&Array.isArray(s.hedgehog.drops)){const n=s.hedgehog.drops.length;s.hedgehog.drops=s.hedgehog.drops.filter(d=>HEDGE_VALID.has(String(d?.type||"")));if(n!==s.hedgehog.drops.length)changed=true}
-    try{processDogDrops?.()}catch(e){console.warn("R34 dog drops",e)}try{processCatDrops?.()}catch(e){console.warn("R34 cat drops",e)}try{globalThis.YN_V240_PROCESS_TREASURE?.()}catch(e){console.warn("R34 alpaca treasure drops",e)}/* R34.11: royal/hamster disc production is cloud-authoritative below; legacy local producers disabled. */
+    try{processDogDrops?.()}catch(e){console.warn("R34 dog drops",e)}try{processCatDrops?.()}catch(e){console.warn("R34 cat drops",e)}try{globalThis.YN_V240_PROCESS_TREASURE?.()}catch(e){console.warn("R34 alpaca treasure drops",e)}try{processRoyalDrops()}catch(e){console.warn("R34.19 royal disc drops",e)}try{processHamsterDrops()}catch(e){console.warn("R34.19 hamster disc drops",e)}
     if(changed){cleanupDirtyR34=false;try{saveLocalOnly?.(s);save?.()}catch(_){cleanupDirtyR34=true}}cleanupUI();renderRoyalDrops();renderHamsterDrops();try{updateMeritUI?.()}catch(_){}
   }
   const obs=new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)cleanupUI(n)});obs.observe(document.documentElement,{subtree:true,childList:true});
@@ -31953,6 +31940,7 @@ console.info(window.YAINOO_BUILD,"loaded");
    ===================================================================== */
 (()=>{
   "use strict";
+  return; /* R34.19: disabled duplicate controller; restored legacy owners */
   const BUILD="S2-R34.13.1-MENU-HOTEL-DISCSTATE";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
@@ -32118,6 +32106,7 @@ console.info(window.YAINOO_BUILD,"loaded");
    ===================================================================== */
 (()=>{
   "use strict";
+  return; /* R34.19: disabled duplicate controller; restored legacy owners */
   const BUILD="S2-R34.13.1-MENU-HOTEL-DISCSTATE";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
@@ -32201,6 +32190,7 @@ console.info(window.YAINOO_BUILD,"loaded");
      per-animal countdown / visible pending disc icons.
    ============================================================ */
 (function YN_R34132_DIRECT_CONTROLS(){
+  return; /* R34.19: disabled duplicate controller; restored legacy owners */
   const BUILD="S2-R34.13.3-MENU-HOTEL-DROP-FINAL";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
@@ -32301,6 +32291,7 @@ console.info(window.YAINOO_BUILD,"loaded");
    ===================================================================== */
 (()=>{
   "use strict";
+  return; /* R34.19: disabled duplicate controller; restored legacy owners */
   const BUILD="S2-R34.13.3-MENU-HOTEL-DROP-FINAL";
   const $=id=>document.getElementById(id);
   const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
@@ -32363,4 +32354,14 @@ console.info(window.YAINOO_BUILD,"loaded");
   function tick(){removeAllOldHoneyUI();syncMenu();syncHotelButton();hideLegacyFeed();renderDrops();if(Date.now()-lastSync>15000)syncDrop(false)}
   setInterval(tick,750);setTimeout(()=>{tick();syncDrop(false)},300);window.addEventListener("pageshow",()=>setTimeout(()=>{tick();syncDrop(false)},80),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{tick();syncDrop(false)},80)},{passive:true});
   globalThis.YN_R34133={BUILD,openHoney,openFeed,forceDrop,syncDrop,claim};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* R34.19 — restored old owners + physical disc proof */
+(function YN_R3419_PHYSICAL_DISC_PROOF(){
+  function live(){return ownState||state}
+  function forceVisibleDrops(){const s=live();if(!s||visitContext)return false;try{globalThis.YN_R34?.ensure?.(s)}catch(_){}const t=typeof gameNow==="function"?gameNow():Date.now();let made=0;
+    (s.alpaca?.pens||[]).forEach((pen,pi)=>{const arr=s.alpaca.royalDiscDrops?.[`pen${pi+1}`];if(!Array.isArray(arr))return;(pen?.alpacas||[]).filter(a=>a?.type==="adult"&&["prince","princess"].includes(String(a.color||""))).forEach(a=>{for(let i=0;i<6;i++){arr.push({id:`r3419-royal-${a.id}-${t}-${i}`,animalId:String(a.id),qty:2,createdAt:t+i});made++}})});
+    for(const farm of [2,3,4]){const arr=s.hamsterDiscDrops?.[String(farm)];if(!Array.isArray(arr))continue;for(const h of (s.farmGuardians?.[String(farm)]?.hamsters||[])){for(let i=0;i<4;i++){arr.push({id:`r3419-ham-${h.id}-${t}-${i}`,hamsterId:String(h.id),farm,qty:1,createdAt:t+i});made++}}}
+    try{saveLocalOnly?.(s);save?.();flushCloudSave?.()}catch(_){}try{globalThis.YN_R34?.resumeAll?.(true)}catch(_){}return made}
+  globalThis.YN_R3419_DISC={forceVisibleDrops};
 })();
