@@ -9941,3 +9941,16 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r17-flower-plot,.r17-wine-machine{pointer-events:auto!important;touch-action:manipulation!important;}
 .r17-flower-plot>* , .r17-wine-machine>*{pointer-events:none!important;}
 #yn124HotelFeedAll{font-family:inherit!important;}
+
+
+/* R34.13.0 — static controls: cannot be removed by scene re-renderers */
+.core13-bottom-btn{position:absolute!important;z-index:2500!important;min-height:44px!important;border:2px solid #e5c785!important;border-radius:16px!important;background:linear-gradient(180deg,#704680,#422c50)!important;color:#fff4d3!important;box-shadow:0 6px 16px #0008!important;font:900 clamp(10px,2.4vw,14px)/1.1 Thonburi,"Noto Sans Thai",sans-serif!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.core13-honey-btn{right:31%!important;bottom:5.5%!important;padding:7px 12px!important}
+.core13-hotel-btn{left:3.2%!important;bottom:4.6%!important;padding:9px 13px!important;max-width:180px!important}
+.core13-drop-btn{position:absolute!important;z-index:2700!important;border:2px solid #f4d88e!important;border-radius:50%!important;background:#fff!important;box-shadow:0 6px 18px #0009!important;padding:5px!important;pointer-events:auto!important;touch-action:manipulation!important}
+.core13-drop-btn img{width:48px!important;height:48px!important;object-fit:contain!important;display:block!important}.core13-drop-btn b{display:block!important;color:#3e2547!important;font-weight:900!important;font-size:11px!important}
+.core13-ham-drop{left:50%!important;bottom:22%!important;transform:translateX(-50%)!important}.core13-royal-drop{left:50%!important;top:52%!important;transform:translate(-50%,-50%)!important}
+.core13-admin-test{position:absolute!important;z-index:2600!important;border:2px solid #e5c785!important;border-radius:13px!important;background:#4b3159!important;color:#fff2ce!important;font-weight:900!important;padding:8px 10px!important;pointer-events:auto!important;touch-action:manipulation!important}
+#core13AdminDropFarmBtn{left:3.5%!important;bottom:12%!important}.core13-admin-alpaca{right:3%!important;bottom:10.5%!important}
+.hidden.core13-bottom-btn,.hidden.core13-drop-btn,.hidden.core13-admin-test{display:none!important}
+@media(max-width:430px){.core13-honey-btn{right:30%!important;bottom:5.3%!important;padding:6px 9px!important}.core13-hotel-btn{left:3%!important;bottom:4.8%!important;max-width:150px!important}}
