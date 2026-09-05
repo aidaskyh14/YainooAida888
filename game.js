@@ -31318,3 +31318,166 @@ console.info(window.YAINOO_BUILD,"loaded");
   setInterval(mount,500);window.addEventListener("resize",mount,{passive:true});window.addEventListener("pageshow",()=>setTimeout(mount,50),{passive:true});setTimeout(mount,100);
   globalThis.YN_HONEY_REFUEL_1212={open,refill,mount};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R34.12.13 — HOTEL PHYSICAL MASTER FEED BUTTON
+   A real body-level button outside the hotel tool rail. No legacy ids.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.13-HOTEL-PHYSICAL-MASTER-FEED";
+  const BTN="ynHotelPhysicalMasterFeed";
+  let busy=false,lastTap=0;
+  const $=id=>document.getElementById(id);
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const own=()=>visitContext?null:(state||ownState||null);
+  function hungry(s,t=now()){
+    try{ensureDogHotelPenState?.(s);ensureCatState?.(s)}catch(_){}
+    const out=[];
+    for(const p of (s?.dogs||[])){
+      if(!p?.placedHotel)continue;
+      if(Number(p?.expiresAt||0)>0 && Number(p.expiresAt)<=t)continue;
+      try{if(YN_petCanFeed?.(p,t))out.push({kind:"dog",id:String(p.id||"")})}catch(_){ }
+    }
+    for(const p of (s?.cats||[])){
+      if(!(p?.placedHotel||Number(p?.placedFarm)===-1))continue;
+      if(Number(p?.expiresAt||0)>0 && Number(p.expiresAt)<=t)continue;
+      try{if(YN_petCanFeed?.(p,t))out.push({kind:"cat",id:String(p.id||"")})}catch(_){ }
+    }
+    return out.filter(x=>x.id);
+  }
+  function mount(){
+    const inHotel=currentScene==="dogHotel"||!!document.getElementById("dogHotelPetLayer");
+    let b=$(BTN);
+    if(!inHotel||visitContext){b?.remove();return}
+    /* Hide the broken rail button so there is only one obvious bulk-feed control. */
+    const old=$("r3411HotelFeedAll");if(old)old.style.display="none";
+    if(!b){
+      b=document.createElement("button");b.id=BTN;b.type="button";b.innerHTML="🍽️ ให้อาหารหมา+แมวทั้งหมด";
+      document.body.appendChild(b);
+    }
+    b.style.cssText="position:fixed!important;left:50%!important;bottom:112px!important;transform:translateX(-50%)!important;width:min(290px,72vw)!important;height:52px!important;z-index:2147483647!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;touch-action:manipulation!important;border:2px solid #f1d49b!important;border-radius:18px!important;background:#56305d!important;color:#fff!important;font-size:15px!important;font-weight:800!important;box-shadow:0 5px 16px #0008!important;";
+  }
+  function openPicker(){
+    if(visitContext)return;
+    const s=own();if(!s)return message?.("ให้อาหารทั้งหมดไม่ได้","ยังโหลดข้อมูลผู้เล่นไม่เสร็จค่ะ");
+    const need=hungry(s).length;
+    if(!need)return message?.("🍽️ ยังไม่ต้องให้อาหาร","ตอนนี้ไม่มีหมาหรือแมวที่หิวในโฮเทลค่ะ");
+    const mc=$("modalContent");if(!mc)return message?.("ให้อาหารทั้งหมดไม่ได้","ไม่พบหน้าต่างรายการอาหารค่ะ");
+    let cards="";
+    try{cards=YN_petFoodCards(s,need)||""}catch(e){console.warn(BUILD,"food cards",e)}
+    mc.innerHTML=`<section class="feature-panel yn-feed-all-panel"><h2>🍽️ ให้อาหารหมา+แมวทั้งหมด</h2><p>หิวรวม <b>${need} ตัว</b> • ต้องใช้ <b>${need} ถาด</b></p><p class="feature-subtitle">เลือกเมนูเดียว ระบบจะใช้เมนูที่เลือกเท่านั้น</p><div class="cat-feed-grid">${cards}</div><button id="ynHotelPhysicalCancel" class="secondary-action" type="button">ยกเลิก</button></section>`;
+    mc.querySelectorAll("[data-yn-pet-feed-key]").forEach(el=>{el.dataset.ynPhysicalFeed="1";el.style.pointerEvents="auto";el.style.touchAction="manipulation"});
+    $("ynHotelPhysicalCancel").onclick=()=>closeModal?.();
+    openModal?.();
+  }
+  async function feed(foodType,key){
+    if(busy||visitContext||!currentMemberKey)return;busy=true;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      let next=null,count=0,rewardTotal=0,penalties=0;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember),t=now(),targets=hungry(s,t);count=targets.length;
+        if(!count)throw new Error("ตอนนี้ไม่มีหมาหรือแมวที่หิวแล้ว");
+        if(typeof YN_consumePetFood!=="function"||!YN_consumePetFood(s,foodType,key,count))throw new Error(`อาหารเมนูนี้ต้องมีอย่างน้อย ${count} ถาด`);
+        const dogs=new Map((s.dogs||[]).map(p=>[String(p?.id||""),p])),cats=new Map((s.cats||[]).map(p=>[String(p?.id||""),p]));
+        for(const x of targets){
+          const p=x.kind==="dog"?dogs.get(x.id):cats.get(x.id);if(!p)continue;
+          try{if(YN_petIsAngry?.(p,t)&&Number(p.lastPenaltyBucket||0)<1){s.merit=(Number(s.merit)||0)-30;penalties++}}catch(_){}
+          const reward=typeof randInt==="function"?randInt(20,50):20;rewardTotal+=reward;s.merit=(Number(s.merit)||0)+reward;
+          p.nextFeedAt=t+Number(typeof YN_PET_HUNGER_MS!=="undefined"?YN_PET_HUNGER_MS:14400000);p.lastPenaltyBucket=0;
+          try{if(x.kind==="dog"&&typeof DOG_DROP_INTERVAL_MS!=="undefined")p.nextDropAt=t+DOG_DROP_INTERVAL_MS;else if(x.kind==="cat"&&typeof CAT_DROP_INTERVAL_MS!=="undefined")p.nextDropAt=t+CAT_DROP_INTERVAL_MS}catch(_){}
+        }
+        try{incrementMissionOn?.(s,"feedOwnPets",count)}catch(_){}
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        try{next=structuredClone(s)}catch(_){next=JSON.parse(JSON.stringify(s))}
+        tx.set(saveRef,{...next,activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
+      closeModal?.();try{renderDogHotelScene?.()}catch(_){try{draw?.()}catch(__){}}
+      message?.("🍽️ ให้อาหารทั้งหมดเรียบร้อย",`ใช้อาหาร ${count} ถาด • หมา/แมว ${count} ตัว${rewardTotal?`<br>ได้รับรวม +${rewardTotal} กุศล`:""}${penalties?`<br>สถานะโกรธ ${penalties} ตัว ถูกหัก -${penalties*30} กุศล`:""}`);
+    }catch(e){message?.("ให้อาหารทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy=false}
+  }
+  function intercept(e){
+    const t=e.target?.closest?.(`#${BTN},[data-yn-physical-feed='1']`);if(!t)return;
+    const n=Date.now();if(n-lastTap<220){e.preventDefault?.();e.stopImmediatePropagation?.();return}lastTap=n;
+    e.preventDefault?.();e.stopImmediatePropagation?.();
+    if(t.id===BTN)openPicker();else feed(t.dataset.ynPetFeedType,t.dataset.ynPetFeedKey);
+  }
+  window.addEventListener("pointerdown",intercept,true);
+  window.addEventListener("touchstart",intercept,{capture:true,passive:false});
+  window.addEventListener("click",intercept,true);
+  setInterval(mount,600);window.addEventListener("pageshow",()=>setTimeout(mount,80),{passive:true});window.addEventListener("resize",mount,{passive:true});setTimeout(mount,100);
+  globalThis.YN_HOTEL_PHYSICAL_FEED={mount,open:openPicker,feed};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.12.14 — ADMIN ANIMAL DISC DROP TEST
+   Admin-only physical test button. Creates real pending drops in /saves
+   through the same arrays used by the normal claim/render flow.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.12.14-ADMIN-DISC-DROP-TEST";
+  const BTN_ID="ynAdminDiscDropTest";
+  let busy=false,lastTap=0;
+  const $=id=>document.getElementById(id);
+  const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
+  const isAida=()=>{try{return String(currentMember||"")==="Aida"||String(currentMemberKey||"").toLowerCase()==="aida"||adminProfile?.role==="admin"||(typeof isAdmin==="function"&&isAdmin())}catch(_){return String(currentMember||"")==="Aida"}};
+  function ensure(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.royalDiscDrops=s.alpaca.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object"?s.alpaca.royalDiscDrops:{};
+    s.alpaca.royalDiscClock=s.alpaca.royalDiscClock&&typeof s.alpaca.royalDiscClock==="object"?s.alpaca.royalDiscClock:{};
+    for(let p=1;p<=5;p++)s.alpaca.royalDiscDrops[`pen${p}`]=Array.isArray(s.alpaca.royalDiscDrops[`pen${p}`])?s.alpaca.royalDiscDrops[`pen${p}`]:[];
+    s.hamsterDiscDrops=s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object"?s.hamsterDiscDrops:{};
+    s.hamsterDiscClock=s.hamsterDiscClock&&typeof s.hamsterDiscClock==="object"?s.hamsterDiscClock:{};
+    for(const f of [2,3,4])s.hamsterDiscDrops[String(f)]=Array.isArray(s.hamsterDiscDrops[String(f)])?s.hamsterDiscDrops[String(f)]:[];
+    return s;
+  }
+  function scan(s){
+    ensure(s);const royals=[],hams=[],seenR=new Set(),seenH=new Set();
+    (s?.alpaca?.pens||[]).forEach((pen,pi)=>(pen?.alpacas||[]).forEach(a=>{
+      const id=String(a?.id||"");
+      if(id&&!seenR.has(id)&&a?.type==="adult"&&["prince","princess"].includes(String(a?.color||""))){seenR.add(id);royals.push({id,pen:pi+1,color:String(a.color)})}
+    }));
+    for(const f of [2,3,4])for(const h of (s?.farmGuardians?.[String(f)]?.hamsters||[])){
+      const id=String(h?.id||"");if(id&&!seenH.has(id)){seenH.add(id);hams.push({id,farm:f,color:String(h?.color||"")})}
+    }
+    return{royals,hams};
+  }
+  async function test(kind="all"){
+    if(busy||!isAida()||visitContext||!currentMemberKey)return;busy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,summary=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟ Aida");
+        const s=ensure(normalizeState(snap.data(),currentMember)),found=scan(s),t=Date.now();let royalDrops=0,hamDrops=0;
+        if(kind!=="ham")for(const r of found.royals){const arr=s.alpaca.royalDiscDrops[`pen${r.pen}`];arr.push({id:`admin-test-royal-${r.id}-${t}-${arr.length}`,animalId:r.id,qty:2,createdAt:t,adminTest:true});royalDrops+=2}
+        if(kind!=="royal")for(const h of found.hams){const arr=s.hamsterDiscDrops[String(h.farm)];arr.push({id:`admin-test-ham-${h.id}-${t}-${arr.length}`,hamsterId:h.id,farm:h.farm,qty:1,createdAt:t,adminTest:true});hamDrops+=1}
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=t;summary={royals:found.royals.length,hams:found.hams.length,royalDrops,hamDrops};next=cp(s);
+        tx.update(ref,{"alpaca.royalDiscDrops":cp(s.alpaca.royalDiscDrops),hamsterDiscDrops:cp(s.hamsterDiscDrops),clientSaveRevision:Number(s.clientSaveRevision)||1,clientLocalEditAt:t,updatedAt:fs.serverTimestamp()});
+      });
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};try{draw?.()}catch(_){};try{globalThis.YN_R341210?.syncDiscs?.(true)}catch(_){} }
+      const lines=[];lines.push(`พบอัลปาก้าเจ้าชาย/เจ้าหญิง ${summary?.royals||0} ตัว`);lines.push(`พบแฮมสเตอร์ที่วางจริง ${summary?.hams||0} ตัว`);lines.push(`สร้างแผ่นหวาน ${summary?.royalDrops||0} แผ่น`);lines.push(`สร้างแผ่นร็อก ${summary?.hamDrops||0} แผ่น`);
+      message?.("🧪 ทดสอบดรอปสำเร็จ",lines.join("<br>"));
+    }catch(e){message?.("ทดสอบดรอปไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy=false}
+  }
+  function openPanel(){
+    if(!isAida())return;const s=ensure(ownState||state||{}),found=scan(s),mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel"><h2>🧪 ทดสอบดรอปสัตว์ — ADMIN</h2><p>ตรวจพบเจ้าชาย/เจ้าหญิง <b>${found.royals.length}</b> ตัว • แฮมสเตอร์ที่วางจริง <b>${found.hams.length}</b> ตัว</p><small>ปุ่มนี้สร้าง “ของดรอปจริงที่รอเก็บ” ไม่แจกเข้ากระเป๋าตรง ๆ และไม่รีเซ็ตเวลา 1 ชม./3 ชม.</small><div style="display:grid;gap:10px;margin-top:14px"><button type="button" data-yn-admin-disc="all" class="primary-spooky-action">💿 ทดสอบดรอปทั้งหมดตอนนี้</button><button type="button" data-yn-admin-disc="royal" class="secondary-action">👑 ทดสอบเฉพาะอัลปาก้า</button><button type="button" data-yn-admin-disc="ham" class="secondary-action">🐹 ทดสอบเฉพาะแฮมสเตอร์</button></div><button id="ynAdminDiscClose" type="button" class="secondary-action" style="margin-top:12px">ปิด</button></section>`;
+    mc.querySelectorAll("[data-yn-admin-disc]").forEach(b=>b.onclick=()=>test(b.dataset.ynAdminDisc));$("ynAdminDiscClose").onclick=()=>closeModal?.();openModal?.();
+  }
+  function mount(){
+    let b=$(BTN_ID);if(!isAida()||visitContext||!currentMemberKey){b?.remove();return}
+    if(!b){b=document.createElement("button");b.id=BTN_ID;b.type="button";b.textContent="🧪 ทดสอบดรอป";document.body.appendChild(b)}
+    b.style.cssText="position:fixed!important;right:12px!important;bottom:174px!important;z-index:2147483647!important;display:block!important;pointer-events:auto!important;touch-action:manipulation!important;padding:10px 12px!important;border-radius:15px!important;border:2px solid #f1d49b!important;background:#6a3a74!important;color:#fff!important;font-weight:900!important;box-shadow:0 4px 14px #0008!important";
+  }
+  function intercept(e){const t=e.target?.closest?.(`#${BTN_ID}`);if(!t)return;const n=Date.now();if(n-lastTap<220){e.preventDefault?.();return}lastTap=n;e.preventDefault?.();e.stopImmediatePropagation?.();openPanel()}
+  window.addEventListener("pointerdown",intercept,true);window.addEventListener("touchstart",intercept,{capture:true,passive:false});window.addEventListener("click",intercept,true);
+  setInterval(mount,900);window.addEventListener("pageshow",()=>setTimeout(mount,80),{passive:true});setTimeout(mount,120);
+  globalThis.YN_ADMIN_DISC_TEST={open:openPanel,test,scan};globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
