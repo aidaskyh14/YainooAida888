@@ -9964,3 +9964,19 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r34131-hotel-feed.hidden{display:none!important}
 /* Hide every legacy feed-all control in the right hotel tool rail. */
 #s2HotelToolRail [data-r34131-legacy-feed="1"]{display:none!important;pointer-events:none!important}
+
+/* R34.13.2 — direct controls + visible per-animal disc clocks */
+#honeyFuelHud{display:none!important;pointer-events:none!important}
+.r34132-hotel-feed{position:absolute!important;left:50%!important;bottom:5.2%!important;transform:translateX(-50%)!important;z-index:500!important;min-width:235px!important;min-height:54px!important;padding:10px 18px!important;border:2px solid #efd18e!important;border-radius:20px!important;background:#4d2d67!important;color:#fff8df!important;font-weight:900!important;box-shadow:0 6px 18px #0008!important;pointer-events:auto!important;touch-action:manipulation!important}
+.r34132-countdown{position:absolute!important;left:50%!important;top:-17px!important;transform:translateX(-50%)!important;z-index:12!important;white-space:nowrap!important;padding:2px 5px!important;border-radius:8px!important;background:rgba(43,25,66,.92)!important;color:#fff4cf!important;border:1px solid rgba(239,209,142,.8)!important;font:700 9px/1.1 sans-serif!important;pointer-events:none!important}
+.r34132-pending-disc{position:absolute!important;left:50%!important;bottom:-8px!important;transform:translateX(-50%)!important;z-index:13!important;width:30px!important;height:30px!important;border-radius:50%!important;border:2px solid #efd18e!important;background:#fff!important;padding:3px!important;pointer-events:auto!important;touch-action:manipulation!important;box-shadow:0 3px 8px #0007!important}
+.r34132-pending-disc img{width:100%!important;height:100%!important;object-fit:contain!important;pointer-events:none!important}
+#alpacaPenAnimalLayer .alpaca-pen-animal,#r25GuardianPetLayer .r25-hamster{overflow:visible!important}
+
+
+/* R34.13.3 canonical controls */
+.r34133-hotel-feed{position:fixed!important;left:50%!important;bottom:calc(env(safe-area-inset-bottom,0px) + 92px)!important;transform:translateX(-50%)!important;z-index:2147483642!important;display:block;min-width:250px!important;max-width:82vw!important;min-height:54px!important;padding:10px 16px!important;border:2px solid #efd18e!important;border-radius:20px!important;background:linear-gradient(180deg,#724883,#392649)!important;color:#fff6da!important;box-shadow:0 8px 22px #0009!important;font:900 clamp(12px,3vw,16px)/1.15 Thonburi,"Noto Sans Thai",sans-serif!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.r34133-hotel-feed.hidden{display:none!important}
+.r34133-drop-clock{position:absolute!important;left:50%!important;top:-18px!important;transform:translateX(-50%)!important;z-index:999!important;min-width:54px!important;padding:2px 5px!important;border-radius:9px!important;background:rgba(55,31,66,.92)!important;border:1px solid #efd18e!important;color:#fff6da!important;font:800 9px/1.15 Thonburi,"Noto Sans Thai",sans-serif!important;white-space:nowrap!important;pointer-events:none!important}
+.r34133-drop-disc{position:absolute!important;right:-8px!important;top:-8px!important;z-index:1000!important;width:30px!important;height:30px!important;border-radius:50%!important;border:2px solid #efd18e!important;background:#fff!important;font-size:16px!important;pointer-events:auto!important;touch-action:manipulation!important}
+#s2MainNav [data-s2-main="honey"],#s2MainNav [data-s2-main="disc-test"]{pointer-events:auto!important;touch-action:manipulation!important}
