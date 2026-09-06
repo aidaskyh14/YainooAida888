@@ -32569,3 +32569,6 @@ console.info(window.YAINOO_BUILD,"loaded");
   globalThis.YN_R3420={BUILD,openOldHoney,openHotelBulk,openHamsterFeed,renderHamsterGround,renderRoyalGround,syncRoyalDrops};
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+/* R34.21 package marker */
+window.YAINOO_PACKAGE_BUILD="S2-R34.21-URGENT3";

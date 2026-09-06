@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.20-CANONICAL">
+  <link rel="stylesheet" href="style.css?v=S2-R34.21-URGENT3">
 </head>
 <body>
   <main id="app">
@@ -462,7 +462,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.20-CANONICAL"></script>
+<script src="game.js?v=S2-R34.21-URGENT3"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -549,6 +549,74 @@
   <script id="s2-final-build-marker">window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";</script>
 
   <button id="r3420HamsterFeedBtn" class="r3420-hamster-feed hidden" type="button" aria-label="ให้อาหารแฮมสเตอร์ 10 อย่าง"><span>🐹🍽️</span><b>ให้อาหารแฮมสเตอร์</b><small>ใช้ 10 อาหาร → ดรอป CD</small></button>
-  <div id="r3420BuildBadge" class="r3420-build-badge" aria-hidden="true">R34.20 INDEX</div>
+  <div id="r3420BuildBadge" class="r3420-build-badge" aria-hidden="true">R34.21 INDEX</div>
+
+  <!-- R34.21 urgent three-system controls -->
+  <button id="r3421HotelFeedAll" class="r3421-action r3421-hotel hidden" type="button"><span>🍽️</span><b>ให้อาหารทั้งหมด</b><small id="r3421HotelStatus">กำลังตรวจสัตว์ที่หิว…</small></button>
+  <button id="r3421HamsterFeed" class="r3421-action r3421-hamster hidden" type="button"><span>🐹</span><b>ให้อาหาร</b><small id="r3421HamsterStatus">ใช้ 10 ชิ้น • +30–300 กุศล</small></button>
+  <div id="r3421BuildBadge" class="r3421-build">R34.21 URGENT ✓</div>
+<script id="r3421-urgent-controller">
+(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id), N=v=>Math.max(0,Math.floor(Number(v)||0)), now=()=>typeof gameNow==='function'?gameNow():Date.now();
+  const clone=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const esc=v=>{try{return typeof safeHtml==='function'?safeHtml(String(v??'')):String(v??'')}catch(_){return String(v??'')}};
+  const isAdmin=()=>{try{return String(currentMember||'')==='Aida'||String(currentMemberKey||'').toLowerCase()==='aida'||adminProfile?.role==='admin'||(typeof window.isAdmin==='function'&&window.isAdmin())}catch(_){return false}};
+  const own=()=>{try{return visitContext?null:(state||ownState||null)}catch(_){return null}};
+  const applyLocal=s=>{if(!s)return;try{s=typeof normalizeState==='function'?normalizeState(s,currentMember):s}catch(_){};try{ownState=s;if(!visitContext)state=s;saveLocalOnly?.(s);updateMeritUI?.()}catch(_){}};
+  const cooldownText=ms=>{ms=Math.max(0,N(ms));const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h?`${h} ชม. ${m} นาที`:`${m} นาที`};
+
+  // ---------- HOTEL: fixed bottom-left, separate from the right tool rail ----------
+  function hotelPen(){try{return Math.max(1,Math.min(4,N(currentDogHotelPen)||1))}catch(_){return 1}}
+  function petPen(s,p){return Math.max(1,Math.min(4,N(s?.hotelPetPenMap?.[String(p?.id||'')]||p?.hotelPen||1)||1))}
+  function canFeed(p,t){if(!p?.id)return false;if(Number(p.expiresAt||0)>0&&Number(p.expiresAt)<=t)return false;if(Number(p.medicineUntil||0)>t)return false;try{if(typeof YN_petCanFeed==='function')return !!YN_petCanFeed(p,t)}catch(_){}return Number(p.nextFeedAt||0)<=t}
+  function hungry(s,pen=hotelPen(),t=now()){
+    const dogs=[],cats=[];
+    for(const p of (s?.dogs||[]))if(p?.placedHotel&&petPen(s,p)===pen&&canFeed(p,t))dogs.push(p);
+    for(const p of (s?.cats||[]))if((p?.placedHotel||Number(p?.placedFarm)===-1)&&petPen(s,p)===pen&&canFeed(p,t))cats.push(p);
+    return {dogs,cats,total:dogs.length+cats.length};
+  }
+  function petFoods(s){try{return (YN_petFoodEntries?.(s)||[]).filter(x=>N(x?.count)>0)}catch(_){return []}}
+  function consumePetFood(s,x,q){try{return !!YN_consumePetFood?.(s,x.type,x.key,q)}catch(_){return false}}
+  function picker(rows,prefix){return rows.length?rows.map((x,i)=>`<article class="r3421-food"><img src="${esc(x.image||'')}" alt=""><div><b>${esc(x.name||x.key)}</b><small>มี ×${N(x.count)}</small></div><div class="r3421-step"><button data-m="${prefix}-${i}">−</button><input id="${prefix}-${i}" type="number" min="0" max="${N(x.count)}" value="0"><button data-p="${prefix}-${i}">+</button></div></article>`).join(''):'<p>ยังไม่มีอาหารที่ใช้ได้ในกระเป๋าค่ะ</p>'}
+  function wire(rows,prefix,need,confirmId,done){const ins=rows.map((_,i)=>$(prefix+'-'+i)).filter(Boolean),total=$(prefix+'-total'),btn=$(confirmId);const sync=()=>{let n=0;ins.forEach(x=>{let v=Math.min(N(x.max),N(x.value));x.value=v;n+=v});if(total)total.textContent=n;if(btn)btn.disabled=n!==need};rows.forEach((_,i)=>{const input=$(prefix+'-'+i),m=document.querySelector(`[data-m="${prefix}-${i}"]`),p=document.querySelector(`[data-p="${prefix}-${i}"]`);if(m)m.onclick=()=>{input.value=Math.max(0,N(input.value)-1);sync()};if(p)p.onclick=()=>{input.value=Math.min(N(input.max),N(input.value)+1);sync()};if(input)input.oninput=sync});if(btn)btn.onclick=()=>done(rows.map((x,i)=>({...x,qty:N($(prefix+'-'+i)?.value)})).filter(x=>x.qty));sync()}
+  function openHotel(){const s=own();if(!s)return;const pen=hotelPen(),h=hungry(s,pen);if(!h.total)return message?.('🍽️ ให้อาหารทั้งหมด','ตอนนี้คอกนี้ไม่มีหมาหรือแมวที่หิวค่ะ');const rows=petFoods(s),pre='r3421-hotel';$('modalContent').innerHTML=`<section class="feature-panel r3421-panel"><h2>🍽️ ให้อาหารทั้งหมด • คอก ${pen}</h2><div class="r3421-summary"><b>🐶 หิว ${h.dogs.length} ตัว</b><b>🐱 หิว ${h.cats.length} ตัว</b><strong>รวม ${h.total} ตัว</strong></div><p>เลือกอาหารเองให้ครบ <b>${h.total} ถาด</b> • คละหลายเมนูได้</p><div class="r3421-foodlist">${picker(rows,pre)}</div><div class="r3421-total">เลือกแล้ว <b id="${pre}-total">0</b> / ${h.total}</div><button id="r3421HotelConfirm" class="primary-spooky-action" disabled>ยืนยันให้อาหารทั้งหมด</button></section>`;openModal?.();wire(rows,pre,h.total,'r3421HotelConfirm',p=>feedHotel(pen,p))}
+  let hotelBusy=false;
+  async function feedHotel(pen,picks){if(hotelBusy||!currentMemberKey)return;hotelBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey),pref=fs.doc(db,'publicProfiles',currentMemberKey);let next,count=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');const s=normalizeState(snap.data(),currentMember),h=hungry(s,pen,now());count=h.total;if(!count)throw new Error('ไม่มีสัตว์ที่หิวแล้ว');if(picks.reduce((a,x)=>a+N(x.qty),0)!==count)throw new Error(`ต้องเลือกอาหารให้ครบ ${count} ถาด`);for(const x of picks)if(!consumePetFood(s,x,x.qty))throw new Error('อาหารที่เลือกมีจำนวนไม่พอ');const t=now(),wait=Number(typeof YN_PET_HUNGER_MS!=='undefined'?YN_PET_HUNGER_MS:0)||4*3600000;for(const p of [...h.dogs,...h.cats]){p.nextFeedAt=t+wait;p.lastPenaltyBucket=0}try{incrementMissionOn?.(s,'feedOwnPets',count)}catch(_){}s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=clone(s);tx.set(ref,{...clone(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==='function'?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});applyLocal(next);closeModal?.();try{renderDogHotelScene?.()}catch(_){};message?.('🍽️ ให้อาหารทั้งหมดแล้ว',`ให้อาหารหมา+แมว ${count} ตัวเรียบร้อยค่ะ`)}catch(e){message?.('ให้อาหารทั้งหมดไม่ได้',e?.message||'กรุณาลองใหม่')}finally{hotelBusy=false}}
+
+  // ---------- HAMSTER: collective feed 10 items, +30..300 merit, 4h cooldown ----------
+  function farmNo(){try{return Math.max(1,Math.min(4,N(farmPlotPage)+1))}catch(_){return 1}}
+  function hams(s,f){return (s?.farmGuardians?.[String(f)]?.hamsters||[]).filter(x=>x&&x.id)}
+  function hamFoodRows(s){const out=[];const add=(type,key,name,image,count)=>{count=N(count);if(count>0)out.push({type,key,name,image,count})};try{for(const r of (RECIPES||[]))add('dish',r.id,r.name,r.image,typeof dishCountInState==='function'?dishCountInState(r.id,s):s?.dishInventory?.[r.id])}catch(_){}try{for(const [k,r] of Object.entries(HOME_FOODS||{}))add('homeFood',k,r.name,r.image,s?.homeFoods?.[k])}catch(_){}try{for(const [k,r] of Object.entries(window.YN_V240?.products||{}))add('factory',k,r.name,r.image,s?.alpaca?.factory?.products?.[k])}catch(_){}return out}
+  function consumeHam(s,x,q){q=N(q);if(isAdmin())return true;if(x.type==='dish')return !!removeDishesFromState?.(s,x.key,q);if(x.type==='homeFood'){if(N(s?.homeFoods?.[x.key])<q)return false;s.homeFoods[x.key]-=q;return true}if(x.type==='factory'){if(N(s?.alpaca?.factory?.products?.[x.key])<q)return false;s.alpaca.factory.products[x.key]-=q;return true}return false}
+  function hamLast(s,f){s.hamsterGroupFeedAt=s.hamsterGroupFeedAt&&typeof s.hamsterGroupFeedAt==='object'?s.hamsterGroupFeedAt:{};return Number(s.hamsterGroupFeedAt[String(f)]||0)}
+  function openHam(){const s=own(),f=farmNo();if(!s||f<2||f>4)return;const hs=hams(s,f);if(!hs.length)return message?.('🐹 ให้อาหาร','Farm นี้ไม่มีแฮมสเตอร์ค่ะ');const left=Math.max(0,hamLast(s,f)+4*3600000-now());if(left)return message?.('🐹 ยังให้อาหารไม่ได้',`คูลดาวน์เหลือ ${cooldownText(left)}`);const rows=hamFoodRows(s),pre='r3421-ham';$('modalContent').innerHTML=`<section class="feature-panel r3421-panel"><h2>🐹 ให้อาหารแฮมสเตอร์ • Farm ${f}</h2><div class="r3421-summary"><b>แฮมสเตอร์ ${hs.length} ตัว</b><strong>ให้อาหารรวม 10 ชิ้น</strong></div><p>เลือกได้จาก <b>อาหารในสวน / อาหารในบ้าน / ผลิตภัณฑ์แปรรูปอัลปาก้า</b><br>เมนูเดียว 10 ชิ้นหรือคละกันก็ได้</p><div class="r3421-foodlist">${picker(rows,pre)}</div><div class="r3421-total">เลือกแล้ว <b id="${pre}-total">0</b> / 10</div><button id="r3421HamConfirm" class="primary-spooky-action" disabled>ให้อาหาร 10 ชิ้น</button></section>`;openModal?.();wire(rows,pre,10,'r3421HamConfirm',p=>feedHam(f,p))}
+  let hamBusy=false;
+  async function feedHam(f,picks){if(hamBusy||!currentMemberKey)return;hamBusy=true;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey),pref=fs.doc(db,'publicProfiles',currentMemberKey);let next,reward=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');const s=normalizeState(snap.data(),currentMember);if(!hams(s,f).length)throw new Error('Farm นี้ไม่มีแฮมสเตอร์แล้ว');const t=now(),last=hamLast(s,f);if(last&&t-last<4*3600000)throw new Error(`คูลดาวน์เหลือ ${cooldownText(last+4*3600000-t)}`);if(picks.reduce((a,x)=>a+N(x.qty),0)!==10)throw new Error('ต้องเลือกอาหารรวม 10 ชิ้น');for(const x of picks)if(!consumeHam(s,x,x.qty))throw new Error('อาหารที่เลือกมีจำนวนไม่พอ');reward=30+Math.floor(Math.random()*271);s.merit=(Number(s.merit)||0)+reward;s.hamsterGroupFeedAt[String(f)]=t;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=clone(s);tx.set(ref,{...clone(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(pref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==='function'?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});applyLocal(next);closeModal?.();message?.('🐹 ให้อาหารสำเร็จ',`ใช้ไป 10 ชิ้น<br><b>ได้รับ +${reward} กุศล</b><br>คูลดาวน์ 4 ชั่วโมง`)}catch(e){message?.('ให้อาหารแฮมสเตอร์ไม่ได้',e?.message||'กรุณาลองใหม่')}finally{hamBusy=false}}
+
+  // ---------- ROYAL ALPACA: independent visible ground CD producer ----------
+  const RKEY='royalCdDropsV3421', CKEY='royalCdClockV3421', SEEDED='royalCdSeededV3421';
+  function currentPen(){try{return typeof currentAlpacaPen==='function'?currentAlpacaPen():1}catch(_){return 1}}
+  function royal(a){const c=String(a?.color||'').toLowerCase();return a?.type==='adult'&&(c==='prince'||c==='princess')}
+  function ensureRoyal(s){s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};s.alpaca[RKEY]=s.alpaca[RKEY]&&typeof s.alpaca[RKEY]==='object'?s.alpaca[RKEY]:{};s.alpaca[CKEY]=s.alpaca[CKEY]&&typeof s.alpaca[CKEY]==='object'?s.alpaca[CKEY]:{};s.alpaca[SEEDED]=s.alpaca[SEEDED]&&typeof s.alpaca[SEEDED]==='object'?s.alpaca[SEEDED]:{};for(let p=1;p<=5;p++)s.alpaca[RKEY]['pen'+p]=Array.isArray(s.alpaca[RKEY]['pen'+p])?s.alpaca[RKEY]['pen'+p]:[];return s}
+  let royalBusy=false,lastRoyal=0;
+  async function produceRoyal(force=false){if(royalBusy||!currentMemberKey)return;const stamp=Date.now();if(!force&&stamp-lastRoyal<30000)return;lastRoyal=stamp;royalBusy=true;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const s=ensureRoyal(normalizeState(snap.data(),currentMember)),t=now();let changed=false;for(let pi=0;pi<(s.alpaca?.pens||[]).length;pi++){const arr=s.alpaca[RKEY]['pen'+(pi+1)];for(const a of (s.alpaca.pens[pi]?.alpacas||[])){if(!royal(a)||!a.id)continue;const id=String(a.id);if(!s.alpaca[SEEDED][id]){arr.push({id:`seed-${id}-${t}`,animalId:id,qty:2,at:t});s.alpaca[SEEDED][id]=t;s.alpaca[CKEY][id]=t;changed=true;continue}let last=Number(s.alpaca[CKEY][id]||t);const due=Math.min(24,Math.floor((t-last)/3600000));if(due>0){for(let i=1;i<=due;i++)arr.push({id:`hour-${id}-${last+i*3600000}`,animalId:id,qty:2,at:last+i*3600000});s.alpaca[CKEY][id]=last+due*3600000;changed=true}if(arr.length>80)arr.splice(0,arr.length-80)}}if(changed){s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=clone(s);tx.set(ref,{...clone(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false})}});if(next)applyLocal(next);renderRoyal()}catch(e){console.warn('R34.21 royal drop',e)}finally{royalBusy=false}}
+  function renderRoyal(){const stage=$('alpacaPenStage');if(!stage)return;let layer=$('r3421RoyalCdGround');if(!layer){layer=document.createElement('div');layer.id='r3421RoyalCdGround';layer.className='r3421-royal-ground';stage.appendChild(layer)}const s=own(),p=currentPen();if(!s||$('alpacaPenScreen')?.classList.contains('hidden')){layer.replaceChildren();layer.classList.add('hidden');return}layer.classList.remove('hidden');ensureRoyal(s);const arr=s.alpaca[RKEY]['pen'+p]||[];const show=arr.slice(-30);layer.innerHTML=show.map((d,i)=>`<button class="r3421-disc" type="button" data-r3421-disc="${esc(d.id)}" style="left:${18+(i%7)*10.2}%;top:${53+Math.floor(i/7)*6.5}%"><img src="therapy-disc-pink.png" alt="CD"><small>×${N(d.qty||2)}</small></button>`).join('');layer.querySelectorAll('[data-r3421-disc]').forEach(b=>b.onclick=()=>claimRoyal(p,b.dataset.r3421Disc))}
+  async function claimRoyal(p,id){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);let next,qty=0;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟ');const s=ensureRoyal(normalizeState(snap.data(),currentMember)),arr=s.alpaca[RKEY]['pen'+p],i=arr.findIndex(x=>String(x.id)===String(id));if(i<0)throw new Error('แผ่นนี้ถูกรับไปแล้ว');qty=N(arr[i].qty||2);arr.splice(i,1);s.specials=s.specials||{};s.specials.therapyDiscPink=isAdmin()?9999:N(s.specials.therapyDiscPink)+qty;next=clone(s);tx.set(ref,{...clone(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false})});applyLocal(next);renderRoyal();showWeatherToast?.(`💿 เก็บแผ่นหวาน ×${qty} แล้ว`)}catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่')}}
+
+  function tick(){
+    // Hide retired R34.20 controls/layers so only the new owner remains.
+    for(const id of ['r3420HotelBulkFeedBtn','r3420HamsterFeedBtn','r3420HamsterCdGround','r3420RoyalCdGround']){const el=$(id);if(el)el.style.setProperty('display','none','important')}
+    const hb=$('r3421HotelFeedAll'),showHotel=!!hb&&typeof currentScene!=='undefined'&&currentScene==='dogHotel'&&!$('sceneScreen')?.classList.contains('hidden');if(hb){hb.classList.toggle('hidden',!showHotel);if(showHotel){const h=hungry(own(),hotelPen());$('r3421HotelStatus').textContent=`คอก ${hotelPen()} • 🐶 ${h.dogs.length} • 🐱 ${h.cats.length} • หิวรวม ${h.total}`}}
+    const ham=$('r3421HamsterFeed'),f=farmNo(),showHam=!!ham&&f>=2&&f<=4&&!$('gameScreen')?.classList.contains('hidden');if(ham){ham.classList.toggle('hidden',!showHam);if(showHam){const s=own(),left=s?Math.max(0,hamLast(s,f)+4*3600000-now()):0;$('r3421HamsterStatus').textContent=left?`Farm ${f} • รอ ${cooldownText(left)}`:`Farm ${f} • ใช้ 10 ชิ้น • +30–300 กุศล`}}
+    renderRoyal();
+  }
+  $('r3421HotelFeedAll').onclick=openHotel;$('r3421HamsterFeed').onclick=openHam;
+  setInterval(tick,1000);setInterval(()=>produceRoyal(false),30000);setTimeout(()=>{tick();produceRoyal(true)},900);
+  window.addEventListener('pageshow',()=>setTimeout(()=>{tick();produceRoyal(true)},250),{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>{tick();produceRoyal(false)},250)},{passive:true});document.addEventListener('click',e=>{if(e.target?.closest?.('#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,[data-alpaca-pen],#plotPageNextBtn,#plotPagePrevBtn,[data-s2-farm]'))setTimeout(()=>{tick();produceRoyal(true)},120)},false);
+  window.YN_R3421={openHotel,openHam,produceRoyal,renderRoyal};
+})();
+</script>
+
 </body>
 </html>
