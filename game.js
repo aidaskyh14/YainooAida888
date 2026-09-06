@@ -32572,3 +32572,6 @@ console.info(window.YAINOO_BUILD,"loaded");
 
 /* R34.21 package marker */
 window.YAINOO_PACKAGE_BUILD="S2-R34.21-URGENT3";
+
+/* R34.22 package marker */
+window.YAINOO_PACKAGE_BUILD='S2-R34.22-POLISH3';

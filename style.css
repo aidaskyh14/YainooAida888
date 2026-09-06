@@ -10058,3 +10058,102 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r3421-hotel{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important}.r3421-hamster{bottom:calc(env(safe-area-inset-bottom,0px) + 84px)!important}
 .r3421-panel{max-height:78vh!important;overflow:auto!important}.r3421-summary{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:8px 0!important}.r3421-summary>*{padding:7px!important;border-radius:10px!important;background:#f7ead1!important}.r3421-summary strong{grid-column:1/-1!important}.r3421-foodlist{display:grid!important;gap:6px!important;max-height:43vh!important;overflow:auto!important}.r3421-food{display:grid!important;grid-template-columns:44px 1fr 112px!important;gap:7px!important;align-items:center!important;padding:6px!important;border:1px solid #c9a878!important;border-radius:12px!important;background:#fff7df!important}.r3421-food img{width:42px!important;height:42px!important;object-fit:contain!important}.r3421-food div>b,.r3421-food div>small{display:block!important}.r3421-food div>small{font-size:9px!important}.r3421-step{display:grid!important;grid-template-columns:32px 42px 32px!important;gap:3px!important}.r3421-step button{min-height:34px!important}.r3421-step input{width:42px!important;text-align:center!important}.r3421-total{position:sticky!important;bottom:0!important;margin:8px 0!important;padding:8px!important;border-radius:10px!important;background:#4a305d!important;color:#fff!important;font-weight:900!important}
 .r3421-royal-ground{position:absolute!important;inset:0!important;z-index:260!important;pointer-events:none!important;overflow:visible!important}.r3421-royal-ground.hidden{display:none!important}.r3421-disc{position:absolute!important;width:clamp(38px,9vw,58px)!important;height:clamp(38px,9vw,58px)!important;border:0!important;background:transparent!important;padding:0!important;pointer-events:auto!important;touch-action:manipulation!important;filter:drop-shadow(0 5px 5px rgba(0,0,0,.5))!important}.r3421-disc img{width:100%!important;height:100%!important;object-fit:contain!important}.r3421-disc small{position:absolute!important;right:-4px!important;bottom:-2px!important;padding:2px 5px!important;border-radius:999px!important;background:#4a305d!important;color:#fff!important;font:900 8px/1 inherit!important}
+
+
+/* ======================================================================
+   S2 R34.22 — compact hotel/hamster controls + true ground CD layering
+   ====================================================================== */
+#r3421RoyalCdGround{display:none!important}
+
+/* Smaller, non-blocking buttons. Keep hotel above the Back button. */
+.r3421-action{
+  width:auto!important;
+  min-width:0!important;
+  min-height:42px!important;
+  max-width:166px!important;
+  grid-template-columns:30px 1fr!important;
+  padding:6px 9px!important;
+  border-radius:14px!important;
+  gap:2px 5px!important;
+  box-shadow:0 4px 12px rgba(25,10,31,.34)!important;
+}
+.r3421-action>span{font-size:20px!important}
+.r3421-action>b{font-size:12px!important;line-height:1.05!important}
+.r3421-action>small{font-size:7.5px!important;line-height:1.12!important}
+.r3421-hotel{
+  position:absolute!important;
+  left:3%!important;
+  bottom:10.8%!important;
+  z-index:220!important;
+}
+.r3421-hamster{
+  position:absolute!important;
+  left:3%!important;
+  bottom:10.2%!important;
+  z-index:220!important;
+}
+
+/* Food picker stays touch-friendly but more compact. */
+.r3421-panel{max-height:80vh!important}
+.r3421-foodlist{max-height:46vh!important}
+.r3421-food{grid-template-columns:38px 1fr 102px!important;padding:5px!important}
+.r3421-food img{width:36px!important;height:36px!important}
+.r3421-step{grid-template-columns:29px 38px 29px!important}
+.r3421-step button{min-height:31px!important}
+.r3421-step input{width:38px!important}
+
+/* Hamster CDs live on the sandy ground, not over the UI. */
+.r3422-ham-ground{
+  position:absolute!important;
+  inset:0!important;
+  z-index:20!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+}
+.r3422-ham-ground.hidden{display:none!important}
+
+/* Royal CDs render below the alpaca animal layer (animal layer is z-index 16). */
+.r3422-royal-ground{
+  position:absolute!important;
+  inset:0!important;
+  z-index:11!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+}
+.r3422-royal-ground.hidden{display:none!important}
+
+.r3422-ground-disc{
+  position:absolute!important;
+  width:clamp(23px,5.6vw,36px)!important;
+  height:clamp(23px,5.6vw,36px)!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  transform:translate(-50%,-50%)!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.58))!important;
+}
+.r3422-ground-disc img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  display:block!important;
+}
+.r3422-ground-disc small{
+  position:absolute!important;
+  right:-5px!important;
+  bottom:-3px!important;
+  padding:1px 4px!important;
+  border-radius:999px!important;
+  background:rgba(65,40,80,.92)!important;
+  color:#fff!important;
+  font:900 7px/1 inherit!important;
+  box-shadow:0 2px 4px rgba(0,0,0,.35)!important;
+}
+
+/* Keep the alpaca "collect all" button compact when CD is present. */
+#v240CollectTreasureAll{
+  z-index:210!important;
+}
