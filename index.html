@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.22-POLISH3">
+  <link rel="stylesheet" href="style.css?v=S2-R34.23-FIX4">
 </head>
 <body>
   <main id="app">
@@ -462,7 +462,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.22-POLISH3"></script>
+<script src="game.js?v=S2-R34.23-FIX4"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -549,12 +549,12 @@
   <script id="s2-final-build-marker">window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";</script>
 
   <button id="r3420HamsterFeedBtn" class="r3420-hamster-feed hidden" type="button" aria-label="ให้อาหารแฮมสเตอร์ 10 อย่าง"><span>🐹🍽️</span><b>ให้อาหารแฮมสเตอร์</b><small>ใช้ 10 อาหาร → ดรอป CD</small></button>
-  <div id="r3420BuildBadge" class="r3420-build-badge" aria-hidden="true">R34.22 INDEX</div>
+  <div id="r3420BuildBadge" class="r3420-build-badge" aria-hidden="true">R34.23 INDEX</div>
 
   <!-- R34.21 urgent three-system controls -->
   <button id="r3421HotelFeedAll" class="r3421-action r3421-hotel hidden" type="button"><span>🍽️</span><b>ให้อาหารทั้งหมด</b><small id="r3421HotelStatus">กำลังตรวจสัตว์ที่หิว…</small></button>
   <button id="r3421HamsterFeed" class="r3421-action r3421-hamster hidden" type="button"><span>🐹</span><b>ให้อาหาร</b><small id="r3421HamsterStatus">ใช้ 10 ชิ้น • +30–300 กุศล</small></button>
-  <div id="r3421BuildBadge" class="r3421-build">R34.22 POLISH ✓</div>
+  <div id="r3421BuildBadge" class="r3421-build">R34.23 FIX4 ✓</div>
 <script id="r3421-urgent-controller">
 (()=>{
   'use strict';
@@ -870,8 +870,8 @@
   if($('collectDropsBtn'))$('collectDropsBtn').onclick=collectCurrentFarm22;
 
   function tick22(){
-    const badge=$('r3421BuildBadge'); if(badge)badge.textContent='R34.22 POLISH ✓';
-    const idx=$('r3420BuildBadge'); if(idx)idx.textContent='R34.22 CORE ✓';
+    const badge=$('r3421BuildBadge'); if(badge)badge.textContent='R34.23 FIX4 ✓';
+    const idx=$('r3420BuildBadge'); if(idx)idx.textContent='R34.23 CORE ✓';
 
     const hb=$('r3421HotelFeedAll');
     const showHotel=!!hb&&typeof currentScene!=='undefined'&&currentScene==='dogHotel'&&!$('sceneScreen')?.classList.contains('hidden');
@@ -895,6 +895,342 @@
   document.addEventListener('click',e=>{if(e.target?.closest?.('#shortcutAlpacaPenBtn,#alpacaPenSwitchBtn,[data-alpaca-pen],#plotPageNextBtn,#plotPagePrevBtn,[data-s2-farm]'))setTimeout(tick22,80)},false);
 
   window.YN_R3422={BUILD,openHotel22,openHam22,renderHamGround22,renderRoyal22,claimHam22,claimRoyal22};
+  window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3423-fix4-controller">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.23-FIX4';
+  const $=id=>document.getElementById(id);
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==='function'?gameNow():Date.now();
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const esc=v=>{try{return typeof safeHtml==='function'?safeHtml(String(v??'')):String(v??'')}catch(_){return String(v??'')}};
+  const admin=()=>{try{return String(currentMember||'')==='Aida'||String(currentMemberKey||'').toLowerCase()==='aida'||adminProfile?.role==='admin'||(typeof isAdmin==='function'&&isAdmin())}catch(_){return false}};
+  const live=()=>{try{return visitContext?null:(ownState||state||null)}catch(_){return null}};
+  const farm=()=>{try{return Math.max(1,Math.min(4,n(farmPlotPage)+1))}catch(_){return 1}};
+  const pen=()=>{try{return typeof currentAlpacaPen==='function'?currentAlpacaPen():1}catch(_){return 1}};
+  const fmt=ms=>{ms=Math.max(0,n(ms));const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);return h?`${h} ชม. ${m} นาที`:`${m} นาที ${String(s).padStart(2,'0')} วิ`};
+  const rand=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+  function apply(s){
+    if(!s)return;
+    try{s=typeof normalizeState==='function'?normalizeState(s,currentMember):s}catch(_){}
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    try{save?.()}catch(_){}
+    try{queueCloudSave?.()}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+  }
+
+  async function publishProfile(s=live()){
+    if(!s||!cloudReady||!currentMemberKey||visitContext)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[];
+      const total=pens.reduce((a,b)=>a+b,0);
+      const claimed=Number(s?.alpaca?.factory?.claimedCount)||0;
+      await fs.setDoc(fs.doc(db,'publicProfiles',currentMemberKey),{
+        memberKey:currentMemberKey,
+        displayName:typeof currentProfileDisplayName==='function'?currentProfileDisplayName():currentMember,
+        merit:Number(s.merit)||0,
+        alpacaHappiness:total,
+        alpacaHappinessPens:pens,
+        alpacaFactoryClaimed:claimed,
+        initialized:true,
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
+    }catch(e){console.warn('R34.23 profile publish',e)}
+  }
+
+  function picker(rows,prefix){
+    return rows.length?rows.map((x,i)=>`<article class="r3423-food"><img src="${esc(x.image||'')}" alt=""><div><b>${esc(x.name||x.key)}</b><small>มี ×${n(x.count)}</small></div><div class="r3423-step"><button type="button" data-minus="${prefix}-${i}">−</button><input id="${prefix}-${i}" type="number" min="0" max="${n(x.count)}" value="0"><button type="button" data-plus="${prefix}-${i}">+</button></div></article>`).join(''):'<p class="empty-feature">ยังไม่มีอาหารที่ใช้ได้ในกระเป๋าค่ะ</p>';
+  }
+
+  function wire(rows,prefix,need,confirmId,submit){
+    const inputs=rows.map((_,i)=>$(prefix+'-'+i)).filter(Boolean),total=$(prefix+'-total'),btn=$(confirmId);
+    const sync=()=>{
+      let sum=0;
+      for(const x of inputs){let v=Math.min(n(x.max),n(x.value));x.value=v;sum+=v}
+      if(total)total.textContent=sum;
+      if(btn)btn.disabled=sum!==need;
+    };
+    rows.forEach((_,i)=>{
+      const inp=$(prefix+'-'+i),m=document.querySelector(`[data-minus="${prefix}-${i}"]`),p=document.querySelector(`[data-plus="${prefix}-${i}"]`);
+      if(m)m.onclick=()=>{inp.value=Math.max(0,n(inp.value)-1);sync()};
+      if(p)p.onclick=()=>{inp.value=Math.min(n(inp.max),n(inp.value)+1);sync()};
+      if(inp)inp.oninput=sync;
+    });
+    if(btn)btn.onclick=()=>submit(rows.map((x,i)=>({...x,qty:n($(prefix+'-'+i)?.value)})).filter(x=>x.qty));
+    sync();
+  }
+
+  // ---------------- HOTEL ----------------
+  function hotelPen(){try{return Math.max(1,Math.min(4,n(currentDogHotelPen)||1))}catch(_){return 1}}
+  function petPen(s,p){return Math.max(1,Math.min(4,n(s?.hotelPetPenMap?.[String(p?.id||'')]||p?.hotelPen||1)||1))}
+  function hungry(s,p=hotelPen(),t=now()){
+    const dogs=[],cats=[];
+    for(const x of (s?.dogs||[])){
+      if(!x?.id||!x.placedHotel||petPen(s,x)!==p)continue;
+      if(Number(x.expiresAt||0)>0&&Number(x.expiresAt)<=t)continue;
+      if(Number(x.medicineUntil||0)>t)continue;
+      if(Number(x.nextFeedAt||0)<=t)dogs.push(x);
+    }
+    for(const x of (s?.cats||[])){
+      if(!x?.id||!(x.placedHotel||Number(x.placedFarm)===-1)||petPen(s,x)!==p)continue;
+      if(Number(x.expiresAt||0)>0&&Number(x.expiresAt)<=t)continue;
+      if(Number(x.medicineUntil||0)>t)continue;
+      if(Number(x.nextFeedAt||0)<=t)cats.push(x);
+    }
+    return {dogs,cats,total:dogs.length+cats.length};
+  }
+  function hotelFoods(s){
+    try{
+      const rows=globalThis.YN_PET_FOOD_ENTRIES_R3423?.(s)||[];
+      if(rows.length)return rows.filter(x=>n(x.count)>0);
+    }catch(e){console.warn('R34.23 hotel foods',e)}
+    const out=[];
+    try{for(const r of (RECIPES||[])){const c=typeof dishCountInState==='function'?dishCountInState(r.id,s):0;if(c>0)out.push({type:'dish',key:r.id,name:r.name,image:r.image,count:c})}}catch(_){}
+    return out;
+  }
+  function consumeHotel(s,x,q){
+    if(admin())return true;
+    try{if(globalThis.YN_CONSUME_PET_FOOD_R3423)return !!globalThis.YN_CONSUME_PET_FOOD_R3423(s,x.type,x.key,q)}catch(_){}
+    if(x.type==='dish'&&typeof removeDishesFromState==='function')return !!removeDishesFromState(s,x.key,q);
+    return false;
+  }
+  function openHotel(){
+    const s=live();if(!s)return;
+    const p=hotelPen(),h=hungry(s,p),rows=hotelFoods(s),pre='r3423-hotel';
+    if(!h.total)return message?.('🍽️ ให้อาหารทั้งหมด','ตอนนี้คอกนี้ไม่มีหมาหรือแมวที่หิวค่ะ');
+    $('modalContent').innerHTML=`<section class="feature-panel r3423-panel"><h2>🍽️ ให้อาหารทั้งหมด • คอก ${p}</h2><div class="r3423-summary"><b>🐶 หิว ${h.dogs.length} ตัว</b><b>🐱 หิว ${h.cats.length} ตัว</b><strong>รวม ${h.total} ตัว</strong></div><p>ต้องใช้อาหาร <b>${h.total} ถาด</b> • เลือกให้ครบตามจำนวนสัตว์ที่หิว</p><div class="r3423-foodlist">${picker(rows,pre)}</div><div class="r3423-total">เลือกแล้ว <b id="${pre}-total">0</b> / ${h.total} ถาด</div><button id="r3423HotelConfirm" class="primary-spooky-action" type="button" disabled>ยืนยันให้อาหารทั้งหมด</button></section>`;
+    openModal?.();
+    wire(rows,pre,h.total,'r3423HotelConfirm',picks=>feedHotel(p,picks));
+  }
+  function feedHotel(p,picks){
+    try{
+      const s=typeof normalizeState==='function'?normalizeState(cp(live()),currentMember):cp(live()),h=hungry(s,p,now());
+      if(!h.total)throw new Error('ตอนนี้ไม่มีสัตว์ที่หิวแล้ว');
+      if(picks.reduce((a,x)=>a+n(x.qty),0)!==h.total)throw new Error(`ต้องเลือกอาหารให้ครบ ${h.total} ถาด`);
+      for(const x of picks)if(!consumeHotel(s,x,x.qty))throw new Error('อาหารที่เลือกมีจำนวนไม่พอแล้ว');
+      const t=now(),wait=Number(typeof YN_PET_HUNGER_MS!=='undefined'?YN_PET_HUNGER_MS:0)||4*3600000;
+      let reward=0;
+      for(const x of [...h.dogs,...h.cats]){const r=rand(20,50);reward+=r;s.merit=(Number(s.merit)||0)+r;x.nextFeedAt=t+wait;x.lastPenaltyBucket=0}
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      apply(s);closeModal?.();try{renderDogHotelScene?.()}catch(_){}
+      publishProfile(s);
+      message?.('🍽️ ให้อาหารทั้งหมดแล้ว',`🐶 หมา ${h.dogs.length} ตัว • 🐱 แมว ${h.cats.length} ตัว<br>ใช้อาหารรวม ${h.total} ถาด<br><b>ได้รับกุศลรวม +${reward}</b>`);
+    }catch(e){message?.('ให้อาหารทั้งหมดไม่ได้',e?.message||'กรุณาลองใหม่')}
+  }
+
+  // ---------------- HAMSTER ----------------
+  function hams(s,f){return (s?.farmGuardians?.[String(f)]?.hamsters||[]).filter(x=>x&&x.id)}
+  function hamFoods(s){
+    const out=[],add=(type,key,name,image,count)=>{count=n(count);if(count>0)out.push({type,key,name,image,count})};
+    try{for(const r of (RECIPES||[]))add('dish',r.id,r.name,r.image,typeof dishCountInState==='function'?dishCountInState(r.id,s):0)}catch(_){}
+    try{for(const [k,r] of Object.entries(globalThis.YN_R16?.HOME_FOODS||{}))add('homeFood',k,r.name,r.image,s?.homeFoods?.[k])}catch(_){}
+    try{for(const [k,r] of Object.entries(globalThis.YN_V240?.products||{}))add('factory',k,r.name,r.image,s?.alpaca?.factory?.products?.[k])}catch(_){}
+    return out;
+  }
+  function consumeHam(s,x,q){
+    q=n(q);if(admin())return true;
+    if(x.type==='dish')return !!removeDishesFromState?.(s,x.key,q);
+    if(x.type==='homeFood'){if(n(s?.homeFoods?.[x.key])<q)return false;s.homeFoods[x.key]-=q;return true}
+    if(x.type==='factory'){if(n(s?.alpaca?.factory?.products?.[x.key])<q)return false;s.alpaca.factory.products[x.key]-=q;return true}
+    return false;
+  }
+  function ensureHam(s){
+    s.hamsterGroupFeedAt=s.hamsterGroupFeedAt&&typeof s.hamsterGroupFeedAt==='object'?s.hamsterGroupFeedAt:{};
+    s.hamsterFeedDropsV3423=s.hamsterFeedDropsV3423&&typeof s.hamsterFeedDropsV3423==='object'?s.hamsterFeedDropsV3423:{};
+    for(const f of [2,3,4])s.hamsterFeedDropsV3423[String(f)]=Array.isArray(s.hamsterFeedDropsV3423[String(f)])?s.hamsterFeedDropsV3423[String(f)]:[];
+    return s;
+  }
+  function lastHam(s,f){ensureHam(s);return Number(s.hamsterGroupFeedAt[String(f)]||0)}
+  function openHam(){
+    const s=ensureHam(live()),f=farm(),hs=hams(s,f);if(!s||f<2||f>4)return;
+    if(!hs.length)return message?.('🐹 ให้อาหาร','Farm นี้ไม่มีแฮมสเตอร์ค่ะ');
+    const left=Math.max(0,lastHam(s,f)+4*3600000-now());
+    if(left)return message?.('🐹 ยังให้อาหารไม่ได้',`คูลดาวน์เหลือ ${fmt(left)}`);
+    const rows=hamFoods(s),pre='r3423-ham';
+    $('modalContent').innerHTML=`<section class="feature-panel r3423-panel"><h2>🐹 ให้อาหารรวม • Farm ${f}</h2><div class="r3423-summary"><b>แฮมสเตอร์ ${hs.length} ตัว</b><strong>ใช้อาหารรวม 10 ชิ้น</strong></div><p>เลือกอาหารในสวน / อาหารในบ้าน / ของแปรรูปอัลปาก้า รวมให้ครบ 10 ชิ้น</p><div class="r3423-foodlist">${picker(rows,pre)}</div><div class="r3423-total">เลือกแล้ว <b id="${pre}-total">0</b> / 10</div><button id="r3423HamConfirm" class="primary-spooky-action" type="button" disabled>ยืนยันให้อาหาร 10 ชิ้น</button></section>`;
+    openModal?.();wire(rows,pre,10,'r3423HamConfirm',picks=>feedHam(f,picks));
+  }
+  function feedHam(f,picks){
+    try{
+      const s=ensureHam(typeof normalizeState==='function'?normalizeState(cp(live()),currentMember):cp(live())),hs=hams(s,f),t=now();
+      if(!hs.length)throw new Error('Farm นี้ไม่มีแฮมสเตอร์แล้ว');
+      const left=Math.max(0,lastHam(s,f)+4*3600000-t);if(left)throw new Error(`คูลดาวน์เหลือ ${fmt(left)}`);
+      if(picks.reduce((a,x)=>a+n(x.qty),0)!==10)throw new Error('ต้องเลือกอาหารรวม 10 ชิ้น');
+      for(const x of picks)if(!consumeHam(s,x,x.qty))throw new Error('อาหารที่เลือกมีจำนวนไม่พอแล้ว');
+      const reward=rand(30,300);s.merit=(Number(s.merit)||0)+reward;s.hamsterGroupFeedAt[String(f)]=t;
+      const arr=s.hamsterFeedDropsV3423[String(f)];
+      for(const h of hs)arr.push({id:`r3423-${h.id}-${t}-${Math.random().toString(36).slice(2)}`,hamsterId:String(h.id),qty:1,createdAt:t});
+      if(arr.length>60)arr.splice(0,arr.length-60);
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      apply(s);closeModal?.();renderHam();publishProfile(s);
+      message?.('🐹 ให้อาหารสำเร็จ',`ใช้อาหาร 10 ชิ้น<br><b>ได้รับ +${reward} กุศล</b><br>💿 Rock CD ดรอปบนพื้น ×${hs.length}<br>คูลดาวน์รอบต่อไป 4 ชั่วโมง`);
+    }catch(e){message?.('ให้อาหารแฮมสเตอร์ไม่ได้',e?.message||'กรุณาลองใหม่')}
+  }
+  function renderHam(){
+    const screen=$('gameScreen');if(!screen)return;
+    let layer=$('r3423HamGround');if(!layer){layer=document.createElement('div');layer.id='r3423HamGround';layer.className='r3423-ham-ground';screen.appendChild(layer)}
+    const s=live(),f=farm();
+    if(!s||visitContext||f<2||f>4||screen.classList.contains('hidden')){layer.innerHTML='';layer.classList.add('hidden');return}
+    layer.classList.remove('hidden');ensureHam(s);
+    const arr=s.hamsterFeedDropsV3423[String(f)]||[];
+    layer.innerHTML=arr.slice(-24).map((d,i)=>`<button type="button" class="r3423-disc rock" data-r3423-ham="${esc(d.id)}" style="left:${23+(i%8)*7.6}%;top:${77+Math.floor(i/8)*4.2}%"><img src="therapy-disc-rock.png" alt="Rock CD"></button>`).join('');
+  }
+  function claimHam(id=null,all=false){
+    try{
+      const s=ensureHam(typeof normalizeState==='function'?normalizeState(cp(live()),currentMember):cp(live())),f=farm(),arr=s.hamsterFeedDropsV3423[String(f)]||[];
+      const take=all?arr.splice(0,arr.length):(()=>{const i=arr.findIndex(x=>String(x.id)===String(id));return i>=0?arr.splice(i,1):[]})();
+      if(!take.length)return false;
+      const qty=take.reduce((a,x)=>a+n(x.qty||1),0);s.specials=s.specials||{};s.specials.therapyDiscRock=admin()?9999:n(s.specials.therapyDiscRock)+qty;
+      apply(s);renderHam();showWeatherToast?.(`💿 Rock CD ×${qty} เข้ากระเป๋าแล้ว`);return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  // ---------------- ROYAL ALPACA ----------------
+  function ensureRoyal(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    s.alpaca.royalCdDropsV3423=s.alpaca.royalCdDropsV3423&&typeof s.alpaca.royalCdDropsV3423==='object'?s.alpaca.royalCdDropsV3423:{};
+    s.alpaca.royalCdClockV3423=s.alpaca.royalCdClockV3423&&typeof s.alpaca.royalCdClockV3423==='object'?s.alpaca.royalCdClockV3423:{};
+    for(let p=1;p<=5;p++)s.alpaca.royalCdDropsV3423['pen'+p]=Array.isArray(s.alpaca.royalCdDropsV3423['pen'+p])?s.alpaca.royalCdDropsV3423['pen'+p]:[];
+    return s;
+  }
+  function processRoyal(){
+    const base=live();if(!base||visitContext)return;
+    const s=ensureRoyal(typeof normalizeState==='function'?normalizeState(cp(base),currentMember):cp(base)),t=now();let changed=false;
+    for(let pi=0;pi<(s.alpaca?.pens||[]).length;pi++){
+      for(const a of (s.alpaca.pens[pi]?.alpacas||[])){
+        if(!a?.id||a.type!=='adult'||!['prince','princess'].includes(String(a.color||'').toLowerCase()))continue;
+        const id=String(a.id),key='pen'+(pi+1),arr=s.alpaca.royalCdDropsV3423[key];
+        let last=Number(s.alpaca.royalCdClockV3423[id]||0);
+        if(!last){last=t-3600000;s.alpaca.royalCdClockV3423[id]=last;changed=true}
+        const due=Math.floor((t-last)/3600000);
+        if(due>0){
+          for(let r=1;r<=Math.min(due,8);r++)arr.push({id:`r3423-royal-${id}-${last+r*3600000}`,animalId:id,qty:2,createdAt:last+r*3600000});
+          s.alpaca.royalCdClockV3423[id]=last+due*3600000;changed=true;
+        }
+      }
+    }
+    if(changed){apply(s);setTimeout(renderRoyal,50)}
+  }
+  function royalArrays(s,p){
+    ensureRoyal(s);
+    const rows=[];
+    const add=(src,arr)=>{for(const d of (Array.isArray(arr)?arr:[]))rows.push({src,d})};
+    add('v3423',s.alpaca.royalCdDropsV3423['pen'+p]);
+    add('v3421',s.alpaca?.royalCdDropsV3421?.['pen'+p]);
+    add('legacy',s.alpaca?.royalDiscDrops?.['pen'+p]);
+    return rows;
+  }
+  function renderRoyal(){
+    const stage=$('alpacaPenStage');if(!stage)return;
+    for(const id of ['r3421RoyalCdGround','r3420RoyalCdGround','r34RoyalDiscLayer','r34120RoyalDiscLayer','r3411RoyalDropLayer']){const x=$(id);if(x)x.style.setProperty('display','none','important')}
+    let layer=$('r3423RoyalGround');if(!layer){layer=document.createElement('div');layer.id='r3423RoyalGround';layer.className='r3423-royal-ground';stage.appendChild(layer)}
+    const s=live(),p=pen();
+    if(!s||$('alpacaPenScreen')?.classList.contains('hidden')){layer.innerHTML='';layer.classList.add('hidden');return}
+    layer.classList.remove('hidden');const rows=royalArrays(s,p).slice(-24);
+    layer.innerHTML=rows.map((x,i)=>`<button type="button" class="r3423-disc pink" data-r3423-royal="${esc(String(x.d.id))}" data-r3423-src="${x.src}" style="left:${24+(i%8)*7.3}%;top:${58+Math.floor(i/8)*6.1}%"><img src="therapy-disc-pink.png" alt="Pink CD"><small>×${n(x.d.qty||2)}</small></button>`).join('');
+    const basket=$('v240CollectTreasureAll');
+    if(basket&&rows.length){
+      basket.classList.remove('hidden');
+      basket.innerHTML='<span>🧺</span><b>เก็บของทั้งหมด</b>';
+    }
+  }
+  function claimRoyal(id=null,src=null,all=false){
+    try{
+      const s=ensureRoyal(typeof normalizeState==='function'?normalizeState(cp(live()),currentMember):cp(live())),p=pen();let take=[];
+      const takeFrom=(arr,source)=>{
+        if(!Array.isArray(arr))return;
+        if(all){take.push(...arr.splice(0,arr.length));return}
+        if(source!==src)return;
+        const i=arr.findIndex(x=>String(x.id)===String(id));if(i>=0)take.push(...arr.splice(i,1));
+      };
+      takeFrom(s.alpaca.royalCdDropsV3423['pen'+p],'v3423');
+      if(s.alpaca?.royalCdDropsV3421)takeFrom(s.alpaca.royalCdDropsV3421['pen'+p],'v3421');
+      if(s.alpaca?.royalDiscDrops)takeFrom(s.alpaca.royalDiscDrops['pen'+p],'legacy');
+      if(!take.length)return false;
+      const qty=take.reduce((a,x)=>a+n(x.qty||2),0);s.specials=s.specials||{};s.specials.therapyDiscPink=admin()?9999:n(s.specials.therapyDiscPink)+qty;
+      apply(s);renderRoyal();showWeatherToast?.(`💿 Pink CD ×${qty} เข้ากระเป๋าแล้ว`);return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  // ---------------- RANK ----------------
+  async function showRanks(tab='happiness'){
+    const factory=tab==='factory';
+    $('modalContent').innerHTML=`<section class="feature-panel v240-rank-panel"><header><div><small>🦙 ระบบอัลปาก้า</small><h2>${factory?'Rank แปรรูป':'Rank ความสุข'}</h2></div><button id="r3423RankClose">×</button></header><p>กำลังโหลดคะแนนล่าสุด...</p></section>`;openModal?.();
+    try{
+      const {db,fs}=await getFirebaseContext(),profiles={},saves={};
+      try{const ps=await fs.getDocs(fs.collection(db,'publicProfiles'));ps.forEach(d=>profiles[d.id]=d.data()||{})}catch(_){}
+      try{const ss=await fs.getDocs(fs.collection(db,'saves'));ss.forEach(d=>saves[d.id]=d.data()||{})}catch(_){}
+      const names=Object.keys(typeof MEMBERS!=='undefined'?MEMBERS:{}).filter(x=>x!=='Aida');
+      const rows=names.map(name=>{
+        const key=typeof memberKeyFromName==='function'?memberKeyFromName(name):String(name).toLowerCase(),sv=saves[key],pf=profiles[key]||{};
+        const pens=Array.isArray(sv?.alpaca?.pens)?sv.alpaca.pens.map(p=>Number(p?.happiness)||0):(Array.isArray(pf.alpacaHappinessPens)?pf.alpacaHappinessPens:[]);
+        const happiness=sv?pens.reduce((a,b)=>a+b,0):Number(pf.alpacaHappiness)||0;
+        const claimed=sv?Number(sv?.alpaca?.factory?.claimedCount)||0:Number(pf.alpacaFactoryClaimed)||0;
+        return {name,happiness,claimed};
+      }).sort((a,b)=>(factory?b.claimed-a.claimed:b.happiness-a.happiness)||a.name.localeCompare(b.name,'th'));
+      $('modalContent').innerHTML=`<section class="feature-panel v240-rank-panel"><header><div><small>🦙 ระบบอัลปาก้า</small><h2>${factory?'Rank แปรรูป':'Rank ความสุข'}</h2></div><button id="r3423RankClose">×</button></header><div class="v240-rank-tabs"><button data-r3423-rank="happiness" class="${!factory?'active':''}">ความสุข</button><button data-r3423-rank="factory" class="${factory?'active':''}">แปรรูป</button></div><div class="v240-rank-scroll">${rows.map((r,i)=>`<article class="v240-rank-row ${i<3?'top'+(i+1):''}"><strong>#${i+1}</strong><div><b>${esc(r.name)}</b><small>${factory?'คะแนนแปรรูป':'คะแนนความสุข'}</small></div><span>${factory?r.claimed:r.happiness}</span></article>`).join('')}</div></section>`;
+      document.querySelectorAll('[data-r3423-rank]').forEach(b=>b.onclick=()=>showRanks(b.dataset.r3423Rank));
+      $('r3423RankClose').onclick=closeModal;
+    }catch(e){message?.('โหลด Rank ไม่ได้',e?.message||'กรุณาลองใหม่')}
+  }
+
+  // Exact-button capture prevents old handlers from stealing these actions.
+  document.addEventListener('click',e=>{
+    const hotel=e.target.closest?.('#r3421HotelFeedAll');
+    if(hotel){e.preventDefault();e.stopImmediatePropagation();openHotel();return}
+    const ham=e.target.closest?.('#r3421HamsterFeed');
+    if(ham){e.preventDefault();e.stopImmediatePropagation();openHam();return}
+    const rc=e.target.closest?.('[data-r3423-royal]');
+    if(rc){e.preventDefault();e.stopImmediatePropagation();claimRoyal(rc.dataset.r3423Royal,rc.dataset.r3423Src,false);return}
+    const hc=e.target.closest?.('[data-r3423-ham]');
+    if(hc){e.preventDefault();e.stopImmediatePropagation();claimHam(hc.dataset.r3423Ham,false);return}
+  },true);
+
+  let lastProfileSig='';
+  function tick(){
+    const badge=$('r3421BuildBadge');if(badge)badge.textContent='R34.23 FIX4 ✓';
+    const core=$('r3420BuildBadge');if(core)core.textContent='R34.23 CORE ✓';
+    const hb=$('r3421HotelFeedAll');
+    if(hb&&currentScene==='dogHotel'){
+      hb.classList.remove('hidden');const h=hungry(live(),hotelPen());const st=$('r3421HotelStatus');if(st)st.textContent=`🐶 ${h.dogs.length} • 🐱 ${h.cats.length} • หิว ${h.total}`;
+    }
+    const hbtn=$('r3421HamsterFeed'),f=farm();
+    if(hbtn){
+      const show=f>=2&&f<=4&&!$('gameScreen')?.classList.contains('hidden');hbtn.classList.toggle('hidden',!show);
+      if(show){const s=ensureHam(live()),left=Math.max(0,lastHam(s,f)+4*3600000-now()),st=$('r3421HamsterStatus');if(st)st.textContent=left?`Farm ${f} • อีก ${fmt(left)}`:`Farm ${f} • 10 ชิ้น • +30–300 กุศล`}
+    }
+    renderHam();renderRoyal();
+    const s=live();
+    if(s&&!visitContext){
+      const pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[],sig=JSON.stringify([pens,Number(s?.alpaca?.factory?.claimedCount)||0]);
+      if(sig!==lastProfileSig){lastProfileSig=sig;publishProfile(s)}
+    }
+    const rankBtn=$('alpacaRankBtn');if(rankBtn)rankBtn.onclick=()=>showRanks('happiness');
+    if(globalThis.YN_V240)globalThis.YN_V240.showRanks=showRanks;
+    const basket=$('v240CollectTreasureAll');
+    if(basket&&royalArrays(ensureRoyal(live()),pen()).length){
+      if(!basket.__r3423){
+        basket.__r3423=true;basket.__r3423Old=basket.onclick;
+        basket.onclick=async ev=>{ev?.preventDefault?.();claimRoyal(null,null,true);try{return await basket.__r3423Old?.call(basket,ev)}catch(_){}};
+      }
+    }
+  }
+
+  setInterval(tick,900);
+  setInterval(processRoyal,30000);
+  setTimeout(()=>{processRoyal();tick()},250);
+  window.addEventListener('pageshow',()=>setTimeout(tick,120),{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>{processRoyal();tick()},120)},{passive:true});
+  window.YN_R3423={BUILD,openHotel,openHam,feedHotel,feedHam,claimHam,claimRoyal,showRanks,processRoyal};
   window.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,'loaded');
 })();

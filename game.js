@@ -11495,6 +11495,9 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     }
     return false;
   }
+  globalThis.YN_PET_FOOD_ENTRIES_R3423=YN_petFoodEntries;
+  globalThis.YN_CONSUME_PET_FOOD_R3423=YN_consumePetFood;
+
   function YN_petFoodCards(s,required=1){
     const foods=YN_petFoodEntries(s);
     return foods.length?foods.map(f=>`<button type="button" data-yn-pet-feed-type="${f.type}" data-yn-pet-feed-key="${f.key}" ${f.count<required?"disabled":""}>
@@ -17620,7 +17623,29 @@ async function V181_campaignScoreLater(summary){
     s.alpaca.inventory.other.processingLicense=v240Int(s.alpaca.inventory.other.processingLicense)-r.license;s.specials.processingLicense=s.alpaca.inventory.other.processingLicense;
   }
   async function v240MutateSave(mutator,{profile=false}={}){
-    const base=ownState||state;if(!base)throw new Error("ยังไม่พบข้อมูลผู้เล่น");const next=normalizeState(cloneData(base),currentMember);v240EnsureState(next);v240AdminTopup(next);const result=await mutator(next,null,null,null);v240AdminTopup(next);v240Apply(next);saveLocalOnly(next);queueCloudSave();return{state:next,result};
+    const base=ownState||state;if(!base)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
+    const next=normalizeState(cloneData(base),currentMember);v240EnsureState(next);v240AdminTopup(next);
+    const result=await mutator(next,null,null,null);
+    v240AdminTopup(next);v240Apply(next);saveLocalOnly(next);queueCloudSave();
+    if(profile&&cloudReady&&currentMemberKey&&!visitContext){
+      try{
+        const {db,fs}=await getFirebaseContext();
+        const pens=Array.isArray(next?.alpaca?.pens)?next.alpaca.pens.map(p=>Number(p?.happiness)||0):[];
+        const total=pens.reduce((a,b)=>a+b,0);
+        const claimed=Number(next?.alpaca?.factory?.claimedCount)||0;
+        await fs.setDoc(fs.doc(db,"publicProfiles",currentMemberKey),{
+          memberKey:currentMemberKey,
+          displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+          merit:Number(next.merit)||0,
+          alpacaHappiness:total,
+          alpacaHappinessPens:pens,
+          alpacaFactoryClaimed:claimed,
+          initialized:true,
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      }catch(e){console.warn("R34.23 alpaca profile publish",e)}
+    }
+    return{state:next,result};
   }
 
   function v240MutateFast(mutator){
@@ -32575,3 +32600,6 @@ window.YAINOO_PACKAGE_BUILD="S2-R34.21-URGENT3";
 
 /* R34.22 package marker */
 window.YAINOO_PACKAGE_BUILD='S2-R34.22-POLISH3';
+
+/* S2 R34.23 FIX4 marker */
+window.YAINOO_PACKAGE_BUILD='S2-R34.23-FIX4';
