@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.23-FIX4">
+  <link rel="stylesheet" href="style.css?v=S2-R34.25-STABILITY">
 </head>
 <body>
   <main id="app">
@@ -462,7 +462,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.23-FIX4"></script>
+<script src="game.js?v=S2-R34.25-STABILITY"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -549,12 +549,10 @@
   <script id="s2-final-build-marker">window.YAINOO_BUILD="S2-R34.11.15-LOGIN-PARSE-FIX-20260904";</script>
 
   <button id="r3420HamsterFeedBtn" class="r3420-hamster-feed hidden" type="button" aria-label="ให้อาหารแฮมสเตอร์ 10 อย่าง"><span>🐹🍽️</span><b>ให้อาหารแฮมสเตอร์</b><small>ใช้ 10 อาหาร → ดรอป CD</small></button>
-  <div id="r3420BuildBadge" class="r3420-build-badge" aria-hidden="true">R34.23 INDEX</div>
 
   <!-- R34.21 urgent three-system controls -->
   <button id="r3421HotelFeedAll" class="r3421-action r3421-hotel hidden" type="button"><span>🍽️</span><b>ให้อาหารทั้งหมด</b><small id="r3421HotelStatus">กำลังตรวจสัตว์ที่หิว…</small></button>
   <button id="r3421HamsterFeed" class="r3421-action r3421-hamster hidden" type="button"><span>🐹</span><b>ให้อาหาร</b><small id="r3421HamsterStatus">ใช้ 10 ชิ้น • +30–300 กุศล</small></button>
-  <div id="r3421BuildBadge" class="r3421-build">R34.23 FIX4 ✓</div>
 <script id="r3421-urgent-controller">
 (()=>{
   'use strict';
@@ -870,8 +868,8 @@
   if($('collectDropsBtn'))$('collectDropsBtn').onclick=collectCurrentFarm22;
 
   function tick22(){
-    const badge=$('r3421BuildBadge'); if(badge)badge.textContent='R34.23 FIX4 ✓';
-    const idx=$('r3420BuildBadge'); if(idx)idx.textContent='R34.23 CORE ✓';
+    const badge=$('r3421BuildBadge'); 
+    const idx=$('r3420BuildBadge'); 
 
     const hb=$('r3421HotelFeedAll');
     const showHotel=!!hb&&typeof currentScene!=='undefined'&&currentScene==='dogHotel'&&!$('sceneScreen')?.classList.contains('hidden');
@@ -1197,8 +1195,8 @@
 
   let lastProfileSig='';
   function tick(){
-    const badge=$('r3421BuildBadge');if(badge)badge.textContent='R34.23 FIX4 ✓';
-    const core=$('r3420BuildBadge');if(core)core.textContent='R34.23 CORE ✓';
+    const badge=$('r3421BuildBadge');
+    const core=$('r3420BuildBadge');
     const hb=$('r3421HotelFeedAll');
     if(hb&&currentScene==='dogHotel'){
       hb.classList.remove('hidden');const h=hungry(live(),hotelPen());const st=$('r3421HotelStatus');if(st)st.textContent=`🐶 ${h.dogs.length} • 🐱 ${h.cats.length} • หิว ${h.total}`;
@@ -1232,6 +1230,461 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>{processRoyal();tick()},120)},{passive:true});
   window.YN_R3423={BUILD,openHotel,openHam,feedHotel,feedHam,claimHam,claimRoyal,showRanks,processRoyal};
   window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3424-collect-ui-controller">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.24-COLLECT-UI';
+  const $=id=>document.getElementById(id);
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const now=()=>typeof gameNow==='function'?gameNow():Date.now();
+  const live=()=>{try{return visitContext?null:(ownState||state||null)}catch(_){return null}};
+  const farm=()=>{try{return Math.max(1,Math.min(4,n(farmPlotPage)+1))}catch(_){return 1}};
+  const pen=()=>{try{return typeof currentAlpacaPen==='function'?currentAlpacaPen():1}catch(_){return 1}};
+  const admin=()=>{try{return String(currentMember||'')==='Aida'||String(currentMemberKey||'').toLowerCase()==='aida'||adminProfile?.role==='admin'||(typeof isAdmin==='function'&&isAdmin())}catch(_){return false}};
+  const fmt=ms=>{ms=Math.max(0,n(ms));const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h?`${h}:${String(m).padStart(2,'0')}`:`${m}m`};
+
+  function apply(s){
+    if(!s)return;
+    try{s=typeof normalizeState==='function'?normalizeState(s,currentMember):s}catch(_){}
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    try{save?.()}catch(_){}
+    try{queueCloudSave?.()}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},40);
+  }
+
+  function ensureArrays(s){
+    if(!s)return s;
+    s.specials=s.specials&&typeof s.specials==='object'?s.specials:{};
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    for(const key of ['royalCdDropsV3423','royalCdDropsV3421','royalDiscDrops']){
+      s.alpaca[key]=s.alpaca[key]&&typeof s.alpaca[key]==='object'?s.alpaca[key]:{};
+      for(let p=1;p<=5;p++)s.alpaca[key]['pen'+p]=Array.isArray(s.alpaca[key]['pen'+p])?s.alpaca[key]['pen'+p]:[];
+    }
+    for(const key of ['hamsterFeedDropsV3423','hamsterFeedDropsV3422','hamsterDiscDrops']){
+      s[key]=s[key]&&typeof s[key]==='object'?s[key]:{};
+      for(const f of [2,3,4])s[key][String(f)]=Array.isArray(s[key][String(f)])?s[key][String(f)]:[];
+    }
+    return s;
+  }
+
+  function royalSources(s,p){
+    ensureArrays(s);
+    return [
+      ['v3423',s.alpaca.royalCdDropsV3423['pen'+p]],
+      ['v3421',s.alpaca.royalCdDropsV3421['pen'+p]],
+      ['legacy',s.alpaca.royalDiscDrops['pen'+p]]
+    ];
+  }
+  function hamSources(s,f){
+    ensureArrays(s);
+    return [
+      ['v3423',s.hamsterFeedDropsV3423[String(f)]],
+      ['v3422',s.hamsterFeedDropsV3422[String(f)]],
+      ['legacy',s.hamsterDiscDrops[String(f)]]
+    ];
+  }
+
+  function sourceRows(sources){
+    const rows=[];
+    for(const [src,arr] of sources)for(const d of arr)rows.push({src,d});
+    return rows;
+  }
+  function sourceQty(rows,def=1){return rows.reduce((a,x)=>a+n(x.d?.qty||def),0)}
+
+  function takeFromSources(sources,id=null,src=null,all=false){
+    const take=[];
+    for(const [name,arr] of sources){
+      if(all){take.push(...arr.splice(0,arr.length));continue}
+      if(name!==src)continue;
+      const i=arr.findIndex(x=>String(x?.id)===String(id));
+      if(i>=0)take.push(...arr.splice(i,1));
+    }
+    return take;
+  }
+
+  function collectRoyal(id=null,src=null,all=false){
+    try{
+      const base=live();if(!base)return false;
+      const s=ensureArrays(typeof normalizeState==='function'?normalizeState(cp(base),currentMember):cp(base)),p=pen();
+      const take=takeFromSources(royalSources(s,p),id,src,all);
+      if(!take.length)return false;
+      const qty=take.reduce((a,x)=>a+n(x?.qty||2),0);
+      s.specials.therapyDiscPink=admin()?9999:n(s.specials.therapyDiscPink)+qty;
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      apply(s);renderRoyal();
+      try{showWeatherToast?.(`💿 Pink CD ×${qty} เข้ากระเป๋าแล้ว`)}catch(_){}
+      return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  function collectHam(id=null,src=null,all=false){
+    try{
+      const base=live(),f=farm();if(!base||f<2||f>4)return false;
+      const s=ensureArrays(typeof normalizeState==='function'?normalizeState(cp(base),currentMember):cp(base));
+      const take=takeFromSources(hamSources(s,f),id,src,all);
+      if(!take.length)return false;
+      const qty=take.reduce((a,x)=>a+n(x?.qty||1),0);
+      s.specials.therapyDiscRock=admin()?9999:n(s.specials.therapyDiscRock)+qty;
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      apply(s);renderHam();
+      try{showWeatherToast?.(`💿 Rock CD ×${qty} เข้ากระเป๋าแล้ว`)}catch(_){}
+      return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  // ----------- clean visual layers: small, scattered, no x2 labels -----------
+  const ROYAL_POS=[
+    [20,61],[31,66],[43,62],[56,67],[69,61],[80,66],
+    [24,72],[37,76],[51,72],[64,76],[77,72],[47,81]
+  ];
+  const HAM_POS=[
+    [21,76],[31,74],[42,77],[53,74],[64,77],[75,74],
+    [26,81],[38,80],[50,82],[62,80],[73,82],[83,79]
+  ];
+
+  function renderRoyal(){
+    for(const id of ['r3423RoyalGround','r3422RoyalGround','r3421RoyalCdGround','r3420RoyalCdGround','r34RoyalDiscLayer','r34120RoyalDiscLayer','r3411RoyalDropLayer']){
+      const x=$(id);if(x)x.style.setProperty('display','none','important');
+    }
+    const stage=$('alpacaPenStage');if(!stage)return;
+    let layer=$('r3424RoyalGround');
+    if(!layer){layer=document.createElement('div');layer.id='r3424RoyalGround';layer.className='r3424-ground r3424-royal-ground';stage.appendChild(layer)}
+    const s=live(),p=pen();
+    if(!s||$('alpacaPenScreen')?.classList.contains('hidden')){layer.innerHTML='';layer.classList.add('hidden');return}
+    const rows=sourceRows(royalSources(s,p));
+    layer.classList.toggle('hidden',!rows.length);
+    layer.innerHTML=rows.slice(-12).map((x,i)=>{
+      const pos=ROYAL_POS[i%ROYAL_POS.length];
+      return `<button type="button" class="r3424-disc pink" data-r3424-kind="royal" data-r3424-src="${x.src}" data-r3424-id="${String(x.d.id)}" style="left:${pos[0]}%;top:${pos[1]}%" aria-label="เก็บ Pink CD"><img src="therapy-disc-pink.png" alt=""></button>`;
+    }).join('');
+    const basket=$('v240CollectTreasureAll');
+    if(basket){
+      const hasBox=!!((s?.alpaca?.treasureDrops?.['pen'+p]||[]).length);
+      basket.classList.toggle('hidden',!(hasBox||rows.length));
+      basket.innerHTML='<span>🧺</span><b>เก็บของทั้งหมด</b>';
+    }
+  }
+
+  function renderHam(){
+    for(const id of ['r3423HamGround','r3422HamGround','r3420HamsterCdGround','r34HamsterDiscLayer','r34120HamDiscLayer','r3411HamsterDropLayer']){
+      const x=$(id);if(x)x.style.setProperty('display','none','important');
+    }
+    const screen=$('gameScreen');if(!screen)return;
+    let layer=$('r3424HamGround');
+    if(!layer){layer=document.createElement('div');layer.id='r3424HamGround';layer.className='r3424-ground r3424-ham-ground';screen.appendChild(layer)}
+    const s=live(),f=farm();
+    if(!s||f<2||f>4||screen.classList.contains('hidden')){layer.innerHTML='';layer.classList.add('hidden');return}
+    const rows=sourceRows(hamSources(s,f));
+    layer.classList.toggle('hidden',!rows.length);
+    layer.innerHTML=rows.slice(-12).map((x,i)=>{
+      const pos=HAM_POS[i%HAM_POS.length];
+      return `<button type="button" class="r3424-disc rock" data-r3424-kind="ham" data-r3424-src="${x.src}" data-r3424-id="${String(x.d.id)}" style="left:${pos[0]}%;top:${pos[1]}%" aria-label="เก็บ Rock CD"><img src="therapy-disc-rock.png" alt=""></button>`;
+    }).join('');
+  }
+
+  // ----------- small stable icon-only feed buttons -----------
+  function ensureIcons(){
+    // Kill old flashing / bar-size controls.
+    for(const id of ['r3421HotelFeedAll','r3421HamsterFeed'])$(id)?.remove();
+
+    if(!$('r3424HotelIcon')){
+      const b=document.createElement('button');
+      b.id='r3424HotelIcon';b.type='button';b.className='r3424-feed-icon hotel';b.innerHTML='<span>🍽️</span><i id="r3424HotelCount">0</i>';b.setAttribute('aria-label','ให้อาหารหมาและแมวทั้งหมด');
+      document.body.appendChild(b);
+    }
+    if(!$('r3424HamIcon')){
+      const b=document.createElement('button');
+      b.id='r3424HamIcon';b.type='button';b.className='r3424-feed-icon ham';b.innerHTML='<span>🐹</span><i id="r3424HamCd">พร้อม</i>';b.setAttribute('aria-label','ให้อาหารแฮมสเตอร์');
+      document.body.appendChild(b);
+    }
+  }
+
+  function hotelHungryCount(){
+    const s=live();if(!s)return 0;
+    const p=Math.max(1,Math.min(4,n(typeof currentDogHotelPen!=='undefined'?currentDogHotelPen:1)||1)),t=now();
+    const petPen=x=>Math.max(1,Math.min(4,n(s?.hotelPetPenMap?.[String(x?.id||'')]||x?.hotelPen||1)||1));
+    let c=0;
+    for(const x of [...(s.dogs||[]),...(s.cats||[])]){
+      if(!x?.id||petPen(x)!==p)continue;
+      const placed=x.placedHotel||Number(x.placedFarm)===-1;if(!placed)continue;
+      if(Number(x.expiresAt||0)>0&&Number(x.expiresAt)<=t)continue;
+      if(Number(x.medicineUntil||0)>t)continue;
+      if(Number(x.nextFeedAt||0)<=t)c++;
+    }
+    return c;
+  }
+
+  function hamCooldown(){
+    const s=live(),f=farm();if(!s||f<2||f>4)return 0;
+    const last=Number(s?.hamsterGroupFeedAt?.[String(f)]||0);
+    return Math.max(0,last+4*3600000-now());
+  }
+
+  // Use the already-fixed R34.23 feed logic; only replace the UI.
+  function openHotel(){return globalThis.YN_R3423?.openHotel?.()}
+  function openHam(){return globalThis.YN_R3423?.openHam?.()}
+
+  // ----------- earliest capture point: window runs before document blockers -----------
+  window.addEventListener('click',e=>{
+    const target=e.target?.closest?.('[data-r3424-kind],#r3424HotelIcon,#r3424HamIcon,#v240CollectTreasureAll,#collectDropsBtn,[data-s2-tool="drops"]');
+    if(!target)return;
+
+    if(target.id==='r3424HotelIcon'){
+      e.preventDefault();e.stopImmediatePropagation();openHotel();return;
+    }
+    if(target.id==='r3424HamIcon'){
+      e.preventDefault();e.stopImmediatePropagation();openHam();return;
+    }
+    if(target.matches('[data-r3424-kind="royal"]')){
+      e.preventDefault();e.stopImmediatePropagation();collectRoyal(target.dataset.r3424Id,target.dataset.r3424Src,false);return;
+    }
+    if(target.matches('[data-r3424-kind="ham"]')){
+      e.preventDefault();e.stopImmediatePropagation();collectHam(target.dataset.r3424Id,target.dataset.r3424Src,false);return;
+    }
+
+    if(target.id==='v240CollectTreasureAll'){
+      const s=live(),rows=s?sourceRows(royalSources(s,pen())):[];
+      if(rows.length){
+        e.preventDefault();e.stopImmediatePropagation();
+        const got=collectRoyal(null,null,true);
+        // Same physical button also keeps its old treasure-box job.
+        setTimeout(()=>{try{globalThis.YN_V240_COLLECT_TREASURE_R3424?.(null,true)}catch(_){}},80);
+        return;
+      }
+      return; // no CD: let original treasure handler work
+    }
+
+    if(target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]')){
+      const s=live(),f=farm(),rows=(s&&f>=2&&f<=4)?sourceRows(hamSources(s,f)):[];
+      if(rows.length){
+        e.preventDefault();e.stopImmediatePropagation();
+        collectHam(null,null,true);
+        setTimeout(()=>{try{collectAllCatDropsCurrentFarm?.()}catch(_){}},60);
+        return;
+      }
+    }
+  },true);
+
+  // Hide all visible build/version badges permanently.
+  function removeBadges(){
+    for(const id of ['r3420BuildBadge','r3421BuildBadge'])$(id)?.remove();
+    document.querySelectorAll('.r3420-build-badge,.r3421-build').forEach(x=>x.remove());
+  }
+
+  let lastScene='',lastFarm=-1,lastPen=-1;
+  function tick(){
+    ensureIcons();removeBadges();
+    const scene=String(typeof currentScene!=='undefined'?currentScene:'');
+    const f=farm(),p=pen();
+    const hb=$('r3424HotelIcon'),mb=$('r3424HamIcon');
+
+    const showHotel=scene==='dogHotel'&&!$('sceneScreen')?.classList.contains('hidden');
+    const showHam=f>=2&&f<=4&&!$('gameScreen')?.classList.contains('hidden');
+    if(hb){
+      const display=showHotel?'grid':'none';if(hb.style.display!==display)hb.style.display=display;
+      const c=$('r3424HotelCount');if(c)c.textContent=String(hotelHungryCount());
+    }
+    if(mb){
+      const display=showHam?'grid':'none';if(mb.style.display!==display)mb.style.display=display;
+      const cd=$('r3424HamCd'),left=hamCooldown();if(cd)cd.textContent=left?fmt(left):'พร้อม';
+    }
+
+    renderHam();renderRoyal();
+    lastScene=scene;lastFarm=f;lastPen=p;
+  }
+
+  setInterval(tick,1200);
+  setTimeout(tick,180);
+  window.addEventListener('pageshow',()=>setTimeout(tick,100),{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(tick,100)},{passive:true});
+
+  globalThis.YN_R3424={BUILD,collectRoyal,collectHam,renderRoyal,renderHam};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3425-stability-controller">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.25-STABILITY';
+  const $=id=>document.getElementById(id);
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const live=()=>{try{return visitContext?null:(ownState||state||null)}catch(_){return null}};
+  const farm=()=>{try{return Math.max(1,Math.min(4,n(farmPlotPage)+1))}catch(_){return 1}};
+  const pen=()=>{try{return typeof currentAlpacaPen==='function'?currentAlpacaPen():1}catch(_){return 1}};
+  const admin=()=>{try{return String(currentMember||'')==='Aida'||String(currentMemberKey||'').toLowerCase()==='aida'||adminProfile?.role==='admin'||(typeof isAdmin==='function'&&isAdmin())}catch(_){return false}};
+
+  function hideAllVersionBadges(){
+    for(const id of ['r3420BuildBadge','r3421BuildBadge','ynR3417BuildBadge'])$(id)?.remove();
+    document.querySelectorAll('[id*="BuildBadge"],[class*="build-badge"],.r3420-build-badge,.r3421-build').forEach(el=>{
+      const t=String(el.textContent||'');
+      if(/R34\.|CORE|INDEX|FIX|POLISH|URGENT/i.test(t))el.remove();
+    });
+  }
+
+  function ensure(s){
+    if(!s)return s;
+    s.specials=s.specials&&typeof s.specials==='object'?s.specials:{};
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    for(const key of ['royalCdDropsV3423','royalCdDropsV3421','royalDiscDrops']){
+      s.alpaca[key]=s.alpaca[key]&&typeof s.alpaca[key]==='object'?s.alpaca[key]:{};
+      for(let p=1;p<=5;p++)s.alpaca[key]['pen'+p]=Array.isArray(s.alpaca[key]['pen'+p])?s.alpaca[key]['pen'+p]:[];
+    }
+    for(const key of ['hamsterFeedDropsV3423','hamsterFeedDropsV3422','hamsterDiscDrops']){
+      s[key]=s[key]&&typeof s[key]==='object'?s[key]:{};
+      for(const f of [2,3,4])s[key][String(f)]=Array.isArray(s[key][String(f)])?s[key][String(f)]:[];
+    }
+    return s;
+  }
+
+  function royalSources(s,p){
+    ensure(s);
+    return [
+      ['v3423',s.alpaca.royalCdDropsV3423['pen'+p]],
+      ['v3421',s.alpaca.royalCdDropsV3421['pen'+p]],
+      ['legacy',s.alpaca.royalDiscDrops['pen'+p]]
+    ];
+  }
+  function hamSources(s,f){
+    ensure(s);
+    return [
+      ['v3423',s.hamsterFeedDropsV3423[String(f)]],
+      ['v3422',s.hamsterFeedDropsV3422[String(f)]],
+      ['legacy',s.hamsterDiscDrops[String(f)]]
+    ];
+  }
+  function rowsOf(sources){
+    const out=[];for(const [src,arr] of sources)for(const d of arr)out.push({src,d});return out;
+  }
+  function take(sources,id=null,src=null,all=false){
+    const out=[];
+    for(const [name,arr] of sources){
+      if(all){out.push(...arr.splice(0,arr.length));continue}
+      if(name!==src)continue;
+      const i=arr.findIndex(d=>String(d?.id)===String(id));
+      if(i>=0)out.push(...arr.splice(i,1));
+    }
+    return out;
+  }
+
+  function persist(s){
+    try{s=typeof normalizeState==='function'?normalizeState(s,currentMember):s}catch(_){}
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    try{save?.()}catch(_){}
+    try{queueCloudSave?.()}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},0);
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},250);
+  }
+
+  function collectRoyal(id=null,src=null,all=false){
+    const base=live();if(!base)return false;
+    try{
+      const s=ensure(cp(base)),p=pen(),picked=take(royalSources(s,p),id,src,all);
+      if(!picked.length)return false;
+      const qty=picked.reduce((a,d)=>a+n(d?.qty||2),0);
+      s.specials.therapyDiscPink=admin()?9999:n(s.specials.therapyDiscPink)+qty;
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      persist(s);
+      globalThis.YN_R3424?.renderRoyal?.();
+      try{showWeatherToast?.(`💿 Pink CD ×${qty} เข้ากระเป๋าแล้ว`)}catch(_){}
+      return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  function collectHam(id=null,src=null,all=false){
+    const base=live(),f=farm();if(!base||f<2||f>4)return false;
+    try{
+      const s=ensure(cp(base)),picked=take(hamSources(s,f),id,src,all);
+      if(!picked.length)return false;
+      const qty=picked.reduce((a,d)=>a+n(d?.qty||1),0);
+      s.specials.therapyDiscRock=admin()?9999:n(s.specials.therapyDiscRock)+qty;
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+      persist(s);
+      globalThis.YN_R3424?.renderHam?.();
+      try{showWeatherToast?.(`💿 Rock CD ×${qty} เข้ากระเป๋าแล้ว`)}catch(_){}
+      return true;
+    }catch(e){message?.('เก็บ CD ไม่ได้',e?.message||'กรุณาลองใหม่');return false}
+  }
+
+  let lastActionAt=0,lastKey='';
+  function once(key,fn){
+    const t=Date.now();
+    if(key===lastKey&&t-lastActionAt<450)return;
+    lastKey=key;lastActionAt=t;fn();
+  }
+
+  function route(e){
+    const target=e.target?.closest?.(
+      '[data-r3424-kind],#v240CollectTreasureAll,#collectDropsBtn,[data-s2-tool="drops"]'
+    );
+    if(!target)return;
+
+    if(target.matches('[data-r3424-kind="royal"]')){
+      e.preventDefault();e.stopImmediatePropagation();
+      once('royal:'+target.dataset.r3424Id,()=>collectRoyal(target.dataset.r3424Id,target.dataset.r3424Src,false));
+      return;
+    }
+    if(target.matches('[data-r3424-kind="ham"]')){
+      e.preventDefault();e.stopImmediatePropagation();
+      once('ham:'+target.dataset.r3424Id,()=>collectHam(target.dataset.r3424Id,target.dataset.r3424Src,false));
+      return;
+    }
+
+    if(target.id==='v240CollectTreasureAll'){
+      const s=live(),cd=s?rowsOf(royalSources(s,pen())):[];
+      if(!cd.length)return; // let original treasure-box handler work when no CD exists.
+      e.preventDefault();e.stopImmediatePropagation();
+      once('royal-all',()=>{
+        collectRoyal(null,null,true);
+        // Keep the original button's treasure-box purpose too.
+        setTimeout(()=>{try{globalThis.YN_V240_COLLECT_TREASURE_R3424?.(null,true)}catch(_){}},90);
+      });
+      return;
+    }
+
+    if(target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]')){
+      const s=live(),f=farm(),cd=(s&&f>=2&&f<=4)?rowsOf(hamSources(s,f)):[];
+      if(!cd.length)return; // no hamster CD: normal farm-drop handler continues.
+      e.preventDefault();e.stopImmediatePropagation();
+      once('ham-all:'+f,()=>{
+        collectHam(null,null,true);
+        // Still allow the farm's existing cat/other drop collection.
+        setTimeout(()=>{try{collectAllCatDropsCurrentFarm?.()}catch(_){}},90);
+      });
+    }
+  }
+
+  // iPhone Safari can dispatch pointerup/click differently; capture both and dedupe.
+  window.addEventListener('pointerup',route,true);
+  window.addEventListener('click',route,true);
+  window.addEventListener('touchend',route,{capture:true,passive:false});
+
+  function sync(){
+    hideAllVersionBadges();
+    // Keep newer R34.24 renderer as the single visual owner.
+    try{globalThis.YN_R3424?.renderHam?.();globalThis.YN_R3424?.renderRoyal?.()}catch(_){}
+  }
+
+  setInterval(sync,1500);
+  setTimeout(sync,100);
+  window.addEventListener('pageshow',()=>setTimeout(sync,80),{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(sync,80)},{passive:true});
+
+  globalThis.YN_R3425={BUILD,collectRoyal,collectHam};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,'loaded');
 })();
 </script>

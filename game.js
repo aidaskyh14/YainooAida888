@@ -17760,6 +17760,7 @@ async function V181_campaignScoreLater(summary){
     }catch(e){console.warn("V240 treasure",e)}
   }
   async function v240CollectTreasure(id=null,all=false){const penNo=v240PenNo();try{const out=v240MutateFast(s=>{const arr=s.alpaca.treasureDrops[`pen${penNo}`]||[],take=all?arr.splice(0,arr.length):(()=>{const i=arr.findIndex(x=>x.id===id);return i>=0?arr.splice(i,1):[]})();if(!take.length)throw new Error("ตอนนี้ยังไม่มีกล่องสมบัติในคอกนี้ค่ะ");s.alpaca.inventory.other.treasureBox=v240Int(s.alpaca.inventory.other.treasureBox)+take.length;return take.length});v240RenderTreasureDrops();$("modalContent").innerHTML=`<section class="feature-panel v240-reward-popup"><img src="${V240_ITEM.treasureBox.image}" alt=""><h2>เก็บกล่องสำเร็จ</h2><p>กล่องสมบัติอัลปาก้า <b>×${out.result}</b> เข้ากระเป๋าแล้วค่ะ</p><button id="v240TreasureCollected" class="primary-spooky-action">ยืนยัน</button></section>`;openModal();$("v240TreasureCollected").onclick=closeModal}catch(e){message("ยังเก็บไม่ได้",e.message||"กรุณาลองใหม่")}}
+  globalThis.YN_V240_COLLECT_TREASURE_R3424=v240CollectTreasure;
   function v240EnsureTreasureUI(){const stage=$("alpacaPenStage");if(!stage)return;if(!$("v240TreasureLayer")){stage.insertAdjacentHTML("beforeend",'<div id="v240TreasureLayer" class="v240-treasure-layer"></div><button id="v240CollectTreasureAll" class="v240-collect-treasure-all" type="button"><span>🧺</span><b>เก็บกล่อง</b></button>');$("v240CollectTreasureAll").onclick=()=>v240CollectTreasure(null,true)}}
   function v240RenderTreasureDrops(){v240EnsureTreasureUI();const layer=$("v240TreasureLayer");if(!layer)return;const penNo=v240PenNo(),root=(ownState||state)?.alpaca,pen=root?.pens?.[penNo-1],hasAdult=Boolean(pen?.alpacas?.some(a=>a?.type==="adult"&&!(["prince","princess"].includes(String(a?.color||""))))),arr=hasAdult?(root?.treasureDrops?.[`pen${penNo}`]||[]):[];layer.innerHTML=arr.map(x=>`<button class="v240-treasure-drop" type="button" data-v240-treasure="${x.id}" style="left:${x.x}%;top:${x.y}%"><img src="${V240_ITEM.treasureBox.image}" alt="กล่องสมบัติ"></button>`).join("");const all=$("v240CollectTreasureAll");if(all)all.classList.toggle("hidden",arr.length<1);document.querySelectorAll("[data-v240-treasure]").forEach(b=>b.onclick=()=>v240CollectTreasure(b.dataset.v240Treasure,false))}
   globalThis.YN_V240_RENDER_TREASURE=v240RenderTreasureDrops;globalThis.YN_V240_PROCESS_TREASURE=v240ProcessTreasureDrops;
@@ -32603,3 +32604,9 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.22-POLISH3';
 
 /* S2 R34.23 FIX4 marker */
 window.YAINOO_PACKAGE_BUILD='S2-R34.23-FIX4';
+
+/* S2 R34.24 COLLECT/UI marker */
+window.YAINOO_PACKAGE_BUILD='S2-R34.24-COLLECT-UI';
+
+/* S2 R34.25 stability marker — intentionally not shown in UI */
+window.YAINOO_PACKAGE_BUILD='S2-R34.25-STABILITY';
