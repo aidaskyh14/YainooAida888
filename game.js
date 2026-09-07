@@ -32610,3 +32610,6 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.24-COLLECT-UI';
 
 /* S2 R34.25 stability marker — intentionally not shown in UI */
 window.YAINOO_PACKAGE_BUILD='S2-R34.25-STABILITY';
+
+/* S2 R34.26 collection-flow marker — not shown in UI */
+window.YAINOO_PACKAGE_BUILD='S2-R34.26-COLLECTION-FLOW';

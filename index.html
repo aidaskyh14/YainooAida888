@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.25-STABILITY">
+  <link rel="stylesheet" href="style.css?v=S2-R34.26-COLLECTION-FLOW">
 </head>
 <body>
   <main id="app">
@@ -462,7 +462,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.25-STABILITY"></script>
+<script src="game.js?v=S2-R34.26-COLLECTION-FLOW"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -1450,27 +1450,8 @@
       e.preventDefault();e.stopImmediatePropagation();collectHam(target.dataset.r3424Id,target.dataset.r3424Src,false);return;
     }
 
-    if(target.id==='v240CollectTreasureAll'){
-      const s=live(),rows=s?sourceRows(royalSources(s,pen())):[];
-      if(rows.length){
-        e.preventDefault();e.stopImmediatePropagation();
-        const got=collectRoyal(null,null,true);
-        // Same physical button also keeps its old treasure-box job.
-        setTimeout(()=>{try{globalThis.YN_V240_COLLECT_TREASURE_R3424?.(null,true)}catch(_){}},80);
-        return;
-      }
-      return; // no CD: let original treasure handler work
-    }
-
-    if(target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]')){
-      const s=live(),f=farm(),rows=(s&&f>=2&&f<=4)?sourceRows(hamSources(s,f)):[];
-      if(rows.length){
-        e.preventDefault();e.stopImmediatePropagation();
-        collectHam(null,null,true);
-        setTimeout(()=>{try{collectAllCatDropsCurrentFarm?.()}catch(_){}},60);
-        return;
-      }
-    }
+    /* R34.26 owns all bulk-basket collection so animation + summary stay in sync. */
+    if(target.id==='v240CollectTreasureAll'||target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]'))return;
   },true);
 
   // Hide all visible build/version badges permanently.
@@ -1643,28 +1624,8 @@
       return;
     }
 
-    if(target.id==='v240CollectTreasureAll'){
-      const s=live(),cd=s?rowsOf(royalSources(s,pen())):[];
-      if(!cd.length)return; // let original treasure-box handler work when no CD exists.
-      e.preventDefault();e.stopImmediatePropagation();
-      once('royal-all',()=>{
-        collectRoyal(null,null,true);
-        // Keep the original button's treasure-box purpose too.
-        setTimeout(()=>{try{globalThis.YN_V240_COLLECT_TREASURE_R3424?.(null,true)}catch(_){}},90);
-      });
-      return;
-    }
-
-    if(target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]')){
-      const s=live(),f=farm(),cd=(s&&f>=2&&f<=4)?rowsOf(hamSources(s,f)):[];
-      if(!cd.length)return; // no hamster CD: normal farm-drop handler continues.
-      e.preventDefault();e.stopImmediatePropagation();
-      once('ham-all:'+f,()=>{
-        collectHam(null,null,true);
-        // Still allow the farm's existing cat/other drop collection.
-        setTimeout(()=>{try{collectAllCatDropsCurrentFarm?.()}catch(_){}},90);
-      });
-    }
+    /* R34.26 owns bulk basket collection. Single-CD taps above remain active. */
+    if(target.id==='v240CollectTreasureAll'||target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]'))return;
   }
 
   // iPhone Safari can dispatch pointerup/click differently; capture both and dedupe.
@@ -1684,6 +1645,217 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(sync,80)},{passive:true});
 
   globalThis.YN_R3425={BUILD,collectRoyal,collectHam};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3426-collection-flow">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.26-COLLECTION-FLOW';
+  const $=id=>document.getElementById(id);
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const live=()=>{try{return visitContext?null:(ownState||state||null)}catch(_){return null}};
+  const farm=()=>{try{return Math.max(1,Math.min(4,n(farmPlotPage)+1))}catch(_){return 1}};
+  const pen=()=>{try{return typeof currentAlpacaPen==='function'?currentAlpacaPen():1}catch(_){return 1}};
+  const admin=()=>{try{return String(currentMember||'')==='Aida'||String(currentMemberKey||'').toLowerCase()==='aida'||adminProfile?.role==='admin'||(typeof isAdmin==='function'&&isAdmin())}catch(_){return false}};
+
+  function ensure(s){
+    if(!s)return s;
+    s.specials=s.specials&&typeof s.specials==='object'?s.specials:{};
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==='object'?s.alpaca.inventory:{};
+    s.alpaca.inventory.other=s.alpaca.inventory.other&&typeof s.alpaca.inventory.other==='object'?s.alpaca.inventory.other:{};
+    s.alpaca.treasureDrops=s.alpaca.treasureDrops&&typeof s.alpaca.treasureDrops==='object'?s.alpaca.treasureDrops:{};
+    for(let p=1;p<=5;p++)s.alpaca.treasureDrops['pen'+p]=Array.isArray(s.alpaca.treasureDrops['pen'+p])?s.alpaca.treasureDrops['pen'+p]:[];
+    for(const key of ['royalCdDropsV3423','royalCdDropsV3421','royalDiscDrops']){
+      s.alpaca[key]=s.alpaca[key]&&typeof s.alpaca[key]==='object'?s.alpaca[key]:{};
+      for(let p=1;p<=5;p++)s.alpaca[key]['pen'+p]=Array.isArray(s.alpaca[key]['pen'+p])?s.alpaca[key]['pen'+p]:[];
+    }
+    for(const key of ['hamsterFeedDropsV3423','hamsterFeedDropsV3422','hamsterDiscDrops']){
+      s[key]=s[key]&&typeof s[key]==='object'?s[key]:{};
+      for(const f of [2,3,4])s[key][String(f)]=Array.isArray(s[key][String(f)])?s[key][String(f)]:[];
+    }
+    return s;
+  }
+  function royalSources(s,p){ensure(s);return [
+    ['v3423',s.alpaca.royalCdDropsV3423['pen'+p]],
+    ['v3421',s.alpaca.royalCdDropsV3421['pen'+p]],
+    ['legacy',s.alpaca.royalDiscDrops['pen'+p]]
+  ]}
+  function hamSources(s,f){ensure(s);return [
+    ['v3423',s.hamsterFeedDropsV3423[String(f)]],
+    ['v3422',s.hamsterFeedDropsV3422[String(f)]],
+    ['legacy',s.hamsterDiscDrops[String(f)]]
+  ]}
+  function rows(sources){const out=[];for(const [src,arr] of sources)for(const d of arr)out.push({src,d});return out}
+  function takeAll(sources){const out=[];for(const [,arr] of sources)out.push(...arr.splice(0,arr.length));return out}
+
+  function showWorking(host){
+    if(!host)return;
+    let overlay=host.querySelector('.r3426-collect-overlay');
+    if(!overlay){
+      overlay=document.createElement('div');
+      overlay.className='r3426-collect-overlay';
+      overlay.innerHTML='<div class="drop-basket-working-card"><img src="drop-collection-basket.png?v=1" alt="ตะกร้า"><b>กำลังเก็บของดรอปทั้งหมด...</b></div>';
+      host.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden');
+  }
+  function hideWorking(){document.querySelectorAll('.r3426-collect-overlay').forEach(x=>x.classList.add('hidden'))}
+
+  function summaryHtml(items){
+    return items.map(x=>`<div class="r3426-summary-row">${x.icon||''}<b>${x.name}</b><span>×${x.qty}</span></div>`).join('');
+  }
+  function showSummary(title,items){
+    hideWorking();
+    if(!items.length)return message?.(title,'เก็บของดรอปเรียบร้อยแล้วค่ะ');
+    $('modalContent').innerHTML=`<section class="feature-panel r3426-result"><h2>${title}</h2><p>ของดรอปรอบนี้เข้ากระเป๋าแล้ว</p><div class="r3426-summary">${summaryHtml(items)}</div><button id="r3426Done" class="primary-spooky-action" type="button">รับทราบ</button></section>`;
+    openModal?.();$('r3426Done').onclick=closeModal;
+  }
+
+  let busy=false,lastKey='',lastAt=0;
+  function dedupe(key){
+    const t=Date.now();if(key===lastKey&&t-lastAt<700)return false;lastKey=key;lastAt=t;return true;
+  }
+
+  async function collectFarmAll(){
+    if(busy||visitContext||!cloudReady||!currentMemberKey)return;
+    const f=farm(),base=live();if(!base)return;
+    const initial=ensure(cp(base));
+    const hamInitial=(f>=2&&f<=4)?rows(hamSources(initial,f)):[];
+    const catInitial=(initial.cats||[]).filter(c=>Number(c?.placedFarm)===f).reduce((a,c)=>a+(Array.isArray(c?.drops)?c.drops.length:0),0);
+    if(!hamInitial.length&&!catInitial)return message?.('เก็บของดรอปไม่ได้','ตอนนี้ยังไม่มีของดรอปให้เก็บ');
+
+    busy=true;showWorking($('gameScreen'));
+    try{
+      /* Let the basket animation actually play before items disappear from the ground. */
+      await sleep(950);
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);
+      let next=null,summary=[];
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+        const s=ensure(normalizeState(snap.data(),currentMember));
+        try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(_){}
+
+        let rockQty=0;
+        if(f>=2&&f<=4){
+          const got=takeAll(hamSources(s,f));
+          rockQty=got.reduce((a,d)=>a+n(d?.qty||1),0);
+          if(rockQty){
+            s.specials.therapyDiscRock=admin()?9999:n(s.specials.therapyDiscRock)+rockQty;
+            summary.push({icon:'💿',name:'Rock CD',qty:rockQty});
+          }
+        }
+
+        const catSummary={};
+        for(const cat of (s.cats||[])){
+          if(Number(cat?.placedFarm)!==f)continue;
+          for(const drop of (cat.drops||[])){
+            const item=(typeof CAT_DROP_POOL!=='undefined'?CAT_DROP_POOL:[]).find(x=>x.id===drop.itemId);
+            if(!item)continue;
+            try{applyPetDropReward?.(s,item)}catch(_){}
+            if(!catSummary[item.id])catSummary[item.id]={name:item.name||item.id,qty:0};
+            catSummary[item.id].qty+=n(item.qty||1);
+          }
+          cat.drops=[];
+        }
+        for(const x of Object.values(catSummary))summary.push({icon:'🎁',name:x.name,qty:x.qty});
+
+        if(!summary.length){
+          /* Do not show a false error after a successful earlier event; just finish quietly. */
+          next=s;return;
+        }
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        next=cp(s);
+        tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next){
+        ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);
+        try{globalThis.YN_R3424?.renderHam?.()}catch(_){}
+        try{renderCatPendingDrop?.()}catch(_){}
+      }
+      await sleep(220);
+      showSummary('🧺 เก็บของดรอปทั้งหมดแล้ว',summary);
+    }catch(e){
+      hideWorking();message?.('เก็บของดรอปไม่ได้',e?.message||'กรุณาลองใหม่');
+    }finally{busy=false}
+  }
+
+  async function collectAlpacaAll(){
+    if(busy||visitContext||!cloudReady||!currentMemberKey)return;
+    const p=pen(),base=live();if(!base)return;
+    const initial=ensure(cp(base)),cdInitial=rows(royalSources(initial,p)),boxInitial=(initial.alpaca.treasureDrops['pen'+p]||[]);
+    if(!cdInitial.length&&!boxInitial.length)return message?.('ยังเก็บไม่ได้','ตอนนี้ยังไม่มีของดรอปในคอกนี้ค่ะ');
+
+    busy=true;showWorking($('alpacaPenScreen')||$('sceneScreen'));
+    try{
+      await sleep(950);
+      await settlePendingCloudSave?.();
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);
+      let next=null,summary=[];
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+        const s=ensure(normalizeState(snap.data(),currentMember));
+        try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(_){}
+
+        const gotCd=takeAll(royalSources(s,p));
+        const pinkQty=gotCd.reduce((a,d)=>a+n(d?.qty||2),0);
+        if(pinkQty){
+          s.specials.therapyDiscPink=admin()?9999:n(s.specials.therapyDiscPink)+pinkQty;
+          summary.push({icon:'💿',name:'Pink CD',qty:pinkQty});
+        }
+
+        const boxes=s.alpaca.treasureDrops['pen'+p].splice(0);
+        if(boxes.length){
+          s.alpaca.inventory.other.treasureBox=n(s.alpaca.inventory.other.treasureBox)+boxes.length;
+          summary.push({icon:'🧰',name:'กล่องสมบัติอัลปาก้า',qty:boxes.length});
+        }
+
+        if(!summary.length){next=s;return}
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        next=cp(s);
+        tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=='undefined'?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      if(next){
+        ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);
+        try{globalThis.YN_R3424?.renderRoyal?.()}catch(_){}
+        try{globalThis.YN_V240_RENDER_TREASURE_R3426?.()}catch(_){}
+      }
+      await sleep(220);
+      showSummary('🧺 เก็บของในคอกแล้ว',summary);
+    }catch(e){
+      hideWorking();message?.('ยังเก็บไม่ได้',e?.message||'กรุณาลองใหม่');
+    }finally{busy=false}
+  }
+
+  function route(e){
+    const target=e.target?.closest?.('#v240CollectTreasureAll,#collectDropsBtn,[data-s2-tool="drops"]');
+    if(!target)return;
+    if(target.id==='v240CollectTreasureAll'){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(dedupe('alpaca-all'))collectAlpacaAll();
+      return;
+    }
+    if(target.id==='collectDropsBtn'||target.matches('[data-s2-tool="drops"]')){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(dedupe('farm-all:'+farm()))collectFarmAll();
+    }
+  }
+
+  /* Own all bulk collection events; single-CD taps remain owned by R34.25. */
+  window.addEventListener('pointerup',route,true);
+  window.addEventListener('touchend',route,{capture:true,passive:false});
+  window.addEventListener('click',route,true);
+
+  globalThis.YN_R3426={BUILD,collectFarmAll,collectAlpacaAll};
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,'loaded');
 })();
