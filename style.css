@@ -10337,3 +10337,45 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 }
 .r3426-summary-row>b{font-size:11px}
 .r3426-summary-row>span{font-weight:900;font-size:12px;color:#5b315f}
+
+
+/* ======================================================================
+   S2 R34.27 — responsiveness/stability pass
+   ====================================================================== */
+#r15ClaimTrapReward,
+.temple-supply-row button,
+#r17HarvestOne,
+[data-r17-plant],
+.alpaca-trough-slot,
+.alpaca-inventory-grid [data-fill-trough],
+#r3427FillAllTrough,
+[data-r3427-fillall]{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+
+#r15ClaimTrapReward{min-height:48px!important}
+
+.r17-flower-plot{min-width:58px!important;min-height:58px!important}
+#r17HarvestOne{min-height:48px!important;padding:10px 18px!important}
+.r17-flower-picker [data-r17-plant]{min-height:58px!important}
+
+.alpaca-trough-slot{
+  min-width:48px!important;
+  min-height:48px!important;
+}
+.r3427-fill-all{
+  width:100%!important;
+  min-height:46px!important;
+  margin-top:8px!important;
+  animation:none!important;
+  transition:none!important;
+}
+.temple-supply-row button{
+  min-width:70px!important;
+  min-height:42px!important;
+}
+.temple-supply-row button.r3427-sending{
+  opacity:.72!important;
+  pointer-events:none!important;
+}
