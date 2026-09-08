@@ -8752,9 +8752,37 @@ function v15ShiftDateKey(dateKey,days){
   const x=new Date(Date.UTC(y,m-1,d+days));return `${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,"0")}-${String(x.getUTCDate()).padStart(2,"0")}`;
 }
 let v15TempleCache=null,v15TempleUnsub=null,v15TempleOutcomeSyncBusy=false,v15TempleClockTimer=null;
-async function v15TouchTempleDay(){if(!cloudReady||!currentMemberKey)return null;const {db,fs}=await getFirebaseContext(),dateKey=currentBangkokDateKey(),ref=fs.doc(db,"templeMissions",dateKey);let result;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),day=v15RefreshTempleDay(snap.exists()?cloneData(snap.data()):v15NewTempleDay(dateKey));result=day;tx.set(ref,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false})});v15TempleCache=result;return result}
+async function v15TouchTempleDay(){
+  if(!cloudReady||!currentMemberKey)return null;
+  const {db,fs}=await getFirebaseContext(),dateKey=currentBangkokDateKey(),ref=fs.doc(db,"templeMissions",dateKey);
+  let result;
+  await fs.runTransaction(db,async tx=>{
+    const snap=await tx.get(ref);
+    const raw=snap.exists()?cloneData(snap.data()):v15NewTempleDay(dateKey);
+    const before=JSON.stringify(raw);
+    const day=v15RefreshTempleDay(cloneData(raw));
+    result=day;
+    const after=JSON.stringify(day);
+    if(!snap.exists()||before!==after)tx.set(ref,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
+  });
+  v15TempleCache=result;return result;
+}
 function v15StopTempleSubscription(){if(v15TempleUnsub){v15TempleUnsub();v15TempleUnsub=null}}
-async function v15StartTempleSubscription(){if(!cloudReady)return;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"templeMissions",currentBangkokDateKey());v15StopTempleSubscription();v15TempleUnsub=fs.onSnapshot(ref,snap=>{if(!snap.exists())return;v15TempleCache=v15RefreshTempleDay(cloneData(snap.data()));if(currentScene==="templeSolo")v15RenderSoloPanel();else if(currentScene==="templeGroup")v15RenderGroupPanel();v15ApplyOwnTempleOutcomes().catch(()=>{})},error=>console.warn("temple listener",error))}
+async function v15StartTempleSubscription(){
+  if(!cloudReady)return;
+  const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"templeMissions",currentBangkokDateKey());
+  v15StopTempleSubscription();
+  let renderTimer=0;
+  v15TempleUnsub=fs.onSnapshot(ref,snap=>{
+    if(!snap.exists())return;
+    v15TempleCache=v15RefreshTempleDay(cloneData(snap.data()));
+    clearTimeout(renderTimer);
+    renderTimer=setTimeout(()=>{
+      if(currentScene==="templeSolo")v15RenderSoloPanel();
+      else if(currentScene==="templeGroup")v15RenderGroupPanel();
+    },35);
+  },error=>console.warn("temple listener",error));
+}
 async function v15ApplyTempleOutcomesForDate(dateKey){
   const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",dateKey),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next,notices=[];
   await fs.runTransaction(db,async tx=>{
@@ -8788,7 +8816,23 @@ async function v15ApplyOwnTempleOutcomes(){
     }
   }catch(error){console.warn("temple outcome sync",error)}finally{v15TempleOutcomeSyncBusy=false}
 }
-async function v15LoadTempleDay(){const day=await v15TouchTempleDay();await v15ApplyOwnTempleOutcomes();return day}
+async function v15LoadTempleDay(){
+  if(!cloudReady)return v15TempleCache||v15NewTempleDay(currentBangkokDateKey());
+  const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"templeMissions",currentBangkokDateKey());
+  const snap=await fs.getDoc(ref);
+  let day;
+  if(snap.exists()){
+    day=v15RefreshTempleDay(cloneData(snap.data()));
+  }else{
+    day=v15NewTempleDay(currentBangkokDateKey());
+    /* First creator only. Do not make every reader rewrite the shared temple doc. */
+    try{await fs.setDoc(ref,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false})}catch(_){}
+  }
+  v15TempleCache=day;
+  /* Rewards/penalties are background work; opening the temple must never wait for them. */
+  setTimeout(()=>v15ApplyOwnTempleOutcomes().catch(()=>{}),0);
+  return day;
+}
 function v15TempleClosedText(){return "วัดเปิดตลอด 24 ชั่วโมง"}
 function v15UpdateTempleButton(){const btn=$("almsBtn");if(!btn)return;const b=btn.querySelector("b"),small=btn.querySelector("small");if(b)b.textContent="วัดไทยในสวน";if(small)small.textContent="เปิด 24 ชั่วโมง"}
 updateAlmsButton=v15UpdateTempleButton;
@@ -8816,13 +8860,15 @@ async function v15RenderSoloPanel(){
 async function v15AcceptSolo(slotIndex){
   if(!v15TempleIsOpen())return v15ShowTempleClosed();
   try{
-    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState;
+    const btn=document.querySelector(`[data-solo-accept="${slotIndex}"]`);if(btn){btn.disabled=true;btn.textContent="กำลังรับ..."}
+    const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState;
     await fs.runTransaction(db,async tx=>{
       const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]),day=v15RefreshTempleDay(dSnap.exists()?cloneData(dSnap.data()):v15NewTempleDay(currentBangkokDateKey()));if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);v15EnsureTemplePlayerState(s);if(s.templeHourly.solo.count>=2)throw new Error("ชั่วโมงนี้คุณรับคำท้าครบ 2 ภารกิจแล้ว พักก่อนนะคะ");const slot=day.soloSlots[slotIndex];if(!slot||slot.status!=="open")throw new Error("มีคนรับคำท้าภารกิจนี้ไปแล้ว");
       const now=gameNow(),attemptId=`${day.dateKey}-solo-${slotIndex}-${slot.cycle}-${now}`,requirements=v15SoloRequirements(attemptId);Object.assign(slot,{status:"active",ownerKey:currentMemberKey,ownerName:currentMember,attemptId,requirements,sent:{},reward:v15SoloReward(requirements,attemptId),startedAt:now,deadlineAt:now+V15_SOLO_DURATION_MS,cooldownUntil:0,lastResult:""});s.templeHourly.solo.count++;nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);showWeatherToast("🛕 รับคำท้าทายแล้ว • มีเวลา 30 นาที");
   }catch(error){message("รับคำท้าทายไม่ได้",error.message||"กรุณาลองใหม่")}
+  finally{const btn=document.querySelector(`[data-solo-accept="${slotIndex}"]`);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent="รับคำท้าทาย"}}
 }
 async function v15SendSolo(slotIndex,reqId){
   try{
@@ -8860,16 +8906,28 @@ async function v15SendSolo(slotIndex,reqId){
 async function v15ClaimSolo(slotIndex){
   try{
     if(v15ClaimSolo._busy)return;v15ClaimSolo._busy=true;
-    const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let reward=0;
+    const btn=document.querySelector(`[data-solo-claim="${slotIndex}"]`);if(btn){btn.disabled=true;btn.textContent="กำลังรับ..."}
+    const {db,fs}=await getFirebaseContext(),
+      dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),
+      saveRef=fs.doc(db,"saves",currentMemberKey),
+      profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let reward=0,next=null;
     await fs.runTransaction(db,async tx=>{
-      const dSnap=await tx.get(dayRef);if(!dSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
-      const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex];if(!slot||slot.status!=="completed"||slot.ownerKey!==currentMemberKey)throw new Error("ยังรับรางวัลไม่ได้");
-      reward=Number(slot.reward)||50;slot.status="cooldown";slot.lastResult="success";slot.cooldownUntil=gameNow()+V15_SOLO_COOLDOWN_MS;slot.requirements=[];slot.sent={};
+      const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]);
+      if(!dSnap.exists()||!sSnap.exists())throw new Error("ข้อมูลภารกิจไม่พร้อม");
+      const day=v15RefreshTempleDay(cloneData(dSnap.data())),slot=day.soloSlots[slotIndex];
+      if(!slot||slot.status!=="completed"||slot.ownerKey!==currentMemberKey)throw new Error("ยังรับรางวัลไม่ได้");
+      const s=normalizeState(sSnap.data(),currentMember);
+      reward=Number(slot.reward)||50;
+      slot.status="cooldown";slot.lastResult="success";slot.cooldownUntil=gameNow()+V15_SOLO_COOLDOWN_MS;slot.requirements=[];slot.sent={};
+      s.merit=(Number(s.merit)||0)+reward;incrementMissionOn(s,"templeSoloSuccess",1);
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=cloneData(s);
       tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
     });
-    const next=normalizeState(cloneData(ownState||state),currentMember);next.merit=(Number(next.merit)||0)+reward;incrementMissionOn(next,"templeSoloSuccess",1);ownState=next;if(!visitContext)state=next;saveLocalOnly(next);try{save()}catch(_){};try{await flushCloudSave?.()}catch(_){}
-    try{await fs.setDoc(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:next.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R34.11.6 temple profile",e)}
-    updateMeritUI();message("ยินดีด้วยค่ะ คุณทำภารกิจสำเร็จ",`ได้รับ +${reward} กุศล<br>ภารกิจใหม่กำลังมาใน 10.00 นาที`);
+    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);updateMeritUI();
+    message("ยินดีด้วยค่ะ คุณทำภารกิจสำเร็จ",`ได้รับ +${reward} กุศล<br>ภารกิจใหม่กำลังมาใน 10.00 นาที`);
   }catch(error){message("รับรางวัลไม่ได้",error.message||"กรุณาลองใหม่")}
   finally{v15ClaimSolo._busy=false}
 }
@@ -8914,13 +8972,15 @@ async function v15RenderGroupPanel(){
 async function v15JoinGroup(slotIndex){
   if(!v15TempleIsOpen())return v15ShowTempleClosed();
   try{
-    await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,started=false;
+    const btn=document.querySelector(`[data-group-join="${slotIndex}"]`);if(btn){btn.disabled=true;btn.textContent="กำลังเข้าร่วม..."}
+    const {db,fs}=await getFirebaseContext(),dayRef=fs.doc(db,"templeMissions",currentBangkokDateKey()),saveRef=fs.doc(db,"saves",currentMemberKey);let nextState,started=false;
     await fs.runTransaction(db,async tx=>{
       const [dSnap,sSnap]=await Promise.all([tx.get(dayRef),tx.get(saveRef)]),day=v15RefreshTempleDay(dSnap.exists()?cloneData(dSnap.data()):v15NewTempleDay(currentBangkokDateKey()));if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sSnap.data(),currentMember);v15EnsureTemplePlayerState(s);const slot=day.groupSlots[slotIndex];if(!slot||!["open","active"].includes(slot.status))throw new Error("ภารกิจนี้จบหรือพักอยู่");if(slot.status==="active"&&Number(slot.deadlineAt||0)>0&&gameNow()>=Number(slot.deadlineAt||0))throw new Error("หมดเวลาภารกิจแล้ว");slot.participants=Array.isArray(slot.participants)?slot.participants:[];if(slot.participants.some(p=>p.key===currentMemberKey))throw new Error("คุณลงชื่อภารกิจนี้แล้ว");
       slot.participants.push({key:currentMemberKey,name:currentMember,joinedAt:gameNow()});if(slot.status==="open"&&slot.participants.length>=Math.max(1,Number(slot.requiredPeople)||1)){const now=gameNow(),attemptId=`${day.dateKey}-group-${slotIndex}-${slot.cycle}-${now}`;slot.status="active";slot.attemptId=attemptId;slot.requirements=v15GroupRequirements(attemptId,slotIndex);slot.sent={};slot.rewardTotal=v15GroupReward(slotIndex,attemptId);slot.startedAt=now;slot.deadlineAt=now+V15_GROUP_DURATION_MS;started=true}nextState=s;tx.set(dayRef,{...cloneData(day),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);showWeatherToast(started?"👥 ทีมครบแล้ว • ภารกิจเริ่ม 45 นาที":"👥 ลงชื่อภารกิจหมู่แล้ว");
   }catch(error){message("ลงชื่อไม่ได้",error.message||"กรุณาลองใหม่")}
+  finally{const btn=document.querySelector(`[data-group-join="${slotIndex}"]`);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent="เข้าร่วมทีม"}}
 }
 async function v15SendGroup(slotIndex,reqId){
   try{
@@ -8948,7 +9008,7 @@ async function v15SendGroup(slotIndex,reqId){
       tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);
-    if(completedNow){await v15ApplyOwnTempleOutcomes();showWeatherToast("✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที")}
+    if(completedNow){showWeatherToast("✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที");setTimeout(()=>v15ApplyOwnTempleOutcomes().catch(()=>{}),0)}
     else showWeatherToast(`🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว ×${consumeQty}`);
     if(currentScene==="templeGroup")setTimeout(()=>v15RenderGroupPanel(),0);
   }catch(error){message("ส่งเสบียงไม่ได้",error.message||"กรุณาลองใหม่")}
@@ -8982,7 +9042,15 @@ draw=function(){const result=__drawBeforeV15();v15UpdateTempleButton();const sp=
 if($("almsBtn"))$("almsBtn").onclick=showAlms;
 if($("sprinklerBtn"))$("sprinklerBtn").onclick=v15BulkWaterCurrentFarm;
 v15UpdateTempleButton();
-setInterval(()=>{if(currentMember&&cloudReady){if(currentScene==="coconut"&&v15CoconutClosed()){returnToFarm();v15ShowCoconutClosed()}v15TouchTempleDay().then(()=>v15ApplyOwnTempleOutcomes()).catch(()=>{})}},60000);
+setInterval(()=>{
+  if(!currentMember||!cloudReady)return;
+  if(currentScene==="coconut"&&v15CoconutClosed()){returnToFarm();v15ShowCoconutClosed();return}
+  /* Critical: never rewrite the shared temple day every minute for every player.
+     Only the player currently inside the temple refreshes an actually expired slot. */
+  if(v15TempleScene()&&v15TempleNeedsServerRefresh()){
+    v15TouchTempleDay().then(()=>v15ApplyOwnTempleOutcomes()).catch(()=>{});
+  }
+},60000);
 
 
 
@@ -10801,26 +10869,60 @@ ingredientText=function(recipe){
 craft=async function(id){
   const recipe=recipeById(id);if(!recipe)return;
   if(recipe.night&&!isNightCraftOpen()){message("ยังคราฟไม่ได้","เมนูรอบดึกเปิดเวลา 22:00–02:00");return}
-  const s=ownState||state;if(!s)return;
-  if(!cloudReady){message("ยังคราฟไม่ได้","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");return}
-  if(!canCraftRecipeFromState(recipe,s)){message("คราฟอาหารไม่ได้","วัตถุดิบไม่ครบตามสูตร");return}
-  for(const [key,count] of Object.entries(recipe.need||{})){
-    if(!YN_consumeRecipeIngredient(s,key,count)){message("คราฟอาหารไม่ได้","วัตถุดิบไม่ครบตามสูตร");return}
+  if(!cloudReady||!currentMemberKey){message("ยังคราฟไม่ได้","กำลังเชื่อมข้อมูล กรุณาลองอีกครั้ง");return}
+  if(craft._busy)return;
+  craft._busy=true;
+  try{
+    const {db,fs}=await getFirebaseContext(),
+      saveRef=fs.doc(db,"saves",currentMemberKey),
+      profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let next=null,success=false,reward=0;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);
+      if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(snap.data(),currentMember);
+      try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(_){}
+      if(!canCraftRecipeFromState(recipe,s))throw new Error("วัตถุดิบไม่ครบตามสูตร");
+      for(const [key,count] of Object.entries(recipe.need||{})){
+        if(!YN_consumeRecipeIngredient(s,key,Number(count)||0))
+          throw new Error("วัตถุดิบไม่ครบตามสูตร");
+      }
+      success=Math.random()*100<recipe.chance;
+      if(success){
+        reward=randInt(recipe.reward[0],recipe.reward[1]);
+        addDishToState(s,recipe.id,1);
+        s.merit=(Number(s.merit)||0)+reward;
+        incrementMissionOn(s,"craftFood",1);
+      }
+      if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
+      s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+      s.clientLocalEditAt=Date.now();
+      next=cloneData(s);
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(success){
+        tx.set(profileRef,{
+          memberKey:currentMemberKey,
+          displayName:currentProfileDisplayName(),
+          merit:s.merit,
+          initialized:true,
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+      }
+    });
+    ownState=normalizeState(next,currentMember);
+    if(!visitContext)state=ownState;
+    saveLocalOnly(ownState);
+    updateMeritUI();
+    $("modalContent").innerHTML=success
+      ? `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`
+      : `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
+    return {success,reward};
+  }catch(error){
+    message("คราฟอาหารไม่ได้",error?.message||"กรุณาลองใหม่");
+    return {success:false,error:true};
+  }finally{
+    craft._busy=false;
   }
-  const success=Math.random()*100<recipe.chance;
-  let reward=0;
-  if(success){
-    reward=randInt(recipe.reward[0],recipe.reward[1]);
-    addDishToState(s,recipe.id,1);
-    s.merit=(Number(s.merit)||0)+reward;
-    incrementMissionOn(s,"craftFood",1);
-  }
-  if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(s);
-  save();updateMeritUI();
-  $("modalContent").innerHTML=success
-    ? `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`
-    : `<section class="feature-panel craft-success-panel yn-new-menu-result"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${safeHtml(recipe.name)}"><h3>${safeHtml(recipe.name)}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
-  return {success,reward};
 };
 
 /* ---------- BOAT RACE: ONLY the 8 new menus ---------- */
@@ -21157,7 +21259,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     cloudSaveTimer=setTimeout(()=>{
       cloudSaveTimer=null;
       flushCloudSave().catch(e=>console.error("S2 durable save failed",e));
-    },220);
+    },520);
   };
 
   save=function(){
@@ -21286,8 +21388,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
           }
         }
         const localRev=Number(ownState.clientSaveRevision)||0,remoteRev=Number(raw.clientSaveRevision)||0;
+        const localEdit=Number(ownState.clientLocalEditAt)||0,remoteEdit=Number(raw.clientLocalEditAt)||0;
         if((s2Dirty||cloudSaveTimer||cloudSaveInFlight)&&remoteRev<localRev)return;
         if(remoteRev<localRev)return;
+        /* R34.34: some direct-transaction / optimistic actions can produce a newer
+           local edit before the cloud revision advances. Never let an equal-revision
+           but older cloud snapshot repaint that newer local result. */
+        if(remoteRev<=localRev&&localEdit>remoteEdit&&localEdit>0)return;
         const remote=normalizeState(raw,currentMember);remote.plots=ownState.plots;
         const preservedPlots=ownState.plots;
         Object.keys(ownState).forEach(k=>{if(k!=="plots"&&!(k in remote))delete ownState[k]});
@@ -22698,13 +22805,30 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const MARKET_POS=[[27.2,33.4],[53.8,33.4],[80.4,33.4],[27.2,45.7],[53.8,45.7],[80.4,45.7],[27.2,58.0],[53.8,58.0],[80.4,58.0],[27.2,70.3],[53.8,70.3],[80.4,70.3]];
   const marketCacheR15=new Map();
   const marketPendingR15=new Set();
+  let marketLiveUnsubR32=null;
+  function stopMarketLiveR32(){try{marketLiveUnsubR32?.()}catch(_){}marketLiveUnsubR32=null}
+  async function startMarketLiveR32(ownerKey,ownerName,shopNo,viewToken){
+    stopMarketLiveR32();
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",ownerKey);
+      marketLiveUnsubR32=fs.onSnapshot(ref,snap=>{
+        if(!snap.exists())return;
+        const screen=$r("s2MarketScreen");
+        if(!screen||screen.classList.contains("hidden"))return;
+        if(screen.dataset.viewToken!==String(viewToken)||screen.dataset.owner!==String(ownerKey)||Number(screen.dataset.shop)!==Number(shopNo))return;
+        const data={...marketDefault(ownerKey,ownerName),...snap.data()};
+        saveMarketLocal(ownerKey,data);
+        renderMarketR15(shopNo,data,ownerKey,ownerName);
+      },e=>console.warn("R34.32 market live",e));
+    }catch(e){console.warn("R34.32 market live start",e)}
+  }
   const marketKey=k=>`s2-r15-market-cache:${k}`;
   function marketDefault(ownerKey,ownerName){return{memberKey:ownerKey,ownerName:ownerName||"",shopName:"ร้านของฉัน",shop1:Array(12).fill(null),shop2:Array(12).fill(null)}}
   function loadMarketLocal(k){if(marketCacheR15.has(k))return marketCacheR15.get(k);try{const v=localStorage.getItem(marketKey(k));if(v){const d=JSON.parse(v);marketCacheR15.set(k,d);return d}}catch(_){}return null}
   function saveMarketLocal(k,d){marketCacheR15.set(k,d);try{localStorage.setItem(marketKey(k),JSON.stringify(d))}catch(_){}}
   function marketScreenR15(){
     let s=$r("s2MarketScreen");if(!s){s=document.createElement("section");s.id="s2MarketScreen";s.className="s2-market-screen hidden";s.innerHTML='<button id="s2MarketBack" class="s2-market-back" type="button">‹</button><button id="s2MarketTitle" class="s2-market-title" type="button"></button><div id="s2MarketSlots"></div><div id="s2MarketFooter"></div>';document.body.appendChild(s)}
-    $r("s2MarketBack").onclick=()=>{s.dataset.viewToken=String((Number(s.dataset.viewToken)||0)+1);s.classList.add("hidden");try{closeModal()}catch(_){}};return s;
+    $r("s2MarketBack").onclick=()=>{s.dataset.viewToken=String((Number(s.dataset.viewToken)||0)+1);stopMarketLiveR32();s.classList.add("hidden");try{closeModal()}catch(_){}};return s;
   }
   function marketEntriesR15(){
     const st=ensureFishTrapState(own());let rows=[];try{rows=typeof globalThis.YN_R25_fullMarketEntries==="function"?globalThis.YN_R25_fullMarketEntries(st):(typeof v240MemberGiftEntriesFull==="function"?v240MemberGiftEntriesFull(st):giftableEntries(st))}catch(_){ }
@@ -22724,8 +22848,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return{min:Math.max(1,Math.round(base*.65)),mid:base,max:Math.max(2,Math.round(base*1.45))};
   }
   async function fetchMarketR15(k,name){
-    const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"farmMarkets",k));
-    const d=snap.exists()?{...marketDefault(k,name),...snap.data()}:marketDefault(k,name);saveMarketLocal(k,d);return d;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",k);
+    let snap;
+    try{snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref)}
+    catch(_){snap=await fs.getDoc(ref)}
+    const d=snap.exists()?{...marketDefault(k,name),...snap.data()}:marketDefault(k,name);
+    saveMarketLocal(k,d);return d;
   }
   function renderMarketR15(shopNo,data,ownerKey,ownerName){
     const screen=marketScreenR15(),isOwn=ownerKey===currentMemberKey&&!visitContext,arr=Array.isArray(data?.[`shop${shopNo}`])?data[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
@@ -22738,10 +22866,20 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   async function openMarketR15(shopNo=1){
     shopNo=Number(shopNo)===2?2:1;const ownerKey=visitContext?.memberKey||currentMemberKey,ownerName=visitContext?.name||currentMember;if(!ownerKey)return;
-    const screen=marketScreenR15();const viewToken=String((Number(screen.dataset.viewToken)||0)+1);screen.dataset.viewToken=viewToken;screen.dataset.owner=ownerKey;screen.dataset.shop=String(shopNo);let cached=loadMarketLocal(ownerKey);
-    if(!cached&&ownerKey===currentMemberKey){cached=marketDefault(ownerKey,ownerName);saveMarketLocal(ownerKey,cached)}
-    if(cached)renderMarketR15(shopNo,cached,ownerKey,ownerName);else{screen.dataset.shop=String(shopNo);$r("s2MarketTitle").textContent="กำลังเปิดร้าน…";$r("s2MarketSlots").innerHTML='<div class="s2-market-loading">🧺 กำลังโหลดสินค้า…</div>';$r("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b>`;screen.classList.remove("hidden")}
-    try{const data=await fetchMarketR15(ownerKey,ownerName);if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&!marketPendingR15.has(ownerKey)&&screen.dataset.owner===ownerKey&&Number(screen.dataset.shop)===shopNo)renderMarketR15(shopNo,data,ownerKey,ownerName)}catch(err){if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&!cached)message("เปิดร้านไม่ได้",err.message||"กรุณาลองใหม่")}
+    const screen=marketScreenR15();const viewToken=String((Number(screen.dataset.viewToken)||0)+1);screen.dataset.viewToken=viewToken;screen.dataset.owner=ownerKey;screen.dataset.shop=String(shopNo);
+    const isOwnView=ownerKey===currentMemberKey&&!visitContext;
+    let cached=isOwnView?loadMarketLocal(ownerKey):null;
+    if(!cached&&isOwnView){cached=marketDefault(ownerKey,ownerName);saveMarketLocal(ownerKey,cached)}
+    if(cached)renderMarketR15(shopNo,cached,ownerKey,ownerName);
+    else{screen.dataset.shop=String(shopNo);$r("s2MarketTitle").textContent="กำลังเปิดร้านล่าสุด…";$r("s2MarketSlots").innerHTML='<div class="s2-market-loading">🧺 กำลังโหลดสินค้าล่าสุดจากร้าน…</div>';$r("s2MarketFooter").innerHTML=`<b>ร้าน ${shopNo}/2</b>`;screen.classList.remove("hidden")}
+    startMarketLiveR32(ownerKey,ownerName,shopNo,viewToken);
+    try{
+      const data=await fetchMarketR15(ownerKey,ownerName);
+      if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&screen.dataset.owner===ownerKey&&Number(screen.dataset.shop)===shopNo)
+        renderMarketR15(shopNo,data,ownerKey,ownerName);
+    }catch(err){
+      if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&!cached)message("เปิดร้านไม่ได้",err.message||"กรุณาลองใหม่");
+    }
   }
   function showMarketListingR15(shopNo,slot,data){
     const entries=marketEntriesR15();if(!entries.length)return message("ยังไม่มีของขาย","ตอนนี้ไม่มีไอเท็มว่างในกระเป๋า/คลัง");
@@ -22761,7 +22899,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     try{
       const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let nextState,nextMarket;
       await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(ss.data(),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),a=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(a.length<12)a.push(null);if(a[slot])throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false})});
-      ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ`);
+      ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);
+      try{await fetchMarketR15(currentMemberKey,currentMember)}catch(_){}
+      showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ • เพื่อนเห็นจากร้านกลางแล้ว`);
     }catch(err){ownState=before;state=before;saveLocalOnly(before);const rollback=loadMarketLocal(currentMemberKey)||marketDefault(currentMemberKey,currentMember);if(Array.isArray(rollback[`shop${shopNo}`]))rollback[`shop${shopNo}`][slot]=null;saveMarketLocal(currentMemberKey,rollback);renderMarketR15(shopNo,rollback,currentMemberKey,currentMember);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}
     finally{marketPendingR15.delete(currentMemberKey)}
   }
@@ -23211,6 +23351,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function wineNeed17(w){const s=ensureR17State(own17());return Object.entries(w.crops).map(([k,q])=>`<div><span>${safe17(CROPS?.[k]?.name||k)}</span><b>${isAdmin17()?9999:int17(s.bag?.[k])}/${q}</b></div>`).join("")}
   function startWine17(idx,key){const s=ensureR17State(own17()),w=WINES17[key];if(!w||s.wineMachines[idx])return;const enough=Object.entries(w.crops).every(([k,q])=>int17(s.bag?.[k])>=q);if(!enough&&!isAdmin17())return message("วัตถุดิบไม่พอ","ยังเริ่มหมักไวน์สูตรนี้ไม่ได้ค่ะ");if(!isAdmin17()){Object.entries(w.crops).forEach(([k,q])=>s.bag[k]-=q)}const t=now17();const houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),wineFactor=houseLv>=3?.80:houseLv>=2?.90:1;s.wineMachines[idx]={wine:key,startedAt:t,readyAt:t+Math.round(w.duration*wineFactor)};try{incrementMissionOn(s,"wineStart",1)}catch(_){}commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🍷 เริ่มหมัก ${w.name} • เครื่อง ${idx+1}`)}
   function claimWine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(!m||!wineReady17(m))return;const w=WINES17[m.wine];if(!isAdmin17())s.wines[m.wine]+=1;else s.wines[m.wine]=9999;const r29WineReceipt=`wine:${currentMemberKey}:${idx}:${m.startedAt||0}:${m.wine}`;s.wineMachines[idx]=null;try{incrementMissionOn(s,"wineClaim",1)}catch(_){}commit17(s);try{globalThis.YN_R29?.scoreWine?.(m.wine,r29WineReceipt)}catch(_){}renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${w.image}"><h2>🍷 หมักเสร็จแล้ว</h2><p>${safe17(w.name)} ×1</p><small>เข้ากระเป๋า → ไวน์ เรียบร้อยแล้ว</small><button id="r17WineDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17WineDone").onclick=closeModal;openModal()}
+  function openWineRecipeFast17(idx,key){
+    const w=WINES17[key];if(!w)return;
+    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${key}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;
+    openModal();
+  }
   function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();claimWine17(idx)};b.onclick=e=>{if(!e?.pointerType)claimWine17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
     $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}" data-r17-wine-machine="${idx}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=e=>{e?.preventDefault?.();e?.stopPropagation?.();const k=b.dataset.r17Wine,w=WINES17[k];$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${k}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;const sb=$17("r17StartWine");sb.style.touchAction="none";sb.onpointerdown=ev=>{ev.preventDefault();ev.stopPropagation();startWine17(idx,k)};sb.onclick=ev=>{if(!ev?.pointerType)startWine17(idx,k)};openModal()};b.style.touchAction="none";b.onpointerdown=choose;b.onclick=e=>{if(!e?.pointerType)choose(e)}});openModal()}
   function openWineTest17(){if(!isAdmin17())return;const s=ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><h2>🧪 ทดลองระบบไวน์</h2><p>ทดสอบครบวงจร • เริ่มหมัก / เวลาจริง / พร้อมรับทันที / รับเข้ากระเป๋า</p><div class="r17-machine-list">${s.wineMachines.map((m,i)=>`<button type="button" data-r17-machine="${i}"><b>เครื่อง ${i+1}</b><small>${m?(wineReady17(m)?"พร้อมรับ":`${WINES17[m.wine].name} • ${fmtMs17(m.readyAt-now17())}`):"ว่าง"}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-machine]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17Machine)));openModal()}
@@ -23253,6 +23398,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   /* R34.11.21: window-capture one-tap path. Window fires before every legacy document handler. */
   window.addEventListener("pointerdown",e=>{
+    if(globalThis.YN_BASEMENT_FAST_R3430?.route?.(e))return;
     if(currentScene!=="house"||houseMode17!=="basement"||visitContext)return;
     const direct=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot]");
     if(direct){e.preventDefault();e.stopImmediatePropagation();if(direct.hasAttribute("data-r17-plot"))openFlowerPlot17(Number(direct.dataset.r17Plot));else openWineMachine17(Number(direct.dataset.r17MachineHot));return}
@@ -23297,7 +23443,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function tick17(){try{ensureR17State(own17());removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&houseMode17==="basement"){renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=own17()?.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(label)label.textContent="แปลงว่าง";return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=own17()?.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
-  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17};
+  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
@@ -32649,3 +32795,156 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.26-COLLECTION-FLOW';
 
 /* S2 R34.27 performance marker — hidden */
 window.YAINOO_PACKAGE_BUILD='S2-R34.27-PERFORMANCE5';
+
+/* S2 R34.28 temple-fast marker — intentionally hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.28-TEMPLE-FAST';
+
+/* S2 R34.29 temple sharded marker — hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.29-TEMPLE-SHARDED';
+
+/* S2 R34.30 basement-fast marker — intentionally hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.30-BASEMENT-FAST';
+
+/* S2 R34.31 time-limits/temple-fast marker — hidden from UI */
+window.YAINOO_PACKAGE_BUILD='S2-R34.31-TIME-LIMITS-TEMPLE-FAST';
+
+/* S2 R34.32 market/craft stability marker — hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.32-MARKET-CRAFT-STABILITY';
+
+/* S2 R34.33 alpaca critical marker — hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.33-ALPACA-CRITICAL';
+
+
+/* =====================================================================
+   S2 R34.34 — PERSISTENCE SAFETY / APP-SWITCH RECOVERY
+   - Local snapshot is preserved before iOS/Safari suspends the page.
+   - Login compares local revision/edit timestamp with cloud state, even when
+     an older action forgot to create the legacy dirty marker.
+   - Only a STRICTLY newer local snapshot can win over cloud.
+   - Pending save flushes are retried on pageshow/focus/online.
+   ===================================================================== */
+(function YN_R3434_PERSISTENCE_SAFETY(){
+  "use strict";
+  const BUILD="S2-R34.34-PERSISTENCE-SAFETY";
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const localKeyFor=(member)=>member?`yainoo-v5:${member}`:"";
+  const resumeKeyFor=(memberKey)=>memberKey?`yainoo-r3434-resume:${memberKey}`:"";
+  const now=()=>Date.now();
+
+  function snapshotCurrent(reason=""){
+    if(!currentMember||!currentMemberKey||!ownState||visitContext)return;
+    try{
+      const snap=cp(ownState);
+      const rev=Number(snap?.clientSaveRevision)||0;
+      const edit=Number(snap?.clientLocalEditAt)||0;
+      localStorage.setItem(localKeyFor(currentMember),JSON.stringify(snap));
+      localStorage.setItem(resumeKeyFor(currentMemberKey),JSON.stringify({
+        savedAt:now(),reason,rev,edit
+      }));
+    }catch(e){console.warn(BUILD,"local snapshot",e)}
+  }
+
+  function localIsStrictlyNewer(local,cloud){
+    const lr=Number(local?.clientSaveRevision)||0,cr=Number(cloud?.clientSaveRevision)||0;
+    const le=Number(local?.clientLocalEditAt)||0,ce=Number(cloud?.clientLocalEditAt)||0;
+    if(lr>cr)return true;
+    if(lr<cr)return false;
+    /* Same revision is only recoverable when the local action explicitly
+       stamped a later clientLocalEditAt. This avoids reviving arbitrary stale cache. */
+    return le>0&&le>ce+50;
+  }
+
+  async function flushResume(){
+    if(!currentMemberKey||!ownState||visitContext||cloudSessionSuperseded)return;
+    try{
+      cloudReady=true;
+      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+      else if(typeof flushCloudSave==="function")await flushCloudSave();
+    }catch(e){console.warn(BUILD,"resume flush deferred",e)}
+  }
+
+  const init3434=initializeOrLoadCloudState;
+  initializeOrLoadCloudState=async function(member,memberKey){
+    let localCandidate=null,resumeMeta=null;
+    try{
+      const raw=localStorage.getItem(localKeyFor(member));
+      if(raw)localCandidate=JSON.parse(raw);
+      const rr=localStorage.getItem(resumeKeyFor(memberKey));
+      if(rr)resumeMeta=JSON.parse(rr);
+    }catch(_){}
+
+    const loaded=await init3434(member,memberKey);
+    const cloudCurrent=cp(ownState||loaded);
+
+    if(localCandidate&&resumeMeta&&localIsStrictlyNewer(localCandidate,cloudCurrent)){
+      try{
+        const recovered=normalizeState(cp(localCandidate),member);
+        recovered.activeSessionId=cloudSessionId;
+        recovered.clientSaveRevision=Math.max(
+          Number(recovered.clientSaveRevision)||0,
+          Number(cloudCurrent?.clientSaveRevision)||0
+        )+1;
+        recovered.clientLocalEditAt=Math.max(Number(recovered.clientLocalEditAt)||0,now());
+        ownState=recovered;
+        if(!visitContext)state=ownState;
+        saveLocalOnly(ownState);
+        try{updateMeritUI?.()}catch(_){}
+        /* queueCloudSave creates the normal durable dirty marker. */
+        try{queueCloudSave?.()}catch(_){}
+        try{await flushCloudSave?.()}catch(e){console.warn(BUILD,"recovery cloud flush",e)}
+        console.info(BUILD,"recovered newer local state after app suspension");
+      }catch(e){console.warn(BUILD,"recovery skipped",e)}
+    }
+
+    try{localStorage.removeItem(resumeKeyFor(memberKey))}catch(_){}
+    return ownState||loaded;
+  };
+
+  function goingBackground(reason){
+    snapshotCurrent(reason);
+    /* Never wait on this. iOS may suspend JavaScript immediately after the event,
+       but the synchronous local snapshot above has already completed. */
+    try{
+      if(typeof settlePendingCloudSave==="function")settlePendingCloudSave().catch(()=>{});
+      else if(typeof flushCloudSave==="function")flushCloudSave().catch(()=>{});
+    }catch(_){}
+  }
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden)goingBackground("visibility-hidden");
+    else{
+      snapshotCurrent("visibility-visible");
+      setTimeout(()=>flushResume(),0);
+    }
+  },{passive:true});
+  window.addEventListener("pagehide",()=>goingBackground("pagehide"),{passive:true});
+  window.addEventListener("beforeunload",()=>snapshotCurrent("beforeunload"),{passive:true});
+  window.addEventListener("pageshow",()=>{
+    snapshotCurrent("pageshow");
+    setTimeout(()=>flushResume(),0);
+  },{passive:true});
+  window.addEventListener("focus",()=>setTimeout(()=>flushResume(),0),{passive:true});
+  window.addEventListener("online",()=>setTimeout(()=>flushResume(),0),{passive:true});
+
+  /* Snapshot after successful local state changes without forcing extra Firestore writes.
+     This specifically protects transaction-backed systems that update local UI first. */
+  const saveLocal3434=saveLocalOnly;
+  saveLocalOnly=function(target=ownState||state){
+    const r=saveLocal3434.apply(this,arguments);
+    try{
+      if(target&&target===ownState&&!visitContext&&currentMember&&currentMemberKey){
+        localStorage.setItem(resumeKeyFor(currentMemberKey),JSON.stringify({
+          savedAt:now(),reason:"saveLocalOnly",rev:Number(target.clientSaveRevision)||0,
+          edit:Number(target.clientLocalEditAt)||0
+        }));
+      }
+    }catch(_){}
+    return r;
+  };
+
+  globalThis.YN_R3434={BUILD,snapshotCurrent,flushResume};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.34-PERSISTENCE-SAFETY';

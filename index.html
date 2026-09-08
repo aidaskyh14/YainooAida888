@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.27-PERFORMANCE5">
+  <link rel="stylesheet" href="style.css?v=S2-R34.34-PERSISTENCE-SAFETY">
 </head>
 <body>
   <main id="app">
@@ -462,7 +462,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.27-PERFORMANCE5"></script>
+<script src="game.js?v=S2-R34.34-PERSISTENCE-SAFETY"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2018,6 +2018,1157 @@
   setInterval(tick,1200);setTimeout(tick,150);
   window.YN_R3427={BUILD};
   window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3428-temple-fast-input">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.28-TEMPLE-FAST';
+  let lastKey='',lastAt=0;
+  function fire(key,fn,e){
+    const t=performance.now();if(key===lastKey&&t-lastAt<420)return;
+    lastKey=key;lastAt=t;
+    try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}
+    try{fn()}catch(err){console.warn(BUILD,key,err)}
+  }
+  window.addEventListener('pointerdown',e=>{
+    const b=e.target?.closest?.(
+      '[data-solo-accept],[data-solo-send],[data-solo-claim],[data-group-join],[data-group-send],#templeSoloBtn,#templeGroupBtn'
+    );
+    if(!b)return;
+    if(b.disabled)return;
+    if(b.id==='templeSoloBtn')return fire('nav-solo',()=>openScene('templeSolo'),e);
+    if(b.id==='templeGroupBtn')return fire('nav-group',()=>openScene('templeGroup'),e);
+    if(b.hasAttribute('data-solo-accept'))return fire('solo-accept:'+b.dataset.soloAccept,()=>v15AcceptSolo(Number(b.dataset.soloAccept)),e);
+    if(b.hasAttribute('data-solo-send'))return fire('solo-send:'+b.dataset.soloSend+':'+b.dataset.reqId,()=>v15SendSolo(Number(b.dataset.soloSend),b.dataset.reqId),e);
+    if(b.hasAttribute('data-solo-claim'))return fire('solo-claim:'+b.dataset.soloClaim,()=>v15ClaimSolo(Number(b.dataset.soloClaim)),e);
+    if(b.hasAttribute('data-group-join'))return fire('group-join:'+b.dataset.groupJoin,()=>v15JoinGroup(Number(b.dataset.groupJoin)),e);
+    if(b.hasAttribute('data-group-send'))return fire('group-send:'+b.dataset.groupSend+':'+b.dataset.reqId,()=>v15SendGroup(Number(b.dataset.groupSend),b.dataset.reqId),e);
+  },true);
+
+  /* A snapshot may repaint the board while a request is in flight. The busy flags
+     above prevent a second network transaction, and this keeps the tap feeling immediate. */
+  document.addEventListener('pointerdown',e=>{
+    const b=e.target?.closest?.('.temple-mission-board button');
+    if(!b||b.disabled)return;
+    b.classList.add('r3428-pressed');
+    setTimeout(()=>b.classList.remove('r3428-pressed'),500);
+  },true);
+
+  globalThis.YN_R3428={BUILD};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3429-temple-sharded">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.29-TEMPLE-SHARDED';
+  const COLL='templeMissionSlotsV2';
+  const $=id=>document.getElementById(id);
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const now=()=>typeof gameNow==='function'?gameNow():Date.now();
+  const key=(date,type,i)=>`${date}_${type}_${i}`;
+  const refFor=(db,fs,date,type,i)=>fs.doc(db,COLL,key(date,type,i));
+  let unsub=null, loadPromise=null, migrationDoneFor='', outcomeBusy=false;
+
+  function newSlot(type,date,i,cycle=0){
+    return type==='solo'?v15NewSoloSlot(date,i,cycle):v15NewGroupSlot(date,i,cycle);
+  }
+  function newDoc(type,date,i,slot=null){
+    return {dateKey:date,type,index:i,slot:slot||newSlot(type,date,i,0),outcomes:{},updatedAtMs:now()};
+  }
+  function normalizeDoc(raw,type,date,i){
+    const d=raw&&typeof raw==='object'?cp(raw):newDoc(type,date,i);
+    d.dateKey=date;d.type=type;d.index=i;
+    d.slot=d.slot&&typeof d.slot==='object'?d.slot:newSlot(type,date,i,0);
+    d.outcomes=d.outcomes&&typeof d.outcomes==='object'?d.outcomes:{};
+    return d;
+  }
+  function completeGroupDoc(d,t=now()){
+    const slot=d.slot,i=d.index,date=d.dateKey;
+    if(!slot||slot.status!=='active'||!v15AllReqDone(slot))return false;
+    const id=slot.attemptId||`${date}-group-${i}-${slot.cycle}`;
+    if(!d.outcomes[id]){
+      const ps=Array.isArray(slot.participants)?slot.participants:[];
+      const names=Object.fromEntries(ps.map(p=>[p.key,p.name]));
+      const total=Number(slot.rewardTotal)||300;
+      d.outcomes[id]={
+        type:'group',status:'success',title:slot.title,names,
+        rewards:v15AllocateGroupReward(total,ps,id),penalties:{},appliedKeys:[],
+        createdAt:t,total
+      };
+    }
+    slot.status='cooldown';slot.lastResult='success';slot.cooldownUntil=t+V15_GROUP_COOLDOWN_MS;
+    slot.requirements=[];slot.sent={};slot.participants=[];
+    return true;
+  }
+  function refreshDoc(d,t=now()){
+    d=normalizeDoc(d,d.type,d.dateKey,d.index);
+    let slot=d.slot, changed=false;
+    const today=d.dateKey===currentBangkokDateKey(), canRespawn=today&&v15TempleIsOpen();
+
+    if(d.type==='solo'){
+      if(slot.status==='active'&&Number(slot.deadlineAt||0)>0&&t>=Number(slot.deadlineAt)){
+        const id=slot.attemptId||`${d.dateKey}-solo-${d.index}-${slot.cycle}`;
+        if(!d.outcomes[id])d.outcomes[id]={
+          type:'solo',status:'failed',title:slot.title,
+          names:{[slot.ownerKey]:slot.ownerName},rewards:{},
+          penalties:{[slot.ownerKey]:100},appliedKeys:[],createdAt:t
+        };
+        slot.status='cooldown';slot.lastResult='failed';slot.cooldownUntil=t+V15_SOLO_COOLDOWN_MS;
+        slot.requirements=[];slot.sent={};changed=true;
+      }
+      if(slot.status==='cooldown'&&t>=Number(slot.cooldownUntil||0)&&canRespawn){
+        d.slot=newSlot('solo',d.dateKey,d.index,(Number(slot.cycle)||0)+1);changed=true;
+      }
+    }else{
+      if(slot.status==='closed'&&slot.lastResult==='incomplete'&&today){
+        d.slot=newSlot('group',d.dateKey,d.index,(Number(slot.cycle)||0)+1);slot=d.slot;changed=true;
+      }
+      if(slot.status==='active'&&v15AllReqDone(slot)){
+        if(completeGroupDoc(d,t))changed=true;
+      }
+      if(slot.status==='active'&&Number(slot.deadlineAt||0)>0&&t>=Number(slot.deadlineAt)){
+        const id=slot.attemptId||`${d.dateKey}-group-${d.index}-${slot.cycle}`;
+        const ps=Array.isArray(slot.participants)?slot.participants:[];
+        if(!d.outcomes[id]){
+          const names=Object.fromEntries(ps.map(p=>[p.key,p.name]));
+          d.outcomes[id]={
+            type:'group',status:'failed',title:slot.title,names,rewards:{},
+            penalties:Object.fromEntries(ps.map(p=>[p.key,150])),
+            appliedKeys:[],createdAt:t,total:0
+          };
+        }
+        slot.status='cooldown';slot.lastResult='failed';slot.cooldownUntil=t+V15_GROUP_COOLDOWN_MS;
+        slot.requirements=[];slot.sent={};slot.participants=[];changed=true;
+      }
+      if(slot.status==='cooldown'&&t>=Number(slot.cooldownUntil||0)&&canRespawn){
+        d.slot=newSlot('group',d.dateKey,d.index,(Number(slot.cycle)||0)+1);changed=true;
+      }
+    }
+    d.updatedAtMs=t;
+    return {doc:d,changed};
+  }
+
+  function composeDay(date,docs){
+    const day=v15NewTempleDay(date);day.outcomes={};
+    for(const d of docs){
+      if(!d)continue;
+      const nd=normalizeDoc(d,d.type,date,Number(d.index)||0);
+      if(nd.type==='solo')day.soloSlots[nd.index]=cp(nd.slot);
+      else day.groupSlots[nd.index]=cp(nd.slot);
+      Object.assign(day.outcomes,cp(nd.outcomes||{}));
+    }
+    day.updatedAtMs=now();
+    return day;
+  }
+
+  async function readAll(date){
+    const {db,fs}=await getFirebaseContext();
+    const pairs=[];
+    for(const type of ['solo','group'])for(let i=0;i<6;i++)pairs.push([type,i,refFor(db,fs,date,type,i)]);
+    const snaps=await Promise.all(pairs.map(x=>fs.getDoc(x[2])));
+    const docs=snaps.map((snap,j)=>snap.exists()?normalizeDoc(snap.data(),pairs[j][0],date,pairs[j][1]):null);
+    return {db,fs,pairs,snaps,docs};
+  }
+
+  async function migrateIfNeeded(date){
+    if(migrationDoneFor===date)return;
+    migrationDoneFor=date;
+    const {db,fs,pairs,snaps,docs}=await readAll(date);
+    if(docs.every(Boolean))return;
+
+    let legacy=null;
+    try{
+      const ls=await fs.getDoc(fs.doc(db,'templeMissions',date));
+      if(ls.exists())legacy=v15RefreshTempleDay(cp(ls.data()));
+    }catch(_){}
+    const batch=fs.writeBatch(db);
+    let wrote=0;
+    pairs.forEach(([type,i,ref],j)=>{
+      if(snaps[j].exists())return;
+      const slot=legacy
+        ? cp(type==='solo'?legacy.soloSlots?.[i]:legacy.groupSlots?.[i])
+        : newSlot(type,date,i,0);
+      const d=newDoc(type,date,i,slot||newSlot(type,date,i,0));
+      /* carry legacy outcomes relevant to this slot when attempt IDs match */
+      if(legacy?.outcomes){
+        for(const [oid,o] of Object.entries(legacy.outcomes)){
+          if(type==='solo'&&String(oid).includes(`-solo-${i}-`))d.outcomes[oid]=cp(o);
+          if(type==='group'&&String(oid).includes(`-group-${i}-`))d.outcomes[oid]=cp(o);
+        }
+      }
+      batch.set(ref,{...d,updatedAt:fs.serverTimestamp()},{merge:false});wrote++;
+    });
+    if(wrote)await batch.commit();
+  }
+
+  async function loadDay(){
+    const date=currentBangkokDateKey();
+    if(loadPromise)return loadPromise;
+    loadPromise=(async()=>{
+      await migrateIfNeeded(date);
+      const {docs}=await readAll(date);
+      const refreshed=[];
+      for(const d of docs){
+        if(!d)continue;
+        refreshed.push(refreshDoc(d).doc);
+      }
+      v15TempleCache=composeDay(date,refreshed);
+      setTimeout(()=>applyOwnOutcomes().catch(()=>{}),0);
+      return v15TempleCache;
+    })().finally(()=>{loadPromise=null});
+    return loadPromise;
+  }
+
+  function stopSub(){try{unsub?.()}catch(_){}unsub=null}
+  async function startSub(){
+    if(!cloudReady)return;
+    stopSub();
+    const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext();
+    if(fs.query&&fs.where){
+      const q=fs.query(fs.collection(db,COLL),fs.where('dateKey','==',date));
+      unsub=fs.onSnapshot(q,snap=>{
+        const docs=[];snap.forEach(x=>docs.push(normalizeDoc(x.data(),x.data()?.type,date,Number(x.data()?.index)||0)));
+        if(docs.length){
+          v15TempleCache=composeDay(date,docs);
+          if(currentScene==='templeSolo')v15RenderSoloPanel();
+          else if(currentScene==='templeGroup')v15RenderGroupPanel();
+        }
+      },e=>console.warn(BUILD,'query listener',e));
+    }else{
+      const us=[];
+      for(const type of ['solo','group'])for(let i=0;i<6;i++){
+        us.push(fs.onSnapshot(refFor(db,fs,date,type,i),()=>loadDay().then(()=>{
+          if(currentScene==='templeSolo')v15RenderSoloPanel();
+          else if(currentScene==='templeGroup')v15RenderGroupPanel();
+        }).catch(()=>{})));
+      }
+      unsub=()=>us.forEach(u=>{try{u()}catch(_){}});
+    }
+    v15TempleUnsub=()=>stopSub();
+  }
+
+  async function refreshOne(type,i){
+    const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),ref=refFor(db,fs,date,type,i);
+    let result=null;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);
+      const base=snap.exists()?normalizeDoc(snap.data(),type,date,i):newDoc(type,date,i);
+      const r=refreshDoc(base);
+      result=r.doc;
+      if(!snap.exists()||r.changed)tx.set(ref,{...cp(r.doc),updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    return result;
+  }
+
+  async function touchDay(){
+    const day=v15TempleCache;if(!day)return loadDay();
+    const jobs=[];
+    const t=now();
+    day.soloSlots.forEach((s,i)=>{
+      if((s.status==='active'&&Number(s.deadlineAt||0)>0&&t>=Number(s.deadlineAt))||
+         (s.status==='cooldown'&&t>=Number(s.cooldownUntil||0)))jobs.push(refreshOne('solo',i));
+    });
+    day.groupSlots.forEach((s,i)=>{
+      if((s.status==='active'&&v15AllReqDone(s))||
+         (s.status==='active'&&Number(s.deadlineAt||0)>0&&t>=Number(s.deadlineAt))||
+         (s.status==='cooldown'&&t>=Number(s.cooldownUntil||0)))jobs.push(refreshOne('group',i));
+    });
+    if(jobs.length)await Promise.all(jobs);
+    return loadDay();
+  }
+
+  function updateCacheSlot(type,i,slot){
+    if(!v15TempleCache||v15TempleCache.dateKey!==currentBangkokDateKey())v15TempleCache=v15NewTempleDay(currentBangkokDateKey());
+    if(type==='solo')v15TempleCache.soloSlots[i]=cp(slot);
+    else v15TempleCache.groupSlots[i]=cp(slot);
+  }
+
+  async function acceptSolo(i){
+    if(v15AcceptSolo._busy)return;v15AcceptSolo._busy=true;
+    const btn=document.querySelector(`[data-solo-accept="${i}"]`);
+    if(btn){btn.disabled=true;btn.textContent='กำลังรับ...'}
+    try{
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),
+        sref=refFor(db,fs,date,'solo',i),saveRef=fs.doc(db,'saves',currentMemberKey);
+      let slotOut=null,nextState=null;
+      await fs.runTransaction(db,async tx=>{
+        const [slotSnap,saveSnap]=await Promise.all([tx.get(sref),tx.get(saveRef)]);
+        if(!saveSnap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+        let d=slotSnap.exists()?normalizeDoc(slotSnap.data(),'solo',date,i):newDoc('solo',date,i);
+        d=refreshDoc(d).doc;
+        const s=normalizeState(saveSnap.data(),currentMember);v15EnsureTemplePlayerState(s);
+        if(s.templeHourly.solo.count>=2)throw new Error('ชั่วโมงนี้คุณรับคำท้าครบ 2 ภารกิจแล้ว พักก่อนนะคะ');
+        const slot=d.slot;if(slot.status!=='open')throw new Error('มีคนรับคำท้าภารกิจนี้ไปแล้ว');
+        const t=now(),attemptId=`${date}-solo-${i}-${slot.cycle}-${t}`,requirements=v15SoloRequirements(attemptId);
+        Object.assign(slot,{status:'active',ownerKey:currentMemberKey,ownerName:currentMember,attemptId,requirements,sent:{},reward:v15SoloReward(requirements,attemptId),startedAt:t,deadlineAt:t+V15_SOLO_DURATION_MS,cooldownUntil:0,lastResult:''});
+        s.templeHourly.solo.count++;s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        slotOut=cp(slot);nextState=cp(s);
+        tx.set(sref,{...cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);
+      updateCacheSlot('solo',i,slotOut);v15RenderSoloPanel();showWeatherToast('🛕 รับคำท้าทายแล้ว');
+    }catch(e){message('รับคำท้าทายไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{v15AcceptSolo._busy=false}
+  }
+
+  async function sendSolo(i,reqId){
+    if(v15SendSolo._busy)return;v15SendSolo._busy=true;
+    const btn=document.querySelector(`[data-solo-send="${i}"][data-req-id="${CSS.escape(String(reqId))}"]`);
+    if(btn){btn.disabled=true;btn.textContent='กำลังส่ง...'}
+    try{
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),
+        sref=refFor(db,fs,date,'solo',i),saveRef=fs.doc(db,'saves',currentMemberKey);
+      let slotOut=null,nextState=null,qty=0;
+      await fs.runTransaction(db,async tx=>{
+        const [slotSnap,saveSnap]=await Promise.all([tx.get(sref),tx.get(saveRef)]);
+        if(!slotSnap.exists()||!saveSnap.exists())throw new Error('ข้อมูลภารกิจยังไม่พร้อม');
+        let d=refreshDoc(normalizeDoc(slotSnap.data(),'solo',date,i)).doc;
+        const slot=d.slot,s=normalizeState(saveSnap.data(),currentMember);
+        if(slot.status!=='active'||slot.ownerKey!==currentMemberKey)throw new Error('ภารกิจนี้ไม่ได้อยู่ในสถานะส่งเสบียง');
+        const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error('ไม่พบเสบียงนี้');
+        const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,Number(req.qty||0)-sent),have=v15ReqHave(s,req);
+        qty=Math.min(remain,have);if(qty<=0)throw new Error('ของในกระเป๋าไม่พอ');
+        if(!v15ConsumeReq(s,req,qty))throw new Error('หักของจากกระเป๋าไม่สำเร็จ');
+        slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;
+        if(v15AllReqDone(slot))slot.status='completed';
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        slotOut=cp(slot);nextState=cp(s);
+        tx.set(sref,{...cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);
+      updateCacheSlot('solo',i,slotOut);v15RenderSoloPanel();showWeatherToast(`🍱 ส่งเสบียงแล้ว ×${qty}`);
+    }catch(e){message('ส่งเสบียงไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{v15SendSolo._busy=false}
+  }
+
+  async function claimSolo(i){
+    if(v15ClaimSolo._busy)return;v15ClaimSolo._busy=true;
+    try{
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),
+        sref=refFor(db,fs,date,'solo',i),saveRef=fs.doc(db,'saves',currentMemberKey),
+        profileRef=fs.doc(db,'publicProfiles',currentMemberKey);
+      let reward=0,nextState=null,slotOut=null;
+      await fs.runTransaction(db,async tx=>{
+        const [slotSnap,saveSnap]=await Promise.all([tx.get(sref),tx.get(saveRef)]);
+        if(!slotSnap.exists()||!saveSnap.exists())throw new Error('ข้อมูลภารกิจไม่พร้อม');
+        const d=normalizeDoc(slotSnap.data(),'solo',date,i),slot=d.slot;
+        if(slot.status!=='completed'||slot.ownerKey!==currentMemberKey)throw new Error('ยังรับรางวัลไม่ได้');
+        const s=normalizeState(saveSnap.data(),currentMember);
+        reward=Number(slot.reward)||50;s.merit=(Number(s.merit)||0)+reward;incrementMissionOn(s,'templeSoloSuccess',1);
+        slot.status='cooldown';slot.lastResult='success';slot.cooldownUntil=now()+V15_SOLO_COOLDOWN_MS;slot.requirements=[];slot.sent={};
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        slotOut=cp(slot);nextState=cp(s);
+        tx.set(sref,{...cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:s.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);updateMeritUI();
+      updateCacheSlot('solo',i,slotOut);v15RenderSoloPanel();
+      message('ยินดีด้วยค่ะ คุณทำภารกิจสำเร็จ',`ได้รับ +${reward} กุศล<br>ภารกิจใหม่กำลังมาใน 10.00 นาที`);
+    }catch(e){message('รับรางวัลไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{v15ClaimSolo._busy=false}
+  }
+
+  async function joinGroup(i){
+    if(v15JoinGroup._busy)return;v15JoinGroup._busy=true;
+    try{
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),sref=refFor(db,fs,date,'group',i);
+      let slotOut=null,started=false;
+      await fs.runTransaction(db,async tx=>{
+        const slotSnap=await tx.get(sref);
+        let d=slotSnap.exists()?normalizeDoc(slotSnap.data(),'group',date,i):newDoc('group',date,i);
+        d=refreshDoc(d).doc;const slot=d.slot;
+        if(!['open','active'].includes(slot.status))throw new Error('ภารกิจนี้จบหรือพักอยู่');
+        slot.participants=Array.isArray(slot.participants)?slot.participants:[];
+        if(slot.participants.some(p=>p.key===currentMemberKey))throw new Error('คุณลงชื่อภารกิจนี้แล้ว');
+        slot.participants.push({key:currentMemberKey,name:currentMember,joinedAt:now()});
+        if(slot.status==='open'&&slot.participants.length>=Math.max(1,Number(slot.requiredPeople)||1)){
+          const t=now(),attemptId=`${date}-group-${i}-${slot.cycle}-${t}`;
+          slot.status='active';slot.attemptId=attemptId;slot.requirements=v15GroupRequirements(attemptId,i);slot.sent={};
+          slot.rewardTotal=v15GroupReward(i,attemptId);slot.startedAt=t;slot.deadlineAt=t+V15_GROUP_DURATION_MS;started=true;
+        }
+        slotOut=cp(slot);tx.set(sref,{...cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      updateCacheSlot('group',i,slotOut);v15RenderGroupPanel();
+      showWeatherToast(started?'👥 ทีมครบแล้ว • ภารกิจเริ่ม 45 นาที':'👥 ลงชื่อภารกิจหมู่แล้ว');
+    }catch(e){message('ลงชื่อไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{v15JoinGroup._busy=false}
+  }
+
+  async function sendGroup(i,reqId){
+    if(v15SendGroup._busy)return;v15SendGroup._busy=true;
+    try{
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),
+        sref=refFor(db,fs,date,'group',i),saveRef=fs.doc(db,'saves',currentMemberKey);
+      let slotOut=null,nextState=null,qty=0,completed=false;
+      await fs.runTransaction(db,async tx=>{
+        const [slotSnap,saveSnap]=await Promise.all([tx.get(sref),tx.get(saveRef)]);
+        if(!slotSnap.exists()||!saveSnap.exists())throw new Error('ข้อมูลภารกิจยังไม่พร้อม');
+        let d=refreshDoc(normalizeDoc(slotSnap.data(),'group',date,i)).doc;
+        const slot=d.slot,s=normalizeState(saveSnap.data(),currentMember);
+        if(slot.status!=='active')throw new Error('ภารกิจนี้ยังไม่เริ่มหรือจบแล้ว');
+        if(!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error('คุณไม่ได้อยู่ในทีมนี้');
+        const req=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);if(!req)throw new Error('ไม่พบเสบียงนี้');
+        const sent=Number(slot.sent?.[reqId])||0,remain=Math.max(0,Number(req.qty||0)-sent),have=v15ReqHave(s,req);
+        qty=Math.min(remain,have);if(qty<=0)throw new Error('ของในกระเป๋าไม่พอ');
+        if(!v15ConsumeReq(s,req,qty))throw new Error('หักของจากกระเป๋าไม่สำเร็จ');
+        slot.sent=slot.sent||{};slot.sent[reqId]=sent+qty;
+        if(v15AllReqDone(slot)){completed=completeGroupDoc(d,now())}
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+        slotOut=cp(d.slot);nextState=cp(s);
+        tx.set(sref,{...cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(nextState,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);
+      updateCacheSlot('group',i,slotOut);v15RenderGroupPanel();
+      if(completed){showWeatherToast('✅ ภารกิจหมู่สำเร็จแล้ว • เริ่มคูลดาวน์ 15 นาที');setTimeout(()=>applyOwnOutcomes().catch(()=>{}),0)}
+      else showWeatherToast(`🍱 ส่งเสบียงเข้าภารกิจหมู่แล้ว ×${qty}`);
+    }catch(e){message('ส่งเสบียงไม่ได้',e.message||'กรุณาลองใหม่')}
+    finally{v15SendGroup._busy=false}
+  }
+
+  async function applyOutcomesFor(date){
+    const {db,fs}=await getFirebaseContext();
+    for(const type of ['solo','group'])for(let i=0;i<6;i++){
+      const sref=refFor(db,fs,date,type,i);
+      const snap=await fs.getDoc(sref);if(!snap.exists())continue;
+      const d=normalizeDoc(snap.data(),type,date,i);
+      for(const [oid,o] of Object.entries(d.outcomes||{})){
+        if(!o||Array.isArray(o.appliedKeys)&&o.appliedKeys.includes(currentMemberKey))continue;
+        const reward=Number(o.rewards?.[currentMemberKey])||0,penalty=Number(o.penalties?.[currentMemberKey])||0;
+        if(!reward&&!penalty)continue;
+        const saveRef=fs.doc(db,'saves',currentMemberKey),profileRef=fs.doc(db,'publicProfiles',currentMemberKey);
+        let next=null;
+        await fs.runTransaction(db,async tx=>{
+          const [os,ss]=await Promise.all([tx.get(sref),tx.get(saveRef)]);
+          if(!os.exists()||!ss.exists())return;
+          const dd=normalizeDoc(os.data(),type,date,i),oo=dd.outcomes?.[oid];
+          if(!oo)return;oo.appliedKeys=Array.isArray(oo.appliedKeys)?oo.appliedKeys:[];
+          if(oo.appliedKeys.includes(currentMemberKey))return;
+          const rw=Number(oo.rewards?.[currentMemberKey])||0,pn=Number(oo.penalties?.[currentMemberKey])||0;
+          if(!rw&&!pn)return;
+          const st=normalizeState(ss.data(),currentMember);st.merit=(Number(st.merit)||0)+rw-pn;oo.appliedKeys.push(currentMemberKey);
+          next=cp(st);
+          tx.set(saveRef,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+          tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:st.merit,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+          tx.set(sref,{...cp(dd),updatedAt:fs.serverTimestamp()},{merge:false});
+        });
+        if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly(ownState);updateMeritUI()}
+      }
+    }
+  }
+  async function applyOwnOutcomes(){
+    if(outcomeBusy||!cloudReady||!currentMemberKey)return;outcomeBusy=true;
+    try{
+      const today=currentBangkokDateKey();
+      await applyOutcomesFor(v15ShiftDateKey(today,-1));
+      await applyOutcomesFor(today);
+    }finally{outcomeBusy=false}
+  }
+
+  /* Replace the monolithic-day APIs completely. */
+  v15LoadTempleDay=loadDay;
+  v15StartTempleSubscription=startSub;
+  v15StopTempleSubscription=stopSub;
+  v15TouchTempleDay=touchDay;
+  v15ApplyOwnTempleOutcomes=applyOwnOutcomes;
+  v15AcceptSolo=acceptSolo;
+  v15SendSolo=sendSolo;
+  v15ClaimSolo=claimSolo;
+  v15JoinGroup=joinGroup;
+  v15SendGroup=sendGroup;
+
+  /* Input owner: one physical tap only. */
+  let lastTap='',lastAt=0;
+  window.addEventListener('pointerdown',e=>{
+    const b=e.target?.closest?.('[data-solo-accept],[data-solo-send],[data-solo-claim],[data-group-join],[data-group-send]');
+    if(!b||b.disabled)return;
+    const tap=[
+      b.dataset.soloAccept!==undefined?'sa'+b.dataset.soloAccept:'',
+      b.dataset.soloSend!==undefined?'ss'+b.dataset.soloSend+':'+b.dataset.reqId:'',
+      b.dataset.soloClaim!==undefined?'sc'+b.dataset.soloClaim:'',
+      b.dataset.groupJoin!==undefined?'gj'+b.dataset.groupJoin:'',
+      b.dataset.groupSend!==undefined?'gs'+b.dataset.groupSend+':'+b.dataset.reqId:''
+    ].find(Boolean);
+    const t=performance.now();if(tap===lastTap&&t-lastAt<500)return;lastTap=tap;lastAt=t;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(b.dataset.soloAccept!==undefined)return acceptSolo(Number(b.dataset.soloAccept));
+    if(b.dataset.soloSend!==undefined)return sendSolo(Number(b.dataset.soloSend),b.dataset.reqId);
+    if(b.dataset.soloClaim!==undefined)return claimSolo(Number(b.dataset.soloClaim));
+    if(b.dataset.groupJoin!==undefined)return joinGroup(Number(b.dataset.groupJoin));
+    if(b.dataset.groupSend!==undefined)return sendGroup(Number(b.dataset.groupSend),b.dataset.reqId);
+  },true);
+
+  globalThis.YN_R3429={BUILD,COLL,loadDay,startSub,acceptSolo,sendSolo,claimSolo,joinGroup,sendGroup};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3430-basement-fast-controller">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.30-BASEMENT-FAST';
+  let lastKey='',lastAt=0,busyKey='';
+  const api=()=>globalThis.YN_R17;
+
+  function isBasement(){
+    try{return currentScene==='house'&&!visitContext&&document.getElementById('sceneInteractiveLayer')?.dataset?.r17HouseMode==='basement'}catch(_){return false}
+  }
+  function lock(key,ms=260){
+    const t=performance.now();
+    if(key===lastKey&&t-lastAt<ms)return false;
+    lastKey=key;lastAt=t;return true;
+  }
+  function consume(e){
+    try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}
+  }
+  function feedback(el){
+    if(!el)return;
+    el.classList.add('r3430-pressed');
+    setTimeout(()=>el.classList.remove('r3430-pressed'),180);
+  }
+
+  function route(e){
+    if(!isBasement())return false;
+    const a=api();if(!a)return false;
+    const t=e.target?.closest?.(
+      '[data-r17-plot],[data-r17-plant],[data-r17-machine-hot],[data-r17-wine],#r17StartWine,#r17WineClaim,#r17HarvestOne,#r17HarvestAll'
+    );
+    if(!t)return false;
+
+    let key='',fn=null;
+    if(t.matches('[data-r17-plot]')){
+      const i=Number(t.dataset.r17Plot);key=`plot:${i}`;fn=()=>a.openFlowerPlot?.(i);
+    }else if(t.matches('[data-r17-plant]')){
+      const i=Number(t.dataset.r17PlantPlot),k=t.dataset.r17Plant;key=`plant:${i}:${k}`;fn=()=>a.plantFlower?.(i,k);
+    }else if(t.matches('[data-r17-machine-hot]')){
+      const i=Number(t.dataset.r17MachineHot);key=`machine:${i}`;fn=()=>a.openWineMachine?.(i);
+    }else if(t.matches('[data-r17-wine]')){
+      const i=Number(t.dataset.r17WineMachine),k=t.dataset.r17Wine;key=`winepick:${i}:${k}`;fn=()=>a.openWineRecipe?.(i,k);
+    }else if(t.id==='r17StartWine'){
+      const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;key=`winestart:${i}:${k}`;fn=()=>a.startWine?.(i,k);
+    }else if(t.id==='r17WineClaim'){
+      const i=Number(t.dataset.r17WineClaim);key=`wineclaim:${i}`;fn=()=>a.claimWine?.(i);
+    }else if(t.id==='r17HarvestOne'){
+      const i=Number(t.dataset.r17HarvestOne);key=`harvest:${i}`;fn=()=>a.harvestFlower?.(i);
+    }else if(t.id==='r17HarvestAll'){
+      key='harvest:all';fn=()=>a.harvestAll?.();
+    }
+    if(!fn)return false;
+
+    consume(e);
+    if(!lock(key))return true;
+    feedback(t);
+    try{fn()}catch(err){
+      console.warn(BUILD,key,err);
+      try{message?.('ทำรายการไม่ได้',err?.message||'กรุณาลองใหม่ค่ะ')}catch(_){}
+    }
+    return true;
+  }
+
+  /* This object is consulted by the earliest R17 window-capture listener in game.js.
+     That means one controller owns the tap before all historical basement handlers. */
+  globalThis.YN_BASEMENT_FAST_R3430={BUILD,route};
+
+  /* iOS fallback: if pointerdown is cancelled by the browser, touchend/click uses
+     the same route and dedupe key. These do not create duplicate actions. */
+  window.addEventListener('touchend',e=>route(e),{capture:true,passive:false});
+  window.addEventListener('click',e=>route(e),true);
+
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3431-time-limits-temple-fast">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.31-TIME-LIMITS-TEMPLE-FAST';
+  const TEMPLE_COLL='templeMissionSlotsV2';
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const N=v=>Math.max(0,Math.floor(Number(v)||0));
+  const NOW=()=>typeof gameNow==='function'?gameNow():Date.now();
+
+  /* ============================================================
+     GLOBAL TIME WINDOWS — Bangkok time only
+     Temple      CLOSED 08:00–16:00, opens 16:00
+     Home food   CLOSED 09:00–13:00, opens 13:00
+     Fishing     CLOSED 09:00–12:00, opens 12:00
+     Honey       CLOSED 16:00–21:00, opens 21:00
+     ============================================================ */
+  function bangkokMinute(){
+    try{if(typeof v15BangkokMinute==='function')return Number(v15BangkokMinute())||0}catch(_){}
+    const d=new Date(Date.now()+7*60*60*1000);
+    return d.getUTCHours()*60+d.getUTCMinutes();
+  }
+  const inWindow=(start,end)=>{const m=bangkokMinute();return m>=start&&m<end};
+  const templeClosed=()=>inWindow(8*60,16*60);
+  const homeFoodClosed=()=>inWindow(9*60,13*60);
+  const fishingClosed=()=>inWindow(9*60,12*60);
+  const honeyClosed=()=>inWindow(16*60,21*60);
+
+  function closedMessage(kind,openAt){
+    const titles={
+      temple:'🛕 วัดไทยปิดอยู่',
+      home:'🍳 ครัวอาหารบ้านปิดอยู่',
+      fishing:'🎣 บ่อตกปลายัยหนูปิดอยู่',
+      honey:'🛵 ระบบน้องน้ำผึ้งปิดอยู่'
+    };
+    try{message?.(titles[kind]||'ปิดอยู่',`ปิดอยู่ รบกวนกลับมาอีกครั้ง เวลา ${openAt} น.`)}catch(_){}
+  }
+  const blockTemple=()=>{closedMessage('temple','16.00');return false};
+  const blockHome=()=>{closedMessage('home','13.00');return false};
+  const blockFishing=()=>{closedMessage('fishing','12.00');return false};
+  const blockHoney=()=>{closedMessage('honey','21.00');return false};
+
+  /* ============================================================
+     TEMPLE TIME GATE
+     Override the old historical hours at the FINAL layer.
+     ============================================================ */
+  try{
+    v15TempleIsOpen=function(){return !templeClosed()};
+    v15TempleClosedText=function(){return 'ปิดอยู่ รบกวนกลับมาอีกครั้ง เวลา 16.00 น.'};
+    v15ShowTempleClosed=function(){return blockTemple()};
+    v15UpdateTempleButton=function(){
+      const btn=document.getElementById('almsBtn');if(!btn)return;
+      const b=btn.querySelector('b'),small=btn.querySelector('small');
+      if(b)b.textContent='วัดไทยในสวน';
+      if(small)small.textContent=templeClosed()?'ปิด 08.00–16.00 • เปิด 16.00':'เปิดอยู่ • ปิด 08.00–16.00';
+    };
+  }catch(_){}
+
+  /* Block scene entry too. This protects direct shortcuts and stale buttons. */
+  try{
+    const openSceneBase3431=openScene;
+    openScene=function(name){
+      if(templeClosed()&&['templeEntrance','templeSolo','templeGroup'].includes(String(name)))return blockTemple();
+      if(fishingClosed()&&['fishingLobby','fishingPondV2','underwater'].includes(String(name)))return blockFishing();
+      return openSceneBase3431.apply(this,arguments);
+    };
+  }catch(_){}
+
+  try{
+    const showAlmsBase3431=typeof showAlms==='function'?showAlms:null;
+    if(showAlmsBase3431)showAlms=function(){if(templeClosed())return blockTemple();return showAlmsBase3431.apply(this,arguments)};
+  }catch(_){}
+
+  /* ============================================================
+     TEMPLE SUPPLIES — LOW-CONTENTION FAST PATH
+     Problem found in prior versions:
+     the supply transaction touched the player's full /saves document.
+     Other background saves can keep changing that same document and force
+     Firestore transaction retries. The button then appears frozen.
+
+     New flow:
+       1) deduct locally + repaint immediately;
+       2) transact ONLY the one temple slot document;
+       3) persist only the one inventory field with updateDoc;
+       4) queue a normal full save later in the background.
+     ============================================================ */
+  const templeBusy=new Set();
+  const slotId=(date,type,i)=>`${date}_${type}_${i}`;
+  function slotRef(db,fs,date,type,i){return fs.doc(db,TEMPLE_COLL,slotId(date,type,i))}
+  function localSlot(type,i){
+    const d=globalThis.v15TempleCache;
+    return type==='solo'?d?.soloSlots?.[i]:d?.groupSlots?.[i];
+  }
+  function setLocalSlot(type,i,slot){
+    if(!globalThis.v15TempleCache)return;
+    if(type==='solo')globalThis.v15TempleCache.soloSlots[i]=cp(slot);
+    else globalThis.v15TempleCache.groupSlots[i]=cp(slot);
+  }
+  function renderTemple(type){
+    try{
+      if(type==='solo'&&currentScene==='templeSolo')v15RenderSoloPanel();
+      if(type==='group'&&currentScene==='templeGroup')v15RenderGroupPanel();
+    }catch(_){}
+  }
+  function applyLocalState(s){
+    try{s=typeof normalizeState==='function'?normalizeState(s,currentMember):s}catch(_){}
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+  }
+  function refundReq(s,req,qty){
+    qty=N(qty);if(!qty)return;
+    if(req.type==='dish'){
+      s.dishInventory=s.dishInventory&&typeof s.dishInventory==='object'?s.dishInventory:{};
+      s.dishInventory[req.key]=N(s.dishInventory[req.key])+qty;
+    }else if(req.type==='product'){
+      s.animalProducts=s.animalProducts&&typeof s.animalProducts==='object'?s.animalProducts:{};
+      s.animalProducts[req.key]=N(s.animalProducts[req.key])+qty;
+    }
+  }
+  function inventoryPatch(fs,s,req){
+    const patch={
+      clientSaveRevision:Number(s.clientSaveRevision)||0,
+      clientLocalEditAt:Number(s.clientLocalEditAt)||Date.now(),
+      updatedAt:fs.serverTimestamp()
+    };
+    if(req.type==='dish')patch[`dishInventory.${req.key}`]=N(s?.dishInventory?.[req.key]);
+    else if(req.type==='product')patch[`animalProducts.${req.key}`]=N(s?.animalProducts?.[req.key]);
+    return patch;
+  }
+  async function persistTempleInventory(req){
+    try{
+      const s=ownState||state;if(!s||!currentMemberKey)return;
+      const {db,fs}=await getFirebaseContext();
+      await fs.updateDoc(fs.doc(db,'saves',currentMemberKey),inventoryPatch(fs,s,req));
+    }catch(e){
+      console.warn(BUILD,'temple inventory quick-save retry',e);
+      setTimeout(async()=>{
+        try{
+          const s=ownState||state;if(!s||!currentMemberKey)return;
+          const {db,fs}=await getFirebaseContext();
+          await fs.updateDoc(fs.doc(db,'saves',currentMemberKey),inventoryPatch(fs,s,req));
+        }catch(err){console.warn(BUILD,'temple inventory retry failed',err)}
+      },700);
+    }finally{
+      /* Full-state sync is background only and never blocks the temple button. */
+      setTimeout(()=>{try{queueCloudSave?.()}catch(_){}},900);
+    }
+  }
+  function completeGroupDoc(d,t){
+    const slot=d.slot;
+    const id=slot.attemptId||`${d.dateKey}-group-${d.index}-${slot.cycle}`;
+    d.outcomes=d.outcomes&&typeof d.outcomes==='object'?d.outcomes:{};
+    if(!d.outcomes[id]){
+      const ps=Array.isArray(slot.participants)?slot.participants:[];
+      const names=Object.fromEntries(ps.map(p=>[p.key,p.name]));
+      const total=Number(slot.rewardTotal)||300;
+      d.outcomes[id]={
+        type:'group',status:'success',title:slot.title,names,
+        rewards:v15AllocateGroupReward(total,ps,id),penalties:{},appliedKeys:[],
+        createdAt:t,total
+      };
+    }
+    slot.status='cooldown';slot.lastResult='success';
+    slot.cooldownUntil=t+V15_GROUP_COOLDOWN_MS;
+    slot.requirements=[];slot.sent={};slot.participants=[];
+  }
+
+  async function fastSend(type,i,reqId){
+    if(templeClosed())return blockTemple();
+    const busyKey=`${type}:${i}:${reqId}`;
+    if(templeBusy.has(busyKey))return;
+    templeBusy.add(busyKey);
+
+    const beforeState=cp(ownState||state);
+    const beforeSlot=cp(localSlot(type,i));
+    let req=null,optimisticQty=0;
+
+    try{
+      if(!beforeState||!beforeSlot)throw new Error('ข้อมูลภารกิจยังไม่พร้อม');
+      if(beforeSlot.status!=='active')throw new Error('ภารกิจนี้ยังไม่อยู่ในสถานะส่งเสบียง');
+      if(type==='solo'&&beforeSlot.ownerKey!==currentMemberKey)throw new Error('ภารกิจนี้ไม่ใช่ของคุณ');
+      if(type==='group'&&!(beforeSlot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error('คุณไม่ได้อยู่ในทีมนี้');
+
+      req=(beforeSlot.requirements||[]).find(r=>v15ReqId(r)===reqId);
+      if(!req)throw new Error('ไม่พบเสบียงนี้');
+
+      const sent=N(beforeSlot.sent?.[reqId]);
+      const remain=Math.max(0,N(req.qty)-sent);
+      const have=N(v15ReqHave(beforeState,req));
+      optimisticQty=Math.min(remain,have);
+      if(optimisticQty<=0)throw new Error('ของในกระเป๋าไม่พอ');
+
+      /* Immediate local deduction + immediate visible mission progress. */
+      const optimisticState=typeof normalizeState==='function'?normalizeState(cp(beforeState),currentMember):cp(beforeState);
+      if(!v15ConsumeReq(optimisticState,req,optimisticQty))throw new Error('หักของจากกระเป๋าไม่สำเร็จ');
+      optimisticState.clientSaveRevision=(Number(optimisticState.clientSaveRevision)||0)+1;
+      optimisticState.clientLocalEditAt=Date.now();
+
+      const optimisticSlot=cp(beforeSlot);
+      optimisticSlot.sent=optimisticSlot.sent||{};
+      optimisticSlot.sent[reqId]=sent+optimisticQty;
+      if(type==='solo'&&v15AllReqDone(optimisticSlot))optimisticSlot.status='completed';
+
+      applyLocalState(optimisticState);
+      setLocalSlot(type,i,optimisticSlot);
+      renderTemple(type);
+      try{showWeatherToast?.(`🍱 กำลังส่งเสบียง ×${optimisticQty}...`)}catch(_){}
+
+      /* Shared mission write touches ONLY this slot document. */
+      const date=currentBangkokDateKey(),{db,fs}=await getFirebaseContext(),ref=slotRef(db,fs,date,type,i);
+      let serverSlot=null,actualQty=0,completedGroup=false;
+
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);
+        if(!snap.exists())throw new Error('ข้อมูลภารกิจยังไม่พร้อม');
+        const d=cp(snap.data()),slot=d.slot;
+        if(!slot||slot.status!=='active')throw new Error('ภารกิจนี้จบหรือเปลี่ยนสถานะแล้ว');
+        if(type==='solo'&&slot.ownerKey!==currentMemberKey)throw new Error('ภารกิจนี้ไม่ใช่ของคุณ');
+        if(type==='group'&&!(slot.participants||[]).some(p=>p.key===currentMemberKey))throw new Error('คุณไม่ได้อยู่ในทีมนี้');
+
+        const serverReq=(slot.requirements||[]).find(r=>v15ReqId(r)===reqId);
+        if(!serverReq)throw new Error('ไม่พบเสบียงนี้');
+        const serverSent=N(slot.sent?.[reqId]);
+        const serverRemain=Math.max(0,N(serverReq.qty)-serverSent);
+        actualQty=Math.min(optimisticQty,serverRemain);
+        if(actualQty<=0)throw new Error('เสบียงรายการนี้ครบแล้ว');
+
+        slot.sent=slot.sent||{};
+        slot.sent[reqId]=serverSent+actualQty;
+
+        if(type==='solo'&&v15AllReqDone(slot))slot.status='completed';
+        if(type==='group'&&v15AllReqDone(slot)){
+          completeGroupDoc(d,NOW());
+          completedGroup=true;
+        }
+
+        d.updatedAtMs=NOW();serverSlot=cp(d.slot);
+        tx.set(ref,{...d,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+
+      /* If another group member filled part of it at the same moment, refund only
+         the excess optimistic deduction instead of losing extra supplies. */
+      if(actualQty<optimisticQty){
+        const cur=typeof normalizeState==='function'?normalizeState(cp(ownState||state),currentMember):cp(ownState||state);
+        refundReq(cur,req,optimisticQty-actualQty);
+        cur.clientSaveRevision=(Number(cur.clientSaveRevision)||0)+1;
+        cur.clientLocalEditAt=Date.now();
+        applyLocalState(cur);
+      }
+
+      if(serverSlot)setLocalSlot(type,i,serverSlot);
+      renderTemple(type);
+      persistTempleInventory(req);
+
+      if(completedGroup){
+        try{showWeatherToast?.(`✅ ส่ง ×${actualQty} • ภารกิจหมู่สำเร็จแล้ว`)}catch(_){}
+        setTimeout(()=>{try{v15ApplyOwnTempleOutcomes?.()}catch(_){}},0);
+      }else{
+        try{showWeatherToast?.(`🍱 ส่งเสบียงสำเร็จ ×${actualQty}`)}catch(_){}
+      }
+    }catch(e){
+      /* Roll back the optimistic UI and inventory only when the server write fails. */
+      if(beforeState)applyLocalState(beforeState);
+      if(beforeSlot)setLocalSlot(type,i,beforeSlot);
+      renderTemple(type);
+      try{message?.('ส่งเสบียงไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}catch(_){}
+    }finally{
+      templeBusy.delete(busyKey);
+    }
+  }
+
+  /* These globals are the functions used by the existing temple buttons.
+     We replace only SEND. Accept/join/claim keep R34.29 sharded behavior. */
+  try{
+    v15SendSolo=function(i,reqId){return fastSend('solo',Number(i),reqId)};
+    v15SendGroup=function(i,reqId){return fastSend('group',Number(i),reqId)};
+  }catch(_){}
+
+  /* Time guards for every temple action, including stale modal buttons. */
+  for(const name of ['v15AcceptSolo','v15JoinGroup','v15ClaimSolo']){
+    try{
+      const base=globalThis[name];
+      if(typeof base==='function')globalThis[name]=function(){if(templeClosed())return blockTemple();return base.apply(this,arguments)};
+    }catch(_){}
+  }
+
+  /* ============================================================
+     HOME FOOD 09:00–13:00
+     ============================================================ */
+  try{
+    const api=globalThis.YN_R16;
+    if(api){
+      for(const k of ['openKitchen','openHomeRecipe','craftHomeFood']){
+        const base=api[k];
+        if(typeof base==='function')api[k]=function(){if(homeFoodClosed())return blockHome();return base.apply(this,arguments)};
+      }
+    }
+  }catch(_){}
+
+  /* ============================================================
+     HONEY 16:00–21:00
+     Wrap the proven APIs instead of changing delivery mechanics.
+     ============================================================ */
+  function wrapHoneyApi(obj,keys){
+    if(!obj)return;
+    for(const k of keys){
+      const base=obj[k];
+      if(typeof base==='function'&&!base.__r3431){
+        const f=function(){if(honeyClosed())return blockHoney();return base.apply(this,arguments)};
+        f.__r3431=true;obj[k]=f;
+      }
+    }
+  }
+  try{wrapHoneyApi(globalThis.YN_HONEY_DELIVERY,['openFuel','call','openSend','refill'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_R34133,['openHoney'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_R34132,['openHoney'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_R34131,['openHoneyMenu'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_HONEY_1220,['open'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_HONEY_REFUEL_1211,['open'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_HONEY_REFUEL_1212,['open'])}catch(_){}
+  try{wrapHoneyApi(globalThis.YN_R341208,['openHoney128'])}catch(_){}
+
+  /* ============================================================
+     EARLY INPUT GATES
+     Capture at window so old onclick handlers never execute while closed.
+     ============================================================ */
+  function routeClosedInput(e){
+    const t=e.target?.closest?.(
+      '#almsBtn,#templeSoloBtn,#templeGroupBtn,[data-solo-accept],[data-solo-send],[data-solo-claim],[data-group-join],[data-group-send],'+
+      '#r17Kitchen,#r16StoveHotspot,#r28HomeFood,[data-r16-food],#r16CraftHomeFood,'+
+      '#wellHotspot,#shortcutFishingBtn,[data-ynu-pond],'+
+      '[data-s2-main="honey"],#honeyFuelHud,#honeyFuelCallHoney,#yn128HoneyConfirm,#r34133HoneyConfirm'
+    );
+    if(!t)return;
+    let blocked=false;
+    if(templeClosed()&&t.matches('#almsBtn,#templeSoloBtn,#templeGroupBtn,[data-solo-accept],[data-solo-send],[data-solo-claim],[data-group-join],[data-group-send]')){
+      blocked=true;blockTemple();
+    }else if(homeFoodClosed()&&t.matches('#r17Kitchen,#r16StoveHotspot,#r28HomeFood,[data-r16-food],#r16CraftHomeFood')){
+      blocked=true;blockHome();
+    }else if(fishingClosed()&&t.matches('#wellHotspot,#shortcutFishingBtn,[data-ynu-pond]')){
+      blocked=true;blockFishing();
+    }else if(honeyClosed()&&t.matches('[data-s2-main="honey"],#honeyFuelHud,#honeyFuelCallHoney,#yn128HoneyConfirm,#r34133HoneyConfirm')){
+      blocked=true;blockHoney();
+    }
+    if(blocked){
+      try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}
+    }
+  }
+  window.addEventListener('pointerdown',routeClosedInput,true);
+  window.addEventListener('touchend',routeClosedInput,{capture:true,passive:false});
+  window.addEventListener('click',routeClosedInput,true);
+
+  /* If a player is sitting inside the temple exactly when 08:00 arrives,
+     the existing temple clock will eject them because v15TempleIsOpen above
+     is now the final authoritative time check. */
+  globalThis.YN_R3431={
+    BUILD,templeClosed,homeFoodClosed,fishingClosed,honeyClosed,fastSend
+  };
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
+
+
+<script id="r3433-alpaca-critical">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.33-ALPACA-CRITICAL';
+  const cp=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const N=v=>Math.max(0,Math.floor(Number(v)||0));
+  const live=()=>ownState||state;
+  const penNo=()=>{try{return Math.max(1,Math.min(5,Number(typeof currentAlpacaPen==='function'?currentAlpacaPen():1)||1))}catch(_){return 1}};
+  const admin=()=>{try{return String(currentMember||'')==='Aida'||adminProfile?.role==='admin'}catch(_){return false}};
+  let lastKey='',lastAt=0;
+  function once(key,fn,e,ms=320){
+    const t=performance.now();if(key===lastKey&&t-lastAt<ms)return;
+    lastKey=key;lastAt=t;
+    try{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.()}catch(_){}
+    return fn();
+  }
+  function apply(s){
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+    try{queueCloudSave?.()}catch(_){}
+    setTimeout(()=>{try{flushCloudSave?.()}catch(_){}},120);
+  }
+
+  function ensureTrough(s,p){
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    while(s.alpaca.pens.length<5)s.alpaca.pens.push({alpacas:[],trough:Array(16).fill(null)});
+    const pen=s.alpaca.pens[p-1]||(s.alpaca.pens[p-1]={alpacas:[],trough:Array(16).fill(null)});
+    pen.trough=Array.isArray(pen.trough)?pen.trough.slice(0,16):Array(16).fill(null);
+    while(pen.trough.length<16)pen.trough.push(null);
+    s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==='object'?s.alpaca.inventory:{};
+    s.alpaca.inventory.food=s.alpaca.inventory.food&&typeof s.alpaca.inventory.food==='object'?s.alpaca.inventory.food:{};
+    return pen;
+  }
+
+  const FOOD_META={
+    hayPack:{name:'แพ็คหญ้าสดและหญ้าแห้ง',servings:6},
+    pellet:{name:'อาหารเม็ดอัลปาก้า',servings:12},
+    tricolorPudding:{name:'พุดดิ้งหญ้าสามสี',servings:1},
+    braisedEgg:{name:'ไข่พะโล้อัลปาก้า',servings:1}
+  };
+
+  function fastFillOne(slot,key){
+    const s=cp(live());if(!s)return;
+    const p=penNo(),pen=ensureTrough(s,p),meta=FOOD_META[key];
+    if(!meta||slot<0||slot>15)return;
+    if(pen.trough[slot])return message?.('ช่องนี้มีอาหารแล้ว','กรุณาเลือกช่องว่างค่ะ');
+    const have=N(s.alpaca.inventory.food[key]);
+    if(!admin()&&have<=0)return message?.('คุณไม่มีอาหาร','อาหารชนิดนี้หมดแล้วค่ะ');
+    pen.trough[slot]={foodKey:key,servings:meta.servings,placedAt:Date.now()};
+    if(!admin())s.alpaca.inventory.food[key]=have-1;
+    s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+    apply(s);
+    try{closeModal?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.showTrough?.()}catch(_){}
+    try{showWeatherToast?.(`🦙 วางอาหารช่อง ${slot+1} แล้ว`)}catch(_){}
+  }
+
+  function fastFillAll(key){
+    const s=cp(live());if(!s)return;
+    const p=penNo(),pen=ensureTrough(s,p),meta=FOOD_META[key];
+    if(!meta)return;
+    const empty=pen.trough.map((x,i)=>x?null:i).filter(x=>x!==null);
+    if(!empty.length)return message?.('รางอาหาร','ทั้ง 16 ช่องมีอาหารครบแล้วค่ะ');
+    const have=N(s.alpaca.inventory.food[key]);
+    const count=admin()?empty.length:Math.min(empty.length,have);
+    if(count<=0)return message?.('คุณไม่มีอาหาร','อาหารชนิดนี้หมดแล้วค่ะ');
+    for(let i=0;i<count;i++)pen.trough[empty[i]]={foodKey:key,servings:meta.servings,placedAt:Date.now()};
+    if(!admin())s.alpaca.inventory.food[key]=have-count;
+    s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();
+    apply(s);
+    try{closeModal?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.showTrough?.()}catch(_){}
+    try{showWeatherToast?.(`⚡ เติมราง ${count} ช่องแล้ว`)}catch(_){}
+  }
+
+  function mountFillAll(){
+    const grid=document.querySelector('.alpaca-trough-grid');if(!grid)return;
+    let b=document.getElementById('r3433FillAllTrough');
+    if(!b){
+      b=document.createElement('button');
+      b.id='r3433FillAllTrough';b.type='button';
+      b.className='primary-spooky-action r3433-fill-all';
+      b.textContent='⚡ เติมช่องว่างทั้งหมด';
+      grid.insertAdjacentElement('afterend',b);
+    }
+  }
+
+  function openFillAllPicker(){
+    const s=live();if(!s)return;
+    const food=s?.alpaca?.inventory?.food||{};
+    const rows=Object.entries(FOOD_META).filter(([k])=>N(food[k])>0||admin());
+    if(!rows.length)return message?.('คุณไม่มีอาหาร','ไม่มีอาหารอัลปาก้าที่ใช้เติมรางได้ค่ะ');
+    document.getElementById('modalContent').innerHTML=
+      `<section class="feature-panel alpaca-panel"><h2>⚡ เติมช่องว่างทั้งหมด</h2><div class="alpaca-inventory-grid">${
+        rows.map(([k,m])=>`<article class="alpaca-inventory-item"><b>${m.name}</b><strong>×${admin()?9999:N(food[k])}</strong><button type="button" data-r3433-fillall="${k}">เติมให้เต็มเท่าที่มี</button></article>`).join('')
+      }</div></section>`;
+    openModal?.();
+  }
+
+  // Factory: optimistic removal from pen, then durable cloud transaction.
+  function findAlpacaInPen(s,p,alpacaId){
+    const pen=ensureTrough(s,p);
+    const arr=Array.isArray(pen.alpacas)?pen.alpacas:[];
+    const idx=arr.findIndex(a=>String(a?.id||a?.uid||a?.key||'')===String(alpacaId));
+    return {pen,arr,idx,alpaca:idx>=0?arr[idx]:null};
+  }
+  function ensureFactory(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==='object'?s.alpaca:{};
+    s.alpaca.factory=s.alpaca.factory&&typeof s.alpaca.factory==='object'?s.alpaca.factory:{};
+    s.alpaca.factory.queue=Array.isArray(s.alpaca.factory.queue)?s.alpaca.factory.queue:[];
+    s.alpaca.factory.products=s.alpaca.factory.products&&typeof s.alpaca.factory.products==='object'?s.alpaca.factory.products:{};
+    return s.alpaca.factory;
+  }
+
+  async function fastSendFactory(alpacaId,kind){
+    if(!alpacaId)return;
+    const before=cp(live());if(!before)return;
+    const p=penNo();
+    const found=findAlpacaInPen(before,p,alpacaId);
+    if(found.idx<0)return message?.('ส่งเข้าโรงงานไม่ได้','ไม่พบอัลปาก้าตัวนี้ในคอกแล้วค่ะ');
+
+    const optimistic=cp(before);
+    const ff=findAlpacaInPen(optimistic,p,alpacaId);
+    const alpaca=ff.alpaca;ff.arr.splice(ff.idx,1);ff.pen.alpacas=ff.arr;
+    const factory=ensureFactory(optimistic);
+    factory.queue.push({
+      id:`fac-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      alpaca:cp(alpaca),alpacaId:String(alpacaId),kind:String(kind||'default'),
+      startedAt:Date.now(),status:'processing',sourcePen:p
+    });
+    optimistic.clientSaveRevision=(Number(optimistic.clientSaveRevision)||0)+1;
+    optimistic.clientLocalEditAt=Date.now();
+    ownState=optimistic;if(!visitContext)state=optimistic;saveLocalOnly?.(optimistic);
+    try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+    try{showWeatherToast?.('🏭 ส่งอัลปาก้าเข้าโรงงานแล้ว')}catch(_){}
+
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');
+        const s=normalizeState(snap.data(),currentMember);
+        const f=findAlpacaInPen(s,p,alpacaId);
+        if(f.idx<0){
+          // already moved by another accepted action; just accept current cloud state.
+          next=cp(s);return;
+        }
+        const a=f.alpaca;f.arr.splice(f.idx,1);f.pen.alpacas=f.arr;
+        const fac=ensureFactory(s);
+        fac.queue.push({
+          id:`fac-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+          alpaca:cp(a),alpacaId:String(alpacaId),kind:String(kind||'default'),
+          startedAt:Date.now(),status:'processing',sourcePen:p
+        });
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+        s.clientLocalEditAt=Date.now();next=cp(s);
+        tx.set(ref,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(next){
+        ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);
+        try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+      }
+    }catch(e){
+      ownState=before;if(!visitContext)state=before;saveLocalOnly?.(before);
+      try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+      message?.('ส่งเข้าโรงงานไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ');
+    }
+  }
+
+  // Capture trough and factory inputs before old handlers.
+  window.addEventListener('pointerdown',e=>{
+    const all=e.target?.closest?.('#r3433FillAllTrough');
+    if(all)return once('trough-all-open',openFillAllPicker,e);
+    const fillall=e.target?.closest?.('[data-r3433-fillall]');
+    if(fillall)return once('trough-all:'+fillall.dataset.r3433Fillall,()=>fastFillAll(fillall.dataset.r3433Fillall),e,450);
+
+    const slotFood=e.target?.closest?.('[data-r3433-fill-one]');
+    if(slotFood){
+      const slot=Number(slotFood.dataset.r3433Slot),key=slotFood.dataset.r3433FillOne;
+      return once(`trough:${slot}:${key}`,()=>fastFillOne(slot,key),e,300);
+    }
+
+    // Existing picker buttons: infer slot from modal heading and intercept.
+    const fill=e.target?.closest?.('.alpaca-inventory-grid [data-fill-trough]');
+    if(fill){
+      const title=document.querySelector('.alpaca-panel h2')?.textContent||'';
+      const m=String(title).match(/ช่องที่\s*(\d+)/);
+      if(m){
+        const slot=Number(m[1])-1,key=fill.dataset.fillTrough;
+        return once(`trough:${slot}:${key}`,()=>fastFillOne(slot,key),e,300);
+      }
+    }
+
+    // Factory buttons — support common existing data attributes.
+    const fac=e.target?.closest?.(
+      '[data-alpaca-process],[data-process-alpaca],[data-send-factory],[data-factory-alpaca],[data-v240-process]'
+    );
+    if(fac){
+      const alpacaId=fac.dataset.alpacaProcess||fac.dataset.processAlpaca||fac.dataset.sendFactory||fac.dataset.factoryAlpaca||fac.dataset.v240Process;
+      const kind=fac.dataset.kind||fac.dataset.processKind||fac.dataset.factoryKind||'default';
+      return once('factory:'+alpacaId,()=>fastSendFactory(alpacaId,kind),e,600);
+    }
+  },true);
+
+  setInterval(mountFillAll,900);setTimeout(mountFillAll,120);
+
+  globalThis.YN_R3433={BUILD,fastFillOne,fastFillAll,fastSendFactory};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,'loaded');
 })();
 </script>

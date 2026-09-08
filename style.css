@@ -10379,3 +10379,121 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
   opacity:.72!important;
   pointer-events:none!important;
 }
+
+
+/* ======================================================================
+   S2 R34.28 — Temple fast input / no waiting-looking dead buttons
+   ====================================================================== */
+.temple-mission-board button,
+#templeSoloBtn,#templeGroupBtn{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+  transition:opacity .05s linear,filter .05s linear!important;
+}
+.temple-mission-board button:not(:disabled){
+  min-height:44px!important;
+}
+.temple-mission-board button.r3428-pressed,
+.temple-mission-board button:active,
+#templeSoloBtn:active,#templeGroupBtn:active{
+  filter:brightness(1.08)!important;
+  opacity:.72!important;
+}
+.temple-supply-row button:disabled{
+  opacity:.55!important;
+}
+
+
+/* ======================================================================
+   S2 R34.29 — Temple sharded slots: tap response should never look frozen
+   ====================================================================== */
+.temple-mission-board button{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.temple-mission-board button:active{
+  transform:scale(.985)!important;
+}
+
+
+/* ======================================================================
+   S2 R34.30 — Basement one-owner input
+   Visual size stays compact; actual tap areas are generous.
+   ====================================================================== */
+#sceneInteractiveLayer[data-r17-house-mode="basement"]{
+  touch-action:manipulation!important;
+}
+.r17-flower-plot,
+.r17-wine-machine,
+.r17-flower-picker [data-r17-plant],
+.r17-wine-picker [data-r17-wine],
+#r17HarvestOne,
+#r17HarvestAll,
+#r17StartWine,
+#r17WineClaim{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+  transition:filter .04s linear,opacity .04s linear,transform .04s linear!important;
+}
+
+/* Keep the artwork unchanged while giving fingers a larger reliable target. */
+.r17-flower-plot{
+  min-width:72px!important;
+  min-height:72px!important;
+}
+.r17-wine-machine{
+  min-width:72px!important;
+  min-height:96px!important;
+}
+.r17-flower-picker [data-r17-plant],
+.r17-wine-picker [data-r17-wine]{
+  min-height:72px!important;
+}
+#r17HarvestOne,#r17HarvestAll,#r17StartWine,#r17WineClaim{
+  min-height:50px!important;
+  padding:10px 16px!important;
+}
+
+.r3430-pressed,
+.r17-flower-plot:active,
+.r17-wine-machine:active{
+  filter:brightness(1.08)!important;
+  opacity:.78!important;
+  transform:scale(.985)!important;
+}
+
+
+/* ======================================================================
+   S2 R34.31 — time limits + temple immediate feedback
+   ====================================================================== */
+.temple-supply-row button{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.temple-supply-row button:active{
+  opacity:.68!important;
+  transform:scale(.985)!important;
+}
+
+/* R34.32: market visitor waits for authoritative server shop, not stale cache. */
+.s2-market-loading{pointer-events:none!important}
+
+
+/* ======================================================================
+   S2 R34.33 — Alpaca critical input
+   ====================================================================== */
+.alpaca-trough-slot,
+.alpaca-inventory-grid [data-fill-trough],
+#r3433FillAllTrough,
+[data-r3433-fillall]{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.alpaca-trough-slot{min-width:50px!important;min-height:50px!important}
+.r3433-fill-all{
+  width:100%!important;
+  min-height:46px!important;
+  margin-top:8px!important;
+  animation:none!important;
+  transition:none!important;
+}
