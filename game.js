@@ -33811,3 +33811,365 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.36-ALL-TOPICS';
 })();
 
 window.YAINOO_PACKAGE_BUILD='S2-R34.37-VISIBILITY-HARD-FIX';
+
+
+/* =====================================================================
+   S2 R34.40 — MERGED CORE BUILD
+   Previously standalone R34.38 and R34.39 runtime code is merged
+   back into game.js. No extra runtime JS files are required.
+   ===================================================================== */
+
+
+/* S2 R34.38 — standalone systems bootstrap
+   Loaded as a separate script AFTER game.js so these systems can still mount
+   even if a legacy runtime exception stops game.js before its late hotfix blocks.
+*/
+(()=>{
+'use strict';
+const BUILD='S2-R34.38-STANDALONE-SYSTEMS';
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+const admin=()=>String(globalThis.currentMember||'')==='Aida' && globalThis.adminProfile?.role==='admin';
+const live=()=>globalThis.ownState||globalThis.state;
+const now=()=>typeof globalThis.gameNow==='function'?globalThis.gameNow():Date.now();
+
+function bkkMinute(){const d=new Date(now()+7*3600000);return d.getUTCHours()*60+d.getUTCMinutes()}
+const inRange=(a,b)=>{const m=bkkMinute();return a<b?(m>=a&&m<b):(m>=a||m<b)};
+const bingoOpen=()=>inRange(8*60,16*60);
+const mysteryOpen=()=>inRange(10*60,15*60);
+function msg(title,body){try{globalThis.message?.(title,body)}catch(_){}}
+function closed(label,time){msg(`🔒 ${label}`,`ปิดอยู่ รบกวนกลับมาอีกครั้ง เวลา ${time} น.`)}
+function modal(html){const m=$('modalContent');if(!m)return false;m.innerHTML=html;globalThis.openModal?.();return true}
+function close(){try{globalThis.closeModal?.()}catch(_){}}
+function consume(e){try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}}
+
+async function fb(){
+  if(typeof globalThis.getFirebaseContext!=='function')throw new Error('Firebase ยังไม่พร้อม');
+  return globalThis.getFirebaseContext();
+}
+
+/* ---------------- BINGO ---------------- */
+let bingoUnsub=null,bingoData={cells:{},winner:''};
+const center=12;
+function normBingo(x){return {cells:x?.cells&&typeof x.cells==='object'?x.cells:{},winner:String(x?.winner||'')}}
+function stopBingo(){try{bingoUnsub?.()}catch(_){} bingoUnsub=null}
+function screen(){
+  let s=$('r38BingoScreen'); if(s)return s;
+  s=document.createElement('section');s.id='r38BingoScreen';s.className='r38-bingo-screen hidden';
+  s.innerHTML=`<div class="r38-bingo-card">
+    <img class="r38-bingo-bg" src="farmer-bingo-reference.jpg" alt="บิงโกชาวสวน">
+    <button id="r38BingoClose" class="r38-bingo-close" type="button">‹</button>
+    <div id="r38BingoGrid" class="r38-bingo-grid"></div>
+    <div id="r38BingoWinner" class="r38-bingo-winner"></div>
+    <button id="r38BingoReset" class="r38-bingo-reset hidden" type="button">รีเซ็ตทั้งหมด</button>
+  </div>`;
+  document.body.appendChild(s);
+  $('r38BingoClose').onclick=()=>{stopBingo();s.classList.add('hidden')};
+  $('r38BingoReset').onclick=resetBingo;
+  return s;
+}
+function catalog(){
+  let rows=[];
+  try{
+    if(typeof globalThis.YN_R25_fullMarketEntries==='function')rows=globalThis.YN_R25_fullMarketEntries(live())||[];
+    else if(typeof globalThis.adminGiftCatalog==='function')rows=globalThis.adminGiftCatalog()||[];
+    else if(typeof globalThis.giftableEntries==='function')rows=globalThis.giftableEntries(live())||[];
+  }catch(_){}
+  const bad=new Set(['crop','flower','flowerSeed']),seen=new Set(),out=[];
+  for(const e of rows){
+    if(!e||bad.has(String(e.type||''))||/Instance$/.test(String(e.type||''))||!e.image)continue;
+    const sig=`${e.type}:${e.key}`;if(seen.has(sig))continue;seen.add(sig);
+    out.push({...e,category:e.category||'ไอเท็ม'});
+  }
+  return out;
+}
+function renderBingo(){
+  const s=screen(),grid=$('r38BingoGrid'),isAdmin=admin();
+  grid.innerHTML=Array.from({length:25},(_,i)=>{
+    if(i===center)return `<div class="r38-bingo-cell center"></div>`;
+    const x=bingoData.cells?.[String(i)];
+    return `<button type="button" class="r38-bingo-cell ${x?'filled':''}" data-r38-cell="${i}" ${isAdmin?'':'disabled'}>${x?`<img src="${esc(x.image)}" alt="${esc(x.name)}">`:''}</button>`;
+  }).join('');
+  grid.querySelectorAll('[data-r38-cell]').forEach(b=>b.onclick=()=>openPicker(Number(b.dataset.r38Cell)));
+  const w=$('r38BingoWinner');
+  if(isAdmin){
+    const names=Object.keys(globalThis.MEMBERS||{}).filter(n=>n&&n!=='Aida').sort((a,b)=>a.localeCompare(b,'th'));
+    w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><select id="r38WinnerSel"><option value="">—</option>${names.map(n=>`<option value="${esc(n)}" ${n===bingoData.winner?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
+    $('r38WinnerSel').onchange=e=>saveWinner(e.target.value);
+    $('r38BingoReset').classList.remove('hidden');
+  }else{
+    w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><b>${esc(bingoData.winner||'—')}</b>`;
+    $('r38BingoReset').classList.add('hidden');
+  }
+}
+async function openBingo(){
+  if(!bingoOpen())return closed('บิงโกชาวสวน','08.00');
+  try{globalThis.closeHomeHudMenu?.()}catch(_){}
+  const s=screen();s.classList.remove('hidden');renderBingo();stopBingo();
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,'shared','farmerBingo');
+    bingoUnsub=fs.onSnapshot(ref,snap=>{bingoData=normBingo(snap.exists()?snap.data():{});renderBingo()},e=>msg('เปิดบิงโกไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ'));
+  }catch(e){msg('เปิดบิงโกไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}
+}
+function openPicker(index){
+  if(!admin())return;
+  const rows=catalog();
+  modal(`<section class="feature-panel r38-picker"><h2>เลือกไอเท็ม • ช่อง ${index+1}</h2>
+    <input id="r38PickSearch" placeholder="ค้นหาไอเท็ม…">
+    <button id="r38ClearCell" class="secondary-action">ล้างช่องนี้</button>
+    <div id="r38PickItems" class="r38-pick-items"></div></section>`);
+  const paint=()=>{
+    const q=String($('r38PickSearch')?.value||'').toLowerCase();
+    const found=rows.filter(x=>!q||String(x.name||'').toLowerCase().includes(q));
+    $('r38PickItems').innerHTML=found.map((x,i)=>`<button data-r38-pick="${rows.indexOf(x)}"><img src="${esc(x.image)}"><span>${esc(x.name)}</span></button>`).join('');
+    $('r38PickItems').querySelectorAll('[data-r38-pick]').forEach(b=>b.onclick=()=>saveCell(index,rows[Number(b.dataset.r38Pick)]));
+  };
+  $('r38PickSearch').oninput=paint;$('r38ClearCell').onclick=()=>saveCell(index,null);paint();
+}
+async function saveCell(index,item){
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,'shared','farmerBingo'),snap=await fs.getDoc(ref),cur=normBingo(snap.exists()?snap.data():{}),cells={...cur.cells};
+    if(item)cells[String(index)]={type:String(item.type||''),key:String(item.key||''),name:String(item.name||''),image:String(item.image||'')};else delete cells[String(index)];
+    await fs.setDoc(ref,{version:1,cells,winner:cur.winner||'',updatedAt:fs.serverTimestamp(),updatedBy:'Aida'},{merge:false});close();
+  }catch(e){msg('บันทึกช่องไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}
+}
+async function saveWinner(name){
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,'shared','farmerBingo'),snap=await fs.getDoc(ref),cur=normBingo(snap.exists()?snap.data():{});
+    await fs.setDoc(ref,{version:1,cells:cur.cells,winner:String(name||''),updatedAt:fs.serverTimestamp(),updatedBy:'Aida'},{merge:false});
+  }catch(e){msg('บันทึกชื่อไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}
+}
+async function resetBingo(){
+  if(!admin()||!confirm('รีเซ็ตบิงโกทั้งหมด?'))return;
+  try{const {db,fs}=await fb();await fs.setDoc(fs.doc(db,'shared','farmerBingo'),{version:1,cells:{},winner:'',updatedAt:fs.serverTimestamp(),updatedBy:'Aida'},{merge:false})}
+  catch(e){msg('รีเซ็ตไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}
+}
+
+/* ---------------- RECYCLE ---------------- */
+const badTypes=new Set(['crop','flower','flowerSeed']);
+function recycleRows(){
+  let rows=[];
+  try{
+    if(typeof globalThis.YN_R25_fullMarketEntries==='function')rows=globalThis.YN_R25_fullMarketEntries(live())||[];
+    else if(typeof globalThis.giftableEntries==='function')rows=globalThis.giftableEntries(live())||[];
+  }catch(_){}
+  const seen=new Set(),out=[];
+  for(const e of rows){
+    if(!e||badTypes.has(String(e.type||''))||/Instance$/.test(String(e.type||'')))continue;
+    const cnt=iv(e.count??e.qty??0),sig=`${e.type}:${e.key}`;if(cnt<5||seen.has(sig))continue;seen.add(sig);out.push({...e,count:cnt});
+  }
+  return out;
+}
+let recSel=new Map(),recRows=[];
+function openRecycle(){
+  if(!mysteryOpen())return closed('ร้านค้าลึกลับ','10.00');
+  recSel=new Map();recRows=recycleRows();
+  modal(`<section class="feature-panel r38-recycle"><h2>♻️ จุดรีไซเคิล</h2><p>รวมขั้นต่ำ 30 ชิ้น • แต่ละประเภทขั้นต่ำ 5 ชิ้น</p><input id="r38RecSearch" placeholder="ค้นหาไอเท็ม…"><div id="r38RecItems"></div><footer><b id="r38RecTotal">0/30</b><button id="r38RecGo" class="primary-spooky-action" disabled>♻️ รีไซเคิล</button></footer></section>`);
+  $('r38RecSearch').oninput=paintRecycle;$('r38RecGo').onclick=()=>msg('จุดรีไซเคิล','หน้ารายการทำงานแล้วค่ะ ระบบหักของ/สุ่มรางวัลใช้ตัวประมวลผลหลักของ R34.36');paintRecycle();
+}
+function paintRecycle(){
+  const q=String($('r38RecSearch')?.value||'').toLowerCase(),wrap=$('r38RecItems');
+  const rows=recRows.filter(x=>!q||String(x.name||'').toLowerCase().includes(q));
+  wrap.innerHTML=rows.map(x=>{const sig=`${x.type}:${x.key}`,n=iv(recSel.get(sig));return `<button class="r38-rec-card" data-r38-rec="${esc(sig)}"><img src="${esc(x.image||'mysterious-shop.png')}"><span>${esc(x.name)}<small>มี ×${x.count}</small></span><b>${n||'เลือก 5'}</b></button>`}).join('')||'<p>ไม่มีไอเท็มที่มีอย่างน้อย 5 ชิ้นค่ะ</p>';
+  wrap.querySelectorAll('[data-r38-rec]').forEach(b=>b.onclick=()=>{const sig=b.dataset.r38Rec,row=recRows.find(x=>`${x.type}:${x.key}`===sig),cur=iv(recSel.get(sig));if(!cur)recSel.set(sig,Math.min(5,row.count));else if(cur+5<=row.count)recSel.set(sig,cur+5);else recSel.delete(sig);paintRecycle()});
+  const total=[...recSel.values()].reduce((a,b)=>a+b,0);$('r38RecTotal').textContent=`${total}/30`;$('r38RecGo').disabled=total<30;
+}
+
+/* ---------------- MARKET FRIEND LIVE ---------------- */
+let mu=[];
+function stopMarket(){for(const u of mu.splice(0)){try{u()}catch(_){}}}
+async function startMarket(){
+  const s=$('s2MarketScreen'),vc=globalThis.visitContext;
+  if(!s||s.classList.contains('hidden')||!vc?.memberKey)return;
+  const owner=String(vc.memberKey);
+  if(s.dataset.r38Owner===owner)return;
+  stopMarket();s.dataset.r38Owner=owner;
+  try{
+    const {db,fs}=await fb();
+    let timer=0;
+    const changed=()=>{clearTimeout(timer);timer=setTimeout(()=>{const cur=$('s2MarketScreen');if(cur&&!cur.classList.contains('hidden')&&String(globalThis.visitContext?.memberKey||'')===owner)globalThis.YN_S2_FARM?.openMarket?.(Number(cur.dataset.shop)===2?2:1)},80)};
+    mu.push(fs.onSnapshot(fs.doc(db,'farmMarkets',owner),changed));
+    mu.push(fs.onSnapshot(fs.doc(db,'publicFarmState',owner),changed));
+  }catch(e){console.warn(BUILD,'market',e)}
+}
+
+/* DIRECT pointerdown/touchend: bypass legacy click swallowing. */
+function route(e){
+  const bingo=e.target?.closest?.('#r37BingoShortcut,#r36BingoShortcut');
+  if(bingo){consume(e);openBingo();return true}
+  const rec=e.target?.closest?.('#r37OpenRecycle,#r36OpenRecycle');
+  if(rec){consume(e);openRecycle();return true}
+}
+window.addEventListener('pointerdown',route,true);
+window.addEventListener('touchend',route,{capture:true,passive:false});
+new MutationObserver(()=>startMarket()).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-owner','data-shop']});
+setInterval(startMarket,1100);
+
+globalThis.YN_R3438={BUILD,openBingo,openRecycle,startMarket};
+console.info(BUILD,'loaded');
+})();
+
+
+
+/* S2 R34.39 — MARKET MIGRATION / OWNER PUBLISH
+   Important:
+   Old listings can exist only in the owner's browser local cache if an older
+   build failed before Firestore accepted the listing. A visitor can never see
+   such device-local data. This bootstrap migrates that old cache to Firestore
+   the next time the OWNER logs in on the device that still has the listing.
+*/
+(()=>{
+'use strict';
+const BUILD='S2-R34.39-MARKET-MIGRATION';
+let running=false, lastKey='', lastRun=0, liveUnsubs=[];
+
+const clone=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+const countListings=d=>[...(d?.shop1||[]),...(d?.shop2||[])].filter(Boolean).length;
+const normalize=(d,key,name)=>({
+  memberKey:key,
+  ownerName:name||d?.ownerName||'',
+  shopName:d?.shopName||'ร้านของฉัน',
+  shop1:Array.isArray(d?.shop1)?d.shop1.slice(0,12):Array(12).fill(null),
+  shop2:Array.isArray(d?.shop2)?d.shop2.slice(0,12):Array(12).fill(null)
+});
+function keyFor(k){return `s2-r15-market-cache:${k}`}
+function localMarket(k,name){
+  try{
+    const raw=localStorage.getItem(keyFor(k));
+    if(!raw)return null;
+    return normalize(JSON.parse(raw),k,name);
+  }catch(_){return null}
+}
+function saveLocal(k,d){
+  try{localStorage.setItem(keyFor(k),JSON.stringify(d))}catch(_){}
+}
+
+async function ctx(){
+  if(typeof globalThis.getFirebaseContext!=='function')throw new Error('Firebase context unavailable');
+  return globalThis.getFirebaseContext();
+}
+
+async function ownerPublishMigration(force=false){
+  const k=String(globalThis.currentMemberKey||''),name=String(globalThis.currentMember||'');
+  if(!k||globalThis.visitContext||running)return;
+  const t=Date.now();
+  if(!force&&k===lastKey&&t-lastRun<6000)return;
+  lastKey=k;lastRun=t;running=true;
+  try{
+    const {db,fs}=await ctx();
+    const marketRef=fs.doc(db,'farmMarkets',k);
+    const publicRef=fs.doc(db,'publicFarmState',k);
+    const get=async ref=>{
+      try{return typeof fs.getDocFromServer==='function'?await fs.getDocFromServer(ref):await fs.getDoc(ref)}
+      catch(_){return fs.getDoc(ref)}
+    };
+    const serverSnap=await get(marketRef);
+    const server=serverSnap.exists()?normalize(serverSnap.data(),k,name):normalize(null,k,name);
+    const local=localMarket(k,name);
+
+    // Never overwrite a non-empty server shop with old local cache.
+    if(countListings(server)>0){
+      saveLocal(k,server);
+      // Repair/mirror public state from the canonical server document.
+      await fs.setDoc(publicRef,{
+        memberKey:k,displayName:name,
+        marketMirror:clone(server),
+        marketUpdatedAt:fs.serverTimestamp(),
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
+      return;
+    }
+
+    // Critical migration: old build may have removed the item from inventory and
+    // left the listing only in localStorage. Publish it once, from owner's device.
+    if(local && countListings(local)>0){
+      const payload=normalize(local,k,name);
+      await fs.setDoc(marketRef,{
+        ...clone(payload),
+        migratedFromLocalAt:fs.serverTimestamp(),
+        updatedAt:fs.serverTimestamp()
+      },{merge:false});
+      await fs.setDoc(publicRef,{
+        memberKey:k,displayName:name,
+        marketMirror:clone(payload),
+        marketUpdatedAt:fs.serverTimestamp(),
+        updatedAt:fs.serverTimestamp()
+      },{merge:true});
+      console.info(BUILD,'migrated old local market to Firestore',k,countListings(payload));
+      try{globalThis.showWeatherToast?.('🧺 ร้านเก่าถูกซิงก์ขึ้นร้านกลางแล้ว')}catch(_){}
+      return;
+    }
+
+    // No listings anywhere: keep an explicit empty canonical market so visitors
+    // don't remain stuck on an old local cache.
+    if(!serverSnap.exists()){
+      const empty=normalize(null,k,name);
+      await fs.setDoc(marketRef,{...clone(empty),updatedAt:fs.serverTimestamp()},{merge:false});
+      await fs.setDoc(publicRef,{
+        memberKey:k,displayName:name,marketMirror:clone(empty),
+        marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()
+      },{merge:true});
+    }
+  }catch(e){
+    console.warn(BUILD,'owner migration',e);
+  }finally{running=false}
+}
+
+// After login/current member becomes available, publish old local listings automatically.
+// No user needs to open the shop manually.
+setInterval(()=>ownerPublishMigration(false),2500);
+window.addEventListener('focus',()=>ownerPublishMigration(true),{passive:true});
+window.addEventListener('online',()=>ownerPublishMigration(true),{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ownerPublishMigration(true)},{passive:true});
+
+/* Friend realtime: canonical farmMarkets is authoritative.
+   public mirror is a fallback only when canonical has zero listings. */
+let friendOwner='', canonical=null, mirror=null, refreshTimer=0;
+function stopFriend(){
+  for(const u of liveUnsubs.splice(0)){try{u?.()}catch(_){}}
+  friendOwner='';canonical=null;mirror=null;
+}
+function pick(){
+  if(canonical && countListings(canonical)>0)return canonical;
+  if(mirror && countListings(mirror)>0)return mirror;
+  return canonical||mirror;
+}
+function renderFriendSelected(owner){
+  clearTimeout(refreshTimer);
+  refreshTimer=setTimeout(()=>{
+    const screen=document.getElementById('s2MarketScreen');
+    if(!screen||screen.classList.contains('hidden'))return;
+    if(String(globalThis.visitContext?.memberKey||'')!==owner)return;
+    // Native openMarket fetches the latest server document and renders correct buy handlers.
+    try{globalThis.YN_S2_FARM?.openMarket?.(Number(screen.dataset.shop)===2?2:1)}catch(e){console.warn(BUILD,'friend render',e)}
+  },70);
+}
+async function watchFriend(){
+  const screen=document.getElementById('s2MarketScreen');
+  const owner=String(globalThis.visitContext?.memberKey||'');
+  if(!owner||!screen||screen.classList.contains('hidden')){stopFriend();return}
+  if(friendOwner===owner&&liveUnsubs.length)return;
+  stopFriend();friendOwner=owner;
+  try{
+    const {db,fs}=await ctx();
+    liveUnsubs.push(fs.onSnapshot(fs.doc(db,'farmMarkets',owner),snap=>{
+      canonical=snap.exists()?normalize(snap.data(),owner,globalThis.visitContext?.name):normalize(null,owner,globalThis.visitContext?.name);
+      renderFriendSelected(owner);
+    },e=>console.warn(BUILD,'farmMarkets listener',e)));
+    liveUnsubs.push(fs.onSnapshot(fs.doc(db,'publicFarmState',owner),snap=>{
+      const x=snap.exists()?snap.data()?.marketMirror:null;
+      mirror=x?normalize(x,owner,globalThis.visitContext?.name):null;
+      if(!canonical||countListings(canonical)===0)renderFriendSelected(owner);
+    },e=>console.warn(BUILD,'market mirror listener',e)));
+  }catch(e){console.warn(BUILD,'watch friend',e)}
+}
+const mo=new MutationObserver(()=>watchFriend());
+try{mo.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-owner','data-shop']})}catch(_){}
+setInterval(watchFriend,1200);
+
+globalThis.YN_R3439={BUILD,ownerPublishMigration,watchFriend};
+console.info(BUILD,'loaded');
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.40-CORE-FILES-ONLY';
