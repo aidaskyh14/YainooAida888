@@ -22289,7 +22289,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function marketListingOptions(shopNo,slot,e){const maxQty=Math.min(10,Math.max(1,Number(e.count??e.qty)||1)),p=marketPrice(e);$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><h2>${esc(e.name)}</h2><label>จำนวน <input id="s2MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="s2MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="s2MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="s2ConfirmListing" class="primary-spooky-action">วางขาย</button></section>`;const paint=()=>{const q=Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1));$("s2MarketRange").textContent=`ตั้งได้ ${p.min*q}–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$("s2MarketPrice").min=String(p.min*q);$("s2MarketPrice").max=String(p.max*q)};$("s2MarketQty").oninput=paint;paint();$("s2ConfirmListing").onclick=()=>createMarketListing(shopNo,slot,e,Math.max(1,Math.min(maxQty,Number($("s2MarketQty").value)||1)),Number($("s2MarketPrice").value)||0,p)}
   async function createMarketListing(shopNo,slot,e,qty,price,p){const min=p.min*qty,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`สินค้านี้จำนวน ×${qty} ตั้งราคาได้ ${min}–${max} กุศล`);const before=normalizeState(cloneData(ownState||state),currentMember),s=ensureFarmState(normalizeState(cloneData(ownState||state),currentMember)),m={...marketDocDefault(currentMemberKey,currentMember),...(marketCache.get(currentMemberKey)||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);if(arr[slot]&&arr[slot].status!=="sold")return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketOwnedItem(s,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");arr[slot]={type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:NOW(),instance:e.instance?cloneData(e.instance):null};m[`shop${shopNo}`]=arr;m.ownerName=currentMember;m.memberKey=currentMemberKey;m.shopName=m.shopName||"ร้านของฉัน";ownState=s;state=s;saveLocalOnly(s);try{save()}catch(_){}marketCache.set(currentMemberKey,m);try{localStorage.setItem(`s2-market-cache:${currentMemberKey}`,JSON.stringify(m))}catch(_){}closeModal();renderMarket(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} ขายแล้ว`);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{...cloneData(m),updatedAt:fs.serverTimestamp()},{merge:false})}catch(err){ownState=before;state=before;saveLocalOnly(before);try{save()}catch(_){}marketCache.delete(currentMemberKey);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}}
   function showOwnerMarketSlot(shopNo,slot,x,data){$("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${x.image||""}" alt=""><h2>${esc(x.name)} ×${x.qty}</h2><p>${x.status==="sold"?"ขายแล้ว":"ราคา "+x.price+" กุศล"}</p><button id="s2DeleteMarketSlot" class="danger-action">ลบออกจากสล็อต${x.status==="sold"?"":" • ของจะไม่คืนกระเป๋า"}</button></section>`;$("s2DeleteMarketSlot").onclick=()=>deleteMarketSlot(shopNo,slot);openModal()}
-  async function deleteMarketSlot(shopNo,slot){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const m=snap.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})});marketCache.delete(currentMemberKey);closeModal();openMarket(shopNo)}catch(e){message("ลบไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function deleteMarketSlot(shopNo,slot){try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey),publicRef=fs.doc(db,"publicFarmState",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())return;const m=snap.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const merged={...marketDefault(currentMemberKey,currentMember),...md,[`shop${shopNo}`]:arr};tx.set(publicRef,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:merged.shopName||"ร้านของฉัน",shop1:clone(merged.shop1||[]),shop2:clone(merged.shop2||[])},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true})});marketCache.delete(currentMemberKey);closeModal();openMarket(shopNo)}catch(e){message("ลบไม่ได้",e.message||"กรุณาลองใหม่")}}
   async function buyMarketSlot(shopNo,slot,x,ownerKey,ownerName){if(ownerKey===currentMemberKey)return;const ok=confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`);if(!ok)return;showWeatherToast("🛍️ กำลังยืนยันการซื้อ…");try{const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;await fs.runTransaction(db,async tx=>{const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");const m=ms.data(),arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const buyer=ensureFarmState(normalizeState(bs.data(),currentMember));if(!ADMIN()&&Number(buyer.merit||0)<Number(cur.price||0))throw new Error("กุศลไม่พอ");addGiftItemToState(buyer,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!ADMIN())buyer.merit-=Number(cur.price)||0;else ensureAdminStock(buyer);cur.status="sold";cur.soldAt=NOW();cur.buyerKey=currentMemberKey;cur.buyerName=currentMember;arr[slot]=null;m[`shop${shopNo}`]=arr;next=buyer;tx.set(buyerRef,{...cloneData(buyer),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(Number(cur.price)||0),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});const who=ADMIN()?"น้ำผึ้ง":currentMember;tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:who,title:`${who} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว • สต๊อก/กุศล Aida คงที่ 9999`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();marketCache.delete(ownerKey);try{localStorage.removeItem(`s2-market-cache:${ownerKey}`)}catch(_){}openMarket(shopNo);message("🛍️ ซื้อเรียบร้อย",`${esc(x.name)} ×${x.qty} เข้ากระเป๋าแล้ว`) }catch(e){message("ซื้อไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function mountFarmUI(){
@@ -22848,11 +22848,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return{min:Math.max(1,Math.round(base*.65)),mid:base,max:Math.max(2,Math.round(base*1.45))};
   }
   async function fetchMarketR15(k,name){
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",k);
-    let snap;
-    try{snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref)}
-    catch(_){snap=await fs.getDoc(ref)}
-    const d=snap.exists()?{...marketDefault(k,name),...snap.data()}:marketDefault(k,name);
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",k),pubRef=fs.doc(db,"publicFarmState",k);
+    const read=async r=>{try{return typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(r):await fs.getDoc(r)}catch(_){return fs.getDoc(r)}};
+    const [ms,ps]=await Promise.allSettled([read(ref),read(pubRef)]);
+    const marketSnap=ms.status==="fulfilled"?ms.value:null,pubSnap=ps.status==="fulfilled"?ps.value:null;
+    const canonical=marketSnap?.exists?.()?{...marketDefault(k,name),...marketSnap.data()}:marketDefault(k,name);
+    const mirror=pubSnap?.exists?.()&&pubSnap.data()?.marketMirror?{...marketDefault(k,name),...pubSnap.data().marketMirror}:null;
+    const count=d=>[...(d?.shop1||[]),...(d?.shop2||[])].filter(Boolean).length;
+    const d=(count(canonical)>0||!mirror)?canonical:mirror;
     saveMarketLocal(k,d);return d;
   }
   function renderMarketR15(shopNo,data,ownerKey,ownerName){
@@ -22897,8 +22900,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const listing={type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
     ownState=optimistic;state=optimistic;saveLocalOnly(optimistic);saveMarketLocal(currentMemberKey,m);marketPendingR15.add(currentMemberKey);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} แล้ว • กำลังบันทึก…`);
     try{
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey);let nextState,nextMarket;
-      await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(ss.data(),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),a=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(a.length<12)a.push(null);if(a[slot])throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false})});
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey),publicRef=fs.doc(db,"publicFarmState",currentMemberKey);let nextState,nextMarket;
+      await fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(ss.data(),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),a=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(a.length<12)a.push(null);if(a[slot])throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(publicRef,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:md.shopName||"ร้านของฉัน",shop1:clone(md.shop1||[]),shop2:clone(md.shop2||[])},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true})});
       ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);
       try{await fetchMarketR15(currentMemberKey,currentMember)}catch(_){}
       showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ • เพื่อนเห็นจากร้านกลางแล้ว`);
@@ -26064,7 +26067,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function openMysteriousShop(){
     const s=ensure31(own()),left=Math.max(0,2-s.r31Mysterious.sold);
     const imgs={meat1:"01_alpaca_steak_bambroo.png?v=240",meat2:"02_smoked_alpaca_halonpi.png?v=240",meat3:"03_alpaca_spirit_pot_soup.png?v=240",meat4:"04_royal_alpaca_meat_platter.png?v=240",wool1:"01_alpaca_pastel_bag.png?v=240",wool2:"02_alpaca_fluffy_blanket.png?v=240",wool3:"03_alpaca_golden_luxury_bag.png?v=240",wool4:"04_alpaca_golden_royal_cloak.png?v=240",moon:"wine-moon-grape.png",spiritRose:"wine-spirit-rose.png",blood:"wine-blood-grape.png",eclipse:"wine-eclipse-king.png"};
-    $("modalContent").innerHTML=`<section class="feature-panel r31-mysterious"><header><img src="mysterious-shop.png"><div><small>ราคาสุ่มใหม่ทุกเที่ยงคืน</small><h2>ร้านค้าลึกลับ</h2><b>วันนี้ขายได้อีก ${left}/2 ชิ้น</b></div></header><div class="r31-mysterious-grid">${MYSTERY_SELL.map(([type,key,name,min,max])=>{const q=isAdmin()?9999:sellCount(s,type,key),price=dailyPrice(key,min,max),img=imgs[key]||"mysterious-shop.png";return`<article><img class="r32-mystery-item-img" src="${img}" alt="${esc(name)}" onerror="this.src='mysterious-shop.png'"><div><b>${esc(name)}</b><small>มี ×${q}</small><strong>🙏 ${price}</strong></div><button data-r31-sell="${type}:${key}" ${q<1||left<1?"disabled":""}>ขาย 1 ชิ้น</button></article>`}).join("")}</div></section>`;document.querySelectorAll("[data-r31-sell]").forEach(b=>b.onclick=()=>{const [t,k]=b.dataset.r31Sell.split(":");sellOne(t,k)});openModal();
+    $("modalContent").innerHTML=`<section class="feature-panel r31-mysterious"><header><img src="mysterious-shop.png"><div><small>ราคาสุ่มใหม่ทุกเที่ยงคืน</small><h2>ร้านค้าลึกลับ</h2><b>วันนี้ขายได้อีก ${left}/2 ชิ้น</b></div></header><button id="r37OpenRecycle" class="r36-open-recycle" type="button"><span>♻️</span><div><b>จุดรีไซเคิล</b><small>ละลายของส่วนเกิน • ลุ้นรางวัล</small></div><i>›</i></button><div class="r31-mysterious-grid">${MYSTERY_SELL.map(([type,key,name,min,max])=>{const q=isAdmin()?9999:sellCount(s,type,key),price=dailyPrice(key,min,max),img=imgs[key]||"mysterious-shop.png";return`<article><img class="r32-mystery-item-img" src="${img}" alt="${esc(name)}" onerror="this.src='mysterious-shop.png'"><div><b>${esc(name)}</b><small>มี ×${q}</small><strong>🙏 ${price}</strong></div><button data-r31-sell="${type}:${key}" ${q<1||left<1?"disabled":""}>ขาย 1 ชิ้น</button></article>`}).join("")}</div></section>`;document.querySelectorAll("[data-r31-sell]").forEach(b=>b.onclick=()=>{const [t,k]=b.dataset.r31Sell.split(":");sellOne(t,k)});openModal();
   }
   function mountMysteriousShortcut(){
     const box=document.querySelector(".hud-menu-section-items");if(!box||$("r31MysteriousShortcut"))return;const b=document.createElement("button");b.id="r31MysteriousShortcut";b.className="hud-menu-item r31-mysterious-shortcut";b.type="button";b.innerHTML='<span>🔮</span><div><b>ร้านค้าลึกลับ</b><small>ขายสินค้าแปรรูป • วันละ 2 ชิ้น</small></div><i>›</i>';b.onclick=()=>{try{closeHomeHudMenu?.()}catch(_){}openMysteriousShop()};box.appendChild(b);
@@ -33709,3 +33712,102 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
 })();
 
 window.YAINOO_PACKAGE_BUILD='S2-R34.36-ALL-TOPICS';
+
+
+/* =====================================================================
+   S2 R34.37 — VISIBILITY HARD FIX
+   Guarantees new UI entry points exist and market friend view listens to
+   both farmMarkets/{ownerKey} and publicFarmState/{ownerKey}.marketMirror.
+   ===================================================================== */
+(function YN_R3437_VISIBILITY_HARD_FIX(){
+  "use strict";
+  const BUILD="S2-R34.37-VISIBILITY-HARD-FIX";
+  const by=id=>document.getElementById(id);
+  let unsubs=[],ownerKey="",lastHash="";
+
+  function closeFriendMarketLive(){
+    for(const u of unsubs.splice(0)){try{u?.()}catch(_){}}
+    ownerKey="";lastHash="";
+  }
+  function marketCount(d){return [...(d?.shop1||[]),...(d?.shop2||[])].filter(Boolean).length}
+  function currentMarketScreen(){return by("s2MarketScreen")}
+  function renderThroughNative(shop){
+    try{globalThis.YN_S2_FARM?.openMarket?.(shop)}catch(e){console.warn(BUILD,"native market refresh",e)}
+  }
+
+  async function startFriendMarketLive(){
+    const s=currentMarketScreen();
+    if(!s||s.classList.contains("hidden")||!visitContext?.memberKey){closeFriendMarketLive();return}
+    const k=String(visitContext.memberKey||"");
+    if(String(s.dataset.owner||"")!==k)return;
+    if(ownerKey===k&&unsubs.length)return;
+    closeFriendMarketLive();ownerKey=k;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const apply=(source,data)=>{
+        const mirror=source==="public"?(data?.marketMirror||null):data;
+        if(!mirror)return;
+        const hash=JSON.stringify([mirror.shopName||"",mirror.shop1||[],mirror.shop2||[]]);
+        if(hash===lastHash)return;
+        lastHash=hash;
+        const screen=currentMarketScreen();
+        if(!screen||screen.classList.contains("hidden")||String(screen.dataset.owner||"")!==k)return;
+        renderThroughNative(Number(screen.dataset.shop)===2?2:1);
+      };
+      unsubs.push(fs.onSnapshot(fs.doc(db,"farmMarkets",k),x=>apply("market",x.exists()?x.data():null),e=>console.warn(BUILD,"farmMarkets live",e)));
+      unsubs.push(fs.onSnapshot(fs.doc(db,"publicFarmState",k),x=>apply("public",x.exists()?x.data():null),e=>console.warn(BUILD,"public market live",e)));
+    }catch(e){console.warn(BUILD,"start live",e)}
+  }
+
+  function bindVisibleSystems(){
+    const bingo=by("r37BingoShortcut");
+    if(bingo&&!bingo.dataset.r37Bound){
+      bingo.dataset.r37Bound="1";
+      bingo.onclick=()=>{
+        try{closeHomeHudMenu?.()}catch(_){}
+        const fn=globalThis.YN_R3436?.openFarmerBingo;
+        if(typeof fn==="function")fn();
+        else message?.("บิงโกยังโหลดไม่เสร็จ","กรุณาปิดเมนูแล้วเปิดใหม่อีกครั้งค่ะ");
+      };
+    }
+  }
+
+  /* Recycle button is physically rendered by the Mystery Shop itself. */
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#r37OpenRecycle,#r36OpenRecycle");
+    if(!b)return;
+    e.preventDefault();e.stopPropagation();
+    const fn=globalThis.YN_R3436?.openRecycle;
+    if(typeof fn==="function")fn();
+    else message?.("จุดรีไซเคิลยังโหลดไม่เสร็จ","กรุณาเปิดร้านใหม่อีกครั้งค่ะ");
+  },true);
+
+  /* Every time a friend market screen opens/switches shop, assert both live subscriptions. */
+  const mo=new MutationObserver(()=>{bindVisibleSystems();startFriendMarketLive()});
+  try{mo.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class","data-owner","data-shop"]})}catch(_){}
+  setInterval(()=>{bindVisibleSystems();startFriendMarketLive()},900);
+  setTimeout(bindVisibleSystems,0);
+
+  /* When owner is looking at their own shop, mirror the current canonical market.
+     This also migrates an existing R34.36 listing the next time that owner opens a shop. */
+  async function mirrorOwnMarket(){
+    const s=currentMarketScreen();
+    if(!s||s.classList.contains("hidden")||visitContext||String(s.dataset.owner||"")!==String(currentMemberKey||""))return;
+    try{
+      const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"farmMarkets",currentMemberKey),pref=fs.doc(db,"publicFarmState",currentMemberKey);
+      const snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(mref):await fs.getDoc(mref);
+      if(!snap.exists())return;
+      const d=snap.data()||{};
+      await fs.setDoc(pref,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:d.shopName||"ร้านของฉัน",shop1:Array.isArray(d.shop1)?d.shop1:[],shop2:Array.isArray(d.shop2)?d.shop2:[]},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true});
+    }catch(e){console.warn(BUILD,"mirror own market",e)}
+  }
+  document.addEventListener("click",e=>{
+    if(e.target?.closest?.('.s2-scene-hotspot[aria-label^="ร้านค้า"],#r15MarketSwitch'))setTimeout(mirrorOwnMarket,350);
+  },true);
+
+  globalThis.YN_R3437={BUILD,startFriendMarketLive,mirrorOwnMarket};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.37-VISIBILITY-HARD-FIX';

@@ -10611,3 +10611,7 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r36-bingo-items button{min-height:90px;border-radius:12px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .r36-bingo-items img{width:55px;height:55px;object-fit:contain}.r36-bingo-items span{font-size:9px;line-height:1.15;text-align:center}
 @media (min-width:560px){.r36-bingo-items{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* R34.37 visibility guarantees */
+#r37BingoShortcut{display:grid!important}
+#r37OpenRecycle{display:grid!important}
