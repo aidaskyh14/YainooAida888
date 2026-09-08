@@ -32948,3 +32948,764 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.33-ALPACA-CRITICAL';
 })();
 
 window.YAINOO_PACKAGE_BUILD='S2-R34.34-PERSISTENCE-SAFETY';
+
+/* S2 R34.35 global stability marker — hidden */
+window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
+
+
+/* =====================================================================
+   S2 R34.36 — ALL TOPICS / REALTIME + RECYCLE + FARMER BINGO
+   2026-09-07
+
+   Goals:
+   - one authoritative basement tap route
+   - inventory-changing actions respond locally and flush quickly
+   - front-farm market friend view stays live from farmMarkets/{ownerKey}
+   - craft success is verified in inventory
+   - alpaca trough / factory / craft / drops get fast input + durable save
+   - requested Bangkok-time gates
+   - Mystery Shop recycle point
+   - Farmer Bingo: Aida-only editor, realtime viewers
+   ===================================================================== */
+(function YN_S2_R3436_ALL_TOPICS(){
+  "use strict";
+  const BUILD="S2-R34.36-ALL-TOPICS";
+  const $=id=>document.getElementById(id);
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const live=()=>ownState||state;
+  const admin=()=>String(currentMember||"")==="Aida"&&adminProfile?.role==="admin";
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+
+  let lastAction="", lastActionAt=0;
+  function dedupe(key,ms=260){
+    const t=performance.now();
+    if(key===lastAction&&t-lastActionAt<ms)return false;
+    lastAction=key;lastActionAt=t;return true;
+  }
+  function consume(e){
+    try{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.()}catch(_){}
+  }
+
+  /* ---------- Bangkok clock ---------- */
+  function bkkMinute(){
+    const d=new Date(now()+7*60*60*1000);
+    return d.getUTCHours()*60+d.getUTCMinutes();
+  }
+  const inRange=(start,end)=>{
+    const m=bkkMinute();
+    if(start<end)return m>=start&&m<end;
+    return m>=start||m<end;
+  };
+  const bingoOpen=()=>inRange(8*60,16*60);
+  const mysteryOpen=()=>inRange(10*60,15*60);
+  const boatClosed=()=>inRange(22*60,4*60);
+  const forestClosed=()=>inRange(20*60,23*60);
+  const homeFoodClosed=()=>inRange(9*60,13*60);
+
+  function closedAt(label,time){
+    try{message?.(`🔒 ${label}`,`ปิดอยู่ รบกวนกลับมาอีกครั้ง เวลา ${time} น.`)}catch(_){}
+  }
+
+  /* ---------- Fast durability without idle writes ---------- */
+  let flushTimer=0,flushBusy=false,flushAgain=false;
+  function requestFastFlush(delay=90){
+    if(!currentMemberKey||visitContext||cloudSessionSuperseded)return;
+    clearTimeout(flushTimer);
+    flushTimer=setTimeout(async()=>{
+      if(flushBusy){flushAgain=true;return}
+      flushBusy=true;
+      try{
+        try{queueCloudSave?.()}catch(_){}
+        try{await flushCloudSave?.()}catch(e){console.warn(BUILD,"flush",e)}
+      }finally{
+        flushBusy=false;
+        if(flushAgain){flushAgain=false;requestFastFlush(90)}
+      }
+    },Math.max(0,delay));
+  }
+  function stampLocal(s){
+    if(!s)return s;
+    s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+    s.clientLocalEditAt=Date.now();
+    ownState=s;if(!visitContext)state=s;
+    try{saveLocalOnly?.(s)}catch(_){}
+    return s;
+  }
+  function persistCurrent(delay=90){
+    const s=live();if(!s||visitContext)return;
+    stampLocal(s);requestFastFlush(delay);
+  }
+
+  /* ============================================================
+     1) BASEMENT — one physical tap -> one action
+     ============================================================ */
+  function basementActive(){
+    try{
+      return currentScene==="house"&&!visitContext&&
+        ($("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement" ||
+         document.querySelector(".r17-basement-scene,.r17-flower-plots,.r17-wine-machines"));
+    }catch(_){return false}
+  }
+  function basementRoute(e){
+    if(!basementActive())return false;
+    const api=globalThis.YN_R17;if(!api)return false;
+    const t=e.target?.closest?.(
+      '[data-r17-plot],[data-r17-plant],[data-r17-machine-hot],[data-r17-wine],'+
+      '#r17StartWine,#r17WineClaim,#r17HarvestOne,#r17HarvestAll'
+    );
+    if(!t)return false;
+
+    let key="",fn=null,flush=false;
+    if(t.matches("[data-r17-plot]")){
+      const i=Number(t.dataset.r17Plot);key=`base:plot:${i}`;fn=()=>api.openFlowerPlot?.(i);
+    }else if(t.matches("[data-r17-plant]")){
+      const i=Number(t.dataset.r17PlantPlot),k=t.dataset.r17Plant;
+      key=`base:plant:${i}:${k}`;fn=()=>api.plantFlower?.(i,k);flush=true;
+    }else if(t.matches("[data-r17-machine-hot]")){
+      const i=Number(t.dataset.r17MachineHot);key=`base:machine:${i}`;fn=()=>api.openWineMachine?.(i);
+    }else if(t.matches("[data-r17-wine]")){
+      const i=Number(t.dataset.r17WineMachine),k=t.dataset.r17Wine;
+      key=`base:wine:${i}:${k}`;fn=()=>api.openWineRecipe?.(i,k);
+    }else if(t.id==="r17StartWine"){
+      const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;
+      key=`base:start:${i}:${k}`;fn=()=>api.startWine?.(i,k);flush=true;
+    }else if(t.id==="r17WineClaim"){
+      const i=Number(t.dataset.r17WineClaim);
+      key=`base:claim:${i}`;fn=()=>api.claimWine?.(i);flush=true;
+    }else if(t.id==="r17HarvestOne"){
+      const i=Number(t.dataset.r17HarvestOne);
+      key=`base:harvest:${i}`;fn=()=>api.harvestFlower?.(i);flush=true;
+    }else if(t.id==="r17HarvestAll"){
+      key="base:harvest:all";fn=()=>api.harvestAll?.();flush=true;
+    }
+    if(!fn)return false;
+    consume(e);
+    if(!dedupe(key,220))return true;
+    try{
+      t.classList.add("r36-pressed");setTimeout(()=>t.classList.remove("r36-pressed"),150);
+      fn();
+      if(flush)requestFastFlush(80);
+    }catch(err){
+      console.warn(BUILD,key,err);
+      try{message?.("ทำรายการไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}
+    }
+    return true;
+  }
+  /* The earliest R17 listener consults this object first. */
+  globalThis.YN_BASEMENT_FAST_R3430={BUILD,route:basementRoute};
+  window.addEventListener("touchend",e=>basementRoute(e),{capture:true,passive:false});
+  window.addEventListener("click",e=>basementRoute(e),true);
+
+  /* Fish-trap fast route retained from the retired R34.27 controller. */
+  window.addEventListener("pointerdown",e=>{
+    const claim=e.target?.closest?.("#r15ClaimTrapReward");
+    if(claim){
+      const ready=[...document.querySelectorAll("[data-r15-fish-trap-slot].ready")];
+      const i=ready.length?Number(ready[0]?.dataset?.r15FishTrapSlot):NaN;
+      if(Number.isFinite(i)&&dedupe(`trap:claim:${i}`,500)){consume(e);globalThis.YN_R15?.claimTrap?.(i)}
+      return;
+    }
+    const slot=e.target?.closest?.("[data-r15-fish-trap-slot].ready");
+    if(slot){
+      const i=Number(slot.dataset.r15FishTrapSlot);
+      if(Number.isFinite(i)&&dedupe(`trap:open:${i}`,250)){consume(e);globalThis.YN_R15?.showTrapClaim?.(i)}
+    }
+  },true);
+
+  /* ============================================================
+     2) CRAFT — verify successful output and flush immediately
+     ============================================================ */
+  try{
+    if(typeof craft==="function"&&!craft.__r3436){
+      const base=craft;
+      const wrapped=async function(id){
+        const before=clone(live()),beforeQty=(()=>{try{return dishCountInState(id,before)}catch(_){return iv(before?.dishInventory?.[id])}})();
+        const result=await base.apply(this,arguments);
+        try{
+          if(result?.success){
+            const after=live(),afterQty=(()=>{try{return dishCountInState(id,after)}catch(_){return iv(after?.dishInventory?.[id])}})();
+            if(afterQty<=beforeQty&&after){
+              try{addDishToState(after,id,1)}catch(_){
+                after.dishInventory=after.dishInventory&&typeof after.dishInventory==="object"?after.dishInventory:{};
+                after.dishInventory[id]=beforeQty+1;
+              }
+              stampLocal(after);
+            }
+            requestFastFlush(70);
+          }
+        }catch(e){console.warn(BUILD,"craft verify",e)}
+        return result;
+      };
+      wrapped.__r3436=true;craft=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"craft wrap",e)}
+
+  /* Home-food UI calls a closure, so own the final craft tap through the exposed API. */
+  window.addEventListener("pointerdown",e=>{
+    const b=e.target?.closest?.("#r16CraftHomeFood");if(!b)return;
+    if(homeFoodClosed())return; // R34.31 displays the existing closed message.
+    const api=globalThis.YN_R16;if(!api?.craftHomeFood)return;
+    const panel=b.closest(".r16-home-recipe"),txt=panel?.textContent||"";
+    const found=Object.entries(api.HOME_FOODS||{}).find(([,r])=>txt.includes(String(r?.name||"")));
+    if(!found)return;
+    const qty=Math.max(1,Math.min(10,iv($("r16CraftQty")?.textContent)||1));
+    if(!dedupe(`homecraft:${found[0]}:${qty}`,450)){consume(e);return}
+    consume(e);
+    api.craftHomeFood(found[0],qty);
+    requestFastFlush(70);
+  },true);
+
+  /* ============================================================
+     3) FRONT-FARM MARKET — realtime safety listener for friend view
+     ============================================================ */
+  let marketWatchUnsub=null,marketWatchOwner="",marketWatchHash="",marketWatchTimer=0;
+  function stopMarketWatch(){
+    try{marketWatchUnsub?.()}catch(_){}
+    marketWatchUnsub=null;marketWatchOwner="";marketWatchHash="";
+  }
+  async function ensureMarketWatch(){
+    const screen=$("s2MarketScreen");
+    if(!screen||screen.classList.contains("hidden")||!visitContext){stopMarketWatch();return}
+    const owner=String(screen.dataset.owner||visitContext.memberKey||"");
+    if(!owner||owner!==String(visitContext.memberKey||"")){stopMarketWatch();return}
+    if(marketWatchOwner===owner&&marketWatchUnsub)return;
+    stopMarketWatch();marketWatchOwner=owner;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",owner);
+      marketWatchUnsub=fs.onSnapshot(ref,snap=>{
+        const data=snap.exists()?snap.data():{};
+        const hash=JSON.stringify([data?.shopName||"",data?.shop1||[],data?.shop2||[]]);
+        if(hash===marketWatchHash)return;
+        const first=!marketWatchHash;marketWatchHash=hash;
+        clearTimeout(marketWatchTimer);
+        marketWatchTimer=setTimeout(()=>{
+          const s=$("s2MarketScreen");
+          if(!s||s.classList.contains("hidden")||String(s.dataset.owner||"")!==owner)return;
+          const shop=Number(s.dataset.shop)===2?2:1;
+          /* Re-open uses getDocFromServer + the native market renderer.
+             This is only on actual server snapshot changes, not polling. */
+          try{globalThis.YN_S2_FARM?.openMarket?.(shop)}catch(e){console.warn(BUILD,"market live refresh",e)}
+        },first?20:60);
+      },e=>console.warn(BUILD,"market watch",e));
+    }catch(e){console.warn(BUILD,"market watch start",e)}
+  }
+  const marketObserver=new MutationObserver(()=>ensureMarketWatch());
+  try{marketObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class","data-owner","data-shop"]})}catch(_){}
+  setInterval(()=>ensureMarketWatch(),1400);
+
+  /* ============================================================
+     4) ALPACA — fast trough + baby factory render/state + craft/drop save
+     ============================================================ */
+  const troughServings={hayPack:6,pellet:12,tricolorPudding:1,braisedEgg:1};
+  function alpacaPenNo(){
+    const n=Number(globalThis.YN_ALPACA_CURRENT_PEN);
+    return Number.isFinite(n)&&n>=1&&n<=5?n:1;
+  }
+  function ensureAlpacaShape(s){
+    if(!s)return s;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    while(s.alpaca.pens.length<5)s.alpaca.pens.push({alpacas:[],trough:Array(16).fill(null)});
+    s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};
+    for(const k of ["food","medicine","other","wool"])s.alpaca.inventory[k]=s.alpaca.inventory[k]&&typeof s.alpaca.inventory[k]==="object"?s.alpaca.inventory[k]:{};
+    s.alpaca.factory=s.alpaca.factory&&typeof s.alpaca.factory==="object"?s.alpaca.factory:{};
+    s.alpaca.factory.babies=s.alpaca.factory.babies&&typeof s.alpaca.factory.babies==="object"?s.alpaca.factory.babies:{};
+    return s;
+  }
+  function fastTroughFill(slot,key){
+    const base=live();if(!base)return;
+    const s=ensureAlpacaShape(clone(base)),pn=alpacaPenNo(),p=s.alpaca.pens[pn-1];
+    p.trough=Array.isArray(p.trough)?p.trough.slice(0,16):Array(16).fill(null);
+    while(p.trough.length<16)p.trough.push(null);
+    if(slot<0||slot>15||p.trough[slot])return;
+    const have=iv(s.alpaca.inventory.food[key]),servings=troughServings[key];
+    if(!servings)return;
+    if(!admin()&&have<1)return message?.("คุณไม่มีอาหาร","อาหารชนิดนี้หมดแล้วค่ะ");
+    p.trough[slot]={foodKey:key,servings};
+    if(!admin())s.alpaca.inventory.food[key]=have-1;
+    stampLocal(s);requestFastFlush(70);
+    try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.showTrough?.()}catch(_){}
+  }
+  function fastTroughFillAll(key){
+    const base=live();if(!base)return;
+    const s=ensureAlpacaShape(clone(base)),pn=alpacaPenNo(),p=s.alpaca.pens[pn-1];
+    p.trough=Array.isArray(p.trough)?p.trough.slice(0,16):Array(16).fill(null);
+    while(p.trough.length<16)p.trough.push(null);
+    const empty=p.trough.map((x,i)=>x?null:i).filter(x=>x!==null),have=iv(s.alpaca.inventory.food[key]),servings=troughServings[key];
+    const count=admin()?empty.length:Math.min(empty.length,have);
+    if(!servings||count<1)return message?.("เติมไม่ได้","ไม่มีช่องว่างหรืออาหารไม่พอค่ะ");
+    for(let i=0;i<count;i++)p.trough[empty[i]]={foodKey:key,servings};
+    if(!admin())s.alpaca.inventory.food[key]=have-count;
+    stampLocal(s);requestFastFlush(70);
+    try{closeModal?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+    try{globalThis.YN_ALPACA_CORE?.showTrough?.()}catch(_){}
+    try{showWeatherToast?.(`⚡ เติมราง ${count} ช่องแล้ว`)}catch(_){}
+  }
+  function mountTroughAll(){
+    const grid=document.querySelector(".alpaca-trough-grid");if(!grid)return;
+    if($("r36TroughAll"))return;
+    const b=document.createElement("button");b.id="r36TroughAll";b.type="button";
+    b.className="primary-spooky-action r36-trough-all";b.textContent="⚡ เติมช่องว่างทั้งหมด";
+    grid.insertAdjacentElement("afterend",b);
+  }
+  function showTroughAllPicker(){
+    const s=ensureAlpacaShape(live()),food=s?.alpaca?.inventory?.food||{};
+    const names={hayPack:"แพ็คหญ้าสดและหญ้าแห้ง",pellet:"อาหารเม็ดอัลปาก้า",tricolorPudding:"พุดดิ้งสามสี",braisedEgg:"ไข่พะโล้อัลปาก้า"};
+    const imgs={hayPack:"alpaca-hay-pack.png",pellet:"alpaca-pellet-food.png",tricolorPudding:"alpaca_tricolor_pudding.png",braisedEgg:"alpaca_braised_egg.png"};
+    const rows=Object.keys(troughServings).filter(k=>admin()||iv(food[k])>0);
+    $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel"><h2>⚡ เติมช่องว่างทั้งหมด</h2><div class="alpaca-inventory-grid">${rows.map(k=>`<article class="alpaca-inventory-item"><img src="${imgs[k]||""}" onerror="this.style.visibility='hidden'"><b>${esc(names[k]||k)}</b><strong>×${admin()?9999:iv(food[k])}</strong><button type="button" data-r36-fillall="${k}">เติม</button></article>`).join("")}</div></section>`;openModal?.();
+  }
+
+  /* Wrap the real baby-send API. The legacy function mutates the correct state,
+     but did not force the pen renderer to repaint after success. */
+  try{
+    const sendBase=globalThis.YN_V240_SEND_BABY;
+    if(typeof sendBase==="function"&&!sendBase.__r3436){
+      const wrapped=async function(pn,id){
+        const before=clone(live()),bp=before?.alpaca?.pens?.[Number(pn)-1],ba=bp?.alpacas?.find(a=>String(a?.id)===String(id));
+        const color=ba?.color,beforeFactory=iv(before?.alpaca?.factory?.babies?.[color]);
+        const out=await sendBase.apply(this,arguments);
+        try{
+          let s=ensureAlpacaShape(live()),p=s?.alpaca?.pens?.[Number(pn)-1],still=p?.alpacas?.findIndex(a=>String(a?.id)===String(id))??-1;
+          const afterFactory=iv(s?.alpaca?.factory?.babies?.[color]);
+          if(still>=0&&color&&afterFactory>beforeFactory){
+            s=clone(s);ensureAlpacaShape(s);s.alpaca.pens[Number(pn)-1].alpacas.splice(still,1);stampLocal(s);
+          }else if(still<0&&s){stampLocal(s)}
+          requestFastFlush(60);
+          try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}
+          try{globalThis.YN_V240_RENDER_TREASURE?.()}catch(_){}
+        }catch(e){console.warn(BUILD,"baby render repair",e)}
+        return out;
+      };
+      wrapped.__r3436=true;globalThis.YN_V240_SEND_BABY=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"baby send wrap",e)}
+
+  /* Fast one-tap trough owner. */
+  window.addEventListener("pointerdown",e=>{
+    const all=e.target?.closest?.("#r36TroughAll,#r3427FillAllTrough,#r3433FillAllTrough");
+    if(all&&dedupe("alpaca:fillall-open",250)){consume(e);showTroughAllPicker();return}
+    const pick=e.target?.closest?.("[data-r36-fillall]");
+    if(pick&&dedupe(`alpaca:fillall:${pick.dataset.r36Fillall}`,400)){consume(e);fastTroughFillAll(pick.dataset.r36Fillall);return}
+    const slot=e.target?.closest?.(".alpaca-trough-grid [data-trough-slot]");
+    if(slot){
+      const i=Number(slot.dataset.troughSlot);
+      if(Number.isFinite(i)&&dedupe(`alpaca:slot:${i}`,220)){
+        consume(e);globalThis.YN_ALPACA_CORE?.showTroughFoodPicker?.(i);
+      }
+      return;
+    }
+    const fill=e.target?.closest?.(".alpaca-inventory-grid [data-fill-trough]");
+    if(fill){
+      const title=document.querySelector(".alpaca-panel h2")?.textContent||"",m=title.match(/ช่องที่\s*(\d+)/);
+      const i=m?Number(m[1])-1:NaN;
+      if(Number.isFinite(i)&&dedupe(`alpaca:fill:${i}:${fill.dataset.fillTrough}`,250)){
+        consume(e);fastTroughFill(i,fill.dataset.fillTrough);
+      }
+      return;
+    }
+
+    /* Buttons that historically felt unresponsive: invoke their current action
+       on pointerdown and suppress the delayed click. */
+    const fast=e.target?.closest?.("#alpacaCraftConfirm,#alpacaCraftDone,#craftDetailGo,[data-craft-now]");
+    if(fast&&typeof fast.onclick==="function"&&dedupe(`alpaca:btn:${fast.id||fast.dataset.craftNow||"x"}`,300)){
+      consume(e);try{fast.onclick.call(fast,e)}catch(err){console.warn(BUILD,"alpaca button",err)}
+    }
+  },true);
+
+  /* After actual alpaca economy actions, request a quick cloud flush. */
+  window.addEventListener("click",e=>{
+    const b=e.target?.closest?.(
+      "#alpacaCraftDone,#alpacaCraftConfirm,[data-v240-start],#v240StartFromIngredients,"+
+      "[data-v240-claim],#v240ClaimAllFactory,#v240CollectTreasureAll,[data-v240-treasure],"+
+      "#core13AlpDropBtn,#r3424AlpacaCollect,#r3424HamCollect"
+    );
+    if(b)setTimeout(()=>requestFastFlush(50),80);
+  },true);
+
+  /* Exposed treasure collector: save immediately after a successful take. */
+  try{
+    const tb=globalThis.YN_V240_COLLECT_TREASURE_R3424;
+    if(typeof tb==="function"&&!tb.__r3436){
+      const w=async function(){const r=await tb.apply(this,arguments);persistCurrent(50);return r};w.__r3436=true;
+      globalThis.YN_V240_COLLECT_TREASURE_R3424=w;
+    }
+  }catch(_){}
+
+  setInterval(mountTroughAll,1100);setTimeout(mountTroughAll,120);
+
+  /* ============================================================
+     5–7) Requested time gates
+     ============================================================ */
+  try{
+    const sceneBase=openScene;
+    openScene=function(name){
+      if(String(name)==="boatRace"&&boatClosed()){closedAt("เทศกาลเรือพาย","04.00");return}
+      return sceneBase.apply(this,arguments);
+    };
+  }catch(_){}
+  try{
+    const forestBase=openForbiddenForest;
+    if(typeof forestBase==="function"){
+      openForbiddenForest=function(){
+        if(forestClosed()){closedAt("ป่าต้องห้าม","23.00");return}
+        return forestBase.apply(this,arguments);
+      };
+    }
+  }catch(_){}
+  window.addEventListener("pointerdown",e=>{
+    const m=e.target?.closest?.("#r31MysteriousShortcut");
+    if(m&&!mysteryOpen()){consume(e);closedAt("ร้านค้าลึกลับ","10.00")}
+    const f=e.target?.closest?.("#shortcutForbiddenForestBtn");
+    if(f&&forestClosed()){consume(e);closedAt("ป่าต้องห้าม","23.00")}
+  },true);
+
+  /* ============================================================
+     8) MYSTERY SHOP — RECYCLE POINT
+     ============================================================ */
+  const PLANT_TYPES=new Set(["crop","flowerSeed","flower"]);
+  const RECYCLE_FIELD={
+    product:["animalProducts"],special:["specials"],jelly:["specialAnimals"],jellyV2:["jellyfishV2"],
+    fishingBait:["fishingBaits"],coconutRiver:["coconutRiverItems"],medicine:["medicines"],
+    rainyMenu:["rainyMenus"],boatDrink:["boatDrinks"],farmFruit:["farmFruits"],homeFood:["homeFoods"],
+    hedgehogItem:["hedgehogItems"],flowerSeed:["flowerSeeds"],flower:["flowers"],wine:["wines"],
+    warehouseTool:["warehouseTools"],upgradeKey:["upgradeKeys"]
+  };
+  function nested(s,path){
+    let x=s;for(const k of path){if(!x||typeof x!=="object")return null;x=x[k]}return x;
+  }
+  function recycleCount(s,e){
+    const t=e.type,k=e.key;
+    if(PLANT_TYPES.has(t))return 0;
+    if(t==="dish"){try{return dishCountInState(k,s)}catch(_){return iv(s?.dishInventory?.[k])}}
+    if(t==="alpacaFood")return iv(s?.alpaca?.inventory?.food?.[k]);
+    if(t==="alpacaMedicine")return iv(s?.alpaca?.inventory?.medicine?.[k]);
+    if(t==="alpacaOther")return iv(s?.alpaca?.inventory?.other?.[k]);
+    if(t==="alpacaWool")return iv(s?.alpaca?.inventory?.wool?.[k]);
+    if(t==="alpacaFactoryProduct")return iv(s?.alpaca?.factory?.products?.[k]);
+    if(t==="mystery")return iv(s?.mysteryBoxes);
+    if(t==="catMystery")return iv(s?.catMysteryBoxes);
+    if(t==="dogMystery")return iv(s?.dogMysteryBoxes);
+    if(t==="number4Mystery")return iv(s?.number4MysteryBoxes);
+    if(RECYCLE_FIELD[t])return iv(nested(s,RECYCLE_FIELD[t])?.[k]);
+    return 0; // single pet instances and non-stackable state are intentionally not recyclable.
+  }
+  function removeRecycle(s,e,qty){
+    qty=Math.max(5,iv(qty));const t=e.type,k=e.key;
+    if(recycleCount(s,e)<qty&&!admin())return false;
+    if(t==="dish"){
+      if(admin())return true;
+      try{return removeDishesFromState(s,k,qty)}catch(_){
+        s.dishInventory=s.dishInventory&&typeof s.dishInventory==="object"?s.dishInventory:{};
+        if(iv(s.dishInventory[k])<qty)return false;s.dishInventory[k]-=qty;return true;
+      }
+    }
+    if(t==="alpacaFood"){if(!admin())s.alpaca.inventory.food[k]-=qty;return true}
+    if(t==="alpacaMedicine"){if(!admin())s.alpaca.inventory.medicine[k]-=qty;return true}
+    if(t==="alpacaOther"){if(!admin())s.alpaca.inventory.other[k]-=qty;return true}
+    if(t==="alpacaWool"){if(!admin())s.alpaca.inventory.wool[k]-=qty;return true}
+    if(t==="alpacaFactoryProduct"){if(!admin())s.alpaca.factory.products[k]-=qty;return true}
+    if(t==="mystery"){if(!admin())s.mysteryBoxes-=qty;return true}
+    if(t==="catMystery"){if(!admin())s.catMysteryBoxes-=qty;return true}
+    if(t==="dogMystery"){if(!admin())s.dogMysteryBoxes-=qty;return true}
+    if(t==="number4Mystery"){if(!admin())s.number4MysteryBoxes-=qty;return true}
+    const path=RECYCLE_FIELD[t],map=path?nested(s,path):null;
+    if(map&&Object.prototype.hasOwnProperty.call(map,k)){if(!admin())map[k]=iv(map[k])-qty;return true}
+    return false;
+  }
+  function recycleEntries(s=live()){
+    let rows=[];
+    try{
+      rows=typeof globalThis.YN_R25_fullMarketEntries==="function"?globalThis.YN_R25_fullMarketEntries(s):
+        (typeof v240MemberGiftEntriesFull==="function"?v240MemberGiftEntriesFull(s):giftableEntries(s));
+    }catch(_){}
+    const seen=new Set(),out=[];
+    for(const e of rows||[]){
+      if(!e||PLANT_TYPES.has(String(e.type||""))||/Instance$/.test(String(e.type||"")))continue;
+      const count=recycleCount(s,e),sig=`${e.type}:${e.key}`;
+      if(count<5||seen.has(sig))continue;seen.add(sig);
+      out.push({...e,count,category:e.category||"ไอเท็ม"});
+    }
+    return out.sort((a,b)=>String(a.category).localeCompare(String(b.category),"th")||String(a.name).localeCompare(String(b.name),"th"));
+  }
+  const RECYCLE_REWARDS=[
+    {id:"fuel",name:"น้ำมันรถน้องน้ำผึ้ง",qty:10,image:"honey-fuel-can.png?v=252"},
+    {id:"wing",name:"แคปซูลปีกนางฟ้า",qty:10,image:"angel_wing_capsule.png?v=1"},
+    {id:"pestle",name:"สากกะเบือไฮโซ",qty:10,image:"pestle-boost-100.png?v=1"},
+    {id:"dogBox",name:"กล่องสุ่มหมา",qty:10,image:"dog-mystery-box.png"},
+    {id:"pudding",name:"พุดดิ้งสามสี",qty:10,image:"alpaca_tricolor_pudding.png"},
+    {id:"happy",name:"ยาเพิ่มความสุขอัลปาก้า",qty:5,image:"alpaca-happiness-potion.png"},
+    {id:"hamBox",name:"กล่องสุ่มแฮมสเตอร์",qty:5,image:"mystery-box-hamster.png"},
+    {id:"merit",name:"กุศล",qty:0,image:""}
+  ];
+  function secureRand(max){
+    try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%max}catch(_){return Math.floor(Math.random()*max)}
+  }
+  function rollRecycle(){
+    const r={...RECYCLE_REWARDS[secureRand(RECYCLE_REWARDS.length)]};
+    if(r.id==="merit")r.qty=15+secureRand(486);
+    return r;
+  }
+  function addRecycleReward(s,r){
+    ensureAlpacaShape(s);s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    if(r.id==="fuel")s.specials.honeyFuelCan=iv(s.specials.honeyFuelCan)+10;
+    else if(r.id==="wing")s.specials.angelWingCapsule=iv(s.specials.angelWingCapsule)+10;
+    else if(r.id==="pestle")s.specials.pestle100=iv(s.specials.pestle100)+10;
+    else if(r.id==="dogBox")s.dogMysteryBoxes=iv(s.dogMysteryBoxes)+10;
+    else if(r.id==="pudding")s.alpaca.inventory.food.tricolorPudding=iv(s.alpaca.inventory.food.tricolorPudding)+10;
+    else if(r.id==="happy")s.alpaca.inventory.medicine.happinessPotion=iv(s.alpaca.inventory.medicine.happinessPotion)+5;
+    else if(r.id==="hamBox")s.specials.r31HamsterBox=iv(s.specials.r31HamsterBox)+5;
+    else if(r.id==="merit")s.merit=(Number(s.merit)||0)+iv(r.qty);
+  }
+
+  let recycleSelection=new Map(), recycleBusy=false, recycleRows=[];
+  function renderRecycleList(){
+    const wrap=$("r36RecycleItems"),totalEl=$("r36RecycleTotal"),btn=$("r36RecycleGo"),search=String($("r36RecycleSearch")?.value||"").trim().toLowerCase(),cat=$("r36RecycleCat")?.value||"ALL";
+    if(!wrap)return;
+    const rows=recycleRows.filter(e=>(cat==="ALL"||String(e.category)===cat)&&(!search||String(e.name||"").toLowerCase().includes(search)));
+    wrap.innerHTML=rows.map(e=>{
+      const sig=`${e.type}:${e.key}`,q=iv(recycleSelection.get(sig)||0);
+      return `<article class="r36-recycle-card ${q>=5?"selected":""}" data-r36-recycle-card="${esc(sig)}">
+        <img src="${esc(e.image||"mysterious-shop.png")}" alt="${esc(e.name)}" onerror="this.src='mysterious-shop.png'">
+        <div><b>${esc(e.name)}</b><small>${esc(e.category||"ไอเท็ม")} • มี ×${e.count}</small></div>
+        <div class="r36-recycle-controls">
+          <button type="button" data-r36-rec-minus="${esc(sig)}">−5</button>
+          <input data-r36-rec-qty="${esc(sig)}" inputmode="numeric" type="number" min="0" max="${e.count}" value="${q}">
+          <button type="button" data-r36-rec-plus5="${esc(sig)}">+5</button>
+          <button type="button" data-r36-rec-plus10="${esc(sig)}">+10</button>
+        </div>
+      </article>`;
+    }).join("")||'<p class="r36-recycle-empty">ไม่มีไอเท็มในหมวดนี้ที่มีอย่างน้อย 5 ชิ้นค่ะ</p>';
+
+    const total=[...recycleSelection.values()].reduce((a,b)=>a+iv(b),0);
+    totalEl.textContent=`เลือกแล้ว ${total}/30 ชิ้น`;
+    totalEl.classList.toggle("ready",total>=30);
+    btn.disabled=total<30||recycleBusy;
+
+    wrap.querySelectorAll("[data-r36-recycle-card]").forEach(card=>{
+      card.addEventListener("click",ev=>{
+        if(ev.target.closest("button,input"))return;
+        const sig=card.dataset.r36RecycleCard,row=recycleRows.find(x=>`${x.type}:${x.key}`===sig);if(!row)return;
+        const cur=iv(recycleSelection.get(sig));
+        if(cur===0)recycleSelection.set(sig,Math.min(5,row.count));else recycleSelection.delete(sig);
+        renderRecycleList();
+      });
+    });
+    wrap.querySelectorAll("[data-r36-rec-minus]").forEach(b=>b.onclick=()=>{
+      const sig=b.dataset.r36RecMinus,cur=iv(recycleSelection.get(sig)),n=Math.max(0,cur-5);
+      if(n>0&&n<5)return; if(n)recycleSelection.set(sig,n);else recycleSelection.delete(sig);renderRecycleList();
+    });
+    wrap.querySelectorAll("[data-r36-rec-plus5]").forEach(b=>b.onclick=()=>{
+      const sig=b.dataset.r36RecPlus5,row=recycleRows.find(x=>`${x.type}:${x.key}`===sig);if(!row)return;
+      recycleSelection.set(sig,Math.min(row.count,Math.max(5,iv(recycleSelection.get(sig))+5)));renderRecycleList();
+    });
+    wrap.querySelectorAll("[data-r36-rec-plus10]").forEach(b=>b.onclick=()=>{
+      const sig=b.dataset.r36RecPlus10,row=recycleRows.find(x=>`${x.type}:${x.key}`===sig);if(!row)return;
+      recycleSelection.set(sig,Math.min(row.count,Math.max(5,iv(recycleSelection.get(sig))+10)));renderRecycleList();
+    });
+    wrap.querySelectorAll("[data-r36-rec-qty]").forEach(inp=>inp.onchange=()=>{
+      const sig=inp.dataset.r36RecQty,row=recycleRows.find(x=>`${x.type}:${x.key}`===sig);if(!row)return;
+      let q=Math.min(row.count,iv(inp.value));if(q>0&&q<5)q=5;
+      if(q)recycleSelection.set(sig,q);else recycleSelection.delete(sig);renderRecycleList();
+    });
+  }
+  function openRecycle(){
+    if(!mysteryOpen()){closedAt("ร้านค้าลึกลับ","10.00");return}
+    recycleSelection=new Map();recycleRows=recycleEntries(live());
+    const cats=["ALL",...new Set(recycleRows.map(e=>String(e.category||"ไอเท็ม")))];
+    $("modalContent").innerHTML=`<section class="feature-panel r36-recycle-panel">
+      <header><div><small>🔮 ร้านค้าลึกลับ</small><h2>♻️ จุดรีไซเคิล</h2></div><button id="r36RecycleBack" type="button">×</button></header>
+      <p>เลือกของรวมขั้นต่ำ <b>30 ชิ้น</b> • แต่ละประเภทขั้นต่ำ <b>5 ชิ้น</b> • พืชพันธุ์ใช้ไม่ได้</p>
+      <div class="r36-recycle-tools"><input id="r36RecycleSearch" placeholder="ค้นหาไอเท็ม…"><select id="r36RecycleCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div>
+      <div id="r36RecycleItems" class="r36-recycle-items"></div>
+      <footer><strong id="r36RecycleTotal">เลือกแล้ว 0/30 ชิ้น</strong><button id="r36RecycleGo" class="primary-spooky-action" disabled>♻️ รีไซเคิล</button></footer>
+    </section>`;
+    openModal?.();$("r36RecycleSearch").oninput=renderRecycleList;$("r36RecycleCat").onchange=renderRecycleList;
+    $("r36RecycleBack").onclick=closeModal;$("r36RecycleGo").onclick=doRecycle;renderRecycleList();
+  }
+  async function doRecycle(){
+    if(recycleBusy)return;if(!mysteryOpen())return closedAt("ร้านค้าลึกลับ","10.00");
+    const selected=[...recycleSelection.entries()].map(([sig,qty])=>{const e=recycleRows.find(x=>`${x.type}:${x.key}`===sig);return e?{type:e.type,key:e.key,name:e.name,qty:iv(qty)}:null}).filter(Boolean);
+    const total=selected.reduce((a,b)=>a+b.qty,0);
+    if(total<30)return message?.("ยังรีไซเคิลไม่ได้","ต้องเลือกของรวมอย่างน้อย 30 ชิ้นค่ะ");
+    if(selected.some(x=>x.qty<5))return message?.("ยังรีไซเคิลไม่ได้","ไอเท็มแต่ละประเภทต้องเลือกอย่างน้อย 5 ชิ้นค่ะ");
+    const reward=rollRecycle();recycleBusy=true;const btn=$("r36RecycleGo");if(btn){btn.disabled=true;btn.textContent="กำลังรีไซเคิล…"}
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),profile=fs.doc(db,"publicProfiles",currentMemberKey);let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(snap.data(),currentMember);ensureAlpacaShape(s);
+        for(const x of selected){
+          const e={type:x.type,key:x.key};
+          if(recycleCount(s,e)<x.qty&&!admin())throw new Error(`${x.name} ในกระเป๋าไม่พอ`);
+        }
+        for(const x of selected)if(!removeRecycle(s,x,x.qty))throw new Error(`หัก ${x.name} ไม่สำเร็จ`);
+        addRecycleReward(s,reward);
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=clone(s);
+        tx.set(ref,{...clone(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        if(reward.id==="merit"){
+          tx.set(profile,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+        }
+      });
+      ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();
+      const icon=reward.image?`<img src="${esc(reward.image)}" alt="${esc(reward.name)}" onerror="this.style.display='none'">`:`<div class="r36-recycle-merit">🙏</div>`;
+      $("modalContent").innerHTML=`<section class="feature-panel r36-recycle-result"><button id="r36RecycleX" class="r36-result-x" type="button">×</button>${icon}<small>รีไซเคิลสำเร็จ</small><h2>${esc(reward.name)}</h2><strong>${reward.id==="merit"?`+${reward.qty} แต้ม`:`×${reward.qty}`}</strong><p>รางวัลเข้ากระเป๋าเรียบร้อยแล้วค่ะ</p><button id="r36RecycleReceive" class="primary-spooky-action">รับ</button></section>`;
+      $("r36RecycleX").onclick=closeModal;$("r36RecycleReceive").onclick=closeModal;openModal?.();
+    }catch(e){
+      message?.("รีไซเคิลไม่สำเร็จ",e?.message||"กรุณาลองใหม่ค่ะ");
+    }finally{recycleBusy=false}
+  }
+  function mountRecycleButton(){
+    const panel=document.querySelector("#modalContent .r31-mysterious");if(!panel||$("r36OpenRecycle"))return;
+    const b=document.createElement("button");b.id="r36OpenRecycle";b.type="button";b.className="r36-open-recycle";
+    b.innerHTML="<span>♻️</span><div><b>จุดรีไซเคิล</b><small>ละลายของส่วนเกิน • ลุ้นรางวัล</small></div><i>›</i>";
+    panel.insertBefore(b,panel.querySelector(".r31-mysterious-grid"));
+    b.onclick=openRecycle;
+  }
+  const recObs=new MutationObserver(mountRecycleButton);try{recObs.observe($("modalContent")||document.body,{childList:true,subtree:true})}catch(_){}
+
+  /* ============================================================
+     9) FARMER BINGO — 5×5 realtime shared board
+     ============================================================ */
+  const BINGO_DOC="farmerBingo";
+  const centerIndex=12;
+  let bingoUnsub=null,bingoData={version:1,cells:{},winner:""},bingoPickerIndex=-1;
+  function normalizeBingo(x){
+    const d=x&&typeof x==="object"?x:{};
+    return{version:1,cells:d.cells&&typeof d.cells==="object"&&!Array.isArray(d.cells)?d.cells:{},winner:String(d.winner||"")};
+  }
+  function stopBingoLive(){try{bingoUnsub?.()}catch(_){}bingoUnsub=null}
+  function bingoScreen(){
+    let s=$("r36BingoScreen");if(s)return s;
+    s=document.createElement("section");s.id="r36BingoScreen";s.className="r36-bingo-screen hidden";
+    s.innerHTML=`<div class="r36-bingo-card">
+      <img class="r36-bingo-bg" src="farmer-bingo-reference.jpg" alt="บิงโกชาวสวน">
+      <button id="r36BingoClose" class="r36-bingo-close" type="button">‹</button>
+      <div id="r36BingoGrid" class="r36-bingo-grid"></div>
+      <div id="r36BingoWinner" class="r36-bingo-winner"></div>
+      <button id="r36BingoReset" class="r36-bingo-reset hidden" type="button">รีเซ็ตทั้งหมด</button>
+    </div>`;
+    document.body.appendChild(s);
+    $("r36BingoClose").onclick=()=>{stopBingoLive();s.classList.add("hidden")};
+    $("r36BingoReset").onclick=resetBingo;
+    return s;
+  }
+  function renderBingo(){
+    const s=bingoScreen(),grid=$("r36BingoGrid"),isAdmin=admin();
+    grid.innerHTML=Array.from({length:25},(_,i)=>{
+      if(i===centerIndex)return `<div class="r36-bingo-cell center" aria-label="ช่องกลาง"></div>`;
+      const x=bingoData.cells?.[String(i)];
+      return `<button type="button" class="r36-bingo-cell ${x?"filled":""}" data-r36-bingo-cell="${i}" ${isAdmin?"":"disabled"}>${x?`<img src="${esc(x.image||"")}" alt="${esc(x.name||"")}" onerror="this.style.display='none'">`:""}</button>`;
+    }).join("");
+    grid.querySelectorAll("[data-r36-bingo-cell]").forEach(b=>b.onclick=()=>openBingoPicker(Number(b.dataset.r36BingoCell)));
+    const w=$("r36BingoWinner");
+    if(isAdmin){
+      const names=Object.keys(typeof MEMBERS==="object"?MEMBERS:{}).filter(n=>n&&n!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+      w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><select id="r36BingoWinnerSelect"><option value="">— ยังไม่ได้เลือก —</option>${names.map(n=>`<option value="${esc(n)}" ${n===bingoData.winner?"selected":""}>${esc(n)}</option>`).join("")}</select>`;
+      $("r36BingoWinnerSelect").onchange=e=>saveBingoWinner(e.target.value);
+      $("r36BingoReset").classList.remove("hidden");
+    }else{
+      w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><b>${esc(bingoData.winner||"—")}</b>`;
+      $("r36BingoReset").classList.add("hidden");
+    }
+  }
+  async function openFarmerBingo(){
+    if(!bingoOpen())return closedAt("บิงโกชาวสวน","08.00");
+    try{closeHomeHudMenu?.()}catch(_){}
+    const s=bingoScreen();s.classList.remove("hidden");renderBingo();stopBingoLive();
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared",BINGO_DOC);
+      bingoUnsub=fs.onSnapshot(ref,snap=>{bingoData=normalizeBingo(snap.exists()?snap.data():{});if(!$("r36BingoScreen")?.classList.contains("hidden"))renderBingo()},e=>{console.warn(BUILD,"bingo live",e);message?.("เปิดบิงโกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")});
+    }catch(e){message?.("เปิดบิงโกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  function bingoCatalog(){
+    let rows=[];
+    try{
+      if(typeof globalThis.YN_R25_fullMarketEntries==="function")rows=globalThis.YN_R25_fullMarketEntries(live())||[];
+      else if(typeof adminGiftCatalog==="function")rows=adminGiftCatalog()||[];
+    }catch(_){}
+    const seen=new Set(),out=[];
+    for(const e of rows){
+      const t=String(e?.type||""),sig=`${t}:${e?.key}`;if(!e||PLANT_TYPES.has(t)||/Instance$/.test(t)||seen.has(sig))continue;
+      if(!e.image)continue;seen.add(sig);out.push({...e,category:e.category||"ไอเท็ม"});
+    }
+    return out.sort((a,b)=>String(a.category).localeCompare(String(b.category),"th")||String(a.name).localeCompare(String(b.name),"th"));
+  }
+  function openBingoPicker(index){
+    if(!admin())return;if(!bingoOpen())return closedAt("บิงโกชาวสวน","08.00");
+    bingoPickerIndex=index;const rows=bingoCatalog(),cats=["ALL",...new Set(rows.map(x=>String(x.category||"ไอเท็ม")))];
+    $("modalContent").innerHTML=`<section class="feature-panel r36-bingo-picker"><h2>เลือกไอเท็ม • ช่อง ${index+1}</h2><div class="r36-bingo-picker-tools"><input id="r36BingoSearch" placeholder="ค้นหาไอเท็ม…"><select id="r36BingoCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div><button id="r36BingoClearCell" class="secondary-action">ล้างช่องนี้</button><div id="r36BingoItems" class="r36-bingo-items"></div></section>`;
+    const paint=()=>{
+      const q=String($("r36BingoSearch")?.value||"").trim().toLowerCase(),cat=$("r36BingoCat")?.value||"ALL",wrap=$("r36BingoItems");
+      const found=rows.filter(x=>(cat==="ALL"||String(x.category)===cat)&&(!q||String(x.name||"").toLowerCase().includes(q)));
+      wrap.innerHTML=found.map((x,i)=>`<button type="button" data-r36-bingo-item="${rows.indexOf(x)}"><img src="${esc(x.image)}" alt="${esc(x.name)}"><span>${esc(x.name)}</span></button>`).join("")||"<p>ไม่พบไอเท็มค่ะ</p>";
+      wrap.querySelectorAll("[data-r36-bingo-item]").forEach(b=>b.onclick=()=>saveBingoCell(index,rows[Number(b.dataset.r36BingoItem)]));
+    };
+    $("r36BingoSearch").oninput=paint;$("r36BingoCat").onchange=paint;$("r36BingoClearCell").onclick=()=>saveBingoCell(index,null);paint();openModal?.();
+  }
+  async function saveBingoCell(index,item){
+    if(!admin()||index===centerIndex)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared",BINGO_DOC);
+      const snap=await fs.getDoc(ref),cur=normalizeBingo(snap.exists()?snap.data():{}),cells={...cur.cells};
+      if(item)cells[String(index)]={type:String(item.type||""),key:String(item.key||""),name:String(item.name||""),image:String(item.image||"")};
+      else delete cells[String(index)];
+      await fs.setDoc(ref,{version:1,cells,winner:cur.winner||"",updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});
+      closeModal?.();
+    }catch(e){message?.("บันทึกช่องไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function saveBingoWinner(name){
+    if(!admin())return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"shared",BINGO_DOC),snap=await fs.getDoc(ref),cur=normalizeBingo(snap.exists()?snap.data():{});
+      await fs.setDoc(ref,{version:1,cells:cur.cells,winner:String(name||""),updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});
+    }catch(e){message?.("บันทึกชื่อไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function resetBingo(){
+    if(!admin())return;
+    if(!confirm("รีเซ็ตบิงโกทั้งหมด?\n24 ช่องจะกลับมาว่าง แต่ช่องกลางยังอยู่เหมือนเดิม"))return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(fs.doc(db,"shared",BINGO_DOC),{version:1,cells:{},winner:"",updatedAt:fs.serverTimestamp(),updatedBy:"Aida"},{merge:false});
+    }catch(e){message?.("รีเซ็ตไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  function mountBingoShortcut(){
+    if($("r36BingoShortcut"))return;
+    const anchor=$("shortcutTopSpendersBtn"),box=anchor?.parentElement||document.querySelector(".hud-menu-section-items");if(!box)return;
+    const b=document.createElement("button");b.id="r36BingoShortcut";b.className="hud-menu-item r36-bingo-shortcut";b.type="button";
+    b.innerHTML='<span>🎀</span><div><b>บิงโกชาวสวน</b><small>กระดานบิงโก 5×5</small></div><i>›</i>';
+    if(anchor)anchor.insertAdjacentElement("afterend",b);else box.appendChild(b);
+    b.onclick=openFarmerBingo;
+  }
+  setInterval(mountBingoShortcut,1200);setTimeout(mountBingoShortcut,120);
+
+  /* Stop live listener on logout / returning to login. */
+  try{
+    const logoutBase=logout;
+    if(typeof logoutBase==="function")logout=async function(){stopBingoLive();stopMarketWatch();return logoutBase.apply(this,arguments)}
+  }catch(_){}
+
+  /* App-switch safety: synchronous local snapshot first, cloud flush request second. */
+  function background(){
+    const s=live();if(!s||visitContext)return;
+    try{saveLocalOnly?.(s)}catch(_){}
+    requestFastFlush(0);
+  }
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)background()},{passive:true});
+  window.addEventListener("pagehide",background,{passive:true});
+  window.addEventListener("online",()=>requestFastFlush(60),{passive:true});
+
+  globalThis.YN_R3436={
+    BUILD,requestFastFlush,basementRoute,openRecycle,openFarmerBingo,
+    bingoOpen,mysteryOpen,boatClosed,forestClosed
+  };
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.36-ALL-TOPICS';
