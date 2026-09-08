@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.49-BINGO-RECYCLE-REBUILD">
+  <link rel="stylesheet" href="style.css?v=S2-R34.50-BINGO-RECYCLE-INPUT-REBUILD">
 </head>
 <body>
   <main id="app">
@@ -140,7 +140,7 @@
             <div class="hud-menu-section-items">
               <button id="notificationBtn" class="hud-menu-item" type="button" aria-label="การแจ้งเตือน"><span>🔔</span><div><b>แจ้งเตือน</b><small>ข้อความและกิจกรรมจากเพื่อน</small></div><i>›</i><em id="notificationBadge" class="notification-badge hidden">0</em></button>
               <button id="shortcutTopSpendersBtn" class="hud-menu-item top-spenders-shortcut" type="button"><span>💎</span><div><b>Top Spenders</b><small>อันดับผู้สนับสนุน Season 2</small></div><i>›</i></button>
-              <button id="r37BingoShortcut" class="hud-menu-item r36-bingo-shortcut" type="button"><span>🎀</span><div><b>บิงโกชาวสวน</b><small>กระดานบิงโก 5×5</small></div><i>›</i></button>
+              <button id="r50BingoShortcut" class="hud-menu-item r50-bingo-shortcut" type="button"><span>🎀</span><div><b>บิงโกชาวสวน</b><small>กระดานบิงโก 5×5</small></div><i>›</i></button>
               <button id="challengeBtn" class="hud-menu-item activity-button challenge-button" type="button"><span>👻</span><div><b>ท้าทายภูติผี</b><small>ใช้ 5 กุศล</small></div><i>›</i></button>
             </div>
           </section>
@@ -463,7 +463,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.49-BINGO-RECYCLE-REBUILD"></script>
+<script src="game.js?v=S2-R34.50-BINGO-RECYCLE-INPUT-REBUILD"></script>
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
@@ -2713,5 +2713,150 @@
   console.info(BUILD,'loaded');
 })();
 </script>
+
+<script id="r50-bingo-recycle-controller">
+(function YN_R3450_BINGO_RECYCLE(){
+  "use strict";
+  const BUILD="S2-R34.50-BINGO-RECYCLE-INPUT-REBUILD";
+  const q=id=>document.getElementById(id);
+  const esc=v=>String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]));
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const copy=v=>{try{return cloneData(v)}catch(_){try{return structuredClone(v)}catch(__){return JSON.parse(JSON.stringify(v))}}};
+  const own=()=>ownState||state;
+  const aida=()=>String(currentMember||"")==="Aida";
+  const CENTER=12;
+  let bingoUnsub=null,bingoData={cells:{},winner:""},selectedCell=-1,selectedBingoItem=null;
+  let recycleRows=[],recycleSel=new Map(),recycleBusy=false;
+  let lastTap="",lastTapAt=0;
+
+  function once(key,ms=360){const t=performance.now();if(key===lastTap&&t-lastTapAt<ms)return false;lastTap=key;lastTapAt=t;return true}
+  function eat(e){try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}}
+  function makeOverlay(id,cls){let x=q(id);if(!x){x=document.createElement("section");x.id=id;x.className=`${cls} hidden`;document.body.appendChild(x)}return x}
+  function show(x){x.classList.remove("hidden");document.body.classList.add("r50-lock")}
+  function hide(x){if(x)x.classList.add("hidden");if(!document.querySelector(".r50-screen:not(.hidden),.r50-panel-screen:not(.hidden)"))document.body.classList.remove("r50-lock")}
+  async function firebase(){return getFirebaseContext()}
+
+  /* ---------------- Bingo ---------------- */
+  function bingoItems(){
+    const rows=[],seen=new Set();
+    const addMany=list=>{for(const x of list||[]){if(!x||!x.type||x.key==null)continue;const type=String(x.type),sig=`${type}:${String(x.key)}`;if(["crop","flower","flowerSeed"].includes(type)||/Instance$/i.test(type)||seen.has(sig))continue;const image=String(x.image||"");if(!image)continue;seen.add(sig);rows.push({type,key:String(x.key),name:String(x.name||x.key||"ไอเท็ม"),image,category:String(x.category||"ไอเท็ม")})}};
+    try{if(typeof globalThis.YN_R25_fullMarketEntries==="function")addMany(globalThis.YN_R25_fullMarketEntries(own()))}catch(_){}
+    try{if(typeof globalThis.YN_R50_STACKABLE_ENTRIES==="function")addMany(globalThis.YN_R50_STACKABLE_ENTRIES(own()))}catch(_){}
+    return rows.sort((a,b)=>a.category.localeCompare(b.category,"th")||a.name.localeCompare(b.name,"th"));
+  }
+  function bingoScreen(){
+    const s=makeOverlay("r50Bingo","r50-screen");
+    if(!s.dataset.built){
+      s.dataset.built="1";
+      s.innerHTML=`<div class="r50-bingo-wrap"><img class="r50-bingo-art" src="farmer-bingo-reference.jpg?v=R3450" alt="บิงโกชาวสวน"><button id="r50BingoBack" class="r50-back" type="button">‹</button><div id="r50BingoGrid" class="r50-bingo-grid"></div><div id="r50BingoWinner" class="r50-bingo-winner"></div><button id="r50BingoReset" class="r50-bingo-reset hidden" type="button">รีเซ็ตทั้งหมด</button></div>`;
+      q("r50BingoBack").onclick=()=>{try{bingoUnsub?.()}catch(_){}bingoUnsub=null;hide(s)};
+      q("r50BingoReset").onclick=resetBingo;
+    }
+    return s;
+  }
+  function renderBingo(){
+    const grid=q("r50BingoGrid");if(!grid)return;
+    grid.innerHTML=Array.from({length:25},(_,i)=>{if(i===CENTER)return `<button type="button" class="r50-bingo-cell center" disabled></button>`;const x=bingoData.cells?.[String(i)];return `<button type="button" class="r50-bingo-cell ${x?"filled":""}" data-r50-cell="${i}" ${aida()?"":"disabled"}>${x?`<img src="${esc(x.image)}" alt="${esc(x.name)}">`:""}</button>`}).join("");
+    const w=q("r50BingoWinner");
+    if(aida()){
+      const names=Object.keys(MEMBERS||{}).filter(n=>n&&n!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+      w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><select id="r50WinnerSelect"><option value="">—</option>${names.map(n=>`<option value="${esc(n)}" ${n===bingoData.winner?"selected":""}>${esc(n)}</option>`).join("")}</select><button id="r50WinnerSave" type="button">บันทึก</button>`;
+      q("r50WinnerSave").onclick=()=>saveWinner(q("r50WinnerSelect")?.value||"");
+      q("r50BingoReset").classList.remove("hidden");
+    }else{w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><b>${esc(bingoData.winner||"—")}</b>`;q("r50BingoReset").classList.add("hidden")}
+  }
+  async function openBingo(){
+    try{closeHomeHudMenu?.()}catch(_){}
+    const s=bingoScreen();show(s);renderBingo();try{bingoUnsub?.()}catch(_){}
+    try{const {db,fs}=await firebase(),ref=fs.doc(db,"shared","farmerBingo");bingoUnsub=fs.onSnapshot(ref,snap=>{const d=snap.exists()?snap.data():{};bingoData={cells:d?.cells&&typeof d.cells==="object"?d.cells:{},winner:String(d?.winner||"")};if(!s.classList.contains("hidden"))renderBingo()},e=>message?.("เปิดบิงโกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ"))}catch(e){message?.("เปิดบิงโกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  function picker(){return makeOverlay("r50BingoPicker","r50-panel-screen")}
+  function openPicker(index){
+    if(!aida()||index===CENTER)return;selectedCell=index;selectedBingoItem=null;
+    const items=bingoItems(),cats=["ALL",...new Set(items.map(x=>x.category))],s=picker();
+    s.innerHTML=`<div class="r50-panel"><header><div><small>บิงโกชาวสวน</small><h2>เลือกไอเท็มสำหรับช่อง ${index+1}</h2></div><button id="r50PickerX" class="r50-close" type="button">×</button></header><div class="r50-tools"><input id="r50BingoSearch" placeholder="ค้นหาไอเท็ม…"><select id="r50BingoCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div><button id="r50ClearCell" class="secondary-action" type="button">ล้างช่องนี้</button><div id="r50BingoItems" class="r50-item-grid"></div></div>`;
+    q("r50PickerX").onclick=()=>hide(s);q("r50BingoSearch").oninput=()=>paintPicker(items);q("r50BingoCat").onchange=()=>paintPicker(items);q("r50ClearCell").onclick=()=>confirmBingo(null);paintPicker(items);show(s);
+  }
+  function paintPicker(items){
+    const search=String(q("r50BingoSearch")?.value||"").trim().toLowerCase(),cat=q("r50BingoCat")?.value||"ALL",wrap=q("r50BingoItems");if(!wrap)return;
+    const found=items.filter(x=>(cat==="ALL"||x.category===cat)&&(!search||x.name.toLowerCase().includes(search)));
+    wrap.innerHTML=found.map(x=>`<button type="button" class="r50-item-card" data-r50-item="${items.indexOf(x)}"><img src="${esc(x.image)}" alt=""><span>${esc(x.name)}</span></button>`).join("")||`<p class="r50-empty">ไม่พบไอเท็มค่ะ</p>`;
+    wrap.querySelectorAll("[data-r50-item]").forEach(b=>b.onclick=()=>confirmBingo(items[Number(b.dataset.r50Item)]));
+  }
+  function confirmBingo(item){selectedBingoItem=item;const s=picker();s.innerHTML=`<div class="r50-panel r50-confirm">${item?`<img class="r50-confirm-img" src="${esc(item.image)}" alt=""><small>ช่อง ${selectedCell+1}</small><h2>${esc(item.name)}</h2><p>นำภาพนี้ลงในช่องบิงโกใช่ไหมคะ</p>`:`<h2>ล้างช่อง ${selectedCell+1}?</h2><p>ช่องนี้จะกลับเป็นช่องว่างค่ะ</p>`}<div class="r50-actions"><button id="r50ConfirmBack" class="secondary-action" type="button">กลับ</button><button id="r50ConfirmSave" class="primary-spooky-action" type="button">ยืนยัน</button></div></div>`;q("r50ConfirmBack").onclick=()=>openPicker(selectedCell);q("r50ConfirmSave").onclick=saveCell;show(s)}
+  async function saveCell(){
+    const b=q("r50ConfirmSave");if(b){b.disabled=true;b.textContent="กำลังบันทึก…"}
+    try{const {db,fs}=await firebase(),ref=fs.doc(db,"shared","farmerBingo");await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),d=snap.exists()?snap.data():{},cells=d?.cells&&typeof d.cells==="object"?{...d.cells}:{};if(selectedBingoItem)cells[String(selectedCell)]={type:selectedBingoItem.type,key:selectedBingoItem.key,name:selectedBingoItem.name,image:selectedBingoItem.image};else delete cells[String(selectedCell)];tx.set(ref,{version:1,cells,winner:String(d?.winner||""),updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false})});hide(picker())}catch(e){if(b){b.disabled=false;b.textContent="ยืนยัน"}message?.("บันทึกช่องไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function saveWinner(name){const b=q("r50WinnerSave");if(b){b.disabled=true;b.textContent="กำลังบันทึก…"}try{const {db,fs}=await firebase(),ref=fs.doc(db,"shared","farmerBingo");await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),d=snap.exists()?snap.data():{};tx.set(ref,{version:1,cells:d?.cells&&typeof d.cells==="object"?d.cells:{},winner:String(name||""),updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false})});if(b){b.textContent="บันทึกแล้ว";setTimeout(()=>{if(b){b.disabled=false;b.textContent="บันทึก"}},800)}}catch(e){if(b){b.disabled=false;b.textContent="บันทึก"}message?.("บันทึกชื่อไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function resetBingo(){if(!aida()||!confirm("รีเซ็ตบิงโกทั้งหมด?"))return;try{const {db,fs}=await firebase();await fs.setDoc(fs.doc(db,"shared","farmerBingo"),{version:1,cells:{},winner:"",updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false})}catch(e){message?.("รีเซ็ตไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+
+  /* ---------------- Recycler ---------------- */
+  const PATHS={product:["animalProducts"],special:["specials"],jelly:["specialAnimals"],jellyV2:["jellyfishV2"],fishingBait:["fishingBaits"],coconutRiver:["coconutRiverItems"],medicine:["medicines"],rainyMenu:["rainyMenus"],boatDrink:["boatDrinks"],farmFruit:["farmFruits"],homeFood:["homeFoods"],hedgehogItem:["hedgehogItems"],wine:["wines"],warehouseTool:["warehouseTools"],animal:["pendingAnimals"]};
+  function at(s,path){let x=s;for(const k of path||[]){if(!x||typeof x!=="object")return null;x=x[k]}return x}
+  function ensureAlpaca(s){s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};for(const k of ["food","medicine","other","wool"])s.alpaca.inventory[k]=s.alpaca.inventory[k]&&typeof s.alpaca.inventory[k]==="object"?s.alpaca.inventory[k]:{};s.alpaca.factory=s.alpaca.factory&&typeof s.alpaca.factory==="object"?s.alpaca.factory:{};s.alpaca.factory.products=s.alpaca.factory.products&&typeof s.alpaca.factory.products==="object"?s.alpaca.factory.products:{};s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};return s}
+  function stackCount(s,e){
+    if(e.type==="dish"){try{return dishCountInState(e.key,s)}catch(_){return iv(s?.dishInventory?.[e.key])}}
+    if(e.type==="mystery")return iv(s?.mysteryBoxes);if(e.type==="catMystery")return iv(s?.catMysteryBoxes);if(e.type==="dogMystery")return iv(s?.dogMysteryBoxes);if(e.type==="number4Mystery")return iv(s?.number4MysteryBoxes);
+    if(e.type==="alpacaFood")return iv(s?.alpaca?.inventory?.food?.[e.key]);if(e.type==="alpacaMedicine")return iv(s?.alpaca?.inventory?.medicine?.[e.key]);if(e.type==="alpacaOther")return iv(s?.alpaca?.inventory?.other?.[e.key]);if(e.type==="alpacaWool")return iv(s?.alpaca?.inventory?.wool?.[e.key]);if(e.type==="alpacaFactoryProduct")return iv(s?.alpaca?.factory?.products?.[e.key]);
+    const map=at(s,PATHS[e.type]);if(map&&Object.prototype.hasOwnProperty.call(map,e.key))return iv(map[e.key]);
+    try{return iv(globalThis.YN_R50_STACKABLE_COUNT?.(s,e))}catch(_){return 0}
+  }
+  function stackRemove(s,e,qty){
+    qty=iv(qty);if(qty<1||stackCount(s,e)<qty)return false;
+    if(e.type==="dish"){try{return removeDishesFromState(s,e.key,qty)}catch(_){if(!s.dishInventory)return false;s.dishInventory[e.key]=iv(s.dishInventory[e.key])-qty;return true}}
+    if(e.type==="mystery"){s.mysteryBoxes-=qty;return true}if(e.type==="catMystery"){s.catMysteryBoxes-=qty;return true}if(e.type==="dogMystery"){s.dogMysteryBoxes-=qty;return true}if(e.type==="number4Mystery"){s.number4MysteryBoxes-=qty;return true}
+    if(e.type==="alpacaFood"){s.alpaca.inventory.food[e.key]-=qty;return true}if(e.type==="alpacaMedicine"){s.alpaca.inventory.medicine[e.key]-=qty;return true}if(e.type==="alpacaOther"){s.alpaca.inventory.other[e.key]-=qty;return true}if(e.type==="alpacaWool"){s.alpaca.inventory.wool[e.key]-=qty;return true}if(e.type==="alpacaFactoryProduct"){s.alpaca.factory.products[e.key]-=qty;return true}
+    const map=at(s,PATHS[e.type]);if(map&&Object.prototype.hasOwnProperty.call(map,e.key)){map[e.key]=iv(map[e.key])-qty;return true}
+    try{return Boolean(globalThis.YN_R50_STACKABLE_REMOVE?.(s,e,qty))}catch(_){return false}
+  }
+  function ownedRecycleItems(){
+    let source=[];try{if(typeof globalThis.YN_R25_fullMarketEntries==="function")source=globalThis.YN_R25_fullMarketEntries(own())||[]}catch(_){}
+    const seen=new Set(),out=[];for(const e of source){if(!e||["crop","flower","flowerSeed"].includes(String(e.type||""))||/Instance$/i.test(String(e.type||"")))continue;const sig=`${e.type}:${e.key}`;if(seen.has(sig))continue;const count=stackCount(own(),e);if(count<5)continue;seen.add(sig);out.push({...e,count,name:String(e.name||e.key||"ไอเท็ม"),category:String(e.category||"ไอเท็ม")})}return out.sort((a,b)=>a.category.localeCompare(b.category,"th")||a.name.localeCompare(b.name,"th"));
+  }
+  const REWARDS=[{id:"fuel",name:"น้ำมันรถน้องน้ำผึ้ง",qty:10,image:"honey-fuel-can.png?v=252"},{id:"wing",name:"แคปซูลปีกนางฟ้า",qty:10,image:"angel_wing_capsule.png?v=1"},{id:"pestle",name:"สากกะเบือไฮโซ",qty:10,image:"pestle-boost-100.png?v=1"},{id:"dog",name:"กล่องสุ่มหมา",qty:10,image:"dog-mystery-box.png"},{id:"pudding",name:"พุดดิ้งสามสี",qty:10,image:"alpaca_tricolor_pudding.png?v=240"},{id:"happy",name:"ยาเพิ่มความสุขอัลปาก้า",qty:5,image:"alpaca-happiness-potion.png"},{id:"ham",name:"กล่องสุ่มแฮมสเตอร์",qty:5,image:"mystery-box-hamster.png"},{id:"merit",name:"กุศล",qty:0,image:""}];
+  function rnd(n){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}catch(_){return Math.floor(Math.random()*n)}}
+  function roll(){const r={...REWARDS[rnd(REWARDS.length)]};if(r.id==="merit")r.qty=15+rnd(486);return r}
+  function grant(s,r){ensureAlpaca(s);if(r.id==="fuel")s.specials.honeyFuelCan=iv(s.specials.honeyFuelCan)+10;else if(r.id==="wing")s.specials.angelWingCapsule=iv(s.specials.angelWingCapsule)+10;else if(r.id==="pestle")s.specials.pestle100=iv(s.specials.pestle100)+10;else if(r.id==="dog")s.dogMysteryBoxes=iv(s.dogMysteryBoxes)+10;else if(r.id==="pudding")s.alpaca.inventory.food.tricolorPudding=iv(s.alpaca.inventory.food.tricolorPudding)+10;else if(r.id==="happy")s.alpaca.inventory.medicine.happinessPotion=iv(s.alpaca.inventory.medicine.happinessPotion)+5;else if(r.id==="ham")s.specials.r31HamsterBox=iv(s.specials.r31HamsterBox)+5;else s.merit=(Number(s.merit)||0)+iv(r.qty)}
+  function recycler(){return makeOverlay("r50Recycler","r50-panel-screen")}
+  function openRecycler(){
+    try{closeModal?.()}catch(_){}
+    recycleRows=ownedRecycleItems();recycleSel=new Map();recycleBusy=false;const s=recycler(),cats=["ALL",...new Set(recycleRows.map(x=>x.category))];
+    s.innerHTML=`<div class="r50-panel r50-recycle"><header><div><small>🔮 ร้านค้าลึกลับ</small><h2>♻️ จุดรีไซเคิล</h2></div><button id="r50RecX" class="r50-close" type="button">×</button></header><p>เลือกของรวมขั้นต่ำ <b>30 ชิ้น</b> • แต่ละประเภทขั้นต่ำ <b>5 ชิ้น</b> • ไม่รวมพืชพันธุ์</p><div class="r50-tools"><input id="r50RecSearch" placeholder="ค้นหาไอเท็ม…"><select id="r50RecCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div><div id="r50RecList" class="r50-rec-list"></div><footer><strong id="r50RecTotal">เลือกแล้ว 0/30 ชิ้น</strong><button id="r50RecGo" class="primary-spooky-action" type="button" disabled>♻️ รีไซเคิล</button></footer></div>`;
+    q("r50RecX").onclick=()=>hide(s);q("r50RecSearch").oninput=paintRecycler;q("r50RecCat").onchange=paintRecycler;q("r50RecGo").onclick=doRecycle;paintRecycler();show(s);
+  }
+  function findRec(sig){return recycleRows.find(x=>`${x.type}:${x.key}`===sig)}
+  function setRec(sig,n){const row=findRec(sig);if(!row)return;n=Math.max(0,Math.min(row.count,iv(n)));if(n>0&&n<5)n=5;if(n)recycleSel.set(sig,n);else recycleSel.delete(sig);paintRecycler()}
+  function paintRecycler(){
+    const search=String(q("r50RecSearch")?.value||"").trim().toLowerCase(),cat=q("r50RecCat")?.value||"ALL",wrap=q("r50RecList");if(!wrap)return;
+    const rows=recycleRows.filter(x=>(cat==="ALL"||x.category===cat)&&(!search||x.name.toLowerCase().includes(search)));
+    wrap.innerHTML=rows.map(x=>{const sig=`${x.type}:${x.key}`,n=iv(recycleSel.get(sig));return `<article class="r50-rec-row ${n>=5?"selected":""}"><img src="${esc(x.image||"mysterious-shop.png")}" alt=""><div><b>${esc(x.name)}</b><small>${esc(x.category)} • มี ×${x.count}</small></div><div class="r50-rec-controls"><button type="button" data-r50-minus="${esc(sig)}">−5</button><input data-r50-qty="${esc(sig)}" type="number" min="0" max="${x.count}" value="${n}"><button type="button" data-r50-plus5="${esc(sig)}">+5</button><button type="button" data-r50-plus10="${esc(sig)}">+10</button></div></article>`}).join("")||`<p class="r50-empty">ไม่มีไอเท็มที่มีอย่างน้อย 5 ชิ้นค่ะ</p>`;
+    wrap.querySelectorAll("[data-r50-minus]").forEach(b=>b.onclick=()=>setRec(b.dataset.r50Minus,iv(recycleSel.get(b.dataset.r50Minus))-5));wrap.querySelectorAll("[data-r50-plus5]").forEach(b=>b.onclick=()=>setRec(b.dataset.r50Plus5,iv(recycleSel.get(b.dataset.r50Plus5))+5));wrap.querySelectorAll("[data-r50-plus10]").forEach(b=>b.onclick=()=>setRec(b.dataset.r50Plus10,iv(recycleSel.get(b.dataset.r50Plus10))+10));wrap.querySelectorAll("[data-r50-qty]").forEach(i=>i.onchange=()=>setRec(i.dataset.r50Qty,i.value));
+    const total=[...recycleSel.values()].reduce((a,b)=>a+iv(b),0);q("r50RecTotal").textContent=`เลือกแล้ว ${total}/30 ชิ้น`;q("r50RecGo").disabled=total<30||recycleBusy;
+  }
+  async function doRecycle(){
+    if(recycleBusy)return;const selected=[...recycleSel.entries()].map(([sig,qty])=>({row:findRec(sig),qty:iv(qty)})).filter(x=>x.row),total=selected.reduce((a,b)=>a+b.qty,0);if(total<30)return;if(selected.some(x=>x.qty<5))return;
+    recycleBusy=true;paintRecycler();const btn=q("r50RecGo");if(btn)btn.textContent="กำลังรีไซเคิล…";const reward=roll();
+    try{const {db,fs}=await firebase(),ref=fs.doc(db,"saves",currentMemberKey),profile=fs.doc(db,"publicProfiles",currentMemberKey);let next=null;await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=ensureAlpaca(normalizeState(snap.data(),currentMember));try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(_){}for(const x of selected)if(stackCount(s,x.row)<x.qty)throw new Error(`${x.row.name} ในกระเป๋าไม่พอ`);for(const x of selected)if(!stackRemove(s,x.row,x.qty))throw new Error(`หัก ${x.row.name} ไม่สำเร็จ`);grant(s,reward);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=copy(s);tx.set(ref,{...copy(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(reward.id==="merit")tx.set(profile,{memberKey:currentMemberKey,displayName:currentMember,merit:Number(s.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true})});ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();const s=recycler();s.innerHTML=`<div class="r50-panel r50-result"><button id="r50ResultX" class="r50-close" type="button">×</button>${reward.image?`<img src="${esc(reward.image)}" alt="">`:`<div class="r50-merit">🙏</div>`}<small>รีไซเคิลสำเร็จ</small><h2>${esc(reward.name)}</h2><strong>${reward.id==="merit"?`+${reward.qty} แต้ม`:`×${reward.qty}`}</strong><p>รางวัลเข้ากระเป๋าเรียบร้อยแล้วค่ะ</p><button id="r50ResultOK" class="primary-spooky-action" type="button">รับ</button></div>`;q("r50ResultX").onclick=()=>hide(s);q("r50ResultOK").onclick=()=>hide(s)}catch(e){recycleBusy=false;paintRecycler();if(btn)btn.textContent="♻️ รีไซเคิล";message?.("รีไซเคิลไม่สำเร็จ",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+
+  /* -------- Unique input ownership -------- */
+  function replaceRecycleEntry(){
+    const old=document.querySelector("#r37OpenRecycle,#r36OpenRecycle");if(old){const b=old.cloneNode(true);b.id="r50RecycleEntry";b.removeAttribute("onclick");old.replaceWith(b)}
+    const b=q("r50RecycleEntry");if(b&&!b.dataset.r50Bound){b.dataset.r50Bound="1";b.disabled=false;b.onpointerdown=e=>{eat(e);if(once("recycle"))openRecycler()};b.onclick=e=>{eat(e);if(once("recycle"))openRecycler()}}
+  }
+  function bindBingoEntry(){const b=q("r50BingoShortcut");if(b&&!b.dataset.r50Bound){b.dataset.r50Bound="1";b.disabled=false;b.onpointerdown=e=>{eat(e);if(once("bingo"))openBingo()};b.onclick=e=>{eat(e);if(once("bingo"))openBingo()}}}
+  function capture(e){
+    const cell=e.target?.closest?.("[data-r50-cell]");if(cell&&aida()){const index=Number(cell.dataset.r50Cell);if(Number.isFinite(index)&&index!==CENTER){eat(e);if(once(`cell:${index}`,280))openPicker(index);return}}
+    const b=e.target?.closest?.("#r50BingoShortcut");if(b){eat(e);if(once("bingo"))openBingo();return}
+    const r=e.target?.closest?.("#r50RecycleEntry");if(r){eat(e);if(once("recycle"))openRecycler();return}
+  }
+  window.addEventListener("pointerdown",capture,true);window.addEventListener("touchstart",capture,{capture:true,passive:false});
+  const mo=new MutationObserver(()=>{replaceRecycleEntry();bindBingoEntry()});mo.observe(document.body,{subtree:true,childList:true});setInterval(()=>{replaceRecycleEntry();bindBingoEntry()},700);replaceRecycleEntry();bindBingoEntry();
+
+  globalThis.YN_R3450={BUILD,openBingo,openPicker,openRecycler};window.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>

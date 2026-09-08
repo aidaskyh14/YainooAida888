@@ -10709,36 +10709,37 @@ body.r45-overlay-open{overflow:hidden!important}
 .r45-bingo-winner{gap:4px!important}
 #r45WinnerSave{font-size:8px!important;min-height:22px!important;padding:2px 6px!important;border-radius:8px!important}
 
+
 /* ======================================================================
-   R34.49 — Bingo + Recycle clean rebuild
+   R34.50 — Bingo + Recycler unique overlays
+   Board and picker have explicit, separated z-index layers.
    ====================================================================== */
-body.r49-open{overflow:hidden!important}
-.r49-overlay,.r49-panel-screen{position:fixed!important;inset:0!important;z-index:2147483640!important;background:rgba(14,10,22,.97)!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:auto!important}
-.r49-overlay.hidden,.r49-panel-screen.hidden{display:none!important}
-.r49-bingo-wrap{height:100dvh;aspect-ratio:9/16;max-width:100vw;position:relative;overflow:hidden}
-.r49-bingo-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
-.r49-back{position:absolute;z-index:8;left:2%;top:1.5%;width:40px;height:40px;border-radius:50%;font-size:30px}
-.r49-bingo-grid{position:absolute;z-index:7;left:12.05%;top:23.05%;width:75.75%;height:42.35%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr)}
-.r49-bingo-cell{border:0!important;background:transparent!important;padding:7%!important;pointer-events:auto!important;touch-action:manipulation!important;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0}
-.r49-bingo-cell:not(.center):active{background:rgba(255,255,255,.24)!important;transform:scale(.94)}
-.r49-bingo-cell>img{max-width:84%;max-height:84%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(60,30,20,.3))}
-.r49-bingo-cell.center{pointer-events:none!important}
-.r49-bingo-winner{position:absolute;z-index:8;left:19%;right:19%;top:66.1%;min-height:29px;border-radius:12px;background:rgba(255,239,222,.86);display:flex;align-items:center;justify-content:center;gap:4px;color:#70422e;font-size:9px;padding:4px 6px}
-.r49-bingo-winner select{font-size:9px;max-width:50%;height:23px}.r49-bingo-winner button{font-size:8px;min-height:22px;padding:2px 6px;border-radius:8px}
-.r49-bingo-reset{position:absolute;z-index:8;right:3%;top:69.4%;font-size:9px;padding:5px 8px}.r49-bingo-reset.hidden{display:none!important}
-
-.r49-panel-screen{padding:16px!important}
-.r49-panel{width:min(560px,96vw);max-height:88dvh;overflow:hidden;border-radius:20px;padding:14px;background:linear-gradient(180deg,#3d214b,#21152e);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column}
-.r49-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px}.r49-panel header h2{margin:0;font-size:17px}.r49-panel header small{font-size:9px;opacity:.72}.r49-panel header button,#r49ResultX{width:36px;height:36px;border-radius:50%;font-size:21px}
-.r49-tools{display:grid;grid-template-columns:1fr 120px;gap:7px;margin:9px 0}.r49-tools input,.r49-tools select{min-height:40px;border-radius:10px;padding:7px 9px}
-.r49-item-grid{overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:4px 1px;min-height:220px}
-.r49-item{min-height:98px;border-radius:12px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.r49-item img{width:58px;height:58px;object-fit:contain}.r49-item span{font-size:9px;line-height:1.15}
-.r49-confirm{text-align:center}.r49-confirm-img{width:130px;height:130px;object-fit:contain;margin:0 auto}.r49-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.r49-empty{text-align:center;font-size:11px;padding:30px 8px;grid-column:1/-1}
-
-.r49-recycle>p{font-size:11px;line-height:1.45}.r49-rec-list{overflow:auto;display:grid;gap:7px;min-height:220px;padding:2px}
-.r49-rec-row{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:center;padding:8px;border-radius:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08)}.r49-rec-row.selected{border-color:rgba(255,220,120,.7)}
-.r49-rec-row>img{width:46px;height:46px;object-fit:contain}.r49-rec-row>div>b{display:block;font-size:11px}.r49-rec-row>div>small{font-size:9px;opacity:.72}
-.r49-rec-controls{grid-column:1/-1;display:grid;grid-template-columns:45px 1fr 45px 48px;gap:5px}.r49-rec-controls button,.r49-rec-controls input{min-height:35px;border-radius:9px;text-align:center}
-.r49-recycle>footer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}.r49-recycle>footer strong{font-size:12px}
-.r49-result{text-align:center;position:relative}.r49-result>img{width:135px;height:135px;object-fit:contain;margin:0 auto}.r49-result>small{font-size:9px}.r49-result>strong{font-size:26px}.r49-result p{font-size:11px}.r49-merit{font-size:80px}
-#r37BingoShortcut,#r36BingoShortcut,#r37OpenRecycle,#r36OpenRecycle{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:2147483000!important}
+body.r50-lock{overflow:hidden!important}
+.r50-screen,.r50-panel-screen{position:fixed!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:auto!important}
+.r50-screen{z-index:100000!important;background:#171221!important}
+.r50-panel-screen{z-index:100200!important;background:rgba(12,8,18,.92)!important;padding:14px!important}
+.r50-screen.hidden,.r50-panel-screen.hidden{display:none!important}
+.r50-bingo-wrap{height:100dvh;aspect-ratio:9/16;max-width:100vw;position:relative;overflow:hidden}
+.r50-bingo-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
+.r50-back{position:absolute;z-index:20;left:2%;top:1.4%;width:42px;height:42px;border-radius:50%;font-size:30px;pointer-events:auto!important}
+.r50-bingo-grid{position:absolute;z-index:15;left:12.05%;top:23.05%;width:75.75%;height:42.35%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);pointer-events:auto!important}
+.r50-bingo-cell{border:0!important;background:transparent!important;padding:7%!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:0!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.r50-bingo-cell:not(.center):active{background:rgba(255,255,255,.24)!important;transform:scale(.94)!important}
+.r50-bingo-cell img{max-width:84%;max-height:84%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(70,35,30,.32))}
+.r50-bingo-cell.center{pointer-events:none!important}
+.r50-bingo-winner{position:absolute;z-index:20;left:18%;right:18%;top:66.1%;min-height:30px;border-radius:12px;padding:4px 6px;background:rgba(255,239,222,.88);display:flex;align-items:center;justify-content:center;gap:4px;color:#70422e;font-size:9px;pointer-events:auto!important}
+.r50-bingo-winner span,.r50-bingo-winner b{font-size:9px}.r50-bingo-winner select{font-size:9px;max-width:48%;height:24px}.r50-bingo-winner button{font-size:8px;min-height:23px;padding:2px 6px;border-radius:8px}
+.r50-bingo-reset{position:absolute;z-index:20;right:3%;top:69.4%;font-size:9px!important;padding:5px 8px!important;min-height:28px!important}.r50-bingo-reset.hidden{display:none!important}
+.r50-panel{width:min(560px,96vw);max-height:88dvh;overflow:hidden;border-radius:20px;padding:14px;background:linear-gradient(180deg,#3e224c,#21152e);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;pointer-events:auto!important}
+.r50-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px}.r50-panel header h2{margin:0;font-size:17px}.r50-panel header small{font-size:9px;opacity:.75}.r50-close{width:36px;height:36px;border-radius:50%;font-size:21px}
+.r50-tools{display:grid;grid-template-columns:1fr 120px;gap:7px;margin:9px 0}.r50-tools input,.r50-tools select{min-height:40px;border-radius:10px;padding:7px 9px}
+.r50-item-grid{overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:4px 1px;min-height:220px}
+.r50-item-card{min-height:98px;border-radius:12px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;touch-action:manipulation}.r50-item-card img{width:58px;height:58px;object-fit:contain}.r50-item-card span{font-size:9px;line-height:1.15;text-align:center}
+.r50-confirm{text-align:center}.r50-confirm-img{width:130px;height:130px;object-fit:contain;margin:0 auto}.r50-confirm small{font-size:9px}.r50-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.r50-empty{text-align:center;font-size:11px;padding:30px 8px;grid-column:1/-1}
+.r50-recycle p{font-size:11px;line-height:1.45}.r50-rec-list{overflow:auto;display:grid;gap:7px;min-height:220px;padding:2px}
+.r50-rec-row{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:center;padding:8px;border-radius:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08)}.r50-rec-row.selected{border-color:rgba(255,220,120,.72)}
+.r50-rec-row>img{width:46px;height:46px;object-fit:contain}.r50-rec-row>div>b{display:block;font-size:11px}.r50-rec-row>div>small{font-size:9px;opacity:.72}
+.r50-rec-controls{grid-column:1/-1;display:grid;grid-template-columns:45px 1fr 45px 48px;gap:5px}.r50-rec-controls button,.r50-rec-controls input{min-height:36px;border-radius:9px;text-align:center;touch-action:manipulation}
+.r50-recycle footer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}.r50-recycle footer strong{font-size:12px}
+.r50-result{text-align:center;position:relative}.r50-result>img{width:135px;height:135px;object-fit:contain;margin:0 auto}.r50-result>small{font-size:9px}.r50-result>strong{font-size:26px}.r50-result p{font-size:11px}.r50-merit{font-size:80px}
+#r50BingoShortcut,#r50RecycleEntry{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:50!important}
