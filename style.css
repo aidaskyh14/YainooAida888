@@ -10615,3 +10615,15 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 /* R34.37 visibility guarantees */
 #r37BingoShortcut{display:grid!important}
 #r37OpenRecycle{display:grid!important}
+
+/* R34.38 standalone systems */
+.r38-bingo-screen{position:fixed;inset:0;z-index:100000;background:#130e19;display:flex;justify-content:center;align-items:center}
+.r38-bingo-screen.hidden{display:none!important}.r38-bingo-card{height:100dvh;aspect-ratio:9/16;max-width:100vw;position:relative;overflow:hidden}
+.r38-bingo-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.r38-bingo-close{position:absolute;z-index:3;left:2%;top:1.5%;width:38px;height:38px;border-radius:50%}
+.r38-bingo-grid{position:absolute;z-index:2;left:12.05%;top:23.05%;width:75.75%;height:42.35%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr)}
+.r38-bingo-cell{border:0;background:transparent;padding:7%;display:flex;align-items:center;justify-content:center}.r38-bingo-cell img{max-width:84%;max-height:84%;object-fit:contain}
+.r38-bingo-winner{position:absolute;z-index:3;left:22%;right:22%;top:66.2%;min-height:26px;border-radius:12px;background:rgba(255,239,222,.82);display:flex;justify-content:center;align-items:center;gap:5px;font-size:9px;color:#70422e}
+.r38-bingo-winner select{font-size:9px;max-width:58%}.r38-bingo-reset{position:absolute;z-index:3;right:3%;top:69.3%;font-size:9px}.r38-bingo-reset.hidden{display:none!important}
+.r38-pick-items{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:55vh;overflow:auto}.r38-pick-items button{min-height:90px}.r38-pick-items img{width:55px;height:55px;object-fit:contain}.r38-pick-items span{display:block;font-size:9px}
+.r38-recycle #r38RecItems{max-height:55vh;overflow:auto;display:grid;gap:6px}.r38-rec-card{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;padding:7px;border-radius:12px}.r38-rec-card img{width:44px;height:44px;object-fit:contain}.r38-rec-card span{font-size:11px;text-align:left}.r38-rec-card small{display:block;font-size:9px}.r38-recycle footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
