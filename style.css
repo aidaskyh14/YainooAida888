@@ -10703,3 +10703,8 @@ body.r45-overlay-open{overflow:hidden!important}
 .r45-recycle-panel>footer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}.r45-recycle-panel>footer strong{font-size:12px}
 .r45-result{text-align:center;position:relative}.r45-result>img{width:135px;height:135px;object-fit:contain;margin:0 auto}.r45-result>small{font-size:9px}.r45-result>strong{font-size:26px}.r45-result p{font-size:11px}.r45-merit-icon{font-size:80px}
 #r37BingoShortcut,#r36BingoShortcut,#r37OpenRecycle,#r36OpenRecycle{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:2147483000!important}
+
+/* R34.46 — direct Bingo ownership */
+.r45-bingo-cell[data-r45-cell]{pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer!important;position:relative!important;z-index:10!important}
+.r45-bingo-winner{gap:4px!important}
+#r45WinnerSave{font-size:8px!important;min-height:22px!important;padding:2px 6px!important;border-radius:8px!important}
