@@ -2069,8 +2069,8 @@ const now=()=>typeof gameNow==='function'?gameNow():Date.now();
 
 function bkkMinute(){const d=new Date(now()+7*3600000);return d.getUTCHours()*60+d.getUTCMinutes()}
 const inRange=(a,b)=>{const m=bkkMinute();return a<b?(m>=a&&m<b):(m>=a||m<b)};
-const bingoOpen=()=>inRange(8*60,16*60);
-const mysteryOpen=()=>inRange(10*60,15*60);
+const bingoOpen=()=>true; /* R34.44 TEST UNLOCK */
+const mysteryOpen=()=>true; /* R34.44 TEST UNLOCK */
 function msg(title,body){try{message?.(title,body)}catch(_){}}
 function closed(label,time){msg(`🔒 ${label}`,`ปิดอยู่ รบกวนกลับมาอีกครั้ง เวลา ${time} น.`)}
 function modal(html){const m=$('modalContent');if(!m)return false;m.innerHTML=html;openModal?.();return true}
@@ -33388,8 +33388,8 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
     if(start<end)return m>=start&&m<end;
     return m>=start||m<end;
   };
-  const bingoOpen=()=>inRange(8*60,16*60);
-  const mysteryOpen=()=>inRange(10*60,15*60);
+  const bingoOpen=()=>true; /* R34.44 TEST UNLOCK */
+  const mysteryOpen=()=>true; /* R34.44 TEST UNLOCK */
   const boatClosed=()=>inRange(22*60,4*60);
   const forestClosed=()=>inRange(20*60,23*60);
   const homeFoodClosed=()=>inRange(9*60,13*60);
@@ -34483,3 +34483,460 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.42-MARKET-INPUT-HARD-FIX';
 })();
 
 window.YAINOO_PACKAGE_BUILD='S2-R34.43-BINGO-CELL-PICKER';
+
+
+/* =====================================================================
+   S2 R34.44 — TEST UNLOCK + RECYCLE DIRECT OPEN
+   TEMPORARY TEST BUILD:
+   - Bingo time lock disabled
+   - Mystery Shop / Recycle time lock disabled
+   - Recycle opens directly to item selection and cannot be closed by the
+     same tap that opened it.
+   ===================================================================== */
+(function YN_R3444_TEST_UNLOCK_RECYCLE_FIX(){
+  "use strict";
+  const BUILD="S2-R34.44-TEST-UNLOCK-RECYCLE";
+  const $=id=>document.getElementById(id);
+  let openingRecycle=false,lastTap="",lastAt=0;
+
+  function dedupe(k,ms=450){
+    const t=performance.now();
+    if(k===lastTap&&t-lastAt<ms)return false;
+    lastTap=k;lastAt=t;return true;
+  }
+  function eat(e){
+    try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}
+  }
+
+  function openBingoNow(){
+    const fn =
+      globalThis.YN_R3436?.openFarmerBingo ||
+      globalThis.YN_R3438?.openBingo;
+    if(typeof fn==="function"){
+      try{closeHomeHudMenu?.()}catch(_){}
+      fn();
+      setTimeout(()=>globalThis.YN_R3443?.enableAidaCells?.(),120);
+      return true;
+    }
+    message?.("บิงโกยังไม่พร้อม","ไม่พบตัวเปิดระบบบิงโกค่ะ");
+    return false;
+  }
+
+  function openRecycleNow(){
+    if(openingRecycle)return true;
+    openingRecycle=true;
+
+    /* Prefer the complete R34.36 recycle processor because it contains
+       +5/+10/manual quantity + real transaction/reward logic. */
+    const fn =
+      globalThis.YN_R3436?.openRecycle ||
+      globalThis.YN_R3438?.openRecycle;
+
+    if(typeof fn==="function"){
+      try{fn()}catch(e){
+        openingRecycle=false;
+        console.warn(BUILD,"open recycle",e);
+        message?.("เปิดจุดรีไซเคิลไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");
+        return false;
+      }
+      /* Keep the newly opened recycle modal alive past the original
+         Mystery Shop tap/click chain. */
+      setTimeout(()=>{
+        openingRecycle=false;
+        const panel=document.querySelector(".r36-recycle-panel,.r38-recycle");
+        if(panel){
+          panel.dataset.r3444Open="1";
+          const modal=document.getElementById("modal");
+          if(modal)modal.classList.remove("hidden");
+        }
+      },260);
+      return true;
+    }
+
+    openingRecycle=false;
+    message?.("จุดรีไซเคิลยังไม่พร้อม","ไม่พบตัวเปิดระบบรีไซเคิลค่ะ");
+    return false;
+  }
+
+  function visibleRecycleButton(){
+    return document.getElementById("r37OpenRecycle") ||
+           document.getElementById("r36OpenRecycle");
+  }
+
+  function route(e){
+    const t=e.target;
+
+    const bingo=t?.closest?.("#r37BingoShortcut,#r36BingoShortcut");
+    if(bingo){
+      eat(e);
+      if(dedupe("bingo"))openBingoNow();
+      return;
+    }
+
+    const rec=t?.closest?.("#r37OpenRecycle,#r36OpenRecycle");
+    if(rec){
+      eat(e);
+      if(dedupe("recycle"))openRecycleNow();
+      return;
+    }
+
+    /* Once recycle is open, prevent a backdrop/legacy Mystery Shop close
+       handler from treating taps inside the recycle panel as an outside tap. */
+    if(openingRecycle || t?.closest?.(".r36-recycle-panel,.r38-recycle")){
+      if(t?.closest?.("#r36RecycleBack,#r36RecycleX,#r36RecycleReceive"))return;
+      try{e.stopPropagation()}catch(_){}
+    }
+  }
+
+  window.addEventListener("pointerdown",route,true);
+  window.addEventListener("touchstart",route,{capture:true,passive:false});
+  window.addEventListener("touchend",route,{capture:true,passive:false});
+  window.addEventListener("click",route,true);
+
+  function hardBind(){
+    const bingo=document.getElementById("r37BingoShortcut")||document.getElementById("r36BingoShortcut");
+    if(bingo){
+      bingo.disabled=false;
+      bingo.style.pointerEvents="auto";
+      bingo.onclick=e=>{eat(e);openBingoNow()};
+    }
+
+    const rec=visibleRecycleButton();
+    if(rec){
+      rec.disabled=false;
+      rec.style.pointerEvents="auto";
+      rec.onclick=e=>{eat(e);openRecycleNow()};
+      rec.onpointerdown=e=>{eat(e);if(dedupe("recycle-pointer",250))openRecycleNow()};
+    }
+
+    globalThis.YN_R3443?.enableAidaCells?.();
+  }
+
+  const mo=new MutationObserver(hardBind);
+  try{mo.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class","disabled"]})}catch(_){}
+  setInterval(hardBind,700);
+  setTimeout(hardBind,50);
+
+  globalThis.YN_R3444={BUILD,openBingoNow,openRecycleNow,hardBind};
+  window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.44-TEST-UNLOCK-RECYCLE';
+
+/* =====================================================================
+   S2 R34.45 — DIRECT OVERLAYS
+   Rebuild Bingo + Recycle entry/UI without using the legacy modal system.
+   This avoids the old modal/backdrop/input handlers that were swallowing taps.
+   TEST UNLOCK remains active for both systems in this build.
+   ===================================================================== */
+(function YN_R3445_DIRECT_OVERLAYS(){
+"use strict";
+const BUILD="S2-R34.45-DIRECT-OVERLAYS";
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+const live=()=>ownState||state;
+const isAida=()=>String(currentMember||"")==="Aida";
+const clone=v=>{try{return cloneData(v)}catch(_){try{return structuredClone(v)}catch(__){return JSON.parse(JSON.stringify(v))}}};
+
+function eat(e){try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}}
+function ensureOverlay(id,cls){
+  let x=$(id);if(x)return x;
+  x=document.createElement("section");x.id=id;x.className=`${cls} hidden`;
+  document.body.appendChild(x);return x;
+}
+function showOverlay(x){x.classList.remove("hidden");document.body.classList.add("r45-overlay-open")}
+function hideOverlay(x){x.classList.add("hidden");if(!document.querySelector(".r45-screen:not(.hidden),.r45-panel-screen:not(.hidden)"))document.body.classList.remove("r45-overlay-open")}
+async function fb(){return getFirebaseContext()}
+
+/* ============================================================
+   BINGO — direct full-screen board + direct item picker
+   ============================================================ */
+let bingoUnsub=null,bingoState={cells:{},winner:""},chosenCell=-1,chosenItem=null;
+const CENTER=12;
+
+function bingoCatalog(){
+  let rows=[];
+  try{rows=globalThis.YN_R25_fullMarketEntries?.(live())||[]}catch(e){console.warn(BUILD,"bingo catalog",e)}
+  const bad=new Set(["crop","flower","flowerSeed"]),seen=new Set(),out=[];
+  for(const x of rows){
+    if(!x||bad.has(String(x.type||""))||/Instance$/i.test(String(x.type||""))||!x.image)continue;
+    const sig=`${x.type}:${x.key}`;if(seen.has(sig))continue;seen.add(sig);
+    out.push({type:String(x.type||""),key:String(x.key||""),name:String(x.name||x.key||"ไอเท็ม"),image:String(x.image||""),category:String(x.category||"ไอเท็ม")});
+  }
+  return out.sort((a,b)=>a.category.localeCompare(b.category,"th")||a.name.localeCompare(b.name,"th"));
+}
+function bingoScreen(){
+  const s=ensureOverlay("r45Bingo","r45-screen");
+  if(!s.dataset.built){
+    s.dataset.built="1";
+    s.innerHTML=`<div class="r45-bingo-wrap">
+      <img src="farmer-bingo-reference.jpg" class="r45-bingo-art" alt="บิงโกชาวสวน">
+      <button id="r45BingoBack" class="r45-back" type="button">‹</button>
+      <div id="r45BingoCells" class="r45-bingo-cells"></div>
+      <div id="r45BingoWinner" class="r45-bingo-winner"></div>
+      <button id="r45BingoReset" class="r45-bingo-reset hidden" type="button">รีเซ็ตทั้งหมด</button>
+    </div>`;
+    $("r45BingoBack").onclick=()=>{try{bingoUnsub?.()}catch(_){}bingoUnsub=null;hideOverlay(s)};
+    $("r45BingoReset").onclick=resetBingo45;
+  }
+  return s;
+}
+function renderBingo45(){
+  const grid=$("r45BingoCells");if(!grid)return;
+  grid.innerHTML=Array.from({length:25},(_,i)=>{
+    if(i===CENTER)return `<div class="r45-bingo-cell center"></div>`;
+    const x=bingoState.cells?.[String(i)];
+    return `<div class="r45-bingo-cell ${x?"filled":""}" data-r45-cell="${i}" role="${isAida()?"button":"img"}">${x?`<img src="${esc(x.image)}" alt="${esc(x.name)}">`:""}</div>`;
+  }).join("");
+  if(isAida()){
+    grid.querySelectorAll("[data-r45-cell]").forEach(el=>{
+      el.onclick=e=>{eat(e);openPicker45(Number(el.dataset.r45Cell))};
+      el.onpointerdown=e=>{eat(e);openPicker45(Number(el.dataset.r45Cell))};
+    });
+  }
+  const w=$("r45BingoWinner");
+  if(isAida()){
+    const names=Object.keys(MEMBERS||{}).filter(n=>n&&n!=="Aida").sort((a,b)=>a.localeCompare(b,"th"));
+    w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><select id="r45WinnerSelect"><option value="">—</option>${names.map(n=>`<option value="${esc(n)}" ${n===bingoState.winner?"selected":""}>${esc(n)}</option>`).join("")}</select>`;
+    $("r45WinnerSelect").onchange=e=>saveWinner45(e.target.value);
+    $("r45BingoReset").classList.remove("hidden");
+  }else{
+    w.innerHTML=`<span>ผู้โชคดีล่าสุด :</span><b>${esc(bingoState.winner||"—")}</b>`;
+    $("r45BingoReset").classList.add("hidden");
+  }
+}
+async function openBingo45(){
+  try{closeHomeHudMenu?.()}catch(_){}
+  const s=bingoScreen();showOverlay(s);renderBingo45();
+  try{bingoUnsub?.()}catch(_){}
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,"shared","farmerBingo");
+    bingoUnsub=fs.onSnapshot(ref,snap=>{
+      const d=snap.exists()?snap.data():{};
+      bingoState={cells:d?.cells&&typeof d.cells==="object"?d.cells:{},winner:String(d?.winner||"")};
+      if(!s.classList.contains("hidden"))renderBingo45();
+    },e=>console.warn(BUILD,"bingo live",e));
+  }catch(e){console.warn(BUILD,"open bingo",e)}
+}
+function pickerScreen(){
+  const s=ensureOverlay("r45BingoPicker","r45-panel-screen");
+  return s;
+}
+function openPicker45(i){
+  if(!isAida()||i===CENTER)return;
+  chosenCell=i;chosenItem=null;
+  const rows=bingoCatalog(),cats=["ALL",...new Set(rows.map(x=>x.category))],s=pickerScreen();
+  s.innerHTML=`<div class="r45-panel">
+    <header><div><small>บิงโกชาวสวน</small><h2>เลือกไอเท็มสำหรับช่อง ${i+1}</h2></div><button id="r45PickerClose">×</button></header>
+    <div class="r45-tools"><input id="r45BingoSearch" placeholder="ค้นหาไอเท็ม…"><select id="r45BingoCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div>
+    <button id="r45ClearCell" class="secondary-action">ล้างช่องนี้</button>
+    <div id="r45BingoItemList" class="r45-item-list"></div>
+  </div>`;
+  $("r45PickerClose").onclick=()=>hideOverlay(s);
+  $("r45BingoSearch").oninput=()=>paintPicker45(rows);
+  $("r45BingoCat").onchange=()=>paintPicker45(rows);
+  $("r45ClearCell").onclick=()=>confirmBingo45(null);
+  paintPicker45(rows);showOverlay(s);
+}
+function paintPicker45(rows){
+  const q=String($("r45BingoSearch")?.value||"").trim().toLowerCase(),cat=$("r45BingoCat")?.value||"ALL",wrap=$("r45BingoItemList");
+  const found=rows.filter(x=>(cat==="ALL"||x.category===cat)&&(!q||x.name.toLowerCase().includes(q)));
+  wrap.innerHTML=found.map(x=>`<button class="r45-item-card" data-r45-pick="${rows.indexOf(x)}"><img src="${esc(x.image)}"><span>${esc(x.name)}</span></button>`).join("")||"<p class='r45-empty'>ไม่พบไอเท็มค่ะ</p>";
+  wrap.querySelectorAll("[data-r45-pick]").forEach(b=>b.onclick=()=>confirmBingo45(rows[Number(b.dataset.r45Pick)]));
+}
+function confirmBingo45(item){
+  chosenItem=item;
+  const s=pickerScreen();
+  s.innerHTML=`<div class="r45-panel r45-confirm">${item?`<img src="${esc(item.image)}" class="r45-confirm-img"><small>ช่อง ${chosenCell+1}</small><h2>${esc(item.name)}</h2><p>นำภาพนี้ลงในช่องบิงโกใช่ไหมคะ</p>`:`<h2>ล้างช่อง ${chosenCell+1}?</h2><p>ช่องนี้จะกลับเป็นช่องว่างค่ะ</p>`}<div class="r45-confirm-actions"><button id="r45ConfirmBack" class="secondary-action">กลับ</button><button id="r45ConfirmSave" class="primary-spooky-action">ยืนยัน</button></div></div>`;
+  $("r45ConfirmBack").onclick=()=>openPicker45(chosenCell);
+  $("r45ConfirmSave").onclick=saveBingo45;
+}
+async function saveBingo45(){
+  const btn=$("r45ConfirmSave");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก…"}
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,"shared","farmerBingo");
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?snap.data():{},cells=d?.cells&&typeof d.cells==="object"?{...d.cells}:{};
+      if(chosenItem)cells[String(chosenCell)]={type:chosenItem.type,key:chosenItem.key,name:chosenItem.name,image:chosenItem.image};else delete cells[String(chosenCell)];
+      tx.set(ref,{version:1,cells,winner:String(d?.winner||""),updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    hideOverlay(pickerScreen());
+  }catch(e){message?.("บันทึกช่องไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");if(btn){btn.disabled=false;btn.textContent="ยืนยัน"}}
+}
+async function saveWinner45(name){
+  try{
+    const {db,fs}=await fb(),ref=fs.doc(db,"shared","farmerBingo");
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?snap.data():{};
+      tx.set(ref,{version:1,cells:d?.cells&&typeof d.cells==="object"?d.cells:{},winner:String(name||""),updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+  }catch(e){message?.("บันทึกชื่อไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+}
+async function resetBingo45(){
+  if(!isAida()||!confirm("รีเซ็ตบิงโกทั้งหมด?"))return;
+  try{const {db,fs}=await fb();await fs.setDoc(fs.doc(db,"shared","farmerBingo"),{version:1,cells:{},winner:"",updatedBy:"Aida",updatedAt:fs.serverTimestamp()},{merge:false})}catch(e){message?.("รีเซ็ตไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+}
+
+/* ============================================================
+   RECYCLE — direct full-screen item selector + real transaction
+   ============================================================ */
+let recRows=[],recSel=new Map(),recBusy=false;
+
+function ensureAlpaca45(s){
+  s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+  s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};
+  for(const k of ["food","medicine","other","wool"])s.alpaca.inventory[k]=s.alpaca.inventory[k]&&typeof s.alpaca.inventory[k]==="object"?s.alpaca.inventory[k]:{};
+  s.alpaca.factory=s.alpaca.factory&&typeof s.alpaca.factory==="object"?s.alpaca.factory:{};
+  s.alpaca.factory.products=s.alpaca.factory.products&&typeof s.alpaca.factory.products==="object"?s.alpaca.factory.products:{};
+  s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+  return s;
+}
+function recRows45(){
+  let rows=[];try{rows=globalThis.YN_R25_fullMarketEntries?.(live())||[]}catch(_){}
+  const bad=new Set(["crop","flower","flowerSeed"]),seen=new Set();
+  return rows.filter(x=>{
+    if(!x||bad.has(String(x.type||""))||/Instance$/i.test(String(x.type||"")))return false;
+    const sig=`${x.type}:${x.key}`;if(seen.has(sig)||iv(x.count)<5)return false;seen.add(sig);return true;
+  }).map(x=>({...x,category:String(x.category||"ไอเท็ม")}));
+}
+function recScreen(){return ensureOverlay("r45Recycle","r45-panel-screen")}
+function openRecycle45(){
+  recRows=recRows45();recSel=new Map();recBusy=false;
+  const s=recScreen();
+  const cats=["ALL",...new Set(recRows.map(x=>x.category))];
+  s.innerHTML=`<div class="r45-panel r45-recycle-panel">
+    <header><div><small>🔮 ร้านค้าลึกลับ</small><h2>♻️ จุดรีไซเคิล</h2></div><button id="r45RecClose">×</button></header>
+    <p>เลือกของรวมขั้นต่ำ <b>30 ชิ้น</b> • แต่ละประเภทขั้นต่ำ <b>5 ชิ้น</b> • ไม่รวมพืชพันธุ์</p>
+    <div class="r45-tools"><input id="r45RecSearch" placeholder="ค้นหาไอเท็ม…"><select id="r45RecCat">${cats.map(c=>`<option value="${esc(c)}">${c==="ALL"?"ทุกหมวด":esc(c)}</option>`).join("")}</select></div>
+    <div id="r45RecList" class="r45-recycle-list"></div>
+    <footer><strong id="r45RecTotal">เลือกแล้ว 0/30 ชิ้น</strong><button id="r45RecGo" class="primary-spooky-action" disabled>♻️ รีไซเคิล</button></footer>
+  </div>`;
+  $("r45RecClose").onclick=()=>hideOverlay(s);$("r45RecSearch").oninput=paintRec45;$("r45RecCat").onchange=paintRec45;$("r45RecGo").onclick=doRecycle45;
+  paintRec45();showOverlay(s);
+}
+function paintRec45(){
+  const q=String($("r45RecSearch")?.value||"").trim().toLowerCase(),cat=$("r45RecCat")?.value||"ALL",wrap=$("r45RecList");
+  const rows=recRows.filter(x=>(cat==="ALL"||x.category===cat)&&(!q||String(x.name||"").toLowerCase().includes(q)));
+  wrap.innerHTML=rows.map(x=>{
+    const sig=`${x.type}:${x.key}`,n=iv(recSel.get(sig));
+    return `<article class="r45-rec-row ${n>=5?"selected":""}"><img src="${esc(x.image||"mysterious-shop.png")}"><div><b>${esc(x.name)}</b><small>${esc(x.category)} • มี ×${iv(x.count)}</small></div><div class="r45-rec-controls"><button data-r45-minus="${esc(sig)}">−5</button><input data-r45-qty="${esc(sig)}" type="number" min="0" max="${iv(x.count)}" value="${n}"><button data-r45-plus5="${esc(sig)}">+5</button><button data-r45-plus10="${esc(sig)}">+10</button></div></article>`;
+  }).join("")||"<p class='r45-empty'>ไม่มีไอเท็มที่มีอย่างน้อย 5 ชิ้นค่ะ</p>";
+  wrap.querySelectorAll("[data-r45-minus]").forEach(b=>b.onclick=()=>changeRec45(b.dataset.r45Minus,-5));
+  wrap.querySelectorAll("[data-r45-plus5]").forEach(b=>b.onclick=()=>changeRec45(b.dataset.r45Plus5,5));
+  wrap.querySelectorAll("[data-r45-plus10]").forEach(b=>b.onclick=()=>changeRec45(b.dataset.r45Plus10,10));
+  wrap.querySelectorAll("[data-r45-qty]").forEach(i=>i.onchange=()=>setRec45(i.dataset.r45Qty,i.value));
+  const total=[...recSel.values()].reduce((a,b)=>a+iv(b),0);
+  $("r45RecTotal").textContent=`เลือกแล้ว ${total}/30 ชิ้น`;
+  $("r45RecGo").disabled=total<30||recBusy;
+}
+function findRec(sig){return recRows.find(x=>`${x.type}:${x.key}`===sig)}
+function changeRec45(sig,delta){const r=findRec(sig);if(!r)return;let n=iv(recSel.get(sig));if(n===0&&delta>0)n=5;else n+=delta;n=Math.max(0,Math.min(iv(r.count),n));if(n>0&&n<5)n=5;if(n)recSel.set(sig,n);else recSel.delete(sig);paintRec45()}
+function setRec45(sig,val){const r=findRec(sig);if(!r)return;let n=Math.max(0,Math.min(iv(r.count),iv(val)));if(n>0&&n<5)n=5;if(n)recSel.set(sig,n);else recSel.delete(sig);paintRec45()}
+
+function mapAt(s,path){let x=s;for(const k of path){if(!x||typeof x!=="object")return null;x=x[k]}return x}
+const FIELD={
+  product:["animalProducts"],special:["specials"],jelly:["specialAnimals"],jellyV2:["jellyfishV2"],fishingBait:["fishingBaits"],coconutRiver:["coconutRiverItems"],medicine:["medicines"],rainyMenu:["rainyMenus"],boatDrink:["boatDrinks"],farmFruit:["farmFruits"],homeFood:["homeFoods"],hedgehogItem:["hedgehogItems"],wine:["wines"],warehouseTool:["warehouseTools"]
+};
+function count45(s,e){
+  if(e.type==="dish"){try{return dishCountInState(e.key,s)}catch(_){return iv(s?.dishInventory?.[e.key])}}
+  if(e.type==="alpacaFood")return iv(s?.alpaca?.inventory?.food?.[e.key]);
+  if(e.type==="alpacaMedicine")return iv(s?.alpaca?.inventory?.medicine?.[e.key]);
+  if(e.type==="alpacaOther")return iv(s?.alpaca?.inventory?.other?.[e.key]);
+  if(e.type==="alpacaWool")return iv(s?.alpaca?.inventory?.wool?.[e.key]);
+  if(e.type==="alpacaFactoryProduct")return iv(s?.alpaca?.factory?.products?.[e.key]);
+  if(e.type==="mystery")return iv(s?.mysteryBoxes);
+  if(e.type==="catMystery")return iv(s?.catMysteryBoxes);
+  if(e.type==="dogMystery")return iv(s?.dogMysteryBoxes);
+  if(e.type==="number4Mystery")return iv(s?.number4MysteryBoxes);
+  const m=FIELD[e.type]?mapAt(s,FIELD[e.type]):null;return iv(m?.[e.key]);
+}
+function remove45(s,e,q){
+  q=iv(q);if(count45(s,e)<q)return false;
+  if(e.type==="dish"){try{return removeDishesFromState(s,e.key,q)}catch(_){s.dishInventory[e.key]-=q;return true}}
+  if(e.type==="alpacaFood"){s.alpaca.inventory.food[e.key]-=q;return true}
+  if(e.type==="alpacaMedicine"){s.alpaca.inventory.medicine[e.key]-=q;return true}
+  if(e.type==="alpacaOther"){s.alpaca.inventory.other[e.key]-=q;return true}
+  if(e.type==="alpacaWool"){s.alpaca.inventory.wool[e.key]-=q;return true}
+  if(e.type==="alpacaFactoryProduct"){s.alpaca.factory.products[e.key]-=q;return true}
+  if(e.type==="mystery"){s.mysteryBoxes-=q;return true}
+  if(e.type==="catMystery"){s.catMysteryBoxes-=q;return true}
+  if(e.type==="dogMystery"){s.dogMysteryBoxes-=q;return true}
+  if(e.type==="number4Mystery"){s.number4MysteryBoxes-=q;return true}
+  const m=FIELD[e.type]?mapAt(s,FIELD[e.type]):null;if(m&&Object.prototype.hasOwnProperty.call(m,e.key)){m[e.key]-=q;return true}
+  try{return removeGiftItemFromState(s,e.type,e.key,q)}catch(_){return false}
+}
+function rand(n){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}catch(_){return Math.floor(Math.random()*n)}}
+const REW=[
+  {id:"fuel",name:"น้ำมันรถน้องน้ำผึ้ง",qty:10,image:"honey-fuel-can.png?v=252"},
+  {id:"wing",name:"แคปซูลปีกนางฟ้า",qty:10,image:"angel_wing_capsule.png?v=1"},
+  {id:"pestle",name:"สากกะเบือไฮโซ",qty:10,image:"pestle-boost-100.png?v=1"},
+  {id:"dog",name:"กล่องสุ่มหมา",qty:10,image:"dog-mystery-box.png"},
+  {id:"pudding",name:"พุดดิ้งสามสี",qty:10,image:"alpaca_tricolor_pudding.png"},
+  {id:"happy",name:"ยาเพิ่มความสุขอัลปาก้า",qty:5,image:"alpaca-happiness-potion.png"},
+  {id:"ham",name:"กล่องสุ่มแฮมสเตอร์",qty:5,image:"mystery-box-hamster.png"},
+  {id:"merit",name:"กุศล",qty:0,image:""}
+];
+function reward45(){const x={...REW[rand(REW.length)]};if(x.id==="merit")x.qty=15+rand(486);return x}
+function addReward45(s,r){
+  ensureAlpaca45(s);
+  if(r.id==="fuel")s.specials.honeyFuelCan=iv(s.specials.honeyFuelCan)+10;
+  else if(r.id==="wing")s.specials.angelWingCapsule=iv(s.specials.angelWingCapsule)+10;
+  else if(r.id==="pestle")s.specials.pestle100=iv(s.specials.pestle100)+10;
+  else if(r.id==="dog")s.dogMysteryBoxes=iv(s.dogMysteryBoxes)+10;
+  else if(r.id==="pudding")s.alpaca.inventory.food.tricolorPudding=iv(s.alpaca.inventory.food.tricolorPudding)+10;
+  else if(r.id==="happy")s.alpaca.inventory.medicine.happinessPotion=iv(s.alpaca.inventory.medicine.happinessPotion)+5;
+  else if(r.id==="ham")s.specials.r31HamsterBox=iv(s.specials.r31HamsterBox)+5;
+  else if(r.id==="merit")s.merit=(Number(s.merit)||0)+iv(r.qty);
+}
+async function doRecycle45(){
+  if(recBusy)return;
+  const selected=[...recSel.entries()].map(([sig,qty])=>({row:findRec(sig),qty:iv(qty)})).filter(x=>x.row);
+  const total=selected.reduce((a,b)=>a+b.qty,0);
+  if(total<30)return;
+  if(selected.some(x=>x.qty<5))return;
+  recBusy=true;paintRec45();const reward=reward45();
+  try{
+    try{await settlePendingCloudSave?.()}catch(_){}
+    const {db,fs}=await fb(),ref=fs.doc(db,"saves",currentMemberKey),profile=fs.doc(db,"publicProfiles",currentMemberKey);let next;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=ensureAlpaca45(normalizeState(snap.data(),currentMember));
+      for(const x of selected)if(count45(s,x.row)<x.qty)throw new Error(`${x.row.name} ในกระเป๋าไม่พอ`);
+      for(const x of selected)if(!remove45(s,x.row,x.qty))throw new Error(`หัก ${x.row.name} ไม่สำเร็จ`);
+      addReward45(s,reward);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;s.clientLocalEditAt=Date.now();next=clone(s);
+      tx.set(ref,{...clone(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      if(reward.id==="merit")tx.set(profile,{memberKey:currentMemberKey,displayName:currentMember,merit:Number(s.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();
+    const s=recScreen();s.innerHTML=`<div class="r45-panel r45-result"><button id="r45ResultX">×</button>${reward.image?`<img src="${esc(reward.image)}">`:`<div class="r45-merit-icon">🙏</div>`}<small>รีไซเคิลสำเร็จ</small><h2>${esc(reward.name)}</h2><strong>${reward.id==="merit"?`+${reward.qty} แต้ม`:`×${reward.qty}`}</strong><p>รางวัลเข้ากระเป๋าเรียบร้อยแล้วค่ะ</p><button id="r45ResultOk" class="primary-spooky-action">รับ</button></div>`;
+    $("r45ResultX").onclick=()=>hideOverlay(s);$("r45ResultOk").onclick=()=>hideOverlay(s);
+  }catch(e){recBusy=false;paintRec45();message?.("รีไซเคิลไม่สำเร็จ",e?.message||"กรุณาลองใหม่ค่ะ")}
+}
+
+/* Direct entry: no legacy modal/shortcut handler is required. */
+function route(e){
+  const bingo=e.target?.closest?.("#r37BingoShortcut,#r36BingoShortcut");
+  if(bingo){eat(e);openBingo45();return}
+  const rec=e.target?.closest?.("#r37OpenRecycle,#r36OpenRecycle");
+  if(rec){eat(e);openRecycle45();return}
+}
+window.addEventListener("pointerdown",route,true);
+window.addEventListener("touchstart",route,{capture:true,passive:false});
+window.addEventListener("click",route,true);
+
+/* Replace onclick properties too, so normal desktop/iOS click works. */
+function bind(){
+  const b=$("r37BingoShortcut")||$("r36BingoShortcut");if(b){b.disabled=false;b.onclick=e=>{eat(e);openBingo45()}}
+  const r=$("r37OpenRecycle")||$("r36OpenRecycle");if(r){r.disabled=false;r.onclick=e=>{eat(e);openRecycle45()}}
+}
+new MutationObserver(bind).observe(document.body,{subtree:true,childList:true});
+setInterval(bind,700);setTimeout(bind,20);
+
+globalThis.YN_R3445={BUILD,openBingo45,openRecycle45,openPicker45};
+window.YAINOO_PACKAGE_BUILD=BUILD;
+console.info(BUILD,"loaded");
+})();
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.45-DIRECT-OVERLAYS';
