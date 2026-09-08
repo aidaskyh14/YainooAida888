@@ -10627,3 +10627,32 @@ button,[role="button"]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .r38-bingo-winner select{font-size:9px;max-width:58%}.r38-bingo-reset{position:absolute;z-index:3;right:3%;top:69.3%;font-size:9px}.r38-bingo-reset.hidden{display:none!important}
 .r38-pick-items{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:55vh;overflow:auto}.r38-pick-items button{min-height:90px}.r38-pick-items img{width:55px;height:55px;object-fit:contain}.r38-pick-items span{display:block;font-size:9px}
 .r38-recycle #r38RecItems{max-height:55vh;overflow:auto;display:grid;gap:6px}.r38-rec-card{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;padding:7px;border-radius:12px}.r38-rec-card img{width:44px;height:44px;object-fit:contain}.r38-rec-card span{font-size:11px;text-align:left}.r38-rec-card small{display:block;font-size:9px}.r38-recycle footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+
+
+/* R34.42 — make new system buttons physically tappable above legacy overlays */
+#r37BingoShortcut,#r36BingoShortcut,#r37OpenRecycle,#r36OpenRecycle{
+  position:relative!important;
+  z-index:2147483000!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+
+/* R34.43 — Bingo editable cells + picker */
+[data-r36-bingo-cell],[data-r38-cell]{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.r43-bingo-picker{max-height:min(86vh,760px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+.r43-bingo-picker>header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.r43-bingo-picker>header small{font-size:9px;opacity:.7}.r43-bingo-picker>header h2{margin:0;font-size:16px}
+#r43PickerX{width:34px;height:34px;border-radius:50%;font-size:20px}
+.r43-bingo-tools{display:grid;grid-template-columns:1fr 120px;gap:7px;margin:8px 0}
+.r43-bingo-tools input,.r43-bingo-tools select{min-height:38px;border-radius:10px;padding:7px 8px}
+#r43ClearCell{min-height:34px!important;margin-bottom:7px!important}
+.r43-bingo-list{overflow:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:2px;min-height:180px}
+.r43-bingo-item{min-height:96px;border-radius:12px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.r43-bingo-item img{width:58px;height:58px;object-fit:contain}.r43-bingo-item span{font-size:9px;line-height:1.15;text-align:center}
+.r43-confirm{text-align:center!important}.r43-confirm>img{width:min(130px,36vw);height:min(130px,36vw);object-fit:contain;display:block;margin:0 auto 7px}
+.r43-confirm>small{font-size:9px}.r43-confirm h2{margin:4px 0}.r43-confirm p{font-size:11px}
+.r43-confirm>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.r43-empty{grid-column:1/-1;text-align:center;font-size:11px;padding:28px 10px}
