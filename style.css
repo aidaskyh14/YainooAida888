@@ -10743,3 +10743,11 @@ body.r50-lock{overflow:hidden!important}
 .r50-recycle footer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}.r50-recycle footer strong{font-size:12px}
 .r50-result{text-align:center;position:relative}.r50-result>img{width:135px;height:135px;object-fit:contain;margin:0 auto}.r50-result>small{font-size:9px}.r50-result>strong{font-size:26px}.r50-result p{font-size:11px}.r50-merit{font-size:80px}
 #r50BingoShortcut,#r50RecycleEntry{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:50!important}
+
+/* R34.51 — Royal drop must sit above alpaca animal layer and be easy to collect */
+#r3451RoyalDropLayer{position:absolute!important;inset:0!important;z-index:220!important;pointer-events:none!important;overflow:visible!important}
+#r3451RoyalDropLayer.hidden{display:none!important}
+.r3451-royal-drop{position:absolute!important;transform:translate(-50%,-50%)!important;width:34px!important;height:34px!important;border:0!important;background:transparent!important;padding:0!important;pointer-events:auto!important;touch-action:manipulation!important;z-index:230!important}
+.r3451-royal-drop img{width:30px!important;height:30px!important;object-fit:contain!important;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))!important}
+.r3451-royal-drop small{position:absolute!important;right:-7px!important;top:-6px!important;min-width:17px!important;height:17px!important;border-radius:9px!important;background:#fff!important;color:#5b2a61!important;font-size:8px!important;font-weight:900!important;line-height:17px!important;text-align:center!important}
+#r3420RoyalCdGround,#yn1218RoyalDropLayer,#yn1219RoyalDropLayer,#yn1220RoyalDropLayer,#r34RoyalDiscLayer,#r3411RoyalDropLayer,#r34120RoyalDiscLayer,#core13RoyalDropBtn{display:none!important}
