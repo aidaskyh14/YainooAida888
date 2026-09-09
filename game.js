@@ -2411,6 +2411,7 @@ async function getFirebaseContext(){
 }
 let cloudSaveInFlight=null;
 function queueCloudSave(){
+  if(globalThis.YN_ALPACA_TRANSFER_LOCK)return;
   if(!cloudReady||!currentMemberKey||visitContext)return;
   if(cloudSaveTimer)clearTimeout(cloudSaveTimer);
   cloudSaveTimer=setTimeout(()=>{
@@ -2441,9 +2442,11 @@ function save(){
   queueCloudSave();
 }
 async function flushCloudSave(){
+  if(globalThis.YN_ALPACA_TRANSFER_LOCK)return;
   if(!cloudReady||!currentMemberKey||!ownState)return;
   const {db,fs}=await getFirebaseContext();
   ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);
+  try{globalThis.YN_ALPACA_TRANSFER_EARLY?.shield?.(ownState)}catch(_){}
   const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.updatedAt=fs.serverTimestamp();
   await fs.setDoc(fs.doc(db,"saves",currentMemberKey),payload,{merge:false});
   const currentHash=plotHash(ownState.plots);
@@ -4482,6 +4485,7 @@ async function initializeOrLoadCloudState(member,memberKey){
 }
 
 async function flushCloudSave(){
+  if(globalThis.YN_ALPACA_TRANSFER_LOCK)return;
   if(!cloudReady||!currentMemberKey||!ownState||cloudSessionSuperseded)return;
   if(cloudSaveInFlight)return cloudSaveInFlight;
   cloudSaveInFlight=(async()=>{
@@ -4489,6 +4493,7 @@ async function flushCloudSave(){
     ensureMissionStateFor(ownState);ensureDailyLimitsFor(ownState);ensureBoatState(ownState);
     if(currentMember==="Aida"&&adminProfile?.role==="admin")ensureAdminStock(ownState);
     const saveRef=fs.doc(db,"saves",currentMemberKey);
+    try{globalThis.YN_ALPACA_TRANSFER_EARLY?.shield?.(ownState)}catch(_){}
     const payload=cloneData(ownState);payload.launchVersion=LAUNCH_VERSION;payload.activeSessionId=cloudSessionId;
     await fs.runTransaction(db,async tx=>{
       const snap=await tx.get(saveRef);
@@ -17216,11 +17221,110 @@ async function V181_campaignScoreLater(summary){
     globalThis.YN_ALPACA_CURRENT_PEN=currentPen;
     setTimeout(()=>{try{globalThis.YN_V240_RENDER_TREASURE?.()}catch{}},0);
   }
-  function sendReadyBabyToFactory(penNo,id){
-    const fn=globalThis.YN_V240_SEND_BABY;
-    if(typeof fn!=="function"){alpacaMessage("โรงงานยังไม่พร้อม","กรุณาปิดแล้วเปิดคอกอัลปาก้าอีกครั้งค่ะ");return}
-    return fn(Number(penNo)||currentPen,id);
+  let r3456BabyTransferBusy=false;
+  function r3456Clone(v){try{return cloneData(v)}catch(_){try{return structuredClone(v)}catch(__){return JSON.parse(JSON.stringify(v))}}}
+  function r3456EnsureTransferShape(s){
+    s=s&&typeof s==="object"?s:{};
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    while(s.alpaca.pens.length<5)s.alpaca.pens.push({alpacas:[]});
+    for(const p of s.alpaca.pens){if(p)p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[]}
+    s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    s.alpaca.factory=s.alpaca.factory&&typeof s.alpaca.factory==="object"?s.alpaca.factory:{};
+    s.alpaca.factory.babies=s.alpaca.factory.babies&&typeof s.alpaca.factory.babies==="object"?s.alpaca.factory.babies:{};
+    s.alpaca.factory.babyTransfers=s.alpaca.factory.babyTransfers&&typeof s.alpaca.factory.babyTransfers==="object"?s.alpaca.factory.babyTransfers:{};
+    return s;
   }
+  function r3456FindBaby(s,id){
+    const hits=[];id=String(id||"");
+    for(let pi=0;pi<5;pi++)for(const a of (s.alpaca.pens[pi]?.alpacas||[]))if(String(a?.id||"")===id)hits.push({pi,a});
+    for(const a of (s.alpaca.vault||[]))if(String(a?.id||"")===id)hits.push({pi:-1,a});
+    return hits;
+  }
+  function r3456RemoveBabyEverywhere(s,id){
+    id=String(id||"");let removed=0;
+    for(let pi=0;pi<5;pi++){
+      const p=s.alpaca.pens[pi];if(!p)continue;
+      const before=p.alpacas.length;
+      p.alpacas=p.alpacas.filter(a=>String(a?.id||"")!==id);
+      removed+=before-p.alpacas.length;
+    }
+    const vb=s.alpaca.vault.length;s.alpaca.vault=s.alpaca.vault.filter(a=>String(a?.id||"")!==id);removed+=vb-s.alpaca.vault.length;
+    return removed;
+  }
+  function r3456HardRemoveVisual(id){
+    id=String(id||"");
+    try{for(const [key,w] of Array.from(penWalkers.entries())){if(String(key).endsWith(`:${id}`)||String(w?.el?.dataset?.alpacaId||"")===id){try{stopWalker(w)}catch(_){}try{w?.el?.remove()}catch(_){}penWalkers.delete(key)}}}catch(_){}
+    try{document.querySelectorAll('.alpaca-pen-animal[data-alpaca-id]').forEach(el=>{if(String(el.dataset?.alpacaId||"")===id)el.remove()})}catch(_){}
+  }
+  function r3456RebuildPenVisual(){
+    try{
+      const layer=$("alpacaPenAnimalLayer");
+      if(layer){for(const [key,w] of Array.from(penWalkers.entries())){if(String(key).startsWith(`${currentPen}:`)){try{stopWalker(w)}catch(_){}try{w?.el?.remove()}catch(_){}penWalkers.delete(key)}}layer.replaceChildren()}
+      renderPen();
+    }catch(e){console.warn("R34.56 rebuild pen",e)}
+  }
+  async function r3456ConfirmBabyTransfer(){
+    return new Promise(resolve=>{
+      const mc=$("modalContent");if(!mc){resolve(window.confirm?window.confirm("ส่งเบบี้เข้าโรงงานแปรรูป?"):true);return}
+      mc.innerHTML=`<section class="feature-panel v240-reward-popup"><div style="font-size:54px">🏭🦙</div><h2>ส่งเบบี้เข้าโรงงาน?</h2><p>เมื่อยืนยัน เบบี้ตัวนี้จะถูกย้ายออกจากคอกจริง และเพิ่มเข้าโรงงานเพียง 1 ตัวค่ะ</p><div class="v240-modal-actions"><button id="r3456BabyYes" class="primary-spooky-action" type="button">ยืนยัน</button><button id="r3456BabyNo" type="button">ยกเลิก</button></div></section>`;
+      openModal();
+      $("r3456BabyYes").onclick=e=>{try{e.preventDefault();e.stopPropagation()}catch(_){}closeModal();resolve(true)};
+      $("r3456BabyNo").onclick=e=>{try{e.preventDefault();e.stopPropagation()}catch(_){}closeModal();resolve(false)};
+    });
+  }
+  async function sendReadyBabyToFactory(penNo,id){
+    id=String(id||"");penNo=Math.max(1,Math.min(5,Number(penNo)||currentPen));
+    if(!id||visitContext)return;
+    if(r3456BabyTransferBusy){showWeatherToast?.("🏭 กำลังส่งเบบี้อยู่ค่ะ");return}
+    if(!currentMemberKey){alpacaMessage("ส่งเข้าโรงงานไม่ได้","ไม่พบรหัสสมาชิก กรุณาเข้าเกมใหม่ค่ะ");return}
+    if(!(await r3456ConfirmBabyTransfer()))return;
+    r3456BabyTransferBusy=true;globalThis.YN_ALPACA_TRANSFER_LOCK=true;
+    let result=null,committed=null;
+    try{
+      try{if(cloudSaveTimer){clearTimeout(cloudSaveTimer);cloudSaveTimer=null}}catch(_){}
+      try{if(cloudSaveInFlight)await cloudSaveInFlight}catch(_){}
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิกค่ะ");
+        const raw=snap.data(),st=r3456EnsureTransferShape(r3456Clone(raw));
+        const ledger=st.alpaca.factory.babyTransfers,recorded=ledger[id]||null,hits=r3456FindBaby(st,id);
+        if(recorded){result={already:true,removed:r3456RemoveBabyEverywhere(st,id),color:String(recorded.color||"")}}
+        else{
+          if(!hits.length)throw new Error("ไม่พบเบบี้ตัวนี้ในคอกแล้วค่ะ");
+          const baby=hits[0].a;if(String(baby?.type||"")!=="baby")throw new Error("ตัวที่เลือกไม่ใช่เบบี้อัลปาก้าค่ะ");
+          if(Number(gameNow())<Number(baby.readyProcessAt||0))throw new Error("เบบี้ตัวนี้ยังไม่พร้อมแปรรูปค่ะ");
+          const color=String(baby.color||"white"),before=Number(st.alpaca.factory.babies[color])||0,removed=r3456RemoveBabyEverywhere(st,id);
+          if(removed<1)throw new Error("ลบเบบี้ออกจากคอกไม่สำเร็จค่ะ");
+          st.alpaca.factory.babies[color]=before+1;
+          ledger[id]={id,color,fromPens:[...new Set(hits.filter(x=>x.pi>=0).map(x=>x.pi+1))],transferredAt:Number(gameNow())||Date.now(),factoryAdded:true,version:"R34.56"};
+          result={already:false,removed,color,before,after:before+1};
+        }
+        const rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;
+        st.clientSaveRevision=rev;st.clientLocalEditAt=Date.now();committed=r3456Clone(st);
+        tx.set(saveRef,{alpaca:r3456Clone(st.alpaca),clientSaveRevision:rev,clientLocalEditAt:st.clientLocalEditAt,activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      let verifySnap;try{verifySnap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(saveRef):await fs.getDoc(saveRef)}catch(_){verifySnap=await fs.getDoc(saveRef)}
+      let verified=r3456EnsureTransferShape(r3456Clone(verifySnap.data()||committed||{})),still=r3456FindBaby(verified,id).length;
+      if(still){
+        await fs.runTransaction(db,async tx=>{
+          const snap=await tx.get(saveRef);if(!snap.exists())return;const st=r3456EnsureTransferShape(r3456Clone(snap.data()));
+          r3456RemoveBabyEverywhere(st,id);
+          if(!st.alpaca.factory.babyTransfers[id])st.alpaca.factory.babyTransfers[id]={id,color:String(result?.color||""),transferredAt:Number(gameNow())||Date.now(),factoryAdded:false,version:"R34.56-repair"};
+          const rev=(Number(st.clientSaveRevision)||0)+1;st.clientSaveRevision=rev;st.clientLocalEditAt=Date.now();
+          tx.set(saveRef,{alpaca:r3456Clone(st.alpaca),clientSaveRevision:rev,clientLocalEditAt:st.clientLocalEditAt,activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:true});
+        });
+        const s2=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(saveRef):await fs.getDoc(saveRef);verified=r3456EnsureTransferShape(r3456Clone(s2.data()||{}));still=r3456FindBaby(verified,id).length;
+      }
+      if(still)throw new Error("เซิร์ฟเวอร์ยังพบเบบี้อยู่ในคอกหลังส่ง จึงไม่แสดงว่าสำเร็จค่ะ");
+      ownState=normalizeState(verified,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch(_){}
+      r3456HardRemoveVisual(id);r3456RebuildPenVisual();
+      requestAnimationFrame(()=>{r3456HardRemoveVisual(id);r3456RebuildPenVisual()});setTimeout(()=>{r3456HardRemoveVisual(id);r3456RebuildPenVisual()},180);setTimeout(()=>{r3456HardRemoveVisual(id);r3456RebuildPenVisual()},700);
+      const mc=$("modalContent");if(mc){mc.innerHTML=`<section class="feature-panel v240-reward-popup"><div style="font-size:58px">✅🏭</div><h2>${result?.already?"ซ่อมตัวค้างเรียบร้อย":"ส่งเข้าโรงงานแล้วค่ะ"}</h2><p>${result?.already?"ตัวนี้เคยเข้าโรงงานแล้ว ระบบเอาตัวค้างออกจากคอกโดยไม่เพิ่มจำนวนซ้ำค่ะ":"ตรวจจากเซิร์ฟเวอร์แล้ว: เบบี้หายจากคอก และเพิ่มเข้าโรงงาน ×1 เรียบร้อยค่ะ"}</p><button id="r3456BabyDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("r3456BabyDone").onclick=closeModal}
+    }catch(e){console.error("R34.56 baby transfer",e);alpacaMessage("ส่งเข้าโรงงานไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+    finally{globalThis.YN_ALPACA_TRANSFER_LOCK=false;r3456BabyTransferBusy=false}
+  }
+  globalThis.YN_R3456_SEND_BABY=(penNo,id)=>sendReadyBabyToFactory(penNo,id);
   function renderPenAnimals(root,pen){
     const layer=$("alpacaPenAnimalLayer");if(!layer)return;
     if(layer.dataset.v268BabyFactoryBound!=="1"){
@@ -18069,7 +18173,7 @@ async function V181_campaignScoreLater(summary){
      game.js. Even if a later optional subsystem throws during startup, every
      current pen button still reaches this transaction-backed sender.
      ==================================================================== */
-  const V240_TRANSFER_BUILD="S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH";
+  const V240_TRANSFER_BUILD="S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE";
   let v240TransferBusy=false,v240TransferWatchKey="",v240TransferUnsub=null,v240TransferRepairBusy=false;
   let v240TransferRemote={};
   const v240TransferStorageKey=(k=currentMemberKey)=>`yn:alpaca:factory-transfer:${String(k||currentMember||"guest")}`;
@@ -18102,10 +18206,14 @@ async function V181_campaignScoreLater(summary){
     {const a=s.alpaca.vault,n=a.length;s.alpaca.vault=a.filter(x=>String(x?.id||"")!==id);removed+=n-s.alpaca.vault.length}
     return removed;
   }
-  function v240TransferPurge(s,ledger=v240TransferLedger()){
-    if(!s||typeof s!=="object")return 0;v240TransferShape(s);const ids=new Set(Object.keys(ledger||{}).map(String));if(!ids.size)return 0;let removed=0;
+  function v240TransferPurge(s,ledger=null){
+    if(!s||typeof s!=="object")return 0;
+    v240TransferShape(s);
+    const embedded=s?.alpaca?.factory?.babyTransfers&&typeof s.alpaca.factory.babyTransfers==="object"?s.alpaca.factory.babyTransfers:{};
+    const all={...v240TransferClone(embedded),...v240TransferClone(v240TransferLedger()),...(ledger&&typeof ledger==="object"?v240TransferClone(ledger):{})};
+    const ids=new Set(Object.keys(all).map(String));if(!ids.size)return 0;let removed=0;
     for(const id of ids)removed+=v240TransferRemove(s,id);
-    s.alpaca.factory.babyTransfers={...s.alpaca.factory.babyTransfers,...v240TransferClone(ledger)};
+    s.alpaca.factory.babyTransfers={...v240TransferClone(embedded),...v240TransferClone(all)};
     return removed;
   }
   function v240TransferPurgeDom(){
@@ -18143,27 +18251,34 @@ async function V181_campaignScoreLater(summary){
     });
   }
   async function v240RepairTransferredServer(force=false){
-    if(v240TransferRepairBusy||visitContext||!currentMemberKey)return false;const ledger=v240TransferLedger();if(!Object.keys(ledger).length)return false;v240TransferRepairBusy=true;
+    if(v240TransferRepairBusy||visitContext||!currentMemberKey)return false;
+    const localLedger=v240TransferLedger();
+    if(!Object.keys(localLedger).length && !Object.keys((ownState||state)?.alpaca?.factory?.babyTransfers||{}).length)return false;
+    v240TransferRepairBusy=true;
     try{
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),ledgerRef=fs.doc(db,"alpacaBabyTransfers",currentMemberKey);let committed=null,changed=false;
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let committed=null,changed=false;
       await fs.runTransaction(db,async tx=>{
-        const [ss,ls]=await Promise.all([tx.get(saveRef),tx.get(ledgerRef)]);if(!ss.exists())return;
-        const remoteLedger=ls.exists()&&ls.data()?.transfers&&typeof ls.data().transfers==="object"?ls.data().transfers:{};const all={...v240TransferClone(ledger),...v240TransferClone(remoteLedger)};
-        const raw=v240TransferClone(ss.data()),s=v240TransferShape(raw),removed=v240TransferPurge(s,all);if(!removed&&!force){v240TransferRemote=all;v240TransferRemember(all);return}
-        const rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;s.clientSaveRevision=rev;s.clientLocalEditAt=Date.now();committed=v240TransferClone(s);changed=removed>0;
+        const ss=await tx.get(saveRef);if(!ss.exists())return;
+        const raw=v240TransferClone(ss.data()),serverEmbedded=raw?.alpaca?.factory?.babyTransfers&&typeof raw.alpaca.factory.babyTransfers==="object"?raw.alpaca.factory.babyTransfers:{};
+        const all={...v240TransferClone(localLedger),...v240TransferClone(serverEmbedded)};
+        const s=v240TransferShape(raw),removed=v240TransferPurge(s,all);
+        v240TransferRemote={...v240TransferRemote,...v240TransferClone(all)};v240TransferRemember(v240TransferLedger());
+        if(!removed&&!force)return;
+        const rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;
+        s.clientSaveRevision=rev;s.clientLocalEditAt=Date.now();committed=v240TransferClone(s);changed=removed>0;
         tx.set(saveRef,{alpaca:v240TransferClone(s.alpaca),clientSaveRevision:rev,clientLocalEditAt:s.clientLocalEditAt,updatedAt:fs.serverTimestamp()},{merge:true});
-        tx.set(ledgerRef,{memberKey:currentMemberKey,transfers:v240TransferClone(all),updatedAt:fs.serverTimestamp()},{merge:false});
-        v240TransferRemote=all;v240TransferRemember(all);
       });
       if(committed)v240TransferApplyCommitted(committed);return changed;
-    }catch(e){console.warn(V240_TRANSFER_BUILD,"repair",e);return false}finally{v240TransferRepairBusy=false}
+    }catch(e){console.warn(V240_TRANSFER_BUILD,"embedded repair",e);return false}finally{v240TransferRepairBusy=false}
   }
   async function v240StartTransferWatch(){
-    const key=String(currentMemberKey||"");if(!key||visitContext||key===v240TransferWatchKey)return;v240TransferWatchKey=key;try{v240TransferUnsub?.()}catch(_){}v240TransferUnsub=null;
-    try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"alpacaBabyTransfers",key);
-      v240TransferUnsub=fs.onSnapshot(ref,snap=>{const remote=snap.exists()&&snap.data()?.transfers&&typeof snap.data().transfers==="object"?v240TransferClone(snap.data().transfers):{};v240TransferRemote=remote;const all=v240TransferLedger();v240TransferRemember(all);const s=ownState||state;if(s&&v240TransferPurge(s,all)){try{saveLocalOnly(s)}catch(_){}try{renderPen()}catch(_){}v240TransferPurgeDom()}v240RepairTransferredServer(false)},e=>console.warn(V240_TRANSFER_BUILD,"ledger watch",e));
-    }catch(e){console.warn(V240_TRANSFER_BUILD,"ledger init",e)}
+    const key=String(currentMemberKey||"");if(!key||visitContext)return false;
+    if(key!==v240TransferWatchKey){v240TransferWatchKey=key;try{v240TransferUnsub?.()}catch(_){}v240TransferUnsub=null}
+    const s=ownState||state;
+    const embedded=s?.alpaca?.factory?.babyTransfers&&typeof s.alpaca.factory.babyTransfers==="object"?v240TransferClone(s.alpaca.factory.babyTransfers):{};
+    if(Object.keys(embedded).length){v240TransferRemote={...v240TransferRemote,...embedded};v240TransferRemember(v240TransferLedger())}
+    if(s&&v240TransferPurge(s)){try{saveLocalOnly(s)}catch(_){}try{renderPen()}catch(_){}v240TransferPurgeDom();setTimeout(()=>v240RepairTransferredServer(false),0)}
+    return true;
   }
   async function v240SendBaby(penNo,id,{skipConfirm=false}={}){
     id=String(id||"");if(!id||visitContext)return;if(v240TransferBusy){showWeatherToast?.("🏭 กำลังส่งเบบี้ตัวนี้อยู่ค่ะ");return}
@@ -18171,25 +18286,22 @@ async function V181_campaignScoreLater(summary){
     if(!skipConfirm&&!(await v240TransferConfirm()))return;
     v240TransferBusy=true;
     try{
-      /* No settlePendingCloudSave here. The server transaction is the source of
-         truth. Old pending/local snapshots are neutralized by the transfer
-         tombstone before any later save can merge them back into a pen. */
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),ledgerRef=fs.doc(db,"alpacaBabyTransfers",currentMemberKey);let committed=null,result=null,ledgerAfter={};
+      try{await settlePendingCloudSave?.()}catch(e){console.warn(V240_TRANSFER_BUILD,"pre-transfer save settle",e)}
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let committed=null,result=null,ledgerAfter={};
       await fs.runTransaction(db,async tx=>{
-        const [saveSnap,ledgerSnap]=await Promise.all([tx.get(saveRef),tx.get(ledgerRef)]);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิกค่ะ");
-        const serverLedger=ledgerSnap.exists()&&ledgerSnap.data()?.transfers&&typeof ledgerSnap.data().transfers==="object"?ledgerSnap.data().transfers:{};const seed={...v240TransferLocal(),...v240TransferClone(serverLedger)};
-        const out=v240TransferMutate(saveSnap.data(),seed,id,v240Now());committed=out.s;result=out.result;ledgerAfter=out.ledger;
-        const raw=saveSnap.data(),rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;committed.clientSaveRevision=rev;committed.clientLocalEditAt=Date.now();
+        const saveSnap=await tx.get(saveRef);if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิกค่ะ");
+        const raw=saveSnap.data(),serverEmbedded=raw?.alpaca?.factory?.babyTransfers&&typeof raw.alpaca.factory.babyTransfers==="object"?raw.alpaca.factory.babyTransfers:{};
+        const seed={...v240TransferLocal(),...v240TransferClone(serverEmbedded)};
+        const out=v240TransferMutate(raw,seed,id,v240Now());committed=out.s;result=out.result;ledgerAfter=out.ledger;
+        const rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;
+        committed.clientSaveRevision=rev;committed.clientLocalEditAt=Date.now();
         tx.set(saveRef,{alpaca:v240TransferClone(committed.alpaca),clientSaveRevision:rev,clientLocalEditAt:committed.clientLocalEditAt,activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:null,updatedAt:fs.serverTimestamp()},{merge:true});
-        tx.set(ledgerRef,{memberKey:currentMemberKey,transfers:v240TransferClone(ledgerAfter),updatedAt:fs.serverTimestamp()},{merge:false});
       });
-      /* Install the tombstone BEFORE touching local state. Any R24 last-good or
-         pending-save merge after this point must purge this ID. */
       v240TransferRemote={...v240TransferRemote,...v240TransferClone(ledgerAfter)};v240TransferRemember(v240TransferLedger());
       v240TransferApplyCommitted(committed);v240TransferPurgeDom();
-      requestAnimationFrame(()=>{v240TransferPurge(ownState||state);v240TransferPurgeDom();try{renderPen()}catch(_){}});
+      requestAnimationFrame(()=>{v240TransferPurge(ownState||state,ledgerAfter);v240TransferPurgeDom();try{renderPen()}catch(_){}});
       setTimeout(()=>v240RepairTransferredServer(true),180);setTimeout(()=>v240RepairTransferredServer(false),1200);
-      const mc=$("modalContent");if(mc){mc.innerHTML=`<section class="feature-panel v240-reward-popup"><div style="font-size:58px">✅🏭</div><h2>${result?.already?"ซ่อมตัวค้างเรียบร้อย":"ส่งเข้าโรงงานแล้วค่ะ"}</h2><p>${result?.already?"ตัวนี้ถูกส่งไปก่อนแล้ว ระบบจึงเอาตัวที่ค้างออกจากคอกโดยไม่เพิ่มโรงงานซ้ำค่ะ":"ตัวอัลปาก้าถูกย้ายออกจากคอก และเพิ่มเข้าคลังโรงงาน ×1 เรียบร้อยค่ะ"}</p><button id="r3454BabyDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal?.();$("r3454BabyDone").onclick=closeModal}
+      const mc=$("modalContent");if(mc){mc.innerHTML=`<section class="feature-panel v240-reward-popup"><div style="font-size:58px">✅🏭</div><h2>${result?.already?"ซ่อมตัวค้างเรียบร้อย":"ส่งเข้าโรงงานแล้วค่ะ"}</h2><p>${result?.already?"ตัวนี้ถูกส่งไปก่อนแล้ว ระบบจึงเอาตัวที่ค้างออกจากคอกโดยไม่เพิ่มโรงงานซ้ำค่ะ":"ตัวอัลปาก้าถูกย้ายออกจากคอก และเพิ่มเข้าคลังโรงงาน ×1 เรียบร้อยค่ะ"}</p><button id="r3455BabyDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal?.();$("r3455BabyDone").onclick=closeModal}
     }catch(e){console.error(V240_TRANSFER_BUILD,"send",e);message?.("ส่งเข้าโรงงานไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{v240TransferBusy=false}
   }
   /* Normalize/save shields are installed here, before the large optional
@@ -18198,10 +18310,10 @@ async function V181_campaignScoreLater(summary){
     const __r3454Normalize=normalizeState;normalizeState=function(raw,player){const s=__r3454Normalize(raw,player);try{v240TransferPurge(s)}catch(_){}return s};
     const __r3454SaveLocal=saveLocalOnly;saveLocalOnly=function(target=ownState||state){try{v240TransferPurge(target)}catch(_){}return __r3454SaveLocal.apply(this,arguments)};
   }catch(e){console.warn(V240_TRANSFER_BUILD,"shield",e)}
-  globalThis.YN_ALPACA_TRANSFER_EARLY={BUILD:V240_TRANSFER_BUILD,send:v240SendBaby,ids:()=>[...v240TransferIds()],ledger:v240TransferLedger,purge:v240TransferPurge,repair:v240RepairTransferredServer,startWatch:v240StartTransferWatch,mutateForTest:v240TransferMutate};
-  globalThis.YN_V240_SEND_BABY=v240SendBaby;
-  setInterval(()=>{v240StartTransferWatch();const s=ownState||state;if(s&&v240TransferPurge(s)){try{saveLocalOnly(s)}catch(_){}try{renderPen()}catch(_){}v240TransferPurgeDom()}},1000);
-  setTimeout(()=>v240StartTransferWatch(),80);
+  globalThis.YN_ALPACA_TRANSFER_EARLY={BUILD:V240_TRANSFER_BUILD,send:v240SendBaby,ids:()=>[...v240TransferIds()],ledger:v240TransferLedger,purge:v240TransferPurge,repair:v240RepairTransferredServer,startWatch:v240StartTransferWatch,mutateForTest:v240TransferMutate,shield:(s)=>{if(!s)return s;const embedded=s?.alpaca?.factory?.babyTransfers||{};v240TransferRemote={...v240TransferRemote,...v240TransferClone(embedded)};v240TransferPurge(s);return s},busy:()=>v240TransferBusy};
+  globalThis.YN_V240_SEND_BABY=globalThis.YN_R3456_SEND_BABY||v240SendBaby;
+  /* R34.56 old transfer watchdog disabled */
+  /* R34.56 old transfer startup disabled */
   function v240InjectBabyFactoryButton(){if(!v240LastAnimal||$("v240SendBabyFactory"))return;const {penNo,id}=v240LastAnimal,a=(ownState||state)?.alpaca?.pens?.[penNo-1]?.alpacas?.find(x=>x.id===id);if(!a||a.type!=="baby"||v240Now()<Number(a.readyProcessAt||0))return;const actions=document.querySelector("#modalContent .alpaca-detail-actions");if(!actions)return;const b=document.createElement("button");b.id="v240SendBabyFactory";b.className="primary v240-send-baby";b.type="button";b.innerHTML=`<img src="${V240_PROCESSING_MEAT_ICON}" alt="">ส่งเข้าโรงงานแปรรูป`;b.onclick=()=>v240SendBaby(penNo,id);actions.prepend(b)}
   /* V265: baby factory action is bound directly in the pen icon and baby detail UI.
      The old MutationObserver injector is intentionally disabled to prevent timing-dependent failures on slower clients. */
@@ -33929,9 +34041,9 @@ function removeBabyDom(id){
   try{const q=CSS?.escape?CSS.escape(String(id)):String(id).replace(/[\"\\]/g,"\\$&");document.querySelectorAll(`.alpaca-pen-animal[data-alpaca-id="${q}"]`).forEach(n=>n.remove())}catch(_){}
 }
 
-/* R34.53 — external irreversible transfer ledger.
-   This lives OUTSIDE /saves. A stale whole-save write can no longer erase the
-   fact that a baby already entered the factory. */
+/* R34.55 — embedded irreversible transfer ledger.
+   Source of truth is /saves.alpaca.factory.babyTransfers plus a local shield.
+   No separate Firestore collection is required. */
 let r3453TransferCache={},r3453TransferUnsub=null,r3453RepairBusy=false,r3453LastRepair=0;
 function r3453TransferIds(){return new Set(Object.keys(r3453TransferCache||{}).map(String))}
 function locateTransferredCount(s,ledger){const ids=new Set(Object.keys(ledger||{}).map(String));let n=0;for(const p of (s?.alpaca?.pens||[]))for(const a of (p?.alpacas||[]))if(ids.has(String(a?.id||"")))n++;if(Array.isArray(s?.alpaca?.vault))for(const a of s.alpaca.vault)if(ids.has(String(a?.id||"")))n++;return n}
@@ -33949,28 +34061,15 @@ function r3453PurgeDom(){const ids=r3453TransferIds();if(!ids.size)return;docume
 function r3453PurgeOwn(){const s=ownState||state;if(!s)return 0;const n=r3453PurgeState(s);if(n){ownState=s;if(!visitContext)state=s;try{saveLocalOnly?.(s)}catch(_){}}r3453PurgeDom();return n}
 
 async function r3453RepairServerFromLedger(force=false){
-  if(r3453RepairBusy||visitContext||!currentMemberKey||!Object.keys(r3453TransferCache||{}).length)return;
-  const t=Date.now();if(!force&&t-r3453LastRepair<5000)return;r3453LastRepair=t;r3453RepairBusy=true;
-  try{
-    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),ledgerRef=fs.doc(db,"alpacaBabyTransfers",currentMemberKey);let next=null;
-    await fs.runTransaction(db,async tx=>{
-      const ss=await tx.get(saveRef),ls=await tx.get(ledgerRef);if(!ss.exists())return;
-      const ledger=ls.exists()&&ls.data()?.transfers&&typeof ls.data().transfers==="object"?cp(ls.data().transfers):{};if(!Object.keys(ledger).length)return;
-      r3453TransferCache={...r3453TransferCache,...ledger};const raw=cp(ss.data()),s=ensureAlpaca(raw),before=locateTransferredCount(s,ledger);if(!before)return;
-      r3453PurgeState(s);const rev=Math.max(Number(raw.clientSaveRevision)||0,Number((ownState||state)?.clientSaveRevision)||0)+1;s.clientSaveRevision=rev;s.clientLocalEditAt=Date.now();next=cp(s);
-      tx.set(saveRef,{alpaca:cp(s.alpaca),clientSaveRevision:rev,clientLocalEditAt:s.clientLocalEditAt,updatedAt:fs.serverTimestamp()},{merge:true});
-    });
-    if(next){const base=cp(ownState||state||{});base.alpaca=cp(next.alpaca);base.clientSaveRevision=Math.max(Number(base.clientSaveRevision)||0,Number(next.clientSaveRevision)||0);base.clientLocalEditAt=Number(next.clientLocalEditAt)||Date.now();applyRemote(base);r3453PurgeDom()}
-  }catch(e){console.warn("R34.53 ledger repair",e)}finally{r3453RepairBusy=false}
+  if(r3453RepairBusy||visitContext||!currentMemberKey)return;
+  const early=globalThis.YN_ALPACA_TRANSFER_EARLY;if(early?.repair)return early.repair(force);
 }
 
 async function r3453StartLedgerWatch(){
-  if(!currentMemberKey||visitContext)return false;try{r3453TransferUnsub?.()}catch(_){}r3453TransferUnsub=null;
-  try{
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"alpacaBabyTransfers",currentMemberKey),embedded=(ownState||state)?.alpaca?.factory?.babyTransfers;
-    if(embedded&&typeof embedded==="object"&&Object.keys(embedded).length){await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),old=snap.exists()&&snap.data()?.transfers&&typeof snap.data().transfers==="object"?snap.data().transfers:{};tx.set(ref,{memberKey:currentMemberKey,transfers:{...cp(old),...cp(embedded)},updatedAt:fs.serverTimestamp()},{merge:false})})}
-    r3453TransferUnsub=fs.onSnapshot(ref,snap=>{r3453TransferCache=snap.exists()&&snap.data()?.transfers&&typeof snap.data().transfers==="object"?cp(snap.data().transfers):{};r3453PurgeOwn();try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}r3453PurgeDom();r3453RepairServerFromLedger(false)},e=>console.warn("R34.53 ledger watch",e));return true;
-  }catch(e){console.warn("R34.53 ledger init",e);return false}
+  if(!currentMemberKey||visitContext)return false;
+  const embedded=(ownState||state)?.alpaca?.factory?.babyTransfers;
+  r3453TransferCache={...r3453TransferCache,...(embedded&&typeof embedded==="object"?cp(embedded):{}),...(globalThis.YN_ALPACA_TRANSFER_EARLY?.ledger?.()||{})};
+  r3453PurgeOwn();try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){}r3453PurgeDom();return true;
 }
 
 async function sendBabyServer(penHint,id,{skipConfirm=false}={}){
@@ -33982,7 +34081,7 @@ async function sendBabyServer(penHint,id,{skipConfirm=false}={}){
 }
 
 /* Override the API used by every current pen ready icon. */
-globalThis.YN_V240_SEND_BABY=globalThis.YN_ALPACA_TRANSFER_EARLY?.send||sendBabyServer;
+globalThis.YN_V240_SEND_BABY=globalThis.YN_R3456_SEND_BABY||sendBabyServer;
 
 async function repairTransferredGhostsOnce(){
   if(visitContext||!currentMemberKey||repairTransferredGhostsOnce.done)return;repairTransferredGhostsOnce.done=true;
@@ -34050,19 +34149,23 @@ try{
 }catch(e){console.warn("R34.53 persistence shield",e)}
 let r3453WatchStartedFor="";
 function r3453EnsureWatch(){const k=String(currentMemberKey||"");if(!k||visitContext)return;if(k!==r3453WatchStartedFor){r3453WatchStartedFor=k;r3453StartLedgerWatch()}const screen=$("alpacaPenScreen");if(screen&&!screen.classList.contains("hidden")){const removed=r3453PurgeOwn();r3453PurgeDom();if(removed)r3453RepairServerFromLedger(false)}}
-setInterval(r3453EnsureWatch,900);setTimeout(r3453EnsureWatch,100);window.addEventListener("pageshow",()=>setTimeout(r3453EnsureWatch,50),{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(r3453EnsureWatch,50)},{passive:true});
-globalThis.YN_R3453_ALPACA_TRANSFER={BUILD:"S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH",sendBabyServer:globalThis.YN_ALPACA_TRANSFER_EARLY?.send||sendBabyServer,startLedgerWatch:r3453StartLedgerWatch,repair:r3453RepairServerFromLedger,purge:r3453PurgeOwn};
-globalThis.YN_V240_SEND_BABY=globalThis.YN_ALPACA_TRANSFER_EARLY?.send||sendBabyServer;
-window.YAINOO_PACKAGE_BUILD='S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH';
+/* R34.56 R34.53 transfer watchdog disabled */
+globalThis.YN_R3453_ALPACA_TRANSFER={BUILD:"S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE",sendBabyServer:globalThis.YN_ALPACA_TRANSFER_EARLY?.send||sendBabyServer,startLedgerWatch:r3453StartLedgerWatch,repair:r3453RepairServerFromLedger,purge:r3453PurgeOwn};
+globalThis.YN_V240_SEND_BABY=globalThis.YN_R3456_SEND_BABY||sendBabyServer;
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
 globalThis.YN_R3451={BUILD,sendBabyServer,syncRoyal,renderRoyalDrops,claimRoyal};
 window.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
-window.YAINOO_PACKAGE_BUILD='S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH';
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
-window.YAINOO_PACKAGE_BUILD='S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH';
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
-window.YAINOO_PACKAGE_BUILD='S2-R34.54-ALPACA-TRANSFER-SINGLE-PATH';
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
 try{globalThis.YN_R3454_DIAG=()=>({build:window.YAINOO_PACKAGE_BUILD,transfer:globalThis.YN_ALPACA_TRANSFER_EARLY?.BUILD||null,sendIsEarly:globalThis.YN_V240_SEND_BABY===globalThis.YN_ALPACA_TRANSFER_EARLY?.send,memberKey:String(currentMemberKey||"")})}catch(_){}
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
+
+window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
