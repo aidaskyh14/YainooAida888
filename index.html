@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE">
+  <link rel="stylesheet" href="style.css?v=S2-R34.57-DEEP-SYSTEM-INTEGRITY">
 </head>
 <body>
   <main id="app">
@@ -463,7 +463,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE"></script>
+<script src="game.js?v=S2-R34.57-DEEP-SYSTEM-INTEGRITY"></script>
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
@@ -2717,7 +2717,7 @@
 <script id="r50-bingo-recycle-controller">
 (function YN_R3450_BINGO_RECYCLE(){
   "use strict";
-  const BUILD="S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE";
+  const BUILD="S2-R34.57-DEEP-SYSTEM-INTEGRITY";
   const q=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]));
   const iv=v=>Math.max(0,Math.floor(Number(v)||0));
@@ -2855,6 +2855,22 @@
   const mo=new MutationObserver(()=>{replaceRecycleEntry();bindBingoEntry()});mo.observe(document.body,{subtree:true,childList:true});setInterval(()=>{replaceRecycleEntry();bindBingoEntry()},700);replaceRecycleEntry();bindBingoEntry();
 
   globalThis.YN_R3450={BUILD,openBingo,openPicker,openRecycler};window.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
+
+<script id="r3457-temple-atomic-final">
+(()=>{
+  'use strict';
+  const BUILD='S2-R34.57-TEMPLE-ATOMIC-FINAL',busy=new Set();
+  const api=globalThis.YN_R3429;if(!api)return;
+  const open=()=>{try{return typeof v15TempleIsOpen!=='function'||v15TempleIsOpen()}catch(_){return true}};
+  const wrap=(name,fn)=>{globalThis[name]=async function(...args){if(!open()){try{return v15ShowTempleClosed?.()}catch(_){return}}const k=name+':'+args.join(':');if(busy.has(k))return;busy.add(k);try{if(typeof settlePendingCloudSave==='function')await settlePendingCloudSave();return await fn(...args)}catch(e){console.warn(BUILD,name,e);try{message?.('ทำรายการไม่สำเร็จ',e?.message||'กรุณาลองใหม่ค่ะ')}catch(_){}}finally{busy.delete(k)}}};
+  wrap('v15SendSolo',api.sendSolo);wrap('v15SendGroup',api.sendGroup);
+  /* Keep accept/join/claim on the sharded R34.29 source too, so R34.31 never
+     redirects a stale button into an older monolithic path. */
+  wrap('v15AcceptSolo',api.acceptSolo);wrap('v15JoinGroup',api.joinGroup);wrap('v15ClaimSolo',api.claimSolo);
+  globalThis.YN_R3457_TEMPLE={BUILD};console.info(BUILD,'loaded');
 })();
 </script>
 

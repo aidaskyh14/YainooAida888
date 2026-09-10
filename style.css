@@ -10751,3 +10751,22 @@ body.r50-lock{overflow:hidden!important}
 .r3451-royal-drop img{width:30px!important;height:30px!important;object-fit:contain!important;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))!important}
 .r3451-royal-drop small{position:absolute!important;right:-7px!important;top:-6px!important;min-width:17px!important;height:17px!important;border-radius:9px!important;background:#fff!important;color:#5b2a61!important;font-size:8px!important;font-weight:900!important;line-height:17px!important;text-align:center!important}
 #r3420RoyalCdGround,#yn1218RoyalDropLayer,#yn1219RoyalDropLayer,#yn1220RoyalDropLayer,#r34RoyalDiscLayer,#r3411RoyalDropLayer,#r34120RoyalDiscLayer,#core13RoyalDropBtn{display:none!important}
+
+
+/* S2 R34.57 — basement seed/touch reliability */
+.r17-flower-picker{
+  position:relative!important;
+  z-index:2147482000!important;
+  pointer-events:auto!important;
+}
+.r17-flower-picker button[data-r17-plant]{
+  position:relative!important;
+  z-index:2147482001!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  min-height:112px!important;
+  cursor:pointer!important;
+  -webkit-tap-highlight-color:rgba(255,255,255,.16);
+}
+.r17-flower-picker button[data-r17-plant] *{pointer-events:none!important}
+.r17-flower-picker button[data-r17-plant].r3457-seed-selected{transform:scale(.97)}

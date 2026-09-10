@@ -3332,7 +3332,21 @@ async function sendAdminNotice(){
   try{const {db,fs}=await getFirebaseContext();await fs.addDoc(fs.collection(db,"broadcasts"),{type:"notice",title,body,from:"Aida",createdAt:fs.serverTimestamp()});showWeatherToast("📣 ส่งแจ้งเตือนให้ทุกคนแล้ว");showAdminCenter()}catch(error){message("ส่งไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
 }
 async function sendAdminGlobalGift(entry,qty){
-  if(!entry)return;try{const {db,fs}=await getFirebaseContext();await fs.addDoc(fs.collection(db,"broadcasts"),{type:"gift",title:"🎁 ของขวัญจากยัยหนู",body:"กดรับเพื่อเพิ่มของเข้ากระเป๋า",itemType:entry.type,itemKey:entry.key,itemName:entry.name,qty:Math.max(1,Math.floor(qty)),from:"Aida",createdAt:fs.serverTimestamp()});showWeatherToast("🎁 ส่งของขวัญให้ทุกคนแล้ว");showAdminCenter()}catch(error){message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
+  if(!entry)return;qty=Math.max(1,Math.floor(qty));
+  try{
+    const {db,fs}=await getFirebaseContext();
+    const targets=Object.keys(MEMBERS||{}).filter(n=>n&&n!=="Aida").map(name=>({name,key:memberKeyFromName(name)})).filter(x=>x.key);
+    if(!targets.length)throw new Error("ไม่พบรายชื่อสมาชิก");
+    const batch=fs.writeBatch(db),sentAt=Date.now();let count=0;
+    for(const t of targets){
+      const giftRef=fs.doc(fs.collection(db,"gifts"));
+      const gift={fromKey:"aida",fromName:"Aida",toKey:t.key,toName:t.name,itemType:entry.type,itemKey:String(entry.key),itemName:String(entry.name||entry.key),qty,status:"pending",source:"admin-global",createdAtClient:sentAt,createdAt:fs.serverTimestamp()};
+      batch.set(giftRef,gift);
+      batch.set(fs.doc(db,"mailboxes",t.key,"items",giftRef.id),{source:"yainoo",type:"gift",giftId:giftRef.id,fromKey:"aida",fromName:"Aida",title:"🎁 ของขวัญจากยัยหนู",text:`${entry.name} ×${qty} • ของขวัญนี้จะอยู่จนกว่าจะกดรับ`,read:false,createdAt:fs.serverTimestamp()});
+      count++;
+    }
+    await batch.commit();notificationDataCache.at=0;showWeatherToast(`🎁 ส่งของขวัญค้างรับให้สมาชิก ${count} คนแล้ว`);showAdminCenter();
+  }catch(error){message("ส่งของขวัญไม่สำเร็จ",error.message||"กรุณาลองใหม่")}
 }
 
 function enterGameScreen(){
@@ -3728,10 +3742,34 @@ function draw(){
 
 // ===== อาหารแบบ count map =====
 async function craft(id){
-  const recipe=recipeById(id);if(!recipe||!can(recipe))return;Object.entries(recipe.need).forEach(([key,count])=>state.bag[key]-=count);const success=Math.random()*100<recipe.chance;
-  if(success){const reward=randInt(recipe.reward[0],recipe.reward[1]);addDishToState(state,recipe.id,1);state.merit+=reward;incrementMissionOn(state,"craftFood",1);save();try{await settlePendingCloudSave?.()}catch(e){console.warn("R32 craft save",e)}updateMeritUI();$("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>อาหารเพิ่มลงกระเป๋า ×1<br>ได้รับ +${reward} กุศล</p></section>`}
-  else{save();try{await settlePendingCloudSave?.()}catch(e){console.warn("R32 craft failure save",e)}$("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`}
+  const recipe=recipeById(id);if(!recipe)return;
+  const btn=$("confirmCraftBtn");if(btn?.dataset.r3457Busy==="1")return;
+  if(btn){btn.dataset.r3457Busy="1";btn.disabled=true;btn.textContent="กำลังคราฟ…"}
+  try{
+    if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
+    let next=null,success=false,reward=0;
+    await fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const st=normalizeState(snap.data(),currentMember);assertCurrentCloudSession?.(snap.data(),currentMember);
+      for(const [key,count] of Object.entries(recipe.need||{}))if((Number(st.bag?.[key])||0)<count)throw new Error(`วัตถุดิบ ${CROPS?.[key]?.name||key} ไม่พอ`);
+      for(const [key,count] of Object.entries(recipe.need||{}))st.bag[key]=Math.max(0,(Number(st.bag[key])||0)-count);
+      success=Math.random()*100<Number(recipe.chance||100);
+      if(success){reward=randInt(recipe.reward?.[0]||0,recipe.reward?.[1]||0);addDishToState(st,recipe.id,1);st.merit=(Number(st.merit)||0)+reward;incrementMissionOn(st,"craftFood",1)}
+      st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;st.clientLocalEditAt=Date.now();next=cloneData(st);
+      tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+    });
+    ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();
+    if(success){
+      const afterQty=(()=>{try{return dishCountInState(recipe.id,ownState)}catch(_){return Number(ownState?.dishInventory?.[recipe.id])||0}})();
+      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>✨ คราฟสำเร็จ!</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>อาหารเข้ากระเป๋าแล้ว ×1<br>ได้รับ +${reward} กุศล<br><small>มีอาหารชนิดนี้ในกระเป๋า ×${afterQty}</small></p></section>`;
+    }else{
+      $("modalContent").innerHTML=`<section class="feature-panel craft-success-panel"><h2>💨 คราฟไม่สำเร็จ</h2><img src="${recipe.image}" alt="${recipe.name}"><h3>${recipe.name}</h3><p>วัตถุดิบครั้งนี้สูญเปล่าแล้ว</p></section>`;
+    }
+  }catch(e){message("คราฟไม่สำเร็จ",e?.message||"กรุณาลองใหม่ค่ะ")}
+  finally{if(btn){btn.dataset.r3457Busy="0";btn.disabled=false;btn.textContent="ยืนยัน"}}
 }
+
 async function craftPestle(key){
   const s=ownState||state,item=PESTLE_ITEMS[key];if(!item||item.locked)return;if(item.dishAny&&totalDishCount(s)<item.dishAny){message("วัตถุดิบยังไม่ครบ",`ต้องมีอาหารที่คราฟแล้วอย่างน้อย ${item.dishAny} ชิ้น`);return}if(item.meritNeed&&(Number(s.merit)||0)<item.meritNeed){message("กุศลไม่พอ",`ต้องใช้ ${item.meritNeed} คะแนนกุศล`);return}if(!Object.entries(item.need||{}).every(([k,n])=>(Number(s.animalProducts[k])||0)>=n)){message("วัตถุดิบยังไม่ครบ","ผลผลิตสัตว์ยังไม่ครบตามสูตร");return}
   if(item.dishAny)consumeAnyDishes(s,item.dishAny);if(item.meritNeed)s.merit-=item.meritNeed;Object.entries(item.need||{}).forEach(([k,n])=>s.animalProducts[k]-=n);s.specials[key]=(s.specials[key]||0)+1;save();updateMeritUI();message("คราฟสำเร็จ",`ยินดีด้วยนะคะ คุณได้รับ ${item.name} ×1<br>โอกาสสำเร็จ 100%`);
@@ -12632,7 +12670,11 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     fishPondId=id;currentScene="fishingPondV2";$("sceneScreen").style.backgroundImage=`url("${FISH_PONDS[id].image}")`;
     setSceneNav({backText:"กลับหน้าล็อบบี้",backAction:openFishingLobby,nextText:"ไปที่แปลงผัก",nextAction:returnToFarm});
     const localActive=loadFishMirrorV2();if(localActive&&Number(localActive.pondId)===Number(id))fishSlots[Number(localActive.slot)-1]=localActive;
+    const savedActive=(ownState||state)?.fishingActiveSession;if(savedActive&&Number(savedActive.claimDeadline||0)>NOW()&&Number(savedActive.pondId)===Number(id)){fishSlots[Number(savedActive.slot)-1]=savedActive;saveFishMirrorV2(savedActive)}
     drawFishingV2();subscribeFishV2();
+    /* Server recovery: returning from another app must restore the same cast even if
+       the in-app browser discarded timers/local mirror. */
+    getFirebaseContext().then(async({db,fs})=>{try{const ref=fs.doc(db,"saves",fishingActorKey()),snap=await fs.getDoc(ref);if(!snap.exists())return;const a=snap.data()?.fishingActiveSession;if(a&&Number(a.claimDeadline||0)>NOW()&&Number(a.pondId)===Number(id)){fishSlots[Number(a.slot)-1]=a;saveFishMirrorV2(a);if(currentScene==="fishingPondV2")drawFishingV2()}}catch(e){console.warn("R34.57 fishing recovery",e)}});
   }
   function slotDocId(pond,slot){return `${DAILY_KEY()}-p${pond}-s${slot}`}
   function subscribeFishV2(){
@@ -12717,6 +12759,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         s.fishingBaits[baitKey]-=1;
         const roll=rollFishingCatches(baitKey),finish=now+bait.durationMs;
         const directSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:"mameaw",ownerName:currentProfileDisplayName(),baitKey,catches:roll.catches,totalWeight:roll.total,status:"fishing",startedAt:now,finishAt:finish,claimDeadline:finish+5*MIN};
+        s.fishingActiveSession={...directSlot,savedAt:now};
         await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(slotRef,{...directSlot,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(playerRef,{memberKey:"mameaw",pondId:fishPondId,slot:slotNo,finishAt:finish,claimDeadline:finish+5*MIN,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -12737,6 +12780,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         s.fishingBaits[baitKey]-=1;
         const roll=rollFishingCatches(baitKey),finish=now+bait.durationMs;
         newSlot={dateKey:DAILY_KEY(),pondId:fishPondId,slot:slotNo,ownerKey:actorKey,ownerName:currentProfileDisplayName(),baitKey,catches:roll.catches,totalWeight:roll.total,status:"fishing",startedAt:now,finishAt:finish,claimDeadline:finish+5*MIN};
+        s.fishingActiveSession={...newSlot,savedAt:now};
         next=s;
         tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(slotRef,{...newSlot,updatedAt:fs.serverTimestamp()},{merge:false});
@@ -12779,7 +12823,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         d.scores.mameaw=Number((Number(d.scores.mameaw||0)+claimedWeight).toFixed(2));
         d.names.mameaw=currentProfileDisplayName();d.ponds.mameaw=Number(x.pondId||0);
         ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=d.scores.mameaw;s.missions.progress.dailyFishingWeight500=d.scores.mameaw;
-        s.fishingCooldownUntil=NOW()+5*MIN;s.fishingClaimReceipts[receipt]=NOW();
+        s.fishingCooldownUntil=NOW()+5*MIN;s.fishingClaimReceipts[receipt]=NOW();s.fishingActiveSession=null;
         await fs.setDoc(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         await fs.setDoc(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
         try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("V213 mameaw slot cleanup",e)}
@@ -12837,6 +12881,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         s.missions.progress.dailyFishingWeight500=d.scores[key];
         s.fishingCooldownUntil=NOW()+5*MIN;
         s.fishingClaimReceipts[receipt]=NOW();
+        s.fishingActiveSession=null;
         next=s;
 
         tx.set(saveRef,{
@@ -23645,11 +23690,37 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function openHomeRecipe16(key){const r=HOME_FOODS[key],s=ensureR16State(own16());if(!r)return;$16("modalContent").innerHTML=`<section class="feature-panel r16-home-recipe r16-scroll-panel"><img class="r16-food-hero" src="${r.image}" alt="${safe16(r.name)}"><h2>${safe16(r.name)}</h2><div class="r16-chance-pill">โอกาสคราฟสำเร็จ ${effectiveCraftChance16(r)}%</div><div class="r16-need-grid">${recipeNeedHTML16(r)}</div><div class="r16-qty-row"><button id="r16QtyMinus" type="button">−</button><strong id="r16CraftQty">1</strong><button id="r16QtyPlus" type="button">＋</button></div><small>คราฟได้ครั้งละ 1–10 ชิ้น • ถ้าพลาดหักวัตถุดิบ 50%</small><button id="r16CraftHomeFood" class="primary-spooky-action" type="button">คราฟ</button><button id="r16BackKitchen" class="secondary-action" type="button">กลับเมนูอาหารบ้าน</button></section>`;let q=1;const paint=()=>{$16("r16CraftQty").textContent=String(q);$16("r16QtyMinus").disabled=q<=1;$16("r16QtyPlus").disabled=q>=10};$16("r16QtyMinus").onclick=()=>{q=Math.max(1,q-1);paint()};$16("r16QtyPlus").onclick=()=>{q=Math.min(10,q+1);paint()};$16("r16CraftHomeFood").onclick=()=>craftHomeFood16(key,q);$16("r16BackKitchen").onclick=openHomeKitchen16;paint();openModal()}
   function enoughForFull16(s,r,qty){return Object.entries(r.products).every(([k,n])=>int16(s.animalProducts?.[k])>=n*qty)&&Object.entries(r.crops).every(([k,n])=>int16(s.bag?.[k])>=n*qty)}
-  function craftHomeFood16(key,qty){
-    qty=Math.max(1,Math.min(10,int16(qty)||1));const r=HOME_FOODS[key],s=ensureR16State(own16());if(!r)return;if(!isAdmin16()&&!enoughForFull16(s,r,qty))return message("วัตถุดิบยังไม่ครบ",`ต้องมีวัตถุดิบพอสำหรับ ${qty} ชิ้นก่อนเริ่มคราฟค่ะ`);
-    const chance=effectiveCraftChance16(r);let success=0,fail=0;for(let x=0;x<qty;x++){const ok=Math.random()*100<chance;ok?success++:fail++;if(!isAdmin16()){const factor=ok?1:.5;Object.entries(r.products).forEach(([k,n])=>s.animalProducts[k]=Math.max(0,(Number(s.animalProducts[k])||0)-Math.ceil(n*factor)));Object.entries(r.crops).forEach(([k,n])=>s.bag[k]=Math.max(0,(Number(s.bag[k])||0)-Math.ceil(n*factor)))} }
-    if(success){s.homeFoods[key]+=success;try{incrementMissionOn(s,"homeFoodCraft",success)}catch(_){}}if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});if(success){try{globalThis.YN_R29?.scoreHomeFood?.(success,`homefood:${currentMemberKey}:${key}:${Date.now()}:${success}`)}catch(_){}}
-    $16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-craft-result"><img src="${r.image}" alt="${safe16(r.name)}"><h2>${success?"✨ คราฟเสร็จแล้วค่ะ":"💨 คราฟไม่สำเร็จ"}</h2><p><b>${safe16(r.name)}</b></p><div class="r16-result-chips"><span>สำเร็จ ${success}</span><span>ไม่สำเร็จ ${fail}</span></div><small>ชิ้นที่สำเร็จเข้ากระเป๋า → อาหารบ้านแล้ว • ชิ้นที่พลาดหักวัตถุดิบ 50%</small><button id="r16CraftResultDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;$16("r16CraftResultDone").onclick=openHomeKitchen16;openModal();
+  async function craftHomeFood16(key,qty){
+    qty=Math.max(1,Math.min(10,int16(qty)||1));const r=HOME_FOODS[key];if(!r)return;
+    const btn=$16("r16CraftHomeFood");if(btn?.dataset.r3457Busy==="1")return;
+    if(btn){btn.dataset.r3457Busy="1";btn.disabled=true;btn.textContent="กำลังบันทึก…"}
+    try{
+      if(typeof settlePendingCloudSave==="function")await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);
+      let next=null,success=0,fail=0;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=ensureR16State(normalizeState(snap.data(),currentMember));assertCurrentCloudSession?.(snap.data(),currentMember);
+        if(!isAdmin16()&&!enoughForFull16(st,r,qty))throw new Error(`ต้องมีวัตถุดิบพอสำหรับ ${qty} ชิ้นก่อนเริ่มคราฟค่ะ`);
+        const chance=effectiveCraftChance16(r);success=0;fail=0;
+        for(let x=0;x<qty;x++){
+          const ok=Math.random()*100<chance;ok?success++:fail++;
+          if(!isAdmin16()){
+            const factor=ok?1:.5;
+            Object.entries(r.products).forEach(([k,n])=>st.animalProducts[k]=Math.max(0,(Number(st.animalProducts[k])||0)-Math.ceil(n*factor)));
+            Object.entries(r.crops).forEach(([k,n])=>st.bag[k]=Math.max(0,(Number(st.bag[k])||0)-Math.ceil(n*factor)));
+          }
+        }
+        if(success){st.homeFoods[key]=(Number(st.homeFoods[key])||0)+success;try{incrementMissionOn(st,"homeFoodCraft",success)}catch(_){}}
+        if(isAdmin16())ensureAdminStock(st);st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;st.clientLocalEditAt=Date.now();next=clone16(st);
+        tx.set(saveRef,{...clone16(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI?.();
+      if(success){try{globalThis.YN_R29?.scoreHomeFood?.(success,`homefood:${currentMemberKey}:${key}:${Date.now()}:${success}`)}catch(_){}}
+      $16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-craft-result"><img src="${r.image}" alt="${safe16(r.name)}"><h2>${success?"✨ คราฟเสร็จแล้วค่ะ":"💨 คราฟไม่สำเร็จ"}</h2><p><b>${safe16(r.name)}</b></p><div class="r16-result-chips"><span>สำเร็จ ${success}</span><span>ไม่สำเร็จ ${fail}</span></div><small>${success?`ของเข้ากระเป๋า → อาหารบ้านแล้ว • มีทั้งหมด ×${int16(ownState?.homeFoods?.[key])}`:"ชิ้นที่พลาดหักวัตถุดิบ 50%"}</small><button id="r16CraftResultDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;
+      $16("r16CraftResultDone").onclick=openHomeKitchen16;openModal();
+    }catch(e){message("คราฟอาหารบ้านไม่สำเร็จ",e?.message||"กรุณาลองใหม่ค่ะ")}
+    finally{if(btn){btn.dataset.r3457Busy="0";btn.disabled=false;btn.textContent="คราฟ"}}
   }
 
   function fortune16(){const s=ensureR16State(own16()),today=dayKey16();if(s.houseFortune.day===today&&s.houseFortune.id){return compactMsg16("🔮 ดูดวงวันนี้",`คุณดูดวงของวันนี้ไปแล้ว จะกดอีกหาพระแสงอะไรคะ ไปนอน<br><small>${safe16(FORTUNES.find(x=>x.id===s.houseFortune.id)?.name||"")}</small>`)}const f=FORTUNES[Math.floor(Math.random()*FORTUNES.length)];s.houseFortune={day:today,id:f.id,at:now16()};if(f.id==="neutral"&&!isAdmin16())s.merit=(Number(s.merit)||0)+20;if(f.id==="pet")acceleratePetDrops16(s,.15);if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});updateMeritUI?.();$16("modalContent").innerHTML=`<section class="feature-panel r16-fortune-modal"><div class="r16-fortune-orb">${f.icon}</div><h2>${safe16(f.name)}</h2><p>${safe16(f.text)}</p><small>ดวงนี้มีผลจริงจนถึง 00:00 น. และจะยังอยู่แม้ออกจากเกมค่ะ</small></section>`;openModal();applyFortunePersistent16(s)}
@@ -34169,3 +34240,40 @@ try{globalThis.YN_R3454_DIAG=()=>({build:window.YAINOO_PACKAGE_BUILD,transfer:gl
 window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
 window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
+
+
+/* ======================================================================
+   S2 R34.57 — DEEP SYSTEM INTEGRITY
+   Critical persistence/input hardening requested 2026-09-09.
+   ====================================================================== */
+(function YN_R3457_DEEP_SYSTEM_INTEGRITY(){
+  "use strict";
+  const BUILD="S2-R34.57-DEEP-SYSTEM-INTEGRITY";
+  let lastFlush=0;
+  function durable(){const t=Date.now();if(t-lastFlush<180)return;lastFlush=t;try{save?.()}catch(_){}try{flushCloudSave?.()}catch(_){} }
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)durable();else{setTimeout(()=>{try{if(currentScene==="house")globalThis.YN_R17?.renderHouse?.()}catch(_){}},60)}},{passive:true});
+  window.addEventListener("pagehide",durable,{passive:true});
+
+  /* Basement picker: one large physical tap target owns selection. */
+  let basementTap="",basementAt=0;
+  function ownBasementInput(e){
+    if(currentScene!=="house"||visitContext)return;
+    const t=e.target?.closest?.("[data-r17-plant]");if(!t)return;
+    const idx=Number(t.dataset.r17PlantPlot),key=String(t.dataset.r17Plant||"");if(!Number.isFinite(idx)||!key)return;
+    const sig=`${idx}:${key}`,now=performance.now();
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(sig===basementTap&&now-basementAt<450)return;basementTap=sig;basementAt=now;
+    t.disabled=true;t.classList.add("r3457-seed-selected");
+    try{globalThis.YN_R17?.plantFlower?.(idx,key)}finally{setTimeout(()=>{if(t?.isConnected)t.disabled=false},500)}
+  }
+  window.addEventListener("pointerdown",ownBasementInput,true);
+  window.addEventListener("touchstart",ownBasementInput,{capture:true,passive:false});
+
+  /* A result message is not proof of persistence. Keep critical UI/inventory fresh. */
+  const refreshCritical=()=>{try{if(!visitContext&&ownState){state=ownState;saveLocalOnly?.(ownState)}}catch(_){} };
+  document.addEventListener("pointerup",e=>{if(e.target?.closest?.("#ynuClaimFish,#r16CraftHomeFood,#confirmCraftBtn,[data-s2-ghost-target],[data-solo-send],[data-group-send]")){refreshCritical();setTimeout(durable,40)}},true);
+
+  globalThis.YN_R3457={BUILD,durable};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
