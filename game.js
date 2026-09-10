@@ -19664,6 +19664,8 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const h=s.honeyDelivery;
     h.active=Boolean(h.active);
     h.calledAt=num(h.calledAt);
+    h.tripId=String(h.tripId||"");
+    h.lastCompletedTripId=String(h.lastCompletedTripId||"");
     h.reward=h.reward&&typeof h.reward==="object"?h.reward:null;
     h.fuelReadyAt=num(h.fuelReadyAt);
     h.fuelExpiresAt=num(h.fuelExpiresAt);
@@ -20051,14 +20053,46 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     await fs.setDoc(fs.doc(db,"saves",currentMemberKey),{honeyDelivery:cloneData(clean),updatedAt:fs.serverTimestamp()},{merge:true});
   }
 
+  const honeyActiveShadowKey=()=>currentMemberKey?`yn:s2:r3459:honey-active:${currentMemberKey}`:"";
+  function rememberHoneyTrip(h){
+    if(!h?.active||!h?.tripId||!currentMemberKey)return;
+    try{localStorage.setItem(honeyActiveShadowKey(),JSON.stringify({tripId:String(h.tripId),calledAt:Number(h.calledAt)||0,savedAt:Date.now()}))}catch(_){}
+  }
+  function forgetHoneyTrip(tripId=""){
+    if(!currentMemberKey)return;
+    try{const k=honeyActiveShadowKey(),raw=localStorage.getItem(k),old=raw?JSON.parse(raw):null;if(!tripId||!old?.tripId||String(old.tripId)===String(tripId))localStorage.removeItem(k)}catch(_){}
+  }
+  function newHoneyTripId(){
+    try{if(globalThis.crypto?.randomUUID)return `hny-${crypto.randomUUID()}`}catch(_){}
+    return `hny-${String(currentMemberKey||"member")}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+  }
+
   async function callHoney(){
     if(!honeyEnabled()||transit||!currentMemberKey)return;
-    const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery,t=now();
-    advanceFuelCycle(h,t);if(h.active)return;if(fuelPercent(h,t)<100)return showFuelModal();
+    const local=ensureHoneyState(ownState||state,currentMember),lh=local?.honeyDelivery,t=now();
+    if(!lh)return;
+    advanceFuelCycle(lh,t);if(lh.active)return;if(fuelPercent(lh,t)<100)return showFuelModal();
     transit=true;
     try{
-      h.active=true;h.calledAt=t;h.reward=null;h.fuelPercentStored=0;h.fuelAutoBasePct=0;h.fuelAutoBaseAt=t;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=0;h.needsSeedPersist=false;
-      applyOwn(s);try{save()}catch(_){};await persistHoneyNow(s);closeModal();renderFuelHud();
+      /* Drain an older queued whole-save before starting the trip. Otherwise that
+         older snapshot can arrive after the trip transaction and make the bike vanish. */
+      if((typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer)||(typeof cloudSaveInFlight!=="undefined"&&cloudSaveInFlight))await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),tripId=newHoneyTripId();let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=ensureHoneyState(normalizeState(snap.data(),currentMember),currentMember);assertCurrentCloudSession?.(snap.data(),currentMember);
+        const h=st.honeyDelivery;advanceFuelCycle(h,t);
+        if(h.active)throw new Error("น้องน้ำผึ้งอยู่ในสวนแล้วค่ะ");
+        if(fuelPercent(h,t)<100)throw new Error("น้ำมันยังไม่เต็ม 100% ค่ะ");
+        h.active=true;h.calledAt=t;h.tripId=tripId;h.reward=null;h.fuelPercentStored=0;h.fuelAutoBasePct=0;h.fuelAutoBaseAt=t;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=0;h.needsSeedPersist=false;
+        if(isAdmin())ensureAdminStock(st);next=cloneData(st);
+        tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      const normalized=ensureHoneyState(normalizeState(next,currentMember),currentMember);applyOwn(normalized);rememberHoneyTrip(normalized.honeyDelivery);
+      /* New-format trips do not use the old timestamp-claim guard. Remove a stale
+         timestamp left by an older version on this particular device. */
+      try{localStorage.removeItem(`yn:honey-claimed:${currentMemberKey}`)}catch(_){}
+      closeModal();renderFuelHud();
       showBikeBase();const b=bike(),start=-(b?.offsetWidth||110)-24,stop=bikeStopX();
       setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,105);
       await moveBike(start,stop,1350);b.classList.remove("is-riding");b.classList.add("is-parked");currentBikeMode="idle";await setSheet(SPRITE_FILES.idle,true,165);
@@ -20172,10 +20206,27 @@ console.info("R17 canonical gift save + rainy score writer loaded");
     const total=selections.reduce((n,x)=>n+int(x.qty),0);if(total<3||total>10)return;
     if(button)button.disabled=true;transit=true;
     try{
-      const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery;if(!h?.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(h.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
-      for(const e of selections){if(!takeDeliveryItem(s,e,int(e.qty)))throw new Error(`${e.name} ในคลังไม่พอ`)}
-      const reward=rollReward(selections,h.calledAt);grantReward(s,reward);h.reward=cloneData(reward);if(isAdmin())ensureAdminStock(s);
-      applyOwn(s);try{save()}catch(_){} if(reward.type==="merit"){try{await globalThis.YN_R29?.scoreHoneyMerit?.(int(reward.qty),`honey:${currentMemberKey}:${h.calledAt||Date.now()}`)}catch(e){console.warn("R32 honey campaign score",e)}} closeModal();
+      const local=ensureHoneyState(ownState||state,currentMember),lh=local?.honeyDelivery;if(!lh?.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(lh.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
+      const expectedTripId=String(lh.tripId||""),expectedCalledAt=Number(lh.calledAt)||0;
+      /* Roll exactly once outside runTransaction. Firestore may retry the callback;
+         reward and inventory must still be applied only once. */
+      const reward=rollReward(selections,expectedCalledAt);
+      if((typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer)||(typeof cloudSaveInFlight!=="undefined"&&cloudSaveInFlight))await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=ensureHoneyState(normalizeState(snap.data(),currentMember),currentMember);assertCurrentCloudSession?.(snap.data(),currentMember);const h=st.honeyDelivery;
+        if(!h?.active)throw new Error("น้ำผึ้งไม่ได้อยู่ในสวนแล้ว");if(h.reward)throw new Error("เที่ยวนี้ส่งของไปแล้ว");
+        if(expectedTripId&&String(h.tripId||"")!==expectedTripId)throw new Error("เที่ยวของน้ำผึ้งเปลี่ยนไปแล้ว กรุณาเปิดใหม่ค่ะ");
+        if(!expectedTripId&&expectedCalledAt&&Number(h.calledAt||0)!==expectedCalledAt)throw new Error("ข้อมูลเที่ยวของน้ำผึ้งไม่ตรงกัน กรุณาเปิดใหม่ค่ะ");
+        for(const e of selections){if(!takeDeliveryItem(st,e,int(e.qty)))throw new Error(`${e.name} ในคลังไม่พอ`)}
+        const meritBefore=Number(st.merit)||0;grantReward(st,reward);h.reward=cloneData(reward);if(isAdmin())ensureAdminStock(st);next=cloneData(st);
+        tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        if((Number(st.merit)||0)!==meritBefore)tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(st.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      const normalized=ensureHoneyState(normalizeState(next,currentMember),currentMember);applyOwn(normalized);rememberHoneyTrip(normalized.honeyDelivery);
+      if(reward.type==="merit"){try{await globalThis.YN_R29?.scoreHoneyMerit?.(int(reward.qty),`honey:${currentMemberKey}:${expectedTripId||expectedCalledAt}`)}catch(e){console.warn("R34.59 honey campaign score",e)}}
+      closeModal();
       const b=bike();showBikeBase();setBikeX(bikeStopX());b.classList.remove("is-riding");b.classList.add("is-parked");
       await playSheetOnce(SPRITE_FILES.receive,34,35);await playSheetOnce(SPRITE_FILES.place,36,40);await playSheetOnce(SPRITE_FILES.ready,38,45);
       currentBikeMode="ready";transit=false;showRewardModal(reward);
@@ -20204,9 +20255,22 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   async function beginDeparture(){
     if(transit)return;transit=true;
     try{
-      const s=ensureHoneyState(ownState||state,currentMember),h=s.honeyDelivery,t=now();
-      h.active=false;h.calledAt=0;h.reward=null;h.fuelPercentStored=0;h.fuelAutoBasePct=0;h.fuelAutoBaseAt=t;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=0;h.needsSeedPersist=false;
-      if(isAdmin())ensureAdminStock(s);applyOwn(s);try{save()}catch(_){};await persistHoneyNow(s);restoreModalCloseHandlers();rewardShowing=false;closeModal();
+      const local=ensureHoneyState(ownState||state,currentMember),lh=local?.honeyDelivery,t=now(),expectedTripId=String(lh?.tripId||""),expectedCalledAt=Number(lh?.calledAt)||0;
+      if((typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer)||(typeof cloudSaveInFlight!=="undefined"&&cloudSaveInFlight))await settlePendingCloudSave();
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey);let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=ensureHoneyState(normalizeState(snap.data(),currentMember),currentMember);assertCurrentCloudSession?.(snap.data(),currentMember);const h=st.honeyDelivery;
+        if(!h.active){
+          if(expectedTripId&&String(h.lastCompletedTripId||"")===expectedTripId){next=cloneData(st);return}
+          throw new Error("เที่ยวนี้สิ้นสุดไปแล้วค่ะ");
+        }
+        if(expectedTripId&&String(h.tripId||"")!==expectedTripId)throw new Error("ข้อมูลเที่ยวของน้ำผึ้งเปลี่ยนไปแล้ว");
+        if(!expectedTripId&&expectedCalledAt&&Number(h.calledAt||0)!==expectedCalledAt)throw new Error("ข้อมูลเที่ยวของน้ำผึ้งไม่ตรงกัน");
+        const completedId=String(h.tripId||"");h.lastCompletedTripId=completedId||String(h.lastCompletedTripId||"");h.active=false;h.calledAt=0;h.tripId="";h.reward=null;h.fuelPercentStored=0;h.fuelAutoBasePct=0;h.fuelAutoBaseAt=t;h.fuelReadyAt=t+FILL_MS;h.fuelExpiresAt=0;h.needsSeedPersist=false;
+        if(isAdmin())ensureAdminStock(st);next=cloneData(st);tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      const normalized=ensureHoneyState(normalizeState(next,currentMember),currentMember);applyOwn(normalized);forgetHoneyTrip(expectedTripId);restoreModalCloseHandlers();rewardShowing=false;closeModal();
       showBikeBase();const b=bike(),start=bikeStopX(),screen=$("gameScreen"),end=(screen?.clientWidth||window.innerWidth)+(b?.offsetWidth||110)+30;
       setBikeX(start);b.classList.remove("is-parked");b.classList.add("is-riding");currentBikeMode="ride";await setSheet(SPRITE_FILES.ride,true,105);
       await moveBike(start,end,1350);hideBike();renderFuelHud();
@@ -20234,7 +20298,7 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   setInterval(()=>{try{renderFuelHud();restoreHoneyPresence()}catch(error){console.warn("V252 honey tick",error)}},5000);
   setTimeout(()=>{try{renderFuelHud();restoreHoneyPresence();persistSeedOrTimer()}catch{}},800);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderFuelHud();restoreHoneyPresence()}});
-  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal,refill:refillFuel};window.YN_HONEY_LEGACY_OPEN=showFuelModal;
+  window.YN_HONEY_DELIVERY={render:renderFuelHud,call:callHoney,openFuel:showFuelModal,openSend:showSendModal,refill:refillFuel,restore:restoreHoneyPresence};window.YN_HONEY_LEGACY_OPEN=showFuelModal;
   window.YAINOO_BUILD=VERSION;
   console.info(`${VERSION} loaded`);
 })();
@@ -23776,7 +23840,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   /* Honey: preserve active trip locally and lock motorcycle to one straight Y axis. */
   const honeyMirrorKey16=()=>currentMemberKey?`s2-r16-honey:${currentMemberKey}`:"";let honeySig16="";
-  function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(h.active&&claimedAt&&Number(h.calledAt||0)&&Number(h.calledAt||0)<=claimedAt){h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=Number(h.fuelReadyAt)||Date.now()+30*60*1000;h.fuelExpiresAt=Number(h.fuelExpiresAt)||h.fuelReadyAt+10*60*1000}if(sig!==honeySig16){honeySig16=JSON.stringify(h);localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}/* R27: never resurrect a completed trip from the legacy mirror. */}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("transition","none","important")}}
+  function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(!h.tripId&&h.active&&claimedAt&&Number(h.calledAt||0)&&Number(h.calledAt||0)<=claimedAt){h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=Number(h.fuelReadyAt)||Date.now()+30*60*1000;h.fuelExpiresAt=Number(h.fuelExpiresAt)||h.fuelReadyAt+10*60*1000}if(sig!==honeySig16){honeySig16=JSON.stringify(h);localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}/* R27: never resurrect a completed trip from the legacy mirror. */}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("transition","none","important")}}
 
   function postR16(){try{ensureR16State(own16());applyFortunePersistent16();fixedTrough16();fixHotelStatus16();rebindWorm16();syncTrapMirror16();syncHoney16();if(currentScene==="house")renderHedgeDrops16()}catch(e){console.warn("R16 tick",e)}}
   const draw16Base=draw;draw=function(){const r=draw16Base.apply(this,arguments);requestAnimationFrame(postR16);return r};
@@ -24191,13 +24255,17 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(reward&&!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+reward;
     const all=(d.missions||[]).length===6&&(d.missions||[]).every(m=>Number(m.progress)>=Number(m.target));
     if(all&&!d.bonusAwarded){d.bonusAwarded=true;v.missStreak=0;if(!(typeof isAdmin==="function"&&isAdmin()))s.merit=(Number(s.merit)||0)+300;reward+=300}
-    /* Keep the visible owner copy in sync even when an action used a transaction clone. */
-    try{const live=ownState||(!visitContext?state:null);if(live&&live!==s){ensureVillage(live);const ld=live.villageSeason2?.daily;if(ld&&String(ld.dateKey)===String(d.dateKey)){for(const m of ld.missions||[]){const src=(d.missions||[]).find(x=>x.id===m.id);if(src){m.progress=Math.max(Number(m.progress)||0,Number(src.progress)||0);m.rewarded=Boolean(m.rewarded||src.rewarded)}}if(d.bonusAwarded)ld.bonusAwarded=true}}}catch(_){}
-    if(reward){try{updateMeritUI?.()}catch(_){}queueMicrotask(()=>{try{showWeatherToast?.(`🙏 ภารกิจผู้ใหญ่บ้าน +${reward} กุศล`)}catch(_){}})}
-    queueMissionCloud(s,id,delta);
+    /* R34.59: keep track() mutation-only for transaction clones. Firestore may
+       execute a transaction callback more than once; mutating the live owner copy
+       here could count a mission that never committed. */
+    const live=ownState||(!visitContext?state:null);
+    if(reward&&live===s){try{updateMeritUI?.()}catch(_){}queueMicrotask(()=>{try{showWeatherToast?.(`🙏 ภารกิจผู้ใหญ่บ้าน +${reward} กุศล`)}catch(_){}})}
+    /* R34.59: do not perform a Firestore side effect here. track() is sometimes
+       called from inside a Firestore transaction callback, and that callback may retry.
+       The committed-state reconciler below persists MAX progress exactly after commit. */
+    try{globalThis.YN_R3459_MISSIONS?.schedule?.()}catch(_){}
   }
-  /* incrementMissionOn calls track directly at source level; cloud progress is
-     independently persisted by queueMissionCloud. */
+  /* Mission progress is persisted from committed owner state by R34.59. */
   function commit(s){ensureVillage(s);ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}try{updateMeritUI?.()}catch(_){}}
   function chooseVillage(id){if(!VILLAGES[id])return;const s=ensureVillage(ownState||state);if(s.villageSeason2.villageId)return showVillage();const v=VILLAGES[id];$("modalContent").innerHTML=`<section class="r19-village-confirm"><img src="${v.image}" alt=""><h2>${esc(v.name)}</h2><b>${esc(v.chief)}</b><p>เลือกแล้วจะไม่สามารถเปลี่ยนหมู่บ้านได้จนกว่าจะจบซีซัน ต้องการยืนยันหรือไม่</p><div><button id="r19VillageYes" class="primary-spooky-action">ยืนยัน</button><button id="r19VillageNo" class="secondary-action">ย้อนกลับ</button></div></section>`;$("r19VillageYes").onclick=()=>{s.villageSeason2.villageId=id;s.villageSeason2.chosenAt=gameNow();commit(s);showVillage()};$("r19VillageNo").onclick=showVillage;openModal()}
   function chooseUI(){$("modalContent").innerHTML=`<section class="r19-village-pick"><h2>🏘️ เลือกผู้ใหญ่บ้าน</h2><p>เลือกหมู่บ้านประจำตัวสำหรับซีซันนี้</p><div class="r19-village-grid">${Object.entries(VILLAGES).map(([id,v])=>`<button data-r19-village="${id}" type="button"><img src="${v.image}" alt="${esc(v.chief)}"><span><b>${esc(v.name)}</b><small>${esc(v.chief)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r19-village]").forEach(b=>b.onclick=()=>chooseVillage(b.dataset.r19Village));openModal()}
@@ -25211,9 +25279,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function mergeHoney(local,remote){
     const l=local&&typeof local==="object"?clone(local):{},r=remote&&typeof remote==="object"?remote:{};
     let claimedAt=0;try{claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0)}catch(_){}
-    const staleClaimed=x=>Boolean(claimedAt&&x?.active&&Number(x.calledAt||0)&&Number(x.calledAt||0)<=claimedAt);
+    const staleClaimed=x=>Boolean(!x?.tripId&&claimedAt&&x?.active&&Number(x.calledAt||0)&&Number(x.calledAt||0)<=claimedAt);
     if(staleClaimed(l)){l.active=false;l.calledAt=0;l.reward=null}
     if(staleClaimed(r))return l;
+    /* R34.59: completion is irreversible per tripId. A stale local/onSnapshot copy
+       must never resurrect a trip that the other side has already completed. */
+    if(l.lastCompletedTripId&&r.active&&String(r.tripId||"")===String(l.lastCompletedTripId))return l;
+    if(r.lastCompletedTripId&&l.active&&String(l.tripId||"")===String(r.lastCompletedTripId))return clone(r);
     if(r.active&&!l.active)return clone(r);
     if(r.active&&l.active&&Number(r.calledAt||0)>Number(l.calledAt||0))return clone(r);
     if(r.reward&&!l.reward&&r.active)return clone(r);
@@ -25824,6 +25896,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function sanitizeHoneyState({persist=false}={}){
     const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return false;
+    if(String(h.tripId||""))return false;
     const c=claimedAt(),trip=Number(h.calledAt||0);
     if(!(c&&h.active&&trip&&trip<=c))return false;
     h.active=false;h.calledAt=0;h.reward=null;
@@ -25834,6 +25907,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return true;
   }
   async function finalizeHoneyClaim(){
+    if(String(currentHoney()?.tripId||""))return;
     const trip=markHoneyClaimed();
     // Let the legacy departure handler update the reward-bearing inventory first,
     // then make the completed trip durable and flush it immediately.
@@ -26020,7 +26094,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const honeyKey=()=>currentMemberKey?`yn:honey-claimed:${currentMemberKey}`:"";
   function honeyClaimedAt(){try{return Number(localStorage.getItem(honeyKey())||0)}catch(_){return 0}}
   function acknowledgeHoney(){
-    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return false;const trip=Number(h.calledAt||0)||Number(h.r27LastClaimedTrip||0)||now();
+    const s=ownState||state,h=s?.honeyDelivery;if(!s||!h)return false;if(String(h.tripId||""))return false;const trip=Number(h.calledAt||0)||Number(h.r27LastClaimedTrip||0)||now();
     try{localStorage.setItem(honeyKey(),String(Math.max(honeyClaimedAt(),trip)))}catch(_){}
     h.active=false;h.reward=null;h.calledAt=0;h.r28ClaimedTrip=Math.max(Number(h.r28ClaimedTrip||0),trip);h.r28ClaimedAt=now();
     if(!Number(h.fuelReadyAt||0)){h.fuelReadyAt=now()+30*60*1000;h.fuelExpiresAt=h.fuelReadyAt+10*60*1000}
@@ -26032,7 +26106,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   document.addEventListener('pointerdown',e=>{if(!document.querySelector('.honey-reward-modal'))return;const ack=e.target?.closest?.('#honeyRewardThanks,#closeModal')||e.target===$('modal');if(ack)acknowledgeHoney()},true);
   function suppressHoneyGhost(){
-    const s=ownState||state,h=s?.honeyDelivery,c=honeyClaimedAt();if(!h||!c)return;
+    const s=ownState||state,h=s?.honeyDelivery,c=honeyClaimedAt();if(!h||!c||String(h.tripId||""))return;
     const trip=Number(h.calledAt||0);if(h.active&&trip&&trip<=c){h.active=false;h.calledAt=0;h.reward=null;try{saveLocalOnly(s)}catch(_){};try{save()}catch(_){} }
     if(document.querySelector('.honey-reward-modal')&&!h.reward){try{closeModal()}catch(_){}}
   }
@@ -26266,7 +26340,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function collectHouseAll(){
     const s=ensureR29State(stateRef());if((Number(s.houseUpgrade?.level)||1)<3)return;let flowerCount=0,dropCount=0;const t=now(),bonus=.35;
     (s.flowerPlots||[]).forEach((p,i)=>{if(!p)return;const ready=p.testStage==='ready'||Number(p.readyAt||0)<=t;if(!ready)return;const key=p.flower,q=1+Math.floor(Math.random()*3)+(Math.random()<bonus?1:0);s.flowers=s.flowers||{};s.flowers[key]=ADMIN()?9999:(Number(s.flowers[key])||0)+q;flowerCount+=q;try{score('home',FLOWER_SCORE[key]||0,`flower:${currentMemberKey}:${i}:${p.plantedAt||0}`)}catch(_){}s.flowerPlots[i]=null});
-    const drops=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops.slice():[];drops.forEach(d=>{const gain=1+(Math.random()<.10?1:0);s.hedgehogItems[d.type]=ADMIN()?9999:(Number(s.hedgehogItems[d.type])||0)+gain;dropCount+=gain});if(s.hedgehog)s.hedgehog.drops=[];try{saveLocalOnly(s);save();flushCloudSave?.()}catch(_){}message('✨ จัดการบ้านทั้งหมดแล้ว',`🌸 ดอกไม้เข้ากระเป๋า ${flowerCount} ชิ้น<br>🦔 ของเม่นเข้ากระเป๋า ${dropCount} ชิ้น`);try{globalThis.YN_R16?.renderHouse?.()}catch(_){}
+    const drops=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops.slice():[];drops.forEach(d=>{const gain=1+(Math.random()<.10?1:0);s.hedgehogItems[d.type]=ADMIN()?9999:(Number(s.hedgehogItems[d.type])||0)+gain;dropCount+=gain});if(s.hedgehog)s.hedgehog.drops=[];
+    /* R34.59: this Lv3 bulk route used to put the rewards in the bag but skipped
+       village missions entirely. Count the same units as the normal individual/all buttons. */
+    if(flowerCount>0)try{incrementMissionOn(s,"flowerHarvest",flowerCount)}catch(_){}
+    if(drops.length>0)try{incrementMissionOn(s,"hedgehogCollect",drops.length)}catch(_){}
+    try{saveLocalOnly(s);save();flushCloudSave?.()}catch(_){}message('✨ จัดการบ้านทั้งหมดแล้ว',`🌸 ดอกไม้เข้ากระเป๋า ${flowerCount} ชิ้น<br>🦔 ของเม่นเข้ากระเป๋า ${dropCount} ชิ้น`);try{globalThis.YN_R16?.renderHouse?.()}catch(_){}
   }
 
   // New campaign event adapters.
@@ -34275,5 +34354,216 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 
   globalThis.YN_R3457={BUILD,durable};
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R34.58 — HONEY TOUCH TARGET HARDENING
+   Device-scale/WebView-safe input layer for the parked Honey motorcycle.
+   Does NOT change Honey inventory, reward, fuel, or save logic.
+   ====================================================================== */
+(function YN_R3458_HONEY_TOUCH_TARGET(){
+  "use strict";
+  const HIT_ID="r3458HoneyHitTarget";
+  let raf=0,lastFire=0,lastMode="";
+  const $id=id=>document.getElementById(id);
+
+  function gameVisible(){
+    const g=$id("gameScreen");
+    if(!g||g.classList.contains("hidden"))return false;
+    if(g.classList.contains("plot-page-2")||g.classList.contains("plot-page-3")||g.classList.contains("plot-page-4"))return false;
+    return true;
+  }
+  function honeyState(){
+    try{return (typeof ownState!=="undefined"&&ownState?.honeyDelivery)?ownState.honeyDelivery:(typeof state!=="undefined"?state?.honeyDelivery:null)}catch{return null}
+  }
+  function modalOpen(){
+    const m=$id("modal");
+    return !!(m&&!m.classList.contains("hidden")&&getComputedStyle(m).display!=="none");
+  }
+  function ensureHit(){
+    let hit=$id(HIT_ID);
+    if(hit)return hit;
+    hit=document.createElement("button");
+    hit.id=HIT_ID;hit.type="button";hit.tabIndex=-1;
+    hit.setAttribute("aria-label","แตะน้องน้ำผึ้งเพื่อฝากของ");
+    hit.setAttribute("title","แตะน้องน้ำผึ้ง");
+    hit.innerHTML='<span aria-hidden="true"></span>';
+    document.body.appendChild(hit);
+    return hit;
+  }
+  function hideHit(){
+    const hit=$id(HIT_ID);if(hit){hit.classList.remove("is-live");hit.style.pointerEvents="none"}
+  }
+  function syncHit(){
+    raf=0;
+    const bike=$id("honeyBike"),hit=ensureHit(),h=honeyState();
+    const live=!!(bike&&h?.active&&bike.classList.contains("is-parked")&&!bike.classList.contains("hidden")&&gameVisible()&&!modalOpen());
+    if(!live){hideHit();return}
+    const r=bike.getBoundingClientRect();
+    if(!r.width||!r.height){hideHit();return}
+    /* Use viewport pixels, not CSS percentages. This stays aligned even when
+       Android Display Size / font scaling / embedded WebView zoom is unusual. */
+    const vw=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
+    const vh=Math.max(1,window.innerHeight||document.documentElement.clientHeight||1);
+    const padX=Math.max(28,Math.min(74,r.width*.52));
+    const padY=Math.max(24,Math.min(62,r.height*.62));
+    const left=Math.max(0,r.left-padX),top=Math.max(0,r.top-padY);
+    const right=Math.min(vw,r.right+padX),bottom=Math.min(vh,r.bottom+padY);
+    hit.style.left=`${Math.round(left)}px`;
+    hit.style.top=`${Math.round(top)}px`;
+    hit.style.width=`${Math.max(64,Math.round(right-left))}px`;
+    hit.style.height=`${Math.max(64,Math.round(bottom-top))}px`;
+    hit.style.pointerEvents="auto";
+    hit.classList.add("is-live");
+    const mode=h?.reward?"reward":"send";
+    if(mode!==lastMode){lastMode=mode;hit.setAttribute("aria-label",mode==="reward"?"แตะน้องน้ำผึ้งเพื่อรับของ":"แตะน้องน้ำผึ้งเพื่อฝากของ")}
+  }
+  function scheduleSync(){if(raf)return;raf=requestAnimationFrame(syncHit)}
+
+  function activate(ev){
+    const now=Date.now();if(now-lastFire<420)return;
+    const h=honeyState();if(!h?.active||modalOpen())return;
+    lastFire=now;
+    try{ev?.preventDefault?.();ev?.stopPropagation?.();ev?.stopImmediatePropagation?.()}catch{}
+    const hit=$id(HIT_ID),bike=$id("honeyBike");
+    hit?.classList.add("is-pressed");bike?.classList.add("r3458-honey-pressed");
+    setTimeout(()=>{hit?.classList.remove("is-pressed");bike?.classList.remove("r3458-honey-pressed")},120);
+    try{
+      if(h.reward&&typeof window.YN_HONEY_DELIVERY?.openSend==="function"){
+        /* openSend already routes reward state to the reward modal. */
+        window.YN_HONEY_DELIVERY.openSend();
+      }else if(typeof window.YN_HONEY_DELIVERY?.openSend==="function"){
+        window.YN_HONEY_DELIVERY.openSend();
+      }
+    }catch(error){console.warn("R34.58 honey tap",error)}
+    setTimeout(()=>{
+      try{
+        const live=honeyState();
+        if(live?.active&&!modalOpen()){
+          window.YN_HONEY_DELIVERY?.restore?.();
+          window.YN_HONEY_DELIVERY?.openSend?.();
+        }
+      }catch(error){console.warn("R34.59 honey tap retry",error)}
+      scheduleSync();
+    },160);
+  }
+
+  const hit=ensureHit();
+  /* pointerdown is intentionally used instead of click/pointerup: some Android
+     WebViews lose the up/click event when the finger moves a few pixels. */
+  hit.addEventListener("pointerdown",activate,{capture:true,passive:false});
+  hit.addEventListener("touchstart",activate,{capture:true,passive:false});
+
+  /* Fallback: if another transparent farm overlay sits above the motorcycle,
+     accept a tap inside the motorcycle's enlarged screen-space rectangle. */
+  document.addEventListener("pointerdown",function(ev){
+    const h=honeyState(),bike=$id("honeyBike"),target=$id(HIT_ID);
+    if(!h?.active||!bike?.classList.contains("is-parked")||modalOpen()||!gameVisible())return;
+    if(ev.target===target||target?.contains(ev.target))return;
+    const r=bike.getBoundingClientRect();if(!r.width||!r.height)return;
+    const px=Math.max(30,Math.min(76,r.width*.56)),py=Math.max(26,Math.min(64,r.height*.68));
+    if(ev.clientX>=r.left-px&&ev.clientX<=r.right+px&&ev.clientY>=r.top-py&&ev.clientY<=r.bottom+py)activate(ev);
+  },{capture:true,passive:false});
+
+  ["resize","orientationchange","scroll"].forEach(type=>window.addEventListener(type,scheduleSync,{passive:true}));
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)hideHit();else setTimeout(scheduleSync,80)});
+  document.addEventListener("click",()=>setTimeout(scheduleSync,0),true);
+  setInterval(scheduleSync,450);
+  setTimeout(scheduleSync,120);
+  window.YN_R3458_HONEY_TOUCH={sync:scheduleSync,hide:hideHit};
+  console.info("R34.58 Honey device-scale touch target loaded");
+})();
+
+
+/* ======================================================================
+   S2 R34.59 — MISSION + HONEY INTEGRITY
+   - Mission counters persist from committed owner state with MAX merge.
+   - Honey active trips use tripId and server verification on resume.
+   ====================================================================== */
+(function YN_R3459_MISSION_HONEY_INTEGRITY(){
+  "use strict";
+  const BUILD="S2-R34.59-MISSION-HONEY-INTEGRITY-20260909";
+  const MISSION_COLLECTION="villageMissionProgress";
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const missionShadowKey=()=>currentMemberKey?`yn:s2:r3459:mission-shadow:${currentMemberKey}`:"";
+  const honeyShadowKey=()=>currentMemberKey?`yn:s2:r3459:honey-active:${currentMemberKey}`:"";
+  let missionTimer=0,missionBusy=false,missionDirty=true,lastMissionHash="",missionRetry=0;
+  let honeyBusy=false,lastHoneyCheck=0;
+
+  function owner(){return !visitContext&&currentMemberKey&&(ownState||state)}
+  function missionSnapshot(){
+    const s=owner(),v=s?.villageSeason2,d=v?.daily;if(!s||!v?.villageId||!d?.dateKey||!Array.isArray(d.missions)||!d.missions.length)return null;
+    const progress={},rewarded={};
+    for(const m of d.missions){const id=String(m?.id||"");if(!id)continue;progress[id]=Math.max(0,Math.min(Number(m.target)||1,Number(m.progress)||0));rewarded[id]=Boolean(m.rewarded)}
+    return{dateKey:String(d.dateKey),villageId:String(v.villageId),progress,rewarded,bonusAwarded:Boolean(d.bonusAwarded)};
+  }
+  function readMissionShadow(){try{const raw=localStorage.getItem(missionShadowKey());return raw?JSON.parse(raw):null}catch(_){return null}}
+  function writeMissionShadow(x){try{if(x)localStorage.setItem(missionShadowKey(),JSON.stringify({...x,savedAt:Date.now()}))}catch(_){}}
+  function mergeMax(a,b){const out={...(a||{})};for(const [k,v] of Object.entries(b||{}))out[k]=Math.max(Number(out[k])||0,Number(v)||0);return out}
+  function mergeReward(a,b){const out={...(a||{})};for(const [k,v] of Object.entries(b||{}))out[k]=Boolean(out[k]||v);return out}
+  function applyShadowToLocal(snap){
+    const sh=readMissionShadow();if(!sh||String(sh.dateKey)!==String(snap.dateKey))return snap;
+    const s=owner(),d=s?.villageSeason2?.daily;if(!d)return snap;
+    let changed=false;
+    for(const m of d.missions||[]){const p=Math.max(Number(m.progress)||0,Number(sh.progress?.[m.id])||0);if(p!==Number(m.progress||0)){m.progress=Math.min(Number(m.target)||0,p);changed=true}if(sh.rewarded?.[m.id]&&!m.rewarded){m.rewarded=true;changed=true}}
+    if(sh.bonusAwarded&&!d.bonusAwarded){d.bonusAwarded=true;changed=true}
+    if(changed){try{saveLocalOnly(s)}catch(_){} }
+    return missionSnapshot()||snap;
+  }
+  function schedule(delay=80){missionDirty=true;if(missionTimer)clearTimeout(missionTimer);missionTimer=setTimeout(()=>{missionTimer=0;syncMissions()},Math.max(0,delay))}
+  async function syncMissions(force=false){
+    if(missionBusy||!cloudReady||!currentMemberKey||visitContext)return;
+    let snap=missionSnapshot();if(!snap)return;snap=applyShadowToLocal(snap);
+    const oldShadow=readMissionShadow();if(oldShadow&&String(oldShadow.dateKey)===snap.dateKey){snap.progress=mergeMax(oldShadow.progress,snap.progress);snap.rewarded=mergeReward(oldShadow.rewarded,snap.rewarded);snap.bonusAwarded=Boolean(oldShadow.bonusAwarded||snap.bonusAwarded)}
+    writeMissionShadow(snap);
+    const hash=JSON.stringify([snap.dateKey,snap.villageId,snap.progress,snap.rewarded,snap.bonusAwarded]);if(!force&&!missionDirty&&hash===lastMissionHash)return;
+    missionBusy=true;missionDirty=false;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,MISSION_COLLECTION,currentMemberKey);let merged=null;
+      await fs.runTransaction(db,async tx=>{
+        const doc=await tx.get(ref),old=doc.exists()?doc.data()||{}:{},same=String(old.dateKey||"")===snap.dateKey;
+        const progress=same?mergeMax(old.progress,snap.progress):{...snap.progress};
+        const rewarded=same?mergeReward(old.rewarded,snap.rewarded):{...snap.rewarded};
+        merged={...snap,progress,rewarded,bonusAwarded:Boolean((same&&old.bonusAwarded)||snap.bonusAwarded)};
+        tx.set(ref,{memberKey:String(currentMemberKey),dateKey:merged.dateKey,villageId:merged.villageId,progress:merged.progress,rewarded:merged.rewarded,bonusAwarded:merged.bonusAwarded,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      lastMissionHash=JSON.stringify([merged.dateKey,merged.villageId,merged.progress,merged.rewarded,merged.bonusAwarded]);writeMissionShadow(merged);missionRetry=0;
+      /* Pull MAX cloud values into the visible list without awarding twice. */
+      const s=owner(),d=s?.villageSeason2?.daily;if(s&&d&&String(d.dateKey)===merged.dateKey){let changed=false;for(const m of d.missions||[]){const p=Math.min(Number(m.target)||0,Math.max(Number(m.progress)||0,Number(merged.progress?.[m.id])||0));if(p!==Number(m.progress||0)){m.progress=p;changed=true}if(merged.rewarded?.[m.id]&&!m.rewarded){m.rewarded=true;changed=true}}if(merged.bonusAwarded&&!d.bonusAwarded){d.bonusAwarded=true;changed=true}if(changed)try{saveLocalOnly(s)}catch(_){}}
+    }catch(e){missionDirty=true;missionRetry=Math.min(5000,700+missionRetry*2);console.warn(BUILD,"mission reconcile",e);setTimeout(()=>schedule(0),missionRetry)}
+    finally{missionBusy=false}
+  }
+
+  function readHoneyShadow(){try{const raw=localStorage.getItem(honeyShadowKey());return raw?JSON.parse(raw):null}catch(_){return null}}
+  function rememberHoneyLocal(){const h=owner()?.honeyDelivery;if(!h?.active||!h?.tripId)return false;try{localStorage.setItem(honeyShadowKey(),JSON.stringify({tripId:String(h.tripId),calledAt:Number(h.calledAt)||0,savedAt:Date.now()}))}catch(_){}return true}
+  function clearHoneyShadow(){try{localStorage.removeItem(honeyShadowKey())}catch(_){}}
+  async function reconcileHoney(force=false){
+    if(honeyBusy||!cloudReady||!currentMemberKey||visitContext)return;
+    const s=owner(),h=s?.honeyDelivery;if(h?.active&&h?.tripId){rememberHoneyLocal();try{globalThis.YN_HONEY_DELIVERY?.restore?.();globalThis.YN_R3458_HONEY_TOUCH?.sync?.()}catch(_){}return}
+    const shadow=readHoneyShadow();if(!shadow?.tripId)return;
+    const t=Date.now();if(!force&&t-lastHoneyCheck<1800)return;lastHoneyCheck=t;honeyBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(!snap.exists()){clearHoneyShadow();return}
+      const remote=normalizeState(snap.data(),currentMember),rh=remote?.honeyDelivery;
+      if(rh?.active&&String(rh.tripId||"")===String(shadow.tripId)){
+        /* Only server evidence may resurrect a missing bike. Never resurrect from the
+           local shadow alone. Preserve unrelated newer local systems. */
+        const live=owner();if(live){live.honeyDelivery=clone(rh);ownState=live;if(!visitContext)state=live;try{saveLocalOnly(live)}catch(_){} }
+        try{globalThis.YN_HONEY_DELIVERY?.restore?.();globalThis.YN_HONEY_DELIVERY?.render?.();globalThis.YN_R3458_HONEY_TOUCH?.sync?.()}catch(_){}
+      }else clearHoneyShadow();
+    }catch(e){console.warn(BUILD,"honey reconcile",e)}finally{honeyBusy=false}
+  }
+
+  /* Scan committed state frequently, but only write when the progress hash changes. */
+  setInterval(()=>{try{const snap=missionSnapshot();if(snap){const sh=readMissionShadow(),p=sh&&String(sh.dateKey)===snap.dateKey?mergeMax(sh.progress,snap.progress):snap.progress;const r=sh&&String(sh.dateKey)===snap.dateKey?mergeReward(sh.rewarded,snap.rewarded):snap.rewarded;const hash=JSON.stringify([snap.dateKey,snap.villageId,p,r,Boolean(snap.bonusAwarded||sh?.bonusAwarded)]);if(hash!==lastMissionHash)schedule(0)}}catch(_){}},900);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){schedule(30);setTimeout(()=>reconcileHoney(true),80)}});
+  window.addEventListener("pageshow",()=>{schedule(30);setTimeout(()=>reconcileHoney(true),80)},{passive:true});
+  window.addEventListener("online",()=>{schedule(0);reconcileHoney(true)},{passive:true});
+  document.addEventListener("pointerdown",e=>{if(e.target?.closest?.("#missionsNavBtn"))schedule(0)},{capture:true,passive:true});
+  setTimeout(()=>{schedule(0);reconcileHoney(true)},250);
+  globalThis.YN_R3459_MISSIONS={schedule,syncNow:()=>syncMissions(true)};
+  globalThis.YN_R3459_HONEY={reconcile:()=>reconcileHoney(true)};
+  globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();

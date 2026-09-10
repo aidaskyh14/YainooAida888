@@ -10770,3 +10770,26 @@ body.r50-lock{overflow:hidden!important}
 }
 .r17-flower-picker button[data-r17-plant] *{pointer-events:none!important}
 .r17-flower-picker button[data-r17-plant].r3457-seed-selected{transform:scale(.97)}
+
+/* ======================================================================
+   S2 R34.58 — Honey device-scale / WebView-safe touch target
+   Invisible fixed hitbox follows the visual motorcycle in viewport pixels.
+   ====================================================================== */
+#r3458HoneyHitTarget{
+  position:fixed!important;
+  display:block!important;
+  margin:0!important;padding:0!important;border:0!important;
+  background:transparent!important;box-shadow:none!important;
+  appearance:none!important;-webkit-appearance:none!important;
+  opacity:0!important;
+  z-index:128!important;
+  pointer-events:none;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+  user-select:none!important;-webkit-user-select:none!important;
+}
+#r3458HoneyHitTarget.is-live{pointer-events:auto!important}
+#r3458HoneyHitTarget:focus,#r3458HoneyHitTarget:active{outline:none!important;background:transparent!important}
+#honeyBike.is-parked{pointer-events:auto!important;touch-action:manipulation!important;z-index:127!important}
+#honeyBike.is-parked .honey-bike-clip,#honeyBike.is-parked .honey-bike-sheet{pointer-events:none!important}
+#honeyBike.r3458-honey-pressed{filter:brightness(.94) saturate(1.04)!important}
