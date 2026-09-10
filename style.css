@@ -10793,3 +10793,122 @@ body.r50-lock{overflow:hidden!important}
 #honeyBike.is-parked{pointer-events:auto!important;touch-action:manipulation!important;z-index:127!important}
 #honeyBike.is-parked .honey-bike-clip,#honeyBike.is-parked .honey-bike-sheet{pointer-events:none!important}
 #honeyBike.r3458-honey-pressed{filter:brightness(.94) saturate(1.04)!important}
+/* =====================================================================
+   S2 R34.60 — OSTRICH SYSTEM
+   Mobile-first, low-overdraw UI. Game logic commits before result popups.
+   ===================================================================== */
+#ostrichPenScreen.ostrich-pen-screen{
+  position:fixed; inset:0; z-index:92; width:100%; height:100dvh; overflow:hidden;
+  background:#07112c; touch-action:manipulation; contain:layout paint style;
+}
+#ostrichPenScreen.hidden{display:none!important}
+.ostrich-pen-stage{
+  position:absolute; inset:0; overflow:hidden; isolation:isolate;
+  background-image:linear-gradient(to bottom,rgba(2,8,35,.02),rgba(15,7,24,.12)),url("ostrich-pen-bg.jpg");
+  background-position:center center; background-repeat:no-repeat; background-size:cover;
+  font-family:inherit;
+}
+.ostrich-pen-stage::after{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  box-shadow:inset 0 0 70px rgba(1,4,18,.2);
+}
+.ostrich-pen-top-btn,.ostrich-admin-button{
+  position:absolute;z-index:500;border:1px solid rgba(255,235,183,.65);color:#fff7dc;
+  background:linear-gradient(180deg,rgba(48,27,70,.94),rgba(28,16,48,.96));
+  box-shadow:0 4px 14px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.12);
+  min-height:42px;border-radius:14px;padding:7px 12px;font-size:12px;font-weight:800;
+  display:flex;align-items:center;gap:7px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.ostrich-pen-back{left:max(10px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top))}
+.ostrich-pen-switch{right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top))}
+.ostrich-admin-button{right:max(10px,env(safe-area-inset-right));top:62px;background:linear-gradient(180deg,rgba(115,69,23,.95),rgba(70,38,12,.96))}
+.ostrich-pen-title{
+  position:absolute;z-index:450;top:max(62px,calc(env(safe-area-inset-top) + 54px));left:50%;transform:translateX(-50%);
+  width:min(70vw,390px);padding:7px 12px;border-radius:15px;text-align:center;color:#fff8e8;
+  background:rgba(27,16,46,.78);border:1px solid rgba(255,228,166,.42);backdrop-filter:blur(5px);
+  box-shadow:0 5px 18px rgba(0,0,0,.22);pointer-events:none;
+}
+.ostrich-pen-title b{display:block;font-size:14px;line-height:1.2}
+.ostrich-pen-title small{display:block;margin-top:2px;font-size:11px;opacity:.9}
+.ostrich-pen-title em{display:block;margin-top:2px;font-size:10px;font-style:normal;color:#ffe6a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ostrich-animal-layer,.ostrich-drop-layer{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:hidden}
+.ostrich-drop-layer{z-index:300}
+.ostrich-bird{position:absolute;width:clamp(72px,17vw,104px);height:clamp(112px,26vw,162px);transform:translate(-50%,-88%);pointer-events:none;will-change:left,top;filter:none}
+.ostrich-bird-shadow{position:absolute;z-index:0;left:17%;right:17%;bottom:3%;height:10%;border-radius:50%;background:rgba(8,5,10,.28);filter:blur(3px);transform:scaleX(1.15)}
+.ostrich-sprite{position:absolute;z-index:1;inset:0;background-repeat:no-repeat;background-size:400% 400%;background-position:0 0;will-change:background-position,transform;transform-origin:center bottom;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25))}
+.ostrich-life-label{position:absolute;z-index:3;left:50%;bottom:-7px;transform:translateX(-50%);width:max-content;max-width:142px;padding:2px 6px;border-radius:8px;background:rgba(22,13,35,.82);border:1px solid rgba(255,230,170,.45);color:#fff7de;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;text-shadow:0 1px 1px #000;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.ostrich-ground-drop{position:absolute;z-index:1;transform:translate(-50%,-50%);width:48px;height:48px;padding:7px;border:0;background:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));animation:ostrichDropFloat 2.2s ease-in-out infinite}
+.ostrich-ground-drop img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.ostrich-ground-drop:active{transform:translate(-50%,-50%) scale(.9)}
+@keyframes ostrichDropFloat{0%,100%{margin-top:0}50%{margin-top:-4px}}
+.ostrich-pen-bottom-actions{
+  position:absolute;z-index:600;left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));bottom:max(10px,calc(env(safe-area-inset-bottom) + 7px));
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:6px;padding:7px;border-radius:17px;
+  background:rgba(23,13,43,.86);border:1px solid rgba(255,228,169,.5);box-shadow:0 6px 20px rgba(0,0,0,.3);backdrop-filter:blur(6px);
+}
+.ostrich-pen-action{min-height:48px;padding:5px 6px;border:1px solid rgba(255,229,173,.38);border-radius:12px;background:linear-gradient(180deg,#6c4a91,#382553);color:#fff;font:inherit;font-size:10px;font-weight:800;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;touch-action:manipulation}
+.ostrich-pen-action span{font-size:18px}.ostrich-pen-action:active{transform:translateY(1px)}
+.ostrich-pen-action.collect{background:linear-gradient(180deg,#6f5a2d,#493719)}
+.ostrich-pen-action.feed{background:linear-gradient(180deg,#326d55,#214939)}
+.ostrich-pen-action.vault{background:linear-gradient(180deg,#476896,#293c5d)}
+.ostrich-pen-action.hidden,.ostrich-admin-button.hidden{display:none!important}
+
+/* Modal content — keep typography compact and all controls reachable on scaled Android screens. */
+#modalContent .ostrich-modal,#modalContent .ostrich-result-popup{
+  width:min(92vw,620px);max-width:620px;max-height:min(82dvh,760px);margin:auto;box-sizing:border-box;
+  overflow:hidden;border-radius:24px;padding:15px;background:linear-gradient(180deg,#fff5d9,#f8e6bd);
+  border:2px solid #9d633f;box-shadow:0 16px 45px rgba(15,7,25,.4);color:#402b36;font-size:13px;line-height:1.35;
+}
+#modalContent .ostrich-modal header{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+#modalContent .ostrich-modal header>img{width:62px;height:62px;flex:0 0 62px;object-fit:contain;border-radius:14px;background:rgba(255,255,255,.55);padding:4px;box-sizing:border-box}
+#modalContent .ostrich-modal header div{min-width:0;flex:1}
+#modalContent .ostrich-modal h2,#modalContent .ostrich-result-popup h2{font-size:18px;line-height:1.2;margin:2px 0 4px;color:#422738}
+#modalContent .ostrich-modal header p,#modalContent .ostrich-result-popup p{margin:3px 0;font-size:12px;color:#765765}
+#modalContent .ostrich-modal header small,#modalContent .ostrich-result-popup>small{font-size:10px;font-weight:900;color:#9b624d;letter-spacing:.02em}
+#modalContent .ostrich-scroll{max-height:min(53dvh,500px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 3px 4px;scrollbar-gutter:stable}
+#modalContent .ostrich-modal button,#modalContent .ostrich-result-popup button,#modalContent .ostrich-modal select,#modalContent .ostrich-modal input{font:inherit;touch-action:manipulation;min-height:42px}
+#modalContent .ostrich-modal-note{margin-top:9px;padding:8px 10px;border-radius:12px;background:#f1dcae;font-size:11px;color:#78543b;text-align:center}
+.ostrich-lure-list,.ostrich-feed-list,.ostrich-food-craft-list{display:grid;gap:7px}
+.ostrich-lure-card,.ostrich-feed-card,.ostrich-food-card{display:grid;align-items:center;gap:8px;border:1px solid #ddbd88;background:rgba(255,255,255,.68);border-radius:15px;padding:8px;box-shadow:0 2px 6px rgba(92,54,32,.08)}
+.ostrich-lure-card{grid-template-columns:52px minmax(0,1fr) auto}
+.ostrich-lure-card>img,.ostrich-feed-card>img{width:52px;height:52px;object-fit:contain}
+.ostrich-lure-card div,.ostrich-feed-card div{min-width:0}.ostrich-lure-card b,.ostrich-feed-card b{display:block;font-size:12px;line-height:1.25}.ostrich-lure-card small,.ostrich-feed-card small{display:block;margin-top:3px;font-size:10px;color:#785e58}
+.ostrich-lure-card button,.ostrich-feed-card button{border:0;border-radius:11px;padding:6px 9px;background:#563976;color:white;font-weight:900;font-size:10px;white-space:nowrap}
+.ostrich-lure-card.is-disabled,.ostrich-feed-card.is-disabled{opacity:.58}.ostrich-lure-card button:disabled,.ostrich-feed-card button:disabled{background:#b2a4aa;color:#f8f2f1}
+.ostrich-feed-card{grid-template-columns:58px minmax(0,1fr) auto}.ostrich-feed-card>img{width:58px;height:58px}.ostrich-feed-card em{display:block;margin-top:3px;font-size:9px;font-style:normal;color:#8e5570}
+.ostrich-food-card{grid-template-columns:74px minmax(0,1fr);align-items:start}.ostrich-food-card>img{width:74px;height:74px;object-fit:contain}.ostrich-food-card-main{min-width:0}.ostrich-food-title{display:flex;gap:5px;justify-content:space-between;align-items:flex-start}.ostrich-food-title b{font-size:12px}.ostrich-food-title span{flex:0 0 auto;border-radius:9px;padding:2px 5px;background:#4f7650;color:#fff;font-size:9px;font-weight:900}.ostrich-food-card-main>small{font-size:10px;color:#755b55}
+.ostrich-recipe{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ostrich-recipe span{display:inline-flex;align-items:center;gap:2px;padding:2px 5px;border-radius:8px;background:#e9f3df;font-size:9px;font-weight:700}.ostrich-recipe span.missing{background:#f6d8d7;color:#8d3e43}.ostrich-recipe img{width:16px;height:16px;object-fit:contain}
+.ostrich-craft-row{display:flex;align-items:center;justify-content:space-between;gap:7px}.ostrich-craft-row label{font-size:10px}.ostrich-craft-row input{width:58px;min-height:36px!important;padding:4px;border:1px solid #c8a977;border-radius:9px;background:#fff;text-align:center}.ostrich-craft-row button{min-height:38px!important;border:0;border-radius:10px;background:#6a3f7b;color:#fff;padding:6px 13px;font-weight:900;font-size:11px}
+
+#modalContent .ostrich-result-popup{text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.ostrich-result-main{display:block;width:min(40vw,154px);height:min(40vw,154px);object-fit:contain;margin:0 auto 5px}.ostrich-result-text{max-height:34dvh;overflow:auto;margin:8px 0 12px;padding:9px 10px;border-radius:13px;background:rgba(255,255,255,.55);font-size:12px;line-height:1.5}.ostrich-confirm-row{display:grid;grid-template-columns:1fr 1.2fr;gap:8px;margin-top:12px}.ostrich-result-popup>.primary-spooky-action{width:100%;margin-top:8px;min-height:44px}
+.ostrich-vault-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.ostrich-vault-stats span{padding:9px;border-radius:12px;background:#f2dbaa;font-size:11px}.ostrich-vault-stats b{font-size:15px}
+
+.ostrich-inventory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ostrich-inventory-grid article{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:7px;padding:8px;border:1px solid #ddbd88;background:rgba(255,255,255,.65);border-radius:13px}.ostrich-inventory-grid img{width:52px;height:52px;object-fit:contain}.ostrich-inventory-grid b{font-size:10px}.ostrich-inventory-grid strong{font-size:13px;color:#5a386d}
+
+.ostrich-admin-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0 10px}.ostrich-admin-tabs button{border:1px solid #c19a65;border-radius:10px;background:#f0d8ac;color:#5e4050;font-size:10px;font-weight:900;padding:5px}.ostrich-admin-tabs button.active{background:#563976;color:#fff;border-color:#563976}
+.ostrich-request-list{display:grid;gap:6px}.ostrich-request-list article{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:8px;border:1px solid #dec092;background:rgba(255,255,255,.65);border-radius:12px}.ostrich-request-list b{font-size:12px}.ostrich-request-list small{display:block;font-size:9px;color:#80645e}.ostrich-request-list article>div:last-child{display:flex;gap:5px}.ostrich-request-list button{min-height:38px!important;border:0;border-radius:9px;padding:5px 9px;background:#4d7651;color:#fff;font-size:10px;font-weight:900}.ostrich-request-list button.reject{background:#9a5157}
+.ostrich-admin-send{display:grid;gap:9px;max-height:57dvh;overflow:auto;padding:2px}.ostrich-admin-send>label{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:7px;font-size:11px;font-weight:800}.ostrich-admin-send select,.ostrich-admin-send input{width:100%;box-sizing:border-box;border:1px solid #cda873;border-radius:10px;background:#fff;padding:6px}.ostrich-admin-item-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ostrich-admin-item-grid button{display:grid;grid-template-columns:45px minmax(0,1fr);align-items:center;gap:5px;padding:6px;border:1px solid #d8ba8d;border-radius:11px;background:rgba(255,255,255,.68);color:#4c3442;text-align:left;font-size:9px;font-weight:800}.ostrich-admin-item-grid button.active{outline:2px solid #7c4e91;background:#efe0fa}.ostrich-admin-item-grid img{width:45px;height:45px;object-fit:contain}
+.ostrich-rank-list{display:grid;gap:6px}.ostrich-rank-list article{display:grid;grid-template-columns:35px 1fr auto;align-items:center;gap:7px;padding:8px;border-radius:12px;background:rgba(255,255,255,.65);border:1px solid #ddbd88}.ostrich-rank-list article.top{background:#fff0c5}.ostrich-rank-list article>strong{font-size:12px}.ostrich-rank-list b{font-size:11px}.ostrich-rank-list small{display:block;font-size:9px;color:#7d625a}.ostrich-rank-list span{font-weight:900;color:#613d77}
+.ostrich-admin-entry-wrap{margin:10px 0}.ostrich-admin-entry-wrap button{width:100%;display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:8px;min-height:62px;padding:7px 10px;border:1px solid #d3a95e;border-radius:14px;background:linear-gradient(180deg,#fff2ca,#ead2a0);color:#4b3141;text-align:left}.ostrich-admin-entry-wrap img{width:50px;height:50px;object-fit:contain}.ostrich-admin-entry-wrap b{display:block;font-size:12px}.ostrich-admin-entry-wrap small{display:block;font-size:9px;margin-top:2px}.ostrich-admin-entry-wrap i{font-size:20px;font-style:normal}
+
+@media (max-width:420px){
+  #modalContent .ostrich-modal,#modalContent .ostrich-result-popup{width:min(94vw,620px);padding:12px;max-height:80dvh}
+  #modalContent .ostrich-scroll{max-height:50dvh}
+  .ostrich-lure-card{grid-template-columns:46px minmax(0,1fr)}.ostrich-lure-card>img{width:46px;height:46px}.ostrich-lure-card button{grid-column:1/-1;width:100%;min-height:38px!important}
+  .ostrich-feed-card{grid-template-columns:50px minmax(0,1fr)}.ostrich-feed-card>img{width:50px;height:50px}.ostrich-feed-card button{grid-column:1/-1;width:100%;min-height:38px!important}
+  .ostrich-food-card{grid-template-columns:62px minmax(0,1fr)}.ostrich-food-card>img{width:62px;height:62px}
+  .ostrich-inventory-grid{grid-template-columns:1fr}.ostrich-admin-item-grid{grid-template-columns:1fr 1fr}
+  .ostrich-pen-action{font-size:9px;min-height:46px;padding-inline:3px}.ostrich-pen-bottom-actions{gap:4px;padding:5px;grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}
+}
+@media (max-height:650px){
+  .ostrich-pen-title{top:52px;padding:5px 9px}.ostrich-pen-title em{display:none}.ostrich-admin-button{top:52px}
+  .ostrich-pen-bottom-actions{padding:4px}.ostrich-pen-action{min-height:42px}.ostrich-bird{width:68px;height:106px}
+  #modalContent .ostrich-modal,#modalContent .ostrich-result-popup{max-height:86dvh;padding:10px}.ostrich-result-main{width:92px;height:92px}#modalContent .ostrich-scroll{max-height:50dvh}
+}
+.ostrich-notification-admin-card{border:1px solid rgba(151,100,56,.35);background:linear-gradient(180deg,#fff3d2,#f2d7aa)!important;color:#4a3240}
+.ostrich-notification-admin-card>b{display:block;font-size:13px}.ostrich-notification-admin-card>span{display:block;margin:2px 0 7px;font-size:10px;color:#7d625d}
+.ostrich-notification-request-list{display:grid;gap:5px;max-height:32dvh;overflow:auto;-webkit-overflow-scrolling:touch}
+.ostrich-notification-request-list>div{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:6px 7px;border-radius:10px;background:rgba(255,255,255,.62)}
+.ostrich-notification-request-list strong{font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ostrich-notification-request-list span{display:flex;gap:4px;flex:0 0 auto}
+.ostrich-notification-request-list button{min-height:36px;min-width:58px;border:0;border-radius:8px;padding:4px 7px;background:#4f7854;color:#fff;font-size:9px;font-weight:900;touch-action:manipulation}.ostrich-notification-request-list button.reject{background:#995159}

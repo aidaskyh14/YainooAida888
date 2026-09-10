@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.59-MISSION-HONEY-INTEGRITY">
+  <link rel="stylesheet" href="style.css?v=S2-R34.60-OSTRICH-SYSTEM-LAUNCH">
 </head>
 <body>
   <main id="app">
@@ -112,6 +112,7 @@
               <button id="shortcutJellyfishBtn" class="hud-menu-item" type="button"><span>🪼</span><div><b>บ่อแมงกะพรุน</b><small>ไปยังบ่อแมงกะพรุนส่วนกลาง</small></div><i>›</i></button>
               <button id="shortcutBoatRaceBtn" class="hud-menu-item" type="button"><span>🚣</span><div><b>เทศกาลเรือพาย</b><small>เข้าสู่การแข่งขันเรือพายโดยตรง</small></div><i>›</i></button>
               <button id="shortcutAlpacaPenBtn" class="hud-menu-item" type="button"><span>🦙</span><div><b>คอกอัลปาก้า</b><small>ไปดูและจัดการอัลปาก้าในคอก</small></div><i>›</i></button>
+              <button id="shortcutOstrichPenBtn" class="hud-menu-item" type="button"><span>🦤</span><div><b>คอกนกกระจอกเทศ</b><small>2 คอก • ร่างคัมภีร์ • เลี้ยง 48 ชม.</small></div><i>›</i></button>
               <button id="shortcutSpiritBarnBtn" class="hud-menu-item" type="button"><span>👻</span><div><b>โรงเรือนสัตว์วิญญาณ</b><small>เข้าสู่โรงเรือนสัตว์วิญญาณ</small></div><i>›</i></button>
               <button id="shortcutCraftFoodBtn" class="hud-menu-item" type="button"><span>🍳</span><div><b>สถานที่คราฟอาหาร</b><small>คราฟอาหารในสวน / อาหารบ้าน</small></div><i>›</i></button>
             </div>
@@ -179,6 +180,29 @@
       <button id="sceneBackBtn" class="scene-nav-button scene-back-button hidden" type="button"></button>
       <button id="sceneNextBtn" class="scene-nav-button scene-next-button hidden" type="button"></button>
       <div id="sceneInteractiveLayer" class="scene-interactive-layer"></div>
+    </section>
+
+    <!-- ===== S2 R34.60 • คอกนกกระจอกเทศ ===== -->
+    <section id="ostrichPenScreen" class="screen ostrich-pen-screen hidden" aria-label="คอกนกกระจอกเทศ">
+      <div id="ostrichPenStage" class="ostrich-pen-stage">
+        <button id="ostrichBackBtn" class="ostrich-pen-top-btn ostrich-pen-back" type="button"><span>🌿</span><b>กลับไปที่แปลงผัก</b></button>
+        <button id="ostrichSwitchBtn" class="ostrich-pen-top-btn ostrich-pen-switch" type="button"><b>ไปคอก 2</b><span>›</span></button>
+        <div class="ostrich-pen-title" aria-live="polite">
+          <b id="ostrichPenName">คอกนกกระจอกเทศ • คอก 1</b>
+          <small id="ostrichPenCount">นก 0/6 • ของบนพื้น 0</small>
+          <em id="ostrichPenSub">กำลังโหลดข้อมูล...</em>
+        </div>
+        <button id="ostrichAdminBtn" class="ostrich-admin-button hidden" type="button">👑 Admin</button>
+        <div id="ostrichAnimalLayer" class="ostrich-animal-layer" aria-label="นกกระจอกเทศในคอก"></div>
+        <div id="ostrichDropLayer" class="ostrich-drop-layer" aria-label="ผลผลิตจากนกกระจอกเทศ"></div>
+        <div class="ostrich-pen-bottom-actions" aria-label="เครื่องมือคอกนกกระจอกเทศ">
+          <button id="ostrichLureBtn" class="ostrich-pen-action" type="button"><span>📜</span><b>ร่างคัมภีร์</b></button>
+          <button id="ostrichCraftBtn" class="ostrich-pen-action" type="button"><span>🍽️</span><b>คราฟอาหาร</b></button>
+          <button id="ostrichFeedBtn" class="ostrich-pen-action feed" type="button"><span>🥣</span><b>ให้อาหารทั้งหมด</b></button>
+          <button id="ostrichCollectBtn" class="ostrich-pen-action collect" type="button"><span>📦</span><b>เก็บทั้งหมด</b></button>
+          <button id="ostrichVaultBtn" class="ostrich-pen-action vault hidden" type="button"><span>🦤</span><b>คลังนก</b></button>
+        </div>
+      </div>
     </section>
 
     <button id="r3420HotelBulkFeedBtn" class="r3420-hotel-bulk-feed hidden" type="button" aria-label="ให้อาหารหมาและแมวทั้งหมด"><span>🍽️</span><b>ให้อาหารทั้งหมด</b><small id="r3420HotelHungryBadge">หิว 0 ตัว</small></button>
@@ -463,7 +487,7 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.59-MISSION-HONEY-INTEGRITY"></script>
+<script src="game.js?v=S2-R34.60-OSTRICH-SYSTEM-LAUNCH"></script>
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
@@ -2874,5 +2898,408 @@
 })();
 </script>
 
+
+
+<script id="r3460-ostrich-system-final">
+/* ======================================================================
+   S2 R34.60 — OSTRICH SYSTEM LAUNCH
+   Isolated Season 2 system: 2 pens / lure manuscripts / 48h retirement /
+   3h bulk feeding / instant drops / 4 food crafts / Admin approvals & rank.
+   ====================================================================== */
+(function YN_R3460_OSTRICH_SYSTEM(){
+  "use strict";
+  const BUILD="S2-R34.60-OSTRICH-SYSTEM-LAUNCH-20260910";
+  const HOUR=60*60*1000;
+  const LIFE_MS=48*HOUR, FEED_MS=3*HOUR, LURE_MS=2*HOUR, MAX_BIRDS=6;
+  const STATE_COLLECTION="ostrichStates", INVENTORY_COLLECTION="ostrichInventories", REQUEST_COLLECTION="ostrichLureRequests";
+  const $=id=>document.getElementById(id);
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const admin=()=>String(currentMemberKey||"")==="aida"||(String(currentMember||"")==="Aida"&&adminProfile?.role==="admin")||adminProfile?.role==="admin";
+  const newId=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+  const cssEsc=v=>globalThis.CSS&&typeof globalThis.CSS.escape==='function'?globalThis.CSS.escape(String(v)):String(v).replace(/[^a-zA-Z0-9_-]/g,ch=>`\\${ch.codePointAt(0).toString(16)} `);
+  function hash32(v){let h=2166136261;for(const c of String(v)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+  const unitHash=v=>hash32(v)/4294967296;
+
+  const FOODS={
+    salad:{name:"สลัดนกคอยาว",image:"ostrich-food-salad.png",craftChance:90,eggChance:70,recipe:{peach:10,apple:10,friendGrassGreen:80,friendGrassRed:80,friendGrassYellow:80,tricolorPudding:3}},
+    featherBuffet:{name:"บุฟเฟต์สามสีสะบัดขน",image:"ostrich-food-feather-buffet.png",craftChance:75,eggChance:40,recipe:{orange:15,cherry:15,friendGrassGreen:90,friendGrassRed:90,friendGrassYellow:90,tricolorPudding:5}},
+    eggPlatter:{name:"ถาดผลไม้ไข่ล้นรัง",image:"ostrich-food-egg-platter.png",craftChance:65,eggChance:90,recipe:{peach:10,apple:10,orange:10,cherry:10,friendGrassGreen:100,friendGrassRed:100,friendGrassYellow:100,tricolorPudding:8}},
+    royalFeast:{name:"สำรับราชานกกระจอกเทศ",image:"ostrich-food-royal-feast.png",craftChance:55,eggChance:20,recipe:{peach:15,apple:15,orange:15,cherry:15,friendGrassGreen:120,friendGrassRed:120,friendGrassYellow:120,tricolorPudding:12}}
+  };
+  const PRODUCTS={
+    egg:{name:"ไข่นกกระจอกเทศ",image:"ostrich-egg.png"},
+    feather:{name:"ขนนกกระจอกเทศ",image:"ostrich-feather.png"}
+  };
+  const BOOKS=[
+    {key:"pink",name:"คัมภีร์สีชมพู",image:"ostrich-book-pink.png"},
+    {key:"brown",name:"คัมภีร์สีน้ำตาล",image:"ostrich-book-brown.png"},
+    {key:"blue",name:"คัมภีร์สีฟ้า",image:"ostrich-book-blue.png"},
+    {key:"green",name:"คัมภีร์สีเขียว",image:"ostrich-book-green.png"}
+  ];
+  const LURE_ITEMS=[
+    {type:"special",key:"jellyfishLaxative",name:"ยาถ่ายแมงกะพรุน",image:"jellyfish_Laxative_Bag.png?v=1",qty:200},
+    {type:"special",key:"landDeed",name:"โฉนดที่ดินขอคืนวัดได้บ่",image:"land-deed.png?v=181",qty:150},
+    {type:"special",key:"coconut20",name:"มะพร้าวสาวแก่",image:"coconut-boost-20.png?v=1",qty:120},
+    {type:"special",key:"pestle50",name:"สากกะเบือชุบตัว",image:"pestle-boost-50.png?v=1",qty:100},
+    {type:"special",key:"cake50",name:"เค้กฮะมอยมัธยม",image:"cake-boost-50.png?v=1",qty:100},
+    {type:"special",key:"satanWings",name:"ปีกซาตาน",image:"item-satan-wings.png?v=1",qty:80},
+    {type:"fishingBait",key:"bait3",name:"เหยื่อตกปลามืออาชีพ",image:"fishing-bait-03.png?v=1",qty:60},
+    {type:"hedgehogItem",key:"goldenShield",name:"โล่เม่นทอง",image:"golden-hedgehog-shield.png",qty:20}
+  ];
+  const INGREDIENT_META={
+    peach:{name:"ลูกพีช",image:"fruit-peach.png?v=S2F1"},
+    apple:{name:"แอปเปิ้ล",image:"fruit-apple.png?v=S2F1"},
+    orange:{name:"ส้ม",image:"fruit-orange.png?v=S2F1"},
+    cherry:{name:"เชอร์รี่",image:"fruit-cherry.png?v=S2F1"},
+    friendGrassGreen:{name:"หญ้าสีเขียว",image:"friend-grass-green.png?v=221"},
+    friendGrassYellow:{name:"หญ้าสีเหลือง",image:"friend-grass-yellow.png?v=221"},
+    friendGrassRed:{name:"หญ้าสีแดง",image:"friend-grass-red.png?v=221"},
+    tricolorPudding:{name:"พุดดิ้งหญ้าสามสี",image:"alpaca_tricolor_pudding.png?v=240"}
+  };
+  const SPRITES={
+    idle:"ostrich_adult_idle-normalized.png",
+    side:"ostrich_adult_side_walk-normalized.png",
+    front:"ostrich_adult_front_walk-normalized.png",
+    back:"ostrich_adult_back_walk-normalized.png",
+    cute:"ostrich_adult_cute_pose-normalized.png"
+  };
+
+  function defaultState(key=currentMemberKey,name=currentMember){return{version:1,memberKey:String(key||""),displayName:String(name||key||""),pen1:[],pen2:[],pen1Drops:[],pen2Drops:[],nextLureAt:0,lureAttempts:0,lifetimeLureSuccess:0,updatedAtClient:0}}
+  function normBird(b){const placed=Math.max(0,Number(b?.placedAt)||now());return{id:String(b?.id||newId("ostrich")),placedAt:placed,expiresAt:Math.max(placed,Number(b?.expiresAt)||placed+LIFE_MS),nextFeedAt:Math.max(0,Number(b?.nextFeedAt)||0),source:String(b?.source||"unknown")}}
+  function normDrop(d){return{id:String(d?.id||newId("ostrich-drop")),type:d?.type==="feather"?"feather":"egg",x:Math.max(9,Math.min(91,Number(d?.x)||50)),y:Math.max(30,Math.min(88,Number(d?.y)||65)),createdAt:Math.max(0,Number(d?.createdAt)||now()),birdId:String(d?.birdId||"")}}
+  function normalizeOState(raw,key=currentMemberKey,name=currentMember){const s={...defaultState(key,name),...(raw&&typeof raw==="object"?raw:{})};s.memberKey=String(key||s.memberKey||"");s.displayName=String(s.displayName||name||key||"");s.pen1=(Array.isArray(s.pen1)?s.pen1:[]).map(normBird);s.pen2=(Array.isArray(s.pen2)?s.pen2:[]).map(normBird);s.pen1Drops=(Array.isArray(s.pen1Drops)?s.pen1Drops:[]).map(normDrop);s.pen2Drops=(Array.isArray(s.pen2Drops)?s.pen2Drops:[]).map(normDrop);s.nextLureAt=Math.max(0,Number(s.nextLureAt)||0);s.lureAttempts=int(s.lureAttempts);s.lifetimeLureSuccess=int(s.lifetimeLureSuccess);return s}
+  function defaultInventory(key=currentMemberKey){return{version:1,memberKey:String(key||""),birdVault:0,foods:Object.fromEntries(Object.keys(FOODS).map(k=>[k,0])),products:{egg:0,feather:0},updatedAtClient:0}}
+  function normalizeInventory(raw,key=currentMemberKey){const s={...defaultInventory(key),...(raw&&typeof raw==="object"?raw:{})};s.memberKey=String(key||s.memberKey||"");s.birdVault=int(s.birdVault);s.foods=s.foods&&typeof s.foods==="object"?s.foods:{};Object.keys(FOODS).forEach(k=>s.foods[k]=int(s.foods[k]));s.products=s.products&&typeof s.products==="object"?s.products:{};s.products.egg=int(s.products.egg);s.products.feather=int(s.products.feather);return s}
+
+  let oState=null,oInv=null,currentPen=1,stateUnsub=null,invUnsub=null,opening=false;
+  let motionRAF=0,motionSaveAt=0,motionMap=new Map(),motionPen=0;
+  let noticeUnsub=null,noticeKey="",noticeQueue=[],noticeBusy=false,expireBusy=false;
+  let adminReqUnsub=null,adminReqKey='',adminReqReady=false,adminPendingCache=[];
+  const busy=new Set();
+
+  async function settleOwnerWrites(){
+    if(typeof settlePendingCloudSave!=="function")return;
+    let timer=0;
+    try{
+      await Promise.race([
+        Promise.resolve().then(()=>settlePendingCloudSave()),
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('ระบบกำลังบันทึกข้อมูลเดิมอยู่ กรุณากดอีกครั้งในอีกครู่ค่ะ')),5000)})
+      ]);
+    }finally{if(timer)clearTimeout(timer)}
+  }
+  function stateDoc(db,fs,key=currentMemberKey){return fs.doc(db,STATE_COLLECTION,String(key))}
+  function invDoc(db,fs,key=currentMemberKey){return fs.doc(db,INVENTORY_COLLECTION,String(key))}
+  function activeBirds(s,pen,t=now()){return (s?.[`pen${pen}`]||[]).filter(b=>Number(b.expiresAt)>t)}
+  function dropsFor(s,pen){return s?.[`pen${pen}Drops`]||[]}
+  function pruneExpired(s,t=now()){
+    let removed=[];
+    for(const pen of [1,2]){const key=`pen${pen}`,keep=[];for(const b of s[key]||[]){if(Number(b.expiresAt)<=t)removed.push({...b,pen});else keep.push(b)}s[key]=keep}
+    return removed;
+  }
+  function fmtRemain(ms){ms=Math.max(0,Number(ms)||0);const h=Math.floor(ms/HOUR),m=Math.floor((ms%HOUR)/60000),sec=Math.floor((ms%60000)/1000);if(h>=1)return`${h} ชม. ${m} นาที`;if(m>=1)return`${m} นาที ${sec} วิ`;return`${sec} วิ`}
+  function localMotionKey(pen=currentPen){return`yn:s2:r3460:ostrich-motion:${String(currentMemberKey||"guest")}:pen${pen}`}
+  function readMotionStore(pen=currentPen){try{return JSON.parse(localStorage.getItem(localMotionKey(pen))||"{}")||{}}catch{return{}}}
+  function saveMotionStore(){if(!motionPen||!motionMap.size)return;const out={};motionMap.forEach((m,id)=>{out[id]={x:m.x,y:m.y,tx:m.tx,ty:m.ty,moving:!!m.moving,nextMoveAt:m.nextMoveAt||0}});try{localStorage.setItem(localMotionKey(motionPen),JSON.stringify(out))}catch{}}
+
+  async function ensureDocs(){
+    if(!cloudReady||!currentMemberKey)throw new Error("ระบบส่วนกลางยังไม่พร้อมค่ะ");
+    const {db,fs}=await getFirebaseContext(),sr=stateDoc(db,fs),ir=invDoc(db,fs);
+    const [ss,is]=await Promise.all([fs.getDoc(sr),fs.getDoc(ir)]);
+    if(!ss.exists())await fs.setDoc(sr,{...defaultState(),updatedAt:fs.serverTimestamp()},{merge:false});
+    if(!is.exists())await fs.setDoc(ir,{...defaultInventory(),updatedAt:fs.serverTimestamp()},{merge:false});
+    oState=normalizeOState(ss.exists()?ss.data():defaultState());
+    oInv=normalizeInventory(is.exists()?is.data():defaultInventory());
+    return{oState,oInv};
+  }
+  async function reloadDocs(){
+    const {db,fs}=await getFirebaseContext(),[ss,is]=await Promise.all([fs.getDoc(stateDoc(db,fs)),fs.getDoc(invDoc(db,fs))]);
+    oState=normalizeOState(ss.exists()?ss.data():defaultState());oInv=normalizeInventory(is.exists()?is.data():defaultInventory());return{oState,oInv};
+  }
+  function stopSubscriptions(){try{stateUnsub?.()}catch{}try{invUnsub?.()}catch{}stateUnsub=invUnsub=null}
+  async function subscribeDocs(){
+    stopSubscriptions();if(!cloudReady||!currentMemberKey)return;const {db,fs}=await getFirebaseContext();
+    stateUnsub=fs.onSnapshot(stateDoc(db,fs),snap=>{if(!snap.exists())return;oState=normalizeOState(snap.data());if(isOstrichOpen())renderScreen(false)},e=>console.warn(BUILD,"state listen",e));
+    invUnsub=fs.onSnapshot(invDoc(db,fs),snap=>{if(!snap.exists())return;oInv=normalizeInventory(snap.data());if(isOstrichOpen())renderScreen(false)},e=>console.warn(BUILD,"inv listen",e));
+  }
+  function isOstrichOpen(){return !$('ostrichPenScreen')?.classList.contains('hidden')}
+
+  function stopMotion(){if(motionRAF){cancelAnimationFrame(motionRAF);motionRAF=0}saveMotionStore();motionMap.clear();motionPen=0}
+  function pauseMotion(){if(motionRAF){cancelAnimationFrame(motionRAF);motionRAF=0}motionMap.forEach(m=>{m.moving=false;m.sx=m.x;m.sy=m.y;m.tx=m.x;m.ty=m.y;m.nextMoveAt=performance.now()+650});saveMotionStore()}
+  function seedPos(id,i){let h=2166136261;for(const c of String(id)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}const x=22+((h>>>0)%58),y=43+(((h>>>8)%35));return{x:x+(i%2)*1.4,y:y+(i%3)*.8}}
+  function pickTarget(m){const angle=Math.random()*Math.PI*2,dist=9+Math.random()*24;m.tx=Math.max(17,Math.min(84,m.x+Math.cos(angle)*dist));m.ty=Math.max(39,Math.min(82,m.y+Math.sin(angle)*dist));const d=Math.hypot(m.tx-m.x,m.ty-m.y);m.sx=m.x;m.sy=m.y;m.start=performance.now();m.duration=4000+d*230+Math.random()*2200;m.moving=true;m.nextMoveAt=0}
+  function motionMode(m){if(!m.moving)return"idle";const dx=m.tx-m.sx,dy=m.ty-m.sy;if(Math.abs(dx)>Math.abs(dy)*.8)return"side";return dy<0?"back":"front"}
+  function spriteFrame(el,mode,frame,flip){const img=SPRITES[mode]||SPRITES.idle;if(el.dataset.sprite!==img){el.dataset.sprite=img;el.style.backgroundImage=`url("${img}")`}const c=frame%4,r=Math.floor(frame/4)%4;el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`;el.style.transform=flip?"scaleX(-1)":"scaleX(1)"}
+  function startMotion(birds){
+    if(motionPen!==currentPen){stopMotion();motionPen=currentPen}
+    const stored=readMotionStore(currentPen),ids=new Set(birds.map(b=>b.id));
+    for(const id of [...motionMap.keys()])if(!ids.has(id))motionMap.delete(id);
+    birds.forEach((b,i)=>{if(motionMap.has(b.id))return;const st=stored[b.id],p=st&&Number.isFinite(Number(st.x))?{x:Number(st.x),y:Number(st.y)}:seedPos(b.id,i);motionMap.set(b.id,{id:b.id,x:p.x,y:p.y,sx:p.x,sy:p.y,tx:Number(st?.tx)||p.x,ty:Number(st?.ty)||p.y,moving:false,nextMoveAt:performance.now()+500+Math.random()*1700,start:0,duration:0})});
+    if(!motionRAF)motionRAF=requestAnimationFrame(motionTick);
+  }
+  function motionTick(t){
+    motionRAF=0;if(!isOstrichOpen())return;const layer=$('ostrichAnimalLayer');if(!layer)return;
+    motionMap.forEach((m,id)=>{
+      const node=layer.querySelector(`[data-ostrich-bird="${cssEsc(id)}"]`);if(!node)return;
+      if(m.moving){let p=Math.min(1,(t-m.start)/Math.max(1,m.duration));const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;m.x=m.sx+(m.tx-m.sx)*e;m.y=m.sy+(m.ty-m.sy)*e;if(p>=1){m.x=m.tx;m.y=m.ty;m.moving=false;m.nextMoveAt=t+900+Math.random()*2600}}
+      else if(t>=m.nextMoveAt)pickTarget(m);
+      node.style.left=`${m.x}%`;node.style.top=`${m.y}%`;node.style.zIndex=String(100+Math.round(m.y));
+      const mode=motionMode(m),fr=Math.floor(t/(mode==="idle"?330:170))%16,flip=mode==="side"&&(m.tx-m.sx)<0;spriteFrame(node.querySelector('.ostrich-sprite'),mode,fr,flip);
+    });
+    if(t-motionSaveAt>4500){motionSaveAt=t;saveMotionStore()}
+    motionRAF=requestAnimationFrame(motionTick);
+  }
+
+  function renderBirdLayer(){
+    const layer=$('ostrichAnimalLayer');if(!layer||!oState)return;const birds=activeBirds(oState,currentPen),seen=new Set();
+    for(const b of birds){seen.add(b.id);let n=layer.querySelector(`[data-ostrich-bird="${cssEsc(b.id)}"]`);if(!n){n=document.createElement('div');n.className='ostrich-bird';n.dataset.ostrichBird=b.id;n.innerHTML='<div class="ostrich-bird-shadow"></div><div class="ostrich-sprite" aria-hidden="true"></div><small class="ostrich-life-label"></small>';layer.appendChild(n)}const label=n.querySelector('.ostrich-life-label');if(label)label.textContent=`เหลือ ${fmtRemain(Number(b.expiresAt)-now())} • จะถูกปลดระวาง`}
+    [...layer.querySelectorAll('[data-ostrich-bird]')].forEach(n=>{if(!seen.has(n.dataset.ostrichBird))n.remove()});startMotion(birds)
+  }
+  function renderDropLayer(){
+    const layer=$('ostrichDropLayer');if(!layer||!oState)return;const arr=dropsFor(oState,currentPen),seen=new Set();
+    for(const d of arr){seen.add(d.id);let b=layer.querySelector(`[data-ostrich-drop="${cssEsc(d.id)}"]`);if(!b){b=document.createElement('button');b.type='button';b.className=`ostrich-ground-drop is-${d.type}`;b.dataset.ostrichDrop=d.id;b.innerHTML=`<img src="${PRODUCTS[d.type].image}" alt="${esc(PRODUCTS[d.type].name)}">`;b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();collectDrop(d.id,b)},{passive:false});layer.appendChild(b)}b.style.left=`${d.x}%`;b.style.top=`${d.y}%`}
+    [...layer.querySelectorAll('[data-ostrich-drop]')].forEach(b=>{if(!seen.has(b.dataset.ostrichDrop))b.remove()})
+  }
+  function renderHeader(){
+    if(!oState||!oInv)return;const birds=activeBirds(oState,currentPen),drops=dropsFor(oState,currentPen);
+    const title=$('ostrichPenName');if(title)title.textContent=`คอกนกกระจอกเทศ • คอก ${currentPen}`;
+    const count=$('ostrichPenCount');if(count)count.textContent=`นก ${birds.length}/${MAX_BIRDS} • ของบนพื้น ${drops.length}`;
+    const sub=$('ostrichPenSub');if(sub){if(currentPen===1){const rem=Math.max(0,Number(oState.nextLureAt)-now());sub.textContent=birds.length>=MAX_BIRDS?'คอกเต็มแล้ว':rem?`ล่อได้อีกใน ${fmtRemain(rem)}`:'พร้อมร่างคัมภีร์ล่อนก'}else{sub.textContent=`คลังนก ${oInv.birdVault} ตัว • วางลงคอกแล้วเอากลับไม่ได้`}}
+    $('ostrichLureBtn')?.classList.toggle('hidden',currentPen!==1);$('ostrichCraftBtn')?.classList.toggle('hidden',currentPen!==1);$('ostrichVaultBtn')?.classList.toggle('hidden',currentPen!==2);$('ostrichAdminBtn')?.classList.toggle('hidden',!admin());
+    const sw=$('ostrichSwitchBtn');if(sw)sw.innerHTML=`<b>ไปคอก ${currentPen===1?2:1}</b><span>›</span>`;
+  }
+  function renderScreen(full=true){if(!oState||!oInv)return;renderHeader();renderBirdLayer();renderDropLayer()}
+
+  async function cleanupExpired(showSummary=false){
+    if(!cloudReady||!currentMemberKey)return 0;const t=now(),{db,fs}=await getFirebaseContext(),ref=stateDoc(db,fs);let removed=[];
+    await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref),s=normalizeOState(snap.exists()?snap.data():defaultState());removed=pruneExpired(s,t);if(removed.length)tx.set(ref,{...clone(s),updatedAtClient:t,updatedAt:fs.serverTimestamp()},{merge:false})});
+    if(removed.length){await reloadDocs().catch(()=>{});if(showSummary)prettyPopup({image:"ostrich-adult-icon.png",title:"🦤 นกถูกปลดระวางแล้ว",text:removed.length===1?"น้องอยู่กับคุณครบ 48 ชั่วโมงแล้ว และออกเดินทางต่อเรียบร้อยค่ะ":`มีนกกระจอกเทศถูกปลดระวางแล้ว ${removed.length} ตัวค่ะ`,button:"รับทราบ"})}
+    return removed.length;
+  }
+
+  async function openOstrich(){
+    if(opening)return;opening=true;
+    try{
+      if(visitContext)return message("เข้าไม่ได้","กรุณากลับฟาร์มของตัวเองก่อนค่ะ");
+      try{closeHomeHudMenu?.()}catch{}try{closeModal?.()}catch{};
+      await ensureDocs();await cleanupExpired(true).catch(e=>console.warn(BUILD,"expire",e));await reloadDocs();
+      $('gameScreen')?.classList.add('hidden');$('sceneScreen')?.classList.add('hidden');$('alpacaPenScreen')?.classList.add('hidden');$('ostrichPenScreen')?.classList.remove('hidden');currentScene='ostrichPen';currentPen=1;await subscribeDocs();renderScreen(true);
+    }catch(e){message("เข้าคอกนกกระจอกเทศไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{opening=false}
+  }
+  function leaveOstrich(){saveMotionStore();stopMotion();stopSubscriptions();$('ostrichPenScreen')?.classList.add('hidden');$('sceneScreen')?.classList.add('hidden');$('alpacaPenScreen')?.classList.add('hidden');$('gameScreen')?.classList.remove('hidden');currentScene=null;try{draw?.()}catch{}}
+  async function switchPen(){saveMotionStore();stopMotion();currentPen=currentPen===1?2:1;await cleanupExpired(false).catch(()=>{});renderScreen(true)}
+
+  function saveCount(s,it){if(it.type==="special")return int(s?.specials?.[it.key]);if(it.type==="fishingBait")return int(s?.fishingBaits?.[it.key]);if(it.type==="hedgehogItem")return int(s?.hedgehogItems?.[it.key]);return 0}
+  function saveFieldPath(it){if(it.type==="special")return`specials.${it.key}`;if(it.type==="fishingBait")return`fishingBaits.${it.key}`;if(it.type==="hedgehogItem")return`hedgehogItems.${it.key}`;return""}
+  function patchLocalField(path,value){const s=ownState||state;if(!s||!path)return;const a=path.split('.');let o=s;for(let i=0;i<a.length-1;i++){o[a[i]]=o[a[i]]&&typeof o[a[i]]==='object'?o[a[i]]:{};o=o[a[i]]}o[a[a.length-1]]=value;try{if(ownState)ownState=s;if(!visitContext)state=s;saveLocalOnly?.(s)}catch{}}
+
+  async function openLure(){
+    try{await ensureDocs();await cleanupExpired(false);await reloadDocs();const birds=activeBirds(oState,1),rem=Math.max(0,Number(oState.nextLureAt)-now());if(birds.length>=MAX_BIRDS)return message("คอกนกกระจอกเทศคอก 1 เต็มแล้ว","รอนกปลดระวางค่อยมาล่อใหม่นะ");if(rem>0)return message("ยังล่อนกไม่ได้",`ร่างคัมภีร์ได้อีกใน ${fmtRemain(rem)} ค่ะ`);const s=ownState||state;
+      $('modalContent').innerHTML=`<section class="feature-panel ostrich-modal"><header><img src="ostrich-book-blue.png" alt=""><div><small>กิจกรรมล่อนกกระจอกเทศ</small><h2>📜 ร่างคัมภีร์ล่อนก</h2><p>เลือกวัตถุดิบได้เพียง 1 อย่างตามจำนวนที่กำหนด</p></div></header><div class="ostrich-scroll ostrich-lure-list">${LURE_ITEMS.map((it,i)=>{const have=saveCount(s,it),ok=have>=it.qty;return`<article class="ostrich-lure-card ${ok?'':'is-disabled'}"><img src="${it.image}" alt="${esc(it.name)}"><div><b>${esc(it.name)}</b><small>มี ${have.toLocaleString('th-TH')} • ใช้ ${it.qty.toLocaleString('th-TH')}</small></div><button type="button" data-ostrich-lure="${i}" ${ok?'':'disabled'}>${ok?'เลือกชิ้นนี้':'ไอเท็มไม่เพียงพอ'}</button></article>`}).join('')}</div><div class="ostrich-modal-note">ล่อได้ 1 ครั้งทุก 2 ชั่วโมง • ของจะถูกหักเมื่อส่งคำขอสำเร็จ</div></section>`;openModal();document.querySelectorAll('[data-ostrich-lure]').forEach(b=>b.onclick=()=>confirmLure(LURE_ITEMS[Number(b.dataset.ostrichLure)]));
+    }catch(e){message("เปิดคัมภีร์ไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  function confirmLure(it){
+    if(!it)return;const have=saveCount(ownState||state,it);if(have<it.qty)return openLure();
+    $('modalContent').innerHTML=`<section class="feature-panel ostrich-result-popup"><img class="ostrich-result-main" src="${it.image}" alt="${esc(it.name)}"><small>ร่างคัมภีร์นกกระจอกเทศ</small><h2>${esc(it.name)} ×${it.qty}</h2><p>ยืนยันใช้วัตถุดิบนี้เพื่อส่งคำล่อนกหรือไม่คะ?</p><div class="ostrich-confirm-row"><button id="ostrichLureCancel" type="button" class="secondary-action">กลับ</button><button id="ostrichLureConfirm" type="button" class="primary-spooky-action">ยืนยันร่างคัมภีร์</button></div></section>`;openModal();$('ostrichLureCancel').onclick=openLure;$('ostrichLureConfirm').onclick=()=>submitLure(it);
+  }
+  async function submitLure(it){
+    const lock='lure';if(busy.has(lock))return;busy.add(lock);const btn=$('ostrichLureConfirm'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='กำลังส่งคัมภีร์...'}
+    const book=BOOKS[Math.floor(Math.random()*BOOKS.length)],actionId=newId('lure'),t=now();
+    try{
+      await settleOwnerWrites();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,'saves',currentMemberKey),oRef=stateDoc(db,fs),rRef=fs.doc(fs.collection(db,REQUEST_COLLECTION));let finalCount=0,nextLure=t+LURE_MS;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,os]=await Promise.all([tx.get(sRef),tx.get(oRef)]);if(!ss.exists())throw new Error('ไม่พบเซฟสมาชิก');const save=normalizeState(ss.data(),currentMember),ost=normalizeOState(os.exists()?os.data():defaultState());pruneExpired(ost,t);if(activeBirds(ost,1,t).length>=MAX_BIRDS)throw new Error('คอกนกกระจอกเทศคอก 1 เต็มแล้ว รอนกปลดระวางค่อยมาล่อใหม่นะ');if(Number(ost.nextLureAt)>t)throw new Error(`ยังล่อไม่ได้ • เหลือ ${fmtRemain(Number(ost.nextLureAt)-t)}`);const have=saveCount(save,it);if(have<it.qty)throw new Error(`${it.name} ไม่เพียงพอ`);finalCount=have-it.qty;const path=saveFieldPath(it);tx.update(sRef,{[path]:finalCount,updatedAt:fs.serverTimestamp()});ost.nextLureAt=nextLure;ost.lureAttempts=int(ost.lureAttempts)+1;ost.updatedAtClient=t;tx.set(oRef,{...clone(ost),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(rRef,{version:1,memberKey:String(currentMemberKey),memberName:String(currentMember||currentMemberKey),status:'pending',bookStyle:book.key,actionId,itemKey:it.key,itemType:it.type,itemName:it.name,qty:it.qty,createdAtClient:t,createdAt:fs.serverTimestamp()},{merge:false});
+      });
+      patchLocalField(saveFieldPath(it),finalCount);oState={...(oState||defaultState()),nextLureAt,lureAttempts:int(oState?.lureAttempts)+1};renderScreen(false);prettyPopup({image:book.image,title:`📜 ${book.name}`,text:'ส่งใบร่างคัมภีร์นกกระจอกเทศเรียบร้อยแล้วค่ะ รอดูกันว่าน้องจะถูกใจคุณหรือเปล่า 🦤💕',button:'รับทราบ'});
+    }catch(e){message("ส่งคำล่อนกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'ยืนยันร่างคัมภีร์'}}
+  }
+
+  function ingredientCount(s,key){if(['peach','apple','orange','cherry'].includes(key))return int(s?.farmFruits?.[key]);if(key.startsWith('friendGrass'))return int(s?.specials?.[key]);if(key==='tricolorPudding')return int(s?.alpaca?.inventory?.food?.tricolorPudding);return 0}
+  function ingredientPath(key){if(['peach','apple','orange','cherry'].includes(key))return`farmFruits.${key}`;if(key.startsWith('friendGrass'))return`specials.${key}`;if(key==='tricolorPudding')return'alpaca.inventory.food.tricolorPudding';return''}
+  function recipeRows(food,s,qty=1){return Object.entries(food.recipe).map(([key,n])=>({key,need:n*qty,have:ingredientCount(s,key),...INGREDIENT_META[key]}))}
+  async function openCraft(){
+    try{await ensureDocs();const s=ownState||state;await reloadDocs();$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-craft-modal"><header><img src="ostrich-food-salad.png" alt=""><div><small>คอก 1 • ครัวนกกระจอกเทศ</small><h2>🍽️ คราฟอาหารนก</h2><p>คราฟได้ครั้งละ 1–10 ครั้ง • วัตถุดิบถูกใช้ทุกครั้งไม่ว่าจะสำเร็จหรือไม่</p></div></header><div class="ostrich-scroll ostrich-food-craft-list">${Object.entries(FOODS).map(([key,f])=>`<article class="ostrich-food-card"><img src="${f.image}" alt="${esc(f.name)}"><div class="ostrich-food-card-main"><div class="ostrich-food-title"><b>${esc(f.name)}</b><span>สำเร็จ ${f.craftChance}%</span></div><small>มีอาหาร ×${int(oInv?.foods?.[key])}</small><div class="ostrich-recipe">${recipeRows(f,s).map(r=>`<span class="${r.have>=r.need?'':'missing'}"><img src="${r.image}" alt="">${esc(r.name)} ×${r.need}</span>`).join('')}</div><div class="ostrich-craft-row"><label>จำนวน <input type="number" min="1" max="10" value="1" data-ostrich-craft-qty="${key}"></label><button type="button" data-ostrich-craft="${key}">คราฟ</button></div></div></article>`).join('')}</div></section>`;openModal();document.querySelectorAll('[data-ostrich-craft]').forEach(b=>b.onclick=()=>craftFood(b.dataset.ostrichCraft));
+    }catch(e){message("เปิดครัวไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function craftFood(key){
+    const f=FOODS[key];if(!f)return;const qEl=document.querySelector(`[data-ostrich-craft-qty="${cssEsc(key)}"]`),qty=Math.max(1,Math.min(10,Math.floor(Number(qEl?.value)||1)));const lock=`craft:${key}`;if(busy.has(lock))return;busy.add(lock);const btn=document.querySelector(`[data-ostrich-craft="${cssEsc(key)}"]`),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='กำลังคราฟ...'}
+    let success=0;for(let i=0;i<qty;i++)if(Math.random()*100<f.craftChance)success++;
+    try{
+      await settleOwnerWrites();const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,'saves',currentMemberKey),iRef=invDoc(db,fs);let finalVals={},nextInv=null;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,is]=await Promise.all([tx.get(sRef),tx.get(iRef)]);if(!ss.exists())throw new Error('ไม่พบเซฟสมาชิก');const save=normalizeState(ss.data(),currentMember),inv=normalizeInventory(is.exists()?is.data():defaultInventory());const rows=recipeRows(f,save,qty),missing=rows.filter(r=>r.have<r.need);if(missing.length)throw new Error(`วัตถุดิบไม่พอ: ${missing.map(r=>`${r.name} ขาด ${r.need-r.have}`).join(' • ')}`);const updates={updatedAt:fs.serverTimestamp()};for(const r of rows){const v=r.have-r.need;updates[ingredientPath(r.key)]=v;finalVals[r.key]=v}inv.foods[key]=int(inv.foods[key])+success;inv.updatedAtClient=now();nextInv=clone(inv);tx.update(sRef,updates);tx.set(iRef,{...clone(inv),updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Object.entries(finalVals).forEach(([k,v])=>patchLocalField(ingredientPath(k),v));oInv=normalizeInventory(nextInv);renderScreen(false);prettyPopup({image:f.image,title:success?`✨ คราฟ ${f.name} สำเร็จ`:'💨 คราฟไม่สำเร็จ',text:`คราฟทั้งหมด ${qty} ครั้ง • สำเร็จ ${success} • ไม่สำเร็จ ${qty-success}<br><b>ได้รับ ${esc(f.name)} ×${success}</b><br><small>วัตถุดิบถูกใช้ครบ ${qty} สูตรแล้วค่ะ</small>`,button:'รับ'});
+    }catch(e){message("คราฟอาหารไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'คราฟ'}}
+  }
+
+  async function openFeed(){
+    try{await ensureDocs();await cleanupExpired(false);await reloadDocs();const birds=activeBirds(oState,currentPen),t=now(),ready=birds.filter(b=>Number(b.nextFeedAt||0)<=t);if(!birds.length)return message("ยังไม่มีนกในคอก",currentPen===1?'ลองร่างคัมภีร์ล่อนกก่อนนะคะ':'นำสมาชิกจากคลังนกมาวางก่อนนะคะ');if(!ready.length){const next=Math.min(...birds.map(b=>Number(b.nextFeedAt)||t));return message("น้องยังอิ่มอยู่",`ให้อาหารรอบต่อไปได้อีกใน ${fmtRemain(next-t)} ค่ะ`)}const need=ready.length;
+      $('modalContent').innerHTML=`<section class="feature-panel ostrich-modal"><header><img src="ostrich-adult-icon.png" alt=""><div><small>คอก ${currentPen}</small><h2>🍽️ ให้อาหารทั้งหมด</h2><p>มีนกพร้อมกิน ${need}/${birds.length} ตัว • ต้องใช้อาหารชนิดเดียว ${need} เสิร์ฟ</p></div></header><div class="ostrich-scroll ostrich-feed-list">${Object.entries(FOODS).map(([key,f])=>{const have=int(oInv.foods[key]),ok=have>=need;return`<article class="ostrich-feed-card ${ok?'':'is-disabled'}"><img src="${f.image}" alt="${esc(f.name)}"><div><b>${esc(f.name)}</b><small>มี ${have} เสิร์ฟ • ใช้ ${need} เสิร์ฟ</small><em>โอกาสไข่ ${f.eggChance}% • ขน ${100-f.eggChance}%</em></div><button type="button" data-ostrich-feed="${key}" ${ok?'':'disabled'}>${ok?'ให้อาหารทั้งหมด':'อาหารไม่พอ'}</button></article>`}).join('')}</div></section>`;openModal();document.querySelectorAll('[data-ostrich-feed]').forEach(b=>b.onclick=()=>feedAll(b.dataset.ostrichFeed));
+    }catch(e){message("เปิดเมนูอาหารไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function feedAll(key){
+    const f=FOODS[key];if(!f)return;const lock=`feed:${currentPen}`;if(busy.has(lock))return;busy.add(lock);const btn=document.querySelector(`[data-ostrich-feed="${cssEsc(key)}"]`),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='กำลังให้อาหาร...'}const pen=currentPen,t=now(),actionId=newId('feed');let egg=0,feather=0;
+    try{
+      const {db,fs}=await getFirebaseContext(),oRef=stateDoc(db,fs),iRef=invDoc(db,fs);let nextS=null,nextI=null;
+      await fs.runTransaction(db,async tx=>{
+        const [os,is]=await Promise.all([tx.get(oRef),tx.get(iRef)]),st=normalizeOState(os.exists()?os.data():defaultState()),inv=normalizeInventory(is.exists()?is.data():defaultInventory());pruneExpired(st,t);const birds=activeBirds(st,pen,t),ready=birds.filter(b=>Number(b.nextFeedAt||0)<=t),need=ready.length;if(!need)throw new Error('ตอนนี้ยังไม่มีนกที่พร้อมกิน');if(int(inv.foods[key])<need)throw new Error(`อาหารไม่เพียงพอค่ะ • ต้องใช้ ${need} เสิร์ฟ`);inv.foods[key]-=need;const dropKey=`pen${pen}Drops`;egg=0;feather=0;for(const b of ready){b.nextFeedAt=t+FEED_MS;const seed=`${actionId}:${b.id}`;const type=unitHash(seed+':type')*100<f.eggChance?'egg':'feather';type==='egg'?egg++:feather++;st[dropKey].push({id:`ostrich-drop-${hash32(seed).toString(36)}`,type,birdId:b.id,x:18+unitHash(seed+':x')*64,y:43+unitHash(seed+':y')*39,createdAt:t})}st.updatedAtClient=t;inv.updatedAtClient=t;nextS=clone(st);nextI=clone(inv);tx.set(oRef,{...clone(st),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(iRef,{...clone(inv),updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      oState=normalizeOState(nextS);oInv=normalizeInventory(nextI);closeModal();renderScreen(true);prettyPopup({image:f.image,title:'🦤 น้องกินอิ่มแล้ว!',text:`ให้อาหารสำเร็จค่ะ • ของดรอปลงพื้นทันที<br>🥚 ไข่ ×${egg} &nbsp; 🪶 ขน ×${feather}<br><small>รอบให้อาหารถัดไปอีก 3 ชั่วโมง</small>`,button:'รับทราบ'});
+    }catch(e){message("ให้อาหารไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'ให้อาหารทั้งหมด'}}
+  }
+
+  async function collectDrop(id,button){
+    const lock=`drop:${id}`;if(busy.has(lock))return;busy.add(lock);button&&(button.disabled=true);const pen=currentPen;
+    try{
+      const {db,fs}=await getFirebaseContext(),oRef=stateDoc(db,fs),iRef=invDoc(db,fs);let got=null,nextS=null,nextI=null;
+      await fs.runTransaction(db,async tx=>{const [os,is]=await Promise.all([tx.get(oRef),tx.get(iRef)]),st=normalizeOState(os.exists()?os.data():defaultState()),inv=normalizeInventory(is.exists()?is.data():defaultInventory()),key=`pen${pen}Drops`,idx=st[key].findIndex(d=>d.id===id);if(idx<0)throw new Error('ของชิ้นนี้ถูกเก็บไปแล้ว');got=st[key][idx];st[key].splice(idx,1);inv.products[got.type]=int(inv.products[got.type])+1;nextS=clone(st);nextI=clone(inv);tx.set(oRef,{...clone(st),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(iRef,{...clone(inv),updatedAt:fs.serverTimestamp()},{merge:false})});oState=normalizeOState(nextS);oInv=normalizeInventory(nextI);renderDropLayer();prettyPopup({image:PRODUCTS[got.type].image,title:'ยินดีด้วยนะคะ 🎉',text:`คุณได้รับ <b>${esc(PRODUCTS[got.type].name)} ×1</b><br><small>เข้ากระเป๋า → นกกระจอกเทศแล้วค่ะ</small>`,button:'รับ'});
+    }catch(e){if(!/ถูกเก็บ/.test(String(e?.message)))message("เก็บของไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);button&&(button.disabled=false)}
+  }
+  async function collectAll(){
+    const pen=currentPen,lock=`collect:${pen}`;if(busy.has(lock))return;busy.add(lock);const btn=$('ostrichCollectBtn'),old=btn?.innerHTML;if(btn){btn.disabled=true;btn.innerHTML='<span>⏳</span><b>กำลังเก็บ...</b>'}
+    try{
+      const {db,fs}=await getFirebaseContext(),oRef=stateDoc(db,fs),iRef=invDoc(db,fs);let egg=0,feather=0,nextS=null,nextI=null;
+      await fs.runTransaction(db,async tx=>{const [os,is]=await Promise.all([tx.get(oRef),tx.get(iRef)]),st=normalizeOState(os.exists()?os.data():defaultState()),inv=normalizeInventory(is.exists()?is.data():defaultInventory()),key=`pen${pen}Drops`,arr=st[key]||[];if(!arr.length)throw new Error('คอกนี้ยังไม่มีของดรอปค่ะ');for(const d of arr)d.type==='feather'?feather++:egg++;inv.products.egg+=egg;inv.products.feather+=feather;st[key]=[];nextS=clone(st);nextI=clone(inv);tx.set(oRef,{...clone(st),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(iRef,{...clone(inv),updatedAt:fs.serverTimestamp()},{merge:false})});oState=normalizeOState(nextS);oInv=normalizeInventory(nextI);renderScreen(false);prettyPopup({image:egg?PRODUCTS.egg.image:PRODUCTS.feather.image,title:'📦 เก็บของทั้งหมดแล้ว',text:`🥚 ไข่นกกระจอกเทศ ×${egg}<br>🪶 ขนนกกระจอกเทศ ×${feather}<br><small>เข้ากระเป๋าเรียบร้อยแล้วค่ะ</small>`,button:'รับ'});
+    }catch(e){message("เก็บทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=old||'<span>📦</span><b>เก็บทั้งหมด</b>'}}
+  }
+
+  async function openVault(){
+    try{await ensureDocs();await cleanupExpired(false);await reloadDocs();const count=int(oInv.birdVault),used=activeBirds(oState,2).length,free=Math.max(0,MAX_BIRDS-used);$('modalContent').innerHTML=`<section class="feature-panel ostrich-result-popup"><img class="ostrich-result-main" src="ostrich-adult-icon.png" alt=""><small>คอก 2</small><h2>🦤 คลังนกกระจอกเทศ</h2><div class="ostrich-vault-stats"><span>ในคลัง <b>${count}</b> ตัว</span><span>ในคอก <b>${used}/${MAX_BIRDS}</b></span></div><p>เวลาปลดระวาง 48 ชั่วโมงจะเริ่มนับเมื่อวางนกลงคอกเท่านั้น และวางแล้วเอากลับคลังไม่ได้ค่ะ</p><button id="ostrichPlaceBirdBtn" class="primary-spooky-action" type="button" ${count>0&&free>0?'':'disabled'}>${free<=0?'คอก 2 เต็มแล้ว':count<=0?'ยังไม่มีนกในคลัง':'วางนก 1 ตัว'}</button></section>`;openModal();$('ostrichPlaceBirdBtn')&&($('ostrichPlaceBirdBtn').onclick=placeBirdFromVault);
+    }catch(e){message("เปิดคลังนกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  async function placeBirdFromVault(){
+    const lock='place';if(busy.has(lock))return;busy.add(lock);const btn=$('ostrichPlaceBirdBtn'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='กำลังวาง...'}const t=now();
+    try{const {db,fs}=await getFirebaseContext(),oRef=stateDoc(db,fs),iRef=invDoc(db,fs);let nextS,nextI;await fs.runTransaction(db,async tx=>{const [os,is]=await Promise.all([tx.get(oRef),tx.get(iRef)]),st=normalizeOState(os.exists()?os.data():defaultState()),inv=normalizeInventory(is.exists()?is.data():defaultInventory());pruneExpired(st,t);if(activeBirds(st,2,t).length>=MAX_BIRDS)throw new Error('คอก 2 เต็มแล้วค่ะ');if(inv.birdVault<1)throw new Error('ไม่มีนกในคลัง');inv.birdVault--;st.pen2.push({id:newId('ostrich'),placedAt:t,expiresAt:t+LIFE_MS,nextFeedAt:0,source:'vault'});nextS=clone(st);nextI=clone(inv);tx.set(oRef,{...clone(st),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(iRef,{...clone(inv),updatedAt:fs.serverTimestamp()},{merge:false})});oState=normalizeOState(nextS);oInv=normalizeInventory(nextI);closeModal();renderScreen(true);prettyPopup({image:'ostrich-adult-icon.png',title:'🦤 วางนกลงคอก 2 แล้ว',text:'เริ่มนับเวลาปลดระวาง 48 ชั่วโมงตั้งแต่วินาทีนี้ค่ะ<br><small>น้องพร้อมกินอาหารรอบแรกได้ทันที</small>',button:'รับทราบ'})}catch(e){message("วางนกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'วางนก 1 ตัว'}}
+  }
+
+  async function loadOstrichInventory(){if(!cloudReady||!currentMemberKey)return normalizeInventory(null);try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDoc(invDoc(db,fs));oInv=normalizeInventory(snap.exists()?snap.data():defaultInventory());return oInv}catch(e){console.warn(BUILD,'inventory load',e);return normalizeInventory(oInv)}}
+  async function renderOstrichInventory(){
+    const inv=await loadOstrichInventory();$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-inventory-modal"><header><img src="ostrich-adult-icon.png" alt=""><div><small>กระเป๋า</small><h2>🦤 นกกระจอกเทศ</h2><p>อาหาร ผลผลิต และนกสำรองคอก 2</p></div></header><div class="inventory-tabs inventory-tabs-v2 ostrich-inventory-tabs"><button type="button" data-inventory-tab="crops">🌱 กระเป๋าหลัก</button><button type="button" data-inventory-tab="ostrich" class="active">🦤 นกกระจอกเทศ</button></div><div class="ostrich-scroll ostrich-inventory-grid"><article><img src="ostrich-adult-icon.png" alt=""><b>นกในคลังคอก 2</b><strong>×${inv.birdVault}</strong></article>${Object.entries(FOODS).map(([k,f])=>`<article><img src="${f.image}" alt=""><b>${esc(f.name)}</b><strong>×${int(inv.foods[k])}</strong></article>`).join('')}${Object.entries(PRODUCTS).map(([k,p])=>`<article><img src="${p.image}" alt=""><b>${esc(p.name)}</b><strong>×${int(inv.products[k])}</strong></article>`).join('')}</div></section>`;openModal();document.querySelectorAll('.ostrich-inventory-tabs [data-inventory-tab]').forEach(b=>b.onclick=()=>inventory(b.dataset.inventoryTab));
+  }
+  function injectInventoryTab(){const tabs=document.querySelector('.inventory-tabs');if(!tabs||tabs.querySelector('[data-inventory-tab="ostrich"]'))return;const b=document.createElement('button');b.type='button';b.dataset.inventoryTab='ostrich';b.textContent='🦤 นกกระจอกเทศ';b.onclick=()=>inventory('ostrich');tabs.appendChild(b)}
+
+  function prettyPopup({image,title,text,button='รับทราบ'}){$('modalContent').innerHTML=`<section class="feature-panel ostrich-result-popup"><img class="ostrich-result-main" src="${image}" alt=""><h2>${title}</h2><div class="ostrich-result-text">${text}</div><button id="ostrichResultDone" class="primary-spooky-action" type="button">${button}</button></section>`;openModal();$('ostrichResultDone').onclick=closeModal}
+
+  function bookByKey(key){return BOOKS.find(b=>b.key===key)||BOOKS[0]}
+  function noticeSeenKey(id){return`yn:s2:r3460:ostrich-notice:${String(currentMemberKey)}:${id}`}
+  function enqueueNotice(item){if(!item?.id||localStorage.getItem(noticeSeenKey(item.id)))return;if(noticeQueue.some(x=>x.id===item.id))return;noticeQueue.push(item);noticeQueue.sort((a,b)=>(a.createdAtMs||0)-(b.createdAtMs||0));processNoticeQueue()}
+  async function markNoticePresented(item){
+    const d=item?.data||{};
+    /* Rejection merit is already granted by Admin, but a whole-save write from an
+       online player could otherwise overwrite it. Before the popup is shown, wait
+       for older owner writes and reconcile the server/local merit to at least the
+       amount recorded in this one-time notice. */
+    try{
+      if(d.type==='ostrichLureRejected'&&Number.isFinite(Number(d.meritAfter))){
+        await settleOwnerWrites();
+        const {db,fs}=await getFirebaseContext(),sRef=fs.doc(db,'saves',currentMemberKey);let fixed=null;
+        await fs.runTransaction(db,async tx=>{const ss=await tx.get(sRef);if(!ss.exists())return;const current=Number(ss.data()?.merit)||0,target=Math.max(current,Number(d.meritAfter)||0);fixed=target;if(target!==current)tx.update(sRef,{merit:target,updatedAt:fs.serverTimestamp()})});
+        if(fixed!=null&&ownState){ownState.merit=Math.max(Number(ownState.merit)||0,fixed);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState);updateMeritUI?.()}catch{}}
+      }
+    }catch(e){console.warn(BUILD,'rejection merit reconcile',e)}
+    try{localStorage.setItem(noticeSeenKey(item.id),'1')}catch{}
+    try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,'mailboxes',currentMemberKey,'items',item.id),{read:true,presentedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,'notice ack',e)}
+  }
+  async function processNoticeQueue(){
+    if(noticeBusy||!noticeQueue.length)return;const modal=$('modal');if(modal&&!modal.classList.contains('hidden')){setTimeout(processNoticeQueue,500);return}
+    const item=noticeQueue.shift();noticeBusy=true;
+    /* Commit/reconcile first. The popup is informational only: X and รับทราบ are
+       equivalent and closing either one cannot lose a reward or make it repeat. */
+    await markNoticePresented(item);
+    const d=item.data||{},img=d.image||((d.type==='ostrichLureApproved')?'ostrich-adult-icon.png':bookByKey(d.bookStyle).image);prettyPopup({image:img,title:esc(d.title||'🦤 ข่าวจากคอกนกกระจอกเทศ'),text:esc(d.text||'').replace(/\n/g,'<br>'),button:'รับทราบ'});
+    const release=()=>{noticeBusy=false;setTimeout(processNoticeQueue,180)};$('ostrichResultDone')?.addEventListener('click',release,{once:true});$('closeModal')?.addEventListener('click',release,{once:true})
+  }
+  async function bindNoticeStream(){
+    if(!cloudReady||!currentMemberKey)return;if(noticeKey===currentMemberKey&&noticeUnsub)return;try{noticeUnsub?.()}catch{}noticeUnsub=null;noticeKey=currentMemberKey;const {db,fs}=await getFirebaseContext();noticeUnsub=fs.onSnapshot(fs.collection(db,'mailboxes',currentMemberKey,'items'),snap=>{snap.forEach(doc=>{const d=doc.data()||{};if(d.read)return;if(!['ostrichLureApproved','ostrichLureRejected','ostrichAdminGrant'].includes(d.type))return;const ts=d.createdAt?.toMillis?.()||Number(d.createdAtClient)||0;enqueueNotice({id:doc.id,data:d,createdAtMs:ts})})},e=>console.warn(BUILD,'notice stream',e))}
+
+  async function adminPendingRequests(){const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.query(fs.collection(db,REQUEST_COLLECTION),fs.where('status','==','pending'))),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));rows.sort((a,b)=>(Number(a.createdAtClient)||0)-(Number(b.createdAtClient)||0));return rows}
+  function injectAdminRequestNotice(){
+    if(!admin())return;const list=document.querySelector('.notification-panel .notification-list');if(!list)return;
+    list.querySelectorAll('.ostrich-notification-admin-card').forEach(n=>n.remove());const rows=Array.isArray(adminPendingCache)?adminPendingCache:[];if(!rows.length)return;
+    const box=document.createElement('div');box.className='notification-card unread ostrich-notification-admin-card';
+    box.innerHTML=`<b>🦤 คำขอนกกระจอกเทศ (${rows.length})</b><span>คำขอร่างคัมภีร์ที่รอการตัดสิน</span><div class="ostrich-notification-request-list">${rows.map(r=>`<div><strong>${esc(r.memberName||r.memberKey)}</strong><span><button type="button" data-ostrich-notif-approve="${r.id}">อนุมัติ</button><button type="button" class="reject" data-ostrich-notif-reject="${r.id}">ไม่อนุมัติ</button></span></div>`).join('')}</div>`;
+    list.prepend(box);box.querySelectorAll('[data-ostrich-notif-approve]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichNotifApprove,true,b));box.querySelectorAll('[data-ostrich-notif-reject]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichNotifReject,false,b));
+  }
+  async function bindAdminRequestStream(){
+    if(!admin()||!cloudReady||!currentMemberKey){try{adminReqUnsub?.()}catch{}adminReqUnsub=null;adminReqKey='';adminReqReady=false;adminPendingCache=[];return}
+    if(adminReqUnsub&&adminReqKey===String(currentMemberKey))return;try{adminReqUnsub?.()}catch{}adminReqKey=String(currentMemberKey);adminReqReady=false;
+    try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,REQUEST_COLLECTION),fs.where('status','==','pending'));adminReqUnsub=fs.onSnapshot(q,snap=>{const before=new Set(adminPendingCache.map(x=>x.id)),rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));rows.sort((a,b)=>(Number(a.createdAtClient)||0)-(Number(b.createdAtClient)||0));const added=adminReqReady?rows.filter(x=>!before.has(x.id)):[];adminPendingCache=rows;adminReqReady=true;if(added.length)showWeatherToast?.(`🦤 มีคำขอล่อนกใหม่จาก ${added[added.length-1].memberName||added[added.length-1].memberKey}`);injectAdminRequestNotice();try{refreshNotificationBadge?.(true)}catch{}},e=>console.warn(BUILD,'admin request stream',e))}catch(e){console.warn(BUILD,'admin request init',e)}
+  }
+  async function memberTargets(includeAida=true){
+    const map=new Map();
+    try{
+      const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,'loginDirectory'));
+      snap.forEach(d=>{const x=d.data()||{},key=String(x.memberKey||d.id||'').trim();if(!key||String(x.status||'approved')!=='approved')return;map.set(key,String(x.displayName||key))});
+    }catch(e){console.warn(BUILD,'member directory',e)}
+    try{for(const name of Object.keys(typeof MEMBERS==='object'&&MEMBERS?MEMBERS:{})){const key=name==='Aida'?'aida':memberKeyFromName(name);if(key&&!map.has(key))map.set(key,name)}}catch(_){}
+    if(includeAida&&!map.has('aida'))map.set('aida','Aida');if(!includeAida)map.delete('aida');
+    return [...map].map(([key,name])=>({key,name})).sort((a,b)=>a.name.localeCompare(b.name,'th'));
+  }
+  const ADMIN_ITEMS=[
+    {type:'bird',key:'bird',name:'นกกระจอกเทศ',image:'ostrich-adult-icon.png'},
+    ...Object.entries(FOODS).map(([key,f])=>({type:'food',key,name:f.name,image:f.image})),
+    ...Object.entries(PRODUCTS).map(([key,p])=>({type:'product',key,name:p.name,image:p.image}))
+  ];
+  async function openAdminOstrich(tab='requests'){
+    if(!admin())return message('ไม่มีสิทธิ์','เมนูนี้สำหรับ Aida/Admin เท่านั้นค่ะ');let requests=[];if(tab==='requests')try{requests=await adminPendingRequests()}catch(e){return message('โหลดคำขอไม่ได้',e?.message||'กรุณาลองใหม่')}
+    const tabs=`<div class="ostrich-admin-tabs"><button data-ostrich-admin-tab="requests" class="${tab==='requests'?'active':''}">คำขอล่อนก</button><button data-ostrich-admin-tab="send" class="${tab==='send'?'active':''}">ส่งนก/ไอเท็ม</button><button data-ostrich-admin-tab="rank" class="${tab==='rank'?'active':''}">Rank</button></div>`;
+    if(tab==='requests')$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-book-pink.png" alt=""><div><small>Aida / Admin</small><h2>🦤 ระบบนกกระจอกเทศ</h2><p>คำขอที่รอการตัดสิน ${requests.length} รายการ</p></div></header>${tabs}<div class="ostrich-scroll ostrich-request-list">${requests.length?requests.map(r=>`<article><div><b>${esc(r.memberName||r.memberKey)}</b><small>ส่งคำขอล่อนกแล้ว</small></div><div><button type="button" data-ostrich-approve="${r.id}">อนุมัติ</button><button type="button" class="reject" data-ostrich-reject="${r.id}">ไม่อนุมัติ</button></div></article>`).join(''):'<p class="empty-feature">ไม่มีคำขอค้างค่ะ</p>'}</div></section>`;
+    if(tab==='send'){const targets=await memberTargets(true);$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-adult-icon.png" alt=""><div><small>Aida / Admin</small><h2>🎁 ส่งนกและไอเท็ม</h2><p>ส่งตรงเข้าคลัง/กระเป๋าของสมาชิก ไม่ต้องออนไลน์</p></div></header>${tabs}<div class="ostrich-admin-send"><label>ผู้รับ<select id="ostrichAdminTarget"><option value="__all__">สมาชิกทุกคน</option>${targets.map(t=>`<option value="${esc(t.key)}" data-name="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select></label><div class="ostrich-admin-item-grid">${ADMIN_ITEMS.map((it,i)=>`<button type="button" data-ostrich-admin-item="${i}" class="${i===0?'active':''}"><img src="${it.image}" alt=""><span>${esc(it.name)}</span></button>`).join('')}</div><label>จำนวน<input id="ostrichAdminQty" type="number" min="1" max="9999" value="1"></label><button id="ostrichAdminGrant" class="primary-spooky-action" type="button">ส่งให้ผู้รับ</button></div></section>`}
+    if(tab==='rank'){$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-book-green.png" alt=""><div><small>Aida / Admin เท่านั้น</small><h2>🏆 Rank ล่อนกสำเร็จ</h2><p>นับเฉพาะนกคอก 1 ที่ได้รับอนุมัติสำเร็จ</p></div></header>${tabs}<div id="ostrichRankList" class="ostrich-scroll ostrich-rank-list"><p>กำลังโหลด...</p></div></section>`;loadAdminRank()}
+    openModal();document.querySelectorAll('[data-ostrich-admin-tab]').forEach(b=>b.onclick=()=>openAdminOstrich(b.dataset.ostrichAdminTab));document.querySelectorAll('[data-ostrich-approve]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichApprove,true,b));document.querySelectorAll('[data-ostrich-reject]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichReject,false,b));
+    if(tab==='send'){let selected=0;document.querySelectorAll('[data-ostrich-admin-item]').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.ostrichAdminItem);document.querySelectorAll('[data-ostrich-admin-item]').forEach(x=>x.classList.toggle('active',x===b))});$('ostrichAdminGrant').onclick=()=>adminGrant(ADMIN_ITEMS[selected])}
+  }
+  async function rejectInsideTransaction(tx,fs,db,reqRef,req,reason,reward){const sRef=fs.doc(db,'saves',req.memberKey),ss=await tx.get(sRef);if(!ss.exists())throw new Error('ไม่พบเซฟสมาชิก');const oldMerit=Number(ss.data()?.merit)||0,newMerit=oldMerit+reward;tx.update(sRef,{merit:newMerit,updatedAt:fs.serverTimestamp()});tx.set(fs.doc(db,'publicProfiles',req.memberKey),{memberKey:req.memberKey,displayName:req.memberName||req.memberKey,merit:newMerit,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(reqRef,{status:'rejected',resolvedAt:fs.serverTimestamp(),resolvedBy:'Aida',rejectReason:reason,consolationMerit:reward},{merge:true});const mail=fs.doc(db,'mailboxes',req.memberKey,'items',`ostrich-lure-${reqRef.id}`),book=bookByKey(req.bookStyle);tx.set(mail,{source:'ostrich',type:'ostrichLureRejected',title:'นกไม่ได้ชอบคุณ เสียใจด้วยนะ 🥹',text:`เอาไว้โอกาสหน้าฟ้าใหม่ ลองอีกครั้งแล้วกัน สู้ๆ\nครั้งนี้จะปลอบใจ รับไป ${reward} กุศล`,image:book.image,bookStyle:req.bookStyle,meritAfter:newMerit,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false});return newMerit}
+  async function resolveLureRequest(id,approve,btn){
+    if(!admin())return;const lock=`resolve:${id}`;if(busy.has(lock))return;busy.add(lock);const old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='กำลังบันทึก...'}const reward=30+Math.floor(Math.random()*71),t=now();let result='';
+    try{const {db,fs}=await getFirebaseContext(),rRef=fs.doc(db,REQUEST_COLLECTION,id);await fs.runTransaction(db,async tx=>{const rs=await tx.get(rRef);if(!rs.exists())throw new Error('ไม่พบคำขอ');const req={id,...rs.data()};if(req.status!=='pending')throw new Error('คำขอนี้ถูกจัดการแล้ว');if(!approve){await rejectInsideTransaction(tx,fs,db,rRef,req,'admin-rejected',reward);result=`ปฏิเสธแล้ว • ปลอบใจ ${reward} กุศล`;return}const oRef=stateDoc(db,fs,req.memberKey),os=await tx.get(oRef),st=normalizeOState(os.exists()?os.data():defaultState(req.memberKey,req.memberName),req.memberKey,req.memberName);pruneExpired(st,t);if(activeBirds(st,1,t).length>=MAX_BIRDS){await rejectInsideTransaction(tx,fs,db,rRef,req,'pen-full',reward);result=`คอกเต็ม • ปฏิเสธอัตโนมัติ +${reward} กุศล`;return}st.pen1.push({id:newId('ostrich'),placedAt:t,expiresAt:t+LIFE_MS,nextFeedAt:0,source:'lure'});st.lifetimeLureSuccess=int(st.lifetimeLureSuccess)+1;st.updatedAtClient=t;tx.set(oRef,{...clone(st),memberKey:req.memberKey,displayName:req.memberName||req.memberKey,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(rRef,{status:'approved',resolvedAt:fs.serverTimestamp(),resolvedBy:'Aida'},{merge:true});tx.set(fs.doc(db,'mailboxes',req.memberKey,'items',`ostrich-lure-${id}`),{source:'ostrich',type:'ostrichLureApproved',title:'🦤 คัมภีร์ได้รับการตอบรับ!',text:'นกกระจอกเทศถูกใจคุณแล้ว 💕\nน้องเข้าคอก 1 เรียบร้อย และเริ่มนับ 48 ชั่วโมงแล้วค่ะ',image:'ostrich-adult-icon.png',bookStyle:req.bookStyle,read:false,createdAtClient:t,createdAt:fs.serverTimestamp()},{merge:false});result='อนุมัติแล้ว • นกเข้าคอก 1'});showWeatherToast?.(`🦤 ${result}`);await openAdminOstrich('requests')
+    }catch(e){message('จัดการคำขอไม่ได้',e?.message||'กรุณาลองใหม่ค่ะ')}finally{busy.delete(lock);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'อนุมัติ'}}
+  }
+  async function adminGrant(item){
+    if(!admin()||!item)return;const target=$('ostrichAdminTarget'),value=target?.value||'',qty=Math.max(1,Math.min(9999,Math.floor(Number($('ostrichAdminQty')?.value)||1))),all=value==='__all__';let targets=await memberTargets(true);if(all)targets=targets.filter(t=>t.key!=='aida');else targets=targets.filter(t=>t.key===value);if(!targets.length)return message('ส่งไม่ได้','ไม่พบผู้รับค่ะ');const btn=$('ostrichAdminGrant'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent=`กำลังส่ง 0/${targets.length}...`}let done=0,failed=[];
+    async function one(tg){const {db,fs}=await getFirebaseContext(),iRef=invDoc(db,fs,tg.key),mailRef=fs.doc(db,'mailboxes',tg.key,'items',newId('ostrich-grant'));await fs.runTransaction(db,async tx=>{const is=await tx.get(iRef),inv=normalizeInventory(is.exists()?is.data():defaultInventory(tg.key),tg.key);if(item.type==='bird')inv.birdVault+=qty;else if(item.type==='food')inv.foods[item.key]=int(inv.foods[item.key])+qty;else inv.products[item.key]=int(inv.products[item.key])+qty;inv.updatedAtClient=now();tx.set(iRef,{...clone(inv),memberKey:tg.key,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(mailRef,{source:'ostrich',type:'ostrichAdminGrant',title:'🎁 ของจากยัยหนูมาถึงแล้ว',text:`ได้รับ ${item.name} ×${qty}${item.type==='bird'?' • เข้าไปอยู่ในคลังนกคอก 2 แล้ว':' • เข้ากระเป๋านกกระจอกเทศแล้ว'}`,image:item.image,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})})}
+    try{const queue=targets.slice(),workers=Array.from({length:Math.min(4,queue.length)},async()=>{while(queue.length){const tg=queue.shift();try{await one(tg);done++}catch(e){failed.push(`${tg.name}: ${e?.message||'error'}`)}if(btn?.isConnected)btn.textContent=`กำลังส่ง ${done+failed.length}/${targets.length}...`}});await Promise.all(workers);if(failed.length)throw new Error(`สำเร็จ ${done} คน • ไม่สำเร็จ ${failed.length} คน\n${failed.slice(0,5).join('\n')}`);showWeatherToast?.(`🎁 ส่ง ${item.name} ×${qty} ให้ ${done} คนแล้ว`);await openAdminOstrich('send')
+    }catch(e){message('ส่งของไม่ครบ',e?.message||'กรุณาลองใหม่ค่ะ')}finally{if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=old||'ส่งให้ผู้รับ'}}
+  }
+  async function loadAdminRank(){try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,STATE_COLLECTION)),rows=[];snap.forEach(d=>{const s=normalizeOState(d.data(),d.id,d.data()?.displayName||d.id);rows.push({key:d.id,name:s.displayName||d.id,count:int(s.lifetimeLureSuccess)})});rows.sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'th'));const host=$('ostrichRankList');if(host)host.innerHTML=rows.length?rows.map((r,i)=>`<article class="${i<3?'top':''}"><strong>#${i+1}</strong><div><b>${esc(r.name)}</b><small>ล่อนกสำเร็จสะสม</small></div><span>${r.count} ตัว</span></article>`).join(''):'<p class="empty-feature">ยังไม่มีข้อมูลค่ะ</p>'}catch(e){const host=$('ostrichRankList');if(host)host.innerHTML=`<p>โหลด Rank ไม่สำเร็จ: ${esc(e?.message||'')}</p>`}}
+
+  /* Integrate a dedicated Ostrich inventory tab without mixing its data into the large /saves document. */
+  if(typeof inventory==='function'){
+    const baseInventory=inventory;inventory=function(tab='crops'){if(tab==='ostrich'){renderOstrichInventory();return}const r=baseInventory.apply(this,arguments);setTimeout(injectInventoryTab,0);return r};
+  }
+
+  /* Admin lure requests also live inside the normal notification center. */
+  if(typeof showNotifications==='function'){
+    const baseShowNotifications=showNotifications;showNotifications=async function(){const r=await baseShowNotifications.apply(this,arguments);if(admin()){try{if(!adminPendingCache.length)adminPendingCache=await adminPendingRequests()}catch{}setTimeout(injectAdminRequestNotice,0)}return r};
+  }
+  if(typeof refreshNotificationBadge==='function'){
+    const baseRefreshNotificationBadge=refreshNotificationBadge;refreshNotificationBadge=async function(){const r=await baseRefreshNotificationBadge.apply(this,arguments);if(admin()){try{if(!adminReqReady)adminPendingCache=await adminPendingRequests();const badge=$('notificationBadge'),n=int(adminPendingCache.length);if(badge&&n){const base=int(badge.textContent);badge.textContent=String(base+n);badge.classList.remove('hidden')}}catch{}}return r};
+  }
+
+  /* Add an entry to whatever Admin center is final after all earlier patches. */
+  if(typeof showAdminCenter==='function'){
+    const baseAdminCenter=showAdminCenter;showAdminCenter=async function(){const r=await baseAdminCenter.apply(this,arguments);if(!admin())return r;setTimeout(async()=>{const host=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');if(!host||$('ostrichAdminEntryBtn'))return;const wrap=document.createElement('div');wrap.className='ostrich-admin-entry-wrap';wrap.innerHTML='<button id="ostrichAdminEntryBtn" type="button"><img src="ostrich-adult-icon.png" alt=""><span><b>ระบบนกกระจอกเทศ</b><small id="ostrichAdminPendingCount">คำขอล่อนก / ส่งของ / Rank</small></span><i>›</i></button>';host.appendChild(wrap);$('ostrichAdminEntryBtn').onclick=()=>openAdminOstrich('requests');try{const q=await adminPendingRequests(),x=$('ostrichAdminPendingCount');if(x)x.textContent=`คำขอล่อนกรอ ${q.length} • ส่งของ • Rank`}catch{}},0);return r};
+  }
+
+  function bindUI(){
+    const entry=$('shortcutOstrichPenBtn');if(entry){let last=0;const go=e=>{const t=Date.now();if(t-last<500)return;last=t;e?.preventDefault?.();e?.stopPropagation?.();openOstrich()};entry.onclick=go;entry.addEventListener('pointerdown',go,{passive:false})}
+    $('ostrichBackBtn')&&($('ostrichBackBtn').onclick=leaveOstrich);$('ostrichSwitchBtn')&&($('ostrichSwitchBtn').onclick=switchPen);$('ostrichLureBtn')&&($('ostrichLureBtn').onclick=openLure);$('ostrichCraftBtn')&&($('ostrichCraftBtn').onclick=openCraft);$('ostrichFeedBtn')&&($('ostrichFeedBtn').onclick=openFeed);$('ostrichCollectBtn')&&($('ostrichCollectBtn').onclick=collectAll);$('ostrichVaultBtn')&&($('ostrichVaultBtn').onclick=openVault);$('ostrichAdminBtn')&&($('ostrichAdminBtn').onclick=()=>openAdminOstrich('requests'));
+  }
+  bindUI();
+
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseMotion()}else{setTimeout(()=>{bindNoticeStream();if(isOstrichOpen()){cleanupExpired(true).then(()=>renderScreen(false)).catch(()=>{})}},120)}});
+  window.addEventListener('pageshow',()=>{setTimeout(()=>{bindUI();bindNoticeStream();if(isOstrichOpen())cleanupExpired(true).then(()=>renderScreen(false)).catch(()=>{})},180)},{passive:true});
+  window.addEventListener('online',()=>{bindNoticeStream();if(isOstrichOpen())reloadDocs().then(()=>renderScreen(false)).catch(()=>{})},{passive:true});
+  setInterval(()=>{try{bindNoticeStream();bindAdminRequestStream();if(isOstrichOpen()){renderHeader();renderBirdLayer();const hasExpired=[...(oState?.pen1||[]),...(oState?.pen2||[])].some(b=>Number(b?.expiresAt)<=now());const modalOpen=$('modal')&&!$('modal').classList.contains('hidden');if(hasExpired&&!expireBusy&&!modalOpen){expireBusy=true;cleanupExpired(true).then(()=>renderScreen(false)).catch(e=>console.warn(BUILD,'expire tick',e)).finally(()=>{expireBusy=false})}}}catch{}},1000);
+  setTimeout(()=>{bindNoticeStream();bindAdminRequestStream()},350);
+
+  globalThis.YN_OSTRICH={BUILD,FOODS,PRODUCTS,BOOKS,LURE_ITEMS,open:openOstrich,openAdmin:openAdminOstrich,reload:reloadDocs};
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,'loaded');
+})();
+</script>
 </body>
 </html>
