@@ -4476,6 +4476,64 @@ function save(){
   queueCloudSave();
 }
 
+/* =====================================================================
+   S2 R34.63 — SAVE SIZE GUARD / LOSSLESS QUEUE COMPACTION
+   Keeps real inventory counts and live pet instances intact. Only repeated
+   historical records and pending visual/drop queues are compacted.
+   ===================================================================== */
+const YN_R3463_SAVE_SOFT_BYTES=700*1024;
+const YN_R3463_SAVE_RESCUE_BYTES=820*1024;
+function ynSaveByteSizeR3463(v){try{const str=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(str).length:str.length*2}catch(_){return 0}}
+function ynQtyR3463(v,def=1){const n=Math.floor(Number(v));return Number.isFinite(n)&&n>0?n:def}
+function ynCompactQtyQueueR3463(arr,{keep=24,keyOf=()=>"all",qtyOf=d=>ynQtyR3463(d?.qty,1),kind="q",scope=""}={}){
+  if(!Array.isArray(arr)||arr.length<=keep+8)return arr;
+  const cut=Math.max(0,arr.length-keep),old=arr.slice(0,cut),recent=arr.slice(cut),groups=new Map();
+  for(const d of old){if(!d||typeof d!=="object")continue;const key=String(keyOf(d)||"all"),q=Math.max(1,Math.floor(Number(qtyOf(d))||1)),at=Number(d.createdAt||d.at)||0,g=groups.get(key)||{qty:0,at:0,sample:d};g.qty+=q;if(!g.at||at<g.at)g.at=at;groups.set(key,g)}
+  const packed=[...groups.entries()].map(([key,g],i)=>{const x={...g.sample};x.id=`r3463-${kind}-${scope}-${key}-${g.at||0}-${i}`;x.qty=g.qty;x.compacted=true;if("createdAt" in x)x.createdAt=g.at||Number(x.createdAt)||0;if("at" in x)x.at=g.at||Number(x.at)||0;return x});
+  return packed.concat(recent);
+}
+function ynCompactSaveStateR3463(s,{aggressive=false}={}){
+  if(!s||typeof s!=="object")return s;
+  const spiritKeep=aggressive?8:28,hedgeKeep=aggressive?8:20,discKeep=aggressive?8:24;
+  /* Spirit-animal products: compact pending rail records by productKey. */
+  if(s.spiritDrops&&typeof s.spiritDrops==="object")for(const type of Object.keys(s.spiritDrops)){const a=s.spiritDrops[type];if(Array.isArray(a))s.spiritDrops[type]=ynCompactQtyQueueR3463(a,{keep:spiritKeep,keyOf:d=>d?.productKey||"unknown",kind:"spirit",scope:type})}
+  /* Hedgehog drops: preserve every pending reward as qty, only reduce DOM/save records. */
+  if(s.hedgehog&&Array.isArray(s.hedgehog.drops))s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:hedgeKeep,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"basement"});
+  /* Alpaca factory: claimed products/merit are already in inventory/rank counters.
+     Keep all active jobs + a short visible claimed history; never touch products. */
+  const fac=s.alpaca?.factory;if(fac&&typeof fac==="object"){
+    if(Array.isArray(fac.jobs)){const active=fac.jobs.filter(j=>j&&j.status!=="claimed"),claimed=fac.jobs.filter(j=>j&&j.status==="claimed");fac.jobs=active.concat(claimed.slice(-(aggressive?8:24)))}
+    if(Array.isArray(fac.history))fac.history=fac.history.slice(-(aggressive?8:24)).map(j=>j&&typeof j==="object"?{id:j.id,productKey:j.productKey,penNo:j.penNo,status:j.status,startedAt:Number(j.startedAt)||0,finishAt:Number(j.finishAt)||0,claimedAt:Number(j.claimedAt)||0}:j);
+  }
+  /* Canonical CD drop queues already claim by qty; pack old records by animal. */
+  if(s.alpaca?.royalDiscDrops&&typeof s.alpaca.royalDiscDrops==="object")for(let p=1;p<=5;p++){const k=`pen${p}`,a=s.alpaca.royalDiscDrops[k];if(Array.isArray(a))s.alpaca.royalDiscDrops[k]=ynCompactQtyQueueR3463(a,{keep:discKeep,keyOf:d=>d?.animalId||"royal",qtyOf:d=>ynQtyR3463(d?.qty,2),kind:"royalcd",scope:String(p)})}
+  if(s.alpaca?.r3451RoyalDrops&&typeof s.alpaca.r3451RoyalDrops==="object")for(let p=1;p<=5;p++){const k=`pen${p}`,a=s.alpaca.r3451RoyalDrops[k];if(Array.isArray(a))s.alpaca.r3451RoyalDrops[k]=ynCompactQtyQueueR3463(a,{keep:discKeep,keyOf:d=>d?.animalId||"royal",qtyOf:d=>ynQtyR3463(d?.qty,2),kind:"r3451cd",scope:String(p)})}
+  if(s.hamsterDiscDrops&&typeof s.hamsterDiscDrops==="object")for(const f of [2,3,4]){const k=String(f),a=s.hamsterDiscDrops[k];if(Array.isArray(a))s.hamsterDiscDrops[k]=ynCompactQtyQueueR3463(a,{keep:discKeep,keyOf:d=>d?.hamsterId||"ham",kind:"hamcd",scope:k})}
+  /* Older music-drop layers still exist in historical saves. Preserve every pending
+     CD via qty, but do not keep thousands of per-cycle visual records. */
+  for(const [field,label] of [["musicDropV2","mdv2"],["musicDropV4","mdv4"],["coreMusicDrops","coremd"]]){
+    const d=s[field];if(!d||typeof d!=="object")continue;
+    if(d.royalByPen&&typeof d.royalByPen==="object")for(let p=1;p<=5;p++){const k=String(p),a=d.royalByPen[k];if(Array.isArray(a))d.royalByPen[k]=ynCompactQtyQueueR3463(a,{keep:discKeep,keyOf:x=>x?.animalId||"royal",qtyOf:x=>ynQtyR3463(x?.qty,2),kind:`${label}r`,scope:k})}
+    if(d.hamByFarm&&typeof d.hamByFarm==="object")for(const f of [2,3,4]){const k=String(f),a=d.hamByFarm[k];if(Array.isArray(a))d.hamByFarm[k]=ynCompactQtyQueueR3463(a,{keep:discKeep,keyOf:x=>x?.hamsterId||"ham",kind:`${label}h`,scope:k})}
+  }
+  /* Idempotency receipts are not inventory. Fishing receipts only need a recent
+     safety window; old campaign receipts are retained recently then retired. */
+  const pruneReceiptMap=(obj,{ageMs,cap})=>{if(!obj||typeof obj!=="object"||Array.isArray(obj))return obj;const t=Date.now(),rows=Object.entries(obj).filter(([,v])=>{const n=Number(v)||0;return !n||t-n<=ageMs}).sort((a,b)=>(Number(b[1])||0)-(Number(a[1])||0)).slice(0,cap);return Object.fromEntries(rows)};
+  if(s.fishingClaimReceipts&&typeof s.fishingClaimReceipts==="object")s.fishingClaimReceipts=pruneReceiptMap(s.fishingClaimReceipts,{ageMs:3*24*60*60*1000,cap:aggressive?96:256});
+  if(s.campaignReceipts&&typeof s.campaignReceipts==="object")s.campaignReceipts=pruneReceiptMap(s.campaignReceipts,{ageMs:14*24*60*60*1000,cap:aggressive?64:192});
+  if(s.friendCatCooldowns&&typeof s.friendCatCooldowns==="object"){const t=Date.now();for(const [k,v] of Object.entries(s.friendCatCooldowns))if(!Number(v)||Number(v)<=t)delete s.friendCatCooldowns[k]}
+  /* Retired-cat archive is audit/history, never active inventory. Strip bulky drop/timer fields. */
+  if(Array.isArray(s.retiredCatsArchiveR34)){
+    const old=s.retiredCatsArchiveR34;s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,old.length);
+    s.retiredCatsArchiveR34=old.slice(-(aggressive?20:80)).map(c=>c&&typeof c==="object"?{id:String(c.id||""),typeKey:String(c.typeKey||""),customName:String(c.customName||""),archivedBy:String(c.archivedBy||"R34-retired-cat")}:c);
+  }
+  /* Expired friend forage locks are transient and can be dropped safely. */
+  if(s.r32FriendForageLocks&&typeof s.r32FriendForageLocks==="object"){const t=Date.now();for(const [k,v] of Object.entries(s.r32FriendForageLocks)){const n=Number(v)||0;if(!n||n<=t)delete s.r32FriendForageLocks[k]}}
+  s.saveGuardR3463=s.saveGuardR3463&&typeof s.saveGuardR3463==="object"?s.saveGuardR3463:{};s.saveGuardR3463.version="S2-R34.63";
+  return s;
+}
+function ynPrepareSaveR3463(s){ynCompactSaveStateR3463(s);let bytes=ynSaveByteSizeR3463(s);/* Proactive headroom: once a save passes 700 KiB, shrink only non-inventory history/queues more aggressively before Firestore ever gets close to 1 MiB. */if(bytes>YN_R3463_SAVE_SOFT_BYTES){ynCompactSaveStateR3463(s,{aggressive:true});bytes=ynSaveByteSizeR3463(s)}return{state:s,bytes}}
+
 async function stampActiveSessionFast(saveRef,fs){
   cloudSessionId=newCloudSessionId();cloudSessionSuperseded=false;
   await fs.setDoc(saveRef,{activeSessionId:cloudSessionId,activeSessionAt:fs.serverTimestamp(),clockProbeAt:fs.serverTimestamp()},{merge:true});
@@ -4504,9 +4562,13 @@ async function initializeOrLoadCloudState(member,memberKey){
     await fs.setDoc(saveRef,{...cloneData(initial),createdAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:false});
     saveSnap=await fs.getDoc(saveRef);
   }
-  await stampActiveSessionFast(saveRef,fs);
-  let loaded=normalizeState(saveSnap.data(),member);
-  loaded.activeSessionId=cloudSessionId;
+  /* R34.63 rescue: do NOT issue a merge-only session stamp first. An already
+     oversized Firestore document cannot accept that write. Normalize/compact the
+     fetched save in memory, then replace it with the smaller authoritative state. */
+  cloudSessionId="";cloudSessionSuperseded=false;
+  let loaded=normalizeState(saveSnap.data(),member);ynPrepareSaveR3463(loaded);
+  cloudSessionId=newCloudSessionId();loaded.activeSessionId=cloudSessionId;
+  await fs.setDoc(saveRef,{...cloneData(loaded),activeSessionId:cloudSessionId,activeSessionAt:fs.serverTimestamp(),clockProbeAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:false});
   /* R34.12.0: /saves is authoritative for the owner. /gardens is outbound public state only. */
   ownState=normalizeState(loaded,member);state=ownState;lastGardenHash=plotHash(ownState.plots);lastPublishedMerit=Number(ownState.merit)||0;
   cloudReady=true;
@@ -22486,6 +22548,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         }
         animal.readyAt=ready;
       });
+      if(s.spiritDrops[type].length>96)s.spiritDrops[type]=ynCompactQtyQueueR3463(s.spiritDrops[type],{keep:28,keyOf:d=>d?.productKey||"unknown",kind:"spirit",scope:type});
     });
     return changed;
   }
@@ -22496,8 +22559,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   };
 
   function spiritDropHTML(type){
-    const drops=(ownState||state)?.spiritDrops?.[type]||[],visible=drops.slice(-72),hidden=Math.max(0,drops.length-visible.length),n=visible.length;
-    return `<div class="r9-spirit-drop-rail r9-${type}-rail" aria-label="รางผลผลิต ${type}">${visible.map((d,i)=>{const p=ANIMAL_PRODUCTS[d.productKey],pos=spiritDropPosition(type,i,n);return `<button type="button" class="r9-spirit-drop" data-r9-spirit-drop="${esc(d.id)}" style="left:${pos.x}%;top:${pos.y}%" title="${esc(p?.name||"")}"><img src="${p?.image||""}" alt="${esc(p?.name||"")}"></button>`}).join("")}${hidden?`<span class="r9-spirit-more">+${hidden}</span>`:""}</div>`;
+    const drops=(ownState||state)?.spiritDrops?.[type]||[],visible=drops.slice(-72),hiddenQty=drops.slice(0,Math.max(0,drops.length-visible.length)).reduce((n,d)=>n+Math.max(1,Math.floor(Number(d?.qty)||1)),0),n=visible.length;
+    return `<div class="r9-spirit-drop-rail r9-${type}-rail" aria-label="รางผลผลิต ${type}">${visible.map((d,i)=>{const p=ANIMAL_PRODUCTS[d.productKey],pos=spiritDropPosition(type,i,n),q=Math.max(1,Math.floor(Number(d?.qty)||1));return `<button type="button" class="r9-spirit-drop" data-r9-spirit-drop="${esc(d.id)}" style="left:${pos.x}%;top:${pos.y}%" title="${esc(p?.name||"")}"><img src="${p?.image||""}" alt="${esc(p?.name||"")}">${q>1?`<small>×${q}</small>`:""}</button>`}).join("")}${hiddenQty?`<span class="r9-spirit-more">+${hiddenQty}</span>`:""}</div>`;
   }
   function spiritSlotHTML(type,index){
     const s=ownState||state,cfg=R9_SPIRIT[type],item=animalById(type),animal=s?.animals?.[type]?.[index],pos=cfg.slots[index]||[50,50];
@@ -22534,7 +22597,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   };
 
   function showSpiritCare(type){
-    const drops=(ownState||state)?.spiritDrops?.[type]?.length||0;
+    const drops=((ownState||state)?.spiritDrops?.[type]||[]).reduce((n,d)=>n+Math.max(1,Math.floor(Number(d?.qty)||1)),0);
     $("modalContent").innerHTML=`<section class="feature-panel r9-spirit-care-panel"><button id="r9SpiritCareClose" class="v15-card-x" type="button">×</button><header><span>💗</span><div><small>${esc(animalById(type)?.name||"")}</small><h2>เทคแคร์สัตว์</h2></div></header><div class="r9-spirit-care-actions"><button id="r9BoostAllSpirit" type="button"><span>🥄</span><div><b>เร่งผลผลิตทั้งหมด</b><small>ใช้สากชนิดเดียวกัน ×9</small></div></button><button id="r9CollectAllSpirit" type="button"><span>🧺</span><div><b>เก็บผลผลิตทั้งหมด</b><small>บนรางตอนนี้ ×${drops}</small></div></button><button id="r31SpiritTherapy" type="button"><span>💿</span><div><b>ใช้เสียงเพลงบำบัด</b><small>รับผลผลิตของคอกนี้ทันทีแบบสุ่ม</small></div></button></div></section>`;openModal();$("r9SpiritCareClose").onclick=closeModal;$("r9BoostAllSpirit").onclick=()=>showSpiritPestlePicker(type);$("r9CollectAllSpirit").onclick=()=>collectAllSpiritDrops(type);$("r31SpiritTherapy").onclick=()=>globalThis.YN_R31?.showTherapy?.(type);
   }
   function showSpiritPestlePicker(type){
@@ -22549,11 +22612,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     s.specials[key]-=9;const now=gameNow();active.forEach(a=>{const rem=Math.max(0,Number(a.readyAt||0)-now);a.readyAt=p.boost===100?now:now+Math.max(1000,Math.round(rem*(1-p.boost/100)));a.forcedCommonProduct=true});processSpiritProductionOn(s);save();closeModal();renderSpiritScene(type);showWeatherToast(`🥄 เร่งสัตว์ทั้ง 9 ตัวแล้ว • ใช้ ${p.name} ×9`);
   }
   function collectOneSpiritDrop(type,id){
-    const s=ownState||state,list=s?.spiritDrops?.[type];if(!Array.isArray(list))return;const i=list.findIndex(d=>String(d.id)===String(id));if(i<0)return;const d=list[i],p=ANIMAL_PRODUCTS[d.productKey];list.splice(i,1);s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+1;incrementMissionOn(s,"collectAnimalProducts",1);save();renderSpiritScene(type);showWeatherToast(`🧺 ${p?.name||"ผลผลิต"} ×1 เข้ากระเป๋าแล้ว`);
+    const s=ownState||state,list=s?.spiritDrops?.[type];if(!Array.isArray(list))return;const i=list.findIndex(d=>String(d.id)===String(id));if(i<0)return;const d=list[i],p=ANIMAL_PRODUCTS[d.productKey],q=Math.max(1,Math.floor(Number(d?.qty)||1));list.splice(i,1);s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+q;incrementMissionOn(s,"collectAnimalProducts",q);save();renderSpiritScene(type);showWeatherToast(`🧺 ${p?.name||"ผลผลิต"} ×${q} เข้ากระเป๋าแล้ว`);
   }
   function collectAllSpiritDrops(type){
     const s=ownState||state,list=Array.isArray(s?.spiritDrops?.[type])?s.spiritDrops[type]:[];if(!list.length)return message("ยังไม่มีผลผลิต","ตอนนี้รางยังว่างอยู่ค่ะ");
-    const summary={};list.forEach(d=>{if(!ANIMAL_PRODUCTS[d.productKey])return;s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+1;summary[d.productKey]=(summary[d.productKey]||0)+1});const total=Object.values(summary).reduce((a,b)=>a+b,0);s.spiritDrops[type]=[];incrementMissionOn(s,"collectAnimalProducts",total);save();renderSpiritScene(type);
+    const summary={};list.forEach(d=>{if(!ANIMAL_PRODUCTS[d.productKey])return;const q=Math.max(1,Math.floor(Number(d?.qty)||1));s.animalProducts[d.productKey]=(Number(s.animalProducts[d.productKey])||0)+q;summary[d.productKey]=(summary[d.productKey]||0)+q});const total=Object.values(summary).reduce((a,b)=>a+b,0);s.spiritDrops[type]=[];incrementMissionOn(s,"collectAnimalProducts",total);save();renderSpiritScene(type);
     $("modalContent").innerHTML=`<section class="feature-panel r9-spirit-reward"><h2>🧺 เก็บเข้ากระเป๋าแล้ว</h2><div>${Object.entries(summary).map(([k,n])=>`<article><img src="${ANIMAL_PRODUCTS[k].image}" alt=""><span><b>${esc(ANIMAL_PRODUCTS[k].name)}</b><small>×${n}</small></span></article>`).join("")}</div><button id="r9SpiritRewardDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;openModal();$("r9SpiritRewardDone").onclick=closeModal;
   }
 
@@ -23755,7 +23818,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     s.houseFortune.day=String(s.houseFortune.day||"");s.houseFortune.id=String(s.houseFortune.id||"");s.houseFortune.at=Number(s.houseFortune.at)||0;
     s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};
     s.hedgehog.enabled=Boolean(s.hedgehog.enabled);s.hedgehog.lastDropAt=Number(s.hedgehog.lastDropAt)||now16();
-    s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map(d=>({id:String(d.id||`hd-${Math.random()}`),type:HEDGE_ITEMS[d.type]?d.type:"fur",room:["bedroom","kitchen","living","basement"].includes(d.room)?d.room:"living",x:Number(d.x)||50,y:Number(d.y)||80,at:Number(d.at)||now16()})):[];
+    s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map(d=>({id:String(d.id||`hd-${Math.random()}`),type:HEDGE_ITEMS[d.type]?d.type:"fur",room:["bedroom","kitchen","living","basement"].includes(d.room)?d.room:"living",x:Number(d.x)||50,y:Number(d.y)||80,at:Number(d.at)||now16(),qty:Math.max(1,int16(d.qty)||1),compacted:Boolean(d.compacted)})):[];
     if(isAdmin16()){
       Object.keys(HOME_FOODS).forEach(k=>s.homeFoods[k]=9999);
       Object.keys(HEDGE_ITEMS).forEach(k=>s.hedgehogItems[k]=9999);
@@ -23883,9 +23946,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const roomRanges16={bedroom:{x:[20,80],y:[8,30]},kitchen:{x:[18,82],y:[38,62]},living:{x:[17,83],y:[72,92]},basement:{x:[20,80],y:[20,88]}};
   function randBetween16(a,b){return a+Math.random()*(b-a)}
   function makeHedgeDrop16(s,at=now16()){const types=["fur","fang","claw","tail"],rooms=["bedroom","kitchen","living","basement"],room=rooms[Math.floor(Math.random()*rooms.length)],rg=roomRanges16[room],type=types[Math.floor(Math.random()*types.length)];s.hedgehog.drops.push({id:`hd-${at}-${Math.random().toString(36).slice(2,7)}`,type,room,x:randBetween16(...rg.x),y:randBetween16(...rg.y),at});if(s.houseFortune?.day===dayKey16()&&s.houseFortune.id==="treasure"&&Math.random()<.10){const type2=types[Math.floor(Math.random()*types.length)];s.hedgehog.drops.push({id:`hd-${at}-b-${Math.random().toString(36).slice(2,7)}`,type:type2,room,x:randBetween16(...rg.x),y:randBetween16(...rg.y),at})}}
-  function processHedgeDrops16(s=ensureR16State(own16())){if(!s?.hedgehog?.enabled)return false;const t=now16();let last=Number(s.hedgehog.lastDropAt)||t,changed=false;while(t-last>=DROP_MS16){last+=DROP_MS16;makeHedgeDrop16(s,last);changed=true}s.hedgehog.lastDropAt=last;if(changed)commit16(s,{flush:true});return changed}
-  function renderHedgeDrops16(){const layer=$16("r16HedgeDropLayer"),s=ensureR16State(own16());if(!layer||!s)return;processHedgeDrops16(s);const rooms=houseMode16==="basement"?["basement"]:["bedroom","kitchen","living"];layer.innerHTML=s.hedgehog.drops.filter(d=>rooms.includes(d.room)).map(d=>{const m=HEDGE_ITEMS[d.type];return `<button class="r16-hedge-drop" type="button" data-r16-hdrop="${safe16(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe16(m.name)}"></button>`}).join("")}
-  function collectAllHedge16(){const s=ensureR16State(own16()),drops=s.hedgehog.drops.slice();if(!drops.length)return compactMsg16("🦔 ของเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{s.hedgehogItems[d.type]+=1;got[d.type]=(got[d.type]||0)+1});s.hedgehog.drops=[];if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});renderHedgeDrops16();$16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-hedge-collect"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS[k].image}"><b>${safe16(HEDGE_ITEMS[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ของทั้งหมดเข้า กระเป๋า → ของเม่น เรียบร้อยแล้ว ต่อให้กด × ปิดหน้าต่าง ของก็ถูกบันทึกแล้วค่ะ</small><button id="r16HedgeCollectDone" class="primary-spooky-action">รับทราบ</button></section>`;$16("r16HedgeCollectDone").onclick=closeModal;openModal()}
+  function processHedgeDrops16(s=ensureR16State(own16())){if(!s?.hedgehog?.enabled)return false;const t=now16();let last=Number(s.hedgehog.lastDropAt)||t,changed=false,guard=0;while(t-last>=DROP_MS16&&guard++<2000){last+=DROP_MS16;makeHedgeDrop16(s,last);if(s.hedgehog.drops.length>64)s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:20,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"r16"});changed=true}s.hedgehog.lastDropAt=last;if(changed)commit16(s,{flush:true});return changed}
+  function renderHedgeDrops16(){const layer=$16("r16HedgeDropLayer"),s=ensureR16State(own16());if(!layer||!s)return;processHedgeDrops16(s);const rooms=houseMode16==="basement"?["basement"]:["bedroom","kitchen","living"];layer.innerHTML=s.hedgehog.drops.filter(d=>rooms.includes(d.room)).map(d=>{const m=HEDGE_ITEMS[d.type],q=Math.max(1,int16(d.qty)||1);return `<button class="r16-hedge-drop" type="button" data-r16-hdrop="${safe16(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe16(m.name)}">${q>1?`<small>×${q}</small>`:""}</button>`}).join("")}
+  function collectAllHedge16(){const s=ensureR16State(own16()),drops=s.hedgehog.drops.slice();if(!drops.length)return compactMsg16("🦔 ของเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{const q=Math.max(1,int16(d.qty)||1);s.hedgehogItems[d.type]+=q;got[d.type]=(got[d.type]||0)+q});s.hedgehog.drops=[];if(isAdmin16())ensureAdminStock(s);commit16(s,{flush:true});renderHedgeDrops16();$16("modalContent").innerHTML=`<section class="feature-panel r16-compact-modal r16-hedge-collect"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS[k].image}"><b>${safe16(HEDGE_ITEMS[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ของทั้งหมดเข้า กระเป๋า → ของเม่น เรียบร้อยแล้ว ต่อให้กด × ปิดหน้าต่าง ของก็ถูกบันทึกแล้วค่ะ</small><button id="r16HedgeCollectDone" class="primary-spooky-action">รับทราบ</button></section>`;$16("r16HedgeCollectDone").onclick=closeModal;openModal()}
   function stopHedgeMotion16(){clearTimeout(hedgehogMoveTimer16);clearInterval(hedgehogFrameTimer16);hedgehogMoveTimer16=0;hedgehogFrameTimer16=0}
   function animateHedgeSheet16(el,sheet="side"){if(!el)return;let f=0;el.style.backgroundImage=`url("${HEDGE_SPRITES[sheet]}")`;el.style.backgroundSize="400% 400%";clearInterval(hedgehogFrameTimer16);hedgehogFrameTimer16=setInterval(()=>{f=(f+1)%16;const c=f%4,r=Math.floor(f/4);el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`},150)}
   function wanderHedge16(){const el=$16("r16Hedgehog");if(!el||currentScene!=="house")return;const rg=houseMode16==="basement"?roomRanges16.basement:roomRanges16[["bedroom","kitchen","living"][Math.floor(Math.random()*3)]],x=randBetween16(...rg.x),y=randBetween16(...rg.y),oldX=parseFloat(el.style.left)||50;el.classList.toggle("face-left",x<oldX);animateHedgeSheet16(el,"side");el.style.transition="left 4.6s linear, top 4.6s linear";requestAnimationFrame(()=>{el.style.left=`${x}%`;el.style.top=`${y}%`});hedgehogMoveTimer16=setTimeout(()=>{clearInterval(hedgehogFrameTimer16);animateHedgeSheet16(el,"idle");hedgehogMoveTimer16=setTimeout(wanderHedge16,1300+Math.random()*1700)},4700)}
@@ -23928,7 +23991,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const honeyMirrorKey16=()=>currentMemberKey?`s2-r16-honey:${currentMemberKey}`:"";let honeySig16="";
   function syncHoney16(){const s=own16();if(!s?.honeyDelivery||visitContext||!currentMemberKey)return;try{const h=s.honeyDelivery,sig=JSON.stringify(h),key=honeyMirrorKey16(),claimedAt=Number(localStorage.getItem(`yn:honey-claimed:${currentMemberKey}`)||0),oldRaw=localStorage.getItem(key),old=oldRaw?JSON.parse(oldRaw):null;if(!h.tripId&&h.active&&claimedAt&&Number(h.calledAt||0)&&Number(h.calledAt||0)<=claimedAt){h.active=false;h.calledAt=0;h.reward=null;h.fuelReadyAt=Number(h.fuelReadyAt)||Date.now()+30*60*1000;h.fuelExpiresAt=Number(h.fuelExpiresAt)||h.fuelReadyAt+10*60*1000}if(sig!==honeySig16){honeySig16=JSON.stringify(h);localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),h:clone16(h)}))}/* R27: never resurrect a completed trip from the legacy mirror. */}catch(_){}const bike=$16("honeyBike");if(bike){bike.style.setProperty("top","68.7%","important");bike.style.setProperty("bottom","auto","important");bike.style.setProperty("transition","none","important")}}
 
-  function postR16(){try{ensureR16State(own16());applyFortunePersistent16();fixedTrough16();fixHotelStatus16();rebindWorm16();syncTrapMirror16();syncHoney16();if(currentScene==="house")renderHedgeDrops16()}catch(e){console.warn("R16 tick",e)}}
+  function postR16(){try{/* R34.63: R17 exclusively owns the basement. Do not normalize/render the retired R16 house layer every 900 ms while the player is downstairs. */if(currentScene==="house"&&document.getElementById("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement")return;ensureR16State(own16());applyFortunePersistent16();fixedTrough16();fixHotelStatus16();rebindWorm16();syncTrapMirror16();syncHoney16();if(currentScene==="house")renderHedgeDrops16()}catch(e){console.warn("R16 tick",e)}}
   const draw16Base=draw;draw=function(){const r=draw16Base.apply(this,arguments);requestAnimationFrame(postR16);return r};
   setInterval(postR16,900);setTimeout(postR16,100);
   globalThis.YN_R16={BUILD,HOME_FOODS,HEDGE_ITEMS,FORTUNES,openKitchen:openHomeKitchen16,openHomeRecipe:openHomeRecipe16,craftHomeFood:craftHomeFood16,fortune:fortune16,renderHouse:renderHouseScene16,collectHedge:collectAllHedge16};
@@ -23983,9 +24046,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function nearestNode17(x,y){let best=0,dist=Infinity;WALK_NODES17.forEach((p,i)=>{const d=(p[0]-x)**2+(p[1]-y)**2;if(d<dist){dist=d;best=i}});return best}
 
   const basementMirrorKey17=()=>`yn:r30:basement:${currentMemberKey||currentMember||"guest"}`;
-  function readBasementMirror17(){try{const raw=localStorage.getItem(basementMirrorKey17());return raw?JSON.parse(raw):null}catch(_){return null}}
-  function writeBasementMirror17(s){if(!s)return;try{localStorage.setItem(basementMirrorKey17(),JSON.stringify({at:Date.now(),rev:Number(s.clientSaveRevision)||0,flowerPlots:clone17(s.flowerPlots||[]),flowerSeeds:clone17(s.flowerSeeds||{}),flowers:clone17(s.flowers||{}),wineMachines:clone17(s.wineMachines||[]),wines:clone17(s.wines||{}),wineSugar:Number(s.specials?.wineSugar)||0,hedgehog:clone17(s.hedgehog||{}),hedgehogItems:clone17(s.hedgehogItems||{})}))}catch(_){}}
-  function mergeBasementMirror17(s){const box=readBasementMirror17();if(!box||!s)return s;const cloudRev=Number(s.clientSaveRevision)||0,localRev=Number(box.rev)||0;if(localRev<cloudRev)return s;if(Array.isArray(box.flowerPlots))s.flowerPlots=clone17(box.flowerPlots);if(box.flowerSeeds&&typeof box.flowerSeeds==="object")s.flowerSeeds={...(s.flowerSeeds||{}),...clone17(box.flowerSeeds)};if(box.flowers&&typeof box.flowers==="object")s.flowers={...(s.flowers||{}),...clone17(box.flowers)};if(Array.isArray(box.wineMachines))s.wineMachines=clone17(box.wineMachines);if(box.wines&&typeof box.wines==="object")s.wines={...(s.wines||{}),...clone17(box.wines)};s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};if(Number.isFinite(Number(box.wineSugar)))s.specials.wineSugar=Number(box.wineSugar)||0;if(box.hedgehog&&typeof box.hedgehog==="object"){const rh=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};const lh=clone17(box.hedgehog);s.hedgehog={...rh,...lh,enabled:isAdmin17()?true:Boolean(rh.enabled),drops:Array.isArray(lh.drops)?lh.drops:(Array.isArray(rh.drops)?rh.drops:[])}}if(box.hedgehogItems&&typeof box.hedgehogItems==="object")s.hedgehogItems={...(s.hedgehogItems||{}),...clone17(box.hedgehogItems)};return s}
+  let basementMirrorCache17=null,basementMirrorCacheKey17="";
+  const basementMirrorMergedStates17=new WeakSet();
+  function readBasementMirror17({force=false}={}){try{const key=basementMirrorKey17();if(!force&&basementMirrorCacheKey17===key)return basementMirrorCache17;const raw=localStorage.getItem(key);basementMirrorCacheKey17=key;basementMirrorCache17=raw?JSON.parse(raw):null;return basementMirrorCache17}catch(_){return null}}
+  function writeBasementMirror17(s){if(!s)return;try{const key=basementMirrorKey17(),h=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};const box={at:Date.now(),rev:Number(s.clientSaveRevision)||0,flowerPlots:s.flowerPlots||[],flowerSeeds:s.flowerSeeds||{},flowers:s.flowers||{},wineMachines:s.wineMachines||[],wines:s.wines||{},wineSugar:Number(s.specials?.wineSugar)||0,hedgehog:{enabled:Boolean(h.enabled),lastDropAt:Number(h.lastDropAt)||0,pos:h.pos||null,motion:h.motion||null,drops:h.drops||[]},hedgehogItems:s.hedgehogItems||{}};basementMirrorCacheKey17=key;basementMirrorCache17=box;localStorage.setItem(key,JSON.stringify(box))}catch(_){}}
+  function mergeBasementMirror17(s){if(!s||typeof s!=="object"||basementMirrorMergedStates17.has(s))return s;basementMirrorMergedStates17.add(s);const box=readBasementMirror17();if(!box)return s;const cloudRev=Number(s.clientSaveRevision)||0,localRev=Number(box.rev)||0;if(localRev<cloudRev)return s;if(Array.isArray(box.flowerPlots))s.flowerPlots=clone17(box.flowerPlots);if(box.flowerSeeds&&typeof box.flowerSeeds==="object")s.flowerSeeds={...(s.flowerSeeds||{}),...clone17(box.flowerSeeds)};if(box.flowers&&typeof box.flowers==="object")s.flowers={...(s.flowers||{}),...clone17(box.flowers)};if(Array.isArray(box.wineMachines))s.wineMachines=clone17(box.wineMachines);if(box.wines&&typeof box.wines==="object")s.wines={...(s.wines||{}),...clone17(box.wines)};s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};if(Number.isFinite(Number(box.wineSugar)))s.specials.wineSugar=Number(box.wineSugar)||0;if(box.hedgehog&&typeof box.hedgehog==="object"){const rh=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{},lh=clone17(box.hedgehog);s.hedgehog={...rh,...lh,enabled:isAdmin17()?true:Boolean(rh.enabled),drops:Array.isArray(lh.drops)?lh.drops:(Array.isArray(rh.drops)?rh.drops:[])}}if(box.hedgehogItems&&typeof box.hedgehogItems==="object")s.hedgehogItems={...(s.hedgehogItems||{}),...clone17(box.hedgehogItems)};return s}
 
   function ensureR17State(s){
     if(!s||typeof s!=="object")return s;
@@ -24002,7 +24067,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     /* R17 migration: the house hedgehog now lives in every player's basement; only debug controls stay Aida-only. */
     if(!s.hedgehogBasementR17)s.hedgehogBasementR17=true;s.hedgehog.enabled=true;s.hedgehog.lastDropAt=Number(s.hedgehog.lastDropAt)||now17();
     s.hedgehog.pos=s.hedgehog.pos&&typeof s.hedgehog.pos==="object"?{x:Number(s.hedgehog.pos.x)||8,y:Number(s.hedgehog.pos.y)||86,node:nearestNode17(Number(s.hedgehog.pos.x)||8,Number(s.hedgehog.pos.y)||86)}:{x:8,y:86,node:6};
-    s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map((d,i)=>{const pt=(d.room==="basement"&&Number.isFinite(Number(d.x))&&Number.isFinite(Number(d.y)))?{x:Number(d.x),y:Number(d.y)}:safeDropPoint17(i);return{id:String(d.id||`hd17-${now17()}-${i}`),type:HEDGE_ITEMS17[d.type]?d.type:"fur",room:"basement",x:pt.x,y:pt.y,at:Number(d.at)||now17()}}):[];
+    s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops.filter(Boolean).map((d,i)=>{const pt=(d.room==="basement"&&Number.isFinite(Number(d.x))&&Number.isFinite(Number(d.y)))?{x:Number(d.x),y:Number(d.y)}:safeDropPoint17(i);return{id:String(d.id||`hd17-${now17()}-${i}`),type:HEDGE_ITEMS17[d.type]?d.type:"fur",room:"basement",x:pt.x,y:pt.y,at:Number(d.at)||now17(),qty:Math.max(1,int17(d.qty)||1),compacted:Boolean(d.compacted)}}):[];
     mergeBasementMirror17(s);
     if(isAdmin17()){
       Object.keys(FLOWERS17).forEach(k=>{s.flowerSeeds[k]=9999;s.flowers[k]=9999});Object.keys(WINES17).forEach(k=>s.wines[k]=9999);s.specials.wineSugar=9999;s.specials.fruitFertilizer=9999;s.specials.flowerFertilizer=9999;
@@ -24015,21 +24080,25 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   if(typeof ensureAdminStock==="function"){
     const admin17Base=ensureAdminStock;ensureAdminStock=function(s){const r=admin17Base(s);ensureR17State(s);return r};
   }
-  let commitCloudTimer17=0;
+  let commitCloudTimer17=0,commitLocalTimer17=0;
   function commit17(s,{cloud=true}={}){
     if(!s)return;
     ensureR17State(s);
+    try{ynCompactSaveStateR3463?.(s)}catch(_){}
     s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
     s.clientLocalEditAt=Date.now();
     ownState=s;if(!visitContext)state=s;
-    try{saveLocalOnly(s)}catch(_){}
+    /* R34.63: write the tiny basement mirror immediately so the tap is durable,
+       then coalesce the expensive full-state stringify + Firestore write. */
     writeBasementMirror17(s);
+    clearTimeout(commitLocalTimer17);
+    commitLocalTimer17=setTimeout(()=>{try{saveLocalOnly(ownState||s)}catch(_){}},120);
     if(!cloud||!cloudReady||!currentMemberKey)return;
     clearTimeout(commitCloudTimer17);
     commitCloudTimer17=setTimeout(async()=>{
-      try{try{save?.()}catch(_){};await flushCloudSave?.()}
-      catch(e){console.warn("R34.62 basement coalesced flush",e)}
-    },90);
+      try{await flushCloudSave?.()}
+      catch(e){console.warn("R34.63 basement coalesced flush",e)}
+    },420);
   }
 
   /* ---------- New inventory + gifting: every new item can be sent ---------- */
@@ -24076,7 +24145,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
      Any player who owns/unlocks the house can choose a flower directly and plant it.
      No flowerSeeds stock is required or consumed. */
   function plantFlower17(idx,key){const s=ensureR17State(own17()),f=FLOWERS17[key];if(!f||s.flowerPlots[idx])return;const t=now17();s.flowerPlots[idx]={flower:key,plantedAt:t,readyAt:t+f.totalMs,testStage:""};commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🌱 ปลูก${f.name} แปลง ${idx+1} แล้ว`)}
-  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}" data-r17-plant-plot="${idx}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();const t=Date.now();if(t-last<450)return;last=t;plantFlower17(idx,b.dataset.r17Plant)};b.style.touchAction="manipulation";b.onpointerdown=take;b.ontouchstart=take;b.onclick=e=>{e?.preventDefault?.()}});openModal()}
+  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}" data-r17-plant-plot="${idx}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)plantFlower17(idx,b.dataset.r17Plant);else e?.preventDefault?.()}});openModal()}
   function harvestFlower17(idx,{quiet=false}={}){const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p||flowerStage17(p)!=="ready")return false;const f=FLOWERS17[p.flower],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,qty=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0),r29FlowerReceipt=`flower:${currentMemberKey}:${idx}:${p.plantedAt||0}`;if(!isAdmin17())s.flowers[p.flower]+=qty;else s.flowers[p.flower]=9999;try{incrementMissionOn(s,"flowerHarvest",qty)}catch(_){}s.flowerPlots[idx]=null;commit17(s);try{globalThis.YN_R29?.scoreFlower?.(p.flower,1,r29FlowerReceipt)}catch(_){}renderHouse17();if(!quiet){$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${f.ready}"><h2>🌸 เก็บเกี่ยวแล้ว</h2><p>${safe17(f.name)} ×${qty}</p><small>เข้ากระเป๋า → ดอกไม้ เรียบร้อยแล้ว</small><button id="r17FlowerDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;$17("r17FlowerDone").onclick=closeModal;openModal()}return{key:p.flower,qty}}
   function harvestAllFlowers17(){const s=ensureR17State(own17()),ready=[];s.flowerPlots.forEach((p,i)=>{if(p&&flowerStage17(p)==="ready")ready.push(i)});if(!ready.length)return message("🌸 เก็บเกี่ยวทั้งหมด","ยังไม่มีดอกไม้พร้อมเก็บค่ะ");const got={},r29FlowerScores=[];ready.forEach(i=>{const p=s.flowerPlots[i],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,q=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0);if(!isAdmin17())s.flowers[p.flower]+=q;else s.flowers[p.flower]=9999;got[p.flower]=(got[p.flower]||0)+q;r29FlowerScores.push([p.flower,`flower:${currentMemberKey}:${i}:${p.plantedAt||0}`]);s.flowerPlots[i]=null});try{incrementMissionOn(s,"flowerHarvest",Object.values(got).reduce((a,b)=>a+b,0))}catch(_){}commit17(s);r29FlowerScores.forEach(([k,r])=>{try{globalThis.YN_R29?.scoreFlower?.(k,1,r)}catch(_){}});renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🌸 เก็บเกี่ยวทั้งหมดแล้ว</h2><div class="r17-flower-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${FLOWERS17[k].ready}"><b>${safe17(FLOWERS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ดอกไม้ทั้งหมดเข้ากระเป๋าแล้วค่ะ</small><button id="r17FlowerAllDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17FlowerAllDone").onclick=closeModal;openModal()}
   async function useFlowerFertilizer17(idx){
@@ -24110,7 +24179,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p)return openPlantPicker17(idx);
     const f=FLOWERS17[p.flower],st=flowerStage17(p),cost=FLOWER_FERT_COST17[p.flower]||40,have=isAdmin17()?9999:int17(s.specials?.flowerFertilizer);
     $17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal"><img class="r17-flower-hero" src="${flowerImg17(p)}"><h2>${safe17(f.name)} • แปลง ${idx+1}</h2><p>${safe17(flowerStatus17(p))}</p>${st==="ready"?`<button id="r17HarvestOne" data-r17-harvest-one="${idx}" class="primary-spooky-action" type="button">🌸 เก็บเกี่ยว</button>`:`<div class="r3461-flower-fertilizer-offer"><img src="flower-fertilizer.png" alt="ปุ๋ยดอกไม้"><span><b>เร่งให้พร้อมเก็บทันที</b><small>ใช้ปุ๋ยดอกไม้ ${cost} ชิ้น • มี ×${have}</small></span></div><button id="r3461FlowerFertilize" class="primary-spooky-action" type="button" ${have<cost&&!isAdmin17()?"disabled":""}>🌱 ใช้ปุ๋ยดอกไม้ ${cost} ชิ้น</button>`}${isAdmin17()?`<div class="r17-stage-test"><small>โหมดทดสอบ Aida</small><button data-r17-stage="seed">เมล็ด</button><button data-r17-stage="sprout">ต้นอ่อน</button><button data-r17-stage="grown">ต้นโต</button><button data-r17-stage="ready">พร้อมเก็บ</button><button data-r17-stage="real">เวลาจริง</button></div>`:""}</section>`;
-    if($17("r17HarvestOne")){const b=$17("r17HarvestOne");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();harvestFlower17(idx)};b.onclick=e=>{if(!e?.pointerType)harvestFlower17(idx)}}
+    if($17("r17HarvestOne")){const b=$17("r17HarvestOne");b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)harvestFlower17(idx);else e?.preventDefault?.()}}
     if($17("r3461FlowerFertilize"))$17("r3461FlowerFertilize").onclick=()=>useFlowerFertilizer17(idx);
     document.querySelectorAll("[data-r17-stage]").forEach(b=>b.onclick=()=>{const q=ensureR17State(own17()).flowerPlots[idx];if(!q)return;const v=b.dataset.r17Stage;q.testStage=v==="real"?"":v;commit17(own17());closeModal();renderHouse17();showWeatherToast?.(`🧪 แปลง ${idx+1}: ${b.textContent}`)});
     openModal()
@@ -24126,8 +24195,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${key}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;
     openModal();
   }
-  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="none";b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();claimWine17(idx)};b.onclick=e=>{if(!e?.pointerType)claimWine17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
-    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}" data-r17-wine-machine="${idx}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=e=>{e?.preventDefault?.();e?.stopPropagation?.();const k=b.dataset.r17Wine,w=WINES17[k];$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${k}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;const sb=$17("r17StartWine");sb.style.touchAction="none";sb.onpointerdown=ev=>{ev.preventDefault();ev.stopPropagation();startWine17(idx,k)};sb.onclick=ev=>{if(!ev?.pointerType)startWine17(idx,k)};openModal()};b.style.touchAction="none";b.onpointerdown=choose;b.onclick=e=>{if(!e?.pointerType)choose(e)}});openModal()}
+  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)claimWine17(idx);else e?.preventDefault?.()}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
+    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}" data-r17-wine-machine="${idx}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=()=>openWineRecipeFast17(idx,b.dataset.r17Wine);b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)choose();else e?.preventDefault?.()}});openModal()}
   function openWineTest17(){if(!isAdmin17())return;const s=ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><h2>🧪 ทดลองระบบไวน์</h2><p>ทดสอบครบวงจร • เริ่มหมัก / เวลาจริง / พร้อมรับทันที / รับเข้ากระเป๋า</p><div class="r17-machine-list">${s.wineMachines.map((m,i)=>`<button type="button" data-r17-machine="${i}"><b>เครื่อง ${i+1}</b><small>${m?(wineReady17(m)?"พร้อมรับ":`${WINES17[m.wine].name} • ${fmtMs17(m.readyAt-now17())}`):"ว่าง"}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-machine]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17Machine)));openModal()}
 
   /* ---------- Hedgehog R18: basement only, continuous RAF motion + persistent segment ---------- */
@@ -24135,27 +24204,27 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function stopHedge17(){clearTimeout(hedgeMoveTimer17);clearInterval(hedgeFrameTimer17);cancelAnimationFrame(hedgeRaf17);hedgeMoveTimer17=0;hedgeFrameTimer17=0;hedgeRaf17=0}
   function animateHedge17(el,sheet="side",left=false){if(!el)return;let f=0;el.style.backgroundImage=`url("${HEDGE_SPRITES17[sheet]||HEDGE_SPRITES17.side}")`;el.style.backgroundSize="400% 400%";el.classList.toggle("face-left",Boolean(left));clearInterval(hedgeFrameTimer17);hedgeFrameTimer17=setInterval(()=>{f=(f+1)%16;const c=f%4,r=Math.floor(f/4);el.style.backgroundPosition=`${c*100/3}% ${r*100/3}%`},240)}
   function currentHedgePoint17(s,t=now17()){const h=s?.hedgehog||{},mo=h.motion;if(mo&&Number(mo.duration)>0){const q=Math.max(0,Math.min(1,(t-Number(mo.startedAt||t))/Number(mo.duration))),x=Number(mo.fromX)+(Number(mo.toX)-Number(mo.fromX))*q,y=Number(mo.fromY)+(Number(mo.toY)-Number(mo.fromY))*q;return{x,y,done:q>=1,node:q>=1?Number(mo.toNode):nearestNode17(x,y)}}return{x:Number(h.pos?.x)||8,y:Number(h.pos?.y)||86,done:true,node:Number(h.pos?.node)||nearestNode17(Number(h.pos?.x)||8,Number(h.pos?.y)||86)}}
-  function persistHedgeVisualPos17(){const s=ensureR17State(own17());if(!s)return;const p=currentHedgePoint17(s);s.hedgehog.pos={x:p.x,y:p.y,node:p.node};try{saveLocalOnly(s)}catch(_){}}
-  function chooseHedgeMotion17(s){const p=currentHedgePoint17(s),node=nearestNode17(p.x,p.y),choices=WALK_ADJ17[node]||[8],next=choices[Math.floor(Math.random()*choices.length)],target=WALK_NODES17[next],dx=target[0]-p.x,dy=target[1]-p.y,dist=Math.hypot(dx,dy),duration=Math.max(9000,Math.min(22000,dist*650));s.hedgehog.motion={fromX:p.x,fromY:p.y,toX:target[0],toY:target[1],fromNode:node,toNode:next,startedAt:now17(),duration};s.hedgehog.pos={x:p.x,y:p.y,node};try{saveLocalOnly(s)}catch(_){}return s.hedgehog.motion}
-  function moveHedge17(){cancelAnimationFrame(hedgeRaf17);const el=$17("r17Hedgehog"),s=ensureR17State(own17());if(!el||currentScene!=="house"||houseMode17!=="basement"||document.hidden)return;let mo=s.hedgehog.motion;if(!mo||now17()>=Number(mo.startedAt)+Number(mo.duration)){if(mo){s.hedgehog.pos={x:Number(mo.toX),y:Number(mo.toY),node:Number(mo.toNode)};s.hedgehog.motion=null}mo=chooseHedgeMotion17(s)}const dx=Number(mo.toX)-Number(mo.fromX),dy=Number(mo.toY)-Number(mo.fromY);animateHedge17(el,Math.abs(dy)>Math.abs(dx)?"back":"side",dx<0);const frame=()=>{if(currentScene!=="house"||houseMode17!=="basement"||document.hidden||!el.isConnected)return;const st=ensureR17State(own17()),p=currentHedgePoint17(st);el.style.left=`${p.x}%`;el.style.top=`${p.y}%`;if(p.done){st.hedgehog.pos={x:p.x,y:p.y,node:Number(st.hedgehog.motion?.toNode??p.node)};st.hedgehog.motion=null;try{saveLocalOnly(st)}catch(_){}hedgeMoveTimer17=setTimeout(moveHedge17,500+Math.random()*800);return}hedgeRaf17=requestAnimationFrame(frame)};frame()}
-  function generateHedgeDrops17(s){if(!s?.hedgehog?.enabled)return false;let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;while(t-last>=HEDGE_DROP_MS17&&count<2000){last+=HEDGE_DROP_MS17;const keys=["fur","fang","claw","tail"],pt=safeDropPoint17(count);s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});changed=true;count++}s.hedgehog.lastDropAt=last;if(changed)commit17(s);return changed}
-  function collectHedgeDrop17(id){const s=ensureR17State(own17()),idx=s.hedgehog.drops.findIndex(d=>d.id===id);if(idx<0)return;const d=s.hedgehog.drops[idx],m=HEDGE_ITEMS17[d.type];s.hedgehogItems=s.hedgehogItems||{};const r29HedgeGain=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+r29HedgeGain;else s.hedgehogItems[d.type]=9999;s.hedgehog.drops.splice(idx,1);try{incrementMissionOn(s,"hedgehogCollect",1)}catch(_){}commit17(s);renderHedgeDrops17();showWeatherToast?.(`🦔 ${m.name} ×1 เข้ากระเป๋าแล้ว`)}
-  function collectAllHedge17(){const s=ensureR17State(own17()),drops=s.hedgehog.drops.slice();if(!drops.length)return message("🦔 ของดรอปเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};drops.forEach(d=>{const r29Gain=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);got[d.type]=(got[d.type]||0)+r29Gain;if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+r29Gain;else s.hedgehogItems[d.type]=9999});s.hedgehog.drops=[];try{incrementMissionOn(s,"hedgehogCollect",drops.length)}catch(_){}commit17(s);renderHedgeDrops17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS17[k].image}"><b>${safe17(HEDGE_ITEMS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>เข้ากระเป๋า → ของเม่น เรียบร้อยแล้ว</small><button id="r17HedgeDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17HedgeDone").onclick=closeModal;openModal()}
+  function persistHedgeVisualPos17({saveNow=true}={}){const s=own17();if(!s?.hedgehog)return;const p=currentHedgePoint17(s);s.hedgehog.pos={x:p.x,y:p.y,node:p.node};try{writeBasementMirror17(s)}catch(_){}if(saveNow)try{saveLocalOnly(s)}catch(_){}}
+  function chooseHedgeMotion17(s){const p=currentHedgePoint17(s),node=nearestNode17(p.x,p.y),choices=WALK_ADJ17[node]||[8],next=choices[Math.floor(Math.random()*choices.length)],target=WALK_NODES17[next],dx=target[0]-p.x,dy=target[1]-p.y,dist=Math.hypot(dx,dy),duration=Math.max(9000,Math.min(22000,dist*650));s.hedgehog.motion={fromX:p.x,fromY:p.y,toX:target[0],toY:target[1],fromNode:node,toNode:next,startedAt:now17(),duration};s.hedgehog.pos={x:p.x,y:p.y,node};try{writeBasementMirror17(s)}catch(_){}return s.hedgehog.motion}
+  function moveHedge17(){cancelAnimationFrame(hedgeRaf17);const el=$17("r17Hedgehog"),s=own17();if(!el||!s?.hedgehog||currentScene!=="house"||houseMode17!=="basement"||document.hidden)return;let mo=s.hedgehog.motion;if(!mo||now17()>=Number(mo.startedAt)+Number(mo.duration)){if(mo){s.hedgehog.pos={x:Number(mo.toX),y:Number(mo.toY),node:Number(mo.toNode)};s.hedgehog.motion=null}mo=chooseHedgeMotion17(s)}const dx=Number(mo.toX)-Number(mo.fromX),dy=Number(mo.toY)-Number(mo.fromY);animateHedge17(el,Math.abs(dy)>Math.abs(dx)?"back":"side",dx<0);const frame=()=>{if(currentScene!=="house"||houseMode17!=="basement"||document.hidden||!el.isConnected)return;const st=own17();if(!st?.hedgehog)return;const p=currentHedgePoint17(st);el.style.left=`${p.x}%`;el.style.top=`${p.y}%`;if(p.done){st.hedgehog.pos={x:p.x,y:p.y,node:Number(st.hedgehog.motion?.toNode??p.node)};st.hedgehog.motion=null;try{writeBasementMirror17(st)}catch(_){}hedgeMoveTimer17=setTimeout(moveHedge17,500+Math.random()*800);return}hedgeRaf17=requestAnimationFrame(frame)};frame()}
+  function generateHedgeDrops17(s){if(!s?.hedgehog?.enabled)return false;let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;while(t-last>=HEDGE_DROP_MS17&&count<2000){last+=HEDGE_DROP_MS17;const keys=["fur","fang","claw","tail"],pt=safeDropPoint17(count);s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});if(s.hedgehog.drops.length>64)s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:20,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"basement"});changed=true;count++}s.hedgehog.lastDropAt=last;if(changed)commit17(s);return changed}
+  function collectHedgeDrop17(id){const s=ensureR17State(own17()),idx=s.hedgehog.drops.findIndex(d=>d.id===id);if(idx<0)return;const d=s.hedgehog.drops[idx],m=HEDGE_ITEMS17[d.type],baseQty=Math.max(1,int17(d.qty)||1);s.hedgehogItems=s.hedgehogItems||{};let gain=0;for(let q=0;q<baseQty;q++)gain+=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+gain;else s.hedgehogItems[d.type]=9999;s.hedgehog.drops.splice(idx,1);try{incrementMissionOn(s,"hedgehogCollect",baseQty)}catch(_){}commit17(s);renderHedgeDrops17();showWeatherToast?.(`🦔 ${m.name} ×${gain} เข้ากระเป๋าแล้ว`)}
+  function collectAllHedge17(){const s=ensureR17State(own17()),drops=s.hedgehog.drops.slice();if(!drops.length)return message("🦔 ของดรอปเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};let baseTotal=0;drops.forEach(d=>{const baseQty=Math.max(1,int17(d.qty)||1);baseTotal+=baseQty;let gain=0;for(let q=0;q<baseQty;q++)gain+=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);got[d.type]=(got[d.type]||0)+gain;if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+gain;else s.hedgehogItems[d.type]=9999});s.hedgehog.drops=[];try{incrementMissionOn(s,"hedgehogCollect",baseTotal)}catch(_){}commit17(s);renderHedgeDrops17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS17[k].image}"><b>${safe17(HEDGE_ITEMS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>เข้ากระเป๋า → ของเม่น เรียบร้อยแล้ว</small><button id="r17HedgeDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17HedgeDone").onclick=closeModal;openModal()}
   function renderHedgeDrops17(){
-    const layer=$17("r17HedgeDropLayer"),s=ensureR17State(own17());if(!layer||!s)return;
+    const layer=$17("r17HedgeDropLayer"),s=own17();if(!layer||!s?.hedgehog)return;
     generateHedgeDrops17(s);
-    const all=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops:[],shown=all.slice(-24),sig=shown.map(d=>String(d.id)).join("|");
+    const all=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops:[],shown=all.slice(-24),sig=shown.map(d=>`${String(d.id)}:${Math.max(1,int17(d.qty)||1)}`).join("|");
     if(layer.dataset.r17DropSig===sig)return;
     layer.dataset.r17DropSig=sig;
-    layer.innerHTML=shown.map(d=>{const m=HEDGE_ITEMS17[d.type];return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}"></button>`}).join("");
-    layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>{let fired=false;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();if(fired)return;fired=true;collectHedgeDrop17(b.dataset.r17Hdrop)};b.style.touchAction="manipulation";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}});
+    layer.innerHTML=shown.map(d=>{const m=HEDGE_ITEMS17[d.type],q=Math.max(1,int17(d.qty)||1);return`<button class="r17-hedge-drop" type="button" data-r17-hdrop="${safe17(d.id)}" style="left:${d.x}%;top:${d.y}%"><img src="${m.image}" alt="${safe17(m.name)}">${q>1?`<small>×${q}</small>`:""}</button>`}).join("");
+    layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>{b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)collectHedgeDrop17(b.dataset.r17Hdrop)}});
   }
   function enableHedge17(){const s=ensureR17State(own17());s.hedgehog.enabled=true;if(!Number(s.hedgehog.lastDropAt))s.hedgehog.lastDropAt=now17();commit17(s);renderHouse17();showWeatherToast?.("🦔 เปิดโหมดทดสอบเม่นแล้ว")}
 
   /* ---------- House renderer ---------- */
   function setHouseBg17(mode){const sc=$17("sceneScreen");if(!sc)return;const lv=Math.min(3,Math.max(1,Number((ownState||state)?.houseUpgrade?.level)||1)),bg=mode==="basement"?"house-basement-season2.jpeg":lv===3?"house-level3.jpeg":lv===2?"house-level2.jpeg":"house-interior-season2.jpeg";sc.style.backgroundImage=`url("${bg}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
-  function renderHouseMain17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
-  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();const t=Date.now();if(t-last<450)return;last=t;fn()};b.style.touchAction="manipulation";b.onpointerdown=take;b.ontouchstart=take;b.onclick=e=>{e?.preventDefault?.()}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
+  function renderHouseMain17(){persistHedgeVisualPos17({saveNow:false});stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
+  function renderHouseBasement17(){persistHedgeVisualPos17({saveNow:false});stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{if(!b)return;b.style.touchAction="manipulation";b.onclick=e=>{if(e?.detail===0)fn();else e?.preventDefault?.()}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
     /* R34.11.13: iPhone coordinate fallback. The whole visual plot/machine area is tappable,
        even when the transparent DOM button misses the finger by a few pixels. */
     layer.onpointerdown=e=>{
@@ -24168,6 +24237,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   /* R34.11.21: window-capture one-tap path. Window fires before every legacy document handler. */
   window.addEventListener("pointerdown",e=>{
+    if(globalThis.YN_BASEMENT_SINGLE_INPUT_R3463)return;
     if(globalThis.YN_BASEMENT_FAST_R3430?.route?.(e))return;
     if(currentScene!=="house"||houseMode17!=="basement"||visitContext)return;
     const direct=e.target?.closest?.("[data-r17-plot],[data-r17-machine-hot]");
@@ -24210,10 +24280,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   document.addEventListener("visibilitychange",()=>{if(document.hidden){persistHedgeVisualPos17();stopHedge17();try{save();flushCloudSave?.()}catch(_){}}else if(currentScene==="house"&&houseMode17==="basement")setTimeout(()=>{renderHouse17()},80)});
   window.addEventListener("pagehide",()=>{persistHedgeVisualPos17();try{save();flushCloudSave?.()}catch(_){}});
 
-  function tick17(){try{ensureR17State(own17());removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&houseMode17==="basement"){renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=own17()?.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(label)label.textContent="แปลงว่าง";return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=own17()?.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
+  function tick17(){try{if(document.hidden)return;removeLegacyHitbox17();if(currentScene==="dogHotel")fixHotel17();if(document.querySelector("#alpacaPenScreen:not(.hidden)"))fixTrough17();if(currentScene==="house"&&houseMode17==="basement"){const bs=own17();if(!bs?.flowerPlots||!bs?.wineMachines)return;renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=bs.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(label)label.textContent="แปลงว่าง";return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=bs.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
-  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17};
+  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17,goHouseMain:()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()}};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
@@ -25233,6 +25303,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   /* ---------- Main tick is UI/timestamp only: no Firebase reads ---------- */
   function uiTick(){
+    /* R34.63: this R23 watchdog has no basement work; skip its DOM/state scan while downstairs. */
+    if(currentScene==="house"&&document.getElementById("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement")return;
     try{const s=houseState();if(s){const l=level();if(seenHouseLevel===null)seenHouseLevel=l;if(l!==seenHouseLevel){seenHouseLevel=l;ensureHedgeReward();publishHouseLevel(true);applyHouseBackground()}else ensureHedgeReward()}applyHouseBackground();renderExtraHedgehogs();renderFriendNodes();patchOwnRank()}catch(e){console.warn("R23 UI tick",e)}
   }
   const drawBase=typeof draw==="function"?draw:null;if(drawBase)draw=function(){const r=drawBase.apply(this,arguments);requestAnimationFrame(uiTick);return r};
@@ -25462,7 +25534,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     try{claimed=Number(s?.alpaca?.factory?.claimedCount)||0;pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[]}catch(_){}
     return JSON.stringify([Number(s.merit)||0,Math.max(0,Math.min(3,iv(s?.houseUpgrade?.level))),happiness,claimed,pens]);
   }
-  function persistLocalGood(s){if(!s||visitContext)return;try{localStorage.setItem(localKey(),JSON.stringify({at:Date.now(),state:clone(s)}))}catch(_){} }
+  let r24LocalGoodTimer=0,r24LocalGoodAt=0;
+  function persistLocalGood(s){if(!s||visitContext)return;const write=()=>{r24LocalGoodTimer=0;const cur=ownState||s;if(!cur||visitContext)return;try{localStorage.setItem(localKey(),JSON.stringify({at:Date.now(),state:clone(cur)}));r24LocalGoodAt=Date.now()}catch(_){}};const wait=Math.max(0,320-(Date.now()-r24LocalGoodAt));if(wait===0)return write();clearTimeout(r24LocalGoodTimer);r24LocalGoodTimer=setTimeout(write,wait)}
   function restoreLocalGood(s){
     if(!s||visitContext)return s;try{const raw=localStorage.getItem(localKey());if(!raw)return s;const box=JSON.parse(raw);if(!box?.state||Date.now()-Number(box.at||0)>14*86400000)return s;return protectPersistent(s,box.state)}catch{return s}
   }
@@ -26463,11 +26536,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function collectHouseAll(){
     const s=ensureR29State(stateRef());if((Number(s.houseUpgrade?.level)||1)<3)return;let flowerCount=0,dropCount=0;const t=now(),bonus=.35;
     (s.flowerPlots||[]).forEach((p,i)=>{if(!p)return;const ready=p.testStage==='ready'||Number(p.readyAt||0)<=t;if(!ready)return;const key=p.flower,q=1+Math.floor(Math.random()*3)+(Math.random()<bonus?1:0);s.flowers=s.flowers||{};s.flowers[key]=ADMIN()?9999:(Number(s.flowers[key])||0)+q;flowerCount+=q;try{score('home',FLOWER_SCORE[key]||0,`flower:${currentMemberKey}:${i}:${p.plantedAt||0}`)}catch(_){}s.flowerPlots[i]=null});
-    const drops=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops.slice():[];drops.forEach(d=>{const gain=1+(Math.random()<.10?1:0);s.hedgehogItems[d.type]=ADMIN()?9999:(Number(s.hedgehogItems[d.type])||0)+gain;dropCount+=gain});if(s.hedgehog)s.hedgehog.drops=[];
+    const drops=Array.isArray(s.hedgehog?.drops)?s.hedgehog.drops.slice():[];let hedgeBaseTotal=0;drops.forEach(d=>{const baseQty=Math.max(1,Math.floor(Number(d?.qty)||1));hedgeBaseTotal+=baseQty;let gain=0;for(let q=0;q<baseQty;q++)gain+=1+(Math.random()<.10?1:0);s.hedgehogItems[d.type]=ADMIN()?9999:(Number(s.hedgehogItems[d.type])||0)+gain;dropCount+=gain});if(s.hedgehog)s.hedgehog.drops=[];
     /* R34.59: this Lv3 bulk route used to put the rewards in the bag but skipped
        village missions entirely. Count the same units as the normal individual/all buttons. */
     if(flowerCount>0)try{incrementMissionOn(s,"flowerHarvest",flowerCount)}catch(_){}
-    if(drops.length>0)try{incrementMissionOn(s,"hedgehogCollect",drops.length)}catch(_){}
+    if(hedgeBaseTotal>0)try{incrementMissionOn(s,"hedgehogCollect",hedgeBaseTotal)}catch(_){}
     try{saveLocalOnly(s);save();flushCloudSave?.()}catch(_){}message('✨ จัดการบ้านทั้งหมดแล้ว',`🌸 ดอกไม้เข้ากระเป๋า ${flowerCount} ชิ้น<br>🦔 ของเม่นเข้ากระเป๋า ${dropCount} ชิ้น`);try{globalThis.YN_R16?.renderHouse?.()}catch(_){}
   }
 
@@ -27092,7 +27165,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(!s||visitContext)return false;s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};const unlocked=isAdmin32()||Boolean(s?.s2Unlocks?.house)||Number(s?.houseUpgrade?.level)>0;if(!unlocked){s.hedgehog.enabled=false;s.hedgehog.drops=[];return false}s.hedgehog.enabled=true;s.hedgehog.drops=Array.isArray(s.hedgehog.drops)?s.hedgehog.drops:[];
     const t=now();if(!s.hedgehog.r32ClockMigrated){s.hedgehog.r32ClockMigrated=true;if(!s.hedgehog.drops.length&&(!Number(s.hedgehog.lastDropAt)||t-Number(s.hedgehog.lastDropAt)<HEDGE_MS))s.hedgehog.lastDropAt=t-HEDGE_MS}
     let last=Math.max(0,Number(s.hedgehog.lastDropAt)||t),changed=false,count=0;const keys=Object.keys(hedgeMeta());
-    while(t-last>=HEDGE_MS&&count<240){last+=HEDGE_MS;const type=keys[Math.floor(Math.random()*keys.length)]||"fur",routes=[[18,45],[48,45],[80,45],[12,63],[88,63],[15,82],[48,84],[84,82]],pt=routes[(s.hedgehog.drops.length+count)%routes.length];s.hedgehog.drops.push({id:`r32hd-${last}-${Math.random().toString(36).slice(2,7)}`,type,room:"basement",x:pt[0]+Math.random()*4-2,y:pt[1]+Math.random()*3-1.5,at:last});changed=true;count++}
+    while(t-last>=HEDGE_MS&&count<240){last+=HEDGE_MS;const type=keys[Math.floor(Math.random()*keys.length)]||"fur",routes=[[18,45],[48,45],[80,45],[12,63],[88,63],[15,82],[48,84],[84,82]],pt=routes[(s.hedgehog.drops.length+count)%routes.length];s.hedgehog.drops.push({id:`r32hd-${last}-${Math.random().toString(36).slice(2,7)}`,type,room:"basement",x:pt[0]+Math.random()*4-2,y:pt[1]+Math.random()*3-1.5,at:last});if(s.hedgehog.drops.length>64)s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:20,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"r32"});changed=true;count++}
     s.hedgehog.lastDropAt=last;if(changed){ownState=s;if(!visitContext)state=s;try{saveLocalOnly(s)}catch(_){}try{save()}catch(_){}try{flushCloudSave?.()}catch(_){}}return changed;
   }
   if(typeof renderHouseScene==="function"){
@@ -30343,7 +30416,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     finally{strictBusy=false;if(strictAgain){strictAgain=false;setTimeout(()=>strictPublish(false),40)}}
   }
   /* No debounce: check local state only; Firestore write happens only when signature changes. */
-  setInterval(()=>{try{if(!visitContext&&me()&&sig(me().plots)!==strictAck)strictPublish(false)}catch(_){}},450);
+  setInterval(()=>{try{if(currentScene==="house")return;if(!visitContext&&me()&&sig(me().plots)!==strictAck)strictPublish(false)}catch(_){}},450);
   window.addEventListener("focus",()=>setTimeout(()=>strictPublish(true),80),{passive:true});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>strictPublish(true),100)},{passive:true});
 
@@ -30516,7 +30589,7 @@ console.info(globalThis.YAINOO_BUILD,"loaded");
     if(!cloudReady||!currentMemberKey||visitContext)return;
     try{const {db,fs}=await getFirebaseContext(),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(fs.doc(db,"saves",currentMemberKey)):await fs.getDoc(fs.doc(db,"saves",currentMemberKey));if(snap.exists()){const s=typeof normalizeState==="function"?normalizeState(snap.data(),currentMember):snap.data();await publishPublicFarm(true,s)}}catch(e){console.warn("R34.11.7 publish server save",e)}
   }
-  setInterval(()=>{try{publishPublicFarm(false)}catch(_){}},900);
+  setInterval(()=>{try{if(currentScene==="house")return;publishPublicFarm(false)}catch(_){}},900);
   window.addEventListener("focus",()=>setTimeout(()=>publishPublicFarm(true,state||ownState),100),{passive:true});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishPublicFarm(true,state||ownState),130)},{passive:true});
   const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;
@@ -30634,10 +30707,10 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   function sigPlots(){try{return JSON.stringify((state?.plots||[]).map(p=>p&&typeof p==="object"?[p.crop||"",Number(p.plantedAt||0),Number(p.readyAt||0),Boolean(p.worm),Boolean(p.giantWorm),Number(p.wateredAt||0)]:null))}catch(_){return""}}
   function forcePublic(delay=0){if(visitContext||!cloudReady||!currentMemberKey)return;clearTimeout(pubTimer);pubTimer=setTimeout(()=>{try{globalThis.YN_R34117?.publishPublicFarm?.(true,state)}catch(e){console.warn("R34.11.10 public force",e)}},delay)}
   const drawBase=typeof draw==="function"?draw:null;if(drawBase)draw=function(){const r=drawBase.apply(this,arguments);if(!visitContext){const s=sigPlots();if(s!==lastPlotSig){lastPlotSig=s;forcePublic(10)}}return r};
-  setInterval(()=>{if(!visitContext){const s=sigPlots();if(s!==lastPlotSig){lastPlotSig=s;forcePublic(0)}}},250);
+  setInterval(()=>{if(currentScene==="house")return;if(!visitContext){const s=sigPlots();if(s!==lastPlotSig){lastPlotSig=s;forcePublic(0)}}},250);
   /* R34.11.17: retired early hotel capture blocker. The final standalone R34.11.12 handler owns this button. */
   document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3411HotelFeedAll");if(!b)return;e.preventDefault();e.stopImmediatePropagation()},true);
-  document.addEventListener("pointerup",e=>{if(visitContext)return;const hit=e.target?.closest?.(".plot,[data-plot-index],[data-r17-plot],[data-r17-machine-hot]");if(hit)forcePublic(30)},true);
+  document.addEventListener("pointerup",e=>{if(visitContext)return;/* Basement actions do not change public farm plots. */const hit=e.target?.closest?.(".plot,[data-plot-index]");if(hit)forcePublic(30)},true);
   window.addEventListener("pageshow",()=>forcePublic(80),{passive:true});
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
@@ -30678,7 +30751,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"publicFarmState",currentMemberKey);await fs.setDoc(ref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(normPlots(s.plots)),publicHamsters:clone(placedHamsters(s)),clientSaveRevision:Number(s.clientSaveRevision)||0,publicSeq:Date.now(),publicVersion:"R34.11.11",updatedAt:fs.serverTimestamp()},{merge:true});pubLast=sig;return true}catch(e){console.warn("R34.11.11 public farm publish",e);return false}finally{pubBusy=false;if(pubQueued){pubQueued=false;setTimeout(()=>publishFarmTruth(false),60)}}
   }
   async function publishFromSaveTruth(){if(visitContext||!cloudReady||!currentMemberKey)return;try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(snap.exists()){const s=typeof normalizeState==="function"?normalizeState(snap.data(),currentMember):snap.data();const local=freshestOwner(),L=plotFreshness(local),R=plotFreshness(s);await publishFarmTruth(true,(L.rev>R.rev||(L.rev===R.rev&&L.t>=R.t))?local:s)}}catch(e){console.warn("R34.11.11 publish save truth",e)}}
-  let observed="";setInterval(()=>{if(visitContext)return;const s=freshestOwner();if(!s)return;const x=pubSig(s);if(x!==observed){observed=x;setTimeout(()=>publishFarmTruth(false,s),20)}},300);
+  let observed="";setInterval(()=>{if(currentScene==="house"||visitContext)return;const s=freshestOwner();if(!s)return;const x=pubSig(s);if(x!==observed){observed=x;setTimeout(()=>publishFarmTruth(false,s),20)}},300);
   const initBase=typeof initializeOrLoadCloudState==="function"?initializeOrLoadCloudState:null;if(initBase)initializeOrLoadCloudState=async function(){const r=await initBase.apply(this,arguments);pubLast="";observed="";setTimeout(publishFromSaveTruth,100);setTimeout(()=>discSync(true),450);return r};
   const flushBase=typeof flushCloudSave==="function"?flushCloudSave:null;if(flushBase)flushCloudSave=async function(){const r=await flushBase.apply(this,arguments);setTimeout(()=>publishFarmTruth(true,freshestOwner()),10);return r};
 
@@ -30846,7 +30919,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     if(visitContext||!cloudReady||!currentMemberKey)return false;const s=liveOwner112();if(!s)return false;const sig=liveFarmSig112(s);if(!force&&sig===livePubSig112)return false;if(livePubBusy112){livePubQueued112=true;return false}livePubBusy112=true;
     try{const {db,fs}=await getFirebaseContext(),p=liveFarmPayload112(s);await fs.setDoc(fs.doc(db,"publicFarmState",currentMemberKey),{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(p.plots),publicHamsters:cp(p.publicHamsters),clientSaveRevision:p.clientSaveRevision,publicSeq:Date.now(),publicVersion:"R34.11.13-live-owner",updatedAt:fs.serverTimestamp()},{merge:true});livePubSig112=sig;return true}catch(e){console.warn("R34.11.13 live public farm",e);return false}finally{livePubBusy112=false;if(livePubQueued112){livePubQueued112=false;setTimeout(()=>publishLiveFarm112(false),25)}}
   }
-  let liveObserved112="";setInterval(()=>{if(visitContext)return;const s=liveOwner112();if(!s)return;const sig=liveFarmSig112(s);if(sig!==liveObserved112){liveObserved112=sig;setTimeout(()=>publishLiveFarm112(false),10)}},180);
+  let liveObserved112="";setInterval(()=>{if(currentScene==="house"||visitContext)return;const s=liveOwner112();if(!s)return;const sig=liveFarmSig112(s);if(sig!==liveObserved112){liveObserved112=sig;setTimeout(()=>publishLiveFarm112(false),10)}},180);
   document.addEventListener("pointerup",e=>{if(visitContext)return;if(e.target?.closest?.(".plot,[data-plot-index],[data-s2-farm],#plotPageNextBtn,#plotPagePrevBtn"))setTimeout(()=>publishLiveFarm112(true),8)},true);
 
   /* Friend viewer: publicFarmState is primary; /gardens is migration fallback only.
@@ -31130,7 +31203,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
     }catch(e){console.warn("R34.11.16 own garden subscribe",e)}
   }
   // Do not rely on local-change detection alone: periodically compare server truth.
-  setInterval(()=>{if(!visitContext){ensureOwnWatch();pushTruth(false)}},300);
+  setInterval(()=>{if(currentScene==="house")return;if(!visitContext){ensureOwnWatch();pushTruth(false)}},300);
   document.addEventListener("pointerup",()=>{if(!visitContext)setTimeout(()=>pushTruth(true),8)},{passive:true,capture:true});
   window.addEventListener("pageshow",()=>setTimeout(()=>{ensureOwnWatch();pushTruth(true)},50),{passive:true});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{ensureOwnWatch();pushTruth(true)},40)},{passive:true});
@@ -31369,7 +31442,7 @@ globalThis.YAINOO_BUILD="S2-R34.11.19-HONEY-AUTHORITATIVE";
   }
 
   /* Keep the public garden hot while owner is playing. Signature prevents needless writes. */
-  setInterval(()=>{if(!visitContext&&cloudReady&&currentMemberKey)publishGarden(false)},700);
+  setInterval(()=>{if(currentScene==="house")return;if(!visitContext&&cloudReady&&currentMemberKey)publishGarden(false)},700);
   window.addEventListener("pageshow",()=>setTimeout(()=>publishGarden(true),50),{passive:true});
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>publishGarden(true),50)},{passive:true});
   const flush121=typeof flushCloudSave==="function"?flushCloudSave:null;
@@ -31702,10 +31775,10 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
 
   /* ---------- 8. BASEMENT one-tap delegated path + full-save commit already source-fixed ---------- */
   let basementTapAt=0;
-  window.addEventListener("pointerdown",e=>{if(currentScene!=="house"||visitContext)return;const a=globalThis.YN_R17;if(!a)return;const t=e.target?.closest?.("[data-r17-hdrop],[data-r17-plot],[data-r17-machine-hot],#r17CollectHedge");if(!t)return;const tm=performance.now();if(tm-basementTapAt<120)return;basementTapAt=tm;e.preventDefault();e.stopImmediatePropagation();if(t.hasAttribute("data-r17-hdrop"))a.collectHedgeOne?.(t.dataset.r17Hdrop);else if(t.hasAttribute("data-r17-plot"))a.openFlowerPlot?.(Number(t.dataset.r17Plot));else if(t.hasAttribute("data-r17-machine-hot"))a.openWineMachine?.(Number(t.dataset.r17MachineHot));else a.collectHedge?.()},true);
+  window.addEventListener("pointerdown",e=>{if(globalThis.YN_BASEMENT_SINGLE_INPUT_R3463)return;if(currentScene!=="house"||visitContext)return;const a=globalThis.YN_R17;if(!a)return;const t=e.target?.closest?.("[data-r17-hdrop],[data-r17-plot],[data-r17-machine-hot],#r17CollectHedge");if(!t)return;const tm=performance.now();if(tm-basementTapAt<120)return;basementTapAt=tm;e.preventDefault();e.stopImmediatePropagation();if(t.hasAttribute("data-r17-hdrop"))a.collectHedgeOne?.(t.dataset.r17Hdrop);else if(t.hasAttribute("data-r17-plot"))a.openFlowerPlot?.(Number(t.dataset.r17Plot));else if(t.hasAttribute("data-r17-machine-hot"))a.openWineMachine?.(Number(t.dataset.r17MachineHot));else a.collectHedge?.()},true);
 
   /* ---------- UI/watchdog ---------- */
-  function uiTick(){try{mountHotelButton();mountTroughButton();renderDiscLayers()}catch(e){console.warn(BUILD,"ui",e)}}
+  function uiTick(){if(document.hidden||currentScene==="house")return;try{mountHotelButton();mountTroughButton();renderDiscLayers()}catch(e){console.warn(BUILD,"ui",e)}}
   const drawLiveBase=typeof draw==="function"?draw:null;if(drawLiveBase)draw=function(){const r=drawLiveBase.apply(this,arguments);if(!visitContext)setTimeout(()=>forceGardenFromSave(false),0);return r};
   setInterval(uiTick,500);setInterval(()=>syncAnimalDiscs(false),30000);window.addEventListener("pageshow",()=>{setTimeout(()=>{armFriendActionWatch();armLiveGardenSelfHeal();forceGardenFromSave(true);syncAnimalDiscs(true);startPendingGiftLive();uiTick()},150)},{passive:true});document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{armFriendActionWatch();armLiveGardenSelfHeal();forceGardenFromSave(true);syncAnimalDiscs(true);uiTick()},120)},{passive:true});setTimeout(()=>{armFriendActionWatch();armLiveGardenSelfHeal();forceGardenFromSave(true);uiTick();syncAnimalDiscs(true);startPendingGiftLive()},700);
 
@@ -31977,7 +32050,7 @@ globalThis.YN_R341200_GARDENS_ONLY=true;
     else injectFriend();
     return r;
   };
-  setInterval(()=>{if(!visitContext){const s=ownerScreenState();if(s&&sig(s)!==lastSig)publishLive(true)}},500);
+  setInterval(()=>{if(currentScene==="house")return;if(!visitContext){const s=ownerScreenState();if(s&&sig(s)!==lastSig)publishLive(true)}},500);
 
   function stopFriend(){try{friendUnsub?.()}catch(_){}friendUnsub=null;friendRaw=null;friendKey="";friendName="";friendDocRef=null;friendToken++}
   function pickQuerySnap(qs){let best=null;qs?.forEach?.(d=>{const x=d.data()||{};if(!best||Number(x.ownerLocalEditAt||0)>Number(best.data.ownerLocalEditAt||0))best={ref:d.ref,data:x}});return best}
@@ -32113,7 +32186,7 @@ console.info(window.YAINOO_BUILD,"loaded");
   };
   const ret127=typeof returnFromFriendVisit==="function"?returnFromFriendVisit:null;if(ret127)returnFromFriendVisit=function(){stopFriend127();return ret127.apply(this,arguments)};
   const page127=typeof setFarmPlotPage==="function"?setFarmPlotPage:null;if(page127)setFarmPlotPage=function(){injectFriend127();const r=page127.apply(this,arguments);injectFriend127();setTimeout(()=>{try{globalThis.YN_R3411?.renderFriendHamstersAnimated?.()}catch(_){}},0);return r};
-  setInterval(()=>{if(visitContext&&fRaw)injectFriend127();else{const s=freshestOwner();if(s&&pubSig(s)!==lastOwnerSig)queueOwnerSync(60)}},350);
+  setInterval(()=>{if(currentScene==="house"&&!visitContext)return;if(visitContext&&fRaw)injectFriend127();else{const s=freshestOwner();if(s&&pubSig(s)!==lastOwnerSig)queueOwnerSync(60)}},350);
 
   /* ---- STANDALONE HOTEL FEED ALL ---- */
   const HOTEL_ID="yn127HotelFeedAll";let hotelBusy=false;
@@ -33883,8 +33956,8 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
     if(!basementActive())return false;
     const api=globalThis.YN_R17;if(!api)return false;
     const t=e.target?.closest?.(
-      '[data-r17-plot],[data-r17-plant],[data-r17-machine-hot],[data-r17-wine],'+
-      '#r17StartWine,#r17WineClaim,#r17HarvestOne,#r17HarvestAll'
+      '[data-r17-plot],[data-r17-plant],[data-r17-machine-hot],[data-r17-wine],[data-r17-hdrop],'+
+      '#r17StartWine,#r17WineClaim,#r17HarvestOne,#r17HarvestAll,#r17CollectHedge,#r17HouseUp'
     );
     if(!t)return false;
 
@@ -33910,6 +33983,12 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
       key=`base:harvest:${i}`;fn=()=>api.harvestFlower?.(i);flush=true;
     }else if(t.id==="r17HarvestAll"){
       key="base:harvest:all";fn=()=>api.harvestAll?.();flush=true;
+    }else if(t.matches("[data-r17-hdrop]")){
+      const id=String(t.dataset.r17Hdrop||"");key=`base:hedge:${id}`;fn=()=>api.collectHedgeOne?.(id);flush=true;
+    }else if(t.id==="r17CollectHedge"){
+      key="base:hedge:all";fn=()=>api.collectHedge?.();flush=true;
+    }else if(t.id==="r17HouseUp"){
+      key="base:house:up";fn=()=>{try{globalThis.YN_R17?.goHouseMain?.()}catch(_){}};
     }
     if(!fn)return false;
     consume(e);
@@ -33917,7 +33996,7 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
     try{
       t.classList.add("r36-pressed");setTimeout(()=>t.classList.remove("r36-pressed"),150);
       fn();
-      if(flush)requestFastFlush(80);
+      /* R34.63: basement mutations schedule their own coalesced cloud flush. */
     }catch(err){
       console.warn(BUILD,key,err);
       try{message?.("ทำรายการไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}
@@ -33926,10 +34005,11 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
   }
   /* The earliest R17 listener consults this object first. */
   globalThis.YN_BASEMENT_FAST_R3430={BUILD,route:basementRoute};
-  /* R34.62: only DOWN events own basement actions. touchstart prevents iOS text
-     selection/callout; delayed touchend/click routes are intentionally removed. */
-  window.addEventListener("pointerdown",e=>basementRoute(e),{capture:true,passive:false});
-  window.addEventListener("touchstart",e=>basementRoute(e),{capture:true,passive:false});
+  /* R34.63: exactly one physical input family owns basement actions.
+     Pointer Events cover modern iOS/Android; touchstart is fallback only. */
+  globalThis.YN_BASEMENT_SINGLE_INPUT_R3463=true;
+  if("PointerEvent" in window)window.addEventListener("pointerdown",e=>basementRoute(e),{capture:true,passive:false});
+  else window.addEventListener("touchstart",e=>basementRoute(e),{capture:true,passive:false});
 
   /* Fish-trap fast route retained from the retired R34.27 controller. */
   window.addEventListener("pointerdown",e=>{
@@ -34726,6 +34806,32 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
 })();
 
 
+/* =====================================================================
+   S2 R34.63 — FINAL SAVE GUARD
+   Runs after every legacy normalizer and before the final cloud flush.
+   ===================================================================== */
+(function YN_R3463_SAVE_GUARD(){
+  "use strict";
+  const BUILD="S2-R34.63-SAVE-BASEMENT-STABILITY-20260911";
+  try{
+    const baseNormalize=normalizeState;
+    normalizeState=function(raw,player){const out=baseNormalize(raw,player);return ynCompactSaveStateR3463(out)};
+  }catch(e){console.warn(BUILD,"normalize guard",e)}
+  try{
+    const baseLocal=saveLocalOnly;
+    saveLocalOnly=function(target=ownState||state){try{ynCompactSaveStateR3463(target)}catch(_){}return baseLocal.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"local guard",e)}
+  try{
+    const baseFlush=flushCloudSave;
+    flushCloudSave=async function(){
+      if(ownState){const r=ynPrepareSaveR3463(ownState);if(r.bytes>900*1024)console.warn(BUILD,"save remains large after lossless compaction",r.bytes,currentMemberKey)}
+      return baseFlush.apply(this,arguments);
+    };
+  }catch(e){console.warn(BUILD,"flush guard",e)}
+  globalThis.YN_SAVE_GUARD_R3463={BUILD,estimate:()=>ynSaveByteSizeR3463(ownState||state||{}),compact:(aggressive=false)=>{const s=ownState||state;if(!s)return null;ynCompactSaveStateR3463(s,{aggressive});return{bytes:ynSaveByteSizeR3463(s),state:s}},report:()=>{const s=ownState||state||{},rows=Object.entries(s).map(([k,v])=>[k,ynSaveByteSizeR3463(v)]).sort((a,b)=>b[1]-a[1]);return{memberKey:String(currentMemberKey||""),total:ynSaveByteSizeR3463(s),largest:rows.slice(0,15)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
 /* S2 R34.62 — final hotfix marker */
-globalThis.YAINOO_BUILD='S2-R34.62-OSTRICH-BASEMENT-HOTFIX-20260910';
-globalThis.YAINOO_PACKAGE_BUILD='S2-R34.62-OSTRICH-BASEMENT-HOTFIX-20260910';
+globalThis.YAINOO_BUILD='S2-R34.63-SAVE-BASEMENT-STABILITY-20260911';
+globalThis.YAINOO_PACKAGE_BUILD='S2-R34.63-SAVE-BASEMENT-STABILITY-20260911';

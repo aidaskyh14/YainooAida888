@@ -10964,3 +10964,46 @@ body.r50-lock{overflow:hidden!important}
   .ostrich-admin-bundle-item{grid-template-columns:40px minmax(0,1fr) 54px}
   .ostrich-admin-bundle-item img{width:40px;height:40px}
 }
+
+/* =====================================================================
+   S2 R34.63 — SAVE / BASEMENT STABILITY
+   One physical tap path + lower repaint cost in the basement.
+   ===================================================================== */
+#sceneInteractiveLayer[data-r17-house-mode="basement"]{
+  contain:layout paint style;
+  touch-action:manipulation!important;
+}
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-flower-plot,
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-wine-machine,
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-hedge-drop,
+.r17-flower-picker button[data-r17-plant],
+.r17-wine-picker button[data-r17-wine],
+#r17StartWine,
+#r17WineClaim,
+#r17HarvestOne,
+#r17HarvestAll,
+#r17CollectHedge,
+#r17HouseUp{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.r17-hedge-drop small,
+.r16-hedge-drop small,
+.r9-spirit-drop small{
+  position:absolute;
+  right:-5px;
+  bottom:-4px;
+  min-width:20px;
+  height:20px;
+  padding:0 5px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  font-size:11px;
+  font-weight:900;
+  line-height:1;
+  background:rgba(31,20,39,.92);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);
+  pointer-events:none;
+}
