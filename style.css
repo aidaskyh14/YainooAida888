@@ -11007,3 +11007,25 @@ body.r50-lock{overflow:hidden!important}
   box-shadow:0 2px 8px rgba(0,0,0,.28);
   pointer-events:none;
 }
+
+/* =====================================================================
+   S2 R34.64 — BASEMENT INPUT HOTFIX
+   Avoid Safari containment/input edge cases and keep every downstairs
+   interactive control above decorative layers with a normal tap target.
+   ===================================================================== */
+#sceneInteractiveLayer[data-r17-house-mode="basement"]{
+  contain:none!important;
+  touch-action:manipulation!important;
+}
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-flower-plot,
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-wine-machine,
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-hedge-drop,
+#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-house-actions button,
+.r17-flower-picker button[data-r17-plant],
+.r17-wine-picker button[data-r17-wine],
+#r17StartWine,#r17WineClaim,#r17HarvestOne,#r17HarvestAll,#r17CollectHedge,#r17HouseUp,
+#r29ShieldCraft,#r29HouseCollectAll{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
