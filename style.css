@@ -10794,7 +10794,7 @@ body.r50-lock{overflow:hidden!important}
 #honeyBike.is-parked .honey-bike-clip,#honeyBike.is-parked .honey-bike-sheet{pointer-events:none!important}
 #honeyBike.r3458-honey-pressed{filter:brightness(.94) saturate(1.04)!important}
 /* =====================================================================
-   S2 R34.60 — OSTRICH SYSTEM
+   S2 R34.61 — OSTRICH SYSTEM POLISH
    Mobile-first, low-overdraw UI. Game logic commits before result popups.
    ===================================================================== */
 #ostrichPenScreen.ostrich-pen-screen{
@@ -10831,13 +10831,16 @@ body.r50-lock{overflow:hidden!important}
 .ostrich-pen-title b{display:block;font-size:14px;line-height:1.2}
 .ostrich-pen-title small{display:block;margin-top:2px;font-size:11px;opacity:.9}
 .ostrich-pen-title em{display:block;margin-top:2px;font-size:10px;font-style:normal;color:#ffe6a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ostrich-animal-layer,.ostrich-drop-layer{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:hidden}
-.ostrich-drop-layer{z-index:300}
-.ostrich-bird{position:absolute;width:clamp(72px,17vw,104px);height:clamp(112px,26vw,162px);transform:translate(-50%,-88%);pointer-events:none;will-change:left,top;filter:none}
-.ostrich-bird-shadow{position:absolute;z-index:0;left:17%;right:17%;bottom:3%;height:10%;border-radius:50%;background:rgba(8,5,10,.28);filter:blur(3px);transform:scaleX(1.15)}
+.ostrich-animal-layer,.ostrich-drop-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.ostrich-drop-layer{z-index:10}
+.ostrich-animal-layer{z-index:20}
+.ostrich-bird{position:absolute;width:clamp(66px,15.8vw,96px);height:clamp(104px,24vw,150px);transform:translate(-50%,-88%);pointer-events:none;will-change:left,top;filter:none}
+.ostrich-bird-shadow{position:absolute;z-index:0;left:12%;right:12%;bottom:2.5%;height:11.5%;border-radius:50%;background:rgba(7,4,9,.55);filter:blur(3px);transform:scaleX(1.22);opacity:.96;transition:transform 180ms ease,opacity 180ms ease}
+.ostrich-bird.is-moving .ostrich-bird-shadow{animation:ostrichBirdShadowWalk 720ms ease-in-out infinite}
+@keyframes ostrichBirdShadowWalk{0%,100%{transform:scaleX(1.18) scaleY(.92);opacity:.9}50%{transform:scaleX(1.28) scaleY(1.04);opacity:1}}
 .ostrich-sprite{position:absolute;z-index:1;inset:0;background-repeat:no-repeat;background-size:400% 400%;background-position:0 0;will-change:background-position,transform;transform-origin:center bottom;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25))}
 .ostrich-life-label{position:absolute;z-index:3;left:50%;bottom:-7px;transform:translateX(-50%);width:max-content;max-width:142px;padding:2px 6px;border-radius:8px;background:rgba(22,13,35,.82);border:1px solid rgba(255,230,170,.45);color:#fff7de;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;text-shadow:0 1px 1px #000;box-shadow:0 2px 5px rgba(0,0,0,.2)}
-.ostrich-ground-drop{position:absolute;z-index:1;transform:translate(-50%,-50%);width:48px;height:48px;padding:7px;border:0;background:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 4px 5px rgba(0,0,0,.38));animation:ostrichDropFloat 2.2s ease-in-out infinite}
+.ostrich-ground-drop{position:absolute;z-index:1;transform:translate(-50%,-50%);width:48px;height:48px;padding:10px;border:0;background:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 4px rgba(0,0,0,.34));animation:ostrichDropFloat 2.2s ease-in-out infinite}
 .ostrich-ground-drop img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .ostrich-ground-drop:active{transform:translate(-50%,-50%) scale(.9)}
 @keyframes ostrichDropFloat{0%,100%{margin-top:0}50%{margin-top:-4px}}
@@ -10888,7 +10891,10 @@ body.r50-lock{overflow:hidden!important}
 
 .ostrich-admin-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0 10px}.ostrich-admin-tabs button{border:1px solid #c19a65;border-radius:10px;background:#f0d8ac;color:#5e4050;font-size:10px;font-weight:900;padding:5px}.ostrich-admin-tabs button.active{background:#563976;color:#fff;border-color:#563976}
 .ostrich-request-list{display:grid;gap:6px}.ostrich-request-list article{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:8px;border:1px solid #dec092;background:rgba(255,255,255,.65);border-radius:12px}.ostrich-request-list b{font-size:12px}.ostrich-request-list small{display:block;font-size:9px;color:#80645e}.ostrich-request-list article>div:last-child{display:flex;gap:5px}.ostrich-request-list button{min-height:38px!important;border:0;border-radius:9px;padding:5px 9px;background:#4d7651;color:#fff;font-size:10px;font-weight:900}.ostrich-request-list button.reject{background:#9a5157}
-.ostrich-admin-send{display:grid;gap:9px;max-height:57dvh;overflow:auto;padding:2px}.ostrich-admin-send>label{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:7px;font-size:11px;font-weight:800}.ostrich-admin-send select,.ostrich-admin-send input{width:100%;box-sizing:border-box;border:1px solid #cda873;border-radius:10px;background:#fff;padding:6px}.ostrich-admin-item-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ostrich-admin-item-grid button{display:grid;grid-template-columns:45px minmax(0,1fr);align-items:center;gap:5px;padding:6px;border:1px solid #d8ba8d;border-radius:11px;background:rgba(255,255,255,.68);color:#4c3442;text-align:left;font-size:9px;font-weight:800}.ostrich-admin-item-grid button.active{outline:2px solid #7c4e91;background:#efe0fa}.ostrich-admin-item-grid img{width:45px;height:45px;object-fit:contain}
+.ostrich-admin-send{display:grid;gap:9px;max-height:57dvh;overflow:auto;padding:2px}.ostrich-admin-send>label{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:7px;font-size:11px;font-weight:800}.ostrich-admin-send select,.ostrich-admin-send input{width:100%;box-sizing:border-box;border:1px solid #cda873;border-radius:10px;background:#fff;padding:6px}.ostrich-admin-item-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ostrich-admin-item-grid img{width:45px;height:45px;object-fit:contain}
+.ostrich-admin-bundle-item{display:grid;grid-template-columns:45px minmax(0,1fr) 60px;align-items:center;gap:6px;padding:7px;border:1px solid #d8ba8d;border-radius:11px;background:rgba(255,255,255,.68);color:#4c3442;font-size:9px}
+.ostrich-admin-bundle-item span{min-width:0}.ostrich-admin-bundle-item b{display:block;font-size:10px;line-height:1.2}.ostrich-admin-bundle-item small{display:block;margin-top:2px;color:#80645e;font-size:8px;line-height:1.15}.ostrich-admin-bundle-item input{min-height:38px!important;text-align:center;font-weight:900;color:#563976;padding:4px!important}
+.ostrich-admin-bundle-summary{padding:8px 9px;border-radius:11px;background:#f1dcae;border:1px solid #d5b579;color:#6b4b48;font-size:10px;line-height:1.4}
 .ostrich-rank-list{display:grid;gap:6px}.ostrich-rank-list article{display:grid;grid-template-columns:35px 1fr auto;align-items:center;gap:7px;padding:8px;border-radius:12px;background:rgba(255,255,255,.65);border:1px solid #ddbd88}.ostrich-rank-list article.top{background:#fff0c5}.ostrich-rank-list article>strong{font-size:12px}.ostrich-rank-list b{font-size:11px}.ostrich-rank-list small{display:block;font-size:9px;color:#7d625a}.ostrich-rank-list span{font-weight:900;color:#613d77}
 .ostrich-admin-entry-wrap{margin:10px 0}.ostrich-admin-entry-wrap button{width:100%;display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:8px;min-height:62px;padding:7px 10px;border:1px solid #d3a95e;border-radius:14px;background:linear-gradient(180deg,#fff2ca,#ead2a0);color:#4b3141;text-align:left}.ostrich-admin-entry-wrap img{width:50px;height:50px;object-fit:contain}.ostrich-admin-entry-wrap b{display:block;font-size:12px}.ostrich-admin-entry-wrap small{display:block;font-size:9px;margin-top:2px}.ostrich-admin-entry-wrap i{font-size:20px;font-style:normal}
 
@@ -10898,12 +10904,12 @@ body.r50-lock{overflow:hidden!important}
   .ostrich-lure-card{grid-template-columns:46px minmax(0,1fr)}.ostrich-lure-card>img{width:46px;height:46px}.ostrich-lure-card button{grid-column:1/-1;width:100%;min-height:38px!important}
   .ostrich-feed-card{grid-template-columns:50px minmax(0,1fr)}.ostrich-feed-card>img{width:50px;height:50px}.ostrich-feed-card button{grid-column:1/-1;width:100%;min-height:38px!important}
   .ostrich-food-card{grid-template-columns:62px minmax(0,1fr)}.ostrich-food-card>img{width:62px;height:62px}
-  .ostrich-inventory-grid{grid-template-columns:1fr}.ostrich-admin-item-grid{grid-template-columns:1fr 1fr}
+  .ostrich-inventory-grid{grid-template-columns:1fr}.ostrich-admin-item-grid{grid-template-columns:1fr}
   .ostrich-pen-action{font-size:9px;min-height:46px;padding-inline:3px}.ostrich-pen-bottom-actions{gap:4px;padding:5px;grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}
 }
 @media (max-height:650px){
   .ostrich-pen-title{top:52px;padding:5px 9px}.ostrich-pen-title em{display:none}.ostrich-admin-button{top:52px}
-  .ostrich-pen-bottom-actions{padding:4px}.ostrich-pen-action{min-height:42px}.ostrich-bird{width:68px;height:106px}
+  .ostrich-pen-bottom-actions{padding:4px}.ostrich-pen-action{min-height:42px}.ostrich-bird{width:62px;height:98px}
   #modalContent .ostrich-modal,#modalContent .ostrich-result-popup{max-height:86dvh;padding:10px}.ostrich-result-main{width:92px;height:92px}#modalContent .ostrich-scroll{max-height:50dvh}
 }
 .ostrich-notification-admin-card{border:1px solid rgba(151,100,56,.35);background:linear-gradient(180deg,#fff3d2,#f2d7aa)!important;color:#4a3240}
@@ -10912,3 +10918,25 @@ body.r50-lock{overflow:hidden!important}
 .ostrich-notification-request-list>div{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:6px 7px;border-radius:10px;background:rgba(255,255,255,.62)}
 .ostrich-notification-request-list strong{font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis}.ostrich-notification-request-list span{display:flex;gap:4px;flex:0 0 auto}
 .ostrich-notification-request-list button{min-height:36px;min-width:58px;border:0;border-radius:8px;padding:4px 7px;background:#4f7854;color:#fff;font-size:9px;font-weight:900;touch-action:manipulation}.ostrich-notification-request-list button.reject{background:#995159}
+
+@media (prefers-reduced-motion:reduce){.ostrich-bird.is-moving .ostrich-bird-shadow,.ostrich-ground-drop{animation:none!important}}
+
+/* =====================================================================
+   S2 R34.61 — fertilizer + home-food polish
+   ===================================================================== */
+.r3461-fertilizer-modal{text-align:center!important;max-height:78dvh!important;overflow:auto!important}
+.r3461-fertilizer-modal>img{display:block;width:min(34vw,132px);height:min(34vw,132px);object-fit:contain;margin:0 auto 6px}
+.r3461-fertilizer-offer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;padding:9px 10px;border:1px solid #d9b779;border-radius:13px;background:rgba(255,248,224,.9);font-size:11px}
+.r3461-fertilizer-offer small{color:#765765;font-weight:800}
+.r3461-flower-fertilizer-offer{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;align-items:center;margin:9px 0;padding:8px;border:1px solid #d9b779;border-radius:13px;background:rgba(255,248,224,.9);text-align:left}
+.r3461-flower-fertilizer-offer img{width:56px;height:56px;object-fit:contain}.r3461-flower-fertilizer-offer b{display:block;font-size:11px}.r3461-flower-fertilizer-offer small{display:block;margin-top:2px;font-size:9px;color:#765765}
+.r3461-hedge-craft-cards{grid-template-columns:1fr!important}
+.r3461-fertilizer-craft-img{display:block;width:min(34vw,135px);height:min(34vw,135px);object-fit:contain;margin:0 auto 6px}
+.r3461-craft-qty{display:grid;grid-template-columns:1fr 84px;align-items:center;gap:8px;margin:10px 0;text-align:left;font-size:11px;font-weight:800}
+.r3461-craft-qty input{width:100%;min-height:40px;border:1px solid #caa873;border-radius:10px;background:#fff;text-align:center;font:inherit;font-weight:900}
+.r3461-fertilizer-result .r31-result-img{max-height:155px}
+@media(max-width:420px){
+  .r3461-fertilizer-offer{align-items:flex-start;flex-direction:column}
+  .ostrich-admin-bundle-item{grid-template-columns:40px minmax(0,1fr) 54px}
+  .ostrich-admin-bundle-item img{width:40px;height:40px}
+}
