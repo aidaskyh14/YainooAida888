@@ -10771,6 +10771,26 @@ body.r50-lock{overflow:hidden!important}
 .r17-flower-picker button[data-r17-plant] *{pointer-events:none!important}
 .r17-flower-picker button[data-r17-plant].r3457-seed-selected{transform:scale(.97)}
 
+/* S2 R34.62 — Basement true one-tap hardening (iOS/Safari). */
+#sceneInteractiveLayer[data-r17-house-mode="basement"],
+#sceneInteractiveLayer[data-r17-house-mode="basement"] *,
+.r17-flower-modal,
+.r17-flower-modal *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+.r17-flower-plot,.r17-flower-picker button[data-r17-plant]{
+  touch-action:manipulation!important;
+  pointer-events:auto!important;
+}
+.r17-flower-picker button[data-r17-plant]{min-height:116px!important}
+.r17-flower-picker button[data-r17-plant] img,
+.r17-flower-picker button[data-r17-plant] b,
+.r17-flower-picker button[data-r17-plant] small,
+.r17-flower-plot>*{pointer-events:none!important}
+
+
 /* ======================================================================
    S2 R34.58 — Honey device-scale / WebView-safe touch target
    Invisible fixed hitbox follows the visual motorcycle in viewport pixels.
@@ -10834,16 +10854,20 @@ body.r50-lock{overflow:hidden!important}
 .ostrich-animal-layer,.ostrich-drop-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .ostrich-drop-layer{z-index:10}
 .ostrich-animal-layer{z-index:20}
-.ostrich-bird{position:absolute;width:clamp(66px,15.8vw,96px);height:clamp(104px,24vw,150px);transform:translate(-50%,-88%);pointer-events:none;will-change:left,top;filter:none}
+.ostrich-bird{position:absolute;width:clamp(66px,15.8vw,96px);height:clamp(104px,24vw,150px);transform:translate(-50%,-88%);pointer-events:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;will-change:left,top;filter:none}
 .ostrich-bird-shadow{position:absolute;z-index:0;left:12%;right:12%;bottom:2.5%;height:11.5%;border-radius:50%;background:rgba(7,4,9,.55);filter:blur(3px);transform:scaleX(1.22);opacity:.96;transition:transform 180ms ease,opacity 180ms ease}
-.ostrich-bird.is-moving .ostrich-bird-shadow{animation:ostrichBirdShadowWalk 720ms ease-in-out infinite}
+.ostrich-bird.is-moving .ostrich-bird-shadow{animation:ostrichBirdShadowWalk 1100ms ease-in-out infinite}
 @keyframes ostrichBirdShadowWalk{0%,100%{transform:scaleX(1.18) scaleY(.92);opacity:.9}50%{transform:scaleX(1.28) scaleY(1.04);opacity:1}}
 .ostrich-sprite{position:absolute;z-index:1;inset:0;background-repeat:no-repeat;background-size:400% 400%;background-position:0 0;will-change:background-position,transform;transform-origin:center bottom;filter:drop-shadow(0 4px 4px rgba(0,0,0,.25))}
-.ostrich-life-label{position:absolute;z-index:3;left:50%;bottom:-7px;transform:translateX(-50%);width:max-content;max-width:142px;padding:2px 6px;border-radius:8px;background:rgba(22,13,35,.82);border:1px solid rgba(255,230,170,.45);color:#fff7de;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;text-shadow:0 1px 1px #000;box-shadow:0 2px 5px rgba(0,0,0,.2)}
-.ostrich-ground-drop{position:absolute;z-index:1;transform:translate(-50%,-50%);width:48px;height:48px;padding:10px;border:0;background:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 4px rgba(0,0,0,.34));animation:ostrichDropFloat 2.2s ease-in-out infinite}
-.ostrich-ground-drop img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.ostrich-life-label{display:none!important}
+.ostrich-ground-drop{position:absolute;z-index:1;transform:translate(-50%,-50%);width:44px;height:44px;padding:0;border:0;background:transparent;border-radius:50%;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 4px rgba(0,0,0,.30));animation:ostrichDropFloat 2.8s ease-in-out infinite;isolation:isolate}
+.ostrich-ground-drop::before{content:"";position:absolute;z-index:0;left:50%;top:50%;width:36px;height:36px;border-radius:50%;transform:translate(-50%,-50%) scale(.88);opacity:.68;pointer-events:none;animation:ostrichDropAura 2.4s ease-in-out infinite}
+.ostrich-ground-drop.is-egg::before{background:radial-gradient(circle,rgba(255,249,190,.95) 0 20%,rgba(255,214,109,.48) 38%,rgba(255,196,77,.14) 62%,transparent 74%);box-shadow:0 0 10px rgba(255,220,125,.72),0 0 18px rgba(255,198,92,.34)}
+.ostrich-ground-drop.is-feather::before{background:radial-gradient(circle,rgba(243,231,255,.95) 0 18%,rgba(196,154,255,.48) 38%,rgba(146,101,232,.14) 62%,transparent 74%);box-shadow:0 0 10px rgba(218,188,255,.72),0 0 18px rgba(164,117,244,.34)}
+.ostrich-ground-drop img{position:absolute;z-index:1;left:50%;top:50%;display:block;width:22px;height:22px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none}
 .ostrich-ground-drop:active{transform:translate(-50%,-50%) scale(.9)}
-@keyframes ostrichDropFloat{0%,100%{margin-top:0}50%{margin-top:-4px}}
+@keyframes ostrichDropFloat{0%,100%{margin-top:0}50%{margin-top:-2px}}
+@keyframes ostrichDropAura{0%,100%{transform:translate(-50%,-50%) scale(.82);opacity:.52}50%{transform:translate(-50%,-50%) scale(1.08);opacity:.9}}
 .ostrich-pen-bottom-actions{
   position:absolute;z-index:600;left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));bottom:max(10px,calc(env(safe-area-inset-bottom) + 7px));
   display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:6px;padding:7px;border-radius:17px;

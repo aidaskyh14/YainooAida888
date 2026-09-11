@@ -24028,8 +24028,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     clearTimeout(commitCloudTimer17);
     commitCloudTimer17=setTimeout(async()=>{
       try{try{save?.()}catch(_){};await flushCloudSave?.()}
-      catch(e){console.warn("R34.12.10 basement coalesced flush",e)}
-    },220);
+      catch(e){console.warn("R34.62 basement coalesced flush",e)}
+    },90);
   }
 
   /* ---------- New inventory + gifting: every new item can be sent ---------- */
@@ -24076,7 +24076,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
      Any player who owns/unlocks the house can choose a flower directly and plant it.
      No flowerSeeds stock is required or consumed. */
   function plantFlower17(idx,key){const s=ensureR17State(own17()),f=FLOWERS17[key];if(!f||s.flowerPlots[idx])return;const t=now17();s.flowerPlots[idx]={flower:key,plantedAt:t,readyAt:t+f.totalMs,testStage:""};commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🌱 ปลูก${f.name} แปลง ${idx+1} แล้ว`)}
-  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}" data-r17-plant-plot="${idx}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;plantFlower17(idx,b.dataset.r17Plant)};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}});openModal()}
+  function openPlantPicker17(idx){ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-flower-modal r16-scroll-panel"><h2>🌸 ปลูกดอกไม้ • แปลง ${idx+1}</h2><p>เลือกดอกไม้แล้วปลูกได้เลย • ไม่ใช้เมล็ดในกระเป๋า • ไม่มีหนอน • ไม่ต้องรดน้ำ</p><div class="r17-flower-picker">${Object.entries(FLOWERS17).map(([k,f])=>`<button type="button" data-r17-plant="${k}" data-r17-plant-plot="${idx}"><img src="${f.bag}"><b>${safe17(f.name)}</b><small>ปลูกได้เลย • ${fmtMs17(f.totalMs)}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-plant]").forEach(b=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();const t=Date.now();if(t-last<450)return;last=t;plantFlower17(idx,b.dataset.r17Plant)};b.style.touchAction="manipulation";b.onpointerdown=take;b.ontouchstart=take;b.onclick=e=>{e?.preventDefault?.()}});openModal()}
   function harvestFlower17(idx,{quiet=false}={}){const s=ensureR17State(own17()),p=s.flowerPlots[idx];if(!p||flowerStage17(p)!=="ready")return false;const f=FLOWERS17[p.flower],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,qty=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0),r29FlowerReceipt=`flower:${currentMemberKey}:${idx}:${p.plantedAt||0}`;if(!isAdmin17())s.flowers[p.flower]+=qty;else s.flowers[p.flower]=9999;try{incrementMissionOn(s,"flowerHarvest",qty)}catch(_){}s.flowerPlots[idx]=null;commit17(s);try{globalThis.YN_R29?.scoreFlower?.(p.flower,1,r29FlowerReceipt)}catch(_){}renderHouse17();if(!quiet){$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${f.ready}"><h2>🌸 เก็บเกี่ยวแล้ว</h2><p>${safe17(f.name)} ×${qty}</p><small>เข้ากระเป๋า → ดอกไม้ เรียบร้อยแล้ว</small><button id="r17FlowerDone" class="primary-spooky-action" type="button">รับทราบ</button></section>`;$17("r17FlowerDone").onclick=closeModal;openModal()}return{key:p.flower,qty}}
   function harvestAllFlowers17(){const s=ensureR17State(own17()),ready=[];s.flowerPlots.forEach((p,i)=>{if(p&&flowerStage17(p)==="ready")ready.push(i)});if(!ready.length)return message("🌸 เก็บเกี่ยวทั้งหมด","ยังไม่มีดอกไม้พร้อมเก็บค่ะ");const got={},r29FlowerScores=[];ready.forEach(i=>{const p=s.flowerPlots[i],houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),flowerBonusChance=houseLv>=3?.35:houseLv>=2?.20:0,q=1+Math.floor(Math.random()*3)+(Math.random()<flowerBonusChance?1:0);if(!isAdmin17())s.flowers[p.flower]+=q;else s.flowers[p.flower]=9999;got[p.flower]=(got[p.flower]||0)+q;r29FlowerScores.push([p.flower,`flower:${currentMemberKey}:${i}:${p.plantedAt||0}`]);s.flowerPlots[i]=null});try{incrementMissionOn(s,"flowerHarvest",Object.values(got).reduce((a,b)=>a+b,0))}catch(_){}commit17(s);r29FlowerScores.forEach(([k,r])=>{try{globalThis.YN_R29?.scoreFlower?.(k,1,r)}catch(_){}});renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🌸 เก็บเกี่ยวทั้งหมดแล้ว</h2><div class="r17-flower-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${FLOWERS17[k].ready}"><b>${safe17(FLOWERS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>ดอกไม้ทั้งหมดเข้ากระเป๋าแล้วค่ะ</small><button id="r17FlowerAllDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17FlowerAllDone").onclick=closeModal;openModal()}
   async function useFlowerFertilizer17(idx){
@@ -24155,7 +24155,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   /* ---------- House renderer ---------- */
   function setHouseBg17(mode){const sc=$17("sceneScreen");if(!sc)return;const lv=Math.min(3,Math.max(1,Number((ownState||state)?.houseUpgrade?.level)||1)),bg=mode==="basement"?"house-basement-season2.jpeg":lv===3?"house-level3.jpeg":lv===2?"house-level2.jpeg":"house-interior-season2.jpeg";sc.style.backgroundImage=`url("${bg}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
   function renderHouseMain17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
-  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();const t=Date.now();if(t-last<90)return;last=t;fn()};b.style.touchAction="none";b.onpointerdown=take;b.onclick=e=>{if(e?.pointerType)return;take(e)}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
+  function renderHouseBasement17(){persistHedgeVisualPos17();stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r17HarvestAll" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{let last=0;const take=e=>{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();const t=Date.now();if(t-last<450)return;last=t;fn()};b.style.touchAction="manipulation";b.onpointerdown=take;b.ontouchstart=take;b.onclick=e=>{e?.preventDefault?.()}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
     /* R34.11.13: iPhone coordinate fallback. The whole visual plot/machine area is tappable,
        even when the transparent DOM button misses the finger by a few pixels. */
     layer.onpointerdown=e=>{
@@ -33913,7 +33913,7 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
     }
     if(!fn)return false;
     consume(e);
-    if(!dedupe(key,220))return true;
+    if(!dedupe(key,520))return true;
     try{
       t.classList.add("r36-pressed");setTimeout(()=>t.classList.remove("r36-pressed"),150);
       fn();
@@ -33926,8 +33926,10 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
   }
   /* The earliest R17 listener consults this object first. */
   globalThis.YN_BASEMENT_FAST_R3430={BUILD,route:basementRoute};
-  window.addEventListener("touchend",e=>basementRoute(e),{capture:true,passive:false});
-  window.addEventListener("click",e=>basementRoute(e),true);
+  /* R34.62: only DOWN events own basement actions. touchstart prevents iOS text
+     selection/callout; delayed touchend/click routes are intentionally removed. */
+  window.addEventListener("pointerdown",e=>basementRoute(e),{capture:true,passive:false});
+  window.addEventListener("touchstart",e=>basementRoute(e),{capture:true,passive:false});
 
   /* Fish-trap fast route retained from the retired R34.27 controller. */
   window.addEventListener("pointerdown",e=>{
@@ -34500,8 +34502,8 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
     t.disabled=true;t.classList.add("r3457-seed-selected");
     try{globalThis.YN_R17?.plantFlower?.(idx,key)}finally{setTimeout(()=>{if(t?.isConnected)t.disabled=false},500)}
   }
-  window.addEventListener("pointerdown",ownBasementInput,true);
-  window.addEventListener("touchstart",ownBasementInput,{capture:true,passive:false});
+  /* R34.62: retired duplicate basement picker listeners. The R34.36 route above
+     now owns pointerdown/touchstart so one physical tap can only become one action. */
 
   /* A result message is not proof of persistence. Keep critical UI/inventory fresh. */
   const refreshCritical=()=>{try{if(!visitContext&&ownState){state=ownState;saveLocalOnly?.(ownState)}}catch(_){} };
@@ -34722,3 +34724,8 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+
+/* S2 R34.62 — final hotfix marker */
+globalThis.YAINOO_BUILD='S2-R34.62-OSTRICH-BASEMENT-HOTFIX-20260910';
+globalThis.YAINOO_PACKAGE_BUILD='S2-R34.62-OSTRICH-BASEMENT-HOTFIX-20260910';
