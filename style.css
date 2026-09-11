@@ -11029,3 +11029,6 @@ body.r50-lock{overflow:hidden!important}
   touch-action:manipulation!important;
   -webkit-tap-highlight-color:transparent!important;
 }
+
+/* R34.65 basement flower tools */
+.r3465-flower-tools{max-height:min(72vh,640px);overflow:auto}.r3465-flower-tools>button{width:100%;min-height:48px;margin:7px 0;touch-action:manipulation}.r3465-flower-tools .r17-flower-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.r3465-flower-tools .r17-flower-picker button{min-height:92px;touch-action:manipulation}.r3465-pending-gift{outline:2px solid rgba(174,109,166,.22)}
