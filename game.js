@@ -34864,7 +34864,7 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
    ===================================================================== */
 (()=>{
   "use strict";
-  const BUILD="S2-R34.65-SYSTEM-INTEGRITY-20260911";
+  const BUILD="S2-R34.66-WINE-RECOVERY-20260911";
   const $=id=>document.getElementById(id);
   const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
@@ -34880,11 +34880,11 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
   function keepReceipts(st){const a=Object.entries(st.r3465BasementReceipts||{}).sort((x,y)=>(Number(y[1]?.at)||0)-(Number(x[1]?.at)||0)).slice(0,30);st.r3465BasementReceipts=Object.fromEntries(a)}
   const wineBusy=new Set(),flowerBusy=new Set();
 
-  async function startWine(idx,key){idx=Math.floor(Number(idx));const api=globalThis.YN_R17,w=api?.WINES?.[key],busy=`start:${idx}`;if(!w||idx<0||idx>2||wineBusy.has(busy)||!cloudReady)return;wineBusy.add(busy);const btn=$("r17StartWine");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก…"}const actionId=`wine-start:${currentMemberKey}:${idx}:${key}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;
+  async function startWine(idx,key){idx=Math.floor(Number(idx));const api=globalThis.YN_R17,w=api?.WINES?.[key],busy=`start:${idx}`;if(!w||idx<0||idx>2||wineBusy.has(busy))return;if(!currentMemberKey)return message("เริ่มหมักไม่ได้","ไม่พบสมาชิกที่กำลังเล่น กรุณาเข้าเกมใหม่ค่ะ");if(!cloudReady){try{showWeatherToast?.("🍷 กำลังเชื่อมข้อมูลไวน์…")}catch(_){};for(let n=0;n<20&&!cloudReady&&!cloudSessionSuperseded;n++)await new Promise(r=>setTimeout(r,100));if(!cloudReady)return message("เริ่มหมักไม่ได้",cloudSessionSuperseded?"บัญชีนี้กำลังเปิดจากอีกเครื่อง กรุณาใช้เครื่องล่าสุดค่ะ":"ระบบบันทึกยังเชื่อมต่อไม่เสร็จ กรุณาลองอีกครั้งค่ะ")};wineBusy.add(busy);const btn=$("r17StartWine");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก…"}const actionId=`wine-start:${currentMemberKey}:${idx}:${key}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`;try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;
       await globalThis.YN_R3465_RETRY_TX(()=>fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=ensureBasement(sn.data());assertCurrentCloudSession?.(sn.data(),currentMember);if(st.r3465BasementReceipts[actionId]){next=st;return}if(st.wineMachines[idx])throw new Error("เครื่องนี้กำลังหมักอยู่แล้ว");if(!admin())for(const [k,q] of Object.entries(w.crops||{}))if(iv(st.bag?.[k])<iv(q))throw new Error(`วัตถุดิบ ${CROPS?.[k]?.name||k} ไม่พอ`);if(!admin())for(const [k,q] of Object.entries(w.crops||{}))st.bag[k]=iv(st.bag?.[k])-iv(q);const t=now(),lv=Math.max(1,Math.min(3,Number(st.houseUpgrade?.level)||1)),factor=lv>=3?.80:lv>=2?.90:1;st.wineMachines[idx]={wine:key,startedAt:t,readyAt:t+Math.round(Number(w.duration||0)*factor)};try{incrementMissionOn?.(st,"wineStart",1)}catch(_){};if(admin())try{ensureAdminStock?.(st)}catch(_){};st.r3465BasementReceipts[actionId]={at:t,kind:"wineStart",idx,key};keepReceipts(st);st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=clone(st);tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}));applyServerState(next);try{closeModal?.()}catch(_){};try{api.renderHouse?.()}catch(_){};showWeatherToast?.(`🍷 เริ่มหมัก ${w.name} • เครื่อง ${idx+1} แล้ว`)
     }catch(e){message("เริ่มหมักไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{wineBusy.delete(busy);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=`เริ่มหมักเครื่อง ${idx+1}`}}}
 
-  async function claimWine(idx){idx=Math.floor(Number(idx));const api=globalThis.YN_R17,busy=`claim:${idx}`;if(idx<0||idx>2||wineBusy.has(busy)||!cloudReady)return;wineBusy.add(busy);const btn=$("r17WineClaim");if(btn){btn.disabled=true;btn.textContent="กำลังรับ…"}let got=null,receipt="";try{await settlePendingCloudSave?.();const local=ensureBasement(clone(ownState||state)),lm=local.wineMachines[idx];if(!lm)throw new Error("เครื่องนี้ไม่มีไวน์รอรับ");receipt=`wine-claim:${currentMemberKey}:${idx}:${lm.startedAt||0}:${lm.wine}`;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;
+  async function claimWine(idx){idx=Math.floor(Number(idx));const api=globalThis.YN_R17,busy=`claim:${idx}`;if(idx<0||idx>2||wineBusy.has(busy))return;if(!currentMemberKey)return message("รับไวน์ไม่ได้","ไม่พบสมาชิกที่กำลังเล่น กรุณาเข้าเกมใหม่ค่ะ");if(!cloudReady){try{showWeatherToast?.("🍷 กำลังเชื่อมข้อมูลไวน์…")}catch(_){};for(let n=0;n<20&&!cloudReady&&!cloudSessionSuperseded;n++)await new Promise(r=>setTimeout(r,100));if(!cloudReady)return message("รับไวน์ไม่ได้",cloudSessionSuperseded?"บัญชีนี้กำลังเปิดจากอีกเครื่อง กรุณาใช้เครื่องล่าสุดค่ะ":"ระบบบันทึกยังเชื่อมต่อไม่เสร็จ กรุณาลองอีกครั้งค่ะ")};wineBusy.add(busy);const btn=$("r17WineClaim");if(btn){btn.disabled=true;btn.textContent="กำลังรับ…"}let got=null,receipt="";try{await settlePendingCloudSave?.();const local=ensureBasement(clone(ownState||state)),lm=local.wineMachines[idx];if(!lm)throw new Error("เครื่องนี้ไม่มีไวน์รอรับ");receipt=`wine-claim:${currentMemberKey}:${idx}:${lm.startedAt||0}:${lm.wine}`;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null;
       await globalThis.YN_R3465_RETRY_TX(()=>fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=ensureBasement(sn.data());assertCurrentCloudSession?.(sn.data(),currentMember);if(st.r3465BasementReceipts[receipt]){got=st.r3465BasementReceipts[receipt].wine;next=st;return}const m=st.wineMachines[idx];if(!m)throw new Error("ไวน์เครื่องนี้ถูกรับไปแล้ว");if(Number(m.readyAt||0)>now())throw new Error("ไวน์ยังหมักไม่เสร็จค่ะ");got=m.wine;st.wines[got]=admin()?9999:iv(st.wines?.[got])+1;st.wineMachines[idx]=null;try{incrementMissionOn?.(st,"wineClaim",1)}catch(_){};if(admin())try{ensureAdminStock?.(st)}catch(_){};st.r3465BasementReceipts[receipt]={at:now(),kind:"wineClaim",idx,wine:got};keepReceipts(st);st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=clone(st);tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}));applyServerState(next);try{await globalThis.YN_R29?.scoreWine?.(got,receipt)}catch(_){};try{api.renderHouse?.()}catch(_){};const w=api?.WINES?.[got];$("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${w?.image||""}"><h2>🍷 รับไวน์เรียบร้อย</h2><p>${esc(w?.name||got)} ×1</p><small>ยืนยันแล้วว่าเข้ากระเป๋า → ไวน์</small><button id="r3465WineDone" class="primary-spooky-action">รับทราบ</button></section>`;$("r3465WineDone").onclick=closeModal;openModal()
     }catch(e){message("รับไวน์ไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{wineBusy.delete(busy);if(btn&&btn.isConnected){btn.disabled=false;btn.textContent="รับเข้ากระเป๋า"}}}
 
@@ -34903,6 +34903,19 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
 
   if(globalThis.YN_R17){globalThis.YN_R17.startWine=startWine;globalThis.YN_R17.claimWine=claimWine;globalThis.YN_R17.plantFlower=plantFlower;globalThis.YN_R17.harvestFlower=harvestOne;globalThis.YN_R17.harvestAll=harvestAll}
   globalThis.YN_R3465={BUILD,openFlowerTools,startWine,claimWine,plantFlower,harvestOne,harvestAll,fertilizeAll,plantAll};
+
+  /* R34.66 wine UI recovery: delegated route remains canonical, but every newly
+     rendered wine action gets a keyboard/click fallback that never silently dies. */
+  document.addEventListener("click",e=>{
+    const t=e.target?.closest?.("#r17StartWine,#r17WineClaim");if(!t)return;
+    if(currentScene!=="house"||visitContext)return;
+    if(t.dataset.r3466Handled==="1")return;
+    t.dataset.r3466Handled="1";setTimeout(()=>delete t.dataset.r3466Handled,700);
+    if(t.id==="r17StartWine"){const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;
+      if(!wineBusy.has(`start:${i}`))startWine(i,k);
+    }else{const i=Number(t.dataset.r17WineClaim);if(!wineBusy.has(`claim:${i}`))claimWine(i)}
+  },false);
+  globalThis.YN_R3466={BUILD:"S2-R34.66-WINE-RECOVERY-20260911",startWine,claimWine};
 
   /* Farm 1-4: authoritative one-plot planting. Each plot commits against the latest
      cloud save and mirrors the same plot array to /gardens before success is shown. */
@@ -34934,4 +34947,96 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
   showFriends=async function(){if(typeof guardResting==="function"&&guardResting())return;let cached={};try{cached=JSON.parse(localStorage.getItem(rankKey())||"{}")||{}}catch(_){};renderRank(cached);if(!cloudReady)return;try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"publicProfiles")),fresh={};sn.forEach(d=>fresh[d.id]=d.data()||{});try{localStorage.setItem(rankKey(),JSON.stringify(fresh))}catch(_){};renderRank(fresh)}catch(e){console.warn(BUILD,"rank refresh",e)}};
 
   globalThis.YAINOO_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.67 — WINE HARD REBUILD (mobile direct-action path)
+   - Replaces the R17 wine modal controls with fresh controls that bind
+     pointerup/touchend/click directly to the durable R34.65 transaction APIs.
+   - No closure-bound legacy claim/start handlers are used.
+   - Every tap provides visible feedback; no silent return on the UI path.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.67-WINE-HARD-REBUILD-20260911";
+  const $=id=>document.getElementById(id);
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  const api=()=>globalThis.YN_R17;
+  const core=()=>globalThis.YN_R3465||globalThis.YN_R3466;
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>{try{return typeof isAdmin==="function"?!!isAdmin():(currentMemberKey==="aida"||currentMember==="Aida")}catch(_){return currentMemberKey==="aida"||currentMember==="Aida"}};
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  function fmt(ms){let sec=Math.max(0,Math.ceil(Number(ms||0)/1000)),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),ss=sec%60;return h?`${h}:${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`}
+  function live(){return ownState||state}
+  function wines(){return api()?.WINES||{}}
+  function machineState(i){const s=live();return Array.isArray(s?.wineMachines)?s.wineMachines[i]:null}
+  function ready(m){return !!m&&now()>=Number(m.readyAt||0)}
+  function needHtml(w){const s=live()||{};return Object.entries(w?.crops||{}).map(([k,q])=>`<div><span>${esc(CROPS?.[k]?.name||k)}</span><b>${admin()?9999:iv(s.bag?.[k])}/${iv(q)}</b></div>`).join("")}
+  function feedback(txt){try{showWeatherToast?.(txt)}catch(_){}}
+  function bindDirect(el,fn){
+    if(!el)return;
+    el.style.pointerEvents="auto";el.style.touchAction="manipulation";el.disabled=false;
+    let last=0;
+    const fire=e=>{
+      const t=Date.now();if(t-last<500){try{e?.preventDefault?.()}catch(_){};return}last=t;
+      try{e?.preventDefault?.();e?.stopPropagation?.()}catch(_){}
+      try{fn()}catch(err){console.warn(BUILD,"wine action",err);try{message?.("ระบบไวน์มีปัญหา",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}}
+    };
+    el.addEventListener("pointerup",fire,{passive:false});
+    el.addEventListener("touchend",fire,{passive:false});
+    el.addEventListener("click",fire,false);
+  }
+  function openRecipe(i,key){
+    i=Math.floor(Number(i));const w=wines()[key];if(!w||i<0||i>2)return message?.("เลือกสูตรไม่ได้","ไม่พบสูตรไวน์หรือเครื่องหมักค่ะ");
+    const m=machineState(i);if(m)return openMachine(i);
+    $("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel r3467-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>${esc(w.name)}</h2><div class="r17-wine-needs">${needHtml(w)}</div><p>เวลาหมัก ${fmt(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button type="button" id="r3467StartWine" class="primary-spooky-action">🍷 เริ่มหมักเครื่อง ${i+1}</button><small id="r3467WineHint">แตะ 1 ครั้ง ระบบจะบันทึกก่อนปิดหน้าต่าง</small></section>`;
+    openModal?.();
+    bindDirect($("r3467StartWine"),async()=>{
+      const b=$("r3467StartWine"),hint=$("r3467WineHint");if(b?.dataset.busy==="1")return;
+      if(b){b.dataset.busy="1";b.disabled=true;b.textContent="กำลังเริ่มหมัก…"}if(hint)hint.textContent="กำลังตรวจวัตถุดิบและบันทึกข้อมูล…";
+      feedback("🍷 กำลังเริ่มหมัก…");
+      try{const fn=core()?.startWine;if(typeof fn!=="function")throw new Error("ไม่พบระบบบันทึกไวน์รุ่นล่าสุด");await fn(i,key)}
+      catch(err){if(b&&b.isConnected){b.disabled=false;delete b.dataset.busy;b.textContent=`🍷 เริ่มหมักเครื่อง ${i+1}`}if(hint&&hint.isConnected)hint.textContent=err?.message||"เริ่มหมักไม่สำเร็จ";throw err}
+    });
+  }
+  function openMachine(i){
+    i=Math.floor(Number(i));if(i<0||i>2)return;
+    const m=machineState(i);
+    if(!m){
+      $("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel r3467-wine-modal"><h2>🍷 หมักไวน์ • เครื่อง ${i+1}</h2><div class="r17-wine-picker">${Object.entries(wines()).map(([k,w])=>`<button type="button" data-r3467-wine="${k}"><img src="${w.image}"><span><b>${esc(w.name)}</b><small>${fmt(w.duration)}</small></span></button>`).join("")}</div><small>เลือกสูตรก่อน แล้วกดเริ่มหมักในหน้าถัดไป</small></section>`;
+      openModal?.();
+      document.querySelectorAll("[data-r3467-wine]").forEach(b=>bindDirect(b,()=>openRecipe(i,b.dataset.r3467Wine)));
+      return;
+    }
+    const w=wines()[m.wine];if(!w)return message?.("เครื่องหมักผิดปกติ","ไม่พบสูตรไวน์ของเครื่องนี้ค่ะ");
+    const isReady=ready(m);
+    $("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r3467-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${i+1}</h2><p>${esc(w.name)}</p><b>${isReady?"✅ พร้อมรับแล้ว":`⏳ เหลือ ${fmt(Number(m.readyAt||0)-now())}`}</b>${isReady?`<button type="button" id="r3467ClaimWine" class="primary-spooky-action">🍾 รับเข้ากระเป๋า</button><small id="r3467WineHint">ของจะถูกเพิ่มเข้ากระเป๋าก่อนล้างเครื่อง</small>`:`<small>กลับมารับได้เมื่อครบเวลา</small>`}</section>`;
+    openModal?.();
+    if(isReady)bindDirect($("r3467ClaimWine"),async()=>{
+      const b=$("r3467ClaimWine"),hint=$("r3467WineHint");if(b?.dataset.busy==="1")return;
+      if(b){b.dataset.busy="1";b.disabled=true;b.textContent="กำลังรับไวน์…"}if(hint)hint.textContent="กำลังเพิ่มไวน์เข้ากระเป๋าและบันทึก…";
+      feedback("🍾 กำลังรับไวน์…");
+      try{const fn=core()?.claimWine;if(typeof fn!=="function")throw new Error("ไม่พบระบบรับไวน์รุ่นล่าสุด");await fn(i)}
+      catch(err){if(b&&b.isConnected){b.disabled=false;delete b.dataset.busy;b.textContent="🍾 รับเข้ากระเป๋า"}if(hint&&hint.isConnected)hint.textContent=err?.message||"รับไวน์ไม่สำเร็จ";throw err}
+    });
+  }
+  /* Replace every public wine entry point used by the authoritative basement route. */
+  if(api()){
+    api().openWineMachine=openMachine;
+    api().openWineRecipe=openRecipe;
+    if(core()?.startWine)api().startWine=core().startWine;
+    if(core()?.claimWine)api().claimWine=core().claimWine;
+  }
+  /* Capture only machine/legacy wine controls and reroute them before closure handlers. */
+  window.addEventListener("pointerup",e=>{
+    if(currentScene!=="house"||visitContext)return;
+    const t=e.target?.closest?.("[data-r17-machine-hot],[data-r17-wine],#r17StartWine,#r17WineClaim");if(!t)return;
+    if(t.matches("[data-r17-machine-hot]")){e.preventDefault();e.stopImmediatePropagation();return openMachine(Number(t.dataset.r17MachineHot))}
+    if(t.matches("[data-r17-wine]")){e.preventDefault();e.stopImmediatePropagation();return openRecipe(Number(t.dataset.r17WineMachine),t.dataset.r17Wine)}
+    if(t.id==="r17StartWine"){e.preventDefault();e.stopImmediatePropagation();return core()?.startWine?.(Number(t.dataset.r17StartMachine),t.dataset.r17StartWine)}
+    if(t.id==="r17WineClaim"){e.preventDefault();e.stopImmediatePropagation();return core()?.claimWine?.(Number(t.dataset.r17WineClaim))}
+  },true);
+  globalThis.YN_R3467={BUILD,openMachine,openRecipe};
+  console.info(BUILD,"loaded");
 })();
