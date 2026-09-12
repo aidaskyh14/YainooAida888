@@ -24190,12 +24190,19 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function wineNeed17(w){const s=ensureR17State(own17());return Object.entries(w.crops).map(([k,q])=>`<div><span>${safe17(CROPS?.[k]?.name||k)}</span><b>${isAdmin17()?9999:int17(s.bag?.[k])}/${q}</b></div>`).join("")}
   function startWine17(idx,key){const s=ensureR17State(own17()),w=WINES17[key];if(!w||s.wineMachines[idx])return;const enough=Object.entries(w.crops).every(([k,q])=>int17(s.bag?.[k])>=q);if(!enough&&!isAdmin17())return message("วัตถุดิบไม่พอ","ยังเริ่มหมักไวน์สูตรนี้ไม่ได้ค่ะ");if(!isAdmin17()){Object.entries(w.crops).forEach(([k,q])=>s.bag[k]-=q)}const t=now17();const houseLv=Math.max(1,Math.min(3,Number(s.houseUpgrade?.level)||1)),wineFactor=houseLv>=3?.80:houseLv>=2?.90:1;s.wineMachines[idx]={wine:key,startedAt:t,readyAt:t+Math.round(w.duration*wineFactor)};try{incrementMissionOn(s,"wineStart",1)}catch(_){}commit17(s);closeModal();renderHouse17();showWeatherToast?.(`🍷 เริ่มหมัก ${w.name} • เครื่อง ${idx+1}`)}
   function claimWine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(!m||!wineReady17(m))return;const w=WINES17[m.wine];if(!isAdmin17())s.wines[m.wine]+=1;else s.wines[m.wine]=9999;const r29WineReceipt=`wine:${currentMemberKey}:${idx}:${m.startedAt||0}:${m.wine}`;s.wineMachines[idx]=null;try{incrementMissionOn(s,"wineClaim",1)}catch(_){}commit17(s);try{globalThis.YN_R29?.scoreWine?.(m.wine,r29WineReceipt)}catch(_){}renderHouse17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><img src="${w.image}"><h2>🍷 หมักเสร็จแล้ว</h2><p>${safe17(w.name)} ×1</p><small>เข้ากระเป๋า → ไวน์ เรียบร้อยแล้ว</small><button id="r17WineDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17WineDone").onclick=closeModal;openModal()}
+  function runWineStart17(idx,key){
+    try{return startWine17(idx,key)}catch(e){console.warn("R34.69 original wine start",e);return message("เริ่มหมักไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+  function runWineClaim17(idx){
+    try{return claimWine17(idx)}catch(e){console.warn("R34.69 original wine claim",e);return message("รับไวน์ไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
   function openWineRecipeFast17(idx,key){
     const w=WINES17[key];if(!w)return;
-    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button id="r17StartWine" data-r17-start-wine="${key}" data-r17-start-machine="${idx}" class="primary-spooky-action">เริ่มหมักเครื่อง ${idx+1}</button></section>`;
+    $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><img class="r17-wine-hero" src="${w.image}"><h2>${safe17(w.name)}</h2><div class="r17-wine-needs">${wineNeed17(w)}</div><p>เวลาหมัก ${fmtMs17(w.duration)} • ไม่มีโอกาสล้มเหลว</p><button type="button" id="r17StartWine" data-r17-start-wine="${key}" data-r17-start-machine="${idx}" class="primary-spooky-action">🍷 เริ่มหมักเครื่อง ${idx+1}</button><small id="r3468WineDirectHint">ปุ่มนี้ผูกตรงกับระบบบันทึกไวน์ ไม่ผ่านตัวดักปุ่มใต้ดินรุ่นเก่า</small></section>`;
+    const b=$17("r17StartWine");if(b){b.style.touchAction="manipulation";b.style.pointerEvents="auto";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();runWineStart17(idx,key)}}
     openModal();
   }
-  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();claimWine17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
+  function openWineMachine17(idx){const s=ensureR17State(own17()),m=s.wineMachines[idx];if(m){const w=WINES17[m.wine],ready=wineReady17(m);$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><img class="r17-wine-hero" src="${w.image}"><h2>เครื่องหมัก ${idx+1}</h2><p>${safe17(w.name)}</p><b>${ready?"พร้อมรับแล้ว":`เหลือ ${fmtMs17(m.readyAt-now17())}`}</b>${ready?`<button id="r17WineClaim" data-r17-wine-claim="${idx}" class="primary-spooky-action">รับเข้ากระเป๋า</button>`:(isAdmin17()?'<button id="r17WineReadyNow" class="secondary-action">🧪 ทำให้พร้อมรับทันที</button>':'')}</section>`;if($17("r17WineClaim")){const b=$17("r17WineClaim");b.style.touchAction="manipulation";b.style.pointerEvents="auto";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();runWineClaim17(idx)}};if($17("r17WineReadyNow"))$17("r17WineReadyNow").onclick=()=>{const q=ensureR17State(own17()).wineMachines[idx];if(q){q.readyAt=now17();commit17(own17());openWineMachine17(idx);renderHouse17()}};openModal();return}
     $17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal r16-scroll-panel"><h2>🍷 หมักไวน์ • เครื่อง ${idx+1}</h2><div class="r17-wine-picker">${Object.entries(WINES17).map(([k,w])=>`<button type="button" data-r17-wine="${k}" data-r17-wine-machine="${idx}"><img src="${w.image}"><span><b>${safe17(w.name)}</b><small>${fmtMs17(w.duration)}</small></span></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-wine]").forEach(b=>{const choose=()=>openWineRecipeFast17(idx,b.dataset.r17Wine);b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();choose()}});openModal()}
   function openWineTest17(){if(!isAdmin17())return;const s=ensureR17State(own17());$17("modalContent").innerHTML=`<section class="feature-panel r17-wine-modal"><h2>🧪 ทดลองระบบไวน์</h2><p>ทดสอบครบวงจร • เริ่มหมัก / เวลาจริง / พร้อมรับทันที / รับเข้ากระเป๋า</p><div class="r17-machine-list">${s.wineMachines.map((m,i)=>`<button type="button" data-r17-machine="${i}"><b>เครื่อง ${i+1}</b><small>${m?(wineReady17(m)?"พร้อมรับ":`${WINES17[m.wine].name} • ${fmtMs17(m.readyAt-now17())}`):"ว่าง"}</small></button>`).join("")}</div></section>`;document.querySelectorAll("[data-r17-machine]").forEach(b=>b.onclick=()=>openWineMachine17(Number(b.dataset.r17Machine)));openModal()}
 
@@ -33956,9 +33963,10 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.35-GLOBAL-STABILITY';
      ============================================================ */
   function basementActive(){
     try{
-      return currentScene==="house"&&!visitContext&&
-        ($("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement" ||
-         document.querySelector(".r17-basement-scene,.r17-flower-plots,.r17-wine-machines"));
+      return !visitContext&&(
+        (currentScene==="house"&&$("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement") ||
+        document.querySelector(".r17-basement-scene,.r17-flower-plots,.r17-wine-machines,.r17-wine-modal,.r17-flower-modal")
+      );
     }catch(_){return false}
   }
   function basementRoute(e){
@@ -34901,20 +34909,12 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
 
   function openFlowerTools(){const api=globalThis.YN_R17,st=ensureBasement(clone(ownState||state)),empty=st.flowerPlots.filter(x=>!x).length,ready=st.flowerPlots.filter(p=>p&&Number(p.readyAt||0)<=now()).length,growing=st.flowerPlots.filter(p=>p&&Number(p.readyAt||0)>now()).length;$("modalContent").innerHTML=`<section class="feature-panel r3465-flower-tools"><h2>🧰 เครื่องมือดอกไม้</h2><p>แปลงว่าง ${empty} • พร้อมเก็บ ${ready} • กำลังโต ${growing}</p><button id="r3465PlantAll" class="primary-spooky-action">🌱 ปลูกทั้งหมด</button><button id="r3465HarvestAll" ${ready?'':'disabled'}>🌸 เก็บเกี่ยวทั้งหมด</button><button id="r3465FertAll" ${growing?'':'disabled'}>✨ ใส่ปุ๋ยทั้งหมด</button><small>การแตะแปลงทีละช่องยังใช้ได้ตามปกติ และเลือกดอกคนละชนิดได้ทุกแปลง</small></section>`;openModal();$("r3465HarvestAll").onclick=()=>harvestAll();$("r3465FertAll").onclick=()=>fertilizeAll();$("r3465PlantAll").onclick=()=>{$("modalContent").innerHTML=`<section class="feature-panel r3465-flower-tools"><h2>🌱 เลือกดอกไม้สำหรับแปลงว่างทั้งหมด</h2><div class="r17-flower-picker">${Object.entries(api.FLOWERS||{}).map(([k,f])=>`<button type="button" data-r3465-plant-all="${k}"><img src="${f.bag||f.ready||''}"><b>${esc(f.name)}</b></button>`).join('')}</div></section>`;document.querySelectorAll('[data-r3465-plant-all]').forEach(b=>b.onclick=()=>plantAll(b.dataset.r3465PlantAll));openModal()}}
 
-  if(globalThis.YN_R17){globalThis.YN_R17.startWine=startWine;globalThis.YN_R17.claimWine=claimWine;globalThis.YN_R17.plantFlower=plantFlower;globalThis.YN_R17.harvestFlower=harvestOne;globalThis.YN_R17.harvestAll=harvestAll}
+  if(globalThis.YN_R17){globalThis.YN_R17.plantFlower=plantFlower;globalThis.YN_R17.harvestFlower=harvestOne;globalThis.YN_R17.harvestAll=harvestAll}
   globalThis.YN_R3465={BUILD,openFlowerTools,startWine,claimWine,plantFlower,harvestOne,harvestAll,fertilizeAll,plantAll};
 
   /* R34.66 wine UI recovery: delegated route remains canonical, but every newly
      rendered wine action gets a keyboard/click fallback that never silently dies. */
-  document.addEventListener("click",e=>{
-    const t=e.target?.closest?.("#r17StartWine,#r17WineClaim");if(!t)return;
-    if(currentScene!=="house"||visitContext)return;
-    if(t.dataset.r3466Handled==="1")return;
-    t.dataset.r3466Handled="1";setTimeout(()=>delete t.dataset.r3466Handled,700);
-    if(t.id==="r17StartWine"){const i=Number(t.dataset.r17StartMachine),k=t.dataset.r17StartWine;
-      if(!wineBusy.has(`start:${i}`))startWine(i,k);
-    }else{const i=Number(t.dataset.r17WineClaim);if(!wineBusy.has(`claim:${i}`))claimWine(i)}
-  },false);
+  /* R34.69: retired R34.66 wine click fallback; original R17 owns wine actions again. */
   globalThis.YN_R3466={BUILD:"S2-R34.66-WINE-RECOVERY-20260911",startWine,claimWine};
 
   /* Farm 1-4: authoritative one-plot planting. Each plot commits against the latest
@@ -34960,6 +34960,7 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
 (()=>{
   "use strict";
   const BUILD="S2-R34.67-WINE-HARD-REBUILD-20260911";
+  return; /* R34.69: retired conflicting wine input layer; original R17 path restored. */
   const $=id=>document.getElementById(id);
   const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
   const api=()=>globalThis.YN_R17;
@@ -35040,3 +35041,32 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
   globalThis.YN_R3467={BUILD,openMachine,openRecipe};
   console.info(BUILD,"loaded");
 })();
+
+
+/* =====================================================================
+   S2 R34.68 — WINE SOURCE-PATH FIX
+   The old wine recipe screen can exist while basement scene metadata is stale.
+   Route visible wine action buttons directly to the durable transaction APIs.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.68-WINE-SOURCE-PATH-20260911";
+  return; /* R34.69: retired conflicting wine input layer; original R17 path restored. */
+  let lastKey="",lastAt=0;
+  function fire(key,fn,e){const t=Date.now();if(key===lastKey&&t-lastAt<450){e?.preventDefault?.();return}lastKey=key;lastAt=t;try{e?.preventDefault?.();e?.stopPropagation?.()}catch(_){};try{const r=fn?.();if(r&&typeof r.catch==="function")r.catch(err=>{console.warn(BUILD,key,err);try{message?.("ระบบไวน์มีปัญหา",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}})}catch(err){console.warn(BUILD,key,err)}}
+  function start(i,k){return globalThis.YN_R3465?.startWine?.(Number(i),String(k||""))||globalThis.YN_R3466?.startWine?.(Number(i),String(k||""))}
+  function claim(i){return globalThis.YN_R3465?.claimWine?.(Number(i))||globalThis.YN_R3466?.claimWine?.(Number(i))}
+  document.addEventListener("click",e=>{
+    const t=e.target?.closest?.("#r17StartWine,#r17WineClaim,#r3467StartWine,#r3467ClaimWine");if(!t)return;
+    if(t.id==="r17StartWine")return fire(`start:${t.dataset.r17StartMachine}:${t.dataset.r17StartWine}`,()=>start(t.dataset.r17StartMachine,t.dataset.r17StartWine),e);
+    if(t.id==="r17WineClaim")return fire(`claim:${t.dataset.r17WineClaim}`,()=>claim(t.dataset.r17WineClaim),e);
+    /* R34.67 buttons already have direct handlers; only stop here if those were stripped by a stale modal rebuild. */
+  },true);
+  globalThis.YN_R3468={BUILD};console.info(BUILD,"loaded");
+})();
+
+
+/* S2 R34.69 — WINE ORIGINAL-PATH RESTORE
+   Wine start/claim uses the original R17 source functions that previously worked.
+   Later R34.65-.68 wine input overrides are intentionally bypassed to prevent capture-layer conflicts. */
+globalThis.YAINOO_BUILD_WINE="S2-R34.69-WINE-ORIGINAL-PATH-RESTORE-20260911";
