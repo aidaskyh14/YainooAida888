@@ -11032,3 +11032,29 @@ body.r50-lock{overflow:hidden!important}
 
 /* R34.65 basement flower tools */
 .r3465-flower-tools{max-height:min(72vh,640px);overflow:auto}.r3465-flower-tools>button{width:100%;min-height:48px;margin:7px 0;touch-action:manipulation}.r3465-flower-tools .r17-flower-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.r3465-flower-tools .r17-flower-picker button{min-height:92px;touch-action:manipulation}.r3465-pending-gift{outline:2px solid rgba(174,109,166,.22)}
+
+
+/* ================================================================
+   S2 R34.71 — WINE MODAL CLEANUP
+   ================================================================ */
+.r17-wine-modal{
+  text-align:center!important;
+  padding-bottom:14px!important;
+}
+.r17-wine-modal .r17-wine-needs{
+  margin:10px 0 8px!important;
+}
+.r17-wine-modal>.primary-spooky-action,
+.r17-wine-modal #r17StartWine,
+.r17-wine-modal #r17WineClaim{
+  display:block!important;
+  width:min(100%,320px)!important;
+  min-height:48px!important;
+  margin:12px auto 0!important;
+  font-size:14px!important;
+}
+.r17-wine-modal>p{
+  margin:8px 0!important;
+  line-height:1.45!important;
+}
+#r3468WineDirectHint{display:none!important}
