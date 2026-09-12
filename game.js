@@ -1,5 +1,5 @@
 /* =====================================================================
-   S2 R34.71 — STABLE TRANSACTION CORE
+   S2 R34.73 — HONEY + HEDGEHOG ODDS TUNE
    Lexical function declaration: critical systems call this directly instead
    of depending on a mutable global property.
    ===================================================================== */
@@ -18,7 +18,9 @@ async function YN_RETRY_TX(task,tries=6){
   }
   throw last;
 }
-try{globalThis.YN_R3465_RETRY_TX=YN_RETRY_TX}catch(_){}
+try{
+  if(typeof globalThis.YN_R3465_RETRY_TX!=="function")globalThis.YN_R3465_RETRY_TX=YN_RETRY_TX;
+}catch(_){}
 
 /* =====================================================================
    S2 R34.70 — EARLY ACTION CORE
@@ -28,14 +30,15 @@ try{globalThis.YN_R3465_RETRY_TX=YN_RETRY_TX}catch(_){}
    ===================================================================== */
 (function YN_R3470_EARLY_ACTION_CORE(){
   "use strict";
-  const BUILD="S2-R34.71-EARLY-ACTION-CORE-20260911";
+  const BUILD="S2-R34.73-ODDS-TUNE-20260911";
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const retryable=e=>/aborted|version|required base|stored version|conflict|contention|failed-precondition|unavailable/i.test(String(e?.message||e||""));
   /* Must exist from the first millisecond of game.js execution. R34.65 used to
      define this near the end of the file, while Honey actions can call it much
      earlier after a partial/stale load. */
   /* Compatibility alias only. Critical actions call lexical YN_RETRY_TX directly. */
-  globalThis.YN_R3465_RETRY_TX=YN_RETRY_TX;
+  try{globalThis.YN_R3465_RETRY_TX=YN_RETRY_TX}catch(_){}
+  if(typeof globalThis.YN_R3465_RETRY_TX!=="function")throw new Error("transaction core bootstrap failed");
 
   let lastKey="",lastAt=0;
   const once=(key,fn,e)=>{
@@ -20313,8 +20316,15 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function rollReward(selections,calledAt){
-    /* R34.65: กุศล 40% ตรง ๆ; ไอเท็ม 8 ชนิดแบ่ง 60% เท่ากัน */
-    if(Math.random()<0.40)return{type:"merit",key:"merit",name:"กุศล",qty:50+Math.floor(Math.random()*101),image:""};
+    /* R34.73: keep reward odds private; afternoon merit uses a larger amount. */
+    const meritHit=Math.random()<0.30;
+    if(meritHit){
+      let hour=0;
+      try{hour=Number(bangkokPartsFull(new Date(Number(calledAt)||gameNow())).hour)||0}catch(_){hour=Number(bangkokPartsFull().hour)||0}
+      const afternoon=hour>=13&&hour<16;
+      const qty=afternoon?randInt(100,150):randInt(50,70);
+      return{type:"merit",key:"merit",name:"กุศล",qty,image:""};
+    }
     const rewards=[
       {type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:30},
       {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:30},
@@ -23714,7 +23724,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         if(a[slot]){if(String(a[slot]?.id||"")===listingId){nextState=st;nextMarket=md;return}throw new Error("สล็อตนี้มีสินค้าแล้ว")}
         if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(publicRef,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:md.shopName||"ร้านของฉัน",shop1:clone(md.shop1||[]),shop2:clone(md.shop2||[])},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true})}));
       ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);try{await fetchMarketR15(currentMemberKey,currentMember)}catch(_){}showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ • เพื่อนเห็นจากร้านกลางแล้ว`);
-    }catch(err){ownState=before;state=before;saveLocalOnly(before);const rollback=loadMarketLocal(currentMemberKey)||marketDefault(currentMemberKey,currentMember);if(Array.isArray(rollback[`shop${shopNo}`])&&String(rollback[`shop${shopNo}`][slot]?.id||"")===listingId)rollback[`shop${shopNo}`][slot]=null;saveMarketLocal(currentMemberKey,rollback);renderMarketR15(shopNo,rollback,currentMemberKey,currentMember);message("วางขายไม่สำเร็จ",`${err.message||"เชื่อมต่อไม่ได้"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}
+    }catch(err){ownState=before;state=before;saveLocalOnly(before);const rollback=loadMarketLocal(currentMemberKey)||marketDefault(currentMemberKey,currentMember);if(Array.isArray(rollback[`shop${shopNo}`])&&String(rollback[`shop${shopNo}`][slot]?.id||"")===listingId)rollback[`shop${shopNo}`][slot]=null;saveMarketLocal(currentMemberKey,rollback);renderMarketR15(shopNo,rollback,currentMemberKey,currentMember);message("วางขายไม่สำเร็จ",`${/YN_R3465_RETRY_TX|not a function|stored version|required base version|aborted|contention|failed-precondition|version conflict/i.test(String(err?.message||err||""))?"ข้อมูลกำลังซิงก์ชนกัน ระบบคืนของให้แล้ว กรุณากดวางใหม่อีกครั้ง":"เกิดปัญหาระหว่างบันทึกร้านค้า กรุณาลองใหม่ค่ะ"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}
     finally{marketPendingR15.delete(currentMemberKey)}
   }
   function showOwnerMarketR15(shopNo,slot,x,data){const sold=x.status==="sold";$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(x.image||"")}" alt=""><h2>${html(x.name)} ×${i(x.qty)}</h2><p>${sold?`✅ ขายแล้ว${x.buyerName?` • ผู้ซื้อ ${html(x.buyerName)}`:""}`:`ราคา ${i(x.price)} กุศล`}</p><button id="r15DeleteMarket" class="${sold?"secondary-action":"danger-action"}">${sold?"ล้างช่องที่ขายแล้ว":"ลบออกจากสล็อต • ของจะไม่คืนกระเป๋า"}</button></section>`;$r("r15DeleteMarket").onclick=()=>deleteMarketR15(shopNo,slot,data);openModal()}
@@ -26437,7 +26447,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
 
   const C={
     rainbow:{id:"s2-r29-rainbow",title:"ตามหาปลาสายรุ้ง กันเต๊อะ",icon:"🌈",bg:"campaign-rainbow-fish.webp",scoreLabel:"ตัว",rules:`<h3>🌈 ตามหาปลาสายรุ้ง กันเต๊อะ</h3><p>ออกตามหาปลาสายรุ้งให้ได้มากที่สุด!</p><ul><li>ปลาสายรุ้งที่กดรับผลตกปลาสำเร็จ <b>1 ตัว = 1 คะแนน</b></li><li>ถ้าครั้งเดียวได้ 2 ตัว = 2 คะแนน</li><li>นับเฉพาะปลาที่ได้หลังแคมเปญเริ่มเท่านั้น</li><li>ปลาที่มีอยู่ก่อนเริ่มกิจกรรมไม่นับย้อนหลัง</li></ul>`},
-    shield:{id:"s2-r29-shield",title:"โล่เม่นทอง",icon:"🦔",bg:"campaign-golden-hedgehog.webp",scoreLabel:"โล่",rules:`<h3>🦔 โล่เม่นทอง</h3><p>เก็บของดรอปจากเม่นในห้องใต้ดิน แล้วนำมาคราฟโล่เม่นทอง</p><ul><li>ขนเม่น 2 + เขี้ยวเม่น 2 + กรงเล็บเม่น 2 + หางเม่น 2 ต่อ 1 ครั้ง</li><li>คราฟได้สูงสุด <b>10 ครั้งต่อรอบ</b></li><li>โอกาสสำเร็จต่อครั้ง <b>50%</b></li><li>สำเร็จ 1 โล่ = 1 คะแนน</li><li>ล้มเหลวไม่ได้คะแนน และวัตถุดิบไม่คืน</li><li>นับเฉพาะการคราฟหลังแคมเปญเริ่ม</li></ul>`},
+    shield:{id:"s2-r29-shield",title:"โล่เม่นทอง",icon:"🦔",bg:"campaign-golden-hedgehog.webp",scoreLabel:"โล่",rules:`<h3>🦔 โล่เม่นทอง</h3><p>เก็บของดรอปจากเม่นในห้องใต้ดิน แล้วนำมาคราฟโล่เม่นทอง</p><ul><li>ขนเม่น 2 + เขี้ยวเม่น 2 + กรงเล็บเม่น 2 + หางเม่น 2 ต่อ 1 ครั้ง</li><li>คราฟได้สูงสุด <b>10 ครั้งต่อรอบ</b></li><li>มีโอกาสสำเร็จในการคราฟแต่ละครั้ง</li><li>สำเร็จ 1 โล่ = 1 คะแนน</li><li>ล้มเหลวไม่ได้คะแนน และวัตถุดิบไม่คืน</li><li>นับเฉพาะการคราฟหลังแคมเปญเริ่ม</li></ul>`},
     honey:{id:"s2-r29-honey",title:"กุศลนักส่งของ",icon:"🐷",bg:"campaign-honey-merit.webp",scoreLabel:"กุศล",rules:`<h3>🐷 กุศลนักส่งของ</h3><p>ช่วยส่งของให้น้องน้ำผึ้ง แล้วสะสมกุศลให้ได้มากที่สุด</p><ul><li>นับเฉพาะ <b>กุศลที่ได้รับจากน้องน้ำผึ้ง</b></li><li>กุศล 1 = 1 คะแนน</li><li>รางวัลชนิดอื่นจากน้องน้ำผึ้งไม่นับคะแนน</li><li>นับเฉพาะกุศลที่ได้รับหลังแคมเปญเริ่ม</li></ul>`},
     home:{id:"s2-r29-home",title:"แม่ศรีเรือน",icon:"🏡",bg:"campaign-mae-sri-ruean.webp",scoreLabel:"คะแนน",rules:`<h3>🏡 แม่ศรีเรือน</h3><p>สะสมคะแนนจากกิจกรรมในบ้าน ทั้งอาหารบ้าน ไวน์ และดอกไม้</p><div class="r29-rule-grid"><b>อาหารบ้าน</b><span>คราฟสำเร็จ 1 เมนู = 5 คะแนน</span><b>ไวน์</b><span>Moonlight Grape 10 • Spirit Rose 20 • Blood Grape 40 • Eclipse King 60</span><b>ดอกไม้</b><span>Daisy 3 • Rose 4 • Butterfly pea 4 • Sunflower 5 • Lotus 6 • Orchid 8</span></div><p>ไวน์นับเมื่อรับเข้ากระเป๋า และดอกไม้นับเมื่อเก็บเกี่ยวเข้ากระเป๋าสำเร็จ</p>`}
   };
@@ -26617,8 +26627,8 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   document.addEventListener('click',e=>{const b=e.target.closest?.('[data-r29-guardian-reward]');if(!b)return;const s=ensureR29State(stateRef()),arr=s.farmGuardianInventory||[],i=arr.findIndex(h=>h.id===b.dataset.r29GuardianReward),farm=Math.max(1,Math.min(4,Number(typeof farmPlotPage!=='undefined'?farmPlotPage:1)+1));if(i<0||farm<2||farm>4)return;const g=s.farmGuardians?.[String(farm)],cap=globalThis.YN_R33?.hamsterCap?.(s)||6;if(!g||g.hamsters.length>=cap)return cap===3?globalThis.YN_R33?.showLock?.('petKey'):message('วางไม่ได้','ฟาร์มนี้มีแฮมสเตอร์ครบ 6 ตัวแล้ว');const [h]=arr.splice(i,1),p={x:30+Math.random()*40,y:79+Math.random()*8};g.hamsters.push({...h,x:p.x,y:p.y,fromX:p.x,fromY:p.y,tx:p.x,ty:p.y,mode:'idle',action:'idle',faceLeft:false,motionStartedAt:0,duration:5200,idleUntil:now()+500,frameSeed:Math.floor(Math.random()*10000),updatedAt:now()});try{saveLocalOnly(s);save();flushCloudSave?.()}catch(_){}closeModal();setTimeout(()=>globalThis.YN_R25?.showGuardianMenu?.(),50)},true);
 
   async function openShieldCraft(){
-    const s=ensureR29State(stateRef()),q=k=>ADMIN()?9999:Number(s.hedgehogItems?.[k]||0),dk=typeof currentBangkokDateKey==="function"?currentBangkokDateKey():new Date().toISOString().slice(0,10),luck=s.hedgehogShieldLuckR3465?.dateKey===dk?s.hedgehogShieldLuckR3465:{dateKey:dk,successes:0},done=Math.max(0,Number(luck.successes)||0),chance=done===0?45:done===1?25:done===2?10:5;
-    $('modalContent').innerHTML=`<section class="feature-panel r29-shield-craft"><img src="golden-hedgehog-shield.png" alt="โล่เม่นทอง"><h2>🛡️ คราฟโล่เม่นทอง</h2><p>ต่อ 1 ครั้ง ใช้ ขนเม่น 2 • เขี้ยวเม่น 2 • กรงเล็บเม่น 2 • หางเม่น 2</p><small>โอกาสรอบปัจจุบัน <b>${chance}%</b> • ได้แล้ววันนี้ ${done} ชิ้น • โอกาสจะลดเป็น 25% → 10% → 5% หลังสำเร็จ • รีเซ็ต 00:00 น. ไทย • ล้มเหลววัตถุดิบไม่คืน</small><div class="r29-shield-stock"><span>ขน ${q('fur')}</span><span>เขี้ยว ${q('fang')}</span><span>กรงเล็บ ${q('claw')}</span><span>หาง ${q('tail')}</span></div><label>จำนวนครั้ง <input id="r29ShieldQty" type="number" min="1" max="10" value="1"></label><button id="r29ShieldGo" class="primary-spooky-action">คราฟ</button></section>`;openModal();$('r29ShieldGo').onclick=craftShield;
+    const s=ensureR29State(stateRef()),q=k=>ADMIN()?9999:Number(s.hedgehogItems?.[k]||0),dk=typeof currentBangkokDateKey==="function"?currentBangkokDateKey():new Date().toISOString().slice(0,10),luck=s.hedgehogShieldLuckR3465?.dateKey===dk?s.hedgehogShieldLuckR3465:{dateKey:dk,successes:0},done=Math.max(0,Number(luck.successes)||0),chance=done===0?60:done===1?40:done===2?25:15;
+    $('modalContent').innerHTML=`<section class="feature-panel r29-shield-craft"><img src="golden-hedgehog-shield.png" alt="โล่เม่นทอง"><h2>🛡️ คราฟโล่เม่นทอง</h2><p>ต่อ 1 ครั้ง ใช้ ขนเม่น 2 • เขี้ยวเม่น 2 • กรงเล็บเม่น 2 • หางเม่น 2</p><small>ล้มเหลววัตถุดิบไม่คืน • รีเซ็ตรอบการคราฟ 00:00 น. ไทย</small><div class="r29-shield-stock"><span>ขน ${q('fur')}</span><span>เขี้ยว ${q('fang')}</span><span>กรงเล็บ ${q('claw')}</span><span>หาง ${q('tail')}</span></div><label>จำนวนครั้ง <input id="r29ShieldQty" type="number" min="1" max="10" value="1"></label><button id="r29ShieldGo" class="primary-spooky-action">คราฟ</button></section>`;openModal();$('r29ShieldGo').onclick=craftShield;
   }
   async function craftShield(){
     const qty=Math.max(1,Math.min(10,Math.floor(Number($('r29ShieldQty')?.value)||1))),keys=['fur','fang','claw','tail'],craftId=`shield-${currentMemberKey}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;let success=0,next=null,startChance=45;
@@ -26626,9 +26636,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'saves',currentMemberKey);
       await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error('ไม่พบเซฟสมาชิก');const st=ensureR29State(normalizeState(snap.data(),currentMember));assertCurrentCloudSession?.(snap.data(),currentMember);st.hedgehogShieldReceiptsR3465=st.hedgehogShieldReceiptsR3465&&typeof st.hedgehogShieldReceiptsR3465==='object'?st.hedgehogShieldReceiptsR3465:{};const old=st.hedgehogShieldReceiptsR3465[craftId];if(old){success=Number(old.success)||0;startChance=Number(old.startChance)||45;next=st;return}
         if(!ADMIN()&&keys.some(k=>(Number(st.hedgehogItems?.[k])||0)<qty*2))throw new Error(`คราฟ ${qty} ครั้ง ต้องใช้ของเม่นแต่ละชนิด ${qty*2} ชิ้น`);if(!ADMIN())keys.forEach(k=>st.hedgehogItems[k]-=qty*2);
-        const dk=typeof currentBangkokDateKey==='function'?currentBangkokDateKey():new Date().toISOString().slice(0,10);let luck=st.hedgehogShieldLuckR3465&&st.hedgehogShieldLuckR3465.dateKey===dk?st.hedgehogShieldLuckR3465:{dateKey:dk,successes:0};let made=Math.max(0,Number(luck.successes)||0);startChance=made===0?45:made===1?25:made===2?10:5;success=0;for(let n=0;n<qty;n++){const chance=made===0?45:made===1?25:made===2?10:5;if(Math.random()*100<chance){success++;made++}}
+        const dk=typeof currentBangkokDateKey==='function'?currentBangkokDateKey():new Date().toISOString().slice(0,10);let luck=st.hedgehogShieldLuckR3465&&st.hedgehogShieldLuckR3465.dateKey===dk?st.hedgehogShieldLuckR3465:{dateKey:dk,successes:0};let made=Math.max(0,Number(luck.successes)||0);startChance=made===0?60:made===1?40:made===2?25:15;success=0;for(let n=0;n<qty;n++){const chance=made===0?60:made===1?40:made===2?25:15;if(Math.random()*100<chance){success++;made++}}
         luck={dateKey:dk,successes:made};st.hedgehogShieldLuckR3465=luck;if(!ADMIN())st.hedgehogItems.goldenShield=(Number(st.hedgehogItems.goldenShield)||0)+success;else st.hedgehogItems.goldenShield=9999;st.hedgehogShieldReceiptsR3465[craftId]={at:Date.now(),success,qty,startChance};const rec=Object.entries(st.hedgehogShieldReceiptsR3465).sort((a,b)=>(Number(b[1]?.at)||0)-(Number(a[1]?.at)||0)).slice(0,20);st.hedgehogShieldReceiptsR3465=Object.fromEntries(rec);st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}));
-      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);if(success)await score('shield',success,craftId);const failed=qty-success;$('modalContent').innerHTML=`<section class="feature-panel r29-shield-craft"><img src="golden-hedgehog-shield.png" alt=""><h2>${success?'✨ คราฟเสร็จแล้ว':'💨 คราฟไม่สำเร็จ'}</h2><p>สำเร็จ <b>${success}</b> ครั้ง • ล้มเหลว <b>${failed}</b> ครั้ง</p><strong>ได้รับโล่เม่นทอง ×${success}</strong><small>โอกาสเริ่มรอบนี้ ${startChance}% • ผลลัพธ์บันทึกในระบบแล้ว</small><button id="r29ShieldDone" class="primary-spooky-action">รับทราบ</button></section>`;openModal();$('r29ShieldDone').onclick=closeModal;
+      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);if(success)await score('shield',success,craftId);const failed=qty-success;$('modalContent').innerHTML=`<section class="feature-panel r29-shield-craft"><img src="golden-hedgehog-shield.png" alt=""><h2>${success?'✨ คราฟเสร็จแล้ว':'💨 คราฟไม่สำเร็จ'}</h2><p>สำเร็จ <b>${success}</b> ครั้ง • ล้มเหลว <b>${failed}</b> ครั้ง</p><strong>ได้รับโล่เม่นทอง ×${success}</strong><small>ผลลัพธ์บันทึกในระบบแล้ว</small><button id="r29ShieldDone" class="primary-spooky-action">รับทราบ</button></section>`;openModal();$('r29ShieldDone').onclick=closeModal;
     }catch(e){message('คราฟโล่ไม่สำเร็จ',e?.message||'กรุณาลองใหม่ค่ะ')}finally{if(btn&&btn.isConnected){btn.dataset.busy='0';btn.disabled=false;btn.textContent='คราฟ'}}
   }
 
@@ -26959,7 +26969,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   try{
     const shieldBase=globalThis.YN_R29?.openShieldCraft;
     if(shieldBase)globalThis.YN_R29.openShieldCraft=function(){
-      $("modalContent").innerHTML=`<section class="feature-panel r31-craft-menu r32-hedge-craft-menu"><header><span>🦔</span><div><small>ห้องคราฟของเม่น</small><h2>เลือกสิ่งที่ต้องการคราฟ</h2></div></header><div class="r32-hedge-craft-cards r3461-hedge-craft-cards"><button id="r31OpenShield"><img src="golden-hedgehog-shield.png" alt=""><span><b>โล่เม่นทอง</b><small>ของเม่นทั้ง 4 อย่างละ ×2 • เริ่ม 45% แล้วลดตามจำนวนที่สำเร็จ</small></span></button><button id="r31OpenJigsaw"><img src="hamster-jigsaw-1.png" alt=""><span><b>จิ๊กซอว์แฮมสเตอร์</b><small>ของเม่นทั้ง 4 อย่างละ ×3 • สุ่มจิ๊กซอว์</small></span></button><button id="r3461OpenFruitFertilizer"><img src="fruit-fertilizer.png" alt=""><span><b>ปุ๋ยผลไม้</b><small>ขน 6 • เขี้ยว 4 • กรงเล็บ 4 • หาง 6<br>สำเร็จ 75% • ได้ ×20</small></span></button><button id="r3461OpenFlowerFertilizer"><img src="flower-fertilizer.png" alt=""><span><b>ปุ๋ยดอกไม้</b><small>ขน 4 • เขี้ยว 6 • กรงเล็บ 6 • หาง 4<br>สำเร็จ 70% • ได้ ×20</small></span></button></div></section>`;
+      $("modalContent").innerHTML=`<section class="feature-panel r31-craft-menu r32-hedge-craft-menu"><header><span>🦔</span><div><small>ห้องคราฟของเม่น</small><h2>เลือกสิ่งที่ต้องการคราฟ</h2></div></header><div class="r32-hedge-craft-cards r3461-hedge-craft-cards"><button id="r31OpenShield"><img src="golden-hedgehog-shield.png" alt=""><span><b>โล่เม่นทอง</b><small>ของเม่นทั้ง 4 อย่างละ ×2 • สุ่มคราฟโล่เม่นทอง</small></span></button><button id="r31OpenJigsaw"><img src="hamster-jigsaw-1.png" alt=""><span><b>จิ๊กซอว์แฮมสเตอร์</b><small>ของเม่นทั้ง 4 อย่างละ ×3 • สุ่มจิ๊กซอว์</small></span></button><button id="r3461OpenFruitFertilizer"><img src="fruit-fertilizer.png" alt=""><span><b>ปุ๋ยผลไม้</b><small>ขน 6 • เขี้ยว 4 • กรงเล็บ 4 • หาง 6<br>สำเร็จ 75% • ได้ ×20</small></span></button><button id="r3461OpenFlowerFertilizer"><img src="flower-fertilizer.png" alt=""><span><b>ปุ๋ยดอกไม้</b><small>ขน 4 • เขี้ยว 6 • กรงเล็บ 6 • หาง 4<br>สำเร็จ 70% • ได้ ×20</small></span></button></div></section>`;
       openModal();$("r31OpenShield").onclick=()=>shieldBase();$("r31OpenJigsaw").onclick=showHedgeJigsawCraft;$("r3461OpenFruitFertilizer").onclick=()=>showFertilizerCraftR3461("fruit");$("r3461OpenFlowerFertilizer").onclick=()=>showFertilizerCraftR3461("flower");
     };
   }catch(_){}
@@ -35157,5 +35167,5 @@ globalThis.YAINOO_PACKAGE_BUILD='S2-R34.64-BASEMENT-INPUT-HOTFIX-20260911';
 globalThis.YAINOO_BUILD_WINE="S2-R34.69-WINE-ORIGINAL-PATH-RESTORE-20260911";
 
 /* S2 R34.70 final marker */
-globalThis.YAINOO_BUILD="S2-R34.71-HONEY-WINE-CLEAN-20260911";
-globalThis.YAINOO_PACKAGE_BUILD="S2-R34.71-HONEY-WINE-CLEAN-20260911";
+globalThis.YAINOO_BUILD="S2-R34.73-ODDS-TUNE-20260911";
+globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";

@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.71-HONEY-WINE-CLEAN">
+  <link rel="stylesheet" href="style.css?v=S2-R34.73-ODDS-TUNE">
 </head>
 <body>
   <main id="app">
@@ -263,7 +263,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=S2-R34.71-HONEY-WINE-CLEAN"></script>
+  <script src="daily-missions.js?v=S2-R34.73-ODDS-TUNE"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -485,7 +485,32 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.71-HONEY-WINE-CLEAN"></script>
+<script id="r3472-tx-bootstrap">
+/* R34.72: boot-level transaction helper.
+   This exists BEFORE game.js so even a stale legacy action that still calls
+   globalThis.YN_R3465_RETRY_TX can never see an undefined/non-function value. */
+(function(){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const retryable=e=>/aborted|version|required base|stored version|conflict|contention|failed-precondition|unavailable|deadline-exceeded/i.test(String((e&&e.message)||e||''));
+  let impl=async function(task,tries){
+    let last; const max=Math.max(1,Number(tries)||6);
+    for(let n=0;n<max;n++){
+      try{return await task();}
+      catch(e){last=e;if(!retryable(e)||n>=max-1)throw e;await sleep(Math.min(1400,160+n*220));}
+    }
+    throw last;
+  };
+  try{
+    Object.defineProperty(globalThis,'YN_R3465_RETRY_TX',{
+      configurable:true,enumerable:false,
+      get(){return impl;},
+      set(v){if(typeof v==='function')impl=v;}
+    });
+  }catch(_){globalThis.YN_R3465_RETRY_TX=impl;}
+  globalThis.YN_R3472_TX_BOOT_OK=true;
+})();
+</script>
+<script src="game.js?v=S2-R34.73-ODDS-TUNE"></script>
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
