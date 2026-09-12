@@ -11058,3 +11058,11 @@ body.r50-lock{overflow:hidden!important}
   line-height:1.45!important;
 }
 #r3468WineDirectHint{display:none!important}
+
+
+/* S2 R34.74 — compact basement/farm tools */
+.r3474-basement-tools,.r3474-farm-tools{max-height:min(72vh,680px);overflow:auto;-webkit-overflow-scrolling:touch}
+.r3474-basement-tools .r3474-tool-group{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0;padding:12px;border-radius:16px;background:rgba(255,255,255,.07)}
+.r3474-basement-tools .r3474-tool-group>b{display:block;margin-bottom:2px}
+.r3474-basement-tools button,#r3474BasementTools{touch-action:manipulation;pointer-events:auto;min-height:44px}
+.r17-basement-actions #r3474BasementTools{display:inline-flex;align-items:center;justify-content:center}
