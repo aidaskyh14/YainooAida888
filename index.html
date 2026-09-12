@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R34.71-HONEY-WINE-CLEAN">
+  <link rel="stylesheet" href="style.css?v=S2-R34.79-CANONICAL-ACTION-FIX">
 </head>
 <body>
   <main id="app">
@@ -263,7 +263,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=S2-R34.71-HONEY-WINE-CLEAN"></script>
+  <script src="daily-missions.js?v=S2-R34.79-CANONICAL-ACTION-FIX"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -485,7 +485,33 @@
     window.__YAINOO_ARENA_REMOVED__=true;
   })();
   </script>
-<script src="game.js?v=S2-R34.71-HONEY-WINE-CLEAN"></script>
+<script id="r3472-tx-bootstrap">
+/* R34.72: boot-level transaction helper.
+   This exists BEFORE game.js so even a stale legacy action that still calls
+   globalThis.YN_R3465_RETRY_TX can never see an undefined/non-function value. */
+(function(){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const retryable=e=>/aborted|version|required base|stored version|conflict|contention|failed-precondition|unavailable|deadline-exceeded/i.test(String((e&&e.message)||e||''));
+  let impl=async function(task,tries){
+    let last; const max=Math.max(1,Number(tries)||6);
+    for(let n=0;n<max;n++){
+      try{return await task();}
+      catch(e){last=e;if(!retryable(e)||n>=max-1)throw e;await sleep(Math.min(1400,160+n*220));}
+    }
+    throw last;
+  };
+  try{
+    Object.defineProperty(globalThis,'YN_R3465_RETRY_TX',{
+      configurable:true,enumerable:false,
+      get(){return impl;},
+      set(v){if(typeof v==='function')impl=v;}
+    });
+  }catch(_){globalThis.YN_R3465_RETRY_TX=impl;}
+  globalThis.YN_R3472_TX_BOOT_OK=true;
+})();
+</script>
+<script src="game.js?v=S2-R34.81-SCENE-INPUT-ISOLATION-20260912"></script>
+
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
   .v179-take-panel h2{font-size:21px!important;margin:0 0 5px!important}
@@ -3428,5 +3454,85 @@
   console.info(BUILD,'loaded');
 })();
 </script>
+
+
+
+<script id="r3480-final-authority">
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.81-SCENE-INPUT-ISOLATION-20260912";
+  const $=id=>document.getElementById(id);
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const adm=()=>{try{return (typeof isAdmin==="function"&&isAdmin())||String(currentMemberKey||"").toLowerCase()==="aida"}catch(_){return false}};
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  const flowerCost={daisy:40,rose:50,butterflypea:50,sunflower:60,lotus:70,orchid:80};
+  const busy=new Set();
+  async function tx(label,mutate,{garden=false,drawFarm=false,renderBasement=false}={}){
+    if(busy.has(label))return null;busy.add(label);
+    try{
+      if(visitContext)throw new Error("ใช้ได้เฉพาะพื้นที่ของตัวเองค่ะ");
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกยังไม่พร้อม กรุณาลองใหม่ค่ะ");
+      try{await settlePendingCloudSave?.()}catch(_){ }
+      const {db,fs}=await getFirebaseContext();
+      const sref=fs.doc(db,"saves",currentMemberKey),gref=fs.doc(db,"gardens",currentMemberKey);let out,res;
+      await YN_RETRY_TX(()=>fs.runTransaction(db,async tr=>{
+        const ss=await tr.get(sref);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const st=normalizeState(ss.data(),currentMember);assertCurrentCloudSession?.(ss.data(),currentMember);
+        res=await mutate(st);
+        if(adm())try{ensureAdminStock?.(st)}catch(_){ }
+        st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;st.clientLocalEditAt=Date.now();out=cp(st);
+        tr.set(sref,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        if(garden)tr.set(gref,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(st.plots||[]),clientSaveRevision:st.clientSaveRevision,updatedAt:fs.serverTimestamp()},{merge:true});
+      }));
+      ownState=normalizeState(out,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){ }
+      if(garden)try{lastGardenHash=plotHash?.(ownState.plots)}catch(_){ }
+      if(drawFarm)try{draw?.()}catch(_){ }
+      if(renderBasement)try{globalThis.YN_R17?.renderHouse?.()}catch(_){ }
+      return res??true;
+    }finally{busy.delete(label)}
+  }
+  function flowers(){return globalThis.YN_R17?.FLOWERS||{}}
+  function ensureFlowers(st){st.flowerPlots=Array.isArray(st.flowerPlots)?st.flowerPlots.slice(0,6):[];while(st.flowerPlots.length<6)st.flowerPlots.push(null);st.flowers=st.flowers&&typeof st.flowers==="object"?st.flowers:{};st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};return st}
+  async function flowerPlantAll(key){const f=flowers()[key];if(!f)return;try{const c=await tx("r3480-flower-plant",st=>{ensureFlowers(st);const t=now();let c=0;st.flowerPlots=st.flowerPlots.map(p=>p||(c++,{flower:key,plantedAt:t,readyAt:t+Number(f.totalMs||0),testStage:""}));if(!c)throw new Error("ไม่มีแปลงว่างค่ะ");return c},{renderBasement:true});closeModal?.();message?.("🌱 ปลูกทั้งหมดแล้ว",`${esc(f.name||key)} ${c} แปลง • บันทึกเรียบร้อยค่ะ`)}catch(e){message?.("ปลูกทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function flowerHarvestAll(){try{const got={};await tx("r3480-flower-harvest",st=>{ensureFlowers(st);const ids=[];st.flowerPlots.forEach((p,i)=>{if(p&&Number(p.readyAt||0)<=now())ids.push(i)});if(!ids.length)throw new Error("ยังไม่มีดอกไม้พร้อมเก็บค่ะ");for(const i of ids){const p=st.flowerPlots[i],q=1+Math.floor(Math.random()*3);st.flowers[p.flower]=adm()?9999:iv(st.flowers[p.flower])+q;got[p.flower]=(got[p.flower]||0)+q;st.flowerPlots[i]=null}},{renderBasement:true});message?.("🌸 เก็บเกี่ยวทั้งหมดแล้ว",Object.entries(got).map(([k,q])=>`${esc(flowers()[k]?.name||k)} ×${q}`).join("<br>"))}catch(e){message?.("เก็บเกี่ยวทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function flowerFertAll(){try{const c=await tx("r3480-flower-fert",st=>{ensureFlowers(st);const ids=st.flowerPlots.map((p,i)=>p&&Number(p.readyAt||0)>now()?i:-1).filter(i=>i>=0);if(!ids.length)throw new Error("ไม่มีแปลงที่กำลังโตค่ะ");const need=ids.reduce((s,i)=>s+(flowerCost[st.flowerPlots[i].flower]||40),0),have=iv(st.specials.flowerFertilizer);if(!adm()&&have<need)throw new Error(`ปุ๋ยไม่พอ • ต้องใช้ ${need} • มี ${have}`);if(!adm())st.specials.flowerFertilizer=have-need;ids.forEach(i=>{st.flowerPlots[i].readyAt=now();st.flowerPlots[i].testStage="ready"});return ids.length},{renderBasement:true});closeModal?.();message?.("✨ ใส่ปุ๋ยทั้งหมดแล้ว",`${c} แปลงพร้อมเก็บเกี่ยวแล้วค่ะ`)}catch(e){message?.("ใส่ปุ๋ยทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  function openFlowerToolsFinal(){
+    const mc=$("modalContent");if(!mc)return;
+    const st=ownState||state||{},plots=Array.isArray(st.flowerPlots)?st.flowerPlots:[],ready=plots.filter(p=>p&&Number(p.readyAt||0)<=now()).length,growing=plots.filter(p=>p&&Number(p.readyAt||0)>now()).length;
+    mc.innerHTML=`<section class="feature-panel r3480-flower-tools"><h2>🧰 เครื่องมือดอกไม้</h2><div class="ynu-manager-grid"><button id="r3480PlantAll" type="button">🌱 ปลูกทั้งหมด</button><button id="r3480HarvestAll" type="button" ${ready?'':'disabled'}>🌸 เก็บเกี่ยวทั้งหมด</button><button id="r3480FertAll" type="button" ${growing?'':'disabled'}>✨ ใส่ปุ๋ยทั้งหมด</button></div><small>ปลูกทีละแปลงยังใช้ได้ตามปกติค่ะ</small></section>`;
+    openModal?.();
+    $("r3480PlantAll").onclick=()=>{mc.innerHTML=`<section class="feature-panel"><h2>🌱 เลือกดอกไม้</h2><div class="r17-flower-picker">${Object.entries(flowers()).map(([k,f])=>`<button type="button" data-r3480-flower="${esc(k)}"><img src="${f.bag||f.ready||''}" alt=""><b>${esc(f.name||k)}</b></button>`).join("")}</div></section>`;mc.querySelectorAll("[data-r3480-flower]").forEach(b=>b.onclick=()=>flowerPlantAll(b.dataset.r3480Flower));};
+    $("r3480HarvestAll").onclick=flowerHarvestAll;$("r3480FertAll").onclick=flowerFertAll;
+  }
+  async function claimTrapFinal(idx){idx=Math.max(0,Math.min(2,Number(idx)||0));try{let summary=[];await tx(`r3480-trap-${idx}`,st=>{st.fishTraps=Array.isArray(st.fishTraps)?st.fishTraps.slice(0,3):[];while(st.fishTraps.length<3)st.fishTraps.push(null);const tr=st.fishTraps[idx],t=now();if(!tr||Number(tr.readyAt||0)>t||!Array.isArray(tr.rewards)||!tr.rewards.length)throw new Error("ไซนี้ยังไม่พร้อมหรือถูกรับไปแล้ว");st.coconutRiverItems=st.coconutRiverItems&&typeof st.coconutRiverItems==="object"?st.coconutRiverItems:{};summary=tr.rewards.map(r=>({key:r.key,qty:iv(r.qty)||1}));summary.forEach(r=>st.coconutRiverItems[r.key]=iv(st.coconutRiverItems[r.key])+r.qty);const round=30*60*1000;if(t>=Number(tr.expiresAt||0))st.fishTraps[idx]=null;else if(t+round<=Number(tr.expiresAt||0)){tr.cycleStartedAt=t;tr.readyAt=t+round;tr.rewards=typeof rollFishTrapRewards==="function"?rollFishTrapRewards():tr.rewards}else{tr.cycleStartedAt=t;tr.readyAt=0;tr.rewards=[]}});closeModal?.();globalThis.YN_R15?.renderFishTraps?.();message?.("🎣 รับเข้ากระเป๋าแล้ว",summary.map(r=>`${esc(COCONUT_RIVER_ITEMS?.[r.key]?.name||r.key)} ×${r.qty}`).join("<br>"))}catch(e){message?.("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  const blocked=p=>Boolean(p?.takeover&&Number(p.takeover.until)>now()&&String(p.takeover.by||"")!==String(currentMemberKey||""));
+  const page=()=>Math.max(0,Math.min(3,Number(farmPlotPage)||0)),range=()=>[page()*12,Math.min(Number(PLOT_COUNT)||48,(page()+1)*12)];
+  const growth=k=>(typeof CAKE_ITEMS!=="undefined"&&CAKE_ITEMS?.[k])||(typeof COCONUT_ITEMS!=="undefined"&&COCONUT_ITEMS?.[k])||(typeof SPECIAL_ITEMS!=="undefined"&&SPECIAL_ITEMS?.[k])||null;
+  async function plantOneFinal(index,key,button){index=Math.floor(Number(index));const crop=CROPS?.[key];if(!crop)return false;try{if(button){button.disabled=true;button.textContent="กำลังบันทึก…"}await tx(`r3480-farm-one-${index}`,st=>{const p=st.plots?.[index];if(p?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");if(blocked(p))throw new Error("แปลงนี้กำลังถูก Take Over");const t=now();st.plots[index]=normalizePlot({crop:key,phase:"growing1",phaseEndsAt:t+Number(crop.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel:false})},{garden:true,drawFarm:true});closeModal?.();showWeatherToast?.(`🌱 ปลูก ${crop.name} แล้ว`);return true}catch(e){message?.("ปลูกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return false}finally{if(button&&button.isConnected){button.disabled=false;button.textContent=crop?.name||"ปลูก"}}}
+  async function bulkBoostFinal(key){const item=growth(key);if(!item)return;const [a,b]=range();try{const c=await tx(`r3480-boost-${page()}`,st=>{st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const ids=[],t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0));for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||blocked(p))continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){ }if(["growing1","needsWater","growing2"].includes(p.phase))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");const have=iv(st.specials[key]);if(!adm()&&have<ids.length)throw new Error(`ไอเท็มไม่พอ • ต้องใช้ ${ids.length} • มี ${have}`);for(const i of ids){const p=st.plots[i],crop=CROPS?.[p.crop];if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType}else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.phase=rem<=1000?"ready":"growing2";p.phaseEndsAt=rem<=1000?0:t+rem;p.worm=false;delete p.wormType}st.plots[i]=normalizePlot(p)}if(!adm())st.specials[key]=have-ids.length;return ids.length},{garden:true,drawFarm:true});closeModal?.();message?.("⚡ เร่งโตทั้งหมดแล้ว",`${c} แปลง • บันทึกเรียบร้อยค่ะ`)}catch(e){message?.("เร่งโตทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function bulkAngelFinal(){const [a,b]=range(),key="angelWingCapsule";try{const c=await tx(`r3480-angel-${page()}`,st=>{st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(p?.crop&&!p.angel&&!blocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่ต้องติดปีกนางฟ้า");const have=iv(st.specials[key]);if(!adm()&&have<ids.length)throw new Error(`แคปซูลไม่พอ • ต้องใช้ ${ids.length} • มี ${have}`);ids.forEach(i=>{st.plots[i].angel=true;st.plots[i]=normalizePlot(st.plots[i])});if(!adm())st.specials[key]=have-ids.length;return ids.length},{garden:true,drawFarm:true});closeModal?.();message?.("🪽 ติดปีกนางฟ้าทั้งหมดแล้ว",`${c} แปลง • บันทึกเรียบร้อยค่ะ`)}catch(e){message?.("ติดปีกนางฟ้าไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function craftBaitFinal(key,btn){const bait=FISHING_BAITS?.[key];if(!bait)return;const mc=$("modalContent");if(btn){btn.disabled=true;btn.textContent="กำลังคราฟและบันทึก…"}try{let success=false,have=0;await tx(`r3480-bait-${key}`,st=>{if(!canCraftFishingBait(st,bait))throw new Error("วัตถุดิบไม่ครบตามสูตร");Object.entries(bait.needBag||{}).forEach(([k,n])=>st.bag[k]-=n);Object.entries(bait.needProducts||{}).forEach(([k,n])=>st.animalProducts[k]-=n);if(bait.dishAny)consumeAnyDishes(st,bait.dishAny);success=Math.random()*100<bait.chance;if(success)st.fishingBaits[key]=(Number(st.fishingBaits[key])||0)+1;have=Number(st.fishingBaits[key]||0)});if(mc){mc.innerHTML=`<section class="feature-panel"><h2>${success?'🎣 คราฟเหยื่อสำเร็จ':'💨 คราฟเหยื่อไม่สำเร็จ'}</h2><p>${success?`${esc(bait.name)} ×1 เข้ากระเป๋าแล้วค่ะ<br>ตอนนี้มี ×${have}`:'รอบนี้คราฟไม่สำเร็จค่ะ • วัตถุดิบถูกใช้ไปแล้ว'}</p><button type="button" id="r3480BaitBack">กลับไปหน้าคราฟ</button></section>`;$("r3480BaitBack").onclick=()=>showFishingBaitCraft?.()} }catch(e){if(mc)mc.innerHTML=`<section class="feature-panel"><h2>คราฟเหยื่อไม่ได้</h2><p>${esc(e?.message||'กรุณาลองใหม่ค่ะ')}</p><button type="button" id="r3480BaitBack">กลับไปหน้าคราฟ</button></section>`;$("r3480BaitBack").onclick=()=>showFishingBaitCraft?.()} }
+  function bindCraftButtons(){document.querySelectorAll("[data-craft-fishing-bait]").forEach(b=>{if(b.dataset.r3480Bound)return;b.dataset.r3480Bound="1";b.onclick=e=>{e.preventDefault();e.stopPropagation();craftBaitFinal(b.dataset.craftFishingBait,b)}})}
+  try{
+    const oldShow=showFishingBaitCraft;
+    showFishingBaitCraft=function(){const r=oldShow.apply(this,arguments);setTimeout(bindCraftButtons,0);return r};
+  }catch(_){ }
+  if(globalThis.YN_R3478){globalThis.YN_R3478.openBasementTools=openFlowerToolsFinal;globalThis.YN_R3478.flowerPlantAll=flowerPlantAll;globalThis.YN_R3478.flowerHarvestAll=flowerHarvestAll;globalThis.YN_R3478.flowerFertAll=flowerFertAll;globalThis.YN_R3478.claimTrap=claimTrapFinal;globalThis.YN_R3478.bulkBoost=bulkBoostFinal;globalThis.YN_R3478.bulkAngel=bulkAngelFinal}
+  if(globalThis.YN_R3474)globalThis.YN_R3474.openBasementTools=openFlowerToolsFinal;
+  if(globalThis.YN_R3465){globalThis.YN_R3465.openFlowerTools=openFlowerToolsFinal;globalThis.YN_R3465.plantAll=flowerPlantAll;globalThis.YN_R3465.harvestAll=flowerHarvestAll;globalThis.YN_R3465.fertilizeAll=flowerFertAll}
+  if(globalThis.YN_R17)globalThis.YN_R17.openFlowerTools=openFlowerToolsFinal;
+  if(globalThis.YN_R15)globalThis.YN_R15.claimTrap=claimTrapFinal;
+  try{Y26_plantCrop=plantOneFinal;globalThis.Y26_plantCrop=plantOneFinal}catch(_){ }
+  document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3474BasementTools,#r3465FlowerTools");if(!b)return;e.preventDefault();e.stopPropagation();openFlowerToolsFinal()},true);
+  const mo=new MutationObserver(()=>{bindCraftButtons();const b=$("r3474BasementTools")||$("r3465FlowerTools");if(b){b.style.pointerEvents="auto";b.disabled=false}});try{mo.observe(document.body,{childList:true,subtree:true})}catch(_){ }
+  setTimeout(bindCraftButtons,100);
+  globalThis.YN_R3480={BUILD,openFlowerTools:openFlowerToolsFinal,claimTrap:claimTrapFinal,craftBait:craftBaitFinal};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>

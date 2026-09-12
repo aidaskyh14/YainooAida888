@@ -11035,7 +11035,7 @@ body.r50-lock{overflow:hidden!important}
 
 
 /* ================================================================
-   S2 R34.71 — WINE MODAL CLEANUP
+   S2 R34.72 — WINE MODAL CLEANUP
    ================================================================ */
 .r17-wine-modal{
   text-align:center!important;
@@ -11058,3 +11058,21 @@ body.r50-lock{overflow:hidden!important}
   line-height:1.45!important;
 }
 #r3468WineDirectHint{display:none!important}
+
+
+/* S2 R34.74 — compact basement/farm tools */
+.r3474-basement-tools,.r3474-farm-tools{max-height:min(72vh,680px);overflow:auto;-webkit-overflow-scrolling:touch}
+.r3474-basement-tools .r3474-tool-group{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0;padding:12px;border-radius:16px;background:rgba(255,255,255,.07)}
+.r3474-basement-tools .r3474-tool-group>b{display:block;margin-bottom:2px}
+.r3474-basement-tools button,#r3474BasementTools{touch-action:manipulation;pointer-events:auto;min-height:44px}
+.r17-basement-actions #r3474BasementTools{display:inline-flex;align-items:center;justify-content:center}
+
+
+/* S2 R34.76 — direct mobile input surfaces */
+#r3476BasementToolsFloat{position:absolute!important;right:max(8px,calc(env(safe-area-inset-right,0px) + 6px))!important;bottom:max(52px,calc(env(safe-area-inset-bottom,0px) + 48px))!important;z-index:10020!important;min-width:118px!important;min-height:44px!important;padding:8px 12px!important;border:1.5px solid rgba(243,212,164,.96)!important;border-radius:15px!important;background:linear-gradient(180deg,rgba(91,55,105,.98),rgba(56,34,72,.99))!important;color:#fff8e9!important;font-size:11px!important;font-weight:950!important;box-shadow:0 5px 14px rgba(14,8,24,.32)!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+.r3476-basement-tools,.r3476-farm-tools{max-height:min(74vh,680px)!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important}
+.r3476-tool-grid{display:grid!important;grid-template-columns:1fr!important;gap:9px!important;margin-top:10px!important}
+.r3476-tool-grid button,.r3476-basement-tools button,.r3476-farm-tools button{min-height:46px!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+
+/* R34.78 single basement tool entry */
+#sceneInteractiveLayer[data-r17-house-mode="basement"] #r3474BasementTools{pointer-events:auto!important;touch-action:manipulation!important;min-height:44px!important;z-index:900!important;}
