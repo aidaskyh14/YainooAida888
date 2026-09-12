@@ -35172,7 +35172,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
 
 /* =====================================================================
-   S2 R34.74 — URGENT INTEGRITY / FARM / BOAT / GIFTS / BASEMENT
+   S2 R34.74 — URGENT INTEGRITY / FARM / BOAT / GIFTS / BASEMENT (base for R34.75 video hotfix)
    2026-09-12
    Final owner layer. No pre-deduct / no optimistic success before commit.
    ===================================================================== */
@@ -35283,5 +35283,101 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
   /* A lightweight post-commit inventory assertion for the critical paths above. */
   globalThis.YN_R3474={BUILD,farm:globalThis.YN_R3474_FARM,boat:{show:showBoatSupplyPicker,send:sendBoatSupply},openBasementTools:openBasementTools74,fertilizeOne:fertilizeOne74};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R34.76 — DIRECT INPUT FIX
+   2026-09-12
+   Fixes the actual mobile input owners instead of adding another click layer.
+   - Basement tool button lives above the scene and owns pointerup/click directly.
+   - Farm bulk boost / angel buttons own pointerup directly.
+   - Fish-trap fast route calls the durable cloud claim because YN_R15.claimTrap
+     itself is replaced (the legacy pointerdown owner calls this exported method).
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R34.76-DIRECT-INPUT-FIX-20260912";
+  const $=id=>document.getElementById(id);
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"")}catch(_){return String(v??"")}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const adm=()=>{try{return (typeof isAdmin==="function"&&isAdmin())||String(currentMemberKey||"").toLowerCase()==="aida"}catch(_){return false}};
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  async function retry(fn,tries=6){let last;for(let n=0;n<tries;n++){try{return await fn()}catch(e){last=e;if(!/aborted|version|required base|stored version|conflict|contention|failed-precondition|unavailable|deadline-exceeded/i.test(String(e?.message||e))||n===tries-1)throw e;await wait(160+n*170)}}throw last}
+  function apply(st,paint=true){if(!st)return;ownState=typeof normalizeState==="function"?normalizeState(st,currentMember):st;if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};if(paint)try{draw?.()}catch(_){}}
+
+  /* Direct mobile press: pointerup is authoritative; click is keyboard/fallback only. */
+  const pressed=new WeakMap();
+  function bindPress(el,fn){
+    if(!el||el.__r3476Bound)return el;el.__r3476Bound=true;el.style.pointerEvents="auto";el.style.touchAction="manipulation";
+    el.addEventListener("pointerup",e=>{pressed.set(el,Date.now());try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){};Promise.resolve(fn(e)).catch(err=>{console.warn(BUILD,err);try{message?.("ทำรายการไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}})},{capture:false,passive:false});
+    el.addEventListener("click",e=>{if(Date.now()-(pressed.get(el)||0)<650){try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){};return}try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){};Promise.resolve(fn(e)).catch(err=>{console.warn(BUILD,err);try{message?.("ทำรายการไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ")}catch(_){}})},{capture:false,passive:false});
+    return el;
+  }
+
+  /* ---------------- Basement: guaranteed floating owner ---------------- */
+  function basementActive(){const layer=$("sceneInteractiveLayer");return currentScene==="house"&&layer?.dataset?.r17HouseMode==="basement"}
+  function openBasementTools76(){
+    const api=globalThis.YN_R17,core=globalThis.YN_R3465,mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel r3476-basement-tools"><h2>🧰 เครื่องมือห้องใต้ดิน</h2><div class="r3476-tool-grid"><button id="r3476FlowerPlant" type="button">🌱 ปลูกทั้งหมด</button><button id="r3476FlowerHarvest" type="button">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r3476FlowerFert" type="button">✨ ใส่ปุ๋ยทั้งหมด</button><button id="r3476HedgeCollect" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r3476HedgeCraft" type="button">🛡️ คราฟโล่เม่นทอง</button></div></section>`;
+    openModal?.();
+    bindPress($("r3476FlowerPlant"),()=>{if(!api?.FLOWERS||!core?.plantAll)throw new Error("ระบบดอกไม้ยังไม่พร้อมค่ะ");mc.innerHTML=`<section class="feature-panel r3476-basement-tools"><h2>🌱 เลือกดอกไม้</h2><div class="r17-flower-picker">${Object.entries(api.FLOWERS).map(([k,f])=>`<button type="button" data-r3476-flower="${esc(k)}"><img src="${f.bag||f.ready||''}" alt=""><b>${esc(f.name||k)}</b></button>`).join("")}</div></section>`;mc.querySelectorAll("[data-r3476-flower]").forEach(b=>bindPress(b,()=>core.plantAll(b.dataset.r3476Flower)));});
+    bindPress($("r3476FlowerHarvest"),()=>core?.harvestAll?.());
+    bindPress($("r3476FlowerFert"),()=>core?.fertilizeAll?.());
+    bindPress($("r3476HedgeCollect"),()=>api?.collectHedge?.());
+    bindPress($("r3476HedgeCraft"),()=>globalThis.YN_R29?.openShieldCraft?.());
+  }
+  function syncBasementButton(){
+    let b=$("r3476BasementToolsFloat");
+    if(!basementActive()){if(b)b.style.display="none";return}
+    const bar=document.querySelector('#sceneInteractiveLayer[data-r17-house-mode="basement"] .r17-basement-actions');
+    if(bar){[...bar.children].forEach(x=>{if(x.id!=="r17HouseUp")x.style.setProperty("display","none","important")})}
+    if(!b){b=document.createElement("button");b.id="r3476BasementToolsFloat";b.type="button";b.textContent="🧰 เครื่องมือ";($("gameScreen")||document.body).appendChild(b);bindPress(b,openBasementTools76)}
+    b.style.display="block";
+  }
+  setInterval(syncBasementButton,180);setTimeout(syncBasementButton,20);
+
+  /* ---------------- Farm manager: pointerup owns boost / angel ---------------- */
+  function growthItems76(){return {...(typeof CAKE_ITEMS!=="undefined"?CAKE_ITEMS:{}),...(typeof COCONUT_ITEMS!=="undefined"?COCONUT_ITEMS:{})}}
+  function openBoost76(){
+    const st=ownState||state,rows=Object.entries(growthItems76()).filter(([k])=>adm()||iv(st?.specials?.[k])>0),mc=$("modalContent");
+    if(!rows.length)return message?.("เร่งโตทั้งหมด","ไม่มีไอเท็มเร่งโตในกระเป๋าค่ะ");
+    mc.innerHTML=`<section class="feature-panel r3476-farm-tools"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${rows.map(([k,m])=>`<button type="button" data-r3476-boost="${esc(k)}"><img src="${m.image||''}" alt=""><span>${esc(m.name||k)} • ×${adm()?9999:iv(st?.specials?.[k])}</span></button>`).join("")}</div></section>`;
+    mc.querySelectorAll("[data-r3476-boost]").forEach(b=>bindPress(b,()=>globalThis.YN_R3474_FARM?.bulkBoost?.(b.dataset.r3476Boost)));openModal?.();
+  }
+  function bindFarmManager76(){
+    const plant=$("r3474FarmPlant"),boost=$("r3474FarmBoost"),angel=$("r3474FarmAngel");
+    if(boost&&!boost.__r3476Bound)bindPress(boost,openBoost76);
+    if(angel&&!angel.__r3476Bound)bindPress(angel,()=>globalThis.YN_R3474_FARM?.bulkAngel?.());
+    /* plant was the only working command; leave its original action intact. */
+  }
+  const farmObs=new MutationObserver(bindFarmManager76);try{farmObs.observe($("modalContent")||document.body,{childList:true,subtree:true})}catch(_){};setInterval(bindFarmManager76,250);
+
+  /* ---------------- Fish trap: replace exported claim itself ---------------- */
+  let trapBusy76=false;
+  function rollTrap76(){const species=["fish","frog","shrimp","crab","urchin"],total=1+Math.floor(Math.random()*4),maxKinds=Math.min(total,4),kindCount=total===1?1:2+Math.floor(Math.random()*Math.max(1,maxKinds-1)),sh=species.slice().sort(()=>Math.random()-.5).slice(0,Math.min(kindCount,species.length)),rows=sh.map(k=>({key:`${k}${1+Math.floor(Math.random()*4)}`,qty:1}));let left=total-rows.length;while(left-->0&&rows.length)rows[Math.floor(Math.random()*rows.length)].qty++;return rows.filter(r=>globalThis.COCONUT_RIVER_ITEMS?.[r.key]||COCONUT_RIVER_ITEMS?.[r.key])}
+  async function claimTrap76(idx){
+    idx=Math.max(0,Math.min(2,Number(idx)||0));if(trapBusy76)return;trapBusy76=true;
+    const btn=$("r15ClaimTrapReward");if(btn){btn.disabled=true;btn.textContent="กำลังบันทึก…"}
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกยังไม่พร้อม กรุณาลองใหม่ค่ะ");try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,summary=[];
+      await retry(()=>fs.runTransaction(db,async tx=>{
+        const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(sn.data(),currentMember);assertCurrentCloudSession?.(sn.data(),currentMember);
+        st.fishTraps=Array.isArray(st.fishTraps)?st.fishTraps.slice(0,3):[];while(st.fishTraps.length<3)st.fishTraps.push(null);const tr=st.fishTraps[idx],t=now();
+        if(!tr||Number(tr.readyAt||0)>t||!Array.isArray(tr.rewards)||!tr.rewards.length)throw new Error("ไซนี้ถูกรับไปแล้วหรือยังไม่พร้อมค่ะ");
+        st.coconutRiverItems=st.coconutRiverItems&&typeof st.coconutRiverItems==="object"?st.coconutRiverItems:{};summary=tr.rewards.map(r=>({key:r.key,qty:iv(r.qty)||1}));summary.forEach(r=>st.coconutRiverItems[r.key]=iv(st.coconutRiverItems[r.key])+r.qty);
+        const round=30*60*1000;if(t>=Number(tr.expiresAt||0))st.fishTraps[idx]=null;else if(t+round<=Number(tr.expiresAt||0)){tr.cycleStartedAt=t;tr.readyAt=t+round;tr.rewards=rollTrap76()}else{tr.cycleStartedAt=t;tr.readyAt=0;tr.rewards=[]}
+        if(adm()){st.specials=st.specials||{};st.specials.fishTrap=9999}st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;st.clientLocalEditAt=Date.now();next=clone(st);tx.set(ref,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      }));
+      apply(next,false);closeModal?.();try{globalThis.YN_R15?.renderFishTraps?.()}catch(_){};const rows=summary.map(r=>`${esc(COCONUT_RIVER_ITEMS?.[r.key]?.name||r.key)} ×${r.qty}`).join("<br>");message?.("🎣 รับเรียบร้อย",`${rows}<br><small>เข้ากระเป๋าและบันทึกแล้ว • ไซเริ่มรอบใหม่</small>`);
+    }catch(e){message?.("🎣 รับปลาไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{trapBusy76=false}
+  }
+  if(globalThis.YN_R15){globalThis.YN_R15.claimTrap=claimTrap76;const baseShow=globalThis.YN_R15.showTrapClaim;globalThis.YN_R15.showTrapClaim=function(i){const r=baseShow?.apply(this,arguments);setTimeout(()=>bindPress($("r15ClaimTrapReward"),()=>claimTrap76(i)),0);return r}}
+
+  globalThis.YN_R3476={BUILD,openBasementTools:openBasementTools76,claimTrap:claimTrap76,openBoost:openBoost76};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
