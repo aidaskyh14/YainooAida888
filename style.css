@@ -11076,3 +11076,282 @@ body.r50-lock{overflow:hidden!important}
 
 /* R34.78 single basement tool entry */
 #sceneInteractiveLayer[data-r17-house-mode="basement"] #r3474BasementTools{pointer-events:auto!important;touch-action:manipulation!important;min-height:44px!important;z-index:900!important;}
+
+
+/* =====================================================================
+   S2 R35.00 — MAJOR BETA UI
+   Compact, touch-safe, scrollable mobile cards for Secret Seeds and
+   special fishing. Thai temple UI is fully retired.
+   ===================================================================== */
+#almsBtn,
+.temple-entry-action,
+.temple-mission-board,
+.temple-fast-loading,
+[data-scene="templeEntrance"],
+[data-scene="templeSolo"],
+[data-scene="templeGroup"]{
+  display:none !important;
+}
+
+.r35-modal{
+  width:min(92vw,560px);
+  max-height:min(84vh,760px);
+  margin:0 auto;
+  padding:16px;
+  box-sizing:border-box;
+  border-radius:24px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  font-size:14px;
+  line-height:1.45;
+}
+.r35-modal h2{
+  margin:0;
+  font-size:clamp(18px,4.8vw,24px);
+  line-height:1.2;
+}
+.r35-modal small{font-size:12px;line-height:1.35}
+.r35-modal button,
+.r35-modal input{font:inherit}
+.r35-modal button{
+  min-height:44px;
+  touch-action:manipulation;
+}
+.r35-modal-scroll{
+  min-height:0;
+  max-height:58vh;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:2px 3px 6px;
+}
+.r35-notice-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.r35-notice-head>img,
+.r35-notice-head>span{
+  width:64px;
+  height:64px;
+  flex:0 0 64px;
+  border-radius:18px;
+  object-fit:contain;
+}
+.r35-notice-head>span{
+  display:grid;
+  place-items:center;
+  font-size:34px;
+}
+.r35-notice-head>div{min-width:0}
+.r35-notice-head small{display:block;margin-top:4px}
+
+.r35-recipe-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin:4px 0 10px;
+}
+.r35-recipe-grid article{
+  min-width:0;
+  padding:10px;
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.r35-recipe-grid article.ok{box-shadow:inset 0 0 0 1px rgba(121,255,168,.22)}
+.r35-recipe-grid article.missing{opacity:.68}
+.r35-recipe-grid b,
+.r35-recipe-grid span,
+.r35-recipe-grid small{
+  overflow-wrap:anywhere;
+}
+.r35-stock-line{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:10px 12px;
+  border-radius:15px;
+  background:rgba(255,255,255,.08);
+}
+.r35-stock-line img{width:42px;height:42px;object-fit:contain}
+.r35-stock-line span{flex:1;min-width:0}
+.r35-stock-line b{white-space:nowrap}
+
+.r35-secret-seed-tile img,
+.r35-secret-bulk img{object-fit:contain}
+.r35-secret-boost-note{
+  margin:8px 0;
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:12px;
+  background:rgba(255,255,255,.08);
+}
+
+.r35-special-bait-craft{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+.r35-special-bait-title{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:10px;
+}
+.r35-special-bait-title>img{
+  width:50px;
+  height:50px;
+  object-fit:contain;
+  flex:0 0 50px;
+}
+.r35-special-bait-title>span{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  margin-left:4px;
+}
+.r35-craft-qty{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:8px 0 10px;
+}
+.r35-craft-qty input{
+  width:78px;
+  min-height:42px;
+  text-align:center;
+  border-radius:12px;
+  box-sizing:border-box;
+}
+
+.r35-summary-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.r35-summary-list>span{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  border-radius:13px;
+  background:rgba(255,255,255,.07);
+}
+.r35-summary-list img{
+  width:42px;
+  height:42px;
+  object-fit:contain;
+  flex:0 0 42px;
+}
+.r35-summary-list b{flex:1;min-width:0}
+
+.r35-gimmick-slots{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:7px;
+  margin:2px 0 12px;
+}
+.r35-gimmick-slots button{
+  aspect-ratio:1/1;
+  min-width:0;
+  min-height:0;
+  border-radius:14px;
+  padding:4px;
+  display:grid;
+  place-items:center;
+}
+.r35-gimmick-slots button img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.r35-gimmick-slots button span{font-size:12px;opacity:.8}
+.r35-gimmick-picks{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.r35-gimmick-picks button{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-align:left;
+  padding:8px;
+  min-width:0;
+}
+.r35-gimmick-picks img{
+  width:52px;
+  height:52px;
+  object-fit:contain;
+  flex:0 0 52px;
+}
+.r35-gimmick-picks span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.r35-gimmick-picks small{display:block}
+
+.r35-fish-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.r35-fish-grid article{
+  padding:8px;
+  border-radius:14px;
+  background:rgba(255,255,255,.07);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  min-width:0;
+}
+.r35-fish-grid article.bad{box-shadow:inset 0 0 0 1px rgba(255,100,125,.30)}
+.r35-fish-grid article.good{box-shadow:inset 0 0 0 1px rgba(105,222,255,.24)}
+.r35-fish-grid img{
+  width:82px;
+  height:82px;
+  max-width:100%;
+  object-fit:contain;
+}
+.r35-fish-grid b{
+  font-size:12px;
+  line-height:1.25;
+  min-height:30px;
+  display:flex;
+  align-items:center;
+}
+.r35-fish-grid small{font-weight:700}
+.r35-total{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  text-align:center;
+  font-weight:800;
+  font-size:16px;
+  background:rgba(255,255,255,.09);
+}
+.r35-total.negative{box-shadow:inset 0 0 0 1px rgba(255,100,125,.34)}
+
+@media (max-width:430px){
+  .r35-modal{width:94vw;max-height:82vh;padding:13px;border-radius:20px;font-size:13px}
+  .r35-modal-scroll{max-height:55vh}
+  .r35-notice-head>img,.r35-notice-head>span{width:54px;height:54px;flex-basis:54px}
+  .r35-recipe-grid{grid-template-columns:1fr}
+  .r35-gimmick-slots{gap:5px}
+  .r35-gimmick-picks img{width:44px;height:44px;flex-basis:44px}
+  .r35-fish-grid img{width:70px;height:70px}
+}
+
+/* R35 compact global toast */
+.weather-toast{font-size:clamp(11px,2.7vw,14px)!important;max-width:84%!important;line-height:1.35!important;}
+.r35-global-alert h2{font-size:clamp(17px,4.3vw,22px)!important;}
