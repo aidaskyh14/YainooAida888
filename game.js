@@ -2706,18 +2706,28 @@ function clearWorm(index){
   incrementOwnMission("clearWorms",1);save();draw();message("🐛 ไล่หนอนสำเร็จ",`ใช้ 1 กุศล • คงเหลือ ${ownState.merit} กุศล`);
 }
 function cropBoostOptionsHTML(plot){
-  const available=Object.entries(SPECIAL_ITEMS).filter(([key,item])=>item.kind==="crop"&&specialCount(key)>0&&(item.boost===100||(plot.phase==="growing1"||plot.phase==="growing2")));
+  const secretCrop=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]).has(String(plot?.crop||""));
+  const available=Object.entries(SPECIAL_ITEMS).filter(([key,item])=>item.kind==="crop"&&specialCount(key)>0&&(item.boost===100||secretCrop||plot.phase==="growing1"||plot.phase==="growing2"));
   if(!available.length)return"";
-  return `<div class="coconut-boost-panel"><h3>⚡ ไอเท็มเร่งการเจริญเติบโต</h3><div class="coconut-boost-grid">${available.map(([key,item])=>`<button type="button" class="coconut-boost-btn" data-use-crop-boost="${key}"><img src="${item.image}" alt="${item.name}"><span>${item.name}<small>เร่งโต ${item.boost}% • มี ×${specialCount(key)}</small></span></button>`).join("")}</div></div>`;
+  return `<div class="coconut-boost-panel"><h3>⚡ ไอเท็มเร่งการเจริญเติบโต</h3>${secretCrop?'<p class="r3519-secret-boost-note">✨ พืช Secret ใช้อุปกรณ์เร่งโต 30 ชิ้น / แปลง</p>':''}<div class="coconut-boost-grid">${available.map(([key,item])=>`<button type="button" class="coconut-boost-btn" data-use-crop-boost="${key}" ${secretCrop&&specialCount(key)<30?"disabled":""}><img src="${item.image}" alt="${item.name}"><span>${item.name}<small>เร่งโต ${item.boost}% • มี ×${specialCount(key)}${secretCrop?' • ใช้ ×30':''}</small></span></button>`).join("")}</div></div>`;
 }
 function useCropBoostOnPlot(index,key){
-  const plot=state.plots[index],item=SPECIAL_ITEMS[key];if(!plot||!plot.crop||!item||item.kind!=="crop"||specialCount(key)<=0)return false;ensurePlotPhase(plot);
-  if(item.boost===100){plot.phase="ready";plot.phaseEndsAt=0;plot.worm=false}
+  const plot=state.plots[index],item=SPECIAL_ITEMS[key];if(!plot||!plot.crop||!item||item.kind!=="crop")return false;
+  const secretCrop=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]).has(String(plot.crop||""));
+  const cost=secretCrop?30:1,have=specialCount(key);if(have<cost)return message("ไอเท็มไม่พอ",`ต้องใช้ ${cost} ชิ้น • มี ${have}`),false;
+  ensurePlotPhase(plot);
+  if(secretCrop){
+    if(plot.phase==="ready")return message("พืชพร้อมเก็บแล้ว","แปลงนี้โตเต็มที่แล้วค่ะ"),false;
+    const t=gameNow(),total=16*60*60*1000,boost=Math.max(0,Math.min(100,Number(item.boost)||0));
+    const oldRemain=Math.max(0,(Number(plot.plantedAt)||t)+total-t),rem=Math.max(0,Math.round(oldRemain*(1-boost/100)));
+    if(rem<=1000){plot.phase="ready";plot.phaseEndsAt=0;plot.plantedAt=t-total}else{plot.plantedAt=t-(total-rem);plot.phase="r35SecretGrowing";plot.phaseEndsAt=t+rem}
+    plot.worm=false;delete plot.wormType;plot.wateredAt=Number(plot.wateredAt)||Number(plot.plantedAt)||t;
+  }else if(item.boost===100){plot.phase="ready";plot.phaseEndsAt=0;plot.worm=false}
   else{
     if(plot.phase!=="growing1"&&plot.phase!=="growing2"){message("ยังใช้ไอเท็มนี้ไม่ได้","ไอเท็ม 10% / 20% / 50% ใช้ได้ตอนต้นกำลังนับเวลาเติบโตเท่านั้น");return false}
     const rem=Math.max(0,Number(plot.phaseEndsAt||0)-gameNow());plot.phaseEndsAt=gameNow()+Math.max(1000,Math.round(rem*(1-item.boost/100)));
   }
-  ownState.specials[key]-=1;save();closeModal();draw();showWeatherToast(`⚡ ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%`);return true;
+  ownState.specials[key]-=cost;save();closeModal();draw();showWeatherToast(`⚡ ใช้ ${item.name} แล้ว • เร่งโต ${item.boost}%${secretCrop?' • ใช้ ×30':''}`);return true;
 }
 function bindCropBoostButtons(index){document.querySelectorAll("[data-use-crop-boost]").forEach(btn=>btn.onclick=()=>useCropBoostOnPlot(index,btn.dataset.useCropBoost))}
 async function tapPlot(index){
@@ -5483,7 +5493,22 @@ function baitNeedHTML(bait){
 }
 function canCraftFishingBait(s,bait){return Object.entries(bait.needBag||{}).every(([k,n])=>(Number(s.bag[k])||0)>=n)&&Object.entries(bait.needProducts||{}).every(([k,n])=>(Number(s.animalProducts[k])||0)>=n)&&(!bait.dishAny||totalDishCount(s)>=bait.dishAny)}
 function showFishingBaitCraft(){
-  const s=ensureV4State(ownState||state);$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 คราฟเหยื่อตกปลา</h2><p class="feature-subtitle">คราฟสำเร็จแล้วเหยื่อจะเข้า กระเป๋า → เหยื่อตกปลา • สูตร 75% ถ้าพลาดวัตถุดิบจะถูกใช้ไป</p><div class="fishing-bait-grid">${Object.entries(FISHING_BAITS).filter(([,b])=>!b?.r35Special).map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>${baitNeedHTML(b)}<br>โอกาสสำเร็จ ${b.chance}% • ใช้ตก ${Math.round(b.durationMs/60000)} นาที<br>มีในกระเป๋า ×${s.fishingBaits[key]||0}</small><button type="button" data-craft-fishing-bait="${key}" ${canCraftFishingBait(s,b)?"":"disabled"}>คราฟ</button></article>`).join("")}</div></section>`;document.querySelectorAll("[data-craft-fishing-bait]").forEach(btn=>btn.onclick=()=>craftFishingBait(btn.dataset.craftFishingBait,btn));openModal();
+  const s=ensureV4State(ownState||state);
+  const r35Have=(type,key)=>type==="bait"?Math.max(0,Number(s?.fishingBaits?.[key]||0)):Math.max(0,Number(s?.specials?.[key]||0));
+  const r35Recipe=[
+    ["special","friendGrassRed",50,"หญ้าสีแดง"],
+    ["special","pestle100",50,"สากกะเบือไฮโซ"],
+    ["special","therapyDiscRock",5,"แผ่นเพลงบำบัดพลังร็อก"],
+    ["bait","bait4",20,"เหยื่อตกปลามือโปร"]
+  ];
+  $("modalContent").innerHTML=`<section class="feature-panel fishing-bait-craft-r3519"><h2>🎣 คราฟเหยื่อตกปลา</h2><p class="feature-subtitle">4 สูตรเดิมอยู่ด้านบน • เหยื่อใหม่คราฟแบบสุ่มรวมเพียง 1 สูตรด้านล่าง</p><div class="fishing-bait-grid">${Object.entries(FISHING_BAITS).filter(([,b])=>!b?.r35Special).map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>${baitNeedHTML(b)}<br>โอกาสสำเร็จ ${b.chance}% • ใช้ตก ${Math.round(b.durationMs/60000)} นาที<br>มีในกระเป๋า ×${s.fishingBaits[key]||0}</small><button type="button" data-craft-fishing-bait="${key}" ${canCraftFishingBait(s,b)?"":"disabled"}>คราฟ</button></article>`).join("")}</div><section id="r35SpecialBaitCraft" class="r3519-special-bait-card"><div class="r3519-special-head"><div class="r3519-bait-pics"><img src="assets/r35/bait-pumpkin-kill.png" alt="ฟักทองพิฆาต"><img src="assets/r35/bait-candy-spider.png" alt="แคนดี้สไปเดอร์"></div><div><h3>✨ คราฟเหยื่อใหม่แบบสุ่ม</h3><small>สำเร็จรวม 50% • ถ้าสำเร็จสุ่มรับ ฟักทองพิฆาต หรือ แคนดี้สไปเดอร์</small></div></div><div class="r3519-recipe-grid">${r35Recipe.map(([type,key,qty,name])=>`<article class="${r35Have(type,key)>=qty?"ok":"missing"}"><b>${name}</b><small>ใช้ ×${qty}</small><span>มี ×${r35Have(type,key)}</span></article>`).join("")}</div><div class="r3519-bait-stock"><span>🎃 ฟักทองพิฆาต <b>×${Number(s?.fishingBaits?.r35PumpkinBait||0)}</b></span><span>🍬 แคนดี้สไปเดอร์ <b>×${Number(s?.fishingBaits?.r35CandyBait||0)}</b></span></div><label class="r3519-qty">จำนวนครั้ง <input id="r35BaitCraftQty" type="number" inputmode="numeric" min="1" max="10" value="1"></label><button id="r35CraftSpecialBait" class="primary-spooky-action" type="button">คราฟแบบสุ่ม</button></section></section>`;
+  document.querySelectorAll("[data-craft-fishing-bait]").forEach(btn=>btn.onclick=()=>craftFishingBait(btn.dataset.craftFishingBait,btn));
+  const specialBtn=$("r35CraftSpecialBait");if(specialBtn)specialBtn.onclick=()=>{
+    const qty=Math.max(1,Math.min(10,Math.floor(Number($("r35BaitCraftQty")?.value)||1)));
+    if(globalThis.YN_R35?.craftSpecialBaits)return globalThis.YN_R35.craftSpecialBaits(qty);
+    message("คราฟเหยื่อใหม่ไม่ได้","ระบบเหยื่อใหม่ยังโหลดไม่ครบ กรุณาปิดหน้าคราฟแล้วเปิดใหม่ค่ะ");
+  };
+  openModal();
 }
 async function craftFishingBait(key,sourceBtn=null){
   const bait=FISHING_BAITS[key];if(!bait)return message("คราฟเหยื่อไม่ได้","ไม่พบสูตรเหยื่อตกปลาค่ะ");
@@ -11788,32 +11813,11 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   showFishingBaitCraft=function(){
     const s=ensureV4State(ownState||state);
     const craftables=Object.entries(FISHING_BAITS).filter(([,b])=>!b.shopOnly);
-    const specialHave=(k)=>Math.max(0,Math.floor(Number(s?.specials?.[k])||0));
-    const baitHave=(k)=>Math.max(0,Math.floor(Number(s?.fishingBaits?.[k])||0));
-    const newBaitRecipe=[
-      ["special","friendGrassRed",50,"หญ้าสีแดง"],
-      ["special","pestle100",50,"สากกะเบือไฮโซ"],
-      ["special","therapyDiscRock",5,"แผ่นเพลงบำบัดพลังร็อก"],
-      ["bait","bait4",20,"เหยื่อตกปลามือโปร"]
-    ];
-    const ingredientHave=(type,key)=>type==="bait"?baitHave(key):specialHave(key);
     $("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 คราฟเหยื่อตกปลา</h2>
-      <p class="feature-subtitle">เหยื่อเดิม 4 ชนิดคราฟตามสูตรเดิม • เหยื่อใหม่ใช้สูตรร่วมและสุ่มผลต่อครั้ง</p>
+      <p class="feature-subtitle">คราฟสำเร็จแล้วเหยื่อจะเข้า กระเป๋า → เหยื่อตกปลา • เหยื่อเทพารักษ์ซื้อได้ที่ ร้านค้า → ของพิเศษ</p>
       <div class="fishing-bait-grid">${craftables.map(([key,b])=>`<article class="fishing-bait-card"><img src="${b.image}" alt="${b.name}"><h3>${b.name}</h3><small>${baitNeedHTML(b)}<br>โอกาสสำเร็จ ${b.chance}% • ใช้ตก ${Math.round(b.durationMs/60000)} นาที<br>มีในกระเป๋า ×${s.fishingBaits[key]||0}</small><button type="button" data-craft-fishing-bait="${key}" ${canCraftFishingBait(s,b)?"":"disabled"}>คราฟ</button></article>`).join("")}</div>
-      <section id="r35SpecialBaitCraft" class="r35-special-bait-craft">
-        <div class="r35-special-bait-title"><img src="assets/r35/bait-pumpkin-kill.png" alt=""><img src="assets/r35/bait-candy-spider.png" alt=""><span><b>เหยื่อใหม่ 2 ชนิด</b><small>คราฟสูตรเดียว • สำเร็จ 50% • ถ้าสำเร็จสุ่ม ฟักทองพิฆาต / แคนดี้สไปเดอร์</small></span></div>
-        <div class="r35-new-bait-stock"><span>🎃 ฟักทองพิฆาต <b>×${baitHave("r35PumpkinBait")}</b></span><span>🍬 แคนดี้สไปเดอร์ <b>×${baitHave("r35CandyBait")}</b></span></div>
-        <div class="r35-recipe-grid">${newBaitRecipe.map(([type,key,qty,name])=>`<article class="${ingredientHave(type,key)>=qty?"ok":"missing"}"><b>${name}</b><small>ต่อ 1 ครั้ง ×${qty}</small><span>มี ×${ingredientHave(type,key)}</span></article>`).join("")}</div>
-        <label class="r35-craft-qty">จำนวนครั้ง <input id="r35BaitCraftQty" type="number" inputmode="numeric" min="1" max="10" value="1"></label>
-        <button id="r35CraftSpecialBait" class="primary-spooky-action" type="button">คราฟเหยื่อใหม่แบบสุ่ม</button>
-      </section>
     </section>`;
     document.querySelectorAll("[data-craft-fishing-bait]").forEach(btn=>btn.onclick=()=>craftFishingBait(btn.dataset.craftFishingBait,btn));
-    const specialBtn=$("r35CraftSpecialBait");if(specialBtn)specialBtn.onclick=()=>{
-      const qty=Math.max(1,Math.min(10,Math.floor(Number($("r35BaitCraftQty")?.value)||1)));
-      if(globalThis.YN_R35?.craftSpecialBaits)return globalThis.YN_R35.craftSpecialBaits(qty);
-      message?.("คราฟเหยื่อไม่ได้","ระบบเหยื่อใหม่ยังโหลดไม่ครบค่ะ กรุณาปิดหน้าคราฟแล้วเปิดใหม่อีกครั้ง");
-    };
     openModal();
   };
 
@@ -12921,7 +12925,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     }catch(e){message("เปิดแท่นไม่ได้",e.message)}
     finally{if(dock?.isConnected){dock.dataset.busy="0";dock.classList.remove("is-busy");if(dock.textContent?.includes("กำลังตรวจ"))dock.innerHTML=""}}
   }
-  function showFishingBaitChoiceV2(slotNo){const s=ensureV4State(ownState||state),cards=Object.entries(FISHING_BAITS).map(([k,b])=>`<button data-ynu-fish-bait="${k}" ${Number(s.fishingBaits?.[k]||0)<1?"disabled":""}><img src="${b.image}" alt="${esc(b.name)}"><span>${esc(b.name)}<small>มี ×${Number(s.fishingBaits?.[k]||0)} • ${Math.round(b.durationMs/60000)} นาที</small></span></button>`).join("");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 เลือกเหยื่อตกปลา</h2><div class="ynu-bait-list">${cards}</div></section>`;document.querySelectorAll("[data-ynu-fish-bait]").forEach(b=>b.onclick=()=>startFishingV2(slotNo,b.dataset.ynuFishBait));openModal()}
+  function showFishingBaitChoiceV2(slotNo){const s=ensureV4State(ownState||state),cards=Object.entries(FISHING_BAITS).map(([k,b])=>`<button data-ynu-fish-bait="${k}" ${Number(s.fishingBaits?.[k]||0)<1?"disabled":""}><img src="${b.image}" alt="${esc(b.name)}"><span>${esc(b.name)}<small>มี ×${Number(s.fishingBaits?.[k]||0)} • ${Math.round(b.durationMs/60000)} นาที</small></span></button>`).join("");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 เลือกเหยื่อตกปลา</h2><div class="ynu-bait-list">${cards}</div></section>`;document.querySelectorAll("[data-ynu-fish-bait]").forEach(b=>b.onclick=()=>{const key=b.dataset.ynuFishBait;if(FISHING_BAITS?.[key]?.r35Special){if(globalThis.YN_R35?.openGimmickSelectorV2)return globalThis.YN_R35.openGimmickSelectorV2(slotNo,key);return message("ระบบเหยื่อใหม่ยังโหลดไม่ครบ","กรุณาออกจากบ่อแล้วเข้าใหม่อีกครั้งค่ะ")}return startFishingV2(slotNo,key)});openModal()}
   async function startFishingV2(slotNo,baitKey){
     const bait=FISHING_BAITS[baitKey];if(!bait)return;
     /* Show the rod immediately. The server transaction below is still the source
@@ -12989,7 +12993,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       message("เริ่มตกไม่ได้",e.message||"กรุณาลองใหม่")
     }
   }
-  function fishingResultV2(x){const expired=NOW()>Number(x.claimDeadline||0);if(expired)return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 ปลาติดเบ็ดแล้ว</h2><div class="fishing-result-grid">${x.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}"><h3>${esc(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(x.totalWeight).toFixed(2)} lbs</div><p>รับภายใน ${fmt(x.claimDeadline-NOW())}</p><button id="ynuClaimFish">รับปลา</button></section>`;$("ynuClaimFish").onclick=()=>claimFishingV2(x);openModal()}
+  function fishingResultV2(x){if(FISHING_BAITS?.[x?.baitKey]?.r35Special&&globalThis.YN_R35?.showSpecialResultV2){if(NOW()>Number(x.claimDeadline||0))return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");return globalThis.YN_R35.showSpecialResultV2(x,()=>claimFishingV2(x))}const expired=NOW()>Number(x.claimDeadline||0);if(expired)return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 ปลาติดเบ็ดแล้ว</h2><div class="fishing-result-grid">${x.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}"><h3>${esc(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(x.totalWeight).toFixed(2)} lbs</div><p>รับภายใน ${fmt(x.claimDeadline-NOW())}</p><button id="ynuClaimFish">รับปลา</button></section>`;$("ynuClaimFish").onclick=()=>claimFishingV2(x);openModal()}
   async function claimFishingV2(x){
     try{
       const actorKey=(String(currentMemberKey||"")==="mameaw"||String(currentMember||"").toLowerCase()==="mameaw")?"mameaw":currentMemberKey;
@@ -35426,9 +35430,43 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     finally{farmBusy.delete(kind)}
   }
   async function bulkPlant74(key){const crop=CROPS?.[key];if(!crop)return;const [a,b]=farmRange();return mutateFarm(`plant:${farmPage()}`,st=>{const ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop&&!blocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงว่างในฟาร์มหน้านี้");const cost=iv(crop.seedCostMerit)*ids.length;if(cost&&!isAdm()&&Number(st.merit||0)<cost)throw new Error(`ต้องใช้ ${cost} กุศล • มี ${Number(st.merit)||0}`);if(cost&&!isAdm())st.merit=Number(st.merit||0)-cost;const t=now();for(const i of ids){st.angelPlantCounter=(Number(st.angelPlantCounter)||0)+1;const angel=st.angelPlantCounter>=30;if(angel)st.angelPlantCounter=0;st.plots[i]=normalizePlot({crop:key,phase:"growing1",phaseEndsAt:t+Number(crop.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel})}try{incrementMissionOn?.(st,"dailyPlantCrops",ids.length)}catch(_){};return{count:ids.length}},r=>`🌱 ปลูก ${crop.name} ${r.count} แปลงแล้ว • บันทึกเรียบร้อย`)}
-  async function bulkBoost74(key){const item=growthItem(key);if(!item)return;const [a,b]=farmRange();return mutateFarm(`boost:${farmPage()}`,st=>{st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const ids=[],t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0));for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||blocked(p))continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(["growing1","needsWater","growing2"].includes(p.phase))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");const have=iv(st.specials[key]);if(!isAdm()&&have<ids.length)throw new Error(`ไอเท็มไม่พอ • ต้องใช้ ${ids.length} ชิ้น • มี ${have}`);for(const i of ids){const p=st.plots[i],crop=CROPS?.[p.crop];try{ensurePlotPhaseStandalone?.(p)}catch(_){};if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType}else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}st.plots[i]=normalizePlot(p)}if(!isAdm())st.specials[key]=have-ids.length;return{count:ids.length}},r=>`⚡ เร่งโต ${r.count} แปลงแล้ว • บันทึกเรียบร้อย`)}
+  async function bulkBoost74(key){
+    const item=growthItem(key);if(!item)return;const [a,b]=farmRange(),secretSet=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]),SECRET_TOTAL=16*60*60*1000;
+    return mutateFarm(`boost:${farmPage()}`,st=>{
+      st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const ids=[],t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0));let need=0;
+      for(let i=a;i<b;i++){
+        const p=st.plots?.[i];if(!p?.crop||blocked(p))continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){}
+        const secret=secretSet.has(String(p.crop||""));if(p.phase==="ready")continue;
+        if(secret||["growing1","needsWater","growing2"].includes(p.phase)){ids.push(i);need+=secret?30:1}
+      }
+      if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");const have=iv(st.specials[key]);if(!isAdm()&&have<need)throw new Error(`ไอเท็มไม่พอ • ต้องใช้ ${need} ชิ้น • มี ${have}`);
+      for(const i of ids){
+        const p=st.plots[i],crop=CROPS?.[p.crop],secret=secretSet.has(String(p.crop||""));try{ensurePlotPhaseStandalone?.(p)}catch(_){}
+        if(secret){
+          const oldRemain=Math.max(0,(Number(p.plantedAt)||t)+SECRET_TOTAL-t),rem=Math.max(0,Math.round(oldRemain*(1-boost/100)));
+          if(rem<=1000){p.phase="ready";p.phaseEndsAt=0;p.plantedAt=t-SECRET_TOTAL}else{p.plantedAt=t-(SECRET_TOTAL-rem);p.phase="r35SecretGrowing";p.phaseEndsAt=t+rem}
+          p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||Number(p.plantedAt)||t;
+        }else if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType}
+        else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}
+        st.plots[i]=normalizePlot(p)
+      }
+      if(!isAdm())st.specials[key]=have-need;return{count:ids.length,need}
+    },r=>`⚡ เร่งโต ${r.count} แปลงแล้ว • ใช้ไอเท็ม ×${r.need} • บันทึกเรียบร้อย`)
+  }
   async function bulkAngel74(){const [a,b]=farmRange(),key="angelWingCapsule";return mutateFarm(`angel:${farmPage()}`,st=>{st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(p?.crop&&!p.angel&&!blocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่ต้องติดปีกนางฟ้า");const have=iv(st.specials[key]);if(!isAdm()&&have<ids.length)throw new Error(`แคปซูลไม่พอ • ต้องใช้ ${ids.length} • มี ${have}`);ids.forEach(i=>{st.plots[i].angel=true;st.plots[i]=normalizePlot(st.plots[i])});if(!isAdm())st.specials[key]=have-ids.length;return{count:ids.length}},r=>`🪽 ติดปีกนางฟ้า ${r.count} แปลงแล้ว • บันทึกเรียบร้อย`)}
-  function showBulkSeed74(){const [a,b]=farmRange(),st=ownState||state,empty=(st?.plots||[]).slice(a,b).filter(p=>!p?.crop&&!blocked(p)).length;if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้ค่ะ");const hiddenSecret=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]),rows=Object.entries(CROPS||{}).filter(([k])=>!hiddenSecret.has(k)),secretQty=Math.max(0,Math.floor(Number(st?.specials?.r35SecretSeeds)||0));$("modalContent").innerHTML=`<section class="feature-panel r3474-farm-tools"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${rows.map(([k,c])=>`<button type="button" data-r3474-seed="${esc(k)}"><img src="${c.selectImg||''}" alt=""><span>${esc(c.name)}</span></button>`).join('')}<button type="button" class="r35-secret-bulk" id="r35BulkSecretSeeds" ${secretQty>0||isAdm()?"":"disabled"}><img src="assets/r35/secret-seeds.png" alt="Secret Seeds"><span><b>Secret Seeds</b><small>มี ×${isAdm()?9999:secretQty}<br>แต่ละแปลงสุ่ม 1 ใน 4 ตอนปลูกจริง</small></span></button></div></section>`;document.querySelectorAll('[data-r3474-seed]').forEach(btn=>btn.onclick=()=>bulkPlant74(btn.dataset.r3474Seed));const secretBtn=$("r35BulkSecretSeeds");if(secretBtn)secretBtn.onclick=()=>{if(globalThis.YN_R35?.bulkSecretPlant)return globalThis.YN_R35.bulkSecretPlant();message?.("ปลูก Secret Seeds ไม่ได้","ระบบ Secret Seeds ยังโหลดไม่ครบค่ะ กรุณาปิดหน้าปลูกทั้งหมดแล้วเปิดใหม่อีกครั้ง")};openModal?.()}
+  function showBulkSeed74(){
+    const [a,b]=farmRange(),st=ownState||state,empty=(st?.plots||[]).slice(a,b).filter(p=>!p?.crop&&!blocked(p)).length;
+    if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้ค่ะ");
+    const hiddenSecret=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]),secretQty=Math.max(0,Number(st?.specials?.r35SecretSeeds||0));
+    const normalRows=Object.entries(CROPS||{}).filter(([k])=>!hiddenSecret.has(k));
+    $("modalContent").innerHTML=`<section class="feature-panel r3474-farm-tools"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><p class="feature-subtitle">Secret Seeds จะยังเป็นถุงเดียว และสุ่มพืชลับตอนลงแต่ละแปลงจริง</p><div class="ynu-seed-grid">${normalRows.map(([k,c])=>`<button type="button" data-r3474-seed="${esc(k)}"><img src="${c.selectImg||c.seedImg||''}" alt=""><span>${esc(c.name)}</span></button>`).join('')}<button id="r3519BulkSecretSeeds" type="button" class="r3519-secret-seed-choice" ${secretQty>0?"":"disabled"}><img src="assets/r35/secret-seeds.png" alt="Secret Seeds"><span><b>Secret Seeds</b><small>มี ×${secretQty} • ลงแปลงแล้วสุ่ม 1 ใน 4</small></span></button></div></section>`;
+    document.querySelectorAll('[data-r3474-seed]').forEach(btn=>btn.onclick=()=>bulkPlant74(btn.dataset.r3474Seed));
+    const secretBtn=$("r3519BulkSecretSeeds");if(secretBtn)secretBtn.onclick=()=>{
+      if(globalThis.YN_R35?.bulkSecretPlant)return globalThis.YN_R35.bulkSecretPlant();
+      message?.("ปลูก Secret Seeds ไม่ได้","ระบบ Secret Seeds ยังโหลดไม่ครบ กรุณาปิดเมนูแล้วเปิดใหม่ค่ะ");
+    };
+    openModal?.();
+  }
   function showBulkBoost74(){const st=ownState||state,all={...(typeof CAKE_ITEMS!=="undefined"?CAKE_ITEMS:{}),...(typeof COCONUT_ITEMS!=="undefined"?COCONUT_ITEMS:{})},rows=Object.entries(all).filter(([k])=>isAdm()||iv(st?.specials?.[k])>0);if(!rows.length)return message?.("เร่งโตทั้งหมด","ไม่มีไอเท็มเร่งโตในกระเป๋าค่ะ");$("modalContent").innerHTML=`<section class="feature-panel r3474-farm-tools"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${rows.map(([k,m])=>`<button type="button" data-r3474-boost="${esc(k)}"><img src="${m.image||''}" alt=""><span>${esc(m.name||k)} • ×${isAdm()?9999:iv(st?.specials?.[k])}</span></button>`).join('')}</div></section>`;document.querySelectorAll('[data-r3474-boost]').forEach(b=>b.onclick=()=>bulkBoost74(b.dataset.r3474Boost));openModal?.()}
   function showFarmManager74(){if(visitContext)return message?.("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=farmRange();$("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager r3474-farm-tools"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">ฟาร์ม ${farmPage()+1} • แปลง ${a+1}–${b}</p><div class="ynu-manager-grid"><button id="r3474FarmPlant">🌱 ปลูกทั้งหมด</button><button id="r3474FarmBoost">🍰 เร่งโตทั้งหมด</button><button id="r3474FarmAngel">🪽 ปีกนางฟ้าทั้งหมด</button>${globalThis.YN_R14?.wormManager?'<button id="r3474FarmWorm">🪱 จัดการหนอนทั้งหมด</button>':''}</div><small>ปลูกทีละแปลงยังใช้ได้ตามปกติ และสามารถปลูกคนละชนิดในแต่ละแปลงได้</small></section>`;openModal?.();$("r3474FarmPlant").onclick=showBulkSeed74;$("r3474FarmBoost").onclick=showBulkBoost74;$("r3474FarmAngel").onclick=bulkAngel74;if($("r3474FarmWorm"))$("r3474FarmWorm").onclick=()=>globalThis.YN_R14?.wormManager?.()}
   globalThis.YN_R3474_FARM={manager:showFarmManager74,bulkPlant:bulkPlant74,bulkBoost:bulkBoost74,bulkAngel:bulkAngel74};
@@ -35631,7 +35669,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   function ingredientHave(s,r){return r.type==="bag"?n(s?.bag?.[r.key]):n(s?.specials?.[r.key])}
   function showSecretLuck(){
     const s=ensureR35(ownState||state),can=SECRET_RECIPE.every(r=>ingredientHave(s,r)>=r.qty);
-    $("modalContent").innerHTML=`<section class="feature-panel r35-modal r35-secret-craft"><div class="r35-notice-head"><img src="${AS}secret-seeds.png" alt="Secret Seeds"><div><h2>🎲 ลุ้น Secret Seeds</h2><small>คราฟ 1 ครั้ง • สำเร็จ 50%</small></div></div><div class="r35-modal-scroll"><div class="r35-recipe-grid">${SECRET_RECIPE.map(r=>`<article class="${ingredientHave(s,r)>=r.qty?"ok":"missing"}"><b>${html(r.name)}</b><small>ต้องใช้ ×${r.qty}</small><span>มี ×${ingredientHave(s,r)}</span></article>`).join("")}</div><div class="r35-stock-line"><img src="${AS}secret-seeds.png" alt=""><span>Secret Seeds ในกระเป๋า</span><b>×${secretBagCount(s)}</b></div></div><button id="r35CraftSecret" class="primary-spooky-action" type="button" ${can?"":"disabled"}>ลุ้น 1 ครั้ง</button></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel r35-modal r35-secret-craft r3519-secret-luck"><div class="r35-notice-head"><img src="${AS}secret-seeds.png" alt="Secret Seeds"><div><h2>🎲 ลุ้น Secret Seeds</h2><small>คราฟ 1 ครั้ง • สำเร็จ 50%</small></div></div><div class="r35-modal-scroll"><div class="r35-recipe-grid">${SECRET_RECIPE.map(r=>`<article class="${ingredientHave(s,r)>=r.qty?"ok":"missing"}"><b>${html(r.name)}</b><small>ต้องใช้ ×${r.qty}</small><span>มี ×${ingredientHave(s,r)}</span></article>`).join("")}</div><div class="r35-stock-line"><img src="${AS}secret-seeds.png" alt=""><span>Secret Seeds ในกระเป๋า</span><b>×${secretBagCount(s)}</b></div></div><button id="r35CraftSecret" class="primary-spooky-action" type="button" ${can?"":"disabled"}>ลุ้น 1 ครั้ง</button></section>`;
     openModal?.();$("r35CraftSecret").onclick=craftSecretSeed;
   }
   async function craftSecretSeed(){
