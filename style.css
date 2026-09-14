@@ -11367,32 +11367,4 @@ body.r50-lock{overflow:hidden!important}
 .r35-craft-qty{display:grid!important;grid-template-columns:1fr 76px!important;align-items:center!important;gap:8px!important;margin-top:8px!important;font-size:12px!important}.r35-craft-qty input{width:76px!important;min-height:38px!important}
 #r35CraftSpecialBait{width:100%!important;margin-top:8px!important;min-height:42px!important;font-size:14px!important}
 .r35-secret-seed-tile img{object-fit:contain!important}
-
-
-/* R35.17 targeted UI polish — Secret Seeds luck + bulk planting */
-.r35-luck-panel{
-  width:min(92vw,520px)!important;
-  padding:14px!important;
-  gap:10px!important;
-  border-radius:22px!important;
-}
-.r35-luck-panel .r35-notice-head{gap:9px!important;margin-bottom:2px!important}
-.r35-luck-panel .r35-notice-head>img{width:50px!important;height:50px!important;flex-basis:50px!important}
-.r35-luck-panel .r35-notice-head h2{font-size:clamp(17px,4.15vw,21px)!important;line-height:1.08!important;letter-spacing:0!important}
-.r35-luck-panel .r35-notice-head small{font-size:10.5px!important;margin-top:2px!important;opacity:.78}
-.r35-luck-panel .r35-recipe-grid{grid-template-columns:1fr 1fr!important;gap:7px!important;margin:2px 0 8px!important}
-.r35-luck-panel .r35-recipe-grid article{padding:8px 9px!important;border-radius:13px!important;background:rgba(255,255,255,.34)!important;border:1px solid rgba(171,129,85,.35)!important}
-.r35-luck-panel .r35-recipe-grid article b{font-size:12.5px!important;line-height:1.15!important}
-.r35-luck-panel .r35-recipe-grid article small,.r35-luck-panel .r35-recipe-grid article span{font-size:10.5px!important;line-height:1.25!important}
-.r35-luck-panel .r35-stock-line{padding:8px 10px!important;border-radius:13px!important;background:rgba(255,255,255,.28)!important;border:1px solid rgba(171,129,85,.28)!important}
-.r35-luck-panel .r35-stock-line img{width:38px!important;height:38px!important}
-.r35-luck-panel .r35-stock-line span{font-size:12px!important}.r35-luck-panel .r35-stock-line b{font-size:13px!important}
-.r35-luck-panel #r35CraftSecret{width:100%!important;min-height:42px!important;border-radius:13px!important;font-size:14px!important;font-weight:800!important;margin-top:1px!important}
-.r35-secret-bulk{grid-column:auto!important;min-height:116px!important}
-.r35-secret-bulk img{width:72px!important;height:72px!important;object-fit:contain!important}
-.r35-secret-bulk span{display:flex!important;flex-direction:column!important;gap:2px!important;font-size:12px!important}
-.r35-secret-bulk small{font-size:9.5px!important;line-height:1.2!important}
-@media (max-width:430px){
-  .r35-luck-panel{width:94vw!important;padding:12px!important}
-  .r35-luck-panel .r35-recipe-grid{grid-template-columns:1fr 1fr!important}
-}
+\n\n/* R35.18 surgical polish — based on the last user-confirmed visible R35.16 */\n.r35-secret-craft{width:min(92vw,520px)!important;padding:14px!important;border-radius:22px!important}\n.r35-secret-craft .r35-notice-head{gap:9px!important;margin-bottom:4px!important}\n.r35-secret-craft .r35-notice-head>img{width:50px!important;height:50px!important;flex:0 0 50px!important;border-radius:13px!important}\n.r35-secret-craft .r35-notice-head h2{font-size:clamp(18px,4.5vw,22px)!important;line-height:1.1!important;margin:0!important}\n.r35-secret-craft .r35-notice-head small{font-size:10.5px!important;margin-top:2px!important}\n.r35-secret-craft .r35-recipe-grid{grid-template-columns:1fr 1fr!important;gap:7px!important;margin:5px 0 8px!important}\n.r35-secret-craft .r35-recipe-grid article{padding:8px 9px!important;border-radius:12px!important;background:rgba(255,255,255,.28)!important;border:1px solid rgba(160,119,77,.28)!important}\n.r35-secret-craft .r35-recipe-grid article b{font-size:12.5px!important;line-height:1.2!important}\n.r35-secret-craft .r35-recipe-grid article small,.r35-secret-craft .r35-recipe-grid article span{font-size:10px!important;line-height:1.25!important}\n.r35-secret-craft .r35-stock-line{padding:8px 10px!important;border-radius:12px!important;background:rgba(255,255,255,.24)!important}\n.r35-secret-craft .r35-stock-line img{width:36px!important;height:36px!important}\n.r35-secret-craft .r35-stock-line span{font-size:12px!important}.r35-secret-craft .r35-stock-line b{font-size:13px!important}\n.r35-secret-craft #r35CraftSecret{width:100%!important;min-height:42px!important;font-size:14px!important;border-radius:12px!important;margin-top:5px!important}\n.r35-new-bait-stock{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:8px 0!important}\n.r35-new-bait-stock span{padding:7px 8px!important;border-radius:11px!important;background:rgba(255,255,255,.42)!important;border:1px solid rgba(160,119,77,.25)!important;font-size:11px!important;display:flex!important;justify-content:space-between!important;gap:6px!important}\n.r35-secret-bulk{min-height:116px!important}\n.r35-secret-bulk img{width:72px!important;height:72px!important;object-fit:contain!important}\n.r35-secret-bulk span{display:flex!important;flex-direction:column!important;gap:2px!important;font-size:12px!important}\n.r35-secret-bulk small{font-size:9.5px!important;line-height:1.2!important}\n
