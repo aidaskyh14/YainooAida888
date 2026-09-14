@@ -12912,6 +12912,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     const x=fishSlots[slotNo-1],actorKey=fishingActorKey(),dock=document.querySelector(`[data-ynu-dock="${slotNo}"]`);
     if(dock?.dataset.busy==="1")return;
     if(activeSlot(x)){
+      /* R35.28: every bait uses the same native Fishing V2 result/claim flow. */
       if(String(x.ownerKey||"")===String(actorKey||"")&&NOW()>=x.finishAt)return fishingResultV2(x);
       return message("แท่นนี้ไม่ว่าง",NOW()<x.finishAt?`${x.ownerName} กำลังตกปลา • เหลือ ${fmt(x.finishAt-NOW())}`:"กำลังรอเจ้าของรับปลา");
     }
@@ -12993,7 +12994,14 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       message("เริ่มตกไม่ได้",e.message||"กรุณาลองใหม่")
     }
   }
-  function fishingResultV2(x){if(FISHING_BAITS?.[x?.baitKey]?.r35Special&&globalThis.YN_R35?.showSpecialResultV2){if(NOW()>Number(x.claimDeadline||0))return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");return globalThis.YN_R35.showSpecialResultV2(x,()=>claimFishingV2(x))}const expired=NOW()>Number(x.claimDeadline||0);if(expired)return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");$("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 ปลาติดเบ็ดแล้ว</h2><div class="fishing-result-grid">${x.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}"><h3>${esc(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(x.totalWeight).toFixed(2)} lbs</div><p>รับภายใน ${fmt(x.claimDeadline-NOW())}</p><button id="ynuClaimFish">รับปลา</button></section>`;$("ynuClaimFish").onclick=()=>claimFishingV2(x);openModal()}
+  function fishingResultV2(x){
+    const expired=NOW()>Number(x.claimDeadline||0);
+    if(expired)return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");
+    const catches=Array.isArray(x.catches)?x.catches:[];
+    $("modalContent").innerHTML=`<section class="feature-panel"><h2>🎣 ปลาติดเบ็ดแล้ว</h2><div class="fishing-result-grid">${catches.map(c=>`<article class="fishing-result-card"><img src="${c.image||""}"><h3>${esc(c.name||"ปลา")}</h3><small>${Number(c.weight||0)>=0?"+":""}${Number(c.weight||0).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(x.totalWeight||0)>=0?"+":""}${Number(x.totalWeight||0).toFixed(2)} lbs</div><p>รับภายใน ${fmt(x.claimDeadline-NOW())}</p><button id="ynuClaimFish">รับปลา</button></section>`;
+    $("ynuClaimFish").onclick=()=>claimFishingV2(x);
+    openModal();
+  }
   async function claimFishingV2(x){
     try{
       const actorKey=(String(currentMemberKey||"")==="mameaw"||String(currentMember||"").toLowerCase()==="mameaw")?"mameaw":currentMemberKey;
@@ -13355,14 +13363,8 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     }
     return startFishingV2BaseR35.apply(this,arguments);
   };
-  const fishingResultV2BaseR35=fishingResultV2;
-  fishingResultV2=function(x){
-    if(FISHING_BAITS?.[x?.baitKey]?.r35Special&&globalThis.YN_R35?.showSpecialResultV2){
-      if(NOW()>Number(x.claimDeadline||0))return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");
-      return globalThis.YN_R35.showSpecialResultV2(x,()=>claimFishingV2(x));
-    }
-    return fishingResultV2BaseR35(x);
-  };
+  /* R35.28: no result wrapper here.
+     Both old and new baits now use the native fishingResultV2 + claimFishingV2 path. */
   window.YN_FISH_V2_BRIDGE={startSpecial:r35StartSpecialV2,getPondId:()=>fishPondId,claim:claimFishingV2,refresh:drawFishingV2};
 
   /* ---------- openScene routing ---------- */

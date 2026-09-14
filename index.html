@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R35.25-FISH-CLAIM-FAST-MULTI-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R35.28-FISH-UNIFIED-NATIVE-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R35.25-FISH-CLAIM-FAST-MULTI-20260914"></script>
+<script src="game.js?v=S2-R35.28-FISH-UNIFIED-NATIVE-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2787,7 +2787,7 @@
 <script id="r3523-public-core">
 (()=>{
 "use strict";
-const BUILD="S2-R35.25-FISH-CLAIM-FAST-MULTI-20260914";
+const BUILD="S2-R35.28-FISH-UNIFIED-NATIVE-20260914";
 const SECRET="r35SecretSeeds", PG="r35PumpkinGimmick", CG="r35CandyGimmick";
 const PBAIT="r35PumpkinBait", CBAIT="r35CandyBait";
 const SECRET_CROPS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
@@ -2999,6 +2999,43 @@ function rollEight(){
   }
   return{catches,total:Number(catches.reduce((a,x)=>a+Number(x.weight||0),0).toFixed(2))};
 }
+
+/* R35.28 — 4 existing baits:
+   Keep each bait's ORIGINAL fish-count distribution and ORIGINAL result/claim flow.
+   Only expand the fish-species roll using the previously coded R35 rule:
+   per fish = 50% new bad / 25% new good / 25% original rolled fish.
+   New good fish are equal; new bad fish use 45/30/17/8. */
+const R3528_OLD_BAITS=new Set(["bait1","bait2","bait3","bait4"]);
+const R3528_GOOD=["r35Good1","r35Good2","r35Good3","r35Good4"];
+const R3528_BAD=[["r35Bad1",45],["r35Bad2",30],["r35Bad3",17],["r35Bad4",8]];
+function r3528FishFromKey(k){
+  const f=FISHING_FISH[k];
+  const lo=Math.round(Number(f.min)*100),hi=Math.round(Number(f.max)*100);
+  const w=(lo+Math.floor(Math.random()*(hi-lo+1)))/100;
+  return{fishKey:k,name:f.name,image:f.image,weight:Number(w.toFixed(2))};
+}
+function r3528Good(){
+  return r3528FishFromKey(R3528_GOOD[Math.floor(Math.random()*R3528_GOOD.length)]);
+}
+function r3528Bad(){
+  let r=Math.random()*100;
+  for(const [k,w] of R3528_BAD){r-=w;if(r<0)return r3528FishFromKey(k)}
+  return r3528FishFromKey("r35Bad4");
+}
+const r3528RollBase=rollFishingCatches;
+rollFishingCatches=function(baitKey){
+  const base=r3528RollBase(baitKey);
+  if(!R3528_OLD_BAITS.has(String(baitKey||"")))return base;
+  const catches=(base.catches||[]).map(original=>{
+    if(Math.random()<.50)return r3528Bad();
+    return Math.random()<.50?original:r3528Good();
+  });
+  return{
+    catches,
+    total:Number(catches.reduce((sum,c)=>sum+Number(c.weight||0),0).toFixed(2))
+  };
+};
+
 let gimmickTimer=0;
 async function openGimmickSelectorV2(slotNo,baitKey){
   try{
@@ -3022,42 +3059,10 @@ async function startSpecial(slotNo,baitKey,selected){
   catch(e){notice("หย่อนเหยื่อไม่ได้",`<p>${esc(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`)}
 }
 
-async function r3525OpenOwnSpecialResult(slotNo){
-  try{
-    let a=ensure(own()||{})?.fishingActiveSession||null;
-    const same=x=>x&&Number(x.slot)===Number(slotNo)&&FISHING_BAITS?.[x.baitKey]?.r35Special;
-    if(!same(a)){
-      const {db,fs}=await getFirebaseContext();
-      const snap=await fs.getDoc(fs.doc(db,"saves",currentMemberKey));
-      a=snap.exists()?snap.data()?.fishingActiveSession:null;
-    }
-    if(!same(a))return false;
-    if(now()<Number(a.finishAt||0))return false;
-    if(now()>Number(a.claimDeadline||0)){notice("💨 ปลาหนีไปแล้ว","<p>หมดเวลารับปลาแล้วค่ะ</p>");return true}
-    const bridge=globalThis.YN_FISH_V2_BRIDGE;
-    showSpecialResultV2(a,async()=>{
-      const btn=$("r3523Claim");
-      if(btn?.dataset.busy==="1")return;
-      if(btn){btn.dataset.busy="1";btn.disabled=true;btn.textContent="กำลังรับปลา…"}
-      try{
-        if(!bridge?.claim)throw new Error("ระบบรับปลายังไม่พร้อม");
-        await bridge.claim(a);
-        try{bridge.refresh?.()}catch(_){}
-      }catch(e){
-        if(btn?.isConnected){btn.dataset.busy="0";btn.disabled=false;btn.textContent="รับคะแนนเข้ากระดาน"}
-        notice("รับปลาไม่ได้",`<p>${esc(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`);
-      }
-    });
-    return true;
-  }catch(e){
-    console.warn("R35.25 special result recovery",e);
-    return false;
-  }
-}
-function showSpecialResultV2(slot,claimFn){
-  const expired=now()>Number(slot?.claimDeadline||0),owner=String(slot?.ownerKey||"")===String(currentMemberKey||"");
-  $("modalContent").innerHTML=`<section class="feature-panel r35-modal"><h2>${expired?"💨 ปลาหนีไปแล้ว":"🎣 ปลา 8 ตัวติดแล้ว"}</h2>${expired?"<p>หมดเวลารับแล้วค่ะ</p>":`<div class="r35-fish-grid">${(slot.catches||[]).map(x=>`<article class="${Number(x.weight)<0?"bad":"good"}"><img src="${x.image||""}"><b>${esc(x.name||"")}</b><small>${Number(x.weight)>=0?"+":""}${Number(x.weight||0).toFixed(2)} lbs</small></article>`).join("")}</div><div class="r35-total">น้ำหนักสุทธิ ${Number(slot.totalWeight)>=0?"+":""}${Number(slot.totalWeight||0).toFixed(2)} lbs</div>${owner?'<button id="r3523Claim" class="primary-spooky-action">รับคะแนนเข้ากระดาน</button>':""}`}</section>`;
-  openModal?.();if($("r3523Claim"))$("r3523Claim").onclick=()=>claimFn?.();
+function openSpecialResultFromSlot(slot){
+  if(!slot||!FISHING_BAITS?.[slot.baitKey]?.r35Special)return false;
+  showSpecialResultV2(slot);
+  return true;
 }
 
 function keyOf(btn){return btn?.dataset?.r13Crop||btn?.dataset?.y26Crop||btn?.dataset?.crop||btn?.dataset?.r3474Seed||btn?.dataset?.r13BulkSeed||""}
@@ -3090,16 +3095,6 @@ function mountBulkPlant(){
 }
 function mountAll(){register();mountShop();mountSinglePlant();mountBulkPlant();mountBaitCraft()}
 
-document.addEventListener("click",async e=>{
-  const dock=e.target?.closest?.("[data-ynu-dock]");
-  if(!dock)return;
-  const slotNo=Number(dock.dataset.ynuDock||0);
-  const a=ensure(own()||{})?.fishingActiveSession;
-  if(!a||Number(a.slot)!==slotNo||!FISHING_BAITS?.[a.baitKey]?.r35Special||now()<Number(a.finishAt||0))return;
-  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-  await r3525OpenOwnSpecialResult(slotNo);
-},true);
-
 const mo=new MutationObserver(()=>mountAll());try{mo.observe(document.body,{childList:true,subtree:true})}catch(_){}
 setTimeout(mountAll,50);setTimeout(mountAll,300);setTimeout(mountAll,1000);
 
@@ -3108,7 +3103,7 @@ if(globalThis.YN_R3478){
   globalThis.YN_R3478.showBulkSeed=function(){const r=oldBulk?.apply(this,arguments);setTimeout(mountBulkPlant,0);return r};
 }
 
-globalThis.YN_R35={BUILD,public:true,showSecretLuck,craftSecretSeed:craftSecret,plantSecretOne,bulkSecretPlant,craftSpecialBaits:craftSpecial,openGimmickSelectorV2,showSpecialResultV2,register};
+globalThis.YN_R35={BUILD,public:true,showSecretLuck,craftSecretSeed:craftSecret,plantSecretOne,bulkSecretPlant,craftSpecialBaits:craftSpecial,openGimmickSelectorV2,register};
 globalThis.YAINOO_PUBLIC_R35_BUILD=BUILD;
 console.info(BUILD,"loaded");
 })();
