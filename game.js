@@ -35459,7 +35459,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้ค่ะ");
     const hiddenSecret=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]),secretQty=Math.max(0,Number(st?.specials?.r35SecretSeeds||0));
     const normalRows=Object.entries(CROPS||{}).filter(([k])=>!hiddenSecret.has(k));
-    $("modalContent").innerHTML=`<section class="feature-panel r3474-farm-tools"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><p class="feature-subtitle">Secret Seeds จะยังเป็นถุงเดียว และสุ่มพืชลับตอนลงแต่ละแปลงจริง</p><div class="ynu-seed-grid">${normalRows.map(([k,c])=>`<button type="button" data-r3474-seed="${esc(k)}"><img src="${c.selectImg||c.seedImg||''}" alt=""><span>${esc(c.name)}</span></button>`).join('')}<button id="r3519BulkSecretSeeds" type="button" class="r3519-secret-seed-choice" ${secretQty>0?"":"disabled"}><img src="assets/r35/secret-seeds.png" alt="Secret Seeds"><span><b>Secret Seeds</b><small>มี ×${secretQty} • ลงแปลงแล้วสุ่ม 1 ใน 4</small></span></button></div></section>`;
+    $("modalContent").innerHTML=`<section class="feature-panel r3474-farm-tools"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><p class="feature-subtitle">Secret Seeds จะยังเป็นถุงเดียว และสุ่มพืชลับตอนลงแต่ละแปลงจริง</p><div class="ynu-seed-grid">${normalRows.map(([k,c])=>`<button type="button" data-r3474-seed="${esc(k)}"><img src="${c.selectImg||c.seedImg||''}" alt=""><span>${esc(c.name)}</span></button>`).join('')}<button id="r3519BulkSecretSeeds" type="button" class="r3519-secret-seed-choice" ${secretQty>0?"":"disabled"}><img src="secret-seeds.png" alt="Secret Seeds"><span><b>Secret Seeds</b><small>มี ×${secretQty} • ลงแปลงแล้วสุ่ม 1 ใน 4</small></span></button></div></section>`;
     document.querySelectorAll('[data-r3474-seed]').forEach(btn=>btn.onclick=()=>bulkPlant74(btn.dataset.r3474Seed));
     const secretBtn=$("r3519BulkSecretSeeds");if(secretBtn)secretBtn.onclick=()=>{
       if(globalThis.YN_R35?.bulkSecretPlant)return globalThis.YN_R35.bulkSecretPlant();
@@ -35533,6 +35533,8 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
+  /* R35.23: old partial authority retired; final public core lives in index.html. */
+  return;
   const BUILD="S2-R35.16-VERIFIED-CORE-20260914";
   const AS="assets/r35/";
   const R35_ORIGINAL_FILES={
