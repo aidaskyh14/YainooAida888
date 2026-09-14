@@ -1,5 +1,5 @@
 /* =====================================================================
-   S2 R35.02 — SECRET SEEDS + SPECIAL FISHING BETA + TEMPLE RETIRE
+   S2 R35.04 — FINAL UI AUTHORITY
    Lexical function declaration: critical systems call this directly instead
    of depending on a mutable global property.
    ===================================================================== */
@@ -3925,7 +3925,7 @@ async function showShop(tab="animals"){
   const animalCards=SHOP_ITEMS.map(item=>{const meta=ANIMAL_META[item.id],used=animalCapacityUsed(item.id,s),remain=Math.max(0,ANIMAL_CAPACITY-used),max=Math.min(SHOP_REQUEST_MAX_QTY,remain);return `<article class="shop-card"><img class="shop-animal-img" src="${item.image}" alt="${item.name}"><b>${item.name}</b><small class="shop-price">${meta.price} ⭐️ / ตัว • ใช้พื้นที่ ${used}/${ANIMAL_CAPACITY}</small>${max>0?qtyInput(`animalQty-${item.id}`,max):""}<button class="shop-worship-button" type="button" data-buy-animal="${item.id}" ${max<=0?"disabled":""}>${max<=0?"คอกเต็มแล้ว":"ส่งคำขอซื้อ"}</button></article>`}).join("");
   const specialUsed=Number(s.dailyLimits.specialPurchases)||0,specialRemain=Math.max(0,SPECIAL_DAILY_LIMIT-specialUsed);const specialCards=SPECIAL_SHOP_KEYS.map(key=>{const item=SPECIAL_ITEMS[key],max=Math.min(SHOP_REQUEST_MAX_QTY,specialRemain);return `<article class="shop-card"><img class="shop-animal-img" src="${item.image}" alt="${item.name}"><b>${item.name}</b><small class="shop-price">20 ⭐️ / ชิ้น • ${item.boost}%</small>${max>0?qtyInput(`specialQty-${key}`,max):""}<button class="shop-worship-button" type="button" data-buy-special="${key}" ${max<=0?"disabled":""}>${max<=0?"ครบลิมิตวันนี้แล้ว":"ส่งคำขอซื้อ"}</button></article>`}).join("");
   const jellyUsed=Number(s.dailyLimits.jellyBoxes)||0,jellyRemain=Math.max(0,JELLY_BOX_DAILY_LIMIT-jellyUsed),jellyMax=Math.min(JELLY_BOX_DAILY_LIMIT,jellyRemain);const mysteryCard=`<article class="shop-card mystery-box-card"><img class="shop-animal-img" src="${JELLY_BOX.image}" alt="${JELLY_BOX.name}"><b>${JELLY_BOX.name}</b><small class="shop-price">${JELLY_BOX.price} ⭐️ / กล่อง</small><div class="mystery-rules"><strong>ซื้อได้สูงสุด ${JELLY_BOX_DAILY_LIMIT} กล่อง/วัน/คน</strong><span>โอกาสได้รับแมงกะพรุน 30%</span><span>ถ้าไม่ออกพรุน สุ่ม: อาหารคราฟ x2 / ใบไผ่ x5 / แพลงก์ตอน x2 / กุศล +5 / ยาถ่ายแมงกะพรุน x1</span><span>วันนี้ใช้ ${jellyUsed}/${JELLY_BOX_DAILY_LIMIT}</span></div>${jellyMax>0?qtyInput("jellyBoxQty",jellyMax):""}<button class="shop-worship-button" id="buyJellyBoxBtn" type="button" ${jellyMax<=0?"disabled":""}>${jellyMax<=0?"ครบ 7 กล่องวันนี้แล้ว":"ส่งคำขอซื้อ"}</button></article>`;
-  $("modalContent").innerHTML=`<section class="feature-panel shop-panel"><button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือนสัตว์วิญญาณ</button><h2>🕯️ ร้านค้า</h2><div class="shop-category-tabs shop-category-tabs-v2"><button type="button" data-shop-tab="animals" class="${tab==="animals"?"active":""}">🐾 สัตว์วิญญาณ</button><button type="button" data-shop-tab="specials" class="${tab==="specials"?"active":""}">🎁 ของพิเศษ</button><button type="button" data-shop-tab="mystery" class="${tab==="mystery"?"active":""}">🎲 กล่องสุ่ม</button></div>${tab==="animals"?`<p class="feature-subtitle">เลือกจำนวนได้สูงสุด 10 ตัวต่อคำขอ • ดาวเป็นราคาที่แสดงเท่านั้น</p><div class="shop-grid">${animalCards}</div>`:tab==="specials"?`<p class="feature-subtitle">เลือกจำนวนได้สูงสุด 10 ชิ้นต่อคำขอ • ของพิเศษรวมวันละ ${SPECIAL_DAILY_LIMIT} ชิ้น • วันนี้ใช้ ${specialUsed}/${SPECIAL_DAILY_LIMIT}</p><div class="shop-grid">${specialCards}</div>`:`<p class="feature-subtitle">กล่องสุ่มแมงกะพรุน • จำกัดรายวันชัดเจน</p><div class="shop-grid mystery-shop-grid">${mysteryCard}</div>`}</section>`;
+  $("modalContent").innerHTML=`<section class="feature-panel shop-panel"><button id="stableEntranceBtn" class="stable-entrance-button" type="button">ทางเข้าโรงเรือนสัตว์วิญญาณ</button><h2>🕯️ ร้านค้า</h2><div class="shop-category-tabs shop-category-tabs-v2"><button type="button" data-shop-tab="animals" class="${tab==="animals"?"active":""}">🐾 สัตว์วิญญาณ</button><button type="button" data-shop-tab="specials" class="${tab==="specials"?"active":""}">🎁 ของพิเศษ</button><button type="button" data-shop-tab="mystery" class="${tab==="mystery"?"active":""}">🎲 กล่องสุ่ม</button>${String(currentMember||"")==="Aida"?`<button type="button" id="r35LuckShopBtnDirect" data-shop-tab="r35Luck" class="${tab==="r35Luck"?"active":""}">🌱 ลุ้น</button>`:""}</div>${tab==="animals"?`<p class="feature-subtitle">เลือกจำนวนได้สูงสุด 10 ตัวต่อคำขอ • ดาวเป็นราคาที่แสดงเท่านั้น</p><div class="shop-grid">${animalCards}</div>`:tab==="specials"?`<p class="feature-subtitle">เลือกจำนวนได้สูงสุด 10 ชิ้นต่อคำขอ • ของพิเศษรวมวันละ ${SPECIAL_DAILY_LIMIT} ชิ้น • วันนี้ใช้ ${specialUsed}/${SPECIAL_DAILY_LIMIT}</p><div class="shop-grid">${specialCards}</div>`:`<p class="feature-subtitle">กล่องสุ่มแมงกะพรุน • จำกัดรายวันชัดเจน</p><div class="shop-grid mystery-shop-grid">${mysteryCard}</div>`}</section>`;
   $("stableEntranceBtn").onclick=()=>{closeModal();openScene("chicken")};document.querySelectorAll("[data-shop-tab]").forEach(btn=>btn.onclick=()=>showShop(btn.dataset.shopTab));document.querySelectorAll("[data-buy-animal]").forEach(btn=>btn.onclick=()=>requestAnimalPurchase(btn.dataset.buyAnimal,Number($(`animalQty-${btn.dataset.buyAnimal}`)?.value)||1));document.querySelectorAll("[data-buy-special]").forEach(btn=>btn.onclick=()=>requestSpecialPurchase(btn.dataset.buySpecial,Number($(`specialQty-${btn.dataset.buySpecial}`)?.value)||1));if($("buyJellyBoxBtn"))$("buyJellyBoxBtn").onclick=()=>requestMysteryBoxPurchase(Number($("jellyBoxQty")?.value)||1);openModal();
 }
 async function requestAnimalPurchase(type,qty=1){
@@ -35474,7 +35474,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
-  const BUILD="S2-R35.02-MAJOR-BETA-20260914";
+  const BUILD="S2-R35.03-SHOP-DIRECT-FIX-20260914";
   const AS="assets/r35/";
   const SECRET_SEED_KEY="r35SecretSeeds";
   const GIMMICK_PUMPKIN="r35PumpkinGimmick";
@@ -35482,7 +35482,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   const SPECIAL_BAITS=["r35PumpkinBait","r35CandyBait"];
   const SECRET_CROPS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
   const SECRET_TOTAL_MS=16*60*60*1000;
-  const isAidaBeta=()=>((String(currentMember||"")==="Aida")||(String(currentMemberKey||"").toLowerCase()==="aida"))&&String(adminProfile?.role||"")==="admin";
+  const isAidaBeta=()=>String(currentMember||"")==="Aida"||String(currentMemberKey||"").toLowerCase()==="aida"||String(adminProfile?.role||"")==="admin";
   const n=v=>Math.max(0,Math.floor(Number(v)||0));
   const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const html=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -35596,7 +35596,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     b.onclick=()=>showShop("r35Luck");
     tabs.appendChild(b);
     let badge=document.querySelector(".r35-build-badge");
-    if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="R35.02 • Aida Beta";document.querySelector(".shop-panel h2")?.appendChild(badge)}
+    if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="R35.03 • Aida Beta";document.querySelector(".shop-panel h2")?.appendChild(badge)}
   }
   const shopBase=showShop;showShop=function(tab){
     if(tab==="r35Luck")return isAidaBeta()?showSecretLuck():shopBase("home");
@@ -35775,5 +35775,115 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   globalThis.YN_R35={BUILD,showSecretLuck,craftSecretSeed,plantSecretOne,bulkSecretPlant,craftSpecialBaits,openGimmickSelector,openGimmickSelectorV2:(slotNo,baitKey)=>openGimmickSelector(slotNo,baitKey,{v2:true}),showSpecialResultV2:(slot,claimFn)=>showR35FishResult(slot,claimFn),rollNewFish,retireTemple,injectR35LuckShopButton};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   setTimeout(()=>{try{if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home")}catch(_){ }},250);
+  console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R35.04 — FINAL UI AUTHORITY + AIDA FISHING TEST STOCK
+   This block is intentionally LAST. Earlier builds patched a showShop()
+   definition that was later overwritten by another legacy definition.
+   R35.04 binds the final runtime functions after every legacy override.
+   ====================================================================== */
+(function YN_R3504_FINAL_AUTHORITY(){
+  "use strict";
+  const BUILD="S2-R35.04-FINAL-UI-AUTHORITY-20260914";
+  const AS="assets/r35/";
+  const isAida=()=>String(globalThis.currentMember||"").trim().toLowerCase()==="aida" || String(globalThis.currentMemberKey||"").trim().toLowerCase()==="aida" || String(globalThis.adminProfile?.role||"").toLowerCase()==="admin";
+
+  /* One-time Aida beta supply so the ACTIVE fishing pond can be tested
+     without waiting for a successful craft first. Crafting still works and
+     still consumes/creates real inventory. */
+  const norm3504=normalizeState;
+  normalizeState=function(raw,player){
+    const s=norm3504(raw,player);
+    if(isAida() || String(player||"").trim().toLowerCase()==="aida"){
+      s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+      s.fishingBaits=s.fishingBaits&&typeof s.fishingBaits==="object"?s.fishingBaits:{};
+      s.r35=s.r35&&typeof s.r35==="object"?s.r35:{};
+      if(!s.r35.r3504FishingTestSeeded){
+        s.specials.r35PumpkinGimmick=(Number(s.specials.r35PumpkinGimmick)||0)+50;
+        s.specials.r35CandyGimmick=(Number(s.specials.r35CandyGimmick)||0)+50;
+        s.fishingBaits.r35PumpkinBait=(Number(s.fishingBaits.r35PumpkinBait)||0)+3;
+        s.fishingBaits.r35CandyBait=(Number(s.fishingBaits.r35CandyBait)||0)+3;
+        s.r35.r3504FishingTestSeeded=true;
+      }
+    }
+    return s;
+  };
+
+  /* FINAL shop wrapper: do not rely on a delayed DOM injection. */
+  const shop3504=showShop;
+  showShop=function(tab="animals"){
+    if(tab==="r35Luck"){
+      if(!isAida())return shop3504("animals");
+      if(globalThis.YN_R35?.showSecretLuck)return globalThis.YN_R35.showSecretLuck();
+      return message("ระบบลุ้นยังไม่พร้อม","กรุณาปิดหน้าเกมแล้วเปิดใหม่อีกครั้งค่ะ");
+    }
+    const result=shop3504(tab==="home"?"animals":tab);
+    if(isAida()){
+      const tabs=document.querySelector(".shop-panel .shop-category-tabs,.shop-home-panel .shop-category-tabs");
+      if(tabs){
+        let b=tabs.querySelector("#r3504LuckShopBtn");
+        if(!b){
+          b=document.createElement("button");
+          b.id="r3504LuckShopBtn";b.type="button";b.textContent="🌱 ลุ้น";
+          tabs.appendChild(b);
+        }
+        b.onclick=()=>showShop("r35Luck");
+      }
+      const h=document.querySelector(".shop-panel h2,.shop-home-panel h2");
+      if(h&&!h.querySelector(".r3504-build-badge")){
+        const badge=document.createElement("small");badge.className="r35-build-badge r3504-build-badge";badge.textContent="R35.04 • Aida Beta";h.appendChild(badge);
+      }
+    }
+    return result;
+  };
+
+  /* FINAL fishing bait craft wrapper.  Render the two new bait systems
+     directly into the active craft modal, not through an older callback. */
+  const baitCraft3504=showFishingBaitCraft;
+  showFishingBaitCraft=function(){
+    const result=baitCraft3504.apply(this,arguments);
+    if(!isAida())return result;
+    const panel=document.querySelector("#modalContent .feature-panel");
+    if(!panel)return result;
+    panel.querySelector("#r3504SpecialBaitPanel")?.remove();
+    const s=globalThis.ownState||globalThis.state||{};
+    const sp=s.specials||{},fb=s.fishingBaits||{};
+    const rows=[
+      ["หญ้าสีแดง",50,Number(sp.friendGrassRed)||0],
+      ["สากกะเบือไฮโซ",50,Number(sp.pestle100)||0],
+      ["แผ่นเพลงบำบัดพลังร็อก",5,Number(sp.therapyDiscRock)||0],
+      ["เหยื่อตกปลามือโปร",20,Number(fb.bait4)||0]
+    ];
+    const wrap=document.createElement("section");
+    wrap.id="r3504SpecialBaitPanel";wrap.className="r35-special-bait-craft r3504-special-bait-craft";
+    wrap.innerHTML=`<div class="r35-special-bait-title"><img src="${AS}bait-pumpkin-kill.png" alt=""><img src="${AS}bait-candy-spider.png" alt=""><span><b>เหยื่อใหม่ 2 ชนิด • Aida Beta</b><small>ฟักทองพิฆาต / แคนดี้สไปเดอร์</small></span></div>
+      <div class="r35-stock-line"><span>🎃 ฟักทองพิฆาต</span><b>×${Number(fb.r35PumpkinBait)||0}</b></div>
+      <div class="r35-stock-line"><span>🍬 แคนดี้สไปเดอร์</span><b>×${Number(fb.r35CandyBait)||0}</b></div>
+      <div class="r35-stock-line"><span>🎃 ฟักทองกิมมิก</span><b>×${Number(sp.r35PumpkinGimmick)||0}</b></div>
+      <div class="r35-stock-line"><span>🍬 แคนดี้กิมมิก</span><b>×${Number(sp.r35CandyGimmick)||0}</b></div>
+      <div class="r35-recipe-grid">${rows.map(([name,need,have])=>`<article class="${have>=need?"ok":"missing"}"><b>${name}</b><small>ต่อ 1 ครั้ง ×${need}</small><span>มี ×${have}</span></article>`).join("")}</div>
+      <label class="r35-craft-qty">จำนวนครั้ง <input id="r3504BaitCraftQty" type="number" min="1" max="10" value="1"></label>
+      <button id="r3504CraftSpecialBait" class="primary-spooky-action" type="button">คราฟเหยื่อใหม่</button>`;
+    panel.appendChild(wrap);
+    const btn=wrap.querySelector("#r3504CraftSpecialBait");
+    btn.onclick=()=>{
+      const qty=Math.max(1,Math.min(10,Math.floor(Number(wrap.querySelector("#r3504BaitCraftQty")?.value)||1)));
+      return globalThis.YN_R35?.craftSpecialBaits?globalThis.YN_R35.craftSpecialBaits(qty):message("ระบบคราฟยังไม่พร้อม","กรุณาปิดหน้าเกมแล้วเปิดใหม่ค่ะ");
+    };
+    return result;
+  };
+
+  /* Rebind the real entry buttons after all legacy copies have finished. */
+  function rebind(){
+    try{if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("animals")}catch(_){}
+    try{document.querySelectorAll("[data-v32-shop]").forEach(b=>b.onclick=()=>showShop(b.dataset.v32Shop))}catch(_){}
+    try{if($("ynuCraftBait"))$("ynuCraftBait").onclick=showFishingBaitCraft}catch(_){}
+  }
+  rebind();setTimeout(rebind,100);setTimeout(rebind,500);setTimeout(rebind,1500);
+
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  globalThis.YN_R3504={BUILD,isAida,rebind};
   console.info(BUILD,"loaded");
 })();
