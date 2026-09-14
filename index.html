@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R35.10-CLEAN-ONE-AUTHORITY-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R35.13-MAIN-CLEAN-AUTHORITY-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R35.10-CLEAN-ONE-AUTHORITY-20260914"></script>
+<script src="game.js?v=S2-R35.13-MAIN-CLEAN-AUTHORITY-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2763,7 +2763,7 @@
     const oldShow=showFishingBaitCraft;
     showFishingBaitCraft=function(){const r=oldShow.apply(this,arguments);setTimeout(bindCraftButtons,0);return r};
   }catch(_){ }
-  if(globalThis.YN_R3478){globalThis.YN_R3478.openBasementTools=openFlowerToolsFinal;globalThis.YN_R3478.flowerPlantAll=flowerPlantAll;globalThis.YN_R3478.flowerHarvestAll=flowerHarvestAll;globalThis.YN_R3478.flowerFertAll=flowerFertAll;globalThis.YN_R3478.claimTrap=claimTrapFinal;globalThis.YN_R3478.bulkBoost=bulkBoostFinal;globalThis.YN_R3478.bulkAngel=bulkAngelFinal}
+  if(globalThis.YN_R3478){globalThis.YN_R3478.openBasementTools=openFlowerToolsFinal;globalThis.YN_R3478.flowerPlantAll=flowerPlantAll;globalThis.YN_R3478.flowerHarvestAll=flowerHarvestAll;globalThis.YN_R3478.flowerFertAll=flowerFertAll;globalThis.YN_R3478.claimTrap=claimTrapFinal;/* R35.13 keeps the game.js Secret-aware bulkBoost authority. */globalThis.YN_R3478.bulkAngel=bulkAngelFinal}
   if(globalThis.YN_R3474)globalThis.YN_R3474.openBasementTools=openFlowerToolsFinal;
   if(globalThis.YN_R3465){globalThis.YN_R3465.openFlowerTools=openFlowerToolsFinal;globalThis.YN_R3465.plantAll=flowerPlantAll;globalThis.YN_R3465.harvestAll=flowerHarvestAll;globalThis.YN_R3465.fertilizeAll=flowerFertAll}
   if(globalThis.YN_R17)globalThis.YN_R17.openFlowerTools=openFlowerToolsFinal;
@@ -2780,48 +2780,8 @@
 
 
 
+<!-- R35.13: Secret Seeds + special fishing live only in game.js; obsolete inline R35 authority removed. -->
 
-
-<script>
-/* R35.10 asset fallback only — does not create UI or bind game actions. */
-(()=>{
-  const ORIGINAL={
-    "secret-seeds.png":"3254F274-BC98-4AB0-B023-735C5F5FECDD.jpeg",
-    "bait-pumpkin-kill.png":"C2DD0FBB-993C-4970-8F70-EFD682FF436D(3).jpeg",
-    "bait-candy-spider.png":"E26A8F2F-1B15-46C0-8F26-37846A54182F(2).jpeg",
-    "gimmick-pumpkin.png":"B23EAF97-2FE4-4CC4-812A-511C1AFC47DA(2).jpeg",
-    "gimmick-candy.png":"B23EAF97-2FE4-4CC4-812A-511C1AFC47DA(20260914-022153).jpeg",
-    "secret-candy-seed.png":"03DC9676-598F-447E-B1D9-BC7BBD116982(20260913-222741).jpeg",
-    "secret-candy-sprout.png":"03DC9676-598F-447E-B1D9-BC7BBD116982(4).jpeg",
-    "secret-candy-grow.png":"03DC9676-598F-447E-B1D9-BC7BBD116982(5).jpeg",
-    "secret-candy-ready.png":"03DC9676-598F-447E-B1D9-BC7BBD116982(6).jpeg",
-    "secret-spider-seed.png":"52A42869-094C-4B4A-9721-923F142FC2A0.jpeg",
-    "secret-spider-sprout.png":"52A42869-094C-4B4A-9721-923F142FC2A0(1).jpeg",
-    "secret-spider-grow.png":"52A42869-094C-4B4A-9721-923F142FC2A0(2).jpeg",
-    "secret-spider-ready.png":"52A42869-094C-4B4A-9721-923F142FC2A0(3).jpeg",
-    "secret-cat-seed.png":"1B7DB3C5-9D91-46FC-8DD8-22CBD6201DB2.jpeg",
-    "secret-cat-sprout.png":"1B7DB3C5-9D91-46FC-8DD8-22CBD6201DB2(1).jpeg",
-    "secret-cat-grow.png":"1B7DB3C5-9D91-46FC-8DD8-22CBD6201DB2(20260913-222927).jpeg",
-    "secret-cat-ready.png":"1B7DB3C5-9D91-46FC-8DD8-22CBD6201DB2(2).jpeg",
-    "secret-bee-seed.png":"23C70E28-2B99-4324-BD2E-5AF7A8E40298(20260913-222948).jpeg",
-    "secret-bee-sprout.png":"23C70E28-2B99-4324-BD2E-5AF7A8E40298(20260913-222948-1).jpeg",
-    "secret-bee-grow.png":"23C70E28-2B99-4324-BD2E-5AF7A8E40298.jpeg",
-    "secret-bee-ready.png":"23C70E28-2B99-4324-BD2E-5AF7A8E40298(1).jpeg"
-  };
-  window.addEventListener("error",e=>{
-    const img=e.target;
-    if(!(img instanceof HTMLImageElement))return;
-    const src=String(img.getAttribute("src")||"").split("?")[0],base=src.split("/").pop(),old=ORIGINAL[base];
-    if(!old)return;
-    let tried=[];try{tried=JSON.parse(img.dataset.r3510Tried||"[]")}catch(_){}
-    if(src&&!tried.includes(src))tried.push(src);
-    const candidates=[base,`assets/${base}`,old,`assets/r35/${old}`,`assets/${old}`];
-    const next=candidates.find(x=>x&&!tried.includes(x));
-    if(!next)return;
-    tried.push(next);img.dataset.r3510Tried=JSON.stringify(tried);img.src=next;
-  },true);
-})();
-</script>
 
 </body>
 </html>

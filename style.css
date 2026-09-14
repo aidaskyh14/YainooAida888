@@ -11355,30 +11355,3 @@ body.r50-lock{overflow:hidden!important}
 /* R35 compact global toast */
 .weather-toast{font-size:clamp(11px,2.7vw,14px)!important;max-width:84%!important;line-height:1.35!important;}
 .r35-global-alert h2{font-size:clamp(17px,4.3vw,22px)!important;}
-
-
-/* S2-R35.10-CLEAN-ONE-AUTHORITY-20260914 — compact single combined craft card (no duplicate individual R35 recipes). */
-#r35SpecialBaitCraft{
-  margin:12px 0 2px;
-  padding:12px;
-  border:1px solid rgba(125,88,55,.28);
-  border-radius:18px;
-  background:linear-gradient(180deg,rgba(255,251,239,.94),rgba(247,229,191,.90));
-  box-shadow:0 5px 14px rgba(61,35,40,.10);
-}
-#r35SpecialBaitCraft .r35-special-bait-title{gap:4px;margin-bottom:8px}
-#r35SpecialBaitCraft .r35-special-bait-title>img{width:40px;height:40px;flex-basis:40px}
-#r35SpecialBaitCraft .r35-special-bait-title b{font-size:14px;line-height:1.15}
-#r35SpecialBaitCraft .r35-special-bait-title small{font-size:10.5px;line-height:1.3;margin-top:2px}
-#r35SpecialBaitCraft .r35-recipe-grid{gap:6px;margin:6px 0 8px}
-#r35SpecialBaitCraft .r35-recipe-grid article{padding:7px 8px;border-radius:11px;background:rgba(255,255,255,.58);border-color:rgba(130,96,64,.20)}
-#r35SpecialBaitCraft .r35-recipe-grid b{font-size:11.5px;line-height:1.2}
-#r35SpecialBaitCraft .r35-recipe-grid small{font-size:9.5px;line-height:1.2}
-#r35SpecialBaitCraft .r35-recipe-grid span{font-size:10.5px;line-height:1.2}
-#r35SpecialBaitCraft .r35-craft-qty{font-size:11.5px;margin:6px 0 8px}
-#r35SpecialBaitCraft .r35-craft-qty input{width:70px;min-height:36px;font-size:13px}
-#r35CraftSpecialBait{width:100%;min-height:42px;font-size:13px;font-weight:850;border-radius:12px}
-@media (max-width:430px){
-  #r35SpecialBaitCraft{padding:10px}
-  #r35SpecialBaitCraft .r35-recipe-grid{grid-template-columns:1fr 1fr}
-}

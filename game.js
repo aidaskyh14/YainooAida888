@@ -35468,14 +35468,14 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
 
 /* ======================================================================
-   S2 R35.02 — MAJOR BETA: SECRET SEEDS + SPECIAL FISHING + TEMPLE RETIRE
-   - Aida-only beta for the two new systems.
+   S2 R35.13 — SECRET SEEDS + SPECIAL FISHING • MAIN GAME AUTHORITY
+   - Public Secret Seeds + special fishing, defined only in game.js.
    - Durable inventory transactions for every new consume/grant action.
    - Temple entry/mission retired.
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
-  const BUILD="S2-R35.10-CLEAN-ONE-AUTHORITY-20260914";
+  const BUILD="S2-R35.13-MAIN-CLEAN-AUTHORITY-20260914";
   const AS="assets/r35/";
   const SECRET_SEED_KEY="r35SecretSeeds";
   const GIMMICK_PUMPKIN="r35PumpkinGimmick";
@@ -35590,15 +35590,21 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   }
   function injectR35LuckShopButton(){
     if(!r35Enabled())return;
-    document.querySelectorAll("#r35LuckShopBtnDirect,#r3505LuckTab,[data-r35-luck-legacy]").forEach(x=>x.remove());
     const tabs=document.querySelector(".shop-home-panel .shop-category-tabs,.shop-panel .shop-category-tabs");
     if(!tabs)return;
+    /* ONE luck tab only. The old jelly/random luck tab was the source of the
+       duplicate buttons and routed users to the wrong screen. */
+    [...tabs.querySelectorAll("button")].forEach(x=>{
+      const txt=String(x.textContent||"").trim();
+      if(x.id!=="r35LuckShopBtn"&&(txt.includes("ลุ้น")||x.id==="r35LuckShopBtnDirect"||x.id==="r3505LuckTab"||x.hasAttribute("data-r35-luck-legacy")))x.remove();
+    });
     const existing=[...tabs.querySelectorAll("#r35LuckShopBtn")];
     existing.slice(1).forEach(x=>x.remove());
     let b=existing[0]||null;
     if(!b){b=document.createElement("button");b.id="r35LuckShopBtn";b.type="button";tabs.appendChild(b)}
     b.dataset.r35Luck="1";b.textContent="🎲 ลุ้น";
-    b.onclick=e=>{try{e?.preventDefault?.();e?.stopPropagation?.()}catch(_){};showSecretLuck()};
+    const run=e=>{try{e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.()}catch(_){};showSecretLuck()};
+    b.onclick=run;b.onpointerdown=run;
     let badge=document.querySelector(".r35-build-badge");
     if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="Secret Seeds";document.querySelector(".shop-panel h2")?.appendChild(badge)}
   }
