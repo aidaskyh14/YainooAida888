@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R35.23-PUBLIC-CORE-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R35.24-SHOP-LUCK-ONLY-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R35.23-PUBLIC-CORE-20260914"></script>
+<script src="game.js?v=S2-R35.24-SHOP-LUCK-ONLY-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2787,7 +2787,7 @@
 <script id="r3523-public-core">
 (()=>{
 "use strict";
-const BUILD="S2-R35.23-PUBLIC-CORE-20260914";
+const BUILD="S2-R35.24-SHOP-LUCK-ONLY-20260914";
 const SECRET="r35SecretSeeds", PG="r35PumpkinGimmick", CG="r35CandyGimmick";
 const PBAIT="r35PumpkinBait", CBAIT="r35CandyBait";
 const SECRET_CROPS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
@@ -2990,7 +2990,7 @@ function removeLegacySecretChoices(root){
   });
 }
 function mountShop(){
-  const mc=$("modalContent");if(!mc)return;const h=[...mc.querySelectorAll("h2")].find(x=>x.textContent.trim()==="ร้านค้า");if(!h)return;
+  const mc=$("modalContent");if(!mc)return;const h=[...mc.querySelectorAll("h2")].find(x=>String(x.textContent||"").includes("ร้านค้า"));if(!h)return;
   const tabs=mc.querySelector(".shop-category-tabs");if(!tabs||tabs.querySelector("#r3523Luck"))return;
   const b=document.createElement("button");b.id="r3523Luck";b.type="button";b.textContent="🎲 ลุ้น";b.onclick=e=>{e.preventDefault();e.stopPropagation();showSecretLuck()};tabs.appendChild(b);
 }
