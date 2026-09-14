@@ -1,5 +1,5 @@
 /* =====================================================================
-   S2 R35.01 — SECRET SEEDS + SPECIAL FISHING BETA + TEMPLE RETIRE
+   S2 R35.02 — SECRET SEEDS + SPECIAL FISHING BETA + TEMPLE RETIRE
    Lexical function declaration: critical systems call this directly instead
    of depending on a mutable global property.
    ===================================================================== */
@@ -35467,14 +35467,14 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
 
 /* ======================================================================
-   S2 R35.01 — MAJOR BETA: SECRET SEEDS + SPECIAL FISHING + TEMPLE RETIRE
+   S2 R35.02 — MAJOR BETA: SECRET SEEDS + SPECIAL FISHING + TEMPLE RETIRE
    - Aida-only beta for the two new systems.
    - Durable inventory transactions for every new consume/grant action.
    - Temple entry/mission retired.
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
-  const BUILD="S2-R35.01-MAJOR-BETA-20260914";
+  const BUILD="S2-R35.02-MAJOR-BETA-20260914";
   const AS="assets/r35/";
   const SECRET_SEED_KEY="r35SecretSeeds";
   const GIMMICK_PUMPKIN="r35PumpkinGimmick";
@@ -35482,7 +35482,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   const SPECIAL_BAITS=["r35PumpkinBait","r35CandyBait"];
   const SECRET_CROPS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
   const SECRET_TOTAL_MS=16*60*60*1000;
-  const isAidaBeta=()=>String(currentMember||"")==="Aida"&&String(adminProfile?.role||"")==="admin";
+  const isAidaBeta=()=>((String(currentMember||"")==="Aida")||(String(currentMemberKey||"").toLowerCase()==="aida"))&&String(adminProfile?.role||"")==="admin";
   const n=v=>Math.max(0,Math.floor(Number(v)||0));
   const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const html=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -35586,9 +35586,27 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     }catch(e){notice({title:"ลุ้นไม่ได้",icon:"🥲",text:`<p>${html(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`,button:"กลับ",onDone:showSecretLuck})}
     finally{if(btn&&btn.isConnected){btn.dataset.busy="0";btn.disabled=false;btn.textContent="ลุ้น 1 ครั้ง"}}
   }
+  function injectR35LuckShopButton(){
+    if(!isAidaBeta())return;
+    const tabs=document.querySelector(".shop-home-panel .shop-category-tabs,.shop-panel .shop-category-tabs");
+    if(!tabs||tabs.querySelector("#r35LuckShopBtn"))return;
+    const b=document.createElement("button");
+    b.id="r35LuckShopBtn";b.type="button";b.dataset.r35Luck="1";
+    b.innerHTML="🎲 ลุ้น";
+    b.onclick=()=>showShop("r35Luck");
+    tabs.appendChild(b);
+    let badge=document.querySelector(".r35-build-badge");
+    if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="R35.02 • Aida Beta";document.querySelector(".shop-panel h2")?.appendChild(badge)}
+  }
   const shopBase=showShop;showShop=function(tab){
     if(tab==="r35Luck")return isAidaBeta()?showSecretLuck():shopBase("home");
-    const r=shopBase.apply(this,arguments);if((!tab||tab==="home")&&isAidaBeta())setTimeout(()=>{const tabs=document.querySelector(".shop-home-panel .shop-category-tabs");if(tabs&&!tabs.querySelector("#r35LuckShopBtn")){const b=document.createElement("button");b.id="r35LuckShopBtn";b.type="button";b.textContent="🎲 ลุ้น";b.onclick=()=>showShop("r35Luck");tabs.appendChild(b)}},0);return r;
+    const r=shopBase.apply(this,arguments);
+    if(isAidaBeta()){
+      const paint=()=>{try{injectR35LuckShopButton()}catch(_){}};
+      setTimeout(paint,0);setTimeout(paint,80);setTimeout(paint,240);
+      if(r&&typeof r.finally==="function")r.finally(paint);
+    }
+    return r;
   };if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home");
 
   /* ---------- Secret crop lifecycle: no water / no worms ---------- */
@@ -35754,7 +35772,8 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     }catch(_){return messageBaseR35(title,text)}
   };
 
-  globalThis.YN_R35={BUILD,showSecretLuck,craftSecretSeed,plantSecretOne,bulkSecretPlant,craftSpecialBaits,openGimmickSelector,openGimmickSelectorV2:(slotNo,baitKey)=>openGimmickSelector(slotNo,baitKey,{v2:true}),showSpecialResultV2:(slot,claimFn)=>showR35FishResult(slot,claimFn),rollNewFish,retireTemple};
+  globalThis.YN_R35={BUILD,showSecretLuck,craftSecretSeed,plantSecretOne,bulkSecretPlant,craftSpecialBaits,openGimmickSelector,openGimmickSelectorV2:(slotNo,baitKey)=>openGimmickSelector(slotNo,baitKey,{v2:true}),showSpecialResultV2:(slot,claimFn)=>showR35FishResult(slot,claimFn),rollNewFish,retireTemple,injectR35LuckShopButton};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  setTimeout(()=>{try{if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home")}catch(_){ }},250);
   console.info(BUILD,"loaded");
 })();
