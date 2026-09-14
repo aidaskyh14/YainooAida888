@@ -35536,7 +35536,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
-  const BUILD="S2-R35.06-PUBLIC-FUNCTIONAL-FIX-20260914";
+  const BUILD="S2-R35.07-URGENT-RUNTIME-FIX-20260914";
   const AS="assets/r35/";
   const SECRET_SEED_KEY="r35SecretSeeds";
   const GIMMICK_PUMPKIN="r35PumpkinGimmick";
@@ -35836,7 +35836,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3504_FINAL_AUTHORITY(){
   "use strict";
-  const BUILD="S2-R35.06-PUBLIC-FUNCTIONAL-FIX-20260914";
+  const BUILD="S2-R35.07-URGENT-RUNTIME-FIX-20260914";
   const AS="assets/r35/";
   const isAida=()=>String(globalThis.currentMember||"").trim().toLowerCase()==="aida" || String(globalThis.currentMemberKey||"").trim().toLowerCase()==="aida" || String(globalThis.adminProfile?.role||"").toLowerCase()==="admin";
 
@@ -35904,3 +35904,6 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   globalThis.YN_R3504={BUILD,isAida,rebind};
   console.info(BUILD,"loaded");
 })();
+
+
+/* S2-R35.07-URGENT-RUNTIME-FIX-20260914 — deployment marker. UI authority is in index.html. */
