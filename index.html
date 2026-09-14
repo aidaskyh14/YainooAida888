@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R35.21-ROLLBACK-SAFE-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R35.22-PUBLIC-STABLE-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R35.21-ROLLBACK-SAFE-20260914"></script>
+<script src="game.js?v=S2-R35.22-PUBLIC-STABLE-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2781,6 +2781,48 @@
 
 
 
+
+
+<script id="r3522-final-public-bridge">
+(()=>{
+  "use strict";
+  const BUILD="S2-R35.22-PUBLIC-STABLE-20260914";
+
+  function api(){ return globalThis.YN_R35 || null; }
+
+  // Only restore visibility/connection after the later R3480 index authority.
+  // Do NOT replace shopNavBtn, showShop, farm navigation, or fishing core.
+  function mountLuck(){
+    const a=api();
+    if(!a)return;
+    try{ a.injectR35LuckShopButton?.(); }catch(_){}
+  }
+
+  // If a shop panel is painted after this script, add exactly one Luck button.
+  const observer=new MutationObserver(()=>mountLuck());
+  try{observer.observe(document.body,{childList:true,subtree:true})}catch(_){}
+
+  // Luck click is routed directly to the R35 core without touching the Shop opener.
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#r35LuckShopBtn,[data-r35-luck]");
+    if(!b)return;
+    const a=api();
+    if(!a?.showSecretLuck)return;
+    e.preventDefault();
+    e.stopPropagation();
+    a.showSecretLuck();
+  },true);
+
+  // Re-mount on ordinary app lifecycle events, never overwrite their handlers.
+  window.addEventListener("pageshow",()=>setTimeout(mountLuck,80),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(mountLuck,80)});
+
+  setTimeout(mountLuck,80);
+  setTimeout(mountLuck,400);
+  globalThis.YAINOO_PUBLIC_R35_BUILD=BUILD;
+  console.info(BUILD,"final bridge loaded");
+})();
+</script>
 
 </body>
 </html>
