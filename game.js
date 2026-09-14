@@ -13298,7 +13298,9 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   /* ---------- R35 bridge: special bait flow on the ACTIVE V2 ponds ---------- */
   async function r35StartSpecialV2({slotNo,baitKey,countP,countC,catches,totalWeight}){
     if(!FISHING_BAITS?.[baitKey]?.r35Special)throw new Error("ไม่ใช่เหยื่อพิเศษ");
-    const actorKey=fishingActorKey(),t=NOW(),pondId=fishPondId;
+    const actorKey=fishingActorKey(),t=NOW(),pondId=Number(fishPondId||0),adminPass=fishingAdminBypass();
+    slotNo=Math.max(1,Math.min(4,Number(slotNo)||1));countP=Math.max(0,Math.min(10,Number(countP)||0));countC=Math.max(0,Math.min(10,Number(countC)||0));
+    if(countP+countC!==10)throw new Error("ต้องเลือกกิมมิกให้ครบ 10 ช่อง");
     if(!pondId||currentScene!=="fishingPondV2")throw new Error("กรุณาเข้าบ่อตกปลาก่อนค่ะ");
     const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(pondId,slotNo)),playerRef=fs.doc(db,"fishingPlayers",actorKey),saveRef=fs.doc(db,"saves",actorKey);
     let next,newSlot;
@@ -13306,13 +13308,17 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const [sl,pl,ss]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef)]);
       if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
       const s=normalizeState(ss.data(),currentMember);resetDailyExtras(s);
-      if(!fishingAdminBypass()&&Number(s.fishingDailyChoice?.pondId)!==Number(pondId))throw new Error("วันนี้ไม่ได้เลือกบ่อนี้");
+      s.fishingBaits=s.fishingBaits&&typeof s.fishingBaits==="object"?s.fishingBaits:{};
+      s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+      if(!adminPass&&Number(s.fishingDailyChoice?.pondId)!==pondId)throw new Error("วันนี้ไม่ได้เลือกบ่อนี้");
       if(pl.exists()&&Number(pl.data().claimDeadline||0)>t)throw new Error("กำลังตกปลาอยู่ที่แท่นอื่น");
       if(Number(s.fishingCooldownUntil||0)>t)throw new Error(`คูลดาวน์เหลือ ${fmt(s.fishingCooldownUntil-t)}`);
       if(sl.exists()&&activeSlot(sl.data()))throw new Error("แท่นนี้ไม่ว่างแล้ว");
-      if(Number(s.fishingBaits?.[baitKey]||0)<1)throw new Error("เหยื่อนี้หมดจากกระเป๋าแล้ว");
-      if(Number(s.specials?.r35PumpkinGimmick||0)<countP||Number(s.specials?.r35CandyGimmick||0)<countC)throw new Error("กิมมิกในกระเป๋าไม่พอแล้ว กรุณาเลือกใหม่");
-      s.fishingBaits[baitKey]-=1;s.specials.r35PumpkinGimmick-=countP;s.specials.r35CandyGimmick-=countC;
+      const baitHave=Number(s.fishingBaits[baitKey]||0),pumpHave=Number(s.specials.r35PumpkinGimmick||0),candyHave=Number(s.specials.r35CandyGimmick||0);
+      if(!adminPass&&baitHave<1)throw new Error("เหยื่อนี้หมดจากกระเป๋าแล้ว");
+      if(!adminPass&&(pumpHave<countP||candyHave<countC))throw new Error("กิมมิกในกระเป๋าไม่พอแล้ว กรุณาเลือกใหม่");
+      if(adminPass){s.fishingBaits[baitKey]=Math.max(9999,baitHave);s.specials.r35PumpkinGimmick=Math.max(9999,pumpHave);s.specials.r35CandyGimmick=Math.max(9999,candyHave)}
+      else{s.fishingBaits[baitKey]=baitHave-1;s.specials.r35PumpkinGimmick=pumpHave-countP;s.specials.r35CandyGimmick=candyHave-countC}
       const finish=t+10*MIN,claimDeadline=finish+5*MIN;
       newSlot={dateKey:DAILY_KEY(),pondId,slot:slotNo,ownerKey:actorKey,ownerName:currentProfileDisplayName(),baitKey,catches:(catches||[]).slice(0,8),totalWeight:Number(Number(totalWeight||0).toFixed(2)),status:"fishing",startedAt:t,finishAt:finish,claimDeadline,r35Special:true,r35Gimmicks:{pumpkin:countP,candy:countC}};
       s.fishingActiveSession={...newSlot,savedAt:t};next=s;
@@ -13322,23 +13328,58 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     });
     Y26_applyOwnState(next);fishSlots[slotNo-1]=newSlot;saveFishMirrorV2(newSlot);drawFishingV2();return newSlot;
   }
+
+  async function claimFishingV2Stable(x){
+    if(!x||!x.slot||!x.pondId)return message("รับปลาไม่ได้","ข้อมูลแท่นตกปลาไม่ครบ กรุณาแตะแท่นใหม่ค่ะ");
+    try{
+      const actorKey=fishingActorKey(),canonical=actorKey||memberKeyFromName(currentMember||""),pondId=Number(x.pondId||fishPondId||0),slotNo=Math.max(1,Math.min(4,Number(x.slot)||1));
+      const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(pondId,slotNo)),playerRef=fs.doc(db,"fishingPlayers",actorKey),saveRef=fs.doc(db,"saves",actorKey),dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
+      let next=null,claimedWeight=0;
+      await fs.runTransaction(db,async tx=>{
+        const [sl,ss,dd]=await Promise.all([tx.get(slotRef),tx.get(saveRef),tx.get(dailyRef)]);
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const slot=sl.exists()?sl.data():x,now=NOW(),ownerOk=!sl.exists()||String(slot.ownerKey||"")===String(actorKey||"")||String(slot.ownerKey||"")===String(canonical||"")||String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
+        if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
+        if(now<Number(slot.finishAt||x.finishAt||0))throw new Error(`ปลายังไม่ติดเบ็ด • เหลือ ${fmt(Number(slot.finishAt||x.finishAt||0)-now)}`);
+        if(now>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
+        const s=normalizeState(ss.data(),currentMember),d=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
+        d.scores=ensureObj(d.scores);d.names=ensureObj(d.names);d.ponds=ensureObj(d.ponds);
+        const key=canonical||actorKey,receipt=`${DAILY_KEY()}:${pondId}:${slotNo}:${Number(slot.startedAt||x.startedAt||0)}`;
+        s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
+        claimedWeight=Number(Number(slot.totalWeight??x.totalWeight??0).toFixed(2));
+        d.scores[key]=Number((Number(d.scores[key]||0)+claimedWeight).toFixed(2));d.names[key]=currentProfileDisplayName();d.ponds[key]=pondId;
+        ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=d.scores[key];s.fishingCooldownUntil=now+5*MIN;s.fishingClaimReceipts[receipt]=now;s.fishingActiveSession=null;next=s;
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      Y26_applyOwnState(next);
+      try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("R35.09 slot cleanup",e)}
+      try{await fs.deleteDoc(playerRef)}catch(e){console.warn("R35.09 player cleanup",e)}
+      fishSlots[slotNo-1]=null;clearFishMirrorV2();drawFishingV2();closeModal();showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs แล้ว • คูลดาวน์ 5 นาที`);return true;
+    }catch(e){console.error("R35.09 claim",e);message("รับปลาไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return false}
+  }
+
   const startFishingV2BaseR35=startFishingV2;
   startFishingV2=async function(slotNo,baitKey){
     if(FISHING_BAITS?.[baitKey]?.r35Special){
-      if(!globalThis.YN_R35?.openGimmickSelectorV2)return message("ระบบทดลองยังโหลดไม่ครบ","กรุณาปิดแล้วเปิดหน้าบ่อตกปลาใหม่ค่ะ");
-      return globalThis.YN_R35.openGimmickSelectorV2(slotNo,baitKey);
+      const stable=globalThis.YN_R3509?.openSpecial||globalThis.YN_R3508?.openSpecial;
+      if(typeof stable==="function")return stable(slotNo,baitKey);
+      if(globalThis.YN_R35?.openGimmickSelectorV2)return globalThis.YN_R35.openGimmickSelectorV2(slotNo,baitKey);
+      return message("ระบบเหยื่อพิเศษยังโหลดไม่ครบ","กรุณารีเฟรชหน้าเกม 1 ครั้งค่ะ");
     }
     return startFishingV2BaseR35.apply(this,arguments);
   };
   const fishingResultV2BaseR35=fishingResultV2;
   fishingResultV2=function(x){
-    if(FISHING_BAITS?.[x?.baitKey]?.r35Special&&globalThis.YN_R35?.showSpecialResultV2){
+    if(FISHING_BAITS?.[x?.baitKey]?.r35Special){
       if(NOW()>Number(x.claimDeadline||0))return message("🐟 ปลาได้หนีไปแล้ว","ปลาได้หนีไปแล้ว (แท่นตกปลานี้ว่าง)");
-      return globalThis.YN_R35.showSpecialResultV2(x,()=>claimFishingV2(x));
+      const stableResult=globalThis.YN_R3509?.showResult;
+      if(typeof stableResult==="function")return stableResult(x,()=>claimFishingV2Stable(x));
+      if(globalThis.YN_R35?.showSpecialResultV2)return globalThis.YN_R35.showSpecialResultV2(x,()=>claimFishingV2Stable(x));
     }
     return fishingResultV2BaseR35(x);
   };
-  window.YN_FISH_V2_BRIDGE={startSpecial:r35StartSpecialV2,getPondId:()=>fishPondId,claim:claimFishingV2,refresh:drawFishingV2};
+  window.YN_FISH_V2_BRIDGE={startSpecial:r35StartSpecialV2,getPondId:()=>Number(fishPondId||0),claim:claimFishingV2Stable,claimLegacy:claimFishingV2,refresh:drawFishingV2};
 
   /* ---------- openScene routing ---------- */
   const _openScene=openScene;openScene=function(name){if(name==="fishingLobby")return openFishingLobby();if(name==="jellyfish2")return openJelly2();if(name==="jellyfishArena")return openJelly2();return _openScene(name)};
@@ -35536,7 +35577,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3500_MAJOR_BETA(){
   "use strict";
-  const BUILD="S2-R35.07-URGENT-RUNTIME-FIX-20260914";
+  const BUILD="S2-R35.08-STABLE-R35-AUTHORITY-20260914";
   const AS="assets/r35/";
   const SECRET_SEED_KEY="r35SecretSeeds";
   const GIMMICK_PUMPKIN="r35PumpkinGimmick";
@@ -35836,7 +35877,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
    ====================================================================== */
 (function YN_R3504_FINAL_AUTHORITY(){
   "use strict";
-  const BUILD="S2-R35.07-URGENT-RUNTIME-FIX-20260914";
+  const BUILD="S2-R35.08-STABLE-R35-AUTHORITY-20260914";
   const AS="assets/r35/";
   const isAida=()=>String(globalThis.currentMember||"").trim().toLowerCase()==="aida" || String(globalThis.currentMemberKey||"").trim().toLowerCase()==="aida" || String(globalThis.adminProfile?.role||"").toLowerCase()==="admin";
 
@@ -35906,4 +35947,4 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 })();
 
 
-/* S2-R35.07-URGENT-RUNTIME-FIX-20260914 — deployment marker. UI authority is in index.html. */
+/* S2-R35.08-STABLE-R35-AUTHORITY-20260914 — deployment marker. UI authority is in index.html. */
