@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.2-LUCK-WIG-HARD-ROUTE-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R36.4-WIG-INLINE-ROUTE-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.2-LUCK-WIG-HARD-ROUTE-20260914"></script>
+<script src="game.js?v=S2-R36.4-WIG-INLINE-ROUTE-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2881,10 +2881,41 @@ function weighted(){let r=Math.random()*WEIGHTS.reduce((a,x)=>a+x[1],0);for(cons
 function showSecretLuck(){
   const s=ensure(own()||{});
   const maxByStock=SECRET_RECIPE.reduce((m,[t,k,q])=>Math.min(m,Math.floor(have(s,t,k)/q)),10);
-  $("modalContent").innerHTML=`<section class="feature-panel r35-modal r3519-secret-luck"><div class="r35-notice-head"><img src="secret-seeds.png" alt=""><div><h2>🎲 ลุ้น Secret Seeds</h2><small>เลือกคราฟ 1–10 ครั้ง • แต่ละครั้งสุ่มอิสระ 50%</small></div></div><div class="r35-modal-scroll"><div class="r35-recipe-grid">${SECRET_RECIPE.map(([t,k,q,n])=>`<article class="${have(s,t,k)>=q?"ok":"missing"}"><b>${n}</b><small>ต่อ 1 ครั้ง ×${q}</small><span>มี ×${have(s,t,k)}</span></article>`).join("")}</div><div class="r35-stock-line"><img src="secret-seeds.png"><span>Secret Seeds</span><b>×${iv(s.specials?.[SECRET])}</b></div><label style="display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0"><b>จำนวนครั้ง</b><input id="r3525SecretQty" type="number" min="1" max="10" value="1" inputmode="numeric" style="width:76px;text-align:center"></label><small style="display:block;text-align:center">สูงสุด 10 ครั้งต่อรอบ • ระบบล็อกปุ่มระหว่างบันทึกเพื่อป้องกันการกดซ้ำ</small></div><button id="r3523CraftSecret" class="primary-spooky-action" ${maxByStock<1?"disabled":""}>ลุ้น Secret Seeds</button></section>`;
+  const wigApi=globalThis.YN_WIG_CRAFT;
+  const wigImg=wigApi?.image||"alpaca-wool-pink.png";
+  $("modalContent").innerHTML=`<section class="feature-panel r35-modal r3519-secret-luck ynu-luck-shop">
+    <div class="r35-notice-head"><span class="ynu-luck-icon">🎲</span><div><h2>ร้านค้า • ลุ้น</h2><small>คราฟวิกผมและ Secret Seeds อยู่ในหน้านี้</small></div></div>
+    <div class="r35-modal-scroll ynu-luck-scroll">
+      <section class="ynu-luck-section ynu-wig-entry r364-wig-inline">
+        <div class="ynu-luck-section-head"><img src="${wigImg}" alt="วิกผมแฟนซีจากขนอัลปาก้า"><div><b>คราฟวิกผมแฟนซีจากขนอัลปาก้า</b><small>ขน 5 สี • สีละ 2 ต่อ 1 ครั้ง • สำเร็จ 30%</small></div></div>
+        <div class="r35-recipe-grid">
+          <article><b>ขนอัลปาก้าสีขาว</b><small>ต่อ 1 ครั้ง ×2</small></article>
+          <article><b>ขนอัลปาก้าสีดำ</b><small>ต่อ 1 ครั้ง ×2</small></article>
+          <article><b>ขนอัลปาก้าสีชมพู</b><small>ต่อ 1 ครั้ง ×2</small></article>
+          <article><b>ขนอัลปาก้าสีน้ำตาล</b><small>ต่อ 1 ครั้ง ×2</small></article>
+          <article><b>ขนอัลปาก้าสีเขียว</b><small>ต่อ 1 ครั้ง ×2</small></article>
+        </div>
+        <p style="text-align:center;margin:10px 0">เลือกคราฟได้ครั้งละ 1–10 ครั้ง • สุ่มสำเร็จแยกแต่ละครั้ง 30% • ไม่การันตี</p>
+        <button id="r364OpenWigCraft" class="primary-spooky-action" type="button">คราฟวิกผม</button>
+      </section>
+      <section class="ynu-luck-section r364-secret-inline">
+        <div class="ynu-luck-section-head"><img src="secret-seeds.png" alt="Secret Seeds"><div><b>ลุ้น Secret Seeds</b><small>เลือกคราฟ 1–10 ครั้ง • แต่ละครั้งสุ่มอิสระ 50%</small></div></div>
+        <div class="r35-recipe-grid">${SECRET_RECIPE.map(([t,k,q,n])=>`<article class="${have(s,t,k)>=q?"ok":"missing"}"><b>${n}</b><small>ต่อ 1 ครั้ง ×${q}</small><span>มี ×${have(s,t,k)}</span></article>`).join("")}</div>
+        <div class="r35-stock-line"><img src="secret-seeds.png"><span>Secret Seeds</span><b>×${iv(s.specials?.[SECRET])}</b></div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0"><b>จำนวนครั้ง</b><input id="r3525SecretQty" type="number" min="1" max="10" value="1" inputmode="numeric" style="width:76px;text-align:center"></label>
+        <small style="display:block;text-align:center">สูงสุด 10 ครั้งต่อรอบ • ระบบล็อกปุ่มระหว่างบันทึกเพื่อป้องกันการกดซ้ำ</small>
+        <button id="r3523CraftSecret" class="primary-spooky-action" ${maxByStock<1?"disabled":""}>ลุ้น Secret Seeds</button>
+      </section>
+    </div>
+  </section>`;
   openModal?.();
+  const wigBtn=$("r364OpenWigCraft");
+  if(wigBtn)wigBtn.onclick=()=>{
+    if(globalThis.YN_WIG_CRAFT?.open)return globalThis.YN_WIG_CRAFT.open();
+    message?.("ระบบคราฟวิกยังโหลดไม่ครบ","กรุณาปิดร้านค้าแล้วเปิดใหม่อีกครั้งค่ะ");
+  };
   const btn=$("r3523CraftSecret");
-  btn.onclick=()=>craftSecret(Math.max(1,Math.min(10,iv($("r3525SecretQty")?.value)||1)));
+  if(btn)btn.onclick=()=>craftSecret(Math.max(1,Math.min(10,iv($("r3525SecretQty")?.value)||1)));
 }
 async function craftSecret(attempts=1){
   attempts=Math.max(1,Math.min(10,iv(attempts)||1));
