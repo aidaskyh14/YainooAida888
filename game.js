@@ -36460,7 +36460,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
         tx.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
       });
       ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};try{updateMeritUI?.()}catch(_){}
-      if(success)try{await scoreDetailed("wool",success*10,`wig:${craftId}`,{fancyWig:success})}catch(e){console.warn("R36 wool campaign score",e)}
+      if(success)try{await globalThis.YN_S2_CAMPAIGNS?.scoreDetailed?.("wool",success*10,`wig:${craftId}`,{fancyWig:success},Date.now())}catch(e){console.warn("R36.17 wool campaign score",e)}
 
       const successBlock=success?`<div class="ynu-wig-result-card success"><img src="${WIG_GOOD_IMG}" alt=""><div><h3>ยินดีด้วยค่ะ วิกผมใหม่ สวย น่ารัก เหมาะกับคุณเลย</h3><p>${WIG_NAME} ×<b>${success}</b> เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว</p><small>ของถูกบันทึกเข้ากระเป๋าตั้งแต่คราฟสำเร็จ ไม่ต้องกดรับเพื่อบันทึก</small></div></div>`:"";
       const failBlock=failed?`<div class="ynu-wig-result-card fail"><img src="${WIG_BAD_IMG}" alt=""><div><h3>เสียใจด้วยค่ะ รอบหน้าตั้งใจกว่านี้ วิกผมพังหมด อีดอก!!!</h3><p>ปลอบใจนะ ไปซื้อกรรไกรมาตัดใหม่ <b>${merit.toLocaleString("th-TH")} กุศล</b></p><small>พัง ${failed} ครั้ง • สุ่มกุศล 1–50 แยกต่อครั้ง</small></div></div>`:"";
@@ -37374,5 +37374,302 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   const BUILD="S2-R36.15-QUOTA-CACHE-DUAL-SCORE-20260915";
   setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.();globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn(BUILD,"initial recovery",e)}},1800);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.()}catch(_){}},400)},{passive:true});
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R36.16 — CLEAN CAMPAIGN TRIO ENGINE (ISOLATED)
+   2026-09-15
+   This engine is intentionally independent from the old R29/R36 score queues.
+   One Firestore document per player per campaign => no shared-document contention.
+   Authoritative path: campaignTrioScores/{campaignId}__{memberKey}
+   Existing campaign meta / rewards / UI remain in place for compatibility.
+   ====================================================================== */
+(function YN_R3616_CLEAN_TRIO_SCORE(){
+  "use strict";
+  const BUILD="S2-R36.16-CLEAN-TRIO-SCORE-20260915";
+  const KEYS=new Set(["secret","fishing","wool"]);
+  const SECRET_POINTS={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH_POINTS={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const isAdmin=()=>String(currentMember||"")==="Aida"&&adminProfile?.role==="admin";
+  const safeName=()=>typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(currentMember||currentMemberKey||"");
+  const cfg=key=>globalThis.YN_R29?.C?.[key]||null;
+  const docId=(campaignId,memberKey)=>`${String(campaignId)}__${String(memberKey)}`;
+  const pending=[];
+  let retryBusy=false;
+
+  function normalizeBreakdown(input){
+    const out={};
+    for(const [k,v] of Object.entries(input||{})){
+      const q=Math.max(0,Math.floor(Number(v)||0));
+      if(q)out[k]=q;
+    }
+    return out;
+  }
+  async function metaFor(key){
+    const c=cfg(key);if(!c)return null;
+    const {db,fs}=await getFirebaseContext();
+    const s=await fs.getDoc(fs.doc(db,"campaigns",c.id));
+    return s.exists()?s.data()||{}:null;
+  }
+  function activeForEvent(meta,eventAt){
+    const start=Number(meta?.startedAtMs)||0,end=Number(meta?.endAtMs)||0,t=Number(eventAt)||now();
+    return Boolean(start&&meta?.active!==false&&t>=start&&(!end||t<end));
+  }
+
+  async function mirrorLegacy(key,row){
+    const c=cfg(key);if(!c||!currentMemberKey)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const p=fs.doc(db,"campaigns",c.id,"scores",String(currentMemberKey));
+      await fs.setDoc(p,{memberKey:String(currentMemberKey),displayName:row.displayName,runId:row.runId,score:row.score,reachedAtMs:row.reachedAtMs,breakdown:row.breakdown,updatedAt:fs.serverTimestamp()},{merge:false});
+    }catch(e){console.warn(BUILD,"legacy per-player mirror",key,e?.message||e)}
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"campaignScores",c.id),mk=String(currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(ref);let d=ss.exists()?ss.data()||{}:{};
+        if(Number(d.runId||0)!==Number(row.runId||0))d={campaignId:c.id,runId:Number(row.runId)||0,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{}};
+        d.scores=d.scores&&typeof d.scores==="object"?{...d.scores}:{};
+        d.names=d.names&&typeof d.names==="object"?{...d.names}:{};
+        d.reachedAtMs=d.reachedAtMs&&typeof d.reachedAtMs==="object"?{...d.reachedAtMs}:{};
+        d.breakdowns=d.breakdowns&&typeof d.breakdowns==="object"?{...d.breakdowns}:{};
+        d.scores[mk]=Number(row.score)||0;d.names[mk]=row.displayName;d.reachedAtMs[mk]=Number(row.reachedAtMs)||now();d.breakdowns[mk]=row.breakdown||{};
+        tx.set(ref,{...d,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+    }catch(e){console.warn(BUILD,"legacy aggregate mirror",key,e?.message||e)}
+  }
+
+  async function addScore(key,delta,receipt,breakdown={},eventAt=0){
+    if(!KEYS.has(key)||!currentMemberKey||visitContext||isAdmin())return false;
+    delta=Number(delta)||0;const add=normalizeBreakdown(breakdown);if(!delta&&!Object.keys(add).length)return false;
+    const c=cfg(key);if(!c)return false;
+    const t=Number(eventAt)||now(),rec=String(receipt||"");
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),ref=fs.doc(db,"campaignTrioScores",docId(c.id,currentMemberKey));
+      const m=await fs.getDoc(metaRef);if(!m.exists())return false;const meta=m.data()||{};if(!activeForEvent(meta,t))return false;
+      const runId=Number(meta.startedAtMs)||0;let row=null;
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(ref),raw=ss.exists()?ss.data()||{}:{},same=Number(raw.runId||0)===runId,old=same?raw:{};
+        const recent=same&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        const bd=same&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+        if(rec&&recent.includes(rec)){row={...old};return}
+        for(const [k,q] of Object.entries(add))bd[k]=(Number(bd[k])||0)+q;
+        const oldScore=Number(old.score)||0,nextScore=oldScore+delta;
+        row={campaignId:c.id,key,memberKey:String(currentMemberKey),displayName:safeName(),runId,score:nextScore,reachedAtMs:t,breakdown:bd,recentReceipts:(rec?[...recent,rec]:recent).slice(-120)};
+        tx.set(ref,{...row,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      if(!row)return false;
+      mirrorLegacy(key,row);
+      try{if(delta)showWeatherToast?.(`🏆 ${c.title} ${delta>0?"+":""}${delta} คะแนน`)}catch(_){}
+      return true;
+    }catch(e){
+      console.warn(BUILD,"score failed",key,e?.message||e);
+      if(rec&&!pending.some(x=>x.receipt===rec))pending.push({key,delta,receipt:rec,breakdown:add,eventAt:t});
+      return false;
+    }
+  }
+
+  async function retryPending(){
+    if(retryBusy||!pending.length||!currentMemberKey||visitContext||isAdmin())return;retryBusy=true;
+    try{const rows=pending.splice(0,pending.length);for(const x of rows){const ok=await addScore(x.key,x.delta,x.receipt,x.breakdown,x.eventAt);if(!ok&&!pending.some(y=>y.receipt===x.receipt))pending.push(x)}}finally{retryBusy=false}
+  }
+
+  function scoreSecretHarvest(summary){
+    const bd={};let delta=0;
+    for(const [k,pt] of Object.entries(SECRET_POINTS)){const q=Math.max(0,Math.floor(Number(summary?.[k])||0));if(q){bd[k]=q;delta+=q*pt}}
+    if(!delta)return Promise.resolve(false);
+    const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
+    const rev=Math.max(0,Math.floor(Number(s?.clientSaveRevision)||0));
+    const sig=Object.entries(bd).sort(([a],[b])=>a.localeCompare(b)).map(([k,q])=>`${k}:${q}`).join("|");
+    return addScore("secret",delta,`r3616:secret:${currentMemberKey}:${rev||Date.now()}:${sig}`,bd);
+  }
+  function scoreFishingClaim(slot){
+    const catches=Array.isArray(slot?.catches)?slot.catches:[],bd={};let delta=0,n=0;
+    for(const x of catches){const k=String(x?.fishKey||"");if(!Object.prototype.hasOwnProperty.call(FISH_POINTS,k))continue;bd[k]=(bd[k]||0)+1;delta+=FISH_POINTS[k];n++}
+    if(!n)return Promise.resolve(false);
+    const stamp=Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0),pond=String(slot?.pondId||"0"),sl=String(slot?.slot||slot?.slotNo||"0");
+    return addScore("fishing",delta,`r3616:fish:${currentMemberKey}:${stamp}:${pond}:${sl}`,bd,Number(slot?.claimedAt)||now());
+  }
+
+  /* All existing Secret/Fishing hooks call this object at runtime. Replacing the
+     object makes them use the clean engine without another patch chain. */
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed:addScore,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores:retryPending,retryPendingCampaignScores:retryPending};
+
+  /* Bulk Secret Seed harvest adapter. Duplicate calls collapse by save revision. */
+  try{
+    const prev=typeof globalThis.V181_campaignScoreLater==="function"?globalThis.V181_campaignScoreLater:null;
+    globalThis.V181_campaignScoreLater=async function(summary){let r;try{if(prev)r=await prev.apply(this,arguments)}catch(e){console.warn(BUILD,"prior V181",e)}try{await scoreSecretHarvest(summary)}catch(e){console.warn(BUILD,"bulk Secret score",e)}return r};
+  }catch(e){console.warn(BUILD,"V181 install",e)}
+
+  /* Wig craft's old scorer is lexical, so observe the authoritative inventory delta
+     around the actual Craft button. Successful wigs only are scored. */
+  let wigBusy=false;
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#ynuWigCraftGo");if(!b||wigBusy||isAdmin()||!currentMemberKey)return;
+    const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
+    const before=Math.max(0,Math.floor(Number(s?.alpaca?.inventory?.other?.fancyWig)||0));wigBusy=true;
+    let tries=0;const timer=setInterval(()=>{
+      tries++;const x=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{},after=Math.max(0,Math.floor(Number(x?.alpaca?.inventory?.other?.fancyWig)||0));
+      if(after>before){clearInterval(timer);wigBusy=false;const gained=after-before,rev=Math.max(0,Math.floor(Number(x?.clientSaveRevision)||0));addScore("wool",gained*10,`r3616:wig:${currentMemberKey}:${rev||Date.now()}:${after}`,{fancyWig:gained});return}
+      if(tries>=30||!document.getElementById("ynuWigCraftGo")){clearInterval(timer);wigBusy=false}
+    },200);
+  },true);
+
+  /* New three-campaign leaderboard reads ONLY campaignTrioScores. The old screen,
+     reward button, conditions and countdown are kept; only score/rank DOM is replaced. */
+  let activeKey="",scoreUnsub=null,metaUnsub=null,paintTimer=null,cacheRows=[],cacheRun=0;
+  const buttonKey={r29CampaignSecretBtn:"secret",r29CampaignFishingBtn:"fishing",r29CampaignWoolBtn:"wool",r29CampaignHomeBtn:""};
+  function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function stopRank(){try{scoreUnsub?.()}catch(_){}try{metaUnsub?.()}catch(_){}scoreUnsub=metaUnsub=null;if(paintTimer){clearInterval(paintTimer);paintTimer=null}cacheRows=[];cacheRun=0}
+  function rankHtml(rows,key){
+    const c=cfg(key),labels=new Map(c?.breakdown||[]),all=(rows||[]).filter(r=>String(r?.memberKey||"").toLowerCase()!=="aida");
+    all.sort((a,b)=>Number(b.score||0)-Number(a.score||0)||Number(a.reachedAtMs||0)-Number(b.reachedAtMs||0)||String(a.displayName||a.memberKey).localeCompare(String(b.displayName||b.memberKey),"th"));
+    if(!all.length)return '<p class="r29-empty">ยังไม่มีผู้เล่นในอันดับค่ะ</p>';
+    return all.map((r,i)=>{const details=[...labels].map(([k,label])=>`<span><b>${esc(label)}</b> ×${Math.max(0,Number(r?.breakdown?.[k]||0))}</span>`).join("");return `<article class="r29-rank-row ${i<3?"top":""}"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span><div class="r29-rank-body"><b>${esc(r.displayName||r.memberKey)}</b><small>${String(r.memberKey)===String(currentMemberKey)?"คุณ":""}</small>${details?`<div class="r29-rank-breakdown">${details}</div>`:""}</div><strong>${Number(r.score||0).toLocaleString("th-TH")}</strong></article>`}).join("");
+  }
+  function paint(){
+    if(!activeKey||!document.querySelector(".r29-campaign"))return;
+    const c=cfg(activeKey),title=document.querySelector(".r29-campaign-title h2")?.textContent||"";if(c&&title.trim()!==c.title.trim())return;
+    const rows=cacheRows.filter(r=>Number(r.runId||0)===Number(cacheRun||0)&&r.campaignId===c.id),mine=rows.find(r=>String(r.memberKey)===String(currentMemberKey));
+    const me=document.getElementById("r29MyScore"),rank=document.getElementById("r29Ranks");if(me&&!isAdmin())me.textContent=Number(mine?.score||0).toLocaleString("th-TH");if(rank)rank.innerHTML=rankHtml(rows,activeKey);
+  }
+  async function bindRank(key){
+    stopRank();activeKey=key;if(!KEYS.has(key))return;
+    try{
+      const c=cfg(key),{db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),col=fs.collection(db,"campaignTrioScores");
+      metaUnsub=fs.onSnapshot(metaRef,s=>{cacheRun=s.exists()?Number(s.data()?.startedAtMs)||0:0;paint()});
+      scoreUnsub=fs.onSnapshot(col,s=>{cacheRows=[];s.forEach(d=>{const x=d.data()||{};if(x.campaignId===c.id)cacheRows.push(x)});paint()},e=>console.warn(BUILD,"rank read",e));
+      paintTimer=setInterval(paint,450);setTimeout(paint,120);
+    }catch(e){console.warn(BUILD,"rank bind",e)}
+  }
+  document.addEventListener("click",e=>{const b=e.target?.closest?.("button");if(!b)return;if(Object.prototype.hasOwnProperty.call(buttonKey,b.id)){const k=buttonKey[b.id];setTimeout(()=>bindRank(k),70)}if(b.id==="r29Back"&&activeKey)setTimeout(()=>{if(!document.querySelector(".r29-campaign"))stopRank()},100)},true);
+
+  setInterval(retryPending,5000);
+  globalThis.YN_R3616_CAMPAIGN_ENGINE={BUILD,addScore,scoreSecretHarvest,scoreFishingClaim,retryPending,metaFor};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R36.17 — HARD SAVE PRESSURE + DIRECT TRIO SCORE + SECRET INVENTORY
+   2026-09-15
+   - Firestore 1 MiB / index-entry failures are fixed by trimming only stale
+     history ledgers BEFORE the next write; security rules cannot raise those limits.
+   - Secret crop inventory is always normalized and visible in พืชพรรณ.
+   - The three new campaigns score from successful real actions through one
+     per-player document, with a second mirror only for compatibility.
+   ====================================================================== */
+(function YN_R3617_HARD_FIX(){
+  "use strict";
+  const BUILD="S2-R36.17-HARD-SAVE-DIRECT-TRIO-20260915";
+  const KNOWN=new Set(["opor","kongkwan"]);
+  const SECRET={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+  const SECRET_KEYS=Object.keys(SECRET);
+  const cp=x=>{try{return cloneData(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const mk=()=>String(currentMemberKey||"").toLowerCase();
+  const aida=()=>mk()==="aida";
+  const cfg=k=>globalThis.YN_R29?.C?.[k]||null;
+  const name=()=>typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(currentMember||currentMemberKey||"");
+
+  /* --------- SAVE PRESSURE --------- */
+  const TOP_HISTORY=[
+    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
+    "friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks",
+    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","retiredCatsArchiveR34",
+    "giftClaimHistory","claimHistory","eventHistory","activityHistory"
+  ];
+  const NESTED_HISTORY=[
+    "alpaca.friendMushroomClaims","alpaca.eventClaims","alpaca.testSireCooldowns",
+    "alpaca.factory.babyTransfers","alpaca.factory.history"
+  ];
+  function clearPath(o,path,empty){const ps=path.split(".");let x=o;for(let i=0;i<ps.length-1;i++){if(!x||typeof x!=="object")return;x=x[ps[i]]}if(x&&typeof x==="object")x[ps.at(-1)]=empty}
+  function compactPressure(s){
+    if(!s||typeof s!=="object")return s;
+    for(const k of TOP_HISTORY)if(Object.prototype.hasOwnProperty.call(s,k))s[k]=Array.isArray(s[k])?[]:{};
+    for(const p of NESTED_HISTORY)clearPath(s,p,p.endsWith("history")?[]:{});
+    /* Preserve all inventories, animals, plots, foods and active production. */
+    s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+    for(const k of SECRET_KEYS)s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0));
+    s.saveGuardR3617={version:BUILD,trimmedAt:Date.now()};
+    return s;
+  }
+  async function trimCloud(memberKey){
+    const key=String(memberKey||"").toLowerCase();if(!KNOWN.has(key))return false;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",key),sn=await fs.getDoc(ref);if(!sn.exists())return false;
+      const raw=sn.data()||{},del=typeof fs.deleteField==="function"?fs.deleteField():null;
+      const p1={};for(const k of TOP_HISTORY)if(Object.prototype.hasOwnProperty.call(raw,k))p1[k]=del||{};
+      if(Object.keys(p1).length)await fs.updateDoc(ref,p1);
+      const p2={};for(const p of NESTED_HISTORY)p2[p]=del||(p.endsWith("history")?[]:{});
+      try{await fs.updateDoc(ref,p2)}catch(_){ }
+      const after=await fs.getDoc(ref);if(after.exists()){
+        const clean=compactPressure(cp(after.data()||{}));
+        try{await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false})}catch(e){console.warn(BUILD,"compact rewrite",key,e?.message||e)}
+      }
+      return true;
+    }catch(e){console.warn(BUILD,"trimCloud",key,e?.message||e);return false}
+  }
+  /* Every normalized state for the two broken accounts is write-safe. */
+  try{
+    const baseNorm=normalizeState;
+    normalizeState=function(raw,player){const out=baseNorm(raw,player);if(KNOWN.has(mk()))compactPressure(out);for(const k of SECRET_KEYS){out.bag=out.bag||{};out.bag[k]=Math.max(0,Math.floor(Number(out.bag[k])||0))}return out};
+  }catch(e){console.warn(BUILD,"normalize install",e)}
+  /* Repair BEFORE the loader and again after login. */
+  try{
+    const baseInit=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,key){const k=String(key||"").toLowerCase();if(KNOWN.has(k))await trimCloud(k);const r=await baseInit.apply(this,arguments);if(KNOWN.has(k))setTimeout(()=>trimCloud(k),500);return r};
+  }catch(e){console.warn(BUILD,"init install",e)}
+
+  /* --------- DIRECT CAMPAIGN SCORE --------- */
+  function calcSecret(summary){const bd={};let score=0;for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(summary?.[k])||0));if(q){bd[k]=q;score+=q*p}}return{score,bd}}
+  function calcFish(slot){const bd={};let score=0,count=0;for(const c of Array.isArray(slot?.catches)?slot.catches:[]){const k=String(c?.fishKey||"");if(!(k in FISH))continue;bd[k]=(bd[k]||0)+1;score+=FISH[k];count++}return{score,bd,count}}
+  async function add(key,delta,receipt,bd={},eventAt=0){
+    if(aida()||visitContext||!currentMemberKey)return false;
+    const c=cfg(key);if(!c)return false;
+    const t=Number(eventAt)||now(),rec=String(receipt||`${key}:${currentMemberKey}:${t}`);
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),sn=await fs.getDoc(metaRef);
+      if(!sn.exists())return false;const meta=sn.data()||{},start=Number(meta.startedAtMs)||0,end=Number(meta.endAtMs)||0;
+      /* active flag is intentionally NOT trusted here; startedAt/endAt are authoritative. */
+      if(!start||t<start||(end&&t>=end))return false;
+      const ref=fs.doc(db,"campaignTrioScores",`${c.id}__${currentMemberKey}`);let row;
+      await fs.runTransaction(db,async tx=>{
+        const oldSn=await tx.get(ref),raw=oldSn.exists()?oldSn.data()||{}:{},same=Number(raw.runId||0)===start,old=same?raw:{};
+        const rr=same&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        if(rr.includes(rec)){row={...old};return}
+        const out=same&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+        for(const [k,q] of Object.entries(bd||{}))out[k]=(Number(out[k])||0)+Math.max(0,Math.floor(Number(q)||0));
+        row={campaignId:c.id,key,memberKey:String(currentMemberKey),displayName:name(),runId:start,score:(same?Number(old.score)||0:0)+(Number(delta)||0),reachedAtMs:t,breakdown:out,recentReceipts:[...rr,rec].slice(-160)};
+        tx.set(ref,{...row,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      /* Independent mirror; a mirror failure never cancels the real score. */
+      try{await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",String(currentMemberKey)),{memberKey:String(currentMemberKey),displayName:row.displayName,runId:start,score:row.score,reachedAtMs:row.reachedAtMs,breakdown:row.breakdown,updatedAt:fs.serverTimestamp()},{merge:false})}catch(e){console.warn(BUILD,"score mirror",key,e?.message||e)}
+      try{showWeatherToast?.(`🏆 ${c.title} ${Number(delta)>=0?"+":""}${Number(delta)||0} คะแนน`)}catch(_){ }
+      return true;
+    }catch(e){console.warn(BUILD,"DIRECT SCORE FAILED",key,e?.message||e);try{showWeatherToast?.(`⚠️ คะแนน ${cfg(key)?.title||key} บันทึกไม่สำเร็จ: ${String(e?.code||e?.message||e).slice(0,90)}`)}catch(_){ }return false}
+  }
+  function scoreSecret(summary){const x=calcSecret(summary);if(!x.score)return Promise.resolve(false);const st=ownState||state||{},rev=Math.max(0,Number(st.clientSaveRevision)||0);return add("secret",x.score,`r3617:secret:${currentMemberKey}:${rev||Date.now()}:${Object.entries(x.bd).join("|")}`,x.bd)}
+  function scoreFish(slot){const x=calcFish(slot);if(!x.count)return Promise.resolve(false);const stamp=Number(slot?.startAt||slot?.startedAt||slot?.finishAt||0),sl=Number(slot?.slot||slot?.slotNo||0);return add("fishing",x.score,`r3617:fish:${currentMemberKey}:${stamp}:${sl}`,x.bd,Number(slot?.claimedAt)||now())}
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed:add,scoreSecretHarvest:scoreSecret,scoreFishingClaim:scoreFish,recoverActiveCampaignScores:async()=>true,retryPendingCampaignScores:async()=>true};
+  globalThis.V181_campaignScoreLater=async summary=>scoreSecret(summary);
+
+  /* --------- SECRET INVENTORY VISIBILITY --------- */
+  try{
+    const baseInv=inventory;
+    inventory=function(tab="crops"){
+      const r=baseInv.apply(this,arguments);
+      if(tab==="crops")setTimeout(()=>{
+        const grid=document.querySelector(".inventory-panel .inventory-grid,.inventory-grid");if(!grid)return;
+        const st=ownState||state||{};for(const k of SECRET_KEYS){if(grid.querySelector(`[data-r3617-secret='${k}']`))continue;const c=CROPS?.[k];if(!c)continue;const el=document.createElement("div");el.className="inventory-item r3617-secret-crop";el.dataset.r3617Secret=k;el.innerHTML=`<img src="${c.readyImg||c.selectImg||''}" alt=""><span>${c.name||k}</span><b>×${Math.max(0,Math.floor(Number(st?.bag?.[k])||0))}</b>`;grid.appendChild(el)}
+      },0);return r
+    };
+  }catch(e){console.warn(BUILD,"inventory install",e)}
+
+  /* Force an immediate safe cleanup for the account currently logged in. */
+  setTimeout(()=>{if(KNOWN.has(mk()))trimCloud(mk())},1000);
+  globalThis.YN_R3617={BUILD,trimCloud,compactPressure,scoreSecret,scoreFish,add};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
