@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.7-ALL-PLAYER-INDEX-GUARD-20260914">
+  <link rel="stylesheet" href="style.css?v=S2-R36.9-HARD-SAVE-RESCUE-20260914">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.7-ALL-PLAYER-INDEX-GUARD-20260914"></script>
+<script src="game.js?v=S2-R36.9-HARD-SAVE-RESCUE-20260914"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2902,32 +2902,13 @@ function r365WigStockHTML(s,qty=1){
 }
 async function r365ScoreWig(success,receipt){
   if(!success||admin()||visitContext||!cloudReady||!currentMemberKey)return false;
-  const eventAt=now(),campaignId="s2-r36-wool-expert",rec=String(receipt||"");
-  for(let attempt=0;attempt<3;attempt++){
-    try{
-      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",campaignId),scoreRef=fs.doc(db,"campaigns",campaignId,"scores",currentMemberKey);
-      let accepted=false;
-      await fs.runTransaction(db,async tr=>{
-        const [m,sc]=await Promise.all([tr.get(metaRef),tr.get(scoreRef)]);
-        if(!m.exists())return;
-        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
-        if(!meta.active||!started||eventAt<started||(ended&&eventAt>=ended))return;
-        const raw=sc.exists()?sc.data():{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
-        const recent=sameRun&&Array.isArray(old.recentReceipts)?old.recentReceipts:[];
-        if(rec&&recent.includes(rec)){accepted=true;return}
-        const bd={...(sameRun&&old.breakdown&&typeof old.breakdown==="object"?old.breakdown:{})};
-        bd.fancyWig=iv(bd.fancyWig)+success;
-        tr.set(scoreRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:started,score:(Number(old.score)||0)+success*10,reachedAtMs:eventAt,breakdown:bd,recentReceipts:rec?[...recent,rec].slice(-120):recent.slice(-120),updatedAt:fs.serverTimestamp()},{merge:true});
-        accepted=true;
-      });
-      return accepted;
-    }catch(e){
-      if(attempt===2){console.warn("R36.5 wig campaign score",e);try{showWeatherToast?.("⚠️ วิกเข้ากระเป๋าแล้ว แต่คะแนนแคมเปญยังซิงก์ไม่สำเร็จ")}catch(_){};return false}
-      await new Promise(r=>setTimeout(r,250*(attempt+1)));
-    }
-  }
+  try{
+    const api=globalThis.YN_S2_CAMPAIGNS;
+    if(api?.scoreDetailed)return await api.scoreDetailed("wool",success*10,String(receipt||""),{fancyWig:success});
+  }catch(e){console.warn("R36.8 inline wig score bridge",e)}
   return false;
 }
+
 function r365OpenWigCraft(){
   const s=r365EnsureWigState(own()||{});
   const haveWig=iv(s?.alpaca?.inventory?.other?.[R365_WIG_KEY]);
