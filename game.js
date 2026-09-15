@@ -37673,3 +37673,274 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YN_R3617={BUILD,trimCloud,compactPressure,scoreSecret,scoreFish,add};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+
+/* ======================================================================
+   S2 R36.18 — SELF REBUILD SAVE + ACTION-AUTHORITATIVE TRIO SCORE
+   2026-09-15
+   ====================================================================== */
+(function YN_R3618_HARD_RECOVERY(){
+  "use strict";
+  const BUILD="S2-R36.18-SELF-REBUILD-ACTION-SCORE-20260915";
+  const KNOWN=new Set(["opor","kongkwan"]);
+  const SECRET={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+  const LEDGER_TOP=[
+    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
+    "friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks",
+    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","retiredCatsArchiveR34",
+    "giftClaimHistory","claimHistory","eventHistory","activityHistory","friendGrassClaims",
+    "friendFruitClaims","friendFlowerClaims","friendVisitClaims","deliveryReceipts","giftReceipts"
+  ];
+  const LEDGER_NESTED=[
+    "alpaca.friendMushroomClaims","alpaca.eventClaims","alpaca.testSireCooldowns",
+    "alpaca.factory.babyTransfers","alpaca.factory.history"
+  ];
+  const clone=x=>{try{return cloneData(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
+  const size=x=>{try{return new Blob([JSON.stringify(x)]).size}catch(_){return JSON.stringify(x).length}};
+  const lower=x=>String(x||"").toLowerCase();
+  const currentKey=()=>lower(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+  const isAdminAccount=()=>currentKey()==="aida";
+  const cfg=k=>globalThis.YN_R29?.C?.[k]||null;
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  function clearPath(o,path,empty){const a=path.split(".");let x=o;for(let i=0;i<a.length-1;i++){if(!x||typeof x!=="object")return;x=x[a[i]]}if(x&&typeof x==="object"&&Object.prototype.hasOwnProperty.call(x,a[a.length-1]))x[a[a.length-1]]=empty}
+  function compact(raw,deep=false){
+    const s=clone(raw||{});
+    for(const k of LEDGER_TOP)if(Object.prototype.hasOwnProperty.call(s,k))s[k]=Array.isArray(s[k])?[]:{};
+    for(const p of LEDGER_NESTED)clearPath(s,p,p.endsWith("history")?[]:{});
+    if(deep){
+      const rx=/(claim|receipt|history|archive|tombstone|friend.*lock|forage.*lock|eventlog|activitylog)/i;
+      const walk=(o,depth=0)=>{if(!o||typeof o!=="object"||depth>7)return;for(const k of Object.keys(o)){const v=o[k];if((Array.isArray(v)||(v&&typeof v==="object"))&&rx.test(k)){o[k]=Array.isArray(v)?[]:{};continue}walk(v,depth+1)}};walk(s);
+      if(s.friendResourceCooldowns&&typeof s.friendResourceCooldowns==="object")s.friendResourceCooldowns={};
+    }
+    s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+    for(const k of Object.keys(SECRET))s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0));
+    s.saveGuardR3618={version:BUILD,repairedAt:Date.now(),deep:Boolean(deep)};
+    return s;
+  }
+  async function selfRebuild(memberKey){
+    const key=lower(memberKey);if(!KNOWN.has(key))return false;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",key),stage=fs.doc(db,"saveRescueStaging",key);
+    const sn=await fs.getDoc(ref);
+    if(!sn.exists()){
+      const st=await fs.getDoc(stage);if(!st.exists())return false;
+      const json=String(st.data()?.json||"");if(!json)return false;
+      await fs.setDoc(ref,{...JSON.parse(json),updatedAt:fs.serverTimestamp()},{merge:false});
+      try{await fs.deleteDoc(stage)}catch(_){}
+      return true;
+    }
+    const raw=sn.data()||{};
+    let clean=compact(raw,false);
+    if(size(clean)>900*1024)clean=compact(raw,true);
+    const json=JSON.stringify(clean),bytes=new Blob([json]).size;
+    if(bytes>940*1024)throw new Error(`เซฟ ${key} หลังตัดประวัติยังใหญ่ ${bytes.toLocaleString()} bytes`);
+    await fs.setDoc(stage,{memberKey:key,json,bytes,build:BUILD,createdAt:fs.serverTimestamp()},{merge:false});
+    await fs.deleteDoc(ref);
+    try{
+      await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
+      try{await fs.deleteDoc(stage)}catch(_){}
+      return true;
+    }catch(first){
+      const deeper=compact(clean,true);
+      try{
+        await fs.setDoc(ref,{...deeper,updatedAt:fs.serverTimestamp()},{merge:false});
+        try{await fs.deleteDoc(stage)}catch(_){}
+        return true;
+      }catch(second){
+        console.error(BUILD,"recreate failed",key,first,second);
+        throw second;
+      }
+    }
+  }
+
+  /* Known broken saves must be rebuilt, not updateDoc-trimmed: an already-invalid
+     1 MiB/index-entry document can reject the trim write itself. */
+  try{
+    const baseInit=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,key){
+      const k=lower(key);
+      if(KNOWN.has(k))await selfRebuild(k);
+      const out=await baseInit.apply(this,arguments);
+      return out;
+    };
+  }catch(e){console.warn(BUILD,"init wrapper",e)}
+  try{
+    const baseNorm=normalizeState;
+    normalizeState=function(raw,player){
+      const out=baseNorm(raw,player),guess=lower(typeof memberKeyFromName==="function"?memberKeyFromName(player):player);
+      if(KNOWN.has(currentKey())||KNOWN.has(guess)){const c=compact(out,true);Object.keys(out).forEach(k=>delete out[k]);Object.assign(out,c)}
+      out.bag=out.bag&&typeof out.bag==="object"?out.bag:{};for(const k of Object.keys(SECRET))out.bag[k]=Math.max(0,Math.floor(Number(out.bag[k])||0));
+      return out;
+    };
+  }catch(e){console.warn(BUILD,"normalize wrapper",e)}
+
+  async function writeScore(key,delta,receipt,breakdown,eventAt){
+    if(!currentMemberKey||visitContext)return false;
+    const c=cfg(key);if(!c)return false;
+    const t=Number(eventAt)||now();
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),m=await fs.getDoc(metaRef);
+      if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");const meta=m.data()||{},run=Number(meta.startedAtMs)||0,end=Number(meta.endAtMs)||0;
+      if(!run||t<run||(end&&t>=end))throw new Error("อยู่นอกเวลาแคมเปญ");
+      const mk=String(currentMemberKey),ref=fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`),rec=String(receipt||`${key}:${mk}:${t}`);let row;
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(ref),raw=ss.exists()?ss.data()||{}:{},same=Number(raw.runId||0)===run,old=same?raw:{};
+        const recent=same&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        if(recent.includes(rec)){row=old;return}
+        const bd=same&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+        for(const [k,v] of Object.entries(breakdown||{}))bd[k]=(Number(bd[k])||0)+Math.max(0,Math.floor(Number(v)||0));
+        row={campaignId:c.id,key,memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:run,score:(same?Number(old.score)||0:0)+(Number(delta)||0),reachedAtMs:t,breakdown:bd,recentReceipts:[...recent,rec].slice(-120)};
+        tx.set(ref,{...row,updatedAt:fs.serverTimestamp()},{merge:false});
+      });
+      try{await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",mk),{memberKey:mk,displayName:row.displayName,runId:run,score:row.score,reachedAtMs:row.reachedAtMs,breakdown:row.breakdown,updatedAt:fs.serverTimestamp()},{merge:false})}catch(_){}
+      return true;
+    }catch(e){console.warn(BUILD,"score",key,e);try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ไม่เข้า: ${String(e?.code||e?.message||e).slice(0,80)}`)}catch(_){}return false}
+  }
+  function scoreSecret(summary,receipt="") {let d=0,bd={};for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(summary?.[k])||0));if(q){bd[k]=q;d+=q*p}}return d?writeScore("secret",d,receipt||`r3618:secret:${currentMemberKey}:${Date.now()}`,bd,now()):Promise.resolve(false)}
+  function scoreFish(slot,receipt=""){let d=0,n=0,bd={};for(const x of Array.isArray(slot?.catches)?slot.catches:[]){const k=String(x?.fishKey||"");if(!(k in FISH))continue;bd[k]=(bd[k]||0)+1;d+=FISH[k];n++}return n?writeScore("fishing",d,receipt||`r3618:fish:${currentMemberKey}:${Number(slot?.startedAt||slot?.startAt||0)}:${slot?.slot||slot?.slotNo||0}`,bd,Number(slot?.claimedAt)||now()):Promise.resolve(false)}
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed:writeScore,scoreSecretHarvest:scoreSecret,scoreFishingClaim:scoreFish,recoverActiveCampaignScores:async()=>true,retryPendingCampaignScores:async()=>true};
+  globalThis.V181_campaignScoreLater=summary=>scoreSecret(summary,`r3618:bulk:${currentMemberKey}:${Date.now()}`);
+
+  /* Single harvest: verify the item ACTUALLY reached bag. If an older harvest route
+     clears the plot without adding the Secret crop, repair the missing quantity first. */
+  try{
+    const baseHarvest=harvestOwnPlot;
+    harvestOwnPlot=async function(index){
+      const beforeState=ownState||state||{},p=beforeState?.plots?.[Number(index)],crop=String(p?.crop||""),secret=Object.prototype.hasOwnProperty.call(SECRET,crop),qty=p?.angel?10:Math.max(1,Number(CROPS?.[crop]?.yield||1)),before=Math.max(0,Number(beforeState?.bag?.[crop])||0);
+      const ret=await baseHarvest.apply(this,arguments);
+      if(secret&&ret!==false){
+        let st=ownState||state||{},after=Math.max(0,Number(st?.bag?.[crop])||0);
+        if(after<before+qty){
+          const fixed=clone(st);fixed.bag=fixed.bag||{};fixed.bag[crop]=before+qty;fixed.clientSaveRevision=(Number(fixed.clientSaveRevision)||0)+1;ownState=fixed;if(!visitContext)state=fixed;try{saveLocalOnly?.(fixed)}catch(_){};try{await flushCloudSave?.()}catch(e){console.warn(BUILD,"secret bag repair save",e)};st=fixed;after=Number(fixed.bag[crop])||0;
+        }
+        if(after>=before+qty)await scoreSecret({[crop]:qty},`r3618:single:${currentMemberKey}:${Number(index)||0}:${Number(st.clientSaveRevision)||Date.now()}`);
+      }
+      return ret;
+    };
+  }catch(e){console.warn(BUILD,"harvest wrapper",e)}
+
+  /* Fishing: reconcile authoritative claimed slots after any claim button. */
+  let fishBusy=false;
+  async function reconcileFish(){
+    if(fishBusy||!currentMemberKey||visitContext)return;fishBusy=true;
+    try{
+      const c=cfg("fishing"),{db,fs}=await getFirebaseContext(),m=await fs.getDoc(fs.doc(db,"campaigns",c.id));if(!m.exists())return;const start=Number(m.data()?.startedAtMs)||0,end=Number(m.data()?.endAtMs)||0;
+      for(const colName of ["fishingSlots","fishingSlotsV2"]){let snap;try{snap=await fs.getDocs(fs.collection(db,colName))}catch(_){continue}const jobs=[];snap.forEach(d=>{const x=d.data()||{},at=Number(x.claimedAt)||0;if(String(x.ownerKey||"")!==String(currentMemberKey)||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;jobs.push(scoreFish(x,`r3618:${colName}:${d.id}:${at}`))});if(jobs.length)await Promise.allSettled(jobs)}
+    }finally{fishBusy=false}
+  }
+  document.addEventListener("click",e=>{const id=String(e.target?.closest?.("button")?.id||"");if(["claimFishingWeightBtn","ynuClaimFish","r35ClaimSpecialFish"].includes(id)){setTimeout(reconcileFish,600);setTimeout(reconcileFish,1800)}},true);
+
+  /* Inventory: render Secret crops from bag directly in พืชพรรณ every time. */
+  try{
+    const baseInv=inventory;
+    inventory=function(tab="crops"){
+      const r=baseInv.apply(this,arguments);
+      if(tab==="crops")setTimeout(()=>{const grid=document.querySelector(".inventory-panel .inventory-grid");if(!grid)return;const st=ownState||state||{};for(const k of Object.keys(SECRET)){let card=grid.querySelector(`[data-r3618-secret='${k}']`);if(!card){card=document.createElement("div");card.className="inventory-item r3618-secret";card.dataset.r3618Secret=k;grid.appendChild(card)}const c=CROPS?.[k]||{};card.innerHTML=`<img src="${c.readyImg||c.selectImg||''}" alt=""><span>${c.name||k}</span><b>×${Math.max(0,Math.floor(Number(st?.bag?.[k])||0))}</b>`}},20);
+      return r;
+    };
+  }catch(e){console.warn(BUILD,"inventory",e)}
+
+  setTimeout(async()=>{const k=currentKey();if(KNOWN.has(k)){try{const ok=await selfRebuild(k);if(ok)showWeatherToast?.(`🛠️ ซ่อมเซฟ ${k} แล้ว`)}catch(e){console.error(BUILD,"late rescue",e);showWeatherToast?.(`⚠️ ซ่อมเซฟ ${k} ไม่สำเร็จ: ${String(e?.message||e).slice(0,90)}`)}}},1200);
+  globalThis.YN_R3618={BUILD,selfRebuild,reconcileFish,scoreSecret,scoreFish,writeScore};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R36.19 — SECRET SEED HARVEST BAG GUARANTEE
+   2026-09-15
+   Fix only: the 4 Secret Seed crops MUST enter bag on single + tractor harvest.
+   This bypasses the older harvest wrapper chain for these crops and commits the
+   bag increment + cleared plot in the same Firestore transaction.
+   ====================================================================== */
+(function YN_R3619_SECRET_BAG_GUARANTEE(){
+  "use strict";
+  const BUILD="S2-R36.19-SECRET-BAG-GUARANTEE-20260915";
+  const SECRET=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]);
+  const qtyOf=p=>Math.max(1,Math.floor(Number(CROPS?.[p?.crop]?.yield)||1))*(p?.angel?10:1);
+  const activeOwner=()=>ownState||state;
+  const commitLocal=s=>{
+    ownState=normalizeState(s,currentMember);if(!visitContext)state=ownState;
+    try{saveLocalOnly?.(ownState)}catch(_){}
+    try{draw?.()}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+  };
+  async function commitSingle(index){
+    if(visitContext||!currentMemberKey)return false;
+    index=Math.floor(Number(index));
+    const live=activeOwner(), lp=live?.plots?.[index];
+    if(!lp?.crop||!SECRET.has(String(lp.crop)))return null;
+    try{ensurePlotPhaseStandalone?.(lp)}catch(_){try{ensurePlotPhase?.(lp)}catch(__){}}
+    if(lp.phase!=="ready")return false;
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let next=null,cropKey="",qty=0;
+    await fs.runTransaction(db,async tx=>{
+      const ss=await tx.get(saveRef);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(ss.data(),currentMember);s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+      const p=s.plots?.[index];if(!p?.crop||!SECRET.has(String(p.crop)))throw new Error("พืชลับในแปลงเปลี่ยนแล้ว");
+      try{ensurePlotPhaseStandalone?.(p)}catch(_){try{ensurePlotPhase?.(p)}catch(__){}}
+      if(p.phase!=="ready")throw new Error("แปลงนี้ยังไม่พร้อมเก็บ");
+      cropKey=String(p.crop);qty=qtyOf(p);
+      s.bag[cropKey]=Math.max(0,Math.floor(Number(s.bag[cropKey])||0))+qty;
+      s.plots[index]=emptyPlot();
+      try{incrementMissionOn?.(s,"harvestCrops",1)}catch(_){}
+      s.clientSaveRevision=Math.max(0,Number(s.clientSaveRevision)||0)+1;
+      next=s;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    commitLocal(next);
+    const confirmed=Math.max(0,Math.floor(Number(ownState?.bag?.[cropKey])||0));
+    if(!confirmed)throw new Error(`เก็บ ${cropKey} แล้วแต่จำนวนใน bag ยังเป็น 0`);
+    try{await globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.({[cropKey]:qty})}catch(e){console.warn(BUILD,"score single",e)}
+    try{showWeatherToast?.(`🌾 ${CROPS?.[cropKey]?.name||cropKey} ×${qty} เข้ากระเป๋าแล้ว • มี ${confirmed}`)}catch(_){}
+    return true;
+  }
+  const baseHarvest=typeof harvestOwnPlot==="function"?harvestOwnPlot:null;
+  harvestOwnPlot=async function(index){
+    const p=activeOwner()?.plots?.[Math.floor(Number(index))];
+    if(p?.crop&&SECRET.has(String(p.crop))){try{return await commitSingle(index)}catch(e){console.error(BUILD,"single",e);return message?.("เก็บพืชลับไม่ได้",e?.message||String(e))}}
+    return baseHarvest?baseHarvest.apply(this,arguments):false;
+  };
+
+  async function commitBulk(){
+    if(visitContext||!currentMemberKey)return false;
+    const start=Math.max(0,Math.floor(Number(farmPlotPage)||0))*12,end=Math.min(Number(PLOT_COUNT)||48,start+12),live=activeOwner();
+    let hasSecret=false;for(let i=start;i<end;i++){const p=live?.plots?.[i];if(p?.crop&&SECRET.has(String(p.crop))){try{ensurePlotPhaseStandalone?.(p)}catch(_){}if(p.phase==="ready"){hasSecret=true;break}}}
+    if(!hasSecret)return null;
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey);
+    let next=null,summary={},plotsCount=0;
+    await fs.runTransaction(db,async tx=>{
+      const ss=await tx.get(saveRef);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      const s=normalizeState(ss.data(),currentMember);s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+      for(let i=start;i<end;i++){
+        const p=s.plots?.[i];if(!p?.crop)continue;try{ensurePlotPhaseStandalone?.(p)}catch(_){try{ensurePlotPhase?.(p)}catch(__){}}
+        if(p.phase!=="ready")continue;
+        const k=String(p.crop),q=qtyOf(p);
+        s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0))+q;
+        summary[k]=(summary[k]||0)+q;s.plots[i]=emptyPlot();plotsCount++;
+      }
+      if(!plotsCount)throw new Error("หน้านี้ยังไม่มีพืชที่พร้อมเก็บ");
+      try{incrementMissionOn?.(s,"harvestCrops",plotsCount)}catch(_){}
+      s.clientSaveRevision=Math.max(0,Number(s.clientSaveRevision)||0)+1;next=s;
+      tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+      tx.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cloneData(s.plots),updatedAt:fs.serverTimestamp()},{merge:true});
+    });
+    commitLocal(next);
+    const secretSummary={};for(const k of SECRET)if(summary[k])secretSummary[k]=summary[k];
+    if(Object.keys(secretSummary).length)try{await globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.(secretSummary)}catch(e){console.warn(BUILD,"score bulk",e)}
+    try{showWeatherToast?.(`🚜 เก็บเกี่ยว ${plotsCount} แปลงเข้ากระเป๋าแล้ว`)}catch(_){}
+    return true;
+  }
+  const baseBulk=typeof bulkHarvestCurrentPage==="function"?bulkHarvestCurrentPage:null;
+  if(baseBulk)bulkHarvestCurrentPage=async function(){try{const r=await commitBulk();if(r!==null)return r}catch(e){console.error(BUILD,"bulk",e);return message?.("รถไถเก็บไม่ได้",e?.message||String(e))}return baseBulk.apply(this,arguments)};
+  /* Some builds bind the tractor directly to older functions. Capture the button and
+     route it through this guaranteed bulk path whenever a ready Secret crop exists. */
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#tractorBtn");if(!b)return;
+    const start=Math.max(0,Math.floor(Number(farmPlotPage)||0))*12,end=Math.min(Number(PLOT_COUNT)||48,start+12),s=activeOwner();
+    let has=false;for(let i=start;i<end;i++){const p=s?.plots?.[i];if(p?.crop&&SECRET.has(String(p.crop))){try{ensurePlotPhaseStandalone?.(p)}catch(_){}if(p.phase==="ready"){has=true;break}}}
+    if(!has)return;e.preventDefault();e.stopImmediatePropagation();commitBulk().catch(err=>message?.("รถไถเก็บไม่ได้",err?.message||String(err)));
+  },true);
+  globalThis.YN_R3619_SECRET={BUILD,commitSingle,commitBulk};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
