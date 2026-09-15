@@ -26876,7 +26876,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
 
   let unsub=null,timer=null,currentKey='';
-  const R368_AGG_KEYS=new Set(['secret','fishing','wool']); /* R36.13: authoritative aggregate scoreboard path for the three new campaigns */
+  const R368_AGG_KEYS=new Set(); /* R36.10: new campaigns use owner-writable per-player score docs */
   function stopLive(){if(unsub){try{unsub()}catch(_){}unsub=null}if(timer){clearInterval(timer);timer=null}}
   function aggregateRows(data,key){
     const scores=data?.scores&&typeof data.scores==='object'?data.scores:{};
@@ -36187,9 +36187,11 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     if(!delta&&!hasBreakdown)return false;
     const eventAt=Number(forcedEventAt)||now(),rec=String(receipt||"");
     let lastError=null;
-    for(let attempt=0;attempt<6;attempt++){
+    for(let attempt=0;attempt<5;attempt++){
       try{
-        const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),aggRef=fs.doc(db,"campaignScores",c.id);
+        const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
+        /* R36.11: read campaign meta once outside the score transaction. This keeps
+           the owner score write to a single document and avoids rule/read pressure. */
         const m=await fs.getDoc(metaRef);
         if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");
         const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
@@ -36197,49 +36199,51 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
         if(eventAt<started||(ended&&eventAt>=ended))throw new Error("กิจกรรมอยู่นอกเวลาแคมเปญ");
         let accepted=false,nextScore=0,nextBreakdown={};
         await fs.runTransaction(db,async tx=>{
-          const snap=await tx.get(aggRef);let d=snap.exists()?snap.data()||{}:{};
-          if(Number(d.runId||0)!==started){d={campaignId:c.id,runId:started,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{}}}
-          d.scores=d.scores&&typeof d.scores==="object"?{...d.scores}:{};
-          d.names=d.names&&typeof d.names==="object"?{...d.names}:{};
-          d.reachedAtMs=d.reachedAtMs&&typeof d.reachedAtMs==="object"?{...d.reachedAtMs}:{};
-          d.breakdowns=d.breakdowns&&typeof d.breakdowns==="object"?{...d.breakdowns}:{};
-          d.receipts=d.receipts&&typeof d.receipts==="object"?{...d.receipts}:{};
-          const mk=String(currentMemberKey),recent=Array.isArray(d.receipts[mk])?d.receipts[mk].map(String):[];
-          const bd=d.breakdowns[mk]&&typeof d.breakdowns[mk]==="object"?{...d.breakdowns[mk]}:{};
-          if(rec&&recent.includes(rec)){accepted=true;nextScore=Number(d.scores[mk])||0;nextBreakdown=bd;return}
+          const ss=await tx.get(scoreRef);
+          const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
+          const recent=sameRun&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+          const bd=sameRun&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+          if(rec&&recent.includes(rec)){accepted=true;nextScore=Number(old.score)||0;nextBreakdown=bd;return}
           Object.entries(add).forEach(([k,q])=>bd[k]=Math.max(0,Math.floor(Number(bd[k])||0))+q);
-          const oldScore=Number(d.scores[mk])||0;nextScore=oldScore+delta;nextBreakdown=bd;
-          d.scores[mk]=nextScore;
-          d.names[mk]=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember;
-          if(nextScore!==oldScore||!Number(d.reachedAtMs[mk]))d.reachedAtMs[mk]=eventAt;
-          d.breakdowns[mk]=bd;
-          d.receipts[mk]=(rec?[...recent,rec]:recent).slice(-60);
-          tx.set(aggRef,{...d,campaignId:c.id,runId:started,updatedAt:fs.serverTimestamp()},{merge:false});
+          nextScore=(Number(old.score)||0)+delta;nextBreakdown=bd;
+          tx.set(scoreRef,{
+            memberKey:currentMemberKey,
+            displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+            runId:started,
+            score:nextScore,
+            reachedAtMs:eventAt,
+            breakdown:bd,
+            recentReceipts:(rec?[...recent,rec]:recent).slice(-40),
+            updatedAt:fs.serverTimestamp()
+          },{merge:false});
           accepted=true;
         });
         if(accepted){
-          /* Keep the per-player document as a non-authoritative mirror. Rank/rewards use campaignScores. */
+          /* Compatibility mirror. If an older Rank build is still open on another
+             device it can still see the absolute score. Failure here never cancels
+             the authoritative per-player score write. */
           try{
-            const scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
-            await fs.setDoc(scoreRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:started,score:nextScore,reachedAtMs:eventAt,breakdown:nextBreakdown,updatedAt:fs.serverTimestamp()},{merge:true});
-          }catch(e){console.warn("R36.13 score mirror",key,e?.message||e)}
+            const agg=fs.doc(db,"campaignScores",c.id);
+            await fs.setDoc(agg,{campaignId:c.id,runId:started,scores:{[currentMemberKey]:nextScore},names:{[currentMemberKey]:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember},reachedAtMs:{[currentMemberKey]:eventAt},breakdowns:{[currentMemberKey]:nextBreakdown},updatedAt:fs.serverTimestamp()},{merge:true});
+          }catch(e){console.warn("R36.11 score mirror",key,e?.message||e)}
           try{if(delta!==0)showWeatherToast?.(`🏆 ${c.title} ${delta>0?"+":""}${delta} คะแนน`)}catch(_){ }
           return true;
         }
       }catch(e){
-        lastError=e;const msg=String(e?.message||e||"");
+        lastError=e;
+        const msg=String(e?.message||e||"");
         if(/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(msg))break;
-        if(attempt<5)await new Promise(r=>setTimeout(r,260+attempt*360));
+        if(attempt<4)await new Promise(r=>setTimeout(r,220+attempt*300));
       }
     }
-    console.warn("R36.13 aggregate campaign score",key,lastError);
+    console.warn("R36.11 per-player campaign score",key,lastError);
     const failMsg=String(lastError?.message||lastError||"");
     if(rec&&!/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(failMsg))queuePendingCampaign(key,delta,rec,add,eventAt);
-    try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึกตอนนี้ • เก็บคิวไว้แล้ว`)}catch(_){ }
+    try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึกตอนนี้ • ระบบเก็บคิวไว้แล้ว`)}catch(_){ }
     return false;
   }
 
-  async function scoreSecretHarvest(summary,receipt=""){
+  async function scoreSecretHarvest(summary){
     if(!summary||typeof summary!=="object")return false;
     const breakdown={};let delta=0;
     Object.entries(SECRET_POINTS).forEach(([k,pt])=>{
@@ -36249,8 +36253,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     if(!delta)return false;
     const st=ownState||state;
     const revision=Math.max(0,Math.floor(Number(st?.clientSaveRevision)||0));
-    const parts=Object.entries(breakdown).map(([k,q])=>`${k}:${q}`).join("|");
-    const sig=String(receipt||"")||(revision?`rev:${revision}:${parts}`:`time:${Date.now()}:${parts}`);
+    const sig=revision||`${Date.now()}-${Object.entries(breakdown).map(([k,q])=>`${k}:${q}`).join("|")}`;
     return scoreDetailed("secret",delta,`secret:${currentMemberKey}:${sig}`,breakdown);
   }
 
@@ -36262,10 +36265,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
       breakdown[k]=(breakdown[k]||0)+1;delta+=FISH_POINTS[k];found++;
     });
     if(!found)return false;
-    /* Canonical receipt ignores the caller label so the direct claim hook, UI repair
-       and recovery scan all collapse to ONE score event for the same fishing round. */
-    const stamp=Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0),pond=Number(slot?.pondId||0),sl=Number(slot?.slot||slot?.slotNo||0);
-    const rec=`fish:${currentMemberKey}:${stamp}:${pond}:${sl}`;
+    const rec=receipt||`fish:${currentMemberKey}:${Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0)}:${slot?.pondId||0}:${slot?.slot||0}`;
     return scoreDetailed("fishing",delta,rec,breakdown);
   }
 
@@ -36279,21 +36279,18 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     const c=globalThis.YN_R29?.C?.[key];if(!c)return false;
     floorScore=Number(floorScore)||0;
     try{
-      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),aggRef=fs.doc(db,"campaignScores",c.id);let changed=false;
-      const m=await fs.getDoc(metaRef);if(!m.exists())return false;
-      const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0,t=now();if(!started||t<started||(ended&&t>=ended))return false;
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);let changed=false;
       await fs.runTransaction(db,async tx=>{
-        const snap=await tx.get(aggRef);let d=snap.exists()?snap.data()||{}:{};
-        if(Number(d.runId||0)!==started)d={campaignId:c.id,runId:started,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{}};
-        d.scores=d.scores&&typeof d.scores==="object"?{...d.scores}:{};d.names=d.names&&typeof d.names==="object"?{...d.names}:{};d.reachedAtMs=d.reachedAtMs&&typeof d.reachedAtMs==="object"?{...d.reachedAtMs}:{};d.breakdowns=d.breakdowns&&typeof d.breakdowns==="object"?{...d.breakdowns}:{};d.receipts=d.receipts&&typeof d.receipts==="object"?{...d.receipts}:{};
-        const mk=String(currentMemberKey),oldScore=Number(d.scores[mk])||0,bd=d.breakdowns[mk]&&typeof d.breakdowns[mk]==="object"?{...d.breakdowns[mk]}:{};let bdChanged=false;
-        Object.entries(floorBreakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q>Number(bd[k]||0)){bd[k]=q;bdChanged=true}});
+        const [m,ss]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);if(!m.exists())return;
+        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0,t=now();if(!started||t<started||(ended&&t>=ended))return;
+        const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
+        const oldScore=Number(old.score)||0,bd=old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+        let bdChanged=false;Object.entries(floorBreakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q>Number(bd[k]||0)){bd[k]=q;bdChanged=true}});
         const nextScore=Math.max(oldScore,floorScore);if(nextScore===oldScore&&!bdChanged)return;
-        d.scores[mk]=nextScore;d.names[mk]=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember;d.reachedAtMs[mk]=Number(d.reachedAtMs[mk])||t;d.breakdowns[mk]=bd;
-        const recent=Array.isArray(d.receipts[mk])?d.receipts[mk].map(String):[];const rr=`recovery:${tag}:${started}`;d.receipts[mk]=recent.includes(rr)?recent:[...recent,rr].slice(-60);
-        tx.set(aggRef,{...d,campaignId:c.id,runId:started,updatedAt:fs.serverTimestamp()},{merge:false});changed=true;
+        const recent=Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        tx.set(scoreRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:started,score:nextScore,reachedAtMs:Number(old.reachedAtMs)||t,breakdown:bd,recentReceipts:[...recent,`recovery:${tag}:${started}`].slice(-80),recoveredAtMs:t,updatedAt:fs.serverTimestamp()},{merge:false});changed=true;
       });return changed;
-    }catch(e){console.warn("R36.13 recovery floor",key,e);return false}
+    }catch(e){console.warn("R36.10 recovery floor",key,e);return false}
   }
   async function recoverSecretAndWool(){
     if(admin()||!currentMemberKey||visitContext)return;
@@ -36313,19 +36310,8 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
       for(const row of docs){const x=row.data,owner=String(x.ownerKey||"");const claimedAt=Number(x.claimedAt)||0;if(owner!==String(currentMemberKey)||String(x.status||"")!=="claimed"||claimedAt<started||(ended&&claimedAt>=ended))continue;await scoreFishingClaim(x,`recovery:${row.id}:${claimedAt}`)}
     }catch(e){console.warn("R36.10 fishing recovery",e)}
   }
-  async function recoverLegacyPerPlayerScores(){
-    if(admin()||!currentMemberKey||visitContext)return;
-    for(const key of ["secret","fishing","wool"]){
-      try{
-        const c=globalThis.YN_R29?.C?.[key];if(!c)continue;const {db,fs}=await getFirebaseContext();
-        const [m,sc]=await Promise.all([fs.getDoc(fs.doc(db,"campaigns",c.id)),fs.getDoc(fs.doc(db,"campaigns",c.id,"scores",currentMemberKey))]);
-        if(!m.exists()||!sc.exists())continue;const started=Number(m.data()?.startedAtMs)||0,d=sc.data()||{};if(!started||Number(d.runId||0)!==started)continue;
-        await applyRecoveryFloor(key,Number(d.score)||0,d.breakdown&&typeof d.breakdown==="object"?d.breakdown:{},"legacy-score-doc");
-      }catch(e){console.warn("R36.13 legacy score recovery",key,e)}
-    }
-  }
   async function recoverActiveCampaignScores(){
-    try{await recoverLegacyPerPlayerScores();await recoverSecretAndWool();await recoverFishingSlots()}catch(e){console.warn("R36.13 campaign recovery",e)}
+    try{await recoverSecretAndWool();await recoverFishingSlots()}catch(e){console.warn("R36.10 campaign recovery",e)}
   }
 
   const harvestCampaignBase=typeof globalThis.V181_campaignScoreLater==="function"?globalThis.V181_campaignScoreLater:null;
@@ -37082,233 +37068,5 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
     initializeOrLoadCloudState=async function(member,memberKey){const mk=String(memberKey||"");await surgicalCloudTrim(mk);try{return await baseInit.apply(this,arguments)}catch(e){const m=String(e?.message||e||"");if(/maximum allowed size|exceeds the maximum|too many index entries|index entries|resource-exhausted|1,048,576/i.test(m)){await surgicalCloudTrim(mk);return await baseInit.apply(this,arguments)}throw e}};
   }catch(e){console.warn(BUILD,"login wrapper",e)}
   globalThis.YN_R3610_SAVE_RESCUE={BUILD,trimNow:async()=>surgicalCloudTrim(String(globalThis.currentMemberKey||"")),report:()=>{const x=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(globalThis.currentMemberKey||""),bytes:bytes(x),indexUnits:units(x)}}};
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
-})();
-
-/* ======================================================================
-   S2 R36.12 — URGENT SCORE HOOK + QUOTA RESCUE
-   2026-09-15
-   - Directly scores normal single-plot Secret Seed harvests (route was missing).
-   - Reconciles new-fish score after every fishing claim UI route.
-   - Keeps tractor/bulk scoring through V181 adapter, now unblocked by R36.12 rules.
-   - Performs destructive-only-on-history cloud surgery for bloated save documents;
-     inventory / merit / crops / animals / active plots are never deleted here.
-   ====================================================================== */
-(function YN_R3612_URGENT(){
-  "use strict";
-  const BUILD="S2-R36.13-AGG-SCORE-HARD-RESCUE-20260915";
-  const SECRET_KEYS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
-  const FISH_KEYS=new Set(["r35Good1","r35Good2","r35Good3","r35Good4","r35Bad1","r35Bad2","r35Bad3","r35Bad4"]);
-  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
-
-  function secretBag(s){const out={};for(const k of SECRET_KEYS)out[k]=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));return out}
-  function secretDiff(a,b){const out={};for(const k of SECRET_KEYS){const q=Math.max(0,(Number(b?.[k])||0)-(Number(a?.[k])||0));if(q)out[k]=q}return out}
-  function hasAny(o){return Object.values(o||{}).some(v=>Number(v)>0)}
-
-  /* The original normal harvestOwnPlot path never called the campaign adapter.
-     Wrap the final function itself, compare the authoritative bag before/after,
-     then score only the newly-added Secret crops. */
-  try{
-    if(typeof harvestOwnPlot==="function"&&!harvestOwnPlot.__r3612){
-      const base=harvestOwnPlot;
-      const wrapped=async function(index){
-        const before=secretBag((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{});
-        const beforeRev=Number(((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{})?.clientSaveRevision)||0;
-        const ret=await base.apply(this,arguments);
-        try{
-          const after=secretBag((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}),diff=secretDiff(before,after);
-          if(hasAny(diff)&&globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest){
-            /* scoreSecretHarvest derives its receipt from the post-harvest save revision,
-               so duplicate adapters collapse to the same receipt. */
-            await globalThis.YN_S2_CAMPAIGNS.scoreSecretHarvest(diff,`single:${currentMemberKey}:${Number(index)||0}:${Number(((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{})?.clientSaveRevision)||0}`);
-          }
-        }catch(e){console.warn(BUILD,"single Secret harvest score",beforeRev,e)}
-        return ret;
-      };
-      wrapped.__r3612=true;harvestOwnPlot=wrapped;
-    }
-  }catch(e){console.warn(BUILD,"harvest hook install",e)}
-
-  /* Scan only after a fishing-claim action. This avoids constant Firestore reads but
-     makes the score independent of which old/new fishing claim function rendered the UI. */
-  let fishRepairBusy=false;
-  async function reconcileRecentFishing(){
-    if(fishRepairBusy||!globalThis.currentMemberKey||globalThis.visitContext)return;
-    fishRepairBusy=true;
-    try{
-      const api=globalThis.YN_S2_CAMPAIGNS;if(!api?.scoreFishingClaim)return;
-      const {db,fs}=await getFirebaseContext();
-      const member=String(globalThis.currentMemberKey||"");
-      for(const col of ["fishingSlots","fishingSlotsV2"]){
-        let snap;try{snap=await fs.getDocs(fs.collection(db,col))}catch(_){continue}
-        const jobs=[];
-        snap.forEach(d=>{
-          const x=d.data()||{},owner=String(x.ownerKey||""),claimedAt=Number(x.claimedAt)||0;
-          if(owner!==member||String(x.status||"")!=="claimed"||!claimedAt)return;
-          const catches=Array.isArray(x.catches)?x.catches:[];
-          if(!catches.some(c=>FISH_KEYS.has(String(c?.fishKey||""))))return;
-          jobs.push(api.scoreFishingClaim(x,`r3612-fish:${col}:${d.id}:${claimedAt}`));
-        });
-        if(jobs.length)await Promise.allSettled(jobs);
-      }
-    }catch(e){console.warn(BUILD,"fishing reconcile",e)}finally{fishRepairBusy=false}
-  }
-  document.addEventListener("click",e=>{
-    const id=String(e.target?.closest?.("button")?.id||"");
-    if(!["claimFishingWeightBtn","ynuClaimFish","r35ClaimSpecialFish"].includes(id))return;
-    setTimeout(reconcileRecentFishing,700);setTimeout(reconcileRecentFishing,2200);
-  },true);
-  globalThis.YN_R3612_FISH_REPAIR=reconcileRecentFishing;
-
-  /* Also recover when a player opens either new campaign rank.  Existing claimed slots
-     and current Secret inventory are used as a floor, so previously lost events that
-     still have evidence are restored without requiring another item to be spent. */
-  async function recoveryNow(){
-    try{await globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn(BUILD,"campaign recovery",e)}
-    try{await reconcileRecentFishing()}catch(_){ }
-  }
-  setTimeout(recoveryNow,1600);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(recoveryNow,500)},{passive:true});
-
-  /* ---- Save quota/index rescue ----
-     updateDoc(deleteField) changes only historical bookkeeping fields.  This is much
-     smaller than rewriting the whole save and can rescue a near-limit document before
-     the next full-save action. */
-  const HISTORY_TOP=[
-    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
-    "friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks",
-    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","retiredCatsArchiveR34"
-  ];
-  const HISTORY_NESTED=[
-    "alpaca.friendMushroomClaims","alpaca.eventClaims","alpaca.testSireCooldowns",
-    "alpaca.factory.babyTransfers","alpaca.factory.history"
-  ];
-  async function emergencyTrimSave(memberKey){
-    const mk=String(memberKey||globalThis.currentMemberKey||"");if(!mk)return false;
-    try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
-      const raw=snap.data()||{};
-      const bytes=new Blob([JSON.stringify(raw)]).size;
-      const forced=/^(opor|kongkwan)$/i.test(mk);
-      if(!forced&&bytes<600*1024)return false;
-      const del=typeof fs.deleteField==="function"?fs.deleteField():null;
-      if(del){
-        const patch={};for(const k of HISTORY_TOP)if(Object.prototype.hasOwnProperty.call(raw,k))patch[k]=del;
-        for(const k of HISTORY_NESTED)patch[k]=del;
-        patch.saveGuardR3612={version:BUILD,trimmedAt:Date.now(),previousBytes:bytes};
-        if(Object.keys(patch).length)await fs.updateDoc(ref,patch);
-      }else{
-        const patch={};for(const k of HISTORY_TOP)patch[k]={};
-        patch["alpaca.friendMushroomClaims"]={};patch["alpaca.eventClaims"]={};patch["alpaca.testSireCooldowns"]={};patch["alpaca.factory.babyTransfers"]={};patch["alpaca.factory.history"]=[];
-        await fs.updateDoc(ref,patch);
-      }
-      return true;
-    }catch(e){console.warn(BUILD,"emergency save trim",mk,e?.message||e);return false}
-  }
-  globalThis.YN_R3612_SAVE_RESCUE={trim:emergencyTrimSave};
-
-  /* Rescue before login for the two known damaged saves, and for any login that throws
-     a size/index/resource-exhausted error. */
-  try{
-    if(typeof initializeOrLoadCloudState==="function"&&!initializeOrLoadCloudState.__r3612){
-      const baseInit=initializeOrLoadCloudState;
-      const wrapped=async function(member,memberKey){
-        const mk=String(memberKey||"");if(/^(opor|kongkwan)$/i.test(mk))await emergencyTrimSave(mk);
-        try{return await baseInit.apply(this,arguments)}catch(e){
-          const m=String(e?.message||e||"");
-          if(/quota has been exceeded|resource-exhausted|too many index entries|maximum allowed size|1,048,576|exceeded the maximum/i.test(m)){
-            await emergencyTrimSave(mk);return await baseInit.apply(this,arguments)
-          }
-          throw e;
-        }
-      };
-      wrapped.__r3612=true;initializeOrLoadCloudState=wrapped;
-    }
-  }catch(e){console.warn(BUILD,"login rescue install",e)}
-
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
-})();
-
-
-/* ======================================================================
-   S2 R36.13 — AUTHORITATIVE CAMPAIGN SCORE + KNOWN SAVE HARD REBUILD
-   2026-09-15
-   - New campaigns use the already-proven campaignScores aggregate document.
-   - Opor/Kongkwan can self-rescue after auth via staged compact -> delete -> recreate.
-   - Aida also repairs both known damaged saves automatically after admin login.
-   ====================================================================== */
-(function YN_R3613_FINAL_RESCUE(){
-  "use strict";
-  const BUILD="S2-R36.13-AGG-SCORE-HARD-RESCUE-20260915";
-  const KNOWN=new Set(["opor","kongkwan"]);
-  const now=()=>Date.now();
-  const clone=x=>{try{return cloneData(x)}catch(_){return JSON.parse(JSON.stringify(x))}};
-  function clearPath(o,path,empty){const p=path.split(".");let x=o;for(let i=0;i<p.length-1;i++){if(!x||typeof x!=="object")return;x=x[p[i]]}if(x&&typeof x==="object"&&Object.prototype.hasOwnProperty.call(x,p[p.length-1]))x[p[p.length-1]]=empty}
-  function compactKnown(raw){
-    const s=clone(raw||{});
-    const tops=["friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks","r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","retiredCatsArchiveR34","giftClaimHistory","claimHistory","eventHistory","activityHistory"];
-    for(const k of tops)if(Object.prototype.hasOwnProperty.call(s,k))s[k]=Array.isArray(s[k])?[]:{};
-    for(const [p,e] of [["alpaca.friendMushroomClaims",{}],["alpaca.eventClaims",{}],["alpaca.testSireCooldowns",{}],["alpaca.factory.babyTransfers",{}],["alpaca.factory.history",[]]])clearPath(s,p,e);
-    /* Never touch bag / merit / plots / animal collections / alpaca inventory / dishes. */
-    s.saveGuardR3613={version:BUILD,repairedAt:now()};
-    return s;
-  }
-  function byteSize(x){try{return new Blob([JSON.stringify(x)]).size}catch(_){return JSON.stringify(x).length}}
-  async function rebuild(memberKey,{force=false}={}){
-    const mk=String(memberKey||"").toLowerCase();if(!KNOWN.has(mk))return false;
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),stage=fs.doc(db,"saveRescueStaging",mk);
-    let [snap,stageSnap]=await Promise.all([fs.getDoc(ref),fs.getDoc(stage)]);
-    /* If a previous rescue was interrupted after delete, restore from staging BEFORE
-       the normal login loader can create a blank fresh save. */
-    if(!snap.exists()&&stageSnap.exists()){
-      const j=String(stageSnap.data()?.json||"");if(!j)throw new Error(`staging ของ ${mk} ว่าง`);
-      const restored=JSON.parse(j);restored.saveGuardR3613={version:BUILD,repairedAt:now(),restoredFromStage:true,bytesAfter:new Blob([j]).size};
-      await fs.setDoc(ref,{...restored,updatedAt:fs.serverTimestamp()},{merge:false});
-      try{await fs.deleteDoc(stage)}catch(_){ }
-      return true;
-    }
-    if(!snap.exists())return false;
-    const raw=snap.data()||{},already=String(raw?.saveGuardR3613?.version||"")===BUILD;
-    if(already&&!force&&byteSize(raw)<850*1024)return true;
-    const clean=compactKnown(raw),json=JSON.stringify(clean),bytes=new Blob([json]).size;
-    if(bytes>=930*1024)throw new Error(`เซฟ ${mk} หลังตัด history ยังใหญ่ ${bytes.toLocaleString()} bytes — หยุดเพื่อป้องกันของหาย`);
-    await fs.setDoc(stage,{memberKey:mk,build:BUILD,bytes,json,createdAt:fs.serverTimestamp()},{merge:false});
-    await fs.deleteDoc(ref);
-    try{
-      const restored=JSON.parse(json);restored.saveGuardR3613={version:BUILD,repairedAt:now(),previousBytes:byteSize(raw),bytesAfter:bytes};
-      await fs.setDoc(ref,{...restored,updatedAt:fs.serverTimestamp()},{merge:false});
-      try{await fs.deleteDoc(stage)}catch(_){ }
-      console.info(BUILD,"rebuilt",mk,byteSize(raw),"->",bytes);
-      return true;
-    }catch(e){
-      console.error(BUILD,"recreate failed; restoring from staging",mk,e);
-      try{
-        stageSnap=await fs.getDoc(stage);const j=String(stageSnap.data()?.json||json),restored=JSON.parse(j);
-        restored.saveGuardR3613={version:BUILD,repairedAt:now(),restoredAfterFailure:true,bytesAfter:new Blob([j]).size};
-        await fs.setDoc(ref,{...restored,updatedAt:fs.serverTimestamp()},{merge:false});
-        return true;
-      }catch(restoreErr){console.error(BUILD,"STAGING RESTORE FAILED",mk,restoreErr);throw restoreErr}
-    }
-  }
-  async function repairKnownAsAdmin(){
-    if(String(globalThis.currentMember||"")!=="Aida"||globalThis.adminProfile?.role!=="admin")return;
-    const out=[];for(const mk of KNOWN){try{out.push([mk,await rebuild(mk)])}catch(e){out.push([mk,false]);console.warn(BUILD,"admin repair",mk,e)}}
-    try{showWeatherToast?.(`🛠️ Save rescue: ${out.map(([k,v])=>`${k} ${v?"✓":"×"}`).join(" • ")}`)}catch(_){ }
-  }
-  /* This wrapper runs AFTER Firebase Auth succeeds but BEFORE the normal save loader. */
-  try{
-    if(typeof initializeOrLoadCloudState==="function"&&!initializeOrLoadCloudState.__r3613){
-      const base=initializeOrLoadCloudState;
-      const wrapped=async function(member,memberKey){
-        const mk=String(memberKey||"").toLowerCase();
-        if(KNOWN.has(mk)){try{await rebuild(mk)}catch(e){console.warn(BUILD,"owner hard rebuild failed",mk,e?.message||e);throw e}}
-        const result=await base.apply(this,arguments);
-        if(String(member||"")==="Aida")setTimeout(repairKnownAsAdmin,900);
-        return result;
-      };
-      wrapped.__r3613=true;initializeOrLoadCloudState=wrapped;
-    }
-  }catch(e){console.warn(BUILD,"login wrapper",e)}
-  globalThis.YN_R3613_SAVE_RESCUE={rebuild,repairKnownAsAdmin,compactKnown};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
