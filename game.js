@@ -36401,3 +36401,95 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* ======================================================================
+   S2 R36.2 — SHOP > ลุ้น HARD ROUTE FIX
+   2026-09-14
+   - Make the "ลุ้น" destination deterministic instead of relying on DOM injection.
+   - Wig Craft is the first visible card and can be opened directly.
+   - Secret Seeds remains available from the same "ลุ้น" destination.
+   ====================================================================== */
+(function YN_R362_LUCK_HARD_ROUTE(){
+  "use strict";
+  const BUILD="S2-R36.2-LUCK-WIG-HARD-ROUTE-20260914";
+  const $=id=>document.getElementById(id);
+
+  function renderLuckHub(){
+    if(typeof guardResting==="function"&&guardResting())return;
+    const root=$("modalContent");
+    if(!root)return;
+    root.innerHTML=`<section class="feature-panel r35-modal ynu-luck-shop r362-luck-hub">
+      <div class="r35-notice-head"><span class="ynu-luck-icon">🎲</span><div><h2>ร้านค้า • ลุ้น</h2><small>เลือกสิ่งที่ต้องการคราฟได้เลยค่ะ</small></div></div>
+      <div class="r35-modal-scroll ynu-luck-scroll r362-luck-list">
+        <section class="ynu-luck-section ynu-wig-entry r362-wig-first">
+          <div class="ynu-luck-section-head">
+            <img src="alpaca-wig-fancy.png" alt="วิกผมแฟนซีจากขนอัลปาก้า">
+            <div><b>คราฟวิกผมแฟนซีจากขนอัลปาก้า</b><small>ขน 5 สี • สีละ 2 ต่อ 1 ครั้ง • สำเร็จ 30%</small></div>
+          </div>
+          <p>ขาว ×2 • ดำ ×2 • ชมพู ×2 • น้ำตาล ×2 • เขียว ×2<br>เลือกคราฟได้ครั้งละ 1–10 ครั้ง • แต่ละครั้งสุ่มอิสระ ไม่มีการการันตี</p>
+          <button id="r362OpenWig" class="primary-spooky-action" type="button">คราฟวิกผม</button>
+        </section>
+        <section class="ynu-luck-section r362-secret-entry">
+          <div class="ynu-luck-section-head">
+            <img src="secret-seeds.png" alt="Secret Seeds">
+            <div><b>ลุ้น Secret Seeds</b><small>ระบบคราฟ Secret Seeds เดิม</small></div>
+          </div>
+          <p>กดเพื่อเปิดสูตรและลุ้น Secret Seeds ตามระบบเดิมค่ะ</p>
+          <button id="r362OpenSecret" class="secondary-action" type="button">เปิด Secret Seeds</button>
+        </section>
+      </div>
+    </section>`;
+    if(typeof openModal==="function")openModal();
+    const wb=$("r362OpenWig");
+    if(wb)wb.onclick=()=>{
+      if(globalThis.YN_WIG_CRAFT?.open)return globalThis.YN_WIG_CRAFT.open();
+      if(typeof message==="function")message("ระบบคราฟวิกยังโหลดไม่ครบ","กรุณาปิดร้านค้าแล้วเปิดใหม่อีกครั้งค่ะ");
+    };
+    const sb=$("r362OpenSecret");
+    if(sb)sb.onclick=()=>{
+      if(globalThis.YN_R35?.showSecretLuck)return globalThis.YN_R35.showSecretLuck();
+      if(typeof message==="function")message("ระบบ Secret Seeds ยังโหลดไม่ครบ","กรุณาปิดร้านค้าแล้วเปิดใหม่อีกครั้งค่ะ");
+    };
+  }
+
+  function forceLuckButton(){
+    const tabs=document.querySelector(".shop-home-panel .shop-category-tabs,.shop-panel .shop-category-tabs");
+    if(!tabs)return false;
+    let b=tabs.querySelector('[data-r362-luck],#r35LuckShopBtn,[data-shop-tab="r35Luck"]');
+    if(!b){
+      b=document.createElement("button");
+      b.type="button";
+      b.dataset.r362Luck="1";
+      b.textContent="🎲 ลุ้น";
+      tabs.appendChild(b);
+    }
+    b.hidden=false;
+    b.style.removeProperty("display");
+    b.onclick=()=>renderLuckHub();
+    return true;
+  }
+
+  try{
+    const base=showShop;
+    showShop=function(tab){
+      if(tab==="r35Luck"||tab==="luck")return renderLuckHub();
+      const r=base.apply(this,arguments);
+      const paint=()=>forceLuckButton();
+      setTimeout(paint,0);setTimeout(paint,60);setTimeout(paint,180);
+      if(r&&typeof r.finally==="function")r.finally(paint);
+      return r;
+    };
+    if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home");
+    const root=$("modalContent");
+    if(root){
+      new MutationObserver(()=>{
+        if(root.querySelector(".shop-home-panel,.shop-panel"))forceLuckButton();
+      }).observe(root,{childList:true,subtree:true});
+    }
+  }catch(e){console.warn("R36.2 luck hard route",e)}
+
+  globalThis.YN_R362_LUCK={BUILD,open:renderLuckHub,ensureButton:forceLuckButton};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
