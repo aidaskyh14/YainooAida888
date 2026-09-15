@@ -37721,36 +37721,59 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   async function selfRebuild(memberKey){
     const key=lower(memberKey);if(!KNOWN.has(key))return false;
     const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",key),stage=fs.doc(db,"saveRescueStaging",key);
+    const indexUnits=v=>{
+      const seen=new WeakSet();
+      const walk=x=>{if(x==null||typeof x!=="object")return 1;if(seen.has(x))return 0;seen.add(x);if(Array.isArray(x)){let n=Math.max(1,x.length);for(const y of x)n+=walk(y);return n}let n=0;for(const y of Object.values(x))n+=walk(y);return Math.max(1,n)};
+      try{return walk(v)}catch(_){return 999999}
+    };
+    const trimHistory=(raw,hard=false)=>{
+      const s=compact(raw,true),rx=/(claim|receipt|history|archive|tombstone|cooldown|lock|ledger|visited|seen|processed|dedupe|audit|eventlog|activitylog|transfer)/i;
+      const futureOnly=(o,cap=24)=>{const t=Date.now(),rows=Object.entries(o&&typeof o==="object"&&!Array.isArray(o)?o:{}).filter(([,v])=>{const n=Number(v?.expiresAt??v?.until??v?.readyAt??v);return !Number.isFinite(n)||n>t});return Object.fromEntries(rows.slice(-cap))};
+      const walk=(o,depth=0)=>{if(!o||typeof o!=="object"||depth>9)return;if(Array.isArray(o)){for(const x of o)walk(x,depth+1);return}for(const k of Object.keys(o)){const v=o[k];if(!v||typeof v!=="object")continue;if(rx.test(k)){
+          if(/cooldown|lock/i.test(k)&&!Array.isArray(v)){o[k]=futureOnly(v,hard?8:20);continue}
+          if(Array.isArray(v)){o[k]=v.slice(-(hard?1:4));continue}
+          o[k]={};continue
+        }walk(v,depth+1)}};
+      walk(s);
+      if(Array.isArray(s.dishes))s.dishes=[]; /* dishInventory is canonical */
+      if(s.friendResourceCooldowns&&typeof s.friendResourceCooldowns==="object")s.friendResourceCooldowns=futureOnly(s.friendResourceCooldowns,hard?8:24);
+      if(s.notifications&&Array.isArray(s.notifications))s.notifications=s.notifications.slice(-(hard?5:20));
+      s.saveGuardR3622={version:"S2-R36.22-SAVE-CAMPAIGN-REPAIR-20260915",repairedAt:Date.now(),hard:Boolean(hard)};
+      return s;
+    };
     const sn=await fs.getDoc(ref);
     if(!sn.exists()){
       const st=await fs.getDoc(stage);if(!st.exists())return false;
       const json=String(st.data()?.json||"");if(!json)return false;
-      await fs.setDoc(ref,{...JSON.parse(json),updatedAt:fs.serverTimestamp()},{merge:false});
+      const restored=JSON.parse(json);
+      await fs.setDoc(ref,{...restored,updatedAt:fs.serverTimestamp()},{merge:false});
       try{await fs.deleteDoc(stage)}catch(_){}
       return true;
     }
     const raw=sn.data()||{};
-    let clean=compact(raw,false);
-    if(size(clean)>900*1024)clean=compact(raw,true);
-    const json=JSON.stringify(clean),bytes=new Blob([json]).size;
-    if(bytes>940*1024)throw new Error(`เซฟ ${key} หลังตัดประวัติยังใหญ่ ${bytes.toLocaleString()} bytes`);
-    await fs.setDoc(stage,{memberKey:key,json,bytes,build:BUILD,createdAt:fs.serverTimestamp()},{merge:false});
-    await fs.deleteDoc(ref);
+    let clean=trimHistory(raw,false),bytes=size(clean),units=indexUnits(clean);
+    if(bytes>620*1024||units>5500){clean=trimHistory(raw,true);bytes=size(clean);units=indexUnits(clean)}
+    if(bytes>760*1024||units>8000)throw new Error(`เซฟ ${key} ยังใหญ่/มี index มากเกินหลังซ่อม: ${bytes.toLocaleString()} bytes • ~${units.toLocaleString()} entries`);
+    const json=JSON.stringify(clean);
+    /* Keep a compact emergency copy as ONE string field, so staging itself cannot
+       explode Firestore index entries. */
+    await fs.setDoc(stage,{memberKey:key,json,bytes,indexUnits:units,build:"S2-R36.22-SAVE-CAMPAIGN-REPAIR-20260915",createdAt:fs.serverTimestamp()},{merge:false});
     try{
+      /* First try a normal replacement. A smaller final document is usually accepted
+         even when the previous attempted save exceeded the 1 MiB/index limits. */
       await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
-      try{await fs.deleteDoc(stage)}catch(_){}
-      return true;
     }catch(first){
-      const deeper=compact(clean,true);
-      try{
-        await fs.setDoc(ref,{...deeper,updatedAt:fs.serverTimestamp()},{merge:false});
-        try{await fs.deleteDoc(stage)}catch(_){}
-        return true;
-      }catch(second){
-        console.error(BUILD,"recreate failed",key,first,second);
-        throw second;
-      }
+      const msg=String(first?.message||first||"");
+      if(!/maximum allowed size|exceeds the maximum|too many index entries|index entries|resource-exhausted|invalid-argument/i.test(msg))throw first;
+      /* Last-resort atomicity substitute for the two already-damaged accounts only.
+         The compact staging copy remains available if recreation is interrupted. */
+      await fs.deleteDoc(ref);
+      try{await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false})}
+      catch(second){console.error(BUILD,"recreate failed",key,first,second);throw second}
     }
+    try{await fs.deleteDoc(stage)}catch(_){}
+    try{const lk=typeof stateKey==="function"?stateKey():"";if(lk)localStorage.removeItem(lk)}catch(_){}
+    return true;
   }
 
   /* Known broken saves must be rebuilt, not updateDoc-trimmed: an already-invalid
@@ -38120,3 +38143,92 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   console.info(BUILD,"loaded");
 })();
 
+
+
+/* ======================================================================
+   S2 R36.22 — FINAL SAVE + CAMPAIGN TRIO REPAIR
+   2026-09-15
+   - Restores a real retry queue after R36.18 accidentally replaced recovery with no-op.
+   - Uses campaignTrioScores as the single leaderboard source for Secret/Fishing/Wool.
+   - Migrates same-run legacy scores into the trio documents (retroactive recovery).
+   - Rebuilds fishing score from claimed fishing slot documents when possible.
+   - Secret harvest is scored only after R36.19 confirms the crop entered bag.
+   ====================================================================== */
+(function YN_R3622_FINAL_REPAIR(){
+  "use strict";
+  const BUILD="S2-R36.22-SAVE-CAMPAIGN-REPAIR-20260915";
+  const SECRET={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+  const KEYS=new Set(["secret","fishing","wool"]);
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>String(currentMemberKey||"")==="aida"||String(currentMember||"")==="Aida"&&adminProfile?.role==="admin";
+  const cfg=k=>globalThis.YN_R29?.C?.[k]||null;
+  const pendingKey=()=>currentMemberKey?`yn:r3611:campaign-pending:${currentMemberKey}`:"";
+  const readPending=()=>{try{const k=pendingKey();const x=k?JSON.parse(localStorage.getItem(k)||"[]"):[];return Array.isArray(x)?x:[]}catch(_){return[]}};
+  const writePending=a=>{try{const k=pendingKey();if(k)localStorage.setItem(k,JSON.stringify((a||[]).slice(-160)))}catch(_){}};
+  function queue(key,delta,receipt,breakdown,eventAt){if(!KEYS.has(key)||!currentMemberKey||!receipt)return;const a=readPending();if(!a.some(x=>String(x?.receipt||"")===String(receipt)))a.push({key,delta:Number(delta)||0,receipt:String(receipt),breakdown:breakdown&&typeof breakdown==="object"?breakdown:{},eventAt:Number(eventAt)||now()});writePending(a)}
+  async function meta(key){const c=cfg(key);if(!c)return null;const {db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,"campaigns",c.id));return s.exists()?s.data()||{}:null}
+  async function writeScore(key,delta,receipt,breakdown={},eventAt=0,{queueOnFail=true}={}){
+    if(!KEYS.has(key)||!currentMemberKey||visitContext||admin())return false;
+    const c=cfg(key);if(!c)return false;const t=Number(eventAt)||now(),rec=String(receipt||`${key}:${currentMemberKey}:${t}`);
+    try{
+      const {db,fs}=await getFirebaseContext(),m=await fs.getDoc(fs.doc(db,"campaigns",c.id));if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");
+      const md=m.data()||{},run=Number(md.startedAtMs)||0,end=Number(md.endAtMs)||0;if(!run)throw new Error("แคมเปญยังไม่เริ่ม");if(t<run||(end&&t>=end))throw new Error("กิจกรรมอยู่นอกเวลาแคมเปญ");
+      const mk=String(currentMemberKey),ref=fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`);let row=null,duplicate=false;
+      await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(ref),raw=ss.exists()?ss.data()||{}:{},same=Number(raw.runId||0)===run,old=same?raw:{},recent=same&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        if(recent.includes(rec)){row=old;duplicate=true;return}
+        const bd=same&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};for(const [k,v] of Object.entries(breakdown||{})){const q=Math.max(0,Math.floor(Number(v)||0));if(q)bd[k]=(Number(bd[k])||0)+q}
+        const oldScore=same?Number(old.score)||0:0,next=oldScore+(Number(delta)||0);
+        row={campaignId:c.id,key,memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:run,score:next,reachedAtMs:next!==oldScore?t:(Number(old.reachedAtMs)||t),breakdown:bd,recentReceipts:[...recent,rec].slice(-160)};
+        tx.set(ref,{...row,updatedAt:fs.serverTimestamp()},{merge:false});
+      }));
+      /* Compatibility mirror only; leaderboard authority remains campaignTrioScores. */
+      if(row)try{await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",mk),{memberKey:mk,displayName:row.displayName,runId:run,score:Number(row.score)||0,reachedAtMs:Number(row.reachedAtMs)||t,breakdown:row.breakdown||{},updatedAt:fs.serverTimestamp()},{merge:false})}catch(_){}
+      return true;
+    }catch(e){
+      const msg=String(e?.message||e||"");
+      if(queueOnFail&&!/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(msg))queue(key,delta,rec,breakdown,t);
+      console.warn(BUILD,"score",key,msg);return false;
+    }
+  }
+  async function retryPendingCampaignScores(){
+    if(!currentMemberKey||visitContext||admin())return false;const rows=readPending();if(!rows.length)return true;writePending([]);const failed=[];
+    for(const x of rows){const ok=await writeScore(String(x.key||""),Number(x.delta)||0,String(x.receipt||""),x.breakdown||{},Number(x.eventAt)||0,{queueOnFail:false});if(!ok)failed.push(x)}
+    if(failed.length){const cur=readPending(),seen=new Set(cur.map(x=>String(x?.receipt||"")));for(const x of failed)if(!seen.has(String(x?.receipt||"")))cur.push(x);writePending(cur)}return !failed.length;
+  }
+  function scoreSecretHarvest(summary,receipt=""){
+    let d=0,bd={};for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(summary?.[k])||0));if(q){bd[k]=q;d+=q*p}}if(!d)return Promise.resolve(false);
+    const rev=Math.max(0,Math.floor(Number((ownState||state)?.clientSaveRevision)||0)),sig=Object.entries(bd).sort().map(([k,q])=>`${k}:${q}`).join("|");
+    return writeScore("secret",d,receipt||`secret:${currentMemberKey}:${rev?`rev:${rev}`:`t:${Date.now()}`}:${sig}`,bd,now());
+  }
+  function scoreFishingClaim(slot,receipt=""){
+    const bd={};let d=0,n=0;for(const x of Array.isArray(slot?.catches)?slot.catches:[]){const k=String(x?.fishKey||"");if(!(k in FISH))continue;bd[k]=(bd[k]||0)+1;d+=FISH[k];n++}if(!n)return Promise.resolve(false);
+    const stamp=Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0),pond=Number(slot?.pondId||0),sl=Number(slot?.slot||slot?.slotNo||0),rec=receipt||`fish:${currentMemberKey}:${stamp}:${pond}:${sl}`;
+    return writeScore("fishing",d,rec,bd,Number(slot?.claimedAt)||now());
+  }
+  async function mergeFloor(key,floorScore,floorBd={},reachedAt=0,tag="legacy"){
+    const c=cfg(key);if(!c||!currentMemberKey||admin())return false;const md=await meta(key),run=Number(md?.startedAtMs)||0;if(!run)return false;
+    const {db,fs}=await getFirebaseContext(),mk=String(currentMemberKey),ref=fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`),t=Number(reachedAt)||now();let changed=false;
+    await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{const ss=await tx.get(ref),raw=ss.exists()?ss.data()||{}:{},same=Number(raw.runId||0)===run,old=same?raw:{},bd=old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};let b=false;for(const [k,v] of Object.entries(floorBd||{})){const q=Math.max(0,Math.floor(Number(v)||0));if(q>Number(bd[k]||0)){bd[k]=q;b=true}}const oldScore=Number(old.score)||0,next=Math.max(oldScore,Number(floorScore)||0);if(next===oldScore&&!b)return;const rr=Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[],rec=`r3622:${tag}:${run}`;tx.set(ref,{campaignId:c.id,key,memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:run,score:next,reachedAtMs:Number(old.reachedAtMs)||t,breakdown:bd,recentReceipts:rr.includes(rec)?rr:[...rr,rec].slice(-160),updatedAt:fs.serverTimestamp()},{merge:false});changed=true}));return changed;
+  }
+  async function migrateLegacyScores(){
+    if(!currentMemberKey||visitContext||admin())return;const {db,fs}=await getFirebaseContext(),mk=String(currentMemberKey);
+    for(const key of KEYS){const c=cfg(key);if(!c)continue;const md=await meta(key),run=Number(md?.startedAtMs)||0;if(!run)continue;let floor=-Infinity,bd={},reached=0;
+      try{const s=await fs.getDoc(fs.doc(db,"campaigns",c.id,"scores",mk));if(s.exists()){const d=s.data()||{};if(Number(d.runId||0)===run||!d.runId){floor=Math.max(floor,Number(d.score)||0);reached=Number(d.reachedAtMs)||reached;for(const [k,v] of Object.entries(d.breakdown||{}))bd[k]=Math.max(Number(bd[k])||0,Number(v)||0)}}}catch(_){}
+      try{const s=await fs.getDoc(fs.doc(db,"campaignScores",c.id));if(s.exists()){const d=s.data()||{};if(Number(d.runId||0)===run||!d.runId){floor=Math.max(floor,Number(d.scores?.[mk])||0);reached=Number(d.reachedAtMs?.[mk])||reached;for(const [k,v] of Object.entries(d.breakdowns?.[mk]||{}))bd[k]=Math.max(Number(bd[k])||0,Number(v)||0)}}}catch(_){}
+      if(floor!==-Infinity)try{await mergeFloor(key,floor,bd,reached,"legacy-migrate")}catch(e){console.warn(BUILD,"legacy migrate",key,e)}
+    }
+  }
+  async function recoverFishingSlots(){
+    if(!currentMemberKey||visitContext||admin())return;const c=cfg("fishing"),md=await meta("fishing"),start=Number(md?.startedAtMs)||0,end=Number(md?.endAtMs)||0;if(!c||!start)return;const {db,fs}=await getFirebaseContext();
+    for(const colName of ["fishingSlots","fishingSlotsV2"]){let snap;try{snap=await fs.getDocs(fs.collection(db,colName))}catch(_){continue}const jobs=[];snap.forEach(doc=>{const x=doc.data()||{},at=Number(x.claimedAt)||0;if(String(x.ownerKey||"")!==String(currentMemberKey)||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;jobs.push(scoreFishingClaim(x,`r3622:${colName}:${doc.id}:${at}`))});if(jobs.length)await Promise.allSettled(jobs)}
+  }
+  async function recoverActiveCampaignScores(){try{await migrateLegacyScores();await retryPendingCampaignScores();await recoverFishingSlots();return true}catch(e){console.warn(BUILD,"recovery",e);return false}}
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed:writeScore,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,retryPendingCampaignScores,migrateLegacyScores,recoverFishingSlots};
+  /* The bulk Secret harvest adapters call this symbol; keep it bound to the final engine. */
+  globalThis.V181_campaignScoreLater=summary=>scoreSecretHarvest(summary);
+  setTimeout(recoverActiveCampaignScores,900);setTimeout(recoverActiveCampaignScores,3500);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(recoverActiveCampaignScores,300)},{passive:true});
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
