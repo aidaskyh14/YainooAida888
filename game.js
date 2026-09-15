@@ -36494,4 +36494,4 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   console.info(BUILD,"loaded");
 })();
 
-/* S2-R36.4-WIG-INLINE-ROUTE-20260914: wig images embedded; legacy inline luck renderer fixed in index.html. */
+/* S2-R36.5-WIG-INLINE-ROUTE-20260914: wig images embedded; legacy inline luck renderer fixed in index.html. */
