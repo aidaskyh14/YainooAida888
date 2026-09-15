@@ -36495,3 +36495,90 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 })();
 
 /* S2-R36.5-WIG-INLINE-ROUTE-20260914: wig images embedded; legacy inline luck renderer fixed in index.html. */
+
+/* =====================================================================
+   S2 R36.6 — FIRESTORE 1 MiB SAVE RESCUE
+   2026-09-14
+   Purpose: rescue long-lived member saves (notably Kongkwan) that contain
+   bulky historical claim/receipt metadata. Real inventory, animals, crops,
+   currencies and unclaimed drops are never deleted by this rescue.
+   ===================================================================== */
+(function YN_R366_FIRESTORE_SAVE_RESCUE(){
+  "use strict";
+  const BUILD="S2-R36.6-FIRESTORE-SAVE-RESCUE-20260914";
+  const SOFT=700*1024, HARD=900*1024, LAST_CHANCE=980*1024;
+  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+  const ts=v=>Number(v?.resolvedAt??v?.at??v?.createdAt??v?.claimedAt??v?.time??v)||0;
+  function keepNewestMap(v,cap,{maxAgeMs=0}={}){
+    const now=Date.now(),rows=Object.entries(obj(v)).filter(([,x])=>{
+      if(!maxAgeMs)return true;const t=ts(x);return !t||now-t<=maxAgeMs;
+    }).sort((a,b)=>ts(b[1])-ts(a[1]));
+    return Object.fromEntries(rows.slice(0,Math.max(0,cap)));
+  }
+  function pruneRoundClaims(v,keepRounds=96,cap=512){
+    const rows=Object.entries(obj(v));let maxRound=-Infinity;
+    for(const [k] of rows){const m=String(k).match(/:r(\d+)$/);if(m)maxRound=Math.max(maxRound,Number(m[1]))}
+    const kept=rows.filter(([k])=>{const m=String(k).match(/:r(\d+)$/);return !m||!Number.isFinite(maxRound)||Number(m[1])>=maxRound-keepRounds});
+    kept.sort((a,b)=>ts(b[1])-ts(a[1]));
+    return Object.fromEntries(kept.slice(0,cap));
+  }
+  function compactHistory(s,{hard=false,lastChance=false}={}){
+    if(!s||typeof s!=="object")return s;
+    /* These maps are anti-duplicate/history only. UI reads at most 40 mailbox
+       items and 30 broadcasts, so retaining a healthy recent window is enough. */
+    s.friendGiftClaims=keepNewestMap(s.friendGiftClaims,lastChance?48:hard?96:160);
+    s.broadcastGiftClaims=keepNewestMap(s.broadcastGiftClaims,lastChance?48:hard?80:128);
+    if(s.fishingClaimReceipts)s.fishingClaimReceipts=keepNewestMap(s.fishingClaimReceipts,lastChance?64:hard?96:192,{maxAgeMs:3*86400000});
+    if(s.campaignReceipts)s.campaignReceipts=keepNewestMap(s.campaignReceipts,lastChance?48:hard?64:128,{maxAgeMs:14*86400000});
+    if(s.r3465BasementReceipts)s.r3465BasementReceipts=keepNewestMap(s.r3465BasementReceipts,lastChance?12:hard?20:30);
+    if(s.hedgehogShieldReceiptsR3465)s.hedgehogShieldReceiptsR3465=keepNewestMap(s.hedgehogShieldReceiptsR3465,lastChance?8:hard?12:20);
+    if(s.friendResourceClaims)s.friendResourceClaims=pruneRoundClaims(s.friendResourceClaims,lastChance?48:96,lastChance?192:384);
+    if(s.friendForageClaims)s.friendForageClaims=keepNewestMap(s.friendForageClaims,lastChance?64:hard?128:256,{maxAgeMs:7*86400000});
+    if(s.friendCatCooldowns){const now=Date.now();const out={};for(const [k,v] of Object.entries(obj(s.friendCatCooldowns))){const t=Number(v)||0;if(t>now)out[k]=t}s.friendCatCooldowns=out}
+    if(s.r32FriendForageLocks){const now=Date.now();const out={};for(const [k,v] of Object.entries(obj(s.r32FriendForageLocks))){const t=Number(v)||0;if(t>now)out[k]=t}s.r32FriendForageLocks=out}
+    if(s.alpaca&&typeof s.alpaca==="object"){
+      if(s.alpaca.eventClaims)s.alpaca.eventClaims=keepNewestMap(s.alpaca.eventClaims,lastChance?48:hard?96:160,{maxAgeMs:7*86400000});
+      if(s.alpaca.friendMushroomClaims)s.alpaca.friendMushroomClaims=keepNewestMap(s.alpaca.friendMushroomClaims,lastChance?48:hard?96:160,{maxAgeMs:7*86400000});
+      const f=s.alpaca.factory;if(f&&typeof f==="object"){
+        if(Array.isArray(f.history))f.history=f.history.slice(-(lastChance?4:hard?8:16));
+        if(Array.isArray(f.jobs)){const active=f.jobs.filter(j=>j&&j.status!=="claimed"),claimed=f.jobs.filter(j=>j&&j.status==="claimed").slice(-(lastChance?4:hard?8:16));f.jobs=active.concat(claimed)}
+      }
+    }
+    /* Legacy food detail array is already represented by dishInventory. */
+    if(Array.isArray(s.dishes))s.dishes=[];
+    /* Retired-cat archive is audit only; active cats live in s.cats. */
+    if(Array.isArray(s.retiredCatsArchiveR34)){
+      s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s.retiredCatsArchiveR34.length);
+      s.retiredCatsArchiveR34=s.retiredCatsArchiveR34.slice(-(lastChance?8:hard?16:40)).map(c=>c&&typeof c==="object"?{id:String(c.id||""),typeKey:String(c.typeKey||""),customName:String(c.customName||""),archivedBy:String(c.archivedBy||"R34-retired-cat")}:c);
+    }
+    s.saveGuardR366={version:BUILD,lastCompactAt:Date.now(),memberKey:String(globalThis.currentMemberKey||"")};
+    return s;
+  }
+  function rescue(s){
+    if(!s||typeof s!=="object")return s;
+    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s)}catch(_){}
+    let n=bytes(s);
+    if(n>SOFT){compactHistory(s);try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:true})}catch(_){}n=bytes(s)}
+    if(n>HARD){compactHistory(s,{hard:true});try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:true})}catch(_){}n=bytes(s)}
+    if(n>LAST_CHANCE){compactHistory(s,{hard:true,lastChance:true});try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:true})}catch(_){}n=bytes(s)}
+    if(n>HARD)console.warn(BUILD,"save still large after safe-history rescue",n,String(globalThis.currentMemberKey||""));
+    return s;
+  }
+  try{
+    const baseNormalize=normalizeState;
+    normalizeState=function(raw,player){return rescue(baseNormalize(raw,player))};
+  }catch(e){console.warn(BUILD,"normalize wrapper",e)}
+  try{
+    const basePrepare=ynPrepareSaveR3463;
+    ynPrepareSaveR3463=function(s){rescue(s);const out=basePrepare(s);rescue(out?.state||s);return{state:out?.state||s,bytes:bytes(out?.state||s)}};
+  }catch(e){console.warn(BUILD,"prepare wrapper",e)}
+  try{
+    const baseFlush=flushCloudSave;
+    flushCloudSave=async function(){if(ownState)rescue(ownState);return baseFlush.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"flush wrapper",e)}
+  globalThis.YN_R366_SAVE_RESCUE={BUILD,estimate:()=>bytes(ownState||state||{}),report:()=>{const s=ownState||state||{};return{memberKey:String(currentMemberKey||""),total:bytes(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}},compact:()=>{const s=ownState||state;rescue(s);return bytes(s)}};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
