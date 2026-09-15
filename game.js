@@ -36582,3 +36582,149 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R36.7 — ALL PLAYER SAVE / INDEX ENTRY GUARD
+   2026-09-14
+   Prevents two Firestore hard failures on /saves/{memberKey}:
+   1) document > 1 MiB
+   2) too many index entries (notably opor)
+   Real inventory / active animals / crops / currencies / unclaimed drops
+   are never deleted. Only old anti-duplicate receipts, cooldown maps,
+   tombstones and transfer ledgers are bounded.
+   ===================================================================== */
+(function YN_R367_ALL_PLAYER_INDEX_GUARD(){
+  "use strict";
+  const BUILD="S2-R36.7-ALL-PLAYER-INDEX-GUARD-20260914";
+  const DAY=86400000;
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const stamp=v=>{
+    if(typeof v==="number")return Number(v)||0;
+    if(!isObj(v))return 0;
+    return Number(v.resolvedAt??v.transferredAt??v.claimedAt??v.createdAt??v.updatedAt??v.at??v.time??v.expiresAt??0)||0;
+  };
+  function keepMap(v,cap,maxAgeMs=0){
+    const now=Date.now(),rows=Object.entries(isObj(v)?v:{}).filter(([,x])=>{
+      if(!maxAgeMs)return true;const t=stamp(x);return !t||now-t<=maxAgeMs;
+    });
+    rows.sort((a,b)=>stamp(b[1])-stamp(a[1]));
+    return Object.fromEntries(rows.slice(0,Math.max(0,cap)));
+  }
+  function keepFutureMap(v,cap=256){
+    const now=Date.now(),rows=Object.entries(isObj(v)?v:{}).filter(([,x])=>(Number(x)||stamp(x)||0)>now);
+    rows.sort((a,b)=>(Number(b[1])||stamp(b[1])||0)-(Number(a[1])||stamp(a[1])||0));
+    return Object.fromEntries(rows.slice(0,cap));
+  }
+  function keepRoundMap(v,roundWindow=36,cap=192){
+    const rows=Object.entries(isObj(v)?v:{});let max=-Infinity;
+    for(const [k] of rows){const m=String(k).match(/:r(\d+)$/);if(m)max=Math.max(max,Number(m[1]))}
+    const kept=rows.filter(([k])=>{const m=String(k).match(/:r(\d+)$/);return !m||!Number.isFinite(max)||Number(m[1])>=max-roundWindow});
+    kept.sort((a,b)=>stamp(b[1])-stamp(a[1]));
+    return Object.fromEntries(kept.slice(0,cap));
+  }
+  /* Approximate indexed scalar/array leaf pressure. This is intentionally
+     conservative; it is a guard signal, not a Firestore billing counter. */
+  function indexUnits(v,seen=new WeakSet()){
+    if(v==null)return 1;
+    if(typeof v!=="object")return 1;
+    if(seen.has(v))return 0;seen.add(v);
+    if(Array.isArray(v)){
+      let n=Math.max(1,v.length); // array-contains pressure
+      for(const x of v)n+=indexUnits(x,seen);
+      return n;
+    }
+    let n=0;for(const x of Object.values(v))n+=indexUnits(x,seen);return Math.max(1,n);
+  }
+  function pruneSaleTombstones(s,{hard=false}={}){
+    if(!isObj(s?.saleTombstones))return;
+    const cap=hard?96:192,age=(hard?14:30)*DAY;
+    for(const k of ["dogs","cats","alpacas"])s.saleTombstones[k]=keepMap(s.saleTombstones[k],cap,age);
+    /* Keep the local mirror bounded too; otherwise normalize can re-inflate cloud. */
+    try{
+      const key=`yn:r3210:sold:${String(globalThis.currentMemberKey||globalThis.currentMember||"guest")}`;
+      const local=JSON.parse(localStorage.getItem(key)||"{}")||{},out={dogs:{},cats:{},alpacas:{}};
+      for(const k of Object.keys(out))out[k]=keepMap(local[k],cap,age);
+      localStorage.setItem(key,JSON.stringify(out));
+    }catch(_){ }
+  }
+  function pruneTransferLedger(s,{hard=false}={}){
+    const f=s?.alpaca?.factory;if(!isObj(f))return;
+    const cap=hard?128:256,age=(hard?21:45)*DAY;
+    if(isObj(f.babyTransfers))f.babyTransfers=keepMap(f.babyTransfers,cap,age);
+    try{
+      const key=`yn:alpaca:factory-transfer:${String(globalThis.currentMemberKey||globalThis.currentMember||"guest")}`;
+      const local=JSON.parse(localStorage.getItem(key)||"{}")||{};
+      localStorage.setItem(key,JSON.stringify(keepMap(local,cap,age)));
+    }catch(_){ }
+  }
+  function safeHistory(s,{hard=false,lastChance=false}={}){
+    if(!s||typeof s!=="object")return s;
+    const tiny=lastChance,mid=hard;
+    s.friendGiftClaims=keepMap(s.friendGiftClaims,tiny?32:mid?48:64,30*DAY);
+    s.broadcastGiftClaims=keepMap(s.broadcastGiftClaims,tiny?24:mid?36:48,30*DAY);
+    if(s.fishingClaimReceipts)s.fishingClaimReceipts=keepMap(s.fishingClaimReceipts,tiny?32:mid?48:72,3*DAY);
+    if(s.campaignReceipts)s.campaignReceipts=keepMap(s.campaignReceipts,tiny?32:mid?48:72,14*DAY);
+    if(s.r3465BasementReceipts)s.r3465BasementReceipts=keepMap(s.r3465BasementReceipts,tiny?8:mid?12:20,14*DAY);
+    if(s.hedgehogShieldReceiptsR3465)s.hedgehogShieldReceiptsR3465=keepMap(s.hedgehogShieldReceiptsR3465,tiny?6:mid?10:16,14*DAY);
+    if(s.friendResourceClaims)s.friendResourceClaims=keepRoundMap(s.friendResourceClaims,tiny?12:mid?24:36,tiny?64:mid?128:192);
+    if(s.friendForageClaims)s.friendForageClaims=keepMap(s.friendForageClaims,tiny?48:mid?72:96,7*DAY);
+    if(s.friendCatCooldowns)s.friendCatCooldowns=keepFutureMap(s.friendCatCooldowns,tiny?64:128);
+    if(s.r32FriendForageLocks)s.r32FriendForageLocks=keepFutureMap(s.r32FriendForageLocks,tiny?64:128);
+    if(isObj(s.alpaca)){
+      if(s.alpaca.eventClaims)s.alpaca.eventClaims=keepMap(s.alpaca.eventClaims,tiny?32:mid?48:72,7*DAY);
+      if(s.alpaca.friendMushroomClaims)s.alpaca.friendMushroomClaims=keepMap(s.alpaca.friendMushroomClaims,tiny?32:mid?48:72,7*DAY);
+      if(s.alpaca.testSireCooldowns)s.alpaca.testSireCooldowns=keepFutureMap(s.alpaca.testSireCooldowns,tiny?32:64);
+      const fac=s.alpaca.factory;
+      if(isObj(fac)){
+        if(Array.isArray(fac.history))fac.history=fac.history.slice(-(tiny?3:mid?5:8));
+        if(Array.isArray(fac.jobs)){
+          const active=fac.jobs.filter(j=>j&&j.status!=="claimed");
+          const claimed=fac.jobs.filter(j=>j&&j.status==="claimed").slice(-(tiny?3:mid?5:8));
+          fac.jobs=active.concat(claimed);
+        }
+      }
+    }
+    if(Array.isArray(s.dishes))s.dishes=[];
+    if(Array.isArray(s.retiredCatsArchiveR34)){
+      s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s.retiredCatsArchiveR34.length);
+      s.retiredCatsArchiveR34=s.retiredCatsArchiveR34.slice(-(tiny?4:mid?8:12)).map(c=>c&&typeof c==="object"?{id:String(c.id||""),typeKey:String(c.typeKey||""),customName:String(c.customName||""),archivedBy:String(c.archivedBy||"R34-retired-cat")}:c);
+    }
+    pruneSaleTombstones(s,{hard:hard||lastChance});
+    pruneTransferLedger(s,{hard:hard||lastChance});
+    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:hard||lastChance})}catch(_){ }
+    return s;
+  }
+  function guard(s){
+    if(!s||typeof s!=="object")return s;
+    /* Always bound history maps for EVERY account, even when byte size is small.
+       This is what prevents the Opor index-entry failure from returning. */
+    safeHistory(s);
+    let b=bytes(s),u=indexUnits(s);
+    if(b>620*1024||u>9000){safeHistory(s,{hard:true});b=bytes(s);u=indexUnits(s)}
+    if(b>850*1024||u>15000){safeHistory(s,{hard:true,lastChance:true});b=bytes(s);u=indexUnits(s)}
+    s.saveGuardR367={version:BUILD,lastGuardAt:Date.now(),approxBytes:b,approxIndexUnits:u};
+    if(b>900*1024||u>20000)console.warn(BUILD,"save remains heavy after safe guard",{memberKey:String(globalThis.currentMemberKey||""),bytes:b,indexUnits:u});
+    return s;
+  }
+  try{
+    const base=normalizeState;
+    normalizeState=function(raw,player){return guard(base(raw,player))};
+  }catch(e){console.warn(BUILD,"normalize wrapper",e)}
+  try{
+    const base=ynPrepareSaveR3463;
+    ynPrepareSaveR3463=function(s){guard(s);const out=base(s);guard(out?.state||s);return{state:out?.state||s,bytes:bytes(out?.state||s)}};
+  }catch(e){console.warn(BUILD,"prepare wrapper",e)}
+  try{
+    const base=flushCloudSave;
+    flushCloudSave=async function(){if(globalThis.ownState)guard(globalThis.ownState);else if(typeof ownState!=="undefined"&&ownState)guard(ownState);return base.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"flush wrapper",e)}
+  /* Public emergency diagnostics; no inventory is changed by report(). */
+  globalThis.YN_R367_SAVE_GUARD={
+    BUILD,
+    guard:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;return guard(s)},
+    report:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(globalThis.currentMemberKey||""),bytes:bytes(s),indexUnits:indexUnits(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v),indexUnits(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}}
+  };
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
