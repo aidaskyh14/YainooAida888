@@ -4671,19 +4671,38 @@ async function initializeOrLoadCloudState(member,memberKey){
   const {db,fs}=await getFirebaseContext();
   const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
   let [saveSnap,gardenSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef)]);
+  let createdNow=false;
   if(!saveSnap.exists()){
     const initial=fresh(member);
     await fs.setDoc(saveRef,{...cloneData(initial),createdAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:false});
-    saveSnap=await fs.getDoc(saveRef);
+    saveSnap=await fs.getDoc(saveRef);createdNow=true;
   }
-  /* R34.63 rescue: do NOT issue a merge-only session stamp first. An already
-     oversized Firestore document cannot accept that write. Normalize/compact the
-     fetched save in memory, then replace it with the smaller authoritative state. */
-  cloudSessionId="";cloudSessionSuperseded=false;
+
+  /* R36.11 LOGIN RESCUE:
+     Existing member saves are READ first and are no longer force-rewritten during
+     login. A large/index-heavy document used to fail here before the player could
+     even enter the garden. We compact only in memory, reuse the already-authorized
+     session id, and let the normal guarded save path persist the compact state later.
+     New accounts still create their initial save normally. */
+  cloudSessionSuperseded=false;
   let loaded=normalizeState(saveSnap.data(),member);ynPrepareSaveR3463(loaded);
-  cloudSessionId=newCloudSessionId();loaded.activeSessionId=cloudSessionId;
-  await fs.setDoc(saveRef,{...cloneData(loaded),activeSessionId:cloudSessionId,activeSessionAt:fs.serverTimestamp(),clockProbeAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:false});
-  /* R34.12.0: /saves is authoritative for the owner. /gardens is outbound public state only. */
+  const remoteSession=String(saveSnap.data()?.activeSessionId||"");
+  cloudSessionId=remoteSession||newCloudSessionId();
+  loaded.activeSessionId=cloudSessionId;
+
+  if(createdNow){
+    /* Initial account is small, so stamping the first session is safe. */
+    try{await fs.setDoc(saveRef,{activeSessionId:cloudSessionId,activeSessionAt:fs.serverTimestamp(),clockProbeAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true})}catch(error){console.warn("R36.11 first session stamp",error)}
+  }else{
+    /* Never block login on a write. Best-effort tiny stamp only after the player is
+       already loaded; oversized/index-heavy saves may reject it and that is OK. */
+    Promise.resolve().then(async()=>{
+      try{await fs.setDoc(saveRef,{activeSessionId:cloudSessionId,activeSessionAt:fs.serverTimestamp(),clockProbeAt:fs.serverTimestamp()},{merge:true})}
+      catch(error){console.warn("R36.11 deferred session stamp skipped",error?.message||error)}
+    });
+  }
+
+  /* /saves remains authoritative for the owner. */
   ownState=normalizeState(loaded,member);state=ownState;lastGardenHash=plotHash(ownState.plots);lastPublishedMerit=Number(ownState.merit)||0;
   cloudReady=true;
   const localKey=stateKey();if(localKey)localStorage.setItem(localKey,JSON.stringify(ownState));
@@ -4695,8 +4714,12 @@ async function initializeOrLoadCloudState(member,memberKey){
       await Promise.all(writes);
     }catch(error){console.warn("background login publish",error)}
   });
-  syncServerClockAfterLogin(saveRef,fs);
+  /* Clock sync is best-effort; do not require a login write to succeed. */
+  try{syncServerClockAfterLogin(saveRef,fs)}catch(_){}
   setTimeout(()=>{try{subscribeOwnGarden()}catch{}try{startNotificationPolling()}catch{}},0);
+  /* R36.11: recovery must run AFTER the member save is loaded. The older module
+     scheduled recovery during page boot, before currentMemberKey existed. */
+  setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn("R36.11 post-login campaign recovery",e)}try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.()}catch(e){console.warn("R36.11 pending campaign retry",e)}},900);
   return ownState;
 }
 
@@ -36137,31 +36160,52 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     };
   }
 
-  async function scoreDetailed(key,delta,receipt,breakdown={}){
+  /* R36.11: never throw away campaign activity just because Firestore is briefly
+     unavailable. Failed score events are kept locally with their ORIGINAL event time
+     and retried after login / when the page becomes active again. */
+  function pendingCampaignKey(){return currentMemberKey?`yn:r3611:campaign-pending:${currentMemberKey}`:""}
+  function readPendingCampaign(){try{const k=pendingCampaignKey();if(!k)return[];const a=JSON.parse(localStorage.getItem(k)||"[]");return Array.isArray(a)?a:[]}catch(_){return[]}}
+  function writePendingCampaign(rows){try{const k=pendingCampaignKey();if(k)localStorage.setItem(k,JSON.stringify((rows||[]).slice(-120)))}catch(_){}}
+  function queuePendingCampaign(key,delta,receipt,breakdown,eventAt){
+    if(!currentMemberKey||!receipt)return;const rows=readPendingCampaign();
+    if(rows.some(x=>String(x?.receipt||"")===String(receipt)))return;
+    rows.push({key,delta:Number(delta)||0,receipt:String(receipt),breakdown:breakdown&&typeof breakdown==="object"?breakdown:{},eventAt:Number(eventAt)||now()});writePendingCampaign(rows);
+  }
+  async function retryPendingCampaignScores(){
+    if(!currentMemberKey||visitContext||admin())return;const rows=readPendingCampaign();if(!rows.length)return;
+    writePendingCampaign([]);const failed=[];
+    for(const x of rows){try{const ok=await scoreDetailed(String(x.key||""),Number(x.delta)||0,String(x.receipt||""),x.breakdown||{},Number(x.eventAt)||0);if(!ok)failed.push(x)}catch(_){failed.push(x)}}
+    if(failed.length){const nowRows=readPendingCampaign(),seen=new Set(nowRows.map(x=>String(x?.receipt||"")));for(const x of failed)if(!seen.has(String(x.receipt||"")))nowRows.push(x);writePendingCampaign(nowRows)}
+  }
+
+  async function scoreDetailed(key,delta,receipt,breakdown={},forcedEventAt=0){
     const c=globalThis.YN_R29?.C?.[key];
-    if(!c||!cloudReady||!currentMemberKey||visitContext||admin())return false;
+    if(!c||!currentMemberKey||visitContext||admin())return false;
     delta=Number(delta)||0;
     const add={};let hasBreakdown=false;
     Object.entries(breakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q){add[k]=q;hasBreakdown=true}});
     if(!delta&&!hasBreakdown)return false;
-    const eventAt=now(),rec=String(receipt||"");
+    const eventAt=Number(forcedEventAt)||now(),rec=String(receipt||"");
     let lastError=null;
-    for(let attempt=0;attempt<4;attempt++){
+    for(let attempt=0;attempt<5;attempt++){
       try{
         const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
-        let accepted=false,nextScore=0;
+        /* R36.11: read campaign meta once outside the score transaction. This keeps
+           the owner score write to a single document and avoids rule/read pressure. */
+        const m=await fs.getDoc(metaRef);
+        if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");
+        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
+        if(!started)throw new Error("แคมเปญยังไม่เริ่ม");
+        if(eventAt<started||(ended&&eventAt>=ended))throw new Error("กิจกรรมอยู่นอกเวลาแคมเปญ");
+        let accepted=false,nextScore=0,nextBreakdown={};
         await fs.runTransaction(db,async tx=>{
-          const [m,ss]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);
-          if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");
-          const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
-          if(!meta.active||!started)throw new Error("แคมเปญยังไม่เริ่ม");
-          if(eventAt<started||(ended&&eventAt>=ended))throw new Error("กิจกรรมอยู่นอกเวลาแคมเปญ");
+          const ss=await tx.get(scoreRef);
           const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
           const recent=sameRun&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
           const bd=sameRun&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
-          if(rec&&recent.includes(rec)){accepted=true;nextScore=Number(old.score)||0;return}
+          if(rec&&recent.includes(rec)){accepted=true;nextScore=Number(old.score)||0;nextBreakdown=bd;return}
           Object.entries(add).forEach(([k,q])=>bd[k]=Math.max(0,Math.floor(Number(bd[k])||0))+q);
-          nextScore=(Number(old.score)||0)+delta;
+          nextScore=(Number(old.score)||0)+delta;nextBreakdown=bd;
           tx.set(scoreRef,{
             memberKey:currentMemberKey,
             displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
@@ -36169,12 +36213,19 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
             score:nextScore,
             reachedAtMs:eventAt,
             breakdown:bd,
-            recentReceipts:(rec?[...recent,rec]:recent).slice(-80),
+            recentReceipts:(rec?[...recent,rec]:recent).slice(-40),
             updatedAt:fs.serverTimestamp()
           },{merge:false});
           accepted=true;
         });
         if(accepted){
+          /* Compatibility mirror. If an older Rank build is still open on another
+             device it can still see the absolute score. Failure here never cancels
+             the authoritative per-player score write. */
+          try{
+            const agg=fs.doc(db,"campaignScores",c.id);
+            await fs.setDoc(agg,{campaignId:c.id,runId:started,scores:{[currentMemberKey]:nextScore},names:{[currentMemberKey]:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember},reachedAtMs:{[currentMemberKey]:eventAt},breakdowns:{[currentMemberKey]:nextBreakdown},updatedAt:fs.serverTimestamp()},{merge:true});
+          }catch(e){console.warn("R36.11 score mirror",key,e?.message||e)}
           try{if(delta!==0)showWeatherToast?.(`🏆 ${c.title} ${delta>0?"+":""}${delta} คะแนน`)}catch(_){ }
           return true;
         }
@@ -36182,11 +36233,13 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
         lastError=e;
         const msg=String(e?.message||e||"");
         if(/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(msg))break;
-        if(attempt<3)await new Promise(r=>setTimeout(r,180+attempt*260));
+        if(attempt<4)await new Promise(r=>setTimeout(r,220+attempt*300));
       }
     }
-    console.warn("R36.10 per-player campaign score",key,lastError);
-    try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึก • ${lastError?.message||"กรุณาลองใหม่"}`)}catch(_){ }
+    console.warn("R36.11 per-player campaign score",key,lastError);
+    const failMsg=String(lastError?.message||lastError||"");
+    if(rec&&!/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(failMsg))queuePendingCampaign(key,delta,rec,add,eventAt);
+    try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึกตอนนี้ • ระบบเก็บคิวไว้แล้ว`)}catch(_){ }
     return false;
   }
 
@@ -36229,7 +36282,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
       const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);let changed=false;
       await fs.runTransaction(db,async tx=>{
         const [m,ss]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);if(!m.exists())return;
-        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0,t=now();if(!meta.active||!started||t<started||(ended&&t>=ended))return;
+        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0,t=now();if(!started||t<started||(ended&&t>=ended))return;
         const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
         const oldScore=Number(old.score)||0,bd=old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
         let bdChanged=false;Object.entries(floorBreakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q>Number(bd[k]||0)){bd[k]=q;bdChanged=true}});
@@ -36250,7 +36303,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   }
   async function recoverFishingSlots(){
     if(admin()||!currentMemberKey||visitContext)return;
-    const meta=await campaignMetaFor("fishing"),started=Number(meta?.startedAtMs)||0,ended=Number(meta?.endAtMs)||0,t=now();if(!meta?.active||!started||t<started||(ended&&t>=ended))return;
+    const meta=await campaignMetaFor("fishing"),started=Number(meta?.startedAtMs)||0,ended=Number(meta?.endAtMs)||0,t=now();if(!started||t<started||(ended&&t>=ended))return;
     try{
       const {db,fs}=await getFirebaseContext(),docs=[];
       for(const colName of ["fishingSlots","fishingSlotsV2"]){try{const q=await fs.getDocs(fs.collection(db,colName));q.forEach(d=>docs.push({id:`${colName}:${d.id}`,data:d.data()||{}}))}catch(_){}}
@@ -36368,8 +36421,8 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   setTimeout(injectWigInventory,200);
 
   globalThis.YN_WIG_CRAFT={BUILD,key:WIG_KEY,name:WIG_NAME,image:WIG_GOOD_IMG,badImage:WIG_BAD_IMG,open:openWigCraft,craft:craftWig,ensure:ensureWigState};
-  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,applyRecoveryFloor};
-  setTimeout(()=>recoverActiveCampaignScores(),1800);
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,applyRecoveryFloor,retryPendingCampaignScores};
+  setTimeout(()=>{recoverActiveCampaignScores();retryPendingCampaignScores()},1800);
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
