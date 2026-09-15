@@ -37944,3 +37944,97 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YN_R3619_SECRET={BUILD,commitSingle,commitBulk};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
+
+
+/* ======================================================================
+   S2 R36.20 — SECRET CROPS BAG HARD ROUTER
+   2026-09-15
+   - Hard-renders the crops inventory from the real state bag.
+   - Secret crops are first-class crop items, not post-render injected cards.
+   - Rebinds inventory navigation so older inventory wrappers cannot hide them.
+   ====================================================================== */
+(function YN_R3620_SECRET_BAG_HARD_ROUTER(){
+  "use strict";
+  const BUILD="S2-R36.20-SECRET-BAG-HARD-ROUTER-20260915";
+  const SECRET_KEYS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  function stateNow(){
+    return (typeof ownState!=="undefined"&&ownState) || (typeof state!=="undefined"&&state) || {};
+  }
+  function ensureSecretBag(s){
+    if(!s||typeof s!=="object")return s;
+    s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};
+    for(const k of SECRET_KEYS)s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0));
+    return s;
+  }
+  function cropCard(k,c,s){
+    const img=c?.readyImg||c?.growImg||c?.selectImg||c?.seedImg||"";
+    const qty=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));
+    return `<div class="inventory-item r3620-crop-item" data-r3620-crop="${esc(k)}">
+      <img src="${esc(img)}" alt="${esc(c?.name||k)}">
+      <span>${esc(c?.name||k)}</span>
+      <b>×${qty}</b>
+    </div>`;
+  }
+  function renderCropsHard(){
+    if(typeof guardResting==="function"&&guardResting())return;
+    const s=ensureSecretBag(stateNow());
+    const rows=Object.entries(CROPS||{});
+    const secretSet=new Set(SECRET_KEYS);
+    const ordered=[...rows.filter(([k])=>secretSet.has(k)),...rows.filter(([k])=>!secretSet.has(k))];
+    const body=ordered.map(([k,c])=>cropCard(k,c,s)).join("");
+    const root=document.getElementById("modalContent");
+    if(!root)return;
+    root.innerHTML=`<section class="feature-panel inventory-panel r3620-inventory">
+      <h2>🎒 กระเป๋าผี</h2>
+      <div class="inventory-tabs inventory-tabs-v2">
+        <button type="button" data-inventory-tab="crops" class="active">🌱 พืชพรรณ</button>
+        <button type="button" data-inventory-tab="products">🐾 ผลผลิตสัตว์</button>
+        <button type="button" data-inventory-tab="food">🍲 อาหาร</button>
+        <button type="button" data-inventory-tab="specials">🕯️ ของพิเศษ</button>
+      </div>
+      <div class="inventory-grid">${body}</div>
+    </section>`;
+    document.querySelectorAll("[data-inventory-tab]").forEach(b=>{
+      b.onclick=()=>inventory(b.dataset.inventoryTab);
+    });
+    if(typeof openModal==="function")openModal();
+  }
+
+  const previousInventory=typeof inventory==="function"?inventory:null;
+  inventory=function(tab="crops"){
+    if(!tab||tab==="crops")return renderCropsHard();
+    return previousInventory?previousInventory.call(this,tab):undefined;
+  };
+
+  /* Force every common inventory entry route to call the hard router at click time. */
+  function rebind(){
+    const b=document.getElementById("inventoryNavBtn");
+    if(b)b.onclick=()=>inventory("crops");
+  }
+  rebind();
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("#inventoryNavBtn");
+    if(!b)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    inventory("crops");
+  },true);
+  document.addEventListener("pointerup",e=>{
+    const b=e.target?.closest?.("#inventoryNavBtn");
+    if(!b)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    inventory("crops");
+  },true);
+
+  /* Normalize the four keys immediately in memory so a zero quantity is still visible. */
+  try{ensureSecretBag(stateNow())}catch(_){}
+
+  globalThis.YN_R3620_SECRET_BAG={BUILD,renderCropsHard,ensureSecretBag};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
