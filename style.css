@@ -11766,3 +11766,11 @@ body.r50-lock{overflow:hidden!important}
   .ynu-wig-result-card{grid-template-columns:76px minmax(0,1fr)!important}
   .ynu-wig-result-card img{width:76px!important;height:76px!important}
 }
+
+/* S2 R36.1 — ensure Shop > ลุ้น Wig Craft stays visible and mobile-scrollable */
+.r361-force-wig-entry,.ynu-wig-entry{display:block!important;visibility:visible!important;opacity:1!important;min-height:0!important}
+.ynu-luck-shop,.r3519-secret-luck{max-height:min(88vh,760px)!important;overflow:hidden!important}
+.ynu-luck-scroll,.r3519-secret-luck .r35-modal-scroll{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;max-height:min(70vh,620px)!important;padding-bottom:18px!important}
+.ynu-luck-section-head b{font-size:16px!important;line-height:1.28!important}
+.ynu-luck-section-head small,.ynu-wig-entry p{font-size:13px!important;line-height:1.45!important}
+.ynu-wig-entry .primary-spooky-action{font-size:14px!important;min-height:44px!important}

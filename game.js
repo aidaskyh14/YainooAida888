@@ -15893,8 +15893,8 @@ async function V213_syncMameawCampaignFromSave(){
   };
   openOneNumber4Box=async function(qty=1){
     if(!cloudReady)return message("เปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");qty=Math.max(1,Math.floor(Number(qty)||1));const btn=$("openNumber4BoxBtn");if(btn){btn.disabled=true;btn.textContent=`กำลังเปิด ×${qty}...`}
-    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,totalFrog=0,totalFish=0,rareTotals={};
-      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(st);if(!M200_ADMIN()&&Number(st.number4MysteryBoxes)<qty)throw new Error(`กล่องสุ่มหมายเลข4 ไม่พอ เหลือ ${Number(st.number4MysteryBoxes)||0} กล่อง`);for(let i=0;i<qty;i++){const fq=randomNumber4Qty(),fi=randomNumber4Qty();totalFrog+=fq;totalFish+=fi;if(Math.random()<.20){const k=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)],q=[10,20,30][Math.floor(Math.random()*3)];rareTotals[k]=(rareTotals[k]||0)+q}}if(!M200_ADMIN())st.number4MysteryBoxes-=qty;else st.number4MysteryBoxes=ADMIN_STOCK_QTY;incrementMissionOn(st,"openMysteryBox",qty);st.coconutRiverItems.frog4=(Number(st.coconutRiverItems.frog4)||0)+totalFrog;st.coconutRiverItems.fish4=(Number(st.coconutRiverItems.fish4)||0)+totalFish;Object.entries(rareTotals).forEach(([k,q])=>st.coconutRiverItems[k]=(Number(st.coconutRiverItems[k])||0)+q);next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);const rows={[COCONUT_RIVER_ITEMS.frog4.name]:totalFrog,[COCONUT_RIVER_ITEMS.fish4.name]:totalFish};Object.entries(rareTotals).forEach(([k,q])=>rows[COCONUT_RIVER_ITEMS[k].name]=q);message(`🎁 เปิดกล่องหมายเลข4 ${qty} กล่องแล้ว!`,`<div style="max-height:45vh;overflow:auto">${boxRewardSummary(rows)}</div><br>กล่องคงเหลือ ×${Number(ownState.number4MysteryBoxes)||0}`)
+    try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,totalFrog=0,totalFish=0,rareTotals={},bonusTotals={};
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(st);if(!M200_ADMIN()&&Number(st.number4MysteryBoxes)<qty)throw new Error(`กล่องสุ่มหมายเลข4 ไม่พอ เหลือ ${Number(st.number4MysteryBoxes)||0} กล่อง`);for(let i=0;i<qty;i++){const fq=randomNumber4Qty(),fi=randomNumber4Qty();totalFrog+=fq;totalFish+=fi;if(Math.random()<.20){const k=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)],q=[10,20,30][Math.floor(Math.random()*3)];rareTotals[k]=(rareTotals[k]||0)+q}if(Math.random()<.15){const q=1+Math.floor(Math.random()*5),pick=Math.floor(Math.random()*3);st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};if(pick===0){st.specials.r35PumpkinGimmick=(Number(st.specials.r35PumpkinGimmick)||0)+q;bonusTotals["🎃 ฟักทองกิมมิก"]=(bonusTotals["🎃 ฟักทองกิมมิก"]||0)+q}else if(pick===1){st.specials.r35CandyGimmick=(Number(st.specials.r35CandyGimmick)||0)+q;bonusTotals["🍬 แคนดี้กิมมิก"]=(bonusTotals["🍬 แคนดี้กิมมิก"]||0)+q}else{const cs=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]],c=cs[Math.floor(Math.random()*cs.length)]||cs[0];st.alpaca=st.alpaca||{};st.alpaca.inventory=st.alpaca.inventory||{};st.alpaca.inventory.wool=st.alpaca.inventory.wool||{};st.alpaca.inventory.wool[c[0]]=(Number(st.alpaca.inventory.wool[c[0]])||0)+q;bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]=(bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]||0)+q}}}if(!M200_ADMIN())st.number4MysteryBoxes-=qty;else st.number4MysteryBoxes=ADMIN_STOCK_QTY;incrementMissionOn(st,"openMysteryBox",qty);st.coconutRiverItems.frog4=(Number(st.coconutRiverItems.frog4)||0)+totalFrog;st.coconutRiverItems.fish4=(Number(st.coconutRiverItems.fish4)||0)+totalFish;Object.entries(rareTotals).forEach(([k,q])=>st.coconutRiverItems[k]=(Number(st.coconutRiverItems[k])||0)+q);next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);const rows={[COCONUT_RIVER_ITEMS.frog4.name]:totalFrog,[COCONUT_RIVER_ITEMS.fish4.name]:totalFish};Object.entries(rareTotals).forEach(([k,q])=>rows[COCONUT_RIVER_ITEMS[k].name]=q);Object.entries(bonusTotals).forEach(([k,q])=>rows[k]=q);message(`🎁 เปิดกล่องหมายเลข4 ${qty} กล่องแล้ว!`,`<div style="max-height:45vh;overflow:auto">${boxRewardSummary(rows)}</div><br>กล่องคงเหลือ ×${Number(ownState.number4MysteryBoxes)||0}`)
     }catch(e){message("เปิดกล่องไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent="เปิดตามจำนวน"}}
   };
 
@@ -20415,30 +20415,40 @@ console.info("R17 canonical gift save + rainy score writer loaded");
       if(type==="alpacaOther"&&key==="processingLicense")return "alpaca_processing_license.png?v=240";
       if(type==="dogMystery")return DOG_BOX?.image||"";
       if(type==="catMystery")return CAT_BOX?.image||"";
-      if(type==="alpacaWool"&&key==="gold")return "alpaca-wool-gold.png";
+      if(type==="alpacaWool"){
+        const imgs={white:"alpaca-wool-white.png",black:"alpaca-wool-black.png",pink:"alpaca-wool-pink.png",brown:"alpaca-wool-brown.png",green:"alpaca-wool-green.png",gold:"alpaca-wool-gold.png"};
+        return imgs[key]||"alpaca-wool-white.png";
+      }
     }catch{}
     return"";
   }
 
   function rollReward(selections,calledAt){
-    /* R34.73: keep reward odds private; afternoon merit uses a larger amount. */
-    const meritHit=Math.random()<0.30;
+    /* R36.1: lower Honey rewards and seed the new gimmick/wig materials into circulation. */
+    const meritHit=Math.random()<0.20;
     if(meritHit){
       let hour=0;
       try{hour=Number(bangkokPartsFull(new Date(Number(calledAt)||gameNow())).hour)||0}catch(_){hour=Number(bangkokPartsFull().hour)||0}
       const afternoon=hour>=13&&hour<16;
-      const qty=afternoon?randInt(100,150):randInt(50,70);
+      const qty=afternoon?randInt(40,70):randInt(20,40);
       return{type:"merit",key:"merit",name:"กุศล",qty,image:""};
     }
+    const woolColors=[
+      ["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]
+    ];
+    const [woolKey,woolName]=woolColors[Math.floor(Math.random()*woolColors.length)]||woolColors[0];
     const rewards=[
-      {type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:30},
-      {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:30},
-      {type:"fishingBait",key:"bait4",name:"เหยื่อตกปลามือโปร",qty:20},
-      {type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:50},
-      {type:"alpacaOther",key:"processingLicense",name:"ใบอนุญาตแปรรูป",qty:30},
-      {type:"dogMystery",key:"dogBox",name:"กล่องสุ่มหมา",qty:20},
-      {type:"catMystery",key:"catBox",name:"กล่องสุ่มแมว",qty:20},
-      {type:"alpacaWool",key:"gold",name:"ขนอัลปาก้าสีทอง",qty:10}
+      {type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:15},
+      {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:15},
+      {type:"fishingBait",key:"bait4",name:"เหยื่อตกปลามือโปร",qty:10},
+      {type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:20},
+      {type:"alpacaOther",key:"processingLicense",name:"ใบอนุญาตแปรรูป",qty:10},
+      {type:"dogMystery",key:"dogBox",name:"กล่องสุ่มหมา",qty:10},
+      {type:"catMystery",key:"catBox",name:"กล่องสุ่มแมว",qty:10},
+      {type:"alpacaWool",key:"gold",name:"ขนอัลปาก้าสีทอง",qty:5},
+      {type:"special",key:"r35PumpkinGimmick",name:"ฟักทองกิมมิก",qty:10},
+      {type:"special",key:"r35CandyGimmick",name:"แคนดี้กิมมิก",qty:10},
+      {type:"alpacaWool",key:woolKey,name:`ขนอัลปาก้าสี${woolName}`,qty:10}
     ];
     const pick=rewards[Math.floor(Math.random()*rewards.length)]||rewards[0];
     return{...pick,image:rewardImage(pick.type,pick.key)};
@@ -27344,6 +27354,16 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     }
     if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await settlePendingCloudSave?.()}catch(e){console.warn("R32 box purchase save",e)}try{updateMeritUI()}catch(_){}showWeatherToast?.("🎁 ซื้อกล่องเรียบร้อย • เข้ากระเป๋าแล้ว");setTimeout(()=>showShop("mystery"),40);
   }
+  function r361MaybeBoxBonus(s,summary){
+    if(Math.random()>=.15)return;
+    const qty=1+Math.floor(Math.random()*5),pick=Math.floor(Math.random()*3);
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    if(pick===0){s.specials.r35PumpkinGimmick=int(s.specials.r35PumpkinGimmick)+qty;summary["🎃 ฟักทองกิมมิก"]=(summary["🎃 ฟักทองกิมมิก"]||0)+qty;return}
+    if(pick===1){s.specials.r35CandyGimmick=int(s.specials.r35CandyGimmick)+qty;summary["🍬 แคนดี้กิมมิก"]=(summary["🍬 แคนดี้กิมมิก"]||0)+qty;return}
+    const colors=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]],row=colors[Math.floor(Math.random()*colors.length)]||colors[0],key=row[0],name=row[1];
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};s.alpaca.inventory.wool=s.alpaca.inventory.wool&&typeof s.alpaca.inventory.wool==="object"?s.alpaca.inventory.wool:{};
+    s.alpaca.inventory.wool[key]=int(s.alpaca.inventory.wool[key])+qty;summary[`🧶 ขนอัลปาก้าสี${name}`]=(summary[`🧶 ขนอัลปาก้าสี${name}`]||0)+qty;
+  }
   function hamsterJigsawRoll(){const r=Math.random();return r<.05?0:r<.52?1:r<.99?2:3}
   async function openHamsterBoxes(qty){
     const s=ensure31(own()),have=isAdmin()?9999:int(s.specials.r31HamsterBox);qty=Math.max(1,Math.min(int(qty)||1,have));if(qty<1)return;
@@ -27354,6 +27374,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       s.specials.honeyFuelCan=int(s.specials.honeyFuelCan)+fuel;
       summary[`🧩 จิ๊กซอว์ #${idx+1}`]=(summary[`🧩 จิ๊กซอว์ #${idx+1}`]||0)+1;
       summary["⛽ แกลลอนน้ำมันรถน้องน้ำผึ้ง"]=(summary["⛽ แกลลอนน้ำมันรถน้องน้ำผึ้ง"]||0)+fuel;
+      r361MaybeBoxBonus(s,summary);
     }
     if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await settlePendingCloudSave?.()}catch(e){console.warn("R34.1 hamster box save",e)}try{updateMeritUI()}catch(_){}showBoxSummary("🎁 เปิดกล่องแฮมสเตอร์แล้ว",summary);
   }
@@ -27361,7 +27382,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function openPlantBoxes(qty){
     const s=ensure31(own()),have=isAdmin()?9999:int(s.specials.r31PlantBox);qty=Math.max(1,Math.min(int(qty)||1,have));if(qty<1)return;
     if(!isAdmin())s.specials.r31PlantBox-=qty;const cropKeys=Object.keys(CROPS||{}),summary={};
-    for(let i=0;i<qty;i++){const keys=cropKeys.slice().sort(()=>Math.random()-.5).slice(0,Math.min(3,cropKeys.length));keys.forEach(k=>{const q=plantQty();s.bag[k]=int(s.bag[k])+q;summary[CROPS[k]?.name||k]=(summary[CROPS[k]?.name||k]||0)+q})}
+    for(let i=0;i<qty;i++){const keys=cropKeys.slice().sort(()=>Math.random()-.5).slice(0,Math.min(3,cropKeys.length));keys.forEach(k=>{const q=plantQty();s.bag[k]=int(s.bag[k])+q;summary[CROPS[k]?.name||k]=(summary[CROPS[k]?.name||k]||0)+q});r361MaybeBoxBonus(s,summary)}
     if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await settlePendingCloudSave?.()}catch(e){console.warn("R32 plant box save",e)}showBoxSummary("🌱 เปิดกล่องพืชพรรณแล้ว",summary);
   }
   function showBoxSummary(title,summary){$("modalContent").innerHTML=`<section class="feature-panel r31-box-result"><h2>${esc(title)}</h2><div>${Object.entries(summary).map(([k,q])=>`<article><b>${esc(k)}</b><span>×${q}</span></article>`).join("")}</div><button id="r31BoxDone" class="primary-spooky-action">รับทราบ</button></section>`;$("r31BoxDone").onclick=closeModal;openModal()}
@@ -27382,6 +27403,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     else if(roll===6){const merit=30+Math.floor(Math.random()*51);s.merit=(Number(s.merit)||0)+merit;summary["กุศล"]=merit}
     else if(roll===7){const jv2=Object.keys(Y26_JELLY_V2||{});if(jv2.length){const k=jv2[Math.floor(Math.random()*jv2.length)];s.jellyfishV2[k]=int(s.jellyfishV2[k])+1;summary[Y26_JELLY_V2[k]?.name||k]=1}}
     else{s.specials.honeyFuelCan=int(s.specials.honeyFuelCan)+30;summary["น้ำมันรถน้ำผึ้ง"]=30}
+    r361MaybeBoxBonus(s,summary);
     s.r31Daily.newPlayerClaimed=true;if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await flushCloudSave?.()}catch(_){}try{updateMeritUI()}catch(_){}showBoxSummary("🎀 กล่องฟรีประจำวัน",summary);
   }
   function injectR31BoxShop(){
@@ -36275,6 +36297,106 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
   globalThis.YN_WIG_CRAFT={BUILD,key:WIG_KEY,name:WIG_NAME,open:openWigCraft,craft:craftWig,ensure:ensureWigState};
   globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+/* ======================================================================
+   S2 R36.1 — WIG VISIBILITY + REWARD CIRCULATION + SCORING RELIABILITY
+   2026-09-14
+   - Force Wig Craft to appear in Shop > ลุ้น even if an older shop wrapper repaints the modal
+   - Add Pumpkin/Candy gimmicks + 5-color alpaca wool to every active random-box family
+   - Reinforce Secret Seeds harvest scoring after a successful harvest
+   ====================================================================== */
+(function YN_R361_HOTFIX(){
+  "use strict";
+  const BUILD="S2-R36.1-WIG-BOX-HONEY-HOTFIX-20260914";
+  const $=id=>document.getElementById(id);
+  const rand15=()=>1+Math.floor(Math.random()*5);
+  const woolRows=[["white","ขาว","alpaca-wool-white.png"],["black","ดำ","alpaca-wool-black.png"],["pink","ชมพู","alpaca-wool-pink.png"],["brown","น้ำตาล","alpaca-wool-brown.png"],["green","เขียว","alpaca-wool-green.png"]];
+
+  /* ---------- Cat + Dog consolation pools ---------- */
+  try{
+    if(typeof catConsolationPool==="function"){
+      const basePool=catConsolationPool;
+      catConsolationPool=function(){
+        const rows=(basePool()||[]).slice();
+        const add=row=>{if(!rows.some(x=>x?.id===row.id))rows.push(row)};
+        {
+          const row={id:"r361PumpkinGimmick",label:"ฟักทองกิมมิก • สุ่ม ×1–5",image:SPECIAL_ITEMS?.r35PumpkinGimmick?.image||"gimmick-pumpkin.png",apply:s=>{const q=rand15();s.specials=s.specials||{};s.specials.r35PumpkinGimmick=(Number(s.specials.r35PumpkinGimmick)||0)+q;row.label=`ฟักทองกิมมิก ×${q}`;return q}};add(row);
+        }
+        {
+          const row={id:"r361CandyGimmick",label:"แคนดี้กิมมิก • สุ่ม ×1–5",image:SPECIAL_ITEMS?.r35CandyGimmick?.image||"gimmick-candy.png",apply:s=>{const q=rand15();s.specials=s.specials||{};s.specials.r35CandyGimmick=(Number(s.specials.r35CandyGimmick)||0)+q;row.label=`แคนดี้กิมมิก ×${q}`;return q}};add(row);
+        }
+        {
+          const row={id:"r361RandomWool",label:"ขนอัลปาก้าสุ่มสี • สุ่ม ×1–5",image:"alpaca-wool-white.png",apply:s=>{const q=rand15(),w=woolRows[Math.floor(Math.random()*woolRows.length)]||woolRows[0];s.alpaca=s.alpaca||{};s.alpaca.inventory=s.alpaca.inventory||{};s.alpaca.inventory.wool=s.alpaca.inventory.wool||{};s.alpaca.inventory.wool[w[0]]=(Number(s.alpaca.inventory.wool[w[0]])||0)+q;row.label=`ขนอัลปาก้าสี${w[1]} ×${q}`;row.image=w[2];return q}};add(row);
+        }
+        return rows;
+      };
+    }
+  }catch(e){console.warn("R36.1 box consolation patch",e)}
+
+  /* ---------- Jellyfish mystery box: keep 30% jelly; expand consolation pool ---------- */
+  try{
+    if(typeof rollMysteryBoxRewardOnState==="function"){
+      rollMysteryBoxRewardOnState=function(s){
+        if(Math.random()<.30){
+          const keys=Object.keys(JELLYFISH_TYPES||{}),key=keys[Math.floor(Math.random()*keys.length)],j=JELLYFISH_TYPES[key];
+          if(j){s.specialAnimals=s.specialAnimals||{};s.specialAnimals[key]=(Number(s.specialAnimals[key])||0)+1;return `🪼 ${j.name} ×1`}
+        }
+        const roll=Math.floor(Math.random()*8);
+        if(roll===0){const r=RECIPES[Math.floor(Math.random()*RECIPES.length)];addDishToState(s,r.id,2);return `🍲 ${r.name} ×2`}
+        if(roll===1){s.specials=s.specials||{};s.specials.bambooLeaf=(Number(s.specials.bambooLeaf)||0)+5;return "🎋 ใบไผ่ ×5"}
+        if(roll===2){s.bag=s.bag||{};s.bag.hauntedPlankton=(Number(s.bag.hauntedPlankton)||0)+2;return "🫧 แพลงก์ตอนหลอนปิ๊ ×2"}
+        if(roll===3){s.merit=(Number(s.merit)||0)+5;return "🙏 กุศล +5"}
+        if(roll===4){s.specials=s.specials||{};s.specials.jellyfishLaxative=(Number(s.specials.jellyfishLaxative)||0)+1;return "🧪 ยาถ่ายแมงกะพรุน ×1"}
+        if(roll===5){const q=rand15();s.specials=s.specials||{};s.specials.r35PumpkinGimmick=(Number(s.specials.r35PumpkinGimmick)||0)+q;return `🎃 ฟักทองกิมมิก ×${q}`}
+        if(roll===6){const q=rand15();s.specials=s.specials||{};s.specials.r35CandyGimmick=(Number(s.specials.r35CandyGimmick)||0)+q;return `🍬 แคนดี้กิมมิก ×${q}`}
+        const q=rand15(),w=woolRows[Math.floor(Math.random()*woolRows.length)]||woolRows[0];s.alpaca=s.alpaca||{};s.alpaca.inventory=s.alpaca.inventory||{};s.alpaca.inventory.wool=s.alpaca.inventory.wool||{};s.alpaca.inventory.wool[w[0]]=(Number(s.alpaca.inventory.wool[w[0]])||0)+q;return `🧶 ขนอัลปาก้าสี${w[1]} ×${q}`;
+      };
+    }
+  }catch(e){console.warn("R36.1 jelly box patch",e)}
+
+  /* ---------- Wig Craft must visibly exist in Shop > ลุ้น ---------- */
+  function injectWigLuckEntry(){
+    const root=$("modalContent");if(!root)return false;
+    const luck=root.querySelector(".r3519-secret-luck,.ynu-luck-shop,.r35-secret-craft");if(!luck)return false;
+    let entry=root.querySelector(".ynu-wig-entry");
+    if(!entry){
+      const host=luck.querySelector(".ynu-luck-scroll,.r35-modal-scroll")||luck;
+      host.insertAdjacentHTML("beforeend",`<section class="ynu-luck-section ynu-wig-entry r361-force-wig-entry"><div class="ynu-luck-section-head"><img src="alpaca-wig-fancy.png" alt="วิกผมแฟนซีจากขนอัลปาก้า"><div><b>คราฟวิกผมแฟนซีจากขนอัลปาก้า</b><small>ใช้ขน ขาว • ดำ • ชมพู • น้ำตาล • เขียว สีละ 2 ต่อ 1 ครั้ง</small></div></div><p>คราฟได้ครั้งละ 1–10 • สำเร็จ 30% ต่อครั้งแบบสุ่มอิสระ • ไม่มีการการันตี</p><button id="ynuOpenWigCraft" class="primary-spooky-action" type="button">เปิดระบบคราฟวิกผม</button></section>`);
+      entry=root.querySelector(".ynu-wig-entry");
+    }
+    if(entry){entry.hidden=false;entry.style.removeProperty("display");entry.style.removeProperty("visibility");entry.style.removeProperty("opacity")}
+    const btn=$("ynuOpenWigCraft");if(btn)btn.onclick=()=>globalThis.YN_WIG_CRAFT?.open?.();
+    return Boolean(entry);
+  }
+  const queueWigEntry=()=>{requestAnimationFrame(()=>{injectWigLuckEntry();setTimeout(injectWigLuckEntry,80);setTimeout(injectWigLuckEntry,260)})};
+  try{
+    if(globalThis.YN_R35?.showSecretLuck){const base=globalThis.YN_R35.showSecretLuck;globalThis.YN_R35.showSecretLuck=function(){const r=base.apply(this,arguments);queueWigEntry();return r}}
+    if(typeof showShop==="function"){
+      const baseShop=showShop;showShop=function(tab){const r=baseShop.apply(this,arguments);if(tab==="r35Luck")queueWigEntry();else setTimeout(()=>globalThis.YN_R35?.injectR35LuckShopButton?.(),0);return r};
+    }
+    const root=$("modalContent");if(root){new MutationObserver(()=>{if(root.querySelector(".r3519-secret-luck,.ynu-luck-shop,.r35-secret-craft"))queueWigEntry()}).observe(root,{childList:true,subtree:true})}
+  }catch(e){console.warn("R36.1 wig shop visibility",e)}
+
+  /* ---------- Secret Seeds: direct successful-harvest safety hook ---------- */
+  try{
+    if(typeof harvestOwnPlot==="function"){
+      const baseHarvest=harvestOwnPlot;
+      harvestOwnPlot=async function(index){
+        const before=ownState||state,p=before?.plots?.[Number(index)],crop=String(p?.crop||""),qty=p?.angel?10:1;
+        const secret=/^r35(?:Candy|Spider|Cat|Bee)Crop$/.test(crop);
+        const result=await baseHarvest.apply(this,arguments);
+        if(result!==false&&secret){
+          try{await globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.({[crop]:qty})}catch(e){console.warn("R36.1 direct secret harvest scorer",e)}
+        }
+        return result;
+      };
+    }
+  }catch(e){console.warn("R36.1 harvest hook",e)}
+
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
