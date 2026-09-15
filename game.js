@@ -38038,3 +38038,85 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   console.info(BUILD,"loaded");
 })();
 
+
+
+/* ======================================================================
+   S2 R36.21 — SECRET CROPS VISIBLE IN REAL BAG UI
+   2026-09-15
+   Preserve the current bag tabs/layout and inject the 4 Secret Seed crops
+   into the ACTUAL visible crop grid, regardless of which legacy inventory
+   renderer opened the modal.
+   ====================================================================== */
+(function YN_R3621_SECRET_VISIBLE_REAL_BAG(){
+  "use strict";
+  const BUILD="S2-R36.21-SECRET-VISIBLE-REAL-BAG-20260915";
+  const SECRET=[
+    ["r35CandyCrop","ลูกกวาดประสาทแดร๊ก"],
+    ["r35SpiderCrop","แมงมุมขยุ้มเม็ด"],
+    ["r35CatCrop","แมวเหมียว เสวปิ๊"],
+    ["r35BeeCrop","บีเหินบนโต๊ะน้ำชา"]
+  ];
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  function stateNow(){return (typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}}
+  function ensureBag(){const s=stateNow();s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};for(const [k] of SECRET)s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0));return s}
+  function card(k,fallback,s){
+    const c=(typeof CROPS!=="undefined"&&CROPS?.[k])||{};
+    const img=c.readyImg||c.growImg||c.selectImg||c.seedImg||"";
+    const name=c.name||fallback;
+    const qty=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));
+    const el=document.createElement("div");
+    el.className="inventory-item r3621-secret-crop";
+    el.dataset.r3621Secret=k;
+    el.innerHTML=`${img?`<img src="${esc(img)}" alt="${esc(name)}">`:""}<span>${esc(name)}</span><b>×${qty}</b>`;
+    return el;
+  }
+  function looksLikeCropGrid(grid){
+    if(!grid)return false;
+    const txt=String(grid.textContent||"");
+    return /ผัก|มะม่วง|ฟักทอง|กล้วย|ข้าวโพด|แพลงก์ตอน|เมล่อน|แครอท|เห็ด/.test(txt);
+  }
+  function inject(){
+    const s=ensureBag();
+    const grids=[...document.querySelectorAll(".inventory-panel .inventory-grid,.inventory-grid")];
+    const grid=grids.find(looksLikeCropGrid);
+    if(!grid)return false;
+    /* Avoid inserting into alpaca/ostrich/special tabs. */
+    for(const [k,fallback] of [...SECRET].reverse()){
+      let el=grid.querySelector(`[data-r3621-secret="${k}"]`);
+      if(!el){el=card(k,fallback,s);grid.prepend(el)}
+      else {
+        const b=el.querySelector("b");
+        if(b)b.textContent=`×${Math.max(0,Math.floor(Number(s?.bag?.[k])||0))}`;
+      }
+    }
+    return true;
+  }
+
+  /* Do not replace the user's real inventory renderer anymore. Wrap it and
+     decorate the final DOM instead. */
+  if(typeof inventory==="function"){
+    const base=inventory;
+    inventory=function(){
+      const r=base.apply(this,arguments);
+      setTimeout(inject,0);setTimeout(inject,80);setTimeout(inject,250);
+      return r;
+    };
+  }
+
+  const mo=new MutationObserver(()=>{try{inject()}catch(_){}});
+  mo.observe(document.documentElement,{subtree:true,childList:true});
+
+  document.addEventListener("click",e=>{
+    if(e.target?.closest?.("#inventoryNavBtn,[data-inventory-tab]")){
+      setTimeout(inject,20);setTimeout(inject,150);
+    }
+  },true);
+
+  setInterval(()=>{try{inject()}catch(_){}},800);
+
+  globalThis.YN_R3621_SECRET_VISIBLE={BUILD,inject};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
