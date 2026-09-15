@@ -26853,7 +26853,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
 
   let unsub=null,timer=null,currentKey='';
-  const R368_AGG_KEYS=new Set(['secret','fishing','wool']);
+  const R368_AGG_KEYS=new Set(); /* R36.10: new campaigns use owner-writable per-player score docs */
   function stopLive(){if(unsub){try{unsub()}catch(_){}unsub=null}if(timer){clearInterval(timer);timer=null}}
   function aggregateRows(data,key){
     const scores=data?.scores&&typeof data.scores==='object'?data.scores:{};
@@ -36145,41 +36145,49 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     Object.entries(breakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q){add[k]=q;hasBreakdown=true}});
     if(!delta&&!hasBreakdown)return false;
     const eventAt=now(),rec=String(receipt||"");
-    try{
-      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),aggRef=fs.doc(db,"campaignScores",c.id),mirrorRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
-      let accepted=false,mirror=null;
-      await fs.runTransaction(db,async tx=>{
-        const [m,a]=await Promise.all([tx.get(metaRef),tx.get(aggRef)]);
-        if(!m.exists())return;
-        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
-        if(!meta.active||!started||eventAt<started||(ended&&eventAt>=ended))return;
-        const raw=a.exists()?a.data()||{}:{},sameRun=Number(raw.runId||0)===started;
-        const scores=sameRun&&raw.scores&&typeof raw.scores==="object"?{...raw.scores}:{};
-        const names=sameRun&&raw.names&&typeof raw.names==="object"?{...raw.names}:{};
-        const reached=sameRun&&raw.reachedAtMs&&typeof raw.reachedAtMs==="object"?{...raw.reachedAtMs}:{};
-        const breakdowns=sameRun&&raw.breakdowns&&typeof raw.breakdowns==="object"?{...raw.breakdowns}:{};
-        const receipts=sameRun&&raw.receipts&&typeof raw.receipts==="object"?{...raw.receipts}:{};
-        const recent=Array.isArray(receipts[currentMemberKey])?receipts[currentMemberKey].map(String):[];
-        const oldScore=Number(scores[currentMemberKey])||0,bd=breakdowns[currentMemberKey]&&typeof breakdowns[currentMemberKey]==="object"?{...breakdowns[currentMemberKey]}:{};
-        if(rec&&recent.includes(rec)){accepted=true;mirror={memberKey:currentMemberKey,displayName:names[currentMemberKey]||currentMember,runId:started,score:oldScore,reachedAtMs:Number(reached[currentMemberKey])||eventAt,breakdown:bd,recentReceipts:recent.slice(-60)};return}
-        Object.entries(add).forEach(([k,q])=>bd[k]=Math.max(0,Math.floor(Number(bd[k])||0))+q);
-        const nextScore=oldScore+delta;
-        scores[currentMemberKey]=nextScore;
-        names[currentMemberKey]=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember;
-        if(delta!==0)reached[currentMemberKey]=eventAt;else if(!reached[currentMemberKey])reached[currentMemberKey]=eventAt;
-        breakdowns[currentMemberKey]=bd;
-        receipts[currentMemberKey]=(rec?[...recent,rec]:recent).slice(-60);
-        tx.set(aggRef,{campaignId:c.id,runId:started,scores,names,reachedAtMs:reached,breakdowns,receipts,updatedAt:fs.serverTimestamp()},{merge:false});
-        mirror={memberKey:currentMemberKey,displayName:names[currentMemberKey],runId:started,score:nextScore,reachedAtMs:Number(reached[currentMemberKey])||eventAt,breakdown:bd,recentReceipts:receipts[currentMemberKey]};
-        accepted=true;
-      });
-      if(accepted&&mirror){try{await fs.setDoc(mirrorRef,{...mirror,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn("R36.8 score mirror skipped",key,e?.message||e)}}
-      return accepted;
-    }catch(e){
-      console.warn("R36.8 authoritative campaign score",key,e);
-      try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึก • ${e?.message||"กรุณาลองใหม่"}`)}catch(_){}
-      return false;
+    let lastError=null;
+    for(let attempt=0;attempt<4;attempt++){
+      try{
+        const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
+        let accepted=false,nextScore=0;
+        await fs.runTransaction(db,async tx=>{
+          const [m,ss]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);
+          if(!m.exists())throw new Error("ไม่พบข้อมูลแคมเปญ");
+          const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
+          if(!meta.active||!started)throw new Error("แคมเปญยังไม่เริ่ม");
+          if(eventAt<started||(ended&&eventAt>=ended))throw new Error("กิจกรรมอยู่นอกเวลาแคมเปญ");
+          const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
+          const recent=sameRun&&Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+          const bd=sameRun&&old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+          if(rec&&recent.includes(rec)){accepted=true;nextScore=Number(old.score)||0;return}
+          Object.entries(add).forEach(([k,q])=>bd[k]=Math.max(0,Math.floor(Number(bd[k])||0))+q);
+          nextScore=(Number(old.score)||0)+delta;
+          tx.set(scoreRef,{
+            memberKey:currentMemberKey,
+            displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+            runId:started,
+            score:nextScore,
+            reachedAtMs:eventAt,
+            breakdown:bd,
+            recentReceipts:(rec?[...recent,rec]:recent).slice(-80),
+            updatedAt:fs.serverTimestamp()
+          },{merge:false});
+          accepted=true;
+        });
+        if(accepted){
+          try{if(delta!==0)showWeatherToast?.(`🏆 ${c.title} ${delta>0?"+":""}${delta} คะแนน`)}catch(_){ }
+          return true;
+        }
+      }catch(e){
+        lastError=e;
+        const msg=String(e?.message||e||"");
+        if(/แคมเปญยังไม่เริ่ม|อยู่นอกเวลา|ไม่พบข้อมูลแคมเปญ/.test(msg))break;
+        if(attempt<3)await new Promise(r=>setTimeout(r,180+attempt*260));
+      }
     }
+    console.warn("R36.10 per-player campaign score",key,lastError);
+    try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึก • ${lastError?.message||"กรุณาลองใหม่"}`)}catch(_){ }
+    return false;
   }
 
   async function scoreSecretHarvest(summary){
@@ -36206,6 +36214,51 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     if(!found)return false;
     const rec=receipt||`fish:${currentMemberKey}:${Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0)}:${slot?.pondId||0}:${slot?.slot||0}`;
     return scoreDetailed("fishing",delta,rec,breakdown);
+  }
+
+
+  async function campaignMetaFor(key){
+    const c=globalThis.YN_R29?.C?.[key];if(!c)return null;
+    try{const {db,fs}=await getFirebaseContext(),m=await fs.getDoc(fs.doc(db,"campaigns",c.id));return m.exists()?m.data()||{}:null}catch(_){return null}
+  }
+  async function applyRecoveryFloor(key,floorScore,floorBreakdown={},tag="inventory"){
+    if(admin()||!currentMemberKey||visitContext)return false;
+    const c=globalThis.YN_R29?.C?.[key];if(!c)return false;
+    floorScore=Number(floorScore)||0;
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);let changed=false;
+      await fs.runTransaction(db,async tx=>{
+        const [m,ss]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);if(!m.exists())return;
+        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0,t=now();if(!meta.active||!started||t<started||(ended&&t>=ended))return;
+        const raw=ss.exists()?ss.data()||{}:{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
+        const oldScore=Number(old.score)||0,bd=old.breakdown&&typeof old.breakdown==="object"?{...old.breakdown}:{};
+        let bdChanged=false;Object.entries(floorBreakdown||{}).forEach(([k,v])=>{const q=Math.max(0,Math.floor(Number(v)||0));if(q>Number(bd[k]||0)){bd[k]=q;bdChanged=true}});
+        const nextScore=Math.max(oldScore,floorScore);if(nextScore===oldScore&&!bdChanged)return;
+        const recent=Array.isArray(old.recentReceipts)?old.recentReceipts.map(String):[];
+        tx.set(scoreRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,runId:started,score:nextScore,reachedAtMs:Number(old.reachedAtMs)||t,breakdown:bd,recentReceipts:[...recent,`recovery:${tag}:${started}`].slice(-80),recoveredAtMs:t,updatedAt:fs.serverTimestamp()},{merge:false});changed=true;
+      });return changed;
+    }catch(e){console.warn("R36.10 recovery floor",key,e);return false}
+  }
+  async function recoverSecretAndWool(){
+    if(admin()||!currentMemberKey||visitContext)return;
+    const st=ownState||state||{};
+    const secretBd={};let secretScore=0;
+    Object.entries(SECRET_POINTS).forEach(([k,pt])=>{const q=Math.max(0,Math.floor(Number(st?.bag?.[k])||0));if(q){secretBd[k]=q;secretScore+=q*pt}});
+    if(secretScore>0)await applyRecoveryFloor("secret",secretScore,secretBd,"secret-bag");
+    const wigCount=Math.max(0,Math.floor(Number(st?.alpaca?.inventory?.other?.[WIG_KEY])||0));
+    if(wigCount>0)await applyRecoveryFloor("wool",wigCount*10,{fancyWig:wigCount},"wig-bag");
+  }
+  async function recoverFishingSlots(){
+    if(admin()||!currentMemberKey||visitContext)return;
+    const meta=await campaignMetaFor("fishing"),started=Number(meta?.startedAtMs)||0,ended=Number(meta?.endAtMs)||0,t=now();if(!meta?.active||!started||t<started||(ended&&t>=ended))return;
+    try{
+      const {db,fs}=await getFirebaseContext(),docs=[];
+      for(const colName of ["fishingSlots","fishingSlotsV2"]){try{const q=await fs.getDocs(fs.collection(db,colName));q.forEach(d=>docs.push({id:`${colName}:${d.id}`,data:d.data()||{}}))}catch(_){}}
+      for(const row of docs){const x=row.data,owner=String(x.ownerKey||"");const claimedAt=Number(x.claimedAt)||0;if(owner!==String(currentMemberKey)||String(x.status||"")!=="claimed"||claimedAt<started||(ended&&claimedAt>=ended))continue;await scoreFishingClaim(x,`recovery:${row.id}:${claimedAt}`)}
+    }catch(e){console.warn("R36.10 fishing recovery",e)}
+  }
+  async function recoverActiveCampaignScores(){
+    try{await recoverSecretAndWool();await recoverFishingSlots()}catch(e){console.warn("R36.10 campaign recovery",e)}
   }
 
   const harvestCampaignBase=typeof globalThis.V181_campaignScoreLater==="function"?globalThis.V181_campaignScoreLater:null;
@@ -36315,7 +36368,8 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   setTimeout(injectWigInventory,200);
 
   globalThis.YN_WIG_CRAFT={BUILD,key:WIG_KEY,name:WIG_NAME,image:WIG_GOOD_IMG,badImage:WIG_BAD_IMG,open:openWigCraft,craft:craftWig,ensure:ensureWigState};
-  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim};
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,applyRecoveryFloor};
+  setTimeout(()=>recoverActiveCampaignScores(),1800);
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
@@ -36905,4 +36959,61 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YN_R369_SAVE_RESCUE={BUILD,compact:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s)return null;const r=emergencyCompact(s);return{bytes:r.bytes,indexUnits:r.indexUnits}},report:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(globalThis.currentMemberKey||""),bytes:bytes(s),indexUnits:units(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v),units(v)]).sort((a,b)=>b[1]-a[1]).slice(0,25)}}};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R36.10 — CAMPAIGN SCORE + SURGICAL SAVE/INDEX RESCUE
+   2026-09-14
+   - New 3 campaigns score to /campaigns/{id}/scores/{memberKey} (owner-writable).
+   - Opor/Kongkwan and any high-pressure save get small transient/history maps
+     pruned BEFORE normal login and before later full-document writes.
+   ===================================================================== */
+(function YN_R3610_SURGICAL_SAVE_RESCUE(){
+  "use strict";
+  const BUILD="S2-R36.10-CAMPAIGN-SCORE-SAVE-RESCUE-20260914";
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const bytes=v=>{try{const x=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(x).length:x.length*2}catch(_){return 0}};
+  function units(v,seen=new WeakSet()){if(v==null||typeof v!=="object")return 1;if(seen.has(v))return 0;seen.add(v);if(Array.isArray(v)){let n=v.length;for(const x of v)n+=units(x,seen);return n}let n=0;for(const x of Object.values(v))n+=units(x,seen);return Math.max(1,n)}
+  function capMap(v,n=8){if(!isObj(v))return{};const a=Object.entries(v).sort((a,b)=>{const ta=Number(a[1]?.updatedAt||a[1]?.claimedAt||a[1]?.createdAt||a[1]||0)||0,tb=Number(b[1]?.updatedAt||b[1]?.claimedAt||b[1]?.createdAt||b[1]||0)||0;return tb-ta});return Object.fromEntries(a.slice(0,n))}
+  function hardTrim(s,extreme=false){
+    if(!s||typeof s!=="object")return s;const n=extreme?4:12;
+    for(const k of ["friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks","r3465BasementReceipts","hedgehogShieldReceiptsR3465"]){if(k in s)s[k]=capMap(s[k],n)}
+    if("saleTombstones" in s)s.saleTombstones={};
+    if(Array.isArray(s.retiredCatsArchiveR34))s.retiredCatsArchiveR34=s.retiredCatsArchiveR34.slice(-(extreme?1:3)).map(c=>c&&typeof c==="object"?{id:String(c.id||""),typeKey:String(c.typeKey||""),customName:String(c.customName||"")}:c);
+    if(isObj(s.alpaca)){
+      s.alpaca.friendMushroomClaims=capMap(s.alpaca.friendMushroomClaims,n);
+      s.alpaca.eventClaims=capMap(s.alpaca.eventClaims,n);
+      s.alpaca.testSireCooldowns=capMap(s.alpaca.testSireCooldowns,n);
+      if(isObj(s.alpaca.factory)){s.alpaca.factory.babyTransfers=capMap(s.alpaca.factory.babyTransfers,n);if(Array.isArray(s.alpaca.factory.history))s.alpaca.factory.history=s.alpaca.factory.history.slice(-(extreme?1:3));if(Array.isArray(s.alpaca.factory.jobs)){const active=s.alpaca.factory.jobs.filter(j=>j&&j.status!=="claimed"),done=s.alpaca.factory.jobs.filter(j=>j&&j.status==="claimed").slice(-(extreme?1:3));s.alpaca.factory.jobs=active.concat(done)}}
+    }
+    if(Array.isArray(s.dishes))s.dishes=[];
+    s.saveGuardR3610={version:BUILD,trimmedAt:Date.now(),extreme:Boolean(extreme)};return s;
+  }
+  async function surgicalCloudTrim(mk){
+    if(!mk)return false;try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
+      const raw=snap.data()||{},b=bytes(raw),u=units(raw),forced=/^(opor|kongkwan)$/i.test(String(mk));if(!forced&&b<430*1024&&u<5000)return false;
+      /* First make a narrow update. This is deliberately not a full-document rewrite. */
+      const topPatch={friendGiftClaims:{},broadcastGiftClaims:{},fishingClaimReceipts:{},campaignReceipts:{},friendResourceClaims:{},friendForageClaims:{},friendCatCooldowns:{},r32FriendForageLocks:{},r3465BasementReceipts:{},hedgehogShieldReceiptsR3465:{},saleTombstones:{},retiredCatsArchiveR34:[],saveGuardR3610:{version:BUILD,surgicalAt:Date.now()}};
+      try{await fs.updateDoc(ref,topPatch)}catch(e){console.warn(BUILD,"top surgical trim",mk,e?.message||e)}
+      try{await fs.updateDoc(ref,{"alpaca.friendMushroomClaims":{},"alpaca.eventClaims":{},"alpaca.testSireCooldowns":{},"alpaca.factory.babyTransfers":{},"alpaca.factory.history":[]})}catch(e){console.warn(BUILD,"alpaca surgical trim",mk,e?.message||e)}
+      const reread=await fs.getDoc(ref);if(reread.exists()){
+        const clean=hardTrim(reread.data()||{},true);
+        await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
+      }
+      for(const k of [`yn:r3210:sold:${mk}`,`yn:alpaca:factory-transfer:${mk}`,`yn:r3453:alpaca-transfer:${mk}`])try{localStorage.removeItem(k)}catch(_){}
+      return true;
+    }catch(e){console.warn(BUILD,"surgicalCloudTrim failed",mk,e);return false}
+  }
+  try{
+    const baseNormalize=normalizeState;
+    normalizeState=function(raw,player){const out=baseNormalize(raw,player),mk=String(globalThis.currentMemberKey||"");const b=bytes(out),u=units(out);if(/^(opor|kongkwan)$/i.test(mk)||b>520*1024||u>6500)hardTrim(out,b>700*1024||u>9000);return out};
+  }catch(e){console.warn(BUILD,"normalize guard",e)}
+  try{
+    const baseInit=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,memberKey){const mk=String(memberKey||"");await surgicalCloudTrim(mk);try{return await baseInit.apply(this,arguments)}catch(e){const m=String(e?.message||e||"");if(/maximum allowed size|exceeds the maximum|too many index entries|index entries|resource-exhausted|1,048,576/i.test(m)){await surgicalCloudTrim(mk);return await baseInit.apply(this,arguments)}throw e}};
+  }catch(e){console.warn(BUILD,"login wrapper",e)}
+  globalThis.YN_R3610_SAVE_RESCUE={BUILD,trimNow:async()=>surgicalCloudTrim(String(globalThis.currentMemberKey||"")),report:()=>{const x=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(globalThis.currentMemberKey||""),bytes:bytes(x),indexUnits:units(x)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
