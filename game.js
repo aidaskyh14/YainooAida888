@@ -5609,7 +5609,7 @@ function showFishingResultModal(slot){
   const now=gameNow(),expired=now>Number(slot.claimDeadline||0),owner=slot.ownerKey===currentMemberKey;$("modalContent").innerHTML=`<section class="feature-panel"><h2>${expired?"💨 ปลาหนีไปแล้ว":"🎣 สำเร็จ ปลาติดเบ็ดแล้วแม่!"}</h2>${expired?'<p class="feature-subtitle">ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด</p>':`<div class="fishing-result-grid">${slot.catches.map(c=>`<article class="fishing-result-card"><img src="${c.image}" alt="${safeHtml(c.name)}"><h3>${safeHtml(c.name)}</h3><small>${Number(c.weight).toFixed(2)} lbs</small></article>`).join("")}</div><div class="fishing-total-weight">น้ำหนักรวม ${Number(slot.totalWeight).toFixed(2)} lbs</div><p class="feature-subtitle">${owner?`เหลือเวลารับ ${fishingCountdown(slot.claimDeadline-now)}`:`ของ ${safeHtml(slot.ownerName)} • คุณดูผลได้แต่รับแทนไม่ได้`}</p>${owner?'<button id="claimFishingWeightBtn" class="fishing-claim-button" type="button">รับน้ำหนักเข้าการแข่งขัน</button>':""}`}</section>`;if($("claimFishingWeightBtn"))$("claimFishingWeightBtn").onclick=()=>claimFishingCatch(slot.slot-1);openModal();
 }
 async function claimFishingCatch(index){
-  const now=gameNow(),dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey),dailyRef=fs.doc(db,"fishingDaily",dateKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap,dailySnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)]);if(!slotSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบผลการตกปลา");const slot=normalizeFishingSlot(slotSnap.data(),index);if(slot.ownerKey!==currentMemberKey)throw new Error("ปลาชุดนี้ไม่ใช่ของคุณ");if(now<slot.finishAt)throw new Error("ปลายังไม่ติดเบ็ด");if(now>slot.claimDeadline)throw new Error("ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด");if(slot.status==="claimed")throw new Error("รับน้ำหนักรอบนี้แล้ว");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const daily=dailySnap.exists()?dailySnap.data():{scores:{},names:{}};daily.scores=daily.scores&&typeof daily.scores==="object"?daily.scores:{};daily.names=daily.names&&typeof daily.names==="object"?daily.names:{};daily.scores[currentMemberKey]=Number(((Number(daily.scores[currentMemberKey])||0)+slot.totalWeight).toFixed(2));daily.names[currentMemberKey]=currentMember;ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);slot.status="claimed";slot.claimedAt=now;next=s;newSlot=slot;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dailyRef,{dateKey,scores:daily.scores,names:daily.names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slot,updatedAt:fs.serverTimestamp()},{merge:false});if(playerSnap.exists())tx.delete(playerRef)});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=newSlot;closeModal();drawFishingPond();showWeatherToast(`🏆 รับน้ำหนัก ${Number(newSlot.totalWeight).toFixed(2)} lbs เข้าการแข่งขันแล้ว`)}catch(error){message("รับน้ำหนักไม่ได้",error.message||"กรุณาลองใหม่")}
+  const now=gameNow(),dateKey=currentBangkokDateKey();try{const {db,fs}=await getFirebaseContext(),slotRef=fs.doc(db,"fishingSlots",String(index+1)),playerRef=fs.doc(db,"fishingPlayers",currentMemberKey),saveRef=fs.doc(db,"saves",currentMemberKey),dailyRef=fs.doc(db,"fishingDaily",dateKey);let next,newSlot;await fs.runTransaction(db,async tx=>{const [slotSnap,playerSnap,saveSnap,dailySnap]=await Promise.all([tx.get(slotRef),tx.get(playerRef),tx.get(saveRef),tx.get(dailyRef)]);if(!slotSnap.exists()||!saveSnap.exists())throw new Error("ไม่พบผลการตกปลา");const slot=normalizeFishingSlot(slotSnap.data(),index);if(slot.ownerKey!==currentMemberKey)throw new Error("ปลาชุดนี้ไม่ใช่ของคุณ");if(now<slot.finishAt)throw new Error("ปลายังไม่ติดเบ็ด");if(now>slot.claimDeadline)throw new Error("ปลาหนีไปแล้ว ช้ามาก ทำอะไรชักช้าตลอด");if(slot.status==="claimed")throw new Error("รับน้ำหนักรอบนี้แล้ว");const s=normalizeState(saveSnap.data(),currentMember);assertCurrentCloudSession(saveSnap.data(),currentMember);const daily=dailySnap.exists()?dailySnap.data():{scores:{},names:{}};daily.scores=daily.scores&&typeof daily.scores==="object"?daily.scores:{};daily.names=daily.names&&typeof daily.names==="object"?daily.names:{};daily.scores[currentMemberKey]=Number(((Number(daily.scores[currentMemberKey])||0)+slot.totalWeight).toFixed(2));daily.names[currentMemberKey]=currentMember;ensureMissionStateFor(s);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);s.missions.progress.dailyFishingWeight500=Number(daily.scores[currentMemberKey]||0);slot.status="claimed";slot.claimedAt=now;next=s;newSlot=slot;tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(dailyRef,{dateKey,scores:daily.scores,names:daily.names,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(slotRef,{...slot,updatedAt:fs.serverTimestamp()},{merge:false});if(playerSnap.exists())tx.delete(playerRef)});ownState=normalizeState(next,currentMember);state=ownState;fishingSlotsCache[index]=newSlot;try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(newSlot,`fish-old:${currentMemberKey}:${newSlot?.startAt||newSlot?.finishAt||0}:${index+1}`)}catch(e){console.warn("R36 fishing campaign score",e)}closeModal();drawFishingPond();showWeatherToast(`🏆 รับน้ำหนัก ${Number(newSlot.totalWeight).toFixed(2)} lbs เข้าการแข่งขันแล้ว`)}catch(error){message("รับน้ำหนักไม่ได้",error.message||"กรุณาลองใหม่")}
 }
 
 function previousBangkokDateKey(dateKey=currentBangkokDateKey()){const [y,m,d]=dateKey.split("-").map(Number),dt=new Date(Date.UTC(y,m-1,d)-86400000);return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`}
@@ -13036,7 +13036,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         await fs.setDoc(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
         try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("V213 mameaw slot cleanup",e)}
         try{await fs.deleteDoc(playerRef)}catch(e){console.warn("V213 mameaw player cleanup",e)}
-        Y26_applyOwnState(s);closeModal();showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
+        Y26_applyOwnState(s);try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(slot,`fish-v2:${actorKey}:${Number(slot.startedAt||x.startedAt||0)}:${x.pondId}:${x.slot}`)}catch(e){console.warn("R36 fishing campaign score",e)}closeModal();showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
         return;
       }
 
@@ -13108,6 +13108,7 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       });
 
       Y26_applyOwnState(next);
+      try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36 fishing campaign score",e)}
 
       /* Cleanup is best-effort only. A slot/player permission issue can no
          longer cancel the fish weight already credited to save + dashboard. */
@@ -15471,6 +15472,7 @@ async function V213_syncMameawCampaignFromSave(){
           });
 
           Y26_applyOwnState(next);
+          try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v193:${currentMemberKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36 fishing campaign score",e)}
           closeModal();
           showWeatherToast(`🏆 รับน้ำหนักปลาเข้าดashboardแล้ว`);
         }catch(fallbackError){
@@ -26649,7 +26651,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
-  const D9=9*24*60*60*1000;
+  const D8=8*24*60*60*1000;
   const ADMIN=()=>currentMember==="Aida"&&adminProfile?.role==="admin";
   const HAM_COLORS=["gray","pink","green","orange","mint"];
   const ALPACA_COLORS=["white","brown","black","pink","green","goldenHoney","thaiTea"];
@@ -26657,48 +26659,138 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   const WINE_SCORE={moon:10,spiritRose:20,blood:40,eclipse:60,moonlightGrape:10,eclipseKing:60};
 
   const C={
-    rainbow:{id:"s2-r29-rainbow",title:"ตามหาปลาสายรุ้ง กันเต๊อะ",icon:"🌈",bg:"campaign-rainbow-fish.webp",scoreLabel:"ตัว",rules:`<h3>🌈 ตามหาปลาสายรุ้ง กันเต๊อะ</h3><p>ออกตามหาปลาสายรุ้งให้ได้มากที่สุด!</p><ul><li>ปลาสายรุ้งที่กดรับผลตกปลาสำเร็จ <b>1 ตัว = 1 คะแนน</b></li><li>ถ้าครั้งเดียวได้ 2 ตัว = 2 คะแนน</li><li>นับเฉพาะปลาที่ได้หลังแคมเปญเริ่มเท่านั้น</li><li>ปลาที่มีอยู่ก่อนเริ่มกิจกรรมไม่นับย้อนหลัง</li></ul>`},
-    shield:{id:"s2-r29-shield",title:"โล่เม่นทอง",icon:"🦔",bg:"campaign-golden-hedgehog.webp",scoreLabel:"โล่",rules:`<h3>🦔 โล่เม่นทอง</h3><p>เก็บของดรอปจากเม่นในห้องใต้ดิน แล้วนำมาคราฟโล่เม่นทอง</p><ul><li>ขนเม่น 2 + เขี้ยวเม่น 2 + กรงเล็บเม่น 2 + หางเม่น 2 ต่อ 1 ครั้ง</li><li>คราฟได้สูงสุด <b>10 ครั้งต่อรอบ</b></li><li>มีโอกาสสำเร็จในการคราฟแต่ละครั้ง</li><li>สำเร็จ 1 โล่ = 1 คะแนน</li><li>ล้มเหลวไม่ได้คะแนน และวัตถุดิบไม่คืน</li><li>นับเฉพาะการคราฟหลังแคมเปญเริ่ม</li></ul>`},
-    honey:{id:"s2-r29-honey",title:"กุศลนักส่งของ",icon:"🐷",bg:"campaign-honey-merit.webp",scoreLabel:"กุศล",rules:`<h3>🐷 กุศลนักส่งของ</h3><p>ช่วยส่งของให้น้องน้ำผึ้ง แล้วสะสมกุศลให้ได้มากที่สุด</p><ul><li>นับเฉพาะ <b>กุศลที่ได้รับจากน้องน้ำผึ้ง</b></li><li>กุศล 1 = 1 คะแนน</li><li>รางวัลชนิดอื่นจากน้องน้ำผึ้งไม่นับคะแนน</li><li>นับเฉพาะกุศลที่ได้รับหลังแคมเปญเริ่ม</li></ul>`},
-    home:{id:"s2-r29-home",title:"แม่ศรีเรือน",icon:"🏡",bg:"campaign-mae-sri-ruean.webp",scoreLabel:"คะแนน",rules:`<h3>🏡 แม่ศรีเรือน</h3><p>สะสมคะแนนจากกิจกรรมในบ้าน ทั้งอาหารบ้าน ไวน์ และดอกไม้</p><div class="r29-rule-grid"><b>อาหารบ้าน</b><span>คราฟสำเร็จ 1 เมนู = 5 คะแนน</span><b>ไวน์</b><span>Moonlight Grape 10 • Spirit Rose 20 • Blood Grape 40 • Eclipse King 60</span><b>ดอกไม้</b><span>Daisy 3 • Rose 4 • Butterfly pea 4 • Sunflower 5 • Lotus 6 • Orchid 8</span></div><p>ไวน์นับเมื่อรับเข้ากระเป๋า และดอกไม้นับเมื่อเก็บเกี่ยวเข้ากระเป๋าสำเร็จ</p>`}
+    secret:{
+      id:"s2-r36-secret-seeds",
+      title:"ซีเคร็ทซี๊ด จี๊ดจ๊าดดดดด",
+      icon:"🌱",
+      bg:"campaign-secret-seeds.jpg",
+      scoreLabel:"คะแนน",
+      breakdown:[
+        ["r35CandyCrop","ลูกกวาดประสาทแดร๊ก"],
+        ["r35SpiderCrop","แมงมุมขยุ้มเม็ด"],
+        ["r35CatCrop","แมวเหมียว เสวปิ๊"],
+        ["r35BeeCrop","บีเหินบนโต๊ะน้ำชา"]
+      ],
+      rules:`<h3>🌱 ซีเคร็ทซี๊ด จี๊ดจ๊าดดดดด</h3>
+        <p>ปลูก Secret Seeds แล้วเก็บเกี่ยวพืชลับให้ได้คะแนนรวมสูงที่สุด</p>
+        <div class="r29-rule-grid">
+          <b>ลูกกวาดประสาทแดร๊ก</b><span>1 ต้น = <b>1 คะแนน</b></span>
+          <b>แมงมุมขยุ้มเม็ด</b><span>1 ต้น = <b>2 คะแนน</b></span>
+          <b>แมวเหมียว เสวปิ๊</b><span>1 ต้น = <b>3 คะแนน</b></span>
+          <b>บีเหินบนโต๊ะน้ำชา</b><span>1 ต้น = <b>4 คะแนน</b></span>
+        </div>
+        <ul>
+          <li>นับตอนเก็บเกี่ยวสำเร็จและผลผลิตเข้ากระเป๋าแล้วเท่านั้น</li>
+          <li>พืชที่มีอยู่ก่อนเริ่มแคมเปญไม่นับย้อนหลัง</li>
+          <li>หน้าอันดับแสดงยอดพืชทั้ง 4 ชนิดแยกกัน พร้อมคะแนนรวม</li>
+          <li>คะแนนเท่ากัน ผู้ที่ถึงคะแนนนั้นก่อนอยู่อันดับสูงกว่า</li>
+        </ul>`
+    },
+    fishing:{
+      id:"s2-r36-fishing-goodbad",
+      title:"ตกลงว่าเธอจะตกยังไงกับช้านนนนน",
+      icon:"🎣",
+      bg:"campaign-fishing-good-bad.jpg",
+      scoreLabel:"คะแนน",
+      breakdown:[
+        ["r35Good1","ปลาหยาดฟ้าอัญมณี"],
+        ["r35Good2","ปลาบัวชมพูพราวฝัน"],
+        ["r35Good4","ปลาจันทร์มุกนภา"],
+        ["r35Good3","ปลาราชินีมงกุฎทับทิม"],
+        ["r35Bad1","ปลาเขี้ยวโลกันต์"],
+        ["r35Bad2","ปลาคำสาปม่วงมรณะ"],
+        ["r35Bad4","ปลาปักเป้าคริสตัลคลั่ง"],
+        ["r35Bad3","ปลาฉลามจักรวาลทมิฬ"]
+      ],
+      rules:`<h3>🎣 ตกลงว่าเธอจะตกยังไงกับช้านนนนน</h3>
+        <p>นับเฉพาะปลาใหม่ 8 ชนิดล่าสุด เมื่อกดรับผลตกปลาสำเร็จแล้วเท่านั้น</p>
+        <div class="r29-rule-grid">
+          <b>ปลาหยาดฟ้าอัญมณี</b><span><b>+1</b> คะแนน</span>
+          <b>ปลาบัวชมพูพราวฝัน</b><span><b>+2</b> คะแนน</span>
+          <b>ปลาจันทร์มุกนภา</b><span><b>+3</b> คะแนน</span>
+          <b>ปลาราชินีมงกุฎทับทิม</b><span><b>+4</b> คะแนน</span>
+          <b>ปลาเขี้ยวโลกันต์</b><span><b>−1</b> คะแนน</span>
+          <b>ปลาคำสาปม่วงมรณะ</b><span><b>−2</b> คะแนน</span>
+          <b>ปลาปักเป้าคริสตัลคลั่ง</b><span><b>−3</b> คะแนน</span>
+          <b>ปลาฉลามจักรวาลทมิฬ</b><span><b>−4</b> คะแนน</span>
+        </div>
+        <ul>
+          <li>ปลาเก่าชนิดอื่นไม่นับคะแนน</li>
+          <li>คะแนนรวมสุทธิสามารถติดลบได้จริง</li>
+          <li>ปลาที่ตกก่อนเริ่มแคมเปญไม่นับย้อนหลัง</li>
+          <li>หน้าอันดับแสดงจำนวนปลาใหม่ทั้ง 8 ชนิดแยกกัน พร้อมคะแนนสุทธิ</li>
+          <li>คะแนนเท่ากัน ผู้ที่ถึงคะแนนนั้นก่อนอยู่อันดับสูงกว่า</li>
+        </ul>`
+    },
+    wool:{
+      id:"s2-r36-wool-expert",
+      title:"ผู้เชี่ยวชาญด้านขน",
+      icon:"🎀",
+      bg:"campaign-wool-expert.jpg",
+      scoreLabel:"คะแนน",
+      breakdown:[["fancyWig","วิกผมแฟนซีสำเร็จ"]],
+      rules:`<h3>🎀 ผู้เชี่ยวชาญด้านขน</h3>
+        <p>นำขนอัลปาก้า 5 สีไปคราฟเป็น “วิกผมแฟนซีจากขนอัลปาก้า” ที่ร้านค้า → ลุ้น</p>
+        <ul>
+          <li>คราฟ 1 ครั้งใช้ ขาว ×2 • ดำ ×2 • ชมพู ×2 • น้ำตาล ×2 • เขียว ×2 รวม 10 ชิ้น และคละสีทดแทนกันไม่ได้</li>
+          <li>โอกาสสำเร็จ <b>30% ต่อครั้งแบบสุ่มอิสระ</b> ไม่มีการการันตีหรือระบบสะสมแต้มการันตี</li>
+          <li>เลือกคราฟได้ครั้งละ 1–10 ครั้ง</li>
+          <li>คราฟสำเร็จ 1 วิก = <b>10 คะแนน</b> และวิกเข้ากระเป๋าอัลปาก้าทันที</li>
+          <li>คราฟพัง = 0 คะแนน และวิกเสียไม่เข้ากระเป๋า</li>
+          <li>คราฟพังแต่ละครั้งสุ่มปลอบใจ 1–50 กุศล</li>
+          <li>นับเฉพาะวิกที่ผู้เล่นคราฟเองหลังแคมเปญเริ่ม ของที่มีอยู่ก่อนหน้า/ของขวัญไม่นับ</li>
+          <li>คะแนนเท่ากัน ผู้ที่ถึงคะแนนนั้นก่อนอยู่อันดับสูงกว่า</li>
+        </ul>`
+    },
+    home:{id:"s2-r36-home",title:"แม่ศรีเรือน",icon:"🏡",bg:"campaign-mae-sri-ruean.webp",scoreLabel:"คะแนน",rules:`<h3>🏡 แม่ศรีเรือน</h3><p>สะสมคะแนนจากกิจกรรมในบ้าน ทั้งอาหารบ้าน ไวน์ และดอกไม้</p><div class="r29-rule-grid"><b>อาหารบ้าน</b><span>คราฟสำเร็จ 1 เมนู = 5 คะแนน</span><b>ไวน์</b><span>Moonlight Grape 10 • Spirit Rose 20 • Blood Grape 40 • Eclipse King 60</span><b>ดอกไม้</b><span>Daisy 3 • Rose 4 • Butterfly pea 4 • Sunflower 5 • Lotus 6 • Orchid 8</span></div><p>ไวน์นับเมื่อรับเข้ากระเป๋า และดอกไม้นับเมื่อเก็บเกี่ยวเข้ากระเป๋าสำเร็จ</p>`}
   };
 
   const REWARDS={
-    rainbow:[
-      {need:50,items:[['merit',750],['special','angelWingCapsule',300],['fuel',100]]},
-      {need:100,items:[['merit',1250],['tool','wood',400],['tool','stone',400],['grass','friendGrassGreen',300],['grass','friendGrassYellow',300],['grass','friendGrassRed',300]]},
-      {need:200,items:[['merit',2000],['bait',300],['alpacaFemale',2]]},
-      {need:300,items:[['merit',2500],['hamster',1]]},
-      {need:400,items:[['merit',3000],['fuel',300],['hamster',2]]},
-      {need:500,items:[['merit',5000]]}
+    secret:[
+      {need:10000,items:[["special","angelWingCapsule",2000],["merit",5000]]},
+      {need:12500,items:[["hamster",3],["merit",7500],["alpacaMedicine","woolGrowthMedicine",100]]},
+      {need:15000,items:[["alpacaRoyal","prince",3],["alpacaRoyal","princess",3],["fishingBait","r35PumpkinBait",10]]},
+      {need:20000,items:[["grass","friendGrassGreen",3000],["grass","friendGrassYellow",3000],["grass","friendGrassRed",3000],["merit",10000]]},
+      {need:25000,items:[["hedgehogAll",500],["special","flowerFertilizer",5000],["merit",10000]]},
+      {need:30000,items:[["mysteryJelly",500],["merit",5000]]},
+      {need:35000,items:[["merit",5000],["alpacaMedicine","woolGrowthMedicine",500],["alpacaMedicine","happinessPotion",500]]},
+      {need:40000,items:[["merit",5000],["special","angelWingCapsule",1000],["fishingBait","r35PumpkinBait",50]]},
+      {need:45000,items:[["merit",10000],["alpacaWool","gold",100]]},
+      {need:50000,items:[["merit",5000],["fishingBait","r35PumpkinBait",100],["alpacaMedicine","happinessPotion",500]]}
     ],
-    shield:[
-      {need:50,items:[['merit',1000]]},
-      {need:100,items:[['merit',1200],['hamster',1]]},
-      {need:150,items:[['fuel',500],['special','angelWingCapsule',750],['bait',200]]},
-      {need:200,items:[['merit',2000],['alpacaFemale',3]]},
-      {need:300,items:[['merit',2500],['hamster',3]]},
-      {need:500,items:[['merit',5000],['tool','steel',300],['tool','rope',300],['grass','friendGrassGreen',999],['grass','friendGrassYellow',999],['grass','friendGrassRed',999]]}
+    fishing:[
+      {need:250,items:[["special","angelWingCapsule",500],["special","flowerFertilizer",1000],["merit",3000]]},
+      {need:500,items:[["special","angelWingCapsule",700],["special","flowerFertilizer",1500],["fishingBait","r35PumpkinBait",10]]},
+      {need:750,items:[["fishingBait","r35PumpkinBait",15],["fishingBait","r35CandyBait",15],["special","flowerFertilizer",2000],["merit",5000]]},
+      {need:1000,items:[["special","angelWingCapsule",1000],["hamster",2],["special","flowerFertilizer",2500]]},
+      {need:1500,items:[["grass","friendGrassGreen",1000],["grass","friendGrassYellow",1000],["grass","friendGrassRed",1000],["special","flowerFertilizer",3000],["merit",5000]]},
+      {need:2000,items:[["special","angelWingCapsule",1500],["alpacaMedicine","woolGrowthMedicine",150],["special","flowerFertilizer",3500]]},
+      {need:2500,items:[["mysteryJelly",200],["special","flowerFertilizer",4000]]},
+      {need:3000,items:[["special","angelWingCapsule",2000],["hedgehogAll",300],["special","flowerFertilizer",4500]]},
+      {need:4000,items:[["alpacaWool","gold",100],["fishingBait","r35PumpkinBait",40],["fishingBait","r35CandyBait",40],["special","flowerFertilizer",5000],["merit",10000]]},
+      {need:5000,items:[["special","angelWingCapsule",3000],["alpacaRoyal","prince",2],["alpacaRoyal","princess",2],["special","flowerFertilizer",6000],["merit",15000]]}
     ],
-    honey:[
-      {need:5000,items:[['jellyV2All',1]]},
-      {need:7500,items:[['hamster',3]]},
-      {need:10000,items:[['tool','steel',500],['tool','rope',500],['grass','friendGrassGreen',999],['grass','friendGrassYellow',999],['grass','friendGrassRed',999]]},
-      {need:12500,items:[['special','angelWingCapsule',500],['special','wormKillerSpray',500],['bait',500]]},
-      {need:15000,items:[['alpacaFemale',3]]},
-      {need:20000,items:[['merit',5000]]},
-      {need:25000,items:[['merit',7500]]},
-      {need:30000,items:[['merit',10000]]}
+    wool:[
+      {need:150,items:[["special","angelWingCapsule",300],["special","flowerFertilizer",1500],["special","r35PumpkinGimmick",20],["special","r35CandyGimmick",20],["merit",2000]]},
+      {need:300,items:[["special","flowerFertilizer",2000],["alpacaMedicine","happinessPotion",100],["special","r35PumpkinGimmick",30],["special","r35CandyGimmick",30],["merit",3000]]},
+      {need:450,items:[["special","angelWingCapsule",500],["alpacaMedicine","woolGrowthMedicine",100],["special","flowerFertilizer",2500],["special","r35PumpkinGimmick",40],["special","r35CandyGimmick",40]]},
+      {need:600,items:[["mysteryJelly",100],["special","flowerFertilizer",3000],["special","r35PumpkinGimmick",50],["special","r35CandyGimmick",50],["merit",5000]]},
+      {need:800,items:[["hamster",2],["special","angelWingCapsule",800],["special","flowerFertilizer",3500],["special","r35PumpkinGimmick",60],["special","r35CandyGimmick",60]]},
+      {need:1000,items:[["alpacaWool","gold",50],["special","flowerFertilizer",4000],["special","r35PumpkinGimmick",75],["special","r35CandyGimmick",75],["merit",7500]]},
+      {need:1200,items:[["alpacaRoyal","prince",1],["alpacaRoyal","princess",1],["alpacaMedicine","happinessPotion",250],["special","flowerFertilizer",4500],["special","r35PumpkinGimmick",90],["special","r35CandyGimmick",90]]},
+      {need:1400,items:[["special","angelWingCapsule",1500],["hedgehogAll",200],["special","flowerFertilizer",5000],["special","r35PumpkinGimmick",100],["special","r35CandyGimmick",100]]},
+      {need:1700,items:[["alpacaWool","gold",100],["alpacaMedicine","woolGrowthMedicine",400],["special","flowerFertilizer",6000],["special","r35PumpkinGimmick",125],["special","r35CandyGimmick",125],["merit",10000]]},
+      {need:2000,items:[["special","angelWingCapsule",3000],["alpacaRoyal","prince",2],["alpacaRoyal","princess",2],["special","flowerFertilizer",8000],["special","r35PumpkinGimmick",150],["special","r35CandyGimmick",150],["merit",15000]]}
     ],
     home:[
-      {need:2000,items:[['merit',2000]]},
-      {need:3000,items:[['hamster',2],['fuel',400]]},
-      {need:5000,items:[['tool','wood',500],['tool','stone',500],['tool','steel',500],['tool','rope',500]]},
-      {need:7500,items:[['bait',500],['special','angelWingCapsule',1000],['merit',3000]]},
-      {need:10000,items:[['merit',10000]]},
-      {need:12500,items:[['alpacaFemale',5]]},
-      {need:15000,items:[['merit',5000]]},
-      {need:20000,items:[['merit',7500]]}
+      {need:2000,items:[["merit",2000]]},
+      {need:3000,items:[["hamster",2],["fuel",400]]},
+      {need:5000,items:[["tool","wood",500],["tool","stone",500],["tool","steel",500],["tool","rope",500]]},
+      {need:7500,items:[["bait",500],["special","angelWingCapsule",1000],["merit",3000]]},
+      {need:10000,items:[["merit",10000]]},
+      {need:12500,items:[["alpacaFemale",5]]},
+      {need:15000,items:[["merit",5000]]},
+      {need:20000,items:[["merit",7500]]}
     ]
   };
 
@@ -26727,7 +26819,28 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     ms=Math.max(0,Number(ms)||0);const d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);
     return d>0?`${d} วัน ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
-  function itemText(item){const [t,a,b]=item;if(t==='merit')return `${a.toLocaleString('th-TH')} กุศล`;if(t==='special')return `${SPECIAL_ITEMS?.[a]?.name||a} ×${b}`;if(t==='fuel')return `น้ำมันรถน้ำผึ้ง ×${a} แกลลอน`;if(t==='tool')return `${({wood:'เนื้อไม้',stone:'ก้อนหิน',steel:'เหล็ก',rope:'เชือก'})[a]} ×${b}`;if(t==='grass')return `${SPECIAL_ITEMS?.[a]?.name||a} ×${b}`;if(t==='bait')return `เหยื่อตกปลามือโปร ×${a}`;if(t==='alpacaFemale')return `อัลปาก้าตัวเมียสุ่มสี ×${a}`;if(t==='hamster')return `แฮมสเตอร์สุ่มสี ×${a}`;if(t==='jellyV2All')return `แมงกระพรุน V2 ครบทั้ง 4 สี`;return t}
+  function itemText(item){
+    const [t,a,b]=item;
+    if(t==="merit")return `${Number(a).toLocaleString("th-TH")} กุศล`;
+    if(t==="special")return `${SPECIAL_ITEMS?.[a]?.name||a} ×${Number(b).toLocaleString("th-TH")}`;
+    if(t==="fuel")return `น้ำมันรถน้ำผึ้ง ×${Number(a).toLocaleString("th-TH")} แกลลอน`;
+    if(t==="tool")return `${({wood:"เนื้อไม้",stone:"ก้อนหิน",steel:"เหล็ก",rope:"เชือก"})[a]} ×${Number(b).toLocaleString("th-TH")}`;
+    if(t==="grass")return `${SPECIAL_ITEMS?.[a]?.name||a} ×${Number(b).toLocaleString("th-TH")}`;
+    if(t==="bait")return `เหยื่อตกปลามือโปร ×${Number(a).toLocaleString("th-TH")}`;
+    if(t==="fishingBait")return `${FISHING_BAITS?.[a]?.name||a} ×${Number(b).toLocaleString("th-TH")}`;
+    if(t==="alpacaFemale")return `อัลปาก้าตัวเมียสุ่มสี ×${a}`;
+    if(t==="alpacaRoyal")return `${a==="prince"?"อัลปาก้าตัวเต็มวัยสีเจ้าชาย • เพศผู้":"อัลปาก้าตัวเต็มวัยสีเจ้าหญิง • เพศเมีย"} ×${b}`;
+    if(t==="alpacaMedicine"){
+      const n={woolGrowthMedicine:"ยาเร่งขนอัลปาก้า",happinessPotion:"ยาเพิ่มความสุข"}[a]||a;
+      return `${n} ×${Number(b).toLocaleString("th-TH")}`;
+    }
+    if(t==="alpacaWool")return `${a==="gold"?"ขนอัลปาก้าสีทอง":`ขนอัลปาก้า ${a}`} ×${Number(b).toLocaleString("th-TH")}`;
+    if(t==="hedgehogAll")return `ของดร็อปเม่นครบ 4 อย่าง อย่างละ ×${Number(a).toLocaleString("th-TH")}`;
+    if(t==="mysteryJelly")return `กล่องสุ่มแมงกะพรุน ×${Number(a).toLocaleString("th-TH")}`;
+    if(t==="hamster")return `แฮมสเตอร์สุ่มสี ×${a}`;
+    if(t==="jellyV2All")return `แมงกระพรุน V2 ครบทั้ง 4 สี`;
+    return t;
+  }
 
   let unsub=null,timer=null,currentKey='';
   function stopLive(){if(unsub){try{unsub()}catch(_){}unsub=null}if(timer){clearInterval(timer);timer=null}}
@@ -26739,7 +26852,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,'campaigns',c.id),scoreCol=fs.collection(db,'campaigns',c.id,'scores'),t=now();
       const oldScores=await fs.getDocs(scoreCol);
       if(!oldScores.empty){const batch=fs.writeBatch(db);oldScores.forEach(d=>batch.delete(d.ref));await batch.commit()}
-      await fs.setDoc(ref,{campaignId:c.id,key,title:c.title,active:true,runId:String(t),startedAtMs:t,endAtMs:t+D9,durationMs:D9,startedBy:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:true});
+      await fs.setDoc(ref,{campaignId:c.id,key,title:c.title,active:true,runId:String(t),startedAtMs:t,endAtMs:t+D8,durationMs:D8,startedBy:currentMemberKey,updatedAt:fs.serverTimestamp()},{merge:true});
       showCampaign(key);
     }catch(e){console.error("R32 start campaign",key,e);message("เริ่มแคมเปญไม่ได้",e.message||"กรุณาลองใหม่")}
   }
@@ -26772,9 +26885,23 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   document.addEventListener('visibilitychange',()=>{if(document.hidden)for(const k of campaignScoreQueues.keys())flushCampaignScoreQueue(k)},{passive:true});
   window.addEventListener('pagehide',()=>{for(const k of campaignScoreQueues.keys())flushCampaignScoreQueue(k)},{passive:true});
 
-  function rankHTML(rows){
-    if(!rows.length)return '<p class="r29-empty">ยังไม่มีผู้เล่นทำคะแนนค่ะ</p>';
-    return rows.filter(r=>String(r?.memberKey||'').toLowerCase()!=='aida'&&String(r?.displayName||'').toLowerCase()!=='aida').sort((a,b)=>b.score-a.score||a.reachedAtMs-b.reachedAtMs).map((r,i)=>`<article class="r29-rank-row ${i<3?'top':''}"><span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`}</span><div><b>${esc(r.displayName||r.memberKey)}</b><small>${r.memberKey===currentMemberKey?'คุณ':''}</small></div><strong>${Number(r.score||0).toLocaleString('th-TH')}</strong></article>`).join('');
+  function rankHTML(rows,key=currentKey){
+    const c=C[key],map=new Map();
+    (rows||[]).forEach(r=>{if(r?.memberKey)map.set(String(r.memberKey),r)});
+    try{
+      Object.keys(MEMBERS||{}).forEach(name=>{
+        if(String(name).toLowerCase()==="aida")return;
+        const k=typeof memberKeyFromName==="function"?memberKeyFromName(name):String(name);
+        if(!map.has(k))map.set(k,{memberKey:k,displayName:name,score:0,reachedAtMs:0,breakdown:{}});
+      });
+    }catch(_){}
+    const all=[...map.values()].filter(r=>String(r?.memberKey||"").toLowerCase()!=="aida"&&String(r?.displayName||"").toLowerCase()!=="aida");
+    all.sort((a,b)=>Number(b.score||0)-Number(a.score||0)||Number(a.reachedAtMs||0)-Number(b.reachedAtMs||0)||String(a.displayName||a.memberKey).localeCompare(String(b.displayName||b.memberKey),"th"));
+    if(!all.length)return '<p class="r29-empty">ยังไม่มีผู้เล่นในอันดับค่ะ</p>';
+    return all.map((r,i)=>{
+      const details=(c?.breakdown||[]).map(([k,label])=>`<span title="${esc(label)}"><b>${esc(label)}</b> ×${Math.max(0,Number(r?.breakdown?.[k]||0))}</span>`).join("");
+      return `<article class="r29-rank-row ${i<3?"top":""}"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span><div class="r29-rank-body"><b>${esc(r.displayName||r.memberKey)}</b><small>${r.memberKey===currentMemberKey?"คุณ":""}</small>${details?`<div class="r29-rank-breakdown">${details}</div>`:""}</div><strong>${Number(r.score||0).toLocaleString("th-TH")}</strong></article>`;
+    }).join("");
   }
   async function showCampaign(key){
     const c=C[key];if(!c)return;currentKey=key;stopLive();let meta=await getMeta(key);const started=Boolean(meta?.startedAtMs),isActive=active(meta),ended=started&&now()>=Number(meta.endAtMs||0);
@@ -26782,11 +26909,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     openModal();$('r29Back').onclick=()=>{stopLive();closeModal()};$('r29Rules').onclick=()=>showRules(key);$('r29Gift').onclick=()=>showRewards(key);if($('r29StartCampaign'))$('r29StartCampaign').onclick=()=>startCampaign(key);
     try{
       const {db,fs}=await getFirebaseContext(),col=fs.collection(db,'campaigns',c.id,'scores');
-      unsub=fs.onSnapshot(col,snap=>{const rows=[];snap.forEach(d=>rows.push(d.data()));const mine=rows.find(r=>r.memberKey===currentMemberKey)?.score||0;if($('r29MyScore'))$('r29MyScore').textContent=ADMIN()?'ไม่เข้าร่วมการแข่งขัน':Number(mine).toLocaleString('th-TH');if($('r29Ranks'))$('r29Ranks').innerHTML=rankHTML(rows)},e=>{if($('r29Ranks'))$('r29Ranks').innerHTML='<p class="r29-empty">เชื่อมต่ออันดับไม่ได้ กรุณาลองใหม่</p>';console.warn(e)});
+      unsub=fs.onSnapshot(col,snap=>{const rows=[];snap.forEach(d=>rows.push(d.data()));const mine=rows.find(r=>r.memberKey===currentMemberKey)?.score||0;if($('r29MyScore'))$('r29MyScore').textContent=ADMIN()?'ไม่เข้าร่วมการแข่งขัน':Number(mine).toLocaleString('th-TH');if($('r29Ranks'))$('r29Ranks').innerHTML=rankHTML(rows,key)},e=>{if($('r29Ranks'))$('r29Ranks').innerHTML='<p class="r29-empty">เชื่อมต่ออันดับไม่ได้ กรุณาลองใหม่</p>';console.warn(e)});
     }catch(e){console.warn(e)}
     timer=setInterval(()=>{if(currentKey!==key)return stopLive();const left=meta?.startedAtMs?Math.max(0,Number(meta.endAtMs)-now()):0;if($('r29Countdown'))$('r29Countdown').textContent=meta?.startedAtMs?fmt(left):'ยังไม่เริ่ม';if($('r29CampaignStatus'))$('r29CampaignStatus').textContent=!meta?.startedAtMs?'ยังไม่เปิดแคมเปญ':left<=0?'แคมเปญจบแล้ว':'กำลังนับคะแนน'},1000);
   }
-  function showRules(key){const c=C[key];$('modalContent').innerHTML=`<section class="feature-panel r29-campaign-page"><button id="r29PageBack">← กลับหน้าอันดับ</button><div class="r29-page-scroll">${c.rules}<p><b>ระยะเวลา 9 วัน</b> เริ่มนับจากเวลาที่ Aida กดเริ่มแคมเปญนี้</p></div></section>`;openModal();$('r29PageBack').onclick=()=>showCampaign(key)}
+  function showRules(key){const c=C[key];$('modalContent').innerHTML=`<section class="feature-panel r29-campaign-page"><button id="r29PageBack">← กลับหน้าอันดับ</button><div class="r29-page-scroll">${c.rules}<p><b>ระยะเวลา 8 วัน</b> เริ่มนับจากเวลาที่ Aida กดเริ่มแคมเปญนี้</p></div></section>`;openModal();$('r29PageBack').onclick=()=>showCampaign(key)}
   async function currentScore(key){if(ADMIN())return 0;try{const c=C[key],{db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,'campaigns',c.id,'scores',currentMemberKey));return s.exists()?Number(s.data().score)||0:0}catch{return 0}}
   async function currentRun(key){try{const c=C[key],{db,fs}=await getFirebaseContext(),m=await fs.getDoc(fs.doc(db,'campaigns',c.id));return m.exists()?Number(m.data()?.startedAtMs)||0:0}catch{return 0}}
   async function showRewards(key){
@@ -26799,17 +26926,35 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function uid(prefix){return globalThis.crypto?.randomUUID?.()||`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`}
   function randomHamster(){return {id:uid('reward-ham'),color:HAM_COLORS[Math.floor(Math.random()*HAM_COLORS.length)],source:'campaign-r29',createdAt:now()}}
   function addFemaleAlpaca(s,qty){s.alpaca=s.alpaca||{};s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];for(let i=0;i<qty;i++)s.alpaca.vault.push({id:uid('reward-alpaca'),type:'adult',color:ALPACA_COLORS[Math.floor(Math.random()*ALPACA_COLORS.length)],sex:'female',source:'campaign-r29',createdAt:now()})}
+  function addRoyalAlpaca(s,color,qty){
+    s.alpaca=s.alpaca||{};s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    const sex=color==="prince"?"male":"female";
+    for(let i=0;i<qty;i++)s.alpaca.vault.push({id:uid(`reward-${color}`),type:"adult",color,sex,source:"campaign-r36",createdAt:now()});
+  }
   function applyRewardItem(s,item){
     const [t,a,b]=item;
-    if(t==='merit'){s.merit=(Number(s.merit)||0)+a;return}
-    if(t==='special'){s.specials[a]=(Number(s.specials[a])||0)+b;return}
-    if(t==='fuel'){s.specials.honeyFuelCan=(Number(s.specials.honeyFuelCan)||0)+a;return}
-    if(t==='tool'){s.warehouseTools[a]=(Number(s.warehouseTools[a])||0)+b;return}
-    if(t==='grass'){s.specials[a]=(Number(s.specials[a])||0)+b;return}
-    if(t==='bait'){s.fishingBaits.bait4=(Number(s.fishingBaits.bait4)||0)+a;return}
-    if(t==='hamster'){for(let i=0;i<a;i++)s.farmGuardianInventory.push(randomHamster());return}
-    if(t==='alpacaFemale'){addFemaleAlpaca(s,a);return}
-    if(t==='jellyV2All'){Object.keys(Y26_JELLY_V2||{}).forEach(k=>s.jellyfishV2[k]=(Number(s.jellyfishV2[k])||0)+1);return}
+    s.specials=s.specials&&typeof s.specials==="object"?s.specials:{};
+    s.fishingBaits=s.fishingBaits&&typeof s.fishingBaits==="object"?s.fishingBaits:{};
+    s.hedgehogItems=s.hedgehogItems&&typeof s.hedgehogItems==="object"?s.hedgehogItems:{};
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};
+    s.alpaca.inventory.medicine=s.alpaca.inventory.medicine&&typeof s.alpaca.inventory.medicine==="object"?s.alpaca.inventory.medicine:{};
+    s.alpaca.inventory.wool=s.alpaca.inventory.wool&&typeof s.alpaca.inventory.wool==="object"?s.alpaca.inventory.wool:{};
+    if(t==="merit"){s.merit=(Number(s.merit)||0)+a;return}
+    if(t==="special"){s.specials[a]=(Number(s.specials[a])||0)+b;return}
+    if(t==="fuel"){s.specials.honeyFuelCan=(Number(s.specials.honeyFuelCan)||0)+a;return}
+    if(t==="tool"){s.warehouseTools[a]=(Number(s.warehouseTools[a])||0)+b;return}
+    if(t==="grass"){s.specials[a]=(Number(s.specials[a])||0)+b;return}
+    if(t==="bait"){s.fishingBaits.bait4=(Number(s.fishingBaits.bait4)||0)+a;return}
+    if(t==="fishingBait"){s.fishingBaits[a]=(Number(s.fishingBaits[a])||0)+b;return}
+    if(t==="hamster"){for(let i=0;i<a;i++)s.farmGuardianInventory.push(randomHamster());return}
+    if(t==="alpacaFemale"){addFemaleAlpaca(s,a);return}
+    if(t==="alpacaRoyal"){addRoyalAlpaca(s,a,b);return}
+    if(t==="alpacaMedicine"){s.alpaca.inventory.medicine[a]=(Number(s.alpaca.inventory.medicine[a])||0)+b;return}
+    if(t==="alpacaWool"){s.alpaca.inventory.wool[a]=(Number(s.alpaca.inventory.wool[a])||0)+b;return}
+    if(t==="hedgehogAll"){["fang","fur","claw","tail"].forEach(k=>s.hedgehogItems[k]=(Number(s.hedgehogItems[k])||0)+a);return}
+    if(t==="mysteryJelly"){s.mysteryBoxes=(Number(s.mysteryBoxes)||0)+a;return}
+    if(t==="jellyV2All"){Object.keys(Y26_JELLY_V2||{}).forEach(k=>s.jellyfishV2[k]=(Number(s.jellyfishV2[k])||0)+1);return}
   }
   async function claimReward(key,need){
     const c=C[key],def=REWARDS[key].find(r=>r.need===need);if(!c||!def)return;
@@ -26876,11 +27021,11 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function mountShortcuts(){
     const box=document.querySelector('.campaign-shortcut-section .hud-menu-section-items');if(!box)return;
     const defs=[
-      ['r29CampaignRainbowBtn','rainbow','🌈'],['r29CampaignShieldBtn','shield','🦔'],['r29CampaignHoneyBtn','honey','🐷'],['r29CampaignHomeBtn','home','🏡']
+      ["r29CampaignSecretBtn","secret","🌱"],["r29CampaignFishingBtn","fishing","🎣"],["r29CampaignWoolBtn","wool","🎀"],["r29CampaignHomeBtn","home","🏡"]
     ];
     const keep=new Set(defs.map(x=>x[0]));
     box.querySelectorAll('.campaign-shortcut-item').forEach(b=>{if(!keep.has(b.id))b.remove()});
-    defs.forEach(([id,key,icon])=>{let b=$(id);if(!b){b=document.createElement('button');b.id=id;b.className='hud-menu-item campaign-shortcut-item r29-campaign-shortcut';b.type='button';b.innerHTML=`<span>${icon}</span><div><b>${esc(C[key].title)}</b><small>9 วัน • เริ่มเมื่อ Aida กดเปิด</small></div><i>›</i>`;box.appendChild(b)}b.onclick=()=>showCampaign(key)});
+    defs.forEach(([id,key,icon])=>{let b=$(id);if(!b){b=document.createElement('button');b.id=id;b.className='hud-menu-item campaign-shortcut-item r29-campaign-shortcut';b.type='button';b.innerHTML=`<span>${icon}</span><div><b>${esc(C[key].title)}</b><small>8 วัน • เริ่มเมื่อ Aida กดเปิด</small></div><i>›</i>`;box.appendChild(b)}b.onclick=()=>showCampaign(key)});
   }
   setInterval(mountShortcuts,1200);setTimeout(mountShortcuts,100);
 
@@ -35673,8 +35818,25 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   function ingredientHave(s,r){return r.type==="bag"?n(s?.bag?.[r.key]):n(s?.specials?.[r.key])}
   function showSecretLuck(){
     const s=ensureR35(ownState||state),can=SECRET_RECIPE.every(r=>ingredientHave(s,r)>=r.qty);
-    $("modalContent").innerHTML=`<section class="feature-panel r35-modal r35-secret-craft r3519-secret-luck"><div class="r35-notice-head"><img src="${AS}secret-seeds.png" alt="Secret Seeds"><div><h2>🎲 ลุ้น Secret Seeds</h2><small>คราฟ 1 ครั้ง • สำเร็จ 50%</small></div></div><div class="r35-modal-scroll"><div class="r35-recipe-grid">${SECRET_RECIPE.map(r=>`<article class="${ingredientHave(s,r)>=r.qty?"ok":"missing"}"><b>${html(r.name)}</b><small>ต้องใช้ ×${r.qty}</small><span>มี ×${ingredientHave(s,r)}</span></article>`).join("")}</div><div class="r35-stock-line"><img src="${AS}secret-seeds.png" alt=""><span>Secret Seeds ในกระเป๋า</span><b>×${secretBagCount(s)}</b></div></div><button id="r35CraftSecret" class="primary-spooky-action" type="button" ${can?"":"disabled"}>ลุ้น 1 ครั้ง</button></section>`;
-    openModal?.();$("r35CraftSecret").onclick=craftSecretSeed;
+    $("modalContent").innerHTML=`<section class="feature-panel r35-modal r35-secret-craft r3519-secret-luck ynu-luck-shop">
+      <div class="r35-notice-head"><span class="ynu-luck-icon">🎲</span><div><h2>ร้านค้า • ลุ้น</h2><small>เลือกกิจกรรมที่ต้องการลุ้นได้จากส่วนด้านล่าง</small></div></div>
+      <div class="r35-modal-scroll ynu-luck-scroll">
+        <section class="ynu-luck-section">
+          <div class="ynu-luck-section-head"><img src="${AS}secret-seeds.png" alt="Secret Seeds"><div><b>ลุ้น Secret Seeds</b><small>คราฟ 1 ครั้ง • สำเร็จ 50%</small></div></div>
+          <div class="r35-recipe-grid">${SECRET_RECIPE.map(r=>`<article class="${ingredientHave(s,r)>=r.qty?"ok":"missing"}"><b>${html(r.name)}</b><small>ต้องใช้ ×${r.qty}</small><span>มี ×${ingredientHave(s,r)}</span></article>`).join("")}</div>
+          <div class="r35-stock-line"><img src="${AS}secret-seeds.png" alt=""><span>Secret Seeds ในกระเป๋า</span><b>×${secretBagCount(s)}</b></div>
+          <button id="r35CraftSecret" class="primary-spooky-action" type="button" ${can?"":"disabled"}>ลุ้น Secret Seeds 1 ครั้ง</button>
+        </section>
+        <section class="ynu-luck-section ynu-wig-entry">
+          <div class="ynu-luck-section-head"><img src="alpaca-wig-fancy.png" alt="วิกผมแฟนซีจากขนอัลปาก้า"><div><b>คราฟวิกผมแฟนซีจากขนอัลปาก้า</b><small>ขนอัลปาก้า 5 สี • สีละ 2 ต่อ 1 ครั้ง • สำเร็จ 30%</small></div></div>
+          <p>เลือกคราฟได้ครั้งละ 1–10 ครั้ง • ผลสำเร็จแต่ละครั้งสุ่มอิสระและไม่มีการการันตี</p>
+          <button id="ynuOpenWigCraft" class="primary-spooky-action" type="button">เปิดระบบคราฟวิกผม</button>
+        </section>
+      </div>
+    </section>`;
+    openModal?.();
+    if($("r35CraftSecret"))$("r35CraftSecret").onclick=craftSecretSeed;
+    if($("ynuOpenWigCraft"))$("ynuOpenWigCraft").onclick=()=>globalThis.YN_WIG_CRAFT?.open?.();
   }
   async function craftSecretSeed(){
     const btn=$("r35CraftSecret");if(btn?.dataset.busy==="1")return;if(btn){btn.dataset.busy="1";btn.disabled=true;btn.textContent="กำลังลุ้น…"}
@@ -35695,11 +35857,11 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     if(!tabs||tabs.querySelector("#r35LuckShopBtn"))return;
     const b=document.createElement("button");
     b.id="r35LuckShopBtn";b.type="button";b.dataset.r35Luck="1";
-    b.innerHTML="🎲 ลุ้น Secret Seeds";
+    b.innerHTML="🎲 ลุ้น";
     b.onclick=()=>showShop("r35Luck");
     tabs.appendChild(b);
     let badge=document.querySelector(".r35-build-badge");
-    if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="Secret Seeds";document.querySelector(".shop-panel h2")?.appendChild(badge)}
+    if(!badge){badge=document.createElement("small");badge.className="r35-build-badge";badge.textContent="ลุ้น";document.querySelector(".shop-panel h2")?.appendChild(badge)}
   }
   const shopBase=showShop;showShop=function(tab){
     if(tab==="r35Luck")return showSecretLuck();
@@ -35864,5 +36026,256 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   globalThis.YN_R35={BUILD,showSecretLuck,craftSecretSeed,plantSecretOne,bulkSecretPlant,craftSpecialBaits,openGimmickSelector,openGimmickSelectorV2:(slotNo,baitKey)=>openGimmickSelector(slotNo,baitKey,{v2:true}),showSpecialResultV2:(slot,claimFn)=>showR35FishResult(slot,claimFn),rollNewFish,retireTemple,injectR35LuckShopButton};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   setTimeout(()=>{try{if($("shopNavBtn"))$("shopNavBtn").onclick=()=>showShop("home")}catch(_){ }},250);
+  console.info(BUILD,"loaded");
+})();
+
+
+/* ======================================================================
+   S2 R36 — FINAL CAMPAIGN TRIO + ALPACA FANCY WIG CRAFT
+   2026-09-14
+   - Detailed Secret Seeds / fishing / wig campaign scoring
+   - 8-day manual campaign runs are handled by YN_R29
+   - Wig craft lives in Shop > ลุ้น and stores successful wigs in Alpaca > อื่นๆ
+   ====================================================================== */
+(function YN_R36_CAMPAIGNS_AND_WIG(){
+  "use strict";
+  const BUILD="S2-R36-CAMPAIGN-TRIO-WIG-20260914";
+  const $=id=>document.getElementById(id);
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const admin=()=>String(currentMember||"")==="Aida"&&adminProfile?.role==="admin";
+  const WIG_KEY="fancyWig";
+  const WIG_NAME="วิกผมแฟนซีจากขนอัลปาก้า";
+  const WIG_GOOD_IMG="alpaca-wig-fancy.png";
+  const WIG_BAD_IMG="alpaca-wig-broken.png";
+  const WIG_WOOL=["white","black","pink","brown","green"];
+  const WIG_WOOL_TH={white:"ขาว",black:"ดำ",pink:"ชมพู",brown:"น้ำตาล",green:"เขียว"};
+  const SECRET_POINTS={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH_POINTS={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+
+  function ensureWigState(s){
+    if(!s||typeof s!=="object")return s;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};
+    s.alpaca.inventory.other=s.alpaca.inventory.other&&typeof s.alpaca.inventory.other==="object"?s.alpaca.inventory.other:{};
+    s.alpaca.inventory.wool=s.alpaca.inventory.wool&&typeof s.alpaca.inventory.wool==="object"?s.alpaca.inventory.wool:{};
+    s.alpaca.inventory.other[WIG_KEY]=Math.max(0,Math.floor(Number(s.alpaca.inventory.other[WIG_KEY])||0));
+    WIG_WOOL.forEach(k=>s.alpaca.inventory.wool[k]=Math.max(0,Math.floor(Number(s.alpaca.inventory.wool[k])||0)));
+    return s;
+  }
+
+  if(typeof normalizeState==="function"){
+    const base=normalizeState;
+    normalizeState=function(raw,player){return ensureWigState(base(raw,player))};
+  }
+  try{ensureWigState(ownState||state)}catch(_){}
+
+  if(typeof ensureAdminStock==="function"){
+    const base=ensureAdminStock;
+    ensureAdminStock=function(s){
+      const r=base(s);ensureWigState(s);
+      if(admin())s.alpaca.inventory.other[WIG_KEY]=9999;
+      return r;
+    };
+  }
+  if(typeof adminGiftCatalog==="function"){
+    const base=adminGiftCatalog;
+    adminGiftCatalog=function(){
+      const rows=base()||[];
+      if(!rows.some(x=>x?.type==="alpacaOther"&&x?.key===WIG_KEY))
+        rows.push({type:"alpacaOther",key:WIG_KEY,name:WIG_NAME,image:WIG_GOOD_IMG,category:"อัลปาก้า"});
+      return rows;
+    };
+  }
+  if(typeof addGiftItemToState==="function"){
+    const base=addGiftItemToState;
+    addGiftItemToState=function(s,gift){
+      const type=gift?.itemType||gift?.type,key=gift?.itemKey||gift?.key,qty=Math.max(1,Math.floor(Number(gift?.qty)||1));
+      if(type==="alpacaOther"&&key===WIG_KEY){ensureWigState(s);s.alpaca.inventory.other[WIG_KEY]=(Number(s.alpaca.inventory.other[WIG_KEY])||0)+qty;return}
+      return base(s,gift);
+    };
+  }
+
+  async function scoreDetailed(key,delta,receipt,breakdown={}){
+    const c=globalThis.YN_R29?.C?.[key];
+    if(!c||!cloudReady||!currentMemberKey||visitContext||admin())return false;
+    delta=Number(delta)||0;
+    const add={};let hasBreakdown=false;
+    Object.entries(breakdown||{}).forEach(([k,v])=>{
+      const q=Math.max(0,Math.floor(Number(v)||0));
+      if(q){add[k]=q;hasBreakdown=true}
+    });
+    if(!delta&&!hasBreakdown)return false;
+    const eventAt=now(),rec=String(receipt||"");
+    try{
+      const {db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),scoreRef=fs.doc(db,"campaigns",c.id,"scores",currentMemberKey);
+      let accepted=false;
+      await fs.runTransaction(db,async tx=>{
+        const [m,snap]=await Promise.all([tx.get(metaRef),tx.get(scoreRef)]);
+        if(!m.exists())return;
+        const meta=m.data()||{},started=Number(meta.startedAtMs)||0,ended=Number(meta.endAtMs)||0;
+        if(!meta.active||!started||eventAt<started||(ended&&eventAt>=ended))return;
+        const raw=snap.exists()?snap.data():{},sameRun=Number(raw.runId||0)===started,old=sameRun?raw:{};
+        const recent=sameRun&&Array.isArray(old.recentReceipts)?old.recentReceipts:[];
+        if(rec&&recent.includes(rec))return;
+        const bd={...(sameRun&&old.breakdown&&typeof old.breakdown==="object"?old.breakdown:{})};
+        Object.entries(add).forEach(([k,q])=>bd[k]=Math.max(0,Math.floor(Number(bd[k])||0))+q);
+        const nextScore=(Number(old.score)||0)+delta;
+        tx.set(scoreRef,{
+          memberKey:currentMemberKey,
+          displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,
+          runId:started,
+          score:nextScore,
+          reachedAtMs:delta!==0?eventAt:(Number(old.reachedAtMs)||eventAt),
+          breakdown:bd,
+          recentReceipts:rec?[...recent,rec].slice(-120):recent.slice(-120),
+          updatedAt:fs.serverTimestamp()
+        },{merge:true});
+        accepted=true;
+      });
+      return accepted;
+    }catch(e){
+      console.warn("R36 detailed campaign score",key,e);
+      try{showWeatherToast?.(`⚠️ คะแนน ${c.title} ยังไม่บันทึก • ${e?.message||"กรุณาลองใหม่"}`)}catch(_){}
+      return false;
+    }
+  }
+
+  async function scoreSecretHarvest(summary){
+    if(!summary||typeof summary!=="object")return false;
+    const breakdown={};let delta=0;
+    Object.entries(SECRET_POINTS).forEach(([k,pt])=>{
+      const q=Math.max(0,Math.floor(Number(summary[k])||0));
+      if(q){breakdown[k]=q;delta+=q*pt}
+    });
+    if(!delta)return false;
+    const st=ownState||state;
+    const revision=Math.max(0,Math.floor(Number(st?.clientSaveRevision)||0));
+    const sig=revision||`${Date.now()}-${Object.entries(breakdown).map(([k,q])=>`${k}:${q}`).join("|")}`;
+    return scoreDetailed("secret",delta,`secret:${currentMemberKey}:${sig}`,breakdown);
+  }
+
+  async function scoreFishingClaim(slot,receipt=""){
+    const catches=Array.isArray(slot?.catches)?slot.catches:[],breakdown={};let delta=0,found=0;
+    catches.forEach(c=>{
+      const k=String(c?.fishKey||"");
+      if(!Object.prototype.hasOwnProperty.call(FISH_POINTS,k))return;
+      breakdown[k]=(breakdown[k]||0)+1;delta+=FISH_POINTS[k];found++;
+    });
+    if(!found)return false;
+    const rec=receipt||`fish:${currentMemberKey}:${Number(slot?.startedAt||slot?.startAt||slot?.finishAt||0)}:${slot?.pondId||0}:${slot?.slot||0}`;
+    return scoreDetailed("fishing",delta,rec,breakdown);
+  }
+
+  const harvestCampaignBase=typeof globalThis.V181_campaignScoreLater==="function"?globalThis.V181_campaignScoreLater:null;
+  globalThis.V181_campaignScoreLater=async function(summary){
+    let baseResult;
+    try{if(harvestCampaignBase)baseResult=await harvestCampaignBase.apply(this,arguments)}
+    catch(e){console.warn("R36 prior harvest campaign scorer",e)}
+    try{await scoreSecretHarvest(summary)}catch(e){console.warn("R36 secret harvest scorer",e)}
+    return baseResult;
+  };
+
+  function wigHave(s,k){return admin()?9999:Math.max(0,Math.floor(Number(ensureWigState(s)?.alpaca?.inventory?.wool?.[k])||0))}
+  function maxWigCraft(s){
+    return Math.max(0,Math.min(10,...WIG_WOOL.map(k=>Math.floor(wigHave(s,k)/2))));
+  }
+  function wigStockHTML(s,qty=1){
+    const need=Math.max(1,Math.min(10,Math.floor(Number(qty)||1))*2);
+    return WIG_WOOL.map(k=>{
+      const have=wigHave(s,k),ok=have>=need;
+      return `<article class="${ok?"ok":"missing"}"><b>ขนอัลปาก้าสี${WIG_WOOL_TH[k]}</b><span>มี ×${have.toLocaleString("th-TH")}</span><small>ต้องใช้ ×${need}</small></article>`;
+    }).join("");
+  }
+  function openWigCraft(){
+    const s=ensureWigState(ownState||state),max=Math.max(1,maxWigCraft(s));
+    $("modalContent").innerHTML=`<section class="feature-panel ynu-wig-craft">
+      <header class="ynu-wig-title"><img src="${WIG_GOOD_IMG}" alt="${WIG_NAME}"><div><small>ร้านค้า • ลุ้น</small><h2>${WIG_NAME}</h2><p>สุ่มสำเร็จ 30% ต่อครั้ง • สุ่มอิสระ • ไม่มีการการันตี</p></div></header>
+      <div class="ynu-wig-scroll">
+        <div class="ynu-wig-recipe-note"><b>วัตถุดิบต่อ 1 ครั้ง</b><span>ขาว ×2 • ดำ ×2 • ชมพู ×2 • น้ำตาล ×2 • เขียว ×2</span><small>รวม 10 ชิ้น • คละสีทดแทนกันไม่ได้</small></div>
+        <div id="ynuWigStock" class="ynu-wig-stock">${wigStockHTML(s,1)}</div>
+        <label class="ynu-wig-qty">จำนวนครั้ง
+          <input id="ynuWigQty" type="number" inputmode="numeric" min="1" max="10" value="1">
+          <small>คราฟได้สูงสุดครั้งละ 10</small>
+        </label>
+        <p class="ynu-wig-bagline">ในกระเป๋าอัลปาก้า: <b>${WIG_NAME} ×${Number(s.alpaca.inventory.other[WIG_KEY]||0).toLocaleString("th-TH")}</b></p>
+      </div>
+      <button id="ynuWigCraftGo" class="primary-spooky-action" type="button" ${maxWigCraft(s)<1&&!admin()?"disabled":""}>คราฟวิกผม</button>
+      <button id="ynuWigBackLuck" class="secondary-action" type="button">กลับร้านลุ้น</button>
+    </section>`;
+    openModal?.();
+    const input=$("ynuWigQty"),paint=()=>{
+      const q=Math.max(1,Math.min(10,Math.floor(Number(input?.value)||1)));
+      if(input)input.value=String(q);
+      const stock=$("ynuWigStock");if(stock)stock.innerHTML=wigStockHTML(ownState||state,q);
+      const can=admin()||WIG_WOOL.every(k=>wigHave(ownState||state,k)>=q*2);
+      if($("ynuWigCraftGo"))$("ynuWigCraftGo").disabled=!can;
+    };
+    if(input){input.oninput=paint;input.onchange=paint}
+    if($("ynuWigCraftGo"))$("ynuWigCraftGo").onclick=craftWig;
+    if($("ynuWigBackLuck"))$("ynuWigBackLuck").onclick=()=>globalThis.YN_R35?.showSecretLuck?.();
+  }
+
+  async function craftWig(){
+    const qty=Math.max(1,Math.min(10,Math.floor(Number($("ynuWigQty")?.value)||1)));
+    const btn=$("ynuWigCraftGo");if(btn?.dataset.busy==="1")return;
+    if(btn){btn.dataset.busy="1";btn.disabled=true;btn.textContent="กำลังคราฟ…"}
+    const craftId=`wig-${currentMemberKey}-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+    let success=0,failed=0,merit=0,next=null;
+    try{
+      if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      await fs.runTransaction(db,async tx=>{
+        const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=ensureWigState(normalizeState(snap.data(),currentMember));try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(_){}
+        const need=qty*2;
+        if(!admin())for(const k of WIG_WOOL)if(Number(s.alpaca.inventory.wool[k]||0)<need)throw new Error(`ขนอัลปาก้าสี${WIG_WOOL_TH[k]} ไม่พอ • ต้องใช้ ${need} ชิ้น`);
+        if(!admin())WIG_WOOL.forEach(k=>s.alpaca.inventory.wool[k]-=need);
+        success=0;failed=0;merit=0;
+        for(let i=0;i<qty;i++){
+          if(Math.random()<0.30)success++;
+          else{failed++;merit+=1+Math.floor(Math.random()*50)}
+        }
+        if(success)s.alpaca.inventory.other[WIG_KEY]=(Number(s.alpaca.inventory.other[WIG_KEY])||0)+success;
+        if(failed)s.merit=(Number(s.merit)||0)+merit;
+        if(admin()){WIG_WOOL.forEach(k=>s.alpaca.inventory.wool[k]=9999);s.alpaca.inventory.other[WIG_KEY]=9999}
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+        next=JSON.parse(JSON.stringify(s));
+        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+      });
+      ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};try{updateMeritUI?.()}catch(_){}
+      if(success)try{await scoreDetailed("wool",success*10,`wig:${craftId}`,{fancyWig:success})}catch(e){console.warn("R36 wool campaign score",e)}
+
+      const successBlock=success?`<div class="ynu-wig-result-card success"><img src="${WIG_GOOD_IMG}" alt=""><div><h3>ยินดีด้วยค่ะ วิกผมใหม่ สวย น่ารัก เหมาะกับคุณเลย</h3><p>${WIG_NAME} ×<b>${success}</b> เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว</p><small>ของถูกบันทึกเข้ากระเป๋าตั้งแต่คราฟสำเร็จ ไม่ต้องกดรับเพื่อบันทึก</small></div></div>`:"";
+      const failBlock=failed?`<div class="ynu-wig-result-card fail"><img src="${WIG_BAD_IMG}" alt=""><div><h3>เสียใจด้วยค่ะ รอบหน้าตั้งใจกว่านี้ วิกผมพังหมด อีดอก!!!</h3><p>ปลอบใจนะ ไปซื้อกรรไกรมาตัดใหม่ <b>${merit.toLocaleString("th-TH")} กุศล</b></p><small>พัง ${failed} ครั้ง • สุ่มกุศล 1–50 แยกต่อครั้ง</small></div></div>`:"";
+      $("modalContent").innerHTML=`<section class="feature-panel ynu-wig-result"><h2>ผลคราฟ ${qty} ครั้ง</h2><div class="ynu-wig-scroll">${successBlock}${failBlock}<div class="ynu-wig-summary"><b>สำเร็จ ${success}</b><span>พัง ${failed}</span>${failed?`<span>กุศลปลอบใจ +${merit.toLocaleString("th-TH")}</span>`:""}</div></div><button id="ynuWigReceive" class="primary-spooky-action" type="button">${success?"รับ":"รับทราบ"}</button><button id="ynuWigAgain" class="secondary-action" type="button">คราฟอีกครั้ง</button></section>`;
+      openModal?.();
+      if($("ynuWigReceive"))$("ynuWigReceive").onclick=()=>closeModal?.();
+      if($("ynuWigAgain"))$("ynuWigAgain").onclick=openWigCraft;
+    }catch(e){
+      message?.("คราฟวิกผมไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");
+    }finally{
+      if(btn&&btn.isConnected){btn.dataset.busy="0";btn.disabled=false;btn.textContent="คราฟวิกผม"}
+    }
+  }
+
+  function injectWigInventory(){
+    const content=$("modalContent");if(!content)return;
+    const other=content.querySelector('.alpaca-inventory-subtabs [data-alpaca-inv="other"].active');
+    const grid=content.querySelector(".alpaca-inventory-grid");
+    if(!other||!grid||grid.querySelector("[data-ynu-fancy-wig]"))return;
+    const s=ensureWigState(ownState||state),qty=Number(s?.alpaca?.inventory?.other?.[WIG_KEY]||0);
+    grid.insertAdjacentHTML("beforeend",`<article class="alpaca-inventory-item" data-ynu-fancy-wig="1"><img src="${WIG_GOOD_IMG}" alt="${WIG_NAME}"><b>${WIG_NAME}</b><strong>×${qty.toLocaleString("th-TH")}</strong><small>คราฟได้จาก ร้านค้า → ลุ้น</small></article>`);
+  }
+  const obs=new MutationObserver(()=>queueMicrotask(injectWigInventory));
+  if($("modalContent"))obs.observe($("modalContent"),{childList:true,subtree:true});
+  setTimeout(injectWigInventory,200);
+
+  globalThis.YN_WIG_CRAFT={BUILD,key:WIG_KEY,name:WIG_NAME,open:openWigCraft,craft:craftWig,ensure:ensureWigState};
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();

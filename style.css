@@ -11395,3 +11395,374 @@ body.r50-lock{overflow:hidden!important}
 .r3519-qty{display:grid!important;grid-template-columns:1fr 72px!important;align-items:center!important;gap:8px!important;font-size:11px!important}.r3519-qty input{width:72px!important;min-height:36px!important;text-align:center!important;border-radius:9px!important}
 .r3519-special-bait-card #r35CraftSpecialBait{width:100%!important;min-height:40px!important;margin-top:8px!important;font-size:12.5px!important;border-radius:11px!important}
 @media(max-width:390px){.r3519-secret-luck .r35-recipe-grid,.r3519-recipe-grid,.r3519-bait-stock{grid-template-columns:1fr 1fr!important}.r3519-special-head{grid-template-columns:82px 1fr!important}.r3519-bait-pics img{width:39px!important;height:39px!important}}
+
+/* ======================================================================
+   S2 R36 — CAMPAIGN TRIO + WIG CRAFT MOBILE UI
+   Large-enough text, true vertical scroll, compact footer controls.
+   ====================================================================== */
+.r29-campaign{
+  width:min(96vw,560px)!important;
+  height:min(92dvh,820px)!important;
+  max-height:calc(100dvh - 20px)!important;
+  border-radius:24px!important;
+}
+.r29-campaign-ui{
+  padding:12px!important;
+  gap:5px!important;
+  min-height:0!important;
+}
+.r29-campaign-ui header{flex:0 0 auto!important;gap:10px!important}
+.r29-campaign-ui header button{
+  min-height:38px!important;
+  padding:8px 13px!important;
+  font-size:13px!important;
+  line-height:1.1!important;
+  touch-action:manipulation;
+}
+.r29-campaign-title{flex:0 0 auto!important;margin:5px 0 3px!important}
+.r29-campaign-title small{font-size:12px!important;font-weight:800!important}
+.r29-campaign-title h2{
+  margin:3px auto 4px!important;
+  max-width:96%!important;
+  font-size:clamp(20px,5.4vw,29px)!important;
+  line-height:1.16!important;
+  text-wrap:balance;
+  overflow-wrap:anywhere;
+}
+.r29-campaign-title span{font-size:11.5px!important;padding:5px 10px!important}
+.r29-my-score{
+  flex:0 0 auto!important;
+  margin:3px 0 4px!important;
+  padding:7px 11px!important;
+  font-size:12.5px!important;
+  border-radius:14px!important;
+}
+.r29-my-score strong{font-size:16px!important}
+.r29-ranks{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  scrollbar-gutter:stable;
+  padding:4px 2px 12px!important;
+}
+.r29-rank-row{
+  grid-template-columns:38px minmax(0,1fr) auto!important;
+  align-items:start!important;
+  gap:8px!important;
+  margin:6px 0!important;
+  padding:10px!important;
+  border-radius:15px!important;
+}
+.r29-rank-row>span{font-size:13px!important;padding-top:2px!important}
+.r29-rank-body>b{
+  display:block!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  font-size:13.5px!important;
+  line-height:1.25!important;
+}
+.r29-rank-body>small{font-size:10px!important;line-height:1.2!important}
+.r29-rank-row>strong{
+  font-size:15px!important;
+  line-height:1.2!important;
+  white-space:nowrap!important;
+  padding-top:1px!important;
+}
+.r29-rank-breakdown{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:4px!important;
+  margin-top:7px!important;
+}
+.r29-rank-breakdown span{
+  min-width:0!important;
+  padding:4px 5px!important;
+  border-radius:8px!important;
+  background:rgba(109,61,114,.08)!important;
+  font-size:10.5px!important;
+  line-height:1.22!important;
+  overflow-wrap:anywhere!important;
+}
+.r29-rank-breakdown span b{
+  display:inline!important;
+  font-size:10.5px!important;
+  white-space:normal!important;
+  overflow:visible!important;
+}
+.r29-campaign-ui footer{
+  flex:0 0 auto!important;
+  display:grid!important;
+  grid-template-columns:74px minmax(0,1fr)!important;
+  gap:8px!important;
+  align-items:stretch!important;
+  padding-top:3px!important;
+}
+.r29-campaign-ui footer>button{
+  min-height:56px!important;
+  border-radius:15px!important;
+  font-size:22px!important;
+  line-height:1!important;
+  touch-action:manipulation;
+}
+.r29-campaign-ui footer>button small{font-size:10px!important;margin-top:3px!important}
+.r29-campaign-ui footer>div{
+  min-height:56px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:6px 9px!important;
+  border-radius:15px!important;
+}
+.r29-campaign-ui footer>div small{font-size:10px!important}
+.r29-campaign-ui footer>div strong{font-size:13px!important;line-height:1.25!important}
+.r29-start{
+  flex:0 0 auto!important;
+  min-height:40px!important;
+  margin-top:3px!important;
+  padding:9px 12px!important;
+  font-size:13px!important;
+}
+
+.r29-campaign-page{
+  width:min(95vw,520px)!important;
+  height:min(90dvh,780px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:14px!important;
+}
+.r29-campaign-page>#r29PageBack{
+  flex:0 0 auto!important;
+  min-height:38px!important;
+  align-self:flex-start!important;
+  padding:8px 12px!important;
+  font-size:12.5px!important;
+  font-weight:850!important;
+}
+.r29-campaign-page>h2{
+  flex:0 0 auto!important;
+  margin:8px 0 5px!important;
+  font-size:clamp(19px,5vw,25px)!important;
+  line-height:1.2!important;
+  text-wrap:balance;
+}
+.r29-page-scroll,
+.r29-reward-list{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  scrollbar-gutter:stable;
+}
+.r29-page-scroll{
+  padding:4px 3px 14px!important;
+  font-size:13.5px!important;
+  line-height:1.58!important;
+}
+.r29-page-scroll h3{font-size:21px!important;line-height:1.25!important;margin:8px 0!important}
+.r29-page-scroll p{margin:8px 0!important}
+.r29-page-scroll ul{padding-left:22px!important;margin:8px 0!important}
+.r29-page-scroll li{margin:5px 0!important}
+.r29-rule-grid{
+  grid-template-columns:minmax(110px,.9fr) minmax(0,1.1fr)!important;
+  gap:7px 9px!important;
+  padding:10px!important;
+  font-size:12.5px!important;
+  line-height:1.35!important;
+}
+.r29-score-now{flex:0 0 auto!important;margin:3px 0 9px!important;font-size:13px!important}
+.r29-score-now b{font-size:17px!important}
+.r29-reward-list{display:grid!important;gap:8px!important;padding:2px 2px 14px!important}
+.r29-reward-list article{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:9px!important;
+  align-items:center!important;
+  padding:10px!important;
+  border-radius:14px!important;
+}
+.r29-reward-list article b{font-size:13.5px!important;line-height:1.3!important}
+.r29-reward-list article small{font-size:11.5px!important;line-height:1.4!important;margin-top:2px!important}
+.r29-reward-list button{
+  min-width:82px!important;
+  min-height:38px!important;
+  padding:8px 9px!important;
+  font-size:11.5px!important;
+  font-weight:850!important;
+}
+.r29-empty{font-size:13px!important;line-height:1.45!important;padding:20px 10px!important}
+
+/* Shop > ลุ้น is visually split into independent sections. */
+.ynu-luck-shop{
+  width:min(95vw,540px)!important;
+  height:min(90dvh,780px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.ynu-luck-shop>.r35-notice-head{flex:0 0 auto!important}
+.ynu-luck-shop>.r35-notice-head h2{font-size:22px!important;line-height:1.15!important}
+.ynu-luck-shop>.r35-notice-head small{font-size:11.5px!important;line-height:1.35!important}
+.ynu-luck-icon{font-size:31px!important}
+.ynu-luck-scroll{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding:5px 3px 14px!important;
+}
+.ynu-luck-section{
+  margin:8px 0 12px!important;
+  padding:12px!important;
+  border:1px solid rgba(109,61,114,.18)!important;
+  border-radius:18px!important;
+  background:rgba(255,250,240,.94)!important;
+  box-shadow:0 5px 14px rgba(58,37,64,.08)!important;
+}
+.ynu-luck-section-head{
+  display:grid!important;
+  grid-template-columns:60px minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:center!important;
+  margin-bottom:9px!important;
+}
+.ynu-luck-section-head img{width:60px!important;height:60px!important;object-fit:contain!important}
+.ynu-luck-section-head b{display:block!important;font-size:15px!important;line-height:1.25!important}
+.ynu-luck-section-head small{display:block!important;margin-top:2px!important;font-size:11px!important;line-height:1.35!important}
+.ynu-luck-section>p{font-size:12.5px!important;line-height:1.5!important;margin:7px 0 10px!important}
+.ynu-luck-section .primary-spooky-action{min-height:42px!important;font-size:13px!important}
+
+/* New alpaca wig craft. */
+.ynu-wig-craft,.ynu-wig-result{
+  width:min(95vw,540px)!important;
+  height:min(90dvh,780px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:14px!important;
+}
+.ynu-wig-title{
+  flex:0 0 auto!important;
+  display:grid!important;
+  grid-template-columns:76px minmax(0,1fr)!important;
+  gap:11px!important;
+  align-items:center!important;
+  margin-bottom:7px!important;
+}
+.ynu-wig-title img{width:76px!important;height:76px!important;object-fit:contain!important}
+.ynu-wig-title small{font-size:11px!important;font-weight:800!important}
+.ynu-wig-title h2{font-size:clamp(19px,5vw,24px)!important;line-height:1.16!important;margin:2px 0!important;text-wrap:balance}
+.ynu-wig-title p{font-size:11.5px!important;line-height:1.4!important;margin:3px 0!important}
+.ynu-wig-scroll{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  scrollbar-gutter:stable;
+  padding:3px 2px 12px!important;
+}
+.ynu-wig-recipe-note{
+  display:grid!important;
+  gap:4px!important;
+  padding:10px!important;
+  margin-bottom:9px!important;
+  border-radius:14px!important;
+  background:#fff4d9!important;
+  font-size:12.5px!important;
+  line-height:1.4!important;
+}
+.ynu-wig-recipe-note b{font-size:14px!important}
+.ynu-wig-recipe-note small{font-size:11px!important}
+.ynu-wig-stock{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;margin-bottom:10px!important}
+.ynu-wig-stock article{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  gap:2px 6px!important;
+  padding:9px!important;
+  border:1px solid #d9c5ad!important;
+  border-radius:12px!important;
+  background:#fffaf1!important;
+}
+.ynu-wig-stock article.missing{border-color:#dc9c9c!important;background:#fff0f0!important}
+.ynu-wig-stock article b{grid-column:1/-1!important;font-size:12px!important;line-height:1.3!important}
+.ynu-wig-stock article span,.ynu-wig-stock article small{font-size:10.5px!important;line-height:1.25!important}
+.ynu-wig-qty{
+  display:grid!important;
+  grid-template-columns:auto 88px!important;
+  gap:6px 10px!important;
+  align-items:center!important;
+  padding:10px!important;
+  border-radius:13px!important;
+  background:#f8f1ff!important;
+  font-size:13px!important;
+  font-weight:850!important;
+}
+.ynu-wig-qty input{
+  width:88px!important;
+  min-height:40px!important;
+  border:1px solid #bda3c8!important;
+  border-radius:10px!important;
+  padding:5px 8px!important;
+  font-size:17px!important;
+  text-align:center!important;
+}
+.ynu-wig-qty small{grid-column:1/-1!important;font-size:10.5px!important;font-weight:600!important}
+.ynu-wig-bagline{font-size:12px!important;line-height:1.45!important;margin:9px 2px!important}
+.ynu-wig-craft>.primary-spooky-action,.ynu-wig-result>.primary-spooky-action{flex:0 0 auto!important;min-height:43px!important;font-size:13.5px!important}
+.ynu-wig-craft>.secondary-action,.ynu-wig-result>.secondary-action{flex:0 0 auto!important;min-height:38px!important;margin-top:6px!important;font-size:12px!important}
+.ynu-wig-result>h2{flex:0 0 auto!important;font-size:21px!important;margin:2px 0 8px!important}
+.ynu-wig-result-card{
+  display:grid!important;
+  grid-template-columns:92px minmax(0,1fr)!important;
+  gap:10px!important;
+  align-items:center!important;
+  padding:11px!important;
+  margin-bottom:9px!important;
+  border-radius:16px!important;
+  background:#fff9eb!important;
+  border:1px solid #e0cfa5!important;
+}
+.ynu-wig-result-card.fail{background:#fff1f1!important;border-color:#e8b4b4!important}
+.ynu-wig-result-card img{width:92px!important;height:92px!important;object-fit:contain!important}
+.ynu-wig-result-card h3{font-size:14px!important;line-height:1.35!important;margin:0 0 5px!important}
+.ynu-wig-result-card p{font-size:12.5px!important;line-height:1.45!important;margin:0 0 4px!important}
+.ynu-wig-result-card small{font-size:10.5px!important;line-height:1.35!important}
+.ynu-wig-summary{display:flex!important;flex-wrap:wrap!important;gap:6px!important;padding:10px!important;border-radius:13px!important;background:#f5eff8!important;font-size:12px!important}
+.ynu-wig-summary>*{padding:4px 7px!important;border-radius:999px!important;background:#fff!important}
+
+@media (max-width:420px){
+  .r29-campaign{width:97vw!important;height:94dvh!important;border-radius:20px!important}
+  .r29-campaign-ui{padding:10px!important}
+  .r29-campaign-title h2{font-size:clamp(19px,5.7vw,24px)!important}
+  .r29-rank-row{grid-template-columns:32px minmax(0,1fr) auto!important;padding:8px!important;gap:6px!important}
+  .r29-rank-breakdown{grid-template-columns:1fr!important}
+  .r29-rank-breakdown span,.r29-rank-breakdown span b{font-size:10.5px!important}
+  .r29-rule-grid{grid-template-columns:1fr!important}
+  .r29-rule-grid>span{margin-bottom:3px!important}
+  .r29-reward-list article{grid-template-columns:1fr!important}
+  .r29-reward-list button{width:100%!important}
+  .ynu-wig-stock{grid-template-columns:1fr!important}
+  .ynu-wig-result-card{grid-template-columns:76px minmax(0,1fr)!important}
+  .ynu-wig-result-card img{width:76px!important;height:76px!important}
+}
