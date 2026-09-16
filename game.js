@@ -37537,9 +37537,11 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   async function bindRank(key){
     stopRank();activeKey=key;if(!KEYS.has(key))return;
     try{
-      const c=cfg(key),{db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),col=fs.collection(db,"campaignTrioScores");
+      const c=cfg(key),{db,fs}=await getFirebaseContext(),metaRef=fs.doc(db,"campaigns",c.id),col=fs.query(fs.collection(db,"campaignTrioScores"),fs.where("campaignId","==",c.id));
       metaUnsub=fs.onSnapshot(metaRef,s=>{cacheRun=s.exists()?Number(s.data()?.startedAtMs)||0:0;paint()});
-      scoreUnsub=fs.onSnapshot(col,s=>{cacheRows=[];s.forEach(d=>{const x=d.data()||{};if(x.campaignId===c.id)cacheRows.push(x)});paint()},e=>console.warn(BUILD,"rank read",e));
+      /* Cost-safe: subscribe only to the campaign being viewed, never the whole
+         campaignTrioScores collection. Score values and realtime behavior stay the same. */
+      scoreUnsub=fs.onSnapshot(col,s=>{cacheRows=[];s.forEach(d=>{const x=d.data()||{};cacheRows.push(x)});paint()},e=>console.warn(BUILD,"rank read",e));
       paintTimer=setInterval(paint,450);setTimeout(paint,120);
     }catch(e){console.warn(BUILD,"rank bind",e)}
   }

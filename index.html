@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.22-SAVE-CAMPAIGN-REPAIR-20260915"></script>
+<script src="game.js?v=S2-R36.24-COST-SAFE-NO-GAMEPLAY-CHANGE-20260915"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3254,13 +3254,13 @@ console.info(BUILD,"loaded");
 
 <script>
 /* ======================================================================
-   S2-R36.23-CRITICAL-CAMPAIGN-SAVE-REPAIR-20260915
+   S2-R36.24-COST-SAFE-NO-GAMEPLAY-CHANGE-20260915
    Critical late boot repair. Kept in index.html so it still installs even if
    an optional late block in game.js throws at runtime.
    ====================================================================== */
 (function YN_R3623_CRITICAL_REPAIR(){
   "use strict";
-  const BUILD="S2-R36.23-CRITICAL-CAMPAIGN-SAVE-REPAIR-20260915";
+  const BUILD="S2-R36.24-COST-SAFE-NO-GAMEPLAY-CHANGE-20260915";
   const SECRET={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
   const SECRET_NAMES={r35CandyCrop:"ลูกกวาดประสาทแดร๊ก",r35SpiderCrop:"แมงมุมขยุ้มเม็ด",r35CatCrop:"แมวเหมียว เสวปิ๊",r35BeeCrop:"บีเหินบนโต๊ะน้ำชา"};
   const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
@@ -3335,26 +3335,62 @@ console.info(BUILD,"loaded");
   }
   function scoreDetailed(key,delta,receipt,breakdown,eventAt){return writeLegacyScore(key,delta,receipt,breakdown,eventAt)}
 
+  /* R36.24 cost-safe guard: recovery/backfill is repair work, not gameplay.
+     Run it at most once per page session after a successful pass. Real actions
+     (harvest/craft/fishing/receive/send) still write immediately and are untouched. */
+  let selfRecoveryDone="",selfRecoveryBusy=null,adminBackfillDone=false,adminBackfillBusy=null;
+
   async function recoverSelf(){
-    const mk=keyNow();if(!mk||isAdmin())return;
-    try{
-      /* Migrate any R36.22 trio score back into the collection the visible UI reads. */
-      for(const key of CAMPAIGNS){const c=cfg(key);if(!c)continue;const md=await campaignMeta(key),run=Number(md?.startedAtMs)||0;if(!run)continue;try{const {db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`));if(s.exists()){const d=s.data()||{};if(Number(d.runId||0)===run)await mergeFloor(key,mk,d.displayName||mk,Number(d.score)||0,d.breakdown||{},"trio-migrate")}}catch(_){}}
-      const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
-      const secretBd={};let secretScore=0;for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));if(q){secretBd[k]=q;secretScore+=q*p}}if(secretScore)await mergeFloor("secret",mk,typeof currentProfileDisplayName==="function"?currentProfileDisplayName():mk,secretScore,secretBd,"bag-floor");
-      const wigs=Math.max(0,Math.floor(Number(s?.alpaca?.inventory?.other?.fancyWig)||0));if(wigs)await mergeFloor("wool",mk,typeof currentProfileDisplayName==="function"?currentProfileDisplayName():mk,wigs*10,{fancyWig:wigs},"wig-floor");
-      const fm=await campaignMeta("fishing"),start=Number(fm?.startedAtMs)||0,end=Number(fm?.endAtMs)||0;if(start){const {db,fs}=await getFirebaseContext();for(const col of ["fishingSlots","fishingSlotsV2"]){let snap;try{snap=await fs.getDocs(fs.collection(db,col))}catch(_){continue}const jobs=[];snap.forEach(d=>{const x=d.data()||{},at=Number(x.claimedAt)||0;if(String(x.ownerKey||"")!==mk||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;jobs.push(scoreFishingClaim(x,`r3623:recover:${col}:${d.id}:${at}`))});if(jobs.length)await Promise.allSettled(jobs)}}
-    }catch(e){console.warn(BUILD,"recoverSelf",e)}
+    const mk=keyNow();if(!mk||isAdmin())return false;
+    if(selfRecoveryDone===mk)return true;
+    if(selfRecoveryBusy)return selfRecoveryBusy;
+    selfRecoveryBusy=(async()=>{
+      try{
+        /* Migrate any older trio score into the collection the visible UI reads. */
+        for(const key of CAMPAIGNS){const c=cfg(key);if(!c)continue;const md=await campaignMeta(key),run=Number(md?.startedAtMs)||0;if(!run)continue;try{const {db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`));if(s.exists()){const d=s.data()||{};if(Number(d.runId||0)===run)await mergeFloor(key,mk,d.displayName||mk,Number(d.score)||0,d.breakdown||{},"trio-migrate")}}catch(_){}}
+        const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
+        const secretBd={};let secretScore=0;for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));if(q){secretBd[k]=q;secretScore+=q*p}}if(secretScore)await mergeFloor("secret",mk,typeof currentProfileDisplayName==="function"?currentProfileDisplayName():mk,secretScore,secretBd,"bag-floor");
+        const wigs=Math.max(0,Math.floor(Number(s?.alpaca?.inventory?.other?.fancyWig)||0));if(wigs)await mergeFloor("wool",mk,typeof currentProfileDisplayName==="function"?currentProfileDisplayName():mk,wigs*10,{fancyWig:wigs},"wig-floor");
+        const fm=await campaignMeta("fishing"),start=Number(fm?.startedAtMs)||0,end=Number(fm?.endAtMs)||0;
+        if(start){
+          const {db,fs}=await getFirebaseContext();
+          for(const col of ["fishingSlots","fishingSlotsV2"]){
+            let snap;
+            try{snap=await fs.getDocs(fs.query(fs.collection(db,col),fs.where("ownerKey","==",mk)))}
+            catch(_){try{snap=await fs.getDocs(fs.collection(db,col))}catch(__){continue}}
+            const jobs=[];snap.forEach(d=>{const x=d.data()||{},at=Number(x.claimedAt)||0;if(String(x.ownerKey||"").toLowerCase()!==mk||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;jobs.push(scoreFishingClaim(x,`r3623:recover:${col}:${d.id}:${at}`))});if(jobs.length)await Promise.allSettled(jobs);
+          }
+        }
+        selfRecoveryDone=mk;return true;
+      }catch(e){console.warn(BUILD,"recoverSelf",e);return false}
+      finally{selfRecoveryBusy=null}
+    })();
+    return selfRecoveryBusy;
   }
 
   async function adminBackfillAll(){
-    if(!isAdmin())return;
-    try{
-      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves"));
-      const jobs=[];sn.forEach(doc=>{const mk=String(doc.id||"").toLowerCase();if(!mk||mk==="aida")return;const s=doc.data()||{},name=(typeof MEMBERS!=="undefined"?Object.keys(MEMBERS).find(n=>{try{return typeof memberKeyFromName==="function"?memberKeyFromName(n)===mk:false}catch(_){return false}}):null)||mk;let sec=0,bd={};for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));if(q){bd[k]=q;sec+=q*p}}if(sec)jobs.push(mergeFloor("secret",mk,name,sec,bd,"admin-bag-floor"));const wigs=Math.max(0,Math.floor(Number(s?.alpaca?.inventory?.other?.fancyWig)||0));if(wigs)jobs.push(mergeFloor("wool",mk,name,wigs*10,{fancyWig:wigs},"admin-wig-floor"))});
-      await Promise.allSettled(jobs);
-      const fm=await campaignMeta("fishing"),start=Number(fm?.startedAtMs)||0,end=Number(fm?.endAtMs)||0;if(start){for(const col of ["fishingSlots","fishingSlotsV2"]){let snap;try{snap=await fs.getDocs(fs.collection(db,col))}catch(_){continue}const fj=[];snap.forEach(d=>{const x=d.data()||{},mk=String(x.ownerKey||"").toLowerCase(),at=Number(x.claimedAt)||0;if(!mk||mk==="aida"||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;let score=0,bd={},n=0;for(const c of Array.isArray(x.catches)?x.catches:[]){const k=String(c?.fishKey||"");if(!(k in FISH))continue;bd[k]=(bd[k]||0)+1;score+=FISH[k];n++}if(n)fj.push(writeLegacyScore("fishing",score,`r3623:admin-recover:${col}:${d.id}:${at}`,bd,at,mk,x.ownerName||mk))});if(fj.length)await Promise.allSettled(fj)}}
-    }catch(e){console.warn(BUILD,"adminBackfillAll",e)}
+    if(!isAdmin())return false;
+    if(adminBackfillDone)return true;
+    if(adminBackfillBusy)return adminBackfillBusy;
+    adminBackfillBusy=(async()=>{
+      try{
+        const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves"));
+        const jobs=[];sn.forEach(doc=>{const mk=String(doc.id||"").toLowerCase();if(!mk||mk==="aida")return;const s=doc.data()||{},name=(typeof MEMBERS!=="undefined"?Object.keys(MEMBERS).find(n=>{try{return typeof memberKeyFromName==="function"?memberKeyFromName(n)===mk:false}catch(_){return false}}):null)||mk;let sec=0,bd={};for(const [k,p] of Object.entries(SECRET)){const q=Math.max(0,Math.floor(Number(s?.bag?.[k])||0));if(q){bd[k]=q;sec+=q*p}}if(sec)jobs.push(mergeFloor("secret",mk,name,sec,bd,"admin-bag-floor"));const wigs=Math.max(0,Math.floor(Number(s?.alpaca?.inventory?.other?.fancyWig)||0));if(wigs)jobs.push(mergeFloor("wool",mk,name,wigs*10,{fancyWig:wigs},"admin-wig-floor"))});
+        await Promise.allSettled(jobs);
+        const fm=await campaignMeta("fishing"),start=Number(fm?.startedAtMs)||0,end=Number(fm?.endAtMs)||0;
+        if(start){for(const col of ["fishingSlots","fishingSlotsV2"]){
+          let snap;
+          try{
+            const q=end?fs.query(fs.collection(db,col),fs.where("claimedAt",">=",start),fs.where("claimedAt","<",end)):fs.query(fs.collection(db,col),fs.where("claimedAt",">=",start));
+            snap=await fs.getDocs(q);
+          }catch(_){try{snap=await fs.getDocs(fs.collection(db,col))}catch(__){continue}}
+          const fj=[];snap.forEach(d=>{const x=d.data()||{},mk=String(x.ownerKey||"").toLowerCase(),at=Number(x.claimedAt)||0;if(!mk||mk==="aida"||String(x.status||"")!=="claimed"||!at||at<start||(end&&at>=end))return;let score=0,bd={},n=0;for(const c of Array.isArray(x.catches)?x.catches:[]){const k=String(c?.fishKey||"");if(!(k in FISH))continue;bd[k]=(bd[k]||0)+1;score+=FISH[k];n++}if(n)fj.push(writeLegacyScore("fishing",score,`r3623:admin-recover:${col}:${d.id}:${at}`,bd,at,mk,x.ownerName||mk))});if(fj.length)await Promise.allSettled(fj);
+        }}
+        adminBackfillDone=true;return true;
+      }catch(e){console.warn(BUILD,"adminBackfillAll",e);return false}
+      finally{adminBackfillBusy=null}
+    })();
+    return adminBackfillBusy;
   }
 
   /* Make the four Secret crops visible in the actual crop bag no matter which
@@ -3405,9 +3441,12 @@ console.info(BUILD,"loaded");
   globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores:recoverSelf,retryPendingCampaignScores:recoverSelf,migrateLegacyScores:recoverSelf,recoverFishingSlots:recoverSelf};
   globalThis.V181_campaignScoreLater=summary=>scoreSecretHarvest(summary);
   globalThis.YN_R3623={BUILD,recoverSelf,adminBackfillAll,injectSecretBag,repairBrokenSave,writeLegacyScore};
+  /* Startup repair is intentionally deduplicated. The second call is a fallback
+     only if the first pass could not complete; visibility changes never rescan
+     whole collections after a successful pass. */
   setTimeout(()=>{injectSecretBag();recoverSelf();adminBackfillAll()},1200);
-  setTimeout(()=>{recoverSelf();adminBackfillAll()},5000);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{recoverSelf();adminBackfillAll()},250)},{passive:true});
+  setTimeout(()=>{if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},5000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{injectSecretBag();if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},250)},{passive:true});
   console.info(BUILD,"loaded");
 })();
 </script>
