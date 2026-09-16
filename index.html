@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.50-ALPACA-FRESH-WAREHOUSE-20260916">
+  <link rel="stylesheet" href="style.css?v=S2-R36.51-ALPACA-ZERO-FAST-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.50-ALPACA-FRESH-WAREHOUSE-20260916"></script>
+<script src="game.js?v=S2-R36.51-ALPACA-ZERO-FAST-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3719,7 +3719,7 @@ console.info(BUILD,"loaded");
     /* R36.49 clean slate: clear the historical unplaced alpaca vault ONCE per member.
        Old recovery patches had repopulated thousands of dead/processed historical animals. */
     clean.alpaca=clean.alpaca&&typeof clean.alpaca==="object"?clean.alpaca:{};
-    if(clean.alpaca.warehouseResetEpoch!=="r3649"){clean.alpaca.vault=[];clean.alpaca.warehouseResetEpoch="r3649";}
+    if(clean.alpaca.warehouseResetEpoch!=="r3651-zero-20260916"){clean.alpaca.vault=[];clean.alpaca.warehouseResetEpoch="r3651-zero-20260916";}
     if(force)compact(clean,3);
     compactToHeadroom(clean);
     if(bytes(clean)>SAFE_WRITE)compact(clean,4);
@@ -3760,7 +3760,7 @@ console.info(BUILD,"loaded");
     if(typeof initializeOrLoadCloudState==="function"){
       const base=initializeOrLoadCloudState;
       initializeOrLoadCloudState=async function(member,memberKey){
-        const mk=String(memberKey||"").trim(),onceKey=`yn:r3649:self-repair:${mk}`;
+        const mk=String(memberKey||"").trim(),onceKey=`yn:r3651:self-repair:${mk}`;
         let done=false;try{done=localStorage.getItem(onceKey)==="1"}catch(_){ }
         if(!done){try{await repairOne(mk,true);try{localStorage.setItem(onceKey,"1")}catch(_){ }}catch(e){console.warn(BUILD,"pre-login repair",mk,e)}}
         let out;
@@ -3781,218 +3781,150 @@ console.info(BUILD,"loaded");
 
 <script>
 /* =====================================================================
-   S2 R36.50 — ALPACA FRESH WAREHOUSE / ISOLATED FAST SENDER
+   S2 R36.51 — ALPACA ZERO-RESET / FAST SENDER / 24-PEN CAPACITY
    2026-09-16
-   - Hard clean-slate for the warehouse: old epochs are never read.
-   - One-time per-player reset clears legacy saves.alpaca.vault so old/dead/processed
-     alpacas cannot keep the root save near Firestore's size/index limits.
-   - Future legitimate root-vault alpacas created AFTER the reset remain supported.
-   - Admin sender + warehouse use an isolated Shadow DOM overlay, outside modalContent,
-     so legacy MutationObservers cannot freeze the phone when the button is pressed.
-   - Gift warehouse stores STACKS (qty) instead of one document per alpaca.
-   - Placing one alpaca updates only alpaca.pens + the one stack document.
+   - New warehouse epoch starts at ZERO for every player. Old warehouse docs are ignored.
+   - Legacy saves.alpaca.vault is cleared once per player to remove historical ghosts.
+   - Warehouse shows ONLY newly claimed R36.51 gifts that are still unplaced.
+   - Admin sender opens outside the old modal and never scans saves.
+   - Pen capacity is 24. Placed gift alpacas are fully shaped for the live pen system.
    ===================================================================== */
-(function YN_R3650_ALPACA_FRESH(){
+(function YN_R3651_ALPACA_ZERO(){
   "use strict";
-  const BUILD="S2-R36.50-ALPACA-FRESH-WAREHOUSE-20260916";
-  const EPOCH="r3650";
-  const RESET_EPOCH="r3650";
-  const DAY=86400000;
-  const $=id=>document.getElementById(id);
+  const BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";
+  const EPOCH="r3651-zero-20260916";
+  const RESET_EPOCH="r3651-zero-20260916";
+  const PEN_CAPACITY=24;
+  const DAY=86400000,HOUR=3600000;
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const mk=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").trim();
   const player=()=>String(typeof currentMember!=="undefined"?currentMember:"").trim();
   const isAdmin=()=>mk().toLowerCase()==="aida"&&(player()==="Aida"||globalThis.adminProfile?.role==="admin");
-  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const iv=v=>Math.max(0,Math.floor(Number(v)||0));
-  const safeId=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,150);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
+  const safeId=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,140);
   const COLORS=new Set(["white","brown","black","pink","green","goldenHoney","thaiTea","prince","princess"]);
   const LABEL={white:"ขาว",brown:"น้ำตาล",black:"ดำ",pink:"ชมพู",green:"เขียว",goldenHoney:"Golden Honey",thaiTea:"ชาไทย",prince:"เจ้าชาย",princess:"เจ้าหญิง"};
-  const ASSET={white:"alpaca-stage-1-idle.png",brown:"alpaca-brown-stage-1-idle.png",black:"alpaca-black-stage-1-idle.png",pink:"alpaca-pink-stage-1-idle.png",green:"alpaca-green-stage-1-idle.png",goldenHoney:"alpaca-golden-honey-icon.png",thaiTea:"alpaca-thai-tea-icon.png",prince:"alpaca-prince-stage1_idle.png",princess:"alpaca-princess-stage1_idle.png"};
+  const IMG={white:"alpaca-stage-1-idle.png",brown:"alpaca-brown-stage-1-idle.png",black:"alpaca-black-stage-1-idle.png",pink:"alpaca-pink-stage-1-idle.png",green:"alpaca-green-stage-1-idle.png",goldenHoney:"alpaca-golden-honey-icon.png",thaiTea:"alpaca-thai-tea-icon.png",prince:"alpaca-prince-stage1_idle.png",princess:"alpaca-princess-stage1_idle.png"};
   const VARIANTS=[];
   for(const color of ["white","brown","black","pink","green","goldenHoney","thaiTea","prince","princess"]){
     const c=LABEL[color];
-    if(color==="prince")VARIANTS.push({type:"alpacaAdult",color,sex:"male",name:"อัลปาก้าเจ้าชาย",image:ASSET[color]});
-    else if(color==="princess")VARIANTS.push({type:"alpacaAdult",color,sex:"female",name:"อัลปาก้าเจ้าหญิง",image:ASSET[color]});
+    if(color==="prince")VARIANTS.push({type:"alpacaAdult",color,sex:"male",name:"อัลปาก้าเจ้าชาย",image:IMG[color]});
+    else if(color==="princess")VARIANTS.push({type:"alpacaAdult",color,sex:"female",name:"อัลปาก้าเจ้าหญิง",image:IMG[color]});
     else{
-      VARIANTS.push({type:"alpacaAdult",color,sex:"male",name:`อัลปาก้าสี${c} • เพศผู้`,image:ASSET[color]});
-      VARIANTS.push({type:"alpacaAdult",color,sex:"female",name:`อัลปาก้าสี${c} • เพศเมีย`,image:ASSET[color]});
-      VARIANTS.push({type:"alpacaBaby",color,sex:"",name:`เบบี้อัลปาก้าสี${c}`,image:ASSET[color]});
+      VARIANTS.push({type:"alpacaAdult",color,sex:"male",name:`อัลปาก้าสี${c} • เพศผู้`,image:IMG[color]});
+      VARIANTS.push({type:"alpacaAdult",color,sex:"female",name:`อัลปาก้าสี${c} • เพศเมีย`,image:IMG[color]});
+      VARIANTS.push({type:"alpacaBaby",color,sex:"",name:`เบบี้อัลปาก้าสี${c}`,image:IMG[color]});
     }
   }
-  const validAnimal=a=>Boolean(a&&["adult","baby"].includes(String(a.type))&&COLORS.has(String(a.color||""))&&(String(a.type)!=="adult"||["male","female"].includes(String(a.sex||""))));
+  const validStack=x=>x&&x.epoch===EPOCH&&x.state==="stored"&&x.kind==="stack"&&["adult","baby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0;
 
-  /* -------------------- isolated UI -------------------- */
-  let overlayHost=null;
-  function ensureOverlay(){
-    if(overlayHost?.isConnected)return overlayHost;
-    overlayHost=document.getElementById("ynAlpacaR3650Overlay");
-    if(!overlayHost){
-      overlayHost=document.createElement("div");
-      overlayHost.id="ynAlpacaR3650Overlay";
-      overlayHost.style.cssText="display:none;position:fixed;inset:0;z-index:2147483000;";
-      document.body.appendChild(overlayHost);
-      overlayHost.attachShadow({mode:"open"});
-    }else if(!overlayHost.shadowRoot){try{overlayHost.attachShadow({mode:"open"})}catch(_){}}
-    return overlayHost;
-  }
-  ensureOverlay();
-  const SHELL_CSS=`
-    :host{all:initial}*{box-sizing:border-box;font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif}
-    .veil{position:fixed;inset:0;background:rgba(20,11,29,.72);display:flex;align-items:center;justify-content:center;padding:14px}
-    .panel{width:min(760px,100%);max-height:min(88vh,900px);overflow:auto;background:linear-gradient(180deg,#fff9e8,#f5e2bd);border:2px solid #7a4a6d;border-radius:22px;box-shadow:0 22px 70px rgba(0,0,0,.35);color:#3d273d}
-    .top{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,249,232,.96);border-bottom:1px solid #d8b98b}
-    .top img{width:48px;height:48px;object-fit:contain;border-radius:14px;background:#f7e6ef}.title{min-width:0;flex:1}.title small{font-size:10px;font-weight:800;letter-spacing:.08em;color:#8e5a83}.title h2{font-size:20px;line-height:1.15;margin:1px 0}.title p{font-size:11px;margin:2px 0;color:#745d70}
-    .x{width:36px;height:36px;border:0;border-radius:50%;background:#6d3f63;color:white;font-size:22px;font-weight:700}.body{padding:12px}.block{background:rgba(255,255,255,.62);border:1px solid #d9be9b;border-radius:16px;padding:10px;margin-bottom:10px}.head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.head b{font-size:14px}.count{font-size:11px;color:#80597a}
-    .people,.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.card{display:flex;align-items:center;gap:8px;min-height:54px;padding:8px;border:1px solid #dec7ac;border-radius:13px;background:#fff}.card input[type=checkbox]{width:18px;height:18px;flex:0 0 auto}.card img{width:42px;height:42px;object-fit:contain;border-radius:10px;background:#f6e6ed}.card .copy{min-width:0;flex:1}.card b{display:block;font-size:12px;line-height:1.25}.card small{display:block;font-size:9px;color:#7f6b79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qty{width:54px;padding:6px;border:1px solid #c8a8bd;border-radius:9px;font-size:12px}.tools{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0 8px}.tools button,.ghost{border:1px solid #98718f;background:#fff6fb;color:#63405f;border-radius:10px;padding:7px 10px;font-size:11px;font-weight:700}.primary{border:0;background:linear-gradient(135deg,#7a3f84,#9a4a98);color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800}.primary:disabled{opacity:.55}.foot{position:sticky;bottom:0;background:rgba(255,249,232,.97);border-top:1px solid #d8b98b;padding:10px 12px;display:flex;align-items:center;gap:10px}.status{font-size:10px;color:#6e596a;flex:1}
-    .warehouseGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.wcard{display:grid;grid-template-columns:54px 1fr;gap:8px;padding:9px;border:1px solid #d9c1a4;border-radius:14px;background:#fff}.wcard img{width:54px;height:54px;object-fit:contain;border-radius:12px;background:#f7e7ed}.wcopy{min-width:0}.wcopy b{font-size:12px;display:block;line-height:1.25}.wcopy small{font-size:9px;color:#776575}.badge{display:inline-block;margin-top:4px;padding:2px 6px;border-radius:999px;background:#f2e1f0;color:#6c3d68;font-size:9px;font-weight:800}.place{grid-column:1/-1;border:0;border-radius:10px;background:#7f4388;color:#fff;padding:8px;font-size:12px;font-weight:800}.empty{grid-column:1/-1;text-align:center;padding:34px 12px;color:#745f70}.empty span{font-size:34px;display:block}.empty b{display:block;font-size:15px;margin:5px}.empty small{font-size:10px}.pens{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pen{border:1px solid #d4b596;background:#fff;border-radius:14px;padding:12px;text-align:left}.pen b{display:block;font-size:13px}.pen small{font-size:10px;color:#786675}.pen:disabled{opacity:.4}.warn{padding:9px 11px;border-radius:12px;background:#fff2d8;color:#75572c;font-size:10px;margin-bottom:8px}
-    @media(max-width:520px){.veil{padding:8px;align-items:flex-end}.panel{max-height:92vh;border-radius:20px 20px 10px 10px}.people,.items,.warehouseGrid{grid-template-columns:1fr}.top{padding:10px}.body{padding:9px}.card{min-height:50px}.title h2{font-size:18px}}
+  /* ---------- isolated plain-DOM overlay: no old modal / no Shadow DOM ---------- */
+  let host=null,lastOpen=0;
+  const CSS=`
+  #ynR3651Overlay{position:fixed;inset:0;z-index:2147483600;display:none;font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;color:#432d42}
+  #ynR3651Overlay *{box-sizing:border-box}#ynR3651Overlay .r51veil{position:absolute;inset:0;background:rgba(15,8,24,.78);display:flex;align-items:center;justify-content:center;padding:10px}
+  #ynR3651Overlay .r51panel{width:min(760px,100%);max-height:92vh;overflow:auto;background:linear-gradient(180deg,#fff9e8,#f4dfb7);border:2px solid #77466f;border-radius:22px;box-shadow:0 22px 65px rgba(0,0,0,.38)}
+  #ynR3651Overlay .r51top{position:sticky;top:0;z-index:2;display:flex;gap:10px;align-items:center;padding:11px 12px;background:#fff8e9;border-bottom:1px solid #d8bb91}#ynR3651Overlay .r51top img{width:46px;height:46px;object-fit:contain;border-radius:12px;background:#f8e8ef}#ynR3651Overlay .r51title{flex:1;min-width:0}#ynR3651Overlay .r51title small{font-size:9px;font-weight:900;letter-spacing:.08em;color:#915782}#ynR3651Overlay .r51title h2{font-size:19px;margin:1px 0;line-height:1.15}#ynR3651Overlay .r51title p{font-size:10px;margin:2px 0;color:#765f72}
+  #ynR3651Overlay .r51x{width:38px;height:38px;border:0;border-radius:50%;background:#6b3d61;color:#fff;font-size:22px;font-weight:900}#ynR3651Overlay .r51body{padding:10px}#ynR3651Overlay .r51block{padding:9px;border:1px solid #d9bd99;background:rgba(255,255,255,.65);border-radius:15px;margin-bottom:9px}#ynR3651Overlay .r51head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}#ynR3651Overlay .r51head b{font-size:13px}#ynR3651Overlay .r51head span{font-size:10px;color:#765c70}
+  #ynR3651Overlay .r51grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#ynR3651Overlay .r51card{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #dfc9af;border-radius:12px;background:#fff;min-height:50px}#ynR3651Overlay .r51card input[type=checkbox]{width:18px;height:18px;flex:0 0 auto}#ynR3651Overlay .r51card img{width:40px;height:40px;object-fit:contain;border-radius:9px;background:#faeaf1}#ynR3651Overlay .r51copy{flex:1;min-width:0}#ynR3651Overlay .r51copy b{display:block;font-size:11px;line-height:1.25}#ynR3651Overlay .r51copy small{display:block;font-size:9px;color:#7f6a7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#ynR3651Overlay .r51qty{width:54px;padding:6px;border:1px solid #cbaac2;border-radius:8px;font-size:11px}
+  #ynR3651Overlay .r51tools{display:flex;gap:6px;margin:5px 0 7px;flex-wrap:wrap}#ynR3651Overlay .r51tools button,#ynR3651Overlay .r51back{border:1px solid #99718f;background:#fff;color:#67415f;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:800}#ynR3651Overlay .r51foot{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:9px 10px;background:#fff8e9;border-top:1px solid #d8bb91}#ynR3651Overlay .r51status{flex:1;font-size:10px;color:#6e5969}#ynR3651Overlay .r51primary{border:0;border-radius:11px;background:linear-gradient(135deg,#7a3f84,#9a4a98);color:#fff;padding:10px 13px;font-size:12px;font-weight:900}#ynR3651Overlay .r51primary:disabled{opacity:.5}
+  #ynR3651Overlay .r51warehouse{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#ynR3651Overlay .r51wcard{display:grid;grid-template-columns:52px 1fr;gap:8px;padding:9px;border:1px solid #dcc3a7;border-radius:14px;background:#fff}#ynR3651Overlay .r51wcard img{width:52px;height:52px;object-fit:contain;border-radius:10px;background:#fae9ef}#ynR3651Overlay .r51wcard b{font-size:11px;line-height:1.25}#ynR3651Overlay .r51wcard small{display:block;font-size:9px;color:#796675}#ynR3651Overlay .r51badge{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#f1e1ef;color:#6d3d68;font-size:9px;font-weight:900}#ynR3651Overlay .r51place{grid-column:1/-1;border:0;border-radius:9px;background:#814489;color:#fff;padding:8px;font-size:11px;font-weight:900}#ynR3651Overlay .r51empty{text-align:center;grid-column:1/-1;padding:34px 10px;color:#725d6d}#ynR3651Overlay .r51empty span{display:block;font-size:34px}#ynR3651Overlay .r51empty b{display:block;font-size:14px;margin:5px}#ynR3651Overlay .r51empty small{font-size:10px}
+  #ynR3651Overlay .r51pens{display:grid;grid-template-columns:1fr 1fr;gap:8px}#ynR3651Overlay .r51pen{border:1px solid #d6b99b;border-radius:13px;background:#fff;padding:13px;text-align:left}#ynR3651Overlay .r51pen b{display:block;font-size:13px}#ynR3651Overlay .r51pen small{font-size:10px;color:#776675}#ynR3651Overlay .r51pen:disabled{opacity:.4}#ynR3651Overlay .r51warn{padding:8px 10px;border-radius:11px;background:#fff1d7;color:#78592c;font-size:10px;margin-bottom:8px}
+  @media(max-width:520px){#ynR3651Overlay .r51veil{align-items:flex-end;padding:5px}#ynR3651Overlay .r51panel{max-height:94vh;border-radius:20px 20px 8px 8px}#ynR3651Overlay .r51grid,#ynR3651Overlay .r51warehouse{grid-template-columns:1fr}}
   `;
-  function showOverlay(inner){
-    const h=ensureOverlay(),sr=h.shadowRoot;h.style.display="block";sr.innerHTML=`<style>${SHELL_CSS}</style><div class="veil"><section class="panel">${inner}</section></div>`;return sr;
+  function ensureHost(){
+    if(host?.isConnected)return host;host=document.getElementById("ynR3651Overlay");if(!host){host=document.createElement("div");host.id="ynR3651Overlay";document.body.appendChild(host)}return host;
   }
-  function closeOverlay(){const h=ensureOverlay();h.style.display="none";if(h.shadowRoot)h.shadowRoot.innerHTML=""}
+  function show(html){const h=ensureHost();h.innerHTML=`<style>${CSS}</style><div class="r51veil"><section class="r51panel">${html}</section></div>`;h.style.display="block";h.querySelectorAll("[data-r51-close]").forEach(b=>b.onclick=close);return h}
+  function close(){const h=ensureHost();h.style.display="none";h.innerHTML=""}
 
-  /* -------------------- reset old vault / save headroom -------------------- */
+  /* ---------- hard zero reset of historical root warehouse ---------- */
   let resetPromise=null;
-  async function ensureLegacyVaultReset(){
+  async function ensureReset(){
     if(resetPromise)return resetPromise;
     resetPromise=(async()=>{
-      const k=mk();if(!k)return {ok:false};
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let resetAt=now(),changed=false;
-      await fs.runTransaction(db,async tx=>{
-        const sn=await tx.get(ref);if(!sn.exists())return;
-        const d=sn.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{};
-        if(String(a.warehouseResetEpoch||"")===RESET_EPOCH){resetAt=Number(a.warehouseResetAt)||resetAt;return}
-        changed=true;resetAt=now();
-        tx.update(ref,{"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,"alpaca.warehouseResetAt":resetAt,updatedAt:fs.serverTimestamp()});
-      });
-      try{
-        if(typeof ownState!=="undefined"&&ownState){ownState.alpaca=ownState.alpaca&&typeof ownState.alpaca==="object"?ownState.alpaca:{};ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;ownState.alpaca.warehouseResetAt=resetAt;if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
-      }catch(_){ }
-      return {ok:true,changed,resetAt};
-    })().catch(e=>{resetPromise=null;console.warn(BUILD,"vault reset",e);throw e});
-    return resetPromise;
+      const k=mk();if(!k)return false;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let changed=false;
+      await fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())return;const d=sn.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{};if(String(a.warehouseResetEpoch||"")===RESET_EPOCH&&Array.isArray(a.vault)&&a.vault.length===0)return;changed=true;tx.update(ref,{"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,"alpaca.warehouseResetAt":now(),updatedAt:fs.serverTimestamp()})});
+      try{if(typeof ownState!=="undefined"&&ownState){ownState.alpaca=ownState.alpaca&&typeof ownState.alpaca==="object"?ownState.alpaca:{};ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;ownState.alpaca.warehouseResetAt=now();if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }
+      return changed;
+    })().catch(e=>{resetPromise=null;console.warn(BUILD,"reset",e);throw e});return resetPromise;
   }
-  function filterFreshRootVault(s){
-    const a=s?.alpaca;if(!a||String(a.warehouseResetEpoch||"")!==RESET_EPOCH)return[];
-    const resetAt=Number(a.warehouseResetAt)||0,t=now(),pens=Array.isArray(a.pens)?a.pens:[],placed=new Set();
-    for(const p of pens)for(const x of (Array.isArray(p?.alpacas)?p.alpacas:[]))if(x?.id)placed.add(String(x.id));
-    return (Array.isArray(a.vault)?a.vault:[]).filter(x=>{if(!validAnimal(x)||placed.has(String(x.id||"")))return false;const born=Number(x.receivedAt||x.createdAt||x.bornAt||0);if(!born||born<resetAt)return false;const exp=Number(x.expiresAt)||0;if(exp&&exp<=t)return false;return true});
-  }
-  function sanitizeLocalVault(){
-    try{if(typeof ownState==="undefined"||!ownState?.alpaca)return;const a=ownState.alpaca;if(String(a.warehouseResetEpoch||"")!==RESET_EPOCH)return;a.vault=filterFreshRootVault(ownState);if(!visitContext)state=ownState}catch(_){ }
-  }
-  /* Prevent stale local data from resurrecting the thousands of pre-reset vault rows. */
-  try{const base=normalizeState;normalizeState=function(raw,p){const out=base(raw,p);try{if(out?.alpaca&&String(out.alpaca.warehouseResetEpoch||"")===RESET_EPOCH)out.alpaca.vault=filterFreshRootVault(out)}catch(_){ }return out}}catch(_){ }
-  /* Any cloud mutation waits for the one-time shrink first, so the old 8k vault cannot be written back before reset. */
-  try{if(typeof flushCloudSave==="function"){const base=flushCloudSave;flushCloudSave=async function(){try{if(mk()&&String(ownState?.alpaca?.warehouseResetEpoch||"")!==RESET_EPOCH)await ensureLegacyVaultReset()}catch(_){ }return base.apply(this,arguments)}}}catch(_){ }
-  try{if(typeof mutateOwn==="function"){const base=mutateOwn;mutateOwn=async function(){try{if(mk()&&String(ownState?.alpaca?.warehouseResetEpoch||"")!==RESET_EPOCH)await ensureLegacyVaultReset()}catch(_){ }return base.apply(this,arguments)}}}catch(_){ }
-  try{if(typeof initializeOrLoadCloudState==="function"){const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(){const r=await base.apply(this,arguments);setTimeout(()=>ensureLegacyVaultReset().catch(()=>{}),0);return r}}}catch(_){ }
 
-  /* -------------------- recipients / sender -------------------- */
+  /* ---------- FAST sender ---------- */
   let recipients=[];
-  function localRecipients(){
-    const out=[];try{for(const name of Object.keys(typeof MEMBERS==="object"&&MEMBERS?MEMBERS:{})){if(name==="Aida")continue;const key=typeof memberKeyFromName==="function"?String(memberKeyFromName(name)||"").trim():String(name).trim();if(key)out.push({key,name:String(name)})}}catch(_){ }
-    const m=new Map();for(const r of out)m.set(r.key,r);return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,"th"));
+  function buildRecipients(){
+    const out=[];try{for(const name of Object.keys(typeof MEMBERS==="object"&&MEMBERS?MEMBERS:{})){if(String(name).toLowerCase()==="aida")continue;const key=typeof memberKeyFromName==="function"?String(memberKeyFromName(name)||"").trim():String(name).trim();if(key)out.push({name:String(name),key})}}catch(_){ }
+    const m=new Map();out.forEach(x=>m.set(x.key,x));return [...m.values()];
   }
-  function senderPerson(p){return `<label class="card"><input type="checkbox" data-person="${esc(p.key)}"><div class="copy"><b>${esc(p.name)}</b><small>${esc(p.key)}</small></div></label>`}
-  function senderItem(v,i){return `<label class="card"><input type="checkbox" data-item="${i}"><img src="${esc(v.image)}" alt=""><div class="copy"><b>${esc(v.name)}</b><small>${v.type==="alpacaBaby"?"เบบี้":"ตัวเต็มวัย"}</small></div><input class="qty" type="number" min="1" max="999" value="1" data-qty="${i}" inputmode="numeric"></label>`}
+  function personHTML(p){return `<label class="r51card"><input type="checkbox" data-r51-person="${esc(p.key)}"><div class="r51copy"><b>${esc(p.name)}</b><small>${esc(p.key)}</small></div></label>`}
+  function itemHTML(v,i){return `<label class="r51card"><input type="checkbox" data-r51-item="${i}"><img src="${esc(v.image)}"><div class="r51copy"><b>${esc(v.name)}</b><small>${v.type==="alpacaBaby"?"เบบี้":"ตัวเต็มวัย"}</small></div><input class="r51qty" type="number" min="1" max="999" value="1" data-r51-qty="${i}" inputmode="numeric"></label>`}
   function openSender(){
-    if(!isAdmin())return;
-    recipients=localRecipients();
-    const sr=showOverlay(`<div class="top"><img src="alpaca-princess-stage1_idle.png"><div class="title"><small>ALPACA GIFT • R36.50</small><h2>ส่งอัลปาก้า</h2><p>หน้าส่งแยกจากระบบเดิม • เปิดทันที ไม่สแกนเซฟผู้เล่น</p></div><button class="x" data-close>×</button></div><div class="body"><div class="block"><div class="head"><b>👥 เลือกผู้รับ</b><span class="count" data-pcount>0/${recipients.length}</span></div><div class="tools"><button data-all>เลือกทั้งหมด</button><button data-clear>ล้าง</button></div><div class="people">${recipients.map(senderPerson).join("")}</div></div><div class="block"><div class="head"><b>🦙 เลือกอัลปาก้า</b><span class="count" data-icount>0 รายการ</span></div><div class="items">${VARIANTS.map(senderItem).join("")}</div></div></div><div class="foot"><span class="status" data-status>ของขวัญใหม่เท่านั้น • ผู้รับกดรับแล้วเข้าคลังใหม่</span><button class="primary" data-send>🎁 ส่งของขวัญ</button></div>`);
-    const sync=()=>{const pc=sr.querySelector("[data-pcount]"),ic=sr.querySelector("[data-icount]");if(pc)pc.textContent=`${sr.querySelectorAll("[data-person]:checked").length}/${recipients.length}`;if(ic)ic.textContent=`${sr.querySelectorAll("[data-item]:checked").length} รายการ`};
-    sr.querySelector("[data-close]").onclick=closeOverlay;sr.querySelector("[data-all]").onclick=()=>{sr.querySelectorAll("[data-person]").forEach(x=>x.checked=true);sync()};sr.querySelector("[data-clear]").onclick=()=>{sr.querySelectorAll("[data-person]").forEach(x=>x.checked=false);sync()};sr.querySelectorAll("[data-person],[data-item]").forEach(x=>x.onchange=sync);sr.querySelector("[data-send]").onclick=()=>sendSelected(sr);sync();
+    if(!isAdmin())return;const t=performance.now();if(t-lastOpen<350)return;lastOpen=t;
+    try{closeModal?.()}catch(_){ }
+    const h=show(`<div class="r51top"><img src="alpaca-princess-stage1_idle.png"><div class="r51title"><small>ALPACA GIFT • R36.51</small><h2>ส่งอัลปาก้า</h2><p>เปิดทันที • ไม่อ่าน saves • ไม่สแกนคลังเก่า</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51block"><div class="r51head"><b>👥 ผู้รับ</b><span data-r51-pcount>กำลังเตรียมรายชื่อ…</span></div><div class="r51tools"><button data-r51-all>เลือกทั้งหมด</button><button data-r51-clear>ล้าง</button></div><div class="r51grid" data-r51-people><div class="r51empty"><b>กำลังเปิดเมนู…</b></div></div></div><div class="r51block"><div class="r51head"><b>🦙 อัลปาก้า</b><span data-r51-icount>0 รายการ</span></div><div class="r51grid">${VARIANTS.map(itemHTML).join("")}</div></div></div><div class="r51foot"><span class="r51status" data-r51-status>คลังผู้รับเริ่มใหม่จาก 0 • ของเก่าไม่ถูกนำมาใช้</span><button class="r51primary" data-r51-send>🎁 ส่งของขวัญ</button></div>`);
+    requestAnimationFrame(()=>{recipients=buildRecipients();const box=h.querySelector("[data-r51-people]");if(box)box.innerHTML=recipients.map(personHTML).join("")||'<div class="r51empty"><b>ไม่พบรายชื่อสมาชิก</b></div>';bindSender(h)});
   }
-  async function sendSelected(sr){
-    const btn=sr.querySelector("[data-send]"),status=sr.querySelector("[data-status]");
-    const targets=[...sr.querySelectorAll("[data-person]:checked")].map(x=>recipients.find(r=>r.key===x.dataset.person)).filter(Boolean);
-    const rows=[...sr.querySelectorAll("[data-item]:checked")].map(x=>{const i=Number(x.dataset.item),v=VARIANTS[i],q=Math.max(1,Math.min(999,iv(sr.querySelector(`[data-qty="${i}"]`)?.value)||1));return{...v,qty:q}});
-    if(!targets.length){status.textContent="กรุณาเลือกผู้รับอย่างน้อย 1 คน";return}if(!rows.length){status.textContent="กรุณาเลือกอัลปาก้าอย่างน้อย 1 รายการ";return}
-    btn.disabled=true;status.textContent=`กำลังส่งให้ ${targets.length} คน…`;
-    try{
-      const {db,fs}=await getFirebaseContext(),delivery=`r3650-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,batch=fs.writeBatch(db);
-      for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`,ref=fs.doc(db,"mailboxes",t.key,"items",id);batch.set(ref,{source:"yainoo",type:"alpacaGiftR3650",giftKind:"alpaca",epoch:EPOCH,fromKey:mk(),fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()})}
-      await batch.commit();status.textContent=`✅ ส่งของขวัญสำเร็จ ${targets.length} คน`;try{showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(_){ }
-    }catch(e){status.textContent=`ส่งไม่สำเร็จ: ${e?.message||"กรุณาลองใหม่"}`}finally{btn.disabled=false}
+  function bindSender(h){
+    const sync=()=>{const pc=h.querySelector("[data-r51-pcount]"),ic=h.querySelector("[data-r51-icount]");if(pc)pc.textContent=`${h.querySelectorAll("[data-r51-person]:checked").length}/${recipients.length}`;if(ic)ic.textContent=`${h.querySelectorAll("[data-r51-item]:checked").length} รายการ`};
+    h.querySelectorAll("[data-r51-person],[data-r51-item]").forEach(x=>x.onchange=sync);const all=h.querySelector("[data-r51-all]"),clear=h.querySelector("[data-r51-clear]"),send=h.querySelector("[data-r51-send]");if(all)all.onclick=()=>{h.querySelectorAll("[data-r51-person]").forEach(x=>x.checked=true);sync()};if(clear)clear.onclick=()=>{h.querySelectorAll("[data-r51-person]").forEach(x=>x.checked=false);sync()};if(send)send.onclick=()=>sendSelected(h);sync();
+  }
+  async function sendSelected(h){
+    const btn=h.querySelector("[data-r51-send]"),status=h.querySelector("[data-r51-status]");const targets=[...h.querySelectorAll("[data-r51-person]:checked")].map(x=>recipients.find(r=>r.key===x.dataset.r51Person)).filter(Boolean);const rows=[...h.querySelectorAll("[data-r51-item]:checked")].map(x=>{const i=Number(x.dataset.r51Item),v=VARIANTS[i],q=Math.max(1,Math.min(999,iv(h.querySelector(`[data-r51-qty="${i}"]`)?.value)||1));return{...v,qty:q}});
+    if(!targets.length){status.textContent="กรุณาเลือกผู้รับ";return}if(!rows.length){status.textContent="กรุณาเลือกอัลปาก้า";return}btn.disabled=true;status.textContent=`กำลังส่ง ${targets.length} คน…`;
+    try{const {db,fs}=await getFirebaseContext(),delivery=`r3651-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,batch=fs.writeBatch(db);for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`;batch.set(fs.doc(db,"mailboxes",t.key,"items",id),{source:"yainoo",type:"alpacaGiftR3651",giftKind:"alpaca",epoch:EPOCH,fromKey:"aida",fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})}await batch.commit();status.textContent=`✅ ส่งสำเร็จ ${targets.length} คน`;showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(e){status.textContent=`ส่งไม่สำเร็จ: ${e?.message||"กรุณาลองใหม่"}`}finally{btn.disabled=false}
   }
 
-  /* -------------------- new stacked gift warehouse -------------------- */
+  /* ---------- NEW warehouse: ONLY claimed R36.51 gifts ---------- */
   const whCol=(fs,db,k)=>fs.collection(db,"alpacaGiftWarehouse",k,"items");
   const whRef=(fs,db,k,id)=>fs.doc(db,"alpacaGiftWarehouse",k,"items",id);
   async function claimGift(mailId){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureLegacyVaultReset();
-    const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};
-    if(String(g.type)!=="alpacaGiftR3650"||String(g.epoch)!==EPOCH)throw new Error("รายการนี้เป็นของขวัญอัลปาก้าระบบเก่าและถูกยกเลิกแล้ว");
-    const items=(Array.isArray(g.items)?g.items:[]).filter(x=>COLORS.has(String(x.color||""))&&["alpacaAdult","alpacaBaby"].includes(String(x.type))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญนี้");
-    const t=now(),batch=fs.writeBatch(db);let total=0;
-    items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const id=`stack-${safeId(mailId)}-${i}`,baby=String(it.type)==="alpacaBaby";batch.set(whRef(fs,db,k,id),{schemaVersion:5,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||ASSET[it.color]||ASSET.white),source:"alpaca-gift-r3650",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,expiresAt:t+7*DAY,storedAt:fs.serverTimestamp()},{merge:false})});
-    batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }try{showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`)}catch(_){ }return{count:total};
+    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};if(g.type!=="alpacaGiftR3651"||g.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");const t=now(),batch=fs.writeBatch(db);let total=0;items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;batch.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);return{count:total};
   }
-  async function readGiftStacks(){
-    const k=mk();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),t=now(),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(x.epoch===EPOCH&&x.state==="stored"&&x.kind==="stack"&&validAnimal(x)&&iv(x.qty)>0&&(!Number(x.expiresAt)||Number(x.expiresAt)>t))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}catch(e){console.warn(BUILD,"read fresh warehouse",e);return[]}
-  }
-  function rootRows(){sanitizeLocalVault();try{return filterFreshRootVault(typeof ownState!=="undefined"?ownState:null).map(x=>({...x,_root:true,qty:1}))}catch(_){return[]}}
+  async function readStacks(){const k=mk();if(!k)return[];const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(validStack(x))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
   function animalName(x){const c=LABEL[x.color]||x.color||"ขาว";return x.type==="baby"?`เบบี้อัลปาก้าสี${c}`:`อัลปาก้าสี${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
-  function warehouseCard(x){return `<article class="wcard"><img src="${esc(x.image||ASSET[x.color]||ASSET.white)}"><div class="wcopy"><b>${esc(animalName(x))}</b><small>${x._root?"ได้รับ/คราฟ/จับหลังรีเซ็ต":"ของขวัญจากยัยหนู"}</small><span class="badge">คงเหลือ ×${iv(x.qty)||1}</span></div><button class="place" data-place="${esc(x.id)}" data-source="${x._root?"root":"gift"}">วางเข้าคอก 1 ตัว</button></article>`}
+  function wcard(x){return `<article class="r51wcard"><img src="${esc(x.image||IMG[x.color]||IMG.white)}"><div><b>${esc(animalName(x))}</b><small>ของขวัญใหม่ • รับแล้ว • ยังไม่ได้วาง</small><span class="r51badge">คงเหลือ ×${iv(x.qty)}</span></div><button class="r51place" data-r51-place="${esc(x.id)}">วางเข้าคอก 1 ตัว</button></article>`}
   async function openWarehouse(){
-    const sr=showOverlay(`<div class="top"><img src="alpaca-princess-stage1_idle.png"><div class="title"><small>ALPACA WAREHOUSE • R36.50</small><h2>คลังอัลปาก้า</h2><p data-wh-sub>กำลังโหลดเฉพาะตัวที่ยังไม่ได้วาง…</p></div><button class="x" data-close>×</button></div><div class="body"><div class="warn">คลังนี้เริ่มใหม่จากศูนย์ใน R36.50 • ประวัติเก่า ตัวที่ตาย ขาย แปรรูป หรือเคยวางคอกแล้ว จะไม่ถูกนำกลับมา</div><div class="warehouseGrid" data-grid><div class="empty"><span>🦙</span><b>กำลังโหลด…</b></div></div></div>`);
-    sr.querySelector("[data-close]").onclick=closeOverlay;
-    /* Do not block the UI on the reset transaction. Old root rows are hidden until reset is confirmed. */
-    ensureLegacyVaultReset().then(()=>sanitizeLocalVault()).catch(()=>{});
-    const stacks=await readGiftStacks(),roots=rootRows(),all=[...stacks,...roots],total=all.reduce((n,x)=>n+(iv(x.qty)||1),0),grid=sr.querySelector("[data-grid]"),sub=sr.querySelector("[data-wh-sub]");
-    if(sub)sub.textContent=`รับแล้วและยังไม่ได้วางลงคอก • ${total.toLocaleString("th-TH")} ตัว`;
-    if(grid)grid.innerHTML=all.length?all.map(warehouseCard).join(""):`<div class="empty"><span>🦙</span><b>คลังว่าง 0 ตัว</b><small>ของขวัญใหม่ที่กดรับ หรืออัลปาก้าใหม่หลังการรีเซ็ต จะมาอยู่ตรงนี้เท่านั้น</small></div>`;
-    sr.querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPenPicker(b.dataset.source,b.dataset.place));
+    const h=show(`<div class="r51top"><img src="alpaca-princess-stage1_idle.png"><div class="r51title"><small>ALPACA WAREHOUSE • R36.51</small><h2>คลังอัลปาก้า</h2><p data-r51-whsub>กำลังโหลดคลังใหม่…</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51warn">เริ่มใหม่จาก 0 • หน้านี้อ่านเฉพาะของขวัญ R36.51 ที่กดรับแล้วและยังไม่ได้วางเท่านั้น</div><div class="r51warehouse" data-r51-wh><div class="r51empty"><span>🦙</span><b>กำลังโหลด…</b></div></div></div>`);
+    try{await ensureReset()}catch(_){ }let stacks=[];try{stacks=await readStacks()}catch(e){console.warn(BUILD,"warehouse",e)}const total=stacks.reduce((n,x)=>n+iv(x.qty),0),sub=h.querySelector("[data-r51-whsub]"),grid=h.querySelector("[data-r51-wh]");if(sub)sub.textContent=`ยังไม่ได้วาง ${total.toLocaleString("th-TH")} ตัว`;if(grid)grid.innerHTML=stacks.length?stacks.map(wcard).join(""):`<div class="r51empty"><span>🦙</span><b>คลังว่าง 0 ตัว</b><small>ให้ Aida ส่งใหม่ → กดรับ → ตัวที่ยังไม่วางจะอยู่ตรงนี้</small></div>`;h.querySelectorAll("[data-r51-place]").forEach(b=>b.onclick=()=>openPenPicker(b.dataset.r51Place));
   }
-  function currentPens(){try{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[]}catch(_){return[]}}
-  function openPenPicker(source,id){
-    const ps=currentPens(),sr=showOverlay(`<div class="top"><img src="${ASSET.white}"><div class="title"><small>PLACE ALPACA</small><h2>เลือกคอก</h2><p>วางสำเร็จแล้วจำนวนในคลังจะลดทันที</p></div><button class="x" data-close>×</button></div><div class="body"><div class="pens">${ps.map((p,i)=>{const n=(Array.isArray(p?.alpacas)?p.alpacas:[]).length;return `<button class="pen" data-pen="${i+1}" ${n>=6?"disabled":""}><b>คอก ${i+1}</b><small>${esc(p?.name||"")} • ${n}/6</small></button>`}).join("")}</div><div class="tools"><button class="ghost" data-back>← กลับคลัง</button></div></div>`);
-    sr.querySelector("[data-close]").onclick=closeOverlay;sr.querySelector("[data-back]").onclick=openWarehouse;sr.querySelectorAll("[data-pen]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{if(source==="gift")await placeGiftStack(id,Number(b.dataset.pen));else await placeRootVault(id,Number(b.dataset.pen));await openWarehouse()}catch(e){b.disabled=false;try{message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่") }catch(_){}}});
+  function localPens(){try{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[]}catch(_){return[]}}
+  function openPenPicker(id){const ps=localPens(),h=show(`<div class="r51top"><img src="${IMG.white}"><div class="r51title"><small>PLACE ALPACA</small><h2>เลือกคอก</h2><p>คอกละ ${PEN_CAPACITY} ตัว</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51pens">${Array.from({length:5},(_,i)=>{const p=ps[i]||{},n=(Array.isArray(p.alpacas)?p.alpacas:[]).length;return `<button class="r51pen" data-r51-pen="${i+1}" ${n>=PEN_CAPACITY?"disabled":""}><b>คอก ${i+1}</b><small>${esc(p.name||"")} • ${n}/${PEN_CAPACITY}</small></button>`}).join("")}</div><div class="r51tools"><button class="r51back" data-r51-back>← กลับคลัง</button></div></div>`);h.querySelector("[data-r51-back]").onclick=openWarehouse;h.querySelectorAll("[data-r51-pen]").forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{await placeGift(id,Number(b.dataset.r51Pen));showWeatherToast?.(`🦙 วางเข้าคอก ${b.dataset.r51Pen} แล้ว`);await openWarehouse()}catch(e){b.disabled=false;message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}})}
+  function makePlaced(x,id,serial,t){
+    if(x.type==="baby")return{id:`${id}-p${serial}`,type:"baby",color:x.color,bornAt:t,readyProcessAt:t+12*HOUR,source:"gift",deliveryId:String(x.deliveryId||""),placedAt:t,expiresAt:t+7*DAY};
+    return{id:`${id}-p${serial}`,type:"adult",color:x.color,sex:x.sex==="female"?"female":"male",name:String(x.name||""),createdAt:t,woolStage:1,woolStageEndsAt:t+2*HOUR,everSheared:false,lastShearedAt:0,nextHungryAt:t+3*HOUR,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,pregnancyRoyal:false,breederCooldownUntil:0,source:"gift",deliveryId:String(x.deliveryId||""),placedAt:t,expiresAt:t+7*DAY};
   }
-  async function placeGiftStack(id,penNo){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,k,id);let nextPens=null;
-    await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้ารายการนี้หมดจากคลังแล้ว");const x=is.data()||{},qty=iv(x.qty);if(x.epoch!==EPOCH||x.kind!=="stack"||x.state!=="stored"||qty<1||!validAnimal(x))throw new Error("ข้อมูลอัลปาก้าไม่ถูกต้อง");const d=ss.data()||{},pens=clone(Array.isArray(d?.alpaca?.pens)?d.alpaca.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=6)throw new Error("คอกนี้เต็มแล้ว");const serial=iv(x.placedCount)+1,t=now(),a={id:`${id}-p${serial}`,type:x.type,color:x.color,sex:x.type==="baby"?null:x.sex,source:"gift",deliveryId:String(x.deliveryId||""),createdAt:t,receivedAt:Number(x.receivedAt)||t,placedAt:t,expiresAt:Number(x.expiresAt)||t+7*DAY};if(a.type==="baby"){a.bornAt=t;a.readyProcessAt=t+12*3600000}p.alpacas.push(a);nextPens=pens;tx.update(sref,{"alpaca.pens":pens,updatedAt:fs.serverTimestamp()});if(qty<=1)tx.delete(iref);else tx.update(iref,{qty:qty-1,placedCount:serial,updatedAt:fs.serverTimestamp()})});
-    try{if(nextPens&&ownState?.alpaca){ownState.alpaca.pens=nextPens;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
-  }
-  async function placeRootVault(id,penNo){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k);let nextPens=null,nextVault=null;
-    await fs.runTransaction(db,async tx=>{const ss=await tx.get(sref);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");const d=ss.data()||{},a=d.alpaca||{},resetAt=Number(a.warehouseResetAt)||0;if(String(a.warehouseResetEpoch||"")!==RESET_EPOCH)throw new Error("คลังยังรีเซ็ตไม่เสร็จ");const vault=clone(Array.isArray(a.vault)?a.vault:[]),idx=vault.findIndex(x=>String(x?.id||"")===String(id));if(idx<0)throw new Error("อัลปาก้าตัวนี้ไม่ได้อยู่ในคลังแล้ว");const x=vault[idx],born=Number(x.receivedAt||x.createdAt||x.bornAt||0);if(!validAnimal(x)||!born||born<resetAt)throw new Error("รายการนี้เป็นข้อมูลเก่าและใช้ไม่ได้");const pens=clone(Array.isArray(a.pens)?a.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=6)throw new Error("คอกนี้เต็มแล้ว");const item=clone(x);item.placedAt=now();p.alpacas.push(item);vault.splice(idx,1);nextPens=pens;nextVault=vault;tx.update(sref,{"alpaca.pens":pens,"alpaca.vault":vault,updatedAt:fs.serverTimestamp()})});
-    try{if(ownState?.alpaca){ownState.alpaca.pens=nextPens||ownState.alpaca.pens;ownState.alpaca.vault=nextVault||[];if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
+  async function placeGift(id,penNo){
+    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();try{globalThis.YN_SAVE_GUARD_ALL_PLAYERS?.compact?.(3)}catch(_){ }const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,k,id);let nextPens=null;
+    await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้ารายการนี้หมดจากคลังแล้ว");const x=is.data()||{},qty=iv(x.qty);if(!validStack(x)||qty<1)throw new Error("รายการนี้ไม่ใช่อัลปาก้าคลังใหม่");const d=ss.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{},pens=cp(Array.isArray(a.pens)?a.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็ม ${PEN_CAPACITY}/${PEN_CAPACITY} แล้ว`);const serial=iv(x.placedCount)+1,t=now(),animal=makePlaced(x,id,serial,t);p.alpacas.push(animal);nextPens=pens;tx.update(sref,{"alpaca.pens":pens,"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,updatedAt:fs.serverTimestamp()});if(qty<=1)tx.delete(iref);else tx.update(iref,{qty:qty-1,placedCount:serial,updatedAt:fs.serverTimestamp()})});
+    try{if(nextPens&&ownState?.alpaca){ownState.alpaca.pens=nextPens;ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
   }
 
-  /* -------------------- notifications -------------------- */
-  async function pendingRows(){const k=mk();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3650")),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x=d.data()||{};if(String(x.epoch)===EPOCH&&!x.resolved)out.push({id:d.id,...x})});return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(e){console.warn(BUILD,"pending",e);return[]}}
-  async function decorateInbox(){
-    const list=document.querySelector('.notification-panel .notification-list');if(!list)return;list.querySelectorAll('.r3650-gift-note').forEach(x=>x.remove());const rows=await pendingRows();for(const g of rows.slice(0,20).reverse()){const items=Array.isArray(g.items)?g.items:[],c=document.createElement('article');c.className='notification-card r3650-gift-note unread';c.innerHTML=`<div style="display:flex;gap:9px;align-items:center"><img src="${esc(g.previewImage||items[0]?.image||ASSET.white)}" style="width:46px;height:46px;object-fit:contain;border-radius:12px;background:#f8e8ef"><div style="min-width:0;flex:1"><b>🎁 ยัยหนูส่งอัลปาก้าให้คุณ</b><small style="display:block">${esc(items.map(x=>`${x.name} ×${x.qty}`).join(' • '))}</small></div></div><button type="button" data-r3650-claim="${esc(g.id)}" style="width:100%;margin-top:8px">รับเข้าคลังอัลปาก้า</button>`;list.prepend(c)}
-    list.querySelectorAll('[data-r3650-claim]').forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;b.textContent='กำลังรับ…';try{await claimGift(b.dataset.r3650Claim);b.closest('.r3650-gift-note')?.remove();await openWarehouse()}catch(e){b.disabled=false;b.textContent='รับเข้าคลังอัลปาก้า';try{message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}catch(_){}}});
-  }
+  /* ---------- notification card ---------- */
+  async function pendingRows(){const k=mk();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3651")),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x=d.data()||{};if(x.epoch===EPOCH&&!x.resolved)out.push({id:d.id,...x})});return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(_){return[]}}
+  async function decorateInbox(){const list=document.querySelector('.notification-panel .notification-list');if(!list)return;list.querySelectorAll('.r3651-gift-note').forEach(x=>x.remove());const rows=await pendingRows();for(const g of rows.slice(0,20).reverse()){const items=Array.isArray(g.items)?g.items:[],c=document.createElement('article');c.className='notification-card r3651-gift-note unread';c.innerHTML=`<div style="display:flex;gap:9px;align-items:center"><img src="${esc(g.previewImage||items[0]?.image||IMG.white)}" style="width:46px;height:46px;object-fit:contain;border-radius:12px;background:#f8e8ef"><div style="min-width:0;flex:1"><b>🎁 ยัยหนูส่งอัลปาก้าให้คุณ</b><small style="display:block">${esc(items.map(x=>`${x.name} ×${x.qty}`).join(' • '))}</small></div></div><button type="button" data-r3651-claim="${esc(g.id)}" style="width:100%;margin-top:8px">รับเข้าคลังอัลปาก้า</button>`;list.prepend(c)}list.querySelectorAll('[data-r3651-claim]').forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;b.textContent='กำลังรับ…';try{await claimGift(b.dataset.r3651Claim);b.closest('.r3651-gift-note')?.remove();await openWarehouse()}catch(e){b.disabled=false;b.textContent='รับเข้าคลังอัลปาก้า';message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}})}
   try{if(typeof showNotifications==="function"){const base=showNotifications;showNotifications=async function(tab="friend"){const r=await base.apply(this,arguments);if(tab==="yainoo")setTimeout(()=>decorateInbox().catch(()=>{}),0);return r}}}catch(_){ }
 
-  /* -------------------- admin entry / authoritative clicks -------------------- */
-  function mountAdmin(){
-    if(!isAdmin())return;document.querySelectorAll('[id^="r3638Admin"],[id^="r3640Admin"],[id^="r3641Admin"],[id^="r3642Admin"],[id^="r3645Admin"],[id^="r3646Admin"],[id^="r3648Admin"],[id^="r3649Admin"]').forEach(x=>x.remove());if($("r3650AdminEntry"))return;const host=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');if(!host)return;const box=document.createElement('section');box.id='r3650AdminEntry';box.className='r3646-admin-entry';box.innerHTML=`<img src="alpaca-princess-stage1_idle.png" alt=""><div><b>ส่งของขวัญอัลปาก้า</b><small>ระบบใหม่ R36.50 • ไม่สแกนเซฟ • ไม่ใช้ modal เดิม</small></div><button id="r3650OpenSender" type="button">เปิด</button>`;host.appendChild(box)
-  }
-  try{if(typeof showAdminCenter==="function"){const base=showAdminCenter;showAdminCenter=async function(){const r=await base.apply(this,arguments);setTimeout(mountAdmin,0);return r}}}catch(_){ }
-  document.addEventListener('click',e=>{
-    const sender=e.target?.closest?.('#r3650OpenSender');if(sender){e.preventDefault();e.stopImmediatePropagation();openSender();return}
-    const wh=e.target?.closest?.('#alpacaWarehouseBtn');if(wh){e.preventDefault();e.stopImmediatePropagation();openWarehouse();return}
-    const receive=e.target?.closest?.('#receiveCraftedAlpaca');if(receive){e.preventDefault();e.stopImmediatePropagation();openWarehouse();return}
-  },true);
+  /* ---------- admin entry + capture BEFORE legacy handlers ---------- */
+  function removeLegacyAdminCards(){document.querySelectorAll('#r3650AdminEntry,#r3649AdminEntry,#r3648AdminEntry,#r3646AdminEntry,#r3645AdminEntry,#r3642AdminEntry,#r3641AdminEntry,#r3640AdminEntry,#r3638AdminEntry').forEach(x=>x.remove())}
+  function mountAdmin(){if(!isAdmin())return;removeLegacyAdminCards();if(document.getElementById('r3651AdminEntry'))return;const target=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');if(!target)return;const box=document.createElement('section');box.id='r3651AdminEntry';box.className='r3646-admin-entry';box.innerHTML=`<img src="alpaca-princess-stage1_idle.png" alt=""><div><b>ส่งของขวัญอัลปาก้า</b><small>R36.51 • คลังเริ่ม 0 • คอกละ 24</small></div><button id="r3651OpenSender" type="button">เปิด</button>`;target.appendChild(box);const b=box.querySelector('#r3651OpenSender');if(b)b.onclick=e=>{e.preventDefault();e.stopPropagation();openSender()}}
+  try{if(typeof showAdminCenter==="function"){const base=showAdminCenter;showAdminCenter=async function(){const r=await base.apply(this,arguments);requestAnimationFrame(mountAdmin);return r}}}catch(_){ }
+  function captureOpen(e){const b=e.target?.closest?.('#r3651OpenSender,#r3650OpenSender,#r3649OpenSender,#r3648OpenSender,#r3646OpenSender');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openSender()}
+  window.addEventListener('pointerdown',captureOpen,{capture:true,passive:false});window.addEventListener('touchstart',captureOpen,{capture:true,passive:false});window.addEventListener('click',captureOpen,true);
+  document.addEventListener('click',e=>{const w=e.target?.closest?.('#alpacaWarehouseBtn,#receiveCraftedAlpaca');if(!w)return;e.preventDefault();e.stopImmediatePropagation();openWarehouse()},true);
+
+  /* Make every later call route to the new zero warehouse. */
   if(globalThis.YN_ALPACA_CORE)globalThis.YN_ALPACA_CORE.showAlpacaWarehouse=openWarehouse;
-
-  /* Current account self-heals only itself. No Admin-wide scans. */
-  setTimeout(()=>ensureLegacyVaultReset().catch(()=>{}),1200);
-
-  globalThis.YN_R3650={BUILD,EPOCH,openSender,openWarehouse,claimGift,ensureLegacyVaultReset};
+  setTimeout(()=>ensureReset().catch(()=>{}),900);
+  setTimeout(mountAdmin,0);
+  globalThis.YN_R3651={BUILD,EPOCH,openSender,openWarehouse,claimGift,ensureReset};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
 
 
 
-<script>window.YAINOO_BUILD="S2-R36.50-ALPACA-FRESH-WAREHOUSE-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>window.YAINOO_BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
