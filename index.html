@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.37-EXTERNAL-ALPACA-VAULT-CLOUDREADY-FIX-20260916"></script>
+<script src="game.js?v=S2-R36.38-ALPACA-DIRECT-DISPATCH-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3804,7 +3804,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3636_EXTERNAL_ALPACA_VAULT(){
   "use strict";
-  const BUILD="S2-R36.37-EXTERNAL-ALPACA-VAULT-CLOUDREADY-FIX-20260916";
+  const BUILD="S2-R36.38-ALPACA-DIRECT-DISPATCH-20260916";
   const PRIORITY=new Set(["opor","mhai","earn","kongkwan"]);
   const A_TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance","alpaca"]);
   const HOUR=3600000, DAY=24*HOUR, SCAN_MS=72*HOUR;
@@ -4027,6 +4027,497 @@ console.info(BUILD,"loaded");
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+</script>
+
+<script>
+/* =====================================================================
+   S2 R36.38 — ALPACA DIRECT DISPATCH (REBUILT SEND/RECEIVE)
+   2026-09-16
+   - Admin can select MANY recipients + MANY alpaca variants + quantities.
+   - Alpacas are written DIRECTLY to alpacaVaults/{memberKey}/items.
+   - Recipient does NOT need to press claim; warehouse is authoritative.
+   - Deterministic IDs make retries idempotent (no duplicate from same dispatch).
+   - One-time deep repair for Opor/Mhai/Earn/Kongkwan scans both legacy gifts
+     and targeted broadcasts and reconstructs missing alpacas into cloud vault.
+   - Legacy save size is irrelevant to receiving these alpacas.
+   ===================================================================== */
+(function YN_R3638_ALPACA_DIRECT_DISPATCH(){
+  "use strict";
+  const BUILD="S2-R36.38-ALPACA-DIRECT-DISPATCH-20260916";
+  const PRIORITY=["opor","mhai","earn","kongkwan"];
+  const DAY=86400000, REPAIR_WINDOW=7*DAY;
+  const $=id=>document.getElementById(id);
+  const low=v=>String(v??"").trim().toLowerCase();
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const ts=v=>{try{if(v&&typeof v.toMillis==="function")return v.toMillis();if(v&&typeof v.seconds==="number")return v.seconds*1000;return Number(v)||0}catch(_){return 0}};
+  const safeId=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,150);
+  const admin=()=>low(typeof currentMemberKey!=="undefined"?currentMemberKey:"")==="aida"&&(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"||globalThis.adminProfile?.role==="admin");
+  const ALPACA_TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance","alpaca"]);
+  const COLORS=[
+    ["white","ขาว"],["brown","น้ำตาล"],["black","ดำ"],["pink","ชมพู"],["green","เขียว"],
+    ["goldenHoney","Golden Honey"],["thaiTea","ชาไทย"],["prince","เจ้าชาย"],["princess","เจ้าหญิง"]
+  ];
+
+  function variants(){
+    const out=[];
+    for(const [color,label] of COLORS){
+      if(color==="prince")out.push({type:"alpacaAdult",key:"prince:male",color,sex:"male",name:"อัลปาก้าเจ้าชาย"});
+      else if(color==="princess")out.push({type:"alpacaAdult",key:"princess:female",color,sex:"female",name:"อัลปาก้าเจ้าหญิง"});
+      else {
+        out.push({type:"alpacaAdult",key:`${color}:male`,color,sex:"male",name:`อัลปาก้าสี${label} • เพศผู้`});
+        out.push({type:"alpacaAdult",key:`${color}:female`,color,sex:"female",name:`อัลปาก้าสี${label} • เพศเมีย`});
+      }
+      out.push({type:"alpacaBaby",key:color,color,sex:null,name:`เบบี้อัลปาก้า${label}`});
+    }
+    return out;
+  }
+  const VARIANTS=variants();
+
+  function parseLegacyItems(x){
+    const src=Array.isArray(x?.items)&&x.items.length?x.items:[{type:x?.itemType,key:x?.itemKey,qty:x?.qty,name:x?.name,instance:x?.instance}];
+    const out=[];
+    src.forEach((it,index)=>{
+      let type=String(it?.type||it?.itemType||"");
+      const text=`${it?.name||""} ${x?.title||""} ${x?.body||""} ${x?.text||""}`;
+      if(!ALPACA_TYPES.has(type)&&!/อัลปาก้า|alpaca/i.test(text))return;
+      if(!ALPACA_TYPES.has(type)||type==="alpaca")type=/เบบี้|baby/i.test(text)?"alpacaBaby":"alpacaAdult";
+      const key=String(it?.key||it?.itemKey||"");
+      const rawColor=String(key).split(":")[0];
+      let color=rawColor||"white";
+      if(/เจ้าหญิง|princess/i.test(text))color="princess";else if(/เจ้าชาย|prince/i.test(text))color="prince";else if(/ชาไทย|thai\s*tea/i.test(text))color="thaiTea";else if(/golden\s*honey/i.test(text))color="goldenHoney";else if(/เขียว|green/i.test(text))color="green";else if(/ชมพู|pink/i.test(text))color="pink";else if(/ดำ|black/i.test(text))color="black";else if(/น้ำตาล|brown/i.test(text))color="brown";else if(/ขาว|white/i.test(text))color="white";
+      let sex=null;
+      if(type!=="alpacaBaby"){
+        const rawSex=String(key).split(":")[1]||"";
+        sex=color==="prince"?"male":color==="princess"?"female":(/female|เพศเมีย|ตัวเมีย/i.test(text+rawSex)?"female":"male");
+      }
+      out.push({index,type,key,color,sex,qty:Math.max(1,int(it?.qty)||1),name:String(it?.name||""),instance:it?.instance||null});
+    });
+    return out;
+  }
+
+  function itemDocId(sourceId,index,n){return `dispatch-${safeId(sourceId)}-${index}-${n}`}
+  function unitFrom(row,sourceId,n,memberKey,sourceAt){
+    const id=itemDocId(sourceId,row.index,n),t=sourceAt||now();
+    if(row.type==="alpacaInstance"&&row.instance){
+      const x=JSON.parse(JSON.stringify(row.instance));
+      return {...x,id,type:x.type==="baby"?"baby":"adult",memberKey,source:"alpaca-direct-migration",sourceId,receivedAt:t,createdAt:Number(x.createdAt)||t};
+    }
+    if(row.type==="alpacaBaby")return{id,type:"baby",color:row.color||"white",sex:null,memberKey,source:"alpaca-direct",sourceId,receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*3600000};
+    return{id,type:"adult",color:row.color||"white",sex:row.sex||"male",memberKey,source:"alpaca-direct",sourceId,receivedAt:t,createdAt:t};
+  }
+
+  async function writeUnits(fs,db,memberKey,sourceId,rows,sourceAt){
+    memberKey=low(memberKey);if(!memberKey||!rows.length)return 0;
+    const units=[];for(const row of rows)for(let n=0;n<row.qty;n++)units.push(unitFrom(row,sourceId,n,memberKey,sourceAt));
+    let wrote=0;
+    for(let offset=0;offset<units.length;offset+=350){
+      const part=units.slice(offset,offset+350),batch=fs.writeBatch(db);
+      for(const u of part){batch.set(fs.doc(db,"alpacaVaults",memberKey,"items",u.id),{...u,createdServerAt:fs.serverTimestamp()},{merge:true});wrote++}
+      await batch.commit();
+    }
+    return wrote;
+  }
+
+  async function recipientRows(){
+    const map=new Map();
+    try{for(const name of Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{})){const key=low(typeof memberKeyFromName==="function"?memberKeyFromName(name):name);if(key)map.set(key,name)}}catch(_){ }
+    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"loginDirectory"));sn.forEach(d=>{const x=d.data()||{},k=low(x.memberKey||d.id);if(k&&String(x.status||"approved")==="approved")map.set(k,String(x.displayName||x.memberName||map.get(k)||k))})}catch(e){console.warn(BUILD,"recipients",e)}
+    map.delete("aida");
+    return [...map].map(([key,name])=>({key,name})).sort((a,b)=>a.name.localeCompare(b.name,"th"));
+  }
+
+  async function directDispatch(targets,selections){
+    if(!admin())throw new Error("เฉพาะ Aida/Admin เท่านั้น");
+    if(!targets.length)throw new Error("กรุณาเลือกสมาชิกอย่างน้อย 1 คน");
+    if(!selections.length)throw new Error("กรุณาเลือกอัลปาก้าอย่างน้อย 1 รายการ");
+    const {db,fs}=await getFirebaseContext();
+    const deliveryId=`r3638-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    let count=0;
+    for(const t of targets){
+      const rows=selections.map((s,index)=>({...s,index}));
+      count+=await writeUnits(fs,db,t.key,deliveryId,rows,now());
+      // audit summary is intentionally kept tiny and separate from player save
+      try{await fs.setDoc(fs.doc(db,"alpacaVaults",t.key,"deliveries",deliveryId),{deliveryId,memberKey:t.key,memberName:t.name,items:selections.map(x=>({type:x.type,key:x.key,name:x.name,qty:x.qty})),fromKey:"aida",fromName:"Aida",status:"delivered",createdAt:fs.serverTimestamp()},{merge:false})}catch(_){ }
+    }
+    return {deliveryId,count,people:targets.length};
+  }
+
+  async function openDispatchCenter(){
+    if(!admin())return;
+    const people=await recipientRows(),mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel alpaca-panel" id="r3638DispatchPanel" style="max-height:88vh;overflow:auto"><header style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><small>🦙 ระบบใหม่ • เข้าคลังทันที</small><h2>ส่งอัลปาก้าหลายคน / หลายรายการ</h2></div><button id="r3638Close" type="button">×</button></header><p>เลือกสมาชิกหลายคนได้ แล้วเลือกอัลปาก้าหลายชนิดพร้อมจำนวน จากนั้นกดส่งครั้งเดียว • ผู้รับไม่ต้องกดรับ อัลปาก้าจะอยู่ในคลัง Cloud ทันที</p><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><button id="r3638AllPeople" type="button">เลือกสมาชิกทั้งหมด</button><button id="r3638ClearPeople" type="button">ล้างสมาชิก</button><button id="r3638PriorityPeople" type="button">เลือก 4 ไอดีที่มีปัญหา</button></div><div id="r3638People" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:210px;overflow:auto;padding:4px">${people.map(p=>`<label style="display:flex;gap:6px;align-items:center;padding:7px;border:1px solid #dcc9b2;border-radius:10px;background:#fff"><input type="checkbox" data-r3638-person="${esc(p.key)}"><span><b>${esc(p.name)}</b><small style="display:block">${esc(p.key)}</small></span></label>`).join("")}</div><hr><h3>เลือกอัลปาก้าและจำนวน</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"><button id="r3638ClearItems" type="button">ล้างรายการ</button></div><div id="r3638Items" style="display:grid;gap:6px">${VARIANTS.map((v,i)=>`<label style="display:grid;grid-template-columns:auto 1fr 70px;gap:8px;align-items:center;padding:7px;border:1px solid #dcc9b2;border-radius:10px;background:#fff"><input type="checkbox" data-r3638-item="${i}"><span><b>${esc(v.name)}</b></span><input type="number" min="1" max="99" value="1" data-r3638-qty="${i}" inputmode="numeric"></label>`).join("")}</div><button id="r3638Send" class="primary-spooky-action" type="button" style="width:100%;margin-top:12px">🎁 ส่งเข้าคลังของสมาชิกที่เลือกทันที</button><small id="r3638Status" style="display:block;margin-top:8px"></small></section>`;
+    try{openModal?.()}catch(_){ }
+    $("r3638Close").onclick=()=>closeModal?.();
+    const personBoxes=()=>[...document.querySelectorAll("[data-r3638-person]")];
+    $("r3638AllPeople").onclick=()=>personBoxes().forEach(x=>x.checked=true);
+    $("r3638ClearPeople").onclick=()=>personBoxes().forEach(x=>x.checked=false);
+    $("r3638PriorityPeople").onclick=()=>personBoxes().forEach(x=>x.checked=PRIORITY.includes(low(x.dataset.r3638Person)));
+    $("r3638ClearItems").onclick=()=>document.querySelectorAll("[data-r3638-item]").forEach(x=>x.checked=false);
+    $("r3638Send").onclick=async()=>{
+      const btn=$("r3638Send"),status=$("r3638Status");
+      const selectedPeople=personBoxes().filter(x=>x.checked).map(x=>people.find(p=>p.key===low(x.dataset.r3638Person))).filter(Boolean);
+      const selectedItems=[...document.querySelectorAll("[data-r3638-item]")].filter(x=>x.checked).map(x=>{const i=Number(x.dataset.r3638Item),base=VARIANTS[i],q=Math.max(1,Math.min(99,int(document.querySelector(`[data-r3638-qty="${i}"]`)?.value)||1));return{...base,qty:q}});
+      const old=btn.textContent;btn.disabled=true;btn.textContent="กำลังส่งเข้าคลัง Cloud...";if(status)status.textContent="";
+      try{const out=await directDispatch(selectedPeople,selectedItems);if(status)status.textContent=`สำเร็จ • ${out.people} คน • อัลปาก้ารวม ${out.count} ตัว`;showWeatherToast?.(`🦙 ส่งเข้าคลัง ${out.people} คน • ${out.count} ตัวแล้ว`);}
+      catch(e){message?.("ส่งอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}
+      finally{btn.disabled=false;btn.textContent=old}
+    };
+  }
+
+  async function deepRepairFour(){
+    if(!admin())return 0;
+    const {db,fs}=await getFirebaseContext();let total=0;
+    // 1) Durable /gifts path — this is the route many recent Admin gifts used.
+    for(const mk of PRIORITY){
+      try{
+        const q=fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk));
+        const sn=await fs.getDocs(q);
+        for(const d of sn.docs||[]){
+          const g=d.data()||{},at=ts(g.createdAt)||ts(g.resolvedAt)||0;if(at&&at<Date.now()-REPAIR_WINDOW)continue;
+          if(low(g.fromKey)!=="aida"&&low(g.fromName)!=="aida")continue;
+          if(String(g.status||"")!=="claimed")continue;
+          const rows=parseLegacyItems(g);if(rows.length)total+=await writeUnits(fs,db,mk,`legacy-gift-${d.id}`,rows,at||now());
+        }
+      }catch(e){console.warn(BUILD,"repair gifts",mk,e)}
+    }
+    // 2) Targeted broadcasts — recent targeted alpaca gifts are materialized even if old claim receipts were compacted.
+    try{
+      const q=fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(1200)),sn=await fs.getDocs(q);
+      for(const d of sn.docs||[]){const b=d.data()||{},mk=low(b.targetKey),at=ts(b.createdAt)||0;if(!PRIORITY.includes(mk))continue;if(at&&at<Date.now()-REPAIR_WINDOW)continue;const rows=parseLegacyItems(b);if(rows.length)total+=await writeUnits(fs,db,mk,`legacy-broadcast-${d.id}`,rows,at||now())}
+    }catch(e){console.warn(BUILD,"repair broadcasts",e)}
+    if(total)showWeatherToast?.(`🛠️ กู้คลังอัลปาก้า 4 ไอดีแล้ว ${total} รายการ`);
+    try{localStorage.setItem(`yn:r3638-repair:${new Date().toISOString().slice(0,10)}`,String(Date.now()))}catch(_){ }
+    return total;
+  }
+
+  function injectAdminEntry(){
+    if(!admin())return;
+    const host=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');
+    if(!host||$("r3638OpenDispatch"))return;
+    const box=document.createElement("section");box.style.cssText="margin:12px 0;padding:12px;border:2px solid #9b6b8d;border-radius:16px;background:#fff8ef";
+    box.innerHTML=`<b style="display:block;margin-bottom:6px">🦙 ระบบส่งอัลปาก้าใหม่ R36.38</b><small style="display:block;margin-bottom:8px">เลือกหลายสมาชิก + หลายชนิด + หลายจำนวน • เข้าคลังทันที ไม่ต้องกดรับ</small><button id="r3638OpenDispatch" class="primary-spooky-action" type="button">เปิดศูนย์ส่งอัลปาก้าใหม่</button><button id="r3638RepairFour" type="button" style="margin-left:6px">กู้ย้อนหลัง 4 ไอดีตอนนี้</button>`;
+    host.appendChild(box);$("r3638OpenDispatch").onclick=openDispatchCenter;$("r3638RepairFour").onclick=async()=>{const b=$("r3638RepairFour"),old=b.textContent;b.disabled=true;b.textContent="กำลังกู้...";try{const n=await deepRepairFour();showWeatherToast?.(`🛠️ ตรวจย้อนหลังเสร็จ ${n} รายการ`)}finally{b.disabled=false;b.textContent=old}};
+  }
+
+  try{if(typeof showAdminCenter==="function"&&!showAdminCenter.__r3638){const base=showAdminCenter;const wrapped=async function(){const r=await base.apply(this,arguments);setTimeout(injectAdminEntry,40);return r};wrapped.__r3638=true;showAdminCenter=wrapped}}catch(e){console.warn(BUILD,"admin hook",e)}
+  const obs=new MutationObserver(()=>{if(admin())setTimeout(injectAdminEntry,20)});try{obs.observe(document.getElementById("modalContent"),{childList:true,subtree:true})}catch(_){ }
+
+  // Automatic one-time repair for the four currently affected accounts.
+  setTimeout(async()=>{if(!admin())return;try{const key=`yn:r3638-auto-repair`;if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,"1");await deepRepairFour()}catch(e){console.warn(BUILD,"auto repair",e)}},3500);
+
+  globalThis.YN_R3638_ALPACA_DISPATCH={BUILD,open:openDispatchCenter,send:directDispatch,repairFour:deepRepairFour};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   S2 R36.39 — UNIVERSAL SAVE STORAGE V2 / ALL PLAYERS
+   2026-09-16
+   - Every account uses the same save-size policy.
+   - Old receipts/history are archived outside saves/{memberKey} before trim.
+   - Active inventory counts, crops, currencies, animals and unclaimed drops stay live.
+   - Self-migration runs before normal login; Aida sweeps every member once/build.
+   - Future in-memory saves are compacted so old history cannot inflate the root again.
+   - Firestore size/index errors shown to players are translated to Thai and trigger repair.
+   ===================================================================== */
+(function YN_R3639_UNIVERSAL_SAVE_STORAGE_V2(){
+  "use strict";
+  const BUILD="S2-R36.39-UNIVERSAL-SAVE-STORAGE-V2-20260916";
+  const DAY=86400000;
+  const SOFT=360*1024;
+  const TARGET=260*1024;
+  const ARCHIVE_CHUNK=170*1024;
+  const low=v=>String(v??"").trim().toLowerCase();
+  const now=()=>Date.now();
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const bytes=v=>{try{const s=typeof v==="string"?v:JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const pressure=e=>/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i.test(String(e?.message||e||""));
+  const currentKey=()=>low(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+  const adminNow=()=>currentKey()==="aida"||(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"&&globalThis.adminProfile?.role==="admin");
+
+  function stamp(v){
+    if(typeof v==="number")return Number(v)||0;
+    if(!isObj(v))return 0;
+    return Number(v.resolvedAt??v.claimedAt??v.transferredAt??v.createdAtClient??v.createdAt??v.updatedAtMs??v.updatedAt??v.at??v.time??v.ts??v.expiresAt??0)||0;
+  }
+  function entriesNewest(v){
+    const rows=Object.entries(isObj(v)?v:{}),has=rows.some(([,x])=>stamp(x)>0);
+    if(has)rows.sort((a,b)=>stamp(b[1])-stamp(a[1]));
+    else rows.reverse();
+    return rows;
+  }
+  function keepMap(v,cap,maxAge=0){
+    const t=now(),rows=entriesNewest(v).filter(([,x])=>{if(!maxAge)return true;const z=stamp(x);return !z||t-z<=maxAge});
+    return Object.fromEntries(rows.slice(0,Math.max(0,cap)));
+  }
+  function futureMap(v,cap=48){
+    const t=now(),rows=Object.entries(isObj(v)?v:{}).filter(([,x])=>{const z=Number(x?.expiresAt??x?.until??x?.readyAt??x)||0;return !z||z>t});
+    return Object.fromEntries(rows.slice(-cap));
+  }
+  function recentArray(v,cap){return Array.isArray(v)?v.slice(-Math.max(0,cap)):[]}
+  function getPath(root,path){return String(path).split(".").reduce((o,k)=>o&&typeof o==="object"?o[k]:undefined,root)}
+  function setPath(root,path,value){
+    const p=String(path).split("."),last=p.pop();let o=root;
+    for(const k of p){if(!isObj(o[k]))o[k]={};o=o[k]}
+    o[last]=value;
+  }
+  function safePath(path){return String(path).replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,90)}
+  function hashText(text){let h=2166136261;for(let i=0;i<String(text).length;i++){h^=String(text).charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
+
+  const FIELD_POLICIES=[
+    ["friendGiftClaims","map",32,45*DAY],
+    ["broadcastGiftClaims","map",32,45*DAY],
+    ["fishingClaimReceipts","map",32,7*DAY],
+    ["campaignReceipts","map",32,21*DAY],
+    ["friendResourceClaims","map",48,14*DAY],
+    ["friendForageClaims","map",48,14*DAY],
+    ["friendGrassClaims","map",32,14*DAY],
+    ["friendFruitClaims","map",32,14*DAY],
+    ["friendFlowerClaims","map",32,14*DAY],
+    ["friendVisitClaims","map",32,14*DAY],
+    ["deliveryReceipts","map",24,30*DAY],
+    ["giftReceipts","map",24,45*DAY],
+    ["giftClaimHistory","map",24,45*DAY],
+    ["claimHistory","map",24,30*DAY],
+    ["eventHistory","array",8,0],
+    ["activityHistory","array",8,0],
+    ["r3465BasementReceipts","map",16,21*DAY],
+    ["hedgehogShieldReceiptsR3465","map",12,21*DAY],
+    ["friendCatCooldowns","future",48,0],
+    ["friendResourceCooldowns","future",48,0],
+    ["r32FriendForageLocks","future",48,0],
+    ["notifications","array",12,0],
+    ["alpaca.friendMushroomClaims","map",24,14*DAY],
+    ["alpaca.eventClaims","map",24,14*DAY],
+    ["alpaca.testSireCooldowns","future",32,0],
+    ["alpaca.factory.babyTransfers","map",32,45*DAY],
+    ["alpaca.factory.history","array",4,0]
+  ];
+  const POLICY_PATHS=new Set(FIELD_POLICIES.map(x=>x[0]));
+  const GENERIC_LEDGER=/^(?:.*(?:claims?|receipts?|history|archive|tombstones?|ledger|auditlog|eventlog|activitylog|processed|seenids?|dedupe|notificationqueue|cache|snapshot|mirror|backup))$/i;
+  const PROTECTED_TOP=new Set(["bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","plots","dogs","cats","hamsters","hamsterFarms","farmGuardians","alpaca","hedgehog","coconutRiverItems","jellyfishV2","warehouseTools","rainyMenus","boatDrinks","pendingAnimals","farmFruits","flowers","flowerSeeds","flowerPlots","wines","wineMachines","homeFoods","houseUpgrade","s2Unlocks","upgradeKeys","missions","dailyLimits"]);
+
+  function archivedRemainder(original,kept,mode){
+    if(mode==="array"){
+      const a=Array.isArray(original)?original:[],k=Array.isArray(kept)?kept:[];
+      return a.slice(0,Math.max(0,a.length-k.length));
+    }
+    if(mode==="map"){
+      const src=isObj(original)?original:{},ks=new Set(Object.keys(isObj(kept)?kept:{})),out={};
+      for(const [k,v] of Object.entries(src))if(!ks.has(k))out[k]=v;
+      return out;
+    }
+    return null;
+  }
+  function trimValue(value,mode,cap,age){
+    if(mode==="map")return keepMap(value,cap,age);
+    if(mode==="array")return recentArray(value,cap);
+    if(mode==="future")return futureMap(value,cap);
+    return value;
+  }
+  function splitArchive(path,value){
+    if(value==null)return[];
+    const chunks=[];
+    if(Array.isArray(value)){
+      let cur=[];
+      for(const x of value){const next=cur.concat([x]);if(cur.length&&bytes(next)>ARCHIVE_CHUNK){chunks.push(cur);cur=[x]}else cur=next}
+      if(cur.length)chunks.push(cur);
+    }else if(isObj(value)){
+      let cur={};
+      for(const [k,v] of Object.entries(value)){const next={...cur,[k]:v};if(Object.keys(cur).length&&bytes(next)>ARCHIVE_CHUNK){chunks.push(cur);cur={[k]:v}}else cur=next}
+      if(Object.keys(cur).length)chunks.push(cur);
+    }else if(bytes(value)>0)chunks.push(value);
+    return chunks.map((payload,i)=>({path,part:i,payloadJson:JSON.stringify(payload),count:Array.isArray(payload)?payload.length:isObj(payload)?Object.keys(payload).length:1}));
+  }
+
+  function compactState(raw,{collectArchive=false,aggressive=false}={}){
+    const s=clone(raw||{})||{},archives=[],patch={};
+    for(const [path,mode,cap0,age] of FIELD_POLICIES){
+      const old=getPath(s,path);if(old==null)continue;
+      const cap=aggressive?Math.max(mode==="array"?2:8,Math.floor(cap0/2)):cap0;
+      const kept=trimValue(old,mode,cap,age);
+      if(collectArchive&&(mode==="map"||mode==="array")){
+        const retired=archivedRemainder(old,kept,mode);
+        if((Array.isArray(retired)&&retired.length)||(isObj(retired)&&Object.keys(retired).length))archives.push(...splitArchive(path,retired));
+      }
+      setPath(s,path,kept);patch[path]=kept;
+    }
+
+    /* Generic top-level bookkeeping introduced by older patches is archived too.
+       Never touch actual inventories, animals, crops or pending rewards. */
+    for(const [k,v] of Object.entries(s)){
+      if(PROTECTED_TOP.has(k)||POLICY_PATHS.has(k)||k.includes(".")||!GENERIC_LEDGER.test(k))continue;
+      if(!(Array.isArray(v)||isObj(v)))continue;
+      const cap=aggressive?8:20,kept=Array.isArray(v)?recentArray(v,cap):keepMap(v,cap,45*DAY);
+      if(collectArchive){const retired=archivedRemainder(v,kept,Array.isArray(v)?"array":"map");if((Array.isArray(retired)&&retired.length)||(isObj(retired)&&Object.keys(retired).length))archives.push(...splitArchive(k,retired))}
+      s[k]=kept;patch[k]=kept;
+    }
+
+    /* Canonical replacements / derived history only. */
+    if(Array.isArray(s.dishes)&&isObj(s.dishInventory)){if(collectArchive&&s.dishes.length)archives.push(...splitArchive("dishes-legacy",s.dishes));s.dishes=[];patch.dishes=[]}
+    if(Array.isArray(s.retiredCatsArchiveR34)){
+      if(collectArchive&&s.retiredCatsArchiveR34.length>4)archives.push(...splitArchive("retiredCatsArchiveR34",s.retiredCatsArchiveR34.slice(0,-4)));
+      s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s.retiredCatsArchiveR34.length);
+      s.retiredCatsArchiveR34=s.retiredCatsArchiveR34.slice(-4).map(x=>x&&typeof x==="object"?{id:String(x.id||""),typeKey:String(x.typeKey||""),customName:String(x.customName||"")}:x);
+      patch.retiredCatsArchiveR34=s.retiredCatsArchiveR34;patch.retiredCatsArchiveCountR3463=s.retiredCatsArchiveCountR3463;
+    }
+    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:true})}catch(_){ }
+
+    /* Do not accumulate dozens of old guard diagnostics in the root document. */
+    for(const k of Object.keys(s)){
+      if((/^saveGuardR\d+/i.test(k)||/^rescueBuildR\d+/i.test(k)||/^rescuedAtR\d+/i.test(k))&&k!=="saveStorageV2")delete s[k];
+    }
+    if(bytes(s)>SOFT&&!aggressive)return compactState(raw,{collectArchive,aggressive:true});
+    /* Emergency headroom: if bookkeeping still dominates after the normal pass,
+       keep only a tiny recent live window. The retired records were archived above. */
+    if(bytes(s)>520*1024){
+      for(const [path,mode,,age] of FIELD_POLICIES){
+        const old=getPath(s,path);if(old==null)continue;
+        const kept=mode==="map"?keepMap(old,4,age):mode==="array"?recentArray(old,2):futureMap(old,12);
+        setPath(s,path,kept);patch[path]=kept;
+      }
+      for(const [k,v] of Object.entries(s))if(!PROTECTED_TOP.has(k)&&GENERIC_LEDGER.test(k)&&(Array.isArray(v)||isObj(v))){s[k]=Array.isArray(v)?recentArray(v,2):keepMap(v,4,45*DAY);patch[k]=s[k]}
+      try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:true})}catch(_){ }
+    }
+    s.saveStorageV2={version:BUILD,migratedAtClient:now(),approxBytes:bytes(s)};
+    return {state:s,archives,patch,approxBytes:bytes(s)};
+  }
+
+  async function moveLegacyAlpacaVault(fs,db,mk,raw){
+    const list=Array.isArray(raw?.alpaca?.vault)?raw.alpaca.vault:[];if(!list.length)return 0;
+    let moved=0;
+    for(let i=0;i<list.length;i++){
+      const x=clone(list[i]);if(!x||typeof x!=="object")continue;
+      const rawId=String(x.id||`legacy-${i}`),id=`legacy-${safePath(rawId)}-${hashText(JSON.stringify(x))}`;
+      const ref=fs.doc(db,"alpacaVaults",mk,"items",id);
+      const snap=await fs.getDoc(ref);
+      if(!snap.exists())await fs.setDoc(ref,{...x,id,memberKey:mk,source:String(x.source||"legacy-vault-migration-r3639"),sourceLegacyVaultId:rawId,migratedAtClient:now(),updatedAt:fs.serverTimestamp()},{merge:false});
+      moved++;
+    }
+    return moved;
+  }
+
+  async function archiveChunks(fs,db,mk,chunks){
+    let n=0;
+    for(const c of chunks){
+      const id=`${safePath(c.path)}-${hashText(c.payloadJson)}-${String(c.part).padStart(3,"0")}`;
+      const ref=fs.doc(db,"saveArchives",mk,"chunks",id);
+      await fs.setDoc(ref,{memberKey:mk,path:c.path,part:c.part,count:c.count,payloadJson:c.payloadJson,build:BUILD,archivedAtClient:now(),updatedAt:fs.serverTimestamp()},{merge:true});
+      n+=c.count||0;
+    }
+    return n;
+  }
+
+  function buildShrinkPatch(clean){
+    const p={};
+    for(const [path] of FIELD_POLICIES){const v=getPath(clean,path);if(v!==undefined)p[path]=clone(v)}
+    for(const k of Object.keys(clean))if(GENERIC_LEDGER.test(k)&&!PROTECTED_TOP.has(k)&&!k.includes("."))p[k]=clone(clean[k]);
+    if("dishes" in clean)p.dishes=clone(clean.dishes);
+    if("retiredCatsArchiveR34" in clean)p.retiredCatsArchiveR34=clone(clean.retiredCatsArchiveR34);
+    p.saveStorageV2=clone(clean.saveStorageV2);
+    return p;
+  }
+
+  let migrateBusy=new Map();
+  async function migrateOne(memberKey,{force=false}={}){
+    const mk=low(memberKey);if(!mk)return{ok:false,reason:"no-member"};
+    if(migrateBusy.has(mk))return migrateBusy.get(mk);
+    const job=(async()=>{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);
+      if(!snap.exists())return{ok:false,reason:"no-save"};
+      const raw=snap.data()||{},before=bytes(raw),marker=raw?.saveStorageV2?.version;
+      if(!force&&marker===BUILD&&before<SOFT)return{ok:true,skipped:true,before,after:before};
+      const r=compactState(raw,{collectArchive:true,aggressive:force||before>SOFT});
+      /* Legacy unplaced alpacas are also moved out of the root save. R36.38 already
+         renders/places alpacaVaults, so this is lossless and reduces active save size. */
+      const movedAlpacas=await moveLegacyAlpacaVault(fs,db,mk,raw);
+      if(movedAlpacas&&r.state?.alpaca){r.state.alpaca.vault=[];r.patch["alpaca.vault"]=[]}
+      /* Archive first. If this fails, leave the member save untouched. */
+      const archived=await archiveChunks(fs,db,mk,r.archives);
+      /* First shrink the known bookkeeping paths in-place. This can rescue a
+         document that is already above 1 MiB before the final replacement. */
+      try{await fs.updateDoc(ref,{...buildShrinkPatch(r.state),updatedAt:fs.serverTimestamp()})}catch(e){if(!pressure(e))throw e;console.warn(BUILD,"shrink patch pressure",mk,e?.message||e)}
+      const reread=await fs.getDoc(ref),latest=reread.exists()?reread.data():raw;
+      const final=compactState(latest,{collectArchive:false,aggressive:true}).state;
+      if(movedAlpacas&&final?.alpaca)final.alpaca.vault=[];
+      final.saveStorageV2={version:BUILD,migratedAtClient:now(),approxBytes:bytes(final),archivedRecords:archived,movedAlpacas};
+      await fs.setDoc(ref,{...final,updatedAt:fs.serverTimestamp()},{merge:false});
+      const after=bytes(final);
+      console.info(BUILD,"migrated",mk,{before,after,archived,movedAlpacas});
+      return{ok:true,before,after,archived,movedAlpacas};
+    })().finally(()=>migrateBusy.delete(mk));
+    migrateBusy.set(mk,job);return job;
+  }
+
+  let sweepBusy=null;
+  async function migrateAllPlayers(){
+    if(!adminNow())return false;if(sweepBusy)return sweepBusy;
+    try{if(localStorage.getItem("yn:r3639:all-save-sweep")===BUILD)return true}catch(_){ }
+    sweepBusy=(async()=>{try{
+      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves")),ids=[];sn.forEach(d=>ids.push(d.id));
+      let done=0,failed=0;
+      for(let i=0;i<ids.length;i+=3){
+        const rs=await Promise.allSettled(ids.slice(i,i+3).map(id=>migrateOne(id,{force:false})));
+        for(const x of rs)x.status==="fulfilled"?done++:failed++;
+      }
+      if(!failed)try{localStorage.setItem("yn:r3639:all-save-sweep",BUILD)}catch(_){ }
+      try{showWeatherToast?.(`💾 จัดระเบียบเซฟสมาชิก ${done} คน${failed?` • ไม่สำเร็จ ${failed}`:""}`)}catch(_){ }
+      return failed===0;
+    }catch(e){console.warn(BUILD,"all-player migration",e);return false}finally{sweepBusy=null}})();
+    return sweepBusy;
+  }
+
+  function compactLive(s){
+    if(!s||typeof s!=="object")return s;
+    const r=compactState(s,{collectArchive:false,aggressive:bytes(s)>SOFT}).state;
+    for(const k of Object.keys(s))delete s[k];Object.assign(s,r);return s;
+  }
+
+  /* Future full-save routes cannot re-inflate the root document with old ledgers. */
+  try{if(typeof normalizeState==="function"){
+    const base=normalizeState;normalizeState=function(raw,player){return compactLive(base(raw,player))};
+  }}catch(e){console.warn(BUILD,"normalize wrap",e)}
+  try{if(typeof ynPrepareSaveR3463==="function"){
+    const base=ynPrepareSaveR3463;ynPrepareSaveR3463=function(s){compactLive(s);const out=base(s);compactLive(out?.state||s);return{state:out?.state||s,bytes:bytes(out?.state||s)}};
+  }}catch(e){console.warn(BUILD,"prepare wrap",e)}
+  try{if(typeof saveLocalOnly==="function"){
+    const base=saveLocalOnly;saveLocalOnly=function(target=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)){if(target)compactLive(target);return base.apply(this,arguments)};
+  }}catch(e){console.warn(BUILD,"local wrap",e)}
+  try{if(typeof flushCloudSave==="function"){
+    const base=flushCloudSave;flushCloudSave=async function(){if(typeof ownState!=="undefined"&&ownState)compactLive(ownState);try{return await base.apply(this,arguments)}catch(e){if(!pressure(e))throw e;await migrateOne(currentKey(),{force:true});if(typeof ownState!=="undefined"&&ownState)compactLive(ownState);return await base.apply(this,arguments)}};
+  }}catch(e){console.warn(BUILD,"flush wrap",e)}
+
+  /* Repair the signed-in member BEFORE ordinary login code can perform a small
+     update against an already-oversized document. */
+  try{if(typeof initializeOrLoadCloudState==="function"){
+    const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){
+      const mk=low(memberKey);try{await migrateOne(mk,{force:false})}catch(e){console.warn(BUILD,"pre-login migration",mk,e)}
+      let out;try{out=await base.apply(this,arguments)}catch(e){if(!pressure(e))throw e;await migrateOne(mk,{force:true});out=await base.apply(this,arguments)}
+      if(adminNow())setTimeout(()=>migrateAllPlayers(),1800);return out;
+    };
+  }}catch(e){console.warn(BUILD,"init wrap",e)}
+
+  /* No raw Firebase size/index error should be shown to members anymore. */
+  const THAI_PRESSURE="ข้อมูลบัญชีมีขนาดเกินระบบจัดเก็บเดิม ระบบกำลังย้ายข้อมูลประวัติออกจากเซฟหลักให้อัตโนมัติค่ะ กรุณารอสักครู่แล้วกดทำรายการอีกครั้ง ของในกระเป๋าและสัตว์จะไม่ถูกลบ";
+  try{if(typeof message==="function"){
+    const base=message;message=function(title,body){
+      if(pressure(body)){setTimeout(()=>migrateOne(currentKey(),{force:true}).catch(()=>{}),50);return base.call(this,title||"กำลังจัดระเบียบข้อมูล",THAI_PRESSURE)}
+      return base.apply(this,arguments);
+    };
+  }}catch(e){console.warn(BUILD,"message wrap",e)}
+  globalThis.YN_translateFirestoreError=e=>pressure(e)?THAI_PRESSURE:String(e?.message||e||"");
+
+  /* Aida can manually re-run the universal sweep from console/admin tools if needed. */
+  globalThis.YN_SAVE_STORAGE_V2={BUILD,migrateOne,migrateAll:migrateAllPlayers,compactCurrent:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s)return null;compactLive(s);return{memberKey:currentKey(),bytes:bytes(s)}},report:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:currentKey(),bytes:bytes(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
 </script>
 </body>
 </html>
