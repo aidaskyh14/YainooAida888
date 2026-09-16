@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.36-EXTERNAL-ALPACA-VAULT-RECOVERY-20260916"></script>
+<script src="game.js?v=S2-R36.37-EXTERNAL-ALPACA-VAULT-CLOUDREADY-FIX-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3804,7 +3804,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3636_EXTERNAL_ALPACA_VAULT(){
   "use strict";
-  const BUILD="S2-R36.36-EXTERNAL-ALPACA-VAULT-RECOVERY-20260916";
+  const BUILD="S2-R36.37-EXTERNAL-ALPACA-VAULT-CLOUDREADY-FIX-20260916";
   const PRIORITY=new Set(["opor","mhai","earn","kongkwan"]);
   const A_TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance","alpaca"]);
   const HOUR=3600000, DAY=24*HOUR, SCAN_MS=72*HOUR;
@@ -3901,7 +3901,7 @@ console.info(BUILD,"loaded");
   }
 
   async function repairPriorityAll(){
-    if(!isAdmin()||!globalThis.cloudReady)return 0;
+    if(!isAdmin()||!cloudReady)return 0;
     const {db,fs}=await getFirebaseContext(),rows=await scanRecentBroadcasts(fs,db);let total=0;
     for(const mk of PRIORITY){
       let saveClaims={};
@@ -3918,7 +3918,7 @@ console.info(BUILD,"loaded");
   }
 
   async function repairSelf(){
-    const mk=currentKey();if(!mk||!globalThis.cloudReady||globalThis.visitContext)return 0;
+    const mk=currentKey();if(!mk||!cloudReady||visitContext)return 0;
     const {db,fs}=await getFirebaseContext(),rows=await scanRecentBroadcasts(fs,db);let saveClaims={};
     try{const ss=await fs.getDoc(fs.doc(db,"saves",mk));if(ss.exists())saveClaims=ss.data()?.broadcastGiftClaims||{}}catch(_){ }
     let total=0;
@@ -3933,7 +3933,7 @@ console.info(BUILD,"loaded");
     return set;
   }
   async function externalItems(){
-    const mk=currentKey();if(!mk||!globalThis.cloudReady)return[];
+    const mk=currentKey();if(!mk||!cloudReady)return[];
     try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(extCol(fs,db,mk)),ids=mainIds(),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(!ids.has(String(x.id)))out.push(x)});return out.sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0))}catch(e){console.warn(BUILD,"external read",e);return[]}
   }
   function colorLabel(c){return({white:"ขาว",black:"ดำ",pink:"ชมพู",green:"เขียว",brown:"น้ำตาล",goldenHoney:"Golden Honey",thaiTea:"ชาไทย",prince:"เจ้าชาย",princess:"เจ้าหญิง"})[c]||c||"ขาว"}
@@ -4009,7 +4009,21 @@ console.info(BUILD,"loaded");
   const obs=new MutationObserver(()=>{if(document.querySelector(".alpaca-warehouse-panel"))setTimeout(injectWarehouse,40)});try{obs.observe(document.getElementById("modalContent"),{childList:true,subtree:true})}catch(_){ }
   setTimeout(()=>{if(isAdmin())repairPriorityAll();else if(PRIORITY.has(currentKey()))repairSelf()},900);
 
-  globalThis.YN_R3636_ALPACA_VAULT={BUILD,repairSelf,repairPriorityAll,injectWarehouse};
+  async function readyRepair(){
+    try{
+      if(!cloudReady||!currentMemberKey)return 0;
+      const mk=currentKey();
+      const n=isAdmin()?await repairPriorityAll():await repairSelf();
+      if(document.querySelector(".alpaca-warehouse-panel"))await injectWarehouse();
+      return n;
+    }catch(e){console.warn(BUILD,"ready repair",e?.message||e);return 0}
+  }
+  /* Login may finish long after this patch is evaluated. Retry a few times so
+     existing accepted gifts are reconstructed without requiring another claim. */
+  [1800,4200,9000,16000].forEach(ms=>setTimeout(readyRepair,ms));
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(readyRepair,350)});
+
+  globalThis.YN_R3636_ALPACA_VAULT={BUILD,repairSelf,repairPriorityAll,injectWarehouse,readyRepair};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
