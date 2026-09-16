@@ -38925,3 +38925,299 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R36.34 — ALPACA TARGETED-GIFT GUARANTEED VAULT + HISTORIC REPAIR
+   2026-09-16
+   - Root cause fix for already-accepted Admin alpaca gifts missing from vault.
+   - Recovery no longer depends only on broadcastGiftClaims, because old save
+     compaction may have trimmed that ledger after the UI had already shown “รับแล้ว”.
+   - Recent TARGETED Admin alpaca broadcasts are delivery-authoritative: the
+     intended recipient is repaired from the broadcast itself, idempotently.
+   - Global broadcasts are repaired only when an accepted claim is still present.
+   - Stable IDs derived from broadcast id prevent duplicate alpacas.
+   - No pen/animation/breeding/medicine/lifespan changes.
+   ===================================================================== */
+(function YN_R3634_ALPACA_GIFT_GUARANTEE(){
+  "use strict";
+  const BUILD="S2-R36.34-ALPACA-TARGETED-GIFT-GUARANTEE-20260916";
+  const TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance"]);
+  const HOUR=60*60*1000, RECENT_MS=24*HOUR;
+  const low=v=>String(v??"").toLowerCase();
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
+  const millis=v=>{try{if(v&&typeof v.toMillis==="function")return Number(v.toMillis())||0;if(v&&typeof v.seconds==="number")return Number(v.seconds)*1000;return Number(v)||0}catch(_){return 0}};
+  const safe=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_");
+
+  function ensure(s){
+    if(!s||typeof s!=="object")return null;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    s.alpaca.broadcastGiftVaultReceipts=(s.alpaca.broadcastGiftVaultReceipts&&typeof s.alpaca.broadcastGiftVaultReceipts==="object"&&!Array.isArray(s.alpaca.broadcastGiftVaultReceipts))?s.alpaca.broadcastGiftVaultReceipts:{};
+    return s.alpaca;
+  }
+  function giftRows(b){
+    const src=Array.isArray(b?.items)?b.items:[{type:b?.itemType,key:b?.itemKey,qty:b?.qty,instance:b?.instance}];
+    return src.map((x,i)=>({index:i,type:String(x?.type||x?.itemType||""),key:String(x?.key||x?.itemKey||""),qty:Math.max(1,iv(x?.qty)||1),instance:x?.instance?cp(x.instance):null})).filter(x=>TYPES.has(x.type));
+  }
+  function adult(key){let [color,sex]=String(key||"").split(":");color=color||"white";sex=sex==="female"?"female":"male";if(color==="prince")sex="male";if(color==="princess")sex="female";return{color,sex}}
+  function idFor(bid,row,n){return `gift-${safe(bid)}-${row.index}-${n}`}
+  function make(bid,row,n,at){
+    const id=idFor(bid,row,n),t=at||now();
+    if(row.type==="alpacaInstance"&&row.instance){const x=cp(row.instance)||{};x.id=String(x.id||id);x.source=x.source||"admin-broadcast-gift";x.receivedAt=Number(x.receivedAt)||t;x.createdAt=Number(x.createdAt)||t;return x}
+    if(row.type==="alpacaBaby"){const color=String(row.key||"").split(":")[0]||"white";return{id,type:"baby",color,sex:null,source:"admin-broadcast-gift",receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*HOUR}}
+    const m=adult(row.key);return{id,type:"adult",color:m.color,sex:m.sex,source:"admin-broadcast-gift",receivedAt:t,createdAt:t}
+  }
+  function animals(s){const a=ensure(s),out=[];for(const x of a.vault)if(x&&typeof x==="object")out.push(x);for(const p of a.pens){for(const x of (Array.isArray(p?.alpacas)?p.alpacas:[]))if(x&&typeof x==="object")out.push(x)}return out}
+  function sameKind(x,row){if(!x)return false;if(row.type==="alpacaInstance")return String(x.id||"")==String(row.instance?.id||"");if(row.type==="alpacaBaby")return String(x.type||"")==="baby"&&String(x.color||"")===(String(row.key||"").split(":")[0]||"white");const m=adult(row.key);return String(x.type||"")==="adult"&&String(x.color||"")===m.color&&String(x.sex||"")===m.sex}
+  function isGiftAnimal(x){const s=low(x?.source);return s.includes("gift")||s.includes("admin")||s.includes("broadcast")}
+  function near(x,at){const t=Number(x?.receivedAt||x?.createdAt||x?.bornAt||0);return !at||!!t&&Math.abs(t-at)<=18*HOUR}
+  function grant(s,bid,b,at,{historic=true}={}){
+    const a=ensure(s),all=animals(s),used=new Set();let added=0;
+    for(const row of giftRows(b))for(let n=0;n<row.qty;n++){
+      const want=idFor(bid,row,n);let found=all.find(x=>String(x?.id||"")===want);
+      if(!found&&row.type==="alpacaInstance"&&row.instance?.id)found=all.find(x=>String(x?.id||"")===String(row.instance.id));
+      if(!found&&historic)found=all.find(x=>{const id=String(x?.id||"");return id&&!used.has(id)&&isGiftAnimal(x)&&near(x,at)&&sameKind(x,row)});
+      if(found){used.add(String(found.id||""));continue}
+      const x=make(bid,row,n,at);a.vault.push(x);all.push(x);used.add(String(x.id));added++;
+    }
+    a.broadcastGiftVaultReceipts[bid]={at:Date.now(),source:"r3634",added};
+    return added;
+  }
+  function acceptedFromAny(cloud){
+    const out={};
+    const merge=o=>{if(!o||typeof o!=="object"||Array.isArray(o))return;for(const [id,r] of Object.entries(o))if(low(r?.status||r)==="accepted")out[id]=r};
+    merge(cloud?.broadcastGiftClaims);
+    try{merge((ownState||state)?.broadcastGiftClaims)}catch(_){}
+    try{const k=typeof stateKey==="function"?stateKey():"";if(k){const raw=JSON.parse(localStorage.getItem(k)||"null");merge(raw?.broadcastGiftClaims)}}catch(_){}
+    return out;
+  }
+  function adminGift(b,mk){if(!b||b.type!=="gift"||!giftRows(b).length)return false;if(b.targetKey&&low(b.targetKey)!==low(mk))return false;const from=low(b.fromKey||b.from||b.fromName);return !from||from==="aida"||from==="ยัยหนู"}
+  function claimAccepted(claims,id){return !!claims[id]&&low(claims[id]?.status||claims[id])==="accepted"}
+
+  async function recentBroadcasts(fs,db,limit=100){
+    try{const q=fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(limit)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>out.push({id:d.id,data:d.data()||{}}));return out}catch(e){console.warn(BUILD,"broadcast query",e);return[]}
+  }
+  let busy=false,last=0;
+  async function repairSelf(force=false){
+    const mk=low(typeof currentMemberKey!=="undefined"?currentMemberKey:"");if(!mk||!cloudReady||visitContext||busy)return false;if(!force&&Date.now()-last<3*60*1000)return false;busy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
+      const cloud=snap.data()||{},claims=acceptedFromAny(cloud),rows=await recentBroadcasts(fs,db,100),cut=Date.now()-RECENT_MS;
+      const candidates=rows.filter(r=>{const b=r.data,created=millis(b.createdAt);if(!adminGift(b,mk))return false;if(b.targetKey&&low(b.targetKey)===mk)return !created||created>=cut;return claimAccepted(claims,r.id)});
+      if(!candidates.length){last=Date.now();return false}
+      let next=null,added=0,touched=0;
+      await fs.runTransaction(db,async tx=>{
+        const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");const s=normalizeState(sn.data(),currentMember),a=ensure(s),freshClaims=acceptedFromAny(sn.data());
+        for(const r of candidates){
+          if(a.broadcastGiftVaultReceipts?.[r.id])continue;
+          const b=r.data,isTarget=!!b.targetKey&&low(b.targetKey)===mk;
+          if(!isTarget&&!claimAccepted(freshClaims,r.id)&&!claimAccepted(claims,r.id))continue;
+          const at=millis(freshClaims[r.id]?.resolvedAt)||millis(claims[r.id]?.resolvedAt)||millis(b.createdAt)||now();added+=grant(s,r.id,b,at,{historic:true});touched++;
+        }
+        if(!touched)return;
+        try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:false})}catch(_){}
+        tx.set(ref,{...cp(s),activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:undefined,updatedAt:fs.serverTimestamp()},{merge:false});next=s;
+      });
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){};try{notificationDataCache.at=0}catch(_){}}
+      last=Date.now();if(added>0)try{showWeatherToast?.(`🦙 กู้คืนอัลปาก้าเข้าคลัง ${added} ตัว`)}catch(_){};return added>0;
+    }catch(e){console.warn(BUILD,"repair self",e);return false}finally{busy=false}
+  }
+
+  /* One Admin sweep: targeted alpaca broadcasts from the last 24h are repaired for
+     their intended recipients even if an old compaction pass already removed the
+     claim ledger. Stable broadcast-based IDs make this safe to run repeatedly. */
+  let adminBusy=false;
+  async function repairAll(force=false){
+    let admin=false;try{admin=low(currentMemberKey)==="aida"&&(currentMember==="Aida"||adminProfile?.role==="admin")}catch(_){}if(!admin||!cloudReady||adminBusy)return false;
+    const marker=`yn:${BUILD}:targeted-sweep`;if(!force){try{if(localStorage.getItem(marker)==="1")return false}catch(_){}}
+    adminBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),rows=await recentBroadcasts(fs,db,120),cut=Date.now()-RECENT_MS;
+      const targeted=rows.filter(r=>r.data?.targetKey&&millis(r.data.createdAt)>=cut&&adminGift(r.data,low(r.data.targetKey)));
+      const groups=new Map();for(const r of targeted){const mk=low(r.data.targetKey);if(!groups.has(mk))groups.set(mk,[]);groups.get(mk).push(r)}
+      let total=0,people=0;
+      for(const [mk,list] of groups){const ref=fs.doc(db,"saves",mk);let added=0,touched=0;try{await fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())return;const s=normalizeState(sn.data(),sn.data()?.player||mk),a=ensure(s);for(const r of list){if(a.broadcastGiftVaultReceipts?.[r.id])continue;added+=grant(s,r.id,r.data,millis(r.data.createdAt)||now(),{historic:true});touched++}if(!touched)return;try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:false})}catch(_){};tx.set(ref,{...cp(s),updatedAt:fs.serverTimestamp()},{merge:false})});if(touched){people++;total+=added}}catch(e){console.warn(BUILD,"targeted repair",mk,e)}}
+      try{localStorage.setItem(marker,"1")}catch(_){};if(total>0)try{showWeatherToast?.(`🦙 ย้อนหลังอัลปาก้า ${total} ตัว • ${people} สมาชิก`)}catch(_){};return total>0;
+    }catch(e){console.warn(BUILD,"repair all",e);return false}finally{adminBusy=false}
+  }
+
+  /* Future claims: run the authoritative verifier immediately after the existing
+     claim flow, so a successful “รับแล้ว” can never remain without a vault item. */
+  try{if(typeof claimBroadcastGift==="function"&&!claimBroadcastGift.__r3634){const base=claimBroadcastGift;const w=async function(){const r=await base.apply(this,arguments);if(arguments[1])await repairSelf(true);return r};w.__r3634=true;claimBroadcastGift=w}}catch(e){console.warn(BUILD,"claim hook",e)}
+
+  /* Warehouse opens only after repair has had a chance to commit, then rerenders. */
+  document.addEventListener("click",e=>{if(!e.target?.closest?.("#alpacaWarehouseBtn"))return;setTimeout(async()=>{const ch=await repairSelf(true);if(ch)try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}catch(_){ }},0)},true);
+  setTimeout(()=>repairSelf(true),700);
+  setTimeout(()=>repairAll(false),1400);
+  globalThis.YN_R3634_ALPACA_GIFT_GUARANTEE={BUILD,repairSelf:()=>repairSelf(true),repairAll:()=>repairAll(true)};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R36.35 — DEEP ALPACA VAULT REPAIR FOR QUOTA-PRESSURED ACCOUNTS
+   2026-09-16
+   Targets: Opor / Mhai / Earn / Kongkwan.
+   - These four saves are known to be close to Firestore's 1 MiB limit. Earlier
+     alpaca recovery tried to rewrite the whole save and could fail before the
+     recovered alpaca ever reached alpaca.vault.
+   - This repair first removes ONLY disposable history/cache ledgers, never
+     inventory/merit/plots/animals/unlocks/scores, then writes alpaca.vault by
+     field path instead of replacing the whole save.
+   - Recent targeted Admin alpaca broadcasts are treated as authoritative for
+     these four accounts because the user confirmed they already pressed รับ.
+   - Deterministic broadcast-derived ids make the repair safe to run repeatedly.
+   ===================================================================== */
+(function YN_R3635_DEEP_ALPACA_VAULT_REPAIR(){
+  "use strict";
+  const BUILD="S2-R36.35-DEEP-ALPACA-VAULT-REPAIR-20260916";
+  const TARGETS=new Set(["opor","mhai","earn","kongkwan"]);
+  const TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance"]);
+  const HOUR=60*60*1000, WINDOW_MS=48*HOUR;
+  const low=v=>String(v??"").toLowerCase();
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const ts=v=>{try{if(v&&typeof v.toMillis==="function")return Number(v.toMillis())||0;if(v&&typeof v.seconds==="number")return Number(v.seconds)*1000;return Number(v)||0}catch(_){return 0}};
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
+  const safe=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_");
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+
+  function rows(b){
+    const src=Array.isArray(b?.items)?b.items:[{type:b?.itemType,key:b?.itemKey,qty:b?.qty,instance:b?.instance}];
+    return src.map((x,i)=>({i,type:String(x?.type||x?.itemType||""),key:String(x?.key||x?.itemKey||""),qty:Math.max(1,iv(x?.qty)||1),instance:x?.instance?cp(x.instance):null})).filter(x=>TYPES.has(x.type));
+  }
+  function adult(key){let [color,sex]=String(key||"").split(":");color=color||"white";sex=sex==="female"?"female":"male";if(color==="prince")sex="male";if(color==="princess")sex="female";return{color,sex}}
+  function unitId(bid,row,n){return `r3635-${safe(bid)}-${row.i}-${n}`}
+  function makeUnit(bid,row,n,at){
+    const id=unitId(bid,row,n),t=at||now();
+    if(row.type==="alpacaInstance"&&row.instance){const x=cp(row.instance)||{};x.id=String(x.id||id);x.source=x.source||"admin-targeted-gift-r3635";x.receivedAt=Number(x.receivedAt)||t;x.createdAt=Number(x.createdAt)||t;return x}
+    if(row.type==="alpacaBaby"){const color=String(row.key||"").split(":")[0]||"white";return{id,type:"baby",color,sex:null,source:"admin-targeted-gift-r3635",receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*HOUR}}
+    const m=adult(row.key);return{id,type:"adult",color:m.color,sex:m.sex,source:"admin-targeted-gift-r3635",receivedAt:t,createdAt:t}
+  }
+  function collectIds(s){
+    const set=new Set();
+    for(const x of (Array.isArray(s?.alpaca?.vault)?s.alpaca.vault:[]))if(x?.id)set.add(String(x.id));
+    for(const p of (Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[]))for(const x of (Array.isArray(p?.alpacas)?p.alpacas:[]))if(x?.id)set.add(String(x.id));
+    return set;
+  }
+  function ensureRoot(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    s.alpaca.r3635GiftReceipts=(s.alpaca.r3635GiftReceipts&&typeof s.alpaca.r3635GiftReceipts==="object"&&!Array.isArray(s.alpaca.r3635GiftReceipts))?s.alpaca.r3635GiftReceipts:{};
+    return s.alpaca;
+  }
+  function compactReceiptMap(o,cap=120){
+    const ent=Object.entries(o&&typeof o==="object"&&!Array.isArray(o)?o:{}).sort((a,b)=>Number(a[1]?.at||0)-Number(b[1]?.at||0));
+    return Object.fromEntries(ent.slice(-cap));
+  }
+
+  /* Shrink only expendable ledgers. No inventory, plots, currencies, alpacas,
+     unlock flags, campaign scores, foods or active production are touched. */
+  async function makeRoom(fs,db,mk){
+    const ref=fs.doc(db,"saves",mk),del=typeof fs.deleteField==="function"?fs.deleteField():null;
+    if(!del)return;
+    const patch={
+      fishingClaimReceipts:del,
+      campaignReceipts:del,
+      friendResourceClaims:del,
+      friendForageClaims:del,
+      friendCatCooldowns:del,
+      r32FriendForageLocks:del,
+      r3465BasementReceipts:del,
+      hedgehogShieldReceiptsR3465:del,
+      retiredCatsArchiveR34:del,
+      giftClaimHistory:del,
+      claimHistory:del,
+      eventHistory:del,
+      activityHistory:del,
+      "alpaca.friendMushroomClaims":del,
+      "alpaca.eventClaims":del,
+      "alpaca.testSireCooldowns":del,
+      "alpaca.factory.history":del
+    };
+    try{await fs.updateDoc(ref,patch)}catch(e){console.warn(BUILD,"make room",mk,e?.message||e)}
+  }
+
+  async function recentTargeted(fs,db){
+    const cut=Date.now()-WINDOW_MS;
+    const out=[];
+    /* Read a wider window than prior patches: a busy Admin can easily create more
+       than 100 broadcasts in a few hours. */
+    try{
+      const q=fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(500));
+      const sn=await fs.getDocs(q);
+      sn.forEach(d=>{const b=d.data()||{},mk=low(b.targetKey),at=ts(b.createdAt);if(TARGETS.has(mk)&&b.type==="gift"&&rows(b).length&&(!at||at>=cut))out.push({id:d.id,b,at:at||now(),mk})});
+    }catch(e){console.warn(BUILD,"broadcast scan",e)}
+    return out;
+  }
+
+  async function repairMember(fs,db,mk,gifts){
+    mk=low(mk);if(!TARGETS.has(mk)||!gifts?.length)return 0;
+    const ref=fs.doc(db,"saves",mk);
+    /* The four accounts are quota pressured. Make room before adding any alpaca. */
+    await makeRoom(fs,db,mk);
+    const sn=await fs.getDoc(ref);if(!sn.exists())return 0;
+    const raw=sn.data()||{},s=typeof normalizeState==="function"?normalizeState(cp(raw),raw?.player||mk):cp(raw),root=ensureRoot(s),ids=collectIds(s);
+    let added=0;
+    for(const g of gifts.sort((a,b)=>a.at-b.at)){
+      if(root.r3635GiftReceipts[g.id])continue;
+      let giftAdded=0;
+      for(const r of rows(g.b))for(let n=0;n<r.qty;n++){
+        const id=unitId(g.id,r,n);
+        /* Exact deterministic id or original instance id means this unit already exists. */
+        if(ids.has(id))continue;
+        if(r.type==="alpacaInstance"&&r.instance?.id&&ids.has(String(r.instance.id)))continue;
+        const x=makeUnit(g.id,r,n,g.at);root.vault.push(x);ids.add(String(x.id));giftAdded++;added++;
+      }
+      root.r3635GiftReceipts[g.id]={at:Date.now(),giftAt:g.at,added:giftAdded};
+    }
+    root.r3635GiftReceipts=compactReceiptMap(root.r3635GiftReceipts,160);
+    if(!added){
+      /* Still persist receipts only if missing, so the same broadcast is not
+         repeatedly reconsidered after a successful earlier repair. */
+      try{await fs.updateDoc(ref,{"alpaca.r3635GiftReceipts":root.r3635GiftReceipts,updatedAt:fs.serverTimestamp()})}catch(_){ }
+      return 0;
+    }
+    /* Partial field update: avoids rewriting the multi-hundred-KB save object. */
+    try{
+      await fs.updateDoc(ref,{"alpaca.vault":root.vault,"alpaca.r3635GiftReceipts":root.r3635GiftReceipts,updatedAt:fs.serverTimestamp()});
+    }catch(first){
+      /* One more shrink pass, then retry exactly once. */
+      await makeRoom(fs,db,mk);
+      await fs.updateDoc(ref,{"alpaca.vault":root.vault,"alpaca.r3635GiftReceipts":root.r3635GiftReceipts,updatedAt:fs.serverTimestamp()});
+    }
+    return added;
+  }
+
+  let allBusy=false;
+  async function repairFour(force=false){
+    if(allBusy||!cloudReady)return false;
+    let admin=false;try{admin=low(currentMemberKey)==="aida"&&(currentMember==="Aida"||adminProfile?.role==="admin")}catch(_){}
+    if(!admin&&!force)return false;
+    allBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),gifts=await recentTargeted(fs,db),groups=new Map();
+      for(const g of gifts){if(!groups.has(g.mk))groups.set(g.mk,[]);groups.get(g.mk).push(g)}
+      let total=0;const report=[];
+      for(const mk of TARGETS){try{const n=await repairMember(fs,db,mk,groups.get(mk)||[]);total+=n;report.push(`${mk}:${n}`)}catch(e){console.warn(BUILD,"repair",mk,e);report.push(`${mk}:ERR`)}}
+      if(total>0)try{showWeatherToast?.(`🦙 กู้คลังอัลปาก้า ${total} ตัว • ${report.join(" • ")}`)}catch(_){}
+      return total>0;
+    }catch(e){console.warn(BUILD,"repairFour",e);return false}finally{allBusy=false}
+  }
+
+  let selfBusy=false;
+  async function repairSelf(){
+    const mk=low(typeof currentMemberKey!=="undefined"?currentMemberKey:"");if(!TARGETS.has(mk)||selfBusy||!cloudReady||visitContext)return false;selfBusy=true;
+    try{const {db,fs}=await getFirebaseContext(),gifts=(await recentTargeted(fs,db)).filter(x=>x.mk===mk),n=await repairMember(fs,db,mk,gifts);if(n>0){const sn=await fs.getDoc(fs.doc(db,"saves",mk));if(sn.exists()){ownState=normalizeState(sn.data(),currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}try{showWeatherToast?.(`🦙 กู้คืนอัลปาก้าเข้าคลัง ${n} ตัว`)}catch(_){}}return n>0}catch(e){console.warn(BUILD,"self",e);return false}finally{selfBusy=false}}
+
+  /* Run for Aida and the four recipients. Warehouse click waits for repair and
+     then rerenders, so opening the warehouse after deploy shows the recovered units. */
+  setTimeout(()=>{try{if(low(currentMemberKey)==="aida")repairFour(false);else repairSelf()}catch(_){}},1200);
+  document.addEventListener("click",e=>{if(!e.target?.closest?.("#alpacaWarehouseBtn"))return;const mk=low(currentMemberKey);if(!TARGETS.has(mk))return;setTimeout(async()=>{const changed=await repairSelf();if(changed)try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}catch(_){}},0)},true);
+
+  globalThis.YN_R3635_ALPACA_DEEP_REPAIR={BUILD,repairFour:()=>repairFour(true),repairSelf};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
