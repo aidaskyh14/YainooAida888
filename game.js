@@ -38259,3 +38259,109 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 })();
 
 /* R36.27: basement flower visual sync — authoritative cloud state wins at equal revision; clear harvested plot art immediately before campaign score await. */
+
+/* =====================================================================
+   S2 R36.30 — ALPACA GIFT -> VAULT DURABILITY REPAIR
+   - Fixes receiver-side alpaca gifts that were accepted but never reached
+     alpaca.vault because an older wrapper normalized into a temporary object.
+   - Adult / baby / instance gifts now mutate the caller state directly.
+   - Repairs already-accepted recent Admin alpaca gifts when opening warehouse.
+   - Does not alter pen animation, movement, breeding, medicine, or other items.
+   ===================================================================== */
+(function YN_R3630_ALPACA_GIFT_VAULT_REPAIR(){
+  "use strict";
+  const BUILD="S2-R36.30-ALPACA-GIFT-VAULT-REPAIR-20260916";
+  const prevAdd=typeof addGiftItemToState==="function"?addGiftItemToState:null;
+  if(!prevAdd)return;
+  const clone=v=>{try{return cloneData(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const n=v=>Math.max(0,Math.floor(Number(v)||0));
+  const uid=p=>{try{return `${p}-${crypto.randomUUID()}`}catch(_){return `${p}-${Date.now()}-${Math.random().toString(36).slice(2)}`}};
+  function ensureRoot(s){
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    return s.alpaca;
+  }
+  function pushUnique(vault,item){
+    if(!item||!item.id)return false;
+    if(vault.some(x=>String(x?.id||"")===String(item.id)))return false;
+    vault.push(item);return true;
+  }
+  function addDirect(s,gift,sourceId=""){
+    const type=String(gift?.itemType||gift?.type||""),key=String(gift?.itemKey||gift?.key||""),qty=Math.max(1,n(gift?.qty)||1),root=ensureRoot(s),now=typeof gameNow==="function"?gameNow():Date.now();
+    if(type==="alpacaAdult"){
+      const [colorRaw,sexRaw]=key.split(":"),color=colorRaw||"white",sex=(sexRaw==="female"?"female":"male");
+      for(let i=0;i<qty;i++)pushUnique(root.vault,{id:sourceId?`gift-${sourceId}-adult-${i}`:uid("gift-adult"),type:"adult",color,sex,source:"gift",createdAt:now});
+      return true;
+    }
+    if(type==="alpacaBaby"){
+      const color=key.split(":")[0]||"white";
+      for(let i=0;i<qty;i++){
+        const born=now;
+        pushUnique(root.vault,{id:sourceId?`gift-${sourceId}-baby-${i}`:uid("gift-baby"),type:"baby",color,sex:null,source:"gift",createdAt:born,bornAt:born,readyProcessAt:born+12*60*60*1000});
+      }
+      return true;
+    }
+    if(type==="alpacaInstance"&&gift?.instance){
+      const item=clone(gift.instance)||{};
+      item.id=String(item.id|| (sourceId?`gift-${sourceId}-instance`:uid("gift-alpaca")) );
+      item.source=item.source||"gift-instance";
+      item.createdAt=Number(item.createdAt)||now;
+      pushUnique(root.vault,item);
+      return true;
+    }
+    return false;
+  }
+  addGiftItemToState=function(s,gift){
+    if(Array.isArray(gift?.items)){
+      gift.items.forEach((item,i)=>{
+        const g={itemType:item?.type,itemKey:item?.key,qty:item?.qty,instance:item?.instance};
+        if(!addDirect(s,g,String(gift?.sourceId||"")+`-${i}`))addGiftItemToState(s,g);
+      });
+      return;
+    }
+    if(addDirect(s,gift,String(gift?.sourceId||"")))return;
+    return prevAdd(s,gift);
+  };
+
+  let repairing=false,repairedSession=false;
+  async function repairAcceptedAdminAlpacaGifts(){
+    if(repairing||repairedSession||!currentMemberKey||!cloudReady)return false;
+    repairing=true;
+    try{
+      const local=normalizeState(clone(ownState||state),currentMember),claims=local?.broadcastGiftClaims||{};
+      const acceptedIds=Object.entries(claims).filter(([,v])=>String(v?.status||"")==="accepted").map(([id])=>String(id));
+      if(!acceptedIds.length){repairedSession=true;return false}
+      const rows=typeof fetchBroadcasts==="function"?await fetchBroadcasts():[];
+      const byId=new Map((rows||[]).map(x=>[String(x?.id||""),x]));
+      let added=0;
+      for(const id of acceptedIds){
+        const b=byId.get(id);if(!b||b.type!=="gift")continue;
+        const items=Array.isArray(b.items)?b.items:[{type:b.itemType,key:b.itemKey,qty:b.qty,instance:b.instance}];
+        items.forEach((item,i)=>{if(addDirect(local,{itemType:item?.type,itemKey:item?.key,qty:item?.qty,instance:item?.instance},`${id}-${i}`))added++});
+      }
+      if(!added){repairedSession=true;return false}
+      ownState=normalizeState(local,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}
+      try{save?.();await settlePendingCloudSave?.()}catch(e){console.warn(BUILD,"repair save",e)}
+      repairedSession=true;
+      try{showWeatherToast?.(`🦙 กู้คืนอัลปาก้าที่รับแล้วเข้าคลัง ${added} รายการ`)}catch(_){}
+      return true;
+    }catch(e){console.warn(BUILD,"repair accepted gifts",e);return false}
+    finally{repairing=false}
+  }
+
+  const core=globalThis.YN_ALPACA_CORE;
+  if(core&&typeof core.showAlpacaWarehouse==="function"){
+    const baseShow=core.showAlpacaWarehouse;
+    core.showAlpacaWarehouse=function(){
+      const r=baseShow.apply(this,arguments);
+      repairAcceptedAdminAlpacaGifts().then(changed=>{if(changed)try{baseShow()}catch(_){}});
+      return r;
+    };
+  }
+  document.addEventListener("click",e=>{
+    if(e.target?.closest?.("#alpacaWarehouseBtn"))setTimeout(()=>repairAcceptedAdminAlpacaGifts().then(changed=>{if(changed)try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}catch(_){}}),40);
+  },true);
+  globalThis.YN_R3630_ALPACA_GIFT_REPAIR={BUILD,repairAcceptedAdminAlpacaGifts};
+  globalThis.YAINOO_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
