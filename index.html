@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.25-FULL-STABILITY-20260915"></script>
+<script src="game.js?v=S2-R36.26-URGENT-DURABILITY-20260915"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2740,7 +2740,7 @@
   function flowers(){return globalThis.YN_R17?.FLOWERS||{}}
   function ensureFlowers(st){st.flowerPlots=Array.isArray(st.flowerPlots)?st.flowerPlots.slice(0,6):[];while(st.flowerPlots.length<6)st.flowerPlots.push(null);st.flowers=st.flowers&&typeof st.flowers==="object"?st.flowers:{};st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};return st}
   async function flowerPlantAll(key){const f=flowers()[key];if(!f)return;try{const c=await tx("r3480-flower-plant",st=>{ensureFlowers(st);const t=now();let c=0;st.flowerPlots=st.flowerPlots.map(p=>p||(c++,{flower:key,plantedAt:t,readyAt:t+Number(f.totalMs||0),testStage:""}));if(!c)throw new Error("ไม่มีแปลงว่างค่ะ");return c},{renderBasement:true});closeModal?.();message?.("🌱 ปลูกทั้งหมดแล้ว",`${esc(f.name||key)} ${c} แปลง • บันทึกเรียบร้อยค่ะ`)}catch(e){message?.("ปลูกทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
-  async function flowerHarvestAll(){try{const got={},scoreRows=[];await tx("r3480-flower-harvest",st=>{ensureFlowers(st);const ids=[];st.flowerPlots.forEach((p,i)=>{if(p&&Number(p.readyAt||0)<=now())ids.push(i)});if(!ids.length)throw new Error("ยังไม่มีดอกไม้พร้อมเก็บค่ะ");const stamp=Date.now();for(const i of ids){const p=st.flowerPlots[i],q=1+Math.floor(Math.random()*3),fk=p.flower;st.flowers[fk]=adm()?9999:iv(st.flowers[fk])+q;got[fk]=(got[fk]||0)+q;scoreRows.push({key:fk,receipt:`r3625:flower-all:${keyNow()}:${stamp}:${i}`});st.flowerPlots[i]=null}},{renderBasement:true});for(const r of scoreRows){try{await globalThis.YN_R29?.scoreFlower?.(r.key,1,r.receipt)}catch(err){console.warn("R36.25 flower score retry",err)}}message?.("🌸 เก็บเกี่ยวทั้งหมดแล้ว",Object.entries(got).map(([k,q])=>`${esc(flowers()[k]?.name||k)} ×${q}`).join("<br>"))}catch(e){message?.("เก็บเกี่ยวทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function flowerHarvestAll(){try{const got={},scoreRows=[];await tx("r3480-flower-harvest",st=>{ensureFlowers(st);const ids=[];st.flowerPlots.forEach((p,i)=>{if(p&&Number(p.readyAt||0)<=now())ids.push(i)});if(!ids.length)throw new Error("ยังไม่มีดอกไม้พร้อมเก็บค่ะ");const stamp=Date.now();for(const i of ids){const p=st.flowerPlots[i],q=1+Math.floor(Math.random()*3),fk=p.flower;st.flowers[fk]=adm()?9999:iv(st.flowers[fk])+q;got[fk]=(got[fk]||0)+q;scoreRows.push({key:fk,receipt:`r3626:flower-all:${String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase()}:${stamp}:${i}`});st.flowerPlots[i]=null}},{renderBasement:true});for(const r of scoreRows){try{await globalThis.YN_R29?.scoreFlower?.(r.key,1,r.receipt)}catch(err){console.warn("R36.25 flower score retry",err)}}message?.("🌸 เก็บเกี่ยวทั้งหมดแล้ว",Object.entries(got).map(([k,q])=>`${esc(flowers()[k]?.name||k)} ×${q}`).join("<br>"))}catch(e){message?.("เก็บเกี่ยวทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function flowerFertAll(){try{const c=await tx("r3480-flower-fert",st=>{ensureFlowers(st);const ids=st.flowerPlots.map((p,i)=>p&&Number(p.readyAt||0)>now()?i:-1).filter(i=>i>=0);if(!ids.length)throw new Error("ไม่มีแปลงที่กำลังโตค่ะ");const need=ids.reduce((s,i)=>s+(flowerCost[st.flowerPlots[i].flower]||40),0),have=iv(st.specials.flowerFertilizer);if(!adm()&&have<need)throw new Error(`ปุ๋ยไม่พอ • ต้องใช้ ${need} • มี ${have}`);if(!adm())st.specials.flowerFertilizer=have-need;ids.forEach(i=>{st.flowerPlots[i].readyAt=now();st.flowerPlots[i].testStage="ready"});return ids.length},{renderBasement:true});closeModal?.();message?.("✨ ใส่ปุ๋ยทั้งหมดแล้ว",`${c} แปลงพร้อมเก็บเกี่ยวแล้วค่ะ`)}catch(e){message?.("ใส่ปุ๋ยทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   function openFlowerToolsFinal(){
     const mc=$("modalContent");if(!mc)return;
@@ -3265,7 +3265,7 @@ console.info(BUILD,"loaded");
   const SECRET_NAMES={r35CandyCrop:"ลูกกวาดประสาทแดร๊ก",r35SpiderCrop:"แมงมุมขยุ้มเม็ด",r35CatCrop:"แมวเหมียว เสวปิ๊",r35BeeCrop:"บีเหินบนโต๊ะน้ำชา"};
   const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
   const CAMPAIGNS=new Set(["secret","fishing","wool"]);
-  const BROKEN=new Set(["opor","kongkwan","earn","mhai"]);
+  const BROKEN=new Set(["opor","kongkwan","earn","mhai"]); /* known already-at-risk saves; every save is also size-guarded below */
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const keyNow=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase();
   const isAdmin=()=>keyNow()==="aida" || (String(typeof currentMember!=="undefined"?currentMember:"")==="Aida" && globalThis.adminProfile?.role==="admin");
@@ -3412,39 +3412,86 @@ console.info(BUILD,"loaded");
 
   /* Strong but inventory-safe cleanup for the two saves that are already over
      Firestore document/index limits. */
+  /* Keep gameplay/idempotency state. Large receipts/claims are capped, never blindly erased. */
   const SAFE_LEDGER_KEYS=new Set([
     "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks","r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","retiredCatsArchiveR34","giftClaimHistory","claimHistory","eventHistory","activityHistory","friendGrassClaims","friendFruitClaims","friendFlowerClaims","friendVisitClaims","deliveryReceipts","giftReceipts","friendResourceCooldowns","notifications"
   ]);
-  const RX_SAFE=/(receipts?|claims?|history|archive|tombstones?|cooldowns?|locks?|ledgers?|eventlog|activitylog|dedupe|processed|visited|seenids?|auditlog|notificationqueue)/i;
+  const RX_LEDGER=/(receipts?|claims?|history|archive|tombstones?|locks?|ledgers?|eventlog|activitylog|dedupe|processed|seenids?|auditlog|notificationqueue)/i;
+  function ledgerStamp(v){if(v&&typeof v==="object")return Number(v.resolvedAt??v.createdAt??v.at??v.updatedAt??v.claimedAt??v.ts??0)||0;return Number(v)||0}
+  function capObject(v,cap){
+    if(!v||typeof v!=="object"||Array.isArray(v))return {};
+    const rows=Object.entries(v);if(rows.length<=cap)return v;
+    rows.sort((a,b)=>ledgerStamp(a[1])-ledgerStamp(b[1]));return Object.fromEntries(rows.slice(-cap));
+  }
+  function capLedger(v,hard=false){
+    const cap=hard?120:240;
+    if(Array.isArray(v))return v.slice(-cap);
+    if(v&&typeof v==="object")return capObject(v,cap);
+    return v;
+  }
   function futureMap(v,cap){const t=Date.now(),rows=Object.entries(v&&typeof v==="object"&&!Array.isArray(v)?v:{}).filter(([,x])=>{const n=Number(x?.expiresAt??x?.until??x?.readyAt??x);return !Number.isFinite(n)||n>t});return Object.fromEntries(rows.slice(-cap))}
   function compactBroken(raw,hard=true){
-    const s=clone(raw||{});for(const k of SAFE_LEDGER_KEYS){if(!Object.prototype.hasOwnProperty.call(s,k))continue;if(k==="notifications"&&Array.isArray(s[k]))s[k]=s[k].slice(-5);else if(/cooldown/i.test(k)&&s[k]&&typeof s[k]==="object"&&!Array.isArray(s[k]))s[k]=futureMap(s[k],8);else s[k]=Array.isArray(s[k])?[]:{}}
-    const walk=(o,depth=0)=>{if(!o||typeof o!=="object"||depth>10)return;if(Array.isArray(o)){for(const x of o)walk(x,depth+1);return}for(const k of Object.keys(o)){const v=o[k];if(!v||typeof v!=="object")continue;if(RX_SAFE.test(k)){if(/cooldown|lock/i.test(k)&&!Array.isArray(v))o[k]=futureMap(v,hard?6:16);else if(Array.isArray(v))o[k]=v.slice(-(hard?1:4));else o[k]={};continue}walk(v,depth+1)}};walk(s);
-    if(Array.isArray(s.dishes))s.dishes=[]; /* dishInventory is canonical */
+    const s=clone(raw||{});
+    for(const k of SAFE_LEDGER_KEYS){
+      if(!Object.prototype.hasOwnProperty.call(s,k))continue;
+      if(k==="notifications"&&Array.isArray(s[k]))s[k]=s[k].slice(-(hard?10:25));
+      else if(/cooldown|lock/i.test(k)&&s[k]&&typeof s[k]==="object"&&!Array.isArray(s[k]))s[k]=futureMap(s[k],hard?24:60);
+      else s[k]=capLedger(s[k],hard);
+    }
+    const walk=(o,depth=0)=>{
+      if(!o||typeof o!=="object"||depth>10)return;
+      if(Array.isArray(o)){for(const x of o)walk(x,depth+1);return}
+      for(const k of Object.keys(o)){
+        const v=o[k];if(!v||typeof v!=="object")continue;
+        if(RX_LEDGER.test(k)){
+          /* Claims/receipts are duplicate-payment protection: retain a recent window. */
+          if(/cooldown|lock/i.test(k)&&!Array.isArray(v))o[k]=futureMap(v,hard?24:60);
+          else o[k]=capLedger(v,hard);
+          continue;
+        }
+        walk(v,depth+1)
+      }
+    };
+    walk(s);
+    if(Array.isArray(s.dishes)&&s.dishInventory&&typeof s.dishInventory==="object")s.dishes=[]; /* only when canonical dishInventory exists */
     s.bag=s.bag&&typeof s.bag==="object"?s.bag:{};for(const k of Object.keys(SECRET))s.bag[k]=Math.max(0,Math.floor(Number(s.bag[k])||0));
-    s.saveGuardR3623={version:BUILD,repairedAt:Date.now(),hard:true};return s;
+    s.saveGuardR3626={version:"S2-R36.26-URGENT-DURABILITY-20260915",repairedAt:Date.now(),hard:Boolean(hard)};return s;
   }
   function bytes(x){try{return new Blob([JSON.stringify(x)]).size}catch(_){return JSON.stringify(x||{}).length}}
   function leaves(x){const seen=new WeakSet();const walk=v=>{if(v==null||typeof v!=="object")return 1;if(seen.has(v))return 0;seen.add(v);if(Array.isArray(v))return 1+v.reduce((n,z)=>n+walk(z),0);return 1+Object.values(v).reduce((n,z)=>n+walk(z),0)};try{return walk(x)}catch(_){return 999999}}
-  async function repairBrokenSave(memberKey){
-    const mk=String(memberKey||"").toLowerCase();if(!BROKEN.has(mk))return false;
+  async function repairBrokenSave(memberKey,force=false){
+    const mk=String(memberKey||"").toLowerCase();if(!mk)return false;
     const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),sn=await fs.getDoc(ref);if(!sn.exists())return false;
-    const clean=compactBroken(sn.data()||{},true),b=bytes(clean),l=leaves(clean);if(b>900*1024)throw new Error(`เซฟ ${mk} หลังล้าง history ยัง ${b.toLocaleString()} bytes`);
-    try{await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false})}
-    catch(first){const msg=String(first?.message||first||"");if(!/maximum allowed size|exceeds the maximum|too many index entries|index entries|resource-exhausted|invalid-argument/i.test(msg))throw first;await fs.deleteDoc(ref);await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false})}
-    try{console.info(BUILD,"save repaired",mk,b,l)}catch(_){}return true;
+    const raw=sn.data()||{},before=bytes(raw),must=force||BROKEN.has(mk)||before>700*1024;if(!must)return false;
+    let clean=compactBroken(raw,before>820*1024||BROKEN.has(mk)),b=bytes(clean),l=leaves(clean);
+    if(b>880*1024){clean=compactBroken(clean,true);b=bytes(clean);l=leaves(clean)}
+    if(b>=1000*1024)throw new Error(`เซฟ ${mk} หลังย่อยัง ${b.toLocaleString()} bytes — หยุดก่อนเพื่อไม่แตะของจริง`);
+    /* Never delete the save document. Replacing with a smaller validated copy is atomic. */
+    await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
+    try{console.info(BUILD,"save repaired",mk,{before,after:b,leaves:l})}catch(_){}return true;
   }
-  try{if(typeof normalizeState==="function"){const base=normalizeState;normalizeState=function(raw,player){let out=base(raw,player),mk=keyNow()||String(typeof memberKeyFromName==="function"?memberKeyFromName(player):player||"").toLowerCase(),sz=bytes(out);if(BROKEN.has(mk)||sz>780*1024)out=compactBroken(out,BROKEN.has(mk)||sz>900*1024);return out}}}catch(e){console.warn(BUILD,"normalize",e)}
-  try{if(typeof ynPrepareSaveR3463==="function"){const base=ynPrepareSaveR3463;ynPrepareSaveR3463=function(s){const mk=keyNow(),sz=bytes(s);if(BROKEN.has(mk)||sz>780*1024){const c=compactBroken(s,BROKEN.has(mk)||sz>900*1024);for(const k of Object.keys(s))delete s[k];Object.assign(s,c)}return base(s)}}}catch(e){console.warn(BUILD,"prepare",e)}
-  try{if(typeof initializeOrLoadCloudState==="function"){const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){const mk=String(memberKey||"").toLowerCase();if(BROKEN.has(mk))try{await repairBrokenSave(mk)}catch(e){console.warn(BUILD,"pre-login save repair",mk,e)}return base.apply(this,arguments)}}}catch(e){console.warn(BUILD,"init",e)}
+  let allSaveRepairDone=false,allSaveRepairBusy=null;
+  async function repairAllLargeSaves(){
+    if(allSaveRepairDone||allSaveRepairBusy||!isAdmin())return false;
+    allSaveRepairBusy=(async()=>{try{
+      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves")),jobs=[];
+      sn.forEach(d=>{const raw=d.data()||{},mk=String(d.id||"").toLowerCase(),sz=bytes(raw);if(mk&&mk!=="aida"&&(BROKEN.has(mk)||sz>700*1024))jobs.push((async()=>{try{let c=compactBroken(raw,sz>820*1024||BROKEN.has(mk)),b=bytes(c);if(b>880*1024){c=compactBroken(c,true);b=bytes(c)}if(b<1000*1024)await fs.setDoc(d.ref,{...c,updatedAt:fs.serverTimestamp()},{merge:false});else console.warn(BUILD,"skip unsafe oversize repair",mk,b)}catch(e){console.warn(BUILD,"repair member",mk,e)}})())});
+      await Promise.allSettled(jobs);allSaveRepairDone=true;return true;
+    }catch(e){console.warn(BUILD,"repairAllLargeSaves",e);return false}finally{allSaveRepairBusy=null}})();return allSaveRepairBusy;
+  }
+  try{if(typeof normalizeState==="function"){const base=normalizeState;normalizeState=function(raw,player){let out=base(raw,player),mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase()||String(typeof memberKeyFromName==="function"?memberKeyFromName(player):player||"").toLowerCase(),sz=bytes(out);if(BROKEN.has(mk)||sz>700*1024)out=compactBroken(out,BROKEN.has(mk)||sz>820*1024);return out}}}catch(e){console.warn(BUILD,"normalize",e)}
+  try{if(typeof ynPrepareSaveR3463==="function"){const base=ynPrepareSaveR3463;ynPrepareSaveR3463=function(s){const mk=keyNow(),sz=bytes(s);if(BROKEN.has(mk)||sz>700*1024){const c=compactBroken(s,BROKEN.has(mk)||sz>820*1024);for(const k of Object.keys(s))delete s[k];Object.assign(s,c)}return base(s)}}}catch(e){console.warn(BUILD,"prepare",e)}
+  try{if(typeof initializeOrLoadCloudState==="function"){const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){const mk=String(memberKey||"").toLowerCase();if(BROKEN.has(mk))try{await repairBrokenSave(mk,true)}catch(e){console.warn(BUILD,"pre-login save repair",mk,e)}const out=await base.apply(this,arguments);if(isAdmin())setTimeout(()=>repairAllLargeSaves(),900);return out}}}catch(e){console.warn(BUILD,"init",e)}
+  globalThis.YN_SAVE_GUARD={compact:compactBroken,bytes,repair:repairBrokenSave,repairAll:repairAllLargeSaves};
+
 
   globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores:recoverSelf,retryPendingCampaignScores:recoverSelf,migrateLegacyScores:recoverSelf,recoverFishingSlots:recoverSelf};
   globalThis.V181_campaignScoreLater=summary=>scoreSecretHarvest(summary);
-  globalThis.YN_R3623={BUILD,recoverSelf,adminBackfillAll,injectSecretBag,repairBrokenSave,writeLegacyScore};
+  globalThis.YN_R3623={BUILD,recoverSelf,adminBackfillAll,injectSecretBag,repairBrokenSave,repairAllLargeSaves,writeLegacyScore};
   /* Startup repair is intentionally deduplicated. The second call is a fallback
      only if the first pass could not complete; visibility changes never rescan
      whole collections after a successful pass. */
-  setTimeout(()=>{injectSecretBag();recoverSelf();adminBackfillAll()},1200);
+  setTimeout(()=>{injectSecretBag();recoverSelf();adminBackfillAll();repairAllLargeSaves()},1200);
   setTimeout(()=>{if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},5000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{injectSecretBag();if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},250)},{passive:true});
   console.info(BUILD,"loaded");
@@ -3481,6 +3528,23 @@ console.info(BUILD,"loaded");
   function durableWrap(obj,name){try{if(!obj||typeof obj[name]!=="function"||obj[name].__r3625)return;const base=obj[name];const w=async function(){const r=await base.apply(this,arguments);try{const s=live();if(s)saveLocalOnly?.(s);await settlePendingCloudSave?.()}catch(_){}return r};w.__r3625=true;obj[name]=w}catch(_){}}
   setTimeout(()=>{durableWrap(globalThis.YN_WIG_CRAFT,"craft");durableWrap(globalThis.YN_R35,"craftSecretSeed");durableWrap(globalThis.YN_R35,"craftSpecialBaits")},300);
   console.info("S2-R36.25-STABILITY-GUARDS loaded");
+})();
+</script>
+
+
+<script>
+/* S2 R36.26 urgent late bind — restores alpaca entry without touching movement/animation. */
+(()=>{
+  "use strict";
+  function bindAlpacaEntry(){
+    const b=document.getElementById("shortcutAlpacaPenBtn"),api=globalThis.YN_ALPACA_CORE;
+    if(!b||typeof api?.openPen!=="function")return false;
+    b.onclick=()=>{try{typeof closeHomeHudMenu==="function"&&closeHomeHudMenu()}catch(_){};api.openPen(1)};
+    return true;
+  }
+  setTimeout(bindAlpacaEntry,150);setTimeout(bindAlpacaEntry,900);
+  window.addEventListener("pageshow",()=>setTimeout(bindAlpacaEntry,120),{passive:true});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(bindAlpacaEntry,120)},{passive:true});
 })();
 </script>
 
