@@ -38648,3 +38648,280 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+/* =====================================================================
+   S2 R36.33 — ALPACA BROADCAST GIFT VAULT AUTHORITY + BACKFILL
+   2026-09-16
+   - Fixes the actual Admin-center delivery path: targeted/global broadcasts.
+   - Future alpaca bundle claims mutate the receiver's REAL state object in-place.
+   - Rebuilds already-accepted alpaca broadcasts into alpaca.vault for every member.
+   - Uses accepted broadcastGiftClaims + broadcast documents as source of truth.
+   - Stable source IDs + receipts prevent duplicate recovery / duplicate alpacas.
+   - Does not change pens, animation, breeding, medicine, lifespan, or non-alpaca gifts.
+   ===================================================================== */
+(function YN_R3633_ALPACA_BROADCAST_VAULT_AUTHORITY(){
+  "use strict";
+  const BUILD="S2-R36.33-ALPACA-BROADCAST-VAULT-BACKFILL-20260916";
+  const TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance"]);
+  const lower=v=>String(v??"").toLowerCase();
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
+  const stamp=v=>{try{if(v&&typeof v.toMillis==="function")return Number(v.toMillis())||0;if(v&&typeof v.seconds==="number")return Number(v.seconds)*1000;return Number(v)||0}catch(_){return 0}};
+  const sid=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_");
+
+  function ensure(s){
+    if(!s||typeof s!=="object")return null;
+    s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+    s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault:[];
+    s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];
+    s.alpaca.broadcastGiftVaultReceipts=(s.alpaca.broadcastGiftVaultReceipts&&typeof s.alpaca.broadcastGiftVaultReceipts==="object"&&!Array.isArray(s.alpaca.broadcastGiftVaultReceipts))?s.alpaca.broadcastGiftVaultReceipts:{};
+    return s.alpaca;
+  }
+  function adultMeta(key){
+    let [color,sex]=String(key||"").split(":");
+    color=color||"white"; sex=sex==="female"?"female":"male";
+    if(color==="prince")sex="male";
+    if(color==="princess")sex="female";
+    return {color,sex};
+  }
+  function rowsFromGift(g){
+    const rows=Array.isArray(g?.items)?g.items:[{type:g?.itemType,key:g?.itemKey,qty:g?.qty,instance:g?.instance}];
+    return rows.map((x,i)=>({
+      index:i,
+      type:String(x?.type||x?.itemType||""),
+      key:String(x?.key||x?.itemKey||""),
+      qty:Math.max(1,int(x?.qty)||1),
+      instance:x?.instance?clone(x.instance):null
+    })).filter(x=>TYPES.has(x.type));
+  }
+  function allAnimals(s){
+    const a=ensure(s),out=[];
+    for(const x of a.vault)if(x&&typeof x==="object")out.push(x);
+    for(const p of a.pens){
+      const arr=Array.isArray(p?.alpacas)?p.alpacas:Array.isArray(p?.animals)?p.animals:[];
+      for(const x of arr)if(x&&typeof x==="object")out.push(x);
+    }
+    return out;
+  }
+  function same(a,item){
+    if(!a)return false;
+    if(item.type==="alpacaInstance")return String(a.id||"")===String(item.instance?.id||"");
+    if(item.type==="alpacaBaby"){
+      const color=String(item.key||"").split(":")[0]||"white";
+      return String(a.type||"")==="baby"&&String(a.color||"")===color;
+    }
+    const m=adultMeta(item.key);
+    return String(a.type||"")==="adult"&&String(a.color||"")===m.color&&String(a.sex||"")===m.sex;
+  }
+  function isGiftSource(a){
+    const s=lower(a?.source);
+    return s.includes("gift")||s.includes("admin")||s.includes("broadcast");
+  }
+  function near(a,at){
+    if(!at)return true;
+    const t=Number(a?.receivedAt||a?.createdAt||a?.bornAt||0);
+    if(!t)return false;
+    return Math.abs(t-at)<=12*60*60*1000;
+  }
+  function stableId(sourceId,itemIndex,n){return `gift-${sid(sourceId)}-${itemIndex}-${n}`}
+  function make(item,sourceId,n,at){
+    const id=stableId(sourceId,item.index,n),t=at||now();
+    if(item.type==="alpacaInstance"&&item.instance){
+      const x=clone(item.instance)||{};
+      x.id=String(x.id||id);x.source=x.source||"admin-broadcast-gift";x.receivedAt=Number(x.receivedAt)||t;x.createdAt=Number(x.createdAt)||t;return x;
+    }
+    if(item.type==="alpacaBaby"){
+      const color=String(item.key||"").split(":")[0]||"white";
+      return {id,type:"baby",color,sex:null,source:"admin-broadcast-gift",receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*60*60*1000};
+    }
+    const m=adultMeta(item.key);
+    return {id,type:"adult",color:m.color,sex:m.sex,source:"admin-broadcast-gift",receivedAt:t,createdAt:t};
+  }
+  function trimReceipts(a){
+    const rows=Object.entries(a.broadcastGiftVaultReceipts||{}).sort((x,y)=>Number(x[1]?.at||0)-Number(y[1]?.at||0));
+    if(rows.length>180)a.broadcastGiftVaultReceipts=Object.fromEntries(rows.slice(-180));
+  }
+
+  /* Authoritative in-place alpaca grant. This intentionally does NOT call normalizeState,
+     because an older alpaca wrapper rebound `s` to a normalized clone and silently lost
+     the mutation from the transaction's real save object. */
+  function grantAlpacaRows(s,gift,sourceId="",receivedAt=0,{historical=false}={}){
+    const a=ensure(s);if(!a)return 0;
+    const rows=rowsFromGift(gift);if(!rows.length)return 0;
+    const src=String(sourceId||gift?.sourceId||gift?.id||`live-${now()}`),animals=allAnimals(s),reserved=new Set();
+    let added=0;
+    for(const item of rows){
+      for(let n=0;n<item.qty;n++){
+        const wantedId=stableId(src,item.index,n);
+        let found=animals.find(x=>String(x?.id||"")===wantedId);
+        if(!found&&item.type==="alpacaInstance"&&item.instance?.id)found=animals.find(x=>String(x?.id||"")===String(item.instance.id));
+        /* Historical claims may already have produced a random-ID admin-gift alpaca.
+           Match only gift-sourced animals created near the recorded claim time, never
+           ordinary owned alpacas of the same color/sex. */
+        if(!found&&historical){
+          found=animals.find(x=>{
+            const id=String(x?.id||"");
+            return id&&!reserved.has(id)&&isGiftSource(x)&&near(x,receivedAt)&&same(x,item);
+          });
+        }
+        if(found){reserved.add(String(found.id||""));continue}
+        const x=make(item,src,n,receivedAt||now());
+        if(!animals.some(z=>String(z?.id||"")===String(x.id))){a.vault.push(x);animals.push(x);reserved.add(String(x.id));added++}
+      }
+    }
+    return added;
+  }
+
+  /* Final wrapper: every future alpaca gift/bundle enters the real vault state directly.
+     Non-alpaca items continue through the exact previous gift logic. */
+  try{
+    if(typeof addGiftItemToState==="function"&&!addGiftItemToState.__r3633){
+      const base=addGiftItemToState;
+      const wrapped=function(s,gift){
+        if(Array.isArray(gift?.items)){
+          gift.items.forEach((item,i)=>wrapped(s,{...item,itemType:item?.type||item?.itemType,itemKey:item?.key||item?.itemKey,sourceId:gift?.sourceId||gift?.id||"",_sourceIndex:i}));
+          return;
+        }
+        const type=String(gift?.itemType||gift?.type||"");
+        if(TYPES.has(type)){
+          const g={...gift,itemType:type,itemKey:gift?.itemKey||gift?.key};
+          const idx=Number.isInteger(gift?._sourceIndex)?gift._sourceIndex:0;
+          const one={items:[{type,key:g.itemKey,qty:g.qty,instance:g.instance}]};
+          /* keep source item index stable even when bundle recursion is used */
+          const rows=rowsFromGift(one);if(rows[0])rows[0].index=idx;
+          const shadow={items:rows.map(r=>({type:r.type,key:r.key,qty:r.qty,instance:r.instance}))};
+          /* rowsFromGift(shadow) starts at 0; use a source suffix to preserve uniqueness */
+          return grantAlpacaRows(s,shadow,`${g.sourceId||"live"}-i${idx}`,now(),{historical:false});
+        }
+        return base(s,gift);
+      };
+      wrapped.__r3633=true;addGiftItemToState=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"gift authority wrapper",e)}
+
+  function acceptedClaims(s){
+    const c=s?.broadcastGiftClaims;
+    if(!c||typeof c!=="object"||Array.isArray(c))return [];
+    return Object.entries(c).filter(([,v])=>lower(v?.status||v)==="accepted").sort((a,b)=>stamp(a[1]?.resolvedAt)-stamp(b[1]?.resolvedAt));
+  }
+  function adminBroadcast(b,mk){
+    if(!b||b.type!=="gift")return false;
+    if(b.targetKey&&lower(b.targetKey)!==lower(mk))return false;
+    const from=lower(b.fromKey||b.from||b.fromName);
+    return (!from||from==="aida"||from==="ยัยหนู")&&rowsFromGift(b).length>0;
+  }
+  async function getBroadcastsForClaims(fs,db,claims,already){
+    const ids=claims.map(([id])=>id).filter(id=>!already?.[id]).slice(-80),out=[];
+    for(let i=0;i<ids.length;i+=12){
+      const part=ids.slice(i,i+12);
+      const rows=await Promise.all(part.map(async id=>{try{const sn=await fs.getDoc(fs.doc(db,"broadcasts",id));return sn.exists()?{id,data:sn.data()||{}}:null}catch(_){return null}}));
+      for(const r of rows)if(r)out.push(r);
+    }
+    return out;
+  }
+
+  let selfBusy=false,selfDoneAt=0;
+  async function repairSelf(force=false){
+    const mk=lower(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+    if(!mk||!cloudReady||visitContext||selfBusy)return false;
+    if(!force&&Date.now()-selfDoneAt<60*1000)return false;
+    selfBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
+      const raw=snap.data()||{},claims=acceptedClaims(raw),receipts=raw?.alpaca?.broadcastGiftVaultReceipts||{};
+      if(!claims.some(([id])=>!receipts[id])){selfDoneAt=Date.now();return false}
+      const docs=await getBroadcastsForClaims(fs,db,claims,receipts);if(!docs.length){selfDoneAt=Date.now();return false}
+      const claimMap=Object.fromEntries(claims);let next=null,added=0,checked=0;
+      await fs.runTransaction(db,async tx=>{
+        const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const s=normalizeState(sn.data(),currentMember),a=ensure(s);const currentReceipts=a.broadcastGiftVaultReceipts||{};
+        for(const row of docs){
+          if(currentReceipts[row.id])continue;
+          const rec=claimMap[row.id];if(lower(rec?.status||rec)!=="accepted"||!adminBroadcast(row.data,mk))continue;
+          const at=stamp(rec?.resolvedAt)||stamp(row.data?.createdAt)||now();
+          const n=grantAlpacaRows(s,row.data,row.id,at,{historical:true});added+=n;checked++;
+          a.broadcastGiftVaultReceipts[row.id]={at:Date.now(),claimAt:at,added:n,build:BUILD};
+        }
+        trimReceipts(a);
+        if(!checked)return;
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+(added?1:0);
+        try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:false})}catch(_){}
+        tx.set(ref,{...clone(s),activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:undefined,updatedAt:fs.serverTimestamp()},{merge:false});next=s;
+      });
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}
+      selfDoneAt=Date.now();
+      if(added>0)try{showWeatherToast?.(`🦙 กู้คืนอัลปาก้าที่รับแล้วเข้าคลัง ${added} ตัว`)}catch(_){}
+      return added>0;
+    }catch(e){console.warn(BUILD,"self backfill",e);return false}
+    finally{selfBusy=false}
+  }
+
+  /* Aida one-time sweep for EVERY member. It uses each save's accepted claim ledger,
+     so it does not guess and does not require members to receive the gift again. */
+  let adminBusy=false;
+  async function backfillAll(force=false){
+    let admin=false;try{admin=lower(currentMemberKey)==="aida"&&(currentMember==="Aida"||adminProfile?.role==="admin")}catch(_){}
+    if(!admin||!cloudReady||adminBusy)return false;
+    const key=`yn:${BUILD}:all-member-backfill`;
+    if(!force){try{if(localStorage.getItem(key)==="1")return false}catch(_){}}
+    adminBusy=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),saves=await fs.getDocs(fs.collection(db,"saves"));
+      const members=[];saves.forEach(d=>{if(lower(d.id)!=="aida")members.push({id:lower(d.id),data:d.data()||{}})});
+      /* Collect only the newest unresolved accepted claim IDs per member to keep this
+         migration bounded and cheap. */
+      const need=new Map(),allIds=new Set();
+      for(const m of members){
+        const receipts=m.data?.alpaca?.broadcastGiftVaultReceipts||{};
+        const claims=acceptedClaims(m.data).filter(([id])=>!receipts[id]).slice(-40);
+        if(claims.length){need.set(m.id,Object.fromEntries(claims));for(const [id] of claims)allIds.add(id)}
+      }
+      const bcMap=new Map(),ids=[...allIds];
+      for(let i=0;i<ids.length;i+=12){
+        const rows=await Promise.all(ids.slice(i,i+12).map(async id=>{try{const sn=await fs.getDoc(fs.doc(db,"broadcasts",id));return sn.exists()?{id,data:sn.data()||{}}:null}catch(_){return null}}));
+        for(const r of rows)if(r)bcMap.set(r.id,r.data);
+      }
+      let total=0,people=0;
+      for(const [mk,claims] of need){
+        const ref=fs.doc(db,"saves",mk);let added=0,checked=0;
+        try{
+          await fs.runTransaction(db,async tx=>{
+            const sn=await tx.get(ref);if(!sn.exists())return;
+            const s=normalizeState(sn.data(),sn.data()?.player||mk),a=ensure(s);
+            for(const [id,rec] of Object.entries(claims)){
+              if(a.broadcastGiftVaultReceipts?.[id])continue;
+              const b=bcMap.get(id);if(!b||!adminBroadcast(b,mk))continue;
+              const at=stamp(rec?.resolvedAt)||stamp(b.createdAt)||now(),n=grantAlpacaRows(s,b,id,at,{historical:true});
+              added+=n;checked++;a.broadcastGiftVaultReceipts[id]={at:Date.now(),claimAt:at,added:n,build:BUILD};
+            }
+            if(!checked)return;trimReceipts(a);s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+(added?1:0);
+            try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:false})}catch(_){}
+            tx.set(ref,{...clone(s),updatedAt:fs.serverTimestamp()},{merge:false});
+          });
+          if(checked){people++;total+=added}
+        }catch(e){console.warn(BUILD,"member backfill",mk,e)}
+      }
+      try{localStorage.setItem(key,"1")}catch(_){}
+      if(total>0)try{showWeatherToast?.(`🦙 กู้คืนอัลปาก้าย้อนหลัง ${total} ตัว • ${people} สมาชิก`)}catch(_){}
+      return total>0;
+    }catch(e){console.warn(BUILD,"all-member backfill",e);return false}
+    finally{adminBusy=false}
+  }
+
+  /* Reconcile immediately after future broadcast claims and again when the warehouse opens. */
+  try{
+    if(typeof claimBroadcastGift==="function"&&!claimBroadcastGift.__r3633){
+      const base=claimBroadcastGift;
+      const wrapped=async function(){const r=await base.apply(this,arguments);if(arguments[1])setTimeout(()=>repairSelf(true),0);return r};
+      wrapped.__r3633=true;claimBroadcastGift=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"broadcast claim wrapper",e)}
+  document.addEventListener("click",e=>{if(e.target?.closest?.("#alpacaWarehouseBtn"))setTimeout(()=>repairSelf(true).then(ch=>{if(ch)try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}catch(_){}}),40)},true);
+  setTimeout(()=>repairSelf(false),900);
+  setTimeout(()=>backfillAll(false),1800);
+
+  globalThis.YN_R3633_ALPACA_BROADCAST_RECOVERY={BUILD,repairSelf:()=>repairSelf(true),backfillAll:()=>backfillAll(true)};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
