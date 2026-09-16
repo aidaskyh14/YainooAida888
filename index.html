@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.42-ALPACA-GIFT-SAVE-EXACT-20260916">
+  <link rel="stylesheet" href="style.css?v=S2-R36.44-CANONICAL-ALPACA-SAVE-V3-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.42-ALPACA-GIFT-SAVE-EXACT-20260916"></script>
+<script src="game.js?v=S2-R36.44-CANONICAL-ALPACA-SAVE-V3-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4047,7 +4047,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3642_ALPACA_GIFT_INBOX(){
   "use strict";
-  const BUILD="S2-R36.42-ALPACA-GIFT-INBOX-20260916";
+  const BUILD="S2-R36.44-CANONICAL-ALPACA-SAVE-V3-20260916";
   const $=id=>document.getElementById(id);
   const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const iv=v=>Math.max(0,Math.floor(Number(v)||0));
@@ -4081,15 +4081,31 @@ console.info(BUILD,"loaded");
     const uniq=new Map();out.forEach(x=>uniq.set(x.key,x));return [...uniq.values()].sort((a,b)=>a.name.localeCompare(b.name,"th"));
   }
 
+  async function ensureGiftVaultUnits(fs,db,mk,mailId,gift){
+    const items=Array.isArray(gift?.items)?gift.items:[],units=[];
+    items.forEach((it,i)=>{const row={...it,index:Number.isFinite(Number(it.index))?Number(it.index):i,deliveryId:gift.deliveryId};for(let n=0;n<Math.max(1,iv(it.qty)||1);n++)units.push(makeVaultUnit(mailId,row,n,mk))});
+    if(!units.length)throw new Error("ของขวัญนี้ไม่มีอัลปาก้า");
+    for(let off=0;off<units.length;off+=420){
+      const batch=fs.writeBatch(db);
+      for(const a of units.slice(off,off+420))batch.set(fs.doc(db,"alpacaVaults",mk,"items",a.id),{...a,claimState:"pending",createdServerAt:fs.serverTimestamp()},{merge:true});
+      await batch.commit();
+    }
+    const checks=await Promise.all(units.map(a=>fs.getDoc(fs.doc(db,"alpacaVaults",mk,"items",a.id))));
+    if(checks.some(x=>!x.exists()))throw new Error("ระบบยังเตรียมอัลปาก้าเข้าคลังไม่ครบ");
+    return units;
+  }
   async function createPendingFor(fs,db,target,rows,deliveryId){
     const save=await fs.getDoc(fs.doc(db,"saves",target.key));if(!save.exists())throw new Error(`ไม่พบบัญชี ${target.name}`);
     const mailId=`alpacaGift-${safeId(deliveryId)}`,ref=fs.doc(db,"mailboxes",target.key,"items",mailId);
     const payload={
       source:"yainoo",type:"alpacaGiftPending",giftKind:"alpaca",fromKey:"aida",fromName:"Aida",
-      title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:`${rowText(rows)} • กดรับเพื่อย้ายเข้าคลังอัลปาก้า`,
+      title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:`${rowText(rows)} • กดรับเพื่อเปิดเข้าคลังอัลปาก้า`,
       items:rows.map((r,i)=>({index:i,type:r.type,key:r.key,color:r.color,sex:r.sex||"",name:r.name,qty:r.qty,image:r.image||ASSETS[r.color]||ASSETS.white})),
       previewImage:rows[0]?.image||ASSETS[rows[0]?.color]||ASSETS.white,deliveryId,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()
     };
+    /* สำคัญ: Aida เตรียมอัลปาก้าไว้ใน Cloud Vault ก่อน แล้วค่อยสร้างแจ้งเตือน
+       ผู้รับจึงไม่ต้องเขียน saves หรือสร้างอัลปาก้าเองตอนกดรับ */
+    await ensureGiftVaultUnits(fs,db,target.key,mailId,payload);
     await fs.setDoc(ref,payload,{merge:false});
     const check=await fs.getDoc(ref);if(!check.exists())throw new Error(`แจ้งเตือนของ ${target.name} ไม่ถูกสร้าง`);
     return 1;
@@ -4108,16 +4124,24 @@ console.info(BUILD,"loaded");
     if(baby){x.bornAt=t;x.readyProcessAt=t+12*3600000}return x;
   }
   async function claimPending(mailId){
-    const mk=memberKeyExact();if(!mk)throw new Error("ยังไม่พบสมาชิก");const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(db,"mailboxes",mk,"items",mailId),snap=await fs.getDoc(mailRef);
-    if(!snap.exists())throw new Error("ไม่พบของขวัญนี้");const gift=snap.data()||{};
+    const mk=memberKeyExact();if(!mk)throw new Error("ยังไม่พบสมาชิก");
+    const {db,fs}=await getFirebaseContext(),mailRef=fs.doc(db,"mailboxes",mk,"items",mailId),snap=await fs.getDoc(mailRef);
+    if(!snap.exists())return{already:true,count:0};
+    const gift=snap.data()||{};
     if(gift.type!=="alpacaGiftPending")throw new Error("รายการนี้ไม่ใช่ของขวัญอัลปาก้า");
-    if(gift.status==="claimed"||gift.resolved)return{already:true,count:0};
-    const items=Array.isArray(gift.items)?gift.items:[],units=[];items.forEach((it,i)=>{const row={...it,index:Number.isFinite(Number(it.index))?Number(it.index):i,deliveryId:gift.deliveryId};for(let n=0;n<Math.max(1,iv(it.qty)||1);n++)units.push(makeVaultUnit(mailId,row,n,mk))});
-    if(!units.length)throw new Error("ของขวัญนี้ไม่มีอัลปาก้า");
-    for(let off=0;off<units.length;off+=430){const batch=fs.writeBatch(db);for(const a of units.slice(off,off+430))batch.set(fs.doc(db,"alpacaVaults",mk,"items",a.id),{...a,createdServerAt:fs.serverTimestamp()},{merge:false});await batch.commit()}
-    await fs.setDoc(mailRef,{status:"claimed",resolved:true,read:true,claimedAtClient:now(),claimedAt:fs.serverTimestamp()},{merge:true});
-    const probe=await fs.getDoc(fs.doc(db,"alpacaVaults",mk,"items",units[0].id));if(!probe.exists())throw new Error("ระบบยังบันทึกอัลปาก้าเข้าคลังไม่สำเร็จ");
-    try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังอัลปาก้าแล้ว ${units.length} ตัว`);return{count:units.length};
+    /* ของใหม่ถูก Aida เตรียมไว้แล้ว ส่วนของที่ส่งก่อน R36.43 ให้ลองเติมแบบ deterministic
+       อีกครั้งเพื่อกู้ของเก่า โดยไม่แตะ saves/{memberKey} */
+    const units=await ensureGiftVaultUnits(fs,db,mk,mailId,gift);
+    /* ตรวจทุกตัวก่อนลบแจ้งเตือน: ถ้าตัวใดไม่อยู่ จะไม่ถือว่ารับสำเร็จ */
+    const verified=await Promise.all(units.map(a=>fs.getDoc(fs.doc(db,"alpacaVaults",mk,"items",a.id))));
+    if(verified.some(x=>!x.exists()))throw new Error("อัลปาก้ายังเข้าคลังไม่ครบ กรุณากดรับอีกครั้ง");
+    /* การรับเสร็จแล้ว: ลบ notification จริง ไม่เก็บการ์ดค้างไว้ */
+    try{await fs.deleteDoc(mailRef)}catch(_){await fs.setDoc(mailRef,{status:"claimed",resolved:true,read:true,claimedAtClient:now(),claimedAt:fs.serverTimestamp()},{merge:true})}
+    /* เปิดสถานะของ Cloud unit หลังรับสำเร็จ (best effort; การมี unit จริงคือหลักฐานหลัก) */
+    await Promise.allSettled(units.map(a=>fs.setDoc(fs.doc(db,"alpacaVaults",mk,"items",a.id),{claimState:"claimed",claimedAtClient:now(),claimedAt:fs.serverTimestamp()},{merge:true})));
+    try{notificationDataCache.at=0;await refreshNotificationBadge?.(true)}catch(_){ }
+    showWeatherToast?.(`🦙 รับเข้าคลังอัลปาก้าแล้ว ${units.length} ตัว`);
+    return{count:units.length};
   }
 
   function personCard(p){return `<label class="r3642-person"><input type="checkbox" data-r3642-person="${esc(p.key)}"><span class="r3642-avatar">${esc(p.name.slice(0,1).toUpperCase())}</span><span><b>${esc(p.name)}</b><small>${esc(p.key)}</small></span></label>`}
@@ -4143,7 +4167,7 @@ console.info(BUILD,"loaded");
       const claimed=g.status==="claimed"||g.resolved,items=Array.isArray(g.items)?g.items:[],card=document.createElement("article");card.className=`notification-card r3642-gift-card ${g.read?'':'unread'}`;
       card.innerHTML=`<div class="r3642-gift-top"><img src="${esc(g.previewImage||items[0]?.image||ASSETS.white)}" alt=""><div><b>${claimed?'✅ รับอัลปาก้าแล้ว':'🎁 ยัยหนูส่งอัลปาก้าให้คุณ'}</b><small>${esc(items.map(x=>`${x.name} ×${x.qty}`).join(' • '))}</small></div></div><div class="r3642-mini-icons">${items.slice(0,8).map(x=>`<span><img src="${esc(x.image||ASSETS[x.color]||ASSETS.white)}" alt=""><i>×${iv(x.qty)||1}</i></span>`).join('')}</div><div class="r3642-gift-actions">${claimed?'<button data-r3642-open-vault>เปิดคลังอัลปาก้า</button>':`<button class="primary" data-r3642-claim="${esc(g.id)}">รับเข้าคลังอัลปาก้า</button>`}</div>`;list.prepend(card)
     }
-    list.querySelectorAll('[data-r3642-claim]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='กำลังรับ…';try{await claimPending(b.dataset.r3642Claim);await decorateInbox()}catch(e){message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}finally{b.disabled=false}});
+    list.querySelectorAll('[data-r3642-claim]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='กำลังรับ…';const card=b.closest('.r3642-gift-card');try{const out=await claimPending(b.dataset.r3642Claim);card?.remove();await decorateInbox();try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.();setTimeout(paintVault,80);setTimeout(paintVault,300)}catch(_){ }return out}catch(e){message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}finally{b.disabled=false}});
     list.querySelectorAll('[data-r3642-open-vault]').forEach(b=>b.onclick=()=>globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.());
   }
   try{if(typeof showNotifications==="function"&&!showNotifications.__r3642){const base=showNotifications,wrapped=async function(tab="friend"){const r=await base.apply(this,arguments);if(tab==="yainoo")setTimeout(()=>decorateInbox().catch(()=>{}),20);return r};wrapped.__r3642=true;showNotifications=wrapped}}catch(_){ }
@@ -4153,13 +4177,32 @@ console.info(BUILD,"loaded");
   [700,1800,4000,8000].forEach(ms=>setTimeout(ensureStream,ms));setInterval(ensureStream,8000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(ensureStream,150)});
 
   /* Keep Cloud Vault rendering from the previous build, but no gift is placed there until claim. */
-  async function cloudItems(){const mk=memberKeyExact();if(!mk)return[];try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"alpacaVaults",mk,"items")),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(["adult","baby"].includes(String(x.type)))out.push(x)});return out.sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0))}catch(_){return[]}}
+  async function cloudItems(){
+    const mk=memberKeyExact();if(!mk)return[];
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const [vs,ms]=await Promise.all([fs.getDocs(fs.collection(db,"alpacaVaults",mk,"items")),fs.getDocs(fs.collection(db,"mailboxes",mk,"items"))]);
+      const pending=new Set();ms.forEach(d=>{const x=d.data()||{};if(x.type==="alpacaGiftPending"&&!x.resolved&&x.status!=="claimed")pending.add(d.id)});
+      const out=[];vs.forEach(d=>{const x={id:d.id,...d.data()};if(!["adult","baby"].includes(String(x.type)))return;if(x.sourceMailboxId&&pending.has(String(x.sourceMailboxId)))return;out.push(x)});
+      return out.sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0));
+    }catch(e){console.warn(BUILD,"cloud vault read",e);return[]}
+  }
   function label(x){const c=COLOR_LABEL[x.color]||x.color||"ขาว";return x.type==="baby"?`เบบี้อัลปาก้า${c}`:`อัลปาก้า${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
   async function paintVault(){const panel=document.querySelector('.alpaca-warehouse-panel');if(!panel)return;panel.querySelectorAll('#r3641CloudVault,#r3640CloudVault,#r3636ExternalVault,#r3642CloudVault').forEach(x=>x.remove());const items=await cloudItems();if(!items.length)return;panel.querySelector('.alpaca-empty-state')?.classList.add('r3642-hide-empty');const sec=document.createElement('section');sec.id='r3642CloudVault';sec.className='r3642-cloud-vault';sec.innerHTML=`<header><img src="alpaca-princess-stage1_idle.png" alt=""><div><b>☁️ คลังอัลปาก้าของขวัญ</b><small>${items.length} ตัว • รับแล้วพร้อมวาง</small></div></header><div class="r3642-cloud-grid">${items.map(x=>`<article><img src="${esc(ASSETS[x.color]||ASSETS.white)}" alt=""><div><b>${esc(label(x))}</b><small>อยู่ในคลังแล้ว</small></div></article>`).join('')}</div>`;const grid=panel.querySelector('.alpaca-warehouse-grid');if(grid)grid.before(sec);else panel.appendChild(sec)}
   const core=globalThis.YN_ALPACA_CORE;if(core&&typeof core.showAlpacaWarehouse==="function"&&!core.showAlpacaWarehouse.__r3642){const base=core.showAlpacaWarehouse,wrapped=function(){const r=base.apply(this,arguments);setTimeout(paintVault,35);return r};wrapped.__r3642=true;core.showAlpacaWarehouse=wrapped}
   document.addEventListener('click',e=>{if(e.target?.closest?.('#alpacaWarehouseBtn'))setTimeout(paintVault,60)},true);
 
-  globalThis.YN_R3642_ALPACA={BUILD,open:openCenter,send:sendMany,claim:claimPending,refreshInbox:decorateInbox,refreshVault:paintVault,recipients:canonicalRecipients};
+  async function adminRepairPending(){
+    if(!admin())return 0;let fixed=0;
+    try{const {db,fs}=await getFirebaseContext(),people=await canonicalRecipients();for(const p of people){try{const ms=await fs.getDocs(fs.collection(db,"mailboxes",p.key,"items"));for(const d of ms.docs){const g=d.data()||{};if(g.type!=="alpacaGiftPending"||g.resolved||g.status==="claimed")continue;await ensureGiftVaultUnits(fs,db,p.key,d.id,g);fixed++}}catch(e){console.warn(BUILD,"repair pending",p.key,e)}}}catch(e){console.warn(BUILD,"admin repair",e)}return fixed;
+  }
+  if(admin())setTimeout(()=>adminRepairPending().catch(()=>{}),1800);
+  /* Older wrappers can repaint the warehouse after our first render. Repaint the
+     Cloud section whenever the warehouse DOM is recreated. */
+  const warehouseObserver=new MutationObserver(()=>{if(document.querySelector('.alpaca-warehouse-panel')){setTimeout(paintVault,20);setTimeout(paintVault,180)}});
+  try{warehouseObserver.observe(document.getElementById('modalContent'),{childList:true,subtree:true})}catch(_){ }
+
+  globalThis.YN_R3642_ALPACA={BUILD,open:openCenter,send:sendMany,claim:claimPending,refreshInbox:decorateInbox,refreshVault:paintVault,recipients:canonicalRecipients,repairPending:adminRepairPending};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
@@ -4470,5 +4513,142 @@ console.info(BUILD,"loaded");
 })();
 
 </script>
+<script>
+/* =====================================================================
+   S2 R36.44 — CANONICAL ALPACA GIFT WAREHOUSE + SAVE STORAGE V3
+   2026-09-16
+   - One stable Cloud warehouse renderer; no DOM repaint race/flicker.
+   - Claim = mark Cloud units claimed FIRST, verify, then remove notification.
+   - Gift alpacas can be placed into a pen from the same canonical screen.
+   - Universal recursive bookkeeping compaction for every member.
+   ===================================================================== */
+(function YN_R3644_CANONICAL_ALPACA_AND_SAVE(){
+  "use strict";
+  const BUILD="S2-R36.44-CANONICAL-ALPACA-SAVE-V3-20260916";
+  const $=id=>document.getElementById(id);
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const bytes=v=>{try{const s=JSON.stringify(v??null);return new TextEncoder().encode(s).length}catch(_){return 0}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const key=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").trim();
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const admin=()=>key().toLowerCase()==="aida"&&(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"||globalThis.adminProfile?.role==="admin");
+  const DAY=86400000;
+  const ASSETS={white:"alpaca-stage-1-idle.png",brown:"alpaca-brown-stage-1-idle.png",black:"alpaca-black-stage-1-idle.png",pink:"alpaca-pink-stage-1-idle.png",green:"alpaca-green-stage-1-idle.png",goldenHoney:"alpaca-golden-honey-icon.png",thaiTea:"alpaca-thai-tea-icon.png",prince:"alpaca-prince-stage1_idle.png",princess:"alpaca-princess-stage1_idle.png"};
+  const LABEL={white:"ขาว",brown:"น้ำตาล",black:"ดำ",pink:"ชมพู",green:"เขียว",goldenHoney:"Golden Honey",thaiTea:"ชาไทย",prince:"เจ้าชาย",princess:"เจ้าหญิง"};
+
+  /* ---------- ALPACA GIFT: canonical claim ---------- */
+  async function cloudGiftUnits(mailId){
+    const mk=key();if(!mk)return[];
+    const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"alpacaVaults",mk,"items")),out=[];
+    sn.forEach(d=>{const x={id:d.id,...d.data()};if(String(x.sourceMailboxId||"")===String(mailId||""))out.push(x)});
+    return out;
+  }
+  async function claimGift(mailId){
+    const mk=key();if(!mk)throw new Error("ยังไม่พบสมาชิก");
+    const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",mk,"items",mailId),ms=await fs.getDoc(mref);
+    if(!ms.exists())return{already:true,count:0};
+    const gift=ms.data()||{};if(gift.type!=="alpacaGiftPending")throw new Error("รายการนี้ไม่ใช่ของขวัญอัลปาก้า");
+    let units=await cloudGiftUnits(mailId);
+    /* Compatibility for gifts created by R36.42 before sender-side Cloud preparation. */
+    if(!units.length&&globalThis.YN_R3642_ALPACA?.claim){
+      try{await globalThis.YN_R3642_ALPACA.claim(mailId)}catch(_){ }
+      units=await cloudGiftUnits(mailId);
+    }
+    if(!units.length)throw new Error("ยังไม่พบอัลปาก้าของขวัญในคลัง Cloud");
+    /* Claim state is authoritative. Do this before touching the mailbox. */
+    for(let i=0;i<units.length;i+=400){
+      const b=fs.writeBatch(db);for(const x of units.slice(i,i+400))b.set(fs.doc(db,"alpacaVaults",mk,"items",x.id),{claimState:"claimed",claimedAtClient:now(),claimedAt:fs.serverTimestamp()},{merge:true});await b.commit();
+    }
+    const verify=await cloudGiftUnits(mailId);if(!verify.length||verify.some(x=>String(x.claimState)!=="claimed"))throw new Error("ระบบยังยืนยันอัลปาก้าเข้าคลังไม่ครบ");
+    try{await fs.deleteDoc(mref)}catch(e){await fs.setDoc(mref,{status:"claimed",resolved:true,read:true,claimedAtClient:now(),claimedAt:fs.serverTimestamp()},{merge:true})}
+    try{notificationDataCache.at=0;await refreshNotificationBadge?.(true)}catch(_){ }
+    showWeatherToast?.(`🦙 รับอัลปาก้าเข้าคลังแล้ว ${verify.length} ตัว`);
+    return{count:verify.length};
+  }
+
+  /* capture claim clicks before all legacy handlers */
+  document.addEventListener("click",async e=>{
+    const b=e.target?.closest?.("[data-r3642-claim]");if(!b)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(b.disabled)return;b.disabled=true;const old=b.textContent;b.textContent="กำลังรับเข้าคลัง…";
+    try{await claimGift(b.dataset.r3642Claim);b.closest(".r3642-gift-card")?.remove();await showCanonicalWarehouse()}
+    catch(err){message?.("รับอัลปาก้าไม่ได้",err?.message||"กรุณาลองใหม่ค่ะ");b.disabled=false;b.textContent=old}
+  },true);
+
+  /* ---------- canonical warehouse ---------- */
+  async function claimedCloud(){
+    const mk=key();if(!mk)return[];try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"alpacaVaults",mk,"items")),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(!["adult","baby"].includes(String(x.type)))return;if(String(x.claimState||"claimed")!=="claimed")return;out.push(x)});return out.sort((a,b)=>Number(a.receivedAt||a.createdAt||0)-Number(b.receivedAt||b.createdAt||0))}catch(e){console.warn(BUILD,"cloud read",e);return[]}
+  }
+  function legacyVault(){const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return Array.isArray(s?.alpaca?.vault)?s.alpaca.vault.map(x=>({...x,__legacy:true})):[]}
+  function card(x){const c=LABEL[x.color]||x.color||"ขาว",name=x.type==="baby"?`เบบี้อัลปาก้าสี${c}`:`อัลปาก้าสี${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`;return `<article class="r3644-vault-card"><div class="r3644-vault-pic"><img src="${esc(ASSETS[x.color]||ASSETS.white)}" alt=""></div><div class="r3644-vault-info"><b>${esc(name)}</b><small>${x.__legacy?"คลังเดิม":"ของขวัญ Cloud • รับแล้ว"}</small></div><button type="button" data-r3644-place="${esc(x.id)}" data-r3644-kind="${x.__legacy?"legacy":"cloud"}">วางเข้าคอก</button></article>`}
+  async function showCanonicalWarehouse(){
+    const mc=$("modalContent");if(!mc)return;const cloud=await claimedCloud(),legacy=legacyVault(),all=[...cloud,...legacy];
+    mc.innerHTML=`<section class="feature-panel r3644-warehouse"><header><div><small>☁️🦙 ALPACA WAREHOUSE</small><h2>คลังอัลปาก้า</h2><p>รับแล้ว ${cloud.length} ตัว • คลังเดิม ${legacy.length} ตัว</p></div><button id="r3644Close" type="button">×</button></header><div class="r3644-vault-list">${all.length?all.map(card).join(""):`<div class="r3644-empty"><span>🦙</span><b>ยังไม่มีอัลปาก้าในคลังค่ะ</b><small>เมื่อกดรับของขวัญสำเร็จ ตัวอัลปาก้าจะอยู่ที่หน้านี้ทันที</small></div>`}</div><footer><button id="r3644BackPen" type="button">← กลับคอก</button><button id="r3644Refresh" type="button">↻ โหลดคลังใหม่</button></footer></section>`;
+    openModal?.();$("r3644Close").onclick=()=>closeModal?.();$("r3644BackPen").onclick=()=>{closeModal?.();try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }};$("r3644Refresh").onclick=showCanonicalWarehouse;
+    document.querySelectorAll("[data-r3644-place]").forEach(b=>b.onclick=()=>showPenPicker(b.dataset.r3644Place,b.dataset.r3644Kind));
+  }
+  function currentPens(){const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[]}
+  function showPenPicker(id,kind){const pens=currentPens(),mc=$("modalContent");mc.innerHTML=`<section class="feature-panel r3644-penpick"><h2>เลือกคอกอัลปาก้า</h2><div>${pens.map((p,i)=>`<button data-r3644-pen="${i+1}" ${(p?.alpacas||[]).length>=6?"disabled":""}><b>คอก ${i+1}</b><small>${esc(p?.name||"")} • ${(p?.alpacas||[]).length}/6</small></button>`).join("")}</div><button id="r3644CancelPlace">กลับคลัง</button></section>`;openModal?.();document.querySelectorAll("[data-r3644-pen]").forEach(b=>b.onclick=()=>placeToPen(id,kind,Number(b.dataset.r3644Pen)));$("r3644CancelPlace").onclick=showCanonicalWarehouse}
+  async function placeToPen(id,kind,penNo){
+    const mk=key();if(!mk)return;try{
+      /* ensure oversized saves are reduced BEFORE pen write */
+      try{await globalThis.YN_SAVE_STORAGE_V3?.migrateOne?.(mk,{force:true})}catch(_){try{await globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(mk,{force:true})}catch(__){ }}
+      const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",mk);let next=null;
+      if(kind==="cloud"){
+        const iref=fs.doc(db,"alpacaVaults",mk,"items",id);
+        await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists()||!is.exists())throw new Error("ไม่พบอัลปาก้าตัวนี้");const raw=ss.data()||{},s=typeof normalizeState==="function"?normalizeState(clone(raw),raw.player||currentMember):clone(raw);s.alpaca=s.alpaca||{};s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];while(s.alpaca.pens.length<Math.max(2,penNo))s.alpaca.pens.push({name:`คอก ${s.alpaca.pens.length+1}`,alpacas:[]});const p=s.alpaca.pens[penNo-1];p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=6)throw new Error("คอกนี้เต็มแล้ว");const x=is.data()||{},t=now(),a={...clone(x),id,type:x.type==="baby"?"baby":"adult",placedAt:t,expiresAt:Number(x.expiresAt)||t+7*DAY};delete a.memberKey;delete a.claimState;delete a.createdServerAt;delete a.sourceMailboxId;p.alpacas.push(a);next=s;tx.update(sref,{"alpaca.pens":s.alpaca.pens,updatedAt:fs.serverTimestamp()});tx.delete(iref)});
+      }else{
+        await fs.runTransaction(db,async tx=>{const ss=await tx.get(sref);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");const raw=ss.data()||{},s=typeof normalizeState==="function"?normalizeState(clone(raw),raw.player||currentMember):clone(raw);const idx=(s?.alpaca?.vault||[]).findIndex(x=>String(x.id)===String(id));if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");while(s.alpaca.pens.length<Math.max(2,penNo))s.alpaca.pens.push({name:`คอก ${s.alpaca.pens.length+1}`,alpacas:[]});const p=s.alpaca.pens[penNo-1];if((p.alpacas||[]).length>=6)throw new Error("คอกนี้เต็มแล้ว");const [a]=s.alpaca.vault.splice(idx,1);a.placedAt=now();a.expiresAt=Number(a.expiresAt)||now()+7*DAY;p.alpacas.push(a);next=s;tx.update(sref,{"alpaca.vault":s.alpaca.vault,"alpaca.pens":s.alpaca.pens,updatedAt:fs.serverTimestamp()})});
+      }
+      if(next){try{ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}catch(_){ }}showWeatherToast?.(`🦙 วางอัลปาก้าเข้าคอก ${penNo} แล้ว`);closeModal?.();try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
+    }catch(e){message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+
+  /* Replace warehouse authority and intercept direct button taps. */
+  if(globalThis.YN_ALPACA_CORE)globalThis.YN_ALPACA_CORE.showAlpacaWarehouse=showCanonicalWarehouse;
+  document.addEventListener("click",e=>{if(!e.target?.closest?.("#alpacaWarehouseBtn"))return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showCanonicalWarehouse()},true);
+
+  /* Sender wording: it sends a gift, not merely a notification. */
+  const textObserver=new MutationObserver(()=>{
+    document.querySelectorAll("#r3642Send").forEach(b=>{if(!b.disabled)b.textContent="🎁 ส่งของขวัญอัลปาก้า"});
+    const st=$("r3642Status");if(st&&/ส่งแจ้งเตือนสำเร็จ/.test(st.textContent))st.textContent=st.textContent.replace("ส่งแจ้งเตือนสำเร็จ","ส่งของขวัญสำเร็จ");
+  });try{textObserver.observe(document.body,{childList:true,subtree:true})}catch(_){ }
+
+  /* ---------- SAVE STORAGE V3: recursive universal compaction ---------- */
+  const BOOK=/claim|receipt|history|archive|tombstone|ledger|audit|eventlog|activitylog|processed|seenid|dedupe|cache|snapshot|mirror|backup|diagnostic|debug/i;
+  const KEEP_KEYS=new Set(["bag","specials","animalProducts","plots","pens","alpacas","vault","dogs","cats","hamsters","farmGuardians","inventory","food","medicine","wool","products","drops","jobs","missions","unlocked","s2Unlocks","upgradeKeys"]);
+  function stamp(v){return Number(v?.resolvedAt??v?.claimedAt??v?.createdAtClient??v?.createdAt??v?.updatedAt??v?.at??0)||0}
+  function trimObj(v,cap){const rows=Object.entries(v||{});rows.sort((a,b)=>stamp(b[1])-stamp(a[1]));return Object.fromEntries(rows.slice(0,cap))}
+  function recursiveCompact(root,{hard=false}={}){
+    const patches={};
+    function walk(node,path="",depth=0){if(!node||typeof node!=="object"||depth>12)return;
+      for(const k of Object.keys(node)){
+        const v=node[k],p=path?`${path}.${k}`:k;
+        if(/^saveGuardR\d+/i.test(k)||/^rescueBuildR\d+/i.test(k)||/^rescuedAtR\d+/i.test(k)){delete node[k];patches[p]=null;continue}
+        if(BOOK.test(k)&&!KEEP_KEYS.has(k)&&(Array.isArray(v)||(v&&typeof v==="object"))){const kept=Array.isArray(v)?v.slice(-(hard?2:8)):trimObj(v,hard?4:16);node[k]=kept;patches[p]=kept;continue}
+        walk(v,p,depth+1);
+      }
+    }walk(root);return patches;
+  }
+  function setNestedPatch(fs,patches){const out={};for(const [p,v] of Object.entries(patches))out[p]=v===null&&fs.deleteField?fs.deleteField():v;return out}
+  async function migrateOne(mk,{force=false}={}){
+    mk=String(mk||"").trim();if(!mk)return false;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),sn=await fs.getDoc(ref);if(!sn.exists())return false;const raw=clone(sn.data()||{}),before=bytes(raw);
+    /* Run prior migration first because it archives known histories and legacy vault. */
+    try{await globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(mk,{force})}catch(_){ }
+    const fresh=await fs.getDoc(ref);if(!fresh.exists())return false;const s=clone(fresh.data()||{}),patches=recursiveCompact(s,{hard:force||bytes(s)>300*1024});
+    if(Object.keys(patches).length){try{await fs.updateDoc(ref,{...setNestedPatch(fs,patches),saveStorageV3:{version:BUILD,compactedAtClient:now()},updatedAt:fs.serverTimestamp()})}catch(e){console.warn(BUILD,"recursive shrink",mk,e?.message||e)}}
+    const check=await fs.getDoc(ref),after=check.exists()?bytes(check.data()||{}):before;
+    console.info(BUILD,"save compact",mk,{before,after});return{ok:true,before,after};
+  }
+  async function sweepAll(){if(!admin())return;const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves")),ids=[];sn.forEach(d=>ids.push(d.id));for(let i=0;i<ids.length;i+=2)await Promise.allSettled(ids.slice(i,i+2).map(id=>migrateOne(id,{force:true})))}
+  /* all users: repair early and periodically when their save is large */
+  [1200,4500].forEach(ms=>setTimeout(()=>{if(key())migrateOne(key(),{force:true}).catch(()=>{})},ms));
+  if(admin())setTimeout(()=>sweepAll().catch(()=>{}),2500);
+  globalThis.YN_SAVE_STORAGE_V3={BUILD,migrateOne,sweepAll,report:async()=>{const mk=key(),{db,fs}=await getFirebaseContext(),sn=await fs.getDoc(fs.doc(db,"saves",mk));const s=sn.exists()?sn.data()||{}:{};return{memberKey:mk,bytes:bytes(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]).slice(0,15)}}};
+
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>
