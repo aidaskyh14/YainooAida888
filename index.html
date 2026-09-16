@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.35-DEEP-ALPACA-VAULT-REPAIR-20260916"></script>
+<script src="game.js?v=S2-R36.36-EXTERNAL-ALPACA-VAULT-RECOVERY-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3786,5 +3786,233 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
+
+<script>
+/* =====================================================================
+   S2 R36.36 — EXTERNAL ALPACA VAULT + ACCEPTED-GIFT RECOVERY
+   2026-09-16
+   Critical repair for Opor / Mhai / Earn / Kongkwan and future recipients.
+   - The four accounts previously hit Firestore save-size pressure. Alpaca gifts
+     must not depend on adding another object to the already-large saves/{member}.
+   - Accepted/recent Admin alpaca gifts are mirrored to a dedicated per-alpaca
+     document under alpacaVaults/{memberKey}/items/{deterministicId}.
+   - Warehouse UI reads those documents directly, so recovered alpacas appear
+     even if the legacy main save is close to 1 MiB.
+   - Placement moves exactly one external alpaca into the chosen pen only after
+     the save write succeeds; then the external item is deleted. No duplication.
+   - No animation/movement code is changed.
+   ===================================================================== */
+(function YN_R3636_EXTERNAL_ALPACA_VAULT(){
+  "use strict";
+  const BUILD="S2-R36.36-EXTERNAL-ALPACA-VAULT-RECOVERY-20260916";
+  const PRIORITY=new Set(["opor","mhai","earn","kongkwan"]);
+  const A_TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance","alpaca"]);
+  const HOUR=3600000, DAY=24*HOUR, SCAN_MS=72*HOUR;
+  const low=v=>String(v??"").trim().toLowerCase();
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const ts=v=>{try{if(v&&typeof v.toMillis==="function")return v.toMillis();if(v&&typeof v.seconds==="number")return v.seconds*1000;return Number(v)||0}catch(_){return 0}};
+  const safeId=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,180);
+  const currentKey=()=>low(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+  const isAdmin=()=>currentKey()==="aida"&&(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"||globalThis.adminProfile?.role==="admin");
+
+  function colorFromText(text,key=""){
+    const t=(String(text||"")+" "+String(key||"")).toLowerCase();
+    if(/princess|เจ้าหญิง/.test(t))return "princess";
+    if(/prince|เจ้าชาย/.test(t))return "prince";
+    if(/golden\s*honey|golden honey|โกลเด้น|โกลเดน/.test(t))return "goldenHoney";
+    if(/thai\s*tea|ชาไทย/.test(t))return "thaiTea";
+    if(/สีเขียว|green/.test(t))return "green";
+    if(/สีชมพู|pink/.test(t))return "pink";
+    if(/สีดำ|black/.test(t))return "black";
+    if(/สีน้ำตาล|brown/.test(t))return "brown";
+    if(/สีขาว|white/.test(t))return "white";
+    return String(key||"").split(":")[0]||"white";
+  }
+  function sexFromText(text,key,color){
+    const k=String(key||"").split(":")[1]||"",t=(String(text||"")+" "+k).toLowerCase();
+    if(color==="prince")return "male";
+    if(color==="princess")return "female";
+    if(/female|เพศเมีย|ตัวเมีย/.test(t))return "female";
+    if(/male|เพศผู้|ตัวผู้/.test(t))return "male";
+    return k==="female"?"female":"male";
+  }
+  function looksAlpaca(x,b){
+    const type=String(x?.type||x?.itemType||"");
+    if(A_TYPES.has(type))return true;
+    const text=`${x?.name||""} ${x?.label||""} ${b?.title||""} ${b?.body||""}`;
+    return /อัลปาก้า|alpaca/i.test(text);
+  }
+  function parseRows(b){
+    const src=Array.isArray(b?.items)&&b.items.length?b.items:[{type:b?.itemType,key:b?.itemKey,qty:b?.qty,name:b?.name,instance:b?.instance}];
+    const out=[];
+    src.forEach((x,i)=>{
+      if(!looksAlpaca(x,b))return;
+      const type0=String(x?.type||x?.itemType||"");
+      const text=`${x?.name||""} ${b?.body||""}`;
+      let type=type0;
+      if(!A_TYPES.has(type))type=/เบบี้|baby/i.test(text)?"alpacaBaby":"alpacaAdult";
+      if(type==="alpaca")type=/เบบี้|baby/i.test(text)?"alpacaBaby":"alpacaAdult";
+      const key=String(x?.key||x?.itemKey||"");
+      const color=colorFromText(text,key);
+      const sex=type==="alpacaBaby"?null:sexFromText(text,key,color);
+      out.push({i,type,key,color,sex,qty:Math.max(1,int(x?.qty)||1),name:String(x?.name||""),instance:x?.instance?clone(x.instance):null});
+    });
+    return out;
+  }
+  function deterministicId(bid,row,n){return `gift-${safeId(bid)}-${row.i}-${n}`}
+  function makeExternal(bid,row,n,at,mk){
+    const id=deterministicId(bid,row,n),t=at||now();
+    if(row.type==="alpacaInstance"&&row.instance){
+      const x=clone(row.instance)||{};
+      return {id,type:x.type==="baby"?"baby":"adult",color:x.color||row.color||"white",sex:x.type==="baby"?null:(x.sex||row.sex||"male"),source:"admin-gift-external-r3636",sourceBroadcastId:bid,sourceInstanceId:String(x.id||""),memberKey:mk,createdAt:Number(x.createdAt)||t,receivedAt:t,bornAt:Number(x.bornAt)||0,readyProcessAt:Number(x.readyProcessAt)||0};
+    }
+    if(row.type==="alpacaBaby")return{id,type:"baby",color:row.color||"white",sex:null,source:"admin-gift-external-r3636",sourceBroadcastId:bid,memberKey:mk,createdAt:t,receivedAt:t,bornAt:t,readyProcessAt:t+12*HOUR};
+    return{id,type:"adult",color:row.color||"white",sex:row.sex||"male",source:"admin-gift-external-r3636",sourceBroadcastId:bid,memberKey:mk,createdAt:t,receivedAt:t};
+  }
+  function extCol(fs,db,mk){return fs.collection(db,"alpacaVaults",mk,"items")}
+  function extRef(fs,db,mk,id){return fs.doc(db,"alpacaVaults",mk,"items",id)}
+
+  async function writeGiftExternal(fs,db,mk,bid,b,at){
+    mk=low(mk);const rows=parseRows(b);if(!mk||!rows.length)return 0;
+    let wrote=0;
+    for(const r of rows)for(let n=0;n<r.qty;n++){
+      const item=makeExternal(bid,r,n,at,mk),ref=extRef(fs,db,mk,item.id);
+      try{
+        const snap=await fs.getDoc(ref);
+        if(!snap.exists()){await fs.setDoc(ref,{...item,createdServerAt:fs.serverTimestamp()},{merge:false});wrote++}
+      }catch(e){console.warn(BUILD,"external write",mk,bid,e?.message||e)}
+    }
+    return wrote;
+  }
+
+  async function acceptedBy(fs,db,bid,mk,saveClaims){
+    if(saveClaims?.[bid]?.status==="accepted")return true;
+    try{const cs=await fs.getDoc(fs.doc(db,"broadcasts",bid,"claims",mk));return cs.exists()&&cs.data()?.status==="accepted"}catch(_){return false}
+  }
+
+  async function scanRecentBroadcasts(fs,db){
+    try{
+      const q=fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(1000));
+      const sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const b=d.data()||{},at=ts(b.createdAt);if(b.type==="gift"&&parseRows(b).length&&(!at||at>=Date.now()-SCAN_MS))out.push({id:d.id,b,at:at||now()})});return out;
+    }catch(e){console.warn(BUILD,"broadcast scan",e);return[]}
+  }
+
+  async function repairPriorityAll(){
+    if(!isAdmin()||!globalThis.cloudReady)return 0;
+    const {db,fs}=await getFirebaseContext(),rows=await scanRecentBroadcasts(fs,db);let total=0;
+    for(const mk of PRIORITY){
+      let saveClaims={};
+      try{const ss=await fs.getDoc(fs.doc(db,"saves",mk));if(ss.exists())saveClaims=ss.data()?.broadcastGiftClaims||{}}catch(_){ }
+      for(const r of rows){
+        const target=low(r.b?.targetKey);
+        let ok=target===mk;
+        if(!ok&&!target)ok=await acceptedBy(fs,db,r.id,mk,saveClaims);
+        if(ok)total+=await writeGiftExternal(fs,db,mk,r.id,r.b,r.at);
+      }
+    }
+    if(total>0)try{showWeatherToast?.(`🦙 กู้คลังอัลปาก้า ${total} ตัวเรียบร้อย`)}catch(_){ }
+    return total;
+  }
+
+  async function repairSelf(){
+    const mk=currentKey();if(!mk||!globalThis.cloudReady||globalThis.visitContext)return 0;
+    const {db,fs}=await getFirebaseContext(),rows=await scanRecentBroadcasts(fs,db);let saveClaims={};
+    try{const ss=await fs.getDoc(fs.doc(db,"saves",mk));if(ss.exists())saveClaims=ss.data()?.broadcastGiftClaims||{}}catch(_){ }
+    let total=0;
+    for(const r of rows){const target=low(r.b?.targetKey);let ok=target===mk;if(!ok&&!target)ok=await acceptedBy(fs,db,r.id,mk,saveClaims);if(ok)total+=await writeGiftExternal(fs,db,mk,r.id,r.b,r.at)}
+    return total;
+  }
+
+  function mainIds(){
+    const set=new Set(),s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
+    for(const a of (s?.alpaca?.vault||[]))if(a?.id)set.add(String(a.id));
+    for(const p of (s?.alpaca?.pens||[]))for(const a of (p?.alpacas||[]))if(a?.id)set.add(String(a.id));
+    return set;
+  }
+  async function externalItems(){
+    const mk=currentKey();if(!mk||!globalThis.cloudReady)return[];
+    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(extCol(fs,db,mk)),ids=mainIds(),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(!ids.has(String(x.id)))out.push(x)});return out.sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0))}catch(e){console.warn(BUILD,"external read",e);return[]}
+  }
+  function colorLabel(c){return({white:"ขาว",black:"ดำ",pink:"ชมพู",green:"เขียว",brown:"น้ำตาล",goldenHoney:"Golden Honey",thaiTea:"ชาไทย",prince:"เจ้าชาย",princess:"เจ้าหญิง"})[c]||c||"ขาว"}
+  function sexLabel2(s){return s==="female"?"เพศเมีย":"เพศผู้"}
+  function spriteFor(x){
+    try{if(typeof warehouseSprite==="function")return warehouseSprite(x)}catch(_){ }
+    const img=x.color==="prince"?"alpaca-prince-stage1_idle.png":x.color==="princess"?"alpaca-princess-stage1_idle.png":"alpaca-white-idle.png";
+    return `<img src="${img}" alt="" style="width:92px;height:92px;object-fit:contain">`;
+  }
+  async function injectWarehouse(){
+    const root=document.querySelector(".alpaca-warehouse-panel");if(!root)return;
+    const old=root.querySelector("#r3636ExternalVault");if(old)old.remove();
+    const list=await externalItems();if(!list.length)return;
+    const box=document.createElement("section");box.id="r3636ExternalVault";box.style.margin="14px 0";
+    box.innerHTML=`<div style="padding:9px 12px;border-radius:14px;background:#fff1df;color:#5b4053;font-weight:900;margin-bottom:8px">🎁 อัลปาก้าของขวัญที่กู้คืนแล้ว <b>${list.length}</b> ตัว</div><div class="alpaca-warehouse-grid">${list.map(x=>`<article class="alpaca-warehouse-card ${x.type==="baby"?"is-baby":"is-adult"}"><span class="alpaca-age-badge">${x.type==="baby"?"เบบี้":"ตัวเต็มวัย"}</span>${spriteFor(x)}<b>${x.type==="baby"?`เบบี้อัลปาก้าสี${esc(colorLabel(x.color))}`:`อัลปาก้าสี${esc(colorLabel(x.color))}`}</b><small>${x.type==="baby"?"ของขวัญที่กู้คืน • รอวางเข้าคอก":`${esc(sexLabel2(x.sex))} • ของขวัญที่กู้คืน`}</small><button type="button" data-r3636-ext-place="${esc(x.id)}">วางเข้าคอก</button></article>`).join("")}</div>`;
+    const grid=root.querySelector(".alpaca-warehouse-grid");if(grid)grid.before(box);else root.appendChild(box);
+    box.querySelectorAll("[data-r3636-ext-place]").forEach(b=>b.onclick=()=>showPenPicker(b.dataset.r3636ExtPlace,list.find(x=>x.id===b.dataset.r3636ExtPlace)));
+  }
+
+  function showPenPicker(id,item){
+    const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{},pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[];
+    const mc=document.getElementById("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel alpaca-panel"><h2>🦙 วางอัลปาก้าเข้าคอก</h2><p>${item?.type==="baby"?"เบบี้":`สี${esc(colorLabel(item?.color))} • ${esc(sexLabel2(item?.sex))}`}</p><div class="alpaca-pen-picker">${[1,2,3,4,5].map(n=>{const p=pens[n-1]||{},count=(p.alpacas||[]).length;return `<button type="button" data-r3636-pen="${n}" ${count>=6?"disabled":""}>คอก ${n}<small>${esc(p.name||`คอก ${n}`)} • ${count}/6</small></button>`}).join("")}</div><button id="r3636BackVault" class="secondary-action">กลับคลัง</button></section>`;
+    try{openModal?.()}catch(_){ }
+    mc.querySelectorAll("[data-r3636-pen]").forEach(b=>b.onclick=()=>placeExternal(id,Number(b.dataset.r3636Pen)));
+    document.getElementById("r3636BackVault")?.addEventListener("click",()=>{try{globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}catch(_){ }});
+  }
+
+  async function trimForPlacement(fs,db,mk){
+    const del=typeof fs.deleteField==="function"?fs.deleteField():null;if(!del)return;
+    const ref=fs.doc(db,"saves",mk),patch={};
+    ["fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendCatCooldowns","r32FriendForageLocks","r3465BasementReceipts","hedgehogShieldReceiptsR3465","giftClaimHistory","claimHistory","eventHistory","activityHistory","retiredCatsArchiveR34","notifications"].forEach(k=>patch[k]=del);
+    patch["alpaca.friendMushroomClaims"]=del;patch["alpaca.eventClaims"]=del;patch["alpaca.testSireCooldowns"]=del;patch["alpaca.factory.history"]=del;
+    try{await fs.updateDoc(ref,patch)}catch(e){console.warn(BUILD,"trim placement",mk,e?.message||e)}
+  }
+
+  async function placeExternal(itemId,penNo){
+    const mk=currentKey();if(!mk)return;penNo=Math.max(1,Math.min(5,Number(penNo)||1));
+    try{
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",mk),itemRef=extRef(fs,db,mk,itemId);
+      await trimForPlacement(fs,db,mk);
+      let next=null;
+      await fs.runTransaction(db,async tx=>{
+        const [ss,is]=await Promise.all([tx.get(saveRef),tx.get(itemRef)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้าตัวนี้ถูกวางไปแล้ว");
+        const raw=ss.data()||{},s=typeof normalizeState==="function"?normalizeState(clone(raw),raw.player||currentMember):clone(raw);s.alpaca=s.alpaca||{};s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];while(s.alpaca.pens.length<5)s.alpaca.pens.push({name:`คอก ${s.alpaca.pens.length+1}`,alpacas:[]});
+        const p=s.alpaca.pens[penNo-1];p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=6)throw new Error(`คอก ${penNo} เต็มแล้ว`);
+        const x=is.data()||{},t=now();let a;
+        if(x.type==="baby")a={...clone(x),id:itemId,type:"baby",placedAt:t,expiresAt:t+7*DAY};
+        else a={...clone(x),id:itemId,type:"adult",placedAt:t,expiresAt:t+7*DAY};
+        delete a.memberKey;delete a.createdServerAt;delete a.sourceBroadcastId;
+        p.alpacas.push(a);next=s;
+        tx.update(saveRef,{"alpaca.pens":s.alpaca.pens,updatedAt:fs.serverTimestamp()});tx.delete(itemRef);
+      });
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){ }}
+      try{showWeatherToast?.(`🦙 วางเข้าคอก ${penNo} แล้ว`)}catch(_){ }
+      try{closeModal?.();globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
+    }catch(e){message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+
+  /* Future gift guard: after the existing claim flow, verify/mirror only any
+     alpaca units not already represented by the legacy local vault count. */
+  try{
+    if(typeof claimBroadcastGift==="function"&&!claimBroadcastGift.__r3636){
+      const base=claimBroadcastGift;const wrapped=async function(bid,accept){
+        const before=((ownState||state)?.alpaca?.vault||[]).length;const r=await base.apply(this,arguments);if(!accept)return r;
+        try{const {db,fs}=await getFirebaseContext(),bs=await fs.getDoc(fs.doc(db,"broadcasts",bid));if(bs.exists()){const rows=parseRows(bs.data());if(rows.length){const expected=rows.reduce((n,x)=>n+x.qty,0),after=((ownState||state)?.alpaca?.vault||[]).length;if(after-before<expected)await writeGiftExternal(fs,db,currentKey(),bid,bs.data(),ts(bs.data()?.createdAt)||now())}}}catch(e){console.warn(BUILD,"future mirror",e)}
+        return r;
+      };wrapped.__r3636=true;claimBroadcastGift=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"claim hook",e)}
+
+  document.addEventListener("click",e=>{if(!e.target?.closest?.("#alpacaWarehouseBtn"))return;setTimeout(async()=>{await repairSelf();await injectWarehouse()},120)},true);
+  const obs=new MutationObserver(()=>{if(document.querySelector(".alpaca-warehouse-panel"))setTimeout(injectWarehouse,40)});try{obs.observe(document.getElementById("modalContent"),{childList:true,subtree:true})}catch(_){ }
+  setTimeout(()=>{if(isAdmin())repairPriorityAll();else if(PRIORITY.has(currentKey()))repairSelf()},900);
+
+  globalThis.YN_R3636_ALPACA_VAULT={BUILD,repairSelf,repairPriorityAll,injectWarehouse};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
 </body>
 </html>
