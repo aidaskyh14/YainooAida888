@@ -35906,6 +35906,11 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
 
   /* ---------- cute compact result / alert ---------- */
   function notice({title,text="",image="",icon="✨",button="รับทราบ",onDone=null}){
+    const __pressure=/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i;
+    if(__pressure.test(String(text||""))||__pressure.test(String(title||""))){
+      title="กำลังจัดระเบียบข้อมูล";icon="💾";image="";text="<p>ข้อมูลบัญชีมีขนาดเกินพื้นที่เซฟหลักชั่วคราว ระบบกำลังย้ายข้อมูลประวัติออกให้อัตโนมัติค่ะ</p><small>ของในกระเป๋า สัตว์ คะแนน และจำนวนไอเท็มจะไม่ถูกลบ กรุณารอสักครู่แล้วลองอีกครั้ง</small>";
+      try{setTimeout(()=>globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(String(currentMemberKey||""),{force:true}),50)}catch(_){}
+    }
     const mc=$("modalContent");if(!mc)return message?.(title,text);
     mc.innerHTML=`<section class="feature-panel r35-modal"><div class="r35-notice-head">${image?`<img src="${image}" alt="">`:`<span>${icon}</span>`}<div><h2>${html(title)}</h2></div></div><div class="r35-modal-scroll">${text}</div><button id="r35NoticeDone" class="primary-spooky-action" type="button">${html(button)}</button></section>`;
     openModal?.();$("r35NoticeDone").onclick=()=>{if(onDone)onDone();else closeModal?.()};

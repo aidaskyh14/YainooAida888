@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.21-SECRET-VISIBLE-REAL-BAG-20260915">
+  <link rel="stylesheet" href="style.css?v=S2-R36.41-CANONICAL-ALPACA-DELIVERY-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.38-ALPACA-DIRECT-DISPATCH-20260916"></script>
+<script src="game.js?v=S2-R36.41-CANONICAL-ALPACA-DELIVERY-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2846,6 +2846,12 @@ function ensure(s){
   return s;
 }
 function notice(title,html,button="รับทราบ",done=null){
+  const __pressure=/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i;
+  if(__pressure.test(String(html||""))||__pressure.test(String(title||""))){
+    title="กำลังจัดระเบียบข้อมูล";
+    html="<p>ข้อมูลบัญชีมีขนาดเกินพื้นที่เซฟหลักชั่วคราว ระบบกำลังย้ายข้อมูลประวัติออกให้อัตโนมัติค่ะ</p><small>ของในกระเป๋า สัตว์ คะแนน และจำนวนไอเท็มจะไม่ถูกลบ กรุณารอสักครู่แล้วลองอีกครั้ง</small>";
+    try{setTimeout(()=>globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(String(currentMemberKey||""),{force:true}),50)}catch(_){}
+  }
   const mc=$("modalContent");if(!mc)return;
   mc.innerHTML=`<section class="feature-panel r35-modal"><h2>${title}</h2><div class="r35-modal-scroll">${html}</div><button id="r3523Done" class="primary-spooky-action" type="button">${button}</button></section>`;
   openModal?.();$("r3523Done").onclick=()=>done?done():closeModal?.();
@@ -4031,183 +4037,171 @@ console.info(BUILD,"loaded");
 
 <script>
 /* =====================================================================
-   S2 R36.38 — ALPACA DIRECT DISPATCH (REBUILT SEND/RECEIVE)
+   S2 R36.41 — CANONICAL ALPACA DELIVERY / RECEIVER INBOX
    2026-09-16
-   - Admin can select MANY recipients + MANY alpaca variants + quantities.
-   - Alpacas are written DIRECTLY to alpacaVaults/{memberKey}/items.
-   - Recipient does NOT need to press claim; warehouse is authoritative.
-   - Deterministic IDs make retries idempotent (no duplicate from same dispatch).
-   - One-time deep repair for Opor/Mhai/Earn/Kongkwan scans both legacy gifts
-     and targeted broadcasts and reconstructs missing alpacas into cloud vault.
-   - Legacy save size is irrelevant to receiving these alpacas.
+   - Canonical recipient key comes from the real saves/{memberKey} document.
+   - Admin can send many recipients + many alpaca variants + quantities.
+   - Alpacas go directly into Cloud Vault. No claim is required.
+   - Mailbox notice is written to the same canonical member key.
+   - Receiver watches both mailbox + Cloud Vault in realtime.
+   - Admin UI is compact and uses the real alpaca artwork.
    ===================================================================== */
-(function YN_R3638_ALPACA_DIRECT_DISPATCH(){
+(function YN_R3641_CANONICAL_ALPACA_DELIVERY(){
   "use strict";
-  const BUILD="S2-R36.38-ALPACA-DIRECT-DISPATCH-20260916";
-  const PRIORITY=["opor","mhai","earn","kongkwan"];
-  const DAY=86400000, REPAIR_WINDOW=7*DAY;
+  const BUILD="S2-R36.41-CANONICAL-ALPACA-DELIVERY-20260916";
   const $=id=>document.getElementById(id);
-  const low=v=>String(v??"").trim().toLowerCase();
   const esc=v=>typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
-  const ts=v=>{try{if(v&&typeof v.toMillis==="function")return v.toMillis();if(v&&typeof v.seconds==="number")return v.seconds*1000;return Number(v)||0}catch(_){return 0}};
   const safeId=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,150);
-  const admin=()=>low(typeof currentMemberKey!=="undefined"?currentMemberKey:"")==="aida"&&(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"||globalThis.adminProfile?.role==="admin");
-  const ALPACA_TYPES=new Set(["alpacaAdult","alpacaBaby","alpacaInstance","alpaca"]);
+  const admin=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase()==="aida"&&(String(typeof currentMember!=="undefined"?currentMember:"")==="Aida"||globalThis.adminProfile?.role==="admin");
+  const ASSETS={
+    white:"alpaca-stage-1-idle.png",brown:"alpaca-brown-stage-1-idle.png",black:"alpaca-black-stage-1-idle.png",pink:"alpaca-pink-stage-1-idle.png",green:"alpaca-green-stage-1-idle.png",
+    goldenHoney:"alpaca-golden-honey-icon.png",thaiTea:"alpaca-thai-tea-icon.png",prince:"alpaca-prince-stage1_idle.png",princess:"alpaca-princess-stage1_idle.png"
+  };
   const COLORS=[
     ["white","ขาว"],["brown","น้ำตาล"],["black","ดำ"],["pink","ชมพู"],["green","เขียว"],
     ["goldenHoney","Golden Honey"],["thaiTea","ชาไทย"],["prince","เจ้าชาย"],["princess","เจ้าหญิง"]
   ];
-
-  function variants(){
-    const out=[];
-    for(const [color,label] of COLORS){
-      if(color==="prince")out.push({type:"alpacaAdult",key:"prince:male",color,sex:"male",name:"อัลปาก้าเจ้าชาย"});
-      else if(color==="princess")out.push({type:"alpacaAdult",key:"princess:female",color,sex:"female",name:"อัลปาก้าเจ้าหญิง"});
-      else {
-        out.push({type:"alpacaAdult",key:`${color}:male`,color,sex:"male",name:`อัลปาก้าสี${label} • เพศผู้`});
-        out.push({type:"alpacaAdult",key:`${color}:female`,color,sex:"female",name:`อัลปาก้าสี${label} • เพศเมีย`});
-      }
-      out.push({type:"alpacaBaby",key:color,color,sex:null,name:`เบบี้อัลปาก้า${label}`});
+  const VARIANTS=[];
+  for(const [color,label] of COLORS){
+    if(color==="prince")VARIANTS.push({type:"alpacaAdult",key:"prince:male",color,sex:"male",name:"อัลปาก้าเจ้าชาย",image:ASSETS[color]});
+    else if(color==="princess")VARIANTS.push({type:"alpacaAdult",key:"princess:female",color,sex:"female",name:"อัลปาก้าเจ้าหญิง",image:ASSETS[color]});
+    else{
+      VARIANTS.push({type:"alpacaAdult",key:`${color}:male`,color,sex:"male",name:`อัลปาก้าสี${label} • เพศผู้`,image:ASSETS[color]});
+      VARIANTS.push({type:"alpacaAdult",key:`${color}:female`,color,sex:"female",name:`อัลปาก้าสี${label} • เพศเมีย`,image:ASSETS[color]});
     }
-    return out;
+    VARIANTS.push({type:"alpacaBaby",key:color,color,sex:null,name:`เบบี้อัลปาก้า${label}`,image:ASSETS[color]});
   }
-  const VARIANTS=variants();
+  function colorLabel(c){return Object.fromEntries(COLORS)[c]||c||"ขาว"}
+  function makeUnit(deliveryId,row,n,targetKey){
+    const id=`alpaca-${safeId(deliveryId)}-${row.index}-${n}`,t=now();
+    if(row.type==="alpacaBaby")return{id,type:"baby",color:row.color,sex:null,memberKey:targetKey,source:"admin-cloud-delivery-r3641",deliveryId,receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*3600000};
+    return{id,type:"adult",color:row.color,sex:row.sex||"male",memberKey:targetKey,source:"admin-cloud-delivery-r3641",deliveryId,receivedAt:t,createdAt:t};
+  }
+  function rowsSummary(rows){return rows.map(r=>`${r.name} ×${r.qty}`).join(" • ")}
 
-  function parseLegacyItems(x){
-    const src=Array.isArray(x?.items)&&x.items.length?x.items:[{type:x?.itemType,key:x?.itemKey,qty:x?.qty,name:x?.name,instance:x?.instance}];
-    const out=[];
-    src.forEach((it,index)=>{
-      let type=String(it?.type||it?.itemType||"");
-      const text=`${it?.name||""} ${x?.title||""} ${x?.body||""} ${x?.text||""}`;
-      if(!ALPACA_TYPES.has(type)&&!/อัลปาก้า|alpaca/i.test(text))return;
-      if(!ALPACA_TYPES.has(type)||type==="alpaca")type=/เบบี้|baby/i.test(text)?"alpacaBaby":"alpacaAdult";
-      const key=String(it?.key||it?.itemKey||"");
-      const rawColor=String(key).split(":")[0];
-      let color=rawColor||"white";
-      if(/เจ้าหญิง|princess/i.test(text))color="princess";else if(/เจ้าชาย|prince/i.test(text))color="prince";else if(/ชาไทย|thai\s*tea/i.test(text))color="thaiTea";else if(/golden\s*honey/i.test(text))color="goldenHoney";else if(/เขียว|green/i.test(text))color="green";else if(/ชมพู|pink/i.test(text))color="pink";else if(/ดำ|black/i.test(text))color="black";else if(/น้ำตาล|brown/i.test(text))color="brown";else if(/ขาว|white/i.test(text))color="white";
-      let sex=null;
-      if(type!=="alpacaBaby"){
-        const rawSex=String(key).split(":")[1]||"";
-        sex=color==="prince"?"male":color==="princess"?"female":(/female|เพศเมีย|ตัวเมีย/i.test(text+rawSex)?"female":"male");
-      }
-      out.push({index,type,key,color,sex,qty:Math.max(1,int(it?.qty)||1),name:String(it?.name||""),instance:it?.instance||null});
+  /* The save document id is the only canonical memberKey. This avoids sending to
+     stale/duplicate loginDirectory aliases that a recipient never reads. */
+  async function canonicalRecipients(){
+    const {db,fs}=await getFirebaseContext(),dirByKey=new Map();
+    try{const ds=await fs.getDocs(fs.collection(db,"loginDirectory"));ds.forEach(d=>{const x=d.data()||{};if(String(x.status||"approved")==="approved")dirByKey.set(String(x.memberKey||d.id),String(x.displayName||x.memberName||""))})}catch(_){ }
+    const sn=await fs.getDocs(fs.collection(db,"saves")),out=[];
+    sn.forEach(d=>{
+      const key=String(d.id||"").trim();if(!key||key.toLowerCase()==="aida")return;
+      const x=d.data()||{};let name=String(x.player||x.displayName||dirByKey.get(key)||key).trim();
+      if(!name)name=key;
+      out.push({key,name});
     });
-    return out;
+    const uniq=new Map();for(const p of out)uniq.set(p.key,p);
+    return [...uniq.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),"th"));
   }
 
-  function itemDocId(sourceId,index,n){return `dispatch-${safeId(sourceId)}-${index}-${n}`}
-  function unitFrom(row,sourceId,n,memberKey,sourceAt){
-    const id=itemDocId(sourceId,row.index,n),t=sourceAt||now();
-    if(row.type==="alpacaInstance"&&row.instance){
-      const x=JSON.parse(JSON.stringify(row.instance));
-      return {...x,id,type:x.type==="baby"?"baby":"adult",memberKey,source:"alpaca-direct-migration",sourceId,receivedAt:t,createdAt:Number(x.createdAt)||t};
+  async function deliverOne(fs,db,target,rows,deliveryId){
+    /* Confirm the target is a real live save before writing anything. */
+    const saveRef=fs.doc(db,"saves",target.key),saveSnap=await fs.getDoc(saveRef);
+    if(!saveSnap.exists())throw new Error(`ไม่พบข้อมูลบัญชีของ ${target.name}`);
+    const units=[];rows.forEach((r,index)=>{const rr={...r,index};for(let n=0;n<rr.qty;n++)units.push(makeUnit(deliveryId,rr,n,target.key))});
+    if(!units.length)throw new Error("ไม่มีอัลปาก้าที่เลือก");
+    for(let off=0;off<units.length;off+=420){
+      const batch=fs.writeBatch(db);for(const a of units.slice(off,off+420))batch.set(fs.doc(db,"alpacaVaults",target.key,"items",a.id),{...a,createdServerAt:fs.serverTimestamp()},{merge:false});await batch.commit();
     }
-    if(row.type==="alpacaBaby")return{id,type:"baby",color:row.color||"white",sex:null,memberKey,source:"alpaca-direct",sourceId,receivedAt:t,createdAt:t,bornAt:t,readyProcessAt:t+12*3600000};
-    return{id,type:"adult",color:row.color||"white",sex:row.sex||"male",memberKey,source:"alpaca-direct",sourceId,receivedAt:t,createdAt:t};
+    const noticeId=`alpaca-${safeId(deliveryId)}`;
+    const noticeRef=fs.doc(db,"mailboxes",target.key,"items",noticeId);
+    await fs.setDoc(noticeRef,{
+      source:"yainoo",type:"alpacaDirect",fromKey:"aida",fromName:"Aida",title:"🦙 อัลปาก้าเข้าคลังแล้ว",
+      text:`ยัยหนูส่งให้คุณ: ${rowsSummary(rows)} • เปิดคลังอัลปาก้าได้ทันที`,items:rows.map(r=>({name:r.name,qty:r.qty,color:r.color,sex:r.sex||"",image:r.image||ASSETS[r.color]||""})),
+      previewImage:rows[0]?.image||ASSETS[rows[0]?.color]||"",deliveryId,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()
+    },{merge:false});
+    const [first,last,mail]=await Promise.all([
+      fs.getDoc(fs.doc(db,"alpacaVaults",target.key,"items",units[0].id)),
+      fs.getDoc(fs.doc(db,"alpacaVaults",target.key,"items",units[units.length-1].id)),
+      fs.getDoc(noticeRef)
+    ]);
+    if(!first.exists()||!last.exists())throw new Error(`บันทึกคลังของ ${target.name} ไม่ครบ`);
+    if(!mail.exists())throw new Error(`สร้างการแจ้งเตือนของ ${target.name} ไม่สำเร็จ`);
+    return units.length;
   }
-
-  async function writeUnits(fs,db,memberKey,sourceId,rows,sourceAt){
-    memberKey=low(memberKey);if(!memberKey||!rows.length)return 0;
-    const units=[];for(const row of rows)for(let n=0;n<row.qty;n++)units.push(unitFrom(row,sourceId,n,memberKey,sourceAt));
-    let wrote=0;
-    for(let offset=0;offset<units.length;offset+=350){
-      const part=units.slice(offset,offset+350),batch=fs.writeBatch(db);
-      for(const u of part){batch.set(fs.doc(db,"alpacaVaults",memberKey,"items",u.id),{...u,createdServerAt:fs.serverTimestamp()},{merge:true});wrote++}
-      await batch.commit();
-    }
-    return wrote;
-  }
-
-  async function recipientRows(){
-    const map=new Map();
-    try{for(const name of Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{})){const key=low(typeof memberKeyFromName==="function"?memberKeyFromName(name):name);if(key)map.set(key,name)}}catch(_){ }
-    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"loginDirectory"));sn.forEach(d=>{const x=d.data()||{},k=low(x.memberKey||d.id);if(k&&String(x.status||"approved")==="approved")map.set(k,String(x.displayName||x.memberName||map.get(k)||k))})}catch(e){console.warn(BUILD,"recipients",e)}
-    map.delete("aida");
-    return [...map].map(([key,name])=>({key,name})).sort((a,b)=>a.name.localeCompare(b.name,"th"));
-  }
-
-  async function directDispatch(targets,selections){
-    if(!admin())throw new Error("เฉพาะ Aida/Admin เท่านั้น");
+  async function sendMany(targets,rows,onProgress){
+    if(!admin())throw new Error("เมนูนี้ใช้ได้เฉพาะ Aida/Admin");
     if(!targets.length)throw new Error("กรุณาเลือกสมาชิกอย่างน้อย 1 คน");
-    if(!selections.length)throw new Error("กรุณาเลือกอัลปาก้าอย่างน้อย 1 รายการ");
-    const {db,fs}=await getFirebaseContext();
-    const deliveryId=`r3638-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    let count=0;
-    for(const t of targets){
-      const rows=selections.map((s,index)=>({...s,index}));
-      count+=await writeUnits(fs,db,t.key,deliveryId,rows,now());
-      // audit summary is intentionally kept tiny and separate from player save
-      try{await fs.setDoc(fs.doc(db,"alpacaVaults",t.key,"deliveries",deliveryId),{deliveryId,memberKey:t.key,memberName:t.name,items:selections.map(x=>({type:x.type,key:x.key,name:x.name,qty:x.qty})),fromKey:"aida",fromName:"Aida",status:"delivered",createdAt:fs.serverTimestamp()},{merge:false})}catch(_){ }
-    }
-    return {deliveryId,count,people:targets.length};
+    if(!rows.length)throw new Error("กรุณาเลือกอัลปาก้าอย่างน้อย 1 รายการ");
+    const {db,fs}=await getFirebaseContext(),deliveryId=`r3641-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    let people=0,total=0;const failures=[];
+    for(const target of targets){try{onProgress?.(`กำลังส่งให้ ${target.name}…`);total+=await deliverOne(fs,db,target,rows,deliveryId);people++}catch(e){console.warn(BUILD,"delivery",target,e);failures.push(`${target.name}: ${e?.message||"ส่งไม่สำเร็จ"}`)}}
+    if(!people)throw new Error(failures[0]||"ส่งไม่สำเร็จ");
+    try{notificationDataCache.at=0}catch(_){ }
+    return{deliveryId,people,total,failures};
   }
 
-  async function openDispatchCenter(){
-    if(!admin())return;
-    const people=await recipientRows(),mc=$("modalContent");if(!mc)return;
-    mc.innerHTML=`<section class="feature-panel alpaca-panel" id="r3638DispatchPanel" style="max-height:88vh;overflow:auto"><header style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><small>🦙 ระบบใหม่ • เข้าคลังทันที</small><h2>ส่งอัลปาก้าหลายคน / หลายรายการ</h2></div><button id="r3638Close" type="button">×</button></header><p>เลือกสมาชิกหลายคนได้ แล้วเลือกอัลปาก้าหลายชนิดพร้อมจำนวน จากนั้นกดส่งครั้งเดียว • ผู้รับไม่ต้องกดรับ อัลปาก้าจะอยู่ในคลัง Cloud ทันที</p><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><button id="r3638AllPeople" type="button">เลือกสมาชิกทั้งหมด</button><button id="r3638ClearPeople" type="button">ล้างสมาชิก</button><button id="r3638PriorityPeople" type="button">เลือก 4 ไอดีที่มีปัญหา</button></div><div id="r3638People" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:210px;overflow:auto;padding:4px">${people.map(p=>`<label style="display:flex;gap:6px;align-items:center;padding:7px;border:1px solid #dcc9b2;border-radius:10px;background:#fff"><input type="checkbox" data-r3638-person="${esc(p.key)}"><span><b>${esc(p.name)}</b><small style="display:block">${esc(p.key)}</small></span></label>`).join("")}</div><hr><h3>เลือกอัลปาก้าและจำนวน</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"><button id="r3638ClearItems" type="button">ล้างรายการ</button></div><div id="r3638Items" style="display:grid;gap:6px">${VARIANTS.map((v,i)=>`<label style="display:grid;grid-template-columns:auto 1fr 70px;gap:8px;align-items:center;padding:7px;border:1px solid #dcc9b2;border-radius:10px;background:#fff"><input type="checkbox" data-r3638-item="${i}"><span><b>${esc(v.name)}</b></span><input type="number" min="1" max="99" value="1" data-r3638-qty="${i}" inputmode="numeric"></label>`).join("")}</div><button id="r3638Send" class="primary-spooky-action" type="button" style="width:100%;margin-top:12px">🎁 ส่งเข้าคลังของสมาชิกที่เลือกทันที</button><small id="r3638Status" style="display:block;margin-top:8px"></small></section>`;
-    try{openModal?.()}catch(_){ }
-    $("r3638Close").onclick=()=>closeModal?.();
-    const personBoxes=()=>[...document.querySelectorAll("[data-r3638-person]")];
-    $("r3638AllPeople").onclick=()=>personBoxes().forEach(x=>x.checked=true);
-    $("r3638ClearPeople").onclick=()=>personBoxes().forEach(x=>x.checked=false);
-    $("r3638PriorityPeople").onclick=()=>personBoxes().forEach(x=>x.checked=PRIORITY.includes(low(x.dataset.r3638Person)));
-    $("r3638ClearItems").onclick=()=>document.querySelectorAll("[data-r3638-item]").forEach(x=>x.checked=false);
-    $("r3638Send").onclick=async()=>{
-      const btn=$("r3638Send"),status=$("r3638Status");
-      const selectedPeople=personBoxes().filter(x=>x.checked).map(x=>people.find(p=>p.key===low(x.dataset.r3638Person))).filter(Boolean);
-      const selectedItems=[...document.querySelectorAll("[data-r3638-item]")].filter(x=>x.checked).map(x=>{const i=Number(x.dataset.r3638Item),base=VARIANTS[i],q=Math.max(1,Math.min(99,int(document.querySelector(`[data-r3638-qty="${i}"]`)?.value)||1));return{...base,qty:q}});
-      const old=btn.textContent;btn.disabled=true;btn.textContent="กำลังส่งเข้าคลัง Cloud...";if(status)status.textContent="";
-      try{const out=await directDispatch(selectedPeople,selectedItems);if(status)status.textContent=`สำเร็จ • ${out.people} คน • อัลปาก้ารวม ${out.count} ตัว`;showWeatherToast?.(`🦙 ส่งเข้าคลัง ${out.people} คน • ${out.count} ตัวแล้ว`);}
-      catch(e){message?.("ส่งอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}
-      finally{btn.disabled=false;btn.textContent=old}
+  function personCard(p){return `<label class="r3641-person"><input type="checkbox" data-r3641-person="${esc(p.key)}"><span class="r3641-person-avatar">${esc(String(p.name).slice(0,1).toUpperCase())}</span><span><b>${esc(p.name)}</b><small>พร้อมรับเข้าคลัง</small></span></label>`}
+  function itemCard(v,i){return `<label class="r3641-item"><input type="checkbox" data-r3641-item="${i}"><img src="${esc(v.image)}" alt=""><span><b>${esc(v.name)}</b><small>${v.type==="alpacaBaby"?"เบบี้":"ตัวเต็มวัย"}</small></span><input class="r3641-qty" type="number" min="1" max="99" value="1" data-r3641-qty="${i}" inputmode="numeric" aria-label="จำนวน"></label>`}
+  async function openCenter(){
+    if(!admin())return;const mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel r3641-panel"><header class="r3641-head"><div class="r3641-title"><img src="alpaca-princess-stage1_idle.png" alt=""><div><small>ของขวัญอัลปาก้า</small><h2>ส่งเข้าคลังสมาชิก</h2><p>เลือกหลายคน หลายชนิด และกำหนดจำนวนได้ในครั้งเดียว</p></div></div><button id="r3641Close" class="r3641-close" type="button">×</button></header><div class="r3641-columns"><section><div class="r3641-section-head"><b>👥 ผู้รับ</b><span id="r3641PeopleCount">0 คน</span></div><div class="r3641-actions"><button id="r3641AllPeople">เลือกทั้งหมด</button><button id="r3641ClearPeople">ล้าง</button></div><div class="r3641-people"><div class="r3641-loading">กำลังโหลดสมาชิก…</div></div></section><section><div class="r3641-section-head"><b>🦙 อัลปาก้าที่ส่ง</b><span id="r3641ItemCount">0 รายการ</span></div><div class="r3641-actions"><button id="r3641ClearItems">ล้างรายการ</button></div><div class="r3641-items">${VARIANTS.map(itemCard).join("")}</div></section></div><footer class="r3641-sendbar"><div id="r3641Status">เลือกผู้รับและรายการที่ต้องการส่ง</div><button id="r3641Send">🎁 ส่งเข้าคลังทันที</button></footer></section>`;
+    openModal?.();$("r3641Close").onclick=()=>closeModal?.();
+    let people=[];try{people=await canonicalRecipients();document.querySelector(".r3641-people").innerHTML=people.map(personCard).join("")||'<div class="r3641-loading">ยังไม่มีสมาชิกที่มีเซฟเกม</div>'}catch(e){document.querySelector(".r3641-people").innerHTML='<div class="r3641-loading">โหลดสมาชิกไม่สำเร็จ</div>'}
+    const pboxes=()=>[...document.querySelectorAll("[data-r3641-person]")],iboxes=()=>[...document.querySelectorAll("[data-r3641-item]")];
+    const sync=()=>{$("r3641PeopleCount").textContent=`${pboxes().filter(x=>x.checked).length} คน`;$('r3641ItemCount').textContent=`${iboxes().filter(x=>x.checked).length} รายการ`};
+    pboxes().forEach(x=>x.onchange=sync);iboxes().forEach(x=>x.onchange=sync);
+    $("r3641AllPeople").onclick=()=>{pboxes().forEach(x=>x.checked=true);sync()};$("r3641ClearPeople").onclick=()=>{pboxes().forEach(x=>x.checked=false);sync()};$("r3641ClearItems").onclick=()=>{iboxes().forEach(x=>x.checked=false);sync()};
+    $("r3641Send").onclick=async()=>{
+      const btn=$("r3641Send"),status=$("r3641Status"),targets=pboxes().filter(x=>x.checked).map(x=>people.find(p=>p.key===x.dataset.r3641Person)).filter(Boolean);
+      const rows=iboxes().filter(x=>x.checked).map(x=>{const i=Number(x.dataset.r3641Item),q=Math.max(1,Math.min(99,iv(document.querySelector(`[data-r3641-qty="${i}"]`)?.value)||1));return{...VARIANTS[i],qty:q}});
+      btn.disabled=true;btn.textContent="กำลังส่ง…";
+      try{const out=await sendMany(targets,rows,msg=>status.textContent=msg);status.innerHTML=`<strong>ส่งสำเร็จ</strong> ${out.people} คน • ${out.total} ตัว`;btn.textContent="✓ ส่งสำเร็จ";showWeatherToast?.(`🎁 ส่งอัลปาก้าเข้าคลังแล้ว ${out.people} คน`);if(out.failures.length)setTimeout(()=>message?.("บางบัญชีส่งไม่สำเร็จ",out.failures.map(esc).join("<br>")),80)}
+      catch(e){status.textContent=e?.message||"ส่งไม่สำเร็จ";message?.("ส่งอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}
+      finally{setTimeout(()=>{btn.disabled=false;btn.textContent="🎁 ส่งเข้าคลังทันที"},700)}
     };
   }
 
-  async function deepRepairFour(){
-    if(!admin())return 0;
-    const {db,fs}=await getFirebaseContext();let total=0;
-    // 1) Durable /gifts path — this is the route many recent Admin gifts used.
-    for(const mk of PRIORITY){
-      try{
-        const q=fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk));
-        const sn=await fs.getDocs(q);
-        for(const d of sn.docs||[]){
-          const g=d.data()||{},at=ts(g.createdAt)||ts(g.resolvedAt)||0;if(at&&at<Date.now()-REPAIR_WINDOW)continue;
-          if(low(g.fromKey)!=="aida"&&low(g.fromName)!=="aida")continue;
-          if(String(g.status||"")!=="claimed")continue;
-          const rows=parseLegacyItems(g);if(rows.length)total+=await writeUnits(fs,db,mk,`legacy-gift-${d.id}`,rows,at||now());
-        }
-      }catch(e){console.warn(BUILD,"repair gifts",mk,e)}
-    }
-    // 2) Targeted broadcasts — recent targeted alpaca gifts are materialized even if old claim receipts were compacted.
-    try{
-      const q=fs.query(fs.collection(db,"broadcasts"),fs.orderBy("createdAt","desc"),fs.limit(1200)),sn=await fs.getDocs(q);
-      for(const d of sn.docs||[]){const b=d.data()||{},mk=low(b.targetKey),at=ts(b.createdAt)||0;if(!PRIORITY.includes(mk))continue;if(at&&at<Date.now()-REPAIR_WINDOW)continue;const rows=parseLegacyItems(b);if(rows.length)total+=await writeUnits(fs,db,mk,`legacy-broadcast-${d.id}`,rows,at||now())}
-    }catch(e){console.warn(BUILD,"repair broadcasts",e)}
-    if(total)showWeatherToast?.(`🛠️ กู้คลังอัลปาก้า 4 ไอดีแล้ว ${total} รายการ`);
-    try{localStorage.setItem(`yn:r3638-repair:${new Date().toISOString().slice(0,10)}`,String(Date.now()))}catch(_){ }
-    return total;
+  function removeOldAdminCards(){
+    document.querySelectorAll('#r3640AdminEntry,[id^="r3638"],[class*="r3638"]').forEach(x=>{const box=x.closest("section")||x;x.remove?.();if(box!==x&&/R36\.38|4 ไอดี|กู้ย้อนหลัง/.test(box.textContent||""))box.remove()});
+    document.querySelectorAll('#modalContent section').forEach(x=>{const t=x.textContent||"";if(/ระบบส่งอัลปาก้าใหม่ R36\.38|4 ไอดีที่มีปัญหา|กู้ย้อนหลัง 4 ไอดี/.test(t))x.remove()});
   }
-
-  function injectAdminEntry(){
-    if(!admin())return;
-    const host=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');
-    if(!host||$("r3638OpenDispatch"))return;
-    const box=document.createElement("section");box.style.cssText="margin:12px 0;padding:12px;border:2px solid #9b6b8d;border-radius:16px;background:#fff8ef";
-    box.innerHTML=`<b style="display:block;margin-bottom:6px">🦙 ระบบส่งอัลปาก้าใหม่ R36.38</b><small style="display:block;margin-bottom:8px">เลือกหลายสมาชิก + หลายชนิด + หลายจำนวน • เข้าคลังทันที ไม่ต้องกดรับ</small><button id="r3638OpenDispatch" class="primary-spooky-action" type="button">เปิดศูนย์ส่งอัลปาก้าใหม่</button><button id="r3638RepairFour" type="button" style="margin-left:6px">กู้ย้อนหลัง 4 ไอดีตอนนี้</button>`;
-    host.appendChild(box);$("r3638OpenDispatch").onclick=openDispatchCenter;$("r3638RepairFour").onclick=async()=>{const b=$("r3638RepairFour"),old=b.textContent;b.disabled=true;b.textContent="กำลังกู้...";try{const n=await deepRepairFour();showWeatherToast?.(`🛠️ ตรวจย้อนหลังเสร็จ ${n} รายการ`)}finally{b.disabled=false;b.textContent=old}};
+  function mountAdminEntry(){
+    if(!admin())return;removeOldAdminCards();if($("r3641AdminEntry"))return;
+    const host=document.querySelector('#modalContent .v240-admin-center,#modalContent .admin-panel,#modalContent .feature-panel');if(!host)return;
+    const box=document.createElement("section");box.id="r3641AdminEntry";box.className="r3641-admin-entry";box.innerHTML=`<img src="alpaca-princess-stage1_idle.png" alt=""><div><b>ส่งอัลปาก้าให้สมาชิก</b><small>หลายคน • หลายชนิด • หลายจำนวน • เข้าคลังทันที</small></div><button id="r3641Open">เปิด</button>`;host.appendChild(box);$("r3641Open").onclick=openCenter;
   }
+  try{if(typeof showAdminCenter==="function"&&!showAdminCenter.__r3641){const base=showAdminCenter;const wrapped=async function(){const r=await base.apply(this,arguments);setTimeout(mountAdminEntry,40);return r};wrapped.__r3641=true;showAdminCenter=wrapped}}catch(_){ }
+  const adminObs=new MutationObserver(()=>{if(admin())setTimeout(mountAdminEntry,25)});try{adminObs.observe($("modalContent"),{childList:true,subtree:true})}catch(_){ }
 
-  try{if(typeof showAdminCenter==="function"&&!showAdminCenter.__r3638){const base=showAdminCenter;const wrapped=async function(){const r=await base.apply(this,arguments);setTimeout(injectAdminEntry,40);return r};wrapped.__r3638=true;showAdminCenter=wrapped}}catch(e){console.warn(BUILD,"admin hook",e)}
-  const obs=new MutationObserver(()=>{if(admin())setTimeout(injectAdminEntry,20)});try{obs.observe(document.getElementById("modalContent"),{childList:true,subtree:true})}catch(_){ }
+  function key(){return String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").trim()}
+  async function cloudItems(){
+    const mk=key();if(!mk||typeof cloudReady!=="undefined"&&!cloudReady)return[];try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"alpacaVaults",mk,"items")),out=[];sn.forEach(d=>{const x={id:d.id,...d.data(),_vaultKey:mk};if(["adult","baby"].includes(String(x.type)))out.push(x)});return out.sort((a,b)=>Number(a.receivedAt||0)-Number(b.receivedAt||0))}catch(e){console.warn(BUILD,"vault read",e);return[]}
+  }
+  function label(x){return x.type==="baby"?`เบบี้อัลปาก้า${colorLabel(x.color)}`:`อัลปาก้า${colorLabel(x.color)} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
+  async function placeCloud(itemId,penNo){
+    const mk=key();try{const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",mk),itemRef=fs.doc(db,"alpacaVaults",mk,"items",itemId);let next;
+      await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(saveRef),tx.get(itemRef)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลสมาชิก");if(!is.exists())throw new Error("อัลปาก้าตัวนี้ถูกวางไปแล้ว");const s=normalizeState(ss.data(),currentMember);s.alpaca=s.alpaca||{};s.alpaca.pens=Array.isArray(s.alpaca.pens)?s.alpaca.pens:[];while(s.alpaca.pens.length<5)s.alpaca.pens.push({name:`คอก ${s.alpaca.pens.length+1}`,alpacas:[]});const p=s.alpaca.pens[penNo-1];p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=6)throw new Error(`คอก ${penNo} เต็มแล้ว`);const x=is.data()||{},t=now(),a={id:itemId,type:x.type,color:x.color,sex:x.type==="baby"?null:(x.sex||"male"),source:x.source||"cloud-vault",createdAt:Number(x.createdAt)||t,placedAt:t,expiresAt:t+7*86400000};if(x.type==="baby"){a.bornAt=Number(x.bornAt)||t;a.readyProcessAt=Number(x.readyProcessAt)||t+12*3600000}p.alpacas.push(a);next=s;tx.update(saveRef,{"alpaca.pens":s.alpaca.pens,updatedAt:fs.serverTimestamp()});tx.delete(itemRef)});
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){ }}closeModal?.();globalThis.YN_ALPACA_CORE?.renderPen?.();showWeatherToast?.(`🦙 วางเข้าคอก ${penNo} แล้ว`)
+    }catch(e){message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}
+  }
+  function picker(item){const s=ownState||state,pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[],mc=$("modalContent");mc.innerHTML=`<section class="feature-panel alpaca-panel"><h2>🦙 เลือกคอก</h2><p>${esc(label(item))}</p><div class="alpaca-pen-picker">${[1,2,3,4,5].map(n=>{const p=pens[n-1]||{},c=(p.alpacas||[]).length;return `<button data-r3641-pen="${n}" ${c>=6?"disabled":""}>คอก ${n}<small>${esc(p.name||`คอก ${n}`)} • ${c}/6</small></button>`}).join("")}</div><button id="r3641Back" class="secondary-action">กลับคลัง</button></section>`;openModal?.();document.querySelectorAll("[data-r3641-pen]").forEach(b=>b.onclick=()=>placeCloud(item.id,Number(b.dataset.r3641Pen)));$("r3641Back").onclick=()=>globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.()}
+  async function paintVault(){
+    const panel=document.querySelector(".alpaca-warehouse-panel");if(!panel)return;panel.querySelector("#r3641CloudVault")?.remove();panel.querySelector("#r3640CloudVault")?.remove();const items=await cloudItems();
+    const localCount=panel.querySelectorAll('.alpaca-warehouse-grid .alpaca-warehouse-card').length;const countB=panel.querySelector('.alpaca-warehouse-title small b');if(countB)countB.textContent=String(localCount+items.length);
+    if(!items.length)return;panel.querySelector(".alpaca-empty-state")?.classList.add("r3641-hide-empty");const sec=document.createElement("section");sec.id="r3641CloudVault";sec.className="r3641-cloud-vault";sec.innerHTML=`<header><img src="alpaca-princess-stage1_idle.png" alt=""><div><b>อัลปาก้าที่ได้รับ</b><small>${items.length} ตัว • พร้อมวางลงคอก</small></div></header><div class="r3641-cloud-grid">${items.map(x=>`<article><img src="${esc(ASSETS[x.color]||ASSETS.white)}" alt=""><div><b>${esc(label(x))}</b><small>อยู่ในคลัง Cloud</small></div><button data-r3641-place="${esc(x.id)}">วาง</button></article>`).join("")}</div>`;const grid=panel.querySelector(".alpaca-warehouse-grid");if(grid)grid.before(sec);else panel.appendChild(sec);sec.querySelectorAll("[data-r3641-place]").forEach(b=>b.onclick=()=>picker(items.find(x=>x.id===b.dataset.r3641Place)))}
+  const core=globalThis.YN_ALPACA_CORE;if(core&&typeof core.showAlpacaWarehouse==="function"&&!core.showAlpacaWarehouse.__r3641){const base=core.showAlpacaWarehouse;const wrapped=function(){const r=base.apply(this,arguments);setTimeout(paintVault,40);return r};wrapped.__r3641=true;core.showAlpacaWarehouse=wrapped}
+  document.addEventListener("click",e=>{if(e.target?.closest?.("#alpacaWarehouseBtn"))setTimeout(paintVault,80)},true);
+  const vaultObs=new MutationObserver(()=>{if(document.querySelector(".alpaca-warehouse-panel"))setTimeout(paintVault,35)});try{vaultObs.observe($("modalContent"),{childList:true,subtree:true})}catch(_){ }
 
-  // Automatic one-time repair for the four currently affected accounts.
-  setTimeout(async()=>{if(!admin())return;try{const key=`yn:r3638-auto-repair`;if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,"1");await deepRepairFour()}catch(e){console.warn(BUILD,"auto repair",e)}},3500);
+  let mailUnsub=null,vaultUnsub=null,streamKey="",firstMail=true,firstVault=true;
+  function badgeAtLeast(n){const b=$("notificationBadge");if(!b||n<1)return;const old=iv(b.textContent);b.textContent=String(Math.max(old,n));b.classList.remove("hidden")}
+  function toastOnce(id,text){const k=`yn:r3641:seen:${key()}:${id}`;try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(_){ }showWeatherToast?.(text)}
+  async function startStreams(){
+    const mk=key();if(!mk||mk===streamKey||typeof cloudReady!=="undefined"&&!cloudReady)return;try{mailUnsub?.();vaultUnsub?.()}catch(_){ }streamKey=mk;firstMail=true;firstVault=true;
+    const {db,fs}=await getFirebaseContext();
+    try{mailUnsub=fs.onSnapshot(fs.collection(db,"mailboxes",mk,"items"),snap=>{let unread=0,recent=null;snap.forEach(d=>{const x=d.data()||{};if(x.type==="alpacaDirect"&&!x.read){unread++;const t=x.createdAt?.toMillis?.()||Number(x.createdAtClient)||0;if(!recent||t>recent.t)recent={id:d.id,x,t}}});badgeAtLeast(unread);try{notificationDataCache.at=0}catch(_){ }try{refreshNotificationBadge?.(true)}catch(_){ }if(recent&&Date.now()-recent.t<6*3600000)toastOnce(recent.id,"🦙 ยัยหนูส่งอัลปาก้าเข้าคลังแล้ว");firstMail=false},e=>console.warn(BUILD,"mail stream",e))}catch(e){console.warn(BUILD,"mail start",e)}
+    try{vaultUnsub=fs.onSnapshot(fs.collection(db,"alpacaVaults",mk,"items"),snap=>{const added=snap.docChanges().filter(c=>c.type==="added"&&String(c.doc.data()?.source||"").includes("admin-cloud-delivery"));if(!firstVault&&added.length)showWeatherToast?.(`🦙 อัลปาก้าใหม่เข้าคลัง ${added.length} ตัว`);firstVault=false;if(document.querySelector(".alpaca-warehouse-panel"))setTimeout(paintVault,50)},e=>console.warn(BUILD,"vault stream",e))}catch(e){console.warn(BUILD,"vault start",e)}
+  }
+  [600,1600,3500].forEach(ms=>setTimeout(startStreams,ms));document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(startStreams,180)});
 
-  globalThis.YN_R3638_ALPACA_DISPATCH={BUILD,open:openDispatchCenter,send:directDispatch,repairFour:deepRepairFour};
+  /* Enrich Yainoo notification cards for direct alpaca deliveries. */
+  try{if(typeof showNotifications==="function"&&!showNotifications.__r3641){const base=showNotifications;const wrapped=async function(tab="friend"){const r=await base.apply(this,arguments);if(tab!=="yainoo")return r;try{const mk=key(),{db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"mailboxes",mk,"items")),rows=[];sn.forEach(d=>{const x=d.data()||{};if(x.type==="alpacaDirect")rows.push({id:d.id,...x})});rows.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0));const list=document.querySelector('.notification-panel .notification-list');if(list&&rows.length){list.querySelectorAll('.r3641-direct-card').forEach(x=>x.remove());list.querySelectorAll('.notification-card').forEach(c=>{if((c.querySelector('b')?.textContent||'').includes('อัลปาก้าเข้าคลังแล้ว'))c.style.display='none'});for(const x of rows.slice(0,8).reverse()){const c=document.createElement('div');c.className=`notification-card r3641-direct-card ${x.read?'':'unread'}`;c.innerHTML=`<img src="${esc(x.previewImage||ASSETS.white)}" alt=""><div><b>🦙 อัลปาก้าเข้าคลังแล้ว</b><span>${esc(x.text||'เปิดคลังอัลปาก้าได้ทันที')}</span><button type="button" data-r3641-open-vault>เปิดคลังอัลปาก้า</button></div>`;list.prepend(c)}list.querySelectorAll('[data-r3641-open-vault]').forEach(b=>b.onclick=()=>globalThis.YN_ALPACA_CORE?.showAlpacaWarehouse?.())}}catch(e){console.warn(BUILD,'notification decorate',e)}return r};wrapped.__r3641=true;showNotifications=wrapped}}catch(e){console.warn(BUILD,'notification hook',e)}
+
+  globalThis.YN_R3641_ALPACA={BUILD,open:openCenter,send:sendMany,refreshVault:paintVault,recipients:canonicalRecipients};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
