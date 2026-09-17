@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.61-TRANSPARENT-SHARDED-SAVE-V5-20260917">
+  <link rel="stylesheet" href="style.css?v=S2-R36.51-ALPACA-ZERO-FAST-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.61-TRANSPARENT-SHARDED-SAVE-V5-20260917"></script>
+<script src="game.js?v=S2-R36.51-ALPACA-ZERO-FAST-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3555,7 +3555,229 @@ console.info(BUILD,"loaded");
 </script>
 
 
-<!-- S2 R36.29 legacy save repair removed in R36.61; V5 is the only authoritative save layer. -->
+<script>
+/* ======================================================================
+   S2 R36.29 — UNIVERSAL SAVE REPAIR / ALL PLAYERS
+   - Applies to EVERY member, not a hard-coded rescue list.
+   - Never trims inventory, currencies, active crops, active animals, unlocks,
+     scores, or unclaimed drop queues.
+   - Binds historical/idempotency metadata so /saves/{memberKey} keeps durable
+     headroom below Firestore's 1 MiB document limit.
+   - Retries a failed full save after an in-memory safe compaction so the action
+     that just happened is not lost.
+   ====================================================================== */
+(function YN_R3628_UNIVERSAL_SAVE_HEADROOM(){
+  "use strict";
+  const BUILD="S2-R36.29-UNIVERSAL-SAVE-REPAIR-20260916";
+  const SOFT=520*1024, HARD=700*1024, EMERGENCY=850*1024, SAFE_WRITE=930*1024;
+  const DAY=86400000;
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
+  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const pressure=e=>/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|resource-exhausted|invalid-argument/i.test(String(e?.message||e||""));
+  const now=()=>Date.now();
+  function stamp(v){
+    if(typeof v==="number")return Number(v)||0;
+    if(!v||typeof v!=="object")return 0;
+    return Number(v.updatedAtMs??v.resolvedAt??v.claimedAt??v.transferredAt??v.createdAt??v.updatedAt??v.at??v.time??v.ts??v.expiresAt??0)||0;
+  }
+  function capObj(v,cap,maxAge=0){
+    if(!isObj(v))return v;
+    let rows=Object.entries(v),t=now();
+    if(maxAge)rows=rows.filter(([,x])=>{const z=stamp(x);return !z||t-z<=maxAge});
+    if(rows.length<=cap)return Object.fromEntries(rows);
+    const hasStamp=rows.some(([,x])=>stamp(x)>0);
+    if(hasStamp)rows.sort((a,b)=>stamp(b[1])-stamp(a[1]));
+    else rows=rows.slice(-cap).reverse();
+    return Object.fromEntries(rows.slice(0,cap));
+  }
+  function capAny(v,cap,maxAge=0){
+    if(Array.isArray(v))return v.length>cap?v.slice(-cap):v;
+    if(isObj(v))return capObj(v,cap,maxAge);
+    return v;
+  }
+  function futureObj(v,cap){
+    if(!isObj(v))return v;
+    const t=now(),rows=Object.entries(v).filter(([,x])=>{const z=Number(x?.expiresAt??x?.until??x?.readyAt??x)||0;return !z||z>t});
+    return Object.fromEntries(rows.slice(-cap));
+  }
+  function activeAlpacaIds(s){
+    const out=new Set(),a=s?.alpaca;
+    if(!a||typeof a!=="object")return out;
+    for(const p of Array.isArray(a.pens)?a.pens:[])for(const x of Array.isArray(p?.alpacas)?p.alpacas:[])if(x?.id!=null)out.add(String(x.id));
+    for(const x of Array.isArray(a.vault)?a.vault:[])if(x?.id!=null)out.add(String(x.id));
+    return out;
+  }
+  function activeHamsterIds(s){
+    const out=new Set(),add=x=>{if(x?.id!=null)out.add(String(x.id))};
+    const g=s?.farmGuardians;if(g&&typeof g==="object")for(const v of Object.values(g))for(const h of Array.isArray(v?.hamsters)?v.hamsters:[])add(h);
+    for(const h of Array.isArray(s?.hamsters)?s.hamsters:[])add(h);
+    const hf=s?.hamsterFarms;if(hf&&typeof hf==="object")for(const v of Object.values(hf))for(const h of Array.isArray(v?.hamsters)?v.hamsters:[])add(h);
+    return out;
+  }
+  function pruneClockMap(obj,ids,cap=160){
+    if(!isObj(obj))return obj;
+    let rows=Object.entries(obj);
+    if(ids&&ids.size)rows=rows.filter(([k])=>ids.has(String(k)));
+    if(rows.length>cap)rows=rows.slice(-cap);
+    return Object.fromEntries(rows);
+  }
+  const TOP_LEDGER=[
+    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
+    "friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims",
+    "friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","eventHistory",
+    "activityHistory","deliveryReceipts","giftReceipts","friendResourceCooldowns",
+    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","r32FriendForageLocks",
+    "friendCatCooldowns","saleTombstones","retiredCatsArchiveR34","notifications"
+  ];
+  const HIST_RX=/(receipts?|claims?|history|archive|tombstones?|ledgers?|audit(?:log)?|eventlog|activitylog|dedupe|processed|seenids?|notificationqueue)$/i;
+  const COOLDOWN_RX=/(cooldowns?|locks?)$/i;
+  const PROTECTED=new Set([
+    "bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","plots",
+    "animals","dogs","cats","hamsters","hamsterFarms","farmGuardians","pens","vault","inventory",
+    "wool","food","medicine","products","flowers","flowerSeeds","flowerPlots","wines","wineMachines",
+    "homeFoods","boatDrinks","coconutRiverItems","jellyfishV2","warehouseTools","rainyMenus","alpaca",
+    "hedgehog","houseUpgrade","s2Unlocks","upgradeKeys","missions","dailyLimits"
+  ]);
+  function walkHistory(o,cap,depth=0){
+    if(!o||typeof o!=="object"||depth>12)return;
+    if(Array.isArray(o)){for(const x of o)walkHistory(x,cap,depth+1);return}
+    for(const k of Object.keys(o)){
+      const v=o[k];if(!v||typeof v!=="object")continue;
+      if(PROTECTED.has(k)){walkHistory(v,cap,depth+1);continue}
+      if(COOLDOWN_RX.test(k)){o[k]=futureObj(v,Math.max(16,cap));continue}
+      if(HIST_RX.test(k)){o[k]=capAny(v,cap);continue}
+      walkHistory(v,cap,depth+1);
+    }
+  }
+  function compact(raw,level=1){
+    const s=raw&&typeof raw==="object"?raw:{};
+    const cap=level>=4?8:level===3?16:level===2?48:96;
+    const age=level>=3?7*DAY:21*DAY;
+    for(const k of TOP_LEDGER){
+      if(!(k in s))continue;
+      if(k==="notifications"){if(Array.isArray(s[k]))s[k]=s[k].slice(-(level>=3?8:20));continue}
+      if(/cooldown|lock/i.test(k)){s[k]=futureObj(s[k],level>=3?32:96);continue}
+      if(k==="saleTombstones"&&isObj(s[k])){for(const t of Object.keys(s[k]))s[k][t]=capObj(s[k][t],level>=3?24:80,45*DAY);continue}
+      if(k==="retiredCatsArchiveR34"&&Array.isArray(s[k])){
+        s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s[k].length);
+        s[k]=s[k].slice(-(level>=3?4:12)).map(x=>x&&typeof x==="object"?{id:String(x.id||""),typeKey:String(x.typeKey||""),customName:String(x.customName||""),archivedBy:String(x.archivedBy||"")}:x);continue;
+      }
+      s[k]=capAny(s[k],cap,age);
+    }
+    if(Array.isArray(s.dishes)&&isObj(s.dishInventory))s.dishes=[];
+    if(isObj(s.alpaca)){
+      const a=s.alpaca,ids=activeAlpacaIds(s);
+      if(a.eventClaims)a.eventClaims=capAny(a.eventClaims,cap,14*DAY);
+      if(a.friendMushroomClaims)a.friendMushroomClaims=capAny(a.friendMushroomClaims,cap,14*DAY);
+      if(a.testSireCooldowns)a.testSireCooldowns=futureObj(a.testSireCooldowns,level>=3?24:64);
+      if(a.treasureClock)a.treasureClock=pruneClockMap(a.treasureClock,ids,level>=3?64:160);
+      if(a.royalDiscClock)a.royalDiscClock=pruneClockMap(a.royalDiscClock,ids,level>=3?64:160);
+      const f=a.factory;
+      if(isObj(f)){
+        if(f.babyTransfers)f.babyTransfers=capAny(f.babyTransfers,level>=3?32:96,45*DAY);
+        if(Array.isArray(f.history))f.history=f.history.slice(-(level>=3?4:16));
+        if(Array.isArray(f.jobs)){
+          const active=f.jobs.filter(j=>j&&j.status!=="claimed"),done=f.jobs.filter(j=>j&&j.status==="claimed").slice(-(level>=3?4:12));
+          f.jobs=active.concat(done);
+        }
+      }
+    }
+    const hids=activeHamsterIds(s);
+    if(s.hamsterDiscClock)s.hamsterDiscClock=pruneClockMap(s.hamsterDiscClock,hids,level>=3?64:160);
+    if(s.dropRepairMarks)s.dropRepairMarks=capAny(s.dropRepairMarks,level>=3?24:80,21*DAY);
+    walkHistory(s,cap);
+    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:level>=2})}catch(_){}
+    /* Old guard diagnostics are not gameplay. Keep only the current marker. */
+    if(level>=3)for(const k of Object.keys(s))if(/^saveGuardR\d+/i.test(k)&&k!=="saveGuardR3629")delete s[k];
+    s.saveGuardR3629={version:BUILD,level,guardedAt:Date.now(),approxBytes:bytes(s)};
+    return s;
+  }
+  function compactToHeadroom(s){
+    if(!s||typeof s!=="object")return s;
+    let b=bytes(s),level=0;
+    if(b>SOFT){level=1;compact(s,1);b=bytes(s)}
+    if(b>HARD){level=2;compact(s,2);b=bytes(s)}
+    if(b>EMERGENCY){level=3;compact(s,3);b=bytes(s)}
+    if(b>SAFE_WRITE){level=4;compact(s,4);b=bytes(s)}
+    if(level)s.saveGuardR3629={version:BUILD,level,guardedAt:Date.now(),approxBytes:b};
+    return s;
+  }
+  function replaceInPlace(target,next){
+    if(!target||!next||target===next)return target;
+    for(const k of Object.keys(target))delete target[k];Object.assign(target,next);return target;
+  }
+  async function repairOne(memberKey,force=false){
+    const mk=String(memberKey||"").trim();if(!mk)return false;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
+    const raw=snap.data()||{},before=bytes(raw);
+    /* Firestore's real document size can be much larger than JSON.stringify size
+       because nested field names/index metadata add overhead. Therefore every
+       forced repair compacts history even when the JSON estimate looks small. */
+    if(!force&&before<SOFT)return false;
+    const clean=clone(raw);
+    /* R36.49 clean slate: clear the historical unplaced alpaca vault ONCE per member.
+       Old recovery patches had repopulated thousands of dead/processed historical animals. */
+    clean.alpaca=clean.alpaca&&typeof clean.alpaca==="object"?clean.alpaca:{};
+    if(clean.alpaca.warehouseResetEpoch!=="r3651-zero-20260916"){clean.alpaca.vault=[];clean.alpaca.warehouseResetEpoch="r3651-zero-20260916";}
+    if(force)compact(clean,3);
+    compactToHeadroom(clean);
+    if(bytes(clean)>SAFE_WRITE)compact(clean,4);
+    const after=bytes(clean);
+    if(after>=1000*1024)throw new Error(`เซฟ ${mk} ยังใหญ่ ${after.toLocaleString()} bytes หลังย่อข้อมูลประวัติ โดยไม่ได้แตะของจริง`);
+    await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
+    console.info(BUILD,"repaired",mk,{before,after});return true;
+  }
+  /* R36.49: never scan every save from Admin. Repairs are self-only on login. */
+  async function repairAllPlayersOnce(){ return false; }
+  try{
+    if(typeof normalizeState==="function"){
+      const base=normalizeState;
+      normalizeState=function(raw,player){const out=base(raw,player);compact(out,1);compactToHeadroom(out);return out};
+    }
+  }catch(e){console.warn(BUILD,"normalize wrap",e)}
+  try{
+    if(typeof ynPrepareSaveR3463==="function"){
+      const base=ynPrepareSaveR3463;
+      ynPrepareSaveR3463=function(s){compact(s,1);compactToHeadroom(s);const out=base(s);compact(out?.state||s,1);compactToHeadroom(out?.state||s);return{state:out?.state||s,bytes:bytes(out?.state||s)}};
+    }
+  }catch(e){console.warn(BUILD,"prepare wrap",e)}
+  try{
+    if(typeof flushCloudSave==="function"){
+      const base=flushCloudSave;
+      flushCloudSave=async function(){
+        if(typeof ownState!=="undefined"&&ownState)compactToHeadroom(ownState);
+        try{return await base.apply(this,arguments)}catch(e){
+          if(!pressure(e)||typeof ownState==="undefined"||!ownState)throw e;
+          compact(ownState,4);
+          try{saveLocalOnly?.(ownState)}catch(_){}
+          return await base.apply(this,arguments);
+        }
+      };
+    }
+  }catch(e){console.warn(BUILD,"flush wrap",e)}
+  try{
+    if(typeof initializeOrLoadCloudState==="function"){
+      const base=initializeOrLoadCloudState;
+      initializeOrLoadCloudState=async function(member,memberKey){
+        const mk=String(memberKey||"").trim(),onceKey=`yn:r3651:self-repair:${mk}`;
+        let done=false;try{done=localStorage.getItem(onceKey)==="1"}catch(_){ }
+        if(!done){try{await repairOne(mk,true);try{localStorage.setItem(onceKey,"1")}catch(_){ }}catch(e){console.warn(BUILD,"pre-login repair",mk,e)}}
+        let out;
+        try{out=await base.apply(this,arguments)}catch(e){
+          if(!pressure(e))throw e;
+          await repairOne(mk,true);out=await base.apply(this,arguments);
+        }
+        return out;
+      };
+    }
+  }catch(e){console.warn(BUILD,"init wrap",e)}
+  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,bytes,compact:(level=3)=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s)return null;compact(s,Math.max(1,Math.min(4,Number(level)||3)));return{bytes:bytes(s),state:s}},repair:repairOne,repairAll:repairAllPlayersOnce};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
 
 <script>
 /* =====================================================================
@@ -3569,7 +3791,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3651_ALPACA_ZERO(){
   "use strict";
-  const BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";
+  const BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";
   const EPOCH="r3651-zero-20260916";
   const RESET_EPOCH="r3651-zero-20260916";
   const PEN_CAPACITY=24;
@@ -3703,410 +3925,6 @@ console.info(BUILD,"loaded");
 
 
 
-
-
-<!-- S2 R36.52 — STRUCTURAL SAVE HEADROOM / ALL PLAYERS removed in R36.61; superseded by one authoritative V5 save layer. -->
-
-
-
-
-<!-- S2 R36.53 — SURGICAL SERVER SAVE REPAIR / NO FULL-DOC REWRITE removed in R36.61; superseded by one authoritative V5 save layer. -->
-
-
-
-
-
-
-<!-- S2 R36.60 — SAFE SAVE WRITE + RECOVERY BRIDGE removed in R36.61; superseded by one authoritative V5 save layer. -->
-
-<script>
-/* =====================================================================
-   S2 R36.61 — TRANSPARENT SHARDED SAVE V5 / COMPATIBILITY LAYER
-   2026-09-17
-   - /saves/{memberKey} stays small; heavy live systems are stored in saveShards.
-   - Every getDoc + transaction + onSnapshot of /saves is hydrated back to one
-     virtual state, so legacy gameplay code can keep reading a normal full save.
-   - Every full-state write is split atomically; legacy writes can no longer push
-     the root document toward Firestore's 1 MiB limit.
-   - Old R36.54 shards are READ-ONLY recovery sources. V5 writes new shard docs.
-   - A root-only snapshot is NEVER delivered to gameplay listeners.
-   ===================================================================== */
-(function YN_R3661_TRANSPARENT_SHARDED_SAVE_V5(){
-  "use strict";
-  const BUILD="S2-R36.61-TRANSPARENT-SHARDED-SAVE-V5-20260917";
-  const LAYOUT="save-layout-v5-r3661";
-  const ROOT_BUDGET=280*1024;
-  const ROOT_HARD=380*1024;
-  const SHARD_DOC={
-    alpaca:"v5-alpaca", pets:"v5-pets", animals:"v5-animals",
-    farm:"v5-farm", jelly:"v5-jelly", claims:"v5-claims",
-    cooldowns:"v5-cooldowns", logs:"v5-logs", overflow:"v5-overflow"
-  };
-  const GROUP_KEYS={
-    alpaca:new Set(["alpaca"]),
-    pets:new Set(["dogs","cats","hamsters","hamsterFarms","farmGuardians"]),
-    animals:new Set(["animals","specialAnimals"]),
-    farm:new Set(["plots","flowerPlots","wineMachines","wines","fishTraps","hedgehog","coconutRiverItems","houseHedgehogs"]),
-    jelly:new Set(["jellyfishV2"])
-  };
-  const STATIC_CLAIMS=new Set([
-    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
-    "friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims",
-    "friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory",
-    "deliveryReceipts","giftReceipts","r3465BasementReceipts","hedgehogShieldReceiptsR3465",
-    "saleTombstones","dropRepairMarks"
-  ]);
-  const CLAIM_RX=/(receipts?|claims?|dedupe|processed|seenids?|tombstones?|ledgers?)$/i;
-  const COOL_RX=/(cooldowns?|locks?)$/i;
-  const LOG_RX=/(history|archive|audit(?:log)?|eventlog|activitylog|notificationqueue|notifications|debug|trace)$/i;
-  const ROOT_PINNED=new Set([
-    "activeSessionId","activeSessionAt","player","memberName","displayName","merit",
-    "createdAt","updatedAt","launchVersion","saveLayoutVersion","saveLayoutUpdatedAt",
-    "saveRootApproxBytes","saveShardRoutes","saveShardBuild","clientSaveRevision",
-    "clientLocalEditAt","cloudSessionId","saveVirtualUpdatedAt"
-  ]);
-  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
-  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
-  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
-  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
-  const pathOf=ref=>String(ref?.path||ref?._key?.path?.canonicalString?.()||"");
-  const saveInfo=ref=>{const m=pathOf(ref).match(/^saves\/([^/]+)$/);return m?{memberKey:m[1]}:null};
-  const pressure=e=>/maximum allowed size|exceeds the maximum|1,048,576|1048576|too many index entries|index entries|resource-exhausted/i.test(String(e?.message||e||""));
-  const friendlyPressure=()=>new Error("พื้นที่เซฟเดิมเต็ม ระบบกำลังย้ายข้อมูลออกเป็นส่วนย่อยแล้ว กรุณาลองอีกครั้งค่ะ");
-  const routeCache=new Map();
-  const shardRef=(fs,db,mk,g)=>fs.doc(db,"saveShards",mk,"items",SHARD_DOC[g]);
-  const oldShardRef=(fs,db,mk,id)=>fs.doc(db,"saveShards",mk,"items",id);
-
-  function staticGroupFor(k){
-    for(const [g,set] of Object.entries(GROUP_KEYS))if(set.has(k))return g;
-    if(STATIC_CLAIMS.has(k)||CLAIM_RX.test(k)||/^saveGuardR\d+/i.test(k))return "claims";
-    if(COOL_RX.test(k))return "cooldowns";
-    if(LOG_RX.test(k))return "logs";
-    return "";
-  }
-  function routesOf(root,mk=""){
-    const out=isObj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{};
-    if(mk&&routeCache.has(mk))Object.assign(out,routeCache.get(mk));
-    return out;
-  }
-  function groupFor(k,routes={}){return staticGroupFor(k)||String(routes?.[k]||"");}
-  function allGroupsFromRoutes(routes={}){
-    const s=new Set(["alpaca","pets","animals","farm","jelly","claims","cooldowns","logs"]);
-    for(const g of Object.values(routes||{}))if(SHARD_DOC[g])s.add(g);
-    return [...s];
-  }
-  function signal(v,depth=0){
-    if(v==null)return 0;
-    if(typeof v==="number")return Number.isFinite(v)&&v!==0?2:0;
-    if(typeof v==="boolean")return v?1:0;
-    if(typeof v==="string")return v.trim()?1:0;
-    if(depth>6)return 0;
-    if(Array.isArray(v))return v.reduce((n,x)=>n+signal(x,depth+1),0);
-    if(isObj(v))return Object.values(v).reduce((n,x)=>n+signal(x,depth+1),0);
-    return 0;
-  }
-  function hasSignal(v){return signal(v)>0;}
-  function tsMs(v){try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}}
-  function pickRecovery(current,candidates=[]){
-    if(hasSignal(current))return cp(current);
-    for(const c of candidates)if(hasSignal(c))return cp(c);
-    return cp(current!==undefined?current:candidates.find(x=>x!==undefined));
-  }
-  function recoverAlpaca(rootA,candidates){
-    const srcs=candidates.filter(isObj),out=isObj(rootA)?cp(rootA):cp(srcs[0]||{});
-    if(!isObj(out))return out;
-    for(const key of ["inventory","pens","factory","products"]){
-      if(hasSignal(out[key]))continue;
-      for(const s of srcs){if(hasSignal(s?.[key])){out[key]=cp(s[key]);break}}
-    }
-    /* The old historical warehouse is intentionally external now. Never resurrect it. */
-    out.vault=[];out.warehouseResetEpoch="r3661-v5";
-    return out;
-  }
-  function recoverCanonical(root,oldAnimals={},oldFarm={},backupRows=[],localRows=[]){
-    const out=cp(root)||{};
-    const animalsCandidates=[oldAnimals,...backupRows.map(x=>x.data||{}),...localRows];
-    const farmCandidates=[oldFarm,...backupRows.map(x=>x.data||{}),...localRows];
-    out.alpaca=recoverAlpaca(out.alpaca,animalsCandidates.map(x=>x?.alpaca));
-    out.specialAnimals=pickRecovery(out.specialAnimals,animalsCandidates.map(x=>x?.specialAnimals));
-    out.jellyfishV2=pickRecovery(out.jellyfishV2,farmCandidates.map(x=>x?.jellyfishV2));
-    /* Other moved systems: root wins when present. Missing root fields can be restored from old shards. */
-    for(const k of ["dogs","cats","hamsters","hamsterFarms","farmGuardians","animals"]){
-      if(out[k]===undefined){const c=animalsCandidates.find(x=>x&&x[k]!==undefined);if(c)out[k]=cp(c[k])}
-    }
-    for(const k of ["plots","flowerPlots","wineMachines","wines","fishTraps","hedgehog","coconutRiverItems","houseHedgehogs"]){
-      if(out[k]===undefined){const c=farmCandidates.find(x=>x&&x[k]!==undefined);if(c)out[k]=cp(c[k])}
-    }
-    return out;
-  }
-  function selectOverflowRoutes(full,baseRoutes={}){
-    const routes={...baseRoutes};
-    const projected={};
-    for(const [k,v] of Object.entries(full||{}))if(!groupFor(k,routes))projected[k]=v;
-    let size=bytes(projected);if(size<=ROOT_BUDGET)return routes;
-    const candidates=Object.entries(projected)
-      .filter(([k])=>!ROOT_PINNED.has(k)&&k!=="saveShardRoutes")
-      .map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]);
-    for(const [k,n] of candidates){if(size<=ROOT_BUDGET)break;if(n<4096&&size<ROOT_HARD)break;routes[k]="overflow";size-=n}
-    return routes;
-  }
-  function splitState(full,mk=""){
-    const input=cp(full||{})||{},routes=selectOverflowRoutes(input,routesOf(input,mk));
-    const root={},groups={};for(const g of allGroupsFromRoutes(routes))groups[g]={};
-    for(const [k,v] of Object.entries(input)){
-      if(k==="saveShardRoutes")continue;
-      const g=groupFor(k,routes);if(g){groups[g]??={};groups[g][k]=v}else root[k]=v;
-    }
-    root.saveLayoutVersion=LAYOUT;root.saveShardBuild=BUILD;root.saveLayoutUpdatedAt=Date.now();root.saveShardRoutes=routes;root.saveRootApproxBytes=bytes(root);
-    if(mk)routeCache.set(mk,{...routes});
-    return{root,groups,routes};
-  }
-  function mergeState(root,groupData,mk=""){
-    const out=cp(root||{})||{},routes=routesOf(root,mk);
-    for(const g of allGroupsFromRoutes(routes)){const d=groupData?.[g];if(isObj(d))Object.assign(out,cp(d));}
-    out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=routes;
-    if(mk)routeCache.set(mk,{...routes});
-    return out;
-  }
-  function fieldGet(obj,path){
-    const parts=String(path||"").split(".");let x=obj;for(const p of parts){if(x==null)return undefined;x=x[p]}return x;
-  }
-  function snapLike(base,data){
-    return new Proxy(base,{get(t,p){
-      if(p==="data")return()=>cp(data);
-      if(p==="get")return path=>cp(fieldGet(data,path?.toString?.()||path));
-      return Reflect.get(t,p,t);
-    }});
-  }
-
-  /* Preserve the native storage methods so we can inspect any surviving local copy,
-     then hide those legacy full-state mirrors from old R24 recovery wrappers. */
-  const nativeStorageGet=Storage.prototype.getItem,nativeStorageSet=Storage.prototype.setItem;
-  const legacyLocalKey=k=>/^yainoo-v5:/.test(k)||/^yn:r24:(?:pending|last-good):/.test(k)||/^yn:s2:r22:critical:/.test(k);
-  function localRecoveryRows(member,mk){
-    const keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:s2:r22:critical:${mk}`,`yn:r24:last-good:${member}`,`yn:r24:pending:${member}`],out=[];
-    for(const k of keys)try{const raw=nativeStorageGet.call(localStorage,k);if(!raw)continue;const x=JSON.parse(raw),s=x?.state&&isObj(x.state)?x.state:(isObj(x)?x:null);if(s)out.push(s)}catch(_){ }
-    return out;
-  }
-  try{
-    if(!Storage.prototype.__ynR3661LegacyIsolation){
-      Storage.prototype.getItem=function(k){k=String(k||"");if(legacyLocalKey(k))return null;return nativeStorageGet.call(this,k)};
-      Storage.prototype.setItem=function(k,v){k=String(k||"");if(legacyLocalKey(k))return;return nativeStorageSet.call(this,k,v)};
-      Object.defineProperty(Storage.prototype,"__ynR3661LegacyIsolation",{value:true,configurable:true});
-    }
-  }catch(_){ }
-
-  const baseGetFirebaseContext=globalThis.getFirebaseContext||getFirebaseContext;
-  if(typeof baseGetFirebaseContext!=="function")return;
-  async function rawContext(){return baseGetFirebaseContext.apply(this,arguments)}
-  async function nativeGet(fs,ref,server=false){
-    if(server&&typeof fs.getDocFromServer==="function")return fs.getDocFromServer(ref);
-    return fs.getDoc(ref);
-  }
-  async function readV5Groups(fs,db,mk,root,server=false){
-    const routes=routesOf(root,mk),names=allGroupsFromRoutes(routes),groups={};
-    const snaps=await Promise.all(names.map(g=>nativeGet(fs,shardRef(fs,db,mk,g),server)));
-    names.forEach((g,i)=>{const sn=snaps[i];groups[g]=sn.exists()?(sn.data()?.data||{}):{}});
-    return groups;
-  }
-  async function readOldRecovery(fs,db,mk){
-    const [oa,of]=await Promise.all([nativeGet(fs,oldShardRef(fs,db,mk,"animals")),nativeGet(fs,oldShardRef(fs,db,mk,"farm"))]);
-    const backups=[];
-    try{
-      const sn=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));
-      sn.forEach(d=>{if(/backup|pre[_-]?r36|recovery/i.test(String(d.id||""))){const raw=d.data()||{},data=raw.data||raw;if(isObj(data))backups.push({id:d.id,data,updatedAt:raw.updatedAt})}});
-      backups.sort((a,b)=>tsMs(b.updatedAt)-tsMs(a.updatedAt));
-    }catch(_){ }
-    return{oldAnimals:oa.exists()?(oa.data()?.data||{}):{},oldFarm:of.exists()?(of.data()?.data||{}):{},backups};
-  }
-  async function backupOnce(fs,db,mk,label,data){
-    if(!isObj(data)||!Object.keys(data).length)return;
-    const ref=oldShardRef(fs,db,mk,`_pre_r3661_${label}`),sn=await nativeGet(fs,ref);if(sn.exists())return;
-    try{await fs.setDoc(ref,{build:BUILD,kind:"pre-v5-backup",data:cp(data),createdAt:fs.serverTimestamp()},{merge:false})}catch(e){console.warn(BUILD,"backup skipped",mk,label,e?.message||e)}
-  }
-  async function ensureV5(memberKey,memberName="",force=false){
-    const mk=String(memberKey||"").trim();if(!mk)return{ok:false,reason:"no-key"};
-    const {db,fs}=await rawContext(),rootRef=fs.doc(db,"saves",mk),rs=await nativeGet(fs,rootRef,true);if(!rs.exists())return{ok:false,reason:"no-root"};
-    const root=rs.data()||{};
-    if(!force&&root.saveLayoutVersion===LAYOUT){routeCache.set(mk,routesOf(root,mk));return{ok:true,skipped:true,rootBytes:bytes(root)}}
-    const recovery=await readOldRecovery(fs,db,mk),locals=localRecoveryRows(String(memberName||root.player||root.memberName||""),mk);
-    const canonical=recoverCanonical(root,recovery.oldAnimals,recovery.oldFarm,recovery.backups,locals);
-    /* Preserve both current root copies and old shard copies before changing layout. */
-    const rootAnimals={};for(const k of ["alpaca","dogs","cats","hamsters","hamsterFarms","farmGuardians","animals","specialAnimals"])if(root[k]!==undefined)rootAnimals[k]=cp(root[k]);
-    const rootFarm={};for(const k of ["plots","flowerPlots","wineMachines","wines","fishTraps","hedgehog","coconutRiverItems","houseHedgehogs","jellyfishV2"])if(root[k]!==undefined)rootFarm[k]=cp(root[k]);
-    await Promise.all([backupOnce(fs,db,mk,"root_animals",rootAnimals),backupOnce(fs,db,mk,"root_farm",rootFarm),backupOnce(fs,db,mk,"old_animals",recovery.oldAnimals),backupOnce(fs,db,mk,"old_farm",recovery.oldFarm)]);
-    const parts=splitState(canonical,mk),batch=fs.writeBatch(db);
-    for(const [g,data] of Object.entries(parts.groups))batch.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(data),updatedAt:fs.serverTimestamp()},{merge:false});
-    await batch.commit();
-    /* Shrink the root in place AFTER durable shards exist. This works even for
-       near-limit saves because the resulting document is smaller. */
-    /* Replace the root with the already-small projected root. This is safe even
-       for accounts close to 1 MiB because the NEW document is only the light
-       root, while every heavy field is already durable in V5 shards. */
-    await fs.setDoc(rootRef,{...parts.root,updatedAt:fs.serverTimestamp()},{merge:false});
-    const after=await nativeGet(fs,rootRef,true),rootBytes=after.exists()?bytes(after.data()||{}):0;
-    console.info(BUILD,"migrated",mk,{before:bytes(root),after:rootBytes,routes:parts.routes});
-    return{ok:true,migrated:true,rootBytes,recovered:{alpaca:hasSignal(canonical?.alpaca?.inventory),jelly:hasSignal(canonical?.jellyfishV2),special:hasSignal(canonical?.specialAnimals)}};
-  }
-  async function hydrateSave(fs,db,ref,base,server=false){
-    if(!base?.exists?.())return base;const info=saveInfo(ref);if(!info)return base;
-    const root=base.data()||{};
-    if(root.saveLayoutVersion!==LAYOUT){
-      /* A legacy root still contains its own full fields; never merge partial old
-         shards here. Migration happens before login / on pressure. */
-      return base;
-    }
-    const groups=await readV5Groups(fs,db,info.memberKey,root,server);
-    return snapLike(base,mergeState(root,groups,info.memberKey));
-  }
-  function splitPatch(mk,patch,routes){
-    const root={},groups={};
-    for(const [path,v] of Object.entries(patch||{})){
-      const top=String(path).split(".")[0];let g=groupFor(top,routes);
-      if(!g&&!ROOT_PINNED.has(top)&&bytes(v)>16384){g="overflow";routes[top]="overflow"}
-      if(g){groups[g]??={};groups[g][`data.${path}`]=v}else root[path]=v;
-    }
-    return{root,groups,routes};
-  }
-  function patchObject(patch){
-    const out={};
-    for(const [path,value] of Object.entries(patch||{})){
-      const parts=String(path).split(".").filter(Boolean);if(!parts.length)continue;
-      let cur=out;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(!isObj(cur[k]))cur[k]={};cur=cur[k]}
-      cur[parts[parts.length-1]]=value;
-    }
-    return out;
-  }
-  function shardMergePayload(target,patch){
-    return {layout:LAYOUT,...patchObject(patch),updatedAt:target.serverTimestamp()};
-  }
-  function touchRoot(target,obj={}){
-    if(obj.updatedAt===undefined)obj.updatedAt=target.serverTimestamp();
-    if(obj.saveVirtualUpdatedAt===undefined)obj.saveVirtualUpdatedAt=target.serverTimestamp();
-    return obj;
-  }
-  function saveRootForSet(data,mk){return splitState(data,mk)}
-  function buildBatch(target,dbArg,ops){
-    const b=target.writeBatch(dbArg);
-    for(const op of ops){
-      if(op.kind==="set")b.set(op.ref,op.data,op.opt);
-      else if(op.kind==="update")b.update(op.ref,op.data);
-      else if(op.kind==="delete")b.delete(op.ref);
-    }
-    return b;
-  }
-  const proxyCache=new WeakMap();
-  async function wrappedGetFirebaseContext(){
-    const ctx=await baseGetFirebaseContext.apply(this,arguments),db=ctx.db,fs=ctx.fs;
-    if(proxyCache.has(fs))return{...ctx,fs:proxyCache.get(fs)};
-    const prox=new Proxy(fs,{get(target,prop){
-      if((prop==="getDoc"||prop==="getDocFromServer")&&prop==="getDocFromServer"&&typeof target.getDocFromServer!=="function")return undefined;
-      if(prop==="getDoc"||prop==="getDocFromServer")return async function(ref){
-        const info=saveInfo(ref);if(!info)return target[prop](ref);
-        try{const base=await target[prop](ref);return await hydrateSave(target,db,ref,base,prop==="getDocFromServer")}
-        catch(e){if(pressure(e)){await ensureV5(info.memberKey,"",true);const base=await (typeof target.getDocFromServer==="function"&&prop==="getDocFromServer"?target.getDocFromServer(ref):target.getDoc(ref));return hydrateSave(target,db,ref,base,prop==="getDocFromServer")}throw e}
-      };
-      if(prop==="onSnapshot")return function(ref,...args){
-        const info=saveInfo(ref);if(!info)return target.onSnapshot(ref,...args);
-        let options=null,next=null,error=null,complete=null,observer=null;
-        if(args[0]&&typeof args[0]==="object"&&!Array.isArray(args[0])&&(typeof args[0].next==="function"||typeof args[0].error==="function"||typeof args[0].complete==="function")){observer=args[0];next=observer.next?.bind(observer);error=observer.error?.bind(observer);complete=observer.complete?.bind(observer)}
-        else if(args[0]&&typeof args[0]==="object"&&typeof args[0]!=="function"){options=args[0];if(args[1]&&typeof args[1]==="object"){observer=args[1];next=observer.next?.bind(observer);error=observer.error?.bind(observer);complete=observer.complete?.bind(observer)}else{next=args[1];error=args[2];complete=args[3]}}
-        else{next=args[0];error=args[1];complete=args[2]}
-        let dead=false,seq=0;
-        const wrappedNext=base=>{const my=++seq;Promise.resolve().then(async()=>{try{const h=await hydrateSave(target,db,ref,base,false);if(!dead&&my===seq)next?.(h)}catch(e){console.warn(BUILD,"save snapshot hydrate blocked",info.memberKey,e);if(!dead)error?.(e)}})};
-        const unsub=options?target.onSnapshot(ref,options,wrappedNext,e=>error?.(e),()=>complete?.()):target.onSnapshot(ref,wrappedNext,e=>error?.(e),()=>complete?.());
-        return()=>{dead=true;try{unsub?.()}catch(_){ }};
-      };
-      if(prop==="setDoc")return async function(ref,data,opt){
-        const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);
-        const mk=info.memberKey,routes={...(routeCache.get(mk)||{})};
-        const run=async()=>{
-          if(opt?.merge||opt?.mergeFields){
-            const sp=splitPatch(mk,data||{},routes),ops=[];
-            const hasShard=Object.keys(sp.groups).length>0;
-            if(Object.keys(sp.root).length||Object.keys(sp.routes).length||hasShard){const rootPatch={...sp.root};if(!same(sp.routes,routeCache.get(mk)||{})){rootPatch.saveShardRoutes=sp.routes;rootPatch.saveLayoutVersion=LAYOUT;rootPatch.saveShardBuild=BUILD}touchRoot(target,rootPatch);ops.push({kind:"set",ref,data:patchObject(rootPatch),opt:{merge:true}})}
-            for(const [g,p] of Object.entries(sp.groups)){const sr=shardRef(target,db,mk,g);ops.push({kind:"set",ref:sr,data:shardMergePayload(target,p),opt:{merge:true}})}
-            routeCache.set(mk,{...sp.routes});return buildBatch(target,db,ops).commit();
-          }
-          const parts=saveRootForSet(data||{},mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];
-          for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});
-          return buildBatch(target,db,ops).commit();
-        };
-        try{return await run()}catch(e){if(!pressure(e))throw e;await ensureV5(mk,"",true);try{return await run()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}
-      };
-      if(prop==="updateDoc")return async function(ref,patch,...rest){
-        const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);
-        const mk=info.memberKey,routes={...(routeCache.get(mk)||{})};
-        const run=async()=>{const sp=splitPatch(mk,patch||{},routes),ops=[],hasShard=Object.keys(sp.groups).length>0;const rp={...sp.root};if(!same(sp.routes,routeCache.get(mk)||{})){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||hasShard){touchRoot(target,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,p] of Object.entries(sp.groups)){const sr=shardRef(target,db,mk,g);ops.push({kind:"set",ref:sr,data:shardMergePayload(target,p),opt:{merge:true}})}routeCache.set(mk,{...sp.routes});return buildBatch(target,db,ops).commit()};
-        try{return await run()}catch(e){if(!pressure(e))throw e;await ensureV5(mk,"",true);try{return await run()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}
-      };
-      if(prop==="runTransaction")return async function(dbArg,callback,...rest){
-        const touched=new Set();
-        const once=()=>target.runTransaction(dbArg,async realTx=>{
-          const before=new Map(),routesBy=new Map();
-          const tx=new Proxy(realTx,{get(tt,p){
-            if(p==="get")return async ref=>{
-              const info=saveInfo(ref);if(!info)return tt.get(ref);touched.add(info.memberKey);
-              const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routesBy.set(info.memberKey,routesOf(root,info.memberKey));return base}
-              const routes=routesOf(root,info.memberKey),groups={},names=allGroupsFromRoutes(routes),snaps=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g))));names.forEach((g,i)=>{const ss=snaps[i];groups[g]=ss.exists()?(ss.data()?.data||{}):{}});
-              const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routesBy.set(info.memberKey,routes);return snapLike(base,full);
-            };
-            if(p==="set")return(ref,data,opt)=>{
-              const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}touched.add(info.memberKey);const mk=info.memberKey;
-              if(opt?.merge||opt?.mergeFields){const routes={...(routesBy.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},routes),hasShard=Object.keys(sp.groups).length>0,rp={...sp.root};if(!same(sp.routes,routesBy.get(mk)||{})){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||hasShard){touchRoot(target,rp);tt.set(ref,patchObject(rp),{merge:true})}for(const [g,pch] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardMergePayload(target,pch),{merge:true});routesBy.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}
-              const parts=splitState(data||{},mk),prev=before.get(pathOf(ref));tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});const prevParts=prev?splitState(prev,mk):null;for(const [g,d] of Object.entries(parts.groups)){if(prevParts&&same(prevParts.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routesBy.set(mk,parts.routes);return tx;
-            };
-            if(p==="update")return(ref,patch)=>{
-              const info=saveInfo(ref);if(!info){tt.update(ref,patch);return tx}touched.add(info.memberKey);const mk=info.memberKey,routes={...(routesBy.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,patch||{},routes),rp={...sp.root},hasShard=Object.keys(sp.groups).length>0;if(!same(sp.routes,routes)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||hasShard){touchRoot(target,rp);tt.set(ref,patchObject(rp),{merge:true})}for(const [g,pch] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardMergePayload(target,pch),{merge:true});routesBy.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx;
-            };
-            if(p==="delete")return ref=>{tt.delete(ref);return tx};
-            return Reflect.get(tt,p,tt);
-          }});
-          return callback(tx);
-        },...rest);
-        try{return await once()}catch(e){if(!pressure(e))throw e;for(const mk of touched)try{await ensureV5(mk,"",true)}catch(_){}try{return await once()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}
-      };
-      if(prop==="writeBatch")return function(dbArg){
-        const ops=[],touched=new Set();
-        const api={
-          set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;touched.add(mk);if(opt?.merge||opt?.mergeFields){const routes={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},routes),rp={...sp.root},hasShard=Object.keys(sp.groups).length>0;if(!same(sp.routes,routes)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||hasShard){touchRoot(target,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardMergePayload(target,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data||{},mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return api},
-          update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey;touched.add(mk);const routes={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},routes),rp={...sp.root},hasShard=Object.keys(sp.groups).length>0;if(!same(sp.routes,routes)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||hasShard){touchRoot(target,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardMergePayload(target,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},
-          delete(ref){ops.push({kind:"delete",ref});return api},
-          async commit(){for(const mk of touched)try{await ensureV5(mk,"",false)}catch(e){console.warn(BUILD,"batch preflight",mk,e)}const run=()=>buildBatch(target,dbArg,ops).commit();try{return await run()}catch(e){if(!pressure(e))throw e;for(const mk of touched)try{await ensureV5(mk,"",true)}catch(_){}try{return await run()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}}
-        };return api;
-      };
-      return Reflect.get(target,prop,target);
-    }});
-    proxyCache.set(fs,prox);return{...ctx,fs:prox};
-  }
-  wrappedGetFirebaseContext.__r3661Base=baseGetFirebaseContext;
-  globalThis.getFirebaseContext=wrappedGetFirebaseContext;try{getFirebaseContext=wrappedGetFirebaseContext}catch(_){ }
-
-  /* Outer-most login wrapper: migrate/shrink BEFORE any legacy rescue/normalizer runs. */
-  try{
-    if(typeof initializeOrLoadCloudState==="function"){
-      const base=initializeOrLoadCloudState;
-      initializeOrLoadCloudState=async function(member,memberKey){
-        const mk=String(memberKey||"").trim();if(mk)await ensureV5(mk,String(member||""),false);
-        const out=await base.apply(this,arguments);
-        /* Re-read one virtual snapshot after login so UI never keeps a root-only state. */
-        if(mk){try{const {db,fs}=await wrappedGetFirebaseContext(),sn=await fs.getDoc(fs.doc(db,"saves",mk));if(sn.exists()){ownState=normalizeState(sn.data(),member);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}}catch(e){console.warn(BUILD,"post-login hydrate",mk,e)}}
-        return ownState||out;
-      };
-    }
-  }catch(e){console.error(BUILD,"login wrapper",e)}
-
-  /* Compatibility aliases used by older error handlers. */
-  globalThis.YN_SAVE_STORAGE_V2={migrateOne:(mk)=>ensureV5(String(mk||currentMemberKey||""),String(currentMember||""),true)};
-  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,repair:(mk)=>ensureV5(String(mk||currentMemberKey||""),String(currentMember||""),true),compact:()=>({layout:LAYOUT,structural:true})};
-  globalThis.YN_SAVE_V5={BUILD,LAYOUT,repair:(mk)=>ensureV5(String(mk||currentMemberKey||""),String(currentMember||""),true),report:async()=>{const mk=String(currentMemberKey||"");if(!mk)return{};const c=await wrappedGetFirebaseContext(),sn=await c.fs.getDoc(c.fs.doc(c.db,"saves",mk));const d=sn.exists()?sn.data()||{}:{};const split=splitState(d,mk);return{memberKey:mk,virtualBytes:bytes(d),rootProjectedBytes:bytes(split.root),routes:split.routes,alpacaInventory:d?.alpaca?.inventory||{},jellyfishV2:d?.jellyfishV2||{},specialAnimals:d?.specialAnimals||{}}}};
-
-  /* Normalize pressure messages at the common global message surface. */
-  try{if(typeof message==="function"){const bm=message;message=function(title,body){const t=String(body||"");if(pressure(t))body="พื้นที่เซฟเดิมเต็ม ระบบได้ย้ายข้อมูลออกเป็นส่วนย่อยแล้ว กรุณาลองรายการนี้อีกครั้งค่ะ";return bm.call(this,title,body)}}}catch(_){ }
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
-})();
-</script>
-
-<script>window.YAINOO_BUILD="S2-R36.61-TRANSPARENT-SHARDED-SAVE-V5-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>window.YAINOO_BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
