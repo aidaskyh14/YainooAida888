@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916">
+  <link rel="stylesheet" href="style.css?v=S2-R36.56-RECOVERY-BRIDGE-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916"></script>
+<script src="game.js?v=S2-R36.56-RECOVERY-BRIDGE-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4273,6 +4273,172 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script>window.YAINOO_BUILD="S2-R36.53-SURGICAL-SERVER-SAVE-REPAIR-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>
+/* =====================================================================
+   S2 R36.56 — RECOVERY COMPATIBILITY BRIDGE
+   2026-09-16
+   Purpose: recover accounts already migrated by R36.54/R36.55 without
+   migrating untouched accounts and without treating failed shard reads as zero.
+   ===================================================================== */
+(function YN_R3656_RECOVERY_BRIDGE(){
+  "use strict";
+  const BUILD="S2-R36.56-RECOVERY-BRIDGE-20260916";
+  const LAYOUT="save-layout-v4-sharded-r3654";
+  const GROUPS={
+    animals:new Set(["alpaca","dogs","cats","hamsters","hamsterFarms","farmGuardians","animals","specialAnimals"]),
+    farm:new Set(["plots","flowerPlots","wineMachines","wines","jellyfishV2","fishTraps","hedgehog","coconutRiverItems"])
+  };
+  const HIST_RX=/(receipts?|claims?|history|archive|tombstones?|ledgers?|audit(?:log)?|eventlog|activitylog|dedupe|processed|seenids?|notificationqueue|cache|debug|trace|cooldowns?|locks?)$/i;
+  const STATIC_HISTORY=new Set(["friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims","friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","eventHistory","activityHistory","deliveryReceipts","giftReceipts","friendResourceCooldowns","r3465BasementReceipts","hedgehogShieldReceiptsR3465","r32FriendForageLocks","friendCatCooldowns","saleTombstones","retiredCatsArchiveR34","notifications","dropRepairMarks"]);
+  const CRITICAL=new Set(["alpaca","dogs","cats","hamsters","hamsterFarms","farmGuardians","animals","specialAnimals","plots","flowerPlots","wineMachines","wines","jellyfishV2","fishTraps","hedgehog","coconutRiverItems"]);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const bytes=v=>{try{const t=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(t).length:t.length*2}catch(_){return 0}};
+  const saveInfo=ref=>{const m=String(ref?.path||"").match(/^saves\/([^/]+)$/);return m?{memberKey:m[1]}:null};
+  const groupFor=k=>GROUPS.animals.has(k)?"animals":GROUPS.farm.has(k)?"farm":STATIC_HISTORY.has(k)||HIST_RX.test(k)||/^saveGuardR\d+/i.test(k)?"history":"";
+  const shardRef=(fs,db,mk,g)=>fs.doc(db,"saveShards",mk,"items",g);
+  const nonEmpty=v=>{
+    if(v==null)return false;
+    if(Array.isArray(v))return v.some(x=>x!=null&&x!==false);
+    if(typeof v==="object")return Object.keys(v).some(k=>nonEmpty(v[k]));
+    if(typeof v==="number")return v!==0;
+    return Boolean(v);
+  };
+  const protectValue=(k,next,old)=>CRITICAL.has(k)&&nonEmpty(old)&&!nonEmpty(next)?cp(old):next;
+  function splitState(input,existing={}){
+    const root=cp(input||{})||{},groups={animals:{},farm:{},history:{}};
+    for(const k of Object.keys(root)){
+      const g=groupFor(k);if(!g)continue;
+      groups[g][k]=protectValue(k,root[k],existing?.[g]?.[k]);
+      delete root[k];
+    }
+    root.saveLayoutVersion=LAYOUT;root.saveLayoutUpdatedAt=Date.now();root.saveRootApproxBytes=bytes(root);
+    return{root,groups};
+  }
+  function mergeState(root,groups){
+    const out=cp(root||{})||{};
+    for(const g of ["animals","farm","history"]){const d=groups?.[g];if(d&&typeof d==="object")Object.assign(out,cp(d));}
+    out.saveLayoutVersion=LAYOUT;return out;
+  }
+  function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);return Reflect.get(t,p,t)}})}
+  const migrated=new Set(), groupCache=new Map();
+  async function readGroups(fs,db,mk,{server=false,strict=true}={}){
+    const out={animals:{},farm:{},history:{}},exists={animals:false,farm:false,history:false};
+    for(const g of ["animals","farm","history"]){
+      try{
+        const ref=shardRef(fs,db,mk,g),sn=server&&typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+        exists[g]=sn.exists();out[g]=sn.exists()?(sn.data()?.data||{}):{};
+      }catch(e){
+        if(strict)throw new Error("RECOVERY_SHARD_READ_FAILED: "+(e?.message||e));
+      }
+    }
+    const any=Object.values(exists).some(Boolean);
+    if(any){migrated.add(mk);groupCache.set(mk,cp(out));}
+    return{groups:out,any,exists};
+  }
+  async function hydratedSnapshot(target,db,ref,method){
+    const base=await target[method](ref);if(!base.exists())return base;
+    const info=saveInfo(ref);if(!info)return base;
+    const rr=await readGroups(target,db,info.memberKey,{server:method==="getDocFromServer",strict:true});
+    if(!rr.any)return base;
+    return snapLike(base,mergeState(base.data()||{},rr.groups));
+  }
+  const originalCtx=typeof getFirebaseContext==="function"?getFirebaseContext:null;
+  if(!originalCtx)return;
+  const proxyCache=new WeakMap();
+  getFirebaseContext=async function(){
+    const ctx=await originalCtx.apply(this,arguments),db=ctx.db,fs=ctx.fs;
+    if(proxyCache.has(fs))return{...ctx,fs:proxyCache.get(fs)};
+    const prox=new Proxy(fs,{get(target,prop){
+      if(prop==="getDoc"||prop==="getDocFromServer")return async ref=>{
+        const info=saveInfo(ref);if(!info)return target[prop](ref);
+        return hydratedSnapshot(target,db,ref,prop);
+      };
+      if(prop==="setDoc")return async function(ref,data,opt){
+        const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);
+        let isMig=migrated.has(info.memberKey),existing=groupCache.get(info.memberKey)||null;
+        if(!isMig){const rr=await readGroups(target,db,info.memberKey,{strict:true});isMig=rr.any;existing=rr.groups}
+        if(!isMig)return target.setDoc(ref,data,opt);
+        const isMerge=Boolean(opt?.merge||opt?.mergeFields);
+        if(isMerge){
+          const rootPatch={},gp={animals:{},farm:{},history:{}};
+          for(const [k,v] of Object.entries(data||{})){const g=groupFor(k);if(g)gp[g][k]=protectValue(k,v,existing?.[g]?.[k]);else rootPatch[k]=v}
+          const b=target.writeBatch(db);if(Object.keys(rootPatch).length)b.set(ref,rootPatch,opt);
+          for(const g of Object.keys(gp))if(Object.keys(gp[g]).length)b.set(shardRef(target,db,info.memberKey,g),{layout:LAYOUT,data:gp[g],updatedAt:target.serverTimestamp()},{merge:true});
+          await b.commit();return;
+        }
+        const {root,groups}=splitState(data||{},existing||{}),b=target.writeBatch(db);
+        b.set(ref,{...root,updatedAt:target.serverTimestamp()},{merge:false});
+        for(const g of ["animals","farm","history"])b.set(shardRef(target,db,info.memberKey,g),{layout:LAYOUT,data:groups[g],updatedAt:target.serverTimestamp()},{merge:false});
+        await b.commit();groupCache.set(info.memberKey,cp(groups));migrated.add(info.memberKey);return;
+      };
+      if(prop==="updateDoc")return async function(ref,patch,...rest){
+        const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);
+        let isMig=migrated.has(info.memberKey);if(!isMig){const rr=await readGroups(target,db,info.memberKey,{strict:true});isMig=rr.any}
+        if(!isMig)return target.updateDoc(ref,patch,...rest);
+        const rootPatch={},gp={animals:{},farm:{},history:{}};
+        for(const [path,v] of Object.entries(patch||{})){const top=String(path).split(".")[0],g=groupFor(top);if(g)gp[g][path]=v;else rootPatch[path]=v}
+        const b=target.writeBatch(db);if(Object.keys(rootPatch).length)b.update(ref,rootPatch);
+        for(const g of Object.keys(gp))if(Object.keys(gp[g]).length)b.update(shardRef(target,db,info.memberKey,g),Object.fromEntries(Object.entries(gp[g]).map(([k,v])=>[`data.${k}`,v])));
+        return b.commit();
+      };
+      if(prop==="runTransaction")return async function(dbArg,callback,...rest){
+        return target.runTransaction(dbArg,async realTx=>{
+          const txGroups=new Map();
+          const tx=new Proxy(realTx,{get(tt,p){
+            if(p==="get")return async ref=>{
+              const info=saveInfo(ref);if(!info)return tt.get(ref);
+              const base=await tt.get(ref);if(!base.exists())return base;
+              const groups={animals:{},farm:{},history:{}},exists=[];
+              for(const g of ["animals","farm","history"]){const ss=await tt.get(shardRef(target,dbArg,info.memberKey,g));groups[g]=ss.exists()?(ss.data()?.data||{}):{};exists.push(ss.exists())}
+              if(!exists.some(Boolean))return base;
+              migrated.add(info.memberKey);txGroups.set(info.memberKey,cp(groups));return snapLike(base,mergeState(base.data()||{},groups));
+            };
+            if(p==="set")return(ref,data,opt)=>{
+              const info=saveInfo(ref);if(!info||!migrated.has(info.memberKey))return tt.set(ref,data,opt);
+              const existing=txGroups.get(info.memberKey)||{};
+              if(opt?.merge){
+                const rootPatch={},gp={animals:{},farm:{},history:{}};for(const [k,v] of Object.entries(data||{})){const g=groupFor(k);if(g)gp[g][k]=protectValue(k,v,existing?.[g]?.[k]);else rootPatch[k]=v}
+                if(Object.keys(rootPatch).length)tt.set(ref,rootPatch,opt);
+                for(const g of Object.keys(gp))if(Object.keys(gp[g]).length)tt.set(shardRef(target,dbArg,info.memberKey,g),{layout:LAYOUT,data:gp[g],updatedAt:target.serverTimestamp()},{merge:true});return tx;
+              }
+              const {root,groups}=splitState(data||{},existing);tt.set(ref,{...root,updatedAt:target.serverTimestamp()},{merge:false});
+              for(const g of ["animals","farm","history"])tt.set(shardRef(target,dbArg,info.memberKey,g),{layout:LAYOUT,data:groups[g],updatedAt:target.serverTimestamp()},{merge:false});return tx;
+            };
+            if(p==="update")return(ref,patch)=>{
+              const info=saveInfo(ref);if(!info||!migrated.has(info.memberKey))return tt.update(ref,patch);
+              const rootPatch={},gp={animals:{},farm:{},history:{}};for(const [path,v] of Object.entries(patch||{})){const top=String(path).split(".")[0],g=groupFor(top);if(g)gp[g][path]=v;else rootPatch[path]=v}
+              if(Object.keys(rootPatch).length)tt.update(ref,rootPatch);
+              for(const g of Object.keys(gp))if(Object.keys(gp[g]).length)tt.update(shardRef(target,dbArg,info.memberKey,g),Object.fromEntries(Object.entries(gp[g]).map(([k,v])=>[`data.${k}`,v])));return tx;
+            };
+            return Reflect.get(tt,p,tt);
+          }});return callback(tx);
+        },...rest);
+      };
+      return Reflect.get(target,prop,target);
+    }});
+    proxyCache.set(fs,prox);return{...ctx,fs:prox};
+  };
+  /* Hard preflight: migrated accounts MUST hydrate shards before normal login.
+     A read failure aborts login instead of turning missing data into zeros. */
+  try{
+    if(typeof initializeOrLoadCloudState==="function"){
+      const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){
+        const mk=String(memberKey||"").trim();
+        try{
+          const raw=await originalCtx();const rr=await readGroups(raw.fs,raw.db,mk,{server:true,strict:true});
+          if(rr.any){migrated.add(mk);groupCache.set(mk,cp(rr.groups));}
+        }catch(e){
+          console.error(BUILD,"recovery preflight blocked",mk,e);
+          throw new Error("กู้ข้อมูลผู้เล่นจากคลังสำรองไม่สำเร็จ ระบบหยุดการเข้าเกมเพื่อป้องกันข้อมูลถูกเขียนเป็นศูนย์ กรุณารีโหลดอีกครั้ง");
+        }
+        return base.apply(this,arguments);
+      };
+    }
+  }catch(e){console.warn(BUILD,"init wrapper",e)}
+  globalThis.YN_RECOVERY_BRIDGE={BUILD,report:()=>({memberKey:String(typeof currentMemberKey!=="undefined"?currentMemberKey:""),migrated:[...migrated]})};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+<script>window.YAINOO_BUILD="S2-R36.56-RECOVERY-BRIDGE-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
