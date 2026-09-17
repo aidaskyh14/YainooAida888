@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.67-CANONICAL-SHARD-OWNER-20260917">
+  <link rel="stylesheet" href="style.css?v=S2-R36.69-FIELD-LEVEL-SAVE-20260917">
 </head>
 <body>
   <main id="app">
@@ -262,7 +262,7 @@
       </div>
     </div>
   </main>
-  <script src="daily-missions.js?v=S2-R34.79-CANONICAL-ACTION-FIX"></script>
+  <script src="daily-missions.js?v=S2-R36.69-FIELD-LEVEL-SAVE-20260917"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.68-FARM-ALPACA-DURABLE-20260917"></script>
+<script src="game.js?v=S2-R36.69-FIELD-LEVEL-SAVE-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3877,24 +3877,88 @@ console.info(BUILD,"loaded");
   function stampLocal(s){if(!s)return;s.clientLocalEditAt=now();s.clientSaveRevision=Math.max(0,Number(s.clientSaveRevision)||0)+1;return s}
   function scheduleFlush(ms=18){if(saveTimer||!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;saveTimer=setTimeout(()=>{saveTimer=null;flushCloudSave().catch(e=>{console.error(BUILD,"flush",e);try{message?.("บันทึกไม่สำเร็จ",pressure(e)?"ระบบแยกเซฟทำงานแล้ว แต่รายการนี้ยังบันทึกไม่สำเร็จ กรุณาลองอีกครั้งค่ะ":(e?.message||"กรุณาลองใหม่"))}catch(_){}})},ms)}
   save=function(){const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s||visitContext)return;if(!visitContext){ownState=s;state=s}stampLocal(s);dirtySeq++;try{localSave?.(s)}catch(_){}criticalLocalBackup(s);scheduleFlush()};
+  /* =====================================================================
+     R36.69 FIX-2 — PER-FIELD MERGE (was: winner-takes-all)
+
+     The old rule was:
+         merged = rr>lr ? {...local,...remote} : {...remote,...local}
+     i.e. whichever side had the higher clientSaveRevision won EVERY top-level
+     key at once. Revisions drift constantly because several writers bump them
+     independently, so an unrelated server-side change (a gift, a mission tick)
+     would silently erase `plots`, and an unrelated local change would silently
+     erase an incoming reward. This is the root cause behind "it works for two
+     seconds and then reverts" across planting, watering, harvesting, boosting,
+     crafting and the alpaca pens.
+
+     The new rule compares three states: what the server has (remote), what this
+     device has (local), and what this device last knew the server had (base).
+     A key is only overwritten by local if LOCAL ACTUALLY CHANGED IT. Everything
+     the player did not touch keeps the server's value. Keys become independent
+     of one another, so planting can never destroy an incoming gift and an
+     incoming gift can never destroy a plant.
+     ===================================================================== */
+  let baseSnapshot=null,baseSnapshotKey="";
+  const MERGE_META=new Set(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes"]);
+  function mergeByField(remote,local,base){
+    const out=cp(remote)||{},changed=[];
+    for(const k of new Set([...Object.keys(local||{}),...Object.keys(base||{})])){
+      if(MERGE_META.has(k))continue;
+      if(same(local?.[k],base?.[k]))continue;   /* untouched here -> server value stands */
+      out[k]=cp(local?.[k]);changed.push(k);    /* changed here -> local wins for THIS key only */
+    }
+    return{merged:out,changed};
+  }
   async function writeLatestPass(){
     if(!cloudReady||!currentMemberKey||!ownState||visitContext||cloudSessionSuperseded)return;
     const seq=dirtySeq,local=cp(ownState),mk=String(currentMemberKey);
+    /* A baseline belongs to one player. Never carry it across a member switch. */
+    if(baseSnapshotKey!==mk){baseSnapshot=null;baseSnapshotKey=mk}
     await ensureV7(mk,String(currentMember||""),false);
     const {db,fs}=await wrappedGetFirebaseContext(),ref=fs.doc(db,"saves",mk);
-    let committed=cp(local);
+    let committed=cp(local),appliedKeys=[];
     await fs.runTransaction(db,async tx=>{
       const sn=await tx.get(ref),remote=sn.exists()?sn.data()||{}:{},rr=Math.max(0,Number(remote.clientSaveRevision)||0),lr=Math.max(0,Number(local.clientSaveRevision)||0);
-      /* A transaction/reward with a newer server revision must never be erased by an older queued local snapshot. */
-      const merged=rr>lr?{...cp(local),...cp(remote)}:{...cp(remote),...cp(local)};
+      /* First flush of a session has no baseline yet, but ownState was loaded
+         from this very document at login, so the server copy IS the baseline. */
+      const base=baseSnapshot||remote;
+      const {merged,changed}=mergeByField(remote,local,base);
       merged.activeSessionId=cloudSessionId;merged.clientSaveRevision=Math.max(rr,lr)+1;merged.clientLocalEditAt=Math.max(Number(remote.clientLocalEditAt)||0,Number(local.clientLocalEditAt)||0,now());
-      committed=cp(merged);tx.set(ref,merged,{merge:false});
+      committed=cp(merged);appliedKeys=changed;
+      /* R36.69 FIX-3 — write ONLY what changed, as a merge patch.
+         The old line rewrote the entire player document with {merge:false} on
+         every flush. That is what pushed large saves past the 1 MB Firestore
+         limit ("cannot be written because its size exceeds the maximum allowed")
+         and made every action fail for long-time players. A patch of one or two
+         keys is a few kilobytes no matter how big the save has grown. */
+      const patch={activeSessionId:merged.activeSessionId,clientSaveRevision:merged.clientSaveRevision,clientLocalEditAt:merged.clientLocalEditAt};
+      for(const k of changed)patch[k]=cp(merged[k]);
+      tx.set(ref,patch,{merge:true});
     });
+    baseSnapshot=cp(committed);baseSnapshotKey=mk;
     /* /gardens is OUTPUT ONLY. Owner gameplay never imports plot state from it. */
     try{await fs.setDoc(fs.doc(db,"gardens",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(committed.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"garden mirror",e?.message||e)}
     try{await fs.setDoc(fs.doc(db,"publicProfiles",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(committed.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
     committedSeq=Math.max(committedSeq,seq);
-    if(ownState&&Number(committed.clientSaveRevision||0)>=Number(ownState.clientSaveRevision||0)){ownState=typeof normalizeState==="function"?normalizeState(cp(committed),currentMember):cp(committed);if(!visitContext)state=ownState;try{localSave?.(ownState)}catch(_){}criticalLocalBackup(ownState)}
+    /* R36.69 FIX-4 — do not repaint the whole live state from the commit snapshot.
+       `committed` is a photograph taken before the network round trip. Assigning
+       it back over ownState threw away anything the player did during those 1-3
+       seconds, and it replaced the object identity that open modals still hold
+       a reference to (which is why panels sometimes stopped responding).
+       Import ONLY the keys this pass did not write - those are the ones that may
+       carry genuine server-side news (gifts, friend actions, admin top-ups). */
+    if(ownState){
+      const mine=new Set(appliedKeys);
+      for(const k of Object.keys(committed)){
+        if(mine.has(k)||MERGE_META.has(k))continue;
+        if(!same(ownState[k],committed[k]))ownState[k]=cp(committed[k]);
+      }
+      ownState.activeSessionId=committed.activeSessionId;
+      ownState.clientSaveRevision=committed.clientSaveRevision;
+      ownState.clientLocalEditAt=committed.clientLocalEditAt;
+      if(!visitContext)state=ownState;
+      try{localSave?.(ownState)}catch(_){}
+      criticalLocalBackup(ownState);
+    }
   }
   flushCloudSave=async function(){
     if(!cloudReady||!currentMemberKey||!ownState||visitContext||cloudSessionSuperseded)return;
@@ -3922,7 +3986,21 @@ console.info(BUILD,"loaded");
   subscribeOwnGarden=function(){for(const name of ["ownGardenUnsubscribe","ownSaveUnsubscribe"]){try{const u=globalThis[name];if(typeof u==="function")u()}catch(_){}}try{if(typeof ownGardenUnsubscribe!=="undefined")ownGardenUnsubscribe=null}catch(_){}try{if(typeof ownSaveUnsubscribe!=="undefined")ownSaveUnsubscribe=null}catch(_){};if(!cloudReady||!currentMemberKey)return;rawContext().then(({db,fs})=>{const u=fs.onSnapshot(fs.doc(db,"saves",currentMemberKey),sn=>{if(!sn.exists())return;const d=sn.data()||{},sid=String(d.activeSessionId||"");if(cloudSessionId&&sid&&sid!==cloudSessionId&&currentMember!=="Aida"&&globalThis.adminProfile?.role!=="admin"){cloudSessionSuperseded=true;cloudReady=false;try{message?.("ข้อมูลถูกเปิดจากอีกเครื่องแล้ว","เครื่องนี้หยุดบันทึกเพื่อป้องกันข้อมูลเก่าทับข้อมูลใหม่ค่ะ")}catch(_){}}},e=>console.warn(BUILD,"session listener",e?.message||e));try{ownSaveUnsubscribe=u;ownGardenUnsubscribe=()=>{}}catch(_){}}).catch(()=>{})};
 
   /* ---- Single-plot durability check: plant locally, then force the V7 commit. ---- */
-  try{const plantBase=globalThis.Y26_plantCrop;if(typeof plantBase==="function")globalThis.Y26_plantCrop=async function(index,key,button){const i=Math.floor(Number(index)),before=cp((ownState||state)?.plots?.[i]);await plantBase.apply(this,arguments);const p=(ownState||state)?.plots?.[i];if(p?.crop===key){try{await settlePendingCloudSave()}catch(e){if(before&&(ownState||state)?.plots)(ownState||state).plots[i]=before;try{draw?.()}catch(_){}throw e}try{draw?.()}catch(_){}}return true}}catch(e){console.warn(BUILD,"plant guard",e)}
+  /* R36.69 FIX-1 — PLANT ROLLBACK REMOVED.
+     The old guard re-read the plot AFTER the seed had already been committed by
+     the field-level engine, then, if the FOLLOW-UP whole-save queue flush threw
+     for any reason (oversized root, contention, migration error), it restored the
+     empty plot on screen and rethrew. That is exactly the reported symptom:
+     the seed appears, then 2-3 seconds later the plot is empty again.
+     A queue flush failing says nothing about whether the seed was saved - the
+     seed transaction already committed on its own. So: never roll back, never
+     rethrow, and do not block the UI on the flush. */
+  try{const plantBase=globalThis.Y26_plantCrop;if(typeof plantBase==="function")globalThis.Y26_plantCrop=async function(index,key,button){
+    const out=await plantBase.apply(this,arguments);
+    try{Promise.resolve(settlePendingCloudSave?.()).catch(e=>console.warn(BUILD,"plant flush (seed already committed)",e?.message||e))}catch(_){}
+    try{draw?.()}catch(_){}
+    return out===false?false:true;
+  }}catch(e){console.warn(BUILD,"plant guard",e)}
 
 
   /* ---- Garden V7: one atomic path for every owner garden mutation. ----
@@ -4037,7 +4115,7 @@ console.info(BUILD,"loaded");
 </script>
 <script>
 (()=>{
-  const BUILD="S2-R36.68-FARM-ALPACA-DURABLE-20260917",d=globalThis.YN_R3650_DURABLE;
+  const BUILD="S2-R36.69-FIELD-LEVEL-SAVE-20260917",d=globalThis.YN_R3650_DURABLE;
   try{
     if(d?.plantOne){Y26_plantCrop=d.plantOne;globalThis.Y26_plantCrop=d.plantOne}
     if(d?.boostOne){useCropBoostOnPlot=d.boostOne;globalThis.useCropBoostOnPlot=d.boostOne}

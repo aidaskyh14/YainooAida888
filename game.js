@@ -17755,16 +17755,14 @@ async function V181_campaignScoreLater(summary){
 
   /* S2 FIX2: low-risk pen actions update locally first, then use the existing queued cloud save.
      Cross-player / economy-sensitive actions still keep their original Firestore transactions. */
-  function mutateOwnFast(mutator){
-    if(!currentMemberKey||!ownState)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
-    const next=normalizeState(cloneData(ownState),currentMember);
-    topupAdminAlpacaInventory(next);
-    const result=mutator(next);
-    topupAdminAlpacaInventory(next);
-    applyOwn(next);
-    try{saveLocalOnly(next)}catch{}
-    try{queueCloudSave()}catch{}
-    return{state:next,result};
+  /* R36.69 FIX-6 — the "fast" pen path is no longer a local-only write.
+     It used to mutate memory and drop the result into queueCloudSave(), the
+     whole-document queue. Anything it did could be erased by the next flush, so
+     mushrooms, holes and pen placements kept coming back. It now commits through
+     the same field-level engine as shearing, and REJECTS (so the caller shows a
+     real error) instead of pretending to succeed. */
+  async function mutateOwnFast(mutator){
+    return mutateOwn(mutator);
   }
 
   function panelHero(image,title,subtitle=""){
@@ -17939,24 +17937,25 @@ async function V181_campaignScoreLater(summary){
     $("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"รางอาหารอัลปาก้า","แตะช่องเพื่อเติมอาหารจากกระเป๋า • ตัวเต็มวัยจะกินอัตโนมัติ")}<div class="alpaca-trough-grid">${pen.trough.map((slot,i)=>slot?`<button class="alpaca-trough-slot" data-trough-slot="${i}" type="button"><img src="${FOOD[slot.foodKey].image}"><b>${safeHtml(FOOD[slot.foodKey].name)}</b><small>${slot.servings} เสิร์ฟ</small></button>`:`<button class="alpaca-trough-slot empty" data-trough-slot="${i}" type="button" aria-label="ช่องอาหารว่าง">+</button>`).join("")}</div><p class="alpaca-mini-note">แพ็คหญ้า 1 ชิ้น = 6 เสิร์ฟ • อาหารเม็ด 1 ชิ้น = 12 เสิร์ฟ</p><button id="alpacaTroughClose" class="secondary-action" type="button">ปิด</button></section>`;openModal();document.querySelectorAll("[data-trough-slot]").forEach(b=>{b.onclick=null;b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();showTroughFoodPicker(Number(b.dataset.troughSlot))}});$("alpacaTroughClose").onclick=closeModal;
   }
   function showTroughFoodPicker(slotIndex){const inv=ownAlpaca()?.inventory?.food||{},available=Object.entries(FOOD).filter(([k,m])=>(!m.direct||m.trough)&&(Number(inv[k])||0)>0);if(!available.length){alpacaMessage("คุณไม่มีอาหาร","ตอนนี้ไม่มีอาหารอัลปาก้าในกระเป๋าค่ะ");return}$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero(ASSET.hay,"เลือกอาหารใส่ราง",`ช่องที่ ${slotIndex+1}`)}<div class="alpaca-inventory-grid">${available.map(([k,m])=>`<article class="alpaca-inventory-item"><img src="${m.image}"><b>${safeHtml(m.name)}</b><strong>×${Number(inv[k])||0}</strong><small>${m.servings} เสิร์ฟ/ชิ้น</small><button type="button" data-fill-trough="${k}">ใส่ช่องนี้</button></article>`).join("")}</div><button id="troughPickerBack" class="secondary-action" type="button">กลับ</button></section>`;openModal();document.querySelectorAll("[data-fill-trough]").forEach(b=>{b.onclick=null;b.onpointerdown=e=>{e.preventDefault();e.stopPropagation();fillTroughSlot(slotIndex,b.dataset.fillTrough)}});$("troughPickerBack").onclick=showTrough}
+  /* R36.69 FIX-5 — trough feeding now uses the same durable engine as shearing.
+     It used to mutate the local state, then push the ENTIRE player document to
+     Firestore via flushCloudSave(). On a large save that write was rejected, the
+     error was logged and swallowed, and the food came back a moment later. */
   async function fillTroughSlot(slotIndex,foodKey){
     if(guardResting())return;
     try{
-      const base=(!visitContext&&state)?state:ownState;
-      if(!base)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
-      const next=normalizeState(cloneData(base),currentMember);ensureAlpacaState(next);topupAdminAlpacaInventory(next);
-      const pen=penAt(next.alpaca,currentPen),meta=FOOD[foodKey],have=Number(next.alpaca?.inventory?.food?.[foodKey])||0;
-      if(!meta||(meta.direct&&!meta.trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");
-      if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");
-      pen.trough=Array.isArray(pen.trough)?pen.trough.slice(0,16):Array(16).fill(null);while(pen.trough.length<16)pen.trough.push(null);
-      if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");
-      if(!isAdmin()&&have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");
-      if(!isAdmin())next.alpaca.inventory.food[foodKey]=have-1;
-      pen.trough[slotIndex]={foodKey,servings:Number(meta.servings)||1};
-      next.clientSaveRevision=(Number(next.clientSaveRevision)||0)+1;
-      ownState=next;if(!visitContext)state=next;try{saveLocalOnly(next)}catch(_){}
-      renderPen();renderFixedSideTroughFood(penAt(next.alpaca,currentPen));showTrough();
-      try{save()}catch(_){};try{await flushCloudSave?.()}catch(err){console.warn("R34.12.17 trough cloud",err)}
+      await mutateOwn(next=>{
+        const pen=penAt(next.alpaca,currentPen),meta=FOOD[foodKey],have=Number(next.alpaca?.inventory?.food?.[foodKey])||0;
+        if(!meta||(meta.direct&&!meta.trough))throw new Error("อาหารชนิดนี้ไม่สามารถใส่รางได้");
+        if(!pen||slotIndex<0||slotIndex>=16)throw new Error("ไม่พบช่องรางอาหาร");
+        pen.trough=Array.isArray(pen.trough)?pen.trough.slice(0,16):Array(16).fill(null);while(pen.trough.length<16)pen.trough.push(null);
+        if(pen.trough[slotIndex])throw new Error("ช่องนี้มีอาหารอยู่แล้ว");
+        if(!isAdmin()&&have<1)throw new Error("คุณไม่มีอาหารชนิดนี้");
+        if(!isAdmin())next.alpaca.inventory.food[foodKey]=have-1;
+        pen.trough[slotIndex]={foodKey,servings:Number(meta.servings)||1};
+      });
+      const live=(!visitContext&&state)?state:ownState;
+      renderPen();renderFixedSideTroughFood(penAt(live.alpaca,currentPen));showTrough();
     }catch(e){alpacaMessage("ใส่อาหารไม่ได้",e.message||"กรุณาลองใหม่")}
   }
 
@@ -18001,7 +18000,7 @@ async function V181_campaignScoreLater(summary){
   async function useBirthAccelerator(penNo,id){try{await mutateOwn(s=>{const {animal:a}=findAnimal(s,penNo,id);const now=gameNow();if(!a||a.type!=="adult"||a.sex!=="female"||a.pregnantUntil<=now)throw new Error("ตัวนี้ไม่ได้กำลังตั้งครรภ์");if(a.birthAccelUsed)throw new Error("ครรภ์นี้ใช้ยาเร่งคลอดไปแล้ว");if(s.alpaca.inventory.medicine.birthAccelerator<1)throw new Error("ไม่มียาเร่งคลอดในกระเป๋า");s.alpaca.inventory.medicine.birthAccelerator--;a.birthAccelUsed=true;const start=a.pregnancyStartedAt||now;a.pregnantUntil=Math.max(now,start+PREGNANCY_ACCEL_MS)});alpacaMessage("🍼 ใช้ยาเร่งคลอดแล้ว","เวลาตั้งครรภ์รอบนี้ลดเหลือรวม 3 ชั่วโมงค่ะ");showAlpacaDetail(penNo,id);renderPen()}catch(e){alpacaMessage("ใช้ยาเร่งคลอดไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   function confirmMagicMushroom(ev,source="pen"){$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${panelHero(MAGIC_MUSHROOM_ICON,"ยินดีด้วยนะ","คุณได้รับเห็ดวิเศษ ×1")}<p>กดยืนยันแล้วเห็ดวิเศษจะเข้า กระเป๋า → อัลปาก้า → อื่นๆ</p><button id="magicMushConfirm" class="primary-spooky-action" type="button">ยืนยัน</button><button id="magicMushCancel" class="secondary-action" type="button">ยังไม่เก็บ</button></section>`;openModal();$("magicMushConfirm").onclick=()=>source==="friend"?claimFriendMushroom(ev):claimPenMushroom(ev);$("magicMushCancel").onclick=closeModal}
-  async function claimPenMushroom(ev){try{mutateOwnFast(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="mushroom");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("เห็ดดอกนี้ถูกเก็บไปแล้ว");p.events.splice(idx,1);s.alpaca.inventory.other.magicMushroom++;s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca)});closeModal();renderPenEvents(ownAlpaca());alpacaMessage("🍄 ได้รับเห็ดวิเศษ","ยินดีด้วยนะ คุณได้รับ <b>เห็ดวิเศษ ×1</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว") }catch(e){alpacaMessage("เก็บเห็ดไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function claimPenMushroom(ev){try{await mutateOwnFast(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="mushroom");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("เห็ดดอกนี้ถูกเก็บไปแล้ว");p.events.splice(idx,1);s.alpaca.inventory.other.magicMushroom++;s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca)});closeModal();renderPenEvents(ownAlpaca());alpacaMessage("🍄 ได้รับเห็ดวิเศษ","ยินดีด้วยนะ คุณได้รับ <b>เห็ดวิเศษ ×1</b><br>เข้ากระเป๋าอัลปาก้าเรียบร้อยแล้ว") }catch(e){alpacaMessage("เก็บเห็ดไม่ได้",e.message||"กรุณาลองใหม่")}}
   function randomHoleReward(s){
     /* Same reward pool/quantities as the existing friendly ghost, but no ghost cooldown. */
     const pool=[
@@ -18020,7 +18019,7 @@ async function V181_campaignScoreLater(summary){
     else if(pick.type==="merit")s.merit=(Number(s.merit)||0)+qty;
     return{...pick,qty};
   }
-  async function claimPenHole(ev){try{const out=mutateOwnFast(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="hole");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("หลุมนี้ถูกเปิดไปแล้ว");p.events.splice(idx,1);const reward=randomHoleReward(s);s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca);return reward});renderPenEvents(ownAlpaca());const r=out.result,meta=r.image?`<img class="alpaca-hero-icon" src="${r.image}" alt="">`:`<div class="alpaca-hero-emoji">🙏</div>`;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${meta}<h2>หลุมสุ่มให้รางวัลแล้ว ✨</h2><div class="alpaca-big-reward"><b>${safeHtml(r.name)}</b><strong>×${r.qty}</strong></div><button id="holeRewardDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("holeRewardDone").onclick=()=>{closeModal();renderPenEvents(ownAlpaca())}}catch(e){alpacaMessage("เปิดหลุมไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function claimPenHole(ev){try{const out=await mutateOwnFast(s=>{const p=penAt(s.alpaca,currentPen),idx=p.events.findIndex(x=>x.id===ev.id&&x.type==="hole");if(idx<0||s.alpaca.eventClaims[ev.id])throw new Error("หลุมนี้ถูกเปิดไปแล้ว");p.events.splice(idx,1);const reward=randomHoleReward(s);s.alpaca.eventClaims[ev.id]=gameNow();pruneEventClaims(s.alpaca);return reward});renderPenEvents(ownAlpaca());const r=out.result,meta=r.image?`<img class="alpaca-hero-icon" src="${r.image}" alt="">`:`<div class="alpaca-hero-emoji">🙏</div>`;$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel alpaca-success-panel">${meta}<h2>หลุมสุ่มให้รางวัลแล้ว ✨</h2><div class="alpaca-big-reward"><b>${safeHtml(r.name)}</b><strong>×${r.qty}</strong></div><button id="holeRewardDone" class="primary-spooky-action" type="button">ยืนยัน</button></section>`;openModal();$("holeRewardDone").onclick=()=>{closeModal();renderPenEvents(ownAlpaca())}}catch(e){alpacaMessage("เปิดหลุมไม่ได้",e.message||"กรุณาลองใหม่")}}
 
   async function syncOwnMaleBreeders(){
     if(!cloudReady||!currentMemberKey||!ownState)return;
@@ -18152,7 +18151,7 @@ async function V181_campaignScoreLater(summary){
 
   async function sellVaultAlpaca(vaultId){const item=ownAlpaca()?.vault?.find(v=>v.id===vaultId);if(!item)return;const reward=item.type==="baby"?50:200,ok=await alpacaConfirm("ขายอัลปาก้าในคลังไหมคะ?",`เมื่อลบแล้วจะเอากลับคืนไม่ได้ • ได้ <b>${reward} กุศล</b>`,{confirmText:`ขาย +${reward} กุศล`,danger:true});if(!ok)return;try{await mutateOwnSale(st=>{const idx=st.alpaca.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const got=st.alpaca.vault[idx].type==="baby"?50:200;st.alpaca.vault.splice(idx,1);st.saleTombstones=st.saleTombstones&&typeof st.saleTombstones==="object"?st.saleTombstones:{};st.saleTombstones.alpacas=st.saleTombstones.alpacas&&typeof st.saleTombstones.alpacas==="object"?st.saleTombstones.alpacas:{};st.saleTombstones.alpacas[String(vaultId)]=gameNow();st.merit=(Number(st.merit)||0)+got});updateMeritUI();showWeatherToast(`🦙 ขายอัลปาก้าแล้ว • +${reward} กุศล`);showAlpacaWarehouse()}catch(e){alpacaMessage("ขายอัลปาก้าไม่ได้",e.message||"กรุณาลองใหม่")}}
   function showVaultPenPicker(vaultId){const root=ownAlpaca(),item=root?.vault?.find(v=>v.id===vaultId);if(!item)return showAlpacaWarehouse();$("modalContent").innerHTML=`<section class="feature-panel alpaca-panel">${panelHero("",`วาง${item.type==="baby"?"เบบี้":"อัลปาก้า"}เข้าคอก`,`เลือกคอกที่ยังมีพื้นที่`)}<div class="alpaca-pen-picker">${root.pens.map((p,i)=>`<button type="button" data-vault-pen="${i+1}" ${p.alpacas.length>=PEN_CAPACITY?"disabled":""}>คอก ${i+1}<small>${safeHtml(p.name)} • ${p.alpacas.length}/${PEN_CAPACITY}</small></button>`).join("")}</div><button id="vaultPenBack" class="secondary-action" type="button">กลับคลัง</button></section>`;openModal();document.querySelectorAll("[data-vault-pen]").forEach(b=>b.onclick=()=>placeVaultAlpaca(vaultId,Number(b.dataset.vaultPen)));$("vaultPenBack").onclick=showAlpacaWarehouse}
-  async function placeVaultAlpaca(vaultId,penNo){try{penNo=Math.max(1,Math.min(5,Number(penNo)||1));mutateOwnFast(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;const placed=gameNow();if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||placed,item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||placed}a.placedAt=placed;a.expiresAt=placed+ALPACA_LIFETIME_MS;pen.alpacas.push(a);root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
+  async function placeVaultAlpaca(vaultId,penNo){try{penNo=Math.max(1,Math.min(5,Number(penNo)||1));await mutateOwnFast(s=>{const root=s.alpaca,idx=root.vault.findIndex(v=>v.id===vaultId);if(idx<0)throw new Error("ไม่พบอัลปาก้าในคลัง");const item=root.vault[idx],pen=penAt(root,penNo);if(!pen||pen.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็มแล้ว`);let a;const placed=gameNow();if(item.type==="baby"){a=makeBaby(item.color,Number(item.bornAt)||placed,item.source||"vault");a.id=item.id;a.readyProcessAt=Number(item.readyProcessAt)||a.readyProcessAt}else{a=makeAdult(root,item.color,item.sex,1);a.id=item.id;a.createdAt=Number(item.createdAt)||placed}a.placedAt=placed;a.expiresAt=placed+ALPACA_LIFETIME_MS;pen.alpacas.push(a);root.vault.splice(idx,1)});currentPen=penNo;closeModal();renderPen();alpacaMessage("วางเข้าคอกแล้ว",`อัลปาก้าไปอยู่ที่ <b>คอก ${penNo}</b> เรียบร้อยแล้วค่ะ`)}catch(e){alpacaMessage("วางไม่ได้",e.message||"กรุณาลองใหม่")}}
   function countUnplacedPets(s,kind){const arr=kind==="cat"?(s.cats||[]):(s.dogs||[]);return arr.filter(x=>kind==="cat"?!x.placedFarm:!x.placedHotel).length}
   function totalJellyV2(s){return Object.values(s.jellyfishV2||{}).reduce((n,v)=>n+(Number(v)||0),0)}
   function alpacaCraftCounts(s){const admin=isAdmin();return{jellyV2:admin?9999:totalJellyV2(s),landDeed:admin?9999:Number(s.specials?.landDeed)||0,cats:admin?9999:countUnplacedPets(s,"cat"),dogs:admin?9999:countUnplacedPets(s,"dog"),merit:admin?9999:Number(s.merit)||0,egg:admin?9999:Number(s.animalProducts?.egg)||0,milk:admin?9999:Number(s.animalProducts?.milk)||0,truffle:admin?9999:Number(s.animalProducts?.truffle)||0,fishMeat:admin?9999:Number(s.animalProducts?.fishMeat)||0}}
