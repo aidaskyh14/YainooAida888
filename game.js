@@ -3538,7 +3538,7 @@ async function start(){
   }
   try{
     await ensureMemberAuth(member,code);await initializeOrLoadCloudState(member,currentMemberKey);enterGameScreen();showWeatherToast("☁️ โหลดเซฟส่วนกลางแล้ว");
-  }catch(error){console.error("member cloud login",error);currentMember=null;currentMemberKey="";ownState=state=null;$("loginError").textContent=`เชื่อม Firebase ไม่สำเร็จ: ${error.message||"กรุณาลองใหม่"}`}
+  }catch(error){console.error("member cloud login",error);currentMember=null;currentMemberKey="";ownState=state=null;$("loginError").textContent="เชื่อมข้อมูลเกมไม่สำเร็จ กรุณาลองเข้าสู่สวนอีกครั้ง หากยังเข้าไม่ได้ให้ปิดหน้าเกมแล้วเปิดใหม่ค่ะ"}
   finally{if(loginBtn){loginBtn.disabled=false;loginBtn.textContent="เข้าสู่สวน"}}
 }
 async function checkFirebaseAdminConnection(options={}){
@@ -37808,6 +37808,10 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
       return true;
     }
     const raw=sn.data()||{};
+    /* R36.72: V7 is already structurally sharded. getFirebaseContext() returns the
+       hydrated virtual state, so the old R36.22 index counter can look huge even
+       though no single Firestore document is huge. Never rebuild/delete a V7 save. */
+    if(String(raw.saveLayoutVersion||"")==="save-layout-v7-r3663")return true;
     let clean=trimHistory(raw,false),bytes=size(clean),units=indexUnits(clean);
     if(bytes>620*1024||units>5500){clean=trimHistory(raw,true);bytes=size(clean);units=indexUnits(clean)}
     if(bytes>760*1024||units>8000)throw new Error(`เซฟ ${key} ยังใหญ่/มี index มากเกินหลังซ่อม: ${bytes.toLocaleString()} bytes • ~${units.toLocaleString()} entries`);
@@ -38465,7 +38469,12 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
         for(const i of empties.slice(0,qty)){let ck=key;if(secret){if(!admin())s.specials[SECRET_SEED]-=1;ck=SECRET_CROPS[Math.floor(Math.random()*SECRET_CROPS.length)]}s.angelPlantCounter=iv(s.angelPlantCounter)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;const c=cropMeta(ck);s.plots[i]=secret?normPlot({crop:ck,phase:"r35SecretGrowing",phaseEndsAt:t+SECRET_TOTAL,plantedAt:t,wateredAt:t,worm:false,angel}):normPlot({crop:ck,phase:"growing1",phaseEndsAt:t+Number(c?.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel});got[ck]=(got[ck]||0)+1}
         try{incrementMissionOn?.(s,"dailyPlantCrops",qty)}catch(_){};return{qty,got};
       },{garden:true,profile:true,preferLocal:true});
-      closeModal?.();draw?.();notice?.({title:`ปลูกทั้งหมด ${out.result.qty} แปลงแล้ว`,icon:"🌱",text:"<p>บันทึกเรียบร้อยแล้วค่ะ</p>"});return true;
+      closeModal?.();draw?.();
+      if(secret){
+        const rows=Object.entries(out.result.got||{}).map(([k,q])=>`<div><b>${typeof safeHtml==="function"?safeHtml(cropMeta(k)?.name||k):(cropMeta(k)?.name||k)}</b> ×${q}</div>`).join("");
+        const left=admin()?9999:iv((ownState||state)?.specials?.[SECRET_SEED]);
+        notice?.({title:`Secret Seeds สุ่มแล้ว ${out.result.qty} แปลง`,image:"secret-seeds.png",text:`<p>รอบนี้สุ่มได้</p><div style="display:grid;gap:4px">${rows}</div><small>Secret Seeds คงเหลือ ×${left} • บันทึกเรียบร้อยแล้ว</small>`});
+      }else notice?.({title:`ปลูกทั้งหมด ${out.result.qty} แปลงแล้ว`,icon:"🌱",text:"<p>บันทึกเรียบร้อยแล้วค่ะ</p>"});return true;
     }catch(e){notice?.({title:"ปลูกทั้งหมดไม่ได้",icon:"🌱",text:`<p>${typeof safeHtml==="function"?safeHtml(e?.message||"กรุณาลองใหม่ค่ะ"):(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`});return false}
   }
   async function bulkBoostFixed(key){
@@ -38484,4 +38493,186 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   Object.assign(globalThis.YN_R3650_DURABLE,{plantOne,plantSecretOne:plantSecretOneFixed,boostOne:useCropBoostOnPlot,bulkPlant:bulkPlantFixed,bulkBoost:bulkBoostFixed});
 
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+
+/* =====================================================================
+   S2 R36.73 — PERMANENT SAVE SPACE STABILIZER
+   2026-09-17
+   Goals:
+   - Keep /saves well below Firestore document/index limits instead of only hiding errors.
+   - Remove only historical/dedupe/cooldown metadata; never inventory, active animals,
+     crops, currencies, or pending/unclaimed rewards.
+   - Strip undefined recursively before any guarded full save.
+   - Repair oversized member saves at login; Aida performs one light sweep of all saves.
+   ===================================================================== */
+(function YN_R3673_SAVE_SPACE_STABILIZER(){
+  "use strict";
+  const BUILD="S2-R36.73-SAVE-SPACE-STABILIZER-20260917";
+  const DAY=86400000;
+  const SOFT_BYTES=430*1024;
+  const HARD_BYTES=560*1024;
+  const SOFT_UNITS=6000;
+  const HARD_UNITS=7800;
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const units=(v,seen=new WeakSet())=>{
+    if(v==null||typeof v!=="object")return 1;
+    if(seen.has(v))return 0;seen.add(v);
+    if(Array.isArray(v)){let n=v.length||1;for(const x of v)n+=units(x,seen);return n}
+    let n=0;for(const x of Object.values(v))n+=units(x,seen);return Math.max(1,n);
+  };
+  const stamp=v=>{if(typeof v==="number")return Number(v)||0;if(!isObj(v))return 0;return Number(v.claimedAt??v.createdAt??v.updatedAt??v.resolvedAt??v.transferredAt??v.at??v.time??v.expiresAt??0)||0};
+  const keepMap=(v,cap,maxAgeMs=0)=>{const t=Date.now();return Object.fromEntries(Object.entries(isObj(v)?v:{}).filter(([,x])=>{if(!maxAgeMs)return true;const s=stamp(x);return !s||t-s<=maxAgeMs}).sort((a,b)=>stamp(b[1])-stamp(a[1])).slice(0,cap))};
+  const futureMap=(v,cap)=>{const t=Date.now();return Object.fromEntries(Object.entries(isObj(v)?v:{}).filter(([,x])=>(Number(x)||stamp(x)||0)>t).sort((a,b)=>(Number(b[1])||stamp(b[1])||0)-(Number(a[1])||stamp(a[1])||0)).slice(0,cap))};
+
+  /* Firestore rejects undefined anywhere in a document. Preserve special SDK values. */
+  function stripUndefined(v,seen=new WeakSet()){
+    if(v===undefined)return undefined;
+    if(v===null||typeof v!=="object")return v;
+    if(typeof v.toMillis==="function"||typeof v.isEqual==="function")return v;
+    if(seen.has(v))return undefined;seen.add(v);
+    if(Array.isArray(v))return v.map(x=>stripUndefined(x,seen)).filter(x=>x!==undefined);
+    for(const k of Object.keys(v)){const x=stripUndefined(v[k],seen);if(x===undefined)delete v[k];else v[k]=x}
+    return v;
+  }
+
+  const protectedTop=new Set([
+    "bag","specials","animalProducts","dishInventory","homeFoods","fishingBaits","mysteryBoxes","specialAnimals",
+    "dogs","cats","plots","pens","vault","inventory","wool","food","medicine","products","coconutRiverItems",
+    "jellyfishV2","warehouseTools","rainyMenus","boatDrinks","alpaca","hedgehog","hamsters","hamsterFarms",
+    "merit","stars","charity","money","dailyMissions","missionState","dailyLimits","house","basement","ostrich"
+  ]);
+  const historyRe=/claim|receipt|history|archive|tombstone|cooldown|lock|ledger|visited|seen|processed|dedupe|audit|log/i;
+  function genericPrune(node,level=1,depth=0){
+    if(!node||typeof node!=="object"||depth>9)return;
+    if(Array.isArray(node)){for(const x of node)genericPrune(x,level,depth+1);return}
+    const mapCap=level>=3?8:level>=2?16:32,arrCap=level>=3?2:level>=2?4:8;
+    for(const [k,v] of Object.entries(node)){
+      if(!v||typeof v!=="object")continue;
+      if(depth===0&&protectedTop.has(k)){genericPrune(v,level,depth+1);continue}
+      if(historyRe.test(k)){
+        if(Array.isArray(v)&&v.length>arrCap){node[k]=v.slice(-arrCap);continue}
+        if(isObj(v)&&Object.keys(v).length>mapCap){node[k]=keepMap(v,mapCap);continue}
+      }
+      genericPrune(node[k],level,depth+1);
+    }
+  }
+
+  function compact(s,level=1){
+    if(!s||typeof s!=="object")return s;
+    const hard=level>=2,tiny=level>=3;
+    const cap=tiny?12:hard?24:48;
+    s.friendGiftClaims=keepMap(s.friendGiftClaims,cap,30*DAY);
+    s.broadcastGiftClaims=keepMap(s.broadcastGiftClaims,tiny?8:hard?16:32,30*DAY);
+    if(s.fishingClaimReceipts)s.fishingClaimReceipts=keepMap(s.fishingClaimReceipts,tiny?16:hard?32:64,3*DAY);
+    if(s.campaignReceipts)s.campaignReceipts=keepMap(s.campaignReceipts,tiny?16:hard?32:64,14*DAY);
+    if(s.friendResourceClaims)s.friendResourceClaims=keepMap(s.friendResourceClaims,tiny?24:hard?48:96,7*DAY);
+    if(s.friendForageClaims)s.friendForageClaims=keepMap(s.friendForageClaims,tiny?24:hard?48:96,7*DAY);
+    if(s.friendCatCooldowns)s.friendCatCooldowns=futureMap(s.friendCatCooldowns,tiny?24:48);
+    if(s.r32FriendForageLocks)s.r32FriendForageLocks=futureMap(s.r32FriendForageLocks,tiny?24:48);
+    if(s.r3465BasementReceipts)s.r3465BasementReceipts=keepMap(s.r3465BasementReceipts,tiny?4:8,14*DAY);
+    if(s.hedgehogShieldReceiptsR3465)s.hedgehogShieldReceiptsR3465=keepMap(s.hedgehogShieldReceiptsR3465,tiny?4:8,14*DAY);
+    if(Array.isArray(s.dishes))s.dishes=[]; /* counts are canonical in dishInventory */
+    if(Array.isArray(s.retiredCatsArchiveR34)){
+      s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s.retiredCatsArchiveR34.length);
+      s.retiredCatsArchiveR34=s.retiredCatsArchiveR34.slice(-(tiny?2:hard?4:8)).map(c=>c&&typeof c==="object"?{id:String(c.id||""),typeKey:String(c.typeKey||""),customName:String(c.customName||"")}:c);
+    }
+    if(isObj(s.saleTombstones))for(const k of ["dogs","cats","alpacas"])s.saleTombstones[k]=keepMap(s.saleTombstones[k],tiny?12:hard?24:48,21*DAY);
+    if(isObj(s.alpaca)){
+      if(s.alpaca.eventClaims)s.alpaca.eventClaims=keepMap(s.alpaca.eventClaims,tiny?12:hard?24:48,7*DAY);
+      if(s.alpaca.friendMushroomClaims)s.alpaca.friendMushroomClaims=keepMap(s.alpaca.friendMushroomClaims,tiny?12:hard?24:48,7*DAY);
+      if(s.alpaca.testSireCooldowns)s.alpaca.testSireCooldowns=futureMap(s.alpaca.testSireCooldowns,tiny?12:24);
+      const f=s.alpaca.factory;if(isObj(f)){
+        if(isObj(f.babyTransfers))f.babyTransfers=keepMap(f.babyTransfers,tiny?16:hard?32:64,30*DAY);
+        if(Array.isArray(f.history))f.history=f.history.slice(-(tiny?2:hard?4:8));
+        if(Array.isArray(f.jobs)){const active=f.jobs.filter(j=>j&&j.status!=="claimed"),done=f.jobs.filter(j=>j&&j.status==="claimed").slice(-(tiny?2:hard?4:8));f.jobs=active.concat(done)}
+      }
+    }
+    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:hard})}catch(_){ }
+    genericPrune(s,level);
+    stripUndefined(s);
+    s.saveSpaceGuardR3673={version:BUILD,lastCompactAt:Date.now(),level};
+    return s;
+  }
+  function prepare(s){
+    compact(s,1);let b=bytes(s),u=units(s);
+    if(b>SOFT_BYTES||u>SOFT_UNITS){compact(s,2);b=bytes(s);u=units(s)}
+    if(b>HARD_BYTES||u>HARD_UNITS){compact(s,3);b=bytes(s);u=units(s)}
+    return {state:s,bytes:b,indexUnits:u};
+  }
+
+  /* Every path that normalizes a save now also prunes growth sources. This covers
+     legacy transaction routes that bypass flushCloudSave and write a full /saves doc. */
+  try{
+    const baseNormalize=normalizeState;
+    normalizeState=function(raw,player){const out=baseNormalize(raw,player);prepare(out);return out};
+  }catch(e){console.warn(BUILD,"normalize install",e)}
+
+  try{
+    const baseLocal=saveLocalOnly;
+    saveLocalOnly=function(target=ownState||state){try{if(target)prepare(target)}catch(_){}return baseLocal.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"local save install",e)}
+
+  try{
+    const baseFlush=flushCloudSave;
+    flushCloudSave=async function(){try{if(ownState)prepare(ownState)}catch(_){}return baseFlush.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"flush install",e)}
+
+  const DELETE_PATHS=[
+    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims",
+    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","r32FriendForageLocks","retiredCatsArchiveR34",
+    "alpaca.friendMushroomClaims","alpaca.eventClaims","alpaca.testSireCooldowns","alpaca.factory.babyTransfers","alpaca.factory.history"
+  ];
+  async function rescueDoc(memberKey,{force=false}={}){
+    const mk=String(memberKey||"");if(!mk)return false;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk);let snap=await fs.getDoc(ref);if(!snap.exists())return false;
+    const raw=snap.data()||{},b0=bytes(raw),u0=units(raw);
+    if(!force&&b0<=SOFT_BYTES&&u0<=SOFT_UNITS)return false;
+    let normalized;
+    try{normalized=normalizeState(raw,raw.player||raw.displayName||mk)}catch(_){normalized=JSON.parse(JSON.stringify(raw))}
+    const r=prepare(normalized);
+    try{
+      await fs.setDoc(ref,{...stripUndefined(r.state),saveSpaceRescueR3673:{version:BUILD,rescuedAtClient:Date.now(),beforeBytes:b0,beforeUnits:u0,afterBytes:r.bytes,afterUnits:r.indexUnits},updatedAt:fs.serverTimestamp()},{merge:false});
+      console.info(BUILD,"save rescued",mk,{beforeBytes:b0,beforeUnits:u0,afterBytes:r.bytes,afterUnits:r.indexUnits});return true;
+    }catch(e){
+      /* If a near-limit document rejects a full rewrite, first delete only historical
+         fields in-place, then retry the compact rewrite. */
+      try{
+        if(typeof fs.deleteField==="function"){
+          const patch={};for(const p of DELETE_PATHS)patch[p]=fs.deleteField();
+          await fs.updateDoc(ref,patch);snap=await fs.getDoc(ref);
+          const raw2=snap.data()||{};let n2;try{n2=normalizeState(raw2,raw2.player||raw2.displayName||mk)}catch(_){n2=JSON.parse(JSON.stringify(raw2))}
+          const r2=prepare(n2);
+          await fs.setDoc(ref,{...stripUndefined(r2.state),saveSpaceRescueR3673:{version:BUILD,rescuedAtClient:Date.now(),beforeBytes:b0,beforeUnits:u0,afterBytes:r2.bytes,afterUnits:r2.indexUnits},updatedAt:fs.serverTimestamp()},{merge:false});
+          return true;
+        }
+      }catch(e2){console.warn(BUILD,"two-stage rescue failed",mk,e2?.message||e2)}
+      console.warn(BUILD,"rescue failed",mk,e?.message||e);return false;
+    }
+  }
+
+  /* Repair current player before normal login writes. Failure never blocks login. */
+  try{
+    const baseInit=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,memberKey){
+      try{await rescueDoc(String(memberKey||""))}catch(e){console.warn(BUILD,"pre-login rescue skipped",e?.message||e)}
+      return baseInit.apply(this,arguments);
+    };
+  }catch(e){console.warn(BUILD,"login rescue install",e)}
+
+  /* Aida repairs all currently bloated player saves once per build/browser session.
+     With ~20 players this is intentionally sequential and only rewrites docs over threshold. */
+  async function adminSweep(){
+    try{
+      const admin=(String(currentMember||"")==="Aida")||(adminProfile?.role==="admin");if(!admin||!cloudReady)return;
+      const key="yn:r3673:save-sweep";try{if(sessionStorage.getItem(key)===BUILD)return;sessionStorage.setItem(key,BUILD)}catch(_){}
+      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"saves"));
+      for(const d of sn.docs){try{await rescueDoc(d.id)}catch(e){console.warn(BUILD,"sweep",d.id,e?.message||e)}}
+    }catch(e){console.warn(BUILD,"admin sweep failed",e?.message||e)}
+  }
+  setTimeout(adminSweep,2500);
+
+  globalThis.YN_R3673_SAVE_SPACE={BUILD,prepare,compact,rescue:(mk=currentMemberKey)=>rescueDoc(mk,{force:true}),report:()=>{const s=ownState||state||{};return{memberKey:String(currentMemberKey||""),bytes:bytes(s),indexUnits:units(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v),units(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
 })();
