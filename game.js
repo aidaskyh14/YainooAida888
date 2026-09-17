@@ -28335,6 +28335,17 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   }
   let globalResetPromise33=null;
   async function resetEveryoneExceptAida33(){
+    /* R36.70 DATA-LOSS STOP — this one-time launch reset (3 Sep 2026) is now disabled.
+       It read every player document with fs.getDocs(collection("saves")), which is the
+       ONE Firestore call the R36.63 shard proxy does not intercept, so it saw only the
+       small root document. The reset marker lives in an overflow shard, so
+       `raw?.[RESET_MARK]` came back undefined for EVERY player and the reset re-ran in
+       full each time an admin signed in on a fresh browser: unlocks back to locked,
+       house level 0, plots emptied, animals cleared, alpaca pens emptied.
+       That is the "everything I unlocked asks for a key again" report. The migration is
+       long finished; re-running it can only destroy data. */
+    return;
+    /* eslint-disable no-unreachable */
     if(!isAida33()||!cloudReady)return;if(globalResetPromise33)return globalResetPromise33;const doneKey="yn:r33:global-reset-run";try{if(localStorage.getItem(doneKey)===RESET_VERSION)return}catch(_){}
     globalResetPromise33=(async()=>{try{const {db,fs}=await getFirebaseContext(),snap=await fs.getDocs(fs.collection(db,"saves"));let jobs=[];snap.forEach(docSnap=>{if(String(docSnap.id).toLowerCase()==="aida")return;const raw=docSnap.data()||{};if(raw?.[RESET_MARK])return;const next=resetObject33(raw,raw.player||raw.memberName||"",docSnap.id);jobs.push({id:docSnap.id,next,displayName:String(raw.player||raw.memberName||raw.displayName||docSnap.id)})});for(let off=0;off<jobs.length;off+=150){const batch=fs.writeBatch(db);for(const j of jobs.slice(off,off+150)){batch.set(fs.doc(db,"saves",j.id),{...clone33(j.next),updatedAt:fs.serverTimestamp()},{merge:false});batch.set(fs.doc(db,"gardens",j.id),{memberKey:j.id,displayName:j.displayName,plots:clone33(j.next.plots),season2ResetVersion:RESET_VERSION,updatedAt:fs.serverTimestamp()},{merge:true});batch.set(fs.doc(db,"publicProfiles",j.id),{memberKey:j.id,displayName:j.displayName,houseLevel:0,houseName:"ผู้ไร้บ้าน",initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}await batch.commit()}try{localStorage.setItem(doneKey,RESET_VERSION)}catch(_){}console.info("R33 global reset complete",jobs.length)}catch(e){console.warn("R33 global reset failed; per-user login fallback remains active",e)}finally{globalResetPromise33=null}})();return globalResetPromise33;
   }
@@ -28954,7 +28965,12 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     const sc=$id("sceneScreen");if(sc){sc.style.backgroundImage=`url("${typeof FOREST_BG!=="undefined"?FOREST_BG:"forbidden-forest.png"}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
     if(forestRenderBase346)forestRenderBase346();
   }
-  openForbiddenForest=function(){
+  /* R36.70 LOAD-BREAKER #1 — this line used to abort the whole file.
+     YN_R346_STABLE_BASE runs in strict mode, and `openForbiddenForest` is a
+     function local to the R21 module, NOT a global. Assigning to an undeclared
+     identifier under "use strict" throws ReferenceError, so game.js stopped
+     executing right here and the last ~9,500 lines never ran. */
+  globalThis.openForbiddenForest=function(){
     if(!forestAllowed346()){
       try{globalThis.YN_R33_SHOW_LOCK?.("mysticKey")}catch(_){}
       if(!globalThis.YN_R33_SHOW_LOCK)message?.("🔒 ป่าต้องห้าม","พื้นที่นี้ยังล็อกอยู่ ต้องปลดล็อกก่อนค่ะ");
@@ -28965,7 +28981,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   /* If an unlocked/admin click is intercepted by stale legacy handlers, take authority here. */
   document.addEventListener("click",e=>{
     const b=e.target?.closest?.("#shortcutForbiddenForestBtn");if(!b||!forestAllowed346())return;
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openForbiddenForest();
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();globalThis.openForbiddenForest();
   },true);
 
   globalThis.YN_R346={BUILD,publishHamsters346,loadAndRenderFriend346,waterAll346,forestAllowed346};
@@ -29732,7 +29748,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   /* Dashboard: read all per-member garden arenaWeekly records. Also read the
      old shared weekly doc as a migration fallback and take max per member so
      previous points do not disappear. */
-  showArenaDashboard=async function(){
+  globalThis.showArenaDashboard=async function(){
     if(typeof arenaBoardUnsub!=="undefined"&&arenaBoardUnsub){try{arenaBoardUnsub()}catch(_){}arenaBoardUnsub=null}
     $("modalContent").innerHTML=`<section class="feature-panel ynu-arena-dashboard"><div class="ynu-arena-dash-title"><span>🏆</span><div><h2>คะแนนมวยทะเล</h2><p>คะแนนสะสมประจำสัปดาห์ • รีเซ็ตทุกวันพุธ เวลา 12:00 น.</p></div></div><div id="ynuArenaRows" class="ynu-score-table"><p class="r29-empty">กำลังโหลดคะแนน…</p></div></section>`;
     openModal();
@@ -29819,7 +29835,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     return false;
   }
 
-  startArenaFight=async function(){
+  globalThis.startArenaFight=async function(){
     if(busy9)return;
     if(!arenaChoice?.jelly||arenaChoice.opp==null||!arenaChoice.move){
       return message?.("ยังเลือกไม่ครบ","เลือกแมงกะพรุนของเรา คู่แข่ง และท่าต่อสู้ก่อนค่ะ");
@@ -38330,7 +38346,14 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   async function mutateTop(mutator,{garden=false,profile=false,preferLocal=false}={}){
     if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
     let pendingError=null;
-    try{await settlePendingCloudSave?.()}catch(e){pendingError=e;console.warn(BUILD,"whole-save flush skipped for partial action",e)}
+    /* R36.70 SPEED — do not force a whole-save flush before every action.
+       This line alone doubled the cost of every tap: settlePendingCloudSave()
+       runs a full queue pass (1 root read + 13 shard reads + 2 mirror writes)
+       and only THEN does this function start its own transaction, which reads
+       the same 14 documents again. On mobile that is where the ~1 minute went.
+       The per-field merge added in R36.69 means a queued snapshot can no longer
+       clobber this action, so settling first is no longer needed for safety. */
+    try{if(typeof pendingCloudSaveCount==="function"&&pendingCloudSaveCount()>0)await settlePendingCloudSave?.()}catch(e){pendingError=e;console.warn(BUILD,"queue settle skipped",e)}
     const {db,fs}=await getFirebaseContext();
     const saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
     let committed=null,result,keys=[];
