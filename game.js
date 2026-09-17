@@ -2648,7 +2648,7 @@ async function ensureMemberAuth(member,code){
   return user;
 }
 async function initializeOrLoadCloudState(member,memberKey){
-  if(/^(Opor|Kongkwan)$/i.test(String(member||""))){try{localStorage.removeItem(`yainoo-v5:${member}`)}catch(_){}}
+  /* R36.63: preserve legacy local snapshot for recovery; do not delete yainoo-v5 cache. */
   const {db,fs}=await getFirebaseContext();
   const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
   const [saveSnap,gardenSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef)]);
@@ -3764,7 +3764,7 @@ function ensureAdminStock(target){
 
 // Firebase load: อ่านเซฟเดิมทุก version และสร้าง fresh เฉพาะเมื่อยืนยันว่าเอกสารไม่มีจริงเท่านั้น
 async function initializeOrLoadCloudState(member,memberKey){
-  if(/^(Opor|Kongkwan)$/i.test(String(member||""))){try{localStorage.removeItem(`yainoo-v5:${member}`)}catch(_){}}
+  /* R36.63: preserve legacy local snapshot for recovery; do not delete yainoo-v5 cache. */
   const {db,fs}=await getFirebaseContext();const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
   // ถ้าการอ่านล้มเหลว Promise จะ throw ก่อนมีการเขียนใด ๆ จึงไม่เอา state ว่างไปทับของเดิม
   const [saveSnap,gardenSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef)]);
@@ -4695,7 +4695,7 @@ function syncServerClockAfterLogin(saveRef,fs){
 }
 
 async function initializeOrLoadCloudState(member,memberKey){
-  if(/^(Opor|Kongkwan)$/i.test(String(member||""))){try{localStorage.removeItem(`yainoo-v5:${member}`)}catch(_){}}
+  /* R36.63: preserve legacy local snapshot for recovery; do not delete yainoo-v5 cache. */
   const {db,fs}=await getFirebaseContext();
   const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
   let [saveSnap,gardenSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef)]);
