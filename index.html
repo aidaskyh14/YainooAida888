@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.51-ALPACA-ZERO-FAST-20260916">
+  <link rel="stylesheet" href="style.css?v=S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.51-ALPACA-ZERO-FAST-20260916"></script>
+<script src="game.js?v=S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3791,7 +3791,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3651_ALPACA_ZERO(){
   "use strict";
-  const BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";
+  const BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";
   const EPOCH="r3651-zero-20260916";
   const RESET_EPOCH="r3651-zero-20260916";
   const PEN_CAPACITY=24;
@@ -3925,6 +3925,238 @@ console.info(BUILD,"loaded");
 
 
 
-<script>window.YAINOO_BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+
+<script>
+/* =====================================================================
+   S2 R36.52 — STRUCTURAL SAVE HEADROOM / ALL PLAYERS
+   2026-09-16
+   Goal: stop saves from racing back to Firestore's 1 MiB / index-entry limits.
+   - Cloud is authoritative; full game state is no longer cached in localStorage.
+   - Every account self-migrates on login by SERVER marker (not device marker).
+   - Historical receipts/logs are archived as JSON strings outside /saves.
+   - Root save keeps only a small recent anti-duplicate window.
+   - Legacy alpaca vault is reset once for this layout, then permanently bounded.
+   - Old local recovery shadows are cleared so Android cannot resurrect bloated saves.
+   ===================================================================== */
+(function YN_R3652_STRUCTURAL_SAVE_HEADROOM(){
+  "use strict";
+  const BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";
+  const LAYOUT="save-layout-v3-r3652";
+  const DAY=86400000;
+  const ROOT_SOFT=320*1024;
+  const ROOT_HARD=480*1024;
+  const ROOT_DANGER=700*1024;
+  const ARCHIVE_CHARS=220000;
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const bytes=v=>{try{const x=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(x).length:x.length*2}catch(_){return 0}};
+  const now=()=>Date.now();
+  const pressure=e=>/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i.test(String(e?.message||e||""));
+  const localQuota=e=>/QuotaExceededError|quota has been exceeded|storage quota|exceeded.*quota/i.test(String(e?.name||"")+" "+String(e?.message||e||""));
+  const stamp=v=>{
+    if(typeof v==="number")return Number(v)||0;
+    if(!v||typeof v!=="object")return 0;
+    const x=v.claimedAtClient??v.resolvedAt??v.claimedAt??v.transferredAt??v.updatedAtMs??v.createdAtClient??v.createdAt??v.updatedAt??v.at??v.time??v.ts??v.expiresAt??0;
+    if(typeof x?.toMillis==="function")return Number(x.toMillis())||0;
+    return Number(x)||0;
+  };
+  function keep(v,cap,ageMs=0){
+    if(Array.isArray(v)){
+      let a=v.slice();
+      if(ageMs)a=a.filter(x=>{const t=stamp(x);return !t||now()-t<=ageMs});
+      if(a.length>cap)a=a.slice(-cap);
+      return a;
+    }
+    if(isObj(v)){
+      let a=Object.entries(v);
+      if(ageMs)a=a.filter(([,x])=>{const t=stamp(x);return !t||now()-t<=ageMs});
+      if(a.some(([,x])=>stamp(x)>0))a.sort((x,y)=>stamp(y[1])-stamp(x[1]));
+      if(a.length>cap)a=a.slice(0,cap);
+      return Object.fromEntries(a);
+    }
+    return v;
+  }
+  function keepFuture(v,cap=48){
+    if(!isObj(v))return v;
+    const t=now();let a=Object.entries(v).filter(([,x])=>{const n=Number(x?.expiresAt??x?.until??x?.readyAt??x)||0;return !n||n>t});
+    if(a.length>cap)a=a.slice(-cap);return Object.fromEntries(a);
+  }
+  const TOP_HISTORY=[
+    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
+    "friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims",
+    "friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","eventHistory",
+    "activityHistory","deliveryReceipts","giftReceipts","r3465BasementReceipts",
+    "hedgehogShieldReceiptsR3465","notifications","saleTombstones","retiredCatsArchiveR34"
+  ];
+  const HIST_RX=/(receipts?|claims?|history|archive|tombstones?|ledgers?|audit(?:log)?|eventlog|activitylog|dedupe|processed|seenids?|notificationqueue)$/i;
+  const COOL_RX=/(cooldowns?|locks?)$/i;
+  const NEVER_TRIM=new Set(["bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","plots","animals","dogs","cats","hamsters","hamsterFarms","farmGuardians","pens","inventory","wool","food","medicine","products","flowers","flowerSeeds","flowerPlots","wines","wineMachines","homeFoods","boatDrinks","coconutRiverItems","jellyfishV2","warehouseTools","rainyMenus","hedgehog","houseUpgrade","s2Unlocks","upgradeKeys","missions","dailyLimits"]);
+  function walk(o,cap,depth=0){
+    if(!o||typeof o!=="object"||depth>14)return;
+    if(Array.isArray(o)){for(const x of o)walk(x,cap,depth+1);return}
+    for(const k of Object.keys(o)){
+      const v=o[k];if(!v||typeof v!=="object")continue;
+      if(NEVER_TRIM.has(k)){walk(v,cap,depth+1);continue}
+      if(COOL_RX.test(k)){o[k]=keepFuture(v,Math.max(24,cap*2));continue}
+      if(HIST_RX.test(k)){o[k]=keep(v,cap,30*DAY);continue}
+      walk(v,cap,depth+1);
+    }
+  }
+  function alpacaBound(s,{reset=false,hard=false}={}){
+    if(!isObj(s?.alpaca))return;
+    const a=s.alpaca;
+    a.vault=Array.isArray(a.vault)?a.vault:[];
+    if(reset){a.vault=[];a.warehouseResetEpoch="r3652-save-reset-20260916";}
+    else if(a.vault.length){
+      const pens=new Set();for(const p of Array.isArray(a.pens)?a.pens:[])for(const x of Array.isArray(p?.alpacas)?p.alpacas:[])if(x?.id!=null)pens.add(String(x.id));
+      const sold=new Set(Object.keys(s?.saleTombstones?.alpacas||{}).map(String));
+      const moved=new Set(Object.keys(a?.factory?.babyTransfers||{}).map(String));
+      let v=a.vault.filter(x=>x&&typeof x==="object"&&!pens.has(String(x.id||""))&&!sold.has(String(x.id||""))&&!moved.has(String(x.id||"")));
+      v.sort((x,y)=>(stamp(y)||0)-(stamp(x)||0));
+      a.vault=v.slice(0,hard?40:80);
+    }
+    if(a.eventClaims)a.eventClaims=keep(a.eventClaims,hard?16:32,14*DAY);
+    if(a.friendMushroomClaims)a.friendMushroomClaims=keep(a.friendMushroomClaims,hard?16:32,14*DAY);
+    if(a.testSireCooldowns)a.testSireCooldowns=keepFuture(a.testSireCooldowns,hard?24:48);
+    if(isObj(a.factory)){
+      if(Array.isArray(a.factory.history))a.factory.history=a.factory.history.slice(-(hard?3:6));
+      if(isObj(a.factory.babyTransfers))a.factory.babyTransfers=keep(a.factory.babyTransfers,hard?24:48,45*DAY);
+      if(Array.isArray(a.factory.jobs)){
+        const active=a.factory.jobs.filter(x=>x&&x.status!=="claimed"),done=a.factory.jobs.filter(x=>x&&x.status==="claimed").slice(-(hard?3:6));a.factory.jobs=active.concat(done);
+      }
+    }
+  }
+  function sanitize(s,{resetVault=false,hard=false}={}){
+    if(!s||typeof s!=="object")return s;
+    const cap=hard?10:24;
+    for(const k of TOP_HISTORY){
+      if(!(k in s))continue;
+      if(k==="notifications"){s[k]=keep(s[k],hard?6:12,14*DAY);continue}
+      if(k==="retiredCatsArchiveR34"){
+        const n=Array.isArray(s[k])?s[k].length:0;s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,n);s[k]=keep(s[k],hard?2:4,30*DAY);continue;
+      }
+      if(k==="saleTombstones"&&isObj(s[k])){for(const t of Object.keys(s[k]))s[k][t]=keep(s[k][t],hard?16:32,45*DAY);continue}
+      s[k]=keep(s[k],cap,30*DAY);
+    }
+    if(s.friendResourceCooldowns)s.friendResourceCooldowns=keepFuture(s.friendResourceCooldowns,hard?32:64);
+    if(s.friendCatCooldowns)s.friendCatCooldowns=keepFuture(s.friendCatCooldowns,hard?32:64);
+    if(s.r32FriendForageLocks)s.r32FriendForageLocks=keepFuture(s.r32FriendForageLocks,hard?32:64);
+    if(Array.isArray(s.dishes)&&isObj(s.dishInventory))s.dishes=[];
+    alpacaBound(s,{reset:resetVault,hard});
+    walk(s,cap);
+    for(const k of Object.keys(s))if(/^saveGuardR\d+/i.test(k))delete s[k];
+    s.saveLayoutVersion=LAYOUT;
+    s.saveLayoutUpdatedAt=now();
+    return s;
+  }
+  function historySnapshot(raw){
+    const out={capturedAt:now(),layout:LAYOUT,top:{}};
+    for(const k of TOP_HISTORY)if(raw?.[k]!==undefined)out.top[k]=cp(raw[k]);
+    if(raw?.alpaca){out.alpaca={eventClaims:cp(raw.alpaca.eventClaims),friendMushroomClaims:cp(raw.alpaca.friendMushroomClaims),factoryHistory:cp(raw.alpaca.factory?.history),babyTransfers:cp(raw.alpaca.factory?.babyTransfers)};}
+    return out;
+  }
+  async function archiveHistory(fs,db,memberKey,raw){
+    let text="";try{text=JSON.stringify(historySnapshot(raw))}catch(_){return}
+    if(text.length<5000)return;
+    const total=Math.ceil(text.length/ARCHIVE_CHARS),batchMax=350;
+    for(let start=0;start<total;start+=batchMax){
+      const b=fs.writeBatch(db);for(let i=start;i<Math.min(total,start+batchMax);i++){
+        const ref=fs.doc(db,"saveArchives",memberKey,"chunks",`r3652-${String(i).padStart(3,"0")}`);
+        b.set(ref,{layout:LAYOUT,kind:"history-json",part:i,total,payload:text.slice(i*ARCHIVE_CHARS,(i+1)*ARCHIVE_CHARS),archivedAtClient:now(),archivedAt:fs.serverTimestamp()},{merge:false});
+      }await b.commit();
+    }
+  }
+  function clearHeavyLocal(member,memberKey){
+    const keys=[`yainoo-v5:${member}`,`yainoo-s2-dirty:${memberKey}`,`yn:s2:r22:critical:${memberKey}`,`yn:r24:pending:${memberKey}`,`yn:r24:last-good:${memberKey}`,`yn:r30:basement:${memberKey}`];
+    for(const k of keys)try{localStorage.removeItem(k)}catch(_){ }
+  }
+  function purgeHeavyOriginCache(){
+    try{
+      const remove=[];for(let i=0;i<localStorage.length;i++){const k=String(localStorage.key(i)||"");if(/^yainoo-v5:/.test(k)||/^yn:s2:r22:critical:/.test(k)||/^yn:r24:(?:pending|last-good):/.test(k))remove.push(k)}
+      remove.forEach(k=>{try{localStorage.removeItem(k)}catch(_){ }});
+    }catch(_){ }
+  }
+  function tinyLocal(target){
+    try{
+      const member=String(typeof currentMember!=="undefined"?currentMember:target?.player||""),memberKey=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+      if(member)try{localStorage.removeItem(`yainoo-v5:${member}`)}catch(_){ }
+      if(memberKey)localStorage.setItem(`yn:r3652:resume:${memberKey}`,JSON.stringify({savedAt:now(),layout:LAYOUT,clientSaveRevision:Number(target?.clientSaveRevision)||0}));
+      return true;
+    }catch(e){if(!localQuota(e))console.warn(BUILD,"tiny local cache",e);return true}
+  }
+  async function repairOne(memberKey,{force=false}={}){
+    const mk=String(memberKey||"").trim();if(!mk)return false;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);if(!snap.exists())return false;
+    const raw=snap.data()||{},before=bytes(raw),needs=force||raw.saveLayoutVersion!==LAYOUT||before>ROOT_SOFT||Array.isArray(raw?.alpaca?.vault)&&raw.alpaca.vault.length>80;
+    if(!needs)return false;
+    try{await archiveHistory(fs,db,mk,raw)}catch(e){console.warn(BUILD,"archive skipped",mk,e)}
+    const clean=cp(raw);sanitize(clean,{resetVault:raw.saveLayoutVersion!==LAYOUT,hard:true});
+    let after=bytes(clean);
+    if(after>ROOT_HARD){walk(clean,6);alpacaBound(clean,{hard:true});after=bytes(clean)}
+    clean.saveLayoutVersion=LAYOUT;clean.saveLayoutUpdatedAt=now();clean.saveRootApproxBytes=after;
+    await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
+    console.info(BUILD,"migrated",mk,{before,after});return true;
+  }
+  /* Disable full-state browser cache for EVERY device. Cloud save is authoritative. */
+  purgeHeavyOriginCache();
+  try{YN_safeLocalStateWrite=tinyLocal}catch(_){ }
+  try{saveLocalOnly=function(target=(typeof ownState!=="undefined"?ownState:null)||(typeof state!=="undefined"?state:null)){return tinyLocal(target)}}catch(_){ }
+  /* A few legacy paths call localStorage.setItem directly. Block only the obsolete full-save key. */
+  try{
+    const nativeSet=Storage.prototype.setItem;
+    if(!Storage.prototype.__ynR3652NoFullSave){
+      Storage.prototype.setItem=function(k,v){if(/^yainoo-v5:/.test(String(k||"")))return;return nativeSet.call(this,k,v)};
+      Object.defineProperty(Storage.prototype,"__ynR3652NoFullSave",{value:true,configurable:true});
+    }
+  }catch(_){ }
+  /* Every normalization pass bounds historical maps before any legacy full-document transaction can write them back. */
+  try{
+    if(typeof normalizeState==="function"){
+      const base=normalizeState;
+      normalizeState=function(raw,player){const out=base(raw,player);sanitize(out,{hard:bytes(out)>ROOT_SOFT});return out};
+    }
+  }catch(e){console.warn(BUILD,"normalize",e)}
+  /* Final cloud-save gate. Keeps headroom on every account and repairs server pressure once. */
+  try{
+    if(typeof flushCloudSave==="function"){
+      const base=flushCloudSave;
+      flushCloudSave=async function(){
+        const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
+        if(live){sanitize(live,{hard:bytes(live)>ROOT_SOFT});tinyLocal(live)}
+        try{return await base.apply(this,arguments)}catch(e){
+          if(!pressure(e))throw e;
+          const mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"");
+          await repairOne(mk,{force:true});
+          if(live)sanitize(live,{hard:true});
+          return await base.apply(this,arguments);
+        }
+      };
+    }
+  }catch(e){console.warn(BUILD,"flush",e)}
+  /* Server-marker migration: runs for every player on their next login, regardless of device. */
+  try{
+    if(typeof initializeOrLoadCloudState==="function"){
+      const base=initializeOrLoadCloudState;
+      initializeOrLoadCloudState=async function(member,memberKey){
+        const mk=String(memberKey||"").trim();clearHeavyLocal(String(member||""),mk);
+        try{await repairOne(mk,{force:false})}catch(e){console.warn(BUILD,"pre-login migrate",mk,e)}
+        /* Prevent the older R36.29 local-marker repair wrapper from doing a second heavy rewrite. */
+        try{localStorage.setItem(`yn:r3651:self-repair:${mk}`,"1")}catch(_){ }
+        let out;
+        try{out=await base.apply(this,arguments)}catch(e){
+          if(!pressure(e))throw e;
+          await repairOne(mk,{force:true});out=await base.apply(this,arguments);
+        }
+        const live=(typeof ownState!=="undefined"&&ownState)||out;if(live){sanitize(live,{hard:bytes(live)>ROOT_SOFT});tinyLocal(live)}
+        return out;
+      };
+    }
+  }catch(e){console.warn(BUILD,"init",e)}
+  globalThis.YN_SAVE_V3={BUILD,LAYOUT,bytes,sanitize,repair:repairOne,report:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(typeof currentMemberKey!=="undefined"?currentMemberKey:""),bytes:bytes(s),layout:s.saveLayoutVersion||"",vault:Array.isArray(s?.alpaca?.vault)?s.alpaca.vault.length:0,largest:Object.entries(s).map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]).slice(0,15)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
+<script>window.YAINOO_BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
