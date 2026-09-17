@@ -17716,6 +17716,17 @@ async function V181_campaignScoreLater(summary){
 
   async function mutateOwn(mutator,{updateProfile=false}={}){
     if(!currentMemberKey||!ownState)throw new Error("ยังไม่พบข้อมูลผู้เล่น");
+    /* R36.50: Alpaca actions must not report success before Firestore commits.
+       Use the late partial-write engine when available so a large /saves document
+       cannot make shearing/medicine/crafting snap back to the old value. */
+    if(globalThis.YN_R3650_DURABLE?.mutateTop){
+      return globalThis.YN_R3650_DURABLE.mutateTop(s=>{
+        ensureAlpacaState(s);topupAdminAlpacaInventory(s);
+        const result=mutator(s);
+        topupAdminAlpacaInventory(s);
+        return result;
+      },{profile:updateProfile,preferLocal:true});
+    }
     const next=normalizeState(cloneData(ownState),currentMember);topupAdminAlpacaInventory(next);const result=mutator(next);topupAdminAlpacaInventory(next);applyOwn(next);saveLocalOnly(next);queueCloudSave();return{state:next,result};
   }
 
@@ -38268,3 +38279,187 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 
 /* R36.49: retired obsolete R36.30–R36.35 alpaca recovery/backfill blocks.
    They scanned historical gifts/saves, repopulated dead/processed alpacas, and caused Admin/player lag. */
+
+
+/* =====================================================================
+   S2 R36.50 — FARM + GROWTH ITEMS + ALPACA DURABILITY HOTFIX
+   2026-09-17
+   Root fix:
+   - Critical taps no longer rewrite the entire /saves document.
+   - Only top-level fields changed by the action are committed transactionally.
+   - If the queued whole-save write is stale/too large, the action can still commit.
+   - Growth items reconcile the current local count for this active session before use.
+   - Alpaca mutateOwn routes here, so shearing only reports success after cloud commit.
+   ===================================================================== */
+(function YN_R3650_DURABLE_ACTIONS(){
+  "use strict";
+  const BUILD="S2-R36.50-FARM-ALPACA-DURABLE-20260917";
+  const SECRET_SEED="r35SecretSeeds";
+  const SECRET_CROPS=["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"];
+  const SECRET_SET=new Set(SECRET_CROPS),SECRET_TOTAL=16*60*60*1000;
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const now=()=>typeof gameNow==="function"?gameNow():Date.now();
+  const admin=()=>{try{return typeof isAdmin==="function"?!!isAdmin():(String(currentMemberKey||"")==="aida")}catch(_){return String(currentMemberKey||"")==="aida"}};
+  const retry=fn=>typeof YN_RETRY_TX==="function"?YN_RETRY_TX(fn):fn();
+  const json=v=>{try{return JSON.stringify(v)}catch(_){return String(v)}};
+  const same=(a,b)=>json(a)===json(b);
+  const pressure=e=>/maximum allowed size|too many index entries|resource[- ]exhausted|document.*large|exceeds.*size|invalid.*document/i.test(String(e?.message||e||""));
+  /* Compatibility exports for late inline patches. Top-level `const` bindings are
+     not properties of globalThis, while R36.63 reads these registries there. */
+  try{if(typeof CROPS!=="undefined")globalThis.CROPS=CROPS;if(typeof SPECIAL_ITEMS!=="undefined")globalThis.SPECIAL_ITEMS=SPECIAL_ITEMS;if(typeof CAKE_ITEMS!=="undefined")globalThis.CAKE_ITEMS=CAKE_ITEMS;if(typeof COCONUT_ITEMS!=="undefined")globalThis.COCONUT_ITEMS=COCONUT_ITEMS}catch(_){}
+  const itemMeta=key=>{
+    try{return (typeof CAKE_ITEMS!=="undefined"&&CAKE_ITEMS?.[key])||(typeof COCONUT_ITEMS!=="undefined"&&COCONUT_ITEMS?.[key])||(typeof SPECIAL_ITEMS!=="undefined"&&SPECIAL_ITEMS?.[key])||null}catch(_){return null}
+  };
+  const cropMeta=key=>{try{return CROPS?.[key]||null}catch(_){return null}};
+  const normPlot=p=>{try{return typeof normalizePlot==="function"?normalizePlot(p):p}catch(_){return p}};
+  function phase(p){try{return typeof ensurePlotPhaseStandalone==="function"?ensurePlotPhaseStandalone(p):p}catch(_){return p}}
+  function live(){return ownState||state||null}
+  function chooseLocal(remote,local,pendingError,preferLocal){
+    if(!preferLocal||!local)return remote;
+    const rr=Number(remote?.clientSaveRevision)||0,lr=Number(local?.clientSaveRevision)||0;
+    const rt=Number(remote?.clientLocalEditAt)||0,lt=Number(local?.clientLocalEditAt)||0;
+    if(pendingError||lr>rr||lt>rt)return local;
+    return remote;
+  }
+  function changedTop(before,after){
+    const out=[];for(const k of new Set([...Object.keys(before||{}),...Object.keys(after||{})])){
+      if(["updatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt"].includes(k))continue;
+      if(!same(before?.[k],after?.[k]))out.push(k);
+    }return out;
+  }
+  async function mutateTop(mutator,{garden=false,profile=false,preferLocal=false}={}){
+    if(!cloudReady||!currentMemberKey)throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
+    let pendingError=null;
+    try{await settlePendingCloudSave?.()}catch(e){pendingError=e;console.warn(BUILD,"whole-save flush skipped for partial action",e)}
+    const {db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+    let committed=null,result,keys=[];
+    await retry(()=>fs.runTransaction(db,async tx=>{
+      const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+      try{assertCurrentCloudSession?.(snap.data(),currentMember)}catch(e){throw e}
+      const remote=normalizeState(snap.data(),currentMember),local=live()?normalizeState(clone(live()),currentMember):null;
+      let s=normalizeState(clone(chooseLocal(remote,local,pendingError,preferLocal)),currentMember);
+      const before=clone(s);
+      result=await mutator(s,{remote,local,pendingError,fs,tx});
+      keys=changedTop(before,s);
+      const rev=Math.max(Number(remote.clientSaveRevision)||0,Number(local?.clientSaveRevision)||0,Number(s.clientSaveRevision)||0)+1;
+      const editAt=Date.now();s.clientSaveRevision=rev;s.clientLocalEditAt=editAt;s.activeSessionId=cloudSessionId;
+      const patch={clientSaveRevision:rev,clientLocalEditAt:editAt,activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()};
+      for(const k of keys){const v=s[k];patch[k]=v===undefined&&fs.deleteField?fs.deleteField():clone(v)}
+      /* tx.update is intentional: a one-plot/one-alpaca action must not serialize
+         old history/receipt maps that make the whole player save too large. */
+      tx.update(saveRef,patch);
+      if(garden&&keys.includes("plots"))tx.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(s.plots||[]),ownerRevision:rev,ownerLocalEditAt:editAt,updatedAt:fs.serverTimestamp()},{merge:true});
+      if(profile||keys.includes("merit")||keys.includes("alpaca")){
+        const pp={memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()};
+        if(keys.includes("alpaca")){try{pp.alpacaHappiness=typeof alpacaTotalHappiness==="function"?Number(alpacaTotalHappiness(s.alpaca))||0:Number(s.alpacaHappiness)||0}catch(_){};pp.alpacaFactoryClaimed=Number(s?.alpaca?.factory?.claimedCount)||0;pp.alpacaHappinessPens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[]}
+        tx.set(profileRef,pp,{merge:true});
+      }
+      committed=clone(s);
+    }));
+    if(!committed)throw new Error("บันทึกข้อมูลไม่สำเร็จ");
+    /* Merge only fields this action committed into the freshest local state. */
+    const base=live()?normalizeState(clone(live()),currentMember):normalizeState(clone(committed),currentMember);
+    for(const k of keys)base[k]=clone(committed[k]);
+    base.clientSaveRevision=committed.clientSaveRevision;base.clientLocalEditAt=committed.clientLocalEditAt;base.activeSessionId=cloudSessionId;
+    ownState=normalizeState(base,currentMember);if(!visitContext)state=ownState;
+    try{saveLocalOnly?.(ownState)}catch(_){}
+    try{updateMeritUI?.()}catch(_){}
+    return {state:ownState,result,keys};
+  }
+  globalThis.YN_R3650_DURABLE={BUILD,mutateTop};
+
+  const plantBusy=new Set();
+  async function plantOne(index,key,button){
+    index=Math.floor(Number(index));if(visitContext||plantBusy.has(index))return false;const crop=cropMeta(key);if(!crop)return false;
+    plantBusy.add(index);if(button){button.disabled=true;button.dataset.r3650Busy="1"}
+    try{
+      await mutateTop(s=>{
+        const p=s.plots?.[index];if(p?.crop)throw new Error("แปลงนี้ถูกปลูกไปแล้ว");
+        const cost=Number(crop.seedCostMerit)||0;if(cost&&!admin()&&Number(s.merit)<cost)throw new Error(`${crop.name} ใช้ ${cost} กุศล / 1 เมล็ด`);
+        if(cost&&!admin())s.merit-=cost;try{incrementMissionOn?.(s,"dailyPlantCrops",1)}catch(_){}
+        s.angelPlantCounter=(Number(s.angelPlantCounter)||0)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;
+        const t=now();s.plots[index]=normPlot({crop:key,phase:"growing1",phaseEndsAt:t+Number(crop.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel});
+        if(admin())try{ensureAdminStock?.(s)}catch(_){}
+      },{garden:true,profile:true,preferLocal:true});
+      closeModal?.();draw?.();showWeatherToast?.(`🌱 ปลูก ${crop.name} แปลง #${index+1} แล้ว • บันทึกเรียบร้อย`);return true;
+    }catch(e){message?.("ปลูกไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return false}
+    finally{plantBusy.delete(index);if(button&&button.isConnected){button.disabled=false;delete button.dataset.r3650Busy}}
+  }
+  try{Y26_plantCrop=plantOne;globalThis.Y26_plantCrop=plantOne}catch(_){}
+
+  async function plantSecretOneFixed(index){
+    index=Math.floor(Number(index));
+    try{
+      const out=await mutateTop((s,{local,remote})=>{
+        const p=s.plots?.[index];if(!p||p.crop)throw new Error("แปลงนี้ไม่ว่างแล้วค่ะ");s.specials=s.specials||{};
+        const localHave=iv(local?.specials?.[SECRET_SEED]),remoteHave=iv(remote?.specials?.[SECRET_SEED]);
+        if(localHave>iv(s.specials[SECRET_SEED])&&(localHave>=remoteHave))s.specials[SECRET_SEED]=localHave;
+        const have=iv(s.specials[SECRET_SEED]);if(have<1&&!admin())throw new Error("Secret Seeds ในกระเป๋าหมดแล้ว");if(!admin())s.specials[SECRET_SEED]=have-1;
+        const k=SECRET_CROPS[Math.floor(Math.random()*SECRET_CROPS.length)],t=now();s.angelPlantCounter=iv(s.angelPlantCounter)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;
+        s.plots[index]=normPlot({crop:k,phase:"r35SecretGrowing",phaseEndsAt:t+SECRET_TOTAL,plantedAt:t,wateredAt:t,worm:false,angel});try{incrementMissionOn?.(s,"dailyPlantCrops",1)}catch(_){};return k;
+      },{garden:true,preferLocal:true});
+      const k=out.result;closeModal?.();draw?.();notice?.({title:"ปลูก Secret Seeds แล้ว",image:cropMeta(k)?.seedImg||"",text:`<p>แปลง #${index+1} สุ่มได้ <b>${typeof safeHtml==="function"?safeHtml(cropMeta(k)?.name||k):(cropMeta(k)?.name||k)}</b></p><small>บันทึกเรียบร้อย</small>`});return true;
+    }catch(e){notice?.({title:"ปลูกไม่ได้",icon:"🌱",text:`<p>${typeof safeHtml==="function"?safeHtml(e?.message||"กรุณาลองใหม่ค่ะ"):(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`});return false}
+  }
+  if(typeof plantMenu==="function"){
+    const menuBase=plantMenu;plantMenu=function(index){const r=menuBase.apply(this,arguments);setTimeout(()=>{const b=document.querySelector(".r35-secret-seed-tile button");if(b)b.onclick=()=>plantSecretOneFixed(index)},0);return r};
+  }
+
+  function applyBoostToPlot(p,item){
+    if(!p?.crop)throw new Error("แปลงนี้ไม่มีพืช");phase(p);if(p.phase==="ready")throw new Error("พืชพร้อมเก็บแล้วค่ะ");
+    const t=now(),boost=Math.max(0,Math.min(100,Number(item?.boost)||0)),crop=cropMeta(p.crop);
+    if(SECRET_SET.has(String(p.crop))){const oldRemain=Math.max(0,(Number(p.plantedAt)||t)+SECRET_TOTAL-t),rem=Math.max(0,Math.round(oldRemain*(1-boost/100)));if(rem<=1000){p.phase="ready";p.phaseEndsAt=0;p.plantedAt=t-SECRET_TOTAL}else{p.plantedAt=t-(SECRET_TOTAL-rem);p.phase="r35SecretGrowing";p.phaseEndsAt=t+rem}p.worm=false;delete p.wormType;return normPlot(p)}
+    if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType;return normPlot(p)}
+    if(!["growing1","growing2","needsWater"].includes(p.phase))throw new Error("ไอเท็มเร่งโตใช้ได้ตอนพืชกำลังเติบโตเท่านั้น");
+    let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);
+    rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}return normPlot(p)
+  }
+  useCropBoostOnPlot=async function(index,key){
+    index=Math.floor(Number(index));if(visitContext)return false;const item=itemMeta(key);if(!item)return false;
+    try{
+      const out=await mutateTop((s,{local,remote})=>{
+        const p=s.plots?.[index];if(!p?.crop)throw new Error("แปลงนี้ไม่มีพืช");s.specials=s.specials||{};
+        const cost=SECRET_SET.has(String(p.crop))?30:1,lh=iv(local?.specials?.[key]),rh=iv(remote?.specials?.[key]),cur=iv(s.specials?.[key]);
+        /* Same active session: if the whole-save queue failed, local inventory is
+           the last good copy shown to the player. Reconcile this one item only. */
+        if(lh>cur&&lh>=rh)s.specials[key]=lh;const have=iv(s.specials?.[key]);if(!admin()&&have<cost)throw new Error(`ไอเท็มไม่พอ • ต้องใช้ ${cost} ชิ้น • มี ${have}`);
+        s.plots[index]=applyBoostToPlot(clone(p),item);if(!admin())s.specials[key]=have-cost;else try{ensureAdminStock?.(s)}catch(_){};return{cost,crop:p.crop};
+      },{garden:true,preferLocal:true});
+      closeModal?.();draw?.();showWeatherToast?.(`⚡ ใช้ ${item.name||"อุปกรณ์เร่งโต"} แล้ว • ×${out.result.cost}`);return true;
+    }catch(e){message?.("ใช้ไอเท็มไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ");return false}
+  };
+  globalThis.useCropBoostOnPlot=useCropBoostOnPlot;
+
+  async function bulkPlantFixed(key){
+    const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0)),a=page*12,b=Math.min(a+12,Number(PLOT_COUNT)||48),secret=key===SECRET_SEED;
+    try{
+      const out=await mutateTop((s,{local,remote})=>{
+        const empties=[];for(let i=a;i<b;i++)if(!s.plots?.[i]?.crop)empties.push(i);if(!empties.length)throw new Error("ไม่มีแปลงว่างในฟาร์มหน้านี้ค่ะ");
+        const got={},t=now();let qty=empties.length;
+        if(secret){s.specials=s.specials||{};const lh=iv(local?.specials?.[SECRET_SEED]),rh=iv(remote?.specials?.[SECRET_SEED]);if(lh>iv(s.specials[SECRET_SEED])&&lh>=rh)s.specials[SECRET_SEED]=lh;const have=admin()?qty:iv(s.specials[SECRET_SEED]);qty=Math.min(qty,have);if(qty<1)throw new Error("Secret Seeds ในกระเป๋าหมดแล้ว")}
+        else{const crop=cropMeta(key);if(!crop)throw new Error("ไม่พบพืชชนิดนี้");const cost=Number(crop.seedCostMerit)||0;if(cost&&!admin())qty=Math.min(qty,Math.floor((Number(s.merit)||0)/cost));if(qty<1)throw new Error(`กุศลไม่พอสำหรับ ${crop.name}`);if(cost&&!admin())s.merit-=cost*qty}
+        for(const i of empties.slice(0,qty)){let ck=key;if(secret){if(!admin())s.specials[SECRET_SEED]-=1;ck=SECRET_CROPS[Math.floor(Math.random()*SECRET_CROPS.length)]}s.angelPlantCounter=iv(s.angelPlantCounter)+1;const angel=s.angelPlantCounter>=30;if(angel)s.angelPlantCounter=0;const c=cropMeta(ck);s.plots[i]=secret?normPlot({crop:ck,phase:"r35SecretGrowing",phaseEndsAt:t+SECRET_TOTAL,plantedAt:t,wateredAt:t,worm:false,angel}):normPlot({crop:ck,phase:"growing1",phaseEndsAt:t+Number(c?.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel});got[ck]=(got[ck]||0)+1}
+        try{incrementMissionOn?.(s,"dailyPlantCrops",qty)}catch(_){};return{qty,got};
+      },{garden:true,profile:true,preferLocal:true});
+      closeModal?.();draw?.();notice?.({title:`ปลูกทั้งหมด ${out.result.qty} แปลงแล้ว`,icon:"🌱",text:"<p>บันทึกเรียบร้อยแล้วค่ะ</p>"});return true;
+    }catch(e){notice?.({title:"ปลูกทั้งหมดไม่ได้",icon:"🌱",text:`<p>${typeof safeHtml==="function"?safeHtml(e?.message||"กรุณาลองใหม่ค่ะ"):(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`});return false}
+  }
+  async function bulkBoostFixed(key){
+    const item=itemMeta(key);if(!item)return false;const page=Math.max(0,Math.min(3,Number(farmPlotPage)||0)),a=page*12,b=Math.min(a+12,Number(PLOT_COUNT)||48);
+    try{
+      const out=await mutateTop((s,{local,remote})=>{
+        const ids=[];let need=0;for(let i=a;i<b;i++){const p=s.plots?.[i];if(!p?.crop)continue;phase(p);if(p.phase==="ready")continue;ids.push(i);need+=SECRET_SET.has(String(p.crop))?30:1}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");s.specials=s.specials||{};
+        const lh=iv(local?.specials?.[key]),rh=iv(remote?.specials?.[key]);if(lh>iv(s.specials[key])&&lh>=rh)s.specials[key]=lh;const have=iv(s.specials[key]);if(!admin()&&have<need)throw new Error(`ไอเท็มไม่พอ • ต้องใช้ ${need} ชิ้น • มี ${have}`);
+        for(const i of ids)s.plots[i]=applyBoostToPlot(clone(s.plots[i]),item);if(!admin())s.specials[key]=have-need;else try{ensureAdminStock?.(s)}catch(_){};return{count:ids.length,need};
+      },{garden:true,preferLocal:true});
+      closeModal?.();draw?.();notice?.({title:"เร่งโตทั้งหมดแล้ว",image:item.image||"",text:`<p>เร่งโต <b>${out.result.count} แปลง</b></p><small>ใช้อุปกรณ์รวม ×${out.result.need}</small>`});return true;
+    }catch(e){notice?.({title:"เร่งโตทั้งหมดไม่ได้",image:item.image||"",text:`<p>${typeof safeHtml==="function"?safeHtml(e?.message||"กรุณาลองใหม่ค่ะ"):(e?.message||"กรุณาลองใหม่ค่ะ")}</p>`});return false}
+  }
+  if(globalThis.YN_R3478){globalThis.YN_R3478.bulkPlant=bulkPlantFixed;globalThis.YN_R3478.bulkBoost=bulkBoostFixed}
+  if(globalThis.YN_R3474_FARM){globalThis.YN_R3474_FARM.bulkPlant=bulkPlantFixed;globalThis.YN_R3474_FARM.bulkBoost=bulkBoostFixed}
+  Object.assign(globalThis.YN_R3650_DURABLE,{plantOne,plantSecretOne:plantSecretOneFixed,boostOne:useCropBoostOnPlot,bulkPlant:bulkPlantFixed,bulkBoost:bulkBoostFixed});
+
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();

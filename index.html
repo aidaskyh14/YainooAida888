@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.67-CANONICAL-SHARD-OWNER-20260917"></script>
+<script src="game.js?v=S2-R36.68-FARM-ALPACA-DURABLE-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3905,7 +3905,15 @@ console.info(BUILD,"loaded");
     try{return await flushPromise}finally{flushPromise=null;if(committedSeq<dirtySeq)scheduleFlush(0)}
   };
   queueCloudSave=function(){if(!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;dirtySeq++;scheduleFlush()};
-  settlePendingCloudSave=async function(){if(saveTimer){clearTimeout(saveTimer);saveTimer=null}if(dirtySeq<=committedSeq)dirtySeq=committedSeq+1;do{await flushCloudSave()}while(committedSeq<dirtySeq&&cloudReady&&!cloudSessionSuperseded)};
+  settlePendingCloudSave=async function(){
+    /* R36.68: settling means finish REAL queued work only. The old V7 code
+       invented a dirty revision even when nothing was pending, which rewrote
+       the full local snapshot immediately before every farm transaction and
+       could resurrect stale plots/inventory. */
+    if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+    if(flushPromise)await flushPromise;
+    while(committedSeq<dirtySeq&&cloudReady&&!cloudSessionSuperseded)await flushCloudSave();
+  };
 
   /* ---- Login migration + final server hydrate. ---- */
   try{const baseInit=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,mk){await ensureV7(String(mk||""),String(member||""),false);const out=await baseInit.apply(this,arguments);try{const {db,fs}=await wrappedGetFirebaseContext(),sn=await serverGet(fs,fs.doc(db,"saves",String(mk||"")));if(sn.exists()){const n=normalizeState(sn.data(),member);ownState=n;if(!visitContext)state=n;try{localSave?.(n)}catch(_){}}}catch(e){console.warn(BUILD,"post-login hydrate",e)}return ownState||out}}catch(e){console.error(BUILD,"init",e)}
@@ -3935,7 +3943,9 @@ console.info(BUILD,"loaded");
     if(typeof guardResting==="function"&&guardResting())throw new Error("ตอนนี้ยังทำรายการนี้ไม่ได้ค่ะ");
     if(!cloudReady||!currentMemberKey)throw new Error("ยังเชื่อมข้อมูลฟาร์มไม่สำเร็จ กรุณาเข้าเกมใหม่ค่ะ");
     gardenBusy.add(tag);try{
-      await settlePendingCloudSave();
+      /* R36.68: a failed legacy whole-save flush must not block a small atomic
+         garden action. V7 transactions write only the canonical shard owners. */
+      try{await settlePendingCloudSave()}catch(e){console.warn(BUILD,"pre-action queued save failed; continuing with canonical garden transaction",e?.message||e)}
       const {db,fs}=await wrappedGetFirebaseContext(),sref=fs.doc(db,"saves",String(currentMemberKey)),gref=fs.doc(db,"gardens",String(currentMemberKey));
       let next=null,result=null;
       await fs.runTransaction(db,async tx=>{
@@ -3968,7 +3978,7 @@ console.info(BUILD,"loaded");
   async function v7BoostAll(key){key=String(key||"");const item=boostMeta(key);if(!item)return;try{const r=await gardenAtomic("boost-all",st=>{const[a,b]=gRange(),t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0)),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(["growing1","needsWater","growing2"].includes(p.phase))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");st.specials=st.specials||{};const have=Number(st.specials[key])||0;if(!gameAdmin()&&have<ids.length)throw new Error(`ต้องใช้ ${ids.length} ชิ้น • มี ${have}`);for(const i of ids){const p=st.plots[i],crop=CROPS?.[p.crop];gPhase(p);if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType;p.plantedAt=t-Math.max(1000,Number(crop?.totalMs)||1000);p.wateredAt=Number(p.wateredAt)||t-Math.max(1000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0))}else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}st.plots[i]=gNorm(p)}if(!gameAdmin())st.specials[key]=have-ids.length;return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`⚡ เร่งโต ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("เร่งโตทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function v7AngelAll(){try{const r=await gardenAtomic("angel-all",st=>{const[a,b]=gRange(),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(p?.crop&&!p.angel&&!gBlocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");st.specials=st.specials||{};const key="angelWingCapsule",have=Number(st.specials[key])||0;if(!gameAdmin()&&have<ids.length)throw new Error(`ต้องใช้ ${ids.length} แคปซูล • มี ${have}`);ids.forEach(i=>{st.plots[i].angel=true;st.plots[i]=gNorm(st.plots[i])});if(!gameAdmin())st.specials[key]=have-ids.length;return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`🪽 เปิดปีกนางฟ้า ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("ปีกนางฟ้าทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function v7HarvestAll(){try{const r=await gardenAtomic("tractor",st=>{const[a,b]=gRange(),summary={};let plots=0,total=0;st.bag=st.bag||{};st.specials=st.specials||{};for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(p.phase!=="ready")continue;const k=String(p.crop),q=Math.max(1,Math.floor(Number(CROPS?.[k]?.yield)||1))*(p.angel?10:1);if(typeof grantHarvestYield==="function")grantHarvestYield(st,k,q);else st.bag[k]=(Number(st.bag[k])||0)+q;summary[k]=(summary[k]||0)+q;total+=q;plots++;st.plots[i]=typeof emptyPlot==="function"?emptyPlot():{crop:null,phase:"empty",phaseEndsAt:0,plantedAt:0,wateredAt:0,worm:false}}if(!plots)throw new Error("ยังไม่มีแปลงพร้อมเก็บค่ะ");try{incrementMissionOn?.(st,"dailyHarvestCrops",total)}catch(_){try{incrementMissionOn?.(st,"harvestCrops",plots)}catch(__){}}return{plots,total,summary}});try{if(typeof v193DeferredCampaign==="function")v193DeferredCampaign(r.summary);else if(typeof V181_campaignScoreLater==="function")setTimeout(()=>V181_campaignScoreLater(r.summary),0)}catch(_){}try{const sec={};for(const k of ["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"])if(r.summary[k])sec[k]=r.summary[k];if(Object.keys(sec).length)globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.(sec)}catch(_){}showWeatherToast?.(`🚜 เก็บเกี่ยว ${r.plots} แปลงเข้ากระเป๋าแล้ว • บันทึกแล้ว`)}catch(e){message?.("รถไถเก็บไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
-  function v7ShowSeedPicker(){const[a,b]=gRange(),st=ownState||state||{},empty=(st.plots||[]).slice(a,b).filter(p=>!p?.crop&&!gBlocked(p)).length;if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");const root=document.getElementById("modalContent");if(!root)return;root.innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS||{}).map(([k,c])=>`<button type="button" data-v7-seed="${gEsc(k)}"><img src="${gEsc(c.selectImg||'')}" alt="${gEsc(c.name||k)}"><span>${gEsc(c.name||k)}</span></button>`).join("")}</div></section>`;root.querySelectorAll("[data-v7-seed]").forEach(b=>b.onclick=()=>v7PlantAll(b.dataset.v7Seed));try{openModal?.()}catch(_){}}
+  function v7ShowSeedPicker(){const[a,b]=gRange(),st=ownState||state||{},empty=(st.plots||[]).slice(a,b).filter(p=>!p?.crop&&!gBlocked(p)).length;if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");const root=document.getElementById("modalContent");if(!root)return;const secret=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]),rows=Object.entries(CROPS||{}).filter(([k,c])=>!secret.has(k)&&!c?.r35Secret),secretQty=Math.max(0,Number(st?.specials?.r35SecretSeeds)||0);root.innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${rows.map(([k,c])=>`<button type="button" data-v7-seed="${gEsc(k)}"><img src="${gEsc(c.selectImg||'')}" alt="${gEsc(c.name||k)}"><span>${gEsc(c.name||k)}</span></button>`).join("")}${secretQty>0||gameAdmin()?`<button type="button" data-v7-seed="r35SecretSeeds"><img src="secret-seeds.png" alt="Secret Seeds"><span>Secret Seeds • ×${gameAdmin()?9999:secretQty}</span></button>`:""}</div></section>`;root.querySelectorAll("[data-v7-seed]").forEach(b=>b.onclick=()=>v7PlantAll(b.dataset.v7Seed));try{openModal?.()}catch(_){}}
   function v7ShowBoostPicker(){const st=ownState||state||{},items=[...Object.entries(globalThis.CAKE_ITEMS||{}),...Object.entries(globalThis.COCONUT_ITEMS||{})].filter(([k])=>gameAdmin()||Number(st?.specials?.[k])>0);if(!items.length)return message?.("เร่งโตทั้งหมด","ไม่มีไอเท็มเร่งโตในกระเป๋า");const root=document.getElementById("modalContent");if(!root)return;root.innerHTML=`<section class="feature-panel"><h2>🍰 เลือกไอเท็มเร่งโต</h2><div class="ynu-seed-grid">${items.map(([k,i])=>`<button type="button" data-v7-boost="${gEsc(k)}"><img src="${gEsc(i.image||'')}" alt="${gEsc(i.name||k)}"><span>${gEsc(i.name||k)} • ×${gameAdmin()?9999:Number(st?.specials?.[k])||0}</span></button>`).join("")}</div></section>`;root.querySelectorAll("[data-v7-boost]").forEach(b=>b.onclick=()=>v7BoostAll(b.dataset.v7Boost));try{openModal?.()}catch(_){}}
   function v7ShowManager(){if(visitContext)return message?.("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const[a,b]=gRange(),root=document.getElementById("modalContent");if(!root)return;root.innerHTML=`<section class="feature-panel ynu-garden-manager"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">แปลง ${a+1}–${b} • บันทึกตรงเซิร์ฟเวอร์</p><div class="ynu-manager-grid"><button data-v7-manager="plant">🌱 ปลูกทั้งหมด</button><button data-v7-manager="water">🚿 รดน้ำทั้งหมด</button><button data-v7-manager="boost">🍰 เร่งโตทั้งหมด</button><button data-v7-manager="angel">🪽 ปีกนางฟ้าทั้งหมด</button><button data-v7-manager="harvest">🚜 รถไถเก็บทั้งหมด</button></div></section>`;root.querySelector('[data-v7-manager="plant"]').onclick=v7ShowSeedPicker;root.querySelector('[data-v7-manager="water"]').onclick=v7WaterAll;root.querySelector('[data-v7-manager="boost"]').onclick=v7ShowBoostPicker;root.querySelector('[data-v7-manager="angel"]').onclick=v7AngelAll;root.querySelector('[data-v7-manager="harvest"]').onclick=v7HarvestAll;try{openModal?.()}catch(_){}}
   /* Single plot buttons call the global function dynamically. */
@@ -3986,6 +3996,19 @@ console.info(BUILD,"loaded");
   try{useCropBoostOnPlot=v8BoostOne;globalThis.useCropBoostOnPlot=v8BoostOne}catch(_){}
   try{harvestOwnPlot=v8HarvestOne;globalThis.harvestOwnPlot=v8HarvestOne}catch(_){}
   /* R36.65: never import /gardens into owner state. It is a public mirror only. */
+
+  /* R36.68: game.js installs a field-level durable engine before V7 loads.
+     Rebind the V7 manager closures LAST so R36.63/R36.67 cannot overwrite it. */
+  try{
+    const d=globalThis.YN_R3650_DURABLE;
+    if(d?.plantOne&&d?.boostOne&&d?.bulkPlant&&d?.bulkBoost){
+      v7PlantOne=d.plantOne;v7PlantAll=d.bulkPlant;v8BoostOne=d.boostOne;v7BoostAll=d.bulkBoost;
+      Y26_plantCrop=v7PlantOne;globalThis.Y26_plantCrop=v7PlantOne;
+      useCropBoostOnPlot=v8BoostOne;globalThis.useCropBoostOnPlot=v8BoostOne;
+      if(globalThis.YN_R3478){globalThis.YN_R3478.bulkPlant=v7PlantAll;globalThis.YN_R3478.bulkBoost=v7BoostAll}
+      if(globalThis.YN_R3474_FARM){globalThis.YN_R3474_FARM.bulkPlant=v7PlantAll;globalThis.YN_R3474_FARM.bulkBoost=v7BoostAll}
+    }
+  }catch(e){console.warn(BUILD,"R36.68 durable garden bind",e)}
 
   globalThis.YN_GARDEN_V7={atomic:gardenAtomic,plantOne:v7PlantOne,plantAll:v7PlantAll,waterOne:v8WaterOne,waterAll:v7WaterAll,boostOne:v8BoostOne,boostAll:v7BoostAll,angelAll:v7AngelAll,harvestOne:v8HarvestOne,harvestAll:v7HarvestAll,manager:v7ShowManager};
   globalThis.YN_GARDEN_CANONICAL=globalThis.YN_GARDEN_V7;try{if(globalThis.YN_R14)globalThis.YN_R14.manager=v7ShowManager;if(globalThis.YN_R3474_FARM)globalThis.YN_R3474_FARM.manager=v7ShowManager}catch(_){}
@@ -4012,6 +4035,17 @@ console.info(BUILD,"loaded");
   console.info(BUILD,"loaded");
 })();
 </script>
-<script>window.YAINOO_BUILD="S2-R36.67-CANONICAL-SHARD-OWNER-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>
+(()=>{
+  const BUILD="S2-R36.68-FARM-ALPACA-DURABLE-20260917",d=globalThis.YN_R3650_DURABLE;
+  try{
+    if(d?.plantOne){Y26_plantCrop=d.plantOne;globalThis.Y26_plantCrop=d.plantOne}
+    if(d?.boostOne){useCropBoostOnPlot=d.boostOne;globalThis.useCropBoostOnPlot=d.boostOne}
+    if(globalThis.YN_R3478&&d?.bulkPlant){globalThis.YN_R3478.bulkPlant=d.bulkPlant;globalThis.YN_R3478.bulkBoost=d.bulkBoost}
+    if(globalThis.YN_R3474_FARM&&d?.bulkPlant){globalThis.YN_R3474_FARM.bulkPlant=d.bulkPlant;globalThis.YN_R3474_FARM.bulkBoost=d.bulkBoost}
+  }catch(e){console.warn(BUILD,"final bind",e)}
+  window.YAINOO_BUILD=BUILD;window.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
 </body>
 </html>
