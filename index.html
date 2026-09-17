@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917">
+  <link rel="stylesheet" href="style.css?v=S2-R36.67-CANONICAL-SHARD-OWNER-20260917">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917"></script>
+<script src="game.js?v=S2-R36.67-CANONICAL-SHARD-OWNER-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3739,7 +3739,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3663_SAVE_V7(){
   "use strict";
-  const BUILD="S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917";
+  const BUILD="S2-R36.67-CANONICAL-SHARD-OWNER-20260917";
   const LAYOUT="save-layout-v7-r3663";
   const ROOT_BUDGET=96*1024, ROOT_HARD=180*1024;
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
@@ -3795,7 +3795,34 @@ console.info(BUILD,"loaded");
     root.saveLayoutVersion=LAYOUT;root.saveShardBuild=BUILD;root.saveLayoutUpdatedAt=now();root.saveShardRoutes=r;root.saveRootApproxBytes=bytes(root);if(mk)routeCache.set(mk,{...r});
     return{root,groups,routes:r};
   }
-  function mergeState(root,groups,mk=""){const out=cp(root||{})||{},r=routesOf(root,mk);for(const g of groupsOfRoutes(r)){const d=groups?.[g];if(obj(d))Object.assign(out,cp(d))}out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=r;if(mk)routeCache.set(mk,{...r});return out}
+  function mergeState(root,groups,mk=""){
+    const out=cp(root||{})||{},r=routesOf(root,mk),canonicalSeen=new Set();
+    /* R36.67: a top-level key has exactly ONE authoritative shard owner.
+       Older V6/V7 migrations left duplicate stale copies (for example plots in
+       both v7-farm and an overflow shard). The old merge used Object.assign in
+       shard order, so a stale overflow copy could overwrite the freshly
+       committed farm/inventory/alpaca value and make actions "work for 2 sec"
+       then revert. Canonical owner always wins now. */
+    for(const g of groupsOfRoutes(r)){
+      const d=groups?.[g];if(!obj(d))continue;
+      for(const [k,v] of Object.entries(d)){
+        const owner=staticGroup(k)||String(r[k]||"")||overflowFor(k);
+        if(owner===g){out[k]=cp(v);canonicalSeen.add(k)}
+      }
+    }
+    /* Recovery fallback only: if the canonical shard is missing a key, accept
+       one surviving duplicate. It may restore old data, but can never override
+       a canonical value once one exists. */
+    for(const g of groupsOfRoutes(r)){
+      const d=groups?.[g];if(!obj(d))continue;
+      for(const [k,v] of Object.entries(d)){
+        if(canonicalSeen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;
+        out[k]=cp(v);
+      }
+    }
+    out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=r;
+    if(mk)routeCache.set(mk,{...r});return out
+  }
   function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);if(p==="get")return path=>cp(field(data,path?.toString?.()||path));return Reflect.get(t,p,t)}})}
   function numericTotal(m){if(!obj(m))return 0;return Object.values(m).reduce((n,v)=>n+(typeof v==="number"&&Number.isFinite(v)&&v>0?v:0),0)}
   function bestPositiveMap(current,candidates,path){if(numericTotal(current)>0)return current;let best=current,bestN=0;for(const s of candidates){const m=field(s,path),n=numericTotal(m);if(n>bestN){bestN=n;best=cp(m)}}return bestN>0?best:current}
@@ -3805,12 +3832,12 @@ console.info(BUILD,"loaded");
   async function serverGet(fs,ref){if(typeof fs.getDocFromServer==="function")return fs.getDocFromServer(ref);return fs.getDoc(ref)}
   async function readV7Groups(fs,db,mk,root,server=true){const r=routesOf(root,mk),names=groupsOfRoutes(r),groups={},sn=await Promise.all(names.map(g=>server?serverGet(fs,shardRef(fs,db,mk,g)):fs.getDoc(shardRef(fs,db,mk,g))));names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});return groups}
   async function readLegacyAndRecovery(fs,db,mk,root,member){const candidates=[cp(root)],full=cp(root)||{};try{const qs=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));qs.forEach(d=>{const raw=d.data()||{},data=obj(raw.data)?raw.data:raw,id=String(d.id||"");if(!obj(data))return;candidates.push(cp(data));if(/^v6-|^v5-|^(animals|farm|history)$/i.test(id))Object.assign(full,cp(data))})}catch(e){console.warn(BUILD,"legacy scan",mk,e?.message||e)}candidates.push(...localCandidates(member,mk));return{full,candidates}}
-  async function ensureV7(mk,member="",force=false){mk=String(mk||"").trim();if(!mk)return false;const {db,fs}=await rawContext(),ref=fs.doc(db,"saves",mk),rs=await serverGet(fs,ref);if(!rs.exists())return false;const root=rs.data()||{};if(!force&&root.saveLayoutVersion===LAYOUT&&bytes(root)<ROOT_HARD){routeCache.set(mk,routesOf(root,mk));return true}
+  async function ensureV7(mk,member="",force=false){mk=String(mk||"").trim();if(!mk)return false;const {db,fs}=await rawContext(),ref=fs.doc(db,"saves",mk),rs=await serverGet(fs,ref);if(!rs.exists())return false;const root=rs.data()||{};if(!force&&root.saveLayoutVersion===LAYOUT&&bytes(root)<ROOT_HARD&&Number(root.saveCanonicalOwnerFixR3667||0)===1){routeCache.set(mk,routesOf(root,mk));return true}
     let canonical,candidates=[];
     if(root.saveLayoutVersion===LAYOUT){canonical=mergeState(root,await readV7Groups(fs,db,mk,root,true),mk);candidates=[canonical]}
     else{const rec=await readLegacyAndRecovery(fs,db,mk,root,member||root.player||root.memberName||"");canonical=rec.full;candidates=rec.candidates}
-    canonical=emergencyRecoverStocks(canonical,candidates);canonical.saveRecoveryR3663At=Number(canonical.saveRecoveryR3663At)||now();
-    const parts=splitState(canonical,mk),batch=fs.writeBatch(db);for(const [g,d] of Object.entries(parts.groups))batch.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(d),updatedAt:fs.serverTimestamp()},{merge:false});batch.set(ref,{...parts.root,saveRecoveryR3663At:canonical.saveRecoveryR3663At,updatedAt:fs.serverTimestamp()},{merge:false});await batch.commit();
+    canonical=emergencyRecoverStocks(canonical,candidates);canonical.saveRecoveryR3663At=Number(canonical.saveRecoveryR3663At)||now();canonical.saveCanonicalOwnerFixR3667=1;
+    const parts=splitState(canonical,mk),batch=fs.writeBatch(db);for(const [g,d] of Object.entries(parts.groups))batch.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(d),updatedAt:fs.serverTimestamp()},{merge:false});batch.set(ref,{...parts.root,saveRecoveryR3663At:canonical.saveRecoveryR3663At,saveCanonicalOwnerFixR3667:1,updatedAt:fs.serverTimestamp()},{merge:false});await batch.commit();
     const ck=await serverGet(fs,ref),rb=ck.exists()?bytes(ck.data()||{}):0;if(rb>ROOT_HARD)throw new Error("เซฟหลักยังใหญ่เกินค่าปลอดภัยหลังแยกข้อมูล");console.info(BUILD,"migrated",mk,{rootBytes:rb});return true;
   }
   async function hydrate(fs,db,ref,base,server=false){if(!base?.exists?.())return base;const info=saveInfo(ref);if(!info)return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT)return base;const groups=await readV7Groups(fs,db,info.memberKey,root,server);return snapLike(base,mergeState(root,groups,info.memberKey))}
@@ -3973,6 +4000,18 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script>window.YAINOO_BUILD="S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+
+<script>
+/* S2 R36.67 — CANONICAL SHARD OWNER FIX
+   The rollback was not a timing problem. It was stale duplicate top-level keys
+   living in multiple save shards. R36.67 makes canonical ownership structural
+   and performs a one-time rewrite that clears duplicate stale copies. */
+(()=>{
+  const BUILD="S2-R36.67-CANONICAL-SHARD-OWNER-20260917";
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+<script>window.YAINOO_BUILD="S2-R36.67-CANONICAL-SHARD-OWNER-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
