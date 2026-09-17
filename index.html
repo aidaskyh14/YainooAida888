@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.64-GARDEN-CANONICAL-COMMIT-20260917">
+  <link rel="stylesheet" href="style.css?v=S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.64-GARDEN-CANONICAL-COMMIT-20260917"></script>
+<script src="game.js?v=S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3739,7 +3739,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3663_SAVE_V7(){
   "use strict";
-  const BUILD="S2-R36.64-GARDEN-CANONICAL-COMMIT-20260917";
+  const BUILD="S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917";
   const LAYOUT="save-layout-v7-r3663";
   const ROOT_BUDGET=96*1024, ROOT_HARD=180*1024;
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
@@ -3855,12 +3855,19 @@ console.info(BUILD,"loaded");
     const seq=dirtySeq,local=cp(ownState),mk=String(currentMemberKey);
     await ensureV7(mk,String(currentMember||""),false);
     const {db,fs}=await wrappedGetFirebaseContext(),ref=fs.doc(db,"saves",mk);
-    await fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);const remote=sn.exists()?sn.data()||{}:{};const merged={...cp(remote),...cp(local),activeSessionId:cloudSessionId,clientSaveRevision:Math.max(Number(remote.clientSaveRevision)||0,Number(local.clientSaveRevision)||0)+1,clientLocalEditAt:Math.max(Number(local.clientLocalEditAt)||0,now())};tx.set(ref,merged,{merge:false})});
-    /* Public garden mirror is output-only. It never overwrites owner state. */
-    try{await fs.setDoc(fs.doc(db,"gardens",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(local.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"garden mirror",e?.message||e)}
-    try{await fs.setDoc(fs.doc(db,"publicProfiles",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(local.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
+    let committed=cp(local);
+    await fs.runTransaction(db,async tx=>{
+      const sn=await tx.get(ref),remote=sn.exists()?sn.data()||{}:{},rr=Math.max(0,Number(remote.clientSaveRevision)||0),lr=Math.max(0,Number(local.clientSaveRevision)||0);
+      /* A transaction/reward with a newer server revision must never be erased by an older queued local snapshot. */
+      const merged=rr>lr?{...cp(local),...cp(remote)}:{...cp(remote),...cp(local)};
+      merged.activeSessionId=cloudSessionId;merged.clientSaveRevision=Math.max(rr,lr)+1;merged.clientLocalEditAt=Math.max(Number(remote.clientLocalEditAt)||0,Number(local.clientLocalEditAt)||0,now());
+      committed=cp(merged);tx.set(ref,merged,{merge:false});
+    });
+    /* /gardens is OUTPUT ONLY. Owner gameplay never imports plot state from it. */
+    try{await fs.setDoc(fs.doc(db,"gardens",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(committed.plots||[]),updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"garden mirror",e?.message||e)}
+    try{await fs.setDoc(fs.doc(db,"publicProfiles",mk),{memberKey:mk,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(committed.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
     committedSeq=Math.max(committedSeq,seq);
-    if(ownState){ownState.clientSaveRevision=Math.max(Number(ownState.clientSaveRevision)||0,Number(local.clientSaveRevision)||0)+1;try{localSave?.(ownState)}catch(_){}criticalLocalBackup(ownState)}
+    if(ownState&&Number(committed.clientSaveRevision||0)>=Number(ownState.clientSaveRevision||0)){ownState=typeof normalizeState==="function"?normalizeState(cp(committed),currentMember):cp(committed);if(!visitContext)state=ownState;try{localSave?.(ownState)}catch(_){}criticalLocalBackup(ownState)}
   }
   flushCloudSave=async function(){
     if(!cloudReady||!currentMemberKey||!ownState||visitContext||cloudSessionSuperseded)return;
@@ -3914,12 +3921,11 @@ console.info(BUILD,"loaded");
         tx.set(sref,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(gref,{memberKey:String(currentMemberKey),displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(st.plots),ownerRevision:Number(st.clientSaveRevision)||0,ownerLocalEditAt:Number(st.clientLocalEditAt)||0,updatedAt:fs.serverTimestamp()},{merge:true});
       });
-      /* Re-read the committed garden from SERVER before painting. The garden doc is
-         the canonical plot clock; never trust an older local/save snapshot here. */
+      /* Owner source of truth is the virtual /saves state only. /gardens is a public mirror.
+         Reading /gardens back here caused the 2-second READY -> SEED rollback race. */
       try{
-        const [ss,gg]=await Promise.all([serverGet(fs,sref),serverGet(fs,gref)]);
+        const ss=await serverGet(fs,sref);
         if(ss?.exists?.()) next=typeof normalizeState==="function"?normalizeState(ss.data(),currentMember):cp(ss.data());
-        if(gg?.exists?.()&&Array.isArray(gg.data()?.plots)){next=next||{};next.plots=gg.data().plots.map(gNorm)}
       }catch(verifyErr){console.warn(BUILD,"garden verify",verifyErr?.message||verifyErr)}
       ownState=typeof normalizeState==="function"?normalizeState(next,currentMember):next;if(!visitContext)state=ownState;
       /* Anything queued before this transaction is older than the server commit. */
@@ -3932,7 +3938,7 @@ console.info(BUILD,"loaded");
   async function v7PlantAll(key){key=String(key||"");const crop=globalThis.CROPS?.[key]||CROPS?.[key];if(!crop)return;try{const r=await gardenAtomic("plant-all",st=>{const[a,b]=gRange(),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop&&!gBlocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงว่างในฟาร์มหน้านี้");const each=Math.max(0,Number(crop.seedCostMerit)||0),cost=each*ids.length;if(cost&&!gameAdmin()&&(Number(st.merit)||0)<cost)throw new Error(`ต้องใช้ ${cost} กุศล • มี ${Number(st.merit)||0}`);if(cost&&!gameAdmin())st.merit-=cost;const t=now();for(const i of ids){st.angelPlantCounter=(Number(st.angelPlantCounter)||0)+1;const angel=st.angelPlantCounter>=30;if(angel)st.angelPlantCounter=0;st.plots[i]=gNorm({crop:key,phase:"growing1",phaseEndsAt:t+Number(crop.waterMs||0),plantedAt:t,wateredAt:0,worm:false,angel})}try{incrementMissionOn?.(st,"dailyPlantCrops",ids.length)}catch(_){};return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`🌱 ปลูก ${crop.name} ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("ปลูกทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function v7WaterAll(){try{const r=await gardenAtomic("water-all",st=>{const[a,b]=gRange(),t=now();let count=0,normal=0,giant=0;for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(p.phase!=="needsWater")continue;if(typeof applyWaterOutcomeV11==="function"){const typ=applyWaterOutcomeV11(p);if(typ==="giant")giant++;else if(typ==="normal")normal++}else{const c=CROPS?.[p.crop];p.wateredAt=t;p.phase="growing2";p.worm=false;p.phaseEndsAt=t+Math.max(60000,Number(c?.totalMs||0)-Number(c?.waterMs||0))}st.plots[i]=gNorm(p);count++}if(!count)throw new Error("ไม่มีพืชพรรณที่ต้องการน้ำตอนนี้");return{count,normal,giant}});showWeatherToast?.(`🚿 รดน้ำแล้ว ${r.count} แปลง${r.normal||r.giant?` • หนอนปกติ ${r.normal} / ไจแอนท์ ${r.giant}`:""} • บันทึกแล้ว`)}catch(e){message?.("รดน้ำทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   function boostMeta(key){return (globalThis.SPECIAL_ITEMS||{})?.[key]||(globalThis.CAKE_ITEMS||{})?.[key]||(globalThis.COCONUT_ITEMS||{})?.[key]}
-  async function v7BoostAll(key){key=String(key||"");const item=boostMeta(key);if(!item)return;try{const r=await gardenAtomic("boost-all",st=>{const[a,b]=gRange(),t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0)),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(["growing1","needsWater","growing2"].includes(p.phase))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");st.specials=st.specials||{};const have=Number(st.specials[key])||0;if(!gameAdmin()&&have<ids.length)throw new Error(`ต้องใช้ ${ids.length} ชิ้น • มี ${have}`);for(const i of ids){const p=st.plots[i],crop=CROPS?.[p.crop];gPhase(p);if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType}else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}st.plots[i]=gNorm(p)}if(!gameAdmin())st.specials[key]=have-ids.length;return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`⚡ เร่งโต ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("เร่งโตทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
+  async function v7BoostAll(key){key=String(key||"");const item=boostMeta(key);if(!item)return;try{const r=await gardenAtomic("boost-all",st=>{const[a,b]=gRange(),t=now(),boost=Math.max(0,Math.min(100,Number(item.boost)||0)),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(["growing1","needsWater","growing2"].includes(p.phase))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่เร่งโตได้");st.specials=st.specials||{};const have=Number(st.specials[key])||0;if(!gameAdmin()&&have<ids.length)throw new Error(`ต้องใช้ ${ids.length} ชิ้น • มี ${have}`);for(const i of ids){const p=st.plots[i],crop=CROPS?.[p.crop];gPhase(p);if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType;p.plantedAt=t-Math.max(1000,Number(crop?.totalMs)||1000);p.wateredAt=Number(p.wateredAt)||t-Math.max(1000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0))}else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}st.plots[i]=gNorm(p)}if(!gameAdmin())st.specials[key]=have-ids.length;return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`⚡ เร่งโต ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("เร่งโตทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function v7AngelAll(){try{const r=await gardenAtomic("angel-all",st=>{const[a,b]=gRange(),ids=[];for(let i=a;i<b;i++){const p=st.plots?.[i];if(p?.crop&&!p.angel&&!gBlocked(p))ids.push(i)}if(!ids.length)throw new Error("ไม่มีแปลงที่ต้องใช้ปีกนางฟ้า");st.specials=st.specials||{};const key="angelWingCapsule",have=Number(st.specials[key])||0;if(!gameAdmin()&&have<ids.length)throw new Error(`ต้องใช้ ${ids.length} แคปซูล • มี ${have}`);ids.forEach(i=>{st.plots[i].angel=true;st.plots[i]=gNorm(st.plots[i])});if(!gameAdmin())st.specials[key]=have-ids.length;return{count:ids.length}});try{closeModal?.();showWeatherToast?.(`🪽 เปิดปีกนางฟ้า ${r.count} แปลงแล้ว • บันทึกแล้ว`)}catch(_){}}catch(e){message?.("ปีกนางฟ้าทั้งหมดไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   async function v7HarvestAll(){try{const r=await gardenAtomic("tractor",st=>{const[a,b]=gRange(),summary={};let plots=0,total=0;st.bag=st.bag||{};st.specials=st.specials||{};for(let i=a;i<b;i++){const p=st.plots?.[i];if(!p?.crop||gBlocked(p))continue;gPhase(p);if(p.phase!=="ready")continue;const k=String(p.crop),q=Math.max(1,Math.floor(Number(CROPS?.[k]?.yield)||1))*(p.angel?10:1);if(typeof grantHarvestYield==="function")grantHarvestYield(st,k,q);else st.bag[k]=(Number(st.bag[k])||0)+q;summary[k]=(summary[k]||0)+q;total+=q;plots++;st.plots[i]=typeof emptyPlot==="function"?emptyPlot():{crop:null,phase:"empty",phaseEndsAt:0,plantedAt:0,wateredAt:0,worm:false}}if(!plots)throw new Error("ยังไม่มีแปลงพร้อมเก็บค่ะ");try{incrementMissionOn?.(st,"dailyHarvestCrops",total)}catch(_){try{incrementMissionOn?.(st,"harvestCrops",plots)}catch(__){}}return{plots,total,summary}});try{if(typeof v193DeferredCampaign==="function")v193DeferredCampaign(r.summary);else if(typeof V181_campaignScoreLater==="function")setTimeout(()=>V181_campaignScoreLater(r.summary),0)}catch(_){}try{const sec={};for(const k of ["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"])if(r.summary[k])sec[k]=r.summary[k];if(Object.keys(sec).length)globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.(sec)}catch(_){}showWeatherToast?.(`🚜 เก็บเกี่ยว ${r.plots} แปลงเข้ากระเป๋าแล้ว • บันทึกแล้ว`)}catch(e){message?.("รถไถเก็บไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}}
   function v7ShowSeedPicker(){const[a,b]=gRange(),st=ownState||state||{},empty=(st.plots||[]).slice(a,b).filter(p=>!p?.crop&&!gBlocked(p)).length;if(!empty)return message?.("ปลูกทั้งหมด","ไม่มีแปลงว่างในฟาร์มหน้านี้");const root=document.getElementById("modalContent");if(!root)return;root.innerHTML=`<section class="feature-panel"><h2>🌱 ปลูกทั้งหมด ${empty} แปลง</h2><div class="ynu-seed-grid">${Object.entries(CROPS||{}).map(([k,c])=>`<button type="button" data-v7-seed="${gEsc(k)}"><img src="${gEsc(c.selectImg||'')}" alt="${gEsc(c.name||k)}"><span>${gEsc(c.name||k)}</span></button>`).join("")}</div></section>`;root.querySelectorAll("[data-v7-seed]").forEach(b=>b.onclick=()=>v7PlantAll(b.dataset.v7Seed));try{openModal?.()}catch(_){}}
@@ -3952,10 +3958,10 @@ console.info(BUILD,"loaded");
   try{waterPlot=v8WaterOne;globalThis.waterPlot=v8WaterOne}catch(_){}
   try{useCropBoostOnPlot=v8BoostOne;globalThis.useCropBoostOnPlot=v8BoostOne}catch(_){}
   try{harvestOwnPlot=v8HarvestOne;globalThis.harvestOwnPlot=v8HarvestOne}catch(_){}
-  /* Generic saves must first fence plot state to the canonical garden snapshot. */
-  try{const flushBase=flushCloudSave;flushCloudSave=async function(){if(cloudReady&&currentMemberKey&&!visitContext){try{const {db,fs}=await wrappedGetFirebaseContext(),g=await serverGet(fs,fs.doc(db,"gardens",String(currentMemberKey)));if(g?.exists?.()&&Array.isArray(g.data()?.plots)&&ownState){ownState.plots=g.data().plots.map(gNorm);if(state===ownState||!visitContext)state=ownState}}catch(e){console.warn(BUILD,"pre-flush garden fence",e?.message||e)}}return flushBase.apply(this,arguments)}}catch(_){}
+  /* R36.65: never import /gardens into owner state. It is a public mirror only. */
 
   globalThis.YN_GARDEN_V7={atomic:gardenAtomic,plantOne:v7PlantOne,plantAll:v7PlantAll,waterOne:v8WaterOne,waterAll:v7WaterAll,boostOne:v8BoostOne,boostAll:v7BoostAll,angelAll:v7AngelAll,harvestOne:v8HarvestOne,harvestAll:v7HarvestAll,manager:v7ShowManager};
+  globalThis.YN_GARDEN_CANONICAL=globalThis.YN_GARDEN_V7;try{if(globalThis.YN_R14)globalThis.YN_R14.manager=v7ShowManager;if(globalThis.YN_R3474_FARM)globalThis.YN_R3474_FARM.manager=v7ShowManager}catch(_){}
 
   /* ---- Honey: tolerate persisted callback-style reward rows with no itemType. ---- */
   try{const giftBase=addGiftItemToState;addGiftItemToState=function(s,g){if(g&&!g.itemType&&!g.type&&g.id){const q=Math.max(1,Math.floor(Number(g.qty)||1));s.specials=s.specials||{};if(g.id==="grassGreen"){s.specials.friendGrassGreen=(Number(s.specials.friendGrassGreen)||0)+q;return}if(g.id==="grassYellow"){s.specials.friendGrassYellow=(Number(s.specials.friendGrassYellow)||0)+q;return}if(g.id==="grassRed"){s.specials.friendGrassRed=(Number(s.specials.friendGrassRed)||0)+q;return}}return giftBase.apply(this,arguments)}}catch(_){}
@@ -3967,6 +3973,6 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script>window.YAINOO_BUILD="S2-R36.64-GARDEN-CANONICAL-COMMIT-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>window.YAINOO_BUILD="S2-R36.65-SINGLE-AUTHORITY-FARM-INVENTORY-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>

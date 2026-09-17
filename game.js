@@ -24579,7 +24579,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   try{renderHouseScene=renderHouse17}catch(_){}
 
   /* ---------- Garden manager: all farms must expose the same 4-button manager ---------- */
-  document.addEventListener("click",e=>{const b=e.target.closest?.('[data-s2-tool="manage"],#ynuGardenManagerBtn');if(!b||!globalThis.YN_R14?.manager)return;e.preventDefault();e.stopImmediatePropagation();globalThis.YN_R14.manager()},true);
+  document.addEventListener("click",e=>{const b=e.target.closest?.('[data-s2-tool="manage"],#ynuGardenManagerBtn');if(!b)return;const fn=globalThis.YN_GARDEN_V7?.manager||globalThis.YN_R14?.manager;if(typeof fn!=="function")return;e.preventDefault();e.stopImmediatePropagation();fn()},true);
 
   /* ---------- Alpaca trough: explicit side + exact slot; no global offset / alternating DOM guess ---------- */
   if(typeof renderFixedSideTroughFood==="function"){
@@ -27189,7 +27189,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function tractorCapture(e){const b=e.target?.closest?.('#tractorBtn,[data-s2-tool="tractor"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();try{$("s2FarmToolsMenu")?.classList.add("hidden")}catch(_){}r30Tractor()}
   /* R34.1: legacy pointer-up tractor hook disabled; R33/R34 fast handler is the single tractor authority. */
-  document.addEventListener("click",e=>{const b=e.target?.closest?.('#tractorBtn,[data-s2-tool="tractor"]');if(b){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}},true);
+  document.addEventListener("click",e=>{const b=e.target?.closest?.('#tractorBtn,[data-s2-tool="tractor"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const fn=globalThis.YN_GARDEN_V7?.harvestAll;if(typeof fn==="function"){const t=Date.now(),last=Number(globalThis.__YN_CANON_TRACTOR_AT||0);if(t-last>700){globalThis.__YN_CANON_TRACTOR_AT=t;Promise.resolve(fn()).catch(err=>console.warn("canonical tractor click",err))}}},true);
   bulkHarvestCurrentPage=r30Tractor;
 
   function r30HotelCats(pen,s){return (s?.cats||[]).filter(c=>Number(c?.placedFarm)===-1&&c?.placedHotel&&clampPen(c.hotelPen)===pen)}
@@ -28281,7 +28281,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
       message?.("🚜 รถไถเก็บเกี่ยวไม่ได้",e?.message||"กรุณาลองใหม่");
     }finally{try{hideTractorWorking?.()}catch(_){}tractorBusy33=false;if(btn)btn.disabled=false}
   }
-  function tractorCapture33(e){const b=e.target?.closest?.("#tractorBtn,[data-s2-tool='tractor']");if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();try{$33("s2FarmToolsMenu")?.classList.add("hidden")}catch(_){}fastTractor33()}
+  function tractorCapture33(e){const b=e.target?.closest?.("#tractorBtn,[data-s2-tool='tractor']");if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();try{$33("s2FarmToolsMenu")?.classList.add("hidden")}catch(_){}const fn=globalThis.YN_GARDEN_V7?.harvestAll;if(typeof fn==="function"){const t=Date.now(),last=Number(globalThis.__YN_CANON_TRACTOR_AT||0);if(t-last>700){globalThis.__YN_CANON_TRACTOR_AT=t;Promise.resolve(fn()).catch(err=>console.warn("canonical tractor",err))}return}fastTractor33()}
   window.addEventListener("pointerdown",tractorCapture33,true);window.addEventListener("click",tractorCapture33,true);try{bulkHarvestCurrentPage=fastTractor33}catch(_){}
 
   /* ---------- Fast music therapy: mutate inventory now, one serialized save only ---------- */
@@ -35711,7 +35711,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
           const oldRemain=Math.max(0,(Number(p.plantedAt)||t)+SECRET_TOTAL-t),rem=Math.max(0,Math.round(oldRemain*(1-boost/100)));
           if(rem<=1000){p.phase="ready";p.phaseEndsAt=0;p.plantedAt=t-SECRET_TOTAL}else{p.plantedAt=t-(SECRET_TOTAL-rem);p.phase="r35SecretGrowing";p.phaseEndsAt=t+rem}
           p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||Number(p.plantedAt)||t;
-        }else if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType}
+        }else if(boost>=100){p.phase="ready";p.phaseEndsAt=0;p.worm=false;delete p.wormType;p.plantedAt=t-Math.max(1000,Number(crop?.totalMs)||1000);p.wateredAt=Number(p.wateredAt)||t-Math.max(1000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0))}
         else{let rem=p.phase==="growing1"?Math.max(0,Number(p.phaseEndsAt||0)-t)+Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):p.phase==="needsWater"?Math.max(60000,Number(crop?.totalMs||0)-Number(crop?.waterMs||0)):Math.max(0,Number(p.phaseEndsAt||0)-t);rem=Math.max(0,Math.round(rem*(1-boost/100)));p.worm=false;delete p.wormType;p.wateredAt=Number(p.wateredAt)||t;if(rem<=1000){p.phase="ready";p.phaseEndsAt=0}else{p.phase="growing2";p.phaseEndsAt=t+rem}}
         st.plots[i]=normalizePlot(p)
       }
@@ -35736,7 +35736,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   function showFarmManager74(){if(visitContext)return message?.("จัดการทั้งสวน","ใช้ได้เฉพาะสวนของตัวเองค่ะ");const [a,b]=farmRange();$("modalContent").innerHTML=`<section class="feature-panel ynu-garden-manager r3474-farm-tools"><h2>🌱 จัดการทั้งสวน</h2><p class="feature-subtitle">ฟาร์ม ${farmPage()+1} • แปลง ${a+1}–${b}</p><div class="ynu-manager-grid"><button id="r3474FarmPlant">🌱 ปลูกทั้งหมด</button><button id="r3474FarmBoost">🍰 เร่งโตทั้งหมด</button><button id="r3474FarmAngel">🪽 ปีกนางฟ้าทั้งหมด</button>${globalThis.YN_R14?.wormManager?'<button id="r3474FarmWorm">🪱 จัดการหนอนทั้งหมด</button>':''}</div><small>ปลูกทีละแปลงยังใช้ได้ตามปกติ และสามารถปลูกคนละชนิดในแต่ละแปลงได้</small></section>`;openModal?.();$("r3474FarmPlant").onclick=showBulkSeed74;$("r3474FarmBoost").onclick=showBulkBoost74;$("r3474FarmAngel").onclick=bulkAngel74;if($("r3474FarmWorm"))$("r3474FarmWorm").onclick=()=>globalThis.YN_R14?.wormManager?.()}
   globalThis.YN_R3474_FARM={manager:showFarmManager74,bulkPlant:bulkPlant74,bulkBoost:bulkBoost74,bulkAngel:bulkAngel74};
   if(globalThis.YN_R14)globalThis.YN_R14.manager=showFarmManager74;
-  document.addEventListener("click",e=>{const b=e.target?.closest?.("#ynuGardenManagerBtn");if(!b||visitContext)return;e.preventDefault();e.stopImmediatePropagation();showFarmManager74()},true);
+  document.addEventListener("click",e=>{const b=e.target?.closest?.("#ynuGardenManagerBtn");if(!b||visitContext)return;e.preventDefault();e.stopImmediatePropagation();const fn=globalThis.YN_GARDEN_V7?.manager||showFarmManager74;fn()},true);
 
   /* ------------------------------------------------------------------
      2) BOAT SUPPLY: server transaction is the ONLY deduction.
