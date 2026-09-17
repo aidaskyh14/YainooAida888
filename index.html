@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <title>ในสวนของยัยหนู x ปลูกผักแบบเปรตเปรต</title>
-  <link rel="stylesheet" href="style.css?v=S2-R36.51-ALPACA-ZERO-FAST-20260916">
+  <link rel="stylesheet" href="style.css?v=S2-R36.62-SAVE-V6-SERVER-CONSISTENT-20260917">
 </head>
 <body>
   <main id="app">
@@ -509,7 +509,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.51-ALPACA-ZERO-FAST-20260916"></script>
+<script src="game.js?v=S2-R36.62-SAVE-V6-SERVER-CONSISTENT-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3555,229 +3555,7 @@ console.info(BUILD,"loaded");
 </script>
 
 
-<script>
-/* ======================================================================
-   S2 R36.29 — UNIVERSAL SAVE REPAIR / ALL PLAYERS
-   - Applies to EVERY member, not a hard-coded rescue list.
-   - Never trims inventory, currencies, active crops, active animals, unlocks,
-     scores, or unclaimed drop queues.
-   - Binds historical/idempotency metadata so /saves/{memberKey} keeps durable
-     headroom below Firestore's 1 MiB document limit.
-   - Retries a failed full save after an in-memory safe compaction so the action
-     that just happened is not lost.
-   ====================================================================== */
-(function YN_R3628_UNIVERSAL_SAVE_HEADROOM(){
-  "use strict";
-  const BUILD="S2-R36.29-UNIVERSAL-SAVE-REPAIR-20260916";
-  const SOFT=520*1024, HARD=700*1024, EMERGENCY=850*1024, SAFE_WRITE=930*1024;
-  const DAY=86400000;
-  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
-  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return JSON.parse(JSON.stringify(v||{}))}};
-  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
-  const pressure=e=>/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|resource-exhausted|invalid-argument/i.test(String(e?.message||e||""));
-  const now=()=>Date.now();
-  function stamp(v){
-    if(typeof v==="number")return Number(v)||0;
-    if(!v||typeof v!=="object")return 0;
-    return Number(v.updatedAtMs??v.resolvedAt??v.claimedAt??v.transferredAt??v.createdAt??v.updatedAt??v.at??v.time??v.ts??v.expiresAt??0)||0;
-  }
-  function capObj(v,cap,maxAge=0){
-    if(!isObj(v))return v;
-    let rows=Object.entries(v),t=now();
-    if(maxAge)rows=rows.filter(([,x])=>{const z=stamp(x);return !z||t-z<=maxAge});
-    if(rows.length<=cap)return Object.fromEntries(rows);
-    const hasStamp=rows.some(([,x])=>stamp(x)>0);
-    if(hasStamp)rows.sort((a,b)=>stamp(b[1])-stamp(a[1]));
-    else rows=rows.slice(-cap).reverse();
-    return Object.fromEntries(rows.slice(0,cap));
-  }
-  function capAny(v,cap,maxAge=0){
-    if(Array.isArray(v))return v.length>cap?v.slice(-cap):v;
-    if(isObj(v))return capObj(v,cap,maxAge);
-    return v;
-  }
-  function futureObj(v,cap){
-    if(!isObj(v))return v;
-    const t=now(),rows=Object.entries(v).filter(([,x])=>{const z=Number(x?.expiresAt??x?.until??x?.readyAt??x)||0;return !z||z>t});
-    return Object.fromEntries(rows.slice(-cap));
-  }
-  function activeAlpacaIds(s){
-    const out=new Set(),a=s?.alpaca;
-    if(!a||typeof a!=="object")return out;
-    for(const p of Array.isArray(a.pens)?a.pens:[])for(const x of Array.isArray(p?.alpacas)?p.alpacas:[])if(x?.id!=null)out.add(String(x.id));
-    for(const x of Array.isArray(a.vault)?a.vault:[])if(x?.id!=null)out.add(String(x.id));
-    return out;
-  }
-  function activeHamsterIds(s){
-    const out=new Set(),add=x=>{if(x?.id!=null)out.add(String(x.id))};
-    const g=s?.farmGuardians;if(g&&typeof g==="object")for(const v of Object.values(g))for(const h of Array.isArray(v?.hamsters)?v.hamsters:[])add(h);
-    for(const h of Array.isArray(s?.hamsters)?s.hamsters:[])add(h);
-    const hf=s?.hamsterFarms;if(hf&&typeof hf==="object")for(const v of Object.values(hf))for(const h of Array.isArray(v?.hamsters)?v.hamsters:[])add(h);
-    return out;
-  }
-  function pruneClockMap(obj,ids,cap=160){
-    if(!isObj(obj))return obj;
-    let rows=Object.entries(obj);
-    if(ids&&ids.size)rows=rows.filter(([k])=>ids.has(String(k)));
-    if(rows.length>cap)rows=rows.slice(-cap);
-    return Object.fromEntries(rows);
-  }
-  const TOP_LEDGER=[
-    "friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts",
-    "friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims",
-    "friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","eventHistory",
-    "activityHistory","deliveryReceipts","giftReceipts","friendResourceCooldowns",
-    "r3465BasementReceipts","hedgehogShieldReceiptsR3465","r32FriendForageLocks",
-    "friendCatCooldowns","saleTombstones","retiredCatsArchiveR34","notifications"
-  ];
-  const HIST_RX=/(receipts?|claims?|history|archive|tombstones?|ledgers?|audit(?:log)?|eventlog|activitylog|dedupe|processed|seenids?|notificationqueue)$/i;
-  const COOLDOWN_RX=/(cooldowns?|locks?)$/i;
-  const PROTECTED=new Set([
-    "bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","plots",
-    "animals","dogs","cats","hamsters","hamsterFarms","farmGuardians","pens","vault","inventory",
-    "wool","food","medicine","products","flowers","flowerSeeds","flowerPlots","wines","wineMachines",
-    "homeFoods","boatDrinks","coconutRiverItems","jellyfishV2","warehouseTools","rainyMenus","alpaca",
-    "hedgehog","houseUpgrade","s2Unlocks","upgradeKeys","missions","dailyLimits"
-  ]);
-  function walkHistory(o,cap,depth=0){
-    if(!o||typeof o!=="object"||depth>12)return;
-    if(Array.isArray(o)){for(const x of o)walkHistory(x,cap,depth+1);return}
-    for(const k of Object.keys(o)){
-      const v=o[k];if(!v||typeof v!=="object")continue;
-      if(PROTECTED.has(k)){walkHistory(v,cap,depth+1);continue}
-      if(COOLDOWN_RX.test(k)){o[k]=futureObj(v,Math.max(16,cap));continue}
-      if(HIST_RX.test(k)){o[k]=capAny(v,cap);continue}
-      walkHistory(v,cap,depth+1);
-    }
-  }
-  function compact(raw,level=1){
-    const s=raw&&typeof raw==="object"?raw:{};
-    const cap=level>=4?8:level===3?16:level===2?48:96;
-    const age=level>=3?7*DAY:21*DAY;
-    for(const k of TOP_LEDGER){
-      if(!(k in s))continue;
-      if(k==="notifications"){if(Array.isArray(s[k]))s[k]=s[k].slice(-(level>=3?8:20));continue}
-      if(/cooldown|lock/i.test(k)){s[k]=futureObj(s[k],level>=3?32:96);continue}
-      if(k==="saleTombstones"&&isObj(s[k])){for(const t of Object.keys(s[k]))s[k][t]=capObj(s[k][t],level>=3?24:80,45*DAY);continue}
-      if(k==="retiredCatsArchiveR34"&&Array.isArray(s[k])){
-        s.retiredCatsArchiveCountR3463=Math.max(Number(s.retiredCatsArchiveCountR3463)||0,s[k].length);
-        s[k]=s[k].slice(-(level>=3?4:12)).map(x=>x&&typeof x==="object"?{id:String(x.id||""),typeKey:String(x.typeKey||""),customName:String(x.customName||""),archivedBy:String(x.archivedBy||"")}:x);continue;
-      }
-      s[k]=capAny(s[k],cap,age);
-    }
-    if(Array.isArray(s.dishes)&&isObj(s.dishInventory))s.dishes=[];
-    if(isObj(s.alpaca)){
-      const a=s.alpaca,ids=activeAlpacaIds(s);
-      if(a.eventClaims)a.eventClaims=capAny(a.eventClaims,cap,14*DAY);
-      if(a.friendMushroomClaims)a.friendMushroomClaims=capAny(a.friendMushroomClaims,cap,14*DAY);
-      if(a.testSireCooldowns)a.testSireCooldowns=futureObj(a.testSireCooldowns,level>=3?24:64);
-      if(a.treasureClock)a.treasureClock=pruneClockMap(a.treasureClock,ids,level>=3?64:160);
-      if(a.royalDiscClock)a.royalDiscClock=pruneClockMap(a.royalDiscClock,ids,level>=3?64:160);
-      const f=a.factory;
-      if(isObj(f)){
-        if(f.babyTransfers)f.babyTransfers=capAny(f.babyTransfers,level>=3?32:96,45*DAY);
-        if(Array.isArray(f.history))f.history=f.history.slice(-(level>=3?4:16));
-        if(Array.isArray(f.jobs)){
-          const active=f.jobs.filter(j=>j&&j.status!=="claimed"),done=f.jobs.filter(j=>j&&j.status==="claimed").slice(-(level>=3?4:12));
-          f.jobs=active.concat(done);
-        }
-      }
-    }
-    const hids=activeHamsterIds(s);
-    if(s.hamsterDiscClock)s.hamsterDiscClock=pruneClockMap(s.hamsterDiscClock,hids,level>=3?64:160);
-    if(s.dropRepairMarks)s.dropRepairMarks=capAny(s.dropRepairMarks,level>=3?24:80,21*DAY);
-    walkHistory(s,cap);
-    try{if(typeof ynCompactSaveStateR3463==="function")ynCompactSaveStateR3463(s,{aggressive:level>=2})}catch(_){}
-    /* Old guard diagnostics are not gameplay. Keep only the current marker. */
-    if(level>=3)for(const k of Object.keys(s))if(/^saveGuardR\d+/i.test(k)&&k!=="saveGuardR3629")delete s[k];
-    s.saveGuardR3629={version:BUILD,level,guardedAt:Date.now(),approxBytes:bytes(s)};
-    return s;
-  }
-  function compactToHeadroom(s){
-    if(!s||typeof s!=="object")return s;
-    let b=bytes(s),level=0;
-    if(b>SOFT){level=1;compact(s,1);b=bytes(s)}
-    if(b>HARD){level=2;compact(s,2);b=bytes(s)}
-    if(b>EMERGENCY){level=3;compact(s,3);b=bytes(s)}
-    if(b>SAFE_WRITE){level=4;compact(s,4);b=bytes(s)}
-    if(level)s.saveGuardR3629={version:BUILD,level,guardedAt:Date.now(),approxBytes:b};
-    return s;
-  }
-  function replaceInPlace(target,next){
-    if(!target||!next||target===next)return target;
-    for(const k of Object.keys(target))delete target[k];Object.assign(target,next);return target;
-  }
-  async function repairOne(memberKey,force=false){
-    const mk=String(memberKey||"").trim();if(!mk)return false;
-    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=await fs.getDoc(ref);if(!snap.exists())return false;
-    const raw=snap.data()||{},before=bytes(raw);
-    /* Firestore's real document size can be much larger than JSON.stringify size
-       because nested field names/index metadata add overhead. Therefore every
-       forced repair compacts history even when the JSON estimate looks small. */
-    if(!force&&before<SOFT)return false;
-    const clean=clone(raw);
-    /* R36.49 clean slate: clear the historical unplaced alpaca vault ONCE per member.
-       Old recovery patches had repopulated thousands of dead/processed historical animals. */
-    clean.alpaca=clean.alpaca&&typeof clean.alpaca==="object"?clean.alpaca:{};
-    if(clean.alpaca.warehouseResetEpoch!=="r3651-zero-20260916"){clean.alpaca.vault=[];clean.alpaca.warehouseResetEpoch="r3651-zero-20260916";}
-    if(force)compact(clean,3);
-    compactToHeadroom(clean);
-    if(bytes(clean)>SAFE_WRITE)compact(clean,4);
-    const after=bytes(clean);
-    if(after>=1000*1024)throw new Error(`เซฟ ${mk} ยังใหญ่ ${after.toLocaleString()} bytes หลังย่อข้อมูลประวัติ โดยไม่ได้แตะของจริง`);
-    await fs.setDoc(ref,{...clean,updatedAt:fs.serverTimestamp()},{merge:false});
-    console.info(BUILD,"repaired",mk,{before,after});return true;
-  }
-  /* R36.49: never scan every save from Admin. Repairs are self-only on login. */
-  async function repairAllPlayersOnce(){ return false; }
-  try{
-    if(typeof normalizeState==="function"){
-      const base=normalizeState;
-      normalizeState=function(raw,player){const out=base(raw,player);compact(out,1);compactToHeadroom(out);return out};
-    }
-  }catch(e){console.warn(BUILD,"normalize wrap",e)}
-  try{
-    if(typeof ynPrepareSaveR3463==="function"){
-      const base=ynPrepareSaveR3463;
-      ynPrepareSaveR3463=function(s){compact(s,1);compactToHeadroom(s);const out=base(s);compact(out?.state||s,1);compactToHeadroom(out?.state||s);return{state:out?.state||s,bytes:bytes(out?.state||s)}};
-    }
-  }catch(e){console.warn(BUILD,"prepare wrap",e)}
-  try{
-    if(typeof flushCloudSave==="function"){
-      const base=flushCloudSave;
-      flushCloudSave=async function(){
-        if(typeof ownState!=="undefined"&&ownState)compactToHeadroom(ownState);
-        try{return await base.apply(this,arguments)}catch(e){
-          if(!pressure(e)||typeof ownState==="undefined"||!ownState)throw e;
-          compact(ownState,4);
-          try{saveLocalOnly?.(ownState)}catch(_){}
-          return await base.apply(this,arguments);
-        }
-      };
-    }
-  }catch(e){console.warn(BUILD,"flush wrap",e)}
-  try{
-    if(typeof initializeOrLoadCloudState==="function"){
-      const base=initializeOrLoadCloudState;
-      initializeOrLoadCloudState=async function(member,memberKey){
-        const mk=String(memberKey||"").trim(),onceKey=`yn:r3651:self-repair:${mk}`;
-        let done=false;try{done=localStorage.getItem(onceKey)==="1"}catch(_){ }
-        if(!done){try{await repairOne(mk,true);try{localStorage.setItem(onceKey,"1")}catch(_){ }}catch(e){console.warn(BUILD,"pre-login repair",mk,e)}}
-        let out;
-        try{out=await base.apply(this,arguments)}catch(e){
-          if(!pressure(e))throw e;
-          await repairOne(mk,true);out=await base.apply(this,arguments);
-        }
-        return out;
-      };
-    }
-  }catch(e){console.warn(BUILD,"init wrap",e)}
-  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,bytes,compact:(level=3)=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s)return null;compact(s,Math.max(1,Math.min(4,Number(level)||3)));return{bytes:bytes(s),state:s}},repair:repairOne,repairAll:repairAllPlayersOnce};
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded");
-})();
-</script>
-
+<!-- S2 R36.29 legacy save repair removed; V6 is the only authoritative save layer. -->
 
 <script>
 /* =====================================================================
@@ -3791,7 +3569,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3651_ALPACA_ZERO(){
   "use strict";
-  const BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";
+  const BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";
   const EPOCH="r3651-zero-20260916";
   const RESET_EPOCH="r3651-zero-20260916";
   const PEN_CAPACITY=24;
@@ -3925,6 +3703,139 @@ console.info(BUILD,"loaded");
 
 
 
-<script>window.YAINOO_BUILD="S2-R36.51-ALPACA-ZERO-FAST-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+
+
+<!-- S2 R36.52 — STRUCTURAL SAVE HEADROOM / ALL PLAYERS removed; superseded by one authoritative V6 save layer. -->
+
+
+
+
+<!-- S2 R36.53 — SURGICAL SERVER SAVE REPAIR / NO FULL-DOC REWRITE removed; superseded by one authoritative V6 save layer. -->
+
+
+
+
+
+
+<!-- S2 R36.60 — SAFE SAVE WRITE + RECOVERY BRIDGE removed; superseded by one authoritative V6 save layer. -->
+
+<!-- =====================================================================
+   S2 R36.62 — SAVE V6 / SERVER-CONSISTENT SHARDS + ONE-TIME RECOVERY
+   2026-09-17
+   - Fixes the R36.61 rollback race: /saves listeners never hydrate from stale
+     shard cache. A server-confirmed virtual snapshot is emitted after the commit.
+   - One-time granular recovery can restore surviving alpaca inventory / jelly /
+     wine / special-animal counts from legacy root, V5 shards, old shards,
+     pre-migration backups, and surviving local copies without treating one
+     non-zero subfield as proof that the whole inventory is healthy.
+   - Legacy full-state writes remain compatible but are split into small V6 docs.
+   - Partial merge:false writes are treated as patches so they cannot erase the
+     rest of the player state.
+   - Owner realtime reconciliation is revision/fence aware and cannot repaint a
+     newly completed farm/reward action with an older snapshot.
+   ===================================================================== -->
+<script>
+(function YN_R3662_SAVE_V6(){
+  "use strict";
+  const BUILD="S2-R36.62-SAVE-V6-SERVER-CONSISTENT-20260917";
+  const LAYOUT="save-layout-v6-r3662";
+  const ROOT_BUDGET=240*1024,ROOT_HARD=340*1024;
+  const SHARD_DOC={alpaca:"v6-alpaca",pets:"v6-pets",animals:"v6-animals",farm:"v6-farm",jelly:"v6-jelly",claims:"v6-claims",cooldowns:"v6-cooldowns",logs:"v6-logs",overflow:"v6-overflow"};
+  const GROUP_KEYS={
+    alpaca:new Set(["alpaca"]),
+    pets:new Set(["dogs","cats","hamsters","hamsterFarms","farmGuardians"]),
+    animals:new Set(["animals","specialAnimals"]),
+    farm:new Set(["plots","flowerPlots","wineMachines","wines","fishTraps","hedgehog","coconutRiverItems","houseHedgehogs"]),
+    jelly:new Set(["jellyfishV2"])
+  };
+  const STATIC_CLAIMS=new Set(["friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims","friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","deliveryReceipts","giftReceipts","r3465BasementReceipts","hedgehogShieldReceiptsR3465","saleTombstones","dropRepairMarks"]);
+  const CLAIM_RX=/(receipts?|claims?|dedupe|processed|seenids?|tombstones?|ledgers?)$/i;
+  const COOL_RX=/(cooldowns?|locks?)$/i;
+  const LOG_RX=/(history|archive|audit(?:log)?|eventlog|activitylog|notificationqueue|notifications|debug|trace)$/i;
+  const ROOT_PINNED=new Set(["activeSessionId","activeSessionAt","player","memberName","displayName","merit","createdAt","updatedAt","launchVersion","saveLayoutVersion","saveLayoutUpdatedAt","saveRootApproxBytes","saveShardRoutes","saveShardBuild","clientSaveRevision","clientLocalEditAt","cloudSessionId","saveVirtualUpdatedAt","saveRecoveryR3662At"]);
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const pathOf=ref=>String(ref?.path||ref?._key?.path?.canonicalString?.()||"");
+  const saveInfo=ref=>{const m=pathOf(ref).match(/^saves\/([^/]+)$/);return m?{memberKey:m[1]}:null};
+  const pressure=e=>/maximum allowed size|exceeds the maximum|1,048,576|1048576|too many index entries|index entries|resource-exhausted/i.test(String(e?.message||e||""));
+  const friendlyPressure=()=>new Error("พื้นที่เซฟบัญชีเต็ม ระบบกำลังแยกข้อมูลออกจากเซฟหลัก กรุณาลองรายการนี้อีกครั้งค่ะ");
+  const routeCache=new Map(),proxyCache=new WeakMap();
+  const shardRef=(fs,db,mk,g)=>fs.doc(db,"saveShards",mk,"items",SHARD_DOC[g]);
+  const itemRef=(fs,db,mk,id)=>fs.doc(db,"saveShards",mk,"items",id);
+  const now=()=>Date.now();
+
+  function staticGroup(k){for(const [g,s] of Object.entries(GROUP_KEYS))if(s.has(k))return g;if(STATIC_CLAIMS.has(k)||CLAIM_RX.test(k)||/^saveGuardR\d+/i.test(k))return"claims";if(COOL_RX.test(k))return"cooldowns";if(LOG_RX.test(k))return"logs";return""}
+  function routesOf(root,mk=""){const r=obj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{};if(mk&&routeCache.has(mk))Object.assign(r,routeCache.get(mk));return r}
+  function groupFor(k,r={}){return staticGroup(k)||String(r[k]||"")}
+  function groupNames(r={}){const s=new Set(["alpaca","pets","animals","farm","jelly","claims","cooldowns","logs"]);for(const g of Object.values(r||{}))if(SHARD_DOC[g])s.add(g);return[...s]}
+  function signal(v,d=0){if(v==null)return 0;if(typeof v==="number")return Number.isFinite(v)&&v!==0?2:0;if(typeof v==="boolean")return v?1:0;if(typeof v==="string")return v.trim()?1:0;if(d>7)return 0;if(Array.isArray(v))return v.reduce((n,x)=>n+signal(x,d+1),0);if(obj(v))return Object.values(v).reduce((n,x)=>n+signal(x,d+1),0);return 0}
+  function field(o,p){for(const k of String(p||"").split(".")){if(o==null)return undefined;o=o[k]}return o}
+  function setField(o,p,v){const a=String(p||"").split(".").filter(Boolean);let x=o;for(let i=0;i<a.length-1;i++){if(!obj(x[a[i]]))x[a[i]]={};x=x[a[i]]}if(a.length)x[a[a.length-1]]=cp(v);return o}
+  function maxNumericMap(base,candidates,path){const out=obj(base)?cp(base):{};for(const s of candidates){const m=field(s,path);if(!obj(m))continue;for(const [k,v] of Object.entries(m)){if(typeof v==="number"&&Number.isFinite(v))out[k]=Math.max(Number(out[k])||0,v);else if(out[k]===undefined&&v!==undefined)out[k]=cp(v)}}return out}
+  function alpacaCount(a){try{return (a?.pens||[]).reduce((n,p)=>n+(Array.isArray(p?.alpacas)?p.alpacas.filter(Boolean).length:0),0)}catch(_){return 0}}
+  function recoverAlpaca(current,sources){let out=obj(current)?cp(current):{};const alps=sources.map(s=>s?.alpaca).filter(obj);if(!obj(out)||!Object.keys(out).length)out=cp(alps.sort((a,b)=>signal(b)-signal(a))[0]||{});out.inventory=obj(out.inventory)?out.inventory:{};for(const k of ["food","medicine","wool","other"])out.inventory[k]=maxNumericMap(out.inventory[k],sources,`alpaca.inventory.${k}`);out.factory=obj(out.factory)?out.factory:{};out.factory.products=maxNumericMap(out.factory.products,sources,"alpaca.factory.products");let bestPens=Array.isArray(out.pens)?out.pens:[],best=alpacaCount({pens:bestPens});for(const a of alps){const n=alpacaCount(a);if(n>best){best=n;bestPens=cp(a.pens||[])}}if(!best&&Array.isArray(out.pens))bestPens=out.pens;out.pens=bestPens;/* legacy warehouse history must never bloat the save again */out.vault=[];out.warehouseResetEpoch="r3662-v6";return out}
+  function recoverOneTime(base,sources){const out=cp(base)||{};out.alpaca=recoverAlpaca(out.alpaca,sources);out.jellyfishV2=maxNumericMap(out.jellyfishV2,sources,"jellyfishV2");out.specialAnimals=maxNumericMap(out.specialAnimals,sources,"specialAnimals");out.wines=maxNumericMap(out.wines,sources,"wines");let box=Number(out.mysteryBoxes)||0;for(const s of sources)box=Math.max(box,Number(s?.mysteryBoxes)||0);out.mysteryBoxes=box;return out}
+  function compactVolatile(s){s=cp(s)||{};if(obj(s.alpaca)){s.alpaca=cp(s.alpaca);s.alpaca.vault=[]}const capMap=(v,cap=256)=>{if(!obj(v))return v;const e=Object.entries(v);if(e.length<=cap)return v;e.sort((a,b)=>(Number(b[1])||0)-(Number(a[1])||0));return Object.fromEntries(e.slice(0,cap))};for(const k of STATIC_CLAIMS)if(obj(s[k]))s[k]=capMap(s[k],256);for(const [k,v] of Object.entries(s)){if(CLAIM_RX.test(k)&&obj(v))s[k]=capMap(v,256);if(LOG_RX.test(k)&&Array.isArray(v)&&v.length>120)s[k]=v.slice(-120)}return s}
+  function selectRoutes(full,base={}){const r={...base},projected={};for(const [k,v] of Object.entries(full||{}))if(!groupFor(k,r))projected[k]=v;let n=bytes(projected);if(n<=ROOT_BUDGET)return r;const a=Object.entries(projected).filter(([k])=>!ROOT_PINNED.has(k)&&k!=="saveShardRoutes").map(([k,v])=>[k,bytes(v)]).sort((x,y)=>y[1]-x[1]);for(const [k,b] of a){if(n<=ROOT_BUDGET)break;if(b<2048&&n<ROOT_HARD)break;r[k]="overflow";n-=b}return r}
+  function splitState(full,mk=""){const input=compactVolatile(full),r=selectRoutes(input,routesOf(input,mk)),root={},groups={};for(const g of groupNames(r))groups[g]={};for(const [k,v] of Object.entries(input)){if(k==="saveShardRoutes")continue;const g=groupFor(k,r);if(g){groups[g]??={};groups[g][k]=v}else root[k]=v}root.saveLayoutVersion=LAYOUT;root.saveShardBuild=BUILD;root.saveLayoutUpdatedAt=now();root.saveShardRoutes=r;root.saveRootApproxBytes=bytes(root);if(mk)routeCache.set(mk,{...r});return{root,groups,routes:r}}
+  function mergeState(root,groups,mk=""){const out=cp(root||{})||{},r=routesOf(root,mk);for(const g of groupNames(r)){const d=groups?.[g];if(obj(d))Object.assign(out,cp(d))}out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=r;if(mk)routeCache.set(mk,{...r});return out}
+  function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);if(p==="get")return path=>cp(field(data,path?.toString?.()||path));return Reflect.get(t,p,t)}})}
+  function looksFullState(d){return obj(d)&&obj(d.bag)&&Array.isArray(d.plots)&&obj(d.specials)&&("merit" in d)}
+
+  const nativeStorageGet=Storage.prototype.getItem,nativeStorageSet=Storage.prototype.setItem;
+  const legacyLocalKey=k=>/^yainoo-v5:/.test(k)||/^yn:r24:(?:pending|last-good):/.test(k)||/^yn:s2:r22:critical:/.test(k);
+  function localRows(member,mk){const keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:s2:r22:critical:${mk}`,`yn:r24:last-good:${member}`,`yn:r24:pending:${member}`],out=[];for(const k of keys)try{const raw=nativeStorageGet.call(localStorage,k);if(!raw)continue;const x=JSON.parse(raw),s=x?.state&&obj(x.state)?x.state:(obj(x)?x:null);if(s)out.push(s)}catch(_){ }return out}
+  try{if(!Storage.prototype.__ynR3662LegacyIsolation){Storage.prototype.getItem=function(k){k=String(k||"");if(legacyLocalKey(k))return null;return nativeStorageGet.call(this,k)};Storage.prototype.setItem=function(k,v){k=String(k||"");if(legacyLocalKey(k))return;return nativeStorageSet.call(this,k,v)};Object.defineProperty(Storage.prototype,"__ynR3662LegacyIsolation",{value:true,configurable:true})}}catch(_){ }
+
+  const baseGetFirebaseContext=globalThis.getFirebaseContext||getFirebaseContext;if(typeof baseGetFirebaseContext!=="function")return;
+  async function rawContext(){return baseGetFirebaseContext.apply(this,arguments)}
+  async function nativeGet(fs,ref,server=false){if(server&&typeof fs.getDocFromServer==="function")return fs.getDocFromServer(ref);return fs.getDoc(ref)}
+  async function readCurrentGroups(fs,db,mk,root,server=false){const r=routesOf(root,mk),names=groupNames(r),groups={},sn=await Promise.all(names.map(g=>nativeGet(fs,shardRef(fs,db,mk,g),server)));names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});return groups}
+  async function readRecovery(fs,db,mk,root,member){const rows=[cp(root)],prior=cp(root)||{};try{const qs=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));qs.forEach(d=>{const raw=d.data()||{},data=obj(raw.data)?raw.data:raw,id=String(d.id||"");if(!obj(data))return;if(/^v5-/.test(id))Object.assign(prior,cp(data));if(/^(?:animals|farm|history)$|backup|pre[_-]?r36|recovery|^v5-/i.test(id))rows.push(cp(data))})}catch(e){console.warn(BUILD,"recovery scan",mk,e?.message||e)}rows.unshift(prior);rows.push(...localRows(member,mk));return{prior,rows}}
+  function healthyRoot(root){if(root?.saveLayoutVersion!==LAYOUT||!root?.saveRecoveryR3662At)return false;if(bytes(root)>ROOT_HARD)return false;for(const k of Object.keys(GROUP_KEYS).flatMap(g=>[...GROUP_KEYS[g]]))if(root[k]!==undefined)return false;return true}
+  async function ensureV6(memberKey,memberName="",force=false){const mk=String(memberKey||"").trim();if(!mk)return{ok:false,reason:"no-key"};const {db,fs}=await rawContext(),rr=fs.doc(db,"saves",mk),rs=await nativeGet(fs,rr,true);if(!rs.exists())return{ok:false,reason:"no-root"};const root=rs.data()||{};if(!force&&healthyRoot(root)){routeCache.set(mk,routesOf(root,mk));return{ok:true,skipped:true,rootBytes:bytes(root)}}const rec=await readRecovery(fs,db,mk,root,String(memberName||root.player||root.memberName||""));let canonical;if(root.saveLayoutVersion===LAYOUT){const groups=await readCurrentGroups(fs,db,mk,root,true);canonical=mergeState(root,groups,mk)}else canonical=cp(rec.prior)||{};if(!root.saveRecoveryR3662At)canonical=recoverOneTime(canonical,rec.rows);canonical.saveRecoveryR3662At=Number(root.saveRecoveryR3662At)||now();const parts=splitState(canonical,mk),b=fs.writeBatch(db);for(const [g,d] of Object.entries(parts.groups))b.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(d),updatedAt:fs.serverTimestamp()},{merge:false});await b.commit();await fs.setDoc(rr,{...parts.root,saveRecoveryR3662At:canonical.saveRecoveryR3662At,updatedAt:fs.serverTimestamp()},{merge:false});const chk=await nativeGet(fs,rr,true);const rb=chk.exists()?bytes(chk.data()||{}):0;if(rb>ROOT_HARD)throw new Error("เซฟหลักยังมีขนาดใหญ่เกินค่าปลอดภัยหลังแยกข้อมูล");console.info(BUILD,"ready",mk,{before:bytes(root),after:rb,recovery:!root.saveRecoveryR3662At});return{ok:true,rootBytes:rb}}
+  async function hydrate(fs,db,ref,base,server=false){if(!base?.exists?.())return base;const info=saveInfo(ref);if(!info)return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT)return base;const groups=await readCurrentGroups(fs,db,info.memberKey,root,server);return snapLike(base,mergeState(root,groups,info.memberKey))}
+  function patchObject(p){const out={};for(const [path,v] of Object.entries(p||{}))setField(out,path,v);return out}
+  function splitPatch(mk,patch,r){const root={},groups={};for(const [path,v] of Object.entries(patch||{})){const top=String(path).split(".")[0];let g=groupFor(top,r);if(!g&&!ROOT_PINNED.has(top)&&bytes(v)>8192){g="overflow";r[top]="overflow"}if(g){groups[g]??={};groups[g][`data.${path}`]=v}else root[path]=v}return{root,groups,routes:r}}
+  function shardMergePayload(fs,p){return{layout:LAYOUT,...patchObject(p),updatedAt:fs.serverTimestamp()}}
+  function touch(fs,o={}){if(o.updatedAt===undefined)o.updatedAt=fs.serverTimestamp();if(o.saveVirtualUpdatedAt===undefined)o.saveVirtualUpdatedAt=fs.serverTimestamp();return o}
+  function buildBatch(fs,db,ops){const b=fs.writeBatch(db);for(const o of ops){if(o.kind==="set")b.set(o.ref,o.data,o.opt);else if(o.kind==="update")b.update(o.ref,o.data);else if(o.kind==="delete")b.delete(o.ref)}return b}
+  async function writePatch(fs,db,ref,mk,data){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),ops=[],rp={...sp.root},has=Object.keys(sp.groups).length>0;if(!same(sp.routes,routeCache.get(mk)||{})){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||has){touch(fs,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(fs,db,mk,g),data:shardMergePayload(fs,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return buildBatch(fs,db,ops).commit()}
+
+  async function wrappedGetFirebaseContext(){const ctx=await baseGetFirebaseContext.apply(this,arguments),db=ctx.db,fs=ctx.fs;if(proxyCache.has(fs))return{...ctx,fs:proxyCache.get(fs)};const prox=new Proxy(fs,{get(target,prop){
+    if((prop==="getDoc"||prop==="getDocFromServer")&&prop==="getDocFromServer"&&typeof target.getDocFromServer!=="function")return undefined;
+    if(prop==="getDoc"||prop==="getDocFromServer")return async ref=>{const info=saveInfo(ref);if(!info)return target[prop](ref);const base=await target[prop](ref);return hydrate(target,db,ref,base,prop==="getDocFromServer")};
+    if(prop==="onSnapshot")return function(ref,...args){const info=saveInfo(ref);if(!info)return target.onSnapshot(ref,...args);let options=null,next=null,error=null,complete=null,observer=null;if(args[0]&&typeof args[0]==="object"&&!Array.isArray(args[0])&&(typeof args[0].next==="function"||typeof args[0].error==="function"||typeof args[0].complete==="function")){observer=args[0];next=observer.next?.bind(observer);error=observer.error?.bind(observer);complete=observer.complete?.bind(observer)}else if(args[0]&&typeof args[0]==="object"&&typeof args[0]!=="function"){options=args[0];if(args[1]&&typeof args[1]==="object"){observer=args[1];next=observer.next?.bind(observer);error=observer.error?.bind(observer);complete=observer.complete?.bind(observer)}else{next=args[1];error=args[2];complete=args[3]}}else{next=args[0];error=args[1];complete=args[2]}let dead=false,seq=0,timer=0;const emit=()=>{const my=++seq;clearTimeout(timer);timer=setTimeout(async()=>{try{let base;if(typeof target.getDocFromServer==="function")base=await target.getDocFromServer(ref);else base=await target.getDoc(ref);const h=await hydrate(target,db,ref,base,typeof target.getDocFromServer==="function");if(!dead&&my===seq)next?.(h)}catch(e){/* Never repaint gameplay from an unconfirmed cached snapshot. */console.warn(BUILD,"realtime server hydrate skipped",info.memberKey,e?.message||e)}},120)};const unsub=options?target.onSnapshot(ref,options,emit,e=>error?.(e),()=>complete?.()):target.onSnapshot(ref,emit,e=>error?.(e),()=>complete?.());return()=>{dead=true;clearTimeout(timer);try{unsub?.()}catch(_){}}};
+    if(prop==="setDoc")return async function(ref,data,opt){const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);const mk=info.memberKey;const run=async()=>{if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});const parts=splitState(data||{},mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return buildBatch(target,db,ops).commit()};try{return await run()}catch(e){if(!pressure(e))throw e;await ensureV6(mk,"",true);try{return await run()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}};
+    if(prop==="updateDoc")return async function(ref,patch,...rest){const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);try{return await writePatch(target,db,ref,info.memberKey,patch||{})}catch(e){if(!pressure(e))throw e;await ensureV6(info.memberKey,"",true);try{return await writePatch(target,db,ref,info.memberKey,patch||{})}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}};
+    if(prop==="runTransaction")return async function(dbArg,callback,...rest){const touched=new Set();const once=()=>target.runTransaction(dbArg,async real=>{const before=new Map(),routesBy=new Map();const tx=new Proxy(real,{get(tt,p){if(p==="get")return async ref=>{const info=saveInfo(ref);if(!info)return tt.get(ref);touched.add(info.memberKey);const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routesBy.set(info.memberKey,routesOf(root,info.memberKey));return base}const r=routesOf(root,info.memberKey),groups={},names=groupNames(r),sn=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g))));names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routesBy.set(info.memberKey,r);return snapLike(base,full)};if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;touched.add(mk);if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routesBy.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp={...sp.root},has=Object.keys(sp.groups).length>0;if(!same(sp.routes,routesBy.get(mk)||{})){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||has){touch(target,rp);tt.set(ref,patchObject(rp),{merge:true})}for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardMergePayload(target,q),{merge:true});routesBy.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const parts=splitState(data,mk),prev=before.get(pathOf(ref));tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});const pp=prev?splitState(prev,mk):null;for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routesBy.set(mk,parts.routes);return tx};if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info){tt.update(ref,data);return tx}const mk=info.memberKey;touched.add(mk);const r={...(routesBy.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp={...sp.root},has=Object.keys(sp.groups).length>0;if(!same(sp.routes,r)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||has){touch(target,rp);tt.set(ref,patchObject(rp),{merge:true})}for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardMergePayload(target,q),{merge:true});routesBy.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};if(p==="delete")return ref=>{tt.delete(ref);return tx};return Reflect.get(tt,p,tt)}});return callback(tx)},...rest);try{return await once()}catch(e){if(!pressure(e))throw e;for(const mk of touched)try{await ensureV6(mk,"",true)}catch(_){}try{return await once()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}};
+    if(prop==="writeBatch")return function(dbArg){const ops=[],touched=new Set();const api={set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;touched.add(mk);if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp={...sp.root},has=Object.keys(sp.groups).length>0;if(!same(sp.routes,r)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||has){touch(target,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardMergePayload(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return api},update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey;touched.add(mk);const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp={...sp.root},has=Object.keys(sp.groups).length>0;if(!same(sp.routes,r)){rp.saveShardRoutes=sp.routes;rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD}if(Object.keys(rp).length||has){touch(target,rp);ops.push({kind:"set",ref,data:patchObject(rp),opt:{merge:true}})}for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardMergePayload(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},async commit(){for(const mk of touched)try{await ensureV6(mk,"",false)}catch(e){console.warn(BUILD,"batch preflight",mk,e?.message||e)}const run=()=>buildBatch(target,dbArg,ops).commit();try{return await run()}catch(e){if(!pressure(e))throw e;for(const mk of touched)try{await ensureV6(mk,"",true)}catch(_){}try{return await run()}catch(e2){if(pressure(e2))throw friendlyPressure();throw e2}}}};return api};
+    return Reflect.get(target,prop,target)
+  }});proxyCache.set(fs,prox);return{...ctx,fs:prox}}
+  wrappedGetFirebaseContext.__r3662Base=baseGetFirebaseContext;globalThis.getFirebaseContext=wrappedGetFirebaseContext;try{getFirebaseContext=wrappedGetFirebaseContext}catch(_){ }
+
+  /* Force one V6 migration before legacy login normalization touches the state. */
+  try{if(typeof initializeOrLoadCloudState==="function"){const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){const mk=String(memberKey||"").trim();if(mk)await ensureV6(mk,String(member||""),false);const out=await base.apply(this,arguments);if(mk){try{const {db,fs}=await wrappedGetFirebaseContext(),sn=await (typeof fs.getDocFromServer==="function"?fs.getDocFromServer(fs.doc(db,"saves",mk)):fs.getDoc(fs.doc(db,"saves",mk)));if(sn.exists()){ownState=normalizeState(sn.data(),member);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}}catch(e){console.warn(BUILD,"post-login hydrate",mk,e?.message||e)}}return ownState||out}}
+  }catch(e){console.error(BUILD,"login wrapper",e)}
+
+  /* One owner listener only. Equal/older revisions never repaint a just-completed
+     action. The proxy above already guarantees this callback is server-hydrated. */
+  try{subscribeOwnGarden=function(){try{ownGardenUnsubscribe?.();ownGardenUnsubscribe=null}catch(_){}try{ownSaveUnsubscribe?.();ownSaveUnsubscribe=null}catch(_){}try{if(typeof r24SaveUnsub!=="undefined"){r24SaveUnsub?.();r24SaveUnsub=null}}catch(_){}try{if(typeof r24GardenUnsub!=="undefined"){r24GardenUnsub?.();r24GardenUnsub=null}}catch(_){}try{if(typeof gardenListenerUnsub!=="undefined"){gardenListenerUnsub?.();gardenListenerUnsub=null}}catch(_){}if(!cloudReady||!currentMemberKey)return;getFirebaseContext().then(({db,fs})=>{const ref=fs.doc(db,"saves",currentMemberKey);ownSaveUnsubscribe=fs.onSnapshot(ref,snap=>{if(!snap.exists()||!ownState||snap.metadata?.hasPendingWrites)return;const raw=snap.data()||{},remoteSession=String(raw.activeSessionId||"");if(cloudSessionId&&remoteSession&&remoteSession!==cloudSessionId){if(currentMember==="Aida"||adminProfile?.role==="admin"){cloudSessionId=remoteSession;cloudSessionSuperseded=false;cloudReady=true}else{cloudSessionSuperseded=true;cloudReady=false;try{message("ข้อมูลถูกเปิดจากอีกเครื่องแล้ว","เครื่องนี้หยุดบันทึกเพื่อป้องกันข้อมูลเก่าทับข้อมูลใหม่ค่ะ")}catch(_){}return}}const rr=Number(raw.clientSaveRevision)||0,lr=Number(ownState.clientSaveRevision)||0,le=Number(ownState.clientLocalEditAt)||0;if(rr<lr)return;if((typeof cloudSaveInFlight!=="undefined"&&cloudSaveInFlight)||(typeof cloudSaveTimer!=="undefined"&&cloudSaveTimer))return;if(rr===lr&&le&&now()-le<3000)return;const next=normalizeState(raw,currentMember);ownState=next;if(!visitContext){state=ownState;try{updateMeritUI?.();draw?.()}catch(_){}}try{saveLocalOnly?.(ownState)}catch(_){}},e=>console.warn(BUILD,"owner save listener",e?.message||e));try{ownGardenUnsubscribe=()=>{}}catch(_){}}).catch(e=>console.warn(BUILD,"subscribe",e?.message||e))}}
+  catch(e){console.warn(BUILD,"subscribe override",e)}
+
+  globalThis.YN_SAVE_STORAGE_V2={migrateOne:mk=>ensureV6(String(mk||currentMemberKey||""),String(currentMember||""),true)};
+  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,repair:mk=>ensureV6(String(mk||currentMemberKey||""),String(currentMember||""),true),compact:()=>({layout:LAYOUT,structural:true})};
+  globalThis.YN_SAVE_V6={BUILD,LAYOUT,repair:mk=>ensureV6(String(mk||currentMemberKey||""),String(currentMember||""),true),report:async()=>{const mk=String(currentMemberKey||"");if(!mk)return{};const c=await wrappedGetFirebaseContext(),sn=await (typeof c.fs.getDocFromServer==="function"?c.fs.getDocFromServer(c.fs.doc(c.db,"saves",mk)):c.fs.getDoc(c.fs.doc(c.db,"saves",mk)));const d=sn.exists()?sn.data()||{}:{};return{memberKey:mk,virtualBytes:bytes(d),rootProjectedBytes:bytes(splitState(d,mk).root),alpacaInventory:d?.alpaca?.inventory||{},jellyfishV2:d?.jellyfishV2||{},wines:d?.wines||{},specialAnimals:d?.specialAnimals||{}}}};
+
+  function friendlyText(x){const s=String(x||"");return pressure(s)?"พื้นที่เซฟบัญชีเต็ม ระบบกำลังแยกข้อมูลออกจากเซฟหลัก กรุณาลองรายการนี้อีกครั้งค่ะ":x}
+  try{if(typeof message==="function"){const bm=message;message=function(t,b){return bm.call(this,t,friendlyText(b))}}}catch(_){}
+  try{if(typeof notice==="function"){const bn=notice;notice=function(a,...r){if(obj(a)&&a.text!==undefined)a={...a,text:friendlyText(a.text)};else if(typeof a==="string"&&r.length)r[0]=friendlyText(r[0]);return bn.call(this,a,...r)}}}catch(_){}
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
+<script>window.YAINOO_BUILD="S2-R36.62-SAVE-V6-SERVER-CONSISTENT-20260917";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>

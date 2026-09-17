@@ -20525,6 +20525,10 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function grantReward(s,r){
+    /* R36.62: grass rewards use an apply() callback and have no itemType.
+       Sending those rows into addGiftItemToState caused the intermittent
+       “ประเภทของขวัญไม่รองรับ” error. */
+    if(typeof r?.apply==="function"){r.apply(s);return}
     if(r.type==="merit"){s.merit=num(s.merit)+int(r.qty);return}
     if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มรางวัลยังไม่พร้อม");
     addGiftItemToState(s,{itemType:r.type,itemKey:r.key,qty:r.qty});
