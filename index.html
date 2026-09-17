@@ -4273,7 +4273,7 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script>window.YAINOO_BUILD="S2-R36.57-EMERGENCY-BACKUP-RESTORE-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+<script>window.YAINOO_BUILD="S2-R36.58-LOGIN-FIREBASE-COMPAT-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 <script>
 /* =====================================================================
    S2 R36.55 — SHARD RECOVERY + CATASTROPHIC ZERO GUARD
@@ -4286,7 +4286,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3655_SHARD_RECOVERY_GUARD(){
   "use strict";
-  const BUILD="S2-R36.57-EMERGENCY-BACKUP-RESTORE-20260916";
+  const BUILD="S2-R36.58-LOGIN-FIREBASE-COMPAT-20260916";
   const LAYOUT="save-layout-v7-recovery-r3657";
   const LEGACY_LAYOUTS=new Set(["save-layout-v4-sharded-r3654","save-layout-v5-sharded-r3655",LAYOUT]);
   const GROUP_NAMES=["animals","farm","history"];
@@ -4377,7 +4377,8 @@ console.info(BUILD,"loaded");
   getFirebaseContext=async function(){
     const ctx=await originalCtx.apply(this,arguments),db=ctx.db,fs=ctx.fs;if(proxyCache.has(fs))return{...ctx,fs:proxyCache.get(fs)};
     const prox=new Proxy(fs,{get(target,prop){
-      if(prop==="getDoc"||prop==="getDocFromServer")return async function(ref){const info=saveInfo(ref);if(!info)return target[prop](ref);const base=await target[prop](ref);if(!base.exists())return base;try{const groups=await readGroupsStrict(target,db,info.memberKey,prop==="getDocFromServer");return snapLike(base,mergeState(base.data()||{},groups))}catch(e){hydrateOK.delete(info.memberKey);hydrateBad.set(info.memberKey,e);throw e}};
+      if((prop==="getDoc"||prop==="getDocFromServer")&&typeof target[prop]==="function")return async function(ref){const info=saveInfo(ref);if(!info)return target[prop](ref);const base=await target[prop](ref);if(!base.exists())return base;try{const groups=await readGroupsStrict(target,db,info.memberKey,prop==="getDocFromServer");return snapLike(base,mergeState(base.data()||{},groups))}catch(e){hydrateOK.delete(info.memberKey);hydrateBad.set(info.memberKey,e);throw e}};
+      if(prop==="getDocFromServer"&&typeof target[prop]!=="function")return undefined;
       if(prop==="setDoc")return async function(ref,data,opt){const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);if(hydrateBad.has(info.memberKey))throw hydrateBad.get(info.memberKey);const isMerge=Boolean(opt?.merge||opt?.mergeFields);if(isMerge){const rootPatch={},gp={animals:{},farm:{},history:{}};for(const[k,v0]of Object.entries(data||{})){const g=groupFor(k),v=k==="alpaca"?sanitizeAlpaca(v0):v0;if(g)gp[g][k]=v;else rootPatch[k]=v}const b=target.writeBatch(db);if(Object.keys(rootPatch).length)b.set(ref,rootPatch,opt);for(const g of GROUP_NAMES)if(Object.keys(gp[g]).length)b.set(shardRef(target,db,info.memberKey,g),{layout:LAYOUT,data:gp[g],updatedAt:target.serverTimestamp()},{merge:true});return b.commit()}
         const {root,groups}=splitState(data||{}),prev=groupCache.get(info.memberKey)||await readGroupsStrict(target,db,info.memberKey,false);for(const g of GROUP_NAMES)groups[g]={...cp(prev?.[g]||{}),...cp(groups[g]||{})};const safe=guardedGroups(info.memberKey,groups,prev);try{await cacheBackups(target,db,info.memberKey,prev)}catch(_){}const b=target.writeBatch(db);b.set(ref,{...root,updatedAt:target.serverTimestamp()},{merge:false});for(const g of GROUP_NAMES)b.set(shardRef(target,db,info.memberKey,g),{layout:LAYOUT,data:safe[g],updatedAt:target.serverTimestamp()},{merge:false});await b.commit();groupCache.set(info.memberKey,cp(safe));return;
       };
