@@ -4157,6 +4157,122 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script>window.YAINOO_BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
+
+<script>
+/* =====================================================================
+   S2 R36.53 — SURGICAL SERVER SAVE REPAIR / NO FULL-DOC REWRITE
+   2026-09-16
+   - Repairs oversized saves with updateDoc/deleteField instead of rewriting the 1MiB root.
+   - Archives historical maps first, then removes them from saves/{memberKey}.
+   - Clears legacy alpaca.vault and stale bookkeeping in-place.
+   - Runs for every member on login and before retrying a pressured save.
+   ===================================================================== */
+(function YN_R3653_SURGICAL_SAVE_REPAIR(){
+  "use strict";
+  const BUILD="S2-R36.53-SURGICAL-SERVER-SAVE-REPAIR-20260916";
+  const LAYOUT="save-layout-v3-r3652";
+  const ROOT_TARGET=360*1024;
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):JSON.parse(JSON.stringify(v))}catch(_){return v}};
+  const bytes=v=>{try{const t=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(t).length:t.length*2}catch(_){return 0}};
+  const pressure=e=>/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i.test(String(e?.message||e||""));
+  const HIST_RX=/(receipts?|claims?|history|archive|tombstones?|ledgers?|audit(?:log)?|eventlog|activitylog|dedupe|processed|seenids?|notificationqueue|cache|debug|trace)$/i;
+  const SAFE_KEEP=new Set(["bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","plots","animals","dogs","cats","hamsters","hamsterFarms","farmGuardians","pens","inventory","wool","food","medicine","products","flowers","flowerSeeds","flowerPlots","wines","wineMachines","homeFoods","boatDrinks","coconutRiverItems","jellyfishV2","warehouseTools","rainyMenus","alpaca","hedgehog","houseUpgrade","s2Unlocks","upgradeKeys","missions","dailyLimits"]);
+  const TOP_HISTORY=new Set(["friendGiftClaims","broadcastGiftClaims","fishingClaimReceipts","campaignReceipts","friendResourceClaims","friendForageClaims","friendGrassClaims","friendFruitClaims","friendFlowerClaims","friendVisitClaims","giftClaimHistory","claimHistory","eventHistory","activityHistory","deliveryReceipts","giftReceipts","r3465BasementReceipts","hedgehogShieldReceiptsR3465","r32FriendForageLocks","saleTombstones","retiredCatsArchiveR34","notifications"]);
+  function trimRecent(v,cap=24){
+    if(Array.isArray(v))return v.slice(-cap);
+    if(v&&typeof v==="object"){
+      const rows=Object.entries(v);return Object.fromEntries(rows.slice(-cap));
+    }
+    return v;
+  }
+  async function archiveValue(fs,db,mk,key,val){
+    let raw="";try{raw=JSON.stringify(val)}catch(_){return}
+    if(!raw||raw==="{}"||raw==="[]")return;
+    const CH=100000,total=Math.max(1,Math.ceil(raw.length/CH));
+    for(let i=0;i<total;i++){
+      const id=`r3653-${String(key).replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,90)}-${String(i).padStart(3,"0")}`;
+      await fs.setDoc(fs.doc(db,"saveArchives",mk,"chunks",id),{build:BUILD,field:key,part:i,total,payload:raw.slice(i*CH,(i+1)*CH),archivedAt:fs.serverTimestamp()},{merge:false});
+    }
+  }
+  function localSurgical(s){
+    if(!s||typeof s!=="object")return s;
+    try{
+      s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};
+      s.alpaca.vault=[];
+      s.alpaca.warehouseResetEpoch="r3653-zero-20260916";
+      if(s.alpaca.factory&&typeof s.alpaca.factory==="object"){
+        if(Array.isArray(s.alpaca.factory.history))s.alpaca.factory.history=s.alpaca.factory.history.slice(-4);
+        if(s.alpaca.factory.babyTransfers&&typeof s.alpaca.factory.babyTransfers==="object")s.alpaca.factory.babyTransfers=trimRecent(s.alpaca.factory.babyTransfers,24);
+      }
+      for(const k of Object.keys(s)){
+        if(/^saveGuardR\d+/i.test(k)){delete s[k];continue}
+        if(TOP_HISTORY.has(k)||(!SAFE_KEEP.has(k)&&HIST_RX.test(k))){s[k]=trimRecent(s[k],24)}
+      }
+      s.saveLayoutVersion=LAYOUT;s.saveLayoutUpdatedAt=Date.now();
+    }catch(_){ }
+    return s;
+  }
+  async function surgicalRepair(memberKey,{force=false}={}){
+    const mk=String(memberKey||"").trim();if(!mk)return false;
+    const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",mk),snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
+    if(!snap.exists())return false;
+    const raw=snap.data()||{},before=bytes(raw);
+    const must=force||before>ROOT_TARGET||raw.saveLayoutVersion!==LAYOUT||((raw?.alpaca?.vault?.length||0)>0);
+    if(!must)return false;
+    const patch={saveLayoutVersion:LAYOUT,saveLayoutUpdatedAt:Date.now(),saveRootApproxBytes:Math.min(before,ROOT_TARGET),updatedAt:fs.serverTimestamp(),"alpaca.vault":[],"alpaca.warehouseResetEpoch":"r3653-zero-20260916"};
+    const archiveJobs=[];
+    for(const [k,v] of Object.entries(raw)){
+      if(/^saveGuardR\d+/i.test(k)){patch[k]=fs.deleteField();continue}
+      if(TOP_HISTORY.has(k)||(!SAFE_KEEP.has(k)&&HIST_RX.test(k))){
+        if(v&&typeof v==="object"&&bytes(v)>2048)archiveJobs.push(archiveValue(fs,db,mk,k,v).catch(e=>console.warn(BUILD,"archive",mk,k,e)));
+        patch[k]=trimRecent(v,24);
+      }
+    }
+    const af=raw?.alpaca?.factory;
+    if(af&&typeof af==="object"){
+      if(Array.isArray(af.history)&&af.history.length>4){archiveJobs.push(archiveValue(fs,db,mk,"alpaca.factory.history",af.history).catch(()=>{}));patch["alpaca.factory.history"]=af.history.slice(-4)}
+      if(af.babyTransfers&&typeof af.babyTransfers==="object"&&Object.keys(af.babyTransfers).length>24){archiveJobs.push(archiveValue(fs,db,mk,"alpaca.factory.babyTransfers",af.babyTransfers).catch(()=>{}));patch["alpaca.factory.babyTransfers"]=trimRecent(af.babyTransfers,24)}
+    }
+    await Promise.all(archiveJobs);
+    /* Critical: update only selected fields. This can shrink a nearly-full document
+       even when a normal setDoc of the whole state would exceed Firestore's 1 MiB limit. */
+    await fs.updateDoc(ref,patch);
+    const check=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref),after=check.exists()?bytes(check.data()||{}):0;
+    console.info(BUILD,"surgical repaired",mk,{before,after});
+    return {before,after};
+  }
+  try{
+    if(typeof normalizeState==="function"){
+      const base=normalizeState;normalizeState=function(raw,player){const out=base(raw,player);return localSurgical(out)};
+    }
+  }catch(e){console.warn(BUILD,"normalize",e)}
+  try{
+    if(typeof flushCloudSave==="function"){
+      const base=flushCloudSave;flushCloudSave=async function(){
+        const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;if(live)localSurgical(live);
+        try{return await base.apply(this,arguments)}catch(e){
+          if(!pressure(e))throw e;
+          const mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").trim();
+          await surgicalRepair(mk,{force:true});if(live)localSurgical(live);
+          return await base.apply(this,arguments);
+        }
+      };
+    }
+  }catch(e){console.warn(BUILD,"flush",e)}
+  try{
+    if(typeof initializeOrLoadCloudState==="function"){
+      const base=initializeOrLoadCloudState;initializeOrLoadCloudState=async function(member,memberKey){
+        const mk=String(memberKey||"").trim();
+        try{await surgicalRepair(mk,{force:false})}catch(e){console.warn(BUILD,"pre-login surgical repair",mk,e)}
+        try{return await base.apply(this,arguments)}catch(e){if(!pressure(e))throw e;await surgicalRepair(mk,{force:true});return await base.apply(this,arguments)}
+      };
+    }
+  }catch(e){console.warn(BUILD,"init",e)}
+  globalThis.YN_SAVE_SURGERY={BUILD,repair:surgicalRepair,compactLocal:localSurgical,report:()=>{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return{memberKey:String(typeof currentMemberKey!=="undefined"?currentMemberKey:""),bytes:bytes(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
+<script>window.YAINOO_BUILD="S2-R36.53-SURGICAL-SERVER-SAVE-REPAIR-20260916";window.YAINOO_PACKAGE_BUILD=window.YAINOO_BUILD;</script>
 </body>
 </html>
