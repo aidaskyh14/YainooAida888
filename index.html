@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918"></script>
+<script src="game.js?v=S2-R36.101-UNIFIED-GIFT-ENGINE-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3325,7 +3325,7 @@ console.info(BUILD,"loaded");
   const SECRET_NAMES={r35CandyCrop:"ลูกกวาดประสาทแดร๊ก",r35SpiderCrop:"แมงมุมขยุ้มเม็ด",r35CatCrop:"แมวเหมียว เสวปิ๊",r35BeeCrop:"บีเหินบนโต๊ะน้ำชา"};
   const FISH={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
   const CAMPAIGNS=new Set(["secret","fishing","wool"]);
-  const BROKEN=new Set(["opor","kongkwan","earn","mhai"]); /* known already-at-risk saves; every save is also size-guarded below */
+  const BROKEN=new Set(); /* R36.99: no account is force-repaired by identity; size guards only */
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const keyNow=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase();
   const isAdmin=()=>keyNow()==="aida" || (String(typeof currentMember!=="undefined"?currentMember:"")==="Aida" && globalThis.adminProfile?.role==="admin");
@@ -5205,7 +5205,8 @@ console.info(BUILD,"loaded");
   bindBag();
   /* R36.88: do not rewrite house handlers after R17 renders them. The native
      r17Basement onclick is now the only transition owner. */
-  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag();recoverKongkwanDeep().then(ok=>{if(ok)refreshGarden()})},ms));
+  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag()},ms));
+  console.info(BUILD,"automatic Kongkwan inventory recovery DISABLED; manual recovery only");
   setInterval(()=>{try{bindBag()}catch(_){}},2200);
   async function forceRecover(){done=false;running=false;return recoverKongkwanDeep()}
   function recoverySummary(){
@@ -5288,8 +5289,10 @@ console.info(BUILD,"loaded");
   }
 
   function schedule(){[500,1400,3200,7000,15000,30000].forEach(ms=>setTimeout(()=>repair(false),ms))}
-  schedule();
-  try{if(typeof initializeOrLoadCloudState==="function"&&!initializeOrLoadCloudState.__r3691){const base=initializeOrLoadCloudState;const wrap=async function(){const r=await base.apply(this,arguments);setTimeout(()=>repair(true),180);return r};wrap.__r3691=true;initializeOrLoadCloudState=wrap}}catch(e){console.warn(BUILD,"login hook",e)}
+  /* R36.98 DATA GUARD: historical inventory repair is MANUAL ONLY.
+     Never run it on page load/login because stale shards/localStorage can
+     overwrite healthy live quantities (including resurrecting 9999). */
+  console.info(BUILD,"automatic all-player/self inventory repair DISABLED; manual repair API retained");
   globalThis.YN_R3691={BUILD,repair:()=>repair(true),report:()=>lastReport};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
@@ -5409,11 +5412,500 @@ console.info(BUILD,"loaded");
     try{const {db,fs}=await getFirebaseContext();const roots=await fs.getDocs(fs.collection(db,"saves"));for(const d of roots.docs){const mk=String(d.id||"").toLowerCase();if(!mk||mk==="aida")continue;out.players++;try{const r=await restoreInventoryForMember(fs,db,mk,{includeLocal:false,force:true});if(r&&Object.keys(r.patch||{}).length)out.inventory++;if(await republishDashboardForMember(fs,db,mk))out.dashboard++}catch(e){out.errors.push(`${mk}:${String(e?.message||e)}`)}}out.campaigns=await repairCampaignNumbers(fs,db);reports.__adminSweep=out;console.info(BUILD,"admin numeric sweep",out);try{showWeatherToast?.(`🔢 ซ่อมตัวเลขแล้ว ${out.players} ไอดี • กระเป๋า ${out.inventory} • Dashboard ${out.dashboard}`)}catch(_){}return out}catch(e){out.errors.push(String(e?.message||e));console.warn(BUILD,"sweep",e);return out}finally{sweeping=false}
   }
 
-  /* Run only after login has fully hydrated the V7 save. */
-  [1800,5000,12000].forEach(ms=>setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},ms));
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},900)},{passive:true});
+  /* R36.98 DATA GUARD: numeric history restore is MANUAL ONLY.
+     In R36.92 Admin login called repairAllPlayers(force=true) at 1.8/5/12s
+     and on visibility changes, which rewrote healthy player inventory maps
+     from historical candidates. Keep the tools, never auto-run them. */
+  console.info(BUILD,"automatic numeric history restore DISABLED; manual APIs retained");
   globalThis.YN_R3692={BUILD,repairSelf,repairAllPlayers,repairCampaignNumbers,report:()=>cp(reports)};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
+<script id="r3698-data-guard-marker">
+  globalThis.YAINOO_DATA_GUARD_BUILD="S2-R36.98-DATA-GUARD-RECEIVE-ALL-20260918";
+  console.info(globalThis.YAINOO_DATA_GUARD_BUILD,"auto historical restores are manual-only");
+</script>
+
+
+<script id="r36100-unified-gift-engine">
+/* =====================================================================
+   S2 R36.101 — UNIFIED DIRECT GIFT ENGINE
+   2026-09-18
+   FINAL late override: this script is intentionally after every older patch.
+
+   Source of truth for direct gifts: /gifts/{giftId}.status
+   - EVERY account uses the exact same pending-gift query and claim function.
+   - Pending gifts render from /gifts, never from stale mailbox gift cards.
+   - Individual Receive and Receive All call the same claimDirectGift().
+   - Receive All is shown for 1+ pending gifts (not only 2+).
+   - Claim is one Firestore transaction: inventory delta + gift status + canonical
+     mailbox delete. Re-clicking a claimed gift cannot add items again.
+   - Inventory write is a top-level delta only. It never rewrites the whole save.
+   - Legacy/stale gift mailbox rows are cleaned after the authoritative gift status
+     says the gift is no longer pending.
+   ===================================================================== */
+(function YN_R36100_UNIFIED_GIFT_ENGINE(){
+  "use strict";
+  const BUILD="S2-R36.101-UNIFIED-GIFT-ENGINE-20260918";
+  const busy=new Set();
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const mk=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}catch(_){return String(v??"")}};
+  const ms=v=>{try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}};
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const isAdminGift=g=>String(g?.fromKey||g?.fromName||"").toLowerCase()==="aida" || String(g?.source||"").toLowerCase()==="yainoo";
+  const itemName=i=>String(i?.name||i?.itemName||i?.key||i?.itemKey||"ของขวัญ");
+  const qty=i=>Math.max(1,Math.floor(Number(i?.qty)||1));
+
+  function giftSummary(g){
+    const items=Array.isArray(g?.items)?g.items:[{name:g?.itemName||g?.itemKey||"ของขวัญ",qty:g?.qty||1}];
+    return items.map(i=>`${itemName(i)} ×${qty(i)}`).join(" • ");
+  }
+
+  async function getMailbox(){
+    const key=mk();if(!key||!cloudReady)return[];
+    const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"mailboxes",key,"items"),rows=[];
+    try{const sn=await fs.getDocs(fs.query(ref,fs.limit(300)));sn.forEach(d=>rows.push({id:d.id,...(d.data()||{})}))}catch(e){console.warn(BUILD,"mailbox read",e?.message||e)}
+    rows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return rows;
+  }
+
+  async function getPendingDirectGifts(){
+    const key=mk();if(!key||!cloudReady)return[];
+    const {db,fs}=await getFirebaseContext(),rows=[];
+    try{
+      /* One equality only: no composite index is required, and rules can prove
+         every returned document belongs to the signed-in receiver. */
+      const q=fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",key),fs.limit(500));
+      const sn=await fs.getDocs(q);
+      sn.forEach(d=>{const g=d.data()||{};if(String(g.status||"pending")==="pending")rows.push({id:d.id,...g})});
+    }catch(e){console.error(BUILD,"pending gift query",e);throw e}
+    rows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return rows;
+  }
+
+  function topPatch(before,after){
+    const patch={};
+    for(const k of new Set([...Object.keys(before||{}),...Object.keys(after||{})])){
+      if(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes"].includes(k))continue;
+      if(!same(before?.[k],after?.[k]))patch[k]=cp(after?.[k]);
+    }
+    return patch;
+  }
+
+  function invalidate(){
+    try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}
+    try{if(typeof broadcastClaimCache!=="undefined"&&broadcastClaimCache?.clear)broadcastClaimCache.clear()}catch(_){}
+    try{notificationBadgeLastAt=0}catch(_){}
+  }
+
+  async function cleanupGiftMailbox(giftId){
+    const key=mk();if(!key||!cloudReady)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),ref=fs.collection(db,"mailboxes",key,"items"),sn=await fs.getDocs(fs.query(ref,fs.limit(300))),batch=fs.writeBatch(db);let n=0;
+      sn.forEach(d=>{const x=d.data()||{};if(x.type==="gift"&&(String(d.id)===String(giftId)||String(x.giftId||"")===String(giftId))){batch.delete(d.ref);n++}});
+      if(n)await batch.commit();
+    }catch(e){console.warn(BUILD,"mailbox cleanup",giftId,e?.message||e)}
+  }
+
+  async function claimDirectGift(giftId,accept=true){
+    const id=String(giftId||""),key=mk();
+    if(!id||!key||!cloudReady)return {ok:false,error:"ระบบยังไม่พร้อม"};
+    const token=key+":"+id;if(busy.has(token))return {ok:false,error:"กำลังดำเนินการรายการนี้อยู่"};
+    busy.add(token);
+    let changedPatch=null,already=false,after=null;
+    try{
+      try{await settlePendingCloudSave?.()}catch(e){console.warn(BUILD,"settle before gift",e?.message||e)}
+      const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",id),saveRef=fs.doc(db,"saves",key),mailRef=fs.doc(db,"mailboxes",key,"items",id),profileRef=fs.doc(db,"publicProfiles",key);
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ss]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);
+        if(!gs.exists()){already=true;return}
+        const g=gs.data()||{};
+        if(String(g.toKey||"")!==key)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+        if(String(g.status||"pending")!=="pending"){already=true;return}
+        if(!ss.exists())throw new Error("ไม่พบข้อมูลกระเป๋าผู้เล่น");
+
+        const before=cp(ss.data()||{});
+        after=cp(before);
+        if(accept){
+          if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");
+          addGiftItemToState(after,g);
+          changedPatch=topPatch(before,after);
+          if(!Object.keys(changedPatch).length)throw new Error("รายการของขวัญนี้ไม่สามารถเพิ่มเข้ากระเป๋าได้");
+          /* V7 proxy routes these changed top-level fields to their canonical
+             shards. merge:true means unrelated inventory can never be reset. */
+          tx.set(saveRef,changedPatch,{merge:true});
+          if(Object.prototype.hasOwnProperty.call(changedPatch,"merit")){
+            tx.set(profileRef,{merit:Number(after.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true});
+          }
+        }
+        /* Receiver rules allow exactly status + resolvedAt on an existing pending gift. */
+        tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});
+        tx.delete(mailRef);
+      });
+
+      await cleanupGiftMailbox(id);
+      invalidate();
+
+      if(accept&&after&&changedPatch){
+        try{
+          const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
+          if(live){
+            for(const k of Object.keys(changedPatch))live[k]=cp(after[k]);
+            if(typeof ownState!=="undefined")ownState=live;
+            if(typeof state!=="undefined"&&!visitContext)state=live;
+            try{saveLocalOnly?.(live)}catch(_){}
+            try{updateMeritUI?.()}catch(_){}
+          }
+        }catch(e){console.warn(BUILD,"local apply",e)}
+      }
+      return {ok:true,already,accepted:Boolean(accept&&!already)};
+    }catch(e){console.error(BUILD,"claim failed",id,e);return {ok:false,error:String(e?.message||e)}}
+    finally{busy.delete(token)}
+  }
+
+  function renderGiftCard(g){
+    const t=typeof bangkokTimeText==="function"?bangkokTimeText(g.createdAt):"";
+    return `<div class="notification-card unread r36100-direct-gift" data-r36100-card="${esc(g.id)}"><b>${isAdminGift(g)?"🎁 ของขวัญจากยัยหนู":`🎁 ของขวัญจาก ${esc(g.fromName||"เพื่อน")}`}</b><span>${esc(giftSummary(g))}</span>${t?`<small>${esc(t)} น.</small>`:""}<div class="notification-actions"><button type="button" data-r36100-gift="${esc(g.id)}" data-r36100-act="accept">รับของขวัญ</button><button type="button" data-r36100-gift="${esc(g.id)}" data-r36100-act="discard">ทิ้ง</button></div></div>`;
+  }
+
+  function renderMailCard(m){
+    const t=typeof bangkokTimeText==="function"?bangkokTimeText(m.createdAt):"";
+    return `<div class="notification-card ${m.read?"":"unread"}"><b>${esc(m.title||"การแจ้งเตือน")}</b>${m.text?`<span>${esc(m.text)}</span>`:""}${t?`<small>${esc(t)} น.</small>`:""}</div>`;
+  }
+
+  async function markRead(rows){
+    const key=mk(),unread=(rows||[]).filter(x=>!x.read&&x.type!=="gift");if(!key||!unread.length)return;
+    try{const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db);unread.forEach(x=>batch.set(fs.doc(db,"mailboxes",key,"items",x.id),{read:true},{merge:true}));await batch.commit()}catch(e){console.warn(BUILD,"mark read",e?.message||e)}
+  }
+
+  async function renderLegacyBroadcasts(){
+    try{
+      if(typeof fetchBroadcasts!=="function")return "";
+      const bcasts=await fetchBroadcasts(),parts=[];
+      for(const b of bcasts){
+        if(b.type!=="gift")continue;
+        let claim=null;try{claim=typeof fetchBroadcastClaimCached==="function"?await fetchBroadcastClaimCached(b.id):typeof fetchBroadcastClaim==="function"?await fetchBroadcastClaim(b.id):null}catch(_){}
+        const sum=Array.isArray(b.items)?b.items.map(i=>`${itemName(i)} ×${qty(i)}`).join(" • "):(b.itemName?`${b.itemName} ×${qty(b)}`:"");
+        parts.push(`<div class="notification-card"><b>${esc(b.title||"🎁 ของขวัญจากยัยหนู")}</b>${b.body?`<span>${esc(b.body)}</span>`:""}${sum?`<span>🎁 ${esc(sum)}</span>`:""}<div class="notification-actions">${claim?`<button disabled>${claim.status==="accepted"?"รับแล้ว":"ทิ้งแล้ว"}</button>`:`<button type="button" data-r36100-broadcast="${esc(b.id)}" data-r36100-act="accept">รับของขวัญ</button><button type="button" data-r36100-broadcast="${esc(b.id)}" data-r36100-act="discard">ทิ้ง</button>`}</div></div>`);
+      }
+      return parts.join("");
+    }catch(e){console.warn(BUILD,"legacy broadcasts",e?.message||e);return ""}
+  }
+
+  async function showUnifiedNotifications(tab="friend"){
+    if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
+    const req=(showUnifiedNotifications._req=(Number(showUnifiedNotifications._req)||0)+1);
+    try{
+      const [mail,gifts]=await Promise.all([getMailbox(),getPendingDirectGifts()]);
+      if(req!==showUnifiedNotifications._req)return;
+
+      /* Gift mailbox rows are mirrors only. The /gifts status is authoritative. */
+      const normalMail=mail.filter(x=>x.type!=="gift");
+      const rows=tab==="yainoo"?gifts.filter(isAdminGift):gifts.filter(g=>!isAdminGift(g));
+      const notices=normalMail.filter(x=>tab==="yainoo"?x.source==="yainoo":x.source==="friend");
+      const legacyBroadcasts=tab==="yainoo"?await renderLegacyBroadcasts():"";
+      const adminEntry=(String(mk()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
+      const allBtn=rows.length?`<button id="r36100ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${rows.length})</button>`:"";
+      const body=[...rows.map(renderGiftCard),...notices.map(renderMailCard)].join("")+(legacyBroadcasts||"") || '<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
+      $("modalContent").innerHTML=`<section class="feature-panel notification-panel r36100-inbox"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${adminEntry}${allBtn}<div class="notification-list">${body}</div></section>`;
+      openModal?.();
+
+      document.querySelectorAll("[data-notification-tab]").forEach(b=>b.onclick=()=>showUnifiedNotifications(b.dataset.notificationTab));
+      if($("adminCenterBtn"))$("adminCenterBtn").onclick=()=>showAdminCenter?.();
+
+      document.querySelectorAll("[data-r36100-gift]").forEach(b=>b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;
+        const accept=b.dataset.r36100Act==="accept",r=await claimDirectGift(b.dataset.r36100Gift,accept);
+        if(!r.ok)message?.("จัดการของขวัญไม่ได้",r.error||"กรุณาลองใหม่");
+        else if(r.already)showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว");
+        else showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+        await showUnifiedNotifications(tab);try{refreshNotificationBadge?.(true)}catch(_){}
+      });
+
+      if($("r36100ReceiveAll"))$("r36100ReceiveAll").onclick=async()=>{
+        const b=$("r36100ReceiveAll");if(b.disabled)return;b.disabled=true;let ok=0,skip=0,fail=[];
+        for(let i=0;i<rows.length;i++){
+          b.textContent=`กำลังรับ ${i+1}/${rows.length}…`;
+          const r=await claimDirectGift(rows[i].id,true);
+          if(r.ok){if(r.already)skip++;else ok++}else fail.push(`${rows[i].id}: ${r.error||"ไม่สำเร็จ"}`);
+        }
+        await showUnifiedNotifications(tab);try{refreshNotificationBadge?.(true)}catch(_){}
+        if(fail.length)message?.("รับของขวัญทั้งหมดได้บางส่วน",`สำเร็จ ${ok} • ข้าม ${skip} • ไม่สำเร็จ ${fail.length}<br><small>${esc(fail.slice(0,3).join(" | "))}</small>`);
+        else showWeatherToast?.(`🎁 รับของขวัญทั้งหมดแล้ว ${ok} รายการ${skip?` • ข้าม ${skip}`:""}`);
+      };
+
+      document.querySelectorAll("[data-r36100-broadcast]").forEach(b=>b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;try{await claimBroadcastGift?.(b.dataset.r36100Broadcast,b.dataset.r36100Act==="accept")}catch(e){message?.("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}
+      });
+
+      markRead(notices);
+
+      /* Remove stale gift mailbox rows whose authoritative gift is not pending.
+         Never delete non-gift notices. */
+      const pendingIds=new Set(gifts.map(g=>String(g.id)));
+      const stale=mail.filter(x=>x.type==="gift"&&!pendingIds.has(String(x.giftId||x.id)));
+      if(stale.length){
+        try{const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db);stale.forEach(x=>batch.delete(fs.doc(db,"mailboxes",mk(),"items",x.id)));await batch.commit()}catch(e){console.warn(BUILD,"stale gift mail cleanup",e?.message||e)}
+      }
+    }catch(e){console.error(BUILD,"show notifications",e);message?.("เปิดการแจ้งเตือนไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+
+  /* FINAL OVERRIDES. These assignments happen after every legacy notification
+     patch in game.js and after all save-layer scripts in index.html. */
+  try{showNotifications=showUnifiedNotifications}catch(e){console.error(BUILD,"show override",e)}
+  try{claimFriendGift=async function(giftId,accept,returnTab="friend"){
+    const r=await claimDirectGift(giftId,accept);
+    if(!r.ok){message?.("จัดการของขวัญไม่ได้",r.error||"กรุณาลองใหม่");return r}
+    await showUnifiedNotifications(returnTab);try{refreshNotificationBadge?.(true)}catch(_){};return r;
+  }}catch(e){console.error(BUILD,"claim override",e)}
+
+  /* Capture click fallback: even if an old DOM fragment survives briefly, every
+     direct-gift button is forced through the unified engine instead of a legacy handler. */
+  document.addEventListener("click",e=>{
+    const b=e.target?.closest?.("[data-r36100-gift]");if(!b)return;
+    e.preventDefault();e.stopPropagation();
+  },true);
+
+  globalThis.YN_R36100={BUILD,claimDirectGift,getPendingDirectGifts,show:showUnifiedNotifications};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — one gift source, one claim path, one receive-all path");
+})();
+</script>
+
+<script id="r36101-receiver-owned-gift-engine">
+/* =====================================================================
+   S2 R36.101 — RECEIVER-OWNED UNIFIED GIFT ENGINE
+   2026-09-18
+   - Claim success depends ONLY on the receiver's own save/shards.
+   - Direct gift /gifts status + mailbox cleanup are best-effort after commit.
+   - Admin targeted/global broadcasts use the same receiver-owned claim pattern.
+   - Receive All handles every visible pending gift in the current tab.
+   - No account-specific branches. Earn, Kongkwan, and every other member use
+     exactly the same code path.
+   ===================================================================== */
+(function YN_R36101_RECEIVER_OWNED_GIFT_ENGINE(){
+  "use strict";
+  const BUILD="S2-R36.101-RECEIVER-OWNED-GIFT-ENGINE-20260918";
+  const busy=new Set();
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const key=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}catch(_){return String(v??"")}};
+  const ms=v=>{try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}};
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const isAdminDirect=g=>String(g?.fromKey||g?.fromName||"").toLowerCase()==="aida"||String(g?.source||"").toLowerCase()==="yainoo";
+  const itemName=i=>String(i?.name||i?.itemName||i?.key||i?.itemKey||"ของขวัญ");
+  const qty=i=>Math.max(1,Math.floor(Number(i?.qty)||1));
+
+  function giftSummary(g){
+    const items=Array.isArray(g?.items)?g.items:[{name:g?.itemName||g?.itemKey||"ของขวัญ",qty:g?.qty||1}];
+    return items.map(i=>`${itemName(i)} ×${qty(i)}`).join(" • ");
+  }
+
+  function topPatch(before,after){
+    const patch={};
+    for(const k of new Set([...Object.keys(before||{}),...Object.keys(after||{})])){
+      if(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes"].includes(k))continue;
+      if(!same(before?.[k],after?.[k]))patch[k]=cp(after?.[k]);
+    }
+    return patch;
+  }
+
+  function applyLocal(after,patch){
+    try{
+      const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
+      if(!live)return;
+      for(const k of Object.keys(patch||{}))live[k]=cp(after[k]);
+      if(typeof ownState!=="undefined")ownState=live;
+      if(typeof state!=="undefined"&&!visitContext)state=live;
+      try{saveLocalOnly?.(live)}catch(_){}
+      try{updateMeritUI?.()}catch(_){}
+    }catch(e){console.warn(BUILD,"local apply",e)}
+  }
+
+  function invalidate(){
+    try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}
+    try{if(typeof broadcastClaimCache!=="undefined"&&broadcastClaimCache?.clear)broadcastClaimCache.clear()}catch(_){}
+    try{notificationBadgeLastAt=0}catch(_){}
+  }
+
+  async function getOwnVirtualSave(){
+    const mk=key();if(!mk||!cloudReady)return{};
+    const {db,fs}=await getFirebaseContext();
+    const sn=await fs.getDoc(fs.doc(db,"saves",mk));
+    return sn.exists()?(sn.data()||{}):{};
+  }
+
+  async function getMailbox(){
+    const mk=key();if(!mk||!cloudReady)return[];
+    const {db,fs}=await getFirebaseContext(),out=[];
+    try{const sn=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300)));sn.forEach(d=>out.push({id:d.id,...(d.data()||{})}))}catch(e){console.warn(BUILD,"mailbox read",e?.message||e)}
+    out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
+  }
+
+  async function pendingDirect(claims){
+    const mk=key();if(!mk||!cloudReady)return[];
+    const {db,fs}=await getFirebaseContext(),out=[];
+    const sn=await fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk),fs.limit(500)));
+    sn.forEach(d=>{const g=d.data()||{},id=String(d.id);if(String(g.status||"pending")==="pending"&&!claims?.[id])out.push({kind:"direct",id,...g})});
+    out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
+  }
+
+  async function pendingBroadcasts(claims){
+    let rows=[];
+    try{rows=typeof fetchBroadcasts==="function"?await fetchBroadcasts():[]}catch(e){console.warn(BUILD,"broadcast read",e?.message||e)}
+    const mk=key();
+    return rows.filter(b=>{
+      if(b?.type!=="gift")return false;
+      if(b.targetKey&&String(b.targetKey)!==mk)return false;
+      if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)return false;
+      return !claims?.[String(b.id)];
+    }).map(b=>({kind:"broadcast",...b}));
+  }
+
+  async function claimDirect(id,accept=true){
+    id=String(id||"");const mk=key(),token=`direct:${mk}:${id}`;
+    if(!id||!mk||!cloudReady)return{ok:false,error:"ระบบยังไม่พร้อม"};
+    if(busy.has(token))return{ok:false,error:"กำลังดำเนินการรายการนี้อยู่"};
+    busy.add(token);
+    try{
+      const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",id),giftSnap=await fs.getDoc(giftRef);
+      if(!giftSnap.exists())return{ok:true,already:true};
+      const gift=giftSnap.data()||{};
+      if(String(gift.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+
+      const saveRef=fs.doc(db,"saves",mk);let after=null,patch=null,already=false;
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(saveRef);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        const before=cp(ss.data()||{}),s=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
+        s.friendGiftClaims=obj(s.friendGiftClaims)?s.friendGiftClaims:{};
+        if(s.friendGiftClaims[id]){already=true;after=s;return}
+        if(accept){if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");addGiftItemToState(s,gift)}
+        s.friendGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:typeof gameNow==="function"?gameNow():Date.now(),fromKey:String(gift.fromKey||""),itemType:String(gift.itemType||""),itemKey:String(gift.itemKey||""),qty:qty(gift)};
+        after=s;patch=topPatch(before,s);
+        if(!Object.keys(patch).length)throw new Error("ไม่มีข้อมูลที่ต้องบันทึก");
+        /* Own-save only. V7 proxy routes item + claim marker to canonical shards. */
+        tx.set(saveRef,patch,{merge:true});
+      });
+      if(!already&&after&&patch)applyLocal(after,patch);
+
+      /* Best-effort mirrors only. A permissions failure here cannot undo claim. */
+      if(!already){
+        try{await fs.setDoc(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"direct status cleanup",id,e?.message||e)}
+        try{
+          const q=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300))),batch=fs.writeBatch(db);let n=0;
+          q.forEach(d=>{const x=d.data()||{};if(x.type==="gift"&&(String(d.id)===id||String(x.giftId||"")===id)){batch.delete(d.ref);n++}});if(n)await batch.commit();
+        }catch(e){console.warn(BUILD,"direct mailbox cleanup",id,e?.message||e)}
+      }
+      invalidate();return{ok:true,already,accepted:Boolean(accept&&!already)};
+    }catch(e){console.error(BUILD,"direct claim",id,e);return{ok:false,error:String(e?.message||e)}}
+    finally{busy.delete(token)}
+  }
+
+  async function claimBroadcast(id,accept=true){
+    id=String(id||"");const mk=key(),token=`broadcast:${mk}:${id}`;
+    if(!id||!mk||!cloudReady)return{ok:false,error:"ระบบยังไม่พร้อม"};
+    if(busy.has(token))return{ok:false,error:"กำลังดำเนินการรายการนี้อยู่"};
+    busy.add(token);
+    try{
+      const {db,fs}=await getFirebaseContext(),bRef=fs.doc(db,"broadcasts",id),bs=await fs.getDoc(bRef);
+      if(!bs.exists())return{ok:true,already:true};
+      const b=bs.data()||{};
+      if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+      if(b.targetKey&&String(b.targetKey)!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+
+      const saveRef=fs.doc(db,"saves",mk);let after=null,patch=null,already=false;
+      await fs.runTransaction(db,async tx=>{
+        const ss=await tx.get(saveRef);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        const before=cp(ss.data()||{}),s=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
+        s.broadcastGiftClaims=obj(s.broadcastGiftClaims)?s.broadcastGiftClaims:{};
+        if(s.broadcastGiftClaims[id]){already=true;after=s;return}
+        if(accept){
+          if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");
+          if(Array.isArray(b.items))addGiftItemToState(s,{items:b.items});
+          else addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});
+        }
+        s.broadcastGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:typeof gameNow==="function"?gameNow():Date.now()};
+        after=s;patch=topPatch(before,s);
+        if(!Object.keys(patch).length)throw new Error("ไม่มีข้อมูลที่ต้องบันทึก");
+        tx.set(saveRef,patch,{merge:true});
+      });
+      if(!already&&after&&patch)applyLocal(after,patch);
+      try{if(typeof broadcastClaimCache!=="undefined")broadcastClaimCache.set(broadcastClaimCacheKey(id),{memberKey:mk,status:accept?"accepted":"discarded"})}catch(_){}
+      invalidate();return{ok:true,already,accepted:Boolean(accept&&!already)};
+    }catch(e){console.error(BUILD,"broadcast claim",id,e);return{ok:false,error:String(e?.message||e)}}
+    finally{busy.delete(token)}
+  }
+
+  function giftCard(g){
+    const t=typeof bangkokTimeText==="function"?bangkokTimeText(g.createdAt):"";
+    const who=g.kind==="broadcast"||isAdminDirect(g)?"🎁 ของขวัญจากยัยหนู":`🎁 ของขวัญจาก ${esc(g.fromName||"เพื่อน")}`;
+    return `<div class="notification-card unread r36101-gift" data-r36101-card="${esc(g.kind+":"+g.id)}"><b>${who}</b><span>${esc(giftSummary(g))}</span>${t?`<small>${esc(t)} น.</small>`:""}<div class="notification-actions"><button type="button" data-r36101-kind="${esc(g.kind)}" data-r36101-id="${esc(g.id)}" data-r36101-act="accept">รับของขวัญ</button><button type="button" data-r36101-kind="${esc(g.kind)}" data-r36101-id="${esc(g.id)}" data-r36101-act="discard">ทิ้ง</button></div></div>`;
+  }
+  function noticeCard(m){const t=typeof bangkokTimeText==="function"?bangkokTimeText(m.createdAt):"";return `<div class="notification-card ${m.read?"":"unread"}"><b>${esc(m.title||"การแจ้งเตือน")}</b>${m.text?`<span>${esc(m.text)}</span>`:""}${t?`<small>${esc(t)} น.</small>`:""}</div>`}
+
+  async function markRead(rows){
+    const mk=key(),unread=(rows||[]).filter(x=>!x.read&&x.type!=="gift");if(!mk||!unread.length)return;
+    try{const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db);unread.forEach(x=>batch.set(fs.doc(db,"mailboxes",mk,"items",x.id),{read:true},{merge:true}));await batch.commit()}catch(e){console.warn(BUILD,"mark read",e?.message||e)}
+  }
+
+  async function getViewData(){
+    const [save,mail]=await Promise.all([getOwnVirtualSave(),getMailbox()]);
+    const friendClaims=obj(save.friendGiftClaims)?save.friendGiftClaims:{};
+    const bcClaims=obj(save.broadcastGiftClaims)?save.broadcastGiftClaims:{};
+    const [direct,bcasts]=await Promise.all([pendingDirect(friendClaims),pendingBroadcasts(bcClaims)]);
+    return{save,mail,direct,bcasts};
+  }
+
+  async function showUnified(tab="friend"){
+    if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
+    const req=(showUnified._req=(Number(showUnified._req)||0)+1);
+    try{
+      const {mail,direct,bcasts}=await getViewData();if(req!==showUnified._req)return;
+      const directRows=tab==="yainoo"?direct.filter(isAdminDirect):direct.filter(g=>!isAdminDirect(g));
+      const giftRows=tab==="yainoo"?[...directRows,...bcasts]:directRows;
+      giftRows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
+      const notices=mail.filter(x=>x.type!=="gift"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"));
+      const allBtn=giftRows.length?`<button id="r36101ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${giftRows.length})</button>`:"";
+      const adminEntry=(String(key()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
+      const body=[...giftRows.map(giftCard),...notices.map(noticeCard)].join("")||'<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
+      $("modalContent").innerHTML=`<section class="feature-panel notification-panel r36101-inbox"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${adminEntry}${allBtn}<div class="notification-list">${body}</div></section>`;
+      openModal?.();
+      document.querySelectorAll("[data-notification-tab]").forEach(b=>b.onclick=()=>showUnified(b.dataset.notificationTab));
+      if($("adminCenterBtn"))$("adminCenterBtn").onclick=()=>showAdminCenter?.();
+      document.querySelectorAll("[data-r36101-id]").forEach(b=>b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;b.textContent="กำลังจัดการ…";
+        const accept=b.dataset.r36101Act==="accept";
+        const r=b.dataset.r36101Kind==="broadcast"?await claimBroadcast(b.dataset.r36101Id,accept):await claimDirect(b.dataset.r36101Id,accept);
+        if(!r.ok)message?.("จัดการของขวัญไม่ได้",r.error||"กรุณาลองใหม่");
+        else showWeatherToast?.(r.already?"🎁 รายการนี้ถูกจัดการไปแล้ว":accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+        await showUnified(tab);try{refreshNotificationBadge?.(true)}catch(_){}
+      });
+      if($("r36101ReceiveAll"))$("r36101ReceiveAll").onclick=async()=>{
+        const b=$("r36101ReceiveAll");if(b.disabled)return;b.disabled=true;let ok=0,skip=0,fail=[];
+        for(let i=0;i<giftRows.length;i++){
+          b.textContent=`กำลังรับ ${i+1}/${giftRows.length}…`;
+          const g=giftRows[i],r=g.kind==="broadcast"?await claimBroadcast(g.id,true):await claimDirect(g.id,true);
+          if(r.ok){if(r.already)skip++;else ok++}else fail.push(`${g.id}: ${r.error||"ไม่สำเร็จ"}`);
+        }
+        await showUnified(tab);try{refreshNotificationBadge?.(true)}catch(_){}
+        if(fail.length)message?.("รับของขวัญทั้งหมดได้บางส่วน",`สำเร็จ ${ok} • ข้าม ${skip} • ไม่สำเร็จ ${fail.length}<br><small>${esc(fail.slice(0,4).join(" | "))}</small>`);
+        else showWeatherToast?.(`🎁 รับของขวัญทั้งหมดแล้ว ${ok} รายการ${skip?` • ข้าม ${skip}`:""}`);
+      };
+      markRead(notices);
+    }catch(e){console.error(BUILD,"show",e);message?.("เปิดการแจ้งเตือนไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}
+  }
+
+  /* Absolute final overrides. */
+  try{showNotifications=showUnified}catch(e){console.error(BUILD,"show override",e)}
+  try{claimFriendGift=async(id,accept,returnTab="friend")=>{const r=await claimDirect(id,accept);await showUnified(returnTab);return r}}catch(e){console.error(BUILD,"direct override",e)}
+  try{claimBroadcastGift=async(id,accept)=>{const r=await claimBroadcast(id,accept);await showUnified("yainoo");return r}}catch(e){console.error(BUILD,"broadcast override",e)}
+
+  globalThis.YN_R36101={BUILD,claimDirect,claimBroadcast,show:showUnified,getViewData};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — receiver-owned claim is authoritative");
 })();
 </script>
 
