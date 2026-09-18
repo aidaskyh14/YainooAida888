@@ -25906,6 +25906,19 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   }
   function protectPersistent(local,remote){
     if(!local||!remote)return local;
+    /* R36.86 — Kongkwan inventory-loss recovery. R24 last-good used to protect
+       animals/house/alpaca but NOT bag/specials. If the live save was migrated
+       with an accidentally empty inventory map, keep the positive last-good map
+       instead of normalizing the account to zero. This is intentionally scoped
+       to the affected account and only activates when the live map is wholly zero. */
+    try{
+      const __mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").toLowerCase();
+      const __sum=o=>o&&typeof o==="object"&&!Array.isArray(o)?Object.values(o).reduce((n,v)=>n+(typeof v==="number"&&Number.isFinite(v)&&v>0?v:0),0):0;
+      if(__mk==="kongkwan"){
+        if(__sum(local.bag)===0&&__sum(remote.bag)>0)local.bag=clone(remote.bag);
+        if(__sum(local.specials)===0&&__sum(remote.specials)>0)local.specials=clone(remote.specials);
+      }
+    }catch(_){}
     /* R33 launch reset is an irreversible boundary. A pre-reset local/cloud
        snapshot must never resurrect crops, placed animals, house level or
        hedgehog state after the reset has been committed. */
@@ -38802,11 +38815,11 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   if(globalThis.YN_R3474)globalThis.YN_R3474.openBasementTools=openBasementTools77;
   if(globalThis.YN_R3478)globalThis.YN_R3478.openBasementTools=openBasementTools77;
 
-  const layer=$("sceneInteractiveLayer");
-  if(layer){
-    const mo=new MutationObserver(()=>queueMicrotask(repairHouse));
-    mo.observe(layer,{childList:true,subtree:true});
-  }
+  /* R36.86: DO NOT observe sceneInteractiveLayer here. The native R17 house
+     renderer replaces this subtree when entering/leaving the basement. The old
+     observer immediately wrote back into the subtree it was observing and could
+     form a mutation feedback loop on iOS, freezing the whole page. Lifecycle
+     retries below are enough; the native R17 renderer owns the house DOM. */
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(repairHouse,40)});
   window.addEventListener("pageshow",()=>setTimeout(repairHouse,40),{passive:true});
   setTimeout(repairHouse,80);setTimeout(repairHouse,350);

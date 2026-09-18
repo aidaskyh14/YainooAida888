@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.86-KONGKWAN-INVENTORY-HOUSE-ROOT-FIX-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918"></script>
+<script src="game.js?v=S2-R36.86-KONGKWAN-INVENTORY-HOUSE-ROOT-FIX-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3880,7 +3880,18 @@ console.info(BUILD,"loaded");
   function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);if(p==="get")return path=>cp(field(data,path?.toString?.()||path));return Reflect.get(t,p,t)}})}
   function numericTotal(m){if(!obj(m))return 0;return Object.values(m).reduce((n,v)=>n+(typeof v==="number"&&Number.isFinite(v)&&v>0?v:0),0)}
   function bestPositiveMap(current,candidates,path){if(numericTotal(current)>0)return current;let best=current,bestN=0;for(const s of candidates){const m=field(s,path),n=numericTotal(m);if(n>bestN){bestN=n;best=cp(m)}}return bestN>0?best:current}
-  function emergencyRecoverStocks(base,candidates){const s=cp(base)||{};s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};for(const k of ["food","medicine","wool","other"])s.alpaca.inventory[k]=bestPositiveMap(s.alpaca.inventory[k],candidates,`alpaca.inventory.${k}`)||{};s.alpaca.factory=obj(s.alpaca.factory)?s.alpaca.factory:{};s.alpaca.factory.products=bestPositiveMap(s.alpaca.factory.products,candidates,"alpaca.factory.products")||{};s.jellyfishV2=bestPositiveMap(s.jellyfishV2,candidates,"jellyfishV2")||s.jellyfishV2||{};s.specialAnimals=bestPositiveMap(s.specialAnimals,candidates,"specialAnimals")||s.specialAnimals||{};s.wines=bestPositiveMap(s.wines,candidates,"wines")||s.wines||{};return s}
+  function emergencyRecoverStocks(base,candidates){const s=cp(base)||{};
+    /* R36.86: bag + specials are first-class inventory shards. Older migration
+       recovery accidentally omitted them, which can leave an affected account
+       with a valid V7 layout but a completely zero inventory. Recover only when
+       the current map is zero and a positive pre-migration/shard copy exists. */
+    s.bag=bestPositiveMap(s.bag,candidates,"bag")||s.bag||{};
+    s.specials=bestPositiveMap(s.specials,candidates,"specials")||s.specials||{};
+    s.animalProducts=bestPositiveMap(s.animalProducts,candidates,"animalProducts")||s.animalProducts||{};
+    s.flowers=bestPositiveMap(s.flowers,candidates,"flowers")||s.flowers||{};
+    s.wines=bestPositiveMap(s.wines,candidates,"wines")||s.wines||{};
+    s.fishingBaits=bestPositiveMap(s.fishingBaits,candidates,"fishingBaits")||s.fishingBaits||{};
+    s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};for(const k of ["food","medicine","wool","other"])s.alpaca.inventory[k]=bestPositiveMap(s.alpaca.inventory[k],candidates,`alpaca.inventory.${k}`)||{};s.alpaca.factory=obj(s.alpaca.factory)?s.alpaca.factory:{};s.alpaca.factory.products=bestPositiveMap(s.alpaca.factory.products,candidates,"alpaca.factory.products")||{};s.jellyfishV2=bestPositiveMap(s.jellyfishV2,candidates,"jellyfishV2")||s.jellyfishV2||{};s.specialAnimals=bestPositiveMap(s.specialAnimals,candidates,"specialAnimals")||s.specialAnimals||{};return s}
   function localCandidates(member,mk){const out=[],keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:s2:r22:critical:${mk}`,`yn:r24:last-good:${member}`,`yn:r24:pending:${member}`,`yn:v7:critical:${mk}`];for(const k of keys)try{const raw=localStorage.getItem(k);if(!raw)continue;const x=JSON.parse(raw),st=obj(x?.state)?x.state:(obj(x)?x:null);if(st)out.push(st)}catch(_){}return out}
   async function rawContext(){return RAW_CTX.apply(this,arguments)}
   async function serverGet(fs,ref){if(typeof fs.getDocFromServer==="function")return fs.getDocFromServer(ref);return fs.getDoc(ref)}
@@ -5064,175 +5075,78 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script id="r3685-bag-basement-kongkwan">
+<script id="r3686-kongkwan-inventory-house-root-fix">
 /* =====================================================================
-   S2 R36.85 — BAG + BASEMENT + KONGKWAN INVENTORY RECOVERY
+   S2 R36.86 — KONGKWAN INVENTORY ROOT RECOVERY + HOUSE FREEZE ROOT FIX
    2026-09-18
-
-   - No floating workaround buttons.
-   - The normal bag button opens the full native inventory.
-   - The normal house basement button uses the native R17 room/functions.
-   - "เร่งโตทั้งหมด" stays inside "จัดการสวน".
-   - Kongkwan-only recovery reads surviving save shards/local snapshots and
-     restores stock ONLY when the live map is zero. No quantity is invented.
    ===================================================================== */
-(function YN_R3685(){
+(function YN_R3686(){
   "use strict";
-  const BUILD="S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918";
+  const BUILD="S2-R36.86-KONGKWAN-INVENTORY-HOUSE-ROOT-FIX-20260918";
   const $=id=>document.getElementById(id);
-  const GROWTH_KEYS=["cake10","cake20","cake50","cake100","coconut10","coconut20","coconut50","coconut100"];
-  const num=v=>Math.max(0,Math.floor(Number(v)||0));
-  const isObj=v=>!!v&&typeof v==="object"&&!Array.isArray(v);
-  const copy=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
-  const stateNow=()=>{try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return null};
-  const memberKey=()=>{try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||"").trim().toLowerCase():""}catch(_){return ""}};
-  const memberName=()=>{try{return typeof currentMember!=="undefined"?String(currentMember||"").trim():""}catch(_){return ""}};
+  const GROWTH=["cake10","cake20","cake50","cake100","coconut10","coconut20","coconut50","coconut100"];
+  const INV=["bag","specials","animalProducts","dishInventory","dishes","fishingBaits","mysteryBoxes","catMysteryBoxes","dogMysteryBoxes","number4MysteryBoxes","medicines","homeFoods","hedgehogItems","flowerSeeds","flowers","wines","boatDrinks","rainyMenus","warehouseTools","farmFruits","coconutRiverItems"];
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
+  const mk=()=>{try{return String(currentMemberKey||"").trim().toLowerCase()}catch(_){return ""}};
+  const live=()=>{try{return ownState||state||null}catch(_){return null}};
+  function score(v){if(typeof v==="number")return Number.isFinite(v)&&v>0?v:0;if(Array.isArray(v))return v.length;if(!obj(v))return 0;return Object.values(v).reduce((n,x)=>n+score(x),0)}
+  function ts(v){try{if(v?.toMillis)return Number(v.toMillis())||0;if(Number.isFinite(Number(v)))return Number(v)}catch(_){}return 0}
+  function unwrap(raw){if(!obj(raw))return null;for(const k of ["state","data","save","snapshot","payload"]){if(obj(raw[k])&&(obj(raw[k].bag)||obj(raw[k].specials)||INV.some(x=>obj(raw[k][x]))))return raw[k]}return raw}
+  function addCandidate(out,raw,when=0,source=""){const d=unwrap(raw);if(!obj(d))return;out.push({data:cp(d),at:Number(when)||0,source})}
+  function newestPositive(cands,key){let best=null;for(const c of cands){const v=c.data?.[key],n=score(v);if(n<=0)continue;if(!best||c.at>best.at||(c.at===best.at&&n>best.n))best={v:cp(v),at:c.at,n,source:c.source}}return best}
+  function applyPatch(patch){const s=live();if(!s)return;for(const [k,v] of Object.entries(patch))s[k]=cp(v);try{ownState=s;state=s}catch(_){}try{saveLocalOnly?.(s)}catch(_){}try{draw?.()}catch(_){} }
 
-  function bindBag(){
-    try{if(typeof inventory==="function")globalThis.inventory=inventory}catch(_){}
-    const b=$("inventoryNavBtn");
-    if(!b)return;
-    b.disabled=false;
-    b.style.setProperty("pointer-events","auto","important");
-    b.style.setProperty("touch-action","manipulation","important");
-    b.onclick=e=>{
-      try{e?.preventDefault?.();e?.stopPropagation?.()}catch(_){}
-      try{if(typeof inventory==="function")inventory("crops");else globalThis.inventory?.("crops")}catch(err){console.warn(BUILD,"bag",err)}
-    };
-  }
-
-  function bindBasement(){
-    let scene="";try{scene=typeof currentScene!=="undefined"?String(currentScene||""):""}catch(_){}
-    if(scene!=="house")return;
-    const layer=$("sceneInteractiveLayer"),api=globalThis.YN_R17;
-    if(!layer||!api)return;
-    const mode=String(layer.dataset.r17HouseMode||"");
-    if(mode==="main"){
-      const b=$("r17Basement");
-      if(b){
-        b.disabled=false;
-        b.style.setProperty("pointer-events","auto","important");
-        b.style.setProperty("touch-action","manipulation","important");
-        b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();api.goBasement?.()};
-      }
-    }else if(mode==="basement"){
-      try{globalThis.YN_R3677?.repairHouse?.()}catch(_){}
-      try{globalThis.YN_R3680?.fixBasement?.()}catch(_){}
-    }
-  }
-
-  function keepGardenManagerCanonical(){
-    /* Remove only the old floating workaround if a cached build left it behind. */
-    try{$("ynChips")?.remove();$("ynDeck")?.remove();$("r3683Css")?.remove()}catch(_){}
-    const grid=document.querySelector(".ynu-manager-grid");
-    if(grid&&!grid.querySelector('[data-v7-manager="boost"]')){
-      const panel=grid.closest(".ynu-garden-manager");
-      if(panel&&typeof globalThis.YN_GARDEN_V7?.manager==="function"){
-        try{globalThis.YN_GARDEN_V7.manager()}catch(_){}
-      }
-    }
-  }
-
-  function totalMap(m){return isObj(m)?Object.values(m).reduce((n,v)=>n+num(v),0):0}
-  function growthTotal(m){return GROWTH_KEYS.reduce((n,k)=>n+num(m?.[k]),0)}
-  function candidatesFromObject(raw,out,depth=0){
-    if(!isObj(raw)||depth>2)return;
-    if(isObj(raw.bag)||isObj(raw.specials))out.push(raw);
-    if(GROWTH_KEYS.some(k=>num(raw[k])>0))out.push({specials:raw});
-    for(const k of ["data","state","snapshot","save","payload"]){
-      if(isObj(raw[k]))candidatesFromObject(raw[k],out,depth+1);
-    }
-  }
-  function bestMap(candidates,key){
-    let best=null,bestN=0;
-    for(const c of candidates){const m=c?.[key],n=totalMap(m);if(n>bestN){bestN=n;best=copy(m)}}
-    return bestN>0?best:null;
-  }
-  function bestGrowth(candidates){
-    const out={};
-    for(const k of GROWTH_KEYS){let best=0;for(const c of candidates)best=Math.max(best,num(c?.specials?.[k]));if(best>0)out[k]=best}
-    return out;
-  }
-  function applyMemory(patch){
-    const targets=[];
-    const first=stateNow();if(first)targets.push(first);
-    try{if(typeof state!=="undefined"&&state&&!targets.includes(state))targets.push(state)}catch(_){}
-    try{if(typeof ownState!=="undefined"&&ownState&&!targets.includes(ownState))targets.push(ownState)}catch(_){}
-    for(const target of targets){
-      if(patch.bag)target.bag=copy(patch.bag);
-      if(patch.specials)target.specials=copy(patch.specials);
-    }
-    try{if(typeof draw==="function")draw()}catch(_){}
-  }
-
-  let recoveryRunning=false,recoveryDone=false;
-  async function recoverKongkwan(){
-    if(recoveryRunning||recoveryDone||memberKey()!=="kongkwan")return false;
-    const live=stateNow();if(!live)return false;
-    recoveryRunning=true;
+  let running=false,done=false,lastReport=null;
+  async function recoverKongkwanDeep(){
+    if(running||done||mk()!=="kongkwan")return false;
+    const s=live();if(!s)return false;
+    running=true;
     try{
-      const ctx=await globalThis.getFirebaseContext?.();
-      if(!ctx?.db||!ctx?.fs)return false;
-      const {db,fs}=ctx,candidates=[];
+      const ctx=await getFirebaseContext?.();if(!ctx?.db||!ctx?.fs)return false;
+      const {db,fs}=ctx,c=[];
+      /* Every surviving shard, including stale V5/V6/overflow duplicates. */
+      try{const qs=await fs.getDocs(fs.collection(db,"saveShards","kongkwan","items"));qs.forEach(d=>{const r=d.data()||{};addCandidate(c,r,ts(r.updatedAt),`shard:${d.id}`);if(obj(r.data))addCandidate(c,r.data,ts(r.updatedAt),`shard-data:${d.id}`)})}catch(e){console.warn(BUILD,"shard scan",e?.message||e)}
+      /* Current virtual save is also a candidate but cannot win a zero map. */
+      try{const sn=await fs.getDoc(fs.doc(db,"saves","kongkwan"));if(sn.exists())addCandidate(c,sn.data(),Date.now(),"current-save")}catch(_){}
+      const name=(()=>{try{return String(currentMember||"").trim()}catch(_){return ""}})();
+      const keys=[`yainoo-v5:${name}`,`yn:r24:last-good:kongkwan`,`yn:r24:pending:kongkwan`,`yn:s2:r22:critical:kongkwan`,`yn:v7:critical:kongkwan`,`yn:r24:last-good:${name}`,`yn:r24:pending:${name}`];
+      for(const k of keys){if(!k||k.endsWith(":"))continue;try{const raw=localStorage.getItem(k);if(!raw)continue;const box=JSON.parse(raw);addCandidate(c,box,Number(box?.at)||0,`local:${k}`);if(obj(box?.state))addCandidate(c,box.state,Number(box?.at)||0,`local-state:${k}`)}catch(_){}}
 
-      const qs=await fs.getDocs(fs.collection(db,"saveShards","kongkwan","items"));
-      qs.forEach(d=>candidatesFromObject(d.data()||{},candidates));
+      const patch={},found={};
+      for(const key of INV){if(score(s?.[key])>0)continue;const b=newestPositive(c,key);if(b){patch[key]=b.v;found[key]={source:b.source,score:b.n,at:b.at}}}
+      /* specials can be partly alive while only cake/coconut keys were lost. */
+      const sp=obj(patch.specials)?patch.specials:cp(obj(s?.specials)?s.specials:{});
+      let spChanged=!!patch.specials;
+      for(const key of GROWTH){if(iv(sp[key])>0)continue;let best=null;for(const x of c){const q=iv(x.data?.specials?.[key]);if(!q)continue;if(!best||x.at>best.at||(x.at===best.at&&q>best.q))best={q,at:x.at,source:x.source}}if(best){sp[key]=best.q;spChanged=true;found[`specials.${key}`]=best}}
+      if(spChanged)patch.specials=sp;
 
-      const mk="kongkwan",mn=memberName();
-      for(const key of [`yainoo-v5:${mn}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:r24:last-good:${mn}`,`yn:r24:pending:${mn}`]){
-        if(!key||key.endsWith(":"))continue;
-        try{const raw=localStorage.getItem(key);if(raw)candidatesFromObject(JSON.parse(raw),candidates)}catch(_){}
-      }
-
-      const patch={};
-      const liveBag=isObj(live.bag)?live.bag:{};
-      const liveSpecials=isObj(live.specials)?live.specials:{};
-
-      /* Do not resurrect a healthy inventory. Recovery is only allowed when
-         the affected live map is actually zero, as reported for Kongkwan. */
-      if(totalMap(liveBag)===0){const b=bestMap(candidates,"bag");if(b)patch.bag=b}
-      if(totalMap(liveSpecials)===0){
-        const sp=bestMap(candidates,"specials");if(sp)patch.specials=sp;
-      }else if(growthTotal(liveSpecials)===0){
-        const g=bestGrowth(candidates);
-        if(growthTotal(g)>0)patch.specials={...liveSpecials,...g};
-      }
-
-      if(patch.specials){
-        const g=bestGrowth(candidates);
-        for(const k of GROWTH_KEYS)if(num(patch.specials[k])===0&&num(g[k])>0)patch.specials[k]=num(g[k]);
-      }
-
-      if(!patch.bag&&!patch.specials){
-        recoveryDone=true;
-        console.info(BUILD,"Kongkwan recovery scan: no zero map with positive surviving copy");
-        return false;
-      }
-
-      const saveRef=fs.doc(db,"saves","kongkwan");
-      await fs.setDoc(saveRef,{...patch,clientLocalEditAt:Date.now()},{merge:true});
-      applyMemory(patch);
-      recoveryDone=true;
-      try{globalThis.showWeatherToast?.("กู้คืนข้อมูลกระเป๋า/ไอเท็มเร่งโตของ Kongkwan จากข้อมูลที่มีอยู่แล้วเรียบร้อยค่ะ")}catch(_){}
-      console.info(BUILD,"Kongkwan recovered",{
-        bag:patch.bag?totalMap(patch.bag):"unchanged",
-        growth:patch.specials?Object.fromEntries(GROWTH_KEYS.map(k=>[k,num(patch.specials[k])])):"unchanged"
-      });
-      return true;
-    }catch(e){
-      console.warn(BUILD,"Kongkwan recovery",e?.message||e);
-      return false;
-    }finally{recoveryRunning=false}
+      if(!Object.keys(patch).length){done=true;lastReport={recovered:false,candidates:c.length,found};console.warn(BUILD,"no surviving positive inventory copy found",lastReport);return false}
+      /* Write through the V7 proxy so bag/specials go to v7-inventory rather than
+         bloating the root /saves document. */
+      await fs.setDoc(fs.doc(db,"saves","kongkwan"),patch,{merge:true});
+      applyPatch(patch);done=true;lastReport={recovered:true,candidates:c.length,keys:Object.keys(patch),found};
+      try{showWeatherToast?.("กู้ข้อมูลกระเป๋า Kongkwan จากข้อมูลสำรองที่ยังเหลืออยู่แล้วค่ะ")}catch(_){}
+      console.info(BUILD,"Kongkwan inventory restored",lastReport);return true;
+    }catch(e){console.warn(BUILD,"recovery",e?.message||e);return false}finally{running=false}
   }
 
-  bindBag();bindBasement();keepGardenManagerCanonical();
-  setTimeout(bindBag,250);setTimeout(bindBasement,300);
-  setInterval(()=>{try{bindBag();bindBasement();keepGardenManagerCanonical()}catch(_){}},1800);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){setTimeout(bindBag,40);setTimeout(bindBasement,60)}},{passive:true});
-  window.addEventListener("pageshow",()=>{setTimeout(bindBag,40);setTimeout(bindBasement,80)},{passive:true});
-  setTimeout(recoverKongkwan,2500);setTimeout(recoverKongkwan,7000);setTimeout(recoverKongkwan,15000);
+  /* Native bag only. No synthetic button and no global click capture. */
+  function bindBag(){const b=$("inventoryNavBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();try{inventory?.("crops")}catch(err){console.warn(BUILD,"bag",err)}}}
 
-  globalThis.YN_R3685={BUILD,bindBag,bindBasement,recoverKongkwan,GROWTH_KEYS};
+  /* Native R17 owns house state. Direct pointer handler avoids the old stacked
+     click layers; there is no DOM observer in R36.77 anymore. */
+  function bindHouse(){let scene="";try{scene=String(currentScene||"")}catch(_){}if(scene!=="house")return;const layer=$("sceneInteractiveLayer"),a=globalThis.YN_R17;if(!layer||!a)return;layer.style.pointerEvents="auto";const mode=String(layer.dataset.r17HouseMode||"");if(mode==="main"){const b=$("r17Basement");if(b){b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();try{a.goBasement?.()}catch(err){console.warn(BUILD,"basement",err)}};b.onpointerup=go;b.onclick=go}}else if(mode==="basement"){try{globalThis.YN_R3680?.fixBasement?.()}catch(_){}}}
+
+  /* Ensure the garden manager uses the same canonical specials map as the
+     one-plot boost panel. */
+  function refreshGarden(){try{if(typeof currentScene!=="undefined"&&currentScene==="farm"&&document.querySelector(".ynu-garden-manager"))globalThis.YN_R3478?.showFarmManager?.()}catch(_){}}
+
+  bindBag();bindHouse();
+  [350,900,1800,3500,7000,14000].forEach(ms=>setTimeout(()=>{bindBag();bindHouse();recoverKongkwanDeep().then(ok=>{if(ok)refreshGarden()})},ms));
+  setInterval(()=>{try{bindBag();bindHouse()}catch(_){}},2200);
+  globalThis.YN_R3686={BUILD,recoverKongkwanDeep,report:()=>lastReport,GROWTH};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
