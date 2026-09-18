@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.83-STANDALONE-TOOLS-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.84-GLOBAL-SCOPE-FIX-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.83-STANDALONE-TOOLS-20260918"></script>
+<script src="game.js?v=S2-R36.84-GLOBAL-SCOPE-FIX-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4370,7 +4370,7 @@ console.info(BUILD,"loaded");
     if(Date.now()-repairing<60000)return;
     repairing=Date.now();
     try{
-      const mk=String(window.currentMemberKey||"");
+      const mk=memberKey();
       if(!mk)return;
       console.warn(BUILD,"save pressure -> forcing V7 split for",mk);
       Promise.resolve(window.YN_SAVE_V7&&window.YN_SAVE_V7.repair&&window.YN_SAVE_V7.repair(mk))
@@ -4473,7 +4473,7 @@ console.info(BUILD,"loaded");
     sanitise:safe,
     unstick,
     health(){
-      const s=window.ownState||window.state||{};
+      const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
       const reg={...(window.CAKE_ITEMS||{}),...(window.COCONUT_ITEMS||{})};
       const boost={};for(const k of Object.keys(reg))boost[k]=Number(s&&s.specials&&s.specials[k])||0;
       return{
@@ -4556,7 +4556,7 @@ console.info(BUILD,"loaded");
   let tries=0;const reguard=setInterval(()=>{guardNormalize();if(++tries>120)clearInterval(reguard)},500);
 
   /* Also stamp whatever is live right now, so save() cannot wipe it. */
-  setInterval(()=>{try{stamp(window.ownState);stamp(window.state)}catch(_){}},1000);
+  setInterval(()=>{try{if(typeof ownState!=="undefined")stamp(ownState)}catch(_){}try{if(typeof state!=="undefined")stamp(state)}catch(_){}},1000);
 
   /* ---------- 2. merit floor at the SDK boundary ---------------------- */
   /* A high-water mark per member. Any write that would crater merit to the
@@ -4568,14 +4568,14 @@ console.info(BUILD,"loaded");
   function highWater(mk){
     let hw=0;
     try{hw=Number(localStorage.getItem(HW_KEY(mk)))||0}catch(_){}
-    try{const live=Number((window.ownState||window.state||{}).merit)||0;if(live>hw)hw=live}catch(_){}
+    try{let live=0;try{live=Number(((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}).merit)||0}catch(_){}if(live>hw)hw=live}catch(_){}
     return hw;
   }
   function raiseHighWater(mk,v){
     v=Number(v)||0;if(!mk||v<=0)return;
     try{if(v>highWater(mk))localStorage.setItem(HW_KEY(mk),String(v))}catch(_){}
   }
-  setInterval(()=>{const mk=memberKey();if(mk)raiseHighWater(mk,(window.ownState||window.state||{}).merit)},4000);
+  setInterval(()=>{const mk=memberKey();if(!mk)return;try{raiseHighWater(mk,((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}).merit)}catch(_){}},4000);
 
   const SAVE_RX=/^saves\/([^/]+)$/;
   const pathOf=ref=>{try{return String(ref&&(ref.path||(ref._key&&ref._key.path&&ref._key.path.canonicalString&&ref._key.path.canonicalString()))||"")}catch(_){return""}};
@@ -4893,7 +4893,7 @@ console.info(BUILD,"loaded");
   async function freeSpace(reason){
     if(Date.now()-fixing<90000)return;
     fixing=Date.now();
-    const mk=String(globalThis.currentMemberKey||"");
+    const mk=(function(){try{if(typeof currentMemberKey!=="undefined")return String(currentMemberKey||"")}catch(_){}return ""})();
     if(!mk)return;
     console.warn(BUILD,"save space repair for",mk,reason||"");
     let ok=false;
@@ -5017,7 +5017,7 @@ console.info(BUILD,"loaded");
     log("bag fallback panel","both routes produced no modal");
     const root=$("modalContent");
     if(!root)return;
-    const s=globalThis.ownState||globalThis.state||{};
+    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
     const bag=s.bag&&typeof s.bag==="object"?s.bag:{};
     const sp=s.specials&&typeof s.specials==="object"?s.specials:{};
     const rows=o=>Object.entries(o).filter(([,v])=>Number(v)>0)
@@ -5040,7 +5040,7 @@ console.info(BUILD,"loaded");
   function basementPanel(){
     const a=R17(),f=R3465(),root=$("modalContent");
     if(!root)return;
-    const s=globalThis.ownState||globalThis.state||{};
+    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
     const plots=Array.isArray(s.flowerPlots)?s.flowerPlots:[null,null,null,null,null,null];
     const mach=Array.isArray(s.wineMachines)?s.wineMachines:[null,null,null];
     const drops=(s.hedgehog&&Array.isArray(s.hedgehog.drops))?s.hedgehog.drops.length:0;
@@ -5146,13 +5146,13 @@ console.info(BUILD,"loaded");
   function diag(){
     const l=$("sceneInteractiveLayer");
     const a=R17();
-    const s=globalThis.ownState||globalThis.state||{};
+    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
     const reg=Object.assign({},globalThis.CAKE_ITEMS||{},globalThis.COCONUT_ITEMS||{});
     const boost={};for(const k of Object.keys(reg))boost[k]=Number(s.specials&&s.specials[k])||0;
     const bar=l&&l.querySelector(".r17-basement-actions");
     return {
       build:globalThis.YAINOO_BUILD||"?",
-      member:globalThis.currentMemberKey||"?",
+      member:(function(){try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||"?"):"?"}catch(_){return "?"}})(),
       scene:(typeof currentScene==="undefined"?"?":currentScene),
       houseMode:l?(l.dataset.r17HouseMode||"(none)"):"(no layer)",
       R17:!!a,
@@ -5286,7 +5286,7 @@ console.info(BUILD,"loaded");
 
   function runOnce(){
     if(report.checked)return;
-    const s=globalThis.ownState||globalThis.state;
+    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return null})();
     if(!s||!s.specials)return;
     report.checked=true;
     let changed=false;
@@ -5309,7 +5309,7 @@ console.info(BUILD,"loaded");
     repair:()=>{report.checked=false;runOnce();return report},
     report:()=>report,
     specialsDump(){
-      const s=globalThis.ownState||globalThis.state||{};
+      const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
       const sp=s.specials||{};
       const out={};
       for(const [k,v] of Object.entries(sp))if(Number(v)>0)out[k]=Number(v);
@@ -5347,11 +5347,22 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3683(){
   "use strict";
-  const BUILD="S2-R36.83-STANDALONE-TOOLS-20260918";
+  const BUILD="S2-R36.84-GLOBAL-SCOPE-FIX-20260918";
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const num=v=>Number(v)||0;
-  const st=()=>globalThis.ownState||globalThis.state||{};
+  /* R36.84: game.js declares `let state/ownState/currentMemberKey/currentScene`
+     at the top level of a classic script. Top-level `let` creates a SCRIPT-scoped
+     lexical binding, which is NOT a property of window/globalThis. Every
+     globalThis.<name> read in R36.78-R36.83 therefore returned undefined, which
+     is why none of those patches ever did anything visible. Bare identifiers do
+     resolve, so read them that way. */
+  const stateNow=()=>{try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}
+                      try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}};
+  const memberKey=()=>{try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||""):""}catch(_){return ""}};
+  const sceneNow=()=>{try{return typeof currentScene!=="undefined"?String(currentScene||""):""}catch(_){return ""}};
+  const reg=n=>{try{return globalThis[n]||((0,eval)("typeof "+n+"!==\'undefined\'?"+n+":null"))||{}}catch(_){return globalThis[n]||{}}};
+  const st=stateNow;
   const notes=[];
   const log=(k,v)=>{notes.push(k+": "+(v==null?"":String(v)));if(notes.length>30)notes.shift();console.warn(BUILD,k,v)};
 
@@ -5416,13 +5427,13 @@ console.info(BUILD,"loaded");
 
   /* ---------- where are the boost items, really? ---------------------- */
   function canonKeys(){
-    const SI=globalThis.SPECIAL_ITEMS||{};
+    const SI=reg("SPECIAL_ITEMS");
     const out={};
     for(const k of Object.keys(SI))if(SI[k]&&SI[k].kind==="crop")out[k]=SI[k];
     return out;
   }
   function allKnown(){
-    return Object.assign({},canonKeys(),globalThis.CAKE_ITEMS||{},globalThis.COCONUT_ITEMS||{});
+    return Object.assign({},canonKeys(),reg("CAKE_ITEMS"),reg("COCONUT_ITEMS"));
   }
   /* Returns [{key, qty, where, item}] searching every plain object on state. */
   function findBoost(){
@@ -5512,7 +5523,7 @@ console.info(BUILD,"loaded");
       return `<h3>${title}</h3><div class="ynGrid">${rows.map(([k,v])=>cell(k,v,reg)).join("")}</div>`;
     };
     open(`<h2>🎒 กระเป๋า</h2>
-      ${block("🌱 พืชพรรณ",s.bag,globalThis.CROPS)}
+      ${block("🌱 พืชพรรณ",s.bag,reg("CROPS"))}
       ${block("🕯️ ของพิเศษ",s.specials,allKnown())}
       ${block("🐾 ผลผลิตสัตว์",s.animalProducts,null)}
       ${block("🦔 ของเม่น",s.hedgehogItems,null)}
@@ -5566,8 +5577,8 @@ console.info(BUILD,"loaded");
     const s=st(),l=$("sceneInteractiveLayer"),a=globalThis.YN_R17;
     const info={
       build:globalThis.YAINOO_BUILD||"?",
-      member:globalThis.currentMemberKey||"?",
-      scene:(typeof currentScene==="undefined"?"?":currentScene),
+      member:memberKey()||"?",
+      scene:sceneNow()||"?",
       houseMode:l?(l.dataset.r17HouseMode||"(none)"):"(no layer)",
       R17:!!a,R29:!!globalThis.YN_R29,R3465:!!globalThis.YN_R3465,R3478:!!globalThis.YN_R3478,
       boostFound:findBoost().map(e=>e.key+"="+e.qty+"@"+e.where+(e.canonical?"":" (ชื่อไม่ตรงทะเบียน)")),
@@ -5597,9 +5608,12 @@ console.info(BUILD,"loaded");
       tap($("ynChipDiag"),diagPanel);
     }
     /* Keep it tidy: only show what belongs to the screen you are on. */
-    const scene=(typeof currentScene==="undefined")?"":String(currentScene);
-    const inGame=!!(globalThis.currentMemberKey)&&!document.getElementById("loginScreen")?.offsetParent;
-    const farm=scene===""||scene==="farm"||scene==="garden";
+    const scene=sceneNow();
+    /* Show them whenever the farm screen is actually on screen. */
+    const screen=document.getElementById("gameScreen")||document.getElementById("farmScreen")||document.getElementById("sceneScreen");
+    const login=document.getElementById("loginScreen");
+    const inGame=!!memberKey()||!!(screen&&screen.offsetParent)||!(login&&login.offsetParent);
+    const farm=scene===""||scene==="farm"||scene==="garden"||scene===null;
     const house=scene==="house";
     c.style.display=inGame?"flex":"none";
     $("ynChipBoost").style.display=farm?"":"none";
