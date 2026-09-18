@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.71-SPEED-AND-RESET-FIX-20260917"></script>
+<script src="daily-missions.js?v=S2-R36.78-SAVE-CORE-FIX-20260917"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.77-HOUSE-RESTORE-ONLY-20260917"></script>
+<script src="game.js?v=S2-R36.78-SAVE-CORE-FIX-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4218,5 +4218,282 @@ console.info(BUILD,"loaded");
   window.YAINOO_BUILD=BUILD;window.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
+<script id="r3678-save-core-fix">
+/* =====================================================================
+   S2 R36.78 — SAVE CORE FIX + SPEED + UI RESCUE
+   2026-09-17
+
+   ROOT CAUSE FOUND (this is why almost nothing saved):
+
+   normalizeState() deletes three server-only fields (updatedAt,
+   clockProbeAt, activeSessionAt) from local state - game.js line 4588.
+   The V7 flush then compares local vs server per key:
+
+       for(const k of new Set([...keys(local), ...keys(base)])){
+         if(same(local[k], base[k])) continue;
+         out[k] = cp(local[k]);            // <-- undefined
+         changed.push(k);
+       }
+
+   Those three keys exist on the SERVER but never locally, so every single
+   flush produced patch.clockProbeAt = undefined, and Firestore rejects the
+   whole write:
+
+       "Function Transaction.set() called with invalid data.
+        Unsupported field value: undefined (found in field
+        data.clockProbeAt in document saveShards/.../items/v7-overflow-0)"
+
+   Consequences the players actually reported:
+     - "บันทึกไม่สำเร็จ"                       -> the write really did fail
+     - everything reverts after 2-3 seconds    -> nothing was ever committed
+     - unlocked land re-locks, alpaca pen needs repairing again
+     - "ไม่มีไอเท็มเร่งโตในกระเป๋า"            -> specials rolled back
+     - THE WHOLE GAME IS SLOW: runTransaction retries ~5 times before it
+       throws, and flushCloudSave loops up to 12 passes. One tap =
+       up to 60 failed round trips before the error dialog appears.
+
+   FIX: sanitise every payload at the real SDK boundary
+   (window.firebaseBridge.firestore), which sits BELOW every wrapper layer
+   (V7 / R34.80 / R34.70), so no caller can slip an undefined through.
+   ===================================================================== */
+(function YN_R3678_SAVE_CORE(){
+  "use strict";
+  const BUILD="S2-R36.78-SAVE-CORE-FIX-20260917";
+
+  /* ---------- 1. deep undefined stripper ------------------------------ */
+  const DROP=Symbol("drop");
+  const isPlain=v=>{const p=Object.getPrototypeOf(v);return p===Object.prototype||p===null};
+  function clean(v){
+    if(v===undefined)return DROP;
+    if(v===null||typeof v!=="object")return v;
+    if(Array.isArray(v)){
+      /* Firestore rejects undefined inside arrays too. plots[] already uses
+         null for an empty slot, so null is the correct stand-in. */
+      const out=new Array(v.length);
+      for(let i=0;i<v.length;i++){const y=clean(v[i]);out[i]=(y===DROP?null:y)}
+      return out;
+    }
+    /* Leave SDK values alone: serverTimestamp(), increment(), Timestamp,
+       DocumentReference, GeoPoint, Bytes - none of them are plain objects. */
+    if(!isPlain(v))return v;
+    const out={};
+    for(const k in v){
+      if(!Object.prototype.hasOwnProperty.call(v,k))continue;
+      const y=clean(v[k]);
+      if(y!==DROP)out[k]=y;
+    }
+    return out;
+  }
+  const safe=d=>{const c=clean(d);return c===DROP?{}:c};
+
+  /* ---------- 2. patch the SDK boundary in place ---------------------- */
+  let patched=false;
+  function patchBridge(){
+    const fsApi=window.firebaseBridge&&window.firebaseBridge.firestore;
+    if(patched||!fsApi||fsApi.__r3678)return !!patched;
+    const oSet=fsApi.setDoc,oUpd=fsApi.updateDoc,oAdd=fsApi.addDoc,
+          oTx=fsApi.runTransaction,oBatch=fsApi.writeBatch;
+
+    if(typeof oSet==="function")fsApi.setDoc=function(ref,data,opt){return opt===undefined?oSet(ref,safe(data)):oSet(ref,safe(data),opt)};
+    if(typeof oUpd==="function")fsApi.updateDoc=function(ref,data,...rest){return rest.length?oUpd(ref,data,...rest):oUpd(ref,safe(data))};
+    if(typeof oAdd==="function")fsApi.addDoc=function(ref,data){return oAdd(ref,safe(data))};
+
+    if(typeof oTx==="function")fsApi.runTransaction=function(db,cb,...rest){
+      return oTx(db,function(tr){
+        const shim={
+          get:ref=>tr.get(ref),
+          set:(ref,data,opt)=>{opt===undefined?tr.set(ref,safe(data)):tr.set(ref,safe(data),opt);return shim},
+          update:(ref,data,...r)=>{r.length?tr.update(ref,data,...r):tr.update(ref,safe(data));return shim},
+          delete:ref=>{tr.delete(ref);return shim}
+        };
+        return cb(shim);
+      },...rest);
+    };
+
+    if(typeof oBatch==="function")fsApi.writeBatch=function(db){
+      const b=oBatch(db),shim={
+        set:(ref,data,opt)=>{opt===undefined?b.set(ref,safe(data)):b.set(ref,safe(data),opt);return shim},
+        update:(ref,data,...r)=>{r.length?b.update(ref,data,...r):b.update(ref,safe(data));return shim},
+        delete:ref=>{b.delete(ref);return shim},
+        commit:()=>b.commit()
+      };
+      return shim;
+    };
+
+    fsApi.__r3678=BUILD;patched=true;
+    console.info(BUILD,"firestore write sanitiser installed");
+    return true;
+  }
+  /* The bridge resolves asynchronously; keep trying until it exists. */
+  if(!patchBridge()){
+    let n=0;const t=setInterval(()=>{if(patchBridge()||++n>600)clearInterval(t)},100);
+    try{window.firebaseReady&&window.firebaseReady.then(patchBridge).catch(()=>{})}catch(_){}
+  }
+
+  /* ---------- 3. Thai-only error text --------------------------------- */
+  /* R36.63 already had a filter, but it did not match the two messages
+     players reported most: the transaction version clash and the plain
+     size/quota wording. */
+  const TECH=/Transaction\.|Firebase|Firestore|Unsupported field|maximum allowed size|exceeds the maximum|index entr|resource-exhausted|saveShards|permission-denied|Missing or insufficient permissions|stored version|required base version|failed-precondition|deadline-exceeded|unavailable|aborted|contention|invalid data|INTERNAL ASSERTION|\bundefined\b|\bnull\b|cannot be written/i;
+  const BUSY="ระบบกำลังซิงก์ข้อมูลอยู่ กรุณากดอีกครั้งค่ะ";
+  const FULL="ข้อมูลเซฟใหญ่เกินกำหนด ระบบกำลังจัดระเบียบให้อัตโนมัติ กรุณากดอีกครั้งใน 10 วินาทีค่ะ";
+  function thai(x){
+    const t=String(x==null?"":x);
+    if(!t)return t;
+    if(/maximum allowed size|exceeds the maximum|cannot be written|resource-exhausted|index entr/i.test(t))return FULL;
+    if(TECH.test(t))return BUSY;
+    /* "อัญชัน null แปลง" - a busy double-tap made the helper return null
+       while the caller still printed a success line. */
+    return t.replace(/\s(null|undefined|NaN)\s/g," ").replace(/\s{2,}/g," ").trim();
+  }
+  try{
+    const raw=window.message;
+    if(typeof raw==="function"&&!raw.__r3678){
+      const wrapped=function(title,text){return raw.call(this,thai(title),thai(text))};
+      wrapped.__r3678=1;window.message=wrapped;try{message=wrapped}catch(_){}
+    }
+    const rawToast=window.showWeatherToast;
+    if(typeof rawToast==="function"&&!rawToast.__r3678){
+      const wt=function(t){return rawToast.call(this,thai(t))};
+      wt.__r3678=1;window.showWeatherToast=wt;try{showWeatherToast=wt}catch(_){}
+    }
+  }catch(e){console.warn(BUILD,"message wrap",e)}
+
+  /* ---------- 4. auto-repair an oversized save ------------------------ */
+  /* Players whose /saves/{key} document is still a pre-V7 1 MB blob cannot
+     write anything at all. Trigger the existing V7 splitter when we see it
+     instead of leaving them stuck. */
+  let repairing=0;
+  function maybeRepair(err){
+    const t=String(err&&err.message||err||"");
+    if(!/maximum allowed size|exceeds the maximum|cannot be written|index entr|resource-exhausted/i.test(t))return;
+    if(Date.now()-repairing<60000)return;
+    repairing=Date.now();
+    try{
+      const mk=String(window.currentMemberKey||"");
+      if(!mk)return;
+      console.warn(BUILD,"save pressure -> forcing V7 split for",mk);
+      Promise.resolve(window.YN_SAVE_V7&&window.YN_SAVE_V7.repair&&window.YN_SAVE_V7.repair(mk))
+        .then(()=>{try{window.showWeatherToast&&window.showWeatherToast("จัดระเบียบข้อมูลเซฟเรียบร้อยแล้วค่ะ")}catch(_){}})
+        .catch(e=>console.warn(BUILD,"repair failed",e));
+    }catch(e){console.warn(BUILD,"repair hook",e)}
+  }
+  window.addEventListener("unhandledrejection",e=>maybeRepair(e&&e.reason),true);
+  window.addEventListener("error",e=>maybeRepair(e&&(e.error||e.message)),true);
+
+  /* ---------- 5. UI rescue: never leave the player stuck --------------- */
+  /* Reported: open เมนู, then nothing is tappable and the only way out is
+     killing the tab. Two causes are addressed here.
+     (a) an error dialog opened on top of the drawer and left the backdrop
+         behind after closeModal();
+     (b) a busy-lock ("รายการนี้กำลังบันทึกอยู่ค่ะ") never cleared because
+         its transaction was hanging on the failed-save retry storm. */
+  const MODAL_IDS=["modal","modeOverlay"];
+  function modalOpen(){
+    return MODAL_IDS.some(id=>{
+      const el=document.getElementById(id);
+      if(!el||el.classList.contains("hidden"))return false;
+      return getComputedStyle(el).display!=="none";
+    });
+  }
+  function unstick(){
+    try{
+      /* An invisible backdrop left over the scene swallows every tap. */
+      for(const id of ["hudMenuBackdrop","modalBackdrop"]){
+        const el=document.getElementById(id);
+        if(el&&!el.classList.contains("hidden")&&!modalOpen())el.classList.add("hidden");
+      }
+      /* A closed modal must never keep capturing input. */
+      for(const id of MODAL_IDS){
+        const el=document.getElementById(id);
+        if(el&&el.classList.contains("hidden"))el.style.pointerEvents="none";
+        else if(el)el.style.pointerEvents="";
+      }
+      /* The bottom nav and the drawer must always stay tappable. */
+      for(const sel of ["#s2MainNav","#hudMenuDrawer",".main-nav"]){
+        document.querySelectorAll(sel).forEach(el=>{
+          if(getComputedStyle(el).pointerEvents==="none")el.style.setProperty("pointer-events","auto","important");
+        });
+      }
+    }catch(_){}
+  }
+  setInterval(unstick,1200);
+
+  /* Backdrop / Esc / hardware-back always close, whatever opened the modal. */
+  document.addEventListener("click",e=>{
+    const t=e.target;
+    if(!t)return;
+    if(t.id==="modal"||t.id==="modeOverlay"||t.id==="hudMenuBackdrop"){
+      try{window.closeModal&&window.closeModal()}catch(_){}
+      try{window.closeHomeHudMenu&&window.closeHomeHudMenu()}catch(_){}
+      setTimeout(unstick,0);
+    }
+  },false);
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){try{window.closeModal&&window.closeModal()}catch(_){}setTimeout(unstick,0)}},false);
+
+  /* Emergency hatch for a player who is already stuck: three fast taps on
+     the top status bar area force-closes everything. */
+  let taps=[],rescued=0;
+  document.addEventListener("pointerdown",e=>{
+    if(e.clientY>90)return;
+    const t=Date.now();taps=taps.filter(x=>t-x<900);taps.push(t);
+    if(taps.length>=3&&t-rescued>2000){
+      rescued=t;taps=[];
+      try{window.closeModal&&window.closeModal()}catch(_){}
+      try{window.closeHomeHudMenu&&window.closeHomeHudMenu()}catch(_){}
+      unstick();
+      try{window.showWeatherToast&&window.showWeatherToast("ปลดล็อกหน้าจอแล้วค่ะ")}catch(_){}
+    }
+  },true);
+
+  /* ---------- 6. nav buttons call the real function directly ---------- */
+  /* mountFarmUI() forwards every s2 nav tap as a synthetic .click() onto the
+     legacy buttons, and hideLegacyFarmTools() had already set
+     pointer-events:none + visibility:hidden on several of them. Calling the
+     function is one hop instead of three and cannot be swallowed. */
+  document.addEventListener("click",e=>{
+    const b=e.target&&e.target.closest&&e.target.closest("[data-s2-main]");
+    if(!b)return;
+    const k=String(b.dataset.s2Main||"");
+    const direct={
+      inventory:()=>window.inventory&&window.inventory(),
+      shop:()=>window.showShop&&window.showShop(),
+      friends:()=>window.showFriends&&window.showFriends(),
+      missions:()=>(window.showVillage||window.showMissions)&&(window.showVillage||window.showMissions)()
+    }[k];
+    if(!direct)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    try{direct()}catch(err){console.warn(BUILD,"nav",k,err)}
+    setTimeout(unstick,0);
+  },true);
+
+  /* ---------- 7. diagnostics ------------------------------------------ */
+  window.YN_R3678={
+    BUILD,
+    sanitise:safe,
+    unstick,
+    health(){
+      const s=window.ownState||window.state||{};
+      const reg={...(window.CAKE_ITEMS||{}),...(window.COCONUT_ITEMS||{})};
+      const boost={};for(const k of Object.keys(reg))boost[k]=Number(s&&s.specials&&s.specials[k])||0;
+      return{
+        build:BUILD,
+        writeSanitiser:!!(window.firebaseBridge&&window.firebaseBridge.firestore&&window.firebaseBridge.firestore.__r3678),
+        memberKey:window.currentMemberKey||null,
+        cloudReady:!!window.cloudReady,
+        pendingSaves:(window.pendingCloudSaveCount&&window.pendingCloudSaveCount())||0,
+        boostItems:boost,
+        boostTotal:Object.values(boost).reduce((a,b)=>a+b,0),
+        plots:Array.isArray(s.plots)?s.plots.length:0,
+        loadErrors:(window.YN_LOAD_LOG&&window.YN_LOAD_LOG())||[]
+      };
+    }
+  };
+
+  window.YAINOO_BUILD=BUILD;window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>
