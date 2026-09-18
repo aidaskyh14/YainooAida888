@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.81-BASEMENT-AND-BAG-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.82-SPECIALS-KEYS-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.81-BASEMENT-AND-BAG-20260918"></script>
+<script src="game.js?v=S2-R36.82-SPECIALS-KEYS-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4801,17 +4801,40 @@ console.info(BUILD,"loaded");
       const all=$("r29HouseCollectAll");
       if(all){if(all.parentNode!==bar)bar.appendChild(all);bind(all,()=>globalThis.YN_R29&&globalThis.YN_R29.collectHouseAll&&globalThis.YN_R29.collectHouseAll())}
       /* Keep our order: the exit button stays last. */
-      const up=$("r17HouseUp");if(up&&up.parentNode===bar)bar.appendChild(up);
+      /* R36.82: moving an existing child counts as a childList mutation,
+         which re-fires the observer below and loops forever. Only move the
+         exit button when it is genuinely out of place. */
+      const up=$("r17HouseUp");
+      if(up&&up.parentNode===bar&&up.nextElementSibling)bar.appendChild(up);
     }finally{busy=false}
   }
 
   (function watch(){
     const layer=$("sceneInteractiveLayer");
     if(layer){
-      const mo=new MutationObserver(()=>{clearTimeout(watch.t);watch.t=setTimeout(fixBasement,30)});
-      mo.observe(layer,{childList:true,subtree:true});
+      /* R36.82: fixBasement writes to the very node this observer watches.
+         Detach while it runs, and cap how often it may run, so a mutation
+         it makes can never feed straight back into another pass. */
+      let mo=null,runs=[],guard=false;
+      const safeRun=()=>{
+        if(guard)return;
+        const t=Date.now();
+        runs=runs.filter(v=>t-v<1000);
+        if(runs.length>=6)return;          // hard throttle
+        runs.push(t);
+        guard=true;
+        try{mo&&mo.disconnect()}catch(_){}
+        try{fixBasement()}catch(e){console.warn("R36.82 fixBasement",e)}
+        finally{
+          guard=false;
+          try{mo&&mo.observe(layer,{childList:true})}catch(_){}
+        }
+      };
+      mo=new MutationObserver(()=>{clearTimeout(watch.t);watch.t=setTimeout(safeRun,60)});
+      mo.observe(layer,{childList:true});
+      watch.safeRun=safeRun;
     }
-    setInterval(fixBasement,1500);
+    setInterval(()=>{try{fixBasement()}catch(_){}},2000);
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(fixBasement,60)});
     setTimeout(fixBasement,200);setTimeout(fixBasement,800);
   })();
@@ -4829,8 +4852,9 @@ console.info(BUILD,"loaded");
     grid.appendChild(b);
     bind(b,()=>worm());
   }
-  new MutationObserver(()=>setTimeout(addWormButton,20))
-    .observe(document.body,{childList:true,subtree:true});
+  /* R36.82: a subtree observer on <body> that then writes into <body> is a
+     feedback loop on a page this busy. A cheap poll is enough for a button. */
+  setInterval(()=>{try{addWormButton()}catch(_){}},900);
 
   /* ---------- 3. bag / nav cannot be swallowed ------------------------ */
   function closePanels(){
@@ -5142,6 +5166,9 @@ console.info(BUILD,"loaded");
       boostItems:boost,
       boostTotal:Object.values(boost).reduce((x,y)=>x+y,0),
       specialsKeys:s.specials?Object.keys(s.specials).length:typeof s.specials,
+      specialsStock:(globalThis.YN_R3682&&globalThis.YN_R3682.specialsDump)?globalThis.YN_R3682.specialsDump():"(n/a)",
+      boostRegistry:(globalThis.YN_R3682&&globalThis.YN_R3682.boostKeys)?globalThis.YN_R3682.boostKeys():"(n/a)",
+      keyRepair:(globalThis.YN_R3682&&globalThis.YN_R3682.report)?globalThis.YN_R3682.report():"(n/a)",
       notes:notes.slice(-12)
     };
   }
@@ -5164,6 +5191,132 @@ console.info(BUILD,"loaded");
   },true);
 
   globalThis.YN_R3681={BUILD,diag,showDiag,openBag,goBasement,basementPanel,notes:()=>notes.slice()};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
+<script id="r3682-specials-keys">
+/* =====================================================================
+   S2 R36.82 — FREEZE FIX + BOOST ITEM KEY REPAIR
+   2026-09-18
+
+   1) THE FREEZE (my bug, introduced in R36.80)
+
+      fixBasement() ended with:
+          bar.appendChild(up);
+      and the function was driven by a MutationObserver watching the very
+      element it writes to. appendChild on a node that is already a child
+      MOVES it, and a move is a childList mutation, so every pass fed
+      straight into the next one. On a phone that is a runaway loop on the
+      main thread - the tab stops responding to every tap, which is exactly
+      the "ค้าง แข็งไปหมด ต้องออกจากเกม" that happened on both the bag and
+      the basement. The same shape existed in the worm-button observer,
+      which watched <body> with subtree and then wrote into <body>.
+
+      Fixed above in the R36.80 block: the move is now conditional, the
+      observer detaches while the repair runs, it is throttled to six
+      passes per second, and the body-wide observer is replaced by a poll.
+
+   2) BOOST ITEMS MISSING ON ONE ACCOUNT
+
+      cropBoostOptionsHTML() (game.js:2394 area) builds the list from
+          Object.entries(SPECIAL_ITEMS).filter(([key,item]) =>
+            item.kind === "crop" && specialCount(key) > 0 ...)
+      and specialCount() is a plain lookup: state.specials[key].
+
+      So an item only appears if its key in state.specials matches a key in
+      SPECIAL_ITEMS character for character. The bag lists whatever keys are
+      present, which is why the same account can show a full bag and an
+      empty boost list. An older account whose cake/coconut counts were
+      written under a differently-spelled key is invisible to every boost
+      path while looking perfectly normal in the bag.
+
+      Below: any specials key holding a positive count that no registry
+      recognises is matched to a canonical key by exact comparison after
+      lowercasing and removing non-alphanumerics, and only then merged.
+      No fuzzy guessing - an unmatched key is left untouched and reported.
+   ===================================================================== */
+(function YN_R3682(){
+  "use strict";
+  const BUILD="S2-R36.82-SPECIALS-KEYS-20260918";
+  const report={checked:false,merged:[],unmatched:[],canonical:0};
+
+  const norm=s=>String(s==null?"":s).toLowerCase().replace(/[^a-z0-9]/g,"");
+
+  function registry(){
+    return Object.assign({},
+      globalThis.SPECIAL_ITEMS||{},
+      globalThis.CAKE_ITEMS||{},
+      globalThis.COCONUT_ITEMS||{});
+  }
+  /* Only keys the boost panel can actually use. */
+  function boostKeys(){
+    const SI=globalThis.SPECIAL_ITEMS||{};
+    return Object.keys(SI).filter(k=>SI[k]&&SI[k].kind==="crop");
+  }
+
+  function repair(state){
+    if(!state||typeof state!=="object")return false;
+    const sp=state.specials;
+    if(!sp||typeof sp!=="object")return false;
+    const canon=boostKeys();
+    if(!canon.length)return false;
+    report.canonical=canon.length;
+
+    const byNorm=new Map();
+    for(const k of canon)byNorm.set(norm(k),k);
+    const known=new Set(Object.keys(registry()));
+
+    let changed=false;
+    for(const [k,v] of Object.entries(sp)){
+      const qty=Number(v)||0;
+      if(qty<=0)continue;
+      if(known.has(k))continue;               // already a recognised key
+      const hit=byNorm.get(norm(k));
+      if(!hit){report.unmatched.push(k+"="+qty);continue}
+      if(hit===k)continue;
+      sp[hit]=(Number(sp[hit])||0)+qty;
+      sp[k]=0;
+      report.merged.push(k+" -> "+hit+" ("+qty+")");
+      changed=true;
+    }
+    return changed;
+  }
+
+  function runOnce(){
+    if(report.checked)return;
+    const s=globalThis.ownState||globalThis.state;
+    if(!s||!s.specials)return;
+    report.checked=true;
+    let changed=false;
+    try{changed=repair(s)}catch(e){console.warn(BUILD,e)}
+    try{if(globalThis.state&&globalThis.state!==s)changed=repair(globalThis.state)||changed}catch(_){}
+    if(changed){
+      console.warn(BUILD,"merged boost item keys",report.merged);
+      try{globalThis.save&&globalThis.save()}catch(_){}
+      try{globalThis.showWeatherToast&&globalThis.showWeatherToast("ซ่อมรายการไอเท็มเร่งโตเรียบร้อยแล้วค่ะ")}catch(_){}
+      try{globalThis.draw&&globalThis.draw()}catch(_){}
+    }
+  }
+  setTimeout(runOnce,6000);
+  setTimeout(runOnce,15000);
+
+  /* Feed the on-screen diagnostic every specials key that holds stock, so a
+     single screenshot settles whether the items exist under another name. */
+  globalThis.YN_R3682={
+    BUILD,
+    repair:()=>{report.checked=false;runOnce();return report},
+    report:()=>report,
+    specialsDump(){
+      const s=globalThis.ownState||globalThis.state||{};
+      const sp=s.specials||{};
+      const out={};
+      for(const [k,v] of Object.entries(sp))if(Number(v)>0)out[k]=Number(v);
+      return out;
+    },
+    boostKeys
+  };
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
