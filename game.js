@@ -38118,36 +38118,26 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   }
 
   const previousInventory=typeof inventory==="function"?inventory:null;
-  inventory=function(tab="crops"){
-    if(!tab||tab==="crops")return renderCropsHard();
-    return previousInventory?previousInventory.call(this,tab):undefined;
-  };
 
-  /* Force every common inventory entry route to call the hard router at click time. */
+  /* R36.85: the hard crops-only router was the reason the real bag stopped being
+     reachable. Keep its renderer only as a diagnostic helper; the live bag uses
+     the full native inventory chain so every category remains available. */
+  if(previousInventory){
+    inventory=function(tab="crops"){return previousInventory.call(this,tab)};
+    try{globalThis.inventory=inventory}catch(_){}
+  }
+
   function rebind(){
     const b=document.getElementById("inventoryNavBtn");
     if(b)b.onclick=()=>inventory("crops");
   }
   rebind();
-  document.addEventListener("click",e=>{
-    const b=e.target?.closest?.("#inventoryNavBtn");
-    if(!b)return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    inventory("crops");
-  },true);
-  document.addEventListener("pointerup",e=>{
-    const b=e.target?.closest?.("#inventoryNavBtn");
-    if(!b)return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    inventory("crops");
-  },true);
 
-  /* Normalize the four keys immediately in memory so a zero quantity is still visible. */
+  /* Normalize the four keys immediately in memory. They are rendered by the
+     ordinary crop inventory because the four Secret crops are registered in CROPS. */
   try{ensureSecretBag(stateNow())}catch(_){}
 
-  globalThis.YN_R3620_SECRET_BAG={BUILD,renderCropsHard,ensureSecretBag};
+  globalThis.YN_R3620_SECRET_BAG={BUILD,renderCropsHard,ensureSecretBag,nativeInventory:previousInventory};
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
@@ -38201,7 +38191,8 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
       if(!el){el=card(k,fallback,s);grid.prepend(el)}
       else {
         const b=el.querySelector("b");
-        if(b)b.textContent=`×${Math.max(0,Math.floor(Number(s?.bag?.[k])||0))}`;
+        const next=`×${Math.max(0,Math.floor(Number(s?.bag?.[k])||0))}`;
+        if(b&&b.textContent!==next)b.textContent=next;
       }
     }
     return true;
@@ -38218,17 +38209,19 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
     };
   }
 
-  const mo=new MutationObserver(()=>{try{inject()}catch(_){}});
-  mo.observe(document.documentElement,{subtree:true,childList:true});
-
+  /* R36.85: do not observe the whole document. That observer called inject()
+     after every bag DOM write and could feed itself forever on mobile. */
   document.addEventListener("click",e=>{
     if(e.target?.closest?.("#inventoryNavBtn,[data-inventory-tab]")){
       setTimeout(inject,20);setTimeout(inject,150);
     }
   },true);
 
-  setInterval(()=>{try{inject()}catch(_){}},800);
+  setInterval(()=>{
+    try{if(document.querySelector(".inventory-panel"))inject()}catch(_){}
+  },1600);
 
+  try{globalThis.inventory=inventory}catch(_){}
   globalThis.YN_R3621_SECRET_VISIBLE={BUILD,inject};
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;

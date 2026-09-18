@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.84-GLOBAL-SCOPE-FIX-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.84-GLOBAL-SCOPE-FIX-20260918"></script>
+<script src="game.js?v=S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4810,33 +4810,14 @@ console.info(BUILD,"loaded");
   }
 
   (function watch(){
-    const layer=$("sceneInteractiveLayer");
-    if(layer){
-      /* R36.82: fixBasement writes to the very node this observer watches.
-         Detach while it runs, and cap how often it may run, so a mutation
-         it makes can never feed straight back into another pass. */
-      let mo=null,runs=[],guard=false;
-      const safeRun=()=>{
-        if(guard)return;
-        const t=Date.now();
-        runs=runs.filter(v=>t-v<1000);
-        if(runs.length>=6)return;          // hard throttle
-        runs.push(t);
-        guard=true;
-        try{mo&&mo.disconnect()}catch(_){}
-        try{fixBasement()}catch(e){console.warn("R36.82 fixBasement",e)}
-        finally{
-          guard=false;
-          try{mo&&mo.observe(layer,{childList:true})}catch(_){}
-        }
-      };
-      mo=new MutationObserver(()=>{clearTimeout(watch.t);watch.t=setTimeout(safeRun,60)});
-      mo.observe(layer,{childList:true});
-      watch.safeRun=safeRun;
-    }
-    setInterval(()=>{try{fixBasement()}catch(_){}},2000);
+    /* R36.85: R36.77 already repairs immediately after the native house render.
+       A second MutationObserver on the same scene node is unnecessary and was a
+       freeze risk because this repair can move/add children. Keep only a cheap,
+       bounded safety poll and lifecycle retries. */
+    setInterval(()=>{try{fixBasement()}catch(_){}},1800);
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(fixBasement,60)});
-    setTimeout(fixBasement,200);setTimeout(fixBasement,800);
+    window.addEventListener("pageshow",()=>setTimeout(fixBasement,80),{passive:true});
+    setTimeout(fixBasement,160);setTimeout(fixBasement,650);
   })();
 
   /* ---------- 2. worm manager back in the garden tools ---------------- */
@@ -4952,248 +4933,9 @@ console.info(BUILD,"loaded");
 </script>
 
 <script id="r3681-basement-and-bag">
-/* =====================================================================
-   S2 R36.81 — BASEMENT ACCESS + BAG BUTTON
-   2026-09-18
-
-   Two confirmed interception problems, both fixed by owning the event
-   earlier than any existing layer, plus a working fallback when the
-   native render fails.
-
-   A) BAG
-      game.js:38121 replaces the global inventory():
-          inventory = function(tab="crops"){
-            if(!tab || tab==="crops") return renderCropsHard();
-            return previousInventory.call(this,tab);
-          }
-      and registers BOTH click and pointerup capture handlers that call
-      preventDefault() + stopImmediatePropagation(). preventDefault() on
-      pointerup suppresses the click event entirely, so every later
-      handler - including R36.79/R36.80 - never ran. If renderCropsHard()
-      throws, the tap is consumed and nothing opens: the reported freeze.
-      Fixed by claiming the tap on POINTERDOWN, which fires before
-      pointerup, and by falling back to the original inventory renderer
-      (any tab other than "crops" routes to previousInventory) when the
-      hard renderer produces no modal.
-
-   B) BASEMENT
-      Reported for every player: the house main floor works, the way down
-      does not. Rather than guess which layer breaks renderHouseBasement17,
-      the tap is claimed on pointerdown, the native path is tried first,
-      and if the scene has not switched after 500 ms a full basement panel
-      is rendered instead - flowers, three wine machines, hedgehog drops
-      and craft - all wired to the real YN_R17 functions, so nothing
-      downstairs is unreachable.
-
-   The exact failure reason is recorded and shown in the diagnostic box
-   (tap the profile card top-left five times).
-   ===================================================================== */
-(function YN_R3681(){
-  "use strict";
-  const BUILD="S2-R36.81-BASEMENT-AND-BAG-20260918";
-  const $=id=>document.getElementById(id);
-  const R17=()=>globalThis.YN_R17||null;
-  const R29=()=>globalThis.YN_R29||null;
-  const R3465=()=>globalThis.YN_R3465||null;
-  const notes=[];
-  const log=(k,v)=>{notes.push(new Date().toLocaleTimeString()+" "+k+" "+(v==null?"":String(v)));if(notes.length>40)notes.shift();console.warn(BUILD,k,v)};
-
-  const modalOpen=()=>{
-    const m=$("modal");
-    return !!(m&&!m.classList.contains("hidden")&&getComputedStyle(m).display!=="none");
-  };
-  const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-  /* ---------- A. bag ------------------------------------------------- */
-  function openBag(){
-    let opened=false;
-    try{globalThis.inventory&&globalThis.inventory("crops");opened=modalOpen()}
-    catch(e){log("bag crops failed",e&&e.message)}
-    if(modalOpen())return;
-    /* Any tab other than "crops" bypasses the hard renderer. */
-    try{globalThis.inventory&&globalThis.inventory("specials");}
-    catch(e){log("bag specials failed",e&&e.message)}
-    if(modalOpen())return;
-    log("bag fallback panel","both routes produced no modal");
-    const root=$("modalContent");
-    if(!root)return;
-    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
-    const bag=s.bag&&typeof s.bag==="object"?s.bag:{};
-    const sp=s.specials&&typeof s.specials==="object"?s.specials:{};
-    const rows=o=>Object.entries(o).filter(([,v])=>Number(v)>0)
-      .map(([k,v])=>`<div class="r3681-cell"><span>${esc(k)}</span><b>×${Number(v)}</b></div>`).join("")||"<small>ไม่มีของในหมวดนี้</small>";
-    root.innerHTML=`<section class="feature-panel inventory-panel">
-      <h2>🎒 กระเป๋า</h2>
-      <p class="feature-subtitle">โหมดสำรอง</p>
-      <h3>🌱 พืชพรรณ</h3><div class="inventory-grid r3681-grid">${rows(bag)}</div>
-      <h3>🕯️ ของพิเศษ</h3><div class="inventory-grid r3681-grid">${rows(sp)}</div>
-    </section>`;
-    try{globalThis.openModal&&globalThis.openModal()}catch(_){}
-  }
-
-  /* ---------- B. basement -------------------------------------------- */
-  function basementReady(){
-    const l=$("sceneInteractiveLayer");
-    return !!(l&&String(l.dataset.r17HouseMode||"")==="basement");
-  }
-
-  function basementPanel(){
-    const a=R17(),f=R3465(),root=$("modalContent");
-    if(!root)return;
-    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
-    const plots=Array.isArray(s.flowerPlots)?s.flowerPlots:[null,null,null,null,null,null];
-    const mach=Array.isArray(s.wineMachines)?s.wineMachines:[null,null,null];
-    const drops=(s.hedgehog&&Array.isArray(s.hedgehog.drops))?s.hedgehog.drops.length:0;
-    root.innerHTML=`<section class="feature-panel r3474-basement-tools">
-      <h2>⬇️ ห้องใต้ดิน</h2>
-      <div class="r3474-tool-group"><b>🌸 แปลงดอกไม้</b>
-        <div class="ynu-manager-grid">
-          ${plots.map((p,i)=>`<button type="button" data-r3681-plot="${i}">แปลง ${i+1}${p?" •":""}</button>`).join("")}
-        </div>
-        <div class="ynu-manager-grid">
-          <button type="button" data-r3681="plantAll">🌱 ปลูกทั้งหมด</button>
-          <button type="button" data-r3681="harvestAll">🌸 เก็บเกี่ยวทั้งหมด</button>
-          <button type="button" data-r3681="fertAll">✨ ใส่ปุ๋ยทั้งหมด</button>
-        </div>
-      </div>
-      <div class="r3474-tool-group"><b>🍷 เครื่องหมักไวน์</b>
-        <div class="ynu-manager-grid">
-          ${mach.map((m,i)=>`<button type="button" data-r3681-wine="${i}">เครื่อง ${i+1}${m?" •":""}</button>`).join("")}
-        </div>
-      </div>
-      <div class="r3474-tool-group"><b>🦔 ระบบเม่น</b>
-        <div class="ynu-manager-grid">
-          <button type="button" data-r3681="hedgeAll">🧺 เก็บของเม่นทั้งหมด${drops?" ("+drops+")":""}</button>
-          <button type="button" data-r3681="hedgeCraft">🦔 คราฟของเม่น</button>
-        </div>
-      </div>
-    </section>`;
-    try{globalThis.openModal&&globalThis.openModal()}catch(_){}
-
-    const run=(name,fn)=>{try{fn()}catch(e){log(name,e&&e.message)}};
-    root.querySelectorAll("[data-r3681-plot]").forEach(b=>b.onclick=()=>run("openFlowerPlot",()=>a&&a.openFlowerPlot&&a.openFlowerPlot(Number(b.dataset.r3681Plot))));
-    root.querySelectorAll("[data-r3681-wine]").forEach(b=>b.onclick=()=>run("openWineMachine",()=>a&&a.openWineMachine&&a.openWineMachine(Number(b.dataset.r3681Wine))));
-    const acts={
-      plantAll:()=>{
-        const F=(a&&a.FLOWERS)||{};
-        root.innerHTML=`<section class="feature-panel r3474-basement-tools"><h2>🌱 เลือกดอกไม้</h2><div class="r17-flower-picker">${
-          Object.entries(F).map(([k,fl])=>`<button type="button" data-r3681-flower="${esc(k)}"><img src="${esc(fl.bag||fl.ready||"")}" alt=""><b>${esc(fl.name||k)}</b></button>`).join("")
-        }</div></section>`;
-        root.querySelectorAll("[data-r3681-flower]").forEach(b=>b.onclick=()=>run("plantAll",()=>{
-          const g=(f&&f.plantAll)||(a&&a.plantAll);g&&g(b.dataset.r3681Flower);
-        }));
-      },
-      harvestAll:()=>run("harvestAll",()=>{const g=(f&&f.harvestAll)||(a&&a.harvestAll);g&&g()}),
-      fertAll:()=>run("fertilizeAll",()=>{const g=(f&&f.fertilizeAll)||(a&&a.fertilizeAll);g&&g()}),
-      hedgeAll:()=>run("collectHedge",()=>a&&a.collectHedge&&a.collectHedge()),
-      hedgeCraft:()=>run("openShieldCraft",()=>{const r=R29();r&&r.openShieldCraft&&r.openShieldCraft()})
-    };
-    root.querySelectorAll("[data-r3681]").forEach(b=>b.onclick=()=>{const fn=acts[b.dataset.r3681];fn&&fn()});
-  }
-
-  function goBasement(){
-    const a=R17();
-    if(!a){log("goBasement","YN_R17 missing");return basementPanel()}
-    try{a.goBasement&&a.goBasement()}
-    catch(e){log("goBasement threw",e&&e.message);return basementPanel()}
-    setTimeout(()=>{
-      if(basementReady())return;
-      log("goBasement","scene did not switch, using panel");
-      basementPanel();
-    },500);
-  }
-
-  /* ---------- claim the tap on pointerdown ---------------------------- */
-  const SEL_BAG='#inventoryNavBtn,[data-s2-main="inventory"]';
-  const SEL_DOWN='#r17Basement,[data-r3681-go-basement]';
-  function claim(e,fn){
-    try{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}catch(_){}
-    setTimeout(fn,0);
-  }
-  let lastTap=0;
-  function handler(e){
-    const t=e.target&&e.target.closest;
-    if(!t)return;
-    const bag=e.target.closest(SEL_BAG);
-    const down=e.target.closest(SEL_DOWN);
-    if(!bag&&!down)return;
-    const now=Date.now();
-    if(now-lastTap<400){claim(e,()=>{});return}
-    lastTap=now;
-    claim(e,bag?openBag:goBasement);
-  }
-  window.addEventListener("pointerdown",handler,true);
-  window.addEventListener("click",handler,true);
-
-  /* Make sure the way down always exists on the main floor. */
-  setInterval(()=>{
-    try{
-      if(typeof currentScene==="undefined"||currentScene!=="house")return;
-      const layer=$("sceneInteractiveLayer");if(!layer)return;
-      if(String(layer.dataset.r17HouseMode||"")!=="main")return;
-      if($("r17Basement"))return;
-      let bar=layer.querySelector(".r17-house-actions");
-      if(!bar){bar=document.createElement("div");bar.className="r17-house-actions";layer.appendChild(bar)}
-      const b=document.createElement("button");
-      b.id="r17Basement";b.type="button";b.textContent="⬇️ ห้องใต้ดิน";
-      b.setAttribute("data-r3681-go-basement","1");
-      bar.insertBefore(b,bar.firstChild);
-      log("restored","r17Basement button was missing");
-    }catch(_){}
-  },1500);
-
-  /* ---------- diagnostic box ------------------------------------------ */
-  function diag(){
-    const l=$("sceneInteractiveLayer");
-    const a=R17();
-    const s=(function(){try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}})();
-    const reg=Object.assign({},globalThis.CAKE_ITEMS||{},globalThis.COCONUT_ITEMS||{});
-    const boost={};for(const k of Object.keys(reg))boost[k]=Number(s.specials&&s.specials[k])||0;
-    const bar=l&&l.querySelector(".r17-basement-actions");
-    return {
-      build:globalThis.YAINOO_BUILD||"?",
-      member:(function(){try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||"?"):"?"}catch(_){return "?"}})(),
-      scene:(typeof currentScene==="undefined"?"?":currentScene),
-      houseMode:l?(l.dataset.r17HouseMode||"(none)"):"(no layer)",
-      R17:!!a,
-      R17fn:a?["goBasement","collectHedge","openFlowerPlot","openWineMachine","openFlowerTools"].filter(k=>typeof a[k]==="function"):[],
-      R29:!!R29(),R3465:!!R3465(),
-      basementBar:bar?[...bar.children].map(c=>c.id+":"+(getComputedStyle(c).display==="none"?"hidden":"shown")):"(no bar)",
-      flowerPlots:Array.isArray(s.flowerPlots)?s.flowerPlots.length:typeof s.flowerPlots,
-      wineMachines:Array.isArray(s.wineMachines)?s.wineMachines.length:typeof s.wineMachines,
-      hedgehog:s.hedgehog?("drops="+((s.hedgehog.drops||[]).length)+" on="+!!s.hedgehog.enabled):typeof s.hedgehog,
-      houseLevel:(s.houseUpgrade&&s.houseUpgrade.level)||"?",
-      boostItems:boost,
-      boostTotal:Object.values(boost).reduce((x,y)=>x+y,0),
-      specialsKeys:s.specials?Object.keys(s.specials).length:typeof s.specials,
-      specialsStock:(globalThis.YN_R3682&&globalThis.YN_R3682.specialsDump)?globalThis.YN_R3682.specialsDump():"(n/a)",
-      boostRegistry:(globalThis.YN_R3682&&globalThis.YN_R3682.boostKeys)?globalThis.YN_R3682.boostKeys():"(n/a)",
-      keyRepair:(globalThis.YN_R3682&&globalThis.YN_R3682.report)?globalThis.YN_R3682.report():"(n/a)",
-      notes:notes.slice(-12)
-    };
-  }
-  function showDiag(){
-    let box=$("r3681Diag");
-    if(box){box.remove();return}
-    box=document.createElement("div");box.id="r3681Diag";
-    box.style.cssText="position:fixed;inset:6% 4%;z-index:2147483647;background:#111;color:#0f0;font:11px/1.45 monospace;padding:10px;overflow:auto;border:2px solid #0f0;border-radius:10px;white-space:pre-wrap;word-break:break-all";
-    box.textContent=JSON.stringify(diag(),null,1);
-    const x=document.createElement("button");
-    x.textContent="ปิด";x.style.cssText="position:sticky;top:0;float:right;background:#0f0;color:#000;border:0;padding:4px 10px;border-radius:6px;font-weight:700";
-    x.onclick=()=>box.remove();box.prepend(x);
-    document.body.appendChild(box);
-  }
-  let taps=[];
-  document.addEventListener("pointerdown",e=>{
-    if(e.clientY>140||e.clientX>200)return;
-    const t=Date.now();taps=taps.filter(v=>t-v<1200);taps.push(t);
-    if(taps.length>=5){taps=[];showDiag()}
-  },true);
-
-  globalThis.YN_R3681={BUILD,diag,showDiag,openBag,goBasement,basementPanel,notes:()=>notes.slice()};
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded");
-})();
+/* S2 R36.85: R36.81 disabled. Its window-level pointerdown/click capture
+   consumed bag and basement taps before the native R17/inventory handlers.
+   R36.77 + R36.80 now own only DOM repair; native controls own the input. */
 </script>
 
 <script id="r3682-specials-keys">
@@ -5322,316 +5064,175 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script id="r3683-standalone-tools">
+<script id="r3685-bag-basement-kongkwan">
 /* =====================================================================
-   S2 R36.83 — STANDALONE BOOST / BAG / BASEMENT ON A PRIVATE OVERLAY
+   S2 R36.85 — BAG + BASEMENT + KONGKWAN INVENTORY RECOVERY
    2026-09-18
 
-   Why a private overlay: every panel in this game renders into
-   #modalContent, and 26 MutationObservers across the patch layers watch
-   either that node or <body> with subtree:true. Each one runs a
-   whole-document querySelector sweep on every write. The panels that
-   freeze on a phone - the bag (about 60 cards) and the basement (6 plots,
-   3 machines, drop layer) - are the two biggest writes in the game.
-   Everything below renders into #ynDeck instead, which no existing
-   observer targets, and never calls openModal().
-
-   Boost items: cropBoostOptionsHTML() only reads state.specials[key] with
-   an exact key match against SPECIAL_ITEMS. The panel below searches every
-   object on the player's state for any known boost key, reports where it
-   found each one, and moves it to the canonical place before spending, so
-   an account whose items were written elsewhere still works.
-
-   The old 🍰 เร่งโตทั้งหมด entry inside จัดการสวน is removed so there is
-   only ever one way in.
+   - No floating workaround buttons.
+   - The normal bag button opens the full native inventory.
+   - The normal house basement button uses the native R17 room/functions.
+   - "เร่งโตทั้งหมด" stays inside "จัดการสวน".
+   - Kongkwan-only recovery reads surviving save shards/local snapshots and
+     restores stock ONLY when the live map is zero. No quantity is invented.
    ===================================================================== */
-(function YN_R3683(){
+(function YN_R3685(){
   "use strict";
-  const BUILD="S2-R36.84-GLOBAL-SCOPE-FIX-20260918";
+  const BUILD="S2-R36.85-BAG-BASEMENT-KONGKWAN-FIX-20260918";
   const $=id=>document.getElementById(id);
-  const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const num=v=>Number(v)||0;
-  /* R36.84: game.js declares `let state/ownState/currentMemberKey/currentScene`
-     at the top level of a classic script. Top-level `let` creates a SCRIPT-scoped
-     lexical binding, which is NOT a property of window/globalThis. Every
-     globalThis.<name> read in R36.78-R36.83 therefore returned undefined, which
-     is why none of those patches ever did anything visible. Bare identifiers do
-     resolve, so read them that way. */
-  const stateNow=()=>{try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}
-                      try{if(typeof state!=="undefined"&&state)return state}catch(_){}return {}};
-  const memberKey=()=>{try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||""):""}catch(_){return ""}};
-  const sceneNow=()=>{try{return typeof currentScene!=="undefined"?String(currentScene||""):""}catch(_){return ""}};
-  const reg=n=>{try{return globalThis[n]||((0,eval)("typeof "+n+"!==\'undefined\'?"+n+":null"))||{}}catch(_){return globalThis[n]||{}}};
-  const st=stateNow;
-  const notes=[];
-  const log=(k,v)=>{notes.push(k+": "+(v==null?"":String(v)));if(notes.length>30)notes.shift();console.warn(BUILD,k,v)};
+  const GROWTH_KEYS=["cake10","cake20","cake50","cake100","coconut10","coconut20","coconut50","coconut100"];
+  const num=v=>Math.max(0,Math.floor(Number(v)||0));
+  const isObj=v=>!!v&&typeof v==="object"&&!Array.isArray(v);
+  const copy=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const stateNow=()=>{try{if(typeof ownState!=="undefined"&&ownState)return ownState}catch(_){}try{if(typeof state!=="undefined"&&state)return state}catch(_){}return null};
+  const memberKey=()=>{try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||"").trim().toLowerCase():""}catch(_){return ""}};
+  const memberName=()=>{try{return typeof currentMember!=="undefined"?String(currentMember||"").trim():""}catch(_){return ""}};
 
-  /* ---------- styles -------------------------------------------------- */
-  (function css(){
-    if($("r3683Css"))return;
-    const s=document.createElement("style");s.id="r3683Css";
-    s.textContent=`
-    #ynChips{position:fixed;right:8px;bottom:120px;z-index:2147483000;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
-    #ynChips button{pointer-events:auto;border:0;border-radius:14px;padding:8px 12px;font:600 13px/1 system-ui,-apple-system,"Sarabun",sans-serif;
-      background:rgba(60,32,84,.92);color:#ffe9b0;box-shadow:0 2px 10px rgba(0,0,0,.45);white-space:nowrap;-webkit-tap-highlight-color:transparent}
-    #ynChips button:active{transform:scale(.96)}
-    #ynChips button.mini{padding:6px 9px;font-size:11px;background:rgba(40,40,40,.7);color:#bdf5bd}
-    #ynDeck{position:fixed;inset:0;z-index:2147483600;display:none;background:rgba(10,6,16,.72);
-      -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-    #ynDeck.on{display:block}
-    #ynDeckBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,440px);max-height:82vh;overflow:auto;
-      background:#f6e7c4;color:#4a2f14;border:3px solid #8a5a2b;border-radius:18px;padding:14px;
-      font:14px/1.5 system-ui,-apple-system,"Sarabun",sans-serif;-webkit-overflow-scrolling:touch}
-    #ynDeckBox h2{margin:0 0 4px;font-size:18px}
-    #ynDeckBox h3{margin:12px 0 6px;font-size:14px;opacity:.85}
-    #ynDeckBox small{opacity:.75}
-    #ynDeckClose{position:absolute;right:10px;top:10px;width:34px;height:34px;border:0;border-radius:50%;
-      background:#6b4423;color:#fff;font-size:18px;line-height:1}
-    .ynRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-    .ynRow button{flex:1 1 auto;min-width:44%;border:0;border-radius:12px;padding:10px 8px;
-      background:#6b4423;color:#ffe9b0;font:600 13px/1.25 system-ui,"Sarabun",sans-serif}
-    .ynRow button[disabled]{opacity:.45}
-    .ynItem{display:flex;align-items:center;gap:8px;width:100%;text-align:left}
-    .ynItem img{width:34px;height:34px;object-fit:contain;flex:0 0 auto}
-    .ynGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-    .ynGrid div{background:#fff5df;border-radius:8px;padding:6px 8px;font-size:12px;display:flex;justify-content:space-between;gap:6px}
-    #ynDeckBox pre{background:#1b1b1b;color:#9f9;font:10px/1.4 monospace;padding:8px;border-radius:8px;
-      white-space:pre-wrap;word-break:break-all;max-height:46vh;overflow:auto}`;
-    (document.head||document.documentElement).appendChild(s);
-  })();
+  function bindBag(){
+    try{if(typeof inventory==="function")globalThis.inventory=inventory}catch(_){}
+    const b=$("inventoryNavBtn");
+    if(!b)return;
+    b.disabled=false;
+    b.style.setProperty("pointer-events","auto","important");
+    b.style.setProperty("touch-action","manipulation","important");
+    b.onclick=e=>{
+      try{e?.preventDefault?.();e?.stopPropagation?.()}catch(_){}
+      try{if(typeof inventory==="function")inventory("crops");else globalThis.inventory?.("crops")}catch(err){console.warn(BUILD,"bag",err)}
+    };
+  }
 
-  /* ---------- private overlay ----------------------------------------- */
-  function deck(){
-    let d=$("ynDeck");
-    if(!d){
-      d=document.createElement("div");d.id="ynDeck";
-      d.innerHTML='<div id="ynDeckBox"><button id="ynDeckClose" type="button">✕</button><div id="ynDeckBody"></div></div>';
-      document.body.appendChild(d);
-      d.addEventListener("pointerdown",e=>{if(e.target===d){e.preventDefault();close()}},true);
-      d.querySelector("#ynDeckClose").addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();close()},true);
+  function bindBasement(){
+    let scene="";try{scene=typeof currentScene!=="undefined"?String(currentScene||""):""}catch(_){}
+    if(scene!=="house")return;
+    const layer=$("sceneInteractiveLayer"),api=globalThis.YN_R17;
+    if(!layer||!api)return;
+    const mode=String(layer.dataset.r17HouseMode||"");
+    if(mode==="main"){
+      const b=$("r17Basement");
+      if(b){
+        b.disabled=false;
+        b.style.setProperty("pointer-events","auto","important");
+        b.style.setProperty("touch-action","manipulation","important");
+        b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();api.goBasement?.()};
+      }
+    }else if(mode==="basement"){
+      try{globalThis.YN_R3677?.repairHouse?.()}catch(_){}
+      try{globalThis.YN_R3680?.fixBasement?.()}catch(_){}
     }
-    return d;
-  }
-  function open(html){
-    const d=deck();
-    d.querySelector("#ynDeckBody").innerHTML=html;
-    d.classList.add("on");
-    return d.querySelector("#ynDeckBody");
-  }
-  function close(){const d=$("ynDeck");if(d)d.classList.remove("on")}
-  /* Bind by pointerdown so no existing capture handler can eat the tap. */
-  function tap(el,fn){
-    if(!el)return;
-    el.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();setTimeout(fn,0)},true);
   }
 
-  /* ---------- where are the boost items, really? ---------------------- */
-  function canonKeys(){
-    const SI=reg("SPECIAL_ITEMS");
+  function keepGardenManagerCanonical(){
+    /* Remove only the old floating workaround if a cached build left it behind. */
+    try{$("ynChips")?.remove();$("ynDeck")?.remove();$("r3683Css")?.remove()}catch(_){}
+    const grid=document.querySelector(".ynu-manager-grid");
+    if(grid&&!grid.querySelector('[data-v7-manager="boost"]')){
+      const panel=grid.closest(".ynu-garden-manager");
+      if(panel&&typeof globalThis.YN_GARDEN_V7?.manager==="function"){
+        try{globalThis.YN_GARDEN_V7.manager()}catch(_){}
+      }
+    }
+  }
+
+  function totalMap(m){return isObj(m)?Object.values(m).reduce((n,v)=>n+num(v),0):0}
+  function growthTotal(m){return GROWTH_KEYS.reduce((n,k)=>n+num(m?.[k]),0)}
+  function candidatesFromObject(raw,out,depth=0){
+    if(!isObj(raw)||depth>2)return;
+    if(isObj(raw.bag)||isObj(raw.specials))out.push(raw);
+    if(GROWTH_KEYS.some(k=>num(raw[k])>0))out.push({specials:raw});
+    for(const k of ["data","state","snapshot","save","payload"]){
+      if(isObj(raw[k]))candidatesFromObject(raw[k],out,depth+1);
+    }
+  }
+  function bestMap(candidates,key){
+    let best=null,bestN=0;
+    for(const c of candidates){const m=c?.[key],n=totalMap(m);if(n>bestN){bestN=n;best=copy(m)}}
+    return bestN>0?best:null;
+  }
+  function bestGrowth(candidates){
     const out={};
-    for(const k of Object.keys(SI))if(SI[k]&&SI[k].kind==="crop")out[k]=SI[k];
+    for(const k of GROWTH_KEYS){let best=0;for(const c of candidates)best=Math.max(best,num(c?.specials?.[k]));if(best>0)out[k]=best}
     return out;
   }
-  function allKnown(){
-    return Object.assign({},canonKeys(),reg("CAKE_ITEMS"),reg("COCONUT_ITEMS"));
-  }
-  /* Returns [{key, qty, where, item}] searching every plain object on state. */
-  function findBoost(){
-    const s=st(),known=allKnown(),canon=canonKeys(),found=new Map();
-    const take=(where,obj)=>{
-      if(!obj||typeof obj!=="object"||Array.isArray(obj))return;
-      for(const [k,v] of Object.entries(obj)){
-        const q=num(v);
-        if(q<=0)continue;
-        if(!known[k])continue;
-        const prev=found.get(k);
-        if(!prev||q>prev.qty)found.set(k,{key:k,qty:q,where,item:known[k],canonical:!!canon[k]});
-      }
-    };
-    take("specials",s.specials);
-    for(const [k,v] of Object.entries(s)){
-      if(k==="specials")continue;
-      if(v&&typeof v==="object"&&!Array.isArray(v))take(k,v);
+  function applyMemory(patch){
+    const targets=[];
+    const first=stateNow();if(first)targets.push(first);
+    try{if(typeof state!=="undefined"&&state&&!targets.includes(state))targets.push(state)}catch(_){}
+    try{if(typeof ownState!=="undefined"&&ownState&&!targets.includes(ownState))targets.push(ownState)}catch(_){}
+    for(const target of targets){
+      if(patch.bag)target.bag=copy(patch.bag);
+      if(patch.specials)target.specials=copy(patch.specials);
     }
-    return [...found.values()].sort((a,b)=>b.qty-a.qty);
-  }
-  /* Move a count into state.specials under a key SPECIAL_ITEMS recognises. */
-  function ensureCanonical(entry){
-    const s=st();
-    if(!s.specials||typeof s.specials!=="object")s.specials={};
-    if(entry.where==="specials"&&entry.canonical)return entry.key;
-    const canon=canonKeys();
-    let target=canon[entry.key]?entry.key:null;
-    if(!target){
-      const n=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"");
-      target=Object.keys(canon).find(k=>n(k)===n(entry.key))||null;
-    }
-    if(!target){log("no canonical key for",entry.key);return null}
-    if(num(s.specials[target])>=entry.qty)return target;
-    s.specials[target]=num(s.specials[target])+entry.qty;
-    const src=entry.where==="specials"?s.specials:s[entry.where];
-    if(src&&entry.key!==target)src[entry.key]=0;
-    log("moved",entry.key+" ("+entry.where+") -> specials."+target+" x"+entry.qty);
-    try{globalThis.save&&globalThis.save()}catch(_){}
-    return target;
+    try{if(typeof draw==="function")draw()}catch(_){}
   }
 
-  /* ---------- boost panel --------------------------------------------- */
-  function boostPanel(){
-    const list=findBoost();
-    if(!list.length){
-      open(`<h2>🍰 เร่งโตทั้งหมด</h2>
-        <p>ไม่พบไอเท็มเร่งโตในข้อมูลของคุณเลยค่ะ</p>
-        <small>ระบบค้นหาแล้วทุกหมวดในกระเป๋า ไม่ใช่แค่หมวดของพิเศษ</small>`);
-      return;
-    }
-    const body=open(`<h2>🍰 เร่งโตทั้งหมด</h2>
-      <small>พบ ${list.length} รายการ • กดเลือกเพื่อใช้กับทุกแปลงในหน้านี้</small>
-      <div class="ynRow" id="ynBoostRow">${list.map((e,i)=>`
-        <button type="button" data-boost-i="${i}">
-          <span class="ynItem">
-            ${e.item&&e.item.image?`<img src="${esc(e.item.image)}" alt="">`:""}
-            <span>${esc((e.item&&e.item.name)||e.key)}<br>
-            <small>มี ×${e.qty}${e.item&&e.item.boost?" • เร่ง "+e.item.boost+"%":""}${e.where!=="specials"?" • อยู่ใน "+esc(e.where):""}</small></span>
-          </span>
-        </button>`).join("")}</div>`);
-    body.querySelectorAll("[data-boost-i]").forEach(b=>tap(b,()=>{
-      const e=list[Number(b.dataset.boostI)];
-      if(!e)return;
-      const key=ensureCanonical(e);
-      if(!key){
-        open(`<h2>ใช้ไอเท็มนี้ไม่ได้</h2><p>ไอเท็ม <b>${esc(e.key)}</b> อยู่ในกระเป๋าจริง (×${e.qty}) แต่ระบบเร่งโตไม่รู้จักชื่อนี้ค่ะ</p><small>กรุณาส่งชื่อนี้ให้ผู้ดูแลเพื่อเพิ่มเข้าทะเบียน</small>`);
-        return;
-      }
-      close();
-      const f=globalThis.YN_R3478&&globalThis.YN_R3478.bulkBoost;
-      if(typeof f==="function"){try{f(key)}catch(err){log("bulkBoost",err&&err.message)}}
-      else log("bulkBoost","missing");
-    }));
-  }
-
-  /* ---------- bag on the private overlay ------------------------------ */
-  function bagPanel(){
-    const s=st();
-    const cell=(k,v,reg)=>{
-      const it=reg&&reg[k];
-      return `<div><span>${esc((it&&it.name)||k)}</span><b>×${num(v)}</b></div>`;
-    };
-    const block=(title,obj,reg)=>{
-      const rows=Object.entries(obj||{}).filter(([,v])=>num(v)>0);
-      if(!rows.length)return "";
-      return `<h3>${title}</h3><div class="ynGrid">${rows.map(([k,v])=>cell(k,v,reg)).join("")}</div>`;
-    };
-    open(`<h2>🎒 กระเป๋า</h2>
-      ${block("🌱 พืชพรรณ",s.bag,reg("CROPS"))}
-      ${block("🕯️ ของพิเศษ",s.specials,allKnown())}
-      ${block("🐾 ผลผลิตสัตว์",s.animalProducts,null)}
-      ${block("🦔 ของเม่น",s.hedgehogItems,null)}
-      ${block("🌸 ดอกไม้",s.flowers,null)}
-      ${block("🍷 ไวน์",s.wines,null)}
-      <small>แสดงเฉพาะรายการที่มีจำนวนมากกว่า 0</small>`);
-  }
-
-  /* ---------- basement on the private overlay ------------------------- */
-  function basementPanel(){
-    const a=globalThis.YN_R17,f=globalThis.YN_R3465,s=st();
-    const plots=Array.isArray(s.flowerPlots)?s.flowerPlots:[null,null,null,null,null,null];
-    const mach=Array.isArray(s.wineMachines)?s.wineMachines:[null,null,null];
-    const drops=(s.hedgehog&&Array.isArray(s.hedgehog.drops))?s.hedgehog.drops.length:0;
-    const body=open(`<h2>⬇️ ห้องใต้ดิน</h2>
-      <h3>🌸 แปลงดอกไม้</h3>
-      <div class="ynRow">${plots.map((p,i)=>`<button type="button" data-plot="${i}">แปลง ${i+1}${p?" ●":""}</button>`).join("")}</div>
-      <div class="ynRow">
-        <button type="button" data-act="plantAll">🌱 ปลูกทั้งหมด</button>
-        <button type="button" data-act="harvestAll">🌸 เก็บเกี่ยวทั้งหมด</button>
-        <button type="button" data-act="fertAll">✨ ใส่ปุ๋ยทั้งหมด</button>
-      </div>
-      <h3>🍷 เครื่องหมักไวน์</h3>
-      <div class="ynRow">${mach.map((m,i)=>`<button type="button" data-wine="${i}">เครื่อง ${i+1}${m?" ●":""}</button>`).join("")}</div>
-      <h3>🦔 ระบบเม่น</h3>
-      <div class="ynRow">
-        <button type="button" data-act="hedgeAll">🧺 เก็บของเม่นทั้งหมด${drops?" ("+drops+")":""}</button>
-        <button type="button" data-act="hedgeCraft">🦔 คราฟของเม่น</button>
-      </div>`);
-    const run=(n,fn)=>{try{fn()}catch(e){log(n,e&&e.message)}};
-    body.querySelectorAll("[data-plot]").forEach(b=>tap(b,()=>{close();run("openFlowerPlot",()=>a&&a.openFlowerPlot&&a.openFlowerPlot(Number(b.dataset.plot)))}));
-    body.querySelectorAll("[data-wine]").forEach(b=>tap(b,()=>{close();run("openWineMachine",()=>a&&a.openWineMachine&&a.openWineMachine(Number(b.dataset.wine)))}));
-    const acts={
-      plantAll:()=>{
-        const F=(a&&a.FLOWERS)||{};
-        const inner=open(`<h2>🌱 เลือกดอกไม้</h2><div class="ynRow">${
-          Object.entries(F).map(([k,fl])=>`<button type="button" data-flower="${esc(k)}"><span class="ynItem">${fl.bag||fl.ready?`<img src="${esc(fl.bag||fl.ready)}" alt="">`:""}<span>${esc(fl.name||k)}</span></span></button>`).join("")||"<small>ไม่พบชนิดดอกไม้</small>"
-        }</div>`);
-        inner.querySelectorAll("[data-flower]").forEach(b=>tap(b,()=>{close();run("plantAll",()=>{const g=(f&&f.plantAll)||(a&&a.plantAll);g&&g(b.dataset.flower)})}));
-      },
-      harvestAll:()=>{close();run("harvestAll",()=>{const g=(f&&f.harvestAll)||(a&&a.harvestAll);g&&g()})},
-      fertAll:()=>{close();run("fertilizeAll",()=>{const g=(f&&f.fertilizeAll)||(a&&a.fertilizeAll);g&&g()})},
-      hedgeAll:()=>{close();run("collectHedge",()=>a&&a.collectHedge&&a.collectHedge())},
-      hedgeCraft:()=>{close();run("openShieldCraft",()=>globalThis.YN_R29&&globalThis.YN_R29.openShieldCraft&&globalThis.YN_R29.openShieldCraft())}
-    };
-    body.querySelectorAll("[data-act]").forEach(b=>tap(b,()=>{const fn=acts[b.dataset.act];fn&&fn()}));
-  }
-
-  /* ---------- diagnostic ---------------------------------------------- */
-  function diagPanel(){
-    const s=st(),l=$("sceneInteractiveLayer"),a=globalThis.YN_R17;
-    const info={
-      build:globalThis.YAINOO_BUILD||"?",
-      member:memberKey()||"?",
-      scene:sceneNow()||"?",
-      houseMode:l?(l.dataset.r17HouseMode||"(none)"):"(no layer)",
-      R17:!!a,R29:!!globalThis.YN_R29,R3465:!!globalThis.YN_R3465,R3478:!!globalThis.YN_R3478,
-      boostFound:findBoost().map(e=>e.key+"="+e.qty+"@"+e.where+(e.canonical?"":" (ชื่อไม่ตรงทะเบียน)")),
-      registryCropKeys:Object.keys(canonKeys()),
-      specialsAll:Object.entries(s.specials||{}).filter(([,v])=>num(v)>0).map(([k,v])=>k+"="+num(v)),
-      flowerPlots:Array.isArray(s.flowerPlots)?s.flowerPlots.length:typeof s.flowerPlots,
-      wineMachines:Array.isArray(s.wineMachines)?s.wineMachines.length:typeof s.wineMachines,
-      hedgehog:s.hedgehog?("drops="+((s.hedgehog.drops||[]).length)):typeof s.hedgehog,
-      notes:notes.slice(-10)
-    };
-    open(`<h2>🔧 ข้อมูลระบบ</h2><pre>${esc(JSON.stringify(info,null,1))}</pre>`);
-  }
-
-  /* ---------- chips ---------------------------------------------------- */
-  function chips(){
-    let c=$("ynChips");
-    if(!c){
-      c=document.createElement("div");c.id="ynChips";
-      c.innerHTML=`<button id="ynChipBoost" type="button">🍰 เร่งโตทั้งหมด</button>
-        <button id="ynChipBag" type="button">🎒 กระเป๋า</button>
-        <button id="ynChipBase" type="button">⬇️ ห้องใต้ดิน</button>
-        <button id="ynChipDiag" class="mini" type="button">🔧</button>`;
-      document.body.appendChild(c);
-      tap($("ynChipBoost"),boostPanel);
-      tap($("ynChipBag"),bagPanel);
-      tap($("ynChipBase"),basementPanel);
-      tap($("ynChipDiag"),diagPanel);
-    }
-    /* Keep it tidy: only show what belongs to the screen you are on. */
-    const scene=sceneNow();
-    /* Show them whenever the farm screen is actually on screen. */
-    const screen=document.getElementById("gameScreen")||document.getElementById("farmScreen")||document.getElementById("sceneScreen");
-    const login=document.getElementById("loginScreen");
-    const inGame=!!memberKey()||!!(screen&&screen.offsetParent)||!(login&&login.offsetParent);
-    const farm=scene===""||scene==="farm"||scene==="garden"||scene===null;
-    const house=scene==="house";
-    c.style.display=inGame?"flex":"none";
-    $("ynChipBoost").style.display=farm?"":"none";
-    $("ynChipBase").style.display=house?"":"none";
-    $("ynChipBag").style.display=(farm||house)?"":"none";
-  }
-  setInterval(()=>{try{chips()}catch(_){}},1200);
-  setTimeout(chips,600);
-
-  /* ---------- remove the duplicate entry inside จัดการสวน -------------- */
-  setInterval(()=>{
+  let recoveryRunning=false,recoveryDone=false;
+  async function recoverKongkwan(){
+    if(recoveryRunning||recoveryDone||memberKey()!=="kongkwan")return false;
+    const live=stateNow();if(!live)return false;
+    recoveryRunning=true;
     try{
-      document.querySelectorAll('[data-v7-manager="boost"],[data-ynu-manager="boost"],#r3474FarmBoost')
-        .forEach(b=>{if(b&&b.parentNode)b.remove()});
-    }catch(_){}
-  },800);
+      const ctx=await globalThis.getFirebaseContext?.();
+      if(!ctx?.db||!ctx?.fs)return false;
+      const {db,fs}=ctx,candidates=[];
 
-  globalThis.YN_R3683={BUILD,findBoost,boostPanel,bagPanel,basementPanel,diagPanel,open,close,notes:()=>notes.slice()};
+      const qs=await fs.getDocs(fs.collection(db,"saveShards","kongkwan","items"));
+      qs.forEach(d=>candidatesFromObject(d.data()||{},candidates));
+
+      const mk="kongkwan",mn=memberName();
+      for(const key of [`yainoo-v5:${mn}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:r24:last-good:${mn}`,`yn:r24:pending:${mn}`]){
+        if(!key||key.endsWith(":"))continue;
+        try{const raw=localStorage.getItem(key);if(raw)candidatesFromObject(JSON.parse(raw),candidates)}catch(_){}
+      }
+
+      const patch={};
+      const liveBag=isObj(live.bag)?live.bag:{};
+      const liveSpecials=isObj(live.specials)?live.specials:{};
+
+      /* Do not resurrect a healthy inventory. Recovery is only allowed when
+         the affected live map is actually zero, as reported for Kongkwan. */
+      if(totalMap(liveBag)===0){const b=bestMap(candidates,"bag");if(b)patch.bag=b}
+      if(totalMap(liveSpecials)===0){
+        const sp=bestMap(candidates,"specials");if(sp)patch.specials=sp;
+      }else if(growthTotal(liveSpecials)===0){
+        const g=bestGrowth(candidates);
+        if(growthTotal(g)>0)patch.specials={...liveSpecials,...g};
+      }
+
+      if(patch.specials){
+        const g=bestGrowth(candidates);
+        for(const k of GROWTH_KEYS)if(num(patch.specials[k])===0&&num(g[k])>0)patch.specials[k]=num(g[k]);
+      }
+
+      if(!patch.bag&&!patch.specials){
+        recoveryDone=true;
+        console.info(BUILD,"Kongkwan recovery scan: no zero map with positive surviving copy");
+        return false;
+      }
+
+      const saveRef=fs.doc(db,"saves","kongkwan");
+      await fs.setDoc(saveRef,{...patch,clientLocalEditAt:Date.now()},{merge:true});
+      applyMemory(patch);
+      recoveryDone=true;
+      try{globalThis.showWeatherToast?.("กู้คืนข้อมูลกระเป๋า/ไอเท็มเร่งโตของ Kongkwan จากข้อมูลที่มีอยู่แล้วเรียบร้อยค่ะ")}catch(_){}
+      console.info(BUILD,"Kongkwan recovered",{
+        bag:patch.bag?totalMap(patch.bag):"unchanged",
+        growth:patch.specials?Object.fromEntries(GROWTH_KEYS.map(k=>[k,num(patch.specials[k])])):"unchanged"
+      });
+      return true;
+    }catch(e){
+      console.warn(BUILD,"Kongkwan recovery",e?.message||e);
+      return false;
+    }finally{recoveryRunning=false}
+  }
+
+  bindBag();bindBasement();keepGardenManagerCanonical();
+  setTimeout(bindBag,250);setTimeout(bindBasement,300);
+  setInterval(()=>{try{bindBag();bindBasement();keepGardenManagerCanonical()}catch(_){}},1800);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){setTimeout(bindBag,40);setTimeout(bindBasement,60)}},{passive:true});
+  window.addEventListener("pageshow",()=>{setTimeout(bindBag,40);setTimeout(bindBasement,80)},{passive:true});
+  setTimeout(recoverKongkwan,2500);setTimeout(recoverKongkwan,7000);setTimeout(recoverKongkwan,15000);
+
+  globalThis.YN_R3685={BUILD,bindBag,bindBasement,recoverKongkwan,GROWTH_KEYS};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
