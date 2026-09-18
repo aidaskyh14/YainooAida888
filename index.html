@@ -5296,5 +5296,126 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
+
+<script id="r3692-numeric-history-restore">
+/* =====================================================================
+   S2 R36.92 — NUMERIC HISTORY RESTORE ONLY
+   2026-09-18
+   Scope is deliberately narrow:
+   - inventory quantities
+   - campaign score/rank numbers
+   - alpaca happiness/factory dashboard numbers
+   Merit/charity and gameplay systems are NEVER changed here.
+   ===================================================================== */
+(function YN_R3692_NUMERIC_HISTORY_RESTORE(){
+  "use strict";
+  const BUILD="S2-R36.92-NUMERIC-HISTORY-RESTORE-20260918";
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const num=v=>Math.max(0,Number.isFinite(Number(v))?Number(v):0);
+  const ts=v=>{try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}};
+  const isAdmin=()=>{try{return String(currentMemberKey||"").toLowerCase()==="aida"||String(currentMember||"").toLowerCase()==="aida"}catch(_){return false}};
+  const live=()=>{try{return (typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null}catch(_){return null}};
+  const INV_PATHS=["bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","hedgehogItems","flowerSeeds","flowers","wines","boatDrinks","rainyMenus","warehouseTools","farmFruits","coconutRiverItems","medicines","homeFoods","alpaca.inventory.food","alpaca.inventory.medicine","alpaca.inventory.wool","alpaca.inventory.other","alpaca.factory.products"];
+  const SHARD_IDS=["v7-inventory","v6-inventory","v5-inventory","inventory","v7-alpaca","v6-alpaca","v5-alpaca","alpaca","v7-overflow-0","v7-overflow-1","v7-overflow-2","v7-overflow-3","over0","over1","over2","over3"];
+  const reports={};let sweeping=false;
+
+  function field(o,path){for(const k of String(path).split(".")){if(o==null)return undefined;o=o[k]}return o}
+  function setField(o,path,val){const a=String(path).split("."),last=a.pop();let x=o;for(const k of a){if(!obj(x[k]))x[k]={};x=x[k]}x[last]=val}
+  function add(list,data,at,source){if(!obj(data))return;list.push({data:cp(data),at:Number(at)||0,source:String(source||"unknown")})}
+  function mapStats(m){if(!obj(m))return{keys:0,pos:0,total:0,n9999:0,max:0};let keys=0,pos=0,total=0,n9999=0,max=0;for(const v of Object.values(m)){const q=num(v);keys++;if(q>0){pos++;total+=q;max=Math.max(max,q);if(q===9999)n9999++}}return{keys,pos,total,n9999,max}}
+  function suspiciousSynthetic(m,mk){if(String(mk).toLowerCase()==="aida")return false;const s=mapStats(m);return s.pos>=4&&s.n9999>=3&&s.n9999/s.pos>=0.34}
+  function chooseHistoricalMap(cands,path,mk){
+    const rows=[];
+    for(const c of cands){const m=field(c.data,path);if(!obj(m))continue;const st=mapStats(m);if(!st.pos||suspiciousSynthetic(m,mk))continue;rows.push({...c,map:cp(m),st})}
+    if(!rows.length)return null;
+    const maxPos=Math.max(...rows.map(r=>r.st.pos)),maxTotal=Math.max(...rows.map(r=>r.st.total));
+    /* Prefer a coherent, substantially populated snapshot, then the newest one.
+       This avoids a late broken shard with only a few surviving values and also
+       avoids the old synthetic 9,999 pattern. */
+    const healthy=rows.filter(r=>r.st.pos>=Math.max(1,Math.floor(maxPos*.60)) && r.st.total>=Math.max(1,maxTotal*.05));
+    healthy.sort((a,b)=>(b.at-a.at)||(b.st.pos-a.st.pos)||(b.st.total-a.st.total));
+    return healthy[0]||rows.sort((a,b)=>(b.st.pos-a.st.pos)||(b.st.total-a.st.total)||(b.at-a.at))[0];
+  }
+  async function collectHistory(fs,db,mk,includeLocal=false){
+    const c=[];
+    for(const id of SHARD_IDS){try{const sn=await fs.getDoc(fs.doc(db,"saveShards",mk,"items",id));if(!sn.exists())continue;const r=sn.data()||{},at=ts(r.updatedAt);add(c,r,at,`shard:${id}`);if(obj(r.data))add(c,r.data,at,`shard-data:${id}`)}catch(_){}}
+    try{const qs=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));qs.forEach(d=>{const r=d.data()||{},at=ts(r.updatedAt);add(c,r,at,`scan:${d.id}`);if(obj(r.data))add(c,r.data,at,`scan-data:${d.id}`)})}catch(_){}
+    try{const st=await fs.getDoc(fs.doc(db,"saveRescueStaging",mk));if(st.exists()){const r=st.data()||{},at=ts(r.createdAt)||ts(r.updatedAt);if(r.json)try{add(c,JSON.parse(String(r.json)),at,"rescue-staging-json")}catch(_){}add(c,r,at,"rescue-staging-doc")}}catch(_){}
+    if(includeLocal){
+      try{for(let i=0;i<localStorage.length;i++){const k=String(localStorage.key(i)||"");if(!k.toLowerCase().includes(String(mk).toLowerCase())&&!/last-good|critical|pending|yainoo-v5/i.test(k))continue;const raw=localStorage.getItem(k);if(!raw)continue;try{const box=JSON.parse(raw),at=Number(box?.at)||0;add(c,box,at,`local:${k}`);if(obj(box?.state))add(c,box.state,at,`local-state:${k}`)}catch(_){}}}catch(_){}
+    }
+    return c;
+  }
+  async function hydrateSave(fs,db,mk){try{const s=await fs.getDoc(fs.doc(db,"saves",mk));return s.exists()?cp(s.data()||{}):null}catch(_){return null}}
+
+  async function restoreInventoryForMember(fs,db,mk,{includeLocal=false,force=false}={}){
+    mk=String(mk||"").toLowerCase();if(!mk||mk==="aida")return null;
+    const cur=await hydrateSave(fs,db,mk);if(!cur)return null;
+    const cands=await collectHistory(fs,db,mk,includeLocal),patch={},picked={};
+    for(const path of INV_PATHS){
+      const best=chooseHistoricalMap(cands,path,mk);if(!best)continue;
+      const nowMap=field(cur,path),a=mapStats(nowMap),b=best.st;
+      const currentSynthetic=suspiciousSynthetic(nowMap,mk);
+      /* Restore the historical map if the current map is obviously damaged,
+         carries synthetic 9,999 stock, or force is requested by Admin sweep.
+         Force still requires a real historical candidate; no number is invented. */
+      const damaged=currentSynthetic||a.pos===0||(b.pos>=Math.max(2,a.pos+2)&&b.total>Math.max(0,a.total)*1.5);
+      if(!force&&!damaged)continue;
+      setField(patch,path,best.map);picked[path]={source:best.source,at:best.at,current:a,recovered:b};
+    }
+    /* Factory claimed count is cumulative, so the largest surviving historical
+       value is a safe floor. Happiness is NOT maxed because it can legitimately fall. */
+    let factoryFloor=num(cur?.alpaca?.factory?.claimedCount),factorySource="live";
+    for(const c of cands){const q=num(c.data?.alpaca?.factory?.claimedCount);if(q>factoryFloor){factoryFloor=q;factorySource=c.source}}
+    if(factoryFloor>num(cur?.alpaca?.factory?.claimedCount)){patch["alpaca.factory.claimedCount"]=factoryFloor;picked["alpaca.factory.claimedCount"]={source:factorySource,value:factoryFloor}}
+    if(Object.keys(patch).length){patch.numericRestoreR3692At=Date.now();await fs.setDoc(fs.doc(db,"saves",mk),patch,{merge:true})}
+    reports[mk]={inventoryChanged:Object.keys(patch).length>0,picked,candidates:cands.length};return{cur,patch,picked};
+  }
+
+  function campaignCfg(){try{return globalThis.YN_R29?.C||{}}catch(_){return {}}}
+  const SECRET_PT={r35CandyCrop:1,r35SpiderCrop:2,r35CatCrop:3,r35BeeCrop:4};
+  const FISH_PT={r35Good1:1,r35Good2:2,r35Good4:3,r35Good3:4,r35Bad1:-1,r35Bad2:-2,r35Bad4:-3,r35Bad3:-4};
+  function mergeBreakdown(dst,src){dst=obj(dst)?dst:{};for(const [k,v] of Object.entries(obj(src)?src:{}))dst[k]=Math.max(num(dst[k]),num(v));return dst}
+  function formulaScore(key,bd,fallback){if(key==="secret")return Object.entries(SECRET_PT).reduce((n,[k,p])=>n+num(bd?.[k])*p,0);if(key==="fishing")return Object.entries(FISH_PT).reduce((n,[k,p])=>n+num(bd?.[k])*p,0);if(key==="wool"&&num(bd?.fancyWig)>0)return num(bd.fancyWig)*10;return Number(fallback)||0}
+  async function repairCampaignNumbers(fs,db){
+    const C=campaignCfg(),summary={};
+    for(const [key,c] of Object.entries(C)){if(!c?.id)continue;let meta;try{const m=await fs.getDoc(fs.doc(db,"campaigns",c.id));if(!m.exists())continue;meta=m.data()||{}}catch(_){continue}const run=Number(meta.startedAtMs)||0;if(!run)continue;
+      const rows=new Map(),put=(mk,name,score,bd,reached)=>{mk=String(mk||"");if(!mk||mk.toLowerCase()==="aida")return;const r=rows.get(mk)||{memberKey:mk,displayName:name||mk,scores:[],breakdown:{},reachedAtMs:0};if(name)r.displayName=name;r.scores.push(Number(score)||0);r.breakdown=mergeBreakdown(r.breakdown,bd);r.reachedAtMs=Math.max(r.reachedAtMs,Number(reached)||0);rows.set(mk,r)};
+      try{const q=await fs.getDocs(fs.collection(db,"campaigns",c.id,"scores"));q.forEach(d=>{const r=d.data()||{};if(!r.runId||Number(r.runId)===run)put(r.memberKey||d.id,r.displayName,r.score,r.breakdown,r.reachedAtMs)})}catch(_){}
+      try{const a=await fs.getDoc(fs.doc(db,"campaignScores",c.id));if(a.exists()){const d=a.data()||{};if(!d.runId||Number(d.runId)===run){for(const mk of new Set([...Object.keys(d.scores||{}),...Object.keys(d.breakdowns||{})]))put(mk,d.names?.[mk],d.scores?.[mk],d.breakdowns?.[mk],d.reachedAtMs?.[mk])}}}catch(_){}
+      if(["secret","fishing","wool"].includes(key))try{const q=await fs.getDocs(fs.query(fs.collection(db,"campaignTrioScores"),fs.where("campaignId","==",c.id)));q.forEach(d=>{const r=d.data()||{};if(Number(r.runId||0)===run)put(r.memberKey,r.displayName,r.score,r.breakdown,r.reachedAtMs)})}catch(_){}
+      if(!rows.size)continue;
+      const agg={campaignId:c.id,runId:run,scores:{},names:{},reachedAtMs:{},breakdowns:{}};
+      for(const [mk,r] of rows){const fallback=r.scores.length?Math.max(...r.scores):0,score=formulaScore(key,r.breakdown,fallback);agg.scores[mk]=score;agg.names[mk]=r.displayName;agg.reachedAtMs[mk]=r.reachedAtMs||Date.now();agg.breakdowns[mk]=r.breakdown;try{await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",mk),{memberKey:mk,displayName:r.displayName,runId:run,score,reachedAtMs:agg.reachedAtMs[mk],breakdown:r.breakdown,numericRepairR3692At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}if(["secret","fishing","wool"].includes(key))try{await fs.setDoc(fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`),{campaignId:c.id,key,memberKey:mk,displayName:r.displayName,runId:run,score,reachedAtMs:agg.reachedAtMs[mk],breakdown:r.breakdown,numericRepairR3692At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}}
+      try{await fs.setDoc(fs.doc(db,"campaignScores",c.id),{...agg,numericRepairR3692At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true})}catch(_){}
+      summary[key]={campaignId:c.id,players:rows.size};
+    }
+    return summary;
+  }
+
+  async function republishDashboardForMember(fs,db,mk){
+    const s=await hydrateSave(fs,db,mk);if(!s)return false;const pens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[],happiness=pens.reduce((a,b)=>a+b,0),claimed=num(s?.alpaca?.factory?.claimedCount);let name=mk;try{const p=await fs.getDoc(fs.doc(db,"publicProfiles",mk));if(p.exists())name=p.data()?.displayName||mk}catch(_){}
+    /* Intentionally omit merit: charity is already correct and must not move. */
+    await fs.setDoc(fs.doc(db,"publicProfiles",mk),{memberKey:mk,displayName:name,alpacaHappiness:happiness,alpacaFactoryClaimed:claimed,alpacaHappinessPens:pens,numericRepairR3692At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});return true;
+  }
+
+  async function repairSelf(){
+    const mk=String(globalThis.currentMemberKey||"").toLowerCase();if(!mk||mk==="aida")return false;try{const {db,fs}=await getFirebaseContext();await restoreInventoryForMember(fs,db,mk,{includeLocal:true,force:false});await republishDashboardForMember(fs,db,mk);if(String(currentMemberKey||"").toLowerCase()===mk){try{const fresh=await fs.getDoc(fs.doc(db,"saves",mk));if(fresh.exists()){ownState=fresh.data();if(!visitContext)state=ownState;saveLocalOnly?.(ownState);draw?.()}}catch(_){}}return true}catch(e){console.warn(BUILD,"self",e);return false}
+  }
+
+  async function repairAllPlayers(){
+    if(!isAdmin()||sweeping)return false;sweeping=true;const out={players:0,inventory:0,dashboard:0,campaigns:{},errors:[]};
+    try{const {db,fs}=await getFirebaseContext();const roots=await fs.getDocs(fs.collection(db,"saves"));for(const d of roots.docs){const mk=String(d.id||"").toLowerCase();if(!mk||mk==="aida")continue;out.players++;try{const r=await restoreInventoryForMember(fs,db,mk,{includeLocal:false,force:true});if(r&&Object.keys(r.patch||{}).length)out.inventory++;if(await republishDashboardForMember(fs,db,mk))out.dashboard++}catch(e){out.errors.push(`${mk}:${String(e?.message||e)}`)}}out.campaigns=await repairCampaignNumbers(fs,db);reports.__adminSweep=out;console.info(BUILD,"admin numeric sweep",out);try{showWeatherToast?.(`🔢 ซ่อมตัวเลขแล้ว ${out.players} ไอดี • กระเป๋า ${out.inventory} • Dashboard ${out.dashboard}`)}catch(_){}return out}catch(e){out.errors.push(String(e?.message||e));console.warn(BUILD,"sweep",e);return out}finally{sweeping=false}
+  }
+
+  /* Run only after login has fully hydrated the V7 save. */
+  [1800,5000,12000].forEach(ms=>setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},ms));
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},900)},{passive:true});
+  globalThis.YN_R3692={BUILD,repairSelf,repairAllPlayers,repairCampaignNumbers,report:()=>cp(reports)};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>

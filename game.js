@@ -31354,8 +31354,18 @@ console.info(globalThis.YAINOO_BUILD,"loaded");
   claimFriendGift=async function(giftId,accept,returnTab="friend"){
     const k="f:"+giftId;if(claimBusy.has(k)||!cloudReady||!currentMemberKey)return;claimBusy.add(k);
     try{await settlePendingCloudSave?.();const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",giftId),saveRef=fs.doc(db,"saves",currentMemberKey),mailRef=fs.doc(db,"mailboxes",currentMemberKey,"items",giftId);let next=null;
-      await retryTx(()=>fs.runTransaction(db,async tx=>{const [g,sn]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);if(!g.exists()||!sn.exists())throw new Error("ไม่พบของขวัญ");const gift=g.data();if(gift.toKey!==currentMemberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");if(gift.status!=="pending")throw new Error("ของขวัญนี้ถูกจัดการแล้ว");const s=normalizeState(sn.data(),currentMember);try{assertCurrentCloudSession?.(sn.data(),currentMember)}catch(e){throw e}if(accept)addGiftItemToState(s,{...gift,sourceId:String(giftId)});s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=s;tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{read:true,resolved:true,status:accept?"claimed":"discarded"},{merge:true})}));
-      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}await committedSave(saveRef,fs);notificationDataCache.at=0;showNotifications?.(returnTab);showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+      await retryTx(()=>fs.runTransaction(db,async tx=>{const [g,sn]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);if(!g.exists()||!sn.exists())throw new Error("ไม่พบของขวัญ");const gift=g.data();if(gift.toKey!==currentMemberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");if(gift.status!=="pending")throw new Error("ของขวัญนี้ถูกจัดการแล้ว");const s=normalizeState(sn.data(),currentMember);try{assertCurrentCloudSession?.(sn.data(),currentMember)}catch(e){throw e}if(accept)addGiftItemToState(s,{...gift,sourceId:String(giftId)});s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;next=s;tx.set(saveRef,{...cp(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.delete(mailRef)}));
+      if(next){ownState=normalizeState(next,currentMember);if(!visitContext)state=ownState;try{saveLocalOnly?.(ownState)}catch(_){}}await committedSave(saveRef,fs);
+      /* R36.93: remove any stale/duplicate mailbox notices for this exact gift.
+         The gift status is already resolved atomically above, so this cleanup only
+         affects notification documents and can never grant the item again. */
+      try{
+        const mcol=fs.collection(db,"mailboxes",currentMemberKey,"items"),ms=await fs.getDocs(fs.query(mcol,fs.where("giftId","==",String(giftId)),fs.limit(20)));
+        if(!ms.empty){const mb=fs.writeBatch(db);ms.forEach(d=>mb.delete(d.ref));await mb.commit()}
+      }catch(cleanErr){console.warn("R36.93 gift mailbox cleanup",cleanErr)}
+      try{notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}catch(_){}
+      try{await refreshNotificationBadge?.(true)}catch(_){}
+      await showNotifications?.(returnTab);showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
     }catch(e){message("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}finally{claimBusy.delete(k)}
   };
   claimBroadcastGift=async function(broadcastId,accept){
@@ -38878,3 +38888,9 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+
+/* S2 R36.93 — ADMIN GIFT CLAIM-ONCE / NOTIFICATION CLEANUP
+   Scope: direct gifts only. Claim transaction deletes the mailbox notice and
+   post-commit cleanup removes duplicate notices carrying the same giftId. */
+try{globalThis.YAINOO_BUILD="S2-R36.93-GIFT-CLAIM-ONCE-20260918";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;console.info(globalThis.YAINOO_BUILD,"loaded")}catch(_){}
