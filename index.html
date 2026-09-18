@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.82-SPECIALS-KEYS-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.83-STANDALONE-TOOLS-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.82-SPECIALS-KEYS-20260918"></script>
+<script src="game.js?v=S2-R36.83-STANDALONE-TOOLS-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -5317,6 +5317,307 @@ console.info(BUILD,"loaded");
     },
     boostKeys
   };
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
+<script id="r3683-standalone-tools">
+/* =====================================================================
+   S2 R36.83 — STANDALONE BOOST / BAG / BASEMENT ON A PRIVATE OVERLAY
+   2026-09-18
+
+   Why a private overlay: every panel in this game renders into
+   #modalContent, and 26 MutationObservers across the patch layers watch
+   either that node or <body> with subtree:true. Each one runs a
+   whole-document querySelector sweep on every write. The panels that
+   freeze on a phone - the bag (about 60 cards) and the basement (6 plots,
+   3 machines, drop layer) - are the two biggest writes in the game.
+   Everything below renders into #ynDeck instead, which no existing
+   observer targets, and never calls openModal().
+
+   Boost items: cropBoostOptionsHTML() only reads state.specials[key] with
+   an exact key match against SPECIAL_ITEMS. The panel below searches every
+   object on the player's state for any known boost key, reports where it
+   found each one, and moves it to the canonical place before spending, so
+   an account whose items were written elsewhere still works.
+
+   The old 🍰 เร่งโตทั้งหมด entry inside จัดการสวน is removed so there is
+   only ever one way in.
+   ===================================================================== */
+(function YN_R3683(){
+  "use strict";
+  const BUILD="S2-R36.83-STANDALONE-TOOLS-20260918";
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const num=v=>Number(v)||0;
+  const st=()=>globalThis.ownState||globalThis.state||{};
+  const notes=[];
+  const log=(k,v)=>{notes.push(k+": "+(v==null?"":String(v)));if(notes.length>30)notes.shift();console.warn(BUILD,k,v)};
+
+  /* ---------- styles -------------------------------------------------- */
+  (function css(){
+    if($("r3683Css"))return;
+    const s=document.createElement("style");s.id="r3683Css";
+    s.textContent=`
+    #ynChips{position:fixed;right:8px;bottom:120px;z-index:2147483000;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
+    #ynChips button{pointer-events:auto;border:0;border-radius:14px;padding:8px 12px;font:600 13px/1 system-ui,-apple-system,"Sarabun",sans-serif;
+      background:rgba(60,32,84,.92);color:#ffe9b0;box-shadow:0 2px 10px rgba(0,0,0,.45);white-space:nowrap;-webkit-tap-highlight-color:transparent}
+    #ynChips button:active{transform:scale(.96)}
+    #ynChips button.mini{padding:6px 9px;font-size:11px;background:rgba(40,40,40,.7);color:#bdf5bd}
+    #ynDeck{position:fixed;inset:0;z-index:2147483600;display:none;background:rgba(10,6,16,.72);
+      -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+    #ynDeck.on{display:block}
+    #ynDeckBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,440px);max-height:82vh;overflow:auto;
+      background:#f6e7c4;color:#4a2f14;border:3px solid #8a5a2b;border-radius:18px;padding:14px;
+      font:14px/1.5 system-ui,-apple-system,"Sarabun",sans-serif;-webkit-overflow-scrolling:touch}
+    #ynDeckBox h2{margin:0 0 4px;font-size:18px}
+    #ynDeckBox h3{margin:12px 0 6px;font-size:14px;opacity:.85}
+    #ynDeckBox small{opacity:.75}
+    #ynDeckClose{position:absolute;right:10px;top:10px;width:34px;height:34px;border:0;border-radius:50%;
+      background:#6b4423;color:#fff;font-size:18px;line-height:1}
+    .ynRow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+    .ynRow button{flex:1 1 auto;min-width:44%;border:0;border-radius:12px;padding:10px 8px;
+      background:#6b4423;color:#ffe9b0;font:600 13px/1.25 system-ui,"Sarabun",sans-serif}
+    .ynRow button[disabled]{opacity:.45}
+    .ynItem{display:flex;align-items:center;gap:8px;width:100%;text-align:left}
+    .ynItem img{width:34px;height:34px;object-fit:contain;flex:0 0 auto}
+    .ynGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+    .ynGrid div{background:#fff5df;border-radius:8px;padding:6px 8px;font-size:12px;display:flex;justify-content:space-between;gap:6px}
+    #ynDeckBox pre{background:#1b1b1b;color:#9f9;font:10px/1.4 monospace;padding:8px;border-radius:8px;
+      white-space:pre-wrap;word-break:break-all;max-height:46vh;overflow:auto}`;
+    (document.head||document.documentElement).appendChild(s);
+  })();
+
+  /* ---------- private overlay ----------------------------------------- */
+  function deck(){
+    let d=$("ynDeck");
+    if(!d){
+      d=document.createElement("div");d.id="ynDeck";
+      d.innerHTML='<div id="ynDeckBox"><button id="ynDeckClose" type="button">✕</button><div id="ynDeckBody"></div></div>';
+      document.body.appendChild(d);
+      d.addEventListener("pointerdown",e=>{if(e.target===d){e.preventDefault();close()}},true);
+      d.querySelector("#ynDeckClose").addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();close()},true);
+    }
+    return d;
+  }
+  function open(html){
+    const d=deck();
+    d.querySelector("#ynDeckBody").innerHTML=html;
+    d.classList.add("on");
+    return d.querySelector("#ynDeckBody");
+  }
+  function close(){const d=$("ynDeck");if(d)d.classList.remove("on")}
+  /* Bind by pointerdown so no existing capture handler can eat the tap. */
+  function tap(el,fn){
+    if(!el)return;
+    el.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();setTimeout(fn,0)},true);
+  }
+
+  /* ---------- where are the boost items, really? ---------------------- */
+  function canonKeys(){
+    const SI=globalThis.SPECIAL_ITEMS||{};
+    const out={};
+    for(const k of Object.keys(SI))if(SI[k]&&SI[k].kind==="crop")out[k]=SI[k];
+    return out;
+  }
+  function allKnown(){
+    return Object.assign({},canonKeys(),globalThis.CAKE_ITEMS||{},globalThis.COCONUT_ITEMS||{});
+  }
+  /* Returns [{key, qty, where, item}] searching every plain object on state. */
+  function findBoost(){
+    const s=st(),known=allKnown(),canon=canonKeys(),found=new Map();
+    const take=(where,obj)=>{
+      if(!obj||typeof obj!=="object"||Array.isArray(obj))return;
+      for(const [k,v] of Object.entries(obj)){
+        const q=num(v);
+        if(q<=0)continue;
+        if(!known[k])continue;
+        const prev=found.get(k);
+        if(!prev||q>prev.qty)found.set(k,{key:k,qty:q,where,item:known[k],canonical:!!canon[k]});
+      }
+    };
+    take("specials",s.specials);
+    for(const [k,v] of Object.entries(s)){
+      if(k==="specials")continue;
+      if(v&&typeof v==="object"&&!Array.isArray(v))take(k,v);
+    }
+    return [...found.values()].sort((a,b)=>b.qty-a.qty);
+  }
+  /* Move a count into state.specials under a key SPECIAL_ITEMS recognises. */
+  function ensureCanonical(entry){
+    const s=st();
+    if(!s.specials||typeof s.specials!=="object")s.specials={};
+    if(entry.where==="specials"&&entry.canonical)return entry.key;
+    const canon=canonKeys();
+    let target=canon[entry.key]?entry.key:null;
+    if(!target){
+      const n=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"");
+      target=Object.keys(canon).find(k=>n(k)===n(entry.key))||null;
+    }
+    if(!target){log("no canonical key for",entry.key);return null}
+    if(num(s.specials[target])>=entry.qty)return target;
+    s.specials[target]=num(s.specials[target])+entry.qty;
+    const src=entry.where==="specials"?s.specials:s[entry.where];
+    if(src&&entry.key!==target)src[entry.key]=0;
+    log("moved",entry.key+" ("+entry.where+") -> specials."+target+" x"+entry.qty);
+    try{globalThis.save&&globalThis.save()}catch(_){}
+    return target;
+  }
+
+  /* ---------- boost panel --------------------------------------------- */
+  function boostPanel(){
+    const list=findBoost();
+    if(!list.length){
+      open(`<h2>🍰 เร่งโตทั้งหมด</h2>
+        <p>ไม่พบไอเท็มเร่งโตในข้อมูลของคุณเลยค่ะ</p>
+        <small>ระบบค้นหาแล้วทุกหมวดในกระเป๋า ไม่ใช่แค่หมวดของพิเศษ</small>`);
+      return;
+    }
+    const body=open(`<h2>🍰 เร่งโตทั้งหมด</h2>
+      <small>พบ ${list.length} รายการ • กดเลือกเพื่อใช้กับทุกแปลงในหน้านี้</small>
+      <div class="ynRow" id="ynBoostRow">${list.map((e,i)=>`
+        <button type="button" data-boost-i="${i}">
+          <span class="ynItem">
+            ${e.item&&e.item.image?`<img src="${esc(e.item.image)}" alt="">`:""}
+            <span>${esc((e.item&&e.item.name)||e.key)}<br>
+            <small>มี ×${e.qty}${e.item&&e.item.boost?" • เร่ง "+e.item.boost+"%":""}${e.where!=="specials"?" • อยู่ใน "+esc(e.where):""}</small></span>
+          </span>
+        </button>`).join("")}</div>`);
+    body.querySelectorAll("[data-boost-i]").forEach(b=>tap(b,()=>{
+      const e=list[Number(b.dataset.boostI)];
+      if(!e)return;
+      const key=ensureCanonical(e);
+      if(!key){
+        open(`<h2>ใช้ไอเท็มนี้ไม่ได้</h2><p>ไอเท็ม <b>${esc(e.key)}</b> อยู่ในกระเป๋าจริง (×${e.qty}) แต่ระบบเร่งโตไม่รู้จักชื่อนี้ค่ะ</p><small>กรุณาส่งชื่อนี้ให้ผู้ดูแลเพื่อเพิ่มเข้าทะเบียน</small>`);
+        return;
+      }
+      close();
+      const f=globalThis.YN_R3478&&globalThis.YN_R3478.bulkBoost;
+      if(typeof f==="function"){try{f(key)}catch(err){log("bulkBoost",err&&err.message)}}
+      else log("bulkBoost","missing");
+    }));
+  }
+
+  /* ---------- bag on the private overlay ------------------------------ */
+  function bagPanel(){
+    const s=st();
+    const cell=(k,v,reg)=>{
+      const it=reg&&reg[k];
+      return `<div><span>${esc((it&&it.name)||k)}</span><b>×${num(v)}</b></div>`;
+    };
+    const block=(title,obj,reg)=>{
+      const rows=Object.entries(obj||{}).filter(([,v])=>num(v)>0);
+      if(!rows.length)return "";
+      return `<h3>${title}</h3><div class="ynGrid">${rows.map(([k,v])=>cell(k,v,reg)).join("")}</div>`;
+    };
+    open(`<h2>🎒 กระเป๋า</h2>
+      ${block("🌱 พืชพรรณ",s.bag,globalThis.CROPS)}
+      ${block("🕯️ ของพิเศษ",s.specials,allKnown())}
+      ${block("🐾 ผลผลิตสัตว์",s.animalProducts,null)}
+      ${block("🦔 ของเม่น",s.hedgehogItems,null)}
+      ${block("🌸 ดอกไม้",s.flowers,null)}
+      ${block("🍷 ไวน์",s.wines,null)}
+      <small>แสดงเฉพาะรายการที่มีจำนวนมากกว่า 0</small>`);
+  }
+
+  /* ---------- basement on the private overlay ------------------------- */
+  function basementPanel(){
+    const a=globalThis.YN_R17,f=globalThis.YN_R3465,s=st();
+    const plots=Array.isArray(s.flowerPlots)?s.flowerPlots:[null,null,null,null,null,null];
+    const mach=Array.isArray(s.wineMachines)?s.wineMachines:[null,null,null];
+    const drops=(s.hedgehog&&Array.isArray(s.hedgehog.drops))?s.hedgehog.drops.length:0;
+    const body=open(`<h2>⬇️ ห้องใต้ดิน</h2>
+      <h3>🌸 แปลงดอกไม้</h3>
+      <div class="ynRow">${plots.map((p,i)=>`<button type="button" data-plot="${i}">แปลง ${i+1}${p?" ●":""}</button>`).join("")}</div>
+      <div class="ynRow">
+        <button type="button" data-act="plantAll">🌱 ปลูกทั้งหมด</button>
+        <button type="button" data-act="harvestAll">🌸 เก็บเกี่ยวทั้งหมด</button>
+        <button type="button" data-act="fertAll">✨ ใส่ปุ๋ยทั้งหมด</button>
+      </div>
+      <h3>🍷 เครื่องหมักไวน์</h3>
+      <div class="ynRow">${mach.map((m,i)=>`<button type="button" data-wine="${i}">เครื่อง ${i+1}${m?" ●":""}</button>`).join("")}</div>
+      <h3>🦔 ระบบเม่น</h3>
+      <div class="ynRow">
+        <button type="button" data-act="hedgeAll">🧺 เก็บของเม่นทั้งหมด${drops?" ("+drops+")":""}</button>
+        <button type="button" data-act="hedgeCraft">🦔 คราฟของเม่น</button>
+      </div>`);
+    const run=(n,fn)=>{try{fn()}catch(e){log(n,e&&e.message)}};
+    body.querySelectorAll("[data-plot]").forEach(b=>tap(b,()=>{close();run("openFlowerPlot",()=>a&&a.openFlowerPlot&&a.openFlowerPlot(Number(b.dataset.plot)))}));
+    body.querySelectorAll("[data-wine]").forEach(b=>tap(b,()=>{close();run("openWineMachine",()=>a&&a.openWineMachine&&a.openWineMachine(Number(b.dataset.wine)))}));
+    const acts={
+      plantAll:()=>{
+        const F=(a&&a.FLOWERS)||{};
+        const inner=open(`<h2>🌱 เลือกดอกไม้</h2><div class="ynRow">${
+          Object.entries(F).map(([k,fl])=>`<button type="button" data-flower="${esc(k)}"><span class="ynItem">${fl.bag||fl.ready?`<img src="${esc(fl.bag||fl.ready)}" alt="">`:""}<span>${esc(fl.name||k)}</span></span></button>`).join("")||"<small>ไม่พบชนิดดอกไม้</small>"
+        }</div>`);
+        inner.querySelectorAll("[data-flower]").forEach(b=>tap(b,()=>{close();run("plantAll",()=>{const g=(f&&f.plantAll)||(a&&a.plantAll);g&&g(b.dataset.flower)})}));
+      },
+      harvestAll:()=>{close();run("harvestAll",()=>{const g=(f&&f.harvestAll)||(a&&a.harvestAll);g&&g()})},
+      fertAll:()=>{close();run("fertilizeAll",()=>{const g=(f&&f.fertilizeAll)||(a&&a.fertilizeAll);g&&g()})},
+      hedgeAll:()=>{close();run("collectHedge",()=>a&&a.collectHedge&&a.collectHedge())},
+      hedgeCraft:()=>{close();run("openShieldCraft",()=>globalThis.YN_R29&&globalThis.YN_R29.openShieldCraft&&globalThis.YN_R29.openShieldCraft())}
+    };
+    body.querySelectorAll("[data-act]").forEach(b=>tap(b,()=>{const fn=acts[b.dataset.act];fn&&fn()}));
+  }
+
+  /* ---------- diagnostic ---------------------------------------------- */
+  function diagPanel(){
+    const s=st(),l=$("sceneInteractiveLayer"),a=globalThis.YN_R17;
+    const info={
+      build:globalThis.YAINOO_BUILD||"?",
+      member:globalThis.currentMemberKey||"?",
+      scene:(typeof currentScene==="undefined"?"?":currentScene),
+      houseMode:l?(l.dataset.r17HouseMode||"(none)"):"(no layer)",
+      R17:!!a,R29:!!globalThis.YN_R29,R3465:!!globalThis.YN_R3465,R3478:!!globalThis.YN_R3478,
+      boostFound:findBoost().map(e=>e.key+"="+e.qty+"@"+e.where+(e.canonical?"":" (ชื่อไม่ตรงทะเบียน)")),
+      registryCropKeys:Object.keys(canonKeys()),
+      specialsAll:Object.entries(s.specials||{}).filter(([,v])=>num(v)>0).map(([k,v])=>k+"="+num(v)),
+      flowerPlots:Array.isArray(s.flowerPlots)?s.flowerPlots.length:typeof s.flowerPlots,
+      wineMachines:Array.isArray(s.wineMachines)?s.wineMachines.length:typeof s.wineMachines,
+      hedgehog:s.hedgehog?("drops="+((s.hedgehog.drops||[]).length)):typeof s.hedgehog,
+      notes:notes.slice(-10)
+    };
+    open(`<h2>🔧 ข้อมูลระบบ</h2><pre>${esc(JSON.stringify(info,null,1))}</pre>`);
+  }
+
+  /* ---------- chips ---------------------------------------------------- */
+  function chips(){
+    let c=$("ynChips");
+    if(!c){
+      c=document.createElement("div");c.id="ynChips";
+      c.innerHTML=`<button id="ynChipBoost" type="button">🍰 เร่งโตทั้งหมด</button>
+        <button id="ynChipBag" type="button">🎒 กระเป๋า</button>
+        <button id="ynChipBase" type="button">⬇️ ห้องใต้ดิน</button>
+        <button id="ynChipDiag" class="mini" type="button">🔧</button>`;
+      document.body.appendChild(c);
+      tap($("ynChipBoost"),boostPanel);
+      tap($("ynChipBag"),bagPanel);
+      tap($("ynChipBase"),basementPanel);
+      tap($("ynChipDiag"),diagPanel);
+    }
+    /* Keep it tidy: only show what belongs to the screen you are on. */
+    const scene=(typeof currentScene==="undefined")?"":String(currentScene);
+    const inGame=!!(globalThis.currentMemberKey)&&!document.getElementById("loginScreen")?.offsetParent;
+    const farm=scene===""||scene==="farm"||scene==="garden";
+    const house=scene==="house";
+    c.style.display=inGame?"flex":"none";
+    $("ynChipBoost").style.display=farm?"":"none";
+    $("ynChipBase").style.display=house?"":"none";
+    $("ynChipBag").style.display=(farm||house)?"":"none";
+  }
+  setInterval(()=>{try{chips()}catch(_){}},1200);
+  setTimeout(chips,600);
+
+  /* ---------- remove the duplicate entry inside จัดการสวน -------------- */
+  setInterval(()=>{
+    try{
+      document.querySelectorAll('[data-v7-manager="boost"],[data-ynu-manager="boost"],#r3474FarmBoost')
+        .forEach(b=>{if(b&&b.parentNode)b.remove()});
+    }catch(_){}
+  },800);
+
+  globalThis.YN_R3683={BUILD,findBoost,boostPanel,bagPanel,basementPanel,diagPanel,open,close,notes:()=>notes.slice()};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
