@@ -39041,3 +39041,148 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — same direct-gift claim path for every member");
 })();
+
+/* =====================================================================
+   S2 R36.98 — BROADCAST GIFT RECEIPT MOVED TO FIRESTORE
+   2026-09-18
+   Problem: the receipt for "ของขวัญส่งให้ทุกคน" lived only inside the
+   member's own save (state.broadcastGiftClaims). The save-space rescue
+   layers (R36.10 surgicalCloudTrim / hardTrim, R36.73 compact) clear or
+   cap that map, so the receipt disappears and the same broadcast gift can
+   be accepted or discarded again and again.
+   Fix: the authoritative receipt is now broadcasts/{id}/claims/{memberKey}
+   on the server, exactly like gifts/{id}.status is for direct gifts.
+   The in-save map is still mirrored for offline display, but it is never
+   the source of truth again. No other system is touched.
+   ===================================================================== */
+(function YN_R3698_BROADCAST_GIFT_RECEIPT(){
+  "use strict";
+  const BUILD="S2-R36.98-BROADCAST-GIFT-RECEIPT-20260918";
+  const busy=new Set();
+  const mk=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):v}catch(_){return v}};
+
+  function localClaim(id){
+    try{
+      const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
+      const rec=s&&s.broadcastGiftClaims?s.broadcastGiftClaims[String(id)]:null;
+      return rec&&typeof rec==="object"?rec:null;
+    }catch(_){return null}
+  }
+
+  async function backfillServerClaim(id,status){
+    const k=mk(); if(!k||!cloudReady) return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      await fs.setDoc(
+        fs.doc(db,"broadcasts",String(id),"claims",k),
+        {memberKey:k,status:String(status||"accepted"),resolvedAt:fs.serverTimestamp(),backfilled:true},
+        {merge:true}
+      );
+    }catch(e){console.warn(BUILD,"claim backfill",e?.message||e)}
+  }
+
+  /* Authoritative read: server first, local mirror only as a fallback. */
+  fetchBroadcastClaim=async function(broadcastId){
+    const id=String(broadcastId||""),k=mk();
+    if(!id||!k||!cloudReady)return localClaim(id);
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const snap=await fs.getDoc(fs.doc(db,"broadcasts",id,"claims",k));
+      if(snap.exists()){
+        const d=snap.data()||{};
+        return {memberKey:k,status:String(d.status||"accepted")};
+      }
+    }catch(e){console.warn(BUILD,"claim read",e?.message||e)}
+    const local=localClaim(id);
+    if(local){ backfillServerClaim(id,local.status); return local }
+    return null;
+  };
+
+  claimBroadcastGift=async function(broadcastId,accept){
+    const id=String(broadcastId||""),k=mk();
+    if(!id||!k||!cloudReady)return;
+    if(busy.has(id))return;
+    busy.add(id);
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext();
+      const bRef=fs.doc(db,"broadcasts",id);
+      const cRef=fs.doc(db,"broadcasts",id,"claims",k);
+      const sRef=fs.doc(db,"saves",k);
+      let next=null,already=false;
+
+      await fs.runTransaction(db,async tx=>{
+        const [bSnap,cSnap,sSnap]=await Promise.all([tx.get(bRef),tx.get(cRef),tx.get(sRef)]);
+        if(!bSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
+
+        /* Server receipt wins. It cannot be erased by save trimming. */
+        if(cSnap.exists()){already=true;return}
+
+        const b=bSnap.data()||{};
+        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+        if(currentMember==="Aida"&&b.includeAida===false)throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
+
+        const s=normalizeState(sSnap.data(),currentMember);
+        try{assertCurrentCloudSession?.(sSnap.data(),currentMember)}catch(e){throw e}
+
+        /* Legacy in-save receipt: honour it, then promote it to the server. */
+        const prior=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims[id]:null;
+        if(prior&&typeof prior==="object"){
+          already=true;
+          tx.set(cRef,{memberKey:k,status:String(prior.status||"accepted"),resolvedAt:fs.serverTimestamp(),backfilled:true});
+          return;
+        }
+
+        if(accept)addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty,items:b.items,instance:b.instance});
+        s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims:{};
+        s.broadcastGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:Date.now()};
+        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
+        next=s;
+
+        tx.set(sRef,{
+          ...clone(s),
+          activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:(sSnap.data()?.activeSessionId||null),
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
+        tx.set(cRef,{memberKey:k,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()});
+      });
+
+      try{broadcastClaimCache?.delete?.(broadcastClaimCacheKey(id))}catch(_){}
+      try{
+        if(typeof notificationDataCache!=="undefined"&&notificationDataCache){
+          notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0;
+        }
+      }catch(_){}
+
+      if(already){
+        try{await showNotifications?.("yainoo")}catch(_){}
+        try{refreshNotificationBadge?.(true)}catch(_){}
+        showWeatherToast?.("🎁 ของขวัญชิ้นนี้ถูกจัดการไปแล้ว");
+        return;
+      }
+
+      if(next){
+        ownState=normalizeState(next,currentMember);
+        if(!visitContext)state=ownState;
+        try{saveLocalOnly?.(ownState)}catch(_){}
+        try{updateMeritUI?.()}catch(_){}
+      }
+      try{await showNotifications?.("yainoo")}catch(_){}
+      try{refreshNotificationBadge?.(true)}catch(_){}
+      showWeatherToast?.(accept?"🎁 รับของขวัญจากยัยหนูแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+
+    }catch(error){
+      console.error(BUILD,error);
+      message("จัดการของขวัญไม่ได้",error?.message||"กรุณาลองใหม่");
+    }finally{
+      busy.delete(id);
+    }
+  };
+
+  globalThis.YN_R3698={BUILD};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — broadcast gift receipt is server-side, trim-proof");
+})();
