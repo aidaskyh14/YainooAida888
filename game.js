@@ -24621,7 +24621,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function tick17(){try{if(document.hidden)return;removeLegacyHitbox17();if(currentScene==="dogHotel")fixHotel17();if(document.querySelector("#alpacaPenScreen:not(.hidden)"))fixTrough17();if(currentScene==="house"&&houseMode17==="basement"){const bs=own17();if(!bs?.flowerPlots||!bs?.wineMachines)return;renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=bs.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(img)img.remove();if(label)label.remove();if(!btn.querySelector("span")){const plus=document.createElement("span");plus.textContent="＋";btn.appendChild(plus)}return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=bs.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
-  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,fertilizeAll:fertilizeAllFlowers17,plantAll:plantAllFlowers17,openFlowerTools:openFlowerTools17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17,goHouseMain:()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()}};
+  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,fertilizeAll:fertilizeAllFlowers17,plantAll:plantAllFlowers17,openFlowerTools:openFlowerTools17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17,goBasement:()=>{persistHedgeVisualPos17({saveNow:false});houseMode17="basement";renderHouse17()},goHouseMain:()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()}};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
@@ -28165,8 +28165,14 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     Object.keys(KEY_DEFS).forEach(k=>s.upgradeKeys[k]=int33(s.upgradeKeys[k]));
     s.s2Unlocks=s.s2Unlocks&&typeof s.s2Unlocks==="object"&&!Array.isArray(s.s2Unlocks)?s.s2Unlocks:{};
     ["house","territory","petExpansion","mystic"].forEach(k=>s.s2Unlocks[k]=Boolean(s.s2Unlocks[k]));
+    /* R36.74 PERMANENT RIGHTS: unlocks are monotonic. A local mirror may add a
+       remembered TRUE while cloud data is being repaired, but neither normalize
+       nor a stale snapshot is ever allowed to turn TRUE back to FALSE. */
+    const mirror33=readUnlockMirror33();
+    if(mirror33?.unlocks&&typeof mirror33.unlocks==="object")for(const k of ["house","territory","petExpansion","mystic"])if(mirror33.unlocks[k]===true)s.s2Unlocks[k]=true;
     s.houseUpgrade=s.houseUpgrade&&typeof s.houseUpgrade==="object"?s.houseUpgrade:{};
-    s.houseUpgrade.level=Math.max(0,Math.min(3,int33(s.houseUpgrade.level)));
+    s.houseUpgrade.level=Math.max(0,Math.min(3,Math.max(int33(s.houseUpgrade.level),int33(mirror33?.houseLevel))));
+    if(s.houseUpgrade.level>0)s.s2Unlocks.house=true;
     if(s[RESET_MARK]&&!s.s2Unlocks.house&&s.houseUpgrade.level>0)s.s2Unlocks.house=true;
     s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};
     if(!isAida33(player,currentMemberKey)&&!s.s2Unlocks.house){s.hedgehog.enabled=false;s.hedgehog.drops=[]}
@@ -28184,7 +28190,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
   /* Latest normalization/fresh layer: older modules cannot silently re-enable locks. */
   if(typeof normalizeState==="function"){const base=normalizeState;normalizeState=function(raw,player){return ensureR33State(base(raw,player),player)}}
-  if(typeof fresh==="function"){const base=fresh;fresh=function(player){const s=ensureR33State(base(player),player),mk=typeof memberKeyFromName==="function"?memberKeyFromName(player):"";if(!isAida33(player,mk)){s.houseUpgrade.level=0;s.s2Unlocks={house:false,territory:false,petExpansion:false,mystic:false};s.hedgehog.enabled=false;s.hedgehog.drops=[]}return s}}
+  if(typeof fresh==="function"){const base=fresh;fresh=function(player){const s=ensureR33State(base(player),player),mk=typeof memberKeyFromName==="function"?memberKeyFromName(player):"",sameMember=Boolean(currentMemberKey&&mk&&String(currentMemberKey)===String(mk)),m=sameMember?readUnlockMirror33():{},remembered=Boolean(m?.marker||int33(m?.houseLevel)>0||Object.values(m?.unlocks||{}).some(Boolean));if(!isAida33(player,mk)&&!remembered){s.houseUpgrade.level=0;s.s2Unlocks={house:false,territory:false,petExpansion:false,mystic:false};s.hedgehog.enabled=false;s.hedgehog.drops=[]}else if(!isAida33(player,mk)){ensureR33State(s,player)}return s}}
   if(typeof ensureAdminStock==="function"){const base=ensureAdminStock;ensureAdminStock=function(s){const r=base(s);ensureR33State(s,currentMember);return r}}
 
   function hasUnlock33(name,s=live33()){return isAida33()||Boolean(ensureR33State(s)?.s2Unlocks?.[name])}
@@ -28328,10 +28334,24 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
   }
   function clearOldLocal33(key=currentMemberKey){for(const k of [`yn:r24:pending:${key}`,`yn:r24:last-good:${key}`,`yn:r30:basement:${key}`,`yn:s2:r22:critical:${key}`])try{localStorage.removeItem(k)}catch(_){}}
   async function resetOwn33(){
-    if(isAida33()||!cloudReady||!currentMemberKey)return live33();const local=live33();if(local?.[RESET_MARK]){writeUnlockMirror33(local);return local}
-    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),gardenRef=fs.doc(db,"gardens",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next=null;
-    await fs.runTransaction(db,async tx=>{const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const raw=snap.data();next=raw?.[RESET_MARK]?ensureR33State(clone33(raw),currentMember):resetObject33(raw,currentMember,currentMemberKey);tx.set(saveRef,{...clone33(next),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone33(next.plots),season2ResetVersion:RESET_VERSION,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,houseLevel:0,houseName:"ผู้ไร้บ้าน",initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})});
-    clearOldLocal33(currentMemberKey);ownState=ensureR33State(normalizeState(next,currentMember),currentMember);if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch(_){}writeUnlockMirror33(ownState);return ownState;
+    /* R36.74: the Sep-3 launch reset is history. Login must NEVER reset gameplay
+       again. It now performs only a monotonic rights repair: write TRUE unlocks
+       and the migration marker as merge patches, never write FALSE and never
+       touch plots, inventory, animals, alpacas, house contents or garden data. */
+    if(isAida33()||!cloudReady||!currentMemberKey)return live33();
+    let next=ensureR33State(live33(),currentMember);if(!next)return next;
+    next[RESET_MARK]=next[RESET_MARK]||{version:RESET_VERSION,at:now33()};
+    ownState=next;if(!visitContext)state=next;writeUnlockMirror33(next);
+    try{
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);
+      const patch={[RESET_MARK]:clone33(next[RESET_MARK]),activeSessionId:cloudSessionId};
+      for(const k of ["house","territory","petExpansion","mystic"])if(next.s2Unlocks?.[k]===true)patch[`s2Unlocks.${k}`]=true;
+      const level=Math.max(0,Math.min(3,int33(next.houseUpgrade?.level)));
+      if(level>0){patch["s2Unlocks.house"]=true;patch["houseUpgrade.level"]=level;patch["hedgehog.enabled"]=true}
+      await fs.setDoc(saveRef,patch,{merge:true});
+      if(level>0){const names={1:"บ้านทั่วไปของผู้ก่อร่าง",2:"บ้านเศรษฐีหัดเข้าสังคม",3:"บ้านไฮโซ"};await fs.setDoc(profileRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,houseLevel:level,houseName:names[level]||"บ้านทั่วไปของผู้ก่อร่าง",initialized:true,updatedAt:fs.serverTimestamp()},{merge:true})}
+    }catch(e){console.warn("R36.74 permanent unlock repair deferred",e?.message||e)}
+    try{saveLocalOnly(next)}catch(_){}writeUnlockMirror33(next);return next;
   }
   let globalResetPromise33=null;
   async function resetEveryoneExceptAida33(){
@@ -35304,8 +35324,12 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.56-ALPACA-TRANSFER-ATOMIC-HARD-REMOVE';
     const h=honeyState(),bike=$id("honeyBike"),target=$id(HIT_ID);
     if(!h?.active||!bike?.classList.contains("is-parked")||modalOpen()||!gameVisible())return;
     if(ev.target===target||target?.contains(ev.target))return;
+    /* Never let Honey steal a tap from a real game control. The old document-
+       capture fallback ran before the farm dock handler and treated the enlarged
+       motorcycle rectangle as authoritative, so "จัดการสวน" could open Honey. */
+    if(ev.target?.closest?.("button,[role='button'],a,input,select,textarea,#s2FarmDock,#s2FarmToolsMenu,#s2FarmSelectMenu,#s2MainNav,.s2-farm-dock,[data-s2-tool],#ynuGardenManagerBtn"))return;
     const r=bike.getBoundingClientRect();if(!r.width||!r.height)return;
-    const px=Math.max(30,Math.min(76,r.width*.56)),py=Math.max(26,Math.min(64,r.height*.68));
+    const px=Math.max(20,Math.min(54,r.width*.38)),py=Math.max(18,Math.min(48,r.height*.46));
     if(ev.clientX>=r.left-px&&ev.clientX<=r.right+px&&ev.clientY>=r.top-py&&ev.clientY<=r.bottom+py)activate(ev);
   },{capture:true,passive:false});
 
@@ -35800,7 +35824,14 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   if(openFlowerBase74)globalThis.YN_R17.openFlowerPlot=function(i){flowerPlot74=Math.floor(Number(i));return openFlowerBase74.apply(this,arguments)};
   async function fertilizeOne74(i){i=Math.floor(Number(i));if(i<0||i>5||flowerFertBusy)return;flowerFertBusy=true;try{await waitCloud("ปุ๋ยดอกไม้");const api=globalThis.YN_R17,f=api?.FLOWERS||{},costMap=flowerCost74,{db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next=null,name="ดอกไม้",cost=0;await txRetry(()=>fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(sn.data(),currentMember);assertCurrentCloudSession?.(sn.data(),currentMember);st.flowerPlots=Array.isArray(st.flowerPlots)?st.flowerPlots.slice(0,6):[];while(st.flowerPlots.length<6)st.flowerPlots.push(null);st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};const p=st.flowerPlots[i];if(!p)throw new Error("แปลงนี้ยังไม่ได้ปลูกดอกไม้");if(Number(p.readyAt||0)<=now())throw new Error("ดอกไม้แปลงนี้พร้อมเก็บแล้วค่ะ");name=f[p.flower]?.name||p.flower||"ดอกไม้";cost=iv(costMap[p.flower]||40);const have=iv(st.specials.flowerFertilizer);if(!isAdm()&&have<cost)throw new Error(`ปุ๋ยดอกไม้ไม่พอ • ต้องใช้ ${cost} ชิ้น`);if(!isAdm())st.specials.flowerFertilizer=have-cost;else st.specials.flowerFertilizer=9999;p.readyAt=now();p.testStage="ready";if(isAdm())try{ensureAdminStock?.(st)}catch(_){};st.clientSaveRevision=(Number(st.clientSaveRevision)||0)+1;next=cp(st);tx.set(ref,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})}));applyState(next,{renderBasement:true});closeModal?.();showWeatherToast?.(`🌸 ${name} พร้อมเก็บแล้ว • ปุ๋ยถูกหักและบันทึกเรียบร้อย`)}catch(e){message?.("ใส่ปุ๋ยไม่ได้",e?.message||"กรุณาลองใหม่ค่ะ")}finally{flowerFertBusy=false}}
   function openBasementTools74(){const flower=globalThis.YN_R3465,hedge=globalThis.YN_R17,$m=$("modalContent");if(!$m)return;$m.innerHTML=`<section class="feature-panel r3474-basement-tools"><h2>🧰 เครื่องมือห้องใต้ดิน</h2><div class="r3474-tool-group"><b>🌸 ดอกไม้</b><button id="r3474FlowerPlant">🌱 ปลูกทั้งหมด</button><button id="r3474FlowerHarvest">🌸 เก็บเกี่ยวทั้งหมด</button><button id="r3474FlowerFert">✨ ใส่ปุ๋ยทั้งหมด</button></div><div class="r3474-tool-group"><b>🦔 เม่น</b><button id="r3474HedgeCollect">🧺 เก็บของเม่นทั้งหมด</button><button id="r3474HedgeCraft">🛡️ คราฟโล่เม่นทอง</button></div><small>แปลงดอกไม้และเครื่องหมักไวน์ยังแตะใช้งานทีละจุดได้ตามปกติ</small></section>`;openModal?.();$("r3474FlowerPlant").onclick=()=>{const api=globalThis.YN_R17;if(!api?.FLOWERS||!flower?.plantAll)return;$("modalContent").innerHTML=`<section class="feature-panel r3474-basement-tools"><h2>🌱 เลือกดอกไม้สำหรับแปลงว่างทั้งหมด</h2><div class="r17-flower-picker">${Object.entries(api.FLOWERS).map(([k,f])=>`<button type="button" data-r3474-flower-all="${esc(k)}"><img src="${f.bag||f.ready||''}" alt=""><b>${esc(f.name||k)}</b></button>`).join('')}</div></section>`;document.querySelectorAll('[data-r3474-flower-all]').forEach(b=>b.onclick=()=>flower.plantAll(b.dataset.r3474FlowerAll));openModal?.()};$("r3474FlowerHarvest").onclick=()=>flower?.harvestAll?.();$("r3474FlowerFert").onclick=()=>flower?.fertilizeAll?.();$("r3474HedgeCollect").onclick=()=>hedge?.collectHedge?.();$("r3474HedgeCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.()}
-  function tidyBasement74(){const layer=$("sceneInteractiveLayer");if(!layer||layer.dataset.r17HouseMode!=="basement")return;const bar=layer.querySelector(".r17-basement-actions");if(!bar)return;for(const el of [...bar.children])if(el.id!=="r17HouseUp"&&el.id!=="r3474BasementTools")el.style.display="none";let b=$("r3474BasementTools");if(!b){b=document.createElement("button");b.id="r3474BasementTools";b.type="button";b.textContent="🧰 เครื่องมือ";b.onclick=e=>{e.preventDefault();e.stopPropagation();openBasementTools74()};bar.insertBefore(b,$("r17HouseUp")||null)}}
+  function tidyBasement74(){const layer=$("sceneInteractiveLayer");if(!layer||layer.dataset.r17HouseMode!=="basement")return;const bar=layer.querySelector(".r17-basement-actions");if(!bar)return;
+    /* R36.74: never hide the real hedgehog controls. R34.74 used to collapse
+       everything into one tools button; a later flower-only patch then hijacked
+       that button, which made Hedgehog Collect/Craft appear to have vanished. */
+    const keep=new Set(["r17HouseUp","r3474BasementTools","r3465FlowerTools","r17CollectHedge","r29ShieldCraft","r29HouseCollectAll"]);
+    for(const el of [...bar.children])el.style.display=keep.has(el.id)?"":"none";
+    const craft=$("r29ShieldCraft");if(craft)craft.textContent="🦔 คราฟของเม่น";
+    let b=$("r3474BasementTools");if(!b){b=document.createElement("button");b.id="r3474BasementTools";b.type="button";b.textContent="🧰 เครื่องมือทั้งหมด";b.onclick=e=>{e.preventDefault();e.stopPropagation();openBasementTools74()};bar.insertBefore(b,$("r17HouseUp")||null)}}
   const basementObserver=new MutationObserver(()=>tidyBasement74());try{basementObserver.observe($("sceneInteractiveLayer")||document.body,{childList:true,subtree:true})}catch(_){};setTimeout(tidyBasement74,150);
   document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3461FlowerFertilize");if(!b||currentScene!=="house")return;e.preventDefault();e.stopImmediatePropagation();fertilizeOne74(flowerPlot74)},true);
   /* Wine UI finally works in R17; only swap its state mutations to the durable tx APIs. */
@@ -38540,7 +38571,8 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
     "bag","specials","animalProducts","dishInventory","homeFoods","fishingBaits","mysteryBoxes","specialAnimals",
     "dogs","cats","plots","pens","vault","inventory","wool","food","medicine","products","coconutRiverItems",
     "jellyfishV2","warehouseTools","rainyMenus","boatDrinks","alpaca","hedgehog","hamsters","hamsterFarms",
-    "merit","stars","charity","money","dailyMissions","missionState","dailyLimits","house","basement","ostrich"
+    "merit","stars","charity","money","dailyMissions","missionState","dailyLimits","house","basement","ostrich",
+    "s2Unlocks","houseUpgrade","upgradeKeys","farmGuardians","farmGuardianInventory","flowerPlots","wineMachines"
   ]);
   const historyRe=/claim|receipt|history|archive|tombstone|cooldown|lock|ledger|visited|seen|processed|dedupe|audit|log/i;
   function genericPrune(node,level=1,depth=0){
@@ -38673,6 +38705,120 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   setTimeout(adminSweep,2500);
 
   globalThis.YN_R3673_SAVE_SPACE={BUILD,prepare,compact,rescue:(mk=currentMemberKey)=>rescueDoc(mk,{force:true}),report:()=>{const s=ownState||state||{};return{memberKey:String(currentMemberKey||""),bytes:bytes(s),indexUnits:units(s),largest:Object.entries(s).map(([k,v])=>[k,bytes(v),units(v)]).sort((a,b)=>b[1]-a[1]).slice(0,20)}}};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+
+
+/* =====================================================================
+   S2 R36.77 — HOUSE RESTORE ONLY / NO GLOBAL INPUT CAPTURE
+   - Starts from the known-good R36.74 package.
+   - Does not touch farm manager, boost inventory, tractor, or main nav.
+   - Repairs only the house/basement DOM after each native R17 render.
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R36.77-HOUSE-RESTORE-ONLY-20260917";
+  const $=id=>document.getElementById(id);
+  const api=()=>globalThis.YN_R17||null;
+  let repairing=false;
+
+  function safeBind(el,fn){
+    if(!el)return;
+    el.disabled=false;
+    el.style.setProperty("pointer-events","auto","important");
+    el.style.setProperty("touch-action","manipulation","important");
+    el.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();fn()};
+  }
+
+  function openBasementTools77(){
+    const a=api(),flower=globalThis.YN_R3465,$m=$("modalContent");
+    if(!$m||!a)return;
+    $m.innerHTML=`<section class="feature-panel r3474-basement-tools">
+      <h2>🧰 เครื่องมือห้องใต้ดิน</h2>
+      <div class="r3474-tool-group"><b>🌸 ดอกไม้</b>
+        <button id="r3677FlowerPlant" type="button">🌱 ปลูกทั้งหมด</button>
+        <button id="r3677FlowerHarvest" type="button">🌸 เก็บเกี่ยวทั้งหมด</button>
+        <button id="r3677FlowerFert" type="button">✨ ใส่ปุ๋ยทั้งหมด</button>
+      </div>
+      <div class="r3474-tool-group"><b>🦔 ระบบเม่น</b>
+        <button id="r3677HedgeCollect" type="button">🧺 เก็บของเม่นทั้งหมด</button>
+        <button id="r3677HedgeCraft" type="button">🦔 คราฟของเม่น</button>
+      </div>
+      <small>ไวน์และแปลงดอกไม้ยังกดใช้งานจากจุดจริงในห้องได้ตามปกติ</small>
+    </section>`;
+    try{openModal?.()}catch(_){ }
+    safeBind($("r3677FlowerPlant"),()=>{
+      const F=a.FLOWERS||{};
+      $m.innerHTML=`<section class="feature-panel r3474-basement-tools"><h2>🌱 เลือกดอกไม้</h2><div class="r17-flower-picker">${Object.entries(F).map(([k,f])=>`<button type="button" data-r3677-flower="${String(k).replace(/"/g,'&quot;')}"><img src="${f.bag||f.ready||''}" alt=""><b>${f.name||k}</b></button>`).join("")}</div></section>`;
+      $m.querySelectorAll("[data-r3677-flower]").forEach(b=>safeBind(b,()=>flower?.plantAll?.(b.dataset.r3677Flower)));
+      try{openModal?.()}catch(_){ }
+    });
+    safeBind($("r3677FlowerHarvest"),()=>flower?.harvestAll?.());
+    safeBind($("r3677FlowerFert"),()=>flower?.fertilizeAll?.());
+    safeBind($("r3677HedgeCollect"),()=>a.collectHedge?.());
+    safeBind($("r3677HedgeCraft"),()=>globalThis.YN_R29?.openShieldCraft?.());
+  }
+
+  function ensureAction(bar,id,text,before){
+    let b=$(id);
+    if(!b){b=document.createElement("button");b.id=id;b.type="button";b.textContent=text;bar.insertBefore(b,before||null)}
+    b.style.removeProperty("display");
+    return b;
+  }
+
+  function repairHouse(){
+    if(repairing)return;
+    if(typeof currentScene==="undefined"||currentScene!=="house")return;
+    const layer=$("sceneInteractiveLayer"),a=api();if(!layer||!a)return;
+    repairing=true;
+    try{
+      layer.style.setProperty("pointer-events","auto","important");
+      layer.classList.remove("rest-view-only");
+      const mode=String(layer.dataset.r17HouseMode||"");
+      if(mode==="main"){
+        safeBind($("r17Bed"),()=>showRestOptions?.());
+        safeBind($("r17Kitchen"),()=>globalThis.YN_R16?.openKitchen?.());
+        safeBind($("r17Fortune"),()=>globalThis.YN_R16?.fortune?.());
+        safeBind($("r17Basement"),()=>a.goBasement?.());
+        return;
+      }
+      if(mode!=="basement")return;
+
+      layer.querySelectorAll("[data-r17-plot]").forEach(b=>safeBind(b,()=>a.openFlowerPlot?.(Number(b.dataset.r17Plot))));
+      layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>safeBind(b,()=>a.openWineMachine?.(Number(b.dataset.r17MachineHot))));
+      layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>safeBind(b,()=>a.collectHedgeOne?.(b.dataset.r17Hdrop)));
+
+      let bar=layer.querySelector(".r17-basement-actions");
+      if(!bar){bar=document.createElement("div");bar.className="r17-house-actions r17-basement-actions";layer.appendChild(bar)}
+      const up=ensureAction(bar,"r17HouseUp","⬆️ กลับขึ้นบ้าน");
+      const tools=ensureAction(bar,"r3474BasementTools","🧰 เครื่องมือทั้งหมด",up);
+      const collect=ensureAction(bar,"r17CollectHedge","🧺 เก็บของเม่นทั้งหมด",up);
+      const craft=ensureAction(bar,"r29ShieldCraft","🦔 คราฟของเม่น",up);
+      const flowerBtn=$("r3465FlowerTools");if(flowerBtn){flowerBtn.textContent="🌸 เครื่องมือดอกไม้";flowerBtn.style.removeProperty("display");safeBind(flowerBtn,()=>a.openFlowerTools?.())}
+      safeBind(tools,openBasementTools77);
+      safeBind(collect,()=>a.collectHedge?.());
+      safeBind(craft,()=>globalThis.YN_R29?.openShieldCraft?.());
+      safeBind(up,()=>a.goHouseMain?.());
+      const all=$("r29HouseCollectAll");if(all){all.style.removeProperty("display");safeBind(all,()=>globalThis.YN_R29?.collectHouseAll?.())}
+    }finally{repairing=false}
+  }
+
+  /* R34.78 overwrote the all-tools entry with a flower-only panel. Restore a
+     combined downstairs panel, but do not alter any unrelated input owner. */
+  if(globalThis.YN_R3474)globalThis.YN_R3474.openBasementTools=openBasementTools77;
+  if(globalThis.YN_R3478)globalThis.YN_R3478.openBasementTools=openBasementTools77;
+
+  const layer=$("sceneInteractiveLayer");
+  if(layer){
+    const mo=new MutationObserver(()=>queueMicrotask(repairHouse));
+    mo.observe(layer,{childList:true,subtree:true});
+  }
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(repairHouse,40)});
+  window.addEventListener("pageshow",()=>setTimeout(repairHouse,40),{passive:true});
+  setTimeout(repairHouse,80);setTimeout(repairHouse,350);
+
+  globalThis.YN_R3677={BUILD,repairHouse,openBasementTools:openBasementTools77};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
