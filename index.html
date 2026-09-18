@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.74-PERMANENT-UNLOCK-INPUT-SPEED-FIX-20260917"></script>
+<script src="game.js?v=S2-R36.71-SPEED-AND-RESET-FIX-20260917"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2814,16 +2814,12 @@
     showFishingBaitCraft=function(){const r=oldShow.apply(this,arguments);setTimeout(bindCraftButtons,0);return r};
   }catch(_){ }
   if(globalThis.YN_R3478){globalThis.YN_R3478.openBasementTools=openFlowerToolsFinal;globalThis.YN_R3478.flowerPlantAll=flowerPlantAll;globalThis.YN_R3478.flowerHarvestAll=flowerHarvestAll;globalThis.YN_R3478.flowerFertAll=flowerFertAll;globalThis.YN_R3478.claimTrap=claimTrapFinal;globalThis.YN_R3478.bulkBoost=bulkBoostFinal;globalThis.YN_R3478.bulkAngel=bulkAngelFinal}
-  /* R36.74: keep R34.74's complete basement menu (flowers + hedgehog).
-     Only install the flower-only menu as a fallback if the complete menu is absent. */
-  if(globalThis.YN_R3474&&typeof globalThis.YN_R3474.openBasementTools!=="function")globalThis.YN_R3474.openBasementTools=openFlowerToolsFinal;
+  if(globalThis.YN_R3474)globalThis.YN_R3474.openBasementTools=openFlowerToolsFinal;
   if(globalThis.YN_R3465){globalThis.YN_R3465.openFlowerTools=openFlowerToolsFinal;globalThis.YN_R3465.plantAll=flowerPlantAll;globalThis.YN_R3465.harvestAll=flowerHarvestAll;globalThis.YN_R3465.fertilizeAll=flowerFertAll}
   if(globalThis.YN_R17)globalThis.YN_R17.openFlowerTools=openFlowerToolsFinal;
   if(globalThis.YN_R15)globalThis.YN_R15.claimTrap=claimTrapFinal;
   try{Y26_plantCrop=plantOneFinal;globalThis.Y26_plantCrop=plantOneFinal}catch(_){ }
-  /* The general basement-tools button must not be captured by the flower-only
-     handler. Direct flower button still opens the fast flower panel. */
-  document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3465FlowerTools");if(!b)return;e.preventDefault();e.stopPropagation();openFlowerToolsFinal()},true);
+  document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3474BasementTools,#r3465FlowerTools");if(!b)return;e.preventDefault();e.stopPropagation();openFlowerToolsFinal()},true);
   const mo=new MutationObserver(()=>{bindCraftButtons();const b=$("r3474BasementTools")||$("r3465FlowerTools");if(b){b.style.pointerEvents="auto";b.disabled=false}});try{mo.observe(document.body,{childList:true,subtree:true})}catch(_){ }
   setTimeout(bindCraftButtons,100);
   globalThis.YN_R3480={BUILD,openFlowerTools:openFlowerToolsFinal,claimTrap:claimTrapFinal,craftBait:craftBaitFinal};
@@ -4103,12 +4099,12 @@ console.info(BUILD,"loaded");
         tx.set(sref,{...cp(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(gref,{memberKey:String(currentMemberKey),displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:cp(st.plots),ownerRevision:Number(st.clientSaveRevision)||0,ownerLocalEditAt:Number(st.clientLocalEditAt)||0,updatedAt:fs.serverTimestamp()},{merge:true});
       });
-      /* R36.74 SPEED + DURABILITY: runTransaction resolving means Firestore has
-         committed this mutation. A second serverGet(sref) immediately afterward
-         re-read root + every V7 shard (about 14 docs), doubled tap latency, and
-         added no correctness. Use the exact committed `next` snapshot instead.
-         Success UI is still shown only AFTER the transaction resolves, so there
-         is no optimistic "fast then rollback" behavior. */
+      /* Owner source of truth is the virtual /saves state only. /gardens is a public mirror.
+         Reading /gardens back here caused the 2-second READY -> SEED rollback race. */
+      try{
+        const ss=await serverGet(fs,sref);
+        if(ss?.exists?.()) next=typeof normalizeState==="function"?normalizeState(ss.data(),currentMember):cp(ss.data());
+      }catch(verifyErr){console.warn(BUILD,"garden verify",verifyErr?.message||verifyErr)}
       ownState=typeof normalizeState==="function"?normalizeState(next,currentMember):next;if(!visitContext)state=ownState;
       /* Anything queued before this transaction is older than the server commit. */
       try{if(saveTimer){clearTimeout(saveTimer);saveTimer=null}committedSeq=Math.max(committedSeq,dirtySeq)}catch(_){}
