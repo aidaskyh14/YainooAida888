@@ -38879,310 +38879,170 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   console.info(BUILD,"loaded");
 })();
 
-/* =====================================================================
-   S2 R36.97 — ONE DIRECT-GIFT CLAIM SYSTEM FOR EVERY MEMBER
-   2026-09-18
-   Scope: direct mailbox gifts only. No member-specific branch.
-   - Every member uses the same transaction and the same receipt rule.
-   - A gift can be accepted/discarded only while gifts/{id}.status == pending.
-   - The receiver save update, gift resolution, and mailbox deletion commit atomically.
-   - Stale notification cards from already-resolved gifts are removed without re-granting.
-   - No campaign/house/farm/admin-stock logic is changed.
-   ===================================================================== */
-(function YN_R3697_UNIFIED_DIRECT_GIFT_CLAIM(){
-  "use strict";
-  const BUILD="S2-R36.97-UNIFIED-DIRECT-GIFT-CLAIM-20260918";
-  const busy=new Set();
+/* R36.97 superseded and removed by R36.98 data-safe gift path. */
 
-  function currentKey(){
-    try{return String(currentMemberKey||"")}catch(_){return ""}
+
+/* =====================================================================
+   S2 R36.98 — DATA-SAFE DIRECT GIFTS + RECEIVE ALL
+   2026-09-18
+   Scope: direct gifts only.
+   - One claim path for every member; no Kongkwan branch.
+   - Never writes the whole player save. Only gift-touched top-level fields.
+   - Gift resolution writes ONLY status + resolvedAt (matches current rules).
+   - Mailbox card is deleted atomically with the claim.
+   - Adds "รับทั้งหมด" as a fallback for users whose individual tap is unreliable.
+   ===================================================================== */
+(function YN_R3698_DATA_SAFE_GIFTS(){
+  "use strict";
+  const BUILD="S2-R36.98-DATA-SAFE-GIFTS-RECEIVE-ALL-20260918";
+  const busy=new Set();
+  const clone=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const keyNow=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+
+  function ensureGiftContainers(s){
+    if(!isObj(s))s={};
+    for(const k of ["bag","animalProducts","specials","specialAnimals","dishInventory","pendingAnimals"]){
+      if(!isObj(s[k]))s[k]={};
+    }
+    if(!Number.isFinite(Number(s.mysteryBoxes)))s.mysteryBoxes=0;
+    if(!Number.isFinite(Number(s.merit)))s.merit=0;
+    return s;
   }
 
-  function invalidateNotificationCache(){
-    try{
-      if(typeof notificationDataCache!=="undefined"&&notificationDataCache){
-        notificationDataCache.mail=null;
-        notificationDataCache.broadcasts=null;
-        notificationDataCache.at=0;
-      }
-    }catch(_){}
+  function giftItems(g){
+    if(Array.isArray(g?.items))return g.items.map(x=>({type:String(x?.type||""),key:String(x?.key||""),qty:Math.max(1,Math.floor(Number(x?.qty)||1))}));
+    return [{type:String(g?.itemType||g?.type||""),key:String(g?.itemKey||g?.key||""),qty:Math.max(1,Math.floor(Number(g?.qty)||1))}];
+  }
+
+  function touchedTopKeys(g){
+    const map={product:"animalProducts",crop:"bag",special:"specials",jelly:"specialAnimals",dish:"dishInventory",merit:"merit",animal:"pendingAnimals",mystery:"mysteryBoxes"};
+    const out=new Set();
+    for(const it of giftItems(g)){const k=map[it.type];if(k)out.add(k)}
+    return [...out];
+  }
+
+  function invalidateNoticeCache(){
+    try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}
     try{notificationBadgeLastAt=0}catch(_){}
   }
 
-  function removeGiftCardNow(giftId){
-    try{
-      const id=String(giftId||"");
-      document.querySelectorAll("[data-claim-gift]").forEach(btn=>{
-        if(String(btn.dataset.claimGift||"")===id){
-          const card=btn.closest?.(".notification-card");
-          if(card)card.remove();
-        }
-      });
-    }catch(_){}
+  function removeCard(id){
+    try{document.querySelectorAll("[data-claim-gift]").forEach(b=>{if(String(b.dataset.claimGift||"")===String(id)){const c=b.closest?.(".notification-card");if(c)c.remove()}})}catch(_){}
   }
 
-  async function deleteStaleMailbox(giftId){
-    try{
-      const key=currentKey();
-      if(!key)return;
-      const {db,fs}=await getFirebaseContext();
-      await fs.deleteDoc(fs.doc(db,"mailboxes",key,"items",String(giftId)));
-    }catch(e){
-      console.warn(BUILD,"stale mailbox cleanup",e);
-    }
-  }
-
-  claimFriendGift=async function(giftId,accept,returnTab="friend"){
-    const id=String(giftId||"");
-    const key=currentKey();
-    if(!id||!key||!cloudReady)return;
-    if(busy.has(id))return;
-    busy.add(id);
-
+  async function claimOne(giftId,accept,{refresh=false,returnTab="friend"}={}){
+    const id=String(giftId||""),mk=keyNow();
+    if(!id||!mk||!cloudReady)return {ok:false,error:"not-ready"};
+    const token=mk+":"+id;
+    if(busy.has(token))return {ok:false,error:"busy"};
+    busy.add(token);
+    let after=null,touched=[],already=false;
     try{
       try{await settlePendingCloudSave?.()}catch(_){}
       const {db,fs}=await getFirebaseContext();
-      const giftRef=fs.doc(db,"gifts",id);
-      const saveRef=fs.doc(db,"saves",key);
-      const mailRef=fs.doc(db,"mailboxes",key,"items",id);
-      let next=null;
-      let alreadyResolved=false;
-
+      const giftRef=fs.doc(db,"gifts",id),saveRef=fs.doc(db,"saves",mk),mailRef=fs.doc(db,"mailboxes",mk,"items",id);
       await fs.runTransaction(db,async tx=>{
-        const [giftSnap,saveSnap]=await Promise.all([
-          tx.get(giftRef),
-          tx.get(saveRef)
-        ]);
-
-        if(!giftSnap.exists()){
-          /* A stale mailbox without its gift must be removable, not claimable. */
-          alreadyResolved=true;
+        const [gs,ss]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);
+        if(!gs.exists()){
+          already=true;
           tx.delete(mailRef);
           return;
         }
-        if(!saveSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
-        const gift=giftSnap.data()||{};
-        if(String(gift.toKey||"")!==key)
-          throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-        if(String(gift.status||"pending")!=="pending"){
-          /* Authoritative receipt is gifts/{id}.status. Never grant twice. */
-          alreadyResolved=true;
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const g=gs.data()||{};
+        if(String(g.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+        if(String(g.status||"pending")!=="pending"){
+          already=true;
           tx.delete(mailRef);
           return;
         }
 
-        const s=normalizeState(saveSnap.data(),currentMember);
-        try{assertCurrentCloudSession?.(saveSnap.data(),currentMember)}catch(e){throw e}
+        const base=ensureGiftContainers(clone(ss.data()||{}));
+        after=ensureGiftContainers(clone(base));
+        if(accept)addGiftItemToState(after,g);
+        touched=accept?touchedTopKeys(g):[];
 
-        if(accept){
-          /* The current game implementation supports both one-item and bundle gifts. */
-          addGiftItemToState(s,{...gift,sourceId:id});
+        if(accept&&touched.length){
+          const patch={};
+          for(const k of touched)patch[k]=clone(after[k]);
+          /* merge:true is essential: V7 routes only these touched keys to the
+             canonical shard and leaves every unrelated inventory map alone. */
+          tx.set(saveRef,patch,{merge:true});
+          if(touched.includes("merit")){
+            tx.set(fs.doc(db,"publicProfiles",mk),{merit:Number(after.merit)||0,updatedAt:fs.serverTimestamp()},{merge:true});
+          }
         }
 
-        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
-        next=s;
-
-        const payload=typeof cp==="function"?cp(s):(typeof cloneData==="function"?cloneData(s):s);
-        tx.set(saveRef,{
-          ...payload,
-          activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:(saveSnap.data()?.activeSessionId||null),
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-
-        tx.set(giftRef,{
-          status:accept?"claimed":"discarded",
-          resolvedAt:fs.serverTimestamp(),
-          resolvedBy:key
-        },{merge:true});
-
-        /* Deleting the mailbox card is part of the same transaction. */
+        /* Current firestore.rules allow member receivers to change only these
+           two fields. Do not add resolvedBy here. */
+        tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});
         tx.delete(mailRef);
       });
 
-      invalidateNotificationCache();
-      removeGiftCardNow(id);
-
-      if(alreadyResolved){
-        /* Old stuck card: clean it and never add the item again. */
-        await deleteStaleMailbox(id);
-        try{await showNotifications(returnTab)}catch(_){}
-        try{refreshNotificationBadge?.(true)}catch(_){}
-        showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว");
-        return;
+      invalidateNoticeCache();removeCard(id);
+      if(after&&accept){
+        try{
+          const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
+          if(live){for(const k of touched)live[k]=clone(after[k]);if(typeof ownState!=="undefined")ownState=live;if(typeof state!=="undefined"&&!visitContext)state=live;try{saveLocalOnly?.(live)}catch(_){}try{updateMeritUI?.()}catch(_){}}
+        }catch(_){}
       }
-
-      if(next){
-        ownState=normalizeState(next,currentMember);
-        if(!visitContext)state=ownState;
-        try{saveLocalOnly?.(ownState)}catch(_){}
-        try{updateMeritUI?.()}catch(_){}
-      }
-
-      /* Reload the committed save when available, but never re-run the claim. */
-      try{
-        if(typeof committedSave==="function")await committedSave(saveRef,fs);
-      }catch(e){console.warn(BUILD,"post-claim reload",e)}
-
-      try{await showNotifications(returnTab)}catch(e){console.warn(BUILD,"notification refresh",e)}
-      try{refreshNotificationBadge?.(true)}catch(_){}
-      showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
-
-    }catch(error){
-      console.error(BUILD,error);
-      message("จัดการของขวัญไม่ได้",error?.message||"กรุณาลองใหม่");
-    }finally{
-      busy.delete(id);
-    }
-  };
-
-  globalThis.YAINOO_BUILD=BUILD;
-  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded — same direct-gift claim path for every member");
-})();
-
-/* =====================================================================
-   S2 R36.98 — BROADCAST GIFT RECEIPT MOVED TO FIRESTORE
-   2026-09-18
-   Problem: the receipt for "ของขวัญส่งให้ทุกคน" lived only inside the
-   member's own save (state.broadcastGiftClaims). The save-space rescue
-   layers (R36.10 surgicalCloudTrim / hardTrim, R36.73 compact) clear or
-   cap that map, so the receipt disappears and the same broadcast gift can
-   be accepted or discarded again and again.
-   Fix: the authoritative receipt is now broadcasts/{id}/claims/{memberKey}
-   on the server, exactly like gifts/{id}.status is for direct gifts.
-   The in-save map is still mirrored for offline display, but it is never
-   the source of truth again. No other system is touched.
-   ===================================================================== */
-(function YN_R3698_BROADCAST_GIFT_RECEIPT(){
-  "use strict";
-  const BUILD="S2-R36.98-BROADCAST-GIFT-RECEIPT-20260918";
-  const busy=new Set();
-  const mk=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
-  const clone=v=>{try{return typeof cloneData==="function"?cloneData(v):v}catch(_){return v}};
-
-  function localClaim(id){
-    try{
-      const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;
-      const rec=s&&s.broadcastGiftClaims?s.broadcastGiftClaims[String(id)]:null;
-      return rec&&typeof rec==="object"?rec:null;
-    }catch(_){return null}
+      if(refresh){try{await showNotifications(returnTab)}catch(_){}try{refreshNotificationBadge?.(true)}catch(_){}}
+      return {ok:true,already,accepted:Boolean(accept&&!already)};
+    }catch(e){
+      console.error(BUILD,"claim",id,e);
+      return {ok:false,error:String(e?.message||e)};
+    }finally{busy.delete(token)}
   }
 
-  async function backfillServerClaim(id,status){
-    const k=mk(); if(!k||!cloudReady) return;
+  claimFriendGift=async function(giftId,accept,returnTab="friend"){
+    const r=await claimOne(giftId,accept,{refresh:true,returnTab});
+    if(!r.ok){message?.("จัดการของขวัญไม่ได้",r.error||"กรุณาลองใหม่");return r}
+    if(r.already)showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว");
+    else showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
+    return r;
+  };
+
+  function injectReceiveAll(tab){
     try{
-      const {db,fs}=await getFirebaseContext();
-      await fs.setDoc(
-        fs.doc(db,"broadcasts",String(id),"claims",k),
-        {memberKey:k,status:String(status||"accepted"),resolvedAt:fs.serverTimestamp(),backfilled:true},
-        {merge:true}
-      );
-    }catch(e){console.warn(BUILD,"claim backfill",e?.message||e)}
+      const panel=document.querySelector(".notification-panel"),list=panel?.querySelector(".notification-list");
+      if(!panel||!list)return;
+      panel.querySelectorAll(".r3698-receive-all").forEach(x=>x.remove());
+      const ids=[...new Set([...list.querySelectorAll('[data-claim-gift][data-gift-action="accept"]')].map(b=>String(b.dataset.claimGift||"")).filter(Boolean))];
+      if(!ids.length)return;
+      const b=document.createElement("button");
+      b.type="button";b.className="primary-spooky-action r3698-receive-all";
+      b.textContent=`🎁 รับทั้งหมด (${ids.length})`;
+      b.style.cssText="width:100%;margin:8px 0 12px";
+      const tabs=panel.querySelector(".notification-tabs");
+      (tabs?.parentNode||panel).insertBefore(b,tabs?.nextSibling||list);
+      b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;const old=b.textContent;let ok=0,skip=0,fail=0;
+        for(let i=0;i<ids.length;i++){
+          b.textContent=`กำลังรับ ${i+1}/${ids.length}…`;
+          const r=await claimOne(ids[i],true,{refresh:false,returnTab:tab});
+          if(r.ok){if(r.already)skip++;else ok++}else fail++;
+        }
+        invalidateNoticeCache();
+        try{await showNotifications(tab)}catch(_){}
+        try{refreshNotificationBadge?.(true)}catch(_){}
+        if(fail)message?.("รับของทั้งหมดแล้วบางส่วน",`รับสำเร็จ ${ok} • ข้ามรายการเดิม ${skip} • ไม่สำเร็จ ${fail}`);
+        else showWeatherToast?.(`🎁 รับทั้งหมดแล้ว ${ok} รายการ${skip?` • ข้าม ${skip}`:""}`);
+        b.textContent=old;b.disabled=false;
+      };
+    }catch(e){console.warn(BUILD,"inject receive all",e)}
   }
 
-  /* Authoritative read: server first, local mirror only as a fallback. */
-  fetchBroadcastClaim=async function(broadcastId){
-    const id=String(broadcastId||""),k=mk();
-    if(!id||!k||!cloudReady)return localClaim(id);
-    try{
-      const {db,fs}=await getFirebaseContext();
-      const snap=await fs.getDoc(fs.doc(db,"broadcasts",id,"claims",k));
-      if(snap.exists()){
-        const d=snap.data()||{};
-        return {memberKey:k,status:String(d.status||"accepted")};
-      }
-    }catch(e){console.warn(BUILD,"claim read",e?.message||e)}
-    const local=localClaim(id);
-    if(local){ backfillServerClaim(id,local.status); return local }
-    return null;
-  };
+  try{
+    const baseShow=showNotifications;
+    showNotifications=async function(tab="friend"){
+      const r=await baseShow.apply(this,arguments);
+      setTimeout(()=>injectReceiveAll(tab),0);
+      return r;
+    };
+  }catch(e){console.warn(BUILD,"showNotifications wrap",e)}
 
-  claimBroadcastGift=async function(broadcastId,accept){
-    const id=String(broadcastId||""),k=mk();
-    if(!id||!k||!cloudReady)return;
-    if(busy.has(id))return;
-    busy.add(id);
-    try{
-      try{await settlePendingCloudSave?.()}catch(_){}
-      const {db,fs}=await getFirebaseContext();
-      const bRef=fs.doc(db,"broadcasts",id);
-      const cRef=fs.doc(db,"broadcasts",id,"claims",k);
-      const sRef=fs.doc(db,"saves",k);
-      let next=null,already=false;
-
-      await fs.runTransaction(db,async tx=>{
-        const [bSnap,cSnap,sSnap]=await Promise.all([tx.get(bRef),tx.get(cRef),tx.get(sRef)]);
-        if(!bSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
-        if(!sSnap.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
-        /* Server receipt wins. It cannot be erased by save trimming. */
-        if(cSnap.exists()){already=true;return}
-
-        const b=bSnap.data()||{};
-        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
-        if(currentMember==="Aida"&&b.includeAida===false)throw new Error("ของขวัญรอบนี้ไม่ได้รวม Aida");
-
-        const s=normalizeState(sSnap.data(),currentMember);
-        try{assertCurrentCloudSession?.(sSnap.data(),currentMember)}catch(e){throw e}
-
-        /* Legacy in-save receipt: honour it, then promote it to the server. */
-        const prior=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims[id]:null;
-        if(prior&&typeof prior==="object"){
-          already=true;
-          tx.set(cRef,{memberKey:k,status:String(prior.status||"accepted"),resolvedAt:fs.serverTimestamp(),backfilled:true});
-          return;
-        }
-
-        if(accept)addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty,items:b.items,instance:b.instance});
-        s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims:{};
-        s.broadcastGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:Date.now()};
-        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
-        next=s;
-
-        tx.set(sRef,{
-          ...clone(s),
-          activeSessionId:typeof cloudSessionId!=="undefined"?cloudSessionId:(sSnap.data()?.activeSessionId||null),
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-        tx.set(cRef,{memberKey:k,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()});
-      });
-
-      try{broadcastClaimCache?.delete?.(broadcastClaimCacheKey(id))}catch(_){}
-      try{
-        if(typeof notificationDataCache!=="undefined"&&notificationDataCache){
-          notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0;
-        }
-      }catch(_){}
-
-      if(already){
-        try{await showNotifications?.("yainoo")}catch(_){}
-        try{refreshNotificationBadge?.(true)}catch(_){}
-        showWeatherToast?.("🎁 ของขวัญชิ้นนี้ถูกจัดการไปแล้ว");
-        return;
-      }
-
-      if(next){
-        ownState=normalizeState(next,currentMember);
-        if(!visitContext)state=ownState;
-        try{saveLocalOnly?.(ownState)}catch(_){}
-        try{updateMeritUI?.()}catch(_){}
-      }
-      try{await showNotifications?.("yainoo")}catch(_){}
-      try{refreshNotificationBadge?.(true)}catch(_){}
-      showWeatherToast?.(accept?"🎁 รับของขวัญจากยัยหนูแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งของขวัญแล้ว");
-
-    }catch(error){
-      console.error(BUILD,error);
-      message("จัดการของขวัญไม่ได้",error?.message||"กรุณาลองใหม่");
-    }finally{
-      busy.delete(id);
-    }
-  };
-
-  globalThis.YN_R3698={BUILD};
-  globalThis.YAINOO_BUILD=BUILD;
-  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded — broadcast gift receipt is server-side, trim-proof");
+  globalThis.YN_R3698={BUILD,claimOne,injectReceiveAll};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — auto historical restore disabled in index; safe gift merge enabled");
 })();

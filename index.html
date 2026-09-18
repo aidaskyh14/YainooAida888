@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918"></script>
+<script src="game.js?v=S2-R36.98-DATA-GUARD-RECEIVE-ALL-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -5205,7 +5205,8 @@ console.info(BUILD,"loaded");
   bindBag();
   /* R36.88: do not rewrite house handlers after R17 renders them. The native
      r17Basement onclick is now the only transition owner. */
-  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag();recoverKongkwanDeep().then(ok=>{if(ok)refreshGarden()})},ms));
+  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag()},ms));
+  console.info(BUILD,"automatic Kongkwan inventory recovery DISABLED; manual recovery only");
   setInterval(()=>{try{bindBag()}catch(_){}},2200);
   async function forceRecover(){done=false;running=false;return recoverKongkwanDeep()}
   function recoverySummary(){
@@ -5288,8 +5289,10 @@ console.info(BUILD,"loaded");
   }
 
   function schedule(){[500,1400,3200,7000,15000,30000].forEach(ms=>setTimeout(()=>repair(false),ms))}
-  schedule();
-  try{if(typeof initializeOrLoadCloudState==="function"&&!initializeOrLoadCloudState.__r3691){const base=initializeOrLoadCloudState;const wrap=async function(){const r=await base.apply(this,arguments);setTimeout(()=>repair(true),180);return r};wrap.__r3691=true;initializeOrLoadCloudState=wrap}}catch(e){console.warn(BUILD,"login hook",e)}
+  /* R36.98 DATA GUARD: historical inventory repair is MANUAL ONLY.
+     Never run it on page load/login because stale shards/localStorage can
+     overwrite healthy live quantities (including resurrecting 9999). */
+  console.info(BUILD,"automatic all-player/self inventory repair DISABLED; manual repair API retained");
   globalThis.YN_R3691={BUILD,repair:()=>repair(true),report:()=>lastReport};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
@@ -5409,13 +5412,19 @@ console.info(BUILD,"loaded");
     try{const {db,fs}=await getFirebaseContext();const roots=await fs.getDocs(fs.collection(db,"saves"));for(const d of roots.docs){const mk=String(d.id||"").toLowerCase();if(!mk||mk==="aida")continue;out.players++;try{const r=await restoreInventoryForMember(fs,db,mk,{includeLocal:false,force:true});if(r&&Object.keys(r.patch||{}).length)out.inventory++;if(await republishDashboardForMember(fs,db,mk))out.dashboard++}catch(e){out.errors.push(`${mk}:${String(e?.message||e)}`)}}out.campaigns=await repairCampaignNumbers(fs,db);reports.__adminSweep=out;console.info(BUILD,"admin numeric sweep",out);try{showWeatherToast?.(`🔢 ซ่อมตัวเลขแล้ว ${out.players} ไอดี • กระเป๋า ${out.inventory} • Dashboard ${out.dashboard}`)}catch(_){}return out}catch(e){out.errors.push(String(e?.message||e));console.warn(BUILD,"sweep",e);return out}finally{sweeping=false}
   }
 
-  /* Run only after login has fully hydrated the V7 save. */
-  [1800,5000,12000].forEach(ms=>setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},ms));
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{try{isAdmin()?repairAllPlayers():repairSelf()}catch(_){}},900)},{passive:true});
+  /* R36.98 DATA GUARD: numeric history restore is MANUAL ONLY.
+     In R36.92 Admin login called repairAllPlayers(force=true) at 1.8/5/12s
+     and on visibility changes, which rewrote healthy player inventory maps
+     from historical candidates. Keep the tools, never auto-run them. */
+  console.info(BUILD,"automatic numeric history restore DISABLED; manual APIs retained");
   globalThis.YN_R3692={BUILD,repairSelf,repairAllPlayers,repairCampaignNumbers,report:()=>cp(reports)};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
 
+<script id="r3698-data-guard-marker">
+  globalThis.YAINOO_DATA_GUARD_BUILD="S2-R36.98-DATA-GUARD-RECEIVE-ALL-20260918";
+  console.info(globalThis.YAINOO_DATA_GUARD_BUILD,"auto historical restores are manual-only");
+</script>
 </body>
 </html>
