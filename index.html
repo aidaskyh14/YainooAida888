@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.79-DATA-PROTECTION-20260917"></script>
+<script src="daily-missions.js?v=S2-R36.80-HOUSE-AND-UI-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.79-DATA-PROTECTION-20260917"></script>
+<script src="game.js?v=S2-R36.80-HOUSE-AND-UI-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4670,6 +4670,259 @@ console.info(BUILD,"loaded");
   };
 
   window.YAINOO_BUILD=BUILD;window.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+
+<script id="r3680-house-and-ui">
+/* =====================================================================
+   S2 R36.80 — HOUSE / BASEMENT / GARDEN TOOLS / NAV
+   2026-09-18
+
+   Nothing in this file touches the save engine. It only repairs UI that
+   later patch layers removed or left unbound.
+
+   1) BASEMENT ACTION BAR
+      renderHouseBasement17() builds five controls, but three later layers
+      rewrite the same bar (tidyBasement74, repairHouse in R36.77) and the
+      bar itself has no overflow rule, so on a phone the row is clipped and
+      only the first and last button are reachable. That is the reported
+      "ปุ่มเก็บของเม่นหายไป". The bar is rebuilt here in a fixed order,
+      forced visible, and made horizontally scrollable.
+
+   2) GARDEN MANAGER
+      v7ShowManager (R36.63) rewrote the manager with four buttons and
+      dropped 🪱 จัดการหนอนทั้งหมด, which still exists as
+      globalThis.YN_R14.wormManager. Re-added.
+
+   3) BAG / NAV
+      The bag button forwards a synthetic click to a legacy button. If a
+      modal is still open the tap appears to do nothing. Now it closes any
+      open panel first, then calls inventory() directly.
+   ===================================================================== */
+(function YN_R3680(){
+  "use strict";
+  const BUILD="S2-R36.80-HOUSE-AND-UI-20260918";
+  const $=id=>document.getElementById(id);
+  const R17=()=>globalThis.YN_R17||null;
+
+  function bind(el,fn){
+    if(!el)return null;
+    el.disabled=false;
+    el.style.setProperty("display","","important");
+    el.style.removeProperty("visibility");
+    el.style.setProperty("pointer-events","auto","important");
+    el.style.setProperty("touch-action","manipulation","important");
+    el.onclick=e=>{try{e&&e.preventDefault();e&&e.stopPropagation()}catch(_){}try{fn()}catch(err){console.warn(BUILD,err)}};
+    return el;
+  }
+
+  /* ---------- 1. basement action bar --------------------------------- */
+  const BAR_CSS=`
+  .r17-basement-actions{
+    display:flex!important;flex-wrap:wrap!important;justify-content:center!important;
+    align-items:center!important;gap:6px!important;
+    max-height:none!important;overflow:visible!important;
+    padding:6px 8px!important;box-sizing:border-box!important;
+    width:auto!important;max-width:96%!important;
+  }
+  .r17-basement-actions>button{
+    display:inline-flex!important;visibility:visible!important;opacity:1!important;
+    pointer-events:auto!important;white-space:nowrap!important;
+    flex:0 0 auto!important;font-size:12px!important;padding:7px 10px!important;
+  }`;
+  (function css(){
+    if($("r3680Style"))return;
+    const s=document.createElement("style");s.id="r3680Style";s.textContent=BAR_CSS;
+    (document.head||document.documentElement).appendChild(s);
+  })();
+
+  /* id, label, what it does — rendered in this exact order every time. */
+  function basementButtons(){
+    const a=R17();
+    return [
+      ["r3465FlowerTools","🌸 เครื่องมือดอกไม้",()=>a&&a.openFlowerTools&&a.openFlowerTools()],
+      ["r17CollectHedge","🧺 เก็บของเม่นทั้งหมด",()=>a&&a.collectHedge&&a.collectHedge()],
+      ["r29ShieldCraft","🦔 คราฟของเม่น",()=>globalThis.YN_R29&&globalThis.YN_R29.openShieldCraft&&globalThis.YN_R29.openShieldCraft()],
+      ["r3474BasementTools","🧰 เครื่องมือทั้งหมด",()=>{
+        const f=globalThis.YN_R3677&&globalThis.YN_R3677.openBasementTools;
+        if(typeof f==="function")return f();
+        const g=globalThis.YN_R3474&&globalThis.YN_R3474.openBasementTools;
+        if(typeof g==="function")return g();
+      }],
+      ["r17HouseUp","⬆️ กลับขึ้นบ้าน",()=>a&&a.goHouseMain&&a.goHouseMain()]
+    ];
+  }
+
+  let busy=false;
+  function fixBasement(){
+    if(busy)return;
+    if(typeof currentScene==="undefined"||currentScene!=="house")return;
+    const layer=$("sceneInteractiveLayer"),a=R17();
+    if(!layer||!a)return;
+    const mode=String(layer.dataset.r17HouseMode||"");
+    busy=true;
+    try{
+      layer.style.setProperty("pointer-events","auto","important");
+
+      if(mode==="main"){
+        bind($("r17Bed"),()=>globalThis.showRestOptions&&globalThis.showRestOptions());
+        bind($("r17Kitchen"),()=>globalThis.YN_R16&&globalThis.YN_R16.openKitchen&&globalThis.YN_R16.openKitchen());
+        bind($("r17Fortune"),()=>globalThis.YN_R16&&globalThis.YN_R16.fortune&&globalThis.YN_R16.fortune());
+        /* The only way downstairs. If it is missing, put it back. */
+        let down=$("r17Basement");
+        if(!down){
+          let bar=layer.querySelector(".r17-house-actions");
+          if(!bar){bar=document.createElement("div");bar.className="r17-house-actions";layer.appendChild(bar)}
+          down=document.createElement("button");down.id="r17Basement";down.type="button";
+          down.textContent="⬇️ ห้องใต้ดิน";bar.insertBefore(down,bar.firstChild);
+        }
+        bind(down,()=>a.goBasement&&a.goBasement());
+        return;
+      }
+      if(mode!=="basement")return;
+
+      /* plots, wine machines and hedgehog drops */
+      layer.querySelectorAll("[data-r17-plot]").forEach(b=>bind(b,()=>a.openFlowerPlot&&a.openFlowerPlot(Number(b.dataset.r17Plot))));
+      layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bind(b,()=>a.openWineMachine&&a.openWineMachine(Number(b.dataset.r17MachineHot))));
+      layer.querySelectorAll("[data-r17-hdrop]").forEach(b=>bind(b,()=>a.collectHedgeOne&&a.collectHedgeOne(b.dataset.r17Hdrop)));
+
+      let bar=layer.querySelector(".r17-basement-actions");
+      if(!bar){bar=document.createElement("div");bar.className="r17-house-actions r17-basement-actions";layer.appendChild(bar)}
+
+      for(const [id,label,fn] of basementButtons()){
+        let b=$(id);
+        if(!b){b=document.createElement("button");b.id=id;b.type="button";bar.appendChild(b)}
+        else if(b.parentNode!==bar)bar.appendChild(b);
+        if(b.textContent!==label)b.textContent=label;
+        bind(b,fn);
+      }
+      /* Level 3 extra, only when the game rendered it. */
+      const all=$("r29HouseCollectAll");
+      if(all){if(all.parentNode!==bar)bar.appendChild(all);bind(all,()=>globalThis.YN_R29&&globalThis.YN_R29.collectHouseAll&&globalThis.YN_R29.collectHouseAll())}
+      /* Keep our order: the exit button stays last. */
+      const up=$("r17HouseUp");if(up&&up.parentNode===bar)bar.appendChild(up);
+    }finally{busy=false}
+  }
+
+  (function watch(){
+    const layer=$("sceneInteractiveLayer");
+    if(layer){
+      const mo=new MutationObserver(()=>{clearTimeout(watch.t);watch.t=setTimeout(fixBasement,30)});
+      mo.observe(layer,{childList:true,subtree:true});
+    }
+    setInterval(fixBasement,1500);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(fixBasement,60)});
+    setTimeout(fixBasement,200);setTimeout(fixBasement,800);
+  })();
+
+  /* ---------- 2. worm manager back in the garden tools ---------------- */
+  function addWormButton(){
+    const grid=document.querySelector(".ynu-manager-grid");
+    if(!grid||grid.querySelector("[data-r3680-worm]"))return;
+    /* only on the garden manager panel, not the basement tool panel */
+    if(!grid.querySelector('[data-v7-manager],[data-ynu-manager],#r3474FarmPlant'))return;
+    const worm=globalThis.YN_R14&&globalThis.YN_R14.wormManager;
+    if(typeof worm!=="function")return;
+    const b=document.createElement("button");
+    b.type="button";b.dataset.r3680Worm="1";b.textContent="🪱 จัดการหนอนทั้งหมด";
+    grid.appendChild(b);
+    bind(b,()=>worm());
+  }
+  new MutationObserver(()=>setTimeout(addWormButton,20))
+    .observe(document.body,{childList:true,subtree:true});
+
+  /* ---------- 3. bag / nav cannot be swallowed ------------------------ */
+  function closePanels(){
+    try{globalThis.closeModal&&globalThis.closeModal()}catch(_){}
+    try{globalThis.closeHomeHudMenu&&globalThis.closeHomeHudMenu()}catch(_){}
+    try{$("hudMenuDrawer")&&$("hudMenuDrawer").classList.add("hidden")}catch(_){}
+    try{$("hudMenuBackdrop")&&$("hudMenuBackdrop").classList.add("hidden")}catch(_){}
+  }
+  const NAV={
+    inventory:()=>globalThis.inventory&&globalThis.inventory(),
+    shop:()=>globalThis.showShop&&globalThis.showShop(),
+    friends:()=>globalThis.showFriends&&globalThis.showFriends(),
+    missions:()=>(globalThis.showVillage||globalThis.showMissions)&&(globalThis.showVillage||globalThis.showMissions)()
+  };
+  document.addEventListener("click",e=>{
+    const t=e.target&&e.target.closest&&e.target.closest("[data-s2-main],#inventoryNavBtn");
+    if(!t)return;
+    const key=t.id==="inventoryNavBtn"?"inventory":String(t.dataset.s2Main||"");
+    const fn=NAV[key];
+    if(!fn)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    closePanels();
+    setTimeout(()=>{try{fn()}catch(err){console.warn(BUILD,"nav",key,err)}},0);
+  },true);
+
+  /* ---------- 4. "พื้นที่เต็ม" in English ----------------------------- */
+  /* Firestore rejects a save document over 1 MB and an index entry over
+     1500 bytes. The raw English text was reaching players. Two things
+     happen here: the message is translated, and the existing splitters
+     (YN_SAVE_V7.repair / YN_R3673_SAVE_SPACE.rescue) are run for the
+     player automatically instead of waiting for an admin. */
+  const FULL_RX=/maximum allowed size|exceeds the maximum|cannot be written|resource-exhausted|index entr|too large|1048576|invalid-argument/i;
+  const FULL_TH="พื้นที่เก็บข้อมูลเต็ม ระบบกำลังจัดระเบียบให้อัตโนมัติ กรุณารอสักครู่แล้วลองใหม่ค่ะ";
+  let fixing=0;
+
+  async function freeSpace(reason){
+    if(Date.now()-fixing<90000)return;
+    fixing=Date.now();
+    const mk=String(globalThis.currentMemberKey||"");
+    if(!mk)return;
+    console.warn(BUILD,"save space repair for",mk,reason||"");
+    let ok=false;
+    try{
+      const v7=globalThis.YN_SAVE_V7;
+      if(v7&&typeof v7.repair==="function"){await v7.repair(mk);ok=true}
+    }catch(e){console.warn(BUILD,"v7 repair",e&&e.message)}
+    try{
+      const sp=globalThis.YN_R3673_SAVE_SPACE;
+      if(sp&&typeof sp.rescue==="function"){await sp.rescue(mk);ok=true}
+      if(sp&&typeof sp.compact==="function"){await sp.compact();ok=true}
+    }catch(e){console.warn(BUILD,"space rescue",e&&e.message)}
+    if(ok){try{globalThis.showWeatherToast&&globalThis.showWeatherToast("จัดระเบียบพื้นที่เก็บข้อมูลเรียบร้อยแล้วค่ะ")}catch(_){}}
+  }
+
+  /* Translate anything that still slips through to a dialog. */
+  try{
+    const raw=globalThis.message;
+    if(typeof raw==="function"&&!raw.__r3680){
+      const wrapped=function(title,text){
+        const t=String(text==null?"":text);
+        if(FULL_RX.test(t)||FULL_RX.test(String(title||""))){
+          freeSpace("dialog");
+          return raw.call(this,"พื้นที่เก็บข้อมูลเต็ม",FULL_TH);
+        }
+        return raw.apply(this,arguments);
+      };
+      wrapped.__r3680=1;globalThis.message=wrapped;try{message=wrapped}catch(_){}
+    }
+  }catch(e){console.warn(BUILD,"message wrap",e)}
+
+  window.addEventListener("unhandledrejection",e=>{
+    const t=String((e&&e.reason&&(e.reason.message||e.reason))||"");
+    if(FULL_RX.test(t))freeSpace("rejection");
+  },true);
+  window.addEventListener("error",e=>{
+    const t=String((e&&(e.message||(e.error&&e.error.message)))||"");
+    if(FULL_RX.test(t))freeSpace("error");
+  },true);
+
+  /* One preventive pass a little after login, so a player who is already
+     near the limit is split before their next save fails. */
+  setTimeout(()=>{
+    try{
+      const sp=globalThis.YN_R3673_SAVE_SPACE;
+      if(!sp||typeof sp.report!=="function")return;
+      const r=sp.report();
+      if(r&&(Number(r.bytes)>700000||Number(r.indexUnits)>18000))freeSpace("preventive");
+    }catch(_){}
+  },20000);
+
+  globalThis.YN_R3680={BUILD,fixBasement,addWormButton,freeSpace};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
 </script>
