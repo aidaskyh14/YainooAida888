@@ -38880,267 +38880,133 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 })();
 
 /* =====================================================================
-   S2 R36.94 — KONGKWAN-ONLY ADMIN GIFT CLAIM-ONCE
+   S2 R36.96 — KONGKWAN-ONLY SAFE GIFT RECEIPT PATCH
    Scope: ONLY memberKey "kongkwan".
-   - Uses /broadcasts/{broadcastId}/claims/kongkwan as durable receipt.
-   - Receipt + inventory write happen in one Firestore transaction.
-   - Claimed/discarded admin gifts are filtered out of the notification list.
-   - All other players keep the exact R36.92 behavior.
+   Goal:
+   - Do NOT replace the normal claim logic or rewrite the whole save.
+   - Let the existing R36.92 claim path add the item exactly as before.
+   - After a successful claim/discard, persist only a tiny mailbox receipt.
+   - Hide already-resolved direct-admin gift cards for kongkwan only.
+   - Every other account returns directly to the untouched R36.92 functions.
    ===================================================================== */
-(function YN_R3694_KONGKWAN_GIFT_CLAIM_ONCE(){
+(function YN_R3696_KONGKWAN_SAFE_GIFT_RECEIPT(){
   "use strict";
-  const BUILD="S2-R36.94-KONGKWAN-GIFT-CLAIM-ONCE-20260918";
+  const BUILD="S2-R36.96-KONGKWAN-SAFE-GIFT-RECEIPT-20260918";
   const TARGET="kongkwan";
-  const isTarget=()=>String(globalThis.currentMemberKey||currentMemberKey||"").toLowerCase()===TARGET;
-  const busy=new Set();
-
-  const baseFetchBroadcastClaim=fetchBroadcastClaim;
-  const baseFetchBroadcasts=fetchBroadcasts;
-  const baseClaimBroadcastGift=claimBroadcastGift;
-
-  fetchBroadcastClaim=async function(broadcastId){
-    if(!isTarget())return baseFetchBroadcastClaim.apply(this,arguments);
-    try{
-      const {db,fs}=await getFirebaseContext();
-      const ref=fs.doc(db,"broadcasts",String(broadcastId),"claims",TARGET);
-      const snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
-      if(snap.exists())return snap.data()||{status:"accepted",memberKey:TARGET};
-    }catch(e){console.warn(BUILD,"durable claim read",e)}
-    return null;
-  };
-
-  fetchBroadcasts=async function(){
-    const rows=await baseFetchBroadcasts.apply(this,arguments);
-    if(!isTarget()||!Array.isArray(rows)||!rows.length)return rows;
-    try{
-      const {db,fs}=await getFirebaseContext();
-      const keep=await Promise.all(rows.map(async b=>{
-        if(!b||b.type!=="gift")return true;
-        try{
-          const ref=fs.doc(db,"broadcasts",String(b.id),"claims",TARGET);
-          const snap=typeof fs.getDocFromServer==="function"?await fs.getDocFromServer(ref):await fs.getDoc(ref);
-          return !snap.exists();
-        }catch(_){return true}
-      }));
-      return rows.filter((_,i)=>keep[i]);
-    }catch(e){console.warn(BUILD,"broadcast filter",e);return rows}
-  };
-
-  claimBroadcastGift=async function(broadcastId,accept){
-    if(!isTarget())return baseClaimBroadcastGift.apply(this,arguments);
-    const id=String(broadcastId||"");
-    if(!id||busy.has(id)||!cloudReady)return;
-    busy.add(id);
-    try{
-      await settlePendingCloudSave?.();
-      const {db,fs}=await getFirebaseContext();
-      const bRef=fs.doc(db,"broadcasts",id);
-      const saveRef=fs.doc(db,"saves",TARGET);
-      const claimRef=fs.doc(db,"broadcasts",id,"claims",TARGET);
-      let next=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const [bSnap,sSnap,cSnap]=await Promise.all([
-          tx.get(bRef),tx.get(saveRef),tx.get(claimRef)
-        ]);
-        if(!bSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
-        if(cSnap.exists())throw new Error("คุณจัดการของขวัญนี้แล้ว");
-
-        const b=bSnap.data()||{};
-        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
-        if(b.targetKey&&String(b.targetKey)!==TARGET)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-        const s=normalizeState(sSnap.data(),currentMember);
-        try{assertCurrentCloudSession?.(sSnap.data(),currentMember)}catch(e){throw e}
-
-        if(accept){
-          if(Array.isArray(b.items)){
-            b.items.forEach(item=>addGiftItemToState(s,{
-              itemType:item.type||item.itemType,
-              itemKey:item.key||item.itemKey,
-              qty:item.qty,
-              name:item.name
-            }));
-          }else{
-            addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty,instance:b.instance});
-          }
-        }
-
-        /* Keep the legacy in-save receipt for compatibility, but the durable
-           subcollection receipt below is the source of truth for kongkwan. */
-        s.broadcastGiftClaims=s.broadcastGiftClaims&&typeof s.broadcastGiftClaims==="object"?s.broadcastGiftClaims:{};
-        s.broadcastGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:Date.now()};
-        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
-        next=s;
-
-        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(claimRef,{
-          memberKey:TARGET,
-          broadcastId:id,
-          status:accept?"accepted":"discarded",
-          resolvedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      if(next){
-        ownState=normalizeState(next,currentMember);
-        if(!visitContext)state=ownState;
-        try{saveLocalOnly?.(ownState)}catch(_){}
-      }
-      try{broadcastClaimCache?.set?.(broadcastClaimCacheKey?.(id),{memberKey:TARGET,status:accept?"accepted":"discarded"})}catch(_){}
-      try{notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}catch(_){}
-      try{await refreshNotificationBadge?.(true)}catch(_){}
-      await showNotifications?.("yainoo");
-      showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • รับได้ครั้งเดียว":"🗑️ ทิ้งของขวัญแล้ว");
-    }catch(e){
-      message("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่");
-    }finally{busy.delete(id)}
-  };
-
-  globalThis.YAINOO_BUILD=BUILD;
-  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded — scope: kongkwan only");
-})();
-
-/* =====================================================================
-   S2 R36.95 — KONGKWAN-ONLY DIRECT ADMIN GIFT RECEIPT FIX
-   Scope: ONLY memberKey "kongkwan".
-   Problem fixed:
-   - Direct admin gift entered inventory, but its notification could stay/reappear.
-   - That let kongkwan press Receive again.
-   Safety:
-   - Uses the existing mailbox item as a durable receipt.
-   - No behavior changes for any other member.
-   - No unrelated inventory / farm / house / campaign changes.
-   ===================================================================== */
-(function YN_R3695_KONGKWAN_DIRECT_GIFT_RECEIPT_FIX(){
-  "use strict";
-  const BUILD="S2-R36.95-KONGKWAN-DIRECT-GIFT-RECEIPT-FIX-20260918";
-  const TARGET="kongkwan";
-  const keyNow=()=>String(globalThis.currentMemberKey||currentMemberKey||"").toLowerCase();
-  const isTarget=()=>keyNow()===TARGET;
-  const busy=new Set();
-
   const baseClaimFriendGift=claimFriendGift;
   const baseShowNotifications=showNotifications;
+  const busy=new Set();
 
-  async function resolvedDirectGiftIds(){
+  function memberKeySafe(){
+    try{
+      const g=globalThis.currentMemberKey;
+      if(g!=null&&String(g)!=="")return String(g).toLowerCase();
+    }catch(_){}
+    try{
+      if(typeof currentMemberKey!=="undefined"&&currentMemberKey!=null)
+        return String(currentMemberKey).toLowerCase();
+    }catch(_){}
+    return "";
+  }
+  function isTarget(){return memberKeySafe()===TARGET}
+
+  async function readResolvedIds(){
     if(!isTarget()||!cloudReady)return new Set();
     try{
       const {db,fs}=await getFirebaseContext();
-      const ref=fs.collection(db,"mailboxes",TARGET,"items");
-      const snap=await fs.getDocs(fs.query(ref,fs.limit(500)));
+      const q=fs.query(fs.collection(db,"mailboxes",TARGET,"items"),fs.limit(500));
+      const sn=await fs.getDocs(q);
       const ids=new Set();
-      snap.forEach(d=>{
+      sn.forEach(d=>{
         const x=d.data()||{};
-        if(x.resolved===true && (x.type==="gift" || x.source==="yainoo")){
-          ids.add(String(x.giftId||d.id));
+        if(x.resolved===true){
+          const id=String(x.giftId||d.id||"");
+          if(id)ids.add(id);
         }
       });
       return ids;
     }catch(e){
-      console.warn(BUILD,"resolved mailbox read failed",e);
+      console.warn(BUILD,"read receipt failed",e);
       return new Set();
     }
   }
 
   function removeResolvedCards(ids){
     if(!isTarget()||!ids?.size)return;
-    document.querySelectorAll('[data-r3474-gift],[data-r3465-gift],[data-claim-gift]').forEach(btn=>{
+    const selector='[data-r3474-gift],[data-r3465-gift],[data-claim-gift]';
+    document.querySelectorAll(selector).forEach(btn=>{
       const id=String(btn.dataset.r3474Gift||btn.dataset.r3465Gift||btn.dataset.claimGift||"");
-      if(id && ids.has(id))btn.closest?.('.notification-card')?.remove?.();
+      if(id&&ids.has(id))btn.closest?.('.notification-card')?.remove?.();
     });
-    const list=document.querySelector('.notification-list');
-    if(list && !list.querySelector('.notification-card') && !list.querySelector('.feature-subtitle')){
-      list.innerHTML='<p class="feature-subtitle">ยังไม่มีรายการจากยัยหนูค่ะ</p>';
-    }
   }
 
   claimFriendGift=async function(giftId,accept,returnTab="friend"){
+    /* Critical safety rule: every account except kongkwan uses the exact
+       untouched R36.92 function immediately. */
     if(!isTarget())return baseClaimFriendGift.apply(this,arguments);
+
     const id=String(giftId||"");
-    if(!id||busy.has(id)||!cloudReady)return;
+    if(!id||busy.has(id))return;
     busy.add(id);
     try{
-      await settlePendingCloudSave?.();
-      const {db,fs}=await getFirebaseContext();
-      const giftRef=fs.doc(db,"gifts",id);
-      const saveRef=fs.doc(db,"saves",TARGET);
-      const mailRef=fs.doc(db,"mailboxes",TARGET,"items",id);
-      let next=null;
-
-      await fs.runTransaction(db,async tx=>{
-        const [gSnap,sSnap,mSnap]=await Promise.all([
-          tx.get(giftRef),tx.get(saveRef),tx.get(mailRef)
-        ]);
-        if(!gSnap.exists()||!sSnap.exists())throw new Error("ไม่พบของขวัญ");
-
-        const gift=gSnap.data()||{};
-        const mail=mSnap.exists()?(mSnap.data()||{}):{};
-        if(String(gift.toKey||"").toLowerCase()!==TARGET)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
-
-        /* Mailbox receipt is the source of truth for kongkwan.
-           Even if an old/stale gifts document says pending again, never grant twice. */
-        if(mail.resolved===true)throw new Error("ของขวัญนี้ถูกรับหรือทิ้งไปแล้ว");
-        if(String(gift.status||"pending")!=="pending")throw new Error("ของขวัญนี้ถูกจัดการแล้ว");
-
-        const s=normalizeState(sSnap.data(),currentMember);
-        try{assertCurrentCloudSession?.(sSnap.data(),currentMember)}catch(e){throw e}
-
-        if(accept)addGiftItemToState(s,{...gift,sourceId:id});
-        s.clientSaveRevision=(Number(s.clientSaveRevision)||0)+1;
-        next=s;
-
-        tx.set(saveRef,{...cloneData(s),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
-        tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});
-        tx.set(mailRef,{
-          source:mail.source||"yainoo",
-          type:mail.type||"gift",
-          giftId:id,
-          read:true,
-          resolved:true,
-          status:accept?"claimed":"discarded",
-          resolvedAt:fs.serverTimestamp()
-        },{merge:true});
-      });
-
-      if(next){
-        ownState=normalizeState(next,currentMember);
-        if(!visitContext)state=ownState;
-        try{saveLocalOnly?.(ownState)}catch(_){}
+      const before=await readResolvedIds();
+      if(before.has(id)){
+        removeResolvedCards(before);
+        try{showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว")}catch(_){}
+        return;
       }
 
-      /* Remove this exact card immediately, then force notification data refresh. */
-      document.querySelectorAll(`[data-r3474-gift="${CSS.escape(id)}"],[data-r3465-gift="${CSS.escape(id)}"],[data-claim-gift="${CSS.escape(id)}"]`).forEach(btn=>btn.closest?.('.notification-card')?.remove?.());
-      try{notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}catch(_){}
-      try{await refreshNotificationBadge?.(true)}catch(_){}
-      try{await baseShowNotifications?.call(this,returnTab)}catch(_){}
-      try{removeResolvedCards(await resolvedDirectGiftIds())}catch(_){}
-      showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • รายการนี้รับซ้ำไม่ได้":"🗑️ ทิ้งของขวัญแล้ว");
-    }catch(e){
-      /* If it was already resolved, clean the stale card instead of letting it stay clickable. */
-      if(/รับหรือทิ้งไปแล้ว|ถูกจัดการแล้ว/.test(String(e?.message||""))){
-        try{removeResolvedCards(await resolvedDirectGiftIds())}catch(_){}
-        try{notificationDataCache.at=0}catch(_){}
-        try{await baseShowNotifications?.call(this,returnTab)}catch(_){}
-        try{removeResolvedCards(await resolvedDirectGiftIds())}catch(_){}
-        showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว");
-      }else{
-        message("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่");
+      /* Inventory/save behavior stays 100% on the existing R36.92 code. */
+      await baseClaimFriendGift.apply(this,arguments);
+
+      /* Only after the legacy claim path returns, verify that it actually
+         registered the claim in the receiver state. This avoids marking a
+         failed claim as resolved. */
+      let claimed=false;
+      try{
+        const s=ownState||state;
+        claimed=!!(s?.friendGiftClaims&&s.friendGiftClaims[id]);
+      }catch(_){}
+
+      if(claimed){
+        try{
+          const {db,fs}=await getFirebaseContext();
+          const mailRef=fs.doc(db,"mailboxes",TARGET,"items",id);
+          await fs.setDoc(mailRef,{
+            giftId:id,
+            source:"yainoo",
+            type:"gift",
+            read:true,
+            resolved:true,
+            status:accept?"claimed":"discarded",
+            resolvedAt:fs.serverTimestamp()
+          },{merge:true});
+        }catch(e){
+          console.warn(BUILD,"receipt write failed",e);
+        }
       }
+
+      try{
+        const ids=await readResolvedIds();
+        removeResolvedCards(ids);
+      }catch(_){}
+      try{notificationDataCache.at=0}catch(_){}
     }finally{
       busy.delete(id);
     }
   };
 
   showNotifications=async function(tab="friend"){
+    /* Other members are passed through with no target-specific work. */
+    if(!isTarget())return baseShowNotifications.apply(this,arguments);
     const result=await baseShowNotifications.apply(this,arguments);
-    if(!isTarget()||tab!=="yainoo")return result;
-    try{removeResolvedCards(await resolvedDirectGiftIds())}catch(e){console.warn(BUILD,"notification cleanup",e)}
+    if(tab==="yainoo"){
+      try{removeResolvedCards(await readResolvedIds())}catch(_){}
+    }
     return result;
   };
 
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded — kongkwan only");
+  console.info(BUILD,"loaded — kongkwan only; all other members untouched");
 })();
