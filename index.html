@@ -312,7 +312,7 @@
   });
 })();
 </script>
-<script src="daily-missions.js?v=S2-R36.87-KONGKWAN-DIRECT-SHARD-HOUSE-SINGLE-TAP-20260918"></script>
+<script src="daily-missions.js?v=S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918"></script>
   <script>
     window.firebaseReady = new Promise((resolve,reject)=>{
       window.__resolveFirebase = resolve;
@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.87-KONGKWAN-DIRECT-SHARD-HOUSE-SINGLE-TAP-20260918"></script>
+<script src="game.js?v=S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4825,10 +4825,10 @@ console.info(BUILD,"loaded");
        A second MutationObserver on the same scene node is unnecessary and was a
        freeze risk because this repair can move/add children. Keep only a cheap,
        bounded safety poll and lifecycle retries. */
-    setInterval(()=>{try{fixBasement()}catch(_){}},1800);
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(fixBasement,60)});
-    window.addEventListener("pageshow",()=>setTimeout(fixBasement,80),{passive:true});
-    setTimeout(fixBasement,160);setTimeout(fixBasement,650);
+    /* R36.88: native R17 is the sole owner of house/basement DOM. No recurring
+       repair poll and no lifecycle DOM rewrite; these old repair loops could
+       race the native renderer and leave iOS stuck during the transition. */
+    setTimeout(()=>{try{if(typeof currentScene!=="undefined"&&currentScene==="house"&&$("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement")fixBasement()}catch(_){}},650);
   })();
 
   /* ---------- 2. worm manager back in the garden tools ---------------- */
@@ -5077,12 +5077,12 @@ console.info(BUILD,"loaded");
 
 <script id="r3687-kongkwan-inventory-house-single-tap">
 /* =====================================================================
-   S2 R36.87 — KONGKWAN DIRECT INVENTORY RECOVERY + HOUSE SINGLE-TAP FIX
+   S2 R36.89 — KONGKWAN HIGH-WATER RECOVERY + BASEMENT SAFE ENTRY
    2026-09-18
    ===================================================================== */
 (function YN_R3686(){
   "use strict";
-  const BUILD="S2-R36.87-KONGKWAN-DIRECT-SHARD-HOUSE-SINGLE-TAP-20260918";
+  const BUILD="S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918";
   const $=id=>document.getElementById(id);
   const GROWTH=["cake10","cake20","cake50","cake100","coconut10","coconut20","coconut50","coconut100"];
   const INV=["bag","specials","animalProducts","dishInventory","dishes","fishingBaits","mysteryBoxes","catMysteryBoxes","dogMysteryBoxes","number4MysteryBoxes","medicines","homeFoods","hedgehogItems","flowerSeeds","flowers","wines","boatDrinks","rainyMenus","warehouseTools","farmFruits","coconutRiverItems"];
@@ -5121,11 +5121,24 @@ console.info(BUILD,"loaded");
       for(const k of keys){if(!k||k.endsWith(":"))continue;try{const raw=localStorage.getItem(k);if(!raw)continue;const box=JSON.parse(raw);addCandidate(c,box,Number(box?.at)||0,`local:${k}`);if(obj(box?.state))addCandidate(c,box.state,Number(box?.at)||0,`local-state:${k}`)}catch(_){}}
 
       const patch={},found={};
-      for(const key of INV){if(score(s?.[key])>0)continue;const b=newestPositive(c,key);if(b){patch[key]=b.v;found[key]={source:b.source,score:b.n,at:b.at}}}
-      /* specials can be partly alive while only cake/coconut keys were lost. */
+      /* R36.89: Kongkwan's first recovery picked the NEWEST positive snapshot.
+         After an inventory-zero corruption that can be the wrong snapshot: a recent
+         partial/stale cache may contain only hundreds while an older intact backup
+         contains tens of thousands. For the two numeric inventory maps that were
+         corrupted (bag + specials), recover a per-item HIGH-WATER MARK across every
+         surviving candidate. This is intentionally scoped to Kongkwan recovery only. */
+      function maxNumericMap(key){
+        const out=cp(obj(s?.[key])?s[key]:{}),src={};let changed=false;
+        for(const x of c){const m=x.data?.[key];if(!obj(m))continue;for(const [ik,raw] of Object.entries(m)){const q=iv(raw);if(q>iv(out[ik])){out[ik]=q;src[ik]={q,at:x.at,source:x.source};changed=true}}}
+        return {out,src,changed};
+      }
+      for(const key of ["bag","specials"]){const m=maxNumericMap(key);if(m.changed){patch[key]=m.out;found[key]={mode:"per-item-max",items:m.src}}}
+      for(const key of INV){if(key==="bag"||key==="specials")continue;if(score(s?.[key])>0)continue;const b=newestPositive(c,key);if(b){patch[key]=b.v;found[key]={source:b.source,score:b.n,at:b.at}}}
+      /* Growth items get an explicit max pass as well, so a later low-count
+         partial recovery can never hide an older intact cake/coconut quantity. */
       const sp=obj(patch.specials)?patch.specials:cp(obj(s?.specials)?s.specials:{});
       let spChanged=!!patch.specials;
-      for(const key of GROWTH){if(iv(sp[key])>0)continue;let best=null;for(const x of c){const q=iv(x.data?.specials?.[key]);if(!q)continue;if(!best||x.at>best.at||(x.at===best.at&&q>best.q))best={q,at:x.at,source:x.source}}if(best){sp[key]=best.q;spChanged=true;found[`specials.${key}`]=best}}
+      for(const key of GROWTH){let best={q:iv(sp[key]),at:0,source:"live"};for(const x of c){const q=iv(x.data?.specials?.[key]);if(q>best.q)best={q,at:x.at,source:x.source}}if(best.q>iv(sp[key])){sp[key]=best.q;spChanged=true;found[`specials.${key}`]=best}}
       if(spChanged)patch.specials=sp;
 
       if(!Object.keys(patch).length){lastReport={recovered:false,candidates:c.length,found};console.warn(BUILD,"no surviving positive inventory copy found yet",lastReport);return false}
@@ -5149,12 +5162,15 @@ console.info(BUILD,"loaded");
      one-plot boost panel. */
   function refreshGarden(){try{if(typeof currentScene!=="undefined"&&currentScene==="farm"&&document.querySelector(".ynu-garden-manager"))globalThis.YN_R3478?.showFarmManager?.()}catch(_){}}
 
-  bindBag();bindHouse();
-  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag();bindHouse();recoverKongkwanDeep().then(ok=>{if(ok)refreshGarden()})},ms));
-  setInterval(()=>{try{bindBag();bindHouse()}catch(_){}},2200);
+  bindBag();
+  /* R36.88: do not rewrite house handlers after R17 renders them. The native
+     r17Basement onclick is now the only transition owner. */
+  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag();recoverKongkwanDeep().then(ok=>{if(ok)refreshGarden()})},ms));
+  setInterval(()=>{try{bindBag()}catch(_){}},2200);
   async function forceRecover(){done=false;running=false;return recoverKongkwanDeep()}
   globalThis.YN_R3686={BUILD,recoverKongkwanDeep:forceRecover,report:()=>lastReport,GROWTH};
   globalThis.YN_R3687=globalThis.YN_R3686;
+  globalThis.YN_R3688=globalThis.YN_R3686;
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();

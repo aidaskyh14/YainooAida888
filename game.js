@@ -24544,7 +24544,27 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function persistHedgeVisualPos17({saveNow=true}={}){const s=own17();if(!s?.hedgehog)return;const p=currentHedgePoint17(s);s.hedgehog.pos={x:p.x,y:p.y,node:p.node};try{writeBasementMirror17(s)}catch(_){}if(saveNow)try{saveLocalOnly(s)}catch(_){}}
   function chooseHedgeMotion17(s){const p=currentHedgePoint17(s),node=nearestNode17(p.x,p.y),choices=WALK_ADJ17[node]||[8],next=choices[Math.floor(Math.random()*choices.length)],target=WALK_NODES17[next],dx=target[0]-p.x,dy=target[1]-p.y,dist=Math.hypot(dx,dy),duration=Math.max(9000,Math.min(22000,dist*650));s.hedgehog.motion={fromX:p.x,fromY:p.y,toX:target[0],toY:target[1],fromNode:node,toNode:next,startedAt:now17(),duration};s.hedgehog.pos={x:p.x,y:p.y,node};try{writeBasementMirror17(s)}catch(_){}return s.hedgehog.motion}
   function moveHedge17(){cancelAnimationFrame(hedgeRaf17);const el=$17("r17Hedgehog"),s=own17();if(!el||!s?.hedgehog||currentScene!=="house"||houseMode17!=="basement"||document.hidden)return;let mo=s.hedgehog.motion;if(!mo||now17()>=Number(mo.startedAt)+Number(mo.duration)){if(mo){s.hedgehog.pos={x:Number(mo.toX),y:Number(mo.toY),node:Number(mo.toNode)};s.hedgehog.motion=null}mo=chooseHedgeMotion17(s)}const dx=Number(mo.toX)-Number(mo.fromX),dy=Number(mo.toY)-Number(mo.fromY);animateHedge17(el,Math.abs(dy)>Math.abs(dx)?"back":"side",dx<0);const frame=()=>{if(currentScene!=="house"||houseMode17!=="basement"||document.hidden||!el.isConnected)return;const st=own17();if(!st?.hedgehog)return;const p=currentHedgePoint17(st);el.style.left=`${p.x}%`;el.style.top=`${p.y}%`;if(p.done){st.hedgehog.pos={x:p.x,y:p.y,node:Number(st.hedgehog.motion?.toNode??p.node)};st.hedgehog.motion=null;try{writeBasementMirror17(st)}catch(_){}hedgeMoveTimer17=setTimeout(moveHedge17,500+Math.random()*800);return}hedgeRaf17=requestAnimationFrame(frame)};frame()}
-  function generateHedgeDrops17(s){if(!s?.hedgehog?.enabled)return false;let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;while(t-last>=HEDGE_DROP_MS17&&count<2000){last+=HEDGE_DROP_MS17;const keys=["fur","fang","claw","tail"],pt=safeDropPoint17(count);s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});if(s.hedgehog.drops.length>64)s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:20,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"basement"});changed=true;count++}s.hedgehog.lastDropAt=last;if(changed)commit17(s);return changed}
+  function generateHedgeDrops17(s){
+    if(!s?.hedgehog?.enabled)return false;
+    let last=Number(s.hedgehog.lastDropAt)||now17(),t=now17(),changed=false,count=0;
+    /* R36.88: never replay hundreds/thousands of old 30-minute hedgehog ticks
+       while the player is entering the basement. That synchronous catch-up was
+       able to lock iPhones on the transition screen. Keep at most 24 recent
+       catch-up drops and fast-forward the drop clock to now. */
+    const missed=Math.max(0,Math.floor((t-last)/HEDGE_DROP_MS17));
+    const replay=Math.min(24,missed);
+    if(missed>replay)last=t-replay*HEDGE_DROP_MS17;
+    while(t-last>=HEDGE_DROP_MS17&&count<24){
+      last+=HEDGE_DROP_MS17;
+      const keys=["fur","fang","claw","tail"],pt=safeDropPoint17(count);
+      s.hedgehog.drops.push({id:`hd17-${last}-${Math.random().toString(36).slice(2,8)}`,type:keys[Math.floor(Math.random()*keys.length)],room:"basement",x:pt.x,y:pt.y,at:last});
+      changed=true;count++;
+    }
+    if(s.hedgehog.drops.length>64)s.hedgehog.drops=ynCompactQtyQueueR3463(s.hedgehog.drops,{keep:24,keyOf:d=>d?.type||"fur",kind:"hedge",scope:"basement"});
+    s.hedgehog.lastDropAt=t;
+    if(changed)commit17(s);
+    return changed
+  }
   function collectHedgeDrop17(id){const s=ensureR17State(own17()),idx=s.hedgehog.drops.findIndex(d=>d.id===id);if(idx<0)return;const d=s.hedgehog.drops[idx],m=HEDGE_ITEMS17[d.type],baseQty=Math.max(1,int17(d.qty)||1);s.hedgehogItems=s.hedgehogItems||{};let gain=0;for(let q=0;q<baseQty;q++)gain+=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+gain;else s.hedgehogItems[d.type]=9999;s.hedgehog.drops.splice(idx,1);try{incrementMissionOn(s,"hedgehogCollect",baseQty)}catch(_){}commit17(s);renderHedgeDrops17();showWeatherToast?.(`🦔 ${m.name} ×${gain} เข้ากระเป๋าแล้ว`)}
   function collectAllHedge17(){const s=ensureR17State(own17()),drops=s.hedgehog.drops.slice();if(!drops.length)return message("🦔 ของดรอปเม่น","ตอนนี้ยังไม่มีของดรอปให้เก็บค่ะ");const got={};let baseTotal=0;drops.forEach(d=>{const baseQty=Math.max(1,int17(d.qty)||1);baseTotal+=baseQty;let gain=0;for(let q=0;q<baseQty;q++)gain+=1+((Number(s.houseUpgrade?.level)||1)>=3&&Math.random()<.10?1:0);got[d.type]=(got[d.type]||0)+gain;if(!isAdmin17())s.hedgehogItems[d.type]=int17(s.hedgehogItems[d.type])+gain;else s.hedgehogItems[d.type]=9999});s.hedgehog.drops=[];try{incrementMissionOn(s,"hedgehogCollect",baseTotal)}catch(_){}commit17(s);renderHedgeDrops17();$17("modalContent").innerHTML=`<section class="feature-panel r17-compact-result"><h2>🧺 เก็บของเม่นทั้งหมดแล้ว</h2><div class="r16-hedge-summary">${Object.entries(got).map(([k,q])=>`<div><img src="${HEDGE_ITEMS17[k].image}"><b>${safe17(HEDGE_ITEMS17[k].name)}</b><span>×${q}</span></div>`).join("")}</div><small>เข้ากระเป๋า → ของเม่น เรียบร้อยแล้ว</small><button id="r17HedgeDone" class="primary-spooky-action">รับทราบ</button></section>`;$17("r17HedgeDone").onclick=closeModal;openModal()}
   function renderHedgeDrops17(){
@@ -24561,17 +24581,42 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   /* ---------- House renderer ---------- */
   function setHouseBg17(mode){const sc=$17("sceneScreen");if(!sc)return;const lv=Math.min(3,Math.max(1,Number((ownState||state)?.houseUpgrade?.level)||1)),bg=mode==="basement"?"house-basement-season2.jpeg":lv===3?"house-level3.jpeg":lv===2?"house-level2.jpeg":"house-interior-season2.jpeg";sc.style.backgroundImage=`url("${bg}")`;sc.style.backgroundSize="100% 100%";sc.style.backgroundPosition="center";sc.style.backgroundRepeat="no-repeat"}
   function renderHouseMain17(){persistHedgeVisualPos17({saveNow:false});stopHedge17();setHouseBg17("main");const layer=$17("sceneInteractiveLayer");if(!layer)return;layer.onpointerdown=null;layer.dataset.r17HouseMode="main";layer.innerHTML=`<button id="r17Bed" class="r17-house-hotspot r17-bed" type="button" aria-label="กิจกรรมบนเตียง"></button><button id="r17Kitchen" class="r17-house-hotspot r17-kitchen" type="button" aria-label="อาหารบ้าน"></button><button id="r17Fortune" class="r17-house-hotspot r17-fortune" type="button" aria-label="ดูดวง"></button><div class="r17-house-actions"><button id="r17Basement" type="button">⬇️ ห้องใต้ดิน</button></div>`;$17("r17Bed").onclick=()=>showRestOptions?.();$17("r17Kitchen").onclick=()=>globalThis.YN_R16?.openKitchen?.();$17("r17Fortune").onclick=()=>globalThis.YN_R16?.fortune?.();$17("r17Basement").onclick=()=>{houseMode17="basement";renderHouse17()}}
-  function renderHouseBasement17(){persistHedgeVisualPos17({saveNow:false});stopHedge17();setHouseBg17("basement");const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());if(!layer)return;layer.dataset.r17HouseMode="basement";generateHedgeDrops17(s);const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower].name)}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div>${s.hedgehog.enabled?'<button id="r17Hedgehog" class="r17-hedgehog" type="button" aria-label="น้องเม่น"></button>':''}<div class="r17-house-actions r17-basement-actions"><button id="r3465FlowerTools" type="button">🧰 เครื่องมือดอกไม้</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🛡️ คราฟโล่เม่นทอง</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;const bindBasementTap17=(b,fn)=>{if(!b)return;b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();fn()}};layer.querySelectorAll("[data-r17-plot]").forEach(b=>bindBasementTap17(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bindBasementTap17(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
-    /* R34.11.13: iPhone coordinate fallback. The whole visual plot/machine area is tappable,
-       even when the transparent DOM button misses the finger by a few pixels. */
-    layer.onpointerdown=e=>{
-      if(currentScene!=="house"||houseMode17!=="basement"||layer.dataset.r17HouseMode!=="basement")return;
-      if(e.target?.closest?.("button,[role=button]"))return;const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;
-      let best=null;FLOWER_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/13.5,dy=Math.abs(y-py)/10.5,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"flower",i,d}});
-      WINE_POS17.forEach(([px,py],i)=>{const dx=Math.abs(x-px)/11.5,dy=Math.abs(y-py)/16.5,d=dx*dx+dy*dy;if(dx<=1&&dy<=1&&(!best||d<best.d))best={kind:"wine",i,d}});
-      if(!best)return;e.preventDefault();e.stopPropagation();if(best.kind==="flower")openFlowerPlot17(best.i);else openWineMachine17(best.i);
-    };
-    bindBasementTap17($17("r3465FlowerTools"),()=>openFlowerTools17());bindBasementTap17($17("r17CollectHedge"),collectAllHedge17);if($17("r17TestHedge"))$17("r17TestHedge").onclick=enableHedge17;if($17("r17WineTest"))$17("r17WineTest").onclick=openWineTest17;if($17("r29ShieldCraft"))$17("r29ShieldCraft").onclick=()=>globalThis.YN_R29?.openShieldCraft?.();if($17("r29HouseCollectAll"))$17("r29HouseCollectAll").onclick=()=>globalThis.YN_R29?.collectHouseAll?.();$17("r17HouseUp").onclick=()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()};renderHedgeDrops17();if(s.hedgehog.enabled){const h=$17("r17Hedgehog"),pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,250)}}
+  function renderHouseBasement17(){
+    /* R36.89: SAFE BASEMENT ENTRY.
+       Entering the basement must be an immediate DOM transition. Do not persist
+       hedgehog motion, generate catch-up drops, commit cloud state, or start RAF
+       animation on the same tap. Those jobs are deferred until after the room is
+       visibly interactive, which prevents the all-account iPhone freeze. */
+    stopHedge17();
+    setHouseBg17("basement");
+    const layer=$17("sceneInteractiveLayer"),s=ensureR17State(own17());
+    if(!layer)return;
+    layer.onpointerdown=null;
+    layer.dataset.r17HouseMode="basement";
+    const flowerHtml=FLOWER_POS17.map(([x,y],i)=>{const p=s.flowerPlots[i],img=p?flowerImg17(p):"",st=p?flowerStage17(p):"";return`<button type="button" class="r17-flower-plot ${st==="ready"?"is-ready":""}" data-r17-plot="${i}" style="left:${x}%;top:${y}%" aria-label="แปลงดอกไม้ ${i+1}">${img?`<img src="${img}" class="r17-flower-plant" alt="${safe17(FLOWERS17[p.flower]?.name||p.flower||"")}"><small>${safe17(flowerStatus17(p))}</small>`:'<span>＋</span>'}</button>`}).join("");
+    const wineHtml=WINE_POS17.map(([x,y],i)=>`<button type="button" class="r17-wine-machine ${s.wineMachines[i]&&wineReady17(s.wineMachines[i])?"is-ready":""}" data-r17-machine-hot="${i}" style="left:${x}%;top:${y}%"><span>${s.wineMachines[i]?(wineReady17(s.wineMachines[i])?"พร้อมรับ":fmtMs17(s.wineMachines[i].readyAt-now17())):`เครื่อง ${i+1}`}</span></button>`).join("");
+    layer.innerHTML=`${flowerHtml}${wineHtml}<div id="r17HedgeDropLayer" class="r17-hedge-drop-layer"></div><div class="r17-house-actions r17-basement-actions"><button id="r3465FlowerTools" type="button">🧰 เครื่องมือดอกไม้</button><button id="r17CollectHedge" type="button">🧺 เก็บของเม่นทั้งหมด</button><button id="r29ShieldCraft" type="button">🦔 คราฟของเม่น</button>${(Number(s.houseUpgrade?.level)||1)>=3?'<button id="r29HouseCollectAll" type="button">✨ จัดการบ้านทั้งหมด</button>':''}<button id="r17HouseUp" type="button">⬆️ กลับขึ้นบ้าน</button></div>`;
+    const bind=(b,fn)=>{if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();fn()}};
+    layer.querySelectorAll("[data-r17-plot]").forEach(b=>bind(b,()=>openFlowerPlot17(Number(b.dataset.r17Plot))));
+    layer.querySelectorAll("[data-r17-machine-hot]").forEach(b=>bind(b,()=>openWineMachine17(Number(b.dataset.r17MachineHot))));
+    bind($17("r3465FlowerTools"),()=>openFlowerTools17());
+    bind($17("r17CollectHedge"),collectAllHedge17);
+    bind($17("r29ShieldCraft"),()=>globalThis.YN_R29?.openShieldCraft?.());
+    bind($17("r29HouseCollectAll"),()=>globalThis.YN_R29?.collectHouseAll?.());
+    bind($17("r17HouseUp"),()=>{stopHedge17();houseMode17="main";renderHouse17()});
+    /* Defer hedgehog catch-up/render until the room is already usable. */
+    setTimeout(()=>{
+      try{
+        if(currentScene!=="house"||houseMode17!=="basement"||layer.dataset.r17HouseMode!=="basement")return;
+        renderHedgeDrops17();
+        if(s.hedgehog?.enabled&&!$17("r17Hedgehog")){
+          const h=document.createElement("button");h.id="r17Hedgehog";h.type="button";h.className="r17-hedgehog";h.setAttribute("aria-label","น้องเม่น");
+          const bar=layer.querySelector(".r17-basement-actions");layer.insertBefore(h,bar||null);
+          const pos=currentHedgePoint17(s);h.style.left=`${pos.x}%`;h.style.top=`${pos.y}%`;animateHedge17(h,"idle");setTimeout(moveHedge17,450);
+        }
+      }catch(e){console.warn("R36.89 deferred basement extras",e)}
+    },700);
+  }
   function renderHouse17(){if(currentScene!=="house"||visitContext)return;try{setSceneNav({backText:"กลับไปที่แปลงผัก",backAction:returnToFarm})}catch(_){}houseMode17==="basement"?renderHouseBasement17():renderHouseMain17();try{Y26_applyRestViewLock?.()}catch(_){} }
   /* R34.11.21: window-capture one-tap path. Window fires before every legacy document handler. */
   window.addEventListener("pointerdown",e=>{
@@ -24621,7 +24666,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function tick17(){try{if(document.hidden)return;removeLegacyHitbox17();if(currentScene==="dogHotel")fixHotel17();if(document.querySelector("#alpacaPenScreen:not(.hidden)"))fixTrough17();if(currentScene==="house"&&houseMode17==="basement"){const bs=own17();if(!bs?.flowerPlots||!bs?.wineMachines)return;renderHedgeDrops17();document.querySelectorAll(".r17-flower-plot").forEach((btn,i)=>{const p=bs.flowerPlots?.[i],label=btn.querySelector("small"),img=btn.querySelector("img");if(!p){btn.classList.remove("is-ready");if(img)img.remove();if(label)label.remove();if(!btn.querySelector("span")){const plus=document.createElement("span");plus.textContent="＋";btn.appendChild(plus)}return}const ready=flowerStage17(p)==="ready";btn.classList.toggle("is-ready",ready);if(label)label.textContent=flowerStatus17(p);const src=flowerImg17(p);if(img&&src&&!img.getAttribute("src")?.endsWith(src))img.setAttribute("src",src)});document.querySelectorAll("[data-r17-machine-hot]").forEach(b=>{const i=Number(b.dataset.r17MachineHot),m=bs.wineMachines?.[i],span=b.querySelector("span");b.classList.toggle("is-ready",!!m&&wineReady17(m));if(m&&span)span.textContent=wineReady17(m)?"พร้อมรับ":fmtMs17(m.readyAt-now17());else if(!m&&span)span.textContent="ว่าง"})}}catch(e){console.warn("R17 tick",e)}}
   const draw17Base=draw;draw=function(){const r=draw17Base.apply(this,arguments);requestAnimationFrame(()=>{removeLegacyHitbox17();fixTrough17();fixHotel17();if(currentScene==="house"&&!visitContext){const layer=$17("sceneInteractiveLayer"),valid=layer?.dataset.r17HouseMode===houseMode17&&(houseMode17==="basement"?!!$17("r17HedgeDropLayer"):!!$17("r17Bed"));if(!valid)renderHouse17()}});return r};
   setInterval(tick17,1000);setTimeout(tick17,120);
-  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,fertilizeAll:fertilizeAllFlowers17,plantAll:plantAllFlowers17,openFlowerTools:openFlowerTools17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17,goBasement:()=>{persistHedgeVisualPos17({saveNow:false});houseMode17="basement";renderHouse17()},goHouseMain:()=>{persistHedgeVisualPos17();houseMode17="main";renderHouse17()}};
+  globalThis.YN_R17={BUILD,FLOWERS:FLOWERS17,WINES:WINES17,renderHouse:renderHouse17,harvestAll:harvestAllFlowers17,fertilizeAll:fertilizeAllFlowers17,plantAll:plantAllFlowers17,openFlowerTools:openFlowerTools17,collectHedge:collectAllHedge17,collectHedgeOne:collectHedgeDrop17,openWineTest:openWineTest17,openFlowerPlot:openFlowerPlot17,openWineMachine:openWineMachine17,openWineRecipe:openWineRecipeFast17,plantFlower:plantFlower17,startWine:startWine17,claimWine:claimWine17,harvestFlower:harvestFlower17,goBasement:()=>{houseMode17="basement";renderHouse17()},goHouseMain:()=>{stopHedge17();houseMode17="main";renderHouse17()}};
   globalThis.YAINOO_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
@@ -35845,7 +35890,12 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     for(const el of [...bar.children])el.style.display=keep.has(el.id)?"":"none";
     const craft=$("r29ShieldCraft");if(craft)craft.textContent="🦔 คราฟของเม่น";
     let b=$("r3474BasementTools");if(!b){b=document.createElement("button");b.id="r3474BasementTools";b.type="button";b.textContent="🧰 เครื่องมือทั้งหมด";b.onclick=e=>{e.preventDefault();e.stopPropagation();openBasementTools74()};bar.insertBefore(b,$("r17HouseUp")||null)}}
-  const basementObserver=new MutationObserver(()=>tidyBasement74());try{basementObserver.observe($("sceneInteractiveLayer")||document.body,{childList:true,subtree:true})}catch(_){};setTimeout(tidyBasement74,150);
+  /* R36.88: retired the old R34.74 basement MutationObserver completely.
+     It watched sceneInteractiveLayer and tidyBasement74() then moved/added
+     children inside that same subtree, which can create a self-triggering
+     render loop during the main-house -> basement transition on iOS. Native
+     R17 owns this DOM now. */
+  setTimeout(()=>{try{if($("sceneInteractiveLayer")?.dataset?.r17HouseMode==="basement")tidyBasement74()}catch(_){}},150);
   document.addEventListener("click",e=>{const b=e.target?.closest?.("#r3461FlowerFertilize");if(!b||currentScene!=="house")return;e.preventDefault();e.stopImmediatePropagation();fertilizeOne74(flowerPlot74)},true);
   /* Wine UI finally works in R17; only swap its state mutations to the durable tx APIs. */
   if(globalThis.YN_R17&&globalThis.YN_R3465){if(typeof globalThis.YN_R3465.startWine==="function")globalThis.YN_R17.startWine=globalThis.YN_R3465.startWine;if(typeof globalThis.YN_R3465.claimWine==="function")globalThis.YN_R17.claimWine=globalThis.YN_R3465.claimWine}
