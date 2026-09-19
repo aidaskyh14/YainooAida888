@@ -38037,3 +38037,95 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 })();
 
 ;globalThis.YAINOO_BUILD="S2-R36.108-FISH-CLAIM-ATOMIC-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
+
+/* ======================================================================
+   S2 R36.109 — MERIT AUTHORITATIVE SESSION GUARD
+   2026-09-19
+   Prevent stale local recovery / partial-state normalization from turning an
+   established player's merit back into the 300 new-account default.
+   New accounts may still start at 300 normally. Legitimate merit changes are
+   accepted whenever the incoming authoritative state explicitly contains merit.
+   ====================================================================== */
+(function YN_R36109_MERIT_AUTHORITATIVE_GUARD(){
+  "use strict";
+  const BUILD="S2-R36.109-MERIT-AUTHORITATIVE-20260919";
+  const byKey=new Map();
+  const finite=v=>Number.isFinite(Number(v));
+  const keyNow=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey||"":"");
+  const remember=(k,v)=>{if(k&&finite(v))byKey.set(String(k),Number(v))};
+  const known=k=>byKey.has(String(k))?byKey.get(String(k)):null;
+
+  /* Remove the obsolete local high-water keys from R36.79. They are not an
+     authority and must never be allowed to generate nuisance merit popups. */
+  try{
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=String(localStorage.key(i)||"");
+      if(k.startsWith("yn:r3679:merit-hw:"))localStorage.removeItem(k);
+    }
+  }catch(_){ }
+
+  /* Any partial object that lacks merit inherits the already-known merit for
+     this logged-in account instead of falling through to legacy default 300. */
+  try{
+    const baseNorm=normalizeState;
+    normalizeState=function(raw,player){
+      const k=keyNow();
+      const explicit=raw&&typeof raw==="object"&&Object.prototype.hasOwnProperty.call(raw,"merit")&&finite(raw.merit);
+      if(explicit&&k)remember(k,raw.merit);
+      const out=baseNorm.apply(this,arguments);
+      if(k){
+        if(explicit){out.merit=Number(raw.merit);remember(k,out.merit)}
+        else {const v=known(k);if(v!==null)out.merit=v}
+      }
+      return out;
+    };
+  }catch(e){console.warn(BUILD,"normalize guard",e)}
+
+  /* Capture Firestore merit BEFORE old pending-local recovery runs. If a stale
+     local snapshot tries to restore 300 during login, put the authoritative
+     cloud value back immediately after initialization, without touching bag/V7. */
+  try{
+    const baseInit=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,memberKey){
+      const k=String(memberKey||"");
+      let before=null;
+      try{
+        const {db,fs}=await getFirebaseContext();
+        const [ss,pp]=await Promise.all([
+          fs.getDoc(fs.doc(db,"saves",k)),
+          fs.getDoc(fs.doc(db,"publicProfiles",k))
+        ]);
+        const sm=ss.exists()?ss.data()?.merit:undefined;
+        const pm=pp.exists()?pp.data()?.merit:undefined;
+        if(finite(sm))before=Number(sm);
+        else if(finite(pm))before=Number(pm);
+        if(before!==null)remember(k,before);
+      }catch(e){console.warn(BUILD,"preload merit read",e)}
+
+      const out=await baseInit.apply(this,arguments);
+      if(before!==null&&k){
+        const live=Number((ownState||state||{}).merit);
+        if(!finite(live)||live!==before){
+          if(ownState)ownState.merit=before;
+          if(!visitContext&&state)state.merit=before;
+          remember(k,before);
+          try{saveLocalOnly?.(ownState||state)}catch(_){ }
+          try{updateMeritUI?.()}catch(_){ }
+          try{
+            const {db,fs}=await getFirebaseContext();
+            const b=fs.writeBatch(db);
+            b.set(fs.doc(db,"saves",k),{merit:before,updatedAt:fs.serverTimestamp()},{merge:true});
+            b.set(fs.doc(db,"publicProfiles",k),{memberKey:k,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||k),merit:before,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
+            await b.commit();
+          }catch(e){console.error(BUILD,"restore authoritative merit",e)}
+        }
+      }
+      return ownState||out;
+    };
+  }catch(e){console.warn(BUILD,"init guard",e)}
+
+  globalThis.YN_R36109={BUILD,knownMerit:()=>known(keyNow())};
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — stale local 300 cannot replace cloud merit");
+})();
