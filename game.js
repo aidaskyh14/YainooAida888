@@ -27535,10 +27535,13 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     /* Five retired cats may never return, even from a legacy save/pending reward. */
     if(Array.isArray(s.cats))s.cats=s.cats.filter(c=>c&&!removedCats33.has(String(c.typeKey||"")));
     if(s.pendingCatBoxReward?.kind==="cat"&&removedCats33.has(String(s.pendingCatBoxReward.typeKey||"")))s.pendingCatBoxReward=null;
-    /* Base hamster capacity is 3. Preserve extras safely in inventory until key is unlocked. */
+    /* R36.114: hamster capacity is structurally 6 per hamster farm for every player.
+       Older R33 logic reduced non-upgraded accounts to 3 and silently moved the
+       extra real hamsters back to inventory during normalization. Keep only a
+       safety clamp above 6; petExpansion no longer gates hamster placement. */
     s.farmGuardianInventory=Array.isArray(s.farmGuardianInventory)?s.farmGuardianInventory:[];
-    if(!isAida33(player,currentMemberKey)&&!s.s2Unlocks.petExpansion&&s.farmGuardians&&typeof s.farmGuardians==="object"){
-      for(const n of ["2","3","4"]){const g=s.farmGuardians[n];if(!g||!Array.isArray(g.hamsters)||g.hamsters.length<=3)continue;const extra=g.hamsters.splice(3);for(const h of extra)if(h?.id&&!s.farmGuardianInventory.some(x=>String(x?.id)===String(h.id)))s.farmGuardianInventory.push({...h,source:h.source||"r33-capacity-migration"})}
+    if(s.farmGuardians&&typeof s.farmGuardians==="object"){
+      for(const n of ["2","3","4"]){const g=s.farmGuardians[n];if(!g||!Array.isArray(g.hamsters)||g.hamsters.length<=6)continue;const extra=g.hamsters.splice(6);for(const h of extra)if(h?.id&&!s.farmGuardianInventory.some(x=>String(x?.id)===String(h.id)))s.farmGuardianInventory.push({...h,source:h.source||"r36114-capacity-safety"})}
     }
     return s;
   }
@@ -27550,7 +27553,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
 
   function hasUnlock33(name,s=live33()){return isAida33()||Boolean(ensureR33State(s)?.s2Unlocks?.[name])}
   function keyQty33(key,s=live33()){return isAida33()?9999:int33(ensureR33State(s)?.upgradeKeys?.[key])}
-  function hamsterCap33(s=live33()){return hasUnlock33("petExpansion",s)?6:3}
+  function hamsterCap33(s=live33()){return 6}
   function keyForUnlock33(unlock){return Object.keys(KEY_DEFS).find(k=>KEY_DEFS[k].unlock===unlock)||""}
 
   /* ---------- Gift + inventory registration for all four keys ---------- */
@@ -27684,7 +27687,7 @@ globalThis.YAINOO_BUILD="S2-R32.7-LAUNCH-CRITICAL";console.info("S2-R32.7 launch
     s.hedgehog=s.hedgehog&&typeof s.hedgehog==="object"?s.hedgehog:{};Object.assign(s.hedgehog,{enabled:false,drops:[],lastDropAt:now33()});s.houseHedgehogs=[];
     s.s2Unlocks={house:false,territory:false,petExpansion:false,mystic:false};s.upgradeKeys=s.upgradeKeys&&typeof s.upgradeKeys==="object"?s.upgradeKeys:{};Object.keys(KEY_DEFS).forEach(k=>s.upgradeKeys[k]=int33(s.upgradeKeys[k]));
     /* Preserve hamsters, but base launch capacity is 3: safely store extras. */
-    s.farmGuardianInventory=Array.isArray(s.farmGuardianInventory)?s.farmGuardianInventory:[];if(s.farmGuardians&&typeof s.farmGuardians==="object")for(const n of ["2","3","4"]){const g=s.farmGuardians[n];if(!g||!Array.isArray(g.hamsters)||g.hamsters.length<=3)continue;for(const h of g.hamsters.splice(3))if(h?.id&&!s.farmGuardianInventory.some(x=>String(x?.id)===String(h.id)))s.farmGuardianInventory.push({...h,source:h.source||"r33-reset-capacity"})}
+    s.farmGuardianInventory=Array.isArray(s.farmGuardianInventory)?s.farmGuardianInventory:[];if(s.farmGuardians&&typeof s.farmGuardians==="object")for(const n of ["2","3","4"]){const g=s.farmGuardians[n];if(!g||!Array.isArray(g.hamsters)||g.hamsters.length<=6)continue;for(const h of g.hamsters.splice(6))if(h?.id&&!s.farmGuardianInventory.some(x=>String(x?.id)===String(h.id)))s.farmGuardianInventory.push({...h,source:h.source||"r36114-reset-capacity-safety"})}
     s[RESET_MARK]={version:RESET_VERSION,at:now33()};s.clientSaveRevision=Math.max(0,Number(s.clientSaveRevision)||0)+1;return ensureR33State(s,player);
   }
   function clearOldLocal33(key=currentMemberKey){for(const k of [`yn:r24:pending:${key}`,`yn:r24:last-good:${key}`,`yn:r30:basement:${key}`,`yn:s2:r22:critical:${key}`])try{localStorage.removeItem(k)}catch(_){}}
@@ -38160,3 +38163,33 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 
 /* R36.111 — STALE LOCAL RECOVERY CANNOT ROLLBACK MERIT. */
 ;globalThis.YAINOO_BUILD="S2-R36.111-STALE-LOCAL-RECOVERY-FIX-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
+
+
+/* =====================================================================
+   S2 R36.114 — UNIFIED ANIMAL GIFT STRUCTURE
+   2026-09-19
+   - Hamsters: real inventory instances, 6 per Farm 2/3/4 for every player.
+   - Admin alpaca ANIMALS: R36.51 is the only sender/receiver route.
+     Generic gifts may still carry alpaca food/medicine/wool/products.
+   - No player-name exceptions.
+   ===================================================================== */
+(function YN_R36114_ANIMAL_GIFT_STRUCTURE(){
+  "use strict";
+  const BUILD="S2-R36.114-UNIFIED-ANIMAL-GIFT-STRUCTURE-20260919";
+  try{
+    if(globalThis.YN_R33)globalThis.YN_R33.hamsterCap=()=>6;
+  }catch(_){}
+  try{
+    if(typeof adminGiftCatalog==="function"&&!adminGiftCatalog.__r36114){
+      const base=adminGiftCatalog;
+      const wrapped=function(){
+        const rows=base.apply(this,arguments)||[];
+        return rows.filter(e=>!["alpacaAdult","alpacaBaby","alpacaInstance"].includes(String(e?.type||"")));
+      };
+      wrapped.__r36114=1;adminGiftCatalog=wrapped;
+    }
+  }catch(e){console.warn(BUILD,"admin alpaca catalog route",e)}
+  globalThis.YN_R36114={BUILD,hamsterCap:6,alpacaAdminRoute:"R36.51"};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — no per-player animal gift exceptions");
+})();
