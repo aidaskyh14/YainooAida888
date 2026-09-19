@@ -5075,152 +5075,6 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script id="r3687-kongkwan-inventory-house-single-tap">
-/* =====================================================================
-   S2 R36.90 — KONGKWAN HISTORICAL INVENTORY RECOVERY + BASEMENT SAFE ENTRY
-   2026-09-18
-   ===================================================================== */
-(function YN_R3686(){
-  "use strict";
-  const BUILD="S2-R36.89-BASEMENT-SAFE-ENTRY-KONGKWAN-MAX-RECOVERY-20260918";
-  const $=id=>document.getElementById(id);
-  const GROWTH=["cake10","cake20","cake50","cake100","coconut10","coconut20","coconut50","coconut100"];
-  const INV=["bag","specials","animalProducts","dishInventory","dishes","fishingBaits","mysteryBoxes","catMysteryBoxes","dogMysteryBoxes","number4MysteryBoxes","medicines","homeFoods","hedgehogItems","flowerSeeds","flowers","wines","boatDrinks","rainyMenus","warehouseTools","farmFruits","coconutRiverItems"];
-  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
-  const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
-  const iv=v=>Math.max(0,Math.floor(Number(v)||0));
-  const mk=()=>{try{return String(currentMemberKey||"").trim().toLowerCase()}catch(_){return ""}};
-  const live=()=>{try{return ownState||state||null}catch(_){return null}};
-  function score(v){if(typeof v==="number")return Number.isFinite(v)&&v>0?v:0;if(Array.isArray(v))return v.length;if(!obj(v))return 0;return Object.values(v).reduce((n,x)=>n+score(x),0)}
-  function ts(v){try{if(v?.toMillis)return Number(v.toMillis())||0;if(Number.isFinite(Number(v)))return Number(v)}catch(_){}return 0}
-  function unwrap(raw){if(!obj(raw))return null;for(const k of ["state","data","save","snapshot","payload"]){if(obj(raw[k])&&(obj(raw[k].bag)||obj(raw[k].specials)||INV.some(x=>obj(raw[k][x]))))return raw[k]}return raw}
-  function addCandidate(out,raw,when=0,source=""){const d=unwrap(raw);if(!obj(d))return;out.push({data:cp(d),at:Number(when)||0,source})}
-  function newestPositive(cands,key){let best=null;for(const c of cands){const v=c.data?.[key],n=score(v);if(n<=0)continue;if(!best||c.at>best.at||(c.at===best.at&&n>best.n))best={v:cp(v),at:c.at,n,source:c.source}}return best}
-  function applyPatch(patch){const s=live();if(!s)return;for(const [k,v] of Object.entries(patch))s[k]=cp(v);try{ownState=s;state=s}catch(_){}try{saveLocalOnly?.(s)}catch(_){}try{draw?.()}catch(_){} }
-
-  let running=false,done=false,lastReport=null;
-  async function recoverKongkwanDeep(){
-    if(running||done||mk()!=="kongkwan")return false;
-    const s=live();if(!s)return false;
-    running=true;
-    try{
-      const ctx=await getFirebaseContext?.();if(!ctx?.db||!ctx?.fs)return false;
-      const {db,fs}=ctx,c=[];
-      /* Read the canonical inventory shard DIRECTLY first.  Do not depend on a
-         collection-list query: an older account/auth mapping can still be able to
-         read its exact save documents while a collection scan is rejected. */
-      const knownShardIds=["v7-inventory","v6-inventory","v5-inventory","inventory","v7-overflow-0","v7-overflow-1","v7-overflow-2","v7-overflow-3","over0","over1","over2","over3","farm","animals"];
-      for(const id of knownShardIds){try{const d=await fs.getDoc(fs.doc(db,"saveShards","kongkwan","items",id));if(!d.exists())continue;const r=d.data()||{};addCandidate(c,r,ts(r.updatedAt),`direct-shard:${id}`);if(obj(r.data))addCandidate(c,r.data,ts(r.updatedAt),`direct-shard-data:${id}`)}catch(e){console.warn(BUILD,"direct shard",id,e?.message||e)}}
-      /* Then scan every surviving legacy/overflow shard when list access works. */
-      try{const qs=await fs.getDocs(fs.collection(db,"saveShards","kongkwan","items"));qs.forEach(d=>{const r=d.data()||{};addCandidate(c,r,ts(r.updatedAt),`shard:${d.id}`);if(obj(r.data))addCandidate(c,r.data,ts(r.updatedAt),`shard-data:${d.id}`)})}catch(e){console.warn(BUILD,"shard scan",e?.message||e)}
-      /* The Sep-15 rescue staging document is the strongest historical source we
-         have for Kongkwan. R36.22 wrote a complete compact JSON snapshot BEFORE a
-         damaged oversized save was rebuilt, so prefer it over values produced by
-         later recovery patches. It may already have been deleted after a successful
-         rebuild; in that case we simply continue with the remaining sources. */
-      try{
-        const st=await fs.getDoc(fs.doc(db,"saveRescueStaging","kongkwan"));
-        if(st.exists()){
-          const r=st.data()||{},at=ts(r.createdAt)||0,raw=String(r.json||"");
-          if(raw){try{addCandidate(c,JSON.parse(raw),at,"rescue-staging-json")}catch(e){console.warn(BUILD,"staging JSON",e?.message||e)}}
-          addCandidate(c,r,at,"rescue-staging-doc");
-        }
-      }catch(e){console.warn(BUILD,"rescue staging",e?.message||e)}
-      /* Current virtual save is useful only as a last fallback. */
-      try{const sn=await fs.getDoc(fs.doc(db,"saves","kongkwan"));if(sn.exists())addCandidate(c,sn.data(),Date.now(),"current-save")}catch(_){}
-      const name=(()=>{try{return String(currentMember||"").trim()}catch(_){return ""}})();
-      const keys=new Set([`yainoo-v5:${name}`,`yainoo-v5:kongkwan`,`yn:r24:last-good:kongkwan`,`yn:r24:pending:kongkwan`,`yn:s2:r22:critical:kongkwan`,`yn:v7:critical:kongkwan`,`yn:r24:last-good:${name}`,`yn:r24:pending:${name}`]);
-      try{for(let i=0;i<localStorage.length;i++){const k=String(localStorage.key(i)||"");if(/kongkwan|yainoo-v5|last-good|pending|critical/i.test(k))keys.add(k)}}catch(_){}
-      for(const k of keys){if(!k||k.endsWith(":"))continue;try{const raw=localStorage.getItem(k);if(!raw)continue;const box=JSON.parse(raw);addCandidate(c,box,Number(box?.at)||0,`local:${k}`);if(obj(box?.state))addCandidate(c,box.state,Number(box?.at)||0,`local-state:${k}`)}catch(_){}}
-
-      const patch={},found={};
-      /* R36.90: recover real historical quantities, not a synthetic 9,999.
-
-         Source priority per item:
-         1) saveRescueStaging JSON (pre-rebuild historical snapshot), when present.
-         2) Otherwise the largest surviving historical value, BUT an exact 9,999 is
-            treated as suspect for Kongkwan whenever another positive value exists.
-            (9,999 is the game's admin stock constant and is not a player target.)
-         3) If 9,999 is literally the only surviving positive evidence, keep it as a
-            fallback rather than inventing another number.
-
-         This selection is allowed to DECREASE a previously recovered 9,999 when a
-         better historical copy proves a different value. It also keeps values above
-         9,999 exactly as found. */
-      function historicalNumericMap(key){
-        const base=cp(obj(s?.[key])?s[key]:{}),out=cp(base),src={};
-        const names=new Set(Object.keys(base));
-        for(const x of c){const m=x.data?.[key];if(obj(m))for(const ik of Object.keys(m))names.add(ik)}
-        let changed=false;
-        for(const ik of names){
-          const vals=[];
-          for(const x of c){const m=x.data?.[key];if(!obj(m))continue;const q=iv(m[ik]);if(q>0)vals.push({q,at:x.at,source:x.source})}
-          if(!vals.length)continue;
-          const staged=vals.filter(v=>v.source==="rescue-staging-json").sort((a,b)=>b.at-a.at);
-          let best=null;
-          if(staged.length)best=staged[0];
-          else{
-            const non9999=vals.filter(v=>v.q!==9999);
-            const pool=non9999.length?non9999:vals;
-            best=pool.sort((a,b)=>b.q-a.q||b.at-a.at)[0]||null;
-          }
-          if(!best)continue;
-          if(iv(out[ik])!==best.q){out[ik]=best.q;changed=true}
-          src[ik]={...best,candidates:vals.length,ignoredSynthetic9999:vals.some(v=>v.q===9999)&&vals.some(v=>v.q!==9999)};
-        }
-        return {out,src,changed};
-      }
-      for(const key of ["bag","specials"]){const m=historicalNumericMap(key);if(m.changed||Object.keys(m.src).length){patch[key]=m.out;found[key]={mode:"historical-evidence",items:m.src}}}
-      for(const key of INV){if(key==="bag"||key==="specials")continue;if(score(s?.[key])>0)continue;const b=newestPositive(c,key);if(b){patch[key]=b.v;found[key]={source:b.source,score:b.n,at:b.at}}}
-      /* bag/specials were already selected item-by-item above. Record the exact
-         cake/coconut evidence chosen so it can be inspected after login. */
-      const sp=obj(patch.specials)?patch.specials:cp(obj(s?.specials)?s.specials:{});
-      for(const key of GROWTH){
-        const meta=found?.specials?.items?.[key];
-        found[`specials.${key}`]=meta||{q:iv(sp[key]),source:"live/fallback",candidates:0};
-      }
-      patch.specials=sp;
-
-      if(!Object.keys(patch).length){lastReport={recovered:false,candidates:c.length,found};console.warn(BUILD,"no surviving positive inventory copy found yet",lastReport);return false}
-      /* Write through the V7 proxy so bag/specials go to v7-inventory rather than
-         bloating the root /saves document. */
-      await fs.setDoc(fs.doc(db,"saves","kongkwan"),patch,{merge:true});
-      applyPatch(patch);done=true;lastReport={recovered:true,candidates:c.length,keys:Object.keys(patch),found};
-      try{showWeatherToast?.("กู้ข้อมูลกระเป๋า Kongkwan จากข้อมูลสำรองที่ยังเหลืออยู่แล้วค่ะ")}catch(_){}
-      console.info(BUILD,"Kongkwan inventory restored",lastReport);return true;
-    }catch(e){console.warn(BUILD,"recovery",e?.message||e);return false}finally{running=false}
-  }
-
-  /* Native bag only. No synthetic button and no global click capture. */
-  function bindBag(){const b=$("inventoryNavBtn");if(!b)return;b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";b.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();try{inventory?.("crops")}catch(err){console.warn(BUILD,"bag",err)}}}
-
-  /* Native R17 owns house state. Direct pointer handler avoids the old stacked
-     click layers; there is no DOM observer in R36.77 anymore. */
-  function bindHouse(){let scene="";try{scene=String(currentScene||"")}catch(_){}if(scene!=="house")return;const layer=$("sceneInteractiveLayer"),a=globalThis.YN_R17;if(!layer||!a)return;layer.style.pointerEvents="auto";const mode=String(layer.dataset.r17HouseMode||"");if(mode==="main"){const b=$("r17Basement");if(b){b.disabled=false;b.style.pointerEvents="auto";b.style.touchAction="manipulation";const go=e=>{e?.preventDefault?.();e?.stopPropagation?.();if(b.dataset.r3687Busy==="1")return;b.dataset.r3687Busy="1";try{a.goBasement?.()}catch(err){console.warn(BUILD,"basement",err)}finally{setTimeout(()=>{try{delete b.dataset.r3687Busy}catch(_){ }},450)}};b.onpointerup=null;b.onclick=go}}else if(mode==="basement"){try{globalThis.YN_R3680?.fixBasement?.()}catch(_){}}}
-
-  /* Ensure the garden manager uses the same canonical specials map as the
-     one-plot boost panel. */
-  function refreshGarden(){try{if(typeof currentScene!=="undefined"&&currentScene==="farm"&&document.querySelector(".ynu-garden-manager"))globalThis.YN_R3478?.showFarmManager?.()}catch(_){}}
-
-  bindBag();
-  /* R36.88: do not rewrite house handlers after R17 renders them. The native
-     r17Basement onclick is now the only transition owner. */
-  [350,900,1800,3500,7000,14000,25000,45000].forEach(ms=>setTimeout(()=>{bindBag()},ms));
-  console.info(BUILD,"automatic Kongkwan inventory recovery DISABLED; manual recovery only");
-  setInterval(()=>{try{bindBag()}catch(_){}},2200);
-  async function forceRecover(){done=false;running=false;return recoverKongkwanDeep()}
-  function recoverySummary(){
-    const r=lastReport||{},f=r.found||{},rows={};
-    for(const key of GROWTH){const m=f[`specials.${key}`]||f?.specials?.items?.[key]||{};rows[key]={qty:iv(live()?.specials?.[key]),source:m.source||"unknown",candidates:Number(m.candidates)||0,ignoredSynthetic9999:Boolean(m.ignoredSynthetic9999)}}
-    return {build:BUILD,recovered:Boolean(r.recovered),candidates:Number(r.candidates)||0,growth:rows,report:r};
-  }
-  globalThis.YN_R3686={BUILD,recoverKongkwanDeep:forceRecover,report:()=>lastReport,recoverySummary,GROWTH};
-  globalThis.YN_R3687=globalThis.YN_R3686;
-  globalThis.YN_R3688=globalThis.YN_R3686;
-  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded");
-})();
-</script>
 
 
 <script>
@@ -5681,7 +5535,7 @@ console.info(BUILD,"loaded");
    - Direct gift /gifts status + mailbox cleanup are best-effort after commit.
    - Admin targeted/global broadcasts use the same receiver-owned claim pattern.
    - Receive All handles every visible pending gift in the current tab.
-   - No account-specific branches. Earn, Kongkwan, and every other member use
+   - No account-specific branches. Every active member uses
      exactly the same code path.
    ===================================================================== */
 (function YN_R36101_RECEIVER_OWNED_GIFT_ENGINE(){
@@ -5748,7 +5602,7 @@ console.info(BUILD,"loaded");
     const mk=key();if(!mk||!cloudReady)return[];
     const {db,fs}=await getFirebaseContext(),out=[];
     const sn=await fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk),fs.limit(500)));
-    sn.forEach(d=>{const g=d.data()||{},id=String(d.id);if(String(g.status||"pending")==="pending"&&!claims?.[id])out.push({kind:"direct",id,...g})});
+    sn.forEach(d=>{const g=d.data()||{},id=String(d.id);if(String(g.status||"pending")==="pending"&&!claims?.[id]&&(isAdminDirect(g)||YN_isActivePlayerKey(g.fromKey)))out.push({kind:"direct",id,...g})});
     out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
   }
 
@@ -5774,6 +5628,7 @@ console.info(BUILD,"loaded");
       if(!giftSnap.exists())return{ok:true,already:true};
       const gift=giftSnap.data()||{};
       if(String(gift.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      if(!isAdminDirect(gift)&&!YN_isActivePlayerKey(gift.fromKey))throw new Error("ผู้ส่งไม่ได้อยู่ในระบบแล้ว");
 
       const saveRef=fs.doc(db,"saves",mk);let after=null,patch=null,already=false;
       await fs.runTransaction(db,async tx=>{
@@ -5867,7 +5722,7 @@ console.info(BUILD,"loaded");
       const directRows=tab==="yainoo"?direct.filter(isAdminDirect):direct.filter(g=>!isAdminDirect(g));
       const giftRows=tab==="yainoo"?[...directRows,...bcasts]:directRows;
       giftRows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
-      const notices=mail.filter(x=>x.type!=="gift"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"));
+      const notices=mail.filter(x=>x.type!=="gift"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&YN_isActivePlayerKey(x.fromKey)));
       const allBtn=giftRows.length?`<button id="r36101ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${giftRows.length})</button>`:"";
       const adminEntry=(String(key()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
       const body=[...giftRows.map(giftCard),...notices.map(noticeCard)].join("")||'<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
@@ -5906,6 +5761,15 @@ console.info(BUILD,"loaded");
   globalThis.YN_R36101={BUILD,claimDirect,claimBroadcast,show:showUnified,getViewData};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — receiver-owned claim is authoritative");
+})();
+</script>
+
+<script id="r36102-remove-retired-legacy-accounts">
+(()=>{
+  const BUILD="S2-R36.102-REMOVE-5-OLD-ACCOUNTS-20260918";
+  globalThis.YAINOO_BUILD=BUILD;
+  globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
 })();
 </script>
 
