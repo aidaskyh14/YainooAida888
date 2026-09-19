@@ -13033,7 +13033,12 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     $("ynuClaimFish").onclick=()=>claimFishingV2(x);
     openModal();
   }
+  let ynuFishClaimBusy=false;
   async function claimFishingV2(x){
+    if(ynuFishClaimBusy)return;
+    ynuFishClaimBusy=true;
+    const claimBtn=$("ynuClaimFish");
+    if(claimBtn)claimBtn.disabled=true;
     try{
       const actorKey=String(currentMemberKey||"");
       if(!actorKey)throw new Error("ไม่พบบัญชีผู้เล่น");
@@ -13045,57 +13050,108 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       const durable=globalThis.YN_R3650_DURABLE?.mutateTop;
       if(typeof durable!=="function")throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
 
-      let claimedWeight=0;
+      /* R36.107: Read shared fishing docs OUTSIDE the player's durable
+         transaction. The old R36.106 claim read fishingDaily inside the same
+         transaction as saves/{memberKey}. Because fishingDaily is shared by
+         every player, any other catch could change that document and force the
+         whole player claim transaction to retry/fail. */
+      const [slotSnap,dailySnap]=await Promise.all([
+        fs.getDoc(slotRef),
+        fs.getDoc(dailyRef)
+      ]);
+      const slot=slotSnap.exists()?slotSnap.data():x;
+      const canonical=actorKey;
+      const ownerOk=
+        !slotSnap.exists()
+        || String(slot.ownerKey||"")===actorKey
+        || String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
+      if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
+      if(String(slot.status||"fishing")==="claimed"){
+        try{await fs.deleteDoc(playerRef)}catch(_){}
+        closeModal();
+        return;
+      }
+      if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
+
+      const claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
+      const priorDaily=dailySnap.exists()?dailySnap.data():{};
+      const priorScores=ensureObj(priorDaily.scores);
+      const previousWeight=Number(priorScores[canonical]||0);
+      const nextWeight=Number((previousWeight+claimedWeight).toFixed(2));
+      const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
+      let alreadyClaimed=false;
+
       await durable(async(s,{fs,tx})=>{
-        /* R36.106: use the shared V7 durable writer. Do NOT replace the whole
-           root save here. The old fishing path serialised normalizeState() back
-           into saves/{memberKey}, which could re-introduce sharded inventory and
-           trigger sync/version failures. */
-        const [sl,dd]=await Promise.all([tx.get(slotRef),tx.get(dailyRef)]);
-        const slot=sl.exists()?sl.data():x;
-        const canonical=actorKey||memberKeyFromName(currentMember||"");
-        const ownerOk=
-          !sl.exists()
-          || String(slot.ownerKey||"")===String(actorKey)
-          || String(slot.ownerKey||"")===String(canonical||"")
-          || String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
-        if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
-        if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
-
-        const d=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
-        d.scores=ensureObj(d.scores);d.names=ensureObj(d.names);d.ponds=ensureObj(d.ponds);
-        const key=canonical||actorKey;
-        const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
         s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
-        if(s.fishingClaimReceipts[receipt])throw new Error("รับน้ำหนักรอบนี้แล้ว");
+        if(s.fishingClaimReceipts[receipt]){
+          alreadyClaimed=true;
+          s.fishingActiveSession=null;
+          return {receipt,key:canonical,already:true};
+        }
 
-        claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
-        d.scores[key]=Number((Number(d.scores[key]||0)+claimedWeight).toFixed(2));
-        d.names[key]=currentProfileDisplayName();
-        d.ponds[key]=Number(x.pondId||0);
         ensureMissionStateFor(s);
-        s.missions.progress.dailyFishingWeight500=d.scores[key];
+        s.missions.progress.dailyFishingWeight500=nextWeight;
         s.fishingCooldownUntil=NOW()+5*MIN;
         s.fishingClaimReceipts[receipt]=NOW();
         s.fishingActiveSession=null;
 
-        tx.set(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
-        return {receipt,key};
+        /* No transaction read of fishingDaily: atomic increment lets multiple
+           players claim at the same time without invalidating each other's
+           save transaction. */
+        if(dailySnap.exists()){
+          const patch={
+            [`scores.${canonical}`]:fs.increment(claimedWeight),
+            [`names.${canonical}`]:currentProfileDisplayName(),
+            [`ponds.${canonical}`]:Number(x.pondId||0),
+            updatedAt:fs.serverTimestamp()
+          };
+          tx.update(dailyRef,patch);
+        }else{
+          tx.set(dailyRef,{
+            dateKey:DAILY_KEY(),
+            scores:{[canonical]:claimedWeight},
+            names:{[canonical]:currentProfileDisplayName()},
+            ponds:{[canonical]:Number(x.pondId||0)},
+            updatedAt:fs.serverTimestamp()
+          },{merge:true});
+        }
+
+        tx.update(slotRef,{
+          status:"claimed",
+          claimedAt:NOW(),
+          claimDeadline:NOW(),
+          updatedAt:fs.serverTimestamp()
+        });
+        tx.delete(playerRef);
+        return {receipt,key:canonical,already:false};
       },{preferLocal:true});
 
-      try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36.106 fishing campaign score",e)}
-      try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("R36.106 slot cleanup",e)}
-      try{await fs.deleteDoc(playerRef)}catch(e){console.warn("R36.106 player cleanup",e)}
+      if(!alreadyClaimed){
+        try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36.107 fishing campaign score",e)}
+      }
 
+      try{
+        const i=Math.max(0,Math.min(3,Number(x.slot||1)-1));
+        if(fishSlots[i])fishSlots[i]={...fishSlots[i],status:"claimed",claimedAt:NOW(),claimDeadline:NOW()};
+        clearFishMirrorV2?.();
+        drawFishingV2?.();
+      }catch(_){}
       closeModal();
-      showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
+      if(!alreadyClaimed)showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
     }catch(e){
-      console.error("R36.106 claim fish",e);
+      console.error("R36.107 claim fish",e);
       const m=String(e?.message||e||"");
-      /* Technical sync/auth/version errors are already retried by mutateTop().
-         Never show the old blocking nuisance popup to players. */
-      if(/Firebase|Firestore|Transaction|stored version|required base version|failed-precondition|aborted|contention|permission-denied|Missing or insufficient permissions|unavailable|deadline|ระบบกำลังซิงก์ข้อมูลอยู่/i.test(m))return;
+      /* Never bother players with transient infrastructure/version messages.
+         Keep the catch on screen so they can tap again after the automatic
+         retry window; only real gameplay errors are shown. */
+      if(/Firebase|Firestore|Transaction|stored version|required base version|failed-precondition|aborted|contention|permission-denied|Missing or insufficient permissions|unavailable|deadline|resource-exhausted|ระบบกำลังซิงก์ข้อมูลอยู่/i.test(m)){
+        try{showWeatherToast?.("🎣 ยังรับปลาไม่สำเร็จ ระบบจะเก็บรอบนี้ไว้ให้ กดรับอีกครั้งได้เลย") }catch(_){}
+        return;
+      }
       message("รับปลาไม่ได้",m||"กรุณาลองใหม่");
+    }finally{
+      ynuFishClaimBusy=false;
+      const b=$("ynuClaimFish");if(b)b.disabled=false;
     }
   }
   async function showFishingDashboardV2(){
@@ -37983,4 +38039,4 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   console.info(BUILD,"loaded — auto historical restore disabled in index; safe gift merge enabled");
 })();
 
-;globalThis.YAINOO_BUILD="S2-R36.106-DURABLE-FISH-NO-NUISANCE-POPUPS-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
+;globalThis.YAINOO_BUILD="S2-R36.107-FISH-CLAIM-ATOMIC-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
