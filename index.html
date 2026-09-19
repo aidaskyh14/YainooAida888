@@ -3686,9 +3686,17 @@ console.info(BUILD,"loaded");
 
   /* ---------- FAST sender ---------- */
   let recipients=[];
-  function buildRecipients(){
-    const out=[];try{for(const name of Object.keys(typeof MEMBERS==="object"&&MEMBERS?MEMBERS:{})){if(String(name).toLowerCase()==="aida")continue;const key=typeof memberKeyFromName==="function"?String(memberKeyFromName(name)||"").trim():String(name).trim();if(key)out.push({name:String(name),key})}}catch(_){ }
-    const m=new Map();out.forEach(x=>m.set(x.key,x));return [...m.values()];
+  async function buildRecipients(){
+    const m=new Map();
+    /* R36.112: the sender must use the same canonical member directory as the rest
+       of the game. R36.51 only read static MEMBERS, so approved S2 accounts could
+       be silently omitted from alpaca delivery. */
+    try{
+      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"loginDirectory"));
+      sn.forEach(d=>{const x=d.data()||{},key=String(x.memberKey||d.id||"").trim(),name=String(x.displayName||key).trim();if(!key||key.toLowerCase()==="aida")return;if(String(x.status||"approved")!=="approved")return;if(typeof YN_isActivePlayerKey==="function"&&!YN_isActivePlayerKey(key))return;m.set(key,{name,key})});
+    }catch(e){console.warn(BUILD,"directory recipients",e)}
+    try{for(const name of Object.keys(typeof MEMBERS==="object"&&MEMBERS?MEMBERS:{})){if(String(name).toLowerCase()==="aida")continue;const key=typeof memberKeyFromName==="function"?String(memberKeyFromName(name)||"").trim():String(name).trim();if(!key)return;if(typeof YN_isActivePlayerKey==="function"&&!YN_isActivePlayerKey(key))return;if(!m.has(key))m.set(key,{name:String(name),key})}}catch(_){ }
+    return [...m.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),"th"));
   }
   function personHTML(p){return `<label class="r51card"><input type="checkbox" data-r51-person="${esc(p.key)}"><div class="r51copy"><b>${esc(p.name)}</b><small>${esc(p.key)}</small></div></label>`}
   function itemHTML(v,i){return `<label class="r51card"><input type="checkbox" data-r51-item="${i}"><img src="${esc(v.image)}"><div class="r51copy"><b>${esc(v.name)}</b><small>${v.type==="alpacaBaby"?"เบบี้":"ตัวเต็มวัย"}</small></div><input class="r51qty" type="number" min="1" max="999" value="1" data-r51-qty="${i}" inputmode="numeric"></label>`}
@@ -3696,7 +3704,7 @@ console.info(BUILD,"loaded");
     if(!isAdmin())return;const t=performance.now();if(t-lastOpen<350)return;lastOpen=t;
     try{closeModal?.()}catch(_){ }
     const h=show(`<div class="r51top"><img src="alpaca-princess-stage1_idle.png"><div class="r51title"><small>ALPACA GIFT • R36.51</small><h2>ส่งอัลปาก้า</h2><p>เปิดทันที • ไม่อ่าน saves • ไม่สแกนคลังเก่า</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51block"><div class="r51head"><b>👥 ผู้รับ</b><span data-r51-pcount>กำลังเตรียมรายชื่อ…</span></div><div class="r51tools"><button data-r51-all>เลือกทั้งหมด</button><button data-r51-clear>ล้าง</button></div><div class="r51grid" data-r51-people><div class="r51empty"><b>กำลังเปิดเมนู…</b></div></div></div><div class="r51block"><div class="r51head"><b>🦙 อัลปาก้า</b><span data-r51-icount>0 รายการ</span></div><div class="r51grid">${VARIANTS.map(itemHTML).join("")}</div></div></div><div class="r51foot"><span class="r51status" data-r51-status>คลังผู้รับเริ่มใหม่จาก 0 • ของเก่าไม่ถูกนำมาใช้</span><button class="r51primary" data-r51-send>🎁 ส่งของขวัญ</button></div>`);
-    requestAnimationFrame(()=>{recipients=buildRecipients();const box=h.querySelector("[data-r51-people]");if(box)box.innerHTML=recipients.map(personHTML).join("")||'<div class="r51empty"><b>ไม่พบรายชื่อสมาชิก</b></div>';bindSender(h)});
+    requestAnimationFrame(async()=>{try{recipients=await buildRecipients()}catch(e){console.warn(BUILD,"recipients",e);recipients=[]}const box=h.querySelector("[data-r51-people]");if(box)box.innerHTML=recipients.map(personHTML).join("")||'<div class="r51empty"><b>ไม่พบรายชื่อสมาชิก</b></div>';bindSender(h)});
   }
   function bindSender(h){
     const sync=()=>{const pc=h.querySelector("[data-r51-pcount]"),ic=h.querySelector("[data-r51-icount]");if(pc)pc.textContent=`${h.querySelectorAll("[data-r51-person]:checked").length}/${recipients.length}`;if(ic)ic.textContent=`${h.querySelectorAll("[data-r51-item]:checked").length} รายการ`};
@@ -3712,7 +3720,12 @@ console.info(BUILD,"loaded");
   const whCol=(fs,db,k)=>fs.collection(db,"alpacaGiftWarehouse",k,"items");
   const whRef=(fs,db,k,id)=>fs.doc(db,"alpacaGiftWarehouse",k,"items",id);
   async function claimGift(mailId){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};if(g.type!=="alpacaGiftR3651"||g.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");const t=now(),batch=fs.writeBatch(db);let total=0;items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;batch.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);return{count:total};
+    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");
+    /* R36.112: claiming is receiver-owned and must not depend on rewriting the
+       root save first. A stale/contended warehouse-reset transaction used to
+       prevent an otherwise valid gift from ever entering alpacaGiftWarehouse. */
+    try{await ensureReset()}catch(e){console.warn(BUILD,"claim reset skipped",e)}
+    const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};if(g.type!=="alpacaGiftR3651"||g.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");const t=now(),batch=fs.writeBatch(db);let total=0;items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;batch.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);return{count:total};
   }
   async function readStacks(){const k=mk();if(!k)return[];const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(validStack(x))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
   function animalName(x){const c=LABEL[x.color]||x.color||"ขาว";return x.type==="baby"?`เบบี้อัลปาก้าสี${c}`:`อัลปาก้าสี${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
@@ -5525,7 +5538,7 @@ console.info(BUILD,"loaded");
   function noticeCard(m){const t=typeof bangkokTimeText==="function"?bangkokTimeText(m.createdAt):"";return `<div class="notification-card ${m.read?"":"unread"}"><b>${esc(m.title||"การแจ้งเตือน")}</b>${m.text?`<span>${esc(m.text)}</span>`:""}${t?`<small>${esc(t)} น.</small>`:""}</div>`}
 
   async function markRead(rows){
-    const mk=key(),unread=(rows||[]).filter(x=>!x.read&&x.type!=="gift");if(!mk||!unread.length)return;
+    const mk=key(),unread=(rows||[]).filter(x=>!x.read&&x.type!=="gift"&&x.type!=="alpacaGiftR3651");if(!mk||!unread.length)return;
     try{const {db,fs}=await getFirebaseContext(),batch=fs.writeBatch(db);unread.forEach(x=>batch.set(fs.doc(db,"mailboxes",mk,"items",x.id),{read:true},{merge:true}));await batch.commit()}catch(e){console.warn(BUILD,"mark read",e?.message||e)}
   }
 
@@ -5537,6 +5550,13 @@ console.info(BUILD,"loaded");
     return{save,mail,direct,bcasts};
   }
 
+  function alpacaGiftCard(g){
+    const items=Array.isArray(g?.items)?g.items:[];
+    const sum=items.length?items.map(i=>`${String(i?.name||"อัลปาก้า")} ×${Math.max(1,Math.floor(Number(i?.qty)||1))}`).join(" • "):String(g?.text||"อัลปาก้า");
+    const t=typeof bangkokTimeText==="function"?bangkokTimeText(g.createdAt):"";
+    return `<div class="notification-card unread r36112-alpaca-gift"><b>🎁 ยัยหนูส่งอัลปาก้าให้คุณ</b><span>${esc(sum)}</span>${t?`<small>${esc(t)} น.</small>`:""}<div class="notification-actions"><button type="button" data-r36112-alpaca="${esc(g.id)}">รับเข้าคลังอัลปาก้า</button></div></div>`;
+  }
+
   async function showUnified(tab="friend"){
     if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
     const req=(showUnified._req=(Number(showUnified._req)||0)+1);
@@ -5545,14 +5565,25 @@ console.info(BUILD,"loaded");
       const directRows=tab==="yainoo"?direct.filter(isAdminDirect):direct.filter(g=>!isAdminDirect(g));
       const giftRows=tab==="yainoo"?[...directRows,...bcasts]:directRows;
       giftRows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
-      const notices=mail.filter(x=>x.type!=="gift"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&YN_isActivePlayerKey(x.fromKey)));
+      const alpacaRows=tab==="yainoo"?mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
+      const notices=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&YN_isActivePlayerKey(x.fromKey)));
       const allBtn=giftRows.length?`<button id="r36101ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${giftRows.length})</button>`:"";
       const adminEntry=(String(key()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
-      const body=[...giftRows.map(giftCard),...notices.map(noticeCard)].join("")||'<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
+      const body=[...alpacaRows.map(alpacaGiftCard),...giftRows.map(giftCard),...notices.map(noticeCard)].join("")||'<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
       $("modalContent").innerHTML=`<section class="feature-panel notification-panel r36101-inbox"><h2>🔔 การแจ้งเตือน</h2><div class="notification-tabs"><button type="button" data-notification-tab="friend" class="${tab==="friend"?"active":""}">👥 จากเพื่อน</button><button type="button" data-notification-tab="yainoo" class="${tab==="yainoo"?"active":""}">👑 จากยัยหนู</button></div>${adminEntry}${allBtn}<div class="notification-list">${body}</div></section>`;
       openModal?.();
       document.querySelectorAll("[data-notification-tab]").forEach(b=>b.onclick=()=>showUnified(b.dataset.notificationTab));
       if($("adminCenterBtn"))$("adminCenterBtn").onclick=()=>showAdminCenter?.();
+      document.querySelectorAll("[data-r36112-alpaca]").forEach(b=>b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;b.textContent="กำลังรับ…";
+        try{
+          const core=globalThis.YN_R3651;if(!core?.claimGift)throw new Error("ระบบรับอัลปาก้ายังไม่พร้อม");
+          const r=await core.claimGift(b.dataset.r36112Alpaca);
+          showWeatherToast?.(`🦙 รับเข้าคลังอัลปาก้าแล้ว ${Number(r?.count)||0} ตัว`);
+          await showUnified(tab);try{refreshNotificationBadge?.(true)}catch(_){ }
+          try{await core.openWarehouse?.()}catch(_){ }
+        }catch(e){b.disabled=false;b.textContent="รับเข้าคลังอัลปาก้า";message?.("รับอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}
+      });
       document.querySelectorAll("[data-r36101-id]").forEach(b=>b.onclick=async()=>{
         if(b.disabled)return;b.disabled=true;b.textContent="กำลังจัดการ…";
         const accept=b.dataset.r36101Act==="accept";
@@ -5622,5 +5653,10 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
+
+<script id="r36112-alpaca-gift-route-marker">
+window.YAINOO_ALPACA_GIFT_BUILD="S2-R36.112-ALPACA-GIFT-ROUTE-20260919";
+console.info(window.YAINOO_ALPACA_GIFT_BUILD,"canonical recipients + unified alpaca claim notification loaded");
+</script>
 </body>
 </html>
