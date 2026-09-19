@@ -109,6 +109,7 @@ let MEMBERS={
   "Gigs Gee":"GIGS2619","Aimme":"AIMM8357","Phon":"PHON1948","Hana":"HANA5273",
   "Noona":"NOON3196","Aida":"YAINOO88"
 };
+const YN_BASE_LEGACY_MEMBER_NAMES=new Set(Object.keys(MEMBERS));
 
 const CROPS={
   morning:{name:"ผักบุ้งสะดุ้งเก่ง",icon:"🌿",selectImg:"06_startled_morning_glory.png?v=2",totalMs:25*60*1000,waterMs:8*60*1000,wormChance:0,seedImg:"morning-seed.png?v=2",sproutImg:"morning-sprout.png?v=2",growImg:"morning-grow.png?v=2",readyImg:"morning-ready.png?v=2"},
@@ -267,13 +268,21 @@ function assertCurrentCloudSession(raw,player){
 }
 
 function YN_isGeneratedMemberKey(key){return /^s2-[a-z0-9]+$/i.test(String(key||""))}
+/* R36.104: five retired identities are permanently excluded from every public/player surface.
+   Their replacement accounts have different display names + generated member keys and are unaffected. */
+const YN_RETIRED_PLAYER_NAMES=new Set(["Mameaw","Kongkwan","Earn","Mhai","Opor"]);
+const YN_RETIRED_PLAYER_KEYS=new Set(["mameaw","kongkwan","earn","mhai","opor"]);
 const YN_ACTIVE_DYNAMIC_KEYS=new Set();
+function YN_isRetiredPlayer(key,name=""){
+  const k=String(key||"").trim(), n=String(name||"").trim();
+  return YN_RETIRED_PLAYER_KEYS.has(k.toLowerCase()) || YN_RETIRED_PLAYER_NAMES.has(n);
+}
 function YN_isActivePlayerKey(key){
-  const target=String(key||"");
-  if(!target)return false;
+  const target=String(key||"").trim();
+  if(!target||YN_isRetiredPlayer(target))return false;
   if(target==="aida")return true;
   if(YN_ACTIVE_DYNAMIC_KEYS.has(target))return true;
-  try{return Object.keys(MEMBERS||{}).some(name=>String(name)!=="Aida"&&String(memberKeyFromName(name)||"")===target)}catch(_){return false}
+  try{return [...YN_BASE_LEGACY_MEMBER_NAMES].some(name=>String(name)!=="Aida"&&String(memberKeyFromName(name)||"")===target)}catch(_){return false}
 }
 function emptyPlot(){return{crop:null,at:null}}
 function stateKey(){return currentMember?`yainoo-v5:${currentMember}`:null}
@@ -395,16 +404,22 @@ function parseLine(line){
 
 async function loadMembers(){
   try{
-    const response=await fetch("member-codes.csv?v=5",{cache:"no-store"});
+    const response=await fetch("member-codes.csv?v=S2-R36.104",{cache:"no-store"});
     if(!response.ok)throw new Error("โหลดรายชื่อไม่สำเร็จ");
     const text=(await response.text()).replace(/^\uFEFF/,"");
     const loaded={};
     text.split(/\r?\n/).filter(Boolean).slice(1).forEach(row=>{
       const [name,code]=parseLine(row);
-      if(name&&code)loaded[name]=code;
+      if(name&&code&&YN_BASE_LEGACY_MEMBER_NAMES.has(name))loaded[name]=code;
     });
-    if(Object.keys(loaded).length)MEMBERS={...MEMBERS,...loaded}; /* R34.11.12: never wipe approved dynamic login names */
+    for(const name of YN_BASE_LEGACY_MEMBER_NAMES){
+      if(Object.prototype.hasOwnProperty.call(loaded,name))MEMBERS[name]=loaded[name];
+    }
   }catch(error){console.warn("ใช้รายชื่อสำรอง")}
+  /* Never allow a stale hosted CSV or an older runtime patch to restore a retired legacy login. */
+  for(const name of Object.keys(MEMBERS)){
+    if(MEMBERS[name]!=="__S2_DYNAMIC__"&&!YN_BASE_LEGACY_MEMBER_NAMES.has(name))delete MEMBERS[name];
+  }
   const loginNames=Object.keys(MEMBERS);
   const adminNames=loginNames.filter(name=>name==="Aida");
   const playerNames=loginNames.filter(name=>name!=="Aida");
@@ -10164,7 +10179,7 @@ showFriends=async function(){
   const profileMap=await V29_loadProfiles();
   const build=(baseName)=>{const key=memberKeyFromName(baseName),p=profileMap[key]||{};return{baseName,key,name:String(p.displayName||baseName),merit:Number(p.merit??300),initialized:Boolean(p.initialized)}};
   const admin=build("Aida");
-  const members=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(build).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name,"th"));
+  const members=Object.keys(MEMBERS).filter(n=>n!=="Aida").map(build).filter(row=>!YN_isRetiredPlayer(row.key,row.name)&&YN_isActivePlayerKey(row.key)).sort((a,b)=>b.merit-a.merit||a.name.localeCompare(b.name,"th"));
   const actions=(row)=>row.key===currentMemberKey?'<span class="friend-self">คุณ</span>':`<span class="friend-actions"><button type="button" data-visit-friend="${row.key}" data-friend-name="${safeHtml(row.name)}" ${!row.initialized?"disabled":""}>เยี่ยมสวน</button><button type="button" data-gift-friend="${row.key}" data-friend-name="${safeHtml(row.name)}">ส่งของ</button></span>`;
   const adminHTML=`<div class="friend-row friend-rank-row v29-admin-rank"><span class="v29-admin-label">👑 ADMIN</span><span class="friend-avatar" aria-hidden="true">✨</span><span class="friend-info"><b>${safeHtml(admin.name)}</b><small>เจ้าของสวน • 🙏 ${admin.merit} กุศล</small></span>${actions(admin)}</div>`;
   const rows=members.map((row,i)=>{const rank=i+1,cls=rank<=3?` v29-top-${rank}`:"";return `<div class="friend-row friend-rank-row${cls}">${rank===1?'<span class="v29-rank-crown">♛</span>':''}<span class="friend-rank">#${rank}</span><span class="friend-avatar" aria-hidden="true">${rank===1?"🏆":"👻"}</span><span class="friend-info"><b>${safeHtml(row.name)}</b><small>🙏 ${row.merit} กุศล${row.initialized?"":" • ยังไม่เข้าสวนครั้งแรก"}</small></span>${actions(row)}</div>`}).join("");
@@ -10309,6 +10324,7 @@ async function V30_adminBackfillPublicCats(){
 /* Friend visit: if publicCats is still absent and the visitor is Admin, read the
    target save directly once, publish the safe projection, then render it immediately. */
 visitFriend=async function(targetKey,targetName){
+  if(!YN_isActivePlayerKey(targetKey)){message("เข้าเยี่ยมสวนไม่ได้","ผู้เล่นนี้ไม่ได้อยู่ในระบบแล้ว");return}
   if(!cloudReady){message("ยังเยี่ยมสวนไม่ได้","กรุณาเชื่อม Firebase ก่อน");return}
   activePlacedCatId="";clearAidaFarmPetActivity(true);V29_setTools(false);
   try{
@@ -20450,7 +20466,7 @@ console.info("V291 maintenance mode loaded");
    - Top Spenders is live Firestore data; members read, Admin edits
    ===================================================================== */
 (function YN_SEASON2_V002_MEMBER_SYSTEM(){
-  const LEGACY_CODES={...MEMBERS};
+  const LEGACY_CODES=Object.fromEntries([...YN_BASE_LEGACY_MEMBER_NAMES].map(name=>[name,MEMBERS[name]]));
   const S2_DYNAMIC_KEYS=Object.create(null);
   const S2_DYNAMIC_NAMES=Object.create(null);
   const DYNAMIC_SENTINEL="__S2_DYNAMIC__";
@@ -20471,7 +20487,11 @@ console.info("V291 maintenance mode loaded");
     try{
       const bridge=await getFirebaseBridge();if(!bridge)return [];
       const {db,firestore:fs}=bridge,snap=await fs.getDocs(fs.collection(db,"loginDirectory")),rows=[];
-      snap.forEach(d=>{const x=d.data()||{},key=String(x.memberKey||d.id||"");if(x.status==="approved"&&x.displayName&&YN_isGeneratedMemberKey(key))rows.push({displayName:String(x.displayName),memberKey:key})});
+      snap.forEach(d=>{
+        const x=d.data()||{},key=String(x.memberKey||d.id||""),name=String(x.displayName||"").trim();
+        if(YN_isRetiredPlayer(key,name)){if(key)YN_RETIRED_PLAYER_KEYS.add(key.toLowerCase());return}
+        if(x.status==="approved"&&name&&YN_isGeneratedMemberKey(key))rows.push({displayName:name,memberKey:key});
+      });
       return rows.sort((a,b)=>a.displayName.localeCompare(b.displayName,"th"));
     }catch(e){console.warn("S2 directory",e);return []}
   }
@@ -20480,7 +20500,7 @@ console.info("V291 maintenance mode loaded");
     Object.keys(MEMBERS).forEach(n=>{if(MEMBERS[n]===DYNAMIC_SENTINEL)delete MEMBERS[n]});
     Object.keys(S2_DYNAMIC_KEYS).forEach(k=>delete S2_DYNAMIC_KEYS[k]);Object.keys(S2_DYNAMIC_NAMES).forEach(k=>delete S2_DYNAMIC_NAMES[k]);
     YN_ACTIVE_DYNAMIC_KEYS.clear();
-    for(const row of rows){if(LEGACY_CODES[row.displayName])continue;MEMBERS[row.displayName]=DYNAMIC_SENTINEL;S2_DYNAMIC_KEYS[row.displayName]=row.memberKey;S2_DYNAMIC_NAMES[row.memberKey]=row.displayName;YN_ACTIVE_DYNAMIC_KEYS.add(row.memberKey)}
+    for(const row of rows){if(LEGACY_CODES[row.displayName]||YN_BASE_LEGACY_MEMBER_NAMES.has(row.displayName))continue;MEMBERS[row.displayName]=DYNAMIC_SENTINEL;S2_DYNAMIC_KEYS[row.displayName]=row.memberKey;S2_DYNAMIC_NAMES[row.memberKey]=row.displayName;YN_ACTIVE_DYNAMIC_KEYS.add(row.memberKey)}
     const select=$("memberSelect");if(!select)return;
     const previous=select.value;
     const names=Object.keys(MEMBERS);
@@ -30508,7 +30528,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
   function renderDirectoryRows(rows){
     if(!Array.isArray(rows))return;
     try{
-      const legacy=new Set(Object.keys(MEMBERS||{}).filter(n=>MEMBERS[n]!=="__S2_DYNAMIC__"));
+      const legacy=new Set([...YN_BASE_LEGACY_MEMBER_NAMES]);
       /* Ask the existing V002 directory mapper to rebuild its key maps first when available. */
       if(typeof window.YN_S2_REFRESH_DIRECTORY==="function"){
         Promise.resolve(window.YN_S2_REFRESH_DIRECTORY()).catch(()=>{});
@@ -30516,7 +30536,7 @@ try{globalThis.YAINOO_BUILD="S2-R34.11.9-FRIEND-AUTHORITATIVE-20260904";console.
       }
       const sel=$("memberSelect");if(!sel)return;
       const names=[...legacy];
-      for(const r of rows){const key=String(r?.memberKey||r?.id||"");if(r?.status==="approved"&&r?.displayName&&YN_isGeneratedMemberKey(key)&&!names.includes(String(r.displayName)))names.push(String(r.displayName))}
+      for(const r of rows){const key=String(r?.memberKey||r?.id||"");if(r?.status==="approved"&&r?.displayName&&YN_isGeneratedMemberKey(key)&&!YN_BASE_LEGACY_MEMBER_NAMES.has(String(r.displayName))&&!names.includes(String(r.displayName)))names.push(String(r.displayName))}
       names.sort((a,b)=>a==="Aida"?-1:b==="Aida"?1:a.localeCompare(b,"th"));
       sel.innerHTML='<option value="" selected disabled>เลือกชื่อผู้เล่น</option>'+
         `<optgroup label="ผู้ดูแลระบบ">${names.filter(n=>n==="Aida").map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`+
