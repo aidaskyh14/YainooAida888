@@ -21617,15 +21617,37 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     s2SaveSeq=Math.max(s2SaveSeq,Number(ownState?.clientSaveRevision)||0);
     if(pendingMarker&&pendingLocal){
       try{
-        const recovered=normalizeState(JSON.parse(pendingLocal),member);
-        recovered.activeSessionId=cloudSessionId;
-        recovered.clientSaveRevision=Math.max(Number(recovered.clientSaveRevision)||0,Number(ownState?.clientSaveRevision)||0)+1;
-        recovered.clientLocalEditAt=Math.max(Number(recovered.clientLocalEditAt)||0,Date.now());
-        ownState=recovered;state=ownState;s2SaveSeq=recovered.clientSaveRevision;s2Dirty=true;
-        saveLocalOnly(ownState);updateMeritUI();
-        await flushCloudSave();
-        console.info("S2 recovered an unfinished local save");
-      }catch(e){console.warn("S2 local recovery skipped",e)}
+        const cloud=ownState||loaded||{};
+        const parsed=JSON.parse(pendingLocal);
+        const localRev=Number(parsed?.clientSaveRevision)||0;
+        const cloudRev=Number(cloud?.clientSaveRevision)||0;
+        const localEdit=Number(parsed?.clientLocalEditAt)||0;
+        const cloudEdit=Number(cloud?.clientLocalEditAt)||0;
+        const isStrictlyNewer=(localRev>cloudRev)&&(localEdit>cloudEdit);
+        if(isStrictlyNewer){
+          const cloudMerit=Number(cloud?.merit);
+          const recovered=normalizeState(parsed,member);
+          /* R36.111: local crash recovery may replay unfinished gameplay state,
+             but it is NEVER allowed to roll merit backward/sideways. Merit
+             remains whatever Firestore loaded for this account at login. */
+          if(Number.isFinite(cloudMerit))recovered.merit=cloudMerit;
+          recovered.activeSessionId=cloudSessionId;
+          recovered.clientSaveRevision=Math.max(localRev,cloudRev)+1;
+          recovered.clientLocalEditAt=localEdit;
+          ownState=recovered;state=ownState;s2SaveSeq=recovered.clientSaveRevision;s2Dirty=true;
+          saveLocalOnly(ownState);updateMeritUI();
+          await flushCloudSave();
+          console.info("R36.111 recovered strictly newer unfinished local state with cloud merit preserved");
+        }else{
+          /* Stale dirty markers are the source of repeated rollback on login. */
+          try{localStorage.removeItem(`yainoo-s2-dirty:${memberKey}`)}catch(_){}
+          s2Dirty=false;s2FlushRequested=false;
+          console.info("R36.111 discarded stale local recovery",{localRev,cloudRev,localEdit,cloudEdit});
+        }
+      }catch(e){
+        try{localStorage.removeItem(`yainoo-s2-dirty:${memberKey}`)}catch(_){}
+        console.warn("R36.111 local recovery skipped",e)
+      }
     }
     return ownState||loaded;
   };
@@ -33433,6 +33455,11 @@ window.YAINOO_PACKAGE_BUILD='S2-R34.33-ALPACA-CRITICAL';
     if(localCandidate&&resumeMeta&&localIsStrictlyNewer(localCandidate,cloudCurrent)){
       try{
         const recovered=normalizeState(cp(localCandidate),member);
+        /* R36.110: app-switch/local recovery may restore gameplay changes,
+           but merit is server-authoritative and must never roll backward from
+           an old device snapshot. Normal merit changes still work because they
+           are written through the ordinary live save path, not this recovery. */
+        if(Number.isFinite(Number(cloudCurrent?.merit))) recovered.merit=Number(cloudCurrent.merit);
         recovered.activeSessionId=cloudSessionId;
         recovered.clientSaveRevision=Math.max(
           Number(recovered.clientSaveRevision)||0,
@@ -38129,3 +38156,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — stale local 300 cannot replace cloud merit");
 })();
+
+
+/* R36.111 — STALE LOCAL RECOVERY CANNOT ROLLBACK MERIT. */
+;globalThis.YAINOO_BUILD="S2-R36.111-STALE-LOCAL-RECOVERY-FIX-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
