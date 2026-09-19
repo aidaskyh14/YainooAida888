@@ -13044,77 +13044,69 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
       if(!actorKey)throw new Error("ไม่พบบัญชีผู้เล่น");
 
       const {db,fs}=await getFirebaseContext();
+      const dateKey=DAILY_KEY();
       const slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(x.pondId,x.slot));
       const playerRef=fs.doc(db,"fishingPlayers",actorKey);
-      const dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
+      const scoreRef=fs.doc(db,"fishingDaily",dateKey,"players",actorKey);
+      const legacyDailyRef=fs.doc(db,"fishingDaily",dateKey);
       const durable=globalThis.YN_R3650_DURABLE?.mutateTop;
       if(typeof durable!=="function")throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
 
-      /* R36.107: Read shared fishing docs OUTSIDE the player's durable
-         transaction. The old R36.106 claim read fishingDaily inside the same
-         transaction as saves/{memberKey}. Because fishingDaily is shared by
-         every player, any other catch could change that document and force the
-         whole player claim transaction to retry/fail. */
-      const [slotSnap,dailySnap]=await Promise.all([
+      /* R36.108 — NO shared-score write on claim.
+         Every player owns one score document under fishingDaily/<date>/players/<memberKey>.
+         This removes the single fishingDaily document as a hot write target, which was
+         causing many simultaneous claims to abort together. */
+      const [slotSnap,legacyDailySnap]=await Promise.all([
         fs.getDoc(slotRef),
-        fs.getDoc(dailyRef)
+        fs.getDoc(legacyDailyRef)
       ]);
       const slot=slotSnap.exists()?slotSnap.data():x;
-      const canonical=actorKey;
       const ownerOk=
         !slotSnap.exists()
         || String(slot.ownerKey||"")===actorKey
         || String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
       if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
-      if(String(slot.status||"fishing")==="claimed"){
-        try{await fs.deleteDoc(playerRef)}catch(_){}
-        closeModal();
-        return;
-      }
       if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
 
       const claimedWeight=Number(Number(slot.totalWeight||x.totalWeight||0).toFixed(2));
-      const priorDaily=dailySnap.exists()?dailySnap.data():{};
-      const priorScores=ensureObj(priorDaily.scores);
-      const previousWeight=Number(priorScores[canonical]||0);
-      const nextWeight=Number((previousWeight+claimedWeight).toFixed(2));
-      const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
-      let alreadyClaimed=false;
+      const legacyDaily=legacyDailySnap.exists()?legacyDailySnap.data():{};
+      const legacyWeight=Number(legacyDaily?.scores?.[actorKey]||0);
+      const receipt=`${dateKey}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
+      let alreadyClaimed=false,combinedWeight=legacyWeight;
 
       await durable(async(s,{fs,tx})=>{
+        const scoreSnap=await tx.get(scoreRef);
+        const scoreData=scoreSnap.exists()?scoreSnap.data():{};
+        const receipts=ensureObj(scoreData.receipts);
+        const deltaBefore=Number(scoreData.score||0);
+
         s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
-        if(s.fishingClaimReceipts[receipt]){
+        if(s.fishingClaimReceipts[receipt]||receipts[receipt]){
           alreadyClaimed=true;
           s.fishingActiveSession=null;
-          return {receipt,key:canonical,already:true};
+          combinedWeight=legacyWeight+deltaBefore;
+          return {receipt,already:true};
         }
 
+        const deltaAfter=Number((deltaBefore+claimedWeight).toFixed(2));
+        combinedWeight=Number((legacyWeight+deltaAfter).toFixed(2));
+        receipts[receipt]=NOW();
+
         ensureMissionStateFor(s);
-        s.missions.progress.dailyFishingWeight500=nextWeight;
+        s.missions.progress.dailyFishingWeight500=combinedWeight;
         s.fishingCooldownUntil=NOW()+5*MIN;
         s.fishingClaimReceipts[receipt]=NOW();
         s.fishingActiveSession=null;
 
-        /* No transaction read of fishingDaily: atomic increment lets multiple
-           players claim at the same time without invalidating each other's
-           save transaction. */
-        if(dailySnap.exists()){
-          const patch={
-            [`scores.${canonical}`]:fs.increment(claimedWeight),
-            [`names.${canonical}`]:currentProfileDisplayName(),
-            [`ponds.${canonical}`]:Number(x.pondId||0),
-            updatedAt:fs.serverTimestamp()
-          };
-          tx.update(dailyRef,patch);
-        }else{
-          tx.set(dailyRef,{
-            dateKey:DAILY_KEY(),
-            scores:{[canonical]:claimedWeight},
-            names:{[canonical]:currentProfileDisplayName()},
-            ponds:{[canonical]:Number(x.pondId||0)},
-            updatedAt:fs.serverTimestamp()
-          },{merge:true});
-        }
+        tx.set(scoreRef,{
+          dateKey,
+          memberKey:actorKey,
+          name:currentProfileDisplayName(),
+          score:deltaAfter,
+          pond:Number(x.pondId||0),
+          receipts,
+          updatedAt:fs.serverTimestamp()
+        },{merge:false});
 
         tx.update(slotRef,{
           status:"claimed",
@@ -13123,11 +13115,11 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
           updatedAt:fs.serverTimestamp()
         });
         tx.delete(playerRef);
-        return {receipt,key:canonical,already:false};
+        return {receipt,already:false};
       },{preferLocal:true});
 
       if(!alreadyClaimed){
-        try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36.107 fishing campaign score",e)}
+        try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36.108 fishing campaign score",e)}
       }
 
       try{
@@ -13135,17 +13127,14 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         if(fishSlots[i])fishSlots[i]={...fishSlots[i],status:"claimed",claimedAt:NOW(),claimDeadline:NOW()};
         clearFishMirrorV2?.();
         drawFishingV2?.();
-      }catch(_){}
+      }catch(_){ }
       closeModal();
-      if(!alreadyClaimed)showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
+      if(!alreadyClaimed)showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs แล้ว • คะแนนวันนี้ ${combinedWeight.toFixed(2)} lbs • คูลดาวน์ 5 นาที`);
     }catch(e){
-      console.error("R36.107 claim fish",e);
+      console.error("R36.108 claim fish",e);
       const m=String(e?.message||e||"");
-      /* Never bother players with transient infrastructure/version messages.
-         Keep the catch on screen so they can tap again after the automatic
-         retry window; only real gameplay errors are shown. */
-      if(/Firebase|Firestore|Transaction|stored version|required base version|failed-precondition|aborted|contention|permission-denied|Missing or insufficient permissions|unavailable|deadline|resource-exhausted|ระบบกำลังซิงก์ข้อมูลอยู่/i.test(m)){
-        try{showWeatherToast?.("🎣 ยังรับปลาไม่สำเร็จ ระบบจะเก็บรอบนี้ไว้ให้ กดรับอีกครั้งได้เลย") }catch(_){}
+      if(/Firebase|Firestore|Transaction|stored version|required base version|failed-precondition|aborted|contention|permission-denied|Missing or insufficient permissions|unavailable|deadline|resource-exhausted/i.test(m)){
+        try{showWeatherToast?.("🎣 ยังรับปลาไม่สำเร็จ รอบปลายังอยู่ กดรับอีกครั้งได้ค่ะ")}catch(_){ }
         return;
       }
       message("รับปลาไม่ได้",m||"กรุณาลองใหม่");
@@ -13158,15 +13147,23 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
     $("modalContent").innerHTML=`<section class="feature-panel fishing-dashboard-panel"><h2>🏆 แดชบอร์ดน้ำหนักปลาวันนี้</h2><div class="ynu-dashboard-loading">กำลังอ่านคะแนน...</div></section>`;openModal();
     try{
       const {db,fs}=await getFirebaseContext();
-      const [snap,dirSnap]=await Promise.all([
-        fs.getDoc(fs.doc(db,"fishingDaily",DAILY_KEY())),
+      const dateKey=DAILY_KEY();
+      const [legacySnap,playerScoresSnap,dirSnap]=await Promise.all([
+        fs.getDoc(fs.doc(db,"fishingDaily",dateKey)),
+        fs.getDocs(fs.collection(db,"fishingDaily",dateKey,"players")),
         fs.getDocs(fs.collection(db,"loginDirectory"))
       ]);
-      const d=snap.exists()?snap.data():{scores:{},names:{},ponds:{}};
+      const legacy=legacySnap.exists()?legacySnap.data():{scores:{},names:{},ponds:{}};
+      const deltas=new Map();
+      playerScoresSnap.forEach(ds=>{const r=ds.data()||{};deltas.set(String(r.memberKey||ds.id),{score:Number(r.score||0),pond:Number(r.pond||0),name:String(r.name||"")})});
       const byKey=new Map();
       Object.keys(MEMBERS).filter(n=>n!=="Aida").forEach(name=>byKey.set(memberKeyFromName(name),name));
       dirSnap.forEach(docSnap=>{const row=docSnap.data()||{},key=String(row.memberKey||docSnap.id||"");if(YN_isGeneratedMemberKey(key)&&String(row.status||"")==="approved"&&key!=="aida")byKey.set(key,String(row.displayName||key))});
-      const rows=[...byKey].map(([key,name])=>({name,key,weight:Number(d.scores?.[key]||0),pond:Number(d.ponds?.[key]||0)})).sort((a,b)=>b.weight-a.weight||a.name.localeCompare(b.name,"th"));
+      const rows=[...byKey].map(([key,name])=>{
+        const extra=deltas.get(key)||{};
+        const base=Number(legacy.scores?.[key]||0);
+        return {name:extra.name||name,key,weight:Number((base+Number(extra.score||0)).toFixed(2)),pond:Number(extra.pond||legacy.ponds?.[key]||0)};
+      }).sort((a,b)=>b.weight-a.weight||a.name.localeCompare(b.name,"th"));
       $("modalContent").innerHTML=`<section class="feature-panel fishing-dashboard-panel"><h2>🏆 แดชบอร์ดน้ำหนักปลาวันนี้</h2><div class="ynu-score-table ynu-score-table-scroll"><div class="head"><b>อันดับ</b><b>ชื่อ</b><b>บ่อ</b><b>น้ำหนัก</b></div>${rows.map((r,i)=>`<div><span>${i+1}</span><span>${esc(r.name)}</span><span>${r.pond?`บ่อ 0${r.pond}`:"-"}</span><strong>${r.weight.toFixed(2)}</strong></div>`).join("")}</div></section>`;
     }catch(e){$("modalContent").innerHTML=`<section class="feature-panel fishing-dashboard-panel"><h2>แดชบอร์ด</h2><p>อ่านข้อมูลไม่สำเร็จ</p></section>`;message("เปิดแดชบอร์ดไม่ได้",e.message)}
   }
@@ -38039,4 +38036,4 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   console.info(BUILD,"loaded — auto historical restore disabled in index; safe gift merge enabled");
 })();
 
-;globalThis.YAINOO_BUILD="S2-R36.107-FISH-CLAIM-ATOMIC-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
+;globalThis.YAINOO_BUILD="S2-R36.108-FISH-CLAIM-ATOMIC-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;
