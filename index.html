@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.114-UNIFIED-ANIMAL-GIFT-STRUCTURE-20260919"></script>
+<script src="game.js?v=S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3623,13 +3623,31 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R3651_ALPACA_ZERO(){
   "use strict";
-  const BUILD="S2-R36.52-STRUCTURAL-SAVE-HEADROOM-20260916";
+  const BUILD="S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919";
   const EPOCH="r3651-zero-20260916";
   const RESET_EPOCH="r3651-zero-20260916";
   const PEN_CAPACITY=24;
   const DAY=86400000,HOUR=3600000;
   const now=()=>typeof gameNow==="function"?gameNow():Date.now();
   const mk=()=>String(typeof currentMemberKey!=="undefined"?currentMemberKey:"").trim();
+  /* R36.115: receiver identity comes from the authenticated login itself.
+     This is the same identity that Firestore Rules trust, so mailbox, warehouse
+     and save can no longer drift apart because of a stale display-name alias. */
+  async function selfKey(){
+    let fallback=mk();
+    try{
+      const bridge=await getFirebaseBridge?.();
+      const user=bridge?.getCurrentUser?.();
+      const email=String(user?.email||"").trim().toLowerCase();
+      const m=email.match(/^member-(.+)@yainoo[.]example[.]com$/);
+      if(m?.[1])return String(m[1]).trim();
+      if(email&&fallback.toLowerCase()==="aida")return "aida";
+      const profile=await bridge?.getSignedInMember?.();
+      const pk=String(profile?.memberKey||"").trim();
+      if(pk)return pk;
+    }catch(e){console.warn(BUILD,"self identity",e?.message||e)}
+    return fallback;
+  }
   const player=()=>String(typeof currentMember!=="undefined"?currentMember:"").trim();
   const isAdmin=()=>mk().toLowerCase()==="aida"&&(player()==="Aida"||globalThis.adminProfile?.role==="admin");
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -3677,7 +3695,7 @@ console.info(BUILD,"loaded");
   async function ensureReset(){
     if(resetPromise)return resetPromise;
     resetPromise=(async()=>{
-      const k=mk();if(!k)return false;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let changed=false;
+      const k=await selfKey();if(!k)return false;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let changed=false;
       await fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())return;const d=sn.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{};if(String(a.warehouseResetEpoch||"")===RESET_EPOCH&&Array.isArray(a.vault)&&a.vault.length===0)return;changed=true;tx.update(ref,{"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,"alpaca.warehouseResetAt":now(),updatedAt:fs.serverTimestamp()})});
       try{if(typeof ownState!=="undefined"&&ownState){ownState.alpaca=ownState.alpaca&&typeof ownState.alpaca==="object"?ownState.alpaca:{};ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;ownState.alpaca.warehouseResetAt=now();if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }
       return changed;
@@ -3687,35 +3705,34 @@ console.info(BUILD,"loaded");
   /* ---------- FAST sender ---------- */
   let recipients=[];
   async function buildRecipients(){
-    /* R36.113 canonical identity rule:
-       The save document id is the ONLY delivery key. loginDirectory is metadata
-       (name/approval) only. This prevents gifts being written to a stale alias
-       mailbox that the real logged-in player never reads. */
-    const m=new Map(),dirName=new Map(),approvedDynamic=new Set();
+    /* R36.115 canonical delivery rule:
+       sender uses the SAME identity registry as login.
+       - legacy players: current MEMBERS/memberKeyFromName login identity
+       - S2 players: approved loginDirectory memberKey
+       We deliberately do NOT discover recipients by scanning saves. A stale,
+       duplicate or migrated save is data, not a login identity. */
+    const m=new Map();
     try{
-      const {db,fs}=await getFirebaseContext();
-      try{
-        const ds=await fs.getDocs(fs.collection(db,"loginDirectory"));
-        ds.forEach(d=>{
-          const x=d.data()||{},key=String(x.memberKey||d.id||"").trim();
-          if(!key||key.toLowerCase()==="aida"||String(x.status||"approved")!=="approved")return;
-          const name=String(x.displayName||x.memberName||"").trim();
-          if(name)dirName.set(key,name);
-          if(/^s2-[a-z0-9]+$/i.test(key))approvedDynamic.add(key);
-        });
-      }catch(e){console.warn(BUILD,"directory metadata",e)}
-
-      const ss=await fs.getDocs(fs.collection(db,"saves"));
-      ss.forEach(d=>{
-        const key=String(d.id||"").trim();if(!key||key.toLowerCase()==="aida")return;
-        const x=d.data()||{},name=String(x.player||x.displayName||dirName.get(key)||key).trim()||key;
+      for(const name of Object.keys(typeof MEMBERS==="object"&&MEMBERS?MEMBERS:{})){
+        if(String(name).toLowerCase()==="aida")continue;
+        if(String(MEMBERS[name])==="__S2_DYNAMIC__")continue;
+        const key=String(typeof memberKeyFromName==="function"?memberKeyFromName(name):name).trim();
+        if(!key)continue;
+        if(typeof YN_isRetiredPlayer==="function"&&YN_isRetiredPlayer(key,name))continue;
+        if(typeof YN_isActivePlayerKey==="function"&&!YN_isActivePlayerKey(key))continue;
+        m.set(key,{name:String(name),key,source:"legacy-login"});
+      }
+    }catch(e){console.warn(BUILD,"legacy login recipients",e)}
+    try{
+      const {db,fs}=await getFirebaseContext(),ds=await fs.getDocs(fs.collection(db,"loginDirectory"));
+      ds.forEach(d=>{
+        const x=d.data()||{},key=String(x.memberKey||d.id||"").trim(),name=String(x.displayName||x.memberName||key).trim()||key;
+        if(!key||key.toLowerCase()==="aida"||String(x.status||"approved")!=="approved")return;
         if(typeof YN_isRetiredPlayer==="function"&&YN_isRetiredPlayer(key,name))return;
-        /* Generated accounts must still be approved. This also excludes orphan
-           typo/test save ids without a live loginDirectory identity. */
-        if(/^s2-[a-z0-9]+$/i.test(key)&&!approvedDynamic.has(key))return;
-        m.set(key,{name,key});
+        if(!/^s2-[a-z0-9]+$/i.test(key))return;
+        m.set(key,{name,key,source:"s2-loginDirectory"});
       });
-    }catch(e){console.warn(BUILD,"canonical save recipients",e)}
+    }catch(e){console.warn(BUILD,"S2 login recipients",e)}
     return [...m.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),"th"));
   }
   function personHTML(p){return `<label class="r51card"><input type="checkbox" data-r51-person="${esc(p.key)}"><div class="r51copy"><b>${esc(p.name)}</b><small>${esc(p.key)}</small></div></label>`}
@@ -3733,21 +3750,21 @@ console.info(BUILD,"loaded");
   async function sendSelected(h){
     const btn=h.querySelector("[data-r51-send]"),status=h.querySelector("[data-r51-status]");const targets=[...h.querySelectorAll("[data-r51-person]:checked")].map(x=>recipients.find(r=>r.key===x.dataset.r51Person)).filter(Boolean);const rows=[...h.querySelectorAll("[data-r51-item]:checked")].map(x=>{const i=Number(x.dataset.r51Item),v=VARIANTS[i],q=Math.max(1,Math.min(999,iv(h.querySelector(`[data-r51-qty="${i}"]`)?.value)||1));return{...v,qty:q}});
     if(!targets.length){status.textContent="กรุณาเลือกผู้รับ";return}if(!rows.length){status.textContent="กรุณาเลือกอัลปาก้า";return}btn.disabled=true;status.textContent=`กำลังส่ง ${targets.length} คน…`;
-    try{const {db,fs}=await getFirebaseContext(),delivery=`r3651-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,batch=fs.writeBatch(db);for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`;batch.set(fs.doc(db,"mailboxes",t.key,"items",id),{source:"yainoo",type:"alpacaGiftR3651",giftKind:"alpaca",epoch:EPOCH,toKey:t.key,recipientKey:t.key,routeVersion:"save-id-r36113",fromKey:"aida",fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})}await batch.commit();status.textContent=`✅ ส่งสำเร็จ ${targets.length} คน`;showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(e){status.textContent=`ส่งไม่สำเร็จ: ${e?.message||"กรุณาลองใหม่"}`}finally{btn.disabled=false}
+    try{const {db,fs}=await getFirebaseContext(),delivery=`r3651-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,batch=fs.writeBatch(db);for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`;batch.set(fs.doc(db,"mailboxes",t.key,"items",id),{source:"yainoo",type:"alpacaGiftR3651",giftKind:"alpaca",epoch:EPOCH,toKey:t.key,recipientKey:t.key,routeVersion:"login-identity-r36115",fromKey:"aida",fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})}await batch.commit();status.textContent=`✅ ส่งสำเร็จ ${targets.length} คน`;showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(e){status.textContent=`ส่งไม่สำเร็จ: ${e?.message||"กรุณาลองใหม่"}`}finally{btn.disabled=false}
   }
 
   /* ---------- NEW warehouse: ONLY claimed R36.51 gifts ---------- */
   const whCol=(fs,db,k)=>fs.collection(db,"alpacaGiftWarehouse",k,"items");
   const whRef=(fs,db,k,id)=>fs.doc(db,"alpacaGiftWarehouse",k,"items",id);
   async function claimGift(mailId){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");
+    const k=await selfKey();if(!k)throw new Error("ยังไม่พบสมาชิก");
     /* R36.112: claiming is receiver-owned and must not depend on rewriting the
        root save first. A stale/contended warehouse-reset transaction used to
        prevent an otherwise valid gift from ever entering alpacaGiftWarehouse. */
     try{await ensureReset()}catch(e){console.warn(BUILD,"claim reset skipped",e)}
     const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};if(g.type!=="alpacaGiftR3651"||g.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");if(g.toKey&&String(g.toKey)!==k)throw new Error("เส้นทางของขวัญไม่ตรงกับบัญชีที่กำลังเล่น");const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");const t=now(),batch=fs.writeBatch(db);let total=0;items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;batch.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);return{count:total};
   }
-  async function readStacks(){const k=mk();if(!k)return[];const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(validStack(x))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
+  async function readStacks(){const k=await selfKey();if(!k)return[];const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(validStack(x))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
   function animalName(x){const c=LABEL[x.color]||x.color||"ขาว";return x.type==="baby"?`เบบี้อัลปาก้าสี${c}`:`อัลปาก้าสี${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
   function wcard(x){return `<article class="r51wcard"><img src="${esc(x.image||IMG[x.color]||IMG.white)}"><div><b>${esc(animalName(x))}</b><small>ของขวัญใหม่ • รับแล้ว • ยังไม่ได้วาง</small><span class="r51badge">คงเหลือ ×${iv(x.qty)}</span></div><button class="r51place" data-r51-place="${esc(x.id)}">วางเข้าคอก 1 ตัว</button></article>`}
   async function openWarehouse(){
@@ -3761,13 +3778,13 @@ console.info(BUILD,"loaded");
     return{id:`${id}-p${serial}`,type:"adult",color:x.color,sex:x.sex==="female"?"female":"male",name:String(x.name||""),createdAt:t,woolStage:1,woolStageEndsAt:t+2*HOUR,everSheared:false,lastShearedAt:0,nextHungryAt:t+3*HOUR,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,pregnancyRoyal:false,breederCooldownUntil:0,source:"gift",deliveryId:String(x.deliveryId||""),placedAt:t,expiresAt:t+7*DAY};
   }
   async function placeGift(id,penNo){
-    const k=mk();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();try{globalThis.YN_SAVE_GUARD_ALL_PLAYERS?.compact?.(3)}catch(_){ }const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,k,id);let nextPens=null;
+    const k=await selfKey();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();try{globalThis.YN_SAVE_GUARD_ALL_PLAYERS?.compact?.(3)}catch(_){ }const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,k,id);let nextPens=null;
     await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้ารายการนี้หมดจากคลังแล้ว");const x=is.data()||{},qty=iv(x.qty);if(!validStack(x)||qty<1)throw new Error("รายการนี้ไม่ใช่อัลปาก้าคลังใหม่");const d=ss.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{},pens=cp(Array.isArray(a.pens)?a.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็ม ${PEN_CAPACITY}/${PEN_CAPACITY} แล้ว`);const serial=iv(x.placedCount)+1,t=now(),animal=makePlaced(x,id,serial,t);p.alpacas.push(animal);nextPens=pens;tx.update(sref,{"alpaca.pens":pens,"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,updatedAt:fs.serverTimestamp()});if(qty<=1)tx.delete(iref);else tx.update(iref,{qty:qty-1,placedCount:serial,updatedAt:fs.serverTimestamp()})});
     try{if(nextPens&&ownState?.alpaca){ownState.alpaca.pens=nextPens;ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
   }
 
   /* ---------- notification card ---------- */
-  async function pendingRows(){const k=mk();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3651")),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x=d.data()||{};if(x.epoch===EPOCH&&!x.resolved)out.push({id:d.id,...x})});return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(_){return[]}}
+  async function pendingRows(){const k=await selfKey();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3651")),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x=d.data()||{};if(x.epoch===EPOCH&&!x.resolved)out.push({id:d.id,...x})});return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(_){return[]}}
   async function decorateInbox(){const list=document.querySelector('.notification-panel .notification-list');if(!list)return;list.querySelectorAll('.r3651-gift-note').forEach(x=>x.remove());const rows=await pendingRows();for(const g of rows.slice(0,20).reverse()){const items=Array.isArray(g.items)?g.items:[],c=document.createElement('article');c.className='notification-card r3651-gift-note unread';c.innerHTML=`<div style="display:flex;gap:9px;align-items:center"><img src="${esc(g.previewImage||items[0]?.image||IMG.white)}" style="width:46px;height:46px;object-fit:contain;border-radius:12px;background:#f8e8ef"><div style="min-width:0;flex:1"><b>🎁 ยัยหนูส่งอัลปาก้าให้คุณ</b><small style="display:block">${esc(items.map(x=>`${x.name} ×${x.qty}`).join(' • '))}</small></div></div><button type="button" data-r3651-claim="${esc(g.id)}" style="width:100%;margin-top:8px">รับเข้าคลังอัลปาก้า</button>`;list.prepend(c)}list.querySelectorAll('[data-r3651-claim]').forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;b.textContent='กำลังรับ…';try{await claimGift(b.dataset.r3651Claim);b.closest('.r3651-gift-note')?.remove();await openWarehouse()}catch(e){b.disabled=false;b.textContent='รับเข้าคลังอัลปาก้า';message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}})}
   try{if(typeof showNotifications==="function"){const base=showNotifications;showNotifications=async function(tab="friend"){const r=await base.apply(this,arguments);if(tab==="yainoo")setTimeout(()=>decorateInbox().catch(()=>{}),0);return r}}}catch(_){ }
 
@@ -3972,13 +3989,13 @@ console.info(BUILD,"loaded");
      IMPORTANT: a mutation that arrives while a flush is in flight MUST trigger
      another pass. Older queues dropped that second mutation by returning the
      first promise; that is exactly how rewards could appear and then vanish. ---- */
-  let saveTimer=null,flushPromise=null,dirtySeq=0,committedSeq=0;
+  let saveTimer=null,flushPromise=null,dirtySeq=0,committedSeq=0,saveErrorStreak=0,saveRetryDelay=250;
   const localSave=typeof saveLocalOnly==="function"?saveLocalOnly:null;
   function criticalLocalBackup(s){
     if(!s||!currentMemberKey)return;try{const snap={at:now(),bag:cp(s?.bag||{}),specials:cp(s?.specials||{}),animalProducts:cp(s?.animalProducts||{}),dishInventory:cp(s?.dishInventory||{}),dishes:cp(s?.dishes||[]),fishingBaits:cp(s?.fishingBaits||{}),flowers:cp(s?.flowers||{}),flowerSeeds:cp(s?.flowerSeeds||{}),wines:cp(s?.wines||{}),hedgehogItems:cp(s?.hedgehogItems||{}),alpaca:{inventory:cp(s?.alpaca?.inventory||{}),factory:{products:cp(s?.alpaca?.factory?.products||{})}},jellyfishV2:cp(s?.jellyfishV2||{}),specialAnimals:cp(s?.specialAnimals||{})};localStorage.setItem(`yn:v7:critical:${currentMemberKey}`,JSON.stringify(snap))}catch(_){}
   }
   function stampLocal(s){if(!s)return;s.clientLocalEditAt=now();s.clientSaveRevision=Math.max(0,Number(s.clientSaveRevision)||0)+1;return s}
-  function scheduleFlush(ms=18){if(saveTimer||!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;saveTimer=setTimeout(()=>{saveTimer=null;flushCloudSave().catch(e=>{console.error(BUILD,"flush",e);try{message?.("บันทึกไม่สำเร็จ",pressure(e)?"ระบบแยกเซฟทำงานแล้ว แต่รายการนี้ยังบันทึกไม่สำเร็จ กรุณาลองอีกครั้งค่ะ":(e?.message||"กรุณาลองใหม่"))}catch(_){}})},ms)}
+  function scheduleFlush(ms=18){if(saveTimer||!cloudReady||!currentMemberKey||visitContext||cloudSessionSuperseded)return;saveTimer=setTimeout(()=>{saveTimer=null;flushCloudSave().then(()=>{saveErrorStreak=0;saveRetryDelay=250}).catch(e=>{saveErrorStreak++;console.warn(BUILD,"background save retry",saveErrorStreak,e?.message||e);const wait=Math.min(8000,saveRetryDelay);saveRetryDelay=Math.min(8000,Math.max(250,saveRetryDelay*2));if(cloudReady&&!cloudSessionSuperseded&&committedSeq<dirtySeq)setTimeout(()=>scheduleFlush(0),wait)})},ms)}
   save=function(){const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(!s||visitContext)return;if(!visitContext){ownState=s;state=s}stampLocal(s);dirtySeq++;try{localSave?.(s)}catch(_){}criticalLocalBackup(s);scheduleFlush()};
   /* =====================================================================
      R36.69 FIX-2 — PER-FIELD MERGE (was: winner-takes-all)
@@ -5401,6 +5418,18 @@ console.info(BUILD,"loaded");
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
   const key=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  async function authMemberKey(){
+    const fallback=key();
+    try{
+      const bridge=await getFirebaseBridge?.(),user=bridge?.getCurrentUser?.();
+      const email=String(user?.email||"").trim().toLowerCase(),m=email.match(/^member-(.+)@yainoo[.]example[.]com$/);
+      if(m?.[1])return String(m[1]).trim();
+      if(fallback.toLowerCase()==="aida")return "aida";
+      const p=await bridge?.getSignedInMember?.(),pk=String(p?.memberKey||"").trim();
+      if(pk)return pk;
+    }catch(e){console.warn(BUILD,"auth identity",e?.message||e)}
+    return fallback;
+  }
   const esc=v=>{try{return typeof safeHtml==="function"?safeHtml(String(v??"")):String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]))}catch(_){return String(v??"")}};
   const ms=v=>{try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}};
   const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
@@ -5451,6 +5480,16 @@ console.info(BUILD,"loaded");
     const mk=key();if(!mk||!cloudReady)return[];
     const {db,fs}=await getFirebaseContext(),out=[];
     try{const sn=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300)));sn.forEach(d=>out.push({id:d.id,...(d.data()||{})}))}catch(e){console.warn(BUILD,"mailbox read",e?.message||e)}
+    out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
+  }
+
+  async function getAlpacaMailbox(){
+    const mk=await authMemberKey();if(!mk||!cloudReady)return[];
+    const {db,fs}=await getFirebaseContext(),out=[];
+    try{
+      const q=fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.where("type","==","alpacaGiftR3651"),fs.limit(300));
+      const sn=await fs.getDocs(q);sn.forEach(d=>out.push({id:d.id,...(d.data()||{})}));
+    }catch(e){console.warn(BUILD,"alpaca mailbox read",mk,e?.message||e)}
     out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
   }
 
@@ -5581,11 +5620,11 @@ console.info(BUILD,"loaded");
     if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณาเชื่อม Firebase ก่อน");return}
     const req=(showUnified._req=(Number(showUnified._req)||0)+1);
     try{
-      const {mail,direct,bcasts}=await getViewData();if(req!==showUnified._req)return;
+      const [{mail,direct,bcasts},alpacaMail]=await Promise.all([getViewData(),getAlpacaMailbox()]);if(req!==showUnified._req)return;
       const directRows=tab==="yainoo"?direct.filter(isAdminDirect):direct.filter(g=>!isAdminDirect(g));
       const giftRows=tab==="yainoo"?[...directRows,...bcasts]:directRows;
       giftRows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
-      const alpacaRows=tab==="yainoo"?mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
+      const alpacaRows=tab==="yainoo"?alpacaMail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
       const notices=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&YN_isActivePlayerKey(x.fromKey)));
       const allBtn=giftRows.length?`<button id="r36101ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${giftRows.length})</button>`:"";
       const adminEntry=(String(key()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
@@ -5663,6 +5702,9 @@ console.info(BUILD,"loaded");
       if(/ระบบกำลังซิงก์ข้อมูลอยู่|กรุณาแจ้งแอดมิน|ระบบบล็อกการรีเซ็ตกุศล/i.test(t+" "+b)){
         console.warn(BUILD,"suppressed obsolete/transient popup",t,b);return;
       }
+      if(t==="บันทึกไม่สำเร็จ"&&/ระบบแยกเซฟทำงานแล้ว|รายการนี้ยังบันทึกไม่สำเร็จ/i.test(b)){
+        console.warn(BUILD,"suppressed background autosave popup; queue will retry",b);return;
+      }
       return raw.apply(this,arguments);
     };
     wrapped.__r36106=1;window.message=wrapped;try{message=wrapped}catch(_){}
@@ -5675,8 +5717,8 @@ console.info(BUILD,"loaded");
 
 
 <script id="r36112-alpaca-gift-route-marker">
-window.YAINOO_ALPACA_GIFT_BUILD="S2-R36.114-UNIFIED-ANIMAL-GIFT-STRUCTURE-20260919";
-console.info(window.YAINOO_ALPACA_GIFT_BUILD,"canonical alpaca route + unified hamster 6-cap structure loaded");
+window.YAINOO_ALPACA_GIFT_BUILD="S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919";
+console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quiet durable autosave + hamster 6-cap loaded");
 </script>
 </body>
 </html>
