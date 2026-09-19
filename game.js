@@ -1,3 +1,4 @@
+/* R36.105 NO-MERIT-RESET: legacy Season-2 reset routines permanently disabled. */
 /* =====================================================================
    S2 R35.04 — FINAL UI AUTHORITY
    Lexical function declaration: critical systems call this directly instead
@@ -13034,49 +13035,35 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
   }
   async function claimFishingV2(x){
     try{
-      const actorKey=currentMemberKey;
+      const actorKey=String(currentMemberKey||"");
+      if(!actorKey)throw new Error("ไม่พบบัญชีผู้เล่น");
 
       const {db,fs}=await getFirebaseContext();
       const slotRef=fs.doc(db,"fishingSlotsV2",slotDocId(x.pondId,x.slot));
       const playerRef=fs.doc(db,"fishingPlayers",actorKey);
-      const saveRef=fs.doc(db,"saves",actorKey);
       const dailyRef=fs.doc(db,"fishingDaily",DAILY_KEY());
-      let next=null,claimedWeight=0;
+      const durable=globalThis.YN_R3650_DURABLE?.mutateTop;
+      if(typeof durable!=="function")throw new Error("ระบบบันทึกยังไม่พร้อมค่ะ");
 
-      /*
-        V194:
-        The old function caught its own permission error, so the V193 wrapper
-        never received an exception and its fallback never ran.
-        This is now fixed directly in the original claim function.
-      */
-      await fs.runTransaction(db,async tx=>{
-        const [sl,ss,dd]=await Promise.all([
-          tx.get(slotRef),
-          tx.get(saveRef),
-          tx.get(dailyRef)
-        ]);
-
-        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
-
+      let claimedWeight=0;
+      await durable(async(s,{fs,tx})=>{
+        /* R36.106: use the shared V7 durable writer. Do NOT replace the whole
+           root save here. The old fishing path serialised normalizeState() back
+           into saves/{memberKey}, which could re-introduce sharded inventory and
+           trigger sync/version failures. */
+        const [sl,dd]=await Promise.all([tx.get(slotRef),tx.get(dailyRef)]);
         const slot=sl.exists()?sl.data():x;
         const canonical=actorKey||memberKeyFromName(currentMember||"");
         const ownerOk=
           !sl.exists()
-          || String(slot.ownerKey||"")===String(actorKey||"")
+          || String(slot.ownerKey||"")===String(actorKey)
           || String(slot.ownerKey||"")===String(canonical||"")
-          || String(slot.ownerName||"").trim().toLowerCase()
-             ===String(currentMember||"").trim().toLowerCase();
-
+          || String(slot.ownerName||"").trim().toLowerCase()===String(currentMember||"").trim().toLowerCase();
         if(!ownerOk)throw new Error("รอบตกปลานี้ไม่ตรงกับบัญชีผู้เล่น");
-        if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))
-          throw new Error("ปลาได้หนีไปแล้ว");
+        if(NOW()>Number(slot.claimDeadline||x.claimDeadline||0))throw new Error("ปลาได้หนีไปแล้ว");
 
-        const s=normalizeState(ss.data(),currentMember);
         const d=dd.exists()?dd.data():{dateKey:DAILY_KEY(),scores:{},names:{},ponds:{}};
-        d.scores=ensureObj(d.scores);
-        d.names=ensureObj(d.names);
-        d.ponds=ensureObj(d.ponds);
-
+        d.scores=ensureObj(d.scores);d.names=ensureObj(d.names);d.ponds=ensureObj(d.ponds);
         const key=canonical||actorKey;
         const receipt=`${DAILY_KEY()}:${x.pondId}:${x.slot}:${Number(slot.startedAt||x.startedAt||0)}`;
         s.fishingClaimReceipts=ensureObj(s.fishingClaimReceipts);
@@ -13086,50 +13073,29 @@ console.info("YAINOO CURRENT 20260814 patch loaded");
         d.scores[key]=Number((Number(d.scores[key]||0)+claimedWeight).toFixed(2));
         d.names[key]=currentProfileDisplayName();
         d.ponds[key]=Number(x.pondId||0);
-
         ensureMissionStateFor(s);
-        s.missions.progress.dailyFishingWeight500=d.scores[key];
         s.missions.progress.dailyFishingWeight500=d.scores[key];
         s.fishingCooldownUntil=NOW()+5*MIN;
         s.fishingClaimReceipts[receipt]=NOW();
         s.fishingActiveSession=null;
-        next=s;
 
-        tx.set(saveRef,{
-          ...cloneData(s),
-          activeSessionId:cloudSessionId,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
+        tx.set(dailyRef,{dateKey:DAILY_KEY(),scores:d.scores,names:d.names,ponds:d.ponds,updatedAt:fs.serverTimestamp()},{merge:false});
+        return {receipt,key};
+      },{preferLocal:true});
 
-        tx.set(dailyRef,{
-          dateKey:DAILY_KEY(),
-          scores:d.scores,
-          names:d.names,
-          ponds:d.ponds,
-          updatedAt:fs.serverTimestamp()
-        },{merge:false});
-      });
-
-      Y26_applyOwnState(next);
-      try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36 fishing campaign score",e)}
-
-      /* Cleanup is best-effort only. A slot/player permission issue can no
-         longer cancel the fish weight already credited to save + dashboard. */
-      try{
-        await fs.updateDoc(slotRef,{
-          status:"claimed",
-          claimedAt:NOW(),
-          claimDeadline:NOW(),
-          updatedAt:fs.serverTimestamp()
-        });
-      }catch(e){console.warn("V194 slot cleanup",e)}
-      try{await fs.deleteDoc(playerRef)}catch(e){console.warn("V194 player cleanup",e)}
+      try{await globalThis.YN_S2_CAMPAIGNS?.scoreFishingClaim?.(x,`fish-v2:${actorKey}:${Number(x?.startedAt||0)}:${x?.pondId}:${x?.slot}`)}catch(e){console.warn("R36.106 fishing campaign score",e)}
+      try{await fs.updateDoc(slotRef,{status:"claimed",claimedAt:NOW(),claimDeadline:NOW(),updatedAt:fs.serverTimestamp()})}catch(e){console.warn("R36.106 slot cleanup",e)}
+      try{await fs.deleteDoc(playerRef)}catch(e){console.warn("R36.106 player cleanup",e)}
 
       closeModal();
       showWeatherToast(`🏆 รับ ${claimedWeight.toFixed(2)} lbs เข้าดashboardแล้ว • คูลดาวน์ 5 นาที`);
     }catch(e){
-      console.error("V194 claim fish",e);
-      message("รับปลาไม่ได้",e.message||"กรุณาลองใหม่");
+      console.error("R36.106 claim fish",e);
+      const m=String(e?.message||e||"");
+      /* Technical sync/auth/version errors are already retried by mutateTop().
+         Never show the old blocking nuisance popup to players. */
+      if(/Firebase|Firestore|Transaction|stored version|required base version|failed-precondition|aborted|contention|permission-denied|Missing or insufficient permissions|unavailable|deadline|ระบบกำลังซิงก์ข้อมูลอยู่/i.test(m))return;
+      message("รับปลาไม่ได้",m||"กรุณาลองใหม่");
     }
   }
   async function showFishingDashboardV2(){
@@ -14758,33 +14724,8 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   };
   requestAnimationFrame(v188TractorButtonBind);
 
-  /* Wrap the final V2 fish-claim function indirectly by intercepting the
-     claim button after fishingResultV2 renders. This avoids changing pond logic. */
-  const v188OldOpenModal=openModal;
-  openModal=function(){
-    const r=v188OldOpenModal();
-    requestAnimationFrame(()=>{
-      const btn=$("ynuClaimFish");
-      if(!btn||btn.__v188Wrapped)return;
-      const old=btn.onclick;
-      if(typeof old!=="function")return;
-
-      btn.onclick=async function(event){
-        btn.disabled=true;
-        try{
-          await v188EnsureFreshSession(false);
-          return await old.call(this,event);
-        }catch(error){
-          message("รับปลาไม่ได้",
-            `${error.message||"Firebase Session มีปัญหา"}<br><small>กรุณาปิดเกมแล้วเข้าสู่ไอดีนี้ใหม่หากยังไม่หาย</small>`);
-        }finally{
-          btn.disabled=false;
-        }
-      };
-      btn.__v188Wrapped=true;
-    });
-    return r;
-  };
+  /* R36.106: fish claim no longer uses the V188 pre-click auth wrapper.
+     The authoritative claim path performs its own durable V7 transaction. */
 
   /* Also refresh the session when the browser/app returns from background.
      This is useful for Messenger/Safari embedded browsers that suspend auth. */
@@ -21702,58 +21643,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         All inventory/storage/pets/etc. are untouched.
      ----------------------------------------------------------------- */
   async function resetEveryoneMerit300Once(){
-    /* R14 targeted Season-2 migration:
-       - Aida stays infinite (9999).
-       - Every other existing save keeps all Season-1 inventory except crop bag entries.
-       - Crop bag entries reset to 0 and merit resets to 300.
-       - One admin-triggered batch makes this true immediately for existing accounts. */
-    if(currentMember!=="Aida"||adminProfile?.role!=="admin"||!cloudReady)return;
-    const marker="season2R14TargetedReset20260831";
-    const {db,fs}=await getFirebaseContext();
-    const aidaRef=fs.doc(db,"saves","aida"),aidaSnap=await fs.getDoc(aidaRef);
-    if(aidaSnap.data()?.[marker]){
-      if(ownState){
-        ownState.merit=9999;
-        ownState[marker]=true;
-        try{ensureAdminStock(ownState)}catch(_){}
-        saveLocalOnly(ownState);updateMeritUI();
-      }
-      return;
-    }
-    const savesSnap=await fs.getDocs(fs.collection(db,"saves"));
-    let batch=fs.writeBatch(db),ops=0;
-    const commits=[];
-    const cropKeys=Object.keys(CROPS||{});
-    for(const docSnap of savesSnap.docs){
-      const data=docSnap.data()||{},key=docSnap.id;
-      if(key!=="aida"&&!YN_isActivePlayerKey(key))continue;
-      let patch;
-      if(key==="aida"){
-        patch={merit:9999,[marker]:true,updatedAt:fs.serverTimestamp()};
-      }else{
-        const bag={...(data.bag&&typeof data.bag==="object"?data.bag:{})};
-        cropKeys.forEach(k=>bag[k]=0);
-        patch={bag,merit:300,[marker]:true,updatedAt:fs.serverTimestamp()};
-      }
-      batch.set(docSnap.ref,patch,{merge:true});ops++;
-      batch.set(fs.doc(db,"publicProfiles",key),{
-        memberKey:key,
-        displayName:String(data.player||data.displayName||key),
-        merit:key==="aida"?9999:300,
-        initialized:true,
-        updatedAt:fs.serverTimestamp()
-      },{merge:true});ops++;
-      if(ops>=430){commits.push(batch.commit());batch=fs.writeBatch(db);ops=0}
-    }
-    if(ops)commits.push(batch.commit());
-    await Promise.all(commits);
-    if(ownState){
-      ownState.merit=9999;
-      ownState[marker]=true;
-      try{ensureAdminStock(ownState)}catch(_){}
-      saveLocalOnly(ownState);updateMeritUI();
-    }
-    showWeatherToast("🌱 Season 2: รีเซ็ตเฉพาะพืชพรรณเป็น 0 • กุศลผู้เล่นเป็น 300 • ของเดิมหมวดอื่นคงเดิม");
+    /* R36.105: retired permanently. Season-2 migration must never mutate
+       existing players' merit or crop inventory again. */
+    return false;
   }
   const aidaSessionBase=completeAidaCloudSession;
   completeAidaCloudSession=async function(profile){
@@ -22846,9 +22738,9 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     return ch;
   }
   function r14SeasonReset(s,player){
-    if(!s||String(player||currentMember)==="Aida"||s[RESET_MARK])return false;
-    s.bag=obj(s.bag);try{Object.keys(CROPS||{}).forEach(k=>s.bag[k]=0)}catch(_){}
-    s.merit=300;s[RESET_MARK]=true;return true;
+    /* R36.105: disabled permanently. Never reset an established player's
+       merit or crop bag during normalize/save. */
+    return false;
   }
   normalizeState=function(raw,player){const s=normalizeBeforeR14(raw,player);if(String(player||currentMember)==="Aida")r14AdminTopup(s);else r14SeasonReset(s,player);return s};
   if(legacyAdminStock){
@@ -38090,3 +37982,5 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — auto historical restore disabled in index; safe gift merge enabled");
 })();
+
+;globalThis.YAINOO_BUILD="S2-R36.106-DURABLE-FISH-NO-NUISANCE-POPUPS-20260919";globalThis.YAINOO_PACKAGE_BUILD=globalThis.YAINOO_BUILD;

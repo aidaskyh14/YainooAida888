@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.104-REMOVE-5-OLD-ACCOUNTS-HARD-20260919"></script>
+<script src="game.js?v=S2-R36.106-DURABLE-FISH-NO-NUISANCE-POPUPS-20260919"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4506,184 +4506,7 @@ console.info(BUILD,"loaded");
 })();
 </script>
 
-<script id="r3679-data-protection">
-/* =====================================================================
-   S2 R36.79 — EMERGENCY DATA PROTECTION
-   2026-09-17
-
-   WHAT HAPPENED
-
-   game.js line 23505 still contains a live one-time season wipe:
-
-       function r14SeasonReset(s,player){
-         if(!s || player==="Aida" || s[RESET_MARK]) return false;
-         Object.keys(CROPS).forEach(k => s.bag[k] = 0);
-         s.merit = 300; s[RESET_MARK] = true; return true;
-       }
-       normalizeState = function(raw,player){ ... r14SeasonReset(s,player) ... }
-
-   It runs inside normalizeState() AND inside save(), for every non-Aida
-   player, every single call. The only thing stopping it is the marker
-   `season2R14TargetedReset20260831` being present in the loaded state.
-
-   Before R36.78 every cloud write was rejected by Firestore, so whenever
-   that marker went missing the 300 was confined to the browser tab and was
-   never committed. R36.78 fixed the write path - and the wipe committed.
-
-   R36.79 makes the wipe impossible and blocks catastrophic merit writes at
-   the SDK boundary. This is triage, not a repair: it stops further loss,
-   it does not bring back what is already gone.
-   ===================================================================== */
-(function YN_R3679_PROTECT(){
-  "use strict";
-  const BUILD="S2-R36.79-DATA-PROTECTION-20260917";
-  const R14_MARK="season2R14TargetedReset20260831";
-  const R33_MARK="season2R33LaunchReset20260903";
-  const log=[];
-  const note=(kind,detail)=>{log.push({at:new Date().toISOString(),kind,detail});if(log.length>200)log.shift();console.warn(BUILD,kind,detail)};
-
-  /* ---------- 1. the wipe can never fire again ------------------------ */
-  /* Stamping the markers on the RAW object before normalizeState runs makes
-     both reset routines take their early-return branch. */
-  function stamp(raw){
-    if(!raw||typeof raw!=="object")return raw;
-    try{
-      if(raw[R14_MARK]===undefined)raw[R14_MARK]=true;
-      if(raw[R33_MARK]===undefined)raw[R33_MARK]={version:"r3679-protect",at:Date.now()};
-    }catch(_){}
-    return raw;
-  }
-  function guardNormalize(){
-    const base=window.normalizeState;
-    if(typeof base!=="function"||base.__r3679)return false;
-    const wrapped=function(raw,player){stamp(raw);const s=base.apply(this,arguments);stamp(s);return s};
-    wrapped.__r3679=1;
-    window.normalizeState=wrapped;try{normalizeState=wrapped}catch(_){}
-    note("normalizeState guarded","season wipe disabled");
-    return true;
-  }
-  guardNormalize();
-  /* Later layers reassign normalizeState; re-apply until it sticks. */
-  let tries=0;const reguard=setInterval(()=>{guardNormalize();if(++tries>120)clearInterval(reguard)},500);
-
-  /* Also stamp whatever is live right now, so save() cannot wipe it. */
-  setInterval(()=>{try{if(typeof ownState!=="undefined")stamp(ownState)}catch(_){}try{if(typeof state!=="undefined")stamp(state)}catch(_){}},1000);
-
-  /* ---------- 2. merit floor at the SDK boundary ---------------------- */
-  /* A high-water mark per member. Any write that would crater merit to the
-     reset value is stripped of its merit field and logged instead of being
-     allowed through. Normal spending is untouched. */
-  const HW_KEY=mk=>`yn:r3679:merit-hw:${mk}`;
-  function memberKey(){try{return String(window.currentMemberKey||"")}catch(_){return""}}
-  function isAida(){try{return memberKey().toLowerCase()==="aida"||String(window.currentMember||"")==="Aida"}catch(_){return false}}
-  function highWater(mk){
-    let hw=0;
-    try{hw=Number(localStorage.getItem(HW_KEY(mk)))||0}catch(_){}
-    try{let live=0;try{live=Number(((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}).merit)||0}catch(_){}if(live>hw)hw=live}catch(_){}
-    return hw;
-  }
-  function raiseHighWater(mk,v){
-    v=Number(v)||0;if(!mk||v<=0)return;
-    try{if(v>highWater(mk))localStorage.setItem(HW_KEY(mk),String(v))}catch(_){}
-  }
-  setInterval(()=>{const mk=memberKey();if(!mk)return;try{raiseHighWater(mk,((typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{}).merit)}catch(_){}},4000);
-
-  const SAVE_RX=/^saves\/([^/]+)$/;
-  const pathOf=ref=>{try{return String(ref&&(ref.path||(ref._key&&ref._key.path&&ref._key.path.canonicalString&&ref._key.path.canonicalString()))||"")}catch(_){return""}};
-
-  function screen(ref,data){
-    if(!data||typeof data!=="object")return data;
-    const m=SAVE_RX.exec(pathOf(ref));
-    if(!m)return data;
-    const mk=m[1];
-    if(String(mk).toLowerCase()==="aida")return data;
-    if(!("merit" in data))return data;
-    const next=Number(data.merit);
-    if(!Number.isFinite(next))return data;
-    const hw=highWater(mk);
-    /* The wipe writes exactly 300. Anything that drops a real account to at
-       or below the starting value is refused. */
-    if(hw>=2000&&next<=300){
-      const copy={...data};delete copy.merit;
-      note("BLOCKED merit reset",{memberKey:mk,attempted:next,knownHigh:hw});
-      try{window.message&&window.message("ป้องกันข้อมูลหาย","ระบบบล็อกการรีเซ็ตกุศลไว้แล้วค่ะ กรุณาแจ้งแอดมิน");}catch(_){}
-      return copy;
-    }
-    raiseHighWater(mk,next);
-    return data;
-  }
-
-  let patched=false;
-  function patchBridge(){
-    const api=window.firebaseBridge&&window.firebaseBridge.firestore;
-    if(patched||!api||api.__r3679)return !!patched;
-    const oSet=api.setDoc,oTx=api.runTransaction,oBatch=api.writeBatch;
-    if(typeof oSet==="function")api.setDoc=function(ref,data,opt){const d=screen(ref,data);return opt===undefined?oSet(ref,d):oSet(ref,d,opt)};
-    if(typeof oTx==="function")api.runTransaction=function(db,cb,...rest){
-      return oTx(db,function(tr){
-        const shim={
-          get:r=>tr.get(r),
-          set:(r,d,o)=>{const c=screen(r,d);o===undefined?tr.set(r,c):tr.set(r,c,o);return shim},
-          update:(r,d,...x)=>{x.length?tr.update(r,d,...x):tr.update(r,screen(r,d));return shim},
-          delete:r=>{tr.delete(r);return shim}
-        };
-        return cb(shim);
-      },...rest);
-    };
-    if(typeof oBatch==="function")api.writeBatch=function(db){
-      const b=oBatch(db),shim={
-        set:(r,d,o)=>{const c=screen(r,d);o===undefined?b.set(r,c):b.set(r,c,o);return shim},
-        update:(r,d,...x)=>{x.length?b.update(r,d,...x):b.update(r,screen(r,d));return shim},
-        delete:r=>{b.delete(r);return shim},
-        commit:()=>b.commit()
-      };
-      return shim;
-    };
-    api.__r3679=BUILD;patched=true;note("merit floor installed","saves/* writes screened");
-    return true;
-  }
-  if(!patchBridge()){
-    let n=0;const t=setInterval(()=>{if(patchBridge()||++n>600)clearInterval(t)},100);
-    try{window.firebaseReady&&window.firebaseReady.then(patchBridge).catch(()=>{})}catch(_){}
-  }
-
-  /* ---------- 3. what survived, for recovery work --------------------- */
-  window.YN_R3679={
-    BUILD,
-    log:()=>log.slice(),
-    /* Every local snapshot still on THIS device, newest first. These are the
-       only client-side copies that predate the wipe. */
-    localSnapshots(){
-      const mk=memberKey(),member=String(window.currentMember||"");
-      const keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,
-                  `yn:s2:r22:critical:${mk}`,`yn:v7:critical:${mk}`,
-                  `yn:r24:last-good:${member}`,`yn:r24:pending:${member}`];
-      const out=[];
-      for(const k of keys){
-        try{
-          const raw=localStorage.getItem(k);if(!raw)continue;
-          const x=JSON.parse(raw),st=(x&&x.state)||x;
-          out.push({key:k,at:x&&x.at||null,merit:st&&st.merit,
-                    specials:st&&st.specials?Object.values(st.specials).reduce((a,b)=>a+(Number(b)||0),0):0,
-                    bagKeys:st&&st.bag?Object.keys(st.bag).length:0});
-        }catch(_){}
-      }
-      return out;
-    },
-    /* Read the public mirror, which the wipe path does not write merit to. */
-    async publicMerit(key){
-      const mk=String(key||memberKey());
-      const ctx=await window.getFirebaseContext();
-      const sn=await ctx.fs.getDoc(ctx.fs.doc(ctx.db,"publicProfiles",mk));
-      return sn.exists()?(sn.data()||{}).merit:null;
-    },
-    meritHighWater:()=>highWater(memberKey())
-  };
-
-  window.YAINOO_BUILD=BUILD;window.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded");
-})();
-</script>
+<!-- R36.105: obsolete R36.79 merit/transaction interception removed. -->
 
 <script id="r3680-house-and-ui">
 /* =====================================================================
@@ -5766,10 +5589,35 @@ console.info(BUILD,"loaded");
 
 <script id="r36103-remove-retired-legacy-accounts-hard">
 (()=>{
-  const BUILD="S2-R36.104-REMOVE-5-OLD-ACCOUNTS-HARD-20260919";
+  const BUILD="S2-R36.106-DURABLE-FISH-NO-NUISANCE-POPUPS-20260919";
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
+})();
+</script>
+
+<script id="r36106-no-nuisance-save-popups">
+(()=>{
+  "use strict";
+  const BUILD="S2-R36.106-DURABLE-FISH-NO-NUISANCE-POPUPS-20260919";
+  const install=()=>{
+    const raw=window.message;
+    if(typeof raw!=="function"||raw.__r36106)return false;
+    const wrapped=function(title,text){
+      const t=String(title==null?"":title),b=String(text==null?"":text);
+      if(/ป้องกันข้อมูลหาย|ระบบบล็อกการรีเซ็ตกุศล/i.test(t+" "+b)){
+        console.warn(BUILD,"suppressed obsolete merit-reset popup",t,b);return;
+      }
+      if(/ระบบกำลังซิงก์ข้อมูลอยู่/i.test(t+" "+b)){
+        console.warn(BUILD,"suppressed transient sync popup",t,b);return;
+      }
+      return raw.apply(this,arguments);
+    };
+    wrapped.__r36106=1;window.message=wrapped;try{message=wrapped}catch(_){}
+    return true;
+  };
+  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>200)clearInterval(t)},50)}
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
 })();
 </script>
 
