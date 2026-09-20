@@ -35020,8 +35020,18 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   function notice({title,text="",image="",icon="✨",button="รับทราบ",onDone=null}){
     const __pressure=/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i;
     if(__pressure.test(String(text||""))||__pressure.test(String(title||""))){
-      title="กำลังจัดระเบียบข้อมูล";icon="💾";image="";text="<p>ข้อมูลบัญชีมีขนาดเกินพื้นที่เซฟหลักชั่วคราว ระบบกำลังย้ายข้อมูลประวัติออกให้อัตโนมัติค่ะ</p><small>ของในกระเป๋า สัตว์ คะแนน และจำนวนไอเท็มจะไม่ถูกลบ กรุณารอสักครู่แล้วลองอีกครั้ง</small>";
-      try{setTimeout(()=>globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(String(currentMemberKey||""),{force:true}),50)}catch(_){}
+      /* R36.116: do not interrupt players for background storage maintenance. */
+      try{
+        const mk=String(currentMemberKey||"");
+        globalThis.__YN_PRESSURE_REPAIR_AT=globalThis.__YN_PRESSURE_REPAIR_AT||{};
+        const last=Number(globalThis.__YN_PRESSURE_REPAIR_AT[mk]||0);
+        if(mk&&Date.now()-last>90000){
+          globalThis.__YN_PRESSURE_REPAIR_AT[mk]=Date.now();
+          setTimeout(()=>Promise.resolve(globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(mk,{force:true})).catch(e=>console.warn("R36.116 pressure repair",e)),50);
+        }
+      }catch(_){}
+      console.warn("R36.116 suppressed background save-pressure modal",title,text);
+      return;
     }
     const mc=$("modalContent");if(!mc)return message?.(title,text);
     mc.innerHTML=`<section class="feature-panel r35-modal"><div class="r35-notice-head">${image?`<img src="${image}" alt="">`:`<span>${icon}</span>`}<div><h2>${html(title)}</h2></div></div><div class="r35-modal-scroll">${text}</div><button id="r35NoticeDone" class="primary-spooky-action" type="button">${html(button)}</button></section>`;
@@ -36893,10 +36903,11 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
       return true;
     }
     const raw=sn.data()||{};
-    /* R36.72: V7 is already structurally sharded. getFirebaseContext() returns the
+    /* R36.117: V7/V8 are structurally sharded. getFirebaseContext() returns the
        hydrated virtual state, so the old R36.22 index counter can look huge even
-       though no single Firestore document is huge. Never rebuild/delete a V7 save. */
-    if(String(raw.saveLayoutVersion||"")==="save-layout-v7-r3663")return true;
+       though no single Firestore document is huge. Never rebuild/delete a modern
+       structurally-sharded save. */
+    if(["save-layout-v7-r3663","save-layout-v8-r36117"].includes(String(raw.saveLayoutVersion||"")))return true;
     let clean=trimHistory(raw,false),bytes=size(clean),units=indexUnits(clean);
     if(bytes>620*1024||units>5500){clean=trimHistory(raw,true);bytes=size(clean);units=indexUnits(clean)}
     if(bytes>760*1024||units>8000)throw new Error(`เซฟ ${key} ยังใหญ่/มี index มากเกินหลังซ่อม: ${bytes.toLocaleString()} bytes • ~${units.toLocaleString()} entries`);

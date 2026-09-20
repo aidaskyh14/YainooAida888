@@ -2902,9 +2902,19 @@ function ensure(s){
 function notice(title,html,button="รับทราบ",done=null){
   const __pressure=/maximum allowed size|exceeds the maximum|too many index entries|index entries|1,048,576|1048576|resource-exhausted|invalid-argument/i;
   if(__pressure.test(String(html||""))||__pressure.test(String(title||""))){
-    title="กำลังจัดระเบียบข้อมูล";
-    html="<p>ข้อมูลบัญชีมีขนาดเกินพื้นที่เซฟหลักชั่วคราว ระบบกำลังย้ายข้อมูลประวัติออกให้อัตโนมัติค่ะ</p><small>ของในกระเป๋า สัตว์ คะแนน และจำนวนไอเท็มจะไม่ถูกลบ กรุณารอสักครู่แล้วลองอีกครั้ง</small>";
-    try{setTimeout(()=>globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(String(currentMemberKey||""),{force:true}),50)}catch(_){}
+    /* R36.116: storage-pressure from background saves is maintenance, not a player modal.
+       Run the existing structural repair silently and let the failed action retry normally. */
+    try{
+      const mk=String(currentMemberKey||"");
+      globalThis.__YN_PRESSURE_REPAIR_AT=globalThis.__YN_PRESSURE_REPAIR_AT||{};
+      const last=Number(globalThis.__YN_PRESSURE_REPAIR_AT[mk]||0);
+      if(mk&&Date.now()-last>90000){
+        globalThis.__YN_PRESSURE_REPAIR_AT[mk]=Date.now();
+        setTimeout(()=>Promise.resolve(globalThis.YN_SAVE_STORAGE_V2?.migrateOne?.(mk,{force:true})).catch(e=>console.warn("R36.116 pressure repair",e)),50);
+      }
+    }catch(_){}
+    console.warn("R36.116 suppressed background save-pressure modal",title,html);
+    return;
   }
   const mc=$("modalContent");if(!mc)return;
   mc.innerHTML=`<section class="feature-panel r35-modal"><h2>${title}</h2><div class="r35-modal-scroll">${html}</div><button id="r3523Done" class="primary-spooky-action" type="button">${button}</button></section>`;
@@ -3829,23 +3839,26 @@ console.info(BUILD,"loaded");
    ===================================================================== -->
 <script>
 /* =====================================================================
-   S2 R36.63 — SAVE V7 / AUTHORITATIVE GAMEPLAY SHARDS
-   2026-09-17
-   - Replaces V6 transparent save layer instead of stacking another wrapper.
-   - ALL object/array gameplay state is kept outside /saves/{memberKey}; root is
-     scalar/session metadata only, so 1 MiB/index-entry failures cannot return
-     from inventory growth.
-   - /saves reads and transactions still see one complete virtual state.
-   - Owner save snapshots NEVER repaint active local gameplay. This removes the
-     plant -> appears -> reverts-to-empty race seen in the supplied recording.
-   - One-time migration reads V6 shards + surviving local snapshots and restores
-     zeroed alpaca inventory / jellyfish / wine only when a positive copy exists.
+   S2 R36.117 — PARTITIONED SAVE V8 / UNIVERSAL LARGE-SAVE FIX
+   2026-09-20
+   - One storage schema for every active player. No player-name exceptions.
+   - Alpaca is no longer one giant document: core + five pen documents.
+   - Pets are split into three stable buckets instead of one growing document.
+   - Any other canonical shard that grows past the soft budget automatically
+     moves whole top-level fields to dedicated field shards before Firestore's
+     1 MiB document ceiling can be reached.
+   - Existing V7 saves migrate on login before gameplay continues. The obsolete
+     v7-alpaca / v7-pets documents are deleted only in the same atomic migration
+     batch that creates the new partitioned documents.
+   - /saves reads and transactions still see the same complete virtual state.
    ===================================================================== */
-(function YN_R3663_SAVE_V7(){
+(function YN_R36117_SAVE_V8(){
   "use strict";
-  const BUILD="S2-R36.67-CANONICAL-SHARD-OWNER-20260917";
-  const LAYOUT="save-layout-v7-r3663";
+  const BUILD="S2-R36.117-PARTITIONED-SAVE-V8-20260920";
+  const LAYOUT="save-layout-v8-r36117";
+  const OLD_V7_LAYOUT="save-layout-v7-r3663";
   const ROOT_BUDGET=96*1024, ROOT_HARD=180*1024;
+  const SHARD_SOFT=360*1024, SHARD_HARD=820*1024;
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
   const bytes=v=>{try{const s=JSON.stringify(v);return typeof TextEncoder!=="undefined"?new TextEncoder().encode(s).length:s.length*2}catch(_){return 0}};
@@ -3855,7 +3868,20 @@ console.info(BUILD,"loaded");
   const RAW_CTX=(globalThis.getFirebaseContext&&globalThis.getFirebaseContext.__r3662Base)||globalThis.getFirebaseContext||(typeof getFirebaseContext==="function"?getFirebaseContext:null);
   if(typeof RAW_CTX!=="function")return;
 
+  /* Existing bounded shards keep their familiar ids. Only unbounded families
+     receive new partitioned ids, which keeps migration small and reversible. */
   const DOC={
+    inventory:"v7-inventory", farm:"v7-farm", animals:"v7-animals",
+    missions:"v7-missions", systems:"v7-systems", claims:"v7-claims",
+    logs:"v7-logs", over0:"v7-overflow-0", over1:"v7-overflow-1",
+    over2:"v7-overflow-2", over3:"v7-overflow-3",
+    pet0:"v8-pets-0", pet1:"v8-pets-1", pet2:"v8-pets-2",
+    alpacaCore:"v8-alpaca-core",
+    alpacaPen1:"v8-alpaca-pen-1", alpacaPen2:"v8-alpaca-pen-2",
+    alpacaPen3:"v8-alpaca-pen-3", alpacaPen4:"v8-alpaca-pen-4",
+    alpacaPen5:"v8-alpaca-pen-5"
+  };
+  const OLD_DOC={
     inventory:"v7-inventory", farm:"v7-farm", alpaca:"v7-alpaca", pets:"v7-pets",
     animals:"v7-animals", missions:"v7-missions", systems:"v7-systems",
     claims:"v7-claims", logs:"v7-logs", over0:"v7-overflow-0", over1:"v7-overflow-1",
@@ -3870,103 +3896,184 @@ console.info(BUILD,"loaded");
     missions:new Set(["missions","villageSeason2","villageMissionProgress","templeMissions","templeMissionSlotsV2"]),
     systems:new Set(["houseUpgrade","s2Unlocks","upgradeKeys","honeyDelivery","forbiddenForest","friendResourceClaims","friendForageClaims"])
   };
+  const PET0=new Set(["dogs","dogCare","hotelPetPenMap"]);
+  const PET1=new Set(["cats","catCare","hotelDropPenMap"]);
+  const PET2=new Set(["hamsters","hamsterFarms","farmGuardians"]);
   const CLAIM_RX=/(receipts?|claims?|dedupe|processed|seenids?|tombstones?|ledgers?|locks?|cooldowns?)$/i;
   const LOG_RX=/(history|archive|audit(?:log)?|eventlog|activitylog|notificationqueue|notifications|debug|trace)$/i;
-  const ROOT_PINNED=new Set(["activeSessionId","activeSessionAt","player","memberName","displayName","merit","createdAt","updatedAt","launchVersion","clientSaveRevision","clientLocalEditAt","cloudSessionId","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","saveRecoveryR3663At","saveVirtualUpdatedAt"]);
+  const ROOT_PINNED=new Set(["activeSessionId","activeSessionAt","player","memberName","displayName","merit","createdAt","updatedAt","launchVersion","clientSaveRevision","clientLocalEditAt","cloudSessionId","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","saveRecoveryR3663At","saveVirtualUpdatedAt","savePartitionR36117"]);
   const routeCache=new Map(),proxyCache=new WeakMap();
   const pathOf=ref=>String(ref?.path||ref?._key?.path?.canonicalString?.()||"");
   const saveInfo=ref=>{const m=pathOf(ref).match(/^saves\/([^/]+)$/);return m?{memberKey:m[1]}:null};
-  const shardRef=(fs,db,mk,g)=>fs.doc(db,"saveShards",mk,"items",DOC[g]||g);
   const field=(o,p)=>{for(const k of String(p||"").split(".")){if(o==null)return undefined;o=o[k]}return o};
   const setField=(o,p,v)=>{const a=String(p||"").split(".").filter(Boolean);let x=o;for(let i=0;i<a.length-1;i++){if(!obj(x[a[i]]))x[a[i]]={};x=x[a[i]]}if(a.length)x[a[a.length-1]]=v;return o};
   const hash=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0};
   const overflowFor=k=>`over${hash(k)%4}`;
+  const safeDoc=v=>String(v||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,54)||"field";
+  const fieldGroup=k=>`field:${String(k)}`;
+  const fieldDocId=k=>`v8-field-${safeDoc(k)}-${hash(k).toString(36)}`;
+  const isFieldGroup=g=>String(g||"").startsWith("field:");
+  const petGroupFor=k=>PET0.has(k)?"pet0":PET1.has(k)?"pet1":PET2.has(k)?"pet2":"";
+  function shardRef(fs,db,mk,g){
+    const id=DOC[g]||(isFieldGroup(g)?fieldDocId(String(g).slice(6)):String(g));
+    return fs.doc(db,"saveShards",mk,"items",id);
+  }
   function staticGroup(k){for(const [g,s] of Object.entries(GROUP_KEYS))if(s.has(k))return g;if(CLAIM_RX.test(k)||/^saveGuardR\d+/i.test(k))return"claims";if(LOG_RX.test(k))return"logs";return""}
   function routesOf(root,mk=""){const r=obj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{};if(mk&&routeCache.has(mk))Object.assign(r,routeCache.get(mk));return r}
-  function groupFor(k,v,r={}){let g=staticGroup(k)||String(r[k]||"");if(g)return g;if(v&&typeof v==="object"){g=overflowFor(k);r[k]=g;return g}return""}
-  function groupsOfRoutes(r={}){const s=new Set(Object.keys(DOC).filter(k=>!k.startsWith("over")));for(const g of Object.values(r))if(DOC[g])s.add(g);for(let i=0;i<4;i++)s.add(`over${i}`);return[...s]}
+  function ownerFor(k,r={}){
+    if(k==="alpaca")return"alpacaParts";
+    const rr=String(r[k]||"");if(isFieldGroup(rr))return rr;
+    const pg=petGroupFor(k);if(pg)return pg;
+    return staticGroup(k)||rr||overflowFor(k);
+  }
+  function groupFor(k,v,r={}){
+    if(k==="alpaca"){r.alpaca="alpacaParts";return""}
+    const rr=String(r[k]||"");if(isFieldGroup(rr))return rr;
+    const pg=petGroupFor(k);if(pg){r[k]=pg;return pg}
+    let g=staticGroup(k)||rr;if(g)return g;
+    if(v&&typeof v==="object"){g=overflowFor(k);r[k]=g;return g}return""
+  }
+  function groupsOfRoutes(r={}){
+    const s=new Set(["inventory","farm","animals","missions","systems","claims","logs","over0","over1","over2","over3","pet0","pet1","pet2"]);
+    for(const g of Object.values(r))if(DOC[g]||isFieldGroup(g))s.add(g);
+    if(String(r.alpaca||"")==="alpacaParts")for(const g of ["alpacaCore","alpacaPen1","alpacaPen2","alpacaPen3","alpacaPen4","alpacaPen5"])s.add(g);
+    return[...s]
+  }
   function compactVolatile(s){s=cp(s)||{};if(obj(s.alpaca)){s.alpaca=cp(s.alpaca);s.alpaca.vault=[]}const cap=v=>{if(!obj(v))return v;const e=Object.entries(v);if(e.length<=160)return v;return Object.fromEntries(e.slice(-160))};for(const [k,v] of Object.entries(s)){if(CLAIM_RX.test(k)&&obj(v))s[k]=cap(v);if(LOG_RX.test(k)&&Array.isArray(v)&&v.length>80)s[k]=v.slice(-80)}return s}
+  function splitAlpaca(a,groups,r){
+    if(!obj(a))return;
+    r.alpaca="alpacaParts";
+    const core=cp(a)||{},pens=Array.isArray(core.pens)?core.pens:[];delete core.pens;
+    groups.alpacaCore={core};
+    for(let i=0;i<5;i++)groups[`alpacaPen${i+1}`]={pen:cp(pens[i]??null)};
+  }
+  function moveLargeGroups(groups,r){
+    const base=["inventory","farm","animals","missions","systems","claims","logs","over0","over1","over2","over3","pet0","pet1","pet2"];
+    for(const g of base){
+      if(!obj(groups[g])||bytes(groups[g])<=SHARD_SOFT)continue;
+      const entries=Object.entries(groups[g]).sort((a,b)=>bytes({[b[0]]:b[1]})-bytes({[a[0]]:a[1]}));
+      for(const [k,v] of entries){
+        const fg=fieldGroup(k);groups[fg]={[k]:v};r[k]=fg;delete groups[g][k];
+        if(bytes(groups[g])<=SHARD_SOFT)break;
+      }
+    }
+  }
+  function assertParts(parts){
+    for(const [g,d] of Object.entries(parts.groups||{})){
+      const n=bytes({layout:LAYOUT,data:d});
+      if(n>SHARD_HARD)throw new Error(`ข้อมูล ${g} ยังใหญ่เกินค่าปลอดภัย ${Math.round(n/1024)}KB`);
+    }
+  }
   function splitState(full,mk=""){
     const input=compactVolatile(full),r=routesOf(input,mk),root={},groups={};
     for(const g of groupsOfRoutes(r))groups[g]={};
     for(const [k,v] of Object.entries(input||{})){
-      if(k==="saveShardRoutes")continue;
+      if(k==="saveShardRoutes"||k==="alpaca")continue;
       const g=groupFor(k,v,r);
       if(g){groups[g]??={};groups[g][k]=v}else root[k]=v;
     }
-    /* If scalar metadata somehow grows, move every non-pinned field to overflow. */
-    if(bytes(root)>ROOT_BUDGET){for(const [k,v] of Object.entries({...root})){if(ROOT_PINNED.has(k))continue;const g=overflowFor(k);groups[g]??={};groups[g][k]=v;r[k]=g;delete root[k];if(bytes(root)<=ROOT_BUDGET)break}}
-    root.saveLayoutVersion=LAYOUT;root.saveShardBuild=BUILD;root.saveLayoutUpdatedAt=now();root.saveShardRoutes=r;root.saveRootApproxBytes=bytes(root);if(mk)routeCache.set(mk,{...r});
-    return{root,groups,routes:r};
+    if(obj(input.alpaca))splitAlpaca(input.alpaca,groups,r);
+    moveLargeGroups(groups,r);
+    if(bytes(root)>ROOT_BUDGET){for(const [k,v] of Object.entries({...root})){if(ROOT_PINNED.has(k))continue;const g=fieldGroup(k);groups[g]??={};groups[g][k]=v;r[k]=g;delete root[k];if(bytes(root)<=ROOT_BUDGET)break}}
+    root.saveLayoutVersion=LAYOUT;root.saveShardBuild=BUILD;root.saveLayoutUpdatedAt=now();root.saveShardRoutes=r;root.saveRootApproxBytes=bytes(root);root.savePartitionR36117=1;if(mk)routeCache.set(mk,{...r});
+    const out={root,groups,routes:r};assertParts(out);return out;
   }
   function mergeState(root,groups,mk=""){
     const out=cp(root||{})||{},r=routesOf(root,mk),canonicalSeen=new Set();
-    /* R36.67: a top-level key has exactly ONE authoritative shard owner.
-       Older V6/V7 migrations left duplicate stale copies (for example plots in
-       both v7-farm and an overflow shard). The old merge used Object.assign in
-       shard order, so a stale overflow copy could overwrite the freshly
-       committed farm/inventory/alpaca value and make actions "work for 2 sec"
-       then revert. Canonical owner always wins now. */
     for(const g of groupsOfRoutes(r)){
+      if(g.startsWith("alpaca"))continue;
       const d=groups?.[g];if(!obj(d))continue;
       for(const [k,v] of Object.entries(d)){
-        const owner=staticGroup(k)||String(r[k]||"")||overflowFor(k);
-        if(owner===g){out[k]=cp(v);canonicalSeen.add(k)}
+        const owner=ownerFor(k,r);if(owner===g){out[k]=cp(v);canonicalSeen.add(k)}
       }
     }
-    /* Recovery fallback only: if the canonical shard is missing a key, accept
-       one surviving duplicate. It may restore old data, but can never override
-       a canonical value once one exists. */
     for(const g of groupsOfRoutes(r)){
+      if(g.startsWith("alpaca"))continue;
       const d=groups?.[g];if(!obj(d))continue;
-      for(const [k,v] of Object.entries(d)){
-        if(canonicalSeen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;
-        out[k]=cp(v);
-      }
+      for(const [k,v] of Object.entries(d)){if(canonicalSeen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;out[k]=cp(v)}
     }
-    out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=r;
+    if(String(r.alpaca||"")==="alpacaParts"){
+      const core=obj(groups?.alpacaCore?.core)?cp(groups.alpacaCore.core):{};
+      const pens=[];for(let i=1;i<=5;i++)pens.push(cp(groups?.[`alpacaPen${i}`]?.pen??null));
+      core.pens=pens.map((p,i)=>obj(p)?p:{name:`คอกอัลปาก้า ${i+1}`,alpacas:[]});out.alpaca=core;
+    }
+    out.saveLayoutVersion=LAYOUT;out.saveShardBuild=BUILD;out.saveShardRoutes=r;out.savePartitionR36117=1;
     if(mk)routeCache.set(mk,{...r});return out
   }
   function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);if(p==="get")return path=>cp(field(data,path?.toString?.()||path));return Reflect.get(t,p,t)}})}
   function numericTotal(m){if(!obj(m))return 0;return Object.values(m).reduce((n,v)=>n+(typeof v==="number"&&Number.isFinite(v)&&v>0?v:0),0)}
   function bestPositiveMap(current,candidates,path){if(numericTotal(current)>0)return current;let best=current,bestN=0;for(const s of candidates){const m=field(s,path),n=numericTotal(m);if(n>bestN){bestN=n;best=cp(m)}}return bestN>0?best:current}
-  function emergencyRecoverStocks(base,candidates){const s=cp(base)||{};
-    /* R36.86: bag + specials are first-class inventory shards. Older migration
-       recovery accidentally omitted them, which can leave an affected account
-       with a valid V7 layout but a completely zero inventory. Recover only when
-       the current map is zero and a positive pre-migration/shard copy exists. */
-    s.bag=bestPositiveMap(s.bag,candidates,"bag")||s.bag||{};
-    s.specials=bestPositiveMap(s.specials,candidates,"specials")||s.specials||{};
-    s.animalProducts=bestPositiveMap(s.animalProducts,candidates,"animalProducts")||s.animalProducts||{};
-    s.flowers=bestPositiveMap(s.flowers,candidates,"flowers")||s.flowers||{};
-    s.wines=bestPositiveMap(s.wines,candidates,"wines")||s.wines||{};
-    s.fishingBaits=bestPositiveMap(s.fishingBaits,candidates,"fishingBaits")||s.fishingBaits||{};
-    s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};for(const k of ["food","medicine","wool","other"])s.alpaca.inventory[k]=bestPositiveMap(s.alpaca.inventory[k],candidates,`alpaca.inventory.${k}`)||{};s.alpaca.factory=obj(s.alpaca.factory)?s.alpaca.factory:{};s.alpaca.factory.products=bestPositiveMap(s.alpaca.factory.products,candidates,"alpaca.factory.products")||{};s.jellyfishV2=bestPositiveMap(s.jellyfishV2,candidates,"jellyfishV2")||s.jellyfishV2||{};s.specialAnimals=bestPositiveMap(s.specialAnimals,candidates,"specialAnimals")||s.specialAnimals||{};return s}
+  function emergencyRecoverStocks(base,candidates){const s=cp(base)||{};s.bag=bestPositiveMap(s.bag,candidates,"bag")||s.bag||{};s.specials=bestPositiveMap(s.specials,candidates,"specials")||s.specials||{};s.animalProducts=bestPositiveMap(s.animalProducts,candidates,"animalProducts")||s.animalProducts||{};s.flowers=bestPositiveMap(s.flowers,candidates,"flowers")||s.flowers||{};s.wines=bestPositiveMap(s.wines,candidates,"wines")||s.wines||{};s.fishingBaits=bestPositiveMap(s.fishingBaits,candidates,"fishingBaits")||s.fishingBaits||{};s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};for(const k of ["food","medicine","wool","other"])s.alpaca.inventory[k]=bestPositiveMap(s.alpaca.inventory[k],candidates,`alpaca.inventory.${k}`)||{};s.alpaca.factory=obj(s.alpaca.factory)?s.alpaca.factory:{};s.alpaca.factory.products=bestPositiveMap(s.alpaca.factory.products,candidates,"alpaca.factory.products")||{};s.jellyfishV2=bestPositiveMap(s.jellyfishV2,candidates,"jellyfishV2")||s.jellyfishV2||{};s.specialAnimals=bestPositiveMap(s.specialAnimals,candidates,"specialAnimals")||s.specialAnimals||{};return s}
   function localCandidates(member,mk){const out=[],keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:s2:r22:critical:${mk}`,`yn:r24:last-good:${member}`,`yn:r24:pending:${member}`,`yn:v7:critical:${mk}`];for(const k of keys)try{const raw=localStorage.getItem(k);if(!raw)continue;const x=JSON.parse(raw),st=obj(x?.state)?x.state:(obj(x)?x:null);if(st)out.push(st)}catch(_){}return out}
   async function rawContext(){return RAW_CTX.apply(this,arguments)}
   async function serverGet(fs,ref){if(typeof fs.getDocFromServer==="function")return fs.getDocFromServer(ref);return fs.getDoc(ref)}
-  async function readV7Groups(fs,db,mk,root,server=true){const r=routesOf(root,mk),names=groupsOfRoutes(r),groups={},sn=await Promise.all(names.map(g=>server?serverGet(fs,shardRef(fs,db,mk,g)):fs.getDoc(shardRef(fs,db,mk,g))));names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});return groups}
-  async function readLegacyAndRecovery(fs,db,mk,root,member){const candidates=[cp(root)],full=cp(root)||{};try{const qs=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));qs.forEach(d=>{const raw=d.data()||{},data=obj(raw.data)?raw.data:raw,id=String(d.id||"");if(!obj(data))return;candidates.push(cp(data));if(/^v6-|^v5-|^(animals|farm|history)$/i.test(id))Object.assign(full,cp(data))})}catch(e){console.warn(BUILD,"legacy scan",mk,e?.message||e)}candidates.push(...localCandidates(member,mk));return{full,candidates}}
-  /* R36.70 SPEED — once a player's save is confirmed migrated, remember it for the
-     session. This used to fire a forced getDocFromServer before every single save. */
-  const v7Verified=new Map();
-  async function ensureV7(mk,member="",force=false){mk=String(mk||"").trim();if(!mk)return false;
-    if(!force&&v7Verified.get(mk)&&Date.now()-v7Verified.get(mk)<600000)return true;
-    const {db,fs}=await rawContext(),ref=fs.doc(db,"saves",mk),rs=await serverGet(fs,ref);if(!rs.exists())return false;const root=rs.data()||{};if(!force&&root.saveLayoutVersion===LAYOUT&&bytes(root)<ROOT_HARD&&Number(root.saveCanonicalOwnerFixR3667||0)===1){routeCache.set(mk,routesOf(root,mk));v7Verified.set(mk,Date.now());return true}
-    let canonical,candidates=[];
-    if(root.saveLayoutVersion===LAYOUT){canonical=mergeState(root,await readV7Groups(fs,db,mk,root,true),mk);candidates=[canonical]}
-    else{const rec=await readLegacyAndRecovery(fs,db,mk,root,member||root.player||root.memberName||"");canonical=rec.full;candidates=rec.candidates}
-    canonical=emergencyRecoverStocks(canonical,candidates);canonical.saveRecoveryR3663At=Number(canonical.saveRecoveryR3663At)||now();canonical.saveCanonicalOwnerFixR3667=1;
-    const parts=splitState(canonical,mk),batch=fs.writeBatch(db);for(const [g,d] of Object.entries(parts.groups))batch.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(d),updatedAt:fs.serverTimestamp()},{merge:false});batch.set(ref,{...parts.root,saveRecoveryR3663At:canonical.saveRecoveryR3663At,saveCanonicalOwnerFixR3667:1,updatedAt:fs.serverTimestamp()},{merge:false});await batch.commit();
-    const ck=await serverGet(fs,ref),rb=ck.exists()?bytes(ck.data()||{}):0;if(rb>ROOT_HARD)throw new Error("เซฟหลักยังใหญ่เกินค่าปลอดภัยหลังแยกข้อมูล");v7Verified.set(mk,Date.now());console.info(BUILD,"migrated",mk,{rootBytes:rb});return true;
+  async function readV8Groups(fs,db,mk,root,server=true){const r=routesOf(root,mk),names=groupsOfRoutes(r),groups={},sn=await Promise.all(names.map(g=>server?serverGet(fs,shardRef(fs,db,mk,g)):fs.getDoc(shardRef(fs,db,mk,g))));names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});return groups}
+  function mergeOldV7(root,docs,mk){
+    const r=obj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{},out=cp(root)||{},byGroup={};
+    for(const [g,id] of Object.entries(OLD_DOC)){const raw=docs.get(id);byGroup[g]=obj(raw?.data)?raw.data:(obj(raw)?raw:{})}
+    const seen=new Set();
+    for(const [g,d] of Object.entries(byGroup))for(const [k,v] of Object.entries(d||{})){const owner=staticGroup(k)||String(r[k]||"")||overflowFor(k);if(owner===g){out[k]=cp(v);seen.add(k)}}
+    for(const d of Object.values(byGroup))for(const [k,v] of Object.entries(d||{})){if(seen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;out[k]=cp(v)}
+    return out;
   }
-  async function hydrate(fs,db,ref,base,server=false){if(!base?.exists?.())return base;const info=saveInfo(ref);if(!info)return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT)return base;const groups=await readV7Groups(fs,db,info.memberKey,root,server);return snapLike(base,mergeState(root,groups,info.memberKey))}
+  async function readLegacyAndRecovery(fs,db,mk,root,member){
+    const candidates=[cp(root)],docs=new Map();
+    try{const qs=await fs.getDocs(fs.collection(db,"saveShards",mk,"items"));qs.forEach(d=>{const raw=d.data()||{},data=obj(raw.data)?raw.data:raw,id=String(d.id||"");docs.set(id,raw);if(obj(data))candidates.push(cp(data))})}catch(e){console.warn(BUILD,"legacy scan",mk,e?.message||e)}
+    let full=cp(root)||{};
+    if(String(root?.saveLayoutVersion||"").startsWith("save-layout-v7"))full=mergeOldV7(root,docs,mk);
+    else for(const [id,raw] of docs){const data=obj(raw?.data)?raw.data:raw;if(obj(data)&&(/^v6-|^v5-|^(animals|farm|history)$/i.test(id)))Object.assign(full,cp(data))}
+    candidates.push(...localCandidates(member,mk));return{full,candidates}
+  }
+  const v8Verified=new Map();
+  async function ensureV7(mk,member="",force=false){mk=String(mk||"").trim();if(!mk)return false;
+    if(!force&&v8Verified.get(mk)&&Date.now()-v8Verified.get(mk)<600000)return true;
+    const {db,fs}=await rawContext(),ref=fs.doc(db,"saves",mk),rs=await serverGet(fs,ref);if(!rs.exists())return false;const root=rs.data()||{};
+    if(!force&&root.saveLayoutVersion===LAYOUT&&bytes(root)<ROOT_HARD&&Number(root.savePartitionR36117||0)===1){routeCache.set(mk,routesOf(root,mk));v8Verified.set(mk,Date.now());return true}
+    let canonical,candidates=[];
+    if(root.saveLayoutVersion===LAYOUT){canonical=mergeState(root,await readV8Groups(fs,db,mk,root,true),mk);candidates=[canonical]}
+    else{const rec=await readLegacyAndRecovery(fs,db,mk,root,member||root.player||root.memberName||"");canonical=rec.full;candidates=rec.candidates}
+    canonical=emergencyRecoverStocks(canonical,candidates);canonical.saveRecoveryR3663At=Number(canonical.saveRecoveryR3663At)||now();canonical.saveCanonicalOwnerFixR3667=1;canonical.savePartitionR36117=1;
+    const parts=splitState(canonical,mk),batch=fs.writeBatch(db);
+    for(const [g,d] of Object.entries(parts.groups))batch.set(shardRef(fs,db,mk,g),{layout:LAYOUT,data:cp(d),updatedAt:fs.serverTimestamp()},{merge:false});
+    batch.set(ref,{...parts.root,saveRecoveryR3663At:canonical.saveRecoveryR3663At,saveCanonicalOwnerFixR3667:1,savePartitionR36117:1,updatedAt:fs.serverTimestamp()},{merge:false});
+    /* These two monolithic documents are obsolete only after all V8 parts are
+       prepared in this same atomic batch. No per-player exception is used. */
+    batch.delete(fs.doc(db,"saveShards",mk,"items","v7-alpaca"));
+    batch.delete(fs.doc(db,"saveShards",mk,"items","v7-pets"));
+    await batch.commit();
+    const ck=await serverGet(fs,ref),rb=ck.exists()?bytes(ck.data()||{}):0;if(rb>ROOT_HARD)throw new Error("เซฟหลักยังใหญ่เกินค่าปลอดภัยหลังแยกข้อมูล");
+    v8Verified.set(mk,Date.now());console.info(BUILD,"migrated",mk,{rootBytes:rb,groups:Object.keys(parts.groups).length});return true;
+  }
+  async function hydrate(fs,db,ref,base,server=false){if(!base?.exists?.())return base;const info=saveInfo(ref);if(!info)return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT)return base;const groups=await readV8Groups(fs,db,info.memberKey,root,server);return snapLike(base,mergeState(root,groups,info.memberKey))}
   function nestedPatch(p){const out={};for(const [k,v] of Object.entries(p||{}))setField(out,k,v);return out}
-  function splitPatch(mk,patch,r){const root={},groups={};for(const [path,v] of Object.entries(patch||{})){if(v===undefined)continue;const top=String(path).split(".")[0];let g=staticGroup(top)||r[top]||"";if(!g&&(String(path).includes(".")||(v&&typeof v==="object"))){g=overflowFor(top);r[top]=g}if(g){groups[g]??={};groups[g][`data.${path}`]=v}else root[path]=v}return{root,groups,routes:r}}
+  function putGroup(groups,g,path,v){groups[g]??={};groups[g][`data.${path}`]=v}
+  function splitPatch(mk,patch,r){
+    const root={},groups={};
+    for(const [path,v] of Object.entries(patch||{})){
+      if(v===undefined)continue;const bits=String(path).split("."),top=bits[0];
+      if(top==="alpaca"){
+        r.alpaca="alpacaParts";
+        if(bits.length===1&&obj(v)){
+          const a=cp(v),hasPens=Object.prototype.hasOwnProperty.call(a,"pens"),pens=Array.isArray(a.pens)?a.pens:[];delete a.pens;putGroup(groups,"alpacaCore","core",a);
+          if(hasPens)for(let i=0;i<5;i++)putGroup(groups,`alpacaPen${i+1}`,"pen",cp(pens[i]??null));
+        }else if(bits[1]==="pens"){
+          if(bits.length===2&&Array.isArray(v)){for(let i=0;i<5;i++)putGroup(groups,`alpacaPen${i+1}`,"pen",cp(v[i]??null))}
+          else{const idx=Math.floor(Number(bits[2]));if(idx>=0&&idx<5){const rest=bits.slice(3).join(".");putGroup(groups,`alpacaPen${idx+1}`,`pen${rest?`.${rest}`:""}`,v)}}
+        }else{const rest=bits.slice(1).join(".");putGroup(groups,"alpacaCore",`core${rest?`.${rest}`:""}`,v)}
+        continue;
+      }
+      const rr=String(r[top]||"");if(isFieldGroup(rr)){putGroup(groups,rr,path,v);continue}
+      const pg=petGroupFor(top);if(pg){r[top]=pg;putGroup(groups,pg,path,v);continue}
+      let g=staticGroup(top)||rr||"";
+      if(!g&&(String(path).includes(".")||(v&&typeof v==="object"))){g=overflowFor(top);r[top]=g}
+      if(g)putGroup(groups,g,path,v);else root[path]=v;
+    }
+    return{root,groups,routes:r}
+  }
   function shardPatch(fs,p){return{layout:LAYOUT,...nestedPatch(p),updatedAt:fs.serverTimestamp()}}
   function rootTouch(fs,o){o={...o};if(o.updatedAt===undefined)o.updatedAt=fs.serverTimestamp();if(o.saveVirtualUpdatedAt===undefined)o.saveVirtualUpdatedAt=fs.serverTimestamp();if(o.clientSaveRevision===undefined&&typeof fs.increment==="function")o.clientSaveRevision=fs.increment(1);return o}
   function makeBatch(fs,db,ops){const b=fs.writeBatch(db);for(const o of ops){if(o.kind==="set")b.set(o.ref,o.data,o.opt);else if(o.kind==="update")b.update(o.ref,o.data);else if(o.kind==="delete")b.delete(o.ref)}return b}
-  async function writePatch(fs,db,ref,mk,patch){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,patch||{},r),ops=[],rp={...sp.root};rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD;rp.saveShardRoutes=sp.routes;ops.push({kind:"set",ref,data:nestedPatch(rootTouch(fs,rp)),opt:{merge:true}});for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(fs,db,mk,g),data:shardPatch(fs,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return makeBatch(fs,db,ops).commit()}
+  async function writePatch(fs,db,ref,mk,patch){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,patch||{},r),ops=[],rp={...sp.root,savePartitionR36117:1};rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD;rp.saveShardRoutes=sp.routes;ops.push({kind:"set",ref,data:nestedPatch(rootTouch(fs,rp)),opt:{merge:true}});for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(fs,db,mk,g),data:shardPatch(fs,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return makeBatch(fs,db,ops).commit()}
   function looksFullState(d){return obj(d)&&("merit" in d)&&(obj(d.bag)||Array.isArray(d.plots)||obj(d.specials)||obj(d.alpaca))}
 
   const proxyCacheRaw=new WeakMap();
@@ -3976,14 +4083,15 @@ console.info(BUILD,"loaded");
     if(prop==="onSnapshot")return function(ref,...args){const info=saveInfo(ref);if(!info)return target.onSnapshot(ref,...args);let options=null,next=null,error=null,complete=null;if(args[0]&&typeof args[0]==="object"&&typeof args[0]!=="function"&&!(typeof args[0].next==="function")){options=args[0];if(args[1]&&typeof args[1]==="object"){next=args[1].next?.bind(args[1]);error=args[1].error?.bind(args[1]);complete=args[1].complete?.bind(args[1])}else{next=args[1];error=args[2];complete=args[3]}}else if(args[0]&&typeof args[0]==="object"){next=args[0].next?.bind(args[0]);error=args[0].error?.bind(args[0]);complete=args[0].complete?.bind(args[0])}else{next=args[0];error=args[1];complete=args[2]}let dead=false,timer=0,seq=0;const emit=()=>{const my=++seq;clearTimeout(timer);timer=setTimeout(async()=>{try{const b=await serverGet(target,ref),h=await hydrate(target,db,ref,b,true);if(!dead&&my===seq)next?.(h)}catch(e){console.warn(BUILD,"snapshot hydrate",e?.message||e)}},80)};const u=options?target.onSnapshot(ref,options,emit,e=>error?.(e),()=>complete?.()):target.onSnapshot(ref,emit,e=>error?.(e),()=>complete?.());return()=>{dead=true;clearTimeout(timer);try{u?.()}catch(_){}}};
     if(prop==="setDoc")return async(ref,data,opt)=>{const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});const parts=splitState(data,mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return makeBatch(target,db,ops).commit()};
     if(prop==="updateDoc")return async(ref,patch,...rest)=>{const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);return writePatch(target,db,ref,info.memberKey,patch||{})};
-    if(prop==="runTransaction")return async function(dbArg,callback,...rest){return target.runTransaction(dbArg,async real=>{const before=new Map(),routes=new Map();const tx=new Proxy(real,{get(tt,p){if(p==="get")return async ref=>{const info=saveInfo(ref);if(!info)return tt.get(ref);const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routes.set(info.memberKey,routesOf(root,info.memberKey));return base}const r=routesOf(root,info.memberKey),names=groupsOfRoutes(r),sn=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g)))),groups={};names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routes.set(info.memberKey,r);return snapLike(base,full)};
-      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const parts=splitState(data,mk),prev=before.get(pathOf(ref)),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);return tx};
-      if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info){tt.update(ref,data);return tx}const mk=info.memberKey,r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};
+    if(prop==="runTransaction")return async function(dbArg,callback,...rest){return target.runTransaction(dbArg,async real=>{const before=new Map(),routes=new Map();const tx=new Proxy(real,{get(tt,p){
+      if(p==="get")return async ref=>{const info=saveInfo(ref);if(!info)return tt.get(ref);const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routes.set(info.memberKey,routesOf(root,info.memberKey));return base}const r=routesOf(root,info.memberKey),names=groupsOfRoutes(r),sn=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g)))),groups={};names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routes.set(info.memberKey,r);return snapLike(base,full)};
+      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const parts=splitState(data,mk),prev=before.get(pathOf(ref)),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);routeCache.set(mk,{...parts.routes});return tx};
+      if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info){tt.update(ref,data);return tx}const mk=info.memberKey,r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};
       if(p==="delete")return ref=>{tt.delete(ref);return tx};return Reflect.get(tt,p,tt)}});return callback(tx)},...rest)};
-    if(prop==="writeBatch")return function(dbArg){const ops=[];const api={set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return api},update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey,r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},commit(){return makeBatch(target,dbArg,ops).commit()}};return api};
+    if(prop==="writeBatch")return function(dbArg){const ops=[];const api={set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});routeCache.set(mk,{...parts.routes});return api},update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey,r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},commit(){return makeBatch(target,dbArg,ops).commit()}};return api};
     return Reflect.get(target,prop,target)
   }});proxyCacheRaw.set(fs,prox);return{...ctx,fs:prox}}
-  wrappedGetFirebaseContext.__r3663Base=RAW_CTX;globalThis.getFirebaseContext=wrappedGetFirebaseContext;try{getFirebaseContext=wrappedGetFirebaseContext}catch(_){}
+  wrappedGetFirebaseContext.__r3663Base=RAW_CTX;wrappedGetFirebaseContext.__r36117Base=RAW_CTX;globalThis.getFirebaseContext=wrappedGetFirebaseContext;try{getFirebaseContext=wrappedGetFirebaseContext}catch(_){}
 
   /* ---- One authoritative local->cloud save queue. No legacy save chain.
      IMPORTANT: a mutation that arrives while a flush is in flight MUST trigger
@@ -4018,7 +4126,7 @@ console.info(BUILD,"loaded");
      incoming gift can never destroy a plant.
      ===================================================================== */
   let baseSnapshot=null,baseSnapshotKey="";
-  const MERGE_META=new Set(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes"]);
+  const MERGE_META=new Set(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","savePartitionR36117"]);
   function mergeByField(remote,local,base){
     const out=cp(remote)||{},changed=[];
     for(const k of new Set([...Object.keys(local||{}),...Object.keys(base||{})])){
@@ -4231,9 +4339,10 @@ console.info(BUILD,"loaded");
   /* ---- Honey: tolerate persisted callback-style reward rows with no itemType. ---- */
   try{const giftBase=addGiftItemToState;addGiftItemToState=function(s,g){if(g&&!g.itemType&&!g.type&&g.id){const q=Math.max(1,Math.floor(Number(g.qty)||1));s.specials=s.specials||{};if(g.id==="grassGreen"){s.specials.friendGrassGreen=(Number(s.specials.friendGrassGreen)||0)+q;return}if(g.id==="grassYellow"){s.specials.friendGrassYellow=(Number(s.specials.friendGrassYellow)||0)+q;return}if(g.id==="grassRed"){s.specials.friendGrassRed=(Number(s.specials.friendGrassRed)||0)+q;return}}return giftBase.apply(this,arguments)}}catch(_){}
 
-  globalThis.YN_SAVE_V7={BUILD,LAYOUT,repair:mk=>ensureV7(String(mk||currentMemberKey||""),String(currentMember||""),true),report:async()=>{const mk=String(currentMemberKey||"");if(!mk)return{};const {db,fs}=await wrappedGetFirebaseContext(),sn=await serverGet(fs,fs.doc(db,"saves",mk)),d=sn.exists()?sn.data()||{}:{};return{memberKey:mk,rootBytes:bytes(splitState(d,mk).root),virtualBytes:bytes(d),alpacaInventory:d?.alpaca?.inventory||{},jellyfishV2:d?.jellyfishV2||{},wines:d?.wines||{},plots:d?.plots||[]}}};
+  globalThis.YN_SAVE_V8={BUILD,LAYOUT,repair:mk=>ensureV7(String(mk||currentMemberKey||""),String(currentMember||""),true),report:async()=>{const mk=String(currentMemberKey||"");if(!mk)return{};const {db,fs}=await wrappedGetFirebaseContext(),sn=await serverGet(fs,fs.doc(db,"saves",mk)),d=sn.exists()?sn.data()||{}:{};const parts=splitState(d,mk);return{memberKey:mk,layout:LAYOUT,rootBytes:bytes(parts.root),virtualBytes:bytes(d),groups:Object.fromEntries(Object.entries(parts.groups).map(([g,v])=>[g,bytes({layout:LAYOUT,data:v})])),alpacaInventory:d?.alpaca?.inventory||{},jellyfishV2:d?.jellyfishV2||{},wines:d?.wines||{},plots:d?.plots||[]}}};
+  globalThis.YN_SAVE_V7=globalThis.YN_SAVE_V8;
   globalThis.YN_SAVE_STORAGE_V2={migrateOne:mk=>ensureV7(String(mk||currentMemberKey||""),String(currentMember||""),true)};
-  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,repair:mk=>ensureV7(String(mk||currentMemberKey||""),String(currentMember||""),true),compact:()=>({layout:LAYOUT,structural:true})};
+  globalThis.YN_SAVE_GUARD_ALL_PLAYERS={BUILD,repair:mk=>ensureV7(String(mk||currentMemberKey||""),String(currentMember||""),true),compact:()=>({layout:LAYOUT,structural:true,partitioned:true})};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
@@ -5719,6 +5828,14 @@ console.info(BUILD,"loaded");
 <script id="r36112-alpaca-gift-route-marker">
 window.YAINOO_ALPACA_GIFT_BUILD="S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919";
 console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quiet durable autosave + hamster 6-cap loaded");
+</script>
+
+<script id="r36117-partitioned-save-v8-marker">
+(()=>{
+  const BUILD="S2-R36.117-PARTITIONED-SAVE-V8-20260920";
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"universal partitioned save loaded — no player-specific storage routes");
+})();
 </script>
 </body>
 </html>
