@@ -3308,10 +3308,29 @@ async function fetchNotificationData(force=false){
   return {mail,broadcasts};
 }
 async function fetchBroadcastClaim(broadcastId){
-  /* R14: keep broadcast claim state in the member's own save. */
+  /* R36.118: immutable server receipt is authoritative across reloads/devices.
+     The save marker remains as a compatibility fallback and is backfilled once. */
+  let db=null,fs=null,ref=null;
+  try{
+    if(cloudReady&&currentMemberKey){
+      ({db,fs}=await getFirebaseContext());
+      ref=fs.doc(db,"broadcasts",String(broadcastId),"claims",String(currentMemberKey));
+      const snap=await fs.getDoc(ref);
+      if(snap.exists())return snap.data()||{};
+    }
+  }catch(error){console.warn("R36.118 broadcast receipt read",broadcastId,error?.message||error)}
   const local=normalizeState(ownState||state,currentMember);
   const rec=local?.broadcastGiftClaims?.[broadcastId];
-  return rec&&typeof rec==="object"?rec:null;
+  if(rec&&typeof rec==="object"){
+    try{
+      if(ref&&fs){
+        const status=String(rec.status||"")==="discarded"?"discarded":"accepted";
+        await fs.setDoc(ref,{memberKey:String(currentMemberKey),status,resolvedAt:fs.serverTimestamp()},{merge:false});
+      }
+    }catch(error){console.warn("R36.118 broadcast receipt backfill",broadcastId,error?.message||error)}
+    return rec;
+  }
+  return null;
 }
 async function refreshNotificationBadge(force=false){
   const badge=$("notificationBadge");if(!badge)return;if(!cloudReady){badge.classList.add("hidden");return}
