@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Mitr:wght@400;500&display=swap");
 :root{
   --ink:#3a2141;
   --pink:#ef63ae;
@@ -11859,3 +11860,118 @@ body.r50-lock{overflow:hidden!important}
 /* S2 R36.72 — only the compact hamster feed icon may exist; never blink/pulse. */
 #r3420HamsterFeedBtn,#r3421HamsterFeed{display:none!important;animation:none!important;transition:none!important}
 #r3424HamIcon{animation:none!important;transition:none!important;opacity:1!important;visibility:visible}
+
+
+/* =====================================================================
+   ธีม "โคมผีน้อย" — แต่งหน้าตาอย่างเดียว (สี ฟอนต์ เงา แอนิเมชัน)
+   ไม่ยุ่งกับข้อมูล ของในกระเป๋า เหรียญ หรือตัวเลขใดๆ ในเกม
+   อยากกลับเป็นแบบเดิม: ลบตั้งแต่บรรทัดนี้ลงไปจนจบไฟล์ และลบบรรทัด @import บนสุดของไฟล์
+   ===================================================================== */
+:root{
+  --ln-font:"Mitr","Thonburi","Noto Sans Thai",sans-serif;
+  --ln-glass:linear-gradient(160deg,rgba(88,70,170,.94),rgba(46,92,104,.93));
+  --ln-edge:rgba(255,255,255,.55);
+  --ln-glow:0 0 0 6px rgba(255,255,255,.07),0 0 40px rgba(190,170,255,.55),0 18px 34px rgba(0,0,0,.4);
+  --ln-gold:#ffe9a8;
+  --ln-text:#f5f0ff;
+  --ln-soft:#e6defc;
+}
+
+/* พื้นหลังตอนเปิดหน้าต่าง: ม่วงกลางคืนนุ่มๆ */
+#modal.modal{background:rgba(24,16,58,.62)}
+
+/* กรอบหน้าต่างทุกแบบ: ขอบแก้ว เรืองแสง มุมโค้ง ฟอนต์ใหม่ เด้งตอนเปิด */
+#modal > .modal-card{
+  font-family:var(--ln-font);
+  border:1.5px solid var(--ln-edge);
+  border-radius:28px;
+  box-shadow:var(--ln-glow);
+  background:#f6f2ff; /* หน้าจอพิเศษ (ร้านค้า สัตว์ ฯลฯ) ใช้พื้นสว่างเพื่อให้อ่านตัวหนังสือเดิมได้ชัด */
+}
+#modal:not(.hidden) > .modal-card{animation:lnPop .42s cubic-bezier(.3,1.5,.5,1)}
+@keyframes lnPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ---------- แบบโคมผีเต็มรูปแบบ: ข้อความทั่วไป / กล่องยืนยัน / ผลการคราฟ ---------- */
+#modal > .modal-card:not(:has(.feature-panel)),
+#modal > .modal-card:has(.confirm-panel,.craft-success-panel,.craft-warning-panel){
+  background:var(--ln-glass);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  color:var(--ln-text);
+}
+/* ประกายดาววิบวับ */
+#modal > .modal-card:not(:has(.feature-panel))::after,
+#modal > .modal-card:has(.confirm-panel,.craft-success-panel,.craft-warning-panel)::after{
+  content:"✦";position:absolute;top:12px;left:18px;font-size:14px;color:var(--ln-gold);
+  text-shadow:0 0 8px var(--ln-gold),240px 30px 0 var(--ln-gold);pointer-events:none;
+  animation:lnTw 1.8s ease-in-out infinite;
+}
+@keyframes lnTw{50%{opacity:.3}}
+
+/* หัวข้อ */
+#modalContent > h2,
+#modalContent .confirm-panel h2,
+#modalContent .craft-success-panel h2,
+#modalContent .craft-warning-panel h2{
+  font-family:var(--ln-font)!important;font-weight:500!important;
+  font-size:clamp(17px,4.6vw,20px)!important;
+  color:#fff!important;text-shadow:0 0 12px rgba(255,236,160,.9)!important;
+  margin:4px 0 12px!important;text-align:center;
+}
+/* ข้อความ */
+#modalContent > p,
+#modalContent .confirm-panel p,
+#modalContent .craft-success-panel p{
+  color:var(--ln-soft)!important;font-size:14px!important;line-height:1.6!important;text-align:center;
+}
+#modalContent .craft-success-panel h3{color:#fff!important;font-family:var(--ln-font)!important;font-weight:500!important}
+#modalContent .craft-warning-panel p{
+  background:rgba(255,160,190,.16)!important;border:1.5px solid rgba(255,190,210,.55)!important;
+  color:#ffe3ec!important;font-weight:400!important;font-size:13px!important;
+}
+/* รูปและผีน้อยลอยขึ้นลง เรืองแสง */
+#modalContent .confirm-ghost,
+#modalContent .craft-success-panel > img,
+#modalContent .craft-warning-panel > img{
+  filter:drop-shadow(0 0 14px rgba(255,240,170,.85))!important;
+  animation:lnFloat 2.4s ease-in-out infinite;
+}
+@keyframes lnFloat{50%{transform:translateY(-6px)}}
+
+/* ปุ่ม */
+#modalContent .confirm-panel button,
+#modalContent .craft-success-panel button,
+#modalContent .craft-warning-panel button,
+#modalContent > button{
+  font-family:var(--ln-font)!important;font-weight:500!important;font-size:14px!important;
+  border-radius:999px!important;
+  background:linear-gradient(#ffe9a8,#f6c96b)!important;color:#5a3a10!important;
+  border:0!important;box-shadow:0 0 16px rgba(255,220,130,.6)!important;
+}
+#modalContent .confirm-panel .secondary-action,
+#modalContent .craft-success-panel .secondary-action,
+#modalContent .craft-warning-panel .secondary-action{
+  background:rgba(255,255,255,.14)!important;color:#fff!important;
+  border:1.5px solid rgba(255,255,255,.5)!important;box-shadow:none!important;
+}
+#modalContent .confirm-panel .danger-action{
+  background:linear-gradient(#ffb3c7,#f0809f)!important;color:#4b1528!important;
+  box-shadow:0 0 16px rgba(255,150,180,.6)!important;
+}
+
+/* ---------- แจ้งเตือนเล็กตอนได้ของ (+จำนวน) ---------- */
+.r23-reward-toast{
+  font-family:var(--ln-font);
+  background:rgba(40,30,90,.8);color:#fff;
+  border:1.5px solid rgba(255,255,255,.45);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  box-shadow:0 0 18px rgba(190,170,255,.55);
+}
+.r23-reward-toast > span,.r23-reward-toast img{background:rgba(255,236,160,.22);border-radius:50%}
+.r23-reward-toast b{font-weight:400}
+.r23-reward-toast strong{color:var(--ln-gold);text-shadow:0 0 8px rgba(255,233,168,.8);font-weight:500}
+.r23-reward-toast.show{transition:opacity .2s ease,transform .35s cubic-bezier(.3,1.6,.5,1)}
+
+@media (prefers-reduced-motion:reduce){
+  #modal:not(.hidden) > .modal-card,
+  #modalContent .confirm-ghost,#modalContent .craft-success-panel > img,#modalContent .craft-warning-panel > img{animation:none}
+}
