@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919"></script>
+<script src="game.js?v=S2-R36.118-STABILITY-20260922"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -1209,6 +1209,7 @@
         const due=Math.floor((t-last)/3600000);
         if(due>0){
           for(let r=1;r<=Math.min(due,8);r++)arr.push({id:`r3423-royal-${id}-${last+r*3600000}`,animalId:id,qty:2,createdAt:last+r*3600000});
+          if(arr.length>48){const old=arr.splice(0,arr.length-23),q=old.reduce((a,x)=>a+Math.max(0,Number(x?.qty||2)||0),0),at=old.reduce((a,x)=>Math.max(a,Number(x?.createdAt)||0),0)||t;if(q)arr.unshift({id:`compact-r3423-${key}-${at}`,qty:q,createdAt:at,compacted:true})}
           s.alpaca.royalCdClockV3423[id]=last+due*3600000;changed=true;
         }
       }
@@ -3854,8 +3855,8 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R36117_SAVE_V8(){
   "use strict";
-  const BUILD="S2-R36.117-PARTITIONED-SAVE-V8-20260920";
-  const LAYOUT="save-layout-v8-r36117";
+  const BUILD="S2-R36.118-STABILITY-20260922";
+  const LAYOUT="save-layout-v8-r36118";
   const OLD_V7_LAYOUT="save-layout-v7-r3663";
   const ROOT_BUDGET=96*1024, ROOT_HARD=180*1024;
   const SHARD_SOFT=360*1024, SHARD_HARD=820*1024;
@@ -3939,7 +3940,33 @@ console.info(BUILD,"loaded");
     if(String(r.alpaca||"")==="alpacaParts")for(const g of ["alpacaCore","alpacaPen1","alpacaPen2","alpacaPen3","alpacaPen4","alpacaPen5"])s.add(g);
     return[...s]
   }
-  function compactVolatile(s){s=cp(s)||{};if(obj(s.alpaca)){s.alpaca=cp(s.alpaca);s.alpaca.vault=[]}const cap=v=>{if(!obj(v))return v;const e=Object.entries(v);if(e.length<=160)return v;return Object.fromEntries(e.slice(-160))};for(const [k,v] of Object.entries(s)){if(CLAIM_RX.test(k)&&obj(v))s[k]=cap(v);if(LOG_RX.test(k)&&Array.isArray(v)&&v.length>80)s[k]=v.slice(-80)}return s}
+  function compactVolatile(s){
+    s=cp(s)||{};
+    const capMap=(v,limit=160)=>{if(!obj(v))return v;const e=Object.entries(v);if(e.length<=limit)return v;return Object.fromEntries(e.slice(-limit))};
+    const compactDrops=(arr,label,defaultQty=2)=>{
+      if(!Array.isArray(arr)||arr.length<=24)return Array.isArray(arr)?arr:[];
+      const recent=arr.slice(-23),old=arr.slice(0,-23);
+      const qty=old.reduce((a,x)=>a+Math.max(0,Number(x?.qty??defaultQty)||0),0);
+      const at=old.reduce((a,x)=>Math.max(a,Number(x?.createdAt)||0),0)||now();
+      const merged=qty>0?[{id:`compact-${label}-${at}`,qty,createdAt:at,compacted:true}]:[];
+      return merged.concat(recent);
+    };
+    if(obj(s.alpaca)){
+      s.alpaca=cp(s.alpaca);s.alpaca.vault=[];
+      for(const key of ["royalCdDropsV3423","royalCdDropsV3421","royalDiscDrops"]){
+        const groups=s.alpaca[key];if(!obj(groups))continue;
+        for(let p=1;p<=5;p++){const pen=`pen${p}`;groups[pen]=compactDrops(groups[pen],`${key}-${pen}`,2)}
+      }
+      if(obj(s.alpaca.factory)){
+        s.alpaca.factory=cp(s.alpaca.factory);
+        if(Array.isArray(s.alpaca.factory.history)&&s.alpaca.factory.history.length>24)s.alpaca.factory.history=s.alpaca.factory.history.slice(-24);
+        if(obj(s.alpaca.factory.babyTransfers))s.alpaca.factory.babyTransfers=capMap(s.alpaca.factory.babyTransfers,96);
+      }
+      for(const k of ["friendMushroomClaims","eventClaims","testSireCooldowns"])if(obj(s.alpaca[k]))s.alpaca[k]=capMap(s.alpaca[k],96);
+    }
+    for(const [k,v] of Object.entries(s)){if(CLAIM_RX.test(k)&&obj(v))s[k]=capMap(v);if(LOG_RX.test(k)&&Array.isArray(v)&&v.length>80)s[k]=v.slice(-80)}
+    return s
+  }
   function splitAlpaca(a,groups,r){
     if(!obj(a))return;
     r.alpaca="alpacaParts";
@@ -3959,9 +3986,10 @@ console.info(BUILD,"loaded");
     }
   }
   function assertParts(parts){
+    const label={alpacaCore:"อัลปาก้า",alpacaPen1:"คอกอัลปาก้า 1",alpacaPen2:"คอกอัลปาก้า 2",alpacaPen3:"คอกอัลปาก้า 3",alpacaPen4:"คอกอัลปาก้า 4",alpacaPen5:"คอกอัลปาก้า 5",inventory:"กระเป๋า",farm:"สวน",animals:"สัตว์",claims:"ประวัติรับของ",logs:"ประวัติระบบ"};
     for(const [g,d] of Object.entries(parts.groups||{})){
       const n=bytes({layout:LAYOUT,data:d});
-      if(n>SHARD_HARD)throw new Error(`ข้อมูล ${g} ยังใหญ่เกินค่าปลอดภัย ${Math.round(n/1024)}KB`);
+      if(n>SHARD_HARD)throw new Error(`ข้อมูล${label[g]||"ผู้เล่น"}ยังใหญ่เกินค่าปลอดภัย กรุณาปิดเกมแล้วเข้าใหม่`);
     }
   }
   function splitState(full,mk=""){
@@ -5522,7 +5550,7 @@ console.info(BUILD,"loaded");
    ===================================================================== */
 (function YN_R36101_RECEIVER_OWNED_GIFT_ENGINE(){
   "use strict";
-  const BUILD="S2-R36.118-DURABLE-GIFT-IDEMPOTENCY-20260920";
+  const BUILD="S2-R36.101-RECEIVER-OWNED-GIFT-ENGINE-20260918";
   const busy=new Set();
   const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
@@ -5576,7 +5604,6 @@ console.info(BUILD,"loaded");
     try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}
     try{if(typeof broadcastClaimCache!=="undefined"&&broadcastClaimCache?.clear)broadcastClaimCache.clear()}catch(_){}
     try{notificationBadgeLastAt=0}catch(_){}
-    try{durableBroadcastCache?.clear?.()}catch(_){}
   }
 
   async function getOwnVirtualSave(){
@@ -5611,39 +5638,16 @@ console.info(BUILD,"loaded");
     out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
   }
 
-  const durableBroadcastCache=new Map();
-  async function durableBroadcastClaim(id){
-    id=String(id||"");const mk=key();if(!id||!mk||!cloudReady)return null;
-    const ck=`${mk}:${id}`;if(durableBroadcastCache.has(ck))return durableBroadcastCache.get(ck);
-    try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"broadcasts",id,"claims",mk),sn=await fs.getDoc(ref),rec=sn.exists()?(sn.data()||{}):null;
-      durableBroadcastCache.set(ck,rec);return rec;
-    }catch(e){console.warn(BUILD,"durable broadcast claim read",id,e?.message||e);return null}
-  }
-  async function backfillDurableBroadcastClaim(id,legacy){
-    id=String(id||"");const mk=key();if(!id||!mk||!legacy||!cloudReady)return null;
-    const status=String(legacy?.status||"")==="discarded"?"discarded":"accepted",ck=`${mk}:${id}`;
-    try{
-      const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"broadcasts",id,"claims",mk),sn=await fs.getDoc(ref);
-      if(!sn.exists())await fs.setDoc(ref,{memberKey:mk,status,resolvedAt:fs.serverTimestamp()},{merge:false});
-      const rec=sn.exists()?(sn.data()||{}):{memberKey:mk,status};durableBroadcastCache.set(ck,rec);return rec;
-    }catch(e){console.warn(BUILD,"durable broadcast backfill",id,e?.message||e);return null}
-  }
-
   async function pendingBroadcasts(claims){
     let rows=[];
     try{rows=typeof fetchBroadcasts==="function"?await fetchBroadcasts():[]}catch(e){console.warn(BUILD,"broadcast read",e?.message||e)}
-    const mk=key(),out=[];
-    await Promise.all(rows.map(async b=>{
-      if(b?.type!=="gift")return;
-      if(b.targetKey&&String(b.targetKey)!==mk)return;
-      if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)return;
-      const id=String(b.id),legacy=claims?.[id];
-      if(legacy){await backfillDurableBroadcastClaim(id,legacy);return}
-      if(await durableBroadcastClaim(id))return;
-      out.push({kind:"broadcast",...b});
-    }));
-    out.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));return out;
+    const mk=key();
+    return rows.filter(b=>{
+      if(b?.type!=="gift")return false;
+      if(b.targetKey&&String(b.targetKey)!==mk)return false;
+      if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)return false;
+      return !claims?.[String(b.id)];
+    }).map(b=>({kind:"broadcast",...b}));
   }
 
   async function claimDirect(id,accept=true){
@@ -5653,43 +5657,38 @@ console.info(BUILD,"loaded");
     busy.add(token);
     try{
       const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",id),saveRef=fs.doc(db,"saves",mk),mailRef=fs.doc(db,"mailboxes",mk,"items",id);
-      let after=null,patch=null,already=false,resolvedStatus=accept?"claimed":"discarded";
+      let after=null,patch=null,already=false;
       await fs.runTransaction(db,async tx=>{
         const [gs,ss]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);
-        if(!gs.exists()){already=true;return}
+        if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        const before=cp(ss.data()||{}),stateNow=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
+        stateNow.friendGiftClaims=obj(stateNow.friendGiftClaims)?stateNow.friendGiftClaims:{};
+        const prior=stateNow.friendGiftClaims[id];
+        if(!gs.exists()){
+          already=true;after=stateNow;tx.delete(mailRef);return;
+        }
         const gift=gs.data()||{};
         if(String(gift.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
-        if(!isAdminDirect(gift)&&!YN_isActivePlayerKey(gift.fromKey))throw new Error("ผู้ส่งไม่ได้อยู่ในระบบแล้ว");
-        if(String(gift.status||"pending")!=="pending"){already=true;resolvedStatus=String(gift.status||"claimed");return}
-        if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
-        const before=cp(ss.data()||{}),s=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
-        s.friendGiftClaims=obj(s.friendGiftClaims)?s.friendGiftClaims:{};
-        const existing=s.friendGiftClaims[id];
-        if(existing){
-          already=true;resolvedStatus=String(existing.status||"")==="discarded"?"discarded":"claimed";
-          tx.set(giftRef,{status:resolvedStatus,resolvedAt:fs.serverTimestamp()},{merge:true});
-          try{tx.delete(mailRef)}catch(_){ }
-          after=s;return;
+        if(prior||String(gift.status||"pending")!=="pending"){
+          already=true;after=stateNow;
+          if(String(gift.status||"pending")==="pending"&&prior)tx.set(giftRef,{status:prior.status==="discarded"?"discarded":"claimed",resolvedAt:fs.serverTimestamp()},{merge:true});
+          tx.delete(mailRef);return;
         }
-        if(accept){if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");addGiftItemToState(s,gift)}
-        s.friendGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:typeof gameNow==="function"?gameNow():Date.now(),fromKey:String(gift.fromKey||""),itemType:String(gift.itemType||""),itemKey:String(gift.itemKey||""),qty:qty(gift)};
-        after=s;patch=topPatch(before,s);
+        if(!isAdminDirect(gift)&&!YN_isActivePlayerKey(gift.fromKey))throw new Error("ผู้ส่งไม่ได้อยู่ในระบบแล้ว");
+        if(accept){if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");addGiftItemToState(stateNow,gift)}
+        stateNow.friendGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:typeof gameNow==="function"?gameNow():Date.now(),fromKey:String(gift.fromKey||""),itemType:String(gift.itemType||""),itemKey:String(gift.itemKey||""),qty:qty(gift)};
+        after=stateNow;patch=topPatch(before,stateNow);
         if(!Object.keys(patch).length)throw new Error("ไม่มีข้อมูลที่ต้องบันทึก");
-        /* Atomic durability: inventory/merit + claim marker + gift status commit together. */
         tx.set(saveRef,patch,{merge:true});
-        tx.set(giftRef,{status:resolvedStatus,resolvedAt:fs.serverTimestamp()},{merge:true});
-        try{tx.delete(mailRef)}catch(_){ }
+        tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});
+        tx.delete(mailRef);
       });
       if(!already&&after&&patch)applyLocal(after,patch);
-      /* Delete alternate/stale mailbox aliases after the authoritative transaction. */
-      try{
-        const q=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300))),batch=fs.writeBatch(db);let n=0;
-        q.forEach(d=>{const x=d.data()||{};if(x.type==="gift"&&(String(d.id)===id||String(x.giftId||"")===id)){batch.delete(d.ref);n++}});if(n)await batch.commit();
-      }catch(e){console.warn(BUILD,"direct mailbox cleanup",id,e?.message||e)}
       invalidate();return{ok:true,already,accepted:Boolean(accept&&!already)};
     }catch(e){console.error(BUILD,"direct claim",id,e);return{ok:false,error:String(e?.message||e)}}
     finally{busy.delete(token)}
   }
+
 
   async function claimBroadcast(id,accept=true){
     id=String(id||"");const mk=key(),token=`broadcast:${mk}:${id}`;
@@ -5697,47 +5696,31 @@ console.info(BUILD,"loaded");
     if(busy.has(token))return{ok:false,error:"กำลังดำเนินการรายการนี้อยู่"};
     busy.add(token);
     try{
-      const {db,fs}=await getFirebaseContext(),bRef=fs.doc(db,"broadcasts",id),claimRef=fs.doc(db,"broadcasts",id,"claims",mk),saveRef=fs.doc(db,"saves",mk);
-      let after=null,patch=null,already=false,finalStatus=accept?"accepted":"discarded";
+      const {db,fs}=await getFirebaseContext(),bRef=fs.doc(db,"broadcasts",id),bs=await fs.getDoc(bRef);
+      if(!bs.exists())return{ok:true,already:true};
+      const b=bs.data()||{};
+      if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+      if(b.targetKey&&String(b.targetKey)!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      const saveRef=fs.doc(db,"saves",mk),claimRef=fs.doc(db,"broadcasts",id,"claims",mk);let after=null,patch=null,already=false;
       await fs.runTransaction(db,async tx=>{
-        const [bs,cs,ss]=await Promise.all([tx.get(bRef),tx.get(claimRef),tx.get(saveRef)]);
-        if(cs.exists()){already=true;finalStatus=String(cs.data()?.status||"accepted");return}
-        if(!bs.exists()){already=true;return}
-        const b=bs.data()||{};
-        if(b.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
-        if(b.targetKey&&String(b.targetKey)!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
-        if(!b.targetKey&&String(currentMember||"")==="Aida"&&b.includeAida===false)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
-        if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
-        const before=cp(ss.data()||{}),s=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
-        s.broadcastGiftClaims=obj(s.broadcastGiftClaims)?s.broadcastGiftClaims:{};
-        const legacy=s.broadcastGiftClaims[id];
-        if(legacy){
-          already=true;finalStatus=String(legacy.status||"")==="discarded"?"discarded":"accepted";
-          /* Backfill an immutable server receipt so future reloads stay locked. */
-          tx.set(claimRef,{memberKey:mk,status:finalStatus,resolvedAt:fs.serverTimestamp()},{merge:false});
-          after=s;return;
-        }
-        if(accept){
-          if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");
-          if(Array.isArray(b.items))addGiftItemToState(s,{items:b.items});
-          else addGiftItemToState(s,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty});
-        }
-        s.broadcastGiftClaims[id]={status:finalStatus,resolvedAt:typeof gameNow==="function"?gameNow():Date.now()};
-        after=s;patch=topPatch(before,s);
-        if(!Object.keys(patch).length)throw new Error("ไม่มีข้อมูลที่ต้องบันทึก");
-        /* The nested claim document is immutable for members. Its creation is the
-           authoritative once-only receipt; transaction retries make double taps safe. */
+        const [ss,cs]=await Promise.all([tx.get(saveRef),tx.get(claimRef)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        const before=cp(ss.data()||{}),stateNow=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
+        stateNow.broadcastGiftClaims=obj(stateNow.broadcastGiftClaims)?stateNow.broadcastGiftClaims:{};
+        if(cs.exists()||stateNow.broadcastGiftClaims[id]){already=true;after=stateNow;return}
+        if(accept){if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");if(Array.isArray(b.items))addGiftItemToState(stateNow,{items:b.items});else addGiftItemToState(stateNow,{itemType:b.itemType,itemKey:b.itemKey,qty:b.qty})}
+        stateNow.broadcastGiftClaims[id]={status:accept?"accepted":"discarded",resolvedAt:typeof gameNow==="function"?gameNow():Date.now()};
+        after=stateNow;patch=topPatch(before,stateNow);if(!Object.keys(patch).length)throw new Error("ไม่มีข้อมูลที่ต้องบันทึก");
         tx.set(saveRef,patch,{merge:true});
-        tx.set(claimRef,{memberKey:mk,status:finalStatus,resolvedAt:fs.serverTimestamp()},{merge:false});
+        tx.set(claimRef,{memberKey:mk,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()},{merge:false});
       });
       if(!already&&after&&patch)applyLocal(after,patch);
-      invalidate();
-      durableBroadcastCache.set(`${mk}:${id}`,{memberKey:mk,status:finalStatus});
-      try{if(typeof broadcastClaimCache!=="undefined")broadcastClaimCache.set(broadcastClaimCacheKey(id),{memberKey:mk,status:finalStatus})}catch(_){}
-      return{ok:true,already,accepted:Boolean(accept&&!already)};
+      try{if(typeof broadcastClaimCache!=="undefined")broadcastClaimCache.set(broadcastClaimCacheKey(id),{memberKey:mk,status:accept?"accepted":"discarded"})}catch(_){}
+      invalidate();return{ok:true,already,accepted:Boolean(accept&&!already)};
     }catch(e){console.error(BUILD,"broadcast claim",id,e);return{ok:false,error:String(e?.message||e)}}
     finally{busy.delete(token)}
   }
+
 
   function giftCard(g){
     const t=typeof bangkokTimeText==="function"?bangkokTimeText(g.createdAt):"";
@@ -5776,6 +5759,7 @@ console.info(BUILD,"loaded");
       giftRows.sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
       const alpacaRows=tab==="yainoo"?alpacaMail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
       const notices=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&YN_isActivePlayerKey(x.fromKey)));
+      try{const badge=$("notificationBadge"),unreadNotice=notices.filter(x=>!x.read).length,adminExtra=adminProfile?.role==="admin"?Number(adminMembershipPendingCache?.length||0):0,total=giftRows.length+alpacaRows.length+unreadNotice+adminExtra;if(badge){badge.textContent=String(total);badge.classList.toggle("hidden",total<=0)}}catch(_){}
       const allBtn=giftRows.length?`<button id="r36101ReceiveAll" class="primary-spooky-action" type="button" style="width:100%;margin:8px 0 12px">🎁 รับของขวัญทั้งหมด (${giftRows.length})</button>`:"";
       const adminEntry=(String(key()).toLowerCase()==="aida"&&adminProfile?.role==="admin")?'<button id="adminCenterBtn" class="admin-center-entry" type="button">🛡️ ศูนย์แอดมิน</button>':"";
       const body=[...alpacaRows.map(alpacaGiftCard),...giftRows.map(giftCard),...notices.map(noticeCard)].join("")||'<p class="empty-feature">ยังไม่มีการแจ้งเตือนค่ะ</p>';
@@ -5871,12 +5855,37 @@ window.YAINOO_ALPACA_GIFT_BUILD="S2-R36.115-UNIFIED-LOGIN-IDENTITY-20260919";
 console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quiet durable autosave + hamster 6-cap loaded");
 </script>
 
-<script id="r36118-durable-gift-idempotency-marker">
+<script id="r36117-partitioned-save-v8-marker">
 (()=>{
-  const BUILD="S2-R36.118-DURABLE-GIFT-IDEMPOTENCY-20260920";
+  const BUILD="S2-R36.118-STABILITY-20260922";
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"durable gift receipts loaded — accept/discard are once-only across reloads");
+  console.info(BUILD,"stability build loaded — bounded alpaca storage + durable gifts + market safety");
 })();
 </script>
+
+<script id="r36118-final-stability">
+(()=>{
+  "use strict";
+  const BUILD="S2-R36.118-STABILITY-20260922";
+  const install=()=>{
+    const raw=window.message;if(typeof raw!=="function"||raw.__r36118)return false;
+    const tech=/alpacaCore|alpacaPen|saveShards|save-layout|v7-|v8-|Firestore|Firebase|FieldPath|FieldFilter|maximum allowed size|exceeds the maximum|resource-exhausted|index entr|permission-denied|failed-precondition|deadline-exceeded|INTERNAL ASSERTION|Unsupported field/i;
+    const wrap=function(title,text){
+      let t=String(title??""),b=String(text??"");
+      if(tech.test(t+" "+b)){
+        console.warn(BUILD,"ซ่อนข้อความระบบ",t,b);
+        if(/ใหญ่เกิน|maximum allowed size|alpacaCore|alpacaPen/i.test(t+" "+b))return raw.call(this,t||"ข้อมูลเต็มชั่วคราว","ระบบกำลังจัดพื้นที่ข้อมูลให้ใหม่ กรุณาปิดเกมแล้วเข้าใหม่หนึ่งครั้ง แล้วลองอีกครั้งค่ะ");
+        return raw.call(this,t||"ระบบกำลังซิงก์ข้อมูล","ข้อมูลกำลังซิงก์ไม่สำเร็จ กรุณาลองอีกครั้งค่ะ หากยังไม่สำเร็จให้ปิดเกมแล้วเปิดใหม่");
+      }
+      return raw.apply(this,arguments);
+    };
+    wrap.__r36118=1;window.message=wrap;try{message=wrap}catch(_){};return true;
+  };
+  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>200)clearInterval(t)},50)}
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"final stability loaded");
+})();
+</script>
+
 </body>
 </html>

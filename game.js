@@ -3308,51 +3308,21 @@ async function fetchNotificationData(force=false){
   return {mail,broadcasts};
 }
 async function fetchBroadcastClaim(broadcastId){
-  /* R36.118: immutable server receipt is authoritative across reloads/devices.
-     The save marker remains as a compatibility fallback and is backfilled once. */
-  let db=null,fs=null,ref=null;
-  try{
-    if(cloudReady&&currentMemberKey){
-      ({db,fs}=await getFirebaseContext());
-      ref=fs.doc(db,"broadcasts",String(broadcastId),"claims",String(currentMemberKey));
-      const snap=await fs.getDoc(ref);
-      if(snap.exists())return snap.data()||{};
-    }
-  }catch(error){console.warn("R36.118 broadcast receipt read",broadcastId,error?.message||error)}
+  /* R14: keep broadcast claim state in the member's own save. */
   const local=normalizeState(ownState||state,currentMember);
   const rec=local?.broadcastGiftClaims?.[broadcastId];
-  if(rec&&typeof rec==="object"){
-    try{
-      if(ref&&fs){
-        const status=String(rec.status||"")==="discarded"?"discarded":"accepted";
-        await fs.setDoc(ref,{memberKey:String(currentMemberKey),status,resolvedAt:fs.serverTimestamp()},{merge:false});
-      }
-    }catch(error){console.warn("R36.118 broadcast receipt backfill",broadcastId,error?.message||error)}
-    return rec;
-  }
-  return null;
+  return rec&&typeof rec==="object"?rec:null;
 }
 async function refreshNotificationBadge(force=false){
   const badge=$("notificationBadge");if(!badge)return;if(!cloudReady){badge.classList.add("hidden");return}
-  const now=Date.now();
-  if(!force&&notificationBadgeInFlight)return notificationBadgeInFlight;
-  if(!force&&now-notificationBadgeLastAt<NOTIFICATION_BADGE_MIN_INTERVAL_MS)return;
-  notificationBadgeInFlight=(async()=>{
-    try{
-      const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]);let count=mail.filter(x=>!x.read&&(x.source!=="friend"||YN_isActivePlayerKey(x.fromKey))).length;const lastSeen=Number((ownState||state)?.lastSeenYainooAt)||0;count+=broadcasts.filter(b=>timestampMillis(b.createdAt)>lastSeen).length;
-      if(adminProfile?.role==="admin"){
-        const {db,fs}=await getFirebaseContext();
-        const purchasePromise=fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending")));
-        const memberPromise=adminMembershipListenerReady
-          ? Promise.resolve({size:adminMembershipPendingCache.length})
-          : fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending")));
-        const [purchaseSnap,memberSnap]=await Promise.all([purchasePromise,memberPromise]);
-        count+=purchaseSnap.size+memberSnap.size;
-      }
-      badge.textContent=String(count);badge.classList.toggle("hidden",count<=0);notificationBadgeLastAt=Date.now();
-    }catch(error){console.warn("notification badge",error)}
-  })();
-  try{return await notificationBadgeInFlight}finally{notificationBadgeInFlight=null}
+  const now=Date.now();if(!force&&notificationBadgeInFlight)return notificationBadgeInFlight;if(!force&&now-notificationBadgeLastAt<NOTIFICATION_BADGE_MIN_INTERVAL_MS)return;
+  notificationBadgeInFlight=(async()=>{try{
+    const [mail,broadcasts]=await Promise.all([fetchMailboxItems(),fetchBroadcasts()]),st=(ownState||state)||{},friendClaims=st.friendGiftClaims||{},bcClaims=st.broadcastGiftClaims||{};let count=0;
+    for(const x of mail){if(x?.resolved)continue;if(x?.type==="gift"){const id=String(x.giftId||x.id||"");if(!friendClaims[id])count++;continue}if(x?.type==="alpacaGiftR3651"){count++;continue}if(!x?.read&&(x.source!=="friend"||YN_isActivePlayerKey(x.fromKey)))count++}
+    for(const x of broadcasts){const id=String(x?.id||"");if(x?.type==="gift"&&!bcClaims[id])count++}
+    if(adminProfile?.role==="admin"){const {db,fs}=await getFirebaseContext();const [purchaseSnap,memberSnap]=await Promise.all([fs.getDocs(fs.query(fs.collection(db,"purchaseRequests"),fs.where("status","==","pending"))),adminMembershipListenerReady?Promise.resolve({size:adminMembershipPendingCache.length}):fs.getDocs(fs.query(fs.collection(db,"membershipApplications"),fs.where("status","==","pending")))]);count+=purchaseSnap.size+memberSnap.size}
+    badge.textContent=String(count);badge.classList.toggle("hidden",count<=0);notificationBadgeLastAt=Date.now();
+  }catch(error){console.warn("notification badge",error)}})();try{return await notificationBadgeInFlight}finally{notificationBadgeInFlight=null}
 }
 function startNotificationPolling(){
   if(notificationTimer)clearInterval(notificationTimer);
@@ -23238,35 +23208,49 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     const maxQty=Math.min(10,Math.max(1,i(e.count??e.qty)||1)),p=marketPriceR15(e);$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(globalThis.YN_R28_marketImage?.(e)||e.image||"")}" alt=""><h2>${html(e.name)}</h2><label>จำนวน <input id="r15MarketQty" type="number" min="1" max="${maxQty}" value="${maxQty}"></label><p id="r15MarketRange"></p><label>ราคากุศลรวมทั้งกอง <input id="r15MarketPrice" type="number" min="1" value="${p.mid*maxQty}"></label><button id="r15MarketConfirm" class="primary-spooky-action">วางขาย</button></section>`;
     const paint=()=>{const q=Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1));$r("r15MarketRange").textContent=`ตั้งได้ 1–${p.max*q} กุศล • ราคากลาง ${p.mid*q}`;$r("r15MarketPrice").min="1";$r("r15MarketPrice").max=String(p.max*q)};$r("r15MarketQty").oninput=paint;paint();$r("r15MarketConfirm").onclick=()=>createMarketR15(shopNo,slot,e,Math.max(1,Math.min(maxQty,i($r("r15MarketQty").value)||1)),i($r("r15MarketPrice").value),p,data);
   }
+  function marketDiffPatch(before,after){const patch={};const keys=new Set([...Object.keys(before||{}),...Object.keys(after||{})]);for(const k of keys){if(["updatedAt","saveVirtualUpdatedAt","activeSessionId","activeSessionAt","cloudSessionId","clientLocalEditAt","clientSaveRevision","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","savePartitionR36117"].includes(k))continue;let a,b;try{a=JSON.stringify(before?.[k]);b=JSON.stringify(after?.[k])}catch(_){a=before?.[k];b=after?.[k]}if(a!==b)patch[k]=clone(after?.[k])}return patch}
+  function applyMarketPatchLocal(patch){const live=normalizeState(clone(own()),currentMember);for(const [k,v] of Object.entries(patch||{}))live[k]=clone(v);ownState=live;if(!visitContext)state=live;saveLocalOnly(live);updateMeritUI?.();return live}
   async function createMarketR15(shopNo,slot,e,qty,price,p,data){
     const min=1,max=p.max*qty;if(price<min||price>max)return message("ราคานี้ใช้ไม่ได้",`ตั้งราคาได้ ${min}–${max} กุศล`);
     try{await settlePendingCloudSave?.()}catch(_){}
-    const before=normalizeState(clone(own()),currentMember),optimistic=normalizeState(clone(own()),currentMember),m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},arr=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
-    if(arr[slot])return message("วางขายไม่ได้","สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(optimistic,e,qty))return message("วางขายไม่ได้","ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
     const listingId=`mkt-${currentMemberKey}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    const listing={id:listingId,type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};arr[slot]=listing;m[`shop${shopNo}`]=arr;m.memberKey=currentMemberKey;m.ownerName=currentMember;m.shopName=m.shopName||"ร้านของฉัน";
-    ownState=optimistic;state=optimistic;saveLocalOnly(optimistic);saveMarketLocal(currentMemberKey,m);marketPendingR15.add(currentMemberKey);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);showWeatherToast(`🧺 วาง ${e.name} ×${qty} แล้ว • กำลังบันทึก…`);
+    const listing={id:listingId,type:e.type,key:e.key,name:e.name,image:(globalThis.YN_R28_marketImage?.(e)||e.image||""),qty,price,status:"active",listedAt:stamp(),instance:e.instance?clone(e.instance):null};
     try{
-      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey),publicRef=fs.doc(db,"publicFarmState",currentMemberKey);let nextState,nextMarket;
-      await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=normalizeState(ss.data(),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),a=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(a.length<12)a.push(null);
-        if(a[slot]){if(String(a[slot]?.id||"")===listingId){nextState=st;nextMarket=md;return}throw new Error("สล็อตนี้มีสินค้าแล้ว")}
-        if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอ");a[slot]=listing;md[`shop${shopNo}`]=a;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextState=st;nextMarket=md;tx.set(saveRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(publicRef,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:md.shopName||"ร้านของฉัน",shop1:clone(md.shop1||[]),shop2:clone(md.shop2||[])},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true})}));
-      ownState=normalizeState(nextState,currentMember);state=ownState;saveLocalOnly(ownState);saveMarketLocal(currentMemberKey,nextMarket);try{await fetchMarketR15(currentMemberKey,currentMember)}catch(_){}showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ • เพื่อนเห็นจากร้านกลางแล้ว`);
-    }catch(err){ownState=before;state=before;saveLocalOnly(before);const rollback=loadMarketLocal(currentMemberKey)||marketDefault(currentMemberKey,currentMember);if(Array.isArray(rollback[`shop${shopNo}`])&&String(rollback[`shop${shopNo}`][slot]?.id||"")===listingId)rollback[`shop${shopNo}`][slot]=null;saveMarketLocal(currentMemberKey,rollback);renderMarketR15(shopNo,rollback,currentMemberKey,currentMember);message("วางขายไม่สำเร็จ",`${/YN_R3465_RETRY_TX|not a function|stored version|required base version|aborted|contention|failed-precondition|version conflict/i.test(String(err?.message||err||""))?"ข้อมูลกำลังซิงก์ชนกัน ระบบคืนของให้แล้ว กรุณากดวางใหม่อีกครั้ง":"เกิดปัญหาระหว่างบันทึกร้านค้า กรุณาลองใหม่ค่ะ"}<br>ของถูกคืนเข้ากระเป๋าแล้ว`)}
+      const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),marketRef=fs.doc(db,"farmMarkets",currentMemberKey),publicRef=fs.doc(db,"publicFarmState",currentMemberKey);let patch=null,nextMarket=null;
+      await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{
+        const [ss,ms]=await Promise.all([tx.get(saveRef),tx.get(marketRef)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        const before=normalizeState(clone(ss.data()),currentMember),st=normalizeState(clone(before),currentMember),md=ms.exists()?{...marketDefault(currentMemberKey,currentMember),...ms.data()}:marketDefault(currentMemberKey,currentMember),arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice(0,12):Array(12).fill(null);while(arr.length<12)arr.push(null);
+        if(arr[slot])throw new Error("สล็อตนี้มีสินค้าแล้ว");if(!removeMarketItemR15(st,e,qty))throw new Error("ของในกระเป๋าไม่พอหรือกำลังถูกใช้งานอยู่");
+        patch=marketDiffPatch(before,st);if(!Object.keys(patch).length)throw new Error("ไม่พบข้อมูลสินค้าที่ต้องหัก");
+        arr[slot]=listing;md[`shop${shopNo}`]=arr;md.memberKey=currentMemberKey;md.ownerName=currentMember;md.shopName=md.shopName||"ร้านของฉัน";nextMarket=md;
+        tx.set(saveRef,patch,{merge:true});tx.set(marketRef,{...clone(md),updatedAt:fs.serverTimestamp()},{merge:false});tx.set(publicRef,{memberKey:currentMemberKey,displayName:currentMember,marketMirror:{memberKey:currentMemberKey,ownerName:currentMember,shopName:md.shopName||"ร้านของฉัน",shop1:clone(md.shop1||[]),shop2:clone(md.shop2||[])},marketUpdatedAt:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true});
+      }));
+      applyMarketPatchLocal(patch);saveMarketLocal(currentMemberKey,nextMarket);closeModal?.();renderMarketR15(shopNo,nextMarket,currentMemberKey,currentMember);showWeatherToast(`✅ วาง ${e.name} ×${qty} สำเร็จ • บันทึกแล้ว`);
+    }catch(err){message("วางขายไม่สำเร็จ",/aborted|contention|failed-precondition|version conflict/i.test(String(err?.message||err||""))?"ข้อมูลกำลังซิงก์ชนกัน กรุณากดวางใหม่อีกครั้งค่ะ":String(err?.message||"กรุณาลองใหม่ค่ะ"))}
     finally{marketPendingR15.delete(currentMemberKey)}
   }
+
   function showOwnerMarketR15(shopNo,slot,x,data){const sold=x.status==="sold";$r("modalContent").innerHTML=`<section class="feature-panel s2-market-listing"><img class="s2-market-preview" src="${html(x.image||"")}" alt=""><h2>${html(x.name)} ×${i(x.qty)}</h2><p>${sold?`✅ ขายแล้ว${x.buyerName?` • ผู้ซื้อ ${html(x.buyerName)}`:""}`:`ราคา ${i(x.price)} กุศล`}</p><button id="r15DeleteMarket" class="${sold?"secondary-action":"danger-action"}">${sold?"ล้างช่องที่ขายแล้ว":"ลบออกจากสล็อต • ของจะไม่คืนกระเป๋า"}</button></section>`;$r("r15DeleteMarket").onclick=()=>deleteMarketR15(shopNo,slot,data);openModal()}
   async function deleteMarketR15(shopNo,slot,data){const m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})},a=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);a[slot]=null;m[`shop${shopNo}`]=a;saveMarketLocal(currentMemberKey,m);closeModal();renderMarketR15(shopNo,m,currentMemberKey,currentMember);try{const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"farmMarkets",currentMemberKey);await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);const md=snap.exists()?snap.data():marketDefault(currentMemberKey,currentMember),arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():Array(12).fill(null);arr[slot]=null;tx.set(ref,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true})})}catch(err){message("ลบไม่ได้",err.message||"กรุณาลองใหม่")}}
   async function renameMarketR15(data){const name=prompt("ตั้งชื่อร้าน (ใช้ชื่อเดียวกันทั้ง 2 ร้าน)",data?.shopName||"");if(name==null)return;const v=String(name).trim().slice(0,40);if(!v)return;const m={...marketDefault(currentMemberKey,currentMember),...(loadMarketLocal(currentMemberKey)||data||{})};m.shopName=v;saveMarketLocal(currentMemberKey,m);renderMarketR15(Number($r("s2MarketScreen")?.dataset.shop)||1,m,currentMemberKey,currentMember);try{const {db,fs}=await getFirebaseContext();await fs.setDoc(fs.doc(db,"farmMarkets",currentMemberKey),{memberKey:currentMemberKey,ownerName:currentMember,shopName:v,updatedAt:fs.serverTimestamp()},{merge:true})}catch(err){message("ตั้งชื่อไม่ได้",err.message||"กรุณาลองใหม่")}}
   async function buyMarketR15(shopNo,slot,x,ownerKey,ownerName){
     if(ownerKey===currentMemberKey)return;if(!confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`))return;
-    const before=normalizeState(clone(own()),currentMember),buyer=normalizeState(clone(own()),currentMember),m={...marketDefault(ownerKey,ownerName),...(loadMarketLocal(ownerKey)||{})},a=Array.isArray(m[`shop${shopNo}`])?m[`shop${shopNo}`].slice():Array(12).fill(null);
-    try{if(!admin()&&n(buyer.merit)<n(x.price))throw new Error("กุศลไม่พอ");addGiftItemToState(buyer,{itemType:x.type,itemKey:x.key,qty:x.qty,instance:x.instance});if(!admin())buyer.merit-=n(x.price);else ensureAdminStock(buyer);a[slot]={...x,status:"sold",soldAt:stamp(),buyerKey:currentMemberKey,buyerName:currentMember};m[`shop${shopNo}`]=a;ownState=buyer;state=buyer;saveLocalOnly(buyer);updateMeritUI();saveMarketLocal(ownerKey,m);marketPendingR15.add(ownerKey);renderMarketR15(shopNo,m,ownerKey,ownerName);showWeatherToast(`🛍️ ${x.name} ×${x.qty} เข้ากระเป๋าแล้ว • กำลังบันทึก…`);
-      const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let next;
-      await fs.runTransaction(db,async tx=>{const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");const md=ms.data(),arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");const st=normalizeState(bs.data(),currentMember);if(!admin()&&n(st.merit)<n(cur.price))throw new Error("กุศลไม่พอ");addGiftItemToState(st,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!admin())st.merit-=n(cur.price);else ensureAdminStock(st);arr[slot]={...cur,status:"sold",soldAt:stamp(),buyerKey:currentMemberKey,buyerName:currentMember};next=st;tx.set(buyerRef,{...clone(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(n(cur.price)),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว • สต๊อก/กุศล Aida คงที่ 9999`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()})});
-      ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly(ownState);updateMeritUI();message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);
-    }catch(err){ownState=before;state=before;saveLocalOnly(before);updateMeritUI();marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){}message("ซื้อไม่ได้",err.message||"กรุณาลองใหม่");openMarketR15(shopNo)}finally{marketPendingR15.delete(ownerKey)}
+    if(marketPendingR15.has(`buy:${ownerKey}:${shopNo}:${slot}`))return;marketPendingR15.add(`buy:${ownerKey}:${shopNo}:${slot}`);showWeatherToast("🛍️ กำลังยืนยันการซื้อ…");
+    try{
+      const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let patch=null,sold=null;
+      await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{
+        const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");
+        const md=ms.data()||{},arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():[],cur=arr[slot];if(!cur||cur.status!=="active")throw new Error("สินค้านี้ถูกซื้อไปแล้ว");
+        const before=normalizeState(clone(bs.data()),currentMember),st=normalizeState(clone(before),currentMember);if(!admin()&&n(st.merit)<n(cur.price))throw new Error("กุศลไม่พอ");
+        addGiftItemToState(st,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!admin())st.merit-=n(cur.price);else ensureAdminStock(st);patch=marketDiffPatch(before,st);if(!Object.keys(patch).length)throw new Error("ไม่พบข้อมูลการซื้อที่ต้องบันทึก");
+        sold={...cur,status:"sold",soldAt:stamp(),buyerKey:currentMemberKey,buyerName:currentMember};arr[slot]=sold;
+        tx.set(buyerRef,patch,{merge:true});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(n(cur.price)),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()});
+      }));
+      applyMarketPatchLocal(patch);marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};await openMarketR15(shopNo);message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);
+    }catch(err){marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};message("ซื้อไม่ได้",String(err?.message||"กรุณาลองใหม่"));try{await openMarketR15(shopNo)}catch(_){} }
+    finally{marketPendingR15.delete(`buy:${ownerKey}:${shopNo}:${slot}`)}
   }
+
   /* Own/visited Farm-1 shop hotspots are intercepted before legacy slow handlers. */
   document.addEventListener("click",e=>{const b=e.target.closest?.('.s2-scene-hotspot[aria-label^="ร้านค้า"]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const num=String(b.getAttribute("aria-label")||"").includes("2")?2:1;openMarketR15(num)},true);
   try{window.YN_S2_FARM=window.YN_S2_FARM||{};window.YN_S2_FARM.openMarket=openMarketR15}catch(_){ }
@@ -26599,7 +26583,18 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   let notifUnsubs=[];
   function stopNotifLive(){notifUnsubs.splice(0).forEach(fn=>{try{fn()}catch(_){}})}
   function paintCachedBadge(){
-    const badge=$("notificationBadge");if(!badge)return;const mail=notificationDataCache.mail||[],broadcasts=notificationDataCache.broadcasts||[],lastSeen=Number((ownState||state)?.lastSeenYainooAt)||0;let count=mail.filter(x=>!x.read).length+broadcasts.filter(x=>timestampMillis(x.createdAt)>lastSeen).length;if(adminProfile?.role==="admin")count+=Number(adminMembershipPendingCache?.length||0);badge.textContent=String(count);badge.classList.toggle("hidden",count<=0)
+    const badge=$("notificationBadge");if(!badge)return;
+    const mail=notificationDataCache.mail||[],broadcasts=notificationDataCache.broadcasts||[],st=(ownState||state)||{},friendClaims=st.friendGiftClaims||{},bcClaims=st.broadcastGiftClaims||{};
+    let count=0;
+    for(const x of mail){
+      if(x?.resolved)continue;
+      if(x?.type==="gift"){const id=String(x.giftId||x.id||"");if(!friendClaims[id])count++;continue}
+      if(x?.type==="alpacaGiftR3651"){if(!x.resolved)count++;continue}
+      if(!x?.read&&(x.source!=="friend"||YN_isActivePlayerKey(x.fromKey)))count++;
+    }
+    for(const x of broadcasts){const id=String(x?.id||"");if(x?.type==="gift"&&!bcClaims[id])count++}
+    if(adminProfile?.role==="admin")count+=Number(adminMembershipPendingCache?.length||0);
+    badge.textContent=String(count);badge.classList.toggle("hidden",count<=0)
   }
   const startNotifBase=startNotificationPolling;
   startNotificationPolling=function(){
@@ -38223,3 +38218,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — no per-player animal gift exceptions");
 })();
+
+
+/* S2 R36.118 final stability marker */
+window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
