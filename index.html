@@ -520,7 +520,7 @@
           try{window.dispatchEvent(new CustomEvent("yn-merit-guard",{detail:{path,base,attempted}}))}catch(_){}
         }
         /* full = the write replaces the whole document (setDoc without merge) */
-        function clean(ref,data,full){
+        function clean(ref,data,full,txLocal){
           const path=ref&&ref.path;
           if(!path||!TRACK.test(path)||!data||typeof data!=="object"||Array.isArray(data))return data;
           const key=path.split("/")[1];
@@ -536,7 +536,12 @@
           const v=out.merit;
           if(v===null||v===undefined){if(base!==null){report(path,base,v);out={...out,merit:base}}return out}
           if(typeof v!=="number")return out; /* increment() / serverTimestamp etc. */
+          /* R36.125: profile written in the same transaction as its save */
+          if(txLocal&&path.startsWith("publicProfiles/")&&txLocal.get("saves/"+key)===v)return out;
           if(base===null)return out;
+          /* R36.125: a verified gift claim may raise merit by the gift amount (any size) */
+          const gc=out.meritGiftClaim;
+          if(path.startsWith("saves/")&&gc&&typeof gc==="object"&&isNum(gc.amount)&&v>=base&&v-base<=gc.amount)return out;
           let bad=false;
           if(!Number.isFinite(v))bad=true;
           else if(key!==myKey())bad=Math.abs(v-base)>200;
@@ -581,11 +586,11 @@
         F.runTransaction=function(db,fn,opts){
           let pend=[];
           const run=function(tx){
-            pend=[];
+            pend=[];const txl=new Map();
             const w={
               async get(ref){const s=await tx.get(ref);noteSnap(s);return s},
-              set(ref,data,o2){const full=!(o2&&(o2.merge||o2.mergeFields));const d=clean(ref,data,full);pend.push([ref&&ref.path,d]);o2===undefined?tx.set(ref,d):tx.set(ref,d,o2);return w},
-              update(ref,data){if(arguments.length>2||typeof data!=="object"){tx.update.apply(tx,arguments);return w}const d=clean(ref,data,false);pend.push([ref&&ref.path,d]);tx.update(ref,d);return w},
+              set(ref,data,o2){const full=!(o2&&(o2.merge||o2.mergeFields));const d=clean(ref,data,full,txl);pend.push([ref&&ref.path,d]);if(ref&&d&&isNum(d.merit))txl.set(ref.path,d.merit);o2===undefined?tx.set(ref,d):tx.set(ref,d,o2);return w},
+              update(ref,data){if(arguments.length>2||typeof data!=="object"){tx.update.apply(tx,arguments);return w}const d=clean(ref,data,false,txl);pend.push([ref&&ref.path,d]);if(ref&&d&&isNum(d.merit))txl.set(ref.path,d.merit);tx.update(ref,d);return w},
               delete(ref){tx.delete(ref);return w}
             };
             return fn(w);
@@ -675,7 +680,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.124-MERIT-BASELINE-LOCK-20260923"></script>
+<script src="game.js?v=S2-R36.125-UNIFIED-GIFTS-20260923"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -4018,7 +4023,7 @@ console.info(BUILD,"loaded");
   const PET2=new Set(["hamsters","hamsterFarms","farmGuardians"]);
   const CLAIM_RX=/(receipts?|claims?|dedupe|processed|seenids?|tombstones?|ledgers?|locks?|cooldowns?)$/i;
   const LOG_RX=/(history|archive|audit(?:log)?|eventlog|activitylog|notificationqueue|notifications|debug|trace)$/i;
-  const ROOT_PINNED=new Set(["activeSessionId","activeSessionAt","player","memberName","displayName","merit","createdAt","updatedAt","launchVersion","clientSaveRevision","clientLocalEditAt","cloudSessionId","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","saveRecoveryR3663At","saveVirtualUpdatedAt","savePartitionR36117"]);
+  const ROOT_PINNED=new Set(["meritGiftClaim","meritBaselineId","meritBaselineFrom","activeSessionId","activeSessionAt","player","memberName","displayName","merit","createdAt","updatedAt","launchVersion","clientSaveRevision","clientLocalEditAt","cloudSessionId","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","saveRecoveryR3663At","saveVirtualUpdatedAt","savePartitionR36117"]);
   const routeCache=new Map(),proxyCache=new WeakMap();
   const pathOf=ref=>String(ref?.path||ref?._key?.path?.canonicalString?.()||"");
   const saveInfo=ref=>{const m=pathOf(ref).match(/^saves\/([^/]+)$/);return m?{memberKey:m[1]}:null};
@@ -6199,6 +6204,408 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   globalThis.YN_R36121={BUILD,repairKkBeforeLogin,rescuePorplaIfAllZero,resetCampaignsAdminOnce};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded — Kk merit guard + Porpla inventory rescue + campaigns paused at zero");
+})();
+</script>
+
+<style id="g125-style">
+.g125{--g-bg:#fff8f1;--g-card:#ffffff;--g-ink:#3b2a33;--g-soft:#8a7380;--g-pink:#ff8fb1;--g-rose:#e8487a;--g-gold:#f5b942;--g-line:#f1dfe6;--g-mint:#3fb68b;color:var(--g-ink);background:linear-gradient(180deg,#fff3e8 0%,#fff8f1 38%,#fdf1f6 100%);border-radius:22px;padding:14px 14px 18px;font-family:inherit;max-width:560px;margin:0 auto;text-align:left}
+.g125 *{box-sizing:border-box}
+.g125-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.g125-head .g125-bow{font-size:34px;line-height:1;filter:drop-shadow(0 3px 4px rgba(232,72,122,.25))}
+.g125-head h2{margin:0;font-size:20px;color:var(--g-rose);letter-spacing:.2px}
+.g125-head small{display:block;color:var(--g-soft);font-size:12px;font-weight:600}
+.g125-tabs{display:flex;gap:6px;background:#f7e6ee;border-radius:14px;padding:4px;margin:6px 0 12px}
+.g125-tabs button{flex:1;border:0;border-radius:11px;padding:9px 6px;font-weight:800;font-size:13px;background:transparent;color:var(--g-soft)}
+.g125-tabs button.on{background:#fff;color:var(--g-rose);box-shadow:0 2px 8px rgba(232,72,122,.18)}
+.g125-sec{background:var(--g-card);border:1px solid var(--g-line);border-radius:16px;padding:12px;margin:10px 0;box-shadow:0 2px 10px rgba(59,42,51,.05)}
+.g125-sec h3{margin:0 0 8px;font-size:14px;color:var(--g-ink);display:flex;align-items:center;gap:6px}
+.g125-sec h3 .n{margin-left:auto;background:#fde3ec;color:var(--g-rose);border-radius:99px;padding:2px 9px;font-size:12px}
+.g125-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow:auto;padding:2px}
+.g125-chip{border:1.5px solid var(--g-line);background:#fff;border-radius:99px;padding:6px 11px;font-size:13px;font-weight:700;color:var(--g-ink)}
+.g125-chip.on{background:var(--g-rose);border-color:var(--g-rose);color:#fff}
+.g125-chip.all{border-style:dashed}
+.g125-merit{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#fff6d8,#ffe9b0);border:1px solid #f3d27a;border-radius:14px;padding:10px}
+.g125-merit .ic{font-size:28px}
+.g125-merit input{flex:1;min-width:0;border:1.5px solid #eccb6e;border-radius:11px;padding:9px 10px;font-size:18px;font-weight:800;color:#8a5a00;background:#fffdf5}
+.g125-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.g125-quick button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:12px;background:#fff1c9;color:#8a5a00}
+.g125-quick button.clr{background:#f3eaee;color:var(--g-soft)}
+.g125-search{width:100%;border:1.5px solid var(--g-line);border-radius:12px;padding:9px 11px;font-size:14px;background:#fffafc}
+.g125-cat{max-height:190px;overflow:auto;margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g125-cat button{display:flex;align-items:center;gap:6px;text-align:left;border:1px solid var(--g-line);background:#fff;border-radius:11px;padding:7px 8px;font-size:12.5px;font-weight:700;color:var(--g-ink);min-height:40px}
+.g125-cat button img,.g125-row img,.g125-it img{width:24px;height:24px;object-fit:contain;flex:none}
+.g125-cat button .e{font-size:18px;flex:none}
+.g125-box{display:flex;flex-direction:column;gap:6px}
+.g125-row{display:flex;align-items:center;gap:8px;background:#fff7fa;border:1px solid var(--g-line);border-radius:12px;padding:7px 8px}
+.g125-row .nm{flex:1;min-width:0;font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g125-row .e{font-size:18px}
+.g125-row input{width:92px;border:1.5px solid var(--g-line);border-radius:9px;padding:6px;font-weight:800;text-align:right;font-size:14px}
+.g125-row button{border:0;background:#f3e3ea;color:var(--g-rose);border-radius:9px;width:30px;height:30px;font-weight:900}
+.g125-empty{color:var(--g-soft);font-size:13px;text-align:center;padding:10px}
+.g125-note{width:100%;border:1.5px solid var(--g-line);border-radius:12px;padding:9px 11px;font-size:14px;resize:vertical;min-height:44px}
+.g125-send{width:100%;border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8fb1,#e8487a);box-shadow:0 6px 16px rgba(232,72,122,.35);margin-top:6px}
+.g125-send:disabled{opacity:.55}
+.g125-sum{font-size:12.5px;color:var(--g-soft);text-align:center;margin-top:8px}
+.g125-list{display:flex;flex-direction:column;gap:10px}
+.g125-gift{position:relative;background:#fff;border:1px solid var(--g-line);border-radius:18px;padding:12px 12px 12px 58px;box-shadow:0 3px 12px rgba(59,42,51,.06);overflow:hidden}
+.g125-gift:before{content:"";position:absolute;left:0;top:0;bottom:0;width:46px;background:linear-gradient(180deg,#ffb3c9,#ff8fb1)}
+.g125-gift.admin:before{background:linear-gradient(180deg,#ffd978,#f5b942)}
+.g125-gift .bx{position:absolute;left:8px;top:12px;font-size:28px}
+.g125-gift b{display:block;font-size:14px;color:var(--g-rose)}
+.g125-gift.admin b{color:#b57800}
+.g125-gift .msg{font-size:13px;color:var(--g-ink);margin:4px 0 2px;font-style:italic}
+.g125-its{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}
+.g125-it{display:inline-flex;align-items:center;gap:4px;background:#fdf0f5;border-radius:99px;padding:4px 9px;font-size:12.5px;font-weight:800}
+.g125-it.merit{background:#fff1c9;color:#8a5a00}
+.g125-gift small{color:var(--g-soft);font-size:11.5px}
+.g125-acts{display:flex;gap:8px;margin-top:8px}
+.g125-acts button{flex:1;border:0;border-radius:12px;padding:10px;font-weight:900;font-size:14px}
+.g125-acts .ok{background:var(--g-mint);color:#fff}
+.g125-acts .no{background:#f3eaee;color:var(--g-soft);flex:.45}
+.g125-gift.done{opacity:.55}
+.g125-all{width:100%;border:0;border-radius:14px;padding:12px;font-weight:900;font-size:15px;background:linear-gradient(135deg,#46c79a,#2f9c75);color:#fff;margin:0 0 12px;box-shadow:0 5px 14px rgba(47,156,117,.3)}
+.g125-notice{background:#fff;border:1px dashed var(--g-line);border-radius:14px;padding:10px 12px;font-size:13px}
+.g125-notice b{display:block;margin-bottom:2px}
+.g125-admin{width:100%;border:0;border-radius:14px;padding:11px;font-weight:900;background:#3b2a33;color:#fff;margin-bottom:10px}
+.g125-big{display:block;width:100%;border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8fb1,#e8487a);margin:8px 0 12px;box-shadow:0 6px 16px rgba(232,72,122,.3)}
+</style>
+
+<script id="r36125-unified-gift-engine">
+/* =====================================================================
+   S2 R36.125 — UNIFIED GIFT SYSTEM (ส่ง + รับ ระบบเดียว)
+   2026-09-23
+   RECEIVE
+   - Every gift claim writes an immutable receipt /giftReceipts/{member}__{gift}
+     IN THE SAME TRANSACTION as the items. A receipt can never be edited or
+     deleted by a player, so a gift can be accepted exactly once, even after
+     logout/login, old tabs, save rollbacks or cleared save receipts.
+   - The inbox list is built from the server (gifts + receipts), never from
+     cached/local save data.
+   SEND (Aida)
+   - One composer for one person / several people / everyone.
+   - No quantity limit. Merit of any size is delivered safely (rules verify the
+     gift, see firestore.rules giftMeritClaimOk).
+   - Deterministic gift ids per send → a retry can never send twice.
+   ===================================================================== */
+(function YN_R36125_UNIFIED_GIFTS(){
+  "use strict";
+  const BUILD="S2-R36.125-UNIFIED-GIFTS-20260923";
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const ms=v=>{try{return Number(v?.toMillis?.()||(v?.seconds?v.seconds*1000:v))||0}catch(_){return 0}};
+  const fmt=n=>Math.floor(Number(n)||0).toLocaleString("en-US");
+  const me=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const myName=()=>{try{return String(currentMember||"")}catch(_){return ""}};
+  const isAdminNow=()=>{try{return myName()==="Aida"&&adminProfile?.role==="admin"}catch(_){return false}};
+  const active=k=>{try{return typeof YN_isActivePlayerKey==="function"?YN_isActivePlayerKey(k):!!k}catch(_){return !!k}};
+  const rid=(mk,id)=>`${mk}__${id}`;
+  const toast=t=>{try{showWeatherToast?.(t)}catch(_){}};
+  const ICON={merit:"🙏",crop:"🌾",product:"🥛",dish:"🍲",special:"✨",jelly:"🪼",jellyV2:"🪼",animal:"🐾",mystery:"🎁",catMystery:"🐱",dogMystery:"🐶",number4Mystery:"🎲",boatDrink:"🧃",fishingBait:"🪱",medicine:"💊",rainyMenu:"☔",farmFruit:"🍓",homeFood:"🍱",hedgehogItem:"🦔",flowerSeed:"🌱",flower:"🌸",wine:"🍷",warehouseTool:"🧰",upgradeKey:"🔑",coconutRiver:"🥥",hamster:"🐹",alpacaFood:"🌿",alpacaMedicine:"💉",alpacaWool:"🧶",alpacaOther:"🦙",alpacaFactoryProduct:"🧵"};
+  const icon=t=>ICON[t]||"🎁";
+  const doneLocal=new Set(),busy=new Set();
+
+  function itemsOf(g){
+    if(Array.isArray(g?.items)&&g.items.length)return g.items.map(i=>({type:String(i.type||i.itemType||""),key:String(i.key||i.itemKey||""),name:String(i.name||i.itemName||i.key||i.itemKey||"ของขวัญ"),qty:Math.max(1,Math.floor(Number(i.qty)||1))}));
+    return [{type:String(g?.itemType||g?.type||""),key:String(g?.itemKey||g?.key||""),name:String(g?.itemName||g?.name||g?.itemKey||"ของขวัญ"),qty:Math.max(1,Math.floor(Number(g?.qty)||1))}];
+  }
+  const meritIn=items=>items.filter(i=>i.type==="merit").reduce((n,i)=>n+i.qty,0);
+  const fromAdmin=g=>String(g?.fromKey||g?.fromName||"").toLowerCase()==="aida"||String(g?.source||"").toLowerCase()==="yainoo";
+  function topPatch(before,after){
+    const skip=new Set(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","savePartitionR36117"]);
+    const p={};for(const k of new Set([...Object.keys(before||{}),...Object.keys(after||{})])){if(skip.has(k))continue;if(!same(before?.[k],after?.[k])&&after?.[k]!==undefined)p[k]=cp(after[k])}return p;
+  }
+  function applyLocal(after,patch){
+    try{
+      const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;if(!live)return;
+      for(const k of Object.keys(patch||{}))live[k]=cp(after[k]);
+      ownState=live;if(typeof visitContext==="undefined"||!visitContext)state=live;
+      try{saveLocalOnly?.(live)}catch(_){}try{updateMeritUI?.()}catch(_){}
+    }catch(e){console.warn(BUILD,"local apply",e)}
+  }
+
+  /* ------------------------------ RECEIVE ------------------------------ */
+  async function receipts(db,fs,mk){
+    const set=new Set();
+    try{const sn=await fs.getDocs(fs.query(fs.collection(db,"giftReceipts"),fs.where("memberKey","==",mk),fs.limit(3000)));sn.forEach(d=>set.add(String(d.data()?.giftId||"")))}
+    catch(e){console.warn(BUILD,"receipts read",e?.message||e)}
+    return set;
+  }
+  async function listPending(){
+    const mk=me();if(!mk||!cloudReady)return{direct:[],bcasts:[],mail:[]};
+    const {db,fs}=await getFirebaseContext();
+    const [rec,gsn,ss,mail]=await Promise.all([
+      receipts(db,fs,mk),
+      fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk),fs.limit(500))).catch(e=>{console.warn(BUILD,"gifts read",e);return null}),
+      fs.getDoc(fs.doc(db,"saves",mk)).catch(()=>null),
+      fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300))).catch(()=>null)
+    ]);
+    const sv=ss&&ss.exists()?(ss.data()||{}):{},fc=obj(sv.friendGiftClaims)?sv.friendGiftClaims:{},bc=obj(sv.broadcastGiftClaims)?sv.broadcastGiftClaims:{};
+    const direct=[];
+    gsn?.forEach(d=>{const g=d.data()||{},id=String(d.id);if(String(g.status||"pending")!=="pending"||rec.has(id)||fc[id]||doneLocal.has(id))return;if(!fromAdmin(g)&&!active(g.fromKey))return;direct.push({kind:"direct",id,...g})});
+    let rows=[];try{rows=typeof fetchBroadcasts==="function"?(await fetchBroadcasts())||[]:[]}catch(e){console.warn(BUILD,"broadcasts",e)}
+    rows=rows.filter(b=>b?.type==="gift"&&(!b.targetKey||String(b.targetKey)===mk)&&!(!b.targetKey&&isAdminNow()&&b.includeAida===false)&&!rec.has(String(b.id))&&!bc[String(b.id)]&&!doneLocal.has(String(b.id)));
+    const claimed=await Promise.all(rows.map(b=>fs.getDoc(fs.doc(db,"broadcasts",String(b.id),"claims",mk)).then(s=>s.exists()).catch(()=>false)));
+    const bcasts=rows.filter((b,i)=>!claimed[i]).map(b=>({kind:"broadcast",...b}));
+    const mailRows=[];mail?.forEach(d=>mailRows.push({id:d.id,...(d.data()||{})}));
+    return{direct,bcasts,mail:mailRows};
+  }
+
+  async function claim(kind,id,accept=true){
+    id=String(id||"");const mk=me(),token=`${kind}:${mk}:${id}`;
+    if(!id||!mk||!cloudReady)return{ok:false,error:"ระบบยังไม่พร้อม"};
+    if(busy.has(token))return{ok:false,error:"กำลังจัดการรายการนี้อยู่"};
+    busy.add(token);
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext();
+      const saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk),recRef=fs.doc(db,"giftReceipts",rid(mk,id)),mailRef=fs.doc(db,"mailboxes",mk,"items",id);
+      const srcRef=kind==="broadcast"?fs.doc(db,"broadcasts",id):fs.doc(db,"gifts",id);
+      const claimRef=kind==="broadcast"?fs.doc(db,"broadcasts",id,"claims",mk):null;
+      let after=null,patch=null,already=false,got=[];
+      await fs.runTransaction(db,async tx=>{
+        after=null;patch=null;already=false;got=[];
+        const reads=[tx.get(srcRef),tx.get(recRef),tx.get(saveRef)];if(claimRef)reads.push(tx.get(claimRef));
+        const [gs,rs,ss,cs]=await Promise.all(reads);
+        if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");
+        if(!gs.exists()){already=true;if(kind==="direct")tx.delete(mailRef);return}
+        const g=gs.data()||{};
+        if(kind==="direct"&&String(g.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+        if(kind==="broadcast"&&(g.type!=="gift"||(g.targetKey&&String(g.targetKey)!==mk)))throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+        const before=cp(ss.data()||{}),st=typeof normalizeState==="function"?normalizeState(cp(before),currentMember):cp(before);
+        if(!obj(st.friendGiftClaims))st.friendGiftClaims={};if(!obj(st.broadcastGiftClaims))st.broadcastGiftClaims={};
+        const ledger=kind==="direct"?st.friendGiftClaims:st.broadcastGiftClaims;
+        const statusDone=kind==="direct"&&String(g.status||"pending")!=="pending";
+        if(rs.exists()||statusDone||ledger[id]||(cs&&cs.exists())){
+          /* already handled: repair the markers, grant NOTHING */
+          already=true;
+          if(!rs.exists())tx.set(recRef,{memberKey:mk,giftId:id,kind,accepted:null,repair:true,at:fs.serverTimestamp()});
+          if(kind==="direct"&&!statusDone)tx.set(srcRef,{status:"claimed",resolvedAt:fs.serverTimestamp()},{merge:true});
+          if(kind==="direct")tx.delete(mailRef);
+          return;
+        }
+        const items=itemsOf(g);let meritAdd=0;
+        if(accept){
+          if(typeof addGiftItemToState!=="function")throw new Error("ระบบเพิ่มของเข้ากระเป๋าไม่พร้อม");
+          if(Array.isArray(g.items)&&g.items.length){
+            const others=g.items.filter(i=>String(i?.type||i?.itemType||"")!=="merit");
+            if(others.length)addGiftItemToState(st,{items:cp(others)});
+          }else if(String(g.itemType||g.type||"")!=="merit")addGiftItemToState(st,cp(g));
+          meritAdd=meritIn(items);
+          if(meritAdd>0){st.merit=(Number(st.merit)||0)+meritAdd;st.meritGiftClaim={id,kind,amount:meritAdd,at:Date.now()}}
+        }
+        ledger[id]={status:accept?"accepted":"discarded",resolvedAt:Date.now(),fromKey:String(g.fromKey||"aida"),qty:items.reduce((n,i)=>n+i.qty,0)};
+        after=st;patch=topPatch(before,st);got=items;
+        if(Object.keys(patch).length)tx.set(saveRef,patch,{merge:true});
+        if(meritAdd>0)tx.set(profRef,{memberKey:mk,merit:st.merit,updatedAt:fs.serverTimestamp()},{merge:true});
+        tx.set(recRef,{memberKey:mk,giftId:id,kind,accepted:Boolean(accept),meritAdd,at:fs.serverTimestamp()});
+        if(kind==="direct"){tx.set(srcRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.delete(mailRef)}
+        else tx.set(claimRef,{memberKey:mk,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()},{merge:false});
+      });
+      doneLocal.add(id);
+      if(!already&&after&&patch)applyLocal(after,patch);
+      try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}
+      badgeAt=0;
+      return{ok:true,already,accepted:Boolean(accept&&!already),items:got};
+    }catch(e){console.error(BUILD,"claim",kind,id,e);return{ok:false,error:String(e?.message||e)}}
+    finally{busy.delete(token)}
+  }
+
+  function itemChip(i){return `<span class="g125-it ${i.type==="merit"?"merit":""}">${icon(i.type)} ${esc(i.name)} ×${fmt(i.qty)}</span>`}
+  function giftCard(g){
+    const adm=g.kind==="broadcast"||fromAdmin(g),t=typeof bangkokTimeText==="function"?bangkokTimeText(g.createdAt):"";
+    const who=adm?"ของขวัญจากยัยหนู 👑":`ของขวัญจาก ${esc(g.fromName||"เพื่อน")}`;
+    const note=String(g.message||g.body||"").trim();
+    return `<div class="g125-gift ${adm?"admin":""}" data-g125-card="${esc(g.kind+":"+g.id)}"><span class="bx">🎁</span><b>${who}</b>${note?`<div class="msg">“${esc(note)}”</div>`:""}<div class="g125-its">${itemsOf(g).map(itemChip).join("")}</div>${t?`<small>${esc(t)} น.</small>`:""}<div class="g125-acts"><button class="ok" data-g125-act="accept" data-g125-kind="${esc(g.kind)}" data-g125-id="${esc(g.id)}">รับของขวัญ</button><button class="no" data-g125-act="discard" data-g125-kind="${esc(g.kind)}" data-g125-id="${esc(g.id)}">ทิ้ง</button></div></div>`;
+  }
+  function noticeCard(m){const t=typeof bangkokTimeText==="function"?bangkokTimeText(m.createdAt):"";return `<div class="g125-notice"><b>${esc(m.title||"การแจ้งเตือน")}</b>${m.text?`<span>${esc(m.text)}</span><br>`:""}${t?`<small>${esc(t)} น.</small>`:""}</div>`}
+  function alpacaCard(m){const items=Array.isArray(m.items)?m.items:[];const sum=items.length?items.map(i=>`${esc(i?.name||"อัลปาก้า")} ×${fmt(i?.qty||1)}`).join(" • "):esc(m.text||"อัลปาก้า");return `<div class="g125-gift admin"><span class="bx">🦙</span><b>ยัยหนูส่งอัลปาก้าให้คุณ</b><div class="g125-its"><span class="g125-it">${sum}</span></div><div class="g125-acts"><button class="ok" data-g125-alpaca="${esc(m.id)}">รับเข้าคลังอัลปาก้า</button></div></div>`}
+
+  let showReq=0;
+  async function showInbox(tab="friend"){
+    if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณารอเชื่อมต่อสักครู่ค่ะ");return}
+    const req=++showReq;
+    if($("modalContent")&&!$("modalContent").querySelector(".g125")){ $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🔔</span><div><h2>การแจ้งเตือน</h2><small>กำลังโหลด…</small></div></div></section>`;openModal?.()}
+    try{
+      const {direct,bcasts,mail}=await listPending();if(req!==showReq)return;
+      const gifts=[...direct,...bcasts].filter(g=>tab==="yainoo"?(g.kind==="broadcast"||fromAdmin(g)):(g.kind==="direct"&&!fromAdmin(g))).sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
+      const alp=tab==="yainoo"?mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
+      const notices=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&active(x.fromKey))).sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
+      const counts={friend:direct.filter(g=>!fromAdmin(g)).length,yainoo:direct.filter(fromAdmin).length+bcasts.length};
+      const body=[...alp.map(alpacaCard),...gifts.map(giftCard),...notices.map(noticeCard)].join("")||`<div class="g125-empty">ยังไม่มีการแจ้งเตือนค่ะ 🌷</div>`;
+      $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🎀</span><div><h2>การแจ้งเตือน</h2><small>ของขวัญแต่ละชิ้นรับได้ครั้งเดียว</small></div></div>
+        ${isAdminNow()?`<button class="g125-admin" id="g125ToAdmin">🛡️ ศูนย์แอดมิน</button><button class="g125-big" id="g125ToSend" style="margin-top:0">🎁 ส่งของขวัญ</button>`:""}
+        <div class="g125-tabs"><button data-g125-tab="friend" class="${tab==="friend"?"on":""}">👥 จากเพื่อน${counts.friend?` (${counts.friend})`:""}</button><button data-g125-tab="yainoo" class="${tab==="yainoo"?"on":""}">👑 จากยัยหนู${counts.yainoo?` (${counts.yainoo})`:""}</button></div>
+        ${gifts.length>1?`<button class="g125-all" id="g125All">🎁 รับทั้งหมด (${gifts.length})</button>`:""}
+        <div class="g125-list">${body}</div></section>`;
+      openModal?.();
+      document.querySelectorAll("[data-g125-tab]").forEach(b=>b.onclick=()=>showInbox(b.dataset.g125Tab));
+      if($("g125ToAdmin"))$("g125ToAdmin").onclick=()=>showAdminCenter?.();
+      if($("g125ToSend"))$("g125ToSend").onclick=()=>openComposer();
+      document.querySelectorAll("[data-g125-id]").forEach(b=>b.onclick=async()=>{
+        const card=b.closest(".g125-gift");if(card?.classList.contains("done"))return;
+        card?.querySelectorAll("button").forEach(x=>x.disabled=true);b.textContent="กำลังจัดการ…";
+        const accept=b.dataset.g125Act==="accept",r=await claim(b.dataset.g125Kind,b.dataset.g125Id,accept);
+        if(!r.ok){card?.querySelectorAll("button").forEach(x=>x.disabled=false);b.textContent=accept?"รับของขวัญ":"ทิ้ง";message?.("จัดการของขวัญไม่ได้",esc(r.error||"กรุณาลองใหม่"));return}
+        card?.classList.add("done");card?.remove();
+        toast(r.already?"🎁 รายการนี้เคยรับไปแล้ว":accept?"🎁 รับแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งแล้ว");
+        refreshBadge(true);
+      });
+      document.querySelectorAll("[data-g125-alpaca]").forEach(b=>b.onclick=async()=>{
+        if(b.disabled)return;b.disabled=true;b.textContent="กำลังรับ…";
+        try{const core=globalThis.YN_R3651;if(!core?.claimGift)throw new Error("ระบบรับอัลปาก้ายังไม่พร้อม");const r=await core.claimGift(b.dataset.g125Alpaca);b.closest(".g125-gift")?.remove();toast(`🦙 รับเข้าคลังแล้ว ${Number(r?.count)||0} ตัว`);refreshBadge(true)}
+        catch(e){b.disabled=false;b.textContent="รับเข้าคลังอัลปาก้า";message?.("รับอัลปาก้าไม่ได้",esc(e?.message||"กรุณาลองใหม่"))}
+      });
+      if($("g125All"))$("g125All").onclick=async()=>{
+        const btn=$("g125All");if(btn.disabled)return;btn.disabled=true;let ok=0,skip=0,fail=0;
+        for(let i=0;i<gifts.length;i++){btn.textContent=`กำลังรับ ${i+1}/${gifts.length}…`;const r=await claim(gifts[i].kind,gifts[i].id,true);if(r.ok){r.already?skip++:ok++;document.querySelector(`[data-g125-card="${CSS.escape(gifts[i].kind+":"+gifts[i].id)}"]`)?.remove()}else fail++}
+        toast(`🎁 รับแล้ว ${ok} รายการ${skip?` • เคยรับแล้ว ${skip}`:""}${fail?` • ไม่สำเร็จ ${fail}`:""}`);
+        await showInbox(tab);refreshBadge(true);
+      };
+      markRead(notices);
+    }catch(e){console.error(BUILD,"inbox",e);message?.("เปิดการแจ้งเตือนไม่ได้",esc(e?.message||"กรุณาลองใหม่ค่ะ"))}
+  }
+  async function markRead(rows){const mk=me(),unread=(rows||[]).filter(x=>!x.read);if(!mk||!unread.length)return;try{const {db,fs}=await getFirebaseContext(),b=fs.writeBatch(db);unread.forEach(x=>b.set(fs.doc(db,"mailboxes",mk,"items",x.id),{read:true},{merge:true}));await b.commit()}catch(e){console.warn(BUILD,"mark read",e?.message||e)}}
+
+  let badgeAt=0,badgeBusy=null;
+  async function refreshBadge(force=false){
+    if(!cloudReady||!me())return;
+    if(!force&&Date.now()-badgeAt<20000)return;
+    if(badgeBusy)return badgeBusy;
+    badgeBusy=(async()=>{try{
+      const {direct,bcasts,mail}=await listPending();badgeAt=Date.now();
+      const alp=mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved).length;
+      const unread=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&!x.read).length;
+      let extra=0;try{if(adminProfile?.role==="admin")extra=Number(adminMembershipPendingCache?.length||0)}catch(_){}
+      const total=direct.length+bcasts.length+alp+unread+extra,b=$("notificationBadge");
+      if(b){b.textContent=String(total);b.classList.toggle("hidden",total<=0)}
+    }catch(e){console.warn(BUILD,"badge",e?.message||e)}finally{badgeBusy=null}})();
+    return badgeBusy;
+  }
+
+  /* ------------------------------ SEND (Aida) ------------------------------ */
+  let draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:""};
+  function catalog(){
+    let list=[];try{list=typeof adminGiftCatalog==="function"?(adminGiftCatalog()||[]):[]}catch(e){console.warn(BUILD,"catalog",e)}
+    const seen=new Set();return list.filter(e=>{if(!e?.type||!e?.key||e.type==="merit")return false;const k=e.type+"|"+e.key;if(seen.has(k))return false;seen.add(k);return true});
+  }
+  async function recipients(){
+    const map=new Map();
+    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"loginDirectory"));sn.forEach(d=>{const x=d.data()||{},k=String(x.memberKey||d.id||"");if(/^s2-[a-z0-9]+$/i.test(k)&&String(x.status||"approved")==="approved")map.set(k,String(x.displayName||k))})}catch(e){console.warn(BUILD,"directory",e)}
+    try{for(const n of Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{})){const k=String(memberKeyFromName(n)||"");if(k&&!map.has(k))map.set(k,n)}}catch(_){}
+    map.delete("aida");
+    return [...map].filter(([k])=>active(k)).map(([key,name])=>({key,name})).sort((a,b)=>a.name.localeCompare(b.name,"th"));
+  }
+  const itemKey=e=>e.type+"|"+e.key;
+  function thumb(e){return e?.image?`<img src="${esc(e.image)}" alt="">`:`<span class="e">${icon(e?.type)}</span>`}
+  let people=[],cat=[];
+  async function openComposer(){
+    if(!isAdminNow()){message?.("ไม่มีสิทธิ์","เมนูนี้สำหรับ Aida เท่านั้น");return}
+    $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🎁</span><div><h2>ส่งของขวัญ</h2><small>กำลังโหลดรายชื่อ…</small></div></div></section>`;openModal?.();
+    try{[people,cat]=await Promise.all([recipients(),Promise.resolve(catalog())])}catch(e){people=[];cat=catalog()}
+    renderComposer();
+  }
+  function totalItems(){let n=0;for(const v of draft.items.values())n+=v.qty;return n}
+  function renderComposer(){
+    const sel=draft.all?people.length:draft.to.size;
+    const q=draft.search.trim().toLowerCase(),shown=(q?cat.filter(e=>String(e.name||"").toLowerCase().includes(q)||String(e.key).toLowerCase().includes(q)):cat).slice(0,80);
+    const rows=[...draft.items.values()];
+    $("modalContent").innerHTML=`<section class="g125 g125-composer">
+      <div class="g125-head"><span class="g125-bow">🎁</span><div><h2>ส่งของขวัญ</h2><small>ไม่จำกัดจำนวน • ผู้รับกดรับได้ครั้งเดียว</small></div></div>
+      <div class="g125-sec"><h3>👥 ส่งให้ใคร <span class="n">${sel} คน</span></h3>
+        <div class="g125-chips"><button class="g125-chip all ${draft.all?"on":""}" data-g125-all>🌟 ทุกคน</button>${people.map(p=>`<button class="g125-chip ${!draft.all&&draft.to.has(p.key)?"on":""}" data-g125-to="${esc(p.key)}">${esc(p.name)}</button>`).join("")}</div></div>
+      <div class="g125-sec"><h3>🙏 คะแนนกุศล</h3>
+        <div class="g125-merit"><span class="ic">🙏</span><input id="g125Merit" inputmode="numeric" placeholder="0" value="${draft.merit?fmt(draft.merit):""}"></div>
+        <div class="g125-quick"><button data-g125-m="1000">+1,000</button><button data-g125-m="10000">+10,000</button><button data-g125-m="100000">+100,000</button><button data-g125-m="1000000">+1,000,000</button><button class="clr" data-g125-m="0">ล้าง</button></div></div>
+      <div class="g125-sec"><h3>🧺 ของในกล่อง <span class="n">${rows.length} รายการ</span></h3>
+        <div class="g125-box">${rows.length?rows.map(r=>`<div class="g125-row">${thumb(r)}<span class="nm">${esc(r.name)}</span><button data-g125-dec="${esc(itemKey(r))}">−</button><input inputmode="numeric" data-g125-qty="${esc(itemKey(r))}" value="${fmt(r.qty)}"><button data-g125-inc="${esc(itemKey(r))}">+</button><button data-g125-del="${esc(itemKey(r))}">×</button></div>`).join(""):`<div class="g125-empty">แตะของด้านล่างเพื่อใส่ลงกล่อง</div>`}</div>
+        <input class="g125-search" id="g125Search" placeholder="🔎 ค้นหาของ เช่น แครอท, ไข่, เมล็ด…" value="${esc(draft.search)}" style="margin-top:10px">
+        <div class="g125-cat">${shown.map(e=>`<button data-g125-add="${esc(itemKey(e))}">${thumb(e)}<span>${esc(e.name)}</span></button>`).join("")||`<div class="g125-empty">ไม่พบของ</div>`}</div></div>
+      <div class="g125-sec"><h3>💌 ข้อความ (ไม่ใส่ก็ได้)</h3><textarea class="g125-note" id="g125Note" maxlength="200" placeholder="เช่น รางวัลกิจกรรมทายใจ 🎉">${esc(draft.note)}</textarea></div>
+      <button class="g125-send" id="g125Send" ${sel&&(draft.merit>0||rows.length)?"":"disabled"}>🎁 ส่งของขวัญ</button>
+      <div class="g125-sum">${sel?`ส่งถึง ${sel} คน`:"ยังไม่ได้เลือกผู้รับ"}${draft.merit>0?` • กุศล ${fmt(draft.merit)}`:""}${rows.length?` • ของ ${rows.length} รายการ (${fmt(totalItems())} ชิ้น)`:""}</div>
+    </section>`;
+    openModal?.();
+    const num=v=>{const n=Math.floor(Number(String(v||"").replace(/[^0-9]/g,""))||0);return Number.isSafeInteger(n)?n:0};
+    document.querySelector("[data-g125-all]").onclick=()=>{draft.all=!draft.all;if(draft.all)draft.to.clear();renderComposer()};
+    document.querySelectorAll("[data-g125-to]").forEach(b=>b.onclick=()=>{draft.all=false;const k=b.dataset.g125To;draft.to.has(k)?draft.to.delete(k):draft.to.add(k);renderComposer()});
+    const mi=$("g125Merit");mi.oninput=()=>{draft.merit=num(mi.value);const s=document.querySelector(".g125-sum"),b=$("g125Send");if(b)b.disabled=!((draft.all?people.length:draft.to.size)&&(draft.merit>0||draft.items.size))};mi.onblur=()=>renderComposer();
+    document.querySelectorAll("[data-g125-m]").forEach(b=>b.onclick=()=>{const v=Number(b.dataset.g125M);draft.merit=v?draft.merit+v:0;renderComposer()});
+    document.querySelectorAll("[data-g125-add]").forEach(b=>b.onclick=()=>{const k=b.dataset.g125Add,e=cat.find(x=>itemKey(x)===k);if(!e)return;const cur=draft.items.get(k);if(cur)cur.qty+=1;else draft.items.set(k,{type:e.type,key:e.key,name:String(e.name||e.key),image:e.image||"",qty:1});renderComposer()});
+    document.querySelectorAll("[data-g125-inc]").forEach(b=>b.onclick=()=>{const r=draft.items.get(b.dataset.g125Inc);if(r){r.qty+=1;renderComposer()}});
+    document.querySelectorAll("[data-g125-dec]").forEach(b=>b.onclick=()=>{const r=draft.items.get(b.dataset.g125Dec);if(r){r.qty=Math.max(1,r.qty-1);renderComposer()}});
+    document.querySelectorAll("[data-g125-del]").forEach(b=>b.onclick=()=>{draft.items.delete(b.dataset.g125Del);renderComposer()});
+    document.querySelectorAll("[data-g125-qty]").forEach(inp=>{inp.onchange=()=>{const r=draft.items.get(inp.dataset.g125Qty);if(r){r.qty=Math.max(1,num(inp.value));renderComposer()}}});
+    const se=$("g125Search");let t=null;se.oninput=()=>{draft.search=se.value;clearTimeout(t);t=setTimeout(()=>{const pos=se.selectionStart;renderComposer();const n=$("g125Search");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}},250)};
+    const no=$("g125Note");no.oninput=()=>{draft.note=no.value};
+    $("g125Send").onclick=sendNow;
+  }
+  async function sendNow(){
+    const btn=$("g125Send");if(!btn||btn.disabled)return;
+    const targets=draft.all?people.slice():people.filter(p=>draft.to.has(p.key));
+    const items=[...draft.items.values()].map(r=>({type:r.type,key:r.key,name:r.name,qty:Math.max(1,Math.floor(r.qty))}));
+    if(draft.merit>0)items.unshift({type:"merit",key:"merit",name:"คะแนนกุศล",qty:draft.merit});
+    if(!targets.length||!items.length)return;
+    const lines=items.map(i=>`${i.name} ×${fmt(i.qty)}`).join("\n");
+    if(!confirm(`ส่งของขวัญให้ ${targets.length} คน\n\n${lines}\n\nยืนยันส่งไหม?`))return;
+    btn.disabled=true;btn.textContent="กำลังส่ง…";
+    const sendId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,7)}`,meritTotal=meritIn(items),note=String(draft.note||"").trim().slice(0,200);
+    const summary=items.map(i=>`${i.name} ×${fmt(i.qty)}`).join(" • ");
+    let ok=0;const failed=[];
+    try{
+      const {db,fs}=await getFirebaseContext();
+      for(let i=0;i<targets.length;i+=150){
+        const chunk=targets.slice(i,i+150),b=fs.writeBatch(db);
+        for(const p of chunk){
+          const gid=`ag125-${sendId}-${String(p.key).replace(/[^a-zA-Z0-9_-]/g,"_")}`;
+          b.set(fs.doc(db,"gifts",gid),{fromKey:"aida",fromName:"Aida",source:"yainoo",toKey:p.key,toName:p.name,bundle:true,items:cp(items),meritTotal,message:note,status:"pending",sendId,deliveryMode:"unified-r36125",createdAt:fs.serverTimestamp()});
+          b.set(fs.doc(db,"mailboxes",p.key,"items",gid),{source:"yainoo",type:"gift",giftId:gid,fromKey:"aida",fromName:"Aida",title:"ยัยหนูส่งของขวัญให้คุณ 🎁",text:summary,read:false,resolved:false,createdAt:fs.serverTimestamp()});
+        }
+        btn.textContent=`กำลังส่ง ${Math.min(i+chunk.length,targets.length)}/${targets.length}…`;
+        try{await b.commit();ok+=chunk.length}catch(e){console.error(BUILD,"send chunk",e);failed.push(...chunk.map(p=>p.name))}
+      }
+    }catch(e){console.error(BUILD,"send",e);message?.("ส่งของขวัญไม่ได้",esc(e?.message||"กรุณาลองใหม่"));btn.disabled=false;btn.textContent="🎁 ส่งของขวัญ";return}
+    if(failed.length){message?.("ส่งได้บางส่วน",`ส่งสำเร็จ ${ok} คน • ไม่สำเร็จ ${failed.length} คน<br><small>${esc(failed.slice(0,10).join(", "))}</small><br>กดส่งใหม่ได้ ระบบจะไม่ส่งซ้ำให้คนที่ได้แล้วในรอบเดียวกัน`);btn.disabled=false;btn.textContent="🎁 ส่งของขวัญ";return}
+    draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:""};
+    $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">💝</span><div><h2>ส่งแล้ว!</h2><small>${ok} คนจะเห็นในแจ้งเตือน “จากยัยหนู”</small></div></div><div class="g125-sec"><div class="g125-its">${items.map(itemChip).join("")}</div></div><button class="g125-send" id="g125Again">🎁 ส่งอีก</button></section>`;
+    $("g125Again").onclick=()=>openComposer();
+  }
+
+  /* ------------------------------ INSTALL ------------------------------ */
+  function install(){
+    try{showNotifications=showInbox}catch(e){console.error(BUILD,"inbox install",e)}
+    try{claimFriendGift=async(id,accept,tab="friend")=>{const r=await claim("direct",id,accept);await showInbox(tab);return r}}catch(_){}
+    try{claimBroadcastGift=async(id,accept)=>{const r=await claim("broadcast",id,accept);await showInbox("yainoo");return r}}catch(_){}
+    try{refreshNotificationBadge=refreshBadge}catch(_){}
+    try{sendAdminBundleGift=async()=>openComposer();sendAdminGlobalBundleGift=async()=>openComposer()}catch(_){}
+    try{
+      if(typeof showAdminCenter==="function"&&!showAdminCenter.__r36125){
+        const base=showAdminCenter;
+        const wrapped=async function(){
+          const r=await base.apply(this,arguments);
+          try{
+            const panel=document.querySelector("#modalContent .admin-panel")||document.querySelector("#modalContent section");
+            ["adminSendBundleBtn","adminSendGlobalBundleBtn"].forEach(id=>{const b=$(id);const sec=b?.closest(".admin-section");if(sec)sec.style.display="none";else if(b)b.style.display="none"});
+            if(panel&&!$("g125AdminSend")){const bt=document.createElement("button");bt.id="g125AdminSend";bt.type="button";bt.className="g125-big";bt.textContent="🎁 ส่งของขวัญ (ไม่จำกัดจำนวน)";bt.onclick=()=>openComposer();const h=panel.querySelector("h2");h?h.insertAdjacentElement("afterend",bt):panel.prepend(bt)}
+          }catch(e){console.warn(BUILD,"admin center inject",e)}
+          return r;
+        };
+        wrapped.__r36125=1;showAdminCenter=wrapped;
+      }
+    }catch(e){console.warn(BUILD,"admin center wrap",e)}
+  }
+  install();
+  /* keep the final say even if an older script re-assigns later */
+  setTimeout(install,1500);setTimeout(install,6000);
+  setTimeout(()=>refreshBadge(true),3000);
+  setInterval(()=>{if(!document.hidden)refreshBadge(false)},30000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshBadge(true)},{passive:true});
+
+  globalThis.YN_R36125={BUILD,claim,listPending,showInbox,openComposer,refreshBadge};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — one gift system, one claim per gift");
 })();
 </script>
 
