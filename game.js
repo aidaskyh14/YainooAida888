@@ -38222,3 +38222,137 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 
 /* S2 R36.118 final stability marker */
 window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
+
+/* =====================================================================
+   S2 R36.119 — GIFT CLAIM IDEMPOTENCY + STALE MAILBOX CLEANUP
+   2026-09-22
+   - Direct gifts: claimed/discarded status is authoritative; only changed save
+     keys are merged, never the whole save.
+   - Broadcast gifts: immutable /broadcasts/{id}/claims/{memberKey} receipt
+     prevents the same gift being accepted again after reload/old-save restore.
+   - Stale mailbox cards for already-resolved gifts are removed automatically.
+   - Does not modify campaign or merit synchronization logic.
+   ===================================================================== */
+(function YN_R36119_GIFT_DURABILITY(){
+  "use strict";
+  const BUILD="S2-R36.119-GIFT-DURABILITY-20260922";
+  const cp=x=>{try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x??null))}};
+  const mk=()=>String(globalThis.currentMemberKey||currentMemberKey||"");
+  const isObj=x=>x&&typeof x==="object"&&!Array.isArray(x);
+  const eq=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const serverState=(raw)=>{
+    try{return normalizeState(cp(raw||{}),currentMember)}catch(_){return cp(raw||{})}
+  };
+  function changedTop(before,after){
+    const out={};
+    const keys=new Set([...Object.keys(before||{}),...Object.keys(after||{})]);
+    for(const k of keys){
+      if(k==="updatedAt"||k==="activeSessionId"||k==="clientSaveRevision"||k==="clientLocalEditAt")continue;
+      if(!eq(before?.[k],after?.[k]))out[k]=cp(after?.[k]);
+    }
+    return out;
+  }
+  async function removeGiftMailCopies(giftId){
+    const memberKey=mk();if(!memberKey||!giftId)return;
+    try{
+      const {db,fs}=await getFirebaseContext(),col=fs.collection(db,"mailboxes",memberKey,"items"),sn=await fs.getDocs(fs.query(col,fs.limit(500))),batch=fs.writeBatch(db);let n=0;
+      sn.forEach(d=>{const x=d.data()||{},gid=String(x.giftId||d.id||"");if(gid===String(giftId)){batch.delete(d.ref);n++}});
+      if(n)await batch.commit();
+    }catch(e){console.warn(BUILD,"mail cleanup",giftId,e?.message||e)}
+  }
+  async function cleanupResolvedGiftMail(){
+    const memberKey=mk();if(!memberKey||!cloudReady)return;
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const [mailSn,giftSn]=await Promise.all([
+        fs.getDocs(fs.query(fs.collection(db,"mailboxes",memberKey,"items"),fs.limit(500))),
+        fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",memberKey),fs.limit(500)))
+      ]);
+      const status=new Map();giftSn.forEach(d=>status.set(String(d.id),String((d.data()||{}).status||"pending")));
+      const batch=fs.writeBatch(db);let n=0;
+      mailSn.forEach(d=>{const x=d.data()||{};if(x.type!=="gift")return;const gid=String(x.giftId||d.id||"");const st=status.get(gid);if(st&&st!=="pending"){batch.delete(d.ref);n++}});
+      if(n)await batch.commit();
+    }catch(e){console.warn(BUILD,"stale mailbox cleanup",e?.message||e)}
+  }
+
+  const busy=new Set();
+  globalThis.claimFriendGift=claimFriendGift=async function(giftId,accept,returnTab="friend"){
+    const id=String(giftId||""),memberKey=mk(),token=`d:${memberKey}:${id}`;
+    if(!id||!memberKey||!cloudReady||busy.has(token))return;
+    busy.add(token);
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext(),giftRef=fs.doc(db,"gifts",id),saveRef=fs.doc(db,"saves",memberKey),mailRef=fs.doc(db,"mailboxes",memberKey,"items",id);let patch=null,already=false;
+      await fs.runTransaction(db,async tx=>{
+        const [gs,ss]=await Promise.all([tx.get(giftRef),tx.get(saveRef)]);
+        if(!gs.exists()){already=true;tx.delete(mailRef);return}
+        if(!ss.exists())throw new Error("ไม่พบเซฟสมาชิก");
+        const g=gs.data()||{};
+        if(String(g.toKey||"")!==memberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+        if(String(g.status||"pending")!=="pending"){already=true;tx.delete(mailRef);return}
+        if(accept){
+          const before=serverState(ss.data()||{}),after=cp(before);
+          addGiftItemToState(after,g);
+          patch=changedTop(before,after);
+          if(Object.keys(patch).length)tx.set(saveRef,{...patch,updatedAt:fs.serverTimestamp()},{merge:true});
+        }
+        tx.set(giftRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});
+        tx.delete(mailRef);
+      });
+      await removeGiftMailCopies(id);
+      try{notificationDataCache.at=0}catch(_){}
+      try{broadcastClaimCache?.clear?.()}catch(_){}
+      if(accept&&patch){
+        try{const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;if(live){for(const [k,v] of Object.entries(patch))live[k]=cp(v);if(typeof ownState!=="undefined")ownState=live;if(typeof state!=="undefined"&&!visitContext)state=live;saveLocalOnly?.(live)}}catch(_){}
+      }
+      try{await showNotifications?.(returnTab)}catch(_){}
+      try{refreshNotificationBadge?.(true)}catch(_){}
+      if(already)showWeatherToast?.("🎁 รายการนี้ถูกจัดการไปแล้ว");else showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • รับซ้ำไม่ได้":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(e){console.error(BUILD,"direct claim",e);message?.("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}finally{busy.delete(token)}
+  };
+
+  globalThis.claimBroadcastGift=claimBroadcastGift=async function(broadcastId,accept){
+    const id=String(broadcastId||""),memberKey=mk(),token=`b:${memberKey}:${id}`;
+    if(!id||!memberKey||!cloudReady||busy.has(token))return;
+    busy.add(token);
+    try{
+      try{await settlePendingCloudSave?.()}catch(_){}
+      const {db,fs}=await getFirebaseContext(),bRef=fs.doc(db,"broadcasts",id),claimRef=fs.doc(db,"broadcasts",id,"claims",memberKey),saveRef=fs.doc(db,"saves",memberKey);let patch=null,already=false;
+      await fs.runTransaction(db,async tx=>{
+        const [bs,cs,ss]=await Promise.all([tx.get(bRef),tx.get(claimRef),tx.get(saveRef)]);
+        if(!bs.exists()||!ss.exists())throw new Error("ไม่พบของขวัญจากยัยหนู");
+        const gift=bs.data()||{};if(gift.type!=="gift")throw new Error("รายการนี้ไม่ใช่ของขวัญ");
+        if(gift.targetKey&&String(gift.targetKey)!==memberKey)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงคุณ");
+        const before=serverState(ss.data()||{}),oldLocal=before?.broadcastGiftClaims?.[id];
+        if(cs.exists()||oldLocal){already=true;if(!cs.exists())tx.set(claimRef,{memberKey,status:String(oldLocal?.status||"accepted"),resolvedAt:fs.serverTimestamp()});return}
+        if(accept){const after=cp(before);addGiftItemToState(after,{itemType:gift.itemType,itemKey:gift.itemKey,qty:gift.qty,items:gift.items,instance:gift.instance});patch=changedTop(before,after);if(Object.keys(patch).length)tx.set(saveRef,{...patch,updatedAt:fs.serverTimestamp()},{merge:true})}
+        tx.set(claimRef,{memberKey,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()});
+      });
+      try{broadcastClaimCache?.delete?.(broadcastClaimCacheKey?.(id))}catch(_){}
+      try{notificationDataCache.at=0}catch(_){}
+      if(accept&&patch){try{const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||null;if(live){for(const [k,v] of Object.entries(patch))live[k]=cp(v);if(typeof ownState!=="undefined")ownState=live;if(typeof state!=="undefined"&&!visitContext)state=live;saveLocalOnly?.(live)}}catch(_){}}
+      try{await showNotifications?.("yainoo")}catch(_){}
+      try{refreshNotificationBadge?.(true)}catch(_){}
+      if(already)showWeatherToast?.("🎁 ของขวัญนี้เคยจัดการแล้ว • รับซ้ำไม่ได้");else showWeatherToast?.(accept?"🎁 รับของขวัญแล้ว • รับซ้ำไม่ได้":"🗑️ ทิ้งของขวัญแล้ว");
+    }catch(e){console.error(BUILD,"broadcast claim",e);message?.("จัดการของขวัญไม่ได้",e?.message||"กรุณาลองใหม่")}finally{busy.delete(token)}
+  };
+
+  try{
+    const oldFetch=typeof fetchBroadcastClaim==="function"?fetchBroadcastClaim:null;
+    fetchBroadcastClaim=async function(id){
+      const memberKey=mk();if(memberKey&&cloudReady){try{const {db,fs}=await getFirebaseContext(),s=await fs.getDoc(fs.doc(db,"broadcasts",String(id),"claims",memberKey));if(s.exists())return s.data()||null}catch(_){} }
+      return oldFetch?oldFetch.apply(this,arguments):null;
+    };
+  }catch(e){console.warn(BUILD,"claim reader install",e)}
+
+  try{
+    const oldShow=showNotifications;
+    showNotifications=async function(){try{await cleanupResolvedGiftMail()}catch(_){}return oldShow.apply(this,arguments)};
+  }catch(e){console.warn(BUILD,"notification cleanup install",e)}
+
+  setTimeout(()=>cleanupResolvedGiftMail(),2200);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>cleanupResolvedGiftMail(),250)},{passive:true});
+  globalThis.YN_R36119={BUILD,cleanupResolvedGiftMail,removeGiftMailCopies};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
