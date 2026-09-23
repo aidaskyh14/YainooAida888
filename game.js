@@ -356,6 +356,11 @@ function fresh(player){
   };
 }
 
+function ynMeritResetSentinelR36122(v){
+  const n=Number(v);
+  return Number.isFinite(n)&&(n===0||n===158||n===188||n===300);
+}
+
 function normalizeState(raw,player){
   const normalized=raw&&typeof raw==="object"?raw:fresh(player);
   normalized.player=player||normalized.player||"ผู้เล่น";
@@ -4694,8 +4699,8 @@ function syncServerClockAfterLogin(saveRef,fs){
 async function initializeOrLoadCloudState(member,memberKey){
   /* R36.63: preserve legacy local snapshot for recovery; do not delete yainoo-v5 cache. */
   const {db,fs}=await getFirebaseContext();
-  const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey);
-  let [saveSnap,gardenSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef)]);
+  const saveRef=fs.doc(db,"saves",memberKey),gardenRef=fs.doc(db,"gardens",memberKey),profileRef=fs.doc(db,"publicProfiles",memberKey);
+  let [saveSnap,gardenSnap,profileSnap]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(gardenRef),fs.getDoc(profileRef)]);
   let createdNow=false;
   if(!saveSnap.exists()){
     const initial=fresh(member);
@@ -4710,7 +4715,16 @@ async function initializeOrLoadCloudState(member,memberKey){
      session id, and let the normal guarded save path persist the compact state later.
      New accounts still create their initial save normally. */
   cloudSessionSuperseded=false;
-  let loaded=normalizeState(saveSnap.data(),member);ynPrepareSaveR3463(loaded);
+  let loaded=normalizeState(saveSnap.data(),member);
+  /* R36.122: a relog must never turn an established merit total into one of the
+     known reset/default sentinels. If /saves is bad but publicProfiles still has
+     the established total, repair in memory before anything can republish it. */
+  const saveMeritR36122=Number(saveSnap.data()?.merit),profileMeritR36122=profileSnap.exists()?Number(profileSnap.data()?.merit):NaN;
+  if(ynMeritResetSentinelR36122(saveMeritR36122)&&Number.isFinite(profileMeritR36122)&&profileMeritR36122>300){
+    loaded.merit=profileMeritR36122;
+    Promise.resolve().then(()=>fs.setDoc(saveRef,{merit:profileMeritR36122,meritRollbackGuardR36122At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true})).catch(error=>console.warn("R36.122 merit login repair",error));
+  }
+  ynPrepareSaveR3463(loaded);
   const remoteSession=String(saveSnap.data()?.activeSessionId||"");
   cloudSessionId=remoteSession||newCloudSessionId();
   loaded.activeSessionId=cloudSessionId;
@@ -4770,6 +4784,15 @@ async function flushCloudSave(){
           cloudSessionSuperseded=false;
         }else throw new Error("เครื่องนี้ไม่ใช่เซสชันล่าสุด");
       }
+      /* R36.122: allow normal merit progression/spending, but never let a stale
+         client overwrite an established total with the known 0/158/188/300
+         reset values. This is NOT a fixed merit total: any other new value saves. */
+      const serverMeritR36122=Number(snap.data()?.merit),proposedMeritR36122=Number(payload.merit);
+      if(Number.isFinite(serverMeritR36122)&&serverMeritR36122>300&&ynMeritResetSentinelR36122(proposedMeritR36122)){
+        payload.merit=serverMeritR36122;
+        ownState.merit=serverMeritR36122;
+        if(!visitContext)state=ownState;
+      }
       tx.set(saveRef,{...payload,updatedAt:fs.serverTimestamp()},{merge:false});
     });
     const currentHash=plotHash(ownState.plots);
@@ -4809,7 +4832,12 @@ function subscribeOwnGarden(){
         }
         return;
       }
-      const remote=normalizeState(raw,currentMember);remote.plots=ownState.plots;
+      const remote=normalizeState(raw,currentMember);
+      /* R36.122: ignore a live rollback event to the known reset sentinels when
+         this session already holds an established merit total. */
+      const localMeritR36122=Number(ownState?.merit),remoteMeritR36122=Number(remote?.merit);
+      if(Number.isFinite(localMeritR36122)&&localMeritR36122>300&&ynMeritResetSentinelR36122(remoteMeritR36122))remote.merit=localMeritR36122;
+      remote.plots=ownState.plots;
       const localComparable=cloneData(ownState),remoteComparable=cloneData(remote);
       delete localComparable.updatedAt;delete remoteComparable.updatedAt;
       if(JSON.stringify(localComparable)===JSON.stringify(remoteComparable))return;
@@ -38359,4 +38387,4 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
 
 
 /* S2 R36.120 — data stability marker: merit source guard + inventory rollback guard + fresh campaign starts. */
-window.YAINOO_PACKAGE_BUILD="S2-R36.121-TARGETED-HOTFIX-20260922";
+window.YAINOO_PACKAGE_BUILD="S2-R36.122-MERIT-ROLLBACK-GUARD-20260922";
