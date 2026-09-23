@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.118-STABILITY-20260922"></script>
+<script src="game.js?v=S2-R36.120-MERIT-INVENTORY-CAMPAIGN-FIX-20260922"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3556,15 +3556,15 @@ console.info(BUILD,"loaded");
   globalThis.YN_SAVE_GUARD={compact:compactBroken,bytes,repair:repairBrokenSave,repairAll:repairAllLargeSaves};
 
 
-  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores:recoverSelf,retryPendingCampaignScores:recoverSelf,migrateLegacyScores:recoverSelf,recoverFishingSlots:recoverSelf};
+  /* R36.120: NEW gameplay events may score, but historical inventory/fishing/legacy
+     data is never allowed to repopulate a freshly reset campaign. */
+  const noCampaignRecovery=async()=>true;
+  globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores:noCampaignRecovery,retryPendingCampaignScores:noCampaignRecovery,migrateLegacyScores:noCampaignRecovery,recoverFishingSlots:noCampaignRecovery};
   globalThis.V181_campaignScoreLater=summary=>scoreSecretHarvest(summary);
-  globalThis.YN_R3623={BUILD,recoverSelf,adminBackfillAll,injectSecretBag,repairBrokenSave,repairAllLargeSaves,writeLegacyScore};
-  /* Startup repair is intentionally deduplicated. The second call is a fallback
-     only if the first pass could not complete; visibility changes never rescan
-     whole collections after a successful pass. */
-  setTimeout(()=>{injectSecretBag();recoverSelf();adminBackfillAll();repairAllLargeSaves()},1200);
-  setTimeout(()=>{if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},5000);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{injectSecretBag();if(!selfRecoveryDone)recoverSelf();if(!adminBackfillDone)adminBackfillAll()},250)},{passive:true});
+  globalThis.YN_R3623={BUILD,recoverSelf:noCampaignRecovery,adminBackfillAll:noCampaignRecovery,injectSecretBag,repairBrokenSave,repairAllLargeSaves,writeLegacyScore};
+  /* Keep unrelated save-size maintenance; remove only campaign recovery/backfill. */
+  setTimeout(()=>{injectSecretBag();repairAllLargeSaves()},1200);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{injectSecretBag()},250)},{passive:true});
   console.info(BUILD,"loaded");
 })();
 </script>
@@ -3920,7 +3920,7 @@ console.info(BUILD,"loaded");
     return fs.doc(db,"saveShards",mk,"items",id);
   }
   function staticGroup(k){for(const [g,s] of Object.entries(GROUP_KEYS))if(s.has(k))return g;if(CLAIM_RX.test(k)||/^saveGuardR\d+/i.test(k))return"claims";if(LOG_RX.test(k))return"logs";return""}
-  function routesOf(root,mk=""){const r=obj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{};if(mk&&routeCache.has(mk))Object.assign(r,routeCache.get(mk));return r}
+  function routesOf(root,mk=""){const r=obj(root?.saveShardRoutes)?{...root.saveShardRoutes}:{};if(mk&&routeCache.has(mk))Object.assign(r,routeCache.get(mk));/* R36.120: root-pinned fields can never have shard routes. */for(const k of ROOT_PINNED)delete r[k];return r}
   function ownerFor(k,r={}){
     if(k==="alpaca")return"alpacaParts";
     const rr=String(r[k]||"");if(isFieldGroup(rr))return rr;
@@ -3928,6 +3928,7 @@ console.info(BUILD,"loaded");
     return staticGroup(k)||rr||overflowFor(k);
   }
   function groupFor(k,v,r={}){
+    if(ROOT_PINNED.has(k)){delete r[k];return""}
     if(k==="alpaca"){r.alpaca="alpacaParts";return""}
     const rr=String(r[k]||"");if(isFieldGroup(rr))return rr;
     const pg=petGroupFor(k);if(pg){r[k]=pg;return pg}
@@ -4012,13 +4013,16 @@ console.info(BUILD,"loaded");
       if(g.startsWith("alpaca"))continue;
       const d=groups?.[g];if(!obj(d))continue;
       for(const [k,v] of Object.entries(d)){
+        /* R36.120: root-pinned fields are authoritative ONLY in /saves/{member}.
+           Old shard routes must never resurrect stale merit/session metadata. */
+        if(ROOT_PINNED.has(k))continue;
         const owner=ownerFor(k,r);if(owner===g){out[k]=cp(v);canonicalSeen.add(k)}
       }
     }
     for(const g of groupsOfRoutes(r)){
       if(g.startsWith("alpaca"))continue;
       const d=groups?.[g];if(!obj(d))continue;
-      for(const [k,v] of Object.entries(d)){if(canonicalSeen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;out[k]=cp(v)}
+      for(const [k,v] of Object.entries(d)){if(ROOT_PINNED.has(k)||canonicalSeen.has(k)||Object.prototype.hasOwnProperty.call(out,k))continue;out[k]=cp(v)}
     }
     if(String(r.alpaca||"")==="alpacaParts"){
       const core=obj(groups?.alpacaCore?.core)?cp(groups.alpacaCore.core):{};
@@ -4031,6 +4035,40 @@ console.info(BUILD,"loaded");
   function snapLike(base,data){return new Proxy(base,{get(t,p){if(p==="data")return()=>cp(data);if(p==="get")return path=>cp(field(data,path?.toString?.()||path));return Reflect.get(t,p,t)}})}
   function numericTotal(m){if(!obj(m))return 0;return Object.values(m).reduce((n,v)=>n+(typeof v==="number"&&Number.isFinite(v)&&v>0?v:0),0)}
   function bestPositiveMap(current,candidates,path){if(numericTotal(current)>0)return current;let best=current,bestN=0;for(const s of candidates){const m=field(s,path),n=numericTotal(m);if(n>bestN){bestN=n;best=cp(m)}}return bestN>0?best:current}
+  /* R36.120 INVENTORY ZERO GUARD
+     A partial/stale normalized state must never replace a populated inventory
+     with all-zero maps. This guard only fires for a catastrophic ALL-inventory
+     zero snapshot; normal item use/sales/claims continue unchanged. */
+  const INV_GUARD_TOP=[...GROUP_KEYS.inventory];
+  function positiveDeep(v,seen=new Set()){
+    if(typeof v==="number"&&Number.isFinite(v)&&v>0)return{pos:1,total:v};
+    if(!v||typeof v!=="object"||seen.has(v))return{pos:0,total:0};
+    seen.add(v);let pos=0,total=0;
+    const vals=Array.isArray(v)?v:Object.values(v);
+    for(const x of vals){const r=positiveDeep(x,seen);pos+=r.pos;total+=r.total}
+    return{pos,total};
+  }
+  function inventoryStats(s){
+    if(!s||typeof s!=="object")return{pos:0,total:0};
+    let pos=0,total=0;
+    for(const k of INV_GUARD_TOP){if(!Object.prototype.hasOwnProperty.call(s,k))continue;const r=positiveDeep(s[k]);pos+=r.pos;total+=r.total}
+    for(const v of [s?.alpaca?.inventory,s?.alpaca?.factory?.products]){const r=positiveDeep(v);pos+=r.pos;total+=r.total}
+    return{pos,total};
+  }
+  function protectInventoryZero(candidate,prior){
+    const next=cp(candidate)||{};if(!prior||typeof prior!=="object")return next;
+    const incoming=inventoryStats(next),server=inventoryStats(prior);
+    if(incoming.pos!==0||server.pos<2||server.total<=0)return next;
+    for(const k of INV_GUARD_TOP)if(Object.prototype.hasOwnProperty.call(prior,k))next[k]=cp(prior[k]);
+    if(obj(prior?.alpaca?.inventory)||obj(prior?.alpaca?.factory?.products)){
+      next.alpaca=obj(next.alpaca)?cp(next.alpaca):{};
+      if(obj(prior?.alpaca?.inventory))next.alpaca.inventory=cp(prior.alpaca.inventory);
+      if(obj(prior?.alpaca?.factory?.products)){next.alpaca.factory=obj(next.alpaca.factory)?cp(next.alpaca.factory):{};next.alpaca.factory.products=cp(prior.alpaca.factory.products)}
+    }
+    next.inventoryZeroGuardR36120At=now();
+    console.warn(BUILD,"blocked catastrophic all-zero inventory write");
+    return next;
+  }
   function emergencyRecoverStocks(base,candidates){const s=cp(base)||{};s.bag=bestPositiveMap(s.bag,candidates,"bag")||s.bag||{};s.specials=bestPositiveMap(s.specials,candidates,"specials")||s.specials||{};s.animalProducts=bestPositiveMap(s.animalProducts,candidates,"animalProducts")||s.animalProducts||{};s.flowers=bestPositiveMap(s.flowers,candidates,"flowers")||s.flowers||{};s.wines=bestPositiveMap(s.wines,candidates,"wines")||s.wines||{};s.fishingBaits=bestPositiveMap(s.fishingBaits,candidates,"fishingBaits")||s.fishingBaits||{};s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};for(const k of ["food","medicine","wool","other"])s.alpaca.inventory[k]=bestPositiveMap(s.alpaca.inventory[k],candidates,`alpaca.inventory.${k}`)||{};s.alpaca.factory=obj(s.alpaca.factory)?s.alpaca.factory:{};s.alpaca.factory.products=bestPositiveMap(s.alpaca.factory.products,candidates,"alpaca.factory.products")||{};s.jellyfishV2=bestPositiveMap(s.jellyfishV2,candidates,"jellyfishV2")||s.jellyfishV2||{};s.specialAnimals=bestPositiveMap(s.specialAnimals,candidates,"specialAnimals")||s.specialAnimals||{};return s}
   function localCandidates(member,mk){const out=[],keys=[`yainoo-v5:${member}`,`yn:r24:last-good:${mk}`,`yn:r24:pending:${mk}`,`yn:s2:r22:critical:${mk}`,`yn:r24:last-good:${member}`,`yn:r24:pending:${member}`,`yn:v7:critical:${mk}`];for(const k of keys)try{const raw=localStorage.getItem(k);if(!raw)continue;const x=JSON.parse(raw),st=obj(x?.state)?x.state:(obj(x)?x:null);if(st)out.push(st)}catch(_){}return out}
   async function rawContext(){return RAW_CTX.apply(this,arguments)}
@@ -4079,6 +4117,7 @@ console.info(BUILD,"loaded");
     const root={},groups={};
     for(const [path,v] of Object.entries(patch||{})){
       if(v===undefined)continue;const bits=String(path).split("."),top=bits[0];
+      if(ROOT_PINNED.has(top)){delete r[top];root[path]=v;continue}
       if(top==="alpaca"){
         r.alpaca="alpacaParts";
         if(bits.length===1&&obj(v)){
@@ -4109,11 +4148,11 @@ console.info(BUILD,"loaded");
     if(prop==="getDocFromServer"&&typeof target.getDocFromServer!=="function")return undefined;
     if(prop==="getDoc"||prop==="getDocFromServer")return async ref=>{const base=await target[prop](ref),info=saveInfo(ref);return info?hydrate(target,db,ref,base,prop==="getDocFromServer"):base};
     if(prop==="onSnapshot")return function(ref,...args){const info=saveInfo(ref);if(!info)return target.onSnapshot(ref,...args);let options=null,next=null,error=null,complete=null;if(args[0]&&typeof args[0]==="object"&&typeof args[0]!=="function"&&!(typeof args[0].next==="function")){options=args[0];if(args[1]&&typeof args[1]==="object"){next=args[1].next?.bind(args[1]);error=args[1].error?.bind(args[1]);complete=args[1].complete?.bind(args[1])}else{next=args[1];error=args[2];complete=args[3]}}else if(args[0]&&typeof args[0]==="object"){next=args[0].next?.bind(args[0]);error=args[0].error?.bind(args[0]);complete=args[0].complete?.bind(args[0])}else{next=args[0];error=args[1];complete=args[2]}let dead=false,timer=0,seq=0;const emit=()=>{const my=++seq;clearTimeout(timer);timer=setTimeout(async()=>{try{const b=await serverGet(target,ref),h=await hydrate(target,db,ref,b,true);if(!dead&&my===seq)next?.(h)}catch(e){console.warn(BUILD,"snapshot hydrate",e?.message||e)}},80)};const u=options?target.onSnapshot(ref,options,emit,e=>error?.(e),()=>complete?.()):target.onSnapshot(ref,emit,e=>error?.(e),()=>complete?.());return()=>{dead=true;clearTimeout(timer);try{u?.()}catch(_){}}};
-    if(prop==="setDoc")return async(ref,data,opt)=>{const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});const parts=splitState(data,mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return makeBatch(target,db,ops).commit()};
+    if(prop==="setDoc")return async(ref,data,opt)=>{const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});let safe=data;try{const raw=await serverGet(target,ref);if(raw.exists()){const prevSnap=await hydrate(target,db,ref,raw,true);safe=protectInventoryZero(data,prevSnap.data()||{})}}catch(e){console.warn(BUILD,"inventory guard preload",e?.message||e)}const parts=splitState(safe,mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return makeBatch(target,db,ops).commit()};
     if(prop==="updateDoc")return async(ref,patch,...rest)=>{const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);return writePatch(target,db,ref,info.memberKey,patch||{})};
     if(prop==="runTransaction")return async function(dbArg,callback,...rest){return target.runTransaction(dbArg,async real=>{const before=new Map(),routes=new Map();const tx=new Proxy(real,{get(tt,p){
       if(p==="get")return async ref=>{const info=saveInfo(ref);if(!info)return tt.get(ref);const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routes.set(info.memberKey,routesOf(root,info.memberKey));return base}const r=routesOf(root,info.memberKey),names=groupsOfRoutes(r),sn=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g)))),groups={};names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routes.set(info.memberKey,r);return snapLike(base,full)};
-      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const parts=splitState(data,mk),prev=before.get(pathOf(ref)),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);routeCache.set(mk,{...parts.routes});return tx};
+      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const prev=before.get(pathOf(ref)),safe=prev?protectInventoryZero(data,prev):data,parts=splitState(safe,mk),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);routeCache.set(mk,{...parts.routes});return tx};
       if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info){tt.update(ref,data);return tx}const mk=info.memberKey,r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};
       if(p==="delete")return ref=>{tt.delete(ref);return tx};return Reflect.get(tt,p,tt)}});return callback(tx)},...rest)};
     if(prop==="writeBatch")return function(dbArg){const ops=[];const api={set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});routeCache.set(mk,{...parts.routes});return api},update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey,r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},commit(){return makeBatch(target,dbArg,ops).commit()}};return api};
@@ -4156,11 +4195,14 @@ console.info(BUILD,"loaded");
   let baseSnapshot=null,baseSnapshotKey="";
   const MERGE_META=new Set(["updatedAt","saveVirtualUpdatedAt","activeSessionId","clientSaveRevision","clientLocalEditAt","saveLayoutVersion","saveLayoutUpdatedAt","saveShardRoutes","saveShardBuild","saveRootApproxBytes","savePartitionR36117"]);
   function mergeByField(remote,local,base){
+    /* If a broken client snapshot suddenly has ZERO across the entire inventory,
+       preserve the populated server inventory before calculating changed fields. */
+    const guarded=protectInventoryZero(local,remote);
     const out=cp(remote)||{},changed=[];
-    for(const k of new Set([...Object.keys(local||{}),...Object.keys(base||{})])){
+    for(const k of new Set([...Object.keys(guarded||{}),...Object.keys(base||{})])){
       if(MERGE_META.has(k))continue;
-      if(same(local?.[k],base?.[k]))continue;   /* untouched here -> server value stands */
-      out[k]=cp(local?.[k]);changed.push(k);    /* changed here -> local wins for THIS key only */
+      if(same(guarded?.[k],base?.[k]))continue;   /* untouched here -> server value stands */
+      out[k]=cp(guarded?.[k]);changed.push(k);    /* changed here -> local wins for THIS key only */
     }
     return{merged:out,changed};
   }
@@ -5884,6 +5926,148 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>200)clearInterval(t)},50)}
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"final stability loaded");
+})();
+</script>
+
+<script id="r36120-merit-inventory-campaign-final">
+/* =====================================================================
+   S2 R36.120 — TARGETED DATA STABILITY
+   Requested scope only:
+   1) Kk/ของขวัญ merit legacy rollback (158/188 -> 1,190,071 once/when stale)
+   2) Porpla catastrophic all-zero inventory rescue + future zero-write guard
+   3) Campaign reset stays fresh: no passive historical score recovery/backfill
+   ===================================================================== */
+(()=>{
+  "use strict";
+  const BUILD="S2-R36.120-MERIT-INVENTORY-CAMPAIGN-FIX-20260922";
+  const KK="s2-pqyqdw14f5bsujtusy", KK_TARGET=1190071, KK_BAD=new Set([158,188]);
+  const CAMPAIGNS=[
+    {id:"s2-r36-fishing-goodbad",key:"fishing"},
+    {id:"s2-r36-home",key:"home"},
+    {id:"s2-r36-secret-seeds",key:"secret"},
+    {id:"s2-r36-wool-expert",key:"wool"}
+  ];
+  const INV_PATHS=["bag","specials","animalProducts","dishInventory","fishingBaits","specialAnimals","hedgehogItems","flowerSeeds","flowers","wines","boatDrinks","rainyMenus","warehouseTools","farmFruits","coconutRiverItems","medicines","homeFoods","alpaca.inventory.food","alpaca.inventory.medicine","alpaca.inventory.wool","alpaca.inventory.other","alpaca.factory.products"];
+  const cp=v=>{try{return typeof cloneData==="function"?cloneData(v):structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const ts=v=>{try{return Number(v?.toMillis?.()||v?.seconds*1000||v)||0}catch(_){return 0}};
+  const field=(o,path)=>{for(const k of String(path).split(".")){if(o==null)return undefined;o=o[k]}return o};
+  const setField=(o,path,v)=>{const a=String(path).split("."),last=a.pop();let x=o;for(const k of a){if(!obj(x[k]))x[k]={};x=x[k]}x[last]=v};
+  const stats=m=>{if(!obj(m))return{pos:0,total:0,n9999:0};let pos=0,total=0,n9999=0;for(const v of Object.values(m)){const q=Math.max(0,Number.isFinite(Number(v))?Number(v):0);if(q>0){pos++;total+=q;if(q===9999)n9999++}}return{pos,total,n9999}};
+  const synthetic=m=>{const s=stats(m);return s.pos>=4&&s.n9999>=3&&s.n9999/s.pos>=.34};
+  function wholeInventoryStats(s){let pos=0,total=0;for(const path of INV_PATHS){const q=stats(field(s,path));pos+=q.pos;total+=q.total}return{pos,total}}
+  function addCandidate(list,data,at,source){if(obj(data))list.push({data:cp(data),at:Number(at)||0,source})}
+  function choose(cands,path){
+    const rows=[];for(const c of cands){const m=field(c.data,path);if(!obj(m)||synthetic(m))continue;const st=stats(m);if(st.pos)rows.push({...c,map:cp(m),st})}
+    if(!rows.length)return null;const maxPos=Math.max(...rows.map(r=>r.st.pos)),maxTotal=Math.max(...rows.map(r=>r.st.total));
+    const healthy=rows.filter(r=>r.st.pos>=Math.max(1,Math.floor(maxPos*.60))&&r.st.total>=Math.max(1,maxTotal*.05));
+    healthy.sort((a,b)=>(b.at-a.at)||(b.st.pos-a.st.pos)||(b.st.total-a.st.total));
+    return healthy[0]||rows.sort((a,b)=>(b.st.pos-a.st.pos)||(b.st.total-a.st.total)||(b.at-a.at))[0];
+  }
+  function isPorpla(member,mk){return String(mk||"").toLowerCase()==="porpla"||/^porpla\b/i.test(String(member||""))}
+
+  async function repairKkBeforeLogin(member,mk){
+    if(String(mk||"")!==KK)return false;
+    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",KK),profileRef=fs.doc(db,"publicProfiles",KK);
+    let sm=null,pm=null,marker=false;
+    try{const [ss,ps]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(profileRef)]);sm=ss.exists()?Number(ss.data()?.merit):NaN;pm=ps.exists()?Number(ps.data()?.merit):NaN;marker=Boolean(ps.exists()&&ps.data()?.meritRepairR36120Done)}catch(e){console.warn(BUILD,"Kk preload",e);return false}
+    /* Repair the known stale rollback values even if an old tab overwrote them after
+       the first repair. Otherwise this runs only once, so future legitimate spending
+       is not held at a permanent minimum. */
+    const stale=KK_BAD.has(sm)||KK_BAD.has(pm);
+    if(marker&&!stale)return false;
+    if(!stale&&Number.isFinite(pm)&&pm>0&&pm!==KK_TARGET)return false;
+    const b=fs.writeBatch(db);
+    b.set(saveRef,{merit:KK_TARGET,meritRepairR36120At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
+    b.set(profileRef,{memberKey:KK,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||"Kk"),merit:KK_TARGET,initialized:true,meritRepairR36120Done:true,meritRepairR36120At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
+    await b.commit();console.info(BUILD,"Kk merit repaired",{fromSave:sm,fromProfile:pm,to:KK_TARGET});return true;
+  }
+
+  async function rescuePorplaIfAllZero(member,mk){
+    if(!isPorpla(member,mk))return false;
+    const live=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};
+    if(wholeInventoryStats(live).pos>0)return false;
+    const {db,fs}=await getFirebaseContext(),cands=[];
+    try{
+      const qs=await fs.getDocs(fs.collection(db,"saveShards",String(mk),"items"));
+      qs.forEach(d=>{const r=d.data()||{},at=ts(r.updatedAt);addCandidate(cands,r,at,`shard:${d.id}`);if(obj(r.data))addCandidate(cands,r.data,at,`shard-data:${d.id}`)});
+    }catch(e){console.warn(BUILD,"Porpla shard scan",e)}
+    try{const st=await fs.getDoc(fs.doc(db,"saveRescueStaging",String(mk)));if(st.exists()){const r=st.data()||{},at=ts(r.createdAt)||ts(r.updatedAt);if(r.json)try{addCandidate(cands,JSON.parse(String(r.json)),at,"rescue-staging-json")}catch(_){}addCandidate(cands,r,at,"rescue-staging-doc")}}catch(_){}
+    try{for(let i=0;i<localStorage.length;i++){const k=String(localStorage.key(i)||"");if(!/last-good|critical|pending|yainoo-v5/i.test(k))continue;if(!k.toLowerCase().includes("porpla")&&!k.toLowerCase().includes(String(mk).toLowerCase()))continue;const raw=localStorage.getItem(k);if(!raw)continue;try{const box=JSON.parse(raw),at=Number(box?.at)||0;addCandidate(cands,box,at,`local:${k}`);if(obj(box?.state))addCandidate(cands,box.state,at,`local-state:${k}`)}catch(_){}}}catch(_){}
+    const patch={},picked={};
+    for(const path of INV_PATHS){const best=choose(cands,path);if(!best)continue;setField(patch,path,best.map);picked[path]={source:best.source,at:best.at,pos:best.st.pos,total:best.st.total}}
+    if(!Object.keys(patch).length){console.warn(BUILD,"Porpla inventory is zero but no healthy backup survived");return false}
+    patch.inventoryRescueR36120At=Date.now();
+    await fs.setDoc(fs.doc(db,"saves",String(mk)),patch,{merge:true});
+    /* Apply ONLY recovered inventory fields to live state; do not touch merit,
+       plots, unlocks, animals, missions, campaign data, or any other system. */
+    const target=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);
+    if(target){for(const path of INV_PATHS){const v=field(patch,path);if(v!==undefined)setField(target,path,cp(v))}try{saveLocalOnly?.(target)}catch(_){}try{draw?.()}catch(_){}}
+    console.info(BUILD,"Porpla inventory-only rescue",picked);return true;
+  }
+
+  async function resetCampaignsAdminOnce(member,mk){
+    if(String(mk||"").toLowerCase()!=="aida"&&String(member||"").toLowerCase()!=="aida")return false;
+    const {db,fs}=await getFirebaseContext();let changed=0;
+    for(const c of CAMPAIGNS){
+      const metaRef=fs.doc(db,"campaigns",c.id),metaSnap=await fs.getDoc(metaRef);if(!metaSnap.exists())continue;
+      const md=metaSnap.data()||{},run=Number(md.startedAtMs)||Number(md.runId)||0;if(!run)continue;
+      if(Number(md.freshResetR36120RunId||0)===run)continue;
+      const scoreSnap=await fs.getDocs(fs.collection(db,"campaigns",c.id,"scores"));
+      let trioSnap=null;try{trioSnap=await fs.getDocs(fs.query(fs.collection(db,"campaignTrioScores"),fs.where("campaignId","==",c.id)))}catch(e){console.warn(BUILD,"campaign trio scan",c.id,e)}
+      const b=fs.writeBatch(db);
+      scoreSnap.forEach(d=>b.set(d.ref,{memberKey:d.id,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:true}));
+      trioSnap?.forEach?.(d=>{const old=d.data()||{};b.set(d.ref,{campaignId:c.id,key:old.key||c.key,memberKey:old.memberKey||String(d.id).split("__").pop(),displayName:old.displayName||"",runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false})});
+      b.set(fs.doc(db,"campaignScores",c.id),{campaignId:c.id,runId:run,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{},freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
+      b.set(metaRef,{freshResetR36120RunId:run,freshResetR36120At:fs.serverTimestamp()},{merge:true});
+      await b.commit();changed++;
+    }
+    if(changed)console.info(BUILD,"Admin fresh campaign reset completed",changed);
+    return changed>0;
+  }
+
+  async function resetOwnCampaignsOnce(member,mk){
+    mk=String(mk||"").toLowerCase();if(!mk||mk==="aida")return false;
+    const {db,fs}=await getFirebaseContext(),profileRef=fs.doc(db,"publicProfiles",mk);
+    let marks={};try{const ps=await fs.getDoc(profileRef);if(ps.exists()&&obj(ps.data()?.campaignFreshR36120))marks={...ps.data().campaignFreshR36120}}catch(_){}
+    let changed=false;
+    for(const c of CAMPAIGNS){
+      const meta=await fs.getDoc(fs.doc(db,"campaigns",c.id));if(!meta.exists())continue;const md=meta.data()||{},run=Number(md.startedAtMs)||Number(md.runId)||0;if(!run||Number(marks[c.id]||0)===run)continue;
+      const displayName=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||mk);
+      await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",mk),{memberKey:mk,displayName,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
+      await fs.setDoc(fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`),{campaignId:c.id,key:c.key,memberKey:mk,displayName,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
+      try{await fs.runTransaction(db,async tx=>{const ref=fs.doc(db,"campaignScores",c.id),sn=await tx.get(ref);let d=sn.exists()?sn.data()||{}:{};if(Number(d.runId||0)!==run)d={campaignId:c.id,runId:run,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{}};d.scores=obj(d.scores)?{...d.scores}:{};d.names=obj(d.names)?{...d.names}:{};d.reachedAtMs=obj(d.reachedAtMs)?{...d.reachedAtMs}:{};d.breakdowns=obj(d.breakdowns)?{...d.breakdowns}:{};d.receipts=obj(d.receipts)?{...d.receipts}:{};d.scores[mk]=0;d.names[mk]=displayName;d.reachedAtMs[mk]=0;d.breakdowns[mk]={};d.receipts[mk]=[];tx.set(ref,{...d,campaignId:c.id,runId:run,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false})})}catch(e){console.warn(BUILD,"own aggregate reset",c.id,e)}
+      marks[c.id]=run;changed=true;
+    }
+    if(changed)await fs.setDoc(profileRef,{campaignFreshR36120:marks,campaignFreshR36120At:fs.serverTimestamp()},{merge:true});
+    return changed;
+  }
+
+  /* Final login wrapper: Kk repair happens before any login normalization can
+     publish stale 158/188; Porpla rescue happens only after a confirmed all-zero bag. */
+  try{
+    const base=initializeOrLoadCloudState;
+    initializeOrLoadCloudState=async function(member,mk){
+      try{await repairKkBeforeLogin(member,mk)}catch(e){console.error(BUILD,"Kk repair",e)}
+      const out=await base.apply(this,arguments);
+      try{
+        if(String(mk||"").toLowerCase()==="aida"||String(member||"").toLowerCase()==="aida")await resetCampaignsAdminOnce(member,mk);
+        else await resetOwnCampaignsOnce(member,mk);
+      }catch(e){console.error(BUILD,"campaign fresh reset",e)}
+      try{await rescuePorplaIfAllZero(member,mk)}catch(e){console.error(BUILD,"Porpla rescue",e)}
+      return ownState||out;
+    };
+  }catch(e){console.error(BUILD,"login wrapper",e)}
+
+  /* Absolute final campaign recovery lock. Live scoring functions are preserved. */
+  try{
+    const c=globalThis.YN_S2_CAMPAIGNS||{},noop=async()=>true;
+    globalThis.YN_S2_CAMPAIGNS={...c,recoverActiveCampaignScores:noop,retryPendingCampaignScores:noop,migrateLegacyScores:noop,recoverFishingSlots:noop};
+  }catch(e){console.warn(BUILD,"campaign recovery lock",e)}
+
+  globalThis.YN_R36120={BUILD,repairKkBeforeLogin,rescuePorplaIfAllZero,resetCampaignsAdminOnce,resetOwnCampaignsOnce};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded — requested three-system fix only");
 })();
 </script>
 

@@ -4744,7 +4744,7 @@ async function initializeOrLoadCloudState(member,memberKey){
   setTimeout(()=>{try{subscribeOwnGarden()}catch{}try{startNotificationPolling()}catch{}},0);
   /* R36.11: recovery must run AFTER the member save is loaded. The older module
      scheduled recovery during page boot, before currentMemberKey existed. */
-  setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn("R36.11 post-login campaign recovery",e)}try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.()}catch(e){console.warn("R36.11 pending campaign retry",e)}},900);
+  /* R36.120: passive campaign recovery disabled. Only NEW gameplay events may score after an admin reset. */
   return ownState;
 }
 
@@ -35652,9 +35652,12 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
   setTimeout(injectWigInventory,200);
 
   globalThis.YN_WIG_CRAFT={BUILD,key:WIG_KEY,name:WIG_NAME,image:WIG_GOOD_IMG,badImage:WIG_BAD_IMG,open:openWigCraft,craft:craftWig,ensure:ensureWigState};
+  /* R36.120: pending NEW action retry is retained; scoreDetailed validates each
+     original eventAt against the current campaign startedAtMs, so pre-reset
+     events cannot enter a new run. Historical floor/backfill recovery stays off. */
   setInterval(()=>{try{if(currentMemberKey&&!visitContext&&!admin()&&readPendingCampaign().length)retryPendingCampaignScores()}catch(_){}},15000);
   globalThis.YN_S2_CAMPAIGNS={BUILD:"S2-R36.14-PERPLAYER-SCORE-20260915",scoreDetailed,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,applyRecoveryFloor,retryPendingCampaignScores};
-  setTimeout(()=>{recoverActiveCampaignScores();retryPendingCampaignScores()},1800);
+  /* R36.120: do not replay legacy/pending campaign history at login. */
   globalThis.YAINOO_BUILD=BUILD;
   globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
@@ -36385,8 +36388,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
     try{await globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn(BUILD,"campaign recovery",e)}
     try{await reconcileRecentFishing()}catch(_){ }
   }
-  setTimeout(recoveryNow,1600);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(recoveryNow,500)},{passive:true});
+  /* R36.120: passive campaign recovery removed; live actions still score normally. */
 
   /* ---- Save quota/index rescue ----
      updateDoc(deleteField) changes only historical bookkeeping fields.  This is much
@@ -36536,8 +36538,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
 (function YN_R3614_FINAL(){
   "use strict";
   const BUILD="S2-R36.15-QUOTA-CACHE-DUAL-SCORE-20260915";
-  setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.();globalThis.YN_S2_CAMPAIGNS?.recoverActiveCampaignScores?.()}catch(e){console.warn(BUILD,"initial recovery",e)}},1800);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>{try{globalThis.YN_S2_CAMPAIGNS?.retryPendingCampaignScores?.()}catch(_){}},400)},{passive:true});
+  /* R36.120: no automatic pending/recovery replay after campaign reset. */
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
@@ -37392,8 +37393,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   globalThis.YN_S2_CAMPAIGNS={BUILD,scoreDetailed:writeScore,scoreSecretHarvest,scoreFishingClaim,recoverActiveCampaignScores,retryPendingCampaignScores,migrateLegacyScores,recoverFishingSlots};
   /* The bulk Secret harvest adapters call this symbol; keep it bound to the final engine. */
   globalThis.V181_campaignScoreLater=summary=>scoreSecretHarvest(summary);
-  setTimeout(recoverActiveCampaignScores,900);setTimeout(recoverActiveCampaignScores,3500);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(recoverActiveCampaignScores,300)},{passive:true});
+  /* R36.120: historical/trio/fishing recovery is manual-only. New events still use writeScore(). */
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 
@@ -38356,3 +38356,7 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
+
+
+/* S2 R36.120 — data stability marker: merit source guard + inventory rollback guard + fresh campaign starts. */
+window.YAINOO_PACKAGE_BUILD="S2-R36.120-DATA-STABILITY-20260922";
