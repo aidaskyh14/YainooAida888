@@ -25347,6 +25347,13 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let merged;
         await fs.runTransaction(db,async tx=>{
           const snap=await tx.get(ref),remote=snap.exists()?snap.data():{},local=protectPersistent(clone(ownState),remote);
+          /* R36.123: stale tabs/local cache must not publish known reset/default merit
+             sentinels over an established cloud balance. Normal earned/spent values
+             continue to save normally. */
+          {
+            const rm=Number(remote?.merit),lm=Number(local?.merit);
+            if(Number.isFinite(rm)&&rm>300&&[0,158,188,300].includes(lm)) local.merit=rm;
+          }
           r24Revision=Math.max(r24Revision,Number(remote.clientSaveRevision)||0,Number(local.clientSaveRevision)||0)+1;
           local.clientSaveRevision=r24Revision;local.clientLocalEditAt=Date.now();local.activeSessionId=cloudSessionId;
           merged={...clone(remote),...local};protectPersistent(merged,remote);
@@ -25503,7 +25510,12 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
            recovery because a local mutation can happen after the last cloud
            commit but before the next revision is allocated. */
         if(cloudRev<=pendingRev){
-          const recovered=typeof normalizeState==="function"?normalizeState(pending,member):clone(pending);ownState=recovered;if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch(_){}await flushCloudSave();console.info("R24 recovered pending full state");
+          const cloudMerit=Number((ownState||r)?.merit);
+          const recovered=typeof normalizeState==="function"?normalizeState(pending,member):clone(pending);
+          /* R36.123: pending local recovery may restore unfinished inventory/farm state,
+             but it must NEVER replace the authoritative cloud merit loaded at login. */
+          if(Number.isFinite(cloudMerit)) recovered.merit=cloudMerit;
+          ownState=recovered;if(!visitContext)state=ownState;try{saveLocalOnly(ownState)}catch(_){}await flushCloudSave();console.info("R36.123 recovered pending state with cloud merit preserved");
         }else{clearPending();console.info("R24 ignored stale pending state",{cloudRev,pendingRev})}
       }catch(e){console.warn("R24 pending recovery skipped",e)}
     }
