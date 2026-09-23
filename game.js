@@ -4836,7 +4836,7 @@ function subscribeOwnGarden(){
       /* R36.122: ignore a live rollback event to the known reset sentinels when
          this session already holds an established merit total. */
       const localMeritR36122=Number(ownState?.merit),remoteMeritR36122=Number(remote?.merit);
-      if(Number.isFinite(localMeritR36122)&&localMeritR36122>300&&ynMeritResetSentinelR36122(remoteMeritR36122))remote.merit=localMeritR36122;
+      if(Number.isFinite(localMeritR36122)&&localMeritR36122>300&&ynMeritResetSentinelR36122(remoteMeritR36122)&&!(remote?.meritBaselineId==="B20260923"&&ownState?.meritBaselineId!=="B20260923"))remote.merit=localMeritR36122;/* R36.124: an official baseline of 0/300 is real, not a rollback */
       remote.plots=ownState.plots;
       const localComparable=cloneData(ownState),remoteComparable=cloneData(remote);
       delete localComparable.updatedAt;delete remoteComparable.updatedAt;
@@ -38164,7 +38164,13 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
   try{
     const baseNorm=normalizeState;
     normalizeState=function(raw,player){
-      const k=keyNow();
+      /* R36.124 FIX: this guard used to remember/apply merit under the LOGGED-IN
+         player's key even while normalizing SOMEONE ELSE's save (visiting a
+         friend, Aida's admin sweeps, rank/profile reads). That copied one
+         player's merit onto another. Now it only acts on the player's own save. */
+      const who=String(player||(raw&&typeof raw==="object"?raw.player:"")||"").trim().toLowerCase();
+      const me=String(typeof currentMember!=="undefined"?currentMember||"":"").trim().toLowerCase();
+      const k=(!who||!me||who===me)?keyNow():"";
       const explicit=raw&&typeof raw==="object"&&Object.prototype.hasOwnProperty.call(raw,"merit")&&finite(raw.merit);
       if(explicit&&k)remember(k,raw.merit);
       const out=baseNorm.apply(this,arguments);
@@ -38400,3 +38406,119 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
 
 /* S2 R36.120 — data stability marker: merit source guard + inventory rollback guard + fresh campaign starts. */
 window.YAINOO_PACKAGE_BUILD="S2-R36.122-MERIT-ROLLBACK-GUARD-20260922";
+
+
+/* =====================================================================
+   S2 R36.124 — MERIT BASELINE (23 ก.ย. 2026) + LOCAL MERIT REPAIR
+   1) Aida/Admin login applies the owner's official merit table ONCE per
+      player (marker meritBaselineId=B20260923 on the save). After that the
+      number is never re-applied; gameplay counts up/down from it.
+   2) When the index.html merit guard blocks a bad write for THIS player,
+      the on-screen merit is put back to the real server value.
+   3) Players never reset to 0/300: see index.html R36.124 guard +
+      firestore.rules meritWriteOk().
+   ===================================================================== */
+(function YN_R36124_MERIT_BASELINE(){
+  "use strict";
+  const BUILD="S2-R36.124-MERIT-BASELINE-LOCK-20260923";
+  const BID="B20260923";
+  const DONE_FIELD="meritBaselineDone_"+BID;
+  const TABLE=[
+    ["Kk",1190071],["Porpla",1105084],["Pukkie",972536],["Manee",920562],
+    ["Op",772093],["Vodka",725577],["Hana",710395],["Zerosky",709955],
+    ["Tangtang",409278],["Aimme",322607],["Kung A",277592],["Noona",217749],
+    ["Para",212099],["Nitthar",172082],["Sa",169526],["Orn",154056],
+    ["Kaew",149337],["Gik",119971],["Phon",97070],["Simsim",90243],
+    ["Nampj",88658],["Dao",39548],["Gigs Gee",35773],["Kamonnet",32365],
+    ["Jeed",4920],["Blotto Bier",300],["Ar Jane",0],["FOCUS",0]
+  ];
+  const ALIASES={"op":["iphone 18"],"nampj":["nam"]};
+  const low=v=>String(v||"").trim().toLowerCase();
+  const fmt=n=>Number(n||0).toLocaleString("en-US");
+  const esc=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+  const activeKey=k=>{try{return typeof YN_isActivePlayerKey==="function"?YN_isActivePlayerKey(k):!!k}catch(_){return !!k}};
+  const isAidaAdmin=()=>String(typeof currentMember!=="undefined"?currentMember||"":"")==="Aida"&&(typeof adminProfile!=="undefined"&&adminProfile?.role==="admin");
+
+  async function candidates(db,fs){
+    const byName=new Map();
+    const add=(name,key)=>{const n=low(name),k=String(key||"");if(!n||!k||k==="aida"||!activeKey(k))return;if(!byName.has(n))byName.set(n,new Set());byName.get(n).add(k)};
+    try{for(const name of Object.keys(typeof MEMBERS!=="undefined"&&MEMBERS?MEMBERS:{}))add(name,typeof memberKeyFromName==="function"?memberKeyFromName(name):"")}catch(_){}
+    try{const snap=await fs.getDocs(fs.collection(db,"publicProfiles"));snap.forEach(d=>{const x=d.data()||{};add(x.displayName,d.id)})}catch(e){console.warn(BUILD,"profiles read",e)}
+    return byName;
+  }
+  function resolve(byName,name){
+    const exact=byName.get(low(name));
+    if(exact&&exact.size)return [...exact];
+    const out=new Set();for(const a of ALIASES[low(name)]||[])for(const k of byName.get(a)||[])out.add(k);
+    return [...out];
+  }
+
+  let running=false;
+  async function applyBaseline(){
+    if(running||!isAidaAdmin()||!cloudReady)return;running=true;
+    try{
+      const {db,fs}=await getFirebaseContext(),aidaRef=fs.doc(db,"saves","aida");
+      const aSnap=await fs.getDoc(aidaRef);if(aSnap.exists()&&aSnap.data()?.[DONE_FIELD])return;
+      const byName=await candidates(db,fs),rows=[];let problems=0;
+      for(const [name,value] of TABLE){
+        const keys=resolve(byName,name);
+        if(keys.length!==1){problems++;rows.push(`⚠️ ${esc(name)} — ${keys.length?"พบหลายบัญชี ("+keys.map(esc).join(", ")+")":"หาบัญชีไม่เจอ"}`);continue}
+        const key=keys[0],sRef=fs.doc(db,"saves",key),pRef=fs.doc(db,"publicProfiles",key);let status="";
+        try{
+          await fs.runTransaction(db,async tx=>{
+            const [s,p]=await Promise.all([tx.get(sRef),tx.get(pRef)]);
+            if(!s.exists()){status="nosave";return}
+            if(String(s.data()?.meritBaselineId||"")===BID){status="done";return}
+            const before=s.data()?.merit;
+            tx.set(sRef,{merit:value,meritBaselineId:BID,meritBaselineFrom:(typeof before==="number"?before:null),updatedAt:fs.serverTimestamp()},{merge:true});
+            const prof={memberKey:key,merit:value,meritBaselineId:BID,initialized:true,updatedAt:fs.serverTimestamp()};
+            if(!p.exists())prof.displayName=name;
+            tx.set(pRef,prof,{merge:true});
+            status="set:"+(typeof before==="number"?before:"-");
+          });
+        }catch(e){status="error";console.error(BUILD,"baseline",name,e)}
+        if(status==="done")rows.push(`⏭️ ${esc(name)} — ตั้งไว้แล้ว`);
+        else if(status==="nosave"){problems++;rows.push(`⚠️ ${esc(name)} — ยังไม่มีเซฟในระบบ`)}
+        else if(status==="error"){problems++;rows.push(`⚠️ ${esc(name)} — บันทึกไม่สำเร็จ`)}
+        else{const b=status.split(":")[1];rows.push(`✅ ${esc(name)} = ${fmt(value)}${b!=="-"&&Number(b)!==value?` <small>(เดิม ${fmt(b)})</small>`:""}`)}
+      }
+      if(!problems){try{await fs.setDoc(aidaRef,{[DONE_FIELD]:true,updatedAt:fs.serverTimestamp()},{merge:true})}catch(e){console.warn(BUILD,"done flag",e)}}
+      const head=problems?`มี ${problems} รายการที่ยังตั้งไม่ได้ ระบบจะลองใหม่ตอน Aida เข้าเกมครั้งหน้า (คนที่ตั้งแล้วจะไม่ถูกตั้งซ้ำ)`:"ตั้งคะแนนกุศลเริ่มต้นครบทุกคนแล้ว จากนี้คะแนนจะนับเพิ่ม/ลดจากตัวเลขนี้ และจะไม่ถูกตั้งซ้ำอีก";
+      try{message("🙏 ตั้งคะแนนกุศลเริ่มต้น",`${head}<br><br><span style="display:block;max-height:50vh;overflow:auto;text-align:left;line-height:1.7">${rows.join("<br>")}</span>`)}catch(_){}
+      console.info(BUILD,"baseline",rows);
+    }catch(e){console.error(BUILD,"baseline failed",e)}
+    finally{running=false}
+  }
+
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    if(typeof cloudReady!=="undefined"&&cloudReady&&(typeof ownState!=="undefined"&&ownState)){
+      if(isAidaAdmin()){clearInterval(timer);setTimeout(applyBaseline,4000)}
+      else if(tries>40)clearInterval(timer);
+    }else if(tries>240)clearInterval(timer);
+  },1000);
+
+  /* Guard blocked a bad write for THIS player → put the real value back on screen. */
+  window.addEventListener("yn-merit-guard",ev=>{
+    const d=ev?.detail||{},mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey||"":"");
+    if(!mk||d.path!=="saves/"+mk)return;
+    setTimeout(()=>{
+      try{
+        const base=window.YN_MERIT_GUARD?.base?.("saves/"+mk);if(typeof base!=="number")return;
+        const live=Number((ownState||{}).merit);
+        if(Number.isFinite(live)&&live===base)return;
+        if(Number.isFinite(live)&&!(base-live>1000&&(live<=300||live*10<base))&&!(live-base>100000))return;
+        if(ownState)ownState.merit=base;
+        if(typeof visitContext==="undefined"||!visitContext){if(state)state.merit=base}
+        try{saveLocalOnly?.(ownState||state)}catch(_){}
+        try{updateMeritUI?.()}catch(_){}
+      }catch(e){console.warn(BUILD,"local merit repair",e)}
+    },400);
+  });
+
+  globalThis.YN_R36124={BUILD,BID,applyBaseline};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+window.YAINOO_PACKAGE_BUILD="S2-R36.124-MERIT-BASELINE-LOCK-20260923";

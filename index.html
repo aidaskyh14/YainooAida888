@@ -480,6 +480,122 @@
         firestore:{doc,getDoc,setDoc,updateDoc,deleteDoc,collection,addDoc,getDocs,query,where,orderBy,limit,runTransaction,writeBatch,serverTimestamp,onSnapshot,increment}
       };
 
+      /* =================================================================
+         S2 R36.124 — MERIT GUARD (single choke point)
+         Every Firestore read/write in the game goes through bridge.firestore,
+         so this one wrapper protects ALL 200+ merit code paths at once:
+         - remembers the real server merit of saves/publicProfiles/gardens
+         - a write that would crash merit to 0/300 or lose 90%+ is corrected
+           back to the real server value (other fields still save normally)
+         - a client may not set ANOTHER player's merit (only small friend
+           actions / increment() are allowed)
+         - a full-save that forgets the merit field keeps the server value
+         Normal gameplay +/- changes pass through untouched.
+         ================================================================= */
+      (function installMeritGuardR36124(){
+        const BID="B20260923";
+        const TRACK=/^(saves|publicProfiles|gardens)\/[^/]+$/;
+        const known=new Map(), markers=new Map();
+        const own=Object.prototype.hasOwnProperty;
+        const isNum=v=>typeof v==="number"&&Number.isFinite(v);
+        function myKey(){try{return typeof currentMemberKey!=="undefined"?String(currentMemberKey||""):""}catch(_){return ""}}
+        function note(path,data){
+          if(!path||!TRACK.test(path)||!data||typeof data!=="object")return;
+          if(isNum(data.merit))known.set(path,data.merit);
+          if(typeof data.meritBaselineId==="string"&&data.meritBaselineId)markers.set(path,data.meritBaselineId);
+        }
+        function noteSnap(s){try{if(s&&s.ref&&typeof s.exists==="function"&&s.exists())note(s.ref.path,s.data())}catch(_){}}
+        function noteAny(s){try{if(s&&Array.isArray(s.docs))s.docs.forEach(noteSnap);else noteSnap(s)}catch(_){}}
+        function baseFor(path){
+          const key=path.split("/")[1],sp="saves/"+key;
+          if(path!==sp&&known.has(sp))return known.get(sp);
+          return known.has(path)?known.get(path):null;
+        }
+        function catastrophic(base,next){
+          const drop=base-next;
+          return drop>1000&&(next<=300||next*10<base);
+        }
+        function report(path,base,attempted){
+          try{console.warn("R36.124 merit guard kept",path,"at",base,"(blocked",attempted,")")}catch(_){}
+          try{window.dispatchEvent(new CustomEvent("yn-merit-guard",{detail:{path,base,attempted}}))}catch(_){}
+        }
+        /* full = the write replaces the whole document (setDoc without merge) */
+        function clean(ref,data,full){
+          const path=ref&&ref.path;
+          if(!path||!TRACK.test(path)||!data||typeof data!=="object"||Array.isArray(data))return data;
+          const key=path.split("/")[1];
+          if(key==="aida")return data;
+          if(data.meritBaselineId===BID&&markers.get(path)!==BID)return data; /* one-time admin baseline */
+          let out=data;
+          if(full&&path.startsWith("saves/")&&!own.call(out,"meritBaselineId")&&markers.has(path))out={...out,meritBaselineId:markers.get(path)};
+          const base=baseFor(path);
+          if(!own.call(out,"merit")){
+            if(full&&base!==null&&path.startsWith("saves/")){report(path,base,"(missing)");out={...out,merit:base}}
+            return out;
+          }
+          const v=out.merit;
+          if(v===null||v===undefined){if(base!==null){report(path,base,v);out={...out,merit:base}}return out}
+          if(typeof v!=="number")return out; /* increment() / serverTimestamp etc. */
+          if(base===null)return out;
+          let bad=false;
+          if(!Number.isFinite(v))bad=true;
+          else if(key!==myKey())bad=Math.abs(v-base)>200;
+          else bad=catastrophic(base,v)||(v-base>100000);
+          if(bad){report(path,base,v);out={...out,merit:base}}
+          return out;
+        }
+        function afterWrite(path,data){if(data&&typeof data==="object"&&isNum(data.merit))note(path,{merit:data.merit});if(data&&typeof data.meritBaselineId==="string")note(path,{meritBaselineId:data.meritBaselineId})}
+        const F=bridge.firestore;
+        const o={...F};
+        F.getDoc=async function(ref){const s=await o.getDoc.apply(this,arguments);noteSnap(s);return s};
+        F.getDocs=async function(){const s=await o.getDocs.apply(this,arguments);noteAny(s);return s};
+        F.onSnapshot=function(){
+          const args=Array.from(arguments);
+          for(let i=1;i<args.length;i++){
+            const a=args[i];
+            if(typeof a==="function"){args[i]=function(s){noteAny(s);return a.apply(this,arguments)};break}
+            if(a&&typeof a.next==="function"){const nx=a.next;args[i]={...a,next(s){noteAny(s);return nx.apply(a,arguments)}};break}
+          }
+          return o.onSnapshot.apply(this,args);
+        };
+        F.setDoc=async function(ref,data,opts){
+          const full=!(opts&&(opts.merge||opts.mergeFields));
+          const d=clean(ref,data,full);
+          const r=await(opts===undefined?o.setDoc(ref,d):o.setDoc(ref,d,opts));
+          afterWrite(ref&&ref.path,d);return r;
+        };
+        F.updateDoc=async function(ref,data){
+          if(arguments.length>2||typeof data!=="object")return o.updateDoc.apply(this,arguments);
+          const d=clean(ref,data,false);const r=await o.updateDoc(ref,d);afterWrite(ref&&ref.path,d);return r;
+        };
+        F.writeBatch=function(){
+          const b=o.writeBatch.apply(this,arguments),pend=[];
+          const w={
+            set(ref,data,opts){const full=!(opts&&(opts.merge||opts.mergeFields));const d=clean(ref,data,full);pend.push([ref&&ref.path,d]);opts===undefined?b.set(ref,d):b.set(ref,d,opts);return w},
+            update(ref,data){if(arguments.length>2||typeof data!=="object"){b.update.apply(b,arguments);return w}const d=clean(ref,data,false);pend.push([ref&&ref.path,d]);b.update(ref,d);return w},
+            delete(ref){b.delete(ref);return w},
+            async commit(){const r=await b.commit();pend.forEach(([p,d])=>afterWrite(p,d));return r}
+          };
+          return w;
+        };
+        F.runTransaction=function(db,fn,opts){
+          let pend=[];
+          const run=function(tx){
+            pend=[];
+            const w={
+              async get(ref){const s=await tx.get(ref);noteSnap(s);return s},
+              set(ref,data,o2){const full=!(o2&&(o2.merge||o2.mergeFields));const d=clean(ref,data,full);pend.push([ref&&ref.path,d]);o2===undefined?tx.set(ref,d):tx.set(ref,d,o2);return w},
+              update(ref,data){if(arguments.length>2||typeof data!=="object"){tx.update.apply(tx,arguments);return w}const d=clean(ref,data,false);pend.push([ref&&ref.path,d]);tx.update(ref,d);return w},
+              delete(ref){tx.delete(ref);return w}
+            };
+            return fn(w);
+          };
+          const p=opts===undefined?o.runTransaction(db,run):o.runTransaction(db,run,opts);
+          return p.then(r=>{pend.forEach(([pa,d])=>afterWrite(pa,d));return r});
+        };
+        window.YN_MERIT_GUARD={BID,base:path=>baseFor(String(path||"")),known:()=>Object.fromEntries(known)};
+      })();
+
       window.firebaseBridge=bridge;
       window.__resolveFirebase(bridge);
     } catch (error) {
@@ -559,7 +675,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.122-MERIT-ROLLBACK-GUARD-20260922"></script>
+<script src="game.js?v=S2-R36.124-MERIT-BASELINE-LOCK-20260923"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -5973,6 +6089,9 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   }
 
   async function repairKkBeforeLogin(member,mk){
+    /* R36.124: retired. The one-time merit baseline (B20260923) + merit guard
+       replace this per-login Kk override. null = "no change". */
+    return null;
     if(!(await isKkAccount(member,mk)))return false;
     const key=String(mk||KK),{db,fs}=await getFirebaseContext();
     const saveRef=fs.doc(db,"saves",key),profileRef=fs.doc(db,"publicProfiles",key);
