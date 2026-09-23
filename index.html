@@ -559,7 +559,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.120-MERIT-INVENTORY-CAMPAIGN-FIX-20260922"></script>
+<script src="game.js?v=S2-R36.121-TARGETED-HOTFIX-20260922"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -5929,9 +5929,9 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
 })();
 </script>
 
-<script id="r36120-merit-inventory-campaign-final">
+<script id="r36121-merit-inventory-campaign-final">
 /* =====================================================================
-   S2 R36.120 — TARGETED DATA STABILITY
+   S2 R36.121 — TARGETED HOTFIX
    Requested scope only:
    1) Kk/ของขวัญ merit legacy rollback (158/188 -> 1,190,071 once/when stale)
    2) Porpla catastrophic all-zero inventory rescue + future zero-write guard
@@ -5939,7 +5939,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
    ===================================================================== */
 (()=>{
   "use strict";
-  const BUILD="S2-R36.120-MERIT-INVENTORY-CAMPAIGN-FIX-20260922";
+  const BUILD="S2-R36.121-TARGETED-HOTFIX-20260922";
   const KK="s2-pqyqdw14f5bsujtusy", KK_TARGET=1190071, KK_BAD=new Set([158,188]);
   const CAMPAIGNS=[
     {id:"s2-r36-fishing-goodbad",key:"fishing"},
@@ -5966,22 +5966,38 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   }
   function isPorpla(member,mk){return String(mk||"").toLowerCase()==="porpla"||/^porpla\b/i.test(String(member||""))}
 
-  async function repairKkBeforeLogin(member,mk){
-    if(String(mk||"")!==KK)return false;
-    const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",KK),profileRef=fs.doc(db,"publicProfiles",KK);
-    let sm=null,pm=null,marker=false;
-    try{const [ss,ps]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(profileRef)]);sm=ss.exists()?Number(ss.data()?.merit):NaN;pm=ps.exists()?Number(ps.data()?.merit):NaN;marker=Boolean(ps.exists()&&ps.data()?.meritRepairR36120Done)}catch(e){console.warn(BUILD,"Kk preload",e);return false}
-    /* Repair the known stale rollback values even if an old tab overwrote them after
-       the first repair. Otherwise this runs only once, so future legitimate spending
-       is not held at a permanent minimum. */
-    const stale=KK_BAD.has(sm)||KK_BAD.has(pm);
-    if(marker&&!stale)return false;
-    if(!stale&&Number.isFinite(pm)&&pm>0&&pm!==KK_TARGET)return false;
-    const b=fs.writeBatch(db);
-    b.set(saveRef,{merit:KK_TARGET,meritRepairR36120At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
-    b.set(profileRef,{memberKey:KK,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||"Kk"),merit:KK_TARGET,initialized:true,meritRepairR36120Done:true,meritRepairR36120At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
-    await b.commit();console.info(BUILD,"Kk merit repaired",{fromSave:sm,fromProfile:pm,to:KK_TARGET});return true;
+  async function isKkAccount(member,mk){
+    if(String(mk||"")===KK)return true;
+    try{const b=await getFirebaseBridge(),u=b?.getCurrentUser?.();if(String(u?.uid||"")===KK)return true}catch(_){}
+    return false;
   }
+
+  async function repairKkBeforeLogin(member,mk){
+    if(!(await isKkAccount(member,mk)))return false;
+    const key=String(mk||KK),{db,fs}=await getFirebaseContext();
+    const saveRef=fs.doc(db,"saves",key),profileRef=fs.doc(db,"publicProfiles",key);
+    let sm=NaN,pm=NaN;
+    try{const [ss,ps]=await Promise.all([fs.getDoc(saveRef),fs.getDoc(profileRef)]);sm=ss.exists()?Number(ss.data()?.merit):NaN;pm=ps.exists()?Number(ps.data()?.merit):NaN}catch(e){console.warn(BUILD,"Kk preload",e)}
+    /* Never let the known corrupted 158/188 values become authoritative again.
+       If either cloud copy already has the restored value, use it. Otherwise use
+       the requested restored total for this one affected account only. */
+    const good=[sm,pm].filter(v=>Number.isFinite(v)&&!KK_BAD.has(v)&&v>188);
+    const merit=good.length?Math.max(...good):KK_TARGET;
+    try{
+      const b=fs.writeBatch(db);
+      b.set(saveRef,{merit,meritRepairR36121At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
+      b.set(profileRef,{memberKey:key,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||"Kk"),merit,initialized:true,meritRepairR36121At:Date.now(),updatedAt:fs.serverTimestamp()},{merge:true});
+      await b.commit();
+    }catch(e){console.warn(BUILD,"Kk cloud repair write blocked; live guard will still prevent 158/188 publish",e?.message||e)}
+    return merit;
+  }
+
+  function applyKkLiveMerit(v){
+    if(!Number.isFinite(Number(v)))return;
+    const n=Number(v);
+    try{if(typeof ownState!=="undefined"&&ownState)ownState.merit=n;if(typeof state!=="undefined"&&state&&!visitContext)state.merit=n;saveLocalOnly?.(ownState||state);updateMeritUI?.()}catch(_){}
+  }
+
 
   async function rescuePorplaIfAllZero(member,mk){
     if(!isPorpla(member,mk))return false;
@@ -6011,49 +6027,36 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     const {db,fs}=await getFirebaseContext();let changed=0;
     for(const c of CAMPAIGNS){
       const metaRef=fs.doc(db,"campaigns",c.id),metaSnap=await fs.getDoc(metaRef);if(!metaSnap.exists())continue;
-      const md=metaSnap.data()||{},run=Number(md.startedAtMs)||Number(md.runId)||0;if(!run)continue;
-      if(Number(md.freshResetR36120RunId||0)===run)continue;
+      const md=metaSnap.data()||{};if(md.waitingForAdminStartR36121===true)continue;
       const scoreSnap=await fs.getDocs(fs.collection(db,"campaigns",c.id,"scores"));
       let trioSnap=null;try{trioSnap=await fs.getDocs(fs.query(fs.collection(db,"campaignTrioScores"),fs.where("campaignId","==",c.id)))}catch(e){console.warn(BUILD,"campaign trio scan",c.id,e)}
       const b=fs.writeBatch(db);
-      scoreSnap.forEach(d=>b.set(d.ref,{memberKey:d.id,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:true}));
-      trioSnap?.forEach?.(d=>{const old=d.data()||{};b.set(d.ref,{campaignId:c.id,key:old.key||c.key,memberKey:old.memberKey||String(d.id).split("__").pop(),displayName:old.displayName||"",runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false})});
-      b.set(fs.doc(db,"campaignScores",c.id),{campaignId:c.id,runId:run,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{},freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
-      b.set(metaRef,{freshResetR36120RunId:run,freshResetR36120At:fs.serverTimestamp()},{merge:true});
+      scoreSnap.forEach(d=>b.set(d.ref,{memberKey:d.id,runId:0,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,updatedAt:fs.serverTimestamp()},{merge:true}));
+      trioSnap?.forEach?.(d=>{const old=d.data()||{};b.set(d.ref,{campaignId:c.id,key:old.key||c.key,memberKey:old.memberKey||String(d.id).split("__").pop(),displayName:old.displayName||"",runId:0,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,updatedAt:fs.serverTimestamp()},{merge:false})});
+      b.set(fs.doc(db,"campaignScores",c.id),{campaignId:c.id,runId:0,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{},updatedAt:fs.serverTimestamp()},{merge:false});
+      /* Critical: reset means NOT STARTED. Timer stays frozen until Aida presses Start. */
+      b.set(metaRef,{active:false,runId:0,startedAtMs:0,endAtMs:0,waitingForAdminStartR36121:true,resetAtR36121:fs.serverTimestamp(),updatedAt:fs.serverTimestamp()},{merge:true});
       await b.commit();changed++;
     }
-    if(changed)console.info(BUILD,"Admin fresh campaign reset completed",changed);
+    if(changed)console.info(BUILD,"4 campaigns reset to zero and PAUSED until Aida starts",changed);
     return changed>0;
   }
 
-  async function resetOwnCampaignsOnce(member,mk){
-    mk=String(mk||"").toLowerCase();if(!mk||mk==="aida")return false;
-    const {db,fs}=await getFirebaseContext(),profileRef=fs.doc(db,"publicProfiles",mk);
-    let marks={};try{const ps=await fs.getDoc(profileRef);if(ps.exists()&&obj(ps.data()?.campaignFreshR36120))marks={...ps.data().campaignFreshR36120}}catch(_){}
-    let changed=false;
-    for(const c of CAMPAIGNS){
-      const meta=await fs.getDoc(fs.doc(db,"campaigns",c.id));if(!meta.exists())continue;const md=meta.data()||{},run=Number(md.startedAtMs)||Number(md.runId)||0;if(!run||Number(marks[c.id]||0)===run)continue;
-      const displayName=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():String(member||mk);
-      await fs.setDoc(fs.doc(db,"campaigns",c.id,"scores",mk),{memberKey:mk,displayName,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
-      await fs.setDoc(fs.doc(db,"campaignTrioScores",`${c.id}__${mk}`),{campaignId:c.id,key:c.key,memberKey:mk,displayName,runId:run,score:0,breakdown:{},recentReceipts:[],reachedAtMs:null,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false});
-      try{await fs.runTransaction(db,async tx=>{const ref=fs.doc(db,"campaignScores",c.id),sn=await tx.get(ref);let d=sn.exists()?sn.data()||{}:{};if(Number(d.runId||0)!==run)d={campaignId:c.id,runId:run,scores:{},names:{},reachedAtMs:{},breakdowns:{},receipts:{}};d.scores=obj(d.scores)?{...d.scores}:{};d.names=obj(d.names)?{...d.names}:{};d.reachedAtMs=obj(d.reachedAtMs)?{...d.reachedAtMs}:{};d.breakdowns=obj(d.breakdowns)?{...d.breakdowns}:{};d.receipts=obj(d.receipts)?{...d.receipts}:{};d.scores[mk]=0;d.names[mk]=displayName;d.reachedAtMs[mk]=0;d.breakdowns[mk]={};d.receipts[mk]=[];tx.set(ref,{...d,campaignId:c.id,runId:run,freshResetR36120:true,updatedAt:fs.serverTimestamp()},{merge:false})})}catch(e){console.warn(BUILD,"own aggregate reset",c.id,e)}
-      marks[c.id]=run;changed=true;
-    }
-    if(changed)await fs.setDoc(profileRef,{campaignFreshR36120:marks,campaignFreshR36120At:fs.serverTimestamp()},{merge:true});
-    return changed;
-  }
+
+  async function resetOwnCampaignsOnce(){ return false; }
+
 
   /* Final login wrapper: Kk repair happens before any login normalization can
      publish stale 158/188; Porpla rescue happens only after a confirmed all-zero bag. */
   try{
     const base=initializeOrLoadCloudState;
     initializeOrLoadCloudState=async function(member,mk){
-      try{await repairKkBeforeLogin(member,mk)}catch(e){console.error(BUILD,"Kk repair",e)}
+      let kkMerit=null;try{kkMerit=await repairKkBeforeLogin(member,mk)}catch(e){console.error(BUILD,"Kk repair",e)}
       const out=await base.apply(this,arguments);
+      try{if(kkMerit!==null)applyKkLiveMerit(kkMerit)}catch(e){console.error(BUILD,"Kk live merit",e)}
       try{
         if(String(mk||"").toLowerCase()==="aida"||String(member||"").toLowerCase()==="aida")await resetCampaignsAdminOnce(member,mk);
-        else await resetOwnCampaignsOnce(member,mk);
-      }catch(e){console.error(BUILD,"campaign fresh reset",e)}
+      }catch(e){console.error(BUILD,"campaign paused reset",e)}
       try{await rescuePorplaIfAllZero(member,mk)}catch(e){console.error(BUILD,"Porpla rescue",e)}
       return ownState||out;
     };
@@ -6065,9 +6068,18 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     globalThis.YN_S2_CAMPAIGNS={...c,recoverActiveCampaignScores:noop,retryPendingCampaignScores:noop,migrateLegacyScores:noop,recoverFishingSlots:noop};
   }catch(e){console.warn(BUILD,"campaign recovery lock",e)}
 
-  globalThis.YN_R36120={BUILD,repairKkBeforeLogin,rescuePorplaIfAllZero,resetCampaignsAdminOnce,resetOwnCampaignsOnce};
+  /* Final Kk stale-value write guard. This changes only the affected account. */
+  try{
+    const baseSave=save;
+    save=function(){
+      try{const t=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state);if(t&&KK_BAD.has(Number(t.merit))){isKkAccount(currentMember,currentMemberKey).then(ok=>{if(ok){applyKkLiveMerit(KK_TARGET);baseSave.apply(this,arguments)}});return}}catch(_){}
+      return baseSave.apply(this,arguments);
+    };
+  }catch(e){console.warn(BUILD,"Kk save guard",e)}
+
+  globalThis.YN_R36121={BUILD,repairKkBeforeLogin,rescuePorplaIfAllZero,resetCampaignsAdminOnce};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
-  console.info(BUILD,"loaded — requested three-system fix only");
+  console.info(BUILD,"loaded — Kk merit guard + Porpla inventory rescue + campaigns paused at zero");
 })();
 </script>
 

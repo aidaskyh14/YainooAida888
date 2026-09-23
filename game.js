@@ -38359,4 +38359,4 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.118-STABILITY-20260922";
 
 
 /* S2 R36.120 — data stability marker: merit source guard + inventory rollback guard + fresh campaign starts. */
-window.YAINOO_PACKAGE_BUILD="S2-R36.120-DATA-STABILITY-20260922";
+window.YAINOO_PACKAGE_BUILD="S2-R36.121-TARGETED-HOTFIX-20260922";
