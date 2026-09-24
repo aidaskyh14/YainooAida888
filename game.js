@@ -37512,6 +37512,13 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
       const before=clone(s);
       result=await mutator(s,{remote,local,pendingError,fs,tx});
       keys=changedTop(before,s);
+      /* R36.126: merit is applied as a DELTA on the server value read in this
+         transaction. A stale device copy can no longer push an old merit total,
+         and the rank profile below always equals the saved merit, so alpaca
+         breeding / activities / drops are never rejected by the merit lock. */
+      const remoteMerit=Number(remote?.merit)||0;
+      if(keys.includes("merit")){const delta=(Number(s.merit)||0)-(Number(before.merit)||0);s.merit=remoteMerit+delta;if(delta===0)keys=keys.filter(k=>k!=="merit")}
+      const finalMerit=keys.includes("merit")?(Number(s.merit)||0):remoteMerit;
       const rev=Math.max(Number(remote.clientSaveRevision)||0,Number(local?.clientSaveRevision)||0,Number(s.clientSaveRevision)||0)+1;
       const editAt=Date.now();s.clientSaveRevision=rev;s.clientLocalEditAt=editAt;s.activeSessionId=cloudSessionId;
       const patch={clientSaveRevision:rev,clientLocalEditAt:editAt,activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()};
@@ -37521,7 +37528,7 @@ globalThis.YN_R368_CAMPAIGN_SCORE_BUILD='S2-R36.8-CAMPAIGN-SCORE-AUTHORITATIVE-2
       tx.update(saveRef,patch);
       if(garden&&keys.includes("plots"))tx.set(gardenRef,{memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,plots:clone(s.plots||[]),ownerRevision:rev,ownerLocalEditAt:editAt,updatedAt:fs.serverTimestamp()},{merge:true});
       if(profile||keys.includes("merit")||keys.includes("alpaca")){
-        const pp={memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:Number(s.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()};
+        const pp={memberKey:currentMemberKey,displayName:typeof currentProfileDisplayName==="function"?currentProfileDisplayName():currentMember,merit:finalMerit,initialized:true,updatedAt:fs.serverTimestamp()};
         if(keys.includes("alpaca")){try{pp.alpacaHappiness=typeof alpacaTotalHappiness==="function"?Number(alpacaTotalHappiness(s.alpaca))||0:Number(s.alpacaHappiness)||0}catch(_){};pp.alpacaFactoryClaimed=Number(s?.alpaca?.factory?.claimedCount)||0;pp.alpacaHappinessPens=Array.isArray(s?.alpaca?.pens)?s.alpaca.pens.map(p=>Number(p?.happiness)||0):[]}
         tx.set(profileRef,pp,{merge:true});
       }

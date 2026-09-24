@@ -680,7 +680,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.125-UNIFIED-GIFTS-20260923"></script>
+<script src="game.js?v=S2-R36.126-ALPACA-GIFT-FIX-20260923"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -2781,7 +2781,7 @@
     if(tab==='requests')$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-book-pink.png" alt=""><div><small>Aida / Admin</small><h2>🦤 ระบบนกกระจอกเทศ</h2><p>คำขอที่รอการตัดสิน ${requests.length} รายการ</p></div></header>${tabs}<div class="ostrich-scroll ostrich-request-list">${requests.length?requests.map(r=>`<article><div><b>${esc(r.memberName||r.memberKey)}</b><small>ส่งคำขอล่อนกแล้ว</small></div><div><button type="button" data-ostrich-approve="${r.id}">อนุมัติ</button><button type="button" class="reject" data-ostrich-reject="${r.id}">ไม่อนุมัติ</button></div></article>`).join(''):'<p class="empty-feature">ไม่มีคำขอค้างค่ะ</p>'}</div></section>`;
     if(tab==='send'){
       const targets=await memberTargets(true);
-      $('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-adult-icon.png" alt=""><div><small>Aida / Admin</small><h2>🎁 ส่งนกและไอเท็ม</h2><p>จัดชุดหลายรายการแล้วส่งพร้อมกันได้ • บันทึกเป็นชุดเดียวต่อผู้รับ</p></div></header>${tabs}<div class="ostrich-admin-send"><label>ผู้รับ<select id="ostrichAdminTarget"><option value="__all__">สมาชิกทุกคน</option>${targets.map(t=>`<option value="${esc(t.key)}" data-name="${esc(t.name)}">${esc(t.name)}</option>`).join('')}</select></label><div class="ostrich-admin-item-grid ostrich-admin-bundle-grid">${ADMIN_ITEMS.map((it,i)=>`<article class="ostrich-admin-bundle-item"><img src="${it.image}" alt=""><span><b>${esc(it.name)}</b><small>${it.type==='bird'?'เข้าคลังนกคอก 2':'เข้ากระเป๋านกกระจอกเทศ'}</small></span><input type="number" inputmode="numeric" min="0" max="9999" value="0" data-ostrich-admin-qty="${i}" aria-label="จำนวน ${esc(it.name)}"></article>`).join('')}</div><div id="ostrichAdminBundleSummary" class="ostrich-admin-bundle-summary">ยังไม่ได้เลือกของที่จะส่ง</div><button id="ostrichAdminGrant" class="primary-spooky-action" type="button">ส่งชุดของให้ผู้รับ</button></div></section>`
+      $('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-adult-icon.png" alt=""><div><small>Aida / Admin</small><h2>🎁 ส่งนกและไอเท็ม</h2><p>จัดชุดหลายรายการแล้วส่งพร้อมกันได้ • บันทึกเป็นชุดเดียวต่อผู้รับ</p></div></header>${tabs}<div class="ostrich-admin-send"><div class="ost126-pick"><div class="ost126-head"><b>ผู้รับ</b><span id="ost126Count">ยังไม่ได้เลือก</span></div><div class="ost126-tools"><button type="button" id="ost126All">เลือกทุกคน</button><button type="button" id="ost126Clear">ล้าง</button></div><div class="ost126-list">${targets.filter(t=>t.key!=='aida').map(t=>`<label class="ost126-chip"><input type="checkbox" data-ost126-to="${esc(t.key)}"><span>${esc(t.name)}</span></label>`).join('')}</div></div><div class="ostrich-admin-item-grid ostrich-admin-bundle-grid">${ADMIN_ITEMS.map((it,i)=>`<article class="ostrich-admin-bundle-item"><img src="${it.image}" alt=""><span><b>${esc(it.name)}</b><small>${it.type==='bird'?'เข้าคลังนกคอก 2':'เข้ากระเป๋านกกระจอกเทศ'}</small></span><input type="number" inputmode="numeric" min="0" max="9999" value="0" data-ostrich-admin-qty="${i}" aria-label="จำนวน ${esc(it.name)}"></article>`).join('')}</div><div id="ostrichAdminBundleSummary" class="ostrich-admin-bundle-summary">ยังไม่ได้เลือกของที่จะส่ง</div><button id="ostrichAdminGrant" class="primary-spooky-action" type="button">ส่งชุดของให้ผู้รับ</button></div></section>`
     }
     if(tab==='rank'){$('modalContent').innerHTML=`<section class="feature-panel ostrich-modal ostrich-admin-modal"><header><img src="ostrich-book-green.png" alt=""><div><small>Aida / Admin เท่านั้น</small><h2>🏆 Rank ล่อนกสำเร็จ</h2><p>นับเฉพาะนกคอก 1 ที่ได้รับอนุมัติสำเร็จ</p></div></header>${tabs}<div id="ostrichRankList" class="ostrich-scroll ostrich-rank-list"><p>กำลังโหลด...</p></div></section>`;loadAdminRank()}
     openModal();document.querySelectorAll('[data-ostrich-admin-tab]').forEach(b=>b.onclick=()=>openAdminOstrich(b.dataset.ostrichAdminTab));document.querySelectorAll('[data-ostrich-approve]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichApprove,true,b));document.querySelectorAll('[data-ostrich-reject]').forEach(b=>b.onclick=()=>resolveLureRequest(b.dataset.ostrichReject,false,b));
@@ -2791,6 +2791,13 @@
         const sum=$('ostrichAdminBundleSummary');if(sum)sum.innerHTML=picked.length?`<b>ชุดนี้ ${picked.length} รายการ</b> • ${picked.map(x=>`${esc(ADMIN_ITEMS[x.i]?.name||'')} ×${x.qty}`).join(' • ')}`:'ยังไม่ได้เลือกของที่จะส่ง';
       };
       document.querySelectorAll('[data-ostrich-admin-qty]').forEach(el=>{el.oninput=paintBundle;el.onchange=paintBundle});
+      /* R36.126: choose any number of recipients (1, 3, 5 … or everyone) */
+      const boxes=()=>[...document.querySelectorAll('[data-ost126-to]')];
+      const paintPick=()=>{const all=boxes(),n=all.filter(b=>b.checked).length,c=$('ost126Count');all.forEach(b=>b.closest('.ost126-chip')?.classList.toggle('on',b.checked));if(c)c.textContent=n?(n===all.length?`ทุกคน (${n} คน)`:`เลือกแล้ว ${n} คน`):'ยังไม่ได้เลือก'};
+      boxes().forEach(b=>b.onchange=paintPick);
+      if($('ost126All'))$('ost126All').onclick=()=>{boxes().forEach(b=>b.checked=true);paintPick()};
+      if($('ost126Clear'))$('ost126Clear').onclick=()=>{boxes().forEach(b=>b.checked=false);paintPick()};
+      paintPick();
       $('ostrichAdminGrant').onclick=()=>adminGrantBundle();paintBundle();
     }
   }
@@ -2804,8 +2811,11 @@
     if(!admin())return;
     const bundle=[...document.querySelectorAll('[data-ostrich-admin-qty]')].map(el=>({item:ADMIN_ITEMS[Number(el.dataset.ostrichAdminQty)],qty:Math.max(0,Math.min(9999,Math.floor(Number(el.value)||0)))})).filter(x=>x.item&&x.qty>0);
     if(!bundle.length)return message('ยังส่งไม่ได้','ใส่จำนวนอย่างน้อย 1 รายการก่อนค่ะ');
-    const target=$('ostrichAdminTarget'),value=target?.value||'',all=value==='__all__';let targets=await memberTargets(true);if(all)targets=targets.filter(t=>t.key!=='aida');else targets=targets.filter(t=>t.key===value);
+    const picked=new Set([...document.querySelectorAll('[data-ost126-to]:checked')].map(b=>String(b.dataset.ost126To||'')));
+    if(!picked.size)return message('ยังส่งไม่ได้','เลือกผู้รับอย่างน้อย 1 คนก่อนค่ะ');
+    let targets=(await memberTargets(true)).filter(t=>t.key!=='aida'&&picked.has(String(t.key)));
     if(!targets.length)return message('ส่งไม่ได้','ไม่พบผู้รับค่ะ');
+    if(!confirm(`ส่งชุดของนกกระจอกเทศให้ ${targets.length} คน\n${targets.slice(0,12).map(t=>t.name).join(', ')}${targets.length>12?' …':''}\n\nยืนยันส่งไหม?`))return;
     const btn=$('ostrichAdminGrant'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent=`กำลังส่ง 0/${targets.length}...`}
     let done=0,failed=[];
     async function one(tg){
@@ -3781,6 +3791,11 @@ console.info(BUILD,"loaded");
     return fallback;
   }
   const player=()=>String(typeof currentMember!=="undefined"?currentMember:"").trim();
+  /* R36.126: the game save is the one the game loaded (currentMemberKey).
+     Mailbox/warehouse are checked under BOTH the login identity and the loaded
+     key, so a gift can never be "claimed" into a key the player cannot see. */
+  async function saveKey(){const a=mk();if(a)return a;return selfKey()}
+  async function allKeys(hint){const out=[];for(const k of [hint,mk(),await selfKey().catch(()=>"")]){const v=String(k||"").trim();if(v&&!out.includes(v))out.push(v)}return out}
   const isAdmin=()=>mk().toLowerCase()==="aida"&&(player()==="Aida"||globalThis.adminProfile?.role==="admin");
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const iv=v=>Math.max(0,Math.floor(Number(v)||0));
@@ -3823,15 +3838,33 @@ console.info(BUILD,"loaded");
   function close(){const h=ensureHost();h.style.display="none";h.innerHTML=""}
 
   /* ---------- hard zero reset of historical root warehouse ---------- */
+  /* R36.126: the zero-reset happens ONCE per player (old history before 16 Sep).
+     After that, alpacas that land in save.alpaca.vault (crafting, campaign
+     rewards, friend gifts, capture) are MOVED into this warehouse instead of
+     being wiped, so "received" always means "visible in คลังอัลปาก้า". */
   let resetPromise=null;
+  function vaultStack(k,v,t){
+    const color=String(v?.color||"");if(!COLORS.has(color))return null;
+    const baby=String(v?.type||"")==="baby";
+    return{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:1,placedCount:0,type:baby?"baby":"adult",color,sex:baby?null:(v?.sex==="female"?"female":"male"),name:String(v?.name||""),image:String(IMG[color]||IMG.white),source:String(v?.source||"vault"),sourceVaultId:String(v?.id||""),deliveryId:"",receivedAt:Number(v?.createdAt)||t,storedAt:null};
+  }
+  async function migrateVault(){
+    const k=await saveKey();if(!k)return 0;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let moved=0,wiped=false;
+    await fs.runTransaction(db,async tx=>{
+      moved=0;wiped=false;
+      const sn=await tx.get(ref);if(!sn.exists())return;const d=sn.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{},vault=Array.isArray(a.vault)?a.vault:[];
+      if(String(a.warehouseResetEpoch||"")!==RESET_EPOCH){wiped=true;tx.update(ref,{"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,"alpaca.warehouseResetAt":now(),updatedAt:fs.serverTimestamp()});return}
+      if(!vault.length)return;const t=now();
+      vault.forEach((v,i)=>{const st=vaultStack(k,v,t);if(!st)return;st.storedAt=fs.serverTimestamp();tx.set(whRef(fs,db,k,`vault-${safeId(v?.id||`${t}-${i}`)}`),st,{merge:false});moved++});
+      tx.update(ref,{"alpaca.vault":[],updatedAt:fs.serverTimestamp()});
+    });
+    try{if(typeof ownState!=="undefined"&&ownState){ownState.alpaca=ownState.alpaca&&typeof ownState.alpaca==="object"?ownState.alpaca:{};ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }
+    if(moved)console.info(BUILD,"R36.126 moved",moved,"vault alpaca(s) into warehouse");
+    return moved;
+  }
   async function ensureReset(){
     if(resetPromise)return resetPromise;
-    resetPromise=(async()=>{
-      const k=await selfKey();if(!k)return false;const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",k);let changed=false;
-      await fs.runTransaction(db,async tx=>{const sn=await tx.get(ref);if(!sn.exists())return;const d=sn.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{};if(String(a.warehouseResetEpoch||"")===RESET_EPOCH&&Array.isArray(a.vault)&&a.vault.length===0)return;changed=true;tx.update(ref,{"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,"alpaca.warehouseResetAt":now(),updatedAt:fs.serverTimestamp()})});
-      try{if(typeof ownState!=="undefined"&&ownState){ownState.alpaca=ownState.alpaca&&typeof ownState.alpaca==="object"?ownState.alpaca:{};ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;ownState.alpaca.warehouseResetAt=now();if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }
-      return changed;
-    })().catch(e=>{resetPromise=null;console.warn(BUILD,"reset",e);throw e});return resetPromise;
+    resetPromise=migrateVault().catch(e=>{resetPromise=null;console.warn(BUILD,"reset/migrate",e);throw e});return resetPromise;
   }
 
   /* ---------- FAST sender ---------- */
@@ -3888,35 +3921,46 @@ console.info(BUILD,"loaded");
   /* ---------- NEW warehouse: ONLY claimed R36.51 gifts ---------- */
   const whCol=(fs,db,k)=>fs.collection(db,"alpacaGiftWarehouse",k,"items");
   const whRef=(fs,db,k,id)=>fs.doc(db,"alpacaGiftWarehouse",k,"items",id);
-  async function claimGift(mailId){
-    const k=await selfKey();if(!k)throw new Error("ยังไม่พบสมาชิก");
-    /* R36.112: claiming is receiver-owned and must not depend on rewriting the
-       root save first. A stale/contended warehouse-reset transaction used to
-       prevent an otherwise valid gift from ever entering alpacaGiftWarehouse. */
-    try{await ensureReset()}catch(e){console.warn(BUILD,"claim reset skipped",e)}
-    const {db,fs}=await getFirebaseContext(),mref=fs.doc(db,"mailboxes",k,"items",mailId),ms=await fs.getDoc(mref);if(!ms.exists())return{already:true,count:0};const g=ms.data()||{};if(g.type!=="alpacaGiftR3651"||g.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");if(g.toKey&&String(g.toKey)!==k)throw new Error("เส้นทางของขวัญไม่ตรงกับบัญชีที่กำลังเล่น");const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");const t=now(),batch=fs.writeBatch(db);let total=0;items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;batch.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});batch.delete(mref);await batch.commit();try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);return{count:total};
+  async function claimGift(mailId,hint){
+    mailId=String(mailId||"");if(!mailId)throw new Error("ไม่พบรายการของขวัญ");
+    const keys=await allKeys(hint);if(!keys.length)throw new Error("ยังไม่พบสมาชิก");
+    const {db,fs}=await getFirebaseContext();
+    let k="",ms=null;for(const key of keys){try{const x=await fs.getDoc(fs.doc(db,"mailboxes",key,"items",mailId));if(x.exists()){k=key;ms=x;break}}catch(e){console.warn(BUILD,"claim lookup",key,e?.message||e)}}
+    if(!k)return{already:true,count:0};
+    const g0=ms.data()||{};if(g0.type!=="alpacaGiftR3651"||g0.epoch!==EPOCH)throw new Error("ของขวัญนี้เป็นระบบเก่า กรุณาให้ Aida ส่งใหม่");
+    const mref=fs.doc(db,"mailboxes",k,"items",mailId);let total=0,already=false;
+    await fs.runTransaction(db,async tx=>{
+      total=0;already=false;const cur=await tx.get(mref);if(!cur.exists()){already=true;return}
+      const g=cur.data()||{};const items=(Array.isArray(g.items)?g.items:[]).filter(x=>["alpacaAdult","alpacaBaby"].includes(String(x.type))&&COLORS.has(String(x.color||""))&&iv(x.qty)>0);if(!items.length)throw new Error("ไม่พบอัลปาก้าในของขวัญ");
+      const t=now();
+      items.forEach((it,i)=>{const q=Math.max(1,Math.min(99999,iv(it.qty)));total+=q;const baby=it.type==="alpacaBaby",id=`r3651-${safeId(mailId)}-${i}`;tx.set(whRef(fs,db,k,id),{schemaVersion:6,epoch:EPOCH,state:"stored",kind:"stack",memberKey:k,qty:q,placedCount:0,type:baby?"baby":"adult",color:String(it.color),sex:baby?null:(it.sex==="female"?"female":"male"),name:String(it.name||""),image:String(it.image||IMG[it.color]||IMG.white),source:"alpaca-gift-r3651",sourceMailboxId:mailId,deliveryId:String(g.deliveryId||""),receivedAt:t,storedAt:fs.serverTimestamp()},{merge:false})});
+      tx.delete(mref);
+    });
+    try{notificationDataCache.at=0;refreshNotificationBadge?.(true)}catch(_){ }
+    if(!already)showWeatherToast?.(`🦙 รับเข้าคลังแล้ว ${total} ตัว`);
+    return{count:total,already,memberKey:k};
   }
-  async function readStacks(){const k=await selfKey();if(!k)return[];const {db,fs}=await getFirebaseContext(),q=fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x={id:d.id,...d.data()};if(validStack(x))out.push(x)});return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
+  async function readStacks(){const keys=await allKeys();if(!keys.length)return[];const {db,fs}=await getFirebaseContext(),out=[],seen=new Set();for(const k of keys){try{const sn=await fs.getDocs(fs.query(whCol(fs,db,k),fs.where("epoch","==",EPOCH)));sn.forEach(d=>{const x={id:d.id,...d.data(),_mk:k};if(validStack(x)&&!seen.has(k+"/"+d.id)){seen.add(k+"/"+d.id);out.push(x)}})}catch(e){console.warn(BUILD,"warehouse read",k,e?.message||e)}}return out.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0))}
   function animalName(x){const c=LABEL[x.color]||x.color||"ขาว";return x.type==="baby"?`เบบี้อัลปาก้าสี${c}`:`อัลปาก้าสี${c} • ${x.sex==="female"?"เพศเมีย":"เพศผู้"}`}
-  function wcard(x){return `<article class="r51wcard"><img src="${esc(x.image||IMG[x.color]||IMG.white)}"><div><b>${esc(animalName(x))}</b><small>ของขวัญใหม่ • รับแล้ว • ยังไม่ได้วาง</small><span class="r51badge">คงเหลือ ×${iv(x.qty)}</span></div><button class="r51place" data-r51-place="${esc(x.id)}">วางเข้าคอก 1 ตัว</button></article>`}
+  function wcard(x){return `<article class="r51wcard"><img src="${esc(x.image||IMG[x.color]||IMG.white)}"><div><b>${esc(animalName(x))}</b><small>ของขวัญใหม่ • รับแล้ว • ยังไม่ได้วาง</small><span class="r51badge">คงเหลือ ×${iv(x.qty)}</span></div><button class="r51place" data-r51-place="${esc(x.id)}" data-r51-mk="${esc(x._mk||"")}">วางเข้าคอก 1 ตัว</button></article>`}
   async function openWarehouse(){
     const h=show(`<div class="r51top"><img src="alpaca-princess-stage1_idle.png"><div class="r51title"><small>ALPACA WAREHOUSE • R36.51</small><h2>คลังอัลปาก้า</h2><p data-r51-whsub>กำลังโหลดคลังใหม่…</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51warn">เริ่มใหม่จาก 0 • หน้านี้อ่านเฉพาะของขวัญ R36.51 ที่กดรับแล้วและยังไม่ได้วางเท่านั้น</div><div class="r51warehouse" data-r51-wh><div class="r51empty"><span>🦙</span><b>กำลังโหลด…</b></div></div></div>`);
-    try{await ensureReset()}catch(_){ }let stacks=[];try{stacks=await readStacks()}catch(e){console.warn(BUILD,"warehouse",e)}const total=stacks.reduce((n,x)=>n+iv(x.qty),0),sub=h.querySelector("[data-r51-whsub]"),grid=h.querySelector("[data-r51-wh]");if(sub)sub.textContent=`ยังไม่ได้วาง ${total.toLocaleString("th-TH")} ตัว`;if(grid)grid.innerHTML=stacks.length?stacks.map(wcard).join(""):`<div class="r51empty"><span>🦙</span><b>คลังว่าง 0 ตัว</b><small>ให้ Aida ส่งใหม่ → กดรับ → ตัวที่ยังไม่วางจะอยู่ตรงนี้</small></div>`;h.querySelectorAll("[data-r51-place]").forEach(b=>b.onclick=()=>openPenPicker(b.dataset.r51Place));
+    try{await ensureReset();await migrateVault()}catch(_){ }let stacks=[];try{stacks=await readStacks()}catch(e){console.warn(BUILD,"warehouse",e)}const total=stacks.reduce((n,x)=>n+iv(x.qty),0),sub=h.querySelector("[data-r51-whsub]"),grid=h.querySelector("[data-r51-wh]");if(sub)sub.textContent=`ยังไม่ได้วาง ${total.toLocaleString("th-TH")} ตัว`;if(grid)grid.innerHTML=stacks.length?stacks.map(wcard).join(""):`<div class="r51empty"><span>🦙</span><b>คลังว่าง 0 ตัว</b><small>ให้ Aida ส่งใหม่ → กดรับ → ตัวที่ยังไม่วางจะอยู่ตรงนี้</small></div>`;h.querySelectorAll("[data-r51-place]").forEach(b=>b.onclick=()=>openPenPicker(b.dataset.r51Place,b.dataset.r51Mk));
   }
   function localPens(){try{const s=(typeof ownState!=="undefined"&&ownState)||(typeof state!=="undefined"&&state)||{};return Array.isArray(s?.alpaca?.pens)?s.alpaca.pens:[]}catch(_){return[]}}
-  function openPenPicker(id){const ps=localPens(),h=show(`<div class="r51top"><img src="${IMG.white}"><div class="r51title"><small>PLACE ALPACA</small><h2>เลือกคอก</h2><p>คอกละ ${PEN_CAPACITY} ตัว</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51pens">${Array.from({length:5},(_,i)=>{const p=ps[i]||{},n=(Array.isArray(p.alpacas)?p.alpacas:[]).length;return `<button class="r51pen" data-r51-pen="${i+1}" ${n>=PEN_CAPACITY?"disabled":""}><b>คอก ${i+1}</b><small>${esc(p.name||"")} • ${n}/${PEN_CAPACITY}</small></button>`}).join("")}</div><div class="r51tools"><button class="r51back" data-r51-back>← กลับคลัง</button></div></div>`);h.querySelector("[data-r51-back]").onclick=openWarehouse;h.querySelectorAll("[data-r51-pen]").forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{await placeGift(id,Number(b.dataset.r51Pen));showWeatherToast?.(`🦙 วางเข้าคอก ${b.dataset.r51Pen} แล้ว`);await openWarehouse()}catch(e){b.disabled=false;message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}})}
+  function openPenPicker(id,whKey){const ps=localPens(),h=show(`<div class="r51top"><img src="${IMG.white}"><div class="r51title"><small>PLACE ALPACA</small><h2>เลือกคอก</h2><p>คอกละ ${PEN_CAPACITY} ตัว</p></div><button class="r51x" data-r51-close>×</button></div><div class="r51body"><div class="r51pens">${Array.from({length:5},(_,i)=>{const p=ps[i]||{},n=(Array.isArray(p.alpacas)?p.alpacas:[]).length;return `<button class="r51pen" data-r51-pen="${i+1}" ${n>=PEN_CAPACITY?"disabled":""}><b>คอก ${i+1}</b><small>${esc(p.name||"")} • ${n}/${PEN_CAPACITY}</small></button>`}).join("")}</div><div class="r51tools"><button class="r51back" data-r51-back>← กลับคลัง</button></div></div>`);h.querySelector("[data-r51-back]").onclick=openWarehouse;h.querySelectorAll("[data-r51-pen]").forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;try{await placeGift(id,Number(b.dataset.r51Pen),whKey);showWeatherToast?.(`🦙 วางเข้าคอก ${b.dataset.r51Pen} แล้ว`);await openWarehouse()}catch(e){b.disabled=false;message?.("วางอัลปาก้าไม่ได้",e?.message||"กรุณาลองใหม่")}})}
   function makePlaced(x,id,serial,t){
     if(x.type==="baby")return{id:`${id}-p${serial}`,type:"baby",color:x.color,bornAt:t,readyProcessAt:t+12*HOUR,source:"gift",deliveryId:String(x.deliveryId||""),placedAt:t,expiresAt:t+7*DAY};
     return{id:`${id}-p${serial}`,type:"adult",color:x.color,sex:x.sex==="female"?"female":"male",name:String(x.name||""),createdAt:t,woolStage:1,woolStageEndsAt:t+2*HOUR,everSheared:false,lastShearedAt:0,nextHungryAt:t+3*HOUR,hungrySince:0,hungerPenaltyBuckets:0,sickAt:0,sickPenaltyBuckets:0,breedReadyAt:0,breedingUntil:0,breedingSire:null,pregnancyStartedAt:0,pregnantUntil:0,birthAccelUsed:false,pregnancyRoyal:false,breederCooldownUntil:0,source:"gift",deliveryId:String(x.deliveryId||""),placedAt:t,expiresAt:t+7*DAY};
   }
-  async function placeGift(id,penNo){
-    const k=await selfKey();if(!k)throw new Error("ยังไม่พบสมาชิก");await ensureReset();try{globalThis.YN_SAVE_GUARD_ALL_PLAYERS?.compact?.(3)}catch(_){ }const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,k,id);let nextPens=null;
-    await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้ารายการนี้หมดจากคลังแล้ว");const x=is.data()||{},qty=iv(x.qty);if(!validStack(x)||qty<1)throw new Error("รายการนี้ไม่ใช่อัลปาก้าคลังใหม่");const d=ss.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{},pens=cp(Array.isArray(a.pens)?a.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็ม ${PEN_CAPACITY}/${PEN_CAPACITY} แล้ว`);const serial=iv(x.placedCount)+1,t=now(),animal=makePlaced(x,id,serial,t);p.alpacas.push(animal);nextPens=pens;tx.update(sref,{"alpaca.pens":pens,"alpaca.vault":[],"alpaca.warehouseResetEpoch":RESET_EPOCH,updatedAt:fs.serverTimestamp()});if(qty<=1)tx.delete(iref);else tx.update(iref,{qty:qty-1,placedCount:serial,updatedAt:fs.serverTimestamp()})});
-    try{if(nextPens&&ownState?.alpaca){ownState.alpaca.pens=nextPens;ownState.alpaca.vault=[];ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
+  async function placeGift(id,penNo,whKey){
+    const k=await saveKey();if(!k)throw new Error("ยังไม่พบสมาชิก");const wk=String(whKey||"")||k;try{await ensureReset()}catch(_){ }const {db,fs}=await getFirebaseContext(),sref=fs.doc(db,"saves",k),iref=whRef(fs,db,wk,id);let nextPens=null;
+    await fs.runTransaction(db,async tx=>{const [ss,is]=await Promise.all([tx.get(sref),tx.get(iref)]);if(!ss.exists())throw new Error("ไม่พบข้อมูลผู้เล่น");if(!is.exists())throw new Error("อัลปาก้ารายการนี้หมดจากคลังแล้ว");const x=is.data()||{},qty=iv(x.qty);if(!validStack(x)||qty<1)throw new Error("รายการนี้ไม่ใช่อัลปาก้าคลังใหม่");const d=ss.data()||{},a=d.alpaca&&typeof d.alpaca==="object"?d.alpaca:{},pens=cp(Array.isArray(a.pens)?a.pens:[]),p=pens[penNo-1];if(!p)throw new Error("ไม่พบคอกนี้");p.alpacas=Array.isArray(p.alpacas)?p.alpacas:[];if(p.alpacas.length>=PEN_CAPACITY)throw new Error(`คอก ${penNo} เต็ม ${PEN_CAPACITY}/${PEN_CAPACITY} แล้ว`);const serial=iv(x.placedCount)+1,t=now(),animal=makePlaced(x,id,serial,t);p.alpacas.push(animal);nextPens=pens;tx.update(sref,{"alpaca.pens":pens,"alpaca.warehouseResetEpoch":RESET_EPOCH,updatedAt:fs.serverTimestamp()});if(qty<=1)tx.delete(iref);else tx.update(iref,{qty:qty-1,placedCount:serial,updatedAt:fs.serverTimestamp()})});
+    try{if(nextPens&&ownState?.alpaca){ownState.alpaca.pens=nextPens;ownState.alpaca.warehouseResetEpoch=RESET_EPOCH;if(!visitContext)state=ownState;saveLocalOnly?.(ownState)}}catch(_){ }try{globalThis.YN_ALPACA_CORE?.renderPen?.()}catch(_){ }
   }
 
   /* ---------- notification card ---------- */
-  async function pendingRows(){const k=await selfKey();if(!k)return[];try{const {db,fs}=await getFirebaseContext(),q=fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3651")),sn=await fs.getDocs(q),out=[];sn.forEach(d=>{const x=d.data()||{};if(x.epoch===EPOCH&&!x.resolved)out.push({id:d.id,...x})});return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(_){return[]}}
+  async function pendingRows(){const keys=await allKeys();if(!keys.length)return[];try{const {db,fs}=await getFirebaseContext(),out=[],seen=new Set();for(const k of keys){try{const sn=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",k,"items"),fs.where("type","==","alpacaGiftR3651"),fs.limit(300)));sn.forEach(d=>{const x=d.data()||{};if(x.epoch===EPOCH&&!x.resolved&&!seen.has(d.id)){seen.add(d.id);out.push({id:d.id,...x,_mk:k})}})}catch(e){console.warn(BUILD,"alpaca mail read",k,e?.message||e)}}return out.sort((a,b)=>(b.createdAt?.toMillis?.()||b.createdAtClient||0)-(a.createdAt?.toMillis?.()||a.createdAtClient||0))}catch(_){return[]}}
   async function decorateInbox(){const list=document.querySelector('.notification-panel .notification-list');if(!list)return;list.querySelectorAll('.r3651-gift-note').forEach(x=>x.remove());const rows=await pendingRows();for(const g of rows.slice(0,20).reverse()){const items=Array.isArray(g.items)?g.items:[],c=document.createElement('article');c.className='notification-card r3651-gift-note unread';c.innerHTML=`<div style="display:flex;gap:9px;align-items:center"><img src="${esc(g.previewImage||items[0]?.image||IMG.white)}" style="width:46px;height:46px;object-fit:contain;border-radius:12px;background:#f8e8ef"><div style="min-width:0;flex:1"><b>🎁 ยัยหนูส่งอัลปาก้าให้คุณ</b><small style="display:block">${esc(items.map(x=>`${x.name} ×${x.qty}`).join(' • '))}</small></div></div><button type="button" data-r3651-claim="${esc(g.id)}" style="width:100%;margin-top:8px">รับเข้าคลังอัลปาก้า</button>`;list.prepend(c)}list.querySelectorAll('[data-r3651-claim]').forEach(b=>b.onclick=async()=>{if(b.disabled)return;b.disabled=true;b.textContent='กำลังรับ…';try{await claimGift(b.dataset.r3651Claim);b.closest('.r3651-gift-note')?.remove();await openWarehouse()}catch(e){b.disabled=false;b.textContent='รับเข้าคลังอัลปาก้า';message?.('รับอัลปาก้าไม่ได้',e?.message||'กรุณาลองใหม่')}})}
   try{if(typeof showNotifications==="function"){const base=showNotifications;showNotifications=async function(tab="friend"){const r=await base.apply(this,arguments);if(tab==="yainoo")setTimeout(()=>decorateInbox().catch(()=>{}),0);return r}}}catch(_){ }
 
@@ -3932,7 +3976,7 @@ console.info(BUILD,"loaded");
   if(globalThis.YN_ALPACA_CORE)globalThis.YN_ALPACA_CORE.showAlpacaWarehouse=openWarehouse;
   setTimeout(()=>ensureReset().catch(()=>{}),900);
   setTimeout(mountAdmin,0);
-  globalThis.YN_R3651={BUILD,EPOCH,openSender,openWarehouse,claimGift,ensureReset};
+  globalThis.YN_R3651={BUILD,EPOCH,openSender,openWarehouse,claimGift,ensureReset,migrateVault,pendingRows,selfKey,allKeys};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;console.info(BUILD,"loaded");
 })();
 </script>
@@ -4074,7 +4118,7 @@ console.info(BUILD,"loaded");
       return merged.concat(recent);
     };
     if(obj(s.alpaca)){
-      s.alpaca=cp(s.alpaca);s.alpaca.vault=[];
+      s.alpaca=cp(s.alpaca);/* R36.126: keep newly received/crafted alpacas until they move to the warehouse */s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault.slice(-200):[];
       for(const key of ["royalCdDropsV3423","royalCdDropsV3421","royalDiscDrops"]){
         const groups=s.alpaca[key];if(!obj(groups))continue;
         for(let p=1;p<=5;p++){const pen=`pen${p}`;groups[pen]=compactDrops(groups[pen],`${key}-${pen}`,2)}
@@ -4263,20 +4307,29 @@ console.info(BUILD,"loaded");
   function makeBatch(fs,db,ops){const b=fs.writeBatch(db);for(const o of ops){if(o.kind==="set")b.set(o.ref,o.data,o.opt);else if(o.kind==="update")b.update(o.ref,o.data);else if(o.kind==="delete")b.delete(o.ref)}return b}
   async function writePatch(fs,db,ref,mk,patch){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,patch||{},r),ops=[],rp={...sp.root,savePartitionR36117:1};rp.saveLayoutVersion=LAYOUT;rp.saveShardBuild=BUILD;rp.saveShardRoutes=sp.routes;ops.push({kind:"set",ref,data:nestedPatch(rootTouch(fs,rp)),opt:{merge:true}});for(const [g,p] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(fs,db,mk,g),data:shardPatch(fs,p),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return makeBatch(fs,db,ops).commit()}
   function looksFullState(d){return obj(d)&&("merit" in d)&&(obj(d.bag)||Array.isArray(d.plots)||obj(d.specials)||obj(d.alpaca))}
+  /* R36.126: a small credit to ANOTHER player's save (friend alpaca breeding +150,
+     cat slap/tease, market seller credit, admin consolation merit) touches only
+     root fields such as merit/updatedAt. It must reach Firestore exactly as written:
+     adding layout/route/revision fields made the friend-credit rules reject the
+     whole transaction ("Missing or insufficient permissions") and could overwrite
+     the other player's shard routes with an empty map. */
+  function foreignRootOnly(mk,data){
+    try{if(!obj(data)||!Object.keys(data).length)return false;const me=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"");if(!mk||String(mk)===me)return false;return Object.keys(data).every(k=>ROOT_PINNED.has(String(k).split(".")[0]))}catch(_){return false}
+  }
 
   const proxyCacheRaw=new WeakMap();
   async function wrappedGetFirebaseContext(){const ctx=await rawContext(),db=ctx.db,fs=ctx.fs;if(proxyCacheRaw.has(fs))return{...ctx,fs:proxyCacheRaw.get(fs)};const prox=new Proxy(fs,{get(target,prop){
     if(prop==="getDocFromServer"&&typeof target.getDocFromServer!=="function")return undefined;
     if(prop==="getDoc"||prop==="getDocFromServer")return async ref=>{const base=await target[prop](ref),info=saveInfo(ref);return info?hydrate(target,db,ref,base,prop==="getDocFromServer"):base};
     if(prop==="onSnapshot")return function(ref,...args){const info=saveInfo(ref);if(!info)return target.onSnapshot(ref,...args);let options=null,next=null,error=null,complete=null;if(args[0]&&typeof args[0]==="object"&&typeof args[0]!=="function"&&!(typeof args[0].next==="function")){options=args[0];if(args[1]&&typeof args[1]==="object"){next=args[1].next?.bind(args[1]);error=args[1].error?.bind(args[1]);complete=args[1].complete?.bind(args[1])}else{next=args[1];error=args[2];complete=args[3]}}else if(args[0]&&typeof args[0]==="object"){next=args[0].next?.bind(args[0]);error=args[0].error?.bind(args[0]);complete=args[0].complete?.bind(args[0])}else{next=args[0];error=args[1];complete=args[2]}let dead=false,timer=0,seq=0;const emit=()=>{const my=++seq;clearTimeout(timer);timer=setTimeout(async()=>{try{const b=await serverGet(target,ref),h=await hydrate(target,db,ref,b,true);if(!dead&&my===seq)next?.(h)}catch(e){console.warn(BUILD,"snapshot hydrate",e?.message||e)}},80)};const u=options?target.onSnapshot(ref,options,emit,e=>error?.(e),()=>complete?.()):target.onSnapshot(ref,emit,e=>error?.(e),()=>complete?.());return()=>{dead=true;clearTimeout(timer);try{u?.()}catch(_){}}};
-    if(prop==="setDoc")return async(ref,data,opt)=>{const info=saveInfo(ref);if(!info)return target.setDoc(ref,data,opt);const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});let safe=data;try{const raw=await serverGet(target,ref);if(raw.exists()){const prevSnap=await hydrate(target,db,ref,raw,true);safe=protectInventoryZero(data,prevSnap.data()||{})}}catch(e){console.warn(BUILD,"inventory guard preload",e?.message||e)}const parts=splitState(safe,mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return makeBatch(target,db,ops).commit()};
-    if(prop==="updateDoc")return async(ref,patch,...rest)=>{const info=saveInfo(ref);if(!info||rest.length)return target.updateDoc(ref,patch,...rest);return writePatch(target,db,ref,info.memberKey,patch||{})};
+    if(prop==="setDoc")return async(ref,data,opt)=>{const info=saveInfo(ref);if(!info||((opt?.merge||opt?.mergeFields)&&foreignRootOnly(info.memberKey,data)))return opt===undefined?target.setDoc(ref,data):target.setDoc(ref,data,opt);const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data))return writePatch(target,db,ref,mk,data||{});let safe=data;try{const raw=await serverGet(target,ref);if(raw.exists()){const prevSnap=await hydrate(target,db,ref,raw,true);safe=protectInventoryZero(data,prevSnap.data()||{})}}catch(e){console.warn(BUILD,"inventory guard preload",e?.message||e)}const parts=splitState(safe,mk),ops=[{kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}}];for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,db,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});return makeBatch(target,db,ops).commit()};
+    if(prop==="updateDoc")return async(ref,patch,...rest)=>{const info=saveInfo(ref);if(!info||rest.length||foreignRootOnly(info.memberKey,patch))return target.updateDoc(ref,patch,...rest);return writePatch(target,db,ref,info.memberKey,patch||{})};
     if(prop==="runTransaction")return async function(dbArg,callback,...rest){return target.runTransaction(dbArg,async real=>{const before=new Map(),routes=new Map();const tx=new Proxy(real,{get(tt,p){
       if(p==="get")return async ref=>{const info=saveInfo(ref);if(!info)return tt.get(ref);const base=await tt.get(ref);if(!base.exists())return base;const root=base.data()||{};if(root.saveLayoutVersion!==LAYOUT){before.set(pathOf(ref),root);routes.set(info.memberKey,routesOf(root,info.memberKey));return base}const r=routesOf(root,info.memberKey),names=groupsOfRoutes(r),sn=await Promise.all(names.map(g=>tt.get(shardRef(target,dbArg,info.memberKey,g)))),groups={};names.forEach((g,i)=>groups[g]=sn[i].exists()?(sn[i].data()?.data||{}):{});const full=mergeState(root,groups,info.memberKey);before.set(pathOf(ref),full);routes.set(info.memberKey,r);return snapLike(base,full)};
-      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info){tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const prev=before.get(pathOf(ref)),safe=prev?protectInventoryZero(data,prev):data,parts=splitState(safe,mk),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);routeCache.set(mk,{...parts.routes});return tx};
-      if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info){tt.update(ref,data);return tx}const mk=info.memberKey,r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};
+      if(p==="set")return(ref,data,opt)=>{const info=saveInfo(ref);if(!info||((opt?.merge||opt?.mergeFields)&&foreignRootOnly(info.memberKey,data))){opt===undefined?tt.set(ref,data):tt.set(ref,data,opt);return tx}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx}const prev=before.get(pathOf(ref)),safe=prev?protectInventoryZero(data,prev):data,parts=splitState(safe,mk),pp=prev?splitState(prev,mk):null;tt.set(ref,{...parts.root,updatedAt:target.serverTimestamp()},{merge:false});for(const [g,d] of Object.entries(parts.groups)){if(pp&&same(pp.groups[g]||{},d||{}))continue;tt.set(shardRef(target,dbArg,mk,g),{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},{merge:false})}routes.set(mk,parts.routes);routeCache.set(mk,{...parts.routes});return tx};
+      if(p==="update")return(ref,data)=>{const info=saveInfo(ref);if(!info||foreignRootOnly(info.memberKey,data)){tt.update(ref,data);return tx}const mk=info.memberKey,r={...(routes.get(mk)||routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});tt.set(ref,nestedPatch(rp),{merge:true});for(const [g,q] of Object.entries(sp.groups))tt.set(shardRef(target,dbArg,mk,g),shardPatch(target,q),{merge:true});routes.set(mk,sp.routes);routeCache.set(mk,{...sp.routes});return tx};
       if(p==="delete")return ref=>{tt.delete(ref);return tx};return Reflect.get(tt,p,tt)}});return callback(tx)},...rest)};
-    if(prop==="writeBatch")return function(dbArg){const ops=[];const api={set(ref,data,opt){const info=saveInfo(ref);if(!info){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});routeCache.set(mk,{...parts.routes});return api},update(ref,data){const info=saveInfo(ref);if(!info){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey,r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},commit(){return makeBatch(target,dbArg,ops).commit()}};return api};
+    if(prop==="writeBatch")return function(dbArg){const ops=[];const api={set(ref,data,opt){const info=saveInfo(ref);if(!info||((opt?.merge||opt?.mergeFields)&&foreignRootOnly(info.memberKey,data))){ops.push({kind:"set",ref,data,opt});return api}const mk=info.memberKey;if(opt?.merge||opt?.mergeFields||!looksFullState(data)){const r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api}const parts=splitState(data,mk);ops.push({kind:"set",ref,data:{...parts.root,updatedAt:target.serverTimestamp()},opt:{merge:false}});for(const [g,d] of Object.entries(parts.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:{layout:LAYOUT,data:d,updatedAt:target.serverTimestamp()},opt:{merge:false}});routeCache.set(mk,{...parts.routes});return api},update(ref,data){const info=saveInfo(ref);if(!info||foreignRootOnly(info.memberKey,data)){ops.push({kind:"update",ref,data});return api}const mk=info.memberKey,r={...(routeCache.get(mk)||{})},sp=splitPatch(mk,data||{},r),rp=rootTouch(target,{...sp.root,saveLayoutVersion:LAYOUT,saveShardBuild:BUILD,saveShardRoutes:sp.routes,savePartitionR36117:1});ops.push({kind:"set",ref,data:nestedPatch(rp),opt:{merge:true}});for(const [g,q] of Object.entries(sp.groups))ops.push({kind:"set",ref:shardRef(target,dbArg,mk,g),data:shardPatch(target,q),opt:{merge:true}});routeCache.set(mk,{...sp.routes});return api},delete(ref){ops.push({kind:"delete",ref});return api},commit(){return makeBatch(target,dbArg,ops).commit()}};return api};
     return Reflect.get(target,prop,target)
   }});proxyCacheRaw.set(fs,prox);return{...ctx,fs:prox}}
   wrappedGetFirebaseContext.__r3663Base=RAW_CTX;wrappedGetFirebaseContext.__r36117Base=RAW_CTX;globalThis.getFirebaseContext=wrappedGetFirebaseContext;try{getFirebaseContext=wrappedGetFirebaseContext}catch(_){}
@@ -6327,30 +6380,41 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   }
 
   /* ------------------------------ RECEIVE ------------------------------ */
-  async function receipts(db,fs,mk){
-    const set=new Set();
-    try{const sn=await fs.getDocs(fs.query(fs.collection(db,"giftReceipts"),fs.where("memberKey","==",mk),fs.limit(3000)));sn.forEach(d=>set.add(String(d.data()?.giftId||"")))}
-    catch(e){console.warn(BUILD,"receipts read",e?.message||e)}
+  /* R36.126: look up receipts only for the gifts on screen (a few reads)
+     instead of downloading every receipt the player ever had, every 30 s. */
+  async function receipts(db,fs,mk,ids){
+    const set=new Set(),list=[...new Set((ids||[]).map(String).filter(Boolean))];
+    await Promise.all(list.map(id=>fs.getDoc(fs.doc(db,"giftReceipts",rid(mk,id))).then(s=>{if(s.exists())set.add(id)}).catch(e=>console.warn(BUILD,"receipt read",id,e?.message||e))));
     return set;
   }
+  async function alpacaPending(){
+    try{const core=globalThis.YN_R3651;if(core?.pendingRows)return (await core.pendingRows())||[]}catch(e){console.warn(BUILD,"alpaca pending",e?.message||e)}
+    return[];
+  }
   async function listPending(){
-    const mk=me();if(!mk||!cloudReady)return{direct:[],bcasts:[],mail:[]};
+    const mk=me();if(!mk||!cloudReady)return{direct:[],bcasts:[],mail:[],alp:[]};
     const {db,fs}=await getFirebaseContext();
-    const [rec,gsn,ss,mail]=await Promise.all([
-      receipts(db,fs,mk),
-      fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",mk),fs.limit(500))).catch(e=>{console.warn(BUILD,"gifts read",e);return null}),
+    const giftsCol=fs.collection(db,"gifts");
+    const [gPend,gAny,ss,mail,alp]=await Promise.all([
+      fs.getDocs(fs.query(giftsCol,fs.where("toKey","==",mk),fs.where("status","==","pending"),fs.limit(500))).catch(e=>{console.warn(BUILD,"pending gifts read",e?.message||e);return null}),
+      fs.getDocs(fs.query(giftsCol,fs.where("toKey","==",mk),fs.limit(500))).catch(e=>{console.warn(BUILD,"gifts read",e);return null}),
       fs.getDoc(fs.doc(db,"saves",mk)).catch(()=>null),
-      fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300))).catch(()=>null)
+      fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(300))).catch(()=>null),
+      alpacaPending()
     ]);
     const sv=ss&&ss.exists()?(ss.data()||{}):{},fc=obj(sv.friendGiftClaims)?sv.friendGiftClaims:{},bc=obj(sv.broadcastGiftClaims)?sv.broadcastGiftClaims:{};
-    const direct=[];
-    gsn?.forEach(d=>{const g=d.data()||{},id=String(d.id);if(String(g.status||"pending")!=="pending"||rec.has(id)||fc[id]||doneLocal.has(id))return;if(!fromAdmin(g)&&!active(g.fromKey))return;direct.push({kind:"direct",id,...g})});
+    const cand=new Map();
+    for(const sn of [gPend,gAny])sn?.forEach(d=>{const g=d.data()||{},id=String(d.id);if(cand.has(id))return;if(String(g.status||"pending")!=="pending"||fc[id]||doneLocal.has(id))return;if(!fromAdmin(g)&&!active(g.fromKey))return;cand.set(id,g)});
     let rows=[];try{rows=typeof fetchBroadcasts==="function"?(await fetchBroadcasts())||[]:[]}catch(e){console.warn(BUILD,"broadcasts",e)}
-    rows=rows.filter(b=>b?.type==="gift"&&(!b.targetKey||String(b.targetKey)===mk)&&!(!b.targetKey&&isAdminNow()&&b.includeAida===false)&&!rec.has(String(b.id))&&!bc[String(b.id)]&&!doneLocal.has(String(b.id)));
+    rows=rows.filter(b=>b?.type==="gift"&&(!b.targetKey||String(b.targetKey)===mk)&&!(!b.targetKey&&isAdminNow()&&b.includeAida===false)&&!bc[String(b.id)]&&!doneLocal.has(String(b.id)));
+    const rec=await receipts(db,fs,mk,[...cand.keys(),...rows.map(b=>String(b.id))]);
+    const direct=[];for(const [id,g] of cand)if(!rec.has(id))direct.push({kind:"direct",id,...g});
+    rows=rows.filter(b=>!rec.has(String(b.id)));
     const claimed=await Promise.all(rows.map(b=>fs.getDoc(fs.doc(db,"broadcasts",String(b.id),"claims",mk)).then(s=>s.exists()).catch(()=>false)));
     const bcasts=rows.filter((b,i)=>!claimed[i]).map(b=>({kind:"broadcast",...b}));
-    const mailRows=[];mail?.forEach(d=>mailRows.push({id:d.id,...(d.data()||{})}));
-    return{direct,bcasts,mail:mailRows};
+    const mailRows=[];mail?.forEach(d=>{const x=d.data()||{};if(x.type!=="alpacaGiftR3651")mailRows.push({id:d.id,...x})});
+    const alpRows=(alp||[]).filter(x=>!x.resolved&&!doneLocal.has("alp:"+x.id));
+    return{direct,bcasts,mail:mailRows,alp:alpRows};
   }
 
   async function claim(kind,id,accept=true){
@@ -6421,19 +6485,22 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     return `<div class="g125-gift ${adm?"admin":""}" data-g125-card="${esc(g.kind+":"+g.id)}"><span class="bx">🎁</span><b>${who}</b>${note?`<div class="msg">“${esc(note)}”</div>`:""}<div class="g125-its">${itemsOf(g).map(itemChip).join("")}</div>${t?`<small>${esc(t)} น.</small>`:""}<div class="g125-acts"><button class="ok" data-g125-act="accept" data-g125-kind="${esc(g.kind)}" data-g125-id="${esc(g.id)}">รับของขวัญ</button><button class="no" data-g125-act="discard" data-g125-kind="${esc(g.kind)}" data-g125-id="${esc(g.id)}">ทิ้ง</button></div></div>`;
   }
   function noticeCard(m){const t=typeof bangkokTimeText==="function"?bangkokTimeText(m.createdAt):"";return `<div class="g125-notice"><b>${esc(m.title||"การแจ้งเตือน")}</b>${m.text?`<span>${esc(m.text)}</span><br>`:""}${t?`<small>${esc(t)} น.</small>`:""}</div>`}
-  function alpacaCard(m){const items=Array.isArray(m.items)?m.items:[];const sum=items.length?items.map(i=>`${esc(i?.name||"อัลปาก้า")} ×${fmt(i?.qty||1)}`).join(" • "):esc(m.text||"อัลปาก้า");return `<div class="g125-gift admin"><span class="bx">🦙</span><b>ยัยหนูส่งอัลปาก้าให้คุณ</b><div class="g125-its"><span class="g125-it">${sum}</span></div><div class="g125-acts"><button class="ok" data-g125-alpaca="${esc(m.id)}">รับเข้าคลังอัลปาก้า</button></div></div>`}
+  function alpacaCard(m){const items=Array.isArray(m.items)?m.items:[];const sum=items.length?items.map(i=>`${esc(i?.name||"อัลปาก้า")} ×${fmt(i?.qty||1)}`).join(" • "):esc(m.text||"อัลปาก้า");return `<div class="g125-gift admin"><span class="bx">🦙</span><b>ยัยหนูส่งอัลปาก้าให้คุณ</b><div class="g125-its"><span class="g125-it">${sum}</span></div><div class="g125-acts"><button class="ok" data-g125-alpaca="${esc(m.id)}" data-g125-amk="${esc(m._mk||"")}">รับเข้าคลังอัลปาก้า</button></div></div>`}
 
   let showReq=0;
-  async function showInbox(tab="friend"){
+  async function showInbox(tab="friend",manual=false){
     if(!cloudReady){message?.("การแจ้งเตือนยังไม่พร้อม","กรุณารอเชื่อมต่อสักครู่ค่ะ");return}
     const req=++showReq;
     if($("modalContent")&&!$("modalContent").querySelector(".g125")){ $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🔔</span><div><h2>การแจ้งเตือน</h2><small>กำลังโหลด…</small></div></div></section>`;openModal?.()}
     try{
-      const {direct,bcasts,mail}=await listPending();if(req!==showReq)return;
+      const {direct,bcasts,mail,alp:alpAll}=await listPending();if(req!==showReq)return;
+      /* R36.126: alpaca gifts are counted in the "จากยัยหนู" tab, and the bell opens
+         straight to that tab when the friend tab has nothing to accept. */
+      {const cf=direct.filter(g=>!fromAdmin(g)).length,cy=direct.filter(fromAdmin).length+bcasts.length+alpAll.length;if(!manual&&tab==="friend"&&cf===0&&cy>0)tab="yainoo"}
       const gifts=[...direct,...bcasts].filter(g=>tab==="yainoo"?(g.kind==="broadcast"||fromAdmin(g)):(g.kind==="direct"&&!fromAdmin(g))).sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
-      const alp=tab==="yainoo"?mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved):[];
+      const alp=tab==="yainoo"?alpAll:[];
       const notices=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&(tab==="yainoo"?x.source==="yainoo":x.source==="friend"&&active(x.fromKey))).sort((a,b)=>ms(b.createdAt)-ms(a.createdAt));
-      const counts={friend:direct.filter(g=>!fromAdmin(g)).length,yainoo:direct.filter(fromAdmin).length+bcasts.length};
+      const counts={friend:direct.filter(g=>!fromAdmin(g)).length,yainoo:direct.filter(fromAdmin).length+bcasts.length+alpAll.length};
       const body=[...alp.map(alpacaCard),...gifts.map(giftCard),...notices.map(noticeCard)].join("")||`<div class="g125-empty">ยังไม่มีการแจ้งเตือนค่ะ 🌷</div>`;
       $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🎀</span><div><h2>การแจ้งเตือน</h2><small>ของขวัญแต่ละชิ้นรับได้ครั้งเดียว</small></div></div>
         ${isAdminNow()?`<button class="g125-admin" id="g125ToAdmin">🛡️ ศูนย์แอดมิน</button><button class="g125-big" id="g125ToSend" style="margin-top:0">🎁 ส่งของขวัญ</button>`:""}
@@ -6441,7 +6508,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
         ${gifts.length>1?`<button class="g125-all" id="g125All">🎁 รับทั้งหมด (${gifts.length})</button>`:""}
         <div class="g125-list">${body}</div></section>`;
       openModal?.();
-      document.querySelectorAll("[data-g125-tab]").forEach(b=>b.onclick=()=>showInbox(b.dataset.g125Tab));
+      document.querySelectorAll("[data-g125-tab]").forEach(b=>b.onclick=()=>showInbox(b.dataset.g125Tab,true));
       if($("g125ToAdmin"))$("g125ToAdmin").onclick=()=>showAdminCenter?.();
       if($("g125ToSend"))$("g125ToSend").onclick=()=>openComposer();
       document.querySelectorAll("[data-g125-id]").forEach(b=>b.onclick=async()=>{
@@ -6455,14 +6522,14 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       });
       document.querySelectorAll("[data-g125-alpaca]").forEach(b=>b.onclick=async()=>{
         if(b.disabled)return;b.disabled=true;b.textContent="กำลังรับ…";
-        try{const core=globalThis.YN_R3651;if(!core?.claimGift)throw new Error("ระบบรับอัลปาก้ายังไม่พร้อม");const r=await core.claimGift(b.dataset.g125Alpaca);b.closest(".g125-gift")?.remove();toast(`🦙 รับเข้าคลังแล้ว ${Number(r?.count)||0} ตัว`);refreshBadge(true)}
+        try{const core=globalThis.YN_R3651;if(!core?.claimGift)throw new Error("ระบบรับอัลปาก้ายังไม่พร้อม");const r=await core.claimGift(b.dataset.g125Alpaca,b.dataset.g125Amk);doneLocal.add("alp:"+b.dataset.g125Alpaca);b.closest(".g125-gift")?.remove();toast(r?.already?"🦙 รายการนี้รับเข้าคลังไปแล้ว • ดูได้ที่ คลังอัลปาก้า":`🦙 รับเข้าคลังแล้ว ${Number(r?.count)||0} ตัว • ดูได้ที่ คลังอัลปาก้า`);refreshBadge(true)}
         catch(e){b.disabled=false;b.textContent="รับเข้าคลังอัลปาก้า";message?.("รับอัลปาก้าไม่ได้",esc(e?.message||"กรุณาลองใหม่"))}
       });
       if($("g125All"))$("g125All").onclick=async()=>{
         const btn=$("g125All");if(btn.disabled)return;btn.disabled=true;let ok=0,skip=0,fail=0;
         for(let i=0;i<gifts.length;i++){btn.textContent=`กำลังรับ ${i+1}/${gifts.length}…`;const r=await claim(gifts[i].kind,gifts[i].id,true);if(r.ok){r.already?skip++:ok++;document.querySelector(`[data-g125-card="${CSS.escape(gifts[i].kind+":"+gifts[i].id)}"]`)?.remove()}else fail++}
         toast(`🎁 รับแล้ว ${ok} รายการ${skip?` • เคยรับแล้ว ${skip}`:""}${fail?` • ไม่สำเร็จ ${fail}`:""}`);
-        await showInbox(tab);refreshBadge(true);
+        await showInbox(tab,true);refreshBadge(true);
       };
       markRead(notices);
     }catch(e){console.error(BUILD,"inbox",e);message?.("เปิดการแจ้งเตือนไม่ได้",esc(e?.message||"กรุณาลองใหม่ค่ะ"))}
@@ -6475,8 +6542,8 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     if(!force&&Date.now()-badgeAt<20000)return;
     if(badgeBusy)return badgeBusy;
     badgeBusy=(async()=>{try{
-      const {direct,bcasts,mail}=await listPending();badgeAt=Date.now();
-      const alp=mail.filter(x=>x.type==="alpacaGiftR3651"&&x.source==="yainoo"&&!x.resolved).length;
+      const {direct,bcasts,mail,alp:alpRows}=await listPending();badgeAt=Date.now();
+      const alp=(alpRows||[]).length;
       const unread=mail.filter(x=>x.type!=="gift"&&x.type!=="alpacaGiftR3651"&&!x.read).length;
       let extra=0;try{if(adminProfile?.role==="admin")extra=Number(adminMembershipPendingCache?.length||0)}catch(_){}
       const total=direct.length+bcasts.length+alp+unread+extra,b=$("notificationBadge");
@@ -6576,8 +6643,8 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   /* ------------------------------ INSTALL ------------------------------ */
   function install(){
     try{showNotifications=showInbox}catch(e){console.error(BUILD,"inbox install",e)}
-    try{claimFriendGift=async(id,accept,tab="friend")=>{const r=await claim("direct",id,accept);await showInbox(tab);return r}}catch(_){}
-    try{claimBroadcastGift=async(id,accept)=>{const r=await claim("broadcast",id,accept);await showInbox("yainoo");return r}}catch(_){}
+    try{claimFriendGift=async(id,accept,tab="friend")=>{const r=await claim("direct",id,accept);await showInbox(tab,true);return r}}catch(_){}
+    try{claimBroadcastGift=async(id,accept)=>{const r=await claim("broadcast",id,accept);await showInbox("yainoo",true);return r}}catch(_){}
     try{refreshNotificationBadge=refreshBadge}catch(_){}
     try{sendAdminBundleGift=async()=>openComposer();sendAdminGlobalBundleGift=async()=>openComposer()}catch(_){}
     try{
@@ -6609,5 +6676,58 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
 })();
 </script>
 
+
+<style id="r36126-style">
+.ost126-pick{border:1px solid rgba(120,80,60,.25);border-radius:14px;background:rgba(255,255,255,.7);padding:10px;margin-bottom:10px}
+.ost126-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ost126-head b{font-size:14px}.ost126-head span{font-size:12px;color:#7a5b4b;font-weight:700}
+.ost126-tools{display:flex;gap:6px;margin-bottom:8px}.ost126-tools button{border:1px solid #b08a6e;background:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:800;color:#6b4632}
+.ost126-list{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow:auto}
+.ost126-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid #d6b89f;border-radius:999px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
+.ost126-chip input{width:16px;height:16px;margin:0}.ost126-chip.on{background:#ffe7c2;border-color:#c07a3a;color:#6b3a12}
+</style>
+<script>
+/* =====================================================================
+   S2 R36.126 — ALPACA GIFT RECEIVE FIX + FRIEND CREDIT PERMISSION FIX
+   2026-09-23
+   - Alpaca gifts: shown/counted in "จากยัยหนู", bell jumps there, claim is
+     transactional, looks under login key AND loaded key, never "0 ตัว".
+   - คลังอัลปาก้า: alpacas that land in save vault (craft/campaign/friend gift)
+     are moved into the warehouse instead of being wiped.
+   - Friend alpaca breeding (+150 to sire owner), cat slap/tease, market credit:
+     foreign-save writes are sent exactly as written (fixes Missing or
+     insufficient permissions).
+   - Alpaca actions: merit applied as delta on the server value; rank profile
+     always equals saved merit.
+   - Ostrich admin send: pick any number of recipients.
+   - Mailbox housekeeping: old READ notices (not gifts) older than 21 days are
+     removed once a day so mailboxes stay small. Merit is never touched.
+   ===================================================================== */
+(function YN_R36126(){
+  "use strict";
+  const BUILD="S2-R36.126-ALPACA-GIFT-FIX-20260923";
+  const DAY=86400000,KEEP=40,AGE=21*DAY;
+  const ms=v=>{try{return Number(v?.toMillis?.()||(v?.seconds?v.seconds*1000:0)||v||0)||0}catch(_){return 0}};
+  const KEEP_TYPES=new Set(["gift","alpacaGiftR3651"]);
+  async function tidyMailbox(){
+    try{
+      const mk=String(typeof currentMemberKey!=="undefined"?currentMemberKey:"");if(!mk||typeof cloudReady==="undefined"||!cloudReady)return;
+      const lk=`yn:r36126:tidy:${mk}`,last=Number(localStorage.getItem(lk)||0);if(Date.now()-last<DAY)return;
+      const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.query(fs.collection(db,"mailboxes",mk,"items"),fs.limit(500)));
+      const notices=[];sn.forEach(d=>{const x=d.data()||{};if(KEEP_TYPES.has(String(x.type||""))||x.giftId)return;notices.push({ref:d.ref,read:x.read===true,at:ms(x.createdAt)||Number(x.createdAtClient)||0})});
+      notices.sort((a,b)=>b.at-a.at);
+      const old=notices.slice(KEEP).filter(x=>x.read&&x.at>0&&Date.now()-x.at>AGE);
+      for(let i=0;i<old.length;i+=200){const b=fs.writeBatch(db);old.slice(i,i+200).forEach(x=>b.delete(x.ref));await b.commit()}
+      localStorage.setItem(lk,String(Date.now()));
+      if(old.length)console.info(BUILD,"tidied",old.length,"old read notices");
+    }catch(e){console.warn(BUILD,"mailbox tidy",e?.message||e)}
+  }
+  setTimeout(tidyMailbox,12000);
+  /* move any freshly received vault alpacas into the warehouse shortly after login */
+  setTimeout(()=>{try{globalThis.YN_R3651?.migrateVault?.().catch(()=>{})}catch(_){}},4000);
+  globalThis.YN_R36126={BUILD,tidyMailbox};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
 </body>
 </html>
