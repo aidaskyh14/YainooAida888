@@ -6417,12 +6417,119 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     return{direct,bcasts,mail:mailRows,alp:alpRows};
   }
 
+  /* =====================================================================
+     R36.129 FAST CLAIM — ผู้เล่นบางคน (เซฟใหญ่ เช่นอัลปาก้าเยอะ) กดรับแล้วค้าง "กำลังจัดการ…"
+     เพราะธุรกรรมเดิมต้องโหลดเซฟทั้งก้อน (~20 เอกสาร) และถูกเซฟอัตโนมัติของเกมชนจนต้องเริ่มใหม่ซ้ำ ๆ
+     ทางใหม่: ธุรกรรมอ่านแค่ ของขวัญ + ใบเสร็จ แล้ว "บวกเพิ่ม" (increment) เฉพาะช่องของที่ได้
+     ไม่อ่าน/ไม่เขียนเซฟทั้งก้อน -> เร็ว และไม่ชนกับเซฟอัตโนมัติ
+     ของชนิดที่บวกตัวเลขตรง ๆ ไม่ได้ (สัตว์เป็นตัว, อาหารสมุดเมนู ฯลฯ) ใช้ทางเดิม
+     ===================================================================== */
+  const LEAN_TIMEOUT=Symbol("lean-timeout");
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(LEAN_TIMEOUT),ms))]);
+  function numDiff(a,b,p,out){
+    if(Array.isArray(a)||Array.isArray(b))return same(a,b);
+    if(obj(b)){for(const k of Object.keys(b)){if(String(k).includes("."))return same(obj(a)?a[k]:undefined,b[k]);if(!numDiff(obj(a)?a[k]:undefined,b[k],p?p+"."+k:k,out))return false}return true}
+    if(typeof b==="number"&&Number.isFinite(b)){const av=typeof a==="number"&&Number.isFinite(a)?a:0,d=b-av;if(d<0)return false;if(d>0)out[p]=d;return true}
+    return true;
+  }
+  const PINNED=new Set(["merit","meritGiftClaim","meritBaselineId","meritBaselineFrom","activeSessionId","updatedAt","clientSaveRevision","clientLocalEditAt","saveShardRoutes","saveLayoutVersion"]);
+  async function knownRoutes(fs,db,mk){
+    const ref=fs.doc(db,"saves",mk);
+    try{if(typeof fs.getDocFromCache==="function"){const c=await fs.getDocFromCache(ref);if(c?.exists?.()){const r=c.data()?.saveShardRoutes;if(obj(r))return r;if(c.data()?.saveLayoutVersion)return {}}}}catch(_){}
+    try{const sn=await fs.getDocs(fs.query(fs.collection(db,"saves"),fs.where("__name__","==",ref),fs.limit(1)));let r=null;sn.forEach(d=>{const x=d.data()||{};r=obj(x.saveShardRoutes)?x.saveShardRoutes:(x.saveLayoutVersion?{}:null)});if(r)return r}catch(_){}
+    return null;
+  }
+  /* returns a result object, or null = "use the original (full) path" */
+  async function leanClaim(kind,id,accept,mk){
+    try{if(isAdminNow())return null}catch(_){}
+    const live=(typeof ownState!=="undefined"&&ownState)||null;
+    if(!live||(typeof visitContext!=="undefined"&&visitContext))return null;
+    const {db,fs}=await getFirebaseContext();
+    if(typeof fs.increment!=="function")return null;
+    const srcRef=kind==="broadcast"?fs.doc(db,"broadcasts",id):fs.doc(db,"gifts",id);
+    const pre=await fs.getDoc(srcRef).catch(()=>null);
+    if(!pre||!pre.exists())return null;
+    const g0=pre.data()||{};
+    const items0=itemsOf(g0),meritAdd=accept?meritIn(items0):0;
+    /* plan the inventory increments on a copy of the local bag */
+    let inc={};
+    if(accept){
+      const hasItems=Array.isArray(g0.items)&&g0.items.length?g0.items.some(i=>String(i?.type||i?.itemType||"")!=="merit"):String(g0.itemType||g0.type||"")!=="merit";
+      if(hasItems){
+        if(typeof addGiftItemToState!=="function")return null;
+        const a=cp(live),b=cp(live);
+        try{
+          if(Array.isArray(g0.items)&&g0.items.length)addGiftItemToState(b,{items:cp(g0.items.filter(i=>String(i?.type||i?.itemType||"")!=="merit"))});
+          else addGiftItemToState(b,cp(g0));
+        }catch(e){return null}
+        const out={};if(!numDiff(a,b,"",out))return null;
+        if(!Object.keys(out).length)return null;
+        for(const k of Object.keys(out))if(PINNED.has(k.split(".")[0]))return null;
+        inc=out;
+      }
+    }
+    /* never guess shard routing: a field moved to its own shard -> original path */
+    const tops=[...new Set(Object.keys(inc).map(k=>k.split(".")[0]))];
+    if(tops.length){const routes=await knownRoutes(fs,db,mk);if(!routes)return null;for(const t of tops)if(String(routes[t]||"").startsWith("field:"))return null}
+    /* short wait for a queued autosave, never unbounded */
+    try{await withTimeout(Promise.resolve(settlePendingCloudSave?.()),6000)}catch(_){}
+    const saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk),recRef=fs.doc(db,"giftReceipts",rid(mk,id)),mailRef=fs.doc(db,"mailboxes",mk,"items",id);
+    const claimRef=kind==="broadcast"?fs.doc(db,"broadcasts",id,"claims",mk):null;
+    const ledgerField=kind==="direct"?"friendGiftClaims":"broadcastGiftClaims";
+    let already=false,changed=false;
+    await fs.runTransaction(db,async tx=>{
+      already=false;changed=false;
+      const reads=[tx.get(srcRef),tx.get(recRef)];if(claimRef)reads.push(tx.get(claimRef));
+      const [gs,rs,cs]=await Promise.all(reads);
+      if(!gs.exists()){already=true;if(kind==="direct")tx.delete(mailRef);return}
+      const g=gs.data()||{};
+      if(kind==="direct"&&String(g.toKey||"")!==mk)throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      if(kind==="broadcast"&&(g.type!=="gift"||(g.targetKey&&String(g.targetKey)!==mk)))throw new Error("ของขวัญนี้ไม่ได้ส่งถึงบัญชีนี้");
+      if(!same(itemsOf(g),items0))throw Object.assign(new Error("gift changed"),{leanFallback:true});
+      const statusDone=kind==="direct"&&String(g.status||"pending")!=="pending";
+      if(rs.exists()||statusDone||(cs&&cs.exists())){
+        already=true;
+        if(!rs.exists())tx.set(recRef,{memberKey:mk,giftId:id,kind,accepted:null,repair:true,at:fs.serverTimestamp()});
+        if(kind==="direct"&&!statusDone)tx.set(srcRef,{status:"claimed",resolvedAt:fs.serverTimestamp()},{merge:true});
+        if(kind==="direct")tx.delete(mailRef);
+        return;
+      }
+      const patch={[`${ledgerField}.${id}`]:{status:accept?"accepted":"discarded",resolvedAt:Date.now(),fromKey:String(g.fromKey||"aida"),qty:items0.reduce((n,i)=>n+i.qty,0)}};
+      for(const [path,d] of Object.entries(inc))patch[path]=fs.increment(d);
+      if(meritAdd>0){patch.merit=fs.increment(meritAdd);patch.meritGiftClaim={id,kind,amount:meritAdd,at:Date.now()}}
+      tx.update(saveRef,patch);
+      if(meritAdd>0)tx.set(profRef,{memberKey:mk,merit:fs.increment(meritAdd),meritGiftClaim:{id,kind,amount:meritAdd,at:Date.now()},updatedAt:fs.serverTimestamp()},{merge:true});
+      tx.set(recRef,{memberKey:mk,giftId:id,kind,accepted:Boolean(accept),meritAdd,fast:true,at:fs.serverTimestamp()});
+      if(kind==="direct"){tx.set(srcRef,{status:accept?"claimed":"discarded",resolvedAt:fs.serverTimestamp()},{merge:true});tx.delete(mailRef)}
+      else tx.set(claimRef,{memberKey:mk,status:accept?"accepted":"discarded",resolvedAt:fs.serverTimestamp()},{merge:false});
+      changed=true;
+    });
+    /* committed: mirror the same change on this phone, then queue a normal save so
+       any older autosave that was already on its way can never win */
+    if(changed){
+      try{
+        const liveNow=(typeof ownState!=="undefined"&&ownState)||live;
+        for(const [path,d] of Object.entries(inc)){const bits=path.split(".");let o=liveNow;for(let i=0;i<bits.length-1;i++){if(!obj(o[bits[i]]))o[bits[i]]={};o=o[bits[i]]}const last=bits[bits.length-1];o[last]=(Number(o[last])||0)+d}
+        if(meritAdd>0){liveNow.merit=(Number(liveNow.merit)||0)+meritAdd;liveNow.meritGiftClaim={id,kind,amount:meritAdd,at:Date.now()}}
+        if(!obj(liveNow[ledgerField]))liveNow[ledgerField]={};
+        liveNow[ledgerField][id]={status:accept?"accepted":"discarded",resolvedAt:Date.now(),fromKey:"aida",qty:items0.reduce((n,i)=>n+i.qty,0)};
+        ownState=liveNow;if(typeof visitContext==="undefined"||!visitContext)state=liveNow;
+        try{saveLocalOnly?.(liveNow)}catch(_){}try{updateMeritUI?.()}catch(_){}
+        try{queueCloudSave?.()}catch(_){}
+      }catch(e){console.warn(BUILD,"fast claim local mirror",e)}
+    }
+    return{ok:true,already,accepted:Boolean(accept&&!already),items:already?[]:items0,fast:true};
+  }
+
   async function claim(kind,id,accept=true){
     id=String(id||"");const mk=me(),token=`${kind}:${mk}:${id}`;
     if(!id||!mk||!cloudReady)return{ok:false,error:"ระบบยังไม่พร้อม"};
-    if(busy.has(token))return{ok:false,error:"กำลังจัดการรายการนี้อยู่"};
+    if(busy.has(token))return{ok:false,busy:true,error:"ของขวัญชิ้นนี้กำลังบันทึกอยู่ รอสักครู่นะคะ ไม่ต้องกดซ้ำ"};
     busy.add(token);
     try{
+      /* R36.129: fast path first; any doubt -> original full path below */
+      try{const r=await leanClaim(kind,id,accept,mk);if(r){doneLocal.add(id);try{if(typeof notificationDataCache!=="undefined"&&notificationDataCache){notificationDataCache.mail=null;notificationDataCache.broadcasts=null;notificationDataCache.at=0}}catch(_){}badgeAt=0;return r}}
+      catch(e){console.warn(BUILD,"fast claim -> original path",kind,id,e?.message||e)}
       try{await settlePendingCloudSave?.()}catch(_){}
       const {db,fs}=await getFirebaseContext();
       const saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk),recRef=fs.doc(db,"giftReceipts",rid(mk,id)),mailRef=fs.doc(db,"mailboxes",mk,"items",id);
@@ -6514,8 +6621,11 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       document.querySelectorAll("[data-g125-id]").forEach(b=>b.onclick=async()=>{
         const card=b.closest(".g125-gift");if(card?.classList.contains("done"))return;
         card?.querySelectorAll("button").forEach(x=>x.disabled=true);b.textContent="กำลังจัดการ…";
-        const accept=b.dataset.g125Act==="accept",r=await claim(b.dataset.g125Kind,b.dataset.g125Id,accept);
-        if(!r.ok){card?.querySelectorAll("button").forEach(x=>x.disabled=false);b.textContent=accept?"รับของขวัญ":"ทิ้ง";message?.("จัดการของขวัญไม่ได้",esc(r.error||"กรุณาลองใหม่"));return}
+        const accept=b.dataset.g125Act==="accept",job=claim(b.dataset.g125Kind,b.dataset.g125Id,accept);
+        /* R36.129: never leave the player staring at a frozen card */
+        let slow=setTimeout(()=>{b.textContent="กำลังบันทึก… ไม่ต้องกดซ้ำ";toast("⏳ เน็ต/เซฟช้า กำลังบันทึกของขวัญ อย่าเพิ่งปิดเกมนะคะ")},8000);
+        const r=await job;clearTimeout(slow);
+        if(!r.ok){if(r.busy){toast("⏳ "+(r.error||"กำลังบันทึกอยู่"));return}card?.querySelectorAll("button").forEach(x=>x.disabled=false);b.textContent=accept?"รับของขวัญ":"ทิ้ง";message?.("จัดการของขวัญไม่ได้",esc(r.error||"กรุณาลองใหม่"));return}
         card?.classList.add("done");card?.remove();
         toast(r.already?"🎁 รายการนี้เคยรับไปแล้ว":accept?"🎁 รับแล้ว • ของเข้ากระเป๋าแล้ว":"🗑️ ทิ้งแล้ว");
         refreshBadge(true);
