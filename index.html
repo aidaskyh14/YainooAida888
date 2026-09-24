@@ -6553,7 +6553,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   }
 
   /* ------------------------------ SEND (Aida) ------------------------------ */
-  let draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:""};
+  let draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:"",cat:""};
   function catalog(){
     let list=[];try{list=typeof adminGiftCatalog==="function"?(adminGiftCatalog()||[]):[]}catch(e){console.warn(BUILD,"catalog",e)}
     const seen=new Set();return list.filter(e=>{if(!e?.type||!e?.key||e.type==="merit")return false;const k=e.type+"|"+e.key;if(seen.has(k))return false;seen.add(k);return true});
@@ -6568,6 +6568,33 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   const itemKey=e=>e.type+"|"+e.key;
   function thumb(e){return e?.image?`<img src="${esc(e.image)}" alt="">`:`<span class="e">${icon(e?.type)}</span>`}
   let people=[],cat=[];
+  /* R36.127: หมวดหมู่ของในหน้าส่งของขวัญ (ยังค้นหาได้เหมือนเดิม) */
+  const G127_CATS=[
+    ["crop","🌾 พืชผล",["crop"]],["flower","🌸 ดอกไม้",["flowerSeed","flower"]],["fruit","🍓 ผลไม้",["farmFruit"]],
+    ["product","🥛 ผลผลิตสัตว์",["product"]],["food","🍲 อาหาร",["dish","rainyMenu","homeFood"]],["drink","🍷 เครื่องดื่ม",["boatDrink","wine"]],
+    ["special","✨ ของพิเศษ",["special"]],["fish","🎣 ตกปลา/สัตว์น้ำ",["fishingBait","coconutRiver"]],["jelly","🪼 แมงกะพรุน",["jelly","jellyV2"]],
+    ["med","💊 ยา",["medicine"]],["pet","🐾 สัตว์",["animal","cat","dog","hamster"]],["box","🎁 กล่องสุ่ม",["mystery","catMystery","dogMystery","number4Mystery"]],
+    ["alpaca","🦙 อัลปาก้า",["alpacaFood","alpacaMedicine","alpacaWool","alpacaOther","alpacaFactoryProduct"]],["hedge","🦔 ของเม่น",["hedgehogItem"]],
+    ["tool","🧰 อุปกรณ์/กุญแจ",["warehouseTool","upgradeKey"]]
+  ];
+  const G127_TYPE={};G127_CATS.forEach(([id,,types])=>types.forEach(t=>G127_TYPE[t]=id));
+  const g127Of=e=>G127_TYPE[e?.type]||(/^alpaca/.test(String(e?.type||""))?"alpaca":"other");
+  const g127Label=id=>(G127_CATS.find(c=>c[0]===id)||[id,"📦 อื่นๆ"])[1];
+  function g127Btn(e){const k=itemKey(e),r=draft.items.get(k);return `<button data-g125-add="${esc(k)}" class="${r?"g127-in":""}">${thumb(e)}<span>${esc(e.name)}</span>${r?`<b class="g127-q">×${fmt(r.qty)}</b>`:""}</button>`}
+  function g127Catalog(){
+    const q=draft.search.trim().toLowerCase(),counts={};
+    cat.forEach(e=>{const c=g127Of(e);counts[c]=(counts[c]||0)+1});
+    const ids=[...G127_CATS.map(c=>c[0]),"other"].filter(id=>counts[id]);
+    if(draft.cat&&!counts[draft.cat])draft.cat="";
+    const tabs=`<div class="g127-tabs" id="g127Tabs"><button data-g127-cat="" class="${!draft.cat&&!q?"on":""}">📋 ทั้งหมด</button>${ids.map(id=>`<button data-g127-cat="${id}" class="${draft.cat===id&&!q?"on":""}">${esc(g127Label(id))} <small>${counts[id]}</small></button>`).join("")}</div>`;
+    let body;
+    if(q){const hits=cat.filter(e=>String(e.name||"").toLowerCase().includes(q)||String(e.key).toLowerCase().includes(q));body=hits.length?`<div class="g127-note">ผลค้นหาจากทุกหมวด ${hits.length} รายการ</div><div class="g125-cat">${hits.slice(0,300).map(g127Btn).join("")}</div>`:`<div class="g125-empty">ไม่พบของ</div>`}
+    else if(draft.cat)body=`<div class="g125-cat">${cat.filter(e=>g127Of(e)===draft.cat).map(g127Btn).join("")}</div>`;
+    else body=ids.map(id=>`<h4 class="g127-h" data-g127-jump="${id}">${esc(g127Label(id))} <small>${counts[id]} รายการ</small></h4><div class="g125-cat">${cat.filter(e=>g127Of(e)===id).map(g127Btn).join("")}</div>`).join("");
+    return `${tabs}<div class="g127-scroll" id="g127Scroll">${body}</div>`;
+  }
+  let g127ResetScroll=false;
+  function g127Scrollers(){const out=[];let el=$("modalContent");while(el&&el!==document.documentElement){try{if(/(auto|scroll)/.test(getComputedStyle(el).overflowY))out.push([el,el.scrollTop])}catch(_){}el=el.parentElement}return out}
   async function openComposer(){
     if(!isAdminNow()){message?.("ไม่มีสิทธิ์","เมนูนี้สำหรับ Aida เท่านั้น");return}
     $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">🎁</span><div><h2>ส่งของขวัญ</h2><small>กำลังโหลดรายชื่อ…</small></div></div></section>`;openModal?.();
@@ -6577,7 +6604,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   function totalItems(){let n=0;for(const v of draft.items.values())n+=v.qty;return n}
   function renderComposer(){
     const sel=draft.all?people.length:draft.to.size;
-    const q=draft.search.trim().toLowerCase(),shown=(q?cat.filter(e=>String(e.name||"").toLowerCase().includes(q)||String(e.key).toLowerCase().includes(q)):cat).slice(0,80);
+    const g127Keep=g127Scrollers(),g127Inner=$("g127Scroll")?.scrollTop||0,g127TabsX=$("g127Tabs")?.scrollLeft||0,g127Anchor=$("g127Scroll")?$("g127Scroll").getBoundingClientRect().top:null;
     const rows=[...draft.items.values()];
     $("modalContent").innerHTML=`<section class="g125 g125-composer">
       <div class="g125-head"><span class="g125-bow">🎁</span><div><h2>ส่งของขวัญ</h2><small>ไม่จำกัดจำนวน • ผู้รับกดรับได้ครั้งเดียว</small></div></div>
@@ -6588,13 +6615,17 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
         <div class="g125-quick"><button data-g125-m="1000">+1,000</button><button data-g125-m="10000">+10,000</button><button data-g125-m="100000">+100,000</button><button data-g125-m="1000000">+1,000,000</button><button class="clr" data-g125-m="0">ล้าง</button></div></div>
       <div class="g125-sec"><h3>🧺 ของในกล่อง <span class="n">${rows.length} รายการ</span></h3>
         <div class="g125-box">${rows.length?rows.map(r=>`<div class="g125-row">${thumb(r)}<span class="nm">${esc(r.name)}</span><button data-g125-dec="${esc(itemKey(r))}">−</button><input inputmode="numeric" data-g125-qty="${esc(itemKey(r))}" value="${fmt(r.qty)}"><button data-g125-inc="${esc(itemKey(r))}">+</button><button data-g125-del="${esc(itemKey(r))}">×</button></div>`).join(""):`<div class="g125-empty">แตะของด้านล่างเพื่อใส่ลงกล่อง</div>`}</div>
-        <input class="g125-search" id="g125Search" placeholder="🔎 ค้นหาของ เช่น แครอท, ไข่, เมล็ด…" value="${esc(draft.search)}" style="margin-top:10px">
-        <div class="g125-cat">${shown.map(e=>`<button data-g125-add="${esc(itemKey(e))}">${thumb(e)}<span>${esc(e.name)}</span></button>`).join("")||`<div class="g125-empty">ไม่พบของ</div>`}</div></div>
+        <input class="g125-search" id="g125Search" placeholder="🔎 ค้นหาของ (ทุกหมวด) เช่น แครอท, ไข่, เมล็ด…" value="${esc(draft.search)}" style="margin-top:10px">
+        ${g127Catalog()}</div>
       <div class="g125-sec"><h3>💌 ข้อความ (ไม่ใส่ก็ได้)</h3><textarea class="g125-note" id="g125Note" maxlength="200" placeholder="เช่น รางวัลกิจกรรมทายใจ 🎉">${esc(draft.note)}</textarea></div>
       <button class="g125-send" id="g125Send" ${sel&&(draft.merit>0||rows.length)?"":"disabled"}>🎁 ส่งของขวัญ</button>
       <div class="g125-sum">${sel?`ส่งถึง ${sel} คน`:"ยังไม่ได้เลือกผู้รับ"}${draft.merit>0?` • กุศล ${fmt(draft.merit)}`:""}${rows.length?` • ของ ${rows.length} รายการ (${fmt(totalItems())} ชิ้น)`:""}</div>
     </section>`;
     openModal?.();
+    try{g127Keep.forEach(([el,top])=>{if(el.isConnected)el.scrollTop=top});const sc=$("g127Scroll");if(sc){sc.scrollTop=g127ResetScroll?0:g127Inner;if(g127Anchor!==null&&g127Keep.length){const d=sc.getBoundingClientRect().top-g127Anchor;if(Math.abs(d)>1&&Math.abs(d)<400)g127Keep[0][0].scrollTop+=d}}const tb=$("g127Tabs");if(tb)tb.scrollLeft=g127TabsX}catch(_){}
+    g127ResetScroll=false;
+    document.querySelectorAll("[data-g127-cat]").forEach(b=>b.onclick=()=>{draft.cat=b.dataset.g127Cat||"";draft.search="";g127ResetScroll=true;renderComposer()});
+    document.querySelectorAll("[data-g127-jump]").forEach(h=>h.onclick=()=>{draft.cat=h.dataset.g127Jump||"";g127ResetScroll=true;renderComposer()});
     const num=v=>{const n=Math.floor(Number(String(v||"").replace(/[^0-9]/g,""))||0);return Number.isSafeInteger(n)?n:0};
     document.querySelector("[data-g125-all]").onclick=()=>{draft.all=!draft.all;if(draft.all)draft.to.clear();renderComposer()};
     document.querySelectorAll("[data-g125-to]").forEach(b=>b.onclick=()=>{draft.all=false;const k=b.dataset.g125To;draft.to.has(k)?draft.to.delete(k):draft.to.add(k);renderComposer()});
@@ -6605,7 +6636,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     document.querySelectorAll("[data-g125-dec]").forEach(b=>b.onclick=()=>{const r=draft.items.get(b.dataset.g125Dec);if(r){r.qty=Math.max(1,r.qty-1);renderComposer()}});
     document.querySelectorAll("[data-g125-del]").forEach(b=>b.onclick=()=>{draft.items.delete(b.dataset.g125Del);renderComposer()});
     document.querySelectorAll("[data-g125-qty]").forEach(inp=>{inp.onchange=()=>{const r=draft.items.get(inp.dataset.g125Qty);if(r){r.qty=Math.max(1,num(inp.value));renderComposer()}}});
-    const se=$("g125Search");let t=null;se.oninput=()=>{draft.search=se.value;clearTimeout(t);t=setTimeout(()=>{const pos=se.selectionStart;renderComposer();const n=$("g125Search");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}},250)};
+    const se=$("g125Search");let t=null;se.oninput=()=>{draft.search=se.value;clearTimeout(t);t=setTimeout(()=>{const pos=se.selectionStart;g127ResetScroll=true;renderComposer();const n=$("g125Search");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}},250)};
     const no=$("g125Note");no.oninput=()=>{draft.note=no.value};
     $("g125Send").onclick=sendNow;
   }
@@ -6635,7 +6666,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       }
     }catch(e){console.error(BUILD,"send",e);message?.("ส่งของขวัญไม่ได้",esc(e?.message||"กรุณาลองใหม่"));btn.disabled=false;btn.textContent="🎁 ส่งของขวัญ";return}
     if(failed.length){message?.("ส่งได้บางส่วน",`ส่งสำเร็จ ${ok} คน • ไม่สำเร็จ ${failed.length} คน<br><small>${esc(failed.slice(0,10).join(", "))}</small><br>กดส่งใหม่ได้ ระบบจะไม่ส่งซ้ำให้คนที่ได้แล้วในรอบเดียวกัน`);btn.disabled=false;btn.textContent="🎁 ส่งของขวัญ";return}
-    draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:""};
+    draft={to:new Set(),all:false,items:new Map(),merit:0,note:"",search:"",cat:""};
     $("modalContent").innerHTML=`<section class="g125"><div class="g125-head"><span class="g125-bow">💝</span><div><h2>ส่งแล้ว!</h2><small>${ok} คนจะเห็นในแจ้งเตือน “จากยัยหนู”</small></div></div><div class="g125-sec"><div class="g125-its">${items.map(itemChip).join("")}</div></div><button class="g125-send" id="g125Again">🎁 ส่งอีก</button></section>`;
     $("g125Again").onclick=()=>openComposer();
   }
@@ -6725,6 +6756,307 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   /* move any freshly received vault alpacas into the warehouse shortly after login */
   setTimeout(()=>{try{globalThis.YN_R3651?.migrateVault?.().catch(()=>{})}catch(_){}},4000);
   globalThis.YN_R36126={BUILD,tidyMailbox};
+  globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
+  console.info(BUILD,"loaded");
+})();
+</script>
+<style id="r36127-style">
+/* R36.127 — หมวดหมู่หน้าส่งของขวัญ + เครื่องตรวจ/คืนกุศล */
+.g127-tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 2px 6px;margin-top:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.g127-tabs::-webkit-scrollbar{display:none}
+.g127-tabs button{flex:none;border:1.5px solid var(--g-line,#f1d6df);background:#fff;border-radius:99px;padding:6px 11px;font-size:12.5px;font-weight:800;color:var(--g-ink,#3b2a33);white-space:nowrap}
+.g127-tabs button small{opacity:.6;font-weight:700}
+.g127-tabs button.on{background:var(--g-rose,#e8718f);border-color:var(--g-rose,#e8718f);color:#fff}
+.g127-scroll{max-height:52vh;overflow:auto;-webkit-overflow-scrolling:touch;padding:2px;border-radius:12px}
+.g127-scroll .g125-cat{max-height:none;overflow:visible;margin-top:4px}
+.g127-h{margin:12px 2px 2px;font-size:13px;color:var(--g-ink,#3b2a33);display:flex;align-items:center;gap:6px;cursor:pointer}
+.g127-h:first-child{margin-top:2px}
+.g127-h small{margin-left:auto;font-weight:700;opacity:.55;font-size:11px}
+.g127-note{font-size:11.5px;opacity:.7;margin:2px 2px 0}
+.g125-cat button.g127-in{border-color:var(--g-rose,#e8718f);background:#fff1f5}
+.g125-cat button .g127-q{margin-left:auto;background:var(--g-rose,#e8718f);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;flex:none}
+.m127 .m127-card{background:#fff;border:1px solid #f1d6df;border-radius:14px;padding:10px 12px;margin:8px 0}
+.m127 .m127-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed #f3dfe6;font-size:13.5px}
+.m127 .m127-row:last-child{border-bottom:0}
+.m127 .m127-row b{white-space:nowrap}
+.m127 .m127-big{font-size:15px;font-weight:900}
+.m127 .m127-bad{color:#c2334f}
+.m127 .m127-ok{color:#2d8a4e}
+.m127 .m127-warn{background:#fff6e5;border:1px solid #f5d38a;border-radius:12px;padding:8px 10px;font-size:12.5px;margin:8px 0;line-height:1.55}
+.m127 input.m127-in{width:100%;box-sizing:border-box;font-size:18px;font-weight:900;text-align:center;border:1.5px solid #f1d6df;border-radius:12px;padding:10px;margin-top:6px}
+.m127 small.m127-k{display:block;opacity:.55;font-size:10.5px;font-weight:600}
+</style>
+<script>
+/* =====================================================================
+   S2 R36.127 — เครื่องตรวจ/คืนคะแนนกุศล (Aida) + หมวดหมู่หน้าส่งของขวัญ
+   2026-09-24
+   - ศูนย์แอดมิน > "🙏 ตรวจ/คืนกุศลผู้เล่น": เลือกผู้เล่น 1 คน ดูกุศลในเซฟ,
+     กุศลหน้า Rank, คะแนนตั้งต้น 23 ก.ย., กุศลจากของขวัญที่รับหลังจากนั้น,
+     ค่าปรับภารกิจหมู่บ้านที่ค้าง แล้วส่ง "ของขวัญคืนกุศล" ส่วนที่ขาด
+   - การคืนใช้ระบบของขวัญ R36.125 เดิม (กฎ Firestore อนุญาตอยู่แล้ว,
+     ไม่ต้อง deploy กฎใหม่) ผู้เล่นกดรับได้ครั้งเดียว
+   - ไม่แตะ ฟาร์ม/สัตว์/กระเป๋า/แคมเปญ และไม่เปลี่ยนกุศลของใครโดยอัตโนมัติ
+   ===================================================================== */
+(function YN_R36127_MERIT_CHECK(){
+  "use strict";
+  const BUILD="S2-R36.128-MERIT-ITEM-RESTORE-20260924";
+  const PREFIX="mr127-";
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const fmt=n=>Math.floor(Number(n)||0).toLocaleString("en-US");
+  const num=v=>{const n=Math.floor(Number(String(v??"").replace(/[^0-9]/g,""))||0);return Number.isSafeInteger(n)?n:0};
+  const isAdminNow=()=>{try{return String(currentMember||"")==="Aida"&&adminProfile?.role==="admin"}catch(_){return false}};
+  const active=k=>{try{return typeof YN_isActivePlayerKey==="function"?YN_isActivePlayerKey(k):!!k}catch(_){return !!k}};
+  const ms=v=>{try{return Number(v?.toMillis?.()||(v?.seconds?v.seconds*1000:v))||0}catch(_){return 0}};
+  /* ตารางคะแนนตั้งต้นทางการ 23 ก.ย. 2026 (เหมือน R36.124) */
+  const BASE={"kk":1190071,"porpla":1105084,"pukkie":972536,"manee":920562,"op":772093,"iphone 18":772093,"vodka":725577,"hana":710395,"zerosky":709955,"tangtang":409278,"aimme":322607,"kung a":277592,"noona":217749,"para":212099,"nitthar":172082,"sa":169526,"orn":154056,"kaew":149337,"gik":119971,"phon":97070,"simsim":90243,"nampj":88658,"nam":88658,"dao":39548,"gigs gee":35773,"kamonnet":32365,"jeed":4920,"blotto bier":300,"ar jane":0,"focus":0};
+
+  let people=[],pick=null,info=null,busy=false;
+
+  /* ---------------- R36.128: ตรวจของในกระเป๋าที่หาย จากสำเนาเก่าบนเซิร์ฟเวอร์ ---------------- */
+  const IPREFIX="mr128i-";
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const field=(o,p)=>{for(const k of String(p).split(".")){if(o==null)return undefined;o=o[k]}return o};
+  const tsOf=v=>{try{return Number(v?.toMillis?.()||(v?.seconds?v.seconds*1000:v))||0}catch(_){return 0}};
+  const MAP_TYPES=[["bag","crop"],["specials","special"],["animalProducts","product"],["fishingBaits","fishingBait"],["specialAnimals","jelly"],["jellyfishV2","jellyV2"],["medicines","medicine"],["hedgehogItems","hedgehogItem"],["flowerSeeds","flowerSeed"],["flowers","flower"],["wines","wine"],["boatDrinks","boatDrink"],["rainyMenus","rainyMenu"],["warehouseTools","warehouseTool"],["farmFruits","farmFruit"],["coconutRiverItems","coconutRiver"],["homeFoods","homeFood"],["alpaca.inventory.food","alpacaFood"],["alpaca.inventory.medicine","alpacaMedicine"],["alpaca.inventory.wool","alpacaWool"],["alpaca.inventory.other","alpacaOther"],["alpaca.factory.products","alpacaFactoryProduct"]];
+  const COUNTERS=[["mysteryBoxes","mystery","jellyfishBox"],["catMysteryBoxes","catMystery","catBox"],["dogMysteryBoxes","dogMystery","dogBox"],["number4MysteryBoxes","number4Mystery","number4Box"]];
+  const q=v=>{const n=Math.floor(Number(v)||0);return n>0&&n<9999?n:0};
+  let snaps=null,snapBusy=false,selSnap=-1,checked=new Set(),nameMap=null;
+  function names(){
+    if(nameMap)return nameMap;nameMap=new Map();
+    try{for(const e of (typeof adminGiftCatalog==="function"?adminGiftCatalog()||[]:[]))if(e?.type&&e?.key!=null)nameMap.set(e.type+"|"+e.key,{name:String(e.name||e.key),image:e.image||""})}catch(_){}
+    return nameMap;
+  }
+  function diffAgainst(cur,snap){
+    const out=[];
+    for(const [path,type] of MAP_TYPES){
+      const m=field(snap,path);if(!obj(m))continue;
+      const vals=Object.values(m).map(Number).filter(x=>x>0);if(vals.length>=4&&vals.filter(x=>x>=9999).length/vals.length>=.34)continue;/* ข้อมูลทดสอบ 9999 */
+      const c=field(cur,path)||{};
+      for(const [k,v] of Object.entries(m)){const had=q(v),now=Math.max(0,Math.floor(Number(c?.[k])||0));if(had>now)out.push({type,key:k,had,now,add:had-now})}
+    }
+    for(const [f,type,key] of COUNTERS){const had=q(snap?.[f]),now=Math.max(0,Math.floor(Number(cur?.[f])||0));if(had>now)out.push({type,key,had,now,add:had-now})}
+    const nm=names();
+    return out.map(r=>({...r,id:r.type+"|"+r.key,name:(nm.get(r.type+"|"+r.key)||{}).name||r.key,image:(nm.get(r.type+"|"+r.key)||{}).image||""})).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,"th"));
+  }
+  async function scanSnaps(){
+    if(!pick||!info||snapBusy)return;snapBusy=true;snaps=null;selSnap=-1;render();
+    const found=[];
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const add=(data,at,source)=>{if(obj(data))found.push({data,at,source})};
+      try{const qs=await fs.getDocs(fs.collection(db,"saveShards",pick.key,"items"));qs.forEach(d=>{const r=d.data()||{},at=tsOf(r.updatedAt)||tsOf(r.savedAt)||tsOf(r.createdAt);add(obj(r.data)?r.data:r,at,d.id)})}catch(e){console.warn(BUILD,"shards",e)}
+      try{const st=await fs.getDoc(fs.doc(db,"saveRescueStaging",pick.key));if(st.exists()){const r=st.data()||{},at=tsOf(r.createdAt)||tsOf(r.updatedAt);if(r.json)try{add(JSON.parse(String(r.json)),at,"rescue-staging")}catch(_){}add(r,at,"rescue-staging-doc")}}catch(e){console.warn(BUILD,"rescue",e)}
+    }catch(e){console.error(BUILD,"scan",e)}
+    const cur=info.state||{};
+    snaps=found.map(f=>({...f,rows:diffAgainst(cur,f.data),merit:Number(f.data?.merit)})).filter(f=>f.rows.length).sort((a,b)=>b.at-a.at);
+    snapBusy=false;render();
+  }
+  function whenText(at){if(!at)return "ไม่ทราบเวลา";try{return new Date(at).toLocaleString("th-TH",{timeZone:"Asia/Bangkok",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(_){return String(at)}}
+  function itemsHtml(){
+    if(!info)return "";
+    let inner;
+    if(snapBusy)inner=`<div class="g125-empty">กำลังค้นสำเนาเก่า…</div>`;
+    else if(snaps===null)inner=`<div class="m127-warn">ระบบจะค้น "สำเนาเซฟเก่า" ที่ยังเหลืออยู่บนเซิร์ฟเวอร์ แล้วเทียบกับกระเป๋าตอนนี้ ว่ามีของอะไรที่เคยมีมากกว่า</div><button class="g125-send" id="m128Scan">🔍 ค้นหาของที่หาย</button>`;
+    else if(!snaps.length)inner=`<div class="m127-warn">ไม่พบสำเนาเก่าที่มีของมากกว่าตอนนี้ค่ะ (ของที่หายอาจไม่มีสำเนาเหลือบนเซิร์ฟเวอร์) ให้ผู้เล่นแจ้งรายการของที่หายแล้วส่งคืนผ่านหน้า 🎁 ส่งของขวัญแทน</div><button class="g125-chip" id="m128Scan" style="width:100%">🔄 ค้นอีกครั้ง</button>`;
+    else if(selSnap<0)inner=`<div class="m127-warn">พบ ${snaps.length} สำเนาที่มีของมากกว่าตอนนี้ เลือกสำเนาที่ <b>ใหม่ที่สุดก่อนของหาย</b> (ของที่ผู้เล่นใช้/ขายไปเองจะถูกนับด้วย ให้ติ๊กออกได้)</div>${snaps.map((sn,i)=>`<button class="g125-chip" data-m128-snap="${i}" style="width:100%;text-align:left;margin:4px 0;border-radius:12px">📦 ${esc(whenText(sn.at))} • ขาด ${sn.rows.length} รายการ<small class="m127-k">${esc(sn.source)}${Number.isFinite(sn.merit)?` • กุศลในสำเนา ${fmt(sn.merit)}`:""}</small></button>`).join("")}`;
+    else{
+      const sn=snaps[selSnap];
+      inner=`<div class="m127-row"><span>สำเนา ${esc(whenText(sn.at))}</span><b>${checked.size}/${sn.rows.length} รายการ</b></div>
+        <div style="display:flex;gap:6px;margin:6px 0"><button class="g125-chip" id="m128All">เลือกทั้งหมด</button><button class="g125-chip" id="m128None">ไม่เลือก</button><button class="g125-chip" id="m128BackList">← สำเนาอื่น</button></div>
+        <div style="max-height:46vh;overflow:auto">${sn.rows.map(r=>`<label class="m127-row" style="align-items:center"><span><input type="checkbox" data-m128-it="${esc(r.id)}" ${checked.has(r.id)?"checked":""}> ${esc(r.name)}<small class="m127-k">ตอนนี้ ${fmt(r.now)} → เคยมี ${fmt(r.had)}</small></span><b class="m127-bad">+${fmt(r.add)}</b></label>`).join("")}</div>
+        <button class="g125-send" id="m128Send" ${checked.size&&!busy?"":"disabled"}>🎒 ส่งของที่เลือกคืน (${checked.size} รายการ)</button>`;
+    }
+    return `<div class="g125-sec"><h3>🎒 ของในกระเป๋าที่หาย</h3>${inner}</div>`;
+  }
+  function bindItems(){
+    if($("m128Scan"))$("m128Scan").onclick=scanSnaps;
+    document.querySelectorAll("[data-m128-snap]").forEach(b=>b.onclick=()=>{selSnap=Number(b.dataset.m128Snap);checked=new Set(snaps[selSnap].rows.map(r=>r.id));render()});
+    if($("m128BackList"))$("m128BackList").onclick=()=>{selSnap=-1;render()};
+    if($("m128All"))$("m128All").onclick=()=>{checked=new Set(snaps[selSnap].rows.map(r=>r.id));render()};
+    if($("m128None"))$("m128None").onclick=()=>{checked=new Set();render()};
+    document.querySelectorAll("[data-m128-it]").forEach(c=>c.onchange=()=>{c.checked?checked.add(c.dataset.m128It):checked.delete(c.dataset.m128It);const b=$("m128Send");if(b){b.disabled=!checked.size;b.textContent=`🎒 ส่งของที่เลือกคืน (${checked.size} รายการ)`}});
+    if($("m128Send"))$("m128Send").onclick=sendItems;
+  }
+  async function sendItems(){
+    if(busy||!pick||!info||selSnap<0||!isAdminNow())return;
+    const rows=snaps[selSnap].rows.filter(r=>checked.has(r.id));if(!rows.length)return;
+    /* ทดลองใส่ของในสำเนากระเป๋าก่อน ของชนิดไหนระบบรับไม่ได้จะถูกตัดออก (กันผู้เล่นกดรับแล้ว error ทั้งกล่อง) */
+    const ok=[],skipped=[];
+    for(const r of rows){try{let t=cp(info.state||{});if(typeof normalizeState==="function")t=normalizeState(t,pick.name);addGiftItemToState(t,{itemType:r.type,itemKey:r.key,qty:r.add});ok.push(r)}catch(e){skipped.push(r)}}
+    if(!ok.length){message?.("ส่งไม่ได้","ของที่เลือกเป็นชนิดที่ระบบของขวัญยังรับไม่ได้ค่ะ");return}
+    if(!confirm(`ส่งของคืนให้ ${pick.name} ${ok.length} รายการ${skipped.length?`\n(ข้าม ${skipped.length} รายการที่ส่งเป็นของขวัญไม่ได้)`:""}\n\n${ok.slice(0,15).map(r=>`${r.name} +${fmt(r.add)}`).join("\n")}${ok.length>15?"\n…":""}\n\nยืนยันไหม?`))return;
+    busy=true;const btn=$("m128Send");if(btn){btn.disabled=true;btn.textContent="กำลังส่ง…"}
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sendId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+      const gid=`${IPREFIX}${sendId}-${String(pick.key).replace(/[^a-zA-Z0-9_-]/g,"_")}`;
+      const items=ok.map(r=>({type:r.type,key:r.key,name:r.name,qty:r.add}));
+      const b=fs.writeBatch(db);
+      b.set(fs.doc(db,"gifts",gid),{fromKey:"aida",fromName:"Aida",source:"yainoo",toKey:pick.key,toName:pick.name,bundle:true,items,meritTotal:0,message:"ยัยหนูคืนของที่หายไปให้นะคะ 🎒",status:"pending",sendId,deliveryMode:"item-restore-r36128",restoreSnapshot:String(snaps[selSnap].source),createdAt:fs.serverTimestamp()});
+      b.set(fs.doc(db,"mailboxes",pick.key,"items",gid),{source:"yainoo",type:"gift",giftId:gid,fromKey:"aida",fromName:"Aida",title:"ยัยหนูคืนของที่หายให้คุณ 🎒",text:`ของ ${items.length} รายการ`,read:false,resolved:false,createdAt:fs.serverTimestamp()});
+      await b.commit();
+      message?.("ส่งของคืนแล้ว 🎒",`ส่งของ <b>${ok.length}</b> รายการให้ <b>${esc(pick.name)}</b> แล้ว${skipped.length?`<br><small>ข้าม ${skipped.length} รายการ: ${esc(skipped.map(r=>r.name).join(", "))}</small>`:""}<br><br>บอก ${esc(pick.name)} ให้เปิด 🔔 → แท็บ <b>👑 จากยัยหนู</b> → กด <b>รับของขวัญ</b>`);
+      snaps=null;selSnap=-1;checked=new Set();
+    }catch(e){console.error(BUILD,"send items",e);message?.("ส่งของคืนไม่ได้",esc(e?.message||"กรุณาลองใหม่"))}
+    finally{busy=false}
+  }
+
+  async function loadPeople(){
+    const map=new Map();
+    try{const {db,fs}=await getFirebaseContext(),sn=await fs.getDocs(fs.collection(db,"loginDirectory"));sn.forEach(d=>{const x=d.data()||{},k=String(x.memberKey||d.id||"");if(/^s2-[a-z0-9]+$/i.test(k)&&String(x.status||"approved")==="approved")map.set(k,String(x.displayName||k))})}catch(e){console.warn(BUILD,"directory",e)}
+    try{for(const n of Object.keys(typeof MEMBERS!=="undefined"?MEMBERS:{})){const k=String(memberKeyFromName(n)||"");if(k&&!map.has(k))map.set(k,n)}}catch(_){}
+    map.delete("aida");
+    return [...map].filter(([k])=>active(k)).map(([key,name])=>({key,name})).sort((a,b)=>a.name.localeCompare(b.name,"th"));
+  }
+
+  async function inspect(p){
+    const {db,fs}=await getFirebaseContext();
+    const [ss,ps,rs,gs]=await Promise.all([
+      fs.getDoc(fs.doc(db,"saves",p.key)),
+      fs.getDoc(fs.doc(db,"publicProfiles",p.key)).catch(()=>null),
+      fs.getDocs(fs.query(fs.collection(db,"giftReceipts"),fs.where("memberKey","==",p.key),fs.limit(1000))).catch(e=>{console.warn(BUILD,"receipts",e);return null}),
+      fs.getDocs(fs.query(fs.collection(db,"gifts"),fs.where("toKey","==",p.key),fs.where("status","==","pending"),fs.limit(500))).catch(e=>{console.warn(BUILD,"pending",e);return null})
+    ]);
+    const sv=ss.exists()?(ss.data()||{}):null,pv=ps&&ps.exists()?(ps.data()||{}):{};
+    let giftMerit=0,giftCount=0,restored=0,restoredCount=0,receiptsOk=!!rs;
+    rs?.forEach(d=>{const x=d.data()||{},a=Number(x.meritAdd)||0;if(x.accepted!==true||a<=0)return;if(String(x.giftId||"").startsWith(PREFIX)){restored+=a;restoredCount++}else{giftMerit+=a;giftCount++}});
+    let pendingRestore=0,pendingGiftMerit=0;
+    gs?.forEach(d=>{const g=d.data()||{},m=Number(g.meritTotal)||0;if(!m)return;if(String(d.id).startsWith(PREFIX))pendingRestore+=m;else pendingGiftMerit+=m});
+    const nm=String(p.name||"").trim().toLowerCase();
+    const base=Object.prototype.hasOwnProperty.call(BASE,nm)?BASE[nm]:null;
+    const v=sv?.villageSeason2||{};
+    return{
+      hasSave:!!sv,saveMerit:Number(sv?.merit),profMerit:Number(pv.merit),
+      baseStamped:String(sv?.meritBaselineId||"")==="B20260923",base,baseFrom:sv?.meritBaselineFrom,
+      giftMerit,giftCount,restored,restoredCount,receiptsOk,pendingRestore,pendingGiftMerit,
+      state:sv||{},missStreak:Math.max(0,Math.floor(Number(v.missStreak)||0)),villageId:String(v.villageId||""),
+      updatedAt:ms(sv?.updatedAt)
+    };
+  }
+
+  function expectedOf(i){
+    if(i.base==null)return null;
+    return i.base+i.giftMerit;
+  }
+  function suggestTarget(i){
+    const cur=Number.isFinite(i.saveMerit)?i.saveMerit:0;
+    const exp=expectedOf(i);
+    let t=cur;
+    if(exp!=null)t=Math.max(t,exp);
+    if(Number.isFinite(i.profMerit))t=Math.max(t,i.profMerit);
+    return t;
+  }
+
+  function render(){
+    const box=$("modalContent");if(!box)return;
+    let body="";
+    if(pick&&info){
+      const i=info,cur=Number.isFinite(i.saveMerit)?i.saveMerit:0,exp=expectedOf(i),target=suggestTarget(i),diff=target-cur;
+      const penNext=(i.missStreak+1)*50,penSum=50*i.missStreak*(i.missStreak+1)/2;
+      body=`<div class="g125-sec m127-card">
+        <h3>🙏 ${esc(pick.name)} <small class="m127-k">${esc(pick.key)}</small></h3>
+        ${!i.hasSave?`<div class="m127-warn">⚠️ ไม่พบเซฟของบัญชีนี้ ลองเลือกชื่อ ${esc(pick.name)} อีกอันถ้ามี 2 ชื่อ</div>`:""}
+        <div class="m127-row"><span>กุศลตอนนี้ (ในเซฟ)</span><b class="m127-big">${fmt(cur)}</b></div>
+        <div class="m127-row"><span>กุศลบนหน้า Rank</span><b>${Number.isFinite(i.profMerit)?fmt(i.profMerit):"-"}</b></div>
+        <div class="m127-row"><span>คะแนนตั้งต้น 23 ก.ย.</span><b>${i.base!=null?fmt(i.base):"ไม่มีในตาราง"}${i.baseStamped?"":" <small>(ยังไม่ถูกตั้ง)</small>"}</b></div>
+        ${i.baseFrom!=null&&i.baseFrom!==""?`<div class="m127-row"><span>ก่อนตั้งค่า 23 ก.ย. เคยมี</span><b>${fmt(i.baseFrom)}</b></div>`:""}
+        <div class="m127-row"><span>กุศลจากของขวัญที่รับหลังจากนั้น</span><b>+${fmt(i.giftMerit)} <small>(${i.giftCount} ครั้ง)</small></b></div>
+        ${i.restored?`<div class="m127-row"><span>เคยคืนกุศลให้แล้ว</span><b>+${fmt(i.restored)} <small>(${i.restoredCount} ครั้ง)</small></b></div>`:""}
+        <div class="m127-row"><span>ควรมีอย่างน้อยประมาณ</span><b class="m127-big">${exp!=null?fmt(exp):"-"}</b></div>
+        <div class="m127-row"><span>ภารกิจหมู่บ้านขาดติดกัน</span><b>${i.missStreak} วัน${i.missStreak?` <small>(หักไปแล้วราว ${fmt(penSum)} • พรุ่งนี้ถ้าไม่ครบหัก ${fmt(penNext)})</small>`:""}</b></div>
+        ${!i.receiptsOk?`<div class="m127-warn">อ่านประวัติการรับของขวัญไม่ได้ ตัวเลข "ควรมี" อาจต่ำกว่าจริง</div>`:""}
+        ${i.pendingRestore?`<div class="m127-warn">⏳ มีของขวัญคืนกุศลที่ส่งไปแล้วแต่ ${esc(pick.name)} ยังไม่กดรับ <b>+${fmt(i.pendingRestore)}</b><br>ให้ผู้เล่นกดรับก่อน อย่าเพิ่งส่งซ้ำนะคะ</div>`:""}
+        ${i.pendingGiftMerit?`<div class="m127-warn">🎁 มีของขวัญกุศลปกติรอ ${esc(pick.name)} กดรับอยู่ +${fmt(i.pendingGiftMerit)} (ยังไม่นับในเซฟ)</div>`:""}
+        <div class="m127-warn">💡 เลขนี้เป็นการประมาณ: กุศลเพิ่ม/ลดจากการเล่นปกติได้ด้วย (ปลูกพืชที่ใช้กุศล, ร้านกุศล, ค่าปรับหมู่บ้าน/สัตว์หิว) ถ้ามีรูปหน้า Rank ล่าสุดของผู้เล่น ให้พิมพ์เลขจากรูปนั้นในช่องด้านล่างได้เลย</div>
+      </div>
+      <div class="g125-sec"><h3>✏️ ตั้งกุศลให้เป็น</h3>
+        <input class="m127-in" id="m127Target" inputmode="numeric" value="${fmt(target)}">
+        <div class="g125-sum" id="m127Diff" style="margin-top:8px">${diff>0?`จะส่งคืน <b class="m127-bad">+${fmt(diff)}</b> กุศล`:`<span class="m127-ok">ตอนนี้ไม่ต่ำกว่าเลขนี้ ไม่ต้องคืน</span>`}</div>
+        <button class="g125-send" id="m127Send" ${diff>0&&i.hasSave&&!busy?"":"disabled"}>🙏 ส่งคืนกุศลให้ ${esc(pick.name)}</button>
+        <button class="g125-chip" id="m127Reload" style="margin-top:8px;width:100%">🔄 โหลดตัวเลขใหม่</button>
+      </div>${itemsHtml()}`;
+    }else if(pick){
+      body=`<div class="g125-sec"><div class="g125-empty">กำลังตรวจ ${esc(pick.name)}…</div></div>`;
+    }
+    box.innerHTML=`<section class="g125 m127">
+      <div class="g125-head"><span class="g125-bow">🙏</span><div><h2>ตรวจ/คืนกุศล + ของหาย</h2><small>เลือกผู้เล่น 1 คน • คืนผ่านของขวัญ ผู้เล่นกดรับครั้งเดียว</small></div></div>
+      <div class="g125-sec"><h3>👤 เลือกผู้เล่น <span class="n">${people.length} คน</span></h3>
+        <div class="g125-chips">${people.map(p=>`<button class="g125-chip ${pick&&pick.key===p.key?"on":""}" data-m127-p="${esc(p.key)}">${esc(p.name)}</button>`).join("")||`<div class="g125-empty">กำลังโหลดรายชื่อ…</div>`}</div></div>
+      ${body}
+      <button class="g125-chip" id="m127Back" style="margin-top:6px;width:100%">← กลับศูนย์แอดมิน</button>
+    </section>`;
+    try{openModal?.()}catch(_){}
+    document.querySelectorAll("[data-m127-p]").forEach(b=>b.onclick=()=>choose(b.dataset.m127P));
+    if($("m127Back"))$("m127Back").onclick=()=>{try{showAdminCenter?.()}catch(_){}};
+    if($("m127Reload"))$("m127Reload").onclick=()=>pick&&choose(pick.key);
+    const ti=$("m127Target");
+    if(ti&&info){ti.oninput=()=>{const cur=Number.isFinite(info.saveMerit)?info.saveMerit:0,d=num(ti.value)-cur,el=$("m127Diff"),b=$("m127Send");if(el)el.innerHTML=d>0?`จะส่งคืน <b class="m127-bad">+${fmt(d)}</b> กุศล`:`<span class="m127-ok">ตอนนี้ไม่ต่ำกว่าเลขนี้ ไม่ต้องคืน</span>`;if(b)b.disabled=!(d>0&&info.hasSave&&!busy)};ti.onblur=()=>{ti.value=fmt(num(ti.value))}}
+    if($("m127Send"))$("m127Send").onclick=send;
+    bindItems();
+  }
+
+  async function choose(key){
+    pick=people.find(p=>p.key===key)||null;info=null;snaps=null;selSnap=-1;checked=new Set();render();
+    if(!pick)return;
+    try{const r=await inspect(pick);if(pick&&pick.key===key){info=r;render()}}
+    catch(e){console.error(BUILD,"inspect",e);message?.("ตรวจไม่ได้",esc(e?.message||"กรุณาลองใหม่"))}
+  }
+
+  async function send(){
+    if(busy||!pick||!info||!isAdminNow())return;
+    const ti=$("m127Target"),target=num(ti?.value),cur=Number.isFinite(info.saveMerit)?info.saveMerit:0,add=target-cur;
+    if(add<=0)return;
+    if(info.pendingRestore&&!confirm(`${pick.name} ยังมีของขวัญคืนกุศลที่ยังไม่กดรับ +${fmt(info.pendingRestore)}\nส่งเพิ่มอีกจริงไหม?`))return;
+    if(!confirm(`คืนกุศลให้ ${pick.name}\n\nตอนนี้ ${fmt(cur)}\nส่งคืน +${fmt(add)}\nหลังกดรับจะเป็น ${fmt(target)}\n\nยืนยันไหม?`))return;
+    busy=true;const btn=$("m127Send");if(btn){btn.disabled=true;btn.textContent="กำลังส่ง…"}
+    try{
+      const {db,fs}=await getFirebaseContext();
+      const sendId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+      const gid=`${PREFIX}${sendId}-${String(pick.key).replace(/[^a-zA-Z0-9_-]/g,"_")}`;
+      const items=[{type:"merit",key:"merit",name:"คะแนนกุศล (คืนส่วนที่หาย)",qty:add}];
+      const note="ยัยหนูคืนคะแนนกุศลที่หายไปให้นะคะ 🙏";
+      const b=fs.writeBatch(db);
+      b.set(fs.doc(db,"gifts",gid),{fromKey:"aida",fromName:"Aida",source:"yainoo",toKey:pick.key,toName:pick.name,bundle:true,items,meritTotal:add,message:note,status:"pending",sendId,deliveryMode:"merit-restore-r36127",restoreFrom:cur,restoreTo:target,createdAt:fs.serverTimestamp()});
+      b.set(fs.doc(db,"mailboxes",pick.key,"items",gid),{source:"yainoo",type:"gift",giftId:gid,fromKey:"aida",fromName:"Aida",title:"ยัยหนูคืนคะแนนกุศลให้คุณ 🙏",text:`คะแนนกุศล ×${fmt(add)}`,read:false,resolved:false,createdAt:fs.serverTimestamp()});
+      await b.commit();
+      message?.("ส่งคืนกุศลแล้ว 🙏",`ส่ง <b>+${fmt(add)}</b> กุศลให้ <b>${esc(pick.name)}</b> แล้ว<br><br>บอก ${esc(pick.name)} ให้เปิด 🔔 การแจ้งเตือน → แท็บ <b>👑 จากยัยหนู</b> → กด <b>รับของขวัญ</b><br>กดรับแล้วกุศลจะเป็น <b>${fmt(target)}</b> (รับได้ครั้งเดียว)`);
+    }catch(e){console.error(BUILD,"send",e);message?.("ส่งคืนไม่ได้",esc(e?.message||"กรุณาลองใหม่"))}
+    finally{busy=false}
+  }
+
+  async function open(){
+    if(!isAdminNow()){message?.("ไม่มีสิทธิ์","เมนูนี้สำหรับ Aida เท่านั้น");return}
+    if(typeof cloudReady!=="undefined"&&!cloudReady){message?.("ยังไม่พร้อม","กรุณารอเชื่อมต่อสักครู่ค่ะ");return}
+    pick=null;info=null;render();
+    try{people=await loadPeople()}catch(_){people=[]}
+    render();
+  }
+
+  function install(){
+    try{
+      if(typeof showAdminCenter!=="function"||showAdminCenter.__r36127)return;
+      const base=showAdminCenter;
+      const wrapped=async function(){
+        const r=await base.apply(this,arguments);
+        try{
+          if(isAdminNow()&&!$("m127AdminBtn")){
+            const bt=document.createElement("button");bt.id="m127AdminBtn";bt.type="button";bt.className="g125-big";bt.textContent="🙏 ตรวจ/คืนกุศล + ของหาย";bt.onclick=()=>open();
+            const after=$("g125AdminSend");
+            if(after)after.insertAdjacentElement("afterend",bt);
+            else{const panel=document.querySelector("#modalContent .admin-panel")||document.querySelector("#modalContent section");const h=panel?.querySelector("h2");h?h.insertAdjacentElement("afterend",bt):panel?.prepend(bt)}
+          }
+        }catch(e){console.warn(BUILD,"admin inject",e)}
+        return r;
+      };
+      wrapped.__r36127=1;if(base.__r36125)wrapped.__r36125=1;
+      showAdminCenter=wrapped;
+    }catch(e){console.warn(BUILD,"admin wrap",e)}
+  }
+  install();setTimeout(install,2000);setTimeout(install,7000);
+
+  globalThis.YN_R36127={BUILD,open,inspect};
   globalThis.YAINOO_BUILD=BUILD;globalThis.YAINOO_PACKAGE_BUILD=BUILD;
   console.info(BUILD,"loaded");
 })();
