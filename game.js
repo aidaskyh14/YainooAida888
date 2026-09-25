@@ -15413,7 +15413,7 @@ window.YAINOO_BUILD="V183-FISHING-DB-SOURCE";
   openOneNumber4Box=async function(qty=1){
     if(!cloudReady)return message("เปิดกล่องไม่ได้","กรุณาเชื่อม Firebase ก่อน");qty=Math.max(1,Math.floor(Number(qty)||1));const btn=$("openNumber4BoxBtn");if(btn){btn.disabled=true;btn.textContent=`กำลังเปิด ×${qty}...`}
     try{await settlePendingCloudSave();const {db,fs}=await getFirebaseContext(),ref=fs.doc(db,"saves",currentMemberKey);let next,totalFrog=0,totalFish=0,rareTotals={},bonusTotals={};
-      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(st);if(!M200_ADMIN()&&Number(st.number4MysteryBoxes)<qty)throw new Error(`กล่องสุ่มหมายเลข4 ไม่พอ เหลือ ${Number(st.number4MysteryBoxes)||0} กล่อง`);for(let i=0;i<qty;i++){const fq=randomNumber4Qty(),fi=randomNumber4Qty();totalFrog+=fq;totalFish+=fi;if(Math.random()<.20){const k=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)],q=[10,20,30][Math.floor(Math.random()*3)];rareTotals[k]=(rareTotals[k]||0)+q}if(Math.random()<.15){const q=1+Math.floor(Math.random()*5),pick=Math.floor(Math.random()*3);st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};if(pick===0){st.specials.r35PumpkinGimmick=(Number(st.specials.r35PumpkinGimmick)||0)+q;bonusTotals["🎃 ฟักทองกิมมิก"]=(bonusTotals["🎃 ฟักทองกิมมิก"]||0)+q}else if(pick===1){st.specials.r35CandyGimmick=(Number(st.specials.r35CandyGimmick)||0)+q;bonusTotals["🍬 แคนดี้กิมมิก"]=(bonusTotals["🍬 แคนดี้กิมมิก"]||0)+q}else{const cs=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]],c=cs[Math.floor(Math.random()*cs.length)]||cs[0];st.alpaca=st.alpaca||{};st.alpaca.inventory=st.alpaca.inventory||{};st.alpaca.inventory.wool=st.alpaca.inventory.wool||{};st.alpaca.inventory.wool[c[0]]=(Number(st.alpaca.inventory.wool[c[0]])||0)+q;bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]=(bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]||0)+q}}}if(!M200_ADMIN())st.number4MysteryBoxes-=qty;else st.number4MysteryBoxes=ADMIN_STOCK_QTY;incrementMissionOn(st,"openMysteryBox",qty);st.coconutRiverItems.frog4=(Number(st.coconutRiverItems.frog4)||0)+totalFrog;st.coconutRiverItems.fish4=(Number(st.coconutRiverItems.fish4)||0)+totalFish;Object.entries(rareTotals).forEach(([k,q])=>st.coconutRiverItems[k]=(Number(st.coconutRiverItems[k])||0)+q);next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);const rows={[COCONUT_RIVER_ITEMS.frog4.name]:totalFrog,[COCONUT_RIVER_ITEMS.fish4.name]:totalFish};Object.entries(rareTotals).forEach(([k,q])=>rows[COCONUT_RIVER_ITEMS[k].name]=q);Object.entries(bonusTotals).forEach(([k,q])=>rows[k]=q);message(`🎁 เปิดกล่องหมายเลข4 ${qty} กล่องแล้ว!`,`<div style="max-height:45vh;overflow:auto">${boxRewardSummary(rows)}</div><br>กล่องคงเหลือ ×${Number(ownState.number4MysteryBoxes)||0}`)
+      await fs.runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");const st=M200_ensureState(normalizeState(snap.data(),currentMember));ensureNumber4BoxState(st);if(!M200_ADMIN()&&Number(st.number4MysteryBoxes)<qty)throw new Error(`กล่องสุ่มหมายเลข4 ไม่พอ เหลือ ${Number(st.number4MysteryBoxes)||0} กล่อง`);for(let i=0;i<qty;i++){if(Math.random()<.20){bonusTotals["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]=(bonusTotals["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]||0)+1;continue}const fq=randomNumber4Qty(),fi=randomNumber4Qty();totalFrog+=fq;totalFish+=fi;if(Math.random()<.20){const k=["crab4","urchin4","shrimp4"][Math.floor(Math.random()*3)],q=[10,20,30][Math.floor(Math.random()*3)];rareTotals[k]=(rareTotals[k]||0)+q}if(Math.random()<.15){const q=1+Math.floor(Math.random()*5),pick=Math.floor(Math.random()*3);st.specials=st.specials&&typeof st.specials==="object"?st.specials:{};if(pick===0){st.specials.r35PumpkinGimmick=(Number(st.specials.r35PumpkinGimmick)||0)+q;bonusTotals["🎃 ฟักทองกิมมิก"]=(bonusTotals["🎃 ฟักทองกิมมิก"]||0)+q}else if(pick===1){st.specials.r35CandyGimmick=(Number(st.specials.r35CandyGimmick)||0)+q;bonusTotals["🍬 แคนดี้กิมมิก"]=(bonusTotals["🍬 แคนดี้กิมมิก"]||0)+q}else{const cs=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]],c=cs[Math.floor(Math.random()*cs.length)]||cs[0];st.alpaca=st.alpaca||{};st.alpaca.inventory=st.alpaca.inventory||{};st.alpaca.inventory.wool=st.alpaca.inventory.wool||{};const wq=5+Math.floor(Math.random()*6);st.alpaca.inventory.wool[c[0]]=(Number(st.alpaca.inventory.wool[c[0]])||0)+wq;bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]=(bonusTotals[`🧶 ขนอัลปาก้าสี${c[1]}`]||0)+wq}}}if(!M200_ADMIN())st.number4MysteryBoxes-=qty;else st.number4MysteryBoxes=ADMIN_STOCK_QTY;incrementMissionOn(st,"openMysteryBox",qty);st.coconutRiverItems.frog4=(Number(st.coconutRiverItems.frog4)||0)+totalFrog;st.coconutRiverItems.fish4=(Number(st.coconutRiverItems.fish4)||0)+totalFish;Object.entries(rareTotals).forEach(([k,q])=>st.coconutRiverItems[k]=(Number(st.coconutRiverItems[k])||0)+q);next=st;tx.set(ref,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false})});Y26_applyOwnState(next);saveLocalOnly(ownState);const rows={[COCONUT_RIVER_ITEMS.frog4.name]:totalFrog,[COCONUT_RIVER_ITEMS.fish4.name]:totalFish};Object.entries(rareTotals).forEach(([k,q])=>rows[COCONUT_RIVER_ITEMS[k].name]=q);Object.entries(bonusTotals).forEach(([k,q])=>rows[k]=q);message(`🎁 เปิดกล่องหมายเลข4 ${qty} กล่องแล้ว!`,`<div style="max-height:45vh;overflow:auto">${boxRewardSummary(rows)}</div><br>กล่องคงเหลือ ×${Number(ownState.number4MysteryBoxes)||0}`)
     }catch(e){message("เปิดกล่องไม่ได้",e.message||"กรุณาลองใหม่")}finally{if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent="เปิดตามจำนวน"}}
   };
 
@@ -18426,8 +18426,8 @@ async function V181_campaignScoreLater(summary){
     const s=normalizeState(ownState||state,currentMember);v240EnsureState(s);const entries=v240MemberGiftEntriesFull(s);
     if(!entries.length)return message("ยังไม่มีของที่ส่งได้","ของที่อยู่ในกระเป๋า/คลังและยังไม่ได้วางใช้งานจะขึ้นที่นี่ค่ะ");
     const cats=[...new Set(entries.map(e=>e.category||"ไอเท็ม"))];let cat=cats[0];
-    $("modalContent").innerHTML=`<section class="feature-panel v240-member-gift"><header><div><small>🎁 ส่งของให้</small><h2>${v240Esc(targetName)}</h2></div><button id="v240GiftClose">×</button></header><p>ส่งให้เพื่อนได้ไม่จำกัดครั้ง • ระบบตรวจของจริงทุกครั้ง</p><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-gift-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240GiftItems" class="v240-admin-items"></div></section>`;openModal();
-    const paint=()=>{$("v240GiftItems").innerHTML=entries.filter(e=>(e.category||"ไอเท็ม")===cat).map((e,i)=>{const real=entries.indexOf(e),max=Math.min(remain,v240Int(e.count||e.qty||1));return `<article><span>${e.image?`<img src="${e.image}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b><small>มี ×${v240Int(e.count||e.qty||1)}</small></span><input type="number" min="1" max="${max}" value="1" data-v240-gift-qty="${real}" ${["alpacaInstance","catInstance","dogInstance"].includes(e.type)?"disabled":""}><button data-v240-gift-send="${real}">ส่ง</button></article>`}).join("");document.querySelectorAll("[data-v240-gift-send]").forEach(b=>b.onclick=()=>{const e=entries[Number(b.dataset.v240GiftSend)],q=["alpacaInstance","catInstance","dogInstance"].includes(e.type)?1:Math.max(1,Math.min(remain,v240Int(document.querySelector(`[data-v240-gift-qty="${b.dataset.v240GiftSend}"]`)?.value)||1));v240SendFriendGift(targetKey,targetName,e,q)})};
+    $("modalContent").innerHTML=`<section class="feature-panel v240-member-gift"><header><div><small>🎁 ส่งของให้</small><h2>${v240Esc(targetName)}</h2></div><button id="v240GiftClose">×</button></header><p>ส่งให้เพื่อนได้ไม่จำกัดครั้ง • ครั้งละไม่เกิน 999 ชิ้น • ระบบตรวจของจริงทุกครั้ง</p><div class="v240-admin-tabs">${cats.map((c,i)=>`<button data-v240-gift-cat="${v240Esc(c)}" class="${i===0?"active":""}">${v240Esc(c)}</button>`).join("")}</div><div id="v240GiftItems" class="v240-admin-items"></div></section>`;openModal();
+    const paint=()=>{$("v240GiftItems").innerHTML=entries.filter(e=>(e.category||"ไอเท็ม")===cat).map((e,i)=>{const real=entries.indexOf(e),max=Math.min(999,v240Int(e.count||e.qty||1));return `<article><span>${e.image?`<img src="${e.image}" alt="">`:"🎁"}<b>${v240Esc(e.name)}</b><small>มี ×${v240Int(e.count||e.qty||1)}</small></span><input type="number" min="1" max="${max}" value="1" data-v240-gift-qty="${real}" ${["alpacaInstance","catInstance","dogInstance"].includes(e.type)?"disabled":""}><button data-v240-gift-send="${real}">ส่ง</button></article>`}).join("");document.querySelectorAll("[data-v240-gift-send]").forEach(b=>b.onclick=()=>{const e=entries[Number(b.dataset.v240GiftSend)],q=["alpacaInstance","catInstance","dogInstance"].includes(e.type)?1:Math.max(1,Math.min(999,v240Int(e.count||e.qty||1),v240Int(document.querySelector(`[data-v240-gift-qty="${b.dataset.v240GiftSend}"]`)?.value)||1));v240SendFriendGift(targetKey,targetName,e,q)})};
     document.querySelectorAll("[data-v240-gift-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.v240GiftCat;document.querySelectorAll("[data-v240-gift-cat]").forEach(x=>x.classList.toggle("active",x===b));paint()});$("v240GiftClose").onclick=closeModal;paint();
   };
 
@@ -19856,34 +19856,35 @@ console.info("R17 canonical gift save + rainy score writer loaded");
   }
 
   function rollReward(selections,calledAt){
-    /* R36.1: lower Honey rewards and seed the new gimmick/wig materials into circulation. */
-    const meritHit=Math.random()<0.20;
-    if(meritHit){
-      let hour=0;
-      try{hour=Number(bangkokPartsFull(new Date(Number(calledAt)||gameNow())).hour)||0}catch(_){hour=Number(bangkokPartsFull().hour)||0}
-      const afternoon=hour>=13&&hour<16;
-      const qty=afternoon?randInt(40,70):randInt(20,40);
-      return{type:"merit",key:"merit",name:"กุศล",qty,image:""};
-    }
-    const woolColors=[
-      ["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]
-    ];
+    /* R36.130: three time periods by the hour Honey was CALLED (Bangkok time).
+       good 12:00-15:59 • bad 00:00-05:59 • normal = every other hour */
+    let hour=0;
+    try{hour=Number(bangkokPartsFull(new Date(Number(calledAt)||gameNow())).hour)||0}catch(_){try{hour=Number(bangkokPartsFull().hour)||0}catch(__){hour=0}}
+    const period=hour>=12&&hour<16?"good":(hour<6?"bad":"normal");
+    const meritChance={good:.50,normal:.30,bad:.10}[period],range={good:[150,300],normal:[80,150],bad:[20,50]}[period];
+    if(Math.random()<meritChance)return{type:"merit",key:"merit",name:"กุศล",qty:randInt(range[0],range[1]),image:"",period};
+    const woolColors=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]];
     const [woolKey,woolName]=woolColors[Math.floor(Math.random()*woolColors.length)]||woolColors[0];
-    const rewards=[{id:"grassGreen",label:"หญ้าเขียว",qty:100,apply:s=>{s.specials=s.specials||{};s.specials.friendGrassGreen=(Number(s.specials.friendGrassGreen)||0)+100}},{id:"grassYellow",label:"หญ้าเหลือง",qty:100,apply:s=>{s.specials=s.specials||{};s.specials.friendGrassYellow=(Number(s.specials.friendGrassYellow)||0)+100}},{id:"grassRed",label:"หญ้าแดง",qty:100,apply:s=>{s.specials=s.specials||{};s.specials.friendGrassRed=(Number(s.specials.friendGrassRed)||0)+100}},
+    const grass=(key,name)=>({id:key,type:"special",key,name,label:name,qty:100,image:SPECIAL_ITEMS?.[key]?.image||({friendGrassGreen:"friend-grass-green.png?v=221",friendGrassYellow:"friend-grass-yellow.png?v=221",friendGrassRed:"friend-grass-red.png?v=221"}[key]),apply:s=>{s.specials=s.specials||{};s.specials[key]=(Number(s.specials[key])||0)+100}});
+    const good=[
       {type:"special",key:"angelWingCapsule",name:"แคปซูลปีกนางฟ้า",qty:15},
-      {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:15},
       {type:"fishingBait",key:"bait4",name:"เหยื่อตกปลามือโปร",qty:10},
-      {type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:20},
       {type:"alpacaOther",key:"processingLicense",name:"ใบอนุญาตแปรรูป",qty:10},
+      {type:"alpacaWool",key:"gold",name:"ขนอัลปาก้าสีทอง",qty:5},
       {type:"dogMystery",key:"dogBox",name:"กล่องสุ่มหมา",qty:10},
       {type:"catMystery",key:"catBox",name:"กล่องสุ่มแมว",qty:10},
-      {type:"alpacaWool",key:"gold",name:"ขนอัลปาก้าสีทอง",qty:5},
-      {type:"special",key:"r35PumpkinGimmick",name:"ฟักทองกิมมิก",qty:10},
-      {type:"special",key:"r35CandyGimmick",name:"แคนดี้กิมมิก",qty:10},
-      {type:"alpacaWool",key:woolKey,name:`ขนอัลปาก้าสี${woolName}`,qty:10}
+      {type:"special",key:"pestle100",name:"สากกะเบือไฮโซ",qty:20}
     ];
+    const plain=[
+      grass("friendGrassGreen","หญ้าสีเขียว"),grass("friendGrassYellow","หญ้าสีเหลือง"),grass("friendGrassRed","หญ้าสีแดง"),
+      {type:"alpacaFood",key:"pellet",name:"อาหารเม็ดอัลปาก้า",qty:15},
+      {type:"alpacaWool",key:woolKey,name:`ขนอัลปาก้าสี${woolName}`,qty:10},
+      {type:"special",key:"r35PumpkinGimmick",name:"ฟักทองกิมมิก",qty:10},
+      {type:"special",key:"r35CandyGimmick",name:"แคนดี้กิมมิก",qty:10}
+    ];
+    const rewards=period==="good"?good:(period==="bad"?plain:[...good,...plain]);
     const pick=rewards[Math.floor(Math.random()*rewards.length)]||rewards[0];
-    return{...pick,image:rewardImage(pick.type,pick.key)};
+    return{...pick,period,image:pick.image||rewardImage(pick.type,pick.key)};
   }
 
   function grantReward(s,r){
@@ -23224,7 +23225,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
       if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&screen.dataset.owner===ownerKey&&Number(screen.dataset.shop)===shopNo)
         renderMarketR15(shopNo,data,ownerKey,ownerName);
     }catch(err){
-      if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden")&&!cached)message("เปิดร้านไม่ได้",err.message||"กรุณาลองใหม่");
+      if(screen.dataset.viewToken===viewToken&&!screen.classList.contains("hidden"))message("เปิดร้านไม่ได้",err.message||"กรุณาลองใหม่");
     }
   }
   function showMarketListingR15(shopNo,slot,data){
@@ -23265,6 +23266,10 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(ownerKey===currentMemberKey)return;if(!confirm(`ซื้อ ${x.name} ×${x.qty}\nราคา ${x.price} กุศล ?`))return;
     if(marketPendingR15.has(`buy:${ownerKey}:${shopNo}:${slot}`))return;marketPendingR15.add(`buy:${ownerKey}:${shopNo}:${slot}`);showWeatherToast("🛍️ กำลังยืนยันการซื้อ…");
     try{
+      /* R36.130 fast buy */
+      {let fast=null;try{fast=await globalThis.YN_R36130?.marketBuyFast?.(shopNo,slot,x,ownerKey,ownerName)}catch(fe){if(fe&&fe.r36130User)throw fe;console.warn("R36.130 market fast -> full",fe)}
+       if(fast&&fast.ok){marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};await openMarketR15(shopNo);message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);return}}
+      try{await settlePendingCloudSave?.()}catch(_){}
       const {db,fs}=await getFirebaseContext(),marketRef=fs.doc(db,"farmMarkets",ownerKey),buyerRef=fs.doc(db,"saves",currentMemberKey),sellerRef=fs.doc(db,"saves",ownerKey),mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);let patch=null,sold=null;
       await YN_RETRY_TX(()=>fs.runTransaction(db,async tx=>{
         const [ms,bs]=await Promise.all([tx.get(marketRef),tx.get(buyerRef)]);if(!ms.exists()||!bs.exists())throw new Error("ข้อมูลร้านไม่ครบ");
@@ -23272,7 +23277,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         const before=normalizeState(clone(bs.data()),currentMember),st=normalizeState(clone(before),currentMember);if(!admin()&&n(st.merit)<n(cur.price))throw new Error("กุศลไม่พอ");
         addGiftItemToState(st,{itemType:cur.type,itemKey:cur.key,qty:cur.qty,instance:cur.instance});if(!admin())st.merit-=n(cur.price);else ensureAdminStock(st);patch=marketDiffPatch(before,st);if(!Object.keys(patch).length)throw new Error("ไม่พบข้อมูลการซื้อที่ต้องบันทึก");
         sold={...cur,status:"sold",soldAt:stamp(),buyerKey:currentMemberKey,buyerName:currentMember};arr[slot]=sold;
-        tx.set(buyerRef,patch,{merge:true});if(String(ownerKey)!=="aida")tx.update(sellerRef,{merit:fs.increment(n(cur.price)),updatedAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()});
+        tx.set(buyerRef,patch,{merge:true});if(String(ownerKey)!=="aida"&&Math.floor(n(cur.price))>0)tx.set(fs.doc(fs.collection(db,"marketCredits")),{toKey:String(ownerKey),fromKey:currentMemberKey,fromName:currentMember,amount:Math.floor(n(cur.price)),itemName:String(cur.name||""),qty:Math.floor(n(cur.qty)),status:"pending",createdAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()});
       }));
       applyMarketPatchLocal(patch);marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};await openMarketR15(shopNo);message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);
     }catch(err){marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};message("ซื้อไม่ได้",String(err?.message||"กรุณาลองใหม่"));try{await openMarketR15(shopNo)}catch(_){} }
@@ -26877,13 +26882,14 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
     if(pick===1){s.specials.r35CandyGimmick=int(s.specials.r35CandyGimmick)+qty;summary["🍬 แคนดี้กิมมิก"]=(summary["🍬 แคนดี้กิมมิก"]||0)+qty;return}
     const colors=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]],row=colors[Math.floor(Math.random()*colors.length)]||colors[0],key=row[0],name=row[1];
     s.alpaca=s.alpaca&&typeof s.alpaca==="object"?s.alpaca:{};s.alpaca.inventory=s.alpaca.inventory&&typeof s.alpaca.inventory==="object"?s.alpaca.inventory:{};s.alpaca.inventory.wool=s.alpaca.inventory.wool&&typeof s.alpaca.inventory.wool==="object"?s.alpaca.inventory.wool:{};
-    s.alpaca.inventory.wool[key]=int(s.alpaca.inventory.wool[key])+qty;summary[`🧶 ขนอัลปาก้าสี${name}`]=(summary[`🧶 ขนอัลปาก้าสี${name}`]||0)+qty;
+    const wq=5+Math.floor(Math.random()*6);s.alpaca.inventory.wool[key]=int(s.alpaca.inventory.wool[key])+wq;summary[`🧶 ขนอัลปาก้าสี${name}`]=(summary[`🧶 ขนอัลปาก้าสี${name}`]||0)+wq;
   }
   function hamsterJigsawRoll(){const r=Math.random();return r<.05?0:r<.52?1:r<.99?2:3}
   async function openHamsterBoxes(qty){
     const s=ensure31(own()),have=isAdmin()?9999:int(s.specials.r31HamsterBox);qty=Math.max(1,Math.min(int(qty)||1,have));if(qty<1)return;
     if(!isAdmin())s.specials.r31HamsterBox-=qty;const summary={};
     for(let i=0;i<qty;i++){
+      if(Math.random()<.20){summary["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]=(summary["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]||0)+1;continue}
       const idx=hamsterJigsawRoll(),jk=jkeys[idx],fuel=1+Math.floor(Math.random()*5);
       s.specials[jk]=int(s.specials[jk])+1;
       s.specials.honeyFuelCan=int(s.specials.honeyFuelCan)+fuel;
@@ -26897,7 +26903,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   async function openPlantBoxes(qty){
     const s=ensure31(own()),have=isAdmin()?9999:int(s.specials.r31PlantBox);qty=Math.max(1,Math.min(int(qty)||1,have));if(qty<1)return;
     if(!isAdmin())s.specials.r31PlantBox-=qty;const cropKeys=Object.keys(CROPS||{}),grass=[{key:"friendGrassGreen",name:"หญ้าเขียว"},{key:"friendGrassYellow",name:"หญ้าเหลือง"},{key:"friendGrassRed",name:"หญ้าแดง"}],summary={};
-    for(let i=0;i<qty;i++){const pool=[...cropKeys.map(key=>({kind:"crop",key})),...grass.map(x=>({kind:"grass",...x}))];const picks=pool.sort(()=>Math.random()-.5).slice(0,Math.min(3,pool.length));picks.forEach(x=>{if(x.kind==="grass"){s.specials=s.specials||{};s.specials[x.key]=int(s.specials[x.key])+50;summary[x.name]=(summary[x.name]||0)+50}else{const q=plantQty();s.bag[x.key]=int(s.bag[x.key])+q;summary[CROPS[x.key]?.name||x.key]=(summary[CROPS[x.key]?.name||x.key]||0)+q}});r361MaybeBoxBonus(s,summary)}
+    for(let i=0;i<qty;i++){if(Math.random()<.20){summary["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]=(summary["🧂 กล่องเกลือ ไม่ได้อะไรเลย"]||0)+1;continue}const pool=[...cropKeys.map(key=>({kind:"crop",key})),...grass.map(x=>({kind:"grass",...x}))];const picks=pool.sort(()=>Math.random()-.5).slice(0,Math.min(3,pool.length));picks.forEach(x=>{if(x.kind==="grass"){s.specials=s.specials||{};s.specials[x.key]=int(s.specials[x.key])+50;summary[x.name]=(summary[x.name]||0)+50}else{const q=plantQty();s.bag[x.key]=int(s.bag[x.key])+q;summary[CROPS[x.key]?.name||x.key]=(summary[CROPS[x.key]?.name||x.key]||0)+q}});r361MaybeBoxBonus(s,summary)}
     if(isAdmin())ensureAdminStock?.(s);persist(s,{flush:true});try{await settlePendingCloudSave?.()}catch(e){console.warn("R32 plant box save",e)}showBoxSummary("🌱 เปิดกล่องพืชพรรณแล้ว",summary);
   }
   function showBoxSummary(title,summary){$("modalContent").innerHTML=`<section class="feature-panel r31-box-result"><h2>${esc(title)}</h2><div>${Object.entries(summary).map(([k,q])=>`<article><b>${esc(k)}</b><span>×${q}</span></article>`).join("")}</div><button id="r31BoxDone" class="primary-spooky-action">รับทราบ</button></section>`;$("r31BoxDone").onclick=closeModal;openModal()}
@@ -29999,7 +30005,7 @@ globalThis.YAINOO_BUILD="S2-R34.10.4-ARENA-REMOVED-WORM-FIX-20260904";
     const el=e.target?.closest?.(fastSelectors);if(!el||el.disabled)return;const fn=el.onclick;if(typeof fn!=="function")return;
     e.preventDefault();e.stopImmediatePropagation();suppressEl=el;suppressClickUntil=performance.now()+450;try{fn.call(el,e)}catch(err){console.warn("R34.11 fast tap",err)}
   },true);
-  document.addEventListener("click",e=>{const el=e.target?.closest?.(fastSelectors);if(el&&el===suppressEl&&performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();suppressEl=null}},true);
+  document.addEventListener("click",e=>{/* R36.130: swallow the ONE synthetic click that follows a fast tap, wherever it lands (backdrop included) */if(suppressEl&&performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();suppressEl=null}},true);
 
   /* ---------- E) Alpaca trough: bulk fill empty slots with one chosen food ---------- */
   const ALPACA_TROUGH_FOOD={
@@ -35239,6 +35245,7 @@ globalThis.YAINOO_PACKAGE_BUILD="S2-R34.73-ODDS-TUNE-20260911";
     return{catches,total};
   };
   function rollSpecialEight(){
+    /* R36.130 pond heat */try{const r=globalThis.YN_R36130?.rollSpecialEight?.();if(r)return r}catch(_){}
     const h=thaiHour(),danger=h>=19&&h<23,goodChance=danger?.20:.70,catches=[];
     for(let i=0;i<8;i++)catches.push(Math.random()<goodChance?rollPositiveFish():rollBadFish());
     return{catches,total:Number(catches.reduce((a,c)=>a+Number(c.weight||0),0).toFixed(2))};

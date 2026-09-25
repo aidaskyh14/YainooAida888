@@ -620,7 +620,7 @@
   (function(){
     "use strict";
     const ARENA_SELECTOR = "#ynuArenaClaimScore,#ynuArenaAccept,.ynu-arena-status,.ynu-arena-dashboard,.ynu-arena-choice-panel,.ynu-fighting";
-    const ARENA_TEXT = /คะแนนสังเวียนมวยทะเล|รับคะแนน|แมงกะพรุนคุณมันมีเลือดนักสู้|กำลังต่อสู้|คะแนนมวยทะเล|สังเวียนมวยทะเลกระพรุน/;
+    const ARENA_TEXT = /คะแนนสังเวียนมวยทะเล|แมงกะพรุนคุณมันมีเลือดนักสู้|กำลังต่อสู้|คะแนนมวยทะเล|สังเวียนมวยทะเลกระพรุน/;
     function isArenaModal(){
       const c=document.getElementById("modalContent");
       if(!c)return false;
@@ -680,7 +680,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.126-ALPACA-GIFT-FIX-20260923"></script>
+<script src="game.js?v=S2-R36.130-20260925"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -3332,6 +3332,7 @@ async function craftSpecial(attempts){
 const rand=(a,b)=>a+Math.random()*(b-a);
 function fish(k){const f=FISHING_FISH[k],w=rand(Number(f.min),Number(f.max));return{fishKey:k,name:f.name,image:f.image,weight:Number(w.toFixed(2))}}
 function rollEight(){
+  /* R36.130 pond heat */try{const r=globalThis.YN_R36130?.rollSpecialEight?.();if(r)return r}catch(_){}
   const good=["r35Good1","r35Good2","r35Good3","r35Good4"];
   const bad=[["r35Bad1",45],["r35Bad2",30],["r35Bad3",17],["r35Bad4",8]];
   const hh=Number(new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Bangkok",hour:"2-digit",hour12:false}).format(new Date()))%24;
@@ -3915,7 +3916,7 @@ console.info(BUILD,"loaded");
   async function sendSelected(h){
     const btn=h.querySelector("[data-r51-send]"),status=h.querySelector("[data-r51-status]");const targets=[...h.querySelectorAll("[data-r51-person]:checked")].map(x=>recipients.find(r=>r.key===x.dataset.r51Person)).filter(Boolean);const rows=[...h.querySelectorAll("[data-r51-item]:checked")].map(x=>{const i=Number(x.dataset.r51Item),v=VARIANTS[i],q=Math.max(1,Math.min(999,iv(h.querySelector(`[data-r51-qty="${i}"]`)?.value)||1));return{...v,qty:q}});
     if(!targets.length){status.textContent="กรุณาเลือกผู้รับ";return}if(!rows.length){status.textContent="กรุณาเลือกอัลปาก้า";return}btn.disabled=true;status.textContent=`กำลังส่ง ${targets.length} คน…`;
-    try{const {db,fs}=await getFirebaseContext(),delivery=`r3651-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,batch=fs.writeBatch(db);for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`;batch.set(fs.doc(db,"mailboxes",t.key,"items",id),{source:"yainoo",type:"alpacaGiftR3651",giftKind:"alpaca",epoch:EPOCH,toKey:t.key,recipientKey:t.key,routeVersion:"login-identity-r36115",fromKey:"aida",fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})}await batch.commit();status.textContent=`✅ ส่งสำเร็จ ${targets.length} คน`;showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(e){status.textContent=`ส่งไม่สำเร็จ: ${e?.message||"กรุณาลองใหม่"}`}finally{btn.disabled=false}
+    try{const {db,fs}=await getFirebaseContext(),delivery=`r3651-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,batch=fs.writeBatch(db);for(const t of targets){const id=`alpacaGift-${safeId(delivery)}-${safeId(t.key)}`;batch.set(fs.doc(db,"mailboxes",t.key,"items",id),{source:"yainoo",type:"alpacaGiftR3651",giftKind:"alpaca",epoch:EPOCH,toKey:t.key,recipientKey:t.key,routeVersion:"login-identity-r36115",fromKey:"aida",fromName:"Aida",title:"🎁 ยัยหนูส่งอัลปาก้าให้คุณ",text:rows.map(r=>`${r.name} ×${r.qty}`).join(" • "),items:rows.map((r,i)=>({index:i,type:r.type,color:r.color,sex:r.sex,name:r.name,qty:r.qty,image:r.image})),previewImage:rows[0].image,deliveryId:delivery,status:"pending",resolved:false,read:false,createdAtClient:now(),createdAt:fs.serverTimestamp()},{merge:false})}await batch.commit();status.textContent=`✅ ส่งสำเร็จ ${targets.length} คน`;showWeatherToast?.(`🎁 ส่งอัลปาก้าให้ ${targets.length} คนแล้ว`)}catch(e){status.textContent=`ส่งไม่สำเร็จ: ${(globalThis.YN_R36130?.thai||String)(e?.message||"กรุณาลองใหม่")}`}finally{btn.disabled=false}
   }
 
   /* ---------- NEW warehouse: ONLY claimed R36.51 gifts ---------- */
@@ -4118,7 +4119,7 @@ console.info(BUILD,"loaded");
       return merged.concat(recent);
     };
     if(obj(s.alpaca)){
-      s.alpaca=cp(s.alpaca);/* R36.126: keep newly received/crafted alpacas until they move to the warehouse */s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault.slice(-200):[];
+      s.alpaca=cp(s.alpaca);/* R36.126: keep newly received/crafted alpacas until they move to the warehouse */s.alpaca.vault=Array.isArray(s.alpaca.vault)?s.alpaca.vault.slice():[];/* R36.130: no 200 cap - never delete alpacas */
       for(const key of ["royalCdDropsV3423","royalCdDropsV3421","royalDiscDrops"]){
         const groups=s.alpaca[key];if(!obj(groups))continue;
         for(let p=1;p<=5;p++){const pen=`pen${p}`;groups[pen]=compactDrops(groups[pen],`${key}-${pen}`,2)}
@@ -7171,5 +7172,6 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   console.info(BUILD,"loaded");
 })();
 </script>
+<script src="r36130-patch.js?v=S2-R36.130-20260925"></script>
 </body>
 </html>
