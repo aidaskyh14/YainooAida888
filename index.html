@@ -7172,6 +7172,519 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   console.info(BUILD,"loaded");
 })();
 </script>
-<script src="r36130-patch.js?v=S2-R36.130-20260925"></script>
+<script id="r36130-patch">
+/* =====================================================================
+   S2 R36.130 — รวมแก้ 7 หัวข้อ (2026-09-25)
+   โหลดเป็นไฟล์สุดท้ายของ index.html
+   1) ส่งของเพื่อน (แก้ใน game.js)          2) ร้านหน้าฟาร์ม: ซื้อทางเร็ว + ใบเครดิตผู้ขาย
+   3) เก็บเกี่ยวทีละแปลง: นับคะแนนแคมเปญ   4) ตกปลา: ระบบบ่อร้อน + ชั่วโมงทอง/อาถรรพ์
+   5) น้ำผึ้ง (แก้ใน game.js)              6) กล่องสุ่ม: กล่องเกลือ 20%, กุศลเพิ่ม, ขน ×5–10, รูปผลเปิดกล่อง
+   7) ความปลอดภัยข้อมูล: แปล Error เป็นไทย + บันทึก Error, เครื่องมือแอดมิน, บังคับรีเฟรช
+   ===================================================================== */
+(function YN_R36130(){
+  "use strict";
+  const BUILD="S2-R36.130-20260925",BUILD_NUM=130;
+  const $=id=>document.getElementById(id);
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
+  const same=(a,b)=>{try{return JSON.stringify(a)===JSON.stringify(b)}catch(_){return a===b}};
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const fmt=n=>Math.floor(Number(n)||0).toLocaleString("en-US");
+  const me=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const myName=()=>{try{return String(currentMember||"")}catch(_){return ""}};
+  const ready=()=>{try{return !!cloudReady}catch(_){return false}};
+  const visiting=()=>{try{return !!visitContext}catch(_){return false}};
+  const isAdminNow=()=>{try{return myName()==="Aida"&&adminProfile?.role==="admin"}catch(_){return false}};
+  const live=()=>{try{return ownState||null}catch(_){return null}};
+  const bkkHour=()=>{try{return Number(new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Bangkok",hour:"2-digit",hour12:false}).format(new Date()))%24}catch(_){return new Date().getHours()}};
+  const toast=t=>{try{showWeatherToast?.(t)}catch(_){}};
+  const ctx=()=>getFirebaseContext();
+  function userErr(t){const e=new Error(t);e.r36130User=true;return e}
+
+  /* =================================================================
+     7a) Thai error text + error log for Aida
+     ================================================================= */
+  const ENG=/(FirebaseError|Firestore|Firebase|Transaction|permission|insufficient|exceed|maximum allowed|quota|exhausted|deadline|unavailable|aborted|contention|network ?error|Failed to|failed-precondition|Cannot read|Cannot set|is not a function|is not defined|TypeError|ReferenceError|RangeError|too big|too many|INTERNAL|invalid-argument|Unsupported field|stored version|base version|index entr|Document .* size)/i;
+  const SIZE=/(too big|too many|exceed|maximum allowed|index entr|resource-exhausted|1048576|1,048,576|size)/i;
+  const TH=/[\u0E00-\u0E7F]/;
+  let errCount=0;const errSeen=new Map();
+  async function logErr(text,where=""){
+    try{
+      text=String(text||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,500);if(!text)return;
+      const t=Date.now();if(errCount>=25)return;if(errSeen.has(text)&&t-errSeen.get(text)<60000)return;errSeen.set(text,t);errCount++;
+      if(!ready())return;const {db,fs}=await ctx();
+      await fs.setDoc(fs.doc(fs.collection(db,"clientErrors")),{memberKey:me(),name:myName(),build:BUILD,text,page:String(where||"").slice(0,60),at:fs.serverTimestamp(),atMs:t});
+    }catch(_){}
+  }
+  function thai(t){
+    const s=String(t??"");if(!s)return s;
+    const plain=s.replace(/<[^>]*>/g," ");
+    if(!ENG.test(plain))return s;
+    /* English words mixed into a Thai sentence (e.g. "ส่งไม่สำเร็จ: Transaction too big") still count */
+    const eng=plain.replace(/[\u0E00-\u0E7F]+/g," ");if(!/[A-Za-z]{3,}.*[A-Za-z]{3,}/.test(eng))return s;
+    logErr(plain,"message");
+    const head=TH.test(plain)?plain.split(/[:：]/)[0].replace(/[A-Za-z].*$/,"").trim():"";
+    const body=SIZE.test(plain)?"ข้อมูลส่วนนี้ใหญ่เกินกำหนด ระบบแจ้งแอดมินให้แล้ว ของไม่หาย กรุณาลองใหม่อีกครั้งในสักครู่ค่ะ":"ระบบกำลังซิงก์ข้อมูลอยู่ ของไม่หาย กรุณากดอีกครั้งค่ะ";
+    return head&&head.length<40?`${head}: ${body}`:body;
+  }
+  function wrapMessages(){
+    try{
+      if(typeof message==="function"&&!message.__r36130){
+        const raw=message;const w=function(title,text,...rest){return raw.call(this,thai(title),thai(text),...rest)};w.__r36130=1;w.__r3678=raw.__r3678;
+        message=w;try{window.message=w}catch(_){}
+      }
+      if(typeof showWeatherToast==="function"&&!showWeatherToast.__r36130){
+        const raw=showWeatherToast;const w=function(t,...rest){return raw.call(this,thai(t),...rest)};w.__r36130=1;w.__r3678=raw.__r3678;
+        showWeatherToast=w;try{window.showWeatherToast=w}catch(_){}
+      }
+    }catch(e){console.warn(BUILD,"message wrap",e)}
+  }
+  window.addEventListener("unhandledrejection",e=>{const t=String(e?.reason?.message||e?.reason||"");if(/Firestore|Firebase|Transaction|permission|exceed|index entr|too big/i.test(t))logErr(t,"unhandled")},true);
+
+  /* =================================================================
+     Shared helper: turn "add this item to my bag" into numeric increments
+     (same idea as the R36.129 fast gift claim)
+     ================================================================= */
+  const PINNED=new Set(["merit","meritGiftClaim","meritBaselineId","meritBaselineFrom","activeSessionId","updatedAt","clientSaveRevision","clientLocalEditAt","saveShardRoutes","saveLayoutVersion"]);
+  function numDiff(a,b,p,out){
+    if(Array.isArray(a)||Array.isArray(b))return same(a,b);
+    if(obj(b)){for(const k of Object.keys(b)){if(String(k).includes("."))return same(obj(a)?a[k]:undefined,b[k]);if(!numDiff(obj(a)?a[k]:undefined,b[k],p?p+"."+k:k,out))return false}return true}
+    if(typeof b==="number"&&Number.isFinite(b)){const av=typeof a==="number"&&Number.isFinite(a)?a:0,d=b-av;if(d<0)return false;if(d>0)out[p]=d;return true}
+    return true;
+  }
+  function planIncrements(gift){
+    const l=live();if(!l||typeof addGiftItemToState!=="function")return null;
+    const a=cp(l),b=cp(l);try{addGiftItemToState(b,cp(gift))}catch(_){return null}
+    const out={};if(!numDiff(a,b,"",out))return null;if(!Object.keys(out).length)return null;
+    for(const k of Object.keys(out))if(PINNED.has(k.split(".")[0]))return null;
+    return out;
+  }
+  function mirrorLocal(inc,meritDelta){
+    const l=live();if(!l)return;
+    for(const [path,d] of Object.entries(inc||{})){const bits=path.split(".");let o=l;for(let i=0;i<bits.length-1;i++){if(!obj(o[bits[i]]))o[bits[i]]={};o=o[bits[i]]}const last=bits[bits.length-1];o[last]=(Number(o[last])||0)+d}
+    if(meritDelta)l.merit=(Number(l.merit)||0)+meritDelta;
+    try{if(!visiting())state=l}catch(_){}
+    try{saveLocalOnly?.(l)}catch(_){}try{updateMeritUI?.()}catch(_){}try{queueCloudSave?.()}catch(_){}
+  }
+  async function serverMerit(fs,db,mk){
+    /* raw root read (no shard hydration): only merit is needed */
+    const ref=fs.doc(db,"saves",mk);let m=null;
+    const sn=await fs.getDocs(fs.query(fs.collection(db,"saves"),fs.where("__name__","==",ref),fs.limit(1)));
+    sn.forEach(d=>{m=Number(d.data()?.merit)});return m;
+  }
+
+  /* =================================================================
+     2) Farm market — fast buy + seller credit receipts
+     ================================================================= */
+  async function marketBuyFast(shopNo,slot,x,ownerKey){
+    if(isAdminNow()||!ready()||visiting()&&!live())return null;
+    const mk=me();if(!mk||!live())return null;
+    const type=String(x?.type||"");
+    if(!type||/Instance$/.test(type)||x?.instance)return null;
+    const price=Math.floor(Number(x?.price)||0);if(price<0)return null;
+    const inc=planIncrements({itemType:x.type,itemKey:x.key,qty:x.qty});if(!inc)return null;
+    const {db,fs}=await ctx();if(typeof fs.increment!=="function")return null;
+    let sm=null;try{sm=await serverMerit(fs,db,mk)}catch(_){return null}
+    if(sm==null||!Number.isFinite(sm))return null;
+    if(sm<price)throw userErr(`กุศลไม่พอ • ต้องใช้ ${fmt(price)} • มี ${fmt(sm)}`);
+    const after=sm-price;
+    if(price>1000&&(after<=300||after*10<sm))throw userErr("ซื้อชิ้นนี้แล้วกุศลจะเหลือน้อยเกินไป (ระบบกันกุศลหาย) กรุณาซื้อเมื่อมีกุศลมากกว่านี้ค่ะ");
+    const marketRef=fs.doc(db,"farmMarkets",ownerKey),saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk);
+    const mailRef=fs.doc(db,"mailboxes",ownerKey,"items",`market-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
+    const creditRef=fs.doc(fs.collection(db,"marketCredits"));
+    const toAida=String(ownerKey)==="aida";
+    await fs.runTransaction(db,async tx=>{
+      const ms=await tx.get(marketRef);if(!ms.exists())throw userErr("ไม่พบร้านนี้แล้ว");
+      const md=ms.data()||{},arr=Array.isArray(md[`shop${shopNo}`])?md[`shop${shopNo}`].slice():[],cur=arr[slot];
+      if(!cur||cur.status!=="active")throw userErr("สินค้านี้ถูกซื้อไปแล้ว");
+      if(String(cur.type)!==String(x.type)||String(cur.key)!==String(x.key)||int(cur.qty)!==int(x.qty)||Math.floor(Number(cur.price)||0)!==price)throw userErr("สินค้าในช่องนี้เปลี่ยนแล้ว กรุณาเปิดร้านใหม่อีกครั้งค่ะ");
+      const patch={};for(const [p,d] of Object.entries(inc))patch[p]=fs.increment(d);if(price>0)patch.merit=fs.increment(-price);
+      tx.update(saveRef,patch);
+      if(price>0)tx.set(profRef,{memberKey:mk,merit:fs.increment(-price),updatedAt:fs.serverTimestamp()},{merge:true});
+      arr[slot]={...cur,status:"sold",soldAt:Date.now(),buyerKey:mk,buyerName:myName()};
+      tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});
+      if(!toAida&&price>0)tx.set(creditRef,{toKey:String(ownerKey),fromKey:mk,fromName:myName(),amount:price,itemName:String(cur.name||""),qty:int(cur.qty),status:"pending",createdAt:fs.serverTimestamp()});
+      tx.set(mailRef,{source:"friend",type:"market",fromKey:mk,fromName:myName(),title:`${myName()} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:toAida?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว`:`ทำให้คุณได้ ${price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()});
+    });
+    mirrorLocal(inc,-price);
+    return{ok:true};
+  }
+
+  let creditBusy=false,creditAt=0;
+  async function claimMarketCredits(force=false){
+    if(creditBusy||!ready()||!me()||visiting())return;
+    if(!force&&Date.now()-creditAt<20000)return;creditAt=Date.now();creditBusy=true;
+    try{
+      const {db,fs}=await ctx(),mk=me();
+      const sn=await fs.getDocs(fs.query(fs.collection(db,"marketCredits"),fs.where("toKey","==",mk),fs.where("status","==","pending"),fs.limit(20)));
+      const ids=[];sn.forEach(d=>ids.push(d.id));let total=0;
+      for(const id of ids){
+        const cref=fs.doc(db,"marketCredits",id),saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk);let amt=0;
+        try{
+          await fs.runTransaction(db,async tx=>{
+            amt=0;const cs=await tx.get(cref);if(!cs.exists())return;const c=cs.data()||{};
+            if(c.status!=="pending"||String(c.toKey)!==mk)return;const a=Math.floor(Number(c.amount)||0);if(a<1)return;
+            tx.update(saveRef,{merit:fs.increment(a)});
+            tx.set(profRef,{memberKey:mk,merit:fs.increment(a),updatedAt:fs.serverTimestamp()},{merge:true});
+            tx.update(cref,{status:"claimed",claimedAt:fs.serverTimestamp()});amt=a;
+          });
+        }catch(e){console.warn(BUILD,"market credit",id,e?.message||e);continue}
+        if(amt>0){total+=amt;mirrorLocal(null,amt)}
+      }
+      if(total>0)toast(`🛍️ มีคนซื้อของในร้านของคุณ • ได้ +${fmt(total)} กุศล`);
+    }catch(e){console.warn(BUILD,"market credits",e?.message||e)}
+    finally{creditBusy=false}
+  }
+  setInterval(()=>claimMarketCredits(false),30000);
+  window.addEventListener("focus",()=>claimMarketCredits(false),{passive:true});
+  setTimeout(()=>claimMarketCredits(true),9000);
+
+  /* =================================================================
+     3) Single-plot harvest: count campaign/secret scores like the tractor
+     ================================================================= */
+  const SECRET=new Set(["r35CandyCrop","r35SpiderCrop","r35CatCrop","r35BeeCrop"]);
+  function installHarvest(){
+    try{
+      if(typeof harvestOwnPlot!=="function"||harvestOwnPlot.__r36130)return;
+      const base=harvestOwnPlot;
+      const w=async function(index){
+        let k="",q=0;
+        try{const p=live()?.plots?.[Math.floor(Number(index))];if(p?.crop){k=String(p.crop);q=Math.max(1,Math.floor(Number(CROPS?.[k]?.yield)||1))*(p.angel?10:1)}}catch(_){}
+        const r=await base.apply(this,arguments);
+        if(r===true&&k){
+          try{if(typeof V181_campaignScoreLater==="function")setTimeout(()=>V181_campaignScoreLater({[k]:q}),0)}catch(_){}
+          try{if(SECRET.has(k))globalThis.YN_S2_CAMPAIGNS?.scoreSecretHarvest?.({[k]:q})}catch(_){}
+        }
+        return r;
+      };
+      w.__r36130=1;harvestOwnPlot=w;try{globalThis.harvestOwnPlot=w}catch(_){}
+    }catch(e){console.warn(BUILD,"harvest wrap",e)}
+  }
+
+  /* =================================================================
+     4) Fishing — "hot pond": the more casts in the last 2 hours, the more bad fish
+     ================================================================= */
+  const HEAT=[.10,.25,.40,.55,.70];
+  const heatKey=()=>`yn:r36130:fishheat:${me()||"guest"}`;
+  function casts(){try{const a=JSON.parse(localStorage.getItem(heatKey())||"[]"),t=Date.now()-2*3600e3;return (Array.isArray(a)?a:[]).map(Number).filter(x=>x>t)}catch(_){return[]}}
+  function recordCast(){
+    const a=casts(),t=Date.now();
+    if(a.length&&t-a[a.length-1]<20000)return a.length-1; /* same cast retried by the transaction */
+    a.push(t);try{localStorage.setItem(heatKey(),JSON.stringify(a.slice(-30)))}catch(_){}
+    return a.length-1;
+  }
+  function fishWindow(h=bkkHour()){if(h===7||h===13)return "gold";if(h>=21&&h<23)return "cursed";return "normal"}
+  function badChance(n,h=bkkHour()){const w=fishWindow(h);if(w==="gold")return 0;let b=HEAT[Math.min(Math.max(0,n),HEAT.length-1)];if(w==="cursed")b+=.15;return Math.min(.85,b)}
+  const BAD_W=[["r35Bad1",45],["r35Bad2",30],["r35Bad3",17],["r35Bad4",8]],GOOD_K=["r35Good1","r35Good2","r35Good3","r35Good4"];
+  function fishOf(k){const f=FISHING_FISH[k];const lo=Math.round(Number(f.min)*100),hi=Math.round(Number(f.max)*100);return{fishKey:k,name:f.name,image:f.image,weight:Number(((lo+Math.floor(Math.random()*(hi-lo+1)))/100).toFixed(2))}}
+  function badFish(){let r=Math.random()*100;for(const [k,w] of BAD_W){r-=w;if(r<0)return fishOf(k)}return fishOf("r35Bad4")}
+  function goodFish(){return fishOf(GOOD_K[Math.floor(Math.random()*GOOD_K.length)])}
+  const RAINBOW={bait1:.80,bait2:.90,bait3:.20,bait4:.25};
+  function legacyRoll(bait){
+    const cfg=FISHING_CONFIG[bait],count=weightedPick(cfg.counts),out=[];
+    for(let i=0;i<count;i++){const tier=weightedPick(cfg.tiers),pool=Object.entries(FISHING_FISH).filter(([,f])=>f.tier===tier&&!f.r35New),[k,f]=pool[Math.floor(Math.random()*pool.length)];out.push({fishKey:k,name:f.name,image:f.image,weight:Number(randomWeight(f.min,f.max).toFixed(2))})}
+    const rf=FISHING_FISH.rainbow5;
+    if(rf&&Math.random()<(RAINBOW[bait]||0)){const n=Math.random()<.22?2:1;const rb=Array.from({length:n},()=>({fishKey:"rainbow5",name:rf.name,image:rf.image,weight:Number((8+Math.random()*4).toFixed(2))}));return[...rb,...out].slice(0,3)}
+    return out;
+  }
+  const total=c=>Number(c.reduce((s,x)=>s+Number(x.weight||0),0).toFixed(2));
+  function rollNormal(bait){
+    const n=recordCast(),bad=badChance(n);
+    const catches=legacyRoll(bait).map(o=>Math.random()<bad?badFish():(Math.random()<.5?o:goodFish()));
+    return{catches,total:total(catches)};
+  }
+  function rollSpecialEight(){
+    if(typeof FISHING_FISH==="undefined"||!FISHING_FISH.r35Good1)return null;
+    const n=recordCast(),bad=badChance(n),catches=[];
+    for(let i=0;i<8;i++)catches.push(Math.random()<bad?badFish():goodFish());
+    return{catches,total:total(catches)};
+  }
+  function installFishing(){
+    try{
+      if(typeof rollFishingCatches!=="function"||rollFishingCatches.__r36130)return;
+      if(typeof FISHING_CONFIG==="undefined"||typeof weightedPick!=="function"||typeof randomWeight!=="function")return;
+      const prev=rollFishingCatches,OLD=new Set(["bait1","bait2","bait3","bait4"]);
+      const w=function(bait){const k=String(bait||"");if(!OLD.has(k)||!FISHING_CONFIG[k]||!FISHING_FISH?.r35Bad1)return prev.apply(this,arguments);try{return rollNormal(k)}catch(e){console.warn(BUILD,"fish roll",e);return prev.apply(this,arguments)}};
+      w.__r36130=1;rollFishingCatches=w;try{globalThis.rollFishingCatches=w}catch(_){}
+    }catch(e){console.warn(BUILD,"fishing wrap",e)}
+  }
+  function heatNote(){
+    const n=casts().length,w=fishWindow(),b=Math.round(badChance(n)*100);
+    const win=w==="gold"?"🌟 ตอนนี้ชั่วโมงทอง ได้ปลาดีล้วน!":w==="cursed"?"🌙 ชั่วโมงอาถรรพ์ (21:00–23:00) ปลาร้ายเพิ่มขึ้น":"";
+    return `<div id="yn130Heat" class="yn130-heat"><b>🔥 บ่อร้อน ${n}/5</b><span>ตกไปแล้ว ${n} ครั้งใน 2 ชม. • รอบนี้เจอปลาร้าย ${b}%</span>${win?`<span>${win}</span>`:""}<small>พักให้ครบ 2 ชม. บ่อจะเย็นลง • ชั่วโมงทอง 07:00–08:00 และ 13:00–14:00</small></div>`;
+  }
+
+  /* =================================================================
+     6) Random boxes
+     ================================================================= */
+  const SALT="🧂 กล่องเกลือ ไม่ได้อะไรเลย",SALT_ID="r36130Salt";
+  const WOOL=[["white","ขาว","alpaca-wool-white.png"],["black","ดำ","alpaca-wool-black.png"],["pink","ชมพู","alpaca-wool-pink.png"],["brown","น้ำตาล","alpaca-wool-brown.png"],["green","เขียว","alpaca-wool-green.png"]];
+  function addWool(s,q){const w=WOOL[Math.floor(Math.random()*WOOL.length)];s.alpaca=obj(s.alpaca)?s.alpaca:{};s.alpaca.inventory=obj(s.alpaca.inventory)?s.alpaca.inventory:{};s.alpaca.inventory.wool=obj(s.alpaca.inventory.wool)?s.alpaca.inventory.wool:{};s.alpaca.inventory.wool[w[0]]=(Number(s.alpaca.inventory.wool[w[0]])||0)+q;return w}
+  function jellyBoxRoll(s){
+    if(Math.random()<.20)return SALT;
+    if(Math.random()<.375){const keys=Object.keys(JELLYFISH_TYPES||{}),key=keys[Math.floor(Math.random()*keys.length)],j=JELLYFISH_TYPES[key];if(j){s.specialAnimals=s.specialAnimals||{};s.specialAnimals[key]=(Number(s.specialAnimals[key])||0)+1;return `🪼 ${j.name} ×1`}}
+    s.specials=s.specials||{};s.bag=s.bag||{};
+    switch(Math.floor(Math.random()*8)){
+      case 0:{const r=RECIPES[Math.floor(Math.random()*RECIPES.length)];addDishToState(s,r.id,2);return `🍲 ${r.name} ×2`}
+      case 1:s.specials.bambooLeaf=(Number(s.specials.bambooLeaf)||0)+5;return `🎋 ${SPECIAL_ITEMS?.bambooLeaf?.name||"ใบไผ่"} ×5`;
+      case 2:s.bag.hauntedPlankton=(Number(s.bag.hauntedPlankton)||0)+2;return `🫧 ${CROPS?.hauntedPlankton?.name||"แพลงก์ตอนหลอนปิ๊"} ×2`;
+      case 3:{const q=rnd(20,60);s.merit=(Number(s.merit)||0)+q;return `🙏 กุศล +${q}`}
+      case 4:s.specials.jellyfishLaxative=(Number(s.specials.jellyfishLaxative)||0)+1;return `🧪 ${SPECIAL_ITEMS?.jellyfishLaxative?.name||"ยาถ่ายแมงกะพรุน"} ×1`;
+      case 5:{const q=rnd(1,5);s.specials.r35PumpkinGimmick=(Number(s.specials.r35PumpkinGimmick)||0)+q;return `🎃 ฟักทองกิมมิก ×${q}`}
+      case 6:{const q=rnd(1,5);s.specials.r35CandyGimmick=(Number(s.specials.r35CandyGimmick)||0)+q;return `🍬 แคนดี้กิมมิก ×${q}`}
+      default:{const q=rnd(5,10),w=addWool(s,q);return `🧶 ขนอัลปาก้าสี${w[1]} ×${q}`}
+    }
+  }
+  function pick3(){const pool=(typeof catConsolationPool==="function"?catConsolationPool():[]).filter(x=>x&&x.id!==SALT_ID),ids=[];while(ids.length<3&&pool.length){const i=Math.floor(Math.random()*pool.length);ids.push(pool.splice(i,1)[0].id)}return ids}
+  function catRoll(){
+    const r=Math.random(),allowed=["cat2","cat3","cat5","cat6","cat7","cat8","cat12"].filter(k=>CAT_TYPES?.[k]);
+    if(r<.10&&allowed.length){const wk=[];allowed.forEach(k=>{for(let i=0;i<(k==="cat12"?1:2);i++)wk.push(k)});return{kind:"cat",typeKey:wk[Math.floor(Math.random()*wk.length)]}}
+    if(r<.30)return{kind:"consolation",ids:[SALT_ID]};
+    return{kind:"consolation",ids:pick3()};
+  }
+  function dogRoll(){
+    const r=Math.random(),keys=Object.keys(DOG_TYPES||{}),ch=Number(DOG_BOX?.chance)||.10;
+    if(r<ch&&keys.length)return{kind:"dog",typeKey:keys[Math.floor(Math.random()*keys.length)]};
+    if(r<ch+.20)return{kind:"consolation",ids:[SALT_ID]};
+    return{kind:"consolation",ids:pick3()};
+  }
+  function installBoxes(){
+    try{if(typeof rollMysteryBoxRewardOnState==="function"&&!rollMysteryBoxRewardOnState.__r36130){jellyBoxRoll.__r36130=1;rollMysteryBoxRewardOnState=jellyBoxRoll}}catch(e){console.warn(BUILD,"jelly box",e)}
+    try{if(typeof rollCatBoxPendingReward==="function"&&!rollCatBoxPendingReward.__r36130){catRoll.__r36130=1;rollCatBoxPendingReward=catRoll}}catch(e){console.warn(BUILD,"cat box",e)}
+    try{if(typeof rollDogBoxReward==="function"&&!rollDogBoxReward.__r36130){dogRoll.__r36130=1;rollDogBoxReward=dogRoll}}catch(e){console.warn(BUILD,"dog box",e)}
+    try{
+      if(typeof catConsolationPool==="function"&&!catConsolationPool.__r36130){
+        const base=catConsolationPool;
+        const w=function(){
+          const rows=(base.apply(this,arguments)||[]).slice();
+          rows.forEach(row=>{
+            if(!row)return;
+            if(row.id==="merit"){row.label="🙏 กุศล +50–150";row.apply=s=>{const q=rnd(50,150);s.merit=(Number(s.merit)||0)+q;row.label=`🙏 กุศล +${q}`;return q}}
+            if(row.id==="r361RandomWool"){row.label="ขนอัลปาก้าสุ่มสี • สุ่ม ×5–10";row.apply=s=>{const q=rnd(5,10),c=addWool(s,q);row.label=`ขนอัลปาก้าสี${c[1]} ×${q}`;row.image=c[2];return q}}
+          });
+          if(!rows.some(x=>x?.id===SALT_ID))rows.push({id:SALT_ID,label:SALT,image:"",apply:()=>0});
+          return rows;
+        };
+        w.__r36130=1;catConsolationPool=w;
+      }
+    }catch(e){console.warn(BUILD,"consolation pool",e)}
+    try{
+      if(typeof boxRewardSummary==="function"&&!boxRewardSummary.__r36130){
+        const w=function(map){
+          return Object.entries(map||{}).filter(([,c])=>Number(c)>0).sort((a,b)=>b[1]-a[1]).map(([name,count])=>{
+            const img=itemImage(name),ic=iconFor(name);
+            return `<div class="yn130-row">${img?`<img src="${esc(img)}" alt="" loading="lazy">`:`<span class="yn130-ic">${ic}</span>`}<b>${esc(name)}</b><em>×${fmt(count)}</em></div>`;
+          }).join("");
+        };
+        w.__r36130=1;boxRewardSummary=w;
+      }
+    }catch(e){console.warn(BUILD,"box summary",e)}
+  }
+
+  /* item name -> image (for every box result screen) */
+  let imgIndex=null,imgIndexAt=0;
+  const norm=s=>String(s||"").replace(/^[^\u0E00-\u0E7FA-Za-z0-9]+/,"").replace(/\s*•.*$/,"").replace(/\s*[×x+]\s*[\d,–\-]+\s*$/,"").replace(/\s+/g," ").trim();
+  function buildIndex(){
+    const m=new Map(),put=(n,img)=>{n=norm(n);if(n&&img&&!m.has(n))m.set(n,String(img))};
+    try{(adminGiftCatalog?.()||[]).forEach(e=>put(e?.name,e?.image))}catch(_){}
+    try{Object.values(CROPS||{}).forEach(c=>put(c?.name,c?.readyImg||c?.selectImg||c?.bagImg))}catch(_){}
+    try{for(const k of Object.getOwnPropertyNames(SPECIAL_ITEMS||{})){const v=SPECIAL_ITEMS[k];put(v?.name,v?.image)}}catch(_){}
+    try{Object.values(CAT_TYPES||{}).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{Object.values(DOG_TYPES||{}).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{Object.values(JELLYFISH_TYPES||{}).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{(RECIPES||[]).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{Object.values(COCONUT_RIVER_ITEMS||{}).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{Object.values(FISHING_BAITS||{}).forEach(c=>put(c?.name,c?.image))}catch(_){}
+    try{(typeof catConsolationPool==="function"?catConsolationPool():[]).forEach(r=>put(r?.label,r?.image))}catch(_){}
+    WOOL.forEach(w=>put(`ขนอัลปาก้าสี${w[1]}`,w[2]));put("ขนอัลปาก้าสีทอง","alpaca-wool-gold.png");
+    put("ฟักทองกิมมิก",SPECIAL_ITEMS?.r35PumpkinGimmick?.image||"gimmick-pumpkin.png");put("แคนดี้กิมมิก",SPECIAL_ITEMS?.r35CandyGimmick?.image||"gimmick-candy.png");
+    put("แกลลอนน้ำมันรถน้องน้ำผึ้ง",SPECIAL_ITEMS?.honeyFuelCan?.image||"honey-fuel-can.png?v=252");put("แกลลอนน้ำมัน",SPECIAL_ITEMS?.honeyFuelCan?.image||"honey-fuel-can.png?v=252");
+    for(let i=1;i<=4;i++)put(`จิ๊กซอว์ #${i}`,SPECIAL_ITEMS?.[`hamJigsaw${i}`]?.image||`hamster-jigsaw-${i}.png`);
+    [["หญ้าเขียว","friend-grass-green.png?v=221"],["หญ้าเหลือง","friend-grass-yellow.png?v=221"],["หญ้าแดง","friend-grass-red.png?v=221"],["หญ้าสีเขียว","friend-grass-green.png?v=221"],["หญ้าสีเหลือง","friend-grass-yellow.png?v=221"],["หญ้าสีแดง","friend-grass-red.png?v=221"]].forEach(([n,i])=>put(n,i));
+    return m;
+  }
+  function itemImage(name){
+    if(!imgIndex||Date.now()-imgIndexAt>60000){imgIndex=buildIndex();imgIndexAt=Date.now()}
+    const n=norm(name);if(!n)return "";if(imgIndex.has(n))return imgIndex.get(n);
+    for(const [k,v] of imgIndex)if(k.length>=3&&(n.startsWith(k)||k.startsWith(n)))return v;
+    return "";
+  }
+  function iconFor(name){const s=String(name||"");if(s.includes("กล่องเกลือ"))return "🧂";if(s.includes("กุศล"))return "🙏";const m=s.match(/^\p{Extended_Pictographic}/u);return m?m[0]:"🎁"}
+  /* R31 box result screen (hamster/plant) builds its own rows -> add pictures there too */
+  function decorateResults(){
+    const root=$("modalContent");if(!root)return;
+    root.querySelectorAll(".r31-box-result article").forEach(a=>{
+      if(a.querySelector("img,.yn130-ic"))return;const b=a.querySelector("b");if(!b)return;
+      const img=itemImage(b.textContent);const el=img?Object.assign(document.createElement("img"),{src:img,alt:"",loading:"lazy"}):Object.assign(document.createElement("span"),{className:"yn130-ic",textContent:iconFor(b.textContent)});
+      a.classList.add("yn130-art");a.insertBefore(el,a.firstChild);
+    });
+    if(root.querySelector("[data-start-fishing],[data-ynu-fish-bait],.fishing-bait-card")&&!$("yn130Heat")){
+      const panel=root.querySelector(".feature-panel")||root.firstElementChild;const h=panel?.querySelector("h2");
+      if(panel){const wrap=document.createElement("div");wrap.innerHTML=heatNote();const el=wrap.firstElementChild;h?h.insertAdjacentElement("afterend",el):panel.prepend(el)}
+    }
+  }
+
+  /* =================================================================
+     7b) Version gate — phones on an older build must refresh before saving
+     ================================================================= */
+  let gateShown=false;
+  async function checkVersion(){
+    if(gateShown||!ready())return;
+    try{
+      const {db,fs}=await ctx(),sn=await fs.getDoc(fs.doc(db,"appConfig","app"));
+      const min=Number(sn.exists()?sn.data()?.minBuild:0)||0;
+      if(min>BUILD_NUM)showGate();
+    }catch(_){}
+  }
+  function showGate(){
+    if(gateShown)return;gateShown=true;
+    try{clearTimeout(globalThis.cloudSaveTimer)}catch(_){}
+    const o=document.createElement("div");o.id="yn130Gate";
+    o.innerHTML=`<div class="yn130-gate-card"><div class="yn130-gate-emoji">🔄</div><h2>มีเกมเวอร์ชันใหม่</h2><p>กดปุ่มด้านล่างเพื่อโหลดเวอร์ชันใหม่ก่อนเล่นต่อ<br>ของในกระเป๋าไม่หาย</p><button type="button" id="yn130Reload">โหลดเวอร์ชันใหม่</button></div>`;
+    document.body.appendChild(o);$("yn130Reload").onclick=()=>{try{location.reload()}catch(_){location.href=location.href}};
+  }
+  setInterval(checkVersion,60000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()},{passive:true});
+  setTimeout(checkVersion,12000);
+
+  /* =================================================================
+     7c) Aida tools: backup all saves • save size check • error log • force refresh
+     ================================================================= */
+  const PART_LABEL={"v7-inventory":"กระเป๋า","v7-farm":"สวน","v7-animals":"สัตว์","v7-missions":"ภารกิจ","v7-systems":"ระบบ","v7-claims":"ประวัติรับของ","v7-logs":"ประวัติระบบ","v7-overflow-0":"ส่วนเสริม 1","v7-overflow-1":"ส่วนเสริม 2","v7-overflow-2":"ส่วนเสริม 3","v7-overflow-3":"ส่วนเสริม 4","v8-pets-0":"สัตว์เลี้ยง 1","v8-pets-1":"สัตว์เลี้ยง 2","v8-pets-2":"สัตว์เลี้ยง 3","v8-alpaca-core":"อัลปาก้า (คลัง/โรงงาน)","v8-alpaca-pen-1":"คอกอัลปาก้า 1","v8-alpaca-pen-2":"คอกอัลปาก้า 2","v8-alpaca-pen-3":"คอกอัลปาก้า 3","v8-alpaca-pen-4":"คอกอัลปาก้า 4","v8-alpaca-pen-5":"คอกอัลปาก้า 5","_root":"ข้อมูลหลัก"};
+  const LIMIT=1048576;
+  const bytes=v=>{try{return new TextEncoder().encode(JSON.stringify(v)).length}catch(_){return 0}};
+  function players(){
+    try{return Object.keys(MEMBERS||{}).map(n=>({name:n,key:String(memberKeyFromName(n))})).filter(p=>p.key)}catch(_){return[]}
+  }
+  async function readParts(fs,db,key){
+    const parts=[];const ref=fs.doc(db,"saves",key);
+    const rs=await fs.getDocs(fs.query(fs.collection(db,"saves"),fs.where("__name__","==",ref),fs.limit(1)));
+    rs.forEach(d=>parts.push({id:"_root",path:`saves/${key}`,data:d.data()||{}}));
+    const ss=await fs.getDocs(fs.collection(db,"saveShards",key,"items"));
+    ss.forEach(d=>parts.push({id:d.id,path:`saveShards/${key}/items/${d.id}`,data:d.data()||{}}));
+    return parts;
+  }
+  function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `b${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`}
+  let adminBusy=false;
+  function panel(inner){
+    const mc=$("modalContent");if(!mc)return;
+    mc.innerHTML=`<section class="feature-panel yn130-admin"><header class="yn130-ah"><span>🛡️</span><div><h2>ความปลอดภัยข้อมูล</h2><small>เครื่องมือของ Aida</small></div></header>
+      <div class="yn130-tools">
+        <button type="button" data-yn130="backup"><b>💾 สำรองเซฟทุกคน</b><small>กดก่อนอัปเดตเกมทุกครั้ง</small></button>
+        <button type="button" data-yn130="size"><b>📏 ตรวจขนาดข้อมูลผู้เล่น</b><small>ดูว่าใครข้อมูลใกล้เต็ม</small></button>
+        <button type="button" data-yn130="errors"><b>🧾 Error ล่าสุดของผู้เล่น</b><small>ข้อความที่ผู้เล่นเจอจริง</small></button>
+        <button type="button" data-yn130="gate"><b>🔄 บังคับทุกคนรีเฟรช</b><small>ใช้หลังอัปโหลดเวอร์ชันใหม่</small></button>
+      </div><div id="yn130Out" class="yn130-out">${inner||"เลือกเครื่องมือด้านบน"}</div></section>`;
+    try{openModal?.()}catch(_){}
+    mc.querySelectorAll("[data-yn130]").forEach(b=>b.onclick=()=>({backup:doBackup,size:doSize,errors:doErrors,gate:doGate})[b.dataset.yn130]?.());
+  }
+  const out=h=>{const o=$("yn130Out");if(o)o.innerHTML=h};
+  async function doBackup(){
+    if(adminBusy)return;if(!confirm("สำรองเซฟของผู้เล่นทุกคนตอนนี้เลยไหม?\n(ใช้เวลาประมาณ 1–2 นาที อย่าเพิ่งปิดหน้านี้)"))return;
+    adminBusy=true;const run=stamp(),list=players();let okN=0,fail=[];
+    try{
+      const {db,fs}=await ctx();
+      for(let i=0;i<list.length;i++){
+        const p=list[i];out(`💾 กำลังสำรอง ${i+1}/${list.length} • ${esc(p.name)}…`);
+        try{
+          const parts=await readParts(fs,db,p.key);if(!parts.length)continue;
+          for(const part of parts)await fs.setDoc(fs.doc(db,"saveBackups",run,"members",p.key,"parts",part.id),{path:part.path,data:part.data,at:fs.serverTimestamp()});
+          await fs.setDoc(fs.doc(db,"saveBackups",run,"members",p.key),{name:p.name,key:p.key,parts:parts.map(x=>x.id),at:fs.serverTimestamp()});okN++;
+        }catch(e){fail.push(`${p.name}: ${e?.message||e}`)}
+      }
+      await fs.setDoc(fs.doc(db,"saveBackups",run),{run,count:okN,failed:fail.length,build:BUILD,at:fs.serverTimestamp()});
+      out(`<p class="yn130-ok">✅ สำรองเสร็จ ${okN} คน</p><p>รหัสชุดสำรอง: <b>${esc(run)}</b><br>จดรหัสนี้ไว้ ถ้าต้องกู้ข้อมูลให้บอกรหัสนี้</p>${fail.length?`<p class="yn130-bad">สำรองไม่สำเร็จ ${fail.length} คน:<br>${fail.map(esc).join("<br>")}</p>`:""}`);
+    }catch(e){out(`<p class="yn130-bad">สำรองไม่สำเร็จ: ${esc(e?.message||e)}</p>`)}
+    finally{adminBusy=false}
+  }
+  async function doSize(){
+    if(adminBusy)return;adminBusy=true;const list=players(),rows=[];
+    try{
+      const {db,fs}=await ctx();
+      for(let i=0;i<list.length;i++){
+        const p=list[i];out(`📏 กำลังตรวจ ${i+1}/${list.length} • ${esc(p.name)}…`);
+        try{const parts=await readParts(fs,db,p.key);let top=null,sum=0;for(const x of parts){const b=bytes(x.data);sum+=b;if(!top||b>top.b)top={id:x.id,b}}if(top)rows.push({name:p.name,top,sum,n:parts.length,vault:0})}catch(e){rows.push({name:p.name,err:String(e?.message||e)})}
+      }
+      rows.sort((a,b)=>(b.top?.b||0)-(a.top?.b||0));
+      out(`<p>ขีดจำกัดต่อ 1 ส่วน = 1 MB • เกิน 70% ควรเริ่มระวัง</p><div class="yn130-table">${rows.map(r=>{if(r.err)return `<div class="yn130-tr"><b>${esc(r.name)}</b><span class="yn130-bad">อ่านไม่ได้</span></div>`;const pct=Math.round(r.top.b/LIMIT*100);return `<div class="yn130-tr ${pct>=70?"hot":pct>=50?"warm":""}"><b>${esc(r.name)}</b><span>ส่วนที่ใหญ่สุด: ${esc(PART_LABEL[r.top.id]||r.top.id)}</span><em>${pct}%</em><i style="--p:${Math.min(100,pct)}%"></i></div>`}).join("")}</div>`);
+    }catch(e){out(`<p class="yn130-bad">ตรวจไม่ได้: ${esc(e?.message||e)}</p>`)}
+    finally{adminBusy=false}
+  }
+  async function doErrors(){
+    try{
+      out("🧾 กำลังโหลด…");const {db,fs}=await ctx();
+      const sn=await fs.getDocs(fs.query(fs.collection(db,"clientErrors"),fs.orderBy("atMs","desc"),fs.limit(60)));const rows=[];sn.forEach(d=>rows.push(d.data()||{}));
+      if(!rows.length)return out("ยังไม่มี Error ที่บันทึกไว้ 🎉");
+      out(`<div class="yn130-errs">${rows.map(r=>`<div><small>${esc(new Date(Number(r.atMs)||0).toLocaleString("th-TH"))} • ${esc(r.name||r.memberKey||"-")}</small><p>${esc(r.text)}</p></div>`).join("")}</div>`);
+    }catch(e){out(`<p class="yn130-bad">โหลดไม่ได้: ${esc(e?.message||e)}</p>`)}
+  }
+  async function doGate(){
+    if(!confirm(`บังคับให้ทุกเครื่องที่เวอร์ชันต่ำกว่า R36.${BUILD_NUM} ต้องรีเฟรชก่อนเล่นต่อ?`))return;
+    try{const {db,fs}=await ctx();await fs.setDoc(fs.doc(db,"appConfig","app"),{minBuild:BUILD_NUM,build:BUILD,setAt:fs.serverTimestamp()},{merge:true});out(`<p class="yn130-ok">✅ ตั้งแล้ว เครื่องที่ต่ำกว่า R36.${BUILD_NUM} จะเห็นหน้าต่างให้รีเฟรชภายใน 1 นาที</p>`)}
+    catch(e){out(`<p class="yn130-bad">ตั้งไม่ได้: ${esc(e?.message||e)}</p>`)}
+  }
+  function installAdmin(){
+    try{
+      if(typeof showAdminCenter!=="function"||showAdminCenter.__r36130)return;
+      const base=showAdminCenter;
+      const w=async function(){
+        const r=await base.apply(this,arguments);
+        try{
+          if(isAdminNow()&&!$("yn130AdminBtn")){
+            const bt=document.createElement("button");bt.id="yn130AdminBtn";bt.type="button";bt.className="g125-big";bt.textContent="🛡️ ความปลอดภัยข้อมูล (สำรอง/ตรวจ/Error)";bt.onclick=()=>panel("");
+            const after=$("m127AdminBtn")||$("g125AdminSend");
+            if(after)after.insertAdjacentElement("afterend",bt);
+            else{const pn=document.querySelector("#modalContent .admin-panel")||document.querySelector("#modalContent section");const h=pn?.querySelector("h2");h?h.insertAdjacentElement("afterend",bt):pn?.prepend(bt)}
+          }
+        }catch(e){console.warn(BUILD,"admin inject",e)}
+        return r;
+      };
+      for(const k of Object.keys(base))try{w[k]=base[k]}catch(_){}
+      w.__r36130=1;showAdminCenter=w;
+    }catch(e){console.warn(BUILD,"admin wrap",e)}
+  }
+
+  /* ---------- styles ---------- */
+  const css=document.createElement("style");css.id="r36130-style";
+  css.textContent=`
+  .yn130-row{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px dashed rgba(120,90,160,.25);text-align:left}
+  .yn130-row img,.yn130-art img{width:40px;height:40px;object-fit:contain;flex:none}
+  .yn130-ic{width:40px;height:40px;display:grid;place-items:center;font-size:26px;flex:none}
+  .yn130-row b{flex:1;font-weight:800;line-height:1.25}
+  .yn130-row em{font-style:normal;font-weight:900;white-space:nowrap}
+  .yn130-art{display:flex!important;align-items:center;gap:8px}
+  .yn130-heat{margin:8px 0 10px;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,#fff1e6,#ffe0ef);border:2px solid #ff9a5c;color:#5a2a14;display:grid;gap:3px;text-align:left}
+  .yn130-heat b{font-size:15px}.yn130-heat span{font-weight:700}.yn130-heat small{opacity:.75}
+  #yn130Gate{position:fixed;inset:0;z-index:2147483647;background:rgba(30,12,48,.82);display:grid;place-items:center;padding:24px}
+  .yn130-gate-card{background:#fff;border-radius:22px;padding:24px 20px;max-width:340px;text-align:center;color:#3a1d55;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  .yn130-gate-emoji{font-size:44px}.yn130-gate-card h2{margin:6px 0}
+  .yn130-gate-card button{margin-top:14px;width:100%;padding:14px;border:0;border-radius:14px;background:#7b3fe4;color:#fff;font-weight:900;font-size:16px}
+  .yn130-ah{display:flex;gap:10px;align-items:center}.yn130-ah>span{font-size:30px}.yn130-ah h2{margin:0}
+  .yn130-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+  .yn130-tools button{display:grid;gap:2px;text-align:left;padding:10px;border-radius:14px;border:2px solid #cbb3f2;background:#faf6ff;color:#3a1d55}
+  .yn130-tools small{opacity:.7;font-size:11px}
+  .yn130-out{max-height:48vh;overflow:auto;text-align:left;font-size:14px}
+  .yn130-ok{color:#1b7a3a;font-weight:800}.yn130-bad{color:#b0203a;font-weight:800}
+  .yn130-table{display:grid;gap:6px}
+  .yn130-tr{position:relative;display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:8px 10px 12px;border-radius:12px;background:#f6f1fd;overflow:hidden}
+  .yn130-tr span{grid-column:1;font-size:12px;opacity:.8}.yn130-tr em{grid-row:1/3;grid-column:2;align-self:center;font-style:normal;font-weight:900}
+  .yn130-tr i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:#7b3fe4}
+  .yn130-tr.warm i{background:#f0a020}.yn130-tr.hot{background:#ffe9ec}.yn130-tr.hot i{background:#d42a4c}
+  .yn130-errs div{padding:8px 0;border-bottom:1px solid #eee}.yn130-errs p{margin:2px 0;font-family:inherit;word-break:break-word}
+  `;
+  document.head.appendChild(css);
+
+  /* ---------- install (re-check because older layers install late) ---------- */
+  function installAll(){wrapMessages();installHarvest();installFishing();installBoxes();installAdmin()}
+  installAll();[500,2000,5000,9000,15000,30000].forEach(t=>setTimeout(installAll,t));
+  try{const mo=new MutationObserver(()=>queueMicrotask(decorateResults));const start=()=>{const mc=$("modalContent");if(mc)mo.observe(mc,{childList:true,subtree:true});else setTimeout(start,500)};start()}catch(_){}
+
+  globalThis.YN_R36130={BUILD,BUILD_NUM,thai,logErr,marketBuyFast,claimMarketCredits,rollSpecialEight,badChance,casts,itemImage,openAdmin:()=>panel("")};
+  console.info(BUILD,"loaded");
+})();
+
+</script>
 </body>
 </html>
