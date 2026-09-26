@@ -113,6 +113,8 @@
               <button id="shortcutOstrichPenBtn" class="hud-menu-item" type="button"><span>🦤</span><div><b>คอกนกกระจอกเทศ</b><small>2 คอก • ร่างคัมภีร์ • เลี้ยง 48 ชม.</small></div><i>›</i></button>
               <button id="shortcutSpiritBarnBtn" class="hud-menu-item" type="button"><span>👻</span><div><b>โรงเรือนสัตว์วิญญาณ</b><small>เข้าสู่โรงเรือนสัตว์วิญญาณ</small></div><i>›</i></button>
               <button id="shortcutCraftFoodBtn" class="hud-menu-item" type="button"><span>🍳</span><div><b>สถานที่คราฟอาหาร</b><small>คราฟอาหารในสวน / อาหารบ้าน</small></div><i>›</i></button>
+              <button id="giraffeLabBtn" class="hud-menu-item" type="button"><span>🦒</span><div><b>ศูนย์วิจัยยีราฟ</b><small>เปิด 13:00–18:00</small></div><i>›</i></button>
+              <button id="r131MyShopBtn" class="hud-menu-item" type="button"><span>🛍️</span><div><b>ร้านค้าหน้าฟาร์มของฉัน</b><small>วางขาย / ดูของในร้าน</small></div><i>›</i></button>
             </div>
           </section>
 
@@ -7183,7 +7185,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
    ===================================================================== */
 (function YN_R36130(){
   "use strict";
-  const BUILD="S2-R36.130-20260925",BUILD_NUM=130;
+  const BUILD="S2-R36.131-20260926",BUILD_NUM=131;
   const $=id=>document.getElementById(id);
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
   const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
@@ -7269,22 +7271,28 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     try{saveLocalOnly?.(l)}catch(_){}try{updateMeritUI?.()}catch(_){}try{queueCloudSave?.()}catch(_){}
   }
   async function serverMerit(fs,db,mk){
-    /* raw root read (no shard hydration): only merit is needed */
-    const ref=fs.doc(db,"saves",mk);let m=null;
-    const sn=await fs.getDocs(fs.query(fs.collection(db,"saves"),fs.where("__name__","==",ref),fs.limit(1)));
-    sn.forEach(d=>{m=Number(d.data()?.merit)});return m;
+    /* R36.130c: a collection query on /saves is refused by the rules for players,
+       which silently sent every purchase back to the old (broken) path.
+       Use the player's own live merit + the public Rank merit instead (the lower one). */
+    let local=Number(live()?.merit);if(!Number.isFinite(local))local=null;
+    let prof=null;try{const sn=await fs.getDoc(fs.doc(db,"publicProfiles",mk));if(sn.exists()){const v=Number(sn.data()?.merit);if(Number.isFinite(v))prof=v}}catch(_){}
+    if(local==null)return prof;if(prof==null)return local;return Math.min(local,prof);
   }
 
   /* =================================================================
      2) Farm market — fast buy + seller credit receipts
      ================================================================= */
   async function marketBuyFast(shopNo,slot,x,ownerKey){
+    try{return await marketBuyFastInner(shopNo,slot,x,ownerKey)}
+    catch(e){if(!e?.r36130User)logErr(`market fast: ${e?.code||""} ${e?.message||e}`,"market");throw e}
+  }
+  async function marketBuyFastInner(shopNo,slot,x,ownerKey){
     if(isAdminNow()||!ready()||visiting()&&!live())return null;
     const mk=me();if(!mk||!live())return null;
     const type=String(x?.type||"");
     if(!type||/Instance$/.test(type)||x?.instance)return null;
     const price=Math.floor(Number(x?.price)||0);if(price<0)return null;
-    const inc=planIncrements({itemType:x.type,itemKey:x.key,qty:x.qty});if(!inc)return null;
+    const inc=planIncrements({itemType:x.type,itemKey:x.key,qty:x.qty});if(!inc){logErr(`market fast skipped: item ${type}/${x?.key} cannot use fast path`,"market");return null}
     const {db,fs}=await ctx();if(typeof fs.increment!=="function")return null;
     let sm=null;try{sm=await serverMerit(fs,db,mk)}catch(_){return null}
     if(sm==null||!Number.isFinite(sm))return null;
@@ -7377,6 +7385,34 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   }
   function fishWindow(h=bkkHour()){if(h===7||h===13)return "gold";if(h>=21&&h<23)return "cursed";return "normal"}
   function badChance(n,h=bkkHour()){const w=fishWindow(h);if(w==="gold")return 0;let b=HEAT[Math.min(Math.max(0,n),HEAT.length-1)];if(w==="cursed")b+=.15;return Math.min(.85,b)}
+  /* R36.130d — lost bait: the cast fails immediately and the bait is used up.
+     Hidden from players. Bangkok hours: 100% at 03:00-03:59 and 16:00-16:59,
+     50% at 09:00-11:59 and 17:00-20:59, 0% otherwise (golden hours included). */
+  const LOSE_100=new Set([3,16]),LOSE_50=new Set([9,10,11,17,18,19,20]);
+  function loseChance(h=bkkHour()){if(LOSE_100.has(h))return 1;if(LOSE_50.has(h))return .5;return 0}
+  const LOSE_TEXT=["ล้มเหลว ลมกันโชกแรงมาก เสียเบ็ดฟรี 🌪️","มีแต่ปลาตัวใหญ่ เบ็ดเธอเล็กเกินอ่ะสาว เสียใจด้วยนะ เสียเบ็ดฟรี 🐋"];
+  let loseBusy=false;
+  async function loseBait(key){
+    const l=live(),have=Number(l?.fishingBaits?.[key])||0;if(have<1)return false;
+    const {db,fs}=await ctx(),ref=fs.doc(db,"saves",me());
+    await fs.updateDoc(ref,{[`fishingBaits.${key}`]:fs.increment(-1)});
+    l.fishingBaits[key]=have-1;try{saveLocalOnly?.(l)}catch(_){}
+    return true;
+  }
+  document.addEventListener("click",async e=>{
+    const b=e.target?.closest?.("[data-ynu-fish-bait]");if(!b||b.disabled)return;
+    const key=String(b.dataset.ynuFishBait||"");if(!key||!FISHING_BAITS?.[key])return;
+    if(!ready()||!me()||visiting())return;
+    if(loseBusy){e.preventDefault();e.stopImmediatePropagation();return}
+    if(Math.random()>=loseChance())return; /* normal cast continues */
+    e.preventDefault();e.stopImmediatePropagation();loseBusy=true;
+    try{
+      const ok=await loseBait(key);
+      try{closeModal?.()}catch(_){}
+      if(ok)message("🎣 เสียเบ็ดฟรี",`${LOSE_TEXT[Math.floor(Math.random()*LOSE_TEXT.length)]}<br><small>${esc(FISHING_BAITS[key].name)} −1</small>`);
+    }catch(err){logErr(`lose bait: ${err?.code||""} ${err?.message||err}`,"fishing");try{closeModal?.()}catch(_){}}
+    finally{loseBusy=false}
+  },true);
   const BAD_W=[["r35Bad1",45],["r35Bad2",30],["r35Bad3",17],["r35Bad4",8]],GOOD_K=["r35Good1","r35Good2","r35Good3","r35Good4"];
   function fishOf(k){const f=FISHING_FISH[k];const lo=Math.round(Number(f.min)*100),hi=Math.round(Number(f.max)*100);return{fishKey:k,name:f.name,image:f.image,weight:Number(((lo+Math.floor(Math.random()*(hi-lo+1)))/100).toFixed(2))}}
   function badFish(){let r=Math.random()*100;for(const [k,w] of BAD_W){r-=w;if(r<0)return fishOf(k)}return fishOf("r35Bad4")}
@@ -7413,7 +7449,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   function heatNote(){
     const n=casts().length,w=fishWindow(),b=Math.round(badChance(n)*100);
     const win=w==="gold"?"🌟 ตอนนี้ชั่วโมงทอง ได้ปลาดีล้วน!":w==="cursed"?"🌙 ชั่วโมงอาถรรพ์ (21:00–23:00) ปลาร้ายเพิ่มขึ้น":"";
-    return `<div id="yn130Heat" class="yn130-heat"><b>🔥 บ่อร้อน ${n}/5</b><span>ตกไปแล้ว ${n} ครั้งใน 2 ชม. • รอบนี้เจอปลาร้าย ${b}%</span>${win?`<span>${win}</span>`:""}<small>พักให้ครบ 2 ชม. บ่อจะเย็นลง • ชั่วโมงทอง 07:00–08:00 และ 13:00–14:00</small></div>`;
+    return `<div id="yn130Heat" class="yn130-heat"><b>🔥 บ่อร้อน ${n}/5</b><span>ตกไปแล้ว ${n} ครั้งใน 2 ชม. • รอบนี้เจอปลาร้าย ${b}%</span>${win?`<span>${win}</span>`:""}<span>🎣 ตอนนี้โอกาสเสียเบ็ดฟรี ${Math.round(loseChance()*100)}%</span><small>👑 เห็นเฉพาะ Aida • ผู้เล่นไม่เห็นป้ายนี้</small></div>`;
   }
 
   /* =================================================================
@@ -7520,7 +7556,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       const img=itemImage(b.textContent);const el=img?Object.assign(document.createElement("img"),{src:img,alt:"",loading:"lazy"}):Object.assign(document.createElement("span"),{className:"yn130-ic",textContent:iconFor(b.textContent)});
       a.classList.add("yn130-art");a.insertBefore(el,a.firstChild);
     });
-    if(root.querySelector("[data-start-fishing],[data-ynu-fish-bait],.fishing-bait-card")&&!$("yn130Heat")){
+    if(isAdminNow()&&root.querySelector("[data-start-fishing],[data-ynu-fish-bait],.fishing-bait-card")&&!$("yn130Heat")){
       const panel=root.querySelector(".feature-panel")||root.firstElementChild;const h=panel?.querySelector("h2");
       if(panel){const wrap=document.createElement("div");wrap.innerHTML=heatNote();const el=wrap.firstElementChild;h?h.insertAdjacentElement("afterend",el):panel.prepend(el)}
     }
@@ -7570,7 +7606,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
   let adminBusy=false;
   function panel(inner){
     const mc=$("modalContent");if(!mc)return;
-    mc.innerHTML=`<section class="feature-panel yn130-admin"><header class="yn130-ah"><span>🛡️</span><div><h2>ความปลอดภัยข้อมูล</h2><small>เครื่องมือของ Aida</small></div></header>
+    mc.innerHTML=`<section class="feature-panel yn130-admin"><header class="yn130-ah"><span>🛡️</span><div><h2>ความปลอดภัยข้อมูล</h2><small>เครื่องมือของ Aida • ${BUILD}</small></div></header>
       <div class="yn130-tools">
         <button type="button" data-yn130="backup"><b>💾 สำรองเซฟทุกคน</b><small>กดก่อนอัปเดตเกมทุกครั้ง</small></button>
         <button type="button" data-yn130="size"><b>📏 ตรวจขนาดข้อมูลผู้เล่น</b><small>ดูว่าใครข้อมูลใกล้เต็ม</small></button>
@@ -7686,5 +7722,429 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
 })();
 
 </script>
+<script id="r36131-giraffe-lab">
+/* =====================================================================
+   S2 R36.131 — ศูนย์วิจัยยีราฟ + ปุ่มเข้าร้านค้าหน้าฟาร์มสำรอง (2026-09-26)
+   - สถานที่ใหม่ในเมนู 📍 สถานที่ • เปิดทุกวัน 13:00–18:00 (เวลาไทย)
+   - โจทย์วิจัยสุ่มของ 3 อย่าง + จำนวนสุ่ม • ขอโจทย์ใหม่ 100 กุศล
+   - สำเร็จ: กุศลสุ่ม 1–1,500 • ล้มเหลว: ของหาย ไม่ได้กุศล
+   - ข้อมูลโจทย์เก็บแยกที่ Firestore: giraffeLab/{memberKey}
+   ===================================================================== */
+(function YN_R36131_GIRAFFE_LAB(){
+  "use strict";
+  const BUILD="S2-R36.131-GIRAFFE-LAB-20260926";
+  const IMG="giraffe-research-lab.jpg?v=131";
+  const OPEN_H=13,CLOSE_H=18,REROLL_COST=100,SUCCESS_RATE=.6,MERIT_MIN=1,MERIT_MAX=1500;
+  const $=id=>document.getElementById(id);
+  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const int=v=>Math.max(0,Math.floor(Number(v)||0));
+  const fmt=n=>Math.floor(Number(n)||0).toLocaleString("en-US");
+  const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const me=()=>{try{return String(currentMemberKey||"")}catch(_){return ""}};
+  const myName=()=>{try{return String(currentMember||"")}catch(_){return ""}};
+  const visiting=()=>{try{return !!visitContext}catch(_){return false}};
+  const live=()=>{try{return ownState||null}catch(_){return null}};
+  const nowMs=()=>{try{return typeof gameNow==="function"?gameNow():Date.now()}catch(_){return Date.now()}};
+  const logErr=(t,w)=>{try{globalThis.YN_R36130?.logErr?.(t,w)}catch(_){}};
+  function userErr(t){const e=new Error(t);e.labUser=true;return e}
+
+  /* ---------- items (ชื่อ/รูปตามในเกม) ----------
+     src: product = animalProducts • special = specials
+          license = ใบอนุญาตแปรรูป (เก็บ 2 ที่) • treasure = alpaca.inventory.other */
+  const TIER=[
+    {range:[300,800],step:10,weight:4},
+    {range:[150,500],step:10,weight:3},
+    {range:[50,200],step:5,weight:2},
+    {range:[5,30],step:1,weight:1}
+  ];
+  const ITEMS={
+    egg:{name:"ไข่เปรต",img:"chicken_egg.png?v=S2R9",src:"product",tier:0},
+    fishMeat:{name:"เนื้อปลาผี",img:"fish_02_salmon.png?v=S2R9",src:"product",tier:0},
+    truffle:{name:"เห็ดทรัฟเฟิลหลอน",img:"pig_truffle_transparent.png?v=S2R9",src:"product",tier:0},
+    milk:{name:"นมวัวอาฆาต",img:"cow_milk.png?v=S2R9",src:"product",tier:0},
+    revivedDrumstick:{name:"น่องไก่คืนชีพ",img:"chicken_chicken_leg.png?v=S2R9",src:"product",tier:1},
+    illusionRoe:{name:"ไข่ปลามายา",img:"fish_04_fish_roe.png?v=S2R9",src:"product",tier:1},
+    shadowPork:{name:"เนื้อหมูเงามรณะ",img:"pig_meat_transparent.png?v=S2R9",src:"product",tier:1},
+    deathMistCream:{name:"ครีมหมอกมรณะ",img:"cow_cream.png?v=S2R9",src:"product",tier:1},
+    friendGrassRed:{name:"หญ้าสีแดง",img:"friend-grass-red.png?v=221",src:"special",tier:1},
+    processingLicense:{name:"ใบอนุญาตแปรรูป",img:"alpaca_processing_license.png?v=240",src:"license",tier:1},
+    hellFeather:{name:"ขนนกนรก",img:"chicken_feather.png?v=S2R9",src:"product",tier:2},
+    darkMoonScale:{name:"เกล็ดปลาจันทรามืด",img:"fish_01_fish_scales.png?v=S2R9",src:"product",tier:2},
+    infernalGoldenTrotter:{name:"คากิทองอเวจี",img:"pig_golden_trotter_transparent.png?v=S2R9",src:"product",tier:2},
+    eclipseCheese:{name:"ชีสจันทร์ดับ",img:"cow_cheese.png?v=S2R9",src:"product",tier:2},
+    treasureBox:{name:"กล่องสมบัติอัลปาก้า",img:"alpaca_treasure_box.png?v=240",src:"treasure",tier:2},
+    pestle100:{name:"สากกะเบือไฮโซ",img:"pestle-boost-100.png?v=1",src:"special",tier:2},
+    therapyDiscRock:{name:"แผ่นเพลงบำบัดพลังร็อก",img:"therapy-disc-rock.png",src:"special",tier:2},
+    therapyDiscDigital:{name:"แผ่นเพลงบำบัดดิจิทัล",img:"therapy-disc-digital.png",src:"special",tier:3},
+    satanWings:{name:"ปีกซาตาน",img:"item-satan-wings.png?v=1",src:"special",tier:3},
+    landDeed:{name:"โฉนดที่ดินขอคืนวัดได้บ่",img:"land-deed.png?v=177",src:"special",tier:3}
+  };
+  const KEYS=Object.keys(ITEMS);
+
+  const FAIL_TEXT=[
+    "เสียใจด้วยน๊า คุณอาจจะไม่เหมาะกับงานสายนี้ ไปรับจ้างถอนผมหงอกเถอะค่ะ บาย",
+    "งานชั้นสูงแบบนี้ มันคงไม่เหมาะกับคนแบบคุณหรอก ไปไหนก็ไปเหอะ",
+    "หวังรวยหรอ ของใส่อะไรมาก็ไม่รู้ แค่เนี๊ยะ ? ฮัลโหล บ่ล่ายยยยยย",
+    "ขี้งกเนอะ",
+    "ไปพักค่ะ โลภมาก นี่ไงริบของซะเลย555 สมน้ำหน้า",
+    "ยิ่งสูงยิ่งหนาว แล้วไง ยิ่งเล่น ยิ่งแพ้ น๊า"
+  ];
+  const WIN_TEXT=[
+    n=>`เธอสุดยอดอ่ะ ฉันชื่อชม งานวิจัยสำเร็จ รับ <b>${n}</b> กุศล`,
+    n=>`ไม่มีใครเก่งกว่าเธอแล้วนะคนดี งานวิจัยสำเร็จ รับ <b>${n}</b> กุศล`,
+    n=>`เก่งที่สุดเลยยยยย ปรบมือให้ งานวิจัยสำเร็จแล้ว รับ <b>${n}</b> กุศล`,
+    n=>`งานวิจัยสำเร็จ อย่าลืมแคปไปบอก ป้าข้างบ้านด้วยนะ อิอิ รับ <b>${n}</b> กุศล`
+  ];
+
+  /* ---------- counts in a save ---------- */
+  function countIn(s,k){
+    const it=ITEMS[k];if(!it||!s)return 0;
+    if(it.src==="product")return int(s.animalProducts?.[k]);
+    if(it.src==="special")return int(s.specials?.[k]);
+    if(it.src==="license")return Math.max(int(s.specials?.processingLicense),int(s.alpaca?.inventory?.other?.processingLicense));
+    if(it.src==="treasure")return int(s.alpaca?.inventory?.other?.treasureBox);
+    return 0;
+  }
+  /* dotted paths to write the new amount (same value everywhere the item lives) */
+  function pathsFor(k){
+    const it=ITEMS[k];
+    if(it.src==="product")return[`animalProducts.${k}`];
+    if(it.src==="special")return[`specials.${k}`];
+    if(it.src==="license")return["specials.processingLicense","alpaca.inventory.other.processingLicense"];
+    if(it.src==="treasure")return["alpaca.inventory.other.treasureBox"];
+    return[];
+  }
+  function setLocal(s,k,v){
+    const it=ITEMS[k];if(!s||!it)return;
+    const ensure=(o,key)=>{if(!obj(o[key]))o[key]={};return o[key]};
+    if(it.src==="product")ensure(s,"animalProducts")[k]=v;
+    else if(it.src==="special")ensure(s,"specials")[k]=v;
+    else{const other=ensure(ensure(ensure(s,"alpaca"),"inventory"),"other");if(it.src==="license"){ensure(s,"specials").processingLicense=v;other.processingLicense=v}else other.treasureBox=v}
+  }
+
+  /* ---------- opening hours (Asia/Bangkok) ---------- */
+  function bkk(){
+    try{const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Bangkok",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date(nowMs()));const g=t=>Number(p.find(x=>x.type===t)?.value)||0;return{h:g("hour")%24,m:g("minute"),s:g("second")}}
+    catch(_){const d=new Date(nowMs()+7*3600000);return{h:d.getUTCHours(),m:d.getUTCMinutes(),s:d.getUTCSeconds()}}
+  }
+  const secOfDay=()=>{const t=bkk();return t.h*3600+t.m*60+t.s};
+  const isOpen=()=>{const s=secOfDay();return s>=OPEN_H*3600&&s<CLOSE_H*3600};
+  const secUntilOpen=()=>{const s=secOfDay();return s<OPEN_H*3600?OPEN_H*3600-s:86400-s+OPEN_H*3600};
+  const secUntilClose=()=>Math.max(0,CLOSE_H*3600-secOfDay());
+  function dur(sec){sec=Math.max(0,Math.ceil(sec/60)*60);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60);return h>0?`${h} ชม. ${m} นาที`:`${m} นาที`}
+
+  /* ---------- task generation ---------- */
+  function pickItems(){
+    const pool=KEYS.slice(),out=[];
+    while(out.length<3&&pool.length){
+      const total=pool.reduce((a,k)=>a+TIER[ITEMS[k].tier].weight,0);let r=Math.random()*total,idx=0;
+      for(;idx<pool.length;idx++){r-=TIER[ITEMS[pool[idx]].tier].weight;if(r<=0)break}
+      out.push(pool.splice(Math.min(idx,pool.length-1),1)[0]);
+    }
+    return out;
+  }
+  function rollQty(k){const t=TIER[ITEMS[k].tier],[a,b]=t.range;return Math.max(t.step,Math.round(rnd(a,b)/t.step)*t.step)}
+  function newTask(){return{id:`t${Date.now().toString(36)}${Math.random().toString(36).slice(2,7)}`,items:pickItems().map(k=>({k,q:rollQty(k)})),createdAt:Date.now()}}
+  function validTask(t){return obj(t)&&typeof t.id==="string"&&Array.isArray(t.items)&&t.items.length===3&&t.items.every(x=>ITEMS[x?.k]&&int(x?.q)>0)}
+  /* hidden reward: rarer tasks lean higher, never outside 1–1500 */
+  function rollMerit(task){
+    const d=task.items.reduce((a,x)=>a+ITEMS[x.k].tier,0);
+    const p=Math.max(1.05,2.2-d*.12),v=MERIT_MIN+Math.floor((MERIT_MAX-MERIT_MIN+1)*Math.pow(Math.random(),p));
+    return Math.min(MERIT_MAX,Math.max(MERIT_MIN,v));
+  }
+
+  /* ---------- firestore ---------- */
+  let lab=null,busy=false;
+  async function ctx(){return getFirebaseContext()}
+  async function loadLab(){
+    const mk=me();if(!mk)throw userErr("กรุณาเข้าสู่ระบบก่อนนะคะ");
+    const {db,fs}=await ctx(),ref=fs.doc(db,"giraffeLab",mk);let out=null;
+    await fs.runTransaction(db,async tx=>{
+      const sn=await tx.get(ref),d=sn.exists()?(sn.data()||{}):{};
+      if(validTask(d.task)){out=d;return}
+      const next={memberKey:mk,name:myName(),task:newTask(),runs:int(d.runs),wins:int(d.wins),fails:int(d.fails),meritTotal:int(d.meritTotal),log:Array.isArray(d.log)?d.log.slice(-10):[],updatedAt:fs.serverTimestamp()};
+      tx.set(ref,next,{merge:true});out={...d,...next};
+    });
+    lab=out;return lab;
+  }
+  function applyLocal(changes,merit){
+    const s=live();if(!s)return;
+    for(const [k,v] of Object.entries(changes||{}))setLocal(s,k,v);
+    if(Number.isFinite(merit))s.merit=merit;
+    try{if(!visiting())state=s}catch(_){}
+    try{saveLocalOnly?.(s)}catch(_){}try{updateMeritUI?.()}catch(_){}try{queueCloudSave?.()}catch(_){}
+  }
+  function profilePatch(fs,merit){
+    let dn=myName();try{dn=typeof currentProfileDisplayName==="function"?currentProfileDisplayName():dn}catch(_){}
+    return{memberKey:me(),displayName:dn,merit,initialized:true,updatedAt:fs.serverTimestamp()};
+  }
+  async function runResearch(){
+    const mk=me(),taskId=lab?.task?.id;if(!mk||!taskId)throw userErr("ยังไม่มีโจทย์วิจัย กรุณาเปิดศูนย์ใหม่อีกครั้งนะคะ");
+    try{await settlePendingCloudSave?.()}catch(_){}
+    const {db,fs}=await ctx(),labRef=fs.doc(db,"giraffeLab",mk),saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk);
+    let res=null;
+    await fs.runTransaction(db,async tx=>{
+      res=null;
+      const ls=await tx.get(labRef),ss=await tx.get(saveRef);
+      if(!ss.exists())throw userErr("ไม่พบเซฟของคุณ");
+      const L=ls.exists()?(ls.data()||{}):{},task=L.task;
+      if(!validTask(task)||task.id!==taskId)throw userErr("โจทย์วิจัยเปลี่ยนแล้ว กรุณาดูโจทย์ใหม่อีกครั้งนะคะ");
+      const S=ss.data()||{},changes={},patch={};
+      for(const x of task.items){const have=countIn(S,x.k),need=int(x.q);if(have<need)throw userErr(`${ITEMS[x.k].name}ไม่พอ • ต้องใช้ ${fmt(need)} มี ${fmt(have)}`);changes[x.k]=have-need;for(const p of pathsFor(x.k))patch[p]=have-need}
+      const ok=Math.random()<SUCCESS_RATE,gain=ok?rollMerit(task):0,merit=Math.max(0,Math.floor(Number(S.merit)||0))+gain;
+      patch.merit=merit;
+      const next=newTask(),log=(Array.isArray(L.log)?L.log:[]).concat([{at:nowMs(),ok,m:gain,items:task.items.map(x=>({k:x.k,q:int(x.q)}))}]).slice(-10);
+      tx.update(saveRef,patch);
+      tx.set(profRef,profilePatch(fs,merit),{merge:true});
+      tx.set(labRef,{memberKey:mk,name:myName(),task:next,runs:int(L.runs)+1,wins:int(L.wins)+(ok?1:0),fails:int(L.fails)+(ok?0:1),meritTotal:int(L.meritTotal)+gain,log,updatedAt:fs.serverTimestamp()},{merge:true});
+      res={ok,gain,merit,changes,lab:{...L,task:next,runs:int(L.runs)+1,wins:int(L.wins)+(ok?1:0),fails:int(L.fails)+(ok?0:1),meritTotal:int(L.meritTotal)+gain,log}};
+    });
+    applyLocal(res.changes,res.merit);lab=res.lab;return res;
+  }
+  async function rerollTask(){
+    const mk=me(),taskId=lab?.task?.id;if(!mk)throw userErr("กรุณาเข้าสู่ระบบก่อนนะคะ");
+    try{await settlePendingCloudSave?.()}catch(_){}
+    const {db,fs}=await ctx(),labRef=fs.doc(db,"giraffeLab",mk),saveRef=fs.doc(db,"saves",mk),profRef=fs.doc(db,"publicProfiles",mk);
+    let res=null;
+    await fs.runTransaction(db,async tx=>{
+      res=null;
+      const ls=await tx.get(labRef),ss=await tx.get(saveRef);
+      if(!ss.exists())throw userErr("ไม่พบเซฟของคุณ");
+      const L=ls.exists()?(ls.data()||{}):{};
+      if(taskId&&L.task?.id&&L.task.id!==taskId)throw userErr("โจทย์วิจัยเปลี่ยนแล้ว กรุณาดูโจทย์ใหม่อีกครั้งนะคะ");
+      const have=Math.floor(Number(ss.data()?.merit)||0);if(have<REROLL_COST)throw userErr(`กุศลไม่พอ • ต้องใช้ ${REROLL_COST} มี ${fmt(have)}`);
+      const merit=have-REROLL_COST,next=newTask();
+      tx.update(saveRef,{merit});
+      tx.set(profRef,profilePatch(fs,merit),{merge:true});
+      tx.set(labRef,{memberKey:mk,name:myName(),task:next,updatedAt:fs.serverTimestamp()},{merge:true});
+      res={merit,lab:{...L,task:next}};
+    });
+    applyLocal(null,res.merit);lab=res.lab;return res;
+  }
+
+  /* ---------- UI ---------- */
+  const css=document.createElement("style");css.id="r36131-giraffe-lab-css";
+  css.textContent=`
+  @import url("https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap");
+  .glab{--cream:#fff7e8;--cream2:#fdeccd;--honey:#e7a646;--spot:#c46f2c;--cocoa:#5b3a21;--holo:#79d6ff;--holo2:#b9ecff;--peach:#f6b58f;
+    position:fixed;inset:0;z-index:2147482400;overflow:hidden;background:#2b1a10;font-family:"Mali","Itim","Mitr","Thonburi",sans-serif;color:var(--cocoa);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  .glab.hidden,.glab-dlg.hidden{display:none!important}
+  .glab-stage{position:absolute;left:50%;top:50%;width:max(100vw,calc(100svh*.5628));height:max(100svh,calc(100vw/.5628));transform:translate(-50%,-50%)}
+  .glab-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+  .glab-hot{position:absolute;border:0;background:transparent;border-radius:22px;padding:0;cursor:pointer;touch-action:manipulation}
+  .glab-hot:active{background:rgba(185,236,255,.16)}
+  .glab-hot.glow::after{content:"";position:absolute;left:50%;bottom:6%;width:62%;height:26%;transform:translateX(-50%);border-radius:50%;border:2px solid rgba(185,236,255,.85);box-shadow:0 0 18px rgba(121,214,255,.8);animation:glabRing 2.4s ease-in-out infinite;pointer-events:none}
+  @keyframes glabRing{0%,100%{opacity:.25;transform:translateX(-50%) scale(.92)}50%{opacity:.9;transform:translateX(-50%) scale(1.04)}}
+  .glab-top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 0;display:flex;align-items:center;gap:8px;pointer-events:none}
+  .glab-top>*{pointer-events:auto}
+  .glab-back{width:38px;height:38px;flex:none;border-radius:50%;border:1.5px solid rgba(231,166,70,.9);background:rgba(255,247,232,.9);color:var(--spot);font:700 22px/1 "Mali",sans-serif;box-shadow:0 4px 12px rgba(60,30,10,.25)}
+  .glab-sign{flex:1;min-width:0;text-align:center;padding:6px 10px;border-radius:18px;background:linear-gradient(180deg,rgba(255,247,232,.94),rgba(253,236,205,.9));border:1.5px solid rgba(231,166,70,.85);box-shadow:0 4px 14px rgba(60,30,10,.22)}
+  .glab-sign b{display:block;font-size:15px;font-weight:700;color:var(--spot);letter-spacing:.2px}
+  .glab-sign small{display:block;font-size:11px;color:#8a6444;margin-top:1px}
+  .glab-merit{flex:none;padding:7px 10px;border-radius:14px;background:rgba(255,247,232,.9);border:1.5px solid rgba(231,166,70,.85);font-size:12px;font-weight:600;color:var(--cocoa)}
+  .glab-bar{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);display:flex;gap:8px}
+  .glab-bar button{border:1.5px solid rgba(121,214,255,.9);background:linear-gradient(180deg,rgba(255,247,232,.96),rgba(253,236,205,.94));color:var(--cocoa);border-radius:20px;padding:9px 14px;font:600 13px/1.1 "Mali",sans-serif;box-shadow:0 0 0 3px rgba(121,214,255,.18),0 6px 16px rgba(60,30,10,.28);white-space:nowrap}
+  .glab-bar button.main{background:linear-gradient(180deg,#ffd98f,#f2b457);border-color:#fff3d6;color:#5b3a21}
+  .glab-scan{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at 50% 55%,rgba(121,214,255,.22),transparent 62%)}
+  .glab.scanning .glab-scan{opacity:1}
+  .glab-scan::before{content:"";position:absolute;left:14%;right:14%;height:14%;top:20%;background:linear-gradient(180deg,transparent,rgba(185,236,255,.75),transparent);box-shadow:0 0 30px rgba(121,214,255,.6);filter:blur(1px);animation:glabSweep 1.1s ease-in-out infinite alternate}
+  .glab-scan::after{content:"กำลังวิเคราะห์ตัวอย่าง…";position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);transform:translateX(-50%);padding:7px 14px;border-radius:14px;background:rgba(20,40,60,.72);color:var(--holo2);font:500 12px/1 "Mali",sans-serif;border:1px solid rgba(121,214,255,.7)}
+  @keyframes glabSweep{from{top:12%}to{top:72%}}
+  .glab-dlg{position:fixed;inset:0;z-index:2147482600;display:grid;place-items:end center;padding:0 10px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(43,26,16,.38);font-family:"Mali","Itim","Mitr","Thonburi",sans-serif;color:#5b3a21}
+  .glab-dlg.center{place-items:center}
+  .glab-card{position:relative;width:min(420px,100%);max-height:78svh;overflow:auto;border-radius:24px;padding:16px 14px 14px;background:linear-gradient(180deg,#fff9ee,#fdeccd);border:1.5px solid #e7a646;box-shadow:0 0 0 4px rgba(121,214,255,.22),0 16px 40px rgba(40,20,5,.4);animation:glabUp .28s ease-out}
+  @keyframes glabUp{from{transform:translateY(18px);opacity:0}to{transform:none;opacity:1}}
+  .glab-card h3{margin:0 0 4px;font-size:16px;font-weight:700;color:#c46f2c;text-align:center}
+  .glab-card p{margin:6px 0;font-size:13px;line-height:1.55;text-align:center}
+  .glab-card .sub{font-size:11.5px;color:#8a6444;text-align:center;margin:0 0 8px}
+  .glab-x{position:absolute;right:10px;top:8px;width:28px;height:28px;border-radius:50%;border:1px solid rgba(231,166,70,.7);background:#fff7e8;color:#c46f2c;font:700 16px/1 "Mali",sans-serif}
+  .glab-items{display:grid;gap:7px;margin:8px 0 10px}
+  .glab-item{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:9px;padding:7px 9px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(121,214,255,.55)}
+  .glab-item img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(60,30,10,.25))}
+  .glab-item b{display:block;font-size:13px;font-weight:600;line-height:1.25}
+  .glab-item small{display:block;font-size:11px;color:#8a6444;margin-top:2px}
+  .glab-item em{font-style:normal;font-size:12px;font-weight:700;padding:4px 8px;border-radius:10px;background:#e8f8ee;color:#2f7a4a;white-space:nowrap}
+  .glab-item.short em{background:#ffe8e3;color:#c0463a}
+  .glab-acts{display:grid;gap:7px;margin-top:6px}
+  .glab-acts button{border-radius:16px;padding:11px 12px;font:600 13.5px/1.1 "Mali",sans-serif;border:1.5px solid #e7a646;background:#fff7e8;color:#5b3a21}
+  .glab-acts button.primary{background:linear-gradient(180deg,#ffd98f,#f2b457);border-color:#fff1cf;box-shadow:0 4px 12px rgba(196,111,44,.3)}
+  .glab-acts button.holo{border-color:#79d6ff;background:linear-gradient(180deg,#f2fbff,#dff4ff);color:#2d5a73}
+  .glab-acts button:disabled{opacity:.5}
+  .glab-note{font-size:11.5px;color:#a0553a;text-align:center;margin:2px 0 0}
+  .glab-result{text-align:center;padding:6px 2px 2px}
+  .glab-result .big{font-size:40px;line-height:1;margin:4px 0 6px}
+  .glab-result p{font-size:14px}
+  .glab-result.win p b{color:#c46f2c;font-size:17px}
+  .glab-result.lose{filter:saturate(.8)}
+  .glab-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
+  .glab-stats div{border-radius:14px;padding:9px;background:rgba(255,255,255,.72);border:1px solid rgba(121,214,255,.5);text-align:center}
+  .glab-stats b{display:block;font-size:17px;color:#c46f2c}.glab-stats small{font-size:11px;color:#8a6444}
+  .glab-log{display:grid;gap:6px;margin-top:6px}
+  .glab-log div{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.7);border:1px solid rgba(231,166,70,.35);font-size:12px}
+  .glab-log img{width:24px;height:24px;object-fit:contain}
+  .glab-log span{margin-left:auto;font-weight:700;white-space:nowrap}
+  .glab-log .ok{color:#2f7a4a}.glab-log .no{color:#b0463a}
+  .r131-visit-shop{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translateX(-50%);z-index:95;border:1.5px solid #e7a646;background:linear-gradient(180deg,#fff7e8,#fdeccd);color:#5b3a21;border-radius:18px;padding:8px 14px;font:600 13px/1 "Mali","Mitr",sans-serif;box-shadow:0 6px 16px rgba(40,20,5,.35)}
+  .r131-visit-shop.hidden{display:none!important}
+  @media (prefers-reduced-motion:reduce){.glab-hot.glow::after,.glab-scan::before,.glab-card{animation:none}}
+  `;
+  document.head.appendChild(css);
+
+  let root=null,clockTimer=0;
+  function mount(){
+    if(root)return root;
+    root=document.createElement("section");root.id="giraffeLabScreen";root.className="glab hidden";root.setAttribute("aria-label","ศูนย์วิจัยยีราฟ");
+    root.innerHTML=`
+      <div class="glab-stage">
+        <img src="${IMG}" alt="">
+        <button class="glab-hot glow" data-lab="task" style="left:27%;top:14%;width:44%;height:74%" aria-label="ยีราฟ • ดูโจทย์วิจัย"></button>
+        <button class="glab-hot" data-lab="task" style="left:4%;top:35%;width:25%;height:15%" aria-label="จอโจทย์วิจัย"></button>
+        <button class="glab-hot" data-lab="stats" style="left:80%;top:47%;width:19%;height:14%" aria-label="จอสถิติงานวิจัย"></button>
+        <button class="glab-hot" data-lab="stats" style="left:68%;top:62%;width:24%;height:8%" aria-label="คอนโซลสถิติ"></button>
+        <button class="glab-hot" data-lab="log" style="left:0%;top:59%;width:21%;height:21%" aria-label="กล้องจุลทรรศน์ • บันทึกผล"></button>
+      </div>
+      <div class="glab-scan"></div>
+      <header class="glab-top">
+        <button class="glab-back" type="button" data-lab="close" aria-label="กลับฟาร์ม">‹</button>
+        <div class="glab-sign"><b>ศูนย์วิจัยยีราฟ</b><small id="glabClock">เปิด 13:00–18:00</small></div>
+        <div class="glab-merit" id="glabMerit">🙏 0</div>
+      </header>
+      <nav class="glab-bar">
+        <button type="button" class="main" data-lab="task">🧪 โจทย์วิจัย</button>
+        <button type="button" data-lab="log">🔬 บันทึกผล</button>
+      </nav>`;
+    document.body.appendChild(root);
+    root.addEventListener("click",e=>{const b=e.target.closest?.("[data-lab]");if(!b||busy)return;e.preventDefault();e.stopPropagation();const a=b.dataset.lab;if(a==="close")closeLab();else if(a==="task")showTask();else if(a==="stats")showStats();else if(a==="log")showLog()});
+    return root;
+  }
+  function paintTop(){
+    const c=$("glabClock"),m=$("glabMerit");
+    if(c)c.textContent=isOpen()?`เปิดอยู่ • ปิด 18:00 (อีก ${dur(secUntilClose())})`:"ปิดแล้ว • เปิด 13:00–18:00";
+    if(m)m.textContent=`🙏 ${fmt(live()?.merit)}`;
+  }
+
+  /* dialog */
+  let dlg=null;
+  function dialog(html,{center=false,closable=true}={}){
+    if(!dlg){dlg=document.createElement("div");dlg.className="glab-dlg hidden";document.body.appendChild(dlg);dlg.addEventListener("click",e=>{if(e.target===dlg&&dlg.dataset.closable==="1")closeDialog()})}
+    dlg.classList.toggle("center",!!center);dlg.dataset.closable=closable?"1":"0";
+    dlg.innerHTML=`<div class="glab-card">${closable?'<button class="glab-x" type="button" aria-label="ปิด">×</button>':""}${html}</div>`;
+    dlg.querySelector(".glab-x")?.addEventListener("click",closeDialog);
+    dlg.classList.remove("hidden");return dlg;
+  }
+  function closeDialog(){dlg?.classList.add("hidden")}
+  function notice(title,text,btn="ตกลง"){const d=dialog(`<h3>${title}</h3><p>${text}</p><div class="glab-acts"><button class="primary" type="button" data-ok>${btn}</button></div>`,{center:true});d.querySelector("[data-ok]").onclick=closeDialog}
+  function errText(e){
+    if(e?.labUser)return e.message;
+    const raw=String(e?.code||"")+" "+String(e?.message||e||"");logErr(`giraffe lab: ${raw}`,"giraffeLab");
+    if(/permission/i.test(raw))return"ศูนย์วิจัยยังเปิดใช้ไม่ได้ (ระบบยังไม่อนุญาต) แจ้งแอดมินได้เลยนะคะ ของไม่หาย";
+    return"ระบบกำลังซิงก์ข้อมูลอยู่ ของไม่หาย ลองใหม่อีกครั้งนะคะ";
+  }
+
+  function closedNotice(){notice("🦒 ศูนย์วิจัยปิดอยู่",`เปิดทุกวัน 13:00–18:00<br>เปิดอีกใน ${dur(secUntilOpen())}`)}
+
+  async function openLab(){
+    try{closeHomeHudMenu?.()}catch(_){}
+    if(visiting())return notice("🦒 ศูนย์วิจัยยีราฟ","กลับไปที่ฟาร์มของตัวเองก่อนนะคะ");
+    if(!isOpen())return closedNotice();
+    mount();paintTop();root.classList.remove("hidden");
+    clearInterval(clockTimer);clockTimer=setInterval(tick,10000);
+    try{await loadLab()}catch(e){notice("🦒 ยังเปิดห้องแล็บไม่ได้",errText(e))}
+  }
+  function closeLab(){closeDialog();root?.classList.add("hidden");root?.classList.remove("scanning");clearInterval(clockTimer)}
+  function tick(){
+    if(!root||root.classList.contains("hidden")){clearInterval(clockTimer);return}
+    paintTop();
+    if(!isOpen()&&!busy){closeLab();notice("🦒 หมดเวลาทำการแล้ว","ศูนย์วิจัยปิด 18:00 กลับมาใหม่พรุ่งนี้ 13:00 นะคะ")}
+  }
+
+  function itemRow(x,s){
+    const it=ITEMS[x.k],have=countIn(s,x.k),need=int(x.q),okay=have>=need;
+    return `<div class="glab-item${okay?"":" short"}"><img src="${esc(it.img)}" alt=""><div><b>${esc(it.name)}</b><small>มีในกระเป๋า ${fmt(have)}</small></div><em>${okay?"✓ ":""}ใช้ ${fmt(need)}</em></div>`;
+  }
+  async function showTask(){
+    if(!isOpen())return closedNotice();
+    if(!validTask(lab?.task)){try{await loadLab()}catch(e){return notice("🦒 ยังเปิดโจทย์ไม่ได้",errText(e))}}
+    const s=live(),t=lab.task,ready=t.items.every(x=>countIn(s,x.k)>=int(x.q));
+    const d=dialog(`<h3>🧪 โจทย์วิจัย</h3><p class="sub">ส่งของครบ 3 อย่างเข้าเครื่อง แล้วรอลุ้นผลวิจัย</p>
+      <div class="glab-items">${t.items.map(x=>itemRow(x,s)).join("")}</div>
+      ${ready?"":'<p class="glab-note">ของยังไม่ครบ • ขอโจทย์ใหม่ได้ค่ะ</p>'}
+      <div class="glab-acts"><button class="primary" type="button" data-go ${ready?"":"disabled"}>เริ่มวิจัย</button><button class="holo" type="button" data-new>ขอโจทย์ใหม่ • ${REROLL_COST} กุศล</button></div>`);
+    d.querySelector("[data-go]").onclick=startRun;
+    d.querySelector("[data-new]").onclick=confirmReroll;
+  }
+  function confirmReroll(){
+    const d=dialog(`<h3>ขอโจทย์ใหม่ไหมคะ</h3><p>ใช้ <b>${REROLL_COST} กุศล</b> แลกโจทย์วิจัยชุดใหม่<br>โจทย์เดิมจะหายไป</p><div class="glab-acts"><button class="primary" type="button" data-yes>ขอโจทย์ใหม่</button><button type="button" data-no>ไม่เอาดีกว่า</button></div>`,{center:true});
+    d.querySelector("[data-no]").onclick=showTask;
+    d.querySelector("[data-yes]").onclick=async()=>{
+      if(busy)return;if(!isOpen())return closedNotice();
+      if(int(live()?.merit)<REROLL_COST)return notice("กุศลไม่พอ",`ต้องใช้ ${REROLL_COST} กุศล • มี ${fmt(live()?.merit)}`);
+      busy=true;d.querySelectorAll("button").forEach(b=>b.disabled=true);
+      try{await rerollTask();paintTop();busy=false;showTask()}
+      catch(e){busy=false;notice("ขอโจทย์ใหม่ไม่ได้",errText(e))}
+    };
+  }
+  async function startRun(){
+    if(busy)return;if(!isOpen())return closedNotice();
+    busy=true;closeDialog();root.classList.add("scanning");
+    const wait=new Promise(r=>setTimeout(r,2300));let res=null,err=null;
+    try{res=await runResearch()}catch(e){err=e}
+    await wait;root.classList.remove("scanning");busy=false;paintTop();
+    if(err)return notice("เริ่มวิจัยไม่ได้",errText(err));
+    if(res.ok){
+      const d=dialog(`<div class="glab-result win"><div class="big">🎉🦒✨</div><p>${WIN_TEXT[Math.floor(Math.random()*WIN_TEXT.length)](fmt(res.gain))}</p></div><div class="glab-acts"><button class="primary" type="button" data-next>ดูโจทย์ถัดไป</button></div>`,{center:true});
+      d.querySelector("[data-next]").onclick=showTask;
+    }else{
+      const d=dialog(`<div class="glab-result lose"><div class="big">💥🦒</div><p>${esc(FAIL_TEXT[Math.floor(Math.random()*FAIL_TEXT.length)])}</p></div><div class="glab-acts"><button class="primary" type="button" data-next>ดูโจทย์ถัดไป</button></div>`,{center:true});
+      d.querySelector("[data-next]").onclick=showTask;
+    }
+  }
+  async function showStats(){
+    if(!lab){try{await loadLab()}catch(e){return notice("🦒 ยังเปิดข้อมูลไม่ได้",errText(e))}}
+    dialog(`<h3>💗 สถิติงานวิจัยของฉัน</h3><div class="glab-stats"><div><b>${fmt(lab.runs)}</b><small>วิจัยทั้งหมด</small></div><div><b>${fmt(lab.meritTotal)}</b><small>กุศลที่ได้รวม</small></div><div><b>${fmt(lab.wins)}</b><small>สำเร็จ</small></div><div><b>${fmt(lab.fails)}</b><small>ล้มเหลว</small></div></div>`);
+  }
+  function when(t){try{return new Intl.DateTimeFormat("th-TH",{timeZone:"Asia/Bangkok",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(new Date(t))}catch(_){return ""}}
+  async function showLog(){
+    if(!lab){try{await loadLab()}catch(e){return notice("🦒 ยังเปิดบันทึกไม่ได้",errText(e))}}
+    const rows=(Array.isArray(lab.log)?lab.log:[]).slice().reverse();
+    dialog(`<h3>🔬 บันทึกผลวิจัย</h3><p class="sub">10 ครั้งล่าสุด</p><div class="glab-log">${rows.length?rows.map(r=>`<div>${(r.items||[]).map(x=>ITEMS[x.k]?`<img src="${esc(ITEMS[x.k].img)}" alt="">`:"").join("")}<small>${esc(when(r.at))}</small><span class="${r.ok?"ok":"no"}">${r.ok?`+${fmt(r.m)} กุศล`:"ล้มเหลว"}</span></div>`).join(""):'<p>ยังไม่มีบันทึกค่ะ เริ่มวิจัยครั้งแรกได้เลย</p>'}</div>`);
+  }
+
+  /* ---------- menu button in 📍 สถานที่ ---------- */
+  function paintMenu(){
+    const b=$("giraffeLabBtn");if(!b)return;const sm=b.querySelector("small");if(!sm)return;
+    sm.textContent=isOpen()?`เปิดอยู่ • ปิด 18:00`:`เปิด 13:00–18:00 • อีก ${dur(secUntilOpen())}`;
+  }
+  document.addEventListener("click",e=>{
+    const lb=e.target.closest?.("#giraffeLabBtn");
+    if(lb){e.preventDefault();e.stopImmediatePropagation();openLab();return}
+    const mb=e.target.closest?.("#r131MyShopBtn");
+    if(mb){e.preventDefault();e.stopImmediatePropagation();try{closeHomeHudMenu?.()}catch(_){};openMarket(1)}
+  },true);
+  setInterval(paintMenu,30000);setTimeout(paintMenu,800);
+  document.addEventListener("click",e=>{if(e.target.closest?.("#hudMenuBtn"))setTimeout(paintMenu,30)},true);
+
+  /* =================================================================
+     ร้านค้าหน้าฟาร์ม: ทางเข้าสำรอง (เมนูของฉัน + ปุ่มตอนเยี่ยมเพื่อน)
+     ================================================================= */
+  function openMarket(n){
+    try{const fn=globalThis.YN_R15?.openMarket||globalThis.YN_S2_FARM?.openMarket;if(typeof fn==="function")return fn(n===2?2:1)}catch(e){logErr(`market open: ${e?.message||e}`,"market")}
+    notice("🛍️ ร้านค้าหน้าฟาร์ม","ร้านค้ากำลังโหลด ลองใหม่อีกครั้งในสักครู่นะคะ");
+  }
+  let visitBtn=null;
+  function paintVisitShop(){
+    if(!visitBtn){visitBtn=document.createElement("button");visitBtn.type="button";visitBtn.className="r131-visit-shop hidden";visitBtn.textContent="🛍️ เข้าร้านค้าเพื่อน";visitBtn.onclick=e=>{e.preventDefault();e.stopPropagation();openMarket(1)};document.body.appendChild(visitBtn)}
+    let show=false;
+    try{const g=$("gameScreen"),m=$("s2MarketScreen"),md=$("modal");show=visiting()&&g&&!g.classList.contains("hidden")&&(!m||m.classList.contains("hidden"))&&(!md||md.classList.contains("hidden"))&&(!root||root.classList.contains("hidden"))}catch(_){}
+    visitBtn.classList.toggle("hidden",!show);
+  }
+  setInterval(paintVisitShop,1000);
+
+  globalThis.YN_R36131={BUILD,open:openLab,close:closeLab,isOpen,ITEMS};
+  console.info(BUILD,"loaded");
+})();
+</script>
+
 </body>
 </html>

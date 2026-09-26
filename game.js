@@ -23280,7 +23280,7 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
         tx.set(buyerRef,patch,{merge:true});if(String(ownerKey)!=="aida"&&Math.floor(n(cur.price))>0)tx.set(fs.doc(fs.collection(db,"marketCredits")),{toKey:String(ownerKey),fromKey:currentMemberKey,fromName:currentMember,amount:Math.floor(n(cur.price)),itemName:String(cur.name||""),qty:Math.floor(n(cur.qty)),status:"pending",createdAt:fs.serverTimestamp()});tx.set(marketRef,{[`shop${shopNo}`]:arr,updatedAt:fs.serverTimestamp()},{merge:true});tx.set(mailRef,{source:"friend",type:"market",fromKey:currentMemberKey,fromName:currentMember,title:`${currentMember} แวะมาช้อปปิ้งที่ฟาร์มของคุณ`,text:String(ownerKey)==="aida"?`${cur.name} ×${cur.qty} ถูกซื้อแล้ว`:`ทำให้คุณได้ ${cur.price} กุศล • ${cur.name} ×${cur.qty}`,read:false,createdAt:fs.serverTimestamp()});
       }));
       applyMarketPatchLocal(patch);marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};await openMarketR15(shopNo);message("🛍️ ซื้อเรียบร้อย",`${html(x.name)} ×${i(x.qty)} เข้ากระเป๋าแล้ว`);
-    }catch(err){marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};message("ซื้อไม่ได้",String(err?.message||"กรุณาลองใหม่"));try{await openMarketR15(shopNo)}catch(_){} }
+    }catch(err){try{if(!err?.r36130User)globalThis.YN_R36130?.logErr?.(`market full: ${err?.code||""} ${err?.message||err}`,"market")}catch(_){};marketCacheR15.delete(ownerKey);try{localStorage.removeItem(marketKey(ownerKey))}catch(_){};message("ซื้อไม่ได้",String(err?.message||"กรุณาลองใหม่"));try{await openMarketR15(shopNo)}catch(_){} }
     finally{marketPendingR15.delete(`buy:${ownerKey}:${shopNo}:${slot}`)}
   }
 
