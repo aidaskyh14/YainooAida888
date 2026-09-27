@@ -682,7 +682,7 @@
   globalThis.YN_R3472_TX_BOOT_OK=true;
 })();
 </script>
-<script src="game.js?v=S2-R36.130-20260925"></script>
+<script src="game.js?v=S2-R36.133-20260927"></script>
 
 <style id="v179-takeover-style">
   .v179-take-panel{max-width:420px!important;width:min(92vw,420px)!important;margin:0 auto!important;padding:14px 12px!important;text-align:center!important;overflow:hidden!important}
@@ -6951,7 +6951,73 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     }
     for(const [f,type,key] of COUNTERS){const had=q(snap?.[f]),now=Math.max(0,Math.floor(Number(cur?.[f])||0));if(had>now)out.push({type,key,had,now,add:had-now})}
     const nm=names();
-    return out.map(r=>({...r,id:r.type+"|"+r.key,name:(nm.get(r.type+"|"+r.key)||{}).name||r.key,image:(nm.get(r.type+"|"+r.key)||{}).image||""})).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,"th"));
+    const base=out.map(r=>({...r,id:r.type+"|"+r.key,name:(nm.get(r.type+"|"+r.key)||{}).name||r.key,image:(nm.get(r.type+"|"+r.key)||{}).image||""})).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,"th"));
+    let extra=[];try{extra=diffPetsJobs(cur,snap)}catch(e){console.warn(BUILD,"pets/jobs diff",e)}
+    return extra.concat(base);
+  }
+
+  /* ---------------- R36.133: หมา/แมว + งานแปรรูปอัลปาก้าที่หาย ---------------- */
+  const petName=(kind,p)=>{try{const T=kind==="dog"?(typeof DOG_TYPES!=="undefined"?DOG_TYPES:{}):(typeof CAT_TYPES!=="undefined"?CAT_TYPES:{});const n=T?.[p?.typeKey]?.name||String(p?.typeKey||kind);return p?.customName?`${n} “${p.customName}”`:n}catch(_){return String(p?.typeKey||kind)}};
+  const petImg=(kind,p)=>{try{const T=kind==="dog"?(typeof DOG_TYPES!=="undefined"?DOG_TYPES:{}):(typeof CAT_TYPES!=="undefined"?CAT_TYPES:{});return T?.[p?.typeKey]?.image||""}catch(_){return ""}};
+  const RETIRED_CATS=new Set(["cat1","cat4","cat9","cat10","cat11"]);
+  function diffPetsJobs(cur,snap){
+    const out=[],t=Date.now();
+    for(const [field,kind,type] of [["dogs","dog","dogInstance"],["cats","cat","catInstance"]]){
+      const old=Array.isArray(snap?.[field])?snap[field]:null;if(!old)continue;
+      const have=new Set((Array.isArray(cur?.[field])?cur[field]:[]).map(p=>String(p?.id||"")));
+      const sold=obj(cur?.saleTombstones?.[field])?cur.saleTombstones[field]:{};
+      for(const p of old){
+        if(!p||!p.id||have.has(String(p.id))||sold[String(p.id)])continue;
+        if(kind==="dog"&&(p.typeKey==="dog1"||(typeof DOG_TYPES!=="undefined"&&!DOG_TYPES[p.typeKey])))continue;
+        if(kind==="cat"&&(RETIRED_CATS.has(String(p.typeKey))||(typeof CAT_TYPES!=="undefined"&&!CAT_TYPES[p.typeKey])))continue;
+        const placed=kind==="dog"?!!p.placedHotel:(Number(p.placedFarm)>0||Number(p.placedFarm)===-1||!!p.placedHotel);
+        if(placed&&Number(p.expiresAt)>0&&Number(p.expiresAt)<=t)continue;/* หมดเวลาอยู่โรงแรม/ฟาร์มตามกติกา */
+        const inst={id:"",typeKey:String(p.typeKey),customName:String(p.customName||"").slice(0,20),placedAt:0,expiresAt:0,nextFeedAt:0,nextDropAt:0,medicineKey:"",medicineUntil:0,lastPenaltyBucket:0,drops:[]};
+        if(kind==="dog"){inst.placedHotel=false;inst.hotelPen=0}else inst.placedFarm=0;
+        out.push({type,key:String(p.id),had:1,now:0,add:1,id:`${type}|${p.id}`,name:`${kind==="dog"?"🐶":"🐱"} ${petName(kind,p)}${placed?" (ตอนนั้นอยู่โรงแรม/ฟาร์ม)":""}`,image:petImg(kind,p),instance:inst});
+      }
+    }
+    const P=globalThis.YN_V240?.products||{};
+    const oldJobs=snap?.alpaca?.factory?.jobs;
+    if(Array.isArray(oldJobs)){
+      const f=cur?.alpaca?.factory||{},haveJ=new Set((Array.isArray(f.jobs)?f.jobs:[]).map(j=>String(j?.id||"")));
+      const done=new Set(String(f.doneR36132||"").split(",").map(x=>x.split(":")[0]).filter(Boolean));
+      const short=id=>String(id||"").replace(/[^0-9a-zA-Z]/g,"").slice(-10);
+      const byKey={};
+      for(const j of oldJobs){
+        if(!j||!j.id||j.status==="claimed"||haveJ.has(String(j.id))||done.has(short(j.id)))continue;
+        const r=P[j.productKey];if(!r)continue;
+        (byKey[j.productKey]??=[]).push(j);
+      }
+      for(const [k,list] of Object.entries(byKey)){const r=P[k],merit=(Number(r.merit)||0)*list.length;out.push({type:"alpacaFactoryProduct",key:k,had:list.length,now:0,add:list.length,id:`factoryJob|${k}`,name:`🏭 งานแปรรูปที่หาย: ${r.name} (+${fmt(merit)} กุศล)`,image:r.image||"",meritAdd:merit,jobIds:list.map(j=>String(j.id))})}
+    }
+    return out;
+  }
+  function combineParts(parts){
+    let root={};const shards=[];
+    for(const pt of parts){const raw=obj(pt?.data)?pt.data:{};if(pt.id==="_root")root=cp(raw)||{};else shards.push(obj(raw.data)?raw.data:raw)}
+    const out=root;
+    for(const d of shards)for(const [k,v] of Object.entries(d||{})){
+      if(k==="layout"||k==="updatedAt")continue;
+      if(k==="core"&&obj(v)){out.alpaca=Object.assign(obj(out.alpaca)?out.alpaca:{},cp(v));continue}
+      if(k==="pen")continue;
+      if(Array.isArray(v)&&Array.isArray(out[k])&&v.some(x=>x&&x.id)){const ids=new Set(out[k].map(x=>String(x?.id||"")));out[k]=out[k].concat(cp(v).filter(x=>!ids.has(String(x?.id||""))));continue}
+      out[k]=cp(v);
+    }
+    return out;
+  }
+  async function readBackups(fs,db,key,add){
+    try{
+      const runs=await fs.getDocs(fs.collection(db,"saveBackups"));const list=[];runs.forEach(d=>list.push(d.id));
+      list.sort().reverse();
+      for(const run of list.slice(0,20)){
+        try{
+          const ps=await fs.getDocs(fs.collection(db,"saveBackups",run,"members",key,"parts"));if(ps.empty)continue;
+          const parts=[];let at=0;ps.forEach(d=>{const x=d.data()||{};at=Math.max(at,tsOf(x.at));parts.push({id:d.id,data:x.data})});
+          add(combineParts(parts),at,`สำรอง 💾 ${run}`);
+        }catch(e){console.warn(BUILD,"backup run",run,e)}
+      }
+    }catch(e){console.warn(BUILD,"backups",e)}
   }
   async function scanSnaps(){
     if(!pick||!info||snapBusy)return;snapBusy=true;snaps=null;selSnap=-1;render();
@@ -6960,6 +7026,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       const {db,fs}=await getFirebaseContext();
       const add=(data,at,source)=>{if(obj(data))found.push({data,at,source})};
       try{const qs=await fs.getDocs(fs.collection(db,"saveShards",pick.key,"items"));qs.forEach(d=>{const r=d.data()||{},at=tsOf(r.updatedAt)||tsOf(r.savedAt)||tsOf(r.createdAt);add(obj(r.data)?r.data:r,at,d.id)})}catch(e){console.warn(BUILD,"shards",e)}
+      await readBackups(fs,db,pick.key,add);
       try{const st=await fs.getDoc(fs.doc(db,"saveRescueStaging",pick.key));if(st.exists()){const r=st.data()||{},at=tsOf(r.createdAt)||tsOf(r.updatedAt);if(r.json)try{add(JSON.parse(String(r.json)),at,"rescue-staging")}catch(_){}add(r,at,"rescue-staging-doc")}}catch(e){console.warn(BUILD,"rescue",e)}
     }catch(e){console.error(BUILD,"scan",e)}
     const cur=info.state||{};
@@ -6973,7 +7040,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     if(snapBusy)inner=`<div class="g125-empty">กำลังค้นสำเนาเก่า…</div>`;
     else if(snaps===null)inner=`<div class="m127-warn">ระบบจะค้น "สำเนาเซฟเก่า" ที่ยังเหลืออยู่บนเซิร์ฟเวอร์ แล้วเทียบกับกระเป๋าตอนนี้ ว่ามีของอะไรที่เคยมีมากกว่า</div><button class="g125-send" id="m128Scan">🔍 ค้นหาของที่หาย</button>`;
     else if(!snaps.length)inner=`<div class="m127-warn">ไม่พบสำเนาเก่าที่มีของมากกว่าตอนนี้ค่ะ (ของที่หายอาจไม่มีสำเนาเหลือบนเซิร์ฟเวอร์) ให้ผู้เล่นแจ้งรายการของที่หายแล้วส่งคืนผ่านหน้า 🎁 ส่งของขวัญแทน</div><button class="g125-chip" id="m128Scan" style="width:100%">🔄 ค้นอีกครั้ง</button>`;
-    else if(selSnap<0)inner=`<div class="m127-warn">พบ ${snaps.length} สำเนาที่มีของมากกว่าตอนนี้ เลือกสำเนาที่ <b>ใหม่ที่สุดก่อนของหาย</b> (ของที่ผู้เล่นใช้/ขายไปเองจะถูกนับด้วย ให้ติ๊กออกได้)</div>${snaps.map((sn,i)=>`<button class="g125-chip" data-m128-snap="${i}" style="width:100%;text-align:left;margin:4px 0;border-radius:12px">📦 ${esc(whenText(sn.at))} • ขาด ${sn.rows.length} รายการ<small class="m127-k">${esc(sn.source)}${Number.isFinite(sn.merit)?` • กุศลในสำเนา ${fmt(sn.merit)}`:""}</small></button>`).join("")}`;
+    else if(selSnap<0)inner=`<div class="m127-warn">พบ ${snaps.length} สำเนาที่มีของมากกว่าตอนนี้ เลือกสำเนาที่ <b>ใหม่ที่สุดก่อนของหาย</b> (ของที่ผู้เล่นใช้/ขายไปเองจะถูกนับด้วย ให้ติ๊กออกได้ • หมา/แมวที่ผู้เล่นส่งให้เพื่อนหรือวางขายหน้าร้านเอง ให้ติ๊กออก)</div>${snaps.map((sn,i)=>`<button class="g125-chip" data-m128-snap="${i}" style="width:100%;text-align:left;margin:4px 0;border-radius:12px">📦 ${esc(whenText(sn.at))} • ขาด ${sn.rows.length} รายการ<small class="m127-k">${esc(sn.source)}${Number.isFinite(sn.merit)?` • กุศลในสำเนา ${fmt(sn.merit)}`:""}</small></button>`).join("")}`;
     else{
       const sn=snaps[selSnap];
       inner=`<div class="m127-row"><span>สำเนา ${esc(whenText(sn.at))}</span><b>${checked.size}/${sn.rows.length} รายการ</b></div>
@@ -6997,7 +7064,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
     const rows=snaps[selSnap].rows.filter(r=>checked.has(r.id));if(!rows.length)return;
     /* ทดลองใส่ของในสำเนากระเป๋าก่อน ของชนิดไหนระบบรับไม่ได้จะถูกตัดออก (กันผู้เล่นกดรับแล้ว error ทั้งกล่อง) */
     const ok=[],skipped=[];
-    for(const r of rows){try{let t=cp(info.state||{});if(typeof normalizeState==="function")t=normalizeState(t,pick.name);addGiftItemToState(t,{itemType:r.type,itemKey:r.key,qty:r.add});ok.push(r)}catch(e){skipped.push(r)}}
+    for(const r of rows){try{let t=cp(info.state||{});if(typeof normalizeState==="function")t=normalizeState(t,pick.name);if(r.instance){ok.push(r);continue}addGiftItemToState(t,{itemType:r.type,itemKey:r.key,qty:r.add});ok.push(r)}catch(e){skipped.push(r)}}
     if(!ok.length){message?.("ส่งไม่ได้","ของที่เลือกเป็นชนิดที่ระบบของขวัญยังรับไม่ได้ค่ะ");return}
     if(!confirm(`ส่งของคืนให้ ${pick.name} ${ok.length} รายการ${skipped.length?`\n(ข้าม ${skipped.length} รายการที่ส่งเป็นของขวัญไม่ได้)`:""}\n\n${ok.slice(0,15).map(r=>`${r.name} +${fmt(r.add)}`).join("\n")}${ok.length>15?"\n…":""}\n\nยืนยันไหม?`))return;
     busy=true;const btn=$("m128Send");if(btn){btn.disabled=true;btn.textContent="กำลังส่ง…"}
@@ -7005,9 +7072,12 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
       const {db,fs}=await getFirebaseContext();
       const sendId=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
       const gid=`${IPREFIX}${sendId}-${String(pick.key).replace(/[^a-zA-Z0-9_-]/g,"_")}`;
-      const items=ok.map(r=>({type:r.type,key:r.key,name:r.name,qty:r.add}));
+      const newId=()=>globalThis.crypto?.randomUUID?.()||`r133-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const items=ok.map(r=>{if(r.instance){const id=newId();return{type:r.type,key:id,name:r.name,qty:1,instance:{...cp(r.instance),id}}}return{type:r.type,key:r.key,name:r.name,qty:r.add}});
+      const meritBack=ok.reduce((a,r)=>a+(Number(r.meritAdd)||0),0);
+      if(meritBack>0)items.unshift({type:"merit",key:"merit",name:"คะแนนกุศล (งานแปรรูปที่หาย)",qty:meritBack});
       const b=fs.writeBatch(db);
-      b.set(fs.doc(db,"gifts",gid),{fromKey:"aida",fromName:"Aida",source:"yainoo",toKey:pick.key,toName:pick.name,bundle:true,items,meritTotal:0,message:"ยัยหนูคืนของที่หายไปให้นะคะ 🎒",status:"pending",sendId,deliveryMode:"item-restore-r36128",restoreSnapshot:String(snaps[selSnap].source),createdAt:fs.serverTimestamp()});
+      b.set(fs.doc(db,"gifts",gid),{fromKey:"aida",fromName:"Aida",source:"yainoo",toKey:pick.key,toName:pick.name,bundle:true,items,meritTotal:meritBack,message:"ยัยหนูคืนของที่หายไปให้นะคะ 🎒",status:"pending",sendId,deliveryMode:"item-restore-r36128",restoreSnapshot:String(snaps[selSnap].source),createdAt:fs.serverTimestamp()});
       b.set(fs.doc(db,"mailboxes",pick.key,"items",gid),{source:"yainoo",type:"gift",giftId:gid,fromKey:"aida",fromName:"Aida",title:"ยัยหนูคืนของที่หายให้คุณ 🎒",text:`ของ ${items.length} รายการ`,read:false,resolved:false,createdAt:fs.serverTimestamp()});
       await b.commit();
       message?.("ส่งของคืนแล้ว 🎒",`ส่งของ <b>${ok.length}</b> รายการให้ <b>${esc(pick.name)}</b> แล้ว${skipped.length?`<br><small>ข้าม ${skipped.length} รายการ: ${esc(skipped.map(r=>r.name).join(", "))}</small>`:""}<br><br>บอก ${esc(pick.name)} ให้เปิด 🔔 → แท็บ <b>👑 จากยัยหนู</b> → กด <b>รับของขวัญ</b>`);
@@ -7185,7 +7255,7 @@ console.info(window.YAINOO_ALPACA_GIFT_BUILD,"login-identity alpaca route + quie
    ===================================================================== */
 (function YN_R36130(){
   "use strict";
-  const BUILD="S2-R36.131-20260926",BUILD_NUM=131;
+  const BUILD="S2-R36.133-20260927",BUILD_NUM=133;
   const $=id=>document.getElementById(id);
   const obj=v=>v&&typeof v==="object"&&!Array.isArray(v);
   const cp=v=>{try{return structuredClone(v)}catch(_){try{return JSON.parse(JSON.stringify(v))}catch(__){return v}}};
