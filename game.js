@@ -19903,8 +19903,9 @@ console.info("R17 canonical gift save + rainy score writer loaded");
        good 12:00-15:59 • bad 00:00-05:59 • normal = every other hour */
     let hour=0;
     try{hour=Number(bangkokPartsFull(new Date(Number(calledAt)||gameNow())).hour)||0}catch(_){try{hour=Number(bangkokPartsFull().hour)||0}catch(__){hour=0}}
-    const period=hour>=12&&hour<16?"good":(hour<6?"bad":"normal");
-    const meritChance={good:.50,normal:.30,bad:.10}[period],range={good:[150,300],normal:[80,150],bad:[20,50]}[period];
+    /* R36.134: ไม่ขึ้นกับเวลาแล้ว • กุศล 50% ได้ 300–600 • ของรางวัลสุ่มจากทุกกลุ่ม */
+    const period="normal";void hour;
+    const meritChance=.50,range=[300,600];
     if(Math.random()<meritChance)return{type:"merit",key:"merit",name:"กุศล",qty:randInt(range[0],range[1]),image:"",period};
     const woolColors=[["white","ขาว"],["black","ดำ"],["pink","ชมพู"],["brown","น้ำตาล"],["green","เขียว"]];
     const [woolKey,woolName]=woolColors[Math.floor(Math.random()*woolColors.length)]||woolColors[0];
