@@ -223,7 +223,7 @@ let currentMember=null;
 /* V291: Maintenance Mode
    true  = only Aida/Admin may enter the game
    false = normal member login resumes with all existing data untouched */
-const MAINTENANCE_MODE=true; /* R36.137: ปิดปรับปรุงจบซีซั่น — เข้าได้เฉพาะ Aida */
+const MAINTENANCE_MODE=false;
 const MAINTENANCE_ADMIN_MEMBER="Aida";
 let state=null;
 let ticker=null;
@@ -26996,81 +26996,37 @@ console.info("TRANSPARENT FISH TRAP ASSET FIX loaded");
   function hash31(str){let h=2166136261>>>0;for(const c of String(str)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
   function dailyPrice(key,min,max){const h=hash31(`${dateKey()}|mysterious|${key}`);return min+(h%(max-min+1))}
   function sellCount(s,type,key){return type==="wine"?int(s.wines?.[key]):int(s.alpaca?.factory?.products?.[key])}
-  /* R36.136: ร้านค้าลึกลับขายได้ไม่จำกัดต่อวัน • เลือกจำนวนได้ครั้งละ 1–10 ชิ้น • ได้กุศล = ราคา × จำนวน */
-  let r136MysteryBusy=false;
-  async function sellOne(type,key,qtyIn=1){
-    if(r136MysteryBusy)return;
-    const local=ensure31(own());
-    const qty=Math.max(1,Math.min(10,Math.floor(Number(qtyIn)||1)));
-    const row=MYSTERY_SELL.find(x=>x[0]===type&&x[1]===key);if(!row)return;if(sellCount(local,type,key)<qty&&!isAdmin())return toast("ของไม่พอ",`มีในกระเป๋าไม่ถึง ${qty} ชิ้นค่ะ`);
-    const price=dailyPrice(key,row[3],row[4]),total=price*qty;
-    r136MysteryBusy=true;
+  async function sellOne(type,key){
+    const local=ensure31(own());if(local.r31Mysterious.sold>=2)return toast("ขายครบแล้ว","วันนี้ขายของในร้านค้าลึกลับครบ 2 ชิ้นแล้วค่ะ");
+    const row=MYSTERY_SELL.find(x=>x[0]===type&&x[1]===key);if(!row)return;if(sellCount(local,type,key)<1&&!isAdmin())return toast("ไม่มีสินค้า","ของชิ้นนี้ไม่มีอยู่ในกระเป๋าค่ะ");
+    const price=dailyPrice(key,row[3],row[4]);
     try{
       await settlePendingCloudSave?.();
       const {db,fs}=await getFirebaseContext(),saveRef=fs.doc(db,"saves",currentMemberKey),profileRef=fs.doc(db,"publicProfiles",currentMemberKey);let next;
       await fs.runTransaction(db,async tx=>{
         const snap=await tx.get(saveRef);if(!snap.exists())throw new Error("ไม่พบเซฟสมาชิก");
         const st=ensure31(normalizeState(snap.data(),currentMember));
+        if(Number(st.r31Mysterious?.sold||0)>=2)throw new Error("วันนี้ขายครบ 2 ชิ้นแล้วค่ะ");
         if(!isAdmin()){
-          if(type==="wine"){if((Number(st.wines?.[key])||0)<qty)throw new Error("สินค้าในกระเป๋าไม่พอแล้วค่ะ");st.wines[key]-=qty}
-          else{if((Number(st.alpaca?.factory?.products?.[key])||0)<qty)throw new Error("สินค้าในกระเป๋าไม่พอแล้วค่ะ");st.alpaca.factory.products[key]-=qty}
-          st.merit=(Number(st.merit)||0)+total;
+          if(type==="wine"){if((Number(st.wines?.[key])||0)<1)throw new Error("สินค้านี้หมดแล้ว");st.wines[key]-=1}
+          else{if((Number(st.alpaca?.factory?.products?.[key])||0)<1)throw new Error("สินค้านี้หมดแล้ว");st.alpaca.factory.products[key]-=1}
+          st.merit=(Number(st.merit)||0)+price;
         }else ensureAdminStock?.(st);
-        st.r31Mysterious.sold=(Number(st.r31Mysterious.sold)||0)+qty;next=cloneData(st);
+        st.r31Mysterious.sold=(Number(st.r31Mysterious.sold)||0)+1;next=cloneData(st);
         tx.set(saveRef,{...cloneData(st),activeSessionId:cloudSessionId,updatedAt:fs.serverTimestamp()},{merge:false});
         tx.set(profileRef,{memberKey:currentMemberKey,displayName:currentProfileDisplayName(),merit:Number(st.merit)||0,initialized:true,updatedAt:fs.serverTimestamp()},{merge:true});
       });
       ownState=normalizeState(next,currentMember);state=ownState;saveLocalOnly?.(ownState);updateMeritUI?.();
-      showWeatherToast?.(`🔮 ขาย ${row[2]} ×${qty} • +${total} กุศล`);openMysteriousShop();
+      showWeatherToast?.(`🔮 ขาย ${row[2]} • +${price} กุศล`);openMysteriousShop();
     }catch(e){message?.("ขายไม่ได้",e?.message||"กรุณาลองใหม่")}
-    finally{r136MysteryBusy=false}
-  }
-  function r136MysteryStyle(){
-    if(document.getElementById("r136MysteryQtyStyle"))return;
-    const st=document.createElement("style");st.id="r136MysteryQtyStyle";
-    st.textContent=`.r31-mysterious{position:relative}
-.r136-qty-back{position:absolute;inset:0;z-index:20;background:rgba(20,10,30,.55);display:flex;align-items:center;justify-content:center;border-radius:inherit;padding:12px}
-.r136-qty{width:min(100%,300px);background:#2a1a3a;color:#fff;border-radius:16px;padding:14px;display:grid;gap:10px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.r136-qty img{width:64px;height:64px;object-fit:contain;margin:0 auto}
-.r136-qty h3{margin:0;font-size:17px}.r136-qty small{opacity:.8}
-.r136-qty-row{display:flex;align-items:center;justify-content:center;gap:10px}
-.r136-qty-row button{width:44px;height:44px;border:0;border-radius:12px;font-size:22px;font-weight:900}
-.r136-qty-row output{min-width:52px;font-size:26px;font-weight:900}
-.r136-qty-max{border:0;border-radius:9px;padding:6px 12px;font-weight:800;justify-self:center}
-.r136-qty strong{color:#ffd778;font-size:18px}
-.r136-qty-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.r136-qty-actions button{border:0;border-radius:11px;padding:10px;font-weight:900}
-.r136-qty-actions .r136-ok{background:#ffd778;color:#3a2340}`;
-    document.head.appendChild(st);
-  }
-  function openMysteryQty(type,key){
-    const row=MYSTERY_SELL.find(x=>x[0]===type&&x[1]===key);if(!row)return;
-    const s=ensure31(own()),have=isAdmin()?9999:sellCount(s,type,key);
-    if(have<1)return toast("ไม่มีสินค้า","ของชิ้นนี้ไม่มีอยู่ในกระเป๋าค่ะ");
-    const max=Math.max(1,Math.min(10,have)),price=dailyPrice(key,row[3],row[4]);
-    const panel=document.querySelector(".r31-mysterious");if(!panel)return;
-    r136MysteryStyle();panel.querySelector(".r136-qty-back")?.remove();
-    const img=panel.querySelector(`[data-r31-sell="${type}:${key}"]`)?.closest("article")?.querySelector("img")?.getAttribute("src")||"mysterious-shop.png";
-    let n=1;
-    const back=document.createElement("div");back.className="r136-qty-back";
-    back.innerHTML=`<div class="r136-qty"><img src="${img}" alt=""><h3>${esc(row[2])}</h3><small>มีในกระเป๋า ×${have} • ชิ้นละ 🙏 ${price}</small><div class="r136-qty-row"><button type="button" data-q="-">−</button><output>1</output><button type="button" data-q="+">+</button></div><button type="button" class="r136-qty-max">สูงสุด ${max} ชิ้น</button><strong>ได้ 🙏 ${price} กุศล</strong><div class="r136-qty-actions"><button type="button" class="r136-cancel">ยกเลิก</button><button type="button" class="r136-ok">ขาย 1 ชิ้น</button></div></div>`;
-    panel.appendChild(back);
-    const out=back.querySelector("output"),sum=back.querySelector("strong"),ok=back.querySelector(".r136-ok");
-    const draw=()=>{out.textContent=n;sum.textContent=`ได้ 🙏 ${price*n} กุศล`;ok.textContent=`ขาย ${n} ชิ้น`};
-    back.querySelector('[data-q="-"]').onclick=()=>{n=Math.max(1,n-1);draw()};
-    back.querySelector('[data-q="+"]').onclick=()=>{n=Math.min(max,n+1);draw()};
-    back.querySelector(".r136-qty-max").onclick=()=>{n=max;draw()};
-    back.querySelector(".r136-cancel").onclick=()=>back.remove();
-    back.onclick=e=>{if(e.target===back)back.remove()};
-    ok.onclick=()=>{if(r136MysteryBusy)return;ok.disabled=true;ok.textContent="กำลังขาย…";sellOne(type,key,n).finally(()=>{try{back.remove()}catch(_){}})};
   }
   function openMysteriousShop(){
-    const s=ensure31(own());
+    const s=ensure31(own()),left=Math.max(0,2-s.r31Mysterious.sold);
     const imgs={meat1:"01_alpaca_steak_bambroo.png?v=240",meat2:"02_smoked_alpaca_halonpi.png?v=240",meat3:"03_alpaca_spirit_pot_soup.png?v=240",meat4:"04_royal_alpaca_meat_platter.png?v=240",wool1:"01_alpaca_pastel_bag.png?v=240",wool2:"02_alpaca_fluffy_blanket.png?v=240",wool3:"03_alpaca_golden_luxury_bag.png?v=240",wool4:"04_alpaca_golden_royal_cloak.png?v=240",moon:"wine-moon-grape.png",spiritRose:"wine-spirit-rose.png",blood:"wine-blood-grape.png",eclipse:"wine-eclipse-king.png"};
-    $("modalContent").innerHTML=`<section class="feature-panel r31-mysterious"><header><img src="mysterious-shop.png"><div><small>ราคาสุ่มใหม่ทุกเที่ยงคืน</small><h2>ร้านค้าลึกลับ</h2><b>ขายได้ไม่จำกัด • ครั้งละสูงสุด 10 ชิ้น</b></div></header><button id="r50RecycleEntry" class="r36-open-recycle" type="button"><span>♻️</span><div><b>จุดรีไซเคิล</b><small>ละลายของส่วนเกิน • ลุ้นรางวัล</small></div><i>›</i></button><div class="r31-mysterious-grid">${MYSTERY_SELL.map(([type,key,name,min,max])=>{const q=isAdmin()?9999:sellCount(s,type,key),price=dailyPrice(key,min,max),img=imgs[key]||"mysterious-shop.png";return`<article><img class="r32-mystery-item-img" src="${img}" alt="${esc(name)}" onerror="this.src='mysterious-shop.png'"><div><b>${esc(name)}</b><small>มี ×${q}</small><strong>🙏 ${price}</strong></div><button data-r31-sell="${type}:${key}" ${q<1?"disabled":""}>ขาย</button></article>`}).join("")}</div></section>`;document.querySelectorAll("[data-r31-sell]").forEach(b=>b.onclick=()=>{const [t,k]=b.dataset.r31Sell.split(":");openMysteryQty(t,k)});openModal();
+    $("modalContent").innerHTML=`<section class="feature-panel r31-mysterious"><header><img src="mysterious-shop.png"><div><small>ราคาสุ่มใหม่ทุกเที่ยงคืน</small><h2>ร้านค้าลึกลับ</h2><b>วันนี้ขายได้อีก ${left}/2 ชิ้น</b></div></header><button id="r50RecycleEntry" class="r36-open-recycle" type="button"><span>♻️</span><div><b>จุดรีไซเคิล</b><small>ละลายของส่วนเกิน • ลุ้นรางวัล</small></div><i>›</i></button><div class="r31-mysterious-grid">${MYSTERY_SELL.map(([type,key,name,min,max])=>{const q=isAdmin()?9999:sellCount(s,type,key),price=dailyPrice(key,min,max),img=imgs[key]||"mysterious-shop.png";return`<article><img class="r32-mystery-item-img" src="${img}" alt="${esc(name)}" onerror="this.src='mysterious-shop.png'"><div><b>${esc(name)}</b><small>มี ×${q}</small><strong>🙏 ${price}</strong></div><button data-r31-sell="${type}:${key}" ${q<1||left<1?"disabled":""}>ขาย 1 ชิ้น</button></article>`}).join("")}</div></section>`;document.querySelectorAll("[data-r31-sell]").forEach(b=>b.onclick=()=>{const [t,k]=b.dataset.r31Sell.split(":");sellOne(t,k)});openModal();
   }
   function mountMysteriousShortcut(){
-    const box=document.querySelector(".hud-menu-section-items");if(!box||$("r31MysteriousShortcut"))return;const b=document.createElement("button");b.id="r31MysteriousShortcut";b.className="hud-menu-item r31-mysterious-shortcut";b.type="button";b.innerHTML='<span>🔮</span><div><b>ร้านค้าลึกลับ</b><small>ขายสินค้าแปรรูป • ไม่จำกัด</small></div><i>›</i>';b.onclick=()=>{try{closeHomeHudMenu?.()}catch(_){}openMysteriousShop()};box.appendChild(b);
+    const box=document.querySelector(".hud-menu-section-items");if(!box||$("r31MysteriousShortcut"))return;const b=document.createElement("button");b.id="r31MysteriousShortcut";b.className="hud-menu-item r31-mysterious-shortcut";b.type="button";b.innerHTML='<span>🔮</span><div><b>ร้านค้าลึกลับ</b><small>ขายสินค้าแปรรูป • วันละ 2 ชิ้น</small></div><i>›</i>';b.onclick=()=>{try{closeHomeHudMenu?.()}catch(_){}openMysteriousShop()};box.appendChild(b);
   }
 
   /* ---------- Spirit music therapy ---------- */
@@ -38624,47 +38580,3 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.122-MERIT-ROLLBACK-GUARD-20260922";
   console.info(BUILD,"loaded");
 })();
 window.YAINOO_PACKAGE_BUILD="S2-R36.124-MERIT-BASELINE-LOCK-20260923";
-
-/* ======================================================================
-   R36.137 — ปิดปรับปรุงจบซีซั่น: เข้าเกมได้เฉพาะ Aida (แอดมิน)
-   - กดเข้าสู่สวน / กด Enter / สมัครสมาชิก → ขึ้น "ปิดปรับปรุง พบกันใหม่ซีซันหน้า"
-   - ใครค้างอยู่ในเกม (ไม่ใช่ Aida) จะถูกพากลับหน้าเข้าสู่ระบบ
-   - ไม่แตะเซฟ / กระเป๋า / กุศลของใคร
-   - เปิดเกมกลับ: เปลี่ยน R36137_CLOSED เป็น false และ MAINTENANCE_MODE เป็น false
-   ====================================================================== */
-(function R36137_MAINTENANCE(){
-  const R36137_CLOSED=true,ADMIN="Aida";
-  const TEXT="🔧 ปิดปรับปรุงค่ะ • พบกันใหม่ซีซันหน้า";
-  if(!R36137_CLOSED)return;
-  const $m=id=>document.getElementById(id);
-  const picked=()=>String($m("memberSelect")?.value||"").trim();
-  const showMsg=()=>{const e=$m("loginError");if(e)e.textContent=TEXT;try{message?.("ปิดปรับปรุง","ปิดปรับปรุงค่ะ<br>พบกันใหม่ซีซันหน้า 💜")}catch(_){}};
-  const block=e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showMsg()};
-  /* ปุ่มเข้าสู่สวน + Enter ในช่องรหัส: ให้ผ่านเฉพาะ Aida */
-  const guardStart=e=>{const b=e.target?.closest?.("#startBtn");if(!b)return;if(picked()!==ADMIN)block(e)};
-  ["pointerdown","click","touchend"].forEach(ev=>window.addEventListener(ev,guardStart,true));
-  window.addEventListener("keydown",e=>{if(e.key!=="Enter")return;if(!e.target?.closest?.("#loginScreen"))return;if(picked()!==ADMIN)block(e)},true);
-  /* ปิดสมัครสมาชิกใหม่ */
-  const guardSignup=e=>{if(!e.target?.closest?.("#season2SignupBtn"))return;block(e)};
-  ["pointerdown","click","touchend"].forEach(ev=>window.addEventListener(ev,guardSignup,true));
-  /* กันทางอื่นที่อาจพาเข้าเกม */
-  try{
-    const enterBase=enterGameScreen;
-    enterGameScreen=function(){if(currentMember!==ADMIN){kick();return}return enterBase.apply(this,arguments)};
-  }catch(e){console.warn("R36.137 enter guard",e)}
-  let kicking=false;
-  async function kick(){
-    if(kicking)return;kicking=true;
-    try{await logout?.()}catch(_){
-      try{$m("gameScreen")?.classList.add("hidden");$m("sceneScreen")?.classList.add("hidden");$m("loginScreen")?.classList.remove("hidden")}catch(_){}
-    }
-    try{closeModal?.()}catch(_){}
-    showMsg();kicking=false;
-  }
-  /* ใครค้างอยู่ในเกมตอนปิด → พากลับหน้าเข้าสู่ระบบ */
-  setInterval(()=>{try{const g=$m("gameScreen");if(g&&!g.classList.contains("hidden")&&currentMember&&currentMember!==ADMIN)kick()}catch(_){}},2000);
-  /* ป้ายบนหน้าเข้าสู่ระบบ */
-  const banner=()=>{const card=document.querySelector(".season2-login-card");if(!card||$m("r36137Closed"))return;const p=document.createElement("p");p.id="r36137Closed";p.textContent=TEXT;p.style.cssText="margin:0 0 8px;padding:8px 10px;border-radius:10px;background:rgba(80,30,90,.85);color:#ffe9a8;font-weight:800;text-align:center";card.insertBefore(p,card.firstChild)};
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",banner);else banner();
-  console.info("R36.137 maintenance: only",ADMIN);
-})();
