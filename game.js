@@ -223,7 +223,7 @@ let currentMember=null;
 /* V291: Maintenance Mode
    true  = only Aida/Admin may enter the game
    false = normal member login resumes with all existing data untouched */
-const MAINTENANCE_MODE=false;
+const MAINTENANCE_MODE=true; /* R36.137: ปิดปรับปรุงจบซีซั่น — เข้าได้เฉพาะ Aida */
 const MAINTENANCE_ADMIN_MEMBER="Aida";
 let state=null;
 let ticker=null;
@@ -38624,3 +38624,47 @@ window.YAINOO_PACKAGE_BUILD="S2-R36.122-MERIT-ROLLBACK-GUARD-20260922";
   console.info(BUILD,"loaded");
 })();
 window.YAINOO_PACKAGE_BUILD="S2-R36.124-MERIT-BASELINE-LOCK-20260923";
+
+/* ======================================================================
+   R36.137 — ปิดปรับปรุงจบซีซั่น: เข้าเกมได้เฉพาะ Aida (แอดมิน)
+   - กดเข้าสู่สวน / กด Enter / สมัครสมาชิก → ขึ้น "ปิดปรับปรุง พบกันใหม่ซีซันหน้า"
+   - ใครค้างอยู่ในเกม (ไม่ใช่ Aida) จะถูกพากลับหน้าเข้าสู่ระบบ
+   - ไม่แตะเซฟ / กระเป๋า / กุศลของใคร
+   - เปิดเกมกลับ: เปลี่ยน R36137_CLOSED เป็น false และ MAINTENANCE_MODE เป็น false
+   ====================================================================== */
+(function R36137_MAINTENANCE(){
+  const R36137_CLOSED=true,ADMIN="Aida";
+  const TEXT="🔧 ปิดปรับปรุงค่ะ • พบกันใหม่ซีซันหน้า";
+  if(!R36137_CLOSED)return;
+  const $m=id=>document.getElementById(id);
+  const picked=()=>String($m("memberSelect")?.value||"").trim();
+  const showMsg=()=>{const e=$m("loginError");if(e)e.textContent=TEXT;try{message?.("ปิดปรับปรุง","ปิดปรับปรุงค่ะ<br>พบกันใหม่ซีซันหน้า 💜")}catch(_){}};
+  const block=e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showMsg()};
+  /* ปุ่มเข้าสู่สวน + Enter ในช่องรหัส: ให้ผ่านเฉพาะ Aida */
+  const guardStart=e=>{const b=e.target?.closest?.("#startBtn");if(!b)return;if(picked()!==ADMIN)block(e)};
+  ["pointerdown","click","touchend"].forEach(ev=>window.addEventListener(ev,guardStart,true));
+  window.addEventListener("keydown",e=>{if(e.key!=="Enter")return;if(!e.target?.closest?.("#loginScreen"))return;if(picked()!==ADMIN)block(e)},true);
+  /* ปิดสมัครสมาชิกใหม่ */
+  const guardSignup=e=>{if(!e.target?.closest?.("#season2SignupBtn"))return;block(e)};
+  ["pointerdown","click","touchend"].forEach(ev=>window.addEventListener(ev,guardSignup,true));
+  /* กันทางอื่นที่อาจพาเข้าเกม */
+  try{
+    const enterBase=enterGameScreen;
+    enterGameScreen=function(){if(currentMember!==ADMIN){kick();return}return enterBase.apply(this,arguments)};
+  }catch(e){console.warn("R36.137 enter guard",e)}
+  let kicking=false;
+  async function kick(){
+    if(kicking)return;kicking=true;
+    try{await logout?.()}catch(_){
+      try{$m("gameScreen")?.classList.add("hidden");$m("sceneScreen")?.classList.add("hidden");$m("loginScreen")?.classList.remove("hidden")}catch(_){}
+    }
+    try{closeModal?.()}catch(_){}
+    showMsg();kicking=false;
+  }
+  /* ใครค้างอยู่ในเกมตอนปิด → พากลับหน้าเข้าสู่ระบบ */
+  setInterval(()=>{try{const g=$m("gameScreen");if(g&&!g.classList.contains("hidden")&&currentMember&&currentMember!==ADMIN)kick()}catch(_){}},2000);
+  /* ป้ายบนหน้าเข้าสู่ระบบ */
+  const banner=()=>{const card=document.querySelector(".season2-login-card");if(!card||$m("r36137Closed"))return;const p=document.createElement("p");p.id="r36137Closed";p.textContent=TEXT;p.style.cssText="margin:0 0 8px;padding:8px 10px;border-radius:10px;background:rgba(80,30,90,.85);color:#ffe9a8;font-weight:800;text-align:center";card.insertBefore(p,card.firstChild)};
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",banner);else banner();
+  console.info("R36.137 maintenance: only",ADMIN);
+})();
