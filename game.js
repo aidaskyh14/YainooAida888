@@ -223,7 +223,7 @@ let currentMember=null;
 /* V291: Maintenance Mode
    true  = only Aida/Admin may enter the game
    false = normal member login resumes with all existing data untouched */
-const MAINTENANCE_MODE=false;
+const MAINTENANCE_MODE=true;
 const MAINTENANCE_ADMIN_MEMBER="Aida";
 let state=null;
 let ticker=null;
