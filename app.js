@@ -65,7 +65,7 @@ async function emailFor(name) {
 function checkName(n) {
   n = n.trim();
   if (n.length < 2) return 'ชื่อสั้นเกินไป (อย่างน้อย 2 ตัว)';
-  if (n.length > 16) return 'ชื่อยาวเกินไป (ไม่เกิน 16 ตัว)';
+  if (n.length > 10) return 'ชื่อยาวเกินไป (ไม่เกิน 10 ตัว)';
   if (/[<>"'\\/]/.test(n)) return 'ชื่อมีตัวอักษรพิเศษที่ใช้ไม่ได้';
   return '';
 }
@@ -145,31 +145,77 @@ async function enter(user) {
   }
 }
 
-// ---------- หน้าล็อกอิน ----------
-function renderLogin(mode = 'login') {
-  $('#app').innerHTML = `<div class="login"><div class="lcard"><h1>🌱 ในสวนของยัยหนู</h1><div class="sub">ซีซั่น 3 ${S.settings.open ? '' : '· เร็วๆ นี้'}</div>
-    <div class="tabs"><button data-m="login" class="${mode === 'login' ? 'on' : ''}">เข้าสู่ระบบ</button><button data-m="reg" class="${mode === 'reg' ? 'on' : ''}">สมัครใหม่</button></div>
-    <label class="field"><span>ชื่อในเกม</span><input id="ln" autocomplete="username" maxlength="16"></label>
-    <label class="field"><span>รหัสผ่าน (อย่างน้อย 6 ตัว)</span><input id="lp" type="password" autocomplete="${mode === 'reg' ? 'new-password' : 'current-password'}"></label>
-    ${mode === 'reg' ? '<label class="field"><span>ยืนยันรหัสผ่าน</span><input id="lp2" type="password" autocomplete="new-password"></label>' : ''}
-    <div class="err" id="lerr"></div>
-    <button class="btn block" id="lgo">${mode === 'reg' ? 'สมัครและเข้าเล่น' : 'เข้าสู่ระบบ'}</button>
-    <p class="note" style="text-align:center;margin:.6rem 0 0">${mode === 'reg' ? 'จำชื่อและรหัสผ่านไว้ให้ดี ใช้เข้าเกมทุกครั้ง' : 'ลืมรหัสผ่าน แจ้งยัยหนูในกลุ่มได้เลย'}</p></div></div>`;
-  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => renderLogin(b.dataset.m));
-  const go = async () => {
-    const name = $('#ln').value.trim(), pw = $('#lp').value, err = $('#lerr'), btn = $('#lgo');
-    const bad = checkName(name); if (bad) { err.textContent = bad; return; }
-    if (pw.length < 6) { err.textContent = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัว'; return; }
-    if (mode === 'reg' && pw !== $('#lp2').value) { err.textContent = 'รหัสผ่านสองช่องไม่ตรงกัน'; return; }
-    err.textContent = ''; busy(btn, true, 'กำลังเข้า…');
+// ---------- หน้าล็อกอิน (ตามหน้าทดลอง: ฉากเต็มจอ กด "เข้าสวน" แล้วการ์ดค่อยเลื่อนขึ้น ปิดได้) ----------
+const HOF = { 2: { d: '4 ก.ย. – 2 ต.ค. 2569', r: [['Porpla', '7,850,112'], ['Kongkwan', '7,496,899'], ['Earn', '6,838,263']] }, 1: { d: '7 – 26 ส.ค. 2569', r: [['Earn', '369,245'], ['Porpla', '359,478'], ['Kongkwan', '341,483']] } };
+let waterOn = false;
+function renderLogin() {
+  let mode = 'login';
+  const L = t => `<div class="L"><span class="b">${t}</span><span class="f">${t}</span><span class="s">${t}</span></div>`;
+  $('#app').innerHTML = `<div class="lscene"></div><canvas id="water"></canvas>
+    <header class="ltitle"><div class="tw"><div class="t1">${L('ในสวนของยัยหนู')}</div><div class="t2">${L('ซีซั่น 3')}</div></div>${S.settings.open ? '' : '<div><span class="ltag">เร็วๆ นี้</span></div>'}</header>
+    <button class="hof-btn" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button>
+    <button class="lstart" id="lstart">เข้าสวน</button>
+    <main class="lcard" id="lcard"><button class="lclose" id="lclose" aria-label="ปิด">✕</button>
+      <div class="ltabs"><button class="on" data-m="login">เข้าสวน</button><button data-m="reg">สมัครใหม่</button></div>
+      <label class="llab" for="ln">ชื่อในเกม</label><div class="lfield"><i>🌱</i><input id="ln" placeholder="เช่น มดแดง" autocomplete="username" maxlength="10"></div>
+      <p class="lhint">ตั้งได้ 2–10 ตัวอักษร ชื่อนี้ใช้ทั้งซีซั่นนะ</p>
+      <label class="llab" for="lp">รหัสผ่าน</label><div class="lfield"><i>🔑</i><input id="lp" type="password" placeholder="อย่างน้อย 6 ตัว" autocomplete="current-password"></div>
+      <div class="lconf"><label class="llab" for="lp2">ยืนยันรหัสผ่าน</label><div class="lfield"><i>🔑</i><input id="lp2" type="password" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password"></div></div>
+      <div class="err" id="lerr"></div>
+      <button class="lgo" id="lgo">เข้าสวนเลย</button><p class="lfoot">ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า</p></main>`;
+  const card = $('#lcard'), go = $('#lgo'), start = $('#lstart');
+  start.onclick = () => { card.classList.add('open'); start.classList.add('hide'); };
+  $('#lclose').onclick = () => { card.classList.remove('open'); start.classList.remove('hide'); };
+  document.querySelectorAll('.ltabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.ltabs button').forEach(x => x.classList.toggle('on', x === b));
+    mode = b.dataset.m; card.classList.toggle('reg', mode === 'reg'); go.textContent = mode === 'reg' ? 'สมัครแล้วเข้าสวน' : 'เข้าสวนเลย'; $('#lerr').textContent = '';
+  });
+  $('#hofBtn').onclick = () => {
+    const show = n => { const x = HOF[n], col = (i, c) => `<div class="col c${c}"><div class="av">${x.r[i][0][0]}</div><div class="nm">${x.r[i][0]}</div><div class="pt">${x.r[i][1]} pts</div><div class="step">${c}</div></div>`;
+      $('#hofD').textContent = x.d; $('#pod').innerHTML = col(1, 2) + col(0, 1) + col(2, 3); document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.s == n)); };
+    modal(`<div class="hofbox"><div class="ribbon">🏆 หอเกียรติยศ</div><div class="seg"><button data-s="2">ซีซั่น 2</button><button data-s="1">ซีซั่น 1</button></div><div class="dates" id="hofD"></div><div class="podium" id="pod"></div><div class="ground"></div></div>`, [{ t: 'ปิด', c: 'gray' }]);
+    document.querySelectorAll('.seg button').forEach(b => b.onclick = () => show(b.dataset.s)); show(2);
+  };
+  const doGo = async () => {
+    const name = $('#ln').value.trim(), pw = $('#lp').value, err = $('#lerr');
+    const bad = checkName(name); if (bad) { err.textContent = '🐷 ' + bad; return; }
+    if (pw.length < 6) { err.textContent = '🐷 รหัสผ่านต้องมีอย่างน้อย 6 ตัวนะ'; return; }
+    if (mode === 'reg' && pw !== $('#lp2').value) { err.textContent = '🐷 รหัสผ่านสองช่องไม่ตรงกันนะ'; return; }
+    err.textContent = ''; busy(go, true, 'กำลังเข้าสวน…');
     try {
       const email = await emailFor(name);
       if (mode === 'reg') { S.pendingName = name; await createUserWithEmailAndPassword(auth, email, pw); }
       else await signInWithEmailAndPassword(auth, email, pw);
-    } catch (e) { err.textContent = thaiError(e); busy(btn, false, mode === 'reg' ? 'สมัครและเข้าเล่น' : 'เข้าสู่ระบบ'); }
+    } catch (e) { err.textContent = '🐷 ' + thaiError(e); busy(go, false, mode === 'reg' ? 'สมัครแล้วเข้าสวน' : 'เข้าสวนเลย'); }
   };
-  $('#lgo').onclick = go;
-  $('#app').querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') go(); }));
+  go.onclick = doGo;
+  card.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') doGo(); }));
+  startWater();
+}
+function startWater() {
+  // น้ำกระเซ็น + ประกายน้ำ เป็นภาพเคลื่อนไหวในเครื่องล้วน ไม่แตะฐานข้อมูล
+  if (waterOn || matchMedia('(prefers-reduced-motion: reduce)').matches) return; waterOn = true;
+  const c = $('#water'); if (!c) { waterOn = false; return; } const x = c.getContext('2d');
+  let W, H, drops = [], rings = [], glints = [];
+  const size = () => { const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; c.width = W * d; c.height = H * d; x.setTransform(d, 0, 0, d, 0, 0); };
+  size(); addEventListener('resize', size);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  for (let i = 0; i < 26; i++) glints.push({ x: rnd(0, 1), y: rnd(.55, 1), p: rnd(0, 6.28), s: rnd(.6, 2.2) });
+  let last = 0, acc = 0;
+  const tick = t => {
+    if (!document.getElementById('water')) { waterOn = false; return; }
+    const dt = Math.min((t - last) / 16.7, 3); last = t; acc += dt;
+    if (acc > 9) { acc = 0; const sx = rnd(0, W), sy = rnd(H * .62, H * .97); for (let i = 0; i < (rnd(6, 12) | 0); i++) drops.push({ x: sx, y: sy, vx: rnd(-1.4, 1.4), vy: rnd(-5.5, -2.5), r: rnd(1.5, 4), life: 1 }); rings.push({ x: sx, y: sy + 4, r: 2, a: .7 }); }
+    x.clearRect(0, 0, W, H);
+    for (const g of glints) { g.p += .05 * dt; const a = Math.max(0, Math.sin(g.p)) * .85; if (a < .05) continue; const gx = g.x * W, gy = g.y * H, s = g.s * 2.2;
+      x.fillStyle = 'rgba(255,255,255,' + a + ')'; x.beginPath(); x.moveTo(gx, gy - s * 2); x.lineTo(gx + s * .5, gy); x.lineTo(gx, gy + s * 2); x.lineTo(gx - s * .5, gy); x.fill();
+      x.beginPath(); x.moveTo(gx - s * 2, gy); x.lineTo(gx, gy + s * .5); x.lineTo(gx + s * 2, gy); x.lineTo(gx, gy - s * .5); x.fill(); }
+    rings = rings.filter(r => r.a > .02); for (const r of rings) { r.r += .9 * dt; r.a *= Math.pow(.95, dt); x.strokeStyle = 'rgba(255,255,255,' + r.a + ')'; x.lineWidth = 1.5; x.beginPath(); x.ellipse(r.x, r.y, r.r * 1.8, r.r * .55, 0, 0, 6.283); x.stroke(); }
+    drops = drops.filter(d => d.life > 0 && d.y < H + 10);
+    for (const d of drops) { d.vy += .18 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= .012 * dt; x.fillStyle = 'rgba(235,250,255,' + (d.life * .9) + ')'; x.beginPath(); x.arc(d.x, d.y, d.r, 0, 6.283); x.fill(); }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(t => { last = t; tick(t); });
 }
 
 // ---------- หน้าหลัก (ชั่วคราวในชุดที่ 1) ----------
@@ -363,7 +409,7 @@ window.addEventListener('error', () => { });
   let first = true;
   onAuthStateChanged(auth, async user => {
     if (user) { if (!S.user || S.user.uid !== user.uid) await enter(user); }
-    else { S.user = null; S.P = null; S.admin = false; clearInterval(S.timer); renderLogin('login'); }
+    else { S.user = null; S.P = null; S.admin = false; clearInterval(S.timer); renderLogin(); }
     first = false;
   });
 })();
