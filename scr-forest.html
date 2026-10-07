@@ -1,0 +1,322 @@
+<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+</script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองป่าต้องห้าม – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;--moss:#6CC9A8;--gold:#F2B33D;--night:#28345E}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#2f4a3a}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.55)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;overflow:hidden}
+.nightfx{position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 50% 45%,rgba(40,52,94,.18),rgba(28,36,72,.5) 85%);mix-blend-mode:multiply}
+.nd{position:absolute;transform:translate(-50%,-100%);cursor:pointer;touch-action:manipulation}
+.nd img{width:100%;display:block;filter:drop-shadow(0 6px 5px rgba(20,30,20,.35));pointer-events:none}
+.nd.hit img{animation:shake .18s}
+.nd.tree.hit img{transform-origin:50% 100%}
+@keyframes shake{0%{transform:rotate(0)}30%{transform:rotate(-4deg) translateX(-2%)}70%{transform:rotate(3deg) translateX(2%)}100%{transform:rotate(0)}}
+.nd.fallT img{transition:transform .5s ease-in,opacity .5s .2s;transform-origin:50% 100%;transform:rotate(80deg);opacity:0}
+.nd.fallR img{transition:transform .35s ease-in,opacity .35s;transform:scale(.3,.1);transform-origin:50% 100%;opacity:0}
+.nd .pg{position:absolute;left:22%;right:22%;bottom:-6%;height:.38rem;border-radius:999px;background:rgba(255,255,255,.75);overflow:hidden;display:none;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.nd .pg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FFE08A,#F2A23A);transition:width .12s}
+.nd.on .pg{display:block}
+.nd .cost{position:absolute;left:50%;top:6%;transform:translateX(-50%);background:rgba(255,251,245,.92);border:2px solid #fff;border-radius:999px;font-size:.62rem;font-weight:800;padding:0 .4rem;white-space:nowrap;display:none;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.nd.on .cost{display:block}
+.chip{position:absolute;pointer-events:none;font-size:1.05rem;z-index:4;transition:transform .55s ease-out,opacity .55s}
+.drop{position:absolute;width:6.2%;transform:translate(-50%,-50%);pointer-events:none;z-index:3;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.drop.pop{animation:pop .55s ease-out}
+@keyframes pop{0%{transform:translate(-50%,-50%) translate(var(--fx),var(--fy)) scale(.3)}60%{transform:translate(-50%,-90%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
+.drop.fly{transition:left .7s ease-in,top .7s ease-in,opacity .7s,transform .7s;opacity:.2;transform:translate(-50%,-50%) scale(.4)}
+.plus{position:absolute;transform:translate(-50%,-100%);z-index:5;pointer-events:none;font-weight:800;font-size:1.05rem;color:#fff;-webkit-text-stroke:.5px #8a5a14;text-shadow:0 2px 0 #B9761F,0 3px 8px rgba(0,0,0,.4);animation:up 1.6s ease-out forwards}
+@keyframes up{0%{opacity:0;margin-top:0}15%{opacity:1}100%{opacity:0;margin-top:-3.2rem}}
+.top{position:fixed;z-index:6;left:.55rem;right:.55rem;top:calc(env(safe-area-inset-top,0px) + 2.6rem);pointer-events:none;display:flex;gap:.4rem;align-items:flex-start}
+.ttl{pointer-events:auto;background:rgba(255,251,245,.78);border:2px solid rgba(255,255,255,.8);border-radius:999px;padding:.1rem .55rem;box-shadow:0 3px 8px rgba(0,0,0,.2);line-height:1.2}
+.ttl small{display:block;font-weight:700;font-size:.66rem;color:var(--cocoa)}
+.spacer{flex:1}
+.craftBtn{pointer-events:auto;position:fixed;right:.55rem;top:calc(env(safe-area-inset-top,0px) + .45rem);width:2.7rem;height:2.7rem;border-radius:50%;border:3px solid #fff;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);box-shadow:0 3px 0 rgba(0,0,0,.12),0 6px 12px rgba(0,0,0,.22);cursor:pointer;display:grid;place-items:center;padding:0}
+.craftBtn i{font-style:normal;font-size:1.2rem}
+.energy{position:fixed;z-index:6;left:.55rem;top:calc(env(safe-area-inset-top,0px) + .55rem);display:flex;align-items:center;gap:.3rem;background:rgba(255,251,245,.85);border:2px solid rgba(255,255,255,.85);border-radius:999px;padding:.12rem .25rem .12rem .15rem;box-shadow:0 3px 8px rgba(0,0,0,.22);cursor:pointer;width:min(12.5rem,52vw)}
+.energy .bolt{width:1.4rem;height:1.4rem;border-radius:50%;display:grid;place-items:center;background:#FFF3C9;font-size:1rem;flex:none}
+.energy .bar{flex:1;height:.6rem;border-radius:999px;background:#EDE3D8;overflow:hidden;position:relative}
+.energy .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#FFD86B,#F2A23A);border-radius:999px;transition:width .3s}
+.energy b{font-size:.66rem;white-space:nowrap;min-width:3.6rem;text-align:right}
+.energy .plus1{width:1.25rem;height:1.25rem;font-size:.8rem;border-radius:50%;background:var(--moss);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.buff{position:fixed;z-index:6;left:.6rem;top:calc(env(safe-area-inset-top,0px) + 4.3rem);background:#EAF7FF;border:2px solid #fff;border-radius:999px;font-size:.66rem;font-weight:800;padding:.05rem .6rem;color:#2E7FA3;box-shadow:0 3px 8px rgba(0,0,0,.2);display:none}
+.collect{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);border:3px solid #fff;border-radius:999px;background:linear-gradient(#7FD8B6,#55B993);color:#fff;font:inherit;font-weight:800;font-size:.9rem;padding:.4rem 1rem .4rem .5rem;box-shadow:0 4px 0 #3E9A78,0 8px 18px rgba(0,0,0,.3);display:none;align-items:center;gap:.4rem;cursor:pointer;max-width:70vw}
+.collect .ic{display:flex}.collect .ic img{width:1.6rem;height:1.6rem;object-fit:contain;margin-right:-.35rem;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.tool{position:fixed;z-index:6;right:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:3.1rem;height:3.1rem;border-radius:50%;border:3px solid #fff;font-size:1.3rem;display:grid;place-items:center;cursor:pointer;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);box-shadow:0 4px 0 rgba(0,0,0,.15),0 8px 16px rgba(0,0,0,.25);transition:transform .25s}
+.tool.open{transform:rotate(45deg)}
+.fan{position:fixed;z-index:6;right:.7rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4rem);display:flex;flex-direction:column-reverse;gap:.35rem;align-items:flex-end;pointer-events:none}
+.fan button{pointer-events:none;display:flex;align-items:center;gap:.35rem;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.97);font:inherit;font-weight:600;font-size:.76rem;color:var(--cocoa);padding:.2rem .75rem .2rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;opacity:0;transform:translateY(1rem) scale(.8);transition:.2s}
+.fan button i{font-style:normal;width:1.65rem;height:1.65rem;border-radius:50%;display:grid;place-items:center;background:#EAF6F3;font-size:.9rem}
+.fan.open button{opacity:1;transform:none;pointer-events:auto}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(30,40,50,.45);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s ease-out;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:84vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.5rem}
+.tabs{display:flex;gap:.3rem;justify-content:center;margin:.2rem 0 .6rem}
+.tabs button{border:2px solid #F3E9DE;background:#fff;border-radius:999px;font:inherit;font-weight:700;font-size:.76rem;padding:.25rem .8rem;color:var(--soft);cursor:pointer}
+.tabs button.on{background:#FFF3C9;border-color:#FFD86B;color:var(--cocoa)}
+.rc{background:#fff;border:2px solid #F3E9DE;border-radius:1rem;padding:.5rem .6rem;margin-bottom:.45rem}
+.rc .hd{display:flex;gap:.55rem;align-items:center}
+.rc .hd img{width:3.1rem;height:3.1rem;object-fit:contain;flex:none}
+.rc .hd b{font-size:.86rem;display:block}.rc .hd small{font-size:.66rem;color:#B9761F;font-weight:700}
+.needs{display:flex;flex-wrap:wrap;gap:.25rem;margin:.4rem 0 .35rem}
+.need{display:flex;align-items:center;gap:.2rem;background:#F7F2EC;border-radius:999px;padding:.08rem .45rem .08rem .12rem;font-size:.66rem;font-weight:700}
+.need img{width:1.35rem;height:1.35rem;object-fit:contain}
+.need.ok{background:#E7F7EF;color:#2F8A65}.need.no{background:#FFEEF1;color:#C2445E}
+.qrow{display:flex;align-items:center;gap:.35rem;justify-content:flex-end}
+.qrow .st{width:1.9rem;height:1.9rem;border-radius:50%;border:0;background:#F3E9DE;font:inherit;font-weight:800;font-size:1rem;color:var(--cocoa);cursor:pointer}
+.qrow .q{min-width:1.8rem;text-align:center;font-weight:800}
+.qrow small{flex:1;font-size:.64rem;color:var(--soft)}
+.row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}
+.btn{border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.8rem;padding:.5rem .9rem;cursor:pointer;background:var(--aqua);color:#fff;box-shadow:0 3px 0 #3F98B6}
+.btn.g{background:#6CC9A8;box-shadow:0 3px 0 #4DAA8A}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}.btn:disabled{opacity:.45}
+.btn.sm{font-size:.72rem;padding:.35rem .75rem}
+.opt{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #fff;background:#fff;border-radius:1rem;padding:.45rem .7rem;margin-bottom:.35rem;font:inherit;color:var(--cocoa);text-align:left;box-shadow:0 3px 8px rgba(70,150,180,.12)}
+.opt img{width:2.8rem;height:2.8rem;object-fit:contain}.opt b{flex:1;font-size:.82rem}.opt b small{display:block;font-weight:600;font-size:.64rem;color:#B9761F}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.cell{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .15rem;text-align:center}
+.cell img{width:100%;aspect-ratio:1;object-fit:contain}.cell b{display:block;font-size:.6rem;line-height:1.2}.cell span{font-size:.7rem;font-weight:800;color:#B9761F}
+.empty{grid-column:1/-1;text-align:center;color:var(--soft);font-size:.75rem;padding:1rem}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center;margin:.3rem 0 .5rem}
+.chips button{border:2px solid #F3E9DE;background:#fff;border-radius:999px;font:inherit;font-size:.7rem;font-weight:700;padding:.2rem .6rem;color:var(--soft);cursor:pointer}
+.chips button.on{background:#E7F7EF;border-color:#9FDDC4;color:#2F8A65}
+.sec{font-size:.72rem;font-weight:800;margin:.6rem 0 .1rem;text-align:center}
+.result{text-align:center}.result img{width:5rem;height:5rem;object-fit:contain;animation:bounce .6s}
+@keyframes bounce{0%{transform:scale(.3)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.result .big{font-size:1.5rem;font-weight:800;color:#B9761F}
+.closed{position:fixed;inset:0;z-index:20;display:none;place-items:center;background:rgba(30,44,80,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.closed.on{display:grid}
+.closed .card{width:min(20rem,88vw);background:var(--cream);border:3px solid #fff;border-radius:1.6rem;padding:1.2rem 1rem;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.closed .moon{font-size:2.6rem}.closed b{display:block;font-size:1.05rem;margin:.2rem 0}.closed p{margin:.2rem 0 .7rem;font-size:.76rem;color:var(--soft)}
+.ann{position:fixed;z-index:22;left:50%;top:calc(env(safe-area-inset-top,0px) + 7rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:1rem;padding:.3rem .8rem .3rem .3rem;font-size:.78rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;width:max-content;max-width:94vw;display:flex;gap:.4rem;align-items:center}
+.ann img{width:2rem;height:2rem;flex:none}.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:var(--pig);background:#FFF4F6}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"></div></div>
+<div class="top"><div class="ttl" id="ttl"><small id="ttlSub"></small></div><span class="spacer"></span><button class="craftBtn" id="craftBtn" aria-label="คราฟ"><i>🔨</i></button></div>
+<div class="energy" id="energy"><span class="bolt">⚡</span><span class="bar"><i id="eFill"></i></span><b id="eTxt"></b><span class="plus1">+</span></div>
+<div class="buff" id="buff"></div>
+<button class="collect" id="collect"><span class="ic" id="cIc"></span><span id="cTxt">เก็บทั้งหมด</span></button>
+<div class="fan" id="fan"></div><button class="tool" id="toolBtn" aria-label="เครื่องมือ">🧰</button>
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet"><div id="sb"></div></section>
+<div class="closed" id="closed"><div class="card"><div class="moon">🌅</div><b>ป่าต้องห้ามปิดอยู่</b><p id="closedTxt"></p><button class="btn g" id="closedBack">🌱 กลับฟาร์ม</button></div></div>
+<div class="ann" id="ann"><img id="aImg" alt=""><span id="aTxt"></span></div>
+<script>
+const IMG={bg:"images/forest-bg.webp",happy:"images/honey-face-happy.webp",oops:"images/honey-face-oops.webp",
+'tree-oak':"images/forest-tree-oak.webp",'tree-pine':"images/forest-tree-pine.webp",'tree-birch':"images/forest-tree-birch.webp",gold:"images/forest-tree-gold.webp",
+'rock-1':"images/forest-rock-1.webp",'rock-2':"images/forest-rock-2.webp",'rock-3':"images/forest-rock-3.webp",glow:"images/forest-rock-glow.webp",
+'g-green':"images/forest-grass-green.webp",'g-yellow':"images/forest-grass-yellow.webp",'g-red':"images/forest-grass-red.webp",'g-pink':"images/forest-grass-pink.webp",'g-blue':"images/forest-grass-blue.webp",
+wood:"images/forest-item-wood.webp",stone:"images/forest-item-stone.webp",steel:"images/forest-item-steel.webp",rope:"images/forest-item-rope.webp",
+'d-watermelon':"images/forest-drink-watermelon.webp",'d-butterflypea':"images/forest-drink-butterflypea.webp",'d-smoothie':"images/forest-drink-smoothie.webp",'d-elixir':"images/forest-drink-elixir.webp",
+'c-watermelon':"images/produce-watermelon.webp",'c-cucumber':"images/produce-cucumber.webp",'c-strawberry':"images/produce-strawberry.webp",'c-banana':"images/produce-banana.webp",'c-grape':"images/produce-grape.webp",'c-lychee':"images/produce-lychee.webp",
+'f-butterflypea':"images/flower-butterflypea.webp",'b-ostrich-feather':"images/birds-ostrich-feather.webp",'b-dodo-pebble':"images/birds-dodo-pebble.webp"};
+const W=941,H=1672,$=id=>document.getElementById(id);
+/* ---------- กติกา (ตัวเลขชั่วคราว ตั้งจริงตอนรวบยอด) ---------- */
+const MAXE=200;
+const KIND={tree:{n:'ต้นไม้',taps:10,cost:20,y:[150,300],res:'wood',w:16.5},rock:{n:'ก้อนหิน',taps:12,cost:25,y:[150,300],res:'stone',w:15},
+ gold:{n:'ต้นไม้ทอง',taps:20,cost:50,y:[500,1000],res:'wood',w:18},glow:{n:'หินเรืองแสง',taps:20,cost:50,y:[500,1000],res:'stone',w:16}};
+const GRASS={green:['หญ้าสีเขียว',40],yellow:['หญ้าสีเหลือง',25],red:['หญ้าสีแดง',20],pink:['หญ้าสีชมพู',10],blue:['หญ้าสีฟ้า',5]};
+const RES={wood:'เนื้อไม้',stone:'ก้อนหิน',steel:'เหล็ก',rope:'เชือก'};
+const DRINK={watermelon:{n:'น้ำแตงโมปั่นเย็นฉ่ำ',e:20,need:[['crop','watermelon',100]]},
+ butterflypea:{n:'ชาอัญชันมะนาวป่า',e:50,need:[['flower','butterflypea',100],['crop','cucumber',200]]},
+ smoothie:{n:'สมูทตี้สตรอว์เบอร์รีกล้วยหอม',e:100,need:[['crop','strawberry',200],['crop','banana',200]]},
+ elixir:{n:'น้ำทิพย์ป่าลึก',e:MAXE,full:1,need:[['crop','grape',300],['crop','lychee',300],['grass','blue',30],['grass','pink',30]]}};
+const TOOLR={rope:{need:[['forest','wood',3000],['bird','ostrich-feather',100]],y:[1,5]},steel:{need:[['forest','stone',3000],['bird','dodo-pebble',100]],y:[2,8]}};
+const NAMES={crop:{watermelon:'แตงโม',cucumber:'แตงกวา',strawberry:'สตรอว์เบอร์รี',banana:'กล้วย',grape:'องุ่น',lychee:'ลิ้นจี่'},flower:{butterflypea:'อัญชัน'},
+ bird:{'ostrich-feather':'ขนนกกระจอกเทศ','dodo-pebble':'หินกรวดนำโชค'},forest:RES,grass:Object.fromEntries(Object.entries(GRASS).map(([k,v])=>[k,v[0]]))};
+const imgOf=(t,k)=>t==='crop'?IMG['c-'+k]:t==='flower'?IMG['f-'+k]:t==='bird'?IMG['b-'+k]:t==='grass'?IMG['g-'+k]:t==='drink'?IMG['d-'+k]:IMG[k];
+/* ---------- โหมดทดลอง ---------- */
+let USER={name:'มดแดง',admin:false};try{USER=JSON.parse(__LS.getItem('s3user')||'null')||USER}catch(e){}
+let ADMIN=!!USER.admin,TOD='auto',FAST=false;
+const HOUR=()=>FAST?20000:5400000,REGEN=()=>FAST?1000:180000,ELIX=()=>FAST?60000:1800000;
+/* ---------- เซฟ: กระเป๋าร่วมกับฟาร์ม/บ้าน + กล่องป่า (เก็บแค่ตัวเลข ไม่เก็บตำแหน่ง) ---------- */
+const KEY='s3all-v1',FKEY='s3forest-v1';
+function loadAll(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}s=s||{merit:1000,bag:{}};s.bag=s.bag||{};['crop','flower','forest','grass','drink','bird'].forEach(k=>s.bag[k]=s.bag[k]||{});return s}
+let S=loadAll();
+function freshF(){return{cnt:{tree:6,rock:5,gold:1,glow:0},grass:{green:3,yellow:1,red:1,pink:0,blue:0},next:Date.now()+HOUR(),e:MAXE,et:Date.now(),elixir:0,pend:{wood:0,stone:0,grass:{}}}}
+let F;try{F=JSON.parse(__LS.getItem(FKEY)||'null')}catch(e){}F=F||freshF();
+function save(){try{S2=loadAll();S2.bag=S.bag;__LS.setItem(KEY,JSON.stringify(S2));__LS.setItem(FKEY,JSON.stringify(F))}catch(e){}}
+let S2;
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+/* ---------- เวลาไทย ---------- */
+function thaiHM(){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).split(':');return[+p[0]%24,+p[1]]}
+function isOpen(){if(TOD==='night')return true;if(TOD==='day')return false;const[h]=thaiHM();return h>=18||h<6}
+function untilOpen(){const[h,m]=thaiHM();const mins=(18*60)-(h*60+m);return mins>0?mins:0}
+/* ---------- พลังงาน: เก็บแค่ค่าล่าสุด + เวลา คำนวณการฟื้นตอนเปิด ---------- */
+function energy(){const k=Math.floor((Date.now()-F.et)/REGEN());if(k>0){F.e=Math.min(MAXE,F.e+k);F.et=F.e>=MAXE?Date.now():F.et+k*REGEN()}if(F.e>=MAXE)F.et=Date.now();return F.e}
+function elixirOn(){return F.elixir>Date.now()}
+function taps(k){return elixirOn()?Math.ceil(KIND[k].taps/2):KIND[k].taps}
+/* ---------- เกิดใหม่: ทุก 1 ชม. 30 นาที ต้นไม้/หิน 3–5 จุด (สูงสุด 24) + หญ้า 2–4 กอ (สูงสุด 10) ---------- */
+const bigCount=()=>F.cnt.tree+F.cnt.rock+F.cnt.gold+F.cnt.glow;
+const grassCount=()=>Object.values(F.grass).reduce((a,b)=>a+b,0);
+function pickGrass(){let r=Math.random()*100;for(const[k,[,w]]of Object.entries(GRASS)){r-=w;if(r<=0)return k}return 'green'}
+function spawnOnce(){let n=rnd(3,5);while(n-->0&&bigCount()<24){const t=Math.random()<.5?'tree':'rock',sp=Math.random()<.05;F.cnt[sp?(t==='tree'?'gold':'glow'):t]++}
+ let g=rnd(2,4);while(g-->0&&grassCount()<10)F.grass[pickGrass()]++}
+function process(){let ch=false,s=0;while(Date.now()>=F.next&&s++<48){spawnOnce();F.next+=HOUR();ch=true}if(F.next-Date.now()>HOUR())F.next=Date.now()+HOUR();return ch}
+/* ---------- ฉาก ---------- */
+const SLOTS=[];[520,640,760,880,1000,1120,1240].forEach((y,r)=>{[170,345,520,700].forEach((x,c)=>{const xx=x+(r%2?55:0);if(xx>560&&y>=1000)return;if(xx>820)return;SLOTS.push([xx,y])})});
+const GSLOTS=[[120,470],[300,580],[470,520],[640,575],[810,610],[240,700],[560,690],[130,820],[420,815],[760,800],[260,940],[600,935],[150,1060],[440,1060],[300,1180],[120,1250],[500,1250]];
+let nodes=[],drops=[],busy=false,hits={};
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function layout(){/* ตำแหน่งสุ่มใหม่ทุกครั้งที่เข้าป่า เพราะเซฟเก็บแค่จำนวน */
+ const list=[];Object.entries(F.cnt).forEach(([k,n])=>{for(let i=0;i<n;i++)list.push(k)});
+ const sl=shuffle(SLOTS.map((p,i)=>[p[0],p[1],i]));nodes=list.slice(0,sl.length).map((k,i)=>({id:'n'+i+'-'+Date.now(),k,slot:sl[i][2],x:sl[i][0]+rnd(-15,15),y:sl[i][1]+rnd(-12,12),
+  img:k==='tree'?['tree-oak','tree-pine','tree-birch'][rnd(0,2)]:k==='rock'?['rock-1','rock-2','rock-3'][rnd(0,2)]:k}));
+ const gl=[];Object.entries(F.grass).forEach(([c,n])=>{for(let i=0;i<n;i++)gl.push(c)});const gs=shuffle(GSLOTS.map((p,i)=>[p[0],p[1],i]));
+ gl.slice(0,gs.length).forEach((c,i)=>nodes.push({id:'g'+i+'-'+Date.now(),k:'grass',c,slot:gs[i][2],x:gs[i][0]+rnd(-12,12),y:gs[i][1]+rnd(-10,10),img:'g-'+c}))}
+function draw(){const s=$('stage');s.innerHTML='<div class="nightfx"></div>';s.style.backgroundImage='url('+IMG.bg+')';
+ [...nodes].sort((a,b)=>a.y-b.y).forEach(n=>{const d=document.createElement('div');d.className='nd '+(n.k==='grass'?'grass':(n.k==='tree'||n.k==='gold')?'tree':'rock');d.id=n.id;
+  const w=n.k==='grass'?8.5:KIND[n.k].w;Object.assign(d.style,{left:n.x/W*100+'%',top:n.y/H*100+'%',width:w+'%',zIndex:Math.round(n.y/10)});
+  d.innerHTML='<img src="'+IMG[n.img]+'" alt="">'+(n.k==='grass'?'':'<div class="pg"><i></i></div><div class="cost">⚡'+KIND[n.k].cost+'</div>');
+  d.onclick=e=>tapNode(n,d,e);s.appendChild(d)});
+ drops.forEach(dp=>s.appendChild(dp.el));hud()}
+function hud(){const e=energy();$('eFill').style.width=(e/MAXE*100)+'%';$('eTxt').textContent=e+'/'+MAXE;
+ const b=$('buff');if(elixirOn()){const s=Math.ceil((F.elixir-Date.now())/1000);b.style.display='block';b.textContent='✨ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}else b.style.display='none';
+ const ms=Math.max(0,F.next-Date.now()),mm=Math.floor(ms/60000),ss=Math.floor(ms%60000/1000);
+ $('ttlSub').textContent='🌱 '+Math.floor(mm/60)+':'+String(mm%60).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+ const p=F.pend,g=Object.values(p.grass).reduce((a,b)=>a+b,0),has=p.wood||p.stone||g;
+ $('collect').style.display=has?'flex':'none';
+ if(has){$('cIc').innerHTML=(p.wood?'<img src="'+IMG.wood+'">':'')+(p.stone?'<img src="'+IMG.stone+'">':'')+(g?'<img src="'+IMG['g-'+(Object.keys(p.grass).find(k=>p.grass[k])||'green')]+'">':'');
+  $('cTxt').textContent='เก็บทั้งหมด'}}
+/* ---------- แตะต้นไม้/หิน: นับแตะในเครื่อง หักพลังงานตอนล้มเท่านั้น ---------- */
+function tapNode(n,d,ev){if(!guardOpen())return;
+ if(n.k==='grass'){F.grass[n.c]--;nodes=nodes.filter(x=>x!==n);d.remove();F.pend.grass[n.c]=(F.pend.grass[n.c]||0)+1;spill(n,'g-'+n.c,1);save();hud();return}
+ const K=KIND[n.k],need=taps(n.k);
+ if(!hits[n.id]&&energy()<K.cost){ann('⚡ พลังงานไม่พอ • '+K.n+'ต้องใช้ ⚡'+K.cost+' (มี '+energy()+')',1);openDrinks();return}
+ hits[n.id]=(hits[n.id]||0)+1;d.classList.add('on');d.classList.remove('hit');void d.offsetWidth;d.classList.add('hit');
+ d.querySelector('.pg i').style.width=Math.min(100,hits[n.id]/need*100)+'%';chip(n,K.res==='wood'?'🪵':'🪨');
+ if(hits[n.id]>=need){if(energy()<K.cost){hits[n.id]=need-1;ann('⚡ พลังงานไม่พอ ต้องใช้ ⚡'+K.cost,1);openDrinks();return}
+  energy();F.e-=K.cost;if(F.e<MAXE&&F.et>Date.now())F.et=Date.now();
+  const q=rnd(K.y[0],K.y[1]);F.cnt[n.k]--;F.pend[K.res]+=q;nodes=nodes.filter(x=>x!==n);delete hits[n.id];
+  d.classList.add(n.k==='tree'||n.k==='gold'?'fallT':'fallR');setTimeout(()=>{d.remove();spill(n,K.res,q)},n.k==='tree'||n.k==='gold'?450:300);save();hud()}}
+function chip(n,e){const s=$('stage'),c=document.createElement('div');c.className='chip';c.textContent=e;Object.assign(c.style,{left:n.x/W*100+'%',top:(n.y-120)/H*100+'%'});s.appendChild(c);
+ requestAnimationFrame(()=>{c.style.transform='translate('+rnd(-40,40)+'px,'+rnd(-50,-20)+'px) rotate('+rnd(-90,90)+'deg)';c.style.opacity='0'});setTimeout(()=>c.remove(),600)}
+function spill(n,img,q){const s=$('stage'),cnt=img.startsWith('g-')?1:Math.min(8,4+Math.floor(q/120));
+ for(let i=0;i<cnt;i++){const el=document.createElement('img');el.className='drop pop';el.src=IMG[img];const x=n.x+rnd(-70,70),y=n.y-rnd(0,40)+rnd(-25,25);
+  Object.assign(el.style,{left:x/W*100+'%',top:y/H*100+'%','--fx':rnd(-30,30)+'px','--fy':rnd(10,40)+'px',animationDelay:(i*40)+'ms'});s.appendChild(el);drops.push({el})}
+ if(!img.startsWith('g-')){const p=document.createElement('div');p.className='plus';p.textContent='+'+fmt(q);Object.assign(p.style,{left:n.x/W*100+'%',top:(n.y-90)/H*100+'%'});s.appendChild(p);setTimeout(()=>p.remove(),1700)}}
+/* ---------- เก็บทั้งหมด: กดครั้งเดียววิ่งเข้ากระเป๋า ---------- */
+function collectAll(silent){const p=F.pend,g=Object.entries(p.grass).filter(([,v])=>v>0);if(!p.wood&&!p.stone&&!g.length)return false;
+ S.bag.forest.wood=(S.bag.forest.wood||0)+p.wood;S.bag.forest.stone=(S.bag.forest.stone||0)+p.stone;g.forEach(([c,v])=>S.bag.grass[c]=(S.bag.grass[c]||0)+v);
+ const msg=[p.wood?'🪵 ไม้ +'+fmt(p.wood):'',p.stone?'🪨 หิน +'+fmt(p.stone):'',g.length?'🌿 หญ้า +'+g.reduce((a,[,v])=>a+v,0):''].filter(Boolean).join(' • ');
+ F.pend={wood:0,stone:0,grass:{}};save();
+ if(!silent){const r=$('collect').getBoundingClientRect(),st=$('stage').getBoundingClientRect();
+  drops.forEach(({el},i)=>{setTimeout(()=>{el.classList.remove('pop');el.classList.add('fly');el.style.left=((r.left+r.width/2-st.left)/st.width*100)+'%';el.style.top=((r.top-st.top)/st.height*100)+'%'},i*25)});
+  setTimeout(()=>{drops.forEach(d=>d.el.remove());drops=[];hud()},800);ann('🎒 เข้ากระเป๋าแล้ว • '+msg)}else{drops.forEach(d=>d.el.remove());drops=[]}
+ hud();return msg}
+$('collect').onclick=()=>collectAll();
+addEventListener('pagehide',()=>{collectAll(true)});
+/* ---------- เปิด/ปิดตามเวลาไทย ---------- */
+function guardOpen(){if(ADMIN||isOpen())return true;showClosed();return false}
+function showClosed(){const m=collectAll(true);const mins=untilOpen();
+ $('closedTxt').innerHTML='เปิดทุกวัน <b style="display:inline;font-size:inherit">18:00–05:59</b> (เวลาไทย)<br>'+(mins?'เปิดอีกครั้งในอีก '+Math.floor(mins/60)+' ชม. '+(mins%60)+' นาที':'')+(m?'<br>🎒 เก็บของที่ค้างบนพื้นเข้ากระเป๋าให้แล้ว':'');$('closed').classList.add('on')}
+$('closedBack').onclick=()=>goFarm();
+function goFarm(){collectAll(true);try{parent.postMessage({go:'farm'},'*')}catch(e){}}
+/* ---------- ชีต ---------- */
+function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on')}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
+$('shade').onclick=closeAll;
+let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}
+const have=(t,k)=>S.bag[t][k]||0;
+const needHTML=(list,times)=>'<div class="needs">'+list.map(([t,k,q])=>{const n=q*times,ok=have(t,k)>=n;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+imgOf(t,k)+'" alt="">'+NAMES[t][k]+' '+fmt(have(t,k))+'/'+fmt(n)+'</span>'}).join('')+'</div>';
+const maxTimes=list=>Math.min(10,...list.map(([t,k,q])=>Math.floor(have(t,k)/q)));
+/* ---------- เครื่องดื่ม ---------- */
+function openDrinks(){closeAll();const e=energy();
+ open('<h3>🧃 ดื่มเพิ่มพลังงาน</h3><div class="hint">⚡ '+e+'/'+MAXE+' • พลังงานฟื้นเอง 1 หน่วยทุก 3 นาที • ใช้ได้เฉพาะในป่าต้องห้าม</div>'+
+ Object.entries(DRINK).map(([k,d])=>'<div class="opt"><img src="'+IMG['d-'+k]+'" alt=""><b>'+d.n+'<small>'+(d.full?'⚡ เติมเต็ม '+MAXE+' + แตะครึ่งเดียว 30 นาที':'⚡ +'+d.e)+' • มี '+have('drink',k)+'</small></b><button class="btn g sm" data-d="'+k+'"'+(have('drink',k)<1?' disabled':'')+'>ดื่ม</button></div>').join('')+
+ '<div class="row"><button class="btn sm" id="toCraft">🔨 ไปคราฟเครื่องดื่ม</button></div>');
+ $('sb').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>drink(b.dataset.d));$('toCraft').onclick=()=>openCraft('drink')}
+function drink(k){const d=DRINK[k],e=energy();if(have('drink',k)<1)return;
+ if(!d.full&&e>=MAXE)return ann('⚡ พลังงานเต็มแล้ว เก็บไว้ดื่มทีหลังนะ',1);
+ S.bag.drink[k]--;F.e=Math.min(MAXE,e+d.e);if(F.e>=MAXE)F.et=Date.now();if(d.full)F.elixir=Date.now()+ELIX();save();hud();draw();openDrinks();
+ ann(d.full?'✨ ดื่ม'+d.n+' • พลังงานเต็ม + แตะครึ่งเดียว 30 นาที':'🧃 ดื่ม'+d.n+' ⚡+'+Math.min(d.e,MAXE-e))}
+/* ---------- คราฟ (ปุ่มขวาบน) ---------- */
+let cTab='drink',cq={};
+function openCraft(tab){if(tab)cTab=tab;closeAll();
+ const items=cTab==='drink'?Object.entries(DRINK).map(([k,d])=>({k,img:IMG['d-'+k],n:d.n,eff:d.full?'⚡ เติมเต็ม + แตะครึ่งเดียว 30 นาที':'⚡ +'+d.e,need:d.need,out:'ได้ 1 ขวด/ครั้ง'}))
+  :Object.entries(TOOLR).map(([k,r])=>({k,img:IMG[k],n:RES[k],eff:'ใช้อัปเกรดบ้าน',need:r.need,out:'ได้ '+r.y[0]+'–'+r.y[1]+' ชิ้น/ครั้ง'}));
+ open('<h3>🔨 คราฟในป่า</h3><div class="hint">สำเร็จ 100% • คราฟได้ครั้งละ 1–10 ครั้ง</div><div class="tabs"><button data-t="drink" class="'+(cTab==='drink'?'on':'')+'">🧃 เครื่องดื่มพลังงาน</button><button data-t="tool" class="'+(cTab==='tool'?'on':'')+'">🪢 เชือก • เหล็ก</button></div>'+
+  items.map(it=>{const mx=maxTimes(it.need),q=Math.max(1,Math.min(cq[it.k]||1,Math.max(1,mx)));cq[it.k]=q;
+   return '<div class="rc"><div class="hd"><img src="'+it.img+'" alt=""><div><b>'+it.n+'</b><small>'+it.eff+' • '+it.out+'</small></div></div>'+needHTML(it.need,q)+
+   '<div class="qrow"><small>'+(mx>0?'คราฟได้สูงสุด '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+it.k+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+it.k+'">+</button><button class="btn g sm" data-c="'+it.k+'"'+(mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
+ $('sb').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{cTab=b.dataset.t;openCraft()});
+ $('sb').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cq[b.dataset.m]=Math.max(1,(cq[b.dataset.m]||1)-1);openCraft()});
+ $('sb').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,(cq[b.dataset.p]||1)+1);openCraft()});
+ $('sb').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>confirmCraft(b.dataset.c))}
+function confirmCraft(k){const isD=cTab==='drink',r=isD?DRINK[k]:TOOLR[k],q=cq[k]||1,nm=isD?DRINK[k].n:RES[k];
+ open('<h3>ยืนยันการคราฟ</h3><div class="hint">'+nm+' × '+q+' ครั้ง • จะใช้วัตถุดิบตามนี้</div>'+needHTML(r.need,q)+'<div class="row"><button class="btn gray" id="cBack">ย้อนกลับ</button><button class="btn g" id="cOk">ยืนยันคราฟ</button></div>');
+ $('cBack').onclick=()=>openCraft();
+ $('cOk').onclick=e=>{e.target.disabled=true;if(maxTimes(r.need)<q)return ann('วัตถุดิบไม่พอแล้ว',1);
+  r.need.forEach(([t,kk,n])=>S.bag[t][kk]-=n*q);let got=0;
+  if(isD){got=q;S.bag.drink[k]=(S.bag.drink[k]||0)+q}else{for(let i=0;i<q;i++)got+=rnd(r.y[0],r.y[1]);S.bag.forest[k]=(S.bag.forest[k]||0)+got}save();
+  open('<div class="result"><img src="'+(isD?IMG['d-'+k]:IMG[k])+'" alt=""><h3>✨ คราฟสำเร็จ</h3><div class="big">'+nm+' ×'+got+'</div><div class="hint">คราฟ '+q+' ครั้ง • เข้ากระเป๋าแล้ว</div><div class="row"><button class="btn" id="rAgain">คราฟต่อ</button><button class="btn g" id="rClose">เรียบร้อย</button></div></div>');
+  $('rAgain').onclick=()=>openCraft();$('rClose').onclick=closeAll;ann('🎒 ได้'+nm+' ×'+got+' เข้ากระเป๋าแล้ว')}}
+$('craftBtn').onclick=()=>{if(guardOpen())openCraft()};
+$('energy').onclick=()=>{if(guardOpen())openDrinks()};
+/* ---------- กระเป๋า (ส่วนของป่า) ---------- */
+function openBag(){closeAll();const sec=[['forest','🪵 วัสดุป่า'],['grass','🌿 หญ้า'],['drink','🧃 เครื่องดื่มพลังงาน']];
+ open('<h3>🎒 กระเป๋า • ส่วนของป่า</h3><div class="hint">ในเกมจริงอยู่ในกระเป๋าหลัก แยกเป็น 3 หมวดนี้</div>'+sec.map(([t,l])=>{const e=Object.entries(S.bag[t]).filter(([,q])=>q>0);
+  return '<div class="sec">'+l+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell"><img src="'+imgOf(t,k)+'" alt=""><b>'+(t==='drink'?DRINK[k].n:NAMES[t][k])+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="empty">ยังไม่มีของหมวดนี้</div>')+'</div>'}).join(''))}
+/* ---------- ตั้งค่าทดลอง ---------- */
+function openSet(){closeAll();
+ open('<h3>⚙️ ตั้งค่าหน้าทดลอง</h3><div class="hint">มีเฉพาะในตัวอย่างนี้ ในเกมจริงไม่มี</div>'+
+ '<div class="sec">มุมมอง</div><div class="chips" id="sMode"><button data-v="0" class="'+(ADMIN?'':'on')+'">🙋 ผู้เล่น</button><button data-v="1" class="'+(ADMIN?'on':'')+'">👑 แอดมิน</button></div>'+
+ '<div class="sec">เวลา</div><div class="chips" id="sTod"><button data-v="auto" class="'+(TOD==='auto'?'on':'')+'">🕐 ตามเวลาไทยจริง</button><button data-v="night" class="'+(TOD==='night'?'on':'')+'">🌙 จำลองกลางคืน (เปิด)</button><button data-v="day" class="'+(TOD==='day'?'on':'')+'">☀️ จำลองกลางวัน (ปิด)</button></div>'+
+ '<div class="sec">ความเร็ว</div><div class="chips" id="sFast"><button data-v="1" class="'+(FAST?'on':'')+'">⏩ เร่ง: ของเกิดทุก 20 วิ • ⚡ฟื้น 1/วิ</button><button data-v="0" class="'+(FAST?'':'on')+'">🐢 เวลาจริง</button></div>'+
+ '<div class="row">'+(ADMIN?'<button class="btn g sm" id="sFull">⚡ เติมพลังงานเต็ม (แอดมิน)</button>':'')+'<button class="btn sm" id="sSpawn">🌲 ให้ของเกิดทันที</button><button class="btn sm" id="sMat">🎁 เติมวัตถุดิบทดลอง</button><button class="btn gray sm" id="sReset">🔄 ล้างข้อมูลป่า</button></div>');
+ $('sMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;ADMIN=b.dataset.v==='1';tick();openSet();ann(ADMIN?'👑 มุมมองแอดมิน • เข้าป่าได้ทุกเวลา':'🙋 มุมมองผู้เล่น')};
+ $('sTod').onclick=e=>{const b=e.target.closest('button');if(!b)return;TOD=b.dataset.v;$('closed').classList.remove('on');tick();openSet()};
+ $('sFast').onclick=e=>{const b=e.target.closest('button');if(!b)return;FAST=b.dataset.v==='1';F.next=Date.now()+HOUR();save();openSet()};
+ if($('sFull'))$('sFull').onclick=()=>{F.e=MAXE;F.et=Date.now();save();hud();ann('⚡ เติมพลังงานเต็มแล้ว')};
+ $('sSpawn').onclick=()=>{spawnOnce();save();sync();draw();closeAll();ann('🌲 ต้นไม้ หิน และหญ้าเกิดใหม่แล้ว')};
+ $('sMat').onclick=()=>{const add={crop:{watermelon:500,cucumber:1000,strawberry:1000,banana:1000,grape:1500,lychee:1500},flower:{butterflypea:500},grass:{blue:60,pink:60},bird:{'ostrich-feather':300,'dodo-pebble':300},forest:{wood:9000,stone:9000}};
+  Object.entries(add).forEach(([t,o])=>Object.entries(o).forEach(([k,q])=>S.bag[t][k]=(S.bag[t][k]||0)+q));save();ann('🎁 เติมวัตถุดิบสำหรับลองคราฟแล้ว')};
+ $('sReset').onclick=()=>{F=freshF();drops.forEach(d=>d.el.remove());drops=[];hits={};save();layout();draw();closeAll();ann('🔄 ล้างข้อมูลป่าแล้ว')}}
+/* ---------- 🧰 ---------- */
+$('fan').innerHTML=[['🎒','กระเป๋าส่วนของป่า',openBag],['🧃','ดื่มเพิ่มพลังงาน',()=>{if(guardOpen())openDrinks()}],['🌱','กลับฟาร์ม',goFarm]].map(([i,t],n)=>'<button data-f="'+n+'"><i>'+i+'</i>'+t+'</button>').join('');
+const FANF=[openBag,()=>{if(guardOpen())openDrinks()},openSet,goFarm];
+$('fan').onclick=e=>{const b=e.target.closest('button');if(!b)return;FANF[+b.dataset.f]()};
+$('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
+/* ---------- เริ่ม ---------- */
+function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
+document.documentElement.style.setProperty('--bg','url('+IMG.bg+')');
+function tick(){if(!ADMIN&&!isOpen()){if(!$('closed').classList.contains('on'))showClosed();return}$('closed').classList.remove('on');
+ if(process()){save();sync();draw()}else hud()}
+/* ของเกิดใหม่: เติมลงช่องว่าง ไม่ขยับของเดิม */
+function sync(){const usedB=new Set(nodes.filter(n=>n.k!=='grass').map(n=>n.slot)),usedG=new Set(nodes.filter(n=>n.k==='grass').map(n=>n.slot));
+ Object.entries(F.cnt).forEach(([k,c])=>{let have=nodes.filter(n=>n.k===k).length;const free=shuffle(SLOTS.map((s,i)=>i).filter(i=>!usedB.has(i)));while(have<c&&free.length){const i=free.pop();usedB.add(i);nodes.push({id:'n'+k+Date.now()+have,k,slot:i,x:SLOTS[i][0]+rnd(-15,15),y:SLOTS[i][1]+rnd(-12,12),img:k==='tree'?['tree-oak','tree-pine','tree-birch'][rnd(0,2)]:k==='rock'?['rock-1','rock-2','rock-3'][rnd(0,2)]:k});have++}});
+ Object.entries(F.grass).forEach(([c,n])=>{let have=nodes.filter(x=>x.k==='grass'&&x.c===c).length;const free=shuffle(GSLOTS.map((s,i)=>i).filter(i=>!usedG.has(i)));while(have<n&&free.length){const i=free.pop();usedG.add(i);nodes.push({id:'g'+c+Date.now()+have,k:'grass',c,slot:i,x:GSLOTS[i][0]+rnd(-12,12),y:GSLOTS[i][1]+rnd(-10,10),img:'g-'+c});have++}})}
+addEventListener('resize',fit);fit();process();layout();draw();save();
+if(!ADMIN&&!isOpen())showClosed();else setTimeout(()=>ann('🌙 แตะต้นไม้หรือหินหลายครั้งให้ล้มนะ'),400);
+setInterval(tick,1000);
+</script><script>/* ===== 🧰 เมนูเครื่องมือ 2 ชั้น: หมวด → รายการ ===== */
+(function(){
+const fan=document.getElementById('fan'),tool=document.getElementById('toolBtn');if(!fan||!tool)return;
+const st=document.createElement('style');st.textContent='.fan .fg-hide{display:none!important}.fan .fcat i{background:#FFF3C9!important}.fan .fcat.back i{background:#EEE!important}.fan .fcat b{font-weight:700}';document.head.appendChild(st);
+const CATS=[['other','⚙️','อื่นๆ',/ตั้งค่าทดลอง|กลับฟาร์ม|กระเป๋า|ขึ้นบ้าน|ลงห้องใต้ดิน/],['box','🎁','กล่องสุ่ม',/กล่องสุ่ม/],['animal','🐾','สัตว์',/^วาง(แมว|แฮมสเตอร์)/],
+ ['care','💕','ดูแล',/อาบน้ำ|นวด|เอนเตอร์เทน/],['food','🍽️','อาหาร',/คราฟอาหาร|เตา|ให้อาหาร|ดื่ม/],['craft','🔨','คราฟ',/คราฟ/],
+ ['harvest','🧺','เก็บ',/เก็บ|เกี่ยว/],['grow','🌱','ดูแลแปลง',/ปลูก|รดน้ำ|หนอน|เร่ง|ปีก|ปุ๋ย/]];
+let cur='',self=false;
+const items=()=>[...fan.children].filter(b=>b.tagName==='BUTTON'&&!b.classList.contains('fcat'));
+const usable=b=>b.style.display!=='none';
+const label=b=>[...b.childNodes].filter(n=>n.nodeName!=='I').map(n=>n.textContent).join('').replace(/\s+/g,' ').trim();
+function catOf(b){const t=label(b);for(const c of CATS)if(c[3].test(t))return c[0];return 'other'}
+function render(){self=true;fan.querySelectorAll('.fcat').forEach(e=>e.remove());const list=items(),av=list.filter(usable);
+ if(av.length<=4){list.forEach(b=>b.classList.remove('fg-hide'));setTimeout(()=>{self=false},0);return}
+ const groups={};av.forEach(b=>{const c=catOf(b);(groups[c]=groups[c]||[]).push(b)});
+ if(!cur||!groups[cur]){cur='';list.forEach(b=>b.classList.add('fg-hide'));
+  CATS.slice().reverse().forEach(([k,ic,nm])=>{const g=groups[k];if(!g)return;
+   if(g.length===1){g[0].classList.remove('fg-hide');fan.appendChild(g[0]);return}
+   const c=document.createElement('button');c.className='fcat';c.dataset.cat=k;c.innerHTML='<i>'+ic+'</i><b>'+nm+'</b> <small style="opacity:.6">('+g.length+')</small>';fan.appendChild(c)})}
+ else{list.forEach(b=>b.classList.toggle('fg-hide',!groups[cur].includes(b)));const back=document.createElement('button');back.className='fcat back';back.dataset.cat='';back.innerHTML='<i>↩</i>หมวดทั้งหมด';fan.insertBefore(back,fan.firstChild)}
+ setTimeout(()=>{self=false},0)}
+fan.addEventListener('click',e=>{const c=e.target.closest('.fcat');if(!c)return;e.stopImmediatePropagation();e.preventDefault();cur=c.dataset.cat;render()},true);
+tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
+new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
+render();
+})();
+</script></body></html>

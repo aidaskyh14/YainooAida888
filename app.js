@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { CATALOG } from './catalog.js?v=1';
+import { CATALOG } from './catalog.js?v=2';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -139,7 +139,8 @@ async function enter(user) {
       await updateDoc(playerRef(), { session: S.sessionId, by: S.sessionId, lastLogin: serverTimestamp() });
     }
     S.pendingName = '';
-    startSaver(); renderHome();
+    S.P.g = S.P.g || null; startSaver();
+    if (!S.settings.open && !S.admin) renderClosed(); else renderGame('farm');
   } catch (e) {
     $('#app').innerHTML = `<div class="boot"><div style="text-align:center;padding:1rem"><p>${thaiError(e)}</p><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>`;
   }
@@ -218,24 +219,56 @@ function startWater() {
   requestAnimationFrame(t => { last = t; tick(t); });
 }
 
-// ---------- หน้าหลัก (ชั่วคราวในชุดที่ 1) ----------
-function barHtml() {
-  return `<div class="bar"><span class="nm">🌱 ${esc(S.P.name)}${S.admin ? ' 👑' : ''}</span>
-    <span class="chip">✨${fmt(S.P.kusal)}</span><span class="chip"><img src="${COIN_IMG}" alt="">${fmt(S.P.coins)}</span>
-    <button class="chip btnc" id="mailBtn">📮${S.P.mailCount > 0 ? `<i>${S.P.mailCount}</i>` : ''}</button></div>`;
+// ---------- เกมปิดอยู่ ----------
+function renderClosed() {
+  $('#app').innerHTML = `<div class="home"><div class="soon"><h2>🌙 สวนกำลังจะเปิด</h2><p>ยัยหนูกำลังเตรียมซีซั่น 3 อยู่ เข้าระบบไว้แล้ว รอประกาศในกลุ่มได้เลย</p>
+    <div class="grid2"><button class="tile" id="tMail"><span>📮</span>ไปรษณีย์</button><button class="tile" id="tOut"><span>🚪</span>ออกจากระบบ</button></div></div></div>`;
+  $('#tMail').onclick = openMail; $('#tOut').onclick = logout;
 }
-function renderHome() {
-  const closed = !S.settings.open && !S.admin;
-  $('#app').innerHTML = `<div class="home">${barHtml()}
-    <div class="soon">${closed ? `<h2>🌙 สวนกำลังจะเปิด</h2><p>ยัยหนูกำลังเตรียมซีซั่น 3 อยู่ เข้าระบบไว้แล้ว รอประกาศในกลุ่มได้เลย</p>` :
-      `<h2>🌱 ยินดีต้อนรับสู่ซีซั่น 3</h2><p class="note">ฟาร์ม สัตว์ และระบบอื่นๆ จะทยอยเปิดในอัปเดตถัดไป ตอนนี้รับของขวัญในไปรษณีย์ได้แล้ว</p>`}
-      <div class="grid2"><button class="tile" id="tMail"><span>📮</span>ไปรษณีย์</button>${S.admin ? '<button class="tile" id="tAdmin"><span>👑</span>ศูนย์แอดมิน</button>' : '<button class="tile" id="tBag"><span>🎒</span>กระเป๋า</button>'}
-      ${S.admin ? '<button class="tile" id="tBag"><span>🎒</span>กระเป๋า</button>' : ''}<button class="tile" id="tOut"><span>🚪</span>ออกจากระบบ</button></div></div></div>`;
-  $('#mailBtn').onclick = openMail; $('#tMail').onclick = openMail; $('#tBag').onclick = openBag;
-  $('#tOut').onclick = () => modal('<h2>ออกจากระบบ?</h2><p class="note">ระบบจะบันทึกของล่าสุดก่อนออก</p>', [{ t: 'ยกเลิก', c: 'gray' }, { t: 'ออก', c: 'pink', f: async () => { await flush(); await signOut(auth); } }]);
-  const a = $('#tAdmin'); if (a) a.onclick = renderAdmin;
+function refreshBar() { }
+async function logout() { frameSave(); await flush(); S.frame = null; await signOut(auth); }
+
+// ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
+const GAME_KEY = 's3all-v1';
+const SCREENS = { farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม' };
+const LS_CAP = 8000;
+function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
+window.__HOST = {
+  get(k) {
+    if (k === GAME_KEY) return S.P && S.P.g ? JSON.stringify(S.P.g) : null;
+    if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
+    const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
+  },
+  set(k, v) {
+    if (!S.P || S.blocked) return;
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } const ls = S.P.g && S.P.g._ls; if (ls && !o._ls) o._ls = ls; S.P.g = o; change('g'); return; }
+    if (k === 's3user') return;
+    if (String(v).length > LS_CAP) return;
+    S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
+  },
+  del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
+  openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
+  ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
+};
+function renderGame(screen) {
+  if (!document.getElementById('scr')) {
+    $('#app').innerHTML = `<div id="gbar" class="gbar" hidden><button id="gback">🌱 กลับฟาร์ม</button><b id="gttl"></b></div><iframe id="scr" title="ในสวนของยัยหนู"></iframe><div id="ov" class="ov" hidden></div>`;
+    $('#gback').onclick = () => goScreen('farm');
+    S.frame = $('#scr');
+  }
+  goScreen(screen);
 }
-function refreshBar() { const b = document.querySelector('.bar'); if (b) { b.outerHTML = barHtml(); $('#mailBtn').onclick = openMail; } }
+function goScreen(n) {
+  if (n === 'admin') { if (S.admin) openAdminOverlay(); return; }
+  if (n === 'login') { logout(); return; }
+  if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
+  frameSave(); S.screen = n;
+  const t = SCREENS[n]; $('#gbar').hidden = !t; $('#gttl').textContent = t; document.body.classList.toggle('sub', !!t);
+  S.frame.src = 'scr-' + n + '.html?v=2';
+}
+function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=2&r=' + Date.now(); }
+window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
+function openAdminOverlay() { const o = $('#ov'); o.hidden = false; renderAdmin(); }
 function itemsHtml(items) {
   return Object.entries(items || {}).map(([k, n]) => { const c = CAT[k]; return `<span>${c ? `<img src="${IMG(c.i)}" alt="">` : '🎁'}${esc(c ? c.n : k)} ×${fmt(n)}</span>`; }).join('');
 }
@@ -262,8 +295,10 @@ async function openMail() {
   modal(html, [{ t: 'ปิด', c: 'gray' }]);
   $('#mcard').querySelectorAll('[data-id]').forEach(b => b.onclick = () => claim(b.dataset.id, b));
 }
+function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') ? 'g.' + p : 'g.bag.' + p; }
+function addPath(o, path, n) { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); t[x] = t[x] || {}; t = t[x]; } t[ks[0]] = (t[ks[0]] || 0) + n; }
 async function claim(id, btn) {
-  busy(btn, true, 'กำลังรับ…');
+  busy(btn, true, 'กำลังรับ…'); frameSave();
   const mref = doc(db, 'mail', S.user.uid, 'items', id);
   let got;
   try {
@@ -273,14 +308,17 @@ async function claim(id, btn) {
       const g = m.data(), upd = { by: S.sessionId, mailCount: increment(-1) };
       if (g.kusal) upd.kusal = increment(g.kusal);
       if (g.coins) upd.coins = increment(g.coins);
-      for (const [k, n] of Object.entries(g.items || {})) upd['bag.' + k] = increment(n);
+      if (g.kusal) { delete upd.kusal; upd['g.merit'] = increment(g.kusal); }
+      for (const [k, n] of Object.entries(g.items || {})) upd[gpath(k)] = increment(n);
       tx.update(playerRef(), upd); tx.delete(mref);
       return g;
     });
   } catch (e) { busy(btn, false, 'กดรับ'); if (e.thai) openMail(); return; }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
-  S.P.kusal += got.kusal || 0; S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
-  for (const [k, n] of Object.entries(got.items || {})) S.P.bag[k] = (S.P.bag[k] || 0) + n;
+  S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
+  S.P.g = S.P.g || {}; if (got.kusal) S.P.g.merit = (S.P.g.merit || 0) + got.kusal;
+  for (const [k, n] of Object.entries(got.items || {})) addPath(S.P.g, gpath(k).slice(2), n);
+  reloadScreen();
   toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail();
 }
 
@@ -293,11 +331,12 @@ async function loadPlayers(force) {
   return A.players;
 }
 function renderAdmin() {
-  $('#app').innerHTML = `<div class="home" style="background:#FFF4EA">${barHtml()}<div class="page">
+  const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
+  host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
     <div class="atabs">${[['send', '🎁 ส่งของ'], ['players', '👥 ผู้เล่น'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
-  $('#aBack').onclick = renderHome; $('#mailBtn').onclick = openMail;
+  $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
   ({ send: tabSend, players: tabPlayers, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
@@ -354,7 +393,7 @@ async function tabPlayers() {
   let ps; try { ps = await loadPlayers(true); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
   const big = ps.filter(p => p._size > SIZE_WARN);
   B.innerHTML = `<div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ เซฟใหญ่เกิน 200KB ${big.length} คน แจ้งผู้พัฒนาได้เลย</p>` : '<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>'}
-    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ</th><th>เข้าล่าสุด</th></tr>${ps.map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.kusal)}</td><td>${fmt(p.coins)}</td><td class="${p._size > SIZE_WARN ? 'warn' : ''}">${(p._size / 1024).toFixed(1)}KB</td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
+    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ</th><th>เข้าล่าสุด</th></tr>${ps.map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${p._size > SIZE_WARN ? 'warn' : ''}">${(p._size / 1024).toFixed(1)}KB</td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
     <p class="note">หน้านี้อ่านข้อมูลเฉพาะตอนกดเปิด ไม่อ่านค้าง</p></div>`;
 }
 const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
@@ -381,7 +420,7 @@ async function tabBackup() {
   const rl = $('#rLoad'); if (rl) rl.onclick = async () => {
     const d = $('#rDay').value, L = $('#rList'); L.innerHTML = '<p class="note">กำลังโหลด…</p>';
     const pl = (await getDocs(collection(db, 'backups', d, 'players'))).docs;
-    L.innerHTML = pl.map(x => `<div class="row"><b style="flex:1">${esc(x.data().name)}</b><span class="note">✨${fmt(x.data().kusal)}</span><button class="btn sm pink" data-r="${x.id}">กู้คืน</button></div>`).join('') || '<p class="note">ไม่มีข้อมูล</p>';
+    L.innerHTML = pl.map(x => `<div class="row"><b style="flex:1">${esc(x.data().name)}</b><span class="note">✨${fmt(x.data().g && x.data().g.merit)}</span><button class="btn sm pink" data-r="${x.id}">กู้คืน</button></div>`).join('') || '<p class="note">ไม่มีข้อมูล</p>';
     L.querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
       const src = pl.find(x => x.id === b.dataset.r).data();
       modal(`<h2>กู้คืน ${esc(src.name)}?</h2><p>เซฟปัจจุบันของคนนี้จะถูกแทนด้วยเซฟวันที่ ${d}</p>`, [{ t: 'ยกเลิก', c: 'gray' }, {

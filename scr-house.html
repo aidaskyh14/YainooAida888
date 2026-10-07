@@ -1,0 +1,302 @@
+<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+</script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#3a2a1e}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;transition:opacity .25s}
+.stage.fade{opacity:0}
+.hot{position:absolute;cursor:pointer;border-radius:14px}
+.hot:active{background:rgba(255,255,255,.15)}
+.tag{position:absolute;transform:translate(-50%,-50%);background:rgba(255,251,245,.92);border:2px solid #fff;border-radius:999px;padding:.12rem .55rem;font-size:.66rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);pointer-events:none}
+.rest{position:absolute;display:grid;place-items:center;pointer-events:none}
+.rest div{background:rgba(40,40,80,.78);color:#fff;border-radius:1rem;padding:.4rem .8rem;text-align:center;font-size:.8rem;font-weight:700;border:2px solid #fff}
+.rest small{display:block;font-weight:500;font-size:.68rem;opacity:.9}
+.fplot{position:absolute;cursor:pointer}
+.fplot .pl{position:absolute;left:6%;right:6%;bottom:12%;height:112%;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
+.fplot .pl img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.3))}
+.fplot .pl img.s1{max-width:38%;max-height:38%}.fplot .pl img.s2{max-width:52%;max-height:52%}
+.fplot .bar,.barrel .bar{position:absolute;left:18%;right:18%;bottom:6%;height:.32rem;border-radius:999px;background:rgba(255,255,255,.55);overflow:hidden}
+.fplot .bar i,.barrel .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFD6E4,#F39AB2);border-radius:999px}
+.barrel{position:absolute;cursor:pointer}
+.barrel .bt{position:absolute;left:50%;top:-14%;transform:translateX(-50%);background:rgba(255,251,245,.94);border:2px solid #fff;border-radius:999px;padding:.08rem .45rem;font-size:.62rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);display:flex;align-items:center;gap:.2rem}
+.barrel .bt img{height:1.2rem}
+.barrel .bar{bottom:20%}
+.hedge{position:absolute;width:7.2%;aspect-ratio:1;pointer-events:none}
+.hedge .sp{position:absolute;inset:0;background-size:400% 400%;transform-origin:50% 100%}
+.hedge .sp.flip{transform:scaleX(-1)}
+.hedge .hs{position:absolute;left:14%;right:14%;bottom:-4%;height:20%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(60,35,10,.45),rgba(60,35,10,0) 70%)}
+.hedge.curl .hs{left:10%;right:10%}
+.drop{position:absolute;width:3.6%;aspect-ratio:1;cursor:pointer;transform:translate(-50%,-50%)}
+.drop img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.top{position:fixed;z-index:5;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + .55rem) .6rem 0;display:flex;gap:.45rem;align-items:center}
+.chip{background:rgba(255,251,245,.92);border:3px solid #fff;border-radius:999px;padding:.35rem .8rem;font-weight:700;font-size:.78rem;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap}
+.rbtn{width:2.9rem;height:2.9rem;border-radius:50%;border:3px solid #fff;font-size:1.3rem;display:grid;place-items:center;cursor:pointer;padding:0;flex:none;background:radial-gradient(circle at 35% 30%,#fff,#E9FBF4);box-shadow:0 4px 0 rgba(0,0,0,.15),0 8px 16px rgba(0,0,0,.3);position:relative}
+.spacer{margin-left:auto}
+.bottom{position:fixed;z-index:5;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap;padding:0 .5rem}
+.pill{border:3px solid #fff;border-radius:999px;background:rgba(255,251,245,.95);font:inherit;font-weight:700;font-size:.78rem;color:var(--cocoa);padding:.4rem .8rem;box-shadow:0 4px 12px rgba(0,0,0,.3);cursor:pointer}
+.pill.go{background:#FFE3EC}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(40,30,20,.4);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s ease-out;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:84vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.05rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.6rem}
+.opt{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #fff;background:#fff;border-radius:1rem;padding:.55rem .7rem;margin-bottom:.4rem;font:inherit;color:var(--cocoa);cursor:pointer;text-align:left;box-shadow:0 3px 8px rgba(70,150,180,.12)}
+.opt i{font-style:normal;font-size:1.5rem;width:2.5rem;height:2.5rem;border-radius:.8rem;background:#EAF6F3;display:grid;place-items:center;flex:none;overflow:hidden}
+.opt i img{width:100%;height:100%;object-fit:contain}
+.opt b{display:block;font-size:.85rem}.opt small{font-size:.66rem;color:var(--soft);display:block;line-height:1.35}
+.opt:disabled{opacity:.45}
+.opt .r{margin-left:auto;font-weight:700;font-size:.75rem;color:#B9761F;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.cell{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .15rem;text-align:center;cursor:pointer}
+.cell img{width:100%;aspect-ratio:1;object-fit:contain}.cell b{display:block;font-size:.6rem;line-height:1.2}.cell span{font-size:.66rem;font-weight:700;color:#B9761F}
+.tabs{display:flex;background:#EAF6F3;border-radius:999px;padding:.25rem;margin-bottom:.6rem;overflow-x:auto;gap:.1rem}
+.tabs button{flex:1 0 auto;border:0;background:none;font:inherit;font-size:.72rem;color:var(--soft);padding:.35rem .5rem;border-radius:999px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:#fff;color:var(--cocoa);font-weight:600}
+.need{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.2rem}.need span{font-size:.62rem;background:#F4EEE6;border-radius:999px;padding:.05rem .4rem}.need span.no{background:#FFE1E8;color:#C0506E}
+.card{text-align:center;padding:.6rem}.card .ic{font-size:3rem}.card b{display:block;font-size:1.05rem;margin:.2rem 0}.card p{margin:.2rem 0;font-size:.82rem}
+.empty{text-align:center;color:var(--soft);padding:1rem;grid-column:1/-1}
+.toast{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top,0px) + 4.2rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:999px;padding:.3rem .9rem .3rem .3rem;font-size:.8rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;max-width:94vw;display:flex;align-items:center;gap:.4rem}
+.toast img{width:2rem;height:2rem;flex:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}.toast.err{border-color:var(--pig);background:#FFF4F6}
+.speed{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap}
+.speed button{border:2px solid #fff;border-radius:999px;font:inherit;font-size:.72rem;font-weight:600;padding:.25rem .65rem;background:#EAF6F3;color:var(--cocoa);cursor:pointer}
+.speed button.on{background:var(--aqua);color:#fff}
+.link{border:0;background:none;font:inherit;font-size:.72rem;color:#C0748A;text-decoration:underline;cursor:pointer}
+
+#view{background:#2b2b2b}#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.8)}
+
+.tool{position:fixed;z-index:6;right:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:3.1rem;height:3.1rem;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);transition:transform .25s}
+.tool.open{transform:rotate(45deg)}
+.fan{position:fixed;z-index:6;right:.7rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4rem);display:flex;flex-direction:column-reverse;gap:.4rem;align-items:flex-end;pointer-events:none}
+.fan button{pointer-events:none;display:flex;align-items:center;gap:.35rem;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.96);font:inherit;font-weight:600;font-size:.76rem;color:var(--cocoa);padding:.2rem .75rem .2rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;opacity:0;transform:translateY(1rem) scale(.8);transition:.2s}
+.fan button i{font-style:normal;width:1.65rem;height:1.65rem;border-radius:50%;display:grid;place-items:center;background:#EAF6F3;font-size:.9rem}
+.fan.open button{opacity:1;transform:none;pointer-events:auto}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;padding:.2rem .4rem}
+.tcard{aspect-ratio:2/3;perspective:600px;cursor:pointer}
+.tcard .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.tcard.flip .in{transform:rotateY(180deg)}
+.tcard .bk,.tcard .fr{position:absolute;inset:0;border-radius:.9rem;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.tcard .bk{background:repeating-linear-gradient(45deg,#F6A9BD 0 8px,#F9C3D1 8px 16px);font-size:2rem}
+.tcard .fr{background:#FFF8E6;transform:rotateY(180deg);padding:.3rem;text-align:center}
+.tcard .fr span{font-size:2rem}.tcard .fr small{font-size:.6rem;font-weight:700;line-height:1.2}
+.tcard.dim{opacity:.35}
+
+.qty{display:flex;align-items:center;justify-content:center;gap:.6rem;margin-top:.4rem}
+.qty button{width:2.6rem;height:2.6rem;border-radius:50%;border:2px solid #fff;background:#EAF6F3;font:inherit;font-size:1.3rem;font-weight:700;color:var(--cocoa);cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.1)}
+.qty b{font-size:1.6rem;min-width:2.5rem;text-align:center}
+.qty .mx{width:auto;height:2.2rem;border-radius:999px;font-size:.72rem;padding:0 .7rem}
+.row2{display:flex;gap:.5rem;margin-top:.9rem}
+.btn2{flex:1;border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.88rem;padding:.65rem;cursor:pointer;background:#6CC9A8;color:#fff;box-shadow:0 3px 0 #4DAA8A}
+.btn2.gray{background:#EEE;color:var(--soft);box-shadow:none}.btn2:disabled{background:#ddd;color:#aaa;box-shadow:none}
+.result{text-align:center}.result .big{font-size:3.4rem;line-height:1.1}
+.tries{display:flex;flex-wrap:wrap;justify-content:center;gap:.3rem;margin:.5rem 0}
+.tries span{width:2.4rem;border-radius:.6rem;background:#F1FBF6;font-size:.62rem;padding:.2rem 0;line-height:1.4}.tries span.no{background:#FFF0F3}
+.got{display:inline-flex;align-items:center;gap:.5rem;background:#FFF8E6;border:2px solid #fff;border-radius:1rem;padding:.4rem .9rem;margin-top:.3rem;box-shadow:0 3px 8px rgba(0,0,0,.08)}
+.got span{font-size:1.8rem}.got b{font-size:.95rem}
+
+.fimg{width:100%;height:100%;object-fit:contain}
+h3 .fimg{width:auto;height:1.8rem;vertical-align:middle}
+.result .big .fimg{width:auto;height:6.5rem}
+.got span .fimg{width:auto;height:2.6rem}
+.tcard .bk,.tcard .fr{padding:0;overflow:hidden;background:none;border:0;box-shadow:none}
+.tcard .bk img,.tcard .fr img{width:100%;height:100%;object-fit:contain}
+.cimg{height:11rem;display:block;margin:0 auto .3rem}
+</style></head><body><div id="view"><div class="stage" id="stage"></div></div>
+<div class="fan" id="fan"></div><button class="rbtn tool" id="toolBtn">🧰</button>
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet"><div id="sheetBody"></div></section>
+<div class="toast" id="toast"><img id="tImg"><span id="tTxt"></span></div>
+<script>/* ---------- เซฟร่วมของทุกหน้า (ตัวอย่างนี้เก็บในเครื่อง • เกมจริงเก็บในเครื่องทันทีแล้วส่งขึ้นระบบตามไป) ---------- */
+const KEY='s3all-v1';
+function fresh(){return{merit:1000,lv:1,rest:null,fortune:null,plots:Array(6).fill(null),barrels:Array(3).fill(null),drops:[],nextDrop:0,
+ farms:{1:Array(12).fill(null),2:Array(16).fill(null),3:Array(16).fill(null),4:Array(16).fill(null)},unlockAll:false,fuel:100,steals:0,magics:0,
+ bag:{crop:{},flower:{},wine:{},food:{},hedge:{},item:{fert:0,cake:0,coconut:0,angel:0},grass:{},forest:{},fruit:{},tree:{},gfood:{}}}}
+function loadS(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}const f=fresh();if(!s)return f;for(const k in f)if(s[k]===undefined)s[k]=f[k];s.bag=s.bag||{};for(const k in f.bag)if(!s.bag[k]||!Object.keys(s.bag[k]).length&&Object.keys(f.bag[k]).length)s.bag[k]=Object.assign({},f.bag[k],s.bag[k]);return s}
+let S=loadS();
+const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+let USER={name:'มดแดง',admin:false};try{USER=JSON.parse(__LS.getItem('s3user')||'null')||USER}catch(e){}
+const goScreen=(g)=>{save();try{parent.postMessage({go:g},'*')}catch(e){}};
+
+const IMG={"up1": "images/house-interior-lv1.webp", "up2": "images/house-interior-lv2.webp", "up3": "images/house-interior-lv3.webp", "base": "images/house-basement.webp", "s1": "images/crop-stage1-seed.webp", "s2": "images/crop-stage2-sprout.webp", "happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "walk": "images/hedgehog-walk.webp", "sniff": "images/hedgehog-sniff.webp", "curl": "images/hedgehog-curl.webp", "it-fert": "images/item-fertilizer.webp", "card-back": "images/card-back.webp", "wine-moon": "images/house-wine-moon.webp", "wine-rose": "images/house-wine-rose.webp", "wine-blood": "images/house-wine-blood.webp", "wine-eclipse": "images/house-wine-eclipse.webp", "hedge-fang": "images/house-hedge-fang.webp", "hedge-quills": "images/house-hedge-quills.webp", "hedge-claw": "images/house-hedge-claw.webp", "hedge-tail": "images/house-hedge-tail.webp", "fl-daisy": "images/flower-daisy.webp", "fl-rose": "images/flower-rose.webp", "fl-butterflypea": "images/flower-butterflypea.webp", "fl-sunflower": "images/flower-sunflower.webp", "fl-lotus": "images/flower-lotus.webp", "fl-orchid": "images/flower-orchid.webp", "fl-tulip": "images/flower-tulip.webp", "fl-lavender": "images/flower-lavender.webp", "fl-marigold": "images/flower-marigold.webp", "fl-hydrangea": "images/flower-hydrangea.webp", "fl-plumeria": "images/flower-plumeria.webp", "fl-hibiscus": "images/flower-hibiscus.webp", "food-01": "images/food-01.webp", "food-02": "images/food-02.webp", "food-03": "images/food-03.webp", "food-04": "images/food-04.webp", "food-05": "images/food-05.webp", "food-06": "images/food-06.webp", "food-07": "images/food-07.webp", "food-08": "images/food-08.webp", "food-09": "images/food-09.webp", "food-10": "images/food-10.webp", "food-11": "images/food-11.webp", "food-12": "images/food-12.webp", "card-merit": "images/card-merit.webp", "card-growth": "images/card-growth.webp", "card-chef": "images/card-chef.webp", "card-honey": "images/card-honey.webp", "card-hedgehog": "images/card-hedgehog.webp", "card-clover": "images/card-clover.webp"};
+let __bg='';function setBg(u){if(u===__bg)return;__bg=u;document.getElementById('view').style.setProperty('--bg','url('+u+')')}
+const W=941,H=1672,$=id=>document.getElementById(id);
+const FLOWERS={daisy:['เดซี่',45,40],rose:['กุหลาบ',60,50],butterflypea:['อัญชัน',60,50],sunflower:['ทานตะวัน',75,60],lotus:['ดอกบัว',90,70],orchid:['กล้วยไม้',120,80],
+ tulip:['ทิวลิป',50,45],lavender:['ลาเวนเดอร์',65,55],marigold:['ดาวเรือง',55,45],hydrangea:['ไฮเดรนเยีย',100,75],plumeria:['ลีลาวดี',80,65],hibiscus:['ชบา',70,60]}; // [ชื่อ, นาที, ปุ๋ยที่ใช้] • 6 ดอกใหม่เป็นตัวเลขชั่วคราว
+const WINES={moon:['ไวน์องุ่นแสงจันทร์',2,{grape:70,lychee:40}],rose:['ไวน์กุหลาบวิญญาณ',4,{strawberry:70,gooseberry:50,grape:40}],blood:['ไวน์องุ่นโลหิต',8,{grape:110,chili:35,mango:55}],eclipse:['ไวน์ราชันสุริยคราส',12,{grape:150,strawberry:70,lychee:70,gooseberry:70}]};
+const CROPN={grape:'องุ่น',lychee:'ลิ้นจี่',strawberry:'สตรอว์เบอร์รี',gooseberry:'มะยม',chili:'พริก',mango:'มะม่วง',waterspinach:'ผักบุ้ง',lettuce:'ผักกาด',pumpkin:'ฟักทอง',banana:'กล้วย'};
+const FOODS=[['ข้าวผัดไข่',30,{c:{waterspinach:60,chili:45}},'🍳'],['ซุปฟักทอง',25,{c:{lettuce:60,pumpkin:55}},'🥣'],['ปลาย่างซอสมะม่วง',22,{c:{mango:55,chili:50}},'🐟'],['สตูว์รวมมิตร',20,{c:{pumpkin:70,lettuce:55}},'🍲'],
+ ['ไข่อบชีส',22,{c:{waterspinach:55,strawberry:45}},'🧀'],['น่องไก่อบครีม',15,{c:{mango:65,grape:55}},'🍗'],['ขนมลิ้นจี่มะยม',15,{c:{lychee:65,gooseberry:55}},'🍮'],['จานรวมมิตร',8,{c:{banana:65,gooseberry:65,grape:55,strawberry:55}},'🍱'],
+ ['ออมเล็ตโรซี่',40,{f:{rose:220,daisy:260,orchid:150}},'🌹'],['ไข่อบอัญชัน',35,{f:{butterflypea:380,sunflower:320,daisy:180}},'💙'],['ไข่ตุ๋นหกบุปผา',22,{f:{rose:260,sunflower:260,daisy:300,lotus:220,butterflypea:300,orchid:220}},'🌼'],['ไข่ย่างสปาฟลาวเวอร์',30,{f:{rose:180,sunflower:220,daisy:220,lotus:180,butterflypea:260,orchid:150}},'🌸']];
+FOODS.forEach((f,i)=>f[3]='<img class="fimg" src="'+IMG['food-'+String(i+1).padStart(2,'0')]+'">');
+const REST=[['sleep','😴','นอนหลับ',7*60,100],['nap','🛌','งีบหลับ',210,45],['crab','🦀','ไล่ปู',60,15],['intro','📖','อินโทรเวิร์ต',30,5]];
+const FORT=[['🙏','ดวงเศรษฐีมาเยือน','วันนี้กุศลจากระบบที่รองรับเพิ่ม 10%'],['🌱','ดวงชาวสวนมือทอง','พืชที่ปลูกวันนี้เติบโตเร็วขึ้น 10%'],['🎣','ดวงนักตกปลาผู้โชคดี','มีโอกาส 15% ได้สัตว์น้ำเพิ่ม'],['🐾','ดวงสัตว์เลี้ยงเอ็นดู','รอบดรอปสัตว์เร็วขึ้น 15%'],['🍳','ดวงนักคราฟท์เทพ','โอกาสคราฟอาหารบ้านสำเร็จเพิ่ม 10%'],
+ ['🚣','ดวงเรือพาโชค','ส่งเสบียงเรือมีโอกาส 15% ได้ความคืบหน้าเพิ่ม'],['🎁','ดวงขุมทรัพย์ลับ','ของดรอปเม่นมีโอกาส 10% ได้เพิ่มอีก 1 ชิ้น'],['👭','ดวงเพื่อนรักมาเยือน','เยี่ยมเพื่อนวันนี้ได้โบนัสกุศล 10%'],['🌤️','ดวงวันนี้กลาง ๆ','รับกุศลปลอบใจ +20 ทันที'],['🫠','ดวงซวยนิด ๆ แต่ยังน่ารัก','โอกาสคราฟอาหารบ้านลดลง 5% วันนี้']];
+const DROPS={fang:'เขี้ยวเม่น',quills:'ขนเม่น',claw:'เล็บเม่น',tail:'หางเม่น'};
+/* ---------- ตำแหน่งในรูป (พิกเซลของรูป 941×1672) ---------- */
+const UP={bed:[300,100,370,370],paint:[560,575,180,110],stove:[95,1130,175,310]};
+const FP=[[45,1035,260,200],[345,1035,255,200],[640,1035,255,200],[20,1260,280,225],[335,1260,275,225],[650,1260,275,225]];
+const BAR=[[235,250,170,250],[452,250,170,250],[667,250,170,250]];
+const PEN={x0:170,x1:800,y0:640,y1:860};const STAIRS=[30,20,190,390];
+/* ---------- เซฟ ---------- */
+let speed=1; // ทดลอง: 1 ชม.ในเกม = 10 วินาที
+const mins=m=>m*60000/speed;
+let room='up';
+function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
+let tt;function toast(m,err){$('tImg').src=err?IMG.oops:IMG.happy;$('tTxt').textContent=m;const t=$('toast');t.className='toast show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='toast'+(err?' err':''),2400)}
+const pos=(el,r)=>Object.assign(el.style,{left:r[0]/W*100+'%',top:r[1]/H*100+'%',width:r[2]/W*100+'%',height:r[3]/H*100+'%'});
+function mk(cls,r,fn,html){const d=document.createElement('div');d.className=cls;pos(d,r);if(html)d.innerHTML=html;if(fn)d.addEventListener('click',fn);$('stage').appendChild(d);return d}
+function tag(txt,x,y){const t=document.createElement('div');t.className='tag';t.textContent=txt;t.style.left=x/W*100+'%';t.style.top=y/H*100+'%';$('stage').appendChild(t)}
+const fmtT=ms=>{ms=Math.max(0,ms);const s=Math.ceil(ms/1000);return s>=60?Math.floor(s/60)+' นาที '+(s%60)+' วิ':s+' วิ'};
+const resting=()=>S.rest&&Date.now()<S.rest.end;
+function guard(){if(resting()){toast('กำลังพักผ่อนอยู่ ทำอะไรไม่ได้นะ รอตื่นก่อน',1);return true}return false}
+/* ---------- วาดห้อง ---------- */
+let hedges=[],dropEls={};
+function build(){const s=$('stage');s.innerHTML='';hedges=[];dropEls={};s.style.backgroundImage='url('+(room==='up'?IMG['up'+S.lv]:IMG.base)+')';setBg((room==='up'?IMG['up'+S.lv]:IMG.base));
+ if(room==='up'){mk('hot',UP.bed,openBed);mk('hot',UP.paint,openFortune);mk('hot',UP.stove,openKitchen);
+  
+  const r=mk('rest',[300,170,370,200]);r.id='restBox';
+  setFan([['🎒','กระเป๋า',openBag],['⬇️','ลงห้องใต้ดิน',()=>go('base')],['🌱','กลับฟาร์ม',()=>{if(resting())return toast('กำลังพักอยู่ ออกจากบ้านไม่ได้นะ',1);goScreen('farm')}]]);}
+ else{mk('hot',STAIRS,()=>go('up'));
+  FP.forEach((r,i)=>{const d=mk('fplot',r,()=>tapPlot(i),'<div class="pl"></div><div class="bar" style="display:none"><i></i></div>');d.dataset.i=i});
+  BAR.forEach((r,i)=>{const d=mk('barrel',r,()=>tapBarrel(i),'<div class="bt" style="display:none"></div><div class="bar" style="display:none"><i></i></div>');d.dataset.i=i});
+  const n={1:1,2:3,3:5}[S.lv];for(let k=0;k<n;k++){const e=document.createElement('div');e.className='hedge';e.innerHTML='<span class="hs"></span><span class="sp"></span>';s.appendChild(e);hedges.push({el:e,sp:e.lastChild,x:rnd(PEN.x0,PEN.x1),y:rnd(PEN.y0,PEN.y1),tx:0,ty:0,mode:'sniff',until:Date.now()+rnd(1000,3000),f:k*3,flip:Math.random()<.5})}
+  setFan([['🎒','กระเป๋า',openBag],['🌸','ปลูกดอกไม้ทั้งหมด',()=>{if(guard())return;if(!S.plots.some(p=>!p))return toast('แปลงดอกไม้เต็มแล้ว',1);openFlowerPick(-1)}],['🌼','ใส่ปุ๋ยนางฟ้าทั้งหมด',fertAll],['💐','เก็บดอกไม้ทั้งหมด',pickAll],['🦔','เก็บของเม่นทั้งหมด',()=>{if(!S.drops.length)return toast('ยังไม่มีของเม่นหล่นนะ',1);collectDrops(S.drops.map(d=>d.id))}],['🪜','ขึ้นบ้าน',()=>go('up')],['🌱','กลับฟาร์ม',()=>goScreen('farm')]])}
+ draw()}
+function go(r){if(r==='base'&&guard())return;$('stage').classList.add('fade');setTimeout(()=>{room=r;build();$('stage').classList.remove('fade')},200)}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function fStage(p){const k=(Date.now()-p.t)/mins(FLOWERS[p.f][1]);return k>=1?3:k>=.5?2:1}
+function draw(){
+ if(room==='up'){const r=$('restBox');if(r){if(resting()){const R=REST.find(x=>x[0]===S.rest.type);r.innerHTML='<div>'+R[1]+' '+R[2]+'<small>ตื่นในอีก '+fmtT(S.rest.end-Date.now())+'</small></div>'}else r.innerHTML=''}
+  if(S.rest&&!resting()){const R=REST.find(x=>x[0]===S.rest.type);S.merit+=R[4];S.rest=null;save();toast('ตื่นแล้ว! ได้ '+R[4]+' กุศล')}}
+ else{document.querySelectorAll('.fplot').forEach(d=>{const i=+d.dataset.i,p=S.plots[i];const pl=d.querySelector('.pl'),bar=d.querySelector('.bar');
+   if(!p){if(pl.dataset.k!==''){pl.innerHTML='';pl.dataset.k=''}bar.style.display='none';return}
+   const st=fStage(p),k=p.f+st;if(pl.dataset.k!==k){pl.dataset.k=k;pl.innerHTML='<img class="s'+st+'" src="'+(st===1?IMG.s1:st===2?IMG.s2:IMG['fl-'+p.f])+'">'}
+   bar.style.display=st<3?'block':'none';if(st<3)bar.firstChild.style.width=Math.min(100,(Date.now()-p.t)/mins(FLOWERS[p.f][1])*100)+'%'});
+  document.querySelectorAll('.barrel').forEach(d=>{const i=+d.dataset.i,b=S.barrels[i],bt=d.querySelector('.bt'),bar=d.querySelector('.bar');
+   if(!b){bt.style.display='flex';bt.innerHTML='＋ หมักไวน์';bar.style.display='none';return}
+   const left=b.end-Date.now();bt.style.display='flex';bt.innerHTML='<img src="'+IMG['wine-'+b.w]+'">'+(left>0?fmtT(left):'พร้อมแล้ว!');
+   bar.style.display=left>0?'block':'none';if(left>0)bar.firstChild.style.width=Math.min(100,(1-left/(b.end-b.t))*100)+'%'});
+  // ของเม่นหล่น
+  if(Date.now()>S.nextDrop){if(S.nextDrop){const n={1:1,2:3,3:5}[S.lv];for(let k=0;k<n;k++)if(S.drops.length<12){const ks=Object.keys(DROPS);S.drops.push({id:Math.random().toString(36).slice(2),k:ks[Math.floor(Math.random()*4)],x:rnd(PEN.x0,PEN.x1),y:rnd(PEN.y0+30,PEN.y1)})}save()}S.nextDrop=Date.now()+mins(30)}
+  const ids=new Set(S.drops.map(d=>d.id));Object.keys(dropEls).forEach(id=>{if(!ids.has(id)){dropEls[id].remove();delete dropEls[id]}});
+  S.drops.forEach(dd=>{if(dropEls[dd.id])return;const e=document.createElement('div');e.className='drop';e.style.left=dd.x/W*100+'%';e.style.top=dd.y/H*100+'%';e.innerHTML='<img src="'+IMG['hedge-'+dd.k]+'">';e.addEventListener('click',ev=>{ev.stopPropagation();collectDrops([dd.id])});$('stage').appendChild(e);dropEls[dd.id]=e})}}
+setInterval(draw,500);
+/* ---------- เม่นเดินในคอก (วาดในเครื่องล้วน ไม่แตะฐานข้อมูล) ---------- */
+let lastT=0;function anim(t){requestAnimationFrame(anim);if(t-lastT<90)return;lastT=t;const now=Date.now();
+ hedges.forEach(h=>{if(now>h.until){const r=Math.random();if(h.mode==='walk'){h.mode=r<.75?'sniff':'curl';h.until=now+(h.mode==='sniff'?rnd(2500,5000):rnd(5000,9000))}else{h.mode='walk';h.tx=rnd(PEN.x0,PEN.x1);h.ty=rnd(PEN.y0,PEN.y1);h.until=now+15000}}
+  if(h.mode==='walk'){const dx=h.tx-h.x,dy=h.ty-h.y,d=Math.hypot(dx,dy);if(d<6){h.mode='sniff';h.until=now+rnd(2000,4000)}else{h.x+=dx/d*4;h.y+=dy/d*4;h.flip=dx<0}}
+  h.f=(h.f+1)%16;const sheet=h.mode==='walk'?IMG.walk:h.mode==='curl'?IMG.curl:IMG.sniff;
+  if(h.sheet!==sheet){h.sp.style.backgroundImage='url('+sheet+')';h.sheet=sheet}
+  h.sp.style.backgroundPosition=((h.f%4)*100/3)+'% '+(Math.floor(h.f/4)*100/3)+'%';
+  h.el.style.left=(h.x/W*100-3.6)+'%';h.el.style.top=(h.y/H*100-3.4)+'%';h.sp.classList.toggle('flip',h.flip);h.el.classList.toggle('curl',h.mode==='curl');h.el.style.zIndex=Math.round(h.y)});}
+requestAnimationFrame(anim);
+/* ---------- แผ่นเมนู ---------- */
+function open(html){$('sheetBody').innerHTML=html;$('sheet').classList.add('on');$('shade').classList.add('on')}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on')}
+$('shade').onclick=closeAll;
+function openBed(){if(resting())return toast('กำลังพักอยู่ ตื่นในอีก '+fmtT(S.rest.end-Date.now()),1);
+ open('<h3>🛏️ พักผ่อนบนเตียง</h3><div class="hint">ระหว่างพัก ทำอะไรในฟาร์มไม่ได้ ได้แค่ดู • พักเสร็จได้กุศลอัตโนมัติ</div>'+REST.map(r=>'<button class="opt" data-r="'+r[0]+'"><i>'+r[1]+'</i><span><b>'+r[2]+'</b><small>'+(r[3]>=60?r[3]/60+' ชั่วโมง':r[3]+' นาที')+'</small></span><span class="r">+'+r[4]+' กุศล</span></button>').join(''));
+ $('sheetBody').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const R=REST.find(x=>x[0]===b.dataset.r);S.rest={type:R[0],end:Date.now()+mins(R[3])};save();closeAll();draw();toast(R[1]+' เริ่ม'+R[2]+'แล้ว')})}
+const CARDK=['merit','growth','chef','honey','hedgehog','clover'];
+const FORT6=[['🙏','ดวงเศรษฐีมาเยือน','วันนี้กุศลที่ได้จากทุกระบบเพิ่ม 30%'],['🌱','ดวงชาวสวนมือทอง','วันนี้ผักและดอกไม้โตเร็วขึ้น 30%'],['🍳','ดวงแม่ครัวมือเทพ','วันนี้คราฟอาหารบ้านสำเร็จเพิ่ม 25%'],
+ ['🐷','ดวงน้ำผึ้งใจดี','วันนี้ฝากของให้น้องน้ำผึ้ง ได้กุศล ×2'],['🦔','ดวงเม่นนำโชค','วันนี้ของเม่นหล่นเพิ่มอีก 2 ชิ้นทุกครั้ง'],['🍀','ดวงโชคหล่นทับ','รับกุศล +10,000 ทันที!']];
+function openFortune(){if(guard())return;const day=new Date().toDateString();
+ if(S.fortune&&S.fortune.day===day){const f=FORT6[S.fortune.i];open('<h3>🔮 ดวงของวันนี้</h3><div class="card"><img class="cimg" src="'+IMG['card-'+CARDK[S.fortune.i]]+'"><b>'+f[1]+'</b><p>'+f[2]+'</p><div class="hint">เปิดไพ่ได้วันละ 1 ใบ พรุ่งนี้มาใหม่นะ</div></div>');($('fReset')||{}).onclick=()=>{S.fortune=null;save();openFortune()};return}
+ const deck=[0,1,2,3,4,5].sort(()=>Math.random()-.5);
+ open('<h3>🔮 เลือกไพ่ 1 ใบ</h3><div class="hint">ไพ่ที่เลือกจะบอกดวงของคุณวันนี้</div><div class="cards">'+deck.map((d,i)=>'<div class="tcard" data-i="'+i+'"><div class="in"><div class="bk"><img src="'+IMG['card-back']+'"></div><div class="fr"><img src="'+IMG['card-'+CARDK[d]]+'"></div></div></div>').join('')+'</div><div id="fRes"></div>');
+ $('sheetBody').querySelectorAll('.tcard').forEach(c=>c.onclick=()=>{if(S.fortune&&S.fortune.day===day)return;const d=deck[+c.dataset.i];S.fortune={day,i:d};if(d===5)S.merit+=10000;save();draw();
+  c.classList.add('flip');setTimeout(()=>{$('sheetBody').querySelectorAll('.tcard').forEach(o=>{if(o!==c)o.classList.add('dim')});const f=FORT6[d];$('fRes').innerHTML='<div class="card"><b>'+f[0]+' '+f[1]+'</b><p>'+f[2]+'</p></div>'},550)})}
+function needHTML(o){let ok=true;const parts=[];Object.entries(o.c||{}).forEach(([k,q])=>{const h=S.bag.crop[k]||0;if(h<q)ok=false;parts.push('<span class="'+(h<q?'no':'')+'">'+CROPN[k]+' '+h+'/'+q+'</span>')});
+ Object.entries(o.f||{}).forEach(([k,q])=>{const h=S.bag.flower[k]||0;if(h<q)ok=false;parts.push('<span class="'+(h<q?'no':'')+'">'+FLOWERS[k][0]+' '+h+'/'+q+'</span>')});return[ok,parts.join('')]}
+function needQty(o,n){let ok=true;const parts=[];const add=(have,name,q)=>{if(have<q)ok=false;parts.push('<span class="'+(have<q?'no':'')+'">'+name+' '+have.toLocaleString()+'/'+q.toLocaleString()+'</span>')};
+ Object.entries(o.c||{}).forEach(([k,q])=>add(S.bag.crop[k]||0,CROPN[k],q*n));Object.entries(o.f||{}).forEach(([k,q])=>add(S.bag.flower[k]||0,FLOWERS[k][0],q*n));return[ok,parts.join('')]}
+function maxCraft(o){let m=10;Object.entries(o.c||{}).forEach(([k,q])=>m=Math.min(m,Math.floor((S.bag.crop[k]||0)/q)));Object.entries(o.f||{}).forEach(([k,q])=>m=Math.min(m,Math.floor((S.bag.flower[k]||0)/q)));return m}
+function openKitchen(){if(guard())return;open('<h3>🔥 ครัว • อาหารบ้าน</h3><div class="hint">แตะเมนูเพื่อเลือกจำนวน • ชื่อเมนูและตัวเลขเป็นของชั่วคราว</div>'+FOODS.map((f,i)=>{const[ok,h]=needQty(f[2],1);return '<button class="opt" data-i="'+i+'"><i>'+f[3]+'</i><span><b>'+f[0]+'</b><span class="need">'+h+'</span></span><span class="r">'+f[1]+'%</span></button>'}).join(''));
+ $('sheetBody').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openCraft(+b.dataset.i,1))}
+function openCraft(i,n){const f=FOODS[i],mx=maxCraft(f[2]);n=Math.max(1,Math.min(10,n));const[ok,h]=needQty(f[2],n);
+ open('<h3>'+f[3]+' '+f[0]+'</h3><div class="hint">โอกาสสำเร็จครั้งละ '+f[1]+'% • คราฟได้สูงสุด 10 ครั้งต่อรอบ</div>'+
+  '<div class="qty"><button id="qm">−</button><b>'+n+'</b><button id="qp">＋</button><button class="mx" id="qx">สูงสุด ('+Math.max(1,mx)+')</button></div>'+
+  '<div class="hint" style="margin:.5rem 0 .2rem">วัตถุดิบที่จะใช้ทั้งหมด</div><div class="need" style="justify-content:center">'+h+'</div>'+
+  '<div class="hint" style="margin-top:.5rem">ถ้าไม่สำเร็จ วัตถุดิบก็ถูกใช้ไปแล้วนะ</div>'+
+  '<div class="row2"><button class="btn2 gray" id="cNo">ยกเลิก</button><button class="btn2" id="cGo"'+(ok?'':' disabled')+'>'+(ok?'ยืนยันคราฟ '+n+' ครั้ง':'วัตถุดิบไม่พอ')+'</button></div>');
+ $('qm').onclick=()=>openCraft(i,n-1);$('qp').onclick=()=>openCraft(i,n+1);$('qx').onclick=()=>openCraft(i,Math.max(1,mx));$('cNo').onclick=openKitchen;
+ $('cGo').onclick=()=>{if(!needQty(f[2],n)[0])return;Object.entries(f[2].c||{}).forEach(([k,q])=>S.bag.crop[k]-=q*n);Object.entries(f[2].f||{}).forEach(([k,q])=>S.bag.flower[k]-=q*n);
+  const res=[];for(let t=0;t<n;t++)res.push(Math.random()*100<f[1]);const ok2=res.filter(Boolean).length;S.bag.food[f[0]]=(S.bag.food[f[0]]||0)+ok2;save();
+  open('<div class="result"><div class="big">'+f[3]+'</div><h3>'+(ok2?'คราฟสำเร็จ '+ok2+' จาก '+n+' ครั้ง!':'ไม่สำเร็จเลยสักครั้ง')+'</h3><div class="hint">'+f[0]+'</div><div class="tries">'+res.map((r,t)=>'<span class="'+(r?'ok':'no')+'">'+(t+1)+'<br>'+(r?'✅':'❌')+'</span>').join('')+'</div>'+
+   (ok2?'<div class="got"><span>'+f[3]+'</span><b>'+f[0]+' ×'+ok2+'</b></div>':'<div class="hint">วัตถุดิบถูกใช้ไปแล้ว ลองใหม่นะ</div>')+
+   '<div class="row2"><button class="btn2 gray" id="rBack">คราฟต่อ</button><button class="btn2" id="rOk">'+(ok2?'🎒 รับเข้ากระเป๋า':'ปิด')+'</button></div></div>');
+  $('rOk').onclick=()=>{closeAll();if(ok2)toast(f[0]+' ×'+ok2+' เข้ากระเป๋าแล้ว')};$('rBack').onclick=openKitchen}}
+function openFlowerPick(i){open('<h3>🌸 '+(i<0?'ปลูกดอกไม้ทั้งหมด':'ปลูกดอกไม้ แปลงที่ '+(i+1))+'</h3><div class="hint">'+(i<0?'เลือก 1 ชนิด ปลูกทุกแปลงที่ว่าง':'แตะดอกไม้ที่อยากปลูก')+'</div><div class="grid">'+Object.entries(FLOWERS).map(([k,f])=>'<div class="cell" data-k="'+k+'"><img src="'+IMG['fl-'+k]+'"><b>'+f[0]+'</b><span>'+(f[1]>=60?(f[1]/60).toFixed(f[1]%60?1:0)+' ชม.':f[1]+' นาที')+'</span></div>').join('')+'</div>');
+ $('sheetBody').querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>{const k=c.dataset.k,now=Date.now();if(i<0){let n=0;S.plots.forEach((p,j)=>{if(!p){S.plots[j]={f:k,t:now};n++}});toast('ปลูก'+FLOWERS[k][0]+' '+n+' แปลงแล้ว')}else{S.plots[i]={f:k,t:now};toast('ปลูก'+FLOWERS[k][0]+'แล้ว')}save();closeAll();draw()})}
+function tapPlot(i){if(guard())return;const p=S.plots[i];if(!p)return openFlowerPick(i);const st=fStage(p),F=FLOWERS[p.f];
+ if(st===3){harvestFlowers([i]);return}
+ open('<h3>'+F[0]+' • แปลงที่ '+(i+1)+'</h3><div class="hint">บานในอีก '+fmtT(p.t+mins(F[1])-Date.now())+'</div><button class="opt" id="oF"'+(S.bag.item.fert<F[2]?' disabled':'')+'><i><img src="'+IMG['it-fert']+'"></i><span><b>ใส่ปุ๋ยนางฟ้า</b><small>บานพร้อมเก็บทันที • ใช้ '+F[2]+' ชิ้น</small></span><span class="r">มี '+S.bag.item.fert+'</span></button>');
+ $('oF').onclick=()=>{if(S.bag.item.fert<F[2])return toast('ปุ๋ยนางฟ้าไม่พอนะ',1);S.bag.item.fert-=F[2];p.t=Date.now()-mins(F[1]);save();closeAll();draw();toast('🌼 '+F[0]+'บานแล้ว!')}}
+function fertAll(){if(guard())return;const l=S.plots.map((p,i)=>p&&fStage(p)<3?i:-1).filter(i=>i>=0);if(!l.length)return toast('ไม่มีดอกไม้ที่กำลังโตนะ',1);
+ const need=l.reduce((s,i)=>s+FLOWERS[S.plots[i].f][2],0);
+ open('<h3>🌼 ใส่ปุ๋ยนางฟ้าทั้งหมด</h3><div class="hint">ดอกไม้ที่กำลังโต '+l.length+' แปลง • แต่ละชนิดใช้ปุ๋ยไม่เท่ากัน</div><button class="opt" id="oFA"'+(S.bag.item.fert<need?' disabled':'')+'><i><img src="'+IMG['it-fert']+'"></i><span><b>ใส่ทั้งหมด '+l.length+' แปลง</b><small>ต้องใช้ '+need+' ชิ้น</small></span><span class="r">มี '+S.bag.item.fert+'</span></button>'+(S.bag.item.fert<need?'<div class="hint">ปุ๋ยไม่พอ ใส่ทีละแปลงแทนได้</div>':''));
+ $('oFA').onclick=()=>{if(S.bag.item.fert<need)return;S.bag.item.fert-=need;l.forEach(i=>S.plots[i].t=Date.now()-mins(FLOWERS[S.plots[i].f][1]));save();closeAll();draw();toast('🌼 ดอกไม้บานทั้งหมด '+l.length+' แปลง')}}
+function harvestFlowers(l){const got={};l.forEach(i=>{const p=S.plots[i];if(!p||fStage(p)<3)return;const q=10;got[p.f]=(got[p.f]||0)+q;S.bag.flower[p.f]=(S.bag.flower[p.f]||0)+q;S.plots[i]=null});save();draw();
+ const t=Object.entries(got).map(([k,q])=>FLOWERS[k][0]+' ×'+q).join(' • ');if(t)toast('💐 เก็บเข้ากระเป๋าดอกไม้: '+t)}
+function pickAll(){if(guard())return;const l=S.plots.map((p,i)=>p&&fStage(p)===3?i:-1).filter(i=>i>=0);if(!l.length)return toast('ยังไม่มีดอกไม้บานนะ',1);harvestFlowers(l)}
+function tapBarrel(i){if(guard())return;const b=S.barrels[i];
+ if(b&&Date.now()>=b.end){S.bag.wine[b.w]=(S.bag.wine[b.w]||0)+1;S.barrels[i]=null;save();draw();return toast('🍷 ได้'+WINES[b.w][0]+' เข้ากระเป๋าแล้ว')}
+ if(b)return toast(WINES[b.w][0]+' • อีก '+fmtT(b.end-Date.now()));
+ open('<h3>🍷 หมักไวน์ ถังที่ '+(i+1)+'</h3><div class="hint">ใช้ผักจากกระเป๋า • หมักเสร็จแล้วแตะถังเพื่อเก็บ</div>'+Object.entries(WINES).map(([k,w])=>{const[ok,h]=needHTML({c:w[2]});return '<button class="opt" data-w="'+k+'"'+(ok?'':' disabled')+'><i><img src="'+IMG['wine-'+k]+'"></i><span><b>'+w[0]+'</b><span class="need">'+h+'</span></span><span class="r">'+w[1]+' ชม.</span></button>'}).join(''));
+ $('sheetBody').querySelectorAll('[data-w]').forEach(btn=>btn.onclick=()=>{const k=btn.dataset.w,w=WINES[k];Object.entries(w[2]).forEach(([c,q])=>S.bag.crop[c]-=q);S.barrels[i]={w:k,t:Date.now(),end:Date.now()+mins(w[1]*60)};save();closeAll();draw();toast('เริ่มหมัก'+w[0]+'แล้ว')})}
+function collectDrops(ids){if(guard())return;const got={};S.drops=S.drops.filter(d=>{if(ids.includes(d.id)){got[d.k]=(got[d.k]||0)+1;S.bag.hedge[d.k]=(S.bag.hedge[d.k]||0)+1;return false}return true});save();draw();
+ toast('🦔 เก็บ '+Object.entries(got).map(([k,q])=>DROPS[k]+' ×'+q).join(' • '))}
+let bagTab='flower';
+function openBag(){const T={crop:'🥬 ผัก',flower:'🌸 ดอกไม้',wine:'🍷 ไวน์',food:'🍲 อาหารบ้าน',hedge:'🦔 ของเม่น',item:'✨ ไอเทม'};
+ const render=()=>{const e=Object.entries(S.bag[bagTab]).filter(([,q])=>q>0);
+  const name=k=>bagTab==='crop'?(CROPN[k]||k):bagTab==='flower'?FLOWERS[k][0]:bagTab==='wine'?WINES[k][0]:bagTab==='hedge'?DROPS[k]:bagTab==='item'?{fert:'ปุ๋ยนางฟ้า',cake:'เค้ก',coconut:'มะพร้าว',angel:'ปีกนางฟ้า'}[k]:k;
+  const im=k=>{const fi=FOODS.findIndex(f=>f[0]===k);return bagTab==='flower'?'<img src="'+IMG['fl-'+k]+'">':bagTab==='wine'?'<img src="'+IMG['wine-'+k]+'">':bagTab==='hedge'?'<img src="'+IMG['hedge-'+k]+'">':bagTab==='food'&&fi>=0?FOODS[fi][3]:bagTab==='item'&&k==='fert'?'<img src="'+IMG['it-fert']+'">':'<div style="font-size:1.8rem">'+(bagTab==='crop'?'🥬':bagTab==='item'?({cake:'🍰',coconut:'🥥',angel:'🪽'}[k]||'✨'):'🍲')+'</div>'};
+  open('<h3>🎒 กระเป๋า</h3><div class="hint">🙏 '+S.merit.toLocaleString()+' กุศล</div><div class="tabs">'+Object.entries(T).map(([k,v])=>'<button data-t="'+k+'" class="'+(k===bagTab?'on':'')+'">'+v+'</button>').join('')+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell">'+im(k)+'<b>'+name(k)+'</b><span>×'+q.toLocaleString()+'</span></div>').join(''):'<div class="empty">ยังไม่มีของในแผนกนี้</div>')+'</div>');
+  $('sheetBody').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{bagTab=b.dataset.t;render()})};render()}
+function openSet(){open('<h3>⚙️ ตั้งค่าหน้าทดลอง</h3><div class="hint">มีเฉพาะในตัวอย่างนี้</div><div class="hint" style="margin:.2rem 0">⏱️ ความเร็วเวลา</div><div class="speed" id="sp"><button data-s="60">1 ชม. = 1 นาที</button><button data-s="360">1 ชม. = 10 วิ</button><button data-s="1800">1 ชม. = 2 วิ</button></div>'+
+ '<div class="hint" style="margin:.8rem 0 .2rem">🏠 เลเวลบ้าน (จำนวนเม่น 1 / 3 / 5 ตัว)</div><div class="speed" id="lv"><button data-l="1">Lv.1</button><button data-l="2">Lv.2</button><button data-l="3">Lv.3</button></div>'+
+ '<div style="text-align:center;margin-top:1rem"><button class="link" id="rs">ล้างข้อมูลทดลองทั้งหมด</button></div>');
+ $('sp').querySelectorAll('button').forEach(b=>{b.classList.toggle('on',+b.dataset.s===speed);b.onclick=()=>{speed=+b.dataset.s;closeAll();toast('เปลี่ยนความเร็วเวลาแล้ว')}});
+ $('lv').querySelectorAll('button').forEach(b=>{b.classList.toggle('on',+b.dataset.l===S.lv);b.onclick=()=>{S.lv=+b.dataset.l;save();closeAll();build();toast('บ้าน Lv.'+S.lv+' • เม่น '+({1:1,2:3,3:5}[S.lv])+' ตัว')}});
+ $('rs').onclick=()=>{if(!confirm('ล้างข้อมูลทดลองทั้งหมด?'))return;S=fresh();save();closeAll();build();toast('เริ่มใหม่แล้ว')}}
+addEventListener('resize',fit);fit();build();
+
+function setFan(items){const f=$('fan');f.innerHTML=items.map((it,i)=>'<button data-i="'+i+'"><i>'+it[0]+'</i>'+it[1]+'</button>').join('');f._items=items;f.classList.remove('open');$('toolBtn').classList.remove('open')}
+$('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
+$('fan').addEventListener('click',e=>{const b=e.target.closest('button');const f=$('fan');if(!b||!f.classList.contains('open'))return;f.classList.remove('open');$('toolBtn').classList.remove('open');f._items[+b.dataset.i][2]()});
+
+</script><script>/* ===== 🧰 เมนูเครื่องมือ 2 ชั้น: หมวด → รายการ ===== */
+(function(){
+const fan=document.getElementById('fan'),tool=document.getElementById('toolBtn');if(!fan||!tool)return;
+const st=document.createElement('style');st.textContent='.fan .fg-hide{display:none!important}.fan .fcat i{background:#FFF3C9!important}.fan .fcat.back i{background:#EEE!important}.fan .fcat b{font-weight:700}';document.head.appendChild(st);
+const CATS=[['other','⚙️','อื่นๆ',/ตั้งค่าทดลอง|กลับฟาร์ม|กระเป๋า|ขึ้นบ้าน|ลงห้องใต้ดิน/],['box','🎁','กล่องสุ่ม',/กล่องสุ่ม/],['animal','🐾','สัตว์',/^วาง(แมว|แฮมสเตอร์)/],
+ ['care','💕','ดูแล',/อาบน้ำ|นวด|เอนเตอร์เทน/],['food','🍽️','อาหาร',/คราฟอาหาร|เตา|ให้อาหาร|ดื่ม/],['craft','🔨','คราฟ',/คราฟ/],
+ ['harvest','🧺','เก็บ',/เก็บ|เกี่ยว/],['grow','🌱','ดูแลแปลง',/ปลูก|รดน้ำ|หนอน|เร่ง|ปีก|ปุ๋ย/]];
+let cur='',self=false;
+const items=()=>[...fan.children].filter(b=>b.tagName==='BUTTON'&&!b.classList.contains('fcat'));
+const usable=b=>b.style.display!=='none';
+const label=b=>[...b.childNodes].filter(n=>n.nodeName!=='I').map(n=>n.textContent).join('').replace(/\s+/g,' ').trim();
+function catOf(b){const t=label(b);for(const c of CATS)if(c[3].test(t))return c[0];return 'other'}
+function render(){self=true;fan.querySelectorAll('.fcat').forEach(e=>e.remove());const list=items(),av=list.filter(usable);
+ if(av.length<=4){list.forEach(b=>b.classList.remove('fg-hide'));setTimeout(()=>{self=false},0);return}
+ const groups={};av.forEach(b=>{const c=catOf(b);(groups[c]=groups[c]||[]).push(b)});
+ if(!cur||!groups[cur]){cur='';list.forEach(b=>b.classList.add('fg-hide'));
+  CATS.slice().reverse().forEach(([k,ic,nm])=>{const g=groups[k];if(!g)return;
+   if(g.length===1){g[0].classList.remove('fg-hide');fan.appendChild(g[0]);return}
+   const c=document.createElement('button');c.className='fcat';c.dataset.cat=k;c.innerHTML='<i>'+ic+'</i><b>'+nm+'</b> <small style="opacity:.6">('+g.length+')</small>';fan.appendChild(c)})}
+ else{list.forEach(b=>b.classList.toggle('fg-hide',!groups[cur].includes(b)));const back=document.createElement('button');back.className='fcat back';back.dataset.cat='';back.innerHTML='<i>↩</i>หมวดทั้งหมด';fan.insertBefore(back,fan.firstChild)}
+ setTimeout(()=>{self=false},0)}
+fan.addEventListener('click',e=>{const c=e.target.closest('.fcat');if(!c)return;e.stopImmediatePropagation();e.preventDefault();cur=c.dataset.cat;render()},true);
+tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
+new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
+render();
+})();
+</script><script>(function(){const H=parent.__HOST;
+const UP={2:{wood:2000,stone:2000,rope:100,steel:100},3:{wood:5000,stone:5000,rope:300,steel:300}};
+window.openUpgrade=function(){const nx=(S.lv||1)+1;if(nx>3)return toast('🏠 บ้านเลเวลสูงสุดแล้ว');const need=UP[nx],f=S.bag.forest||{};let ok=true;
+ const rows=Object.entries(need).map(([k,n])=>{const h=f[k]||0;if(h<n)ok=false;return '<div style="display:flex;justify-content:space-between;padding:.2rem 0"><span>'+{wood:'ไม้',stone:'หิน',rope:'เชือก',steel:'เหล็ก'}[k]+'</span><b style="color:'+(h>=n?'#2F8A65':'#C8443D')+'">'+Math.min(h,n).toLocaleString()+' / '+n.toLocaleString()+'</b></div>'}).join('');
+ H.ask('🏠 อัปเกรดบ้านเป็น Lv.'+nx,rows+'<div style="font-size:.75rem;color:#9A7A68;margin-top:.3rem">บ้านใหญ่ขึ้น เม่นแคระเพิ่มเป็น '+({2:3,3:5}[nx])+' ตัว</div>',ok?'อัปเกรดเลย':'',()=>{for(const k in need)S.bag.forest[k]-=need[k];S.lv=nx;save();build();toast('🎉 บ้านเลเวล '+nx+' แล้ว!')})};
+const b=document.createElement('button');b.textContent='🏠⬆️';b.title='อัปเกรดบ้าน';b.style.cssText='position:fixed;left:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);z-index:30;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.92);font-size:1.05rem;padding:.35rem .6rem;box-shadow:0 3px 8px rgba(0,0,0,.2)';b.onclick=()=>openUpgrade();document.body.appendChild(b);
+})();</script></body></html>
