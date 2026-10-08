@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ร้านค้าลึกลับ – ในสวนของยัยหนู</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--cream:#FFFBF5;--mint:#BDEBDD;--pig:#F6A9BD;--up:#2E9E6A;--dn:#D2506A;--chalk:#F4F1E6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cream:#FFFBF5}}
+:root[data-theme="dark"]{--cream:#FFFBF5}
+*{box-sizing:border-box}html{height:100%;-webkit-text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#3a2a1c}
+body{font-family:'Mali','Sukhumvit Set',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover;filter:blur(18px) brightness(.7)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;container-type:inline-size}
+.board{position:absolute;left:15.5%;right:15.5%;top:23.6%;height:24.6%;display:flex;flex-direction:column;color:var(--chalk);overflow:hidden}
+.ticker{white-space:nowrap;overflow:hidden;font-size:2.9cqw;font-weight:700;color:#FFE9A8;border-bottom:1px dashed rgba(255,255,255,.35);padding:.6% 0}
+.ticker span{display:inline-block;padding-left:100%;animation:tick 22s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+.srow{flex:1;min-height:0;display:flex;align-items:center;gap:2%;padding:0 1%;border-bottom:1px dashed rgba(255,255,255,.18);cursor:pointer}
+.srow img{width:6.5cqw;height:6.5cqw;flex:none}
+.srow b{width:24%;font-size:3.3cqw;font-weight:700;white-space:nowrap}
+.srow .p{width:22%;text-align:right;font-size:3.5cqw;font-weight:800}
+.srow .c{width:17%;text-align:right;font-size:3cqw;font-weight:800}
+.srow svg{flex:1;height:5cqw;min-width:0}
+.up{color:#8EF0B5}.dn{color:#FFA3B5}
+.counter{position:absolute;left:13%;right:13%;top:71%;display:grid;grid-template-columns:1fr 1fr;gap:3cqw}
+.cbtn{border:3px solid #fff;border-radius:3cqw;padding:2.2cqw 1cqw;font-weight:800;font-size:3.6cqw;cursor:pointer;background:linear-gradient(#FFF6E6,#F3DDB8);box-shadow:0 1.2cqw 0 #b9895a,0 2cqw 4cqw rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;gap:1.5cqw;color:var(--cocoa)}
+.cbtn img{width:7cqw;height:7cqw;object-fit:contain}
+.top{position:fixed;z-index:6;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + .45rem) .5rem 0;display:flex;gap:.35rem;align-items:center}
+.chip{background:rgba(255,251,245,.95);border:3px solid #fff;border-radius:999px;padding:.25rem .6rem;font-weight:700;font-size:.72rem;box-shadow:0 4px 12px rgba(0,0,0,.25);white-space:nowrap}
+.chip.btn{cursor:pointer}.chip.adm{background:#FFF3C9}
+.sp{margin-left:auto}
+.ann{position:fixed;z-index:30;left:50%;top:calc(env(safe-area-inset-top,0px) + 3rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:1rem;padding:.45rem .8rem;font-size:.78rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;max-width:94vw;font-weight:600}
+.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:var(--pig);background:#FFF4F6}
+.shade{position:fixed;inset:0;z-index:18;background:rgba(20,10,0,.5);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:19;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:88vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin:.2rem 0 .5rem;line-height:1.45}
+.big{border:3px solid #fff;border-radius:999px;font-weight:800;font-size:.86rem;padding:.55rem 1.05rem;cursor:pointer;background:#6CC9A8;color:#fff;box-shadow:0 4px 0 #4DAA8A}
+.big.red{background:#E8677E;box-shadow:0 4px 0 #c24a62}.big.gold{background:linear-gradient(#F5CF6A,#E2A93B);box-shadow:0 4px 0 #b9822a}
+.big:disabled{background:#cfd8d6;box-shadow:none}
+.ghost{border:2px solid #E9DCCD;background:#fff;border-radius:999px;padding:.45rem .9rem;font-weight:700;cursor:pointer}
+.btns{display:flex;gap:.5rem;justify-content:center;margin-top:.6rem;flex-wrap:wrap}
+.tabs{display:flex;gap:.3rem;margin:.3rem 0}.tab{flex:1;border:2px solid #F3E9DE;background:#fff;border-radius:999px;padding:.25rem;font-weight:700;font-size:.74rem;cursor:pointer}.tab.on{background:var(--mint);border-color:#9EDDBE}
+.chart{background:#2f4a3c;border-radius:1rem;padding:.4rem;border:3px solid #fff;box-shadow:inset 0 0 0 2px #23382d}
+.chart svg{width:100%;height:9rem;display:block}
+.pin{cursor:pointer}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;margin:.5rem 0}
+.kv div{background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem .5rem;font-size:.7rem}
+.kv b{display:block;font-size:.9rem}
+.stepper{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.4rem 0}
+.stepper button{min-width:2.4rem;height:2.2rem;border-radius:999px;border:2px solid #E9DCCD;background:#fff;font-weight:800;cursor:pointer}
+.stepper b{font-size:1.15rem;min-width:2.6rem;text-align:center}
+.item{display:flex;align-items:center;gap:.55rem;background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.35rem .6rem;margin-bottom:.3rem;font-size:.78rem}
+.item img{width:2.8rem;height:2.8rem;object-fit:contain}.item .m{flex:1}.item small{display:block;color:var(--soft);font-size:.66rem}
+.item .bonus{color:var(--up);font-weight:800}
+.item.off{opacity:.5}
+.lot{display:flex;align-items:center;gap:.4rem;background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem .5rem;margin-bottom:.25rem;font-size:.72rem}
+.lot .m{flex:1}.lot .pl{font-weight:800}
+.news{display:flex;gap:.4rem;align-items:center;background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem .5rem;margin-bottom:.25rem;font-size:.72rem;cursor:pointer}
+.news .m{flex:1}.news .e{font-weight:800;white-space:nowrap}
+.gbox{font-size:3rem;text-align:center}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"></div></div>
+<div class="top" id="top"></div>
+<div class="shade" id="shade"></div><div class="sheet" id="sheet"></div><div class="ann" id="ann"></div>
+<script type="module" src="shop.js"></script></body></html>

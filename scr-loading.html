@@ -1,0 +1,88 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตัวอย่างหน้าโหลด – ในสวนของยัยหนู</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;overflow:hidden}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);background:#9fd8ea}
+.farm{position:fixed;inset:0;background:url(images/farm1-bg.webp) center/cover}
+/* หน้าโหลด */
+.load{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ background:linear-gradient(180deg,#CDEEFA 0%,#E4F7F1 55%,#FFF3EA 100%);
+ clip-path:circle(150% at 50% 100%);transition:clip-path 1s cubic-bezier(.6,0,.3,1)}
+.load.done{clip-path:circle(0% at 50% 100%)}
+.cloud{position:absolute;font-size:40px;opacity:.8;animation:drift 14s linear infinite}
+@keyframes drift{from{transform:translateX(-30vw)}to{transform:translateX(110vw)}}
+.ttl{font-weight:700;font-size:22px;margin-bottom:28px;text-align:center;line-height:1.4}
+.ttl small{display:block;font-size:14px;font-weight:600;color:#F08A3C}
+.track{position:relative;width:min(300px,78vw);height:70px}
+.water{position:absolute;left:0;right:0;bottom:0;height:26px;border-radius:14px;background:#D6EFF6;overflow:hidden;border:3px solid #fff;box-shadow:0 4px 12px rgba(70,150,180,.2)}
+.fill{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,#9FE0D6,#6FC6E4);transition:width .5s ease}
+.fill::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(110deg,rgba(255,255,255,.35) 0 8px,transparent 8px 18px);animation:flow 1s linear infinite}
+@keyframes flow{to{background-position:36px 0}}
+.raft{position:absolute;bottom:14px;left:0;transform:translateX(-50%);transition:left .5s ease;text-align:center;animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{50%{margin-bottom:4px}}
+.raft .pig{font-size:30px;display:block;margin-bottom:-6px}
+.raft .boat{display:block;width:48px;height:10px;margin:0 auto;border-radius:6px;background:repeating-linear-gradient(90deg,#B07A4C 0 10px,#9A673D 10px 12px);border:2px solid #7A4A2E}
+.pct{margin-top:14px;font-weight:700;font-size:20px}
+.step{margin-top:4px;font-size:15px;min-height:24px}
+.hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);font-size:12.5px;color:var(--soft)}
+/* หลังโหลด */
+.save{position:fixed;z-index:3;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);background:rgba(255,251,245,.9);
+ border:2px solid #fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(70,150,180,.25)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:6;transform:translate(-50%,-12px);opacity:0;
+ background:var(--cream);border:2px solid var(--mint);border-radius:999px;padding:9px 18px;font-size:14.5px;white-space:nowrap;
+ box-shadow:0 6px 18px rgba(70,150,180,.25);transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.tap{position:fixed;z-index:3;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);
+ font-size:12.5px;background:rgba(255,255,255,.85);border-radius:999px;padding:4px 12px;color:var(--soft)}
+.replay{position:fixed;z-index:3;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);border:2px solid #fff;border-radius:999px;
+ background:rgba(255,236,190,.95);font:inherit;font-size:13px;font-weight:600;color:var(--cocoa);padding:4px 12px;cursor:pointer}
+.ripple{position:fixed;z-index:4;width:20px;height:20px;border-radius:50%;border:3px solid #fff;pointer-events:none;animation:rp .6s ease-out forwards}
+@keyframes rp{to{transform:scale(4);opacity:0}}
+@media (prefers-reduced-motion:reduce){.cloud,.raft,.fill::after{animation:none}.load{transition:none}}
+</style>
+<style>
+.load{background:linear-gradient(180deg,#CFEFFF 0%,#E6F7FF 40%,#F2FBFF 100%)!important}
+.track{position:static!important;width:auto!important;height:auto!important}
+.track .water{display:none}
+.sea{position:absolute;left:0;right:0;bottom:0;height:22%;background:linear-gradient(180deg,#7FD3EE 0%,#4FB6DD 45%,#2E8FC2 100%);transition:height .6s ease;z-index:1;overflow:visible}
+.sea::before,.sea::after{content:"";position:absolute;left:-10%;right:-10%;height:28px;top:-22px;background-repeat:repeat-x;background-size:160px 28px}
+.sea::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 28'%3E%3Cpath d='M0 14 Q20 2 40 14 T80 14 T120 14 T160 14 V28 H0Z' fill='%237FD3EE'/%3E%3C/svg%3E");animation:wv 5s linear infinite}
+.sea::after{top:-14px;opacity:.55;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 28'%3E%3Cpath d='M0 14 Q20 26 40 14 T80 14 T120 14 T160 14 V28 H0Z' fill='%23ffffff'/%3E%3C/svg%3E");animation:wv 3.2s linear infinite reverse}
+@keyframes wv{to{transform:translateX(160px)}}
+.sea .shine{position:absolute;inset:0;background:repeating-linear-gradient(100deg,rgba(255,255,255,.12) 0 14px,transparent 14px 46px);animation:shine 6s linear infinite;mix-blend-mode:screen}
+@keyframes shine{to{background-position:200px 0}}
+.bub{position:absolute;bottom:-10px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.75);background:rgba(255,255,255,.18);animation:bubup linear infinite}
+@keyframes bubup{to{transform:translateY(-38vh) translateX(10px);opacity:0}}
+.lily{position:absolute;top:-6px;font-size:22px;animation:bob 2.6s ease-in-out infinite}
+.fishj{position:absolute;font-size:24px;opacity:0;animation:jump 4.5s ease-in-out infinite}
+@keyframes jump{0%,55%{opacity:0;transform:translate(0,30px) rotate(-40deg)}62%{opacity:1}75%{transform:translate(40px,-46px) rotate(10deg)}88%{opacity:1;transform:translate(80px,10px) rotate(60deg)}100%{opacity:0;transform:translate(90px,40px) rotate(70deg)}}
+#raft{position:absolute!important;left:50%!important;bottom:calc(100% - 26px)!important;transform:translateX(-50%);z-index:3;transition:none!important;animation:rock 2.2s ease-in-out infinite!important}
+@keyframes rock{0%,100%{transform:translateX(-50%) rotate(-4deg)}50%{transform:translateX(-50%) translateY(-5px) rotate(4deg)}}
+.ripl{position:absolute;left:50%;top:-2px;width:150px;height:16px;margin-left:-75px;border-radius:50%;border:2px solid rgba(255,255,255,.7);animation:rpl 2.2s ease-out infinite;z-index:2}
+@keyframes rpl{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.4);opacity:0}}
+.pct{position:relative;z-index:4;background:rgba(255,255,255,.75);border-radius:999px;padding:2px 14px;font-size:16px!important}
+.step{position:relative;z-index:4}
+.ttl{position:relative;z-index:4}
+</style></head><body>
+<div class="farm" id="farm"></div>
+
+
+
+
+<div class="load" id="load">
+ <span class="cloud" style="top:12%;animation-delay:-3s">☁️</span>
+ <span class="cloud" style="top:24%;font-size:28px;animation-duration:20s;animation-delay:-11s">☁️</span>
+ <div class="ttl">ในสวนของยัยหนู<small>ซีซั่น 3</small></div>
+ <div class="track"><div class="water"><div class="fill" id="fill"></div></div>
+  <div class="raft" id="raft"><img src="images/honey-raft-loading.webp" style="width:104px;display:block"></div></div>
+ <div class="pct" id="pct">0%</div>
+ <div class="step" id="step"></div>
+ 
+<div class="sea" id="sea"><div class="shine"></div><div class="ripl"></div><span class="bub" style="left:8%;width:8px;height:8px;animation-duration:5.2s;animation-delay:-1.0s"></span><span class="bub" style="left:18%;width:12px;height:12px;animation-duration:6.5s;animation-delay:-3.0s"></span><span class="bub" style="left:31%;width:7px;height:7px;animation-duration:4.6s;animation-delay:-2.0s"></span><span class="bub" style="left:47%;width:10px;height:10px;animation-duration:5.8s;animation-delay:-4.0s"></span><span class="bub" style="left:62%;width:8px;height:8px;animation-duration:4.9s;animation-delay:-1.5s"></span><span class="bub" style="left:74%;width:13px;height:13px;animation-duration:6.9s;animation-delay:-2.5s"></span><span class="bub" style="left:88%;width:9px;height:9px;animation-duration:5.4s;animation-delay:-0.5s"></span><span class="lily" style="left:6%">🪷</span><span class="lily" style="left:82%;animation-delay:-1.2s">🍃</span><span class="fishj" style="left:12%;top:30px">🐟</span><span class="fishj" style="left:58%;top:40px;animation-delay:-2.2s">🐠</span><span id="raftSlot"></span></div></div>
+<div class="toast" id="toast"></div>
+<script src="loading.js?v=ss3-20261008-images2"></script></body></html>

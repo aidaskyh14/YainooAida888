@@ -1,0 +1,107 @@
+<html lang="th"><head><!-- frame-runtime --><!-- /frame-runtime --><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลอง Top Spenders – ในสวนของยัยหนู</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--cream:#FFFBF5;--gold:#E8B440}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;font-family:'Mali',sans-serif;color:var(--cocoa);background:radial-gradient(circle at 50% 0%,#FFF6DA,#FDE2EC 45%,#E3F3FF);-webkit-tap-highlight-color:transparent}
+.wrap{max-width:30rem;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 1rem) 1rem calc(env(safe-area-inset-bottom,0px) + 6rem)}
+.head{text-align:center;margin-bottom:.4rem}
+.head small{display:block;font-weight:700;letter-spacing:.15em;color:#C08A2E;font-size:.7rem}
+.head h1{margin:.1rem 0;font-size:1.6rem;background:linear-gradient(90deg,#B66DE0,#E8B440,#F28AA8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head p{margin:0;font-size:.72rem;color:var(--soft)}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:.5rem;margin:1.2rem 0 1rem;position:relative}
+.col{flex:1;max-width:8rem;text-align:center;position:relative}
+.av{width:3.6rem;height:3.6rem;border-radius:50%;margin:0 auto .25rem;display:grid;place-items:center;font-weight:800;font-size:1.4rem;color:#fff;border:3px solid #fff;box-shadow:0 6px 14px rgba(0,0,0,.15);position:relative}
+.c1 .av{width:4.6rem;height:4.6rem;font-size:1.8rem}
+.c1 .av::before{content:"👑";position:absolute;top:-1.35rem;font-size:1.4rem;animation:cr 2.4s ease-in-out infinite}
+@keyframes cr{50%{transform:translateY(-3px) rotate(-6deg)}}
+.nm{font-weight:800;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt{font-size:.72rem;color:#B9761F;font-weight:700}
+.step{margin-top:.35rem;border-radius:1rem 1rem .4rem .4rem;display:grid;place-items:center;font-size:1.6rem;color:#fff;font-weight:800;box-shadow:inset 0 -6px 0 rgba(0,0,0,.08),0 6px 14px rgba(0,0,0,.1)}
+.c1 .step{height:6.5rem;background:linear-gradient(180deg,#FFE18A,#E8B440)}
+.c2 .step{height:4.8rem;background:linear-gradient(180deg,#E9EEF5,#B8C3D2)}
+.c3 .step{height:3.8rem;background:linear-gradient(180deg,#F6D2B8,#D99B70)}
+.spark{position:absolute;inset:-1rem 0 auto;height:8rem;pointer-events:none}
+.list{display:flex;flex-direction:column;gap:.4rem}
+.row{display:grid;grid-template-columns:2.4rem 1fr 4.6rem 5.4rem;align-items:center;gap:.3rem;background:rgba(255,251,245,.92);border:2px solid #fff;border-radius:1rem;padding:.5rem .6rem;box-shadow:0 4px 10px rgba(180,120,160,.12);font-size:.82rem}
+.row .r{font-weight:800;text-align:center}.row b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row small{text-align:right;color:var(--soft);font-weight:600}.row strong{text-align:right;color:#B9761F}
+.row.me{border-color:#9EDDBE;background:#F1FBF6}
+.cols{display:grid;grid-template-columns:2.4rem 1fr 4.6rem 5.4rem;gap:.3rem;font-size:.66rem;color:var(--soft);font-weight:700;padding:0 .6rem .2rem}
+.cols span:nth-child(3),.cols span:nth-child(4){text-align:right}
+.upd{text-align:center;font-size:.68rem;color:var(--soft);margin-top:.8rem}
+.btn{border:0;border-radius:999px;font:inherit;font-weight:800;font-size:.85rem;padding:.65rem 1.2rem;cursor:pointer;background:linear-gradient(90deg,#B66DE0,#F28AA8);color:#fff;box-shadow:0 4px 0 #9A55C2}
+.btn.g{background:#6CC9A8;box-shadow:0 4px 0 #4DAA8A}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}
+.bar{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + .8rem);display:flex;justify-content:center;gap:.5rem}
+.ed{display:grid;grid-template-columns:1fr 5rem 6rem;gap:.35rem;align-items:center;background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.35rem .5rem;margin-bottom:.3rem}
+.ed b{font-size:.8rem}.ed input{width:100%;font:inherit;font-size:16px;border:2px solid #EEE3F5;border-radius:.6rem;padding:.25rem .4rem;text-align:right;color:var(--cocoa)}
+.edh{display:grid;grid-template-columns:1fr 5rem 6rem;gap:.35rem;font-size:.66rem;color:var(--soft);font-weight:700;padding:0 .5rem .2rem}
+.hidden{display:none}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 1rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid #BDEBDD;border-radius:999px;padding:.45rem 1rem;font-size:.8rem;box-shadow:0 6px 18px rgba(0,0,0,.18);transition:.25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.sw{position:fixed;right:.8rem;top:calc(env(safe-area-inset-top,0px) + .8rem);font-size:.7rem;background:#fff;border:2px solid #F3E9DE;border-radius:999px;padding:.3rem .7rem;cursor:pointer;font-family:inherit;color:var(--cocoa);font-weight:700;z-index:5}
+
+.nav{position:sticky;top:0;z-index:6;display:flex;gap:.35rem;padding:calc(env(safe-area-inset-top,0px) + .55rem) 7.2rem .55rem .8rem;background:rgba(255,246,218,.85);backdrop-filter:blur(6px)}
+.nav button{flex:1;border:2px solid #fff;background:rgba(255,255,255,.7);border-radius:999px;font:inherit;font-weight:800;font-size:.8rem;padding:.35rem .4rem;color:var(--cocoa);cursor:pointer;white-space:nowrap}
+.nav button.on{background:linear-gradient(90deg,#B66DE0,#F28AA8);color:#fff}
+.sw{top:calc(env(safe-area-inset-top,0px) + .6rem);z-index:7!important}
+.wal{display:flex;gap:.35rem;justify-content:center;margin:.3rem 0 .2rem}
+.chip{display:flex;align-items:center;gap:.25rem;background:#fff;border:2px solid #F3E9DE;border-radius:999px;padding:.1rem .6rem .1rem .2rem;font-weight:800;font-size:.82rem;font-family:inherit;color:var(--cocoa)}
+.chip img{width:1.4rem;height:1.4rem;object-fit:contain}.chip.mail{position:relative;padding-left:.55rem;cursor:pointer}
+.chip.mail i{position:absolute;top:-.4rem;right:-.35rem;background:#F27E9B;color:#fff;font-style:normal;font-size:.62rem;border-radius:999px;min-width:1.1rem;height:1.1rem;display:grid;place-items:center;border:2px solid #fff}
+.gacha{position:relative;border-radius:1.6rem;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#5A3A8C 0%,#2E1D4D 55%,#1B1230 100%);color:#fff;padding:1rem .8rem 1.2rem;margin:.6rem 0;isolation:isolate}
+.gacha::before{content:'';position:absolute;inset:auto -20% -30% -20%;height:55%;background:radial-gradient(closest-side,rgba(242,140,40,.45),transparent);z-index:-1}
+.gtitle{text-align:center}.gtitle p{margin:0;font-size:.8rem;color:#F6DDFF}
+.star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:tw 2.4s infinite;z-index:-1}@keyframes tw{50%{opacity:.15}}
+.floaty{position:absolute;font-size:1.4rem;opacity:.75;animation:fl linear infinite;z-index:-1}@keyframes fl{from{transform:translateX(-40px)}to{transform:translateX(32rem)}}
+.mwrap{position:relative;width:min(70%,250px);margin:.4rem auto 0;aspect-ratio:154/225}
+.mwrap .spr{position:absolute;inset:0;background-repeat:no-repeat;background-size:400% 400%}
+.coinfly{position:absolute;width:3rem;height:2.6rem;background-repeat:no-repeat;background-size:400% 400%;z-index:5;transition:left .7s cubic-bezier(.4,0,.2,1),top .7s cubic-bezier(.4,-.4,.4,1),transform .7s;pointer-events:none}
+.candy{position:absolute;width:24%;left:38%;top:74%;z-index:6;pointer-events:none}
+.candy.drop{animation:cdrop .9s cubic-bezier(.3,1.4,.5,1) forwards}@keyframes cdrop{0%{transform:scale(.2) translateY(-30%);opacity:0}30%{opacity:1}100%{transform:scale(1.25) translateY(40%)}}
+.candy.wob{animation:wob .5s ease-in-out 2;transform:scale(1.25) translateY(40%)}@keyframes wob{25%{rotate:-12deg}75%{rotate:12deg}}
+.burst{position:absolute;inset:0;pointer-events:none;z-index:7}.burst i{position:absolute;left:50%;top:80%;width:.5rem;height:.5rem;border-radius:50%;animation:bs .8s ease-out forwards}@keyframes bs{to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+.gctl{display:flex;flex-direction:column;align-items:center;gap:.5rem;margin-top:.7rem}
+.spin{font-size:1.05rem;padding:.7rem 2rem;background:linear-gradient(#FFB45A,#F28C28);box-shadow:0 4px 0 #A9560E,0 0 18px rgba(255,180,90,.5)}
+.btn:disabled{background:#cfc6d6;box-shadow:none;cursor:default}
+.mini{border:0;border-radius:999px;font:inherit;font-weight:800;font-size:.78rem;padding:.3rem .9rem;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
+.odds{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;font-size:.72rem}.odds span{background:rgba(255,255,255,.12);border-radius:999px;padding:.08rem .6rem}
+.gbox{background:rgba(255,251,245,.95);border:2px solid #fff;border-radius:1.2rem;padding:.7rem .8rem;margin:.6rem 0;box-shadow:0 4px 10px rgba(180,120,160,.12)}
+.gbox h3{margin:0 0 .4rem;font-size:.95rem}
+.plist{display:flex;flex-wrap:wrap;gap:.3rem;margin:.35rem 0}.plist button{border:2px solid #F3E9DE;background:#fff;border-radius:999px;font:inherit;font-size:.76rem;font-weight:700;padding:.15rem .65rem;color:var(--cocoa);cursor:pointer}.plist button.on{background:#DDF6EC;border-color:#9FDDC4}
+.grow{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;font-size:.82rem;margin:.35rem 0}.grow select{border:2px solid #F3E9DE;border-radius:.6rem;font:inherit;font-size:.82rem;padding:.1rem .3rem;color:var(--cocoa)}
+.hist{font-size:.74rem;border-top:1.5px dashed #F3E9DE;padding:.25rem 0}
+.note{font-size:.7rem;color:var(--soft);line-height:1.5}
+#modal{position:fixed;inset:0;z-index:80;background:rgba(20,14,30,.6);display:none;align-items:center;justify-content:center;padding:1rem}#modal.on{display:flex}
+#modal .card{background:#FFFBF5;border-radius:1.4rem;padding:1rem 1.1rem;max-width:400px;width:100%;max-height:86vh;overflow:auto;animation:pop .35s cubic-bezier(.3,1.5,.5,1);text-align:center}
+#modal h2{margin:0 0 .4rem;font-size:1.15rem}#modal .acts{display:flex;gap:.45rem;justify-content:center;margin-top:.8rem;flex-wrap:wrap}@keyframes pop{0%{transform:scale(.7);opacity:0}}
+.rw{font-size:3.2rem;line-height:1.1}
+.mailitem{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid #F3E9DE;border-radius:1rem;padding:.45rem .6rem;margin:.35rem 0;text-align:left}.mailitem b{flex:1;font-size:.82rem}.mailitem small{display:block;color:var(--soft);font-size:.7rem;font-weight:600}
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.4rem 0}.ig{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.4rem .2rem;font-size:.68rem;line-height:1.3}.ig span{display:block;font-size:1.5rem}.ig b{display:block;font-size:.72rem}
+.ig.k{background:#FFF7DA}.ig.n{background:#F1EEF5}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style></head><body>
+<button class="sw" id="sw">👀 มุมมอง: ผู้เล่น</button>
+<nav class="nav" id="nav"><button data-pg="ts" class="on">💎 Top Spenders</button><button data-pg="ga">🍬 ลัคกี้กาชาปอง</button></nav>
+<div class="wrap" id="view" style="padding-top:.3rem">
+ <div class="head"><small>SEASON 3</small><h1>💎 Top Spenders</h1><p>ขอบคุณทุกคนที่สนับสนุนสวนของยัยหนู 💕</p></div>
+ <div class="podium" id="podium"><canvas class="spark" id="spark" width="256" height="128"></canvas><div class="col c2"><div class="av" style="background:#F6B43C">K</div><div class="nm">Kongkwan</div><div class="pt">💎 41,200</div><div class="step">2</div></div><div class="col c1"><div class="av" style="background:#B49BE0">P</div><div class="nm">Porpla</div><div class="pt">💎 48,500</div><div class="step">1</div></div><div class="col c3"><div class="av" style="background:#B49BE0">E</div><div class="nm">Earn</div><div class="pt">💎 39,900</div><div class="step">3</div></div></div>
+ <div class="cols"><span>อันดับ</span><span>ผู้เล่น</span><span>วันนี้</span><span>สะสม</span></div>
+ <div class="list" id="list"><div class="row me"><span class="r">#4</span><b>มดแดง</b><small>+300</small><strong>12,800</strong></div><div class="row"><span class="r">#5</span><b>ส้มโอ</b><small>+150</small><strong>9,600</strong></div><div class="row"><span class="r">#6</span><b>ฟ้าใส</b><small>–</small><strong>5,400</strong></div><div class="row"><span class="r">#7</span><b>Tangtang</b><small>+500</small><strong>3,200</strong></div></div>
+ <div class="upd" id="upd">🕐 อัปเดตล่าสุดโดยยัยหนู • 8 ต.ค. 2569 03:23</div>
+</div>
+<div class="wrap hidden" id="edit" style="padding-top:.3rem">
+ <div class="head"><small>ADMIN</small><h1>✏️ แก้ Top Spenders</h1><p>แก้ตัวเลขแล้วกดบันทึกครั้งเดียว ทุกคนจะเห็นข้อมูลล่าสุดตอนเปิดหน้านี้</p></div>
+ <div class="edh"><span>ผู้เล่น (ทุกคนในระบบ)</span><span style="text-align:right">วันนี้</span><span style="text-align:right">สะสม</span></div>
+ <div id="edList"></div>
+</div>
+<div class="wrap hidden" id="gpage" style="padding-top:.3rem">
+ <div class="head"><small>SEASON 3</small><h1>🍬 ลัคกี้กาชาปอง</h1><p>ขอบคุณที่อุดหนุนนะคะ 💜</p></div>
+ <div class="wal" id="gwal"></div>
+ <section class="gacha" id="gacha"></section>
+ <div id="gadmin"></div>
+</div>
+<div id="modal"><div class="card" id="mcard"></div></div>
+<div class="bar" id="bar"></div>
+<div class="toast" id="toast"></div>
+
+<script src="topspenders.js"></script></body></html>

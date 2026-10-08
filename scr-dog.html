@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
-const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
 </script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกหมา – ในสวนของยัยหนู ซีซั่น 3</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 
@@ -363,7 +363,7 @@ function roll(){const r=Math.random()*100;if(r<2){const ts=Object.keys(DT);retur
 function openBox(){closeAll();const n=it('boxdog');
  open('<div style="text-align:center"><img src="'+IMG.box+'" style="width:7rem" alt=""><h3>กล่องสุ่มหมา</h3><div class="hint">มีอยู่ <b>'+fmt(n)+'</b> กล่อง • หมา 2% / กุศล 40% / กล่องเกลือ 30% / ของ 28%</div><div class="draft">ร่าง % เหมือนกล่องแมว • ของ: อาหารหมาสุ่ม 50 ชาม / ขนมหมา 5 / ปลอกคอ 3 / เค้ก 50</div></div><div class="boxbtns">'+[1,10,50,100,500].map(q=>'<button data-q="'+q+'"'+(n<q?' disabled':'')+'>'+q+'<small>กล่อง</small></button>').join('')+'</div>');
  $('sb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>openMany(+b.dataset.q))}
-function openMany(q){if(it('boxdog')<q)return;closeAll();const res=[];for(let i=0;i<q;i++)res.push(roll());const sum={merit:0,salt:0,dogfood:0,treat:0,collar:0,cake:0},dogs={};
+function openMany(q){if(it('boxdog')<q)return;closeAll();const res=[];for(let i=0;i<q;i++){const reward=roll();parent.__HOST.recordCampaignBox(reward);res.push(reward);}const sum={merit:0,salt:0,dogfood:0,treat:0,collar:0,cake:0},dogs={};
  res.forEach(r=>{if(r.k==='dog')dogs[r.t]=(dogs[r.t]||0)+1;else if(r.k==='salt')sum.salt++;else sum[r.k]+=r.q});
  S.bag.item.boxdog-=q;S.merit+=sum.merit;Object.entries(dogs).forEach(([t,c])=>S.bag.dog[t]=(S.bag.dog[t]||0)+c);for(let i=0;i<sum.dogfood/50;i++){const f=FOOD[rnd(0,5)].id;S.bag.dogfood[f]=(S.bag.dogfood[f]||0)+50}
  addIt('treat',sum.treat);addIt('collar',sum.collar);addIt('cake',sum.cake);save();

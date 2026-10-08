@@ -1,0 +1,77 @@
+import {featuredMenus} from './campaigns-engine.js?v=ss3-20261008-images2';
+
+const IMG={"f-catshark": "images/fishing-fish-catshark.webp", "f-angelshark": "images/fishing-fish-angelshark.webp", "f-manta": "images/fishing-fish-manta.webp", "f-hammerhead": "images/fishing-fish-hammerhead.webp", "f-mola": "images/fishing-fish-mola.webp", "f-strawberry": "images/fishing-fish-strawberry.webp", "f-unicorn": "images/fishing-fish-unicorn.webp", "f-goldsheep": "images/fishing-fish-goldsheep.webp", "h-candy": "images/halloween-hw-candy.webp", "h-bat": "images/halloween-hw-bat.webp", "h-candle": "images/halloween-hw-candle.webp", "h-web": "images/halloween-hw-web.webp", "h-hat": "images/halloween-hw-hat.webp", "h-broom": "images/halloween-hw-broom.webp", "h-pumpkin": "images/halloween-hw-pumpkin.webp", "h-cauldron": "images/halloween-hw-cauldron.webp", "box": "images/dog-box-dog.webp", "honey": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "pump": "images/produce-pumpkin.webp", "cake": "images/item-cake.webp", "wings": "images/item-angelwings.webp", "boot": "images/dog-oldboot.webp", "wine": "images/house-wine-moon.webp", "dogcard": "images/dog-card-husky.webp"};const $=id=>document.getElementById(id),fmt=n=>Number(Math.round(n)||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const DAYS=8,DAY=864e5;
+const Host=parent.__HOST;if(!Host)throw new Error('กรุณาเปิดจากเกมหลัก');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MEMBERS=[esc(JSON.parse(Host.get('s3user')||'{}').name||'ฉัน')+' (ฉัน)'];
+const LAD=['กุศล 10,000','กุศล 25,000','กุศล 50,000','กุศล 80,000','กุศล 120,000','กุศล 180,000','กุศล 250,000','กุศล 350,000','กุศล 500,000','กุศล 1,000,000'];
+const C=[
+ {id:'fish',ic:'🎣',bg:'#DDF1FB',n:'ศึกสาวเบ็ดในตำนาน',d:'ตกปลาตำนาน 8 ตัวในบ่อ VIP นับทุกตัว ไม่จำกัด',th:[300,800,1500,2400,3400,4500,5700,7000,8500,10000]},
+ {id:'pet',ic:'🛡️',bg:'#E7F7EF',n:'ผู้พิทักษ์ Pet Care',d:'นับกุศลจากสัตว์ทุกระบบ + โรงงานแปรรูป + ของดรอปพิเศษ',th:[50000,120000,250000,450000,700000,1000000,1400000,1900000,2500000,3200000]},
+ {id:'box',ic:'🎰',bg:'#FFF3C9',n:'ยี่สุ่มมาแล้วววววว',d:'เปิดกล่องสุ่ม • กุศลนับครึ่ง • ไอเท็ม +50 • สัตว์ +100 • เกลือ −5 • 100 กล่องแรกของวัน ×5',th:[200000,500000,1000000,2000000,3500000,5000000,7000000,10000000,14000000,20000000]},
+ {id:'honey',ic:'🐷',bg:'#FFE9D6',n:'น้ำผึ้งนายแน่มาก',d:'นับเฉพาะกุศลที่ได้จากน้องน้ำผึ้ง • มีช่วงอารมณ์ดี ×2 และช่วงง่วง ×0.5',th:[20000,50000,100000,180000,300000,450000,650000,900000,1200000,1600000]},
+ {id:'cook',ic:'👩‍🍳',bg:'#FFE3EC',n:'เสน่ห์ปลายจวัก',d:'คราฟอาหารบ้าน/สวน หมักไวน์ เก็บดอกไม้ เก็บของเม่น • มีช่วงเวลาพิเศษ + เมนูเด่นรายวัน ×3',th:[5000,12000,25000,40000,60000,85000,115000,150000,200000,260000]},
+ {id:'pump',ic:'🎃',bg:'#FFE4CC',n:'หนูรักษ์โลก: ฟักทองฮาโลวีน',d:'ทุก 10 แปลงฟักทองที่เก็บ = ไอเท็มฮาโลวีน 1 ชิ้น • นับเป็นแปลง • หลอนฮาโลวีน 18:00–22:00 ได้ของหายากง่ายสุด',th:[1000,2500,5000,8000,12000,17000,23000,30000,38000,50000]}];
+const CB=Object.fromEntries(C.map(c=>[c.id,c]));
+const S={role:Host.admin?'admin':'player',view:null,tab:'rule',hour:0,day:0,c:{}};
+let serverOffset=0,config={},ranks={boards:{}},acting=false;const save=()=>{};
+const now=()=>Date.now()+serverOffset;
+const status=c=>{const x=S.c[c.id];if(!x.start)return 0;return now()<x.end?1:2;};
+function project(){const progress=JSON.parse(Host.get('s3all-v1')||'{}').sub?.campaigns||{};S.hour=+new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',hour12:false}).format(new Date(now()));for(const c of C){const cfg=config[c.id]||{},own=cfg.round&&progress[c.id]?.round===cfg.round?progress[c.id]:{};S.c[c.id]={start:cfg.start||0,end:cfg.end||0,score:own.score||0,claimed:own.claimed||[],box:own.box||{day:-1,n:0},items:own.items||{},pumpPlots:own.pumpPlots||0,ev:cfg.ev??null,evHour:cfg.evHour===Math.floor(now()/3600e3)?S.hour:-1,snapAt:ranks.updatedAt||0,others:Object.fromEntries((ranks.boards?.[c.id]||[]).filter(p=>p.uid!==Host.uid).map(p=>[esc(p.name)+' ·'+p.uid.slice(0,4),p.score]))};}}
+async function cloud(input){if(acting)return null;acting=true;const sent=Date.now();try{const out=await Host.cloud('campaigns',input);serverOffset=out.serverNow-(sent+Date.now())/2;config=out.config;ranks=out.ranks;project();render();return out;}catch(e){ann(e.message,1);return null;}finally{acting=false;}}
+
+const left=ms=>{const m=Math.max(0,Math.floor(ms/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60);return (d?d+' วัน ':'')+h+' ชม. '+(m%60)+' นาที'};
+/* ช่วงเวลาสุ่มรายวัน: คำนวณจากวันที่ ทุกเครื่องได้เหมือนกัน */
+function seed(str){let h=2166136261;for(const ch of str){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%10000)/10000}}
+const dayKey=()=>new Date(now()+7*3600e3).toISOString().slice(0,10);
+function honeyWin(){const r=seed('honey'+dayKey());const a=Math.floor(r()*22);let b=Math.floor(r()*22);if(Math.abs(a-b)<3)b=(a+8)%22;return{good:[a,a+2],bad:[b,b+2]}}
+const COOKTIME=[['☀️ ครัวยามเช้า',6,9,'อาหาร ×2'],['🌸 ดอกไม้บานเช้า',6,10,'ดอกไม้ ×2'],['🌙 เม่นตื่นกลางคืน',20,26,'ของเม่น ×2'],['🍷 ห้องหมักยามดึก',22,25,'ไวน์ ×2']];
+const inH=(h,a,b)=>h>=a&&h<b||(b>24&&h<b-24);
+const MENUS=[['ข้าวผัดไข่',30],['ซุปฟักทอง',25],['ปลาย่างซอสมะม่วง',22],['สตูว์รวมมิตร',20],['ไข่อบชีส',22],['น่องไก่อบครีม',15],['ขนมลิ้นจี่มะยม',15],['จานรวมมิตร',8],['ออมเล็ตโรซี่',40],['ไข่อบอัญชัน',35],['ไข่ตุ๋นหกบุปผา',22],['ไข่ย่างสปาฟลาวเวอร์',30]];
+const menuPts=p=>p>=40?10:p>=35?12:p>=30?15:p>=25?18:p>=22?20:p>=20?22:p>=15?30:50;
+function featured(){return featuredMenus(now());}
+const FL=[['เดซี่',1],['ทิวลิป',1],['ดาวเรือง',1],['กุหลาบ',2],['อัญชัน',2],['ลาเวนเดอร์',2],['ทานตะวัน',3],['ชบา',3],['ดอกบัว',3],['ลีลาวดี',4],['ไฮเดรนเยีย',4],['กล้วยไม้',5]];
+const FISH=[['catshark','ฉลามแมว',1,80],['angelshark','ฉลามนางฟ้า',2,65],['manta','กระเบนราหู',3,50],['hammerhead','ฉลามหัวค้อน',4,40],['mola','ปลาโมลา',6,30],['strawberry','ปลาสตรอว์เบอร์รี',8,22],['unicorn','ปลายูนิคอร์น',12,15],['goldsheep','ปลาแกะทอง',20,10]];
+const EV=[['g','🌊 น้ำขึ้นสูง','ปลาตำนานออกง่าย ×2',{legend:2}],['g','🌈 รุ้งกินน้ำ','ยูนิคอร์น/แกะทอง ×3',{uni:3}],['g','✨ จันทร์เต็มดวง','แกะทอง ×5',{gold:5}],['g','🦈 ฉลามว่ายเข้าบ่อ','ฉลาม 4 ตัว ×2',{shark:2}],['g','🍀 ลมเย็นนำโชค','คะแนน ×1.5',{pts:1.5}],['g','🎣 ปลากินเหยื่อดี','ได้ 2 ตัวต่อตา',{two:1}],
+ ['b','🏜️ น้ำลด','ปลาตำนาน ×0.5',{legend:.5}],['b','🌫️ หมอกลง','ปลาหายาก ×0.5',{rare:.5}],['b','🌧️ พายุเข้า','รอนานขึ้น 2 เท่า',{slow:1}],['b','🐊 จระเข้ป่วน','คะแนนฉลาม ×0.5',{sharkpts:.5}],['b','🪣 บ่อขุ่น','คะแนน ×0.7',{pts:.7}],['b','🐙 หมึกยักษ์ขโมยเหยื่อ','30% ตกได้ปลาว่าง',{miss:.3}]];
+const HW=[['candy','ลูกอมผี',1,30,20],['bat','ค้างคาวจิ๋ว',1,25,18],['candle','เทียนผี',2,18,16],['web','ใยแมงมุม',3,12,15],['hat','หมวกแม่มด',5,6,10],['broom','ไม้กวาดแม่มด',5,6,10],['pumpkin','ฟักทองแกะสลักเรืองแสง',10,2.5,8],['cauldron','หม้อยาแม่มด',20,.5,3]];
+function pick(list,w){let t=list.reduce((a,x)=>a+w(x),0),r=Math.random()*t;for(const x of list){r-=w(x);if(r<=0)return x}return list[0]}
+/* ========= ให้คะแนน (บันทึกพร้อมการกระทำ) ========= */
+function snapshot(){}
+
+/* ========= หน้า ========= */
+function listPage(){return '<p class="h2" style="margin:.1rem 0 .6rem">'+(S.role==='admin'?'👑 กด "เริ่ม" เมื่อพร้อม • ยังไม่กดเริ่ม = ไม่นับคะแนน • ทุกแคมเปญมีอายุ 8 วัน':'แตะแคมเปญเพื่อดูเงื่อนไข อันดับ และรางวัล')+'</p>'+
+ C.map(c=>{const s=status(c),x=S.c[c.id];return '<div class="cc" data-v="'+c.id+'"><div class="ic" style="background:'+c.bg+'">'+c.ic+'</div><div style="flex:1"><b>'+c.n+'</b><small>'+(s===1?'⏳ เหลือ '+left(x.end-now())+' • คะแนนฉัน '+fmt(x.score):s===2?'จบแล้ว • คะแนนฉัน '+fmt(x.score):'ยังไม่เริ่ม')+'</small></div><span class="st s'+s+'">'+['ยังไม่เริ่ม','กำลังแข่ง','จบแล้ว'][s]+'</span></div>'}).join('')+
+ ''}
+function campPage(id){const c=CB[id],x=S.c[id],s=status(c);snapshot(id);
+ let h='<div class="row" style="margin:0 0 .4rem"><button class="mini gray" id="back">← แคมเปญทั้งหมด</button></div><div class="cc" style="cursor:default"><div class="ic" style="background:'+c.bg+'">'+c.ic+'</div><div style="flex:1"><b>'+c.n+'</b><small>'+(s===1?'⏳ เหลือเวลา '+left(x.end-now()):s===2?'จบแล้ว':'ยังไม่เริ่ม • รอยัยหนูกดเริ่ม')+'</small></div><span class="st s'+s+'">'+['ยังไม่เริ่ม','กำลังแข่ง','จบแล้ว'][s]+'</span></div>';
+ if(S.role==='admin')h+='<div class="box"><h3>👑 ควบคุมแคมเปญ</h3>'+(s===0?'<div class="h2">กดแล้วเริ่มนับคะแนนทันที อายุ 8 วัน</div><div class="row"><button class="mini pink" id="startC">▶️ เริ่มแคมเปญ</button></div>':s===1?'<div class="h2">เริ่มเมื่อ '+new Date(x.start).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • จบอัตโนมัติเมื่อครบ 8 วัน</div><div class="row"><button class="mini gray" id="stopC">⏹ จบก่อนเวลา</button></div>':'<div class="row"><button class="mini" id="restartC">🔁 เปิดรอบใหม่ (ล้างคะแนน)</button></div>')+(id==='fish'?newsAdmin(x):'')+'</div>';
+ if(id==='fish'&&x.ev!==null&&x.evHour===S.hour)h+='<div class="news">📢 ข่าวจากยัยหนู: '+EV[x.ev][1]+' • '+EV[x.ev][2]+' (ถึง '+String((S.hour+1)%24).padStart(2,'0')+':00)</div>';
+ h+='<div class="ct" id="ctab">'+[['rule','📜 เงื่อนไข'],['rank','🏅 อันดับ'],['rew','🎁 รางวัล']].map(([k,n])=>'<button data-t="'+k+'" class="'+(S.tab===k?'on':'')+'">'+n+'</button>').join('')+'</div>';
+ h+='<div class="myscore"><div><small>คะแนนของฉัน (ขึ้นทันที)</small><b>'+fmt(x.score)+'</b></div><div style="text-align:right"><small>ขั้นรางวัลที่ผ่าน</small><b>'+c.th.filter(t=>x.score>=t).length+'/10</b></div></div>';
+ if(S.tab==='rule')h+=rules(id)+'<div class="box"><div class="h2">คะแนนนับจากการเล่นในหน้าระบบจริง บันทึกพร้อมเซฟของระบบนั้น</div></div>';
+ else if(S.tab==='rank'){const arr=Object.entries(x.others).map(([n,v])=>[n,v]);arr.push([MEMBERS[0],x.score]);arr.sort((a,b)=>b[1]-a[1]);
+  h+='<div class="box"><h3>🏅 อันดับ</h3><div class="h2">คะแนนของคนอื่นอัปเดตทุก 30 นาที • ล่าสุด '+(x.snapAt?new Date(x.snapAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'-')+' • ของเราขึ้นทันที</div>'+(s===0?'<div class="h2" style="text-align:center;padding:1rem">ยังไม่เริ่มแคมเปญ</div>':arr.map(([n,v],i)=>'<div class="rk'+(n===MEMBERS[0]?' me':'')+'"><span class="n">'+(i<3?['🥇','🥈','🥉'][i]:i+1)+'</span><b>'+n+'</b><span>'+fmt(v)+'</span></div>').join(''))+'</div>'}
+ else h+='<div class="box"><h3>🎁 รางวัล 10 ขั้น</h3><div class="h2">ถึงขั้นไหนกดรับได้เลย ของเข้ากระเป๋าทันที (รางวัลเป็นกุศลทั้งหมด • ต้องเล่นหนักจริงถึงจะได้ขั้นสูง)</div>'+c.th.map((t,i)=>{const ok=x.score>=t,cl=x.claimed.includes(i);return '<div class="tier'+(ok?' ok':'')+'"><span class="lv">'+(i+1)+'</span><b>'+LAD[i]+'<small>ต้องได้ '+fmt(t)+' คะแนน</small></b><button class="mini" data-cl="'+i+'"'+(ok&&!cl?'':' disabled')+'>'+(cl?'รับแล้ว ✓':'รับ')+'</button></div>'}).join('')+'</div>';
+ return h}
+function newsAdmin(x){const used=x.evHour===S.hour;return '<h3 style="margin-top:.6rem">📢 แจ้งข่าวบ่อตกปลา</h3><div class="h2">กดได้ชั่วโมงละ 1 ครั้ง มีผลจนจบชั่วโมงนี้ • ไม่กด = ปกติ'+(used?' • <b>ชั่วโมงนี้กดไปแล้ว</b>':'')+'</div><div class="ev" style="margin-top:.35rem">'+EV.map((e,i)=>'<button class="'+e[0]+'" data-ev="'+i+'"'+(used||status(CB.fish)!==1?' disabled':'')+'>'+e[1]+'<small>'+e[2]+'</small></button>').join('')+'</div>'}
+function rules(id){const h=S.hour;
+ if(id==='fish')return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">ตกปลาในบ่อ VIP ได้ปลาตำนานตัวไหน ได้คะแนนตามนี้ ตกได้ไม่จำกัด • ยัยหนูจะแจ้งข่าวดี/ข่าวร้ายระหว่างวัน</div><div class="icons">'+FISH.map(f=>'<span><img src="'+IMG['f-'+f[0]]+'" alt="">'+f[1]+' <b>'+f[2]+'</b></span>').join('')+'</div></div>';
+ if(id==='pet')return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">ได้กุศลจากสัตว์เท่าไหร่ = ได้คะแนนเท่านั้น (หมา แมว นก แฮมสเตอร์ อัลปาก้า โรงเรือน + กุศลจากโรงงานแปรรูป) ไม่จำกัด<br>ของดรอปพิเศษได้คะแนนเพิ่ม: รองเท้าเก่า +50 • ผ้าพันคอแดง/บีนนี่ฟ้า/ตุ๊กตาจิ๋ว +30 • ยาเร่งขน/แบตเตอรี่ +40 • ปลอกคอ +20 • กระดิ่งทอง +10 • ขนมหมา/กล่องดนตรี +5 • ไหมพรม +2</div></div>';
+ if(id==='box'){const x=S.c.box,n=x.box.day===dayKey()?x.box.n:0;return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">เปิดกล่องสุ่มแบบไหนก็ได้ • ได้กุศล → คะแนนครึ่งหนึ่ง (1,250 → 625) • ได้ไอเท็ม +50 • ได้ตัวสัตว์ +100/ตัว • กล่องเกลือ −5<br>🔥 100 กล่องแรกของแต่ละวัน คะแนน ×5 (เปิดทีเดียวหลายกล่อง ระบบนับตามลำดับให้)<br>วันนี้เปิดไปแล้ว <b>'+n+'</b> กล่อง • เหลือ ×5 อีก <b>'+Math.max(0,100-n)+'</b> กล่อง</div></div>'}
+ if(id==='honey'){const w=honeyWin();return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">นับเฉพาะกุศลที่ได้จากน้องน้ำผึ้ง (ได้กุศล จี๊ป 20% / เรือ 25% / แพ 30% ที่เหลือได้ไอเท็มไม่นับ) • ช่วงเวลาสุ่มทุกวัน:</div><div class="win'+(inH(h,...w.good)?' now':'')+'"><span>☀️ น้องน้ำผึ้งอารมณ์ดี ×2</span><b>'+w.good[0]+':00–'+w.good[1]+':00</b></div><div class="win'+(inH(h,...w.bad)?' now':'')+'"><span>😴 น้องน้ำผึ้งง่วง ×0.5</span><b>'+w.bad[0]+':00–'+w.bad[1]+':00</b></div></div>'}
+ if(id==='cook'){const fe=featured();return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">ทำอาหารสำเร็จ (เมนูยากได้เยอะ) • ไวน์ แสงจันทร์ 20 / กุหลาบ 30 / โลหิต 50 / ราชัน 80 • ดอกไม้ดอกละ 1–5 ตามชนิด • ของเม่นชิ้นละ 2 • ไม่จำกัด</div>'+COOKTIME.map(t=>'<div class="win'+(inH(h,t[1],t[2])?' now':'')+'"><span>'+t[0]+' '+t[3]+'</span><b>'+t[1]+':00–'+(t[2]%24)+':00</b></div>').join('')+'<div class="h2" style="margin-top:.3rem">⭐ เมนูเด่นวันนี้ ×3: <b>'+fe.map(i=>MENUS[i][0]).join(' • ')+'</b></div></div>'}
+ if(id==='pump'){const night=h>=18&&h<22,x=S.c.pump;return '<div class="box"><h3>📜 วิธีเล่น</h3><div class="h2">เก็บฟักทองครบทุก 10 แปลง ได้ไอเท็มฮาโลวีน 1 ชิ้น (นับแปลง ใช้ปีกนางฟ้าก็ยังนับ 1 แปลง) • คะแนนตามความหายาก</div><div class="win'+(night?' now':'')+'"><span>👻 หลอนฮาโลวีน ของหายากออกง่าย</span><b>18:00–22:00</b></div><div class="icons">'+HW.map(t=>'<span><img src="'+IMG['h-'+t[0]]+'" alt="">'+t[1]+' <b>'+t[2]+'</b>'+(x.items[t[0]]?' ×'+x.items[t[0]]:'')+'</span>').join('')+'</div><div class="h2" style="margin-top:.3rem">เก็บไปแล้ว '+x.pumpPlots+' แปลง • อีก '+(10-x.pumpPlots%10)+' แปลงได้ไอเท็มชิ้นถัดไป</div></div>'}}
+
+function render(){const m=$('main');m.innerHTML=S.view?campPage(S.view):listPage();m.querySelectorAll('[data-v]').forEach(d=>d.onclick=()=>{S.view=d.dataset.v;S.tab='rule';project();render();scrollTo(0,0);});if($('back'))$('back').onclick=()=>{S.view=null;render();};
+ if($('startC'))$('startC').onclick=()=>cloud({type:'start',campaign:S.view});if($('stopC'))$('stopC').onclick=()=>cloud({type:'stop',campaign:S.view});if($('restartC'))$('restartC').onclick=()=>cloud({type:'start',campaign:S.view});
+ if($('ctab'))$('ctab').onclick=e=>{const b=e.target.closest('button');if(b){S.tab=b.dataset.t;render();}};
+ m.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>cloud({type:'news',campaign:'fish',event:+b.dataset.ev}));m.querySelectorAll('[data-cl]').forEach(b=>b.onclick=async()=>{const out=await cloud({type:'claim',campaign:S.view,step:+b.dataset.cl});if(out)ann('รับ '+fmt(out.reward)+' กุศลบนคลาวด์แล้ว');});
+}
+
+$('role').hidden=true;$('hourSel').hidden=true;$('clkTxt').hidden=true;
+project();render();cloud({type:'status'});
+const stop=Host.watchWorld('campaigns',data=>{config=data||{};project();render();});addEventListener('pagehide',stop,{once:true});
+// Refresh ranking only while this page is visible, at the preview's 30 minute interval.
+const timer=setInterval(()=>{if(!document.hidden)cloud({type:'status'});},30*60000);addEventListener('pagehide',()=>clearInterval(timer),{once:true});

@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองศูนย์วิจัยซาฟารี</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--cream:#FFFBF5}
+*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#C98A4E}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.85)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%}
+.animal{position:absolute;transform:translate(-50%,-100%);transition:opacity .3s,transform .3s;pointer-events:none;z-index:2}
+.animal img{width:100%;display:block;filter:drop-shadow(0 4px 3px rgba(0,0,0,.25))}
+.animal.in{animation:walkin .55s ease-out}@keyframes walkin{from{transform:translate(-50%,-100%) scale(.6);opacity:0}}
+.animal.happy{animation:hop .5s ease-in-out 3}@keyframes hop{50%{transform:translate(-50%,-112%)}}
+.animal.sad{animation:shake .4s ease-in-out 3}@keyframes shake{25%{transform:translate(-54%,-100%)}75%{transform:translate(-46%,-100%)}}
+.glass{position:absolute;left:34%;width:32.5%;top:25.5%;height:34.5%;border-radius:1.2rem;pointer-events:none;z-index:3;overflow:hidden}
+.glass.scan{background:rgba(120,210,255,.18);box-shadow:inset 0 0 30px rgba(120,210,255,.8)}
+.glass .line{position:absolute;left:0;right:0;height:6%;background:linear-gradient(180deg,rgba(150,230,255,0),rgba(150,240,255,.95),rgba(150,230,255,0));box-shadow:0 0 18px rgba(120,220,255,.9);top:-6%}
+.glass.scan .line{animation:sweep .6s ease-in-out 3 alternate}@keyframes sweep{to{top:100%}}
+.glass.win{background:rgba(255,215,90,.25);box-shadow:inset 0 0 40px rgba(255,210,80,.95)}
+.glass.fail{animation:redf .3s 3}@keyframes redf{50%{background:rgba(255,90,90,.25)}}
+.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
+.smoke{position:absolute;width:12%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(160,160,160,.75),rgba(160,160,160,0) 70%);animation:sm 1.6s ease-out forwards}
+@keyframes sm{to{transform:translateY(-120%) scale(2.2);opacity:0}}
+.coin{position:absolute;font-size:1.3rem;animation:cn 1.3s ease-out forwards}@keyframes cn{to{transform:translate(var(--dx),-220%) rotate(360deg);opacity:0}}
+.spark{position:absolute;width:.4rem;height:.4rem;border-radius:50%;background:#BFF0FF;box-shadow:0 0 8px #9FE6FF;animation:sp 1.2s ease-out forwards}@keyframes sp{to{transform:translate(var(--dx),var(--dy));opacity:0}}
+.panel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:min(26rem,96vw);z-index:5;display:flex;flex-direction:column;gap:.4rem}
+.pick{display:flex;gap:.3rem;justify-content:center}
+.pick button{flex:1;min-width:0;border:2px solid #fff;border-radius:.9rem;background:rgba(255,251,245,.9);padding:.2rem .1rem .25rem;cursor:pointer;font:inherit;color:var(--cocoa);box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.pick button img{width:100%;height:2.4rem;object-fit:contain}
+.pick button b{display:block;font-size:.58rem}.pick button small{display:block;font-size:.55rem;color:#B9761F;font-weight:700}
+.pick button.on{background:#FFF3C9;border-color:#FFD86B;transform:translateY(-3px)}
+.card{background:rgba(255,251,245,.96);border:3px solid #fff;border-radius:1.2rem;padding:.55rem .7rem;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.card h4{margin:0 0 .3rem;font-size:.85rem;display:flex;justify-content:space-between;align-items:center}
+.card h4 span{font-size:.66rem;color:var(--soft);font-weight:600}
+.need{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem}
+.nd{background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.2rem;text-align:center}
+.nd img{width:100%;height:2.2rem;object-fit:contain}.nd b{display:block;font-size:.58rem;line-height:1.2}.nd span{font-size:.66rem;font-weight:800}
+.nd.no{border-color:#FFC7D3;background:#FFF4F6}.nd.no span{color:#D9506E}.nd.ok span{color:#3E9E6E}
+.btns{display:flex;gap:.4rem;margin-top:.45rem}
+.btn{flex:1;border:0;border-radius:999px;font:inherit;font-weight:800;font-size:.85rem;padding:.55rem;cursor:pointer;color:#fff;background:linear-gradient(90deg,#4FB3E0,#6CC9A8);box-shadow:0 3px 0 #3F98B6}
+.btn.gray{flex:none;padding:.55rem .8rem;background:#F1E6DA;color:var(--cocoa);box-shadow:none;font-size:.72rem}
+.btn:disabled{background:#ddd;box-shadow:none;color:#fff}
+.top{position:fixed;z-index:6;left:.6rem;right:.6rem;top:calc(env(safe-area-inset-top,0px) + .5rem);display:flex;justify-content:space-between;align-items:center;gap:.4rem}
+.chip{background:rgba(255,251,245,.94);border:2px solid #fff;border-radius:999px;padding:.25rem .7rem;font-weight:800;font-size:.75rem;box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.rb{width:2.5rem;height:2.5rem;border-radius:50%;border:3px solid #fff;background:#fff;font-size:1.1rem;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(40,30,20,.45);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:80vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.5rem}
+.st{display:flex;justify-content:space-between;background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.35rem .6rem;margin-bottom:.25rem;font-size:.75rem}
+.ann{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.4rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid #BDEBDD;border-radius:1rem;padding:.35rem .9rem .35rem .35rem;font-size:.8rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;display:flex;gap:.4rem;align-items:center;max-width:94vw}
+.ann img{width:2.2rem;height:2.2rem;flex:none}.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:#F6A9BD;background:#FFF4F6}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"><div class="animal" id="animal"><img id="aimg"></div><div class="glass" id="glass"><div class="line"></div></div><div class="fx" id="fx"></div></div></div>
+<div class="top"><span class="chip">🔬 ศูนย์วิจัยซาฟารี</span><span class="chip" id="merit"></span><button class="rb" id="statBtn">📊</button></div>
+<div class="panel"><div class="pick" id="pick"></div><div class="card" id="card"></div></div>
+<div class="shade" id="shade"></div><section class="sheet" id="sheet"><div id="sb"></div></section>
+<div class="ann" id="ann"><img id="aIco"><span id="aTxt"></span></div>
+<script src="safari.js"></script></body></html>

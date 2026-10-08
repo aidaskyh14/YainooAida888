@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
-const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
 </script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกแมว – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 
@@ -288,7 +288,7 @@ function roll(){const r=Math.random()*100;if(r<2){const ts=Object.keys(CT);retur
 function openBox(){closeAll();const n=S.bag.box.cat||0;
  open('<div style="text-align:center"><img src="'+IMG.box+'" style="width:7rem" alt=""><h3>กล่องสุ่มแมว</h3><div class="hint">มีอยู่ <b>'+fmt(n)+'</b> กล่อง • แมว 2% / กุศล 40% / กล่องเกลือ 30% / ของ 28%</div></div><div class="boxbtns">'+[1,10,50,100,500].map(q=>'<button data-q="'+q+'"'+(n<q?' disabled':'')+'>'+q+'<small>กล่อง</small></button>').join('')+'</div>');
  $('sb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>openMany(+b.dataset.q))}
-function openMany(q){if((S.bag.box.cat||0)<q)return;closeAll();const res=[];for(let i=0;i<q;i++)res.push(roll());const sum={merit:0,salt:0,catfood:0,fuel:0,cake:0},cats={};
+function openMany(q){if((S.bag.box.cat||0)<q)return;closeAll();const res=[];for(let i=0;i<q;i++){const reward=roll();parent.__HOST.recordCampaignBox(reward);res.push(reward);}const sum={merit:0,salt:0,catfood:0,fuel:0,cake:0},cats={};
  res.forEach(r=>{if(r.k==='cat')cats[r.t]=(cats[r.t]||0)+1;else if(r.k==='salt')sum.salt++;else sum[r.k]+=r.q});
  S.bag.box.cat-=q;S.merit+=sum.merit;Object.entries(cats).forEach(([t,c])=>S.bag.cat[t]=(S.bag.cat[t]||0)+c);for(let i=0;i<sum.catfood/50;i++){const f=FOOD[rnd(0,5)].id;S.bag.catfood[f]=(S.bag.catfood[f]||0)+50}
  S.bag.item.fuelcan=(S.bag.item.fuelcan||0)+sum.fuel;S.bag.item.cake=(S.bag.item.cake||0)+sum.cake;save();

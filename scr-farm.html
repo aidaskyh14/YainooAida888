@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
-const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -355,7 +355,7 @@ function renderBag(){$('bagTabs').innerHTML=Object.entries(BT).map(([k,v])=>'<bu
  $('bagGrid').innerHTML=e.length?e.map(([k,q])=>'<div class="it"><img src="'+bagImg(bagTab,k)+'"><b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
 /* ---------- เพื่อน ---------- */
-const FR=[['Porpla',2410333,'#F6B43C'],['Kongkwan',1980442,'#A9BDD0'],[USER.name,S.merit,'#F6A9BD',1],['Earn',1102994,'#E09C70'],['ส้มโอ',876120,'#6CC9A8'],['ฟ้าใส',540210,'#7FC7E8'],['ลุงชาวสวน',301877,'#B49BE0']];
+const FR=[];
 function renderFriends(){FR.forEach(f=>{if(f[3])f[1]=pts});const rows=[...FR].sort((a,b)=>b[1]-a[1]);
  $('friendList').innerHTML=rows.map((f,i)=>'<div class="rank'+(f[3]?' me':'')+'" data-n="'+f[0]+'"><span class="no">'+(['🥇','🥈','🥉'][i]||i+1)+'</span><span class="ra" style="background:'+f[2]+'">'+f[0][0]+'</span><span class="rn">'+f[0]+(f[3]?' (คุณ)':'')+'</span><span class="rp">'+fmt(f[1])+'</span></div>').join('')}
 $('friendList').onclick=e=>{const r=e.target.closest('.rank');if(!r)return;const f=FR.find(x=>x[0]===r.dataset.n);if(f[3])return toast('นี่คือคุณเองนะ 😊');
@@ -438,7 +438,7 @@ function drawPlots(){if(visiting)return;const arr=S.farms[farm];let ch=false;
   let wg=d.querySelector('.wing');if(p&&p.angel&&!wg){wg=document.createElement('span');wg.className='wing';wg.textContent='🪽';d.appendChild(wg)}if(!(p&&p.angel)&&wg)wg.remove();
   const bar=d.querySelector('.bar'),sh=p&&(p.ph==='g1'||p.ph==='g2');bar.style.display=sh?'block':'none';if(sh)bar.firstChild.style.width=Math.min(100,pprog(p))+'%'});
  if(ch)save()}
-setInterval(()=>{drawPlots();if(dState==='home'&&fuel<100&&Date.now()%6000<500){fuel=Math.min(100,fuel+10);S.fuel=fuel;save()}},500);
+setInterval(()=>{drawPlots();},500);
 const growing=p=>p&&p.ph!=='ready';
 function pwater(i){const p=S.farms[farm][i];if(!p||p.ph!=='water')return null;if(!NOWORM.has(p.c)&&Math.random()<.35){p.ph='worm';p.t=Date.now();return 'worm'}p.ph='g2';p.t=Date.now();return 'ok'}
 function punworm(i){const p=S.farms[farm][i];if(!p||p.ph!=='worm'||pts<1)return false;addPts(-1);p.ph='g2';p.t=Date.now();return true}
@@ -458,7 +458,7 @@ $('aCake').onclick=()=>useOne('cake');$('aCoco').onclick=()=>useOne('coconut');
 $('aAngel').onclick=()=>{const p=S.farms[farm][cur];if(!p||p.angel)return;if(S.bag.item.angel<1)return toast('ไม่มีปีกนางฟ้าแล้วนะ',1);p.angel=true;S.bag.item.angel--;save();closeAll();drawPlots();saving();toast('🪽 ใส่ปีกนางฟ้าแปลงที่ '+(cur+1)+' แล้ว • เก็บได้ ×10')};
 $('aDig').onclick=()=>{if(!confirm('ถอนผักแปลงนี้ทิ้งใช่ไหม?'))return;S.farms[farm][cur]=null;save();closeAll();drawPlots()};
 $('seeds').innerHTML=CROPS.map(([k,n])=>'<div class="seed" data-k="'+k+'"><img src="'+(IMG['p-'+k]||IMG[k+'4'])+'"><b>'+n+'</b></div>').join('');
-$('seeds').addEventListener('click',e=>{const c=e.target.closest('.seed');if(!c)return;const k=c.dataset.k,now=Date.now(),arr=S.farms[farm];
+$('seeds').addEventListener('click',e=>{if(window.cloudFarmReady)return;const c=e.target.closest('.seed');if(!c)return;const k=c.dataset.k,now=Date.now(),arr=S.farms[farm];
  if(plantAll){const fr=arr.map((p,i)=>!p&&!isLocked(i)?i:-1).filter(i=>i>=0),cost=fr.length*(SPR[k]||1);if(pts<cost)return toast('กุศลไม่พอซื้อเมล็ด ต้องใช้ '+fmt(cost),1);addPts(-cost);let n=0;fr.forEach(i=>{arr[i]={c:k,ph:'g1',t:now};n++});save();closeAll();drawPlots();saving();return toast('🌱 ปลูก'+CN[k]+'ทั้งหมด '+n+' แปลงแล้ว')}
  if(pts<(SPR[k]||1))return toast('กุศลไม่พอซื้อเมล็ด',1);addPts(-(SPR[k]||1));arr[pending]={c:k,ph:'g1',t:now};save();closeAll();drawPlots();saving();toast('🌱 ปลูก'+CN[k]+'ที่แปลงที่ '+(pending+1)+' แล้ว')});
 function harvest(list){const got={};list.forEach((i,j)=>{const p=S.farms[farm][i];if(!p||p.ph!=='ready')return;const q=p.angel?10:1;got[p.c]=(got[p.c]||0)+q;S.bag.crop[p.c]=(S.bag.crop[p.c]||0)+q;
@@ -467,7 +467,7 @@ function harvest(list){const got={};list.forEach((i,j)=>{const p=S.farms[farm][i
   S.farms[farm][i]=null});save();drawPlots();saving();
  const t=Object.entries(got).map(([k,q])=>CN[k]+' ×'+q).join(' • ');if(t)toast('🧺 เก็บเข้ากระเป๋า: '+t)}
 const idx=fn=>S.farms[farm].map((p,i)=>!isLocked(i)&&fn(p)?i:-1).filter(i=>i>=0);
-$('fan').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!$('fan').classList.contains('open'))return;const a=b.dataset.a;$('fan').classList.remove('open');$('toolBtn').classList.remove('open');if(visiting)return;S.farms[farm].forEach(pstage);
+$('fan').addEventListener('click',e=>{if(window.cloudFarmReady)return;const b=e.target.closest('button');if(!b||!$('fan').classList.contains('open'))return;const a=b.dataset.a;$('fan').classList.remove('open');$('toolBtn').classList.remove('open');if(visiting)return;S.farms[farm].forEach(pstage);
  if(a==='plantAll'){if(!idx(p=>!p).length)return toast('ไม่มีแปลงว่างแล้วนะ',1);plantAll=true;$('seedTitle').textContent='🌱 ปลูกทั้งหมด';$('seedHint').textContent='เลือกผัก 1 ชนิด จะปลูกลงทุกแปลงที่ว่างในฟาร์มนี้';closeAll();open('seedSheet')}
  if(a==='waterAll'){let ok=0,w=0;S.farms[farm].forEach((p,i)=>{const r=pwater(i);if(r==='ok')ok++;if(r==='worm')w++});save();drawPlots();saving();toast(ok+w?'💧 รดน้ำ '+(ok+w)+' แปลง'+(w?' • เจอหนอน '+w+' แปลง 🐛':''):'ยังไม่มีต้นที่ต้องรดน้ำนะ',!(ok+w))}
  if(a==='wormAll'){const l=idx(p=>p&&p.ph==='worm');if(!l.length)return toast('ไม่มีหนอนในฟาร์มนี้ 🎉');let n=0;l.forEach(i=>{if(punworm(i))n++});save();drawPlots();toast('🪱 กำจัดหนอน '+n+' แปลง (−'+n+' กุศล)')}
@@ -593,18 +593,6 @@ const css=document.createElement('style');css.textContent=`
 .dreq img{width:2.4rem;height:2.4rem;object-fit:contain}.dreq b{flex:1;font-size:.8rem}.dreq span{font-weight:800;font-size:.8rem}.dreq.ok{border-color:#9FDDC4;background:#F1FBF6}.dreq.no span{color:#C2445E}
 .htier{font-size:.66rem;color:#9A7A68;display:block}`;document.head.appendChild(css);
 S.bag.gfood=S.bag.gfood||{};S.bag.hamster=S.bag.hamster||{};S.bag.box=S.bag.box||{};
-/* ---------- 1) รายชื่อเพื่อน: ยัยหนูบนสุด 999,999 ไม่มีอันดับ • Top 5 ไฮไลต์ • สมาชิก 25 คน ---------- */
-const MEM=[['Porpla',2410333],['Kongkwan',1980442],['Earn',1102994],['ส้มโอ',876120],['ฟ้าใส',540210],['ลุงชาวสวน',301877],['มดแดง',288400],['น้องแพรว',265100],['ป้าศรี',240990],['Bam',221050],['ขนมครก',198300],['Nong May',176420],['ต้นกล้า',150880],['Jib',133200],['แม่มะลิ',121775],['Pond',99800],['ใบเตย',87650],['Tangtang',76500],['ลูกหมู',65430],['Fern',54320],['ชมพู่',43210],['Golf',32100],['ข้าวหอม',21980],['Nut',15400],['มะปราง',9870]];
-const COL=['#F6B43C','#A9BDD0','#E09C70','#6CC9A8','#7FC7E8','#B49BE0','#F6A9BD','#9FD18B'];
-FR.length=0;const isOwner=USER.name==='ยัยหนู';FR.push(['ยัยหนู',999999,'#F2A23A',isOwner?1:0,1]);
-MEM.forEach(([n,m],i)=>{if(n!==USER.name)FR.push([n,m,COL[i%8],0,0])});if(!isOwner&&!MEM.find(x=>x[0]===USER.name))FR.push([USER.name,pts,'#F6A9BD',1,0]);else if(!isOwner)FR.push([USER.name,pts,'#F6A9BD',1,0]);
-const ranked=()=>FR.filter(f=>!f[4]).sort((a,b)=>b[1]-a[1]);
-renderFriends=function(){FR.forEach(f=>{if(f[3]&&!f[4])f[1]=pts});const o=FR.find(f=>f[4]),rows=ranked();
- $('friendList').innerHTML='<div class="rank owner'+(o[3]?' me':'')+'" data-n="ยัยหนู"><span class="no">👑</span><span class="ra" style="background:'+o[2]+'">ย</span><span class="rn">ยัยหนู'+(o[3]?' (คุณ)':'')+' <small style="font-weight:600;color:#B9761F">เจ้าของสวน</small></span><span class="rp">999,999</span></div>'+
- rows.map((f,i)=>'<div class="rank'+(i<5?' top5':'')+(f[3]?' me':'')+'" data-n="'+f[0]+'"><span class="no">'+(['🥇','🥈','🥉'][i]||i+1)+'</span><span class="ra" style="background:'+f[2]+'">'+f[0][0]+'</span><span class="rn">'+f[0]+(f[3]?' (คุณ)':'')+'</span><span class="rp">'+fmt(f[1])+'</span></div>').join('')};
-$('friendList').onclick=e=>{const r=e.target.closest('.rank');if(!r)return;const f=FR.find(x=>x[0]===r.dataset.n);if(!f)return;if(f[3])return toast('นี่คือคุณเองนะ 😊');
- const rk=ranked().indexOf(f)+1;$('fmAv').textContent=f[0][0];$('fmAv').style.background=f[2];$('fmName').textContent=f[0];$('fmInfo').textContent=f[4]?'👑 เจ้าของสวน • 999,999 กุศล':'อันดับ '+rk+' • '+fmt(f[1])+' กุศล';
- $('fmVisit').onclick=()=>visit(f[0]);closeAll();open('friendModal')};
 /* ---------- 2) น้องน้ำผึ้งแบบใหม่: น้ำผึ้งขอเมนูเอง ---------- */
 const HV={jeep:{sp:'jeep',lane:1300,w:27,tray:[3,6],menu:[1,2],wait:[20,60],mer:[300,600],nm:'🚙 รถจี๊ป',lv:'ง่าย'},ship:{sp:'boat',lane:1585,w:25,tray:[7,12],menu:[2,3],wait:[10,30],mer:[800,1500],nm:'🏴‍☠️ เรือ',lv:'กลาง'},raft:{sp:'raft',lane:1580,w:28,tray:[13,20],menu:[3,4],wait:[5,15],mer:[2000,3500],nm:'🪵 แพ',lv:'ยาก'}};
 let HFAST=true;const waitMs=v=>HFAST?HV[v].wait[1]*1000:HV[v].wait[0]*60000;const MOVE=3000;
@@ -725,7 +713,7 @@ function drawFruit(s){if(farm!==4)return;s.style.backgroundImage='url('+FI.bg+')
   d.innerHTML='<img class="t" src="'+FI['tree-'+p.t]+'" alt="">'+SPOT.slice(0,I.fr).map(([x,y])=>'<img class="fr" src="'+FI[p.t]+'" style="left:'+x*100+'%;top:'+y*100+'%" alt="">').join('')+(I.grow<1?'<span class="fbadge">🌱 '+Math.round(I.grow*100)+'%</span>':'');
   d.onclick=()=>visiting?toast('🍑 ดูได้อย่างเดียว เด็ดไม่ได้นะ'):tapTree(i);s.appendChild(d)});
  if(gone.length){save();toast('🍂 ต้น'+gone.join(', ')+' หมดอายุแล้ว หลุมว่างให้ปลูกใหม่')}}
-function fakeTree(i){const ts=Object.keys(TR);let h=0;for(const c of visiting+i)h=(h*31+c.charCodeAt(0))>>>0;if(h%4===0)return null;return{t:ts[h%4],at:now()-TR[ts[h%4]].grow*HR()-((h%5)+1)*TR[ts[h%4]].every*HR(),last:0}}
+function fakeTree(i){return window.friendFarm?.fruit?.plots?.[i]||null}
 /* ปลูก */
 function openPlant(i){const ts=Object.keys(TR).filter(t=>(S.bag.tree[t]||0)>0);
  $('delSheet').innerHTML='<h3>🌳 ปลูกต้นไม้ผลไม้</h3><div class="hint" style="text-align:center;margin-bottom:.5rem">ไม่มีเมล็ด ปลูกเป็นต้นเลย • ปลูกแล้วขุดคืนไม่ได้</div>'+
@@ -841,8 +829,8 @@ const OPEN=new Set(['house','backyard','forest','f4']);
 const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"],["🏡","หลังบ้าน","อาหารสวน • แฮมสเตอร์","backyard"]]],
  ["สัตว์",[["🐔","โรงเรือนสัตว์วิญญาณ","ไก่ ปลา หมู วัว","barn"],["🦤","นกน้อยคล้อยบินมาเดียวดาย","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","ขุดสมบัติ โยนบอล เฝ้าสวน","dog"],["🐱","คอกแมว","อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","ทุ่งอัลปาก้า + โรงงาน","ตัดขน • แปรรูป","alpaca"]]],
  ["สถานที่",[["🌲","ป่าต้องห้าม","เปิด 18:00–05:59 เวลาไทย","forest"],["🍎","ฟาร์มต้นผลไม้","ฟาร์ม 4","f4"]]],
- ["เร็วๆ นี้",[["🎣","ตกปลา • แข่งเรือ • ร้านค้า • ซาฟารี","",""],["🎮","มินิเกม • กิจกรรม","",""]]]];
+ ["สถานที่เพิ่มเติม",[["🦓","ซาฟารี","วิจัยสัตว์","safari"],["🏪","ตลาดสวน","หุ้น • ขายไวน์","shop"],["🚤","แข่งเรือ","5 ทีม • เสบียง • การ์ด","boat"],["🏪","ร้านของเพื่อน","วางขาย • ซื้อของ","farmshop"],["🎣","ตกปลา","บ่อทั่วไป • VIP","fishing"],["🏆","Top Spenders • กาชาปอง","","topspenders"],["🏅","แคมเปญ","6 แคมเปญ • รางวัล 10 ขั้น","campaigns"],["🎮","มินิเกม","4 เกม • เหรียญฮาโลวีน","minigames"]]]];
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script></body></html>
+})();</script><script src="outings.js?v=ss3-20261008-images2"></script><script src="farm-cloud.js?v=ss3-20261008-images2"></script></body></html>

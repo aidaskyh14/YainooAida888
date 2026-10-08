@@ -1,8 +1,15 @@
+import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-images2';
+import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
+import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-images2';
+import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-images2';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { CATALOG } from './catalog.js?v=3';
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { SplitSaveStore } from './save-store.js?v=ss3-20261008-images2';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-images2';
+import { installBackupUI } from './save-backup.js?v=ss3-20261008-images2';
+import { CATALOG } from './catalog.js?v=ss3-20261008-images2';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -20,6 +27,7 @@ const MAIL_DAYS = 60;                  // ซองในไปรษณีย�
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const functions=getFunctions(app,'us-central1');
 const db = getFirestore(app);
 const CAT = Object.fromEntries(CATALOG.map(c => [c.k, c]));
 const IMG = n => 'images/' + n;
@@ -29,6 +37,8 @@ const COIN_IMG = IMG('gacha-coin.webp');
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Math.round(n || 0).toLocaleString('en-US');
+let store;
+let campaignConfig={},campaignStop=null,campaignBoxes=[];
 let toastT;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400); }
 function modal(html, acts = [{ t: 'ตกลง' }]) {
@@ -80,27 +90,35 @@ function defaultPlayer(name) {
 // ---------- ระบบเซฟ ----------
 // หลัก: เปลี่ยนค่าในเครื่องทันที -> จดว่าช่องไหนเปลี่ยน -> รวบส่งทุก 30 วิ และตอนพับแอป
 // ของสำคัญใช้ critical() ส่งทันทีแบบสำเร็จหมดหรือไม่เกิดเลย
-// เซฟเดียวต่อคน เก็บเป็นตัวเลขเท่านั้น และตรวจขนาดก่อนส่งทุกครั้ง
+// แยกเซฟตามระบบใน players/{uid}/saves ไม่เก็บเกมรวมในเอกสารผู้เล่น
 // เล่นได้ทีละ 1 เครื่อง: ทุกการบันทึกแนบรหัสเครื่อง กฎ Firebase ปฏิเสธเครื่องเก่า
 const playerRef = () => doc(db, 'players', S.user.uid);
-function change(field) { S.dirty.add(field); showSave('รอบันทึก…'); }
+let cloudSaveTimer;
+function change(field) {
+  if(field === 'g' && S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);
+  S.dirty.add(field); showSave('กำลังบันทึกบนคลาวด์…');
+  if (S.frame) S.frame.style.pointerEvents = 'none';
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => flush().catch(() => {}), 300);
+}
 function addItem(key, n) { S.P.bag[key] = Math.max(0, (S.P.bag[key] || 0) + n); if (!S.P.bag[key]) delete S.P.bag[key]; change('bag'); }
 function sizeOf(o) { return new Blob([JSON.stringify(o)]).size; }
 let saveDotT;
 function showSave(t, bad) { const d = $('#saveDot'); d.hidden = false; d.textContent = t; d.classList.toggle('bad', !!bad); clearTimeout(saveDotT); if (!bad && t.includes('✓')) saveDotT = setTimeout(() => d.hidden = true, 1500); }
 async function flush() {
-  if (!S.user || !S.P || S.blocked || S.saving || !S.dirty.size) return;
-  const size = sizeOf(S.P);
-  if (size > SIZE_BLOCK) { showSave('เซฟใหญ่เกิน แจ้งแอดมิน', true); return; }
-  const fields = [...S.dirty]; S.dirty.clear(); S.saving = true;
-  const data = { by: S.sessionId, v: SAVE_VERSION, size };
-  fields.forEach(f => data[f] = S.P[f]);
-  try { await updateDoc(playerRef(), data); showSave('บันทึกแล้ว ✓'); }
-  catch (e) { fields.forEach(f => S.dirty.add(f)); onSaveError(e); }
-  finally { S.saving = false; }
+  if (!S.user || !S.P || S.blocked || !S.dirty.size) return;
+  if (S.saving) { await S.saving; return flush(); }
+  const fields = [...S.dirty]; S.dirty.clear();
+  const snapshot = {...S.P, g: clone(S.P.g)};
+  S.saving = store.save(snapshot, fields);
+  try { await S.saving; showSave('บันทึกแล้ว ✓'); }
+  catch (e) { fields.forEach(f => S.dirty.add(f)); onSaveError(e); throw e; }
+  finally { S.saving = false; if (S.frame && !S.blocked && !S.dirty.size) S.frame.style.pointerEvents = ''; }
 }
 function onSaveError(e) {
-  if ((e.code || '').includes('permission-denied')) { otherDevice(); return; }
+  if (e.code === 'save/conflict') { otherDevice(); return; }
+  if ((e.code || '').includes('permission-denied')) { showSave('Firebase ไม่อนุญาตให้บันทึก ตรวจ Rules ก่อนเล่นต่อ', true); return; }
+  if ((e.code || '').startsWith('save/')) { showSave(e.message, true); return; }
   showSave('ยังบันทึกไม่ได้ จะลองใหม่อัตโนมัติ', true);
 }
 function otherDevice() {
@@ -115,10 +133,10 @@ async function critical(fn, okMsg) {
   catch (e) { if ((e.code || '').includes('permission-denied')) otherDevice(); else if (e.thai) toast(e.thai); else toast(thaiError(e)); throw e; }
 }
 function startSaver() {
-  clearInterval(S.timer); S.timer = setInterval(flush, SAVE_EVERY_MS);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
-  window.addEventListener('pagehide', flush);
-  window.addEventListener('online', flush);
+  clearInterval(S.timer); S.timer = setInterval(() => flush().catch(() => {}), SAVE_EVERY_MS);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush().catch(() => {}); });
+  window.addEventListener('pagehide', () => flush().catch(() => {}));
+  window.addEventListener('online', () => flush().catch(() => {}));
 }
 
 // ---------- เข้าเกม ----------
@@ -126,9 +144,9 @@ async function loadSettings() {
   try { const s = await getDoc(doc(db, 'settings', 'global')); S.settings = s.exists() ? s.data() : { open: false }; } catch (e) { S.settings = { open: false }; }
 }
 async function enter(user) {
-  S.user = user; S.sessionId = newSession();
+  S.user = user; S.sessionId = newSession();cloudPending.clear();cloudSequences.clear();campaignBoxes=[];
   try {
-    const [adm, snap] = await Promise.all([getDoc(doc(db, 'admins', user.uid)).catch(() => null), getDoc(playerRef())]);
+    const [adm, snap] = await Promise.all([getDoc(doc(db, 'admins', user.uid)), getDoc(playerRef())]);
     S.admin = !!(adm && adm.exists());
     if (!snap.exists()) {
       const name = S.pendingName || 'ผู้เล่น';
@@ -139,8 +157,13 @@ async function enter(user) {
       await updateDoc(playerRef(), { session: S.sessionId, by: S.sessionId, lastLogin: serverTimestamp() });
     }
     S.pendingName = '';
-    S.P.g = S.P.g || null; startSaver();
-    if (!S.settings.open && !S.admin) renderClosed(); else renderGame('farm');
+    store = new SplitSaveStore(db, user.uid, S.sessionId);
+    S.P = await store.load(S.P);
+    const consolidated = consolidatePending(S.P.g,{"wool": "sub.alpaca.bag.wool", "wool-gold": "sub.alpaca.bag.wool-gold", "ameat": "sub.alpaca.bag.ameat", "ameat-p": "sub.alpaca.bag.ameat-p", "rawwool": "sub.alpaca.bag.rawwool", "rawwool-gold": "sub.alpaca.bag.rawwool-gold", "yarn-white": "sub.alpaca.bag.yarn-white", "yarn-pink": "sub.alpaca.bag.yarn-pink", "yarn-blue": "sub.alpaca.bag.yarn-blue", "scarf-red": "sub.alpaca.bag.scarf-red", "beanie-blue": "sub.alpaca.bag.beanie-blue", "plush-mini": "sub.alpaca.bag.plush-mini", "afood0": "sub.alpaca.bag.afood0", "afood1": "sub.alpaca.bag.afood1", "afood2": "sub.alpaca.bag.afood2"});
+    const refilled = refillAdminInventory(S.P.g,S.admin,CATALOG);
+    if(consolidated || refilled)await store.save(S.P,['g']);
+    campaignStop?.();const campaignSnap=await getDoc(doc(db,'world','campaigns'));campaignConfig=campaignSnap.exists()?campaignSnap.data():{};campaignStop=onSnapshot(doc(db,'world','campaigns'),snap=>{campaignConfig=snap.exists()?snap.data():{};});
+    startSaver();renderGame('loading');
   } catch (e) {
     $('#app').innerHTML = `<div class="boot"><div style="text-align:center;padding:1rem"><p>${thaiError(e)}</p><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>`;
   }
@@ -153,7 +176,7 @@ function renderLogin() {
   let mode = 'login';
   const L = t => `<div class="L"><span class="b">${t}</span><span class="f">${t}</span><span class="s">${t}</span></div>`;
   $('#app').innerHTML = `<div class="lscene"></div><canvas id="water"></canvas>
-    <header class="ltitle"><div class="tw"><div class="t1">${L('ในสวนของยัยหนู')}</div><div class="t2">${L('ซีซั่น 3')}</div></div>${S.settings.open ? '' : '<div><span class="ltag">เร็วๆ นี้</span></div>'}</header>
+    <header class="ltitle"><div class="tw"><div class="t1">${L('ในสวนของยัยหนู')}</div><div class="t2">${L('ซีซั่น 3')}</div></div></header>
     <button class="hof-btn" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button>
     <button class="lstart" id="lstart">เข้าสวน</button>
     <main class="lcard" id="lcard"><button class="lclose" id="lclose" aria-label="ปิด">✕</button>
@@ -226,13 +249,14 @@ function renderClosed() {
   $('#tMail').onclick = openMail; $('#tOut').onclick = logout;
 }
 function refreshBar() { }
-async function logout() { frameSave(); await flush(); S.frame = null; await signOut(auth); }
+async function logout() { campaignStop?.();campaignStop=null; frameSave(); await flush(); S.frame = null; await signOut(auth); }
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
-// หน้าที่มีเซฟของตัวเอง: เก็บไว้ใน g.sub.<id> และแชร์กุศล/ของร่วมกับกระเป๋ากลาง
+// g คือภาพข้อมูลในหน่วยความจำเพื่อรองรับหน้าชุด 2–3 เดิม; ฐานข้อมูลแยกเอกสารแล้ว
 const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'เกล็ดปลาจันทร์': 'product.scale' };
 const SUBS = {
+  ...{"s3safari1": {"id": "safari", "maps": {"bag.c-waterspinach": "bag.crop.waterspinach", "bag.c-lettuce": "bag.crop.lettuce", "bag.c-mango": "bag.crop.mango", "bag.c-chili": "bag.crop.chili", "bag.c-pumpkin": "bag.crop.pumpkin", "bag.c-lychee": "bag.crop.lychee", "bag.c-strawberry": "bag.crop.strawberry", "bag.c-grape": "bag.crop.grape", "bag.c-banana": "bag.crop.banana", "bag.c-gooseberry": "bag.crop.gooseberry", "bag.c-carrot": "bag.crop.carrot", "bag.c-corn": "bag.crop.corn", "bag.c-mushroom": "bag.crop.mushroom", "bag.c-melon": "bag.crop.melon", "bag.c-bamboo": "bag.crop.bamboo", "bag.c-plankton": "bag.crop.plankton", "bag.c-potato": "bag.crop.potato", "bag.c-cucumber": "bag.crop.cucumber", "bag.c-watermelon": "bag.crop.watermelon", "bag.c-cabbage": "bag.crop.cabbage", "bag.c-pea": "bag.crop.pea", "bag.c-tomato": "bag.crop.tomato", "bag.a-egg": "bag.product.egg", "bag.a-feather": "bag.product.feather", "bag.a-drumstick": "bag.product.drumstick", "bag.a-fishmeat": "bag.product.fishmeat", "bag.a-roe": "bag.product.roe", "bag.a-scale": "bag.product.scale", "bag.a-truffle": "bag.product.truffle", "bag.a-pork": "bag.product.pork", "bag.a-trotter": "bag.product.trotter", "bag.a-milk": "bag.product.milk", "bag.a-cheese": "bag.product.cheese", "bag.a-cream": "bag.product.cream", "bag.b-ostrich-egg": "bag.bird.ostrich-egg", "bag.b-ostrich-feather": "bag.bird.ostrich-feather", "bag.b-dodo-egg": "bag.bird.dodo-egg", "bag.b-dodo-feather": "bag.bird.dodo-feather", "bag.b-dodo-pebble": "bag.bird.dodo-pebble", "bag.f-0": "bag.food.ข้าวผัดไข่", "bag.f-1": "bag.food.ซุปฟักทอง", "bag.f-2": "bag.food.ปลาย่างซอสมะม่วง", "bag.f-3": "bag.food.สตูว์รวมมิตร", "bag.f-4": "bag.food.ไข่อบชีส", "bag.f-5": "bag.food.น่องไก่อบครีม", "bag.f-6": "bag.food.ขนมลิ้นจี่มะยม", "bag.f-7": "bag.food.จานรวมมิตร", "bag.f-8": "bag.food.ออมเล็ตโรซี่", "bag.f-9": "bag.food.ไข่อบอัญชัน", "bag.f-10": "bag.food.ไข่ตุ๋นหกบุปผา", "bag.f-11": "bag.food.ไข่ย่างสปาฟลาวเวอร์", "bag.fl-daisy": "bag.flower.daisy", "bag.fl-rose": "bag.flower.rose", "bag.fl-butterflypea": "bag.flower.butterflypea", "bag.fl-sunflower": "bag.flower.sunflower", "bag.fl-lotus": "bag.flower.lotus", "bag.fl-orchid": "bag.flower.orchid", "bag.fl-tulip": "bag.flower.tulip", "bag.fl-lavender": "bag.flower.lavender", "bag.fl-marigold": "bag.flower.marigold", "bag.fl-hydrangea": "bag.flower.hydrangea", "bag.fl-plumeria": "bag.flower.plumeria", "bag.fl-hibiscus": "bag.flower.hibiscus", "bag.w-moon": "bag.wine.moon", "bag.w-rose": "bag.wine.rose", "bag.w-blood": "bag.wine.blood", "bag.w-eclipse": "bag.wine.eclipse", "bag.h-fang": "bag.hedge.fang", "bag.h-quills": "bag.hedge.quills", "bag.h-claw": "bag.hedge.claw", "bag.h-tail": "bag.hedge.tail"}, "fresh": {"merit": 0, "bag": {}, "tasks": {}, "sel": 1, "stats": {"runs": 0, "wins": 0, "fails": 0, "merit": 0}, "log": []}}, "s3market1": {"id": "market", "maps": {"bag.rose": "bag.wine.rose", "bag.moon": "bag.wine.moon", "bag.blood": "bag.wine.blood", "bag.eclipse": "bag.wine.eclipse"}, "fresh": {"lots": [], "bag": {}, "news": [], "modes": [], "divGot": {}, "mailSeen": 0, "mail": []}}},
   's3barn3': { id: 'barn', maps: { items: 'bag.item', bag: 'bag.product' } },
   's3birds1': { id: 'birds', maps: { bag: 'bag.bird' }, mats: MATS },
   's3dog-v1': { id: 'dog', maps: { 'bag.item': 'bag.item', 'bag.grass': 'bag.grass', 'bag.product': 'bag.product', 'bag.crop': 'bag.crop' } },
@@ -244,7 +268,7 @@ const delp = (o, path) => { const ks = path.split('.'); const last = ks.pop(); c
 const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
 const FLAT = CATALOG.filter(c => !c.p.startsWith('pend.') && !c.p.startsWith('sub.'));
 function subGet(K) {
-  const C = SUBS[K], G = S.P.g || {}; const sub = clone(G.sub && G.sub[C.id]); if (!sub) return null;
+  const C = SUBS[K], G = S.P.g || {}; const sub = clone((G.sub && G.sub[C.id]) || C.fresh); if (!sub) return null;
   sub.merit = G.merit || 0;
   for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) || {});
   if (C.mats) { sub.mats = {}; for (const n in C.mats) sub.mats[n] = getp(G, 'bag.' + C.mats[n]) || 0; }
@@ -252,6 +276,7 @@ function subGet(K) {
   return JSON.stringify(sub);
 }
 function subSet(K, v) {
+  const before = JSON.stringify(S.P.g), prior=clone(S.P.g);
   const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { return; }
   S.P.g = S.P.g || {}; const G = S.P.g; G.sub = G.sub || {}; const first = !G.sub[C.id];
   if (!first && typeof o.merit === 'number') G.merit = o.merit;
@@ -260,24 +285,69 @@ function subSet(K, v) {
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
   if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; change('g'); setTimeout(reloadScreen, 50); return; }
-  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o); change('g');
+  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);observeGameplay(prior,G,C.id,campaignConfig,Date.now(),campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = { farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
-const LS_CAP = 8000;
+const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
+const LS_CAP = 128 * 1024;
 function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
+const CLOUD_HANDLERS={birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud'};
+const cloudPending=new Map(),cloudSequences=new Map();
+let cloudBusy=false;
+async function cloudAction(system,input) {
+  if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
+  if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');
+  if(!CLOUD_HANDLERS[system])throw new Error('ไม่พบระบบที่เรียก');
+  cloudBusy=true;if(S.frame)S.frame.style.pointerEvents='none';
+  try {
+    frameSave();await flush();
+    let pending=cloudPending.get(system);
+    const recover=pending&&JSON.stringify(pending.input)!==JSON.stringify(input);
+    if(!pending) {
+      if(!cloudSequences.has(system)) {
+        const gate=await getDoc(doc(db,'players',S.user.uid,'actionGates',system));
+        cloudSequences.set(system,gate.exists()?gate.data().seq:0);
+      }
+      pending={input,seq:cloudSequences.get(system)+1,id:crypto.randomUUID(),session:S.sessionId};
+      cloudPending.set(system,pending);
+    }
+    for(let attempt=0;attempt<(recover?2:1);attempt++){
+    const response=(await httpsCallable(functions,CLOUD_HANDLERS[system])(pending)).data;
+    for(const row of response.actorParts||[]){store.parts.set(row.id,row.part);store.revs.set(row.id,row.part.rev);}
+    Object.assign(S.P,response.meta||{});S.P.g=joinGame(store.parts.values());
+    cloudSequences.set(system,response.seq);cloudPending.delete(system);
+    if(recover&&attempt===0){pending={input,seq:response.seq+1,id:crypto.randomUUID(),session:S.sessionId};cloudPending.set(system,pending);continue;}
+    return response;
+    }
+  } catch(e) {
+    const c=e.code||'';
+    if(!['functions/unavailable','functions/deadline-exceeded','functions/internal','functions/unknown'].includes(c)){
+      cloudPending.delete(system);if(c==='functions/aborted')cloudSequences.delete(system);
+    }
+    throw e;
+  } finally {cloudBusy=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
+}
 window.__HOST = {
+  watchGameView(system,fn){return onSnapshot(doc(db,'players',S.user.uid,'gameViews',system),snap=>fn(snap.exists()?snap.data():null),e=>showSave(e.message,true));},
+  recordCampaignBox(reward){if(campaignBoxes.length<10000)campaignBoxes.push({...reward});},
+  get admin() { return S.admin; },
+  get coins(){return S.P?.coins||0;},
+  openAdmin(){if(S.admin)openAdminOverlay();},
+  get uid() { return S.user?.uid||''; },
+  cloud:cloudAction,
+  roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
+  watchWorld(system,fn){const stop=onSnapshot(doc(db,'world',system),snap=>fn(snap.exists()?snap.data():null),e=>showSave(e.message,true));return stop;},
   get(k) {
-    if (k === GAME_KEY) return S.P && S.P.g ? JSON.stringify(S.P.g) : null;
-    if (SUBS[k]) return S.P ? subGet(k) : null;
+    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(S.P.g):null; }
+    if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
   },
   set(k, v) {
     if (!S.P || S.blocked) return;
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } const ls = S.P.g && S.P.g._ls; if (ls && !o._ls) o._ls = ls; S.P.g = o; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; observeGameplay(S.P.g,o,S.screen,campaignConfig,Date.now(),campaignBoxes.splice(0));S.P.g = o; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v); return; }
-    if (String(v).length > LS_CAP) return;
+    if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
     S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
   },
   del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
@@ -293,15 +363,17 @@ function renderGame(screen) {
   }
   goScreen(screen);
 }
-function goScreen(n) {
+async function goScreen(n) {
   if (n === 'admin') { if (S.admin) openAdminOverlay(); return; }
   if (n === 'login') { logout(); return; }
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
-  frameSave(); S.screen = n;
+  if (S.navigating) return; S.navigating = true;
+  try { frameSave(); await flush(); } catch (e) { S.navigating = false; toast(e.message || thaiError(e)); return; }
+  S.navigating = false; S.screen = n;
   const t = SCREENS[n]; $('#gbar').hidden = !t; $('#gttl').textContent = t; document.body.classList.toggle('sub', !!t);
-  S.frame.src = 'scr-' + n + '.html?v=3';
+  S.frame.src = 'scr-' + n + '.html?v=ss3-20261008-images2';
 }
-function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=3&r=' + Date.now(); }
+function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-images2&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 function openAdminOverlay() { const o = $('#ov'); o.hidden = false; renderAdmin(); }
 function itemsHtml(items) {
@@ -322,11 +394,11 @@ async function openMail() {
   const now = Date.now(), live = [], expired = [];
   docs.forEach(d => { const g = d.data(); (g.expireAt && g.expireAt.toMillis() < now ? expired : live).push({ id: d.id, ...g }); });
   expired.forEach(g => deleteDoc(doc(db, 'mail', S.user.uid, 'items', g.id)).catch(() => { }));
-  if (S.P.mailCount !== live.length) { S.P.mailCount = live.length; change('mailCount'); refreshBar(); }
+  // A page of 60 envelopes is not the full mailbox count. Keep the cloud counter.
   if (!live.length) { modal('<h2>📮 ไปรษณีย์</h2><p class="note">ยังไม่มีของในไปรษณีย์</p>'); return; }
   const html = '<h2>📮 ไปรษณีย์</h2>' + live.map(g => `<div class="mail"><span class="ic">${esc(g.icon || '🎁')}</span><b>${esc(g.title)}<small>${esc(g.msg || '')}</small>
     <span class="items">${g.kusal ? `<span>✨ กุศล ${fmt(g.kusal)}</span>` : ''}${g.coins ? `<span><img src="${COIN_IMG}" alt="">เหรียญฮาโลวีน ×${fmt(g.coins)}</span>` : ''}${itemsHtml(g.items)}</span></b>
-    <button class="btn sm" data-id="${g.id}">กดรับ</button></div>`).join('') + `<p class="note">กดรับแล้วซองหายทันที ซองหมดอายุใน ${MAIL_DAYS} วัน</p>`;
+    <button class="btn sm" data-id="${g.id}">กดรับ</button></div>`).join('') + `<p class="note">กดรับแล้วซองหายทันที ซองของขวัญทั่วไปหมดอายุใน ${MAIL_DAYS} วัน · เงินทุนคืนและรางวัลสะสมไม่มีวันหมดอายุ</p>`;
   modal(html, [{ t: 'ปิด', c: 'gray' }]);
   $('#mcard').querySelectorAll('[data-id]').forEach(b => b.onclick = () => claim(b.dataset.id, b));
 }
@@ -337,21 +409,19 @@ async function claim(id, btn) {
   const mref = doc(db, 'mail', S.user.uid, 'items', id);
   let got;
   try {
-    got = await critical(async tx => {
-      const m = await tx.get(mref);
-      if (!m.exists()) { const e = new Error('gone'); e.thai = 'ซองนี้รับไปแล้ว'; throw e; }
-      const g = m.data(), args = ['by', S.sessionId, 'mailCount', increment(-1)];
-      if (g.coins) args.push('coins', increment(g.coins));
-      if (g.kusal) args.push(new FieldPath('g', 'merit'), increment(g.kusal));
-      for (const [k, n] of Object.entries(g.items || {})) args.push(new FieldPath(...gpath(k).split('.')), increment(n));
-      tx.update(playerRef(), ...args); tx.delete(mref);
-      return g;
+    await flush();
+    got = await store.claimMail(mref, (game, mail) => {
+      const release=mail.escrowRelease;if(release&&game.sub?.minigames?.escrows?.[release.system]?.round===release.round)delete game.sub.minigames.escrows[release.system];
+      if (mail.kusal) game.merit = (game.merit || 0) + mail.kusal;
+      for (const [k,n] of Object.entries(mail.items || {})) addPath(game, gpath(k).slice(2), n);
+      refillAdminInventory(game,S.admin,CATALOG);
     });
-  } catch (e) { busy(btn, false, 'กดรับ'); if (e.thai) openMail(); return; }
+  } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(); } else toast(thaiError(e)); return; }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
   S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
-  S.P.g = S.P.g || {}; if (got.kusal) S.P.g.merit = (S.P.g.merit || 0) + got.kusal;
+  S.P.g = S.P.g || {};const released=got.escrowRelease;if(released&&S.P.g.sub?.minigames?.escrows?.[released.system]?.round===released.round)delete S.P.g.sub.minigames.escrows[released.system]; if (got.kusal) S.P.g.merit = (S.P.g.merit || 0) + got.kusal;
   for (const [k, n] of Object.entries(got.items || {})) addPath(S.P.g, gpath(k).slice(2), n);
+  refillAdminInventory(S.P.g,S.admin,CATALOG);
   reloadScreen();
   toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail();
 }
@@ -361,23 +431,40 @@ const A = { tab: 'send', players: null, sel: new Set(), gift: { title: 'ขอ�
 async function loadPlayers(force) {
   if (A.players && !force) return A.players;
   const snap = await getDocs(collection(db, 'players'));
-  A.players = snap.docs.map(d => ({ uid: d.id, ...d.data(), _size: sizeOf(d.data()) })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+  A.players = await Promise.all(snap.docs.map(async d => {
+    const data = d.data();
+    let merit = data.g?.merit || 0;
+    if(data.storageVersion === 2) {
+      const wallet=await getDoc(doc(db,'players',d.id,'saves','wallet'));
+      merit=wallet.exists()?JSON.parse(wallet.data().payload).merit||0:0;
+    }
+    return {uid:d.id,...data,g:{merit},_size:data.maxPartBytes||sizeOf(data)};
+  }));
+  A.players.sort((a,b)=>(a.name||'').localeCompare(b.name||'','th'));
   return A.players;
 }
 function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['send', '🎁 ส่งของ'], ['birds', '🦤 คำขอล่อนก'], ['players', '👥 ผู้เล่น'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['send', '🎁 ส่งของ'], ['birds', '🦤 คำขอล่อนก'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  ({ send: tabSend, birds: tabBirds, players: tabPlayers, backup: tabBackup, settings: tabSettings })[A.tab]();
+  ({ send: tabSend, birds: tabBirds, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 async function tabSend() {
   const B = $('#aBody'), g = A.gift;
   B.innerHTML = '<div class="box"><p class="note">กำลังโหลดรายชื่อ…</p></div>';
   let ps; try { ps = await loadPlayers(); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
+  try {
+    const run=await getDoc(doc(db,'adminGiftRuns',S.user.uid));
+    if(run.exists()&&run.data().status==='sending') {
+      const pending=run.data(),sent=pending.done.reduce((n,start)=>n+Math.min(180,pending.uids.length-start),0);
+      B.innerHTML=`<div class="box"><h3>📮 รายการส่งที่ค้าง</h3><p>${esc(pending.body.title)}</p><div class="items">${itemsHtml(pending.body.items)}</div><p>ส่งสำเร็จแล้ว ${sent}/${pending.uids.length} คน</p><button class="btn pink" id="gResume">ส่งรายการเดิมต่อ</button><p class="note">ผู้รับที่ส่งสำเร็จแล้วจะไม่ได้ซ้ำ แม้รับของจากตู้ไปแล้ว</p></div>`;
+      $('#gResume').onclick=()=>{A.gift.operationId=pending.operationId;sendGift(pending.uids,pending.names)};return;
+    }
+  } catch(e){B.innerHTML=`<div class="box">${thaiError(e)}</div>`;return;}
   const filt = CATALOG.filter(c => !A.q || c.n.includes(A.q) || c.k.includes(A.q.toLowerCase()));
   B.innerHTML = `<div class="box"><h3>1. เลือกผู้รับ (${A.sel.size}/${ps.length})</h3>
       <div class="row"><button class="btn sm" id="sAll">${A.sel.size === ps.length && ps.length ? 'ยกเลิกทั้งหมด' : '👥 เลือกทุกคน'}</button><button class="btn sm gray" id="sReload">↻ โหลดรายชื่อใหม่</button></div>
@@ -407,20 +494,18 @@ async function tabSend() {
   };
 }
 async function sendGift(uids, names) {
+  if(A.sending)return;A.sending=true;
   const g = A.gift, exp = Timestamp.fromMillis(Date.now() + MAIL_DAYS * 864e5);
   const body = { title: g.title, msg: g.msg, icon: g.icon, kusal: g.kusal || 0, coins: g.coins || 0, items: { ...g.items }, createdAt: serverTimestamp(), expireAt: exp, from: 'ยัยหนู' };
   toast('กำลังส่ง…');
   try {
-    for (let i = 0; i < uids.length; i += 200) {
-      const b = writeBatch(db);
-      uids.slice(i, i + 200).forEach(u => { b.set(doc(collection(db, 'mail', u, 'items')), body); b.update(doc(db, 'players', u), { mailCount: increment(1) }); });
-      await b.commit();
-    }
-    await setDoc(doc(collection(db, 'adminLog')), { at: serverTimestamp(), type: 'gift', to: names.slice(0, 50), count: uids.length, kusal: body.kusal, coins: body.coins, items: body.items, title: body.title });
-    if (uids.includes(S.user.uid)) { S.P.mailCount += 1; refreshBar(); }
+    frameSave();await flush();
+    A.gift.operationId ||= doc(collection(db,'adminLog')).id;
+    const result=await deliverAdminGift(db,S.user.uid,{id:A.gift.operationId,uids,names,body});
+    const profile=await getDoc(playerRef());S.P.mailCount=profile.data().mailCount||0;refreshBar();
     A.gift = { title: 'ของขวัญจากยัยหนู', msg: '', icon: '🎁', kusal: 0, coins: 0, items: {} }; A.sel.clear();
-    modal(`<h2>📮 ส่งแล้ว ${uids.length} คน</h2><p class="note">ของอยู่ในไปรษณีย์ของผู้รับ รอกดรับ</p>`); tabSend();
-  } catch (e) { modal(`<h2>ส่งไม่สำเร็จ</h2><p>${thaiError(e)}</p><p class="note">ไม่มีใครได้ของซ้ำ กดส่งใหม่ได้เลย</p>`); }
+    modal(`<h2>📮 ส่งแล้ว ${result.count} คน</h2><p class="note">ของอยู่ในไปรษณีย์ของผู้รับ รอกดรับ</p>`); tabSend();
+  } catch (e) { modal(`<h2>ส่งไม่สำเร็จ</h2><p>${thaiError(e)}</p><p class="note">กดส่งใหม่ ระบบจะตรวจรายการที่ค้างบนคลาวด์และส่งต่อ คนที่ส่งสำเร็จแล้วจะไม่รับซ้ำ</p>`); } finally { A.sending=false; }
 }
 async function tabBirds() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
@@ -443,51 +528,36 @@ async function tabPlayers() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
   let ps; try { ps = await loadPlayers(true); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
   const big = ps.filter(p => p._size > SIZE_WARN);
-  B.innerHTML = `<div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ เซฟใหญ่เกิน 200KB ${big.length} คน แจ้งผู้พัฒนาได้เลย</p>` : '<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>'}
-    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ</th><th>เข้าล่าสุด</th></tr>${ps.map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${p._size > SIZE_WARN ? 'warn' : ''}">${(p._size / 1024).toFixed(1)}KB</td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
+  B.innerHTML = `<div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ ส่วนเซฟใหญ่เกิน 200KB ${big.length} คน แจ้งผู้พัฒนาได้เลย</p>` : '<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>'}
+    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>ส่วนใหญ่ที่สุด</th><th>เข้าล่าสุด</th></tr>${ps.map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${p._size > SIZE_WARN ? 'warn' : ''}">${(p._size / 1024).toFixed(1)}KB</td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
     <p class="note">หน้านี้อ่านข้อมูลเฉพาะตอนกดเปิด ไม่อ่านค้าง</p></div>`;
+}
+async function tabInventory() {
+  const B = $('#aBody'); B.textContent = 'กำลังโหลดรายชื่อ…';
+  try {
+    const users = (await getDocs(collection(db,'players'))).docs;
+    B.innerHTML = '<div class="box"><h3>🎒 ตรวจของจากคลาวด์</h3><select id="iPlayer">'+users.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.data().name)+'</option>').join('')+'</select> <button class="btn sm" id="iLoad">อ่านล่าสุด</button><div id="iResult"></div></div>';
+    $('#iLoad').onclick = async () => {
+      const uid=$('#iPlayer').value;if(!uid)return;$('#iResult').textContent='กำลังอ่านคลาวด์…';
+      try {
+        const data=await store.readFull(uid), G=data.g||{};
+        $('#iResult').innerHTML='<p>✨ กุศล '+fmt(G.merit)+' · เหรียญฮาโลวีน '+fmt(data.coins)+'</p><p class="note">กุศล: wallet · เหรียญ: ข้อมูลบัญชีผู้เล่น · ของและสัตว์รอวาง: inventory</p><table class="pl"><tr><th>ของ</th><th>จำนวน</th><th>เซฟหลัก</th></tr>'+CATALOG.map(c=>{
+          const v=getp(G,c.p.startsWith('sub.')||c.p.startsWith('pend.')?c.p:'bag.'+c.p)||0;
+          return '<tr><td>'+esc(c.n)+'</td><td>'+fmt(v)+'</td><td>inventory</td></tr>';
+        }).join('')+'</table>';
+      } catch(e) { $('#iResult').textContent=e.message||thaiError(e); }
+    };
+  } catch(e) { B.textContent=e.message||thaiError(e); }
 }
 const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 async function tabBackup() {
-  const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
-  let days = [];
-  try { days = (await getDocs(query(collection(db, 'backups'), orderBy('at', 'desc'), limit(14)))).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { }
-  const done = days.some(d => d.id === today());
-  B.innerHTML = `<div class="box"><h3>💾 สำรองข้อมูล</h3><p>${done ? '<span class="ok">✅ วันนี้สำรองแล้ว</span>' : '<span class="warn">⚠️ วันนี้ยังไม่ได้สำรอง</span>'}</p>
-      <button class="btn" id="bNow">สำรองตอนนี้</button><p class="note">เก็บเซฟของทุกคนไว้ 1 ชุดต่อวัน (เก็บย้อนหลัง 14 วัน) ใช้เวลาไม่กี่วินาที</p></div>
-    <div class="box"><h3>♻️ กู้คืนผู้เล่น</h3>${days.length ? `<div class="row">วันที่ <select id="rDay">${days.map(d => `<option value="${d.id}">${d.id} (${d.count || 0} คน)</option>`).join('')}</select> <button class="btn sm gray" id="rLoad">ดูรายชื่อ</button></div><div id="rList"></div>` : '<p class="note">ยังไม่มีข้อมูลสำรอง</p>'}
-      <p class="note">กู้คืนแล้ว เครื่องของผู้เล่นคนนั้นจะหยุดบันทึกทันทีและต้องเข้าเกมใหม่ กันเซฟเก่าทับของที่กู้</p></div>`;
-  $('#bNow').onclick = async e => {
-    busy(e.target, true, 'กำลังสำรอง…');
-    try {
-      const ps = await loadPlayers(true), d = today();
-      for (let i = 0; i < ps.length; i += 400) { const b = writeBatch(db); ps.slice(i, i + 400).forEach(p => { const { _size, uid, ...data } = p; b.set(doc(db, 'backups', d, 'players', uid), data); }); await b.commit(); }
-      await setDoc(doc(db, 'backups', d), { at: serverTimestamp(), count: ps.length });
-      const old = days.filter(x => x.id !== d).slice(13);
-      for (const o of old) { const pl = await getDocs(collection(db, 'backups', o.id, 'players')); const b = writeBatch(db); pl.docs.forEach(x => b.delete(x.ref)); b.delete(doc(db, 'backups', o.id)); await b.commit(); }
-      toast(`สำรองแล้ว ${ps.length} คน`); tabBackup();
-    } catch (er) { busy(e.target, false, 'สำรองตอนนี้'); toast(thaiError(er)); }
-  };
-  const rl = $('#rLoad'); if (rl) rl.onclick = async () => {
-    const d = $('#rDay').value, L = $('#rList'); L.innerHTML = '<p class="note">กำลังโหลด…</p>';
-    const pl = (await getDocs(collection(db, 'backups', d, 'players'))).docs;
-    L.innerHTML = pl.map(x => `<div class="row"><b style="flex:1">${esc(x.data().name)}</b><span class="note">✨${fmt(x.data().g && x.data().g.merit)}</span><button class="btn sm pink" data-r="${x.id}">กู้คืน</button></div>`).join('') || '<p class="note">ไม่มีข้อมูล</p>';
-    L.querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
-      const src = pl.find(x => x.id === b.dataset.r).data();
-      modal(`<h2>กู้คืน ${esc(src.name)}?</h2><p>เซฟปัจจุบันของคนนี้จะถูกแทนด้วยเซฟวันที่ ${d}</p>`, [{ t: 'ยกเลิก', c: 'gray' }, {
-        t: 'กู้คืน', c: 'pink', f: async () => {
-          try { const kick = 'restored-' + Date.now(); await setDoc(doc(db, 'players', b.dataset.r), { ...src, session: kick, by: kick }); await setDoc(doc(collection(db, 'adminLog')), { at: serverTimestamp(), type: 'restore', who: src.name, day: d }); toast('กู้คืนแล้ว'); }
-          catch (e) { toast(thaiError(e)); }
-        }
-      }]);
-    });
-  };
+  await installBackupUI({ db, store, $ , modal, toast, thaiError, esc, today, S, flush, frameSave });
 }
 async function tabSettings() {
   await loadSettings();
   $('#aBody').innerHTML = `<div class="box"><h3>⚙️ เปิด/ปิดเกม</h3><p>ตอนนี้: ${S.settings.open ? '<span class="ok">🟢 เปิดให้ผู้เล่นเข้า</span>' : '<span class="warn">🔴 ปิด (เข้าได้เฉพาะแอดมิน)</span>'}</p>
     <button class="btn ${S.settings.open ? 'pink' : ''}" id="tOpen">${S.settings.open ? 'ปิดเกม' : 'เปิดเกมให้ทุกคน'}</button><p class="note">ตอนปิด ผู้เล่นเข้าระบบได้แต่เห็นหน้า "สวนกำลังจะเปิด"</p></div>
-    <div class="box"><h3>ℹ️ ข้อมูลเครื่องนี้</h3><p class="note">รหัสบัญชีของคุณ (ใช้ตั้งสิทธิ์แอดมิน): <b>${S.user.uid}</b><br>ขนาดเซฟของคุณ: ${(sizeOf(S.P) / 1024).toFixed(1)}KB</p></div>`;
+    <div class="box"><h3>ℹ️ ข้อมูลเครื่องนี้</h3><p class="note">รหัสบัญชีของคุณ (ใช้ตั้งสิทธิ์แอดมิน): <b>${S.user.uid}</b><br>ขนาดข้อมูลในหน่วยความจำ: ${(sizeOf(S.P) / 1024).toFixed(1)}KB • ข้อมูลเกมใน Firebase แยกตามระบบแล้ว</p></div>`;
   $('#tOpen').onclick = async () => { try { await setDoc(doc(db, 'settings', 'global'), { open: !S.settings.open, at: serverTimestamp() }, { merge: true }); toast('บันทึกแล้ว'); tabSettings(); } catch (e) { toast(thaiError(e)); } };
 }
 
