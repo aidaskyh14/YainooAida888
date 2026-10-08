@@ -1,15 +1,15 @@
-import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-lazy2';
+import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-lazy3';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
-import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-lazy2';
-import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-lazy2';
+import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-lazy3';
+import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-lazy3';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-20261008-lazy2';
-import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-lazy2';
-import { installBackupUI } from './save-backup.js?v=ss3-20261008-lazy2';
-import { CATALOG } from './catalog.js?v=ss3-20261008-lazy2';
+import { SplitSaveStore } from './save-store.js?v=ss3-20261008-lazy3';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-lazy3';
+import { installBackupUI } from './save-backup.js?v=ss3-20261008-lazy3';
+import { CATALOG } from './catalog.js?v=ss3-20261008-lazy3';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -421,11 +421,11 @@ async function goScreen(n) {
     S.P.g=await store.loadIds(ids);store.activate(ids);
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-20261008-lazy2';
+    S.frame.src='scr-'+n+'.html?v=ss3-20261008-lazy3';
   }catch(e){toast(e.message||thaiError(e));}
   finally{S.navigating=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-lazy2&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-lazy3&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { try{frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {

@@ -1,5 +1,5 @@
 import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, deleteField, query, limit } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-20261008-lazy2';
+import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-20261008-lazy3';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
 export class SplitSaveStore {
@@ -42,18 +42,25 @@ export class SplitSaveStore {
   async load(profile,options={}) {
     this.partial=Array.isArray(options.ids);
     if(profile.storageVersion!==STORAGE_VERSION) {
-      // สำเนาข้อมูลเก่ายังคงอยู่ จน transaction ย้ายทุกส่วนสำเร็จพร้อมกัน
-      const initial=splitGame(profile.g||{});
+      // Migrate from the transaction's authoritative cloud snapshot.
+      // Keep the original save until every part commits atomically.
       const existing=await this.readParts();
-      if(existing.length)throw new Error('พบข้อมูลย้ายค้าง กรุณาตรวจข้อมูลก่อนเริ่มย้ายใหม่');
-      await runTransaction(this.db,async tx=>{
+      let migratedParts=null;
+      profile=await runTransaction(this.db,async tx=>{
         const root=await tx.get(this.root());
-        if(!root.exists() || root.data().session!==this.session || root.data().storageVersion===STORAGE_VERSION)throw conflict();
-        if(JSON.stringify(root.data().g||{})!==JSON.stringify(profile.g||{}))throw conflict();
+        if(!root.exists() || root.data().session!==this.session)throw conflict();
+        const current=root.data();
+        if(current.storageVersion===STORAGE_VERSION){migratedParts=null;return current;}
+        if(existing.length)throw new Error('พบข้อมูลย้ายค้าง กรุณาตรวจข้อมูลก่อนเริ่มย้ายใหม่');
+        const initial=splitGame(current.g||{});
         for(const [id,p] of initial)tx.set(this.ref(id),{...p,rev:1,by:this.session,updatedAt:serverTimestamp()});
-        tx.update(this.root(),{storageVersion:STORAGE_VERSION,partCount:initial.size,maxPartBytes:Math.max(0,...[...initial.values()].map(p=>bytes(p.payload))),g:deleteField(),size:deleteField(),saveRevision:(root.data().saveRevision||0)+1});
+        const metadata={storageVersion:STORAGE_VERSION,partCount:initial.size,maxPartBytes:Math.max(0,...[...initial.values()].map(p=>bytes(p.payload))),saveRevision:(current.saveRevision||0)+1};
+        tx.update(this.root(),{...metadata,g:deleteField(),size:deleteField()});
+        migratedParts=initial;
+        return {...current,...metadata};
       });
-      this.parts=initial;this.revs=new Map([...initial.keys()].map(id=>[id,1]));
+      if(migratedParts){this.parts=migratedParts;this.revs=new Map([...migratedParts.keys()].map(id=>[id,1]));}
+      else return this.load(profile,options);
     } else {
       if(this.partial) {
         await this.loadIds(options.ids);
