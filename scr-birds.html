@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
+</script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองนกน้อยคล้อยบินมาเดียวดาย</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#8fcf8f}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.85)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;transition:opacity .2s}
+.stage.fade{opacity:0}
+.an{position:absolute;transform:translate(-50%,-88%);width:13%;aspect-ratio:1;cursor:pointer}
+.an .sp{position:absolute;inset:0;background-size:400% 400%}
+.an .sh{position:absolute;left:18%;right:18%;bottom:-3%;height:16%;border-radius:50%;background:radial-gradient(ellipse,rgba(60,35,10,.35),rgba(60,35,10,0) 70%)}
+.an.sick .sp{filter:saturate(.5) brightness(.95)}
+.an .bd{position:absolute;left:50%;top:-14%;transform:translateX(-50%);font-size:1.05rem;background:#fff;border-radius:50%;width:1.7rem;height:1.7rem;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.an .bar{position:absolute;left:20%;right:20%;bottom:-10%;height:.28rem;border-radius:999px;background:rgba(255,255,255,.6);overflow:hidden}
+.an .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFE08A,#F2A23A)}
+.an.dead .sp{filter:grayscale(1) opacity(.5)}
+.empty{position:absolute;transform:translate(-50%,-50%);font-size:.72rem;color:#6E4B3A;font-weight:700;cursor:pointer;background:rgba(255,251,245,.75);border:2px dashed rgba(110,75,58,.4);border-radius:999px;padding:.15rem .6rem}
+.trough{position:absolute;transform:translate(-50%,-50%);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.trough .pile{display:flex;flex-wrap:wrap;justify-content:center;width:100%}
+.trough .pile img{width:8.5%;margin:-.5% -.6%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.trough .cnt{position:absolute;right:-2%;top:-30%;background:#F25C7A;color:#fff;font-weight:800;font-size:.75rem;border:2px solid #fff;border-radius:999px;padding:.05rem .45rem;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.trough .hint2{position:absolute;bottom:-34%;left:50%;transform:translateX(-50%);font-size:.62rem;font-weight:700;background:rgba(255,251,245,.9);border-radius:999px;padding:.05rem .45rem;white-space:nowrap}
+.flyp{position:absolute;width:5%;pointer-events:none;transition:left .9s ease-in,top .9s ease-in,opacity .9s;z-index:3}
+.dots{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + .55rem);display:flex;gap:.3rem;background:rgba(255,251,245,.9);border:2px solid #fff;border-radius:999px;padding:.2rem .35rem;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.dots button{border:0;background:none;font-size:1.05rem;width:2rem;height:2rem;border-radius:50%;cursor:pointer;opacity:.45}
+.dots button.on{opacity:1;background:#FFF3C9}
+.tool{position:fixed;z-index:6;right:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:3.1rem;height:3.1rem;border-radius:50%;border:3px solid #fff;font-size:1.3rem;display:grid;place-items:center;cursor:pointer;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);box-shadow:0 4px 0 rgba(0,0,0,.15),0 8px 16px rgba(0,0,0,.25);transition:transform .25s}
+.tool.open{transform:rotate(45deg)}
+.fan{position:fixed;z-index:6;right:.7rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4rem);display:flex;flex-direction:column-reverse;gap:.35rem;align-items:flex-end;pointer-events:none}
+.fan button{pointer-events:none;display:flex;align-items:center;gap:.35rem;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.97);font:inherit;font-weight:600;font-size:.76rem;color:var(--cocoa);padding:.2rem .75rem .2rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;opacity:0;transform:translateY(1rem) scale(.8);transition:.2s}
+.fan button i{font-style:normal;width:1.65rem;height:1.65rem;border-radius:50%;display:grid;place-items:center;background:#EAF6F3;font-size:.9rem}
+.fan.open button{opacity:1;transform:none;pointer-events:auto}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(40,60,40,.4);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s ease-out;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:84vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.5rem}
+.opt{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #fff;background:#fff;border-radius:1rem;padding:.45rem .7rem;margin-bottom:.35rem;font:inherit;color:var(--cocoa);cursor:pointer;text-align:left;box-shadow:0 3px 8px rgba(70,150,180,.12)}
+.opt img{width:2.6rem;height:2.6rem;object-fit:contain}.opt b{flex:1;font-size:.84rem}.opt b small{display:block;font-weight:500;font-size:.66rem;color:var(--soft)}.opt span{font-size:.72rem;font-weight:700;color:#B9761F;white-space:nowrap}
+.opt:disabled{opacity:.45}
+.row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}
+.btn{border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.8rem;padding:.5rem .9rem;cursor:pointer;background:var(--aqua);color:#fff;box-shadow:0 3px 0 #3F98B6}
+.btn.g{background:#6CC9A8;box-shadow:0 3px 0 #4DAA8A}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}.btn:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.cell{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .15rem;text-align:center;position:relative}
+.cell img{width:100%;aspect-ratio:1;object-fit:contain}.cell b{display:block;font-size:.6rem;line-height:1.2}.cell span{font-size:.7rem;font-weight:800;color:#B9761F}
+.cell.t1{border-color:#BFE3F5;background:#F3FAFE}.cell.t2{border-color:#FFD86B;background:#FFFBEA}.cell.t2::after{content:"✨";position:absolute;right:.15rem;top:.1rem;font-size:.7rem}
+.ann{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.6rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:1rem;padding:.3rem .8rem .3rem .3rem;font-size:.78rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;width:max-content;max-width:94vw;display:flex;gap:.4rem;align-items:center}
+.ann img{width:2rem;height:2rem;flex:none}.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:var(--pig);background:#FFF4F6}
+.bird{position:absolute;transform:translate(-50%,-92%);aspect-ratio:1;pointer-events:auto;cursor:pointer}
+.bird .sp{position:absolute;inset:0;background-size:400% 400%}
+.bird .sp.flip{transform:scaleX(-1)}
+.bird .sh{position:absolute;left:22%;right:22%;bottom:-2%;height:12%;border-radius:50%;background:radial-gradient(ellipse,rgba(70,45,15,.35),rgba(70,45,15,0) 70%)}
+.bird .tag{position:absolute;left:50%;top:-6%;transform:translateX(-50%);font-size:.62rem;font-weight:800;background:rgba(255,251,245,.95);border-radius:999px;padding:.02rem .4rem;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.bird .tag.ready{background:#FFF3C9}
+.drop{position:absolute;transform:translate(-50%,-50%);width:5.2%;cursor:pointer;z-index:2;animation:dp .4s cubic-bezier(.3,1.6,.5,1)}
+.drop img{width:100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+@keyframes dp{from{transform:translate(-50%,-140%) scale(.4);opacity:.2}}
+.dropcnt{position:fixed;z-index:5;left:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .9rem);background:rgba(255,251,245,.95);border:2px solid #fff;border-radius:999px;padding:.3rem .7rem;font-weight:700;font-size:.75rem;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.penchip{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 3.4rem);background:rgba(255,251,245,.92);border:2px solid #fff;border-radius:999px;padding:.2rem .7rem;font-size:.7rem;font-weight:700;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.slotbtn{position:absolute;transform:translate(-50%,-50%);font-size:.7rem;font-weight:700;background:rgba(255,251,245,.8);border:2px dashed rgba(110,75,58,.45);border-radius:999px;padding:.2rem .7rem;cursor:pointer;white-space:nowrap}
+.req{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid #F3E9DE;border-radius:1rem;padding:.4rem .6rem;margin-bottom:.35rem;font-size:.78rem}
+.req img{width:2.2rem}.req b{flex:1}
+.need{display:flex;flex-wrap:wrap;gap:.25rem;justify-content:center;margin:.3rem 0}.need span{font-size:.66rem;background:#F4EEE6;border-radius:999px;padding:.05rem .45rem}.need span.no{background:#FFE1E8;color:#C0506E}
+
+.ann{pointer-events:auto}.ann.long{border-width:3px;font-size:.84rem;padding:.5rem .9rem .5rem .5rem}.ann.long img{width:2.6rem;height:2.6rem}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"></div></div>
+<div class="dots" id="dots"></div><div class="penchip" id="penchip"></div>
+<div class="dropcnt" id="dropcnt"></div>
+<div class="fan" id="fan"></div><button class="tool" id="toolBtn">🧰</button>
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet"><div id="sb"></div></section>
+<div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
+<script>
+const IMG={"bg": "images/bird-pen-bg.webp", "happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "ostrich-walk-side": "images/birds-ostrich-walk-side.webp", "ostrich-walk-back": "images/birds-ostrich-walk-back.webp", "ostrich-walk-front": "images/birds-ostrich-walk-front.webp", "ostrich-idle": "images/birds-ostrich-idle.webp", "dodo-walk-side": "images/birds-dodo-walk-side.webp", "dodo-walk-back": "images/birds-dodo-walk-back.webp", "dodo-walk-front": "images/birds-dodo-walk-front.webp", "dodo-idle": "images/birds-dodo-idle.webp", "ostrich-egg": "images/birds-ostrich-egg.webp", "ostrich-feather": "images/birds-ostrich-feather.webp", "dodo-egg": "images/birds-dodo-egg.webp", "dodo-feather": "images/birds-dodo-feather.webp", "dodo-pebble": "images/birds-dodo-pebble.webp", "scroll-ostrich": "images/birds-scroll-ostrich.webp", "scroll-dodo": "images/birds-scroll-dodo.webp", "f-corn": "images/birds-birdfood-corn.webp", "f-pumpkin": "images/birds-birdfood-pumpkin.webp", "f-melon": "images/birds-birdfood-melon.webp", "f-carrot": "images/birds-birdfood-carrot.webp", "f-fruit": "images/birds-birdfood-fruit.webp", "f-mushroom": "images/birds-birdfood-mushroom.webp"};const W=941,H=1672,$=id=>document.getElementById(id);
+const SP={ostrich:{e:'🦢',n:'นกกระจอกเทศ',size:19},dodo:{e:'🦤',n:'นกโดโด้',size:13.5}};
+const FOOD={corn:['ostrich','ข้าวโพดคลุกเมล็ดพืช',10,3,[['ostrich-egg',1]]],pumpkin:['ostrich','ฟักทองบดธัญพืช',5,5,[['ostrich-egg',2],['ostrich-feather',2]]],melon:['ostrich','สลัดแตงโมเย็นฉ่ำ',2,10,[['ostrich-feather',3]]],
+ carrot:['dodo','แครอทบดเมล็ดทานตะวัน',10,3,[['dodo-egg',1]]],fruit:['dodo','ผลไม้รวมโดโด้',5,5,[['dodo-feather',2]]],mushroom:['dodo','ซุปเห็ดหินกรวด',2,10,[['dodo-pebble',2]]]}; // [นก, ชื่อ, ใช้ต่อตัว, รอ(นาที), ผลผลิต]
+const PN={'ostrich-egg':'ไข่นกกระจอกเทศ','ostrich-feather':'ขนนกกระจอกเทศ','dodo-egg':'ไข่โดโด้','dodo-feather':'ขนโดโด้สีรุ้ง','dodo-pebble':'หินกรวดนำโชค'};
+const TIER={'ostrich-egg':1,'ostrich-feather':2,'dodo-egg':1,'dodo-feather':2,'dodo-pebble':3};
+const SCROLL={ostrich:{need:{'ขนเม่น':100,'ชีส':50},merit:[100,200]},dodo:{need:{'เกล็ดปลาจันทร์':150,'หางเม่น':100},merit:[100,200]}}; // วัตถุดิบชั่วคราว
+const FOODNEED={corn:{'ข้าวโพด':5},pumpkin:{'ฟักทอง':3,'ข้าวโพด':2},melon:{'แตงโม':3,'แตงกวา':2},carrot:{'แครอท':5},fruit:{'องุ่น':3,'สตรอว์เบอร์รี':2},mushroom:{'เห็ดไขลาน':3,'มันฝรั่ง':2}}; // ชั่วคราว
+let MIN=60000; // ทดลอง: 1 นาทีในเกม = 1 วินาที
+const LIFE=48*60; // นาที
+const KEY='s3birds1';let S;try{S=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}
+function fresh(){const now=Date.now();return{pen:1,pens:{1:[],2:[]},
+ vault:{ostrich:0,dodo:0},drops:{1:[],2:[]},bag:{},food:{corn:0,pumpkin:0,melon:0,carrot:0,fruit:0,mushroom:0},mats:{},
+ reqs:[],merit:1000,rank:{},sent:[0,0,0,0]}}
+function mk(sp,born){return{id:Math.random().toString(36).slice(2),sp,born,cd:0}}
+S=__fill(fresh(),S);const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+let pen=S.pen;
+function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
+let at;function ann(m,err,dur){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'')+(dur?' long':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',dur||3000)}
+$('ann').onclick=()=>{clearTimeout(at);$('ann').className='ann'};
+const alive=b=>Date.now()-b.born<LIFE*MIN;
+const left=b=>LIFE*MIN-(Date.now()-b.born);
+const fmtL=ms=>{const m=Math.max(0,ms/MIN);return m>=60?Math.floor(m/60)+' ชม. '+Math.floor(m%60)+' นาที':Math.ceil(m)+' นาที'};
+/* ---------- เดินอิสระในลาน ---------- */
+const CX=470,CY=860,RX=360,RY=330;function rndPt(){const a=Math.random()*6.28,r=Math.sqrt(Math.random());return[CX+Math.cos(a)*RX*r,CY+Math.sin(a)*RY*r]}
+let actors=[];
+function draw(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url('+IMG.bg+')';$('view').style.setProperty('--bg','url('+IMG.bg+')');actors=[];
+ S.pens[pen]=S.pens[pen].filter(alive);save();
+ S.pens[pen].forEach(b=>{const[x,y]=rndPt();const d=document.createElement('div');d.className='bird';d.style.width=SP[b.sp].size+'%';
+  d.innerHTML='<span class="sh"></span><span class="sp"></span>';d.onclick=e=>{e.stopPropagation();tapBird(b.id)};s.appendChild(d);
+  actors.push({b,d,sp:d.querySelector('.sp'),tag:d.querySelector('.tag'),x,y,tx:x,ty:y,mode:'idle',until:Date.now()+Math.random()*3000,f:Math.floor(Math.random()*16),dir:'idle',flip:false})});
+ if(pen===2)for(let i=S.pens[2].length;i<10&&i<S.pens[2].length+1;i++){const bt=document.createElement('div');bt.className='slotbtn';bt.style.left='50%';bt.style.top=(1290/H*100)+'%';bt.textContent='＋ ปล่อยนกจากคลัง ('+(S.vault.ostrich+S.vault.dodo)+')';bt.onclick=openVault;s.appendChild(bt)}
+ drawDrops();
+ $('dots').innerHTML=[1,2].map(k=>'<button class="'+(k===pen?'on':'')+'" data-p="'+k+'">'+(k===1?'📜':'🛒')+'</button>').join('');document.querySelectorAll('#dots button').forEach(b=>b.onclick=()=>go(+b.dataset.p));
+ const pend=S.reqs.filter(r=>r.status==='wait').length;$('penchip').textContent=pen===1?'📜 คอกคัมภีร์ • นก '+S.pens[1].length+'/10'+(pend?' • รออนุมัติ '+pend+' ใบ':''):'🛒 คอกนกที่ซื้อ • นก '+S.pens[2].length+'/10'}
+function drawDrops(){const s=$('stage');s.querySelectorAll('.drop').forEach(e=>e.remove());const D=S.drops[pen];D.slice(0,10).forEach((d,i)=>{const e=document.createElement('div');e.className='drop';e.style.left=d.x/W*100+'%';e.style.top=d.y/H*100+'%';e.innerHTML='<img src="'+IMG[d.k]+'">';e.onclick=ev=>{ev.stopPropagation();collect([i])};s.appendChild(e)});
+ const tot=D.reduce((a,d)=>a+d.q,0);$('dropcnt').style.display=tot?'block':'none';$('dropcnt').textContent='🧺 บนพื้น '+tot+' ชิ้น'}
+function go(p){if(p===pen)return;$('stage').classList.add('fade');setTimeout(()=>{pen=p;S.pen=p;save();draw();$('stage').classList.remove('fade')},180)}
+let sx=null;$('view').addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});$('view').addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>60)go(dx<0?2:1)});
+let lt=0;(function anim(t){requestAnimationFrame(anim);if(t-lt<110||document.hidden)return;lt=t;const now=Date.now();
+ actors.forEach(a=>{if(now>a.until){if(a.mode==='walk'){a.mode='idle';a.until=now+2000+Math.random()*3500}else{a.mode='walk';[a.tx,a.ty]=rndPt();a.until=now+30000}}
+  if(a.mode==='walk'){const dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);if(d<5){a.mode='idle';a.until=now+2500}else{const sp=a.b.sp==='ostrich'?1.7:1.3;a.x+=dx/d*sp;a.y+=dy/d*sp;a.dir=Math.abs(dx)>Math.abs(dy)*1.2?'side':dy<0?'back':'front';a.flip=dx<0}}else a.dir='idle';
+  const sheet=IMG[a.b.sp+'-'+(a.dir==='idle'?'idle':'walk-'+a.dir)];if(a.sheet!==sheet){a.sp.style.backgroundImage='url('+sheet+')';a.sheet=sheet}
+  a.f=(a.f+1)%16;a.sp.style.backgroundPosition=((a.f%4)*100/3)+'% '+(Math.floor(a.f/4)*100/3)+'%';a.sp.classList.toggle('flip',a.dir==='side'&&a.flip);
+  a.d.style.left=a.x/W*100+'%';a.d.style.top=a.y/H*100+'%';a.d.style.zIndex=Math.round(a.y);
+  })})(0);
+setInterval(()=>{const before=S.pens[pen].length;if(S.pens[pen].some(b=>!alive(b))){S.pens[pen]=S.pens[pen].filter(alive);save();draw();ann('🕊️ นกครบ 48 ชม. แล้ว จากไปเงียบๆ ผลผลิตบนพื้นยังอยู่นะ')}},1000);
+/* ---------- แผ่นเมนู ---------- */
+function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on')}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
+$('shade').onclick=closeAll;
+function foodOpts(sp,n,mode,id){return Object.entries(FOOD).filter(([,f])=>f[0]===sp).map(([k,f])=>{const need=f[2]*n;return '<button class="opt" data-food="'+k+'" data-mode="'+mode+'" data-id="'+(id||'')+'"'+(S.food[k]<need?' disabled':'')+'><img src="'+IMG['f-'+k]+'"><b>'+f[1]+'<small>'+f[4].map(([p,q])=>'⭐'.repeat(TIER[p])+' '+PN[p]).join(' หรือ ')+' ×'+f[4][0][1]+' • รอ '+f[3]+' นาที • '+f[2]+' ชิ้น/ตัว</small></b><span>ใช้ '+need+' • มี '+S.food[k]+'</span></button>'}).join('')}
+function tapBird(id){const b=S.pens[pen].find(x=>x.id===id);if(!b)return;const cd=b.cd-Date.now();
+ open('<h3>'+SP[b.sp].e+' '+SP[b.sp].n+'</h3><div class="hint">⏳ อายุเหลือ '+fmtL(left(b))+(pen===1?' • 📜 ได้จากการล่อนก':'')+'</div>'+(cd>0?'<div class="hint" style="font-weight:700">🍽️ ให้อาหารได้อีกใน '+Math.ceil(cd/MIN)+' นาที</div>':'<div class="hint">🥣 เลือกอาหาร</div>'+foodOpts(b.sp,1,'one',b.id))+
+  (pen===2?'<div class="row" style="margin-top:.5rem"><button class="btn gray" id="sell">💸 ขายออก (+'+(b.sp==='dodo'?30:20)+' กุศล)</button></div>':''));
+ if($('sell'))$('sell').onclick=()=>open('<h3>💸 ขาย'+SP[b.sp].n+'ตัวนี้?</h3><div class="hint">ขายแล้วเอาคืนไม่ได้ • ผลผลิตบนพื้นยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>'),setTimeout(()=>{if(!$('sy'))return;$('sn').onclick=closeAll;$('sy').onclick=()=>{S.pens[2]=S.pens[2].filter(x=>x.id!==id);S.merit+=b.sp==='dodo'?30:20;save();closeAll();draw();ann('💸 ขาย'+SP[b.sp].n+'แล้ว')}},0)}
+document.addEventListener('click',e=>{const bt=e.target.closest('#sb [data-food]');if(!bt||bt.disabled)return;const k=bt.dataset.food,f=FOOD[k];
+ const list=bt.dataset.mode==='one'?S.pens[pen].filter(b=>b.id===bt.dataset.id):S.pens[pen].filter(b=>b.sp===f[0]&&b.cd<=Date.now());const need=f[2]*list.length;if(!list.length||S.food[k]<need)return;
+ S.food[k]-=need;list.forEach(b=>{b.cd=Date.now()+f[3]*MIN;const a=actors.find(x=>x.b.id===b.id);const[ox,oy]=a?[a.x,a.y]:rndPt();const[p,q]=f[4][Math.floor(Math.random()*f[4].length)];
+  S.drops[pen].push({k:p,q,x:Math.max(80,Math.min(860,ox+(Math.random()*90-45))),y:Math.max(500,Math.min(1250,oy+10+Math.random()*30))});if(a)a.b.cd=b.cd});
+ save();closeAll();drawDrops();ann('🥣 ให้'+f[1]+' '+list.length+' ตัว ผลผลิตหล่นบนพื้นแล้ว!');if(bt.dataset.mode==='all'&&S.pens[pen].some(b=>b.cd<=Date.now()))setTimeout(feedAll,350)});
+function collect(idx){const D=S.drops[pen];const take=idx?idx.map(i=>D[i]).filter(Boolean):D.slice();if(!take.length)return ann('ไม่มีของบนพื้น',1);const got={};take.forEach(d=>{got[d.k]=(got[d.k]||0)+d.q;S.bag[d.k]=(S.bag[d.k]||0)+d.q});
+ S.drops[pen]=idx?D.filter((d,i)=>!idx.includes(i)):[];save();drawDrops();
+ if(idx&&idx.length===1){const[k,q]=Object.entries(got)[0];return ann('🧺 เก็บ'+PN[k]+' ×'+q+' เข้ากระเป๋าแล้ว')}
+ const list=Object.entries(got).sort((a,b)=>TIER[b[0]]-TIER[a[0]]);open('<h3>🧺 เก็บของบนพื้นแล้ว!</h3><div class="grid">'+list.map(([k,q])=>'<div class="cell t'+(TIER[k]-1)+'"><img src="'+IMG[k]+'"><b>'+'⭐'.repeat(TIER[k])+'<br>'+PN[k]+'</b><span>×'+q+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
+function feedAll(){const hungry=S.pens[pen].filter(b=>b.cd<=Date.now());const os=hungry.filter(b=>b.sp==='ostrich').length,dd=hungry.filter(b=>b.sp==='dodo').length;
+ if(!hungry.length)return ann('ยังไม่มีนกที่พร้อมกิน รอ ⏳ ก่อนนะ',1);
+ open('<h3>🥣 ให้อาหารทั้งหมด</h3><div class="hint">นกพร้อมกิน '+hungry.length+' จาก '+S.pens[pen].length+' ตัว (🦢 '+os+' • 🦤 '+dd+')</div>'+(os?'<div class="hint" style="font-weight:700">🦢 นกกระจอกเทศ '+os+' ตัว</div>'+foodOpts('ostrich',os,'all'):'')+(dd?'<div class="hint" style="font-weight:700;margin-top:.4rem">🦤 นกโดโด้ '+dd+' ตัว</div>'+foodOpts('dodo',dd,'all'):''))}
+function needHTML(o){let ok=true;const h=Object.entries(o).map(([k,q])=>{const have=S.mats[k]||0;if(have<q)ok=false;return '<span class="'+(have<q?'no':'')+'">'+k+' '+have+'/'+q+'</span>'}).join('');return[ok,h]}
+function openScroll(){if(pen!==1)go(1);open('<h3>📜 ร่างคัมภีร์ล่อนก</h3><div class="hint">เลือกนกที่อยากล่อ • หักวัตถุดิบทันทีตอนร่าง • วัตถุดิบเป็นของชั่วคราว</div>'+['ostrich','dodo'].map(sp=>{const[ok,h]=needHTML(SCROLL[sp].need);return '<button class="opt" data-sc="'+sp+'"'+(ok?'':' disabled')+'><img src="'+IMG['scroll-'+sp]+'"><b>คัมภีร์ล่อ'+SP[sp].n+'<small><span class="need" style="justify-content:flex-start">'+h+'</span></small></b></button>'}).join(''));
+ document.querySelectorAll('[data-sc]').forEach(x=>x.onclick=()=>{const sp=x.dataset.sc;Object.entries(SCROLL[sp].need).forEach(([k,q])=>S.mats[k]-=q);if(__H)__H.birdReq(sp);S.sent[0]++;save();closeAll();draw();ann('📜 ส่งคัมภีร์ล่อ'+SP[sp].n+'แล้ว รอยัยหนูอนุมัติ ผลจะส่งทางไปรษณีย์')})}
+function openCraft(){open('<h3>🍽️ คราฟอาหารนก</h3><div class="hint">ใช้ผักจากแปลง • สำเร็จ 100% • ทีละ 10 ถ้วย • สูตรชั่วคราว</div>'+Object.entries(FOOD).map(([k,f])=>{const n10=Object.fromEntries(Object.entries(FOODNEED[k]).map(([a,q])=>[a,q*10]));const[ok,h]=needHTML(n10);return '<button class="opt" data-cf="'+k+'"'+(ok?'':' disabled')+'><img src="'+IMG['f-'+k]+'"><b>'+f[1]+' ×10<small><span class="need" style="justify-content:flex-start">'+h+'</span></small></b><span>มี '+S.food[k]+'</span></button>'}).join(''));
+ document.querySelectorAll('[data-cf]').forEach(x=>x.onclick=()=>{const k=x.dataset.cf;Object.entries(FOODNEED[k]).forEach(([a,q])=>S.mats[a]-=q*10);S.food[k]+=10;save();openCraft();ann('🍽️ ได้'+FOOD[k][1]+' ×10')})}
+function openVault(){if(S.pens[2].length>=10)return ann('คอก 2 เต็ม 10 ตัวแล้ว',1);open('<h3>🦤 คลังนก</h3><div class="hint">ปล่อยลงคอก 2 แล้ว<b>นับอายุ 48 ชม. ทันที</b> และเอาคืนไม่ได้</div>'+['ostrich','dodo'].map(sp=>'<button class="opt" data-pv="'+sp+'"'+(S.vault[sp]<1?' disabled':'')+'><span style="width:2.6rem;height:2.6rem;flex:none;background:url('+IMG[sp+'-idle']+') 0 0/400% 400%"></span><b>'+SP[sp].n+'</b><span>มี '+S.vault[sp]+' ตัว</span></button>').join(''));
+ document.querySelectorAll('[data-pv]').forEach(x=>x.onclick=()=>{const sp=x.dataset.pv;open('<h3>ยืนยันปล่อย'+SP[sp].n+'?</h3><div class="hint">อายุ 48 ชม. เริ่มนับทันที ยกเลิกไม่ได้</div><div class="row"><button class="btn gray" id="pn">ยกเลิก</button><button class="btn g" id="py">ปล่อยเลย</button></div>');$('pn').onclick=closeAll;$('py').onclick=()=>{S.vault[sp]--;S.pens[2].push(mk(sp,Date.now()));save();closeAll();draw();ann(SP[sp].e+' ปล่อย'+SP[sp].n+'ลงคอก 2 แล้ว!')}})}
+function openAdmin(){const W8=S.reqs.filter(r=>r.status==='wait');open('<h3>👑 ศูนย์แอดมิน • คำขอล่อนก</h3><div class="hint">(ในเกมจริงอยู่ในศูนย์แอดมิน) • มดแดง คอก 1: '+S.pens[1].length+'/10</div>'+(W8.length?W8.map(r=>'<div class="req"><img src="'+IMG['scroll-'+r.sp]+'"><b>มดแดง<br><small>ล่อ'+SP[r.sp].n+'</small></b><button class="btn g" data-ok="'+r.id+'">อนุมัติ</button><button class="btn" style="background:#F39AB2;box-shadow:0 3px 0 #D97C96" data-no="'+r.id+'">ปฏิเสธ</button></div>').join(''):'<div class="hint">ไม่มีคำขอรออยู่</div>')+
+ '<h3 style="margin-top:.8rem">🏆 แรงค์นักล่อนก</h3>'+Object.entries({...S.rank,'มดแดง':S.sent}).sort((a,b)=>b[1][0]-a[1][0]).map(([n,v],i)=>'<div class="req"><b>'+(['🥇','🥈','🥉'][i]||i+1)+' '+n+'</b><span style="font-size:.68rem">ส่ง '+v[0]+' • ✅'+v[1]+' • ❌'+v[2]+' • 🕊️'+v[3]+'</span></div>').join(''));
+ document.querySelectorAll('[data-ok]').forEach(x=>x.onclick=()=>decide(x.dataset.ok,true));document.querySelectorAll('[data-no]').forEach(x=>x.onclick=()=>decide(x.dataset.no,false))}
+function decide(id,ok){const r=S.reqs.find(x=>x.id===id);const g=100+Math.floor(Math.random()*101);
+ if(ok&&S.pens[1].length<10){S.pens[1].push(mk(r.sp,Date.now()));r.status='ok';S.sent[1]++;save();openAdmin();if(pen===1)draw();ann('📮 แจ้งเตือนผู้เล่น: 🎉 คำขอได้รับอนุมัติ! '+SP[r.sp].n+'บินมาอยู่ในคอก 1 แล้ว',0,9000)}
+ else if(ok){r.status='flew';S.merit+=g;S.sent[3]++;save();openAdmin();ann('📮 แจ้งเตือนผู้เล่น: 🕊️ คำขอได้รับอนุมัติ แต่คอก 1 ไม่มีที่ว่าง '+SP[r.sp].n+'เลยบินหนีไปแล้ว เสียใจด้วยนะคะ • ได้กุศลปลอบใจ +'+g,1,9000)}
+ else{r.status='no';S.merit+=g;S.sent[2]++;save();openAdmin();ann('📮 แจ้งเตือนผู้เล่น: เสียใจด้วยค่ะ '+SP[r.sp].n+'ไม่ชอบคุณ การล่อนกครั้งนี้ไม่สำเร็จ • ได้กุศลปลอบใจ +'+g,1,9000)}}
+function openBag(){const r=Object.entries(S.bag).filter(([,q])=>q>0);open('<h3>🎒 กระเป๋า</h3><div class="hint">🙏 '+S.merit.toLocaleString()+' กุศล</div><div class="grid">'+(r.length?r.map(([k,q])=>'<div class="cell"><img src="'+IMG[k]+'"><b>'+PN[k]+'</b><span>×'+q+'</span></div>').join(''):'<div class="hint" style="grid-column:1/-1">ยังไม่มีผลผลิตนก</div>')+'</div><h3 style="margin-top:.8rem">🥣 อาหารนก</h3><div class="grid">'+Object.entries(FOOD).map(([k,f])=>'<div class="cell"><img src="'+IMG['f-'+k]+'"><b>'+f[1]+'</b><span>×'+S.food[k]+'</span></div>').join('')+'</div><h3 style="margin-top:.8rem">🦤 คลังนก</h3><div class="grid">'+['ostrich','dodo'].map(sp=>'<div class="cell"><div style="width:100%;aspect-ratio:1;background:url('+IMG[sp+'-idle']+') 0 0/400% 400%"></div><b>'+SP[sp].n+'</b><span>×'+S.vault[sp]+'</span></div>').join('')+'</div>')}
+function openSet(){open('<h3>⚙️ ตั้งค่าทดลอง</h3><div class="hint">1 นาทีในเกม = 1 วินาที • อายุนก 48 ชม. = 48 นาทีจริง</div><div class="row"><button class="btn" id="gift">🎁 ยัยหนูส่งนกให้ (🦢2 🦤2 เข้าคลัง)</button></div><div class="row"><button class="btn" id="nocd">ข้ามเวลารอให้อาหาร</button><button class="btn gray" id="rst">เริ่มใหม่ทั้งหมด</button></div>');
+ $('gift').onclick=()=>{S.vault.ostrich+=2;S.vault.dodo+=2;save();closeAll();draw();ann('🎁 รับนกจากกล่องของขวัญ เข้าคลังนกแล้ว')};$('nocd').onclick=()=>{Object.values(S.pens).flat().forEach(b=>b.cd=0);save();closeAll();ann('ข้ามเวลารอแล้ว')};$('rst').onclick=()=>{S=fresh();pen=1;save();closeAll();draw()}}
+const FAN=[['🥣','ให้อาหารทั้งหมด',feedAll],['🧺','เก็บของบนพื้นทั้งหมด',()=>collect(null)],['📜','ร่างคัมภีร์ล่อนก',openScroll],['🍽️','คราฟอาหารนก',openCraft],['🦤','คลังนก',()=>{go(2);setTimeout(openVault,250)}],['🎒','กระเป๋า',openBag]];
+$('fan').innerHTML=FAN.map((f,i)=>'<button data-i="'+i+'"><i>'+f[0]+'</i>'+f[1]+'</button>').join('');
+$('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
+$('fan').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!$('fan').classList.contains('open'))return;$('fan').classList.remove('open');$('toolBtn').classList.remove('open');FAN[+b.dataset.i][2]()});
+addEventListener('resize',()=>{fit();draw()});fit();draw();setTimeout(()=>ann('🐦 นกน้อยคล้อยบินมาเดียวดาย • ปัดหรือแตะ 📜🛒 ด้านบนเพื่อสลับคอก'),400);
+</script></body></html>

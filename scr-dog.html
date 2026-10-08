@@ -1,0 +1,425 @@
+<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
+</script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกหมา – ในสวนของยัยหนู ซีซั่น 3</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#9fd18b}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.8)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;overflow:hidden}
+.hot{position:absolute;cursor:pointer;border-radius:1rem}
+.lbl{position:absolute;transform:translate(-50%,-50%);background:rgba(255,251,245,.55);border:1.5px solid rgba(255,255,255,.7);border-radius:50%;width:1.6rem;height:1.6rem;display:grid;place-items:center;font-size:.85rem;pointer-events:none;box-shadow:0 2px 5px rgba(0,0,0,.15)}
+.ham{position:absolute;transform:translate(-50%,-100%);cursor:pointer;background-repeat:no-repeat;background-size:400% 400%;transition:opacity .5s}
+.ham.flip{transform:translate(-50%,-100%) scaleX(-1)}
+.ham.in{opacity:0;pointer-events:none}
+.bub{position:absolute;transform:translate(-50%,-100%);font-size:1.2rem;pointer-events:none;z-index:300;animation:bub 1.3s ease-out forwards}
+@keyframes bub{0%{opacity:0;margin-top:0}20%{opacity:1}100%{opacity:0;margin-top:-2.2rem}}
+.ham.angry{animation:ang .12s 4}
+@keyframes ang{50%{margin-left:3px}}
+.mb{position:absolute;width:7%;animation:mbpop .6s ease-out;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));z-index:250}
+.mb.fly{transition:left .7s ease-in,top .7s ease-in,opacity .7s;opacity:.1}
+.top{position:fixed;z-index:6;left:.55rem;top:calc(env(safe-area-inset-top,0px) + .5rem);background:rgba(255,251,245,.94);border:2px solid #fff;border-radius:1rem;padding:.2rem .7rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);font-weight:800;font-size:.86rem;line-height:1.25}
+.top small{display:block;font-weight:600;font-size:.64rem;color:var(--soft)}
+.collect{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);border:3px solid #fff;border-radius:999px;background:linear-gradient(#7FD8B6,#55B993);color:#fff;font:inherit;font-weight:800;font-size:.9rem;padding:.4rem 1rem .4rem .5rem;box-shadow:0 4px 0 #3E9A78,0 8px 18px rgba(0,0,0,.3);display:none;align-items:center;gap:.4rem;cursor:pointer}
+.collect img{width:1.7rem;height:1.7rem}
+.tool{position:fixed;z-index:6;right:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:3.1rem;height:3.1rem;border-radius:50%;border:3px solid #fff;font-size:1.3rem;display:grid;place-items:center;cursor:pointer;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);box-shadow:0 4px 0 rgba(0,0,0,.15),0 8px 16px rgba(0,0,0,.25);transition:transform .25s}
+.tool.open{transform:rotate(45deg)}
+.fan{position:fixed;z-index:6;right:.7rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4rem);display:flex;flex-direction:column-reverse;gap:.35rem;align-items:flex-end;pointer-events:none}
+.fan button{pointer-events:none;display:flex;align-items:center;gap:.35rem;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.97);font:inherit;font-weight:600;font-size:.76rem;color:var(--cocoa);padding:.2rem .75rem .2rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;opacity:0;transform:translateY(1rem) scale(.8);transition:.2s}
+.fan button i{font-style:normal;width:1.65rem;height:1.65rem;border-radius:50%;display:grid;place-items:center;background:#EAF6F3;font-size:.9rem}
+.fan.open button{opacity:1;transform:none;pointer-events:auto}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(40,50,40,.45);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s ease-out;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:86vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.5rem}
+.tabs{display:flex;gap:.25rem;justify-content:center;flex-wrap:wrap;margin:.2rem 0 .6rem}
+.tabs button{border:2px solid #F3E9DE;background:#fff;border-radius:999px;font:inherit;font-weight:700;font-size:.72rem;padding:.22rem .65rem;color:var(--soft);cursor:pointer}
+.tabs button.on{background:#FFF3C9;border-color:#FFD86B;color:var(--cocoa)}
+.rc{background:#fff;border:2px solid #F3E9DE;border-radius:1rem;padding:.5rem .6rem;margin-bottom:.45rem}
+.rc.lock{opacity:.55}
+.rc .hd{display:flex;gap:.55rem;align-items:center}.rc .hd img{width:2.9rem;height:2.9rem;flex:none}
+.rc .hd b{font-size:.84rem;display:block}.rc .hd small{font-size:.66rem;color:#B9761F;font-weight:700}
+.needs{display:flex;flex-wrap:wrap;gap:.25rem;margin:.4rem 0 .35rem}
+.need{display:flex;align-items:center;gap:.2rem;background:#F7F2EC;border-radius:999px;padding:.08rem .45rem .08rem .12rem;font-size:.64rem;font-weight:700}
+.need img{width:1.3rem;height:1.3rem;object-fit:contain}.need.ok{background:#E7F7EF;color:#2F8A65}.need.no{background:#FFEEF1;color:#C2445E}
+.qrow{display:flex;align-items:center;gap:.35rem;justify-content:flex-end}
+.qrow .st{width:1.9rem;height:1.9rem;border-radius:50%;border:0;background:#F3E9DE;font:inherit;font-weight:800;font-size:1rem;color:var(--cocoa);cursor:pointer}
+.qrow .q{min-width:1.8rem;text-align:center;font-weight:800}.qrow small{flex:1;font-size:.64rem;color:var(--soft)}
+.row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}
+.btn{border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.8rem;padding:.5rem .9rem;cursor:pointer;background:var(--aqua);color:#fff;box-shadow:0 3px 0 #3F98B6}
+.btn.g{background:#6CC9A8;box-shadow:0 3px 0 #4DAA8A}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}.btn:disabled{opacity:.45}.btn.sm{font-size:.72rem;padding:.35rem .75rem}
+.tries{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center;margin:.5rem 0}
+.tries span{width:2.4rem;border-radius:.6rem;background:#fff;border:2px solid #F3E9DE;font-size:.62rem;font-weight:700;text-align:center;padding:.15rem 0}
+.tries span.ok{border-color:#9FDDC4;background:#E7F7EF}.tries span.no{border-color:#F6C3CF;background:#FFF0F3}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.cell{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .15rem;text-align:center;position:relative}
+.cell img{width:100%;aspect-ratio:1;object-fit:contain}.cell b{display:block;font-size:.58rem;line-height:1.2}.cell span{font-size:.68rem;font-weight:800;color:#B9761F}
+.cell.sel{border-color:#6CC9A8;background:#F1FBF6}
+.cell em{position:absolute;right:-.3rem;top:-.3rem;font-style:normal;background:#6CC9A8;color:#fff;font-size:.65rem;font-weight:700;border-radius:999px;padding:0 .35rem;border:2px solid #fff}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+.cards .cd{position:relative;text-align:center;cursor:pointer}.cards .cd img{width:100%;border-radius:.6rem;filter:drop-shadow(0 3px 5px rgba(0,0,0,.2))}
+.cards .cd b{display:block;font-size:.62rem}.cards .cd span{position:absolute;right:.2rem;top:.2rem;background:#F25C7A;color:#fff;font-weight:800;font-size:.7rem;border:2px solid #fff;border-radius:999px;padding:0 .4rem}
+.cards .cd.off{opacity:.35}
+.feedbar{display:flex;justify-content:space-between;align-items:center;background:#FFF3C9;border-radius:1rem;padding:.4rem .7rem;font-size:.78rem;font-weight:700;margin-bottom:.5rem}
+.feedbar b{font-size:.95rem}
+.boxbtns{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.6rem 0}
+.boxbtns button{border:0;border-radius:.8rem;background:linear-gradient(#FFB36B,#F28C3A);color:#fff;font:inherit;font-weight:800;font-size:.85rem;padding:.5rem 0;box-shadow:0 3px 0 #C86A23;cursor:pointer}
+.boxbtns button small{display:block;font-size:.55rem;font-weight:600}
+.boxbtns button:disabled{opacity:.4}
+.ov{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(30,20,10,.55)}
+.ov.on{display:grid}
+.ov .sp{width:min(15rem,62vw);aspect-ratio:200/218;background-size:400% 400%;background-repeat:no-repeat;filter:drop-shadow(0 10px 20px rgba(0,0,0,.4))}
+.res{width:min(22rem,92vw);max-height:84vh;overflow:auto;background:var(--cream);border:3px solid #fff;border-radius:1.6rem;padding:1rem;text-align:center;animation:pop2 .35s}
+@keyframes pop2{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.res .big{width:9rem;margin:.3rem auto;display:block;filter:drop-shadow(0 6px 12px rgba(0,0,0,.25))}
+.res .card{width:min(13rem,70vw);display:block;margin:.3rem auto;border-radius:1rem;box-shadow:0 0 0 4px #FFE08A,0 10px 30px rgba(242,179,61,.6);animation:shine 1.2s ease-in-out infinite alternate}
+@keyframes shine{to{box-shadow:0 0 0 4px #FFE08A,0 10px 40px rgba(242,179,61,.95)}}
+.res .qty{font-size:1.4rem;font-weight:800;color:#B9761F}
+.list{text-align:left;margin:.4rem 0}
+.li{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .55rem;margin-bottom:.3rem}
+.li img{width:2.2rem;height:2.2rem;object-fit:contain}.li b{flex:1;font-size:.8rem}.li span{font-weight:800;color:#B9761F;font-variant-numeric:tabular-nums}
+.li.ham{border-color:#FFD86B;background:#FFFBEA}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center;margin:.3rem 0 .5rem}
+.chips button{border:2px solid #F3E9DE;background:#fff;border-radius:999px;font:inherit;font-size:.7rem;font-weight:700;padding:.2rem .6rem;color:var(--soft);cursor:pointer}
+.chips button.on{background:#E7F7EF;border-color:#9FDDC4;color:#2F8A65}
+.sec{font-size:.72rem;font-weight:800;margin:.6rem 0 .1rem;text-align:center}
+/* ทางเข้าแบบหมุน */
+.warp{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:radial-gradient(circle,rgba(18,40,70,.82),rgba(6,14,30,.94));color:#CFF6FF;flex-direction:column}
+.warp.on{display:grid}
+.warp .ring{width:11rem;height:11rem;border-radius:50%;background:conic-gradient(from 0deg,rgba(91,230,255,0),#5BE6FF,rgba(91,230,255,0) 40%,rgba(255,216,107,.9) 60%,rgba(91,230,255,0) 80%);-webkit-mask:radial-gradient(circle,transparent 62%,#000 64%);mask:radial-gradient(circle,transparent 62%,#000 64%);animation:spin 1s linear infinite;margin:0 auto}
+.warp .core{position:absolute;width:11rem;height:11rem;display:grid;place-items:center;font-size:3rem;animation:spinY 1.4s ease-in-out}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes spinY{0%{transform:rotateY(0)}100%{transform:rotateY(720deg)}}
+.warp .scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5BE6FF,transparent);animation:scan 1.4s ease-in-out;top:30%}
+@keyframes scan{0%{top:20%}100%{top:80%}}
+.warp p{margin:1rem 0 .4rem;font-weight:700;letter-spacing:.02em;text-align:center}
+.warp .bar{width:12rem;height:.4rem;border-radius:999px;background:rgba(255,255,255,.15);overflow:hidden;margin:0 auto}
+.warp .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5BE6FF,#FFD86B);animation:fill 1.4s ease-in-out forwards}
+@keyframes fill{to{width:100%}}
+.ann{position:fixed;z-index:42;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.6rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:1rem;padding:.3rem .8rem .3rem .3rem;font-size:.78rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;width:max-content;max-width:94vw;display:flex;gap:.4rem;align-items:center}
+.ann img{width:2rem;height:2rem;flex:none}.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:var(--pig);background:#FFF4F6}
+@keyframes mbpop{0%{transform:translate(-50%,-50%) scale(.2)}60%{transform:translate(-50%,-90%) scale(1.25)}100%{transform:translate(-50%,-50%) scale(1)}}
+.stage.flipin{animation:flipin .55s ease-out}
+@keyframes flipin{0%{transform:translate(-50%,-50%) perspective(1100px) rotateY(-90deg);filter:brightness(1.8)}100%{transform:translate(-50%,-50%) perspective(1100px) rotateY(0);filter:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+
+html,body{background:#9CC86A}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dog{position:absolute;transform:translate(-50%,-100%);cursor:pointer;background-repeat:no-repeat;background-size:400% 400%}
+.dog.flip{transform:translate(-50%,-100%) scaleX(-1)}
+.dog.dance{animation:dance .45s ease-in-out infinite alternate}
+.dog.flip.dance{animation:danceF .45s ease-in-out infinite alternate}
+@keyframes dance{from{transform:translate(-50%,-100%) rotate(-5deg)}to{transform:translate(-50%,-104%) rotate(5deg)}}
+@keyframes danceF{from{transform:translate(-50%,-100%) scaleX(-1) rotate(-5deg)}to{transform:translate(-50%,-104%) scaleX(-1) rotate(5deg)}}
+.shd{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(ellipse at center,rgba(30,45,15,.55) 0,rgba(30,45,15,.28) 45%,rgba(30,45,15,0) 72%);pointer-events:none}
+.badge{position:absolute;transform:translate(-50%,-100%);width:4.2%;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));z-index:390}
+.fx{position:absolute;pointer-events:none;font-size:1.1rem;z-index:400;animation:fxup 1.6s ease-out forwards}
+@keyframes fxup{0%{opacity:0;transform:translate(-50%,0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-70px) scale(1.1)}}
+.carebar{position:fixed;z-index:6;right:.55rem;top:calc(env(safe-area-inset-top,0px) + .55rem);display:flex;gap:.3rem}
+.carebar span{background:rgba(255,251,245,.88);border:2px solid #fff;border-radius:999px;font-size:.72rem;font-weight:800;padding:.08rem .5rem;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.carebar span.ready{background:#E7F7EF;border-color:#9FDDC4;cursor:pointer}
+.drop2{position:absolute;width:6%;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));z-index:250;animation:mbpop .6s ease-out}
+.drop2.fly{transition:left .7s ease-in,top .7s ease-in,opacity .7s;opacity:.1}
+.mound{position:absolute;width:12%;transform:translate(-50%,-70%);pointer-events:none;z-index:5;transition:opacity 1.2s}
+.ball{position:absolute;width:4.5%;transform:translate(-50%,-50%);pointer-events:none;z-index:380;filter:drop-shadow(0 3px 2px rgba(0,0,0,.3))}
+.inp{width:100%;border:2px solid #F3E9DE;border-radius:.8rem;padding:.5rem .7rem;font:inherit;font-size:.9rem;color:var(--cocoa);margin:.4rem 0}
+.dcard{display:flex;gap:.7rem;align-items:center}.dcard img{width:6.2rem;border-radius:.7rem}
+.dcard b{font-size:1rem;display:block}.dcard small{display:block;font-size:.68rem;color:var(--soft);line-height:1.5}
+.ros{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .5rem;margin-bottom:.3rem;cursor:pointer}
+.ros img{width:2.6rem;border-radius:.4rem}.ros b{flex:1;font-size:.8rem}.ros b small{display:block;font-size:.62rem;color:var(--soft);font-weight:600}
+.ros .st{font-size:.68rem;font-weight:800;border-radius:999px;padding:.05rem .5rem;background:#E7F7EF;color:#2F8A65}.ros .st.h{background:#FFEEF1;color:#C2445E}
+.pens{position:fixed;z-index:6;right:.55rem;top:calc(env(safe-area-inset-top,0px) + 2.4rem);display:flex;gap:.3rem}
+.pens button{display:flex;align-items:center;gap:.25rem;border:2.5px solid #fff;background:linear-gradient(#FFF8EE,#FFE9D6);border-radius:1rem;font:inherit;font-size:.74rem;font-weight:800;color:var(--cocoa);padding:.2rem .6rem .2rem .35rem;box-shadow:0 3px 8px rgba(0,0,0,.18)}
+.pens button i{font-style:normal;width:1.45rem;height:1.45rem;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:.85rem}
+.pens button.on{background:linear-gradient(#FFE3EC,#FFC9D8);border-color:#fff;transform:translateY(-1px)}
+.carebar{top:calc(env(safe-area-inset-top,0px) + 4.6rem)!important}
+.dock{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);display:flex;gap:.3rem;background:rgba(255,251,245,.88);border:2px solid #fff;border-radius:999px;padding:.3rem .4rem;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.dock button{width:2.3rem;height:2.3rem;border-radius:50%;border:none;background:#fff;font-size:1.1rem;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.12);position:relative}
+.dock button i{position:absolute;top:-.25rem;right:-.25rem;background:#F27E9B;color:#fff;font-style:normal;font-size:.58rem;font-weight:800;border-radius:999px;padding:0 .3rem;line-height:1.2rem;min-width:1.2rem}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-top:.4rem}
+.tile{background:#fff;border:2px solid #F3E9DE;border-radius:1.1rem;padding:.6rem .3rem;text-align:center;cursor:pointer}
+.tile span{font-size:1.9rem;display:block}.tile b{font-size:.78rem;display:block}.tile small{font-size:.6rem;color:var(--soft);display:block;line-height:1.3;margin-top:.1rem}
+.draft{font-size:.62rem;color:#B9761F;background:#FFF6DD;border-radius:.6rem;padding:.25rem .5rem;margin:.3rem 0;text-align:center}
+.logi{font-size:.72rem;background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem .55rem;margin-bottom:.25rem}
+.logi small{color:var(--soft);display:block;font-size:.6rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin:.4rem 0}
+.two div{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.4rem;font-size:.72rem;text-align:center}
+.two div b{display:block;font-size:.7rem;color:var(--soft);margin-bottom:.15rem}
+.res .chest{width:8rem;display:block;margin:.3rem auto;animation:pop2 .4s}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"></div></div>
+<div class="top">🐶 คอกหมา<small id="sub"></small></div>
+<div class="carebar" id="carebar"></div>
+<div class="pens" id="pens"></div><div class="dock" id="dock"></div>
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet"><div id="sb"></div></section>
+<div class="ov" id="ov"></div>
+<div class="ann" id="ann"><img id="aImg" alt=""><span id="aTxt"></span></div>
+<script>
+const DOGDIM={"husky": {"walk-side": [161, 173], "walk-back": [98, 176], "walk-front": [156, 186], "idle": [144, 172], "sit": [194, 171], "sleep": [235, 122], "fetch": [203, 167], "bark": [230, 167], "dig": [324, 149]}, "dalmatian": {"walk-side": [167, 179], "walk-back": [121, 174], "walk-front": [147, 177], "idle": [144, 171], "sit": [201, 171], "sleep": [243, 129], "fetch": [190, 164], "bark": [251, 167], "dig": [324, 150]}, "poodle": {"walk-side": [150, 175], "walk-back": [130, 181], "walk-front": [155, 182], "idle": [136, 171], "sit": [168, 166], "sleep": [245, 155], "fetch": [190, 158], "bark": [211, 167], "dig": [323, 151]}, "bichon": {"sleep": [242, 120], "dig": [289, 155], "walk-side": [151, 176], "bark": [238, 169], "sit": [172, 166], "walk-back": [139, 175], "fetch": [188, 165], "idle": [168, 171], "walk-front": [166, 176]}, "dachshund": {"walk-side": [215, 179], "walk-back": [133, 176], "walk-front": [182, 178], "idle": [177, 173], "sleep": [260, 170], "fetch": [175, 168], "bark": [205, 172], "dig": [297, 155], "sit": [201, 165]}, "pomeranian": {"walk-side": [171, 175], "walk-back": [114, 177], "walk-front": [162, 178], "idle": [173, 174], "sit": [180, 166], "sleep": [127, 124], "fetch": [223, 168], "bark": [261, 170], "dig": [261, 148]}};
+const FIMG={rice:"images/dog-food-rice.webp",stew:"images/dog-food-stew.webp",trotter:"images/dog-food-trotter.webp",fishegg:"images/dog-food-fishegg.webp",cheeseball:"images/dog-food-cheeseball.webp",feast:"images/dog-food-feast.webp"};
+const IMG={happy:"images/honey-face-happy.webp",oops:"images/honey-face-oops.webp",
+box:"images/dog-box-dog.webp",boxanim:"images/dog-box-dog-open-4x4.webp",musicbox:"images/animals-item-musicbox.webp",cake:"images/item-cake.webp",coconut:"images/item-coconut.webp",
+ball:"images/dog-ball.webp",chest:"images/dog-chest.webp",collar:"images/dog-collar.webp",mound:"images/dog-digmound.webp",guard:"images/dog-guardbadge.webp",boot:"images/dog-oldboot.webp",treat:"images/dog-treat.webp",treatbag:"images/dog-treatbag.webp",
+wood:"images/forest-item-wood.webp",stone:"images/forest-item-stone.webp",
+'g-green':"images/forest-grass-green.webp",'g-yellow':"images/forest-grass-yellow.webp",'g-red':"images/forest-grass-red.webp",'g-pink':"images/forest-grass-pink.webp",'g-blue':"images/forest-grass-blue.webp",
+"pr-drumstick":"images/animals-product-drumstick.webp","pr-egg":"images/animals-product-egg.webp","pr-pork":"images/animals-product-pork.webp","pr-trotter":"images/animals-product-trotter.webp","pr-truffle":"images/animals-product-truffle.webp","pr-milk":"images/animals-product-milk.webp","pr-cheese":"images/animals-product-cheese.webp","pr-fishmeat":"images/animals-product-fishmeat.webp","c-carrot":"images/produce-carrot.webp","c-corn":"images/produce-corn.webp","c-pumpkin":"images/produce-pumpkin.webp","c-potato":"images/produce-potato.webp","c-cabbage":"images/produce-cabbage.webp","c-pea":"images/produce-pea.webp","c-tomato":"images/produce-tomato.webp","c-watermelon":"images/produce-watermelon.webp","dog-husky-walk-side":"images/dog-husky-walk-side-4x4.webp","dog-husky-walk-front":"images/dog-husky-walk-front-4x4.webp","dog-husky-walk-back":"images/dog-husky-walk-back-4x4.webp","dog-husky-idle":"images/dog-husky-idle-4x4.webp","dog-husky-sit":"images/dog-husky-sit-4x4.webp","dog-husky-sleep":"images/dog-husky-sleep-4x4.webp","dog-husky-dig":"images/dog-husky-dig-4x4.webp","dog-husky-fetch":"images/dog-husky-fetch-4x4.webp","dog-husky-bark":"images/dog-husky-bark-4x4.webp","dog-dalmatian-walk-side":"images/dog-dalmatian-walk-side-4x4.webp","dog-dalmatian-walk-front":"images/dog-dalmatian-walk-front-4x4.webp","dog-dalmatian-walk-back":"images/dog-dalmatian-walk-back-4x4.webp","dog-dalmatian-idle":"images/dog-dalmatian-idle-4x4.webp","dog-dalmatian-sit":"images/dog-dalmatian-sit-4x4.webp","dog-dalmatian-sleep":"images/dog-dalmatian-sleep-4x4.webp","dog-dalmatian-dig":"images/dog-dalmatian-dig-4x4.webp","dog-dalmatian-fetch":"images/dog-dalmatian-fetch-4x4.webp","dog-dalmatian-bark":"images/dog-dalmatian-bark-4x4.webp","dog-poodle-walk-side":"images/dog-poodle-walk-side-4x4.webp","dog-poodle-walk-front":"images/dog-poodle-walk-front-4x4.webp","dog-poodle-walk-back":"images/dog-poodle-walk-back-4x4.webp","dog-poodle-idle":"images/dog-poodle-idle-4x4.webp","dog-poodle-sit":"images/dog-poodle-sit-4x4.webp","dog-poodle-sleep":"images/dog-poodle-sleep-4x4.webp","dog-poodle-dig":"images/dog-poodle-dig-4x4.webp","dog-poodle-fetch":"images/dog-poodle-fetch-4x4.webp","dog-poodle-bark":"images/dog-poodle-bark-4x4.webp","dog-bichon-walk-side":"images/dog-bichon-walk-side-4x4.webp","dog-bichon-walk-front":"images/dog-bichon-walk-front-4x4.webp","dog-bichon-walk-back":"images/dog-bichon-walk-back-4x4.webp","dog-bichon-idle":"images/dog-bichon-idle-4x4.webp","dog-bichon-sit":"images/dog-bichon-sit-4x4.webp","dog-bichon-sleep":"images/dog-bichon-sleep-4x4.webp","dog-bichon-dig":"images/dog-bichon-dig-4x4.webp","dog-bichon-fetch":"images/dog-bichon-fetch-4x4.webp","dog-bichon-bark":"images/dog-bichon-bark-4x4.webp","dog-dachshund-walk-side":"images/dog-dachshund-walk-side-4x4.webp","dog-dachshund-walk-front":"images/dog-dachshund-walk-front-4x4.webp","dog-dachshund-walk-back":"images/dog-dachshund-walk-back-4x4.webp","dog-dachshund-idle":"images/dog-dachshund-idle-4x4.webp","dog-dachshund-sit":"images/dog-dachshund-sit-4x4.webp","dog-dachshund-sleep":"images/dog-dachshund-sleep-4x4.webp","dog-dachshund-dig":"images/dog-dachshund-dig-4x4.webp","dog-dachshund-fetch":"images/dog-dachshund-fetch-4x4.webp","dog-dachshund-bark":"images/dog-dachshund-bark-4x4.webp","dog-pomeranian-walk-side":"images/dog-pomeranian-walk-side-4x4.webp","dog-pomeranian-walk-front":"images/dog-pomeranian-walk-front-4x4.webp","dog-pomeranian-walk-back":"images/dog-pomeranian-walk-back-4x4.webp","dog-pomeranian-idle":"images/dog-pomeranian-idle-4x4.webp","dog-pomeranian-sit":"images/dog-pomeranian-sit-4x4.webp","dog-pomeranian-sleep":"images/dog-pomeranian-sleep-4x4.webp","dog-pomeranian-dig":"images/dog-pomeranian-dig-4x4.webp","dog-pomeranian-fetch":"images/dog-pomeranian-fetch-4x4.webp","dog-pomeranian-bark":"images/dog-pomeranian-bark-4x4.webp","card-husky":"images/dog-card-husky.webp","card-dalmatian":"images/dog-card-dalmatian.webp","card-poodle":"images/dog-card-poodle.webp","card-bichon":"images/dog-card-bichon.webp","card-dachshund":"images/dog-card-dachshund.webp","card-pomeranian":"images/dog-card-pomeranian.webp"};
+const W=941,H=1672,$=id=>document.getElementById(id);
+const emo=(e,bg)=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'+(bg?'<circle cx="50" cy="50" r="46" fill="'+bg+'"/>':'')+'<text x="50" y="54" font-size="62" text-anchor="middle" dominant-baseline="middle">'+e+'</text></svg>');
+IMG.salt=emo('🧂','#EEE');IMG.merit=emo('🙏','#FFF3C9');
+/* ---------- ฉากชั่วคราว (รอรูปฉากคอกหมาจริง) ---------- */
+IMG.bg="images/dog-dogpen-bg.webp";
+const DT={husky:['ฮัสกี้เสื้อกั๊กเหลือง','💛'],dalmatian:['ดัลเมเชียนกะลาสี','⚓'],poodle:['พุดเดิ้ลดำแจ็กเก็ต','🖤'],bichon:['บิชองขาวกระโปรง','🎀'],dachshund:['ดัชชุนด์เสื้อเขียว','🌭'],pomeranian:['ปอมโบว์ชมพู','🌼']};
+const SHORT={husky:'ฮัสกี้',dalmatian:'ดัลเมเชียน',poodle:'พุดเดิ้ล',bichon:'บิชอง',dachshund:'ดัชชุนด์',pomeranian:'ปอม'};
+const PR={drumstick:'น่องไก่',egg:'ไข่ไก่',pork:'เนื้อหมู',trotter:'ขาหมู',truffle:'เห็ดทรัฟเฟิล',milk:'นมวัว',cheese:'ชีส',fishmeat:'เนื้อปลา'};
+const CR={carrot:'แครอท',corn:'ข้าวโพด',pumpkin:'ฟักทอง',potato:'มันฝรั่ง',cabbage:'กะหล่ำปลี',pea:'ถั่วลันเตา',tomato:'มะเขือเทศ',watermelon:'แตงโม'};
+const ING=Object.assign({},...Object.entries(PR).map(([k,v])=>({[k]:['product',v]})),...Object.entries(CR).map(([k,v])=>({[k]:['crop',v]})));
+const ingImg=k=>ING[k][0]==='product'?IMG['pr-'+k]:IMG['c-'+k];
+const FOOD=[['rice','🍚','ข้าวคลุกไก่แครอท',{drumstick:150,carrot:200,corn:150},[20,30],'#FFF3C9'],['stew','🍲','สตูว์หมูฟักทอง',{pork:200,pumpkin:200,potato:150},[25,35],'#FFE3CC'],['trotter','🍖','ขาหมูตุ๋นนมสด',{trotter:150,milk:200,cabbage:200},[30,40],'#F7E1D2'],
+ ['fishegg','🐟','ข้าวปลาไข่ทอง',{fishmeat:200,egg:200,pea:150},[30,40],'#DDF1FB'],['cheeseball','🧀','ชีสบอลทรัฟเฟิล',{cheese:200,truffle:100,tomato:200},[35,45],'#FFF0B8'],['feast','🍱','จานพรีเมียมเจ้าตูบ',{pork:300,drumstick:300,cheese:200,truffle:150,watermelon:200},[40,60],'#FFDDE6']].map(([id,e,n,need,mer,bg])=>({id,e,n,need,mer,bg}));
+FOOD.forEach(f=>IMG['food-'+f.id]=FIMG[f.id]);
+const FB=Object.fromEntries(FOOD.map(f=>[f.id,f]));
+const GC=['green','yellow','red','pink','blue'],GN={green:'เขียว',yellow:'เหลือง',red:'แดง',pink:'ชมพู',blue:'ฟ้า'};
+/* ---------- เซฟ (หน้าทดลอง: เก็บในเครื่อง) ---------- */
+const KEY='s3dog-v1';
+function fresh(){return{merit:1000,bag:{dog:{},dogfood:{},item:{},grass:{},product:{},crop:{}},dog:{list:[],drops:[],care:{},play:{},guard:null,log:[]}}}
+function load(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}const f=fresh();if(!s)return f;for(const k in f)if(s[k]===undefined)s[k]=f[k];for(const k in f.bag)s.bag[k]=s.bag[k]||{};for(const k in f.dog)if(s.dog[k]===undefined)s.dog[k]=f.dog[k];return s}
+let S=load();const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const fmt=n=>Number(n||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const it=k=>S.bag.item[k]||0,addIt=(k,q)=>S.bag.item[k]=(S.bag.item[k]||0)+q;
+let FAST=false;
+const T={hunger:()=>FAST?40e3:4*3600e3,life:()=>FAST?8*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:2*3600e3,ball:()=>FAST?15e3:30*60e3,guard:()=>FAST?90e3:6*3600e3,guardMax:()=>FAST?360e3:24*3600e3};
+const MB_USE=100,DIG_DAY=3,BALL_DAY=5,BOOT_SWAP=10;
+const today=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);/* วันตามเวลาไทย */
+function day(o){if(o.day!==today()){o.day=today();o.n=0}return o}
+/* ---------- ฉาก + หมาเดิน ---------- */
+const inFloor=(x,y)=>x>=60&&x<=880&&y>=560&&y<=1420;
+function randPt(){for(let i=0;i<60;i++){const x=rnd(60,880),y=rnd(560,1420);if(inFloor(x,y))return[x,y]}return[470,900]}
+const HOUSE=[170,560],BOWL=[770,560],HOME=[470,1400],DIRT=()=>[rnd(700,860),rnd(1290,1360)];
+const penDogs=()=>S.dog.list.filter(c=>(c.pen||0)===(S.dog.cur||0));
+let actors={},dropEls=[];const DSZ=145;
+function draw(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url("'+IMG.bg+'")';
+ penDogs().forEach(c=>{if(!actors[c.id]){const[x,y]=randPt();actors[c.id]={x,y,tx:x,ty:y,mode:'idle',pose:'idle',until:Date.now()+rnd(800,2500),f:rnd(0,15),flip:false}}
+  const a=actors[c.id],el=document.createElement('div');el.className='dog';a.el=el;const sh=document.createElement('div');sh.className='shd';a.sh=sh;s.appendChild(sh);el.onclick=e=>{e.stopPropagation();openDog(c)};s.appendChild(el);
+  const bd=document.createElement('img');bd.className='badge';bd.src=IMG.guard;bd.alt='';a.bd=bd;s.appendChild(bd);place(c,a)});
+ drawDrops();hud()}
+function place(c,a){if(!a.el)return;const d=DOGDIM[c.type][a.pose],hh=DSZ*d[1]/172,ww=hh*d[0]/d[1];
+ Object.assign(a.el.style,{left:a.x/W*100+'%',top:a.y/H*100+'%',width:ww/W*100+'%',height:hh/H*100+'%',zIndex:Math.round(a.y/10),backgroundImage:'url('+IMG['dog-'+c.type+'-'+a.pose]+')',backgroundPosition:((a.f%4)*100/3)+'% '+(Math.floor(a.f/4)*100/3)+'%'});
+ a.el.classList.toggle('flip',a.flip);a.el.classList.toggle('dance',!!dancing);
+ const sw=(a.pose==='sleep'?ww*.85:a.pose==='dig'?ww*.6:ww*.72);Object.assign(a.sh.style,{left:a.x/W*100+'%',top:(a.y-4)/H*100+'%',width:sw/W*100+'%',height:(sw*.26)/H*100+'%',zIndex:Math.round(a.y/10)-1});
+ const g=guardOn()&&S.dog.guard.id===c.id;a.bd.style.display=g?'block':'none';if(g)Object.assign(a.bd.style,{left:a.x/W*100+'%',top:(a.y-hh*1.02)/H*100+'%'})}
+function goTo(a,x,y,next,o={}){a.mode='walk';a.tx=x;a.ty=y;a.next=next;a.speed=o.speed||15;a.run=o.run||null;a.onArrive=o.onArrive||null}
+let last=performance.now(),acc=0,dancing=0;
+function loop(t){requestAnimationFrame(loop);const dt=Math.min(.1,(t-last)/1000);last=t;acc+=dt;const step=acc>=.085;if(step)acc=0;const now=Date.now();
+ penDogs().forEach(c=>{const a=actors[c.id];if(!a||!a.el)return;
+  if(dancing&&!a.busy){a.pose='bark';a.flip=false}
+  else if(careOn('massage')&&!a.busy){a.pose='sleep';a.mode='sleep';a.until=now+1500}
+  else if(careOn('bath')&&!a.busy){a.pose='sit';a.mode='sit';a.until=now+1500}
+  else if(a.mode==='walk'){const dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy),sp=(a.speed||15)*dt;
+   if(d<=sp){a.x=a.tx;a.y=a.ty;const cb=a.onArrive;a.onArrive=null;a.run=null;a.mode=a.next||'idle';a.pose=['sleep','sit','dig','bark'].includes(a.mode)?a.mode:'idle';a.flip=false;a.until=now+(a.mode==='sleep'?rnd(9000,16000):rnd(2500,6000));a.next=null;if(cb)cb()}
+   else{a.x+=dx/d*sp;a.y+=dy/d*sp;if(a.run){a.pose=a.run;a.flip=dx<0}else if(Math.abs(dy)>Math.abs(dx)*1.2){a.pose=dy<0?'walk-back':'walk-front';a.flip=false}else{a.pose='walk-side';a.flip=dx<0}}}
+  else if(a.busy){if(a.until&&now>a.until&&a.onDone){const cb=a.onDone;a.onDone=null;cb()}}
+  else if(now>a.until){const r=Math.random();
+   if(guardOn()&&S.dog.guard.id===c.id&&r<.25){a.mode='bark';a.pose='bark';a.until=now+2600}
+   else if(r<.12)goTo(a,HOUSE[0]+rnd(-30,40),HOUSE[1]+rnd(0,30),'sleep');
+   else if(r<.22)goTo(a,BOWL[0]+rnd(-20,30),BOWL[1]+rnd(0,25),'sit');
+   else if(r<.4){a.mode='sit';a.pose='sit';a.until=now+rnd(3000,6000)}
+   else{const[x,y]=randPt();goTo(a,x,y,'idle')}}
+  if(step&&(a.mode!=='walk'||a.run||(a.tick=(a.tick||0)+1)%2===0))a.f=(a.f+1)%16;place(c,a)})}
+/* ---------- ทั่วไป ---------- */
+function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');$('sheet').scrollTop=0}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on')}
+$('shade').onclick=closeAll;
+let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',3000)}
+function fx(x,y,t){const s=$('stage'),d=document.createElement('div');d.className='fx';d.textContent=t;Object.assign(d.style,{left:x/W*100+'%',top:y/H*100+'%'});s.appendChild(d);setTimeout(()=>d.remove(),1600)}
+const left=(ms)=>{const m=Math.max(0,Math.ceil(ms/60000));return m>=1440?Math.floor(m/1440)+' วัน '+Math.floor(m%1440/60)+' ชม.':m>=60?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':m+' นาที'};
+const hungry=c=>Date.now()-c.fed>=T.hunger();
+const have=k=>S.bag[ING[k][0]][k]||0;
+const dogName=c=>c.name||SHORT[c.type];
+function popup(h,btns){const ov=$('ov');ov.innerHTML='<div class="res">'+h+'<div class="row">'+(btns||'<button class="btn g" id="oK">เรียบร้อย</button>')+'</div></div>';ov.classList.add('on');const k=$('oK');if(k)k.onclick=()=>ov.classList.remove('on')}
+/* ---------- แตะหมา ---------- */
+function openDog(c){closeAll();const hu=hungry(c),g=guardOn()&&S.dog.guard.id===c.id,dg=day(S.dog.play.dig=S.dog.play.dig||{});
+ open('<div class="dcard"><img src="'+IMG['card-'+c.type]+'" alt=""><div><b>'+dogName(c)+'</b><small>'+DT[c.type][1]+' '+DT[c.type][0]+'<br>อยู่ได้อีก '+left(c.at+T.life()-Date.now())+'<br>'+(hu?'<span style="color:#C2445E;font-weight:800">หิวแล้ว 🥺</span>':'อิ่มอยู่ • หิวอีกใน '+left(c.fed+T.hunger()-Date.now()))+(g?'<br><span style="color:#2F7FB0;font-weight:800">🛡️ กำลังเฝ้าสวน อีก '+left(S.dog.guard.until-Date.now())+'</span>':'')+'</small></div></div>'+
+ '<div class="sec">🍽️ ให้อาหาร (ตัวละ 1 ชาม)</div><div class="grid">'+FOOD.map(f=>'<div class="cell" data-f="'+f.id+'" style="'+((S.bag.dogfood[f.id]||0)?'':'opacity:.45')+'"><img src="'+IMG['food-'+f.id]+'" alt=""><b>'+f.n+'</b><span>มี '+(S.bag.dogfood[f.id]||0)+'</span></div>').join('')+'</div>'+
+ '<div class="sec">🎾 เล่นกับ'+dogName(c)+'</div><div class="row"><button class="btn sm" id="dDig">🦴 พาเดินขุดสมบัติ ('+Math.max(0,DIG_DAY-dg.n)+'/'+DIG_DAY+')</button><button class="btn sm" id="dGuard">🛡️ ให้ขนม → เฝ้าสวน (มี '+it('treat')+')</button></div>'+
+ '<div class="row"><button class="btn gray sm" id="dCraft">🍳 คราฟอาหารหมา</button><button class="btn gray sm" id="dName">✏️ ตั้งชื่อ</button><button class="btn gray sm" id="dSell">💰 ขาย</button></div>');
+ $('sb').querySelectorAll('[data-f]').forEach(d=>d.onclick=()=>feed(c,d.dataset.f));
+ $('dDig').onclick=()=>digWalk(c);$('dGuard').onclick=()=>giveTreat(c);$('dCraft').onclick=openCraft;$('dName').onclick=()=>rename(c);$('dSell').onclick=()=>sell(c)}
+function feed(c,fid){if(!(S.bag.dogfood[fid]>0))return ann('ยังไม่มี'+FB[fid].n+' ไปคราฟก่อนนะ',1);if(!hungry(c))return ann(dogName(c)+'ยังอิ่มอยู่ หิวอีกใน '+left(c.fed+T.hunger()-Date.now()),1);
+ S.bag.dogfood[fid]--;c.fed=Date.now();const m=rnd(10,30);S.merit+=m;save();closeAll();const a=actors[c.id];if(a)fx(a.x,a.y-DSZ,'😋 +'+m);ann('🍽️ '+dogName(c)+'กิน'+FB[fid].n+' • +'+m+' กุศล');hud()}
+function rename(c){open('<h3>✏️ ตั้งชื่อหมา</h3><input class="inp" id="nmIn" maxlength="14" value="'+dogName(c)+'"><div class="row"><button class="btn gray" id="nNo">ยกเลิก</button><button class="btn g" id="nOk">บันทึกชื่อ</button></div>');
+ $('nNo').onclick=()=>openDog(c);$('nOk').onclick=()=>{const v=$('nmIn').value.trim();if(!v)return ann('ใส่ชื่อก่อนนะ',1);c.name=v;save();closeAll();ann('✏️ ตั้งชื่อเป็น "'+v+'" แล้ว')}}
+function sell(c){open('<div style="text-align:center"><img src="'+IMG['card-'+c.type]+'" style="width:7rem" alt=""><h3>ขาย'+dogName(c)+'?</h3><div class="hint">ได้ 20–50 กุศล • ขายแล้วเอาคืนไม่ได้</div><div class="row"><button class="btn gray" id="sNo">ไม่ขาย</button><button class="btn" id="sOk">ขายเลย</button></div></div>');
+ $('sNo').onclick=()=>openDog(c);$('sOk').onclick=()=>{const m=rnd(20,50);S.merit+=m;if(S.dog.guard&&S.dog.guard.id===c.id)S.dog.guard=null;S.dog.list=S.dog.list.filter(x=>x!==c);delete actors[c.id];save();closeAll();draw();ann('💰 ขาย'+dogName(c)+'แล้ว • +'+m+' กุศล')}}
+/* ---------- 📋 รายชื่อหมา (ให้อาหารจากลิสต์ ไม่ต้องไล่จิ้มตัวที่เดินอยู่) ---------- */
+function openRoster(pick){closeAll();const L=penDogs();
+ open('<h3>'+(pick?pick[0]:'📋 รายชื่อหมาในคอก')+'</h3><div class="hint">'+(pick?pick[1]:'แตะชื่อเพื่อให้อาหาร / เล่น / ตั้งชื่อ')+'</div>'+(L.length?L.map((c,i)=>{const g=guardOn()&&S.dog.guard.id===c.id;return '<div class="ros" data-i="'+i+'"><img src="'+IMG['card-'+c.type]+'" alt=""><b>'+dogName(c)+(g?' 🛡️':'')+'<small>อยู่ได้อีก '+left(c.at+T.life()-Date.now())+'</small></b><span class="st'+(hungry(c)?' h':'')+'">'+(hungry(c)?'หิว':'อิ่ม')+'</span></div>'}).join(''):'<div class="hint">ยังไม่มีหมาในคอก</div>'));
+ $('sb').querySelectorAll('[data-i]').forEach(d=>d.onclick=()=>{const c=L[+d.dataset.i];pick?pick[2](c):openDog(c)})}
+/* ---------- 🦴 พาเดินขุดสมบัติ ---------- */
+const CHEST=[['merit',0,40,'กุศล'],['musicbox',100,20,'กล่องดนตรี'],['cake',20,15,'เค้ก'],['coconut',15,10,'มะพร้าว'],['treat',3,10,'ขนมหมา'],['boxdog',2,5,'กล่องสุ่มหมา']];
+function digWalk(c){const a=actors[c.id],dg=day(S.dog.play.dig=S.dog.play.dig||{});if(!a)return;if(a.busy)return ann(dogName(c)+'กำลังทำอย่างอื่นอยู่',1);
+ let usedCollar=false;if(dg.n>=DIG_DAY){if(it('collar')<1)return ann('วันนี้พาเดินขุดครบ '+DIG_DAY+' ครั้งแล้ว • ใช้ปลอกคอ 1 อันเพื่อพาเดินเพิ่มได้',1);S.bag.item.collar--;usedCollar=true}else dg.n++;
+ save();closeAll();const[x,y]=Math.random()<.5?DIRT():randPt();a.busy=true;ann('🦴 พา'+dogName(c)+'ออกเดินดมหาสมบัติ…'+(usedCollar?' (ใช้ปลอกคอ 1)':''));
+ goTo(a,x,y,'dig',{speed:34,onArrive:()=>{a.mode='dig';a.pose='dig';a.until=Date.now()+4200;
+  const m=document.createElement('img');m.className='mound';m.src=IMG.mound;Object.assign(m.style,{left:(x+40)/W*100+'%',top:y/H*100+'%'});$('stage').appendChild(m);
+  a.onDone=()=>{a.busy=false;a.mode='sit';a.pose='sit';a.until=Date.now()+3000;setTimeout(()=>{m.style.opacity=0;setTimeout(()=>m.remove(),1300)},5000);digResult(c,x,y)}}})}
+function digResult(c,x,y){if(Math.random()<.35){addIt('boot',1);save();fx(x,y-DSZ,'👢');
+  return popup('<img class="chest" src="'+IMG.boot+'" alt=""><h3>'+dogName(c)+'ขุดเจอ… รองเท้าเก่า 😅</h3><div class="hint">เก็บเข้ากระเป๋าแล้ว • สะสมครบ '+BOOT_SWAP+' ข้าง แลกกล่องสุ่มหมาได้ 1 กล่อง<br>มีอยู่ '+it('boot')+' ข้าง</div>')}
+ let r=Math.random()*100,d=CHEST[0];for(const z of CHEST){r-=z[2];if(r<=0){d=z;break}}
+ const q=d[0]==='merit'?rnd(100,300):d[1];if(d[0]==='merit')S.merit+=q;else addIt(d[0],q);save();hud();fx(x,y-DSZ,'✨');
+ popup('<img class="chest" src="'+IMG.chest+'" alt=""><h3>🎉 '+dogName(c)+'ขุดเจอหีบสมบัติ!</h3><img class="big" style="width:4.5rem" src="'+(d[0]==='merit'?IMG.merit:d[0]==='boxdog'?IMG.box:IMG[d[0]])+'" alt=""><div class="qty">'+d[3]+' '+(d[0]==='merit'?'+':'×')+fmt(q)+'</div>')}
+/* ---------- 🎾 โยนบอล ---------- */
+const FETCH=[['grass',20,30,'หญ้าสีสุ่ม'],['wood',15,20,'ไม้'],['stone',15,15,'หิน'],['merit',0,20,'กุศล'],['boot',1,10,'รองเท้าเก่า'],['collar',1,5,'ปลอกคอ']];
+let ballBusy=false;
+function throwBall(){closeAll();const b=day(S.dog.play.ball=S.dog.play.ball||{}),now=Date.now();
+ if(!penDogs().length)return ann('ยังไม่มีหมาในคอกนี้',1);if(ballBusy)return ann('รอน้องคาบบอลกลับมาก่อนนะ',1);
+ if(b.n>=BALL_DAY)return ann('วันนี้โยนบอลครบ '+BALL_DAY+' ครั้งแล้ว',1);if(b.cool&&now<b.cool)return ann('น้องเหนื่อยแล้ว โยนได้อีกใน '+left(b.cool-now),1);
+ const free=penDogs().filter(c=>actors[c.id]&&!actors[c.id].busy);if(!free.length)return ann('ทุกตัวกำลังยุ่งอยู่',1);
+ b.n++;b.cool=now+T.ball();save();ballBusy=true;const c=free[rnd(0,free.length-1)],a=actors[c.id];a.busy=true;
+ const[tx,ty]=[rnd(150,800),rnd(560,800)],bl=document.createElement('img');bl.className='ball';bl.src=IMG.ball;$('stage').appendChild(bl);
+ let t0=performance.now();const sx=HOME[0],sy=HOME[1];(function fly(t){const p=Math.min(1,(t-t0)/900),hx=sx+(tx-sx)*p,hy=sy+(ty-sy)*p-Math.sin(p*Math.PI)*260;Object.assign(bl.style,{left:hx/W*100+'%',top:hy/H*100+'%'});if(p<1)requestAnimationFrame(fly)})(t0);
+ ann('🎾 โยนบอล! '+dogName(c)+'วิ่งตามไปแล้ว');
+ setTimeout(()=>goTo(a,tx,ty+20,'idle',{speed:50,run:'walk-side',onArrive:()=>{bl.remove();a.busy=true;goTo(a,HOME[0]+rnd(-40,40),HOME[1]-30,'sit',{speed:40,run:'fetch',onArrive:()=>{a.busy=false;ballBusy=false;fetchResult(c)}})}}),500)}
+function fetchResult(c){let r=Math.random()*100,d=FETCH[0];for(const z of FETCH){r-=z[2];if(r<=0){d=z;break}}const a=actors[c.id];let q=d[1],nm=d[3];
+ if(d[0]==='merit'){q=rnd(10,30);S.merit+=q}else if(d[0]==='grass'){const g=GC[rnd(0,4)];S.bag.grass[g]=(S.bag.grass[g]||0)+q;nm='หญ้า'+GN[g]}else addIt(d[0],q);save();hud();
+ if(a)fx(a.x,a.y-DSZ,d[0]==='boot'?'👢':'🎾');ann('🎾 '+dogName(c)+'คาบ'+nm+' '+(d[0]==='merit'?'+':'×')+q+' กลับมาให้!')}
+/* ---------- 🛡️ หมาเฝ้าสวน ---------- */
+const guardOn=()=>S.dog.guard&&Date.now()<S.dog.guard.until&&S.dog.list.some(c=>c.id===S.dog.guard.id);
+function giveTreat(c){if(it('treat')<1)return ann('ไม่มีขนมหมา • ขนมหมาซื้อได้จากแอดมิน (ถุงขนม 1 ถุง = 10 ชิ้น)',1);
+ const now=Date.now(),same=guardOn()&&S.dog.guard.id===c.id,base=same?S.dog.guard.until:now;if(same&&base-now>=T.guardMax()-1000)return ann('เฝ้าได้สูงสุด 24 ชม. แล้ว',1);
+ S.bag.item.treat--;S.dog.guard={id:c.id,until:Math.min(now+T.guardMax(),base+T.guard())};save();closeAll();const a=actors[c.id];if(a){fx(a.x,a.y-DSZ,'🦴');if(!a.busy){a.mode='bark';a.pose='bark';a.until=now+2500}}
+ ann('🛡️ '+dogName(c)+'กินขนมแล้ว พร้อมเฝ้าสวน '+(same?'(ต่อเวลา +6 ชม.)':'6 ชม.'))}
+function openGuard(){closeAll();const g=guardOn()?S.dog.list.find(c=>c.id===S.dog.guard.id):null;
+ open('<h3>🛡️ หมาเฝ้าสวน</h3><div class="hint">ให้ขนมหมา 1 ชิ้น = เฝ้า 6 ชม. (สะสมได้ถึง 24 ชม.) • มีเฝ้าได้ทีละ 1 ตัว<br>เพื่อนมาขโมยผัก/ร่ายมนต์ดำ → มีโอกาส 40% ที่หมาจะเห่าไล่ เพื่อนทำไม่สำเร็จ และทำของหล่นไว้ให้เรา</div>'+
+ (g?'<div class="ros"><img src="'+IMG['card-'+g.type]+'" alt=""><b>'+dogName(g)+' 🛡️<small>เฝ้าอยู่ อีก '+left(S.dog.guard.until-Date.now())+'</small></b></div>':'<div class="hint" style="color:#C2445E">ตอนนี้ยังไม่มีหมาเฝ้าสวน</div>')+
+ '<div class="row"><button class="btn sm" id="gPick">🦴 เลือกหมามาเฝ้า (ขนมมี '+it('treat')+')</button><button class="btn gray sm" id="gLog">📜 บันทึกเฝ้าสวน</button></div><div class="draft">ร่างตัวเลข: เฝ้า 6 ชม./ขนม 1 • ไล่สำเร็จ 40% • ของหล่น = ผักที่เพื่อนถือ 50 ชิ้น หรือหญ้า 30</div>');
+ $('gPick').onclick=()=>openRoster(['🛡️ เลือกหมามาเฝ้าสวน','ใช้ขนมหมา 1 ชิ้น',giveTreat]);$('gLog').onclick=openLog}
+function openLog(){closeAll();open('<h3>📜 บันทึกหมาเฝ้าสวน</h3><div class="hint">เก็บแค่ 10 รายการล่าสุด (ไม่กินพื้นที่เซฟ)</div>'+(S.dog.log.length?S.dog.log.map(l=>'<div class="logi">'+l.t+'<small>'+new Date(l.at).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})+'</small></div>').join(''):'<div class="hint">ยังไม่มีใครมาป่วนสวน</div>'))}
+function simThief(kind){closeAll();const who=['มะลิ','ส้มโอ','น้ำหวาน','ข้าวปั้น'][rnd(0,3)],act=kind==='steal'?'แอบมาขโมยผัก':'มาร่ายมนต์ดำใส่แปลง',now=Date.now();
+ if(guardOn()&&Math.random()<.4){const g=S.dog.list.find(c=>c.id===S.dog.guard.id),a=actors[g.id];if(a&&!a.busy){a.mode='bark';a.pose='bark';a.until=now+3500;fx(a.x,a.y-DSZ,'💢')}
+  let got;if(Math.random()<.6){const k=Object.keys(CR)[rnd(0,7)];S.bag.crop[k]=(S.bag.crop[k]||0)+50;got=CR[k]+' ×50'}else{const c=GC[rnd(0,4)];S.bag.grass[c]=(S.bag.grass[c]||0)+30;got='หญ้า'+GN[c]+' ×30'}
+  S.dog.log.unshift({t:'🛡️ '+dogName(g)+'เห่าไล่ '+who+' ที่'+act+' • '+who+'ทำ'+got+'หล่นไว้',at:now});S.dog.log=S.dog.log.slice(0,10);save();
+  return popup('<h3>🐶💢 '+dogName(g)+'เห่าไล่สำเร็จ!</h3><div class="two"><div><b>ฝั่งเพื่อน ('+who+')</b>โดนหมาเห่าไล่!<br>'+act.replace('มา','')+'ไม่สำเร็จ<br>แถมทำ'+got+'หล่น</div><div><b>ฝั่งเรา</b>ได้รับ '+got+'<br>เข้ากระเป๋าแล้ว<br>📬 แจ้งในไปรษณีย์</div></div>')}
+ const t=guardOn()?'😴 หมาเฝ้าสวนเผลองีบ… '+who+act+'สำเร็จ':'🚫 ไม่มีหมาเฝ้าสวน… '+who+act+'สำเร็จ';S.dog.log.unshift({t,at:now});S.dog.log=S.dog.log.slice(0,10);save();
+ popup('<h3>'+t+'</h3><div class="hint">(ส่วนนี้ใช้กติกาขโมยผัก/มนต์ดำเดิมของระบบเพื่อน)</div>')}
+/* ---------- 🍳 คราฟอาหารหมา ---------- */
+let cq={};
+function openCraft(){closeAll();
+ open('<h3>🍳 ครัวอาหารหมา</h3><div class="hint">ใช้ผลผลิตสัตว์ + ผักเป็นหลัก • คราฟได้ 1–10 ครั้ง • ได้ครั้งละ 1 ชาม</div><div class="draft">ร่างสูตร รอคอนเฟิร์ม</div>'+FOOD.map(f=>{const mx=Math.min(10,...Object.entries(f.need).map(([k,q])=>Math.floor(have(k)/q))),q=Math.max(1,Math.min(cq[f.id]||1,10));cq[f.id]=q;
+  return '<div class="rc"><div class="hd"><img src="'+IMG['food-'+f.id]+'" alt=""><div><b>'+f.n+'</b><small>ให้หมากินได้ 10–30 กุศล • มี '+(S.bag.dogfood[f.id]||0)+' ชาม</small></div></div><div class="needs">'+Object.entries(f.need).map(([k,n])=>{const t=n*q,ok=have(k)>=t;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+ingImg(k)+'" alt="">'+ING[k][1]+' '+fmt(have(k))+'/'+fmt(t)+'</span>'}).join('')+'</div>'+
+  '<div class="qrow"><small>'+(mx>0?'คราฟได้ '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+f.id+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+f.id+'">+</button><button class="btn g sm" data-c="'+f.id+'"'+(mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
+ const sb=$('sb');sb.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cq[b.dataset.m]=Math.max(1,cq[b.dataset.m]-1);openCraft()});
+ sb.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,cq[b.dataset.p]+1);openCraft()});
+ sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.dogfood[f.id]=(S.bag.dogfood[f.id]||0)+q;save();ann('🍳 ได้'+f.n+' ×'+q);openCraft()})}
+/* ---------- 🎒 กระเป๋าหมา ---------- */
+function openBag(){closeAll();const rows=[['treat',IMG.treat,'ขนมหมา','ใช้ให้หมาเฝ้าสวน'],['treatbag',IMG.treatbag,'ถุงขนมหมา','เปิดได้ขนม 10 ชิ้น'],['collar',IMG.collar,'ปลอกคอ','พาเดินขุดเพิ่มได้ 1 ครั้ง/อัน'],['boot',IMG.boot,'รองเท้าเก่า','ครบ '+BOOT_SWAP+' ข้าง แลกกล่องสุ่มหมา 1'],['boxdog',IMG.box,'กล่องสุ่มหมา',''],['musicbox',IMG.musicbox,'กล่องดนตรี','เอนเตอร์เทนใช้ '+MB_USE+'/ครั้ง']];
+ open('<h3>🎒 กระเป๋าของหมา</h3><div class="list">'+rows.map(([k,im,n,s])=>'<div class="li"><img src="'+im+'" alt=""><b>'+n+(s?'<small style="display:block;font-size:.6rem;color:var(--soft);font-weight:600">'+s+'</small>':'')+'</b><span>×'+fmt(it(k))+'</span>'+(k==='treatbag'&&it(k)?'<button class="btn sm" id="bOpen">เปิด</button>':'')+(k==='boot'&&it(k)>=BOOT_SWAP?'<button class="btn sm" id="bSwap">แลก</button>':'')+(k==='boxdog'&&it(k)?'<button class="btn sm" id="bBox">เปิด</button>':'')+'</div>').join('')+'</div>'+
+ '<div class="sec">🍽️ อาหารหมา</div><div class="grid">'+FOOD.map(f=>'<div class="cell"><img src="'+IMG['food-'+f.id]+'" alt=""><b>'+f.n+'</b><span>'+(S.bag.dogfood[f.id]||0)+'</span></div>').join('')+'</div>'+
+ '<div class="sec">🐶 หมาในกระเป๋า (ยังไม่ได้วาง)</div><div class="cards">'+Object.keys(DT).filter(t=>S.bag.dog[t]>0).map(t=>'<div class="cd"><img src="'+IMG['card-'+t]+'" alt=""><b>'+SHORT[t]+'</b><span>×'+S.bag.dog[t]+'</span></div>').join('')+'</div>'+(Object.keys(DT).some(t=>S.bag.dog[t]>0)?'':'<div class="hint">ไม่มี</div>'));
+ if($('bOpen'))$('bOpen').onclick=()=>{S.bag.item.treatbag--;addIt('treat',10);save();ann('🦴 เปิดถุงขนม ได้ขนมหมา ×10');openBag()};
+ if($('bSwap'))$('bSwap').onclick=()=>{S.bag.item.boot-=BOOT_SWAP;addIt('boxdog',1);save();ann('👢 แลกรองเท้าเก่า '+BOOT_SWAP+' ข้าง → กล่องสุ่มหมา 1 กล่อง');openBag()};
+ if($('bBox'))$('bBox').onclick=openBox}
+/* ---------- ดูแลทั้งคอก: อาบน้ำ / นวด / เอนเตอร์เทน ---------- */
+const CARE={bath:['🛁','อาบน้ำ','🫧',[30,80]],massage:['💆','นวดตัว','💗',[30,80]],music:['🎵','เอนเตอร์เทน','🎶',[50,150]]};
+function cs(k){k=k+(S.dog.cur||0);const c=S.dog.care[k]=S.dog.care[k]||{};if(c.day!==today()){c.day=today();c.count=0}return c}
+function startCare(k){closeAll();const c=cs(k),n=penDogs().length,now=Date.now();if(!n)return ann('ยังไม่มีหมาในคอก',1);
+ if(c.until&&now<c.until)return ann(CARE[k][1]+'อยู่ เหลืออีก '+Math.ceil((c.until-now)/1000)+' วิ',1);
+ if(c.until&&!c.claimed)return claim(k);
+ if(c.count>=4)return ann('วันนี้'+CARE[k][1]+'ครบ 4 ครั้งแล้ว',1);
+ if(c.cool&&now<c.cool)return ann('พักก่อนนะ '+CARE[k][1]+'ได้อีกใน '+left(c.cool-now),1);
+ if(k==='music'){if(it('musicbox')<MB_USE)return ann('ต้องใช้กล่องดนตรี '+MB_USE+' กล่อง (มี '+fmt(it('musicbox'))+')',1);S.bag.item.musicbox-=MB_USE;dance()}
+ c.count++;c.reward=penDogs().reduce(n=>n+rnd(...CARE[k][3]),0);c.until=now+(k==='music'?20e3:T.care());c.claimed=false;c.cool=c.until+T.cool();save();hud();
+ ann(CARE[k][0]+' เริ่ม'+CARE[k][1]+'หมา '+n+' ตัว'+(k==='music'?' • ใช้กล่องดนตรี '+MB_USE+' กล่อง น้องหอนตามเพลง 🎶':' • ออกไปทำอย่างอื่นได้ เวลายังนับต่อ'))}
+function claim(k){const c=cs(k);if(!c.until||Date.now()<c.until||c.claimed)return;c.claimed=true;S.merit+=c.reward;save();hud();ann(CARE[k][0]+' '+CARE[k][1]+'เสร็จแล้ว • +'+c.reward+' กุศล');penDogs().forEach(x=>{const a=actors[x.id];if(a)fx(a.x,a.y-DSZ,CARE[k][2])})}
+function dance(){dancing=1;let n=0;const iv=setInterval(()=>{penDogs().forEach(x=>{const a=actors[x.id];if(a&&Math.random()<.5)fx(a.x+rnd(-40,40),a.y-DSZ,['🎵','🎶','✨','🐾'][rnd(0,3)])});if(++n>=20){clearInterval(iv);dancing=0}},1000)}
+const careOn=k=>{const c=S.dog.care[k+(S.dog.cur||0)];return c&&c.until&&Date.now()<c.until};
+setInterval(()=>{['bath','massage'].forEach(k=>{if(!careOn(k))return;penDogs().forEach(x=>{const a=actors[x.id];if(!a||a.busy)return;
+ if(k==='bath'){for(let j=0;j<2;j++)if(Math.random()<.85)fx(a.x+rnd(-45,45),a.y-DSZ*rnd(20,90)/100,['🫧','🫧','🫧','💧','✨'][rnd(0,4)])}
+ else{if(Math.random()<.8)fx(a.x+rnd(-35,35),a.y-DSZ*.6,['💗','💕','✨','💖'][rnd(0,3)])}})})},380);
+setInterval(()=>hud(),900);
+/* ---------- ดรอป: หมาที่อิ่มดรอปของทุก 2 ชม. (คำนวณจากเวลา ไม่เปลือง) ---------- */
+const DROP=[['grass',30,30,'หญ้าสีสุ่ม'],['wood',20,20,'ไม้'],['stone',20,15,'หิน'],['treat',2,15,'ขนมหมา'],['collar',1,10,'ปลอกคอ'],['cake',10,10,'เค้ก']];
+function rollDrop(){let r=Math.random()*100;for(const d of DROP){r-=d[2];if(r<=0)return d}return DROP[0]}
+function tickDrops(){const now=Date.now();let ch=false;S.dog.list.forEach(c=>{c.nd=c.nd||now+T.drop();while(now>=c.nd&&S.dog.drops.filter(x=>(x.pen||0)===(c.pen||0)).length<12){if(now-c.fed<T.hunger()+T.drop()){const d=rollDrop(),a=actors[c.id];S.dog.drops.push({pen:c.pen||0,k:d[0],q:d[1],g:GC[rnd(0,4)],x:a?a.x+rnd(-50,50):rnd(200,700),y:a?a.y+rnd(-10,25):rnd(600,1300)});ch=true}c.nd+=T.drop()}if(now>=c.nd)c.nd=now+T.drop()});if(ch){save();drawDrops();hud()}}
+const dImg=d=>d.k==='grass'?IMG['g-'+d.g]:IMG[d.k];
+function drawDrops(){const s=$('stage');dropEls.forEach(e=>e.remove());dropEls=S.dog.drops.filter(d=>(d.pen||0)===(S.dog.cur||0)).map(d=>{const e=document.createElement('img');e.className='drop2';e.src=dImg(d);Object.assign(e.style,{left:d.x/W*100+'%',top:d.y/H*100+'%'});s.appendChild(e);return e})}
+function collectDrops(){const mine=S.dog.drops.filter(d=>(d.pen||0)===(S.dog.cur||0));if(!mine.length)return ann('ยังไม่มีของบนพื้น',1);const got={};mine.forEach(d=>{if(d.k==='grass'){S.bag.grass[d.g]=(S.bag.grass[d.g]||0)+d.q;const n='หญ้า'+GN[d.g];got[n]=(got[n]||0)+d.q}else{addIt(d.k,d.q);const n=DROP.find(x=>x[0]===d.k)[3];got[n]=(got[n]||0)+d.q}});
+ S.dog.drops=S.dog.drops.filter(d=>(d.pen||0)!==(S.dog.cur||0));save();const r=$('dock').getBoundingClientRect(),st=$('stage').getBoundingClientRect();dropEls.forEach(e=>{e.classList.add('fly');e.style.left=((r.left+20-st.left)/st.width*100)+'%';e.style.top=((r.top-st.top)/st.height*100)+'%'});
+ setTimeout(()=>{dropEls.forEach(e=>e.remove());dropEls=[]},750);hud();ann('🎒 '+Object.entries(got).map(([n,q])=>n+' ×'+q).join(' • ')+' • เข้ากระเป๋าแล้ว')}
+/* ---------- วางหมา ---------- */
+function openPlace(){closeAll();const n=penDogs().length;
+ open('<h3>🐶 วางหมาลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้วเอากลับไม่ได้ • อยู่ได้ 4 วัน (นับตั้งแต่วาง)</div><div class="cards">'+Object.keys(DT).map(t=>{const c=S.bag.dog[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+SHORT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div><div class="row"><button class="btn sm" id="pBox">🎁 ไปเปิดกล่องสุ่มหมา</button></div>');
+ $('sb').querySelectorAll('[data-t]').forEach(d=>d.onclick=()=>{const t=d.dataset.t;if(!(S.bag.dog[t]>0))return ann('ยังไม่มี'+SHORT[t]+'ในกระเป๋า',1);if(penDogs().length>=8)return ann('คอก '+(S.dog.cur+1)+' เต็มแล้ว (8/8) ลองเปลี่ยนไปอีกคอก',1);
+  open('<div style="text-align:center"><img src="'+IMG['card-'+t]+'" style="width:9rem" alt=""><h3>วาง'+DT[t][0]+'?</h3><div class="hint">วางแล้วเอากลับไม่ได้ • อยู่ในคอก 4 วัน</div><div class="row"><button class="btn gray" id="pNo">ยกเลิก</button><button class="btn g" id="pYes">วางเลย</button></div></div>');
+  $('pNo').onclick=openPlace;$('pYes').onclick=()=>{S.bag.dog[t]--;const now=Date.now();S.dog.list.push({id:now.toString(36)+rnd(10,99),type:t,name:'',at:now,fed:now,pen:S.dog.cur||0});save();closeAll();draw();ann(DT[t][1]+' '+SHORT[t]+'เข้าคอกแล้ว!')}});
+ $('pBox').onclick=openBox}
+function expire(){const now=Date.now(),gone=S.dog.list.filter(c=>now>=c.at+T.life());if(!gone.length)return;S.dog.list=S.dog.list.filter(c=>now<c.at+T.life());gone.forEach(c=>delete actors[c.id]);save();draw();ann('👋 '+gone.map(dogName).join(', ')+' ครบ 4 วัน กลับบ้านแล้ว')}
+/* ---------- 🎁 กล่องสุ่มหมา ---------- */
+function roll(){const r=Math.random()*100;if(r<2){const ts=Object.keys(DT);return{k:'dog',t:ts[rnd(0,5)]}}
+ if(r<42){const p=Math.random();return{k:'merit',q:p<.8?rnd(1,25):p<.95?rnd(26,100):rnd(101,300)}}if(r<72)return{k:'salt'};if(r<84)return{k:'dogfood',q:50};if(r<90)return{k:'treat',q:5};if(r<95)return{k:'collar',q:3};return{k:'cake',q:50}}
+function openBox(){closeAll();const n=it('boxdog');
+ open('<div style="text-align:center"><img src="'+IMG.box+'" style="width:7rem" alt=""><h3>กล่องสุ่มหมา</h3><div class="hint">มีอยู่ <b>'+fmt(n)+'</b> กล่อง • หมา 2% / กุศล 40% / กล่องเกลือ 30% / ของ 28%</div><div class="draft">ร่าง % เหมือนกล่องแมว • ของ: อาหารหมาสุ่ม 50 ชาม / ขนมหมา 5 / ปลอกคอ 3 / เค้ก 50</div></div><div class="boxbtns">'+[1,10,50,100,500].map(q=>'<button data-q="'+q+'"'+(n<q?' disabled':'')+'>'+q+'<small>กล่อง</small></button>').join('')+'</div>');
+ $('sb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>openMany(+b.dataset.q))}
+function openMany(q){if(it('boxdog')<q)return;closeAll();const res=[];for(let i=0;i<q;i++)res.push(roll());const sum={merit:0,salt:0,dogfood:0,treat:0,collar:0,cake:0},dogs={};
+ res.forEach(r=>{if(r.k==='dog')dogs[r.t]=(dogs[r.t]||0)+1;else if(r.k==='salt')sum.salt++;else sum[r.k]+=r.q});
+ S.bag.item.boxdog-=q;S.merit+=sum.merit;Object.entries(dogs).forEach(([t,c])=>S.bag.dog[t]=(S.bag.dog[t]||0)+c);for(let i=0;i<sum.dogfood/50;i++){const f=FOOD[rnd(0,5)].id;S.bag.dogfood[f]=(S.bag.dogfood[f]||0)+50}
+ addIt('treat',sum.treat);addIt('collar',sum.collar);addIt('cake',sum.cake);save();
+ const ov=$('ov');ov.innerHTML='<div class="sp" id="spr" style="aspect-ratio:1"></div>';ov.classList.add('on');const sp=$('spr');sp.style.backgroundImage='url('+IMG.boxanim+')';let f=0;
+ const iv=setInterval(()=>{sp.style.backgroundPosition=((f%4)*100/3)+'% '+(Math.floor(f/4)*100/3)+'%';f++;if(f>=16){clearInterval(iv);setTimeout(()=>showRes(q,res,sum,dogs),150)}},75)}
+function showRes(q,res,sum,dogs){let h='';const dk=Object.entries(dogs);const NM={merit:'กุศล',dogfood:'อาหารหมา',treat:'ขนมหมา',collar:'ปลอกคอ',cake:'เค้ก'},IM={merit:IMG.merit,dogfood:IMG['food-feast'],treat:IMG.treat,collar:IMG.collar,cake:IMG.cake};
+ if(q===1){const r=res[0];if(r.k==='dog')h='<h3>🎉 ได้หมา!</h3><img class="card" src="'+IMG['card-'+r.t]+'" alt=""><div class="qty">'+DT[r.t][0]+'</div>';else if(r.k==='salt')h='<img class="big" src="'+IMG.salt+'" alt=""><h3>กล่องเกลือ…</h3><div class="hint">รอบนี้ไม่ได้อะไรเลย</div>';
+  else h='<img class="big" src="'+IM[r.k]+'" alt=""><h3>'+NM[r.k]+'</h3><div class="qty">'+(r.k==='merit'?'+':'×')+fmt(r.q)+'</div>'}
+ else h='<h3>🎁 เปิด '+fmt(q)+' กล่อง</h3>'+(dk.length?'<div class="cards" style="margin:.4rem 0">'+dk.map(([t,c])=>'<div class="cd"><img src="'+IMG['card-'+t]+'" alt=""><b>'+SHORT[t]+'</b><span>×'+c+'</span></div>').join('')+'</div>':'')+'<div class="list">'+
+  ['merit','dogfood','treat','collar','cake','salt'].filter(k=>sum[k]>0).map(k=>'<div class="li"><img src="'+(k==='salt'?IMG.salt:IM[k])+'" alt=""><b>'+(k==='salt'?'กล่องเกลือ':k==='dogfood'?'อาหารหมาสุ่ม':NM[k])+'</b><span>'+(k==='merit'?'+':'×')+fmt(sum[k])+'</span></div>').join('')+'</div><div class="hint">กุศลบวกเข้าทันทีแล้ว • ของเข้ากระเป๋าแล้ว</div>';
+ popup(h,'<button class="btn" id="oA">เปิดต่อ</button><button class="btn g" id="oK">เรียบร้อย</button>');$('oA').onclick=()=>{$('ov').classList.remove('on');openBox()};hud()}
+/* ---------- 👑 มุมแอดมิน: ส่งหมา/ของให้ผู้เล่น ---------- */
+let adm={p:0,k:'dog-husky',q:1};
+function openAdmin(){closeAll();const P=['ยัยหนู (ทดลองส่งให้ตัวเอง)','มะลิ','ส้มโอ','น้ำหวาน','ข้าวปั้น'];
+ const K=[...Object.keys(DT).map(t=>['dog-'+t,IMG['card-'+t],SHORT[t]]),['treatbag',IMG.treatbag,'ถุงขนมหมา'],['boxdog',IMG.box,'กล่องสุ่มหมา'],['collar',IMG.collar,'ปลอกคอ']];
+ open('<h3>👑 ส่งของหมาให้ผู้เล่น</h3><div class="hint">ใช้ตอนขายของในแชตกลุ่ม • ของจะเข้ากระเป๋าผู้เล่น + แจ้งในไปรษณีย์ (ช่องแอดมิน)</div><div class="sec">ส่งให้ใคร</div><div class="chips" id="aP">'+P.map((n,i)=>'<button data-i="'+i+'" class="'+(adm.p===i?'on':'')+'">'+n+'</button>').join('')+'</div>'+
+ '<div class="sec">ของที่ส่ง</div><div class="grid" id="aK">'+K.map(([k,im,n])=>'<div class="cell'+(adm.k===k?' sel':'')+'" data-k="'+k+'"><img src="'+im+'" alt=""><b>'+n+'</b></div>').join('')+'</div>'+
+ '<div class="qrow" style="margin-top:.5rem"><small>จำนวน</small><button class="st" id="aM">−</button><span class="q">'+adm.q+'</span><button class="st" id="aPl">+</button><button class="btn g sm" id="aSend">🎁 ส่งเลย</button></div>');
+ $('aP').onclick=e=>{const b=e.target.closest('button');if(b){adm.p=+b.dataset.i;openAdmin()}};$('aK').onclick=e=>{const c=e.target.closest('[data-k]');if(c){adm.k=c.dataset.k;openAdmin()}};
+ $('aM').onclick=()=>{adm.q=Math.max(1,adm.q-1);openAdmin()};$('aPl').onclick=()=>{adm.q=Math.min(999,adm.q+1);openAdmin()};
+ $('aSend').onclick=()=>{const nm=K.find(x=>x[0]===adm.k)[2];if(adm.p===0){if(adm.k.startsWith('dog-')){const t=adm.k.slice(4);S.bag.dog[t]=(S.bag.dog[t]||0)+adm.q}else addIt(adm.k,adm.q);save();closeAll();ann('📬 ได้รับของขวัญจากแอดมิน: '+nm+' ×'+adm.q+' • เข้ากระเป๋าแล้ว')}else{closeAll();ann('🎁 ส่ง'+nm+' ×'+adm.q+' ให้ '+P[adm.p]+' แล้ว (ทดลอง)')}}}
+/* ---------- ⚙️ ตั้งค่าทดลอง ---------- */
+function openSet(){closeAll();
+ open('<h3>⚙️ ตั้งค่าหน้าทดลอง</h3><div class="chips" id="sF"><button data-v="1" class="'+(FAST?'on':'')+'">⏩ เร่งเวลา</button><button data-v="0" class="'+(FAST?'':'on')+'">🐢 เวลาจริง</button></div>'+
+ '<div class="row"><button class="btn sm" id="sDog">🐶 รับหมาทุกแบบ +1</button><button class="btn sm" id="sMat">🍖 เติมวัตถุดิบอาหารหมา</button><button class="btn sm" id="sFood">🍽️ อาหารหมา 10 ชาม/อย่าง</button><button class="btn sm" id="sTreat">🦴 ถุงขนมหมา +3</button><button class="btn sm" id="sCol">⭕ ปลอกคอ +3</button><button class="btn sm" id="sMB">🎵 กล่องดนตรี +500</button><button class="btn sm" id="sBox">🎁 กล่องสุ่มหมา +500</button><button class="btn sm" id="sBoot">👢 รองเท้าเก่า +10</button><button class="btn sm" id="sPlay">🔁 รีเซ็ตโควตาเล่นวันนี้</button></div>'+
+ '<div class="sec">🕵️ จำลองเพื่อนมาเยี่ยมสวน</div><div class="row"><button class="btn sm" id="sSteal">🥬 เพื่อนมาขโมยผัก</button><button class="btn sm" id="sHex">🔮 เพื่อนมาร่ายมนต์ดำ</button></div><div class="row"><button class="btn gray sm" id="sReset">🔄 ล้างคอก</button></div>');
+ $('sF').onclick=e=>{const b=e.target.closest('button');if(!b)return;FAST=b.dataset.v==='1';openSet()};
+ $('sDog').onclick=()=>{Object.keys(DT).forEach(t=>S.bag.dog[t]=(S.bag.dog[t]||0)+1);save();ann('🐶 รับหมาทุกแบบอย่างละ 1 ตัว • 🧰 → 🐶 หมา → วางหมา')};
+ $('sMat').onclick=()=>{Object.entries(ING).forEach(([k,[t]])=>S.bag[t][k]=(S.bag[t][k]||0)+5000);save();ann('🍖 เติมผลผลิตสัตว์ + ผัก อย่างละ 5,000')};
+ $('sFood').onclick=()=>{FOOD.forEach(f=>S.bag.dogfood[f.id]=(S.bag.dogfood[f.id]||0)+10);save();ann('🍽️ เติมอาหารหมาอย่างละ 10 ชาม')};
+ $('sTreat').onclick=()=>{addIt('treatbag',3);save();ann('🦴 ถุงขนมหมา +3 • เปิดได้ใน 🎒 กระเป๋าหมา')};$('sCol').onclick=()=>{addIt('collar',3);save();ann('⭕ ปลอกคอ +3')};
+ $('sMB').onclick=()=>{addIt('musicbox',500);save();ann('🎵 กล่องดนตรี +500')};$('sBox').onclick=()=>{addIt('boxdog',500);save();ann('🎁 กล่องสุ่มหมา +500')};$('sBoot').onclick=()=>{addIt('boot',10);save();ann('👢 รองเท้าเก่า +10')};
+ $('sPlay').onclick=()=>{S.dog.play={};S.dog.care={};save();ann('🔁 รีเซ็ตโควตาขุด/โยนบอล/ดูแลของวันนี้แล้ว')};
+ $('sSteal').onclick=()=>simThief('steal');$('sHex').onclick=()=>simThief('hex');
+ $('sReset').onclick=()=>{S.dog={list:[],drops:[],care:{},play:{},guard:null,log:[]};actors={};save();closeAll();draw()}}
+/* ---------- เมนูไอคอนเล็ก + เปลี่ยนคอก ---------- */
+function openCare(){closeAll();const t=k=>{const c=S.dog.care[k+(S.dog.cur||0)];return c&&c.until&&Date.now()<c.until?'กำลังทำ…':(c&&c.cool&&Date.now()<c.cool?'พักอยู่':'พร้อม')};
+ open('<h3>💕 ดูแลทั้งคอก '+(S.dog.cur+1)+'</h3><div class="hint">ทำได้วันละ 4 ครั้ง • พักรอบละ 2 ชม.</div><div class="tiles"><div class="tile" data-c="bath"><span>🛁</span><b>อาบน้ำ</b><small>5 นาที • 30–80/ตัว<br>'+t('bath')+'</small></div><div class="tile" data-c="massage"><span>💆</span><b>นวด</b><small>5 นาที • 30–80/ตัว<br>'+t('massage')+'</small></div><div class="tile" data-c="music"><span>🎵</span><b>เอนเตอร์เทน</b><small>กล่องดนตรี 100 • 50–150/ตัว<br>'+t('music')+'</small></div></div>');
+ $('sb').querySelectorAll('[data-c]').forEach(d=>d.onclick=()=>startCare(d.dataset.c))}
+function openPlay(){closeAll();const b=day(S.dog.play.ball=S.dog.play.ball||{}),dg=day(S.dog.play.dig=S.dog.play.dig||{});
+ open('<h3>🎾 เล่นกับน้องหมา</h3><div class="tiles"><div class="tile" data-p="ball"><span>🎾</span><b>โยนบอล</b><small>เหลือ '+Math.max(0,BALL_DAY-b.n)+'/'+BALL_DAY+' วันนี้</small></div><div class="tile" data-p="dig"><span>🦴</span><b>พาเดินขุด</b><small>เหลือ '+Math.max(0,DIG_DAY-dg.n)+'/'+DIG_DAY+' วันนี้</small></div><div class="tile" data-p="guard"><span>🛡️</span><b>หมาเฝ้าสวน</b><small>'+(guardOn()?'เฝ้าอยู่':'ยังไม่มี')+'</small></div></div>');
+ $('sb').querySelectorAll('[data-p]').forEach(d=>d.onclick=()=>{const p=d.dataset.p;if(p==='ball')throwBall();else if(p==='dig')openRoster(['🦴 เลือกหมาพาเดินขุด','วันละ '+DIG_DAY+' ครั้ง • ครบแล้วใช้ปลอกคอพาเดินเพิ่มได้',digWalk]);else openGuard()})}
+function openMore(){closeAll();open('<h3>⚙️ อื่นๆ</h3><div class="tiles"><div class="tile" data-m="farm"><span>🌱</span><b>กลับฟาร์ม</b></div></div>');
+ $('sb').querySelectorAll('[data-m]').forEach(d=>d.onclick=()=>{const m=d.dataset.m;if(m==='set')openSet();else if(m==='adm')openAdmin();else ann('🌱 ในเกมจริงจะกลับไปฟาร์ม 1')})}
+const DOCK=[['🐶','วางหมา',openPlace],['📋','รายชื่อ',()=>openRoster()],['💕','ดูแล',openCare],['🎾','เล่น',openPlay],['🍳','ครัว',openCraft],['🎒','กระเป๋า',openBag],['🎁','กล่องสุ่ม',openBox],['⚙️','อื่นๆ',openMore]];
+$('dock').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.d==='c')return collectDrops();DOCK[+b.dataset.d][2]()};
+$('pens').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.dog.cur=+b.dataset.p;actors={};save();closeAll();draw();ann('🏡 ย้ายมาคอก '+(S.dog.cur+1))};
+function hud(){S.dog.cur=S.dog.cur||0;const n=S.dog.drops.filter(d=>(d.pen||0)===S.dog.cur).length;
+ $('sub').textContent='คอก '+(S.dog.cur+1)+' • '+penDogs().length+'/8 ตัว';
+ $('pens').innerHTML=[0,1].map(i=>'<button data-p="'+i+'" class="'+(S.dog.cur===i?'on':'')+'"><i>'+(i?'🦴':'🐾')+'</i>คอก '+(i+1)+' · '+S.dog.list.filter(c=>(c.pen||0)===i).length+'</button>').join('');
+ $('dock').innerHTML=(n?'<button data-d="c" title="เก็บของ">🧺<i>'+n+'</i></button>':'')+DOCK.map((d,i)=>'<button data-d="'+i+'" title="'+d[1]+'">'+d[0]+'</button>').join('');
+ const now=Date.now();$('carebar').innerHTML=(guardOn()?'<span>🛡️</span>':'')+Object.entries(CARE).map(([k,v])=>{const c=S.dog.care[k];if(!c||!c.until)return'';if(now<c.until)return '<span>'+v[0]+' ⏳</span>';if(!c.claimed)return '<span class="ready" data-k="'+k+'">'+v[0]+' รับกุศล</span>';return''}).join('');
+ $('carebar').querySelectorAll('[data-k]').forEach(s=>s.onclick=()=>claim(s.dataset.k))}
+function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
+document.documentElement.style.setProperty('--bg','url("'+IMG.bg+'")');
+addEventListener('resize',fit);fit();draw();requestAnimationFrame(loop);
+setInterval(()=>{expire();tickDrops()},1000);
+setTimeout(()=>ann(S.dog.list.length?'🐶 แตะน้องหมาเพื่อให้อาหาร • ไอคอนด้านล่างคือเครื่องมือทั้งหมด':'🐶 ยังไม่มีหมา • เปิดกล่องสุ่มหมาหรือรับจากยัยหนู'),400);
+</script></body></html>

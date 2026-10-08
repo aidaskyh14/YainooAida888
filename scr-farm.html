@@ -839,8 +839,9 @@ $('mLogout').innerHTML='<i>🚪</i>ออกจากระบบ';$('mLogout').
 openMail=function(){closeAll();H.openMail()};
 const OPEN=new Set(['house','backyard','forest','f4']);
 const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"],["🏡","หลังบ้าน","อาหารสวน • แฮมสเตอร์","backyard"]]],
+ ["สัตว์",[["🐔","โรงเรือนสัตว์วิญญาณ","ไก่ ปลา หมู วัว","barn"],["🦤","นกน้อยคล้อยบินมาเดียวดาย","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","ขุดสมบัติ โยนบอล เฝ้าสวน","dog"],["🐱","คอกแมว","อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","ทุ่งอัลปาก้า + โรงงาน","ตัดขน • แปรรูป","alpaca"]]],
  ["สถานที่",[["🌲","ป่าต้องห้าม","เปิด 18:00–05:59 เวลาไทย","forest"],["🍎","ฟาร์มต้นผลไม้","ฟาร์ม 4","f4"]]],
- ["เร็วๆ นี้",[["🐔","สัตว์ทุกชนิด","",""],["🎣","ตกปลา • แข่งเรือ • ร้านค้า","",""],["🎮","มินิเกม • กิจกรรม","",""]]]];
+ ["เร็วๆ นี้",[["🎣","ตกปลา • แข่งเรือ • ร้านค้า • ซาฟารี","",""],["🎮","มินิเกม • กิจกรรม","",""]]]];
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});

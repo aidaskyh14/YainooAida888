@@ -1,0 +1,160 @@
+<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H)__H.set(k,String(v))},removeItem:k=>{if(__H)__H.del(k)}};
+function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
+</script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองโรงเรือนสัตว์ – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{height:100%;margin:0;overflow:hidden;background:#8fcf8f}
+body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#view{position:fixed;inset:0;overflow:hidden}
+#view::before{content:"";position:absolute;inset:-40px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.85)}
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background-size:100% 100%;transition:opacity .2s}
+.stage.fade{opacity:0}
+.an{position:absolute;transform:translate(-50%,-88%);width:13%;aspect-ratio:1;cursor:pointer}
+.an .sp{position:absolute;inset:0;background-size:400% 400%}
+.an .sh{position:absolute;left:18%;right:18%;bottom:-3%;height:16%;border-radius:50%;background:radial-gradient(ellipse,rgba(60,35,10,.35),rgba(60,35,10,0) 70%)}
+.an.sick .sp{filter:saturate(.5) brightness(.95)}
+.an .bd{position:absolute;left:50%;top:-14%;transform:translateX(-50%);font-size:1.05rem;background:#fff;border-radius:50%;width:1.7rem;height:1.7rem;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.an .bar{position:absolute;left:20%;right:20%;bottom:-10%;height:.28rem;border-radius:999px;background:rgba(255,255,255,.6);overflow:hidden}
+.an .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFE08A,#F2A23A)}
+.an.dead .sp{filter:grayscale(1) opacity(.5)}
+.empty{position:absolute;transform:translate(-50%,-50%);font-size:.72rem;color:#6E4B3A;font-weight:700;cursor:pointer;background:rgba(255,251,245,.75);border:2px dashed rgba(110,75,58,.4);border-radius:999px;padding:.15rem .6rem}
+.trough{position:absolute;transform:translate(-50%,-50%);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.trough .pile{display:flex;flex-wrap:wrap;justify-content:center;width:100%}
+.trough .pile img{width:8.5%;margin:-.5% -.6%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.trough .cnt{position:absolute;right:-2%;top:-30%;background:#F25C7A;color:#fff;font-weight:800;font-size:.75rem;border:2px solid #fff;border-radius:999px;padding:.05rem .45rem;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.trough .hint2{position:absolute;bottom:-34%;left:50%;transform:translateX(-50%);font-size:.62rem;font-weight:700;background:rgba(255,251,245,.9);border-radius:999px;padding:.05rem .45rem;white-space:nowrap}
+.flyp{position:absolute;width:5%;pointer-events:none;transition:left .9s ease-in,top .9s ease-in,opacity .9s;z-index:3}
+.dots{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + .55rem);display:flex;gap:.3rem;background:rgba(255,251,245,.9);border:2px solid #fff;border-radius:999px;padding:.2rem .35rem;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.dots button{border:0;background:none;font-size:1.05rem;width:2rem;height:2rem;border-radius:50%;cursor:pointer;opacity:.45}
+.dots button.on{opacity:1;background:#FFF3C9}
+.tool{position:fixed;z-index:6;right:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);width:3.1rem;height:3.1rem;border-radius:50%;border:3px solid #fff;font-size:1.3rem;display:grid;place-items:center;cursor:pointer;background:radial-gradient(circle at 35% 30%,#FFF7D6,#FFD86B);box-shadow:0 4px 0 rgba(0,0,0,.15),0 8px 16px rgba(0,0,0,.25);transition:transform .25s}
+.tool.open{transform:rotate(45deg)}
+.fan{position:fixed;z-index:6;right:.7rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4rem);display:flex;flex-direction:column-reverse;gap:.35rem;align-items:flex-end;pointer-events:none}
+.fan button{pointer-events:none;display:flex;align-items:center;gap:.35rem;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.97);font:inherit;font-weight:600;font-size:.76rem;color:var(--cocoa);padding:.2rem .75rem .2rem .25rem;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;opacity:0;transform:translateY(1rem) scale(.8);transition:.2s}
+.fan button i{font-style:normal;width:1.65rem;height:1.65rem;border-radius:50%;display:grid;place-items:center;background:#EAF6F3;font-size:.9rem}
+.fan.open button{opacity:1;transform:none;pointer-events:auto}
+.shade{position:fixed;inset:0;z-index:8;background:rgba(40,60,40,.4);opacity:0;pointer-events:none;transition:.2s}.shade.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:9;left:50%;bottom:0;width:min(27rem,100vw);transform:translate(-50%,105%);transition:transform .18s ease-out;background:var(--cream);border:3px solid #fff;border-bottom:0;border-radius:1.6rem 1.6rem 0 0;padding:.9rem .9rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);max-height:84vh;overflow:auto}
+.sheet.on{transform:translate(-50%,0)}
+h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;color:var(--soft);text-align:center;margin-bottom:.5rem}
+.opt{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #fff;background:#fff;border-radius:1rem;padding:.45rem .7rem;margin-bottom:.35rem;font:inherit;color:var(--cocoa);cursor:pointer;text-align:left;box-shadow:0 3px 8px rgba(70,150,180,.12)}
+.opt img{width:2.6rem;height:2.6rem;object-fit:contain}.opt b{flex:1;font-size:.84rem}.opt b small{display:block;font-weight:500;font-size:.66rem;color:var(--soft)}.opt span{font-size:.72rem;font-weight:700;color:#B9761F;white-space:nowrap}
+.opt:disabled{opacity:.45}
+.row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}
+.btn{border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.8rem;padding:.5rem .9rem;cursor:pointer;background:var(--aqua);color:#fff;box-shadow:0 3px 0 #3F98B6}
+.btn.g{background:#6CC9A8;box-shadow:0 3px 0 #4DAA8A}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}.btn:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.cell{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .15rem;text-align:center;position:relative}
+.cell img{width:100%;aspect-ratio:1;object-fit:contain}.cell b{display:block;font-size:.6rem;line-height:1.2}.cell span{font-size:.7rem;font-weight:800;color:#B9761F}
+.cell.t1{border-color:#BFE3F5;background:#F3FAFE}.cell.t2{border-color:#FFD86B;background:#FFFBEA}.cell.t2::after{content:"✨";position:absolute;right:.15rem;top:.1rem;font-size:.7rem}
+.ann{position:fixed;z-index:12;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.6rem);transform:translate(-50%,-10px);opacity:0;background:var(--cream);border:2px solid var(--mint);border-radius:1rem;padding:.3rem .8rem .3rem .3rem;font-size:.78rem;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:.25s;pointer-events:none;width:max-content;max-width:94vw;display:flex;gap:.4rem;align-items:center}
+.ann img{width:2rem;height:2rem;flex:none}.ann.show{opacity:1;transform:translate(-50%,0)}.ann.err{border-color:var(--pig);background:#FFF4F6}
+</style></head><body>
+<div id="view"><div class="stage" id="stage"></div></div>
+<div class="dots" id="dots"></div>
+<div class="fan" id="fan"></div><button class="tool" id="toolBtn">🧰</button>
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet"><div id="sb"></div></section>
+<div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
+<script>
+const IMG={"happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "pen-chicken": "images/animals-pen-chicken.webp", "an-chicken": "images/animal-chicken.webp", "pen-fish": "images/animals-pen-fish.webp", "an-fish": "images/animal-fish.webp", "pen-pig": "images/animals-pen-pig.webp", "an-pig": "images/animal-pig.webp", "pen-cow": "images/animals-pen-cow.webp", "an-cow": "images/animal-cow.webp", "p-egg": "images/animals-product-egg.webp", "p-feather": "images/animals-product-feather.webp", "p-drumstick": "images/animals-product-drumstick.webp", "p-fishmeat": "images/animals-product-fishmeat.webp", "p-roe": "images/animals-product-roe.webp", "p-scale": "images/animals-product-scale.webp", "p-truffle": "images/animals-product-truffle.webp", "p-pork": "images/animals-product-pork.webp", "p-trotter": "images/animals-product-trotter.webp", "p-milk": "images/animals-product-milk.webp", "p-cheese": "images/animals-product-cheese.webp", "p-cream": "images/animals-product-cream.webp", "i-pestle": "images/animals-item-pestle.webp", "i-hay": "images/animals-item-hay.webp", "i-musicbox": "images/animals-item-musicbox.webp", "i-bell": "images/animals-item-bell.webp", "i-medicine": "images/animals-item-medicine.webp"};const W=941,H=1672,$=id=>document.getElementById(id);
+const TYPES={chicken:{e:'🐔',n:'เล้าไก่',an:'ไก่',prod:3,life:3,p:['egg','feather','drumstick'],rows:[[625,[210,465,720]],[845,[190,462,740]],[1075,[165,462,762]]],tr:[470,1385,560,140]},
+ fish:{e:'🐟',n:'บ่อปลา',an:'ปลา',prod:1.5,life:3,p:['fishmeat','roe','scale'],rows:[[740,[240,470,700]],[930,[230,470,715]],[1130,[215,470,730]]],tr:[470,1340,640,120]},
+ pig:{e:'🐷',n:'คอกหมู',an:'หมู',prod:6,life:7,p:['truffle','pork','trotter'],rows:[[700,[190,465,745]],[935,[175,465,760]],[1195,[160,465,780]]],tr:[470,1462,560,80]},
+ cow:{e:'🐄',n:'คอกวัว',an:'วัว',prod:5,life:12,p:['milk','cheese','cream'],rows:[[745,[200,465,745]],[965,[178,470,772]],[1220,[158,470,785]]],tr:[470,1432,560,110]}};
+const PN={egg:'ไข่ไก่',feather:'ขนไก่',drumstick:'น่องไก่',fishmeat:'เนื้อปลา',roe:'ไข่ปลา',scale:'เกล็ดปลาจันทร์',truffle:'เห็ดทรัฟเฟิล',pork:'เนื้อหมู',trotter:'ขาหมูทองคำ',milk:'นมวัว',cheese:'ชีส',cream:'ครีม'};
+const BOOST=[['pestle','สากกะเบือ',12,'ได้ ⭐ ธรรมดา'],['hay','ฟ่อนหญ้าหวาน',6,'ได้ ⭐ ธรรมดา หรือ ⭐⭐ พิเศษ'],['musicbox','กล่องดนตรีกล่อมสัตว์',3,'ได้ ⭐⭐ พิเศษ'],['bell','กระดิ่งทองนำโชค',1,'ได้ ⭐⭐⭐ หายาก']];
+const SELL={chicken:5,fish:5,pig:10,cow:20};
+const ORDER=['chicken','fish','pig','cow'];const FRIENDS=['ส้มโอ','ฟ้าใส','Porpla','Kongkwan','Earn','ลุงชาวสวน'];
+let HOUR=3600000; // ทดลอง: 1 ชม.ในเกม = 10 วินาที
+const KEY='s3barn3';let S;try{S=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}
+function fresh(){const now=Date.now(),s={pen:'chicken',animals:{},trough:{},bag:{},items:{pestle:0,hay:0,musicbox:0,bell:0,medicine:0},stock:{chicken:0,fish:0,pig:0,cow:0},cool:0,lastVisit:now,sneeze:{day:'',who:[]}};
+ ORDER.forEach((t,k)=>{s.animals[t]=Array(9).fill(null).map((_,i)=>false?{born:now-i*HOUR*3,next:now+HOUR*TYPES[t].prod*(0.15+Math.random()*.8),sick:false}:null);s.trough[t]={n:0,pestle:0,hay:0,musicbox:0,bell:0}});return s}
+S=__fill(fresh(),S);const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+let pen=S.pen;
+function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
+let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}
+const slotXY=(t,i)=>{const r=TYPES[t].rows[Math.floor(i/3)];return[r[1][i%3],r[0]]};
+const lifeLeft=a=>a.born+TYPES[pen].life*24*HOUR-Date.now();
+const dead=(t,a)=>a&&a.born+TYPES[t].life*24*HOUR<=Date.now();
+/* ---------- ผลิต: ครบเวลา → ไปกองที่ราง (เก็บเป็นตัวเลข) ---------- */
+function produce(animate){let moved=[];ORDER.forEach(t=>{const P=TYPES[t].prod*HOUR;S.animals[t].forEach((a,i)=>{if(!a||a.sick)return;const end=Math.min(Date.now(),a.born+TYPES[t].life*24*HOUR);let n=0;while(a.next<=end&&n<500){S.trough[t].n++;a.next+=P;n++}if(n&&t===pen)moved.push(i)})});if(moved.length){save();if(animate)moved.forEach(slide);drawTrough()}}
+function slide(i){const s=$('stage');const[x,y]=slotXY(pen,i),tr=TYPES[pen].tr;const im=document.createElement('img');im.className='flyp';im.src=IMG['p-'+TYPES[pen].p[0]];
+ Object.assign(im.style,{left:(x/W*100-2.5)+'%',top:(y/H*100-3)+'%'});s.appendChild(im);requestAnimationFrame(()=>requestAnimationFrame(()=>{im.style.left=(tr[0]/W*100-2.5)+'%';im.style.top=(tr[1]/H*100-2)+'%';im.style.opacity='.3'}));setTimeout(()=>im.remove(),950)}
+/* ---------- ไข้หวัด: คิดตอนเข้าโรงเรือน ---------- */
+function enterBarn(){const away=(Date.now()-S.lastVisit)/HOUR;let msg=[];
+ if(away>=4){ORDER.forEach(t=>{const healthy=S.animals[t].map((a,i)=>a&&!a.sick&&!dead(t,a)?i:-1).filter(i=>i>=0);const n=away>=9?3+Math.round(Math.random()):away>=6?1+Math.round(Math.random()):(Math.random()<.5?1:0);
+  healthy.sort(()=>Math.random()-.5).slice(0,n).forEach(i=>S.animals[t][i].sick=true);if(Math.min(n,healthy.length))msg.push(TYPES[t].e+' '+Math.min(n,healthy.length))})}
+ S.lastVisit=Date.now();save();if(msg.length)ann('🤒 ไม่ได้มาดูนาน '+Math.floor(away)+' ชม. สัตว์ติดหวัด: '+msg.join(' • '),1)}
+/* ---------- วาด ---------- */
+let els=[];
+function draw(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url('+IMG['pen-'+pen]+')';$('view').style.setProperty('--bg','url('+IMG['pen-'+pen]+')');els=[];
+ S.animals[pen].forEach((a,i)=>{const[x,y]=slotXY(pen,i);if(!a){const e=document.createElement('div');e.className='empty';e.style.left=x/W*100+'%';e.style.top=(y-40)/H*100+'%';e.innerHTML='＋ ว่าง';e.onclick=()=>placeAnimal(i);s.appendChild(e);els.push(null);return}
+  const d=document.createElement('div');const dd=dead(pen,a);d.className='an'+(a.sick?' sick':'')+(dd?' dead':'');d.style.left=x/W*100+'%';d.style.top=y/H*100+'%';
+  d.innerHTML='<span class="sh"></span><span class="sp" style="background-image:url('+IMG['an-'+pen]+')"></span>'+(a.sick?'<span class="bd">🤒</span>':dd?'<span class="bd">🕊️</span>':'')+'<span class="bar"><i></i></span>';
+  d.onclick=()=>tapAnimal(i);s.appendChild(d);els.push({d,f:(i*5)%16})});
+ const tr=TYPES[pen].tr,t=document.createElement('div');t.className='trough';t.id='trough';Object.assign(t.style,{left:tr[0]/W*100+'%',top:tr[1]/H*100+'%',width:tr[2]/W*100+'%',height:tr[3]/H*100+'%'});t.onclick=()=>collect([pen]);s.appendChild(t);drawTrough();
+ $('dots').innerHTML=ORDER.map(k=>'<button class="'+(k===pen?'on':'')+'" data-p="'+k+'">'+TYPES[k].e+'</button>').join('');document.querySelectorAll('#dots button').forEach(b=>b.onclick=()=>go(b.dataset.p));updBars()}
+function drawTrough(){const t=$('trough');if(!t)return;const n=tTot(pen);const show=Math.min(n,8);t.innerHTML='<div class="pile">'+Array.from({length:show},(_,k)=>'<img src="'+IMG['p-'+TYPES[pen].p[k%7===6?1:0]]+'">').join('')+'</div>'+(n?'<span class="cnt">×'+n.toLocaleString()+' รอบ</span><span class="hint2">🧺 แตะเพื่อเก็บ</span>':'')}
+function updBars(){S.animals[pen].forEach((a,i)=>{const e=els[i];if(!e||!a)return;const bar=e.d.querySelector('.bar');if(a.sick||dead(pen,a)){bar.style.display='none';return}bar.style.display='block';const P=TYPES[pen].prod*HOUR;bar.firstChild.style.width=Math.max(0,Math.min(100,(1-(a.next-Date.now())/P)*100))+'%'})}
+function go(p){if(p===pen)return;$('stage').classList.add('fade');setTimeout(()=>{pen=p;S.pen=p;save();draw();$('stage').classList.remove('fade')},180)}
+let sx=null;$('view').addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+$('view').addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)<60)return;const k=ORDER.indexOf(pen)+(dx<0?1:-1);if(k>=0&&k<4)go(ORDER[k])});
+/* ภาพเคลื่อนไหว: เล่นเฉพาะคอกที่เปิดดู */
+let lt=0;(function anim(t){requestAnimationFrame(anim);if(t-lt<120||document.hidden)return;lt=t;els.forEach(e=>{if(!e)return;e.f=(e.f+1)%16;e.d.querySelector('.sp').style.backgroundPosition=((e.f%4)*100/3)+'% '+(Math.floor(e.f/4)*100/3)+'%'})})(0);
+setInterval(()=>{produce(true);updBars()},1000);
+/* ---------- แผ่นเมนู ---------- */
+function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on')}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
+$('shade').onclick=closeAll;
+const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.floor(s/60)+' นาที '+(s%60)+' วิ':s+' วิ'};
+const gameT=ms=>{const h=ms/HOUR;return h>=24?Math.floor(h/24)+' วัน '+Math.floor(h%24)+' ชม.':h>=1?h.toFixed(1)+' ชม.':Math.round(h*60)+' นาที'};
+function tapAnimal(i){const a=S.animals[pen][i],T=TYPES[pen];
+ if(dead(pen,a))return open('<h3>🕊️ '+T.an+'ช่องที่ '+(i+1)+' หมดอายุแล้ว</h3><div class="hint">ครบ '+T.life+' วันแล้ว ผลผลิตที่ผลิตไว้ยังอยู่ในราง</div><div class="row"><button class="btn g" id="clr">ปล่อยไปและเคลียร์ช่อง</button></div>'),$('clr').onclick=()=>{S.animals[pen][i]=null;save();closeAll();draw()};
+ if(a.sick)return open('<h3>🤒 '+T.an+'ช่องที่ '+(i+1)+' ติดหวัด</h3><div class="hint">หยุดผลิตจนกว่าจะรักษา</div><button class="opt" id="cure"'+(S.items.medicine<1?' disabled':'')+'><img src="'+IMG['i-medicine']+'"><b>ใช้ยาน้ำผึ้งมะนาว<small>1 ชิ้นต่อ 1 ตัว</small></b><span>มี '+S.items.medicine+'</span></button>'),$('cure').onclick=()=>{S.items.medicine--;a.sick=false;a.next=Date.now()+T.prod*HOUR;save();closeAll();draw();ann('🍯 '+T.an+'หายหวัดแล้ว กลับมาผลิตต่อ')};
+ open('<h3>'+T.e+' '+T.an+' ช่องที่ '+(i+1)+'</h3><div class="hint">ผลิตเสร็จในอีก '+gameT(a.next-Date.now())+' • อายุเหลือ '+gameT(lifeLeft(a))+'</div>'+boostOpts(1,'one',i)+'<div class="row" style="margin-top:.6rem"><button class="btn gray" id="sell">💸 ขายออก (+'+SELL[pen]+' กุศล)</button></div>');$('sell').onclick=()=>sellAnimal(i)}
+function boostOpts(n,mode,i){const cd=S.cool-Date.now();if(cd>0)return '<div class="hint" style="font-weight:700">⏱️ เพิ่งใช้ของเร่งไป รออีก '+fmt(cd)+' (กันกดรัวให้ระบบบันทึกทัน)</div>';
+ return '<div class="hint">⚡ เร่งให้ผลิตเสร็จทันที'+(n>1?' • '+n+' ตัว':'')+'</div>'+BOOST.map(([k,nm,per,r])=>{const need=per*n;return '<button class="opt" data-k="'+k+'" data-mode="'+mode+'" data-i="'+(i??'')+'"'+(S.items[k]<need?' disabled':'')+'><img src="'+IMG['i-'+k]+'"><b>'+nm+'<small>'+r+' • '+per+' ชิ้นต่อตัว</small></b><span>ใช้ '+need+' • มี '+S.items[k]+'</span></button>'}).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('#sb [data-k]');if(!b||b.disabled)return;const k=b.dataset.k,per=BOOST.find(x=>x[0]===k)[2];
+ const list=b.dataset.mode==='one'?[+b.dataset.i]:S.animals[pen].map((a,i)=>a&&!a.sick&&!dead(pen,a)?i:-1).filter(i=>i>=0);const need=per*list.length;if(S.items[k]<need)return;
+ S.items[k]-=need;list.forEach(i=>{const a=S.animals[pen][i];S.trough[pen][k]++;a.next=Date.now()+TYPES[pen].prod*HOUR;slide(i)});S.cool=Date.now()+60000;save();closeAll();drawTrough();updBars();ann('⚡ เร่ง '+list.length+' ตัวแล้ว! ผลผลิตไหลไปที่ราง • ใช้ของเร่งครั้งถัดไปได้ใน 1 นาที')});
+const tTot=t=>Object.values(S.trough[t]).reduce((x,y)=>x+y,0);
+function rollFrom(t,src){const p=TYPES[t].p;if(src==='bell')return p[2];if(src==='musicbox')return p[1];if(src==='hay')return Math.random()<.5?p[0]:p[1];return p[0]}
+function collect(pens){const got={};let rounds=0;pens.forEach(t=>{Object.entries(S.trough[t]).forEach(([src,n])=>{rounds+=n;for(let k=0;k<n;k++){const q=Math.random()<.82?2:3;const it=rollFrom(t,src);got[it]=(got[it]||0)+q}S.trough[t][src]=0})});
+ if(!rounds)return ann('ยังไม่มีผลผลิตในราง',1);Object.entries(got).forEach(([k,q])=>S.bag[k]=(S.bag[k]||0)+q);save();drawTrough();closeAll();
+ const tier=k=>ORDER.reduce((r,t)=>{const i=TYPES[t].p.indexOf(k);return i>=0?i:r},0);const list=Object.entries(got).sort((a,b)=>tier(b[0])-tier(a[0]));
+ open('<h3>🧺 เก็บผลผลิตแล้ว!</h3><div class="hint">'+rounds.toLocaleString()+' รอบการผลิต • เข้ากระเป๋าแล้ว</div><div class="grid">'+list.map(([k,q])=>'<div class="cell t'+tier(k)+'"><img src="'+IMG['p-'+k]+'"><b>'+'⭐'.repeat(tier(k)+1)+'<br>'+PN[k]+'</b><span>×'+q.toLocaleString()+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
+/* ---------- เครื่องมือ ---------- */
+const FAN=[['⚡','เร่งผลผลิตคอกนี้',()=>{const n=S.animals[pen].filter(a=>a&&!a.sick&&!dead(pen,a)).length;if(!n)return ann('ไม่มีสัตว์ที่ผลิตอยู่ในคอกนี้',1);open('<h3>⚡ เร่งผลผลิต '+TYPES[pen].n+'</h3>'+boostOpts(n,'all'))}],
+ ['🧺','เก็บผลผลิตทุกคอก',()=>collect(ORDER)],
+ ['🍯','รักษาหวัดทั้งหมด',()=>{const sick=[];ORDER.forEach(t=>S.animals[t].forEach((a,i)=>{if(a&&a.sick&&!dead(t,a))sick.push([t,i])}));if(!sick.length)return ann('ไม่มีสัตว์ป่วย 🎉');
+  open('<h3>🍯 รักษาหวัดทั้งหมด</h3><div class="hint">สัตว์ป่วย '+sick.length+' ตัว (ทุกคอก)</div><button class="opt" id="cureAll"'+(S.items.medicine<sick.length?' disabled':'')+'><img src="'+IMG['i-medicine']+'"><b>ยาน้ำผึ้งมะนาว<small>ต้องใช้ '+sick.length+' ชิ้น</small></b><span>มี '+S.items.medicine+'</span></button>'+(S.items.medicine<sick.length?'<div class="hint">ยาไม่พอ แตะรักษาทีละตัวได้</div>':''));
+  $('cureAll').onclick=()=>{sick.forEach(([t,i])=>{const a=S.animals[t][i];a.sick=false;a.next=Date.now()+TYPES[t].prod*HOUR});S.items.medicine-=sick.length;save();closeAll();draw();ann('🍯 รักษาหายทั้งหมด '+sick.length+' ตัว')}}],
+ ['🎒','กระเป๋า',openBag]];
+$('fan').innerHTML=FAN.map((f,i)=>'<button data-i="'+i+'"><i>'+f[0]+'</i>'+f[1]+'</button>').join('');
+$('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
+$('fan').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!$('fan').classList.contains('open'))return;$('fan').classList.remove('open');$('toolBtn').classList.remove('open');FAN[+b.dataset.i][2]()});
+function openSneeze(){const day=new Date().toDateString();if(S.sneeze.day!==day)S.sneeze={day,who:[]};const left=3-S.sneeze.who.length;
+ open('<h3>🤧 จามใส่เพื่อน</h3><div class="hint">วันนี้เหลือ '+left+'/3 คน • รีเซ็ตเที่ยงคืน • เพื่อนจะโดนตอนเข้าโรงเรือนครั้งถัดไป</div>'+FRIENDS.map(n=>{const done=S.sneeze.who.includes(n);return '<button class="opt" data-sn="'+n+'"'+(done||left<1?' disabled':'')+'><b>👤 '+n+'</b><span>'+(done?'จามแล้ววันนี้':'🤧 จาม')+'</span></button>'}).join(''));
+ document.querySelectorAll('[data-sn]').forEach(b=>b.onclick=()=>{S.sneeze.who.push(b.dataset.sn);save();closeAll();ann('🤧 แอบจามใส่สวน '+b.dataset.sn+' แล้ว! เพื่อนจะได้จดหมายแจ้ง')})}
+function openBag(){const rows=Object.entries(S.bag).filter(([,q])=>q>0);open('<h3>🎒 กระเป๋า • ผลผลิตสัตว์</h3><div class="grid">'+(rows.length?rows.map(([k,q])=>'<div class="cell"><img src="'+IMG['p-'+k]+'"><b>'+PN[k]+'</b><span>×'+q.toLocaleString()+'</span></div>').join(''):'<div class="hint" style="grid-column:1/-1">ยังไม่มีผลผลิต</div>')+'</div><h3 style="margin-top:.8rem">🐾 สัตว์ภาคการเกษตร</h3><div class="grid">'+ORDER.map(t=>'<div class="cell"><div style="width:100%;aspect-ratio:1;background:url('+IMG['an-'+t]+') 0 0/400% 400%"></div><b>'+TYPES[t].an+'</b><span>×'+(S.stock[t]||0)+'</span></div>').join('')+'</div><h3 style="margin-top:.8rem">✨ ไอเทม</h3><div class="grid">'+[...BOOST.map(b=>[b[0],b[1]]),['medicine','ยาน้ำผึ้งมะนาว']].map(([k,n])=>'<div class="cell"><img src="'+IMG['i-'+k]+'"><b>'+n+'</b><span>×'+S.items[k]+'</span></div>').join('')+'</div>')}
+function openSet(){open('<h3>⚙️ ตั้งค่าทดลอง</h3><div class="hint">1 ชม.ในเกม = 10 วินาที • ปุ่มเหล่านี้มีเฉพาะหน้าทดลอง</div>'+
+ '<div class="hint" style="margin-top:.5rem">🤒 จำลองไม่ได้เข้าโรงเรือน แล้วกลับเข้ามา</div><div class="row"><button class="btn" data-aw="4">4 ชม.</button><button class="btn" data-aw="6">6 ชม.</button><button class="btn" data-aw="9">9 ชม.</button></div>'+
+ '<div class="hint" style="margin-top:.5rem">🤧 จำลองเพื่อนจามใส่คุณ</div><div class="row"><button class="btn" id="gotSn">ส้มโอจามใส่ฉัน</button></div>'+
+ '<div class="hint" style="margin-top:.5rem">🎁 จำลองยัยหนูส่งสัตว์ให้ทางกล่องของขวัญ</div><div class="row"><button class="btn g" id="gift">รับไก่ 3 • ปลา 2 • หมู 1 • วัว 1</button></div><div class="row" style="margin-top:.6rem"><button class="btn gray" id="ncd">ข้ามคูลดาวน์ของเร่ง</button><button class="btn gray" id="rst">เริ่มใหม่ทั้งหมด</button></div>');
+ document.querySelectorAll('[data-aw]').forEach(b=>b.onclick=()=>{S.lastVisit=Date.now()-(+b.dataset.aw)*HOUR-500;closeAll();enterBarn();draw()});
+ $('gotSn').onclick=()=>{const t=ORDER[Math.floor(Math.random()*4)];const h=S.animals[t].map((a,i)=>a&&!a.sick&&!dead(t,a)?i:-1).filter(i=>i>=0);if(h.length){S.animals[t][h[Math.floor(Math.random()*h.length)]].sick=true;save()}closeAll();draw();ann('📮 จดหมาย: ส้มโอแอบจามใส่สวนคุณ! 🤧 '+TYPES[t].an+'ติดหวัด 1 ตัว',1)};
+ $('gift').onclick=()=>{S.stock.chicken+=3;S.stock.fish+=2;S.stock.pig++;S.stock.cow++;save();closeAll();ann('🎁 รับของขวัญจากยัยหนูแล้ว! สัตว์เข้ากระเป๋าแล้ว')};$('ncd').onclick=()=>{S.cool=0;save();closeAll();ann('ข้ามคูลดาวน์แล้ว')};$('rst').onclick=()=>{S=fresh();pen='chicken';save();closeAll();draw();ann('เริ่มใหม่แล้ว')}}
+addEventListener('resize',()=>{fit();draw()});fit();produce(false);enterBarn();draw();
+setTimeout(()=>ann('🐔 ยินดีต้อนรับสู่โรงเรือน • ปัดซ้ายขวาหรือแตะไอคอนด้านบนเพื่อสลับคอก'),400);
+
+function placeAnimal(i){const T=TYPES[pen],n=S.stock[pen]||0;
+ open('<h3>＋ วางสัตว์ลงช่องที่ '+(i+1)+'</h3><div class="hint">วางแล้ว<b>เริ่มนับอายุทันที</b> ('+T.life+' วัน) และ<b>เอากลับเข้ากระเป๋าไม่ได้</b></div><button class="opt" id="put"'+(n<1?' disabled':'')+'><span style="width:2.6rem;height:2.6rem;flex:none;background:url('+IMG['an-'+pen]+') 0 0/400% 400%"></span><b>'+T.an+'<small>ในกระเป๋า • สัตว์ภาคการเกษตร</small></b><span>มี '+n+' ตัว</span></button>'+(n<1?'<div class="hint">ยังไม่มี'+T.an+'ในกระเป๋า รับได้จากกล่องของขวัญของยัยหนู</div>':'')+'<div class="row"><button class="btn gray" id="nput">ยังไม่วาง</button></div>');
+ $('nput').onclick=closeAll;if(n<1)return;
+ $('put').onclick=()=>{open('<h3>ยืนยันวาง'+T.an+'?</h3><div class="hint">นับอายุ '+T.life+' วันตั้งแต่ตอนนี้ และยกเลิกไม่ได้</div><div class="row"><button class="btn gray" id="pn">ยกเลิก</button><button class="btn g" id="py">วางเลย</button></div>');
+  $('pn').onclick=closeAll;$('py').onclick=()=>{S.stock[pen]--;S.animals[pen][i]={born:Date.now(),next:Date.now()+T.prod*HOUR,sick:false};save();closeAll();draw();ann(T.e+' วาง'+T.an+'แล้ว เริ่มผลิตเลย!')}}}
+function sellAnimal(i){const T=TYPES[pen];open('<h3>💸 ขาย'+T.an+'ตัวนี้?</h3><div class="hint">ได้ '+SELL[pen]+' กุศล • ขายแล้วเอาคืนไม่ได้ • ผลผลิตในรางยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>');
+ $('sn').onclick=closeAll;$('sy').onclick=()=>{S.animals[pen][i]=null;S.merit=(S.merit||0)+SELL[pen];save();closeAll();draw();ann('💸 ขาย'+T.an+'แล้ว +'+SELL[pen]+' กุศล')}}
+</script></body></html>

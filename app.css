@@ -84,7 +84,7 @@ input,select,textarea{font-size:16px}
 @keyframes pop{0%{transform:scale(.85);opacity:0}}
 .toast{position:fixed;left:50%;bottom:calc(1.2rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;background:#2A2140;color:#FFE9A8;border-radius:999px;padding:.5rem 1.1rem;font-weight:800;font-size:.85rem;opacity:0;transition:opacity .25s;pointer-events:none;max-width:92vw;text-align:center}
 .toast.on{opacity:1}
-.savedot{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + .3rem);z-index:70;background:rgba(42,33,64,.85);color:#fff;border-radius:999px;font-size:.7rem;font-weight:700;padding:.2rem .6rem}
+.savedot{position:fixed;right:.5rem;top:calc(env(safe-area-inset-top,0px) + 2.9rem);z-index:70;background:rgba(42,33,64,.85);color:#fff;border-radius:999px;font-size:.7rem;font-weight:700;padding:.2rem .6rem}
 .savedot.bad{background:#C8443D}
 /* mail */
 .mail{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid var(--line);border-radius:1rem;padding:.5rem .6rem;margin:.35rem 0}

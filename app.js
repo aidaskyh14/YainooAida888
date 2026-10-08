@@ -1,8 +1,8 @@
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { CATALOG } from './catalog.js?v=2';
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { CATALOG } from './catalog.js?v=3';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -230,12 +230,45 @@ async function logout() { frameSave(); await flush(); S.frame = null; await sign
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
-const SCREENS = { farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม' };
+// หน้าที่มีเซฟของตัวเอง: เก็บไว้ใน g.sub.<id> และแชร์กุศล/ของร่วมกับกระเป๋ากลาง
+const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'เกล็ดปลาจันทร์': 'product.scale' };
+const SUBS = {
+  's3barn3': { id: 'barn', maps: { items: 'bag.item', bag: 'bag.product' } },
+  's3birds1': { id: 'birds', maps: { bag: 'bag.bird' }, mats: MATS },
+  's3dog-v1': { id: 'dog', maps: { 'bag.item': 'bag.item', 'bag.grass': 'bag.grass', 'bag.product': 'bag.product', 'bag.crop': 'bag.crop' } },
+  's3alpaca-v1': { id: 'alpaca', flat: true }
+};
+const getp = (o, path) => path.split('.').reduce((t, k) => t == null ? undefined : t[k], o);
+const setp = (o, path, v) => { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); if (!t[x] || typeof t[x] !== 'object') t[x] = {}; t = t[x]; } t[ks[0]] = v; };
+const delp = (o, path) => { const ks = path.split('.'); const last = ks.pop(); const t = ks.reduce((a, k) => a && a[k], o); if (t) delete t[last]; };
+const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
+const FLAT = CATALOG.filter(c => !c.p.startsWith('pend.') && !c.p.startsWith('sub.'));
+function subGet(K) {
+  const C = SUBS[K], G = S.P.g || {}; const sub = clone(G.sub && G.sub[C.id]); if (!sub) return null;
+  sub.merit = G.merit || 0;
+  for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) || {});
+  if (C.mats) { sub.mats = {}; for (const n in C.mats) sub.mats[n] = getp(G, 'bag.' + C.mats[n]) || 0; }
+  if (C.flat) { sub.bag = sub.bag || {}; for (const c of FLAT) { const v = getp(G, 'bag.' + c.p); if (v) sub.bag[c.k] = v; else delete sub.bag[c.k]; } }
+  return JSON.stringify(sub);
+}
+function subSet(K, v) {
+  const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { return; }
+  S.P.g = S.P.g || {}; const G = S.P.g; G.sub = G.sub || {}; const first = !G.sub[C.id];
+  if (!first && typeof o.merit === 'number') G.merit = o.merit;
+  delete o.merit;
+  for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) || {}); delp(o, a); }
+  if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
+  if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
+  if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; change('g'); setTimeout(reloadScreen, 50); return; }
+  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o); change('g');
+}
+const SCREENS = { farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 8000;
 function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
 window.__HOST = {
   get(k) {
     if (k === GAME_KEY) return S.P && S.P.g ? JSON.stringify(S.P.g) : null;
+    if (SUBS[k]) return S.P ? subGet(k) : null;
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
   },
@@ -243,10 +276,12 @@ window.__HOST = {
     if (!S.P || S.blocked) return;
     if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } const ls = S.P.g && S.P.g._ls; if (ls && !o._ls) o._ls = ls; S.P.g = o; change('g'); return; }
     if (k === 's3user') return;
+    if (SUBS[k]) { subSet(k, v); return; }
     if (String(v).length > LS_CAP) return;
     S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
   },
   del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
+  birdReq: sp => { addDoc(collection(db, 'birdReqs'), { uid: S.user.uid, name: S.P.name, sp, status: 'wait', at: serverTimestamp() }).catch(() => toast('ส่งคำขอไม่สำเร็จ ลองใหม่อีกครั้ง')); },
   openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
   ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
 };
@@ -264,9 +299,9 @@ function goScreen(n) {
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
   frameSave(); S.screen = n;
   const t = SCREENS[n]; $('#gbar').hidden = !t; $('#gttl').textContent = t; document.body.classList.toggle('sub', !!t);
-  S.frame.src = 'scr-' + n + '.html?v=2';
+  S.frame.src = 'scr-' + n + '.html?v=3';
 }
-function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=2&r=' + Date.now(); }
+function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=3&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 function openAdminOverlay() { const o = $('#ov'); o.hidden = false; renderAdmin(); }
 function itemsHtml(items) {
@@ -295,7 +330,7 @@ async function openMail() {
   modal(html, [{ t: 'ปิด', c: 'gray' }]);
   $('#mcard').querySelectorAll('[data-id]').forEach(b => b.onclick = () => claim(b.dataset.id, b));
 }
-function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') ? 'g.' + p : 'g.bag.' + p; }
+function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') || p.startsWith('sub.') ? 'g.' + p : 'g.bag.' + p; }
 function addPath(o, path, n) { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); t[x] = t[x] || {}; t = t[x]; } t[ks[0]] = (t[ks[0]] || 0) + n; }
 async function claim(id, btn) {
   busy(btn, true, 'กำลังรับ…'); frameSave();
@@ -305,12 +340,11 @@ async function claim(id, btn) {
     got = await critical(async tx => {
       const m = await tx.get(mref);
       if (!m.exists()) { const e = new Error('gone'); e.thai = 'ซองนี้รับไปแล้ว'; throw e; }
-      const g = m.data(), upd = { by: S.sessionId, mailCount: increment(-1) };
-      if (g.kusal) upd.kusal = increment(g.kusal);
-      if (g.coins) upd.coins = increment(g.coins);
-      if (g.kusal) { delete upd.kusal; upd['g.merit'] = increment(g.kusal); }
-      for (const [k, n] of Object.entries(g.items || {})) upd[gpath(k)] = increment(n);
-      tx.update(playerRef(), upd); tx.delete(mref);
+      const g = m.data(), args = ['by', S.sessionId, 'mailCount', increment(-1)];
+      if (g.coins) args.push('coins', increment(g.coins));
+      if (g.kusal) args.push(new FieldPath('g', 'merit'), increment(g.kusal));
+      for (const [k, n] of Object.entries(g.items || {})) args.push(new FieldPath(...gpath(k).split('.')), increment(n));
+      tx.update(playerRef(), ...args); tx.delete(mref);
       return g;
     });
   } catch (e) { busy(btn, false, 'กดรับ'); if (e.thai) openMail(); return; }
@@ -334,11 +368,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['send', '🎁 ส่งของ'], ['players', '👥 ผู้เล่น'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['send', '🎁 ส่งของ'], ['birds', '🦤 คำขอล่อนก'], ['players', '👥 ผู้เล่น'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  ({ send: tabSend, players: tabPlayers, backup: tabBackup, settings: tabSettings })[A.tab]();
+  ({ send: tabSend, birds: tabBirds, players: tabPlayers, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 async function tabSend() {
   const B = $('#aBody'), g = A.gift;
@@ -387,6 +421,23 @@ async function sendGift(uids, names) {
     A.gift = { title: 'ของขวัญจากยัยหนู', msg: '', icon: '🎁', kusal: 0, coins: 0, items: {} }; A.sel.clear();
     modal(`<h2>📮 ส่งแล้ว ${uids.length} คน</h2><p class="note">ของอยู่ในไปรษณีย์ของผู้รับ รอกดรับ</p>`); tabSend();
   } catch (e) { modal(`<h2>ส่งไม่สำเร็จ</h2><p>${thaiError(e)}</p><p class="note">ไม่มีใครได้ของซ้ำ กดส่งใหม่ได้เลย</p>`); }
+}
+async function tabBirds() {
+  const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
+  let rq = [];
+  try { rq = (await getDocs(query(collection(db, 'birdReqs'), where('status', '==', 'wait'), limit(100)))).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
+  const SPN = { ostrich: '🦤 นกกระจอกเทศ', dodo: '🦤 นกโดโด้' };
+  B.innerHTML = `<div class="box"><h3>🦤 คำขอล่อนกที่รออนุมัติ (${rq.length})</h3>${rq.map(r => `<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp] || r.sp}</b><button class="btn sm" data-ok="${r.id}">อนุมัติ</button><button class="btn sm gray" data-no="${r.id}">ไม่อนุมัติ</button></div>`).join('') || '<p class="note">ไม่มีคำขอรออยู่</p>'}
+    <p class="note">อนุมัติ = ส่งนกเข้าไปรษณีย์ผู้เล่น (กดรับแล้วเข้าคลังนก) · ไม่อนุมัติ = ส่งกุศลปลอบใจ 100–200</p></div>`;
+  const done = async (r, ok) => {
+    const b = writeBatch(db), exp = Timestamp.fromMillis(Date.now() + MAIL_DAYS * 864e5), g = 100 + Math.floor(Math.random() * 101);
+    b.set(doc(collection(db, 'mail', r.uid, 'items')), ok ? { title: `🎉 ${SPN[r.sp]}บินมาแล้ว!`, msg: 'คำขอล่อนกได้รับอนุมัติ กดรับแล้วนกจะเข้าคลังนก', icon: '🦤', kusal: 0, coins: 0, items: { ['bird-' + r.sp]: 1 }, createdAt: serverTimestamp(), expireAt: exp, from: 'ยัยหนู' }
+      : { title: 'คำขอล่อนกไม่สำเร็จ', msg: 'เสียใจด้วยนะ รับกุศลปลอบใจไปก่อน', icon: '🕊️', kusal: g, coins: 0, items: {}, createdAt: serverTimestamp(), expireAt: exp, from: 'ยัยหนู' });
+    b.update(doc(db, 'players', r.uid), { mailCount: increment(1) }); b.update(doc(db, 'birdReqs', r.id), { status: ok ? 'ok' : 'no', doneAt: serverTimestamp() });
+    try { await b.commit(); toast(ok ? 'อนุมัติแล้ว ส่งนกเข้าไปรษณีย์' : 'ส่งกุศลปลอบใจแล้ว'); tabBirds(); } catch (e) { toast(thaiError(e)); }
+  };
+  B.querySelectorAll('[data-ok]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.ok), true));
+  B.querySelectorAll('[data-no]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.no), false));
 }
 async function tabPlayers() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
