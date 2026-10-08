@@ -1,15 +1,15 @@
-import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-images2';
+import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-lazy2';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
-import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-images2';
-import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-images2';
+import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-lazy2';
+import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-lazy2';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-20261008-images2';
-import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-images2';
-import { installBackupUI } from './save-backup.js?v=ss3-20261008-images2';
-import { CATALOG } from './catalog.js?v=ss3-20261008-images2';
+import { SplitSaveStore } from './save-store.js?v=ss3-20261008-lazy2';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-lazy2';
+import { installBackupUI } from './save-backup.js?v=ss3-20261008-lazy2';
+import { CATALOG } from './catalog.js?v=ss3-20261008-lazy2';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -39,6 +39,43 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const fmt = n => Math.round(n || 0).toLocaleString('en-US');
 let store;
 let campaignConfig={},campaignStop=null,campaignBoxes=[];
+const BASE_PARTS=['inventory','wallet'];
+const SCREEN_PARTS={
+ loading:[],farm:['farm-settings','farm-1','farm-2','farm-3','farm-4','module-s3fg-col','module-s3by-entry'],
+ house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
+ barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
+ catpen:['catpen'],safari:['animals-safari'],shop:['animals-market'],outings:['outings','house'],
+ boat:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
+ minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
+};
+const sceneSubscriptions=new Set();
+let sceneVersion=0,campaignJobs=[];
+function stopSceneSubscriptions(){sceneVersion++;for(const stop of sceneSubscriptions)stop();sceneSubscriptions.clear();campaignConfig={};S.campaignConfigAt=0;}
+function sceneWatch(ref,fn){const version=sceneVersion;let stop=onSnapshot(ref,snap=>{if(version===sceneVersion)fn(snap.exists()?snap.data():null);},e=>{if(version===sceneVersion)showSave(e.message,true);});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};}
+function queueGameplay(before,after,source,boxes){
+ const increased=(a,b)=>Object.entries(b||{}).some(([k,v])=>typeof v==='number'&&v>(a?.[k]||0));
+ const pet=['barn','birds','dog','alpaca','catpen'].includes(source);
+ const craft=['farm','house','backyard'].includes(source);
+ const stockChanged=pet&&JSON.stringify(before.bag)!==JSON.stringify(after.bag);
+ const meritChanged=pet&&(after.merit||0)>(before.merit||0);
+ const craftChanged=craft&&['food','gfood','wine','flower','hedge','crop'].some(k=>increased(before.bag?.[k],after.bag?.[k]));
+ if(boxes.length||stockChanged||meritChanged||craftChanged)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,now:Date.now()});
+}
+async function prepareGameplay(){
+ if(!campaignJobs.length)return;
+ const jobs=campaignJobs.slice();
+ await store.loadIds(['animals-campaigns']);
+ if(!S.campaignConfigAt||Date.now()-S.campaignConfigAt>=60000){const cfg=await getDoc(doc(db,'world','campaigns'));campaignConfig=cfg.exists()?cfg.data():{};S.campaignConfigAt=Date.now();}
+ let progress=clone(S.P.g.sub?.campaigns||joinGame(store.parts.values()).sub?.campaigns||{});
+ for(const job of jobs){
+   const before=clone(job.before),after=clone(job.after);before.sub ||= {};before.sub.campaigns=progress;
+   observeGameplay(before,after,job.source,campaignConfig,job.now,job.boxes);
+   progress=after.sub.campaigns;
+   for(const[k,n]of Object.entries(after.bag?.halloween||{})){const added=n-(job.after.bag?.halloween?.[k]||0);if(added>0){S.P.g.bag.halloween ||= {};S.P.g.bag.halloween[k]=(S.P.g.bag.halloween[k]||0)+added;}}
+ }
+ S.P.g.sub ||= {};S.P.g.sub.campaigns=progress;
+ store.activeIds.add('animals-campaigns');campaignJobs.splice(0,jobs.length);
+}
 let toastT;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400); }
 function modal(html, acts = [{ t: 'ตกลง' }]) {
@@ -108,6 +145,8 @@ function showSave(t, bad) { const d = $('#saveDot'); d.hidden = false; d.textCon
 async function flush() {
   if (!S.user || !S.P || S.blocked || !S.dirty.size) return;
   if (S.saving) { await S.saving; return flush(); }
+  if(S.preparing){await S.preparing;return flush();}
+  S.preparing=prepareGameplay();try{await S.preparing;}finally{S.preparing=null;}
   const fields = [...S.dirty]; S.dirty.clear();
   const snapshot = {...S.P, g: clone(S.P.g)};
   S.saving = store.save(snapshot, fields);
@@ -145,9 +184,11 @@ async function loadSettings() {
 }
 async function enter(user) {
   S.user = user; S.sessionId = newSession();cloudPending.clear();cloudSequences.clear();campaignBoxes=[];
+  let stage='ตรวจบัญชีและสิทธิ์แอดมิน';
   try {
     const [adm, snap] = await Promise.all([getDoc(doc(db, 'admins', user.uid)), getDoc(playerRef())]);
     S.admin = !!(adm && adm.exists());
+    stage='เปิดข้อมูลบัญชีบนคลาวด์';
     if (!snap.exists()) {
       const name = S.pendingName || 'ผู้เล่น';
       const p = defaultPlayer(name); p.session = S.sessionId; p.by = S.sessionId;
@@ -157,15 +198,20 @@ async function enter(user) {
       await updateDoc(playerRef(), { session: S.sessionId, by: S.sessionId, lastLogin: serverTimestamp() });
     }
     S.pendingName = '';
+    stage='โหลดกระเป๋าและเงินจากคลาวด์';
     store = new SplitSaveStore(db, user.uid, S.sessionId);
-    S.P = await store.load(S.P);
+    S.P = await store.load(S.P,{ids:BASE_PARTS});
+    stage='ตรวจและเติมกระเป๋าแอดมิน';
     const consolidated = consolidatePending(S.P.g,{"wool": "sub.alpaca.bag.wool", "wool-gold": "sub.alpaca.bag.wool-gold", "ameat": "sub.alpaca.bag.ameat", "ameat-p": "sub.alpaca.bag.ameat-p", "rawwool": "sub.alpaca.bag.rawwool", "rawwool-gold": "sub.alpaca.bag.rawwool-gold", "yarn-white": "sub.alpaca.bag.yarn-white", "yarn-pink": "sub.alpaca.bag.yarn-pink", "yarn-blue": "sub.alpaca.bag.yarn-blue", "scarf-red": "sub.alpaca.bag.scarf-red", "beanie-blue": "sub.alpaca.bag.beanie-blue", "plush-mini": "sub.alpaca.bag.plush-mini", "afood0": "sub.alpaca.bag.afood0", "afood1": "sub.alpaca.bag.afood1", "afood2": "sub.alpaca.bag.afood2"});
     const refilled = refillAdminInventory(S.P.g,S.admin,CATALOG);
-    if(consolidated || refilled)await store.save(S.P,['g']);
-    campaignStop?.();const campaignSnap=await getDoc(doc(db,'world','campaigns'));campaignConfig=campaignSnap.exists()?campaignSnap.data():{};campaignStop=onSnapshot(doc(db,'world','campaigns'),snap=>{campaignConfig=snap.exists()?snap.data():{};});
+    if(consolidated || refilled){stage='บันทึกกระเป๋าแอดมินบนคลาวด์';await store.save(S.P,['g']);}
+    campaignJobs=[];stopSceneSubscriptions();
+    stage='เปิดหน้าโหลดสวน';
     startSaver();renderGame('loading');
   } catch (e) {
-    $('#app').innerHTML = `<div class="boot"><div style="text-align:center;padding:1rem"><p>${thaiError(e)}</p><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>`;
+    clearInterval(S.timer);
+    const message=e?.message||'ไม่พบรายละเอียด',code=e?.code||'ไม่ระบุรหัส';
+    $('#app').innerHTML = `<div class="boot"><div style="text-align:center;padding:1rem;max-width:90vw"><h3>ยังเปิดสวนไม่ได้</h3><p>${esc(thaiError(e))}</p><p style="font-size:13px;overflow-wrap:anywhere">ติดขั้นตอน: ${esc(stage)}<br>รหัส: ${esc(code)}<br>${esc(message)}</p><p style="font-size:12px">ถ่ายภาพหน้านี้เพื่อให้ตรวจสาเหตุได้</p><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>`;
   }
 }
 
@@ -249,7 +295,7 @@ function renderClosed() {
   $('#tMail').onclick = openMail; $('#tOut').onclick = logout;
 }
 function refreshBar() { }
-async function logout() { campaignStop?.();campaignStop=null; frameSave(); await flush(); S.frame = null; await signOut(auth); }
+async function logout() { frameSave(); await flush(); stopSceneSubscriptions();S.frame=null;await signOut(auth); }
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
@@ -285,7 +331,7 @@ function subSet(K, v) {
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
   if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; change('g'); setTimeout(reloadScreen, 50); return; }
-  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);observeGameplay(prior,G,C.id,campaignConfig,Date.now(),campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
+  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
 const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
@@ -312,7 +358,7 @@ async function cloudAction(system,input) {
     }
     for(let attempt=0;attempt<(recover?2:1);attempt++){
     const response=(await httpsCallable(functions,CLOUD_HANDLERS[system])(pending)).data;
-    for(const row of response.actorParts||[]){store.parts.set(row.id,row.part);store.revs.set(row.id,row.part.rev);}
+    store.accept(response.actorParts||[]);
     Object.assign(S.P,response.meta||{});S.P.g=joinGame(store.parts.values());
     cloudSequences.set(system,response.seq);cloudPending.delete(system);
     if(recover&&attempt===0){pending={input,seq:response.seq+1,id:crypto.randomUUID(),session:S.sessionId};cloudPending.set(system,pending);continue;}
@@ -327,7 +373,7 @@ async function cloudAction(system,input) {
   } finally {cloudBusy=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
 }
 window.__HOST = {
-  watchGameView(system,fn){return onSnapshot(doc(db,'players',S.user.uid,'gameViews',system),snap=>fn(snap.exists()?snap.data():null),e=>showSave(e.message,true));},
+  watchGameView(system,fn){return sceneWatch(doc(db,'players',S.user.uid,'gameViews',system),fn);},
   recordCampaignBox(reward){if(campaignBoxes.length<10000)campaignBoxes.push({...reward});},
   get admin() { return S.admin; },
   get coins(){return S.P?.coins||0;},
@@ -335,7 +381,7 @@ window.__HOST = {
   get uid() { return S.user?.uid||''; },
   cloud:cloudAction,
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
-  watchWorld(system,fn){const stop=onSnapshot(doc(db,'world',system),snap=>fn(snap.exists()?snap.data():null),e=>showSave(e.message,true));return stop;},
+  watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
   get(k) {
     if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(S.P.g):null; }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
@@ -344,7 +390,7 @@ window.__HOST = {
   },
   set(k, v) {
     if (!S.P || S.blocked) return;
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; observeGameplay(S.P.g,o,S.screen,campaignConfig,Date.now(),campaignBoxes.splice(0));S.P.g = o; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
@@ -368,14 +414,20 @@ async function goScreen(n) {
   if (n === 'login') { logout(); return; }
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
   if (S.navigating) return; S.navigating = true;
-  try { frameSave(); await flush(); } catch (e) { S.navigating = false; toast(e.message || thaiError(e)); return; }
-  S.navigating = false; S.screen = n;
-  const t = SCREENS[n]; $('#gbar').hidden = !t; $('#gttl').textContent = t; document.body.classList.toggle('sub', !!t);
-  S.frame.src = 'scr-' + n + '.html?v=ss3-20261008-images2';
+  if(S.frame)S.frame.style.pointerEvents='none';
+  try {
+    frameSave();await flush();
+    const ids=[...BASE_PARTS,...SCREEN_PARTS[n]];
+    S.P.g=await store.loadIds(ids);store.activate(ids);
+    stopSceneSubscriptions();S.screen=n;
+    const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
+    S.frame.src='scr-'+n+'.html?v=ss3-20261008-lazy2';
+  }catch(e){toast(e.message||thaiError(e));}
+  finally{S.navigating=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-images2&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-lazy2&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
-function openAdminOverlay() { const o = $('#ov'); o.hidden = false; renderAdmin(); }
+async function openAdminOverlay() { try{frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
   return Object.entries(items || {}).map(([k, n]) => { const c = CAT[k]; return `<span>${c ? `<img src="${IMG(c.i)}" alt="">` : '🎁'}${esc(c ? c.n : k)} ×${fmt(n)}</span>`; }).join('');
 }
@@ -419,8 +471,7 @@ async function claim(id, btn) {
   } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(); } else toast(thaiError(e)); return; }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
   S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
-  S.P.g = S.P.g || {};const released=got.escrowRelease;if(released&&S.P.g.sub?.minigames?.escrows?.[released.system]?.round===released.round)delete S.P.g.sub.minigames.escrows[released.system]; if (got.kusal) S.P.g.merit = (S.P.g.merit || 0) + got.kusal;
-  for (const [k, n] of Object.entries(got.items || {})) addPath(S.P.g, gpath(k).slice(2), n);
+  S.P.g=joinGame(store.parts.values());
   refillAdminInventory(S.P.g,S.admin,CATALOG);
   reloadScreen();
   toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail();
