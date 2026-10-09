@@ -1,3 +1,4 @@
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-hotfix9';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
 import {lurePen} from './bird-lure-engine.js?v=ss3-recovery6';
 import {showLootBoxes} from './loot-boxes.js?v=ss3-recovery6';
@@ -205,6 +206,8 @@ async function enter(user) {
     stage='โหลดกระเป๋าและเงินจากคลาวด์';
     store = new SplitSaveStore(db, user.uid, S.sessionId);
     S.P = await store.load(S.P,{ids:BASE_PARTS});
+    stage='ตรวจความถูกต้องของจำนวนของ';
+    if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stage='ตรวจและเติมกระเป๋าแอดมิน';
     const consolidated = consolidatePending(S.P.g,{"wool": "sub.alpaca.bag.wool", "wool-gold": "sub.alpaca.bag.wool-gold", "ameat": "sub.alpaca.bag.ameat", "ameat-p": "sub.alpaca.bag.ameat-p", "rawwool": "sub.alpaca.bag.rawwool", "rawwool-gold": "sub.alpaca.bag.rawwool-gold", "yarn-white": "sub.alpaca.bag.yarn-white", "yarn-pink": "sub.alpaca.bag.yarn-pink", "yarn-blue": "sub.alpaca.bag.yarn-blue", "scarf-red": "sub.alpaca.bag.scarf-red", "beanie-blue": "sub.alpaca.bag.beanie-blue", "plush-mini": "sub.alpaca.bag.plush-mini", "afood0": "sub.alpaca.bag.afood0", "afood1": "sub.alpaca.bag.afood1", "afood2": "sub.alpaca.bag.afood2"});
     let retired=false;for(const k of ['w1','w2','w3','w4','w5','w6'])if(k in (S.P.g.bag?.gfood||{})){delete S.P.g.bag.gfood[k];retired=true;}
@@ -335,9 +338,9 @@ const delp = (o, path) => { const ks = path.split('.'); const last = ks.pop(); c
 const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
 const FLAT = CATALOG.filter(c => !c.p.startsWith('pend.') && !c.p.startsWith('sub.'));
 function subGet(K) {
-  const C = SUBS[K], G = S.P.g || {}; const sub = clone((G.sub && G.sub[C.id]) || C.fresh); if (!sub) return null;
+  const C = SUBS[K], G = inventoryView(S.P.g || {}); const sub = clone((G.sub && G.sub[C.id]) || C.fresh); if (!sub) return null;
   sub.merit = G.merit || 0;
-  for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) || {});
+  for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{}));
   if (C.mats) { sub.mats = {}; for (const n in C.mats) sub.mats[n] = getp(G, 'bag.' + C.mats[n]) || 0; }
   if (C.flat) { sub.bag = sub.bag || {}; for (const c of FLAT) { const v = getp(G, 'bag.' + c.p); if (v) sub.bag[c.k] = v; else delete sub.bag[c.k]; } }
   return JSON.stringify(sub);
@@ -345,19 +348,19 @@ function subGet(K) {
 function subSet(K, v) {
   const before = JSON.stringify(S.P.g), prior=clone(S.P.g);
   const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { return; }
-  S.P.g = S.P.g || {}; const G = S.P.g; G.sub = G.sub || {}; const first = !G.sub[C.id];
+  const G = clone(S.P.g || {}); G.sub = G.sub || {}; const first = !G.sub[C.id];
   if (!first && typeof o.merit === 'number') G.merit = o.merit;
   delete o.merit;
-  for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) || {}); delp(o, a); }
+  for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{})); delp(o, a); }
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
   if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
-  if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; change('g'); setTimeout(reloadScreen, 50); return; }
-  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
+  if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; change('g'); setTimeout(reloadScreen, 50); return; }
+  G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
 const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',adminshop:'🛍️ ร้านค้ายัยหนู',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
 function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
-const CLOUD_HANDLERS={safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
+const CLOUD_HANDLERS={integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -414,14 +417,14 @@ window.__HOST = {
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
   get(k) {
-    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(S.P.g):null; }
+    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(inventoryView(S.P.g)):null; }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
   },
   set(k, v) {
     if (!S.P || S.blocked) return;
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
@@ -449,14 +452,14 @@ async function goScreen(n) {
   try {
     if(cloudPromise)await cloudPromise;frameSave();await flush();
     const ids=[...BASE_PARTS,...SCREEN_PARTS[n]];
-    S.P.g=await store.loadIds(ids);store.activate(ids);
+    S.P.g=await store.loadIds(ids);store.activate(ids);if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-hotfix7';
+    S.frame.src='scr-'+n+'.html?v=ss3-hotfix9';
   }catch(e){toast(e.message||thaiError(e));}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-hotfix7&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-hotfix9&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
@@ -610,7 +613,8 @@ async function tabInventory() {
   const B = $('#aBody'); B.textContent = 'กำลังโหลดรายชื่อ…';
   try {
     const users = (await getDocs(collection(db,'players'))).docs;
-    B.innerHTML = '<div class="box"><h3>🎒 ตรวจของจากคลาวด์</h3><select id="iPlayer">'+users.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.data().name)+'</option>').join('')+'</select> <button class="btn sm" id="iLoad">อ่านล่าสุด</button><div id="iResult"></div></div>';
+    B.innerHTML = '<div class="box"><h3>🎒 ตรวจของจากคลาวด์</h3><select id="iPlayer">'+users.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.data().name)+'</option>').join('')+'</select> <button class="btn sm" id="iLoad">อ่านล่าสุด</button><button class="btn sm gray" id="iAudit">ประวัติซ่อมจำนวนของ</button><div id="iResult"></div></div>';
+    $('#iAudit').onclick=async()=>{const uid=$('#iPlayer').value;if(!uid)return;$('#iResult').textContent='กำลังอ่านประวัติ…';try{const report=(await httpsCallable(functions,'inventoryRepairReportCloud')({uid})).data;$('#iResult').innerHTML='<p>หลักฐานจำนวนที่เสียหายก่อนซ่อม เก็บไว้ตรวจสอบการชดเชย ของที่เป็นจำนวนปกติไม่ได้ถูกเปลี่ยน</p>'+report.rows.map(row=>'<h4>'+esc(new Date(row.at).toLocaleString())+'</h4><table class="pl"><tr><th>ของ</th><th>ก่อนซ่อม</th><th>หลังซ่อม</th></tr>'+row.issues.map(x=>{const c=CATALOG.find(c=>(c.p.startsWith('sub.')?c.p:'bag.'+c.p)===x.path),n=typeof x.raw==='string'&&/^-?\d+$/.test(x.raw)&&Number.isSafeInteger(Number(x.raw))?Number(x.raw):0;return '<tr><td>'+esc(c?.n||x.path)+'</td><td>'+esc(JSON.stringify(x.raw))+'</td><td>'+n+'</td></tr>';}).join('')+'</table>').join('')+(report.rows.length?'':'<p>ไม่มีประวัติซ่อม</p>');}catch(e){$('#iResult').textContent=e.message;}};
     $('#iLoad').onclick = async () => {
       const uid=$('#iPlayer').value;if(!uid)return;$('#iResult').textContent='กำลังอ่านคลาวด์…';
       try {

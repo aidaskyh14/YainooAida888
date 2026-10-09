@@ -233,11 +233,7 @@ function openBook(tab){if(tab)gTab=tab;closeAll();const no=nightOpen();
 function confirmCook(id){const g=GFBY[id],q=gq[id];
  open('<h3>'+g.ic+' '+g.n+'</h3><div class="hint">คราฟ '+q+' ครั้ง • โอกาสสำเร็จครั้งละ '+g.ch+'%</div>'+needHTML(g.need,q)+'<div class="hint">ถ้าไม่สำเร็จ วัตถุดิบของครั้งนั้นก็ถูกใช้ไปแล้วนะ</div><div class="row"><button class="btn gray" id="cNo">ย้อนกลับ</button><button class="btn g" id="cGo">ยืนยันคราฟ '+q+' ครั้ง</button></div>');
  $('cNo').onclick=()=>openBook();
- $('cGo').onclick=e=>{e.target.disabled=true;if(maxT(g.need)<q)return ann('วัตถุดิบไม่พอแล้ว',1);
-  Object.entries(g.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);const res=[];let ok=0,mer=0;
-  for(let i=0;i<q;i++){const r=Math.random()*100<g.ch;res.push(r);if(r){ok++;mer+=rnd(g.mer[0],g.mer[1])}}
-  S.bag.gfood[id]=(S.bag.gfood[id]||0)+ok;S.merit=(S.merit||0)+mer;save();
-  closeAll();showCraftResult({title:'คราฟ '+g.n,results:res,outputs:ok?[{name:g.n,image:gfImg(g),quantity:ok}]:[],merit:mer,consumed:Object.entries(g.need).map(([k,n])=>({name:ING[k]?.[1]||k,quantity:n*q}))},openBook);hud();}}
+ $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'gfood:'+id,quantity:q});Object.assign(S,JSON.parse(__H.get(KEY)));closeAll();showCraftResult(out,openBook);hud();}catch(err){ann(err.message,1);Object.assign(S,JSON.parse(__H.get(KEY)));openBook();}finally{window.foodCraftBusy=false;}};}
 /* ---------- วางแฮมสเตอร์ ---------- */
 function openPlace(){closeAll();const n=S.ham.list.length;
  open('<h3>🐹 วางแฮมสเตอร์ลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้ว<b>เอากลับเข้ากระเป๋าไม่ได้</b> • อยู่ได้ 48 ชม.</div><div class="cards">'+Object.keys(HT).map(t=>{const c=S.bag.hamster[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+HT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div>'+
