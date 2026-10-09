@@ -47,7 +47,7 @@ const SCREEN_PARTS={
  loading:[],farm:['animals-farmdrops','farm-settings','farm-1','farm-2','farm-3','farm-4','module-s3fg-col','module-s3by-entry'],
  house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
- catpen:['catpen'],safari:['animals-safari'],shop:['animals-market'],outings:['outings','house'],
+ catpen:['catpen'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
  boat:[],farmshop:['animals-farmshop'],adminshop:[],fishing:['animals-fishing'],
  minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
 };
@@ -306,7 +306,7 @@ function watchPendingMembers(){pendingStop?.();pendingStop=onSnapshot(query(coll
 async function tabApprovals(){
  const B=$('#aBody');B.innerHTML='<div class="box">กำลังอ่านคำขอสมัคร…</div>';
  try{const ps=await loadPlayers(true);B.innerHTML=`<div class="box"><h3>📋 รออนุมัติ (${ps.filter(p=>p.approval==='pending').length})</h3>${ps.filter(p=>p.approval==='pending').map(p=>`<div class="row"><div style="flex:1"><b>${esc(p.name)}</b><small style="display:block">สมัคร ${p.createdAt?.toDate?.().toLocaleString('th-TH')||'-'}</small></div><button class="btn sm" data-approve="${p.uid}">อนุมัติ</button><button class="btn sm gray" data-reject="${p.uid}">ไม่อนุมัติ</button></div>`).join('')||'<p>ไม่มีคำขอรออยู่</p>'}</div><div class="box"><h3>ประวัติการอนุมัติ</h3>${ps.filter(p=>p.approval&&p.approval!=='pending').map(p=>`<p>${esc(p.name)} · ${p.approval==='approved'?'อนุมัติแล้ว':'ไม่อนุมัติ'} · ${p.approvedAt?.toDate?.().toLocaleString('th-TH')||'-'}</p>`).join('')||'<p>ยังไม่มีรายการ</p>'}</div>`;
- const decide=async(uid,status)=>{try{await updateDoc(doc(db,'players',uid),{approval:status,approvedAt:serverTimestamp(),approvedBy:S.user.uid});A.players=null;toast(status==='approved'?'อนุมัติแล้ว สมาชิกเข้าเล่นได้เมื่อเกมเปิด':'บันทึกไม่อนุมัติแล้ว');tabApprovals();}catch(e){toast(thaiError(e));}};
+ const decide=async(uid,status)=>{try{await updateDoc(doc(db,'players',uid),{approval:status,approvedAt:serverTimestamp(),approvedBy:S.user.uid});A.players=null;A.sendLoaded=false;if(status==='rejected'){A.sel.delete(uid);if(A.packs)delete A.packs[uid];}toast(status==='approved'?'อนุมัติแล้ว สมาชิกเข้าเล่นได้เมื่อเกมเปิด':'บันทึกไม่อนุมัติแล้ว');tabApprovals();}catch(e){toast(thaiError(e));}};
  B.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>decide(b.dataset.approve,'approved'));B.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>decide(b.dataset.reject,'rejected'));
  }catch(e){B.textContent=thaiError(e);}
 }
@@ -357,7 +357,7 @@ function subSet(K, v) {
 const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',adminshop:'🛍️ ร้านค้ายัยหนู',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
 function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
-const CLOUD_HANDLERS={boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
+const CLOUD_HANDLERS={safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -452,11 +452,11 @@ async function goScreen(n) {
     S.P.g=await store.loadIds(ids);store.activate(ids);
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-recovery6';
+    S.frame.src='scr-'+n+'.html?v=ss3-hotfix7';
   }catch(e){toast(e.message||thaiError(e));}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-recovery6&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-hotfix7&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
@@ -533,6 +533,8 @@ async function tabSend(){
  try{if(!A.players||!A.sendLoaded){B.innerHTML='<div class="box">กำลังอ่านข้อมูลครั้งแรก…</div>';const center=(await httpsCallable(functions,'adminCenterCloud')({type:'status',session:S.sessionId})).data;ps=center.players;A.players=ps;A.templates=center.templates;A.favorites=center.favorites;A.pendingRun=center.pendingRun;A.history=center.history;A.sendLoaded=true;}else ps=A.players;
  }catch(e){B.textContent=thaiError(e);return;}
  if(!document.contains(B))return;
+ ps=ps.filter(p=>p.approval!=='rejected');
+ const eligible=new Set(ps.map(p=>p.uid));A.sel=new Set([...A.sel].filter(uid=>eligible.has(uid)));
  if(A.pendingRun){const r=A.pendingRun;B.innerHTML=`<div class="box"><h3>รายการส่งค้าง: ${esc(r.body.title)}</h3><button class="btn" id="gResume">ส่งรายการเดิมต่อ</button><p>รายการสำเร็จจะไม่ส่งซ้ำ แม้สมาชิกกดรับไปแล้ว</p></div>`;$('#gResume').onclick=()=>{A.gift={...r.body,operationId:r.operationId};sendGift(r.uids,r.names,r.packs||{});};return;}
  A.packs ||= {};const categories=[...new Set(CATALOG.map(c=>c.g))];A.category ||= categories[0];
  const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
