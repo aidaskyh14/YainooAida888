@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
-</script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกหมา – ในสวนของยัยหนู ซีซั่น 3</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+</script><script src="craft-result.js?v=ss3-boxes-fixes4"></script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกหมา – ในสวนของยัยหนู ซีซั่น 3</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
 *,*::before,*::after{box-sizing:border-box}
@@ -308,19 +308,19 @@ function simThief(kind){closeAll();const who=['มะลิ','ส้มโอ','
 /* ---------- 🍳 คราฟอาหารหมา ---------- */
 let cq={};
 function openCraft(){closeAll();
- open('<h3>🍳 ครัวอาหารหมา</h3><div class="hint">ใช้ผลผลิตสัตว์ + ผักเป็นหลัก • คราฟได้ 1–10 ครั้ง • ได้ครั้งละ 1 ชาม</div><div class="draft">ร่างสูตร รอคอนเฟิร์ม</div>'+FOOD.map(f=>{const mx=Math.min(10,...Object.entries(f.need).map(([k,q])=>Math.floor(have(k)/q))),q=Math.max(1,Math.min(cq[f.id]||1,10));cq[f.id]=q;
+ open('<h3>🍳 ครัวอาหารหมา</h3><div class="hint">ใช้ผลผลิตสัตว์ + ผักเป็นหลัก • คราฟได้ 1–10 ครั้ง • ได้ครั้งละ 1 ชาม</div>'+FOOD.map(f=>{const mx=Math.min(10,...Object.entries(f.need).map(([k,q])=>Math.floor(have(k)/q))),q=Math.max(1,Math.min(cq[f.id]||1,10));cq[f.id]=q;
   return '<div class="rc"><div class="hd"><img src="'+IMG['food-'+f.id]+'" alt=""><div><b>'+f.n+'</b><small>ให้หมากินได้ 10–30 กุศล • มี '+(S.bag.dogfood[f.id]||0)+' ชาม</small></div></div><div class="needs">'+Object.entries(f.need).map(([k,n])=>{const t=n*q,ok=have(k)>=t;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+ingImg(k)+'" alt="">'+ING[k][1]+' '+fmt(have(k))+'/'+fmt(t)+'</span>'}).join('')+'</div>'+
   '<div class="qrow"><small>'+(mx>0?'คราฟได้ '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+f.id+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+f.id+'">+</button><button class="btn g sm" data-c="'+f.id+'"'+(mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
  const sb=$('sb');sb.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cq[b.dataset.m]=Math.max(1,cq[b.dataset.m]-1);openCraft()});
  sb.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,cq[b.dataset.p]+1);openCraft()});
- sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.dogfood[f.id]=(S.bag.dogfood[f.id]||0)+q;save();ann('🍳 ได้'+f.n+' ×'+q);openCraft()})}
+ sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.dogfood[f.id]=(S.bag.dogfood[f.id]||0)+q;save();closeAll();showCraftResult({title:'คราฟอาหาร'+'หมา',results:Array(q).fill(true),outputs:[{name:f.n,image:IMG['food-'+f.id],quantity:q}],consumed:Object.entries(f.need).map(([k,n])=>({path:ING[k][0]+'.'+k,name:ING[k][1],image:ingImg(k),quantity:n*q}))},openCraft)})}
 /* ---------- 🎒 กระเป๋าหมา ---------- */
 function openBag(){closeAll();const rows=[['treat',IMG.treat,'ขนมหมา','ใช้ให้หมาเฝ้าสวน'],['treatbag',IMG.treatbag,'ถุงขนมหมา','เปิดได้ขนม 10 ชิ้น'],['collar',IMG.collar,'ปลอกคอ','พาเดินขุดเพิ่มได้ 1 ครั้ง/อัน'],['boot',IMG.boot,'รองเท้าเก่า','ครบ '+BOOT_SWAP+' ข้าง แลกกล่องสุ่มหมา 1'],['boxdog',IMG.box,'กล่องสุ่มหมา',''],['musicbox',IMG.musicbox,'กล่องดนตรี','เอนเตอร์เทนใช้ '+MB_USE+'/ครั้ง']];
  open('<h3>🎒 กระเป๋าของหมา</h3><div class="list">'+rows.map(([k,im,n,s])=>'<div class="li"><img src="'+im+'" alt=""><b>'+n+(s?'<small style="display:block;font-size:.6rem;color:var(--soft);font-weight:600">'+s+'</small>':'')+'</b><span>×'+fmt(it(k))+'</span>'+(k==='treatbag'&&it(k)?'<button class="btn sm" id="bOpen">เปิด</button>':'')+(k==='boot'&&it(k)>=BOOT_SWAP?'<button class="btn sm" id="bSwap">แลก</button>':'')+(k==='boxdog'&&it(k)?'<button class="btn sm" id="bBox">เปิด</button>':'')+'</div>').join('')+'</div>'+
  '<div class="sec">🍽️ อาหารหมา</div><div class="grid">'+FOOD.map(f=>'<div class="cell"><img src="'+IMG['food-'+f.id]+'" alt=""><b>'+f.n+'</b><span>'+(S.bag.dogfood[f.id]||0)+'</span></div>').join('')+'</div>'+
  '<div class="sec">🐶 หมาในกระเป๋า (ยังไม่ได้วาง)</div><div class="cards">'+Object.keys(DT).filter(t=>S.bag.dog[t]>0).map(t=>'<div class="cd"><img src="'+IMG['card-'+t]+'" alt=""><b>'+SHORT[t]+'</b><span>×'+S.bag.dog[t]+'</span></div>').join('')+'</div>'+(Object.keys(DT).some(t=>S.bag.dog[t]>0)?'':'<div class="hint">ไม่มี</div>'));
  if($('bOpen'))$('bOpen').onclick=()=>{S.bag.item.treatbag--;addIt('treat',10);save();ann('🦴 เปิดถุงขนม ได้ขนมหมา ×10');openBag()};
- if($('bSwap'))$('bSwap').onclick=()=>{S.bag.item.boot-=BOOT_SWAP;addIt('boxdog',1);save();ann('👢 แลกรองเท้าเก่า '+BOOT_SWAP+' ข้าง → กล่องสุ่มหมา 1 กล่อง');openBag()};
+ if($('bSwap'))$('bSwap').onclick=()=>{S.bag.item.boot-=BOOT_SWAP;addIt('boxdog',1);save();closeAll();showCraftResult({title:'แลกรองเท้าเก่า',outputs:[{name:'กล่องสุ่มหมา',image:IMG.box,quantity:1}],consumed:[{name:'รองเท้าเก่า',image:IMG.boot,quantity:BOOT_SWAP}]},openBag)};
  if($('bBox'))$('bBox').onclick=openBox}
 /* ---------- ดูแลทั้งคอก: อาบน้ำ / นวด / เอนเตอร์เทน ---------- */
 const CARE={bath:['🛁','อาบน้ำ','🫧',[30,80]],massage:['💆','นวดตัว','💗',[30,80]],music:['🎵','เอนเตอร์เทน','🎶',[50,150]]};
@@ -358,17 +358,10 @@ function openPlace(){closeAll();const n=penDogs().length;
  $('pBox').onclick=openBox}
 function expire(){const now=Date.now(),gone=S.dog.list.filter(c=>now>=c.at+T.life());if(!gone.length)return;S.dog.list=S.dog.list.filter(c=>now<c.at+T.life());gone.forEach(c=>delete actors[c.id]);save();draw();ann('👋 '+gone.map(dogName).join(', ')+' ครบ 4 วัน กลับบ้านแล้ว')}
 /* ---------- 🎁 กล่องสุ่มหมา ---------- */
-function roll(){const r=Math.random()*100;if(r<2){const ts=Object.keys(DT);return{k:'dog',t:ts[rnd(0,5)]}}
- if(r<42){const p=Math.random();return{k:'merit',q:p<.8?rnd(1,25):p<.95?rnd(26,100):rnd(101,300)}}if(r<72)return{k:'salt'};if(r<84)return{k:'dogfood',q:50};if(r<90)return{k:'treat',q:5};if(r<95)return{k:'collar',q:3};return{k:'cake',q:50}}
-function openBox(){closeAll();const n=it('boxdog');
- open('<div style="text-align:center"><img src="'+IMG.box+'" style="width:7rem" alt=""><h3>กล่องสุ่มหมา</h3><div class="hint">มีอยู่ <b>'+fmt(n)+'</b> กล่อง • หมา 2% / กุศล 40% / กล่องเกลือ 30% / ของ 28%</div><div class="draft">ร่าง % เหมือนกล่องแมว • ของ: อาหารหมาสุ่ม 50 ชาม / ขนมหมา 5 / ปลอกคอ 3 / เค้ก 50</div></div><div class="boxbtns">'+[1,10,50,100,500].map(q=>'<button data-q="'+q+'"'+(n<q?' disabled':'')+'>'+q+'<small>กล่อง</small></button>').join('')+'</div>');
- $('sb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>openMany(+b.dataset.q))}
-function openMany(q){if(it('boxdog')<q)return;closeAll();const res=[];for(let i=0;i<q;i++){const reward=roll();parent.__HOST.recordCampaignBox(reward);res.push(reward);}const sum={merit:0,salt:0,dogfood:0,treat:0,collar:0,cake:0},dogs={};
- res.forEach(r=>{if(r.k==='dog')dogs[r.t]=(dogs[r.t]||0)+1;else if(r.k==='salt')sum.salt++;else sum[r.k]+=r.q});
- S.bag.item.boxdog-=q;S.merit+=sum.merit;Object.entries(dogs).forEach(([t,c])=>S.bag.dog[t]=(S.bag.dog[t]||0)+c);for(let i=0;i<sum.dogfood/50;i++){const f=FOOD[rnd(0,5)].id;S.bag.dogfood[f]=(S.bag.dogfood[f]||0)+50}
- addIt('treat',sum.treat);addIt('collar',sum.collar);addIt('cake',sum.cake);save();
- const ov=$('ov');ov.innerHTML='<div class="sp" id="spr" style="aspect-ratio:1"></div>';ov.classList.add('on');const sp=$('spr');sp.style.backgroundImage='url('+IMG.boxanim+')';let f=0;
- const iv=setInterval(()=>{sp.style.backgroundPosition=((f%4)*100/3)+'% '+(Math.floor(f/4)*100/3)+'%';f++;if(f>=16){clearInterval(iv);setTimeout(()=>showRes(q,res,sum,dogs),150)}},75)}
+
+
+
+function openBox(){closeAll();parent.__HOST.openBoxes('dog').catch(e=>ann(e.message,1));}
 function showRes(q,res,sum,dogs){let h='';const dk=Object.entries(dogs);const NM={merit:'กุศล',dogfood:'อาหารหมา',treat:'ขนมหมา',collar:'ปลอกคอ',cake:'เค้ก'},IM={merit:IMG.merit,dogfood:IMG['food-feast'],treat:IMG.treat,collar:IMG.collar,cake:IMG.cake};
  if(q===1){const r=res[0];if(r.k==='dog')h='<h3>🎉 ได้หมา!</h3><img class="card" src="'+IMG['card-'+r.t]+'" alt=""><div class="qty">'+DT[r.t][0]+'</div>';else if(r.k==='salt')h='<img class="big" src="'+IMG.salt+'" alt=""><h3>กล่องเกลือ…</h3><div class="hint">รอบนี้ไม่ได้อะไรเลย</div>';
   else h='<img class="big" src="'+IM[r.k]+'" alt=""><h3>'+NM[r.k]+'</h3><div class="qty">'+(r.k==='merit'?'+':'×')+fmt(r.q)+'</div>'}
@@ -422,4 +415,4 @@ document.documentElement.style.setProperty('--bg','url("'+IMG.bg+'")');
 addEventListener('resize',fit);fit();draw();requestAnimationFrame(loop);
 setInterval(()=>{expire();tickDrops()},1000);
 setTimeout(()=>ann(S.dog.list.length?'🐶 แตะน้องหมาเพื่อให้อาหาร • ไอคอนด้านล่างคือเครื่องมือทั้งหมด':'🐶 ยังไม่มีหมา • เปิดกล่องสุ่มหมาหรือรับจากยัยหนู'),400);
-</script></body></html>
+</script><script src="loot-box-link.js?v=ss3-boxes-fixes4" data-box="dog"></script></body></html>

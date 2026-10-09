@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-boxes-fixes4"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองป่าต้องห้าม – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;--moss:#6CC9A8;--gold:#F2B33D;--night:#28345E}
@@ -253,8 +253,7 @@ function confirmCraft(k){const isD=cTab==='drink',r=isD?DRINK[k]:TOOLR[k],q=cq[k
  $('cOk').onclick=e=>{e.target.disabled=true;if(maxTimes(r.need)<q)return ann('วัตถุดิบไม่พอแล้ว',1);
   r.need.forEach(([t,kk,n])=>S.bag[t][kk]-=n*q);let got=0;
   if(isD){got=q;S.bag.drink[k]=(S.bag.drink[k]||0)+q}else{for(let i=0;i<q;i++)got+=rnd(r.y[0],r.y[1]);S.bag.forest[k]=(S.bag.forest[k]||0)+got}save();
-  open('<div class="result"><img src="'+(isD?IMG['d-'+k]:IMG[k])+'" alt=""><h3>✨ คราฟสำเร็จ</h3><div class="big">'+nm+' ×'+got+'</div><div class="hint">คราฟ '+q+' ครั้ง • เข้ากระเป๋าแล้ว</div><div class="row"><button class="btn" id="rAgain">คราฟต่อ</button><button class="btn g" id="rClose">เรียบร้อย</button></div></div>');
-  $('rAgain').onclick=()=>openCraft();$('rClose').onclick=closeAll;ann('🎒 ได้'+nm+' ×'+got+' เข้ากระเป๋าแล้ว')}}
+  closeAll();showCraftResult({title:'คราฟ '+nm,results:Array(q).fill(true),outputs:[{name:nm,image:isD?IMG['d-'+k]:IMG[k],quantity:got}],consumed:r.need.map(([t,kk,n])=>({path:t+'.'+kk,quantity:n*q}))},openCraft);}}
 $('craftBtn').onclick=()=>{if(guardOpen())openCraft()};
 $('energy').onclick=()=>{if(guardOpen())openDrinks()};
 /* ---------- กระเป๋า (ส่วนของป่า) ---------- */

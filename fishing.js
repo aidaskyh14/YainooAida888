@@ -236,7 +236,7 @@ function craftRod(){const a=CF.amt;const rows=[...FRUITS.map(([k,n])=>ingRow('fr
  $('pkf').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.flower=x.dataset.k;craftRod()});
  $('pkc').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.crop=x.dataset.k;craftRod()});
  bindStep(craftRod);
- $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'rod',quantity:a,rod:CF.rod,flower:CF.flower,crop:CF.crop});if(result){ann('คราฟสำเร็จ '+result.crafted+' จาก '+a+' ครั้ง');craftRod();}};}
+ $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'rod',quantity:a,rod:CF.rod,flower:CF.flower,crop:CF.crop});if(result){closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftRod);}};}
 
 function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('hedge-'+k,'hedge-'+k,n,20*a)),ingRow('item-stone','item-stone','หิน',300*a),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1000*a)];
  const ok=rows.every(r=>!r.includes('lack'));
@@ -245,9 +245,9 @@ function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('he
  <div class="lbl2">ใช้ทั้งหมด (×${a})</div><div class="ings">${rows.join('')}</div>${stepHTML()}
  <div class="btns"><button class="ghost" onclick="craftMenu()">◀ กลับ</button><button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button></div>`);
  $('pkc').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.crop=x.dataset.k;craftCrab()});bindStep(craftCrab);
- $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'crab',quantity:a,crop:CF.crop});if(result){ann('คราฟสำเร็จ '+result.crafted+' จาก '+a+' ครั้ง');craftCrab();}};}
-function craftVip(){const a=CF.amt,rows=[ingRow('grass-blue','grass-blue','หญ้าฟ้า',1000*a),ingRow('fruit-apple','fruit-apple','แอปเปิล',300*a),ingRow('fruit-cherry','fruit-cherry','เชอร์รี',300*a),ingRow('flower-rose','flower-rose','กุหลาบ',300*a),ingRow('forest-iron','item-stone','เหล็ก',20*a)];const ok=rows.every(r=>!r.includes('lack'));sheet(`<h3>🎫 คราฟบัตร VIP</h3><div class="hint">สำเร็จ 10% · ได้ 1 ใบต่อครั้งสำเร็จ · พลาดใช้วัตถุดิบ</div><div class="ings">${rows.join('')}</div>${stepHTML()}<button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button>`);bindStep(craftVip);$('dock').onclick=async()=>{const out=await act({type:'craft',recipe:'vip',quantity:a});if(out){ann('สำเร็จ '+out.crafted+' จาก '+a+' ครั้ง');craftVip();}};}
-function adminPanel(){if(S.role!=='admin')return;sheet(`<h3>🛠️ แผงแอดมิน</h3><div class="hint">เปิดตามเวลาไทย 11:00–17:00 และ 21:00–07:00</div><div class="btns"><button class="big" id="ac">${world?.closed?'ยกเลิกปิดบ่อ':'ปิดบ่อชั่วคราว'}</button></div>`);$('ac').onclick=async()=>{if(await act({type:'admin',closed:!world?.closed})){closeSheet();render();}};}
+ $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'crab',quantity:a,crop:CF.crop});if(result){closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftCrab);}};}
+function craftVip(){const a=CF.amt,rows=[ingRow('grass-blue','grass-blue','หญ้าฟ้า',1000*a),ingRow('fruit-apple','fruit-apple','แอปเปิล',300*a),ingRow('fruit-cherry','fruit-cherry','เชอร์รี',300*a),ingRow('flower-rose','flower-rose','กุหลาบ',300*a),ingRow('forest-iron','item-stone','เหล็ก',20*a)];const ok=rows.every(r=>!r.includes('lack'));sheet(`<h3>🎫 คราฟบัตร VIP</h3><div class="hint">สำเร็จ 10% · ได้ 1 ใบต่อครั้งสำเร็จ · พลาดใช้วัตถุดิบ</div><div class="ings">${rows.join('')}</div>${stepHTML()}<button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button>`);bindStep(craftVip);$('dock').onclick=async()=>{const out=await act({type:'craft',recipe:'vip',quantity:a});if(out){closeSheet();showCraftResult({title:'คราฟบัตร VIP',results:out.results,outputs:out.outputs,consumed:out.consumed},craftVip);}};}
+function adminPanel(){if(S.role!=='admin')return;sheet(`<h3>👑 ควบคุมบ่อตกปลา</h3><p>ตอนนี้ ${world?.mode==='open'?'เปิดฉุกเฉิน':world?.mode==='closed'?'ปิดฉุกเฉิน':'ตามเวลาไทย'}</p><div class="btns"><button class="big" data-mode="open">เปิดฉุกเฉิน / ทดสอบ</button><button class="ghost" data-mode="closed">ปิดฉุกเฉิน</button><button class="ghost" data-mode="auto">กลับตามเวลา</button></div><div class="hint">การเปิดมีผลกับผู้เล่นทุกคน เบ็ด บัตร VIP และคะแนนทำงานตามกติกาจริง</div>`);$('sheet').querySelectorAll('[data-mode]').forEach(b=>b.onclick=async()=>{if(await act({type:'admin',mode:b.dataset.mode})){closeSheet();render();}});}
 
 
 /* ---------- catalog book ---------- */
@@ -296,7 +296,7 @@ function setSheet(si){const st=SETS[si],mn=setLevel(si);
 
 /* ---------- render ---------- */
 function render(){fitStage();renderTop();if(S.screen==='lobby')renderLobby();else renderPond()}
-render();
+closeSheet();render();
 if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}}});})();
 addEventListener('pagehide',()=>{stopWatch?.();});
 

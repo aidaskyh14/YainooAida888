@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-boxes-fixes4"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>หลังบ้าน – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
@@ -118,7 +118,7 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 /* อาหารสวน 26 เมนู (โอกาส/กุศลตาม S2 • วัตถุดิบ 100–999) */
 const ING={chili:['crop','พริก'],mango:['crop','มะม่วง'],waterspinach:['crop','ผักบุ้ง'],lettuce:['crop','ผักกาด'],pumpkin:['crop','ฟักทอง'],lychee:['crop','ลิ้นจี่'],strawberry:['crop','สตรอว์เบอร์รี'],grape:['crop','องุ่น'],banana:['crop','กล้วย'],gooseberry:['crop','มะยม'],
  egg:['product','ไข่'],fishmeat:['product','เนื้อปลา'],truffle:['product','ทรัฟเฟิล'],milk:['product','นม'],frog:['river','กบ'],rfish:['river','ปลาแม่น้ำ']};
-const GCAT={n:'🍽️ ทั่วไป',night:'🌙 รอบดึก',boat:'⛵ เสบียงเรือ',rain:'🌧️ หน้าฝน'};
+const GCAT={n:'🍽️ ทั่วไป',night:'🌙 รอบดึก',boat:'⛵ เสบียงเรือ'};
 const GF=[
 ['r1','n','แกงเปรตลิ้นยาว','🍲',80,[1,3],{chili:100,mango:100,waterspinach:100}],
 ['r2','n','ฟักทองต้มกองกอย','🎃',75,[1,3],{pumpkin:130,lettuce:100}],
@@ -139,13 +139,7 @@ const GF=[
 ['b5','boat','ยำผักสวนผีแตก','🥗',55,[5,8],{lettuce:500,waterspinach:500,mango:380,truffle:100}],
 ['b6','boat','ปลาผีลุยสวนยัยหนู','🐟',50,[5,8],{waterspinach:500,mango:440,grape:380,fishmeat:150}],
 ['b7','boat','แกงทรัฟเฟิลผักหลอน','🍲',45,[7,10],{lettuce:560,waterspinach:560,grape:440,truffle:150}],
-['b8','boat','สำรับผีแดกไม่เลือก','👑',40,[7,10],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}],
-['w1','rain','กบทอด คิดฮอดอ้าย','🐸',80,[6,6],{pumpkin:400,lychee:300,banana:250,egg:150,frog:250}],
-['w2','rain','ยำกบ สยบอิแก่','🐸',70,[10,10],{lychee:450,gooseberry:400,strawberry:350,egg:150,frog:300}],
-['w3','rain','ปลาผัดองุ่น วัยรุ่นเคี้ยวหมาก','🐟',60,[14,14],{grape:500,pumpkin:400,fishmeat:200,milk:100,rfish:300}],
-['w4','rain','ปลาย่างซอสม๊ายม ยม ยม','🐟',50,[18,18],{gooseberry:600,banana:450,truffle:200,milk:150,rfish:350}],
-['w5','rain','ตำกบแซ่บ แชแว๊บบบ','🌶️',40,[24,24],{lychee:600,strawberry:500,gooseberry:400,egg:200,fishmeat:200,truffle:150,frog:400,rfish:400}],
-['w6','rain','อ่างร่วมกบปลาล้างบาง','👑',30,[30,30],{pumpkin:750,lychee:750,grape:750,gooseberry:750,banana:500,strawberry:500,egg:250,fishmeat:250,truffle:250,milk:250,frog:600,rfish:600}]
+['b8','boat','สำรับผีแดกไม่เลือก','👑',40,[7,10],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}]
 ].map(([id,cat,n,ic,ch,mer,need])=>({id,cat,n,ic,ch,mer,need}));
 const GFBY=Object.fromEntries(GF.map(g=>[g.id,g]));
 const emo=(e,bg)=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'+(bg?'<circle cx="50" cy="50" r="46" fill="'+bg+'"/>':'')+'<text x="50" y="54" font-size="62" text-anchor="middle" dominant-baseline="middle">'+e+'</text></svg>');
@@ -243,8 +237,7 @@ function confirmCook(id){const g=GFBY[id],q=gq[id];
   Object.entries(g.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);const res=[];let ok=0,mer=0;
   for(let i=0;i<q;i++){const r=Math.random()*100<g.ch;res.push(r);if(r){ok++;mer+=rnd(g.mer[0],g.mer[1])}}
   S.bag.gfood[id]=(S.bag.gfood[id]||0)+ok;S.merit=(S.merit||0)+mer;save();
-  open('<div style="text-align:center"><img src="'+gfImg(g)+'" style="width:4.5rem" alt=""><h3>'+(ok?'คราฟสำเร็จ '+ok+' จาก '+q+' ครั้ง!':'ไม่สำเร็จเลยสักครั้ง')+'</h3><div class="hint">'+g.n+(mer?' • ได้กุศล +'+mer:'')+'</div><div class="tries">'+res.map((r,i)=>'<span class="'+(r?'ok':'no')+'">'+(i+1)+'<br>'+(r?'✅':'❌')+'</span>').join('')+'</div><div class="row"><button class="btn" id="rA">คราฟต่อ</button><button class="btn g" id="rC">เรียบร้อย</button></div></div>');
-  $('rA').onclick=()=>openBook();$('rC').onclick=closeAll;hud()}}
+  closeAll();showCraftResult({title:'คราฟ '+g.n,results:res,outputs:ok?[{name:g.n,image:gfImg(g),quantity:ok}]:[],merit:mer,consumed:Object.entries(g.need).map(([k,n])=>({name:ING[k]?.[1]||k,quantity:n*q}))},openBook);hud();}}
 /* ---------- วางแฮมสเตอร์ ---------- */
 function openPlace(){closeAll();const n=S.ham.list.length;
  open('<h3>🐹 วางแฮมสเตอร์ลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้ว<b>เอากลับเข้ากระเป๋าไม่ได้</b> • อยู่ได้ 48 ชม.</div><div class="cards">'+Object.keys(HT).map(t=>{const c=S.bag.hamster[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+HT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div>'+
@@ -274,23 +267,11 @@ function spillMB(a){if(!a)return;const s=$('stage');const t=document.createEleme
 $('collect').onclick=()=>{const n=S.ham.drop;if(!n)return;S.bag.item.musicbox=(S.bag.item.musicbox||0)+n;S.ham.drop=0;save();const r=$('collect').getBoundingClientRect(),st=$('stage').getBoundingClientRect();
  drops.forEach(m=>{m.classList.add('fly');m.style.left=((r.left+r.width/2-st.left)/st.width*100)+'%';m.style.top=((r.top-st.top)/st.height*100)+'%'});setTimeout(()=>{drops.forEach(m=>m.remove());drops=[]},750);hud();ann('🎵 เก็บกล่องดนตรี ×'+n+' เข้ากระเป๋าแล้ว • ใช้เร่งผลผลิตในโรงเรือนสัตว์')};
 /* ---------- กล่องสุ่มแฮมสเตอร์ ---------- */
-function roll(){const r=Math.random()*100;
- if(r<2){const ts=Object.keys(HT);return{k:'ham',t:ts[rnd(0,5)]}}
- if(r<42){const p=Math.random();return{k:'merit',q:p<.8?rnd(1,25):p<.95?rnd(26,100):rnd(101,300)}}
- if(r<72)return{k:'salt'};if(r<86)return{k:'fuel',q:100};if(r<95)return{k:'cake',q:50};return{k:'coconut',q:30}}
+
 const RN={merit:'กุศล',salt:'กล่องเกลือ (ไม่ได้อะไรเลย)',fuel:'แกลลอนน้ำมัน',cake:'เค้ก',coconut:'มะพร้าว'};
-function openBox(){closeAll();const n=S.bag.box.hamster||0;
- open('<div style="text-align:center"><img src="'+IMG.box+'" style="width:7rem" alt=""><h3>กล่องสุ่มแฮมสเตอร์</h3><div class="hint">มีอยู่ <b>'+fmt(n)+'</b> กล่อง • แฮมสเตอร์ 2% / กุศล 40% / กล่องเกลือ 30% / ของ 28%</div></div>'+
- '<div class="boxbtns">'+[1,10,50,100,500].map(q=>'<button data-q="'+q+'"'+(n<q?' disabled':'')+'>'+q+'<small>กล่อง</small></button>').join('')+'</div>'+(n<1?'<div class="hint">ยังไม่มีกล่อง • ซื้อได้จากร้านค้ายัยหนู</div>':''));
- $('sb').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>openMany(+b.dataset.q))}
-function openMany(q){if((S.bag.box.hamster||0)<q)return;closeAll();
- /* ทอยในเครื่องทั้งหมด แล้วหักกล่อง+ให้ของ บันทึกครั้งเดียว */
- const res=[];for(let i=0;i<q;i++)res.push(roll());const sum={merit:0,salt:0,fuel:0,cake:0,coconut:0},hams={};
- res.forEach(r=>{if(r.k==='ham')hams[r.t]=(hams[r.t]||0)+1;else if(r.k==='salt')sum.salt++;else sum[r.k]+=r.q});
- S.bag.box.hamster-=q;S.merit=(S.merit||0)+sum.merit;Object.entries(hams).forEach(([t,c])=>S.bag.hamster[t]=(S.bag.hamster[t]||0)+c);
- S.bag.item.fuelcan=(S.bag.item.fuelcan||0)+sum.fuel;S.bag.item.cake=(S.bag.item.cake||0)+sum.cake;S.bag.item.coconut=(S.bag.item.coconut||0)+sum.coconut;save();
- const ov=$('ov');ov.innerHTML='<div class="sp" id="spr"></div>';ov.classList.add('on');ov.onclick=null;const sp=$('spr');sp.style.backgroundImage='url('+IMG.boxanim+')';let f=0;
- const iv=setInterval(()=>{sp.style.backgroundPosition=((f%4)*100/3)+'% '+(Math.floor(f/4)*100/3)+'%';f++;if(f>=16){clearInterval(iv);setTimeout(()=>showRes(q,res,sum,hams),150)}},75)}
+
+
+function openBox(){closeAll();parent.__HOST.openBoxes('hamster').catch(e=>ann(e.message,1));}
 function showRes(q,res,sum,hams){const ov=$('ov');let h='';
  if(q===1){const r=res[0];
   if(r.k==='ham')h='<h3>🎉 ได้แฮมสเตอร์!</h3><img class="card" src="'+IMG['card-'+r.t]+'" alt=""><div class="qty">'+HT[r.t]+'</div>';
@@ -360,4 +341,4 @@ tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
 new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
 render();
 })();
-</script></body></html>
+</script><script src="loot-box-link.js?v=ss3-boxes-fixes4" data-box="hamster"></script></body></html>

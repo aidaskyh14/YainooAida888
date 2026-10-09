@@ -1,5 +1,5 @@
 import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, deleteField, query, limit } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-20261009-complete1';
+import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-boxes-fixes4';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
 export class SplitSaveStore {
@@ -88,7 +88,7 @@ export class SplitSaveStore {
       const added=changes.filter(([id,p])=>p&&!this.parts.has(id)).length,removed=changes.filter(([id,p])=>!p&&this.parts.has(id)).length;
       const count=this.partial?(root.data().partCount||0)+added-removed:next.size;
       if(count>MAX_PARTS)throw new Error('มีส่วนเซฟเกินขอบเขต');
-      tx.update(this.root(),{...meta,partCount:count,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
+      tx.update(this.root(),{...meta,...(next.has("wallet")?{displayMerit:joinGame(next.values()).merit||0}:{}),partCount:count,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
     });
     for(const [id,p] of changes){if(p){this.parts.set(id,p);this.revs.set(id,(this.revs.get(id)||0)+1);}else{this.parts.delete(id);this.revs.delete(id);}}
   }
@@ -110,7 +110,7 @@ export class SplitSaveStore {
       const snaps=await Promise.all(changes.map(([id])=>tx.get(this.ref(id))));
       snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==(expected.get(changes[i][0])??this.revs.get(changes[i][0])??0))throw conflict();});
       changes.forEach(([id,p])=>tx.set(this.ref(id),{...p,rev:(expected.get(id)??this.revs.get(id)??0)+1,by:this.session,updatedAt:serverTimestamp()}));
-      tx.update(this.root(),{coins:(root.data().coins||0)+(m.coins||0),mailCount:Math.max(0,(root.data().mailCount||0)-1),by:this.session,partCount:(root.data().partCount||0)+changes.filter(([id,p])=>p&&!base.has(id)).length,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
+      tx.update(this.root(),{displayMerit:game.merit||0,coins:(root.data().coins||0)+(m.coins||0),mailCount:Math.max(0,(root.data().mailCount||0)-1),by:this.session,partCount:(root.data().partCount||0)+changes.filter(([id,p])=>p&&!base.has(id)).length,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
       tx.delete(mailRef);result=m;
       changes=changes.map(([id,p])=>[id,{...p,rev:(expected.get(id)??this.revs.get(id)??0)+1}]);
       mailDocs.forEach((d,i)=>{if(d.exists()&&!changes.some(([id])=>id===mailIds[i]))changes.push([mailIds[i],d.data()]);});

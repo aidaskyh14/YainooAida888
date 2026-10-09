@@ -13,7 +13,8 @@ export async function deliverAdminGift(db,adminUid,request) {
     if(!uids.length||uids.length>5000)reject('เลือกผู้รับ 1–5,000 คน');
     if(Object.keys(request.body.items||{}).length>250)reject('รายการไอเทมมากเกินไป');
     for(const n of [request.body.kusal||0,request.body.coins||0,...Object.values(request.body.items||{})])if(!Number.isSafeInteger(n)||n<0)reject('จำนวนของต้องเป็นจำนวนเต็มตั้งแต่ศูนย์');
-    operation={operationId:doc(db,'adminLog',request.id).id,uids,names:request.names.slice(0,50),body:request.body,done:[],status:'sending',sender:adminUid,at:serverTimestamp()};
+    const packs=Object.fromEntries(uids.map(uid=>[uid,request.packs?.[uid]??1]));for(const n of Object.values(packs)){if(!Number.isSafeInteger(n)||n<1||n>1000000||[request.body.kusal||0,request.body.coins||0,...Object.values(request.body.items||{})].some(q=>!Number.isSafeInteger(q*n)))reject('จำนวนแพ็กมากเกินไปหรือไม่เป็นจำนวนเต็ม');}
+    operation={packs,operationId:doc(db,'adminLog',request.id).id,uids,names:request.names.slice(0,50),body:request.body,done:[],status:'sending',sender:adminUid,at:serverTimestamp()};
     tx.set(stateRef,operation);
   });
   if(alreadyDelivered)return {count:alreadyDelivered.count,body:alreadyDelivered,uids:[],newlySent:0};
@@ -28,12 +29,12 @@ export async function deliverAdminGift(db,adminUid,request) {
       if(op.status!=='sending')reject('รายการส่งไม่ได้อยู่ระหว่างดำเนินการ');
       const recipients=op.uids.slice(start,start+CHUNK);
       recipients.forEach((uid,j)=>{
-        tx.set(doc(db,'mail',uid,'items',op.operationId+'-'+(start+j)),{...op.body,createdAt:serverTimestamp()});
+        const n=op.packs?.[uid]??1;tx.set(doc(db,'mail',uid,'items',op.operationId+'-'+(start+j)),{...op.body,kusal:(op.body.kusal||0)*n,coins:(op.body.coins||0)*n,items:Object.fromEntries(Object.entries(op.body.items||{}).map(([k,q])=>[k,q*n])),createdAt:serverTimestamp()});
         tx.update(doc(db,'players',uid),{mailCount:increment(1)});
       });
       const done=[...op.done,start],status=done.length===Math.ceil(op.uids.length/CHUNK)?'done':'sending';
       tx.update(stateRef,{done,status,updatedAt:serverTimestamp()});
-      if(status==='done')tx.set(doc(db,'adminLog',op.operationId),{at:serverTimestamp(),expireAt:Timestamp.fromMillis(Date.now()+60*864e5),type:'gift',to:op.names,count:op.uids.length,kusal:op.body.kusal,coins:op.body.coins,items:op.body.items,title:op.body.title});
+      if(status==='done')tx.set(doc(db,'adminLog',op.operationId),{at:serverTimestamp(),expireAt:Timestamp.fromMillis(Date.now()+60*864e5),type:'gift',packs:op.packs||{},to:op.names,count:op.uids.length,kusal:op.body.kusal,coins:op.body.coins,items:op.body.items,title:op.body.title});
       sent=recipients.length;
     });
     newlySent+=sent;

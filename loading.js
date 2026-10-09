@@ -26,7 +26,7 @@
       const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),20000);
       let response,html;
       try {
-        response=await fetch('scr-farm.html?v=ss3-20261008-images2',{signal:ctrl.signal});
+        response=await fetch('scr-farm.html?v=ss3-boxes-fixes4',{signal:ctrl.signal});
         if(!response.ok)throw new Error('scr-farm.html');html=await response.text();
       } finally { clearTimeout(timer); }
       const urls=[...new Set([...html.matchAll(/images\/[A-Za-z0-9_.-]+\.(?:webp|png|jpe?g|gif)/g)].map(m=>m[0]))];

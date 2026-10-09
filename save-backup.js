@@ -1,5 +1,5 @@
 import { doc, collection, getDocs, getDoc, setDoc, query, orderBy, limit, runTransaction, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { splitGame, joinGame, MAX_PARTS } from './save-schema.js?v=ss3-20261008-images2';
+import { splitGame, joinGame, MAX_PARTS } from './save-schema.js?v=ss3-boxes-fixes4';
 export async function installBackupUI({db,store,$,modal,toast,thaiError,esc,today,S,flush,frameSave}) {
   const host=$('#aBody');host.innerHTML='<div class="box">กำลังอ่านข้อมูลสำรอง…</div>';
   try {

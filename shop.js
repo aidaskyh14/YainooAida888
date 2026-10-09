@@ -1,4 +1,4 @@
-import {ST,NEWS,WINES,TICK,DAY,marketMath} from './market-engine.js?v=ss3-20261008-images2';
+import {ST,NEWS,WINES,TICK,DAY,marketMath} from './market-engine.js?v=ss3-boxes-fixes4';
 const __H=parent.__HOST;if(!__H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const __LS={getItem:k=>__H.get(k),setItem:(k,v)=>{__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh)Object.assign(S,fresh)}},removeItem:k=>__H.del(k)};
 
 const IMG={"shop-bg":"images/shop-bg.webp","item-coinbag":"images/shop-item-coinbag.webp","stock-veg":"images/shop-stock-veg.webp","stock-fruit":"images/shop-stock-fruit.webp","stock-fish":"images/shop-stock-fish.webp","stock-wine":"images/shop-stock-wine.webp","stock-alpaca":"images/shop-stock-alpaca.webp","stock-bee":"images/shop-stock-bee.webp","wine-rose":"images/house-wine-rose.webp","wine-moon":"images/house-wine-moon.webp","wine-blood":"images/house-wine-blood.webp","wine-eclipse":"images/house-wine-eclipse.webp"};
@@ -62,14 +62,14 @@ function port(){S.open=['port'];if(!S.lots.length)return sheet(`<h3>💼 พอ�
   return`<div class="lot"><img src="${IMG['stock-'+ST[l.i].k]}" alt="" style="width:1.8rem"><div class="m"><b>${ST[l.i].n}</b> ×${l.q}<br><small>ซื้อเฉลี่ย ${nf(avg)} · ตอนนี้ ${nf(p)}</small></div><span class="pl" style="color:${pl>=0?'var(--up)':'var(--dn)'}">${pl>=0?'+':''}${nf(pl)}</span>${lock>0?`<button class="ghost" disabled style="font-size:.66rem">🔒 ${fmtT(lock)}</button>`:`<button class="big red" style="font-size:.72rem;padding:.35rem .7rem" data-sell="${ix}">ขาย</button>`}</div>`}).join('');
  sheet(`<h3>💼 พอร์ตของฉัน</h3><div class="kv"><div>ต้นทุนรวม<b>${nf(tot)}</b></div><div>มูลค่าตอนนี้<b style="color:${val>=tot?'var(--up)':'var(--dn)'}">${nf(val)}</b></div></div>${rows}<div class="hint">🔒 = ยังไม่ครบ 24 ชม. · ขายทั้งก้อน หักค่าธรรมเนียม 2%</div><div class="btns"><button class="ghost" onclick="closeSheet()">ปิด</button></div>`);
  $('sheet').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell(+b.dataset.sell))}
-async function sell(ix){const l=S.lots[ix];if(l&&await marketCloud({type:'sell',index:ix,boughtAt:l.t})){closeSheet();ann('ขายหุ้นและบันทึกบนคลาวด์แล้ว');render();}}
+async function sell(ix){const l=S.lots[ix];if(!l)return;const out=await marketCloud({type:'sell',index:ix,boughtAt:l.t});if(out){closeSheet();render();showCraftResult({title:'ผลการขายหุ้น',outputs:[],merit:out.gain,consumed:[{name:ST[l.i].n,quantity:l.q}]},port);}}
 /* ---------- sell goods ---------- */
 function sellShop(){S.open=['sell'];const wi=ST.findIndex(s=>s.k==='wine');const bonus=Math.max(0,price(wi,tnow())/ST[wi].b-1);const b=Math.min(.2,bonus);
  sheet(`<h3>🏪 รับซื้อของ</h3><div class="hint">ราคาปกติตลอด · ถ้าหุ้นไวน์สูงกว่าราคาตั้งต้น ได้โบนัสเพิ่มสูงสุด +20% (หุ้นลงก็ยังได้ราคาปกติ)</div>
  ${WINES.map(([k,n,pr])=>`<div class="item"><img src="${IMG['wine-'+k]}" alt=""><div class="m"><b>${n}</b><small>มี ${S.bag[k]} ขวด · ราคาปกติ ${nf(pr)}${b>0?` <span class="bonus">+${Math.round(b*100)}%</span>`:''}</small></div><button class="big" style="font-size:.72rem;padding:.35rem .7rem" data-w="${k}" ${S.bag[k]?'':'disabled'}>ขาย 1</button></div>`).join('')}
 
  <div class="btns"><button class="ghost" onclick="closeSheet()">ปิด</button></div>`);
- $('sheet').querySelectorAll('[data-w]').forEach(x=>x.onclick=async()=>{if(await marketCloud({type:'wine',wine:x.dataset.w})){ann('ขายไวน์และบันทึกบนคลาวด์แล้ว');renderTop();sellShop();}})}
+ $('sheet').querySelectorAll('[data-w]').forEach(x=>x.onclick=async()=>{const out=await marketCloud({type:'wine',wine:x.dataset.w});if(out){closeSheet();showCraftResult({title:'ผลการขายไวน์',outputs:[],merit:out.gain,consumed:[{path:'wine.'+x.dataset.w,quantity:1}]},sellShop);renderTop();}})}
 /* ---------- news list + mail ---------- */
 function newsList(){S.open=['news'];const L=newsUpTo(tnow(),tnow()-672).reverse();sheet(`<h3>📰 ข่าวตลาด</h3><div class="hint">ข่าวจากระบบ ออกทุก 3 ชั่วโมง มีผลกับราคาหุ้นทันที แล้วค่อยๆ จางลง · ย้อนหลัง 7 วัน</div>${L.length?L.map(n=>`<div class="news"><span>${n.e}</span><div class="m">${n.txt}<br><small style="color:var(--soft)">${new Date(n.t*TICK).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small></div></div>`).join(''):'<div class="hint">ยังไม่มีข่าว</div>'}<div class="btns"><button class="ghost" onclick="closeSheet()">ปิด</button></div>`)}
 function mailbox(){S.open=['mail'];S.mailSeen=tnow();renderTop();const L=newsUpTo(tnow(),tnow()-96).reverse();

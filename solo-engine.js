@@ -13,18 +13,18 @@ export function fireBird(round,shot){const t=shot.t;if(!Number.isFinite(t)||t<0|
  if(hit){round.killed.push(hit.id);round.hits[hit.type]++;round.count++;round.sum+=round.values[hit.type].val;}return hit;
 }
 export function soloPublic(state){const out=structuredClone(state);if(out.pk?.phase==='active')delete out.pk.kind;return out;}
-export function soloAction(source,account,ctx,input,rng=Math.random){const state=structuredClone(source||{}),game=structuredClone(account);game.sub ||= {};const progress=game.sub.minigames ||= {cd:{},escrows:{}};progress.cd ||= {};let coins=ctx.coins,reward=null;const hours=bkkHour(ctx.now),nonce=ctx.nonce;
+export function soloAction(source,account,ctx,input,rng=Math.random){const state=structuredClone(source||{}),game=structuredClone(account);game.sub ||= {};const progress=game.sub.minigames ||= {cd:{},escrows:{}};progress.cd ||= {};let coins=ctx.coins,reward=null;const hours=bkkHour(ctx.now),nonce=ctx.nonce;const opened=(k,scheduled)=>ctx.controls?.[k]==='open'||ctx.controls?.[k]!=='closed'&&scheduled;
  const result=()=>({state,game,coins,reward});
  if(input.type==='status'){state.offer ||= birdOffer(nonce);return result();}
  if(input.type==='pk-start'){
-  if(state.pk?.phase==='active')return result();if(!(hours>=19||hours<5))fail('จิ้มฟักทองเปิด 19:00–05:00 เวลาไทย');if((progress.cd.pk||0)>ctx.now)fail('พักจิ้มฟักทอง 30 นาที');if(coins<2||(game.merit||0)<25000)fail('ใช้ 2 เหรียญและต้องมีกุศลอย่างน้อย 25,000');coins-=2;const angels=int(rng,5,10);state.pk={id:nonce,phase:'active',start:ctx.now,kind:shuffle(rng,Array.from({length:16},(_,i)=>i<angels?'angel':'devil'))};return result();
+  if(state.pk?.phase==='active')return result();if(!opened('pk',hours>=19||hours<5))fail('จิ้มฟักทองเปิด 19:00–05:00 เวลาไทย');if((progress.cd.pk||0)>ctx.now)fail('พักจิ้มฟักทอง 30 นาที');if(coins<2||(game.merit||0)<25000)fail('ใช้ 2 เหรียญและต้องมีกุศลอย่างน้อย 25,000');coins-=2;const angels=int(rng,5,10);state.pk={id:nonce,phase:'active',start:ctx.now,kind:shuffle(rng,Array.from({length:16},(_,i)=>i<angels?'angel':'devil'))};return result();
  }
  if(input.type==='pk-finish'){
   const r=state.pk;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบจิ้มฟักทองไม่ถูกต้อง');const picks=input.picks;if(!Array.isArray(picks)||picks.length!==4||new Set(picks).size!==4||picks.some(i=>!Number.isInteger(i)||i<0||i>15))fail('เลือกฟักทอง 4 ลูกที่ต่างกัน');r.picks=picks;r.angels=picks.filter(i=>r.kind[i]==='angel').length;r.phase='done';progress.cd.pk=ctx.now+30*60000;const merit={4:100000,3:20000,2:0,1:-5000,0:-15000}[r.angels];
   if(merit>0)reward={icon:'🎃',title:'จิ้มฟักทอง +'+merit+' กุศล',merit,items:{}};else if(r.angels===2)reward={icon:'📦',title:'รางวัลปลอบใจจิ้มฟักทอง',merit:0,items:{'bird-box-ostrich':10,'bird-box-dodo':10}};else game.merit=Math.max(0,(game.merit||0)+merit);r.gain=merit;return result();
  }
  if(input.type==='bs-start'){
-  if(state.bs?.phase==='active'&&ctx.now<state.bs.until)return result();if(state.bs?.phase==='active')fail('รับผลรอบเดิมก่อน');if(hours<10||hours>=18)fail('ยิงนกเปิด 10:00–18:00 เวลาไทย');if((progress.cd.bs||0)>ctx.now)fail('พักยิงนก 15 นาที');if(coins<3||(game.merit||0)<10000)fail('ใช้ 3 เหรียญและต้องมีกุศลอย่างน้อย 10,000 สำหรับยอดเสี่ยง');coins-=3;state.offer ||= birdOffer(nonce);state.bs={id:nonce,phase:'active',start:ctx.now,until:ctx.now+60000,values:state.offer,flights:birdFlights(nonce,state.offer),killed:[],hits:[0,0,0,0],count:0,sum:0,ammo:6,reload:0,recent:[],shots:0};return result();
+  if(state.bs?.phase==='active'&&ctx.now<state.bs.until)return result();if(state.bs?.phase==='active')fail('รับผลรอบเดิมก่อน');if(!opened('bs',hours>=10&&hours<18))fail('ยิงนกเปิด 10:00–18:00 เวลาไทย');if((progress.cd.bs||0)>ctx.now)fail('พักยิงนก 15 นาที');if(coins<3||(game.merit||0)<10000)fail('ใช้ 3 เหรียญและต้องมีกุศลอย่างน้อย 10,000 สำหรับยอดเสี่ยง');coins-=3;state.offer ||= birdOffer(nonce);state.bs={id:nonce,phase:'active',start:ctx.now,until:ctx.now+60000,values:state.offer,flights:birdFlights(nonce,state.offer),killed:[],hits:[0,0,0,0],count:0,sum:0,ammo:6,reload:0,recent:[],shots:0};return result();
  }
  if(input.type==='bs-shot'||input.type==='bs-shots'){
   const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบยิงนกไม่ถูกต้อง');const shots=input.type==='bs-shot'?[input]:input.shots;

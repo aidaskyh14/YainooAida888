@@ -1,0 +1,14 @@
+(()=>{
+ const Host=parent.__HOST;let dropView=null,dropBusy=false,currentKey='',nextCheck=0;
+ const COLORS={green:'เขียว',yellow:'เหลือง',red:'แดง',pink:'ชมพู',blue:'ฟ้า'};
+ const positions={1:[[180,1160],[450,1160],[750,1160],[230,1320],[650,1320]],2:[[170,1140],[450,1150],[780,1150],[220,1320],[700,1320]],4:[[180,1370],[450,1370],[740,1370],[260,1600],[650,1600]]};
+ const button=document.createElement('button');button.id='collectFarmDrops';button.textContent='🌾 เก็บของดรอปทั้งหมด';button.dataset.a='drops';$('fan').appendChild(button);
+ const floating=document.createElement('button');floating.id='dropCollectVisible';floating.textContent='🌾 เก็บของดรอปทั้งหมด';floating.style.cssText='position:fixed;right:12px;bottom:95px;z-index:7;border-radius:24px;padding:10px;background:#fff6dc;color:#563c32;border:2px solid #74c4a4;font:inherit;font-size:13px';document.body.appendChild(floating);
+ async function request(type,index){if(dropBusy)return;dropBusy=true;try{const owner=window.friendFarm?.owner||Host.uid,out=await Host.cloud('drops',{type,owner,farm,epoch:dropView?.epoch,...(index==null?{all:true}:{index})});Object.assign(S,JSON.parse(Host.get('s3all-v1')));pts=S.merit;dropView=out.view;nextCheck=out.view.nextAt;currentKey=owner+'|'+farm;
+ if(out.collected?.length){toast('🎒 '+out.collected.map(r=>(r.group==='grass'?'หญ้า'+COLORS[r.key]:r.key==='wood'?'ไม้':'หิน')+' ×'+r.quantity).join(' • '));}draw();}catch(e){if(type!=='status')toast(e.message,1);nextCheck=Date.now()+5000;}finally{dropBusy=false;}}
+ function draw(){const st=$('stage');st.querySelectorAll('.cloud-farm-drop').forEach(e=>e.remove());const current=(window.friendFarm?.owner||Host.uid)+'|'+farm;if(current!==currentKey){dropView=null;nextCheck=0;}const rows=dropView?.rows||[];button.style.display='';button.disabled=!rows.length;floating.hidden=!rows.length;button.textContent='🌾 เก็บของดรอปทั้งหมด ('+rows.length+')';
+ rows.forEach(r=>{const img=document.createElement('img');img.className='cloud-farm-drop';img.src='images/'+(r.group==='grass'?'forest-grass-'+r.key:r.key==='wood'?'forest-item-wood':'forest-item-stone')+'.webp';const pt=(positions[farm]||positions[2])[r.position];img.style.cssText=`position:absolute;left:${pt[0]/W*100}%;top:${pt[1]/H*100}%;width:8%;transform:translate(-50%,-80%);z-index:5;cursor:pointer;filter:drop-shadow(0 3px 3px #0006)`;img.title=(r.group==='grass'?'หญ้า'+COLORS[r.key]:r.key==='wood'?'ไม้':'หิน')+' ×'+r.quantity;img.onclick=e=>{e.stopPropagation();request('collect',r.id);};st.appendChild(img);});
+ }
+ button.onclick=floating.onclick=()=>request('collect');const oldRender=render;render=function(){oldRender.apply(this,arguments);draw();};
+ setInterval(()=>{if(document.hidden||dropBusy)return;const key=(window.friendFarm?.owner||Host.uid)+'|'+farm;if(Date.now()>=nextCheck)request('status');},1500);
+})();

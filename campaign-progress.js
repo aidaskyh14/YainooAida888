@@ -24,6 +24,6 @@ export function observeGameplay(before,after,source,config,now,boxes=[],rng=Math
    let plots=0;for(const[f,rows]of Object.entries(before.farms||{}))for(let i=0;i<rows.length;i++)if(rows[i]?.c==='pumpkin'&&rows[i].ph==='ready'&&!after.farms?.[f]?.[i]&&increase(before,after,'bag.crop.pumpkin'))plots++;
    if(plots){const x=recordCampaign(after,config,'pump',0,now);if(x){const old=x.pumpPlots;x.pumpPlots+=plots;let points=0;for(let i=Math.floor(old/10);i<Math.floor(x.pumpPlots/10);i++){const weights=HALLOWEEN.map(v=>v[hour>=18&&hour<22?4:3]);let r=rng()*values(weights),index=weights.length-1;for(let j=0;j<weights.length;j++){r-=weights[j];if(r<0){index=j;break;}}const item=HALLOWEEN[index];x.items[item[0]]=(x.items[item[0]]||0)+1;after.bag.halloween ||= {};after.bag.halloween[item[0]]=(after.bag.halloween[item[0]]||0)+1;points+=item[2];}recordCampaign(after,config,'pump',points,now);}}
  }
- if(boxes.length){const x=recordCampaign(after,config,'box',0,now);if(x){if(x.box.day!==dayKey(now))x.box={day:dayKey(now),n:0};for(const b of boxes){const pts=b.k==='merit'?(b.q||0)/2:b.k==='salt'?-5:['cat','dog','alpaca','hamster'].includes(b.k)?100:50;recordCampaign(after,config,'box',pts*(x.box.n++<100?5:1),now);}}}
+ if(boxes.length){const x=recordCampaign(after,config,'box',0,now);if(x){if(x.box.day!==dayKey(now))x.box={day:dayKey(now),n:0};for(const b of boxes){const pts=b.k==='merit'?(b.q||0)/2:b.k==='salt'?-5:['cat','dog','alpaca','hamster','bird'].includes(b.k)?100:50;recordCampaign(after,config,'box',pts*(x.box.n++<100?5:1),now);}}}
  return after;
 }
