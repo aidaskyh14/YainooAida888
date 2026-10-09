@@ -1,5 +1,5 @@
 import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, deleteField, query, limit } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-boxes-fixes4';
+import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-recovery6';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
 export class SplitSaveStore {

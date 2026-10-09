@@ -55,7 +55,7 @@ function project(){
  const g=JSON.parse(Host.get('s3all-v1')||'{}'),book=g.sub?.fishing||{};S.merit=g.merit||0;S.bag={rod:Object.fromEntries(RK.map(k=>[k,g.bag?.rod?.[k]||0])),crab:g.bag?.fishing?.crab||0,vip:g.bag?.fishing?.vip||0};S.cat=Object.fromEntries(Object.keys(FISH).map(k=>[k,book.cat?.[k]||{n:0,best:0}]));S.claimed=book.claimed||Array(8).fill(0);S.pondToday=book.pondToday||null;
  for(const[group,items]of Object.entries(g.bag||{}))for(const[k,n]of Object.entries(items))INV[group+'-'+k]=n;
  INV['item-stone']=g.bag?.forest?.stone||0;
- if(world){S.gifts=[];S.open=world.open;S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
+ if(world){S.gifts=[];S.open=world.mode==='open'||(world.mode!=='closed'&&!world.closed&&(new Date(now()+7*3600e3).getUTCHours()>=11&&new Date(now()+7*3600e3).getUTCHours()<17||new Date(now()+7*3600e3).getUTCHours()>=21||new Date(now()+7*3600e3).getUTCHours()<7));S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
  S.myCut=quota.cut||0;S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
 }
 async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
@@ -163,9 +163,10 @@ function renderPondBar(force){const b=$('bar'),ms=mySeat(),now=Date.now()+server
  key+='|'+S.pond+'|'+S.myCut+'|'+S.role+'|'+S.lucky;
  if(key===barKey&&!force){const c=$('cd');if(c)c.textContent=mm(cd);return}
  barKey=key;
- const lk=S.role==='admin'?`<span class="chip adm">🍀 นำโชคชั่วโมงนี้ ${RODS[luckyRod()].e}</span>`:'';
+ const lk=S.role==='admin'?`<button class="chip adm" id="luckyInfo">🍀 เบ็ดนำโชค: ${RODS[luckyRod()].n} ⓘ</button>`:'';
  b.innerHTML=`<div class="lobbyrow"><button class="rbtn" id="homeb" aria-label="กลับล็อบบี้">🏠</button>${mid}<button class="rbtn" id="toolbtn" aria-label="กระเป๋า">🧰</button>${S.role==='admin'?'<button class="rbtn" id="admb2" aria-label="แผงแอดมิน">🛠️</button>':''}</div><div class="lobbyrow"><span class="chip">${k==='v'?'👑':'🎣'} ${PONDS[S.pond].name}${k==='n'?' · ✂️ '+(30-S.myCut)+'/30':''}</span>${lk}</div>`;
  const c=$('cd');if(c)c.textContent=mm(cd);
+ if($('luckyInfo'))$('luckyInfo').onclick=()=>sheet('<h3>🍀 เบ็ดนำโชคชั่วโมงนี้</h3><p><b>'+RODS[luckyRod()].n+'</b></p><p>บ่อทั่วไป: เพิ่มโอกาสได้ปลา 2–3 ตัวและปลาระดับสูง</p><p>บ่อ VIP: โอกาสสำเร็จเดิม ×1.15 (เพิ่มแบบสัมพัทธ์ 15%)</p><p>สุ่มชนิดเบ็ดใหม่ในแต่ละชั่วโมง ไม่ต้องกดเปิดโบนัส</p>');
  $('homeb').onclick=()=>{S.screen='lobby';S.pond=null;render()};$('toolbtn').onclick=tools;
  if($('skipb'))$('skipb').onclick=()=>{const m=mySeat();if(m){m.s.t=Date.now();tick()}};
  if($('skipcd'))$('skipcd').onclick=()=>{S.cdEnd=0;updatePond()};
@@ -236,7 +237,7 @@ function craftRod(){const a=CF.amt;const rows=[...FRUITS.map(([k,n])=>ingRow('fr
  $('pkf').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.flower=x.dataset.k;craftRod()});
  $('pkc').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.crop=x.dataset.k;craftRod()});
  bindStep(craftRod);
- $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'rod',quantity:a,rod:CF.rod,flower:CF.flower,crop:CF.crop});if(result){closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftRod);}};}
+ $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'rod',quantity:a,rod:CF.rod,flower:CF.flower,crop:CF.crop});if(result){if(!Array.isArray(result.results)||!Array.isArray(result.outputs)||!Array.isArray(result.consumed)){ann('ระบบกลางส่งรายละเอียดคราฟไม่ครบ กรุณาอัปเดต Cloud ทั้งชุด',false);return;}closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftRod);}};}
 
 function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('hedge-'+k,'hedge-'+k,n,20*a)),ingRow('item-stone','item-stone','หิน',300*a),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1000*a)];
  const ok=rows.every(r=>!r.includes('lack'));
@@ -245,7 +246,7 @@ function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('he
  <div class="lbl2">ใช้ทั้งหมด (×${a})</div><div class="ings">${rows.join('')}</div>${stepHTML()}
  <div class="btns"><button class="ghost" onclick="craftMenu()">◀ กลับ</button><button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button></div>`);
  $('pkc').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.crop=x.dataset.k;craftCrab()});bindStep(craftCrab);
- $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'crab',quantity:a,crop:CF.crop});if(result){closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftCrab);}};}
+ $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'crab',quantity:a,crop:CF.crop});if(result){if(!Array.isArray(result.results)||!Array.isArray(result.outputs)||!Array.isArray(result.consumed)){ann('ระบบกลางส่งรายละเอียดคราฟไม่ครบ กรุณาอัปเดต Cloud ทั้งชุด',false);return;}closeSheet();showCraftResult({title:'ผลคราฟอุปกรณ์ตกปลา',results:result.results,outputs:result.outputs,consumed:result.consumed},craftCrab);}};}
 function craftVip(){const a=CF.amt,rows=[ingRow('grass-blue','grass-blue','หญ้าฟ้า',1000*a),ingRow('fruit-apple','fruit-apple','แอปเปิล',300*a),ingRow('fruit-cherry','fruit-cherry','เชอร์รี',300*a),ingRow('flower-rose','flower-rose','กุหลาบ',300*a),ingRow('forest-iron','item-stone','เหล็ก',20*a)];const ok=rows.every(r=>!r.includes('lack'));sheet(`<h3>🎫 คราฟบัตร VIP</h3><div class="hint">สำเร็จ 10% · ได้ 1 ใบต่อครั้งสำเร็จ · พลาดใช้วัตถุดิบ</div><div class="ings">${rows.join('')}</div>${stepHTML()}<button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button>`);bindStep(craftVip);$('dock').onclick=async()=>{const out=await act({type:'craft',recipe:'vip',quantity:a});if(out){closeSheet();showCraftResult({title:'คราฟบัตร VIP',results:out.results,outputs:out.outputs,consumed:out.consumed},craftVip);}};}
 function adminPanel(){if(S.role!=='admin')return;sheet(`<h3>👑 ควบคุมบ่อตกปลา</h3><p>ตอนนี้ ${world?.mode==='open'?'เปิดฉุกเฉิน':world?.mode==='closed'?'ปิดฉุกเฉิน':'ตามเวลาไทย'}</p><div class="btns"><button class="big" data-mode="open">เปิดฉุกเฉิน / ทดสอบ</button><button class="ghost" data-mode="closed">ปิดฉุกเฉิน</button><button class="ghost" data-mode="auto">กลับตามเวลา</button></div><div class="hint">การเปิดมีผลกับผู้เล่นทุกคน เบ็ด บัตร VIP และคะแนนทำงานตามกติกาจริง</div>`);$('sheet').querySelectorAll('[data-mode]').forEach(b=>b.onclick=async()=>{if(await act({type:'admin',mode:b.dataset.mode})){closeSheet();render();}});}
 
@@ -297,6 +298,6 @@ function setSheet(si){const st=SETS[si],mn=setLevel(si);
 /* ---------- render ---------- */
 function render(){fitStage();renderTop();if(S.screen==='lobby')renderLobby();else renderPond()}
 closeSheet();render();
-if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}}});})();
+if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data&&(!world?.updatedAt||!data.updatedAt||data.updatedAt>=world.updatedAt)){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}}});})();
 addEventListener('pagehide',()=>{stopWatch?.();});
 

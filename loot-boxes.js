@@ -1,5 +1,5 @@
-import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?v=ss3-boxes-fixes4';
-import {CATALOG} from './catalog.js?v=ss3-boxes-fixes4';
+import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
+import {CATALOG} from './catalog.js?v=ss3-recovery6';
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n).toLocaleString('th-TH');
 const itemFor=box=>CATALOG.find(c=>c.k===box.key);

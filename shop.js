@@ -1,4 +1,4 @@
-import {ST,NEWS,WINES,TICK,DAY,marketMath} from './market-engine.js?v=ss3-boxes-fixes4';
+import {ST,NEWS,WINES,TICK,DAY,marketMath} from './market-engine.js?v=ss3-recovery6';
 const __H=parent.__HOST;if(!__H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const __LS={getItem:k=>__H.get(k),setItem:(k,v)=>{__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh)Object.assign(S,fresh)}},removeItem:k=>__H.del(k)};
 
 const IMG={"shop-bg":"images/shop-bg.webp","item-coinbag":"images/shop-item-coinbag.webp","stock-veg":"images/shop-stock-veg.webp","stock-fruit":"images/shop-stock-fruit.webp","stock-fish":"images/shop-stock-fish.webp","stock-wine":"images/shop-stock-wine.webp","stock-alpaca":"images/shop-stock-alpaca.webp","stock-bee":"images/shop-stock-bee.webp","wine-rose":"images/house-wine-rose.webp","wine-moon":"images/house-wine-moon.webp","wine-blood":"images/house-wine-blood.webp","wine-eclipse":"images/house-wine-eclipse.webp"};

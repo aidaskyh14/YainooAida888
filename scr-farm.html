@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-boxes-fixes4"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-recovery6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}
 .owner-rank{border:3px solid #d2a145!important;background:linear-gradient(110deg,#fff5d4,#ffdda0)!important;box-shadow:0 4px 14px #bb882b55;margin-bottom:16px}.owner-rank .rn{font-weight:800;color:#8a541f}
@@ -832,4 +832,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-boxes-fixes4"></script><script src="farm-cloud.js?v=ss3-boxes-fixes4"></script><script src="farm-drops.js?v=ss3-boxes-fixes4"></script><script src="loot-box-link.js?v=ss3-boxes-fixes4" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-recovery6"></script><script src="farm-cloud.js?v=ss3-recovery6"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-recovery6" data-box="all"></script></body></html>
