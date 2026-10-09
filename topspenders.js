@@ -6,7 +6,7 @@ let PLAYERS=[],roster=[],D={rows:[],updatedAt:0},admin=Host.admin;const ME=JSON.
 let pending=false;async function action(input){if(pending)return null;pending=true;try{return await Host.cloud('events',input);}catch(e){toast(e.message);return null;}finally{pending=false;}}
 const fmt=n=>Number(n||0).toLocaleString();
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
-function sorted(){return D.rows.filter(r=>r.total>0||r.today>0).sort((a,b)=>b.total-a.total||b.today-a.today)}
+function sorted(){const by=new Map(D.rows.map(r=>[r.uid,r]));return roster.map(p=>({uid:p.uid,name:p.name,today:0,total:0,...by.get(p.uid)})).sort((a,b)=>b.total-a.total||b.today-a.today)}
 function render(){const R=sorted(),col=n=>COLORS[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%COLORS.length];
  const pod=(r,c)=>r?'<div class="col c'+c+'"><div class="av" style="background:'+col(r.name)+'">'+esc(r.name[0])+'</div><div class="nm">'+esc(r.name)+'</div><div class="pt">💎 '+fmt(r.total)+'</div><div class="step">'+c+'</div></div>':'<div class="col c'+c+'"></div>';
  $('podium').innerHTML='<canvas class="spark" id="spark"></canvas>'+pod(R[1],2)+pod(R[0],1)+pod(R[2],3);

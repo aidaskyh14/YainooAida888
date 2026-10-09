@@ -26,8 +26,11 @@ export function soloAction(source,account,ctx,input,rng=Math.random){const state
  if(input.type==='bs-start'){
   if(state.bs?.phase==='active'&&ctx.now<state.bs.until)return result();if(state.bs?.phase==='active')fail('รับผลรอบเดิมก่อน');if(hours<10||hours>=18)fail('ยิงนกเปิด 10:00–18:00 เวลาไทย');if((progress.cd.bs||0)>ctx.now)fail('พักยิงนก 15 นาที');if(coins<3||(game.merit||0)<10000)fail('ใช้ 3 เหรียญและต้องมีกุศลอย่างน้อย 10,000 สำหรับยอดเสี่ยง');coins-=3;state.offer ||= birdOffer(nonce);state.bs={id:nonce,phase:'active',start:ctx.now,until:ctx.now+60000,values:state.offer,flights:birdFlights(nonce,state.offer),killed:[],hits:[0,0,0,0],count:0,sum:0,ammo:6,reload:0,recent:[],shots:0};return result();
  }
- if(input.type==='bs-shot'){
-  const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบยิงนกไม่ถูกต้อง');if(ctx.now>r.until+2000||input.t>ctx.now-r.start+500||ctx.now-r.start-input.t>2000)fail('เวลายิงหมดแล้วหรือรายการเก่า');fireBird(r,input);return result();
+ if(input.type==='bs-shot'||input.type==='bs-shots'){
+  const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบยิงนกไม่ถูกต้อง');const shots=input.type==='bs-shot'?[input]:input.shots;
+  if(!Array.isArray(shots)||!shots.length||shots.length>40)fail('รายการยิงไม่ถูกต้อง');
+  const maxAge=input.type==='bs-shot'?2000:15000;
+  for(const shot of shots){if(ctx.now>r.until+maxAge||shot.t>ctx.now-r.start+500||ctx.now-r.start-shot.t>maxAge)fail('เวลายิงหมดแล้วหรือรายการเก่า');fireBird(r,shot);}return result();
  }
  if(input.type==='bs-finish'){
   const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round||ctx.now<r.until)fail('รอบยิงนกยังไม่จบ');r.phase='done';r.gain=Math.max(-10000,r.sum);progress.cd.bs=ctx.now+15*60000;if(r.gain>0)reward={icon:'🐦',title:'ยิงนกฮาโลวีน +'+r.gain+' กุศล',merit:r.gain,items:{}};else game.merit=Math.max(0,(game.merit||0)+r.gain);state.offer=birdOffer(nonce);return result();

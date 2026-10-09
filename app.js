@@ -1,15 +1,15 @@
-import {observeGameplay} from './campaign-progress.js?v=ss3-20261008-lazy3';
+import {observeGameplay} from './campaign-progress.js?v=ss3-20261009-complete1';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
-import { deliverAdminGift } from './admin-mail.js?v=ss3-20261008-lazy3';
-import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261008-lazy3';
+import { deliverAdminGift } from './admin-mail.js?v=ss3-20261009-complete1';
+import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-20261009-complete1';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-20261008-lazy3';
-import { splitGame,joinGame } from './save-schema.js?v=ss3-20261008-lazy3';
-import { installBackupUI } from './save-backup.js?v=ss3-20261008-lazy3';
-import { CATALOG } from './catalog.js?v=ss3-20261008-lazy3';
+import { SplitSaveStore } from './save-store.js?v=ss3-20261009-complete1';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-20261009-complete1';
+import { installBackupUI } from './save-backup.js?v=ss3-20261009-complete1';
+import { CATALOG } from './catalog.js?v=ss3-20261009-complete1';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -45,7 +45,7 @@ const SCREEN_PARTS={
  house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
  catpen:['catpen'],safari:['animals-safari'],shop:['animals-market'],outings:['outings','house'],
- boat:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
+ boat:[],farmshop:['animals-farmshop'],adminshop:[],fishing:['animals-fishing'],
  minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
 };
 const sceneSubscriptions=new Set();
@@ -134,9 +134,8 @@ let cloudSaveTimer;
 function change(field) {
   if(field === 'g' && S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);
   S.dirty.add(field); showSave('กำลังบันทึกบนคลาวด์…');
-  if (S.frame) S.frame.style.pointerEvents = 'none';
   clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(() => flush().catch(() => {}), 300);
+  cloudSaveTimer = setTimeout(() => flush().catch(() => {}), 0);
 }
 function addItem(key, n) { S.P.bag[key] = Math.max(0, (S.P.bag[key] || 0) + n); if (!S.P.bag[key]) delete S.P.bag[key]; change('bag'); }
 function sizeOf(o) { return new Blob([JSON.stringify(o)]).size; }
@@ -333,19 +332,19 @@ function subSet(K, v) {
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
+const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',adminshop:'🛍️ ร้านค้ายัยหนู',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
 function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
-const CLOUD_HANDLERS={birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud'};
+const CLOUD_HANDLERS={birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
-let cloudBusy=false;
+let cloudBusy=false,cloudPromise=null;
 async function cloudAction(system,input) {
   if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
   if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');
   if(!CLOUD_HANDLERS[system])throw new Error('ไม่พบระบบที่เรียก');
-  cloudBusy=true;if(S.frame)S.frame.style.pointerEvents='none';
+  let finishCloud;cloudPromise=new Promise(resolve=>{finishCloud=resolve;});cloudBusy=true;if(input.type!=='status')showSave('กำลังบันทึกรายการ…');
   try {
-    frameSave();await flush();
+    if(S.dirty.size||S.saving)await flush();
     let pending=cloudPending.get(system);
     const recover=pending&&JSON.stringify(pending.input)!==JSON.stringify(input);
     if(!pending) {
@@ -362,15 +361,15 @@ async function cloudAction(system,input) {
     Object.assign(S.P,response.meta||{});S.P.g=joinGame(store.parts.values());
     cloudSequences.set(system,response.seq);cloudPending.delete(system);
     if(recover&&attempt===0){pending={input,seq:response.seq+1,id:crypto.randomUUID(),session:S.sessionId};cloudPending.set(system,pending);continue;}
-    return response;
+    if(input.type!=='status')showSave('บันทึกแล้ว ✓');return response;
     }
   } catch(e) {
     const c=e.code||'';
     if(!['functions/unavailable','functions/deadline-exceeded','functions/internal','functions/unknown'].includes(c)){
       cloudPending.delete(system);if(c==='functions/aborted')cloudSequences.delete(system);
     }
-    throw e;
-  } finally {cloudBusy=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
+    if(input.type!=='status')showSave(e.message||'ยังยืนยันการบันทึกไม่ได้',true);throw e;
+  } finally {cloudBusy=false;finishCloud();cloudPromise=null;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
 window.__HOST = {
   watchGameView(system,fn){return sceneWatch(doc(db,'players',S.user.uid,'gameViews',system),fn);},
@@ -416,18 +415,18 @@ async function goScreen(n) {
   if (S.navigating) return; S.navigating = true;
   if(S.frame)S.frame.style.pointerEvents='none';
   try {
-    frameSave();await flush();
+    if(cloudPromise)await cloudPromise;frameSave();await flush();
     const ids=[...BASE_PARTS,...SCREEN_PARTS[n]];
     S.P.g=await store.loadIds(ids);store.activate(ids);
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-20261008-lazy3';
+    S.frame.src='scr-'+n+'.html?v=ss3-20261009-complete1';
   }catch(e){toast(e.message||thaiError(e));}
-  finally{S.navigating=false;if(S.frame&&!S.blocked&&!S.dirty.size)S.frame.style.pointerEvents='';}
+  finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261008-lazy3&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-20261009-complete1&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
-async function openAdminOverlay() { try{frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
+async function openAdminOverlay() { try{if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
   return Object.entries(items || {}).map(([k, n]) => { const c = CAT[k]; return `<span>${c ? `<img src="${IMG(c.i)}" alt="">` : '🎁'}${esc(c ? c.n : k)} ×${fmt(n)}</span>`; }).join('');
 }
@@ -439,6 +438,7 @@ function openBag() {
 // ---------- ไปรษณีย์ ----------
 // แต่ละซองคือ 1 เอกสาร กดรับ = เพิ่มของเข้ากระเป๋า + ลบซอง ในรายการเดียวกัน (รับซ้ำไม่ได้)
 async function openMail() {
+  if(cloudPromise)await cloudPromise;
   modal('<h2>📮 ไปรษณีย์</h2><p class="note">กำลังเปิดตู้…</p>', [{ t: 'ปิด', c: 'gray' }]);
   let docs = [];
   try { const q = query(collection(db, 'mail', S.user.uid, 'items'), orderBy('createdAt', 'desc'), limit(60)); docs = (await getDocs(q)).docs; }
@@ -457,7 +457,7 @@ async function openMail() {
 function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') || p.startsWith('sub.') ? 'g.' + p : 'g.bag.' + p; }
 function addPath(o, path, n) { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); t[x] = t[x] || {}; t = t[x]; } t[ks[0]] = (t[ks[0]] || 0) + n; }
 async function claim(id, btn) {
-  busy(btn, true, 'กำลังรับ…'); frameSave();
+  busy(btn, true, 'กำลังรับ…'); if(cloudPromise)await cloudPromise;frameSave();
   const mref = doc(db, 'mail', S.user.uid, 'items', id);
   let got;
   try {

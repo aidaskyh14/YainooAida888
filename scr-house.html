@@ -238,7 +238,7 @@ function fertAll(){if(guard())return;const l=S.plots.map((p,i)=>p&&fStage(p)<3?i
  const need=l.reduce((s,i)=>s+FLOWERS[S.plots[i].f][2],0);
  open('<h3>🌼 ใส่ปุ๋ยนางฟ้าทั้งหมด</h3><div class="hint">ดอกไม้ที่กำลังโต '+l.length+' แปลง • แต่ละชนิดใช้ปุ๋ยไม่เท่ากัน</div><button class="opt" id="oFA"'+(S.bag.item.fert<need?' disabled':'')+'><i><img src="'+IMG['it-fert']+'"></i><span><b>ใส่ทั้งหมด '+l.length+' แปลง</b><small>ต้องใช้ '+need+' ชิ้น</small></span><span class="r">มี '+S.bag.item.fert+'</span></button>'+(S.bag.item.fert<need?'<div class="hint">ปุ๋ยไม่พอ ใส่ทีละแปลงแทนได้</div>':''));
  $('oFA').onclick=()=>{if(S.bag.item.fert<need)return;S.bag.item.fert-=need;l.forEach(i=>S.plots[i].t=Date.now()-mins(FLOWERS[S.plots[i].f][1]));save();closeAll();draw();toast('🌼 ดอกไม้บานทั้งหมด '+l.length+' แปลง')}}
-function harvestFlowers(l){const got={};l.forEach(i=>{const p=S.plots[i];if(!p||fStage(p)<3)return;const q=10;got[p.f]=(got[p.f]||0)+q;S.bag.flower[p.f]=(S.bag.flower[p.f]||0)+q;S.plots[i]=null});save();draw();
+function harvestFlowers(l){const got={};l.forEach(i=>{const p=S.plots[i];if(!p||fStage(p)<3)return;const q=2+Math.floor(Math.random()*4);got[p.f]=(got[p.f]||0)+q;S.bag.flower[p.f]=(S.bag.flower[p.f]||0)+q;S.plots[i]=null});save();draw();
  const t=Object.entries(got).map(([k,q])=>FLOWERS[k][0]+' ×'+q).join(' • ');if(t)toast('💐 เก็บเข้ากระเป๋าดอกไม้: '+t)}
 function pickAll(){if(guard())return;const l=S.plots.map((p,i)=>p&&fStage(p)===3?i:-1).filter(i=>i>=0);if(!l.length)return toast('ยังไม่มีดอกไม้บานนะ',1);harvestFlowers(l)}
 function tapBarrel(i){if(guard())return;const b=S.barrels[i];
