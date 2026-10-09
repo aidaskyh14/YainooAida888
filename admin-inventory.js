@@ -5,7 +5,7 @@ const put=(o,path,n)=>{const ks=path.split('.');if(ks.some(k=>blocked.has(k)))th
 const fillNumbers=o=>{let changed=false;for(const k of Object.keys(o||{})){if(blocked.has(k))continue;if(typeof o[k]==='number'&&Number.isFinite(o[k])){if(o[k]!==ADMIN_STOCK){o[k]=ADMIN_STOCK;changed=true;}}else if(o[k]&&typeof o[k]==='object'&&!Array.isArray(o[k]))changed=fillNumbers(o[k])||changed;}return changed;};
 export function refillAdminInventory(game,isAdmin,catalog) {
   if(!isAdmin)return false;
-  let changed=false;
+  let changed=false;game.unl ||= {};for(const k of ['c3','c4','f2','f3','f4'])if(!game.unl[k]){game.unl[k]=true;changed=true;}
   for(const c of catalog){const p=c.p;changed=put(game,p.startsWith('sub.')||p.startsWith('pend.')?p:'bag.'+p,ADMIN_STOCK)||changed;}
   for(const base of ['bag','pend'])if(game[base])changed=fillNumbers(game[base])||changed;
   for(const [id,fields]of Object.entries({barn:['stock'],birds:['vault','food'],dog:['bag'],alpaca:['bag']}))

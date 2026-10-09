@@ -161,7 +161,7 @@ const HT={gardener:'เจ้าแก้มป่องชาวสวน',bake
 const HTE={gardener:'🌻',baker:'🍞',explorer:'🧭',scholar:'📖',wizard:'🪄',sailor:'⚓'};
 IMG.fuel=emo('⛽','#FFE9D6');IMG.salt=emo('🧂','#EEE');IMG.merit=emo('🙏','#FFF3C9');IMG.frog=emo('🐸','#E7F7EF');IMG.rfish=emo('🐟','#E6F4FB');
 const ingImg=k=>IMG[k]||IMG['c-'+k]||emo('❓');
-const gfImg=g=>emo(g.ic,'#FFF3C9');
+const gfImg=g=>'images/gfood-'+g.id+'.webp';
 /* ---------- เซฟร่วม ---------- */
 const KEY='s3all-v1';
 function load(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}s=s||{merit:1000,bag:{}};s.bag=s.bag||{};

@@ -55,10 +55,10 @@ function project(){
  const g=JSON.parse(Host.get('s3all-v1')||'{}'),book=g.sub?.fishing||{};S.merit=g.merit||0;S.bag={rod:Object.fromEntries(RK.map(k=>[k,g.bag?.rod?.[k]||0])),crab:g.bag?.fishing?.crab||0,vip:g.bag?.fishing?.vip||0};S.cat=Object.fromEntries(Object.keys(FISH).map(k=>[k,book.cat?.[k]||{n:0,best:0}]));S.claimed=book.claimed||Array(8).fill(0);S.pondToday=book.pondToday||null;
  for(const[group,items]of Object.entries(g.bag||{}))for(const[k,n]of Object.entries(items))INV[group+'-'+k]=n;
  INV['item-stone']=g.bag?.forest?.stone||0;
- if(world){S.open=world.open;S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
+ if(world){S.gifts=[];S.open=world.open;S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
  S.myCut=quota.cut||0;S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
 }
-async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobbyBarSoft();updateLobby();}return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
+async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
 
 function luckyRod(){return RK[S.lucky]}
 
@@ -218,15 +218,15 @@ const CROPS=[['carrot','แครอท'],['corn','ข้าวโพด'],['pum
 const HEDGE=[['fang','เขี้ยวเม่น'],['quills','ขนเม่น'],['claw','เล็บเม่น'],['tail','หางเม่น']];
 const INV={};
 const CF={amt:1,rod:'bamboo',flower:'rose',crop:'carrot'};
-function craftMenu(){sheet(`<h3>🔨 คราฟ</h3><div class="cat" id="cr1"><img src="${IMG['rod-bamboo']}" alt="" style="width:2.4rem;height:2.4rem;object-fit:contain"><div>เบ็ดตกปลา<small>ผลไม้ ดอกไม้ หญ้า 5 สี พืชพรรณ · สำเร็จ 50%</small></div></div><div class="cat" id="cr2"><img src="${IMG['item-crabscissors']}" alt="" style="width:2.4rem;height:2.4rem;object-fit:contain"><div>กรรไกรปูจอมแสบ<small>ของดร็อปเม่น หิน พืชพรรณ · สำเร็จ 50%</small></div></div>`);
- $('cr1').onclick=craftRod;$('cr2').onclick=craftCrab}
+function craftMenu(){sheet(`<h3>🔨 คราฟ</h3><div class="cat" id="cr1"><img src="${IMG['rod-bamboo']}" alt="" style="width:2.4rem;height:2.4rem;object-fit:contain"><div>เบ็ดตกปลา<small>ผลไม้ ดอกไม้ หญ้า 5 สี พืชพรรณ · สำเร็จ 80%</small></div></div><div class="cat" id="cr2"><img src="${IMG['item-crabscissors']}" alt="" style="width:2.4rem;height:2.4rem;object-fit:contain"><div>กรรไกรปูจอมแสบ<small>ของดร็อปเม่น หิน พืชพรรณ · สำเร็จ 75%</small></div></div><div class="cat" id="cr3"><img src="${IMG['vip-card']}" style="width:2.4rem"><div>บัตร VIP<small>สำเร็จ 10% · หญ้าฟ้า 1,000</small></div></div>`);
+ $('cr1').onclick=craftRod;$('cr2').onclick=craftCrab;$('cr3').onclick=craftVip}
 function ingRow(key,img,name,need){const have=INV[key]||0,ok=have>=need;return`<div class="ing ${ok?'ok':'lack'}"><img src="${IMG[img]}" alt=""><span>${name}</span><span class="q">${nf(have)}/${nf(need)}</span></div>`}
 function pickerHTML(list,pre,cur,id){return`<div class="picker" id="${id}">${list.map(([k,n])=>`<div class="pk ${k===cur?'on':''}" data-k="${k}"><img src="${IMG[pre+k+(pre==='crop-'?'':'')]}" alt="">${n}<br>${nf(INV[(pre==='crop-'?'crop-':pre)+k]||0)}</div>`).join('')}</div>`}
 function stepHTML(){return`<div class="stepper"><button id="am-">−</button><b>${CF.amt}</b><button id="am+">＋</button></div>`}
 function bindStep(fn){$('am-').onclick=()=>{CF.amt=Math.max(1,CF.amt-1);fn()};$('am+').onclick=()=>{CF.amt=Math.min(10,CF.amt+1);fn()}}
-function craftRod(){const a=CF.amt;const rows=[...FRUITS.map(([k,n])=>ingRow('fruit-'+k,'fruit-'+k,n,100*a)),ingRow('flower-'+CF.flower,'flower-'+CF.flower,(FLOWERS.find(f=>f[0]===CF.flower)[1]),200*a),...GRASS.map(([k,n])=>ingRow('grass-'+k,'grass-'+k,'หญ้า'+n,500*a)),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1500*a)];
+function craftRod(){const a=CF.amt;const rows=[...FRUITS.map(([k,n])=>ingRow('fruit-'+k,'fruit-'+k,n,80*a)),ingRow('flower-'+CF.flower,'flower-'+CF.flower,(FLOWERS.find(f=>f[0]===CF.flower)[1]),150*a),...GRASS.map(([k,n])=>ingRow('grass-'+k,'grass-'+k,'หญ้า'+n,400*a)),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1200*a)];
  const ok=rows.every(r=>!r.includes('lack'));
- sheet(`<h3>🎣 คราฟเบ็ดตกปลา</h3><div class="hint">สำเร็จ 50% ต่อครั้ง · พลาดแล้ววัตถุดิบหายด้วย · คราฟได้ครั้งละ 1–10</div>
+ sheet(`<h3>🎣 คราฟเบ็ดตกปลา</h3><div class="hint">สำเร็จ 80% ต่อครั้ง · พลาดแล้ววัตถุดิบหายด้วย · คราฟได้ครั้งละ 1–10</div>
  <div class="lbl2">เลือกแบบเบ็ด</div><div class="picker" id="pkr">${RK.map(r=>`<div class="pk ${r===CF.rod?'on':''}" data-k="${r}"><img src="${IMG['rod-'+r]}" alt="">${RODS[r].e}<br>มี ${S.bag.rod[r]}</div>`).join('')}</div>
  <div class="lbl2">ดอกไม้ (เลือก 1 ชนิด)</div>${pickerHTML(FLOWERS,'flower-',CF.flower,'pkf')}
  <div class="lbl2">พืชพรรณ (เลือก 1 ชนิด)</div>${pickerHTML(CROPS,'crop-',CF.crop,'pkc')}
@@ -238,14 +238,15 @@ function craftRod(){const a=CF.amt;const rows=[...FRUITS.map(([k,n])=>ingRow('fr
  bindStep(craftRod);
  $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'rod',quantity:a,rod:CF.rod,flower:CF.flower,crop:CF.crop});if(result){ann('คราฟสำเร็จ '+result.crafted+' จาก '+a+' ครั้ง');craftRod();}};}
 
-function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('hedge-'+k,'hedge-'+k,n,30*a)),ingRow('item-stone','item-stone','หิน',300*a),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1000*a)];
+function craftCrab(){const a=CF.amt;const rows=[...HEDGE.map(([k,n])=>ingRow('hedge-'+k,'hedge-'+k,n,20*a)),ingRow('item-stone','item-stone','หิน',300*a),ingRow('crop-'+CF.crop,'crop-'+CF.crop,(CROPS.find(c=>c[0]===CF.crop)[1]),1000*a)];
  const ok=rows.every(r=>!r.includes('lack'));
- sheet(`<h3>🦀 คราฟกรรไกรปูจอมแสบ</h3><div class="hint">สำเร็จ 50% ต่อครั้ง · พลาดแล้ววัตถุดิบหายด้วย · คราฟได้ครั้งละ 1–10 · มีอยู่ ${S.bag.crab} อัน</div>
+ sheet(`<h3>🦀 คราฟกรรไกรปูจอมแสบ</h3><div class="hint">สำเร็จ 75% ต่อครั้ง · พลาดแล้ววัตถุดิบหายด้วย · คราฟได้ครั้งละ 1–10 · มีอยู่ ${S.bag.crab} อัน</div>
  <div class="lbl2">พืชพรรณ (เลือก 1 ชนิด)</div>${pickerHTML(CROPS,'crop-',CF.crop,'pkc')}
  <div class="lbl2">ใช้ทั้งหมด (×${a})</div><div class="ings">${rows.join('')}</div>${stepHTML()}
  <div class="btns"><button class="ghost" onclick="craftMenu()">◀ กลับ</button><button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button></div>`);
  $('pkc').querySelectorAll('.pk').forEach(x=>x.onclick=()=>{CF.crop=x.dataset.k;craftCrab()});bindStep(craftCrab);
  $('dock').onclick=async()=>{const result=await act({type:'craft',recipe:'crab',quantity:a,crop:CF.crop});if(result){ann('คราฟสำเร็จ '+result.crafted+' จาก '+a+' ครั้ง');craftCrab();}};}
+function craftVip(){const a=CF.amt,rows=[ingRow('grass-blue','grass-blue','หญ้าฟ้า',1000*a),ingRow('fruit-apple','fruit-apple','แอปเปิล',300*a),ingRow('fruit-cherry','fruit-cherry','เชอร์รี',300*a),ingRow('flower-rose','flower-rose','กุหลาบ',300*a),ingRow('forest-iron','item-stone','เหล็ก',20*a)];const ok=rows.every(r=>!r.includes('lack'));sheet(`<h3>🎫 คราฟบัตร VIP</h3><div class="hint">สำเร็จ 10% · ได้ 1 ใบต่อครั้งสำเร็จ · พลาดใช้วัตถุดิบ</div><div class="ings">${rows.join('')}</div>${stepHTML()}<button class="big" id="dock" ${ok?'':'disabled'}>คราฟ ${a} ครั้ง</button>`);bindStep(craftVip);$('dock').onclick=async()=>{const out=await act({type:'craft',recipe:'vip',quantity:a});if(out){ann('สำเร็จ '+out.crafted+' จาก '+a+' ครั้ง');craftVip();}};}
 function adminPanel(){if(S.role!=='admin')return;sheet(`<h3>🛠️ แผงแอดมิน</h3><div class="hint">เปิดตามเวลาไทย 11:00–17:00 และ 21:00–07:00</div><div class="btns"><button class="big" id="ac">${world?.closed?'ยกเลิกปิดบ่อ':'ปิดบ่อชั่วคราว'}</button></div>`);$('ac').onclick=async()=>{if(await act({type:'admin',closed:!world?.closed})){closeSheet();render();}};}
 
 
@@ -296,6 +297,6 @@ function setSheet(si){const st=SETS[si],mn=setLevel(si);
 /* ---------- render ---------- */
 function render(){fitStage();renderTop();if(S.screen==='lobby')renderLobby();else renderPond()}
 render();
-if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data){world=data;project();if(S.screen==='pond')updatePond();else updateLobby();}});})();
+if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}}});})();
 addEventListener('pagehide',()=>{stopWatch?.();});
 

@@ -284,5 +284,5 @@ $('pens').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.cur=+b.d
 $('dock').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.d==='c')return collect();if(view==='factory'&&b.dataset.d==='3')return goFactory();if(view==='factory'&&b.dataset.d!=='3'&&b.dataset.d!=='4'&&b.dataset.d!=='6')return ann('กลับไปทุ่งก่อนนะ (🌾)',1);DOCK[+b.dataset.d][2]()};
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
 addEventListener('resize',fit);fit();draw();requestAnimationFrame(loop);setInterval(tick,1000);setInterval(()=>{if(view==='factory'&&$('sheet').classList.contains('on')&&!$('ov').classList.contains('on')){openFactory()}},2000);
-setTimeout(()=>ann(S.pens.flat().length?'🦙 แตะอัลปาก้าเพื่อป้อนอาหาร/ตัดขน':'🦙 ⚙️ → รับอัลปาก้า → 🦙 วาง • ไอคอนด้านล่างคือเครื่องมือทั้งหมด'),400);
+setTimeout(()=>ann(S.pens.flat().length?'🦙 แตะอัลปาก้าเพื่อป้อนอาหาร/ตัดขน':'🦙 รับอัลปาก้าจากไปรษณีย์หรือกล่องสุ่ม แล้วกดวางลงคอก'),400);
 </script></body></html>
