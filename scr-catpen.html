@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="th"><head><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
-</script><script src="craft-result.js?v=ss3-recovery6"></script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกแมว – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+</script><script src="craft-result.js?v=ss3-fix12"></script><style>.demo{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>คอกแมว – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
 *,*::before,*::after{box-sizing:border-box}
@@ -165,7 +165,10 @@ const FB=Object.fromEntries(FOOD.map(f=>[f.id,f]));
 const KEY='s3all-v1';
 function load(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}s=s||{merit:1000,bag:{}};s.bag=s.bag||{};['flower','fruit','product','catfood','cat','box','item','grass'].forEach(k=>s.bag[k]=s.bag[k]||{});
  s.cat=s.cat||{list:[],drops:[],care:{},gift:0,cbox:0};return s}
-let S=load();const save=()=>{try{const cur=JSON.parse(__LS.getItem(KEY)||'null');if(cur){cur.bag=S.bag;cur.cat=S.cat;cur.merit=S.merit;__LS.setItem(KEY,JSON.stringify(cur))}else __LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+let S=load();
+/* บันทึกล้มเหลว = ไม่กลืน error: โหลดสถานะจริงจาก Host กลับมา แจ้งผู้เล่น แล้วโยน error ต่อ */
+function syncFromHost(){S=load();actors={};closeAll();draw()}
+const save=()=>{try{const cur=JSON.parse(__LS.getItem(KEY)||'null');if(cur){cur.bag=S.bag;cur.cat=S.cat;cur.merit=S.merit;__LS.setItem(KEY,JSON.stringify(cur))}else __LS.setItem(KEY,JSON.stringify(S));const e=__H&&__H.lastSetError;if(e)throw e}catch(e){syncFromHost();ann('บันทึกไม่สำเร็จ ของยังไม่เปลี่ยน กรุณาลองใหม่',1);throw e}};
 const fmt=n=>Number(n||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 let FAST=false;
 const T={hunger:()=>FAST?40e3:4*3600e3,life:()=>FAST?6*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:2*3600e3,gift:()=>FAST?45e3:864e5,cbox:()=>FAST?35e3:6*3600e3};
@@ -229,7 +232,7 @@ function openCraft(){closeAll();
   '<div class="qrow"><small>'+(mx>0?'คราฟได้ '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+f.id+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+f.id+'">+</button><button class="btn g sm" data-c="'+f.id+'"'+(mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
  const sb=$('sb');sb.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cq[b.dataset.m]=Math.max(1,cq[b.dataset.m]-1);openCraft()});
  sb.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,cq[b.dataset.p]+1);openCraft()});
- sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.catfood[f.id]=(S.bag.catfood[f.id]||0)+q;save();closeAll();showCraftResult({title:'คราฟอาหาร'+'แมว',results:Array(q).fill(true),outputs:[{name:f.n,image:IMG['food-'+f.id],quantity:q}],consumed:Object.entries(f.need).map(([k,n])=>({path:ING[k][0]+'.'+k,name:ING[k][1],image:ingImg(k),quantity:n*q}))},openCraft)})}
+ sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];if(!Object.entries(f.need).every(([k,n])=>have(k)>=n*q))return ann('วัตถุดิบไม่พอ',1);Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.catfood[f.id]=(S.bag.catfood[f.id]||0)+q;save();closeAll();showCraftResult({title:'คราฟอาหาร'+'แมว',results:Array(q).fill(true),outputs:[{name:f.n,image:IMG['food-'+f.id],quantity:q}],consumed:Object.entries(f.need).map(([k,n])=>({path:ING[k][0]+'.'+k,name:ING[k][1],image:ingImg(k),quantity:n*q}))},openCraft)})}
 /* ---------- ดูแลทั้งคอก: อาบน้ำ / นวด / เอนเตอร์เทน ---------- */
 const CARE={bath:['🛁','อาบน้ำ','🫧',[3,10]],massage:['💆','นวดตัว','💗',[3,10]],music:['🎵','เอนเตอร์เทน','🎶',[5,15]]};
 const today=()=>new Date().toDateString();
@@ -343,4 +346,4 @@ tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
 new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
 render();
 })();
-</script><script src="loot-box-link.js?v=ss3-recovery6" data-box="cat"></script></body></html>
+</script><script src="loot-box-link.js?v=ss3-fix12" data-box="cat"></script></body></html>

@@ -15,6 +15,12 @@ export const dayKey=now=>new Date(now+7*3600e3).toISOString().slice(0,10);
 export function recordCampaign(game,config,id,points,now,extra={}){
  const c=config?.[id];if(!c||!c.start||now<c.start||now>=c.end)return null;
  game.sub ||= {};const all=game.sub.campaigns ||= {},x=all[id]?.round===c.round?all[id]:(all[id]={round:c.round,score:0,claimed:[],box:{day:'',n:0},pumpPlots:0,items:{}});
+ const integer=v=>{const n=typeof v==='string'&&/^\d+$/.test(v)?Number(v):v;return Number.isSafeInteger(n)&&n>=0?n:null;};
+ x.items=x.items&&typeof x.items==='object'&&!Array.isArray(x.items)?x.items:{};for(const[k,v]of Object.entries(x.items))x.items[k]=integer(v)??0;
+ const earned=HALLOWEEN.reduce((n,v)=>n+(x.items[v[0]]||0),0);
+ x.pumpPlots=integer(x.pumpPlots)??(id==='pump'?earned*10:0);x.claimed=Array.isArray(x.claimed)?x.claimed:[];x.box ||= {day:'',n:0};
+ const score=typeof x.score==='string'&&/^\d+(\.\d+)?$/.test(x.score)?Number(x.score):x.score;
+ x.score=Number.isFinite(score)&&score>=0?score:(id==='pump'?HALLOWEEN.reduce((n,v)=>n+(x.items[v[0]]||0)*v[2],0):0);
  x.score=Math.max(0,Math.round((x.score+points)*10)/10);Object.assign(x,extra);return x;
 }
 export function campaignControl(config,input,ctx){
@@ -32,3 +38,14 @@ export function claimCampaign(game,config,input){
 export function seeded(str){let h=2166136261;for(const ch of str){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%10000)/10000;};}
 export function featuredMenus(now){const rng=seeded('cook'+dayKey(now)),list=Array.from({length:12},(_,i)=>i);for(let i=11;i>0;i--){const j=Math.floor(rng()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list.slice(0,3);}
 export function honeyMultiplier(now){const rng=seeded('honey'+dayKey(now)),a=Math.floor(rng()*22);let b=Math.floor(rng()*22);if(Math.abs(a-b)<3)b=(a+8)%22;const h=bkkHour(now);return h>=a&&h<a+2?2:h>=b&&h<b+2?.5:1;}
+/* Leaderboard rows from every player's campaign progress (rows: [{uid,name,data}] where data = sub.campaigns).
+   Keeps the top `keep` per campaign so the board document stays small however many players exist. */
+export function buildBoards(rows,settings,keep=300){
+ const boards={},totals={};
+ for(const c of Object.keys(settings||{})){
+  const round=settings[c]?.round;
+  const list=(rows||[]).flatMap(r=>{const x=r?.data?.[c];return x&&x.round===round?[{uid:r.uid,name:r.name||'ผู้เล่น',score:Number(x.score)||0}]:[];}).sort((a,b)=>b.score-a.score||String(a.uid).localeCompare(String(b.uid)));
+  totals[c]=list.length;boards[c]=list.slice(0,keep);
+ }
+ return {boards,totals};
+}

@@ -1,7 +1,7 @@
-import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-hotfix9';
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix12';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
-import {lurePen} from './bird-lure-engine.js?v=ss3-recovery6';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-recovery6';
+import {lurePen,SCROLL_RECIPES} from './bird-lure-engine.js?v=ss3-fix12';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix12';
 import {observeGameplay} from './campaign-progress.js?v=ss3-recovery6';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -13,7 +13,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-recovery6';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-recovery6';
 import { installBackupUI } from './save-backup.js?v=ss3-recovery6';
-import { CATALOG } from './catalog.js?v=ss3-recovery6';
+import { CATALOG } from './catalog.js?v=ss3-fix12';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -56,6 +56,16 @@ const sceneSubscriptions=new Set();
 let sceneVersion=0,campaignJobs=[];
 function stopSceneSubscriptions(){sceneVersion++;for(const stop of sceneSubscriptions)stop();sceneSubscriptions.clear();campaignConfig={};S.campaignConfigAt=0;}
 function sceneWatch(ref,fn){const version=sceneVersion;let stop=onSnapshot(ref,snap=>{if(version===sceneVersion)fn(snap.exists()?snap.data():null);},e=>{if(version===sceneVersion)showSave(e.message,true);});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};}
+// Server-synced clock: offset learned from any cloud response's serverNow (or serverClockCloud when none seen yet).
+let serverOffset=0,clockSyncedAt=0,clockSync=null,cloudFlushing=false,campaignKick=null;
+function noteServerNow(serverNow,sentAt){if(!Number.isFinite(serverNow)||!Number.isFinite(sentAt))return;const recv=Date.now();if(recv-sentAt>20000)return;serverOffset=Math.round(serverNow-(sentAt+recv)/2);clockSyncedAt=recv;}
+const serverNow=()=>Date.now()+serverOffset;
+function syncClock(){
+ if(clockSyncedAt&&Date.now()-clockSyncedAt<30*60000)return Promise.resolve(serverOffset);
+ if(clockSync)return clockSync;
+ clockSync=(async()=>{const sent=Date.now();try{const out=(await httpsCallable(functions,'serverClockCloud')({})).data;noteServerNow(out?.serverNow,sent);}catch(e){}if(!clockSyncedAt||Date.now()-clockSyncedAt>=30*60000)clockSyncedAt=Date.now()-25*60000;clockSync=null;return serverOffset;})();
+ return clockSync;
+}
 function queueGameplay(before,after,source,boxes){
  const increased=(a,b)=>Object.entries(b||{}).some(([k,v])=>typeof v==='number'&&v>(a?.[k]||0));
  const pet=['barn','birds','dog','alpaca','catpen'].includes(source);
@@ -63,23 +73,41 @@ function queueGameplay(before,after,source,boxes){
  const stockChanged=pet&&JSON.stringify(before.bag)!==JSON.stringify(after.bag);
  const meritChanged=pet&&(after.merit||0)>(before.merit||0);
  const craftChanged=craft&&['food','gfood','wine','flower','hedge','crop'].some(k=>increased(before.bag?.[k],after.bag?.[k]));
- if(boxes.length||stockChanged||meritChanged||craftChanged)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,now:Date.now()});
+ // `at` is the device clock; the server offset is applied when the job is scored.
+ if(boxes.length||stockChanged||meritChanged||craftChanged)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,at:Date.now()});
 }
+const CAMPAIGN_SOURCES={pet:['barn','birds','dog','alpaca','catpen'],cook:['farm','house','backyard'],pump:['farm','house','backyard']};
+// A cached config is only trusted for a job after the fetch when every campaign that job could score is already running.
+function configCovers(cfg,job,now){const ids=job.boxes?.length?['box']:Object.keys(CAMPAIGN_SOURCES).filter(id=>CAMPAIGN_SOURCES[id].includes(job.source));return ids.every(id=>cfg?.[id]?.start&&cfg[id].start<=now&&now<cfg[id].end);}
 async function prepareGameplay(){
  if(!campaignJobs.length)return;
- const jobs=campaignJobs.slice();
+ let jobs=campaignJobs.slice();
  await store.loadIds(['animals-campaigns']);
- if(!S.campaignConfigAt||Date.now()-S.campaignConfigAt>=60000){const cfg=await getDoc(doc(db,'world','campaigns'));campaignConfig=cfg.exists()?cfg.data():{};S.campaignConfigAt=Date.now();}
+ await syncClock();
+ const jobNow=job=>Number.isFinite(job.at)?job.at+serverOffset:job.now;
+ const age=Date.now()-(S.campaignConfigAt||0),stale=!S.campaignConfigAt||age>=60000;
+ const uncovered=jobs.findIndex(j=>(j.at??j.now)>=(S.campaignConfigAt||0)&&!configCovers(campaignConfig,j,jobNow(j)));
+ if(stale||(uncovered>=0&&age>=5000)){const cfg=await getDoc(doc(db,'world','campaigns'));campaignConfig=cfg.exists()?cfg.data():{};S.campaignConfigAt=Date.now();}
+ else if(uncovered>=0){
+   // A campaign may have started after the cached read: score these jobs after a fresh read instead of dropping them.
+   jobs=jobs.slice(0,uncovered);
+   if(!campaignKick)campaignKick=setTimeout(()=>{campaignKick=null;if(campaignJobs.length&&S.user&&!S.blocked){S.dirty.add('g');flush().catch(()=>{});}},5000-age);
+   if(!jobs.length)return;
+ }
  let progress=clone(S.P.g.sub?.campaigns||joinGame(store.parts.values()).sub?.campaigns||{});
  for(const job of jobs){
    const before=clone(job.before),after=clone(job.after);before.sub ||= {};before.sub.campaigns=progress;
-   observeGameplay(before,after,job.source,campaignConfig,job.now,job.boxes);
+   observeGameplay(before,after,job.source,campaignConfig,jobNow(job),job.boxes);
    progress=after.sub.campaigns;
    for(const[k,n]of Object.entries(after.bag?.halloween||{})){const added=n-(job.after.bag?.halloween?.[k]||0);if(added>0){S.P.g.bag.halloween ||= {};S.P.g.bag.halloween[k]=(S.P.g.bag.halloween[k]||0)+added;}}
  }
  S.P.g.sub ||= {};S.P.g.sub.campaigns=progress;
  store.activeIds.add('animals-campaigns');campaignJobs.splice(0,jobs.length);
 }
+/* Pending merit changes from other players' games (players/{uid}/ledger), applied by the server on any action. */
+function showLedger(rows){const box=document.createElement('div');box.setAttribute('role','status');box.style.cssText='position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9999;width:min(92vw,360px);background:#2A2140;color:#fff;border-radius:16px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45;cursor:pointer';
+  box.innerHTML='<b style="display:block;color:#FFE9A8;margin-bottom:4px">✨ ปรับกุศลจากกิจกรรม</b>'+rows.map(r=>`<div style="margin-top:4px"><b style="color:${r.merit<0?'#FFB0A8':'#9BF0C8'}">${r.merit>0?'+':''}${fmt(r.merit)}</b> ${esc(r.title||'')}${r.msg?`<br><small style="opacity:.85">${esc(r.msg)}</small>`:''}</div>`).join('')+'<small style="display:block;opacity:.6;margin-top:6px">แตะเพื่อปิด</small>';
+  box.onclick=()=>box.remove();document.body.appendChild(box);setTimeout(()=>box.remove(),9000);}
 let toastT;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400); }
 function modal(html, acts = [{ t: 'ตกลง' }]) {
@@ -148,6 +176,8 @@ function showSave(t, bad) { const d = $('#saveDot'); d.hidden = false; d.textCon
 async function flush() {
   if (!S.user || !S.P || S.blocked || !S.dirty.size) return;
   if (S.saving) { await S.saving; return flush(); }
+  // Campaign progress must not be written while a cloud action (which may also write it) is in flight.
+  if(cloudPromise&&!cloudFlushing){await cloudPromise.catch(()=>{});return flush();}
   if(S.preparing){await S.preparing;return flush();}
   S.preparing=prepareGameplay();try{await S.preparing;}finally{S.preparing=null;}
   const fields = [...S.dirty]; S.dirty.clear();
@@ -215,7 +245,9 @@ async function enter(user) {
     if(consolidated || refilled || retired){stage='บันทึกกระเป๋าแอดมินบนคลาวด์';await store.save(S.P,['g']);}
     campaignJobs=[];stopSceneSubscriptions();
     stage='เปิดหน้าโหลดสวน';
-    startSaver();await loadSettings();if(!S.admin&&!S.settings.open){renderClosed();return;}renderGame('loading');
+    startSaver();await loadSettings();if(!S.admin&&!S.settings.open){renderClosed();return;}
+    stage='ตรวจกุศลที่รอปรับจากเกมอื่น';await cloudAction('ledger',{type:'status'}).catch(()=>null);
+    renderGame('loading');
   } catch (e) {
     clearInterval(S.timer);
     const message=e?.message||'ไม่พบรายละเอียด',code=e?.code||'ไม่ระบุรหัส';
@@ -319,7 +351,19 @@ function renderClosed() {
   $('#tMail').onclick = openMail; $('#tOut').onclick = logout;
 }
 function refreshBar() { }
-async function logout() { frameSave(); await flush(); stopSceneSubscriptions();S.frame=null;await signOut(auth); }
+async function logout() {
+  // Save everything (page state, queued campaign points, any in-flight cloud action) before signing out.
+  if(cloudPromise)await cloudPromise;
+  frameSave();
+  try { await flush(); }
+  catch (e) {
+    if(!S.blocked){
+      const leave=await new Promise(done=>modal('<h2>⚠️ ยังบันทึกไม่สำเร็จ</h2><p>ถ้าออกตอนนี้ ของที่เพิ่งทำอาจหายได้</p><p class="note">'+esc(e.message||thaiError(e))+'</p>',[{t:'ออกเลย',c:'gray',f:()=>done(true)},{t:'ลองบันทึกใหม่',f:()=>done(false)}]));
+      if(!leave)return logout();
+    }
+  }
+  stopSceneSubscriptions();S.frame=null;await signOut(auth);
+}
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
@@ -345,22 +389,60 @@ function subGet(K) {
   if (C.flat) { sub.bag = sub.bag || {}; for (const c of FLAT) { const v = getp(G, 'bag.' + c.p); if (v) sub.bag[c.k] = v; else delete sub.bag[c.k]; } }
   return JSON.stringify(sub);
 }
+// ---- Barn save guards: placed animals may only disappear through a sell/clear the page declared this session ----
+const BARN_LIFE_DAYS={chicken:3,fish:3,pig:7,cow:12},BARN_SELL={chicken:5,fish:5,pig:10,cow:20};
+const barnReleases=new Set();let barnReloadAt=0;
+const barnKey=(t,i,a)=>t+':'+i+':'+(a&&a.born);
+function refuseBarn(message,reload){
+  showSave(message,true);
+  if(reload&&Date.now()-barnReloadAt>3000){barnReloadAt=Date.now();setTimeout(reload,50);}
+  throw Object.assign(new Error(message),{code:'save/barn-guard'});
+}
+function guardBarn(G,o,nowMs){
+  if(store&&store.partial&&store.loadedIds&&!store.loadedIds.has('animals-barn'))
+    refuseBarn('ข้อมูลโรงเรือนยังโหลดไม่ครบ ไม่บันทึกทับ กำลังโหลดใหม่…',()=>store.loadIds(['animals-barn']).then(()=>{const j=joinGame([...store.parts.values()].filter(p=>p.path?.[0]==='sub'&&p.path?.[1]==='barn'));if(j.sub?.barn){S.P.g.sub ||= {};S.P.g.sub.barn=Object.assign(S.P.g.sub.barn||{},j.sub.barn);}reloadScreen();}).catch(e=>showSave(e.message||'โหลดโรงเรือนไม่สำเร็จ',true)));
+  const prev=G.sub?.barn?.animals;if(!prev||typeof prev!=='object')return;
+  const lost=[];let sellValue=0;
+  for(const [t,slots] of Object.entries(prev)){
+    if(!Array.isArray(slots))continue;
+    slots.forEach((a,i)=>{
+      if(!a)return;const next=o.animals?.[t]?.[i];if(next&&next.born===a.born)return;
+      const declared=barnReleases.has(barnKey(t,i,a)),expired=a.born+(BARN_LIFE_DAYS[t]||0)*864e5<=nowMs;
+      if(!declared&&!expired){lost.push([t,i,a]);sellValue+=BARN_SELL[t]||0;}
+    });
+  }
+  // Older cached pages do not declare sells; a sale still shows as the matching merit gain in the same save.
+  const meritGain=typeof o.merit==='number'?o.merit-(G.merit||0):0;
+  if(lost.length&&!(meritGain>0&&meritGain>=sellValue))refuseBarn('ไม่บันทึก: สัตว์ในโรงเรือนจะหายโดยไม่ได้ขาย/ปล่อย กำลังโหลดข้อมูลล่าสุด…',reloadScreen);
+  for(const [t,slots] of Object.entries(prev))if(Array.isArray(slots))slots.forEach((a,i)=>{const next=o.animals?.[t]?.[i];if(a&&!(next&&next.born===a.born))barnReleases.delete(barnKey(t,i,a));});
+}
 function subSet(K, v) {
   const before = JSON.stringify(S.P.g), prior=clone(S.P.g);
-  const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { return; }
+  const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }
   const G = clone(S.P.g || {}); G.sub = G.sub || {}; const first = !G.sub[C.id];
+  if (C.id === 'barn') guardBarn(G, o, typeof serverNow === 'function' ? serverNow() : Date.now());
   if (!first && typeof o.merit === 'number') G.merit = o.merit;
   delete o.merit;
   for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{})); delp(o, a); }
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
   if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
-  if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; change('g'); setTimeout(reloadScreen, 50); return; }
+  if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
 const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',adminshop:'🛍️ ร้านค้ายัยหนู',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
-function frameSave() { try { S.frame && S.frame.contentWindow.eval('try{save()}catch(e){}'); } catch (e) { } }
-const CLOUD_HANDLERS={integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud'};
+// lastSetError: the latest failed Host.set/subSet (cleared at the start of every set). frameSave(true) throws it.
+let lastSetError = null;
+function setFailed(e) { if (!(e instanceof Error)) e = new Error(String(e || 'บันทึกไม่สำเร็จ')); e.hostSet = true; lastSetError = e; showSave(e.message || 'บันทึกไม่สำเร็จ', true); return e; }
+function frameSave(strict) {
+  lastSetError = null; let err = null;
+  try { const w = S.frame && S.frame.contentWindow; if (w) w.eval('if(typeof save==="function")save()'); }
+  catch (e) { if (e && e.name !== 'SecurityError') err = e; }
+  err = lastSetError || err; if (err && !err.hostSet) setFailed(err);
+  if (err && strict) throw err;
+  return err;
+}
+const CLOUD_HANDLERS={lure:'lureRequestCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud',ledger:'ledgerCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -372,7 +454,7 @@ async function cloudAction(system,input) {
   let finishCloud;cloudPromise=new Promise(resolve=>{finishCloud=resolve;});cloudBusy=true;if(input.type!=='status')showSave('กำลังบันทึกรายการ…');
   try {
     await checkApi();
-    if(S.dirty.size||S.saving)await flush();
+    if(S.dirty.size||S.saving){cloudFlushing=true;try{await flush();}finally{cloudFlushing=false;}}
     let pending=cloudPending.get(system);
     const recover=pending&&JSON.stringify(pending.input)!==JSON.stringify(input);
     if(!pending) {
@@ -384,10 +466,11 @@ async function cloudAction(system,input) {
       cloudPending.set(system,pending);
     }
     for(let attempt=0;attempt<(recover?2:1);attempt++){
-    const response=(await httpsCallable(functions,CLOUD_HANDLERS[system])(pending)).data;
+    const sentAt=Date.now(),response=(await httpsCallable(functions,CLOUD_HANDLERS[system])(pending)).data;noteServerNow(response.serverNow,sentAt);
     store.accept(response.actorParts||[]);
     Object.assign(S.P,response.meta||{});S.P.g=joinGame(store.parts.values());
     cloudSequences.set(system,response.seq);cloudPending.delete(system);
+    if(response.ledgerApplied?.length&&typeof showLedger==='function')showLedger(response.ledgerApplied);
     if(recover&&attempt===0){pending={input,seq:response.seq+1,id:crypto.randomUUID(),session:S.sessionId};cloudPending.set(system,pending);continue;}
     if(input.type!=='status')showSave('บันทึกแล้ว ✓');return response;
     }
@@ -400,13 +483,23 @@ async function cloudAction(system,input) {
   } finally {cloudBusy=false;finishCloud();cloudPromise=null;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
 window.__HOST = {
-  watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[])})),
-  openBoxes:kind=>showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave();await flush();},game:()=>S.P.g,open:input=>{stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';return cloudAction('boxes',input);},refresh:reloadScreen}),
+  watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[],serverNow())})),
+  // Loot boxes open over the live scene (no blank frame). While the overlay owns the inventory the old
+  // scene is frozen: its saves are dropped so a stale copy can never write box counts back; it reloads after close.
+  openBoxes:kind=>{const H=window.__HOST;let frozen=null;
+    // The freeze ends as soon as the reloaded scene (a new document) first reads the Host, not at its slower load event.
+    const freeze=()=>{if(frozen)return;let doc=null;try{doc=S.frame?.contentDocument||null;}catch(e){}frozen={set:H.set,del:H.del,get:H.get,doc};H.set=()=>{};H.del=()=>{};
+      H.get=function(k){let d=null;try{d=S.frame?.contentDocument||null;}catch(e){}if(frozen&&reloading&&d&&d!==frozen.doc&&d.URL!=='about:blank')thaw();return (frozen?frozen.get:H.get).call(H,k);};stopSceneSubscriptions();};
+    let reloading=false;
+    const thaw=()=>{if(!frozen)return;H.set=frozen.set;H.del=frozen.del;H.get=frozen.get;frozen=null;reloading=false;};
+    return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
+      open:input=>{freeze();return cloudAction('boxes',input);},
+      refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
   catalogItem(path){return CATALOG.find(c=>c.p===path.replace(/^bag\./,''));},
   catalogName(name){return CATALOG.find(c=>c.n===name||c.k===name);},
   get catalog(){return CATALOG;},
   boxList(){return BOXES.map(b=>({id:b.id,image:b.image,name:CAT[b.key].n,count:getBoxCount(S.P.g,b)}));},
-  async commit(){frameSave();await flush();},
+  async commit(){frameSave(true);await flush();if(S.blocked)throw setFailed(new Error('เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน'));},
   watchGameView(system,fn){return sceneWatch(doc(db,'players',S.user.uid,'gameViews',system),fn);},
   recordCampaignBox(reward){if(campaignBoxes.length<10000)campaignBoxes.push({...reward});},
   get admin() { return S.admin; },
@@ -422,19 +515,34 @@ window.__HOST = {
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
   },
-  set(k, v) {
-    if (!S.P || S.blocked) return;
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { return; } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+  set(k, v) { lastSetError = null; try { hostSet(k, v); } catch (e) { throw setFailed(e); } },
+  get lastSetError() { return lastSetError; },
+  del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
+  // Legacy path (old cached bird page / functions not deployed): the page already deducted materials locally.
+  // If the direct write is refused (rules require lureRequestCloud), give the materials back and reload the page.
+  birdReq: sp => { addDoc(collection(db, 'birdReqs'), { uid: S.user.uid, name: S.P.name, sp, status: 'wait', at: serverTimestamp() }).catch(() => {
+    const recipe=SCROLL_RECIPES[sp];
+    if(recipe&&S.P?.g){S.P.g.bag ||= {};for(const [path,q] of Object.entries(recipe)){const [g,k]=path.split('.');S.P.g.bag[g] ||= {};S.P.g.bag[g][k]=(Number(S.P.g.bag[g][k])||0)+q;}change('g');if(S.screen==='birds')setTimeout(reloadScreen,300);}
+    toast('ส่งคำขอไม่สำเร็จ คืนวัตถุดิบแล้ว ลองใหม่อีกครั้ง'); }); },
+  // One server transaction: deduct scroll materials + create the request. {legacy:true} when the function is not deployed yet.
+  async lureRequest(sp){
+    try{return await cloudAction('lure',{type:'request',sp});}
+    catch(e){if(String(e.code||'').includes('not-found'))return {legacy:true};throw e;}
+  },
+  serverNow:()=>serverNow(),
+  syncClock:()=>syncClock(),
+  barnRelease(type,slot,born){if(barnReleases.size<200)barnReleases.add(type+':'+slot+':'+born);},
+  openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
+  ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
+};
+function hostSet(k, v) {
+    if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
     S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
-  },
-  del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
-  birdReq: sp => { addDoc(collection(db, 'birdReqs'), { uid: S.user.uid, name: S.P.name, sp, status: 'wait', at: serverTimestamp() }).catch(() => toast('ส่งคำขอไม่สำเร็จ ลองใหม่อีกครั้ง')); },
-  openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
-  ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
-};
+}
 function renderGame(screen) {
   if (!document.getElementById('scr')) {
     $('#app').innerHTML = `<div id="gbar" class="gbar" hidden><button id="gback">🌱 กลับฟาร์ม</button><b id="gttl"></b></div><iframe id="scr" title="ในสวนของยัยหนู"></iframe><div id="ov" class="ov" hidden></div>`;
@@ -455,11 +563,11 @@ async function goScreen(n) {
     S.P.g=await store.loadIds(ids);store.activate(ids);if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-hotfix9';
+    S.frame.src='scr-'+n+'.html?v=ss3-fix12';
   }catch(e){toast(e.message||thaiError(e));}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-hotfix9&r=' + Date.now(); }
+function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-fix12&r=' + Date.now(); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
@@ -584,21 +692,44 @@ async function tabBirds() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
   let rq = [];
   try { rq = (await getDocs(query(collection(db, 'birdReqs'), where('status', '==', 'wait'), limit(100)))).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
-  const SPN = { ostrich: '🦤 นกกระจอกเทศ', dodo: '🦤 นกโดโด้' };
-  B.innerHTML = `<div class="box"><h3>🦤 คำขอล่อนกที่รออนุมัติ (${rq.length})</h3>${rq.map(r => `<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp] || r.sp}</b><button class="btn sm" data-ok="${r.id}">อนุมัติ</button><button class="btn sm gray" data-no="${r.id}">ไม่อนุมัติ</button></div>`).join('') || '<p class="note">ไม่มีคำขอรออยู่</p>'}
-    <p class="note">อนุมัติ = นกเข้าคอกคัมภีร์ (คอก 1) โดยตรง • คอกละ 10 ตัว อายุ 48 ชั่วโมง · ไม่อนุมัติ = ส่งกุศลปลอบใจ 100–200</p></div>`;
+  const SPN = { ostrich: '🦢 นกกระจอกเทศ', dodo: '🦤 นกโดโด้' };
+  B.innerHTML = `<div class="box"><h3>🦤 คำขอล่อนกที่รออนุมัติ (${rq.length})</h3>${rq.map(r => `<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp] || esc(r.sp)}</b><button class="btn sm" data-ok="${esc(r.id)}">อนุมัติ</button><button class="btn sm gray" data-no="${esc(r.id)}">ไม่อนุมัติ</button></div>`).join('') || '<p class="note">ไม่มีคำขอรออยู่</p>'}
+    <p class="note">อนุมัติ = นกเข้าคอกคัมภีร์ (คอก 1) ทันที + แจ้งเตือนทางไปรษณีย์ • อายุ 48 ชม. นับจากตอนอนุมัติ · คอก 1 เต็ม = นกบินหนี ส่งกุศลปลอบใจ 100–200 · ไม่อนุมัติ = กุศลปลอบใจ 100–200</p></div>`;
+  const call=async(request,decision)=>{
+    if(cloudPromise)await cloudPromise;frameSave();await flush();
+    const result=(await httpsCallable(functions,'birdRequestsCloud')({request,decision})).data;
+    if(result.actorParts?.length){store.accept(result.actorParts);S.P.g=joinGame(store.parts.values());}
+    return result;
+  };
   const done = async (r, ok,repair=false) => {
     try {
-      if(cloudPromise)await cloudPromise;frameSave();await flush();
-      const result=(await httpsCallable(functions,'birdRequestsCloud')({request:r.id,decision:repair?'repair':ok?'approve':'reject'})).data;
-      if(result.actorParts?.length){store.accept(result.actorParts);S.P.g=joinGame(store.parts.values());}
-      toast(ok?'อนุมัติแล้ว นกเข้าคอกคัมภีร์ (คอก 1)':'ส่งกุศลปลอบใจแล้ว');tabBirds();
+      const result=await call(r.id,repair?'repair':ok?'approve':'reject');
+      toast(repair?(result.repair==='skip'?(result.reason==='full'?'คอก 1 เต็ม ยังย้ายไม่ได้':'ไม่พบนกในซองหรือคลังให้ย้าย'):'ย้ายนกเข้าคอก 1 แล้ว'):result.status==='flew'?'คอก 1 เต็ม นกบินหนี ส่งกุศลปลอบใจแล้ว':ok?'อนุมัติแล้ว นกเข้าคอกคัมภีร์ (คอก 1)':'ส่งกุศลปลอบใจแล้ว');tabBirds();
     } catch(e){toast(e.message||thaiError(e));}
   };
   B.querySelectorAll('[data-ok]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.ok), true));
   B.querySelectorAll('[data-no]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.no), false));
+  const repairBox=document.createElement('div');repairBox.className='box';
+  repairBox.innerHTML='<h3>🛠️ คำขอเก่าที่อนุมัติแบบเดิม (นกเข้าคลัง)</h3><p class="note">ซองยังไม่รับ = ลบซองแล้วนกเข้าคอก 1 · รับซองแล้ว = ย้ายนก 1 ตัวจากคลังถ้ามี · ไม่แตะกุศล/ของอื่น · กดซ้ำได้ ไม่ย้ายซ้ำ · อายุ 48 ชม. นับจากตอนซ่อม</p><div class="row"><button class="btn sm" id="lureRepairAll">ซ่อมคำขอเก่าทั้งหมด</button></div><div id="lureRepairList"></div>';
+  B.appendChild(repairBox);
+  $('#lureRepairAll').onclick=async()=>{
+    const btn=$('#lureRepairAll');if(btn.disabled)return;btn.disabled=true;
+    const total={checked:0,mail:0,vault:0,admitted:0,full:0,nobird:0,errors:0},failed=[];let cursor='';
+    try{
+      for(let page=0;page<500;page++){
+        btn.textContent='กำลังซ่อม… ตรวจแล้ว '+total.checked;
+        const out=await call(cursor,'repairAll');
+        for(const k in total)total[k]+=Number(out.summary?.[k])||0;failed.push(...(out.failed||[]));
+        if(!out.next)break;cursor=out.next;
+      }
+      modal(`<h2>🛠️ ซ่อมคำขอเก่าเสร็จแล้ว</h2><p>ตรวจ ${fmt(total.checked)} คำขอ</p><p>✅ ลบซองที่ยังไม่รับ → เข้าคอก 1: ${fmt(total.mail)}<br>✅ ย้ายจากคลัง → คอก 1: ${fmt(total.vault)}${total.admitted?'<br>✅ อยู่ในคอก 1 แล้ว: '+fmt(total.admitted):''}<br>⏸️ คอก 1 เต็ม (ไว้ซ่อมใหม่ทีหลัง): ${fmt(total.full)}<br>⏸️ ไม่มีนกในซอง/คลัง: ${fmt(total.nobird)}${total.errors?'<br>⚠️ ผิดพลาด: '+fmt(total.errors):''}</p>${failed.length?'<p class="note">'+failed.slice(0,5).map(f=>esc(f.request)+': '+esc(f.message)).join('<br>')+'</p>':''}`);
+    }catch(e){toast(e.message||thaiError(e));}
+    finally{tabBirds();}
+  };
   try{const old=(await getDocs(query(collection(db,'birdReqs'),where('status','==','ok'),limit(100)))).docs.map(d=>({id:d.id,...d.data()})).filter(r=>r.route!=='pen1-v2');
-    if(old.length){const repair=document.createElement('div');repair.className='box';repair.innerHTML='<h3>ย้ายนกคัมภีร์เก่าที่เข้าคลังผิด</h3><p class="note">ให้ผู้เล่นรับซองเดิมและออกจากเกมก่อน ย้ายครั้งละ 1 ตัวจากคลังไปคอก 1 ไม่เพิ่มนกใหม่</p>'+old.map(r=>`<div class="row"><b>${esc(r.name)} · ${SPN[r.sp]||r.sp}</b><button class="btn sm" data-repair="${r.id}">ย้ายเข้าคอก 1</button></div>`).join('');B.appendChild(repair);repair.querySelectorAll('[data-repair]').forEach(b=>b.onclick=()=>done(old.find(r=>r.id===b.dataset.repair),true,true));}
+    const list=$('#lureRepairList');if(!list)return;
+    list.innerHTML=old.length?old.map(r=>`<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp]||esc(r.sp)}</b><button class="btn sm" data-repair="${esc(r.id)}">ซ่อมคำขอนี้</button></div>`).join(''):'<p class="note">ไม่พบคำขอเก่าที่ต้องซ่อม (100 รายการแรก)</p>';
+    list.querySelectorAll('[data-repair]').forEach(b=>b.onclick=()=>done(old.find(r=>r.id===b.dataset.repair),true,true));
   }catch(e){toast(e.message||thaiError(e));}
 }
 async function tabPlayers() {

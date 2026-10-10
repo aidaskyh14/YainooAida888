@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-recovery6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix12"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}
 .owner-rank{border:3px solid #d2a145!important;background:linear-gradient(110deg,#fff5d4,#ffdda0)!important;box-shadow:0 4px 14px #bb882b55;margin-bottom:16px}.owner-rank .rn{font-weight:800;color:#8a541f}
@@ -264,7 +264,14 @@ const fmt=n=>n.toLocaleString('en-US');
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';
  const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px';sizeCanvas()}
 let tt;function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='toast'+(err?' err':''),2400)}
-window.harvestPop=function(src,rect,q){if(!rect)return;const target=$('menuBtn').getBoundingClientRect();for(let j=0;j<Math.min(5,Math.max(1,q));j++){const el=document.createElement('img');el.src=src;Object.assign(el.style,{position:'fixed',left:(rect.left+rect.width/2-25)+'px',top:(rect.top+rect.height*.4-25)+'px',width:'50px',height:'50px',objectFit:'contain',zIndex:50,pointerEvents:'none',filter:'drop-shadow(0 4px 4px #0003)'});document.body.appendChild(el);el.animate([{transform:'translate(0,0) scale(.5)',opacity:0},{transform:'translate('+(j-2)*16+'px,-60px) scale(1.2)',opacity:1,offset:.16},{transform:'translate('+(j-2)*16+'px,20px) scale(1)',opacity:1,offset:.3},{transform:'translate('+(j-2)*16+'px,12px) scale(1.1)',opacity:1,offset:.4},{transform:'translate('+(j-2)*16+'px,18px) scale(1)',opacity:1,offset:.72},{transform:'translate('+(target.left-rect.left-rect.width/2+25)+'px,'+(target.top-rect.top-rect.height*.4+25)+'px) scale(.3)',opacity:0}],{duration:2800,delay:j*90,easing:'ease-in-out',fill:'forwards'});setTimeout(()=>el.remove(),3000+j*90);}};
+window.harvestPop=function(src,rect,q){if(!rect||!src)return;const mb=$('menuBtn'),tb=mb.getBoundingClientRect(),n=Math.min(5,Math.max(1,Math.round(q)||1)),sx=rect.left+rect.width/2,sy=rect.top+rect.height*.4,dx=tb.left+tb.width/2-sx,dy=tb.top+tb.height/2-sy,D=2600;
+ const T=(x,y,sc,r)=>'translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px) rotate('+(r||0).toFixed(1)+'deg) scale('+sc+')';
+ for(let j=0;j<n;j++){const el=document.createElement('img');el.src=src;el.alt='';el.onerror=()=>el.remove();Object.assign(el.style,{position:'fixed',left:(sx-25)+'px',top:(sy-25)+'px',width:'50px',height:'50px',objectFit:'contain',zIndex:50,pointerEvents:'none',filter:'drop-shadow(0 4px 4px #0003)'});document.body.appendChild(el);
+  const s=(j-(n-1)/2)*18,lx=s*1.3,peak=-70-(j%2)*12,cx=(lx+dx)/2+s,cy=Math.min(14,dy)-130,frames=[{transform:T(0,0,.4),opacity:0,easing:'ease-out'},{transform:T(s,peak,1.2,s/3),opacity:1,offset:.14,easing:'ease-in'},{transform:T(lx,16,'1.12,.86'),opacity:1,offset:.27,easing:'ease-out'},{transform:T(lx,2,1),opacity:1,offset:.34,easing:'ease-in'},{transform:T(lx,14,'1.06,.94'),opacity:1,offset:.4},{transform:T(lx,14,1),opacity:1,offset:.56}];
+  for(let k=1;k<=6;k++){const t=k/6,u=1-t,x=u*u*lx+2*u*t*cx+t*t*dx,y=u*u*14+2*u*t*cy+t*t*dy;frames.push({transform:T(x,y,(1-.65*t).toFixed(2),t*25),opacity:k<6?1:.2,offset:.56+.44*t});}
+  const a=el.animate(frames,{duration:D,delay:j*90,fill:'forwards'});a.onfinish=()=>{el.remove();if(j===n-1)bagSparkle();};setTimeout(()=>el.remove(),D+400+j*90);}
+ function bagSparkle(){const r=mb.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;try{mb.animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:420,easing:'ease-out'});}catch(e){}
+  for(let i=0;i<8;i++){const p=document.createElement('span'),ang=i/8*Math.PI*2,d=26+(i%2)*12;p.textContent=i%2?'✦':'✧';Object.assign(p.style,{position:'fixed',left:(cx-7)+'px',top:(cy-9)+'px',fontSize:(12+(i%3)*3)+'px',color:i%3?'#ffd54a':'#fff',textShadow:'0 0 6px #ffb300',zIndex:51,pointerEvents:'none'});document.body.appendChild(p);p.animate([{transform:'translate(0,0) scale(.3)',opacity:1},{transform:'translate('+(Math.cos(ang)*d).toFixed(1)+'px,'+(Math.sin(ang)*d).toFixed(1)+'px) scale(1)',opacity:1,offset:.6},{transform:'translate('+(Math.cos(ang)*d*1.3).toFixed(1)+'px,'+(Math.sin(ang)*d*1.3).toFixed(1)+'px) scale(.4)',opacity:0}],{duration:650,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();setTimeout(()=>p.remove(),900);}}};
 let st;function saving(){/* Host reports actual persistence; no fake success timer. */}
 function box(x,y,w,h,cls,fn,html){const d=document.createElement('div');d.className=cls;Object.assign(d.style,{left:x/W*100+'%',top:y/H*100+'%',width:w/W*100+'%',height:h/H*100+'%'});if(html)d.innerHTML=html;if(fn)d.onclick=fn;return d}
 /* ---------- ฉาก ---------- */
@@ -351,11 +358,15 @@ $('dSleep').onclick=()=>{closeAll();sleep()};
 /* ---------- กระเป๋า ---------- */
 let bagTab='crop';const BT={crop:'🥬 ผัก',flower:'🌸 ดอกไม้',food:'🍲 อาหาร',wine:'🍷 ไวน์',hedge:'🦔 ของเม่น',item:'✨ ไอเทม'};
 const ITN={fert:'ปุ๋ยนางฟ้า',cake:'เค้ก',coconut:'มะพร้าว',angel:'ปีกนางฟ้า'};
-function bagName(t,k){return t==='crop'?CN[k]:t==='flower'?FLN[k]:t==='wine'?WN[k]:t==='hedge'?HN[k]:t==='item'?ITN[k]:k}
-function bagImg(t,k){return t==='crop'?(IMG['p-'+k]||IMG[k+'4']):t==='flower'?IMG['fl-'+k]:t==='wine'?IMG['wine-'+k]:t==='hedge'?IMG['hedge-'+k]:t==='item'?IMG['it-'+k]:t==='food'?IMG[FOODIMG[k]]:''}
-function renderBag(){$('bagTabs').innerHTML=Object.entries(BT).map(([k,v])=>'<button class="'+(k===bagTab?'on':'')+'" data-k="'+k+'">'+v+'</button>').join('');
- const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>q>0);
- $('bagGrid').innerHTML=e.length?e.map(([k,q])=>'<div class="it"><img src="'+bagImg(bagTab,k)+'"><b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
+/* ชื่อ/รูปจากแคตตาล็อกกลาง (Host.catalogItem) เมื่อหน้านี้ไม่รู้จักไอเทม เช่น น้ำมัน หมวก ใบอนุญาต กล่องดนตรี */
+const BAGX={fruit:'🍎 ผลไม้',grass:'🌿 หญ้า',forest:'🪵 วัสดุป่า',product:'🥚 ผลผลิตสัตว์',bird:'🪶 ของนก',tree:'🌳 ต้นผลไม้',gfood:'🍲 อาหารสวน',drink:'🧃 เครื่องดื่ม',box:'🎁 กล่องสุ่ม',birdbox:'🎁 กล่องนก',halloween:'🎃 ฮาโลวีน',rod:'🎣 เบ็ด',fishing:'🎣 ตกปลา',catfood:'🐟 อาหารแมว',cat:'🐱 แมว',hamster:'🐹 แฮมสเตอร์'};
+const bagCat=(t,k)=>{try{return parent.__HOST.catalogItem(t+'.'+k)||null}catch(e){return null}},bagQ=v=>Number.isSafeInteger(v)&&v>0?v:0;
+function bagTabsAll(){const t={...BT};for(const[g,o]of Object.entries(S.bag||{}))if(!t[g]&&o&&typeof o==='object'&&Object.values(o).some(bagQ))t[g]=BAGX[g]||((Object.keys(o).map(k=>bagCat(g,k)).find(Boolean)||{}).g)||g;return t}
+function bagName(t,k){return (t==='crop'?CN[k]:t==='flower'?FLN[k]:t==='wine'?WN[k]:t==='hedge'?HN[k]:t==='item'?ITN[k]:null)||(bagCat(t,k)||{}).n||k}
+function bagImg(t,k){const l=t==='crop'?(IMG['p-'+k]||IMG[k+'4']):t==='flower'?IMG['fl-'+k]:t==='wine'?IMG['wine-'+k]:t==='hedge'?IMG['hedge-'+k]:t==='item'?IMG['it-'+k]:t==='food'?IMG[FOODIMG[k]]:'';if(l)return l;const c=bagCat(t,k);return c&&c.i?'images/'+c.i:''}
+function renderBag(){const tabs=bagTabsAll();if(!tabs[bagTab])bagTab='crop';$('bagTabs').innerHTML=Object.entries(tabs).map(([k,v])=>'<button class="'+(k===bagTab?'on':'')+'" data-k="'+k+'">'+v+'</button>').join('');
+ const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>bagQ(q));
+ $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
 /* ---------- เพื่อน ---------- */
 const FR=[];
@@ -810,10 +821,10 @@ window.showUnlock=function(id){S.unl=S.unl||{};const ix=UNL.findIndex(u=>u[0]===
  const[ ,title,need]=UNL[ix];let ok=true,rows=[];
  for(const k in need){let n=need[k],h,lab;
   if(k==='anycrop'){const[bk,bv]=bestOf(S.bag.crop);h=bv;lab='ผักชนิดใดก็ได้ 1 ชนิด'+(bk?' (ใช้'+(CN[bk]||bk)+')':'')}
-  else if(k==='anyflower'){const[bk,bv]=bestOf(S.bag.flower);h=bv;lab='ดอกไม้ชนิดใดก็ได้ 1 ชนิด'}
+  else if(k==='anyflower'){const[bk,bv]=bestOf(S.bag.flower);h=bv;lab='ดอกไม้ชนิดใดก็ได้ 1 ชนิด'+(bk?' (ใช้'+(FLN[bk]||bk)+')':'')}
   else if(k==='grass5'){h=Math.min(...Object.keys(GN).map(c=>(S.bag.grass||{})[c]||0));lab='หญ้า 5 สี สีละ'}
   else{h=have(k);lab={wood:'ไม้',stone:'หิน',rope:'เชือก',steel:'เหล็ก'}[k]||(CN[k.slice(5)]||'ผัก')}
-  if(h<n)ok=false;rows.push('<div style="display:flex;justify-content:space-between;padding:.2rem 0"><span>'+lab+'</span><b style="color:'+(h>=n?'#2F8A65':'#C8443D')+'">'+fmt(Math.min(h,n))+' / '+fmt(n)+'</b></div>')}
+  if(h<n)ok=false;rows.push('<div style="display:flex;justify-content:space-between;padding:.2rem 0"><span>'+lab+'</span><b style="color:'+(h>=n?'#2F8A65':'#C8443D')+'">'+fmt(Math.max(0,Number(h)||0))+' / '+fmt(n)+'</b></div>')}
  H.ask('🔓 ปลด'+title,rows.join(''),ok?'ปลดล็อกเลย':'',()=>{if(window.farmUnlock)return window.farmUnlock(id);for(const k in need){const n=need[k];
    if(k==='anycrop'){const[bk]=bestOf(S.bag.crop);S.bag.crop[bk]-=n}else if(k==='anyflower'){const[bk]=bestOf(S.bag.flower);S.bag.flower[bk]-=n}
    else if(k==='grass5'){Object.keys(GN).forEach(c=>S.bag.grass[c]-=n)}else if(k.startsWith('crop.'))S.bag.crop[k.slice(5)]-=n;else S.bag.forest[k]-=n}
@@ -832,4 +843,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-recovery6"></script><script src="farm-cloud.js?v=ss3-hotfix9"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-recovery6" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix12"></script><script src="farm-cloud.js?v=ss3-fix12"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix12" data-box="all"></script></body></html>

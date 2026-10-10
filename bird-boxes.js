@@ -1,1 +1,2 @@
-(()=>{const H=parent.__HOST,b=document.createElement('button');b.innerHTML='<span>🎁</span>กล่องสุ่มนก / กล่องทั้งหมด';b.onclick=e=>{e.stopPropagation();if(typeof closeAll==='function')closeAll();H.openBoxes('ostrich').catch(e=>ann(e.message,1));};document.getElementById('fan').appendChild(b);})();
+// REQUIREMENTS §8: no extra "กล่องทั้งหมด" button in the tool fan. Bird boxes (ostrich/dodo) open from the bag's box tab (loot-box-link.js).
+// Kept as an empty script so pages that still include it load cleanly.

@@ -806,15 +806,15 @@ export const CATALOG = [
   },
   {
     "k": "bird-ostrich",
-    "n": "นกกระจอกเทศ",
-    "i": "birds-scroll-ostrich.webp",
+    "n": "ตัวนกกระจอกเทศ (เข้าคลังนก)",
+    "i": "birds-ostrich-idle.webp",
     "g": "สัตว์",
     "p": "sub.birds.vault.ostrich"
   },
   {
     "k": "bird-dodo",
-    "n": "นกโดโด้",
-    "i": "birds-scroll-dodo.webp",
+    "n": "ตัวนกโดโด้ (เข้าคลังนก)",
+    "i": "birds-dodo-idle.webp",
     "g": "สัตว์",
     "p": "sub.birds.vault.dodo"
   },

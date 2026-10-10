@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-recovery6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix12"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองป่าต้องห้าม – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;--moss:#6CC9A8;--gold:#F2B33D;--night:#28345E}
@@ -138,7 +138,9 @@ function loadAll(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(
 let S=loadAll();
 function freshF(){return{cnt:{tree:6,rock:5,gold:1,glow:0},grass:{green:3,yellow:1,red:1,pink:0,blue:0},next:Date.now()+HOUR(),e:MAXE,et:Date.now(),elixir:0,pend:{wood:0,stone:0,grass:{}}}}
 let F;try{F=JSON.parse(__LS.getItem(FKEY)||'null')}catch(e){}F=F||freshF();
-function save(){try{S2=loadAll();S2.bag=S.bag;__LS.setItem(KEY,JSON.stringify(S2));__LS.setItem(FKEY,JSON.stringify(F))}catch(e){}}
+/* บันทึกล้มเหลว = ไม่กลืน error: โหลดสถานะจริงจาก Host กลับมา แจ้งผู้เล่น แล้วโยน error ต่อ */
+function save(){try{S2=loadAll();S2.bag=S.bag;__LS.setItem(KEY,JSON.stringify(S2));let e=__H&&__H.lastSetError;if(e)throw e;__LS.setItem(FKEY,JSON.stringify(F));e=__H&&__H.lastSetError;if(e)throw e}catch(e){syncFromHost();ann('บันทึกไม่สำเร็จ ของยังไม่เปลี่ยน กรุณาลองใหม่',1);throw e}}
+function syncFromHost(){S=loadAll();try{F=JSON.parse(__LS.getItem(FKEY)||'null')||F}catch(e){}layout();closeAll();draw()}
 let S2;
 const fmt=n=>Number(n||0).toLocaleString('en-US');
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
@@ -215,7 +217,7 @@ function guardOpen(){if(ADMIN||isOpen())return true;showClosed();return false}
 function showClosed(){const m=collectAll(true);const mins=untilOpen();
  $('closedTxt').innerHTML='เปิดทุกวัน <b style="display:inline;font-size:inherit">18:00–05:59</b> (เวลาไทย)<br>'+(mins?'เปิดอีกครั้งในอีก '+Math.floor(mins/60)+' ชม. '+(mins%60)+' นาที':'')+(m?'<br>🎒 เก็บของที่ค้างบนพื้นเข้ากระเป๋าให้แล้ว':'');$('closed').classList.add('on')}
 $('closedBack').onclick=()=>goFarm();
-function goFarm(){collectAll(true);try{parent.postMessage({go:'farm'},'*')}catch(e){}}
+function goFarm(){try{collectAll(true)}catch(e){}try{parent.postMessage({go:'farm'},'*')}catch(e){}}
 /* ---------- ชีต ---------- */
 function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on')}
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
@@ -259,7 +261,7 @@ $('energy').onclick=()=>{if(guardOpen())openDrinks()};
 /* ---------- กระเป๋า (ส่วนของป่า) ---------- */
 function openBag(){closeAll();const sec=[['forest','🪵 วัสดุป่า'],['grass','🌿 หญ้า'],['drink','🧃 เครื่องดื่มพลังงาน']];
  open('<h3>🎒 กระเป๋า • ส่วนของป่า</h3><div class="hint">ในเกมจริงอยู่ในกระเป๋าหลัก แยกเป็น 3 หมวดนี้</div>'+sec.map(([t,l])=>{const e=Object.entries(S.bag[t]).filter(([,q])=>q>0);
-  return '<div class="sec">'+l+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell"><img src="'+imgOf(t,k)+'" alt=""><b>'+(t==='drink'?DRINK[k].n:NAMES[t][k])+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="empty">ยังไม่มีของหมวดนี้</div>')+'</div>'}).join(''))}
+  return '<div class="sec">'+l+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell"><img src="'+imgOf(t,k)+'" alt=""><b>'+((t==='drink'?DRINK[k]&&DRINK[k].n:NAMES[t][k])||((parent.__HOST&&parent.__HOST.catalogItem&&parent.__HOST.catalogItem(t+'.'+k))||{}).n||k)+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="empty">ยังไม่มีของหมวดนี้</div>')+'</div>'}).join(''))}
 /* ---------- ตั้งค่าทดลอง ---------- */
 function openSet(){closeAll();
  open('<h3>⚙️ ตั้งค่าหน้าทดลอง</h3><div class="hint">มีเฉพาะในตัวอย่างนี้ ในเกมจริงไม่มี</div>'+

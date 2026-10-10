@@ -72,7 +72,11 @@ let HOUR=3600000; // ทดลอง: 1 ชม.ในเกม = 10 วินา
 const KEY='s3barn3';let S;try{S=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}
 function fresh(){const now=Date.now(),s={pen:'chicken',animals:{},trough:{},bag:{},items:{pestle:0,hay:0,musicbox:0,bell:0,medicine:0},stock:{chicken:0,fish:0,pig:0,cow:0},cool:0,lastVisit:now,sneeze:{day:'',who:[]}};
  ORDER.forEach((t,k)=>{s.animals[t]=Array(9).fill(null).map((_,i)=>false?{born:now-i*HOUR*3,next:now+HOUR*TYPES[t].prod*(0.15+Math.random()*.8),sick:false}:null);s.trough[t]={n:0,pestle:0,hay:0,musicbox:0,bell:0}});return s}
-S=__fill(fresh(),S);const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+S=__fill(fresh(),S);
+/* บันทึกไม่สำเร็จต้องแจ้ง ไม่กลืน error (ตัวกลางปฏิเสธเมื่อข้อมูลไม่ครบหรือสัตว์จะหายโดยไม่ได้ขาย/ปล่อย แล้วโหลดหน้าใหม่) */
+let saveErrAt=0;const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){if(Date.now()-saveErrAt>4000){saveErrAt=Date.now();try{ann('⚠️ บันทึกไม่สำเร็จ: '+((e&&e.message)||'ลองใหม่อีกครั้ง'),1)}catch(_){}}}};
+/* แจ้งตัวกลางก่อนเคลียร์ช่อง: ขาย/ปล่อยตัวที่หมดอายุ เป็นการกระทำที่ตั้งใจ */
+const release=(t,i)=>{const a=S.animals[t][i];if(a&&__H&&typeof __H.barnRelease==='function')__H.barnRelease(t,i,a.born)};
 let pen=S.pen;
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
 let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}
@@ -112,7 +116,7 @@ $('shade').onclick=closeAll;
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.floor(s/60)+' นาที '+(s%60)+' วิ':s+' วิ'};
 const gameT=ms=>{const h=ms/HOUR;return h>=24?Math.floor(h/24)+' วัน '+Math.floor(h%24)+' ชม.':h>=1?h.toFixed(1)+' ชม.':Math.round(h*60)+' นาที'};
 function tapAnimal(i){const a=S.animals[pen][i],T=TYPES[pen];
- if(dead(pen,a))return open('<h3>🕊️ '+T.an+'ช่องที่ '+(i+1)+' หมดอายุแล้ว</h3><div class="hint">ครบ '+T.life+' วันแล้ว ผลผลิตที่ผลิตไว้ยังอยู่ในราง</div><div class="row"><button class="btn g" id="clr">ปล่อยไปและเคลียร์ช่อง</button></div>'),$('clr').onclick=()=>{S.animals[pen][i]=null;save();closeAll();draw()};
+ if(dead(pen,a))return open('<h3>🕊️ '+T.an+'ช่องที่ '+(i+1)+' หมดอายุแล้ว</h3><div class="hint">ครบ '+T.life+' วันแล้ว ผลผลิตที่ผลิตไว้ยังอยู่ในราง</div><div class="row"><button class="btn g" id="clr">ปล่อยไปและเคลียร์ช่อง</button></div>'),$('clr').onclick=()=>{release(pen,i);S.animals[pen][i]=null;save();closeAll();draw()};
  if(a.sick)return open('<h3>🤒 '+T.an+'ช่องที่ '+(i+1)+' ติดหวัด</h3><div class="hint">หยุดผลิตจนกว่าจะรักษา</div><button class="opt" id="cure"'+(S.items.medicine<1?' disabled':'')+'><img src="'+IMG['i-medicine']+'"><b>ใช้ยาน้ำผึ้งมะนาว<small>1 ชิ้นต่อ 1 ตัว</small></b><span>มี '+S.items.medicine+'</span></button>'),$('cure').onclick=()=>{S.items.medicine--;a.sick=false;a.next=Date.now()+T.prod*HOUR;save();closeAll();draw();ann('🍯 '+T.an+'หายหวัดแล้ว กลับมาผลิตต่อ')};
  open('<h3>'+T.e+' '+T.an+' ช่องที่ '+(i+1)+'</h3><div class="hint">ผลิตเสร็จในอีก '+gameT(a.next-Date.now())+' • อายุเหลือ '+gameT(lifeLeft(a))+'</div>'+boostOpts(1,'one',i)+'<div class="row" style="margin-top:.6rem"><button class="btn gray" id="sell">💸 ขายออก (+'+SELL[pen]+' กุศล)</button></div>');$('sell').onclick=()=>sellAnimal(i)}
 function boostOpts(n,mode,i){const cd=S.cool-Date.now();if(cd>0)return '<div class="hint" style="font-weight:700">⏱️ เพิ่งใช้ของเร่งไป รออีก '+fmt(cd)+' (กันกดรัวให้ระบบบันทึกทัน)</div>';
@@ -156,5 +160,5 @@ function placeAnimal(i){const T=TYPES[pen],n=S.stock[pen]||0;
  $('put').onclick=()=>{open('<h3>ยืนยันวาง'+T.an+'?</h3><div class="hint">นับอายุ '+T.life+' วันตั้งแต่ตอนนี้ และยกเลิกไม่ได้</div><div class="row"><button class="btn gray" id="pn">ยกเลิก</button><button class="btn g" id="py">วางเลย</button></div>');
   $('pn').onclick=closeAll;$('py').onclick=()=>{S.stock[pen]--;S.animals[pen][i]={born:Date.now(),next:Date.now()+T.prod*HOUR,sick:false};save();closeAll();draw();ann(T.e+' วาง'+T.an+'แล้ว เริ่มผลิตเลย!')}}}
 function sellAnimal(i){const T=TYPES[pen];open('<h3>💸 ขาย'+T.an+'ตัวนี้?</h3><div class="hint">ได้ '+SELL[pen]+' กุศล • ขายแล้วเอาคืนไม่ได้ • ผลผลิตในรางยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>');
- $('sn').onclick=closeAll;$('sy').onclick=()=>{S.animals[pen][i]=null;S.merit=(S.merit||0)+SELL[pen];save();closeAll();draw();ann('💸 ขาย'+T.an+'แล้ว +'+SELL[pen]+' กุศล')}}
+ $('sn').onclick=closeAll;$('sy').onclick=()=>{release(pen,i);S.animals[pen][i]=null;S.merit=(S.merit||0)+SELL[pen];save();closeAll();draw();ann('💸 ขาย'+T.an+'แล้ว +'+SELL[pen]+' กุศล')}}
 </script></body></html>

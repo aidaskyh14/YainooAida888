@@ -18,6 +18,6 @@
   setTimeout(()=>group.remove(),1100);
  };
  window.miniTableEffect=(st,title,changes=[])=>{
-  const el=layer(st),group=document.createElement('div');el.appendChild(group);add(group,'mgfx-title',.5,.30,title);for(const c of changes)add(group,'mgfx-score',c.x/100,c.y/100,(c.amount>0?'+':'')+Number(c.amount).toLocaleString(),`--color:${c.amount<0?'#ff8a8a':'#b9ffe0'}`);setTimeout(()=>group.remove(),1900);
+  const el=layer(st),group=document.createElement('div');el.appendChild(group);add(group,'mgfx-title',.5,.30,title);for(const c of changes)add(group,'mgfx-score',Math.max(.18,Math.min(.82,c.x/100)),c.y/100,(c.amount>0?'+':'')+Number(c.amount).toLocaleString(),`--color:${c.amount<0?'#ff8a8a':'#b9ffe0'}`);setTimeout(()=>group.remove(),1900);
  };
 })();

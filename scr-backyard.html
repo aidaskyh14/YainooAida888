@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-recovery6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix12"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>หลังบ้าน – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
@@ -159,9 +159,12 @@ const gfImg=g=>'images/gfood-'+g.id+'.webp';
 /* ---------- เซฟร่วม ---------- */
 const KEY='s3all-v1';
 function load(){let s=null;try{s=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}s=s||{merit:1000,bag:{}};s.bag=s.bag||{};
- ['crop','product','river','gfood','hamster','box','item'].forEach(k=>s.bag[k]=s.bag[k]||{});s.ham=s.ham||{list:[],drop:0};return s}
+ ['crop','product','river','gfood','hamster','box','item',...Object.values(ING).map(x=>x[0])].forEach(k=>{if(!s.bag[k]||typeof s.bag[k]!=='object')s.bag[k]={}});s.ham=s.ham||{list:[],drop:0};return s}
 let S=load();
-function save(){try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const quantity=n=>Number.isSafeInteger(n)&&n>=0?n:0;
+/* บันทึกล้มเหลว = ไม่กลืน error: โหลดสถานะจริงจาก Host กลับมา แจ้งผู้เล่น แล้วโยน error ต่อ */
+function syncFromHost(){S=load();actors={};closeAll();draw();hud()}
+function save(){try{__LS.setItem(KEY,JSON.stringify(S));const e=__H&&__H.lastSetError;if(e)throw e}catch(e){syncFromHost();ann('บันทึกไม่สำเร็จ ของยังไม่เปลี่ยน กรุณาลองใหม่',1);throw e}}
 const fmt=n=>Number(n||0).toLocaleString('en-US');const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 let USER={name:'มดแดง',admin:false};try{USER=JSON.parse(__LS.getItem('s3user')||'null')||USER}catch(e){}
 /* ---------- โหมดทดลอง ---------- */
@@ -215,7 +218,7 @@ function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').c
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
 $('shade').onclick=closeAll;
 let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}
-const have=k=>S.bag[ING[k][0]][k]||0;
+const have=k=>quantity((S.bag[ING[k][0]]||{})[k]);
 const needHTML=(need,t)=>'<div class="needs">'+Object.entries(need).map(([k,q])=>{const n=q*t,ok=have(k)>=n;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+ingImg(k)+'" alt="">'+ING[k][1]+' '+fmt(have(k))+'/'+fmt(n)+'</span>'}).join('')+'</div>';
 const maxT=need=>Math.min(10,...Object.entries(need).map(([k,q])=>Math.floor(have(k)/q)));
 /* ---------- เตา: สมุดเมนูอาหารสวน ---------- */
@@ -224,7 +227,7 @@ function openBook(tab){if(tab)gTab=tab;closeAll();const no=nightOpen();
  open('<h3>📖 สมุดเมนูอาหารสวน</h3><div class="hint">คราฟได้สูงสุด 10 ครั้งต่อรอบ • ทอยแยกทุกครั้ง • ครั้งที่พลาด วัตถุดิบถูกใช้ไปแล้ว</div><div class="tabs">'+Object.entries(GCAT).map(([k,v])=>'<button data-t="'+k+'" class="'+(k===gTab?'on':'')+'">'+v+'</button>').join('')+'</div>'+
  (gTab==='night'?'<div class="hint">'+(no?'🌙 เปิดอยู่ถึง 02:00 น.':'🔒 เมนูรอบดึกเปิด 22:00–02:00 น. (เวลาไทย)')+'</div>':'')+
  GF.filter(g=>g.cat===gTab).map(g=>{const mx=maxT(g.need),q=Math.max(1,Math.min(gq[g.id]||1,10)),lock=g.cat==='night'&&!no;gq[g.id]=q;
-  return '<div class="rc'+(lock?' lock':'')+'"><div class="hd"><img src="'+gfImg(g)+'" alt=""><div><b>'+g.n+'</b><small>สำเร็จ '+g.ch+'% • กุศล '+(g.mer[0]===g.mer[1]?g.mer[0]:g.mer[0]+'–'+g.mer[1])+' • มี '+(S.bag.gfood[g.id]||0)+' จาน</small></div></div>'+needHTML(g.need,q)+
+  return '<div class="rc'+(lock?' lock':'')+'"><div class="hd"><img src="'+gfImg(g)+'" alt=""><div><b>'+g.n+'</b><small>สำเร็จ '+g.ch+'% • กุศล '+(g.mer[0]===g.mer[1]?g.mer[0]:g.mer[0]+'–'+g.mer[1])+' • มี '+quantity(S.bag.gfood[g.id])+' จาน</small></div></div>'+needHTML(g.need,q)+
   '<div class="qrow"><small>'+(lock?'🔒 รอเวลา 22:00':mx>0?'วัตถุดิบพอ '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+g.id+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+g.id+'">+</button><button class="btn g sm" data-c="'+g.id+'"'+(lock||mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
  const sb=$('sb');sb.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{gTab=b.dataset.t;openBook()});
  sb.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{gq[b.dataset.m]=Math.max(1,gq[b.dataset.m]-1);openBook()});
@@ -233,7 +236,7 @@ function openBook(tab){if(tab)gTab=tab;closeAll();const no=nightOpen();
 function confirmCook(id){const g=GFBY[id],q=gq[id];
  open('<h3>'+g.ic+' '+g.n+'</h3><div class="hint">คราฟ '+q+' ครั้ง • โอกาสสำเร็จครั้งละ '+g.ch+'%</div>'+needHTML(g.need,q)+'<div class="hint">ถ้าไม่สำเร็จ วัตถุดิบของครั้งนั้นก็ถูกใช้ไปแล้วนะ</div><div class="row"><button class="btn gray" id="cNo">ย้อนกลับ</button><button class="btn g" id="cGo">ยืนยันคราฟ '+q+' ครั้ง</button></div>');
  $('cNo').onclick=()=>openBook();
- $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'gfood:'+id,quantity:q});Object.assign(S,JSON.parse(__H.get(KEY)));closeAll();showCraftResult(out,openBook);hud();}catch(err){ann(err.message,1);Object.assign(S,JSON.parse(__H.get(KEY)));openBook();}finally{window.foodCraftBusy=false;}};}
+ $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'gfood:'+id,quantity:q});S=load();closeAll();showCraftResult(out,openBook);hud();}catch(err){ann(err.message,1);S=load();openBook();}finally{window.foodCraftBusy=false;}};}
 /* ---------- วางแฮมสเตอร์ ---------- */
 function openPlace(){closeAll();const n=S.ham.list.length;
  open('<h3>🐹 วางแฮมสเตอร์ลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้ว<b>เอากลับเข้ากระเป๋าไม่ได้</b> • อยู่ได้ 48 ชม.</div><div class="cards">'+Object.keys(HT).map(t=>{const c=S.bag.hamster[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+HT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div>'+
@@ -256,7 +259,7 @@ function renderFeed(){const hs=S.ham.list.filter(hungry),need=hs.length*5,tot=Ob
  $('sb').querySelectorAll('[data-g]').forEach(c=>c.onclick=e=>{const id=c.dataset.g;if(e.target.tagName==='EM'){pick[id]--;if(!pick[id])delete pick[id];return renderFeed()}
   if(tot>=need)return ann('เลือกครบ '+need+' ถาดแล้ว',1);if((pick[id]||0)>=S.bag.gfood[id])return ann('มีแค่ '+S.bag.gfood[id]+' จาน',1);pick[id]=(pick[id]||0)+1;renderFeed()});
  $('fPlace').onclick=openPlace;$('fCook').onclick=()=>openBook();
- $('fGo').onclick=()=>{let use=canFeed*5;const used={};for(const id of Object.keys(pick)){const u=Math.min(pick[id],use);if(u>0){S.bag.gfood[id]-=u;used[id]=u;use-=u}}
+ $('fGo').onclick=()=>{if(Object.keys(pick).some(id=>pick[id]>quantity(S.bag.gfood[id])))return ann('อาหารสวนไม่พอแล้ว',1);let use=canFeed*5;const used={};for(const id of Object.keys(pick)){const u=Math.min(pick[id],use);if(u>0){S.bag.gfood[id]-=u;used[id]=u;use-=u}}
   const fed=hs.slice(0,canFeed),now=Date.now();fed.forEach(h=>{h.fed=now});const boxes=fed.length*10;S.ham.drop+=boxes;save();closeAll();
   fed.forEach(h=>spillMB(actors[h.id]));hud();ann('🐹 ให้อาหาร '+fed.length+' ตัวแล้ว • กล่องดนตรีหล่น ×'+boxes)}}
 function spillMB(a){if(!a)return;const s=$('stage');const t=document.createElement('div');t.className='bub';t.textContent='🎵×10';t.style.fontSize='.9rem';t.style.fontWeight='800';Object.assign(t.style,{left:a.x/W*100+'%',top:(a.y-HSZ)/H*100+'%'});s.appendChild(t);setTimeout(()=>t.remove(),1400);for(let i=0;i<3;i++){const m=document.createElement('img');m.className='mb';m.src=IMG.musicbox;Object.assign(m.style,{left:(a.x+rnd(-40,40))/W*100+'%',top:(a.y+rnd(-10,20))/H*100+'%'});s.appendChild(m);drops.push(m)}}
@@ -281,9 +284,12 @@ function showRes(q,res,sum,hams){const ov=$('ov');let h='';
  ov.innerHTML='<div class="res">'+h+'<div class="row"><button class="btn" id="oAgain">เปิดต่อ</button><button class="btn g" id="oOk">เรียบร้อย</button></div></div>';
  $('oAgain').onclick=()=>{ov.classList.remove('on');openBox()};$('oOk').onclick=()=>ov.classList.remove('on');hud()}
 /* ---------- กระเป๋า / ตั้งค่า ---------- */
-function openBag(){closeAll();const sec=[['gfood','🍲 อาหารสวน',k=>GFBY[k].n,k=>gfImg(GFBY[k])],['hamster','🐹 แฮมสเตอร์',k=>HT[k],k=>IMG['card-'+k]],['item','✨ ไอเทม',k=>({musicbox:'กล่องดนตรี',fuelcan:'แกลลอนน้ำมัน',cake:'เค้ก',coconut:'มะพร้าว'}[k]||k),k=>({musicbox:IMG.musicbox,fuelcan:IMG.fuel,cake:IMG.cake,coconut:IMG.coconut}[k]||emo('✨'))]];
- open('<h3>🎒 กระเป๋า • ของหลังบ้าน</h3><div class="hint">🙏 กุศล '+fmt(S.merit)+' • กล่องสุ่มแฮมสเตอร์ '+fmt(S.bag.box.hamster||0)+'</div>'+sec.map(([t,l,nm,im])=>{const e=Object.entries(S.bag[t]).filter(([k,q])=>q>0&&(t!=='item'||['musicbox','fuelcan','cake','coconut'].includes(k)));
-  return '<div class="sec">'+l+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell"><img src="'+im(k)+'" alt=""><b>'+nm(k)+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="hint" style="grid-column:1/-1">ยังไม่มี</div>')+'</div>'}).join(''))}
+function openBag(){closeAll();const H=parent.__HOST,cat=(t,k)=>{try{return H.catalogItem(t+'.'+k)||null}catch(e){return null}};
+ const LN={gfood:k=>GFBY[k]&&GFBY[k].n,hamster:k=>HT[k],item:k=>({fuelcan:'แกลลอนน้ำมัน'}[k])},LI={gfood:k=>GFBY[k]&&gfImg(GFBY[k]),hamster:k=>IMG['card-'+k],item:k=>({musicbox:IMG.musicbox,fuelcan:IMG.fuel,cake:IMG.cake,coconut:IMG.coconut}[k])};
+ const nm=(t,k)=>(LN[t]&&LN[t](k))||(cat(t,k)||{}).n||k,im=(t,k)=>(LI[t]&&LI[t](k))||((cat(t,k)||{}).i?'images/'+cat(t,k).i:emo('✨'));
+ const sec=[['gfood','🍲 อาหารสวน'],['hamster','🐹 แฮมสเตอร์'],['item','✨ ไอเทม'],['box','🎁 กล่องสุ่ม']];
+ open('<h3>🎒 กระเป๋า • ของหลังบ้าน</h3><div class="hint">🙏 กุศล '+fmt(S.merit)+' • กล่องสุ่มแฮมสเตอร์ '+fmt(quantity(S.bag.box.hamster))+'</div>'+sec.map(([t,l])=>{const e=Object.entries(S.bag[t]||{}).filter(([k,q])=>quantity(q)>0);
+  return '<div class="sec">'+l+'</div><div class="grid">'+(e.length?e.map(([k,q])=>'<div class="cell"><img src="'+im(t,k)+'" alt=""><b>'+nm(t,k)+'</b><span>×'+fmt(q)+'</span></div>').join(''):'<div class="hint" style="grid-column:1/-1">ยังไม่มี</div>')+'</div>'}).join(''))}
 function openSet(){closeAll();
  open('<h3>⚙️ ตั้งค่าหน้าทดลอง</h3><div class="hint">มีเฉพาะในตัวอย่างนี้</div>'+
  '<div class="sec">ความเร็ว</div><div class="chips" id="sF"><button data-v="1" class="'+(FAST?'on':'')+'">⏩ เร่ง: หิวทุก 30 วิ • อยู่ได้ 5 นาที</button><button data-v="0" class="'+(FAST?'':'on')+'">🐢 จริง: หิว 3 ชม. • 48 ชม.</button></div>'+
@@ -337,4 +343,4 @@ tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
 new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
 render();
 })();
-</script><script src="loot-box-link.js?v=ss3-recovery6" data-box="hamster"></script></body></html>
+</script><script src="loot-box-link.js?v=ss3-fix12" data-box="hamster"></script></body></html>
