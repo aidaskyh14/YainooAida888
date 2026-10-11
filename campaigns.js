@@ -1,4 +1,4 @@
-import {featuredMenus} from './campaigns-engine.js?v=ss3-fix12';
+import {featuredMenus} from './campaigns-engine.js?v=ss3-fix13';
 
 const IMG={"f-catshark": "images/fishing-fish-catshark.webp", "f-angelshark": "images/fishing-fish-angelshark.webp", "f-manta": "images/fishing-fish-manta.webp", "f-hammerhead": "images/fishing-fish-hammerhead.webp", "f-mola": "images/fishing-fish-mola.webp", "f-strawberry": "images/fishing-fish-strawberry.webp", "f-unicorn": "images/fishing-fish-unicorn.webp", "f-goldsheep": "images/fishing-fish-goldsheep.webp", "h-candy": "images/halloween-hw-candy.webp", "h-bat": "images/halloween-hw-bat.webp", "h-candle": "images/halloween-hw-candle.webp", "h-web": "images/halloween-hw-web.webp", "h-hat": "images/halloween-hw-hat.webp", "h-broom": "images/halloween-hw-broom.webp", "h-pumpkin": "images/halloween-hw-pumpkin.webp", "h-cauldron": "images/halloween-hw-cauldron.webp", "box": "images/dog-box-dog.webp", "honey": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "pump": "images/produce-pumpkin.webp", "cake": "images/item-cake.webp", "wings": "images/item-angelwings.webp", "boot": "images/dog-oldboot.webp", "wine": "images/house-wine-moon.webp", "dogcard": "images/dog-card-husky.webp"};const $=id=>document.getElementById(id),fmt=n=>Number(Math.round(n)||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const DAYS=8,DAY=864e5;
@@ -71,7 +71,7 @@ function render(){const m=$('main');m.innerHTML=S.view?campPage(S.view):listPage
  m.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>cloud({type:'news',campaign:'fish',event:+b.dataset.ev}));m.querySelectorAll('[data-cl]').forEach(b=>b.onclick=async()=>{const out=await cloud({type:'claim',campaign:S.view,step:+b.dataset.cl});if(out)ann('รับ '+fmt(out.reward)+' กุศลบนคลาวด์แล้ว');});
 }
 
-$('role').hidden=true;$('hourSel').hidden=true;$('clkTxt').hidden=true;
+for(const id of ['role','hourSel','clkTxt'])if($(id))$(id).hidden=true;
 project();render();cloud({type:'status'});
 const stop=Host.watchWorld('campaigns',data=>{config=data||{};project();render();});addEventListener('pagehide',stop,{once:true});
 // Refresh ranking only while this page is visible, at the preview's 30 minute interval.

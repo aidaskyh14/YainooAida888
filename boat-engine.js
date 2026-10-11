@@ -7,7 +7,8 @@ export const BOAT_CARD_TIME=30000;        // การ์ดที่หยิ�
 export const BOAT_TARGET_TIME=10*60000;   // การ์ดที่ต้องเลือกเป้า ถ้าไม่เลือกใน 10 นาที ระบบสุ่มเป้าให้
 export const BOAT_MERIT=5000;
 export const BOAT_MENU_MAX=8;
-export const BOAT_CARDS=[['supply',30],['cut',30],['merit',20],['stop',15],['kick',5]];
+export const BOAT_CARDS=[['supply',30],['cut',30],['merit',10],['stop',15],['kick',15]]; // fix13: กุศล 20→10 · เตะ 5→15
+export const BOAT_GRACE=15000;          // ผู้เปิดส่งเป้าช้ากว่าเส้นตายได้ไม่เกิน 15 วิ (เผื่อเน็ตช้า) หลังจากนั้นเซิร์ฟเวอร์สุ่มเอง
 export const BOAT_CARD_NAMES={supply:'เติมเสบียง',cut:'ตัดเสบียง',merit:'กุศล',stop:'หยุดเรือ',kick:'เตะ'};
 export const needsTarget=card=>card==='cut'||card==='kick';
 const fail=m=>{throw new Error(m);};
@@ -16,6 +17,12 @@ export const members=(r,b)=>Object.keys(r.team).filter(u=>r.team[u]===b&&!r.kick
 const log=(r,m)=>{r.log.unshift(m);r.log=r.log.slice(0,40);};
 const nameOf=(r,u)=>r.names?.[u]||'ลูกเรือ';
 const pickOne=(list,rng)=>list[Math.min(list.length-1,Math.floor(rng()*list.length))];
+/* สุ่มแบบกำหนดผลได้ (seed จากข้อมูลกล่อง): ใครเป็นคนชำระการ์ดที่หมดเวลา ผลก็เหมือนกันเสมอ */
+export function seededRng(seed) {
+  let h=2166136261>>>0;for(const ch of String(seed)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;}
+  return ()=>{h=(h+0x6D2B79F5)>>>0;let t=h;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
+}
+const boxSeed=(r,box)=>box.id+'|'+(box.pickedAt||0)+'|'+(r.round||0);
 const roll=rng=>{let x=rng()*100;for(const [k,w]of BOAT_CARDS){x-=w;if(x<0)return k;}return 'kick';};
 const boatOk=b=>Number.isInteger(b)&&b>=1&&b<=5;
 const foodKeys=new Set(CATALOG.filter(c=>c.p.startsWith('food.')||c.p.startsWith('gfood.')).map(c=>c.k));
@@ -33,20 +40,20 @@ export function boatProgress(r,b,n,rng) {
 }
 /* ใช้การ์ดที่หยิบไว้ ถ้าไม่ได้ระบุเป้า (หมดเวลา) จะสุ่มเป้าที่ใช้ได้ */
 function useCard(r,box,choice,ctx,rng,player,auto) {
-  const boat=box.boat,card=box.card,{uid,now}=ctx,tag=auto?' (อัตโนมัติ)':'';
+  const boat=box.boat,card=box.card,{uid,now}=ctx,tag=auto?' (อัตโนมัติ)':'',pick=seededRng(boxSeed(r,box));
   const rivals=[1,2,3,4,5].filter(b=>b!==boat);
   let target=choice.target,victims=[];
   if(card==='cut') {
-    if(target===undefined||target===null){const staffed=rivals.filter(b=>Object.values(r.team).includes(b));target=pickOne(staffed.length?staffed:rivals,rng);}
+    if(target===undefined||target===null){const staffed=rivals.filter(b=>Object.values(r.team).includes(b));target=pickOne(staffed.length?staffed:rivals,pick);}
     if(!Number.isInteger(target)||!rivals.includes(target))fail('เลือกเรือคู่แข่ง');
   }
   if(card==='kick') {
+    // fix13: เตะทุกทีมยกเว้นทีมตัวเอง ทีมละ 1 คนเสมอ ทีมที่ผู้เปิดไม่ได้เลือก (หน้าเก่า/หมดเวลา) ระบบสุ่มให้
     const teams=rivals.filter(b=>members(r,b).length);
-    let targets=choice.targets||(choice.target!==undefined&&choice.target!==null?[choice.target]:null);
-    if(!targets)targets=teams.map(b=>pickOne(members(r,b),rng));
+    const targets=choice.targets??(choice.target!==undefined&&choice.target!==null?[choice.target]:[]);
     if(!Array.isArray(targets))fail('เลือกสมาชิกคู่แข่ง');
-    if(choice.targets&&targets.length!==teams.length)fail('เลือกคู่แข่งทีมละ 1 คน');
     const seen=new Set();for(const id of targets){const b=r.team[id];if(!b||b===boat||r.kicked[id]||seen.has(b))fail('เลือกคู่แข่งทีมละ 1 คน');seen.add(b);victims.push(id);}
+    for(const b of teams)if(!seen.has(b))victims.push(pickOne(members(r,b),pick));
   }
   box.opened=true;box.usedAt=now;delete box.deadline;
   const ledger=[];
@@ -69,15 +76,16 @@ function useCard(r,box,choice,ctx,rng,player,auto) {
   }
   return ledger;
 }
+export const boxDeadline=(box,now)=>box.deadline??((box.pickedAt||now)+(needsTarget(box.card)?BOAT_TARGET_TIME:BOAT_CARD_TIME));
 /* เส้นตายฝั่งเซิร์ฟเวอร์: การ์ดไม่ต้องเลือกเป้าใช้เองหลัง 30 วิ / การ์ดเลือกเป้าสุ่มเป้าหลัง 10 นาที */
 export function settleBoat(r,ctx,rng,player,skipBox) {
   const ledger=[];
   if(r.status!=='running')return ledger;
-  for(const box of r.boxes) {
+  // ชำระตามลำดับเส้นตาย (ผลเหมือนกันไม่ว่าใครเรียก) · กล่องที่ผู้เปิดกำลังส่งเป้าเองได้ผ่อนผัน BOAT_GRACE
+  const due=r.boxes.filter(box=>!box.opened&&box.picked!==undefined).map(box=>({box,deadline:boxDeadline(box,ctx.now)}))
+    .filter(x=>x.deadline<=ctx.now&&!(x.box.id===skipBox&&ctx.now<x.deadline+BOAT_GRACE)).sort((a,b)=>a.deadline-b.deadline||(a.box.id<b.box.id?-1:1));
+  for(const {box}of due) {
     if(r.status!=='running')break;
-    if(box.opened||box.picked===undefined||box.id===skipBox)continue;
-    const deadline=box.deadline??((box.pickedAt||ctx.now)+(needsTarget(box.card)?BOAT_TARGET_TIME:BOAT_CARD_TIME));
-    if(deadline>ctx.now)continue;
     ledger.push(...useCard(r,box,{},ctx,rng,player,true));
   }
   return ledger;
@@ -96,7 +104,8 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
   const ledger=settleBoat(r,ctx,rng,player,type==='card'?input.box:null);
   const done=extra=>({race:r,player,ledger,...extra});
   const boat=r.team[uid];
-  if(type==='status')return done();
+  // status/tick: ไม่เปลี่ยนอะไรนอกจากชำระการ์ดที่หมดเวลา (tick = ไคลเอนต์เห็นเส้นตายผ่านแล้ว ขอให้เซิร์ฟเวอร์ชำระ)
+  if(type==='status'||type==='tick')return done();
   const addNames=()=>{for(const [id,n]of Object.entries(input.names||{}))if(typeof n==='string')r.names[id]=n.slice(0,40);};
   if(type==='teams') {
     if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='setup')fail('จัดทีมก่อนเริ่มการแข่งขันเท่านั้น');

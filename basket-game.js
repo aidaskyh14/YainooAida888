@@ -22,8 +22,8 @@ const pieces=o=>Object.values(o).reduce((a,c)=>a+c,0);
 function lobbyAction(){const S=api.S,cd=(S.cd.basket||0)-api.time();
  if(api.closed?api.closed():S.solo?.basket==='closed')return '<div class="wait">เกมนี้ปิดชั่วคราว</div>';
  if(cd>0)return `<div class="wait">พักก่อนนะ เล่นได้อีกใน <b>${Math.floor(cd/60000)}:${String(Math.ceil(cd/1000)%60).padStart(2,'0')}</b></div>`;
- const okC=S.coins>=cost(),okK=S.kusal>=MIN;
- return `${okC&&okK?'':`<div class="wait">${!okC?'ใช้ '+cost()+' เหรียญ':'ต้องมีกุศล '+MIN.toLocaleString('en-US')+' ขึ้นไป'}</div>`}<button class="go" id="goBtn" ${okC&&okK?'':'disabled'}>เริ่มจัดตะกร้า! · 🪙 ${cost()}</button>`;}
+ const okC=api.lack?!api.lack():S.coins>=cost(),okK=S.kusal>=MIN;
+ return `${okC&&okK?'':`<div class="wait">${!okC?(api.lackText?api.lackText():'ใช้ '+cost()+' เหรียญ'):'ต้องมีกุศล '+MIN.toLocaleString('en-US')+' ขึ้นไป'}</div>`}<button class="go" id="goBtn" ${okC&&okK?'':'disabled'}>เริ่มจัดตะกร้า! · ${api.feeText?api.feeText():'🪙 '+cost()}</button>`;}
 function lobby(){G=null;R=api.offer();if(!R){st.innerHTML='';return;}
  st.innerHTML=`${WITCHES.map(w=>`<img class="lwitch" src="${A['w_'+w.k]}" style="left:${w.x}%" alt="">`).join('')}<div class="title">จัดตะกร้า<br>ให้แม่มด<small>แม่มด 3 คนรอของอยู่!</small></div>
  <div class="card"><div class="row"><h1>พร้อมช่วยไหม?</h1><button class="ibtn" id="rulesBtn">กติกา</button></div>

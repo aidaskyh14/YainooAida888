@@ -2,8 +2,24 @@ import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, dele
 import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-recovery6';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
+/* fix13 second guard: these parts hold placed animals / pens / house slots. A write may empty them (sold, expired, released)
+   but must never make the collection itself disappear (part missing, key missing, or {} / []), which is what a stale page
+   that never loaded the part produces. Such a write keeps the stored part instead. */
+export const COLLECTION_PARTS={'animals-barn':['animals'],'animals-birds':['pens'],'animals-dog':['dog'],'animals-alpaca':['pens'],'catpen':['cat'],'house':['plots','barrels'],'backyard':['ham']};
+const filled=v=>Array.isArray(v)?v.length>0:v!==null&&typeof v==='object'?Object.keys(v).length>0:false;
+const payloadOf=p=>{try{return p?JSON.parse(p.payload):null;}catch(e){return null;}};
+export function collectionWipe(id,current,next){
+  const keys=COLLECTION_PARTS[id];if(!keys||!current)return false;
+  const was=payloadOf(current),now=payloadOf(next);if(!was||typeof was!=='object')return false;
+  return keys.some(k=>filled(was[k])&&!(now&&typeof now==='object'&&filled(now[k])));
+}
 export class SplitSaveStore {
-  constructor(db,uid,session) { this.db=db;this.uid=uid;this.session=session;this.parts=new Map();this.revs=new Map();this.partial=false;this.loadedIds=new Set();this.activeIds=null; }
+  constructor(db,uid,session) { this.db=db;this.uid=uid;this.session=session;this.parts=new Map();this.revs=new Map();this.partial=false;this.loadedIds=new Set();this.activeIds=null;this.wipesBlocked=0; }
+  keepCollection(id,current,next) {
+    if(!collectionWipe(id,current,next))return false;
+    this.wipesBlocked++;try{console.warn('save guard: kept '+id+' (write would remove its animals/slots)');}catch(e){}
+    return true;
+  }
   root() { return doc(this.db,'players',this.uid); }
   ref(id) { return doc(this.db,'players',this.uid,'saves',id); }
   async readParts(uid=this.uid,base='players',day) {
@@ -22,18 +38,22 @@ export class SplitSaveStore {
   activate(ids) { this.activeIds=new Set(ids); }
   scopedNext(game,ids=this.activeIds) {
     const projected=splitGame(game||{});
-    if(!this.partial)return projected;
+    if(!this.partial){for(const id of Object.keys(COLLECTION_PARTS))if(this.parts.has(id)&&this.keepCollection(id,this.parts.get(id),projected.get(id)))projected.set(id,this.parts.get(id));return projected;}
     const next=new Map(this.parts);
     for(const id of ids||this.loadedIds) {
       if(!this.loadedIds.has(id))throw new Error('ยังไม่ได้โหลดส่วนเซฟ '+id+' ห้ามบันทึกทับ');
+      if(this.keepCollection(id,this.parts.get(id),projected.get(id)))continue;
       if(projected.has(id))next.set(id,projected.get(id));else next.delete(id);
     }
     return next;
   }
-  mergeProjection(before,after) {
+  // scope = the part ids the writing page was opened with (fix13). A page only ever writes parts it loaded and that are
+  // still active; a page from an earlier screen therefore cannot replace the next screen's parts with its stale snapshot.
+  mergeProjection(before,after,scope) {
     if(!this.partial)return after;
     const current=splitGame(before||{}),incoming=splitGame(after||{});
-    for(const id of this.activeIds||this.loadedIds){if(!this.loadedIds.has(id))continue;if(incoming.has(id))current.set(id,incoming.get(id));else current.delete(id);}
+    const active=this.activeIds||this.loadedIds,ids=scope?[...scope].filter(id=>active.has(id)):active;
+    for(const id of ids){if(!this.loadedIds.has(id))continue;if(this.keepCollection(id,current.get(id),incoming.get(id)))continue;if(incoming.has(id))current.set(id,incoming.get(id));else current.delete(id);}
     return joinGame(current.values());
   }
   accept(rows) {

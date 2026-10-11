@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>แม่มดซิ่งไม้กวาด</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Itim&family=Mali:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="witch-game.css?v=ss3-fix13">
+</head><body>
+<canvas id="c"></canvas>
+<div id="hud" class="hide">
+  <div class="hrow"><div class="hearts" id="hearts"></div><div id="dist"><span id="distV">0</span><small>ม.</small></div><div class="pill" id="score"><img id="scoreIc" alt=""><span id="scoreV">0</span></div><button id="pauseBtn" aria-label="พักเกม">⏸</button></div>
+  <div class="prog" id="prog"><div class="fill" id="pfill"></div><div class="me" id="pme"></div><div class="gate" id="pgate"></div></div>
+  <div id="fx"></div>
+</div>
+<div id="banner"><b id="bT"></b><span id="bS"></span></div>
+<div id="count" class="hide"></div>
+<div id="note" class="hide"></div>
+
+<div id="start" class="screen">
+  <button id="closeBtn" aria-label="กลับหน้ามินิเกม">‹ กลับ</button>
+  <div class="wrap">
+    <div class="title"><h1>🧹 แม่มดซิ่งไม้กวาด</h1><p>ตะแคงมือถือ หลบอุปสรรค ไปให้ถึงประตูพระจันทร์</p></div>
+    <div class="card">
+      <div class="tabs" id="tabs"><button data-t="how" class="on">วิธีเล่น</button><button data-t="obs">อุปสรรค</button><button data-t="get">ของเก็บ</button><button data-t="prize">รางวัล</button></div>
+      <div class="tab" id="t-how"></div>
+      <div class="tab hide" id="t-obs"></div>
+      <div class="tab hide" id="t-get"></div>
+      <div class="tab hide" id="t-prize"></div>
+    </div>
+    <div class="dock">
+    <div class="card stale hide" id="stale"></div>
+    <div class="fee" id="fee"></div>
+    <div class="stat" id="stat"><span class="wait">⏳ กำลังโหลด…</span></div>
+    <button class="go" id="goBtn">🧹 เริ่มบิน</button>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="screen hide"><div class="box">
+  <h2>⏸ พักเกม</h2><div class="sub" id="pBudget"></div>
+  <button class="go" id="resume">▶ เล่นต่อ</button>
+  <button class="btn2" id="recal">🎯 ตั้งท่าถือใหม่</button>
+  <button class="btn2" id="quit">🏳️ ยอมจบรอบนี้</button>
+</div></div>
+
+<div id="result" class="screen hide"><div class="box res" id="resBox"></div></div>
+
+<script type="module" src="witch-game.js?v=ss3-fix13"></script>
+</body></html>

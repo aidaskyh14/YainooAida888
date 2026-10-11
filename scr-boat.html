@@ -110,6 +110,104 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .picked.sm{width:min(8rem,40vw)}
 .pop .face{width:6rem;height:6rem;animation:pk .5s cubic-bezier(.3,1.5,.5,1)}
 .pop .row .btn{font-size:.9rem;padding:.6rem 1.2rem}
+
+/* ===== fix13: เอฟเฟกต์ฉาก (transform/opacity เท่านั้น เบาบนมือถือ) ===== */
+.fxc{position:fixed;left:0;top:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.boat{--d:0s}
+.boat img.hull{position:relative;z-index:1;transform-origin:50% 70%;animation:rock 3.2s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes rock{0%,100%{transform:translateY(0) rotate(-1.6deg)}25%{transform:translateY(-3.5%) rotate(0deg)}50%{transform:translateY(-1%) rotate(1.8deg)}75%{transform:translateY(2%) rotate(0deg)}}
+.boat .wake{position:absolute;left:50%;top:80%;width:320%;height:250%;background:radial-gradient(ellipse 9% 34% at 50% 0,rgba(255,255,255,.75),rgba(255,255,255,0) 100%);transform:translateX(-50%);pointer-events:none;z-index:0}
+.boat .wake i{position:absolute;left:50%;top:0;width:34%;aspect-ratio:2.2/1;border:.3em solid rgba(255,255,255,.9);border-top-color:transparent;border-radius:50%;transform:translate(-50%,0) scale(.4);opacity:0;animation:wk 2.4s linear infinite;animation-delay:calc(var(--d) + var(--k,0s))}
+.boat .wake i:nth-child(2){--k:.8s}.boat .wake i:nth-child(3){--k:1.6s}
+@keyframes wk{0%{transform:translate(-50%,0) scale(.35);opacity:0}15%{opacity:.85}100%{transform:translate(-50%,95%) scale(1.5,1.2);opacity:0}}
+.boat .wake::before,.boat .wake::after{content:"";position:absolute;top:-2%;width:2.4%;height:72%;background:linear-gradient(rgba(255,255,255,.95),rgba(255,255,255,.5) 40%,rgba(255,255,255,0));border-radius:999px;transform-origin:50% 0;opacity:.85;animation:wv 2.4s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes wv{50%{opacity:.35}}
+.boat .wake::before{left:48.6%;transform:rotate(22deg)}.boat .wake::after{right:48.6%;transform:rotate(-22deg)}
+.boat.surge img.hull{animation:surge .7s cubic-bezier(.25,1.4,.5,1),rock 3.2s ease-in-out .7s infinite}
+@keyframes surge{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-14%) scale(1.06,.96) rotate(-2deg)}100%{transform:translateY(0) scale(1)}}
+.boat.boost img.hull{filter:drop-shadow(0 0 .5em #6FF0A0) drop-shadow(0 4px 3px rgba(0,30,60,.35));animation:surge .8s cubic-bezier(.25,1.4,.5,1) 3,rock 3.2s ease-in-out 2.4s infinite}
+.boat.boost .wake i{animation-duration:.9s;border-color:rgba(200,255,225,.95);border-top-color:transparent}
+.boat.boost .wake::before,.boat.boost .wake::after{opacity:1;height:130%;background:linear-gradient(rgba(170,255,210,.95),rgba(170,255,210,0))}
+.boat.hit img.hull{animation:hit .5s ease-in-out 2}
+@keyframes hit{20%{transform:translateX(-8%) rotate(-7deg)}40%{transform:translateX(7%) rotate(6deg)}60%{transform:translateX(-5%) rotate(-3deg)}80%{transform:translateX(3%)}}
+.boat .stopv{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.75),rgba(160,220,255,.35) 45%,rgba(90,170,240,.25) 70%);box-shadow:0 0 0 .14em rgba(200,235,255,.95) inset,0 0 .9em rgba(140,210,255,.8);z-index:3;inset:-14%;border-radius:50%}
+.boat .stopv::after{content:"";position:absolute;inset:-12%;border-radius:50%;background:conic-gradient(#BFE9FF calc(var(--left,1)*360deg),rgba(255,255,255,.12) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - .22em),#000 calc(100% - .2em));mask:radial-gradient(farthest-side,transparent calc(100% - .22em),#000 calc(100% - .2em))}
+.fxf{position:absolute;transform:translate(-50%,-50%);z-index:6;font-weight:800;font-size:2.6em;-webkit-text-stroke:.07em #1E4E86;paint-order:stroke fill;white-space:nowrap;pointer-events:none;text-shadow:0 .1em 0 rgba(20,50,90,.6),0 0 .4em rgba(0,0,0,.35);animation:fxf 1.4s ease-out forwards}
+@keyframes fxf{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}18%{opacity:1;transform:translate(-50%,-80%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-260%) scale(1)}}
+.line.glow{animation:lg 2.1s ease-out}
+@keyframes lg{0%,60%{border-top-color:#FFE27A;box-shadow:0 0 .5em .15em rgba(255,226,122,.95),0 0 1.6em .3em rgba(255,200,80,.6)}100%{box-shadow:none}}
+.gift.drop{animation:drop .75s cubic-bezier(.5,0,.75,0) both,gland .5s cubic-bezier(.3,1.6,.5,1) .75s both}
+@keyframes drop{from{transform:translate(-50%,-50%) translateY(-55vh) rotate(-25deg);opacity:.2}to{transform:translate(-50%,-50%)}}
+@keyframes gland{0%{transform:translate(-50%,-38%) scale(1.25,.75)}100%{transform:translate(-50%,-50%) scale(1)}}
+.gift .tmr{position:absolute;left:50%;top:100%;transform:translateX(-50%);background:#2A2140;color:#FFE27A;border:.1em solid #fff;border-radius:999px;font-size:.55em;font-weight:800;padding:0 .35em;white-space:nowrap}
+.gift .tmr.kick{background:#B0213F;color:#fff}
+.fxpk{position:absolute;transform:translate(-50%,-50%);font-size:2.4em;z-index:6;pointer-events:none;animation:pkf .72s cubic-bezier(.55,0,.9,.4) both;filter:drop-shadow(0 .2em .2em rgba(0,0,0,.4))}
+@keyframes pkf{from{transform:translate(-50%,-50%) translateY(-22em) rotate(-200deg) scale(.7)}to{transform:translate(-50%,-50%) rotate(0) scale(1.1)}}
+.fxice{position:absolute;transform:translate(-50%,-50%);width:6em;aspect-ratio:1;z-index:5;pointer-events:none}
+.fxice i{position:absolute;inset:0;border-radius:50%;border:.25em solid rgba(200,240,255,.95);box-shadow:0 0 1em rgba(140,210,255,.9) inset,0 0 1em rgba(140,210,255,.7);animation:icp 2.4s ease-out forwards}
+.fxice::after{content:"⏰";position:absolute;left:50%;top:-10%;transform:translateX(-50%);font-size:1.4em;animation:icc 2.4s ease-out forwards}
+@keyframes icp{0%{transform:scale(.2);opacity:0}25%{transform:scale(1.05);opacity:1}70%{opacity:1}100%{transform:scale(1.4);opacity:0}}
+@keyframes icc{0%{opacity:0;transform:translateX(-50%) scale(.3)}25%{opacity:1;transform:translateX(-50%) scale(1.2) rotate(-12deg)}40%{transform:translateX(-50%) rotate(12deg)}55%{transform:translateX(-50%) rotate(-8deg)}100%{opacity:0;transform:translateX(-50%) translateY(-60%)}}
+.fxname{position:absolute;transform:translate(-50%,-50%);z-index:7;background:#fff;border:.12em solid #FF4D7A;color:#B0213F;border-radius:999px;padding:.1em .5em;font-size:1.45em;box-shadow:0 .2em .5em rgba(0,0,0,.3);font-weight:800;white-space:nowrap;pointer-events:none;animation:nf 1.15s cubic-bezier(.3,.2,.6,1) forwards}
+@keyframes nf{0%{transform:translate(-50%,-50%) scale(.6)}20%{transform:translate(calc(-50% + var(--tx)*.25),calc(-50% - 3em)) scale(1.1) rotate(calc(var(--rot)*.2))}100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(.5) rotate(var(--rot));opacity:.2}}
+#fxBanners{position:fixed;z-index:22;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.5rem);transform:translateX(-50%);display:flex;flex-direction:column;gap:.35rem;align-items:center;pointer-events:none;width:min(24rem,94vw)}
+.fxb{display:flex;gap:.5rem;align-items:center;background:linear-gradient(100deg,rgba(42,33,64,.95),rgba(60,40,90,.95));color:#fff;border:2px solid var(--aura);border-radius:999px;padding:.3rem .9rem .3rem .3rem;font-weight:700;font-size:.78rem;box-shadow:0 0 0 3px rgba(255,255,255,.15),0 0 18px color-mix(in srgb,var(--aura) 70%,transparent),0 8px 18px rgba(0,0,0,.35);animation:bin .5s cubic-bezier(.3,1.5,.5,1) both;max-width:100%}
+.fxb .ic{flex:none;width:2rem;height:2rem;border-radius:50%;display:grid;place-items:center;font-size:1.1rem;background:radial-gradient(circle,#fff 0,color-mix(in srgb,var(--aura) 55%,#fff) 70%);box-shadow:0 0 12px var(--aura)}
+.fxb .tx{line-height:1.25}.fxb .tx small{display:block;font-weight:500;font-size:.66rem;opacity:.85}.fxb b{color:var(--aura)}
+.fxb.out{animation:bout .45s ease-in both}
+@keyframes bin{from{transform:translateY(-120%) scale(.6);opacity:0}}
+@keyframes bout{to{transform:translateY(-60%) scale(.85);opacity:0}}
+.fxspot{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(circle 9rem at var(--sx) var(--sy),rgba(255,248,210,.28) 0,rgba(255,248,210,.12) 45%,rgba(5,15,35,.62) 75%);animation:spin .7s ease-out both}
+.fxspot.out{transition:opacity .9s;opacity:0}
+@keyframes spin{from{opacity:0}}
+.fxtrophy{position:fixed;z-index:16;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 4.8rem);transform:translateX(-50%);display:flex;align-items:center;gap:.5rem;background:linear-gradient(#FFE58A,#FFC23A);color:#6B3A00;border:3px solid #fff;border-radius:1.2rem;padding:.4rem 1.1rem .4rem .6rem;font-weight:800;font-size:1rem;box-shadow:0 0 0 4px rgba(255,210,80,.45),0 0 30px rgba(255,210,80,.8),0 10px 24px rgba(0,0,0,.35);white-space:nowrap;animation:tro .7s cubic-bezier(.3,1.6,.5,1) both}
+.fxtrophy b{font-size:2rem;animation:trb 1s ease-in-out infinite}
+.fxtrophy.out{transition:.5s;opacity:0;transform:translate(-50%,40%)}
+@keyframes tro{from{transform:translate(-50%,120%) scale(.5);opacity:0}}
+@keyframes trb{50%{transform:rotate(-10deg) scale(1.15)}}
+/* ป้ายจบการแข่งอยู่ล่างจอ ไม่บังเรือที่เส้นชัย */
+.boat .win{top:auto;bottom:128%;z-index:4;font-size:.9em;box-shadow:0 0 .8em rgba(255,216,107,.9);animation:wb 1.4s ease-in-out infinite}
+@keyframes wb{50%{transform:translateX(-50%) translateY(-12%)}}
+.lock.fin{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);background:linear-gradient(rgba(70,40,110,.94),rgba(40,25,70,.94));border-color:#FFD86B;box-shadow:0 0 22px rgba(255,216,107,.55)}
+/* ป๊อปอัปกล่อง: สั่น ลำแสง ประกาย ออร่าตามสี */
+.chestw{position:relative;display:grid;place-items:center}
+.rays{position:absolute;width:min(30rem,130vw);aspect-ratio:1;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,236,160,.38) 0 9deg,rgba(255,236,160,0) 9deg 24deg);-webkit-mask:radial-gradient(circle,#000 18%,transparent 68%);mask:radial-gradient(circle,#000 18%,transparent 68%);animation:ray 14s linear infinite;pointer-events:none}
+.rays.hot{animation-duration:3s;filter:brightness(1.5)}
+.rays.aura{background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--aura) 55%,transparent) 0 9deg,transparent 9deg 24deg)}
+@keyframes ray{to{transform:rotate(360deg)}}
+.chest{position:relative;z-index:1}
+.chest.shake{animation:csh .55s ease-in-out}
+@keyframes csh{15%{transform:rotate(-7deg) scale(1.03)}30%{transform:rotate(6deg)}45%{transform:rotate(-5deg) scale(1.06)}60%{transform:rotate(4deg)}80%{transform:rotate(-2deg)}}
+.twk{position:absolute;inset:0;pointer-events:none}
+.twk i{position:absolute;width:.5rem;height:.5rem;background:#FFF3B0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:tw 1.6s ease-in-out infinite}
+@keyframes tw{0%,100%{transform:scale(.2);opacity:0}50%{transform:scale(1.2) rotate(45deg);opacity:1}}
+.fxsp{position:absolute;left:50%;top:50%;width:.55rem;height:.55rem;border-radius:50%;pointer-events:none;box-shadow:0 0 8px currentColor;animation:sp 1s ease-out both;z-index:3}
+@keyframes sp{0%{transform:translate(-50%,-50%) scale(.4);opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(.1);opacity:0}}
+.tc.deal{transform:translateY(-34vh) scale(.25) rotate(-30deg)}
+.tc.deal:nth-child(2n){transform:translateY(-34vh) scale(.25) rotate(25deg)}
+.tc.deal.in{transform:none}
+.tc.pick .f{border-radius:.6rem;box-shadow:0 0 0 2px #fff,0 0 18px 4px var(--aura,#FFE27A),0 0 40px 8px color-mix(in srgb,var(--aura,#FFE27A) 60%,transparent);animation:aur 1.2s ease-in-out infinite}
+@keyframes aur{50%{box-shadow:0 0 0 2px #fff,0 0 26px 8px var(--aura,#FFE27A),0 0 60px 14px color-mix(in srgb,var(--aura,#FFE27A) 50%,transparent)}}
+.picked{position:relative;margin:0 auto}
+.picked img{position:relative;z-index:1;filter:drop-shadow(0 0 14px var(--aura,#FFE1A0)) drop-shadow(0 0 30px var(--aura,#FFE1A0))}
+.picked .rays{width:min(24rem,110vw);left:50%;top:50%;margin:calc(min(24rem,110vw)/-2) 0 0 calc(min(24rem,110vw)/-2)}
+.res b.au{color:var(--aura)}
+/* การ์ดเตะบังคับ: นับถอยหลัง 10:00 */
+.kclock{display:flex;align-items:center;gap:.55rem;justify-content:center;margin:.4rem 0 .1rem}
+.kring{--left:1;width:3.4rem;height:3.4rem;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#FF4D7A calc(var(--left)*360deg),rgba(255,255,255,.18) 0);box-shadow:0 0 16px rgba(255,77,122,.6)}
+.kring span{width:2.8rem;height:2.8rem;border-radius:50%;background:#2A2140;color:#fff;display:grid;place-items:center;font-weight:800;font-size:.85rem;font-variant-numeric:tabular-nums}
+.kclock small{color:#fff;font-size:.72rem;line-height:1.3;text-align:left;max-width:12rem}
+.kring.hot span{color:#FFB3C4;animation:beat .6s ease-in-out infinite}
+@keyframes beat{50%{transform:scale(1.08)}}
+.kt .chipb{transition:transform .15s}.kt .chipb.on{transform:scale(1.05)}
+.kt b small{font-weight:500;color:#B0213F;margin-left:.3rem}
+.kt.done{box-shadow:0 0 0 2px #FF9DB4}
+.pop.forced .px{display:none}
+.btn:disabled{opacity:.5;cursor:default}
+/* ลดเอฟเฟกต์: เครื่องกระตุก / ผู้ใช้ตั้งลดการเคลื่อนไหว */
+.fx-low .boat .wake i:nth-child(n+2),.fx-low .twk,.fx-low .boat.mine::before{display:none}
+.fx-low .rays{animation-duration:30s}
+@media (prefers-reduced-motion:reduce){.boat img.hull{animation-duration:6s}.boat .wake i{animation-duration:4.8s}.boat .wake i:nth-child(n+2){display:none}.rays{animation:none}.twk{display:none}.chest.shake{animation-duration:.2s}.fxpk,.fxname{animation-duration:.08s}}
 </style></head><body>
 <div id="view"><div class="stage" id="stage"></div></div>
 <div class="top"><span class="chip mine" id="myTeam"></span><span class="spacer"></span><button class="rbtn" id="logBtn">📜</button><button class="rbtn" id="setBtn">⚙️</button></div>
@@ -119,4 +217,5 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 <section class="sheet" id="sheet"><div id="sb"></div></section>
 <div class="pop" id="pop"><button class="px" id="popX" aria-label="ปิด">✕</button><div id="popBody"></div></div>
 <div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
-<script type="module" src="boat.js?v=ss3-fix12"></script></body></html>
+<script src="boat-fx.js?v=ss3-fix13"></script>
+<script type="module" src="boat.js?v=ss3-fix13"></script></body></html>

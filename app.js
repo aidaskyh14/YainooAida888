@@ -1,7 +1,7 @@
-import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix12';
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix13';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
-import {lurePen,SCROLL_RECIPES} from './bird-lure-engine.js?v=ss3-fix12';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix12';
+import {lurePen,SCROLL_RECIPES} from './bird-lure-engine.js?v=ss3-fix13';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix13';
 import {observeGameplay} from './campaign-progress.js?v=ss3-recovery6';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -10,10 +10,10 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-recovery6';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix13';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-recovery6';
 import { installBackupUI } from './save-backup.js?v=ss3-recovery6';
-import { CATALOG } from './catalog.js?v=ss3-fix12';
+import { CATALOG } from './catalog.js?v=ss3-fix13';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -416,9 +416,11 @@ function guardBarn(G,o,nowMs){
   if(lost.length&&!(meritGain>0&&meritGain>=sellValue))refuseBarn('ไม่บันทึก: สัตว์ในโรงเรือนจะหายโดยไม่ได้ขาย/ปล่อย กำลังโหลดข้อมูลล่าสุด…',reloadScreen);
   for(const [t,slots] of Object.entries(prev))if(Array.isArray(slots))slots.forEach((a,i)=>{const next=o.animals?.[t]?.[i];if(a&&!(next&&next.born===a.born))barnReleases.delete(barnKey(t,i,a));});
 }
-function subSet(K, v) {
+function subSet(K, v, scope) {
   const before = JSON.stringify(S.P.g), prior=clone(S.P.g);
-  const C = SUBS[K]; let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }
+  const C = SUBS[K]; let o;
+  // fix13: a page may only save the module part its own screen loaded.
+  if (scope && !scope.includes('animals-'+C.id)) throw new Error('หน้านี้ไม่ได้เปิดข้อมูลส่วนนี้ ไม่บันทึกทับ'); try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }
   const G = clone(S.P.g || {}); G.sub = G.sub || {}; const first = !G.sub[C.id];
   if (C.id === 'barn') guardBarn(G, o, typeof serverNow === 'function' ? serverNow() : Date.now());
   if (!first && typeof o.merit === 'number') G.merit = o.merit;
@@ -442,7 +444,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={lure:'lureRequestCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',br:'brActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud',ledger:'ledgerCloud'};
+const CLOUD_HANDLERS={lure:'lureRequestCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud',ledger:'ledgerCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -482,7 +484,7 @@ async function cloudAction(system,input) {
     if(input.type!=='status')showSave(e.message||'ยังยืนยันการบันทึกไม่ได้',true);throw e;
   } finally {cloudBusy=false;finishCloud();cloudPromise=null;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-window.__HOST = {
+const HOST_BASE = {
   watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[],serverNow())})),
   // Loot boxes open over the live scene (no blank frame). While the overlay owns the inventory the old
   // scene is frozen: its saves are dropped so a stale copy can never write box counts back; it reloads after close.
@@ -535,11 +537,22 @@ window.__HOST = {
   openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
   ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
 };
-function hostSet(k, v) {
+// fix13: every scene document gets its own Host handle, tagged with a generation and the part ids its screen loaded.
+// When the scene is retired (navigation, reload, admin overlay) the handle stops saving, so a page that is still running
+// (slow unload, timers) can never write its stale snapshot into the parts of the next screen.
+let sceneGen=0,staleSaves=0;
+function sceneHost(ids){
+  const gen=++sceneGen,scope=ids?[...ids]:null,h=Object.create(HOST_BASE);
+  h.set=function(k,v){if(gen!==sceneGen){staleSaves++;return;}lastSetError=null;try{hostSet(k,v,scope);}catch(e){throw setFailed(e);}};
+  h.del=function(k){if(gen!==sceneGen){staleSaves++;return;}HOST_BASE.del(k);};
+  return h;
+}
+window.__HOST = sceneHost(null);
+function hostSet(k, v, scope) {
     if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
-    if (SUBS[k]) { subSet(k, v); return; }
+    if (SUBS[k]) { subSet(k, v, scope); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
     S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
 }
@@ -557,19 +570,40 @@ async function goScreen(n) {
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
   if (S.navigating) return; S.navigating = true;
   if(S.frame)S.frame.style.pointerEvents='none';
+  const prevIds=store&&store.activeIds?[...store.activeIds]:null;let retired=false;
   try {
     if(cloudPromise)await cloudPromise;frameSave();await flush();
     const ids=[...BASE_PARTS,...SCREEN_PARTS[n]];
+    await store.loadIds(ids); // read the next screen's parts while the current page still owns the save scope
+    // fix13: close the old page first (its Host handle stops saving, frame goes to about:blank and we wait for it),
+    // save what it wrote before that, and only then switch the save scope to the new screen.
+    frameSave();retired=true;const nav=await blankScene();await flush();
     S.P.g=await store.loadIds(ids);store.activate(ids);if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
-    S.frame.src='scr-'+n+'.html?v=ss3-fix12';
-  }catch(e){toast(e.message||thaiError(e));}
+    showScene(n,ids,nav,'');
+  }catch(e){toast(e.message||thaiError(e));if(retired){S.navigating=false;if(prevIds)store.activate(prevIds);reloadScreen();}}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-function reloadScreen() { stopSceneSubscriptions();if (S.frame && S.screen) S.frame.src = 'scr-' + S.screen + '.html?v=ss3-fix12&r=' + Date.now(); }
+// Retire the scene in the frame: new inert Host handle (old page's saves are refused), navigate to about:blank and wait
+// until the old document is gone (or 4 s; the refused handle already protects the save). Resolves with a navigation token.
+let sceneNav=0;
+function blankScene(){
+  const nav=++sceneNav,f=S.frame;window.__HOST=sceneHost([]);
+  let cur='';try{cur=(f&&typeof f.getAttribute==='function'&&f.getAttribute('src'))||'';}catch(e){}
+  if(!f||typeof f.addEventListener!=='function'||!cur||cur==='about:blank'){if(f)f.src='about:blank';return Promise.resolve(nav);}
+  return new Promise(done=>{
+    let timer=0;
+    const end=()=>{clearTimeout(timer);f.removeEventListener('load',onLoad);done(nav);};
+    const onLoad=()=>{let href='';try{href=f.contentWindow.location.href;}catch(e){}if(href==='about:blank')end();};
+    f.addEventListener('load',onLoad);timer=setTimeout(end,4000);f.src='about:blank';
+  });
+}
+// Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix13'+extra;return true;}
+function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
-async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)S.frame.src='about:blank';const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
+async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
   return Object.entries(items || {}).map(([k, n]) => { const c = CAT[k]; return `<span>${c ? `<img src="${IMG(c.i)}" alt="">` : '🎁'}${esc(c ? c.n : k)} ×${fmt(n)}</span>`; }).join('');
 }

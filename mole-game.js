@@ -27,8 +27,8 @@ function chipHTML(cls,box){return TYPES.map(t=>`<div class="${cls} ${R.roles[t]=
 function lobbyAction(){const S=api.S,cd=(S.cd.mole||0)-api.time(),closed=api.closed?api.closed():S.solo?.mole==='closed';
  if(closed)return '<div class="wait">เกมนี้ปิดชั่วคราว</div>';
  if(cd>0)return `<div class="wait">พักก่อนนะ เล่นได้อีกใน <b>${Math.floor(cd/60000)}:${String(Math.ceil(cd/1000)%60).padStart(2,'0')}</b></div>`;
- const okC=S.coins>=cost(),okK=S.kusal>=R0.MIN;
- return `${okC&&okK?'':`<div class="wait">${!okC?'ใช้ '+cost()+' เหรียญ':'ต้องมีกุศล '+num(R0.MIN)+' ขึ้นไป'}</div>`}<button class="go" id="goBtn" ${okC&&okK?'':'disabled'}>เริ่มตี! · 🪙 ${cost()}</button>`;}
+ const okC=api.lack?!api.lack():S.coins>=cost(),okK=S.kusal>=R0.MIN;
+ return `${okC&&okK?'':`<div class="wait">${!okC?(api.lackText?api.lackText():'ใช้ '+cost()+' เหรียญ'):'ต้องมีกุศล '+num(R0.MIN)+' ขึ้นไป'}</div>`}<button class="go" id="goBtn" ${okC&&okK?'':'disabled'}>เริ่มตี! · ${api.feeText?api.feeText():'🪙 '+cost()}</button>`;}
 function lobby(){cancelAnimationFrame(raf);G=null;R=api.offer();measure();if(!R){st.innerHTML='<div class="title">กำลังโหลด…</div>';return;}
  st.innerHTML=`<div class="title">ฮาโลวีนวุ่น<br>ตุ่นบุกสวน!<small>ตีตุ่นให้ถึงเป้าใน 60 วินาที</small></div>
  <div class="card"><div class="row"><h1>ค่าตุ่นรอบนี้</h1><button class="ibtn" id="rulesBtn">กติกา</button></div>
@@ -45,7 +45,7 @@ function rules(){const s=sheet(`<h2>กติกา</h2><div class="rules">
  <div class="rule"><span class="e">☠️</span><div><b>ตุ่นต้องสาป</b><span>ตีโดนแล้วแต้มลด</span></div></div>
  <div class="rule"><span class="e">😮</span><div><b>เกือบถึง (80%)</b><span>ไม่ได้ ไม่เสีย</span></div></div>
  <div class="rule"><span class="e">💔</span><div><b>ต่ำกว่านั้น</b><span>เสีย 15,000 กุศล</span></div></div>
- <div class="rule wide"><span class="e">🎲</span><div><b>ค่าตุ่นและเป้าสุ่มใหม่ทุกรอบ</b><span>ดูค่าบนการ์ดก่อนกดเริ่ม · 🪙 ${cost()} เหรียญ · พัก 15 นาที</span></div></div></div><button class="close">เข้าใจแล้ว</button>`);s.querySelector('.close').onclick=()=>s.remove();}
+ <div class="rule wide"><span class="e">🎲</span><div><b>ค่าตุ่นและเป้าสุ่มใหม่ทุกรอบ</b><span>ดูค่าบนการ์ดก่อนกดเริ่ม · ${api.feeText?api.feeText():'🪙 '+cost()+' เหรียญ'} · พัก ${api.cdMin?api.cdMin():15} นาที</span></div></div></div><button class="close">เข้าใจแล้ว</button>`);s.querySelector('.close').onclick=()=>s.remove();}
 // --- game (server timeline: round.start is when the first second begins; round.until is the end)
 function play(round){R=round;measure();
  st.innerHTML=`<div class="hud"><div class="plate score"><b id="sc">0</b><small>เป้า ${num(R.target)}</small><div class="bar" id="bar"><i></i></div></div><div class="timer" id="tm">60</div><div class="plate goldbox" id="gb"><div class="gm" style="${iconStyle(R.gold,W*.08)}"></div><b id="gc">0/${R.goldTotal}</b></div></div>
