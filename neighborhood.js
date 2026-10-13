@@ -146,5 +146,5 @@ document.addEventListener('click',e=>{
  if(e.target.closest('[data-close]'))closeSheet();
  if(e.target.closest('[data-pclose]'))$('pop').classList.remove('on');
 });
-fit();render();act({type:'status'},true);
+fit();render();act({type:'status'});
 setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true);},60000);
