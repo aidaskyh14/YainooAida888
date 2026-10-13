@@ -32,6 +32,7 @@ function lobby(){
 $('pick').onclick=async e=>{const b=e.target.closest('[data-c]');if(!b)return;const me=mySeat();if(me?.ready)return;myChar=+b.dataset.c;lobby();if(me)await cloud({type:'char',c:CH[myChar][0]});};
 $('ready').onclick=async()=>{const me=mySeat();if(room.status!=='lobby')return;if(!me)return cloud({type:'sit',c:CH[myChar][0]});if(!me.ready)return cloud({type:'ready'});};
 $('back').onclick=async()=>{const me=mySeat();if(me&&room.status==='lobby')await cloud({type:'leave'},true);goHome();};
+$('adm2').hidden=!H.admin;$('adm2').onclick=()=>$('adm').onclick();
 $('adm').onclick=()=>{if(confirm('ล้างห้องแรลลี่ฟักทอง? ถ้ากำลังแข่งจะยกเลิกและคืนค่าเข้าทางไปรษณีย์'))cloud({type:'clear'});};
 function goHome(){try{parent.postMessage({go:'minigames'},location.origin);}catch(e){}}
 let lcdT=0;
@@ -106,7 +107,7 @@ function burst(x,y,c,n=16,sp=6){for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.ran
 function smoke(x,y){parts.push({x:x+(Math.random()-.5)*14,y,vx:(Math.random()-.5)*.6,vy:.8+Math.random()*.6,life:50,c:'rgba(60,60,60,.55)',r:5+Math.random()*4,smoke:1})}
 function shoot(from,to,kind,onHit){fx.push({k:'proj',kind,x:from.x+20,y:from.y+35,to,spin:0,onHit,life:240})}
 function boom(x,y){burst(x,y,'#FF9A3D',22,8);burst(x,y,'#FFE08A',12,5);for(let i=0;i<6;i++)smoke(x,y);pop(x,y+40,'ตูม!','#FFB15C')}
-const ev=e=>{if(game)H.frEvent?.(game.id,{r:round,at:SNow(),...e});};
+const ev=e=>{if(game)try{H.frEvent?.(game.id,{r:round,at:SNow(),...e});}catch(x){}};
 /* ไอเทมของเรา: ผลกับตัวเองทำทันที ผลกับคนอื่นส่งเป็นเหตุการณ์ */
 function useItem(k,dir){
  const a=aheadOf(me.x),os=others();feed(`${INAME[k].split(' ')[0]} ใช้${INAME[k].slice(INAME[k].indexOf(' '))}`,true);banner(INAME[k]);
@@ -147,7 +148,7 @@ function onPlayers(list){if(!game)return;const now=SNow();for(const p of list){i
  for(const [k,b]of Object.entries(FL)){const on=!!(o.f&b);if(k==='out'){if(on&&!o.out){o.out=true;o.ghost=0;feed(`👻 ${o.n} ตกรอบ`,false);}}else if(k==='fin'){if(on&&!o.fin){o.fin=1;feed(`🏁 ${o.n} เข้าเส้นชัย`,false);}}else o[k]=on?(k==='shield'?1:20):0;}}}
 let lastPub=0,lastSent='';
 function publish(force){if(!game||!me)return;const t=performance.now();if(!force&&t-lastPub<480)return;lastPub=t;
- const data={g:game.id,r:round,x:Math.round(me.x),y:Math.round(me.y),v:alive(me)?Math.round(curV*60):0,hp:me.hp,f:flagsOf(me),t:SNow()};const sig=JSON.stringify({...data,t:0});if(!force&&sig===lastSent)return;lastSent=sig;H.frPublish?.(game.id,data);}
+ const data={g:game.id,r:round,x:Math.round(me.x),y:Math.round(me.y),v:alive(me)?Math.round(curV*60):0,hp:me.hp,f:flagsOf(me),t:SNow()};const sig=JSON.stringify({...data,t:0});if(!force&&sig===lastSent)return;lastSent=sig;try{H.frPublish?.(game.id,data);}catch(e){}}
 /* รายงานผลด่านของเรา (เซิร์ฟเวอร์ตรวจและคิดคะแนน) */
 function report(fin){if(reported||!game)return;reported=true;const time=fin?Math.round(SNow()-room.roundStart):0;
  const g=game.id,rd=round,body={type:'report',game:g,round:rd,fin,time,hp:me.hp,candy:me.candy,boxes:me.boxes};const send=(n=0)=>cloud(body,true).then(o=>{if(!o&&n<8&&room.game===g&&room.round===rd&&room.status==='race')setTimeout(()=>send(n+1),1200);});send();
@@ -281,7 +282,7 @@ function drawRunner(r,X,Y,s,now){
  cx.font=`800 ${9.5*s}px Mali, sans-serif`;cx.textAlign='center';const t=r.n,tw=cx.measureText(t).width+10*s;cx.fillStyle=mine?'rgba(242,140,40,.95)':'rgba(26,15,43,.55)';cx.beginPath();cx.roundRect(cxm-tw/2,y-15*s,tw,12*s,6*s);cx.fill();cx.fillStyle='#fff';cx.fillText(t,cxm,y-6*s);
 }
 let acc=0,lastT=0,shakeT=0,lastHUD=0,liveStop=null;
-function loop(t){if($('game').hidden||state==='end'){lastT=0;return}if(!lastT)lastT=t;acc+=Math.min(100,t-lastT);lastT=t;let n=0;while(acc>=16.667&&n<5){step();acc-=16.667;n++}draw();if(t-lastHUD>300){renderHUD();lastHUD=t}requestAnimationFrame(loop)}
+function loop(t){if($('game').hidden||state==='end'){lastT=0;return}if(!lastT)lastT=t;acc+=Math.min(100,t-lastT);lastT=t;let n=0;requestAnimationFrame(loop);try{while(acc>=16.667&&n<5){step();acc-=16.667;n++}draw();if(t-lastHUD>300){renderHUD();lastHUD=t}}catch(e){acc=0;console.error(e)}}
 const HC={};function setH(id,h){if(HC[id]!==h){HC[id]=h;$(id).innerHTML=h}}
 function renderHUD(){
  if(!me)return;setH('hearts',[0,1,2,3,4].map(i=>`<img src="${A}it-heart${i<me.hp?'':'-empty'}.webp" alt="">`).join(''));

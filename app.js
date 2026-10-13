@@ -512,8 +512,8 @@ const HOST_BASE = {
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
   // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
-  frPublish(game,data){if(!S.user)return;setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),data).catch(()=>{});},
-  frEvent(game,ev){if(!S.user)return;addDoc(collection(db,'funrunLive',String(game),'ev'),{...ev,from:S.user.uid}).catch(()=>{});},
+  frPublish(game,data){if(!S.user)return;try{setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),JSON.parse(JSON.stringify(data||{}))).catch(()=>{});}catch(e){}},
+  frEvent(game,ev){if(!S.user)return;try{addDoc(collection(db,'funrunLive',String(game),'ev'),{...JSON.parse(JSON.stringify(ev||{})),from:S.user.uid}).catch(()=>{});}catch(e){}},
   frWatch(game,onPlayers,onEvent){const version=sceneVersion,start=Date.now()-5000;
     const a=onSnapshot(collection(db,'funrunLive',String(game),'p'),snap=>{if(version===sceneVersion)onPlayers(snap.docs.map(d=>({uid:d.id,...d.data()})));},()=>{});
     const b=onSnapshot(collection(db,'funrunLive',String(game),'ev'),snap=>{if(version!==sceneVersion)return;for(const ch of snap.docChanges())if(ch.type==='added'){const e=ch.doc.data();if((e.at||0)>=start)onEvent({id:ch.doc.id,...e});}},()=>{});
