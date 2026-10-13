@@ -1,7 +1,7 @@
-import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix13';
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix14';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
-import {lurePen,SCROLL_RECIPES} from './bird-lure-engine.js?v=ss3-fix13';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix13';
+import {lurePen} from './bird-lure-engine.js?v=ss3-fix14';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix14';
 import {observeGameplay} from './campaign-progress.js?v=ss3-recovery6';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -10,10 +10,10 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-fix13';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix14';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-recovery6';
 import { installBackupUI } from './save-backup.js?v=ss3-recovery6';
-import { CATALOG } from './catalog.js?v=ss3-fix13';
+import { CATALOG } from './catalog.js?v=ss3-fix14';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -49,7 +49,7 @@ const SCREEN_PARTS={
  house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
  catpen:['catpen'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
- boat:[],farmshop:['animals-farmshop'],adminshop:[],fishing:['animals-fishing'],
+ boat:[],neighborhood:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
  minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
 };
 const sceneSubscriptions=new Set();
@@ -431,7 +431,7 @@ function subSet(K, v, scope) {
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = {minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',adminshop:'🛍️ ร้านค้ายัยหนู',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🦤 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
+const SCREENS = {neighborhood:'🏘️ เนเบอร์ฮูด',funrun:'🎃 แรลลี่ฟักทอง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🐦 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
 // lastSetError: the latest failed Host.set/subSet (cleared at the start of every set). frameSave(true) throws it.
 let lastSetError = null;
@@ -444,7 +444,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={lure:'lureRequestCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',adminshop:'adminshopActionCloud',ledger:'ledgerCloud'};
+const CLOUD_HANDLERS={nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -511,6 +511,15 @@ const HOST_BASE = {
   cloud:cloudAction,
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
+  // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
+  frPublish(game,data){if(!S.user)return;setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),data).catch(()=>{});},
+  frEvent(game,ev){if(!S.user)return;addDoc(collection(db,'funrunLive',String(game),'ev'),{...ev,from:S.user.uid}).catch(()=>{});},
+  frWatch(game,onPlayers,onEvent){const version=sceneVersion,start=Date.now()-5000;
+    const a=onSnapshot(collection(db,'funrunLive',String(game),'p'),snap=>{if(version===sceneVersion)onPlayers(snap.docs.map(d=>({uid:d.id,...d.data()})));},()=>{});
+    const b=onSnapshot(collection(db,'funrunLive',String(game),'ev'),snap=>{if(version!==sceneVersion)return;for(const ch of snap.docChanges())if(ch.type==='added'){const e=ch.doc.data();if((e.at||0)>=start)onEvent({id:ch.doc.id,...e});}},()=>{});
+    sceneSubscriptions.add(a);sceneSubscriptions.add(b);return()=>{a();b();sceneSubscriptions.delete(a);sceneSubscriptions.delete(b);};},
+  watchNb(id,fn){return sceneWatch(doc(db,'neighborhoods',String(id)),fn);},
+  watchNbDay(id,day,fn){return sceneWatch(doc(db,'neighborhoods',String(id),'days',String(day)),fn);},
   get(k) {
     if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(inventoryView(S.P.g)):null; }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
@@ -520,17 +529,6 @@ const HOST_BASE = {
   set(k, v) { lastSetError = null; try { hostSet(k, v); } catch (e) { throw setFailed(e); } },
   get lastSetError() { return lastSetError; },
   del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
-  // Legacy path (old cached bird page / functions not deployed): the page already deducted materials locally.
-  // If the direct write is refused (rules require lureRequestCloud), give the materials back and reload the page.
-  birdReq: sp => { addDoc(collection(db, 'birdReqs'), { uid: S.user.uid, name: S.P.name, sp, status: 'wait', at: serverTimestamp() }).catch(() => {
-    const recipe=SCROLL_RECIPES[sp];
-    if(recipe&&S.P?.g){S.P.g.bag ||= {};for(const [path,q] of Object.entries(recipe)){const [g,k]=path.split('.');S.P.g.bag[g] ||= {};S.P.g.bag[g][k]=(Number(S.P.g.bag[g][k])||0)+q;}change('g');if(S.screen==='birds')setTimeout(reloadScreen,300);}
-    toast('ส่งคำขอไม่สำเร็จ คืนวัตถุดิบแล้ว ลองใหม่อีกครั้ง'); }); },
-  // One server transaction: deduct scroll materials + create the request. {legacy:true} when the function is not deployed yet.
-  async lureRequest(sp){
-    try{return await cloudAction('lure',{type:'request',sp});}
-    catch(e){if(String(e.code||'').includes('not-found'))return {legacy:true};throw e;}
-  },
   serverNow:()=>serverNow(),
   syncClock:()=>syncClock(),
   barnRelease(type,slot,born){if(barnReleases.size<200)barnReleases.add(type+':'+slot+':'+born);},
@@ -600,7 +598,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix13'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix14'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -667,11 +665,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['birds', '🦤 คำขอล่อนก'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  ({ approvals: tabApprovals, send: tabSend, birds: tabBirds, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  ({ approvals: tabApprovals, send: tabSend, nb: tabNb, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
@@ -681,30 +679,73 @@ async function tabSend(){
  ps=ps.filter(p=>p.approval!=='rejected');
  const eligible=new Set(ps.map(p=>p.uid));A.sel=new Set([...A.sel].filter(uid=>eligible.has(uid)));
  if(A.pendingRun){const r=A.pendingRun;B.innerHTML=`<div class="box"><h3>รายการส่งค้าง: ${esc(r.body.title)}</h3><button class="btn" id="gResume">ส่งรายการเดิมต่อ</button><p>รายการสำเร็จจะไม่ส่งซ้ำ แม้สมาชิกกดรับไปแล้ว</p></div>`;$('#gResume').onclick=()=>{A.gift={...r.body,operationId:r.operationId};sendGift(r.uids,r.names,r.packs||{});};return;}
- A.packs ||= {};const categories=[...new Set(CATALOG.map(c=>c.g))];A.category ||= categories[0];
+ // fix14: หน้าส่งของแบบใหม่ (ตาม Preview) — การ์ด 4 ขั้น + แถบสรุปลอยด้านล่าง · แตะชื่อแล้วอัปเดตทันที · ตั้งแพ็กรายคนได้
+ A.packs ||= {};A.pq ??= '';A.tpl ??= -1;const categories=[...new Set(CATALOG.map(c=>c.g))];A.category ||= categories[0];
+ const COL=['#F2A23A','#5BB6D4','#B07CC6','#F27E9B','#6CC9A8','#E07A5F','#7C9CE0','#D4A017'],TINT=['#FFEBD9','#EFE6FF','#E4F7EF','#FFF5D6','#FFE3EC','#E3F1FB'];
+ const colOf=uid=>COL[Math.max(0,ps.findIndex(p=>p.uid===uid))%COL.length],ini=s=>esc([...String(s||'?')][0].toUpperCase()),nameOf=uid=>ps.find(p=>p.uid===uid)?.name||uid;
  const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
- B.innerHTML=`<div class="box"><h3>1. ผู้รับและจำนวนแพ็ก (${A.sel.size} คน)</h3><div class="row"><button class="btn sm" id="sAll">เลือก / ยกเลิกทุกคน</button><button class="btn sm gray" id="sReload">โหลดรายชื่อใหม่</button></div><div class="plist">${ps.map(p=>`<label class="${A.sel.has(p.uid)?'on':''}"><input type="checkbox" data-u="${p.uid}" ${A.sel.has(p.uid)?'checked':''}>${esc(p.name)}<input type="number" data-packs="${p.uid}" aria-label="จำนวนแพ็กของ ${esc(p.name)}" min="1" max="1000000" value="${A.packs[p.uid]||1}" style="width:4rem"> แพ็ก</label>`).join('')}</div></div>
- <div class="box"><h3>2. รายการต่อ 1 แพ็ก</h3><div class="row">หัวข้อ <input id="gT" value="${esc(g.title)}" style="flex:1"></div><div class="row">ข้อความ <input id="gM" value="${esc(g.msg)}" style="flex:1"></div><div class="row">กุศล <input id="gK" type="number" min="0" value="${g.kusal||0}" style="width:6rem"> เหรียญฮาโลวีน <input id="gC" type="number" min="0" value="${g.coins||0}" style="width:4rem"></div>
- <div class="picked">${Object.entries(g.items).filter(([k])=>CAT[k]).map(([k,n])=>`<div><img src="${IMG(CAT[k].i)}">${esc(CAT[k].n)}<input type="number" min="0" data-k="${k}" value="${n}"><button class="btn sm gray" data-rm="${k}">ลบ</button></div>`).join('')}</div>
- <div class="row"><input id="gQ" placeholder="ค้นหาไอเทมทุกหมวด" value="${esc(A.q)}" style="flex:1"><select id="gCategory"><option value="favorites" ${A.category==='favorites'?'selected':''}>⭐ รายการโปรด</option>${categories.map(c=>`<option ${A.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
- <div class="cat">${filt.map(c=>`<div style="display:flex;gap:2px"><button data-add="${c.k}" style="flex:1"><img src="${IMG(c.i)}" loading="lazy">${esc(c.n)}</button><button data-favorite="${c.k}" aria-label="รายการโปรด">${A.favorites.includes(c.k)?'★':'☆'}</button></div>`).join('')||'หมวดนี้ยังไม่มีรายการ'}</div></div>
- <div class="box"><h3>3. แพ็กเกจที่บันทึกไว้</h3><div class="row"><input id="templateName" placeholder="ชื่อแพ็กเกจ" style="flex:1"><button class="btn sm" id="saveTemplate">บันทึกแพ็กนี้</button></div>${A.templates.map((t,i)=>`<div class="row"><b style="flex:1">${esc(t.name)}</b><button class="btn sm" data-template="${i}">ใช้แพ็กนี้</button><button class="btn sm gray" data-del-template="${i}">ลบ</button></div>`).join('')}</div>
- <div class="box"><button class="btn pink" id="gSend">📮 ตรวจยอดและส่ง</button><p class="note">จำนวนต่อแพ็ก × จำนวนแพ็กของแต่ละคน ระบบคำนวณให้ทั้งหมด</p></div>
- <details class="box"><summary>📜 ประวัติส่งล่าสุด ${A.history.length} รายการ</summary>${A.history.filter(h=>h.type==='gift').map(h=>`<div style="border-bottom:1px solid #ddd;padding:8px"><b>${esc(h.title)}</b><small> · ${h.at?new Date(typeof h.at==='number'?h.at:h.at.toMillis()).toLocaleString('th-TH'):''}</small><p>${esc((h.to||[]).join(', '))} (${h.count} คน)</p><div class="items">${itemsHtml(h.items||{})}</div><p>กุศลต่อแพ็ก ${fmt(h.kusal)} · เหรียญ ${fmt(h.coins)}</p>${h.packs?'<p>แพ็ก: '+Object.entries(h.packs).map(([uid,n])=>esc(ps.find(p=>p.uid===uid)?.name||uid)+' ×'+n).join(' · ')+'</p>':''}</div>`).join('')||'ยังไม่มีประวัติ'}</details>`;
- const keep=()=>{g.title=$('#gT').value.trim()||'ของขวัญจากยัยหนู';g.msg=$('#gM').value.trim();g.kusal=Math.max(0,Number($('#gK').value)||0);g.coins=Math.max(0,Number($('#gC').value)||0);B.querySelectorAll('[data-k]').forEach(i=>{const n=Number(i.value)||0;if(n>0)g.items[i.dataset.k]=n;else delete g.items[i.dataset.k];});B.querySelectorAll('[data-packs]').forEach(i=>A.packs[i.dataset.packs]=Math.max(1,Number(i.value)||1));};
+ const parts=(n=1)=>[g.kusal?['<span class="as-e">💛</span>','กุศล',g.kusal*n,1]:null,g.coins?['<span class="as-e">🪙</span>','เหรียญฮาโลวีน',g.coins*n,1]:null,...Object.entries(g.items).filter(([k])=>CAT[k]).map(([k,q])=>[`<img class="as-e" src="${IMG(CAT[k].i)}" alt="">`,CAT[k].n,q*n,0,k])].filter(Boolean);
+ const line=n=>parts(n).map(([e,nm,v])=>`${esc(nm)} ×${fmt(v)}`).join(' · ')||'แพ็กยังว่าง';
+ const tplCard=(t,i)=>{const b=t.body||{},its=Object.keys(b.items||{}).filter(k=>CAT[k]);return `<button class="as-tpl${i===A.tpl?' on':''}" style="--tint:${TINT[i%TINT.length]}" data-template="${i}"><span class="as-bi">${its[0]?`<img src="${IMG(CAT[its[0]].i)}" alt="">`:esc(b.icon||'🎁')}</span><b>${esc(t.name)}</b><span class="as-mini">${its.slice(1,5).map(k=>`<img src="${IMG(CAT[k].i)}" alt="">`).join('')}</span><span class="as-ks">${b.kusal?'💛 '+fmt(b.kusal):b.coins?'🪙 '+fmt(b.coins):'📦 '+its.length+' อย่าง'}</span><i data-del-template="${i}" aria-label="ลบแพ็ก">✕</i></button>`;};
+ B.innerHTML=`<div class="asd">
+ <section class="as-card"><div class="as-ch"><span class="as-n">1</span><div class="as-grow"><h2>เลือกแพ็กเกจ</h2><small>แพ็กที่บันทึกไว้ · ปัดซ้ายขวาดูเพิ่ม</small></div></div>
+  <div class="as-tpls">${A.templates.map(tplCard).join('')}<button class="as-tpl add" id="saveTemplate"><span>＋</span>บันทึกแพ็กนี้</button></div></section>
+ <section class="as-card"><div class="as-ch"><span class="as-n">2</span><div class="as-grow"><h2>ของใน 1 แพ็ก</h2><small>${esc(g.icon||'🎁')} ${esc(g.title)}</small></div><button class="as-link" id="asEdit">${A.editOpen?'✓ เสร็จ':'✏️ แก้ไข'}</button></div>
+  <div class="as-items">${parts().map(([e,nm,v,k,key])=>`<div class="as-it${k?' k':''}">${e}<span>${esc(nm)}</span>${A.editOpen&&key?`<input type="number" min="0" data-k="${key}" value="${v}" aria-label="จำนวน ${esc(nm)}"><button class="as-x" data-rm="${key}" aria-label="ลบ">✕</button>`:`<b>×${fmt(v)}</b>`}</div>`).join('')||'<div class="as-empty" style="grid-column:1/-1"><b>📦</b>แตะ ✏️ แก้ไข เพื่อใส่ของ</div>'}</div>
+  <div class="as-editor" ${A.editOpen?'':'hidden'}>
+   <div class="as-form"><label>📝 หัวข้อ<input id="gT" value="${esc(g.title)}"></label><label>💬 ข้อความ<input id="gM" value="${esc(g.msg)}"></label><label>💛 กุศล<input id="gK" type="number" min="0" value="${g.kusal||0}"></label><label>🪙 เหรียญ<input id="gC" type="number" min="0" value="${g.coins||0}"></label></div>
+   <div class="as-srch">🔍<input id="gQ" placeholder="ค้นหาไอเทมทุกหมวด" value="${esc(A.q)}"></div>
+   <div class="as-cats"><button data-cat="favorites" class="${A.category==='favorites'?'on':''}">⭐ โปรด</button>${categories.map(c=>`<button data-cat="${esc(c)}" class="${A.category===c&&!A.q?'on':''}">${esc(c)}</button>`).join('')}</div>
+   <div class="as-pick">${filt.map(c=>`<div><img src="${IMG(c.i)}" loading="lazy" alt=""><span>${esc(c.n)}</span><button class="star" data-favorite="${c.k}" aria-label="รายการโปรด">${A.favorites.includes(c.k)?'★':'☆'}</button><button data-add="${c.k}" aria-label="เพิ่ม">＋</button></div>`).join('')||'<p class="note">หมวดนี้ยังไม่มีรายการ</p>'}</div>
+  </div></section>
+ <section class="as-card"><div class="as-ch"><span class="as-n">3</span><div class="as-grow"><h2>ผู้รับ</h2><small>แตะชื่อเพื่อเลือก</small></div><span class="as-count" id="asCount"></span></div>
+  <div class="as-srch">🔍<input id="asQ" placeholder="ค้นหาชื่อผู้เล่น" autocomplete="off" value="${esc(A.pq)}"><button class="as-link" id="sAll">ทุกคน</button><button class="as-link" id="sReload" aria-label="โหลดรายชื่อใหม่">🔄</button></div>
+  <div class="as-chips" id="asChips"></div></section>
+ <section class="as-card"><div class="as-ch"><span class="as-n">4</span><div class="as-grow"><h2>จำนวนแพ็กของแต่ละคน</h2><small>ระบบคูณยอดให้เอง</small></div></div><div id="asSel"></div></section>
+ <details class="as-card as-hist"><summary>📜 ประวัติส่งล่าสุด ${A.history.length} รายการ</summary>${A.history.filter(h=>h.type==='gift').map(h=>`<div class="hist"><b>${esc(h.title)}</b><small> · ${h.at?new Date(typeof h.at==='number'?h.at:h.at.toMillis()).toLocaleString('th-TH'):''}</small><p>${esc((h.to||[]).join(', '))} (${h.count} คน)</p><div class="items">${itemsHtml(h.items||{})}</div><p>กุศลต่อแพ็ก ${fmt(h.kusal)} · เหรียญ ${fmt(h.coins)}</p>${h.packs?'<p>แพ็ก: '+Object.entries(h.packs).map(([uid,n])=>esc(nameOf(uid))+' ×'+n).join(' · ')+'</p>':''}</div>`).join('')||'ยังไม่มีประวัติ'}</details>
+ <div class="as-dock"><div class="in"><div class="as-stack" id="asStack"></div><div class="as-sum" id="asSum"></div><button class="as-go" id="gSend">ตรวจยอด →</button></div></div>
+ <div class="as-modal" id="asModal"><div class="as-sheet" id="asSheet"></div></div></div>`;
+ const keep=()=>{const v=id=>B.querySelector('#'+id);if(v('gT')){g.title=v('gT').value.trim()||'ของขวัญจากยัยหนู';g.msg=v('gM').value.trim();g.kusal=Math.max(0,Math.floor(Number(v('gK').value)||0));g.coins=Math.max(0,Math.floor(Number(v('gC').value)||0));}B.querySelectorAll('[data-k]').forEach(i=>{const n=Math.floor(Number(i.value)||0);if(n>0)g.items[i.dataset.k]=n;else delete g.items[i.dataset.k];});};
  A.captureSend=keep;
  const persist=async()=>{await httpsCallable(functions,'adminCenterCloud')({type:'preferences',session:S.sessionId,templates:A.templates,favorites:A.favorites});};
- B.querySelectorAll('[data-u]').forEach(i=>i.onchange=()=>{keep();i.checked?A.sel.add(i.dataset.u):A.sel.delete(i.dataset.u);});
- $('#sAll').onclick=()=>{keep();if(ps.every(p=>A.sel.has(p.uid)))A.sel.clear();else ps.forEach(p=>A.sel.add(p.uid));tabSend();};
+ const total=()=>[...A.sel].reduce((a,uid)=>a+(A.packs[uid]||1),0);
+ const dock=()=>{const sel=[...A.sel],tp=total();$('#asCount').textContent=sel.length+' คน';
+  $('#asStack').innerHTML=sel.slice(0,4).map(uid=>`<span style="--c:${colOf(uid)}">${ini(nameOf(uid))}</span>`).join('')+(sel.length>4?`<span style="--c:#C9B6A6">+${sel.length-4}</span>`:'');
+  $('#asSum').innerHTML=sel.length?`<b>${sel.length} คน · ${fmt(tp)} แพ็ก</b><small>${g.kusal?'💛 กุศลรวม '+fmt(g.kusal*tp):esc(g.icon||'🎁')+' '+esc(g.title)}</small>`:`<b style="color:var(--soft)">ยังไม่ได้เลือกผู้รับ</b><small>${esc(g.icon||'🎁')} ${esc(g.title)}</small>`;
+  $('#gSend').disabled=!sel.length;};
+ const chips=()=>{const q=A.pq.toLowerCase(),vis=ps.filter(p=>!q||String(p.name||'').toLowerCase().includes(q));
+  $('#asChips').innerHTML=vis.map(p=>`<button class="as-pc${A.sel.has(p.uid)?' on':''}" style="--c:${colOf(p.uid)}" data-u="${esc(p.uid)}" aria-pressed="${A.sel.has(p.uid)}"><span class="av"><b>${ini(p.name)}</b></span>${esc(p.name)}</button>`).join('')||'<span class="note">ไม่พบชื่อนี้</span>';};
+ const selList=()=>{const sel=[...A.sel];if(!sel.length){$('#asSel').innerHTML='<div class="as-empty"><b>👆</b>เลือกผู้รับในข้อ 3 ก่อน แล้วตั้งจำนวนแพ็กตรงนี้</div>';dock();return;}
+  $('#asSel').innerHTML=`<div class="as-bulk">⚡ ทุกคน = <span class="as-seg">${[1,3,5,10,15].map(n=>`<button data-bulk="${n}">${n}</button>`).join('')}</span> แพ็ก</div><div>${sel.map(uid=>{const n=A.packs[uid]||1;return `<div class="as-sr"><span class="av" style="--c:${colOf(uid)}">${ini(nameOf(uid))}</span><span class="nm">${esc(nameOf(uid))}</span><div class="as-step"><button data-dec="${esc(uid)}" aria-label="ลด">−</button><input data-packs="${esc(uid)}" type="number" min="1" max="1000000" value="${n}" inputmode="numeric" aria-label="จำนวนแพ็กของ ${esc(nameOf(uid))}"><small>แพ็ก</small><button data-inc="${esc(uid)}" aria-label="เพิ่ม">＋</button></div><span class="tot" data-tot="${esc(uid)}">${line(n)}</span><button class="as-rm" data-unsel="${esc(uid)}">เอาออก</button></div>`;}).join('')}</div>`;dock();};
+ const setPacks=(uid,n)=>{n=Math.max(1,Math.min(1000000,Math.floor(Number(n)||1)));A.packs[uid]=n;const inp=B.querySelector(`[data-packs="${CSS.escape(uid)}"]`);if(inp&&Number(inp.value)!==n)inp.value=n;const t=B.querySelector(`[data-tot="${CSS.escape(uid)}"]`);if(t)t.textContent=line(n);dock();};
+ chips();selList();
+ B.querySelector('.asd').onclick=async e=>{const t=e.target;
+  const del=t.closest('[data-del-template]');if(del){e.stopPropagation();keep();const i=+del.dataset.delTemplate;if(!confirm('ลบแพ็ก "'+A.templates[i].name+'" ?'))return;A.templates.splice(i,1);if(A.tpl===i)A.tpl=-1;else if(A.tpl>i)A.tpl--;try{await persist();}catch(err){toast(thaiError(err));}tabSend();return;}
+  const tp=t.closest('[data-template]');if(tp){keep();A.tpl=+tp.dataset.template;A.gift=clone(A.templates[A.tpl].body);tabSend();return;}
+  const u=t.closest('[data-u]');if(u){const id=u.dataset.u;A.sel.has(id)?A.sel.delete(id):A.sel.add(id);u.classList.toggle('on',A.sel.has(id));u.setAttribute('aria-pressed',A.sel.has(id));selList();return;}
+  const dc=t.closest('[data-dec]');if(dc)return setPacks(dc.dataset.dec,(A.packs[dc.dataset.dec]||1)-1);
+  const ic=t.closest('[data-inc]');if(ic)return setPacks(ic.dataset.inc,(A.packs[ic.dataset.inc]||1)+1);
+  const bk=t.closest('[data-bulk]');if(bk){A.sel.forEach(uid=>A.packs[uid]=+bk.dataset.bulk);selList();toast('⚡ ตั้งทุกคนเป็น '+bk.dataset.bulk+' แพ็กแล้ว');return;}
+  const un=t.closest('[data-unsel]');if(un){A.sel.delete(un.dataset.unsel);chips();selList();return;}
+  const ad=t.closest('[data-add]');if(ad){keep();g.items[ad.dataset.add]=(g.items[ad.dataset.add]||0)+1;A.tpl=-1;tabSend();return;}
+  const rm=t.closest('[data-rm]');if(rm){keep();delete g.items[rm.dataset.rm];A.tpl=-1;tabSend();return;}
+  const ct=t.closest('[data-cat]');if(ct){keep();A.category=ct.dataset.cat;A.q='';tabSend();return;}
+  const fv=t.closest('[data-favorite]');if(fv){keep();const k=fv.dataset.favorite;A.favorites=A.favorites.includes(k)?A.favorites.filter(x=>x!==k):[...A.favorites,k];try{await persist();tabSend();}catch(err){toast(thaiError(err));}return;}
+  if(t.closest('[data-close]')||t.id==='asModal'){$('#asModal').classList.remove('on');return;}
+ };
+ B.querySelector('.asd').oninput=e=>{const p=e.target.dataset.packs;if(p)setPacks(p,e.target.value);};
+ B.querySelector('.asd').onchange=e=>{if(e.target.matches('[data-k],#gK,#gC,#gT,#gM')){keep();A.tpl=-1;const it=e.target.dataset.k;if(it||e.target.id==='gK'||e.target.id==='gC'){const pos=e.target.id;tabSend().then(()=>{if(!it)B.querySelector('#'+pos)?.focus();});}}};
+ $('#asEdit').onclick=()=>{keep();A.editOpen=!A.editOpen;tabSend();};
+ $('#asQ').oninput=e=>{A.pq=e.target.value.trim();chips();};
+ $('#sAll').onclick=()=>{const q=A.pq.toLowerCase(),vis=ps.filter(p=>!q||String(p.name||'').toLowerCase().includes(q));const on=vis.every(p=>A.sel.has(p.uid));vis.forEach(p=>on?A.sel.delete(p.uid):A.sel.add(p.uid));chips();selList();};
  $('#sReload').onclick=()=>{keep();A.players=null;A.sendLoaded=false;tabSend();};
- B.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{keep();g.items[b.dataset.add]=(g.items[b.dataset.add]||0)+1;tabSend();});B.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{keep();delete g.items[b.dataset.rm];tabSend();});
- $('#gCategory').onchange=e=>{keep();A.category=e.target.value;tabSend();};let timer;$('#gQ').oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>{keep();A.q=e.target.value.trim();const pos=e.target.selectionStart;tabSend().then(()=>{$('#gQ')?.focus();$('#gQ')?.setSelectionRange(pos,pos);});},180);};
- B.querySelectorAll('[data-favorite]').forEach(b=>b.onclick=async()=>{keep();const k=b.dataset.favorite;A.favorites=A.favorites.includes(k)?A.favorites.filter(x=>x!==k):[...A.favorites,k];try{await persist();tabSend();}catch(e){toast(thaiError(e));}});
- $('#saveTemplate').onclick=async()=>{keep();const name=$('#templateName').value.trim();if(!name)return toast('ใส่ชื่อแพ็กเกจก่อน');if(A.templates.length>=30&&!A.templates.some(t=>t.name===name))return toast('เก็บได้ 30 แพ็กเกจ');A.templates=A.templates.filter(t=>t.name!==name);A.templates.push({name,body:{title:g.title,msg:g.msg,icon:g.icon,kusal:g.kusal,coins:g.coins,items:{...g.items}}});try{await persist();toast('บันทึกแพ็กเกจบนคลาวด์แล้ว');tabSend();}catch(e){toast(thaiError(e));}};
- B.querySelectorAll('[data-template]').forEach(b=>b.onclick=()=>{keep();A.gift=clone(A.templates[+b.dataset.template].body);tabSend();});B.querySelectorAll('[data-del-template]').forEach(b=>b.onclick=async()=>{keep();A.templates.splice(+b.dataset.delTemplate,1);await persist();tabSend();});
+ let timer;const gq=$('#gQ');if(gq)gq.oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>{keep();A.q=e.target.value.trim();const pos=e.target.selectionStart;tabSend().then(()=>{$('#gQ')?.focus();$('#gQ')?.setSelectionRange(pos,pos);});},180);};
+ $('#saveTemplate').onclick=async()=>{keep();if(!g.kusal&&!g.coins&&!Object.keys(g.items).length)return toast('แพ็กยังว่าง ใส่ของก่อนบันทึก');const name=(prompt('💾 ตั้งชื่อแพ็กนี้',g.title||'')||'').trim();if(!name)return;if(A.templates.length>=30&&!A.templates.some(t=>t.name===name))return toast('เก็บได้ 30 แพ็กเกจ');A.templates=A.templates.filter(t=>t.name!==name);A.templates.push({name,body:{title:g.title,msg:g.msg,icon:g.icon,kusal:g.kusal,coins:g.coins,items:{...g.items}}});A.tpl=A.templates.length-1;try{await persist();toast('💾 บันทึกแพ็ก "'+name+'" แล้ว');tabSend();}catch(e){toast(thaiError(e));}};
  $('#gSend').onclick=()=>{keep();const users=ps.filter(p=>A.sel.has(p.uid));if(!users.length)return toast('เลือกผู้รับก่อน');if(!g.kusal&&!g.coins&&!Object.keys(g.items).length)return toast('แพ็กยังว่าง');
- if([g.kusal,g.coins,...Object.values(g.items)].some(n=>!Number.isSafeInteger(n)||n<0)||users.some(p=>!Number.isSafeInteger(A.packs[p.uid]||1)))return toast('จำนวนต้องเป็นจำนวนเต็ม');
- modal(`<h2>ยืนยันยอดส่ง</h2><p>${esc(g.title)}</p>${users.map(p=>{const n=A.packs[p.uid]||1;return `<div class="box"><b>${esc(p.name)} ×${n} แพ็ก</b><p>กุศล ${fmt(g.kusal*n)} · เหรียญ ${fmt(g.coins*n)}</p><div class="items">${itemsHtml(Object.fromEntries(Object.entries(g.items).map(([k,q])=>[k,q*n])))}</div></div>`;}).join('')}`,[{t:'ยกเลิก',c:'gray'},{t:'ส่งเลย',c:'pink',f:()=>sendGift(users.map(p=>p.uid),users.map(p=>p.name),A.packs)}]);
+  if([g.kusal,g.coins,...Object.values(g.items)].some(n=>!Number.isSafeInteger(n)||n<0)||users.some(p=>!Number.isSafeInteger(A.packs[p.uid]||1)))return toast('จำนวนต้องเป็นจำนวนเต็ม');
+  const tp=total();$('#asSheet').innerHTML=`<div class="as-grip"></div><div class="as-rcpt"><h3>📮 ยืนยันยอดส่ง</h3><div class="meta">${esc(g.icon||'🎁')} ${esc(g.title)} · ${users.length} คน · ${fmt(tp)} แพ็ก</div>${users.map(p=>{const n=A.packs[p.uid]||1;return `<div class="as-rl"><span class="av" style="--c:${colOf(p.uid)}">${ini(p.name)}</span><b>${esc(p.name)}</b><span class="x">×${fmt(n)} แพ็ก</span><small>${line(n)}</small></div>`;}).join('')}<div class="as-grand"><b>รวมทั้งหมด</b>${line(tp)}</div></div><div class="as-acts"><button class="as-ghost" data-close>← กลับไปแก้</button><button class="as-go" id="asSendNow">📮 ส่งเลย</button></div>`;
+  $('#asModal').classList.add('on');
+  $('#asSendNow').onclick=()=>{$('#asModal').classList.remove('on');sendGift(users.map(p=>p.uid),users.map(p=>p.name),Object.fromEntries(users.map(p=>[p.uid,A.packs[p.uid]||1])));};
  };
 }
 async function sendGift(uids, names, packs={}) {
@@ -719,52 +760,19 @@ async function sendGift(uids, names, packs={}) {
     const profile=await getDoc(playerRef());S.P.mailCount=profile.data().mailCount||0;refreshBar();
     A.gift = { title: 'ของขวัญจากยัยหนู', msg: '', icon: '🎁', kusal: 0, coins: 0, items: {} }; A.sel.clear();
     A.pendingRun=null;A.sendLoaded=false;
-    modal(`<h2>📮 ส่งแล้ว ${result.count} คน</h2><p class="note">ของอยู่ในไปรษณีย์ของผู้รับ รอกดรับ</p>`); tabSend();
+    A.tpl=-1;modal(`<div style="text-align:center"><div class="as-ok">✓</div><h2>ส่งเรียบร้อย!</h2><p>📮 เข้าไปรษณีย์ ${result.count} คน · รวม ${fmt(Object.values(packs).reduce((a,n)=>a+n,0)||result.count)} แพ็ก</p><p class="note">📜 บันทึกในประวัติส่งแล้ว</p></div>`,[{t:'เสร็จแล้ว',c:'pink'}]); tabSend();
   } catch (e) { modal(`<h2>ส่งไม่สำเร็จ</h2><p>${thaiError(e)}</p><p class="note">กดส่งใหม่ ระบบจะตรวจรายการที่ค้างบนคลาวด์และส่งต่อ คนที่ส่งสำเร็จแล้วจะไม่รับซ้ำ</p>`); } finally { A.sending=false; }
 }
-async function tabBirds() {
-  const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
-  let rq = [];
-  try { rq = (await getDocs(query(collection(db, 'birdReqs'), where('status', '==', 'wait'), limit(100)))).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
-  const SPN = { ostrich: '🦢 นกกระจอกเทศ', dodo: '🦤 นกโดโด้' };
-  B.innerHTML = `<div class="box"><h3>🦤 คำขอล่อนกที่รออนุมัติ (${rq.length})</h3>${rq.map(r => `<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp] || esc(r.sp)}</b><button class="btn sm" data-ok="${esc(r.id)}">อนุมัติ</button><button class="btn sm gray" data-no="${esc(r.id)}">ไม่อนุมัติ</button></div>`).join('') || '<p class="note">ไม่มีคำขอรออยู่</p>'}
-    <p class="note">อนุมัติ = นกเข้าคอกคัมภีร์ (คอก 1) ทันที + แจ้งเตือนทางไปรษณีย์ • อายุ 48 ชม. นับจากตอนอนุมัติ · คอก 1 เต็ม = นกบินหนี ส่งกุศลปลอบใจ 100–200 · ไม่อนุมัติ = กุศลปลอบใจ 100–200</p></div>`;
-  const call=async(request,decision)=>{
-    if(cloudPromise)await cloudPromise;frameSave();await flush();
-    const result=(await httpsCallable(functions,'birdRequestsCloud')({request,decision})).data;
-    if(result.actorParts?.length){store.accept(result.actorParts);S.P.g=joinGame(store.parts.values());}
-    return result;
-  };
-  const done = async (r, ok,repair=false) => {
-    try {
-      const result=await call(r.id,repair?'repair':ok?'approve':'reject');
-      toast(repair?(result.repair==='skip'?(result.reason==='full'?'คอก 1 เต็ม ยังย้ายไม่ได้':'ไม่พบนกในซองหรือคลังให้ย้าย'):'ย้ายนกเข้าคอก 1 แล้ว'):result.status==='flew'?'คอก 1 เต็ม นกบินหนี ส่งกุศลปลอบใจแล้ว':ok?'อนุมัติแล้ว นกเข้าคอกคัมภีร์ (คอก 1)':'ส่งกุศลปลอบใจแล้ว');tabBirds();
-    } catch(e){toast(e.message||thaiError(e));}
-  };
-  B.querySelectorAll('[data-ok]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.ok), true));
-  B.querySelectorAll('[data-no]').forEach(x => x.onclick = () => done(rq.find(r => r.id === x.dataset.no), false));
-  const repairBox=document.createElement('div');repairBox.className='box';
-  repairBox.innerHTML='<h3>🛠️ คำขอเก่าที่อนุมัติแบบเดิม (นกเข้าคลัง)</h3><p class="note">ซองยังไม่รับ = ลบซองแล้วนกเข้าคอก 1 · รับซองแล้ว = ย้ายนก 1 ตัวจากคลังถ้ามี · ไม่แตะกุศล/ของอื่น · กดซ้ำได้ ไม่ย้ายซ้ำ · อายุ 48 ชม. นับจากตอนซ่อม</p><div class="row"><button class="btn sm" id="lureRepairAll">ซ่อมคำขอเก่าทั้งหมด</button></div><div id="lureRepairList"></div>';
-  B.appendChild(repairBox);
-  $('#lureRepairAll').onclick=async()=>{
-    const btn=$('#lureRepairAll');if(btn.disabled)return;btn.disabled=true;
-    const total={checked:0,mail:0,vault:0,admitted:0,full:0,nobird:0,errors:0},failed=[];let cursor='';
-    try{
-      for(let page=0;page<500;page++){
-        btn.textContent='กำลังซ่อม… ตรวจแล้ว '+total.checked;
-        const out=await call(cursor,'repairAll');
-        for(const k in total)total[k]+=Number(out.summary?.[k])||0;failed.push(...(out.failed||[]));
-        if(!out.next)break;cursor=out.next;
-      }
-      modal(`<h2>🛠️ ซ่อมคำขอเก่าเสร็จแล้ว</h2><p>ตรวจ ${fmt(total.checked)} คำขอ</p><p>✅ ลบซองที่ยังไม่รับ → เข้าคอก 1: ${fmt(total.mail)}<br>✅ ย้ายจากคลัง → คอก 1: ${fmt(total.vault)}${total.admitted?'<br>✅ อยู่ในคอก 1 แล้ว: '+fmt(total.admitted):''}<br>⏸️ คอก 1 เต็ม (ไว้ซ่อมใหม่ทีหลัง): ${fmt(total.full)}<br>⏸️ ไม่มีนกในซอง/คลัง: ${fmt(total.nobird)}${total.errors?'<br>⚠️ ผิดพลาด: '+fmt(total.errors):''}</p>${failed.length?'<p class="note">'+failed.slice(0,5).map(f=>esc(f.request)+': '+esc(f.message)).join('<br>')+'</p>':''}`);
-    }catch(e){toast(e.message||thaiError(e));}
-    finally{tabBirds();}
-  };
-  try{const old=(await getDocs(query(collection(db,'birdReqs'),where('status','==','ok'),limit(100)))).docs.map(d=>({id:d.id,...d.data()})).filter(r=>r.route!=='pen1-v2');
-    const list=$('#lureRepairList');if(!list)return;
-    list.innerHTML=old.length?old.map(r=>`<div class="row"><b style="flex:1">${esc(r.name)} · ${SPN[r.sp]||esc(r.sp)}</b><button class="btn sm" data-repair="${esc(r.id)}">ซ่อมคำขอนี้</button></div>`).join(''):'<p class="note">ไม่พบคำขอเก่าที่ต้องซ่อม (100 รายการแรก)</p>';
-    list.querySelectorAll('[data-repair]').forEach(b=>b.onclick=()=>done(old.find(r=>r.id===b.dataset.repair),true,true));
-  }catch(e){toast(e.message||thaiError(e));}
+// fix14 เนเบอร์ฮูด: อนุมัติคำขอสร้าง + ดูรายการที่เปิดอยู่
+async function tabNb(){
+  const B=$('#aBody');B.innerHTML='<div class="box"><p class="note">กำลังโหลด…</p></div>';
+  let pend=[],act=[];
+  try{[pend,act]=await Promise.all(['pending','active'].map(st=>getDocs(query(collection(db,'neighborhoods'),where('status','==',st),limit(200))).then(s=>s.docs.map(d=>({id:d.id,...d.data()})))));}catch(e){B.innerHTML=`<div class="box">${thaiError(e)}</div>`;return;}
+  const names=n=>(n.members||[]).map(u=>(u===n.leader?'👑 ':'')+esc(n.names?.[u]||'สมาชิก')).join(' · ');
+  B.innerHTML=`<div class="box"><h3>📨 รออนุมัติ (${pend.length})</h3>${pend.map(n=>`<div class="hist"><b>🏘️ ${esc(n.name)}</b> <small>${(n.members||[]).length} คน</small><p>${names(n)}</p><p class="note">ลงขันครบแล้ว · ยื่นเมื่อ ${n.submittedAt?new Date(n.submittedAt).toLocaleString('th-TH'):'-'}</p><div class="row"><button class="btn sm" data-nbok="${esc(n.id)}">✅ อนุมัติ</button><button class="btn sm gray" data-nbno="${esc(n.id)}">ยังไม่อนุมัติ</button></div></div>`).join('')||'<p class="note">ไม่มีคำขอรออยู่</p>'}</div>
+  <div class="box"><h3>🏘️ เปิดใช้อยู่ (${act.length})</h3>${act.map(n=>`<div class="hist"><b>${esc(n.name)}</b> <small>${(n.members||[]).length}/4 คน</small><p>${names(n)}</p></div>`).join('')||'<p class="note">ยังไม่มี</p>'}</div>`;
+  const decide=async(id,decision)=>{let note='';if(decision==='reject'){note=prompt('เหตุผล (ไม่ใส่ก็ได้)')||'';}try{await httpsCallable(functions,'nbAdminCloud')({nb:id,decision,note});toast(decision==='approve'?'🎉 อนุมัติแล้ว':'บันทึกแล้ว ของที่ลงขันยังอยู่ครบ');}catch(e){toast(thaiError(e));}tabNb();};
+  B.querySelectorAll('[data-nbok]').forEach(b=>b.onclick=()=>decide(b.dataset.nbok,'approve'));B.querySelectorAll('[data-nbno]').forEach(b=>b.onclick=()=>decide(b.dataset.nbno,'reject'));
 }
 async function tabPlayers() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';

@@ -19,6 +19,6 @@
   const ids=new Set(all.map(b=>b.id)),kept=S.lureSeen.filter(id=>ids.has(id)||have.has(id));
   if(kept.length!==S.lureSeen.length){S.lureSeen=kept;changed=true;}
   if(changed){save();draw();}
-  if(added)ann('📜 คำขอได้รับอนุมัติแล้ว นกเข้าคอก 1 • อายุ 48 ชั่วโมง');
+  if(added)ann('🐦 นกมาถึงคอก 1 แล้ว • อายุ 48 ชั่วโมง');
  });
 })();

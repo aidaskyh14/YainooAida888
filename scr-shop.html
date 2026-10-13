@@ -1,7 +1,7 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix13"></script><meta charset="UTF-8">
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix14"></script><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ร้านค้าลึกลับ – ในสวนของยัยหนู</title>
-<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Itim&family=Mali:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--cream:#FFFBF5;--mint:#BDEBDD;--pig:#F6A9BD;--up:#2E9E6A;--dn:#D2506A;--chalk:#F4F1E6}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cream:#FFFBF5}}
@@ -61,8 +61,88 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .news{display:flex;gap:.4rem;align-items:center;background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem .5rem;margin-bottom:.25rem;font-size:.72rem;cursor:pointer}
 .news .m{flex:1}.news .e{font-weight:800;white-space:nowrap}
 .gbox{font-size:3rem;text-align:center}
+
+/* fix14 มุมฮาโลวีน */
+.hw{position:fixed;inset:0;z-index:12;overflow:auto;display:none;font-size:.86rem;color:var(--cocoa);background:radial-gradient(circle at 20% 0%,#6A3F9E 0,transparent 45%),radial-gradient(circle at 90% 30%,#8A3F6A 0,transparent 40%),linear-gradient(180deg,#2A1840,#1A0F2B);--disp:'Itim','Mali',sans-serif;--pump:#F28C28;--gold:#FFC94D;--red:#E5534B;--line:#F3E9DE}
+.hw.on{display:block}
+.hw .bats{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.hw .bat{position:absolute;font-size:18px;animation:hwbat linear infinite;opacity:.8}
+@keyframes hwbat{from{transform:translateX(-10vw) translateY(0)}50%{transform:translateX(50vw) translateY(-20px)}to{transform:translateX(110vw) translateY(10px)}}
+.hw .wrap{position:relative;z-index:1;max-width:28rem;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + .6rem) 16px calc(env(safe-area-inset-bottom,0px) + 2rem);display:grid;grid-template-columns:minmax(0,1fr);gap:.8rem}
+.hw .hbar{display:flex;align-items:center;gap:.4rem}
+.hw .back{border:0;border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font-weight:800;padding:.35rem .8rem}
+.hw .mchip{margin-left:auto;background:rgba(255,251,245,.95);border-radius:999px;padding:.25rem .65rem;font-weight:800;font-size:.75rem}
+.hw .banner{position:relative;border-radius:1.4rem;overflow:hidden;aspect-ratio:16/9;background:url(images/hw-banner.webp) center/cover;box-shadow:0 12px 28px rgba(0,0,0,.45),0 0 0 3px rgba(255,255,255,.18)}
+.hw .banner::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,12,50,.55) 0%,rgba(30,12,50,.15) 45%,transparent 60%)}
+.hw .banner .tt{position:absolute;left:5%;top:50%;transform:translateY(-50%);width:44%}
+.hw .banner h1{margin:0;font-family:var(--disp);font-weight:400;font-size:clamp(1.55rem,7.4vw,2.2rem);line-height:1;color:#FFE08A;text-shadow:0 3px 0 #6A2C9E,0 0 18px rgba(255,180,60,.6)}
+.hw .banner h1 span{display:block;color:#fff;font-size:.62em;margin-bottom:.15em;text-shadow:0 2px 0 #6A2C9E}
+.hw .banner p{margin:.45rem 0 0;display:inline-flex;gap:.3rem;flex-wrap:wrap}
+.hw .banner p i{font-style:normal;font-size:.62rem;font-weight:800;color:#fff;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.45);border-radius:999px;padding:.08rem .45rem}
+.hw .spark{position:absolute;color:#FFE9A8;font-size:.8rem;animation:hwtw 2.4s ease-in-out infinite;pointer-events:none}
+@keyframes hwtw{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+.hw .haunt{display:flex;align-items:center;gap:.5rem;border-radius:1.1rem;padding:.5rem .8rem;font-weight:700;font-size:.78rem;color:#fff;background:rgba(255,255,255,.1);border:2px dashed rgba(255,255,255,.25)}
+.hw .haunt.on{background:linear-gradient(90deg,#7A2FB8,#E0582A);border:2px solid rgba(255,255,255,.6);box-shadow:0 0 20px rgba(224,88,42,.55)}
+.hw .haunt .g{font-size:1.5rem}.hw .haunt.on .g{animation:hwboo 1.2s ease-in-out infinite}
+@keyframes hwboo{50%{transform:translateY(-4px) scale(1.1)}}
+.hw .haunt b{display:block;font-family:var(--disp);font-weight:400;font-size:1rem}
+.hw .card{background:var(--cream);border:3px solid #fff;border-radius:1.4rem;padding:.8rem;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.hw .ch{display:flex;align-items:center;gap:.5rem;margin-bottom:.55rem}
+.hw .ch h2{font-family:var(--disp);font-weight:400;font-size:1.15rem;margin:0;flex:1}
+.hw .pill{border-radius:999px;padding:.12rem .55rem;font-size:.68rem;font-weight:800;white-space:nowrap}
+.hw .p-pump{background:#FFE6CF;color:#B8601A}.hw .p-grape{background:#EFE3FF;color:#5B3687}
+.hw .chest{display:grid;grid-template-columns:7.5rem 1fr;gap:.7rem;align-items:center}
+.hw .chest>img{width:100%;filter:drop-shadow(0 6px 10px rgba(91,54,135,.4));animation:hwbob 2.6s ease-in-out infinite}
+@keyframes hwbob{50%{transform:translateY(-5px) rotate(-1deg)}}
+.hw .req{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem}
+.hw .rq{background:#fff;border:2px solid var(--line);border-radius:.8rem;text-align:center;padding:.2rem 0;font-size:.62rem;font-weight:800}
+.hw .rq img{width:1.5rem;height:1.5rem;object-fit:contain;display:block;margin:0 auto}
+.hw .rq.ok{border-color:#A9E2CB;background:#F2FCF8;color:#2F8F6C}.hw .rq.no{color:var(--red)}
+.hw .bigp{border:0;border-radius:1.1rem;font-weight:800;font-size:.95rem;padding:.65rem 1rem;width:100%;margin-top:.55rem;color:#fff;background:linear-gradient(180deg,#8A4FD0,#5B3687);box-shadow:0 4px 0 #3B2357,0 0 18px rgba(138,79,208,.5)}
+.hw .bigp:disabled{background:#D9D0E4;box-shadow:none;color:#9A8FA8}
+.hw .odds{margin-top:.5rem;font-size:.7rem}.hw .odds summary{cursor:pointer;color:var(--soft);font-weight:700}
+.hw .odds table{width:100%;border-collapse:collapse;margin-top:.35rem}.hw .odds td{padding:.18rem .2rem;border-bottom:1px dashed var(--line)}
+.hw .odds td:last-child{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.hw .note{font-size:.68rem;color:var(--soft);background:#FFF3E3;border-radius:.8rem;padding:.35rem .55rem;margin-bottom:.5rem}
+.hw .it{display:grid;grid-template-columns:2.6rem 1fr auto;gap:.55rem;align-items:center;padding:.45rem 0;border-top:1.5px dashed var(--line)}
+.hw .it:first-of-type{border-top:0}
+.hw .it .ic{width:2.6rem;height:2.6rem;border-radius:.8rem;display:grid;place-items:center;background:var(--tint)}.hw .it .ic img{width:2.2rem;height:2.2rem;object-fit:contain}
+.hw .it b{font-size:.84rem;display:flex;gap:.3rem;align-items:center;flex-wrap:wrap}
+.hw .it small{display:block;color:var(--soft);font-size:.68rem;font-variant-numeric:tabular-nums}
+.hw .price{font-weight:800;color:#B8601A}.hw .price s{color:var(--soft);font-weight:600;margin-right:.2rem}
+.hw .rar{font-size:.55rem;font-weight:800;border-radius:999px;padding:0 .4rem;color:#fff;background:var(--r)}
+.hw .act{display:flex;align-items:center;gap:.3rem}
+.hw .step{display:flex;align-items:center;background:#F6EEE4;border-radius:999px;padding:.1rem}
+.hw .step button{border:0;background:#fff;width:1.6rem;height:1.6rem;border-radius:50%;font-weight:800;color:#B8601A;padding:0}
+.hw .step input{width:2.5rem;border:0;background:none;text-align:center;font-weight:800;font-size:16px;-moz-appearance:textfield;color:var(--cocoa)}
+.hw .step input::-webkit-inner-spin-button{display:none}
+.hw .sell{border:0;border-radius:999px;background:var(--pump);color:#fff;font-weight:800;font-size:.72rem;padding:.35rem .7rem;box-shadow:0 2px 0 #B8601A}
+.hw .sell:disabled{background:#E9E1D8;box-shadow:none;color:#B5A79A}
+.hwst{position:fixed;inset:0;z-index:25;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1rem;text-align:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,#4A2A78,#120A20 72%);--disp:'Itim','Mali',sans-serif}
+.hwst.on{display:flex}
+.hwst .rays{position:absolute;width:150vmax;aspect-ratio:1;background:repeating-conic-gradient(rgba(166,226,46,.13) 0 9deg,transparent 9deg 18deg);border-radius:50%;animation:hwspin 12s linear infinite;-webkit-mask:radial-gradient(circle,#000 10%,transparent 55%);mask:radial-gradient(circle,#000 10%,transparent 55%)}
+@keyframes hwspin{to{transform:rotate(360deg)}}
+.hwst .cimg{position:relative;width:min(70vw,16rem)}.hwst .cimg img{width:100%;display:block}
+.hwst .shake{animation:hwshake .12s linear 7}
+@keyframes hwshake{25%{transform:translateX(-5px) rotate(-3deg)}75%{transform:translateX(5px) rotate(3deg)}}
+.hwst .boom{animation:hwboom .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes hwboom{from{transform:scale(.6)}}
+.hwst .prize{position:relative;margin-top:.3rem;display:none;flex-direction:column;align-items:center}
+.hwst .prize.on{display:flex;animation:hwboom .5s cubic-bezier(.3,1.6,.5,1)}
+.hwst .prize .e{font-size:3.2rem;filter:drop-shadow(0 0 16px rgba(255,214,107,.8))}
+.hwst .prize img.e{width:5.5rem;height:5.5rem;object-fit:contain}
+.hwst .prize b{font-family:var(--disp);font-weight:400;color:#FFE08A;font-size:1.7rem;text-shadow:0 0 16px rgba(255,214,107,.6)}
+.hwst .prize small{color:#E7DBF7;font-size:.8rem}
+.hwst h3{position:relative;font-family:var(--disp);font-weight:400;color:#fff;font-size:1.3rem;margin:0 0 .4rem}
+.hwst .row{position:relative;display:flex;gap:.5rem;margin-top:1rem}
+.hwst .btn{border:0;border-radius:999px;font-weight:800;padding:.6rem 1.3rem;background:#F28C28;color:#fff;box-shadow:0 3px 0 #B8601A}
+.hwst .btn.gray{background:rgba(255,255,255,.18);box-shadow:none}
+.hwst .btn:disabled{opacity:.45}
+.hwst .cf{position:absolute;top:-6%;font-size:1.2rem;animation:hwfall 2.4s linear forwards;pointer-events:none}
+@keyframes hwfall{to{transform:translate(var(--dx),110vh) rotate(600deg)}}
+@media (prefers-reduced-motion:reduce){.hw *,.hwst *{animation:none!important;transition:none!important}}
 </style></head><body>
 <div id="view"><div class="stage" id="stage"></div></div>
 <div class="top" id="top"></div>
-<div class="shade" id="shade"></div><div class="sheet" id="sheet"></div><div class="ann" id="ann"></div>
-<script type="module" src="shop.js?v=ss3-fix13"></script></body></html>
+<div class="hw" id="hw"></div><div class="hwst" id="hwst"></div><div class="shade" id="shade"></div><div class="sheet" id="sheet"></div><div class="ann" id="ann"></div>
+<script type="module" src="shop.js?v=ss3-fix14"></script></body></html>

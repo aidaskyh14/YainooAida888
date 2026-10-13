@@ -1,4 +1,4 @@
-import {ST,NEWS,WINES,TICK,DAY,marketMath} from './market-engine.js?v=ss3-recovery6';
+import {ST,NEWS,WINES,TICK,DAY,marketMath,HW_ITEMS,HW_CHEST_COST,hwHaunting,hwPrice} from './market-engine.js?v=ss3-fix14';
 const __H=parent.__HOST;if(!__H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const __LS={getItem:k=>__H.get(k),setItem:(k,v)=>{__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh)Object.assign(S,fresh)}},removeItem:k=>__H.del(k)};
 
 const IMG={"shop-bg":"images/shop-bg.webp","item-coinbag":"images/shop-item-coinbag.webp","stock-veg":"images/shop-stock-veg.webp","stock-fruit":"images/shop-stock-fruit.webp","stock-fish":"images/shop-stock-fish.webp","stock-wine":"images/shop-stock-wine.webp","stock-alpaca":"images/shop-stock-alpaca.webp","stock-bee":"images/shop-stock-bee.webp","wine-rose":"images/house-wine-rose.webp","wine-moon":"images/house-wine-moon.webp","wine-blood":"images/house-wine-blood.webp","wine-eclipse":"images/house-wine-eclipse.webp"};
@@ -27,9 +27,9 @@ const held=i=>S.lots.filter(l=>l.i===i).reduce((a,l)=>a+l.q,0);
 function render(){fit();document.documentElement.style.setProperty('--bg',`url(${IMG['shop-bg']})`);const st=$('stage');st.style.backgroundImage=`url(${IMG['shop-bg']})`;
  const last=S.news[S.news.length-1];const tk=[...newsUpTo(tnow(),tnow()-96).slice(-3).reverse().map(n=>`📰 ${n.e} ${n.txt}`),'📈 ตลาดหุ้นสวนยัยหนู · ราคาเปลี่ยนทุก 15 นาที · ปันผลสุ่มทุก 2 ทุ่ม'].join('   ✦   ');
  st.innerHTML=`<div class="board"><div class="ticker"><span>${tk}</span></div>${ST.map((s,i)=>{const c=chg(i);return`<div class="srow" data-i="${i}"><img src="${IMG['stock-'+s.k]}" alt=""><b>${s.n}</b><svg viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="${c>=0?'#8EF0B5':'#FFA3B5'}" stroke-width="1.6" points="${spark(i,96,100,28)}"/></svg><span class="p">${nf(price(i,tnow()))}</span><span class="c ${c>=0?'up':'dn'}">${c>=0?'▲':'▼'}${Math.abs(c).toFixed(1)}%</span></div>`}).join('')}</div>
- <div class="counter"><button class="cbtn" id="b1"><img src="${IMG['wine-moon']}" alt="">รับซื้อของ</button><button class="cbtn" id="b2"><img src="${IMG['item-coinbag']}" alt="">พอร์ตของฉัน</button></div><div class="counter" style="top:80.5%;grid-template-columns:1fr"><button class="cbtn" id="b3">📰 ข่าวตลาดย้อนหลัง</button></div>`;
+ <div class="counter"><button class="cbtn" id="b1"><img src="${IMG['wine-moon']}" alt="">รับซื้อของ</button><button class="cbtn" id="b2"><img src="${IMG['item-coinbag']}" alt="">พอร์ตของฉัน</button></div><div class="counter" style="top:80.5%"><button class="cbtn" id="b3">📰 ข่าวตลาด</button><button class="cbtn" id="b4" style="background:linear-gradient(#6A3F9E,#3B2357);color:#FFE08A;box-shadow:0 1.2cqw 0 #24143a,0 2cqw 4cqw rgba(0,0,0,.35)">🎃 มุมฮาโลวีน</button></div>`;
  st.querySelectorAll('.srow').forEach(r=>r.onclick=()=>stock(+r.dataset.i));
- $('b1').onclick=sellShop;$('b2').onclick=port;$('b3').onclick=newsList;renderTop()}
+ $('b1').onclick=sellShop;$('b2').onclick=port;$('b3').onclick=newsList;$('b4').onclick=hwOpen;renderTop()}
 function renderTop(){const adm=S.role==='admin';const d=new Date(now());
  $('top').innerHTML=`<span class="chip">💛 ${nf(S.merit)}</span><span class="chip">🕘 ${d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}${S.off?' (+'+Math.round(S.off/36e5)+' ชม.)':''}</span><span class="sp"></span><span class="chip btn" id="mb">📮 ${(()=>{const c=newsUpTo(tnow(),Math.max(S.mailSeen+1,tnow()-96)).length;return c?'<b style="color:#E8677E">'+c+'</b>':''})()}</span><span class="chip btn ${adm?'adm':''}" id="rb">${adm?'👑 แอดมิน':'🙂 ผู้เล่น'}</span>${adm?'<span class="chip btn adm" id="ab">🛠️</span>':''}`;
  $('rb').onclick=()=>ann(adm?'สิทธิ์แอดมินของบัญชีนี้':'บัญชีผู้เล่น');$('mb').onclick=mailbox;if(adm)$('ab').onclick=admin}
@@ -90,7 +90,53 @@ function admin(){const sl0=Math.floor(tnow()/SLOT),sent=S.news.some(n=>Math.floo
  $('f1').hidden=$('f24').hidden=true;$('dv').textContent='ตรวจปันผล 20:00 เวลาไทย';$('dv').onclick=async()=>{const out=await marketCloud({type:'dividend'});if(out){ann(out.dividend?'รับปันผล '+nf(out.dividend)+' กุศลแล้ว':'ปันผลตรวจตามเวลาไทยวันละหนึ่งครั้ง');render();}};
 }
 
-setInterval(()=>{if(!S.open&&!$('sheet').classList.contains('on'))render();else renderTop()},15000);
+/* ---------- fix14 มุมฮาโลวีน ---------- */
+const HW_IMG=k=>'images/halloween-hw-'+k+'.webp',HW_RAR={candy:['ธรรมดา','#A3A3B5','#FFE3F0'],bat:['ธรรมดา','#A3A3B5','#EDE3FF'],candle:['ธรรมดา','#A3A3B5','#FFF3D6'],web:['ไม่ค่อยเจอ','#5BB6D4','#EEF0F4'],hat:['หายาก','#8E6BE8','#EFE3FF'],broom:['หายาก','#8E6BE8','#FFF0D9'],pumpkin:['หายากมาก','#E0582A','#FFE6CF'],cauldron:['ตำนาน','#E8A21A','#E8FAD0']};
+const HW_PRIZE_IMG={'wine-rose':'house-wine-rose.webp','wine-moon':'house-wine-moon.webp','wine-blood':'house-wine-blood.webp','wine-eclipse':'house-wine-eclipse.webp','box-plant':'boxes-box-clover.webp','box-fruit':'boxes-box-berry.webp',musicbox:'animals-item-musicbox.webp',hat:'honey-sailorhat.webp',cake:'item-cake.webp',wings:'item-angelwings.webp',coconut:'item-coconut.webp',fertfruitP:'fruit-fert-fruit-premium.webp'};
+const HW_PRIZE_NAME={'box-plant':'กล่องสุ่มพืช','box-fruit':'กล่องสุ่มผลไม้',musicbox:'กล่องดนตรี',hat:'หมวกกะลาสี',cake:'เค้ก',wings:'ปีกนางฟ้า',coconut:'มะพร้าว',fertfruitP:'ปุ๋ยผลไม้พรีเมียม'};
+const HW_ODDS=[['💛 กุศล 3,000–30,000',25],['🍷 ไวน์ 2–10 ขวด (สุ่ม 1 ชนิด)',10],['🍲 อาหารสวน 2–5 ชิ้น (สุ่ม 1 เมนู)',10],['📦 กล่องสุ่มพืช/ผลไม้ 10 กล่อง',10],['🎵 กล่องดนตรี 50',8],['🎩 หมวกกะลาสี 50',8],['🍰 เค้ก 300',8],['🪽 ปีกนางฟ้า 300',8],['🥥 มะพร้าว 300',8],['🧪 ปุ๋ยผลไม้พรีเมียม 100',5]];
+const hwQty={};let hwBusy=false;
+const hwGame=()=>{try{return JSON.parse(__H.get('s3all-v1')||'{}')}catch(e){return {}}};
+const hwHave=k=>{const n=Number(hwGame().bag?.halloween?.[k]);return Number.isFinite(n)&&n>0?Math.floor(n):0};
+const hwCatName=key=>{try{return __H.catalogName?.(key)?.n}catch(e){return null}};
+function hwOpen(){$('hw').classList.add('on');hwRender();}
+function hwClose(){$('hw').classList.remove('on');render();}
+function hwRender(){
+ const haunt=hwHaunting(now()),merit=hwGame().merit??S.merit,can=Math.min(...HW_ITEMS.map(([k])=>Math.floor(hwHave(k)/HW_CHEST_COST)));
+ $('hw').innerHTML=`<div class="bats">${[0,1,2].map(i=>`<span class="bat" style="top:${8+i*22}%;animation-duration:${14+i*5}s;animation-delay:${-i*4}s">🦇</span>`).join('')}</div><div class="wrap">
+ <div class="hbar"><button class="back" id="hwBack">‹ กลับตลาด</button><span class="mchip">💛 ${nf(merit)}</span></div>
+ <div class="banner" role="img" aria-label="น้องน้ำผึ้งในชุดแม่มดกำลังคนหม้อยา"><div class="tt"><h1><span>🎃 มุม</span>ฮาโลวีน</h1><p><i>🏪 ขายของผี</i><i>🧙‍♀️ หีบแม่มด</i></p></div><span class="spark" style="left:8%;top:14%">✦</span><span class="spark" style="left:34%;top:10%;animation-delay:.8s">✦</span><span class="spark" style="left:22%;top:84%;animation-delay:1.5s">✦</span></div>
+ <div class="haunt ${haunt?'on':''}"><span class="g">👻</span><div><b>${haunt?'👻 ช่วงหลอนมาแล้ว!':'ช่วงหลอน 18:00–22:00'}</b><span>${haunt?'ราคาขายทุกชิ้น +20% ถึง 22:00':'ราคาขาย +20% ทุกวัน'}</span></div></div>
+ <section class="card"><div class="ch"><h2>🧙‍♀️ หีบแม่มด</h2><span class="pill p-grape">${can?'แลกได้ '+nf(can)+' ใบ':'ของยังไม่ครบ'}</span></div>
+  <div class="chest"><img src="images/hw-chest.webp" alt="หีบแม่มด"><div><div style="font-size:.72rem;font-weight:700;margin-bottom:.3rem">ใช้ของครบ 8 ชนิด ชนิดละ ${HW_CHEST_COST}</div><div class="req">${HW_ITEMS.map(([k,n])=>`<span class="rq ${hwHave(k)>=HW_CHEST_COST?'ok':'no'}" title="${n}"><img src="${HW_IMG(k)}" alt="">${Math.min(hwHave(k),99)}/${HW_CHEST_COST}</span>`).join('')}</div></div></div>
+  <button class="bigp" id="hwOpenBtn" ${can?'':'disabled'}>✨ แลกหีบแม่มด</button>
+  <details class="odds"><summary>🎲 ดูโอกาสได้ของ</summary><table>${HW_ODDS.map(([a,b])=>`<tr><td>${a}</td><td>${b}%</td></tr>`).join('')}</table></details></section>
+ <section class="card"><div class="ch"><h2>🏪 ขายของฮาโลวีน</h2><span class="pill ${haunt?'p-grape':'p-pump'}">${haunt?'👻 +20%':'ราคาปกติ'}</span></div>
+  <div class="note">💡 ของฮาโลวีนใช้ลงขันสร้างเนเบอร์ฮูด และแลกหีบแม่มดได้ด้วยนะ</div>
+  ${HW_ITEMS.map(([k,n,p])=>{const have=hwHave(k),q=Math.max(1,Math.min(have||1,hwQty[k]||1)),r=HW_RAR[k];return `<div class="it"><span class="ic" style="--tint:${r[2]}"><img src="${HW_IMG(k)}" alt=""></span><div style="min-width:0"><b>${n}<span class="rar" style="--r:${r[1]}">${r[0]}</span></b><small>มี ${nf(have)} · <span class="price">${haunt?`<s>${nf(p)}</s>`:''}${nf(hwPrice(k,now()))}</span>/ชิ้น</small></div><div class="act"><div class="step"><button data-hdec="${k}" aria-label="ลด">−</button><input data-hq="${k}" type="number" min="1" value="${q}" inputmode="numeric" aria-label="จำนวน ${n}"><button data-hinc="${k}" aria-label="เพิ่ม">＋</button></div><button class="sell" data-hsell="${k}" ${have?'':'disabled'}>ขาย</button></div></div>`}).join('')}
+ </section></div>`;
+ $('hwBack').onclick=hwClose;$('hwOpenBtn').onclick=hwChest;
+}
+async function hwSell(k){if(hwBusy)return;const have=hwHave(k),q=Math.max(1,Math.min(have,hwQty[k]||1));if(!have)return;hwBusy=true;
+ try{const out=await marketCloud({type:'hw-sell',item:k,qty:q});if(out?.sold){hwQty[k]=1;ann(`🎃 ขาย ${HW_ITEMS.find(x=>x[0]===k)[1]} ×${nf(q)} · +${nf(out.sold.total)} กุศล 💛`);}}finally{hwBusy=false;hwRender();}}
+function hwPrizeView(p){if(p.kind==='merit')return {img:null,e:'💛',amt:'+'+nf(p.merit)+' กุศล',name:'กุศล'};
+ const name=p.name||HW_PRIZE_NAME[p.key]||hwCatName(p.key)||'ของรางวัล',im=HW_PRIZE_IMG[p.key]||(p.key.startsWith('gfood-')?p.key+'.webp':null);return {img:im?'images/'+im:null,e:'🎁',amt:'×'+nf(p.q),name};}
+async function hwChest(){if(hwBusy)return;if(HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST))return ann('ของยังไม่ครบ 8 ชนิด ชนิดละ '+HW_CHEST_COST,false);hwBusy=true;
+ const st=$('hwst');st.innerHTML=`<div class="rays"></div><h3 id="hwsh">🧙‍♀️ กำลังเปิดหีบแม่มด…</h3><div class="cimg" id="hwcimg"><img id="hwcimgI" src="images/hw-chest.webp" alt=""></div><div class="prize" id="hwprize"></div><div class="row" id="hwsrow" hidden><button class="btn gray" id="hwsClose">ปิด</button><button class="btn" id="hwsAgain">✨ เปิดอีก</button></div>`;
+ st.classList.add('on');const c=$('hwcimg');c.classList.add('shake');
+ let out=null;try{[out]=await Promise.all([marketCloud({type:'hw-chest',count:1}),new Promise(r=>setTimeout(r,900))]);}finally{hwBusy=false;}
+ if(!out?.prizes?.length){st.classList.remove('on');hwRender();return;}
+ const v=hwPrizeView(out.prizes[0]);$('hwcimgI').src='images/hw-chest-open.webp';c.className='cimg boom';$('hwsh').textContent='✨ ได้ของจากหีบแม่มด!';
+ $('hwprize').innerHTML=(v.img?`<img class="e" src="${v.img}" alt="">`:`<span class="e">${v.e}</span>`)+`<b>${v.amt}</b><small>${v.name}</small>`;$('hwprize').className='prize on';$('hwsrow').hidden=false;
+ for(let i=0;i<26;i++){const f=document.createElement('span');f.className='cf';f.textContent=['✨','🍬','⭐','🦇','💜'][i%5];f.style.left=Math.random()*100+'%';f.style.setProperty('--dx',(Math.random()*80-40)+'px');f.style.animationDelay=Math.random()*.5+'s';st.append(f);setTimeout(()=>f.remove(),3200)}
+ $('hwsAgain').disabled=HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST);$('hwsAgain').onclick=hwChest;$('hwsClose').onclick=()=>{st.classList.remove('on');hwRender();};
+ hwRender();
+}
+$('hw').addEventListener('click',e=>{const d=e.target.closest('[data-hdec]'),i=e.target.closest('[data-hinc]'),s=e.target.closest('[data-hsell]');
+ if(d||i){const k=(d||i).dataset[d?'hdec':'hinc'],have=hwHave(k);hwQty[k]=Math.max(1,Math.min(have||1,(hwQty[k]||1)+(d?-1:1)));const inp=$('hw').querySelector(`[data-hq="${k}"]`);if(inp)inp.value=hwQty[k];}
+ if(s)hwSell(s.dataset.hsell);});
+$('hw').addEventListener('input',e=>{const k=e.target.dataset.hq;if(k){const have=hwHave(k);hwQty[k]=Math.max(1,Math.min(have||1,Math.floor(+e.target.value||1)));}});
+setInterval(()=>{if($('hw').classList.contains('on'))return;if(!S.open&&!$('sheet').classList.contains('on'))render();else renderTop()},15000);
 render();marketCloud({type:'status'}).then(()=>render());stopMarket=__H.watchWorld('market',data=>{if(data){Object.assign(S,data);clearPrices();render();}});addEventListener('pagehide',()=>stopMarket?.());setTimeout(()=>ann('แตะหุ้นบนกระดานเพื่อดูกราฟและซื้อ · ราคาเปลี่ยนทุก 15 นาที'),500);
 
 // UI state changes are batched once after each click; unchanged snapshots do not write.

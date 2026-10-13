@@ -4,9 +4,9 @@
    - ลดเอฟเฟกต์เองเมื่อเครื่องกระตุก (FPS ต่ำ) และเมื่อผู้ใช้ตั้ง prefers-reduced-motion */
 (function(root){
 'use strict';
-const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A'};
-const CARD_LABEL={supply:'เติมเสบียง +10',cut:'ตัดเสบียง −10',merit:'กุศลทั้งทีม',stop:'หยุดเรือ 30 นาที',kick:'การ์ดเตะ'};
-const CARD_ICON={supply:'🍱',cut:'🎃',merit:'🪙',stop:'🧊',kick:'🦶'};
+const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45'};
+const CARD_LABEL={supply:'เติมเสบียง +10',cut:'ตัดเสบียง −10',merit:'กุศลทั้งทีม',stop:'หยุดเรือ 30 นาที',kick:'การ์ดเตะ',pull:'ดึงตัว',swap:'สลับตัว',revive:'ชุบชีวิต',ink:'พ่นหมึก',freeze:'แช่แข็ง',crab:'ปูหนีบ'};
+const CARD_ICON={supply:'🍱',cut:'🎃',merit:'🪙',stop:'🧊',kick:'🦶',pull:'🏴‍☠️',swap:'🔄',revive:'💫',ink:'🐙',freeze:'🧊',crab:'🦀'};
 
 /* ---------- เหตุการณ์จากการเทียบข้อมูล (ฟังก์ชันล้วน ทดสอบได้ใน node) ---------- */
 function events(prev,next){
@@ -19,7 +19,7 @@ function events(prev,next){
     const wasPicked=before&&before.picked!==undefined,wasOpened=before&&before.opened;
     if(before&&!wasPicked&&box.picked!==undefined&&box.card)out.push({type:'pick',boat:box.boat,card:box.card,by:box.pickedBy||null,id:box.id,used:!!box.opened});
     if(before&&!wasOpened&&box.opened&&box.card){
-      const e={type:'card',card:box.card,boat:box.boat,id:box.id,target:box.target??null,victims:[...(box.victims||[])],meritTo:[...(box.meritTo||[])]};
+      const e={type:'card',card:box.card,boat:box.boat,id:box.id,target:box.target??null,victims:[...(box.victims||[])],meritTo:[...(box.meritTo||[])],pulled:box.pulled??null,fired:box.fired??null,from:box.from??null,swap:box.swap?[...box.swap]:null,revived:box.revived??null,full:!!box.full,frozen:box.frozen??null};
       if(box.card==='supply')delta[box.boat-1]-=10;
       if(box.card==='cut'&&Number.isInteger(box.target))delta[box.target-1]+=10;
       out.push(e);

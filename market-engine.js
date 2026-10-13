@@ -50,8 +50,33 @@ function price(i,t){build(t);const a=BASE[ST[i].k];return Math.exp(a[t-T0])*effe
 
 return {price,newsUpTo,autoNews,modeAt,daySeed,h32,SLOT,MODES,clear(){for(const k in BASE)delete BASE[k];for(const k in autoCache)delete autoCache[k];}};
 }
+
+/* fix14 มุมฮาโลวีน: ขายของฮาโลวีน (ช่วงหลอน 18:00–22:00 เวลาไทย +20%) + หีบแม่มด (ชนิดละ 3 ครบ 8 ชนิด) */
+export const HW_ITEMS=[['candy','ลูกอมผี',200],['bat','ค้างคาวจิ๋ว',200],['candle','เทียนผี',400],['web','ใยแมงมุม',600],['hat','หมวกแม่มด',1200],['broom','ไม้กวาดแม่มด',1200],['pumpkin','ฟักทองแกะสลักเรืองแสง',3000],['cauldron','หม้อยาแม่มด',10000]];
+export const HW_CHEST_COST=3,HW_HAUNT_BONUS=.2;
+export const hwHaunting=now=>{const h=new Date(now+7*3600000).getUTCHours();return h>=18&&h<22;};
+export const hwPrice=(k,now)=>{const it=HW_ITEMS.find(x=>x[0]===k);return it?Math.round(it[2]*(hwHaunting(now)?1+HW_HAUNT_BONUS:1)):0;};
+export const HW_GFOOD=['r1','r2','r3','r4','r5','r6','r7','r8','n1','n2','n3','n4','b1','b2','b3','b4','b5','b6','b7','b8'];
+// [โอกาส %, ชนิด] รวม 100
+export const HW_PRIZES=[[25,'merit'],[10,'wine'],[10,'gfood'],[10,'box'],[8,'musicbox'],[8,'hat'],[8,'cake'],[8,'wings'],[8,'coconut'],[5,'fert']];
+export function hwRollPrize(rng){
+ const pick=(n)=>Math.min(n-1,Math.floor(rng()*n));let x=rng()*100,kind='merit';for(const [w,k] of HW_PRIZES){if(x<w){kind=k;break;}x-=w;}
+ switch(kind){
+  case 'merit':return {kind,merit:3000+pick(28)*1000};
+  case 'wine':{const w=WINES[pick(WINES.length)];return {kind,path:['wine',w[0]],key:'wine-'+w[0],name:w[1],q:2+pick(9)};}
+  case 'gfood':{const g=HW_GFOOD[pick(HW_GFOOD.length)];return {kind,path:['gfood',g],key:'gfood-'+g,q:2+pick(4)};}
+  case 'box':return pick(2)?{kind,path:['box','fruit'],key:'box-fruit',q:10}:{kind,path:['box','plant'],key:'box-plant',q:10};
+  case 'musicbox':return {kind,path:['item','musicbox'],key:'musicbox',q:50};
+  case 'hat':return {kind,path:['item','hat'],key:'hat',q:50};
+  case 'cake':return {kind,path:['item','cake'],key:'cake',q:300};
+  case 'wings':return {kind,path:['item','angel'],key:'wings',q:300};
+  case 'coconut':return {kind,path:['item','coconut'],key:'coconut',q:300};
+  default:return {kind:'fert',path:['item','fertfruitP'],key:'fertfruitP',q:100};
+ }
+}
+const hwHave=(game,k)=>{const n=Number(game.bag?.halloween?.[k]);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
 const fail=m=>{throw new Error(m);};
-export function marketAction(account,world,ctx,input){
+export function marketAction(account,world,ctx,input,rng=Math.random){
  const game=structuredClone(account);game.sub ||= {};const market=game.sub.market ||= {lots:[],divGot:{}};market.lots ||= [];market.divGot ||= {};game.bag ||= {};game.bag.wine ||= {};
  const config=structuredClone(world||{news:[],modes:[]});config.news ||= [];config.modes ||= [];const maths=marketMath(config),tick=Math.floor(ctx.now/TICK),day=Math.floor((ctx.now+7*3600000)/DAY),at=day*DAY+13*3600000;let dividend=0;
  if(ctx.now>=at&&!market.divGot[day]){const i=Math.floor(maths.h32(maths.daySeed(day),55,1)*6),h=market.lots.filter(l=>l.i===i&&l.t<=at).reduce((a,l)=>a+l.q,0),per=Math.round(maths.price(i,Math.floor(at/TICK))*.03);dividend=h*per;game.merit=(game.merit||0)+dividend;market.divGot={[day]:true};}
@@ -66,6 +91,18 @@ export function marketAction(account,world,ctx,input){
  }
  if(input.type==='wine'){
  const w=WINES.find(w=>w[0]===input.wine);if(!w||(game.bag.wine[w[0]]||0)<1)fail('ไม่มีไวน์นี้');game.bag.wine[w[0]]--;game.merit=(game.merit||0)+Math.round(w[2]*(1+Math.min(.2,Math.max(0,price(3)/ST[3].b-1))));return result();
+ }
+ if(input.type==='hw-sell'){
+ const k=input.item,q=input.qty;if(!HW_ITEMS.some(x=>x[0]===k)||!Number.isInteger(q)||q<1||q>9999)fail('ของหรือจำนวนไม่ถูกต้อง');
+ if(hwHave(game,k)<q)fail('ของไม่พอขาย');const each=hwPrice(k,ctx.now);game.bag.halloween[k]=hwHave(game,k)-q;game.merit=(game.merit||0)+each*q;
+ return {...result(),sold:{item:k,qty:q,each,total:each*q,haunting:hwHaunting(ctx.now)}};
+ }
+ if(input.type==='hw-chest'){
+ const n=input.count??1;if(!Number.isInteger(n)||n<1||n>10)fail('จำนวนหีบไม่ถูกต้อง');
+ const short=HW_ITEMS.filter(([k])=>hwHave(game,k)<HW_CHEST_COST*n);if(short.length)fail('ของยังไม่ครบ: '+short.map(([k,nm])=>nm+' '+hwHave(game,k)+'/'+HW_CHEST_COST*n).join(' • '));
+ for(const [k] of HW_ITEMS)game.bag.halloween[k]=hwHave(game,k)-HW_CHEST_COST*n;
+ const prizes=[];for(let i=0;i<n;i++){const p=hwRollPrize(rng);prizes.push(p);if(p.merit)game.merit=(game.merit||0)+p.merit;else{const [g,k]=p.path;game.bag[g] ||= {};const cur=Number(game.bag[g][k]);game.bag[g][k]=(Number.isFinite(cur)?cur:0)+p.q;}}
+ return {...result(),prizes};
  }
  if(input.type==='news'||input.type==='mode'){
  if(!ctx.admin)fail('เฉพาะแอดมิน');if(input.type==='mode'){if(!maths.MODES[input.mode])fail('รูปแบบตลาดไม่ถูกต้อง');config.modes.push({t:tick+1,m:input.mode});}

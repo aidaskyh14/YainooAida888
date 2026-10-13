@@ -208,6 +208,48 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .fx-low .boat .wake i:nth-child(n+2),.fx-low .twk,.fx-low .boat.mine::before{display:none}
 .fx-low .rays{animation-duration:30s}
 @media (prefers-reduced-motion:reduce){.boat img.hull{animation-duration:6s}.boat .wake i{animation-duration:4.8s}.boat .wake i:nth-child(n+2){display:none}.rays{animation:none}.twk{display:none}.chest.shake{animation-duration:.2s}.fxpk,.fxname{animation-duration:.08s}}
+
+/* fix14 เอฟเฟกต์การ์ดใหม่ */
+.bx{position:absolute;pointer-events:none;z-index:40}
+#stage.bx-shake{animation:bxshake .5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes bxshake{10%,90%{translate:-2px 1px}20%,80%{translate:4px -2px}30%,50%,70%{translate:-6px 3px}40%,60%{translate:6px -3px}}
+.bx-news{left:0;right:0;top:38%;height:9%;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(42,33,64,0),rgba(42,33,64,.88) 15%,rgba(42,33,64,.88) 85%,rgba(42,33,64,0));animation:bxnews 2.6s ease-in-out forwards;z-index:45}
+.bx-news div{font-family:'Itim','Mali',sans-serif;color:#FFE9A8;font-size:2.7em;text-shadow:0 2px 0 rgba(0,0,0,.4);animation:bxslide 2.6s cubic-bezier(.2,.9,.3,1) forwards;white-space:nowrap}
+@keyframes bxnews{0%{opacity:0;transform:scaleY(.2)}12%{opacity:1;transform:scaleY(1)}85%{opacity:1}100%{opacity:0}}
+@keyframes bxslide{0%{transform:translateX(120%)}20%{transform:translateX(0)}80%{transform:translateX(0)}100%{transform:translateX(-120%)}}
+.bx-arc{transform:translate(-50%,-50%);font-size:3.4em;offset-rotate:0deg;animation:bxarc 1.3s ease-in-out forwards}
+@keyframes bxarc{from{offset-distance:0%}to{offset-distance:100%}}
+.bx-beam{top:0;width:9%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(255,250,210,0),rgba(255,245,190,.85) 60%,rgba(255,255,255,.95));filter:blur(2px);animation:bxbeam 2s ease-out forwards;border-radius:0 0 50% 50%}
+@keyframes bxbeam{0%{opacity:0;width:1%}25%{opacity:1;width:9%}100%{opacity:0}}
+.bx-angel{transform:translate(-50%,-50%);font-size:3.6em;animation:bxangel 2s ease-out forwards}
+@keyframes bxangel{0%{opacity:0;margin-top:2em}40%{opacity:1;margin-top:0}100%{opacity:0;margin-top:-1.6em}}
+.bx-sink{transform:translate(-50%,-50%);width:9%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(20,40,80,.65),rgba(20,40,80,0) 70%);animation:bxsink 2.4s ease-in forwards}
+@keyframes bxsink{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}30%{opacity:1}100%{opacity:.9;transform:translate(-50%,-50%) scale(1.4)}}
+.bx-bub{width:.9em;height:.9em;border:1.5px solid rgba(255,255,255,.9);border-radius:50%;animation:bxbub 1.6s ease-out forwards}
+@keyframes bxbub{from{opacity:1}to{transform:translateY(-3em);opacity:0}}
+.bx-ghost{transform:translate(-50%,-50%);font-size:3.4em;animation:bxghost 2.6s ease-out forwards}
+@keyframes bxghost{0%{opacity:0}30%{opacity:1}100%{opacity:0;margin-top:-3em}}
+.bx-tag{transform:translate(-50%,0);background:rgba(255,251,245,.95);border:2px solid #fff;border-radius:999px;padding:.1em .6em;font-size:1.5em;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.25);animation:bxfade .3s}
+@keyframes bxfade{from{opacity:0}}
+.bx-icecube{transform:translate(-50%,-50%);width:6%;aspect-ratio:.8;border-radius:8px;background:linear-gradient(135deg,rgba(230,248,255,.85),rgba(160,215,245,.6));box-shadow:0 0 14px 4px rgba(200,235,255,.9),inset 0 0 6px #fff;animation:bxfade .4s}
+.bx-pincher{transform:translate(-50%,-50%);font-size:3.4em;animation:bxpinch .5s ease-in-out infinite alternate}
+@keyframes bxpinch{to{transform:translate(-50%,-50%) rotate(-18deg) translateY(2px)}}
+.bx-inkwrap{position:fixed;inset:0;z-index:60;pointer-events:none}
+.bx-ink{position:absolute;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 40%,#2a1d3a,#120a1c 70%);opacity:.92;transform:scale(0);animation:bxsplat .35s cubic-bezier(.3,1.6,.5,1) forwards;pointer-events:auto;cursor:grab;touch-action:none}
+.bx-ink::before,.bx-ink::after{content:"";position:absolute;border-radius:50%;background:inherit}
+.bx-ink::before{width:30%;height:30%;right:-12%;top:10%}.bx-ink::after{width:20%;height:20%;left:-8%;bottom:6%}
+@keyframes bxsplat{to{transform:scale(1)}}
+.bx-ink.wipe{transition:opacity .4s,filter .4s;opacity:0;filter:blur(8px)}
+.bx-inktip{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:rgba(255,251,245,.96);border-radius:999px;padding:.35rem .9rem;font-weight:800;font-size:.85rem;box-shadow:0 6px 16px rgba(0,0,0,.3);animation:bxfade .3s}
+.bx-frost{position:fixed;inset:0;z-index:58;pointer-events:none;background:radial-gradient(ellipse at center,rgba(200,235,255,0) 45%,rgba(200,235,255,.75) 100%);box-shadow:inset 0 0 60px 20px rgba(255,255,255,.7);animation:bxfrost 4s ease-out forwards}
+.bx-frost i{position:absolute;font-style:normal;font-size:18px;color:#fff;animation:bxflake 3s ease-out forwards;text-shadow:0 0 6px #9ad}
+@keyframes bxfrost{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes bxflake{0%{opacity:0;transform:scale(.3) rotate(0)}30%{opacity:1}100%{opacity:0;transform:scale(1.2) rotate(180deg)}}
+.kmode{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin:.3rem 0}
+.kmode .opt{margin:0}
+.kmode .opt.sel{outline:3px solid #FF4D7A;outline-offset:-1px}
+.kmode small{display:block;font-weight:600;font-size:.66rem;opacity:.8}
+@media (prefers-reduced-motion:reduce){.bx,.bx *,.bx-ink,.bx-frost{animation-duration:.01ms!important}}
 </style></head><body>
 <div id="view"><div class="stage" id="stage"></div></div>
 <div class="top"><span class="chip mine" id="myTeam"></span><span class="spacer"></span><button class="rbtn" id="logBtn">📜</button><button class="rbtn" id="setBtn">⚙️</button></div>
@@ -217,5 +259,5 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 <section class="sheet" id="sheet"><div id="sb"></div></section>
 <div class="pop" id="pop"><button class="px" id="popX" aria-label="ปิด">✕</button><div id="popBody"></div></div>
 <div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
-<script src="boat-fx.js?v=ss3-fix13"></script>
-<script type="module" src="boat.js?v=ss3-fix13"></script></body></html>
+<script src="boat-fx.js?v=ss3-fix14"></script>
+<script type="module" src="boat.js?v=ss3-fix14"></script></body></html>
