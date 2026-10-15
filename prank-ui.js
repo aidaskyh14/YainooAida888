@@ -1,7 +1,7 @@
 /* fix15 หน้าสวน: เยี่ยมสวนเพื่อนเห็นผักจริง + ระบบแกล้งเพื่อน (ค้างคาว ป้ายแซว แกล้งแปลง หุ่นไล่กา)
    ใช้ตัวแปรของหน้าสวน (S, farm, visiting, IMG, CN, P1, P2, W, H, box, toast, $, open, closeAll, render, plotEls, tapPlot, friendPlot)
    คำสั่งที่เปลี่ยนข้อมูลส่งผ่านคลาวด์ทั้งหมด (window.cloudFriend / window.cloudFarm จาก farm-cloud.js) */
-import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix15';
+import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix15c';
 const HWI=k=>'images/halloween-hw-'+k+'.webp';
 const PIMG=k=>'images/'+PRANKS[k].img+'.webp';
 const fmtN=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('en-US');
@@ -147,10 +147,12 @@ function fixSheet(kind,opt={}){const k=kind==='plot'?opt.k:kind,P=PRANKS[k],n=op
  sheetEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const how=b.dataset.h;closeAll();const out=await window.cloudFarm('prank-fix',{kind,how,...opt.input});if(out&&out.prank){sweep(opt.rect);toast('🧹 แก้เรียบร้อย! '+(how==='merit'?'จ่าย '+fmtN(out.prank.merit)+' กุศล':'ใช้ไม้กวาด '+out.prank.broom+' อัน'));}});}
 function sweep(rect){const im=document.createElement('img');im.className='pksweep';im.src=HWI('broom');im.alt='';const r=rect||{left:innerWidth*.35,top:innerHeight*.4};im.style.left=r.left+'px';im.style.top=r.top+'px';document.body.appendChild(im);setTimeout(()=>im.remove(),950);}
 const prevTap=tapPlot;tapPlot=function(i){if(!visiting){const p=S.farms?.[farm]?.[i];if(p?.pk){const n=(S.farms[farm]||[]).filter(x=>x?.pk?.k===p.pk.k).length;return fixSheet('plot',{k:p.pk.k,input:{farm,index:i},rect:plotEls[i]?.getBoundingClientRect()});}}return prevTap(i);};
-function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),have=hw('broom');
- pkOpen('<div class="ph"><img src="images/prank-scarecrow.webp" alt=""><div><b>🛡️ หุ่นไล่กา</b><small>กันเพื่อนแกล้งสวน 2 ชั่วโมง (ไม่กันการขโมย)</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
-  +(on?'<div class="note" style="font-size:.85rem">🛡️ หุ่นไล่กาเฝ้าอยู่ อีก '+left(st.scareUntil-Date.now())+'</div>':'<button class="pay b" id="pkScare" '+(have>=SCARE_COST?'':'disabled')+'><img src="'+HWI('broom')+'" alt=""><div><b>ตั้งหุ่นไล่กา · ไม้กวาด '+SCARE_COST+' อัน</b><small>'+(have>=SCARE_COST?'มีอยู่ '+have+' อัน':'ไม้กวาดไม่พอ (มี '+have+')')+'</small></div></button>'));
- sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare'});if(out?.prank)toast('🛡️ ตั้งหุ่นไล่กาแล้ว กันแกล้ง 2 ชม.');});}
+function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),need=Object.entries(SCARE_COST),ok=need.every(([k,q])=>hw(k)>=q);
+ pkOpen('<div class="ph"><img src="images/prank-scarecrow.webp" alt=""><div><b>🛡️ หุ่นไล่กา</b><small>กันเพื่อนแกล้งสวน 59 นาที (ไม่กันการขโมย)</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+  +(on?'<div class="note" style="font-size:.85rem">🛡️ หุ่นไล่กาเฝ้าอยู่ อีก '+left(st.scareUntil-Date.now())+'</div>'
+   :'<div class="lbl">🧺 วัตถุดิบ</div><div class="pgrid">'+need.map(([k,q])=>'<div class="pcard" style="cursor:default'+(hw(k)>=q?'':';opacity:.55')+'"><img src="'+HWI(k)+'" alt=""><div><b>'+HW_NAMES[k]+'</b><span class="cost">'+(hw(k)>=q?'✅ ':'❌ ')+fmtN(q)+' <small style="font-weight:600;color:#9A7A68">(มี '+fmtN(hw(k))+')</small></span></div></div>').join('')+'</div>'
+   +'<button class="act gold" id="pkScare" style="width:100%;margin-top:.6rem" '+(ok?'':'disabled')+'>🎃 ตั้งหุ่นไล่กา</button>'));
+ sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare'});if(out?.prank)toast('🛡️ ตั้งหุ่นไล่กาแล้ว กันแกล้ง 59 นาที');});}
 function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0);
  const nn=document.createElement('div');nn.className='pknote';
  nn.innerHTML='<div class="paper" role="dialog"><img src="images/prank-sign.webp" alt="">'+(first?'<div class="sum">😱 ระหว่างที่คุณไม่อยู่ ใครสักคนแกล้งสวนคุณ!<br>'+[signs.length?'🪧 ป้าย '+signs.length:'',plots?'🌱 แปลง '+plots:'',st.bat?'🦇 ค้างคาว 1':''].filter(Boolean).join(' · ')+'</div>':'')

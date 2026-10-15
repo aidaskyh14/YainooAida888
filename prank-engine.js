@@ -2,7 +2,7 @@
    คนแกล้งจ่ายของฮาโลวีน · เจ้าของสวนแก้เอง เลือกจ่ายกุศล (ติดลบได้) หรือไม้กวาดแม่มด (ต้องมีพอ) อย่างใดอย่างหนึ่ง
    แกล้งแปลง: แปลงหยุดโต เก็บ/ขโมย/ถอนไม่ได้ จนกว่าเจ้าของจะแก้ (เวลาที่หยุดไปไม่นับ)
    ค้างคาว: สวนมืดทั้งสวน (ทีละ 1) · ป้ายแซว: สูงสุด 20 ป้าย เจ้าของต้องเปิดอ่าน (ค้างคาวบังป้าย)
-   หุ่นไล่กา: ไม้กวาด 30 กันการแกล้ง 2 ชม. (ไม่กันขโมย) · คนหนึ่งแกล้งได้วันละ 30 · สวนหนึ่งโดนได้วันละ 30 · ไม่บอกชื่อคนแกล้ง */
+   หุ่นไล่กา: ไม้กวาด 150 ฟักทอง 30 เทียน 50 ใยแมงมุม 50 กันการแกล้ง 59 นาที (ไม่กันขโมย) · คนหนึ่งแกล้งได้วันละ 30 · สวนหนึ่งโดนได้วันละ 30 · ไม่บอกชื่อคนแกล้ง */
 export const PRANKS={
  worm:{n:'ปล่อยหนอน',icon:'🪱',img:'prank-worm',pay:['candy',20],merit:3000,broom:10,plot:true,desc:'หนอนกินผัก แปลงนี้หยุดโตและเก็บไม่ได้'},
  dry:{n:'ดินแห้งแตกระแหง',icon:'🏜️',img:'prank-dry',pay:['candle',15],merit:3000,broom:10,plot:true,desc:'ดินแห้ง ผักหยุดโต'},
@@ -12,7 +12,7 @@ export const PRANKS={
  sign:{n:'ปักป้ายแซว',icon:'🪧',img:'prank-sign',pay:['candy',5],merit:1500,broom:5,plot:false,desc:'เจ้าของสวนต้องเปิดอ่าน'}};
 export const HW_NAMES={candy:'ลูกอมผี',candle:'เทียนผี',web:'ใยแมงมุม',pumpkin:'ฟักทองแกะสลักเรืองแสง',bat:'ค้างคาวจิ๋ว',broom:'ไม้กวาดแม่มด'};
 export const PRANK_MSGS=['ปลูกบ้างนะผักอ่ะเล่นแต่มินิเกม','นอนบ้างนะจ๊ะ จะชนะให้ได้เลยมั้ง','อย่างอแงค่ะ','จุ๊กกรู้วววว มีใครอยู่บ้างไหม ร้างหมดแล้วบ้าน','สวนอะไรดูเหมือนไม่ได้รับการดูแลมานาน','ไม่เลิศ','ว่างๆ ปลูกผักบ้างเด้อ','ซีซั่นนี้ยังเล่นอยู่ไหม ถ้า ไม่ จะได้ไปแจ้งความคนหายสาปสูญ','ป๊าาาาาดนอนดึกเกินไปป๊ะ','เห็นเล่นตลอด แต่แอ๊บ ทำเป็นไม่ค่อยได้เล่น รู้ทันนะ','แหมๆๆ เก่งทุกอย่าง ยกเว้นการปลูกผัก','เติมโปรบ้างนะ จะได้เอาไอเท็มมาปลูกผัก ไม่ใช่เติมแต่โปรเหรียญ'];
-export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST=30,SCARE_TIME=2*3600000;
+export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:150,pumpkin:30,candle:50,web:50},SCARE_TIME=59*60000;
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const num=n=>Number.isSafeInteger(Number(n))&&Number(n)>0?Math.floor(Number(n)):0;
 export const thaiDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);
@@ -59,7 +59,7 @@ export function prankFix(game,ctx,input){
   const ids=input.all?st.signs.map((_,i)=>i):Array.isArray(input.ids)?[...new Set(input.ids)]:[];if(!ids.length||ids.some(i=>!Number.isInteger(i)||!st.signs[i]))fail('เลือกป้ายที่จะถอน');
   const r=pay(game,PRANKS.sign,ids.length,input.how);st.signs=st.signs.filter((_,i)=>!ids.includes(i));return {fixed:ids.length,...r};
  }
- if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const have=num(game.bag?.halloween?.broom);if(have<SCARE_COST)fail('ไม้กวาดแม่มดไม่พอ ต้องมี '+SCARE_COST+' (มี '+have+')');game.bag.halloween.broom=have-SCARE_COST;st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,broom:SCARE_COST};}
+ if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));for(const[k,q]of Object.entries(SCARE_COST))game.bag.halloween[k]=num(game.bag.halloween[k])-q;st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,paid:{...SCARE_COST}};}
  if(kind==='seen'){st.seen=now;return {seen:now};}
  fail('คำสั่งแก้การแกล้งไม่ถูกต้อง');
 }

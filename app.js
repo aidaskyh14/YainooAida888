@@ -47,7 +47,7 @@ let store;
 let campaignConfig={},campaignStop=null,campaignBoxes=[];
 const BASE_PARTS=['inventory','wallet'];
 const SCREEN_PARTS={
- loading:[],farm:['animals-farmdrops','farm-settings','farm-1','farm-2','farm-3','farm-4','module-s3fg-col','module-s3by-entry'],
+ loading:[],farm:['animals-farmdrops','animals-prank','farm-settings','farm-1','farm-2','farm-3','farm-4','module-s3fg-col','module-s3by-entry'],
  house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
  catpen:['catpen'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
@@ -471,7 +471,7 @@ async function sceneSafeAction(system,input){
  finally{if(!changed||!S.frame||!S.screen)thaw();else{reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}}
 }
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
-function watchRumors(){rumorStop?.();rumorStop=null;if(S.admin||!S.user)return;
+function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
  rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating,game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
 async function cloudAction(system,input) {
   if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
@@ -624,7 +624,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15c'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }

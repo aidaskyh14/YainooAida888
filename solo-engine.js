@@ -46,8 +46,8 @@ export const birdGain=r=>Math.max((r.hits?.length||4)>4?BIRD_LOSS_CAP:BIRD_LOSS_
    The owner edits them in settings.fee3 = {game:{coin,hat,mb}}. The old coin-only settings.fees is ignored. */
 export const MG_GAMES=['kang','pk','bs','mole','basket','witch','candy'];
 export const MG_SOLO=['pk','bs','mole','basket','witch','candy'];
-/* fix15: ค่าเข้า ×2 (หมวกกะลาสีและกล่องดนตรี ×2 · เหรียญ +50%) · ค่าที่แอดมินแก้ใหม่เก็บใน settings.fee15 (ค่าเดิมใน fee3 เลิกใช้) */
-export const MG_FEE3={bs:{coin:18,hat:160,mb:160},mole:{coin:15,hat:120,mb:120},witch:{coin:15,hat:120,mb:120},pk:{coin:12,hat:100,mb:100},basket:{coin:9,hat:80,mb:80},candy:{coin:9,hat:60,mb:60},kang:{coin:6,hat:40,mb:40}};
+/* fix15: ค่าเข้า ×2 (เหรียญ หมวกกะลาสี กล่องดนตรี ×2 ทั้งหมด) · ค่าที่แอดมินแก้ใหม่เก็บใน settings.fee15 (ค่าเดิมใน fee3 เลิกใช้) */
+export const MG_FEE3={bs:{coin:24,hat:160,mb:160},mole:{coin:20,hat:120,mb:120},witch:{coin:20,hat:120,mb:120},pk:{coin:16,hat:100,mb:100},basket:{coin:12,hat:80,mb:80},candy:{coin:12,hat:60,mb:60},kang:{coin:8,hat:40,mb:40}};
 export const MG_FEES=Object.fromEntries(Object.entries(MG_FEE3).map(([k,v])=>[k,v.coin]));
 export const MG_CD={bs:45,mole:40,witch:40,pk:35,basket:25,candy:20};          // minutes after a finished round
 export const MG_MIN={bs:30000,mole:15000,witch:60000,pk:25000,basket:20000,candy:20000};

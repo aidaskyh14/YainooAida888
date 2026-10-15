@@ -2,7 +2,7 @@
    ห้องละ 6 คน · ครบ 6 และทุกคนกดพร้อม (จ่ายค่าเข้าตอนกดพร้อม) → นับ 10 วิ → 3 ด่าน → จัดอันดับรวม → ให้/หักกุศล
    เซิร์ฟเวอร์เป็นคนตัดสินคะแนนและเงินทั้งหมด หน้าเกมรายงานผลของตัวเองแต่ละด่าน แล้วเซิร์ฟเวอร์ตรวจว่าทำได้จริง */
 export const FR={SEATS:6,ROUNDS:3,LEN:13000,SPEED:3.3,COUNTDOWN:10000,ROUND_CD:3500,BETWEEN:8000,CUTOFF:20000,ROUND_MAX:150000,RESULTS:30000,
- MIN_MERIT:15000,FEE:{coin:15,hat:100,mb:100},MIN_TIME:40000,STALE:10*60000};
+ MIN_MERIT:15000,FEE:{coin:20,hat:100,mb:100},MIN_TIME:40000,STALE:10*60000};
 export const FR_CHARS=['pig','hedgehog','cat','alpaca','dog','dodo'];
 const fail=m=>{throw new Error(m);};
 export function rng(s){s=Math.max(1,Math.floor(s)%2147483646||1);return()=>{s=(s*16807)%2147483647;return s/2147483647;};}
