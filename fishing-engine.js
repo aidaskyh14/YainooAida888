@@ -3,7 +3,7 @@ import {FISH,RODS,RK,VIPL,SETS,LADDER,MERIT,PONDS} from './fishing-catalog.js';
 import {useBoost,boostUsed,boostHave,BOOST_LIMIT,BOOST_CUT} from './boost-engine.js';
 /* fix15: ตัดเบ็ดห้อง VIP (กรรไกรปู 10 อัน ต้องนั่งห้อง VIP เดียวกัน · คนหนึ่งโดนได้ 3 ครั้ง/วัน · โดนแล้วหลุดจากห้อง)
    ทุกบ่อแจ้งคนโดนตัดว่า "ใครสักคน" ไม่บอกชื่อ · เหยื่อวิเศษลดเวลารอปลา 30% (บ่อทั่วไป) */
-export const VIP_CUT_COST=10,VIP_CUT_MAX=3,CUT_MSG_TTL=15*60000;
+export const VIP_CUT_COST=10,VIP_CUT_MAX=100,CUT_MSG_TTL=15*60000;
 const fail=m=>{throw new Error(m);};
 const pick=(rng,a)=>a[Math.floor(rng()*a.length)];
 const int=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
