@@ -1412,3 +1412,5 @@ for(const c of CATALOG)c.i=c.i.replace(/^images\//,'');
 for(const c of CATALOG)if(c.p.startsWith('rod.'))c.i='fishing-rod-'+c.p.slice(4)+'.webp';
 
 CATALOG.push(...[{k:"box-plant",n:"กล่องสุ่มพืช",i:"boxes-box-clover.webp",g:"กล่องสุ่ม",p:"box.plant"},{k:"box-fruit",n:"กล่องสุ่มผลไม้/ดอกไม้",i:"boxes-box-berry.webp",g:"กล่องสุ่ม",p:"box.fruit"}],...[["watermelon","น้ำแตงโมปั่นเย็นฉ่ำ"],["butterflypea","ชาอัญชันมะนาวป่า"],["smoothie","สมูทตี้สตรอว์เบอร์รีกล้วยหอม"],["elixir","น้ำทิพย์ป่าลึก"]].map(([id,n])=>({k:"drink-"+id,n,i:"forest-drink-"+id+".webp",g:"เครื่องดื่มป่า",p:"drink."+id})));
+/* fix15 ไอเทมบูสต์ (ได้จากหีบแม่มด 3% และแอดมินส่ง) */
+CATALOG.push({k:"boost-bait",n:"เหยื่อวิเศษ (ปลากินเร็ว −30%)",i:"boost-bait.webp",g:"ไอเทมบูสต์",p:"boost.bait"},{k:"boost-lens",n:"แว่นขยายนักวิจัย (วัตถุดิบวิจัย −30%)",i:"boost-lens.webp",g:"ไอเทมบูสต์",p:"boost.lens"},{k:"boost-gear",n:"เฟืองเร่งเครื่อง (เวลาแปรรูป −30%)",i:"boost-gear.webp",g:"ไอเทมบูสต์",p:"boost.gear"});

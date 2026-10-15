@@ -4,9 +4,10 @@
    - ลดเอฟเฟกต์เองเมื่อเครื่องกระตุก (FPS ต่ำ) และเมื่อผู้ใช้ตั้ง prefers-reduced-motion */
 (function(root){
 'use strict';
-const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45'};
+const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',kickall:'#FF4D7A',kick2:'#FF2E63',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',reviveall:'#B8FFF0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45',gift:'#FFB3D1'};
 const CARD_LABEL={supply:'เติมเสบียง +10',cut:'ตัดเสบียง −10',merit:'กุศลทั้งทีม',stop:'หยุดเรือ 30 นาที',kick:'การ์ดเตะ',pull:'ดึงตัว',swap:'สลับตัว',revive:'ชุบชีวิต',ink:'พ่นหมึก',freeze:'แช่แข็ง',crab:'ปูหนีบ'};
-const CARD_ICON={supply:'🍱',cut:'🎃',merit:'🪙',stop:'🧊',kick:'🦶',pull:'🏴‍☠️',swap:'🔄',revive:'💫',ink:'🐙',freeze:'🧊',crab:'🦀'};
+const CARD_ICON={supply:'🍱',cut:'🎃',merit:'🪙',stop:'🧊',kick:'🦶',kickall:'🌊',kick2:'🎯',pull:'🏴‍☠️',swap:'🔄',revive:'💫',reviveall:'😇',ink:'🐙',freeze:'🧊',crab:'🦀',gift:'🎁'};
+Object.assign(CARD_LABEL,{cut:'ตัดเสบียง 2 ทีม −20',kickall:'เตะกวาดทุกทีม',kick2:'เตะเจาะทีม 2 คน',reviveall:'ชุบชีวิตทุกทีม',gift:'กล่องของขวัญ 150,000'});
 
 /* ---------- เหตุการณ์จากการเทียบข้อมูล (ฟังก์ชันล้วน ทดสอบได้ใน node) ---------- */
 function events(prev,next){
@@ -19,9 +20,9 @@ function events(prev,next){
     const wasPicked=before&&before.picked!==undefined,wasOpened=before&&before.opened;
     if(before&&!wasPicked&&box.picked!==undefined&&box.card)out.push({type:'pick',boat:box.boat,card:box.card,by:box.pickedBy||null,id:box.id,used:!!box.opened});
     if(before&&!wasOpened&&box.opened&&box.card){
-      const e={type:'card',card:box.card,boat:box.boat,id:box.id,target:box.target??null,victims:[...(box.victims||[])],meritTo:[...(box.meritTo||[])],pulled:box.pulled??null,fired:box.fired??null,from:box.from??null,swap:box.swap?[...box.swap]:null,revived:box.revived??null,full:!!box.full,frozen:box.frozen??null};
+      const e={type:'card',card:box.card,boat:box.boat,id:box.id,target:box.target??null,targets:[...(box.targets||[])],revivedAll:[...(box.revivedAll||[])],meritAmt:box.meritAmt||0,victims:[...(box.victims||[])],meritTo:[...(box.meritTo||[])],pulled:box.pulled??null,fired:box.fired??null,from:box.from??null,swap:box.swap?[...box.swap]:null,revived:box.revived??null,full:!!box.full,frozen:box.frozen??null};
       if(box.card==='supply')delta[box.boat-1]-=10;
-      if(box.card==='cut'&&Number.isInteger(box.target))delta[box.target-1]+=10;
+      if(box.card==='cut'){if(Array.isArray(box.targets)&&box.targets.length)for(const t of box.targets)delta[t-1]+=20;else if(Number.isInteger(box.target))delta[box.target-1]+=10;}
       out.push(e);
     }
   }

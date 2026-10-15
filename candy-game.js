@@ -1,6 +1,6 @@
 /* โรงงานลูกกวาดต้องคำสาป — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน candy-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix14';
-import {mgFrame} from './mg-frame.js?v=ss3-fix14';
+import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix15';
+import {mgFrame} from './mg-frame.js?v=ss3-fix15';
 (()=>{
 const IMG={};['belt','bg','bluecandy','bomb','boss','box','cane','caramel','cat','catgrab','cauldron','choco','clock','corn','cupcake','eyeball','ghost','ghostcandy','gold','heart','jelly','lolli','lose','mold','poster','pumpkinchoco','redeye','skull','spider','ticket','win','worm','zhand','zombiegummy'].forEach(k=>IMG[k]='images/cf-'+k+'.webp');
 const isImg=s=>typeof s==='string'&&s.startsWith('images/');

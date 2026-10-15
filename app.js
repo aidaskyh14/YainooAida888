@@ -1,19 +1,21 @@
-import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix14';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-recovery6';
-import {lurePen} from './bird-lure-engine.js?v=ss3-fix14';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix14';
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix15';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix15';
+import {lurePen} from './bird-lure-engine.js?v=ss3-fix15';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix15';
 import {observeGameplay} from './campaign-progress.js?v=ss3-recovery6';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
+import {startRumors} from './rumor-ui.js?v=ss3-fix15';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix15';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-fix14';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix15';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-recovery6';
 import { installBackupUI } from './save-backup.js?v=ss3-recovery6';
-import { CATALOG } from './catalog.js?v=ss3-fix14';
+import { CATALOG } from './catalog.js?v=ss3-fix15';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -57,7 +59,7 @@ let sceneVersion=0,campaignJobs=[];
 function stopSceneSubscriptions(){sceneVersion++;for(const stop of sceneSubscriptions)stop();sceneSubscriptions.clear();campaignConfig={};S.campaignConfigAt=0;}
 function sceneWatch(ref,fn){const version=sceneVersion;let stop=onSnapshot(ref,snap=>{if(version===sceneVersion)fn(snap.exists()?snap.data():null);},e=>{if(version===sceneVersion)showSave(e.message,true);});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};}
 // Server-synced clock: offset learned from any cloud response's serverNow (or serverClockCloud when none seen yet).
-let serverOffset=0,clockSyncedAt=0,clockSync=null,cloudFlushing=false,campaignKick=null;
+let rumorStop=null,serverOffset=0,clockSyncedAt=0,clockSync=null,cloudFlushing=false,campaignKick=null;
 function noteServerNow(serverNow,sentAt){if(!Number.isFinite(serverNow)||!Number.isFinite(sentAt))return;const recv=Date.now();if(recv-sentAt>20000)return;serverOffset=Math.round(serverNow-(sentAt+recv)/2);clockSyncedAt=recv;}
 const serverNow=()=>Date.now()+serverOffset;
 function syncClock(){
@@ -248,6 +250,8 @@ async function enter(user) {
     startSaver();await loadSettings();if(!S.admin&&!S.settings.open){renderClosed();return;}
     stage='ตรวจกุศลที่รอปรับจากเกมอื่น';await cloudAction('ledger',{type:'status'}).catch(()=>null);
     renderGame('loading');
+    // fix15 ข่าวลือ: ฟังเอกสารของตัวเองเอกสารเดียว (แอดมินไม่รับข่าวลือ)
+    watchRumors();
   } catch (e) {
     clearInterval(S.timer);
     const message=e?.message||'ไม่พบรายละเอียด',code=e?.code||'ไม่ระบุรหัส';
@@ -362,7 +366,7 @@ async function logout() {
       if(!leave)return logout();
     }
   }
-  stopSceneSubscriptions();S.frame=null;await signOut(auth);
+  stopSceneSubscriptions();rumorStop?.();rumorStop=null;S.frame=null;await signOut(auth);
 }
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
@@ -444,11 +448,31 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
+const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
 async function checkApi(){if(apiCheckedSession===S.sessionId)return;try{const status=(await httpsCallable(functions,'gameApiStatus')({})).data;if(status.release!=='ss3-recovery6')throw new Error('รุ่นระบบกลางไม่ตรงกับเว็บ กรุณาติดตั้ง cloud-update.zip รุ่น recovery6 ให้ครบ');apiCheckedSession=S.sessionId;}catch(e){if(e.code)throw new Error('ยังตรวจรุ่นระบบกลางไม่ได้ กรุณา deploy Cloud Functions ทั้งชุด recovery6: '+(e.message||e.code));throw e;}}
+const nbReportBuf={};let nbReportTimer=0;
+async function flushNbReport(){nbReportTimer=0;if(!S.user||S.blocked)return;for(const kind of Object.keys(nbReportBuf)){let n=nbReportBuf[kind];while(n>0){const part=Math.min(50,n);try{await httpsCallable(functions,'nbActionCloud')({input:{type:'report',kind,n:part}});}catch(e){nbReportBuf[kind]=n;if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,60000);return;}n-=part;}delete nbReportBuf[kind];}}
+globalThis.addEventListener?.('pagehide',()=>{if(Object.keys(nbReportBuf).length)flushNbReport();});
+// fix15: รายการที่ทำจากหน้าต่างลอยของ Host (ข่าวลือ) เปลี่ยนกุศล/กระเป๋าโดยหน้าเกมไม่รู้ตัว
+// บันทึกหน้าเกมก่อน · ระหว่างทำรายการไม่รับการบันทึกจากหน้าเกมเดิม · เสร็จแล้วโหลดหน้าเกมใหม่ให้ใช้ข้อมูลล่าสุด (แบบเดียวกับกล่องสุ่ม)
+async function sceneSafeAction(system,input){
+ if(cloudPromise)await cloudPromise;
+ if(!S.frame||!S.screen)return cloudAction(system,input);
+ frameSave(true);await flush();
+ const H=window.__HOST,saved={set:H.set,del:H.del,get:H.get};let doc=null,frozen=true,reloading=false;try{doc=S.frame.contentDocument||null;}catch(e){}
+ const thaw=()=>{if(!frozen)return;frozen=false;H.set=saved.set;H.del=saved.del;H.get=saved.get;};
+ H.set=()=>{};H.del=()=>{};
+ H.get=function(k){let d=null;try{d=S.frame?.contentDocument||null;}catch(e){}if(frozen&&reloading&&d&&d!==doc&&d.URL!=='about:blank')thaw();return saved.get.call(H,k);};
+ let changed=false;
+ try{const out=await cloudAction(system,input);changed=true;return out;}
+ finally{if(!changed||!S.frame||!S.screen)thaw();else{reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}}
+}
+const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
+function watchRumors(){rumorStop?.();rumorStop=null;if(S.admin||!S.user)return;
+ rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating,game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
 async function cloudAction(system,input) {
   if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
   if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');
@@ -509,6 +533,8 @@ const HOST_BASE = {
   openAdmin(){if(S.admin)openAdminOverlay();},
   get uid() { return S.user?.uid||''; },
   cloud:cloudAction,
+  // fix15: ตัดขนอัลปาก้า/เก็บดอกไม้ทำในหน้าเกม แจ้งยอดให้เควสต์เนเบอร์ฮูดแบบรวมเป็นชุด (ไม่เกินทุก 20 วินาที)
+  nbReport(kind,n){if(!['shear','flower'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
   // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
@@ -598,7 +624,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix14'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -665,11 +691,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  ({ approvals: tabApprovals, send: tabSend, nb: tabNb, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  ({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
@@ -764,6 +790,35 @@ async function sendGift(uids, names, packs={}) {
   } catch (e) { modal(`<h2>ส่งไม่สำเร็จ</h2><p>${thaiError(e)}</p><p class="note">กดส่งใหม่ ระบบจะตรวจรายการที่ค้างบนคลาวด์และส่งต่อ คนที่ส่งสำเร็จแล้วจะไม่รับซ้ำ</p>`); } finally { A.sending=false; }
 }
 // fix14 เนเบอร์ฮูด: อนุมัติคำขอสร้าง + ดูรายการที่เปิดอยู่
+/* fix15 📰 ข่าวลือ: เลือกข่าว → เลือกผู้รับ (คนเดียว/หลายคน/ทุกคน) → ส่ง · ดูสถานะของแต่ละคน
+   ผู้เล่นไม่เห็นว่าใครส่ง · คนที่ยังมีข่าวค้างส่งข่าวใหม่ไม่ได้ */
+const RM={kind:'G',pick:0,sel:new Set(),all:false,q:'',rows:{},players:null,at:0};
+const RM_ST={ok:['ok','✅ กดรับแล้ว'],no:['no','✕ ปิดทิ้ง'],exp:['no','⌛ หมดเวลา'],fix:['ok','🙅 แก้ข่าวแล้ว'],acc:['bad','😔 ยอมรับ'],auto:['bad','⌛ ไม่ตอบ (หักแล้ว)']};
+function rmStatus(r,now){if(!r)return ['none','—'];if(r.res)return RM_ST[r.res]||['no',r.res];return now<r.until?['wait','⏳ รอตอบ']:['wait','⌛ รอเข้าเกม'];}
+async function tabRumor(){const B=$('#aBody');
+ if(!document.getElementById('rmAdminCss')){const st=document.createElement('style');st.id='rmAdminCss';st.textContent=`.rma{display:grid;gap:.7rem}.rma .card{background:#fff;border-radius:18px;padding:.75rem .8rem;box-shadow:0 3px 10px rgba(78,53,38,.1)}.rma h3{margin:0 0 .45rem;font-size:.98rem}.rma .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#F4EADB;border-radius:999px;padding:3px;margin-bottom:.5rem}.rma .seg button{border:0;border-radius:999px;padding:.45rem;font:inherit;font-size:.86rem;background:transparent;color:#957863;cursor:pointer}.rma .seg button.on{background:#6B3FA0;color:#fff}.rma .news{display:grid;gap:.4rem;max-height:46vh;overflow:auto}.rma .nw{display:flex;gap:.5rem;align-items:flex-start;text-align:left;border:2px solid #F1E3D3;background:#FFFDF8;border-radius:14px;padding:.45rem .6rem;font:inherit;font-size:.8rem;line-height:1.45;cursor:pointer;color:#4E3526;white-space:pre-wrap}.rma .nw.on{border-color:#6B3FA0;background:#F6EFFF}.rma .nw b{flex:none;font-size:.72rem;border-radius:999px;padding:.05rem .5rem;white-space:nowrap}.rma .nw .g{background:#FFF1C9;color:#9A6400}.rma .nw .r{background:#FBE1DC;color:#C8372D}.rma .ppl{display:flex;flex-wrap:wrap;gap:.35rem;max-height:30vh;overflow:auto}.rma .ppl button{border:2px solid #F1E3D3;background:#fff;border-radius:999px;padding:.2rem .65rem;font:inherit;font-size:.78rem;cursor:pointer;color:#4E3526}.rma .ppl button.on{border-color:#6B3FA0;background:#F1E8FB}.rma .ppl button:disabled{opacity:.45;cursor:not-allowed}.rma .row{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}.rma input{flex:1;min-width:0;font:inherit;border:2px solid #F1E3D3;border-radius:12px;padding:.35rem .6rem}.rma table{width:100%;border-collapse:collapse;font-size:.78rem}.rma td{padding:.35rem .2rem;border-bottom:1px solid #F1E6D6;vertical-align:middle}.rma .st{border-radius:999px;padding:.05rem .45rem;font-size:.72rem;white-space:nowrap}.rma .st.wait{background:#FFF1C9;color:#9A6400}.rma .st.ok{background:#DDF3E4;color:#2F7A48}.rma .st.no{background:#F3EAEA;color:#8A6D6D}.rma .st.bad{background:#FBE1DC;color:#C8372D}.rma .note{font-size:.72rem;color:#957863;margin-top:.35rem}`;document.head.appendChild(st);}
+ try{if(!RM.players||Date.now()-RM.at>60000){B.innerHTML='<div class="box">กำลังโหลดรายชื่อและสถานะข่าวลือ…</div>';const [center,st]=await Promise.all([httpsCallable(functions,'adminCenterCloud')({type:'status',session:S.sessionId}),httpsCallable(functions,'rumorAdminCloud')({type:'status'})]);RM.players=center.data.players.filter(p=>p.approval==='approved'||!p.approval);RM.rows=st.data.rows||{};RM.at=Date.now();}}catch(e){B.textContent=thaiError(e);return;}
+ if(!document.contains(B))return;const now=Date.now(),list=RM.kind==='G'?RUMOR_GOOD:RUMOR_BAD,busyOf=u=>{const r=RM.rows[u];return r&&!r.res;};
+ const ppl=RM.players.filter(p=>!RM.q||String(p.name).includes(RM.q));
+ B.innerHTML=`<div class="rma">
+ <section class="card"><h3>1 · เลือกข่าวลือ</h3><div class="seg"><button data-k="G" class="${RM.kind==='G'?'on':''}">💌 ข่าวดี (${RUMOR_GOOD.length})</button><button data-k="B" class="${RM.kind==='B'?'on':''}">📰 ข่าวร้าย (${RUMOR_BAD.length})</button></div>
+  <div class="news">${list.map((x,i)=>`<button class="nw${RM.pick===i?' on':''}" data-i="${i}"><b class="${RM.kind==='G'?'g':'r'}">${RM.kind==='G'?'🎁 +':'⚠️ −'}${fmt(x[1])}</b><span>${i+1}. ${esc(x[0])}</span></button>`).join('')}</div></section>
+ <section class="card"><h3>2 · เลือกผู้รับ <small style="color:#957863;font-weight:400">${RM.all?'ทุกคน':RM.sel.size+' คน'}</small></h3>
+  <div class="row" style="margin-bottom:.45rem"><input id="rmQ" placeholder="🔍 ค้นหาชื่อ" value="${esc(RM.q)}"><button class="btn sm ${RM.all?'':'gray'}" id="rmAll">${RM.all?'✅ ทุกคน':'👥 ทุกคน'}</button><button class="btn sm gray" id="rmNone">ล้าง</button></div>
+  <div class="ppl">${ppl.map(p=>{const busy=busyOf(p.uid);return `<button data-u="${esc(p.uid)}" class="${RM.all||RM.sel.has(p.uid)?'on':''}" ${busy||RM.all?'disabled':''}>${busy?'⏳ ':''}${esc(p.name||'ผู้เล่น')}</button>`;}).join('')||'<span class="note">ไม่พบชื่อ</span>'}</div>
+  <div class="note">⏳ = ยังมีข่าวค้างอยู่ ส่งข่าวใหม่ไม่ได้จนกว่าจะตอบ · ผู้เล่นเห็นแค่ "ข่าวลือในหมู่บ้าน" ไม่รู้ว่าใครส่ง</div></section>
+ <section class="card"><div class="row"><button class="btn" id="rmSend" ${RM.all||RM.sel.size?'':'disabled'}>📨 ส่งข่าวลือ${RM.all?' ให้ทุกคน':RM.sel.size?' ('+RM.sel.size+' คน)':''}</button><button class="btn sm gray" id="rmRe">🔄 สถานะล่าสุด</button></div></section>
+ <section class="card"><h3>📋 สถานะข่าวลือ</h3><table>${RM.players.map(p=>{const r=RM.rows[p.uid],[c,t]=rmStatus(r,now);return r?`<tr><td>${esc(p.name||'ผู้เล่น')}</td><td>${r.k==='G'?'💌':'📰'} #${r.i+1}</td><td><span class="st ${c}">${t}</span></td></tr>`:'';}).join('')||'<tr><td class="note">ยังไม่เคยส่งข่าวลือ</td></tr>'}</table></section></div>`;
+ B.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{RM.kind=b.dataset.k;RM.pick=0;tabRumor();});
+ B.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{RM.pick=+b.dataset.i;B.querySelectorAll('.nw').forEach(x=>x.classList.toggle('on',x===b));});
+ B.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=b.dataset.u;RM.sel.has(u)?RM.sel.delete(u):RM.sel.add(u);tabRumor();});
+ $('#rmQ').oninput=e=>{RM.q=e.target.value.trim();const pos=e.target.selectionStart;tabRumor().then(()=>{const q=$('#rmQ');if(q){q.focus();q.setSelectionRange(pos,pos);}});};
+ $('#rmAll').onclick=()=>{RM.all=!RM.all;tabRumor();};$('#rmNone').onclick=()=>{RM.all=false;RM.sel.clear();tabRumor();};
+ $('#rmRe').onclick=()=>{RM.at=0;tabRumor();};
+ $('#rmSend').onclick=async()=>{const n=RM.all?'ทุกคน':RM.sel.size+' คน',x=list[RM.pick];if(!confirm('ส่งข่าวลือ #'+(RM.pick+1)+' ('+(RM.kind==='G'?'ข่าวดี':'ข่าวร้าย')+') ให้ '+n+'?'))return;
+  const b=$('#rmSend');b.disabled=true;b.textContent='กำลังส่ง…';
+  try{const out=(await httpsCallable(functions,'rumorAdminCloud')({type:'send',k:RM.kind,i:RM.pick,...(RM.all?{all:true}:{uids:[...RM.sel]})})).data;toast('📨 ส่งแล้ว '+out.sent+' คน'+(out.busy?' · ข้าม '+out.busy+' คนที่ยังมีข่าวค้าง':''));RM.sel.clear();RM.all=false;RM.at=0;tabRumor();}catch(e){toast(thaiError(e));b.disabled=false;}};
+}
 async function tabNb(){
   const B=$('#aBody');B.innerHTML='<div class="box"><p class="note">กำลังโหลด…</p></div>';
   let pend=[],act=[];

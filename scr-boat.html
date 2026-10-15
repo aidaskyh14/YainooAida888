@@ -47,6 +47,23 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .opt{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #fff;background:#fff;border-radius:1rem;padding:.5rem .7rem;margin-bottom:.35rem;font:inherit;color:var(--cocoa);cursor:pointer;text-align:left;box-shadow:0 3px 8px rgba(70,150,180,.12)}
 .opt img{width:2.6rem;height:2.6rem;object-fit:contain}.opt b{flex:1;font-size:.85rem}.opt span{font-size:.72rem;font-weight:700;color:#B9761F}
 .opt:disabled{opacity:.45}
+.opt b small{display:block;font-size:.66rem;font-weight:600;color:var(--soft,#9A7A68)}
+.sendq{display:flex;align-items:center;gap:.35rem;margin:.2rem 0 .1rem;font-size:.78rem;font-weight:700}
+.sendq button{flex:1;border:2px solid #F3E9DE;background:#fff;border-radius:999px;padding:.3rem;font:inherit;font-size:.78rem;cursor:pointer;color:var(--cocoa)}
+.sendq button.on{background:#FFE7A8;border-color:#F2C35A}
+.combo{background:linear-gradient(180deg,#FFF8E6,#FFF);border:2px solid #FFE0A3;border-radius:1rem;padding:.45rem .6rem;margin:.3rem 0 .45rem}
+.combo .ct{display:flex;justify-content:space-between;font-size:.8rem}.combo .ct span{font-weight:800;color:#B9761F}
+.combo .cbar{height:.55rem;background:#F6E7C8;border-radius:999px;overflow:hidden;margin:.25rem 0}.combo .cbar i{display:block;height:100%;background:linear-gradient(90deg,#FFC85A,#F39A3A);border-radius:999px;transition:width .4s}
+.combo .cm{display:flex;flex-wrap:wrap;gap:.25rem}.combo .cm span{position:relative;width:2rem;height:2rem;border-radius:.6rem;background:#fff;border:2px solid #F3E9DE;display:grid;place-items:center;font-size:.7rem;filter:grayscale(.8);opacity:.6}
+.combo .cm span.ok{filter:none;opacity:1;border-color:#7ED6A0}.combo .cm img{width:1.6rem;height:1.6rem;object-fit:contain}.combo .cm span.ok::after{content:"✅";position:absolute;right:-.3rem;top:-.35rem;font-size:.6rem}
+.combo small{display:block;font-size:.62rem;color:#9A7A68;margin-top:.2rem}
+.stay{text-align:center}.stay .sh{font-size:1.05rem;font-weight:800;color:#D9506E;margin-bottom:.3rem}
+.stay .q{background:#FFF6EE;border:2px dashed #F3C9A8;border-radius:1rem;padding:.5rem .6rem;font-size:.82rem;line-height:1.55;margin:.2rem 0 .4rem}
+.scost{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin:.35rem 0}
+.sc{background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .2rem;display:flex;flex-direction:column;align-items:center;gap:.05rem}
+.sc img{width:1.9rem;height:1.9rem;object-fit:contain}.sc .e{font-size:1.5rem;line-height:1.9rem}.sc b{font-size:.62rem}.sc span{font-size:.78rem;font-weight:800}.sc small{font-size:.58rem;color:#9A7A68}
+.sc.ok{border-color:#9EDDB6}.sc.no{border-color:#FFC7D3;background:#FFF4F6}.sc.no span{color:#D9506E}
+.sgain{font-size:.82rem;margin:.2rem 0 .4rem}.sgain b{color:#3E9E6E}
 .tg{display:grid;grid-template-columns:1fr auto;gap:.3rem;align-items:center;background:#fff;border:2px solid #F3E9DE;border-radius:.9rem;padding:.3rem .5rem;margin-bottom:.3rem}
 .tg b{font-size:.8rem}.tg .bs{display:flex;gap:.2rem}
 .tg .bs button{width:1.9rem;height:1.9rem;border-radius:50%;border:2px solid #fff;background:#EEE;font:inherit;font-weight:800;font-size:.75rem;cursor:pointer;color:#fff}
@@ -259,5 +276,5 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 <section class="sheet" id="sheet"><div id="sb"></div></section>
 <div class="pop" id="pop"><button class="px" id="popX" aria-label="ปิด">✕</button><div id="popBody"></div></div>
 <div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
-<script src="boat-fx.js?v=ss3-fix14"></script>
-<script type="module" src="boat.js?v=ss3-fix14"></script></body></html>
+<script src="boat-fx.js?v=ss3-fix15"></script>
+<script type="module" src="boat.js?v=ss3-fix15"></script></body></html>

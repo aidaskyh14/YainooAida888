@@ -1,6 +1,6 @@
 /* fix14 เนเบอร์ฮูด — กติกาล้วน (ใช้ทั้งบนคลาวด์และในหน้าเว็บ ไม่มี Firebase) */
-import {NB_QUESTS} from './nb-quest.js';
-export {NB_QUESTS};
+import {NB_QUESTS,NB_DAILY,nbPicks} from './nb-quest.js?v=ss3-fix15';
+export {NB_QUESTS,NB_DAILY,nbPicks};
 export const NB_MIN=3,NB_MAX=4;
 export const NB_LOCK=30*3600000;            // เข้าแล้วต้องอยู่อย่างน้อย 30 ชม. ถึงออกได้
 export const NB_GIFT_DAY=30,NB_GIFT_KINDS=10,NB_GIFT_MAX=999;
@@ -13,14 +13,14 @@ export const NB_COST=[['wood','forest.wood',5000],['stone','forest.stone',5000],
  ['halloween-candy','halloween.candy',50],['halloween-bat','halloween.bat',50],['halloween-candle','halloween.candle',50],['halloween-web','halloween.web',50],
  ['halloween-hat','halloween.hat',50],['halloween-broom','halloween.broom',50],['halloween-pumpkin','halloween.pumpkin',10],['halloween-cauldron','halloween.cauldron',3]];
 export function nbBasket(done){
- const base=done*NB_PER_QUEST+(done>=NB_QUESTS.length?NB_ALL_BONUS:0),cut=done>=10?0:done>=7?.2:done>=4?.5:1;
+ const base=done*NB_PER_QUEST+(done>=NB_DAILY?NB_ALL_BONUS:0),cut=done>=10?0:done>=7?.2:done>=4?.5:1;
  return {base,cut,net:Math.round(base*(1-cut))};
 }
-/* ความคืบหน้าของวัน: เป้า = เป้าต่อคน × จำนวนสมาชิก · นับเฉพาะสมาชิกปัจจุบัน */
-export function nbProgress(day,members){
- const size=Math.max(1,(members||[]).length),rows=NB_QUESTS.map(([k,name,per,unit,icon])=>{
-  const by=Object.fromEntries((members||[]).map(u=>[u,Math.max(0,Number(day?.q?.[k]?.[u])||0)])),sum=Object.values(by).reduce((a,n)=>a+n,0),goal=per*size;
-  return {k,name,per,unit,icon,goal,sum,by,done:sum>=goal};
+/* ความคืบหน้าของวัน (fix15): 10 ข้อที่สุ่มให้บ้านนี้วันนี้ · เป้า = ยอดรวมทั้งบ้าน · นับเฉพาะสมาชิกปัจจุบัน */
+export function nbProgress(day,members,nbId,dayKey){
+ const picks=new Set(nbPicks(nbId||'',dayKey||'')),rows=NB_QUESTS.filter(q=>picks.has(q[0])).map(([k,name,goal,unit,icon])=>{
+  const by=Object.fromEntries((members||[]).map(u=>[u,Math.max(0,Number(day?.q?.[k]?.[u])||0)])),sum=Object.values(by).reduce((a,n)=>a+n,0);
+  return {k,name,per:goal,unit,icon,goal,sum,by,done:sum>=goal};
  });
  const done=rows.filter(r=>r.done).length;return {rows,done,...nbBasket(done)};
 }

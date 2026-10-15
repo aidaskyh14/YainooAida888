@@ -32,6 +32,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .tagm .av img{position:absolute;width:1.05rem;top:-.6rem;left:50%;transform:translateX(-50%)}
 .tagm .pin{width:0;height:0;border:6px solid transparent;border-top-color:#fff;margin-top:-3px}
 .tagm.me .bub{background:#E9FBF4}
+.tagm.empty .bub{background:rgba(255,251,245,.8);border-style:dashed;border-color:#F2A23A;color:#C47A00;animation:nbinv 1.6s ease-in-out infinite}.tagm.empty .av{background:#FFE7B8}
+@keyframes nbinv{50%{transform:scale(1.06)}}
+.qnote{font-size:.7rem;color:var(--soft);text-align:center;margin:-.2rem 0 .4rem}
 .tagm .gf{width:1.5rem;margin-left:.1rem;animation:wig 2.4s ease-in-out infinite}
 @keyframes wig{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-12deg)}90%{transform:rotate(10deg)}95%{transform:rotate(-6deg)}}
 
@@ -208,5 +211,5 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 <div class="shade" id="shade"></div>
 <section class="sheet" id="sheet"></section>
 <div class="pop" id="pop"></div>
-<script type="module" src="neighborhood.js?v=ss3-fix14"></script>
+<script type="module" src="neighborhood.js?v=ss3-fix15"></script>
 </body></html>

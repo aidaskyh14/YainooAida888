@@ -2,7 +2,7 @@
    - ห้อง/ค่าเข้า/คะแนน/กุศล: เซิร์ฟเวอร์ (Host.cloud('funrun')) · ห้องสาธารณะ world/funrun
    - ระหว่างวิ่ง: ตัวเราจำลองในเครื่อง · เพื่อนอีก 5 คนเห็นจากตำแหน่งที่แต่ละเครื่องส่ง (funrunLive) วันละไม่กี่ครั้งต่อวินาที
    - ไอเทมที่โดนคนอื่นส่งเป็น "เหตุการณ์" แล้วเครื่องของผู้โดนเป็นคนคิดผลกับตัวเอง (โล่/ไฟกันได้ตามจริง) */
-import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix14';
+import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix15';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),A='images/funrun/';
 const ME=H.uid,esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

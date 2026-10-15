@@ -49,16 +49,21 @@ function wt(k){const f=FISH[k];return Math.round(rnd(f[2],f[3])*100)/100}
 const S={role:Host?.admin?'admin':'player',screen:'lobby',pond:null,open:false,day:0,merit:0,
 bag:{rod:Object.fromEntries(RK.map(k=>[k,0])),crab:0,vip:0},myCut:0,cutTaken:{},meTaken:0,pondToday:null,cdEnd:0,tab:'today',lucky:0,
 seats:{n1:Array(6).fill(null),n2:Array(6).fill(null),v1:Array(8).fill(null),v2:Array(8).fill(null)},board:{},hist:[],gifts:[],vipUsed:0,vipCd:0,cat:Object.fromEntries(Object.keys(FISH).map(k=>[k,{n:0,best:0}])),claimed:Array(8).fill(0),mini:false};
-let serverOffset=0,world=null,quota={},busy=false,stopWatch=null;
+let serverOffset=0,world=null,quota={},busy=false,stopWatch=null,useBait=false;
+/* fix15: แจ้งคนโดนตัดเบ็ด ไม่บอกชื่อคนตัด (จำเวลาที่แจ้งแล้วในเครื่อง ไม่แจ้งซ้ำ) */
+const CUT_KEY='fishCutSeen-'+(Host?.uid||'');let cutSeen=0;try{cutSeen=+localStorage.getItem(CUT_KEY)||0}catch(e){}
+function checkCut(){const m=world?.cutMsg?.[Host?.uid];if(!m||!(m.at>cutSeen))return;cutSeen=m.at;try{localStorage.setItem(CUT_KEY,String(m.at))}catch(e){}
+ if(m.vip&&S.screen==='pond'&&PONDS[S.pond]?.k==='v'){S.screen='lobby';S.pond=null;render();}
+ sheet(`<h3>✂️ ใครสักคนตัดเบ็ดของคุณ!</h3><div class="catch"><div class="fcard" style="width:9rem"><img src="${IMG['item-crabscissors']}" alt=""><div class="w">${m.vip?'หลุดออกจากห้อง VIP':'เบ็ดขาด ปลาหนีไปแล้ว'}</div></div></div><div class="hint">${m.vip?'ภารกิจ VIP รอบนี้จบแล้ว ไปพักแป๊บนึงแล้วค่อยกลับมาใหม่นะ':'หย่อนเบ็ดใหม่ได้เลย'}</div><div class="btns"><button class="big" onclick="closeSheet()">โอเค</button></div>`);}
 const now=()=>Date.now()+serverOffset;
 function project(){
  const g=JSON.parse(Host.get('s3all-v1')||'{}'),book=g.sub?.fishing||{};S.merit=g.merit||0;S.bag={rod:Object.fromEntries(RK.map(k=>[k,g.bag?.rod?.[k]||0])),crab:g.bag?.fishing?.crab||0,vip:g.bag?.fishing?.vip||0};S.cat=Object.fromEntries(Object.keys(FISH).map(k=>[k,book.cat?.[k]||{n:0,best:0}]));S.claimed=book.claimed||Array(8).fill(0);S.pondToday=book.pondToday||null;
  for(const[group,items]of Object.entries(g.bag||{}))for(const[k,n]of Object.entries(items))INV[group+'-'+k]=n;
  INV['item-stone']=g.bag?.forest?.stone||0;
  if(world){S.gifts=[];S.open=world.mode==='open'||(world.mode!=='closed'&&!world.closed&&(new Date(now()+7*3600e3).getUTCHours()>=11&&new Date(now()+7*3600e3).getUTCHours()<17||new Date(now()+7*3600e3).getUTCHours()>=21||new Date(now()+7*3600e3).getUTCHours()<7));S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
- S.myCut=quota.cut||0;S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
+ S.myCut=quota.cut||0;S.bait=quota.bait||{have:0,used:0,limit:10};S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
 }
-async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
+async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}checkCut();return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
 
 function luckyRod(){return RK[S.lucky]}
 
@@ -143,12 +148,12 @@ function updatePond(){const p=S.pond,k=PONDS[p].k,seats=S.seats[p];const ms=mySe
   fl.style.display=line?'':'none';ln.style.display=line?'':'none';
   if(line){$('fi'+i).src=IMG['float-'+s.rod];fl.classList.toggle('hook',s.ph==='hook');
    const fx=FLX[k][sd];ln.setAttribute('x1',(sd==='l'?x+.075:x-.075)*100);ln.setAttribute('y1',(y-.055)*100);ln.setAttribute('x2',fx*100);ln.setAttribute('y2',(y+.008)*100);
-   let c=fl.querySelector('.cut');const can=k==='n'&&meFishing&&!s.me;
+   let c=fl.querySelector('.cut');const can=!s.me&&(k==='n'?meFishing:!!(ms&&ms.p===p&&ms.s.vip));
    if(can&&!c){c=document.createElement('span');c.className='cut';c.textContent='✂️';fl.appendChild(c)}if(!can&&c)c.remove()}});
  if(k==='v')updateMission();
  renderPondBar()}
 function updateMission(){const m=$('mis');if(!m)return;const ms=mySeat();const run=ms&&ms.p===S.pond&&ms.s.vip;
- if(!run){m.className='mission idle';m.innerHTML=`<img src="${IMG['vip-card']}" alt=""><div><div class="t">แตะท่าว่าง แล้วใช้บัตร VIP 1 ใบเริ่มภารกิจ</div><div class="s">ทำภารกิจทีละด่าน · ด่านละ ❤️❤️ พลาดได้ 1 ครั้ง · พลาดครบ 2 ครั้งจบรอบ · ที่นี่ตัดเบ็ดไม่ได้</div></div>`;return}
+ if(!run){m.className='mission idle';m.innerHTML=`<img src="${IMG['vip-card']}" alt=""><div><div class="t">แตะท่าว่าง แล้วใช้บัตร VIP 1 ใบเริ่มภารกิจ</div><div class="s">ทำภารกิจทีละด่าน · ด่านละ ❤️❤️ พลาดได้ 1 ครั้ง · พลาดครบ 2 ครั้งจบรอบ · ✂️ ตัดเบ็ดได้ (กรรไกรปู 10 อัน)</div></div>`;return}
  const s=ms.s,tk=vipTarget(s.stage);
  m.className='mission';m.innerHTML=`<img src="${IMG['fish-'+tk]}" alt=""><div><div class="t">ด่าน ${s.stage+1} · ตก${FISH[tk][0]}ให้ได้ <span style="white-space:nowrap">${(s.hearts||2)>1?'❤️❤️':'❤️🤍'}</span></div><div class="s">สะสมรอบนี้ ${f2(s.tot)} lb · บัตรเหลือ ${mm(s.card-Date.now())} นาที</div></div>`}
 let barKey='';
@@ -177,11 +182,13 @@ async function tapDock(i){const p=S.pond,s=S.seats[p][i];if(s){if(s.me){if(s.ph=
 
 function chooseRod(p,i){const s=S.seats[p][i];
  const o=RK.map(r=>`<div class="opt ${S.bag.rod[r]?'':'off'}" data-r="${r}"><img src="${IMG['rod-'+r]}" alt=""><div>${RODS[r].e} ${RODS[r].n}</div><span>มี ${S.bag.rod[r]} อัน</span></div>`).join('');
- sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 5 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div><div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
+ const B=S.bait||{have:0,used:0,limit:10},bOk=B.have>0&&B.used<B.limit;if(useBait&&!bOk)useBait=false;
+ const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><span>${useBait?'✅ ใช้เหยื่อวิเศษ รอปลา 7 นาที':'🎣 ใช้เหยื่อวิเศษ (รอปลา −30%)'}<small>มี ${nf(B.have)} · วันนี้ ${B.used}/${B.limit}</small></span></button>`;
+ sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 5 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
  $('sheet').querySelectorAll('.opt').forEach(x=>x.onclick=()=>{const r=x.dataset.r;if(!S.bag.rod[r])return ann('เบ็ดแบบนี้หมดแล้ว',false);closeSheet();cast(p,i,r)});
- $('leaveb').onclick=()=>{closeSheet();if(!s.vip&&s.ph==='idle'){act({type:'leave'})}}}
-async function cast(p,i,r){if(await act({type:'cast',rod:r}))ann('หย่อนเบ็ดแล้ว '+RODS[r].e+' รอปลากินนะ');}
-function tapFloat(i){const s=S.seats[S.pond][i];if(!s)return;if(s.me){if(s.ph==='hook')collect();return;}ask('✂️ ตัดเบ็ด '+esc(s.who)+'?','ใช้กรรไกรปู 1 อัน จำกัดวันละ 30 ครั้ง','ตัดเลย',async()=>{if(await act({type:'cut',pond:S.pond,seat:i})){snip(i);ann('ตัดเบ็ดสำเร็จ');}});}
+ $('leaveb').onclick=()=>{closeSheet();if(!s.vip&&s.ph==='idle'){act({type:'leave'})}};if($('baitb'))$('baitb').onclick=()=>{useBait=!useBait;chooseRod(p,i)}}
+async function cast(p,i,r){const bait=useBait&&PONDS[p].k==='n';if(await act({type:'cast',rod:r,...(bait?{bait:true}:{})})){if(bait)useBait=false;ann('หย่อนเบ็ดแล้ว '+RODS[r].e+(bait?' 🎣 ใช้เหยื่อวิเศษ':'')+' รอปลากินนะ');}}
+function tapFloat(i){const s=S.seats[S.pond][i];if(!s)return;if(s.me){if(s.ph==='hook')collect();return;}if(PONDS[S.pond].k==='v')return ask('✂️ ตัดเบ็ด '+esc(s.who)+'?','ใช้กรรไกรปู 10 อัน (มี '+nf(S.bag.crab)+') · เพื่อนจะหลุดออกจากห้อง VIP<br>คนหนึ่งโดนตัดในห้อง VIP ได้ 3 ครั้ง/วัน · เพื่อนไม่รู้ว่าใครตัด','✂️ ตัดเลย',async()=>{if(await act({type:'cut',pond:S.pond,seat:i})){snip(i);ann('ตัดเบ็ดสำเร็จ เพื่อนหลุดจากห้อง VIP แล้ว');}});ask('✂️ ตัดเบ็ด '+esc(s.who)+'?','ใช้กรรไกรปู 1 อัน จำกัดวันละ 30 ครั้ง · เพื่อนไม่รู้ว่าใครตัด','ตัดเลย',async()=>{if(await act({type:'cut',pond:S.pond,seat:i})){snip(i);ann('ตัดเบ็ดสำเร็จ');}});}
 
 function snip(i){const fl=$('fl'+i);if(!fl)return;const im=document.createElement('img');im.className='snip';im.src=IMG['item-crabscissors'];im.style.left=fl.style.left;im.style.top=fl.style.top;$('stage').appendChild(im);setTimeout(()=>im.remove(),1200)}
 
@@ -206,7 +213,10 @@ function rulesView(){sheet(`<h3>📋 กติกาตกปลา</h3><div cla
 <p>❗ ปลาติดแล้วต้องกดรับใน 3 นาที ไม่งั้นปลาหนี</p>
 <p>🎯 กดรับแล้วแตะตอนเข็มอยู่ในโซนเขียว พลาด = ปลาหลุด เสียเบ็ด</p>
 <p>😴 จบรอบแล้วลุกจากท่า พัก 3–5 นาทีค่อยตกใหม่</p>
-<p>✂️ ตัดเบ็ดเพื่อนได้วันละ 30 ครั้ง ต้องหย่อนเบ็ดอยู่ทั้งคู่ · คนหนึ่งโดนตัดได้ไม่เกิน 30 ครั้ง/วัน · บ่อ VIP ตัดไม่ได้</p>
+<p>✂️ บ่อทั่วไป: ตัดเบ็ดเพื่อนได้วันละ 30 ครั้ง ใช้กรรไกรปู 1 อัน ต้องหย่อนเบ็ดอยู่ทั้งคู่ · คนหนึ่งโดนตัดได้ไม่เกิน 30 ครั้ง/วัน</p>
+<p>✂️ ห้อง VIP: ต้องนั่งห้องเดียวกัน ใช้กรรไกรปู 10 อัน · คนโดนตัดหลุดออกจากห้อง VIP · คนหนึ่งโดนได้ 3 ครั้ง/วัน</p>
+<p>🤫 คนโดนตัดจะเห็นแค่ว่า "ใครสักคน" ตัดเบ็ด ไม่บอกชื่อ</p>
+<p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาลดลง 30% · ใช้ได้วันละ 10 ชิ้น</p>
 <p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 5 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
 <p>⚖️ น้ำหนักทุกบ่อรวมบอร์ดเดียว รีเซ็ตเที่ยงคืน · ท็อป 5 ได้ 5,000 กุศล ติดต่อกัน +1,000 ทุกวัน</p>
 <p>📖 ปลาทุกตัวนับเข้าสมุดสะสม ครบเซ็ตรับรางวัล</p></div><div class="btns"><button class="ghost" onclick="tools()">◀ กลับ</button></div>`)}
@@ -298,6 +308,6 @@ function setSheet(si){const st=SETS[si],mn=setLevel(si);
 /* ---------- render ---------- */
 function render(){fitStage();renderTop();if(S.screen==='lobby')renderLobby();else renderPond()}
 closeSheet();render();
-if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data&&(!world?.updatedAt||!data.updatedAt||data.updatedAt>=world.updatedAt)){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}}});})();
+if(!Host){ann('กรุณาเปิดจากหน้าเกมหลัก',false);}else(async()=>{const result=await act({type:'status'});if(!result)return;render();stopWatch=Host.watchWorld('fishing',data=>{if(data&&(!world?.updatedAt||!data.updatedAt||data.updatedAt>=world.updatedAt)){world=data;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}checkCut();}});})();
 addEventListener('pagehide',()=>{stopWatch?.();});
 

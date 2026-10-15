@@ -1,6 +1,6 @@
 /* แม่มดซิ่งไม้กวาด — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน witch-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix14';
-import {mgFrame} from './mg-frame.js?v=ss3-fix14';
+import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix15';
+import {mgFrame} from './mg-frame.js?v=ss3-fix15';
 (()=>{
 const IMG={};['bat','batstill','bg1','bg2','bg3','bg4','bg5','bubble','candy','comet','corn','crash','gate','lose','magnet','meteor','moon','poster','pumpkin','shield','star','storm','win','witch'].forEach(k=>IMG[k]='images/wg-'+k+'.webp');
 const isImg=s=>typeof s==='string'&&s.startsWith('images/');

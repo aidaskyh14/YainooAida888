@@ -58,11 +58,13 @@ export const hwHaunting=now=>{const h=new Date(now+7*3600000).getUTCHours();retu
 export const hwPrice=(k,now)=>{const it=HW_ITEMS.find(x=>x[0]===k);return it?Math.round(it[2]*(hwHaunting(now)?1+HW_HAUNT_BONUS:1)):0;};
 export const HW_GFOOD=['r1','r2','r3','r4','r5','r6','r7','r8','n1','n2','n3','n4','b1','b2','b3','b4','b5','b6','b7','b8'];
 // [โอกาส %, ชนิด] รวม 100
-export const HW_PRIZES=[[25,'merit'],[10,'wine'],[10,'gfood'],[10,'box'],[8,'musicbox'],[8,'hat'],[8,'cake'],[8,'wings'],[8,'coconut'],[5,'fert']];
+// fix15: กุศล 25→22 แบ่ง 3% ให้ไอเทมบูสต์ (ได้ 1–3 ชิ้น ชนิดเดียวแบบสุ่ม)
+export const HW_PRIZES=[[22,'merit'],[3,'boost'],[10,'wine'],[10,'gfood'],[10,'box'],[8,'musicbox'],[8,'hat'],[8,'cake'],[8,'wings'],[8,'coconut'],[5,'fert']];
 export function hwRollPrize(rng){
  const pick=(n)=>Math.min(n-1,Math.floor(rng()*n));let x=rng()*100,kind='merit';for(const [w,k] of HW_PRIZES){if(x<w){kind=k;break;}x-=w;}
  switch(kind){
   case 'merit':return {kind,merit:3000+pick(28)*1000};
+  case 'boost':{const k=['bait','lens','gear'][pick(3)];return {kind,path:['boost',k],key:'boost-'+k,q:1+pick(3)};}
   case 'wine':{const w=WINES[pick(WINES.length)];return {kind,path:['wine',w[0]],key:'wine-'+w[0],name:w[1],q:2+pick(9)};}
   case 'gfood':{const g=HW_GFOOD[pick(HW_GFOOD.length)];return {kind,path:['gfood',g],key:'gfood-'+g,q:2+pick(4)};}
   case 'box':return pick(2)?{kind,path:['box','fruit'],key:'box-fruit',q:10}:{kind,path:['box','plant'],key:'box-plant',q:10};

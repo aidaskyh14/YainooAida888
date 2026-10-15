@@ -46,7 +46,8 @@ export const birdGain=r=>Math.max((r.hits?.length||4)>4?BIRD_LOSS_CAP:BIRD_LOSS_
    The owner edits them in settings.fee3 = {game:{coin,hat,mb}}. The old coin-only settings.fees is ignored. */
 export const MG_GAMES=['kang','pk','bs','mole','basket','witch','candy'];
 export const MG_SOLO=['pk','bs','mole','basket','witch','candy'];
-export const MG_FEE3={bs:{coin:12,hat:80,mb:80},mole:{coin:10,hat:60,mb:60},witch:{coin:10,hat:60,mb:60},pk:{coin:8,hat:50,mb:50},basket:{coin:6,hat:40,mb:40},candy:{coin:6,hat:30,mb:30},kang:{coin:4,hat:20,mb:20}};
+/* fix15: ค่าเข้า ×2 (หมวกกะลาสีและกล่องดนตรี ×2 · เหรียญ +50%) · ค่าที่แอดมินแก้ใหม่เก็บใน settings.fee15 (ค่าเดิมใน fee3 เลิกใช้) */
+export const MG_FEE3={bs:{coin:18,hat:160,mb:160},mole:{coin:15,hat:120,mb:120},witch:{coin:15,hat:120,mb:120},pk:{coin:12,hat:100,mb:100},basket:{coin:9,hat:80,mb:80},candy:{coin:9,hat:60,mb:60},kang:{coin:6,hat:40,mb:40}};
 export const MG_FEES=Object.fromEntries(Object.entries(MG_FEE3).map(([k,v])=>[k,v.coin]));
 export const MG_CD={bs:45,mole:40,witch:40,pk:35,basket:25,candy:20};          // minutes after a finished round
 export const MG_MIN={bs:30000,mole:15000,witch:60000,pk:25000,basket:20000,candy:20000};
@@ -59,14 +60,14 @@ export const inHours=(hour,[a,b])=>a<b?hour>=a&&hour<b:hour>=a||hour<b;
 const okInt=(n,max)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
 export function minigameRules(settings){
  const s=settings||{},fee3={},hours={pk:[...MG_HOURS.pk],bs:[...MG_HOURS.bs]};
- for(const k of MG_GAMES){const d=MG_FEE3[k],o=s.fee3?.[k]||{};fee3[k]={coin:okInt(o.coin,99)?o.coin:d.coin,hat:okInt(o.hat,999)?o.hat:d.hat,mb:okInt(o.mb,999)?o.mb:d.mb};}
+ for(const k of MG_GAMES){const d=MG_FEE3[k],o=s.fee15?.[k]||{};fee3[k]={coin:okInt(o.coin,99)?o.coin:d.coin,hat:okInt(o.hat,999)?o.hat:d.hat,mb:okInt(o.mb,999)?o.mb:d.mb};}
  for(const k of ['pk','bs']){const h=s.hours?.[k];if(Array.isArray(h)&&h.length===2&&h.every(n=>Number.isInteger(n)&&n>=0&&n<=23)&&h[0]!==h[1])hours[k]=[h[0],h[1]];}
  const emergency=!!s.emergency,solo=s.solo||{},off={...(s.off||{})},fees=Object.fromEntries(MG_GAMES.map(k=>[k,fee3[k].coin]));
  return {fees,fee3,hours,emergency,emergencyAt:s.emergencyAt||0,solo,off:k=>emergency||k==='br'||(k==='kang'?!!off[k]:solo[k]==='closed')};
 }
 /* Owner control: mutates settings in place, throws on bad input. Changes apply to the next entry; nothing is refused because people are seated. */
 export function minigameConfigure(settings,input,now){
- const s=settings;s.fee3 ||= {};s.hours ||= {};s.off ||= {};s.solo ||= {};
+ const s=settings;s.fee15 ||= {};s.hours ||= {};s.off ||= {};s.solo ||= {};
  if(input.type==='control'){
   if(!MG_GAMES.includes(input.game))fail('เกมไม่ถูกต้อง');
   if(input.game==='kang'){if(!['open','closed','auto'].includes(input.mode))fail('โหมดไม่ถูกต้อง');s.off.kang=input.mode==='closed';}
@@ -76,7 +77,7 @@ export function minigameConfigure(settings,input,now){
   const rows=Object.entries(input.fees||{});if(!rows.length)fail('ไม่มีค่าเข้าที่จะบันทึก');const cur=minigameRules(s).fee3;
   for(const[k,v]of rows){if(!MG_GAMES.includes(k))fail('เกมไม่ถูกต้อง');const next={...cur[k],...(typeof v==='number'?{coin:v}:v&&typeof v==='object'?v:{bad:1})};
    if(next.bad||!okInt(next.coin,99))fail('ค่าเข้าต้องเป็น 0–99 เหรียญ');if(!okInt(next.hat,999)||!okInt(next.mb,999))fail('หมวกกะลาสีและกล่องดนตรีต้องเป็น 0–999');
-   s.fee3[k]={coin:next.coin,hat:next.hat,mb:next.mb};}
+   s.fee15[k]={coin:next.coin,hat:next.hat,mb:next.mb};}
  }else if(input.type==='hours'){
   if(!['pk','bs'].includes(input.game)||![input.from,input.to].every(n=>Number.isInteger(n)&&n>=0&&n<=23)||input.from===input.to)fail('เวลาเปิดไม่ถูกต้อง');s.hours[input.game]=[input.from,input.to];
  }else if(input.type==='emergency'){
@@ -120,7 +121,7 @@ export function soloAction(source,account,ctx,input,rng=Math.random){const state
  for(const k of MG_SOLO){const r=state[k];if(r?.phase!=='active')continue;const paid=r.paidAt??r.start??0;if(rules.emergency||rules.emergencyAt&&paid<=rules.emergencyAt){const fee=paidFee(r,k);r.phase='void';coins=refundInto(game,coins,fee);voided.push({game:k,coins:fee.coin,hat:fee.hat,mb:fee.mb});}}
  /* Witch / candy rounds left past their maximum length (pauses included) are settled from their last checkpoint. */
  const settleExt=(k,res)=>{const r=state[k],gain=Math.round(Number(res?.gain));if(!Number.isSafeInteger(gain))fail('ผลรอบไม่ถูกต้อง');r.phase='done';r.gain=gain;r.breakdown=res.breakdown??null;r.doneAt=ctx.now;progress.cd[k]=ctx.now+MG_CD[k]*60000;
-  if(gain>0)reward(k,EXT[k].icon,MG_NAMES[k]+' +'+num(gain)+' กุศล',gain);else if(gain<0)game.merit=Math.max(0,(game.merit||0)+gain);return r;};
+  if(gain>0)reward(k,EXT[k].icon,MG_NAMES[k]+' +'+num(gain)+' กุศล',gain);else if(gain<0){const m0=game.merit||0;game.merit=Math.max(Math.min(m0,0),m0+gain);}return r;};
  const overdue=(k,r)=>r?.phase==='active'&&ctx.now-(r.startedAt??r.paidAt??0)>(r.maxMs||MG_MAX_MS[k])+60000;   // one minute of grace for a late finish
  const abandoned=[];
  if(!rules.emergency)for(const k of ['witch','candy'])if(overdue(k,state[k])){settleExt(k,EXT[k].abandon(structuredClone(state[k]),ctx.now));state[k].abandoned=true;abandoned.push(k);}

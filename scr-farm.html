@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix14"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix15"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}
 .owner-rank{border:3px solid #d2a145!important;background:linear-gradient(110deg,#fff5d4,#ffdda0)!important;box-shadow:0 4px 14px #bb882b55;margin-bottom:16px}.owner-rank .rn{font-weight:800;color:#8a541f}
@@ -279,7 +279,8 @@ const FRIEND_PLOTS=['ready','water','ready','angel','worm','ready','grow','magic
 function render(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url('+IMG[farm===1?1:2]+')';setBg(IMG[farm===1?1:2]);
  // เมฆ
  [[6,110,28],[15,150,22]].forEach(([top,dur,w],i)=>{const c=document.createElement('div');c.className='cloud';Object.assign(c.style,{top:top+'%',width:w+'%',animationDuration:dur+'s',animationDelay:(-i*dur/3)+'s'});s.appendChild(c)});
- if(visiting){(farm===1?P1:P2).forEach((p,i)=>{const k=FRIEND_PLOTS[i%12];const ic={ready:'🥬',water:'💧',worm:'🪱',angel:'😇',grow:'🌱',magic:''}[k];
+ if(visiting&&window.renderFriendPlots)window.renderFriendPlots(s,farm===1?P1:P2);
+ else if(visiting){(farm===1?P1:P2).forEach((p,i)=>{const k=FRIEND_PLOTS[i%12];const ic={ready:'🥬',water:'💧',worm:'🪱',angel:'😇',grow:'🌱',magic:''}[k];
    s.appendChild(box(...p,'plot'+(k==='magic'?' magic':''),()=>friendPlot(i,FRIEND_PLOTS[i%12]),k==='magic'?'🔮':(ic?'<span>'+ic+'</span>':'')))});}
  else if(farm===1){buildPlots(s,P1);
   s.appendChild(box(300,220,355,320,'hot',()=>{if(dState!=='home')return toast('รอน้องน้ำผึ้งเสร็จงานก่อนนะ',1);goScreen('house')}));
@@ -294,7 +295,7 @@ function render(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url
  if(ph==='night'&&(farm===1||visiting)){[[378,452,60],[480,330,50],[470,470,70]].forEach(([x,y,w])=>{const g=document.createElement('div');g.className='glow';Object.assign(g.style,{left:(x-w)/W*100+'%',top:(y-w)/H*100+'%',width:2*w/W*100+'%',height:2*w/H*100+'%'});s.appendChild(g)})}
  const c=document.createElement('canvas');c.className='fxc';c.id='fxc';s.appendChild(c);sizeCanvas();
  if(farm===1&&!visiting)drawDelivery(s);
- $('farmBtn').style.display='grid';$('toolBtn').style.display=visiting?'none':'grid'}
+ $('farmBtn').style.display='grid';$('toolBtn').style.display=visiting?'none':'grid';try{window.prankDecorate?.(s)}catch(e){console.error(e)}}
 function phase(){if(tod!=='auto')return tod;const h=new Date().getHours();return h>=6&&h<17?'day':h>=17&&h<19?'sunset':'night'}
 function go(d,to){const n=to||farm+d;if(n<1||n>4)return;const s=$('stage');s.classList.add(d>0?'out-l':'out-r');
  setTimeout(()=>{farm=n;render();s.classList.remove('out-l','out-r');s.classList.add(d>0?'out-r':'out-l');requestAnimationFrame(()=>requestAnimationFrame(()=>s.classList.remove('out-l','out-r')))},220)}
@@ -440,7 +441,7 @@ document.querySelectorAll('.hopt').forEach(b=>b.onclick=()=>{if(farm!==1){closeA
 const NOWORM=new Set(['waterspinach','lettuce','mango','bamboo','plankton']);let growMs=20000,pending=null,plantAll=false,cur=null,plotEls=[];
 const GTM={"waterspinach": 25, "lettuce": 35, "pea": 40, "mango": 45, "carrot": 50, "chili": 55, "corn": 60, "potato": 65, "pumpkin": 70, "cucumber": 75, "tomato": 80, "cabbage": 80, "lychee": 85, "strawberry": 100, "watermelon": 110, "grape": 115, "banana": 130, "gooseberry": 150, "mushroom": 160, "melon": 180, "bamboo": 200, "plankton": 240},SPR={"waterspinach": 1, "lettuce": 1, "pea": 3, "mango": 3, "carrot": 3, "chili": 5, "corn": 5, "potato": 5, "pumpkin": 5, "cucumber": 8, "tomato": 8, "cabbage": 8, "lychee": 8, "strawberry": 10, "watermelon": 10, "grape": 12, "banana": 12, "gooseberry": 15, "mushroom": 18, "melon": 20, "bamboo": 25, "plankton": 30};const gms=p=>(GTM[p&&p.c]||30)*60000;const G1=p=>gms(p)*.4,G2=p=>gms(p)*.6;
 const isLocked=i=>{const u=S.unl||{};if(farm===1)return (i%4)===2?!u.c3:(i%4)===3?!u.c4:false;return !u['f'+farm]};
-function ptick(p){if(!p)return;const n=Date.now();if(p.ph==='g1'&&n-p.t>=G1(p)*(S.fortune&&S.fortune.i===1&&S.fortune.day===new Date().toDateString()?.7:1)){p.ph='water';p.t=n}if(p.ph==='g2'&&n-p.t>=G2(p)){p.ph='ready';p.t=n}}
+function ptick(p){if(!p||p.pk)return;const n=Date.now();if(p.ph==='g1'&&n-p.t>=G1(p)*(S.fortune&&S.fortune.i===1&&S.fortune.day===new Date().toDateString()?.7:1)){p.ph='water';p.t=n}if(p.ph==='g2'&&n-p.t>=G2(p)){p.ph='ready';p.t=n}}
 function pstage(p){if(!p)return 0;ptick(p);if(p.ph==='ready')return 4;if(p.ph==='g2'||p.ph==='worm')return 3;if(p.ph==='water')return 2;return (Date.now()-p.t)>=G1(p)*.48?2:1}
 function pprog(p){if(p.ph==='g1')return (Date.now()-p.t)/G1(p)*40;if(p.ph==='g2')return 40+(Date.now()-p.t)/G2(p)*60;return 40}
 const psrc=(p,st)=>st===1?IMG.s1:st===2?IMG.s2:IMG[p.c+st];
@@ -843,4 +844,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix14"></script><script src="farm-cloud.js?v=ss3-fix14"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix14" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix15"></script><script src="farm-cloud.js?v=ss3-fix15"></script><script type="module" src="prank-ui.js?v=ss3-fix15"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix15" data-box="all"></script></body></html>

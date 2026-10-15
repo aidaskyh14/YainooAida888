@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — หน้าเกม (หน้าตาตามที่อนุมัติ) · ทุกอย่างที่เปลี่ยนข้อมูลทำบนเซิร์ฟเวอร์ (Host.cloud('nb',…)) */
-import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix14';
+import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix15';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,7 +26,7 @@ addEventListener('pagehide',()=>{stopNb?.();stopDay?.();},{once:true});
 const AR=941/1672;
 function fit(){const v=$('view').getBoundingClientRect();let w=v.width,h=w/AR;if(h>v.height){h=v.height;w=h*AR;}const s=$('stage');s.style.width=w+'px';s.style.height=h+'px';s.style.fontSize=Math.max(11,Math.min(15,w/30))+'px';}
 addEventListener('resize',fit);
-function prog(){return V.nb&&V.nb.status==='active'?nbProgress(V.today||{q:{}},V.nb.members||[]):null;}
+function prog(){return V.nb&&V.nb.status==='active'?nbProgress(V.today||{q:{}},V.nb.members||[],V.nbId,V.day):null;}
 function render(){fit();const nb=V.nb,st=$('stage'),hud=$('hud');
  if(!nb){st.className='stage gray';st.innerHTML='';hud.innerHTML=`<div class="center"><img class="hero" src="images/nb-home.webp" alt=""><h4>ยังไม่มีเนเบอร์ฮูด</h4><span class="warn">⚠️ ทุกเที่ยงคืน −5,000 กุศล</span>
   <p style="font-size:.78rem;margin:.6rem 0 .2rem">🧺 เข้าเนเบอร์ฮูด รับกุศลสูงสุดวันละ <b style="color:#C47A00">1,000,000</b></p>
@@ -40,7 +40,7 @@ function render(){fit();const nb=V.nb,st=$('stage'),hud=$('hud');
    <div class="ppl">${nb.members.map(u=>`<span class="pill p-mint">${u===nb.leader?'👑':'✅'} ${esc(nameOf(u))}</span>`).join('')}${(nb.invites||[]).map(u=>`<span class="pill p-gray">⏳ ${esc(nameOf(u))}</span>`).join('')}</div>
    <p style="font-size:.72rem;color:var(--soft);margin:.2rem 0">👥 ${nb.members.length}/${NB_MIN}–${NB_MAX} คน · 🤝 ลงขัน ${left.filter(x=>!x[3]).length}/${left.length} ชนิดครบ</p>
    ${pend?`<p style="font-size:.72rem;color:var(--soft);margin:.2rem 0">🛡️ ระหว่างรอไม่โดนหัก · ยกเลิกได้ ของยังอยู่ครบ</p><div class="row">${lead?'<button class="btn gray" id="bWithdraw">↩️ ยกเลิกคำขอ</button>':''}</div>`
-   :`<div class="row"><button class="btn g" id="bGive">🤝 ลงขัน</button>${lead?'<button class="btn r" id="bInvite"><img src="images/nb-invite.webp" alt="">เชิญ</button>':''}</div>
+   :`<div class="row"><button class="btn g" id="bGive">🤝 ลงขัน</button>${nb.members.length+(nb.invites||[]).length<NB_MAX?'<button class="btn r" id="bInvite"><img src="images/nb-invite.webp" alt="">เชิญเพื่อน</button>':''}</div>
     <div class="row">${lead?`<button class="btn y" id="bSubmit" ${nb.members.length>=NB_MIN&&okMats?'':'disabled'}>📨 ยื่นคำขอ</button>`:''}<button class="btn gray" id="bLeave">${lead?'🏚️ ยุบ':'🚪 ออก'}</button></div>`}</div>`;
   if($('bWithdraw'))$('bWithdraw').onclick=()=>confirmPop('↩️ ยกเลิกคำขอ?','กลับไปแก้ไขได้ ของที่ลงขันยังอยู่ครบ',()=>act({type:'withdraw'}));
   if($('bGive'))$('bGive').onclick=openMats;if($('bInvite'))$('bInvite').onclick=openInvitePicker;
@@ -50,17 +50,18 @@ function render(){fit();const nb=V.nb,st=$('stage'),hud=$('hud');
  // active
  const p=prog(),done=p.done,cut=p.cut;st.className='stage';
  st.innerHTML=nb.members.slice(0,4).map((u,i)=>{const [x,y]=SLOTS[i];return `<button class="tagm${u===ME?' me':''}" style="left:${x}%;top:${y}%" ${u===ME?'':`data-gift="${esc(u)}"`} aria-label="${esc(nameOf(u))}"><span class="bub"><span class="av" style="background:${colOf(u)}">${ini(u)}${u===nb.leader?'<img src="images/nb-crown.webp" alt="">':''}</span>${esc(nameOf(u))}${u===ME?'':'<img class="gf" src="images/nb-gift.webp" alt="">'}</span><span class="pin"></span></button>`;}).join('')
-  +`<button class="hot" style="left:14%;top:53%" data-open="quest"><span class="lab"><img src="images/nb-q-harvest.webp" alt="">${done}/10</span></button>`
+  +(nb.members.length+(nb.invites||[]).length<NB_MAX?SLOTS.slice(nb.members.length,NB_MAX).map(([x,y])=>`<button class="tagm empty" style="left:${x}%;top:${y}%" data-invite="1" aria-label="เชิญเพื่อนบ้าน"><span class="bub"><span class="av">➕</span>ว่าง · เชิญ</span><span class="pin"></span></button>`).join(''):'')
+  +`<button class="hot" style="left:14%;top:53%" data-open="quest"><span class="lab"><img src="images/nb-q-harvest.webp" alt="">${done}/${p.rows.length}</span></button>`
   +`<button class="hot" style="left:62%;top:51%" data-open="basket"><span class="glow"></span><span class="lab"><img src="images/nb-basket.webp" alt="">${fmt(p.base)}</span>${cut?`<span class="cut">⏰ −${Math.round(cut*100)}% → ${fmt(p.net)}</span>`:''}</button>`
   +[[55,58],[70,56],[60,62],[67,61.5]].map(([x,y],i)=>`<span class="sp" style="left:${x}%;top:${y}%;animation-delay:${i*.6}s">✨</span>`).join('');
  const giftsLeft=Math.max(0,NB_GIFT_DAY-(Number(V.today?.gifts?.[ME])||0));
  hud.innerHTML=`<div class="top"><div class="namechip"><img src="images/nb-emb-${esc(nb.emblem)}.webp" alt=""><div style="min-width:0"><b>${esc(nb.name)}</b><small>👥 ${nb.members.length}/${NB_MAX} · 👑 ${esc(nameOf(nb.leader))}</small></div></div><div class="grow"></div>
-  <button class="rbtn" data-open="log" aria-label="บันทึกกิจกรรม">📜</button>${nb.leader===ME&&nb.members.length+(nb.invites||[]).length<NB_MAX?'<button class="rbtn" id="bInvite" aria-label="เชิญสมาชิก"><img src="images/nb-invite.webp" alt=""></button>':''}</div>
+  <button class="rbtn" data-open="log" aria-label="บันทึกกิจกรรม">📜</button>${nb.members.length+(nb.invites||[]).length<NB_MAX?'<button class="rbtn" id="bInvite" aria-label="เชิญสมาชิก"><img src="images/nb-invite.webp" alt=""></button>':''}</div>
   <div class="clockchip">🕛 รีเซ็ตใน <span id="cd">--:--:--</span></div>
-  <div class="bar"><button class="bb" data-open="quest"><span class="c"><img src="images/nb-q-harvest.webp" alt=""><span class="badge">${done}/10</span></span><span>เควสต์</span></button>
+  <div class="bar"><button class="bb" data-open="quest"><span class="c"><img src="images/nb-q-harvest.webp" alt=""><span class="badge">${done}/${p.rows.length}</span></span><span>เควสต์</span></button>
    <button class="bb main" data-open="basket"><span class="c"><img src="images/nb-basket.webp" alt=""></span><span>ตะกร้า</span></button>
    <button class="bb" data-open="members"><span class="c"><img src="images/nb-gift.webp" alt=""><span class="badge" style="background:#6CC9A8">${giftsLeft}</span></span><span>ส่งของ</span></button></div>`;
- if($('bInvite'))$('bInvite').onclick=openInvitePicker;tick();
+ if($('bInvite'))$('bInvite').onclick=openInvitePicker;st.querySelectorAll('[data-invite]').forEach(b=>b.onclick=openInvitePicker);tick();
  if(openId&&['quest','basket','members','log'].includes(openId))openSheet(openId,true);
 }
 function tick(){const el=$('cd');if(!el)return;const l=86400e3-((SNow()+7*3600e3)%86400e3);el.textContent=[l/3600e3,l/60e3%60,l/1e3%60].map(v=>String(Math.floor(v)).padStart(2,'0')).join(':');const lk=$('lockcd');if(lk){const t=Math.max(0,(V.nb?.joinedAt?.[ME]||0)+NB_LOCK-SNow())/1000;lk.textContent=[t/3600,t/60%60,t%60].map(v=>String(Math.floor(v)).padStart(2,'0')).join(':');}}
@@ -73,10 +74,10 @@ function closeSheet(){openId=null;$('sheet').classList.remove('on');$('shade').c
 $('shade').onclick=closeSheet;
 const head=(img,title,extra)=>`<div class="sh">${img}<h3>${title}</h3>${extra||''}<button class="x" data-close aria-label="ปิด">✕</button></div>`;
 function openSheet(id,refresh){const nb=V.nb;if(!nb)return;const p=prog();
- if(id==='quest'){const mem=nb.members;sheet(id,head('<img src="images/nb-q-harvest.webp" alt="">','เควสต์รวมพลัง','<span class="pill p-gold">✅ '+p.done+'/10</span>')
+ if(id==='quest'){const mem=nb.members;sheet(id,head('<img src="images/nb-q-harvest.webp" alt="">','เควสต์รวมพลัง','<span class="pill p-gold">✅ '+p.done+'/'+p.rows.length+'</span>')+'<div class="qnote">🎲 วันนี้สุ่มให้บ้านนี้ '+p.rows.length+' เควสต์ · เป้าเป็นยอดรวมทั้งบ้าน · เที่ยงคืนสุ่มใหม่</div>'
   +'<div class="legend">'+mem.map(u=>`<span><i style="background:${colOf(u)}"></i>${esc(nameOf(u))}</span>`).join('')+'</div>'
   +p.rows.map(r=>{let acc=0;const seg=mem.map(u=>{const w=Math.max(0,Math.min(r.by[u]||0,r.goal-acc));acc+=w;return `<i style="width:${w/r.goal*100}%;background:${colOf(u)}"></i>`;}).join('');
-   return `<div class="cc${r.done?' done':''}"><div class="ic" style="background:#FFF6E6">${icon(r.icon)}</div><div class="mid"><b>${esc(r.name)}</b><small>${fmt(Math.min(r.sum,r.goal))} / ${fmt(r.goal)} ${esc(r.unit)} · คนละ ${fmt(r.per)}</small><div class="trk">${seg}</div></div>${r.done?'<span class="ok">✅</span>':'<span class="pill p-gray">⏳</span>'}</div>`;}).join(''));}
+   return `<div class="cc${r.done?' done':''}"><div class="ic" style="background:#FFF6E6">${icon(r.icon)}</div><div class="mid"><b>${esc(r.name)}</b><small>${fmt(Math.min(r.sum,r.goal))} / ${fmt(r.goal)} ${esc(r.unit)}</small><div class="trk">${seg}</div></div>${r.done?'<span class="ok">✅</span>':'<span class="pill p-gray">⏳</span>'}</div>`;}).join(''));}
  if(id==='basket'){const T=[['10','ไม่หัก','1,000,000',10,10,'c-ok'],['7–9','−20%','≤360,000',7,9,'c-w'],['4–6','−50%','≤150,000',4,6,'c-w'],['0–3','−100%','0',0,3,'c-bad']];const y=V.yesterday;
   sheet(id,head('<img src="images/nb-basket.webp" alt="">','ตะกร้ารางวัล')+`<div class="bk"><img src="images/nb-basket.webp" alt=""><div class="amt">${fmt(p.base)} <small>กุศล/คน</small></div><div class="net">${p.cut?`⏰ ถ้าหมดเวลาตอนนี้ <span class="pill ${p.cut===1?'p-red':'p-gold'}">−${Math.round(p.cut*100)}%</span> ได้จริง <b class="${p.cut===1?'c-bad':'c-w'}">${fmt(p.net)}</b>`:'<span class="pill p-mint">🌟 ครบ 10 ข้อ ไม่โดนหัก</span>'}</div></div>
    <div class="tiers">${T.map(([a,b,c,lo,hi,cl])=>`<div class="tier${p.done>=lo&&p.done<=hi?' on':''}"><b>${a} ข้อ</b><span class="${cl}" style="font-weight:700">${b}</span><br>${c}</div>`).join('')}</div>
@@ -124,8 +125,8 @@ function openCreate(){sheet('create',head('<img src="images/nb-home.webp" alt=""
 function openInvites(){sheet('invites',head('<img src="images/nb-invite.webp" alt="">','คำเชิญ')+(V.invites.length?V.invites.map(x=>`<div class="pick"><img src="images/nb-emb-${esc(x.emblem||'pumpkin')}.webp" alt="" style="width:2.4rem"><b>${esc(x.name)}<small style="display:block;color:var(--soft);font-weight:600">จาก ${esc(x.from)}</small></b><button class="btn g" data-acc="${esc(x.nb)}">เข้าร่วม</button><button class="btn gray" data-dec="${esc(x.nb)}">ปฏิเสธ</button></div>`).join(''):'<div class="empty">ยังไม่มีคำเชิญ · ลองสร้างเองเลย!</div>'));
  $('sheet').querySelectorAll('[data-acc]').forEach(b=>b.onclick=async()=>{if(await act({type:'accept',nb:b.dataset.acc})){closeSheet();pop('<img class="face" src="images/nb-home.webp" alt=""><h4>🏘️ เข้าร่วมแล้ว!</h4><p>ยินดีต้อนรับเพื่อนบ้านใหม่</p><div class="row"><button class="btn y" data-pclose>เยี่ยมเลย</button></div>',true);}});
  $('sheet').querySelectorAll('[data-dec]').forEach(b=>b.onclick=async()=>{if(await act({type:'decline',nb:b.dataset.dec}))openInvites();});}
-async function openInvitePicker(){sheet('picker',head('<img src="images/nb-invite.webp" alt="">','เชิญเพื่อนบ้าน')+'<div class="empty">กำลังโหลดรายชื่อ…</div>');let rows=[];try{rows=(await H.roster()).filter(p=>!p.admin&&p.uid!==ME&&!(V.nb?.members||[]).includes(p.uid));}catch(e){toast('nb-lock',esc(e.message),true);return;}
- let q='';const draw=()=>{const inv=V.nb?.invites||[],list=rows.filter(p=>!q||String(p.name).includes(q));$('plist').innerHTML=list.map((p,i)=>`<div class="pick"><span class="av" style="background:${COL[i%COL.length]}">${esc([...String(p.name)][0]||'?')}</span><b>${esc(p.name)}</b>${inv.includes(p.uid)?`<button class="btn gray" data-un="${esc(p.uid)}">ยกเลิกเชิญ</button>`:`<button class="btn r" data-to="${esc(p.uid)}"><img src="images/nb-invite.webp" alt="">เชิญ</button>`}</div>`).join('')||'<div class="empty">ไม่พบชื่อนี้</div>';
+async function openInvitePicker(){sheet('picker',head('<img src="images/nb-invite.webp" alt="">','เชิญเพื่อนบ้าน')+'<div class="empty">กำลังโหลดรายชื่อ…</div>');let rows=[];try{rows=(await H.roster()).filter(p=>!p.admin&&p.uid!==ME&&!p.hasNb&&!(V.nb?.members||[]).includes(p.uid));}catch(e){toast('nb-lock',esc(e.message),true);return;}
+ let q='';const draw=()=>{const inv=V.nb?.invites||[],list=rows.filter(p=>!q||String(p.name).includes(q));$('plist').innerHTML=list.map((p,i)=>`<div class="pick"><span class="av" style="background:${COL[i%COL.length]}">${esc([...String(p.name)][0]||'?')}</span><b>${esc(p.name)}</b>${inv.includes(p.uid)?`<button class="btn gray" data-un="${esc(p.uid)}">ยกเลิกเชิญ</button>`:`<button class="btn r" data-to="${esc(p.uid)}"><img src="images/nb-invite.webp" alt="">เชิญ</button>`}</div>`).join('')||'<div class="empty">'+(rows.length?'ไม่พบชื่อนี้':'ทุกคนมีบ้านแล้ว 🏡')+'</div>';
   $('plist').querySelectorAll('[data-to]').forEach(b=>b.onclick=async()=>{if(await act({type:'invite',to:b.dataset.to})){toast('nb-invite','💌 ส่งคำเชิญแล้ว');draw();}});
   $('plist').querySelectorAll('[data-un]').forEach(b=>b.onclick=async()=>{if(await act({type:'uninvite',to:b.dataset.un}))draw();});};
  sheet('picker',head('<img src="images/nb-invite.webp" alt="">','เชิญเพื่อนบ้าน','<span class="pill p-gold">👥 '+(V.nb?.members||[]).length+'/'+NB_MAX+'</span>')+'<div class="srch">🔍<input id="pq" placeholder="ค้นหาชื่อผู้เล่น"></div><div id="plist"></div>');
