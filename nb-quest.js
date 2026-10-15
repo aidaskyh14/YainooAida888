@@ -41,7 +41,9 @@ export function questDeltas(system,before,after,input={},response={}){
  if(system==='craft'){add('cook',Math.max(0,sum(after?.bag?.food)+sum(after?.bag?.gfood)-sum(before?.bag?.food)-sum(before?.bag?.gfood)));}
  if(system==='fishing'){const n=g=>Object.values(g?.sub?.fishing?.cat||{}).reduce((s,c)=>s+(Number(c?.n)||0),0);add('fish',Math.max(0,n(after)-n(before)));}
  // กุศลที่ได้จากมินิเกม (นับเฉพาะยอดที่ได้ ยอดที่เสียไม่นับ)
- if(system==='minigames'||system==='funrun'||system==='kang')add('mgmerit',Math.max(0,(Number(after?.merit)||0)-(Number(before?.merit)||0)));
+ // fix15d: มินิเกมเดี่ยว (ยิงนก ตุ่น แม่มด ฯลฯ) จ่ายกุศลที่ชนะเป็นซองจดหมาย จึงนับจากรางวัลในผลของรายการนั้นด้วย
+ if(system==='minigames'){const won=(response?.rewards||[]).reduce((s,x)=>s+Math.max(0,Number(x?.merit)||0),0);add('mgmerit',won+Math.max(0,(Number(after?.merit)||0)-(Number(before?.merit)||0)));}
+ else if(system==='funrun'||system==='kang')add('mgmerit',Math.max(0,(Number(after?.merit)||0)-(Number(before?.merit)||0)));
  if(system==='outings'&&type==='deliver'&&!before?.honey?.delivered&&after?.honey?.delivered)add('delivery',1);
  if(system==='boxes'||system==='birdbox'){
   const total=g=>sum(g?.bag?.box)+sum(g?.bag?.birdbox)+BOX_PATHS.reduce((s,p)=>s+at(g,p),0);add('box',Math.max(0,total(before)-total(after)));
