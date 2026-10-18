@@ -7,7 +7,7 @@ import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.g
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
 import {startRumors} from './rumor-ui.js?v=ss3-fix15';
-import {startAlerts} from './alerts-ui.js?v=ss3-fix15f';
+import {startAlerts} from './alerts-ui.js?v=ss3-fix15g';
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix15';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';

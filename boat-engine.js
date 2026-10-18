@@ -280,7 +280,7 @@ function burnRefund(r,b,why){const st=r.burns?.[b];if(!st)return;
 const mmDue=(mm,i)=>mm.since+BOAT_MM_CHECKS[i];
 function mmView(r){const mm=r.mm;if(!mm||mm.done)return null;const i=mm.ok.findIndex(x=>!x);
   return {round:r.round||0,active:true,since:mm.since,earn:mm.earn,check:i<0?null:{n:i+1,at:mmDue(mm,i),until:mmDue(mm,i)+BOAT_MM_REPLY},
-    dismiss:Object.entries(r.dismiss||{}).map(([b,d])=>({boat:+b,until:d.until,crew:members(r,+b).map(u=>[u,nameOf(r,u)])}))};}
+    dismiss:Object.entries(r.dismiss||{}).map(([b,d])=>({boat:+b,until:d.until,crew:members(r,+b).map(u=>({u,n:nameOf(r,u)}))}))};}// Firestore: ห้าม array ซ้อน array
 function emitViews(r){const v=mmView(r),uid=r.mm&&!r.mm.done?r.mm.uid:null,sig=JSON.stringify([uid,v]);
   if(sig===(r.mmSig??JSON.stringify([null,null])))return;r.mmSig=sig;if(uid)outbox(r,{view:{uid,data:v}});}
 function ensureMermaid(r,now){
