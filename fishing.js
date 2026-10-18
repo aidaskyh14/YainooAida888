@@ -78,7 +78,10 @@ function vipTarget(st){return VIPL[Math.min(st,VIPL.length-1)][0]}
 
 /* ---------- ui helpers ---------- */
 let annT;function ann(t,ok=true){const a=$('ann');$('anntx').textContent=t;$('annimg').src=IMG[ok?'honey-face-happy':'honey-face-oops'];a.classList.toggle('err',!ok);a.classList.add('show');clearTimeout(annT);annT=setTimeout(()=>a.classList.remove('show'),2600)}
-function sheet(h){$('sheet').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');$('sheet').scrollTop=0}
+/* fix15f: หน้าเดิมวาดซ้ำ (หัวข้อเดิม) ไม่เด้งกลับบนสุด · แถบเลื่อนแนวนอนก็คงตำแหน่ง */
+function sheet(h){const el=$('sheet'),key=(String(h).match(/<h3[^>]*>([\s\S]*?)<\/h3>/)||[])[1]||'',same=el.classList.contains('on')&&el.dataset.key===key,top=el.scrollTop,lefts=[...el.querySelectorAll('.picker,.tabs')].map(x=>x.scrollLeft);
+ el.innerHTML=h;el.dataset.key=key;el.classList.add('on');$('shade').classList.add('on');
+ if(same){el.scrollTop=top;el.querySelectorAll('.picker,.tabs').forEach((x,i)=>{if(lefts[i])x.scrollLeft=lefts[i];});}else el.scrollTop=0}
 function closeSheet(){$('sheet').classList.remove('on');$('shade').classList.remove('on')}
 $('shade').onclick=closeSheet;
 function ask(title,hint,yes,fn){sheet(`<h3>${title}</h3><div class="hint">${hint}</div><div class="btns"><button class="ghost" onclick="closeSheet()">ไว้ก่อน</button><button class="big" id="yesb">${yes}</button></div>`);$('yesb').onclick=()=>{closeSheet();fn()}}
@@ -97,15 +100,17 @@ function renderLobby(){const st=$('stage');document.documentElement.style.setPro
  $('pnorm').onclick=()=>pondPicker('n');$('pvip').onclick=()=>pondPicker('v');renderLobbyBar()}
 function boardSheet(){sheet(`<h3>⚖️ บอร์ดน้ำหนัก</h3><div class="tabs" style="padding:0 0 .3rem"><button class="tab ${S.tab==='today'?'on':''}" data-t="today">วันนี้</button><button class="tab ${S.tab==='hist'?'on':''}" data-t="hist">🏆 ท็อป 5 ย้อนหลัง</button></div><div id="bwrap" style="display:flex;flex-direction:column"></div><div class="hint" style="margin-top:.4rem">อ่านข้อมูลเฉพาะตอนเปิดหน้านี้ · ปิดแล้วหยุดทันที</div><div class="btns"><button class="ghost" onclick="closeSheet()">ปิด</button></div>`);
  $('sheet').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;boardSheet()});updateLobby()}
+/* fix15f: บอร์ดอัปเดตทุกวินาที → เขียนใหม่เฉพาะเมื่อข้อมูลเปลี่ยน และคงตำแหน่งที่เลื่อนไว้ */
+function setBoard(w,html){if(w.dataset.h===html)return;const old=w.querySelector('.blist'),top=old?old.scrollTop:0;w.dataset.h=html;w.innerHTML=html;const nw=w.querySelector('.blist');if(nw&&top)nw.scrollTop=top;}
 function updateLobby(){const w=$('bwrap');if(!w)return;
  if(S.tab==='today'){
-  if(!S.open){w.innerHTML=`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00<br>บ่อปิดตามเวลาไทย</small></div>`;return}
+  if(!S.open){setBoard(w,`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00<br>บ่อปิดตามเวลาไทย</small></div>`);return}
   const rows=boardRows();
   const html=rows.map(([n,v],i)=>`<div class="row ${i<5?'t5':''} ${n===Host.uid?'me':''}"><span class="rk">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><b>${esc(world?.board?.[n]?.name||ME)+(n===Host.uid?' (ฉัน)':'')}</b><span class="w">${f2(v)} lb</span></div>`).join('');
-  w.innerHTML=`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 5,000+ กุศล</div><div class="blist" id="blist" style="max-height:52vh">${html}</div>`;
+  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 5,000+ กุศล</div><div class="blist" id="blist" style="max-height:52vh">${html}</div>`);
  }else{
   const html=[...S.hist].reverse().map(d=>`<div class="day"><h4>📅 ${esc(d.d)}</h4>${d.top.map((p,i)=>`<div class="r ${p.name===ME?'me':''}"><span>${['🥇','🥈','🥉','4','5'][i]}</span><b>${esc(p.name)}</b><span>${f2(p.w)} lb</span>${p.st>1?`<span class="s">🔥${p.st} วัน</span>`:''}<span class="m">+${nf(p.rw)}</span>${p.name===ME?(S.gifts.some(g=>g.d===d.d)?'<span class="m">🎁</span>':'<span class="m">✅</span>'):''}</div>`).join('')}</div>`).join('');
-  w.innerHTML=`<div class="bnote">ติดท็อป 5 วันแรก 5,000 กุศล · ติดต่อกันบวกวันละ 1,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`}}
+  setBoard(w,`<div class="bnote">ติดท็อป 5 วันแรก 5,000 กุศล · ติดต่อกันบวกวันละ 1,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`)}}
 function occ(p){return S.seats[p].filter(Boolean).length+'/'+S.seats[p].length}
 function renderLobbyBar(){const b=$('bar');const adm=S.role==='admin';
  b.innerHTML=`<div class="ibtns"><button class="ib" id="brdb"><span class="rbtn">⚖️</span><span>บอร์ด</span></button><button class="ib" id="bookbtn"><span class="rbtn">📖</span><span>สมุดปลา</span></button><button class="ib" id="crfb"><span class="rbtn">🔨</span><span>คราฟ</span></button><button class="ib" id="toolbtn"><span class="rbtn">🧰</span><span>กระเป๋า</span></button>${S.gifts.length?`<button class="ib" id="giftb"><span class="rbtn">🎁</span><span class="badge">${S.gifts.length}</span><span>ของขวัญ</span></button>`:''}${adm?'<button class="ib" id="admb"><span class="rbtn">🛠️</span><span>แอดมิน</span></button>':''}</div>`;

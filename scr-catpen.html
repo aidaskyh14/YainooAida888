@@ -203,7 +203,7 @@ function loop(t){requestAnimationFrame(loop);const dt=Math.min(.1,(t-last)/1000)
    else if(r<.45){a.mode='sit';a.pose='sit';a.until=now+rnd(3000,6000)}else{const[x,y]=randPt();a.tx=x;a.ty=y}}
   if(step&&(a.mode!=='walk'||(a.tick=(a.tick||0)+1)%2===0))a.f=(a.f+1)%16;place(c,a)})}
 /* ---------- ทั่วไป ---------- */
-function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');$('sheet').scrollTop=0}
+function open(h){const sh=$('sheet'),key=(String(h).match(/<h3[^>]*>([\s\S]*?)<\/h3>/)||[])[1]||'',same=sh.classList.contains('on')&&sh.dataset.key===key,st=sh.scrollTop;$('sb').innerHTML=h;sh.dataset.key=key;sh.classList.add('on');$('shade').classList.add('on');sh.scrollTop=same?st:0}/* fix15f: วาดหน้าเดิมซ้ำ (หัวข้อเดิม) ไม่เด้งขึ้นบน */
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
 $('shade').onclick=closeAll;
 let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}

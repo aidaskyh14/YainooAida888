@@ -1,19 +1,19 @@
-import {CATALOG} from './catalog.js';import {BOAT_ALPACA,BOAT_STAR_MERIT,BOAT_STAY_TIME,BOAT_STAY_GAIN,stayCost} from './boat-engine.js?v=ss3-fix15';
+import {CATALOG} from './catalog.js';import {BOAT_ALPACA,BOAT_STAR_MERIT,BOAT_STAY_TIME,BOAT_STAY_GAIN,BOAT_STAY_MULT,BOAT_BURN_NEED,BOAT_MM_POKE,stayCost} from './boat-engine.js?v=ss3-fix15f';
 
-const IMG={"bg": "images/boat-boatrace-bg.webp", "box": "images/boat-box.webp", "boxopen": "images/boat-box-open.webp", "back": "images/boat-boatcard-back.webp", "happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "b1": "images/boat-1.webp", "b2": "images/boat-2.webp", "b3": "images/boat-3.webp", "b4": "images/boat-4.webp", "b5": "images/boat-5.webp", "c-supply": "images/boat-boatcard-supply.webp", "c-cut": "images/boat-boatcard-cut.webp", "c-merit": "images/boat-boatcard-merit.webp", "c-stop": "images/boat-boatcard-stop.webp", "c-kick": "images/boat-boatcard-kick.webp","c2-supply": "images/boat-card2-supply.webp","c2-cut": "images/boat-card2-cut.webp","c2-merit": "images/boat-card2-merit.webp","c2-stop": "images/boat-card2-stop.webp","c2-kick": "images/boat-card2-kick.webp","c2-pull": "images/boat-card2-pull.webp","c2-swap": "images/boat-card2-swap.webp","c2-revive": "images/boat-card2-revive.webp","c2-ink": "images/boat-card2-ink.webp","c2-freeze": "images/boat-card2-freeze.webp","c2-crab": "images/boat-card2-crab.webp", "f1": "images/food-01.webp", "f2": "images/food-02.webp", "f9": "images/food-09.webp", "f10": "images/food-10.webp"};const W=941,H=1672,$=id=>document.getElementById(id);
+const IMG={"bg": "images/boat-boatrace-bg.webp", "box": "images/boat-box.webp", "boxopen": "images/boat-box-open.webp", "back": "images/boat-boatcard-back.webp", "happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "b1": "images/boat-1.webp", "b2": "images/boat-2.webp", "b3": "images/boat-3.webp", "b4": "images/boat-4.webp", "b5": "images/boat-5.webp", "c-supply": "images/boat-boatcard-supply.webp", "c-cut": "images/boat-boatcard-cut.webp", "c-merit": "images/boat-boatcard-merit.webp", "c-stop": "images/boat-boatcard-stop.webp", "c-kick": "images/boat-boatcard-kick.webp","c2-supply": "images/boat-card2-supply.webp","c2-cut": "images/boat-card2-cut.webp","c2-merit": "images/boat-card2-merit.webp","c2-stop": "images/boat-card2-stop.webp","c2-kick": "images/boat-card2-kick.webp","c2-pull": "images/boat-card2-pull.webp","c2-swap": "images/boat-card2-swap.webp","c2-revive": "images/boat-card2-revive.webp","c2-ink": "images/boat-card2-ink.webp","c2-freeze": "images/boat-card2-freeze.webp","c2-crab": "images/boat-card2-crab.webp","c2-burn": "images/boat-card2-burn.webp", "f1": "images/food-01.webp", "f2": "images/food-02.webp", "f9": "images/food-09.webp", "f10": "images/food-10.webp"};const W=941,H=1672,$=id=>document.getElementById(id);
 const BOATS=[['ทุเรียน','#3E7A2E','#7CB342'],['องุ่น','#7B3FB5','#9C5BD6'],['สตรอว์เบอร์รี','#D4313B','#E85A62'],['กล้วย','#7A4A22','#E0B43A'],['มะนาว','#2F7A33','#A6C83A']];
-const LINES=[50,100,150,200,250,300,350],BOXLINES=[50,100,150,200,250,300],GOAL=400;
+const LINES=[50,100,150,200,250,300,350],GOAL=400;
 const CARD_TIME=30000,TARGET_TIME=10*60000,MENU_MAX=8;
 const BOAT_DISHES=['food-01','food-02','food-09','food-10']; // เมนูเรือเดิม (ใช้เมื่อแอดมินยังไม่ตั้งเสบียง)
-const CARDS=[['supply',0,'เติมเสบียง +10','เรือของทีมเดินหน้า 10 ทันที'],['cut',0,'ตัดเสบียง 2 ทีม','เลือกเรือคู่แข่ง 2 ลำ ถอยหลังลำละ 20'],['kickall',0,'เตะกวาดทุกทีม','เตะคู่แข่งทุกทีม ทีมละ 1 คน'],['kick2',0,'เตะเจาะทีม','เลือก 1 ทีม เตะได้ 2 คน'],['reviveall',0,'ชุบชีวิตทุกทีม','ทุกทีมคู่แข่ง ทีมละ 1 คนที่โดนเตะ ได้กลับเรือ'],['gift',0,'กล่องของขวัญ','ลูกเรือที่ยังอยู่ในเรือ คนละ 150,000 กุศล'],['merit',0,'กุศลทั้งทีม','ลูกเรือทุกคนในทีม คนละ 100,000 กุศล'],['stop',0,'หยุดเรือ 30 นาที','ทีมอื่นทุกทีมส่งเสบียงไม่ได้ 30 นาที'],['kick',0,'การ์ดเตะ','กวาดทุกทีมทีมละ 1 คน หรือเจาะทีมเดียว 2 คน'],['pull',0,'ดึงตัว','ดึงคู่แข่ง 1 คนมาอยู่ทีมเรา'],['swap',0,'สลับตัว','แลกลูกเรือเรา 1 คนกับคู่แข่ง 1 คน'],['revive',0,'ชุบชีวิต','ชุบคนที่โดนเตะ 1 คน กลับเรือทีมตัวเอง'],['ink',0,'พ่นหมึก','พ่นหมึกใส่จอทีมคู่แข่ง 1 ลำ'],['freeze',0,'แช่แข็ง','คู่แข่ง 1 คนส่งเสบียงไม่ได้ 30 นาที'],['crab',0,'ปูหนีบ','เรือคู่แข่งต้องรอส่งเพิ่ม 10 นาที']];
+const CARDS=[['burn',0,'เผาเรือ','เลือกเรือคู่แข่ง 1 ลำ จุดไฟเผา'],['cut1',0,'ตัดเสบียง','เลือกเรือคู่แข่ง 1 ลำ ถอย 30'],['supply',0,'เติมเสบียง +10','เรือของทีมเดินหน้า 10 ทันที'],['cut',0,'ตัดเสบียง 2 ทีม','เลือกเรือคู่แข่ง 2 ลำ ถอยหลังลำละ 20'],['kickall',0,'เตะกวาดทุกทีม','เตะคู่แข่งทุกทีม ทีมละ 1 คน'],['kick2',0,'เตะเจาะทีม','เลือก 1 ทีม เตะได้ 2 คน'],['reviveall',0,'ชุบชีวิตทุกทีม','ทุกทีมคู่แข่ง ทีมละ 1 คนที่โดนเตะ ได้กลับเรือ'],['gift',0,'กล่องของขวัญ','ลูกเรือที่ยังอยู่ในเรือ คนละ 150,000 กุศล'],['merit',0,'กุศลทั้งทีม','ลูกเรือทุกคนในทีม คนละ 100,000 กุศล'],['stop',0,'หยุดเรือ 30 นาที','ทีมอื่นทุกทีมส่งเสบียงไม่ได้ 30 นาที'],['kick',0,'การ์ดเตะ','กวาดทุกทีมทีมละ 1 คน หรือเจาะทีมเดียว 2 คน'],['pull',0,'ดึงตัว','ดึงคู่แข่ง 1 คนมาอยู่ทีมเรา'],['swap',0,'สลับตัว','แลกลูกเรือเรา 1 คนกับคู่แข่ง 1 คน'],['revive',0,'ชุบชีวิต','ชุบคนที่โดนเตะ 1 คน กลับเรือทีมตัวเอง'],['ink',0,'พ่นหมึก','พ่นหมึกใส่จอทีมคู่แข่ง 1 ลำ'],['freeze',0,'แช่แข็ง','คู่แข่ง 1 คนส่งเสบียงไม่ได้ 60 นาที'],['crab',0,'ปูหนีบ','เรือคู่แข่งต้องรอส่งเพิ่ม 30 นาที']];
 /* เอฟเฟกต์ (boat-fx.js โหลดก่อนหน้านี้) — ถ้าไม่มีก็ข้ามเฉยๆ ไม่กระทบเกม */
 const FX=globalThis.BoatFX||null,fx=(fn,...a)=>{try{if(FX&&typeof FX[fn]==='function')return FX[fn](...a);}catch(e){}};
-const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',kickall:'#FF4D7A',kick2:'#FF2E63',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',reviveall:'#B8FFF0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45',gift:'#FFB3D1',...(FX?.AURA||{})};
+const AURA={burn:'#FF4A1A',cut1:'#FF5A5A',supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',kickall:'#FF4D7A',kick2:'#FF2E63',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',reviveall:'#B8FFF0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45',gift:'#FFB3D1',...(FX?.AURA||{})};
 const CMAP=Object.fromEntries(CARDS.map(c=>[c[0],c]));
-const CARD_TH={supply:'เติมเสบียง',cut:'ตัดเสบียง',merit:'กุศล',stop:'หยุดเรือ',kick:'เตะ',kickall:'เตะกวาดทุกทีม',kick2:'เตะเจาะทีม',pull:'ดึงตัว',swap:'สลับตัว',revive:'ชุบชีวิต',reviveall:'ชุบชีวิตทุกทีม',ink:'พ่นหมึก',freeze:'แช่แข็ง',crab:'ปูหนีบ',gift:'กล่องของขวัญ'};
-const needsTarget=c=>['cut','kick','kickall','kick2','pull','swap','revive','ink','freeze','crab'].includes(c);
+const CARD_TH={burn:'เผาเรือ',cut1:'ตัดเสบียง',supply:'เติมเสบียง',cut:'ตัดเสบียง',merit:'กุศล',stop:'หยุดเรือ',kick:'เตะ',kickall:'เตะกวาดทุกทีม',kick2:'เตะเจาะทีม',pull:'ดึงตัว',swap:'สลับตัว',revive:'ชุบชีวิต',reviveall:'ชุบชีวิตทุกทีม',ink:'พ่นหมึก',freeze:'แช่แข็ง',crab:'ปูหนีบ',gift:'กล่องของขวัญ'};
+const needsTarget=c=>['cut','cut1','burn','kick','kickall','kick2','pull','swap','revive','ink','freeze','crab'].includes(c);
 const isKick=c=>c==='kick'||c==='kickall'||c==='kick2';
-const CARD_ART={kickall:'kick',kick2:'kick',reviveall:'revive',gift:'merit'};
+const CARD_ART={kickall:'kick',kick2:'kick',reviveall:'revive',gift:'merit',cut1:'cut'};
 const cardImg=c=>IMG['c2-'+(CARD_ART[c]||c)]||IMG['c-'+(CARD_ART[c]||c)];
 const ALP=k=>BOAT_ALPACA[String(k).replace(/^alp-/,'')];
 const menuName=k=>String(k).startsWith('alp-')?(ALP(k)?.[1]||k):(CATALOG.find(c=>c.k===k)?.n||k);
@@ -22,7 +22,7 @@ const STARS=n=>n>=6?'👑':'⭐'.repeat(n||1);
 const Host=parent.__HOST;if(!Host)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const ME=Host.uid,ADMIN=Host.admin;
 let roster=[],R=norm({}),acting=false,off=0;
-function norm(w){return {startSize:{},fired:{},frozen:{},revives:0,status:'setup',p:[0,0,0,0,0],team:{},kicked:{},claims:{},menus:{},boxes:[],sent:{},cd:{},credits:{},claimedCredits:{},log:[],stopUntil:0,names:{},lastTeam:{},pausedAt:null,...w,claims:w.claims||{},menus:w.menus||{},names:w.names||{},lastTeam:w.lastTeam||{},boxes:w.boxes||[],team:w.team||{},kicked:w.kicked||{},cd:w.cd||{},sent:w.sent||{},log:w.log||[]};}
+function norm(w){return {burns:{},dismiss:{},mm:null,startSize:{},fired:{},frozen:{},revives:0,status:'setup',p:[0,0,0,0,0],team:{},kicked:{},claims:{},menus:{},boxes:[],sent:{},cd:{},credits:{},claimedCredits:{},log:[],stopUntil:0,names:{},lastTeam:{},pausedAt:null,...w,claims:w.claims||{},menus:w.menus||{},names:w.names||{},lastTeam:w.lastTeam||{},boxes:w.boxes||[],team:w.team||{},kicked:w.kicked||{},cd:w.cd||{},sent:w.sent||{},log:w.log||[]};}
 /* เวลาเซิร์ฟเวอร์: ใช้ส่วนต่างจากผลตอบกลับของคลาวด์ ไม่พึ่งนาฬิกาเครื่อง */
 const SNow=()=>Date.now()+off,setOff=n=>{if(Number.isFinite(n))off=n-Date.now();};
 const clock=()=>R.status==='paused'&&Number.isFinite(R.pausedAt)?R.pausedAt:SNow();
@@ -33,11 +33,11 @@ const members=b=>Object.keys(R.team).filter(n=>R.team[n]===b&&!R.kicked[n]);
 const players=()=>roster.filter(p=>!p.admin);
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const deadlineOf=b=>b.deadline??((b.pickedAt||0)+(needsTarget(b.card)?TARGET_TIME:CARD_TIME));
-const thaiLog=s=>String(s).replace(/ใช้การ์ด (supply|cut|merit|stop|kickall|kick2|kick|pull|swap|reviveall|revive|ink|freeze|crab|gift)\b/g,(_,k)=>'ใช้การ์ด'+CARD_TH[k]);
+const thaiLog=s=>String(s).replace(/ใช้การ์ด (burn|cut1|supply|cut|merit|stop|kickall|kick2|kick|pull|swap|reviveall|revive|ink|freeze|crab|gift)\b/g,(_,k)=>'ใช้การ์ด'+CARD_TH[k]);
 async function action(input,quiet){if(acting)return null;acting=true;try{const out=await Host.cloud('boat',input);setOff(out.serverNow);if(out.race)setRace(out.race,'self');else update();if(out.meritSelf?.length)selfMerit(out.meritSelf[0],out.race);return out;}catch(e){if(!quiet)ann(e.message,true);return quiet?{error:e.message,quiet:true}:{error:e.message};}finally{acting=false;}}
 /* ข้อมูลเรือชุดใหม่ (จากผลตอบกลับหรือจาก world/boat ที่ทุกคนฟังอยู่แล้ว) → เทียบกับชุดเดิมเพื่อเล่นเอฟเฟกต์ */
 let firstWorld=true;
-function setRace(next,src){const prev=firstWorld?null:R;firstWorld=false;const evs=fx('events',prev,next)||[];for(const e of evs)if(e.type==='box')dropIds.add(e.id);const before=prev&&prev.status==='running'?[1,2,3,4,5].map(b=>members(b).length):null;R=norm(next);update();if(evs.length)play(evs,src);if(before&&R.status==='running')[1,2,3,4,5].forEach((b,i)=>{if(before[i]>0&&members(b).length===0)setTimeout(()=>wreckFx(b),1800);});}
+function setRace(next,src){const prev=firstWorld?null:R;firstWorld=false;const evs=fx('events',prev,next)||[];for(const e of evs)if(e.type==='box')dropIds.add(e.id);const before=prev&&prev.status==='running'?[1,2,3,4,5].map(b=>members(b).length):null;R=norm(next);update();if(evs.length)play(evs,src);if(prev)extraEvents(prev,R);if(before&&R.status==='running')[1,2,3,4,5].forEach((b,i)=>{if(before[i]>0&&members(b).length===0)setTimeout(()=>wreckFx(b),1800);});}
 const ok=out=>out&&!out.error;
 function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');}
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');}
@@ -59,11 +59,11 @@ function build(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url(
   const l=document.createElement('div');l.className='lbl';l.style.left=pct(x0-4,W);l.style.top=pct(y,H);s.appendChild(l);lblEls[L]=l;});
  boatEls=BOATS.map(([nm,col],i)=>{const b=i+1,d=document.createElement('div');d.className='boat';Object.assign(d.style,{width:'4.6%',fontSize:'.62em'});
   d.style.setProperty('--d',(-i*.63)+'s');
-  d.innerHTML='<span class="wake"><i></i><i></i><i></i></span><img class="hull" src="'+IMG['b'+b]+'"><span class="num" style="color:'+col+'">'+b+'</span><span class="stopv" style="display:none">🧊</span><span class="tag"></span><span class="win" style="display:none">🏁 ผู้ชนะ</span>';
+  d.innerHTML='<span class="wake"><i></i><i></i><i></i></span><span class="fire" aria-hidden="true"><i>🔥</i><i>🔥</i><i>🔥</i><u></u><u></u><u></u></span><img class="hull" src="'+IMG['b'+b]+'"><span class="num" style="color:'+col+'">'+b+'</span><span class="stopv" style="display:none">🧊</span><span class="tag"></span><span class="win" style="display:none">🏁 ผู้ชนะ</span>';
   d.onclick=()=>ADMIN&&R.status==='setup'?openPick(b):openCrew(b);s.appendChild(d);return d;});
- fx('mount',s,{W,H});built=true;update();}
+ fx('mount',s,{W,H});mmBuild();built=true;update();}
 function update(){if(!built)return build();const now=clock();
- [...LINES,GOAL].forEach(L=>{const c=(R.claims?.[L]||[]).length;const slots=L===50?4:L===100?3:2;lblEls[L].innerHTML=(L===GOAL?'🏁 ':'')+L+(BOXLINES.includes(L)?' <i>'+'✅'.repeat(Math.min(slots,c))+'🎁'.repeat(Math.max(0,slots-c))+'</i>':'');});
+ [...LINES,GOAL].forEach(L=>{lblEls[L].textContent=(L===GOAL?'🏁 ':'')+L;});
  BOATS.forEach((_,i)=>{const b=i+1,p=R.p[i]||0,y=yOf(p),d=boatEls[i];d.style.left=pct(laneX(b,y),W);d.style.top=pct(y,H);d.classList.toggle('mine',b===myBoat());
   const stopped=R.stopUntil>now&&R.stopBy!==b&&(R.status==='running'||R.status==='paused'),sv=d.querySelector('.stopv');sv.style.display=stopped?'':'none';if(stopped)sv.style.setProperty('--left',Math.max(0,Math.min(1,(R.stopUntil-now)/1800000)).toFixed(3));
   d.querySelector('.tag').innerHTML='🧑‍✈️'+members(b).length+' • <b>'+p+'</b>';d.querySelector('.win').style.display=R.winner===b?'':'none';});
@@ -79,6 +79,7 @@ function update(){if(!built)return build();const now=clock();
  const mb=myBoat();$('myTeam').innerHTML=ADMIN?'👑 แอดมิน • '+label(ME):(mb?(isKicked(ME)?'❌ '+label(ME)+' ถูกเตะออกจากเรือ '+mb:'🧑‍✈️ '+label(ME)+' • เรือ '+mb+' '+BOATS[mb-1][0]+((R.cd[ME]||0)>now&&R.status!=='finished'?' • พักส่ง '+fmt(R.cd[ME]-now):'')):'👀 '+label(ME)+' • รอบนี้ไม่ได้ร่วมแข่ง');
  const lk=$('lock');lk.classList.toggle('fin',R.status==='finished'&&!!R.winner);if(R.status==='finished'&&R.winner){lk.classList.add('on');lk.innerHTML='🏁 เรือ '+R.winner+' '+BOATS[R.winner-1][0]+' ชนะ! การแข่งจบแล้ว<small>รอยัยหนูเปิดรอบใหม่ • แตะเรือเพื่อดูรายชื่อและผลของแต่ละทีม</small>'}
  else if(R.status==='setup'){lk.classList.add('on');lk.innerHTML='⏳ แอดมินกำลังจัดทีมรอบใหม่<small>รอสักครู่นะ</small>'}else if(R.status==='paused'){lk.classList.add('on');lk.innerHTML='⏸️ พักการแข่งขัน<small>เวลาพักส่งและการ์ดหยุดไว้ก่อน</small>'}else lk.classList.remove('on');
+ burnsUpdate(now);mmUpdate();
  if(prevStatus==='running'&&R.status==='finished'&&!FX)confetti();
  prevP=[...R.p];prevStatus=R.status;}
 function confetti(){const c=document.createElement('div');c.className='confetti';const cols=['#FFD86B','#F39AB2','#6CC9A8','#5BB6D4','#B58CE0','#fff'];
@@ -93,14 +94,14 @@ function supplyItems(b){const game=JSON.parse(Host.get('s3all-v1')||'{}'),menus=
  return menus.map(key=>{if(String(key).startsWith('alp-')){const id=key.slice(4),a=BOAT_ALPACA[id];if(!a)return null;return {key,id,group:'alpaca',name:a[1],img:'images/alpaca-'+id+'.webp',n:Number(game.sub?.alpaca?.bag?.[id])||0,merit:BOAT_STAR_MERIT[a[0]]+'',stars:a[0]};}
   const c=CATALOG.find(c=>c.k===key);if(!c)return null;const group=c.p.split('.')[0],id=c.p.slice(group.length+1);return {key,id,group,name:c.n,img:'images/'+c.i,n:Number(game.bag?.[group]?.[id])||0,merit:'100–200'};}).filter(Boolean);}
 function comboHTML(b){const menus=R.menus?.[b]||[];if(!menus.length||b!==myBoat())return '';const c=R.combo?.[ME],got=c&&c.b===b?c.got||[]:[];
- return '<div class="combo"><div class="ct"><b>🍱 คอมโบครบเมนู +5,000</b><span>'+got.length+'/'+menus.length+'</span></div><div class="cbar"><i style="width:'+(got.length/menus.length*100)+'%"></i></div><div class="cm">'+menus.map(k=>'<span class="'+(got.includes(k)?'ok':'')+'"><img src="'+menuImg(k)+'" alt=""></span>').join('')+'</div><small>ส่งให้ครบทุกเมนูของเรือตัวเอง รับ +5,000 กุศล (เรือไม่เลื่อน) ทำซ้ำได้ · ย้ายทีมแล้วเริ่มนับใหม่</small></div>';}
+ return '<div class="combo"><div class="ct"><b>🍱 คอมโบครบเมนู +20,000</b><span>'+got.length+'/'+menus.length+'</span></div><div class="cbar"><i style="width:'+(got.length/menus.length*100)+'%"></i></div><div class="cm">'+menus.map(k=>'<span class="'+(got.includes(k)?'ok':'')+'"><img src="'+menuImg(k)+'" alt=""></span>').join('')+'</div><small>ส่งให้ครบทุกเมนูของเรือตัวเอง รับ +20,000 กุศล (เรือไม่เลื่อน) ทำซ้ำได้ · ย้ายทีมแล้วเริ่มนับใหม่</small></div>';}
 function supplyHTML(b){const st=supplyState(b);if(st!=='ok')return (st?'<div class="hint">'+st+'</div>':'')+comboHTML(b);
  return comboHTML(b)+'<div class="sendq"><span>📦 ส่งครั้งละ</span><button class="'+(sendQty===1?'on':'')+'" data-q="1">1 ชิ้น</button><button class="'+(sendQty===3?'on':'')+'" data-q="3">×3 ชิ้น</button></div><div class="hint">🍱 1 ชิ้น = เรือ +1 • พักส่ง 5 นาที</div>'+supplyItems(b).map(x=>'<button class="opt" data-food="'+esc(x.id)+'" data-group="'+x.group+'" '+(x.n>=sendQty?'':'disabled')+'><img src="'+x.img+'"><b>'+(x.stars?STARS(x.stars)+' ':'')+esc(x.name)+'<small>🙏 '+x.merit+'/ชิ้น</small></b><span>มี '+x.n+'</span></button>').join('');}
 function menuList(b){const menus=R.menus?.[b]?.length?R.menus[b]:BOAT_DISHES;return '<div class="hint">🍱 เสบียงเรือนี้: '+menus.map(k=>esc(menuName(k))).join(' • ')+'</div>';}
 function openCrew(b){const m=members(b),out=Object.keys(R.team).filter(n=>R.team[n]===b&&R.kicked[n]);
  open('<h3>🧑‍✈️ กะลาสีเรือ '+b+' '+BOATS[b-1][0]+'</h3><div class="hint">'+(R.p[b-1]||0)+'/400 • '+m.length+' คน</div>'+m.map(uid=>'<div class="mem'+(uid===ME?' me':'')+'"><b>'+((R.frozen?.[uid]||0)>SNow()?'🧊 ':'')+(R.offers?.[uid]?'⏳ ':'')+label(uid)+'</b><span>'+(R.offers?.[uid]?'กำลังตัดสินใจ':'ส่ง '+(R.sent[uid]||0)+' ชิ้น')+'</span></div>').join('')+out.map(uid=>'<div class="mem out"><b>'+(R.fired?.[uid]?'💼 ':'❌ ')+label(uid)+'</b><span>'+(R.fired?.[uid]?'ถูกจ้างออก':'ถูกเตะออก')+'</span></div>').join('')+(R.status!=='setup'&&b!==myBoat()?menuList(b):'')+supplyHTML(b));
  $('sb').querySelectorAll('[data-q]').forEach(el=>el.onclick=()=>{sendQty=+el.dataset.q;openCrew(b);});
- $('sb').querySelectorAll('[data-food]').forEach(el=>el.onclick=async()=>{const q=sendQty;const out=await action({type:'supply',group:el.dataset.group,food:el.dataset.food,qty:q});if(ok(out)){closeAll();const g=out.supply||{};ann('ส่งเสบียงสำเร็จ เรือ '+b+' +'+q+(g.gain?' • 🙏 +'+Number(g.gain).toLocaleString():'')+(g.combo?' • 🍱 คอมโบ +5,000!':''));if(g.combo)fx('coins',W/2,H*.45,24);}});}
+ $('sb').querySelectorAll('[data-food]').forEach(el=>el.onclick=async()=>{const q=sendQty;const out=await action({type:'supply',group:el.dataset.group,food:el.dataset.food,qty:q});if(ok(out)){closeAll();const g=out.supply||{};ann('ส่งเสบียงสำเร็จ เรือ '+b+' +'+q+(g.gain?' • 🙏 +'+Number(g.gain).toLocaleString():'')+(g.combo?' • 🍱 คอมโบ +20,000!':''));if(g.combo)fx('coins',W/2,H*.45,24);}});}
 
 /* กล่องและการ์ด */
 const cardName=c=>CMAP[c]?.[2]||CARD_TH[c]||c;
@@ -118,10 +119,10 @@ function showCards(box){popScreen('<h3>✨ เลือกการ์ด 1 ใ�
 async function choose(box,index){const out=await action({type:'pick',box:box.id,index});
  if(!ok(out)||!out.reveal){if(R.boxes.find(b=>b.id===box.id)?.picked!==undefined)return showPicked(box.id);return showCards(box);}
  const card=out.reveal[index];
- popScreen('<h3>🎴 พลิกการ์ด</h3><div class="cards">'+out.reveal.map((c,i)=>cardHTML(i,c,'in'+(i===index?' pick':''),i===index?auraStyle(c):'')).join('')+'</div><div class="res" id="revealTxt"></div>');
+ popScreen('<h3>🎴 พลิกการ์ด</h3><div class="cards">'+out.reveal.map((c,i)=>cardHTML(i,i===index?c:'','in'+(i===index?' pick':''),i===index?auraStyle(c):'')).join('')+'</div><div class="res" id="revealTxt"></div>');
  const els=[...$('popBody').querySelectorAll('[data-index]')];setTimeout(()=>{els[index].classList.add('flip');},60);
  setTimeout(()=>{fx('burstIn',els[index],AURA[card]);const t=$('revealTxt');if(t)t.innerHTML='<b class="au" style="'+auraStyle(card)+'">'+cardName(card)+'</b>';},420);
- els.forEach((el,i)=>{if(i!==index)setTimeout(()=>el.classList.add('flip','dim'),650+i*110);});
+ els.forEach((el,i)=>{if(i!==index)setTimeout(()=>el.classList.add('dim'),650+i*110);});
  setTimeout(()=>{if($('pop').classList.contains('on'))showPicked(box.id);},2100);}
 /* การ์ดใช้เอง (เติม/กุศล/หยุด): ใช้อัตโนมัติเมื่อครบ 30 วิ · การ์ดเลือกเป้า (ตัด/เตะ) ไปหน้าเลือกเป้าทันที */
 function showPicked(id){const box=R.boxes.find(b=>b.id===id);if(!box||box.opened){closePop();return;}const card=box.card;
@@ -134,13 +135,13 @@ function showPicked(id){const box=R.boxes.find(b=>b.id===id);if(!box||box.opened
  popTimer=setInterval(()=>{const cur=R.boxes.find(b=>b.id===id);if(!cur||cur.opened){closePop();ann('ใช้การ์ด'+CARD_TH[card]+'แล้ว');return;}if(R.status!=='running')return;const n=Math.max(0,remain());if($('countdown'))$('countdown').textContent=n;if(n<=0)go();},250);}
 /* เลือกเป้า: นับถอยหลัง 10:00 จากตอนเปิดได้การ์ด (เวลาเซิร์ฟเวอร์) ไม่เลือกในเวลา เซิร์ฟเวอร์สุ่มให้เอง
    การ์ดเตะ = บังคับ: ไม่มีปุ่มปิด · fix14: เตะเลือกได้ 2 แบบ, ดึงตัว/สลับ/ชุบชีวิต/แช่แข็ง เลือกคน, ตัด/หมึก/ปู เลือกเรือ */
-const TIP={kickall:'🌊 เตะคู่แข่งทุกทีม ทีมละ 1 คน',kick2:'🎯 เลือก 1 ทีม เตะได้ 2 คน',cut:'🎃 เลือกเรือคู่แข่ง 2 ลำ ถอยลำละ 20',ink:'🐙 เลือกเรือคู่แข่งที่จะพ่นหมึกใส่จอ',crab:'🦀 เลือกเรือคู่แข่ง ทุกคนต้องรอส่งเพิ่ม 10 นาที',kick:'🦶 เลือกแบบเตะ',pull:'🏴‍☠️ ดึงคู่แข่ง 1 คนมาอยู่ทีมเรา',swap:'🔄 แลกลูกเรือเรา 1 คนกับคู่แข่ง 1 คน',revive:'💫 ชุบคนที่โดนเตะ 1 คน',freeze:'🧊 แช่แข็งคู่แข่ง 1 คน ส่งไม่ได้ 30 นาที'};
-const BOATCARD=new Set(['ink','crab']);let cutSel=[];
+const TIP={kickall:'🌊 เตะคู่แข่งทุกทีม ทีมละ 1 คน',kick2:'🎯 เลือก 1 ทีม เตะได้ 2 คน',cut:'🎃 เลือกเรือคู่แข่ง 2 ลำ ถอยลำละ 20',cut1:'🎃 เลือกเรือคู่แข่ง 1 ลำ ถอย 30',burn:'🔥 เลือกเรือคู่แข่งที่จะเผา',ink:'🐙 เลือกเรือคู่แข่งที่จะพ่นหมึกใส่จอ 5 นาที',crab:'🦀 เลือกเรือคู่แข่ง ทุกคนต้องรอส่งเพิ่ม 30 นาที',kick:'🦶 เลือกแบบเตะ',pull:'🏴‍☠️ ดึงคู่แข่ง 1 คนมาอยู่ทีมเรา',swap:'🔄 แลกลูกเรือเรา 1 คนกับคู่แข่ง 1 คน',revive:'💫 ชุบคนที่โดนเตะ 1 คน',freeze:'🧊 แช่แข็งคู่แข่ง 1 คน ส่งไม่ได้ 60 นาที'};
+const BOATCARD=new Set(['ink','crab','cut1','burn']);let cutSel=[];
 let kmode='all';
 const kickedList=()=>Object.keys(R.kicked||{}).filter(u=>R.kicked[u]&&R.team[u]);
 const capOf=b=>(R.startSize?.[b]??0)+1;
 function reviveDest(uid){const home=R.team[uid],size=b=>members(b).length;if(size(home)<Math.max(1,R.startSize?.[home]??1))return [home,false];return [[1,2,3,4,5].sort((a,b)=>size(a)-size(b)||a-b)[0],true];}
-function showTarget(id){const box=R.boxes.find(b=>b.id===id);if(!box||box.opened){closePop();return;}const card=box.card,mb=box.boat,kick=isKick(card);if(card==='kickall')kmode='all';if(card==='kick2')kmode='one';
+function showTarget(id){const keepTgt=$('popBody')?.querySelector('.tgt')?.scrollTop||0;const box=R.boxes.find(b=>b.id===id);if(!box||box.opened){closePop();return;}const card=box.card,mb=box.boat,kick=isKick(card);if(card==='kickall')kmode='all';if(card==='kick2')kmode='one';
  if(kick&&mb===myBoat()&&!isKicked(ME)&&(!box.pickedBy||box.pickedBy===ME))forced=id;
  const left=()=>deadlineOf(R.boxes.find(b=>b.id===id)||box)-clock();
  const rivals=[1,2,3,4,5].filter(b=>b!==mb),teams=()=>rivals.filter(b=>members(b).filter(u=>!R.offers?.[u]).length);
@@ -150,7 +151,7 @@ function showTarget(id){const box=R.boxes.find(b=>b.id===id);if(!box||box.opened
  let h='<div class="picked sm" style="'+auraStyle(card)+'"><img src="'+cardImg(card)+'"></div><div class="res"><b class="au" style="'+auraStyle(card)+'">'+cardName(card)+'</b></div>';
  h+='<div class="kclock"><div class="kring" id="kring"><span id="kleft">'+fmt(left())+'</span></div><small>'+(TIP[card]||'')+'<br>⏳ ไม่เลือกในเวลา ระบบสุ่มให้</small></div>';
  const T=teams();let need=0;
- if(BOATCARD.has(card))h+='<div class="tgt">'+BOATS.map((b,i)=>i+1===mb?'':'<button class="opt" data-boat="'+(i+1)+'"><img src="'+IMG['b'+(i+1)]+'"><b>เรือ '+(i+1)+' '+b[0]+'</b><span>🧑‍✈️'+members(i+1).length+' • '+(R.p[i]||0)+'/400</span></button>').join('')+'</div>';
+ if(BOATCARD.has(card))h+='<div class="tgt">'+BOATS.map((b,i)=>i+1===mb?'':'<button class="opt" data-boat="'+(i+1)+'"'+(card==='burn'&&(R.burns?.[i+1]||!members(i+1).length)?' disabled':'')+'><img src="'+IMG['b'+(i+1)]+'"><b>เรือ '+(i+1)+' '+b[0]+'</b><span>🧑‍✈️'+members(i+1).length+' • '+(R.p[i]||0)+'/400</span></button>').join('')+'</div>';
  else if(card==='cut'){cutSel=cutSel.filter(b=>rivals.includes(b));h+='<div class="tgt">'+BOATS.map((b,i)=>i+1===mb?'':'<button class="opt'+(cutSel.includes(i+1)?' sel':'')+'" data-cut="'+(i+1)+'"><img src="'+IMG['b'+(i+1)]+'"><b>'+(cutSel.includes(i+1)?'✅ ':'')+'เรือ '+(i+1)+' '+b[0]+'</b><span>'+(R.p[i]||0)+'/400 → '+Math.max(0,(R.p[i]||0)-20)+'</span></button>').join('')+'</div><div class="row"><button class="btn" id="cutRnd">🎲 สุ่มให้</button><button class="btn r" id="cutGo"'+(cutSel.length===Math.min(2,rivals.length)?'':' disabled')+'>🎃 ตัดเสบียง ('+cutSel.length+'/'+Math.min(2,rivals.length)+')</button></div>';}
  else if(kick){
   if(card==='kick')h+='<div class="kmode"><button class="opt'+(kmode==='all'?' sel':'')+'" data-kmode="all"><b>🌊 กวาดทุกทีม<small>เตะทีมละ 1 คน ทุกทีมคู่แข่ง</small></b></button><button class="opt'+(kmode==='one'?' sel':'')+'" data-kmode="one"><b>🎯 เจาะทีมเดียว<small>เลือก 1 ทีม เตะได้ 2 คน</small></b></button></div>';
@@ -165,6 +166,7 @@ function showTarget(id){const box=R.boxes.find(b=>b.id===id);if(!box||box.opened
  else if(card==='revive'){const k=kickedList();h+=k.length?'<div class="tgt"><div class="kt">'+k.map(uid=>chip('t',uid,'<small> → เรือ '+R.team[uid]+'</small>')).join('')+'</div></div><div class="hint">💡 กลับเรือทีมของตัวเอง</div>':'<div class="hint">ยังไม่มีคนโดนเตะ</div>';need=k.length?1:0;}
  if(!BOATCARD.has(card)&&card!=='cut')h+='<div class="row">'+(need?'<button class="btn" id="kickRnd">🎲 สุ่มให้</button>':'')+'<button class="btn '+(kick?'r':'g')+'" id="kickGo"'+(need?' disabled':'')+'>'+(kick?'❌ เตะออก':'✨ ใช้การ์ด')+(need?' (0/'+need+')':'')+'</button></div>';
  if(!popScreen(h,{forced}))return;
+ {const t=$('popBody').querySelector('.tgt');if(t&&keepTgt)t.scrollTop=keepTgt;}
  const body=$('popBody'),on=g=>[...body.querySelectorAll('[data-g="'+g+'"].on')].map(el=>el.dataset.uid);
  const count=()=>kick?on('k').length:on('t').length+on('f').length+on('m').length;
  const refresh=()=>{body.querySelectorAll('.kt').forEach(k=>k.classList.toggle('done',!!k.querySelector('.on')));const g=$('kickGo');if(g&&need){const n=count();g.disabled=n<need&&!(kick&&kmode==='one'&&n>=1);g.textContent=(kick?'❌ เตะออก':'✨ ใช้การ์ด')+' ('+n+'/'+need+')';}};
@@ -200,7 +202,7 @@ function myBag(){const g=JSON.parse(Host.get('s3all-v1')||'{}');return {merit:g.
 function showOffer(){const o=R.offers?.[ME];if(!o){if(stayOpen){stayOpen=false;if(forced==='offer')closePop();}return;}
  if(forced&&forced!=='offer')return;forced='offer';stayOpen=true;const c=stayCost(o.n),have=myBag(),okAll=Object.keys(c).every(k=>have[k]>=c[k]);
  const row=k=>'<div class="sc '+(have[k]>=c[k]?'ok':'no')+'">'+(k==='merit'?'<span class="e">🙏</span>':'<img src="'+STAY_IMG[k]+'" alt="">')+'<b>'+STAY_NAME[k]+'</b><span>'+Number(c[k]).toLocaleString()+'</span><small>มี '+Number(have[k]).toLocaleString()+'</small></div>';
- if(!popScreen('<div class="stay"><div class="sh">🦶 คุณโดนเตะจากเรือ '+o.by+'!</div><p class="q">คุณยังคิดว่าคุณ มีประโยชน์กับการแข่งเรือครั้งนี้หรือไม่ ถ้ามีประโยชน์คุณควรที่จะอยู่ต่อ นี่คือข้อเสนอสำหรับคุณ</p><div class="kclock"><div class="kring" id="sring"><span id="sleft">'+fmt(o.until-clock())+'</span></div><small>'+(o.n>1?'ครั้งที่ '+o.n+' จ่าย ×'+o.n+'<br>':'')+'ไม่ตอบในเวลา: ของครบ = อยู่ต่ออัตโนมัติ</small></div><div class="scost">'+['merit','hat','mb','wool'].map(row).join('')+'</div><div class="sgain">🎁 อยู่ต่อแล้วได้ <b>🙏 +'+BOAT_STAY_GAIN.toLocaleString()+'</b> กุศล</div><div class="row"><button class="btn g" id="stayYes"'+(okAll?'':' disabled')+'>💪 พี่จะอยู่</button><button class="btn gray" id="stayNo">พี่คิดว่าพี่ไม่เหมาะสม</button></div>'+(okAll?'':'<div class="hint">ของยังไม่ครบ อยู่ต่อไม่ได้</div>')+'</div>',{forced:'offer'}))return;
+ if(!popScreen('<div class="stay"><div class="sh">🦶 คุณโดนเตะจากเรือ '+o.by+'!</div><p class="q">คุณยังคิดว่าคุณ มีประโยชน์กับการแข่งเรือครั้งนี้หรือไม่ ถ้ามีประโยชน์คุณควรที่จะอยู่ต่อ นี่คือข้อเสนอสำหรับคุณ</p><div class="kclock"><div class="kring" id="sring"><span id="sleft">'+fmt(o.until-clock())+'</span></div><small>'+(o.n>1?'ครั้งที่ '+o.n+' จ่าย ×'+(BOAT_STAY_MULT[o.n-1]||o.n)+'<br>':'')+'ไม่ตอบในเวลา: ของครบ = อยู่ต่ออัตโนมัติ</small></div><div class="scost">'+['merit','hat','mb','wool'].map(row).join('')+'</div><div class="sgain">🎁 อยู่ต่อแล้วได้ <b>🙏 +'+BOAT_STAY_GAIN.toLocaleString()+'</b> กุศล</div><div class="row"><button class="btn g" id="stayYes"'+(okAll?'':' disabled')+'>💪 พี่จะอยู่</button><button class="btn gray" id="stayNo">พี่คิดว่าพี่ไม่เหมาะสม</button></div>'+(okAll?'':'<div class="hint">ของยังไม่ครบ อยู่ต่อไม่ได้</div>')+'</div>',{forced:'offer'}))return;
  const answer=async accept=>{const out=await action({type:'stay',accept});if(ok(out)){forced=null;stayOpen=false;closePop();const r=out.stay||{};if(r.stay){fx('coins',W/2,H*.45,22);ann('💪 อยู่ต่อแล้ว! ได้ +'+BOAT_STAY_GAIN.toLocaleString()+' กุศล');}else ann('💦 คุณออกจากเรือแล้ว',1);}};
  $('stayYes').onclick=()=>answer(true);$('stayNo').onclick=()=>answer(false);
  popTimer=setInterval(()=>{const cur=R.offers?.[ME];if(!cur){forced=null;stayOpen=false;closePop();const last=R.lastStay;if(last?.uid===ME)ann(last.stay?'💪 อยู่ต่ออัตโนมัติ ได้ +'+BOAT_STAY_GAIN.toLocaleString()+' กุศล':'💦 หมดเวลา คุณออกจากเรือแล้ว',!last.stay);return;}
@@ -232,7 +234,7 @@ function play(evs,src){const used=new Set(evs.filter(e=>e.type==='card').map(e=>
  else if(e.type==='card')cardFx(e,src);
  else if(e.type==='finish')finishFx(e.boat);
  }catch(err){}}}
-function cardFx(e,src){const [x,y]=boatXY(e.boat);newCardFx(e,src);if(e.card==='kick')bxShake();
+function cardFx(e,src){const [x,y]=boatXY(e.boat);newCardFx(e,src);burnCardFx(e);if(e.card==='kick')bxShake();
  if(e.card==='supply'){fx('boatClass',boatEls[e.boat-1],'boost',2600);fx('streaks',x,y,'#E3FFEE',12);fx('splash',x,y+40,18,'#C9FFE0');fx('floatText',x+10,y-50,'🚀 +10','#7DFFB0');}
  if(e.card==='cut'){const ts=e.targets?.length?e.targets:e.target?[e.target]:[],n=e.targets?.length?20:10;ts.forEach((t,i)=>setTimeout(()=>{const [tx,ty]=boatXY(t);fx('pumpkin',tx,ty-10,()=>{fx('boatClass',boatEls[t-1],'hit',1000);fx('floatText',tx+10,ty-50,'💥 −'+n,'#FF8A8A');});},i*350));if(ts.length)fx('banner','cut','🎃 เรือ '+e.boat+' ตัดเสบียง <b>เรือ '+ts.join(' และ ')+'</b> ถอยลำละ '+n);}
  if(e.card==='merit'||e.card==='gift'){fx('coins',x,y,e.card==='gift'?30:22);fx('floatText',x+10,y-60,(e.card==='gift'?'🎁 +':'🪙 +')+Number(e.meritAmt||100000).toLocaleString(),'#FFE27A');if((e.meritTo||[]).includes(ME)&&src!=='self')setTimeout(()=>mateMerit(e),1200);}
@@ -248,7 +250,7 @@ function bxArc(fromB,toB,emo,dy){const [x1,y1]=boatXY(fromB),[x2,y2]=boatXY(toB)
 function bxInk(){if(document.getElementById('bxInk'))return;const o=document.createElement('div');o.id='bxInk';o.className='bx-inkwrap';document.body.appendChild(o);
  for(let i=0;i<7;i++){const s=18+Math.random()*22,d=document.createElement('div');d.className='bx-ink';Object.assign(d.style,{left:(Math.random()*80)+'%',top:(15+Math.random()*65)+'%',width:s+'%',animationDelay:i*.08+'s'});const wipe=()=>{if(d.classList.contains('wipe'))return;d.classList.add('wipe');setTimeout(()=>{d.remove();if(!o.querySelector('.bx-ink'))o.remove();},400);};d.addEventListener('pointerdown',wipe);d.addEventListener('pointerenter',e=>{if(e.buttons)wipe();});o.appendChild(d);}
  const tip=document.createElement('div');tip.className='bx-inktip';tip.textContent='🧽 ถูจอเพื่อเช็ดหมึก!';o.appendChild(tip);setTimeout(()=>tip.remove(),2600);
- setTimeout(()=>o.remove(),60000);}
+ setTimeout(()=>o.remove(),300000);}
 function bxFrost(){const o=document.createElement('div');o.className='bx-frost';document.body.appendChild(o);for(let i=0;i<14;i++){const f=document.createElement('i');f.textContent='❄';f.style.left=Math.random()*100+'%';f.style.top=Math.random()*100+'%';f.style.animationDelay=Math.random()*.6+'s';o.appendChild(f);}setTimeout(()=>o.remove(),4200);}
 function newCardFx(e,src){const [x,y]=boatXY(e.boat),nm=uid=>'<b>'+label(uid)+'</b>';
  if(e.card==='pull'&&e.pulled){bxNews('🏴‍☠️ เรือ '+e.boat+' ดึง '+label(e.pulled)+' จากเรือ '+e.from+'!');setTimeout(()=>{bxArc(e.from,e.boat,'🐷',10);setTimeout(()=>{fx('splash',x,y+20,16);fx('floatText',x,y-50,'✨ ลูกเรือใหม่','#E8D8FF');},1250);
@@ -260,8 +262,8 @@ function newCardFx(e,src){const [x,y]=boatXY(e.boat),nm=uid=>'<b>'+label(uid)+'<
    if(e.full)fx('banner','revive','💫 เรือ '+e.from+' เต็ม <b>'+label(e.revived)+'</b> จึงไปเรือ '+to+'<small>เรือที่คนน้อยที่สุด</small>');},500);
   if(e.revived===ME)setTimeout(()=>ann('💫 คุณได้รับการชุบชีวิต กลับมาอยู่เรือ '+to+' แล้ว!'),1800);}
  if(e.card==='ink'&&e.target){const [tx,ty]=boatXY(e.target);bxNews('🐙 เรือ '+e.boat+' พ่นหมึกใส่เรือ '+e.target+'!');setTimeout(()=>{fx('explode',tx,ty,['#2a1d3a','#120a1c','#5A3A8A','#3A2A5A'],26);if(e.target===myBoat()&&!isKicked(ME))bxInk();},500);}
- if(e.card==='freeze'&&e.frozen){const b=R.team[e.frozen]||e.target,[tx,ty]=boatXY(b);bxNews('🧊 เรือ '+e.boat+' แช่แข็ง '+label(e.frozen)+' 30 นาที!');setTimeout(()=>{fx('iceRing',tx,ty);bx('bx-icecube','',tx,ty,4200);bx('bx-tag','🧊 '+label(e.frozen)+' ส่งไม่ได้ 30:00',tx,ty+40,4200);if(e.frozen===ME)bxFrost();},500);}
- if(e.card==='crab'&&e.target){const [tx,ty]=boatXY(e.target);bxNews('🦀 เรือ '+e.boat+' ส่งปูหนีบเรือ '+e.target+'!');setTimeout(()=>{bx('bx-pincher','🦀',tx+40,ty,4200);bx('bx-tag','🦀 รอส่งเพิ่ม 10 นาที',tx,ty+40,4200);fx('boatClass',boatEls[e.target-1],'hit',1000);},500);}
+ if(e.card==='freeze'&&e.frozen){const b=R.team[e.frozen]||e.target,[tx,ty]=boatXY(b);bxNews('🧊 เรือ '+e.boat+' แช่แข็ง '+label(e.frozen)+' 60 นาที!');setTimeout(()=>{fx('iceRing',tx,ty);bx('bx-icecube','',tx,ty,4200);bx('bx-tag','🧊 '+label(e.frozen)+' ส่งไม่ได้ 60:00',tx,ty+40,4200);if(e.frozen===ME)bxFrost();},500);}
+ if(e.card==='crab'&&e.target){const [tx,ty]=boatXY(e.target);bxNews('🦀 เรือ '+e.boat+' ส่งปูหนีบเรือ '+e.target+'!');setTimeout(()=>{bx('bx-pincher','🦀',tx+40,ty,4200);bx('bx-tag','🦀 รอส่งเพิ่ม 30 นาที',tx,ty+40,4200);fx('boatClass',boatEls[e.target-1],'hit',1000);},500);}
 }
 function wreckFx(b){const [x,y]=boatXY(b);bxNews('👻 เรือ '+b+' ล่ม! ไม่เหลือลูกเรือ');setTimeout(()=>{bx('bx-sink','',x,y+10,2500);for(let i=0;i<8;i++)setTimeout(()=>bx('bx-bub','',x+(Math.random()*40-20),y+10,1700),i*180);bx('bx-ghost','👻',x,y-50,2700);},500);}
 function finishFx(b){const [x,y]=boatXY(b);fx('finale',x,y);setTimeout(()=>fx('trophy','เรือ '+b+' '+BOATS[b-1][0]+' ชนะ!'),700);}
@@ -304,9 +306,81 @@ $('logBtn').onclick=()=>open('<h3>📜 รายการล่าสุด</h3>
 $('setBtn').hidden=!ADMIN;$('setBtn').onclick=()=>{const live=R.status==='running'||R.status==='paused';open('<h3>👑 ควบคุมการแข่งขัน</h3><div class="row"><button class="btn g" id="teams">'+(live?'➕ เพิ่มคนมาสาย':'👥 จัดทีม / เริ่ม')+'</button>'+(live?'<button class="btn" id="pause">'+(R.status==='paused'?'▶️ แข่งต่อ':'⏸️ พักการแข่งขัน')+'</button>':'')+'<button class="btn r" id="reset">รีเซ็ตการแข่งขัน</button></div>');$('teams').onclick=openTeam;if($('pause'))$('pause').onclick=async()=>{if(await teamsAction({type:R.status==='paused'?'resume':'pause'}))closeAll();};$('reset').onclick=()=>{open('<h3>ยืนยันรีเซ็ตการแข่งขัน?</h3><p>คะแนนและกล่องของรอบนี้จะเริ่มใหม่ (ทีมเดิมเก็บไว้ให้กด "ใช้ทีมเดิม")</p><button class="btn r" id="yesReset">ยืนยัน</button>');$('yesReset').onclick=async()=>{if(await teamsAction({type:'reset'}))closeAll();};};};
 /* เส้นตายฝั่งเซิร์ฟเวอร์: ถ้าเห็นการ์ดค้างเกินเวลา ขอให้คลาวด์ชำระ (สุ่มหน่วงกันทุกเครื่องยิงพร้อมกัน) */
 const jitter=1500+Math.random()*4000;let nextStatus=0;
-function watchDeadlines(){if(R.status!=='running'||acting||Date.now()<nextStatus)return;if(R.boxes.some(b=>!b.opened&&b.picked!==undefined&&deadlineOf(b)+jitter<SNow())){nextStatus=Date.now()+20000;tickServer();}}
+function watchDeadlines(){if(R.status!=='running'||acting||Date.now()<nextStatus)return;const t=SNow(),mm=R.mm&&!R.mm.done?R.mm:null,due=R.boxes.some(b=>!b.opened&&b.picked!==undefined&&deadlineOf(b)+jitter<t)||Object.values(R.burns||{}).some(b=>b.until+jitter<t)||Object.values(R.dismiss||{}).some(d=>(!mm||d.until+15000+jitter<t))||(mm&&[30*60000,120*60000].some((c,i)=>!mm.ok?.[i]&&mm.since+c+5*60000+15000+jitter<t));
+ if(due){nextStatus=Date.now()+20000;tickServer();}}
 /* 'tick' = ขอเซิร์ฟเวอร์ชำระการ์ดที่หมดเวลา (เขียนเฉพาะเมื่อมีการ์ดต้องชำระจริง) · เซิร์ฟเวอร์รุ่นเก่าไม่รู้จัก tick → ใช้ status แทน */
 async function tickServer(){const out=await action({type:'tick'},true);if(out?.error&&/คำสั่งเรือไม่ถูกต้อง/.test(out.error))action({type:'status'},true);}
 async function initialize(){try{roster=await Host.roster();const stop=Host.watchWorld('boat',world=>{if(world)setRace(world,'world');else update();const reward=(R.credits?.[ME]||0)-(R.claimedCredits?.[ME]||0);if(reward>0&&!acting)action({type:'claimCredit'},true);});addEventListener('pagehide',stop,{once:true});update();action({type:'status'},true);}catch(e){ann(e.message,true);}}
+
+/* ---------- fix15f: เผาเรือ ---------- */
+const NEED_ICON={merit:['🙏','กุศล'],hat:['🎩','หมวกกะลาสี'],mb:['🎵','กล่องดนตรี'],wool:['🦙','ขนอัลปาก้า']};
+const kf=n=>n>=1000?(Math.round(n/100)/10).toLocaleString('en-US')+'k':String(n);
+const rescueEl=(()=>{try{const d=document.createElement('div');d.id='rescue';d.className='rescue';d.hidden=true;document.body.appendChild(d);return d;}catch(e){return {hidden:true,dataset:{}};}})();
+function burnsUpdate(now){const burns=R.burns||{};
+ BOATS.forEach((_,i)=>{const b=i+1,d=boatEls[i],st=R.status==='running'||R.status==='paused'?burns[b]:null;if(!d)return;d.classList.toggle('burning',!!st);
+  let t=d.querySelector('.btm');if(st){if(!t){t=document.createElement('span');t.className='btm';d.appendChild(t);}t.textContent='🔥 '+fmt(st.until-now);}else if(t)t.remove();});
+ rescueUpdate(now);}
+function rescueUpdate(now){const mb=myBoat(),st=R.burns?.[mb],el=rescueEl;
+ if(!st||!mb||isKicked(ME)||ADMIN||R.status==='finished'||R.status==='setup'){el.hidden=true;return;}
+ if(!el.dataset.on){el.innerHTML='<div class="rh">🔥 เรือเราไฟไหม้! ทุกคนต้องช่วยกันลงขัน</div><div class="rcd" id="rcd"></div><div class="need" id="rneed"></div><div class="crew" id="rcrew"></div><button class="btn r" id="rpay">🪣 ลงขันกอบกู้</button>';el.dataset.on=1;$('rpay').onclick=openPay;}
+ el.hidden=false;$('rcd').textContent='⏱️ '+fmt(st.until-now);
+ const nd=Object.keys(BOAT_BURN_NEED).map(k=>'<div>'+NEED_ICON[k][0]+'<b>'+kf(st.got[k]||0)+'/'+kf(BOAT_BURN_NEED[k])+'</b><i><u style="width:'+Math.min(100,(st.got[k]||0)/BOAT_BURN_NEED[k]*100)+'%"></u></i></div>').join('');
+ if($('rneed').dataset.h!==nd){$('rneed').dataset.h=nd;$('rneed').innerHTML=nd;}
+ const cr=members(mb).map(u=>'<span class="'+(st.paid?.[u]?'ok':'')+'">'+(st.paid?.[u]?'✅ ':'⏳ ')+label(u)+'</span>').join('');
+ if($('rcrew').dataset.h!==cr){$('rcrew').dataset.h=cr;$('rcrew').innerHTML=cr;}}
+function openPay(){const mb=myBoat(),st=R.burns?.[mb];if(!st)return;const have=myBag(),left=k=>Math.max(0,BOAT_BURN_NEED[k]-(st.got[k]||0));
+ open('<h3>🪣 ลงขันกอบกู้เรือ '+mb+'</h3><div class="hint">ใส่เท่าไหร่ก็ได้ แต่ทุกคนต้องลงอย่างน้อย 1 ชิ้น · ระบบรับเท่าที่ยังขาด</div>'+Object.keys(BOAT_BURN_NEED).map(k=>{const l=left(k),h=Math.max(0,have[k]);return '<div class="payr"><span class="e">'+NEED_ICON[k][0]+'</span><b>'+NEED_ICON[k][1]+'<small>ยังขาด '+l.toLocaleString('en-US')+' · มี '+h.toLocaleString('en-US')+'</small></b><input type="number" inputmode="numeric" min="0" max="'+h+'" value="0" data-pay="'+k+'" aria-label="'+NEED_ICON[k][1]+'"><button class="mx" data-max="'+k+'">'+(l?'ที่ขาด':'1')+'</button></div>';}).join('')+'<div class="row"><button class="btn gray" id="payNo">ปิด</button><button class="btn r" id="payGo">🪣 ลงขัน</button></div>');
+ $('sb').querySelectorAll('[data-max]').forEach(b=>b.onclick=()=>{const k=b.dataset.max,i=$('sb').querySelector('[data-pay="'+k+'"]');i.value=Math.min(Math.max(0,have[k]),left(k)||1);});
+ $('payNo').onclick=closeAll;
+ $('payGo').onclick=async()=>{const v={};$('sb').querySelectorAll('[data-pay]').forEach(i=>v[i.dataset.pay]=Math.max(0,Math.floor(+i.value||0)));if(!Object.values(v).some(Boolean))return ann('ใส่ของอย่างน้อย 1 ชิ้นนะ',1);
+  const out=await action({type:'burnPay',...v});if(ok(out)){closeAll();ann(out.saved?'🌊 กอบกู้สำเร็จ!':'🪣 ลงขันแล้ว ขอบคุณที่ช่วยเรือ!');}};}
+function fireTitle(main,sub,cls){const t=document.createElement('div');t.className='ftitle '+(cls||'');t.innerHTML='<span class="tw"><span class="glow" aria-hidden="true">'+main+'</span><b>'+main+'</b></span><small>'+sub+'</small>';document.body.appendChild(t);setTimeout(()=>t.classList.add('out'),3000);setTimeout(()=>t.remove(),3500);}
+function burnCardFx(e){
+ if(e.card==='burn'&&e.target){const [x,y]=boatXY(e.boat),[tx,ty]=boatXY(e.target);bxArc(e.boat,e.target,'🔥',10);
+  setTimeout(()=>{fx('explode',tx,ty,['#FF3B1F','#FF9A1F','#FFD34D','#3A1A0A','#FF5A3C'],60);fx('boatClass',boatEls[e.target-1],'hit',1000);bxShake();const f=document.createElement('div');f.className='bflash';document.body.appendChild(f);setTimeout(()=>f.remove(),700);
+   fireTitle('เรือ '+e.target+' ถูกเผา!','🔥 เรือ '+e.boat+' ใช้การ์ดเผาเรือ');if(e.target===myBoat()&&!isKicked(ME))setTimeout(()=>ann('🔥 เรือเราไฟไหม้! ช่วยกันลงขันกอบกู้ภายใน 10 นาที'),1200);},1300);}
+ if(e.card==='cut1'&&e.target){const [tx,ty]=boatXY(e.target);fx('pumpkin',tx,ty-10,()=>{fx('boatClass',boatEls[e.target-1],'hit',1000);fx('floatText',tx+10,ty-50,'💥 −30','#FF8A8A');});fx('banner','cut','🎃 เรือ '+e.boat+' ตัดเสบียง <b>เรือ '+e.target+'</b> ถอย 30');}}
+/* เหตุการณ์ที่ไม่ได้มาจากการ์ด: ผลกอบกู้ · นางเงือกปรากฏ/เปลี่ยนตัว · นางเงือกจ้างออก */
+function extraEvents(prev,next){try{
+ const lb=next.lastBurn;if(lb&&lb.at!==prev.lastBurn?.at){const [x,y]=boatXY(lb.boat);
+  if(lb.ok){fx('splash',x,y+20,30,'#C9F0FF');fireTitle('กอบกู้สำเร็จ!','🌊 เรือ '+lb.boat+' ถอย −30','ok');}
+  else fireTitle('เรือ '+lb.boat+' จมแล้ว','💀 ลูกเรือหลุดทั้งลำ · ของที่ลงขันคืนทางไปรษณีย์','dead');}
+ const pm=prev.mm&&!prev.mm.done?prev.mm.uid:null,nm=next.mm&&!next.mm.done?next.mm.uid:null;
+ if(nm&&nm!==pm){fx('banner','revive',pm?'🧜‍♀️ นางเงือกตนใหม่มาแทนแล้ว':'🧜‍♀️ <b>นางเงือก</b>ปรากฏตัวแล้ว!');mmLane=0;}
+ for(const b of Object.keys(prev.dismiss||{}))if(!next.dismiss?.[b]){const u=Object.keys(next.fired||{}).find(u=>next.fired[u]&&!prev.fired?.[u]&&next.team[u]===+b);if(!u)continue;
+  mmAng=performance.now();const [x,y]=boatXY(+b);setTimeout(()=>{fx('nameFly',x,y-20,label(u),x<W/2?-1:1);fx('coins',x,y,22);},600);fx('banner','pull','🧜‍♀️ นางเงือกจ้าง <b>'+label(u)+'</b> ออกจากเรือ '+b);
+  if(u===ME)setTimeout(()=>ann('🧜‍♀️ คุณถูกจ้างออก ได้ 1,000,000 กุศล'),1500);}
+}catch(err){}}
+
+/* ---------- fix15f: นางเงือก (สไปรต์ ท่าปกติ 64 ภาพ · ท่าโกรธ 12 ภาพ) อยู่ใต้เส้นเริ่ม ในเลนที่เรือออกไปไกลแล้ว ไม่ทับเรือ ---------- */
+const MM_CW=168,MM_CH=189,MM_AW=252,MM_ANG=[[0,130],[1,110],[2,110],[3,130],[4,150],[5,150],[6,170],[7,200],[8,220],[9,220],[10,240],[11,600]],MM_SAFE=40,MM_PREF=[3,2,4,1,5];
+let mmEl=null,mmLane=0,mmAng=-1e9,mmDiving=false;const mmSheet={};
+if(typeof Image==='function')['idle','angry'].forEach(k=>{const i=new Image();i.onload=()=>{mmSheet[k]=i;};i.src='images/boat-mm-'+k+'.webp';});
+function mmBuild(){mmEl=document.createElement('div');mmEl.className='mmx';mmEl.hidden=true;mmEl.innerHTML='<span class="mrip"><i></i><i></i></span><canvas aria-label="นางเงือก"></canvas><span class="mtag"><b></b><em></em></span>';$('stage').appendChild(mmEl);mmLane=0;
+ mmEl.querySelector('canvas').addEventListener('pointerdown',mmTap);}
+function mmUpdate(){if(!mmEl)return;const mm=R.mm&&!R.mm.done&&(R.status==='running'||R.status==='paused')?R.mm:null;
+ if(!mm){mmEl.hidden=true;mmLane=0;return;}
+ mmEl.querySelector('.mtag b').textContent='🧜‍♀️ '+label(mm.uid).replace(/&amp;/g,'&');mmEl.querySelector('.mtag em').textContent='💰 '+Number(mm.earn||0).toLocaleString('en-US');
+ if(mmDiving)return;const free=k=>(R.p[k-1]||0)>=MM_SAFE;
+ if(mmLane&&free(mmLane)){mmEl.hidden=false;return;}
+ const k=MM_PREF.find(free)||0;
+ if(mmLane&&!mmEl.hidden){mmDiving=true;mmEl.classList.add('dive');setTimeout(()=>{mmEl.classList.remove('dive');mmDiving=false;mmLane=0;mmEl.hidden=true;mmUpdate();},900);return;}
+ if(!k){mmEl.hidden=true;return;}
+ mmLane=k;mmEl.style.left=pct(laneX(k,1600),W);mmEl.style.top=pct(1666,H);mmEl.hidden=false;mmEl.classList.remove('rise');void mmEl.offsetWidth;mmEl.classList.add('rise');fx('splash',laneX(k,1600),1600,16);}
+function mmDraw(now){requestAnimationFrame(mmDraw);if(typeof now!=='number')return;if(!mmEl||mmEl.hidden||!mmSheet.idle)return;const cv=mmEl.querySelector('canvas'),r=cv.getBoundingClientRect(),d=devicePixelRatio||1,w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+ if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}const g=cv.getContext('2d'),u=h/MM_CH;g.clearRect(0,0,w,h);
+ const t=now-mmAng;let acc=0,k=-1;for(const [f,dur] of MM_ANG){acc+=dur;if(t<acc){k=f;break;}}
+ if(k>=0&&mmSheet.angry)g.drawImage(mmSheet.angry,k*MM_AW,0,MM_AW,MM_CH,0,0,w,h);
+ else{const f=Math.floor(now/1000*12)%64;g.drawImage(mmSheet.idle,(f%8)*MM_CW,Math.floor(f/8)*MM_CH,MM_CW,MM_CH,(MM_AW-MM_CW)/2*u,0,MM_CW*u,h);}}
+if(typeof requestAnimationFrame==='function')requestAnimationFrame(mmDraw);
+/* กดนางเงือก: คนอื่นเสีย 3,000 ทุกครั้งที่กด (ส่งทีละครั้งตามลำดับ) */
+let pokeQ=0,poking=false;
+function mmTap(e){e.preventDefault();const mm=R.mm;if(!mm||mm.done)return;if(mm.uid===ME)return ann('🧜‍♀️ คุณคือนางเงือก');if(ADMIN)return ann('🧜‍♀️ นางเงือก '+label(mm.uid));
+ mmAng=performance.now();mmEl.classList.remove('poked');void mmEl.offsetWidth;mmEl.classList.add('poked');
+ const b=document.createElement('div');b.className='mbub';b.innerHTML='รบกวนนางเงือกได้ป่ะ<br>กดอยู่นั่น กดเพื่อ!!!';mmEl.querySelector('.mbub')?.remove();mmEl.appendChild(b);setTimeout(()=>b.remove(),2200);
+ pokeQ++;pokeRun();}
+async function pokeRun(){if(poking)return;poking=true;try{while(pokeQ>0){pokeQ--;let out=null;for(let i=0;i<20&&!out;i++){out=await action({type:'mmPoke'},true);if(!out)await new Promise(r=>setTimeout(r,300));if(out?.error){if(!/กำลังทำรายการ/.test(out.error)){pokeQ=0;break;}out=null;await new Promise(r=>setTimeout(r,400));}}
+  if(ok(out)){const [x]=[laneX(mmLane||3,1600)];fx('floatText',x,1500,'−'+BOAT_MM_POKE.toLocaleString('en-US')+' กุศล','#FF6B7A');}}}finally{poking=false;}}
+/* เริ่มหน้า (ท้ายไฟล์ เพื่อให้ตัวแปรของ fix15f พร้อมก่อน) */
 addEventListener('resize',()=>{fit();build();});fit();build();initialize();
 setInterval(()=>{update();watchDeadlines();if(R.status==='running'&&R.offers?.[ME]&&!stayOpen&&!acting)showOffer();checkForced();},1000);

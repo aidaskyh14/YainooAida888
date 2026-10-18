@@ -7,6 +7,7 @@ import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.g
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
 import {startRumors} from './rumor-ui.js?v=ss3-fix15';
+import {startAlerts} from './alerts-ui.js?v=ss3-fix15f';
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix15';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -251,7 +252,7 @@ async function enter(user) {
     stage='ตรวจกุศลที่รอปรับจากเกมอื่น';await cloudAction('ledger',{type:'status'}).catch(()=>null);
     renderGame('loading');
     // fix15 ข่าวลือ: ฟังเอกสารของตัวเองเอกสารเดียว (แอดมินไม่รับข่าวลือ)
-    watchRumors();
+    watchRumors();watchAlerts();
   } catch (e) {
     clearInterval(S.timer);
     const message=e?.message||'ไม่พบรายละเอียด',code=e?.code||'ไม่ระบุรหัส';
@@ -366,7 +367,7 @@ async function logout() {
       if(!leave)return logout();
     }
   }
-  stopSceneSubscriptions();rumorStop?.();rumorStop=null;S.frame=null;await signOut(auth);
+  stopSceneSubscriptions();rumorStop?.();rumorStop=null;alertStop?.();alertStop=null;S.frame=null;await signOut(auth);
 }
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
@@ -471,6 +472,10 @@ async function sceneSafeAction(system,input){
  finally{if(!changed||!S.frame||!S.screen)thaw();else{reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}}
 }
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
+/* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
+let alertStop=null;
+function watchAlerts(){alertStop?.();alertStop=null;if(!S.user||S.admin)return;
+ alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,toast});}
 function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
  rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating,game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
 async function cloudAction(system,input) {
@@ -624,7 +629,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15e'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15f'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -638,9 +643,11 @@ function openBag() {
 
 // ---------- ไปรษณีย์ ----------
 // แต่ละซองคือ 1 เอกสาร กดรับ = เพิ่มของเข้ากระเป๋า + ลบซอง ในรายการเดียวกัน (รับซ้ำไม่ได้)
-async function openMail() {
+async function openMail(keep) {
   if(cloudPromise)await cloudPromise;
-  modal('<h2>📮 ไปรษณีย์</h2><p class="note">กำลังเปิดตู้…</p>', [{ t: 'ปิด', c: 'gray' }]);
+  // fix15f: เปิดซ้ำหลังกดรับ → ไม่แสดงหน้า "กำลังเปิดตู้…" และคงตำแหน่งที่เลื่อนไว้
+  const mc=$('#mcard'),top=keep&&mc?mc.scrollTop:0;
+  if(!keep)modal('<h2>📮 ไปรษณีย์</h2><p class="note">กำลังเปิดตู้…</p>', [{ t: 'ปิด', c: 'gray' }]);
   let docs = [];
   try { const q = query(collection(db, 'mail', S.user.uid, 'items'), orderBy('createdAt', 'desc'), limit(60)); docs = (await getDocs(q)).docs; }
   catch (e) { modal(`<h2>📮 ไปรษณีย์</h2><p>${thaiError(e)}</p>`); return; }
@@ -652,7 +659,7 @@ async function openMail() {
   const html = '<h2>📮 ไปรษณีย์</h2>' + live.map(g => `<div class="mail"><span class="ic">${esc(g.icon || '🎁')}</span><b>${esc(g.title)}<small>${esc(g.msg || '')}</small>
     <span class="items">${g.kusal ? `<span>✨ กุศล ${fmt(g.kusal)}</span>` : ''}${g.coins ? `<span><img src="${COIN_IMG}" alt="">เหรียญฮาโลวีน ×${fmt(g.coins)}</span>` : ''}${itemsHtml(g.items)}</span></b>
     <button class="btn sm" data-id="${g.id}">กดรับ</button></div>`).join('') + `<p class="note">กดรับแล้วซองหายทันที ซองของขวัญทั่วไปหมดอายุใน ${MAIL_DAYS} วัน · เงินทุนคืนและรางวัลสะสมไม่มีวันหมดอายุ</p>`;
-  modal(html, [{ t: 'ปิด', c: 'gray' }]);
+  modal(html, [{ t: 'ปิด', c: 'gray' }]);if(top)$('#mcard').scrollTop=top;
   $('#mcard').querySelectorAll('[data-id]').forEach(b => b.onclick = () => claim(b.dataset.id, b));
 }
 function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') || p.startsWith('sub.') ? 'g.' + p : 'g.bag.' + p; }
@@ -669,13 +676,13 @@ async function claim(id, btn) {
       for (const [k,n] of Object.entries(mail.items || {})) addPath(game, gpath(k).slice(2), n);
       refillAdminInventory(game,S.admin,CATALOG);
     });
-  } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(); } else toast(thaiError(e)); return; }
+  } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(true); } else toast(thaiError(e)); return; }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
   S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
   S.P.g=joinGame(store.parts.values());
   refillAdminInventory(S.P.g,S.admin,CATALOG);
   reloadScreen();
-  toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail();
+  toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail(true);
 }
 
 // ---------- ศูนย์แอดมิน ----------
@@ -695,8 +702,13 @@ function renderAdmin() {
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  ({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
+/* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
+const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
+function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=false;if(fresh)return fn(...a);
+  const ov=$('#ov'),host=ov&&!ov.hidden?ov:(document.scrollingElement||document.documentElement),top=host.scrollTop,body=$('#aBody'),inner=ADMIN_LISTS.map(q=>body?.querySelector(q)?.scrollTop||0);
+  const out=await fn(...a);host.scrollTop=top;const b2=$('#aBody');ADMIN_LISTS.forEach((q,i)=>{const e=b2?.querySelector(q);if(e&&inner[i])e.scrollTop=inner[i];});return out;};}
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
  try{if(!A.players||!A.sendLoaded){B.innerHTML='<div class="box">กำลังอ่านข้อมูลครั้งแรก…</div>';const center=(await httpsCallable(functions,'adminCenterCloud')({type:'status',session:S.sessionId})).data;ps=center.players;A.players=ps;A.templates=center.templates;A.favorites=center.favorites;A.pendingRun=center.pendingRun;A.history=center.history;A.sendLoaded=true;}else ps=A.players;
@@ -819,6 +831,7 @@ async function tabRumor(){const B=$('#aBody');
   const b=$('#rmSend');b.disabled=true;b.textContent='กำลังส่ง…';
   try{const out=(await httpsCallable(functions,'rumorAdminCloud')({type:'send',k:RM.kind,i:RM.pick,...(RM.all?{all:true}:{uids:[...RM.sel]})})).data;toast('📨 ส่งแล้ว '+out.sent+' คน'+(out.busy?' · ข้าม '+out.busy+' คนที่ยังมีข่าวค้าง':''));RM.sel.clear();RM.all=false;RM.at=0;tabRumor();}catch(e){toast(thaiError(e));b.disabled=false;}};
 }
+tabSend=keepAdminScroll(tabSend);tabRumor=keepAdminScroll(tabRumor);tabApprovals=keepAdminScroll(tabApprovals);tabNb=keepAdminScroll(tabNb);
 async function tabNb(){
   const B=$('#aBody');B.innerHTML='<div class="box"><p class="note">กำลังโหลด…</p></div>';
   let pend=[],act=[];

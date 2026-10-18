@@ -214,7 +214,7 @@ function left(h){const ms=h.at+LIFE()-Date.now(),m=Math.max(0,Math.ceil(ms/60000
 function expire(){const now=Date.now(),gone=S.ham.list.filter(h=>now>=h.at+LIFE());if(!gone.length)return;
  S.ham.list=S.ham.list.filter(h=>now<h.at+LIFE());gone.forEach(h=>{delete actors[h.id]});save();draw();ann('👋 '+gone.map(h=>HT[h.type]).join(', ')+' ครบ 48 ชม. กลับบ้านแฮมสเตอร์แล้ว')}
 /* ---------- ชีต ---------- */
-function open(h){$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');$('sheet').scrollTop=0}
+function open(h){const sh=$('sheet'),key=(String(h).match(/<h3[^>]*>([\s\S]*?)<\/h3>/)||[])[1]||'',same=sh.classList.contains('on')&&sh.dataset.key===key,st=sh.scrollTop;$('sb').innerHTML=h;sh.dataset.key=key;sh.classList.add('on');$('shade').classList.add('on');sh.scrollTop=same?st:0}/* fix15f: วาดหน้าเดิมซ้ำ (หัวข้อเดิม) ไม่เด้งขึ้นบน */
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');$('fan').classList.remove('open');$('toolBtn').classList.remove('open')}
 $('shade').onclick=closeAll;
 let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',2800)}

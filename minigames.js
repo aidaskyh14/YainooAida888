@@ -117,7 +117,7 @@ function renderHub(){
   renderWallet();
 }
 let sheetK=null;
-function openSheet(k,again){sheetK=k;const g=hubOf(k),f=feeOf(k),lk=lacks(k),w=wallet(),b=blockers(k),R=S.rules,kang=k==='kang';
+function openSheet(k,again){const keepTop=again?document.querySelector('#hsheet .hbox')?.scrollTop||0:0;if(keepTop)Promise.resolve().then(()=>{const b=document.querySelector('#hsheet .hbox');if(b)b.scrollTop=keepTop;});sheetK=k;const g=hubOf(k),f=feeOf(k),lk=lacks(k),w=wallet(),b=blockers(k),R=S.rules,kang=k==='kang';
   const tile=(img,v,s,no)=>`<div class="hf ${no?'no':''}">${img.startsWith('images/')?`<img src="${img}" alt="">`:`<div class="i">${img}</div>`}<b>${v}</b><small>${s}</small></div>`;
   const range=kang?`<div class="hrange"><div class="lb"><span>🃏 ได้เสียกันเองในห้อง</span><span class="p">ตามทุนห้อง</span></div><div class="bonus">🔁 เล่นติดกันได้ ${KANG.rounds} ตา แล้วพัก ${KANG.restMs/60000} นาที</div></div>`
    :`<div class="hrange"><div class="lb"><span>📉 แย่สุด</span><span>📈 ดีสุด</span></div><div class="bar"></div><div class="lb"><span class="n">${sgn(g.lo)}</span><span class="p">${g.hi==null?'ไม่จำกัด':sgn(g.hi)}</span></div>${g.bonus?`<div class="bonus">🌟 โบนัสหายาก +${fmt(g.bonus)} เพิ่ม</div>`:''}</div>`;

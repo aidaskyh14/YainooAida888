@@ -179,7 +179,7 @@ function takeAll(need,q){if(!canMk(need,q))throw new Error('วัตถุด�
 const iimg=k=>k.startsWith('al-')?'🦙':k==='anyflower'?'<img src="'+((ING[(stacks(k)[0]||['daisy'])[0]]||ING.daisy).img)+'" alt="">':ING[k]&&ING[k].img?'<img src="'+ING[k].img+'" alt="">':/^a?food\d$/.test(k)?'<img src="'+IMG['af'+k.slice(-1)]+'" alt="">':CATI(k)&&CATI(k).i?'<img src="images/'+CATI(k).i+'" alt="">':'✨';
 const nm=k=>ING[k]?ING[k].n:(/^a?food\d$/.test(k)?FOOD[+k.slice(-1)].n:k.startsWith('al-')?'อัลปาก้า'+(COL[k.split('-')[1]]||[''])[0]+(k.endsWith('gold')?' ✨ทอง':''):((CATI(k)||{}).n||k));
 /* ---------- ทั่วไป ---------- */
-function open(h,keep){const st=$('sheet').scrollTop;$('sb').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');$('sheet').scrollTop=keep?st:0}
+function open(h,keep){const sh=$('sheet'),key=(String(h).match(/<h3[^>]*>([\s\S]*?)<\/h3>/)||[])[1]||'',same=sh.classList.contains('on')&&sh.dataset.key===key,st=sh.scrollTop;$('sb').innerHTML=h;sh.dataset.key=key;sh.classList.add('on');$('shade').classList.add('on');sh.scrollTop=keep||same?st:0}
 function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on')}
 $('shade').onclick=closeAll;
 let at;function ann(m,err){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',3000)}

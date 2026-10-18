@@ -1,4 +1,4 @@
-import {ST,NEWS,WINES,TICK,DAY,marketMath,HW_ITEMS,HW_CHEST_COST,hwHaunting,hwPrice} from './market-engine.js?v=ss3-fix15';
+import {ST,NEWS,WINES,TICK,DAY,marketMath,HW_ITEMS,HW_CHEST_COST,hwHaunting,hwPrice,HW_POISON} from './market-engine.js?v=ss3-fix15f';
 const __H=parent.__HOST;if(!__H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const __LS={getItem:k=>__H.get(k),setItem:(k,v)=>{__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh)Object.assign(S,fresh)}},removeItem:k=>__H.del(k)};
 
 const IMG={"shop-bg":"images/shop-bg.webp","item-coinbag":"images/shop-item-coinbag.webp","stock-veg":"images/shop-stock-veg.webp","stock-fruit":"images/shop-stock-fruit.webp","stock-fish":"images/shop-stock-fish.webp","stock-wine":"images/shop-stock-wine.webp","stock-alpaca":"images/shop-stock-alpaca.webp","stock-bee":"images/shop-stock-bee.webp","wine-rose":"images/house-wine-rose.webp","wine-moon":"images/house-wine-moon.webp","wine-blood":"images/house-wine-blood.webp","wine-eclipse":"images/house-wine-eclipse.webp"};
@@ -8,7 +8,7 @@ const $=id=>document.getElementById(id);const nf=n=>Math.round(n).toLocaleString
 const S={role:'player',off:0,merit:0,lots:[],bag:{rose:0,moon:0,blood:0,eclipse:0},news:[],mail:[],mailSeen:0,modes:[],divGot:{},tab:'1d'};
 Object.assign(S,JSON.parse(__LS.getItem('s3market1')));S.role=JSON.parse(__LS.getItem('s3user')).admin?'admin':'player';S.off=0;
 function save(){}
-let marketBusy=false,stopMarket=null;async function marketCloud(input){if(marketBusy)return;marketBusy=true;try{const out=await __H.cloud('market',input),fresh=JSON.parse(__H.get('s3market1'));Object.assign(S,fresh);Object.assign(S,out.config);clearPrices();return out;}catch(e){ann(e.message,false);}finally{marketBusy=false;}}
+let marketBusy=false,stopMarket=null;async function marketCloud(input){if(marketBusy)return;marketBusy=true;try{const out=await __H.cloud('market',input),fresh=JSON.parse(__H.get('s3market1'));Object.assign(S,fresh);Object.assign(S,out.config);if(Array.isArray(out.poison))PZQ=out.poison;clearPrices();return out;}catch(e){ann(e.message,false);}finally{marketBusy=false;}}
 const now=()=>Date.now()+S.off;
 const {price,newsUpTo,autoNews,modeAt,daySeed,h32,SLOT,MODES,clear:clearPrices}=marketMath(S);
 const tnow=()=>Math.floor(now()/TICK);
@@ -94,12 +94,22 @@ function admin(){const sl0=Math.floor(tnow()/SLOT),sent=S.news.some(n=>Math.floo
 const HW_IMG=k=>'images/halloween-hw-'+k+'.webp',HW_RAR={candy:['ธรรมดา','#A3A3B5','#FFE3F0'],bat:['ธรรมดา','#A3A3B5','#EDE3FF'],candle:['ธรรมดา','#A3A3B5','#FFF3D6'],web:['ไม่ค่อยเจอ','#5BB6D4','#EEF0F4'],hat:['หายาก','#8E6BE8','#EFE3FF'],broom:['หายาก','#8E6BE8','#FFF0D9'],pumpkin:['หายากมาก','#E0582A','#FFE6CF'],cauldron:['ตำนาน','#E8A21A','#E8FAD0']};
 const HW_PRIZE_IMG={'boost-bait':'boost-bait.webp','boost-lens':'boost-lens.webp','boost-gear':'boost-gear.webp','wine-rose':'house-wine-rose.webp','wine-moon':'house-wine-moon.webp','wine-blood':'house-wine-blood.webp','wine-eclipse':'house-wine-eclipse.webp','box-plant':'boxes-box-clover.webp','box-fruit':'boxes-box-berry.webp',musicbox:'animals-item-musicbox.webp',hat:'honey-sailorhat.webp',cake:'item-cake.webp',wings:'item-angelwings.webp',coconut:'item-coconut.webp',fertfruitP:'fruit-fert-fruit-premium.webp'};
 const HW_PRIZE_NAME={'boost-bait':'เหยื่อวิเศษ','boost-lens':'แว่นขยายนักวิจัย','boost-gear':'เฟืองเร่งเครื่อง','box-plant':'กล่องสุ่มพืช','box-fruit':'กล่องสุ่มผลไม้',musicbox:'กล่องดนตรี',hat:'หมวกกะลาสี',cake:'เค้ก',wings:'ปีกนางฟ้า',coconut:'มะพร้าว',fertfruitP:'ปุ๋ยผลไม้พรีเมียม'};
-const HW_ODDS=[['💛 กุศล 3,000–30,000',25],['🍷 ไวน์ 2–10 ขวด (สุ่ม 1 ชนิด)',10],['🍲 อาหารสวน 2–5 ชิ้น (สุ่ม 1 เมนู)',10],['📦 กล่องสุ่มพืช/ผลไม้ 10 กล่อง',10],['🎵 กล่องดนตรี 50',8],['🎩 หมวกกะลาสี 50',8],['🍰 เค้ก 300',8],['🪽 ปีกนางฟ้า 300',8],['🥥 มะพร้าว 300',8],['🧪 ปุ๋ยผลไม้พรีเมียม 100',5]];
+const HW_ODDS=[['💛 กุศล 3,000–30,000',15],['⚡ ไอเทมบูสต์ 1–3 ชิ้น',3],['🍷 ไวน์ 2–10 ขวด (สุ่ม 1 ชนิด)',8],['🍲 อาหารสวน 2–5 ชิ้น (สุ่ม 1 เมนู)',8],['📦 กล่องสุ่มพืช/ผลไม้ 10 กล่อง',8],['🎵 กล่องดนตรี 50',7],['🎩 หมวกกะลาสี 50',7],['🍰 เค้ก 300',7],['🪽 ปีกนางฟ้า 300',7],['🥥 มะพร้าว 300',6],['🧪 ปุ๋ยผลไม้พรีเมียม 100',4],['☠️ ยาพิษแม่มด (ต้องสาดใส่เพื่อนทันที)',20]];
+/* fix15f ยาพิษแม่มด: ได้แล้วต้องสาดใส่เพื่อนทันที (1 นาที ไม่เลือก = สุ่ม) · เพื่อนไม่รู้ว่าใครสาด · กระดานรายวันจาก world/poison */
+const POISON=HW_POISON.map((x,i)=>({...x,img:'images/hw-poison-'+(i+1)+'.webp',...[{glow:'#A6E22E',dark:'#2E5A00',tint:'#ECFFD6'},{glow:'#FFA33A',dark:'#7A3A00',tint:'#FFEBD6'},{glow:'#B66CFF',dark:'#3E1270',tint:'#F1E3FF'},{glow:'#FF3A55',dark:'#5A0010',tint:'#FFE0E6'}][i]}));
+const ME_UID=__H.uid;let PZQ=[],PB=null,pbAll=false,hwOdds=false,friends=null;
+const pvEsc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pvDay=()=>new Date(now()+7*3600000).toISOString().slice(0,10);
+function poisonBoard(){const rows=PB&&PB.day===pvDay()?Object.entries(PB.rows||{}).map(([u,r])=>({u,n:r.n||'ผู้เล่น',c:r.c||[0,0,0,0]})).map(r=>({...r,cnt:r.c.reduce((a,b)=>a+(b||0),0),lost:r.c.reduce((a,b,i)=>a+(b||0)*POISON[i].d,0)})).filter(r=>r.cnt).sort((a,b)=>b.cnt-a.cnt||b.lost-a.lost||a.n.localeCompare(b.n,'th')):[];
+ const show=pbAll?rows:rows.slice(0,5),mine=rows.findIndex(r=>r.u===ME_UID);
+ const row=(r,i)=>`<div class="pr${i===0?' t1':''}${r.u===ME_UID?' me':''}"><span class="rk">${['🥇','🥈','🥉'][i]||i+1}</span><div class="nm"><b>${pvEsc(r.n)}${r.u===ME_UID?' (คุณ)':''}</b><div class="bt">${r.c.map((c,k)=>c?`<span><img src="${POISON[k].img}" alt="${POISON[k].n}">×${c}</span>`:'').join('')}</div></div><div class="tt"><b>☠️ ${r.cnt}</b><small>−${nf(r.lost)}</small></div></div>`;
+ return `<div class="ch"><h2>☠️ วันนี้ใครโดนยาพิษ</h2><span class="pill p-pump">🕛 รีเซ็ตเที่ยงคืน</span></div><div class="pb">${rows.length?show.map(row).join('')+(!pbAll&&mine>=5?row(rows[mine],mine):'')+(rows.length>5?`<button class="pmore" id="pbMore">${pbAll?'ย่อ ▲':'ดูทั้งหมด '+rows.length+' คน ▼'}</button>`:''):'<div class="pempty">วันนี้ยังไม่มีใครโดน 😇</div>'}</div>`;}
+function boardRefresh(){const el=$('pboard');if(!el)return;const h=poisonBoard();if(el.dataset.h===h)return;el.dataset.h=h;el.innerHTML=h;if($('pbMore'))$('pbMore').onclick=()=>{pbAll=!pbAll;boardRefresh();};}
 const hwQty={};let hwBusy=false;
 const hwGame=()=>{try{return JSON.parse(__H.get('s3all-v1')||'{}')}catch(e){return {}}};
 const hwHave=k=>{const n=Number(hwGame().bag?.halloween?.[k]);return Number.isFinite(n)&&n>0?Math.floor(n):0};
 const hwCatName=key=>{try{return __H.catalogName?.(key)?.n}catch(e){return null}};
-function hwOpen(){$('hw').classList.add('on');hwRender();}
+function hwOpen(){$('hw').classList.add('on');hwRender();if(PZQ.length&&!hwBusy)poisonResume();}
 function hwClose(){$('hw').classList.remove('on');render();}
 function hwRender(){
  const haunt=hwHaunting(now()),merit=hwGame().merit??S.merit,can=Math.min(...HW_ITEMS.map(([k])=>Math.floor(hwHave(k)/HW_CHEST_COST)));
@@ -110,22 +120,24 @@ function hwRender(){
  <section class="card"><div class="ch"><h2>🧙‍♀️ หีบแม่มด</h2><span class="pill p-grape">${can?'แลกได้ '+nf(can)+' ใบ':'ของยังไม่ครบ'}</span></div>
   <div class="chest"><img src="images/hw-chest.webp" alt="หีบแม่มด"><div><div style="font-size:.72rem;font-weight:700;margin-bottom:.3rem">ใช้ของครบ 8 ชนิด ชนิดละ ${HW_CHEST_COST}</div><div class="req">${HW_ITEMS.map(([k,n])=>`<span class="rq ${hwHave(k)>=HW_CHEST_COST?'ok':'no'}" title="${n}"><img src="${HW_IMG(k)}" alt="">${Math.min(hwHave(k),99)}/${HW_CHEST_COST}</span>`).join('')}</div></div></div>
   <button class="bigp" id="hwOpenBtn" ${can?'':'disabled'}>✨ แลกหีบแม่มด</button>
-  <details class="odds"><summary>🎲 ดูโอกาสได้ของ</summary><table>${HW_ODDS.map(([a,b])=>`<tr><td>${a}</td><td>${b}%</td></tr>`).join('')}</table></details></section>
+  <details class="odds" id="hwOdds"${hwOdds?' open':''}><summary>🎲 ดูโอกาสได้ของ</summary><table>${HW_ODDS.map(([a,b])=>`<tr><td>${a}</td><td>${b}%</td></tr>`).join('')}</table></details></section>
+ <section class="card" id="pboard"></section>
  <section class="card"><div class="ch"><h2>🏪 ขายของฮาโลวีน</h2><span class="pill ${haunt?'p-grape':'p-pump'}">${haunt?'👻 +20%':'ราคาปกติ'}</span></div>
   <div class="note">💡 ของฮาโลวีนใช้ลงขันสร้างเนเบอร์ฮูด และแลกหีบแม่มดได้ด้วยนะ</div>
   ${HW_ITEMS.map(([k,n,p])=>{const have=hwHave(k),q=Math.max(1,Math.min(have||1,hwQty[k]||1)),r=HW_RAR[k];return `<div class="it"><span class="ic" style="--tint:${r[2]}"><img src="${HW_IMG(k)}" alt=""></span><div style="min-width:0"><b>${n}<span class="rar" style="--r:${r[1]}">${r[0]}</span></b><small>มี ${nf(have)} · <span class="price">${haunt?`<s>${nf(p)}</s>`:''}${nf(hwPrice(k,now()))}</span>/ชิ้น</small></div><div class="act"><div class="step"><button data-hdec="${k}" aria-label="ลด">−</button><input data-hq="${k}" type="number" min="1" value="${q}" inputmode="numeric" aria-label="จำนวน ${n}"><button data-hinc="${k}" aria-label="เพิ่ม">＋</button></div><button class="sell" data-hsell="${k}" ${have?'':'disabled'}>ขาย</button></div></div>`}).join('')}
  </section></div>`;
- $('hwBack').onclick=hwClose;$('hwOpenBtn').onclick=hwChest;
+ $('hwBack').onclick=hwClose;$('hwOpenBtn').onclick=hwChest;$('hwOdds').ontoggle=e=>{hwOdds=e.target.open;};boardRefresh();
 }
 async function hwSell(k){if(hwBusy)return;const have=hwHave(k),q=Math.max(1,Math.min(have,hwQty[k]||1));if(!have)return;hwBusy=true;
  try{const out=await marketCloud({type:'hw-sell',item:k,qty:q});if(out?.sold){hwQty[k]=1;ann(`🎃 ขาย ${HW_ITEMS.find(x=>x[0]===k)[1]} ×${nf(q)} · +${nf(out.sold.total)} กุศล 💛`);}}finally{hwBusy=false;hwRender();}}
 function hwPrizeView(p){if(p.kind==='merit')return {img:null,e:'💛',amt:'+'+nf(p.merit)+' กุศล',name:'กุศล'};
  const name=p.name||HW_PRIZE_NAME[p.key]||hwCatName(p.key)||'ของรางวัล',im=HW_PRIZE_IMG[p.key]||(p.key.startsWith('gfood-')?p.key+'.webp':null);return {img:im?'images/'+im:null,e:'🎁',amt:'×'+nf(p.q),name};}
-async function hwChest(){if(hwBusy)return;if(HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST))return ann('ของยังไม่ครบ 8 ชนิด ชนิดละ '+HW_CHEST_COST,false);hwBusy=true;
+async function hwChest(){if(hwBusy)return;if(PZQ.length)return poisonResume();if(HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST))return ann('ของยังไม่ครบ 8 ชนิด ชนิดละ '+HW_CHEST_COST,false);hwBusy=true;
  const st=$('hwst');st.innerHTML=`<div class="rays"></div><h3 id="hwsh">🧙‍♀️ กำลังเปิดหีบแม่มด…</h3><div class="cimg" id="hwcimg"><img id="hwcimgI" src="images/hw-chest.webp" alt=""></div><div class="prize" id="hwprize"></div><div class="row" id="hwsrow" hidden><button class="btn gray" id="hwsClose">ปิด</button><button class="btn" id="hwsAgain">✨ เปิดอีก</button></div>`;
  st.classList.add('on');const c=$('hwcimg');c.classList.add('shake');
  let out=null;try{[out]=await Promise.all([marketCloud({type:'hw-chest',count:1}),new Promise(r=>setTimeout(r,900))]);}finally{hwBusy=false;}
  if(!out?.prizes?.length){st.classList.remove('on');hwRender();return;}
+ if(out.prizes[0].kind==='poison')return poisonGot(out.prizes[0].p);
  const v=hwPrizeView(out.prizes[0]);$('hwcimgI').src='images/hw-chest-open.webp';c.className='cimg boom';$('hwsh').textContent='✨ ได้ของจากหีบแม่มด!';
  $('hwprize').innerHTML=(v.img?`<img class="e" src="${v.img}" alt="">`:`<span class="e">${v.e}</span>`)+`<b>${v.amt}</b><small>${v.name}</small>`;$('hwprize').className='prize on';$('hwsrow').hidden=false;
  for(let i=0;i<26;i++){const f=document.createElement('span');f.className='cf';f.textContent=['✨','🍬','⭐','🦇','💜'][i%5];f.style.left=Math.random()*100+'%';f.style.setProperty('--dx',(Math.random()*80-40)+'px');f.style.animationDelay=Math.random()*.5+'s';st.append(f);setTimeout(()=>f.remove(),3200)}
@@ -141,3 +153,38 @@ render();marketCloud({type:'status'}).then(()=>render());stopMarket=__H.watchWor
 
 // UI state changes are batched once after each click; unchanged snapshots do not write.
 document.addEventListener('click',()=>setTimeout(save,0));
+
+/* ---------- fix15f ยาพิษ: ได้ → เลือกเพื่อน (1 นาที) → สาด ---------- */
+const pvSleep=ms=>new Promise(r=>setTimeout(r,ms));
+const stopPoisonBoard=__H.watchWorld('poison',d=>{PB=d;boardRefresh();});addEventListener('pagehide',()=>stopPoisonBoard?.());
+async function loadFriends(){if(friends)return friends;try{friends=(await __H.roster()).filter(p=>!p.admin&&p.uid!==ME_UID).map(p=>[p.uid,String(p.name||'ผู้เล่น')]).sort((a,b)=>a[1].localeCompare(b[1],'th'));}catch(e){friends=[];}return friends;}
+async function poisonGot(k){const P=POISON[k],st=$('hwst');hwBusy=true;st.style.setProperty('--glow',P.glow);st.style.setProperty('--dark',P.dark);
+ $('hwcimgI').src='images/hw-chest-open.webp';$('hwcimg').className='cimg boom';$('hwsh').textContent='😱 มีอะไรบางอย่างพุ่งออกมา…';loadFriends();await pvSleep(700);
+ st.innerHTML=`<div class="rays" style="background:repeating-conic-gradient(${P.glow}33 0 9deg,transparent 9deg 18deg)"></div><img class="pot in" src="${P.img}" alt="${P.n}"><div class="pname">${P.n}!</div><div class="psub">${P.size}</div><div class="pdmg">☠️ ลดกุศล −${nf(P.d)}</div><div class="must">⚠️ ต้องสาดใส่เพื่อนทันที!</div>`;
+ pvSplash(innerWidth/2,innerHeight*.35,P.glow,26);await pvSleep(1700);poisonPick(k);}
+function poisonResume(){const it=PZQ[0];if(!it)return;const st=$('hwst');hwBusy=true;st.classList.add('on');st.style.setProperty('--glow',POISON[it.p].glow);st.style.setProperty('--dark',POISON[it.p].dark);loadFriends().then(()=>poisonPick(it.p));}
+async function poisonPick(k){const P=POISON[k],st=$('hwst');let sel=null,q='';const list0=await loadFriends();
+ const until=PZQ[0]?.until||now()+60000;let left=Math.ceil((until-now())/1000);
+ const list=()=>list0.filter(([,n])=>n.includes(q));
+ st.innerHTML=`<div class="rays" style="background:repeating-conic-gradient(${P.glow}22 0 9deg,transparent 9deg 18deg)"></div><img class="pot bob" src="${P.img}" alt="" style="width:min(30vw,7rem)"><div class="pick"><div class="ph"><img src="${P.img}" alt=""><b>สาด${P.n}ใส่ใครดี?</b><span class="cd" id="pcd">⏱️ ${Math.floor(Math.max(0,left)/60)}:${String(Math.max(0,left)%60).padStart(2,'0')}</span></div><input id="pq" placeholder="🔍 ค้นหาชื่อเพื่อน" aria-label="ค้นหาชื่อเพื่อน"><div class="fl" id="pfl"></div><div class="ph2">⏳ ไม่เลือกในเวลา ระบบสุ่มเพื่อนให้ · 🤫 เพื่อนไม่รู้ว่าใครสาด</div><button class="go" id="pgo" disabled>☠️ เลือกเพื่อนก่อน</button></div>`;
+ const draw=()=>{const fl=$('pfl'),top=fl.scrollTop;fl.innerHTML=list().map(([u,n])=>`<button class="${sel===u?'on':''}" data-pf="${pvEsc(u)}"><i>${pvEsc([...n][0]||'🙂')}</i><span>${pvEsc(n)}</span></button>`).join('')||'<div class="ph2" style="grid-column:1/-1">ไม่พบชื่อนี้</div>';fl.scrollTop=top;
+  fl.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{sel=b.dataset.pf;draw();$('pgo').disabled=false;$('pgo').textContent='☠️ สาดใส่ '+(list0.find(f=>f[0]===sel)?.[1]||'');});};
+ draw();$('pq').oninput=e=>{q=e.target.value.trim();draw();};
+ const t=setInterval(()=>{left--;const c=$('pcd');if(c)c.textContent='⏱️ '+Math.floor(Math.max(0,left)/60)+':'+String(Math.max(0,left)%60).padStart(2,'0');if(left<=0){clearInterval(t);poisonThrow(k,null);}},1000);
+ if(left<=0){clearInterval(t);return poisonThrow(k,null);}
+ $('pgo').onclick=()=>{if(!sel)return;clearInterval(t);poisonThrow(k,sel);};}
+function pvSplash(x,y,col,n){const st=$('hwst');for(let i=0;i<n;i++){const d=document.createElement('span');d.className='sp';const a=Math.random()*6.28,r=40+Math.random()*90;d.style.cssText=`left:${x}px;top:${y}px;background:${i%3?col:'#fff'};--x:${Math.cos(a)*r}px;--y:${Math.sin(a)*r-20}px`;st.append(d);setTimeout(()=>d.remove(),950);}}
+async function poisonThrow(k,uid){const P=POISON[k],st=$('hwst'),go=$('pgo');if(go){go.disabled=true;go.textContent=uid?'☠️ กำลังสาด…':'🎲 หมดเวลา ระบบสุ่มเพื่อนให้…';}
+ let out=null;for(let i=0;i<10&&!out;i++){out=await marketCloud({type:'poison-throw',target:uid});if(!out){if(i>=1)uid=null;await pvSleep(500);}}// เป้าใช้ไม่ได้ (เช่นถูกระงับ) → ระบบสุ่มให้
+ if(!out?.thrown){hwBusy=false;if(!PZQ.length){st.classList.remove('on');hwRender();}else if(go){go.disabled=false;go.textContent='☠️ ลองอีกครั้ง';go.onclick=()=>poisonThrow(k,uid);}return;}
+ if(out.thrown.none){hwBusy=false;ann('ยังไม่มีเพื่อนให้สาด ขวดนี้สลายไปแล้ว',false);if(PZQ.length)return poisonResume();st.classList.remove('on');hwRender();return;}
+ const who=out.thrown.name,tid=out.thrown.to;let tgt=$('pfl')?.querySelector(`[data-pf="${CSS.escape(tid)}"]`);
+ if(!tgt&&$('pfl')){$('pfl').insertAdjacentHTML('afterbegin',`<button class="on" data-pf="${pvEsc(tid)}"><i>${pvEsc([...who][0]||'🙂')}</i><span>${pvEsc(who)}</span></button>`);tgt=$('pfl').firstElementChild;}
+ if(tgt){tgt.scrollIntoView({block:'nearest'});const r=tgt.getBoundingClientRect(),tx=r.left+r.width/2,ty=r.top+r.height*.4,sx=innerWidth/2,sy=innerHeight*.12;
+  const f=document.createElement('img');f.className='fly';f.src=P.img;st.append(f);const t0=performance.now();
+  await new Promise(res=>{(function run(n){const q=Math.min(1,(n-t0)/700),x=sx+(tx-sx)*q,y=sy+(ty-sy)*q-Math.sin(Math.PI*q)*120;f.style.left=x-36+'px';f.style.top=y-48+'px';f.style.transform=`rotate(${q*540}deg) scale(${1-q*.4})`;if(q<1)requestAnimationFrame(run);else res();})(t0);});
+  f.remove();tgt.classList.add('hit','on');tgt.style.background=P.tint;pvSplash(tx,ty,P.glow,30);
+  for(let i=0;i<3;i++){const m=document.createElement('span');m.className='smk';m.style.cssText=`left:${tx+(i-1)*14}px;top:${ty}px;background:${P.glow};animation-delay:${i*.12}s`;st.append(m);setTimeout(()=>m.remove(),1900);}
+  const ng=document.createElement('span');ng.className='neg';ng.style.left=tx+'px';ng.style.top=ty-20+'px';ng.textContent='−'+nf(P.d);st.append(ng);setTimeout(()=>ng.remove(),1700);}
+ await pvSleep(1100);$('pgo')?.remove();$('hwst').querySelector('.pick')?.insertAdjacentHTML('afterend',`<div class="done">☠️ สาดใส่ ${pvEsc(who)} แล้ว!</div><div class="dnote">🤫 ${pvEsc(who)} ไม่รู้ว่าใครสาด · ขึ้นกระดานยาพิษแล้ว</div><div class="row"><button class="btn gray" id="hwsClose">ปิด</button><button class="btn" id="hwsAgain">${PZQ.length?'☠️ สาดขวดต่อไป':'✨ เปิดอีก'}</button></div>`);
+ hwBusy=false;$('hwsAgain').disabled=!PZQ.length&&HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST);$('hwsAgain').onclick=hwChest;$('hwsClose').onclick=()=>{if(PZQ.length)return poisonResume();st.classList.remove('on');hwRender();};hwRender();}
