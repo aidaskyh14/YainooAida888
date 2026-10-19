@@ -158,8 +158,8 @@ const FL={daisy:'เดซี่',marigold:'ดาวเรือง',rose:'ก�
 const FR={peach:'พีช',apple:'แอปเปิล',orange:'ส้ม',cherry:'เชอร์รี'};
 const ING=Object.assign({},...Object.entries(FL).map(([k,v])=>({[k]:['flower',v]})),...Object.entries(FR).map(([k,v])=>({[k]:['fruit',v]})),{fishmeat:['product','เนื้อปลา']});
 const ingImg=k=>ING[k][0]==='flower'?IMG['fl-'+k]:IMG[k];
-const FOOD=[['kibble','ข้าวเม็ดสวนดอกไม้',{daisy:150,marigold:150,apple:100},[20,30]],['shreds','ทูน่าฝอยกลีบกุหลาบ',{rose:200,peach:150,fishmeat:100},[25,35]],['pate','พาเต้ลาเวนเดอร์',{lavender:200,apple:200,hydrangea:100},[30,40]],
- ['biscuit','บิสกิตปลาส้มซ่า',{orange:250,sunflower:150,hibiscus:100},[30,40]],['salmon','แซลมอนเชอร์รี',{cherry:200,orchid:150,fishmeat:150},[35,45]],['can','กระป๋องราชินีบุปผา',{peach:300,cherry:300,lotus:200,plumeria:200,tulip:200},[40,60]]].map(([id,n,need,mer])=>({id,n,need,mer}));
+const FOOD=[['kibble','ข้าวเม็ดสวนดอกไม้',{daisy:150,marigold:150,apple:100},[200,300]],['shreds','ทูน่าฝอยกลีบกุหลาบ',{rose:200,peach:150,fishmeat:100},[250,350]],['pate','พาเต้ลาเวนเดอร์',{lavender:200,apple:200,hydrangea:100},[300,400]],
+ ['biscuit','บิสกิตปลาส้มซ่า',{orange:250,sunflower:150,hibiscus:100},[320,420]],['salmon','แซลมอนเชอร์รี',{cherry:200,orchid:150,fishmeat:150},[350,450]],['can','กระป๋องราชินีบุปผา',{peach:300,cherry:300,lotus:200,plumeria:200,tulip:200},[400,600]]].map(([id,n,need,mer])=>({id,n,need,mer}));
 const FB=Object.fromEntries(FOOD.map(f=>[f.id,f]));
 /* ---------- เซฟ ---------- */
 const KEY='s3all-v1';
@@ -171,7 +171,7 @@ function syncFromHost(){S=load();actors={};closeAll();draw()}
 const save=()=>{try{const cur=JSON.parse(__LS.getItem(KEY)||'null');if(cur){cur.bag=S.bag;cur.cat=S.cat;cur.merit=S.merit;__LS.setItem(KEY,JSON.stringify(cur))}else __LS.setItem(KEY,JSON.stringify(S));const e=__H&&__H.lastSetError;if(e)throw e}catch(e){syncFromHost();ann('บันทึกไม่สำเร็จ ของยังไม่เปลี่ยน กรุณาลองใหม่',1);throw e}};
 const fmt=n=>Number(n||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 let FAST=false;
-const T={hunger:()=>FAST?40e3:4*3600e3,life:()=>FAST?6*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:2*3600e3,gift:()=>FAST?45e3:864e5,cbox:()=>FAST?35e3:6*3600e3};
+const T={hunger:()=>FAST?40e3:2*3600e3,life:()=>FAST?6*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:3600e3,gift:()=>FAST?45e3:864e5,cbox:()=>FAST?35e3:6*3600e3};
 const MB_USE=100;
 /* ---------- ฉาก ---------- */
 const inFloor=(x,y)=>x>=70&&x<=880&&y>=430&&y<=1390&&!(x<230&&y>1170)&&!(x>640&&x<850&&y<380);
@@ -222,8 +222,8 @@ function feed(c,fid){if(!(S.bag.catfood[fid]>0))return ann('ยังไม่�
  S.bag.catfood[fid]--;c.fed=Date.now();const m=rnd(...FB[fid].mer);S.merit+=m;save();closeAll();const a=actors[c.id];if(a){fx(a.x,a.y-CSZ,'😋 +'+m)}ann('🍽️ '+c.name+' กิน'+FB[fid].n+' • +'+m+' กุศล');hud()}
 function rename(c){open('<h3>✏️ ตั้งชื่อแมว</h3><input class="inp" id="nmIn" maxlength="14" value="'+c.name+'"><div class="row"><button class="btn gray" id="nNo">ยกเลิก</button><button class="btn g" id="nOk">บันทึกชื่อ</button></div>');
  $('nNo').onclick=()=>openCat(c);$('nOk').onclick=()=>{const v=$('nmIn').value.trim();if(!v)return ann('ใส่ชื่อก่อนนะ',1);c.name=v;save();closeAll();draw();ann('✏️ ตั้งชื่อเป็น "'+v+'" แล้ว')}}
-function sell(c){open('<div style="text-align:center"><img src="'+IMG['card-'+c.type]+'" style="width:7rem" alt=""><h3>ขาย'+c.name+'?</h3><div class="hint">ได้ 20–50 กุศล • ขายแล้วเอาคืนไม่ได้</div><div class="row"><button class="btn gray" id="sNo">ไม่ขาย</button><button class="btn" id="sOk">ขายเลย</button></div></div>');
- $('sNo').onclick=()=>openCat(c);$('sOk').onclick=()=>{const m=rnd(20,50);S.merit+=m;S.cat.list=S.cat.list.filter(x=>x!==c);delete actors[c.id];save();closeAll();draw();ann('💰 ขาย'+c.name+'แล้ว • +'+m+' กุศล')}}
+function sell(c){open('<div style="text-align:center"><img src="'+IMG['card-'+c.type]+'" style="width:7rem" alt=""><h3>ขาย'+c.name+'?</h3><div class="hint">ได้ 1,000–2,000 กุศล • ขายแล้วเอาคืนไม่ได้</div><div class="row"><button class="btn gray" id="sNo">ไม่ขาย</button><button class="btn" id="sOk">ขายเลย</button></div></div>');
+ $('sNo').onclick=()=>openCat(c);$('sOk').onclick=()=>{if(!S.cat.list.includes(c))return closeAll();const m=rnd(1000,2000);S.merit+=m;S.cat.list=S.cat.list.filter(x=>x!==c);delete actors[c.id];save();closeAll();draw();ann('💰 ขาย'+c.name+'แล้ว • +'+m+' กุศล')}}
 /* ---------- คราฟอาหารแมว ---------- */
 let cq={};
 function openCraft(){closeAll();
@@ -234,7 +234,7 @@ function openCraft(){closeAll();
  sb.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,cq[b.dataset.p]+1);openCraft()});
  sb.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const f=FB[b.dataset.c],q=cq[f.id];if(!Object.entries(f.need).every(([k,n])=>have(k)>=n*q))return ann('วัตถุดิบไม่พอ',1);Object.entries(f.need).forEach(([k,n])=>S.bag[ING[k][0]][k]-=n*q);S.bag.catfood[f.id]=(S.bag.catfood[f.id]||0)+q;save();closeAll();showCraftResult({title:'คราฟอาหาร'+'แมว',results:Array(q).fill(true),outputs:[{name:f.n,image:IMG['food-'+f.id],quantity:q}],consumed:Object.entries(f.need).map(([k,n])=>({path:ING[k][0]+'.'+k,name:ING[k][1],image:ingImg(k),quantity:n*q}))},openCraft)})}
 /* ---------- ดูแลทั้งคอก: อาบน้ำ / นวด / เอนเตอร์เทน ---------- */
-const CARE={bath:['🛁','อาบน้ำ','🫧',[3,10]],massage:['💆','นวดตัว','💗',[3,10]],music:['🎵','เอนเตอร์เทน','🎶',[5,15]]};
+const CARE={bath:['🛁','อาบน้ำ','🫧',[50,100]],massage:['💆','นวดตัว','💗',[50,100]],music:['🎵','เอนเตอร์เทน','🎶',[100,200]]};
 const today=()=>new Date().toDateString();
 function cs(k){const c=S.cat.care[k]=S.cat.care[k]||{};if(c.day!==today()){c.day=today();c.count=0}return c}
 function startCare(k){closeAll();const c=cs(k),n=S.cat.list.length,now=Date.now();if(!n)return ann('ยังไม่มีแมวในคอก',1);
@@ -255,7 +255,7 @@ setInterval(()=>hud(),900);
 /* ---------- ดรอป: แมวที่อิ่มดรอปของทุก 2 ชม. (คำนวณจากเวลา) ---------- */
 const DROP=[['bell',10,35,'กระดิ่ง'],['grass',30,25,'หญ้าสีสุ่ม'],['fuel',20,20,'แกลลอนน้ำมัน'],['fert',5,15,'ปุ๋ยผลไม้'],['cake',10,5,'เค้ก']];
 function rollDrop(){let r=Math.random()*100;for(const d of DROP){r-=d[2];if(r<=0)return d}return DROP[0]}
-function tickDrops(){const now=Date.now();let ch=false;S.cat.list.forEach(c=>{c.nd=c.nd||now+T.drop();while(now>=c.nd&&S.cat.drops.length<12){if(now-c.fed<T.hunger()+T.drop()){const d=rollDrop(),a=actors[c.id];S.cat.drops.push({k:d[0],q:d[1],x:a?a.x+rnd(-50,50):rnd(200,700),y:a?a.y+rnd(-10,25):rnd(600,1200)});ch=true}c.nd+=T.drop()}if(now>=c.nd)c.nd=now+T.drop()});if(ch){save();drawDrops();hud()}}
+function tickDrops(){const now=Date.now();let ch=false,timer=false;S.cat.list.forEach(c=>{if(!c.nd){c.nd=now+T.drop();timer=true;}while(now>=c.nd&&S.cat.drops.length<12){if(now-c.fed<T.hunger()+T.drop()){const d=rollDrop(),a=actors[c.id];S.cat.drops.push({k:d[0],q:d[1],x:a?a.x+rnd(-50,50):rnd(200,700),y:a?a.y+rnd(-10,25):rnd(600,1200)});ch=true}c.nd+=T.drop()}if(now>=c.nd){c.nd=now+T.drop();timer=true;}});if(ch){save();drawDrops();hud()}else if(timer)save()}
 const dImg=k=>k==='grass'?IMG['g-green']:k==='fuel'?IMG.fuel:IMG[k];
 function drawDrops(){const s=$('stage');dropEls.forEach(e=>e.remove());dropEls=S.cat.drops.map(d=>{const e=document.createElement('img');e.className='drop2';e.src=dImg(d.k);Object.assign(e.style,{left:d.x/W*100+'%',top:d.y/H*100+'%'});s.appendChild(e);return e})}
 $('collect').onclick=()=>{if(!S.cat.drops.length)return;const got={};S.cat.drops.forEach(d=>{const nm=DROP.find(x=>x[0]===d.k)[3];got[nm]=(got[nm]||0)+d.q;
@@ -276,7 +276,7 @@ function drawBox(){if(boxEl){boxEl.remove();boxEl=null}if(!S.cat.cboxAt)return;c
 function tickBox(){const now=Date.now();if(!S.cat.list.length)return;if(!S.cat.cboxAt&&now>=(S.cat.cbox||0)){S.cat.cboxAt=randPt();save();drawBox();ann('📦 มีลังกระดาษโผล่มาในคอก…')}
  if(S.cat.cboxAt&&!boxCat&&Math.random()<.08){boxCat=S.cat.list[rnd(0,S.cat.list.length-1)];const a=actors[boxCat.id];if(a){a.mode='walk';a.tx=S.cat.cboxAt[0];a.ty=S.cat.cboxAt[1]+5;a.next='idle';setTimeout(()=>{if(boxCat&&actors[boxCat.id]){actors[boxCat.id].inbox=true;drawBox()}},Math.hypot(a.tx-a.x,a.ty-a.y)/20*1000+200)}}}
 function tapBox(e){e.stopPropagation();if(!boxCat||!actors[boxCat.id]||!actors[boxCat.id].inbox)return ann('📦 ลังว่างอยู่ รอน้องแมวกระโดดเข้าไปก่อนนะ');
- const a=actors[boxCat.id];a.inbox=false;a.y+=30;const m=rnd(30,80);S.merit+=m;fx(a.x,a.y-CSZ,'😸 +'+m);ann('📦 '+boxCat.name+'กระโดดออกมาจากลัง! +'+m+' กุศล');S.cat.cboxAt=null;S.cat.cbox=Date.now()+T.cbox();boxCat=null;save();drawBox();hud()}
+ const a=actors[boxCat.id];a.inbox=false;a.y+=30;const m=rnd(500,1000);S.merit+=m;fx(a.x,a.y-CSZ,'😸 +'+m);ann('📦 '+boxCat.name+'กระโดดออกมาจากลัง! +'+m+' กุศล');S.cat.cboxAt=null;S.cat.cbox=Date.now()+T.cbox();boxCat=null;save();drawBox();hud()}
 /* ---------- วางแมว ---------- */
 function openPlace(){closeAll();const n=S.cat.list.length;
  open('<h3>🐱 วางแมวลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้วเอากลับไม่ได้ • อยู่ได้ 4 วัน</div><div class="cards">'+Object.keys(CT).map(t=>{const c=S.bag.cat[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+CT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div><div class="row"><button class="btn sm" id="pBox">🎁 ไปเปิดกล่องสุ่มแมว</button></div>');
@@ -307,7 +307,7 @@ function openSet(){closeAll();
  $('sBox').onclick=()=>{S.bag.box.cat=(S.bag.box.cat||0)+500;save();ann('🎁 กล่องสุ่มแมว +500')};
  $('sCat').onclick=()=>{Object.keys(CT).forEach(t=>S.bag.cat[t]=(S.bag.cat[t]||0)+1);save();ann('🐱 รับแมวทุกแบบอย่างละ 1 ตัว')};
  $('sReset').onclick=()=>{S.cat={list:[],drops:[],care:{},gift:0,cbox:0};actors={};save();closeAll();draw()}}
-const FANF=[['🐱','วางแมว',openPlace],['🛁','อาบน้ำทั้งคอก',()=>startCare('bath')],['💆','นวดตัวทั้งคอก',()=>startCare('massage')],['🎵','เอนเตอร์เทน (กล่องดนตรี '+MB_USE+')',()=>startCare('music')],['🍳','คราฟอาหารแมว',openCraft],['🎁','กล่องสุ่มแมว',openBox],['🌱','กลับฟาร์ม',()=>{try{parent.postMessage({go:'farm'},'*')}catch(e){}}]];
+const FANF=[['🎩','มินิเกม หาแมวในแก้ว',()=>{if(window.HWG)HWG.open()}],['🐱','วางแมว',openPlace],['🛁','อาบน้ำทั้งคอก',()=>startCare('bath')],['💆','นวดตัวทั้งคอก',()=>startCare('massage')],['🎵','เอนเตอร์เทน (กล่องดนตรี '+MB_USE+')',()=>startCare('music')],['🍳','คราฟอาหารแมว',openCraft],['🎁','กล่องสุ่มแมว',openBox],['🌱','กลับฟาร์ม',()=>{try{parent.postMessage({go:'farm'},'*')}catch(e){}}]];
 $('fan').innerHTML=FANF.map(([i,t],n)=>'<button data-f="'+n+'"><i>'+i+'</i>'+t+'</button>').join('');
 $('fan').onclick=e=>{const b=e.target.closest('button');if(b)FANF[+b.dataset.f][2]()};
 $('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
@@ -324,7 +324,7 @@ setTimeout(()=>ann(S.cat.list.length?'🐱 แตะน้องแมวเพ�
 (function(){
 const fan=document.getElementById('fan'),tool=document.getElementById('toolBtn');if(!fan||!tool)return;
 const st=document.createElement('style');st.textContent='.fan .fg-hide{display:none!important}.fan .fcat i{background:#FFF3C9!important}.fan .fcat.back i{background:#EEE!important}.fan .fcat b{font-weight:700}';document.head.appendChild(st);
-const CATS=[['other','⚙️','อื่นๆ',/ตั้งค่าทดลอง|กลับฟาร์ม|กระเป๋า|ขึ้นบ้าน|ลงห้องใต้ดิน/],['box','🎁','กล่องสุ่ม',/กล่องสุ่ม/],['animal','🐾','สัตว์',/^วาง(แมว|แฮมสเตอร์)/],
+const CATS=[['game','🎮','มินิเกม',/มินิเกม/],['other','⚙️','อื่นๆ',/ตั้งค่าทดลอง|กลับฟาร์ม|กระเป๋า|ขึ้นบ้าน|ลงห้องใต้ดิน/],['box','🎁','กล่องสุ่ม',/กล่องสุ่ม/],['animal','🐾','สัตว์',/^วาง(แมว|แฮมสเตอร์)/],
  ['care','💕','ดูแล',/อาบน้ำ|นวด|เอนเตอร์เทน/],['food','🍽️','อาหาร',/คราฟอาหาร|เตา|ให้อาหาร|ดื่ม/],['craft','🔨','คราฟ',/คราฟ/],
  ['harvest','🧺','เก็บ',/เก็บ|เกี่ยว/],['grow','🌱','ดูแลแปลง',/ปลูก|รดน้ำ|หนอน|เร่ง|ปีก|ปุ๋ย/]];
 let cur='',self=false;
@@ -346,4 +346,5 @@ tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
 new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
 render();
 })();
-</script><script src="loot-box-link.js?v=ss3-fix15" data-box="cat"></script></body></html>
+</script><script src="loot-box-link.js?v=ss3-fix15" data-box="cat"></script><script src="hw-mini-host.js?v=ss3-fix16"></script><script>/* fix16 มินิเกมฮาโลวีน */
+if(typeof HwMini!=='undefined')window.HWG=HwMini.mount({game:'cup',page:'hw-cup.html',save:()=>save(),load:()=>load(),reload:()=>{syncFromHost();try{hud()}catch(e){}}});</script></body></html>

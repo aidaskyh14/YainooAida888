@@ -107,10 +107,10 @@ function updateLobby(){const w=$('bwrap');if(!w)return;
   if(!S.open){setBoard(w,`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00<br>บ่อปิดตามเวลาไทย</small></div>`);return}
   const rows=boardRows();
   const html=rows.map(([n,v],i)=>`<div class="row ${i<5?'t5':''} ${n===Host.uid?'me':''}"><span class="rk">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><b>${esc(world?.board?.[n]?.name||ME)+(n===Host.uid?' (ฉัน)':'')}</b><span class="w">${f2(v)} lb</span></div>`).join('');
-  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 5,000+ กุศล</div><div class="blist" id="blist" style="max-height:52vh">${html}</div>`);
+  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 150,000–3,000,000 กุศล</div><div class="blist" id="blist" style="max-height:52vh">${html}</div>`);
  }else{
   const html=[...S.hist].reverse().map(d=>`<div class="day"><h4>📅 ${esc(d.d)}</h4>${d.top.map((p,i)=>`<div class="r ${p.name===ME?'me':''}"><span>${['🥇','🥈','🥉','4','5'][i]}</span><b>${esc(p.name)}</b><span>${f2(p.w)} lb</span>${p.st>1?`<span class="s">🔥${p.st} วัน</span>`:''}<span class="m">+${nf(p.rw)}</span>${p.name===ME?(S.gifts.some(g=>g.d===d.d)?'<span class="m">🎁</span>':'<span class="m">✅</span>'):''}</div>`).join('')}</div>`).join('');
-  setBoard(w,`<div class="bnote">ติดท็อป 5 วันแรก 5,000 กุศล · ติดต่อกันบวกวันละ 1,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`)}}
+  setBoard(w,`<div class="bnote">🥇 3,000,000 · 🥈 1,000,000 · 🥉 500,000 · 4️⃣ 300,000 · 5️⃣ 150,000 · ติดต่อกันบวกวันละ 10,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`)}}
 function occ(p){return S.seats[p].filter(Boolean).length+'/'+S.seats[p].length}
 function renderLobbyBar(){const b=$('bar');const adm=S.role==='admin';
  b.innerHTML=`<div class="ibtns"><button class="ib" id="brdb"><span class="rbtn">⚖️</span><span>บอร์ด</span></button><button class="ib" id="bookbtn"><span class="rbtn">📖</span><span>สมุดปลา</span></button><button class="ib" id="crfb"><span class="rbtn">🔨</span><span>คราฟ</span></button><button class="ib" id="toolbtn"><span class="rbtn">🧰</span><span>กระเป๋า</span></button>${S.gifts.length?`<button class="ib" id="giftb"><span class="rbtn">🎁</span><span class="badge">${S.gifts.length}</span><span>ของขวัญ</span></button>`:''}${adm?'<button class="ib" id="admb"><span class="rbtn">🛠️</span><span>แอดมิน</span></button>':''}</div>`;
@@ -223,7 +223,7 @@ function rulesView(){sheet(`<h3>📋 กติกาตกปลา</h3><div cla
 <p>🤫 คนโดนตัดจะเห็นแค่ว่า "ใครสักคน" ตัดเบ็ด ไม่บอกชื่อ</p>
 <p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาลดลง 30% · ใช้ได้วันละ 10 ชิ้น</p>
 <p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 5 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
-<p>⚖️ น้ำหนักทุกบ่อรวมบอร์ดเดียว รีเซ็ตเที่ยงคืน · ท็อป 5 ได้ 5,000 กุศล ติดต่อกัน +1,000 ทุกวัน</p>
+<p>⚖️ น้ำหนักทุกบ่อรวมบอร์ดเดียว รีเซ็ตเที่ยงคืน · ท็อป 5 ได้ 150,000–3,000,000 กุศล ติดต่อกัน +10,000 ทุกวัน</p>
 <p>📖 ปลาทุกตัวนับเข้าสมุดสะสม ครบเซ็ตรับรางวัล</p></div><div class="btns"><button class="ghost" onclick="tools()">◀ กลับ</button></div>`)}
 
 /* ---------- craft ---------- */

@@ -62,7 +62,20 @@ export const HW_GFOOD=['r1','r2','r3','r4','r5','r6','r7','r8','n1','n2','n3','n
 // fix15f: ยาพิษแม่มด 20% (เล็ก 10 · กลาง 6 · ใหญ่ 3 · ใหญ่สุด 1) แบ่งมาจากของเดิม
 export const HW_PRIZES=[[15,'merit'],[3,'boost'],[8,'wine'],[8,'gfood'],[8,'box'],[7,'musicbox'],[7,'hat'],[7,'cake'],[7,'wings'],[6,'coconut'],[4,'fert'],[10,'p0'],[6,'p1'],[3,'p2'],[1,'p3']];
 /* ยาพิษ: ได้แล้วต้องสาดใส่เพื่อนทันที (เลือกใน 1 นาที ไม่เลือก = ระบบสุ่มเพื่อน) · คนโดนลดกุศลผ่าน ledger · ไม่บอกชื่อคนสาด */
-export const HW_POISON=[{n:'ยาพิษฟักทอง',size:'ขวดเล็ก',d:2000},{n:'ยาพิษค้างคาว',size:'ขวดกลาง',d:5000},{n:'ยาพิษหัวกะโหลก',size:'ขวดใหญ่',d:10000},{n:'ยาพิษปีศาจแดง',size:'ขวดใหญ่สุด',d:20000}];
+export const HW_POISON=[{n:'ยาพิษฟักทอง',size:'ขวดเล็ก',d:5000},{n:'ยาพิษค้างคาว',size:'ขวดกลาง',d:12000},{n:'ยาพิษหัวกะโหลก',size:'ขวดใหญ่',d:25000},{n:'ยาพิษปีศาจแดง',size:'ขวดใหญ่สุด',d:50000}];// fix16
+/* fix16 น้ำมนต์แก้พิษ: คู่กับยาพิษ 1:1 (a0 แก้ขวดเล็กเท่านั้น …) · คราฟสำเร็จ 100% · เก็บที่ bag.antidote.a0..a3 */
+export const HW_ANTI=[{n:'น้ำมนต์ดอกมะลิ',coin:8,items:{candy:5,bat:5},pestle:50},{n:'น้ำมนต์โบว์ฟ้า',coin:15,items:{candle:5,web:5},pestle:100},
+ {n:'น้ำมนต์ปีกเทวดา',coin:30,items:{hat:3,broom:3},pestle:200},{n:'น้ำมนต์นางฟ้า',coin:60,items:{pumpkin:3,cauldron:2},pestle:400}];
+export const HW_DECIDE=10*60000,HW_UNSEEN_MAX=864e5;
+export const antiHave=(game,k)=>{const n=Number(game.bag?.antidote?.['a'+k]);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
+/* ตัดสินยาพิษที่โดน: ใช้น้ำมนต์คู่กัน (ไม่หัก) หรือรับทราบ (หักกุศล ไม่ต่ำกว่า 0) */
+export function poisonApply(game,hit,use){
+ if(use){if(antiHave(game,hit.k)<1)throw new Error('ไม่มี'+HW_ANTI[hit.k].n);game.bag ||= {};game.bag.antidote ||= {};game.bag.antidote['a'+hit.k]=antiHave(game,hit.k)-1;return {st:'u',lost:0};}
+ const before=Math.max(0,game.merit||0);game.merit=Math.max(0,before-hit.d);return {st:'h',lost:before-game.merit};}
+/* ยาพิษค้างเกินเวลา: เห็นแล้ว 10 นาที หรือยังไม่เคยเห็นเกิน 24 ชม. → นับว่ารับทราบ */
+export const poisonExpired=(h,now)=>h.st==='p'&&!!h.seen&&now>=h.seen+HW_DECIDE;
+/* fix16: เริ่มนับ 10 นาทีทีละขวด (ขวดถัดไปเริ่มนับต่อจากขวดก่อนหน้า) · onlyId = เฉพาะขวดที่เพิ่งขึ้นจอ */
+export function poisonStartClocks(hits,now,onlyId){let t=now;for(const h of hits.filter(x=>x.st==='p').sort((a,b)=>a.at-b.at)){if(h.seen){t=Math.max(t,h.seen+HW_DECIDE);continue;}if(onlyId&&h.id!==onlyId)continue;h.seen=t;t+=HW_DECIDE;}}
 export const HW_POISON_TIME=60000;
 export function hwRollPrize(rng){
  const pick=(n)=>Math.min(n-1,Math.floor(rng()*n));let x=rng()*100,kind='merit';for(const [w,k] of HW_PRIZES){if(x<w){kind=k;break;}x-=w;}
@@ -75,9 +88,9 @@ export function hwRollPrize(rng){
   case 'box':return pick(2)?{kind,path:['box','fruit'],key:'box-fruit',q:10}:{kind,path:['box','plant'],key:'box-plant',q:10};
   case 'musicbox':return {kind,path:['item','musicbox'],key:'musicbox',q:50};
   case 'hat':return {kind,path:['item','hat'],key:'hat',q:50};
-  case 'cake':return {kind,path:['item','cake'],key:'cake',q:300};
-  case 'wings':return {kind,path:['item','angel'],key:'wings',q:300};
-  case 'coconut':return {kind,path:['item','coconut'],key:'coconut',q:300};
+  case 'cake':return {kind,path:['item','cake'],key:'cake',q:100};
+  case 'wings':return {kind,path:['item','angel'],key:'wings',q:100};
+  case 'coconut':return {kind,path:['item','coconut'],key:'coconut',q:100};
   default:return {kind:'fert',path:['item','fertfruitP'],key:'fertfruitP',q:100};
  }
 }
@@ -103,6 +116,15 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
  const k=input.item,q=input.qty;if(!HW_ITEMS.some(x=>x[0]===k)||!Number.isInteger(q)||q<1||q>9999)fail('ของหรือจำนวนไม่ถูกต้อง');
  if(hwHave(game,k)<q)fail('ของไม่พอขาย');const each=hwPrice(k,ctx.now);game.bag.halloween[k]=hwHave(game,k)-q;game.merit=(game.merit||0)+each*q;
  return {...result(),sold:{item:k,qty:q,each,total:each*q,haunting:hwHaunting(ctx.now)}};
+ }
+ if(input.type==='anti-craft'){
+ const k=input.k,n=input.qty??1,R=HW_ANTI[k];if(!Number.isInteger(k)||!R||!Number.isInteger(n)||n<1||n>10)fail('น้ำมนต์หรือจำนวนไม่ถูกต้อง');
+ const coins=Number.isSafeInteger(ctx.coins)?ctx.coins:0,pestle=Number(game.bag?.item?.pestle)||0;
+ const short=[...Object.entries(R.items).filter(([i,q])=>hwHave(game,i)<q*n).map(([i,q])=>HW_ITEMS.find(x=>x[0]===i)[1]+' '+hwHave(game,i)+'/'+q*n),...(pestle<R.pestle*n?['สากกะเบือ '+pestle+'/'+R.pestle*n]:[]),...(coins<R.coin*n?['เหรียญฮาโลวีน '+coins+'/'+R.coin*n]:[])];
+ if(short.length)fail('วัตถุดิบไม่พอ: '+short.join(' • '));
+ game.bag.halloween ||= {};for(const [i,q] of Object.entries(R.items))game.bag.halloween[i]=hwHave(game,i)-q*n;game.bag.item ||= {};game.bag.item.pestle=pestle-R.pestle*n;
+ game.bag.antidote ||= {};game.bag.antidote['a'+k]=antiHave(game,k)+n;
+ return {...result(),crafted:{k,qty:n,have:game.bag.antidote['a'+k]},coinsUsed:R.coin*n};
  }
  if(input.type==='poison-throw'){
  // คลาวด์ตรวจเป้า (มีบัญชี อนุมัติแล้ว ไม่ใช่แอดมิน ไม่ใช่ตัวเอง) แล้วเรียกขั้นนี้เพื่อหยิบขวดแรกออกจากคิว

@@ -183,8 +183,31 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 @keyframes hwneg{0%{transform:translate(-50%,0) scale(.5);opacity:0}20%{transform:translate(-50%,-10px) scale(1.2);opacity:1}100%{transform:translate(-50%,-70px);opacity:0}}
 .hwst .done{position:relative;font-family:var(--disp);font-size:1.5rem;color:#FFE08A;text-shadow:0 2px 0 #6A2C9E;margin-top:.6rem}
 .hwst .dnote{position:relative;color:#E7DBF7;font-size:.75rem}
+.hw .anbal{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.45rem}
+.hw .anbal span{display:inline-flex;align-items:center;gap:.25rem;background:#fff;border:2px solid var(--line);border-radius:999px;padding:.12rem .55rem;font-size:.7rem;font-weight:700}
+.hw .anbal img{width:1.2rem;height:1.2rem;object-fit:contain}
+.hw .an{display:grid;grid-template-columns:4.2rem minmax(0,1fr) auto;gap:.55rem;align-items:center;padding:.55rem .5rem;margin-top:.4rem;border-radius:1.1rem;background:linear-gradient(90deg,var(--t),#fff 70%);border:2px solid #fff;box-shadow:0 0 0 2px var(--line)}
+.hw .anpic{position:relative;width:4.2rem;height:4.2rem;display:grid;place-items:center}
+.hw .anpic img{max-width:100%;max-height:100%;filter:drop-shadow(0 0 8px var(--g));animation:hwbob 2.8s ease-in-out infinite}
+.hw .anhave{position:absolute;right:-.2rem;bottom:-.1rem;background:#5B3687;color:#fff;font-size:.66rem;font-weight:800;border-radius:999px;padding:0 .4rem;border:2px solid #fff}
+.hw .anbody{min-width:0}.hw .anbody>b{font-size:.86rem;display:block}
+.hw .pair{display:flex;align-items:center;gap:.2rem;font-size:.64rem;font-weight:700;color:var(--soft);margin:.05rem 0 .1rem;white-space:nowrap;overflow:hidden}.hw .pair+.pair{margin-bottom:.25rem}
+.hw .pair img{width:1rem;height:1rem;object-fit:contain}.hw .pair i{font-style:normal;color:#2F8F6C;font-weight:800}
+.hw .anreq{display:flex;gap:.22rem;flex-wrap:wrap}
+.hw .anreq span{display:inline-flex;align-items:center;gap:.1rem;font-size:.62rem;font-weight:800;background:#fff;border:1.5px solid var(--line);border-radius:.6rem;padding:.05rem .3rem .05rem .15rem}
+.hw .anreq img{width:1.05rem;height:1.05rem;object-fit:contain}
+.hw .anreq .ok{color:#2F8F6C;border-color:#A9E2CB}.hw .anreq .no{color:var(--red);border-color:#F5B8B3}
+.hw .anbtn{border:0;border-radius:999px;font-weight:800;font-size:.72rem;padding:.45rem .7rem;color:#fff;background:linear-gradient(180deg,#5FC9A0,#2F8F6C);box-shadow:0 3px 0 #1F6A4F;white-space:nowrap}
+.hw .anbtn:disabled{background:#E9E1D8;box-shadow:none;color:#B5A79A}
+.hw .sv{font-style:normal;font-size:.7rem;color:#2F8F6C;background:#E6FBF3;border-radius:999px;padding:0 .3rem}
+.anfx{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(20,10,40,.55);animation:anf .25s both}
+@keyframes anf{from{opacity:0}}
+.anfx-in{display:grid;justify-items:center;gap:.3rem;background:#FFFBF5;border:3px solid #fff;border-radius:1.4rem;padding:1rem 1.3rem;box-shadow:0 0 0 3px var(--g),0 0 40px var(--g);color:#6E4B3A;font-family:'Mali',sans-serif;animation:anp .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes anp{from{transform:scale(.5)}}
+.anfx-in img{width:7rem;filter:drop-shadow(0 0 14px var(--g));animation:hwbob 1.6s ease-in-out infinite}
+.anfx-in b{font-family:'Itim','Mali',sans-serif;font-weight:400;font-size:1.3rem;color:#2F8F6C}.anfx-in span{font-size:.78rem;font-weight:700}
 </style></head><body>
 <div id="view"><div class="stage" id="stage"></div></div>
 <div class="top" id="top"></div>
 <div class="hw" id="hw"></div><div class="hwst" id="hwst"></div><div class="shade" id="shade"></div><div class="sheet" id="sheet"></div><div class="ann" id="ann"></div>
-<script type="module" src="shop.js?v=ss3-fix15f"></script></body></html>
+<script type="module" src="shop.js?v=ss3-fix16"></script></body></html>

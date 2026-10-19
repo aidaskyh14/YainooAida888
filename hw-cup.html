@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>หาแมวในแก้ว</title>
+<style>
+:root{--cream:#FFFBF5;--cocoa:#6E4B3A;--soft:#9A7A68;--line:#F3E9DE;--bg:#2A1840;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#2A1840}}
+:root[data-theme="light"]{--bg:#2A1840}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);font-family:'Mali','Itim',system-ui,sans-serif;color:var(--cocoa);overflow:hidden}
+.pen{position:fixed;inset:0;background:url(images/cat-catpen-bg.webp) center/cover;filter:saturate(.9)}
+.pen::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(30,12,50,.55),rgba(30,12,50,.75))}
+.top{position:fixed;z-index:3;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + .6rem) 16px .4rem;display:flex;align-items:center;gap:.5rem;max-width:30rem;margin:0 auto}
+.back{cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font:800 .8rem 'Mali',sans-serif;padding:.35rem .8rem}
+.chip{margin-left:auto;background:rgba(255,251,245,.95);border-radius:999px;padding:.25rem .7rem;font-weight:800;font-size:.78rem;font-variant-numeric:tabular-nums}
+.game{position:fixed;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);width:min(calc(100vw - 32px),30rem);display:grid;gap:.6rem}
+.title{text-align:center;color:#FFE08A;font-family:'Itim','Mali',sans-serif;font-size:1.5rem;text-shadow:0 2px 0 #6A2C9E,0 0 16px rgba(255,180,60,.6);margin:0}
+.lv{display:flex;justify-content:center;gap:.35rem;flex-wrap:wrap}.lv span{white-space:nowrap}
+.lv span{font-size:.68rem;font-weight:800;color:#fff;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:999px;padding:.08rem .5rem}
+.lv span.on{background:linear-gradient(90deg,#7A2FB8,#E0582A);border-color:#fff}
+.lv span.done{background:#2F8F6C;border-color:#A9E2CB}
+.stage{position:relative;aspect-ratio:10/6.4;border-radius:1.4rem;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#5A3590,#2A1840 75%);box-shadow:0 0 0 3px rgba(255,255,255,.25),0 14px 30px rgba(0,0,0,.5)}
+.stage .cloth{position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(180deg,#6B3FA8,#4B2780);border-top:5px solid #F28C28}
+.stage .cloth::before{content:"✦ 🎃 ✦ 🎃 ✦ 🎃 ✦ 🎃 ✦";position:absolute;left:0;right:0;bottom:12%;text-align:center;letter-spacing:.4rem;color:#FFC94D;opacity:.55;font-size:.8rem}
+.stage .moon{position:absolute;right:7%;top:8%;font-size:2rem;filter:drop-shadow(0 0 12px #FFE08A)}
+.slot{position:absolute;bottom:22%;width:var(--c);height:var(--c);transform:translateX(-50%)}
+.cat{position:absolute;bottom:19.5%;left:0;width:calc(var(--c)*1.3);height:calc(var(--c)*1.3);transform:translateX(-50%);background-repeat:no-repeat;pointer-events:none;z-index:1}
+.cup{position:absolute;bottom:22%;width:var(--c);transform:translateX(-50%);z-index:2;transition:left var(--sw,400ms) cubic-bezier(.45,0,.55,1);cursor:default}
+.cup img{display:block;width:100%;transition:transform .35s cubic-bezier(.3,1.4,.5,1);filter:drop-shadow(0 6px 6px rgba(0,0,0,.4))}
+.cup .lift{transform:translateY(-62%)}
+.cup.up{z-index:3}.cup.up img{animation:hop var(--sw,400ms) ease-in-out}
+.cup.dn img{animation:dip var(--sw,400ms) ease-in-out}
+.cup.fake img{animation:fk .3s ease-in-out}
+@keyframes fk{40%{transform:translateY(-14%) rotate(-4deg)}70%{transform:translateY(-6%) rotate(3deg)}}
+@keyframes hop{50%{transform:translateY(-38%) scale(1.04)}}
+@keyframes dip{50%{transform:translateY(6%) scale(.97)}}
+.pickable .cup{cursor:pointer}
+.pickable .cup img{animation:wob 1.2s ease-in-out infinite}
+.pickable .cup:nth-child(odd) img{animation-delay:-.6s}
+@keyframes wob{50%{transform:translateY(-3%) rotate(1.5deg)}}
+.cup:focus-visible{outline:3px solid #FFE08A;border-radius:1rem}
+.decoy{position:absolute;bottom:22%;width:var(--c);transform:translateX(-50%);text-align:center;font-size:calc(var(--c)*.42);line-height:1;z-index:1;animation:dpop .4s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes dpop{from{transform:translateX(-50%) scale(.2)}}
+.shadow{position:absolute;bottom:20.5%;width:calc(var(--c)*.8);height:calc(var(--c)*.12);transform:translateX(-50%);background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%)}
+.msg{position:absolute;left:50%;top:7%;transform:translateX(-50%);z-index:5;background:rgba(255,251,245,.95);border-radius:999px;padding:.3rem .9rem;font-weight:800;font-size:.85rem;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.panel{background:var(--cream);border:3px solid #fff;border-radius:1.3rem;padding:.75rem;display:grid;gap:.5rem;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.row{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;font-size:.74rem;font-weight:800;justify-content:center}
+.cost{display:inline-flex;align-items:center;gap:.15rem;background:#fff;border:2px solid var(--line);border-radius:.7rem;padding:.05rem .45rem .05rem .15rem}
+.cost img{width:1.4rem;height:1.4rem;object-fit:contain}
+.prize{display:inline-flex;gap:.2rem;align-items:center;background:#FFF6D6;border:2px solid #FFE08A;border-radius:.7rem;padding:.08rem .5rem;color:#9A6A00}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.btn{border:0;border-radius:1rem;font:800 .95rem 'Mali',sans-serif;padding:.65rem;color:#fff;background:linear-gradient(180deg,#8A4FD0,#5B3687);box-shadow:0 4px 0 #3B2357;cursor:pointer}
+.btn.g{background:linear-gradient(180deg,#5FC9A0,#2F8F6C);box-shadow:0 4px 0 #1F6A4F}
+.btn.full{grid-column:1/-1}
+.btn:disabled{background:#D9D0E4;box-shadow:none;color:#8A7F98;cursor:default}
+.btn:focus-visible{outline:3px solid #6E4B3A;outline-offset:2px}
+.bank{text-align:center;font-size:.8rem;font-weight:800}.bank b{font-size:1.25rem;color:#C98A00;font-variant-numeric:tabular-nums}
+.fx{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
+.fx i{position:absolute;font-style:normal;font-size:1.4rem;animation:conf linear forwards}
+.fx img{width:1.7rem;height:1.7rem;object-fit:contain;display:block}
+@keyframes conf{from{transform:translateY(-10vh) rotate(0)}to{transform:translateY(110vh) rotate(var(--r))}}
+.pop{position:absolute;left:50%;top:38%;z-index:6;transform:translate(-50%,-50%);font-family:'Itim','Mali',sans-serif;font-size:2rem;color:#FFE08A;text-shadow:0 3px 0 #6A2C9E,0 0 18px rgba(255,201,77,.8);white-space:nowrap;animation:pp 1.6s ease-out forwards}
+@keyframes pp{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}20%{transform:translate(-50%,-50%) scale(1.15);opacity:1}80%{opacity:1}to{transform:translate(-50%,-90%) scale(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pickable .cup img{animation:none}}
+.err{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:20;background:#B02A44;color:#fff;font-weight:800;font-size:.8rem;border-radius:.8rem;padding:.5rem .8rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="pen" aria-hidden="true"></div>
+<div class="top"><button class="back" id="back">‹ คอกแมว</button><span class="chip" id="merit">🙏 0</span></div>
+<main class="game">
+ <h1 class="title">🎩 หาแมวในแก้ว</h1>
+ <div class="lv" id="lv"></div>
+ <div class="stage" id="stage"><div class="moon">🌙</div><div class="cloth"></div><div class="msg" id="msg">แตะ "เริ่มเล่น" แล้วจำแก้วให้ดี!</div></div>
+ <div class="panel" id="panel"></div>
+</main>
+<div class="fx" id="fx" aria-hidden="true"></div>
+<script>
+/* fix16 🎩 หาแมวในแก้ว — หน้าเกมเปิดทับคอกแมว · เซิร์ฟเวอร์ (hwmini) จ่ายค่าเข้า สุ่มแผนสลับ ตัดสินผล จ่ายกุศล */
+const API=parent.__HWAPI;
+const SP={idle:{src:'images/cg-mn-idle.webp',n:42,fps:12,loop:true},hide:{src:'images/cg-mn-hide.webp',n:16,fps:12},win:{src:'images/cg-mn-win.webp',n:17,fps:11},tease:{src:'images/cg-mn-tease.webp',n:16,fps:11}};
+Object.values(SP).forEach(s=>{const i=new Image();i.src=s.src;});
+const LV=[{lo:4000,hi:6000,name:'ด่าน 1'},{lo:10000,hi:15000,name:'ด่าน 2'},{lo:20000,hi:30000,name:'ด่าน 3'}];
+const COST={hat:20,broom:20,candy:20};
+const IC={hat:['halloween-hw-hat','หมวกแม่มด'],broom:['halloween-hw-broom','ไม้กวาด'],candy:['halloween-hw-candy','ลูกอมผี']};
+let V=null,last=null,busy=false;
+const N=5,stage=document.getElementById('stage'),nf=n=>Math.round(n).toLocaleString('en-US'),$=id=>document.getElementById(id);
+const X=i=>(10+i*20)+'%';
+const now=()=>{try{const t=API.serverNow();return t>0?t:Date.now();}catch(e){return Date.now();}};
+stage.style.setProperty('--c',(stage.clientWidth/5.4)+'px');addEventListener('resize',()=>stage.style.setProperty('--c',(stage.clientWidth/5.4)+'px'));
+let cups=[],catSlot=2,state='ready',level=0,bank=0,catEl,anim=null,timer=null;
+function err(t){const d=document.createElement('div');d.className='err';d.textContent='⚠️ '+t;document.body.append(d);setTimeout(()=>d.remove(),3500);}
+async function call(input){const out=await API.cloud(input);if(out&&out.view)V=out.view;return out;}
+function build(){stage.querySelectorAll('.cup,.cat,.decoy,.shadow').forEach(e=>e.remove());cups=[];
+ for(let i=0;i<N;i++){const s=document.createElement('div');s.className='shadow';s.style.left=X(i);stage.append(s);}
+ catEl=document.createElement('div');catEl.className='cat';stage.append(catEl);
+ for(let i=0;i<N;i++){const c=document.createElement('div');c.className='cup';c.tabIndex=-1;c.setAttribute('role','button');c.setAttribute('aria-label','แก้วใบที่ '+(i+1));c.innerHTML='<img src="images/cg-mn-cup.webp" alt="">';c.pos=i;c.style.left=X(i);if(i===2)c.querySelector('img').classList.add('lift');stage.append(c);cups.push(c);c.onclick=()=>pick(c);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')pick(c)};}
+ placeCat(2);play('idle');}
+function placeCat(slot){catSlot=slot;catEl.style.left=X(slot);}
+function play(name,done){const s=SP[name];clearInterval(anim);let f=0;catEl.style.backgroundImage=`url(${s.src})`;const rows=Math.ceil(s.n/8);catEl.style.backgroundSize=`800% ${rows*100}%`;
+ const draw=()=>{const c=f%8,r=Math.floor(f/8);catEl.style.backgroundPosition=`${c/7*100}% ${rows>1?r/(rows-1)*100:0}%`;};draw();
+ anim=setInterval(()=>{f++;if(f>=s.n){if(s.loop)f=0;else{clearInterval(anim);f=s.n-1;draw();done&&done();return;}}draw();},1000/s.fps);}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const cupAt=p=>cups.find(c=>c.pos===p);
+function msg(t){$('msg').textContent=t;}
+function lvBar(){$('lv').innerHTML=LV.map((l,i)=>`<span class="${i<level?'done':i===level&&state!=='ready'&&state!=='done'?'on':''}">${l.name} 🙏 ${nf(l.lo/1000)}–${nf(l.hi/1000)}k</span>`).join('');}
+function cfgOpen(){return V&&V.open&&V.open.cup;}
+function closedMsg(){const c=V&&V.cfg&&V.cfg.cup;if(!c)return 'กำลังโหลด…';return !c.on?'🔒 ปิดปรับปรุงชั่วคราว':`🌙 ปิดแล้ว · เปิด ${String(c.from).padStart(2,'0')}:00–${String(c.to%24).padStart(2,'0')}:00 ทุกวัน`;}
+function panel(){const p=$('panel'),me=API.fresh();$('merit').textContent='🙏 '+nf(me.merit||0);lvBar();const bag=me.hw||{};
+ const can=Object.entries(COST).every(([k,q])=>(bag[k]||0)>=q),cdl=Math.max(0,((V&&V.cd&&V.cd.cup)||0)-now());
+ const costRow=`<div class="row">ค่าเข้าเล่น ${Object.entries(COST).map(([k,q])=>`<span class="cost"><img src="images/${IC[k][0]}.webp" alt="${IC[k][1]}">${q} <small>/${nf(bag[k]||0)}</small></span>`).join('')}</div>`;
+ if(state==='ready'||state==='done')p.innerHTML=`${last!==null?`<div class="bank">${last>0?`🎉 ได้ <b>+${nf(last)}</b> กุศล`:last<0?`😿 เสีย <b style="color:#B02A44">${nf(last)}</b> กุศล`:'😿 ไม่ได้อะไรเลย'}</div>`:''}${costRow}<div class="btns"><button class="btn full" id="go" ${V&&can&&!cdl&&cfgOpen()&&!busy?'':'disabled'}>${!V?'กำลังโหลด…':busy?'⏳ กำลังเริ่ม…':!cfgOpen()?closedMsg():cdl?`⏳ เล่นได้อีกใน ${Math.floor(cdl/60000)}:${String(Math.floor(cdl/1000)%60).padStart(2,'0')}`:!can?'ของฮาโลวีนไม่พอ':(last!==null?'🔁 เล่นอีกครั้ง':'🎩 เริ่มเล่น')}</button></div>`;
+ else if(state==='won'){const nx=LV[level];p.innerHTML=`<div class="bank">✅ ผ่าน${LV[level-1].name} · ตอนนี้ได้ <b>${nf(bank)}</b> กุศล</div>${nx?`<div class="row">ไปต่อ${nx.name}: ผ่านได้ <span class="prize">🙏 ${nf(nx.lo)}–${nf(nx.hi)}</span> พลาด = ไม่ได้อะไรเลย</div>`:''}<div class="btns"><button class="btn g ${nx?'':'full'}" id="take" ${busy?'disabled':''}>💰 พอแค่นี้</button>${nx?`<button class="btn" id="more" ${busy?'disabled':''}>🔥 ไปต่อ</button>`:''}</div>`;}
+ else p.innerHTML=`<div class="row" style="padding:.55rem 0">${state==='pick'?'👆 แตะแก้วที่มีแมวซ่อนอยู่':'👀 จ้องแก้วไว้ให้ดี…'}</div>`;
+ if($('go'))$('go').onclick=start;if($('take'))$('take').onclick=take;if($('more'))$('more').onclick=more;}
+async function start(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'start',game:'cup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;level=0;bank=0;last=null;await round(out.view.round);}
+async function more(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'next',game:'cup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;await round(out.view.round);}
+async function round(R){state='hide';panel();const plan=R.plan;
+ stage.querySelectorAll('.decoy').forEach(e=>e.remove());cups.forEach((c,i)=>{c.pos=i;c.style.transition='none';c.style.left=X(i);});void stage.offsetWidth;cups.forEach(c=>c.style.transition='');
+ const slot=plan.slot;cups.forEach(c=>c.querySelector('img').classList.toggle('lift',c.pos===slot));placeCat(slot);catEl.style.opacity='1';catEl.style.visibility='';msg('😺 แมวจะซ่อนในแก้ว…');
+ play('idle');await wait(500);
+ await new Promise(r=>play('hide',r));
+ cups.forEach(c=>c.querySelector('img').classList.remove('lift'));catEl.style.visibility='hidden';
+ await wait(450);catEl.style.visibility='';catEl.style.opacity='0';
+ state='shuffle';panel();msg('🔀 สลับแล้ว! '+LV[level].name);stage.style.setProperty('--sw',plan.ms+'ms');
+ const mv=async pairs=>{const moved=pairs.map(([from,to,up])=>[cupAt(from),to,up]);for(const [C,to,up] of moved){C.pos=to;C.classList.add(up?'up':'dn');C.style.left=X(to);}await wait(plan.ms+30);moved.forEach(([C])=>C.classList.remove('up','dn'));};
+ for(const op of plan.ops){const [k,v]=op.split(':'),a=v.split(',').map(Number);
+  if(k==='s')await mv([[a[0],a[1],1],[a[1],a[0],0]]);
+  else if(k==='d')await mv([[a[0],a[1],1],[a[1],a[0],0],[a[2],a[3],0],[a[3],a[2],1]]);
+  else if(k==='r')await mv([[a[0],a[1],1],[a[1],a[2],0],[a[2],a[0],1]]);
+  else if(k==='f'){const C=cupAt(a[0]);C.classList.add('fake');await wait(Math.max(140,plan.ms*.6));C.classList.remove('fake');}}
+ state='pick';stage.classList.add('pickable');cups.forEach(c=>c.tabIndex=0);panel();let left=plan.t;msg('👆 แมวอยู่แก้วไหน? ⏰ '+left);clearInterval(timer);
+ timer=setInterval(()=>{if(state!=='pick')return clearInterval(timer);left--;if(left<=0){clearInterval(timer);pick(null);}else msg('👆 แมวอยู่แก้วไหน? ⏰ '+left);},1000);}
+async function pick(c){if(state!=='pick')return;clearInterval(timer);state='reveal';stage.classList.remove('pickable');cups.forEach(x=>x.tabIndex=-1);panel();
+ let out;try{out=await call({type:'pick',game:'cup',pos:c?c.pos:-1});}catch(e){err(e.message);await sync();return;}
+ const R=out.result||{},ans=Number.isInteger(R.ans)?R.ans:(c?c.pos:0),real=cupAt(ans);placeCat(ans);
+ if(R.result==='win'||R.result==='take'){catEl.style.opacity='1';real.querySelector('img').classList.add('lift');play('win');bank=R.result==='take'?R.gain:R.bank;level=R.stage+1;msg('🎉 เจอแล้ว!');boom();pop(nf(bank)+' 🙏');await wait(1600);
+  if(R.result==='take'){last=R.gain;msg('🏆 ผ่านครบ 3 ด่าน!');state='done';level=0;bank=0;panel();return;}state='won';panel();}
+ else{if(c){c.querySelector('img').classList.add('lift');msg('😜 ผิดแก้ว!');}else msg('⏰ หมดเวลา!');await wait(700);
+  catEl.style.opacity='1';real.querySelector('img').classList.add('lift');play('tease');const l=R.loss||0;pop(l?'−'+nf(l):'0 💔');last=-l;level=0;bank=0;await wait(1500);state='done';panel();}}
+async function take(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'take',game:'cup'});}catch(e){busy=false;err(e.message);await sync();return;}busy=false;
+ last=out.result?.gain||bank;msg('💰 เก็บรางวัลแล้ว');state='done';bank=0;level=0;panel();}
+function pop(t){const p=document.createElement('div');p.className='pop';p.textContent=t;stage.append(p);setTimeout(()=>p.remove(),1700);}
+function boom(){const fx=$('fx');const set=['🎃','⭐','🍬','✨'];for(let i=0;i<34;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.6)+'s';e.style.animationDelay=Math.random()*.5+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML='<img src="images/lux-coin.webp" alt="">';else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4200);}}
+/* โหลดสถานะ: รอบค้างที่รอเลือก → เลือกต่อได้ · รอบค้างกลางเกม → นับว่าไม่ผ่าน */
+async function sync(){let out;try{out=await call({type:'status',game:'cup'});}catch(e){err(e.message);return;}
+ const t=out.tidy;if(t&&t.g==='cup'){if(t.result==='lose'){last=-(t.loss||0);msg('⌛ รอบที่ค้างไว้หมดเวลา นับว่าไม่ผ่าน');}else if(t.result==='take'){last=t.gain;msg('💰 รับรางวัลรอบที่ค้างไว้ให้แล้ว');}}
+ const R=V.round;
+ if(R&&R.ph==='decide'){level=R.st+1;bank=R.bank;state='won';msg('✅ ผ่าน'+LV[R.st].name+' แล้ว · เลือกเลย');panel();return;}
+ if(R&&R.ph==='play'){try{const o=await call({type:'pick',game:'cup',pos:-1});last=-((o.result&&o.result.loss)||0);}catch(e){}msg('⌛ ออกจากเกมกลางรอบ นับว่าไม่ผ่าน');}
+ state='ready';level=0;bank=0;panel();}
+$('back').onclick=()=>{if(state==='hide'||state==='shuffle'||state==='pick'||state==='reveal'||busy)return err('รอให้จบรอบนี้ก่อนนะ');API.close();};
+build();panel();sync();setInterval(()=>{if(state==='ready'||state==='done')panel();},1000);
+</script>
+</body>
+</html>

@@ -36,12 +36,14 @@ export const BOAT_CARD_TABLES={
  250:[['supply',25],['merit',25],['cut',20],['revive',10],['reviveall',5],['stop',5],['ink',5],['crab',5]],
  300:[['merit',35],['supply',30],['cut',20],['ink',5],['crab',5],['stop',5]]};
 export const BOAT_GIFT=150000,BOAT_CUT=20;
-export const BOAT_STAY_TIME=2*60000,BOAT_STAY_GAIN=50000,BOAT_STAY_COST={merit:10000,hat:1000,mb:1000,wool:200};
+export const BOAT_STAY_TIME=2*60000,BOAT_STAY_GAIN=50000,BOAT_STAY_COST={merit:10000,hat:1000,mb:1000,wool:200,pestle:2000,coin:100};// fix16: + สากกะเบือ + เหรียญฮาโลวีน
 export const BOAT_COMBO=20000,BOAT_SEND=[1,3];
 /* fix15f เผาเรือ · นางเงือก · เส้น 350 */
-export const BOAT_STAY_MULT=[1,4,10];       // ค่าอยู่ต่อ ครั้งที่ 1/2/3 · ครั้งที่ 4 หลุดทันที
-export const BOAT_BURN_TIME=10*60000,BOAT_BURN_NEED={merit:500000,hat:5000,mb:5000,wool:3000},BOAT_BURN_BACK=30;
-export const BOAT_CUT1=30,BOAT_FIRE350=1000000,BOAT_FIRE350_TIME=10*60000;
+export const BOAT_STAY_MULT=[1,4];         // fix16: ค่าอยู่ต่อ ครั้งที่ 1/2 · ครั้งที่ 3 หลุดทันที
+export const BOAT_BURN_TIME=10*60000,BOAT_BURN_NEED={merit:500000,hat:5000,mb:5000,wool:3000,pestle:10000,coin:1000},BOAT_BURN_BACK=30;
+export const BOAT_CUT1=30,BOAT_FIRE350=1000000,BOAT_FIRE350_TIME=10*60000,BOAT_FIRE350_N=2;// fix16: นางเงือกจ้างออกลำละ 2 คน
+const BURN_OLD={merit:500000,hat:5000,mb:5000,wool:3000};// เรือที่ไหม้ก่อนอัปเดตใช้ยอดเดิม
+export const burnNeed=st=>st?.need||BURN_OLD;
 export const BOAT_MM_SHARE=.2,BOAT_MM_NEED=2,BOAT_MM_CHECKS=[30*60000,120*60000],BOAT_MM_REPLY=5*60000,BOAT_MM_POKE=3000;
 export const BOAT_FOOD_MERIT=[100,200];
 export const BOAT_STAR_MERIT={1:200,2:300,3:500,4:700,5:1000,6:1000};
@@ -78,7 +80,7 @@ export function boatProgress(r,b,n,rng) {
     const arrived=r.claims[line] ||= [];
     if(arrived.length<boxSlots(line)&&!arrived.includes(b)) {
       const first=!arrived.length,card=BOAT_PLAN[line][arrived.length];arrived.push(b);r.boxes.push({id:line+'-'+b,boat:b,line,opened:false,deck:Array(5).fill(card)});
-      if(line===350){r.dismiss ||= {};r.dismiss[b]={at:r._now||0,until:(r._now||0)+BOAT_FIRE350_TIME};log(r,'🧜‍♀️ เรือ '+b+' ถึงเส้น 350');}
+      if(line===350){r.dismiss ||= {};r.dismiss[b]={at:r._now||0,until:(r._now||0)+BOAT_FIRE350_TIME,left:BOAT_FIRE350_N};log(r,'🧜‍♀️ เรือ '+b+' ถึงเส้น 350');}
       if(line===300&&first){r.boxes.push({id:'300-'+b+'-gift',boat:b,line,opened:false,gift:true,deck:Array(5).fill('gift')});log(r,'🎁 เรือ '+b+' ถึงเส้น 300 ก่อน ได้กล่องของขวัญ!');}
     }
   }
@@ -186,7 +188,7 @@ function useCard(r,box,choice,ctx,rng,player,auto) {
     log(r,card==='gift'?'🎁 เรือ '+boat+' เปิดกล่องของขวัญ ลูกเรือคนละ 150,000'+tag:'เรือ '+boat+' ได้การ์ดกุศล ลูกเรือคนละ 100,000'+tag);
   }
   if(card==='cut1'){box.target=target;if(target===null)log(r,'เรือ '+boat+' ใช้การ์ดตัดเสบียง แต่ไม่มีเรือคู่แข่ง'+tag);else{log(r,'เรือ '+boat+' ใช้การ์ดตัดเสบียง เรือ '+target+' ถอย '+BOAT_CUT1+tag);boatProgress(r,target,-BOAT_CUT1,rng);}}
-  if(card==='burn'){box.target=target;if(target===null)log(r,'เรือ '+boat+' ใช้การ์ดเผาเรือ แต่ไม่มีเรือให้เผา'+tag);else{r.burns ||= {};r.burns[target]={by:boat,at:now,until:now+BOAT_BURN_TIME,got:{merit:0,hat:0,mb:0,wool:0},paid:{}};log(r,'🔥 เรือ '+boat+' เผาเรือ '+target+'! ลูกเรือต้องช่วยกันกอบกู้ใน 10 นาที'+tag);}}
+  if(card==='burn'){box.target=target;if(target===null)log(r,'เรือ '+boat+' ใช้การ์ดเผาเรือ แต่ไม่มีเรือให้เผา'+tag);else{r.burns ||= {};r.burns[target]={by:boat,at:now,until:now+BOAT_BURN_TIME,need:{...BOAT_BURN_NEED},got:Object.fromEntries(Object.keys(BOAT_BURN_NEED).map(k=>[k,0])),paid:{}};log(r,'🔥 เรือ '+boat+' เผาเรือ '+target+'! ลูกเรือต้องช่วยกันกอบกู้ใน 10 นาที'+tag);}}
   if(card==='stop'){r.stopUntil=now+30*60000;r.stopBy=boat;log(r,'เรือ '+boat+' ใช้การ์ดหยุดเรือ ทีมอื่นส่งเสบียงไม่ได้ 30 นาที'+tag);}
   if(isKick(card)) {
     // fix15: คนโดนเตะได้ข้อเสนออยู่ต่อ 2 นาทีก่อน (ยังไม่ออกจากเรือ)
@@ -239,14 +241,16 @@ function useCard(r,box,choice,ctx,rng,player,auto) {
 /* ข้อเสนออยู่ต่อ: ตัดสินด้วยบัญชีของคนโดนเตะเท่านั้น (ต้องใช้ของในกระเป๋าเขา)
    accept=true จ่ายแล้วอยู่ต่อ · false ออกจากเรือ · null = หมดเวลา (มีของครบอยู่ต่อ ไม่ครบออก) */
 const alpacaWool=p=>Number(p.sub?.alpaca?.bag?.wool)||0;
-export function stayAfford(player,n){const c=stayCost(n);return (player.merit||0)>=c.merit&&(Number(player.bag?.item?.hat)||0)>=c.hat&&(Number(player.bag?.item?.musicbox)||0)>=c.mb&&alpacaWool(player)>=c.wool;}
+const pestleOf=p=>Number(p.bag?.item?.pestle)||0;
+export const stayHave=(player,coins)=>({merit:player.merit||0,hat:Number(player.bag?.item?.hat)||0,mb:Number(player.bag?.item?.musicbox)||0,wool:alpacaWool(player),pestle:pestleOf(player),coin:Number(coins)||0});
+export function stayAfford(player,n,coins=0){const c=stayCost(n),h=stayHave(player,coins);return Object.keys(c).every(k=>h[k]>=c[k]);}
 function resolveOffer(r,uid,player,accept,now){
   const o=r.offers?.[uid];if(!o)return null;delete r.offers[uid];
   // fix15f: หมดเวลาแล้วอยู่ต่ออัตโนมัติเฉพาะครั้งแรก (×1) · ครั้งต่อไปต้องกดเอง ไม่หักของแพงโดยไม่ตั้งใจ
-  const stay=accept===true||(accept===null&&o.n===1&&stayAfford(player,o.n));
+  const stay=accept===true||(accept===null&&o.n===1&&stayAfford(player,o.n,r._coins));
   if(stay){
-    if(!stayAfford(player,o.n)){r.offers[uid]=o;fail('ของไม่พอจ่ายข้อเสนอ');}
-    const c=stayCost(o.n);player.merit-=c.merit;player.bag.item.hat-=c.hat;player.bag.item.musicbox-=c.mb;player.sub.alpaca.bag.wool-=c.wool;player.merit+=BOAT_STAY_GAIN;
+    if(!stayAfford(player,o.n,r._coins)){r.offers[uid]=o;fail('ของไม่พอจ่ายข้อเสนอ');}
+    const c=stayCost(o.n);player.merit-=c.merit;player.bag.item.hat-=c.hat;player.bag.item.musicbox-=c.mb;player.sub.alpaca.bag.wool-=c.wool;if(c.pestle)player.bag.item.pestle=pestleOf(player)-c.pestle;if(c.coin)r._coins-=c.coin;player.merit+=BOAT_STAY_GAIN;
     r.stays[uid]=o.n;log(r,'💪 '+nameOf(r,uid)+' เลือกอยู่ต่อบนเรือ '+r.team[uid]+(accept===null?' (อัตโนมัติ)':''));return {stay:true,n:o.n,cost:c,gain:BOAT_STAY_GAIN};
   }
   r.kicked[uid]=true;log(r,'💦 '+nameOf(r,uid)+(accept===null?' หมดเวลาตัดสินใจ':' ยอมรับ')+' ออกจากเรือ '+r.team[uid]);return {stay:false,n:o.n};
@@ -272,15 +276,16 @@ export function settleBoat(r,ctx,rng,player,skipBox) {
 /* ---------- fix15f: กล่องจดหมาย/มุมมองส่วนตัวที่คลาวด์ต้องเขียนหลังธุรกรรม ----------
    r.outbox = [{mail:{uid,key,title,msg,icon,kusal,items}} | {view:{uid,data}}] · boatAction ดึงออกแล้วลบทิ้งก่อนบันทึก */
 const outbox=(r,x)=>{(r.outbox ||= []).push(x);};
-const BURN_ITEM={hat:'hat',mb:'musicbox',wool:'wool'};
+const BURN_ITEM={hat:'hat',mb:'musicbox',wool:'wool',pestle:'pestle'};
 function burnRefund(r,b,why){const st=r.burns?.[b];if(!st)return;
-  for(const [u,c] of Object.entries(st.paid||{})){const items={};for(const k of ['hat','mb','wool'])if(c[k]>0)items[BURN_ITEM[k]]=c[k];
-    if((c.merit||0)>0||Object.keys(items).length)outbox(r,{mail:{uid:u,key:'boat-burn-'+(r.round||0)+'-'+b+'-'+st.at,title:'🔥 คืนของที่ลงขันกอบกู้เรือ '+b,msg:why,icon:'🔥',kusal:c.merit||0,items}});}
+  for(const [u,c] of Object.entries(st.paid||{})){const items={};for(const k of ['hat','mb','wool','pestle'])if(c[k]>0)items[BURN_ITEM[k]]=c[k];
+    if((c.merit||0)>0||(c.coin||0)>0||Object.keys(items).length)outbox(r,{mail:{uid:u,key:'boat-burn-'+(r.round||0)+'-'+b+'-'+st.at,title:'🔥 คืนของที่ลงขันกอบกู้เรือ '+b,msg:why,icon:'🔥',kusal:c.merit||0,coins:c.coin||0,items}});}
   delete r.burns[b];}
 const mmDue=(mm,i)=>mm.since+BOAT_MM_CHECKS[i];
+const dLeft=d=>Number.isInteger(d?.left)?d.left:1;// การ์ดเส้น 350 ก่อนอัปเดตจ้างออก 1 คน
 function mmView(r){const mm=r.mm;if(!mm||mm.done)return null;const i=mm.ok.findIndex(x=>!x);
   return {round:r.round||0,active:true,since:mm.since,earn:mm.earn,check:i<0?null:{n:i+1,at:mmDue(mm,i),until:mmDue(mm,i)+BOAT_MM_REPLY},
-    dismiss:Object.entries(r.dismiss||{}).map(([b,d])=>({boat:+b,until:d.until,crew:members(r,+b).map(u=>({u,n:nameOf(r,u)}))}))};}// Firestore: ห้าม array ซ้อน array
+    dismiss:Object.entries(r.dismiss||{}).map(([b,d])=>({boat:+b,until:d.until,left:dLeft(d),crew:members(r,+b).map(u=>({u,n:nameOf(r,u)}))}))};}// Firestore: ห้าม array ซ้อน array
 function emitViews(r){const v=mmView(r),uid=r.mm&&!r.mm.done?r.mm.uid:null,sig=JSON.stringify([uid,v]);
   if(sig===(r.mmSig??JSON.stringify([null,null])))return;r.mmSig=sig;if(uid)outbox(r,{view:{uid,data:v}});}
 function ensureMermaid(r,now){
@@ -295,8 +300,9 @@ function mmNeglect(r,now){const old=r.mm.uid;r.mmEx ||= {};r.mmEx[old]=true;r.mm
   outbox(r,{mail:{uid:old,key:'boat-mm-fake-'+(r.round||0)+'-'+now,title:'💔 นางเงือกตัวปลอม',msg:'เธอได้ละเลยจากการเป็นนางเงือก ได้แต่งตั้งนางเงือกคนใหม่แล้ว เสียใจด้วย เธอเป็นนางเงือกตัวปลอม',icon:'🧜‍♀️',kusal:0,items:{}}});
   outbox(r,{view:{uid:old,data:{round:r.round||0,active:false,notice:{k:'fake',at:now}}}});ensureMermaid(r,now);}
 function fireOut(r,b,u,ctx,player,ledger,auto){
-  r.kicked[u]=true;r.fired ||= {};r.fired[u]=true;delete r.offers?.[u];delete r.dismiss[b];
-  const id='boat-mm-'+(r.round||0)+'-'+b;
+  r.kicked[u]=true;r.fired ||= {};r.fired[u]=true;delete r.offers?.[u];
+  const d=r.dismiss[b];if(d){d.left=dLeft(d)-1;if(d.left<=0||members(r,b).length<2)delete r.dismiss[b];}
+  const id='boat-mm-'+(r.round||0)+'-'+b+'-'+u;
   if(u===ctx.uid){player.merit=(player.merit||0)+BOAT_FIRE350;ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,self:true,title:'🧜‍♀️ นางเงือกจ้างออก'});}
   else ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,title:'🧜‍♀️ นางเงือกจ้างออก',msg:'ได้ค่าจ้างออกจากเรือ '+b+' 1,000,000 กุศล'});
   log(r,'🧜‍♀️ '+(auto?'ระบบ':'นางเงือก')+'จ้าง '+nameOf(r,u)+' ออกจากเรือ '+b+' ได้ 1,000,000 กุศล');}
@@ -309,8 +315,8 @@ function settleExtras(r,ctx,player,ledger){
   if(r.mm&&!r.mm.done)for(let i=0;i<BOAT_MM_CHECKS.length;i++)if(!r.mm.ok[i]&&now>=mmDue(r.mm,i)+BOAT_MM_REPLY+BOAT_GRACE){mmNeglect(r,now);break;}
   ensureMermaid(r,now);
   for(const b of Object.keys(r.dismiss||{}).map(Number).sort()){const d=r.dismiss[b];if(r.mm&&!r.mm.done&&now<d.until+BOAT_GRACE)continue;
-    const crew=members(r,b).sort();if(crew.length<2){delete r.dismiss[b];continue;}
-    fireOut(r,b,pickOne(crew,seededRng((r.round||0)+'|fire|'+b)),ctx,player,ledger,true);}
+    for(let k=0;r.dismiss[b]&&k<BOAT_FIRE350_N;k++){const crew=members(r,b).sort();if(crew.length<2){delete r.dismiss[b];break;}
+      fireOut(r,b,pickOne(crew,seededRng((r.round||0)+'|fire|'+b+'|'+k)),ctx,player,ledger,true);}}
 }
 function finishExtras(r){
   for(const b of Object.keys(r.burns||{}))burnRefund(r,+b,'การแข่งจบระหว่างเรือไหม้ ระบบคืนของที่ลงขันให้ครบ');
@@ -335,9 +341,9 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
   if(!uid||!Number.isFinite(now))fail('ไม่มีบัญชีหรือเวลาเซิร์ฟเวอร์');
   const type=input.type;
   if(!r.names)r.names={};if(ctx.name&&r.team[uid])r.names[uid]=String(ctx.name).slice(0,40);
-  r._now=now;
+  r._now=now;r._coins=Number.isSafeInteger(ctx.coins)?ctx.coins:0;const coins0=r._coins;
   const ledger=settleBoat(r,ctx,rng,player,type==='card'?input.box:null);
-  const done=extra=>{settleExtras(r,ctx,player,ledger);emitViews(r);const mails=[],views=[];for(const x of r.outbox||[]){if(x.mail)mails.push(x.mail);if(x.view){const v=views.find(v=>v.uid===x.view.uid);if(v)v.data={...v.data,...x.view.data};else views.push({uid:x.view.uid,data:{...x.view.data}});}}delete r.outbox;delete r._now;return {race:r,player,ledger,mails,views,...extra};};
+  const done=extra=>{settleExtras(r,ctx,player,ledger);emitViews(r);const mails=[],views=[];for(const x of r.outbox||[]){if(x.mail)mails.push(x.mail);if(x.view){const v=views.find(v=>v.uid===x.view.uid);if(v)v.data={...v.data,...x.view.data};else views.push({uid:x.view.uid,data:{...x.view.data}});}}delete r.outbox;delete r._now;const coinsOut=r._coins;delete r._coins;return {race:r,player,ledger,mails,views,...(coinsOut!==coins0?{coins:coinsOut}:{}),...extra};};
   const boat=r.team[uid];
   // status/tick: ไม่เปลี่ยนอะไรนอกจากชำระการ์ดที่หมดเวลา (tick = ไคลเอนต์เห็นเส้นตายผ่านแล้ว ขอให้เซิร์ฟเวอร์ชำระ)
   if(type==='status'||type==='tick')return done();
@@ -400,21 +406,24 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
   if(type==='mmFire'){
     const mm=r.mm;if(!mm||mm.done||mm.uid!==uid)fail('คุณไม่ได้เป็นนางเงือก');
     const b=input.boat;if(!r.dismiss?.[b])fail('เรือลำนี้ไม่ต้องจ้างออกแล้ว');
-    const crew=members(r,b);if(!crew.includes(input.uid))fail('เลือกลูกเรือของเรือ '+b);
+    const crew=members(r,b),want=Array.isArray(input.uids)?input.uids:[input.uid],left=dLeft(r.dismiss[b]);
+    if(!want.length||want.length>left||new Set(want).size!==want.length)fail('เลือกลูกเรือ '+Math.min(left,Math.max(1,crew.length-1))+' คน');
+    if(want.some(u=>typeof u!=='string'||!crew.includes(u)))fail('เลือกลูกเรือของเรือ '+b);
     if(crew.length<2){delete r.dismiss[b];return done({fire:null});}
-    fireOut(r,b,input.uid,ctx,player,ledger,false);return done({fire:input.uid});
+    const fired=[];for(const u of want){if(!r.dismiss[b]||members(r,b).length<2)break;fireOut(r,b,u,ctx,player,ledger,false);fired.push(u);}
+    return done({fire:fired[0]??null,fires:fired});
   }
   if(type==='burnPay'){
     const b=r.team[uid],st=r.burns?.[b];if(!b||r.kicked[uid]||!st)fail('เรือของคุณไม่ได้ไฟไหม้');
-    const have={merit:Math.max(0,player.merit||0),hat:Number(player.bag?.item?.hat)||0,mb:Number(player.bag?.item?.musicbox)||0,wool:alpacaWool(player)};
+    const need=burnNeed(st),have={...stayHave(player,r._coins),merit:Math.max(0,player.merit||0)};
     const req={},take={};let sum=0;
-    for(const k of Object.keys(BOAT_BURN_NEED)){const v=input[k]===undefined?0:input[k];if(!Number.isSafeInteger(v)||v<0)fail('จำนวนไม่ถูกต้อง');if(v>have[k])fail('ของไม่พอ');req[k]=v;take[k]=Math.min(v,Math.max(0,BOAT_BURN_NEED[k]-st.got[k]));sum+=take[k];}
+    for(const k of Object.keys(need)){const v=input[k]===undefined?0:input[k];if(!Number.isSafeInteger(v)||v<0)fail('จำนวนไม่ถูกต้อง');if(v>have[k])fail('ของไม่พอ');req[k]=v;take[k]=Math.min(v,Math.max(0,need[k]-(st.got[k]||0)));sum+=take[k];}
     if(!sum&&!st.paid[uid]){const k=Object.keys(req).find(k=>req[k]>0);if(k){take[k]=1;sum=1;}}
     if(!sum)fail(st.paid[uid]?'ของส่วนนี้ครบแล้ว':'ลงขันอย่างน้อย 1 ชิ้น');
-    player.merit-=take.merit;if(take.hat)player.bag.item.hat-=take.hat;if(take.mb)player.bag.item.musicbox-=take.mb;if(take.wool)player.sub.alpaca.bag.wool-=take.wool;
-    const mine=st.paid[uid] ||= {merit:0,hat:0,mb:0,wool:0};for(const k of Object.keys(take)){st.got[k]+=take[k];mine[k]+=take[k];}
+    player.merit-=take.merit||0;if(take.hat)player.bag.item.hat-=take.hat;if(take.mb)player.bag.item.musicbox-=take.mb;if(take.wool)player.sub.alpaca.bag.wool-=take.wool;if(take.pestle)player.bag.item.pestle=pestleOf(player)-take.pestle;if(take.coin)r._coins-=take.coin;
+    const mine=st.paid[uid] ||= Object.fromEntries(Object.keys(need).map(k=>[k,0]));for(const k of Object.keys(take)){st.got[k]=(st.got[k]||0)+take[k];mine[k]=(mine[k]||0)+take[k];}
     log(r,'🪣 '+nameOf(r,uid)+' ลงขันกอบกู้เรือ '+b);
-    const full=Object.keys(BOAT_BURN_NEED).every(k=>st.got[k]>=BOAT_BURN_NEED[k]),all=members(r,b).every(u=>st.paid[u]);
+    const full=Object.keys(need).every(k=>(st.got[k]||0)>=need[k]),all=members(r,b).every(u=>st.paid[u]);
     if(full&&all){delete r.burns[b];r.lastBurn={boat:b,ok:true,at:now};log(r,'🌊 เรือ '+b+' กอบกู้สำเร็จ! ถอย '+BOAT_BURN_BACK);boatProgress(r,b,-BOAT_BURN_BACK,rng);}
     return done({burnPaid:take,saved:full&&all});
   }

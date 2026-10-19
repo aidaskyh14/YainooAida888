@@ -1,5 +1,5 @@
 import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, deleteField, query, limit } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-recovery6';
+import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-fix16';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
 /* fix13 second guard: these parts hold placed animals / pens / house slots. A write may empty them (sold, expired, released)
@@ -100,17 +100,19 @@ export class SplitSaveStore {
     if(!changes.length && fields.every(f=>f==='g'))return;
     const meta={by:this.session};
     for(const f of fields)if(f!=='g'&&f!=='size'&&f!=='storageVersion')meta[f]=profile[f];
+    // fix16: จำ rev ที่ใช้คำนวณก่อนเริ่ม · ถ้าระหว่างนั้นมีรายการอื่นบันทึกส่วนเดียวกัน (เช่น รับไปรษณีย์) ต้องไม่เขียนทับของเขา
+    const expected=new Map(changes.map(([id])=>[id,this.revs.get(id)||0]));
     await runTransaction(this.db,async tx=>{
       const root=await tx.get(this.root());if(!root.exists()||root.data().session!==this.session)throw conflict();
       const snaps=await Promise.all(changes.map(([id])=>tx.get(this.ref(id))));
-      snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==(this.revs.get(changes[i][0])||0))throw conflict();});
-      changes.forEach(([id,p],i)=>{if(p)tx.set(this.ref(id),{...p,rev:(this.revs.get(id)||0)+1,by:this.session,updatedAt:serverTimestamp()});else tx.delete(this.ref(id));});
+      snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==expected.get(changes[i][0]))throw conflict();});
+      changes.forEach(([id,p],i)=>{if(p)tx.set(this.ref(id),{...p,rev:expected.get(id)+1,by:this.session,updatedAt:serverTimestamp()});else tx.delete(this.ref(id));});
       const added=changes.filter(([id,p])=>p&&!this.parts.has(id)).length,removed=changes.filter(([id,p])=>!p&&this.parts.has(id)).length;
       const count=this.partial?(root.data().partCount||0)+added-removed:next.size;
       if(count>MAX_PARTS)throw new Error('มีส่วนเซฟเกินขอบเขต');
       tx.update(this.root(),{...meta,...(next.has("wallet")?{displayMerit:joinGame(next.values()).merit||0}:{}),partCount:count,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
     });
-    for(const [id,p] of changes){if(p){this.parts.set(id,p);this.revs.set(id,(this.revs.get(id)||0)+1);}else{this.parts.delete(id);this.revs.delete(id);}}
+    for(const [id,p] of changes){if(p){this.parts.set(id,p);this.revs.set(id,expected.get(id)+1);}else{this.parts.delete(id);this.revs.delete(id);}}
   }
   async claimMail(mailRef,grant) {
     let result,next,changes;

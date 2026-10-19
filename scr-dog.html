@@ -178,8 +178,8 @@ const PR={drumstick:'น่องไก่',egg:'ไข่ไก่',pork:'เ�
 const CR={carrot:'แครอท',corn:'ข้าวโพด',pumpkin:'ฟักทอง',potato:'มันฝรั่ง',cabbage:'กะหล่ำปลี',pea:'ถั่วลันเตา',tomato:'มะเขือเทศ',watermelon:'แตงโม'};
 const ING=Object.assign({},...Object.entries(PR).map(([k,v])=>({[k]:['product',v]})),...Object.entries(CR).map(([k,v])=>({[k]:['crop',v]})));
 const ingImg=k=>ING[k][0]==='product'?IMG['pr-'+k]:IMG['c-'+k];
-const FOOD=[['rice','🍚','ข้าวคลุกไก่แครอท',{drumstick:150,carrot:200,corn:150},[20,30],'#FFF3C9'],['stew','🍲','สตูว์หมูฟักทอง',{pork:200,pumpkin:200,potato:150},[25,35],'#FFE3CC'],['trotter','🍖','ขาหมูตุ๋นนมสด',{trotter:150,milk:200,cabbage:200},[30,40],'#F7E1D2'],
- ['fishegg','🐟','ข้าวปลาไข่ทอง',{fishmeat:200,egg:200,pea:150},[30,40],'#DDF1FB'],['cheeseball','🧀','ชีสบอลทรัฟเฟิล',{cheese:200,truffle:100,tomato:200},[35,45],'#FFF0B8'],['feast','🍱','จานพรีเมียมเจ้าตูบ',{pork:300,drumstick:300,cheese:200,truffle:150,watermelon:200},[40,60],'#FFDDE6']].map(([id,e,n,need,mer,bg])=>({id,e,n,need,mer,bg}));
+const FOOD=[['rice','🍚','ข้าวคลุกไก่แครอท',{drumstick:150,carrot:200,corn:150},[100,150],'#FFF3C9'],['stew','🍲','สตูว์หมูฟักทอง',{pork:200,pumpkin:200,potato:150},[130,180],'#FFE3CC'],['trotter','🍖','ขาหมูตุ๋นนมสด',{trotter:150,milk:200,cabbage:200},[160,210],'#F7E1D2'],
+ ['fishegg','🐟','ข้าวปลาไข่ทอง',{fishmeat:200,egg:200,pea:150},[190,240],'#DDF1FB'],['cheeseball','🧀','ชีสบอลทรัฟเฟิล',{cheese:200,truffle:100,tomato:200},[220,270],'#FFF0B8'],['feast','🍱','จานพรีเมียมเจ้าตูบ',{pork:300,drumstick:300,cheese:200,truffle:150,watermelon:200},[260,300],'#FFDDE6']].map(([id,e,n,need,mer,bg])=>({id,e,n,need,mer,bg}));
 FOOD.forEach(f=>IMG['food-'+f.id]=FIMG[f.id]);
 const FB=Object.fromEntries(FOOD.map(f=>[f.id,f]));
 const GC=['green','yellow','red','pink','blue'],GN={green:'เขียว',yellow:'เหลือง',red:'แดง',pink:'ชมพู',blue:'ฟ้า'};
@@ -194,7 +194,7 @@ const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S));const e=__H&&__H.lastSet
 const fmt=n=>Number(n||0).toLocaleString('en-US'),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const it=k=>S.bag.item[k]||0,addIt=(k,q)=>S.bag.item[k]=(S.bag.item[k]||0)+q;
 let FAST=false;
-const T={hunger:()=>FAST?40e3:4*3600e3,life:()=>FAST?8*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:2*3600e3,ball:()=>FAST?15e3:30*60e3,guard:()=>FAST?90e3:6*3600e3,guardMax:()=>FAST?360e3:24*3600e3};
+const T={hunger:()=>FAST?40e3:2*3600e3,life:()=>FAST?8*60e3:4*864e5,care:()=>FAST?15e3:5*60e3,cool:()=>FAST?30e3:2*3600e3,drop:()=>FAST?20e3:3600e3,ball:()=>FAST?15e3:30*60e3,guard:()=>FAST?90e3:6*3600e3,guardMax:()=>FAST?360e3:24*3600e3};
 const MB_USE=100,DIG_DAY=3,BALL_DAY=5,BOOT_SWAP=10;
 const today=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);/* วันตามเวลาไทย */
 function day(o){if(o.day!==today()){o.day=today();o.n=0}return o}
@@ -252,11 +252,11 @@ function openDog(c){closeAll();const hu=hungry(c),g=guardOn()&&S.dog.guard.id===
  $('sb').querySelectorAll('[data-f]').forEach(d=>d.onclick=()=>feed(c,d.dataset.f));
  $('dDig').onclick=()=>digWalk(c);$('dGuard').onclick=()=>giveTreat(c);$('dCraft').onclick=openCraft;$('dName').onclick=()=>rename(c);$('dSell').onclick=()=>sell(c)}
 function feed(c,fid){if(!(S.bag.dogfood[fid]>0))return ann('ยังไม่มี'+FB[fid].n+' ไปคราฟก่อนนะ',1);if(!hungry(c))return ann(dogName(c)+'ยังอิ่มอยู่ หิวอีกใน '+left(c.fed+T.hunger()-Date.now()),1);
- S.bag.dogfood[fid]--;c.fed=Date.now();const m=rnd(10,30);S.merit+=m;save();closeAll();const a=actors[c.id];if(a)fx(a.x,a.y-DSZ,'😋 +'+m);ann('🍽️ '+dogName(c)+'กิน'+FB[fid].n+' • +'+m+' กุศล');hud()}
+ S.bag.dogfood[fid]--;c.fed=Date.now();const m=rnd(...FB[fid].mer);S.merit+=m;save();closeAll();const a=actors[c.id];if(a)fx(a.x,a.y-DSZ,'😋 +'+m);ann('🍽️ '+dogName(c)+'กิน'+FB[fid].n+' • +'+m+' กุศล');hud()}
 function rename(c){open('<h3>✏️ ตั้งชื่อหมา</h3><input class="inp" id="nmIn" maxlength="14" value="'+dogName(c)+'"><div class="row"><button class="btn gray" id="nNo">ยกเลิก</button><button class="btn g" id="nOk">บันทึกชื่อ</button></div>');
  $('nNo').onclick=()=>openDog(c);$('nOk').onclick=()=>{const v=$('nmIn').value.trim();if(!v)return ann('ใส่ชื่อก่อนนะ',1);c.name=v;save();closeAll();ann('✏️ ตั้งชื่อเป็น "'+v+'" แล้ว')}}
-function sell(c){open('<div style="text-align:center"><img src="'+IMG['card-'+c.type]+'" style="width:7rem" alt=""><h3>ขาย'+dogName(c)+'?</h3><div class="hint">ได้ 20–50 กุศล • ขายแล้วเอาคืนไม่ได้</div><div class="row"><button class="btn gray" id="sNo">ไม่ขาย</button><button class="btn" id="sOk">ขายเลย</button></div></div>');
- $('sNo').onclick=()=>openDog(c);$('sOk').onclick=()=>{const m=rnd(20,50);S.merit+=m;if(S.dog.guard&&S.dog.guard.id===c.id)S.dog.guard=null;S.dog.list=S.dog.list.filter(x=>x!==c);delete actors[c.id];save();closeAll();draw();ann('💰 ขาย'+dogName(c)+'แล้ว • +'+m+' กุศล')}}
+function sell(c){open('<div style="text-align:center"><img src="'+IMG['card-'+c.type]+'" style="width:7rem" alt=""><h3>ขาย'+dogName(c)+'?</h3><div class="hint">ได้ 1,000–2,000 กุศล • ขายแล้วเอาคืนไม่ได้</div><div class="row"><button class="btn gray" id="sNo">ไม่ขาย</button><button class="btn" id="sOk">ขายเลย</button></div></div>');
+ $('sNo').onclick=()=>openDog(c);$('sOk').onclick=()=>{if(!S.dog.list.includes(c))return closeAll();const m=rnd(1000,2000);S.merit+=m;if(S.dog.guard&&S.dog.guard.id===c.id)S.dog.guard=null;S.dog.list=S.dog.list.filter(x=>x!==c);delete actors[c.id];save();closeAll();draw();ann('💰 ขาย'+dogName(c)+'แล้ว • +'+m+' กุศล')}}
 /* ---------- 📋 รายชื่อหมา (ให้อาหารจากลิสต์ ไม่ต้องไล่จิ้มตัวที่เดินอยู่) ---------- */
 function openRoster(pick){closeAll();const L=penDogs();
  open('<h3>'+(pick?pick[0]:'📋 รายชื่อหมาในคอก')+'</h3><div class="hint">'+(pick?pick[1]:'แตะชื่อเพื่อให้อาหาร / เล่น / ตั้งชื่อ')+'</div>'+(L.length?L.map((c,i)=>{const g=guardOn()&&S.dog.guard.id===c.id;return '<div class="ros" data-i="'+i+'"><img src="'+IMG['card-'+c.type]+'" alt=""><b>'+dogName(c)+(g?' 🛡️':'')+'<small>อยู่ได้อีก '+left(c.at+T.life()-Date.now())+'</small></b><span class="st'+(hungry(c)?' h':'')+'">'+(hungry(c)?'หิว':'อิ่ม')+'</span></div>'}).join(''):'<div class="hint">ยังไม่มีหมาในคอก</div>'));
@@ -272,7 +272,7 @@ function digWalk(c){const a=actors[c.id],dg=day(S.dog.play.dig=S.dog.play.dig||{
 function digResult(c,x,y){if(Math.random()<.35){addIt('boot',1);save();fx(x,y-DSZ,'👢');
   return popup('<img class="chest" src="'+IMG.boot+'" alt=""><h3>'+dogName(c)+'ขุดเจอ… รองเท้าเก่า 😅</h3><div class="hint">เก็บเข้ากระเป๋าแล้ว • สะสมครบ '+BOOT_SWAP+' ข้าง แลกกล่องสุ่มหมาได้ 1 กล่อง<br>มีอยู่ '+it('boot')+' ข้าง</div>')}
  let r=Math.random()*100,d=CHEST[0];for(const z of CHEST){r-=z[2];if(r<=0){d=z;break}}
- const q=d[0]==='merit'?rnd(100,300):d[1];if(d[0]==='merit')S.merit+=q;else addIt(d[0],q);save();hud();fx(x,y-DSZ,'✨');
+ const q=d[0]==='merit'?rnd(500,1500):d[1];if(d[0]==='merit')S.merit+=q;else addIt(d[0],q);save();hud();fx(x,y-DSZ,'✨');
  popup('<img class="chest" src="'+IMG.chest+'" alt=""><h3>🎉 '+dogName(c)+'ขุดเจอหีบสมบัติ!</h3><img class="big" style="width:4.5rem" src="'+(d[0]==='merit'?IMG.merit:d[0]==='boxdog'?IMG.box:IMG[d[0]])+'" alt=""><div class="qty">'+d[3]+' '+(d[0]==='merit'?'+':'×')+fmt(q)+'</div>')}
 /* ---------- 🎾 โยนบอล ---------- */
 const FETCH=[['grass',20,30,'หญ้าสีสุ่ม'],['wood',15,20,'ไม้'],['stone',15,15,'หิน'],['merit',0,20,'กุศล'],['boot',1,10,'รองเท้าเก่า'],['collar',1,5,'ปลอกคอ']];
@@ -287,7 +287,7 @@ function throwBall(){closeAll();const b=day(S.dog.play.ball=S.dog.play.ball||{})
  ann('🎾 โยนบอล! '+dogName(c)+'วิ่งตามไปแล้ว');
  setTimeout(()=>goTo(a,tx,ty+20,'idle',{speed:50,run:'walk-side',onArrive:()=>{bl.remove();a.busy=true;goTo(a,HOME[0]+rnd(-40,40),HOME[1]-30,'sit',{speed:40,run:'fetch',onArrive:()=>{a.busy=false;ballBusy=false;fetchResult(c)}})}}),500)}
 function fetchResult(c){let r=Math.random()*100,d=FETCH[0];for(const z of FETCH){r-=z[2];if(r<=0){d=z;break}}const a=actors[c.id];let q=d[1],nm=d[3];
- if(d[0]==='merit'){q=rnd(10,30);S.merit+=q}else if(d[0]==='grass'){const g=GC[rnd(0,4)];S.bag.grass[g]=(S.bag.grass[g]||0)+q;nm='หญ้า'+GN[g]}else addIt(d[0],q);save();hud();
+ if(d[0]==='merit'){q=rnd(100,300);S.merit+=q}else if(d[0]==='grass'){const g=GC[rnd(0,4)];S.bag.grass[g]=(S.bag.grass[g]||0)+q;nm='หญ้า'+GN[g]}else addIt(d[0],q);save();hud();
  if(a)fx(a.x,a.y-DSZ,d[0]==='boot'?'👢':'🎾');ann('🎾 '+dogName(c)+'คาบ'+nm+' '+(d[0]==='merit'?'+':'×')+q+' กลับมาให้!')}
 /* ---------- 🛡️ หมาเฝ้าสวน ---------- */
 const guardOn=()=>S.dog.guard&&Date.now()<S.dog.guard.until&&S.dog.list.some(c=>c.id===S.dog.guard.id);
@@ -312,7 +312,7 @@ function simThief(kind){closeAll();const who=['มะลิ','ส้มโอ','
 let cq={};
 function openCraft(){closeAll();
  open('<h3>🍳 ครัวอาหารหมา</h3><div class="hint">ใช้ผลผลิตสัตว์ + ผักเป็นหลัก • คราฟได้ 1–10 ครั้ง • ได้ครั้งละ 1 ชาม</div>'+FOOD.map(f=>{const mx=Math.min(10,...Object.entries(f.need).map(([k,q])=>Math.floor(have(k)/q))),q=Math.max(1,Math.min(cq[f.id]||1,10));cq[f.id]=q;
-  return '<div class="rc"><div class="hd"><img src="'+IMG['food-'+f.id]+'" alt=""><div><b>'+f.n+'</b><small>ให้หมากินได้ 10–30 กุศล • มี '+(S.bag.dogfood[f.id]||0)+' ชาม</small></div></div><div class="needs">'+Object.entries(f.need).map(([k,n])=>{const t=n*q,ok=have(k)>=t;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+ingImg(k)+'" alt="">'+ING[k][1]+' '+fmt(have(k))+'/'+fmt(t)+'</span>'}).join('')+'</div>'+
+  return '<div class="rc"><div class="hd"><img src="'+IMG['food-'+f.id]+'" alt=""><div><b>'+f.n+'</b><small>ให้หมากินได้ '+f.mer[0]+'–'+f.mer[1]+' กุศล • มี '+(S.bag.dogfood[f.id]||0)+' ชาม</small></div></div><div class="needs">'+Object.entries(f.need).map(([k,n])=>{const t=n*q,ok=have(k)>=t;return '<span class="need '+(ok?'ok':'no')+'"><img src="'+ingImg(k)+'" alt="">'+ING[k][1]+' '+fmt(have(k))+'/'+fmt(t)+'</span>'}).join('')+'</div>'+
   '<div class="qrow"><small>'+(mx>0?'คราฟได้ '+mx+' ครั้ง':'วัตถุดิบยังไม่พอ')+'</small><button class="st" data-m="'+f.id+'">−</button><span class="q">'+q+'</span><button class="st" data-p="'+f.id+'">+</button><button class="btn g sm" data-c="'+f.id+'"'+(mx<q?' disabled':'')+'>คราฟ</button></div></div>'}).join(''));
  const sb=$('sb');sb.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cq[b.dataset.m]=Math.max(1,cq[b.dataset.m]-1);openCraft()});
  sb.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{cq[b.dataset.p]=Math.min(10,cq[b.dataset.p]+1);openCraft()});
@@ -326,7 +326,7 @@ function openBag(){closeAll();const rows=[['treat',IMG.treat,'ขนมหมา
  if($('bSwap'))$('bSwap').onclick=()=>{if(it('boot')<BOOT_SWAP)return ann('รองเท้าเก่ายังไม่ครบ',1);S.bag.item.boot-=BOOT_SWAP;addIt('boxdog',1);save();closeAll();showCraftResult({title:'แลกรองเท้าเก่า',outputs:[{name:'กล่องสุ่มหมา',image:IMG.box,quantity:1}],consumed:[{name:'รองเท้าเก่า',image:IMG.boot,quantity:BOOT_SWAP}]},openBag)};
  if($('bBox'))$('bBox').onclick=openBox}
 /* ---------- ดูแลทั้งคอก: อาบน้ำ / นวด / เอนเตอร์เทน ---------- */
-const CARE={bath:['🛁','อาบน้ำ','🫧',[30,80]],massage:['💆','นวดตัว','💗',[30,80]],music:['🎵','เอนเตอร์เทน','🎶',[50,150]]};
+const CARE={bath:['🛁','อาบน้ำ','🫧',[50,120]],massage:['💆','นวดตัว','💗',[50,120]],music:['🎵','เอนเตอร์เทน','🎶',[80,220]]};
 function cs(k){k=k+(S.dog.cur||0);const c=S.dog.care[k]=S.dog.care[k]||{};if(c.day!==today()){c.day=today();c.count=0}return c}
 function startCare(k){closeAll();const c=cs(k),n=penDogs().length,now=Date.now();if(!n)return ann('ยังไม่มีหมาในคอก',1);
  if(c.until&&now<c.until)return ann(CARE[k][1]+'อยู่ เหลืออีก '+Math.ceil((c.until-now)/1000)+' วิ',1);
@@ -346,7 +346,7 @@ setInterval(()=>hud(),900);
 /* ---------- ดรอป: หมาที่อิ่มดรอปของทุก 2 ชม. (คำนวณจากเวลา ไม่เปลือง) ---------- */
 const DROP=[['grass',30,30,'หญ้าสีสุ่ม'],['wood',20,20,'ไม้'],['stone',20,15,'หิน'],['treat',2,15,'ขนมหมา'],['collar',1,10,'ปลอกคอ'],['cake',10,10,'เค้ก']];
 function rollDrop(){let r=Math.random()*100;for(const d of DROP){r-=d[2];if(r<=0)return d}return DROP[0]}
-function tickDrops(){const now=Date.now();let ch=false;S.dog.list.forEach(c=>{c.nd=c.nd||now+T.drop();while(now>=c.nd&&S.dog.drops.filter(x=>(x.pen||0)===(c.pen||0)).length<12){if(now-c.fed<T.hunger()+T.drop()){const d=rollDrop(),a=actors[c.id];S.dog.drops.push({pen:c.pen||0,k:d[0],q:d[1],g:GC[rnd(0,4)],x:a?a.x+rnd(-50,50):rnd(200,700),y:a?a.y+rnd(-10,25):rnd(600,1300)});ch=true}c.nd+=T.drop()}if(now>=c.nd)c.nd=now+T.drop()});if(ch){save();drawDrops();hud()}}
+function tickDrops(){const now=Date.now();let ch=false,timer=false;S.dog.list.forEach(c=>{if(!c.nd){c.nd=now+T.drop();timer=true;}while(now>=c.nd&&S.dog.drops.filter(x=>(x.pen||0)===(c.pen||0)).length<12){if(now-c.fed<T.hunger()+T.drop()){const d=rollDrop(),a=actors[c.id];S.dog.drops.push({pen:c.pen||0,k:d[0],q:d[1],g:GC[rnd(0,4)],x:a?a.x+rnd(-50,50):rnd(200,700),y:a?a.y+rnd(-10,25):rnd(600,1300)});ch=true}c.nd+=T.drop()}if(now>=c.nd){c.nd=now+T.drop();timer=true;}});if(ch){save();drawDrops();hud()}else if(timer)save()}
 const dImg=d=>d.k==='grass'?IMG['g-'+d.g]:IMG[d.k];
 function drawDrops(){const s=$('stage');dropEls.forEach(e=>e.remove());dropEls=S.dog.drops.filter(d=>(d.pen||0)===(S.dog.cur||0)).map(d=>{const e=document.createElement('img');e.className='drop2';e.src=dImg(d);Object.assign(e.style,{left:d.x/W*100+'%',top:d.y/H*100+'%'});s.appendChild(e);return e})}
 function collectDrops(){const mine=S.dog.drops.filter(d=>(d.pen||0)===(S.dog.cur||0));if(!mine.length)return ann('ยังไม่มีของบนพื้น',1);const got={};mine.forEach(d=>{if(d.k==='grass'){S.bag.grass[d.g]=(S.bag.grass[d.g]||0)+d.q;const n='หญ้า'+GN[d.g];got[n]=(got[n]||0)+d.q}else{addIt(d.k,d.q);const n=DROP.find(x=>x[0]===d.k)[3];got[n]=(got[n]||0)+d.q}});
@@ -411,7 +411,7 @@ function hud(){S.dog.cur=S.dog.cur||0;const n=S.dog.drops.filter(d=>(d.pen||0)==
  $('sub').textContent='คอก '+(S.dog.cur+1)+' • '+penDogs().length+'/8 ตัว';
  $('pens').innerHTML=[0,1].map(i=>'<button data-p="'+i+'" class="'+(S.dog.cur===i?'on':'')+'"><i>'+(i?'🦴':'🐾')+'</i>คอก '+(i+1)+' · '+S.dog.list.filter(c=>(c.pen||0)===i).length+'</button>').join('');
  $('dock').innerHTML=(n?'<button data-d="c" title="เก็บของ">🧺<i>'+n+'</i></button>':'')+DOCK.map((d,i)=>'<button data-d="'+i+'" title="'+d[1]+'">'+d[0]+'</button>').join('');
- const now=Date.now();$('carebar').innerHTML=(guardOn()?'<span>🛡️</span>':'')+Object.entries(CARE).map(([k,v])=>{const c=S.dog.care[k];if(!c||!c.until)return'';if(now<c.until)return '<span>'+v[0]+' ⏳</span>';if(!c.claimed)return '<span class="ready" data-k="'+k+'">'+v[0]+' รับกุศล</span>';return''}).join('');
+ const now=Date.now();$('carebar').innerHTML=(guardOn()?'<span>🛡️</span>':'')+Object.entries(CARE).map(([k,v])=>{const c=S.dog.care[k+(S.dog.cur||0)];if(!c||!c.until)return'';if(now<c.until)return '<span>'+v[0]+' ⏳</span>';if(!c.claimed)return '<span class="ready" data-k="'+k+'">'+v[0]+' รับกุศล</span>';return''}).join('');
  $('carebar').querySelectorAll('[data-k]').forEach(s=>s.onclick=()=>claim(s.dataset.k))}
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
 document.documentElement.style.setProperty('--bg','url("'+IMG.bg+'")');

@@ -1,6 +1,6 @@
 /* fix15 ข่าวลือในหมู่บ้าน — ป๊อปอัปบนหน้าหลัก (ทับทุกหน้าเกม) ฟังเอกสาร rumors/{uid} เอกสารเดียว ไม่ถามซ้ำ
    ทุกการกดส่งไปเซิร์ฟเวอร์ (rumorActionCloud) · เวลา 10 นาทีนับจากเวลาเซิร์ฟเวอร์ (cur.until) */
-import {RUMOR_GOOD,RUMOR_BAD,RUMOR_GROUPS,rumorName} from './rumor-engine.js?v=ss3-fix15';
+import {RUMOR_GOOD,RUMOR_BAD,RUMOR_GROUPS,rumorName} from './rumor-engine.js?v=ss3-fix16';
 const css=`
 #rmr{position:fixed;inset:0;z-index:90;overflow-y:auto;padding:max(4vh,env(safe-area-inset-top,0px)) 4vw 6vh;display:flex;flex-direction:column;animation:rmfade .25s;font-family:'Mali','Itim',sans-serif;container-type:inline-size}
 #rmr.bad{background:radial-gradient(circle at 50% 40%,rgba(40,22,14,.35),rgba(20,10,6,.75))}

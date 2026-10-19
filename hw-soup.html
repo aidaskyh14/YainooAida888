@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ร้านซุปแม่มด</title>
+<style>
+:root{--w:360px;--cream:#FFFBF5;--cocoa:#6E4B3A;--soft:#9A7A68;--line:#F3E9DE;--bg:#1E1030;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#1E1030}}
+:root[data-theme="light"]{--bg:#1E1030}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+html,body{margin:0;min-height:100%;background:var(--bg);font-family:'Mali','Itim',system-ui,sans-serif;color:var(--cocoa);overflow-x:hidden;user-select:none;-webkit-user-select:none}
+body{background:radial-gradient(circle at 50% 0,#4A2A78,#1E1030 70%)}
+.wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + .4rem) 8px calc(env(safe-area-inset-bottom,0px) + .4rem);gap:.35rem}
+.top{width:var(--w);display:flex;align-items:center;gap:.4rem}
+.back{cursor:pointer;border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font:800 .78rem 'Mali',sans-serif;padding:.3rem .75rem}
+.top h1{margin:0;flex:1;text-align:center;font-family:'Itim','Mali',sans-serif;font-weight:400;font-size:1.15rem;color:#FFE08A;text-shadow:0 2px 0 #6A2C9E}
+.chip{background:rgba(255,251,245,.95);border-radius:999px;padding:.2rem .6rem;font-weight:800;font-size:.74rem;font-variant-numeric:tabular-nums}
+.stage{position:relative;width:var(--w);aspect-ratio:1086/1448;border-radius:1.2rem;overflow:hidden;background:url(images/sp-shop-bg.webp) center/100% 100%;box-shadow:0 0 0 3px rgba(255,255,255,.2),0 12px 30px rgba(0,0,0,.5);flex:none;container-type:inline-size}
+.stage>*{position:absolute}
+.hud{left:33%;right:33%;top:5%;height:5.6%;display:flex;align-items:center;justify-content:center;gap:3cqw;font-weight:800;font-size:3.6cqw;color:#fff;background:rgba(40,16,8,.72);border-radius:999px;border:2px solid #FFC94D;font-variant-numeric:tabular-nums}
+.hud b{font-size:4.2cqw}
+.lvchip{left:2.5%;top:2.5%;background:linear-gradient(90deg,#7A2FB8,#E0582A);color:#fff;border-radius:999px;padding:.6cqw 2.4cqw;font-weight:800;font-size:3cqw;border:2px solid rgba(255,255,255,.7)}
+/* ลูกค้า */
+.cust{position:absolute;bottom:52.6%;width:23%;transform:translateX(-50%);transition:opacity .35s,transform .35s;cursor:pointer}
+.cust img.h{display:block;width:100%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35))}
+.cust.in{animation:walkin .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes walkin{from{transform:translate(-50%,30%) scale(.7);opacity:0}}
+.cust.out{opacity:0;transform:translate(-50%,-8%) scale(.85)}
+.cust.no{animation:no .35s}
+@keyframes no{25%{transform:translateX(-56%)}75%{transform:translateX(-44%)}}
+.cust .bub{position:absolute;left:50%;bottom:96%;transform:translateX(-50%);background:#fff;border-radius:3cqw;padding:1cqw 1.4cqw;display:flex;gap:.8cqw;align-items:center;box-shadow:0 3px 8px rgba(0,0,0,.3);border:2px solid #F3E9DE;white-space:nowrap}
+.cust .bub::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:1.6cqw solid transparent;border-top-color:#fff}
+.cust .bub .o{position:relative;width:9cqw;height:9cqw;opacity:1;transition:opacity .2s}
+.cust .bub .o.done{opacity:.25}
+.cust .bub .o.done::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#2F8F6C;font-weight:800;font-size:6cqw}
+.pat{position:absolute;left:15%;right:15%;bottom:-3.5%;height:1.6cqw;border-radius:9px;background:rgba(0,0,0,.35);overflow:hidden}
+.pat i{position:absolute;left:0;top:0;bottom:0;background:#5FC9A0;transition:width .25s linear}
+.pat i.mid{background:#FFC94D}.pat i.low{background:#E5534B}
+/* ของบนโต๊ะ */
+.src{cursor:pointer;transition:transform .12s}
+.src:active{transform:translate(-50%,-50%) scale(.92)!important}
+.src{transform:translate(-50%,-50%)}
+.src img{display:block;width:100%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35))}
+.src .tag{position:absolute;left:50%;bottom:-6%;transform:translateX(-50%);background:rgba(30,12,50,.75);color:#fff;font-size:2.4cqw;font-weight:800;border-radius:999px;padding:.2cqw 1.4cqw;white-space:nowrap}
+.src.nope{animation:nope .3s}
+@keyframes nope{25%{transform:translate(-56%,-50%)}75%{transform:translate(-44%,-50%)}}
+.dish{position:relative;width:100%;height:100%}
+.dish img{position:absolute;left:50%;transform:translateX(-50%)}
+.plate .dish{position:absolute;left:12%;right:12%;top:-48%;height:120%;width:auto}
+.drink img.d{position:absolute;inset:0;width:100%;animation:popin .3s cubic-bezier(.2,1.6,.4,1)}
+@keyframes popin{from{transform:scale(.4)}}
+.cauld .ring{position:absolute;left:50%;bottom:-17%;transform:translateX(-50%);background:rgba(30,12,50,.82);color:#fff;font-weight:800;font-size:2.8cqw;border-radius:999px;padding:.4cqw 1.8cqw;white-space:nowrap}
+.cauld .bar{position:absolute;left:18%;right:18%;bottom:-4%;height:1.6cqw;background:rgba(0,0,0,.4);border-radius:9px;overflow:hidden}
+.cauld .bar i{position:absolute;left:0;top:0;bottom:0;background:#B66CFF}
+.cauld.ready img{animation:rdy .5s ease-in-out infinite;filter:drop-shadow(0 0 3cqw #E3B6FF)}
+@keyframes rdy{50%{transform:scale(1.05)}}
+.cauld.boil img{filter:grayscale(.7) brightness(.7) drop-shadow(0 0 2cqw #000)}
+.cauld.brew img{animation:brw .6s ease-in-out infinite}
+@keyframes brw{50%{transform:translateY(-1.5%)}}
+.float{pointer-events:none;font-weight:800;font-size:5cqw;color:#FFE08A;text-shadow:0 2px 0 #6A2C9E;transform:translate(-50%,-50%);animation:fl 1s ease-out forwards;z-index:9;white-space:nowrap}
+@keyframes fl{to{transform:translate(-50%,-160%);opacity:0}}
+.cover{inset:0;background:rgba(20,10,40,.55);display:grid;place-items:center;z-index:8}
+.cover .big{font-family:'Itim','Mali',sans-serif;font-size:9cqw;color:#FFE08A;text-shadow:0 3px 0 #6A2C9E,0 0 20px rgba(255,201,77,.7);animation:pp .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pp{from{transform:scale(.3)}}
+.panel{width:var(--w);background:var(--cream);border:3px solid #fff;border-radius:1.2rem;padding:.6rem;display:grid;gap:.45rem;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.row{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;font-size:.74rem;font-weight:800;justify-content:center}
+.cost{display:inline-flex;align-items:center;gap:.15rem;background:#fff;border:2px solid var(--line);border-radius:.7rem;padding:.05rem .45rem .05rem .15rem}
+.cost img{width:1.4rem;height:1.4rem;object-fit:contain}
+.prize{display:inline-flex;gap:.2rem;align-items:center;background:#FFF6D6;border:2px solid #FFE08A;border-radius:.7rem;padding:.08rem .5rem;color:#9A6A00}
+.lvs{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap}
+.lvs span{font-size:.66rem;font-weight:800;border-radius:999px;padding:.05rem .5rem;background:#F3EAFB;color:#5B3687;white-space:nowrap}
+.lvs span.on{background:linear-gradient(90deg,#7A2FB8,#E0582A);color:#fff}.lvs span.done{background:#2F8F6C;color:#fff}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.btn{border:0;border-radius:1rem;font:800 .95rem 'Mali',sans-serif;padding:.6rem;color:#fff;background:linear-gradient(180deg,#8A4FD0,#5B3687);box-shadow:0 4px 0 #3B2357;cursor:pointer}
+.btn.g{background:linear-gradient(180deg,#5FC9A0,#2F8F6C);box-shadow:0 4px 0 #1F6A4F}
+.btn.full{grid-column:1/-1}.btn:disabled{background:#D9D0E4;box-shadow:none;color:#8A7F98}
+.btn:focus-visible,.src:focus-visible,.cust:focus-visible{outline:3px solid #FFE08A;outline-offset:2px}
+.bank{text-align:center;font-size:.8rem;font-weight:800}.bank b{font-size:1.2rem;color:#C98A00}
+.fx{position:fixed;inset:0;pointer-events:none;z-index:20;overflow:hidden}
+.fx i{position:absolute;font-style:normal;font-size:1.4rem;animation:conf linear forwards}
+.fx img{width:1.7rem}
+@keyframes conf{from{transform:translateY(-10vh)}to{transform:translateY(110vh) rotate(var(--r))}}
+.err{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:30;background:#B02A44;color:#fff;font-weight:800;font-size:.8rem;border-radius:.8rem;padding:.5rem .8rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+ <div class="top"><button class="back" id="back">‹ หลังบ้าน</button><h1>🎃 ร้านซุปแม่มด</h1><span class="chip" id="merit">🙏 0</span></div>
+ <div class="stage" id="stage"></div>
+ <div class="panel" id="panel"></div>
+</div>
+<div class="fx" id="fx" aria-hidden="true"></div>
+<script>
+/* fix16 🎃 ร้านซุปแม่มด — หน้าเกมเปิดทับหลังบ้าน · เซิร์ฟเวอร์ (hwmini) จ่ายค่าเข้า ตรวจเวลา ตัดสินผล จ่ายกุศล */
+const API=parent.__HWAPI;let V=null,busy=false;
+const nf=n=>Math.round(n).toLocaleString('en-US'),I=n=>'images/'+(/^halloween-|^lux-/.test(n)?n:'sp-'+n)+'.webp',$=id=>document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
+function fit(){const vw=document.documentElement.clientWidth||innerWidth||390,vh=(window.visualViewport&&visualViewport.height)||innerHeight||0;let w=Math.min(vw-16,480);if(vh>=560)w=Math.min(w,(vh-205)*1086/1448);w=Math.max(260,w);document.documentElement.style.setProperty('--w',w+'px');}
+fit();addEventListener('resize',fit);
+const HAM=['vamp','witch','pump','mummy','ghost','devil'];
+const LV=[{name:'ด่าน 1',lo:4000,hi:6000,total:6,need:6,gap:3500,pat:20000,time:75,win:3500,brew:3500},
+          {name:'ด่าน 2',lo:10000,hi:15000,total:8,need:8,gap:3000,pat:17000,time:80,win:2800,brew:4000},
+          {name:'ด่าน 3',lo:20000,hi:30000,total:10,need:10,gap:2500,pat:15000,time:85,win:2200,brew:4500}];
+const COST={cauldron:20,pumpkin:20,candle:20};
+const now=()=>{try{const t=API.serverNow();return t>0?t:Date.now();}catch(e){return Date.now();}};
+const isOpen=()=>!!(V&&V.open&&V.open.soup);
+const closedMsg=()=>{const c=V&&V.cfg&&V.cfg.soup;if(!c)return 'กำลังโหลด…';return !c.on?'🔒 ปิดปรับปรุงชั่วคราว':`🌙 ปิดแล้ว · เปิด ${String(c.from).padStart(2,'0')}:00–${String(c.to%24).padStart(2,'0')}:00 ทุกวัน`;};
+function err(t){const d=document.createElement('div');d.className='err';d.textContent='⚠️ '+t;document.body.append(d);setTimeout(()=>d.remove(),3500);}
+async function call(input){const out=await API.cloud(input);if(out&&out.view)V=out.view;return out;}
+const SOUPT={candy:'it-candy',batchip:'it-batchip',web:'it-web'},CAKET={eye:'it-eye',minipump:'it-minipump'};/* รูปท็อปปิ้ง */
+let state='ready',level=0,bank=0,last=null,G=null;
+/* ---------- วาดจาน ---------- */
+function dishHTML(d){if(!d)return'';
+ if(d.k==='potion')return `<div class="dish"><img src="${I('it-potion')}" alt="น้ำยาแม่มด" style="width:70%;bottom:0"></div>`;
+ if(d.k==='soup')return `<div class="dish"><img src="${I('it-soup')}" alt="ซุปฟักทอง" style="width:100%;bottom:0">${d.t?`<img src="${I(SOUPT[d.t])}" alt="" style="width:48%;bottom:30%">`:''}</div>`;
+ return `<div class="dish"><img src="${I(d.f==='p'?'it-cake-p':d.f==='o'?'it-cake-o':'it-cake')}" alt="คัพเค้ก" style="width:82%;bottom:0">${d.t?`<img src="${I(CAKET[d.t])}" alt="" style="width:36%;bottom:${d.f?62:48}%">`:''}</div>`;}
+/* ---------- เตรียมฉาก ---------- */
+function scene(){const s=$('stage');s.innerHTML=`<div class="lvchip" id="lvchip"></div><div class="hud" id="hud"></div><div id="custs" style="inset:0"></div>
+ ${['candy','batchip','web','eye','minipump'].map((t,i)=>`<div class="src" data-a="tr:${t}" style="left:${11+i*19.5}%;top:68.5%;width:17.5%" role="button" tabindex="0"><img src="${I('tr-'+t)}" alt=""><span class="tag">${{candy:'ลูกอม',batchip:'ปีกค้างคาว',web:'ครีมใย',eye:'ลูกตา',minipump:'ฟักทองจิ๋ว'}[t]}</span></div>`).join('')}
+ <div class="src" data-a="soup" style="left:10%;top:81%;width:17%" role="button" tabindex="0"><img src="${I('it-soup')}" alt=""><span class="tag">ซุป</span></div>
+ <div class="src" data-a="cake" style="left:10%;top:93.5%;width:13%" role="button" tabindex="0"><img src="${I('it-cake')}" alt=""><span class="tag">คัพเค้ก</span></div>
+ <div class="src" data-a="fp" style="left:27%;top:81%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-p')}" alt=""><span class="tag">ครีมม่วง</span></div>
+ <div class="src" data-a="fo" style="left:27%;top:93.5%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-o')}" alt=""><span class="tag">ครีมส้ม</span></div>
+ <div class="src plate" data-a="plate" style="left:51%;top:91%;width:27%"><img src="${I('it-tray')}" alt="ถาดเสิร์ฟ"><div id="plate"></div></div>
+ <div class="src cauld" id="cauld" data-a="cauld" style="left:76%;top:84%;width:21%" role="button" tabindex="0"><img src="${I('cauldron')}" alt="หม้อต้มน้ำยา"><span class="ring" id="cring">แตะเพื่อต้ม</span><div class="bar"><i id="cbar" style="width:0"></i></div></div>
+ <div class="src drink" data-a="drink" style="left:93.5%;top:79%;width:10%"><div style="position:relative;width:100%;aspect-ratio:3/4;border:2px dashed rgba(255,255,255,.45);border-radius:2cqw" id="drink"></div></div>
+ <div class="src" data-a="trash" style="left:93.5%;top:93.5%;width:10%" role="button" tabindex="0"><img src="${I('it-trash')}" alt="ถังขยะ"></div>`;
+ s.querySelectorAll('.src').forEach(e=>{e.onpointerdown=ev=>{ev.preventDefault();act(e.dataset.a,e);};e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' ')act(e.dataset.a,e)};});}
+/* ---------- เกม: ใช้กติกาเดียวกับเซิร์ฟเวอร์ (soup-sim.js) · บันทึกทุกการกดส่งให้เซิร์ฟเวอร์เล่นซ้ำตัดสินผล ---------- */
+let SIM=null,simLoad=import('./soup-sim.js?v=ss3-fix16').then(m=>{SIM=m;});
+let t0=0,LOG=[],EL={};
+const T=()=>Math.round(performance.now()-t0);
+function nope(e){if(!e)return;e.classList.remove('nope');void e.offsetWidth;e.classList.add('nope');}
+function act(a,e){if(state!=='play'||!G||G.over)return;const t=T();LOG.push([t,a]);const r=SIM.soupAct(G,t,a);if(!r.ok)nope(e);flush();drawPlate();drawDrink();drawCauld();}
+function serve(c){if(state!=='play'||!G||G.over||!c||c.busy)return;const t=T();LOG.push([t,'serve',c.i]);const r=SIM.soupAct(G,t,'serve',c.i);const el=EL[c.i];
+ if(r.ok&&r.hit===false&&el){floatAt(el,'😠 ผิด!');el.classList.remove('no');void el.offsetWidth;el.classList.add('no');}
+ if(r.hit&&el)el.querySelectorAll('.bub .o').forEach((x,i)=>x.classList.toggle('done',c.order[i].done));
+ if(r.done&&el){el.querySelector('img.h').src=I('hm-'+c.h+'-h');el.querySelector('.bub')?.remove();floatAt(el,'❤️ ขอบคุณ!');setTimeout(()=>el.classList.add('out'),900);}
+ flush();drawPlate();drawDrink();hud();}
+function drawPlate(){$('plate').innerHTML=dishHTML(G.plate);}
+function drawDrink(){$('drink').innerHTML=G.drink?`<img class="d" src="${I('it-potion')}" alt="น้ำยาพร้อมเสิร์ฟ">`:'';}
+function drawCauld(){const c=G.cd,el=$('cauld');el.className='src cauld '+c.s;$('cring').textContent={idle:'แตะเพื่อต้ม',brew:'กำลังต้ม…',ready:'✨ ตักเลย!',boil:'💥 ล้น! แตะล้าง'}[c.s];}
+/* เหตุการณ์ตามเวลา → วาดลูกค้า */
+function flush(){if(!G||!G.ev)return;for(const e of G.ev.splice(0)){const c=e.c;
+  if(e.k==='spawn'){const el=document.createElement('div');el.className='cust in';el.style.left=(20+c.slot*30)+'%';el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label','ลูกค้าแฮมสเตอร์');
+   el.innerHTML=`<div class="bub">${c.order.map(o=>`<div class="o">${dishHTML(o)}</div>`).join('')}</div><img class="h" src="${I('hm-'+c.h+'-n')}" alt=""><div class="pat"><i style="width:100%"></i></div>`;
+   el.onpointerdown=ev=>{ev.preventDefault();serve(c);};el.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' ')serve(c)};EL[c.i]=el;$('custs').append(el);}
+  else if(e.k==='expire'){const el=EL[c.i];if(el){floatAt(el,'😤 ช้าจัง!');el.querySelector('.bub')?.remove();setTimeout(()=>el.classList.add('out'),900);}}
+  else if(e.k==='free'){const el=EL[c.i];if(el)el.remove();delete EL[c.i];}
+  else if(e.k==='cauld')drawCauld();}}
+function floatAt(el,t){const r=el.getBoundingClientRect(),s=$('stage').getBoundingClientRect();const f=document.createElement('div');f.className='float';f.style.left=((r.left+r.width/2-s.left)/s.width*100)+'%';f.style.top=((r.top-s.top)/s.height*100+6)+'%';f.textContent=t;$('stage').append(f);setTimeout(()=>f.remove(),1000);}
+function hud(){const L=LV[level],t=G&&G.over?G.over.t:T(),sec=Math.max(0,(G.end-t)/1000);$('hud').innerHTML=`⏰ <b>${Math.ceil(sec)}</b> · 🐹 <b>${G.served}/${L.need}</b>`;$('lvchip').textContent=L.name;}
+/* ---------- ลูปเกม ---------- */
+function loop(){if(state!=='play')return;const t=T();SIM.soupAdvance(G,t);flush();
+ for(const c of G.slots){if(!c||c.busy)continue;const el=EL[c.i];if(!el)continue;const r=1-(t-c.born)/c.pat,bar=el.querySelector('.pat i');bar.style.width=Math.max(0,r*100)+'%';bar.className=r<.3?'low':r<.6?'mid':'';
+  if(r<=.3&&!c.warn){c.warn=true;el.querySelector('img.h').src=I('hm-'+c.h+'-a');}}
+ const cd=G.cd,L=LV[level];if(cd.s==='brew')$('cbar').style.width=Math.min(100,(t-cd.t)/L.brew*100)+'%';else if(cd.s==='ready')$('cbar').style.width=Math.max(0,(1-(t-cd.t)/L.win)*100)+'%';else $('cbar').style.width='0';
+ hud();
+ if(G.over)return finish(G.over.win);
+ requestAnimationFrame(loop);}
+async function round(){await simLoad;const R=V&&V.round;if(!R||!Array.isArray(R.plan)){err('โหลดด่านไม่สำเร็จ');await sync();return;}
+ state='play';panel();scene();EL={};LOG=[];G=SIM.soupNew(LV[level],R.plan);drawCauld();drawPlate();drawDrink();t0=performance.now();hud();
+ cover(LV[level].name+' เริ่ม!',900);requestAnimationFrame(loop);}
+function cover(t,ms){const c=document.createElement('div');c.className='cover';c.innerHTML=`<div class="big">${t}</div>`;$('stage').append(c);setTimeout(()=>c.remove(),ms);}
+async function finish(ok){state='end';let out;
+ try{out=await call({type:'finish',game:'soup',win:!!ok,log:ok?LOG:[]});}catch(e){err(e.message);await sync();return;}
+ const R=out.result||{};
+ if(R.result==='win'||R.result==='take'){bank=R.result==='take'?R.gain:R.bank;level=R.stage+1;cover('🎉 ผ่าน! '+nf(bank)+' 🙏',1500);boom();await wait(1500);
+  if(R.result==='take'){last=R.gain;state='done';bank=0;level=0;panel();return;}state='won';panel();}
+ else{const l=R.loss||0;cover(l?'😿 −'+nf(l):'💔 ไม่ได้อะไรเลย',1500);last=-l;level=0;bank=0;await wait(1500);state='done';panel();}}
+async function take(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'take',game:'soup'});}catch(e){busy=false;err(e.message);await sync();return;}busy=false;last=out.result?.gain||bank;state='done';bank=0;level=0;panel();}
+async function start(){if(busy)return;busy=true;panel();try{await call({type:'start',game:'soup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;level=0;bank=0;last=null;round();}
+async function more(){if(busy)return;busy=true;panel();try{await call({type:'next',game:'soup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;round();}
+async function sync(){let out;try{out=await call({type:'status',game:'soup'});}catch(e){err(e.message);return;}
+ const t=out.tidy;if(t&&t.g==='soup'){if(t.result==='lose')last=-(t.loss||0);else if(t.result==='take')last=t.gain;}
+ const R=V.round;
+ if(R&&R.ph==='decide'){level=R.st+1;bank=R.bank;state='won';panel();return;}
+ if(R&&R.ph==='play'){try{const o=await call({type:'finish',game:'soup',win:false});last=-((o.result&&o.result.loss)||0);}catch(e){}err('ออกจากร้านกลางรอบ นับว่าไม่ผ่าน');}
+ state='ready';level=0;bank=0;panel();}
+/* ---------- แผงล่าง ---------- */
+function panel(){const me=API.fresh(),bag=me.hw||{};$('merit').textContent='🙏 '+nf(me.merit||0);const p=$('panel');
+ const can=Object.entries(COST).every(([k,q])=>(bag[k]||0)>=q),cdl=Math.max(0,((V&&V.cd&&V.cd.soup)||0)-now());
+ const IC={cauldron:['halloween-hw-cauldron','หม้อยา'],pumpkin:['halloween-hw-pumpkin','ฟักทอง'],candle:['halloween-hw-candle','เทียน']};
+ const lvs=`<div class="lvs">${LV.map((l,i)=>`<span class="${i<level?'done':i===level&&state!=='ready'&&state!=='done'?'on':''}">${l.name} 🙏 ${l.lo/1000}–${l.hi/1000}k</span>`).join('')}</div>`;
+ if(state==='ready'||state==='done')p.innerHTML=`${last!==null?`<div class="bank">${last>0?`🎉 ได้ <b>+${nf(last)}</b> กุศล`:last<0?`😿 เสีย <b style="color:#B02A44">${nf(last)}</b> กุศล`:'😿 ไม่ได้อะไรเลย'}</div>`:''}${lvs}<div class="row">ค่าเข้าเล่น ${Object.entries(COST).map(([k,q])=>`<span class="cost"><img src="${I(IC[k][0])}" alt="${IC[k][1]}">${q} <small>/${nf(bag[k]||0)}</small></span>`).join('')}</div><div class="btns"><button class="btn full" id="go" ${V&&can&&!cdl&&isOpen()&&!busy?'':'disabled'}>${!V?'กำลังโหลด…':busy?'⏳ กำลังเปิดร้าน…':!isOpen()?closedMsg():cdl?`⏳ เปิดร้านได้อีกใน ${Math.floor(cdl/60000)}:${String(Math.floor(cdl/1000)%60).padStart(2,'0')}`:!can?'ของฮาโลวีนไม่พอ':'🎃 เปิดร้าน!'}</button></div>`;
+ else if(state==='won'){const nx=LV[level];p.innerHTML=`${lvs}<div class="bank">✅ ผ่าน${LV[level-1].name} · ตอนนี้ได้ <b>${nf(bank)}</b> กุศล</div><div class="row">ไปต่อ${nx.name}: ผ่านได้ <span class="prize">🙏 ${nf(nx.lo)}–${nf(nx.hi)}</span> พลาด = ไม่ได้อะไรเลย</div><div class="btns"><button class="btn g" id="take" ${busy?'disabled':''}>💰 พอแค่นี้</button><button class="btn" id="more" ${busy?'disabled':''}>🔥 ไปต่อ</button></div>`;}
+ else p.innerHTML=`${lvs}<div class="row">🥣 ซุป → ท็อปปิ้ง · 🧁 คัพเค้ก → ครีม → ของแต่ง · 🧪 ต้มแล้วรีบตัก · แตะลูกค้าเพื่อเสิร์ฟ</div>`;
+ if($('go'))$('go').onclick=start;if($('take'))$('take').onclick=take;if($('more'))$('more').onclick=more;}
+function boom(){const fx=$('fx'),set=['🎃','⭐','🍬','✨'];for(let i=0;i<30;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.5)+'s';e.style.animationDelay=Math.random()*.4+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML=`<img src="${I('lux-coin')}" alt="">`;else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4000);}}
+/* ฉากเริ่ม: ลูกค้ายืนโชว์ */
+scene();G={plate:{k:'cake',f:'p',t:'eye'},drink:true,slots:[],cd:{s:'idle'}};drawPlate();drawDrink();drawCauld();$('hud').innerHTML='🎃 พร้อมเปิดร้าน';$('lvchip').textContent='ร้านซุปแม่มด';
+['vamp','ghost','witch'].forEach((h,i)=>{const el=document.createElement('div');el.className='cust in';el.style.left=(20+i*30)+'%';el.innerHTML=`<img class="h" src="${I('hm-'+h+'-h')}" alt="">`;$('custs').append(el);});
+panel();sync();setInterval(()=>{if(state==='ready'||state==='done')panel();},1000);
+$('back').onclick=()=>{if(state==='play'||state==='end'||busy)return err('รอให้จบรอบนี้ก่อนนะ');API.close();};
+</script>
+</body>
+</html>

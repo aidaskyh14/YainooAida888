@@ -15,7 +15,7 @@ function system(path) {
   if (path[0] === 'sub') return path[1];
   if (path[0] === '_ls') return 'module';
   if (['merit','lv','fuel','fuelAt','steals','magics'].includes(path[0])) return 'wallet';
-  if (['plots','barrels','hedge','house','rest','fortune','drops','nextDrop'].includes(path[0])) return 'house';
+  if (['plots','barrels','hedge','house','rest','fortune','drops','nextDrop','hedgeEarn','hedgeLuxAt'].includes(path[0])) return 'house';
   if (['ham','hamster','hamsters','bbq','picnic','backyard'].includes(path[0])) return 'backyard';
   if (path[0] === 'cat') return 'catpen';
   if (['honey','son'].includes(path[0])) return 'outings';

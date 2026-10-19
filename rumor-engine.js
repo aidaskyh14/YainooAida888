@@ -46,7 +46,7 @@ export const RUMOR_BAD=[
 ['ฉันได้ข่าวว่าเธอไม่เคยไปยุ่งอะไรเกี่ยวกับเตียงนอนในบ้านเลย  น้อยมากถ้าไม่บังคับเธอก็ไม่ทำ',5000,[['ไข่นกกระจอกเทศ',10,'bird.ostrich-egg'],['ดอกไม้ คละได้',200,'@flower','mix']]],
 ['เธอเป็นโรคไข้หวัดนกหรืออะไร  หรือเธอกลัวนก  ทำไมเธอไม่ค่อยดูแลใส่ใจ  นกในฟาร์มเธอเลย   เธอนี่มันไม่ได้เรื่องจริงๆ',5000,[['ดอกไม้ คละได้',300,'@flower','mix'],['สากกะเบือ',100,'item.pestle']]]];
 const PATHS=pre=>CATALOG.filter(c=>c.p.startsWith(pre)).map(c=>c.p);
-export const RUMOR_GROUPS={hedge:PATHS('hedge.'),wine:PATHS('wine.'),food:PATHS('food.'),crop:PATHS('crop.'),fruit:['fruit.peach','fruit.apple','fruit.orange','fruit.cherry'],rod:PATHS('rod.'),flower:PATHS('flower.')};
+export const RUMOR_GROUPS={hedge:PATHS('hedge.'),wine:PATHS('wine.'),food:PATHS('food.').filter(p=>CATALOG.find(c=>c.p===p)?.g!=='เมนูมีคลาส'),crop:PATHS('crop.'),fruit:['fruit.peach','fruit.apple','fruit.orange','fruit.cherry'],rod:PATHS('rod.'),flower:PATHS('flower.')};
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const full=p=>/^(sub|pend)\./.test(p)?p:'bag.'+p;
 const get=(g,p)=>{const v=full(p).split('.').reduce((o,k)=>o?.[k],g);return Number.isSafeInteger(Number(v))&&Number(v)>0?Number(v):0;};

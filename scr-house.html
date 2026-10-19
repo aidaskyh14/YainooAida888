@@ -97,6 +97,13 @@ h3{margin:0 0 .3rem;font-size:1.05rem;text-align:center}.hint{font-size:.7rem;co
 .got span{font-size:1.8rem}.got b{font-size:.95rem}
 
 .fimg{width:100%;height:100%;object-fit:contain}
+.ktabs{display:flex;gap:.4rem;margin-bottom:.5rem}.ktab{flex:1;border:2px solid #F3E9DE;background:#fff;border-radius:999px;padding:.42rem;font:inherit;font-weight:800;font-size:.85rem;color:var(--soft);cursor:pointer}
+.ktab.on{background:#6CC9A8;color:#fff;border-color:#fff}.ktab.gold.on{background:linear-gradient(90deg,#B98A2E,#E8C25A);box-shadow:0 0 14px rgba(232,194,90,.6)}
+.opt.cl{display:grid;grid-template-columns:4rem minmax(0,1fr) auto;background:linear-gradient(90deg,#FFF8E6,#fff 60%);border-color:#F3E9DE;text-align:left}
+.opt.cl img.d{width:4rem;height:4rem;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.2))}.opt.cl .r{text-align:center;font-size:.95rem;color:#9A6A00}.opt.cl .r small{display:block;font-size:.58rem;color:var(--soft)}
+.need img.ni{width:1rem;height:1rem;object-fit:contain;vertical-align:-.2rem;margin-right:.1rem}
+.clbig{display:grid;justify-items:center;gap:.3rem;margin:.1rem 0 .4rem}.clbig img{width:8rem;filter:drop-shadow(0 8px 10px rgba(0,0,0,.25));animation:clbob 2.6s ease-in-out infinite}@keyframes clbob{50%{transform:translateY(-5px)}}
+.camp{display:inline-flex;gap:.25rem;align-items:center;background:#FFE3EC;color:#B02A60;border-radius:999px;padding:.1rem .55rem;font-size:.7rem;font-weight:800}
 h3 .fimg{width:auto;height:1.8rem;vertical-align:middle}
 .result .big .fimg{width:auto;height:6.5rem}
 .got span .fimg{width:auto;height:2.6rem}
@@ -133,6 +140,17 @@ const FOODS=[['ข้าวผัดไข่',30,{c:{waterspinach:60,chili:45}}
  ['ไข่อบชีส',22,{c:{waterspinach:55,strawberry:45}},'🧀'],['น่องไก่อบครีม',15,{c:{mango:65,grape:55}},'🍗'],['ขนมลิ้นจี่มะยม',15,{c:{lychee:65,gooseberry:55}},'🍮'],['จานรวมมิตร',8,{c:{banana:65,gooseberry:65,grape:55,strawberry:55}},'🍱'],
  ['ออมเล็ตโรซี่',40,{f:{rose:220,daisy:260,orchid:150}},'🌹'],['ไข่อบอัญชัน',35,{f:{butterflypea:380,sunflower:320,daisy:180}},'💙'],['ไข่ตุ๋นหกบุปผา',22,{f:{rose:260,sunflower:260,daisy:300,lotus:220,butterflypea:300,orchid:220}},'🌼'],['ไข่ย่างสปาฟลาวเวอร์',30,{f:{rose:180,sunflower:220,daisy:220,lotus:180,butterflypea:260,orchid:150}},'🌸']];
 FOODS.forEach((f,i)=>f[3]='<img class="fimg" src="'+IMG['food-'+String(i+1).padStart(2,'0')]+'">');
+/* fix16 🌟 เมนูมีคลาส = food:12–19 (ต้องตรงกับ food-craft-engine.js) */
+const CLASSY=[['cl-peasoup','ซุปครีมถั่วลันเตาทรัฟเฟิล',30,{'crop.pea':220,'product.truffle':40,'product.cream':60,'flower.lavender':50}],
+ ['cl-sashimi','ซาชิมิแตงโมไข่ปลา',35,{'crop.watermelon':200,'product.roe':60,'flower.lotus':40,'fruit.orange':50}],
+ ['cl-risotto','ริซอตโต้แพลงก์ตอน',25,{'crop.plankton':230,'crop.pea':150,'product.cheese':70,'flower.butterflypea':50}],
+ ['cl-rosesalad','สลัดแตงโมกุหลาบชีสนม',45,{'crop.watermelon':180,'flower.rose':80,'product.cheese':50,'product.milk':40}],
+ ['cl-shumai','ขนมจีบแพลงก์ตอนหมูทรัฟเฟิล',30,{'crop.plankton':200,'product.pork':80,'product.truffle':30,'flower.orchid':40}],
+ ['cl-peapasta','พาสต้าถั่วลันเตาไข่นกกระจอกเทศ',35,{'crop.pea':200,'bird.ostrich-egg':50,'product.cheese':60,'flower.sunflower':40}],
+ ['cl-sorbet','ซอร์เบต์แตงโมเชอร์รีลีลาวดี',40,{'crop.watermelon':220,'fruit.cherry':70,'fruit.peach':50,'flower.plumeria':40}],
+ ['cl-fishsteak','สเต๊กปลาซอสแพลงก์ตอนไข่โดโด้',25,{'crop.plankton':180,'crop.watermelon':150,'product.fishmeat':90,'bird.dodo-egg':30,'flower.hibiscus':40}]];
+const CL_PTS={25:600,30:500,35:450,40:400,45:350};
+CLASSY.forEach(c=>FOODS.push([c[1],c[2],{x:c[3]},'<img class="fimg" src="images/'+c[0]+'.webp">',c[0]]));
 const REST=[['sleep','😴','นอนหลับ',7*60,100],['nap','🛌','งีบหลับ',210,45],['crab','🦀','ไล่ปู',60,15],['intro','📖','อินโทรเวิร์ต',30,5]];
 const FORT=[['🙏','ดวงเศรษฐีมาเยือน','วันนี้กุศลจากระบบที่รองรับเพิ่ม 10%'],['🌱','ดวงชาวสวนมือทอง','พืชที่ปลูกวันนี้เติบโตเร็วขึ้น 10%'],['🎣','ดวงนักตกปลาผู้โชคดี','มีโอกาส 15% ได้สัตว์น้ำเพิ่ม'],['🐾','ดวงสัตว์เลี้ยงเอ็นดู','รอบดรอปสัตว์เร็วขึ้น 15%'],['🍳','ดวงนักคราฟท์เทพ','โอกาสคราฟอาหารบ้านสำเร็จเพิ่ม 10%'],
  ['🚣','ดวงเรือพาโชค','ส่งเสบียงเรือมีโอกาส 15% ได้ความคืบหน้าเพิ่ม'],['🎁','ดวงขุมทรัพย์ลับ','ของดรอปเม่นมีโอกาส 10% ได้เพิ่มอีก 1 ชิ้น'],['👭','ดวงเพื่อนรักมาเยือน','เยี่ยมเพื่อนวันนี้ได้โบนัสกุศล 10%'],['🌤️','ดวงวันนี้กลาง ๆ','รับกุศลปลอบใจ +20 ทันที'],['🫠','ดวงซวยนิด ๆ แต่ยังน่ารัก','โอกาสคราฟอาหารบ้านลดลง 5% วันนี้']];
@@ -182,7 +200,7 @@ function draw(){
    const left=b.end-Date.now();bt.style.display='flex';bt.innerHTML='<img src="'+IMG['wine-'+b.w]+'">'+(left>0?fmtT(left):'พร้อมแล้ว!');
    bar.style.display=left>0?'block':'none';if(left>0)bar.firstChild.style.width=Math.min(100,(1-left/(b.end-b.t))*100)+'%'});
   // ของเม่นหล่น
-  if(Date.now()>S.nextDrop){if(S.nextDrop){const n={1:1,2:3,3:5}[S.lv];for(let k=0;k<n;k++)if(S.drops.length<12){const ks=Object.keys(DROPS);S.drops.push({id:Math.random().toString(36).slice(2),k:ks[Math.floor(Math.random()*4)],x:rnd(PEN.x0,PEN.x1),y:rnd(PEN.y0+30,PEN.y1)})}save()}S.nextDrop=Date.now()+mins(30)}
+  if(Date.now()>S.nextDrop){const now=Date.now(),step=mins(30);if(S.nextDrop){const lucky=S.fortune&&S.fortune.i===4&&S.fortune.day===new Date().toDateString();const per={1:1,2:3,3:5}[S.lv]+(lucky?2:0);const cycles=Math.min(12,1+Math.floor((now-S.nextDrop)/step));const ks=Object.keys(DROPS);for(let c=0;c<cycles;c++)for(let k=0;k<per;k++)if(S.drops.length<12)S.drops.push({id:Math.random().toString(36).slice(2),k:ks[Math.floor(Math.random()*4)],x:rnd(PEN.x0,PEN.x1),y:rnd(PEN.y0+30,PEN.y1)});S.nextDrop+=cycles*step;if(S.nextDrop<=now)S.nextDrop=now+step}else S.nextDrop=now+step;save()}
   const ids=new Set(S.drops.map(d=>d.id));Object.keys(dropEls).forEach(id=>{if(!ids.has(id)){dropEls[id].remove();delete dropEls[id]}});
   S.drops.forEach(dd=>{if(dropEls[dd.id])return;const e=document.createElement('div');e.className='drop';e.style.left=dd.x/W*100+'%';e.style.top=dd.y/H*100+'%';e.innerHTML='<img src="'+IMG['hedge-'+dd.k]+'">';e.addEventListener('click',ev=>{ev.stopPropagation();collectDrops([dd.id])});$('stage').appendChild(e);dropEls[dd.id]=e})}}
 setInterval(draw,500);
@@ -213,19 +231,27 @@ function openFortune(){if(guard())return;const day=new Date().toDateString();
   c.classList.add('flip');setTimeout(()=>{$('sheetBody').querySelectorAll('.tcard').forEach(o=>{if(o!==c)o.classList.add('dim')});const f=FORT6[d];$('fRes').innerHTML='<div class="card"><b>'+f[0]+' '+f[1]+'</b><p>'+f[2]+'</p></div>'},550)})}
 function needHTML(o){let ok=true;const parts=[];Object.entries(o.c||{}).forEach(([k,q])=>{const h=quantity((S.bag.crop||{})[k]);if(h<q)ok=false;parts.push('<span class="'+(h<q?'no':'')+'">'+CROPN[k]+' '+h+'/'+q+'</span>')});
  Object.entries(o.f||{}).forEach(([k,q])=>{const h=quantity((S.bag.flower||{})[k]);if(h<q)ok=false;parts.push('<span class="'+(h<q?'no':'')+'">'+FLOWERS[k][0]+' '+h+'/'+q+'</span>')});return[ok,parts.join('')]}
-function needQty(o,n){let ok=true;const parts=[];const add=(have,name,q)=>{if(have<q)ok=false;parts.push('<span class="'+(have<q?'no':'')+'">'+name+' '+have.toLocaleString()+'/'+q.toLocaleString()+'</span>')};
+const bagAt=p=>p.split('.').reduce((o,k)=>o?.[k],S.bag);const ING_N={pea:'ถั่วลันเตา',truffle:'ทรัฟเฟิล',cream:'ครีม',lavender:'ลาเวนเดอร์',watermelon:'แตงโม',roe:'ไข่ปลา',lotus:'ดอกบัว',orange:'ส้ม',plankton:'แพลงก์ตอน',cheese:'ชีส',butterflypea:'อัญชัน',rose:'กุหลาบ',milk:'นมวัว',pork:'เนื้อหมู',orchid:'กล้วยไม้','ostrich-egg':'ไข่นกกระจอกเทศ',sunflower:'ทานตะวัน',cherry:'เชอร์รี',peach:'พีช',plumeria:'ลีลาวดี',fishmeat:'เนื้อปลา','dodo-egg':'ไข่โดโด้',hibiscus:'ชบา'};
+const catAt=p=>{let c={};try{c=__H.catalogItem(p)||{}}catch(e){}return {n:c.n||ING_N[p.split('.')[1]],i:c.i}};
+function needQty(o,n){let ok=true;const parts=[];const add=(have,name,q,img)=>{if(have<q)ok=false;parts.push('<span class="'+(have<q?'no':'')+'">'+(img?'<img class="ni" src="images/'+img+'" alt="">':'')+name+' '+have.toLocaleString()+'/'+q.toLocaleString()+'</span>')};
+ Object.entries(o.x||{}).forEach(([p,q])=>{const c=catAt(p);add(quantity(bagAt(p)),c.n||p.split('.')[1],q*n,c.i)});
  Object.entries(o.c||{}).forEach(([k,q])=>add(quantity((S.bag.crop||{})[k]),CROPN[k],q*n));Object.entries(o.f||{}).forEach(([k,q])=>add(quantity((S.bag.flower||{})[k]),FLOWERS[k][0],q*n));return[ok,parts.join('')]}
-function maxCraft(o){let m=10;Object.entries(o.c||{}).forEach(([k,q])=>m=Math.min(m,Math.floor(quantity((S.bag.crop||{})[k])/q)));Object.entries(o.f||{}).forEach(([k,q])=>m=Math.min(m,Math.floor(quantity((S.bag.flower||{})[k])/q)));return m}
-function openKitchen(){if(guard())return;open('<h3>🔥 ครัว • อาหารบ้าน</h3><div class="hint">แตะเมนูเพื่อเลือกจำนวน • ชื่อเมนูและตัวเลขเป็นของชั่วคราว</div>'+FOODS.map((f,i)=>{const[ok,h]=needQty(f[2],1);return '<button class="opt" data-i="'+i+'"><i>'+f[3]+'</i><span><b>'+f[0]+'</b><span class="need">'+h+'</span></span><span class="r">'+f[1]+'%</span></button>'}).join(''));
+function maxCraft(o){let m=10;Object.entries(o.x||{}).forEach(([p,q])=>m=Math.min(m,Math.floor(quantity(bagAt(p))/q)));Object.entries(o.c||{}).forEach(([k,q])=>m=Math.min(m,Math.floor(quantity((S.bag.crop||{})[k])/q)));Object.entries(o.f||{}).forEach(([k,q])=>m=Math.min(m,Math.floor(quantity((S.bag.flower||{})[k])/q)));return m}
+let kTab='home';
+function openKitchen(tab){if(guard())return;if(typeof tab==='string')kTab=tab;const cl=kTab==='classy';
+ open('<h3>🔥 ครัว</h3><div class="ktabs"><button class="ktab'+(cl?'':' on')+'" data-kt="home">🍳 อาหารบ้าน</button><button class="ktab gold'+(cl?' on':'')+'" data-kt="classy">🌟 เมนูมีคลาส</button></div>'+
+  (cl?'<div class="hint">แตะเมนูเพื่อเลือกจำนวน • ใช้ป้อนแฮมสเตอร์/เม่น หรือส่งขึ้นเรือได้</div>':'<div class="hint">แตะเมนูเพื่อเลือกจำนวน</div>')+
+  FOODS.map((f,i)=>{if(!!f[4]!==cl)return '';const[ok,h]=needQty(f[2],1);return cl?'<button class="opt cl" data-i="'+i+'"><img class="d" src="images/'+f[4]+'.webp" alt=""><span><b>'+f[0]+'</b><span class="need">'+h+'</span></span><span class="r">'+f[1]+'%<small>สำเร็จ</small></span></button>':'<button class="opt" data-i="'+i+'"><i>'+f[3]+'</i><span><b>'+f[0]+'</b><span class="need">'+h+'</span></span><span class="r">'+f[1]+'%</span></button>'}).join(''));
+ $('sheetBody').querySelectorAll('[data-kt]').forEach(b=>b.onclick=()=>openKitchen(b.dataset.kt));
  $('sheetBody').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openCraft(+b.dataset.i,1))}
 function openCraft(i,n){const f=FOODS[i],mx=maxCraft(f[2]);n=Math.max(1,Math.min(10,n));const[ok,h]=needQty(f[2],n);
- open('<h3>'+f[3]+' '+f[0]+'</h3><div class="hint">โอกาสสำเร็จครั้งละ '+f[1]+'% • คราฟได้สูงสุด 10 ครั้งต่อรอบ</div>'+
+ open((f[4]?'<h3>🌟 '+f[0]+'</h3><div class="clbig"><img src="images/'+f[4]+'.webp" alt=""><span class="camp">👩‍🍳 เสน่ห์ปลายจวัก +'+CL_PTS[f[1]]+' คะแนน/จาน</span></div>':'<h3>'+f[3]+' '+f[0]+'</h3>')+'<div class="hint">โอกาสสำเร็จครั้งละ '+f[1]+'% • คราฟได้สูงสุด 10 ครั้งต่อรอบ</div>'+
   '<div class="qty"><button id="qm">−</button><b>'+n+'</b><button id="qp">＋</button><button class="mx" id="qx">สูงสุด ('+Math.max(1,mx)+')</button></div>'+
   '<div class="hint" style="margin:.5rem 0 .2rem">วัตถุดิบที่จะใช้ทั้งหมด</div><div class="need" style="justify-content:center">'+h+'</div>'+
   '<div class="hint" style="margin-top:.5rem">ถ้าไม่สำเร็จ วัตถุดิบก็ถูกใช้ไปแล้วนะ</div>'+
   '<div class="row2"><button class="btn2 gray" id="cNo">ยกเลิก</button><button class="btn2" id="cGo"'+(ok?'':' disabled')+'>'+(ok?'ยืนยันคราฟ '+n+' ครั้ง':'วัตถุดิบไม่พอ')+'</button></div>');
- $('qm').onclick=()=>openCraft(i,n-1);$('qp').onclick=()=>openCraft(i,n+1);$('qx').onclick=()=>openCraft(i,Math.max(1,mx));$('cNo').onclick=openKitchen;
- $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'food:'+i,quantity:n});S=loadS();closeAll();showCraftResult(out,openKitchen);}catch(err){toast(err.message,1);S=loadS();openKitchen();}finally{window.foodCraftBusy=false;}};}
+ $('qm').onclick=()=>openCraft(i,n-1);$('qp').onclick=()=>openCraft(i,n+1);$('qx').onclick=()=>openCraft(i,Math.max(1,mx));$('cNo').onclick=()=>openKitchen();
+ $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'food:'+i,quantity:n});S=loadS();closeAll();showCraftResult(out,()=>openKitchen());}catch(err){toast(err.message,1);S=loadS();openKitchen();}finally{window.foodCraftBusy=false;}};}
 function openFlowerPick(i){open('<h3>🌸 '+(i<0?'ปลูกดอกไม้ทั้งหมด':'ปลูกดอกไม้ แปลงที่ '+(i+1))+'</h3><div class="hint">'+(i<0?'เลือก 1 ชนิด ปลูกทุกแปลงที่ว่าง':'แตะดอกไม้ที่อยากปลูก')+'</div><div class="grid">'+Object.entries(FLOWERS).map(([k,f])=>'<div class="cell" data-k="'+k+'"><img src="'+IMG['fl-'+k]+'"><b>'+f[0]+'</b><span>'+(f[1]>=60?(f[1]/60).toFixed(f[1]%60?1:0)+' ชม.':f[1]+' นาที')+'</span></div>').join('')+'</div>');
  $('sheetBody').querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>{const k=c.dataset.k,now=Date.now();if(i<0){let n=0;S.plots.forEach((p,j)=>{if(!p){S.plots[j]={f:k,t:now};n++}});toast('ปลูก'+FLOWERS[k][0]+' '+n+' แปลงแล้ว')}else{S.plots[i]={f:k,t:now};toast('ปลูก'+FLOWERS[k][0]+'แล้ว')}save();closeAll();draw()})}
 function tapPlot(i){if(guard())return;const p=S.plots[i];if(!p)return openFlowerPick(i);const st=fStage(p),F=FLOWERS[p.f];
@@ -247,8 +273,8 @@ function tapBarrel(i){if(guard())return;const b=S.barrels[i];
   if(S.barrels[i]){closeAll();draw();return toast('ถังนี้กำลังหมักไวน์อยู่แล้ว',1)}
   if(!Object.entries(w[2]).every(([c,q])=>quantity((S.bag.crop||{})[c])>=q)){closeAll();return toast('ผักไม่พอแล้ว',1)}
   Object.entries(w[2]).forEach(([c,q])=>S.bag.crop[c]-=q);S.barrels[i]={w:k,t:Date.now(),end:Date.now()+mins(w[1]*60)};save();closeAll();draw();toast('เริ่มหมัก'+w[0]+'แล้ว')}finally{window.wineBusy=false}})}
-function collectDrops(ids){if(guard())return;const got={};S.drops=S.drops.filter(d=>{if(ids.includes(d.id)){got[d.k]=(got[d.k]||0)+1;S.bag.hedge[d.k]=(S.bag.hedge[d.k]||0)+1;return false}return true});save();draw();
- toast('🦔 เก็บ '+Object.entries(got).map(([k,q])=>DROPS[k]+' ×'+q).join(' • '))}
+function collectDrops(ids){if(guard())return;const got={};S.drops=S.drops.filter(d=>{if(ids.includes(d.id)){got[d.k]=(got[d.k]||0)+1;S.bag.hedge[d.k]=(S.bag.hedge[d.k]||0)+1;return false}return true});const n=Object.values(got).reduce((a,b)=>a+b,0),cm=n*30;if(cm>0){S.merit=(S.merit||0)+cm;S.hedgeEarn=(S.hedgeEarn||0)+cm}save();draw();
+ toast('🦔 เก็บ '+Object.entries(got).map(([k,q])=>DROPS[k]+' ×'+q).join(' • ')+(cm>0?' • 🪷 +'+cm.toLocaleString():''))}
 let bagTab='flower';
 function openBag(){const T={crop:'🥬 ผัก',flower:'🌸 ดอกไม้',wine:'🍷 ไวน์',food:'🍲 อาหารบ้าน',hedge:'🦔 ของเม่น',item:'✨ ไอเทม'};
  const render=()=>{const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>quantity(q)>0);
@@ -301,4 +327,5 @@ window.openUpgrade=function(){const nx=(S.lv||1)+1;if(nx>3)return toast('🏠 �
  const rows=Object.entries(need).map(([k,n])=>{const h=quantity(f[k]);if(h<n)ok=false;return '<div style="display:flex;justify-content:space-between;padding:.2rem 0"><span>'+{wood:'ไม้',stone:'หิน',rope:'เชือก',steel:'เหล็ก'}[k]+'</span><b style="color:'+(h>=n?'#2F8A65':'#C8443D')+'">'+Math.min(h,n).toLocaleString()+' / '+n.toLocaleString()+'</b></div>'}).join('');
  H.ask('🏠 อัปเกรดบ้านเป็น Lv.'+nx,rows+'<div style="font-size:.75rem;color:#9A7A68;margin-top:.3rem">บ้านใหญ่ขึ้น เม่นแคระเพิ่มเป็น '+({2:3,3:5}[nx])+' ตัว</div>',ok?'อัปเกรดเลย':'',()=>{if((S.lv||1)+1!==nx)return;if(!Object.entries(need).every(([k,n])=>quantity((S.bag.forest||{})[k])>=n))return toast('วัสดุไม่พอแล้ว',1);for(const k in need)S.bag.forest[k]-=need[k];S.lv=nx;save();build();toast('🎉 บ้านเลเวล '+nx+' แล้ว!')})};
 const b=document.createElement('button');b.textContent='🏠⬆️';b.title='อัปเกรดบ้าน';b.style.cssText='position:fixed;left:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);z-index:30;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.92);font-size:1.05rem;padding:.35rem .6rem;box-shadow:0 3px 8px rgba(0,0,0,.2)';b.onclick=()=>openUpgrade();document.body.appendChild(b);
-})();</script></body></html>
+})();</script><script src="lux-feed.js?v=ss3-fix16"></script><script>/* fix16 🍽️ ให้อาหารหรูเม่น (เฉพาะสวนเม่นชั้นล่าง) */
+if(typeof LuxFeed!=='undefined')LuxFeed.mount({ls:__LS,page:'house',state:()=>S,visible:()=>room!=='up',guard:()=>guard(),reload:()=>{S=loadS();draw()},target:()=>hedges[0]&&hedges[0].el,toast:(m,e)=>toast(m,e),bottom:'.7rem'});</script></body></html>

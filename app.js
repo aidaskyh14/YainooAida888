@@ -1,22 +1,22 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix15';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix15';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix16';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix15';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix15';
-import {observeGameplay} from './campaign-progress.js?v=ss3-recovery6';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix16';
+import {observeGameplay} from './campaign-progress.js?v=ss3-fix16';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
-import {startRumors} from './rumor-ui.js?v=ss3-fix15';
-import {startAlerts} from './alerts-ui.js?v=ss3-fix15g';
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix15';
+import {startRumors} from './rumor-ui.js?v=ss3-fix16';
+import {startAlerts} from './alerts-ui.js?v=ss3-fix16';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix16';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-fix15';
-import { splitGame,joinGame } from './save-schema.js?v=ss3-recovery6';
-import { installBackupUI } from './save-backup.js?v=ss3-recovery6';
-import { CATALOG } from './catalog.js?v=ss3-fix15';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix16';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-fix16';
+import { installBackupUI } from './save-backup.js?v=ss3-fix16';
+import { CATALOG } from './catalog.js?v=ss3-fix16';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -77,11 +77,12 @@ function queueGameplay(before,after,source,boxes){
  const meritChanged=pet&&(after.merit||0)>(before.merit||0);
  const craftChanged=craft&&['food','gfood','wine','flower','hedge','crop'].some(k=>increased(before.bag?.[k],after.bag?.[k]));
  // `at` is the device clock; the server offset is applied when the job is scored.
- if(boxes.length||stockChanged||meritChanged||craftChanged)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,at:Date.now()});
+ const petEarn=craft&&((after.hedgeEarn||0)>(before.hedgeEarn||0)||(after.ham?.earn||0)>(before.ham?.earn||0));
+ if(boxes.length||stockChanged||meritChanged||craftChanged||petEarn)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,petEarn,at:Date.now()});
 }
-const CAMPAIGN_SOURCES={pet:['barn','birds','dog','alpaca','catpen'],cook:['farm','house','backyard'],pump:['farm','house','backyard']};
+const CAMPAIGN_SOURCES={pet:['barn','birds','dog','alpaca','catpen','house','backyard'],cook:['farm','house','backyard'],pump:['farm','house','backyard']};
 // A cached config is only trusted for a job after the fetch when every campaign that job could score is already running.
-function configCovers(cfg,job,now){const ids=job.boxes?.length?['box']:Object.keys(CAMPAIGN_SOURCES).filter(id=>CAMPAIGN_SOURCES[id].includes(job.source));return ids.every(id=>cfg?.[id]?.start&&cfg[id].start<=now&&now<cfg[id].end);}
+function configCovers(cfg,job,now){const ids=job.boxes?.length?['box']:Object.keys(CAMPAIGN_SOURCES).filter(id=>CAMPAIGN_SOURCES[id].includes(job.source)&&(id!=='pet'||!['house','backyard'].includes(job.source)||job.petEarn));return ids.every(id=>cfg?.[id]?.start&&cfg[id].start<=now&&now<cfg[id].end);}
 async function prepareGameplay(){
  if(!campaignJobs.length)return;
  let jobs=campaignJobs.slice();
@@ -177,18 +178,26 @@ function sizeOf(o) { return new Blob([JSON.stringify(o)]).size; }
 let saveDotT;
 function showSave(t, bad) { const d = $('#saveDot'); d.hidden = false; d.textContent = t; d.classList.toggle('bad', !!bad); clearTimeout(saveDotT); if (!bad && t.includes('✓')) saveDotT = setTimeout(() => d.hidden = true, 1500); }
 async function flush() {
-  if (!S.user || !S.P || S.blocked || !S.dirty.size) return;
+  if (!S.user || !S.P || S.blocked || (!S.dirty.size && !campaignJobs.length)) return;
   if (S.saving) { await S.saving; return flush(); }
+  if (S.claiming) { await S.claiming.catch(()=>{}); return flush(); }
   // Campaign progress must not be written while a cloud action (which may also write it) is in flight.
   if(cloudPromise&&!cloudFlushing){await cloudPromise.catch(()=>{});return flush();}
   if(S.preparing){await S.preparing;return flush();}
-  S.preparing=prepareGameplay();try{await S.preparing;}finally{S.preparing=null;}
-  const fields = [...S.dirty]; S.dirty.clear();
-  const snapshot = {...S.P, g: clone(S.P.g)};
-  S.saving = store.save(snapshot, fields);
-  try { await S.saving; showSave('บันทึกแล้ว ✓'); }
-  catch (e) { fields.forEach(f => S.dirty.add(f)); onSaveError(e); throw e; }
-  finally { S.saving = false; if (S.frame && !S.blocked && !S.dirty.size) S.frame.style.pointerEvents = ''; }
+  // fix16: บันทึกของในเกมก่อนเสมอ (ขาย/วาง/ให้อาหารสัตว์ ต้องไม่หายถ้ารีเฟรชเร็ว) แล้วค่อยนับคะแนนแคมเปญเป็นรอบถัดไป
+  if (S.dirty.size) {
+    const fields = [...S.dirty]; S.dirty.clear();
+    const snapshot = {...S.P, g: clone(S.P.g)};
+    S.saving = store.save(snapshot, fields);
+    try { await S.saving; showSave('บันทึกแล้ว ✓'); }
+    catch (e) { fields.forEach(f => S.dirty.add(f)); onSaveError(e); throw e; }
+    finally { S.saving = false; if (S.frame && !S.blocked && !S.dirty.size) S.frame.style.pointerEvents = ''; }
+  }
+  if (campaignJobs.length && !S.blocked && !campaignKick) {
+    const before = campaignJobs.length;
+    S.preparing=prepareGameplay();try{await S.preparing;}finally{S.preparing=null;}
+    if (campaignJobs.length < before) { S.dirty.add('g'); return flush(); }
+  }
 }
 function onSaveError(e) {
   if (e.code === 'save/conflict') { otherDevice(); return; }
@@ -211,6 +220,8 @@ function startSaver() {
   clearInterval(S.timer); S.timer = setInterval(() => flush().catch(() => {}), SAVE_EVERY_MS);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush().catch(() => {}); });
   window.addEventListener('pagehide', () => flush().catch(() => {}));
+  // fix16: ปิด/รีเฟรชหน้าก่อนบันทึกเสร็จ → เตือนก่อน (กันขายแล้วสัตว์กลับมา / วางแล้วหาย)
+  window.addEventListener('beforeunload', e => { try { frameSave(); } catch (_) {} if (S.user && !S.blocked && (S.dirty.size || S.saving || S.claiming || cloudPromise)) { flush().catch(() => {}); e.preventDefault(); e.returnValue = ''; } });
   window.addEventListener('online', () => flush().catch(() => {}));
 }
 
@@ -449,7 +460,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
+const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -471,13 +482,19 @@ async function sceneSafeAction(system,input){
  try{const out=await cloudAction(system,input);changed=true;return out;}
  finally{if(!changed||!S.frame||!S.screen)thaw();else{reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}}
 }
+const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return false;}};/* fix16: มินิเกมฮาโลวีนเปิดอยู่ (หน้าสัตว์หยุดบันทึก รอโหลดใหม่ตอนปิดเกม) */
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
 let alertStop=null;
 function watchAlerts(){alertStop?.();alertStop=null;if(!S.user||S.admin)return;
- alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,toast});}
+ alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,go:n=>goScreen(n)});}
 function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
- rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating,game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
+ rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen(),game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
+/* fix16: ระหว่างฉากเรียกคลาวด์ (เช่น เตาทำอาหาร) กันการแตะในฉากชั่วคราว ไม่ให้วาง/ขายสัตว์แล้วถูกผลจากคลาวด์ทับจนหาย */
+async function sceneCloud(system,input){let shield=document.getElementById('cloudShield');
+ if(!shield){shield=document.createElement('div');shield.id='cloudShield';shield.style.cssText='position:fixed;inset:0;z-index:2147483000;background:transparent;cursor:progress';shield.setAttribute('aria-hidden','true');}
+ const quiet=input&&input.type==='status'||!['backyard','house','catpen','dog','alpaca','barn','birds'].includes(S.screen);if(!quiet)document.body.appendChild(shield);
+ try{return await cloudAction(system,input);}finally{if(!quiet)shield.remove();}}
 async function cloudAction(system,input) {
   if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
   if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');
@@ -537,7 +554,7 @@ const HOST_BASE = {
   get coins(){return S.P?.coins||0;},
   openAdmin(){if(S.admin)openAdminOverlay();},
   get uid() { return S.user?.uid||''; },
-  cloud:cloudAction,
+  cloud:sceneCloud,
   // fix15: ตัดขนอัลปาก้า/เก็บดอกไม้ทำในหน้าเกม แจ้งยอดให้เควสต์เนเบอร์ฮูดแบบรวมเป็นชุด (ไม่เกินทุก 20 วินาที)
   nbReport(kind,n){if(!['shear','flower'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
@@ -629,7 +646,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix15f'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix16'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -668,8 +685,12 @@ async function claim(id, btn) {
   busy(btn, true, 'กำลังรับ…'); if(cloudPromise)await cloudPromise;frameSave();
   const mref = doc(db, 'mail', S.user.uid, 'items', id);
   let got;
+  // fix16: ระหว่างรับของ หยุดรับเซฟจากหน้าฉาก (ตัวจับเวลาสัตว์) ไม่ให้บันทึกชนกันจนของหาย · เสร็จแล้วโหลดฉากใหม่
+  const H=window.__HOST,held=H?{set:H.set,del:H.del}:null;let release;
   try {
     await flush();
+    if(H){H.set=()=>{};H.del=()=>{};}
+    S.claiming=new Promise(r=>{release=r;});
     got = await store.claimMail(mref, (game, mail) => {
       const release=mail.escrowRelease;if(release&&game.sub?.minigames?.escrows?.[release.system]?.round===release.round)delete game.sub.minigames.escrows[release.system];
       if (mail.kusal) game.merit = (game.merit || 0) + mail.kusal;
@@ -677,11 +698,12 @@ async function claim(id, btn) {
       refillAdminInventory(game,S.admin,CATALOG);
     });
   } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(true); } else toast(thaiError(e)); return; }
+  finally { if(H&&held){H.set=held.set;H.del=held.del;} S.claiming=null; release?.(); }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
   S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
   S.P.g=joinGame(store.parts.values());
   refillAdminInventory(S.P.g,S.admin,CATALOG);
-  reloadScreen();
+  if(!hwOpen())reloadScreen();
   toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail(true);
 }
 
@@ -883,8 +905,23 @@ async function tabSettings() {
   await loadSettings();
   $('#aBody').innerHTML = `<div class="box"><h3>⚙️ เปิด/ปิดเกม</h3><p>ตอนนี้: ${S.settings.open ? '<span class="ok">🟢 เปิดให้ผู้เล่นเข้า</span>' : '<span class="warn">🔴 ปิด (เข้าได้เฉพาะแอดมิน)</span>'}</p>
     <button class="btn ${S.settings.open ? 'pink' : ''}" id="tOpen">${S.settings.open ? 'ปิดเกม' : 'เปิดเกมให้ทุกคน'}</button><p class="note">ตอนปิด ผู้เล่นเข้าระบบได้แต่เห็นหน้า "สวนกำลังจะเปิด"</p></div>
+    <div class="box" id="hwmBox"><h3>🎮 มินิเกมฮาโลวีน</h3><p class="note">กำลังโหลด…</p></div>
     <div class="box"><h3>ℹ️ ข้อมูลเครื่องนี้</h3><p class="note">รหัสบัญชีของคุณ (ใช้ตั้งสิทธิ์แอดมิน): <b>${S.user.uid}</b><br>ขนาดข้อมูลในหน่วยความจำ: ${(sizeOf(S.P) / 1024).toFixed(1)}KB • ข้อมูลเกมใน Firebase แยกตามระบบแล้ว</p></div>`;
   $('#tOpen').onclick = async () => { try { await setDoc(doc(db, 'settings', 'global'), { open: !S.settings.open, at: serverTimestamp() }, { merge: true }); toast('บันทึกแล้ว'); tabSettings(); } catch (e) { toast(thaiError(e)); } };
+  hwmAdmin();
+}
+/* fix16: เปิด/ปิด + เวลาเปิดร้าน ของมินิเกมฮาโลวีน (เก็บที่ world/hwmini · ผู้เล่นเห็นผลตอนเปิดเกมครั้งถัดไป) */
+async function hwmAdmin(){const box=$('#hwmBox');if(!box)return;let v;
+  try{v=(await cloudAction('hwmini',{type:'status'})).view;}catch(e){box.innerHTML='<h3>🎮 มินิเกมฮาโลวีน</h3><p class="warn">'+esc(thaiError(e))+'</p>';return;}
+  if(!document.contains(box))return;
+  const G=[['cup','🎩 หาแมวในแก้ว','คอกแมว'],['soup','🎃 ร้านซุปแม่มด','หลังบ้าน']],hh=(n,sel,max)=>Array.from({length:max+1},(_,i)=>i).filter(i=>n==='to'?i>=1:i<=23).map(i=>`<option value="${i}"${i===sel?' selected':''}>${String(i).padStart(2,'0')}:00</option>`).join('');
+  box.innerHTML='<h3>🎮 มินิเกมฮาโลวีน</h3>'+G.map(([k,n,where])=>{const c=v.cfg[k];return `<div class="hwm" style="border:2px solid #F3E9DE;border-radius:1rem;padding:.6rem;margin:.4rem 0;background:#fff">
+   <div class="row" style="justify-content:space-between"><b>${n} <small style="color:#9A7A68">(${where})</small></b><span>${c.on?(v.open[k]?'<span class="ok">🟢 เปิดอยู่</span>':'<span class="warn">🌙 นอกเวลา</span>'):'<span class="warn">🔴 ปิด</span>'}</span></div>
+   <div class="row" style="gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><label>เปิด <select data-hf="${k}">${hh('from',c.from,23)}</select></label><label>ปิด <select data-ht="${k}">${hh('to',c.to,24)}</select></label>
+   <button class="btn sm" data-hs="${k}">💾 บันทึกเวลา</button><button class="btn sm ${c.on?'pink':''}" data-ho="${k}">${c.on?'ปิดเกม':'เปิดเกม'}</button></div></div>`}).join('')+'<p class="note">เวลาไทย • เปลี่ยนแล้วมีผลทันทีกับการเริ่มรอบใหม่</p>';
+  const save=async(k,set)=>{try{await cloudAction('hwmini',{type:'config',game:k,set});toast('บันทึกแล้ว');hwmAdmin();}catch(e){toast(thaiError(e));}};
+  box.querySelectorAll('[data-hs]').forEach(b=>b.onclick=()=>{const k=b.dataset.hs;save(k,{from:+box.querySelector(`[data-hf="${k}"]`).value,to:+box.querySelector(`[data-ht="${k}"]`).value});});
+  box.querySelectorAll('[data-ho]').forEach(b=>b.onclick=()=>save(b.dataset.ho,{on:!v.cfg[b.dataset.ho].on}));
 }
 
 // ---------- เริ่มต้น ----------

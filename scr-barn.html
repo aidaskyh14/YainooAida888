@@ -66,7 +66,7 @@ const TYPES={chicken:{e:'🐔',n:'เล้าไก่',an:'ไก่',prod:3,l
  cow:{e:'🐄',n:'คอกวัว',an:'วัว',prod:5,life:12,p:['milk','cheese','cream'],rows:[[745,[200,465,745]],[965,[178,470,772]],[1220,[158,470,785]]],tr:[470,1432,560,110]}};
 const PN={egg:'ไข่ไก่',feather:'ขนไก่',drumstick:'น่องไก่',fishmeat:'เนื้อปลา',roe:'ไข่ปลา',scale:'เกล็ดปลาจันทร์',truffle:'เห็ดทรัฟเฟิล',pork:'เนื้อหมู',trotter:'ขาหมูทองคำ',milk:'นมวัว',cheese:'ชีส',cream:'ครีม'};
 const BOOST=[['pestle','สากกะเบือ',12,'ได้ ⭐ ธรรมดา'],['hay','ฟ่อนหญ้าหวาน',6,'ได้ ⭐ ธรรมดา หรือ ⭐⭐ พิเศษ'],['musicbox','กล่องดนตรีกล่อมสัตว์',3,'ได้ ⭐⭐ พิเศษ'],['bell','กระดิ่งทองนำโชค',1,'ได้ ⭐⭐⭐ หายาก']];
-const SELL={chicken:5,fish:5,pig:10,cow:20};
+const SELL={chicken:300,fish:300,pig:800,cow:1500},COLLECT_MER={chicken:30,fish:20,pig:70,cow:60};
 const ORDER=['chicken','fish','pig','cow'];const FRIENDS=['ส้มโอ','ฟ้าใส','Porpla','Kongkwan','Earn','ลุงชาวสวน'];
 let HOUR=3600000; // ทดลอง: 1 ชม.ในเกม = 10 วินาที
 const KEY='s3barn3';let S;try{S=JSON.parse(__LS.getItem(KEY)||'null')}catch(e){}
@@ -126,10 +126,10 @@ document.addEventListener('click',e=>{const b=e.target.closest('#sb [data-k]');i
  S.items[k]-=need;list.forEach(i=>{const a=S.animals[pen][i];S.trough[pen][k]++;a.next=Date.now()+TYPES[pen].prod*HOUR;slide(i)});S.cool=Date.now()+60000;save();closeAll();drawTrough();updBars();ann('⚡ เร่ง '+list.length+' ตัวแล้ว! ผลผลิตไหลไปที่ราง • ใช้ของเร่งครั้งถัดไปได้ใน 1 นาที')});
 const tTot=t=>Object.values(S.trough[t]).reduce((x,y)=>x+y,0);
 function rollFrom(t,src){const p=TYPES[t].p;if(src==='bell')return p[2];if(src==='musicbox')return p[1];if(src==='hay')return Math.random()<.5?p[0]:p[1];return p[0]}
-function collect(pens){const got={};let rounds=0;pens.forEach(t=>{Object.entries(S.trough[t]).forEach(([src,n])=>{rounds+=n;for(let k=0;k<n;k++){const q=Math.random()<.82?2:3;const it=rollFrom(t,src);got[it]=(got[it]||0)+q}S.trough[t][src]=0})});
- if(!rounds)return ann('ยังไม่มีผลผลิตในราง',1);Object.entries(got).forEach(([k,q])=>S.bag[k]=(S.bag[k]||0)+q);save();drawTrough();closeAll();
+function collect(pens){const got={};let rounds=0,cm=0;pens.forEach(t=>{Object.entries(S.trough[t]).forEach(([src,n])=>{rounds+=n;cm+=n*(COLLECT_MER[t]||0);for(let k=0;k<n;k++){const q=Math.random()<.82?2:3;const it=rollFrom(t,src);got[it]=(got[it]||0)+q}S.trough[t][src]=0})});
+ if(!rounds)return ann('ยังไม่มีผลผลิตในราง',1);Object.entries(got).forEach(([k,q])=>S.bag[k]=(S.bag[k]||0)+q);if(cm>0)S.merit=(S.merit||0)+cm;save();drawTrough();closeAll();
  const tier=k=>ORDER.reduce((r,t)=>{const i=TYPES[t].p.indexOf(k);return i>=0?i:r},0);const list=Object.entries(got).sort((a,b)=>tier(b[0])-tier(a[0]));
- open('<h3>🧺 เก็บผลผลิตแล้ว!</h3><div class="hint">'+rounds.toLocaleString()+' รอบการผลิต • เข้ากระเป๋าแล้ว</div><div class="grid">'+list.map(([k,q])=>'<div class="cell t'+tier(k)+'"><img src="'+IMG['p-'+k]+'"><b>'+'⭐'.repeat(tier(k)+1)+'<br>'+PN[k]+'</b><span>×'+q.toLocaleString()+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
+ open('<h3>🧺 เก็บผลผลิตแล้ว!</h3><div class="hint">'+rounds.toLocaleString()+' รอบการผลิต • เข้ากระเป๋าแล้ว'+(cm>0?' • 🪷 +'+cm.toLocaleString()+' กุศล':'')+'</div><div class="grid">'+list.map(([k,q])=>'<div class="cell t'+tier(k)+'"><img src="'+IMG['p-'+k]+'"><b>'+'⭐'.repeat(tier(k)+1)+'<br>'+PN[k]+'</b><span>×'+q.toLocaleString()+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
 /* ---------- เครื่องมือ ---------- */
 const FAN=[['⚡','เร่งผลผลิตคอกนี้',()=>{const n=S.animals[pen].filter(a=>a&&!a.sick&&!dead(pen,a)).length;if(!n)return ann('ไม่มีสัตว์ที่ผลิตอยู่ในคอกนี้',1);open('<h3>⚡ เร่งผลผลิต '+TYPES[pen].n+'</h3>'+boostOpts(n,'all'))}],
  ['🧺','เก็บผลผลิตทุกคอก',()=>collect(ORDER)],
@@ -160,5 +160,5 @@ function placeAnimal(i){const T=TYPES[pen],n=S.stock[pen]||0;
  $('put').onclick=()=>{open('<h3>ยืนยันวาง'+T.an+'?</h3><div class="hint">นับอายุ '+T.life+' วันตั้งแต่ตอนนี้ และยกเลิกไม่ได้</div><div class="row"><button class="btn gray" id="pn">ยกเลิก</button><button class="btn g" id="py">วางเลย</button></div>');
   $('pn').onclick=closeAll;$('py').onclick=()=>{S.stock[pen]--;S.animals[pen][i]={born:Date.now(),next:Date.now()+T.prod*HOUR,sick:false};save();closeAll();draw();ann(T.e+' วาง'+T.an+'แล้ว เริ่มผลิตเลย!')}}}
 function sellAnimal(i){const T=TYPES[pen];open('<h3>💸 ขาย'+T.an+'ตัวนี้?</h3><div class="hint">ได้ '+SELL[pen]+' กุศล • ขายแล้วเอาคืนไม่ได้ • ผลผลิตในรางยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>');
- $('sn').onclick=closeAll;$('sy').onclick=()=>{release(pen,i);S.animals[pen][i]=null;S.merit=(S.merit||0)+SELL[pen];save();closeAll();draw();ann('💸 ขาย'+T.an+'แล้ว +'+SELL[pen]+' กุศล')}}
+ $('sn').onclick=closeAll;$('sy').onclick=()=>{if(!S.animals[pen][i]){closeAll();return}release(pen,i);S.animals[pen][i]=null;S.merit=(S.merit||0)+SELL[pen];save();closeAll();draw();ann('💸 ขาย'+T.an+'แล้ว +'+SELL[pen]+' กุศล')}}
 </script></body></html>

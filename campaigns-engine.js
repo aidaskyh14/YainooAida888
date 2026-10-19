@@ -36,7 +36,7 @@ export function claimCampaign(game,config,input){
 }
 
 export function seeded(str){let h=2166136261;for(const ch of str){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%10000)/10000;};}
-export function featuredMenus(now){const rng=seeded('cook'+dayKey(now)),list=Array.from({length:12},(_,i)=>i);for(let i=11;i>0;i--){const j=Math.floor(rng()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list.slice(0,3);}
+export function featuredMenus(now){const rng=seeded('cook'+dayKey(now)),list=Array.from({length:12},(_,i)=>i);for(let i=11;i>0;i--){const j=Math.floor(rng()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return [...list.slice(0,3),12+Math.floor(rng()*8)];} // fix16: +1 เมนูมีคลาสเด่นประจำวัน (3 เมนูเดิมไม่เปลี่ยน)
 export function honeyMultiplier(now){const rng=seeded('honey'+dayKey(now)),a=Math.floor(rng()*22);let b=Math.floor(rng()*22);if(Math.abs(a-b)<3)b=(a+8)%22;const h=bkkHour(now);return h>=a&&h<a+2?2:h>=b&&h<b+2?.5:1;}
 /* Leaderboard rows from every player's campaign progress (rows: [{uid,name,data}] where data = sub.campaigns).
    Keeps the top `keep` per campaign so the board document stays small however many players exist. */

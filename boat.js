@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js';import {BOAT_ALPACA,BOAT_STAR_MERIT,BOAT_STAY_TIME,BOAT_STAY_GAIN,BOAT_STAY_MULT,BOAT_BURN_NEED,BOAT_MM_POKE,stayCost} from './boat-engine.js?v=ss3-fix15f';
+import {CATALOG} from './catalog.js';import {BOAT_ALPACA,BOAT_STAR_MERIT,BOAT_STAY_TIME,BOAT_STAY_GAIN,BOAT_STAY_MULT,BOAT_BURN_NEED,BOAT_MM_POKE,stayCost,burnNeed} from './boat-engine.js?v=ss3-fix16';
 
 const IMG={"bg": "images/boat-boatrace-bg.webp", "box": "images/boat-box.webp", "boxopen": "images/boat-box-open.webp", "back": "images/boat-boatcard-back.webp", "happy": "images/honey-face-happy.webp", "oops": "images/honey-face-oops.webp", "b1": "images/boat-1.webp", "b2": "images/boat-2.webp", "b3": "images/boat-3.webp", "b4": "images/boat-4.webp", "b5": "images/boat-5.webp", "c-supply": "images/boat-boatcard-supply.webp", "c-cut": "images/boat-boatcard-cut.webp", "c-merit": "images/boat-boatcard-merit.webp", "c-stop": "images/boat-boatcard-stop.webp", "c-kick": "images/boat-boatcard-kick.webp","c2-supply": "images/boat-card2-supply.webp","c2-cut": "images/boat-card2-cut.webp","c2-merit": "images/boat-card2-merit.webp","c2-stop": "images/boat-card2-stop.webp","c2-kick": "images/boat-card2-kick.webp","c2-pull": "images/boat-card2-pull.webp","c2-swap": "images/boat-card2-swap.webp","c2-revive": "images/boat-card2-revive.webp","c2-ink": "images/boat-card2-ink.webp","c2-freeze": "images/boat-card2-freeze.webp","c2-crab": "images/boat-card2-crab.webp","c2-burn": "images/boat-card2-burn.webp", "f1": "images/food-01.webp", "f2": "images/food-02.webp", "f9": "images/food-09.webp", "f10": "images/food-10.webp"};const W=941,H=1672,$=id=>document.getElementById(id);
 const BOATS=[['ทุเรียน','#3E7A2E','#7CB342'],['องุ่น','#7B3FB5','#9C5BD6'],['สตรอว์เบอร์รี','#D4313B','#E85A62'],['กล้วย','#7A4A22','#E0B43A'],['มะนาว','#2F7A33','#A6C83A']];
@@ -195,14 +195,14 @@ function showTarget(id){const keepTgt=$('popBody')?.querySelector('.tgt')?.scrol
   return useCard(id,on('t')[0]?{uid:on('t')[0]}:{});};
  refresh();}
 /* fix15 ข้อเสนออยู่ต่อ: โดนเตะแล้วมี 2 นาที (บังคับตอบ ไม่มีปุ่มปิด) */
-const STAY_IMG={merit:'images/honey-face-happy.webp',hat:'images/honey-sailorhat.webp',mb:'images/animals-item-musicbox.webp',wool:'images/alpaca-mat-wool.webp'};
-const STAY_NAME={merit:'กุศล',hat:'หมวกกะลาสี',mb:'กล่องดนตรี',wool:'ขนอัลปาก้า'};
+const STAY_IMG={merit:'images/honey-face-happy.webp',hat:'images/honey-sailorhat.webp',mb:'images/animals-item-musicbox.webp',wool:'images/alpaca-mat-wool.webp',pestle:'images/animals-item-pestle.webp',coin:'images/gacha-coin.webp'};
+const STAY_NAME={merit:'กุศล',hat:'หมวกกะลาสี',mb:'กล่องดนตรี',wool:'ขนอัลปาก้า',pestle:'สากกะเบือ',coin:'เหรียญฮาโลวีน'};
 let stayAsked=0,stayOpen=false;
-function myBag(){const g=JSON.parse(Host.get('s3all-v1')||'{}');return {merit:g.merit||0,hat:Number(g.bag?.item?.hat)||0,mb:Number(g.bag?.item?.musicbox)||0,wool:Number(g.sub?.alpaca?.bag?.wool)||0,raw:g};}
+function myBag(){const g=JSON.parse(Host.get('s3all-v1')||'{}');return {merit:g.merit||0,hat:Number(g.bag?.item?.hat)||0,mb:Number(g.bag?.item?.musicbox)||0,wool:Number(g.sub?.alpaca?.bag?.wool)||0,pestle:Number(g.bag?.item?.pestle)||0,coin:Number(Host.coins)||0,raw:g};}
 function showOffer(){const o=R.offers?.[ME];if(!o){if(stayOpen){stayOpen=false;if(forced==='offer')closePop();}return;}
  if(forced&&forced!=='offer')return;forced='offer';stayOpen=true;const c=stayCost(o.n),have=myBag(),okAll=Object.keys(c).every(k=>have[k]>=c[k]);
  const row=k=>'<div class="sc '+(have[k]>=c[k]?'ok':'no')+'">'+(k==='merit'?'<span class="e">🙏</span>':'<img src="'+STAY_IMG[k]+'" alt="">')+'<b>'+STAY_NAME[k]+'</b><span>'+Number(c[k]).toLocaleString()+'</span><small>มี '+Number(have[k]).toLocaleString()+'</small></div>';
- if(!popScreen('<div class="stay"><div class="sh">🦶 คุณโดนเตะจากเรือ '+o.by+'!</div><p class="q">คุณยังคิดว่าคุณ มีประโยชน์กับการแข่งเรือครั้งนี้หรือไม่ ถ้ามีประโยชน์คุณควรที่จะอยู่ต่อ นี่คือข้อเสนอสำหรับคุณ</p><div class="kclock"><div class="kring" id="sring"><span id="sleft">'+fmt(o.until-clock())+'</span></div><small>'+(o.n>1?'ครั้งที่ '+o.n+' จ่าย ×'+(BOAT_STAY_MULT[o.n-1]||o.n)+'<br>':'')+'ไม่ตอบในเวลา: ของครบ = อยู่ต่ออัตโนมัติ</small></div><div class="scost">'+['merit','hat','mb','wool'].map(row).join('')+'</div><div class="sgain">🎁 อยู่ต่อแล้วได้ <b>🙏 +'+BOAT_STAY_GAIN.toLocaleString()+'</b> กุศล</div><div class="row"><button class="btn g" id="stayYes"'+(okAll?'':' disabled')+'>💪 พี่จะอยู่</button><button class="btn gray" id="stayNo">พี่คิดว่าพี่ไม่เหมาะสม</button></div>'+(okAll?'':'<div class="hint">ของยังไม่ครบ อยู่ต่อไม่ได้</div>')+'</div>',{forced:'offer'}))return;
+ if(!popScreen('<div class="stay"><div class="sh">🦶 คุณโดนเตะจากเรือ '+o.by+'!</div><p class="q">คุณยังคิดว่าคุณ มีประโยชน์กับการแข่งเรือครั้งนี้หรือไม่ ถ้ามีประโยชน์คุณควรที่จะอยู่ต่อ นี่คือข้อเสนอสำหรับคุณ</p><div class="kclock"><div class="kring" id="sring"><span id="sleft">'+fmt(o.until-clock())+'</span></div><small>'+(o.n>1?'ครั้งที่ '+o.n+' จ่าย ×'+(BOAT_STAY_MULT[o.n-1]||o.n)+'<br>':'')+'ไม่ตอบในเวลา: ของครบ = อยู่ต่ออัตโนมัติ</small></div><div class="scost">'+Object.keys(c).map(row).join('')+'</div><div class="sgain">🎁 อยู่ต่อแล้วได้ <b>🙏 +'+BOAT_STAY_GAIN.toLocaleString()+'</b> กุศล</div><div class="row"><button class="btn g" id="stayYes"'+(okAll?'':' disabled')+'>💪 พี่จะอยู่</button><button class="btn gray" id="stayNo">พี่คิดว่าพี่ไม่เหมาะสม</button></div>'+(okAll?'':'<div class="hint">ของยังไม่ครบ อยู่ต่อไม่ได้</div>')+'</div>',{forced:'offer'}))return;
  const answer=async accept=>{const out=await action({type:'stay',accept});if(ok(out)){forced=null;stayOpen=false;closePop();const r=out.stay||{};if(r.stay){fx('coins',W/2,H*.45,22);ann('💪 อยู่ต่อแล้ว! ได้ +'+BOAT_STAY_GAIN.toLocaleString()+' กุศล');}else ann('💦 คุณออกจากเรือแล้ว',1);}};
  $('stayYes').onclick=()=>answer(true);$('stayNo').onclick=()=>answer(false);
  popTimer=setInterval(()=>{const cur=R.offers?.[ME];if(!cur){forced=null;stayOpen=false;closePop();const last=R.lastStay;if(last?.uid===ME)ann(last.stay?'💪 อยู่ต่ออัตโนมัติ ได้ +'+BOAT_STAY_GAIN.toLocaleString()+' กุศล':'💦 หมดเวลา คุณออกจากเรือแล้ว',!last.stay);return;}
@@ -313,7 +313,7 @@ async function tickServer(){const out=await action({type:'tick'},true);if(out?.e
 async function initialize(){try{roster=await Host.roster();const stop=Host.watchWorld('boat',world=>{if(world)setRace(world,'world');else update();const reward=(R.credits?.[ME]||0)-(R.claimedCredits?.[ME]||0);if(reward>0&&!acting)action({type:'claimCredit'},true);});addEventListener('pagehide',stop,{once:true});update();action({type:'status'},true);}catch(e){ann(e.message,true);}}
 
 /* ---------- fix15f: เผาเรือ ---------- */
-const NEED_ICON={merit:['🙏','กุศล'],hat:['🎩','หมวกกะลาสี'],mb:['🎵','กล่องดนตรี'],wool:['🦙','ขนอัลปาก้า']};
+const NEED_ICON={merit:['🙏','กุศล'],hat:['🎩','หมวกกะลาสี'],mb:['🎵','กล่องดนตรี'],wool:['🦙','ขนอัลปาก้า'],pestle:['🥣','สากกะเบือ'],coin:['🪙','เหรียญฮาโลวีน']};
 const kf=n=>n>=1000?(Math.round(n/100)/10).toLocaleString('en-US')+'k':String(n);
 const rescueEl=(()=>{try{const d=document.createElement('div');d.id='rescue';d.className='rescue';d.hidden=true;document.body.appendChild(d);return d;}catch(e){return {hidden:true,dataset:{}};}})();
 function burnsUpdate(now){const burns=R.burns||{};
@@ -324,12 +324,12 @@ function rescueUpdate(now){const mb=myBoat(),st=R.burns?.[mb],el=rescueEl;
  if(!st||!mb||isKicked(ME)||ADMIN||R.status==='finished'||R.status==='setup'){el.hidden=true;return;}
  if(!el.dataset.on){el.innerHTML='<div class="rh">🔥 เรือเราไฟไหม้! ทุกคนต้องช่วยกันลงขัน</div><div class="rcd" id="rcd"></div><div class="need" id="rneed"></div><div class="crew" id="rcrew"></div><button class="btn r" id="rpay">🪣 ลงขันกอบกู้</button>';el.dataset.on=1;$('rpay').onclick=openPay;}
  el.hidden=false;$('rcd').textContent='⏱️ '+fmt(st.until-now);
- const nd=Object.keys(BOAT_BURN_NEED).map(k=>'<div>'+NEED_ICON[k][0]+'<b>'+kf(st.got[k]||0)+'/'+kf(BOAT_BURN_NEED[k])+'</b><i><u style="width:'+Math.min(100,(st.got[k]||0)/BOAT_BURN_NEED[k]*100)+'%"></u></i></div>').join('');
+ const need=burnNeed(st),nd=Object.keys(need).map(k=>'<div>'+NEED_ICON[k][0]+'<b>'+kf(st.got[k]||0)+'/'+kf(need[k])+'</b><i><u style="width:'+Math.min(100,(st.got[k]||0)/need[k]*100)+'%"></u></i></div>').join('');
  if($('rneed').dataset.h!==nd){$('rneed').dataset.h=nd;$('rneed').innerHTML=nd;}
  const cr=members(mb).map(u=>'<span class="'+(st.paid?.[u]?'ok':'')+'">'+(st.paid?.[u]?'✅ ':'⏳ ')+label(u)+'</span>').join('');
  if($('rcrew').dataset.h!==cr){$('rcrew').dataset.h=cr;$('rcrew').innerHTML=cr;}}
-function openPay(){const mb=myBoat(),st=R.burns?.[mb];if(!st)return;const have=myBag(),left=k=>Math.max(0,BOAT_BURN_NEED[k]-(st.got[k]||0));
- open('<h3>🪣 ลงขันกอบกู้เรือ '+mb+'</h3><div class="hint">ใส่เท่าไหร่ก็ได้ แต่ทุกคนต้องลงอย่างน้อย 1 ชิ้น · ระบบรับเท่าที่ยังขาด</div>'+Object.keys(BOAT_BURN_NEED).map(k=>{const l=left(k),h=Math.max(0,have[k]);return '<div class="payr"><span class="e">'+NEED_ICON[k][0]+'</span><b>'+NEED_ICON[k][1]+'<small>ยังขาด '+l.toLocaleString('en-US')+' · มี '+h.toLocaleString('en-US')+'</small></b><input type="number" inputmode="numeric" min="0" max="'+h+'" value="0" data-pay="'+k+'" aria-label="'+NEED_ICON[k][1]+'"><button class="mx" data-max="'+k+'">'+(l?'ที่ขาด':'1')+'</button></div>';}).join('')+'<div class="row"><button class="btn gray" id="payNo">ปิด</button><button class="btn r" id="payGo">🪣 ลงขัน</button></div>');
+function openPay(){const mb=myBoat(),st=R.burns?.[mb];if(!st)return;const have=myBag(),need=burnNeed(st),left=k=>Math.max(0,need[k]-(st.got[k]||0));
+ open('<h3>🪣 ลงขันกอบกู้เรือ '+mb+'</h3><div class="hint">ใส่เท่าไหร่ก็ได้ แต่ทุกคนต้องลงอย่างน้อย 1 ชิ้น · ระบบรับเท่าที่ยังขาด</div>'+Object.keys(need).map(k=>{const l=left(k),h=Math.max(0,have[k]);return '<div class="payr"><span class="e">'+NEED_ICON[k][0]+'</span><b>'+NEED_ICON[k][1]+'<small>ยังขาด '+l.toLocaleString('en-US')+' · มี '+h.toLocaleString('en-US')+'</small></b><input type="number" inputmode="numeric" min="0" max="'+h+'" value="0" data-pay="'+k+'" aria-label="'+NEED_ICON[k][1]+'"><button class="mx" data-max="'+k+'">'+(l?'ที่ขาด':'1')+'</button></div>';}).join('')+'<div class="row"><button class="btn gray" id="payNo">ปิด</button><button class="btn r" id="payGo">🪣 ลงขัน</button></div>');
  $('sb').querySelectorAll('[data-max]').forEach(b=>b.onclick=()=>{const k=b.dataset.max,i=$('sb').querySelector('[data-pay="'+k+'"]');i.value=Math.min(Math.max(0,have[k]),left(k)||1);});
  $('payNo').onclick=closeAll;
  $('payGo').onclick=async()=>{const v={};$('sb').querySelectorAll('[data-pay]').forEach(i=>v[i.dataset.pay]=Math.max(0,Math.floor(+i.value||0)));if(!Object.values(v).some(Boolean))return ann('ใส่ของอย่างน้อย 1 ชิ้นนะ',1);
@@ -347,9 +347,9 @@ function extraEvents(prev,next){try{
   else fireTitle('เรือ '+lb.boat+' จมแล้ว','💀 ลูกเรือหลุดทั้งลำ · ของที่ลงขันคืนทางไปรษณีย์','dead');}
  const pm=prev.mm&&!prev.mm.done?prev.mm.uid:null,nm=next.mm&&!next.mm.done?next.mm.uid:null;
  if(nm&&nm!==pm){fx('banner','revive',pm?'🧜‍♀️ นางเงือกตนใหม่มาแทนแล้ว':'🧜‍♀️ <b>นางเงือก</b>ปรากฏตัวแล้ว!');mmLane=0;}
- for(const b of Object.keys(prev.dismiss||{}))if(!next.dismiss?.[b]){const u=Object.keys(next.fired||{}).find(u=>next.fired[u]&&!prev.fired?.[u]&&next.team[u]===+b);if(!u)continue;
-  mmAng=performance.now();const [x,y]=boatXY(+b);setTimeout(()=>{fx('nameFly',x,y-20,label(u),x<W/2?-1:1);fx('coins',x,y,22);},600);fx('banner','pull','🧜‍♀️ นางเงือกจ้าง <b>'+label(u)+'</b> ออกจากเรือ '+b);
-  if(u===ME)setTimeout(()=>ann('🧜‍♀️ คุณถูกจ้างออก ได้ 1,000,000 กุศล'),1500);}
+ for(const b of Object.keys(prev.dismiss||{}))for(const [i,u] of Object.keys(next.fired||{}).filter(u=>next.fired[u]&&!prev.fired?.[u]&&next.team[u]===+b).entries()){
+  mmAng=performance.now();const [x,y]=boatXY(+b),dl=i*1400;setTimeout(()=>{fx('nameFly',x,y-20,label(u),x<W/2?-1:1);fx('coins',x,y,22);},600+dl);setTimeout(()=>fx('banner','pull','🧜‍♀️ นางเงือกจ้าง <b>'+label(u)+'</b> ออกจากเรือ '+b),dl);
+  if(u===ME)setTimeout(()=>ann('🧜‍♀️ คุณถูกจ้างออก ได้ 1,000,000 กุศล'),1500+dl);}
 }catch(err){}}
 
 /* ---------- fix15f: นางเงือก (สไปรต์ ท่าปกติ 64 ภาพ · ท่าโกรธ 12 ภาพ) อยู่ใต้เส้นเริ่ม ในเลนที่เรือออกไปไกลแล้ว ไม่ทับเรือ ---------- */

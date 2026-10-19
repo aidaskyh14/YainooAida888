@@ -82,7 +82,7 @@ const SP={ostrich:{e:'🦢',n:'นกกระจอกเทศ',size:19},dodo:
 const FOOD={corn:['ostrich','ข้าวโพดคลุกเมล็ดพืช',10,3,[['ostrich-egg',1]]],pumpkin:['ostrich','ฟักทองบดธัญพืช',5,5,[['ostrich-egg',2],['ostrich-feather',2]]],melon:['ostrich','สลัดแตงโมเย็นฉ่ำ',2,10,[['ostrich-feather',3]]],
  carrot:['dodo','แครอทบดเมล็ดทานตะวัน',10,3,[['dodo-egg',1]]],fruit:['dodo','ผลไม้รวมโดโด้',5,5,[['dodo-feather',2]]],mushroom:['dodo','ซุปเห็ดหินกรวด',2,10,[['dodo-pebble',2]]]}; // [นก, ชื่อ, ใช้ต่อตัว, รอ(นาที), ผลผลิต]
 const PN={'ostrich-egg':'ไข่นกกระจอกเทศ','ostrich-feather':'ขนนกกระจอกเทศ','dodo-egg':'ไข่โดโด้','dodo-feather':'ขนโดโด้สีรุ้ง','dodo-pebble':'หินกรวดนำโชค'};
-const TIER={'ostrich-egg':1,'ostrich-feather':2,'dodo-egg':1,'dodo-feather':2,'dodo-pebble':3};
+const DROP_MER={'ostrich-egg':30,'ostrich-feather':50,'dodo-egg':30,'dodo-feather':80,'dodo-pebble':100},TIER={'ostrich-egg':1,'ostrich-feather':2,'dodo-egg':1,'dodo-feather':2,'dodo-pebble':3};
 const FOODNEED={corn:{'ข้าวโพด':5},pumpkin:{'ฟักทอง':3,'ข้าวโพด':2},melon:{'แตงโม':3,'แตงกวา':2},carrot:{'แครอท':5},fruit:{'องุ่น':3,'สตรอว์เบอร์รี':2},mushroom:{'เห็ดไขลาน':3,'มันฝรั่ง':2}}; // ชั่วคราว
 const MIN=60000; // 1 นาที
 const LIFE=48*60; // นาที
@@ -92,7 +92,7 @@ function fresh(){const now=NOW();return{pen:1,pens:{1:[],2:[]},
  vault:{ostrich:0,dodo:0},drops:{1:[],2:[]},bag:{},food:{corn:0,pumpkin:0,melon:0,carrot:0,fruit:0,mushroom:0},mats:{},
  reqs:[],merit:1000,rank:{},sent:[0,0,0,0]}}
 function mk(sp,born){return{id:Math.random().toString(36).slice(2),sp,born,cd:0}}
-S=__fill(fresh(),S);const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){}};
+S=__fill(fresh(),S);let saveErrAt=0;const save=()=>{try{__LS.setItem(KEY,JSON.stringify(S))}catch(e){if(Date.now()-saveErrAt>4000){saveErrAt=Date.now();try{ann('⚠️ บันทึกไม่สำเร็จ: '+((e&&e.message)||'ลองใหม่อีกครั้ง'),1)}catch(_){}}}};
 let pen=S.pen;
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
 let at;function ann(m,err,dur){$('aImg').src=err?IMG.oops:IMG.happy;$('aTxt').innerHTML=m;$('ann').className='ann show'+(err?' err':'')+(dur?' long':'');clearTimeout(at);at=setTimeout(()=>$('ann').className='ann',dur||3000)}
@@ -131,17 +131,17 @@ $('shade').onclick=closeAll;
 function foodOpts(sp,n,mode,id){return Object.entries(FOOD).filter(([,f])=>f[0]===sp).map(([k,f])=>{const need=f[2]*n;return '<button class="opt" data-food="'+k+'" data-mode="'+mode+'" data-id="'+(id||'')+'"'+(S.food[k]<need?' disabled':'')+'><img src="'+IMG['f-'+k]+'"><b>'+f[1]+'<small>'+f[4].map(([p,q])=>'⭐'.repeat(TIER[p])+' '+PN[p]).join(' หรือ ')+' ×'+f[4][0][1]+' • รอ '+f[3]+' นาที • '+f[2]+' ชิ้น/ตัว</small></b><span>ใช้ '+need+' • มี '+S.food[k]+'</span></button>'}).join('')}
 function tapBird(id){const b=S.pens[pen].find(x=>x.id===id);if(!b)return;const cd=b.cd-NOW();
  open('<h3>'+SP[b.sp].e+' '+SP[b.sp].n+'</h3><div class="hint">⏳ อายุเหลือ '+fmtL(left(b))+'</div>'+(cd>0?'<div class="hint" style="font-weight:700">🍽️ ให้อาหารได้อีกใน '+Math.ceil(cd/MIN)+' นาที</div>':'<div class="hint">🥣 เลือกอาหาร</div>'+foodOpts(b.sp,1,'one',b.id))+
-  '<div class="row" style="margin-top:.5rem"><button class="btn gray" id="sell">💸 ขายออก (+'+(b.sp==='dodo'?30:20)+' กุศล)</button></div>');
- if($('sell'))$('sell').onclick=()=>open('<h3>💸 ขาย'+SP[b.sp].n+'ตัวนี้?</h3><div class="hint">ขายแล้วเอาคืนไม่ได้ • ผลผลิตบนพื้นยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>'),setTimeout(()=>{if(!$('sy'))return;$('sn').onclick=closeAll;$('sy').onclick=()=>{S.pens[pen]=S.pens[pen].filter(x=>x.id!==id);S.merit+=b.sp==='dodo'?30:20;save();closeAll();draw();ann('💸 ขาย'+SP[b.sp].n+'แล้ว')}},0)}
+  '<div class="row" style="margin-top:.5rem"><button class="btn gray" id="sell">💸 ขายออก (+'+(b.sp==='dodo'?2500:1500).toLocaleString()+' กุศล)</button></div>');
+ if($('sell'))$('sell').onclick=()=>{open('<h3>💸 ขาย'+SP[b.sp].n+'ตัวนี้?</h3><div class="hint">ได้ '+(b.sp==='dodo'?2500:1500).toLocaleString()+' กุศล • ขายแล้วเอาคืนไม่ได้ • ผลผลิตบนพื้นยังอยู่</div><div class="row"><button class="btn gray" id="sn">ไม่ขาย</button><button class="btn" id="sy">ขายออก</button></div>');$('sn').onclick=closeAll;$('sy').onclick=()=>{if(!S.pens[pen].some(x=>x.id===id)){closeAll();return}const gain=b.sp==='dodo'?2500:1500;S.pens[pen]=S.pens[pen].filter(x=>x.id!==id);S.merit=(S.merit||0)+gain;save();closeAll();draw();ann('💸 ขาย'+SP[b.sp].n+'แล้ว +'+gain.toLocaleString()+' กุศล')}}}
 document.addEventListener('click',e=>{const bt=e.target.closest('#sb [data-food]');if(!bt||bt.disabled)return;const k=bt.dataset.food,f=FOOD[k];
  const list=bt.dataset.mode==='one'?S.pens[pen].filter(b=>b.id===bt.dataset.id):S.pens[pen].filter(b=>b.sp===f[0]&&b.cd<=NOW());const need=f[2]*list.length;if(!list.length||S.food[k]<need)return;
  S.food[k]-=need;list.forEach(b=>{b.cd=NOW()+f[3]*MIN;const a=actors.find(x=>x.b.id===b.id);const[ox,oy]=a?[a.x,a.y]:rndPt();const[p,q]=f[4][Math.floor(Math.random()*f[4].length)];
   S.drops[pen].push({k:p,q,x:Math.max(80,Math.min(860,ox+(Math.random()*90-45))),y:Math.max(500,Math.min(1250,oy+10+Math.random()*30))});if(a)a.b.cd=b.cd});
  save();closeAll();drawDrops();ann('🥣 ให้'+f[1]+' '+list.length+' ตัว ผลผลิตหล่นบนพื้นแล้ว!');if(bt.dataset.mode==='all'&&S.pens[pen].some(b=>b.cd<=NOW()))setTimeout(feedAll,350)});
-function collect(idx){const D=S.drops[pen];const take=idx?idx.map(i=>D[i]).filter(Boolean):D.slice();if(!take.length)return ann('ไม่มีของบนพื้น',1);const got={};take.forEach(d=>{got[d.k]=(got[d.k]||0)+d.q;S.bag[d.k]=(S.bag[d.k]||0)+d.q});
+function collect(idx){const D=S.drops[pen];const take=idx?idx.map(i=>D[i]).filter(Boolean):D.slice();if(!take.length)return ann('ไม่มีของบนพื้น',1);const got={};let cm=0;take.forEach(d=>{got[d.k]=(got[d.k]||0)+d.q;S.bag[d.k]=(S.bag[d.k]||0)+d.q;cm+=(DROP_MER[d.k]||0)*d.q});if(cm>0)S.merit=(S.merit||0)+cm;
  S.drops[pen]=idx?D.filter((d,i)=>!idx.includes(i)):[];save();drawDrops();
- if(idx&&idx.length===1){const[k,q]=Object.entries(got)[0];return ann('🧺 เก็บ'+PN[k]+' ×'+q+' เข้ากระเป๋าแล้ว')}
- const list=Object.entries(got).sort((a,b)=>TIER[b[0]]-TIER[a[0]]);open('<h3>🧺 เก็บของบนพื้นแล้ว!</h3><div class="grid">'+list.map(([k,q])=>'<div class="cell t'+(TIER[k]-1)+'"><img src="'+IMG[k]+'"><b>'+'⭐'.repeat(TIER[k])+'<br>'+PN[k]+'</b><span>×'+q+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
+ if(idx&&idx.length===1){const[k,q]=Object.entries(got)[0];return ann('🧺 เก็บ'+PN[k]+' ×'+q+' เข้ากระเป๋าแล้ว'+(cm>0?' • 🪷 +'+cm.toLocaleString():''))}
+ const list=Object.entries(got).sort((a,b)=>TIER[b[0]]-TIER[a[0]]);open('<h3>🧺 เก็บของบนพื้นแล้ว!</h3>'+(cm>0?'<div class="hint">🪷 +'+cm.toLocaleString()+' กุศล</div>':'')+'<div class="grid">'+list.map(([k,q])=>'<div class="cell t'+(TIER[k]-1)+'"><img src="'+IMG[k]+'"><b>'+'⭐'.repeat(TIER[k])+'<br>'+PN[k]+'</b><span>×'+q+'</span></div>').join('')+'</div><div class="row"><button class="btn g" id="okc">เยี่ยมเลย</button></div>');$('okc').onclick=closeAll}
 function feedAll(){const hungry=S.pens[pen].filter(b=>b.cd<=NOW());const os=hungry.filter(b=>b.sp==='ostrich').length,dd=hungry.filter(b=>b.sp==='dodo').length;
  if(!hungry.length)return ann('ยังไม่มีนกที่พร้อมกิน รอ ⏳ ก่อนนะ',1);
  open('<h3>🥣 ให้อาหารทั้งหมด</h3><div class="hint">นกพร้อมกิน '+hungry.length+' จาก '+S.pens[pen].length+' ตัว (🦢 '+os+' • 🦤 '+dd+')</div>'+(os?'<div class="hint" style="font-weight:700">🦢 นกกระจอกเทศ '+os+' ตัว</div>'+foodOpts('ostrich',os,'all'):'')+(dd?'<div class="hint" style="font-weight:700;margin-top:.4rem">🦤 นกโดโด้ '+dd+' ตัว</div>'+foodOpts('dodo',dd,'all'):''))}

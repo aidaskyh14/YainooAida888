@@ -1,9 +1,9 @@
-import {recordCampaign,bkkHour,dayKey,HALLOWEEN,featuredMenus} from './campaigns-engine.js';
+import {recordCampaign,bkkHour,dayKey,HALLOWEEN,featuredMenus} from './campaigns-engine.js?v=ss3-fix16';
 const at=(g,p)=>p.split('.').reduce((o,k)=>o?.[k],g)||0;
 const increase=(a,b,p)=>Math.max(0,at(b,p)-at(a,p));
 const values=g=>Object.values(g||{}).reduce((s,n)=>s+(Number(n)||0),0);
 const FLOWER_POINTS={daisy:1,tulip:1,marigold:1,rose:2,butterflypea:2,lavender:2,sunflower:3,hibiscus:3,lotus:3,plumeria:4,hydrangea:4,orchid:5};
-const FOOD_POINTS=[15,18,20,22,20,30,30,50,10,12,20,15],FOOD_NAMES=['ข้าวผัดไข่','ซุปฟักทอง','ปลาย่างซอสมะม่วง','สตูว์รวมมิตร','ไข่อบชีส','น่องไก่อบครีม','ขนมลิ้นจี่มะยม','จานรวมมิตร','ออมเล็ตโรซี่','ไข่อบอัญชัน','ไข่ตุ๋นหกบุปผา','ไข่ย่างสปาฟลาวเวอร์'];
+const FOOD_POINTS=[15,18,20,22,20,30,30,50,10,12,20,15,500,450,600,350,500,450,400,600],FOOD_NAMES=['ข้าวผัดไข่','ซุปฟักทอง','ปลาย่างซอสมะม่วง','สตูว์รวมมิตร','ไข่อบชีส','น่องไก่อบครีม','ขนมลิ้นจี่มะยม','จานรวมมิตร','ออมเล็ตโรซี่','ไข่อบอัญชัน','ไข่ตุ๋นหกบุปผา','ไข่ย่างสปาฟลาวเวอร์','ซุปครีมถั่วลันเตาทรัฟเฟิล','ซาชิมิแตงโมไข่ปลา','ริซอตโต้แพลงก์ตอน','สลัดแตงโมกุหลาบชีสนม','ขนมจีบแพลงก์ตอนหมูทรัฟเฟิล','พาสต้าถั่วลันเตาไข่นกกระจอกเทศ','ซอร์เบต์แตงโมเชอร์รีลีลาวดี','สเต๊กปลาซอสแพลงก์ตอนไข่โดโด้'];
 const GARDEN_CHANCES={"r1":80,"r2":75,"r3":65,"r4":60,"r5":55,"r6":45,"r7":35,"r8":25,"n1":65,"n2":50,"n3":35,"n4":25,"b1":70,"b2":65,"b3":60,"b4":60,"b5":55,"b6":50,"b7":45,"b8":40,"w1":80,"w2":70,"w3":60,"w4":50,"w5":40,"w6":30};
 const menuPts=p=>p>=40?10:p>=35?12:p>=30?15:p>=25?18:p>=22?20:p>=20?22:p>=15?30:50;
 const DROP_POINTS={'bag.item.boot':50,'sub.alpaca.bag.scarf-red':30,'sub.alpaca.bag.beanie-blue':30,'sub.alpaca.bag.plush-mini':30,'bag.item.potion':40,'bag.item.battery':40,'bag.item.collar':20,'bag.item.bell':10,'bag.item.treat':5,'bag.item.musicbox':5,'sub.alpaca.bag.yarn-white':2,'sub.alpaca.bag.yarn-pink':2,'sub.alpaca.bag.yarn-blue':2};
@@ -14,6 +14,8 @@ export function observeGameplay(before,after,source,config,now,boxes=[],rng=Math
  if(!boxes.length&&['barn','birds','dog','alpaca','catpen'].includes(source)){
    let pts=merit;for(const[p,w]of Object.entries(DROP_POINTS))pts+=increase(before,after,p)*w;recordCampaign(after,config,'pet',pts,now);
  }
+ // fix16: เม่น (hedgeEarn) และแฮมสเตอร์ (ham.earn) นับเข้าแคมเปญเลี้ยงสัตว์ผ่านตัวนับกุศลจากสัตว์โดยตรง
+ if(!boxes.length&&['house','backyard'].includes(source)){const pts=increase(before,after,'hedgeEarn')+increase(before,after,'ham.earn');if(pts>0)recordCampaign(after,config,'pet',pts,now);}
  if(['farm','house','backyard'].includes(source)){
    let cook=0;
    FOOD_NAMES.forEach((name,i)=>cook+=increase(before,after,'bag.food.'+name)*FOOD_POINTS[i]*(featured.includes(i)?3:1)*(hour>=6&&hour<9?2:1));
