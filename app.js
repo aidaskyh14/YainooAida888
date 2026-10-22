@@ -1,7 +1,7 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix17';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17b';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -545,6 +545,7 @@ const HOST_BASE = {
     let reloading=false;
     const thaw=()=>{if(!frozen)return;H.set=frozen.set;H.del=frozen.del;H.get=frozen.get;frozen=null;reloading=false;};
     return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
+      go:n=>{try{sessionStorage.setItem('ss3MkOpen','1');}catch(e){}goScreen(n);},
       open:input=>{freeze();return cloudAction('boxes',input);},
       refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
   catalogItem(path){return CATALOG.find(c=>c.p===path.replace(/^bag\./,''));},

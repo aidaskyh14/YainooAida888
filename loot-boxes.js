@@ -44,7 +44,7 @@ const CSS=`
 #lootBoxes .lbpanel.bare{background:transparent;border-color:transparent;box-shadow:none;overflow:visible}
 #lootBoxes h2{margin:.2em 0 .4em;font-size:1.3em}#lootBoxes h3{margin:.5em 0 .2em}
 #lootBoxes button{font:inherit;border:2px solid #e8dacb;border-radius:16px;padding:12px;background:#fff;color:#5e4638;cursor:pointer}#lootBoxes button:disabled{opacity:.45;cursor:default}
-#lootBoxes .lbgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}#lootBoxes .lbchoice{padding:6px;font-size:12px}#lootBoxes .lbchoice img{width:60px;height:60px;object-fit:contain;display:block;margin:auto}#lootBoxes .lbchoice.active{background:#fff0ce;border-color:#d9af51}
+#lootBoxes .lbgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}#lootBoxes .lbchoice{padding:6px;font-size:12px}#lootBoxes .lbchoice img{width:60px;height:60px;object-fit:contain;display:block;margin:auto}#lootBoxes .lbchoice.active{background:#fff0ce;border-color:#d9af51}#lootBoxes .lbchoice[data-mk]{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#fff6d8,#ffe7a0);border-color:#f2c35a;box-shadow:0 0 10px rgba(255,200,60,.55)}#lootBoxes .lbchoice[data-mk] img{width:44px;height:44px;margin:0}#lootBoxes .lbchoice[data-mk] br{display:none}
 #lootBoxes .lbhero{width:115px;height:115px;object-fit:contain;animation:lbFloat 2.4s ease-in-out infinite}
 #lootBoxes .lbquantities{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}#lootBoxes .lbquantities button{background:#65c6a6;color:#fff;border-color:#65c6a6;min-width:65px;font-weight:bold}
 #lootBoxes .lbnote{font-size:13px;color:#7a6253;line-height:1.5}
@@ -108,12 +108,18 @@ export async function showLootBoxes(kind,host){
  const close=()=>{if(busy)return;root.remove();overlay=null;document.removeEventListener('keydown',onKey);if(opened)host.refresh();};
  const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
  const show=(html,bare)=>{panel.classList.toggle('bare',!!bare);panel.innerHTML=html;guardImages(panel);panel.scrollTop=0;};
- const choice=message=>{
+ /* fix17 📦 กล่องมหากุศล: แสดงจำนวนในหน้ากล่องสุ่มด้วย (เปิด/คราฟที่ห้องใต้ดิน) */
+ const mkCount=()=>{const n=Number(host.game()?.bag?.box?.mahakusal);return Number.isSafeInteger(n)&&n>0?n:0;};
+ const mkTile=()=>'<button class="lbchoice" data-mk><img src="'+IMG+'mahakusal-box.webp" alt=""><b>กล่องสุ่มมหากุศล</b><br>'+fmt(mkCount())+' กล่อง</button>';
+ const mkPanel=()=>{show('<button class="lbclose" aria-label="ปิด">×</button><h2>📦 กล่องสุ่มมหากุศล</h2><img class="lbhero" src="'+IMG+'mahakusal-box.webp" alt=""><p>มีอยู่ <b>'+fmt(mkCount())+'</b> กล่อง</p><p class="lbnote">ลุ้นรหัสหรือเปิดด่วน · คราฟเพิ่มได้ ที่ห้องใต้ดินในบ้าน</p><div class="lbactions"><button data-back>‹ กล่องอื่น</button><button data-gomk class="lbprimary">🏠 ไปห้องใต้ดิน</button></div>');
+  panel.querySelector('.lbclose').onclick=close;panel.querySelector('[data-back]').onclick=()=>choice();panel.querySelector('[data-gomk]').onclick=()=>{close();host.go?.('house');};};
+const choice=message=>{
   tint();loadSheet(selected);
   const game=host.game(),count=getBoxCount(game,selected),name=itemFor(selected).n;
-  show('<button class="lbclose" aria-label="ปิด">×</button><h2>🎁 กล่องสุ่ม</h2><div class="lbgrid">'+BOXES.map(b=>'<button class="lbchoice '+(b.id===selected.id?'active':'')+'" data-box="'+b.id+'"><img src="'+IMG+b.image+'" alt=""><b>'+escape(itemFor(b).n)+'</b><br>'+fmt(getBoxCount(game,b))+' กล่อง</button>').join('')+'</div><h3>'+escape(name)+'</h3><img class="lbhero" src="'+IMG+selected.image+'" alt=""><p>มีอยู่ <b>'+fmt(count)+'</b> กล่อง</p>'+(message?'<p class="lberror">'+escape(message)+'</p>':'')+'<div class="lbquantities">'+BOX_QUANTITIES.map(q=>'<button data-open="'+q+'" '+(count<q?'disabled':'')+'>เปิด '+fmt(q)+'</button>').join('')+'</div><p class="lbnote">เปิดหลายกล่อง = แอนิเมชันรอบเดียว แล้วสรุปของทั้งหมด<br>กล่องรับได้จากไปรษณีย์ที่ยัยหนูส่งให้</p><details><summary>ดูโอกาสสุ่ม</summary>'+selected.rows.map(r=>'<p class="lbnote">'+escape(describe(r,selected))+' — '+r.weight+'%</p>').join('')+'</details>');
+  show('<button class="lbclose" aria-label="ปิด">×</button><h2>🎁 กล่องสุ่ม</h2><div class="lbgrid">'+BOXES.map(b=>'<button class="lbchoice '+(b.id===selected.id?'active':'')+'" data-box="'+b.id+'"><img src="'+IMG+b.image+'" alt=""><b>'+escape(itemFor(b).n)+'</b><br>'+fmt(getBoxCount(game,b))+' กล่อง</button>').join('')+mkTile()+'</div><h3>'+escape(name)+'</h3><img class="lbhero" src="'+IMG+selected.image+'" alt=""><p>มีอยู่ <b>'+fmt(count)+'</b> กล่อง</p>'+(message?'<p class="lberror">'+escape(message)+'</p>':'')+'<div class="lbquantities">'+BOX_QUANTITIES.map(q=>'<button data-open="'+q+'" '+(count<q?'disabled':'')+'>เปิด '+fmt(q)+'</button>').join('')+'</div><p class="lbnote">เปิดหลายกล่อง = แอนิเมชันรอบเดียว แล้วสรุปของทั้งหมด<br>กล่องรับได้จากไปรษณีย์ที่ยัยหนูส่งให้</p><details><summary>ดูโอกาสสุ่ม</summary>'+selected.rows.map(r=>'<p class="lbnote">'+escape(describe(r,selected))+' — '+r.weight+'%</p>').join('')+'</details>');
   panel.querySelector('.lbclose').onclick=close;
   panel.querySelectorAll('[data-box]').forEach(b=>b.onclick=()=>{selected=BOXES.find(x=>x.id===b.dataset.box);choice();});
+  panel.querySelector('[data-mk]')?.addEventListener('click',mkPanel);
   panel.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>open(Number(b.dataset.open)));
  };
  const actions='<div class="lbactions"><button data-again>เปิดต่อ</button><button data-done class="lbprimary">รับเข้ากระเป๋า ✓</button></div>';
