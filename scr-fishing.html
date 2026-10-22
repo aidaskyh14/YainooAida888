@@ -1,4 +1,4 @@
-<html lang="th" style="--bg: url(ASSET_REMOVED);"><head><script src="craft-result.js?v=ss3-fix15"></script><!-- frame-runtime --><!-- /frame-runtime --><meta charset="UTF-8">
+<html lang="th" style="--bg: url(ASSET_REMOVED);"><head><script src="craft-result.js?v=ss3-fix17"></script><!-- frame-runtime --><!-- /frame-runtime --><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ทดลองตกปลา – ในสวนของยัยหนู</title>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
@@ -96,7 +96,31 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
 .baitb{display:flex;align-items:center;gap:.45rem;width:100%;margin:0 0 .45rem;border:2px dashed #BFE3EE;background:#F3FBFF;border-radius:1rem;padding:.35rem .6rem;font:inherit;font-size:.74rem;font-weight:700;color:#2F6F86;cursor:pointer;text-align:left}
 .baitb img{width:2rem;height:2rem;object-fit:contain}.baitb small{display:block;font-size:.62rem;font-weight:600;color:#6E95A3}
-.baitb.on{border-style:solid;border-color:#5BB6D4;background:#E1F4FB}.baitb:disabled{opacity:.45;cursor:not-allowed}
+.baitb.on{border-style:solid;border-color:#5BB6D4;background:#E1F4FB}.baitb.glow{border-style:solid;border-color:#8FD3EA;animation:baitGlow 1.6s ease-in-out infinite}@keyframes baitGlow{50%{box-shadow:0 0 0 3px rgba(91,182,212,.3),0 0 18px rgba(91,182,212,.85)}}
+/* fix17 ⚡👻 ปลาไหลไฟฟ้าผี */
+.tool{display:flex;align-items:center;gap:.6rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.5rem .6rem;margin-bottom:.4rem;font:inherit;color:var(--cocoa);cursor:pointer;text-align:left}
+.tool img{width:3rem;height:3rem;object-fit:contain;flex:none}.tool span{flex:1}.tool b{display:block;font-size:.84rem}.tool small{display:block;font-size:.64rem;color:var(--soft);font-weight:600}.tool em{font-style:normal;font-weight:800;font-size:.72rem;color:#B9761F;white-space:nowrap}
+.tool.eel{border-color:#FFB3C1;background:linear-gradient(180deg,#FFF5F7,#fff);box-shadow:0 0 0 1px rgba(255,42,74,.15),0 0 14px rgba(255,42,74,.18)}.tool.eel img{border-radius:50%;filter:drop-shadow(0 0 8px rgba(255,42,74,.7))}
+.tool:disabled{opacity:.45;cursor:not-allowed}
+#fxc{position:fixed;inset:0;z-index:30;pointer-events:none;width:100%;height:100%}
+.eelfly{position:fixed;z-index:29;left:0;top:0;width:min(62vw,17rem);aspect-ratio:3/2;background:url(images/fishing-eel-art.webp) center/contain no-repeat;pointer-events:none;filter:drop-shadow(0 0 18px rgba(255,42,74,.9)) saturate(1.2);will-change:transform,opacity}
+.redflash{position:fixed;inset:0;z-index:31;pointer-events:none;background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,.9),rgba(255,42,74,.55) 30%,rgba(120,0,20,.35) 60%,transparent 80%);animation:rflash .7s ease-out forwards}
+@keyframes rflash{0%{opacity:0}12%{opacity:1}30%{opacity:.25}45%{opacity:.85}100%{opacity:0}}
+.zapvig{position:fixed;inset:0;z-index:31;pointer-events:none;box-shadow:inset 0 0 90px 30px rgba(255,42,74,.75);animation:zvig 1.6s ease-out forwards}
+@keyframes zvig{0%,20%,40%{opacity:1}10%,30%{opacity:.3}100%{opacity:0}}
+.fxt{position:fixed;z-index:32;transform:translate(-50%,-50%);font-family:'Kanit','Mali',sans-serif;font-style:italic;font-weight:900;font-size:1.7rem;color:#fff;-webkit-text-stroke:2px #8a0a1f;paint-order:stroke;text-shadow:0 0 12px rgba(255,42,74,.95),0 3px 0 #5a0010;pointer-events:none;white-space:nowrap;animation:fxtA 1.6s ease-out forwards}
+@keyframes fxtA{0%{opacity:0;transform:translate(-50%,-20%) scale(.5)}15%{opacity:1;transform:translate(-50%,-70%) scale(1.25)}25%{transform:translate(-50%,-70%) scale(1)}100%{opacity:0;transform:translate(-50%,-180%)}}
+.stage.shock{animation:shockA .5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shockA{10%,90%{translate:-2px 1px}20%,80%{translate:5px -2px}30%,50%,70%{translate:-7px 3px}40%,60%{translate:7px -3px}}
+.eelpic{width:100%;aspect-ratio:3/2;background:url(images/fishing-eel-art.webp) center/contain no-repeat;filter:drop-shadow(0 0 14px rgba(255,42,74,.6));margin:.2rem 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin:.3rem 0}.stats .st{background:#fff;border:2px solid #F3E9DE;border-radius:.8rem;padding:.3rem;text-align:center;font-size:.62rem;font-weight:600}.stats .st b{display:block;font-size:.84rem}.stats .st.red b{color:#E0475E}
+.res{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center;margin:.4rem 0}.res i{font-style:normal;width:2.2rem;height:2.2rem;border-radius:.6rem;display:grid;place-items:center;font-size:1.1rem;background:#fff;border:2px solid #F3E9DE;opacity:0;transform:scale(.4);animation:rinA .3s cubic-bezier(.3,1.6,.5,1) forwards}.res i.ok{border-color:#ff8fa3;box-shadow:0 0 10px rgba(255,42,74,.55)}
+@keyframes rinA{to{opacity:1;transform:none}}
+.big.volt{background:linear-gradient(180deg,#FF5A78,#D61F45);box-shadow:0 4px 0 #8A0A1F,0 0 16px rgba(255,42,74,.55)}
+.eelbonus{display:flex;align-items:center;gap:.5rem;justify-content:center;background:linear-gradient(180deg,#FFF0F3,#FFE3E9);border:2px solid #FFB3C1;border-radius:1rem;padding:.35rem .6rem;margin:.35rem 0;font-size:.8rem;color:#C2183E;animation:rinA .4s cubic-bezier(.3,1.6,.5,1) both}.eelbonus img{width:2.2rem;height:2.2rem;border-radius:50%;filter:drop-shadow(0 0 8px rgba(255,42,74,.8))}
+.cat.eelcat{border-color:#FFB3C1;background:linear-gradient(180deg,#FFF5F7,#fff)}
+@media (prefers-reduced-motion:reduce){.baitb.glow,.stage.shock{animation:none}}
+.baitb:disabled{opacity:.45;cursor:not-allowed}
 .opt{background:#fff;border:2px solid #F3E9DE;border-radius:1rem;padding:.45rem;display:flex;flex-direction:column;align-items:center;gap:.15rem;cursor:pointer;font-weight:700;font-size:.74rem;text-align:center}
 .opt img{height:3.6rem;object-fit:contain}
 .opt span{font-size:.66rem;color:var(--soft);font-weight:600}
@@ -209,4 +233,4 @@ table.odds th{background:#FFF3C9}
 <div class="shade" id="shade"></div><div class="sheet" id="sheet"></div>
 <div class="ann" id="ann"><img id="annimg" alt=""><span id="anntx"></span></div>
 
-<script src="fishing.js?v=ss3-fix16"></script></body></html>
+<script src="fishing.js?v=ss3-fix17"></script></body></html>

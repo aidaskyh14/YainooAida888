@@ -23,7 +23,7 @@ export function safariAction(account,ctx,input,rng=Math.random){
   else if(input.type==='research'){
    const task=state.tasks[a[0]];
    if(JSON.stringify(input.task)!==JSON.stringify(task))fail('โจทย์เปลี่ยนแล้ว ตรวจโจทย์ล่าสุดก่อนวิจัย');
-   const lens=input.lens===true;if(lens){if(boostHave(game,'lens')<1)fail('ไม่มีแว่นขยายนักวิจัยในกระเป๋า');if(boostUsed(state,'lens',ctx.now)>=BOOST_LIMIT)fail('🔍 แว่นขยายใช้ครบ '+BOOST_LIMIT+' ครั้งวันนี้แล้ว');}
+   const lens=input.lens===true;if(lens){if(boostHave(game,'lens')<1)fail('ไม่มีแว่นขยายนักวิจัยในกระเป๋า');}
    const consumed=task.map(([key,quantity])=>({key,path:SAFARI_ITEMS.find(i=>i[0]===key)[1],quantity:lens?cut30(quantity):quantity}));
    if(consumed.some(i=>count(get(game.bag,i.path))<i.quantity))fail('วัตถุดิบในกระเป๋าไม่ครบ ไม่ได้หักของหรือใช้โควตา');
    if((state.nextAt||0)>ctx.now)fail('กำลังวิจัย กรุณารอผลรอบก่อน');
@@ -38,5 +38,5 @@ export function safariAction(account,ctx,input,rng=Math.random){
   }else fail('ไม่พบคำสั่งวิจัย');
  }
  const bag=Object.fromEntries(SAFARI_ITEMS.map(([k,p])=>[k,count(get(game.bag,p))]));
- return {game,view:{...state,lens:{have:boostHave(game,'lens'),used:boostUsed(state,'lens',ctx.now),limit:BOOST_LIMIT},tasks:Object.fromEntries(Object.entries(state.tasks).map(([animal,task])=>[animal,task.map(([key,quantity])=>({key,quantity}))])),bag,merit:count(game.merit),limit:10},receipt};
+ return {game,view:{...state,lens:{have:boostHave(game,'lens'),used:boostUsed(state,'lens',ctx.now),limit:0},tasks:Object.fromEntries(Object.entries(state.tasks).map(([animal,task])=>[animal,task.map(([key,quantity])=>({key,quantity}))])),bag,merit:count(game.merit),limit:10},receipt};
 }

@@ -1,4 +1,4 @@
-/* fix15 ไอเทมบูสต์ 3 ชิ้น: ใช้ครั้งละ 1 ชิ้น · ชนิดละไม่เกิน 10 ครั้ง/วัน (วันไทย) · ลด 30%
+/* fix15 ไอเทมบูสต์ 3 ชิ้น: ใช้ครั้งละ 1 ชิ้น · fix17: ไม่จำกัดจำนวนครั้งต่อวัน (ยังนับไว้ดูสถิติ) · ลด 30% (เหยื่อวิเศษ: รอปลา 5 นาที)
    bait  = เหยื่อวิเศษ  ลดเวลารอปลากินเบ็ด (บ่อทั่วไปเท่านั้น ไม่ใช่ห้อง VIP)
    lens  = แว่นขยาย     ลดจำนวนวัตถุดิบวิจัยซาฟารี
    gear  = เฟืองเร่ง     ลดเวลาแปรรูปโรงงานอัลปาก้า */
@@ -15,7 +15,6 @@ export function boostUsed(state,kind,now){const d=thaiDay(now);if(state.boostDay
 export function useBoost(game,state,kind,now){
  if(!BOOST_KINDS.includes(kind))throw Object.assign(new Error('ไอเทมบูสต์ไม่ถูกต้อง'),{code:'invalid-argument'});
  const used=boostUsed(state,kind,now);
- if(used>=BOOST_LIMIT)throw Object.assign(new Error(BOOST_ICONS[kind]+' '+BOOST_NAMES[kind]+' ใช้ครบ '+BOOST_LIMIT+' ครั้งวันนี้แล้ว'),{code:'failed-precondition'});
  if(boostHave(game,kind)<1)throw Object.assign(new Error('ไม่มี'+BOOST_NAMES[kind]+'ในกระเป๋า'),{code:'failed-precondition'});
  game.bag ||= {};game.bag.boost ||= {};game.bag.boost[kind]=boostHave(game,kind)-1;
  state.boostDay.n ||= {};state.boostDay.n[kind]=used+1;return used+1;

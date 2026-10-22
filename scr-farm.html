@@ -1,7 +1,13 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix15"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix17"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}
 .owner-rank{border:3px solid #d2a145!important;background:linear-gradient(110deg,#fff5d4,#ffdda0)!important;box-shadow:0 4px 14px #bb882b55;margin-bottom:16px}.owner-rank .rn{font-weight:800;color:#8a541f}
+#howCard{position:fixed;inset:0;z-index:60;background:rgba(20,30,50,.45);display:none;align-items:center;justify-content:center;padding:16px}#howCard.on{display:flex}
+#howCard .hc{width:min(20rem,100%);background:#FFFBF5;border:3px solid #fff;border-radius:1.4rem;padding:.9rem;text-align:center;box-shadow:0 0 0 3px #FFE08A,0 0 28px rgba(255,214,107,.7),0 12px 28px rgba(0,0,0,.35);animation:hcIn .35s cubic-bezier(.2,1.5,.4,1)}
+@keyframes hcIn{from{transform:scale(.8);opacity:0}}
+#howCard img{width:4.6rem;height:4.6rem;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,214,107,.9))}#howCard h4{margin:.3rem 0;font-size:1rem}#howCard p{margin:0;font-size:.76rem;line-height:1.5;color:#7A5A48}
+#howCard .hb{display:flex;gap:.4rem;margin-top:.7rem}#howCard .hb button{flex:1;border:0;border-radius:999px;font:inherit;font-weight:800;padding:.55rem;cursor:pointer}#howCard .ghost{background:#EEE;color:#9A7A68}#howCard .go{background:linear-gradient(180deg,#6CC9A8,#3FA57F);color:#fff;box-shadow:0 3px 0 #2E7D60}
+.it.how{position:relative;box-shadow:0 0 0 2px #FFE08A,0 0 12px rgba(255,214,107,.6)}.it.how::after{content:"ℹ️";position:absolute;right:.2rem;top:.15rem;font-size:.62rem}
 </style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -367,8 +373,22 @@ function bagName(t,k){return (t==='crop'?CN[k]:t==='flower'?FLN[k]:t==='wine'?WN
 function bagImg(t,k){const l=t==='crop'?(IMG['p-'+k]||IMG[k+'4']):t==='flower'?IMG['fl-'+k]:t==='wine'?IMG['wine-'+k]:t==='hedge'?IMG['hedge-'+k]:t==='item'?IMG['it-'+k]:t==='food'?IMG[FOODIMG[k]]:'';if(l)return l;const c=bagCat(t,k);return c&&c.i?'images/'+c.i:''}
 function renderBag(){const tabs=bagTabsAll();if(!tabs[bagTab])bagTab='crop';$('bagTabs').innerHTML=Object.entries(tabs).map(([k,v])=>'<button class="'+(k===bagTab?'on':'')+'" data-k="'+k+'">'+v+'</button>').join('');
  const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>bagQ(q));
- $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
+ $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it'+(HOWTO[bagTab+'.'+k]?' how':'')+'" data-g="'+bagTab+'" data-k="'+k+'">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
+/* fix17: แตะไอเทมพิเศษ → การ์ดวิธีใช้ + ปุ่ม "ไปใช้เลย" */
+const HOWTO={'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 5 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
+ 'boost.lens':['🔍 แว่นขยายนักวิจัย','ใช้ตอนกดวิจัยที่ซาฟารี · วัตถุดิบที่ต้องใช้ลดลง 30% · ใช้ได้ไม่จำกัด','safari','🦓 ไปซาฟารี'],
+ 'boost.gear':['⚙️ เฟืองเร่งเครื่อง','ใช้ตอนสั่งงานโรงงานอัลปาก้า · เวลาแปรรูปเร็วขึ้น 30% · ใช้ 1 ชิ้นต่องาน ไม่จำกัดต่อวัน','alpaca','🦙 ไปโรงงานอัลปาก้า'],
+ 'fishing.eel':['⚡ ปลาไหลไฟฟ้าผี','แตะทุ่นของเพื่อนที่นั่งบ่อเดียวกันแล้วเลือกปลาไหล · ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว) · เพื่อนไม่รู้ว่าใคร','fishing','🎣 ไปบ่อตกปลา'],
+ 'box.mahakusal':['📦 กล่องสุ่มมหากุศล','เปิดได้ที่ห้องใต้ดินในบ้าน · ทายรหัส 4 หลักได้ 3 ครั้ง ลุ้นกุศลก้อนใหญ่ · หรือเปิดด่วนทีละ 500 กล่องขึ้นไป','house','🏠 ไปห้องใต้ดิน'],
+ 'demon.music':['🎶 กล่องดนตรีหมูปีศาจ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 ปีศาจ · เพื่อนโดนหักทันที −20,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
+ 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −4,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 20) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
+ 'demon.coffin':['⛓️ หีบโลงต้องสาป','ล็อกสวนเพื่อนจนกว่าเจ้าของจะเปิดตราผนึก 1 ใน 3 · ระวังตราสะท้อนกลับมาหาคุณ! · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
+ 'demon.heart':['💖 หัวใจทับทิมปีศาจ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −100,000 · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
+$('bagGrid').onclick=e=>{const it=e.target.closest('.it.how');if(!it)return;const h=HOWTO[it.dataset.g+'.'+it.dataset.k];if(!h)return;const im=bagImg(it.dataset.g,it.dataset.k);
+ let o=document.getElementById('howCard');if(!o){o=document.createElement('div');o.id='howCard';document.body.appendChild(o);}
+ o.innerHTML='<div class="hc"><img src="'+im+'" alt=""><h4>'+h[0]+'</h4><p>'+h[1]+'</p><div class="hb"><button class="ghost" id="hcX">ปิด</button><button class="go" id="hcGo">'+h[3]+'</button></div></div>';o.className='on';
+ $('hcX').onclick=()=>{o.className='';};$('hcGo').onclick=()=>{o.className='';if(h[2]==='friends'){closeAll();open('friendSheet');try{renderFriends();}catch(err){}return;}if(h[2]==='house'){try{sessionStorage.setItem('ss3MkOpen','1');}catch(err){}}try{parent.postMessage({go:h[2]},'*');}catch(err){}};o.onclick=ev=>{if(ev.target===o)o.className='';};};
 /* ---------- เพื่อน ---------- */
 const FR=[];
 function renderFriends(){FR.forEach(f=>{if(f[3])f[1]=pts});const rows=[...FR].sort((a,b)=>b[1]-a[1]);
@@ -844,4 +864,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix15"></script><script src="farm-cloud.js?v=ss3-fix15"></script><script type="module" src="prank-ui.js?v=ss3-fix15c"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix15" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix17"></script><script type="module" src="prank-ui.js?v=ss3-fix17"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>

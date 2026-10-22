@@ -1,22 +1,23 @@
-import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix15';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix16';
-import {lurePen} from './bird-lure-engine.js?v=ss3-fix15';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix16';
-import {observeGameplay} from './campaign-progress.js?v=ss3-fix16';
+import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix17';
+import {lurePen} from './bird-lure-engine.js?v=ss3-fix17';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17';
+import {observeGameplay} from './campaign-progress.js?v=ss3-fix17';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
-import {startRumors} from './rumor-ui.js?v=ss3-fix16';
-import {startAlerts} from './alerts-ui.js?v=ss3-fix16';
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix16';
+import {startRumors} from './rumor-ui.js?v=ss3-fix17';
+import {startAlerts} from './alerts-ui.js?v=ss3-fix17';
+import {startDemon} from './demon-ui.js?v=ss3-fix17';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-fix16';
-import { splitGame,joinGame } from './save-schema.js?v=ss3-fix16';
-import { installBackupUI } from './save-backup.js?v=ss3-fix16';
-import { CATALOG } from './catalog.js?v=ss3-fix16';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix17';
+import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17';
+import { installBackupUI } from './save-backup.js?v=ss3-fix17';
+import { CATALOG } from './catalog.js?v=ss3-fix17';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -75,6 +76,7 @@ function queueGameplay(before,after,source,boxes){
  const craft=['farm','house','backyard'].includes(source);
  const stockChanged=pet&&JSON.stringify(before.bag)!==JSON.stringify(after.bag);
  const meritChanged=pet&&(after.merit||0)>(before.merit||0);
+ if(meritChanged&&typeof petEarnBuf==='number')petEarnBuf=Math.min(5e5,petEarnBuf+(after.merit||0)-(before.merit||0));/* fix17 😈 ตั๋วดร็อปจากการดูแลสัตว์ (สุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้าสัตว์) */
  const craftChanged=craft&&['food','gfood','wine','flower','hedge','crop'].some(k=>increased(before.bag?.[k],after.bag?.[k]));
  // `at` is the device clock; the server offset is applied when the job is scored.
  const petEarn=craft&&((after.hedgeEarn||0)>(before.hedgeEarn||0)||(after.ham?.earn||0)>(before.ham?.earn||0));
@@ -460,7 +462,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud'};
+const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -485,9 +487,11 @@ async function sceneSafeAction(system,input){
 const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return false;}};/* fix16: มินิเกมฮาโลวีนเปิดอยู่ (หน้าสัตว์หยุดบันทึก รอโหลดใหม่ตอนปิดเกม) */
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
-let alertStop=null;
-function watchAlerts(){alertStop?.();alertStop=null;if(!S.user||S.admin)return;
- alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,go:n=>goScreen(n)});}
+let alertStop=null,demonStop=null;
+function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;if(!S.user||S.admin)return;
+ /* fix17 😈 ไอเทมปีศาจ: ฝั่งคนโดน + กระเป๋า 48 ชม. (อ่าน gameViews/demon ของตัวเองเท่านั้น) */
+ demonStop=startDemon({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>hwOpen()||RUMOR_HOLD.has(S.screen)||S.navigating?cloudAction(sys,input):sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,game:()=>S.P?.g,x17:()=>S.P?.x17||{},uid:S.user.uid,roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,screen:()=>S.screen});
+ alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,x17:()=>S.P?.x17||{},screen:()=>S.screen,go:n=>goScreen(n)});}
 function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
  rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen(),game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
 /* fix16: ระหว่างฉากเรียกคลาวด์ (เช่น เตาทำอาหาร) กันการแตะในฉากชั่วคราว ไม่ให้วาง/ขายสัตว์แล้วถูกผลจากคลาวด์ทับจนหาย */
@@ -558,6 +562,9 @@ const HOST_BASE = {
   // fix15: ตัดขนอัลปาก้า/เก็บดอกไม้ทำในหน้าเกม แจ้งยอดให้เควสต์เนเบอร์ฮูดแบบรวมเป็นชุด (ไม่เกินทุก 20 วินาที)
   nbReport(kind,n){if(!['shear','flower'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
+  /* fix17: เรียกคลาวด์แบบไม่ผ่านประตูลำดับรายการ (ฝนกุศล: ฟองทอง/คะแนนสด) · ข้อมูลส่วนตัวฝั่งเซิร์ฟเวอร์ (x17) */
+  cloudRaw:(system,input)=>CLOUD_HANDLERS[system]?httpsCallable(functions,CLOUD_HANDLERS[system])({raw:true,input}).then(r=>r.data):Promise.reject(new Error('ไม่พบระบบที่เรียก')),
+  x17:()=>JSON.parse(JSON.stringify(S.P?.x17||{})),
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
   // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
   frPublish(game,data){if(!S.user)return;try{setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),JSON.parse(JSON.stringify(data||{}))).catch(()=>{});}catch(e){}},
@@ -623,7 +630,7 @@ async function goScreen(n) {
     await store.loadIds(ids); // read the next screen's parts while the current page still owns the save scope
     // fix13: close the old page first (its Host handle stops saving, frame goes to about:blank and we wait for it),
     // save what it wrote before that, and only then switch the save scope to the new screen.
-    frameSave();retired=true;const nav=await blankScene();await flush();
+    frameSave();retired=true;const nav=await blankScene();await flush();await petFlush();
     S.P.g=await store.loadIds(ids);store.activate(ids);if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
@@ -631,6 +638,9 @@ async function goScreen(n) {
   }catch(e){toast(e.message||thaiError(e));if(retired){S.navigating=false;if(prevIds)store.activate(prevIds);reloadScreen();}}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
+/* fix17 😈 ตั๋วดร็อปจากการดูแลสัตว์: สะสมกุศลที่ได้จากหน้าสัตว์ แล้วสุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้า (หน้าเก่าปิดแล้ว ไม่ทับกระเป๋า) */
+var petEarnBuf=0;
+async function petFlush(){if(petEarnBuf<5000||!S.user||S.admin)return;const earned=Math.floor(petEarnBuf);petEarnBuf=0;try{await cloudAction('demon',{type:'petRoll',earned});}catch(e){}}
 // Retire the scene in the frame: new inert Host handle (old page's saves are refused), navigate to about:blank and wait
 // until the old document is gone (or 4 s; the refused handle already protects the save). Resolves with a navigation token.
 let sceneNav=0;
@@ -646,7 +656,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix16'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix17'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -720,17 +730,24 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '😈 บันทึกแกล้ง'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 /* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
 const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
 function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=false;if(fresh)return fn(...a);
   const ov=$('#ov'),host=ov&&!ov.hidden?ov:(document.scrollingElement||document.documentElement),top=host.scrollTop,body=$('#aBody'),inner=ADMIN_LISTS.map(q=>body?.querySelector(q)?.scrollTop||0);
   const out=await fn(...a);host.scrollTop=top;const b2=$('#aBody');ADMIN_LISTS.forEach((q,i)=>{const e=b2?.querySelector(q);if(e&&inner[i])e.scrollTop=inner[i];});return out;};}
+/* fix17 😈 บันทึกการแกล้งด้วยไอเทมปีศาจ — เห็นเฉพาะแอดมิน (ผู้เล่นไม่มีทางรู้ว่าใครแกล้ง) */
+async function tabDemon(day){const B=$('#aBody');const d=day||new Date(Date.now()+serverOffset+7*3600e3).toISOString().slice(0,10);B.innerHTML='<div class="box">กำลังโหลดบันทึก…</div>';
+ try{const out=(await httpsCallable(functions,'demonActionCloud')({input:{type:'log',day:d}})).data,E={music:'🎶',hour:'⏳',coffin:'⛓️',heart:'💖'},W={send:'ใช้',pass:'ส่งหัวใจต่อ',seal:'เปิดหีบ'},R={g:'🟢 หลุดคำสาป',r:'🔴 คำสาปเต็ม',x:'🔁 สะท้อนกลับ'};
+  const prev=new Date(Date.parse(d)-864e5).toISOString().slice(0,10),next=new Date(Date.parse(d)+864e5).toISOString().slice(0,10);
+  B.innerHTML='<div class="box"><div class="row" style="justify-content:space-between"><button class="btn sm gray" id="dlPrev">‹ '+prev.slice(5)+'</button><b>😈 '+d+' · '+out.rows.length+' รายการ</b><button class="btn sm gray" id="dlNext">'+next.slice(5)+' ›</button></div><p style="font-size:.78rem;color:#9A7A68;margin:.3rem 0">เห็นเฉพาะแอดมิน · ผู้เล่นไม่เห็นชื่อคนแกล้ง</p>'
+   +(out.rows.length?out.rows.map(r=>'<div style="display:flex;gap:.5rem;align-items:center;padding:.3rem 0;border-top:1px solid #F3E9DE;font-size:.82rem"><span style="color:#9A7A68;font-variant-numeric:tabular-nums">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</span><span>'+(E[r.k]||'😈')+'</span><span>'+(r.w==='seal'?esc(r.tn||r.to)+' เปิดหีบ → '+(R[r.r]||''):'<b>'+esc(r.fn||r.from)+'</b> '+(W[r.w]||r.w)+' → <b>'+esc(r.tn||r.to)+'</b>'+(r.n?' (ทอด '+r.n+')':''))+'</span></div>').join(''):'<p>ไม่มีรายการ</p>')+'</div>';
+  $('#dlPrev').onclick=()=>tabDemon(prev);$('#dlNext').onclick=()=>tabDemon(next);}catch(e){B.innerHTML='<div class="box">'+esc(e.message||'โหลดไม่สำเร็จ')+'</div>';}}
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
  try{if(!A.players||!A.sendLoaded){B.innerHTML='<div class="box">กำลังอ่านข้อมูลครั้งแรก…</div>';const center=(await httpsCallable(functions,'adminCenterCloud')({type:'status',session:S.sessionId})).data;ps=center.players;A.players=ps;A.templates=center.templates;A.favorites=center.favorites;A.pendingRun=center.pendingRun;A.history=center.history;A.sendLoaded=true;}else ps=A.players;

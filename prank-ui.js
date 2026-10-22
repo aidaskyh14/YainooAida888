@@ -1,7 +1,7 @@
 /* fix15 หน้าสวน: เยี่ยมสวนเพื่อนเห็นผักจริง + ระบบแกล้งเพื่อน (ค้างคาว ป้ายแซว แกล้งแปลง หุ่นไล่กา)
    ใช้ตัวแปรของหน้าสวน (S, farm, visiting, IMG, CN, P1, P2, W, H, box, toast, $, open, closeAll, render, plotEls, tapPlot, friendPlot)
    คำสั่งที่เปลี่ยนข้อมูลส่งผ่านคลาวด์ทั้งหมด (window.cloudFriend / window.cloudFarm จาก farm-cloud.js) */
-import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix15c';
+import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix17';
 const HWI=k=>'images/halloween-hw-'+k+'.webp';
 const PIMG=k=>'images/'+PRANKS[k].img+'.webp';
 const fmtN=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('en-US');
@@ -38,6 +38,34 @@ const css=document.createElement('style');css.textContent=`
 #pkSheet .row2{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem}
 #pkSheet .lbl{font-size:.74rem;color:#8A6AA8;font-weight:700;margin:.35rem 0 .3rem}
 #pkSheet .pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem}
+/* fix17 😈 ไอเทมปีศาจในฉากสวน */
+.dmobj{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:4}
+.dmhg{width:17%}.dmhg img{position:relative;z-index:2;width:100%;display:block;filter:drop-shadow(0 0 .8em rgba(255,40,80,.95)) drop-shadow(0 8px 6px rgba(0,0,0,.4));animation:dmsway 3s ease-in-out infinite}
+@keyframes dmsway{50%{transform:rotate(2deg) translateY(-2%)}}
+.dmhg .rune{position:absolute;left:50%;top:92%;width:190%;aspect-ratio:3/1;transform:translate(-50%,-50%);border-radius:50%;z-index:1;background:repeating-conic-gradient(from 0deg,rgba(255,60,90,0) 0 8deg,rgba(255,60,90,.75) 8deg 10deg),radial-gradient(ellipse,rgba(255,40,80,.55),transparent 70%);-webkit-mask:radial-gradient(ellipse,transparent 30%,#000 32%,#000 48%,transparent 50%);mask:radial-gradient(ellipse,transparent 30%,#000 32%,#000 48%,transparent 50%);animation:dmrs 6s linear infinite}
+@keyframes dmrs{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.dmhg .aura{position:absolute;left:50%;top:50%;width:170%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,60,100,.55),rgba(180,0,40,.25) 40%,transparent 68%);z-index:0;animation:dmap 2.2s ease-in-out infinite;mix-blend-mode:screen}
+@keyframes dmap{50%{transform:translate(-50%,-50%) scale(1.15);opacity:.6}}
+.dmhg .neck{position:absolute;left:50%;top:44%;width:4%;height:16%;transform:translateX(-50%);z-index:3;background:linear-gradient(180deg,#fff,#ff3b5c 40%,rgba(255,60,90,0));border-radius:2px;box-shadow:0 0 .5em #ff3b5c;animation:dmneck .35s linear infinite}
+@keyframes dmneck{50%{opacity:.55;height:13%}}
+.dmtag{position:absolute;left:50%;top:104%;transform:translateX(-50%);white-space:nowrap;background:rgba(28,10,18,.9);color:#FFD5DC;border:2px solid #ff6b82;border-radius:999px;padding:.05rem .5rem;font-size:.6rem;font-weight:800;box-shadow:0 0 10px rgba(216,30,60,.6);font-variant-numeric:tabular-nums;z-index:3;font-family:'Mali',sans-serif}
+.dmcf{width:26%;pointer-events:auto;cursor:pointer;z-index:5}.dmcf img{width:100%;display:block;filter:drop-shadow(0 0 1em rgba(255,50,90,.9)) drop-shadow(0 10px 8px rgba(0,0,0,.4));animation:dmcsh 2.4s ease-in-out infinite}
+.dmcf.drop img{animation:dmcdrop .55s cubic-bezier(.55,0,1,.45)}
+@keyframes dmcsh{0%,80%,100%{transform:rotate(0)}84%{transform:rotate(-2deg)}88%{transform:rotate(2deg)}92%{transform:rotate(-1deg)}}
+@keyframes dmcdrop{from{transform:translateY(-260%) rotate(-12deg);opacity:.2}}
+.dmlock{position:absolute;left:8%;right:8%;top:38%;height:30%;border-radius:4%;background:rgba(30,0,10,.32);box-shadow:inset 0 0 0 3px rgba(255,80,110,.55),0 0 24px rgba(216,30,60,.55);pointer-events:none;z-index:3;animation:dmlk 2s ease-in-out infinite}
+@keyframes dmlk{50%{box-shadow:inset 0 0 0 3px rgba(255,80,110,.85),0 0 34px rgba(216,30,60,.75)}}
+.pkdock button.dv{background:linear-gradient(180deg,#ff5a72,#b30f2b);box-shadow:0 4px 10px rgba(120,0,20,.45),0 0 12px rgba(216,30,60,.55)}
+#pkSheet .dmit{display:grid;grid-template-columns:3rem 1fr auto;align-items:center;gap:.5rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.4rem .55rem;margin-bottom:.32rem;cursor:pointer;text-align:left;font:inherit;color:inherit}
+#pkSheet .dmit img{width:3rem;height:3rem;object-fit:contain;filter:drop-shadow(0 0 5px rgba(216,30,60,.45))}
+#pkSheet .dmit b{display:block;font-size:.82rem}#pkSheet .dmit small{display:block;font-size:.64rem;color:#9A7A68;font-weight:600}
+#pkSheet .dmit .r{font-size:.7rem;font-weight:800;color:#D81E3C}#pkSheet .dmit:disabled{opacity:.45;cursor:default}
+#pkSheet .dmexp{display:inline-block;background:#FFF0F3;color:#D81E3C;border-radius:999px;padding:0 .4em;font-size:.6rem;font-weight:800}#pkSheet .dmexp.warn{background:#D81E3C;color:#fff}
+.dmfly{position:fixed;z-index:60;width:4rem;pointer-events:none;filter:drop-shadow(0 0 10px rgba(255,60,90,.9));transition:transform .9s cubic-bezier(.5,-.3,.5,1),opacity .9s}
+.dmboom{position:fixed;z-index:60;width:10rem;height:10rem;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,#fff,rgba(255,80,110,.85) 30%,rgba(120,0,20,.4) 60%,transparent 72%);animation:dmbm .6s ease-out forwards;pointer-events:none}
+@keyframes dmbm{from{transform:translate(-50%,-50%) scale(.2)}to{transform:translate(-50%,-50%) scale(1.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dmhg img,.dmhg .rune,.dmhg .aura,.dmcf img,.dmlock{animation:none}}
+
 #pkSheet .pcard{border:2px solid #F1E3D3;background:#fff;border-radius:14px;padding:.35rem .4rem;display:flex;gap:.4rem;align-items:center;cursor:pointer;text-align:left;font:inherit;color:var(--cocoa,#6E4B3A)}
 #pkSheet .pcard img{width:2.5rem;height:2.5rem;object-fit:contain;flex:none}
 #pkSheet .pcard b{display:block;font-size:.76rem}#pkSheet .pcard small{display:block;font-size:.62rem;color:#9A7A68;line-height:1.3}
@@ -160,6 +188,27 @@ function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].re
   +'<div class="row2"><button id="pnOk">👀 อ่านแล้ว</button><button class="main" id="pnFix" '+(signs.length?'':'disabled')+'>🧹 ถอน'+(signs.length>1?'ทั้งหมด '+signs.length+' ป้าย':'ป้าย')+'</button></div></div>';
  document.body.appendChild(nn);const done=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'}).catch?.(()=>{});};
  nn.querySelector('#pnOk').onclick=done;nn.querySelector('#pnFix').onclick=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'});setTimeout(()=>fixSheet('sign',{n:signs.length,input:{all:true}}),first?600:0);};}
+
+/* ---------- fix17 😈 ไอเทมปีศาจ ---------- */
+const DM={music:['กล่องดนตรีหมูปีศาจ','🎶','prank-musicbox','หักทันที −20,000'],hour:['นาฬิกาทรายปีศาจ','⏳','prank-hourglass','ดูด −4,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมปีศาจ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −100,000']};
+const dmHms=ms=>{ms=Math.max(0,ms);const h=Math.floor(ms/3600e3),m=Math.floor(ms%3600e3/60e3),s=Math.floor(ms%60e3/1e3);return h?h+':'+String(m).padStart(2,'0')+' ชม.':m+':'+String(s).padStart(2,'0');};
+function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__HOST?.x17?.()?.dm?.b||[];}catch(e){return [];}})(),now=Date.now();
+ pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>😈 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+  +Object.entries(DM).map(([k,[n,e,img,desc]])=>{const have=Math.max(0,Math.floor(Number(bag[k])||0)),first=lots.filter(x=>x.k===k&&x.n>0).sort((a,b)=>a.at-b.at)[0],left=first?first.at+48*3600e3-now:0;
+   return '<button class="dmit" data-dm="'+k+'" '+(have?'':'disabled')+'><img src="images/'+img+'.webp" alt=""><div><b>'+e+' '+n+'</b><small>'+desc+'</small>'+(first?'<span class="dmexp'+(left<6*3600e3?' warn':'')+'">⏳ '+dmHms(left)+'</span>':'')+'</div><div class="r">มี '+have+'</div></button>';}).join('')
+  +'<div class="note">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ · 💖 ทะลุหุ่นไล่กา</div>');
+ sheetEl.querySelectorAll('[data-dm]').forEach(b=>b.onclick=async()=>{const k=b.dataset.dm;closeAll();const out=await window.cloudDemon?.(k);if(!out?.sent)return;
+  const [cx,cy]=[innerWidth/2,innerHeight*.5],f=document.createElement('img');f.className='dmfly';f.src='images/'+DM[k][2]+'.webp';f.style.left=(cx-32)+'px';f.style.top=(innerHeight-120)+'px';document.body.appendChild(f);
+  requestAnimationFrame(()=>{f.style.transform='translate(0,'+(cy-innerHeight+90)+'px) scale(1.4)';});
+  setTimeout(()=>{f.style.opacity='0';const bm=document.createElement('div');bm.className='dmboom';bm.style.left=cx+'px';bm.style.top=cy+'px';document.body.appendChild(bm);setTimeout(()=>{bm.remove();f.remove();},600);const st=$('stage');st.classList.remove('pkshake');void st.offsetWidth;st.classList.add('pkshake');
+   toast('😈 '+({music:'ส่งกล่องดนตรีให้ ',hour:'วางนาฬิกาทรายในสวน ',coffin:'วางหีบโลงในสวน ',heart:'ส่งหัวใจให้ '}[k])+esc(out.sent.name)+' แล้ว! เจ้าของสวนจะไม่รู้ว่าใคร');},900);});}
+const HG_SPOT=[[80,30],[66,27],[90,46]];
+function demonGarden(s){if(visiting)return;let D=null;try{D=parent.__DEMON;}catch(e){}const v=D?.view;if(!v)return;const now=Date.now();
+ (v.hg||[]).slice(0,3).forEach((h,j)=>{const [x,y]=HG_SPOT[j],o=document.createElement('div');o.className='dmobj dmhg';o.style.left=x+'%';o.style.top=y+'%';const paid=Math.min(10,Math.floor((now-h.at)/360000));
+  o.innerHTML='<span class="rune"></span><span class="aura"></span><img src="images/prank-hourglass.webp" alt="นาฬิกาทรายปีศาจ"><span class="neck"></span><span class="dmtag">⏳ '+dmHms(h.end-now)+' · −'+(paid*4000).toLocaleString('en-US')+'</span>';s.appendChild(o);});
+ const c=(v.cf||[])[0];if(c){const l=document.createElement('div');l.className='dmlock';s.appendChild(l);const o=document.createElement('div');o.className='dmobj dmcf'+(window.__dmCf===c.id?'':' drop');window.__dmCf=c.id;o.style.left='52%';o.style.top='54%';o.setAttribute('role','button');o.setAttribute('aria-label','เปิดหีบโลง');
+  o.innerHTML='<img src="images/prank-coffin.webp" alt=""><span class="dmtag">⛓️ แตะเพื่อเปิด · '+dmHms(c.until-now)+'</span>';o.onclick=e=>{e.stopPropagation();try{parent.__DEMON?.openSeal?.();}catch(err){}};s.appendChild(o);}}
+try{parent.__demonHook=()=>{try{render();}catch(e){}};}catch(e){}
 /* ---------- ฉาก: ค้างคาว ป้าย หุ่นไล่กา (ทั้งเจ้าของและคนเยี่ยม) ---------- */
 const SPOTS=[];for(let i=0;i<10;i++){SPOTS.push([88+i*85,1352]);SPOTS.push([130+i*85,1228]);}
 let batRAF=0,dock=null,alert=null;
@@ -194,10 +243,11 @@ window.prankDecorate=function(s){stopBats();dock?.remove();alert?.remove();dock=
  if(st.scareUntil>now&&farm===1){const im=document.createElement('img');im.className='pkscare';im.src='images/prank-scarecrow.webp';im.alt='';s.appendChild(im);const t=document.createElement('span');t.className='pkshield';t.textContent='🛡️ กันแกล้ง '+left(st.scareUntil-now);s.appendChild(t);}
  if(st.bat){const c=document.createElement('canvas');c.className='pkbat';s.appendChild(c);const b=document.createElement('img');b.className='pkbatfly';b.src='images/prank-bat.webp';b.alt='';s.appendChild(b);requestAnimationFrame(()=>startBats(c));}
  dock=document.createElement('div');dock.className='pkdock';
- if(visiting)dock.innerHTML='<button data-p="bat"><img src="images/prank-bat.webp" alt="">ค้างคาว</button><button data-p="sign"><img src="images/prank-sign.webp" alt="">ปักป้าย</button>';
+ if(visiting)dock.innerHTML='<button class="dv" data-dm><img src="images/prank-heart.webp" alt="">ปีศาจ</button><button data-p="bat"><img src="images/prank-bat.webp" alt="">ค้างคาว</button><button data-p="sign"><img src="images/prank-sign.webp" alt="">ปักป้าย</button>';
  else dock.innerHTML=(st.bat?'<button data-f="bat"><img src="images/prank-bat.webp" alt="">ไล่ค้างคาว</button>':'')+(st.signs.length?'<button data-f="sign"><img src="images/prank-sign.webp" alt="">ป้าย '+st.signs.length+'</button>':'')+'<button class="gold" data-f="scare"><img src="images/prank-scarecrow.webp" alt="">'+(st.scareUntil>now?'เฝ้าอยู่':'หุ่นไล่กา')+'</button>';
  document.body.appendChild(dock);
  dock.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>gardenPrank(b.dataset.p));
+ dock.querySelector('[data-dm]')?.addEventListener('click',demonSheet);demonGarden(s);
  dock.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const f=b.dataset.f;if(f==='scare')return scareSheet();if(f==='bat')return fixSheet('bat');readSigns(false);});
  if(!visiting){const plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0),n=plots+(st.bat?1:0)+st.signs.length;
   if(n){alert=document.createElement('div');alert.className='pkalert';alert.textContent='😈 ใครสักคนแกล้งสวนของคุณ · '+n+' จุด';alert.onclick=()=>readSigns(false);document.body.appendChild(alert);}

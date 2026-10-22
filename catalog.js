@@ -1424,3 +1424,6 @@ CATALOG.push(...[{k:"box-plant",n:"กล่องสุ่มพืช",i:"boxe
 CATALOG.push({k:"boost-bait",n:"เหยื่อวิเศษ (ปลากินเร็ว −30%)",i:"boost-bait.webp",g:"ไอเทมบูสต์",p:"boost.bait"},{k:"boost-lens",n:"แว่นขยายนักวิจัย (วัตถุดิบวิจัย −30%)",i:"boost-lens.webp",g:"ไอเทมบูสต์",p:"boost.lens"},{k:"boost-gear",n:"เฟืองเร่งเครื่อง (เวลาแปรรูป −30%)",i:"boost-gear.webp",g:"ไอเทมบูสต์",p:"boost.gear"});
 /* fix16 น้ำมนต์แก้พิษ 4 ขวด (คู่กับยาพิษแม่มด) */
 CATALOG.push(...[['น้ำมนต์ดอกมะลิ'],['น้ำมนต์โบว์ฟ้า'],['น้ำมนต์ปีกเทวดา'],['น้ำมนต์นางฟ้า']].map(([n],i)=>({k:'antidote-'+i,n,i:'anti-'+(i+1)+'.webp',g:'ฮาโลวีน',p:'antidote.a'+i})));
+CATALOG.push({k:"fishing-eel",n:"ปลาไหลไฟฟ้าผี",i:"fishing-item-eel.webp",g:"ตกปลา",p:"fishing.eel"});/* fix17 ⚡👻 */
+CATALOG.push(...[['music','กล่องดนตรีหมูปีศาจ','prank-musicbox'],['hour','นาฬิกาทรายปีศาจ','prank-hourglass'],['coffin','หีบโลงต้องสาป','prank-coffin'],['heart','หัวใจทับทิมปีศาจ','prank-heart']].map(([k,n,i])=>({k:'demon-'+k,n,i:i+'.webp',g:'ไอเทมปีศาจ',p:'demon.'+k})));/* fix17 😈 */
+CATALOG.push({k:'box-mahakusal',n:'กล่องสุ่มมหากุศล',i:'mahakusal-box.webp',g:'กล่องสุ่ม',p:'box.mahakusal'});/* fix17 📦 */

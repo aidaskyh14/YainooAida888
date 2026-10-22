@@ -35,7 +35,7 @@ const CSS=`
 .ax-tmr{text-align:center;font-size:.68rem!important;margin-top:.4rem!important}
 @media (prefers-reduced-motion:reduce){.ax-card{animation:none}}`;
 const ANTI=['น้ำมนต์ดอกมะลิ','น้ำมนต์โบว์ฟ้า','น้ำมนต์ปีกเทวดา','น้ำมนต์นางฟ้า'],DECIDE=10*60000;
-export function startAlerts({watch,act,now,toast,game,go}){
+export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
   if(!document.getElementById('axcss')){const st=document.createElement('style');st.id='axcss';st.textContent=CSS;document.head.appendChild(st);}
   const wrap=document.createElement('div');wrap.className='ax-wrap';wrap.setAttribute('aria-live','polite');document.body.appendChild(wrap);
   const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
@@ -73,7 +73,9 @@ export function startAlerts({watch,act,now,toast,game,go}){
   /* ---- นางเงือก ---- */
   let mm=null,tCheck=0;const busy=new Set();
   function notice(v){const n=v?.notice;if(!n)return;const key='axMm:'+v.round+':'+n.k+':'+(n.at||n.earn||0);if(ls.get(key))return;ls.set(key,'1');
-    if(n.k==='appointed'){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt=""><div><h3 style="color:#7A2FD8">🧜‍♀️ คุณได้เป็นนางเงือก!</h3><p>ทำหน้าที่กรรมการการแข่งเรือ ได้ส่วนแบ่งจากคอมโบของทุกคน · คอยตอบเมื่อมีอะไรเด้งขึ้นมานะ</p></div></div><button class="ax-btn">✨ รับทราบ</button>',{glow:'#C79BFF',life:45000});c.querySelector('button').onclick=()=>drop('mmn');}
+    if(n.k==='appointed'){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt=""><div><h3 style="color:#7A2FD8">🧜‍♀️ คุณได้เป็นนางเงือก!</h3><p>แข่งกับนางเงือกอีกตนส่งถาดให้ครบ 100 ก่อน · ได้ส่วนแบ่งคอมโบ 40% · ไปส่งถาดที่หน้าแข่งเรือ</p></div></div><button class="ax-btn">🚤 ไปหน้าแข่งเรือ</button>',{glow:'#C79BFF',life:45000});c.querySelector('button').onclick=()=>{drop('mmn');go?.('boat');};}
+    if(n.k==='real'){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt=""><div><h3 style="color:#B8601A">👑 คุณคือนางเงือกตัวจริง!</h3><p>เรือที่ถึงเส้น 350 สองลำแรก คุณเลือกจ้างลูกเรือออกได้ลำละ 2 คน</p></div></div><button class="ax-btn">✨ รับทราบ</button>',{glow:'#FFD86B',life:30000});c.querySelector('button').onclick=()=>drop('mmn');}
+    if(n.k==='lost'){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt="" style="filter:grayscale(1)"><div><h3 style="color:#B02A44">💔 นางเงือกสลายแล้ว</h3><p>'+(n.late?'เรือถึงเส้น 350 ก่อนส่งครบ 100':'นางเงือกอีกตนส่งครบ 100 ก่อน')+' · ค่าประกอบวิชาชีพที่สะสมส่งเข้าไปรษณีย์แล้ว</p></div></div><button class="ax-btn r">😢 รับทราบ</button>',{glow:'#FF8AA0',bad:true,life:30000});c.querySelector('button').onclick=()=>drop('mmn');}
     if(n.k==='fake'){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt="" style="filter:grayscale(1)"><div><h3 style="color:#B02A44">💔 นางเงือกตัวปลอม</h3><p>เธอได้ละเลยจากการเป็นนางเงือก ได้แต่งตั้งนางเงือกคนใหม่แล้ว เสียใจด้วย เธอเป็นนางเงือกตัวปลอม</p></div></div><button class="ax-btn r">😢 รับทราบ</button>',{glow:'#FF8AA0',bad:true,life:45000});c.querySelector('button').onclick=()=>drop('mmn');}
     if(n.k==='paid'&&n.earn>0){const c=card('mmn','<div class="ax-row"><img class="mm" src="images/boat-mm.webp" alt=""><div><h3 style="color:#B8601A">📮 ค่าประกอบวิชาชีพนางเงือก</h3><div class="d" style="color:#B8601A">💰 '+Number(n.earn).toLocaleString('en-US')+' กุศล</div><p>ส่งเข้าไปรษณีย์แล้ว กดรับได้เลย</p></div></div><button class="ax-btn">📮 รับทราบ</button>',{glow:'#FFD86B',life:45000});c.querySelector('button').onclick=()=>drop('mmn');}}
   function checkCard(){const ck=mm?.active&&mm.check;clearTimeout(tCheck);if(!ck){drop('mmc');return;}const t=now();
@@ -91,6 +93,21 @@ export function startAlerts({watch,act,now,toast,game,go}){
       const go=c.querySelector('.ax-btn'),sync=()=>{c.querySelectorAll('[data-u]').forEach(x=>x.classList.toggle('on',sel.includes(x.dataset.u)));go.disabled=sel.length!==need;go.textContent=sel.length===need?'🔨 จ้างออก '+need+' คน':'🔨 เลือกอีก '+(need-sel.length)+' คน';};sync();
       c.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=b.dataset.u,i=sel.indexOf(u);if(i>=0)sel.splice(i,1);else{if(sel.length>=need)sel.shift();sel.push(u);}sync();});
       go.onclick=async e=>{const b=e.currentTarget;if(sel.length!==need)return;b.disabled=true;busy.add(id);try{await act('boat',{type:'mmFire',boat:d.boat,uids:sel.slice()});drop(id);toast?.('🔨 นางเงือกตัดสินแล้ว!');}catch(err){b.disabled=false;toast?.(err.message||'ลองใหม่อีกครั้ง');}finally{busy.delete(id);}};}}
-  const stopMm=watch('mermaid',v=>{mm=v;notice(v);checkCard();dismissCards();});
-  return ()=>{clearInterval(pzRe);stopPoison?.();stopMm?.();clearTimeout(tCheck);for(const id of [...cards.keys()])drop(id);wrap.remove();};
+  /* ---- fix17 ⛈️ ฝนกุศล: เตือน 15 วินาทีทุกหน้า (หน้าแข่งเรือมีเตือนของตัวเองแล้ว) · ไม่บอกให้ไปหน้าไหน ---- */
+  let rainT=0;function rainCard(v){const r=v?.rain;clearInterval(rainT);if(!r||!r.start){drop('rain');return;}
+    const left=()=>r.start-now();if(left()<=0||screen?.()==='boat'){drop('rain');return;}
+    if(!cards.has('rain')){card('rain','<div class="ax-row"><div style="font-size:2.6rem;text-align:center;filter:drop-shadow(0 0 10px #9FD8FF)">⛈️</div><div><h3 style="color:#2F5FA8">⛈️ ฝนกุศลกำลังจะตก</h3><p>เตรียมรับกุศล!</p><div class="cd">⏱️ <span>'+Math.ceil(left()/1000)+'</span> วินาที</div></div></div>',{glow:'#9FD8FF'});}
+    rainT=setInterval(()=>{const l=left();const c=cards.get('rain');if(l<=0||screen?.()==='boat'){clearInterval(rainT);drop('rain');return;}if(c)c.querySelector('.cd span').textContent=Math.ceil(l/1000);},250);}
+  /* ---- fix17 🏊 ว่ายกลับเรือ: ภารกิจติดตามทุกหน้า · ครบแล้วกลับเรือให้อัตโนมัติ ---- */
+  const BIRD=['ostrich-egg','ostrich-feather','dodo-egg','dodo-feather','dodo-pebble'],UNIT={mg:'กุศล',cook:'จาน',bird:'ชิ้น',box:'กล่อง'},ICON={mg:'🎮',cook:'🍳',bird:'🦢',box:'🎁'},TXT={mg:'ได้กุศลจากมินิเกม',cook:'คราฟเมนูที่สุ่มให้',bird:'เก็บของนกกระจอกเทศ/โดโด้',box:'เปิดกล่องสุ่ม'};
+  let swimBusy=false,swimAsk=0,swimKey='';
+  function swimProg(sq){if(sq.kind==='bird'){const g=game?.()||{};return Math.max(0,BIRD.reduce((a,k)=>a+(Number(g.bag?.bird?.[k])||0),0)-(Number(sq.base)||0));}return Math.max(0,Number(sq.got)||0);}
+  function swimCard(){const sq=x17?.()?.sq;if(!sq||!sq.until||screen?.()==='boat'||now()>sq.until+60000){drop('swim');swimKey='';return;}
+    const p=swimProg(sq),need=Number(sq.need)||0,done=need>0&&p>=need,key=sq.at+'|'+Math.min(p,need)+'|'+done;
+    if(done&&!swimBusy&&Date.now()-swimAsk>10000){swimAsk=Date.now();swimBusy=true;act('boat',{type:'swimDone'}).then(out=>{if(out?.swimBack){drop('swim');card('swimok','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🎉🚣</div><div><h3 style="color:#2F8F6C">ว่ายกลับเรือสำเร็จ!</h3><div class="d" style="color:#2F8F6C">+1,000,000 กุศล</div><p>🛡️ โล่กันเตะ 30 นาที</p></div></div>',{glow:'#7FE0B8',life:6000});}}).catch(()=>{}).finally(()=>{swimBusy=false;});}
+    if(swimKey===key&&cards.has('swim')){const c=cards.get('swim');const t=c&&c.querySelector('.cd span');if(t)t.textContent=fmt(sq.until-now());return;}swimKey=key;
+    const c=card('swim','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🏊</div><div><h3 style="color:#1F6E9A">ว่ายกลับเรือ</h3><p>'+ICON[sq.kind]+' '+TXT[sq.kind]+' <b>'+Math.min(p,need).toLocaleString('en-US')+' / '+need.toLocaleString('en-US')+'</b> '+UNIT[sq.kind]+'</p><div class="cd">⏳ <span>'+fmt(sq.until-now())+'</span></div></div></div>'+(done?'<p class="ax-sum">✅ ครบแล้ว กำลังพากลับเรือ…</p>':''),{glow:'#8FD8FF'});}
+  const swimT=setInterval(swimCard,1000);
+  const stopMm=watch('mermaid',v=>{mm=v;notice(v);checkCard();dismissCards();rainCard(v);});
+  return ()=>{clearInterval(pzRe);clearInterval(swimT);clearInterval(rainT);stopPoison?.();stopMm?.();clearTimeout(tCheck);for(const id of [...cards.keys()])drop(id);wrap.remove();};
 }
