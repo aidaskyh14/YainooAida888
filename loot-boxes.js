@@ -111,8 +111,8 @@ export async function showLootBoxes(kind,host){
  /* fix17 📦 กล่องมหากุศล: แสดงจำนวนในหน้ากล่องสุ่มด้วย (เปิด/คราฟที่ห้องใต้ดิน) */
  const mkCount=()=>{const n=Number(host.game()?.bag?.box?.mahakusal);return Number.isSafeInteger(n)&&n>0?n:0;};
  const mkTile=()=>'<button class="lbchoice" data-mk><img src="'+IMG+'mahakusal-box.webp" alt=""><b>กล่องสุ่มมหากุศล</b><br>'+fmt(mkCount())+' กล่อง</button>';
- const mkPanel=()=>{show('<button class="lbclose" aria-label="ปิด">×</button><h2>📦 กล่องสุ่มมหากุศล</h2><img class="lbhero" src="'+IMG+'mahakusal-box.webp" alt=""><p>มีอยู่ <b>'+fmt(mkCount())+'</b> กล่อง</p><p class="lbnote">ลุ้นรหัสหรือเปิดด่วน · คราฟเพิ่มได้ ที่ห้องใต้ดินในบ้าน</p><div class="lbactions"><button data-back>‹ กล่องอื่น</button><button data-gomk class="lbprimary">🏠 ไปห้องใต้ดิน</button></div>');
-  panel.querySelector('.lbclose').onclick=close;panel.querySelector('[data-back]').onclick=()=>choice();panel.querySelector('[data-gomk]').onclick=()=>{close();host.go?.('house');};};
+ const mkPanel=()=>{show('<button class="lbclose" aria-label="ปิด">×</button><h2>📦 กล่องสุ่มมหากุศล</h2><img class="lbhero" src="'+IMG+'mahakusal-box.webp" alt=""><p>มีอยู่ <b>'+fmt(mkCount())+'</b> กล่อง</p><p class="lbnote">ลุ้นรหัสหรือเปิดด่วน · คราฟเพิ่มได้ที่ห้องใต้ดินในบ้าน</p><div class="lbactions"><button data-back>‹ กล่องอื่น</button><button data-gomk class="lbprimary">📦 เปิดกล่อง</button></div>');
+  panel.querySelector('.lbclose').onclick=close;panel.querySelector('[data-back]').onclick=()=>choice();panel.querySelector('[data-gomk]').onclick=()=>{close();window.__HOST?.openBoxes?.('mahakusal');};};
 const choice=message=>{
   tint();loadSheet(selected);
   const game=host.game(),count=getBoxCount(game,selected),name=itemFor(selected).n;

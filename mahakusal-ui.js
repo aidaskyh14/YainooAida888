@@ -1,7 +1,8 @@
 /* fix17 📦 กล่องสุ่มมหากุศล — หน้าห้องใต้ดิน (scr-house) · ทุกผลมาจากคลาวด์ (mahakusalActionCloud) หน้าเว็บไม่รู้รหัส/โอกาส/การันตี
    window.mkOpenMenu() เมนูเปิดกล่อง (ปุ่มทายรหัสเด่นกว่าเปิดด่วนมาก) · window.mkOpenCraft() คราฟจากกล่องสุ่ม 8 ชนิด อย่างละ 3 */
 {/* บล็อกเดียว: ชื่อตัวแปรไม่ชนกับสคริปต์ของหน้า */
-const H=parent.__HOST;
+let API=null;/* เปิดจากกระเป๋า (เปลือกเกม) ส่ง cloud/onClose มาเอง · เปิดในห้องใต้ดินใช้ Host ของหน้า */
+const H={cloud:(sys,input)=>API?.cloud?API.cloud(sys,input):parent.__HOST.cloud(sys,input)};
 const IMG={mk:'images/mahakusal-box.webp',sheet:'images/mahakusal-open.webp'};
 const TIER={s:['🥉','มหากุศลขนาดเล็ก'],m:['🥈','มหากุศลขนาดกลาง'],l:['🥇','มหากุศลขนาดใหญ่']};
 const PAYP=[100,80,60],FAST_Q=[500,1000,1500,2000],FAST_MIN=500;
@@ -81,27 +82,28 @@ const mkEl=(cls,tag='div')=>{const d=document.createElement(tag);d.className=cls
 const shade=mkEl('mk-shade'),sheet=mkEl('mk-sheet'),pop=mkEl('mk-pop');pop.innerHTML='<div class="mk-rays"></div><div class="mk-body"></div>';
 const rays=pop.querySelector('.mk-rays'),body=pop.querySelector('.mk-body');
 const openSheet=h=>{sheet.innerHTML=h;sheet.classList.add('on');shade.classList.add('on');};
-const closeSheet=()=>{sheet.classList.remove('on');shade.classList.remove('on');};shade.onclick=closeSheet;
+const closeSheet=()=>{sheet.classList.remove('on');shade.classList.remove('on');};shade.onclick=()=>{closeSheet();done();};
 const showPop=h=>{pop.classList.add('on');body.innerHTML=h;};
-const closePop=()=>{pop.classList.remove('on');rays.classList.remove('hot');refresh();};
-const say=(m,bad)=>{try{toast(m,bad?1:0);}catch(e){}};
+const closePop=()=>{pop.classList.remove('on');rays.classList.remove('hot');refresh();done();};
+let changed=false;const done=()=>{if(sheet.classList.contains('on')||pop.classList.contains('on'))return;const a=API;if(a?.onClose){API=null;a.onClose(changed);}changed=false;};
+const say=(m,bad)=>{try{if(API?.toast)API.toast(m);else toast(m,bad?1:0);}catch(e){}};
 function refresh(){try{S=loadS();}catch(e){}try{draw();}catch(e){}}
 let V=null,busy=false;
-async function call(input){if(busy)return null;busy=true;try{const out=await H.cloud('mahakusal',input);if(out?.view)V={...V,...out.view,counts:out.counts||V?.counts};if(input.type!=='status')refresh();return out;}catch(e){say(e.message||'ลองใหม่อีกครั้ง',1);return null;}finally{busy=false;}}
+async function call(input){if(busy)return null;busy=true;try{const out=await H.cloud('mahakusal',input);if(out?.view)V={...V,...out.view,counts:out.counts||V?.counts};if(input.type!=='status'){changed=true;refresh();}return out;}catch(e){say(e.message||'ลองใหม่อีกครั้ง',1);return null;}finally{busy=false;}}
 function burst(n){const r=body.getBoundingClientRect(),cx=innerWidth/2,cy=r.top+Math.min(r.height*.3,innerHeight*.35);for(let i=0;i<n;i++){const p=document.createElement(i%3?'div':'span');if(i%3)p.className='mk-petal';else{p.className='mk-coin';p.textContent='🪙';}p.style.left=cx+'px';p.style.top=cy+'px';document.body.appendChild(p);const a=Math.random()*6.28,v=80+Math.random()*160;
   p.animate([{transform:'translate(-50%,-50%) rotate(0)',opacity:1},{transform:'translate('+(Math.cos(a)*v)+'px,'+(Math.sin(a)*v+120)+'px) rotate('+(Math.random()*540)+'deg)',opacity:0}],{duration:1400+Math.random()*600,easing:'cubic-bezier(.2,.6,.4,1)'}).onfinish=()=>p.remove();}}
 function playSheet(el,done,speed){let f=0;rays.classList.add('hot');const tm=setInterval(()=>{el.style.backgroundPosition=((f%4)*100/3)+'% '+(Math.floor(f/4)*100/3)+'%';if(f===8)burst(26);if(++f>=16){clearInterval(tm);done&&done();}},speed||85);}
 /* ---------- เมนูเปิดกล่อง ---------- */
 let fq=500,keepL=false;
-async function openMenu(){if(!V){openSheet('<div class="mk-hint">กำลังโหลด…</div>');const o=await call({type:'status'});if(!o){closeSheet();return;}}
+async function openMenu(){if(!V){openSheet('<div class="mk-hint">กำลังโหลด…</div>');const o=await call({type:'status'});if(!o){closeSheet();done();return;}}
   const have=V.have||0,left=V.left??0,n=Math.min(have,left),q=[...FAST_Q,'max'];
   if(have&&!left){openSheet('<div class="mk-head"><img src="'+IMG.mk+'" alt=""><div><h3 style="margin:0">กล่องสุ่มมหากุศล</h3><b>'+fmt(have)+'</b> กล่อง</div></div><div class="mk-mode" style="grid-template-columns:2.6rem 1fr"><span class="e">🌙</span><div><b>วันนี้เปิดครบแล้ว</b><small>กลับมาเปิดต่อได้หลังเที่ยงคืน</small></div></div>'+(V.kept?keptBtn():''));bindKept();return;}
   const fqOk=v=>v==='max'?n>=FAST_MIN:n>=v&&have>=FAST_MIN;
-  openSheet('<div class="mk-head"><img src="'+IMG.mk+'" alt=""><div><h3 style="margin:0">กล่องสุ่มมหากุศล</h3><b>'+fmt(n)+'</b> กล่อง</div></div>'
+  openSheet('<div class="mk-head"><img src="'+IMG.mk+'" alt=""><div><h3 style="margin:0">กล่องสุ่มมหากุศล</h3><b>'+fmt(have)+'</b> กล่อง</div></div>'
    +'<button class="mk-mode" id="mkPlay" '+((n||V.cur)?'':'disabled')+'><span class="tag">⭐ ได้มากกว่า</span><span class="e">🔐</span><div><b>'+(V.cur?'เล่นกล่องที่เปิดค้างไว้':'เปิดลุ้นรหัส')+'</b><small>ทายรหัส 4 หลัก ได้ 3 ครั้ง · ทายถูกได้เต็มก้อน · ทายผิดก็ยังได้มากกว่าเปิดด่วน</small></div></button>'
    +'<div class="mk-mode fast"><span class="e">⚡</span><div><b>เปิดด่วน · ไม่ต้องทาย</b><small>เปิดทีละ 500 กล่องขึ้นไป รับกุศลรวดเดียว</small><div class="mk-qty">'+q.map(v=>'<button data-q="'+v+'" class="'+(v===fq?'on':'')+'" '+(fqOk(v)?'':'disabled')+'>'+(v==='max'?'ทั้งหมด':'×'+fmt(v))+'</button>').join('')+'</div>'
    +'<div class="mk-tog'+(keepL?' on':'')+'" id="mkKeep" role="switch" aria-checked="'+keepL+'" tabindex="0"><i></i>🥇 เก็บกล่องใหญ่ไว้ทายเอง</div></div></div>'
-   +'<div class="mk-row"><button class="mk-big blue" id="mkFast" '+(fqOk(fq)?'':'disabled')+'>⚡ เปิดด่วน '+(fq==='max'?'ทั้งหมด '+fmt(n):'×'+fmt(fq))+'</button></div>'+(have<FAST_MIN?'<div class="mk-fine">เปิดด่วนได้เมื่อมีตั้งแต่ 500 กล่อง</div>':'')+(V.kept?keptBtn():'')
+   +'<div class="mk-row"><button class="mk-big blue" id="mkFast" '+(fqOk(fq)?'':'disabled')+'>⚡ เปิดด่วน '+(fq==='max'?'ทั้งหมด':'×'+fmt(fq))+'</button></div>'+(have<FAST_MIN?'<div class="mk-fine">เปิดด่วนได้เมื่อมีตั้งแต่ 500 กล่อง</div>':'')+(V.kept?keptBtn():'')
    +(have?'':'<div class="mk-fine">ได้จากนางเงือกตัวจริง · ท็อป 5 ตกปลา · ตกปลา (หายาก) · คราฟในห้องใต้ดิน</div>'));
   sheet.querySelector('#mkPlay').onclick=()=>{closeSheet();playNext();};
   sheet.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fq=b.dataset.q==='max'?'max':+b.dataset.q;openMenu();});
@@ -139,7 +141,7 @@ async function fastOpen(n){showPop('<div class="mk-sp" id="mkSp"></div><div id="
     body.querySelector('#mkOk').onclick=closePop;},55);}
 /* ---------- คราฟ ---------- */
 let cq=1;
-async function openCraft(){if(!V?.counts){openSheet('<div class="mk-hint">กำลังโหลด…</div>');const o=await call({type:'status'});if(!o){closeSheet();return;}}
+async function openCraft(){if(!V?.counts){openSheet('<div class="mk-hint">กำลังโหลด…</div>');const o=await call({type:'status'});if(!o){closeSheet();done();return;}}
   const C=V.counts||{},mx=Math.min(1000,...BOXES.map(([k])=>Math.floor((C[k]||0)/3))),minK=BOXES.reduce((a,[k])=>(C[k]||0)<(C[a]||0)?k:a,'dog'),q=cq==='max'?mx:cq;
   openSheet('<h3>🧪 คราฟกล่องมหากุศล</h3><div class="mk-hint">ห้องใต้ดิน · ใช้กล่องสุ่ม 8 ชนิด อย่างละ 3 · สำเร็จทุกครั้ง</div><div class="mk-recipe">'+BOXES.map(([k,n,p])=>'<div class="mk-rc '+((C[k]||0)>=3*Math.max(1,q)?'ok':'no')+(k===minK?' min':'')+'"><img src="'+boxImg(k,p)+'" alt="">'+n+'<span>'+fmt(3*Math.max(1,q))+' / '+fmt(C[k]||0)+'</span></div>').join('')+'</div>'
    +'<div class="mk-arrow">⬇️ ได้ <img src="'+IMG.mk+'" alt=""> 1–4 กล่อง ต่อครั้ง</div><div class="mk-qty">'+[1,10,100,'max'].map(v=>'<button data-c="'+v+'" class="'+(v===cq?'on':'')+'" '+((v==='max'?mx>0:mx>=v)?'':'disabled')+'>'+(v==='max'?'สูงสุด '+fmt(mx):'×'+v)+'</button>').join('')+'</div>'
@@ -154,8 +156,6 @@ async function doCraft(q){showPop('<div class="mk-ring" id="mkRing">'+BOXES.map(
     const show=Math.min(4,q===1?got:4);for(let i=0;i<show;i++)setTimeout(()=>{const im=document.createElement('img');im.src=IMG.mk;im.alt='';body.querySelector('#mkOuts')?.appendChild(im);},250+i*220);
     setTimeout(()=>{const c=body.querySelector('#mkCres');if(!c)return;c.innerHTML='<div class="mk-win">'+(q===1?'ได้ '+got+' กล่อง!':'คราฟ ×'+fmt(q)+' ได้ '+fmt(got)+' กล่อง!')+'</div><div class="mk-row"><button class="mk-big gold" id="mkOk">📦 เก็บเข้ากระเป๋า</button></div>';c.querySelector('#mkOk').onclick=()=>{closePop();say('📦 ได้กล่องมหากุศล +'+fmt(got));};},400+show*220);};
   requestAnimationFrame(spin);}
-window.mkOpenMenu=()=>{V=null;openMenu();};window.mkOpenCraft=()=>{V=null;openCraft();};
-/* มาจากการ์ดวิธีใช้ในกระเป๋า: ลงห้องใต้ดินแล้วเปิดเมนูให้เลย */
-try{if(sessionStorage.getItem('ss3MkOpen')){sessionStorage.removeItem('ss3MkOpen');setTimeout(()=>{try{if(typeof room!=='undefined'&&room!=='base')go('base');}catch(e){}setTimeout(()=>window.mkOpenMenu(),500);},700);}}catch(e){}
+window.mkOpenMenu=api=>{API=api||null;V=null;openMenu();};window.mkOpenCraft=api=>{API=api||null;V=null;openCraft();};
 
 }

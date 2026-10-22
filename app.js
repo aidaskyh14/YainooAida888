@@ -1,7 +1,7 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix17';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17b';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17d';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -9,6 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix17';
 import {startDemon} from './demon-ui.js?v=ss3-fix17';
+import './mahakusal-ui.js?v=ss3-fix17d';/* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -538,14 +539,17 @@ const HOST_BASE = {
   watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[],serverNow())})),
   // Loot boxes open over the live scene (no blank frame). While the overlay owns the inventory the old
   // scene is frozen: its saves are dropped so a stale copy can never write box counts back; it reloads after close.
-  openBoxes:kind=>{if(kind==='mahakusal'){/* fix17c 📦 เปิดที่ห้องใต้ดิน */try{sessionStorage.setItem('ss3MkOpen','1');}catch(e){}goScreen('house');return Promise.resolve();}const H=window.__HOST;let frozen=null;
+  openBoxes:async kind=>{const H=window.__HOST;let frozen=null;
     // The freeze ends as soon as the reloaded scene (a new document) first reads the Host, not at its slower load event.
     const freeze=()=>{if(frozen)return;let doc=null;try{doc=S.frame?.contentDocument||null;}catch(e){}frozen={set:H.set,del:H.del,get:H.get,doc};H.set=()=>{};H.del=()=>{};
       H.get=function(k){let d=null;try{d=S.frame?.contentDocument||null;}catch(e){}if(frozen&&reloading&&d&&d!==frozen.doc&&d.URL!=='about:blank')thaw();return (frozen?frozen.get:H.get).call(H,k);};stopSceneSubscriptions();};
     let reloading=false;
     const thaw=()=>{if(!frozen)return;H.set=frozen.set;H.del=frozen.del;H.get=frozen.get;frozen=null;reloading=false;};
+    const refreshScene=()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();};
+    /* fix17c 📦 กล่องมหากุศล: เปิดจากกระเป๋าได้เลยทุกหน้า (หน้าฉากหยุดบันทึกระหว่างเปิด แล้วโหลดใหม่ให้ตรง) · คราฟอยู่ห้องใต้ดิน */
+    if(kind==='mahakusal'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
+      return window.mkOpenMenu?.({toast,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},onClose:ch=>{if(ch)refreshScene();else thaw();}});}
     return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
-      go:n=>{try{sessionStorage.setItem('ss3MkOpen','1');}catch(e){}goScreen(n);},
       open:input=>{freeze();return cloudAction('boxes',input);},
       refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
   catalogItem(path){return CATALOG.find(c=>c.p===path.replace(/^bag\./,''));},
@@ -657,7 +661,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix17c'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix17d'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
