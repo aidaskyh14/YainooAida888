@@ -61,7 +61,8 @@ const css=document.createElement('style');css.textContent=`
 .mk-hc{display:flex;align-items:center;gap:.45rem;width:100%;background:linear-gradient(100deg,rgba(255,240,190,.18),rgba(255,255,255,.06));border:1.5px solid rgba(255,226,140,.7);border-radius:.9rem;padding:.3rem .6rem;font-size:.74rem;font-weight:700;margin:.2rem 0;animation:mktin .5s cubic-bezier(.2,1.5,.4,1)}
 .mk-hc .e{font-size:1.2rem}.mk-hc b{font-size:.95rem;letter-spacing:.15em;color:#fff}.mk-hc.bonus{border-color:#9EF0B8}
 .mk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;width:min(15rem,78vw);margin:.35rem auto 0}
-.mk-pad button{border:2px solid rgba(255,226,140,.55);background:rgba(255,255,255,.08);color:#fff;border-radius:.8rem;padding:.45rem 0;font:800 1.05rem 'Mali',sans-serif;cursor:pointer}
+.mk-code.wait .mk-slot{animation:mkwait .5s ease-in-out infinite alternate}@keyframes mkwait{to{box-shadow:0 0 14px rgba(255,220,120,.9);transform:translateY(-2px)}}
+.mk-pad button{touch-action:manipulation;-webkit-user-select:none;user-select:none;border:2px solid rgba(255,226,140,.55);background:rgba(255,255,255,.08);color:#fff;border-radius:.8rem;padding:.45rem 0;font:800 1.05rem 'Mali',sans-serif;cursor:pointer}
 .mk-pad button.go{background:linear-gradient(180deg,#FFD36B,#E8962A);border-color:#fff;color:#5a3100;font-size:.88rem}.mk-pad button:active{transform:scale(.95)}.mk-pad button:disabled{opacity:.5}
 .mk-win{font-family:'Kanit','Mali',sans-serif;font-style:italic;font-weight:900;font-size:1.6rem;color:#fff;text-shadow:0 0 18px rgba(255,210,80,.95),0 3px 0 #8a5a10;animation:mktin .6s cubic-bezier(.2,1.5,.4,1)}
 .mk-sumg{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;width:100%;margin:.5rem 0}
@@ -114,9 +115,10 @@ function bindKept(){const b=sheet.querySelector('#mkKept');if(b)b.onclick=()=>{c
 /* ---------- เปิดลุ้นรหัส ---------- */
 let cur=[],box=null;
 async function playNext(kept){showPop('<div class="mk-sp idle" id="mkSp" role="button" aria-label="แตะกล่องเพื่อเปิด"></div><div class="mk-fine2">👆 แตะกล่องเพื่อเปิด</div>');
-  const sp=body.querySelector('#mkSp');sp.onclick=async()=>{sp.onclick=null;sp.classList.remove('idle');sp.nextElementSibling?.remove();const o=await call({type:'open',...(kept?{kept:true}:{})});if(!o?.box){closePop();return;}box=o.box;cur=[];playSheet(sp,showTier);};}
+  const sp=body.querySelector('#mkSp');sp.onclick=async()=>{sp.onclick=null;sp.classList.remove('idle');sp.nextElementSibling?.remove();/* fix18: เล่นแอนิเมชันระหว่างรอเซิร์ฟเวอร์ (ไม่ต้องรอทีละขั้น) */
+    const anim=new Promise(r=>playSheet(sp,r,60));const o=await call({type:'open',...(kept?{kept:true}:{})});if(!o?.box){closePop();return;}await anim;box=o.box;cur=[];showTier();};}
 function showTier(){const [md,name]=TIER[box.t]||TIER.s;const el=document.createElement('div');el.className='mk-tier';el.innerHTML='<span class="mk-medal '+box.t+'">'+md+' '+name+'</span><div class="mk-prize">ลุ้นได้สูงสุด<b>'+fmt(box.val)+'</b></div>';body.appendChild(el);
-  setTimeout(()=>{const host=document.createElement('div');host.id='mkCg';host.style.width='100%';body.appendChild(host);drawCode();},700);}
+  setTimeout(()=>{const host=document.createElement('div');host.id='mkCg';host.style.width='100%';body.appendChild(host);drawCode();},250);}
 const ARW=a=>a===1?'⬆️':a===-1?'⬇️':'✅';
 function drawCode(shake){const host=body.querySelector('#mkCg');if(!host)return;const left=3-box.tries;
   host.innerHTML='<div class="mk-tries" aria-label="เหลือ '+left+' ครั้ง">'+'🔵'.repeat(left)+'⚪'.repeat(box.tries)+'</div><div class="mk-code" id="mkCode">'+[0,1,2,3].map(i=>'<div class="mk-slot'+(i===cur.length?' cur':'')+'">'+(cur[i]??'')+'</div>').join('')+'</div>'
@@ -124,8 +126,10 @@ function drawCode(shake){const host=body.querySelector('#mkCg');if(!host)return;
    +(box.hist.length?'<div class="mk-fine2">⬆️ ตัวจริงมากกว่า · ⬇️ ตัวจริงน้อยกว่า · ✅ ถูกแล้ว</div>':'')
    +'<div class="mk-pad">'+[1,2,3,4,5,6,7,8,9].map(n=>'<button data-n="'+n+'">'+n+'</button>').join('')+'<button data-n="del" aria-label="ลบ">⌫</button><button data-n="0">0</button><button class="go" data-n="go">ทาย!</button></div>';
   if(shake){const c=host.querySelector('#mkCode');c.classList.add('shake');}
-  host.querySelectorAll('[data-n]').forEach(x=>x.onclick=()=>{const v=x.dataset.n;if(v==='del'){cur.pop();drawCode();return;}if(v==='go'){if(cur.length<4)return;guess();return;}if(cur.length<4){cur.push(+v);drawCode();}});}
-async function guess(){const g=cur.slice();body.querySelectorAll('.mk-pad button').forEach(b=>b.disabled=true);const o=await call({type:'guess',code:g});cur=[];
+  const slots=()=>host.querySelectorAll('.mk-slot').forEach((el,i)=>{el.textContent=cur[i]??'';el.classList.toggle('cur',i===cur.length);});
+  const press=x=>{const v=x.dataset.n;if(x.disabled)return;if(v==='del'){cur.pop();slots();return;}if(v==='go'){if(cur.length<4)return;guess();return;}if(cur.length<4){cur.push(+v);slots();}};
+  host.querySelectorAll('[data-n]').forEach(x=>{x.onpointerdown=e=>{e.preventDefault();press(x);};x.onclick=e=>{if(e.detail===0)press(x);};});}
+async function guess(){const g=cur.slice();body.querySelectorAll('.mk-pad button').forEach(b=>b.disabled=true);body.querySelector('#mkCode')?.classList.add('wait');const o=await call({type:'guess',code:g});cur=[];
   if(!o){drawCode();return;}if(o.box){box=o.box;drawCode(true);return;}const r=o.result,host=body.querySelector('#mkCg');
   const more=(V.have>0&&V.left>0)||V.kept>0,again=more?'<button class="mk-big ghost" id="mkAgain">🔐 เปิดอีก</button>':'';
   if(r.win){burst(40);host.innerHTML='<div class="mk-code">'+r.code.map(d=>'<div class="mk-slot ok">'+d+'</div>').join('')+'</div><div class="mk-win">🎉 ถูกต้อง! ครั้งที่ '+r.tries+'</div><div class="mk-total">ได้รับ<b>+'+fmt(r.pay)+'</b>'+(r.tries>1?'('+PAYP[r.tries-1]+'% ของยอด)':'เต็มก้อน!')+'</div><div class="mk-row"><button class="mk-big gold" id="mkOk">✨ รับกุศล</button>'+again+'</div>';}

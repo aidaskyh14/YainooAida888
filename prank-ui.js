@@ -190,7 +190,7 @@ function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].re
  nn.querySelector('#pnOk').onclick=done;nn.querySelector('#pnFix').onclick=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'});setTimeout(()=>fixSheet('sign',{n:signs.length,input:{all:true}}),first?600:0);};}
 
 /* ---------- fix17 😈 ไอเทมปีศาจ ---------- */
-const DM={music:['กล่องดนตรีหมูปีศาจ','🎶','prank-musicbox','หักทันที −20,000'],hour:['นาฬิกาทรายปีศาจ','⏳','prank-hourglass','ดูด −4,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมปีศาจ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −100,000']};
+const DM={music:['กล่องดนตรีหมูปีศาจ','🎶','prank-musicbox','หักทันที −50,000'],hour:['นาฬิกาทรายปีศาจ','⏳','prank-hourglass','ดูด −10,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมปีศาจ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −250,000']};
 const dmHms=ms=>{ms=Math.max(0,ms);const h=Math.floor(ms/3600e3),m=Math.floor(ms%3600e3/60e3),s=Math.floor(ms%60e3/1e3);return h?h+':'+String(m).padStart(2,'0')+' ชม.':m+':'+String(s).padStart(2,'0');};
 function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__HOST?.x17?.()?.dm?.b||[];}catch(e){return [];}})(),now=Date.now();
  pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>😈 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
@@ -205,7 +205,7 @@ function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__
 const HG_SPOT=[[80,30],[66,27],[90,46]];
 function demonGarden(s){if(visiting)return;let D=null;try{D=parent.__DEMON;}catch(e){}const v=D?.view;if(!v)return;const now=Date.now();
  (v.hg||[]).slice(0,3).forEach((h,j)=>{const [x,y]=HG_SPOT[j],o=document.createElement('div');o.className='dmobj dmhg';o.style.left=x+'%';o.style.top=y+'%';const paid=Math.min(10,Math.floor((now-h.at)/360000));
-  o.innerHTML='<span class="rune"></span><span class="aura"></span><img src="images/prank-hourglass.webp" alt="นาฬิกาทรายปีศาจ"><span class="neck"></span><span class="dmtag">⏳ '+dmHms(h.end-now)+' · −'+(paid*4000).toLocaleString('en-US')+'</span>';s.appendChild(o);});
+  o.innerHTML='<span class="rune"></span><span class="aura"></span><img src="images/prank-hourglass.webp" alt="นาฬิกาทรายปีศาจ"><span class="neck"></span><span class="dmtag">⏳ '+dmHms(h.end-now)+' · −'+(paid*10000).toLocaleString('en-US')+'</span>';s.appendChild(o);});
  const c=(v.cf||[])[0];if(c){const l=document.createElement('div');l.className='dmlock';s.appendChild(l);const o=document.createElement('div');o.className='dmobj dmcf'+(window.__dmCf===c.id?'':' drop');window.__dmCf=c.id;o.style.left='52%';o.style.top='54%';o.setAttribute('role','button');o.setAttribute('aria-label','เปิดหีบโลง');
   o.innerHTML='<img src="images/prank-coffin.webp" alt=""><span class="dmtag">⛓️ แตะเพื่อเปิด · '+dmHms(c.until-now)+'</span>';o.onclick=e=>{e.stopPropagation();try{parent.__DEMON?.openSeal?.();}catch(err){}};s.appendChild(o);}}
 try{parent.__demonHook=()=>{try{render();}catch(e){}};}catch(e){}

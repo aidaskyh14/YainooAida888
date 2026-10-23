@@ -376,15 +376,15 @@ function renderBag(){const tabs=bagTabsAll();if(!tabs[bagTab])bagTab='crop';$('b
  $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it'+(HOWTO[bagTab+'.'+k]?' how':'')+'" data-g="'+bagTab+'" data-k="'+k+'">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
 /* fix17: แตะไอเทมพิเศษ → การ์ดวิธีใช้ + ปุ่ม "ไปใช้เลย" */
-const HOWTO={'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 5 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
+const HOWTO={'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 3 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
  'boost.lens':['🔍 แว่นขยายนักวิจัย','ใช้ตอนกดวิจัยที่ซาฟารี · วัตถุดิบที่ต้องใช้ลดลง 30% · ใช้ได้ไม่จำกัด','safari','🦓 ไปซาฟารี'],
  'boost.gear':['⚙️ เฟืองเร่งเครื่อง','ใช้ตอนสั่งงานโรงงานอัลปาก้า · เวลาแปรรูปเร็วขึ้น 30% · ใช้ 1 ชิ้นต่องาน ไม่จำกัดต่อวัน','alpaca','🦙 ไปโรงงานอัลปาก้า'],
  'fishing.eel':['⚡ ปลาไหลไฟฟ้าผี','แตะทุ่นของเพื่อนที่นั่งบ่อเดียวกันแล้วเลือกปลาไหล · ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว) · เพื่อนไม่รู้ว่าใคร','fishing','🎣 ไปบ่อตกปลา'],
  'box.mahakusal':['📦 กล่องสุ่มมหากุศล','เปิดได้ที่ห้องใต้ดินในบ้าน · ทายรหัส 4 หลักได้ 3 ครั้ง ลุ้นกุศลก้อนใหญ่ · หรือเปิดด่วนทีละ 500 กล่องขึ้นไป','house','🏠 ไปห้องใต้ดิน'],
- 'demon.music':['🎶 กล่องดนตรีหมูปีศาจ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 ปีศาจ · เพื่อนโดนหักทันที −20,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
- 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −4,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 20) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
+ 'demon.music':['🎶 กล่องดนตรีหมูปีศาจ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 ปีศาจ · เพื่อนโดนหักทันที −50,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
+ 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −10,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 20) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
  'demon.coffin':['⛓️ หีบโลงต้องสาป','ล็อกสวนเพื่อนจนกว่าเจ้าของจะเปิดตราผนึก 1 ใน 3 · ระวังตราสะท้อนกลับมาหาคุณ! · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
- 'demon.heart':['💖 หัวใจทับทิมปีศาจ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −100,000 · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
+ 'demon.heart':['💖 หัวใจทับทิมปีศาจ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −250,000 · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
 $('bagGrid').onclick=e=>{const it=e.target.closest('.it.how');if(!it)return;const h=HOWTO[it.dataset.g+'.'+it.dataset.k];if(!h)return;const im=bagImg(it.dataset.g,it.dataset.k);
  let o=document.getElementById('howCard');if(!o){o=document.createElement('div');o.id='howCard';document.body.appendChild(o);}
  o.innerHTML='<div class="hc"><img src="'+im+'" alt=""><h4>'+h[0]+'</h4><p>'+h[1]+'</p><div class="hb"><button class="ghost" id="hcX">ปิด</button><button class="go" id="hcGo">'+h[3]+'</button></div></div>';o.className='on';
@@ -864,4 +864,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix17"></script><script type="module" src="prank-ui.js?v=ss3-fix17"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix17"></script><script type="module" src="prank-ui.js?v=ss3-fix18"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>

@@ -72,6 +72,8 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .row{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}
 .btn{border:0;border-radius:999px;font:inherit;font-weight:700;font-size:.8rem;padding:.5rem .9rem;cursor:pointer;background:var(--aqua);color:#fff;box-shadow:0 3px 0 #3F98B6}
 .btn.g{background:#6CC9A8;box-shadow:0 3px 0 #4DAA8A}.btn.r{background:#F39AB2;box-shadow:0 3px 0 #D97C96}.btn.gray{background:#EEE;color:var(--soft);box-shadow:none}
+/* fix18 ย่อหน้าต่างข้อเสนอ */.btn.ghost.offmin{display:block;width:100%;margin-top:.5rem;background:transparent;color:#fff;border:2px dashed rgba(255,255,255,.6);box-shadow:none;font-size:.8rem}
+.offpill{position:fixed;z-index:60;left:max(.35rem,env(safe-area-inset-left));top:calc(env(safe-area-inset-top,0px) + 7.6rem);border:2px solid #fff;border-radius:999px;padding:.3rem .65rem;font:800 .78rem 'Mali',sans-serif;color:#fff;background:linear-gradient(180deg,#F06A8C,#C23A62);box-shadow:0 0 0 2px #FF9DB8,0 0 14px rgba(255,80,130,.6);cursor:pointer}.offpill b{font-variant-numeric:tabular-nums;margin-left:.2rem}.offpill.hot{animation:offhot .8s ease-in-out infinite alternate}@keyframes offhot{to{box-shadow:0 0 0 3px #FFD0DC,0 0 22px rgba(255,60,110,.95)}}
 .log{font-size:.7rem;line-height:1.5;max-height:9rem;overflow:auto;background:#fff;border-radius:.8rem;padding:.4rem .6rem;border:2px solid #F3E9DE}
 /* เปิดกล่อง */
 .pop{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:flex-start;background:rgba(10,25,55,.82);padding:1rem;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -388,4 +390,4 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 <div class="pop" id="pop"><button class="px" id="popX" aria-label="ปิด">✕</button><div id="popBody"></div></div>
 <div class="ann" id="ann"><img id="aImg"><span id="aTxt"></span></div>
 <script src="boat-fx.js?v=ss3-fix17"></script>
-<script type="module" src="boat.js?v=ss3-fix17"></script></body></html>
+<script type="module" src="boat.js?v=ss3-fix18"></script></body></html>

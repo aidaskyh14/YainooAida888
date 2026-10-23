@@ -62,7 +62,7 @@ function project(){
  for(const[group,items]of Object.entries(g.bag||{}))for(const[k,n]of Object.entries(items))INV[group+'-'+k]=n;
  INV['item-stone']=g.bag?.forest?.stone||0;
  if(world){S.gifts=[];S.open=world.mode==='open'||(world.mode!=='closed'&&!world.closed&&(new Date(now()+7*3600e3).getUTCHours()>=11&&new Date(now()+7*3600e3).getUTCHours()<17||new Date(now()+7*3600e3).getUTCHours()>=21||new Date(now()+7*3600e3).getUTCHours()<7));S.day=world.day;S.seats=structuredClone(world.seats);for(const seats of Object.values(S.seats))for(const seat of seats)if(seat){seat.me=seat.uid===Host.uid;if(seat.ph==='wait'&&seat.t<=now())seat.ph='hook';if(seat.ph==='hook')seat.t=seat.hookUntil;}S.board=Object.fromEntries(Object.entries(world.board||{}).map(([uid,row])=>[uid,row.w]));S.hist=(world.hist||[]).map(h=>({...h,d:h.day}));}
- S.myCut=quota.cut||0;S.bait=quota.bait||{have:0,used:0,limit:0};S.eelQ=quota.eel||{have:S.bag.eel,used:0,max:20};S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
+ S.myCut=quota.cut||0;S.bait=quota.bait||{have:0,used:0,limit:0};S.eelQ=quota.eel||{have:S.bag.eel,used:0,max:20};S.meTaken=quota.taken||0;S.cdEnd=quota.cd||0;S.vipCd=quota.vipCd||0;S.vipHeld=quota.vipHeld||0;S.vipUsed=quota.vipCount||0;S.lucky=quota.lucky||0;
 }
 async function act(input){if(busy)return null;busy=true;const sent=Date.now();try{const out=await Host.cloud('fishing',input);serverOffset=out.serverNow-(sent+Date.now())/2;world=out.race;quota=out.quota;project();if(S.screen==='pond')updatePond();else{renderLobby();updateLobby();}checkCut();return out;}catch(e){ann(e.message,false);return null;}finally{busy=false;}}
 
@@ -175,22 +175,25 @@ function renderPondBar(force){const b=$('bar'),ms=mySeat(),now=Date.now()+server
  if(key===barKey&&!force){const c=$('cd');if(c)c.textContent=mm(cd);return}
  barKey=key;
  const lk=S.role==='admin'?`<button class="chip adm" id="luckyInfo">🍀 เบ็ดนำโชค: ${RODS[luckyRod()].n} ⓘ</button>`:'';
- b.innerHTML=`<div class="lobbyrow"><button class="rbtn" id="homeb" aria-label="กลับล็อบบี้">🏠</button>${mid}<button class="rbtn" id="toolbtn" aria-label="กระเป๋า">🧰</button>${S.role==='admin'?'<button class="rbtn" id="admb2" aria-label="แผงแอดมิน">🛠️</button>':''}</div><div class="lobbyrow"><span class="chip">${k==='v'?'👑':'🎣'} ${PONDS[S.pond].name}${k==='n'?' · ✂️ '+(30-S.myCut)+'/30':''}</span>${lk}</div>`;
+ b.innerHTML=`<div class="lobbyrow"><button class="rbtn" id="homeb" aria-label="กลับล็อบบี้">🏠</button>${mid}${ms?'<button class="rbtn" id="standb" aria-label="ลุกออกจากท่า">🚪</button>':''}<button class="rbtn" id="toolbtn" aria-label="กระเป๋า">🧰</button>${S.role==='admin'?'<button class="rbtn" id="admb2" aria-label="แผงแอดมิน">🛠️</button>':''}</div><div class="lobbyrow"><span class="chip">${k==='v'?'👑':'🎣'} ${PONDS[S.pond].name}${k==='n'?' · ✂️ '+(30-S.myCut)+'/30':''}</span>${lk}</div>`;
  const c=$('cd');if(c)c.textContent=mm(cd);
  if($('luckyInfo'))$('luckyInfo').onclick=()=>sheet('<h3>🍀 เบ็ดนำโชคชั่วโมงนี้</h3><p><b>'+RODS[luckyRod()].n+'</b></p><p>บ่อทั่วไป: เพิ่มโอกาสได้ปลา 2–3 ตัวและปลาระดับสูง</p><p>บ่อ VIP: โอกาสสำเร็จเดิม ×1.15 (เพิ่มแบบสัมพัทธ์ 15%)</p><p>สุ่มชนิดเบ็ดใหม่ในแต่ละชั่วโมง ไม่ต้องกดเปิดโบนัส</p>');
  $('homeb').onclick=()=>{S.screen='lobby';S.pond=null;render()};$('toolbtn').onclick=tools;
  if($('skipb'))$('skipb').onclick=()=>{const m=mySeat();if(m){m.s.t=Date.now();tick()}};
  if($('skipcd'))$('skipcd').onclick=()=>{S.cdEnd=0;updatePond()};
- if($('hookb'))$('hookb').onclick=collect;if($('admb2'))$('admb2').onclick=adminPanel;
+ if($('hookb'))$('hookb').onclick=collect;if($('standb'))$('standb').onclick=standUp;if($('admb2'))$('admb2').onclick=adminPanel;
  if($('castb'))$('castb').onclick=()=>{const m=mySeat();if(m)chooseRod(m.p,m.i)}}
+/* fix18: ลุกออกจากท่าได้ทุกเมื่อ ไม่ต้องพัก */
+function standUp(){const m=mySeat();if(!m)return;const s=m.s,busy=s.ph==='wait'||s.ph==='hook';
+ ask('🚪 ลุกออกจากท่า?',(busy?'ปลารอบนี้จะหายไป เบ็ดที่หย่อนไปแล้วไม่คืน · ':'')+(s.vip?'เวลาบัตร VIP ยังเดินต่อ กลับมานั่งห้อง VIP ไหนก็ได้จนบัตรหมด (ทำต่อจากด่านเดิม)':'ลุกแล้วนั่งท่าใหม่ได้เลย ไม่ต้องพัก'),'ลุกออก',()=>act({type:'leave'}));}
 async function tapDock(i){const p=S.pond,s=S.seats[p][i];if(s){if(s.me){if(s.ph==='idle')chooseRod(p,i);else if(s.ph==='hook')collect();else ann('รอปลากินอยู่ค่ะ');}else ann(s.who+' นั่งอยู่ท่านี้');return;}
- const sit=async()=>{if(await act({type:'sit',pond:p,seat:i}))chooseRod(p,i);};if(PONDS[p].k==='v')ask('ใช้บัตร VIP 1 ใบ?','บัตรใช้ได้หนึ่งชั่วโมง ทำภารกิจ 8 ด่าน','ใช้บัตร',sit);else await sit();}
+ const sit=async()=>{if(await act({type:'sit',pond:p,seat:i}))chooseRod(p,i);};if(PONDS[p].k==='v'){if(S.vipHeld>now())ask('กลับเข้าห้อง VIP?','บัตรเดิมเหลือเวลา '+mm(S.vipHeld-now())+' · ทำต่อจากด่านเดิม ไม่เสียบัตรใหม่','กลับเข้าห้อง',sit);else ask('ใช้บัตร VIP 1 ใบ?','บัตรใช้ได้หนึ่งชั่วโมง ทำภารกิจ 8 ด่าน','ใช้บัตร',sit);}else await sit();}
 
 function chooseRod(p,i){const s=S.seats[p][i];
  const o=RK.map(r=>`<div class="opt ${S.bag.rod[r]?'':'off'}" data-r="${r}"><img src="${IMG['rod-'+r]}" alt=""><div>${RODS[r].e} ${RODS[r].n}</div><span>มี ${S.bag.rod[r]} อัน</span></div>`).join('');
  const B=S.bait||{have:0,used:0,limit:0},bOk=B.have>0;if(useBait&&!bOk)useBait=false;
- const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}${bOk&&!useBait?' glow':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><span>${useBait?'✅ ใช้เหยื่อวิเศษ รอปลาแค่ 5 นาที':'🎣 ใช้เหยื่อวิเศษ (รอปลาแค่ 5 นาที)'}<small>${B.have?'มี '+nf(B.have)+' ชิ้น · ใช้ได้ไม่จำกัด':'🛒 รับจากโปรฯ ยัยหนู · ตลาดฮาโลวีน'}</small></span></button>`;
- sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 5 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
+ const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}${bOk&&!useBait?' glow':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><span>${useBait?'✅ ใช้เหยื่อวิเศษ รอปลาแค่ 3 นาที':'🎣 ใช้เหยื่อวิเศษ (รอปลาแค่ 3 นาที)'}<small>${B.have?'มี '+nf(B.have)+' ชิ้น · ใช้ได้ไม่จำกัด':'🛒 รับจากโปรฯ ยัยหนู · ตลาดฮาโลวีน'}</small></span></button>`;
+ sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 3 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
  $('sheet').querySelectorAll('.opt').forEach(x=>x.onclick=()=>{const r=x.dataset.r;if(!S.bag.rod[r])return ann('เบ็ดแบบนี้หมดแล้ว',false);closeSheet();cast(p,i,r)});
  $('leaveb').onclick=()=>{closeSheet();if(!s.vip&&s.ph==='idle'){act({type:'leave'})}};if($('baitb'))$('baitb').onclick=()=>{useBait=!useBait;chooseRod(p,i)}}
 async function cast(p,i,r){const bait=useBait&&PONDS[p].k==='n';if(await act({type:'cast',rod:r,...(bait?{bait:true}:{})})){if(bait)useBait=false;ann('หย่อนเบ็ดแล้ว '+RODS[r].e+(bait?' 🎣 ใช้เหยื่อวิเศษ':'')+' รอปลากินนะ');}}
@@ -252,14 +255,14 @@ function rulesView(){sheet(`<h3>📋 กติกาตกปลา</h3><div cla
 <p>⏳ หย่อนเบ็ด 1 อัน รอประมาณ 10 นาที · ได้ 1–3 ตัว ตัวละ 1–10 lb</p>
 <p>❗ ปลาติดแล้วต้องกดรับใน 3 นาที ไม่งั้นปลาหนี</p>
 <p>🎯 กดรับแล้วแตะตอนเข็มอยู่ในโซนเขียว พลาด = ปลาหลุด เสียเบ็ด</p>
-<p>😴 จบรอบแล้วลุกจากท่า พัก 3–5 นาทีค่อยตกใหม่</p>
+<p>😴 จบรอบแล้วลุกจากท่า พัก 3–5 นาทีค่อยตกใหม่ · กด 🚪 ลุกเองได้ทุกเมื่อ ไม่ต้องพัก</p>
 <p>✂️ บ่อทั่วไป: ตัดเบ็ดเพื่อนได้วันละ 30 ครั้ง ใช้กรรไกรปู 1 อัน ต้องหย่อนเบ็ดอยู่ทั้งคู่ · คนหนึ่งโดนตัดได้ไม่เกิน 30 ครั้ง/วัน</p>
 <p>✂️ ห้อง VIP: ต้องนั่งห้องเดียวกัน ใช้กรรไกรปู 10 อัน · คนโดนตัดหลุดออกจากห้อง VIP · คนหนึ่งโดนได้ 100 ครั้ง/วัน</p>
 <p>🤫 คนโดนตัดจะเห็นแค่ว่า "ใครสักคน" ตัดเบ็ด ไม่บอกชื่อ</p>
-<p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาแค่ 5 นาที · ใช้ได้ไม่จำกัด</p>
+<p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาแค่ 3 นาที · ใช้ได้ไม่จำกัด</p>
 <p>⚡ ปลาไหลไฟฟ้าผี: แตะทุ่นเพื่อนในบ่อเดียวกัน ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว เพื่อนหลุดจากห้อง) · ปล่อยได้วันละ 20 ตัว · คนหนึ่งโดนได้ 50 ครั้ง/วัน · คนโดนเห็นแค่ "ใครสักคน"</p>
 <p>⚡ ได้ปลาไหลไฟฟ้าผีจาก: ตกได้ปลาไหลแถม 5% (21:00–07:00 = 10%) · คราฟที่ร้าน</p>
-<p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 5 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
+<p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 3 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
 <p>⚖️ น้ำหนักทุกบ่อรวมบอร์ดเดียว รีเซ็ตเที่ยงคืน · ท็อป 5 ได้ 150,000–3,000,000 กุศล ติดต่อกัน +10,000 ทุกวัน</p>
 <p>📖 ปลาทุกตัวนับเข้าสมุดสะสม ครบเซ็ตรับรางวัล</p></div><div class="btns"><button class="ghost" onclick="tools()">◀ กลับ</button></div>`)}
 

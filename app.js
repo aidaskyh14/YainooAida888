@@ -7,9 +7,9 @@ import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.g
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
-import {startAlerts} from './alerts-ui.js?v=ss3-fix17';
-import {startDemon} from './demon-ui.js?v=ss3-fix17';
-import './mahakusal-ui.js?v=ss3-fix17d';/* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
+import {startAlerts} from './alerts-ui.js?v=ss3-fix18';
+import {startDemon} from './demon-ui.js?v=ss3-fix18';
+import './mahakusal-ui.js?v=ss3-fix18';/* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -132,7 +132,9 @@ function thaiError(e) {
   if (c.includes('too-many-requests')) return 'ลองหลายครั้งเกินไป รอสักครู่แล้วลองใหม่';
   if (c.includes('network') || c.includes('unavailable')) return 'อินเทอร์เน็ตหลุด ตรวจสอบเน็ตแล้วลองใหม่';
   if (c.includes('permission-denied')) return 'ไม่มีสิทธิ์ทำรายการนี้';
-  return 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง';
+  /* fix17e: ข้อความภาษาไทยจากระบบหลังบ้านบอกสาเหตุจริง → แสดงเลย */
+  if (e && typeof e.message === 'string' && /[\u0E00-\u0E7F]/.test(e.message)) return e.message;
+  return 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' + (c ? ' (' + c.replace('functions/', '') + ')' : '');
 }
 
 // ---------- ล้างแคชเก่าของซีซั่น 2 ----------
@@ -661,7 +663,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix17d'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix18'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -756,7 +758,8 @@ async function tabDemon(day){const B=$('#aBody');const d=day||new Date(Date.now(
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
  try{if(!A.players||!A.sendLoaded){B.innerHTML='<div class="box">กำลังอ่านข้อมูลครั้งแรก…</div>';const center=(await httpsCallable(functions,'adminCenterCloud')({type:'status',session:S.sessionId})).data;ps=center.players;A.players=ps;A.templates=center.templates;A.favorites=center.favorites;A.pendingRun=center.pendingRun;A.history=center.history;A.sendLoaded=true;}else ps=A.players;
- }catch(e){B.textContent=thaiError(e);return;}
+ }catch(e){console.error('admin center status',e);/* fix17e: โหลดใหม่อัตโนมัติ 1 ครั้ง แล้วแสดงสาเหตุ + ปุ่มลองใหม่ */if(!A.statusRetried){A.statusRetried=true;setTimeout(()=>{if(document.contains(B))tabSend();},1200);B.innerHTML='<div class="box">กำลังลองโหลดอีกครั้ง…</div>';return;}A.statusRetried=false;B.innerHTML='<div class="box"><b>โหลดหน้าส่งของไม่สำเร็จ</b><p>'+esc(thaiError(e))+'</p><button class="btn" id="sendRetry">🔄 โหลดใหม่</button></div>';const rb=document.getElementById('sendRetry');if(rb)rb.onclick=()=>{A.sendLoaded=false;tabSend();};return;}
+ A.statusRetried=false;
  if(!document.contains(B))return;
  ps=ps.filter(p=>p.approval!=='rejected');
  const eligible=new Set(ps.map(p=>p.uid));A.sel=new Set([...A.sel].filter(uid=>eligible.has(uid)));

@@ -2,10 +2,10 @@
    อ่าน players/{uid}/gameViews/demon ของตัวเองเท่านั้น (ไม่มีชื่อคนแกล้ง) · หักอัตโนมัติตามเวลาจริง (ส่ง settle เมื่อถึงกำหนด)
    วิดเจ็ตเล็กชิดขอบขวา (หัวใจ · หีบโลง · นาฬิกาทราย · กระเป๋า) · แจ้งเตือนเป็นแคปซูลเล็กมุมซ้ายบน · ฉากสวนวาดโดย prank-ui (อ่าน window.__DEMON) */
 const IT={
- music:{n:'กล่องดนตรีหมูปีศาจ',img:'images/prank-musicbox.webp',e:'🎶',boom:40000,toss:20000},
- hour:{n:'นาฬิกาทรายปีศาจ',img:'images/prank-hourglass.webp',e:'⏳',boom:80000,toss:40000},
- coffin:{n:'หีบโลงต้องสาป',img:'images/prank-coffin.webp',e:'⛓️',boom:130000,toss:65000},
- heart:{n:'หัวใจทับทิมปีศาจ',img:'images/prank-heart.webp',e:'💖',boom:200000,toss:100000}};
+ music:{n:'กล่องดนตรีหมูปีศาจ',img:'images/prank-musicbox.webp',e:'🎶',boom:100000,toss:50000},
+ hour:{n:'นาฬิกาทรายปีศาจ',img:'images/prank-hourglass.webp',e:'⏳',boom:200000,toss:100000},
+ coffin:{n:'หีบโลงต้องสาป',img:'images/prank-coffin.webp',e:'⛓️',boom:300000,toss:150000},
+ heart:{n:'หัวใจทับทิมปีศาจ',img:'images/prank-heart.webp',e:'💖',boom:500000,toss:250000}};
 const HEART_MSG='หัวใจต้องคำสาป  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
 const HG_EVERY=6*60000,HG_TICKS=10,HEART_TIME=10*60000,EXPIRE=48*3600000,FLIP=20;
 const CSS=`
@@ -13,7 +13,7 @@ const CSS=`
 .dm-tt{display:flex;align-items:center;gap:.35rem;background:rgba(28,10,18,.88);color:#fff;border:1.5px solid rgba(255,107,130,.7);border-radius:999px;padding:.12rem .6rem .12rem .15rem;font-size:.68rem;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.3);animation:dmtin .35s cubic-bezier(.2,1.4,.4,1)}
 .dm-tt img{width:1.4rem;height:1.4rem;object-fit:contain;flex:none}.dm-tt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dm-tt b{color:#FFB3C0}.dm-tt.good{border-color:#9EDDB6}.dm-tt.good b{color:#B8FFD4}.dm-tt.out{animation:dmtout .3s forwards}
 @keyframes dmtin{from{opacity:0;transform:translateX(-10px)}}@keyframes dmtout{to{opacity:0;transform:translateX(-10px)}}
-.dm-col{position:fixed;z-index:8990;right:max(.5rem,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 4.4rem);display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;font-family:'Mali',system-ui,sans-serif;pointer-events:none}
+.dm-col{position:fixed;z-index:8990;left:max(.35rem,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 11.4rem);display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;font-family:'Mali',system-ui,sans-serif;pointer-events:none}/* fix17e: ป้ายเล็กชิดขอบซ้ายกลางจอ ไม่ทับปุ่มของหน้า */
 .dm-w{pointer-events:auto;display:flex;align-items:center;gap:.35rem;background:rgba(28,10,18,.88);color:#fff;border:2px solid rgba(255,107,130,.75);border-radius:1rem;padding:.2rem .45rem .2rem .2rem;box-shadow:0 0 12px rgba(216,30,60,.5),0 6px 14px rgba(0,0,0,.3);font-size:.64rem;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;max-width:12.5rem;animation:dmtin .35s}
 .dm-w img{width:2.1rem;height:2.1rem;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,60,90,.8));flex:none}
 .dm-w small{display:block;font-weight:600;font-size:.56rem;color:#FFC9D2}
@@ -63,6 +63,9 @@ const CSS=`
 .dm-note{position:fixed;z-index:9020;font-size:1.6rem;color:#ff4d6d;text-shadow:0 0 8px #ff9aaa,0 2px 2px rgba(0,0,0,.4);pointer-events:none;animation:dmnt 1.8s ease-out forwards}
 @keyframes dmnt{0%{opacity:0;transform:translate(0,0) scale(.5)}20%{opacity:1}100%{opacity:0;transform:translate(var(--dx),-6rem) scale(1.2) rotate(var(--r))}}
 .dm-sheet button:focus-visible,.dm-w:focus-visible{outline:3px solid #fff;outline-offset:2px}
+/* fix17e ป้ายเล็ก */
+.dm-p{pointer-events:auto;display:flex;align-items:center;gap:.25rem;background:rgba(28,10,18,.82);color:#fff;border:1.5px solid rgba(255,107,130,.75);border-radius:999px;padding:.1rem .45rem .1rem .12rem;box-shadow:0 0 8px rgba(216,30,60,.45);font:700 .62rem 'Mali',sans-serif;font-variant-numeric:tabular-nums;cursor:pointer;animation:dmtin .3s}
+.dm-p img{width:1.45rem;height:1.45rem;object-fit:contain}.dm-p.hot{border-color:#ff2a4a;box-shadow:0 0 12px rgba(255,42,74,.9)}.dm-p.ht img{animation:dmbeat 1s ease-in-out infinite}.dm-p.bag{border-color:rgba(255,190,90,.8)}.dm-p.bag.warn{animation:dmwarn 1s infinite}
 @media (prefers-reduced-motion:reduce){.dm-w img,.dm-vig,.dm-seal,.dm-bigimg{animation:none!important}}`;
 export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   if(!document.getElementById('dmcss')){const st=document.createElement('style');st.id='dmcss';st.textContent=CSS;document.head.appendChild(st);}
@@ -120,7 +123,7 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     open('<h3>😈 วันนี้โดนแกล้ง</h3><div class="dm-hint">ไม่มีใครรู้ว่าใครแกล้ง · ระบบไม่เก็บชื่อให้ดู</div>'+(L.length?'<div class="dm-sum">'+L.map(r=>'<div><img src="'+IT[r.k].img+'" alt=""><span>'+esc((WHY[r.w]||(()=>IT[r.k].n))(r))+'<br><small style="color:#9A7A68">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</small></span><b>−'+fmt(r.amt)+'</b></div>').join('')+'<div class="tot"><span>😈</span><span>รวมวันนี้</span><b>−'+fmt(view?.tot?.n||0)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่โดนแกล้ง 🎉</div>'));}
   /* หีบโลง: เลือกตรา 1 ดวง (ผลสุ่มไว้ตั้งแต่วาง) */
   function sealSheet(){const c=view?.cf?.[0];if(!c)return;
-    open('<img class="dm-bigimg" src="'+IT.coffin.img+'" alt=""><h3>⛓️ เลือกตราผนึก 1 ดวง</h3><div class="dm-hint">⏳ <b class="dmcd">'+hms(c.until-now())+'</b> · ไม่เปิดในเวลา = −65,000 · ระหว่างนี้สวนถูกล็อก</div><div class="dm-seals">'+[0,1,2].map(i=>'<button class="dm-seal" data-s="'+i+'" aria-label="ตราผนึก '+(i+1)+'">💀</button>').join('')+'</div><div class="dm-fine">🟢 หลุดคำสาป −20,000 · 🔴 คำสาปเต็ม −65,000 · 🔁 สะท้อนกลับใส่คนแกล้ง</div>',true);
+    open('<img class="dm-bigimg" src="'+IT.coffin.img+'" alt=""><h3>⛓️ เลือกตราผนึก 1 ดวง</h3><div class="dm-hint">⏳ <b class="dmcd">'+hms(c.until-now())+'</b> · ไม่เปิดในเวลา = −150,000 · ระหว่างนี้สวนถูกล็อก</div><div class="dm-seals">'+[0,1,2].map(i=>'<button class="dm-seal" data-s="'+i+'" aria-label="ตราผนึก '+(i+1)+'">💀</button>').join('')+'</div><div class="dm-fine">🟢 หลุดคำสาป −20,000 · 🔴 คำสาปเต็ม −65,000 · 🔁 สะท้อนกลับใส่คนแกล้ง</div>',true);
     const cd=setInterval(()=>{const e=sheet.querySelector('.dmcd');if(!e||!sheet.classList.contains('on'))return clearInterval(cd);e.textContent=hms(c.until-now());},1000);
     sheet.querySelectorAll('.dm-seal').forEach(b=>b.onclick=async()=>{const i=+b.dataset.s;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=true);const out=await run({type:'seal',id:c.id,pick:i});
       if(!out?.seal){lock=false;close();return;}const res=out.seal.seal;sheet.querySelectorAll('.dm-seal').forEach((x,j)=>{x.classList.add(j===i?'r':'dim');x.textContent={g:'🟢',r:'🔴',x:'🔁'}[res[j]];});
@@ -128,11 +131,11 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   /* นาฬิกาทราย: คว่ำด้วยไม้กวาด 20 */
   const broom=()=>Math.floor(Number(game?.()?.bag?.halloween?.broom)||0);
   function flipSheet(){const list=(view?.hg||[]).slice();if(!list.length)return;const t=now();
-    open('<h3>⏳ นาฬิกาทรายปีศาจในสวน</h3><div class="dm-hint">ดูดทีละ −4,000 ทุก 6 นาที · คว่ำได้ด้วยไม้กวาดแม่มด '+FLIP+' อัน (มี '+broom()+')</div>'+list.map(h=>{const paid=Math.min(HG_TICKS,Math.floor((t-h.at)/HG_EVERY));return '<div class="dm-it"><img src="'+IT.hour.img+'" alt=""><div><b>−'+fmt(paid*4000)+' / −40,000</b><span class="dm-exp">⏳ '+hms(h.end-t)+'</span></div><button class="dm-big devil" style="padding:.35rem .7rem;font-size:.7rem" data-f="'+esc(h.id)+'" '+(broom()<FLIP?'disabled':'')+'>🔄 คว่ำ 🧹'+FLIP+'</button></div>';}).join('')+(broom()<FLIP?'<div class="dm-fine">ไม้กวาดไม่พอ · คราฟได้ที่ร้านฮาโลวีน</div>':''));
+    open('<h3>⏳ นาฬิกาทรายปีศาจในสวน</h3><div class="dm-hint">ดูดทีละ −10,000 ทุก 6 นาที · คว่ำได้ด้วยไม้กวาดแม่มด '+FLIP+' อัน (มี '+broom()+')</div>'+list.map(h=>{const paid=Math.min(HG_TICKS,Math.floor((t-h.at)/HG_EVERY));return '<div class="dm-it"><img src="'+IT.hour.img+'" alt=""><div><b>−'+fmt(paid*4000)+' / −40,000</b><span class="dm-exp">⏳ '+hms(h.end-t)+'</span></div><button class="dm-big devil" style="padding:.35rem .7rem;font-size:.7rem" data-f="'+esc(h.id)+'" '+(broom()<FLIP?'disabled':'')+'>🔄 คว่ำ 🧹'+FLIP+'</button></div>';}).join('')+(broom()<FLIP?'<div class="dm-fine">ไม้กวาดไม่พอ · คราฟได้ที่ร้านฮาโลวีน</div>':''));
     sheet.querySelectorAll('[data-f]').forEach(b=>b.onclick=async()=>{b.disabled=true;const out=await run({type:'flip',id:b.dataset.f});if(out?.flip?.flipped){close();const [cx,cy]=center();fxt(cx,cy,'🔄 ทรายหยุดแล้ว!',true);}else if(out)flipSheet();});}
   /* หัวใจ: ข้อความคำสาป (ตามต้นฉบับ) → ส่งต่อ */
   function heartIntro(){const h=view?.ht?.[0];if(!h||sheet.classList.contains('on'))return;
-    open('<img class="dm-bigimg beat" src="'+IT.heart.img+'" alt=""><div class="dm-curse">'+esc(HEART_MSG)+'</div><div class="dm-hint">⏳ 10 นาที · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด · ไม่ส่ง = −100,000</div><div class="dm-row"><button class="dm-big devil" id="dmPassNow" '+((h.passes||0)>=3?'disabled':'')+'>💌 ส่งต่อเลย</button><button class="dm-big dark" id="dmLater">ไว้ก่อน</button></div>',true);
+    open('<img class="dm-bigimg beat" src="'+IT.heart.img+'" alt=""><div class="dm-curse">'+esc(HEART_MSG)+'</div><div class="dm-hint">⏳ 10 นาที · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด · ไม่ส่ง = −250,000</div><div class="dm-row"><button class="dm-big devil" id="dmPassNow" '+((h.passes||0)>=3?'disabled':'')+'>💌 ส่งต่อเลย</button><button class="dm-big dark" id="dmLater">ไว้ก่อน</button></div>',true);
     sheet.querySelector('#dmPassNow').onclick=()=>passSheet();sheet.querySelector('#dmLater').onclick=close;}
   async function passSheet(){const h=view?.ht?.[0];if(!h)return close();
     open('<h3>💌 ส่งหัวใจต่อให้ใคร?</h3><div class="dm-hint">ส่งคืนคนที่ส่งมาไม่ได้ · ส่งซ้ำคนเดิมได้หลัง 60 นาที · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด</div><div class="dm-ppl"><div class="dm-fine">กำลังโหลดรายชื่อ…</div></div>',true);
@@ -147,13 +150,14 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   let vig=null,prevBag=null;
   function paint(){if(stopped)return;const t=now(),v=view||{},b=bag(),parts=[];
     if(prevBag)for(const k of Object.keys(IT))if(b[k]>prevBag[k])tt(IT[k],'😈 ได้'+IT[k].n,'×'+(b[k]-prevBag[k]),true);prevBag=b;
-    const h=(v.ht||[])[0];if(h){const left=h.seen?h.seen+HEART_TIME-t:HEART_TIME;parts.push('<div class="dm-w ht'+(left<120000?' hot':'')+'" data-w="ht" role="button" tabindex="0"><img src="'+IT.heart.img+'" alt=""><span class="tm">💖 '+hms(left)+'</span><button data-w="pass">💌 ส่งต่อ</button></div>');}
-    const c=(v.cf||[])[0];if(c)parts.push('<div class="dm-w cf" data-w="cf" role="button" tabindex="0"><img src="'+IT.coffin.img+'" alt=""><div>⛓️ สวนถูกล็อก<small>⏳ '+hms(c.until-t)+' · แตะเปิดหีบ</small></div></div>');
-    const hg=v.hg||[];if(hg.length){const drained=hg.reduce((a,x)=>a+Math.min(HG_TICKS,Math.floor((t-x.at)/HG_EVERY))*4000,0),end=Math.max(...hg.map(x=>x.end));parts.push('<div class="dm-w hg" data-w="hg" role="button" tabindex="0"><img src="'+IT.hour.img+'" alt=""><div>⏳ −'+fmt(drained)+(hg.length>1?' ×'+hg.length:'')+'<small>เหลือ '+hms(end-t)+'</small></div><button data-w="flip">🔄 🧹'+FLIP+'</button></div>');}
-    if((v.tot?.n||0)>0&&!parts.length)parts.push('<div class="dm-w" data-w="today" role="button" tabindex="0" style="padding:.2rem .55rem"><span>😈 วันนี้ −'+fmt(v.tot.n)+'</span></div>');
-    const n=Object.values(b).reduce((a,x)=>a+x,0);if(n){const soon=lots().some(x=>x.n>0&&x.at+EXPIRE-t<6*3600e3);parts.push('<div class="dm-w bag'+(soon?' warn':'')+'" data-w="bag" role="button" tabindex="0" style="padding:.15rem .5rem .15rem .15rem"><img src="'+IT.music.img+'" alt="" style="width:1.7rem;height:1.7rem"><span>🎒 ×'+n+'</span></div>');}
+    const farm=(screen?.()||'farm')==='farm',pill=(w,img,txt,extra='')=>'<div class="dm-p '+w+extra+'" data-w="'+w+'" role="button" tabindex="0"><img src="'+img+'" alt="">'+txt+'</div>';
+    /* หัวใจ: ทุกหน้า (มีเวลา 10 นาที) · หีบโลง/นาฬิกาทราย/กระเป๋า: เฉพาะหน้าสวน */
+    const h=(v.ht||[])[0];if(h){const left=h.seen?h.seen+HEART_TIME-t:HEART_TIME;parts.push(pill('ht',IT.heart.img,'💖 '+hms(left),left<120000?' hot':''));}
+    const c=(v.cf||[])[0];if(c&&farm)parts.push(pill('cf',IT.coffin.img,'⛓️ '+hms(c.until-t)));
+    const hg=v.hg||[];if(hg.length&&farm){const end=Math.max(...hg.map(x=>x.end));parts.push(pill('hg',IT.hour.img,'⏳ '+hms(end-t)+(hg.length>1?' ×'+hg.length:'')));}
+    const n=Object.values(b).reduce((a,x)=>a+x,0);if(n&&farm){const soon=lots().some(x=>x.n>0&&x.at+EXPIRE-t<6*3600e3);parts.push(pill('bag',IT.music.img,'🎒 ×'+n,soon?' warn':''));}
     const html=parts.join('');if(col._h!==html){col._h=html;col.innerHTML=html;
-      col.querySelectorAll('[data-w]').forEach(x=>x.onclick=e=>{e.stopPropagation();const w=x.dataset.w;({ht:heartIntro,pass:passSheet,cf:sealSheet,hg:flipSheet,flip:flipSheet,bag:bagSheet,today:todaySheet})[w]?.();});}
+      col.querySelectorAll('[data-w]').forEach(x=>x.onclick=e=>{e.stopPropagation();const w=x.dataset.w;({ht:()=>{if(!sheet.classList.contains('on'))heartIntro();},pass:passSheet,cf:sealSheet,hg:flipSheet,flip:flipSheet,bag:bagSheet,today:todaySheet})[w]?.();});}
     if(h&&!vig){vig=el('dm-vig');}if(!h&&vig){vig.remove();vig=null;}
     window.__DEMON={view:v,now:t,openSeal:sealSheet,openFlip:flipSheet};
     const gk=JSON.stringify([(v.hg||[]).map(x=>x.id),(v.cf||[]).map(x=>x.id)]);if(gk!==paint._gk){paint._gk=gk;try{window.__demonHook?.();}catch(e){window.__demonHook=null;}}}

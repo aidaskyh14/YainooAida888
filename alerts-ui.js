@@ -33,6 +33,9 @@ const CSS=`
 .ax-two{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}.ax-two .ax-btn{margin-top:.5rem}
 .ax-btn.all{background:linear-gradient(180deg,#FFB547,#E07B12);box-shadow:0 3px 0 #A5560A;margin-top:.45rem}.ax-card .ax-sum{margin:.25rem 0 0;text-align:center;font-size:.72rem;font-weight:800;color:#6E4B3A}
 .ax-tmr{text-align:center;font-size:.68rem!important;margin-top:.4rem!important}
+.ax-off{border-color:#FF9DB8!important;background:rgba(120,24,58,.9)!important;box-shadow:0 0 12px rgba(255,90,140,.7)!important}
+.ax-swim{position:fixed;z-index:8995;left:max(.35rem,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 9.4rem);display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;max-width:11rem;border:1.5px solid #8FD8FF;border-radius:999px;background:rgba(18,52,78,.86);color:#fff;font:700 .64rem 'Mali',sans-serif;padding:.15rem .5rem .15rem .2rem;box-shadow:0 0 10px rgba(143,216,255,.6);cursor:pointer;font-variant-numeric:tabular-nums}
+.ax-swim .i{font-size:1rem}.ax-swim .t{color:#BDEBFF}.ax-swim .more{display:none;width:100%;font-weight:600;font-size:.6rem;color:#DDF3FF;padding:.1rem 0 .1rem .2rem}.ax-swim.open{border-radius:1rem}.ax-swim.open .more{display:block}
 @media (prefers-reduced-motion:reduce){.ax-card{animation:none}}`;
 const ANTI=['น้ำมนต์ดอกมะลิ','น้ำมนต์โบว์ฟ้า','น้ำมนต์ปีกเทวดา','น้ำมนต์นางฟ้า'],DECIDE=10*60000;
 export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
@@ -102,12 +105,31 @@ export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
   const BIRD=['ostrich-egg','ostrich-feather','dodo-egg','dodo-feather','dodo-pebble'],UNIT={mg:'กุศล',cook:'จาน',bird:'ชิ้น',box:'กล่อง'},ICON={mg:'🎮',cook:'🍳',bird:'🦢',box:'🎁'},TXT={mg:'ได้กุศลจากมินิเกม',cook:'คราฟเมนูที่สุ่มให้',bird:'เก็บของนกกระจอกเทศ/โดโด้',box:'เปิดกล่องสุ่ม'};
   let swimBusy=false,swimAsk=0,swimKey='';
   function swimProg(sq){if(sq.kind==='bird'){const g=game?.()||{};return Math.max(0,BIRD.reduce((a,k)=>a+(Number(g.bag?.bird?.[k])||0),0)-(Number(sq.base)||0));}return Math.max(0,Number(sq.got)||0);}
-  function swimCard(){const sq=x17?.()?.sq;if(!sq||!sq.until||screen?.()==='boat'||now()>sq.until+60000){drop('swim');swimKey='';return;}
+  function swimCard(){const sq=x17?.()?.sq;if(!sq||!sq.until||screen?.()==='boat'||now()>sq.until+60000){drop('swim');dropSwim();swimKey='';return;}
     const p=swimProg(sq),need=Number(sq.need)||0,done=need>0&&p>=need,key=sq.at+'|'+Math.min(p,need)+'|'+done;
-    if(done&&!swimBusy&&Date.now()-swimAsk>10000){swimAsk=Date.now();swimBusy=true;act('boat',{type:'swimDone'}).then(out=>{if(out?.swimBack){drop('swim');card('swimok','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🎉🚣</div><div><h3 style="color:#2F8F6C">ว่ายกลับเรือสำเร็จ!</h3><div class="d" style="color:#2F8F6C">+1,000,000 กุศล</div><p>🛡️ โล่กันเตะ 30 นาที</p></div></div>',{glow:'#7FE0B8',life:6000});}}).catch(()=>{}).finally(()=>{swimBusy=false;});}
-    if(swimKey===key&&cards.has('swim')){const c=cards.get('swim');const t=c&&c.querySelector('.cd span');if(t)t.textContent=fmt(sq.until-now());return;}swimKey=key;
-    const c=card('swim','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🏊</div><div><h3 style="color:#1F6E9A">ว่ายกลับเรือ</h3><p>'+ICON[sq.kind]+' '+TXT[sq.kind]+' <b>'+Math.min(p,need).toLocaleString('en-US')+' / '+need.toLocaleString('en-US')+'</b> '+UNIT[sq.kind]+'</p><div class="cd">⏳ <span>'+fmt(sq.until-now())+'</span></div></div></div>'+(done?'<p class="ax-sum">✅ ครบแล้ว กำลังพากลับเรือ…</p>':''),{glow:'#8FD8FF'});}
+    if(done&&!swimBusy&&Date.now()-swimAsk>10000){swimAsk=Date.now();swimBusy=true;act('boat',{type:'swimDone'}).then(out=>{if(out?.swimBack){drop('swim');dropSwim();card('swimok','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🎉🚣</div><div><h3 style="color:#2F8F6C">ว่ายกลับเรือสำเร็จ!</h3><div class="d" style="color:#2F8F6C">+1,000,000 กุศล</div><p>🛡️ โล่กันเตะ 30 นาที</p></div></div>',{glow:'#7FE0B8',life:6000});}}).catch(()=>{}).finally(()=>{swimBusy=false;});}
+    /* fix17e: ป้ายเล็กชิดขอบซ้าย (ไม่ทับแถบบน/ปุ่มของหน้า) · แตะเพื่อดูรายละเอียด */
+    let pill=document.getElementById('axSwim');if(!pill){pill=document.createElement('button');pill.id='axSwim';pill.type='button';pill.className='ax-swim';pill.onclick=()=>{pill.classList.toggle('open');};document.body.appendChild(pill);}
+    pill.innerHTML='<span class="i">🏊</span><b>'+Math.min(p,need).toLocaleString('en-US')+'/'+need.toLocaleString('en-US')+'</b><span class="t">'+(done?'✅':'⏳ '+fmt(sq.until-now()))+'</span><span class="more">'+ICON[sq.kind]+' '+TXT[sq.kind]+' ('+UNIT[sq.kind]+') · ทำครบแล้วกลับเรือให้เอง</span>';
+    pill.setAttribute('aria-label','ภารกิจว่ายกลับเรือ '+Math.min(p,need)+' จาก '+need+' '+UNIT[sq.kind]);}
+  function dropSwim(){document.getElementById('axSwim')?.remove();}
   const swimT=setInterval(swimCard,1000);
   const stopMm=watch('mermaid',v=>{mm=v;notice(v);checkCard();dismissCards();rainCard(v);});
-  return ()=>{clearInterval(pzRe);clearInterval(swimT);clearInterval(rainT);stopPoison?.();stopMm?.();clearTimeout(tCheck);for(const id of [...cards.keys()])drop(id);wrap.remove();};
+  /* fix18: โดนเตะจากเรือแล้วอยู่หน้าอื่น → ป้ายเล็กนับถอยหลัง แตะกลับไปตัดสินใจ · หมดเวลาตอบให้อัตโนมัติ (กติกาเดิม)
+     ไม่อยู่ในเกมจนเซิร์ฟเวอร์ตัดสินให้ออก → การ์ดแจ้งครั้งเดียวตอนกลับมา (ข้อความของแอดมินตามตัวอักษร) */
+  const AWAY_MSG='ระหว่างที่คุณ ไม่อยู่ในเกมการแข่งขันเรือได้เริ่มขึ้นและคุณคือคนที่ถูกเตะออกจากเรือ  ระบบได้ให้เวลาแล้วแต่คุณไม่รักษาสิทธิ์ตัวเองขอโทษด้วยนะคะ';
+  let boff=null,offAsk='';
+  function dropOff(){document.getElementById('axOff')?.remove();}
+  function offTick(){const o=boff?.offer;if(!o||!o.until||screen?.()==='boat'||now()>o.until+120000){dropOff();return;}
+    const ms=o.until-now(),key=o.until+'|'+o.n;
+    if(ms<=-1500&&offAsk!==key){offAsk=key;act('boat',{type:'stay',accept:null}).catch(()=>{});}
+    let pill=document.getElementById('axOff');if(!pill){pill=document.createElement('button');pill.id='axOff';pill.type='button';pill.className='ax-swim ax-off';pill.onclick=()=>go?.('boat');document.body.appendChild(pill);}
+    pill.innerHTML='<span class="i">🦶</span><b>'+(o.swim?'ว่ายกลับ?':'โดนเตะ!')+'</b><span class="t">⏳ '+(ms>0?fmt(ms):'0:00')+'</span>';
+    pill.setAttribute('aria-label','โดนเตะจากเรือ แตะเพื่อไปตัดสินใจ เหลือเวลา '+(ms>0?fmt(ms):'0:00'));}
+  function awayCard(v){const w=v?.away;if(!w?.at||ls.get('axAway:'+w.at))return;
+    const c=card('away','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🚣💦</div><div><h3 style="color:#B02A44">ออกจากเรือแล้ว</h3><p>'+AWAY_MSG+'</p></div></div><button class="ax-btn r" type="button">รับทราบ</button>',{glow:'#FF9DB8'});
+    c.querySelector('button').onclick=()=>{ls.set('axAway:'+w.at,'1');drop('away');};}
+  const offT=setInterval(offTick,500);
+  const stopOff=watch('boatOffer',v=>{boff=v;offTick();awayCard(v);});
+  return ()=>{clearInterval(offT);dropOff();stopOff?.();clearInterval(pzRe);clearInterval(swimT);dropSwim();clearInterval(rainT);stopPoison?.();stopMm?.();clearTimeout(tCheck);for(const id of [...cards.keys()])drop(id);wrap.remove();};
 }
