@@ -1,0 +1,146 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ศึกต้นไม้ผี – ในสวนของยัยหนู</title>
+<link href="https://fonts.googleapis.com/css2?family=Itim&family=Mali:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* fix19 🌳👻 ศึกต้นไม้ผี — หน้าตาตาม Preview ที่อนุมัติ: แถบอันดับ · ทุ่งกลางคืนเลื่อนซ้ายขวา 7 ต้น · ขวานด้านล่าง · ค้างคาวขนลูกอม (ลากนิ้วฟัน)
+   ข้อมูลจริงทั้งหมดมาจากเซิร์ฟเวอร์ (world/treeWar + world/tw-{บ้าน}) · การ์ดรางวัล/การ์ดแกล้งเด้งจากเปลือกเกม (ทุกหน้า) */
+:root{--night:#1B1030;--panel:#2A1A45;--panel2:#3A2560;--ink:#FFF4E2;--soft:#CDB8E6;--pump:#FF9A3C;--lime:#B8F05A;--blood:#FF5C7A;--gold:#FFD36B;
+ --ff-d:'Itim','Mali',system-ui,sans-serif;--ff-b:'Mali',system-ui,sans-serif;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--night);color:var(--ink);font-family:var(--ff-b);overflow:hidden;-webkit-tap-highlight-color:transparent}
+.app{position:relative;height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;background:var(--night);overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.top{display:flex;align-items:center;gap:.5rem;padding:.45rem max(.75rem,env(safe-area-inset-left,0px)) .3rem;z-index:5}
+.rnd{flex:1;display:flex;flex-direction:column;font-size:.66rem;color:var(--soft);line-height:1.2;min-width:0}
+.rnd b{font:400 1rem var(--ff-d);color:var(--gold);font-variant-numeric:tabular-nums}
+.ib{width:2.2rem;height:2.2rem;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);display:grid;place-items:center;font-size:1rem;flex:none;padding:0}
+.ranks{display:flex;gap:.35rem;overflow-x:auto;padding:.1rem .75rem .45rem;scrollbar-width:none;min-height:2rem}
+.ranks::-webkit-scrollbar{display:none}
+.rk{flex:none;display:flex;align-items:center;gap:.3rem;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:999px;padding:.18rem .55rem .18rem .25rem;font-size:.7rem;white-space:nowrap}
+.rk i{font-style:normal;width:1.25rem;height:1.25rem;border-radius:50%;display:grid;place-items:center;background:var(--panel2);font:400 .72rem var(--ff-d)}
+.rk img{width:1rem;height:1rem;object-fit:contain}
+.rk.r1{border-color:var(--gold);box-shadow:0 0 10px rgba(255,211,107,.45)}.rk.r1 i{background:var(--gold);color:#4a2c00}
+.rk.me{background:rgba(184,240,90,.14)}
+.rk b{font-variant-numeric:tabular-nums;color:var(--gold)}
+.scene{position:relative;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;scrollbar-width:none}
+.scene::-webkit-scrollbar{display:none}
+.world{position:relative;height:100%;background:url(images/tw-bg.webp) 0 0/100% 100% no-repeat}
+.tree{position:absolute;pointer-events:none;transform-origin:50% 100%}
+.tree img{position:absolute;left:0;top:0;width:100%;height:auto;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+.tree img.next{opacity:0}
+.tree.grow img.next{animation:fadein .9s ease forwards}
+@keyframes fadein{to{opacity:1}}
+.tree.shake{animation:shake .5s}
+@keyframes shake{20%{transform:rotate(-4deg)}40%{transform:rotate(3.5deg)}60%{transform:rotate(-2.5deg)}80%{transform:rotate(1.5deg)}}
+.tree.up::after{content:"";position:absolute;left:10%;right:10%;bottom:0;height:70%;border-radius:50% 50% 40% 40%;background:radial-gradient(ellipse at 50% 80%,rgba(255,226,140,.7),transparent 70%);animation:glow 1.2s ease-out forwards;pointer-events:none}
+@keyframes glow{from{opacity:1}to{opacity:0;transform:scale(1.25)}}
+.lbl{position:absolute;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.12rem;background:rgba(27,16,48,.84);border:1.5px solid rgba(255,255,255,.22);border-radius:.8rem;padding:.25rem .3rem .3rem;backdrop-filter:blur(4px)}
+.lbl.r1{border-color:var(--gold);box-shadow:0 0 12px rgba(255,211,107,.5)}
+.lbl.me{border-color:var(--lime)}
+.lbl .nm{display:flex;align-items:center;gap:.2rem;font-size:.66rem;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden}
+.lbl .nm img{width:1rem;height:1rem;object-fit:contain;flex:none}
+.lbl .nm span:last-child{overflow:hidden;text-overflow:ellipsis}
+.lbl .rkb{font:400 .7rem var(--ff-d);color:var(--gold);flex:none}
+.bar{width:100%;height:.38rem;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--pump),var(--gold));transition:width .6s}
+.lbl .sc{font:400 .9rem var(--ff-d);font-variant-numeric:tabular-nums;line-height:1}
+.lbl .nx{font-size:.55rem;color:var(--soft);line-height:1.1;text-align:center}
+.lbl button{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);border-radius:999px;font-size:.6rem;padding:.08rem .45rem;margin-top:.05rem}
+.fpt{position:absolute;font:400 .85rem var(--ff-d);color:var(--lime);text-shadow:0 1px 3px #000;pointer-events:none;animation:fly 1.3s ease-out forwards;white-space:nowrap;z-index:3}
+.fpt.neg{color:var(--blood)}
+@keyframes fly{from{transform:translate(-50%,0);opacity:1}to{transform:translate(-50%,-48px);opacity:0}}
+.chips{position:absolute;pointer-events:none}
+.chips i{position:absolute;width:8px;height:5px;background:#8a5a2b;border-radius:2px;animation:chip .7s ease-out forwards}
+@keyframes chip{to{transform:translate(var(--dx),var(--dy)) rotate(260deg);opacity:0}}
+.chopaxe{position:absolute;width:3.2rem;height:3.2rem;background-size:contain;background-repeat:no-repeat;pointer-events:none;transform-origin:25% 85%;z-index:2}
+.chopaxe.swing{animation:swing .45s ease-in}
+@keyframes swing{0%{transform:rotate(-55deg)}70%{transform:rotate(18deg)}100%{transform:rotate(0)}}
+.chopfx{position:absolute;width:4rem;height:4rem;background-size:contain;background-repeat:no-repeat;pointer-events:none;transform:translate(-50%,-50%);animation:cfx .5s ease-out forwards;z-index:2}
+@keyframes cfx{from{opacity:1;transform:translate(-50%,-50%) scale(.5)}to{opacity:0;transform:translate(-50%,-50%) scale(1.2)}}
+.chopcd{position:absolute;transform:translateX(-50%);background:rgba(120,20,40,.88);border:1.5px solid var(--blood);border-radius:999px;padding:.1rem .55rem;font-size:.66rem;font-weight:700;white-space:nowrap;pointer-events:none;z-index:3}
+.dock{display:flex;align-items:center;gap:.45rem;padding:.4rem max(.75rem,env(safe-area-inset-left,0px)) calc(.45rem + env(safe-area-inset-bottom,0px));z-index:5;min-height:2.6rem}
+.axes{display:flex;gap:.3rem;flex-wrap:wrap}
+.axe{border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.07);border-radius:999px;padding:.2rem .55rem;font-size:.75rem;display:flex;align-items:center;gap:.2rem}
+.axe img{width:1.3rem;height:1.3rem;object-fit:contain}
+.axe.w{box-shadow:0 0 8px rgba(255,154,60,.6)}.axe.s{box-shadow:0 0 8px rgba(140,200,255,.7)}.axe.g{box-shadow:0 0 10px rgba(200,110,255,.8);border-color:#d9a6ff}
+.dock .hint{font-size:.64rem;color:var(--soft);flex:1;text-align:right;line-height:1.3}
+.veil{position:absolute;inset:0;background:rgba(10,4,20,.6);z-index:20;display:none}
+.veil.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:84%;overflow:auto;background:var(--panel);border-top:2px solid rgba(255,255,255,.18);border-radius:1.3rem 1.3rem 0 0;z-index:21;padding:.9rem max(16px,env(safe-area-inset-left,0px)) calc(1rem + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .28s ease;visibility:hidden}
+.sheet.on{transform:none;visibility:visible}
+.sheet h3{margin:0 2.4rem .5rem 0;font:400 1.2rem var(--ff-d)}
+.x{position:absolute;right:.8rem;top:.7rem}
+.mem{display:grid;grid-template-columns:1.6rem 1fr auto;gap:.15rem .5rem;align-items:center;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.mem .n{font-weight:700;font-size:.85rem}.mem .t{font:400 1rem var(--ff-d);font-variant-numeric:tabular-nums;color:var(--gold)}
+.mem .cats{grid-column:2/4;font-size:.68rem;color:var(--soft);display:flex;flex-wrap:wrap;gap:.15rem .55rem}
+.mem.cut .n,.mem.cut .t{color:var(--blood)}
+.mem .badge{font-size:.6rem;color:var(--soft);font-weight:600}
+.sum{display:flex;justify-content:space-between;padding-top:.6rem;font-weight:700}
+.tabs{display:flex;gap:.3rem;overflow-x:auto;margin-bottom:.6rem;scrollbar-width:none}
+.tabs button{flex:none;border:1.5px solid rgba(255,255,255,.2);background:transparent;border-radius:999px;padding:.25rem .7rem;font-size:.75rem}
+.tabs button.on{background:var(--gold);color:#3b2400;border-color:var(--gold);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.74rem}
+th,td{text-align:left;padding:.32rem .3rem;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}
+th{color:var(--soft);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;color:var(--gold);white-space:nowrap}
+.tsc{overflow-x:auto}
+.rules p,.rules li{font-size:.78rem;line-height:1.6}
+.rules ul{padding-left:1.1rem;margin:.3rem 0}
+.rules h4{margin:.7rem 0 .2rem;font:400 .95rem var(--ff-d);color:var(--pump)}
+.pick{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem;width:100%;margin:.5rem 0}
+.pick button{border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);border-radius:.8rem;padding:.45rem;font-size:.75rem;text-align:left;display:flex;gap:.35rem;align-items:center}
+.pick button img{width:1.4rem;height:1.4rem;object-fit:contain}
+.pick button b{display:block;font:400 .9rem var(--ff-d);color:var(--gold)}
+.pick button:disabled{opacity:.4}
+.big{border:0;border-radius:999px;padding:.6rem 1.3rem;font:400 1.05rem var(--ff-d);background:linear-gradient(180deg,#FFD36B,#E8962A);color:#4a2700;box-shadow:0 3px 0 #9a5a10}
+.big.ghost{background:transparent;color:var(--ink);border:1.5px solid rgba(255,255,255,.35);box-shadow:none}
+.big.red{background:linear-gradient(180deg,#FF7A93,#C63A5A);color:#fff;box-shadow:0 3px 0 #7a1a30}
+.big:disabled{opacity:.5}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-top:.5rem}
+.pop{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;padding:1rem max(16px,env(safe-area-inset-left,0px));background:radial-gradient(circle at 50% 40%,rgba(70,30,110,.95),rgba(12,5,24,.97) 70%);text-align:center;overflow:auto}
+.pop.on{display:flex}
+.pc{margin:auto 0;width:100%;max-width:22rem;display:flex;flex-direction:column;align-items:center;padding-block:.5rem}
+.pop h2{margin:.2rem 0;font:400 1.5rem var(--ff-d);text-wrap:balance}
+.pop p{margin:.2rem 0;font-size:.8rem;color:var(--soft);line-height:1.55}
+.admin label{display:flex;justify-content:space-between;align-items:center;gap:.5rem;font-size:.78rem;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.admin input{width:5.5rem;background:var(--night);border:1px solid rgba(255,255,255,.25);border-radius:.4rem;color:var(--ink);padding:.25rem .35rem;font:inherit;text-align:right}
+.admin h4{font:400 .95rem var(--ff-d);color:var(--pump);margin:.8rem 0 .2rem}
+.admin .st{font-size:.75rem;color:var(--soft);line-height:1.5;margin:.2rem 0 .4rem}
+.tog{border:1.5px solid rgba(255,255,255,.3);border-radius:999px;padding:.3rem .75rem;background:rgba(255,255,255,.06);font-size:.75rem;white-space:nowrap}
+.tog.on{background:var(--lime);color:#203000;border-color:var(--lime);font-weight:700}
+.tog.red{border-color:var(--blood);color:#FFC2CF}
+.brk{position:absolute;left:50%;top:9%;transform:translateX(-50%);background:rgba(27,16,48,.9);border:1.5px solid var(--gold);border-radius:1rem;padding:.5rem .9rem;text-align:center;z-index:4;font-size:.75rem;display:none;max-width:86%;line-height:1.5}
+.brk.on{display:block}.brk b{display:block;font:400 1.1rem var(--ff-d);color:var(--gold)}
+/* ค้างคาว */
+.bg{position:absolute;inset:0;z-index:25;display:none;background:linear-gradient(180deg,rgba(20,8,40,.6),rgba(20,8,40,.25));touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair;overflow:hidden}
+.bg.on{display:block}
+.bghud{position:absolute;left:0;right:0;top:0;background:rgba(27,16,48,.92);border-bottom:1.5px solid rgba(255,211,107,.35);display:flex;justify-content:space-between;align-items:center;padding:.5rem .8rem;font:400 1rem var(--ff-d);z-index:6}
+.bghud b{color:var(--gold);font-variant-numeric:tabular-nums}
+.ob{position:absolute;left:0;top:0;background-size:contain;background-repeat:no-repeat;background-position:center;pointer-events:none;will-change:transform}
+.warn{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel);border:2px solid var(--gold);border-radius:1.2rem;padding:1rem 1.2rem;text-align:center;z-index:7;box-shadow:0 0 30px rgba(255,211,107,.4);width:min(88%,20rem)}
+.warn h3{margin:0;font:400 1.2rem var(--ff-d)}
+.warn .cd{font:400 2.4rem var(--ff-d);color:var(--gold)}
+.warn small{display:block;font-size:.72rem;color:var(--soft);line-height:1.5}
+.toast{position:absolute;left:50%;bottom:4.2rem;transform:translateX(-50%);background:rgba(27,16,48,.95);border:1.5px solid var(--gold);border-radius:999px;padding:.4rem .9rem;font-size:.78rem;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%;text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style></head><body>
+<div class="app" id="app">
+ <div class="top">
+  <div class="rnd"><span id="rname">กำลังโหลด…</span><b id="rtime">–</b></div>
+  <button class="ib" id="bRules" aria-label="กติกา">📜</button>
+  <button class="ib" id="bAdmin" aria-label="แผงแอดมิน" hidden>👑</button>
+ </div>
+ <div class="ranks" id="ranks" aria-label="อันดับบ้าน"></div>
+ <div class="scene" id="scene"><div class="world" id="world"><div class="brk" id="brk"></div></div></div>
+ <div class="dock"><div class="axes" id="axes"></div><div class="hint" id="hint"></div></div>
+ <div class="veil" id="veil"></div>
+ <div class="sheet" id="sheet" role="dialog" aria-modal="true"><button class="ib x" id="sx" aria-label="ปิด">✕</button><div id="sb"></div></div>
+ <div class="pop" id="pop" role="dialog" aria-modal="true"></div>
+ <div class="bg" id="bat"></div>
+ <div class="toast" id="toast" role="status"></div>
+</div>
+<script type="module" src="treewar.js?v=ss3-fix19"></script>
+</body></html>

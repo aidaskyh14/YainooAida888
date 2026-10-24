@@ -1427,3 +1427,4 @@ CATALOG.push(...[['น้ำมนต์ดอกมะลิ'],['น้ำม�
 CATALOG.push({k:"fishing-eel",n:"ปลาไหลไฟฟ้าผี",i:"fishing-item-eel.webp",g:"ตกปลา",p:"fishing.eel"});/* fix17 ⚡👻 */
 CATALOG.push(...[['music','กล่องดนตรีหมูปีศาจ','prank-musicbox'],['hour','นาฬิกาทรายปีศาจ','prank-hourglass'],['coffin','หีบโลงต้องสาป','prank-coffin'],['heart','หัวใจทับทิมปีศาจ','prank-heart']].map(([k,n,i])=>({k:'demon-'+k,n,i:i+'.webp',g:'ไอเทมปีศาจ',p:'demon.'+k})));/* fix17 😈 */
 CATALOG.push({k:'box-mahakusal',n:'กล่องสุ่มมหากุศล',i:'mahakusal-box.webp',g:'กล่องสุ่ม',p:'box.mahakusal'});/* fix17 📦 */
+CATALOG.push({k:'atm-card',n:'บัตร ATM กุศล',i:'atm-card.webp',g:'บัตร ATM',p:'item.atmcard'});/* fix19 🏧 แอดมินส่งให้เท่านั้น */

@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — หน้าเกม (หน้าตาตามที่อนุมัติ) · ทุกอย่างที่เปลี่ยนข้อมูลทำบนเซิร์ฟเวอร์ (Host.cloud('nb',…)) */
-import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix15';
+import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix19';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -77,11 +77,11 @@ function openSheet(id,refresh){const nb=V.nb;if(!nb)return;const p=prog();
  if(id==='quest'){const mem=nb.members;sheet(id,head('<img src="images/nb-q-harvest.webp" alt="">','เควสต์รวมพลัง','<span class="pill p-gold">✅ '+p.done+'/'+p.rows.length+'</span>')+'<div class="qnote">🎲 วันนี้สุ่มให้บ้านนี้ '+p.rows.length+' เควสต์ · เป้าเป็นยอดรวมทั้งบ้าน · เที่ยงคืนสุ่มใหม่</div>'
   +'<div class="legend">'+mem.map(u=>`<span><i style="background:${colOf(u)}"></i>${esc(nameOf(u))}</span>`).join('')+'</div>'
   +p.rows.map(r=>{let acc=0;const seg=mem.map(u=>{const w=Math.max(0,Math.min(r.by[u]||0,r.goal-acc));acc+=w;return `<i style="width:${w/r.goal*100}%;background:${colOf(u)}"></i>`;}).join('');
-   return `<div class="cc${r.done?' done':''}"><div class="ic" style="background:#FFF6E6">${icon(r.icon)}</div><div class="mid"><b>${esc(r.name)}</b><small>${fmt(Math.min(r.sum,r.goal))} / ${fmt(r.goal)} ${esc(r.unit)}</small><div class="trk">${seg}</div></div>${r.done?'<span class="ok">✅</span>':'<span class="pill p-gray">⏳</span>'}</div>`;}).join(''));}
- if(id==='basket'){const T=[['10','ไม่หัก','1,000,000',10,10,'c-ok'],['7–9','−20%','≤360,000',7,9,'c-w'],['4–6','−50%','≤150,000',4,6,'c-w'],['0–3','−100%','0',0,3,'c-bad']];const y=V.yesterday;
+   return `<div class="cc${r.done?' done':''}"><div class="ic" style="background:#FFF6E6">${icon(r.icon)}</div><div class="mid"><b>${r.fixed?'⭐ ':''}${esc(r.name)}</b><small>${fmt(Math.min(r.sum,r.goal))} / ${fmt(r.goal)} ${esc(r.unit)} · +${fmt(r.reward)}</small><div class="trk">${seg}</div></div>${r.done?'<span class="ok">✅</span>':'<span class="pill p-gray">⏳</span>'}</div>`;}).join(''));}
+ if(id==='basket'){const T=[['10','ไม่หัก','1,300,000',10,10,'c-ok'],['7–9','−20%','≤600,000',7,9,'c-w'],['4–6','−50%','≤300,000',4,6,'c-w'],['0–3','−100%','0',0,3,'c-bad']];const y=V.yesterday;
   sheet(id,head('<img src="images/nb-basket.webp" alt="">','ตะกร้ารางวัล')+`<div class="bk"><img src="images/nb-basket.webp" alt=""><div class="amt">${fmt(p.base)} <small>กุศล/คน</small></div><div class="net">${p.cut?`⏰ ถ้าหมดเวลาตอนนี้ <span class="pill ${p.cut===1?'p-red':'p-gold'}">−${Math.round(p.cut*100)}%</span> ได้จริง <b class="${p.cut===1?'c-bad':'c-w'}">${fmt(p.net)}</b>`:'<span class="pill p-mint">🌟 ครบ 10 ข้อ ไม่โดนหัก</span>'}</div></div>
    <div class="tiers">${T.map(([a,b,c,lo,hi,cl])=>`<div class="tier${p.done>=lo&&p.done<=hi?' on':''}"><b>${a} ข้อ</b><span class="${cl}" style="font-weight:700">${b}</span><br>${c}</div>`).join('')}</div>
-   <div class="row" style="justify-content:center;font-size:.72rem;color:var(--soft)">✅ ข้อละ 50,000 · 🌟 ครบ 10 ข้อ +500,000 · 📮 จ่ายเที่ยงคืน</div>${y?`<div class="row" style="justify-content:center;font-size:.74rem">🧺 เมื่อวาน ${y.done}/10 ข้อ · ได้ <b>&nbsp;${fmt(y.net)}&nbsp;</b> กุศล/คน</div>`:''}`);}
+   <div class="row" style="justify-content:center;font-size:.72rem;color:var(--soft)">✅ ข้อปกติ 50,000 · ⭐ ข้อพิเศษ 150,000 · 🌟 ครบ 10 ข้อ +500,000 · 📮 จ่ายเที่ยงคืน</div>${y?`<div class="row" style="justify-content:center;font-size:.74rem">🧺 เมื่อวาน ${y.done}/10 ข้อ · ได้ <b>&nbsp;${fmt(y.net)}&nbsp;</b> กุศล/คน</div>`:''}`);}
  if(id==='members'){const left=Math.max(0,NB_GIFT_DAY-(Number(V.today?.gifts?.[ME])||0)),lockLeft=(nb.joinedAt?.[ME]||0)+NB_LOCK-SNow();
   sheet(id,head('<img src="images/nb-gift.webp" alt="">','สมาชิก &amp; ส่งของ','<span class="pill p-mint">🎁 '+left+'/'+NB_GIFT_DAY+'</span>')
    +nb.members.map(u=>{const fresh=SNow()-(nb.joinedAt?.[u]||0)<NB_LOCK,helped=p.rows.reduce((a,r)=>a+(r.by[u]>0?1:0),0);return `<div class="mr"><div class="av" style="background:${colOf(u)}">${ini(u)}${u===nb.leader?'<img src="images/nb-crown.webp" alt="">':''}</div><div class="mid"><b>${esc(nameOf(u))}${u===nb.leader?'<span class="pill p-gold">👑 หัวหน้า</span>':''}${u===ME?'<span class="pill p-mint">ฉัน</span>':''}${fresh?'<span class="pill p-gray">🔒 เพิ่งเข้า</span>':''}</b><small>วันนี้ช่วย ${helped} เควสต์</small></div>${u===ME?'':`<button class="btn r" data-gift="${esc(u)}" ${left?'':'disabled'}><img src="images/nb-gift.webp" alt="">ส่ง</button>`}${nb.leader===ME&&u!==ME?`<button class="btn gray" data-kick="${esc(u)}" aria-label="เชิญออก">👢</button>`:''}</div>`;}).join('')
@@ -150,3 +150,12 @@ document.addEventListener('click',e=>{
 });
 fit();render();act({type:'status'});
 setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true);},60000);
+/* fix19 🌳 ศึกต้นไม้ผี: การ์ดแถบเดียว (แตะไปหน้าศึก) */
+(()=>{if(!H.watchWorld)return;const bar=document.createElement('button');bar.type='button';bar.id='twBar';bar.hidden=true;
+ bar.style.cssText='position:absolute;z-index:6;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 3.9rem);display:flex;align-items:center;gap:.35rem;max-width:calc(100% - 1.5rem);border:2px solid #FFD36B;border-radius:999px;background:rgba(42,26,69,.92);color:#FFF4E2;font:700 .72rem Mali,sans-serif;padding:.3rem .75rem;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer';
+ bar.onclick=()=>{try{parent.postMessage({go:'treewar'},'*');}catch(e){}};$('view').appendChild(bar);let st=null;
+ const draw=()=>{const r=st?.round,l=st?.last;if(!st||(!st.on&&!r)){bar.hidden=true;return;}bar.hidden=false;
+  if(r){const rows=Object.entries(r.houses||{}),me=V.nbId&&r.houses?.[V.nbId];const left=Math.max(0,r.end-SNow()),h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);
+   bar.textContent='🌳 ศึกต้นไม้ผีกำลังแข่ง'+(me?' · บ้านคุณร่วมศึก':'')+' · ⏳ '+h+':'+String(m).padStart(2,'0')+' ›';}
+  else bar.textContent='🌳 ศึกต้นไม้ผี · พักเบรก'+(l?.winner&&l.houses?.[l.winner]?' · 🏆 '+l.houses[l.winner].n:'')+' ›';};
+ H.watchWorld('treeWar',d=>{st=d;draw();});setInterval(draw,30000);})();

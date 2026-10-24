@@ -15,15 +15,22 @@ export const NB_QUESTS=[
  ['sell','ขายของในร้านของเพื่อน',100,'ครั้ง','🏪'],
  ['shear','ตัดขนอัลปาก้า',100,'ตัว','🦙'],
  ['research','วิจัยซาฟารี',40,'ครั้ง','🔬'],
- ['flower','เก็บดอกไม้',200,'แปลง','🌸']
+ ['flower','เก็บดอกไม้',200,'แปลง','🌸'],
+ /* fix19 ภารกิจพิเศษ ขึ้นทุกวันทุกบ้าน · ข้อละ 150,000 (ต่อคน) · [.., รางวัล, ทุกวัน] */
+ ['poison','ปรุงยาพิษจากหีบแม่มด',150,'แต้ม','🧪',150000,true],
+ ['demon','ป่วนด้วยไอเทมปีศาจ',40,'แต้ม','😈',150000,true],
+ ['mkcode','นักถอดรหัสมหากุศล',80,'แต้ม','📦',150000,true]
 ];
+export const NB_FIXED=NB_QUESTS.filter(q=>q[6]).map(q=>q[0]);
+export const nbReward=k=>NB_QUESTS.find(q=>q[0]===k)?.[5]||50000;
 export const NB_DAILY=10;
 /* เควสต์ของวัน: สุ่มแบบกำหนดผลได้จากรหัสบ้าน + วัน (ทุกเครื่องเห็นชุดเดียวกัน แต่ละบ้านไม่เหมือนกัน) */
 export function nbPicks(nbId,day){
  let h=2166136261>>>0;for(const ch of String(nbId)+'|'+String(day)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;}
  const rnd=()=>{h=(h+0x6D2B79F5)>>>0;let t=h;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
- const keys=NB_QUESTS.map(q=>q[0]);for(let i=keys.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[keys[i],keys[j]]=[keys[j],keys[i]];}
- const pick=new Set(keys.slice(0,NB_DAILY));return NB_QUESTS.map(q=>q[0]).filter(k=>pick.has(k));
+ /* fix19: ข้อพิเศษขึ้นทุกวัน + สุ่มข้อปกติจนครบ 10 (ลำดับสุ่มของข้อปกติเหมือนเดิม) */
+ const keys=NB_QUESTS.filter(q=>!q[6]).map(q=>q[0]);for(let i=keys.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[keys[i],keys[j]]=[keys[j],keys[i]];}
+ const pick=new Set([...NB_FIXED,...keys.slice(0,NB_DAILY-NB_FIXED.length)]);return NB_QUESTS.map(q=>q[0]).filter(k=>pick.has(k));
 }
 export const NB_KEYS=NB_QUESTS.map(q=>q[0]);
 const at=(g,p)=>{const v=p.split('.').reduce((o,k)=>o?.[k],g);return Number.isFinite(Number(v))?Number(v):0;};
@@ -33,7 +40,9 @@ export function questDeltas(system,before,after,input={},response={}){
  const q={},add=(k,n)=>{if(n>0)q[k]=(q[k]||0)+n;};
  const type=input?.type;
  if(system==='farm'&&type==='harvest'){
-  for(const [f,rows]of Object.entries(before?.farms||{}))(rows||[]).forEach((p,i)=>{if(p?.ph==='ready'&&!after?.farms?.[f]?.[i]){add('harvest',1);if(p.c==='pumpkin')add('pumpkin',1);}});
+  /* fix19: ใช้รายการแปลงที่เก็บจริงจากเซิร์ฟเวอร์ (แปลงที่สุกระหว่างรายการก็นับ) */
+  if(Array.isArray(response?.harvested))for(const p of response.harvested){add('harvest',1);if(p?.c==='pumpkin')add('pumpkin',1);}
+  else for(const [f,rows]of Object.entries(before?.farms||{}))(rows||[]).forEach((p,i)=>{if(p?.ph==='ready'&&!after?.farms?.[f]?.[i]){add('harvest',1);if(p.c==='pumpkin')add('pumpkin',1);}});
  }
  if(system==='farm'&&type==='fruit-harvest'){
   const b=before?.fruit?.plots||[],a=after?.fruit?.plots||[];a.forEach((t,i)=>{if(t&&b[i]&&(t.last||0)>(b[i].last||0))add('tree',1);});
@@ -53,6 +62,11 @@ export function questDeltas(system,before,after,input={},response={}){
  // ตัดขนอัลปาก้า / เก็บดอกไม้ เกิดในหน้าเกม แจ้งผ่านเนเบอร์ฮูด (จำกัดต่อครั้ง)
  if(system==='nb'&&type==='report'&&['shear','flower'].includes(input?.kind)&&Number.isInteger(input?.n))add(input.kind,Math.min(50,Math.max(0,input.n)));
  if(system==='farmshop'&&type==='clear')add('sell',1);
+ /* fix19 ภารกิจพิเศษ: ยาพิษจากหีบแม่มด (เล็ก1 กลาง2 ใหญ่4 ปีศาจแดง10) · ไอเทมปีศาจที่ส่งสำเร็จ (1/2/3/4 · ส่งต่อหัวใจ 4) · เดารหัสมหากุศลถูก (ครั้งที่ 1/2/3 = 3/2/1) */
+ if(system==='market'&&type==='hw-chest')for(const p of response?.prizes||[])if(p?.kind==='poison'&&[0,1,2,3].includes(p.p))add('poison',[1,2,4,10][p.p]);
+ if(system==='demon'&&type==='send'&&response?.sent?.kind)add('demon',{music:1,hour:2,coffin:3,heart:4}[response.sent.kind]||0);
+ if(system==='demon'&&type==='pass'&&response?.pass)add('demon',4);
+ if(system==='mahakusal'&&type==='guess'&&response?.result?.win&&[1,2,3].includes(response.result.tries))add('mkcode',4-response.result.tries);
  return Object.keys(q).length?q:null;
 }
 /* วันของเนเบอร์ฮูด = วันตามเวลาไทย (เที่ยงคืนไทยรีเซ็ต) */

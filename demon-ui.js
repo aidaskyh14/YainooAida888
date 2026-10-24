@@ -7,7 +7,7 @@ const IT={
  coffin:{n:'หีบโลงต้องสาป',img:'images/prank-coffin.webp',e:'⛓️',boom:300000,toss:150000},
  heart:{n:'หัวใจทับทิมปีศาจ',img:'images/prank-heart.webp',e:'💖',boom:500000,toss:250000}};
 const HEART_MSG='หัวใจต้องคำสาป  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
-const HG_EVERY=6*60000,HG_TICKS=10,HEART_TIME=10*60000,EXPIRE=48*3600000,FLIP=20;
+const HG_EVERY=6*60000,HG_TICKS=10,HEART_TIME=10*60000,EXPIRE=48*3600000,FLIP=100;
 const CSS=`
 .dm-tst{position:fixed;z-index:9001;left:max(.6rem,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 3.3rem);display:flex;flex-direction:column;gap:.25rem;pointer-events:none;max-width:min(62vw,calc(100vw - 11.5rem));font-family:'Mali',system-ui,sans-serif}
 .dm-tt{display:flex;align-items:center;gap:.35rem;background:rgba(28,10,18,.88);color:#fff;border:1.5px solid rgba(255,107,130,.7);border-radius:999px;padding:.12rem .6rem .12rem .15rem;font-size:.68rem;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.3);animation:dmtin .35s cubic-bezier(.2,1.4,.4,1)}
@@ -128,7 +128,7 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     sheet.querySelectorAll('.dm-seal').forEach(b=>b.onclick=async()=>{const i=+b.dataset.s;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=true);const out=await run({type:'seal',id:c.id,pick:i});
       if(!out?.seal){lock=false;close();return;}const res=out.seal.seal;sheet.querySelectorAll('.dm-seal').forEach((x,j)=>{x.classList.add(j===i?'r':'dim');x.textContent={g:'🟢',r:'🔴',x:'🔁'}[res[j]];});
       setTimeout(()=>{clearInterval(cd);close();const [cx,cy]=center();boom(cx,cy);const r=out.seal.result;if(r==='x')fxt(cx,cy,'🔁 สะท้อนกลับ!',true);else fxt(cx,cy,(r==='g'?'🟢 ':'🔴 ')+'−'+fmt(out.seal.amt));},1400);});}
-  /* นาฬิกาทราย: คว่ำด้วยไม้กวาด 20 */
+  /* นาฬิกาทราย: คว่ำด้วยไม้กวาด 100 (fix19) */
   const broom=()=>Math.floor(Number(game?.()?.bag?.halloween?.broom)||0);
   function flipSheet(){const list=(view?.hg||[]).slice();if(!list.length)return;const t=now();
     open('<h3>⏳ นาฬิกาทรายปีศาจในสวน</h3><div class="dm-hint">ดูดทีละ −10,000 ทุก 6 นาที · คว่ำได้ด้วยไม้กวาดแม่มด '+FLIP+' อัน (มี '+broom()+')</div>'+list.map(h=>{const paid=Math.min(HG_TICKS,Math.floor((t-h.at)/HG_EVERY));return '<div class="dm-it"><img src="'+IT.hour.img+'" alt=""><div><b>−'+fmt(paid*4000)+' / −40,000</b><span class="dm-exp">⏳ '+hms(h.end-t)+'</span></div><button class="dm-big devil" style="padding:.35rem .7rem;font-size:.7rem" data-f="'+esc(h.id)+'" '+(broom()<FLIP?'disabled':'')+'>🔄 คว่ำ 🧹'+FLIP+'</button></div>';}).join('')+(broom()<FLIP?'<div class="dm-fine">ไม้กวาดไม่พอ · คราฟได้ที่ร้านฮาโลวีน</div>':''));

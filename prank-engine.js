@@ -4,15 +4,15 @@
    ค้างคาว: สวนมืดทั้งสวน (ทีละ 1) · ป้ายแซว: สูงสุด 20 ป้าย เจ้าของต้องเปิดอ่าน (ค้างคาวบังป้าย)
    หุ่นไล่กา: ไม้กวาด 150 ฟักทอง 30 เทียน 50 ใยแมงมุม 50 กันการแกล้ง 59 นาที (ไม่กันขโมย) · คนหนึ่งแกล้งได้วันละ 30 · สวนหนึ่งโดนได้วันละ 30 · ไม่บอกชื่อคนแกล้ง */
 export const PRANKS={
- worm:{n:'ปล่อยหนอน',icon:'🪱',img:'prank-worm',pay:['candy',20],merit:3000,broom:10,plot:true,desc:'หนอนกินผัก แปลงนี้หยุดโตและเก็บไม่ได้'},
- dry:{n:'ดินแห้งแตกระแหง',icon:'🏜️',img:'prank-dry',pay:['candle',15],merit:3000,broom:10,plot:true,desc:'ดินแห้ง ผักหยุดโต'},
- snail:{n:'หอยทากเกาะแปลง',icon:'🐌',img:'prank-snail',pay:['web',15],merit:5000,broom:15,plot:true,desc:'หอยทากเกาะ ผักหยุดโต'},
- pumpkin:{n:'ฟักทองผีขวางแปลง',icon:'🎃',img:'prank-pumpkin',pay:['pumpkin',5],merit:8000,broom:25,plot:true,desc:'ฟักทองผีนั่งทับ เก็บ/ถอนไม่ได้'},
- bat:{n:'ค้างคาวบังสวน',icon:'🦇',img:'prank-bat',pay:['bat',20],merit:5000,broom:15,plot:false,desc:'สวนมืดสนิท ฟ้าผ่าเป็นระยะ'},
- sign:{n:'ปักป้ายแซว',icon:'🪧',img:'prank-sign',pay:['candy',5],merit:1500,broom:5,plot:false,desc:'เจ้าของสวนต้องเปิดอ่าน'}};
+ worm:{n:'ปล่อยหนอน',icon:'🪱',img:'prank-worm',pay:['candy',20],merit:30000,broom:50,plot:true,desc:'หนอนกินผัก แปลงนี้หยุดโตและเก็บไม่ได้'},
+ dry:{n:'ดินแห้งแตกระแหง',icon:'🏜️',img:'prank-dry',pay:['candle',15],merit:30000,broom:50,plot:true,desc:'ดินแห้ง ผักหยุดโต'},
+ snail:{n:'หอยทากเกาะแปลง',icon:'🐌',img:'prank-snail',pay:['web',15],merit:50000,broom:75,plot:true,desc:'หอยทากเกาะ ผักหยุดโต'},
+ pumpkin:{n:'ฟักทองผีขวางแปลง',icon:'🎃',img:'prank-pumpkin',pay:['pumpkin',5],merit:80000,broom:125,plot:true,desc:'ฟักทองผีนั่งทับ เก็บ/ถอนไม่ได้'},
+ bat:{n:'ค้างคาวบังสวน',icon:'🦇',img:'prank-bat',pay:['bat',20],merit:50000,broom:75,plot:false,desc:'สวนมืดสนิท ฟ้าผ่าเป็นระยะ'},
+ sign:{n:'ปักป้ายแซว',icon:'🪧',img:'prank-sign',pay:['candy',5],merit:15000,broom:25,plot:false,desc:'เจ้าของสวนต้องเปิดอ่าน'}};
 export const HW_NAMES={candy:'ลูกอมผี',candle:'เทียนผี',web:'ใยแมงมุม',pumpkin:'ฟักทองแกะสลักเรืองแสง',bat:'ค้างคาวจิ๋ว',broom:'ไม้กวาดแม่มด'};
 export const PRANK_MSGS=['ปลูกบ้างนะผักอ่ะเล่นแต่มินิเกม','นอนบ้างนะจ๊ะ จะชนะให้ได้เลยมั้ง','อย่างอแงค่ะ','จุ๊กกรู้วววว มีใครอยู่บ้างไหม ร้างหมดแล้วบ้าน','สวนอะไรดูเหมือนไม่ได้รับการดูแลมานาน','ไม่เลิศ','ว่างๆ ปลูกผักบ้างเด้อ','ซีซั่นนี้ยังเล่นอยู่ไหม ถ้า ไม่ จะได้ไปแจ้งความคนหายสาปสูญ','ป๊าาาาาดนอนดึกเกินไปป๊ะ','เห็นเล่นตลอด แต่แอ๊บ ทำเป็นไม่ค่อยได้เล่น รู้ทันนะ','แหมๆๆ เก่งทุกอย่าง ยกเว้นการปลูกผัก','เติมโปรบ้างนะ จะได้เอาไอเท็มมาปลูกผัก ไม่ใช่เติมแต่โปรเหรียญ'];
-export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:150,pumpkin:30,candle:50,web:50},SCARE_TIME=59*60000;
+export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:750,pumpkin:150,candle:250,web:250}/* fix19: ×5 (กุศลแก้ ×10 · ไม้กวาด ×5) */,SCARE_TIME=59*60000;
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const num=n=>Number.isSafeInteger(Number(n))&&Number(n)>0?Math.floor(Number(n)):0;
 export const thaiDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);

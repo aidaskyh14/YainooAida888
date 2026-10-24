@@ -62,10 +62,11 @@ export const HW_GFOOD=['r1','r2','r3','r4','r5','r6','r7','r8','n1','n2','n3','n
 // fix15f: ยาพิษแม่มด 20% (เล็ก 10 · กลาง 6 · ใหญ่ 3 · ใหญ่สุด 1) แบ่งมาจากของเดิม
 export const HW_PRIZES=[[15,'merit'],[3,'boost'],[8,'wine'],[8,'gfood'],[8,'box'],[7,'musicbox'],[7,'hat'],[7,'cake'],[7,'wings'],[6,'coconut'],[4,'fert'],[10,'p0'],[6,'p1'],[3,'p2'],[1,'p3']];
 /* ยาพิษ: ได้แล้วต้องสาดใส่เพื่อนทันที (เลือกใน 1 นาที ไม่เลือก = ระบบสุ่มเพื่อน) · คนโดนลดกุศลผ่าน ledger · ไม่บอกชื่อคนสาด */
-export const HW_POISON=[{n:'ยาพิษฟักทอง',size:'ขวดเล็ก',d:5000},{n:'ยาพิษค้างคาว',size:'ขวดกลาง',d:12000},{n:'ยาพิษหัวกะโหลก',size:'ขวดใหญ่',d:25000},{n:'ยาพิษปีศาจแดง',size:'ขวดใหญ่สุด',d:50000}];// fix16
+export const HW_POISON=[{n:'ยาพิษฟักทอง',size:'ขวดเล็ก',d:20000},{n:'ยาพิษค้างคาว',size:'ขวดกลาง',d:50000},{n:'ยาพิษหัวกะโหลก',size:'ขวดใหญ่',d:100000},{n:'ยาพิษปีศาจแดง',size:'ขวดใหญ่สุด',d:200000}];// fix19: ×4 (เดิม 5k/12k/25k/50k) · ขวดที่สาดไปแล้วหักตามค่าที่บันทึกตอนสาด
 /* fix16 น้ำมนต์แก้พิษ: คู่กับยาพิษ 1:1 (a0 แก้ขวดเล็กเท่านั้น …) · คราฟสำเร็จ 100% · เก็บที่ bag.antidote.a0..a3 */
-export const HW_ANTI=[{n:'น้ำมนต์ดอกมะลิ',coin:8,items:{candy:5,bat:5},pestle:50},{n:'น้ำมนต์โบว์ฟ้า',coin:15,items:{candle:5,web:5},pestle:100},
- {n:'น้ำมนต์ปีกเทวดา',coin:30,items:{hat:3,broom:3},pestle:200},{n:'น้ำมนต์นางฟ้า',coin:60,items:{pumpkin:3,cauldron:2},pestle:400}];
+/* fix19: ของคราฟ ×2 */
+export const HW_ANTI=[{n:'น้ำมนต์ดอกมะลิ',coin:16,items:{candy:10,bat:10},pestle:100},{n:'น้ำมนต์โบว์ฟ้า',coin:30,items:{candle:10,web:10},pestle:200},
+ {n:'น้ำมนต์ปีกเทวดา',coin:60,items:{hat:6,broom:6},pestle:400},{n:'น้ำมนต์นางฟ้า',coin:120,items:{pumpkin:6,cauldron:4},pestle:800}];
 export const HW_DECIDE=10*60000,HW_UNSEEN_MAX=864e5;
 export const antiHave=(game,k)=>{const n=Number(game.bag?.antidote?.['a'+k]);return Number.isFinite(n)&&n>0?Math.floor(n):0;};
 /* ตัดสินยาพิษที่โดน: ใช้น้ำมนต์คู่กัน (ไม่หัก) หรือรับทราบ (หักกุศล ไม่ต่ำกว่า 0) */

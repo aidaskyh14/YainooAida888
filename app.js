@@ -8,8 +8,9 @@ import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6';
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18';
-import {startDemon} from './demon-ui.js?v=ss3-fix18';
-import './mahakusal-ui.js?v=ss3-fix18';/* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
+import {startTreeWar} from './tw-alerts.js?v=ss3-fix19';
+import {startDemon} from './demon-ui.js?v=ss3-fix19';
+import './mahakusal-ui.js?v=ss3-fix18';import './atm-ui.js?v=ss3-fix19';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -18,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17';
-import { CATALOG } from './catalog.js?v=ss3-fix17';
+import { CATALOG } from './catalog.js?v=ss3-fix19';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -54,7 +55,7 @@ const SCREEN_PARTS={
  house:['house'],backyard:['backyard','module-s3by-entry'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds'],dog:['animals-dog'],alpaca:['animals-alpaca'],
  catpen:['catpen'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
- boat:[],neighborhood:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
+ boat:[],neighborhood:[],treewar:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
  minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
 };
 const sceneSubscriptions=new Set();
@@ -112,7 +113,11 @@ async function prepareGameplay(){
  store.activeIds.add('animals-campaigns');campaignJobs.splice(0,jobs.length);
 }
 /* Pending merit changes from other players' games (players/{uid}/ledger), applied by the server on any action. */
-function showLedger(rows){const box=document.createElement('div');box.setAttribute('role','status');box.style.cssText='position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9999;width:min(92vw,360px);background:#2A2140;color:#fff;border-radius:16px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45;cursor:pointer';
+function showLedger(rows){/* fix19 🌳 ศึกต้นไม้ผี: โดนปล้น/ตัด = การ์ดค้างจนกว่าจะกดรับทราบ */
+  const tw=rows.filter(r=>r.tw==='rob'||r.tw==='cut');if(tw.length){const box=document.createElement('div');box.setAttribute('role','alertdialog');box.style.cssText='position:fixed;inset:0;z-index:9600;display:grid;place-items:center;padding:16px;background:rgba(10,4,20,.6);overflow:auto';
+    box.innerHTML='<div style="width:min(100%,22rem);background:#FFFBF5;color:#5a3b2c;border-radius:1.2rem;padding:1rem;box-shadow:0 0 0 3px #FF9DB8,0 0 28px rgba(255,120,160,.6);font-family:Mali,sans-serif">'+tw.map(r=>`<h3 style="margin:0 0 .3rem;font:400 1.2rem Itim,Mali,sans-serif;color:#B02A44">${esc(r.title||'')}</h3><p style="font-size:.8rem;line-height:1.6;margin:.2rem 0">${esc(r.msg||'')}</p>${r.lines?.length?`<ul style="margin:.4rem 0;padding-left:1.1rem;font-size:.85rem;font-weight:700;color:#B02A44">${r.lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:''}`).join('<hr style="border:0;border-top:1px dashed #F3C9D3;margin:.6rem 0">')+'<button style="display:block;width:100%;margin-top:.6rem;border:0;border-radius:999px;padding:.55rem;font:800 .9rem Mali,sans-serif;color:#fff;background:linear-gradient(180deg,#E8566E,#B02A44);cursor:pointer">รับทราบ</button></div>';
+    box.querySelector('button').onclick=()=>box.remove();document.body.appendChild(box);rows=rows.filter(r=>!tw.includes(r));if(!rows.length)return;}
+const box=document.createElement('div');box.setAttribute('role','status');box.style.cssText='position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9999;width:min(92vw,360px);background:#2A2140;color:#fff;border-radius:16px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45;cursor:pointer';
   box.innerHTML='<b style="display:block;color:#FFE9A8;margin-bottom:4px">✨ ปรับกุศลจากกิจกรรม</b>'+rows.map(r=>`<div style="margin-top:4px"><b style="color:${r.merit<0?'#FFB0A8':'#9BF0C8'}">${r.merit>0?'+':''}${fmt(r.merit)}</b> ${esc(r.title||'')}${r.msg?`<br><small style="opacity:.85">${esc(r.msg)}</small>`:''}</div>`).join('')+'<small style="display:block;opacity:.6;margin-top:6px">แตะเพื่อปิด</small>';
   box.onclick=()=>box.remove();document.body.appendChild(box);setTimeout(()=>box.remove(),9000);}
 let toastT;
@@ -383,7 +388,7 @@ async function logout() {
       if(!leave)return logout();
     }
   }
-  stopSceneSubscriptions();rumorStop?.();rumorStop=null;alertStop?.();alertStop=null;S.frame=null;await signOut(auth);
+  stopSceneSubscriptions();rumorStop?.();rumorStop=null;alertStop?.();alertStop=null;twStop?.();twStop=null;S.frame=null;await signOut(auth);
 }
 
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
@@ -452,7 +457,7 @@ function subSet(K, v, scope) {
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = {neighborhood:'🏘️ เนเบอร์ฮูด',funrun:'🎃 แรลลี่ฟักทอง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🐦 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
+const SCREENS = {neighborhood:'🏘️ เนเบอร์ฮูด',treewar:'🌳 ศึกต้นไม้ผี',funrun:'🎃 แรลลี่ฟักทอง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders • กาชาปอง',fishing:'🎣 ตกปลา',farmshop:'🏪 ร้านของเพื่อน',boat:'🚤 แข่งเรือ', safari: '🦓 ซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์วิญญาณ', birds: '🐦 นกน้อยคล้อยบินมาเดียวดาย', catpen: '🐱 คอกแมว', dog: '🐶 คอกหมา', alpaca: '🦙 ทุ่งอัลปาก้า + โรงงาน' };
 const LS_CAP = 128 * 1024;
 // lastSetError: the latest failed Host.set/subSet (cleared at the start of every set). frameSave(true) throws it.
 let lastSetError = null;
@@ -465,7 +470,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud'};
+const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -490,8 +495,11 @@ async function sceneSafeAction(system,input){
 const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return false;}};/* fix16: มินิเกมฮาโลวีนเปิดอยู่ (หน้าสัตว์หยุดบันทึก รอโหลดใหม่ตอนปิดเกม) */
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
-let alertStop=null,demonStop=null;
-function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;if(!S.user||S.admin)return;
+let alertStop=null,demonStop=null,twStop=null;
+function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;twStop?.();twStop=null;if(!S.user)return;
+ /* fix19 🌳 ศึกต้นไม้ผี: ทุกคน (รวมแอดมิน) */
+ twStop=startTreeWar({watchState:fn=>onSnapshot(doc(db,'world','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),watchMine:fn=>onSnapshot(doc(db,'players',S.user.uid,'gameViews','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),call:input=>httpsCallable(functions,'treeWarActionCloud')({input}).then(r=>r.data),now:()=>Date.now()+serverOffset,toast,screen:()=>S.screen,go:n=>goScreen(n),ledger:()=>sceneSafeAction('ledger',{type:'login'}),hold:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen()});
+ if(S.admin)return;
  /* fix17 😈 ไอเทมปีศาจ: ฝั่งคนโดน + กระเป๋า 48 ชม. (อ่าน gameViews/demon ของตัวเองเท่านั้น) */
  demonStop=startDemon({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>hwOpen()||RUMOR_HOLD.has(S.screen)||S.navigating?cloudAction(sys,input):sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,game:()=>S.P?.g,x17:()=>S.P?.x17||{},uid:S.user.uid,roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,screen:()=>S.screen});
  alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,x17:()=>S.P?.x17||{},screen:()=>S.screen,go:n=>goScreen(n)});}
@@ -549,11 +557,16 @@ const HOST_BASE = {
     const thaw=()=>{if(!frozen)return;H.set=frozen.set;H.del=frozen.del;H.get=frozen.get;frozen=null;reloading=false;};
     const refreshScene=()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();};
     /* fix17c 📦 กล่องมหากุศล: เปิดจากกระเป๋าได้เลยทุกหน้า (หน้าฉากหยุดบันทึกระหว่างเปิด แล้วโหลดใหม่ให้ตรง) · คราฟอยู่ห้องใต้ดิน */
+    /* fix19 🏧 ตู้ ATM: เปิดทับฉากแบบเดียวกับกล่องมหากุศล (ฉากหยุดบันทึกระหว่างโอน แล้วโหลดใหม่) */
+    if(kind==='atm'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
+      return window.atmOpen?.({toast,uid:S.user?.uid,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,onClose:ch=>{if(ch)refreshScene();else thaw();}});}
     if(kind==='mahakusal'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
       return window.mkOpenMenu?.({toast,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},onClose:ch=>{if(ch)refreshScene();else thaw();}});}
     return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
       open:input=>{freeze();return cloudAction('boxes',input);},
       refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
+  isAdmin(){return !!S.admin;},
+  openAtm(){return HOST_BASE.openBoxes('atm');},
   catalogItem(path){return CATALOG.find(c=>c.p===path.replace(/^bag\./,''));},
   catalogName(name){return CATALOG.find(c=>c.n===name||c.k===name);},
   get catalog(){return CATALOG;},
@@ -663,7 +676,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix18'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix19'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
@@ -737,11 +750,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '😈 บันทึกแกล้ง'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '😈 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 /* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
 const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
@@ -749,6 +762,21 @@ function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=fa
   const ov=$('#ov'),host=ov&&!ov.hidden?ov:(document.scrollingElement||document.documentElement),top=host.scrollTop,body=$('#aBody'),inner=ADMIN_LISTS.map(q=>body?.querySelector(q)?.scrollTop||0);
   const out=await fn(...a);host.scrollTop=top;const b2=$('#aBody');ADMIN_LISTS.forEach((q,i)=>{const e=b2?.querySelector(q);if(e&&inner[i])e.scrollTop=inner[i];});return out;};}
 /* fix17 😈 บันทึกการแกล้งด้วยไอเทมปีศาจ — เห็นเฉพาะแอดมิน (ผู้เล่นไม่มีทางรู้ว่าใครแกล้ง) */
+/* fix19 🏧 ATM: บันทึกการโอนทั้งหมด · เปิด/ปิดตู้ · ล้าง PIN ให้คนที่ลืม (บัตรส่งได้จากแท็บ 🎁 ส่งของ หมวด "บัตร ATM") */
+async function tabAtm(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'atmActionCloud')({input}).then(r=>r.data);
+ try{const out=await call({type:'admin-list'});let q='';const when=t=>new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const draw=()=>{const rows=out.rows.filter(r=>!q||String(r.fn).includes(q)||String(r.tn||'').includes(q)),tr=rows.filter(r=>r.kind!=='fx'),fx=rows.filter(r=>r.kind==='fx'),sum=tr.reduce((a,r)=>a+r.amount,0),fees=tr.reduce((a,r)=>a+(r.fee||0),0),fxSum=fx.reduce((a,r)=>a+r.amount,0),fxN=fx.reduce((a,r)=>a+(r.n||0),0);
+   B.innerHTML='<div class="box"><div class="row" style="justify-content:space-between;align-items:center"><b>🏧 ตู้ ATM กุศล</b><button class="btn sm '+(out.open?'':'gray')+'" id="atmTg">'+(out.open?'✅ เปิดอยู่ (กดเพื่อปิด)':'⛔ ปิดอยู่ (กดเพื่อเปิด)')+'</button></div><p style="font-size:.76rem;color:#9A7A68;margin:.3rem 0">ส่งบัตรได้ที่แท็บ 🎁 ส่งของ หมวด "บัตร ATM" · ผู้เล่นตั้ง PIN เองที่ตู้</p>'
+    +'<input id="atmQ" placeholder="🔍 ค้นชื่อคนโอน/คนรับ" value="'+esc(q)+'" style="width:100%;box-sizing:border-box;margin:.3rem 0;padding:.4rem .6rem;border:2px solid #F3E9DE;border-radius:.6rem;font:inherit">'
+    +'<p style="font-size:.8rem;margin:.2rem 0">'+rows.length+' รายการ · โอนรวม <b>'+fmt(sum)+'</b> · ค่าธรรมเนียมรวม '+fmt(fees)+' · 💱 แลกเงิน '+fx.length+' ครั้ง ('+fmt(fxN)+' ชุด → '+fmt(fxSum)+' กุศล)</p>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.74rem"><tr style="color:#9A7A68;text-align:left"><th>เวลา</th><th>จาก</th><th>ถึง</th><th style="text-align:right">ยอด</th><th style="text-align:right">ค่าธรรมเนียม</th><th>เลขที่</th></tr>'
+    +rows.map(r=>'<tr style="border-top:1px solid #F3E9DE"><td>'+when(r.at)+'</td><td>'+esc(r.fn)+'</td><td>'+(r.kind==='fx'?'💱 แลก '+fmt(r.n)+' ชุด @'+(r.rate/100).toFixed(2):esc(r.tn))+'</td><td style="text-align:right;font-variant-numeric:tabular-nums">'+fmt(r.amount)+'</td><td style="text-align:right;font-variant-numeric:tabular-nums">'+(r.kind==='fx'?'–':fmt(r.fee))+'</td><td style="font-size:.66rem">'+esc(r.id)+'</td></tr>').join('')+'</table></div>'+(rows.length?'':'<p>ยังไม่มีรายการ</p>')
+    +'<div style="margin-top:.7rem;border-top:2px dashed #F3E9DE;padding-top:.5rem"><b>🔑 ล้าง PIN (ผู้เล่นลืมรหัส)</b><div class="row" style="gap:.4rem;margin-top:.3rem"><select id="atmU" style="flex:1;padding:.35rem;border-radius:.5rem;border:2px solid #F3E9DE;font:inherit"></select><button class="btn sm" id="atmR">ล้าง PIN</button></div></div></div>';
+   $('#atmTg').onclick=async()=>{const r=await call({type:'admin-open',open:!out.open});out.open=r.open;toast(r.open?'🏧 เปิดตู้ ATM แล้ว':'⛔ ปิดตู้ ATM แล้ว');draw();};
+   $('#atmQ').onchange=e=>{q=e.target.value.trim();draw();};
+   httpsCallable(functions,'gameRoster')({}).then(r=>{const sel=$('#atmU');if(sel)sel.innerHTML=(r.data||[]).filter(x=>!x.admin).sort((a,b)=>String(a.name).localeCompare(String(b.name),'th')).map(x=>'<option value="'+esc(x.uid)+'">'+esc(x.name)+'</option>').join('');}).catch(()=>{});
+   $('#atmR').onclick=async()=>{const u=$('#atmU').value;if(!u)return;await call({type:'admin-reset',uid:u});toast('🔑 ล้าง PIN แล้ว ผู้เล่นตั้งใหม่ได้ที่ตู้');};};
+  draw();}catch(e){B.innerHTML='<div class="box">'+esc(e.message||'โหลดไม่สำเร็จ')+'</div>';}}
 async function tabDemon(day){const B=$('#aBody');const d=day||new Date(Date.now()+serverOffset+7*3600e3).toISOString().slice(0,10);B.innerHTML='<div class="box">กำลังโหลดบันทึก…</div>';
  try{const out=(await httpsCallable(functions,'demonActionCloud')({input:{type:'log',day:d}})).data,E={music:'🎶',hour:'⏳',coffin:'⛓️',heart:'💖'},W={send:'ใช้',pass:'ส่งหัวใจต่อ',seal:'เปิดหีบ'},R={g:'🟢 หลุดคำสาป',r:'🔴 คำสาปเต็ม',x:'🔁 สะท้อนกลับ'};
   const prev=new Date(Date.parse(d)-864e5).toISOString().slice(0,10),next=new Date(Date.parse(d)+864e5).toISOString().slice(0,10);

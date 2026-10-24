@@ -20,6 +20,7 @@ body{font-family:'Mali',sans-serif;color:var(--cocoa);font-size:.85rem;-webkit-t
 .tint-sunset{background:linear-gradient(180deg,rgba(255,140,90,.35),rgba(255,120,120,.22) 50%,rgba(120,80,160,.18));mix-blend-mode:multiply}
 .tint-night{background:linear-gradient(180deg,rgba(20,30,90,.78),rgba(30,40,100,.62) 60%,rgba(20,30,80,.7));mix-blend-mode:multiply}
 .tint-rain{background:rgba(90,110,140,.28);mix-blend-mode:multiply}
+.atmHot{position:absolute;cursor:pointer;z-index:3;-webkit-tap-highlight-color:transparent}.atmGlow{position:absolute;left:38%;top:52%;width:34%;height:16%;border-radius:30%;background:radial-gradient(circle,rgba(150,230,255,.85),rgba(150,230,255,0) 70%);animation:atmg 2s ease-in-out infinite;pointer-events:none}@keyframes atmg{50%{opacity:.25}}
 .glow{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,214,120,.95),rgba(255,180,80,.45) 40%,transparent 70%);mix-blend-mode:screen;animation:flick 3s ease-in-out infinite}
 @keyframes flick{50%{opacity:.8}}
 .cloud{position:absolute;height:3.4%;border-radius:999px;background:rgba(255,255,255,.85);filter:blur(1.5px);animation:cloud linear infinite}
@@ -282,7 +283,9 @@ let st;function saving(){/* Host reports actual persistence; no fake success tim
 function box(x,y,w,h,cls,fn,html){const d=document.createElement('div');d.className=cls;Object.assign(d.style,{left:x/W*100+'%',top:y/H*100+'%',width:w/W*100+'%',height:h/H*100+'%'});if(html)d.innerHTML=html;if(fn)d.onclick=fn;return d}
 /* ---------- ฉาก ---------- */
 const FRIEND_PLOTS=['ready','water','ready','angel','worm','ready','grow','magic','ready','grow','water','ready'];
-function render(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url('+IMG[farm===1?1:2]+')';setBg(IMG[farm===1?1:2]);
+/* fix19 🏧 ตู้ ATM: ฉากฟาร์ม 1 ของแอดมินมีตู้ ATM ข้างตู้ไปรษณีย์ (ผู้เล่นคนอื่นเห็นฉากเดิม) */
+const atmHere=()=>{try{return farm===1&&(visiting?!!window.friendFarm?.atm:!!parent.__HOST?.isAdmin?.());}catch(e){return false}};
+function render(){const s=$('stage');s.innerHTML='';const bgu=atmHere()?'images/farm1-bg-atm.webp':IMG[farm===1?1:2];s.style.backgroundImage='url('+bgu+')';setBg(bgu);
  // เมฆ
  [[6,110,28],[15,150,22]].forEach(([top,dur,w],i)=>{const c=document.createElement('div');c.className='cloud';Object.assign(c.style,{top:top+'%',width:w+'%',animationDuration:dur+'s',animationDelay:(-i*dur/3)+'s'});s.appendChild(c)});
  if(visiting&&window.renderFriendPlots)window.renderFriendPlots(s,farm===1?P1:P2);
@@ -301,6 +304,7 @@ function render(){const s=$('stage');s.innerHTML='';s.style.backgroundImage='url
  if(ph==='night'&&(farm===1||visiting)){[[378,452,60],[480,330,50],[470,470,70]].forEach(([x,y,w])=>{const g=document.createElement('div');g.className='glow';Object.assign(g.style,{left:(x-w)/W*100+'%',top:(y-w)/H*100+'%',width:2*w/W*100+'%',height:2*w/H*100+'%'});s.appendChild(g)})}
  const c=document.createElement('canvas');c.className='fxc';c.id='fxc';s.appendChild(c);sizeCanvas();
  if(farm===1&&!visiting)drawDelivery(s);
+ if(atmHere())s.appendChild(box(612,440,148,225,'atmHot',()=>{try{if(parent.__HOST?.isAdmin?.()&&!visiting){toast('🏧 ตู้ ATM ของผู้เล่น · ดูรายการโอนได้ที่ 👑 ศูนย์แอดมิน → 🏧 ATM',1);return;}parent.__HOST?.openAtm?.();}catch(e){}},'<span class="atmGlow"></span>'));
  $('farmBtn').style.display='grid';$('toolBtn').style.display=visiting?'none':'grid';try{window.prankDecorate?.(s)}catch(e){console.error(e)}}
 function phase(){if(tod!=='auto')return tod;const h=new Date().getHours();return h>=6&&h<17?'day':h>=17&&h<19?'sunset':'night'}
 function go(d,to){const n=to||farm+d;if(n<1||n>4)return;const s=$('stage');s.classList.add(d>0?'out-l':'out-r');
@@ -376,13 +380,13 @@ function renderBag(){const tabs=bagTabsAll();if(!tabs[bagTab])bagTab='crop';$('b
  $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it'+(HOWTO[bagTab+'.'+k]?' how':'')+'" data-g="'+bagTab+'" data-k="'+k+'">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
 /* fix17: แตะไอเทมพิเศษ → การ์ดวิธีใช้ + ปุ่ม "ไปใช้เลย" */
-const HOWTO={'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 3 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
+const HOWTO={'item.atmcard':['💳 บัตร ATM กุศล','ไปที่สวนยัยหนู (👥 เพื่อน → ยัยหนู) แล้วแตะตู้ ATM ข้างตู้ไปรษณีย์ · ตั้ง PIN ครั้งแรกครั้งเดียว · โอนกุศลให้เพื่อนได้วันละ 3 คน คนละ 5 ครั้ง · ใช้ได้จนจบซีซั่น','friends','👥 ไปสวนยัยหนู'],'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 3 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
  'boost.lens':['🔍 แว่นขยายนักวิจัย','ใช้ตอนกดวิจัยที่ซาฟารี · วัตถุดิบที่ต้องใช้ลดลง 30% · ใช้ได้ไม่จำกัด','safari','🦓 ไปซาฟารี'],
  'boost.gear':['⚙️ เฟืองเร่งเครื่อง','ใช้ตอนสั่งงานโรงงานอัลปาก้า · เวลาแปรรูปเร็วขึ้น 30% · ใช้ 1 ชิ้นต่องาน ไม่จำกัดต่อวัน','alpaca','🦙 ไปโรงงานอัลปาก้า'],
  'fishing.eel':['⚡ ปลาไหลไฟฟ้าผี','แตะทุ่นของเพื่อนที่นั่งบ่อเดียวกันแล้วเลือกปลาไหล · ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว) · เพื่อนไม่รู้ว่าใคร','fishing','🎣 ไปบ่อตกปลา'],
  'box.mahakusal':['📦 กล่องสุ่มมหากุศล','เปิดได้ที่ห้องใต้ดินในบ้าน · ทายรหัส 4 หลักได้ 3 ครั้ง ลุ้นกุศลก้อนใหญ่ · หรือเปิดด่วนทีละ 500 กล่องขึ้นไป','house','🏠 ไปห้องใต้ดิน'],
  'demon.music':['🎶 กล่องดนตรีหมูปีศาจ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 ปีศาจ · เพื่อนโดนหักทันที −50,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
- 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −10,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 20) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
+ 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −10,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 100) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
  'demon.coffin':['⛓️ หีบโลงต้องสาป','ล็อกสวนเพื่อนจนกว่าเจ้าของจะเปิดตราผนึก 1 ใน 3 · ระวังตราสะท้อนกลับมาหาคุณ! · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
  'demon.heart':['💖 หัวใจทับทิมปีศาจ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −250,000 · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
 $('bagGrid').onclick=e=>{const it=e.target.closest('.it.how');if(!it)return;const h=HOWTO[it.dataset.g+'.'+it.dataset.k];if(!h)return;const im=bagImg(it.dataset.g,it.dataset.k);
@@ -860,8 +864,8 @@ const OPEN=new Set(['house','backyard','forest','f4']);
 const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"],["🏡","หลังบ้าน","อาหารสวน • แฮมสเตอร์","backyard"]]],
  ["สัตว์",[["🐔","โรงเรือนสัตว์วิญญาณ","ไก่ ปลา หมู วัว","barn"],["🦤","นกน้อยคล้อยบินมาเดียวดาย","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","ขุดสมบัติ โยนบอล เฝ้าสวน","dog"],["🐱","คอกแมว","อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","ทุ่งอัลปาก้า + โรงงาน","ตัดขน • แปรรูป","alpaca"]]],
  ["สถานที่",[["🌲","ป่าต้องห้าม","เปิด 18:00–05:59 เวลาไทย","forest"],["🍎","ฟาร์มต้นผลไม้","ฟาร์ม 4","f4"]]],
- ["สถานที่เพิ่มเติม",[["🦓","ซาฟารี","วิจัยสัตว์","safari"],["🏪","ตลาดสวน","หุ้น • ขายไวน์","shop"],["🏘️","เนเบอร์ฮูด","เควสต์ทีม • ตะกร้ากุศล","neighborhood"],["🚤","แข่งเรือ","5 ทีม • เสบียง • การ์ด","boat"],["🏪","ร้านของเพื่อน","วางขาย • ซื้อของ","farmshop"],["🎣","ตกปลา","บ่อทั่วไป • VIP","fishing"],["🏆","Top Spenders • กาชาปอง","","topspenders"],["🏅","แคมเปญ","6 แคมเปญ • รางวัล 10 ขั้น","campaigns"],["🎮","มินิเกม","4 เกม • เหรียญฮาโลวีน","minigames"]]]];
+ ["สถานที่เพิ่มเติม",[["🦓","ซาฟารี","วิจัยสัตว์","safari"],["🏪","ตลาดสวน","หุ้น • ขายไวน์","shop"],["🏘️","เนเบอร์ฮูด","เควสต์ทีม • ตะกร้ากุศล","neighborhood"],["🚤","แข่งเรือ","5 ทีม • เสบียง • การ์ด","boat"],["🌳","ศึกต้นไม้ผี","7 บ้านแข่งกัน • วันละ 2 รอบ","treewar"],["🏪","ร้านของเพื่อน","วางขาย • ซื้อของ","farmshop"],["🎣","ตกปลา","บ่อทั่วไป • VIP","fishing"],["🏆","Top Spenders • กาชาปอง","","topspenders"],["🏅","แคมเปญ","6 แคมเปญ • รางวัล 10 ขั้น","campaigns"],["🎮","มินิเกม","4 เกม • เหรียญฮาโลวีน","minigames"]]]];
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix17"></script><script type="module" src="prank-ui.js?v=ss3-fix18"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix17"></script><script type="module" src="prank-ui.js?v=ss3-fix19"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>
