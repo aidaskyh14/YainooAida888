@@ -9,7 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19';
-import {startDemon} from './demon-ui.js?v=ss3-fix20';
+import {startDemon} from './demon-ui.js?v=ss3-fix21';
 import './mahakusal-ui.js?v=ss3-fix18';import './atm-ui.js?v=ss3-fix19';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
@@ -470,7 +470,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud'};
+const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -596,6 +596,7 @@ const HOST_BASE = {
   get coins(){return S.P?.coins||0;},
   openAdmin(){if(S.admin)openAdminOverlay();},
   get uid() { return S.user?.uid||''; },
+  serverNow(){return serverNow();},
   cloud:sceneCloud,
   // fix15: ตัดขนอัลปาก้า/เก็บดอกไม้ทำในหน้าเกม แจ้งยอดให้เควสต์เนเบอร์ฮูดแบบรวมเป็นชุด (ไม่เกินทุก 20 วินาที)
   nbReport(kind,n){if(!['shear','flower'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
@@ -694,7 +695,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix20'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix21'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }

@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — กติกาล้วน (ใช้ทั้งบนคลาวด์และในหน้าเว็บ ไม่มี Firebase) */
-import {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward} from './nb-quest.js?v=ss3-fix19';
+import {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward} from './nb-quest.js?v=ss3-fix21';
 export {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward};
 export const NB_MIN=3,NB_MAX=4;
 export const NB_LOCK=30*3600000;            // เข้าแล้วต้องอยู่อย่างน้อย 30 ชม. ถึงออกได้

@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — หน้าเกม (หน้าตาตามที่อนุมัติ) · ทุกอย่างที่เปลี่ยนข้อมูลทำบนเซิร์ฟเวอร์ (Host.cloud('nb',…)) */
-import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix19';
+import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix21';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

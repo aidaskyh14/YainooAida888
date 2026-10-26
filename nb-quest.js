@@ -1,6 +1,7 @@
 /* fix14 เนเบอร์ฮูด: นับความคืบหน้าเควสต์จากผลของรายการบนเซิร์ฟเวอร์ (ฟังก์ชันล้วน)
    นับเฉพาะสิ่งที่เซิร์ฟเวอร์เป็นคนตัดสินผล ไม่เชื่อตัวเลขจากหน้าเว็บ */
 /* fix15: เควสต์ 13 แบบ สุ่มวันละ 10 ข้อ แยกแต่ละบ้าน · เป้าเป็นยอดรวมทั้งบ้าน (บ้าน 3 คนและ 4 คนเป้าเท่ากัน) */
+import {ALPACA_MB} from './alpaca-menu.js';
 export const NB_QUESTS=[
  // [key, ชื่อ, เป้ารวมทั้งบ้าน, หน่วย, ไอคอน]
  ['harvest','เก็บผักในแปลง',1400,'แปลง','img:nb-q-harvest'],
@@ -19,7 +20,9 @@ export const NB_QUESTS=[
  /* fix19 ภารกิจพิเศษ ขึ้นทุกวันทุกบ้าน · ข้อละ 150,000 (ต่อคน) · [.., รางวัล, ทุกวัน] */
  ['poison','ปรุงยาพิษจากหีบแม่มด',150,'แต้ม','🧪',150000,true],
  ['demon','ป่วนด้วยไอเทมปีศาจ',40,'แต้ม','😈',150000,true],
- ['mkcode','นักถอดรหัสมหากุศล',80,'แต้ม','📦',150000,true]
+ ['mkcode','นักถอดรหัสมหากุศล',80,'แต้ม','📦',150000,true],
+ /* fix21 ภารกิจพิเศษ: แปรรูปโรงงานอัลปาก้า (เมนูเดิม 1 · เมนูฮาโลวีน 3 ต่อชิ้น · ชิ้นผีสิงก็นับ) */
+ ['alpaca','นักแปรรูปตัวยง',300,'แต้ม','🏭',300000,true]
 ];
 export const NB_FIXED=NB_QUESTS.filter(q=>q[6]).map(q=>q[0]);
 export const nbReward=k=>NB_QUESTS.find(q=>q[0]===k)?.[5]||50000;
@@ -66,6 +69,7 @@ export function questDeltas(system,before,after,input={},response={}){
  if(system==='market'&&type==='hw-chest')for(const p of response?.prizes||[])if(p?.kind==='poison'&&[0,1,2,3].includes(p.p))add('poison',[1,2,4,10][p.p]);
  if(system==='demon'&&type==='send'&&response?.sent?.kind)add('demon',{music:1,hour:2,coffin:3,heart:4}[response.sent.kind]||0);
  if(system==='demon'&&type==='pass'&&response?.pass)add('demon',4);
+ if(system==='alpaca'&&type==='claim'&&response?.claim){const c=response.claim,pt=k=>ALPACA_MB[k]?.hw?3:1;let n=0;for(const [k,v] of Object.entries(c.got||{}))n+=pt(k)*(Number(v)||0);for(const x of c.ghosts||[])n+=pt(x?.g);add('alpaca',n);}
  if(system==='mahakusal'&&type==='guess'&&response?.result?.win&&[1,2,3].includes(response.result.tries))add('mkcode',4-response.result.tries);
  return Object.keys(q).length?q:null;
 }
