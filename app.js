@@ -1,7 +1,7 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix17';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix17d';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix20';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6';
@@ -9,7 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19';
-import {startDemon} from './demon-ui.js?v=ss3-fix19';
+import {startDemon} from './demon-ui.js?v=ss3-fix20';
 import './mahakusal-ui.js?v=ss3-fix18';import './atm-ui.js?v=ss3-fix19';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
@@ -496,12 +496,30 @@ const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
 let alertStop=null,demonStop=null,twStop=null;
+/* fix20: โดนไอเทมปีศาจ (ตัดสินอัตโนมัติ/เลือกตราหีบ/ส่งต่อหัวใจ) ไม่โหลดหน้าใหม่แล้ว — ผู้เล่นทำต่อได้ ไม่เด้งกลับหน้าแรก
+   หน้าเกมยังถือกุศลเลขเดิม: เก็บส่วนต่างไว้ใน meritShift แล้วบวกคืนตอนหน้าเกมบันทึก (และหักออกตอนหน้าเกมอ่าน) ให้ตรงกับเซิร์ฟเวอร์เสมอ
+   ถ้ามีของระเบิดออกจากกระเป๋า (ของในกระเป๋าเปลี่ยน) ค่อยโหลดหน้าใหม่แบบเดิม */
+let meritShift=0;
+const stableStr=v=>v&&typeof v==='object'?(Array.isArray(v)?'['+v.map(stableStr).join(',')+']':'{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+stableStr(v[k])).join(',')+'}'):JSON.stringify(v)??'null';
+const gNoMerit=()=>{const g=S.P?.g;if(!g)return '';const {merit:_m,...rest}=g;return stableStr(rest);};
+async function demonQuiet(sys,input){if(cloudPromise)await cloudPromise;if(!S.frame||!S.screen||S.navigating)return sceneSafeAction(sys,input);
+ frameSave(true);await flush();
+ const H=window.__HOST,held=H?{set:H.set,del:H.del}:null;if(H){H.set=()=>{};H.del=()=>{};}
+ const m0=Number(S.P?.g?.merit)||0,g0=gNoMerit(),frame=S.frame,scr=S.screen;let out,thaw=true;
+ try{out=await cloudAction(sys,input);
+  /* ของในเกมเปลี่ยนนอกจากกุศล (ระเบิด / รายการค้างที่ส่งซ้ำ) หรือกำลังย้ายหน้า → ปลดหน้าเดิมทิ้งแล้วโหลดใหม่แบบเดิม (หน้าเดิมบันทึกทับไม่ได้อีก) */
+  if(out?.boom?.length||gNoMerit()!==g0||S.navigating||S.frame!==frame||S.screen!==scr){thaw=false;reloadScreen();return out;}
+  const d=(Number(S.P?.g?.merit)||0)-m0;
+  if(d){let put=false;try{put=frame.contentWindow.eval('(function(d){if(typeof S==="object"&&S&&typeof S.merit==="number"){S.merit=Math.max(0,S.merit+d);try{if(typeof pts==="number")pts=Math.max(0,pts+d);}catch(e){}try{var el=document.getElementById("ptsv");if(el)el.textContent=Math.round(S.merit).toLocaleString("en-US");}catch(e){}return true;}return false;})('+d+')')===true;}catch(e){}
+   if(!put)meritShift+=d;}
+ }catch(e){throw e;}finally{if(thaw&&H&&held){H.set=held.set;H.del=held.del;}}
+ return out;}
 function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;twStop?.();twStop=null;if(!S.user)return;
  /* fix19 🌳 ศึกต้นไม้ผี: ทุกคน (รวมแอดมิน) */
  twStop=startTreeWar({watchState:fn=>onSnapshot(doc(db,'world','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),watchMine:fn=>onSnapshot(doc(db,'players',S.user.uid,'gameViews','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),call:input=>httpsCallable(functions,'treeWarActionCloud')({input}).then(r=>r.data),now:()=>Date.now()+serverOffset,toast,screen:()=>S.screen,go:n=>goScreen(n),ledger:()=>sceneSafeAction('ledger',{type:'login'}),hold:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen()});
  if(S.admin)return;
  /* fix17 😈 ไอเทมปีศาจ: ฝั่งคนโดน + กระเป๋า 48 ชม. (อ่าน gameViews/demon ของตัวเองเท่านั้น) */
- demonStop=startDemon({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>hwOpen()||RUMOR_HOLD.has(S.screen)||S.navigating?cloudAction(sys,input):sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,game:()=>S.P?.g,x17:()=>S.P?.x17||{},uid:S.user.uid,roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,screen:()=>S.screen});
+ demonStop=startDemon({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>hwOpen()||RUMOR_HOLD.has(S.screen)||S.navigating?cloudAction(sys,input):sys==='demon'&&['settle','sync','seal','pass'].includes(input?.type)&&S.frame&&S.screen?demonQuiet(sys,input):sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,game:()=>S.P?.g,x17:()=>S.P?.x17||{},uid:S.user.uid,roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,screen:()=>S.screen});
  alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,x17:()=>S.P?.x17||{},screen:()=>S.screen,go:n=>goScreen(n)});}
 function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
  rumorStop=startRumors({watch:fn=>onSnapshot(doc(db,'rumors',S.user.uid),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:input=>sceneSafeAction('rumor',input),paused:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen(),game:()=>S.P.g||{},coins:()=>S.P.coins||0,now:()=>Date.now()+serverOffset});}
@@ -596,7 +614,7 @@ const HOST_BASE = {
   watchNb(id,fn){return sceneWatch(doc(db,'neighborhoods',String(id)),fn);},
   watchNbDay(id,day,fn){return sceneWatch(doc(db,'neighborhoods',String(id),'days',String(day)),fn);},
   get(k) {
-    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?.g?JSON.stringify(inventoryView(S.P.g)):null; }
+    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);if(!S.P?.g)return null;const v=inventoryView(S.P.g);if(meritShift&&typeof v==='object')v.merit=(Number(v.merit)||0)-meritShift;return JSON.stringify(v); }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
@@ -623,7 +641,7 @@ function sceneHost(ids){
 window.__HOST = sceneHost(null);
 function hostSet(k, v, scope) {
     if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); } if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }if(meritShift&&o&&typeof o==='object')o.merit=Math.max(0,(Number(o.merit)||0)+meritShift);/* fix20: กุศลที่เซิร์ฟเวอร์หักระหว่างที่หน้านี้ไม่ได้โหลดใหม่ */ if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v, scope); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
@@ -676,7 +694,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix19'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix20'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }

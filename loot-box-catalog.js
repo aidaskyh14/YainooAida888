@@ -12,5 +12,5 @@ export const BOXES=[
  box('plant','box-plant','bag.box.plant','boxes-box-clover.webp',[row(85,'plants'),row(10,'salt'),row(5,'merit',[100,300])]),
  box('fruit','box-fruit','bag.box.fruit','boxes-box-berry.webp',[row(19,'item',['peach',30]),row(19,'item',['orange',30]),row(19,'item',['apple',30]),row(19,'item',['cherry',30]),row(21,'flower',10),row(3,'merit',[300,1800])])
 ];
-export const BOX_QUANTITIES=[1,10,50,100,500];
+export const BOX_QUANTITIES=[1,10,50,100,500,1000,2000,5000];
 export const getBoxCount=(game,box)=>box.path.split('.').reduce((o,k)=>o?.[k],game)||0;

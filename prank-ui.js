@@ -56,6 +56,7 @@ const css=document.createElement('style');css.textContent=`
 .dmlock{position:absolute;left:8%;right:8%;top:38%;height:30%;border-radius:4%;background:rgba(30,0,10,.32);box-shadow:inset 0 0 0 3px rgba(255,80,110,.55),0 0 24px rgba(216,30,60,.55);pointer-events:none;z-index:3;animation:dmlk 2s ease-in-out infinite}
 @keyframes dmlk{50%{box-shadow:inset 0 0 0 3px rgba(255,80,110,.85),0 0 34px rgba(216,30,60,.75)}}
 .pkdock button.dv{background:linear-gradient(180deg,#ff5a72,#b30f2b);box-shadow:0 4px 10px rgba(120,0,20,.45),0 0 12px rgba(216,30,60,.55)}
+#pkSheet .dmbulk{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin:.1rem 0 .4rem;font-size:.72rem;font-weight:700;color:#7A2FD8}#pkSheet .dmbulk button{border:2px solid #E6D2FA;background:#FBF6FF;border-radius:999px;padding:.2rem .7rem;font:800 .78rem Mali,sans-serif;color:#7A2FD8;cursor:pointer}
 #pkSheet .dmit{display:grid;grid-template-columns:3rem 1fr auto;align-items:center;gap:.5rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.4rem .55rem;margin-bottom:.32rem;cursor:pointer;text-align:left;font:inherit;color:inherit}
 #pkSheet .dmit img{width:3rem;height:3rem;object-fit:contain;filter:drop-shadow(0 0 5px rgba(216,30,60,.45))}
 #pkSheet .dmit b{display:block;font-size:.82rem}#pkSheet .dmit small{display:block;font-size:.64rem;color:#9A7A68;font-weight:600}
@@ -196,12 +197,12 @@ function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__
  pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>😈 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +Object.entries(DM).map(([k,[n,e,img,desc]])=>{const have=Math.max(0,Math.floor(Number(bag[k])||0)),first=lots.filter(x=>x.k===k&&x.n>0).sort((a,b)=>a.at-b.at)[0],left=first?first.at+48*3600e3-now:0;
    return '<button class="dmit" data-dm="'+k+'" '+(have?'':'disabled')+'><img src="images/'+img+'.webp" alt=""><div><b>'+e+' '+n+'</b><small>'+desc+'</small>'+(first?'<span class="dmexp'+(left<6*3600e3?' warn':'')+'">⏳ '+dmHms(left)+'</span>':'')+'</div><div class="r">มี '+have+'</div></button>';}).join('')
-  +'<div class="note">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ · 💖 ทะลุหุ่นไล่กา</div>');
- sheetEl.querySelectorAll('[data-dm]').forEach(b=>b.onclick=async()=>{const k=b.dataset.dm;closeAll();const out=await window.cloudDemon?.(k);if(!out?.sent)return;
+  +((Math.floor(Number(bag.music)||0)>1)?'<div class="dmbulk">🎶 ส่งกล่องดนตรีทีละหลายกล่อง '+[10,50].filter(q=>Math.floor(Number(bag.music)||0)>=q).map(q=>'<button data-dmn="'+q+'">×'+q+'</button>').join('')+(Math.floor(Number(bag.music)||0)<10?'<button data-dmn="'+Math.floor(Number(bag.music)||0)+'">×'+Math.floor(Number(bag.music)||0)+'</button>':'')+'</div>':'')+'<div class="note">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ · 💖 ทะลุหุ่นไล่กา</div>');
+ sheetEl.querySelectorAll('[data-dm],[data-dmn]').forEach(b=>b.onclick=async()=>{const k=b.dataset.dm||'music',n=Number(b.dataset.dmn)||1;closeAll();const out=await window.cloudDemon?.(k,n);if(!out?.sent)return;
   const [cx,cy]=[innerWidth/2,innerHeight*.5],f=document.createElement('img');f.className='dmfly';f.src='images/'+DM[k][2]+'.webp';f.style.left=(cx-32)+'px';f.style.top=(innerHeight-120)+'px';document.body.appendChild(f);
   requestAnimationFrame(()=>{f.style.transform='translate(0,'+(cy-innerHeight+90)+'px) scale(1.4)';});
   setTimeout(()=>{f.style.opacity='0';const bm=document.createElement('div');bm.className='dmboom';bm.style.left=cx+'px';bm.style.top=cy+'px';document.body.appendChild(bm);setTimeout(()=>{bm.remove();f.remove();},600);const st=$('stage');st.classList.remove('pkshake');void st.offsetWidth;st.classList.add('pkshake');
-   toast('😈 '+({music:'ส่งกล่องดนตรีให้ ',hour:'วางนาฬิกาทรายในสวน ',coffin:'วางหีบโลงในสวน ',heart:'ส่งหัวใจให้ '}[k])+esc(out.sent.name)+' แล้ว! เจ้าของสวนจะไม่รู้ว่าใคร');},900);});}
+   toast('😈 '+({music:'ส่งกล่องดนตรี'+(out.sent.n>1?' ×'+out.sent.n:'')+' ให้ ',hour:'วางนาฬิกาทรายในสวน ',coffin:'วางหีบโลงในสวน ',heart:'ส่งหัวใจให้ '}[k])+esc(out.sent.name)+' แล้ว! เจ้าของสวนจะไม่รู้ว่าใคร');},900);});}
 const HG_SPOT=[[80,30],[66,27],[90,46]];
 function demonGarden(s){if(visiting)return;let D=null;try{D=parent.__DEMON;}catch(e){}const v=D?.view;if(!v)return;const now=Date.now();
  (v.hg||[]).slice(0,3).forEach((h,j)=>{const [x,y]=HG_SPOT[j],o=document.createElement('div');o.className='dmobj dmhg';o.style.left=x+'%';o.style.top=y+'%';const paid=Math.min(10,Math.floor((now-h.at)/360000));

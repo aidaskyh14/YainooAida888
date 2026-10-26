@@ -35,6 +35,7 @@ const CSS=`
 .dm-it{display:grid;grid-template-columns:3rem 1fr auto;align-items:center;gap:.5rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.4rem .55rem;margin-bottom:.32rem;text-align:left;box-sizing:border-box}
 .dm-it img{width:3rem;height:3rem;object-fit:contain;filter:drop-shadow(0 0 5px rgba(216,30,60,.45))}
 .dm-it b{font-size:.8rem;display:block}.dm-it .r{text-align:right;font-size:.64rem;font-weight:800;color:#D81E3C;font-variant-numeric:tabular-nums}.dm-it .r small{display:block;color:#9A7A68;font-weight:600}
+.dm-next{font-size:.66rem;color:#8B1028;margin:.15rem 0}.dm-next em{font-style:normal;font-weight:800;color:#D81E3C}
 .dm-exp{display:inline-block;background:#FFF0F3;color:#D81E3C;border-radius:999px;padding:0 .4em;font-size:.6rem;font-weight:800;margin:.1rem .15rem 0 0}.dm-exp.warn{background:#D81E3C;color:#fff;animation:dmew 1s infinite}@keyframes dmew{50%{opacity:.6}}
 .dm-mini{border:0;background:none;color:#9A7A68;font:700 .62rem 'Mali',sans-serif;text-decoration:underline;cursor:pointer;padding:0;margin-top:.15rem}
 .dm-row{display:flex;gap:.4rem;justify-content:center;margin-top:.55rem;flex-wrap:wrap}
@@ -85,14 +86,14 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   function open(h,dark,locked){sheet.className='dm-sheet'+(dark?' dark':'');sheet.innerHTML=h;void sheet.offsetWidth;sheet.classList.add('on');shade.classList.add('on');lock=!!locked;}
   function close(){sheet.classList.remove('on');shade.classList.remove('on');lock=false;}
   shade.onclick=()=>{if(!lock)close();};
-  async function run(input,quiet){if(busy)return null;busy=true;try{const out=await act('demon',input);if(out?.view){view=out.view;paint();}boomNotice(out?.boom);return out;}catch(e){if(!quiet)tt(null,'😈 '+esc(e.message||'ลองใหม่อีกครั้ง'),'');return null;}finally{busy=false;}}
+  async function run(input,quiet,wait){if(busy&&wait){for(let i=0;i<80&&busy;i++)await new Promise(r=>setTimeout(r,250));}if(busy){if(wait&&!quiet)tt(null,'⏳ ระบบกำลังบันทึกรายการอื่น ลองกดอีกครั้งนะ','');return wait?{busy:true}:null;}busy=true;/* fix20: ส่งต่อหัวใจรอรายการอัตโนมัติจบก่อน (เดิมชนกันแล้วขึ้น 'ตอนนี้ไม่ได้') */try{const out=await act('demon',input);if(out?.view){view=out.view;paint();}boomNotice(out?.boom);return out;}catch(e){if(!quiet)tt(null,'😈 '+esc(e.message||'ลองใหม่อีกครั้ง'),'');return null;}finally{busy=false;}}
   /* ---------- กระเป๋า 48 ชม. ---------- */
   const bag=()=>{const b=game?.()?.bag?.demon||{};return Object.fromEntries(Object.keys(IT).map(k=>[k,Math.max(0,Math.floor(Number(b[k])||0))]));};
   const lots=()=>{const L=x17?.()?.dm?.b;return Array.isArray(L)?L:[];};
   const lotsOf=k=>lots().filter(x=>x.k===k&&x.n>0).sort((a,b)=>a.at-b.at);
   function bagSheet(){const b=bag(),t=now();const rows=Object.entries(IT).filter(([k])=>b[k]>0);
-    open('<h3>🎒 ไอเทมปีศาจของฉัน</h3><div class="dm-hint">ต้องใช้ภายใน 48 ชม. ไม่อย่างนั้น 💥 ระเบิดใส่ตัวเอง · ใช้ที่สวนเพื่อน (ปุ่ม 😈)</div>'
-      +(rows.length?rows.map(([k,it])=>{const L=lotsOf(k);return '<div class="dm-it"><img src="'+it.img+'" alt=""><div><b>'+it.e+' '+it.n+' ×'+b[k]+'</b>'+(L.length?L.slice(0,3).map(x=>{const left=x.at+EXPIRE-t;return '<span class="dm-exp'+(left<6*3600e3?' warn':'')+'">⏳ '+hms(left)+(x.n>1?' ×'+x.n:'')+'</span>';}).join(''):'<span class="dm-exp">⏳ 48:00 ชม.</span>')+'<br><button class="dm-mini" data-t="'+k+'">🗑️ ทิ้งลงบ่อ 1 ชิ้น (−'+fmt(it.toss)+')</button></div><div class="r">💥 −'+fmt(it.boom)+'<small>ถ้าหมดเวลา</small></div></div>';}).join('')
+    open('<h3>🎒 ไอเทมปีศาจของฉัน</h3><div class="dm-hint">ของแต่ละก้อนนับ 48 ชม. แยกกัน ตั้งแต่ตอนเข้ากระเป๋า · ก้อนไหนหมดเวลา 💥 ระเบิดเฉพาะก้อนนั้น · ใช้/ทิ้ง จะหยิบก้อนที่ใกล้หมดเวลาก่อนเสมอ · ใช้ที่สวนเพื่อน (ปุ่ม 😈)</div>'
+      +(rows.length?rows.map(([k,it])=>{const L=lotsOf(k);return '<div class="dm-it"><img src="'+it.img+'" alt=""><div><b>'+it.e+' '+it.n+' ×'+b[k]+'</b>'+(L.length?'<div class="dm-next">💥 ก้อนแรกระเบิดในอีก <em>'+hms(L[0].at+EXPIRE-t)+'</em> · '+fmt(L[0].n)+' ชิ้น = −'+fmt(L[0].n*it.boom)+'</div>'+L.slice(0,8).map(x=>{const left=x.at+EXPIRE-t;return '<span class="dm-exp'+(left<6*3600e3?' warn':'')+'">⏳ '+hms(left)+' ×'+fmt(x.n)+'</span>';}).join('')+(L.length>8?'<span class="dm-exp">+อีก '+(L.length-8)+' ก้อน</span>':''):'<span class="dm-exp">⏳ 48:00 ชม.</span>')+'<br><button class="dm-mini" data-t="'+k+'">🗑️ ทิ้งลงบ่อ 1 ชิ้น (−'+fmt(it.toss)+')</button></div><div class="r">💥 −'+fmt(it.boom)+'<small>ถ้าหมดเวลา</small></div></div>';}).join('')
         :'<div class="dm-fine">ยังไม่มีไอเทมปีศาจ</div>')+'<div class="dm-fine">ได้จากการดูแลสัตว์เลี้ยง และเปิดกล่องสุ่มสัตว์</div>');
     sheet.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{const k=x.dataset.t,it=IT[k];
       open('<img class="dm-bigimg" src="'+it.img+'" alt=""><h3>🗑️ ทิ้ง'+it.n+'ลงบ่อ?</h3><div class="dm-hint">ทิ้ง 1 ชิ้น เสีย −'+fmt(it.toss)+' กุศล (ครึ่งหนึ่งของตอนระเบิด)</div><div class="dm-row"><button class="dm-big devil" id="dmTossGo">🗑️ ทิ้งเลย</button><button class="dm-big dark" id="dmTossNo">ไม่ทิ้ง</button></div>');
@@ -125,27 +126,27 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   function sealSheet(){const c=view?.cf?.[0];if(!c)return;
     open('<img class="dm-bigimg" src="'+IT.coffin.img+'" alt=""><h3>⛓️ เลือกตราผนึก 1 ดวง</h3><div class="dm-hint">⏳ <b class="dmcd">'+hms(c.until-now())+'</b> · ไม่เปิดในเวลา = −150,000 · ระหว่างนี้สวนถูกล็อก</div><div class="dm-seals">'+[0,1,2].map(i=>'<button class="dm-seal" data-s="'+i+'" aria-label="ตราผนึก '+(i+1)+'">💀</button>').join('')+'</div><div class="dm-fine">🟢 หลุดคำสาป −20,000 · 🔴 คำสาปเต็ม −65,000 · 🔁 สะท้อนกลับใส่คนแกล้ง</div>',true);
     const cd=setInterval(()=>{const e=sheet.querySelector('.dmcd');if(!e||!sheet.classList.contains('on'))return clearInterval(cd);e.textContent=hms(c.until-now());},1000);
-    sheet.querySelectorAll('.dm-seal').forEach(b=>b.onclick=async()=>{const i=+b.dataset.s;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=true);const out=await run({type:'seal',id:c.id,pick:i});
-      if(!out?.seal){lock=false;close();return;}const res=out.seal.seal;sheet.querySelectorAll('.dm-seal').forEach((x,j)=>{x.classList.add(j===i?'r':'dim');x.textContent={g:'🟢',r:'🔴',x:'🔁'}[res[j]];});
+    sheet.querySelectorAll('.dm-seal').forEach(b=>b.onclick=async()=>{const i=+b.dataset.s;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=true);const out=await run({type:'seal',id:c.id,pick:i},false,true);
+      if(out?.busy){lock=false;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=false);return;}if(!out?.seal){lock=false;close();return;}const res=out.seal.seal;sheet.querySelectorAll('.dm-seal').forEach((x,j)=>{x.classList.add(j===i?'r':'dim');x.textContent={g:'🟢',r:'🔴',x:'🔁'}[res[j]];});
       setTimeout(()=>{clearInterval(cd);close();const [cx,cy]=center();boom(cx,cy);const r=out.seal.result;if(r==='x')fxt(cx,cy,'🔁 สะท้อนกลับ!',true);else fxt(cx,cy,(r==='g'?'🟢 ':'🔴 ')+'−'+fmt(out.seal.amt));},1400);});}
   /* นาฬิกาทราย: คว่ำด้วยไม้กวาด 100 (fix19) */
   const broom=()=>Math.floor(Number(game?.()?.bag?.halloween?.broom)||0);
   function flipSheet(){const list=(view?.hg||[]).slice();if(!list.length)return;const t=now();
     open('<h3>⏳ นาฬิกาทรายปีศาจในสวน</h3><div class="dm-hint">ดูดทีละ −10,000 ทุก 6 นาที · คว่ำได้ด้วยไม้กวาดแม่มด '+FLIP+' อัน (มี '+broom()+')</div>'+list.map(h=>{const paid=Math.min(HG_TICKS,Math.floor((t-h.at)/HG_EVERY));return '<div class="dm-it"><img src="'+IT.hour.img+'" alt=""><div><b>−'+fmt(paid*4000)+' / −40,000</b><span class="dm-exp">⏳ '+hms(h.end-t)+'</span></div><button class="dm-big devil" style="padding:.35rem .7rem;font-size:.7rem" data-f="'+esc(h.id)+'" '+(broom()<FLIP?'disabled':'')+'>🔄 คว่ำ 🧹'+FLIP+'</button></div>';}).join('')+(broom()<FLIP?'<div class="dm-fine">ไม้กวาดไม่พอ · คราฟได้ที่ร้านฮาโลวีน</div>':''));
-    sheet.querySelectorAll('[data-f]').forEach(b=>b.onclick=async()=>{b.disabled=true;const out=await run({type:'flip',id:b.dataset.f});if(out?.flip?.flipped){close();const [cx,cy]=center();fxt(cx,cy,'🔄 ทรายหยุดแล้ว!',true);}else if(out)flipSheet();});}
+    sheet.querySelectorAll('[data-f]').forEach(b=>b.onclick=async()=>{b.disabled=true;const out=await run({type:'flip',id:b.dataset.f},false,true);if(out?.flip?.flipped){close();const [cx,cy]=center();fxt(cx,cy,'🔄 ทรายหยุดแล้ว!',true);}else if(out)flipSheet();});}
   /* หัวใจ: ข้อความคำสาป (ตามต้นฉบับ) → ส่งต่อ */
   function heartIntro(){const h=view?.ht?.[0];if(!h||sheet.classList.contains('on'))return;
     open('<img class="dm-bigimg beat" src="'+IT.heart.img+'" alt=""><div class="dm-curse">'+esc(HEART_MSG)+'</div><div class="dm-hint">⏳ 10 นาที · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด · ไม่ส่ง = −250,000</div><div class="dm-row"><button class="dm-big devil" id="dmPassNow" '+((h.passes||0)>=3?'disabled':'')+'>💌 ส่งต่อเลย</button><button class="dm-big dark" id="dmLater">ไว้ก่อน</button></div>',true);
     sheet.querySelector('#dmPassNow').onclick=()=>passSheet();sheet.querySelector('#dmLater').onclick=close;}
   async function passSheet(){const h=view?.ht?.[0];if(!h)return close();
-    open('<h3>💌 ส่งหัวใจต่อให้ใคร?</h3><div class="dm-hint">ส่งคืนคนที่ส่งมาไม่ได้ · ส่งซ้ำคนเดิมได้หลัง 60 นาที · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด</div><div class="dm-ppl"><div class="dm-fine">กำลังโหลดรายชื่อ…</div></div>',true);
+    open('<h3>💌 ส่งหัวใจต่อให้ใคร?</h3><div class="dm-hint">ส่งคืนคนที่ส่งมาไม่ได้ · ส่งต่อได้อีก '+Math.max(0,3-(h.passes||0))+' ทอด</div><div class="dm-ppl"><div class="dm-fine">กำลังโหลดรายชื่อ…</div></div>',true);
     let rows=[];try{rows=(await roster())||[];}catch(e){}
     const box=sheet.querySelector('.dm-ppl');if(!box)return;const ppl=rows.filter(p=>p.uid!==uid&&!p.admin);
     box.innerHTML=ppl.length?ppl.map(p=>'<button data-p="'+esc(p.uid)+'">'+esc(p.name)+'</button>').join(''):'<div class="dm-fine">ยังไม่มีเพื่อนให้ส่ง</div>';
     sheet.insertAdjacentHTML('beforeend','<div class="dm-row"><button class="dm-big dark" id="dmBack">↩️ กลับ</button></div>');sheet.querySelector('#dmBack').onclick=close;
-    box.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{box.querySelectorAll('button').forEach(x=>x.disabled=true);const out=await run({type:'pass',id:h.id,to:b.dataset.p});
+    box.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{box.querySelectorAll('button').forEach(x=>x.disabled=true);const out=await run({type:'pass',id:h.id,to:b.dataset.p},false,true);
       if(out?.pass){close();const w=col.querySelector('.ht')?.getBoundingClientRect()||{left:innerWidth-60,top:120};const f=document.createElement('img');f.className='dm-fly';f.src=IT.heart.img;f.style.left=w.left+'px';f.style.top=w.top+'px';document.body.appendChild(f);requestAnimationFrame(()=>{f.style.transform='translate(-'+(innerWidth*.6)+'px,-120px) scale(.4)';f.style.opacity='0';});setTimeout(()=>f.remove(),950);tt(IT.heart,'ส่งหัวใจต่อให้ '+esc(out.pass.name)+' แล้ว 💌','',true);}
-      else{box.querySelectorAll('button').forEach(x=>x.disabled=false);b.disabled=true;b.textContent='🚫 ตอนนี้ไม่ได้';}});}
+      else{box.querySelectorAll('button').forEach(x=>x.disabled=false);if(!out?.busy){b.disabled=true;b.textContent='🚫 ตอนนี้ไม่ได้';}}});}
   /* ---------- วิดเจ็ตชิดขอบขวา ---------- */
   let vig=null,prevBag=null;
   function paint(){if(stopped)return;const t=now(),v=view||{},b=bag(),parts=[];
