@@ -257,6 +257,6 @@ window.prankDecorate=function(s){stopBats();dock?.remove();alert?.remove();dock=
  dock.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const f=b.dataset.f;if(f==='scare')return scareSheet();if(f==='bat')return fixSheet('bat');readSigns(false);});
  if(!visiting){const plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0),n=plots+(st.bat?1:0)+st.signs.length;
   if(n){alert=document.createElement('div');alert.className='pkalert';alert.textContent='😈 ใครสักคนแกล้งสวนของคุณ · '+n+' จุด';alert.onclick=()=>readSigns(false);document.body.appendChild(alert);}
-  const last=Math.max(myPrank().last||0),seen=myPrank().seen||0;if(n&&last>seen&&!document.querySelector('.pknote')&&!window.__pkShown){window.__pkShown=last;readSigns(true);}}};
+  /* fix22: ไม่เด้งเองแล้ว · แตะแถบ 😈 เพื่อดู */}};
 /* โมดูลนี้โหลดหลังหน้าสวนวาดเสร็จ: วาดใหม่หนึ่งครั้งให้เห็นสถานะการแกล้ง */
 try{render();}catch(e){console.error(e);}

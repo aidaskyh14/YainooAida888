@@ -1,5 +1,6 @@
 /* fix20: ขายของจากกระเป๋า — 🐾 สัตว์ทีละหลายตัว (+ของแถม) · 🍷 ไวน์ (80% ของราคาตลาดสวน)
    ราคาจริงคิดที่เซิร์ฟเวอร์ทุกครั้ง หน้านี้แค่แสดง */
+import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22';
 import {PET_SELL,PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX,petHave} from './pet-sell-engine.js';
 const H=parent.__HOST,W=window;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -42,6 +43,7 @@ const css=document.createElement('style');css.textContent=`
 .bagsellbar{grid-column:1/-1;display:flex;gap:.4rem;align-items:center;justify-content:space-between;background:#FFF1DC;border-radius:.9rem;padding:.45rem .6rem;font-size:.72rem;color:#7A5034}
 .bagsellbar button{border:0;border-radius:.7rem;background:#2E8B57;color:#fff;font-weight:800;padding:.45rem .6rem;font-size:.75rem;white-space:nowrap}
 .spr{width:100%;aspect-ratio:1;background-size:400% 400%;background-position:0 0;background-repeat:no-repeat}#bsell h4 .spr.h{width:3.2rem;height:3.2rem;flex:none;background-color:#fff;border-radius:.8rem;border:2px solid #F3E9DE}
+.bagghost{grid-column:1/-1;display:flex;align-items:center;gap:.5rem;background:linear-gradient(90deg,#F3E8FF,#E9FFF2);border:2px dashed #C9A9F0;border-radius:1rem;padding:.45rem .6rem}.bagghost img{width:2.4rem;height:2.4rem}.bagghost div{flex:1;font-size:.75rem}.bagghost small{display:block;color:#7A4FA8}.bagghost button{border:0;border-radius:.8rem;background:#8E4FD8;color:#fff;font-weight:800;padding:.45rem .6rem;font-size:.75rem;white-space:nowrap}
 .it.sell{position:relative}.it.sell::after{content:'💰';position:absolute;top:.15rem;right:.25rem;font-size:.8rem}
 .it.sell em{display:block;font-style:normal;font-size:.62rem;color:#2E8B57;font-weight:700}
 `;document.head.appendChild(css);
@@ -51,8 +53,16 @@ const close=()=>{box.classList.remove('on');};
 const show=html=>{bx.innerHTML=html;box.classList.add('on');};
 
 /* ---------- แผนก 🐾 ขายสัตว์ ในกระเป๋า ---------- */
-const oldTabs=bagTabsAll;bagTabsAll=function(){const t=oldTabs();if(pets().length)t.pets='🐾 ขายสัตว์';return t;};
+/* fix22 🏭 ของแปรรูปอัลปาก้า ในกระเป๋าหน้าแรก + ของผีสิงในมือ (ส่งให้เพื่อนได้จากตรงนี้) */
+const alpItems=()=>{const b=S.sub?.alpaca?.bag||{};return ALPACA_MENU.map(m=>({m,n:Math.max(0,Math.floor(Number(b[m.id])||0))})).filter(x=>x.n>0);};
+const ghostsHeld=()=>{try{return (parent.__DEMON?.view?.gh||[]).slice().sort((a,b)=>a.until-b.until);}catch(e){return [];}};
+const hms2=ms=>{ms=Math.max(0,ms);const h=Math.floor(ms/3600e3),m=Math.floor(ms%3600e3/60e3);return h?h+' ชม. '+m+' น.':m+' นาที';};
+const oldTabs=bagTabsAll;bagTabsAll=function(){const t=oldTabs();if(alpItems().length||ghostsHeld().length)t.alp='🏭 ของแปรรูป';if(pets().length)t.pets='🐾 ขายสัตว์';return t;};
 const oldRender=renderBag;renderBag=function(){
+ if(bagTab==='alp'){if(!alpItems().length&&!ghostsHeld().length){bagTab='crop';oldRender();markSell();return;}oldRender();const g=ghostsHeld(),list=alpItems();
+  $('bagGrid').innerHTML=(g.length?'<div class="bagghost"><img src="images/alpaca-hw-ghost.webp" alt=""><div><b>👻 ของผีสิงในมือ ×'+g.length+'</b><small>ต้องส่งให้เพื่อนภายใน '+hms2(g[0].until-Date.now())+' ไม่งั้นระเบิดใส่ตัวเอง</small></div><button id="bgSend">💌 ส่งให้เพื่อน</button></div>':'')+
+   (list.length?list.map(x=>'<div class="it"><img src="'+esc(x.m.img)+'" alt=""><b>'+esc(x.m.n)+'</b><span>×'+nf(x.n)+'</span></div>').join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของแปรรูป · ไปทำที่โรงงานอัลปาก้า</div>');
+  const bs=$('bgSend');if(bs)bs.onclick=e=>{e.stopPropagation();try{closeAll();parent.__DEMON?.openGhost?.();}catch(err){}};return;}
  if(bagTab!=='pets'){oldRender();markSell();return;}
  if(!pets().length){bagTab='crop';oldRender();markSell();return;}
  oldRender();/* วาดแท็บ (แผนกนี้ไม่มีใน S.bag จึงขึ้นว่าง แล้ววาดทับ) */

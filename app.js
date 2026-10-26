@@ -9,7 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss3-fix17';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19';
-import {startDemon} from './demon-ui.js?v=ss3-fix21';
+import {startDemon} from './demon-ui.js?v=ss3-fix22';
 import './mahakusal-ui.js?v=ss3-fix18';import './atm-ui.js?v=ss3-fix19';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
@@ -695,7 +695,7 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix21'+extra;return true;}
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix22'+extra;return true;}
 function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
