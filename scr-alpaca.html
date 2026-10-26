@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix17"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script>/* fix22c: เปลือกเกมรุ่นเก่าค้างในเครื่อง (ไม่มีระบบโรงงานใหม่) → โหลดหน้าเกมใหม่อัตโนมัติ 1 ครั้ง */(function(){try{var H=parent.__HOST;if(H&&typeof H.serverNow==='function')return;var k='ss3StaleReload';if(sessionStorage.getItem(k)==='1')return;sessionStorage.setItem(k,'1');parent.location.replace(parent.location.pathname+'?r='+Date.now());}catch(e){}})();</script><script src="craft-result.js?v=ss3-fix17"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 function __fill(d,s){if(s==null)return d;if(typeof d!=='object'||d===null||Array.isArray(d))return s;for(const k in d){if(s[k]===undefined)s[k]=d[k];else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])&&s[k]&&typeof s[k]==='object')__fill(d[k],s[k])}return s}
 </script><style>.demo{display:none!important}.rc.hw{border-color:#B57BD6!important;background:linear-gradient(#FBF4FF,#fff)!important}
@@ -306,7 +306,7 @@ function menuSheet(id,q){const x=MB[id];const max=Math.max(1,Math.min(10,100-S.j
  $('mGo').onclick=()=>order(id,q)}
 /* fix21: สั่งงาน/รับของคิดบนเซิร์ฟเวอร์ (หักวัตถุดิบ · ผีสิง) แล้วดึงข้อมูลล่าสุดกลับมา */
 const fNow=()=>{try{return parent.__HOST.serverNow()}catch(e){return Date.now()}};/* fix21: เวลาเสร็จงานใช้เวลาเซิร์ฟเวอร์ */
-let fBusy=false;const HC=(t,d)=>parent.__HOST.cloud('alpaca',{type:t,...d});
+let fBusy=false;const HC=(t,d)=>parent.__HOST.cloud('alpaca',{type:t,...d}).catch(e=>{if(/ไม่พบระบบที่เรียก/.test(e?.message||'')){ann('🔄 เกมในเครื่องเป็นรุ่นเก่า กำลังโหลดรุ่นใหม่ให้…',1);setTimeout(()=>{try{parent.location.replace(parent.location.pathname+'?r='+Date.now())}catch(x){location.reload()}},1500);}throw e;});
 async function order(id,q){const x=MB[id];if(fBusy)return;if(S.jobs.length+q>100)return ann('งานเต็ม 100 แล้ว กดรับก่อนนะ',1);if(!canMk(x.need,q))return ann('วัตถุดิบไม่พอ',1);
  const g=useGear?Math.min(q,gearLeft()):0;if(useGear&&g<q)return ann('⚙️ เฟืองมีอยู่ '+g+' ชิ้น ลดจำนวนงานหรือปิดเฟือง',1);
  fBusy=true;try{const out=await HC('order',{id,q,gear:!!g});syncFromHost();if(g)gearDay().n+=g;ann('🏭 สั่ง'+x.n+' ×'+q+' แล้ว • หักวัตถุดิบทันที'+(g?' • ⚙️ ใช้เฟือง '+g+' ชิ้น เร็วขึ้น 30%':''));if(useGear&&!gearLeft())useGear=false;view='factory';openFactory();}
