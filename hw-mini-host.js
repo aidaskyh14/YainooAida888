@@ -11,11 +11,11 @@ function mount(o){
  window.__HWAPI={
   cloud:input=>H.cloud('hwmini',input),
   serverNow:()=>{try{return H.serverNow();}catch(e){return Date.now();}},
-  fresh:()=>{const s=o.load()||{};return {merit:Number(s.merit)||0,hw:(s.bag&&s.bag.halloween)||{}};},
+  fresh:()=>{const s=o.load()||{};return {merit:Number(s.merit)||0,hw:(s.bag&&s.bag.halloween)||{},item:(s.bag&&s.bag.item)||{}};},
   close:()=>{if(fr){fr.remove();fr=null;}thaw();try{o.reload();}catch(e){}}
  };
  function open(){if(fr)return;try{o.save();}catch(e){}freeze();
-  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix16';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปแม่มด';
+  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix23';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปแม่มด';
   fr.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147480000;background:#1E1030';document.body.appendChild(fr);}
  addEventListener('pagehide',thaw);
  return {open};

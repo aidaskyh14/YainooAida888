@@ -1,3 +1,4 @@
+import {payBroom,altHave,ALT_X} from './broom-pay.js';
 /* fix15 แกล้งสวนเพื่อน (ทำที่หน้าเยี่ยมสวน) — กติกาล้วน ใช้ทั้งบนคลาวด์และหน้าเว็บ
    คนแกล้งจ่ายของฮาโลวีน · เจ้าของสวนแก้เอง เลือกจ่ายกุศล (ติดลบได้) หรือไม้กวาดแม่มด (ต้องมีพอ) อย่างใดอย่างหนึ่ง
    แกล้งแปลง: แปลงหยุดโต เก็บ/ขโมย/ถอนไม่ได้ จนกว่าเจ้าของจะแก้ (เวลาที่หยุดไปไม่นับ)
@@ -36,10 +37,10 @@ export function prankAction(actor,target,own,ctx,input){
  return {prank:k,where,paid:{item,q}};
 }
 /* เจ้าของสวนแก้: how = 'merit' (ติดลบได้) | 'broom' (ต้องมีพอ) */
-function pay(game,P,n,how){
+function pay(game,P,n,how,alt){
  const merit=P.merit*n,broom=P.broom*n;
  if(how==='merit'){game.merit=(Number(game.merit)||0)-merit;return {merit};}
- if(how==='broom'){const have=num(game.bag?.halloween?.broom);if(have<broom)fail('ไม้กวาดแม่มดไม่พอ ต้องมี '+broom+' (มี '+have+')');game.bag.halloween.broom=have-broom;return {broom};}
+ if(how==='broom')return payBroom(game,broom,alt);/* fix23: ใช้ของแทนไม้กวาดได้ ×5 */
  fail('เลือกวิธีแก้');
 }
 const unfreeze=(p,now)=>{const d=Math.max(0,now-(p.pk?.at||now));if(Number.isFinite(p.t))p.t+=d;delete p.pk;};
@@ -50,16 +51,17 @@ export function prankFix(game,ctx,input){
   if(!ids.length)fail('ไม่มีแปลงที่โดนแกล้ง');const plots=ids.map(i=>{if(!Number.isInteger(i)||!arr[i]?.pk)fail('แปลงนี้ไม่ได้โดนแกล้ง');return arr[i];});
   // จ่ายตามชนิดของแต่ละแปลง
   const out={merit:0,broom:0};const need={};for(const p of plots)need[p.pk.k]=(need[p.pk.k]||0)+1;
-  if(input.how==='broom'){const total=Object.entries(need).reduce((a,[k,n])=>a+PRANKS[k].broom*n,0),have=num(game.bag?.halloween?.broom);if(have<total)fail('ไม้กวาดแม่มดไม่พอ ต้องมี '+total+' (มี '+have+')');}
-  for(const [k,n]of Object.entries(need)){const r=pay(game,PRANKS[k],n,input.how);out.merit+=r.merit||0;out.broom+=r.broom||0;}
+  if(input.how==='broom'){const total=Object.entries(need).reduce((a,[k,n])=>a+PRANKS[k].broom*n,0);Object.assign(out,payBroom(game,total,input.alt));}
+  else for(const [k,n]of Object.entries(need)){const r=pay(game,PRANKS[k],n,input.how);out.merit+=r.merit||0;out.broom+=r.broom||0;}
   for(const p of plots)unfreeze(p,now);return {fixed:plots.length,...out};
  }
- if(kind==='bat'){if(!st.bat)fail('ไม่มีค้างคาวแล้ว');const r=pay(game,PRANKS.bat,1,input.how);st.bat=null;return {fixed:1,...r};}
+ if(kind==='bat'){if(!st.bat)fail('ไม่มีค้างคาวแล้ว');const r=pay(game,PRANKS.bat,1,input.how,input.alt);st.bat=null;return {fixed:1,...r};}
  if(kind==='sign'){
   const ids=input.all?st.signs.map((_,i)=>i):Array.isArray(input.ids)?[...new Set(input.ids)]:[];if(!ids.length||ids.some(i=>!Number.isInteger(i)||!st.signs[i]))fail('เลือกป้ายที่จะถอน');
-  const r=pay(game,PRANKS.sign,ids.length,input.how);st.signs=st.signs.filter((_,i)=>!ids.includes(i));return {fixed:ids.length,...r};
+  const r=pay(game,PRANKS.sign,ids.length,input.how,input.alt);st.signs=st.signs.filter((_,i)=>!ids.includes(i));return {fixed:ids.length,...r};
  }
- if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));for(const[k,q]of Object.entries(SCARE_COST))game.bag.halloween[k]=num(game.bag.halloween[k])-q;st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,paid:{...SCARE_COST}};}
+ if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const alt=input.alt&&input.alt!=='broom'?input.alt:null,hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>!(alt&&k==='broom')&&num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));let bp=null;if(alt){const need=SCARE_COST.broom*ALT_X;if(altHave(game,alt)<need)fail('ของแทนไม้กวาดไม่พอ ต้องมี '+need.toLocaleString('en-US')+' ชิ้น');}
+  for(const[k,q]of Object.entries(SCARE_COST)){if(k==='broom'&&alt){bp=payBroom(game,q,alt);continue;}game.bag.halloween[k]=num(game.bag.halloween[k])-q;}st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,paid:{...SCARE_COST,...(bp?{broom:0}:{})},items:bp?.items};}
  if(kind==='seen'){st.seen=now;return {seen:now};}
  fail('คำสั่งแก้การแกล้งไม่ถูกต้อง');
 }

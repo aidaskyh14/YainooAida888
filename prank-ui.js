@@ -1,7 +1,8 @@
 /* fix15 หน้าสวน: เยี่ยมสวนเพื่อนเห็นผักจริง + ระบบแกล้งเพื่อน (ค้างคาว ป้ายแซว แกล้งแปลง หุ่นไล่กา)
    ใช้ตัวแปรของหน้าสวน (S, farm, visiting, IMG, CN, P1, P2, W, H, box, toast, $, open, closeAll, render, plotEls, tapPlot, friendPlot)
    คำสั่งที่เปลี่ยนข้อมูลส่งผ่านคลาวด์ทั้งหมด (window.cloudFriend / window.cloudFarm จาก farm-cloud.js) */
-import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix19';
+import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix23';
+import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23';
 const HWI=k=>'images/halloween-hw-'+k+'.webp';
 const PIMG=k=>'images/'+PRANKS[k].img+'.webp';
 const fmtN=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('en-US');
@@ -171,17 +172,17 @@ function fixSheet(kind,opt={}){const k=kind==='plot'?opt.k:kind,P=PRANKS[k],n=op
  const title=kind==='sign'?'ป้ายแซว '+n+' ป้าย':kind==='plot'&&n>1?P.n+' '+n+' แปลง':P.n;
  pkOpen('<div class="ph"><img src="'+PIMG(k)+'" alt=""><div><b>😈 ใครสักคน'+title+'!</b><small>'+(n>1?'ราคาคิดต่อ'+(kind==='sign'?'ป้าย':'แปลง')+' · ':'')+'เลือกวิธีแก้ 1 อย่าง</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +'<button class="pay m" data-h="merit"><span class="ico">🙏</span><div><b>จ่าย '+fmtN(merit)+' กุศล</b><small>หลังจ่ายเหลือ '+fmtN(after)+(after<0?' · ติดลบได้':'')+'</small></div></button>'
-  +'<button class="pay b" data-h="broom" '+(have>=broom?'':'disabled')+'><img src="'+HWI('broom')+'" alt=""><div><b>ใช้ไม้กวาดแม่มด '+broom+' อัน</b><small>'+(have>=broom?'มีอยู่ '+have+' อัน':'ไม้กวาดไม่พอ (มี '+have+')')+'</small></div></button>'
+  +'<button class="pay b" data-h="broom"><img src="'+HWI('broom')+'" alt=""><div><b>ใช้ไม้กวาดแม่มด '+broom+' อัน</b><small>มี '+have+' อัน · หรือใช้ของแทน '+fmtN(broom*ALT_X)+' ชิ้น (สากกะเบือ มะพร้าว เค้ก ฯลฯ)</small></div></button>'
   +'<div class="note">เพื่อนช่วยแก้ไม่ได้ · ต้องแก้เอง</div>');
- sheetEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const how=b.dataset.h;closeAll();const out=await window.cloudFarm('prank-fix',{kind,how,...opt.input});if(out&&out.prank){sweep(opt.rect);toast('🧹 แก้เรียบร้อย! '+(how==='merit'?'จ่าย '+fmtN(out.prank.merit)+' กุศล':'ใช้ไม้กวาด '+out.prank.broom+' อัน'));}});}
+ sheetEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const how=b.dataset.h;let alt=null;if(how==='broom'){alt=await altPick(document,{n:broom,broom:have,game:S,title:'🧹 แก้การแกล้ง'});if(!alt)return;}closeAll();const out=await window.cloudFarm('prank-fix',{kind,how,alt,...opt.input});if(out&&out.prank){sweep(opt.rect);toast('🧹 แก้เรียบร้อย! '+(how==='merit'?'จ่าย '+fmtN(out.prank.merit)+' กุศล':out.prank.items?'จ่ายแทนไม้กวาด: '+altText(out.prank.items):'ใช้ไม้กวาด '+out.prank.broom+' อัน'));}});}
 function sweep(rect){const im=document.createElement('img');im.className='pksweep';im.src=HWI('broom');im.alt='';const r=rect||{left:innerWidth*.35,top:innerHeight*.4};im.style.left=r.left+'px';im.style.top=r.top+'px';document.body.appendChild(im);setTimeout(()=>im.remove(),950);}
 const prevTap=tapPlot;tapPlot=function(i){if(!visiting){const p=S.farms?.[farm]?.[i];if(p?.pk){const n=(S.farms[farm]||[]).filter(x=>x?.pk?.k===p.pk.k).length;return fixSheet('plot',{k:p.pk.k,input:{farm,index:i},rect:plotEls[i]?.getBoundingClientRect()});}}return prevTap(i);};
-function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),need=Object.entries(SCARE_COST),ok=need.every(([k,q])=>hw(k)>=q);
+function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),need=Object.entries(SCARE_COST),altOk=altHave(S)>=SCARE_COST.broom*ALT_X,ok=need.every(([k,q])=>hw(k)>=q||(k==='broom'&&altOk));
  pkOpen('<div class="ph"><img src="images/prank-scarecrow.webp" alt=""><div><b>🛡️ หุ่นไล่กา</b><small>กันเพื่อนแกล้งสวน 59 นาที (ไม่กันการขโมย)</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +(on?'<div class="note" style="font-size:.85rem">🛡️ หุ่นไล่กาเฝ้าอยู่ อีก '+left(st.scareUntil-Date.now())+'</div>'
-   :'<div class="lbl">🧺 วัตถุดิบ</div><div class="pgrid">'+need.map(([k,q])=>'<div class="pcard" style="cursor:default'+(hw(k)>=q?'':';opacity:.55')+'"><img src="'+HWI(k)+'" alt=""><div><b>'+HW_NAMES[k]+'</b><span class="cost">'+(hw(k)>=q?'✅ ':'❌ ')+fmtN(q)+' <small style="font-weight:600;color:#9A7A68">(มี '+fmtN(hw(k))+')</small></span></div></div>').join('')+'</div>'
+   :'<div class="lbl">🧺 วัตถุดิบ</div><div class="pgrid">'+need.map(([k,q])=>'<div class="pcard" style="cursor:default'+(hw(k)>=q?'':';opacity:.55')+'"><img src="'+HWI(k)+'" alt=""><div><b>'+HW_NAMES[k]+'</b><span class="cost">'+(hw(k)>=q||(k==='broom'&&altOk)?'✅ ':'❌ ')+fmtN(q)+' <small style="font-weight:600;color:#9A7A68">(มี '+fmtN(hw(k))+')'+(k==='broom'?' หรือของแทน '+fmtN(q*ALT_X):'')+'</small></span></div></div>').join('')+'</div>'
    +'<button class="act gold" id="pkScare" style="width:100%;margin-top:.6rem" '+(ok?'':'disabled')+'>🎃 ตั้งหุ่นไล่กา</button>'));
- sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare'});if(out?.prank)toast('🛡️ ตั้งหุ่นไล่กาแล้ว กันแกล้ง 59 นาที');});}
+ sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{const alt=await altPick(document,{n:SCARE_COST.broom,broom:hw('broom'),game:S,title:'🛡️ ส่วนไม้กวาดของหุ่นไล่กา'});if(!alt)return;closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare',alt});if(out?.prank)toast('🛡️ ตั้งหุ่นไล่กาแล้ว กันแกล้ง 59 นาที'+(out.prank.items?' · จ่ายแทนไม้กวาด: '+altText(out.prank.items):''));});}
 function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0);
  const nn=document.createElement('div');nn.className='pknote';
  nn.innerHTML='<div class="paper" role="dialog"><img src="images/prank-sign.webp" alt="">'+(first?'<div class="sum">😱 ระหว่างที่คุณไม่อยู่ ใครสักคนแกล้งสวนคุณ!<br>'+[signs.length?'🪧 ป้าย '+signs.length:'',plots?'🌱 แปลง '+plots:'',st.bat?'🦇 ค้างคาว 1':''].filter(Boolean).join(' · ')+'</div>':'')
@@ -191,7 +192,7 @@ function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].re
  nn.querySelector('#pnOk').onclick=done;nn.querySelector('#pnFix').onclick=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'});setTimeout(()=>fixSheet('sign',{n:signs.length,input:{all:true}}),first?600:0);};}
 
 /* ---------- fix17 😈 ไอเทมปีศาจ ---------- */
-const DM={music:['กล่องดนตรีหมูปีศาจ','🎶','prank-musicbox','หักทันที −50,000'],hour:['นาฬิกาทรายปีศาจ','⏳','prank-hourglass','ดูด −10,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมปีศาจ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −250,000']};
+const DM={music:['กล่องดนตรีหมูปีศาจ','🎶','prank-musicbox','หักทันที −50,000'],hour:['นาฬิกาทรายปีศาจ','⏳','prank-hourglass','ดูด −10,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมปีศาจ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −250,000 หรือเสียของ 1,500 ชิ้น']};
 const dmHms=ms=>{ms=Math.max(0,ms);const h=Math.floor(ms/3600e3),m=Math.floor(ms%3600e3/60e3),s=Math.floor(ms%60e3/1e3);return h?h+':'+String(m).padStart(2,'0')+' ชม.':m+':'+String(s).padStart(2,'0');};
 function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__HOST?.x17?.()?.dm?.b||[];}catch(e){return [];}})(),now=Date.now();
  pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>😈 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'

@@ -84,6 +84,8 @@ const SP={idle:{src:'images/cg-mn-idle.webp',n:42,fps:12,loop:true},hide:{src:'i
 Object.values(SP).forEach(s=>{const i=new Image();i.src=s.src;});
 const LV=[{lo:4000,hi:6000,name:'ด่าน 1'},{lo:10000,hi:15000,name:'ด่าน 2'},{lo:20000,hi:30000,name:'ด่าน 3'}];
 const COST={hat:20,broom:20,candy:20};
+/* fix23 🧹 ไม้กวาดไม่พอ → ใช้ของ 7 อย่างแทน ×5 (อย่างเดียว/คละ) */
+const ALT_KEYS=['pestle','coconut','cake','fuel','hat','musicbox','angel'],altSum=it=>ALT_KEYS.reduce((a,k)=>a+(Number(it&&it[k])||0),0);
 const IC={hat:['halloween-hw-hat','หมวกแม่มด'],broom:['halloween-hw-broom','ไม้กวาด'],candy:['halloween-hw-candy','ลูกอมผี']};
 let V=null,last=null,busy=false;
 const N=5,stage=document.getElementById('stage'),nf=n=>Math.round(n).toLocaleString('en-US'),$=id=>document.getElementById(id);
@@ -109,13 +111,14 @@ function lvBar(){$('lv').innerHTML=LV.map((l,i)=>`<span class="${i<level?'done':
 function cfgOpen(){return V&&V.open&&V.open.cup;}
 function closedMsg(){const c=V&&V.cfg&&V.cfg.cup;if(!c)return 'กำลังโหลด…';return !c.on?'🔒 ปิดปรับปรุงชั่วคราว':`🌙 ปิดแล้ว · เปิด ${String(c.from).padStart(2,'0')}:00–${String(c.to%24).padStart(2,'0')}:00 ทุกวัน`;}
 function panel(){const p=$('panel'),me=API.fresh();$('merit').textContent='🙏 '+nf(me.merit||0);lvBar();const bag=me.hw||{};
- const can=Object.entries(COST).every(([k,q])=>(bag[k]||0)>=q),cdl=Math.max(0,((V&&V.cd&&V.cd.cup)||0)-now());
+ const can=Object.entries(COST).every(([k,q])=>(bag[k]||0)>=q||(k==='broom'&&altSum(me.item)>=q*5)),cdl=Math.max(0,((V&&V.cd&&V.cd.cup)||0)-now());
  const costRow=`<div class="row">ค่าเข้าเล่น ${Object.entries(COST).map(([k,q])=>`<span class="cost"><img src="images/${IC[k][0]}.webp" alt="${IC[k][1]}">${q} <small>/${nf(bag[k]||0)}</small></span>`).join('')}</div>`;
  if(state==='ready'||state==='done')p.innerHTML=`${last!==null?`<div class="bank">${last>0?`🎉 ได้ <b>+${nf(last)}</b> กุศล`:last<0?`😿 เสีย <b style="color:#B02A44">${nf(last)}</b> กุศล`:'😿 ไม่ได้อะไรเลย'}</div>`:''}${costRow}<div class="btns"><button class="btn full" id="go" ${V&&can&&!cdl&&cfgOpen()&&!busy?'':'disabled'}>${!V?'กำลังโหลด…':busy?'⏳ กำลังเริ่ม…':!cfgOpen()?closedMsg():cdl?`⏳ เล่นได้อีกใน ${Math.floor(cdl/60000)}:${String(Math.floor(cdl/1000)%60).padStart(2,'0')}`:!can?'ของฮาโลวีนไม่พอ':(last!==null?'🔁 เล่นอีกครั้ง':'🎩 เริ่มเล่น')}</button></div>`;
  else if(state==='won'){const nx=LV[level];p.innerHTML=`<div class="bank">✅ ผ่าน${LV[level-1].name} · ตอนนี้ได้ <b>${nf(bank)}</b> กุศล</div>${nx?`<div class="row">ไปต่อ${nx.name}: ผ่านได้ <span class="prize">🙏 ${nf(nx.lo)}–${nf(nx.hi)}</span> พลาด = ไม่ได้อะไรเลย</div>`:''}<div class="btns"><button class="btn g ${nx?'':'full'}" id="take" ${busy?'disabled':''}>💰 พอแค่นี้</button>${nx?`<button class="btn" id="more" ${busy?'disabled':''}>🔥 ไปต่อ</button>`:''}</div>`;}
  else p.innerHTML=`<div class="row" style="padding:.55rem 0">${state==='pick'?'👆 แตะแก้วที่มีแมวซ่อนอยู่':'👀 จ้องแก้วไว้ให้ดี…'}</div>`;
  if($('go'))$('go').onclick=start;if($('take'))$('take').onclick=take;if($('more'))$('more').onclick=more;}
-async function start(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'start',game:'cup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;level=0;bank=0;last=null;await round(out.view.round);}
+async function start(){if(busy)return;let alt=null;const me=API.fresh();if((Number(me.hw&&me.hw.broom)||0)<COST.broom){try{const m=await import('./broom-pay.js?v=ss3-fix23');alt=await m.altPick(document,{n:COST.broom,broom:Number(me.hw&&me.hw.broom)||0,game:{bag:{item:me.item||{}}},title:'🧹 ค่าเข้า: ไม้กวาดไม่พอ ใช้ของแทน'});}catch(e){}if(!alt)return;}
+ busy=true;panel();let out;try{out=await call({type:'start',game:'cup',...(alt?{alt}:{})});}catch(e){busy=false;err(e.message);panel();return;}busy=false;level=0;bank=0;last=null;await round(out.view.round);}
 async function more(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'next',game:'cup'});}catch(e){busy=false;err(e.message);panel();return;}busy=false;await round(out.view.round);}
 async function round(R){state='hide';panel();const plan=R.plan;
  stage.querySelectorAll('.decoy').forEach(e=>e.remove());cups.forEach((c,i)=>{c.pos=i;c.style.transition='none';c.style.left=X(i);});void stage.offsetWidth;cups.forEach(c=>c.style.transition='');
