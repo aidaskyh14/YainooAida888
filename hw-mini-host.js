@@ -15,7 +15,7 @@ function mount(o){
   close:()=>{if(fr){fr.remove();fr=null;}thaw();try{o.reload();}catch(e){}}
  };
  function open(){if(fr)return;try{o.save();}catch(e){}freeze();
-  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix23';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปแม่มด';
+  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix23b';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปแม่มด';
   fr.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147480000;background:#1E1030';document.body.appendChild(fr);}
  addEventListener('pagehide',thaw);
  return {open};

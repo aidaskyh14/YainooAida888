@@ -1,4 +1,5 @@
-import {petSell,petBonusLeft} from './pet-sell-engine.js';
+import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js';
+import {SELL_BY_KEY,sellHave} from './sell-price.js';
 const TICK=15*60e3,DAY=864e5;
 const ST=[{k:'veg',n:'หุ้นผัก',b:3000,v:.014,lo:2000,hi:4500},{k:'fruit',n:'หุ้นผลไม้',b:4000,v:.02,lo:2500,hi:6500},{k:'fish',n:'หุ้นบ่อปลา',b:4500,v:.02,lo:2500,hi:7500},
 {k:'wine',n:'หุ้นไวน์',b:6000,v:.026,lo:3500,hi:10000},{k:'alpaca',n:'หุ้นอัลปาก้า',b:7500,v:.026,lo:4000,hi:12000},{k:'bee',n:'หุ้นซิ่ง',b:5000,v:.05,lo:500,hi:15000}];
@@ -18,7 +19,7 @@ const NEWS=[
 ['🎉','เทศกาลสวนประจำปีเริ่มแล้ว!',{all:10}],['🎆','ปีใหม่มาแล้ว ทุกคนใช้จ่ายสนุก!',{all:12}],['💰','นักลงทุนต่างเมืองบุกตลาดสวน!',{all:8}],['🐷','น้องน้ำผึ้งบอกว่า…วันนี้ลางดี',{rnd:30}],
 ['👻','ข่าวลือ: ผีหลอกในตลาด!',{all:-10}],['🌀','พายุใหญ่ผ่านเมือง!',{all:-12}],['🧾','สรรพากรสวนมาตรวจ!',{all:-8}],['🐷','น้องน้ำผึ้งทำแจกันแตก…ลางร้าย',{rnd:-30}],
 ['🔀','ขาใหญ่ย้ายพอร์ต!',{swap:20}],['🎰','ตลาดปั่นป่วน!!',{chaos:25}],['🧙','แม่มดร่ายมนต์ใส่ตลาด!',{chaos:20}],['🎲','ลูกเต๋ายักษ์กลิ้งผ่านตลาด!',{rnd:25}]];
-export const WINE_BAG_RATE=.8;
+export const WINE_BAG_RATE=.8,BAG_SELL_ROWS=300;
 const WINES=[['rose','ไวน์กุหลาบวิญญาณ',2500],['moon','ไวน์องุ่นแสงจันทร์',4000],['blood','ไวน์องุ่นโลหิต',6000],['eclipse','ไวน์ราชันสุริยคราส',10000]];
 
 export {ST,NEWS,WINES,TICK,DAY};
@@ -117,7 +118,22 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
  }
  /* fix20: ขายไวน์จากกระเป๋า (80% ของราคาตลาดสวน) · ขายสัตว์ทีละหลายตัว · ใบเสนอราคา */
  const wineEach=w=>Math.round(w[2]*(1+Math.min(.2,Math.max(0,price(3)/ST[3].b-1))));
- if(input.type==='bag-quote')return {...result(),extra:{wineQuote:Object.fromEntries(WINES.map(w=>[w[0],Math.round(wineEach(w)*WINE_BAG_RATE)])),petBonusLeft:petBonusLeft(ctx.x17,ctx.now)}};
+ if(input.type==='bag-quote')return {...result(),extra:{wineQuote:Object.fromEntries(WINES.map(w=>[w[0],Math.round(wineEach(w)*WINE_BAG_RATE)])),hwQuote:Object.fromEntries(HW_ITEMS.map(x=>[x[0],hwPrice(x[0],ctx.now)])),petBonusLeft:petBonusLeft(ctx.x17,ctx.now)}};
+ /* fix24 💰 ขายของทุกอย่างในกระเป๋า หลายอย่างในรอบเดียว: items=[{k,q}] · q = จำนวนเต็ม หรือ 'all' · สัตว์ใช้ระบบขายสัตว์เดิม (มีของแถม) */
+ if(input.type==='bag-sell'){if(!ctx.x17||typeof ctx.x17!=='object')fail('ระบบยังไม่พร้อม');
+  const list=Array.isArray(input.items)?input.items:[];if(!list.length)fail('เลือกของที่จะขายก่อน');if(list.length>BAG_SELL_ROWS)fail('ขายได้ครั้งละไม่เกิน '+BAG_SELL_ROWS+' อย่าง');
+  const seen=new Set(),pets=[],rows=[];let gain=0,count=0;
+  for(const it of list){const R=typeof it?.k==='string'?SELL_BY_KEY.get(it.k):null;if(!R||seen.has(R.k))fail('มีของที่ขายไม่ได้ในรายการ');seen.add(R.k);
+   if(R.kind==='pet'){if(it.q==='all'&&!petHave(game,R.path))continue;pets.push({k:R.k,q:it.q});continue;}
+   const have=sellHave(game,R.path),q=it.q==='all'?have:it.q;if(it.q==='all'&&!have)continue;
+   if(!Number.isSafeInteger(q)||q<1)fail('จำนวนไม่ถูกต้อง');if(q>have)fail(R.n+' มีไม่พอขาย (มี '+have.toLocaleString('en-US')+')');
+   const each=R.kind==='wine'?Math.round(wineEach(WINES.find(w=>w[0]===R.w))*WINE_BAG_RATE):R.kind==='hw'?hwPrice(R.h,ctx.now):R.price;if(!Number.isSafeInteger(each)||each<1)fail(R.n+' ยังขายไม่ได้');
+   const ks=R.path.split('.');let o=game;for(const x of ks.slice(0,-1))o=o[x];o[ks.at(-1)]=have-q;
+   rows.push({k:R.k,q,each,total:each*q});gain+=each*q;count+=q;}
+  game.merit=(Number(game.merit)||0)+gain;let pet=null;
+  if(pets.length){pet=petSell(game,ctx.x17,{items:pets},ctx.now,rng);for(const r of pet.rows)rows.push({k:r.k,q:r.q,each:r.each,total:r.total});gain+=pet.total;count+=pet.count;}
+  if(!rows.length)fail('ไม่มีของให้ขายแล้ว');
+  return {...result(),extra:{bagSold:{rows,total:gain,count,bonus:pet?.bonus||{},bonusLeft:pet?pet.bonusLeft:petBonusLeft(ctx.x17,ctx.now)}}};}
  if(input.type==='wine-bag'){
  const w=WINES.find(w=>w[0]===input.wine),have=w?Math.max(0,Math.floor(Number(game.bag.wine[w[0]])||0)):0,q=input.qty==='all'?have:input.qty;
  if(!w)fail('ไม่มีไวน์นี้');if(!Number.isSafeInteger(q)||q<1||q>100000)fail('จำนวนไม่ถูกต้อง');if(have<q)fail('ไวน์ไม่พอขาย ('+have+')');
