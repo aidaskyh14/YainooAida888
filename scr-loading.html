@@ -1,88 +1,107 @@
-<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ตัวอย่างหน้าโหลด – ในสวนของยัยหนู</title>
-<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>กำลังลอยกระทงเข้าสวน</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&family=Itim&display=swap" rel="stylesheet">
 <style>
-:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;
- box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-*,*::before,*::after{box-sizing:inherit}
-html,body{height:100%;margin:0;overflow:hidden}
-body{font-family:'Mali',sans-serif;color:var(--cocoa);background:#9fd8ea}
-.farm{position:fixed;inset:0;background:url(images/farm1-bg.webp) center/cover}
-/* หน้าโหลด */
-.load{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
- background:linear-gradient(180deg,#CDEEFA 0%,#E4F7F1 55%,#FFF3EA 100%);
- clip-path:circle(150% at 50% 100%);transition:clip-path 1s cubic-bezier(.6,0,.3,1)}
-.load.done{clip-path:circle(0% at 50% 100%)}
-.cloud{position:absolute;font-size:40px;opacity:.8;animation:drift 14s linear infinite}
-@keyframes drift{from{transform:translateX(-30vw)}to{transform:translateX(110vw)}}
-.ttl{font-weight:700;font-size:22px;margin-bottom:28px;text-align:center;line-height:1.4}
-.ttl small{display:block;font-size:14px;font-weight:600;color:#F08A3C}
-.track{position:relative;width:min(300px,78vw);height:70px}
-.water{position:absolute;left:0;right:0;bottom:0;height:26px;border-radius:14px;background:#D6EFF6;overflow:hidden;border:3px solid #fff;box-shadow:0 4px 12px rgba(70,150,180,.2)}
-.fill{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,#9FE0D6,#6FC6E4);transition:width .5s ease}
-.fill::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(110deg,rgba(255,255,255,.35) 0 8px,transparent 8px 18px);animation:flow 1s linear infinite}
-@keyframes flow{to{background-position:36px 0}}
-.raft{position:absolute;bottom:14px;left:0;transform:translateX(-50%);transition:left .5s ease;text-align:center;animation:bob 1.4s ease-in-out infinite}
-@keyframes bob{50%{margin-bottom:4px}}
-.raft .pig{font-size:30px;display:block;margin-bottom:-6px}
-.raft .boat{display:block;width:48px;height:10px;margin:0 auto;border-radius:6px;background:repeating-linear-gradient(90deg,#B07A4C 0 10px,#9A673D 10px 12px);border:2px solid #7A4A2E}
-.pct{margin-top:14px;font-weight:700;font-size:20px}
-.step{margin-top:4px;font-size:15px;min-height:24px}
-.hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);font-size:12.5px;color:var(--soft)}
-/* หลังโหลด */
-.save{position:fixed;z-index:3;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);background:rgba(255,251,245,.9);
- border:2px solid #fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(70,150,180,.25)}
-.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:6;transform:translate(-50%,-12px);opacity:0;
- background:var(--cream);border:2px solid var(--mint);border-radius:999px;padding:9px 18px;font-size:14.5px;white-space:nowrap;
- box-shadow:0 6px 18px rgba(70,150,180,.25);transition:.3s;pointer-events:none}
-.toast.show{opacity:1;transform:translate(-50%,0)}
-.tap{position:fixed;z-index:3;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);
- font-size:12.5px;background:rgba(255,255,255,.85);border-radius:999px;padding:4px 12px;color:var(--soft)}
-.replay{position:fixed;z-index:3;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);border:2px solid #fff;border-radius:999px;
- background:rgba(255,236,190,.95);font:inherit;font-size:13px;font-weight:600;color:var(--cocoa);padding:4px 12px;cursor:pointer}
-.ripple{position:fixed;z-index:4;width:20px;height:20px;border-radius:50%;border:3px solid #fff;pointer-events:none;animation:rp .6s ease-out forwards}
-@keyframes rp{to{transform:scale(4);opacity:0}}
-@media (prefers-reduced-motion:reduce){.cloud,.raft,.fill::after{animation:none}.load{transition:none}}
-</style>
-<style>
-.load{background:linear-gradient(180deg,#CFEFFF 0%,#E6F7FF 40%,#F2FBFF 100%)!important}
-.track{position:static!important;width:auto!important;height:auto!important}
-.track .water{display:none}
-.sea{position:absolute;left:0;right:0;bottom:0;height:22%;background:linear-gradient(180deg,#7FD3EE 0%,#4FB6DD 45%,#2E8FC2 100%);transition:height .6s ease;z-index:1;overflow:visible}
-.sea::before,.sea::after{content:"";position:absolute;left:-10%;right:-10%;height:28px;top:-22px;background-repeat:repeat-x;background-size:160px 28px}
-.sea::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 28'%3E%3Cpath d='M0 14 Q20 2 40 14 T80 14 T120 14 T160 14 V28 H0Z' fill='%237FD3EE'/%3E%3C/svg%3E");animation:wv 5s linear infinite}
-.sea::after{top:-14px;opacity:.55;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 28'%3E%3Cpath d='M0 14 Q20 26 40 14 T80 14 T120 14 T160 14 V28 H0Z' fill='%23ffffff'/%3E%3C/svg%3E");animation:wv 3.2s linear infinite reverse}
-@keyframes wv{to{transform:translateX(160px)}}
-.sea .shine{position:absolute;inset:0;background:repeating-linear-gradient(100deg,rgba(255,255,255,.12) 0 14px,transparent 14px 46px);animation:shine 6s linear infinite;mix-blend-mode:screen}
-@keyframes shine{to{background-position:200px 0}}
-.bub{position:absolute;bottom:-10px;width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.75);background:rgba(255,255,255,.18);animation:bubup linear infinite}
-@keyframes bubup{to{transform:translateY(-38vh) translateX(10px);opacity:0}}
-.lily{position:absolute;top:-6px;font-size:22px;animation:bob 2.6s ease-in-out infinite}
-.fishj{position:absolute;font-size:24px;opacity:0;animation:jump 4.5s ease-in-out infinite}
-@keyframes jump{0%,55%{opacity:0;transform:translate(0,30px) rotate(-40deg)}62%{opacity:1}75%{transform:translate(40px,-46px) rotate(10deg)}88%{opacity:1;transform:translate(80px,10px) rotate(60deg)}100%{opacity:0;transform:translate(90px,40px) rotate(70deg)}}
-#raft{position:absolute!important;left:50%!important;bottom:calc(100% - 26px)!important;transform:translateX(-50%);z-index:3;transition:none!important;animation:rock 2.2s ease-in-out infinite!important}
-@keyframes rock{0%,100%{transform:translateX(-50%) rotate(-4deg)}50%{transform:translateX(-50%) translateY(-5px) rotate(4deg)}}
-.ripl{position:absolute;left:50%;top:-2px;width:150px;height:16px;margin-left:-75px;border-radius:50%;border:2px solid rgba(255,255,255,.7);animation:rpl 2.2s ease-out infinite;z-index:2}
-@keyframes rpl{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.4);opacity:0}}
-.pct{position:relative;z-index:4;background:rgba(255,255,255,.75);border-radius:999px;padding:2px 14px;font-size:16px!important}
-.step{position:relative;z-index:4}
-.ttl{position:relative;z-index:4}
+/* หน้าโหลดซีซั่น 4: น้องผึ้งนั่งกระทงโยนเหรียญ ลอยตามแม่น้ำตามเปอร์เซ็นต์ที่โหลดจริง (loading.js) */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#120628}
+body{font-family:'Mali','Itim',system-ui,sans-serif;color:#fff3cf;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+.load{position:fixed;inset:0;overflow:hidden;background:linear-gradient(180deg,#120628 0%,#2b1158 45%,#4a1f6e 70%,#1b2a5c 100%);clip-path:circle(150% at 50% 50%);transition:clip-path 1s cubic-bezier(.6,0,.3,1)}
+.load.done{clip-path:circle(0% at 50% 50%)}
+#fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.moon{position:absolute;z-index:2;left:50%;top:calc(env(safe-area-inset-top,0px) + 9%);width:min(42vw,200px);aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,#fffbe6 0%,#ffe6a3 45%,#f3c46a 75%,#d99b3c 100%)}
+.halo{position:absolute;z-index:2;left:50%;top:calc(env(safe-area-inset-top,0px) + 9% + min(21vw,100px));width:min(126vw,600px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,214,120,.55) 0%,rgba(255,190,110,.25) 22%,rgba(255,170,90,.08) 40%,transparent 60%);animation:moonGlow 3s ease-in-out infinite}
+.moon::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 60%,rgba(200,140,60,.35) 0 9%,transparent 10%),radial-gradient(circle at 64% 40%,rgba(200,140,60,.3) 0 7%,transparent 8%),radial-gradient(circle at 58% 72%,rgba(200,140,60,.25) 0 6%,transparent 7%)}
+@keyframes moonGlow{50%{opacity:.75;transform:translate(-50%,-50%) scale(1.06)}}
+.ttl{position:absolute;z-index:2;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 9% + min(42vw,200px) + 20px);text-align:center;font:700 25px/1.3 'Itim','Mali',system-ui,sans-serif;color:#fff3cf;text-shadow:0 0 12px rgba(255,200,90,.8),0 2px 0 #7d1027}
+.ttl small{display:block;font:600 15px 'Mali',system-ui,sans-serif;color:#ff9ec2;text-shadow:0 1px 3px #000}
+.river{position:absolute;left:0;right:0;bottom:0;height:30%;z-index:2;background:linear-gradient(180deg,#3b6fb8 0%,#24468a 40%,#152a5c 100%)}
+.river::before{content:"";position:absolute;left:50%;top:0;width:min(40vw,190px);height:70%;transform:translateX(-50%);background:radial-gradient(50% 60% at 50% 0%,rgba(255,226,150,.5),transparent 70%);animation:refl 3s ease-in-out infinite}
+@keyframes refl{50%{opacity:.6;transform:translateX(-50%) scaleX(1.15)}}
+.wave{position:absolute;left:0;width:200%;height:26px;top:-18px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 26'%3E%3Cpath d='M0 13 Q20 2 40 13 T80 13 T120 13 T160 13 V26 H0Z' fill='%233b6fb8'/%3E%3C/svg%3E") repeat-x;background-size:160px 26px;animation:wv 6s linear infinite}
+.wave.b{top:-10px;opacity:.5;animation-duration:9s;animation-direction:reverse}
+@keyframes wv{to{transform:translateX(-160px)}}
+#kcv{position:absolute;left:0;right:0;bottom:0;height:48%;width:100%;z-index:3}
+.bar{position:absolute;z-index:4;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 4%);text-align:center;padding:0 16px}
+.pct{font:700 30px 'Itim','Mali',system-ui,sans-serif;color:#fff3cf;text-shadow:0 0 10px rgba(255,200,90,.9);font-variant-numeric:tabular-nums}
+.say{font-size:15px;color:#ffe7c2;min-height:22px;margin-top:2px}
+.step{font-size:12px;color:rgba(255,247,232,.7);min-height:0;margin-top:2px}
+.tip{margin-top:10px;font-size:12.5px;color:rgba(255,247,232,.75)}
+#fill,#sea,#raft{display:none}
+#loadError{position:absolute!important;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(23,10,46,.9);border:2px solid #f7c95a;border-radius:18px;padding:12px 16px;color:#fff3cf}
+#loadError button{background:linear-gradient(180deg,#fff1b8,#f7c95a)!important;color:#7d1027!important;font-weight:700!important}
+@media (prefers-reduced-motion:reduce){.halo,.wave,.river::before{animation:none}}
 </style></head><body>
-<div class="farm" id="farm"></div>
-
-
-
-
 <div class="load" id="load">
- <span class="cloud" style="top:12%;animation-delay:-3s">☁️</span>
- <span class="cloud" style="top:24%;font-size:28px;animation-duration:20s;animation-delay:-11s">☁️</span>
- <div class="ttl">ในสวนของยัยหนู<small>ซีซั่น 3</small></div>
- <div class="track"><div class="water"><div class="fill" id="fill"></div></div>
-  <div class="raft" id="raft"><img src="images/honey-raft-loading.webp" style="width:104px;display:block"></div></div>
- <div class="pct" id="pct">0%</div>
- <div class="step" id="step"></div>
- 
-<div class="sea" id="sea"><div class="shine"></div><div class="ripl"></div><span class="bub" style="left:8%;width:8px;height:8px;animation-duration:5.2s;animation-delay:-1.0s"></span><span class="bub" style="left:18%;width:12px;height:12px;animation-duration:6.5s;animation-delay:-3.0s"></span><span class="bub" style="left:31%;width:7px;height:7px;animation-duration:4.6s;animation-delay:-2.0s"></span><span class="bub" style="left:47%;width:10px;height:10px;animation-duration:5.8s;animation-delay:-4.0s"></span><span class="bub" style="left:62%;width:8px;height:8px;animation-duration:4.9s;animation-delay:-1.5s"></span><span class="bub" style="left:74%;width:13px;height:13px;animation-duration:6.9s;animation-delay:-2.5s"></span><span class="bub" style="left:88%;width:9px;height:9px;animation-duration:5.4s;animation-delay:-0.5s"></span><span class="lily" style="left:6%">🪷</span><span class="lily" style="left:82%;animation-delay:-1.2s">🍃</span><span class="fishj" style="left:12%;top:30px">🐟</span><span class="fishj" style="left:58%;top:40px;animation-delay:-2.2s">🐠</span><span id="raftSlot"></span></div></div>
-<div class="toast" id="toast"></div>
+  <canvas id="fx"></canvas>
+  <div class="halo"></div><div class="moon"></div>
+  <div class="ttl">กำลังลอยกระทงเข้าสวน<small>น้องผึ้งรออยู่ที่ท่าน้ำแล้ว</small></div>
+  <div class="river"><div class="wave"></div><div class="wave b"></div></div>
+  <canvas id="kcv"></canvas>
+  <div class="bar"><div class="pct" id="pct">0%</div><div class="say" id="say"></div><div class="step" id="step"></div><div class="tip" id="tip"></div></div>
+  <div id="fill"></div><div id="sea"></div><div id="raft"></div>
+</div>
+<script>
+/* เอฟเฟกต์หน้าโหลด: เปอร์เซ็นต์จริงมาจาก loading.js (#pct) · โคมลอย พลุ (อยู่หลังพระจันทร์) น้องผึ้งโยนเหรียญ */
+(()=>{
+const $=id=>document.getElementById(id),R=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SAY=['กำลังพับใบตองทำกระทง…','กำลังเก็บดอกดาวเรืองกับกลีบบัว…','กำลังจุดเทียนกับธูป…','กำลังปล่อยกระทงลงน้ำ…','น้องผึ้งวิ่งมาเปิดประตูสวนแล้ว…'];
+const TIPS=['กลางคืนในสวนมีโคมลอยกับกระทงลอยน้ำให้ดู','แตะหมาหรือแมวเพื่อเล่นด้วยได้นะ','กดกระดิ่งที่คอกนกเพื่อเรียกนกกลับเข้าคอก','อย่าลืมให้อาหารสัตว์ทุกวันนะ'];
+$('tip').textContent='💡 '+pick(TIPS);
+const glow=(r,stops)=>{const c=document.createElement('canvas');c.width=c.height=r*2;const g=c.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);stops.forEach(([o,col])=>gr.addColorStop(o,col));g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);return c;};
+const G={gold:glow(32,[[0,'rgba(255,245,200,1)'],[.3,'rgba(247,201,90,.6)'],[1,'rgba(0,0,0,0)']]),pink:glow(32,[[0,'rgba(255,235,245,1)'],[.3,'rgba(255,120,180,.6)'],[1,'rgba(0,0,0,0)']]),
+  red:glow(32,[[0,'rgba(255,230,220,1)'],[.3,'rgba(255,70,70,.6)'],[1,'rgba(0,0,0,0)']]),white:glow(32,[[0,'rgba(255,255,255,1)'],[.3,'rgba(200,220,255,.55)'],[1,'rgba(0,0,0,0)']]),
+  warm:glow(48,[[0,'rgba(255,214,140,.95)'],[.35,'rgba(255,140,50,.35)'],[1,'rgba(0,0,0,0)']])};
+const FWC=[G.gold,G.pink,G.red,G.white,G.gold];
+const LAN=(()=>{const c=document.createElement('canvas');c.width=40;c.height=52;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,0,52);gr.addColorStop(0,'#ffe2a0');gr.addColorStop(.6,'#ff9a3c');gr.addColorStop(1,'#e2582a');g.fillStyle=gr;g.beginPath();g.moveTo(8,4);g.quadraticCurveTo(20,-2,32,4);g.lineTo(36,40);g.quadraticCurveTo(20,48,4,40);g.closePath();g.fill();g.fillStyle='rgba(255,255,220,.9)';g.beginPath();g.ellipse(20,42,7,3,0,0,7);g.fill();return c;})();
+const COIN=(()=>{const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const gr=g.createRadialGradient(18,16,2,24,24,22);gr.addColorStop(0,'#fff6c4');gr.addColorStop(.45,'#ffd24a');gr.addColorStop(1,'#c98a14');g.fillStyle=gr;g.beginPath();g.arc(24,24,21,0,7);g.fill();g.strokeStyle='#a96f0c';g.lineWidth=3;g.beginPath();g.arc(24,24,14,0,7);g.stroke();g.fillStyle='rgba(255,255,255,.8)';g.beginPath();g.ellipse(17,15,6,3,-.6,0,7);g.fill();return c;})();
+const PIG=new Image();PIG.src='images/s4-load-pig-toss-4x4.webp';
+const fx=$('fx'),c=fx.getContext('2d'),kcv=$('kcv'),k=kcv.getContext('2d');let W=0,H=0,KW=0,KH=0,D=1;
+const size=()=>{D=Math.min(devicePixelRatio||1,1.75);W=fx.clientWidth;H=fx.clientHeight;fx.width=W*D;fx.height=H*D;c.setTransform(D,0,0,D,0,0);KW=kcv.clientWidth;KH=kcv.clientHeight;kcv.width=KW*D;kcv.height=KH*D;k.setTransform(D,0,0,D,0,0);};
+size();addEventListener('resize',size);
+const P=[],FW=[],COINS=[],LL=[];const lx=()=>Math.random()<.5?R(.02,.18):R(.82,.98);
+for(let i=0;i<14;i++)LL.push({x:lx(),y:R(.1,.75),s:R(.4,1.2),vy:R(12,30),ph:R(0,7)});
+const burst=(x,y,n,sp,spd)=>{for(let i=0;i<n;i++){const a=i/n*6.283+R(-.1,.1),s=spd*R(.55,1);P.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:R(.55,.85),r:R(2,3.6),sp:sp||pick(FWC),tw:Math.random()<.4});}};
+const firework=(x,y,big)=>FW.push({x,y:H+10,ty:y,vy:-R(520,700),trail:[],big});
+let prog=0,shown=0,t=0,pf=0,pft=0,fwT=.6,finished=false;
+const pctEl=$('pct');new MutationObserver(()=>{prog=parseInt(pctEl.textContent)||0;}).observe(pctEl,{childList:true,characterData:true,subtree:true});
+// ถ้าโหลดไม่สำเร็จ ให้เห็นข้อความจริงจาก loading.js
+new MutationObserver(()=>{$('step').style.display=document.getElementById('loadError')?'block':'none';}).observe($('load'),{childList:true});$('step').style.display='none';
+new MutationObserver(()=>{if($('load').classList.contains('done')&&!finished){finished=true;for(let i=0;i<5;i++)setTimeout(()=>firework(R(W*.15,W*.85),R(H*.08,H*.35),true),i*90);}}).observe($('load'),{attributes:true,attributeFilter:['class']});
+function frame(dt){t+=dt;shown+=(prog-shown)*Math.min(1,dt*4);
+  $('say').textContent=SAY[Math.min(SAY.length-1,Math.floor(shown/20.01))];
+  c.clearRect(0,0,W,H);c.globalCompositeOperation='lighter';
+  for(let i=0;i<40;i++){const x=(i*97.3%1)*W,y=(i*61.7%1)*H*.6,a=Math.max(0,Math.sin(t*2+i));c.globalAlpha=a*.8;c.drawImage(G.white,x-6,y-6,12,12);}
+  for(const l of LL){l.y-=l.vy*dt/H;l.ph+=dt;if(l.y<-.08){l.y=.72;l.x=lx();}const x=l.x*W+Math.sin(l.ph*.7)*8,y=l.y*H,s=46*l.s;c.globalAlpha=.55;c.drawImage(G.warm,x-s*1.3,y-s*1.3,s*2.6,s*2.6);c.globalCompositeOperation='source-over';c.globalAlpha=.95;c.drawImage(LAN,x-20*l.s,y-26*l.s,40*l.s,52*l.s);c.globalCompositeOperation='lighter';}
+  fwT-=dt;if(fwT<=0){firework(R(W*.1,W*.9),R(H*.05,H*.35),Math.random()<.3);fwT=R(.6,1.4);}
+  for(let i=FW.length-1;i>=0;i--){const f=FW[i];f.y+=f.vy*dt;f.trail.push([f.x+R(-1,1),f.y]);if(f.trail.length>10)f.trail.shift();f.trail.forEach(([x,y],j)=>{c.globalAlpha=j/10*.8;c.drawImage(G.gold,x-5,y-5,10,10);});
+    if(f.y<=f.ty){FW.splice(i,1);const n=f.big?110:70;burst(f.x,f.y,n,pick(FWC),f.big?300:220);if(Math.random()<.5)burst(f.x,f.y,n/2,pick(FWC),f.big?170:120);}}
+  for(let i=P.length-1;i>=0;i--){const p=P[i];p.life-=dt*p.decay;if(p.life<=0){P.splice(i,1);continue;}p.vx*=1-dt*1.6;p.vy=p.vy*(1-dt*1.6)+90*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
+    const a=p.tw?p.life*(.4+.6*Math.abs(Math.sin(t*30+i))):p.life,r=p.r*3.2;c.globalAlpha=a;c.drawImage(p.sp,p.x-r,p.y-r,r*2,r*2);}
+  c.globalAlpha=1;c.globalCompositeOperation='source-over';
+  // น้องผึ้งบนกระทง เลื่อนจากซ้ายไปขวาตามเปอร์เซ็นต์
+  k.clearRect(0,0,KW,KH);const x=KW*.14+KW*.72*(shown/100),y=KH*.6+Math.sin(t*2.2)*4,pw=Math.min(KW*.27,120),water=y+pw*.22;
+  k.globalCompositeOperation='lighter';for(let i=0;i<24;i++){const tx=x-i*10;if(tx<0)break;k.globalAlpha=(1-i/24)*.5;k.drawImage(G.gold,tx-10,water-6+Math.sin(t*3+i)*2,20,12);}
+  k.globalAlpha=.55;k.drawImage(G.warm,x-pw*.6,water-pw*.3,pw*1.2,pw*.6);k.globalCompositeOperation='source-over';
+  for(let j=0;j<3;j++){const q=(t*.8+j/3)%1;k.globalAlpha=(1-q)*.5;k.strokeStyle='#cfe8ff';k.lineWidth=2;k.beginPath();k.ellipse(x,water-4,pw*(.45+q*.5),pw*(.06+q*.06),0,0,7);k.stroke();}
+  k.globalAlpha=1;
+  if(PIG.complete&&PIG.naturalWidth){const FWd=PIG.naturalWidth/4,FHd=PIG.naturalHeight/4,ph=pw*FHd/FWd;pft+=dt;
+    if(pft>.11){pft=0;pf=(pf+1)%16;if(pf===8)COINS.push({x:x+pw*.22,y:y+pw*.2-ph*.62,vx:R(120,190),vy:R(-260,-200),r:0});}
+    k.save();k.translate(x,y+pw*.2);k.rotate(Math.sin(t*1.6)*.04);k.drawImage(PIG,(pf%4)*FWd,Math.floor(pf/4)*FHd,FWd,FHd,-pw/2,-ph,pw,ph);
+    const fl=.75+.25*Math.sin(t*17)+.1*Math.sin(t*5.3);k.globalCompositeOperation='lighter';k.globalAlpha=fl;k.drawImage(G.warm,-pw/2+pw*.79-pw*.16,-ph+ph*.34-pw*.18,pw*.32,pw*.32);k.restore();k.globalCompositeOperation='source-over';}
+  for(let i=COINS.length-1;i>=0;i--){const q=COINS[i];q.vy+=520*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.r+=dt*12;
+    if(q.y>water&&q.vy>0){COINS.splice(i,1);const r=kcv.getBoundingClientRect();burst(q.x,r.top+q.y,16,G.gold,120);continue;}
+    k.globalAlpha=1;k.save();k.translate(q.x,q.y);k.scale(Math.max(.15,Math.abs(Math.cos(q.r))),1);k.drawImage(COIN,-11,-11,22,22);k.restore();
+    k.globalCompositeOperation='lighter';k.globalAlpha=.6;k.drawImage(G.gold,q.x-14,q.y-14,28,28);k.globalCompositeOperation='source-over';}
+  k.globalAlpha=1;
+  if(Math.random()<dt*20){const r=kcv.getBoundingClientRect();P.push({x:x+R(-30,30),y:r.top+y-pw*.5,vx:R(-30,30),vy:R(-90,-30),life:1,decay:R(.8,1.2),r:R(1.5,2.5),sp:G.gold,tw:true});}
+}
+let last=performance.now();const loop=now=>{const dt=Math.min(.05,(now-last)/1000);last=now;frame(dt);requestAnimationFrame(loop);};
+if(RM){frame(0);setInterval(()=>frame(.1),300);}else requestAnimationFrame(loop);
+})();
+</script>
 <script src="loading.js?v=ss3-fix15"></script></body></html>
