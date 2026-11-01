@@ -245,6 +245,8 @@ async function enter(user) {
   try {
     const [adm, snap] = await Promise.all([getDoc(doc(db, 'admins', user.uid)), getDoc(playerRef())]);
     S.admin = !!(adm && adm.exists());
+    // ซีซั่น 4 ยังไม่เปิด: ผู้เล่นทั่วไปออกจากระบบทันที (ไม่มีการเขียนข้อมูลใดๆ) · แอดมินเข้าได้ตามปกติ
+    if (S4_CLOSED && !S.admin) { S.user = null; s4Closed = true; await signOut(auth).catch(() => {}); return; }
     stage='เปิดข้อมูลบัญชีบนคลาวด์';
     if (!snap.exists()) {
       const name = S.pendingName || 'ผู้เล่น';
@@ -281,52 +283,141 @@ async function enter(user) {
   }
 }
 
-// ---------- หน้าล็อกอิน (ตามหน้าทดลอง: ฉากเต็มจอ กด "เข้าสวน" แล้วการ์ดค่อยเลื่อนขึ้น ปิดได้) ----------
-const HOF = { 2: { d: '4 ก.ย. – 2 ต.ค. 2569', r: [['Porpla', '7,850,112'], ['Kongkwan', '7,496,899'], ['Earn', '6,838,263']] }, 1: { d: '7 – 26 ส.ค. 2569', r: [['Earn', '369,245'], ['Porpla', '359,478'], ['Kongkwan', '341,483']] } };
-let waterOn = false;
+// ---------- หน้าล็อกอิน ซีซั่น 4 (วิดีโอลอยกระทง + เอฟเฟกต์) · ช่วงรอเปิดซีซั่น 4: ผู้เล่นเข้าไม่ได้ แอดมินเท่านั้น ----------
+const S4_CLOSED = true;   // เปิดซีซั่น 4 แล้ว เปลี่ยนเป็น false
+const S4_CLOSED_MSG = 'ซีซั่น4 เร็วๆนี้น๊า อย่ามาส่องบ่อย';
+const HOF = { 3: { d: '9 – 30 ต.ค. 2569', r: [['Orn', '17,574,185,545'], ['Milin', '14,281,819,499'], ['Porpla', '13,564,468,060']] },
+  2: { d: '4 ก.ย. – 2 ต.ค. 2569', r: [['Porpla', '7,850,112'], ['Kongkwan', '7,496,899'], ['Earn', '6,838,263']] },
+  1: { d: '7 – 26 ส.ค. 2569', r: [['Earn', '369,245'], ['Porpla', '359,478'], ['Kongkwan', '341,483']] } };
+let waterOn = false, s4Closed = false;
 function renderLogin() {
-  let mode = 'login';
-  const L = t => `<div class="L"><span class="b">${t}</span><span class="f">${t}</span><span class="s">${t}</span></div>`;
-  $('#app').innerHTML = `<div class="lscene"></div><canvas id="water"></canvas>
-    <header class="ltitle"><div class="tw"><div class="t1">${L('ในสวนของยัยหนู')}</div><div class="t2">${L('ซีซั่น 3')}</div></div></header>
-    <button class="hof-btn" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button>
-    <button class="lstart" id="lstart">เข้าสวน</button>
-    <main class="lcard" id="lcard"><button class="lclose" id="lclose" aria-label="ปิด">✕</button>
-      <div class="ltabs"><button class="on" data-m="login">เข้าสวน</button><button data-m="reg">สมัครใหม่</button></div>
-      <label class="llab" for="ln">ชื่อในเกม</label><div class="lfield"><i>🌱</i><input id="ln" placeholder="เช่น มดแดง" autocomplete="username" maxlength="10"></div>
-      <p class="lhint">ตั้งได้ 2–10 ตัวอักษร ชื่อนี้ใช้ทั้งซีซั่นนะ</p>
-      <label class="llab" for="lp">รหัสผ่าน</label><div class="lfield"><i>🔑</i><input id="lp" type="password" placeholder="อย่างน้อย 6 ตัว" autocomplete="current-password"></div>
-      <div class="lconf"><label class="llab" for="lp2">ยืนยันรหัสผ่าน</label><div class="lfield"><i>🔑</i><input id="lp2" type="password" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password"></div></div>
-      <div class="err" id="lerr"></div>
-      <button class="lgo" id="lgo">เข้าสวนเลย</button><p class="lfoot">ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า</p></main>`;
-  const card = $('#lcard'), go = $('#lgo'), start = $('#lstart');
-  start.onclick = () => { card.classList.add('open'); start.classList.add('hide'); };
+  const CUP = '<svg class="s4l-cup" viewBox="0 0 80 80" aria-hidden="true"><defs><linearGradient id="s4gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b8"/><stop offset=".5" stop-color="#f7c95a"/><stop offset="1" stop-color="#c98a22"/></linearGradient></defs><path d="M18 14c-10 0-12 16 2 22M62 14c10 0 12 16-2 22" fill="none" stroke="url(#s4gg)" stroke-width="6" stroke-linecap="round"/><path d="M18 8h44v12c0 16-10 26-22 26S18 36 18 20z" fill="url(#s4gg)" stroke="#fff3c8" stroke-width="2"/><rect x="34" y="45" width="12" height="10" rx="3" fill="url(#s4gg)"/><rect x="24" y="55" width="32" height="9" rx="4" fill="#c8263f" stroke="#f7c95a" stroke-width="2"/><rect x="20" y="64" width="40" height="8" rx="4" fill="url(#s4gg)"/><path d="M40 15l3 6 6.5 1-4.7 4.5 1.1 6.5L40 30l-5.9 3 1.1-6.5L30.5 22l6.5-1z" fill="#fff8dc"/></svg>';
+  $('#app').innerHTML = `<div class="s4l" id="s4l">
+    <div class="s4l-blur"></div>
+    <img class="s4l-pic" src="images/s4-login-poster.webp" alt="ในสวนของยัยหนู ซีซั่น 4">
+    <video class="s4l-pic s4l-vid" id="s4vid" src="images/s4-login-loop.mp4" poster="images/s4-login-poster.webp" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+    <canvas class="s4l-fx" id="s4fx"></canvas><div class="s4l-vign"></div>
+    <button class="s4l-hof" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button>
+    <button class="s4l-start" id="lstart"><span><i>🪷</i>เข้าสวน<i>🪷</i></span></button>
+    <div class="s4l-tro" id="s4tro" role="dialog" aria-label="หอเกียรติยศ"><i class="s4l-tw" style="left:16px;top:8px">✨</i><i class="s4l-tw" style="right:16px;top:10px;animation-delay:.6s">✨</i>
+      <div class="s4l-thead">${CUP}<h3>หอเกียรติยศ</h3></div>
+      <div class="s4l-seg" id="s4seg"><button data-s="3">ซีซั่น 3</button><button data-s="2">ซีซั่น 2</button><button data-s="1">ซีซั่น 1</button></div>
+      <div class="s4l-dates" id="hofD"></div><div class="s4l-rows" id="pod"></div></div>
+    <div class="s4l-msg" id="s4msg"></div>
+    <main class="s4l-card" id="lcard"><div class="s4l-ribbon">ยินดีต้อนรับสู่สวน</div><button class="s4l-close" id="lclose" aria-label="ปิด">✕</button>
+      <label class="s4l-lab" for="ln">ชื่อในเกม</label><div class="s4l-field"><span>🌱</span><input id="ln" placeholder="เช่น มดแดง" autocomplete="username" maxlength="10"></div>
+      <label class="s4l-lab" for="lp">รหัสผ่าน</label><div class="s4l-field"><span>🔑</span><input id="lp" type="password" placeholder="อย่างน้อย 6 ตัว" autocomplete="current-password"></div>
+      <div class="s4l-err" id="lerr"></div>
+      <button class="s4l-go" id="lgo">เข้าสวนเลย</button><p class="s4l-foot">ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า</p></main>
+  </div>`;
+  const card = $('#lcard'), go = $('#lgo'), start = $('#lstart'), msgEl = $('#s4msg');
+  let msgT = 0;
+  const showMsg = () => { msgEl.textContent = S4_CLOSED_MSG; msgEl.classList.add('on'); clearTimeout(msgT); msgT = setTimeout(() => msgEl.classList.remove('on'), 3200); };
+  const openCard = () => { card.classList.add('open'); start.classList.add('hide'); };
+  // ช่วงปิดซีซั่น: แตะปุ่ม = ขึ้นข้อความ · กดค้าง 3 วินาที = เปิดช่องล็อกอิน (สำหรับแอดมิน)
+  let holdT = 0, held = false;
+  start.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); if (S4_CLOSED) holdT = setTimeout(() => { held = true; openCard(); }, 3000); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => start.addEventListener(ev, () => clearTimeout(holdT)));
+  start.addEventListener('contextmenu', e => e.preventDefault());
+  start.onclick = () => { if (held) return; const r = start.getBoundingClientRect(); FX.burst(r.left + r.width / 2, r.top + r.height / 2, 50, null, 260); FX.ring(r.left + r.width / 2, r.top + r.height / 2); FX.salvo();
+    if (S4_CLOSED) showMsg(); else openCard(); };
   $('#lclose').onclick = () => { card.classList.remove('open'); start.classList.remove('hide'); };
-  document.querySelectorAll('.ltabs button').forEach(b => b.onclick = () => {
-    document.querySelectorAll('.ltabs button').forEach(x => x.classList.toggle('on', x === b));
-    mode = b.dataset.m; card.classList.toggle('reg', mode === 'reg'); go.textContent = mode === 'reg' ? 'สมัครแล้วเข้าสวน' : 'เข้าสวนเลย'; $('#lerr').textContent = '';
-  });
-  $('#hofBtn').onclick = () => {
-    const show = n => { const x = HOF[n], col = (i, c) => `<div class="col c${c}"><div class="av">${x.r[i][0][0]}</div><div class="nm">${x.r[i][0]}</div><div class="pt">${x.r[i][1]} pts</div><div class="step">${c}</div></div>`;
-      $('#hofD').textContent = x.d; $('#pod').innerHTML = col(1, 2) + col(0, 1) + col(2, 3); document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.s == n)); };
-    modal(`<div class="hofbox"><div class="ribbon">🏆 หอเกียรติยศ</div><div class="seg"><button data-s="2">ซีซั่น 2</button><button data-s="1">ซีซั่น 1</button></div><div class="dates" id="hofD"></div><div class="podium" id="pod"></div><div class="ground"></div></div>`, [{ t: 'ปิด', c: 'gray' }]);
-    document.querySelectorAll('.seg button').forEach(b => b.onclick = () => show(b.dataset.s)); show(2);
-  };
+  // หอเกียรติยศ: การ์ดเล็กมีถ้วยรางวัล
+  const tro = $('#s4tro'); let hofOn = false;
+  const showHof = n => { const x = HOF[n], M = ['🥇', '🥈', '🥉']; $('#hofD').textContent = x.d;
+    $('#pod').innerHTML = x.r.map((r, i) => `<div class="s4l-row r${i + 1}"><span class="md">${M[i]}</span><b>${r[0]}</b><small>${r[1]}</small></div>`).join('');
+    document.querySelectorAll('#s4seg button').forEach(b => b.classList.toggle('on', b.dataset.s == n)); };
+  $('#hofBtn').onclick = e => { e.stopPropagation(); hofOn = !tro.classList.contains('on'); tro.classList.toggle('on', hofOn); if (hofOn) showHof(3); };
+  document.querySelectorAll('#s4seg button').forEach(b => b.onclick = () => showHof(b.dataset.s));
+  $('#s4l').addEventListener('pointerdown', e => { if (hofOn && !e.target.closest('#s4tro,#hofBtn')) { tro.classList.remove('on'); hofOn = false; } });
   const doGo = async () => {
     const name = $('#ln').value.trim(), pw = $('#lp').value, err = $('#lerr');
     const bad = checkName(name); if (bad) { err.textContent = '🐷 ' + bad; return; }
     if (pw.length < 6) { err.textContent = '🐷 รหัสผ่านต้องมีอย่างน้อย 6 ตัวนะ'; return; }
-    if (mode === 'reg' && pw !== $('#lp2').value) { err.textContent = '🐷 รหัสผ่านสองช่องไม่ตรงกันนะ'; return; }
     err.textContent = ''; busy(go, true, 'กำลังเข้าสวน…');
-    try {
-      const email = await emailFor(name);
-      if (mode === 'reg') { S.pendingName = name; await createUserWithEmailAndPassword(auth, email, pw); }
-      else await signInWithEmailAndPassword(auth, email, pw);
-    } catch (e) { err.textContent = '🐷 ' + thaiError(e); busy(go, false, mode === 'reg' ? 'สมัครแล้วเข้าสวน' : 'เข้าสวนเลย'); }
+    try { const email = await emailFor(name); await signInWithEmailAndPassword(auth, email, pw); }
+    catch (e) { err.textContent = '🐷 ' + thaiError(e); busy(go, false, 'เข้าสวนเลย'); }
   };
   go.onclick = doGo;
   card.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') doGo(); }));
-  startWater();
+  const FX = s4LoginFx();
+  if (s4Closed) { s4Closed = false; setTimeout(showMsg, 400); }
+}
+// เอฟเฟกต์หน้าล็อกอิน: พลุ ละอองทอง กลีบดอกไม้ ดาวตก หิ่งห้อย สายแสง · ไม่บังหน้า · เครื่องช้าลดเอฟเฟกต์เอง · ออกจากหน้านี้แล้วหยุดเอง
+function s4LoginFx() {
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches, SAVE = navigator.connection && navigator.connection.saveData;
+  const R = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
+  const v = $('#s4vid');
+  if (SAVE || RM) v.remove(); else { v.addEventListener('playing', () => v.classList.add('on'), { once: true }); const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+  const vis = () => { if (!v.isConnected) { document.removeEventListener('visibilitychange', vis); return; } if (document.hidden) v.pause(); else v.play().catch(() => {}); };
+  if (v.isConnected) document.addEventListener('visibilitychange', vis);
+  const glow = (r, stops) => { const c = document.createElement('canvas'); c.width = c.height = r * 2; const g = c.getContext('2d'), gr = g.createRadialGradient(r, r, 0, r, r, r); stops.forEach(([o, col]) => gr.addColorStop(o, col)); g.fillStyle = gr; g.fillRect(0, 0, r * 2, r * 2); return c; };
+  const G = { gold: glow(32, [[0, 'rgba(255,245,200,1)'], [.3, 'rgba(247,201,90,.6)'], [1, 'rgba(0,0,0,0)']]), pink: glow(32, [[0, 'rgba(255,235,245,1)'], [.3, 'rgba(255,120,180,.6)'], [1, 'rgba(0,0,0,0)']]),
+    red: glow(32, [[0, 'rgba(255,230,220,1)'], [.3, 'rgba(255,70,70,.6)'], [1, 'rgba(0,0,0,0)']]), white: glow(32, [[0, 'rgba(255,255,255,1)'], [.3, 'rgba(200,220,255,.55)'], [1, 'rgba(0,0,0,0)']]),
+    fly: glow(20, [[0, 'rgba(230,255,170,1)'], [.35, 'rgba(170,255,120,.45)'], [1, 'rgba(0,0,0,0)']]), bokeh: glow(64, [[0, 'rgba(255,220,150,.35)'], [.7, 'rgba(255,190,120,.18)'], [1, 'rgba(0,0,0,0)']]) };
+  const FWC = [G.gold, G.pink, G.red, G.white, G.gold], PC = ['#ffb300', '#ff9ec2', '#ffd34d', '#ff7aa8', '#fff1c4', '#ff8a3d'];
+  const STAR = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.translate(32, 32); g.fillStyle = '#fff6d0'; g.shadowColor = '#ffd76a'; g.shadowBlur = 12; g.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? 5 : 30, a = i * Math.PI / 4; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.fill(); return c; })();
+  const cv = $('#s4fx'), cx = cv.getContext('2d'); let W = 0, H = 0;
+  const size = () => { if (!cv.isConnected) { removeEventListener('resize', size); return; } const D = Math.min(devicePixelRatio || 1, 1.75); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * D; cv.height = H * D; cx.setTransform(D, 0, 0, D, 0, 0); };
+  size(); addEventListener('resize', size);
+  // จุดบนรูปปก (u,v = 0..1) → ตำแหน่งบนจอ ตาม object-fit (มือถือ cover · จอกว้าง contain)
+  const vmap = (u, vv) => { const ar = 9 / 16, wide = W / H >= .6; let w, h; if (wide) { h = H; w = H * ar; if (w > W) { w = W; h = W / ar; } } else if (W / H > ar) { w = W; h = W / ar; } else { h = H; w = H * ar; } return [(W - w) / 2 + u * w, (wide ? (H - h) / 2 : 0) + vv * h, w, h]; };
+  const vinv = (x, y) => { const a = vmap(0, 0), b = vmap(1, 1); return [(x - a[0]) / (b[0] - a[0]), (y - a[1]) / (b[1] - a[1])]; };
+  // ไม่ให้แสงใดๆ ไปบังหน้าคนกับหน้าน้องผึ้ง
+  const face = (x, y) => { const [u, vv] = vinv(x, y); return (u > .1 && u < .74 && vv > .16 && vv < .62) || (u > .55 && u < .97 && vv > .6 && vv < .84); };
+  const P = [], FW = [], small = W < 500; let t = 0, flash = 0;
+  const burst = (x, y, n, spr, spd = 200) => { for (let i = 0; i < n; i++) { const a = i / n * 6.283 + R(-.1, .1), s = spd * R(.55, 1); P.push({ k: 's', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, decay: R(.55, .85), r: R(2, 3.6), sp: spr || pick(FWC), tw: Math.random() < .4 }); } };
+  const ring = (x, y) => P.push({ k: 'r', x, y, r: 6, life: 1 });
+  const petals = (x, y, n) => { for (let i = 0; i < n; i++) { const a = R(0, 6.283), s = R(80, 260); P.push({ k: 'p', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, r: R(5, 9), rot: R(0, 6.3), vr: R(-6, 6), fl: R(0, 6), c: pick(PC), life: 1 }); } };
+  const firework = (x, y, big) => FW.push({ x, y: H + 10, ty: y, vy: -R(520, 700), trail: [], big: !!big });
+  const fwSpot = () => { const r = Math.random(); const [u, vv] = r < .5 ? [R(.06, .94), R(.03, .13)] : r < .75 ? [R(.78, .96), R(.24, .46)] : [R(.03, .09), R(.24, .4)]; return vmap(u, vv); };
+  const salvo = () => { for (let k = 0; k < 5; k++) setTimeout(() => { const [x, y] = fwSpot(); firework(x, y, true); }, k * 180); };
+  const edgeU = () => Math.random() < .5 ? R(.01, .1) : R(.88, .99);
+  const D = [], PT = [], F = [], B = [], ST = [];
+  for (let i = 0; i < (small ? 70 : 110); i++) D.push({ x: R(0, W), y: R(0, H), r: R(1, 3), ph: R(0, 7), sp: R(1.5, 4), vy: R(-14, -3) });
+  const newPt = y => ({ x: R(-20, W), y: y ?? R(-60, -10), r: R(6, 11), rot: R(0, 6.3), vr: R(-1.6, 1.6), vy: R(26, 48), vx: R(10, 30), ph: R(0, 7), c: pick(PC), fl: R(0, 6.3) });
+  for (let i = 0; i < (small ? 26 : 40); i++) PT.push(newPt(R(0, H)));
+  for (let i = 0; i < (small ? 14 : 22); i++) F.push({ u: R(0, 1), v: R(.66, .97), ph: R(0, 7), vu: R(-.03, .03), vv: R(-.01, .01) });
+  for (let i = 0; i < (small ? 7 : 11); i++) B.push({ u: edgeU(), v: R(0, 1), r: R(30, 70), ph: R(0, 7), vv: R(-.006, -.002) });
+  for (let i = 0; i < (small ? 14 : 20); i++) ST.push({ u: R(0, 1), v: R(0, .6), ph: R(0, 7), sp: R(1, 2.5), s: R(.4, 1) });
+  const RB = [0, 1, 2].map(i => ({ ph: i * 2.1, sp: R(.6, 1), amp: R(.025, .045), v: .86 + i * .035, c: i === 1 ? '255,150,200' : '255,215,120' }));
+  let star = null, starT = R(1.5, 3), fwT = 1.2, Q = 1, qAcc = 0, qN = 0;
+  const thin = a => Q < 1 ? a.filter((_, i) => i % 2 === 0) : a;
+  $('#s4l').addEventListener('pointerdown', e => { if (e.target.closest('.s4l-card,.s4l-tro,button')) return; burst(e.clientX, e.clientY, 34, null, 240); ring(e.clientX, e.clientY); petals(e.clientX, e.clientY, 10); });
+  function frame(dt) {
+    t += dt; qAcc += dt; qN++; if (qN >= 60) { if (Q === 1 && qAcc / qN > 1 / 34) Q = .5; qAcc = 0; qN = 0; }
+    cx.clearRect(0, 0, W, H); cx.globalCompositeOperation = 'lighter';
+    for (const b of thin(B)) { b.v += b.vv * dt; b.ph += dt; if (b.v < -.1) { b.v = 1.05; b.u = edgeU(); } const [x, y] = vmap(b.u, b.v); cx.globalAlpha = .5 + .3 * Math.sin(b.ph); cx.drawImage(G.bokeh, x - b.r, y - b.r, b.r * 2, b.r * 2); }
+    for (const s of ST) { s.ph += dt * s.sp; const [x, y] = vmap(s.u, s.v); if (face(x, y)) continue; const a = Math.max(0, Math.sin(s.ph)); if (a < .05) continue; const r = 14 * s.s * a; cx.globalAlpha = a; cx.save(); cx.translate(x, y); cx.rotate(s.ph * .3); cx.drawImage(STAR, -r, -r, r * 2, r * 2); cx.restore(); }
+    for (const d of thin(D)) { d.ph += dt * d.sp; d.y += d.vy * dt; if (d.y < -10) { d.y = H + 10; d.x = R(0, W); } if (face(d.x, d.y)) continue; const a = .25 + .75 * Math.max(0, Math.sin(d.ph)), s = d.r * 6; cx.globalAlpha = a; cx.drawImage(G.gold, d.x - s, d.y - s, s * 2, s * 2); }
+    for (const f of F) { f.ph += dt * 2; f.u += (f.vu + Math.sin(f.ph) * .02) * dt; f.v += (f.vv + Math.cos(f.ph * .8) * .01) * dt; if (f.u < 0) f.u = 1; if (f.u > 1) f.u = 0; if (f.v < .66 || f.v > .98) f.vv *= -1; const [x, y] = vmap(f.u, f.v); if (face(x, y)) continue; cx.globalAlpha = .35 + .65 * Math.max(0, Math.sin(f.ph * 1.7)); cx.drawImage(G.fly, x - 11, y - 11, 22, 22); }
+    const [kx, ky, vw] = vmap(.17, .79);
+    for (let i = 0; i < (Q < 1 ? 1 : 3); i++) P.push({ k: 's', x: kx + R(-vw * .06, vw * .06), y: ky + R(-vw * .03, vw * .02), vx: R(-90, 60), vy: R(-160, -40), life: 1, decay: R(.7, 1.1), r: R(1.5, 3), sp: Math.random() < .75 ? G.gold : G.pink, tw: true });
+    for (const rb of RB) { rb.ph += dt * rb.sp; cx.lineCap = 'round'; for (let pass = 0; pass < 2; pass++) { cx.beginPath(); for (let k = 0; k <= 40; k++) { const u = k / 40, vv = rb.v + Math.sin(u * 9 + rb.ph * 2) * rb.amp, [x, y] = vmap(u, vv); if (k) cx.lineTo(x, y); else cx.moveTo(x, y); }
+      cx.globalAlpha = pass ? .9 : .25; cx.strokeStyle = 'rgba(' + rb.c + ',' + (pass ? .9 : .6) + ')'; cx.lineWidth = pass ? 2.2 : 9; cx.stroke(); }
+      const u = (rb.ph * .25) % 1, [hx, hy] = vmap(u, rb.v + Math.sin(u * 9 + rb.ph * 2) * rb.amp); cx.globalAlpha = 1; cx.drawImage(G.gold, hx - 14, hy - 14, 28, 28); }
+    starT -= dt; if (!star && starT <= 0) { const [x, y] = vmap(R(.05, .6), R(.02, .12)); star = { x, y, vx: R(420, 560), vy: R(110, 180), life: 1 }; starT = R(2, 4); }
+    if (star) { star.x += star.vx * dt; star.y += star.vy * dt; star.life -= dt * 1.1; const g = cx.createLinearGradient(star.x, star.y, star.x - star.vx * .22, star.y - star.vy * .22); g.addColorStop(0, 'rgba(255,250,220,' + Math.max(0, star.life) + ')'); g.addColorStop(1, 'rgba(255,250,220,0)');
+      cx.globalAlpha = 1; cx.strokeStyle = g; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(star.x, star.y); cx.lineTo(star.x - star.vx * .22, star.y - star.vy * .22); cx.stroke(); cx.drawImage(G.white, star.x - 10, star.y - 10, 20, 20); if (star.life <= 0) star = null; }
+    fwT -= dt; if (fwT <= 0) { const [x, y] = fwSpot(); firework(x, y, Math.random() < .3); fwT = R(.9, 2.2) / Q; }
+    for (let i = FW.length - 1; i >= 0; i--) { const f = FW[i]; f.y += f.vy * dt; f.trail.push([f.x + R(-1, 1), f.y]); if (f.trail.length > 10) f.trail.shift();
+      f.trail.forEach(([x, y], j) => { if (face(x, y)) return; cx.globalAlpha = j / 10 * .8; cx.drawImage(G.gold, x - 5, y - 5, 10, 10); });
+      if (f.y <= f.ty) { FW.splice(i, 1); const n = f.big ? 110 : 70; burst(f.x, f.y, n, pick(FWC), f.big ? 300 : 220); if (Math.random() < .5) burst(f.x, f.y, n / 2, pick(FWC), f.big ? 170 : 120); ring(f.x, f.y); flash = Math.max(flash, f.big ? .25 : .12); } }
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i];
+      if (p.k === 's') { p.life -= dt * p.decay; if (p.life <= 0) { P.splice(i, 1); continue; } p.vx *= 1 - dt * 1.6; p.vy = p.vy * (1 - dt * 1.6) + 90 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (face(p.x, p.y)) continue;
+        const a = p.tw ? p.life * (.4 + .6 * Math.abs(Math.sin(t * 30 + i))) : p.life, r = p.r * 3.2; cx.globalAlpha = a; cx.drawImage(p.sp, p.x - r, p.y - r, r * 2, r * 2); if (p.life > .3) { cx.globalAlpha = a * .5; cx.drawImage(p.sp, p.x - p.vx * .04 - r * .6, p.y - p.vy * .04 - r * .6, r * 1.2, r * 1.2); } }
+      else if (p.k === 'r') { p.life -= dt * 1.8; if (p.life <= 0) { P.splice(i, 1); continue; } p.r += dt * 260; cx.globalAlpha = p.life * .6; cx.strokeStyle = '#ffe7a3'; cx.lineWidth = 3 * p.life; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.stroke(); } }
+    if (flash > 0) { cx.globalAlpha = flash * .25; cx.fillStyle = '#ffd98a'; cx.fillRect(0, 0, W, H); flash -= dt; }
+    cx.globalCompositeOperation = 'source-over';
+    const petal = (p, pa) => { cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.scale(1, Math.abs(Math.cos(p.fl)) * .8 + .2); cx.globalAlpha = pa; cx.fillStyle = p.c; cx.beginPath(); cx.ellipse(0, 0, p.r, p.r * .55, 0, 0, 7); cx.fill(); cx.globalAlpha = pa * .55; cx.fillStyle = '#fff'; cx.beginPath(); cx.ellipse(-p.r * .3, -p.r * .15, p.r * .35, p.r * .15, 0, 0, 7); cx.fill(); cx.restore(); };
+    for (const p of thin(PT)) { p.ph += dt; p.y += p.vy * dt; p.x += (p.vx + Math.sin(p.ph * 1.3) * 22) * dt; p.rot += p.vr * dt; p.fl += dt * 3; if (p.y > H + 20 || p.x > W + 30) Object.assign(p, newPt()); petal(p, face(p.x, p.y) ? .12 : .92); }
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; if (p.k !== 'p') continue; p.life -= dt * .35; if (p.life <= 0 || p.y > H + 30) { P.splice(i, 1); continue; } p.vx *= 1 - dt * .8; p.vy = Math.min(p.vy + 160 * dt, 90); p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.fl += dt * 4; petal(p, Math.min(1, p.life * 1.5)); }
+    cx.globalAlpha = 1;
+  }
+  let last = performance.now();
+  const loop = now => { if (!cv.isConnected) return; const dt = Math.min(.05, (now - last) / 1000); last = now; if (!document.hidden) frame(dt); requestAnimationFrame(loop); };
+  if (RM) frame(0); else requestAnimationFrame(loop);
+  return { burst, ring, salvo };
 }
 function startWater() {
   // น้ำกระเซ็น + ประกายน้ำ เป็นภาพเคลื่อนไหวในเครื่องล้วน ไม่แตะฐานข้อมูล
