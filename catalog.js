@@ -1038,7 +1038,7 @@ export const CATALOG = [
   },
   {
     "k": "gfood-r3",
-    "n": "ตำมรกตผีหลอก",
+    "n": "ตำมรกตเดือนเพ็ญ",
     "i": "gfood-r3.webp",
     "g": "อาหารสวน",
     "p": "gfood.r3"
@@ -1052,7 +1052,7 @@ export const CATALOG = [
   },
   {
     "k": "gfood-r5",
-    "n": "ข้าวคลุกวิญญาณ",
+    "n": "ข้าวคลุกต้องมนต์",
     "i": "gfood-r5.webp",
     "g": "อาหารสวน",
     "p": "gfood.r5"
@@ -1094,7 +1094,7 @@ export const CATALOG = [
   },
   {
     "k": "gfood-n3",
-    "n": "กล้วยคลุกเถ้าผี",
+    "n": "กล้วยคลุกมะพร้าว",
     "i": "gfood-n3.webp",
     "g": "อาหารสวน",
     "p": "gfood.n3"
@@ -1108,42 +1108,42 @@ export const CATALOG = [
   },
   {
     "k": "gfood-b1",
-    "n": "ผักกาดห่อผีหนีวัด",
+    "n": "ผักกาดห่อกระทงไปวัด",
     "i": "gfood-b1.webp",
     "g": "อาหารสวน",
     "p": "gfood.b1"
   },
   {
     "k": "gfood-b2",
-    "n": "ผักบุ้งผัดสะดุ้งผี",
+    "n": "ผักบุ้งผัดสะดุ้งพลุ",
     "i": "gfood-b2.webp",
     "g": "อาหารสวน",
     "p": "gfood.b2"
   },
   {
     "k": "gfood-b3",
-    "n": "ปลาผีราดซอสมะม่วงหน้าเน่า",
+    "n": "ปลาโคมลอยราดซอสมะม่วงหน้าเน่า",
     "i": "gfood-b3.webp",
     "g": "อาหารสวน",
     "p": "gfood.b3"
   },
   {
     "k": "gfood-b4",
-    "n": "ปลาผีซอสองุ่นครุ่นจิต",
+    "n": "ปลาโคมลอยซอสองุ่นครุ่นจิต",
     "i": "gfood-b4.webp",
     "g": "อาหารสวน",
     "p": "gfood.b4"
   },
   {
     "k": "gfood-b5",
-    "n": "ยำผักสวนผีแตก",
+    "n": "ยำผักสวนพลุแตก",
     "i": "gfood-b5.webp",
     "g": "อาหารสวน",
     "p": "gfood.b5"
   },
   {
     "k": "gfood-b6",
-    "n": "ปลาผีลุยสวนยัยหนู",
+    "n": "ปลาโคมลอยลุยสวนยัยหนู",
     "i": "gfood-b6.webp",
     "g": "อาหารสวน",
     "p": "gfood.b6"
@@ -1157,7 +1157,7 @@ export const CATALOG = [
   },
   {
     "k": "gfood-b8",
-    "n": "สำรับผีแดกไม่เลือก",
+    "n": "สำรับยักษ์แดกไม่เลือก",
     "i": "gfood-b8.webp",
     "g": "อาหารสวน",
     "p": "gfood.b8"
@@ -1411,7 +1411,7 @@ export const CATALOG = [
 
 CATALOG.push(...[['bamboo','เบ็ดไผ่ลมหวน','rod-bamboo'],['moon','เบ็ดจันทร์เสี้ยว','rod-moon'],['honey','เบ็ดน้ำผึ้งหวานเจี๊ยบ','rod-honey'],['sakura','เบ็ดซากุระพลิ้ว','rod-sakura']].map(([k,n,i])=>({k:'rod-'+k,n,i:'images/'+({bamboo:'asset-d90e2f0c857884bb.webp',moon:'asset-d6582bddb91ed9fe.webp',honey:'asset-fb590a8791aee54c.webp',sakura:'asset-873b081abb86150b.webp'}[k]),g:'ตกปลา',p:'rod.'+k})),{k:'fishing-crab',n:'กรรไกรปูจอมแสบ',i:'images/fishing-item-crabscissors.webp',g:'ตกปลา',p:'fishing.crab'},{k:'fishing-vip',n:'บัตรตกปลา VIP',i:'images/fishing-vip-card.webp',g:'ตกปลา',p:'fishing.vip'});
 
-CATALOG.push(...[{"k": "halloween-candy", "n": "ลูกอมผี", "i": "images/halloween-hw-candy.webp", "g": "ฮาโลวีน", "p": "halloween.candy"}, {"k": "halloween-bat", "n": "ค้างคาวจิ๋ว", "i": "images/halloween-hw-bat.webp", "g": "ฮาโลวีน", "p": "halloween.bat"}, {"k": "halloween-candle", "n": "เทียนผี", "i": "images/halloween-hw-candle.webp", "g": "ฮาโลวีน", "p": "halloween.candle"}, {"k": "halloween-web", "n": "ใยแมงมุม", "i": "images/halloween-hw-web.webp", "g": "ฮาโลวีน", "p": "halloween.web"}, {"k": "halloween-hat", "n": "หมวกแม่มด", "i": "images/halloween-hw-hat.webp", "g": "ฮาโลวีน", "p": "halloween.hat"}, {"k": "halloween-broom", "n": "ไม้กวาดแม่มด", "i": "images/halloween-hw-broom.webp", "g": "ฮาโลวีน", "p": "halloween.broom"}, {"k": "halloween-pumpkin", "n": "ฟักทองแกะสลักเรืองแสง", "i": "images/halloween-hw-pumpkin.webp", "g": "ฮาโลวีน", "p": "halloween.pumpkin"}, {"k": "halloween-cauldron", "n": "หม้อยาแม่มด", "i": "images/halloween-hw-cauldron.webp", "g": "ฮาโลวีน", "p": "halloween.cauldron"}]);
+CATALOG.push(...[{"k": "halloween-candy", "n": "ดอกดาวเรือง", "i": "images/halloween-hw-candy.webp", "g": "ลอยกระทง", "p": "halloween.candy"}, {"k": "halloween-bat", "n": "หิ่งห้อยน้อย", "i": "images/halloween-hw-bat.webp", "g": "ลอยกระทง", "p": "halloween.bat"}, {"k": "halloween-candle", "n": "ธูปหอม", "i": "images/halloween-hw-candle.webp", "g": "ลอยกระทง", "p": "halloween.candle"}, {"k": "halloween-web", "n": "ดอกบัว", "i": "images/halloween-hw-web.webp", "g": "ลอยกระทง", "p": "halloween.web"}, {"k": "halloween-hat", "n": "พวงมาลัย", "i": "images/halloween-hw-hat.webp", "g": "ลอยกระทง", "p": "halloween.hat"}, {"k": "halloween-broom", "n": "ใบตองทอง", "i": "images/halloween-hw-broom.webp", "g": "ลอยกระทง", "p": "halloween.broom"}, {"k": "halloween-pumpkin", "n": "กระทงใบตอง", "i": "images/halloween-hw-pumpkin.webp", "g": "ลอยกระทง", "p": "halloween.pumpkin"}, {"k": "halloween-cauldron", "n": "กระทงทอง", "i": "images/halloween-hw-cauldron.webp", "g": "ลอยกระทง", "p": "halloween.cauldron"}]);
 CATALOG.push(...['ostrich','dodo'].map(sp=>({k:'bird-box-'+sp,n:'กล่องสุ่ม'+(sp==='ostrich'?'นกกระจอกเทศ':'นกโดโด้'),i:'boxes-box-'+sp+'.webp',g:'กล่องสุ่ม',p:'birdbox.'+sp})));
 
 for(let i=CATALOG.length-1;i>=0;i--)if(/^gfood\.w[1-6]$/.test(CATALOG[i].p))CATALOG.splice(i,1);
@@ -1423,8 +1423,8 @@ CATALOG.push(...[{k:"box-plant",n:"กล่องสุ่มพืช",i:"boxe
 /* fix15 ไอเทมบูสต์ (ได้จากหีบแม่มด 3% และแอดมินส่ง) */
 CATALOG.push({k:"boost-bait",n:"เหยื่อวิเศษ (ปลากินเร็ว −30%)",i:"boost-bait.webp",g:"ไอเทมบูสต์",p:"boost.bait"},{k:"boost-lens",n:"แว่นขยายนักวิจัย (วัตถุดิบวิจัย −30%)",i:"boost-lens.webp",g:"ไอเทมบูสต์",p:"boost.lens"},{k:"boost-gear",n:"เฟืองเร่งเครื่อง (เวลาแปรรูป −30%)",i:"boost-gear.webp",g:"ไอเทมบูสต์",p:"boost.gear"});
 /* fix16 น้ำมนต์แก้พิษ 4 ขวด (คู่กับยาพิษแม่มด) */
-CATALOG.push(...[['น้ำมนต์ดอกมะลิ'],['น้ำมนต์โบว์ฟ้า'],['น้ำมนต์ปีกเทวดา'],['น้ำมนต์นางฟ้า']].map(([n],i)=>({k:'antidote-'+i,n,i:'anti-'+(i+1)+'.webp',g:'ฮาโลวีน',p:'antidote.a'+i})));
-CATALOG.push({k:"fishing-eel",n:"ปลาไหลไฟฟ้าผี",i:"fishing-item-eel.webp",g:"ตกปลา",p:"fishing.eel"});/* fix17 ⚡👻 */
-CATALOG.push(...[['music','กล่องดนตรีหมูปีศาจ','prank-musicbox'],['hour','นาฬิกาทรายปีศาจ','prank-hourglass'],['coffin','หีบโลงต้องสาป','prank-coffin'],['heart','หัวใจทับทิมปีศาจ','prank-heart']].map(([k,n,i])=>({k:'demon-'+k,n,i:i+'.webp',g:'ไอเทมปีศาจ',p:'demon.'+k})));/* fix17 😈 */
+CATALOG.push(...[['น้ำมนต์ดอกมะลิ'],['น้ำมนต์โบว์ฟ้า'],['น้ำมนต์ปีกเทวดา'],['น้ำมนต์นางฟ้า']].map(([n],i)=>({k:'antidote-'+i,n,i:'anti-'+(i+1)+'.webp',g:'ลอยกระทง',p:'antidote.a'+i})));
+CATALOG.push({k:"fishing-eel",n:"ปลาไหลไฟฟ้า",i:"fishing-item-eel.webp",g:"ตกปลา",p:"fishing.eel"});/* fix17 ⚡🏮 */
+CATALOG.push(...[['music','กล่องดนตรีหมูจอมแสบ','prank-musicbox'],['hour','นาฬิกาทรายจอมแสบ','prank-hourglass'],['coffin','หีบโลงต้องสาป','prank-coffin'],['heart','หัวใจทับทิมจอมแสบ','prank-heart']].map(([k,n,i])=>({k:'demon-'+k,n,i:i+'.webp',g:'ไอเทมจอมแสบ',p:'demon.'+k})));/* fix17 😈 */
 CATALOG.push({k:'box-mahakusal',n:'กล่องสุ่มมหากุศล',i:'mahakusal-box.webp',g:'กล่องสุ่ม',p:'box.mahakusal'});/* fix17 📦 */
 CATALOG.push({k:'atm-card',n:'บัตร ATM กุศล',i:'atm-card.webp',g:'บัตร ATM',p:'item.atmcard'});/* fix19 🏧 แอดมินส่งให้เท่านั้น */

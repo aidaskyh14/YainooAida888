@@ -11,7 +11,7 @@
   [/หญ้า|^grass\./,'🌿'],[/ต้นกล้า|^tree\./,'🌱'],[/ดอก|กุหลาบ|^flower\./,'🌸'],[/ผลไม้|แอปเปิล|ส้ม|พีช|เชอร์รี|^fruit\./,'🍎'],
   [/ปุ๋ย|fert/,'🧪'],[/ยา|potion|medicine|spray/,'🧴'],[/เค้ก|cake/,'🍰'],[/มะพร้าว|coconut/,'🥥'],[/ปีก|angel/,'👼'],[/สาก|pestle/,'🥢'],
   [/อัลปาก้า|alpaca/,'🦙'],[/หมา|dog/,'🐶'],[/แมว|^cat/,'🐱'],[/แฮมสเตอร์|hamster/,'🐹'],[/นก|bird/,'🐦'],[/เม่น|hedge/,'🦔'],
-  [/ปลา|fish/,'🐟'],[/ฟักทอง|halloween/,'🎃'],[/ไม้|wood/,'🪵'],[/หิน|stone|pebble/,'🪨'],[/เหล็ก|steel/,'⚙️'],[/เชือก|rope/,'🪢'],
+  [/ปลา|fish/,'🐟'],[/ฟักทอง|halloween/,'🪷'],[/ไม้|wood/,'🪵'],[/หิน|stone|pebble/,'🪨'],[/เหล็ก|steel/,'⚙️'],[/เชือก|rope/,'🪢'],
   [/แบต|battery/,'🔋'],[/ใบอนุญาต|license/,'📜'],[/ผ้า|scarf|beanie/,'🧣'],[/ตุ๊กตา|plush/,'🧸'],[/รองเท้า|boot/,'👢'],[/ปลอกคอ|collar/,'📿'],
   [/ขนม|treat/,'🍪'],[/นม|milk|cream|ชีส|cheese/,'🧀'],[/เนื้อ|หมู|ไก่|meat|pork|drumstick|trotter/,'🍖'],
   [/อาหาร|food|แกง|ข้าว|ซุป|ยำ|ตำ|สตูว์|ก๋วยเตี๋ยว|^crop\./,'🍲']];
@@ -20,7 +20,7 @@
  function fuzzy(name){if(!name)return null;let best=null;for(const c of host()?.catalog||[])if(c.n&&String(name).startsWith(c.n)&&(!best||c.n.length>best.n.length))best=c;return best;}
  function craftIcon(row){
   row=row||{};const H=host(),path=String(row.path||'');
-  if(row.coins||path==='coins')return {name:row.name||'เหรียญฮาโลวีน',image:row.image||'images/gacha-coin.webp',emoji:'🪙'};
+  if(row.coins||path==='coins')return {name:row.name||'เหรียญกระทงทอง',image:row.image||'images/gacha-coin.webp',emoji:'🪙'};
   let c=null;try{c=(path&&H?.catalogItem?.(path))||(row.name&&H?.catalogName?.(row.name))||fuzzy(row.name);}catch(_){c=null;}
   const name=row.name||c?.n||path||'ไอเทม',image=row.image||(c?.i?'images/'+c.i:''),key=name+' '+path;
   const emoji=row.emoji||(EMOJI.find(([re])=>re.test(path)||re.test(name))||[])[1]||DEFAULT_EMOJI;
@@ -100,7 +100,7 @@
   const step=results.length>1?Math.min(90,2200/results.length):0;
   const coinRow=results.length>1?`<div class="sum">สำเร็จ <b>${wins}</b> จาก ${results.length} ครั้ง</div><div class="coins${results.length>20?' many':''}">${results.map((r,i)=>`<span class="coin${r?'':' x'}" style="animation-delay:${Math.round(i*step)}ms"><small>${i+1}</small>${r?'✅':'❌'}</span>`).join('')}</div>`:'';
   const gains=outputs.length?`<div class="lbl">🎁 ของที่ได้</div><div class="gains">${outputs.map((r,i)=>{const ic=craftIcon(r);return `<div class="gain" style="animation-delay:0s,${.1+i*.08}s">${pic(ic,'gp')}<span class="gn">${esc(ic.name)}</span><span class="gq">+${fmt(r.quantity)}</span></div>`;}).join('')}</div>`:'';
-  const badges=merit||coins?`<div class="badges">${merit?`<span class="badge">✨ กุศล +${fmt(merit)}</span>`:''}${coins?`<span class="badge"><img src="images/gacha-coin.webp" alt="" onerror="this.replaceWith('🪙')">เหรียญฮาโลวีน +${fmt(coins)}</span>`:''}</div>`:'';
+  const badges=merit||coins?`<div class="badges">${merit?`<span class="badge">✨ กุศล +${fmt(merit)}</span>`:''}${coins?`<span class="badge"><img src="images/gacha-coin.webp" alt="" onerror="this.replaceWith('🪙')">เหรียญกระทงทอง +${fmt(coins)}</span>`:''}</div>`:'';
   const none=hasReward?'':'<p class="none">ไม่ได้รับไอเทม · วัตถุดิบถูกใช้ตามสูตร</p>';
   const used=consumed.length?`<details open><summary>📦 ของที่ใช้ไป (${consumed.length})</summary><div class="used">${consumed.map(r=>{const ic=craftIcon(r);return `<span class="use" title="${esc(ic.name)}">${pic(ic,'up')}−${fmt(r.quantity)}</span>`;}).join('')}</div></details>`:'';
   const head=hasReward?(results.length&&wins<results.length?'สำเร็จบางส่วน ได้ของแล้ว!':outputs.length?'สำเร็จ! ได้ของแล้ว':'สำเร็จ! ได้รางวัลแล้ว'):'คราฟครั้งนี้ไม่สำเร็จ';

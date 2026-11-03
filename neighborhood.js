@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — หน้าเกม (หน้าตาตามที่อนุมัติ) · ทุกอย่างที่เปลี่ยนข้อมูลทำบนเซิร์ฟเวอร์ (Host.cloud('nb',…)) */
-import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix21';
+import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone} from './nb-engine.js?v=ss3-fix21&h=ff5f9ad4';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -150,12 +150,18 @@ document.addEventListener('click',e=>{
 });
 fit();render();act({type:'status'});
 setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true);},60000);
-/* fix19 🌳 ศึกต้นไม้ผี: การ์ดแถบเดียว (แตะไปหน้าศึก) */
+/* fix19 🌳 ศึกโคมลอย: การ์ดแถบเดียว (แตะไปหน้าศึก) */
 (()=>{if(!H.watchWorld)return;const bar=document.createElement('button');bar.type='button';bar.id='twBar';bar.hidden=true;
  bar.style.cssText='position:absolute;z-index:6;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 3.9rem);display:flex;align-items:center;gap:.35rem;max-width:calc(100% - 1.5rem);border:2px solid #FFD36B;border-radius:999px;background:rgba(42,26,69,.92);color:#FFF4E2;font:700 .72rem Mali,sans-serif;padding:.3rem .75rem;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer';
  bar.onclick=()=>{try{parent.postMessage({go:'treewar'},'*');}catch(e){}};$('view').appendChild(bar);let st=null;
  const draw=()=>{const r=st?.round,l=st?.last;if(!st||(!st.on&&!r)){bar.hidden=true;return;}bar.hidden=false;
   if(r){const rows=Object.entries(r.houses||{}),me=V.nbId&&r.houses?.[V.nbId];const left=Math.max(0,r.end-SNow()),h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);
-   bar.textContent='🌳 ศึกต้นไม้ผีกำลังแข่ง'+(me?' · บ้านคุณร่วมศึก':'')+' · ⏳ '+h+':'+String(m).padStart(2,'0')+' ›';}
-  else bar.textContent='🌳 ศึกต้นไม้ผี · พักเบรก'+(l?.winner&&l.houses?.[l.winner]?' · 🏆 '+l.houses[l.winner].n:'')+' ›';};
+   bar.textContent='🌳 ศึกโคมลอยกำลังแข่ง'+(me?' · บ้านคุณร่วมศึก':'')+' · ⏳ '+h+':'+String(m).padStart(2,'0')+' ›';}
+  else bar.textContent='🌳 ศึกโคมลอย · พักเบรก'+(l?.winner&&l.houses?.[l.winner]?' · 🏆 '+l.houses[l.winner].n:'')+' ›';};
  H.watchWorld('treeWar',d=>{st=d;draw();});setInterval(draw,30000);})();
+
+/* ซีซัน 4: ส่งสถานะเนเบอร์ฮูดให้ฉาก 3D (อ่านอย่างเดียว · กติกาเดิมทั้งหมด) */
+window.__nbS=()=>{const nb=V.nb;let q=null;try{if(nb&&nb.status==='active'){const p=prog();q=[p.done,p.rows.length];}}catch(e){}
+ return{nb:1,status:nb?(nb.status||'active'):'none',name:nb?.name||'',members:(nb?.members||[]).map(u=>({u,n:nameOf(u),me:u===ME,lead:u===nb.leader})),max:NB_MAX,q};};
+window.__nbOpen=k=>{try{if(k==='invite'){if(typeof openInvitePicker==='function')openInvitePicker();return;}openSheet(k);}catch(e){console.log(e);}};
+window.__nbGift=u=>{try{openGift(u);}catch(e){}};

@@ -1,7 +1,7 @@
-import {CATALOG} from './catalog.js';
-import {rainLogic,rainScore,RAIN_MS,RAIN_WARN,RAIN_LEVELS,RAIN_SETTLE,RAIN_LATE,RAIN_TEAM_MIN,RAIN_TEAM_POS,RAIN_TEAM_BACK,RAIN_ANCHOR_BACK,RAIN_PLUS_CAP} from './rain-engine.js';
+import {CATALOG} from './catalog.js?h=fd044428';
+import {rainLogic,rainScore,RAIN_MS,RAIN_WARN,RAIN_LEVELS,RAIN_SETTLE,RAIN_LATE,RAIN_TEAM_MIN,RAIN_TEAM_POS,RAIN_TEAM_BACK,RAIN_ANCHOR_BACK,RAIN_PLUS_CAP} from './rain-engine.js?h=2e082531';
 /* กติกาเรือเป็นฟังก์ชันล้วน: ใช้กับ transaction บนคลาวด์ ไม่สร้างผู้เล่นจำลอง */
-/* fix17: กล่องการ์ดทุก 30 (30…330) + เส้น 350 เดิม · พักส่ง 7 นาที · โล่กันเตะ 30 นาที · เตะย้อนศร · ว่ายกลับเรือ · นางเงือก 2 ตนแข่งส่งถาด · ฝนกุศล */
+/* fix17: กล่องการ์ดทุก 30 (30…330) + เส้น 350 เดิม · พักส่ง 7 นาที · โล่กันเตะ 30 นาที · เตะย้อนศร · ว่ายกลับเรือ · นางในวรรณคดี 2 ตนแข่งส่งถาด · ฝนกุศล */
 export const BOAT_LINES=[30,60,90,120,150,180,210,240,270,300,330,350];
 export const BOAT_GOAL=400;
 export const BOAT_COOLDOWN=7*60000;
@@ -30,7 +30,7 @@ export const BOAT_CARD_TABLES={
  250:[['supply',25],['merit',25],['cut',20],['revive',10],['reviveall',5],['stop',5],['ink',5],['crab',5]],
  300:[['merit',35],['supply',30],['cut',20],['ink',5],['crab',5],['stop',5]]};
 export const BOAT_GIFT=150000,BOAT_CUT=20;
-export const BOAT_STAY_TIME=2*60000,BOAT_STAY_GAIN=50000,BOAT_STAY_COST={merit:10000,hat:1000,mb:1000,wool:200,pestle:2000,coin:100};
+export const BOAT_STAY_TIME=10*60000/* fix18: 2 → 10 นาที (ย่อหน้าต่างไปหาของได้) */,BOAT_AWAY_GRACE=60000/* fix18: เกินเวลา+1 นาทีแล้วยังไม่ตอบ (ไม่อยู่ในเกม) = เซิร์ฟเวอร์ตัดสินให้ออก */,BOAT_STAY_GAIN=50000,BOAT_STAY_COST={merit:10000,hat:1000,mb:1000,wool:200,pestle:2000,coin:100};
 export const BOAT_COMBO=20000,BOAT_SEND=[1,3];
 export const BOAT_STAY_MULT=[1,4];         // ค่าอยู่ต่อ ครั้งที่ 1/2 · fix17: ครั้งที่ 3 = ว่ายกลับเรือ
 export const BOAT_BURN_TIME=10*60000,BOAT_BURN_NEED={merit:500000,hat:5000,mb:5000,wool:3000,pestle:10000,coin:1000},BOAT_BURN_BACK=30;
@@ -44,16 +44,17 @@ export const BOAT_SWIM_KINDS=['mg','cook','bird','box'];
 export const BOAT_BIRD_ITEMS=['ostrich-egg','ostrich-feather','dodo-egg','dodo-feather','dodo-pebble'];
 /* เมนูภารกิจคราฟ: เมนูในบ้าน/สวนหลังบ้านที่โอกาสสำเร็จ 40% ขึ้นไป (ไม่ใช่เมนูรอบดึก) */
 export const BOAT_COOK_POOL=['food.ออมเล็ตโรซี่','gfood.r1','gfood.r2','gfood.r3','gfood.r4','gfood.r5','gfood.r6','gfood.b1','gfood.b2','gfood.b3','gfood.b4','gfood.b5','gfood.b6','gfood.b7','gfood.b8'];
-/* fix17 นางเงือก 2 ตน */
+/* fix17 นางในวรรณคดี 2 ตน */
+export const BOAT_MM_SPELL=10; // 🌊 คลื่นมนต์ทวนกระแส: เรือที่นำ ถอย 10 ครั้งเดียวต่อการแข่ง
 export const BOAT_MM_SHARE=.4,BOAT_MM_NEED=2,BOAT_MM_GOAL=100,BOAT_MM_STEP=20,BOAT_MM_BONUS=300000,BOAT_MM_LOSE=500000,BOAT_MM_LATE=300000,BOAT_MM_CD=5*60000,BOAT_MM_SEND=[1,2,3];
 export const BOAT_MM_POKE=5000,BOAT_MM_POKE_BOXES=10,BOAT_MM_POKE_CD=15*60000;
 export const BOAT_MM_MENUS=['food-01','food-02','food-03','food-04','food-05','food-06','food-07','food-08','food-09','food-10','food-11','food-12','gfood-r1','gfood-r2','gfood-r3','gfood-r4','gfood-r5','gfood-r6','gfood-r7','gfood-r8','gfood-b1','gfood-b2','gfood-b3','gfood-b4','gfood-b5','gfood-b6','gfood-b7','gfood-b8'];
-/* กล่องสุ่มจากการจิ้มนางเงือก (อยู่ในกระเป๋าหลัก · กล่องอัลปาก้าอยู่หน้าฟาร์มจึงไม่รวม) */
+/* กล่องสุ่มจากการจิ้มนางในวรรณคดี (อยู่ในกระเป๋าหลัก · กล่องอัลปาก้าอยู่หน้าฟาร์มจึงไม่รวม) */
 export const BOAT_POKE_BOXES=[['item','boxdog'],['box','cat'],['box','hamster'],['birdbox','ostrich'],['birdbox','dodo'],['box','plant'],['box','fruit']];
 export const BOAT_FOOD_MERIT=[100,200];
 export const BOAT_STAR_MERIT={1:200,2:300,3:500,4:700,5:1000,6:1000};
 export const BOAT_ALPACA={'wool-yarn':[1,'ไหมพรม'],'wool-mittens':[2,'ถุงมือขนฟู'],'wool-beanie':[2,'หมวกบีนนี่'],'wool-bag':[2,'กระเป๋าพาสเทล'],'wool-scarf':[3,'ผ้าพันคอสายรุ้ง'],'wool-blanket':[3,'ผ้าห่มนุ่มฟู'],'wool-plush':[4,'ตุ๊กตาอัลปาก้า'],'wool-goldbag':[4,'กระเป๋าหรูขนทอง'],'wool-cloak':[5,'เสื้อคลุมราชวงศ์ทอง'],'wool-rug':[6,'พรมขนทองยัยหนู'],
- 'meat-skewer':[1,'ลูกชิ้นปิ้ง'],'meat-sausage':[1,'ไส้กรอกสมุนไพร'],'meat-steak':[2,'สเต็ก'],'meat-burger':[2,'เบอร์เกอร์ชีส'],'meat-smoked':[2,'รมควัน'],'meat-massaman':[3,'มัสมั่น'],'meat-ghostsoup':[3,'ซุปหม้อวิญญาณ'],'meat-winestew':[4,'ตุ๋นไวน์แดง'],'meat-royal':[5,'ชุดเนื้อราชวงศ์'],'meat-buffet':[6,'บุฟเฟต์ทองคำ']};
+ 'meat-skewer':[1,'ลูกชิ้นปิ้ง'],'meat-sausage':[1,'ไส้กรอกสมุนไพร'],'meat-steak':[2,'สเต็ก'],'meat-burger':[2,'เบอร์เกอร์ชีส'],'meat-smoked':[2,'รมควัน'],'meat-massaman':[3,'มัสมั่น'],'meat-ghostsoup':[3,'ต้มข่าหม้อไฟ'],'meat-winestew':[4,'ตุ๋นไวน์แดง'],'meat-royal':[5,'ชุดเนื้อราชวงศ์'],'meat-buffet':[6,'บุฟเฟต์ทองคำ']};
 export const stayCost=n=>{const m=BOAT_STAY_MULT[Math.max(1,n)-1]??BOAT_STAY_MULT[BOAT_STAY_MULT.length-1];return Object.fromEntries(Object.entries(BOAT_STAY_COST).map(([k,v])=>[k,v*m]));};
 const isKick=c=>c==='kick'||c==='kickall'||c==='kick2';
 export const needsTarget=card=>TARGET_CARDS.has(card);
@@ -69,13 +70,13 @@ const kickable=(r,b,now)=>open(r,b).filter(u=>!shielded(r,u,now));
 const log=(r,m)=>{r.log.unshift(m);r.log=r.log.slice(0,40);};
 const nameOf=(r,u)=>r.names?.[u]||'ลูกเรือ';
 const pickOne=(list,rng)=>list[Math.min(list.length-1,Math.floor(rng()*list.length))];
-const floorAdd=(m0,d)=>{m0=m0||0;return d<0?Math.max(Math.min(m0,0),m0+d):m0+d;};
+const floorAdd=(m0,d)=>{m0=m0||0;return d<0?m0+d:m0+d;};
 export function seededRng(seed) {
   let h=2166136261>>>0;for(const ch of String(seed)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;}
   return ()=>{h=(h+0x6D2B79F5)>>>0;let t=h;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
 }
 const boxSeed=(r,box)=>box.id+'|'+(box.pickedAt||0)+'|'+(r.round||0);
-/* คนที่ชุบชีวิตได้: หลุดแล้ว ไม่ใช่นางเงือก (จองจำ) และไม่ได้กำลังว่ายกลับ */
+/* คนที่ชุบชีวิตได้: หลุดแล้ว ไม่ใช่นางในวรรณคดี (จองจำ) และไม่ได้กำลังว่ายกลับ */
 const revivable=r=>Object.keys(r.kicked||{}).filter(u=>r.kicked[u]&&r.team[u]&&!r.mmBan?.[u]&&!r.swim?.[u]&&u!==r.mm?.uid);
 export function rollCard(rng,line,canRevive){const table=(BOAT_CARD_TABLES[line]||BOAT_CARD_TABLES[300]).filter(([k])=>(k!=='revive'&&k!=='reviveall')||canRevive),total=table.reduce((a,[,w])=>a+w,0);let x=rng()*total;for(const [k,w]of table){x-=w;if(x<0)return k;}return table[table.length-1][0];}
 const boatOk=b=>Number.isInteger(b)&&b>=1&&b<=5;
@@ -95,7 +96,7 @@ export function boatProgress(r,b,n,rng) {
     // เส้นที่เคยเปิดกล่องให้ลำนี้แล้ว ถอยแล้วกลับมาใหม่ไม่ได้กล่องซ้ำ
     if(arrived.length<boxSlots(line)&&!arrived.includes(b)) {
       const first=!arrived.length,card=BOAT_PLAN[line][arrived.length];arrived.push(b);r.boxes.push({id:line+'-'+b,boat:b,line,opened:false,deck:Array(5).fill(card)});
-      if(line===350){r.dismiss ||= {};r.dismiss[b]={at:r._now||0,until:(r._now||0)+BOAT_FIRE350_TIME,left:BOAT_FIRE350_N};log(r,'🧜‍♀️ เรือ '+b+' ถึงเส้น 350');mmLate(r,r._now||0);}
+      if(line===350){r.dismiss ||= {};r.dismiss[b]={at:r._now||0,until:(r._now||0)+BOAT_FIRE350_TIME,left:BOAT_FIRE350_N};log(r,'👸 เรือ '+b+' ถึงเส้น 350');mmLate(r,r._now||0);}
       if(line===300&&first){r.boxes.push({id:'300-'+b+'-gift',boat:b,line,opened:false,gift:true,deck:Array(5).fill('gift')});log(r,'🎁 เรือ '+b+' ถึงเส้น 300 ก่อน ได้กล่องของขวัญ!');}
     }
   }
@@ -299,9 +300,15 @@ function resolveOffer(r,uid,player,accept,now,ctx,rng){
 }
 export const boxDeadline=(box,now)=>box.deadline??((box.pickedAt||now)+(needsTarget(box.card)?BOAT_TARGET_TIME:BOAT_CARD_TIME));
 /* เส้นตายฝั่งเซิร์ฟเวอร์: การ์ดไม่ต้องเลือกเป้าใช้เองหลัง 30 วิ / การ์ดเลือกเป้าสุ่มเป้าหลัง 10 นาที */
+/* fix18: ข้อเสนอที่ไม่มีใครตอบ (คนโดนเตะไม่อยู่ในเกม) — เซิร์ฟเวอร์ตัดสินให้ "ออกจากเรือ" ไม่หักอะไร ไม่ได้สิทธิ์ว่ายกลับ
+   คนที่ออนไลน์อยู่ เครื่องตัวเองจะตอบ "หมดเวลา" ให้ก่อน (ใช้กติกาเดิม: เตะครั้งแรกของครบ = อยู่ต่ออัตโนมัติ) */
+export function sweepAway(r,now){let n=0;
+  for(const [u,o] of Object.entries(r.offers||{}))if(o&&Number.isFinite(o.until)&&now>=o.until+BOAT_AWAY_GRACE){r.away ||= {};r.noSwim ||= {};delete r.offers[u];r.kicked[u]=true;r.noSwim[u]=true;r.away[u]={at:now,boat:r.team[u]||o.by||0,round:r.round||0};log(r,'💦 '+nameOf(r,u)+' ไม่ได้อยู่ในเกม ออกจากเรือ '+(r.team[u]||''));n++;}
+  return n;}
 export function settleBoat(r,ctx,rng,player,skipBox) {
   const ledger=[];
   if(r.status!=='running')return ledger;
+  sweepAway(r,ctx.now);
   const due=r.boxes.filter(box=>!box.opened&&box.picked!==undefined).map(box=>({box,deadline:boxDeadline(box,ctx.now)}))
     .filter(x=>x.deadline<=ctx.now&&!(x.box.id===skipBox&&ctx.now<x.deadline+BOAT_GRACE)).sort((a,b)=>a.deadline-b.deadline||(a.box.id<b.box.id?-1:1));
   for(const {box}of due) {
@@ -324,11 +331,11 @@ function burnRefund(r,b,why){const st=r.burns?.[b];if(!st)return;
     if((c.merit||0)>0||(c.coin||0)>0||Object.keys(items).length)outbox(r,{mail:{uid:u,key:'boat-burn-'+(r.round||0)+'-'+b+'-'+st.at,title:'🔥 คืนของที่ลงขันกอบกู้เรือ '+b,msg:why,icon:'🔥',kusal:c.merit||0,coins:c.coin||0,items}});}
   delete r.burns[b];}
 const dLeft=d=>Number.isInteger(d?.left)?d.left:1;
-/* ---------- fix17 นางเงือก 2 ตน ----------
+/* ---------- fix17 นางในวรรณคดี 2 ตน ----------
    r.mm={since,menus:[k1,k2],a:[{uid,t,cd,earn,at},{…}],ms:{20:i,…},win:null|i,lose:null|i,late:false,done:false}
    · แต่งตั้งพร้อมกัน 2 ตน (คนหลุดจริงอย่างน้อย 2 คน) ครั้งเดียวต่อการแข่ง ไม่มีตัวแทน · ถูกจองจำ (ชุบ/ดึง/ว่ายกลับไม่ได้)
    · ส่งถาดเมนูเดียวกัน 1–3 ถาด พัก 5 นาที · ทุก 20 ถาด ถึงก่อน +300,000 อีกตน −300,000
-   · ครบ 100 ก่อน = นางเงือกตัวจริง (มีอำนาจจ้างออกเส้น 350) · อีกตนสลาย −500,000
+   · ครบ 100 ก่อน = นางในวรรณคดีตัวจริง (มีอำนาจจ้างออกเส้น 350) · อีกตนสลาย −500,000
    · เรือถึง 350 ก่อนมีใครครบ 100 → ทั้งคู่ −300,000 · ถาดมากกว่าชนะ (เท่ากัน = ถึงจำนวนนั้นก่อน) */
 const mmOn=r=>!!(r.mm&&Array.isArray(r.mm.a)&&!r.mm.done);
 export const mmIndex=(r,uid)=>mmOn(r)?r.mm.a.findIndex(x=>x.uid===uid):-1;
@@ -342,7 +349,7 @@ function emitViews(r){if(!r.mm||!Array.isArray(r.mm.a))return;if(!r.mmSig||typeo
   r.mm.a.forEach((x,i)=>{const v=mmView(r,i),sig=JSON.stringify(v);if(r.mmSig[x.uid]===sig)return;r.mmSig[x.uid]=sig;outbox(r,{view:{uid:x.uid,data:v}});});}
 const mmNotice=(r,uid,k,extra)=>outbox(r,{view:{uid,data:{round:r.round||0,notice:{k,at:r._now||0,...(extra||{})}}}});
 function mmPay(r,i,why){const x=r.mm.a[i];if(x.paid)return;x.paid=true;
-  if(x.earn>0)outbox(r,{mail:{uid:x.uid,key:'boat-mm-pay-'+(r.round||0)+'-'+i,title:'🧜‍♀️ ค่าประกอบวิชาชีพนางเงือก',msg:why,icon:'🧜‍♀️',kusal:x.earn,items:{}}});}
+  if(x.earn>0)outbox(r,{mail:{uid:x.uid,key:'boat-mm-pay-'+(r.round||0)+'-'+i,title:'👸 ค่าประกอบวิชาชีพนางในวรรณคดี',msg:why,icon:'👸',kusal:x.earn,items:{}}});}
 function ensureMermaid(r,now){
   if(r.status!=='running'||r.mm)return;
   if(Object.keys(r.dismiss||{}).length||r.p.some(p=>p>=350))return;// ถึง 350 แล้ว ไม่แต่งตั้ง (ระบบจ้างออกเอง)
@@ -353,24 +360,28 @@ function ensureMermaid(r,now){
   const menus=[...BOAT_MM_MENUS],picked=[];while(picked.length<2)picked.push(menus.splice(Math.min(menus.length-1,Math.floor(rng()*menus.length)),1)[0]);
   r.mm={since:now,menus:picked,a:two.map(uid=>({uid,t:0,cd:0,earn:0,at:0})),ms:{},win:null,lose:null,late:false,done:false};
   r.mmBan ||= {};for(const u of two)r.mmBan[u]=true;r.mmSig={};
-  log(r,'🧜‍♀️🧜‍♀️ นางเงือก 2 ตนปรากฏตัว! '+two.map(u=>nameOf(r,u)).join(' กับ ')+' แข่งส่งถาดให้ครบ 100');
+  log(r,'👸👸 นางในวรรณคดี 2 ตนปรากฏตัว! '+two.map(u=>nameOf(r,u)).join(' กับ ')+' แข่งส่งถาดให้ครบ 100');
   for(const u of two)mmNotice(r,u,'appointed',{menus:picked});
 }
 function mmResolve(r,win,why){const mm=r.mm,lose=1-win;mm.win=win;mm.lose=lose;mmPay(r,lose,why);
-  outbox(r,{mail:{uid:mm.a[win].uid,key:'boat-mm-mk-'+(r.round||0),title:'👑 รางวัลนางเงือกตัวจริง',msg:'ได้กล่องสุ่มมหากุศล 10 กล่อง',icon:'📦',kusal:0,items:{'box-mahakusal':10}}});/* fix17 📦 */
-  mmNotice(r,mm.a[win].uid,'real');mmNotice(r,mm.a[lose].uid,'lost',{late:!!mm.late});}
+  outbox(r,{mail:{uid:mm.a[win].uid,key:'boat-mm-mk-'+(r.round||0),title:'👑 รางวัลนางในวรรณคดีตัวจริง',msg:'ได้กล่องสุ่มมหากุศล 10 กล่อง',icon:'📦',kusal:0,items:{'box-mahakusal':10}}});/* fix17 📦 */
+  mmNotice(r,mm.a[win].uid,'real');mmNotice(r,mm.a[lose].uid,'lost',{late:!!mm.late});mmSpell(r,win);}
+// 🌊 the real heroine casts once, automatically: the leading boat (every boat tied for the lead) goes back 10
+function mmSpell(r,win){const mm=r.mm;if(mm.spell||r.status!=='running')return;const max=Math.max(...r.p);if(!(max>0))return;
+  const boats=[];r.p.forEach((p,i)=>{if(p===max)boats.push(i+1);});for(const b of boats)boatProgress(r,b,-BOAT_MM_SPELL,()=>.5);
+  mm.spell={k:win,boats,at:r._now||0,n:BOAT_MM_SPELL};log(r,'🌊 '+['นางมโนราห์','นางบุษบา'][win]+'ร่ายคลื่นมนต์ทวนกระแส! เรือ '+boats.join(', ')+' ถอย '+BOAT_MM_SPELL);}
 function mmLate(r,now){const mm=r.mm;if(!mmOn(r)||mm.win!==null)return;mm.late=true;
-  for(const x of mm.a)ledgerOut(r,x.uid,-BOAT_MM_LATE,'🧜‍♀️ ส่งถาดไม่ครบ 100','เรือถึงเส้น 350 ก่อนนางเงือกส่งถาดครบ 100','boat-mm-late-'+(r.round||0)+'-'+x.uid);
+  for(const x of mm.a)ledgerOut(r,x.uid,-BOAT_MM_LATE,'👸 ส่งถาดไม่ครบ 100','เรือถึงเส้น 350 ก่อนนางในวรรณคดีส่งถาดครบ 100','boat-mm-late-'+(r.round||0)+'-'+x.uid);
   const [A,B]=mm.a,win=A.t!==B.t?(A.t>B.t?0:1):((A.at||Infinity)<=(B.at||Infinity)?0:1);
-  log(r,'⏰ เรือถึงเส้น 350 ก่อนนางเงือกส่งครบ 100 · ทั้งคู่ −300,000 · 👑 '+nameOf(r,mm.a[win].uid)+' ถาดมากกว่า เป็นนางเงือกตัวจริง');
+  log(r,'⏰ เรือถึงเส้น 350 ก่อนนางในวรรณคดีส่งครบ 100 · ทั้งคู่ −300,000 · 👑 '+nameOf(r,mm.a[win].uid)+' ถาดมากกว่า เป็นนางในวรรณคดีตัวจริง');
   mmResolve(r,win,'การแข่งส่งถาดจบที่เส้น 350 ขอบคุณที่ทำหน้าที่');}
 function fireOut(r,b,u,ctx,player,ledger,auto){
   r.kicked[u]=true;r.fired ||= {};r.fired[u]=true;r.noSwim ||= {};r.noSwim[u]=true;delete r.offers?.[u];
   const d=r.dismiss[b];if(d){d.left=dLeft(d)-1;if(d.left<=0||members(r,b).length<2)delete r.dismiss[b];}
   const id='boat-mm-'+(r.round||0)+'-'+b+'-'+u;
-  if(u===ctx.uid){player.merit=(player.merit||0)+BOAT_FIRE350;ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,self:true,title:'🧜‍♀️ นางเงือกจ้างออก'});}
-  else ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,title:'🧜‍♀️ นางเงือกจ้างออก',msg:'ได้ค่าจ้างออกจากเรือ '+b+' 1,000,000 กุศล'});
-  log(r,'🧜‍♀️ '+(auto?'ระบบ':'นางเงือก')+'จ้าง '+nameOf(r,u)+' ออกจากเรือ '+b+' ได้ 1,000,000 กุศล');}
+  if(u===ctx.uid){player.merit=(player.merit||0)+BOAT_FIRE350;ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,self:true,title:'👸 นางในวรรณคดีจ้างออก'});}
+  else ledger.push({uid:u,id,boat:b,merit:BOAT_FIRE350,title:'👸 นางในวรรณคดีจ้างออก',msg:'ได้ค่าจ้างออกจากเรือ '+b+' 1,000,000 กุศล'});
+  log(r,'👸 '+(auto?'ระบบ':'นางในวรรณคดี')+'จ้าง '+nameOf(r,u)+' ออกจากเรือ '+b+' ได้ 1,000,000 กุศล');}
 /* ---------- ⛈️ ฝนกุศล: ตัดสินทีม (ต้องมีลูกทีมอย่างน้อย 3 คนที่กดฟองบวก ≥3 ลูก ไม่งั้นเรือ −10) ---------- */
 function rainSettle(r,now){const rain=r.rain;if(!rain||rain.done||now<rain.end+RAIN_SETTLE)return;rain.done=true;
   const res=r.rainRes||{},back=[];
@@ -378,12 +389,12 @@ function rainSettle(r,now){const rain=r.rain;if(!rain||rain.done||now<rain.end+R
     const n=team.filter(u=>(res[u]?.p||0)>=RAIN_TEAM_POS).length;if(n<RAIN_TEAM_MIN)back.push(b);}
   rain.back=back;for(const b of back)boatProgress(r,b,-RAIN_TEAM_BACK,()=>0);
   log(r,back.length?'⛈️ ฝนกุศลจบ · เรือ '+back.join(', ')+' ช่วยกันไม่ถึง 3 คน ถอย −10':'⛈️ ฝนกุศลจบ · ทุกเรือช่วยกันครบ');}
-/* งานตามเวลา (ผลเหมือนกันไม่ว่าใครเรียก): เรือไหม้หมดเวลา · ว่ายกลับไม่ทัน · แต่งตั้งนางเงือก · จ้างออกเส้น 350 · ฝน */
+/* งานตามเวลา (ผลเหมือนกันไม่ว่าใครเรียก): เรือไหม้หมดเวลา · ว่ายกลับไม่ทัน · แต่งตั้งนางในวรรณคดี · จ้างออกเส้น 350 · ฝน */
 function settleExtras(r,ctx,player,ledger){
   if(r.status!=='running')return;const now=ctx.now;
   for(const b of Object.keys(r.burns||{}).map(Number).sort()){const st=r.burns[b];if(now<st.until)continue;
     const crew=members(r,b);for(const u of crew){r.kicked[u]=true;r.burned ||= {};r.burned[u]=true;r.noSwim ||= {};r.noSwim[u]=true;delete r.offers?.[u];}
-    burnRefund(r,b,'เรือจม ระบบคืนของที่ลงขันให้ครบ');log(r,'💀 เรือ '+b+' กอบกู้ไม่ทัน จมแล้ว ลูกเรือหลุดทั้งลำ');r.lastBurn={boat:b,ok:false,at:now};}
+    burnRefund(r,b,'เรือจม ระบบคืนของที่ลงขันให้ครบ');log(r,'🌊 เรือ '+b+' กอบกู้ไม่ทัน จมแล้ว ลูกเรือหลุดทั้งลำ');r.lastBurn={boat:b,ok:false,at:now};}
   for(const u of Object.keys(r.swim||{}).sort()){const s=r.swim[u];if(now<=s.until+BOAT_SWIM_GRACE)continue;
     if(u===ctx.uid&&ctx.x17?.sq&&ctx.x17.sq.round===(r.round||0)&&Number(ctx.x17.sq.doneAt)>0&&ctx.x17.sq.doneAt<=s.until)continue;/* ทำครบทันเวลาแล้ว รอส่ง swimDone */
     delete r.swim[u];r.swam ||= {};r.swam[u]='fail';r.noSwim ||= {};r.noSwim[u]=true;
@@ -399,12 +410,13 @@ function settleExtras(r,ctx,player,ledger){
   rainSettle(r,now);
 }
 function finishExtras(r){
+  for(const u of Object.keys(r.offers||{})){delete r.offers[u];r.kicked[u]=true;log(r,'💦 การแข่งจบระหว่าง '+nameOf(r,u)+' รอตัดสินใจ (ออกจากเรือ)');}/* fix18: ไม่มีใครค้าง "กำลังตัดสินใจ" หลังแข่งจบ */
   for(const b of Object.keys(r.burns||{}))burnRefund(r,+b,'การแข่งจบระหว่างเรือไหม้ ระบบคืนของที่ลงขันให้ครบ');
   r.dismiss={};
   for(const u of Object.keys(r.swim||{})){delete r.swim[u];log(r,'🏊 การแข่งจบระหว่าง '+nameOf(r,u)+' ว่ายกลับ (ไม่หักอะไร)');}
   if(r.rain&&!r.rain.done)r.rain.done=true;
   if(mmOn(r)){const mm=r.mm;mm.done=true;r.mmSig={};
-    mm.a.forEach((x,i)=>{if(mm.lose===i)return;mmPay(r,i,'ขอบคุณที่ทำหน้าที่นางเงือกจนจบการแข่ง');outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false,notice:{k:'paid',earn:x.earn,at:r._now||0}}}});});
+    mm.a.forEach((x,i)=>{if(mm.lose===i)return;mmPay(r,i,'ขอบคุณที่ทำหน้าที่นางในวรรณคดีจนจบการแข่ง');outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false,notice:{k:'paid',earn:x.earn,at:r._now||0}}}});});
     for(const x of mm.a)if(mm.lose===mm.a.indexOf(x))outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false}}});}
 }
 function shiftTimers(r,now) {
@@ -425,7 +437,7 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
   const r={...freshBoat(),...structuredClone(source)}, player=structuredClone(account), {uid,admin,now}=ctx;
   if(!uid||!Number.isFinite(now))fail('ไม่มีบัญชีหรือเวลาเซิร์ฟเวอร์');
   for(const k of ['shield','swim','swam','noSwim','mmBan','rainRes','offers','stays'])r[k] ||= {};
-  if(r.mm&&!Array.isArray(r.mm.a))r.mm=null;// นางเงือกรุ่นเก่า (fix16) ไม่ใช้ต่อ
+  if(r.mm&&!Array.isArray(r.mm.a))r.mm=null;// นางในวรรณคดีรุ่นเก่า (fix16) ไม่ใช้ต่อ
   const type=input.type;
   if(!r.names)r.names={};if(ctx.name&&r.team[uid])r.names[uid]=String(ctx.name).slice(0,40);
   r._now=now;r._coins=Number.isSafeInteger(ctx.coins)?ctx.coins:0;const coins0=r._coins;
@@ -503,37 +515,37 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
     if(!admin)fail('เฉพาะแอดมิน');if(r.rain&&!r.rain.done)fail('ฝนกุศลกำลังตกอยู่');
     const lvl=input.lvl;if(!RAIN_LEVELS.includes(lvl))fail('เลือกระดับฝน');
     const start=now+RAIN_WARN,id='rain-'+now,seed=(Math.floor(rng()*2147483647)^now)|0;
-    r.rain={id,lvl,seed,at:now,start,end:start+RAIN_MS,done:false};r.rainRes={};
-    log(r,'⛈️ ฝนกุศลกำลังจะตก!');outbox(r,{rain:{id,lvl,seed,start,end:start+RAIN_MS}});return done();
+    const theme=['lantern','krathong','firework','rain'].includes(input.theme)?input.theme:'rain';r.rain={id,lvl,seed,theme,at:now,start,end:start+RAIN_MS,done:false};r.rainRes={};
+    log(r,'⛈️ ฝนกุศลกำลังจะตก!');outbox(r,{rain:{id,lvl,seed,theme,start,end:start+RAIN_MS}});return done();
   }
   if(type==='mmPoke'){
-    const i=input.i===1?1:0;if(!mmLive(r,i))fail('ตอนนี้ไม่มีนางเงือกตนนี้');if(mmIndex(r,uid)>=0)fail('นางเงือกจิ้มกันเองไม่ได้');if(admin)fail('แอดมินไม่ต้องจิ้ม');
-    const x17=ctx.x17 ||= {};const last=Number(x17.pokeAt)||0;if(now<last+BOAT_MM_POKE_CD)fail('⏳ จิ้มนางเงือกได้อีกใน '+Math.ceil((last+BOAT_MM_POKE_CD-now)/60000)+' นาที');
+    const i=input.i===1?1:0;if(!mmLive(r,i))fail('ตอนนี้ไม่มีนางในวรรณคดีตนนี้');if(mmIndex(r,uid)>=0)fail('นางในวรรณคดีจิ้มกันเองไม่ได้');if(admin)fail('แอดมินไม่ต้องจิ้ม');
+    const x17=ctx.x17 ||= {};const last=Number(x17.pokeAt)||0;if(now<last+BOAT_MM_POKE_CD)fail('⏳ จิ้มนางในวรรณคดีได้อีกใน '+Math.ceil((last+BOAT_MM_POKE_CD-now)/60000)+' นาที');
     x17.pokeAt=now;
     if(rng()<.5){const before=player.merit||0;player.merit=floorAdd(before,-BOAT_MM_POKE);return done({poke:{lose:before-(player.merit||0),i}});}
     player.bag ||= {};const got={};for(let k=0;k<BOAT_MM_POKE_BOXES;k++){const [g,id]=pickOne(BOAT_POKE_BOXES,rng);player.bag[g] ||= {};player.bag[g][id]=(Number.isSafeInteger(player.bag[g][id])?player.bag[g][id]:0)+1;got[g+'.'+id]=(got[g+'.'+id]||0)+1;}
     return done({poke:{boxes:got,i}});
   }
   if(type==='mmSend'){
-    const i=mmIndex(r,uid);if(!mmLive(r,i))fail('คุณไม่ได้เป็นนางเงือก');const mm=r.mm,a=mm.a[i];
+    const i=mmIndex(r,uid);if(!mmLive(r,i))fail('คุณไม่ได้เป็นนางในวรรณคดี');const mm=r.mm,a=mm.a[i];
     if(mm.win!==null)fail('การแข่งส่งถาดจบแล้ว');
     const qty=input.qty;if(!BOAT_MM_SEND.includes(qty))fail('ส่งได้ครั้งละ 1–3 ถาด');
-    if(!mm.menus.includes(input.menu))fail('เมนูนี้ไม่ใช่เมนูนางเงือก');
+    if(!mm.menus.includes(input.menu))fail('เมนูนี้ไม่ใช่เมนูนางในวรรณคดี');
     if(a.cd>now)fail('⏳ ส่งถาดได้อีกใน '+Math.ceil((a.cd-now)/60000)+' นาที');
     const c=catOf(input.menu);if(!c)fail('เมนูไม่ถูกต้อง');const [g,id]=[c.p.split('.')[0],c.p.slice(c.p.indexOf('.')+1)];
     const have=Number(player.bag?.[g]?.[id])||0;if(have<qty)fail('อาหารไม่พอ');player.bag[g][id]=have-qty;
     const before=a.t;a.t=Math.min(BOAT_MM_GOAL,a.t+qty);a.cd=now+BOAT_MM_CD;a.at=now;const other=mm.a[1-i],steps=[];
     for(let s=BOAT_MM_STEP;s<BOAT_MM_GOAL;s+=BOAT_MM_STEP)if(before<s&&a.t>=s&&mm.ms[s]===undefined){mm.ms[s]=i;steps.push(s);
       player.merit=(player.merit||0)+BOAT_MM_BONUS;ledger.push({uid,id:'boat-mm-step-'+(r.round||0)+'-'+s,merit:BOAT_MM_BONUS,self:true,title:'🎯 ถาดครบ '+s+' ก่อน'});
-      if(mm.lose!==1-i)ledgerOut(r,other.uid,-BOAT_MM_BONUS,'🎯 นางเงือกอีกตนถึง '+s+' ถาดก่อน','นางเงือกอีกตนส่งถาดครบ '+s+' ก่อน','boat-mm-step-'+(r.round||0)+'-'+s+'-x');
-      log(r,'🎯 นางเงือก '+nameOf(r,uid)+' ถึง '+s+' ถาดก่อน! +300,000 · '+nameOf(r,other.uid)+' −300,000');}
+      if(mm.lose!==1-i)ledgerOut(r,other.uid,-BOAT_MM_BONUS,'🎯 นางในวรรณคดีอีกตนถึง '+s+' ถาดก่อน','นางในวรรณคดีอีกตนส่งถาดครบ '+s+' ก่อน','boat-mm-step-'+(r.round||0)+'-'+s+'-x');
+      log(r,'🎯 นางในวรรณคดี '+nameOf(r,uid)+' ถึง '+s+' ถาดก่อน! +300,000 · '+nameOf(r,other.uid)+' −300,000');}
     let won=false;
-    if(a.t>=BOAT_MM_GOAL&&mm.win===null){won=true;ledgerOut(r,other.uid,-BOAT_MM_LOSE,'💔 นางเงือกสลาย','นางเงือกอีกตนส่งถาดครบ 100 ก่อน','boat-mm-lose-'+(r.round||0)+'-'+other.uid);
-      log(r,'👑 '+nameOf(r,uid)+' ส่งถาดครบ 100 เป็นนางเงือกตัวจริง! · 💔 '+nameOf(r,other.uid)+' สลาย −500,000');mmResolve(r,i,'นางเงือกอีกตนส่งถาดครบ 100 ก่อน ขอบคุณที่ทำหน้าที่');}
+    if(a.t>=BOAT_MM_GOAL&&mm.win===null){won=true;ledgerOut(r,other.uid,-BOAT_MM_LOSE,'💔 นางในวรรณคดีสลาย','นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน','boat-mm-lose-'+(r.round||0)+'-'+other.uid);
+      log(r,'👑 '+nameOf(r,uid)+' ส่งถาดครบ 100 เป็นนางในวรรณคดีตัวจริง! · 💔 '+nameOf(r,other.uid)+' สลาย −500,000');mmResolve(r,i,'นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน ขอบคุณที่ทำหน้าที่');}
     return done({mmSend:{t:a.t,steps,won,cd:a.cd}});
   }
   if(type==='mmFire'){
-    if(!mmReal(r)||mmReal(r)!==uid)fail('คุณไม่ได้เป็นนางเงือกตัวจริง');
+    if(!mmReal(r)||mmReal(r)!==uid)fail('คุณไม่ได้เป็นนางในวรรณคดีตัวจริง');
     const b=input.boat;if(!r.dismiss?.[b])fail('เรือลำนี้ไม่ต้องจ้างออกแล้ว');
     const crew=members(r,b),want=Array.isArray(input.uids)?input.uids:[input.uid],left=dLeft(r.dismiss[b]);
     if(!want.length||want.length>left||new Set(want).size!==want.length)fail('เลือกลูกเรือ '+Math.min(left,Math.max(1,crew.length-1))+' คน');
@@ -618,7 +630,7 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
   return done({card,reveal:box.deck});
 }
 /* ข้อมูลที่ทุกคนเห็น (world/boat): ไม่มีสำรับก่อนเปิด · ไม่มีชื่อคนเปิดการ์ด · ไม่มีภารกิจส่วนตัว */
-export function publicBoat(r) {const out=structuredClone(r);delete out.outbox;delete out._now;delete out.mmSig;delete out._coins;
+export function publicBoat(r) {const out=structuredClone(r);delete out.away;delete out.outbox;delete out._now;delete out.mmSig;delete out._coins;
   for(const b of out.boxes){if(!b.opened&&b.picked===undefined)delete b.deck;delete b.pickedBy;}
   for(const s of Object.values(out.swim||{})){delete s.key;}
   return out;}

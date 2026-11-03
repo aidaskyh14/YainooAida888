@@ -1,0 +1,371 @@
+<!DOCTYPE html><html lang="th"><head><script src="../pv/s4icon.js?h=edc9f144"></script><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>โซน 3D</title>
+<style>
+/* ฉาก 3D ของแต่ละโซน (ทุ่งอัลปาก้า · บ้านแฮมสเตอร์) แบบ Hay Day: กล้องมุมสูงล็อกมุม ซูม/เลื่อนได้ แตะของเพื่อใช้ระบบซีซัน 3 */
+:root{--ink:#4a2c18;--paper:#fffaf2}
+html,body{margin:0;height:100%;overflow:hidden;background:#9fd27a;font-family:Mali,Itim,-apple-system,sans-serif;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;touch-action:none}#c canvas{display:block;width:100%;height:100%}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:linear-gradient(#bfe6a0,#8cc66a);color:var(--ink);font-weight:800;font-size:17px;z-index:5}
+#load .bar{width:60%;max-width:260px;height:10px;border-radius:9px;background:#ffffff88;overflow:hidden}#load .bar i{display:block;height:100%;width:0;background:#f2a93b;transition:width .2s}
+#tip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);background:rgba(40,28,60,.72);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-weight:700;font-size:11.5px;padding:5px 13px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.18);white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none;z-index:4}
+.lab{position:fixed;transform:translate(-50%,-100%);background:linear-gradient(135deg,rgba(255,252,246,.92),rgba(255,236,246,.88));color:var(--ink);font-weight:800;font-size:10.5px;padding:2px 9px;border-radius:999px;border:1px solid #fff;box-shadow:0 3px 10px rgba(80,30,60,.22);white-space:nowrap;pointer-events:none;z-index:3}
+.fx{position:fixed;transform:translate(-50%,-50%);pointer-events:none;z-index:4;font-size:20px;transition:transform 1s cubic-bezier(.2,1,.4,1),opacity 1s}
+.fx.go{opacity:0}
+</style>
+<script src="../pv/s4photo.js?h=2983f296"></script><script src="../pv/s4deco.js?h=78616666"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+</head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=c59dc02d"></script>
+<div id="c"></div><div id="tip"></div>
+<div id="load"><div id="lt">กำลังเปิดโซน…</div><div class="bar"><i id="lb"></i></div></div><script>try{document.getElementById('lt').textContent=({hamster:'🐹 กำลังเข้าสวนหลังบ้าน…',dog:'🐶 กำลังเข้าสวนหมา…',cat:'🐱 กำลังเข้าสวนแมว…',alpaca:'🦙 กำลังเข้าทุ่งอัลปาก้า…'})[new URLSearchParams(location.search).get('z')]||'🌿 กำลังเข้าโซน…';}catch(e){}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
+import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
+const Z=new URLSearchParams(location.search).get('z')||'alpaca';
+const P=(()=>{try{return parent!==window?parent:null;}catch(e){return null;}})();
+const send=(a,id)=>{try{P&&P.postMessage({s4z:a,id:id||''},'*');}catch(e){}};
+const tipEl=document.getElementById('tip');let tipT=0;const tip=t=>{tipEl.textContent=t;tipEl.style.opacity=1;clearTimeout(tipT);tipT=setTimeout(()=>tipEl.style.opacity=0,2400);};
+const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?2:1.5));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
+document.getElementById('c').appendChild(R.domElement);
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x9fd8f5);sc.fog=new THREE.Fog(0x9fd8f5,70,140);
+const cam=new THREE.PerspectiveCamera(30,1,.5,300);
+sc.add(new THREE.HemisphereLight(0xfff6e0,0x6f9a4a,1.15));
+const sun=new THREE.DirectionalLight(0xfff1d6,2.1);sun.position.set(-18,30,14);sun.castShadow=true;sun.shadow.mapSize.set(MOBILE?1024:2048,MOBILE?1024:2048);Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,far:90});sun.shadow.bias=-.0005;sc.add(sun);
+// พื้นหญ้า + ทางดิน (สีธรรมชาติ)
+const tl=new THREE.TextureLoader();
+const grass=tl.load('../farm3d/grass.jpg');grass.wrapS=grass.wrapT=THREE.RepeatWrapping;grass.repeat.set(14,14);grass.colorSpace=THREE.SRGBColorSpace;
+const g0=new THREE.Mesh(new THREE.PlaneGeometry(140,140),new THREE.MeshLambertMaterial({map:grass,color:0xd8f0b0}));g0.rotation.x=-Math.PI/2;g0.receiveShadow=true;sc.add(g0);
+const soil=tl.load('../farm3d/road.jpg');soil.wrapS=soil.wrapT=THREE.RepeatWrapping;soil.colorSpace=THREE.SRGBColorSpace;
+function path(pts,w){const sh=new THREE.Group();const m=new THREE.MeshLambertMaterial({map:soil,color:0xf3e2bf});for(let i=0;i<pts.length-1;i++){const [x1,z1]=pts[i],[x2,z2]=pts[i+1];const L=Math.hypot(x2-x1,z2-z1);const t=soil.clone();t.needsUpdate=true;t.repeat.set(w/3,L/3);
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(w,L+w*.6),new THREE.MeshLambertMaterial({map:t,color:0xf3e2bf}));p.rotation.x=-Math.PI/2;p.rotation.z=-Math.atan2(x2-x1,z2-z1);p.position.set((x1+x2)/2,.02+i*.001,(z1+z2)/2);p.receiveShadow=true;sh.add(p);
+  const d=new THREE.Mesh(new THREE.CircleGeometry(w/2,20),m);d.rotation.x=-Math.PI/2;d.position.set(x2,.025,z2);d.receiveShadow=true;sh.add(d);}sc.add(sh);}
+// โหลดโมเดล: แพ็กของโซน (อัลปาก้า แฮมสเตอร์) + โมเดลในฟาร์ม
+let PACK=null;const packP=fetch('pack.json').then(r=>r.json()).then(j=>PACK=j);
+const loader=new GLTFLoader();const CACHE={};let nLoad=0,nDone=0;const prog=()=>{document.getElementById('lb').style.width=(nLoad?nDone/nLoad*100:0)+'%';};
+function toGLB(j){const bin=Uint8Array.from(atob(j.buffers[0].uri.split(',')[1]),c=>c.charCodeAt(0));j=structuredClone(j);delete j.buffers[0].uri;
+ const js=new TextEncoder().encode(JSON.stringify(j));const jl=Math.ceil(js.length/4)*4,bl=Math.ceil(bin.length/4)*4;const out=new Uint8Array(28+jl+bl);const dv=new DataView(out.buffer);
+ dv.setUint32(0,0x46546C67,true);dv.setUint32(4,2,true);dv.setUint32(8,out.length,true);dv.setUint32(12,jl,true);dv.setUint32(16,0x4E4F534A,true);out.fill(0x20,20,20+jl);out.set(js,20);dv.setUint32(20+jl,bl,true);dv.setUint32(24+jl,0x004E4942,true);out.set(bin,28+jl);return out.buffer;}
+function model(name){if(CACHE[name])return CACHE[name];nLoad++;prog();
+ return CACHE[name]=(async()=>{let buf,base;if(name.startsWith('c2_al_')||name.startsWith('c2_hm_')){await packP;buf=toGLB(PACK[name]);base=new URL('./',location.href).href;}
+  else{const ab=await (await fetch('../farm3d/'+name+'.gltf.json')).arrayBuffer();base=new URL('../farm3d/',location.href).href;buf=new DataView(ab).getUint32(0,true)===0x46546C67?ab:toGLB(JSON.parse(new TextDecoder().decode(ab)));}
+  const g=await new Promise((res,rej)=>loader.parse(buf,base,res,rej));g.scene.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;if(m.material){m.material.metalness=0;if('roughness' in m.material)m.material.roughness=Math.max(.55,m.material.roughness||0);}}});nDone++;prog();return g.scene;})();}
+function fit(src,w,d,h){const o=src.clone(true);const b=new THREE.Box3().setFromObject(o),s=b.getSize(new THREE.Vector3());const k=Math.min(w?w/s.x:1e9,d?d/s.z:1e9,h?h/s.y:1e9);o.scale.multiplyScalar(k);
+ const b2=new THREE.Box3().setFromObject(o),c=b2.getCenter(new THREE.Vector3());o.position.x-=c.x;o.position.z-=c.z;o.position.y-=b2.min.y;const g=new THREE.Group();g.add(o);return g;}
+const TAPS=[];// [object, action, label]
+// ---- ลานดินขอบนุ่มกลืนหญ้า + ลำธารไหลผ่าน (แบบเกมฟาร์ม) ----
+const DIRT=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createRadialGradient(128,128,20,128,128,128);g.addColorStop(0,'rgba(140,96,58,1)');g.addColorStop(.62,'rgba(132,90,54,.96)');g.addColorStop(.86,'rgba(120,84,50,.45)');g.addColorStop(1,'rgba(120,84,50,0)');x.fillStyle=g;x.fillRect(0,0,256,256);
+ for(let i=0;i<900;i++){const a=Math.random()*6.28,r=Math.random()*100;x.fillStyle=Math.random()<.5?'rgba(95,62,34,.35)':'rgba(176,130,84,.35)';x.beginPath();x.arc(128+Math.cos(a)*r,128+Math.sin(a)*r,1+Math.random()*3,0,7);x.fill();}
+ for(let i=0;i<40;i++){x.strokeStyle='rgba(230,200,110,.55)';x.lineWidth=1.4;const a=Math.random()*6.28,r=Math.random()*90,px=128+Math.cos(a)*r,py=128+Math.sin(a)*r;x.beginPath();x.moveTo(px,py);x.lineTo(px+(Math.random()-.5)*14,py+(Math.random()-.5)*6);x.stroke();}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+function dirt(x,z,w,d,ry=0){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({map:DIRT,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.rotation.z=ry;m.position.set(x,.025,z);m.receiveShadow=true;m.renderOrder=1;sc.add(m);return m;}
+const WTX=(()=>{const t=tl.load('../farm3d/water.jpg');t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;})();
+function ribbon(pts,w,y,mat,ro){const cv=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,0,z)));const N=200,P=[],U=[],I=[];for(let i=0;i<=N;i++){const t=i/N,p=cv.getPoint(t),tg=cv.getTangent(t),nx=-tg.z,nz=tg.x;
+  P.push(p.x+nx*w/2,y,p.z+nz*w/2,p.x-nx*w/2,y,p.z-nz*w/2);U.push(0,t*8,1,t*8);if(i<N){const a=i*2;I.push(a,a+2,a+1,a+1,a+2,a+3);}}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;m.renderOrder=ro||0;sc.add(m);return m;}
+/* S4: ลำธารไม่มีขอบแข็ง ตลิ่งค่อยๆ กลืนเป็นหญ้า และไหลยาวออกไปจนลับตา (ไม่เห็นปลายลำธาร) */
+const SOFT=(a)=>{const c=document.createElement('canvas');c.width=128;c.height=2;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,128,0);g.addColorStop(0,'#000');g.addColorStop(a,'#fff');g.addColorStop(1-a,'#fff');g.addColorStop(1,'#000');x.fillStyle=g;x.fillRect(0,0,128,2);return new THREE.CanvasTexture(c);};
+const SOFT_B=SOFT(.38),SOFT_W=SOFT(.14);
+function stream(pts0,w=3.2){const ext=(a,b)=>[a[0]+(a[0]-b[0])*7,a[1]+(a[1]-b[1])*7];const pts=[ext(pts0[0],pts0[1]),...pts0,ext(pts0[pts0.length-1],pts0[pts0.length-2])];
+ ribbon(pts,w+5.2,.02,new THREE.MeshLambertMaterial({color:0x86a957,alphaMap:SOFT_B,transparent:true,depthWrite:false}),1);
+ ribbon(pts,w+2.4,.03,new THREE.MeshLambertMaterial({color:0xc9b07e,alphaMap:SOFT_B,transparent:true,depthWrite:false}),1);
+ const wm=new THREE.MeshLambertMaterial({map:WTX,color:0x9fdcf5,alphaMap:SOFT_W,transparent:true,opacity:.96,depthWrite:false});ribbon(pts,w,.045,wm,2);pts0.forEach(p=>p);ANIMW.push(t=>{WTX.offset.y=-t*.25;WTX.offset.x=Math.sin(t*.6)*.03;});
+ for(let i=0;i<pts0.length;i++){const [x,z]=pts0[i];if(i%2)continue;const r=new THREE.Mesh(new THREE.IcosahedronGeometry(.5+Math.random()*.35,1),new THREE.MeshLambertMaterial({color:0xb9b3a8,flatShading:true}));r.scale.y=.6;r.position.set(x+(i%4?1:-1)*(w/2+.7),.15,z);r.castShadow=true;sc.add(r);}}
+const ANIMW=[];
+{const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 84px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:46px;height:46px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB,body.s4photo #callB,body.s4photo #tip{visibility:hidden}';document.head.appendChild(st);
+ pb.onclick=e=>{e.stopPropagation();if(!window.S4PHOTO)return;S4PHOTO.shoot(()=>new Promise(res=>{/* S4: ถ่ายมุมเฉียงต่ำ เห็นทั้งโซน (ไม่ใช่มุมสูง) */const o={x:VIEW.x,z:VIEW.z,d:VIEW.dist,p:PITCH};PITCH=.5;VIEW.x=0;VIEW.z=2;VIEW.dist=Math.min(VIEW.max||70,Math.max(46,o.d*1.2));setTimeout(()=>{window.__zsnap=u=>{VIEW.x=o.x;VIEW.z=o.z;VIEW.dist=o.d;PITCH=o.p;res(u);};},300);}));};}
+let WB=null,ROAM=true;try{ROAM=localStorage.getItem('zone3d-roam-'+Z)!=='0';}catch(e){}
+
+{const st=document.createElement('style');st.textContent='#callB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#callB i{width:46px;height:46px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffd76a,#f39a1e);box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25)}#callB.in i{background:linear-gradient(180deg,#9fe38a,#4bb04a)}';document.head.appendChild(st);
+ const b=document.createElement('button');b.id='callB';document.body.appendChild(b);
+ const draw=()=>{b.className=GATHER?'in':'';b.innerHTML=GATHER?'<i>👆</i>แตะจุดรวม':'<i>🔔</i>เรียกมารวม';};ROAM=true;draw();
+  /* S4: 🔔 เรียกมารวม → แตะพื้นจุดไหน สัตว์ทุกตัวเดินมารวมนั่งตรงนั้น */b.onclick=e=>{e.stopPropagation();GATHER=!GATHER;draw();if(GATHER)tip('👆 แตะพื้นตรงที่อยากให้มารวมกัน');};window.__s4gDraw=draw;}
+
+// ---- สัตว์ออกมาเดินเล่นนอกคอกได้ · ปุ่ม 🔔 เรียกกลับคอก ----
+
+async function put(name,x,z,w,d,h,ry=0,act=null,label=null){const s=await model(name);const o=fit(s,w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
+// สัตว์เดินในคอก: ก้าวเดินนุ่มๆ หยุดกินหญ้า ไม่เด้งแบบลูกโป่ง
+const WALK=[];
+async function animal(name,bx,h,sp){const s=await model(name);const o=fit(s,0,0,h);const w=new THREE.Group();w.add(o);sc.add(w);
+ const a={w,o,x:bx.x0+Math.random()*(bx.x1-bx.x0),z:bx.z0+Math.random()*(bx.z1-bx.z0),tx:null,tz:null,t:Math.random()*3,dir:Math.random()*6.3,ph:Math.random()*6,bx,sp,h};w.position.set(a.x,0,a.z);WALK.push(a);return a;}
+function stepAnimals(dt){for(const a of WALK){a.t-=dt;if(a.tx==null&&a.t<=0){if(Math.random()<.6){const B=ROAM&&WB?WB:a.bx;a.tx=B.x0+Math.random()*(B.x1-B.x0);a.tz=B.z0+Math.random()*(B.z1-B.z0);}else a.t=1.5+Math.random()*3.5;}
+ let mv=0;if(a.tx!=null){const dx=a.tx-a.x,dz=a.tz-a.z,l=Math.hypot(dx,dz);if(l<.08){a.tx=null;a.t=1.2+Math.random()*3;}else{const s=Math.min(l,a.sp*dt);a.x+=dx/l*s;a.z+=dz/l*s;let d=Math.atan2(dx,dz)-a.dir;d=Math.atan2(Math.sin(d),Math.cos(d));a.dir+=d*Math.min(1,dt*5);mv=1;}}
+ for(const b of WALK){if(b===a)continue;const sx=a.x-b.x,sz=a.z-b.z,dd=Math.hypot(sx,sz),mn=(a.h+b.h)*.45;if(dd>0&&dd<mn){const p=(mn-dd)*.5;a.x+=sx/dd*p;a.z+=sz/dd*p;}}
+ a.x=Math.min(a.bx.x1,Math.max(a.bx.x0,a.x));a.z=Math.min(a.bx.z1,Math.max(a.bx.z0,a.z));
+ a.ph+=dt*(mv?7:1.4);a.w.position.set(a.x,mv?Math.abs(Math.sin(a.ph))*.015*a.h:0,a.z);a.w.rotation.y=a.dir;a.o.rotation.z=mv?Math.sin(a.ph)*.035:0;a.o.rotation.x=!mv&&Math.sin(a.ph*.5)>.7?.12:0;}}
+// ต้นไม้ล้อมโซน (ขอบเขตชัดเจน แต่งแน่นแบบ Hay Day)
+const TREEPAL=[[0x7cc85a,0x9ad86a,0x5fae48],[0xffa8c8,0xffc4da,0xf590b8],[0x7cc85a,0x8fd46a,0x6aba50],[0xffb347,0xffc96b,0xf59a3a],[0x8fd9a8,0xa8e6bc,0x74c792]];
+const TRK=new THREE.MeshLambertMaterial({color:0x8a5a36}),TM={};const tm=c=>TM[c]||(TM[c]=new THREE.MeshLambertMaterial({color:c}));
+const BLOB=new THREE.IcosahedronGeometry(1,3),TRG=new THREE.CylinderGeometry(.32,.5,1,10);
+// ต้นไม้แบบเดียวกับฟาร์มหลัก (ใบฟูหนา ลมพัดไหว) · โหลดต้นแบบครั้งเดียวแล้วโคลน
+let KIT=null;const KITP=(async()=>{try{const P={oak:await model('oak_l'),sakura:await model('sakura_l'),jaca:await model('jaca_l')};KIT=makeTreeKit(THREE,BGU,P);}catch(e){console.log('treekit',e&&e.message);}})();
+const TKIND=['green','sakura','green','maple','purple','gold'];const TPROTO={};
+function treeProto(kind,v){const k=kind+v;if(!TPROTO[k])TPROTO[k]=KIT.lushTree(kind,11+v*17+kind.length*5,5.4);return TPROTO[k];}
+function fluffy(x,z,s,pal){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=Math.random()*6.3;g.userData.sw=Math.random()*6;sc.add(g);TREES.push(g);
+ const pi=Math.max(0,TREEPAL.indexOf(pal)),kind=TKIND[pi%TKIND.length],v=Math.floor(Math.random()*2);
+ KITP.then(()=>{if(KIT){try{const t=treeProto(kind,v).clone(true);const b=new THREE.Box3().setFromObject(t),h=b.max.y-b.min.y||1;t.scale.setScalar(5.6*s/h);g.add(t);t.traverse(m=>{if(m.isMesh){m.castShadow=true;}});return;}catch(e){console.log('lush',e&&e.message);}}
+  const tr=new THREE.Mesh(TRG,TRK);tr.scale.set(s,1.9*s,s);tr.position.y=.95*s;g.add(tr);
+  const C=[[0,2.65,0,1.45],[.95,2.25,.35,1.05],[-.9,2.3,-.25,1.08],[.2,2.3,-.95,1.0],[-.25,2.25,.95,1.0],[0,3.45,.1,1.0]];C.forEach(([dx,dy,dz,r],i)=>{const b=new THREE.Mesh(BLOB,tm(pal[i%3]));b.position.set(dx*s,dy*s,dz*s);b.scale.setScalar(r*s);b.castShadow=true;g.add(b);});});
+ return g;}
+const TREES=[];
+async function ring(cx,cz,rx,rz,n,skip){for(let i=0;i<n;i++){const a=i/n*Math.PI*2;if(skip&&skip(a))continue;const k=1+Math.random()*.1;fluffy(cx+Math.cos(a)*rx*k,cz+Math.sin(a)*rz*k,1.15+Math.random()*.35,TREEPAL[(i*7)%TREEPAL.length]);}}
+let VIEW={x:0,z:0,dist:34,min:9,max:48},LAB=[],HOME=[0,20];
+// ---- ตัวละครของเรา: เดินไปทุกที่ที่แตะ · เดินไปหาของแล้วค่อยใช้งาน · นั่งได้ ----
+const PL={x:0,z:20,tx:null,tz:null,dir:Math.PI,then:null,sit:0};let girl=null,gmix=null,GA={},gcur='';
+/* S4: ท่าเล่นกับสัตว์ของน้องชมพู (ปรับกระดูกทับท่ายืน): pat = นั่งยองลูบหัว · hold = อุ้ม · reach = ยื่นมือลูบ (สัตว์ตัวใหญ่) */
+const GB={},GREST={};const POSES={
+ pat:{dy:-.5,b:[['L_Thigh',1,0,0,-95],['R_Thigh',1,0,0,-80],['L_Calf',1,0,0,120],['R_Calf',1,0,0,115],['Spine01',1,0,0,25],['R_Upperarm',1,0,0,-55],['R_Forearm',1,0,0,-20]],wig:['R_Forearm',1,0,0,14,7]},
+ hold:{dy:0,b:[['L_Upperarm',1,0,0,-30],['R_Upperarm',1,0,0,-30],['L_Forearm',1,0,0,-80],['R_Forearm',1,0,0,-80],['L_Forearm',0,1,0,-40],['R_Forearm',0,1,0,40],['Spine01',1,0,0,-6]],wig:['Spine01',0,0,1,5,2.2]},
+ reach:{dy:0,b:[['R_Upperarm',1,0,0,-85],['R_Upperarm',0,0,1,10],['R_Forearm',1,0,0,-10],['Spine01',1,0,0,8]],wig:['R_Forearm',1,0,0,16,6]}};
+const PBONES=[...new Set(Object.values(POSES).flatMap(p=>p.b.map(x=>x[0]).concat(p.wig[0])))];
+const _gq=new THREE.Quaternion(),_gp=new THREE.Quaternion(),_gi=new THREE.Quaternion(),_ga=new THREE.Vector3();
+function rotW(n,ax,ay,az,deg){const b=GB[n];if(!b||!b.parent)return;_ga.set(ax,ay,az).normalize().applyQuaternion(girl.quaternion);b.parent.getWorldQuaternion(_gp);_gq.setFromAxisAngle(_ga,deg*Math.PI/180);_gi.copy(_gp).invert();b.quaternion.premultiply(_gi.multiply(_gq).multiply(_gp));}
+let GPOSE=null;function poseEnd(){const q=GPOSE;GPOSE=null;if(q&&q.a&&q.a.held){const a=q.a;a.held=0;a.w.scale.setScalar(1);a.x=PL.x+Math.sin(PL.dir)*.9;a.z=PL.z+Math.cos(PL.dir)*.9;try{clampArea(a);pushOut(a);}catch(e){}a.frz=performance.now()+900;}}
+async function loadGirl(){/* S4: ตัวละครโหลดจากไฟล์เดียวกับฟาร์ม (ไฟล์ไบนารีที่โหลดไว้แล้ว) — เร็วกว่าและไม่ต้องโหลดไฟล์ใหญ่อีกก้อน (iPhone เคยไม่ขึ้นตัวละคร) */let g=null;try{const ab=await (await fetch('../farm3d/punk.gltf.json')).arrayBuffer();if(new DataView(ab).getUint32(0,true)===0x46546C67)g=await new Promise((res,rej)=>loader.parse(ab,new URL('../farm3d/',location.href).href,res,rej));}catch(e){console.log('punk glb',e&&e.message);}
+ if(!g){const t=await (await fetch('../safari3d/m/punk.gltf.json')).text();g=await new Promise((res,rej)=>loader.parse(t,new URL('../safari3d/m/',location.href).href,res,rej));}
+ const body=g.scene;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;for(const mt of [].concat(o.material)){mt.metalness=0;mt.roughness=.85;}}});
+ const b=new THREE.Box3().setFromObject(body);const k=1.75/(b.max.y-b.min.y);body.scale.setScalar(k);body.position.y=-b.min.y*k;girl=new THREE.Group();girl.add(body);sc.add(girl);
+ for(const c of g.animations)c.tracks=c.tracks.filter(t=>!(t.name.endsWith('.position')&&/BoneRoot|Armature/.test(t.name)));
+ gmix=new THREE.AnimationMixer(body);body.traverse(o=>{if(o.isBone)GB[o.name]=o;});for(const n of PBONES)if(GB[n])GREST[n]=GB[n].quaternion.clone();const f=p=>g.animations.find(c=>c.name.startsWith(p));GA.walk=gmix.clipAction(f('walk.001'));GA.walk.timeScale=1.55;GA.idle=gmix.clipAction(f('A girl stands relaxed'));GA.sit=gmix.clipAction(f('A girl sits upright'));GA.wave=gmix.clipAction(f('A cheerful girl'));
+ PL.x=HOME[0];PL.z=HOME[1];girl.position.set(PL.x,0,PL.z);gset('idle');
+ /* S4: ตัวละครต้องอยู่ในจอเสมอ เปิดหน้ามาเห็นตัวเองยืนหน้าคอก */VIEW.x=Math.max(-16,Math.min(16,PL.x));VIEW.z=Math.max(-14,Math.min(18,PL.z-5));VIEW.dist=Math.min(VIEW.dist,33);}
+function gset(n){if(gcur===n||!GA[n])return;const a=GA[n];a.reset().play();if(GA[gcur])GA[gcur].crossFadeTo(a,.25,false);gcur=n;}
+function walkTo(x,z,then){PL.sit=0;PL.sp0=null;if(GPOSE)poseEnd();PL.tx=Math.max(-26,Math.min(26,x));PL.tz=Math.max(-24,Math.min(30,z));PL.then=then||null;}
+function stepGirl(dt){if(!girl)return;if(PL.tx!=null){const dx=PL.tx-PL.x,dz=PL.tz-PL.z,l=Math.hypot(dx,dz);if(l<.1){PL.tx=null;PL.sp0=null;const t=PL.then;PL.then=null;gset(PL.sit?'sit':'idle');t&&t();}else{/* S4: ไกล = วิ่งเร็วขึ้น (ถึงภายใน ~2 วินาที) */if(PL.sp0==null)PL.sp0=l;const sp=Math.max(4.2,Math.min(10,PL.sp0*.55)),s=Math.min(l,sp*dt);if(GA.walk)GA.walk.timeScale=1.55*Math.min(1.8,sp/4.2);PL.x+=dx/l*s;PL.z+=dz/l*s;let d=Math.atan2(dx,dz)-PL.dir;d=Math.atan2(Math.sin(d),Math.cos(d));PL.dir+=d*Math.min(1,dt*9);gset('walk');}}
+ girl.position.set(PL.x,PL.sit?.35:0,PL.z);girl.rotation.y=PL.dir;for(const n in GREST)GB[n].quaternion.copy(GREST[n]);gmix.update(dt);
+ if(GPOSE){const q=GPOSE,P=POSES[q.n];q.t+=dt;const w=Math.min(1,q.t/.28,Math.max(0,(q.dur-q.t)/.3));if(q.t>=q.dur){poseEnd();}else{girl.updateMatrixWorld(true);for(const x of P.b)rotW(x[0],x[1],x[2],x[3],x[4]*w);const g=P.wig;rotW(g[0],g[1],g[2],g[3],Math.sin(q.t*g[5])*g[4]*w);girl.position.y+=P.dy*w;}}
+ /* S4: กล้องตามตัวละครตอนเดิน (ถ้าไม่ได้ลากจออยู่) */if(PL.tx!=null&&!drag){const k=Math.min(1,dt*2.2),fx=Math.max(-16,Math.min(16,PL.x)),fz=Math.max(-14,Math.min(18,PL.z-5));VIEW.x+=(fx-VIEW.x)*k;VIEW.z+=(fz-VIEW.z)*k;}}
+const fxv=new THREE.Vector3();function fx(x,y,z,list){fxv.set(x,y,z).project(cam);const sx=(fxv.x+1)/2*innerWidth,sy=(1-fxv.y)/2*innerHeight;list.forEach((e,i)=>{const d=document.createElement('div');d.className='fx';d.textContent=e;d.style.left=sx+'px';d.style.top=sy+'px';document.body.appendChild(d);setTimeout(()=>{d.style.transform='translate(calc(-50% + '+((i-1)*26)+'px),calc(-50% - '+(60+i*14)+'px)) scale(1.3)';d.classList.add('go');},30+i*90);setTimeout(()=>d.remove(),1400);});}
+const ringM=new THREE.Mesh(new THREE.RingGeometry(.35,.55,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false}));ringM.rotation.x=-Math.PI/2;ringM.visible=false;sc.add(ringM);let ringT=0;
+
+// กังหันลมหมุนได้ (สร้างเอง ทรงอ้วนกลม)
+const SPIN=[];
+function windmill(x,z,s){const g=new THREE.Group();const W=tm(0xfff4e6),Rf=tm(0xe86f8f),Wd=tm(0x9a6a3e);
+ const t=new THREE.Mesh(new THREE.CylinderGeometry(1.1*s,1.6*s,5*s,16),W);t.position.y=2.5*s;g.add(t);
+ const r=new THREE.Mesh(new THREE.ConeGeometry(1.55*s,1.8*s,16),Rf);r.position.y=5.9*s;g.add(r);
+ const d=new THREE.Mesh(new THREE.BoxGeometry(.8*s,1.3*s,.2*s),Wd);d.position.set(0,.65*s,1.45*s);g.add(d);
+ const hub=new THREE.Group();hub.position.set(0,4.7*s,1.25*s);g.add(hub);const hb=new THREE.Mesh(new THREE.SphereGeometry(.35*s,12,10),Rf);hub.add(hb);
+ for(let k=0;k<4;k++){const a=new THREE.Group();a.rotation.z=k*Math.PI/2;const arm=new THREE.Mesh(new THREE.BoxGeometry(.18*s,3.2*s,.1*s),Wd);arm.position.y=1.6*s;a.add(arm);const sail=new THREE.Mesh(new THREE.BoxGeometry(.9*s,2.4*s,.06*s),W);sail.position.set(.5*s,1.9*s,0);a.add(sail);hub.add(a);}
+ g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});g.position.set(x,0,z);sc.add(g);SPIN.push(hub);return g;}
+// หญ้าสูงในคอก (บังขาให้ดูเดินเนียน)
+function tallGrass(x0,x1,z0,z1,n){const geo=new THREE.ConeGeometry(.16,1,5);const cols=[0x6cbf4a,0x7ccf58,0x5aae3e];const mats=cols.map(c=>new THREE.MeshLambertMaterial({color:c}));
+ for(const [mi,m] of mats.entries()){const im=new THREE.InstancedMesh(geo,m,Math.ceil(n/3));const o=new THREE.Object3D();for(let k=0;k<im.count;k++){o.position.set(x0+Math.random()*(x1-x0),.3,z0+Math.random()*(z1-z0));o.scale.set(1,.5+Math.random()*.55,1);o.rotation.set((Math.random()-.5)*.35,Math.random()*6,(Math.random()-.5)*.35);o.updateMatrix();im.setMatrixAt(k,o.matrix);}im.receiveShadow=true;sc.add(im);}}
+function patio(x,z,w,d,c){const m=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d),tm(c||0xe9dcc4));m.position.set(x,.06,z);m.receiveShadow=true;sc.add(m);const ln=tm(0xd8c7a8);for(let i=-w/2+1.5;i<w/2;i+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(.05,.13,d),ln);l.position.set(x+i,.065,z);sc.add(l);}for(let k=-d/2+1.5;k<d/2;k+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(w,.13,.05),ln);l.position.set(x,.065,z+k);sc.add(l);}}
+async function buildAlpaca(){
+ // ทุ่งกว้าง: คอกใหญ่กลาง หญ้าสูง · โรงงานขน (ซ้ายล่าง) และโรงงานเนื้อ (ขวาล่าง) ใหญ่ชัด · กังหันลมหมุนมุมซ้ายบน · บ่อน้ำมุมขวาบน
+ path([[0,28],[0,6]],2.6);path([[0,16],[-9,16]],2.2);path([[0,16],[9,16]],2.2);
+ dirt(0,-9.5,42,26);dirt(-11,14,13,11,.4);dirt(11,14,13,11,-.4);stream([[-34,-30],[-27,-18],[-26,-4],[-29,8],[-26,18],[-30,32]]);WB={x0:-20,x1:20,z0:-21,z1:9};
+ /* S4: อัลปาก้าสูงสุด 36 ตัว = 6 คอก (คอกละ 6 ตัว) เรียง 3 x 2 */
+ const PENS=[[-12.5,-16],[0,-16],[12.5,-16],[-12.5,-4.5],[0,-4.5],[12.5,-4.5]];
+ /* S4: คอก 3D 2 คอก = คอกซีซัน 3 หนึ่งคอก (ซีซัน 3 มี 3 คอก คอกละ 12 ตัว) · แตะคอก = หน้าต่างดูแลคอกนั้น */
+ PENS.forEach(([x,z],k)=>{put('c2_pen_cow',x,z,11,8.6,0,0).then(o=>{TAPS.push([o,'pen',null,String(Math.floor(k/2))]);}).catch(()=>{});tallGrass(x-4.6,x+4.6,z-3.6,z+3.2,150);});
+ put('c2_al_yarn_factory',-10,13,9,9,8.6,.3,'factory','🧶 โรงงานขน');
+ put('c2_al_meat_shop',10,13,9,9,8.6,-.3,'factory2','🥩 โรงงานเนื้อ');
+ put('c2_al_spinning_wheel',-15,19,3.2,3.2,3.2,.6,'factory');
+ put('d_hay_bale',-6.2,1.6,2.6,2.6,1.8,.3).catch(()=>{});put('d_hay_bale',6.2,1.6,2.6,2.6,1.8,-.3).catch(()=>{});
+ put('d_wooden_barrels',15,19,3,3,2.8,.6).catch(()=>{});
+ windmill(23,-24,1.15);put('d_stone_well',23,-2,3.6,3.6,3.6,-.4).catch(()=>{});
+ put('d_sunflowers',-20,4,3.2,3.2,3,0).catch(()=>{});put('d_sunflowers',20,6,3.2,3.2,3,0).catch(()=>{});
+ put('d_flower_planter',-3.2,22,3,2.4,1.6,0).catch(()=>{});put('d_flower_planter',3.2,22,3,2.4,1.6,0).catch(()=>{});
+ ring(0,-2,34,32,30,a=>Math.abs(a-Math.PI/2)<.2);
+ let L=[];try{L=JSON.parse((0,P.eval)('JSON.stringify((S.pens||[]).map(q=>(q||[]).slice(0,12)))'))||[];}catch(e){}
+ const CM={green:'c2_al_green',lavender:'c2_al_purple',blue:'c2_al_blue',yellow:'c2_al_yellow',cream:'c2_al_cream'};
+ const AL=[];(L||[]).slice(0,3).forEach((q,p)=>(q||[]).forEach((a,j)=>{if(a)AL.push({n:a.gold?'c2_al_gold':CM[a.color]||'c2_al_cream',pen:p*2+(j<6?0:1),id:a.id,sp:String(p)});}));
+ const demo=!AL.length;if(demo)['c2_al_green','c2_al_purple','c2_al_blue','c2_al_yellow','c2_al_cream','c2_al_gold','c2_al_blue','c2_al_cream'].forEach((n,i)=>AL.push({n,pen:i%6,id:'',sp:'0'}));
+ AL.forEach(q=>{const [x,z]=PENS[q.pen%6];const bx={x0:x-4.2,x1:x+4.2,z0:z-3.2,z1:z+2.8};animal(q.n,bx,2.2,.5).then(a=>TAPS.push([a.w,q.id?'al':'pen',null,q.id||q.sp]));});
+ VIEW={x:0,z:2,dist:62,min:9,max:80};HOME=[0,22];
+ tip(demo?'🦙 อัลปาก้าตัวอย่าง':'🦙 แตะคอก = ดูแลอัลปาก้า · แตะโรงงาน = แปรรูป');}
+
+// ---- ♨️ บ่อน้ำพุร้อนแบบบ่อหินธรรมชาติ (ทรงรีขอบไม่เรียบ · หินแบนสีเทาล้อมสองชั้น · ก้อนหินใหญ่ด้านหลัง · ไอน้ำลอย · รั้วไม้ไผ่ด้านหลัง) ----
+let SPRING=null;function hotSpring(cx,cz,ry){const g=new THREE.Group();SPRING=g;g.position.set(cx,0,cz);g.rotation.y=ry||0;sc.add(g);
+ const RX=4.4,RZ=3.5,rr=a=>1+.07*Math.sin(3*a+.6)+.045*Math.sin(5*a+1.9)+.03*Math.sin(7*a);
+ const sh=new THREE.Shape();const N=72;for(let k=0;k<=N;k++){const a=k/N*Math.PI*2,r=rr(a),x=Math.cos(a)*RX*r,y=Math.sin(a)*RZ*r;k?sh.lineTo(x,y):sh.moveTo(x,y);}
+ const geo=new THREE.ShapeGeometry(sh,48);geo.rotateX(Math.PI/2);
+ const bed=new THREE.Mesh(geo.clone(),new THREE.MeshLambertMaterial({color:0x8fd8cf,side:THREE.DoubleSide}));bed.scale.set(1.03,1,1.03);bed.position.y=.06;g.add(bed);
+ const wt=WTX.clone();wt.needsUpdate=true;wt.repeat.set(.18,.18);
+ const water=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:wt,color:0xcaf7f1,emissive:0x5fc7c0,emissiveIntensity:.32,transparent:true,opacity:.9,side:THREE.DoubleSide}));water.position.y=.16;g.add(water);ANIMW.push(t=>{wt.offset.set(Math.sin(t*.35)*.15,Math.cos(t*.27)*.15);});
+ const shine=new THREE.Mesh(geo.clone(),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.14,side:THREE.DoubleSide,depthWrite:false}));shine.scale.set(.5,1,.5);shine.position.set(-.6,.17,-.5);g.add(shine);
+ const sm=[0xd6d2ca,0xc4beb4,0xb1aa9f,0xe0dcd4].map(c=>new THREE.MeshLambertMaterial({color:c,flatShading:true}));
+ const ring=(n,k,sz,y)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=rr(a)*k,x=Math.cos(a)*RX*r,z=Math.sin(a)*RZ*r;const st=new THREE.Mesh(new THREE.DodecahedronGeometry(sz*(.9+Math.random()*.25),0),sm[(i*7)%4]);st.scale.set(1.55,.22,1.15);st.rotation.y=-Math.atan2(Math.cos(a)*RZ,-Math.sin(a)*RX)+(Math.random()-.5)*.3;st.position.set(x,y+Math.random()*.03,z);st.castShadow=true;st.receiveShadow=true;g.add(st);}};
+ ring(34,1.04,.7,.17);ring(30,1.2,.66,.12);
+ /* ก้อนหินใหญ่ด้านหลังบ่อ (ธรรมชาติ ไม่ใช่รูปทรงเรขาคณิต) */
+ for(const [a,s,h] of [[-2.2,1.25,1.1],[-1.75,.95,.8],[-1.3,1.1,1.0],[-.95,.8,.6],[-2.6,.85,.7]]){const r=rr(a)*1.32,b=new THREE.Mesh(new THREE.DodecahedronGeometry(s,1),sm[Math.floor(s*10)%4]);b.scale.set(1.2,h,1);b.position.set(Math.cos(a)*RX*r,h*.45,Math.sin(a)*RZ*r);b.rotation.y=a*3;b.castShadow=true;b.receiveShadow=true;g.add(b);}
+ const steam=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),gr=x.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,'rgba(255,255,255,.95)');gr.addColorStop(.5,'rgba(255,255,255,.45)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+ const P=[];for(let i=0;i<22;i++){const m=new THREE.Sprite(new THREE.SpriteMaterial({map:steam,transparent:true,depthWrite:false,opacity:.6}));g.add(m);P.push([m,Math.random()*6,(Math.random()-.5)*RX*1.4,(Math.random()-.5)*RZ*1.4,.7+Math.random()*.6]);}
+ ANIMW.push(t=>{for(const [m,ph,x,z,sp] of P){const k=(t*.16*sp+ph)%1;m.position.set(x+Math.sin(ph+t*.6)*.5,.35+k*4.2,z+Math.cos(ph+t*.5)*.3);m.scale.setScalar(1.5+k*3.2);m.material.opacity=.6*Math.sin(Math.PI*Math.min(1,k*1.15));}});
+ /* รั้วไม้ไผ่โค้งด้านหลังบ่อ (ด้านหน้าเปิดโล่ง เดินลงบ่อได้) */
+ const bm=new THREE.MeshLambertMaterial({color:0xc9b26a}),bm2=new THREE.MeshLambertMaterial({color:0xa88c4a});const pg=new THREE.CylinderGeometry(.13,.13,1,8);
+ for(let k=0;k<=26;k++){const a=-Math.PI*.98+k/26*Math.PI*.96,r=1.55,x=Math.cos(a)*RX*r,z=Math.sin(a)*RZ*r,h=1.5+((k*37)%5)*.07;const o=new THREE.Mesh(pg,k%3?bm:bm2);o.scale.y=h;o.position.set(x,h/2,z);o.castShadow=true;g.add(o);}
+ for(const y of [.55,1.15]){const pts=[];for(let k=0;k<=24;k++){const a=-Math.PI*.98+k/24*Math.PI*.96;pts.push(new THREE.Vector3(Math.cos(a)*RX*1.55,y,Math.sin(a)*RZ*1.55));}const tb=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),48,.06,6,false),bm2);tb.castShadow=true;g.add(tb);}
+ TAPS.push([water,'sit']);return g;}
+async function buildHamster(){
+ // หลังบ้าน: ระเบียงไม้หลังบ้าน · สนามเด็กเล่นแฮมสเตอร์ตรงกลาง (สูงสุด 12 ตัว) · ลานหินครัวกลางแจ้ง (ซ้าย) · ผ้าปิกนิก (ขวา) · สวนผักกระบะ (ล่าง)
+ put('house',0,-19,10,8,0,Math.PI).catch(()=>{});
+ patio(0,-12.2,16,3.2,0xc99a6a);
+ dirt(0,-3,22,17);stream([[28,-24],[21,-12],[22,0],[19,10],[23,22],[20,32]],2.6);WB={x0:-14,x1:14,z0:-9,z1:7};
+ await put('c2_pen_hedge',0,-3,17,12,0,0,'pen');
+ const props=[['c2_hm_wheel',-5.4,-6.6,2.9],['c2_hm_carousel',0,-7,3.1],['c2_hm_house_strawberry',5.4,-6.6,3],['c2_hm_seesaw',-5,1.2,1.6],['c2_hm_tube_cross',5,1,1.5],['c2_hm_playground',0,1.4,1.8]];
+ for(const [n,x,z,h] of props)put(n,x,z,h*1.6,h*1.6,h*1.25,0,'pen').catch(()=>{});
+ patio(-9,13,9,8);patio(9,13,9,8,0xf3e3e8);
+ put('d_barbecue_grill',-9.5,11,4.2,4.2,3.8,.3,'stove').catch(()=>{});
+ put('d_wooden_tea_table',-9,15.5,4,4,2.4,.3).catch(()=>{});
+ put('d_picnic_basket_food',9,12.5,4,4,2.4,-.3).catch(()=>{});
+ put('d_wicker_garden_furniture',9.5,16.5,4.4,4.4,2.6,-.3,'sit').catch(()=>{});
+ put('d_decorative_string_light',0,8,12,2.4,4.2,0).catch(()=>{});
+ put('d_flower_wheelbarrow',-12.5,21,3.4,2.4,2.4,.6).catch(()=>{});
+ try{hotSpring(-17.5,1,Math.PI/2);}catch(e){console.log('spring',e&&e.message);}
+ put('d_birdhouse',-15,-12,2.6,2.6,3.8,.3).catch(()=>{});put('d_beehive_cluster',15,-12,3.4,2.4,2.8,-.3).catch(()=>{});
+ path([[0,28],[0,9]],2.4);
+ ring(0,0,28,27,24,a=>Math.abs(a-Math.PI/2)<.2);
+ const HM={gardener:'c2_hm_farmer',baker:'c2_hm_chef',explorer:'c2_hm_explorer',scholar:'c2_hm_doctor',wizard:'c2_hm_wizard',sailor:'c2_hm_sailor'};
+ let L=[];try{L=JSON.parse((0,P.eval)('JSON.stringify((S.ham&&S.ham.list)||[])'))||[];}catch(e){}
+ let names=L.slice(0,12).map(h=>HM[h&&h.type]||'c2_hm_farmer');const demo=!names.length;if(demo)names=Object.values(HM);
+ const bx={x0:-6.4,x1:6.4,z0:-4.2,z1:3};
+ /* ♨️ แฮมสเตอร์ 3 ตัวแรกลงไปแช่บ่อน้ำพุร้อน (จมถึงไหล่ ผ้าขนหนูบนหัว) ที่เหลือเล่นในคอก */
+ const bathers=names.slice(0,Math.min(3,Math.max(0,names.length-1))),rest=names.slice(bathers.length);
+ if(SPRING)bathers.forEach((n,i)=>{const [lx,lz,ry]=[[-1.8,-.5,.6],[1.7,-.2,-.7],[.1,1.5,.1]][i];model(n).then(src=>{const o=fit(src,0,0,1.8);const b=new THREE.Box3().setFromObject(o);const sink=(b.max.y-b.min.y)*.3;
+   const hold=new THREE.Group();hold.add(o);o.position.y=-b.min.y-sink;hold.position.set(lx,0,lz);hold.rotation.y=ry;SPRING.add(hold);
+   const rp=new THREE.Mesh(new THREE.RingGeometry(.55,.75,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.35,depthWrite:false}));rp.rotation.x=-Math.PI/2;rp.position.y=.2;hold.add(rp);
+   const ph=i*2.1;ANIMW.push(t=>{hold.position.y=Math.sin(t*1.4+ph)*.05;rp.scale.setScalar(1+((t*.6+ph)%1)*.5);rp.material.opacity=.35*(1-((t*.6+ph)%1));});
+   TAPS.push([hold,'sit']);}).catch(()=>{});});
+ for(const n of rest)animal(n,bx,1.7,.8).then(a=>TAPS.push([a.w,'pen']));
+ VIEW={x:0,z:2,dist:52,min:9,max:70};HOME=[0,22];
+ tip(demo?'🐹 แฮมสเตอร์ตัวอย่าง':'🐹 แตะคอก = ให้อาหาร · แตะเตา = ทำอาหารในสวน');}
+// ---- Pet Care: สวนหมา / สวนแมว (ของตกแต่งชุดสัตว์เลี้ยง 3D + น้องหมาน้องแมวจากซีซัน 3 เดินเล่น) ----
+async function pz(k,x,z,w,d,h,ry=0,act=null,label=null){const s=await model('c2_petzone');const o=fit(s.children[k],w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
+const SPR=[];const TEXC={};
+function sheetTex(kind,type,act){const k=kind+type+act;if(!TEXC[k]){const t=tl.load('../images/'+kind+'-'+type+'-'+act+'-4x4.webp',tx=>{tx.userData.ok=1;});t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(.25,.25);TEXC[k]=t;}return TEXC[k];}
+function sprite(kind,type,x,z,H,bx,id){const mat=new THREE.SpriteMaterial({map:null,alphaTest:.5,transparent:false});const sp=new THREE.Sprite(mat);sp.center.set(.5,.04);const w=new THREE.Group();w.add(sp);
+ const sh=new THREE.Mesh(new THREE.CircleGeometry(H*.32,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.18,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.02;w.add(sh);w.position.set(x,0,z);sc.add(w);
+ const a={kind,type,w,sp,mat,x,z,H,bx,act:'',fr:0,ft:0,t:Math.random()*2,tx:null,flip:false,id};SPR.push(a);setA(a,'idle');TAPS.push([w,'pet',null,id]);return a;}
+function setA(a,act){if(a.act===act)return;a.act=act;const t=sheetTex(a.kind,a.type,act).clone();t.needsUpdate=true;t.repeat.set(.25,.25);a.mat.map=t;a.mat.needsUpdate=true;
+ const img=t.image;const ar=img&&img.width?img.width/img.height:1;a.sp.scale.set(a.H*ar,a.H,1);}
+/* S4 หมา/แมว: (1) เดินหันหน้าถูกทาง (ภาพเดินข้างหันขวาเป็นค่าเริ่ม → เดินไปซ้ายค่อยกลับด้าน เหมือนซีซัน 3)
+   (2) ไม่เดินทะลุรั้ว/ของในสวน (3) ทุกท่าทางมาจากระบบซีซัน 3 จริง: โยนบอล วิ่งไปคาบ · พาเดินขุด · กินข้าว · อาบน้ำ/นวด · ลังแมว · ของตกพื้น */
+const OB=[];function inOb(x,z,pad){for(const o of OB){if(Math.hypot(x-o[0],z-o[1])<o[2]+(pad||0))return o;}return null;}
+function inPetArea(x,z){if(Z==='cat'){return Math.hypot(x,z+1)<10.6;}const B=WB||{x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};return x>B.x0&&x<B.x1&&z>B.z0&&z<B.z1;}
+function pickSpot(a){const B=ROAM&&WB?WB:a.bx;for(let k=0;k<14;k++){const x=B.x0+Math.random()*(B.x1-B.x0),z=B.z0+Math.random()*(B.z1-B.z0);if(inPetArea(x,z)&&!inOb(x,z,.4))return [x,z];}return [a.x,a.z];}
+function pushOut(a){const o=inOb(a.x,a.z,.25);if(!o)return false;const dx=a.x-o[0],dz=a.z-o[1],l=Math.hypot(dx,dz)||1,r=o[2]+.26;a.x=o[0]+dx/l*r;a.z=o[1]+dz/l*r;return true;}
+function clampArea(a){if(Z==='cat'){const dx=a.x,dz=a.z+1,l=Math.hypot(dx,dz);if(l>10.6){a.x=dx/l*10.6;a.z=dz/l*10.6-1;return true;}return false;}const B=WB||{x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};const x=Math.max(B.x0,Math.min(B.x1,a.x)),z=Math.max(B.z0,Math.min(B.z1,a.z));const c=x!==a.x||z!==a.z;a.x=x;a.z=z;return c;}
+/* ข้อมูลสดจากหน้าเดิม (ซีซัน 3) ทุก 0.12 วิ: ตำแหน่ง/ท่าของแต่ละตัว ลูกบอล หลุมขุด ลังแมว ของตกพื้น */
+let MIR=null,MIRT=-1e9;var GATHER=false;const MIRA=new Map();
+const PET2=(nx,ny)=>Z==='cat'?[-9.5+((nx*941-70)/810)*19,-10+((ny*1672-430)/960)*18.5]:[-11.5+((nx*941-60)/820)*23,-11.5+((ny*1672-560)/860)*19.3];
+const HAS={dog:['idle','sit','bark','dig','fetch','sleep','walk-side','walk-front','walk-back'],cat:['idle','sit','sleep','walk-side','walk-front','walk-back']};
+function stepSprites(dt){const live=performance.now()-MIRT<1500;
+ for(const a of SPR){a.ft+=dt;if(a.ft>.09){a.ft=0;a.fr=(a.fr+1)%16;const t=a.mat.map;if(t){const c=a.fr%4,r=Math.floor(a.fr/4);if(a.flip){t.repeat.x=-.25;t.offset.x=(c+1)/4;}else{t.repeat.x=.25;t.offset.x=c/4;}t.offset.y=1-(r+1)/4;
+   const img=t.image;if(img&&img.width&&!a.sized){a.sized=1;a.sp.scale.set(a.H*img.width/img.height,a.H,1);}}}
+  if(a.held){const fx=Math.sin(PL.dir),fz=Math.cos(PL.dir);a.w.scale.setScalar(.6);a.w.position.set(PL.x+fx*.3,.62,PL.z+fz*.3);continue;}
+  if(a.frz>performance.now()){a.w.position.set(a.x,0,a.z);continue;}
+  const m=live&&a.id?MIRA.get(a.id):null;
+  if(m){const [X,Zz]=PET2(m[1],m[2]);const k=Math.min(1,dt*7);a.x+=(X-a.x)*k;a.z+=(Zz-a.z)*k;clampArea(a);pushOut(a);
+   let act=HAS[a.kind].includes(m[3])?m[3]:(/walk/.test(m[3])?'walk-side':'idle');if(a.act!==act){setA(a,act);a.sized=0;}a.flip=!!m[4];a.sp.visible=!m[5];a.tx=null;}
+  else if(a.tx==null){a.t-=dt;if(a.t<=0){if(Math.random()<.55){[a.tx,a.tz]=pickSpot(a);}
+    else{const o=a.kind==='dog'?['idle','sit','bark','dig','fetch','idle','sleep']:['idle','sit','sleep','idle'];setA(a,o[Math.floor(Math.random()*o.length)]);a.sized=0;a.t=2.5+Math.random()*4;}}}
+  else{const dx=a.tx-a.x,dz=a.tz-a.z,l=Math.hypot(dx,dz);if(l<.08){a.tx=null;setA(a,a.gsit?'sit':'idle');a.gsit=0;a.sized=0;a.t=1+Math.random()*2.5;}else{const sp=(a.fast?2.6:1.3)*dt,s=Math.min(l,sp);a.x+=dx/l*s;a.z+=dz/l*s;
+    if(clampArea(a)||pushOut(a)){if(!a.gsit){a.tx=null;a.t=.3;}}
+    const act=Math.abs(dx)>Math.abs(dz)*.8?'walk-side':dz>0?'walk-front':'walk-back';if(a.act!==act){setA(a,act);a.sized=0;}a.flip=act==='walk-side'&&dx<0;}}
+  a.w.position.set(a.x,0,a.z);}
+ stepPetProps(dt,live);}
+/* ของประกอบจากระบบซีซัน 3: ลูกบอล · กองดินที่ขุด · ลังแมว (แตะได้) · ของตกพื้น (แตะเพื่อเก็บ) */
+const PP={ball:null,mounds:[],box:null,drops:[]};const DTEX={};
+function dropTex(u){if(!u)return null;if(!DTEX[u]){const t=tl.load('../'+u.replace(/^\.\.\//,''));t.colorSpace=THREE.SRGBColorSpace;DTEX[u]=t;}return DTEX[u];}
+function stepPetProps(dt,live){if(!live||!MIR)return;
+ if(MIR.ball){if(!PP.ball){PP.ball=new THREE.Mesh(new THREE.SphereGeometry(.2,14,10),new THREE.MeshLambertMaterial({color:0xd7f04a}));PP.ball.castShadow=true;sc.add(PP.ball);}const [x,z]=PET2(MIR.ball[0],MIR.ball[1]);PP.ball.position.set(x,.22,z);PP.ball.visible=true;}else if(PP.ball)PP.ball.visible=false;
+ const M=MIR.mounds||[];while(PP.mounds.length<M.length){const o=new THREE.Mesh(new THREE.SphereGeometry(.55,14,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0x8a5a34,transparent:true}));o.scale.y=.45;o.receiveShadow=true;sc.add(o);PP.mounds.push(o);}
+ PP.mounds.forEach((o,i)=>{const d=M[i];o.visible=!!d;if(d){const [x,z]=PET2(d[0],d[1]);o.position.set(x,0,z);o.material.opacity=d[2]==null?1:d[2];}});
+ if(MIR.box){if(!PP.box){const g=new THREE.Group();const cb=new THREE.Mesh(new THREE.BoxGeometry(1.3,.8,1),new THREE.MeshLambertMaterial({color:0xc89a5c}));cb.position.y=.4;cb.castShadow=true;g.add(cb);
+   for(const sx of [-1,1]){const f=new THREE.Mesh(new THREE.BoxGeometry(.65,.05,1),new THREE.MeshLambertMaterial({color:0xb5864a}));f.position.set(sx*.62,.85,0);f.rotation.z=sx*.7;g.add(f);}sc.add(g);PP.box=g;TAPS.push([g,'cbox']);}
+  const [x,z]=PET2(MIR.box[0],MIR.box[1]);PP.box.position.set(x,0,z);PP.box.visible=true;const wig=(MIR.a||[]).some(q=>q[5]);PP.box.rotation.z=wig?Math.sin(performance.now()/90)*.06:0;}else if(PP.box)PP.box.visible=false;
+ const D=MIR.drops||[];while(PP.drops.length<D.length){const sp=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,alphaTest:.3}));sp.center.set(.5,0);sp.scale.set(.8,.8,1);sc.add(sp);TAPS.push([sp,'collect']);PP.drops.push(sp);}
+ PP.drops.forEach((sp,i)=>{const d=D[i];sp.visible=!!d;if(d){const [x,z]=PET2(d[0],d[1]);sp.position.set(x,.05+Math.abs(Math.sin(performance.now()/400+i))*.12,z);const t=dropTex(d[2]);if(t&&sp.material.map!==t){sp.material.map=t;sp.material.needsUpdate=true;}}});}
+addEventListener('message',e=>{const d=e.data||{};
+ if(d.s4m&&d.s4m.k===Z){MIR=d.s4m;MIRT=performance.now();MIRA.clear();for(const q of MIR.a||[])MIRA.set(q[0],q);}
+ if(d.s4fx&&(Z==='dog'||Z==='cat')){const [nx,ny,t]=d.s4fx;const [x,z]=PET2(nx,ny);try{fx(x,1.4,z,[t]);}catch(_){}}});
+function picket(x0,z0,x1,z1,gap){const m=tm(0xfffaf0),r=tm(0xf1d9c4);const L=Math.hypot(x1-x0,z1-z0),n=Math.round(L/.7),a=Math.atan2(x1-x0,z1-z0);for(let k=0;k<=n;k++){const t=k/n,x=x0+(x1-x0)*t,z=z0+(z1-z0)*t;if(gap&&Math.hypot(x-gap[0],z-gap[1])<gap[2])continue;const p=new THREE.Mesh(new THREE.BoxGeometry(.22,1.1,.12),m);p.position.set(x,.55,z);p.rotation.y=a;p.castShadow=true;sc.add(p);const c=new THREE.Mesh(new THREE.ConeGeometry(.16,.24,4),m);c.position.set(x,1.2,z);c.rotation.y=a+Math.PI/4;sc.add(c);}
+ for(const y of [.35,.8]){const b=new THREE.Mesh(new THREE.BoxGeometry(.08,.1,L),r);b.position.set((x0+x1)/2,y,(z0+z1)/2);b.rotation.y=a;sc.add(b);}}
+async function buildPets(kind){const pzB=(k,x,z,w,d,h,ry,a,l)=>{if(h>1)OB.push([x,z,Math.max(w,d)*1.2*.5+.15]);return pz(k,x,z,w*1.2,d*1.2,h*1.25,ry,a,l);};
+ if(kind==='dog'){
+  // สวนหมา: สนามหญ้าสี่เหลี่ยมรั้วขาว · บ้านหมาใหญ่กลางบน · ลานวิ่งเล่นซ้าย · สระน้ำขวา · ประตูไปสวนแมว
+  dirt(-8,0,11,9,.5);dirt(8,-1,10,8,-.3);dirt(0,4,9,7);stream([[-30,-20],[-21,-12],[-20,0],[-23,10],[-20,20],[-26,30]],2.8);WB={x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};
+  picket(-13,-13,13,-13);picket(-13,-13,-13,9);picket(13,-13,13,9,[13,0,1.6]);picket(-13,9,-2,9);picket(2,9,13,9);
+  path([[0,28],[0,9]],2.6);path([[13,0],[22,0]],2.2);
+  pzB(7,0,-10,6.4,6.4,5.2,0,'menu','🐶 บ้านหมา');pzB(4,-8,-8,5.6,3.6,2.4,.35,'menu');pzB(6,8,-8,3.6,3.6,2.6,-.35,'menu');
+  pzB(5,0,-4.5,3.6,1.8,1.3,0,'feed');pzB(8,-8.4,0,5.6,5.6,2,.2,'menu');pzB(11,8.4,-1,5.6,3.6,3.6,-.2,'menu');
+  pzB(9,-7.5,5.5,5.2,3.6,2.1,.3,'menu');pzB(10,7.5,5.5,3.6,3.6,2.1,-.3,'menu');pzB(14,0,2,5,5,.7,0);
+  put('d_wooden_signpost',17,-2.5,2.4,2.4,3.4,-.6,'gocat','🐱 ไปสวนแมว').catch(()=>{});
+  ring(0,-2,24,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a)<.12);
+ }else{
+  // สวนแมว: ลานหินวงกลมสีครีม · คอนโดแมวสูงกลางบน · ซุ้มดอกไม้ · บ่อปลาเล็ก · ประตูไปสวนหมา
+  const pzT=soil.clone();pzT.needsUpdate=true;pzT.repeat.set(5,5);const plaza=new THREE.Mesh(new THREE.CylinderGeometry(12,12,.12,48),new THREE.MeshLambertMaterial({map:pzT,color:0xfff1e4}));plaza.position.set(0,.06,-1);plaza.receiveShadow=true;sc.add(plaza);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(12,.28,8,64),tm(0xe8b9c8));rim.rotation.x=Math.PI/2;rim.position.set(0,.12,-1);sc.add(rim);
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.2,.14,40),tm(0xf9d6e2));inner.position.set(0,.08,1);sc.add(inner);
+  stream([[30,-20],[21,-12],[20,0],[23,10],[20,20],[26,30]],2.8);WB={x0:-10.5,x1:10.5,z0:-11,z1:9};
+  path([[0,28],[0,11]],2.6);path([[-12,-1],[-22,-1]],2.2);
+  pzB(3,0,-9.5,4.6,4.6,5.6,0,'menu','🐱 คอนโดแมว');pzB(1,-7.6,-6,4.2,4.2,3.8,.4,'menu');pzB(2,7.6,-6,4.2,4.2,4,-.4,'menu');
+  pzB(0,-8.2,2,4,4,1.6,.2,'menu');pzB(5,0,-4,3.6,1.8,1.3,0,'feed');pzB(6,8.2,2,3.6,3.6,2.6,-.2,'menu');
+  pzB(4,-5,7.5,5,3.4,2.2,.3,'menu');pzB(9,5,7.5,5,3.4,2,-.3,'menu');
+  put('d_water_lily_pond',0,1,5,5,.9,0).catch(()=>{});
+  put('d_flower_frame',-12.5,6,3.4,2.4,4.4,.8).catch(()=>{});put('d_flower_frame',12.5,6,3.4,2.4,4.4,-.8).catch(()=>{});
+  put('d_wooden_signpost',-17,-3.5,2.4,2.4,3.4,.6,'godog','🐶 ไปสวนหมา').catch(()=>{});
+  ring(0,-1,23,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a-Math.PI)<.12);
+ }
+ let L=[];try{L=JSON.parse((0,P.eval)(kind==='dog'?'JSON.stringify((S.dog&&S.dog.list)||[])':'JSON.stringify((S.cat&&S.cat.list)||[])'))||[];}catch(e){}
+ const ALL=kind==='dog'?['husky','bichon','poodle','pomeranian','dachshund','dalmatian']:['calico','ginger','cream','gray','explorer'];
+ let list=L.slice(0,10).map(p=>({t:ALL.includes(p.type)?p.type:ALL[0],id:p.id}));const demo=!list.length;if(demo)list=ALL.map(t=>({t,id:''}));
+ const bx=kind==='dog'?{x0:-10,x1:10,z0:-6,z1:7}:{x0:-8,x1:8,z0:-6,z1:7};list.forEach((p,i)=>sprite(kind,p.t,-6+(i%5)*3,1+(i%2)*2.4,kind==='dog'?1.4:1.2,bx,p.id));
+ VIEW={x:0,z:1,dist:46,min:9,max:64};HOME=[0,20];
+ tip(demo?(kind==='dog'?'🐶 น้องหมาตัวอย่าง':'🐱 น้องแมวตัวอย่าง'):(kind==='dog'?'🐶 แตะน้องหมาเพื่อดูแล':'🐱 แตะน้องแมวเพื่อดูแล'));}
+// กล้องแบบ Hay Day: มุมสูงล็อก ลากนิ้วเลื่อน หยิกซูม
+window.__zv=()=>VIEW;let PITCH=.74;function applyCam(){const hz=Math.cos(PITCH)*VIEW.dist;cam.position.set(VIEW.x,Math.sin(PITCH)*VIEW.dist,VIEW.z+hz);cam.lookAt(VIEW.x,0,VIEW.z);}
+function size(){const w=innerWidth,h=innerHeight;R.setSize(w,h);cam.aspect=w/h;cam.fov=w<h?42:30;cam.updateProjectionMatrix();}addEventListener('resize',size);size();
+const ptr=new Map();let drag=null,moved=0,pinch0=0,dist0=0;
+R.domElement.addEventListener('pointerdown',e=>{R.domElement.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);moved=0;if(ptr.size===1)drag=[e.clientX,e.clientY,VIEW.x,VIEW.z];if(ptr.size===2){const [a,b]=[...ptr.values()];pinch0=Math.hypot(a[0]-b[0],a[1]-b[1]);dist0=VIEW.dist;}});
+R.domElement.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId))return;ptr.set(e.pointerId,[e.clientX,e.clientY]);
+ if(ptr.size===2){const [a,b]=[...ptr.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);VIEW.dist=Math.min(VIEW.max,Math.max(VIEW.min,dist0*pinch0/Math.max(20,d)));moved=99;return;}
+ if(drag){const k=VIEW.dist/innerHeight*1.1;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];moved=Math.max(moved,Math.hypot(dx,dy));VIEW.x=Math.min(16,Math.max(-16,drag[2]-dx*k));VIEW.z=Math.min(18,Math.max(-14,drag[3]-dy*k*1.4));}});
+const up=e=>{const was=ptr.size;ptr.delete(e.pointerId);if(ptr.size===0){if(was===1&&moved<8)tap(e.clientX,e.clientY);drag=null;}else if(ptr.size===1){const [p]=[...ptr.values()];drag=[p[0],p[1],VIEW.x,VIEW.z];}};
+R.domElement.addEventListener('pointerup',up);R.domElement.addEventListener('pointercancel',up);
+R.domElement.addEventListener('wheel',e=>{VIEW.dist=Math.min(VIEW.max,Math.max(VIEW.min,VIEW.dist*(1+e.deltaY*.001)));},{passive:true});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+const gplane=new THREE.Plane(new THREE.Vector3(0,1,0),0),gp=new THREE.Vector3();
+const FX={pen:['💕','✨','🌾'],stove:['🔥','✨','🍳'],factory:['🧶','✨'],factory2:['🥩','✨'],pet:['💖','✨','💕'],menu:['✨'],sit:['🪑']};
+function tap(x,y){if(window.__s4dEdit)return;/* S4: โหมดตกแต่ง แตะพื้นไม่เดิน/ไม่เปิดหน้าต่าง */ndc.set(x/innerWidth*2-1,-(y/innerHeight)*2+1);ray.setFromCamera(ndc,cam);
+ if(GATHER){GATHER=false;try{window.__s4gDraw&&__s4gDraw();}catch(_){}if(ray.ray.intersectPlane(gplane,gp)){const X=gp.x,Zp=gp.z;ringM.position.set(X,.05,Zp);ringM.visible=true;ringT=0;
+   const nx=Z==='cat'?((X+9.5)/19*810+70)/941:((X+11.5)/23*820+60)/941,ny=Z==='cat'?((Zp+10)/18.5*960+430)/1672:((Zp+11.5)/19.3*860+560)/1672;
+   if(performance.now()-MIRT<1500)send('gather',nx.toFixed(4)+','+ny.toFixed(4));
+   else{let n=0;for(const a of [...SPR,...WALK]){a.tx=X+((n%3)-1)*1.2;a.tz=Zp+Math.floor(n/3)*1.1;a.gsit=1;a.fast=1;a.t=0;n++;}tip('🔔 เรียกมารวมแล้ว');}}return;}const hs=ray.intersectObjects(TAPS.map(t=>t[0]),true);
+ if(!hs.length){if(ray.ray.intersectPlane(gplane,gp)){walkTo(gp.x,gp.z);ringM.position.set(gp.x,.05,gp.z);ringM.visible=true;ringT=0;}return;}
+ let o=hs[0].object;
+ const t=TAPS.find(t=>{let p=o;while(p){if(p===t[0])return true;p=p.parent;}return false;});if(!t)return;const g=t[0];let k=0;const y0=g.position.y;const f=()=>{k+=.12;g.position.y=y0+Math.sin(Math.min(Math.PI,k))*.25;if(k<Math.PI)requestAnimationFrame(f);else{g.position.y=y0;}};f();
+ {const SA=SPR.find(a=>a.w===g),WA=!SA&&WALK.find(a=>a.w===g);if(girl&&(SA||WA)&&!PL.sit){s4Interact(SA||WA,!!SA,t);return;}}
+ const bb=new THREE.Box3().setFromObject(g),cx=(bb.min.x+bb.max.x)/2,cz=bb.max.z+.9;const far=!girl||Math.hypot(PL.x-cx,PL.z-cz)<1.2;
+ const go=()=>{if(girl){PL.dir=Math.PI;if(t[1]==='sit'){PL.sit=1;PL.z-=.9;gset('sit');return;}gset('wave');setTimeout(()=>{if(!PL.tx&&!PL.sit)gset('idle');},1600);}fx(cx,bb.max.y+.3,(bb.min.z+bb.max.z)/2,FX[t[1]]||['✨']);setTimeout(()=>send(t[1],t[3]),260);};
+ if(far)go();else walkTo(cx,Math.min(cz,29),go);}
+/* S4: แตะสัตว์ → น้องชมพูเดินไปข้างตัว หันหน้าเข้าหา แล้วเล่นด้วย (หมา/แฮมสเตอร์ = นั่งลูบหัว · แมว = อุ้ม · อัลปาก้า = ยื่นมือลูบ) แล้วเปิดหน้าต่างระบบเดิม */
+let s4IT=0;function s4Interact(a,spr,t){const now=performance.now();if(now-s4IT<450)return;s4IT=now;
+ if(spr){a.frz=now+12000;}else{a.tx=null;a.t=12;}
+ const n=spr?(a.kind==='cat'?'hold':'pat'):(Z==='alpaca'?'reach':'pat');const d=spr?.8:Math.max(.9,(a.h||1.4)*.55+.45);
+ const side=PL.x<a.x?-1:1,px=a.x+side*d,pz=a.z+.1;
+ const go=()=>{PL.dir=Math.atan2(a.x-PL.x,a.z-PL.z);gset('idle');if(spr)a.frz=performance.now()+3600;else a.t=3.6;
+  if(!spr){a.dir=Math.atan2(PL.x-a.x,PL.z-a.z);a.t=Math.max(a.t,2.6);}
+  if(n==='hold'){a.held=1;if(a.act!=='idle'){setA(a,'idle');a.sized=0;}GPOSE={n,t:0,dur:2.8,a};setTimeout(()=>{if(GPOSE&&GPOSE.a===a)PL.dir=0;},350);}else GPOSE={n,t:0,dur:1.9,a};
+  if(spr&&HAS[a.kind]&&a.act!=='sit'&&n!=='hold'){setA(a,'sit');a.sized=0;}
+  const y=spr?(a.H||1)+.2:(a.h||1.4)+.2;fx(a.x,y,a.z,['💖','✨','💕']);setTimeout(()=>{if(t)send(t[1],t[3]);},n==='hold'?1500:850);};
+ if(Math.hypot(PL.x-px,PL.z-pz)<.5)go();else walkTo(px,pz,go);}
+// ป้ายชื่อจุดสำคัญ
+const v3=new THREE.Vector3();function labels(){/* S4: ไม่มีป้ายตัวหนังสือลอยในฉาก (แตะที่ของได้เลย) */return;for(const t of TAPS){if(!t[2])continue;if(!t.el){t.el=document.createElement('div');t.el.className='lab';t.el.textContent=t[2];document.body.appendChild(t.el);}
+ const b=t.bb||(t.bb=new THREE.Box3().setFromObject(t[0]));v3.set((b.min.x+b.max.x)/2,b.max.y+.4,(b.min.z+b.max.z)/2).project(cam);t.el.style.left=((v3.x+1)/2*innerWidth)+'px';t.el.style.top=((1-v3.y)/2*innerHeight)+'px';t.el.style.display=v3.z<1?'':'none';}}
+let last=performance.now(),TT=0;function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;TT+=dt;for(const f of ANIMW)f(TT);stepAnimals(dt);stepSprites(dt);stepGirl(dt);
+ for(const h of SPIN)h.rotation.z+=dt*1.1;for(const tr of TREES)tr.rotation.z=Math.sin(TT*.8+tr.userData.sw)*.012;if(KIT)KIT.treeTime.value=TT;
+ if(ringM.visible){ringT+=dt;ringM.scale.setScalar(1+ringT*2.4);ringM.material.opacity=Math.max(0,1-ringT*1.6);if(ringT>.7)ringM.visible=false;}
+ applyCam();labels();R.render(sc,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(R.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}requestAnimationFrame(loop);}
+/* S4: 🎨 ตกแต่งโซน (บันทึกในเซฟผู้เล่นเอง module-s4deco-<โซน>) · ของที่วางเป็นสิ่งกีดขวาง สัตว์เดินอ้อม */
+window.__zt=()=>({SPR,WALK,PL,girl,pose:()=>GPOSE&&GPOSE.n,s4Interact,OB});
+let DOB=[];function s4DecoInit(){if(!window.S4DECO||window.__SHOW)return;try{S4DECO.init({THREE,sc,cam,dom:R.domElement,key:Z,fit,model,max:60,
+ bounds:{x0:-22,x1:22,z0:-20,z1:26},btnTop:'calc(env(safe-area-inset-top,0px) + 156px)',tip:t=>tip(t),
+ onChange:l=>{for(const d of DOB){const i=OB.indexOf(d);if(i>=0)OB.splice(i,1);}DOB=l;OB.push(...l);}});}catch(e){console.warn('s4deco',e&&e.message);}}
+(Z==='hamster'?buildHamster():Z==='dog'||Z==='cat'?buildPets(Z):buildAlpaca()).catch(e=>{console.error(e);window.__zerr=(e&&e.message)||String(e);}).then(()=>loadGirl().catch(e=>{console.error(e);window.__zerr2=(e&&e.message)||String(e);})).then(()=>{s4DecoInit();const L=document.getElementById('load');if(window.__zerr){const lt=document.getElementById('lt');lt.innerHTML='โหลดบางส่วนไม่สำเร็จ ลองเปิดใหม่<br><small style="font-size:9px;opacity:.6">'+String(window.__zerr).slice(0,80)+'</small>';setTimeout(()=>{if(L)L.style.display='none';},2500);}});
+const done=()=>{if(nLoad&&nDone>=nLoad){document.getElementById('load').style.display='none';window.__ready=1;}else setTimeout(done,300);};setTimeout(done,600);setTimeout(()=>{document.getElementById('load').style.display='none';window.__ready=1;},25000);
+requestAnimationFrame(loop);
+</script></body></html>

@@ -105,7 +105,7 @@ async function openMenu(){if(!V){openSheet('<div class="mk-hint">กำลัง
    +'<div class="mk-mode fast"><span class="e">⚡</span><div><b>เปิดด่วน · ไม่ต้องทาย</b><small>เปิดทีละ 500 กล่องขึ้นไป รับกุศลรวดเดียว</small><div class="mk-qty">'+q.map(v=>'<button data-q="'+v+'" class="'+(v===fq?'on':'')+'" '+(fqOk(v)?'':'disabled')+'>'+(v==='max'?'ทั้งหมด':'×'+fmt(v))+'</button>').join('')+'</div>'
    +'<div class="mk-tog'+(keepL?' on':'')+'" id="mkKeep" role="switch" aria-checked="'+keepL+'" tabindex="0"><i></i>🥇 เก็บกล่องใหญ่ไว้ทายเอง</div></div></div>'
    +'<div class="mk-row"><button class="mk-big blue" id="mkFast" '+(fqOk(fq)?'':'disabled')+'>⚡ เปิดด่วน '+(fq==='max'?'ทั้งหมด':'×'+fmt(fq))+'</button></div>'+(have<FAST_MIN?'<div class="mk-fine">เปิดด่วนได้เมื่อมีตั้งแต่ 500 กล่อง</div>':'')+(V.kept?keptBtn():'')
-   +(have?'':'<div class="mk-fine">ได้จากนางเงือกตัวจริง · ท็อป 5 ตกปลา · ตกปลา (หายาก) · คราฟในห้องใต้ดิน</div>'));
+   +(have?'':'<div class="mk-fine">ได้จากนางในวรรณคดีตัวจริง · ท็อป 5 ตกปลา · ตกปลา (หายาก) · คราฟในห้องใต้ดิน</div>'));
   sheet.querySelector('#mkPlay').onclick=()=>{closeSheet();playNext();};
   sheet.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fq=b.dataset.q==='max'?'max':+b.dataset.q;openMenu();});
   const kp=sheet.querySelector('#mkKeep');kp.onclick=()=>{keepL=!keepL;openMenu();};kp.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();kp.click();}};

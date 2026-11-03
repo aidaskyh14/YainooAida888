@@ -2,11 +2,11 @@
    - ห้อง/ค่าเข้า/คะแนน/กุศล: เซิร์ฟเวอร์ (Host.cloud('funrun')) · ห้องสาธารณะ world/funrun
    - ระหว่างวิ่ง: ตัวเราจำลองในเครื่อง · เพื่อนอีก 5 คนเห็นจากตำแหน่งที่แต่ละเครื่องส่ง (funrunLive) วันละไม่กี่ครั้งต่อวินาที
    - ไอเทมที่โดนคนอื่นส่งเป็น "เหตุการณ์" แล้วเครื่องของผู้โดนเป็นคนคิดผลกับตัวเอง (โล่/ไฟกันได้ตามจริง) */
-import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix15';
+import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix15&h=86927985';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),A='images/funrun/';
 const ME=H.uid,esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const CH=[['pig','น้ำผึ้ง'],['hedgehog','เม่นอ้วน'],['cat','แมวแวมไพร์'],['alpaca','อัลปาก้า'],['dog','หมาป่า'],['dodo','โดโด้']];
+const CH=[['pig','น้ำผึ้ง'],['hedgehog','เม่นอ้วน'],['cat','แมวนางรำ'],['alpaca','อัลปาก้า'],['dog','หมาป่า'],['dodo','โดโด้']];
 const CI=k=>Math.max(0,CH.findIndex(c=>c[0]===k));
 const COLORS=['#F28C28','#5BB6D4','#B07CC6','#6CC9A8','#F27E9B','#FFC94D'];
 const img=s=>{const i=new Image();i.src=A+s;return i};
@@ -55,7 +55,7 @@ function size(){const r=cv.getBoundingClientRect();cv.width=Math.round(r.width*D
 function off(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));return c}
 const LEN=FR.LEN,SPEED=FR.SPEED;
 const ZONES=[
- {bg:'bg-pumpkin',gr:'gr-pumpkin',surf:.33,nm:'🎃 ไร่ฟักทอง',soil:['#5A2E14','#24120A'],pit:['#B6FF6A','#5FD13A','#1F5A1C','120,255,90','230,255,200','210,255,170'],lip:['#5B4636','#7FAE3E'],pitNm:'ตกบ่อเมือก',pitC:'#9BFF6A'},
+ {bg:'bg-pumpkin',gr:'gr-pumpkin',surf:.33,nm:'🪷 ไร่ฟักทอง',soil:['#5A2E14','#24120A'],pit:['#B6FF6A','#5FD13A','#1F5A1C','120,255,90','230,255,200','210,255,170'],lip:['#5B4636','#7FAE3E'],pitNm:'ตกบ่อเมือก',pitC:'#9BFF6A'},
  {bg:'bg-volcano',gr:'gr-volcano',surf:.09,nm:'🌋 ภูเขาไฟ',soil:['#3A1E3C','#140A18'],pit:['#FFE07A','#FF7A1E','#8A1A0A','255,120,40','255,230,170','255,200,120'],lip:['#2E1A34','#4A2E52'],pitNm:'ตกบ่อลาวา',pitC:'#FF8A2A'},
  {bg:'bg-ice',gr:'gr-ice',surf:.04,nm:'❄️ ปราสาทน้ำแข็ง',soil:['#1E4FA8','#0C1E4A'],pit:['#E6FBFF','#6FD3FF','#1A4FA0','130,220,255','240,252,255','220,245,255'],lip:['#5C8FD0','#F2FAFF'],pitNm:'ตกบ่อน้ำแข็ง',pitC:'#9BE6FF'}];
 let round=1;const Z=()=>ZONES[Math.max(0,Math.min(2,(round||1)-1))];
@@ -77,7 +77,7 @@ function startRound(){
  traps=[];fx=[];parts=[];snowT=0;myItem=null;cam=0;state='cd';reported=false;$('feed').innerHTML='';
  $('lobby').hidden=true;$('results').hidden=true;$('game').hidden=false;$('spect').hidden=true;size();renderHUD();
  liveStop?.();liveStop=H.frWatch?H.frWatch(room.game,onPlayers,onEvent):null;
- banner(`🎃 ด่าน ${round}/${FR.ROUNDS} · ${Z().nm}`);
+ banner(`🪷 ด่าน ${round}/${FR.ROUNDS} · ${Z().nm}`);
  const go=()=>{state='run';banner(round===1?'🏁 ไป!  👆 แตะจอเพื่อกระโดด':'🏁 ไป!');};
  const wait=()=>{const left=room.roundStart-SNow();if(left<=0)return go();if(left<=3200){$('gcd').innerHTML=`<span>${Math.ceil(left/1000)}</span>`;}setTimeout(wait,Math.min(250,left));};
  wait();lastT=0;requestAnimationFrame(loop);
@@ -93,14 +93,14 @@ function playerUse(k){if(k==='it-saw'){$('aim').hidden=false;return false}useIte
 $('use').onclick=e=>{e.stopPropagation();if(!myItem||state!=='run'||!alive(me))return;if(playerUse(myItem)){myItem=null;renderHUD()}};
 document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=e=>{e.stopPropagation();$('aim').hidden=true;if(myItem!=='it-saw'||state!=='run')return;useItem('it-saw',+b.dataset.dir);myItem=null;renderHUD();});
 const ITEMS=['it-cannon','it-roulette','it-saw','it-candyboost','it-rampage','it-phase','it-storm','it-blizzard','it-mushroom','it-batbox','it-web','it-spikes','it-shield','it-fireshield','it-magnet'];
-const INAME={'it-saw':'⚙️ จักรเหวี่ยง','it-spikes':'🌵 วางหนาม','it-rampage':'🔥 พุ่งชนไม่ยั้ง','it-cannon':'🎃 ปืนใหญ่ฟักทอง','it-roulette':'🎡 วงล้อแม่มด','it-candyboost':'🍬 ลูกอมพลังพิเศษ','it-phase':'👻 ร่างผีทะลุ','it-storm':'🌩️ พายุแม่มด','it-blizzard':'❄️ พายุหิมะผี','it-mushroom':'🍄 เห็ดเด้ง','it-batbox':'📦 กล่องค้างคาว','it-web':'🕸️ ใยแมงมุมไฟฟ้า','it-shield':'🫧 ฟองกันภัย','it-fireshield':'🔥 ฟองไฟฟักทอง','it-magnet':'🧲 แม่เหล็กแม่มด'};
+const INAME={'it-saw':'⚙️ จักรเหวี่ยง','it-spikes':'🌵 วางหนาม','it-rampage':'🔥 พุ่งชนไม่ยั้ง','it-cannon':'🪷 ปืนใหญ่ฟักทอง','it-roulette':'🎡 วงล้อโคมลอย','it-candyboost':'🍬 ขนมไทยพลังพิเศษ','it-phase':'🏮 ร่างโคมทะลุ','it-storm':'🌩️ พายุลมว่าว','it-blizzard':'❄️ พายุหิมะต้องมนต์','it-mushroom':'🍄 เห็ดเด้ง','it-batbox':'📦 กล่องหิ่งห้อย','it-web':'🪷 ดอกบัวไฟฟ้า','it-shield':'🫧 ฟองกันภัย','it-fireshield':'🔥 ฟองไฟฟักทอง','it-magnet':'🧲 แม่เหล็กโคมลอย'};
 const alive=r=>r&&!r.out&&!r.fin;
 const others=()=>[...remotes.values()].filter(alive);
 const aheadOf=x=>others().filter(o=>o.x>x).sort((a,b)=>a.x-b.x);
 function protectedBy(r){if(T(r,'fire'))return true;if(r.shield){r.shield=0;pop(r.x,r.y+30,'🫧 กันได้!','#CFEFFF');burst(r.x,r.y+30,'#CFEFFF',14);return true}return false}
 function hit(why){
  if(!alive(me)||protectedBy(me))return;me.hp--;me.dizzy=70;me.stun=40;pop(me.x,me.y+70,'−1 ❤️','#FF8A80');feed(`💥 ${why||'โดนชน'} −1 ❤️`,true);shakeT=14;
- if(me.hp<=0){me.out=true;me.ghost=0;banner('👻 ตกรอบ');report(false);}renderHUD();publish(true);
+ if(me.hp<=0){me.out=true;me.ghost=0;banner('🏮 ตกรอบ');report(false);}renderHUD();publish(true);
 }
 function pop(x,y,t,c){fx.push({k:'txt',x,y,t,c,life:60})}
 function burst(x,y,c,n=16,sp=6){for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.random()-.5)*sp,vy:Math.random()*sp*.9,life:35+Math.random()*15,c,r:2+Math.random()*2.5})}
@@ -145,14 +145,14 @@ const FL={boost:1,phase:2,fire:4,shield:8,ram:16,frozen:32,webbed:64,char:128,cl
 function flagsOf(r){let f=0;for(const [k,b]of Object.entries(FL)){if(k==='shield'?r.shield:(k==='out'||k==='fin')?r[k]:T(r,k))f|=b;}return f}
 function onPlayers(list){if(!game)return;const now=SNow();for(const p of list){if(p.uid===ME||p.g!==game.id||p.r!==round)continue;const o=remotes.get(p.uid);if(!o)continue;
  if((p.t||0)<=o.t)continue;o.t=p.t;o.px=p.x;o.py=p.y;o.v=Number(p.v)||0;o.hp=p.hp;o.f=p.f||0;o.at=now;
- for(const [k,b]of Object.entries(FL)){const on=!!(o.f&b);if(k==='out'){if(on&&!o.out){o.out=true;o.ghost=0;feed(`👻 ${o.n} ตกรอบ`,false);}}else if(k==='fin'){if(on&&!o.fin){o.fin=1;feed(`🏁 ${o.n} เข้าเส้นชัย`,false);}}else o[k]=on?(k==='shield'?1:20):0;}}}
+ for(const [k,b]of Object.entries(FL)){const on=!!(o.f&b);if(k==='out'){if(on&&!o.out){o.out=true;o.ghost=0;feed(`🏮 ${o.n} ตกรอบ`,false);}}else if(k==='fin'){if(on&&!o.fin){o.fin=1;feed(`🏁 ${o.n} เข้าเส้นชัย`,false);}}else o[k]=on?(k==='shield'?1:20):0;}}}
 let lastPub=0,lastSent='';
 function publish(force){if(!game||!me)return;const t=performance.now();if(!force&&t-lastPub<480)return;lastPub=t;
  const data={g:game.id,r:round,x:Math.round(me.x),y:Math.round(me.y),v:alive(me)?Math.round(curV*60):0,hp:me.hp,f:flagsOf(me),t:SNow()};const sig=JSON.stringify({...data,t:0});if(!force&&sig===lastSent)return;lastSent=sig;try{H.frPublish?.(game.id,data);}catch(e){}}
 /* รายงานผลด่านของเรา (เซิร์ฟเวอร์ตรวจและคิดคะแนน) */
 function report(fin){if(reported||!game)return;reported=true;const time=fin?Math.round(SNow()-room.roundStart):0;
  const g=game.id,rd=round,body={type:'report',game:g,round:rd,fin,time,hp:me.hp,candy:me.candy,boxes:me.boxes};const send=(n=0)=>cloud(body,true).then(o=>{if(!o&&n<8&&room.game===g&&room.round===rd&&room.status==='race')setTimeout(()=>send(n+1),1200);});send();
- $('spect').hidden=false;$('spect').textContent=fin?'🏁 เข้าเส้นแล้ว · รอเพื่อน (ตัดเวลา 20 วิหลังคนแรก)':'👻 ตกรอบ · ดูเพื่อนวิ่งต่อ';}
+ $('spect').hidden=false;$('spect').textContent=fin?'🏁 เข้าเส้นแล้ว · รอเพื่อน (ตัดเวลา 20 วิหลังคนแรก)':'🏮 ตกรอบ · ดูเพื่อนวิ่งต่อ';}
 
 let curV=0;
 function step(){
@@ -177,9 +177,9 @@ function step(){
    for(const o of others())if(T(o,'ram')&&Math.abs(o.x-r.x)<26&&Math.abs(o.y-r.y)<40&&!T(r,'rammed')){r.rammed=90;r.knock=35;r.vy=10;r.grounded=false;boom(r.x,r.y+30);hit(`${o.n} พุ่งชน`)}
    for(const t of traps){if(!t.landed||t.owner===ME||t.hit)continue;const ty=t.k==='it-batbox'?28:0;if(Math.abs(t.x-r.x)<20&&Math.abs(r.y-ty)<28&&!T(r,'phase')){t.hit=true;if(protectedBy(r))continue;const by=remotes.get(t.owner)?.n||'เพื่อน';
      if(t.k==='it-spikes'){burst(t.x,10,'#B36BFF',14);hit(`เหยียบหนามของ ${by}`)}
-     else if(t.k==='it-web'){r.webbed=100;feed(`🕸️ ติดใยของ ${by}`,true)}
+     else if(t.k==='it-web'){r.webbed=100;feed(`🪷 ติดใยของ ${by}`,true)}
      else if(t.k==='it-mushroom'){t.sq=16;r.vy=15;r.grounded=false;r.knock=40;pop(t.x,50,'บึ๋ง!','#FF9AB0');feed(`🍄 เด้งถอยหลัง (${by})`,true)}
-     else{t.broken=1;burst(t.x,30,'#B07A45',18);r.knock=35;r.vy=9;r.grounded=false;pop(t.x,60,'ปึก!','#FFD36B');feed(`📦 ชนกล่องค้างคาวของ ${by}`,true)}}}
+     else{t.broken=1;burst(t.x,30,'#B07A45',18);r.knock=35;r.vy=9;r.grounded=false;pop(t.x,60,'ปึก!','#FFD36B');feed(`📦 ชนกล่องหิ่งห้อยของ ${by}`,true)}}}
    boxes.forEach((b,bi)=>{if(!r.gotB.has(bi)&&Math.abs(b.x-r.x)<24&&Math.abs(r.y+35-b.y)<45){r.gotB.add(bi);r.boxes++;burst(b.x,b.y,'#FFE08A',14);if(!myItem){myItem=ITEMS[Math.floor(Math.random()*ITEMS.length)];renderHUD()}}});
    candies.forEach((c,ci)=>{if(!r.gotC.has(ci)&&Math.abs(c.x-r.x)<18&&Math.abs(r.y+30-c.y)<36){r.gotC.add(ci);r.candy++;burst(c.x,c.y,'#FFD36B',5,3)}});
    if(r.x>=LEN&&!r.fin){r.fin=1;banner('🏁 เข้าเส้นชัย!');feed('🏁 เข้าเส้นชัย!',true);report(true);publish(true);}
@@ -288,7 +288,7 @@ function renderHUD(){
  if(!me)return;setH('hearts',[0,1,2,3,4].map(i=>`<img src="${A}it-heart${i<me.hp?'':'-empty'}.webp" alt="">`).join(''));
  const u=$('use'),want=A+(myItem||'it-box')+'.webp';u.classList.toggle('empty',!myItem);if(!$('useimg').src.endsWith(want))$('useimg').src=want;
  const all=[me,...remotes.values()],ord=[...all].sort((a,b)=>((b.fin?1:0)-(a.fin?1:0))||((a.out?1:0)-(b.out?1:0))||b.x-a.x);
- setH('rank',ord.map((r,i)=>`<div class="${r===me?'me':''} ${r.out?'out':''}">${r.out?'💀':i+1}<img src="${A}ch-${CH[r.c][0]}.webp" alt="">${esc(r.n)}</div>`).join(''));
+ setH('rank',ord.map((r,i)=>`<div class="${r===me?'me':''} ${r.out?'out':''}">${r.out?'💫':i+1}<img src="${A}ch-${CH[r.c][0]}.webp" alt="">${esc(r.n)}</div>`).join(''));
  if($('prog').children.length!==all.length)$('prog').innerHTML=all.map((r,k)=>`<i style="background-image:url(${A}ch-${CH[r.c][0]}.webp);border-color:${COLORS[k%6]}"></i>`).join('');
  all.forEach((r,k)=>{const e=$('prog').children[k];if(!e)return;e.style.left=Math.max(0,Math.min(100,r.x/LEN*100))+'%';e.style.opacity=r.out?.35:1});
 }
@@ -309,7 +309,7 @@ function showResults(title,rows,fin){
  if(fin)$('podium').innerHTML=top.map((r,i)=>r?`<div class="pod">${i===1?'👑':''}<span class="spr big" style="background-image:url(${A}an/${esc(r.c)}-win.webp)"></span>${esc(r.name)}<div class="b" style="height:${hh[i]}px;width:66px;background:${cc[i]}">${nn[i]}</div></div>`:'').join('');
  $('rlist').innerHTML=rows.map((r,i)=>{const rw=fin?r.merit:null;return `<div class="row${r.uid===ME?' me':''}"><span>${i+1}</span><img src="${A}ch-${esc(r.c)}.webp" alt=""><div><div style="font-weight:800">${esc(r.name)}${!fin?` <small style="color:#B8601A">ด่านนี้ +${r.last}</small>`:''}</div><div class="sc"><span>⏱️ ${r.time||0}</span><span>❤️ ${r.heart||0}</span><span>🍬 ${r.got||0}</span></div></div><div style="text-align:right"><b data-v="${r.total||0}">0</b>${fin?`<div class="rw ${rw>0?'p':rw<0?'n':''}">${rw>0?'+':''}${(rw||0).toLocaleString('en-US')} 💛</div>`:''}</div></div>`;}).join('');
  document.querySelectorAll('#rlist b').forEach(b=>{const v=+b.dataset.v;let k=0;const t=setInterval(()=>{k=Math.min(v,k+Math.ceil(v/25)||v);b.textContent=k;if(k>=v)clearInterval(t)},40)});
- if(fin)for(let i=0;i<24;i++){const c=document.createElement('span');c.className='conf';c.textContent=['🎉','✨','🍬','⭐','🎃'][i%5];c.style.left=Math.random()*100+'%';c.style.setProperty('--dx',(Math.random()*80-40)+'px');c.style.animationDelay=Math.random()*.6+'s';$('results').append(c);setTimeout(()=>c.remove(),3500)}
+ if(fin)for(let i=0;i<24;i++){const c=document.createElement('span');c.className='conf';c.textContent=['🎉','✨','🍬','⭐','🪷'][i%5];c.style.left=Math.random()*100+'%';c.style.setProperty('--dx',(Math.random()*80-40)+'px');c.style.animationDelay=Math.random()*.6+'s';$('results').append(c);setTimeout(()=>c.remove(),3500)}
 }
 $('home').onclick=()=>{clearInterval(rtimer);goHome();};
 /* ห้องเปลี่ยน (ทุกคนฟัง world/funrun) */

@@ -1,4 +1,4 @@
-/* แม่มดซิ่งไม้กวาด — shared rules (Cloud Functions + witch-game.js).
+/* แม่มดซิ่งใบตองทอง — shared rules (Cloud Functions + witch-game.js).
    Pure ES module: no DOM, no Firebase. The page uses the same scoring function and the same seeded
    item streams, so the numbers the player sees are exactly what the server pays.
    The server never runs per frame: start → (≤6 checkpoints) → finish; the finish report is re-scored here

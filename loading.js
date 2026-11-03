@@ -1,12 +1,13 @@
 /* หน้าโหลดจริง: เปอร์เซ็นต์นับจากไฟล์และภาพที่โหลดสำเร็จ */
 (() => {
   'use strict';
+  if(/[?&]ov=1/.test(location.search))return; /* ซีซัน 4: หน้าโหลดที่เปิดทับเกม = แสดงผลอย่างเดียว ไม่โหลดซ้ำ */
   const q=id=>document.getElementById(id);
   let runId=0;
   const sea=q('sea'), raft=q('raft'), slot=q('raftSlot');
   if(slot && raft) slot.replaceWith(raft);
   function progress(done,total,label) {
-    const p=total ? Math.floor(done*100/total) : 0;
+    const p=total ? Math.floor(done*70/total) : 0;
     q('fill').style.width=p+'%';q('pct').textContent=p+'%';q('step').textContent=label;
     if(sea)sea.style.height=(20+p*.42)+'%';
   }
@@ -26,11 +27,11 @@
       const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),20000);
       let response,html;
       try {
-        response=await fetch('scr-farm.html?v=ss3-fix15',{signal:ctrl.signal});
-        if(!response.ok)throw new Error('scr-farm.html');html=await response.text();
+        response=await fetch('scr-farm.html?v=ss3-fix15&h=e27a3a90',{signal:ctrl.signal});
+        if(!response.ok)throw new Error('scr-farm.html?h=e27a3a90');html=await response.text();
       } finally { clearTimeout(timer); }
       const urls=[...new Set([...html.matchAll(/images\/[A-Za-z0-9_.-]+\.(?:webp|png|jpe?g|gif)/g)].map(m=>m[0]))];
-      urls.push('images/honey-raft-loading.webp');
+      urls.push('images/s4-load-pig-toss-4x4.webp');
       const failures=[];let next=0,done=1;const total=urls.length+1;
       progress(done,total,'🖼️ กำลังโหลดภาพในสวน…');
       await Promise.all(Array.from({length:Math.min(6,urls.length)},async()=>{
@@ -42,11 +43,7 @@
       }));
       if(id!==runId)return;
       if(failures.length)throw new Error(failures.slice(0,5).join(', '));
-      progress(total,total,'✅ พร้อมแล้ว!');
-      await new Promise(r=>setTimeout(r,300));
-      if(id!==runId)return;
-      q('load').classList.add('done');
-      await new Promise(r=>setTimeout(r,500));
+      progress(total,total,'🌱 กำลังจัดสวน…');
       if(id===runId)parent.postMessage({go:'farm'},location.origin);
     } catch(e) {
       if(id!==runId)return;

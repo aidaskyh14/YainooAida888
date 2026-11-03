@@ -1,0 +1,27 @@
+/* ซีซัน 4: หน้าตากลางของทุกหน้า (ตัวหนังสือเล็กลง · หน้าต่างกระจกใส · ปุ่มมีประกาย) */
+html{font-size:14px!important}
+@media (min-width:600px){html{font-size:15px!important}}
+.sheet,.card,.modal .card,#sheet,.sh .box{border-radius:24px 24px 0 0;}
+.sheet,#sheet{background:linear-gradient(180deg,rgba(255,252,246,.97),rgba(255,244,230,.97))!important;-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:1.5px solid rgba(255,255,255,.95)!important;box-shadow:0 -10px 40px rgba(60,30,10,.25),inset 0 1px 0 #fff!important;font-size:.92rem}
+.sheet h3,#sheet h3{font-size:1.02rem!important;letter-spacing:.01em;margin:.15rem 0 .55rem!important;background:linear-gradient(90deg,#c0567c,#e08a2b);-webkit-background-clip:text;background-clip:text;color:transparent!important;font-weight:800}
+.sheet .hint,#sheet .hint,.hint{font-size:.74rem!important;line-height:1.35}
+.sheet::before{content:'';display:block;width:42px;height:5px;border-radius:9px;background:rgba(120,80,50,.22);margin:-.2rem auto .5rem}
+.shade{background:radial-gradient(circle at 50% 70%,rgba(40,20,60,.25),rgba(20,10,30,.55))!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.toast{background:linear-gradient(135deg,rgba(42,33,64,.92),rgba(80,50,110,.92))!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.35);font-size:.78rem!important;padding:.42rem .95rem!important;box-shadow:0 8px 24px rgba(30,10,50,.35),0 0 18px rgba(255,200,120,.25)!important}
+.toast.on,.toast.show{animation:s4toast .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes s4toast{from{transform:translate(-50%,14px) scale(.85)}}
+button.big,.btn,.big{position:relative;overflow:hidden}
+button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:s4shine 3.2s ease-in-out infinite}
+@keyframes s4shine{0%,60%{left:-60%}100%{left:130%}}
+.opt,.cell,.item,.pcard,.cat{transition:transform .12s}
+.opt:active,.cell:active,.item:active,.pcard:active,.cat:active{transform:scale(.96)}
+.demo{display:none!important}
+
+/* ซีซัน 4: แถบบนของหน้าระบบ = ปุ่มกลับฟาร์มเล็กๆ มุมซ้ายบน (ไม่มีแถบขาวเต็มกว้าง) ฉากเต็มจอ */
+.gbar{background:transparent!important;border:0!important;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0!important}
+.gbar button{pointer-events:auto;background:rgba(48,34,72,.8)!important;color:#fff!important;font:800 11px Mali,sans-serif!important;padding:.42rem .8rem!important;box-shadow:0 4px 12px rgba(20,10,40,.25)!important;border:1px solid rgba(255,255,255,.5)!important}
+.gbar b{display:none!important}
+#scr{top:0!important;height:100%!important}
+
+/* ซีซัน 4: ปุ่มเก็บของดรอปบนฟาร์ม = ปุ่มเล็กไอคอน ไม่ใช่ป้ายตัวหนังสือใหญ่ */
+#dropCollectVisible{font:800 11px Mali,sans-serif!important;padding:6px 11px!important;border-radius:999px!important;border:2px solid #fff!important;background:linear-gradient(180deg,#ffe58a,#f2b33c)!important;color:#6b3f12!important;box-shadow:0 3px 0 rgba(0,0,0,.15),0 4px 10px rgba(60,30,0,.2)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 84px)!important}

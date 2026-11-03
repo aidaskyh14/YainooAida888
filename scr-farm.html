@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script>/* fix22c: เปลือกเกมรุ่นเก่าค้างในเครื่อง (ไม่มีระบบโรงงานใหม่) → โหลดหน้าเกมใหม่อัตโนมัติ 1 ครั้ง */(function(){try{var H=parent.__HOST;if(H&&typeof H.serverNow==='function')return;var k='ss3StaleReload';if(sessionStorage.getItem(k)==='1')return;sessionStorage.setItem(k,'1');parent.location.replace(parent.location.pathname+'?r='+Date.now());}catch(e){}})();</script><script src="craft-result.js?v=ss3-fix17"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="pv/s4icon.js?h=edc9f144"></script><script>/* fix22c: เปลือกเกมรุ่นเก่าค้างในเครื่อง (ไม่มีระบบโรงงานใหม่) → โหลดหน้าเกมใหม่อัตโนมัติ 1 ครั้ง */(function(){try{var H=parent.__HOST;if(H&&typeof H.serverNow==='function')return;var k='ss3StaleReload';if(sessionStorage.getItem(k)==='1')return;sessionStorage.setItem(k,'1');parent.location.replace(parent.location.pathname+'?r='+Date.now());}catch(e){}})();</script><script src="craft-result.js?v=ss3-fix17&h=e654a3c6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}
 .owner-rank{border:3px solid #d2a145!important;background:linear-gradient(110deg,#fff5d4,#ffdda0)!important;box-shadow:0 4px 14px #bb882b55;margin-bottom:16px}.owner-rank .rn{font-weight:800;color:#8a541f}
@@ -201,7 +201,7 @@ h3{margin:0 0 .5rem;font-size:1.05rem}h4{margin:.8rem .1rem .35rem;font-size:.75
 .it img{width:100%;aspect-ratio:1;object-fit:contain}
 .dit img{width:100%;aspect-ratio:1;object-fit:contain}
 
-</style></head><body><div id="view"><div class="stage" id="stage"></div></div>
+</style><link rel="stylesheet" href="pv/s4ui.css?h=0adfba44"></head><body><script src="pv/s4ov.js?h=32a94ca6"></script><script src="pv/s4cover.js?h=fdfc988f"></script><div id="view"><div class="stage" id="stage"></div></div>
 <div class="top">
  <div class="prof"><div class="av" id="av">🐷<span class="cam">📷</span></div>
   <div style="min-width:0"><div class="pname" id="pname"><span id="nm">มดแดง</span><small>✏️</small></div>
@@ -349,7 +349,7 @@ function open(id){$(id).classList.add('on');$('shade').classList.add('on')}
 function closeAll(){['seedSheet','actSheet','boostSheet','angelSheet','honeySheet','farmSheet','delSheet','drawer','mailSheet','menuSheet','bagSheet','friendSheet','nameModal','friendModal','plotModal','shade'].forEach(i=>$(i).classList.remove('on'))}
 $('shade').onclick=closeAll;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeAll);
 const PL=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"]]],
-["สัตว์",[["🐔","โรงเรือนสัตว์วิญญาณ","ไก่ ปลา หมู วัว","barn"],["🦤","นกน้อยคล้อยบินมาเดียวดาย","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","",""],["🐱","คอกแมว","5 สายพันธุ์ • อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","คอกอัลปาก้า","ทำท้ายสุด",""],["🐹","บ้านแฮมสเตอร์","คอกทรายหลังบ้าน","backyard"]]],
+["สัตว์",[["🐔","โรงเรือนสัตว์ภาคการเกษตร","ไก่ ปลา หมู วัว","barn"],["🦤","ซาฟารี","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","",""],["🐱","คอกแมว","5 สายพันธุ์ • อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","คอกอัลปาก้า","ทำท้ายสุด",""],["🐹","บ้านแฮมสเตอร์","คอกทรายหลังบ้าน","backyard"]]],
 ["สถานที่",[["🌲","ป่าต้องห้าม","เปิด 18:00–05:59 เวลาไทย","forest"],["🚣","เทศกาลเรือพาย","แข่งส่งเสบียง","boat"],["🦓","ศูนย์วิจัยซาฟารี","","safari"],["🍎","ฟาร์มต้นผลไม้","ฟาร์ม 4 • พีช แอปเปิล ส้ม เชอร์รี","f4"],["🎣","บ่อตกปลา","อยู่ในหน้าทดลองไฟล์ 2 (ไฟล์ใหญ่ แยกไว้)","url2"],["🔮","ร้านค้าลึกลับ","ตลาดหุ้นสวน • รับซื้อไวน์","shop"]]],
 ["กิจกรรม",[["💎","Top Spenders","","topspenders"],["🎲","มินิเกมในสวน","บิงโก • บันไดงู • เศรษฐี",""]]]];
 $('places').innerHTML='<div style="font-size:.68rem;color:#9A7A68;margin:.1rem 0 .3rem">🧪 ✅ = ออกแบบเสร็จ ลองกดได้ • 🚧 = ยังไม่เสร็จ</div>'+PL.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'<span class="soon" style="background:#E7F7EF;color:#2F8A65">✅ ลองได้</span>':'<span class="soon">🚧 ยังไม่เสร็จ</span>')+'</button>').join('')).join('');
@@ -370,7 +370,7 @@ $('dSleep').onclick=()=>{closeAll();sleep()};
 let bagTab='crop';const BT={crop:'🥬 ผัก',flower:'🌸 ดอกไม้',food:'🍲 อาหาร',wine:'🍷 ไวน์',hedge:'🦔 ของเม่น',item:'✨ ไอเทม'};
 const ITN={fert:'ปุ๋ยนางฟ้า',cake:'เค้ก',coconut:'มะพร้าว',angel:'ปีกนางฟ้า'};
 /* ชื่อ/รูปจากแคตตาล็อกกลาง (Host.catalogItem) เมื่อหน้านี้ไม่รู้จักไอเทม เช่น น้ำมัน หมวก ใบอนุญาต กล่องดนตรี */
-const BAGX={fruit:'🍎 ผลไม้',grass:'🌿 หญ้า',forest:'🪵 วัสดุป่า',product:'🥚 ผลผลิตสัตว์',bird:'🪶 ของนก',tree:'🌳 ต้นผลไม้',gfood:'🍲 อาหารสวน',drink:'🧃 เครื่องดื่ม',box:'🎁 กล่องสุ่ม',birdbox:'🎁 กล่องนก',halloween:'🎃 ฮาโลวีน',rod:'🎣 เบ็ด',fishing:'🎣 ตกปลา',catfood:'🐟 อาหารแมว',cat:'🐱 แมว',hamster:'🐹 แฮมสเตอร์'};
+const BAGX={fruit:'🍎 ผลไม้',grass:'🌿 หญ้า',forest:'🪵 วัสดุป่า',product:'🥚 ผลผลิตสัตว์',bird:'🪶 ของนก',tree:'🌳 ต้นผลไม้',gfood:'🍲 อาหารสวน',drink:'🧃 เครื่องดื่ม',box:'🎁 กล่องสุ่ม',birdbox:'🎁 กล่องนก',halloween:'🪷 ลอยกระทง',rod:'🎣 เบ็ด',fishing:'🎣 ตกปลา',catfood:'🐟 อาหารแมว',cat:'🐱 แมว',hamster:'🐹 แฮมสเตอร์'};
 const bagCat=(t,k)=>{try{return parent.__HOST.catalogItem(t+'.'+k)||null}catch(e){return null}},bagQ=v=>Number.isSafeInteger(v)&&v>0?v:0;
 function bagTabsAll(){const t={...BT};for(const[g,o]of Object.entries(S.bag||{}))if(!t[g]&&o&&typeof o==='object'&&Object.values(o).some(bagQ))t[g]=BAGX[g]||((Object.keys(o).map(k=>bagCat(g,k)).find(Boolean)||{}).g)||g;return t}
 function bagName(t,k){return (t==='crop'?CN[k]:t==='flower'?FLN[k]:t==='wine'?WN[k]:t==='hedge'?HN[k]:t==='item'?ITN[k]:null)||(bagCat(t,k)||{}).n||k}
@@ -383,12 +383,12 @@ $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.datas
 const HOWTO={'item.atmcard':['💳 บัตร ATM กุศล','ไปที่สวนยัยหนู (👥 เพื่อน → ยัยหนู) แล้วแตะตู้ ATM ข้างตู้ไปรษณีย์ · ตั้ง PIN ครั้งแรกครั้งเดียว · โอนกุศลให้เพื่อนได้วันละ 3 คน คนละ 5 ครั้ง · ใช้ได้จนจบซีซั่น','friends','👥 ไปสวนยัยหนู'],'boost.bait':['🎣 เหยื่อวิเศษ','ใช้ตอนเลือกเบ็ดที่บ่อตกปลา (บ่อทั่วไป) · ปลากินเบ็ดใน 3 นาที แทน 10 นาที · ใช้ได้ไม่จำกัด','fishing','🎣 ไปบ่อตกปลา'],
  'boost.lens':['🔍 แว่นขยายนักวิจัย','ใช้ตอนกดวิจัยที่ซาฟารี · วัตถุดิบที่ต้องใช้ลดลง 30% · ใช้ได้ไม่จำกัด','safari','🦓 ไปซาฟารี'],
  'boost.gear':['⚙️ เฟืองเร่งเครื่อง','ใช้ตอนสั่งงานโรงงานอัลปาก้า · เวลาแปรรูปเร็วขึ้น 30% · ใช้ 1 ชิ้นต่องาน ไม่จำกัดต่อวัน','alpaca','🦙 ไปโรงงานอัลปาก้า'],
- 'fishing.eel':['⚡ ปลาไหลไฟฟ้าผี','แตะทุ่นของเพื่อนที่นั่งบ่อเดียวกันแล้วเลือกปลาไหล · ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว) · เพื่อนไม่รู้ว่าใคร','fishing','🎣 ไปบ่อตกปลา'],
+ 'fishing.eel':['⚡ ปลาไหลไฟฟ้า','แตะทุ่นของเพื่อนที่นั่งบ่อเดียวกันแล้วเลือกปลาไหล · ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว) · เพื่อนไม่รู้ว่าใคร','fishing','🎣 ไปบ่อตกปลา'],
  'box.mahakusal':['📦 กล่องสุ่มมหากุศล','เปิดได้ที่ห้องใต้ดินในบ้าน · ทายรหัส 4 หลักได้ 3 ครั้ง ลุ้นกุศลก้อนใหญ่ · หรือเปิดด่วนทีละ 500 กล่องขึ้นไป','house','🏠 ไปห้องใต้ดิน'],
- 'demon.music':['🎶 กล่องดนตรีหมูปีศาจ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 ปีศาจ · เพื่อนโดนหักทันที −50,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
- 'demon.hour':['⏳ นาฬิกาทรายปีศาจ','วางในสวนเพื่อน ดูดกุศล −10,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยไม้กวาด 100) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
+ 'demon.music':['🎶 กล่องดนตรีหมูจอมแสบ','ไปสวนเพื่อนแล้วกดปุ่ม 😈 จอมแสบ · เพื่อนโดนหักทันที −50,000 กุศล · ไม่รู้ว่าใครแกล้ง · ต้องใช้ภายใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง','friends','👥 ไปสวนเพื่อน'],
+ 'demon.hour':['⏳ นาฬิกาทรายจอมแสบ','วางในสวนเพื่อน ดูดกุศล −10,000 ทุก 6 นาที นาน 1 ชม. (เจ้าของคว่ำได้ด้วยใบตองทอง 100) · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
  'demon.coffin':['⛓️ หีบโลงต้องสาป','ล็อกสวนเพื่อนจนกว่าเจ้าของจะเปิดตราผนึก 1 ใน 3 · ระวังตราสะท้อนกลับมาหาคุณ! · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน'],
- 'demon.heart':['💖 หัวใจทับทิมปีศาจ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −250,000 (หรือเลือกเสียของ 1,500 ชิ้นแทน) · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
+ 'demon.heart':['💖 หัวใจทับทิมจอมแสบ','ส่งให้เพื่อน คนถือต้องส่งต่อใน 10 นาที ไม่งั้น −250,000 (หรือเลือกเสียของ 1,500 ชิ้นแทน) · ทะลุหุ่นไล่กา · ต้องใช้ภายใน 48 ชม.','friends','👥 ไปสวนเพื่อน']};
 $('bagGrid').onclick=e=>{const it=e.target.closest('.it.how');if(!it)return;const h=HOWTO[it.dataset.g+'.'+it.dataset.k];if(!h)return;const im=bagImg(it.dataset.g,it.dataset.k);
  let o=document.getElementById('howCard');if(!o){o=document.createElement('div');o.id='howCard';document.body.appendChild(o);}
  o.innerHTML='<div class="hc"><img src="'+im+'" alt=""><h4>'+h[0]+'</h4><p>'+h[1]+'</p><div class="hb"><button class="ghost" id="hcX">ปิด</button><button class="go" id="hcGo">'+h[3]+'</button></div></div>';o.className='on';
@@ -498,8 +498,8 @@ $('aAngel').onclick=()=>{const p=S.farms[farm][cur];if(!p||p.angel)return;if(S.b
 $('aDig').onclick=()=>{if(!confirm('ถอนผักแปลงนี้ทิ้งใช่ไหม?'))return;S.farms[farm][cur]=null;save();closeAll();drawPlots()};
 $('seeds').innerHTML=CROPS.map(([k,n])=>'<div class="seed" data-k="'+k+'"><img src="'+(IMG['p-'+k]||IMG[k+'4'])+'"><b>'+n+'</b></div>').join('');
 $('seeds').addEventListener('click',e=>{if(window.cloudFarmReady)return;const c=e.target.closest('.seed');if(!c)return;const k=c.dataset.k,now=Date.now(),arr=S.farms[farm];
- if(plantAll){const fr=arr.map((p,i)=>!p&&!isLocked(i)?i:-1).filter(i=>i>=0),cost=fr.length*(SPR[k]||1);if(pts<cost)return toast('กุศลไม่พอซื้อเมล็ด ต้องใช้ '+fmt(cost),1);addPts(-cost);let n=0;fr.forEach(i=>{arr[i]={c:k,ph:'g1',t:now};n++});save();closeAll();drawPlots();saving();return toast('🌱 ปลูก'+CN[k]+'ทั้งหมด '+n+' แปลงแล้ว')}
- if(pts<(SPR[k]||1))return toast('กุศลไม่พอซื้อเมล็ด',1);addPts(-(SPR[k]||1));arr[pending]={c:k,ph:'g1',t:now};save();closeAll();drawPlots();saving();toast('🌱 ปลูก'+CN[k]+'ที่แปลงที่ '+(pending+1)+' แล้ว')});
+ if(plantAll){const fr=arr.map((p,i)=>!p&&!isLocked(i)?i:-1).filter(i=>i>=0),cost=fr.length*(SPR[k]||1);addPts(-cost);let n=0;fr.forEach(i=>{arr[i]={c:k,ph:'g1',t:now};n++});save();closeAll();drawPlots();saving();return toast('🌱 ปลูก'+CN[k]+'ทั้งหมด '+n+' แปลงแล้ว')}
+ addPts(-(SPR[k]||1));arr[pending]={c:k,ph:'g1',t:now};save();closeAll();drawPlots();saving();toast('🌱 ปลูก'+CN[k]+'ที่แปลงที่ '+(pending+1)+' แล้ว')});
 function harvest(list){const got={};list.forEach((i,j)=>{const p=S.farms[farm][i];if(!p||p.ph!=='ready')return;const q=p.angel?10:1;got[p.c]=(got[p.c]||0)+q;S.bag.crop[p.c]=(S.bag.crop[p.c]||0)+q;
   const r=plotEls[i].getBoundingClientRect(),b=$('menuBtn').getBoundingClientRect();const f=document.createElement('img');f.className='fly';f.src=IMG['p-'+p.c]||IMG[p.c+'4'];
   f.style.left=(r.left+r.width/2-20)+'px';f.style.top=r.top+'px';document.body.appendChild(f);setTimeout(()=>{f.style.left=(b.left+4)+'px';f.style.top=(b.top+4)+'px';f.style.transform='scale(.4)';f.style.opacity='.4'},30+j*50);setTimeout(()=>f.remove(),800+j*50);
@@ -582,25 +582,25 @@ const ING={chili:['crop','พริก'],mango:['crop','มะม่วง'],wat
 const GCAT={n:'🍽️ ทั่วไป',night:'🌙 รอบดึก',boat:'⛵ เสบียงเรือ'};
 const GF=[
 ['r1','n','แกงเปรตลิ้นยาว','🍲',80,[1,3],{chili:100,mango:100,waterspinach:100}],
-['r2','n','ฟักทองต้มกองกอย','🎃',75,[1,3],{pumpkin:130,lettuce:100}],
-['r3','n','ตำมรกตผีหลอก','🍓',65,[5,8],{strawberry:180,chili:150,mango:120}],
+['r2','n','ฟักทองต้มกองกอย','🪷',75,[1,3],{pumpkin:130,lettuce:100}],
+['r3','n','ตำมรกตเดือนเพ็ญ','🍓',65,[5,8],{strawberry:180,chili:150,mango:120}],
 ['r4','n','ยำองุ่นครุ่นจิต','🍇',60,[5,8],{grape:210,chili:180,waterspinach:150}],
-['r5','n','ข้าวคลุกวิญญาณ','🍚',55,[5,8],{lettuce:240,pumpkin:210,lychee:180,chili:150}],
+['r5','n','ข้าวคลุกต้องมนต์','🍚',55,[5,8],{lettuce:240,pumpkin:210,lychee:180,chili:150}],
 ['r6','n','ลิ้นจี่น้ำแข็งหลุมศพ','🍧',45,[7,10],{lychee:360,grape:320,strawberry:280}],
 ['r7','n','ก๋วยเตี๋ยวเปรตแตก','🍜',35,[7,10],{waterspinach:440,chili:400,lettuce:360,pumpkin:320}],
 ['r8','n','น้ำปั่นคืนชีพ','🧪',25,[7,10],{grape:600,strawberry:520,lychee:440,mango:360}],
 ['n1','night','กล้วยทอดกอดเปรต','🍌',65,[5,8],{banana:200,strawberry:100}],
-['n2','night','ตำมะยมผสมกุมาร','👻',50,[5,8],{gooseberry:200,chili:100,mango:100}],
-['n3','night','กล้วยคลุกเถ้าผี','💀',35,[7,10],{banana:300,lychee:200,grape:100}],
+['n2','night','ตำมะยมผสมกุมาร','🏮',50,[5,8],{gooseberry:200,chili:100,mango:100}],
+['n3','night','กล้วยคลุกมะพร้าว','🥥',35,[7,10],{banana:300,lychee:200,grape:100}],
 ['n4','night','ยำมะยมสมน้ำหน้า','🥗',25,[7,10],{gooseberry:300,chili:200,waterspinach:100,banana:100}],
-['b1','boat','ผักกาดห่อผีหนีวัด','🥬',70,[1,3],{lettuce:750,waterspinach:380,truffle:100}],
-['b2','boat','ผักบุ้งผัดสะดุ้งผี','🌿',65,[1,3],{waterspinach:810,lettuce:380,truffle:100}],
-['b3','boat','ปลาผีราดซอสมะม่วงหน้าเน่า','🥭',60,[5,8],{mango:690,lettuce:440,fishmeat:130}],
-['b4','boat','ปลาผีซอสองุ่นครุ่นจิต','🍇',60,[5,8],{grape:690,waterspinach:440,fishmeat:130}],
-['b5','boat','ยำผักสวนผีแตก','🥗',55,[5,8],{lettuce:500,waterspinach:500,mango:380,truffle:100}],
-['b6','boat','ปลาผีลุยสวนยัยหนู','🐟',50,[5,8],{waterspinach:500,mango:440,grape:380,fishmeat:150}],
+['b1','boat','ผักกาดห่อกระทงไปวัด','🥬',70,[1,3],{lettuce:750,waterspinach:380,truffle:100}],
+['b2','boat','ผักบุ้งผัดสะดุ้งพลุ','🌿',65,[1,3],{waterspinach:810,lettuce:380,truffle:100}],
+['b3','boat','ปลาโคมลอยราดซอสมะม่วงหน้าเน่า','🥭',60,[5,8],{mango:690,lettuce:440,fishmeat:130}],
+['b4','boat','ปลาโคมลอยซอสองุ่นครุ่นจิต','🍇',60,[5,8],{grape:690,waterspinach:440,fishmeat:130}],
+['b5','boat','ยำผักสวนพลุแตก','🥗',55,[5,8],{lettuce:500,waterspinach:500,mango:380,truffle:100}],
+['b6','boat','ปลาโคมลอยลุยสวนยัยหนู','🐟',50,[5,8],{waterspinach:500,mango:440,grape:380,fishmeat:150}],
 ['b7','boat','แกงทรัฟเฟิลผักหลอน','🍲',45,[7,10],{lettuce:560,waterspinach:560,grape:440,truffle:150}],
-['b8','boat','สำรับผีแดกไม่เลือก','👑',40,[7,10],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}]
+['b8','boat','สำรับยักษ์แดกไม่เลือก','👑',40,[7,10],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}]
 ].map(([id,cat,n,ic,ch,mer,need])=>({id,cat,n,ic,ch,mer,need}));
 const GFBY=Object.fromEntries(GF.map(g=>[g.id,g]));
 const emo=(e,bg)=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'+(bg?'<circle cx="50" cy="50" r="46" fill="'+bg+'"/>':'')+'<text x="50" y="54" font-size="62" text-anchor="middle" dominant-baseline="middle">'+e+'</text></svg>');
@@ -800,10 +800,11 @@ const demo=document.querySelector('#menuSheet .demo');if(demo){const p=document.
   if(x==='t'){Object.keys(TR).forEach(t=>S.bag.tree[t]=(S.bag.tree[t]||0)+3);save();toast('🌳 รับต้นกล้าทุกชนิดอย่างละ 3')}
   if(x==='f'){S.bag.item.fertfruit=(S.bag.item.fertfruit||0)+50;S.bag.item.fertfruitP=(S.bag.item.fertfruitP||0)+20;['green','yellow','red','pink','blue'].forEach(c=>S.bag.grass[c]=(S.bag.grass[c]||0)+60);S.bag.forest.wood=(S.bag.forest.wood||0)+500;save();toast('🧪 รับปุ๋ย หญ้า และไม้ทดลองแล้ว')}
   if(x==='s'){FF=!FF;b.classList.toggle('on',FF);b.textContent=FF?'⏩ ฟาร์มผลไม้เร่ง (1 ชม. = 10 วิ)':'🐢 ฟาร์มผลไม้เวลาจริง'}};demo.appendChild(p)}
+window.__F4={info,tapTree,openPlant};/* ตัวอย่างซีซัน 4: ให้ฉาก 3D เรียกใช้ */
 setTimeout(()=>{syncFan();if(farm===4)render()},80);
 })();
 
-(function(){const items={candy:'ลูกอมผี',bat:'ค้างคาวจิ๋ว',candle:'เทียนผี',web:'ใยแมงมุม',hat:'หมวกแม่มด',broom:'ไม้กวาดแม่มด',pumpkin:'ฟักทองเรืองแสง',cauldron:'หม้อยาแม่มด'};const names=bagName,images=bagImg;BT.halloween='🎃 ไอเทมฮาโลวีน';bagName=function(t,k){return t==='halloween'?(items[k]||k):names(t,k)};bagImg=function(t,k){return t==='halloween'?'images/halloween-hw-'+k+'.webp':images(t,k)};})();
+(function(){const items={candy:'ดอกดาวเรือง',bat:'หิ่งห้อยน้อย',candle:'ธูปหอม',web:'ดอกบัว',hat:'พวงมาลัย',broom:'ใบตองทอง',pumpkin:'กระทงใบตอง',cauldron:'กระทงทอง'};const names=bagName,images=bagImg;BT.halloween='🪷 ไอเทมลอยกระทง';bagName=function(t,k){return t==='halloween'?(items[k]||k):names(t,k)};bagImg=function(t,k){return t==='halloween'?'images/halloween-hw-'+k+'.webp':images(t,k)};})();
 /* ===== การ์ดเลือกฟาร์ม: ฟาร์ม 4 = ฟาร์มผลไม้ ===== */
 (function(){const st=document.createElement('style');st.textContent='.fcard.fruit4{outline:3px solid #F2A93B;outline-offset:2px;box-shadow:0 0 0 6px rgba(255,200,90,.35),0 6px 14px rgba(200,120,20,.35)}.fcard.fruit4 b{background:linear-gradient(#FFD27A,#F2A93B)!important;color:#5a3410!important}';document.head.appendChild(st);
 $('farmBtn').onclick=()=>{closeAll();$('fgrid').innerHTML=[1,2,3,4].map(n=>'<div class="fcard'+(n===farm?' cur':'')+(n>1&&!(S.unl||{})['f'+n]?' lk':'')+(n===4?' fruit4':'')+'" data-f="'+n+'" style="background-image:url('+(n===4?"images/fruit-fruitfarm-bg.webp":IMG[n===1?1:2])+')"><b>'+(n===farm?'📍 ':'')+(n===4?'🍑 ฟาร์มผลไม้':'ฟาร์ม '+n)+'</b></div>').join('');open('farmSheet')};})();
@@ -862,10 +863,10 @@ $('mLogout').innerHTML='<i>🚪</i>ออกจากระบบ';$('mLogout').
 openMail=function(){closeAll();H.openMail()};
 const OPEN=new Set(['house','backyard','forest','f4']);
 const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"],["🏡","หลังบ้าน","อาหารสวน • แฮมสเตอร์","backyard"]]],
- ["สัตว์",[["🐔","โรงเรือนสัตว์วิญญาณ","ไก่ ปลา หมู วัว","barn"],["🦤","นกน้อยคล้อยบินมาเดียวดาย","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","ขุดสมบัติ โยนบอล เฝ้าสวน","dog"],["🐱","คอกแมว","อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","ทุ่งอัลปาก้า + โรงงาน","ตัดขน • แปรรูป","alpaca"]]],
- ["สถานที่",[["🌲","ป่าต้องห้าม","เปิด 18:00–05:59 เวลาไทย","forest"],["🍎","ฟาร์มต้นผลไม้","ฟาร์ม 4","f4"]]],
- ["สถานที่เพิ่มเติม",[["🦓","ซาฟารี","วิจัยสัตว์","safari"],["🏪","ตลาดสวน","หุ้น • ขายไวน์","shop"],["🏘️","เนเบอร์ฮูด","เควสต์ทีม • ตะกร้ากุศล","neighborhood"],["🚤","แข่งเรือ","5 ทีม • เสบียง • การ์ด","boat"],["🌳","ศึกต้นไม้ผี","7 บ้านแข่งกัน • วันละ 2 รอบ","treewar"],["🏪","ร้านของเพื่อน","วางขาย • ซื้อของ","farmshop"],["🎣","ตกปลา","บ่อทั่วไป • VIP","fishing"],["🏆","Top Spenders • กาชาปอง","","topspenders"],["🏅","แคมเปญ","6 แคมเปญ • รางวัล 10 ขั้น","campaigns"],["🎮","มินิเกม","4 เกม • เหรียญฮาโลวีน","minigames"]]]];
+ ["สัตว์",[["🐔","โรงเรือนสัตว์ภาคการเกษตร","ไก่ ปลา หมู วัว","barn"],["🦤","ซาฟารี","นกกระจอกเทศ • โดโด้","birds"],["🐶","คอกหมา","ขุดสมบัติ โยนบอล เฝ้าสวน","dog"],["🐱","คอกแมว","อาบน้ำ นวด เอนเตอร์เทน","catpen"],["🦙","ทุ่งอัลปาก้า + โรงงาน","ตัดขน • แปรรูป","alpaca"]]],
+ ["สถานที่",[["🍎","สวนผลไม้","9 หลุม • แตะเก็บ","f4"]]],
+ ["สถานที่เพิ่มเติม",[["🦓","ซาฟารี","วิจัยสัตว์","safari"],["🏪","ตลาดสวน","หุ้น • ขายไวน์","shop"],["🏘️","เนเบอร์ฮูด","เควสต์ทีม • ตะกร้ากุศล","neighborhood"],["🚤","แข่งเรือ","5 ทีม • เสบียง • การ์ด","boat"],["🏮","ศึกโคมลอย","รอรูปโคม",""],["🏪","ร้านของเพื่อน","วางขาย • ซื้อของ","farmshop"],["🎣","ตกปลา","บ่อทั่วไป • VIP","fishing"],["🏆","Top Spenders • กาชาปอง","","topspenders"],["🏅","แคมเปญ","6 แคมเปญ • รางวัล 10 ขั้น","campaigns"],["🎮","มินิเกม","4 เกม • เหรียญกระทงทอง","minigames"]]]];
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix17"></script><script src="farm-cloud.js?v=ss3-fix22"></script><script type="module" src="bag-sell.js?v=ss3-fix24"></script><script type="module" src="prank-ui.js?v=ss3-fix23"></script><script src="farm-drops.js?v=ss3-recovery6"></script><script src="loot-box-link.js?v=ss3-fix17" data-box="all"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix17&h=9dcbfbde"></script><script src="farm-cloud.js?v=ss3-fix22&h=2222477b"></script><script type="module" src="bag-sell.js?v=ss3-fix24&h=39a4d09d"></script><script type="module" src="prank-ui.js?v=ss3-fix23&h=42e90d2a"></script><script src="farm-drops.js?v=ss3-recovery6&h=79203460"></script><script src="loot-box-link.js?v=ss3-fix17&h=d58a70da" data-box="all"></script><script src="pv/farm-bridge.js?h=c0814a6e"></script><script src="pv/s4nav.js?h=7f39155e"></script><script src="pv/s4photo.js?h=2983f296"></script><script src="pv/s4hud.js?h=00db110b"></script></body></html>

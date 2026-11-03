@@ -1,12 +1,13 @@
-import {birdPosition,fireBird,birdGain,minigameRules,MG_EMERGENCY,MG_CD,MG_MIN,MG_FEE3,MG_NAMES,BIRD_BLAST} from './solo-engine.js?v=ss3-fix15c';import {FR} from './funrun-engine.js?v=ss3-fix15c';
-import {KANG} from './kang-engine.js?v=ss3-fix15';
-import {mountMole} from './mole-game.js?v=ss3-fix15';
-import {mountBasket} from './basket-game.js?v=ss3-fix15';
-import {MOLE} from './mole-engine.js?v=ss3-fix15';
-import {BASKET} from './basket-engine.js?v=ss3-fix15';
-import {WITCH} from './witch-engine.js?v=ss3-fix15';
-import {CANDY} from './candy-engine.js?v=ss3-fix15';
+import {birdPosition,fireBird,birdGain,minigameRules,MG_EMERGENCY,MG_CD,MG_MIN,MG_FEE3,MG_NAMES,BIRD_BLAST} from './solo-engine.js?v=ss3-fix15c&h=b21cc564';import {FR} from './funrun-engine.js?v=ss3-fix15c&h=86927985';
+import {KANG} from './kang-engine.js?v=ss3-fix15&h=f5b32ed5';
+import {mountMole} from './mole-game.js?v=ss3-fix15&h=d39882aa';
+import {mountBasket} from './basket-game.js?v=ss3-fix15&h=3e8d5552';
+import {MOLE} from './mole-engine.js?v=ss3-fix15&h=96f1c725';
+import {BASKET} from './basket-engine.js?v=ss3-fix15&h=892382c6';
+import {WITCH} from './witch-engine.js?v=ss3-fix15&h=b520a90e';
+import {CANDY} from './candy-engine.js?v=ss3-fix15&h=0be29d27';
 const IMG={"mole-bg":"images/mole-bg.webp","basket-bg":"images/basket-table-bg.webp","coin":"images/gacha-coin.webp","bs-bg":"images/bs-bg.webp","pk-bg":"images/pk-shelf-bg.webp","kg-bg":"images/kang-table-bg.webp","gun":"images/bs-gun.webp","b-ghost":"images/bs-bird-ghost-fly-4x4.webp","bi-ghost":"images/bs-bird-ghost.webp","b-pumpkin":"images/bs-bird-pumpkin-fly-4x4.webp","bi-pumpkin":"images/bs-bird-pumpkin.webp","b-witch":"images/bs-bird-witch-fly-4x4.webp","bi-witch":"images/bs-bird-witch.webp","b-skeleton":"images/bs-bird-skeleton-fly-4x4.webp","bi-skeleton":"images/bs-bird-skeleton.webp","pk-normal":"images/pk-normal.webp","pk-angel":"images/pk-angel.webp","pk-devil":"images/pk-devil.webp","pkt-angel":"images/pk-angel-turn-4x4.webp","pkt-devil":"images/pk-devil-turn-4x4.webp","k-spade-a":"images/kang-card-spade-a.webp","k-spade-2":"images/kang-card-spade-2.webp","k-spade-3":"images/kang-card-spade-3.webp","k-spade-4":"images/kang-card-spade-4.webp","k-spade-5":"images/kang-card-spade-5.webp","k-spade-6":"images/kang-card-spade-6.webp","k-spade-7":"images/kang-card-spade-7.webp","k-spade-8":"images/kang-card-spade-8.webp","k-spade-9":"images/kang-card-spade-9.webp","k-spade-10":"images/kang-card-spade-10.webp","k-spade-j":"images/kang-card-spade-j.webp","k-spade-q":"images/kang-card-spade-q.webp","k-spade-k":"images/kang-card-spade-k.webp","k-heart-a":"images/kang-card-heart-a.webp","k-heart-2":"images/kang-card-heart-2.webp","k-heart-3":"images/kang-card-heart-3.webp","k-heart-4":"images/kang-card-heart-4.webp","k-heart-5":"images/kang-card-heart-5.webp","k-heart-6":"images/kang-card-heart-6.webp","k-heart-7":"images/kang-card-heart-7.webp","k-heart-8":"images/kang-card-heart-8.webp","k-heart-9":"images/kang-card-heart-9.webp","k-heart-10":"images/kang-card-heart-10.webp","k-heart-j":"images/kang-card-heart-j.webp","k-heart-q":"images/kang-card-heart-q.webp","k-heart-k":"images/kang-card-heart-k.webp","k-diamond-a":"images/kang-card-diamond-a.webp","k-diamond-2":"images/kang-card-diamond-2.webp","k-diamond-3":"images/kang-card-diamond-3.webp","k-diamond-4":"images/kang-card-diamond-4.webp","k-diamond-5":"images/kang-card-diamond-5.webp","k-diamond-6":"images/kang-card-diamond-6.webp","k-diamond-7":"images/kang-card-diamond-7.webp","k-diamond-8":"images/kang-card-diamond-8.webp","k-diamond-9":"images/kang-card-diamond-9.webp","k-diamond-10":"images/kang-card-diamond-10.webp","k-diamond-j":"images/kang-card-diamond-j.webp","k-diamond-q":"images/kang-card-diamond-q.webp","k-diamond-k":"images/kang-card-diamond-k.webp","k-club-a":"images/kang-card-club-a.webp","k-club-2":"images/kang-card-club-2.webp","k-club-3":"images/kang-card-club-3.webp","k-club-4":"images/kang-card-club-4.webp","k-club-5":"images/kang-card-club-5.webp","k-club-6":"images/kang-card-club-6.webp","k-club-7":"images/kang-card-club-7.webp","k-club-8":"images/kang-card-club-8.webp","k-club-9":"images/kang-card-club-9.webp","k-club-10":"images/kang-card-club-10.webp","k-club-j":"images/kang-card-club-j.webp","k-club-q":"images/kang-card-club-q.webp","k-club-k":"images/kang-card-club-k.webp","k-back":"images/kang-card-back.webp","hat":"images/honey-sailorhat.webp","mb":"images/animals-item-musicbox.webp","b-crow":"images/bs-bird-crow-fly-4x4.webp","bi-crow":"images/bs-bird-crow.webp","b-owl":"images/bs-bird-owl-fly-4x4.webp","bi-owl":"images/bs-bird-owl.webp","b-bat":"images/bs-bird-bat-fly-4x4.webp","bi-bat":"images/bs-bird-bat.webp","wg-poster":"images/wg-poster.webp","cf-poster":"images/cf-poster.webp"},DIM={"gun":[571,494],"b-ghost":[183.0,150.0],"b-pumpkin":[197.0,150.0],"b-witch":[161.0,150.0],"b-skeleton":[199.0,150.0],"pk-normal":[50.0,44.75],"pk-angel":[50.0,39.25],"pk-devil":[50.0,44.5],"pkt-angel":[218.0,180.0],"pkt-devil":[413.0,180.0]};
+/* S4: ธีมมินิเกม (🪷 ลอยกระทง ค่าเริ่มต้น · 🎃 ฮาโลวีน ค่าเข้า ×2) */for(const k in IMG)if(window.MGT)IMG[k]=MGT.img(IMG[k]);
 const $=s=>document.querySelector(s);
 const fmt=n=>Math.round(n).toLocaleString('en-US'),sgn=n=>(n>0?'+':n<0?'−':'')+fmt(Math.abs(n));
 const rnd=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.length)],clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -20,7 +21,7 @@ const QUIET=new Set(['advance','tick','status','witch-cp','candy-cp']);
 let cloudWait=Promise.resolve();
 /* One request at a time. Player taps wait their turn instead of being dropped; timer-driven tick calls are skipped when busy. */
 let lastCloudError='';
-async function cloud(system,input,opts={}){
+async function cloud(system,input,opts={}){if(system==='minigames'&&input&&/-start$/.test(String(input.type))&&window.MGT&&MGT.hw)input={...input,theme:'hw'};
   if(!QUIET.has(input.type))touch();
   while(acting){if(input.type==='advance'||input.type==='tick')return null;await cloudWait;}
   acting=true;let release;cloudWait=new Promise(resolve=>release=resolve);const sent=Date.now();
@@ -60,7 +61,7 @@ const avColor=uid=>{let h=0;for(const c of String(uid||''))h=(h*31+c.charCodeAt(
 const initial=name=>esc((Array.from(String(name||'?').trim())[0])||'?');
 /* ---------- wallet + fees (coins, sailor hats bag.item.hat, music boxes bag.item.musicbox) ---------- */
 function wallet(){let g={};try{g=JSON.parse(Host.get('s3all-v1')||'{}')||{};}catch{}const it=g.bag?.item||{};return {coin:Host.coins||0,hat:Number(it.hat)||0,mb:Number(it.musicbox)||0,merit:g.merit||0};}
-const feeOf=k=>S.rules.fee3?.[k]||MG_FEE3[k];
+const feeOf=k=>{const f=S.rules.fee3?.[k]||MG_FEE3[k];return window.MGT&&MGT.hw&&k!=='kang'?{coin:f.coin*2,hat:f.hat*2,mb:f.mb*2}:f;};
 function lacks(k){const f=feeOf(k),w=wallet(),l=[];if(w.coin<f.coin)l.push('coin');if(w.hat<f.hat)l.push('hat');if(w.mb<f.mb)l.push('mb');return l;}
 const LACK_NAME={coin:'🪙 เหรียญ',hat:'👒 หมวกกะลาสี',mb:'🎵 กล่องดนตรี'};
 function feeChips(f,cls='',per=''){return `<div class="fchips ${cls}">${[['coin',f.coin],['hat',f.hat],['mb',f.mb]].map(([k,n])=>`<span><img src="${IMG[k]}" alt="">${fmt(n)}${per}</span>`).join('')}</div>`;}
@@ -80,12 +81,12 @@ function stageOf(bgKey){const s=$('#gbody > .stage');if(s&&s.dataset.bg===bgKey)
 
 /* ---------- hub (2-column cards + bottom sheet) ---------- */
 const HUB=[
- {k:'bs',ic:'🐦',sn:'ยิงนก',d:'60 วิ · ระวังนกร้ายบินประกบ',bg:'bs-bg',lo:-30000,hi:null,tag:'นกร้ายใหม่'},
+ {k:'bs',ic:'🐦',sn:'ยิงนก',d:'60 วิ · ระวังลูกโป่งร้ายบินประกบ',bg:'bs-bg',lo:-30000,hi:null,tag:'ลูกโป่งร้ายใหม่'},
  {k:'mole',ic:'🔨',d:'60 วิ · ทุบให้ถึงเป้า',bg:'mole-bg',lo:MOLE.lose,hi:MOLE.win+MOLE.bonus},
- {k:'witch',ic:'🧹',sn:'แม่มดซิ่ง',d:'ตะแคง/ลากนิ้ว · 5 ช่วง',bg:'wg-poster',lo:WITCH?.lo??-60000,hi:WITCH?.hi??80000,bonus:WITCH?.bonus??30000,tag:'ใหม่'},
- {k:'pk',ic:'🎃',d:'เลือก 4 จาก 16',bg:'pk-bg',lo:-15000,hi:100000},
- {k:'basket',ic:'🧺',sn:'จัดตะกร้า',d:'30 วิ · จัดให้ครบ 3 ตะกร้า',bg:'basket-bg',lo:BASKET.none,hi:BASKET.all.jackpot},
- {k:'candy',ic:'🍭',sn:'ลูกกวาดคำสาป',d:'ปัดซ้ายทิ้ง · ปัดขวาเก็บ',bg:'cf-poster',lo:CANDY?.lo??-20000,hi:CANDY?.hi??50000,bonus:CANDY?.bonus??50000,tag:'ใหม่'},
+ {k:'witch',ic:'🏮',sn:'น้ำผึ้งซิ่ง',d:'ตะแคง/ลากนิ้ว · 5 ช่วง',bg:'wg-poster',lo:WITCH?.lo??-60000,hi:WITCH?.hi??80000,bonus:WITCH?.bonus??30000,tag:'ใหม่'},
+ {k:'pk',ic:'🪷',d:'เลือก 4 จาก 16',bg:'pk-bg',lo:-15000,hi:100000},
+ {k:'basket',ic:'🧺',sn:'จัดกระทง',d:'30 วิ · จัดให้ครบ 3 ตะกร้า',bg:'basket-bg',lo:BASKET.none,hi:BASKET.all.jackpot},
+ {k:'candy',ic:'🍮',sn:'ขนมไทย',d:'ปัดซ้ายทิ้ง · ปัดขวาเก็บ',bg:'cf-poster',lo:CANDY?.lo??-20000,hi:CANDY?.hi??50000,bonus:CANDY?.bonus??50000,tag:'ใหม่'},
  {k:'kang',ic:'🃏',d:'4 คน · ค่าเข้าคิดต่อตา',bg:'kg-bg',tag:'ห้องแบบใหม่'}];
 const hubOf=k=>HUB.find(g=>g.k===k);
 const hasActive=k=>soloState[k]?.phase==='active';
@@ -108,7 +109,7 @@ function cardStatus(k){const R=S.rules,b=blockers(k);
 const pillHtml=st=>`<span class="hst ${st.c}" ${st.cd?`data-cd="${st.cd}" data-pre="${st.t}"`:''}>${st.cd?st.t+' '+mmss(st.cd-time()):st.t}</span>`;
 function renderHub(){
   const l=k=>lacks(k);
-  $('#hub').innerHTML=`${S.emergency?`<div class="emerban">⛔ ${MG_EMERGENCY}</div>`:''}<div class="hgrid">${HUB.map(g=>{const f=feeOf(g.k),lk=l(g.k);return `<button class="hcard" data-g="${g.k}"><span class="hth" style="background-image:url(${IMG[g.bg]})"></span>${g.tag?`<span class="hnew">✨ ${g.tag}</span>`:''}${pillHtml(cardStatus(g.k))}<span class="hbody"><b class="ht">${g.ic} ${g.sn||MG_NAMES[g.k]}</b><span class="hmeta">${g.d}</span><span class="hfee">${[['coin',f.coin],['hat',f.hat],['mb',f.mb]].map(([x,n])=>`<span class="${lk.includes(x)?'no':''}"><img src="${IMG[x]}" alt="">${n}</span>`).join('')}<span>⏳${g.k==='kang'?KANG.restMs/60000:MG_CD[g.k]}′</span></span></span></button>`;}).join('')}<button class="hcard" id="frCard"><span class="hth" style="background-image:url(images/funrun/fr-poster.webp)"></span><span class="hnew">✨ ใหม่</span>${pillHtml({c:S.emergency?'off':'on',t:S.emergency?'ปิดฉุกเฉิน':'6 คน'})}<span class="hbody"><b class="ht">🎃 แรลลี่ฟักทอง</b><span class="hmeta">วิ่งแข่งพร้อมกัน 6 คน · 3 ด่าน</span><span class="hfee"><span><img src="${IMG.coin}" alt="">${FR.FEE.coin}</span><span><img src="${IMG.hat}" alt="">${FR.FEE.hat}</span><span><img src="${IMG.mb}" alt="">${FR.FEE.mb}</span><span>✨15,000+</span></span></span></button></div>`;
+  $('#hub').innerHTML=`<div class="mgth"><button data-th="lk" class="${window.MGT&&MGT.hw?'':'on'}">🪷 ธีมลอยกระทง</button><button data-th="hw" class="${window.MGT&&MGT.hw?'on':''}">🎃 ธีมฮาโลวีน <small>ค่าเข้า ×2</small></button></div>${S.emergency?`<div class="emerban">⛔ ${MG_EMERGENCY}</div>`:''}<div class="hgrid">${HUB.map(g=>{const f=feeOf(g.k),lk=l(g.k);return `<button class="hcard" data-g="${g.k}"><span class="hth" style="background-image:url(${IMG[g.bg]})"></span>${g.tag?`<span class="hnew">✨ ${g.tag}</span>`:''}${pillHtml(cardStatus(g.k))}<span class="hbody"><b class="ht">${g.ic} ${g.sn||MG_NAMES[g.k]}</b><span class="hmeta">${g.d}</span><span class="hfee">${[['coin',f.coin],['hat',f.hat],['mb',f.mb]].map(([x,n])=>`<span class="${lk.includes(x)?'no':''}"><img src="${IMG[x]}" alt="">${n}</span>`).join('')}<span>⏳${g.k==='kang'?KANG.restMs/60000:MG_CD[g.k]}′</span></span></span></button>`;}).join('')}<button class="hcard" id="frCard"><span class="hth" style="background-image:url(images/funrun/fr-poster.webp)"></span><span class="hnew">✨ ใหม่</span>${pillHtml({c:S.emergency?'off':'on',t:S.emergency?'ปิดฉุกเฉิน':'6 คน'})}<span class="hbody"><b class="ht">🪷 แรลลี่กระทง</b><span class="hmeta">วิ่งแข่งพร้อมกัน 6 คน · 3 ด่าน</span><span class="hfee"><span><img src="${IMG.coin}" alt="">${FR.FEE.coin}</span><span><img src="${IMG.hat}" alt="">${FR.FEE.hat}</span><span><img src="${IMG.mb}" alt="">${FR.FEE.mb}</span><span>✨15,000+</span></span></span></button></div>`;
   document.querySelectorAll('.hcard').forEach(b=>{if(b.dataset.g)b.onclick=()=>openSheet(b.dataset.g);});
   const fc=$('#frCard');if(fc)fc.onclick=()=>{if(S.emergency)return toast('⛔ มินิเกมปิดฉุกเฉินอยู่');try{parent.postMessage({go:'funrun'},location.origin);}catch(e){}};
   const ab=$('#adminBtn');ab.hidden=!S.owner;if(!S.owner)closeAdmin();
@@ -154,7 +155,7 @@ function renderAdmin(){
   const card=(k,bg,status,modes,cur,extra='')=>`<section class="acard mg"><header><span class="aic" style="background-image:url(${IMG[bg]})"></span><b>${MG_NAMES[k]}</b>${status}</header>${seg(`data-ctl="${k}" data-mode`,modes,cur)}${feeIn(k)}${extra}</section>`;
   const soloMode=k=>S.solo?.[k]||'auto',onOff=[['auto','เปิด'],['closed','ปิด']],timed=[['auto','⏰ ตามเวลา'],['open','เปิดเลย'],['closed','ปิด']];
   const base=(r,i)=>`<label>ฐานห้อง ${i+1}${sel('kb'+i,[1000,5000,10000,50000],r.base,fmt)}</label>`;
-  const kRooms=kg.map((r,i)=>`<div class="aroom"><span>ห้อง ${i+1} · ${r.seated||0}/4 ${r.state==='playing'?'· กำลังเล่น':r.state==='countdown'?'· นับถอยหลัง':r.state==='result'?'· ขึ้นผล':''}</span><button class="btn sm gray" data-clear="${i}">🧹 เคลียร์ห้อง</button></div>`).join('');
+  const kRooms=kg.map((r,i)=>`<div class="aroom"><span>ห้อง ${i+1} · ${r.seated||0}/4 ${r.state==='playing'?'· กำลังเล่น':r.state==='countdown'?'· นับถอยหลัง':r.state==='result'?'· ขึ้นผล':''}</span><button class="btn sm gray" data-clear="${i}">🏮 เคลียร์ห้อง</button></div>`).join('');
   $('#adminBody').innerHTML=`
   <section class="acard emer ${em?'on':''}"><b>${em?'⛔ มินิเกมปิดฉุกเฉินอยู่':'🟢 มินิเกมเปิดตามปกติ'}</b><p class="note">${em?'ทุกคนถูกพากลับหน้าแรก · ค่าเข้าและทุนคืนแล้ว':'ปิดทุกเกมทันที เตะทุกคนกลับหน้าแรก คืนค่าเข้า (เหรียญ หมวก กล่องดนตรี) และทุนแคงทางไปรษณีย์'}</p><button class="btn ${em?'':'danger'}" id="emBtn">${em?'✅ เปิดระบบกลับ':'⛔ ปิดฉุกเฉินทั้งหมด'}</button></section>
   ${card('kang','kg-bg',pill('kang',kg.some(r=>r.playing)?'กำลังเล่น':''),[['open','เปิด'],['closed','ปิด']],off.kang?'closed':'open',`<div class="agrid">${kg.map(base).join('')}</div>${kRooms}<p class="note">ค่าเข้าคิดต่อตา · เคลียร์ห้องได้ทุกเวลา ถ้ากำลังเล่นจะยกเลิกรอบและคืนทุน+ค่าเข้าทางไปรษณีย์</p>`)}
@@ -172,12 +173,12 @@ function renderAdmin(){
   kg.forEach((r,i)=>{const e=B.querySelector('#kb'+i);if(e)e.onchange=async ev=>{ev.target.blur();const out=await cloud('kang',{type:'configure',room:i,base:+ev.target.value});if(out?.room?.nextBase)toast('ค่าฐานใหม่มีผลรอบถัดไป');else saved(out);};});
   B.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>clearKangRoom(+b.dataset.clear));
 }
-async function clearKangRoom(i){const out=await cloud('kang',{type:'clear',room:i});if(out){toast('🧹 เคลียร์ห้อง '+(i+1)+' แล้ว'+(out.room?.reason==='VOID'||out.cleared?'':''));renderHub();}return out;}
+async function clearKangRoom(i){const out=await cloud('kang',{type:'clear',room:i});if(out){toast('🏮 เคลียร์ห้อง '+(i+1)+' แล้ว'+(out.room?.reason==='VOID'||out.cleared?'':''));renderHub();}return out;}
 $('#adminBtn').onclick=()=>{if(S.owner)openAdmin();};$('#adminClose').onclick=closeAdmin;
 setInterval(()=>{if(!CUR&&!$('#modal').classList.contains('on')&&!$('#admin').classList.contains('on')&&!sheetK)renderHub()},30000);
 renderHub();
 
-/* ---------- จิ้มฟักทอง ---------- */
+/* ---------- จิ้มกระทง ---------- */
 GAMES.pk=(()=>{
   const XS=[26.6,42.2,58.0,73.8],YS=[36.3,44.7,53.0,61.6];
   let st,round=null,cdIv;
@@ -188,25 +189,25 @@ GAMES.pk=(()=>{
   function showRules(){
     const ang=n=>[...Array(4)].map((_,i)=>`<img src="${IMG[i<n?'pk-angel':'pk-devil']}" alt="">`).join('');
     const L=[[4,'+100,000','good'],[3,'+20,000','good'],[2,'📦 กล่องนก 10+10',''],[1,'−5,000','bad'],[0,'−15,000','bad']];
-    rules('จิ้มฟักทอง',[['🎃','เลือก 4 ลูก','จาก 16 ลูกบนชั้น'],['🔮','ผลสุ่มไว้ก่อน','ไม่เปลี่ยนจนจบรอบ'],['⏳','พัก '+MG_CD.pk+' นาที','หลังจบแต่ละรอบ'],['🌙','เปิด '+hoursText('pk'),feeText('pk')+' · กุศล '+fmt(MG_MIN.pk)+'+']],
+    rules('จิ้มกระทง',[['🪷','เลือก 4 ลูก','จาก 16 ลูกบนชั้น'],['🔮','ผลสุ่มไว้ก่อน','ไม่เปลี่ยนจนจบรอบ'],['⏳','พัก '+MG_CD.pk+' นาที','หลังจบแต่ละรอบ'],['🌙','เปิด '+hoursText('pk'),feeText('pk')+' · กุศล '+fmt(MG_MIN.pk)+'+']],
       `<div class="rtitle">รางวัลจาก 4 ลูกที่เลือก</div>${L.map(([n,t,c])=>`<div class="lad ${c}"><span class="ic">${ang(n)}</span><b>${t}</b></div>`).join('')}`);
   }
   function lobby(){
     const open=soloOpen('pk'),cd=time()<(S.cd.pk||0),okC=!lacks('pk').length,okK=wallet().merit>=MG_MIN.pk;
     let body;
-    if(!open) body=`<div class="phead"><h2>🎃 จิ้มฟักทอง</h2><button class="rbtn" id="rb">📜 กติกา</button></div><div style="text-align:center;margin-top:2cqw">${S.rules.emergency||S.rules.solo.pk==='closed'?'🌙 ปิดชั่วคราว แวะมาใหม่นะ':`🌙 เปิด ${hoursText('pk')}<div class="big">อีก ${hm(minsUntil(S.rules.hours.pk[0]))}</div>`}</div>`;
-    else body=`<div class="phead"><h2>🎃 จิ้มฟักทอง</h2><button class="rbtn" id="rb">📜 กติกา</button></div>${feePills('pk')}${pills([['✨ กุศล '+fmt(MG_MIN.pk)+'+',okK],['👼 ลุ้นสูงสุด +100,000']])}
+    if(!open) body=`<div class="phead"><h2>🪷 จิ้มกระทง</h2><button class="rbtn" id="rb">📜 กติกา</button></div><div style="text-align:center;margin-top:2cqw">${S.rules.emergency||S.rules.solo.pk==='closed'?'🌙 ปิดชั่วคราว แวะมาใหม่นะ':`🌙 เปิด ${hoursText('pk')}<div class="big">อีก ${hm(minsUntil(S.rules.hours.pk[0]))}</div>`}</div>`;
+    else body=`<div class="phead"><h2>🪷 จิ้มกระทง</h2><button class="rbtn" id="rb">📜 กติกา</button></div>${feePills('pk')}${pills([['✨ กุศล '+fmt(MG_MIN.pk)+'+',okK],['👼 ลุ้นสูงสุด +100,000']])}
       <div style="text-align:center">${cd?`<div>พักก่อนนะ เล่นได้อีกใน</div><div class="big">${mmss(S.cd.pk-time())}</div>`:`<button class="btn orange big-btn" id="go" ${okC&&okK?'':'disabled'}>เริ่มเล่น</button>`}</div>`;
     st.innerHTML=cells()+`<div class="panel slim" style="bottom:4cqw">${body}</div>`;
     st.querySelector('#rb').onclick=showRules;
     const g=st.querySelector('#go');if(g)g.onclick=start;
   }
   async function start(){const out=await cloud('minigames',{type:'pk-start'});if(!out)return;round={...out.state.pk,sel:[],phase:'pop'};
-    st.innerHTML=cells()+`<div class="pkhud" id="pkhud">ฟักทองกำลังมาวางบนชั้น…</div><div class="panel" style="bottom:4cqw;text-align:center" id="pkp"></div>`;
+    st.innerHTML=cells()+`<div class="pkhud" id="pkhud">กระทงกำลังมาวางบนชั้น…</div><div class="panel" style="bottom:4cqw;text-align:center" id="pkp"></div>`;
     st.querySelector('#pkp').style.display='none';
     const cs=st.querySelectorAll('.pkc');
     cs.forEach((c,i)=>setTimeout(()=>{c.innerHTML=`<img class="pkn" src="${IMG['pk-normal']}" alt="">`;c.classList.add('pop')},120+i*70));
-    setTimeout(()=>{round.phase='ready';const p=st.querySelector('#pkp');p.style.display='';p.innerHTML='<button class="btn orange big-btn" id="ready">พร้อมเลือกฟักทอง</button>';p.querySelector('#ready').onclick=pickMode;st.querySelector('#pkhud').textContent='ผลของทุกช่องสุ่มไว้แล้ว ไม่เปลี่ยนจนจบรอบ'},120+16*70+300);
+    setTimeout(()=>{round.phase='ready';const p=st.querySelector('#pkp');p.style.display='';p.innerHTML='<button class="btn orange big-btn" id="ready">พร้อมเลือกกระทง</button>';p.querySelector('#ready').onclick=pickMode;st.querySelector('#pkhud').textContent='ผลของทุกช่องสุ่มไว้แล้ว ไม่เปลี่ยนจนจบรอบ'},120+16*70+300);
   }
   function pickMode(){
     round.phase='pick';st.querySelector('#pkp').style.display='none';hud();
@@ -217,7 +218,7 @@ GAMES.pk=(()=>{
       hud();if(round.sel.length===4){round.phase='lock';setTimeout(reveal,700)}
     });
   }
-  function hud(){st.querySelector('#pkhud').innerHTML=round.phase==='lock'?'🔒 ล็อกแล้ว! กำลังเฉลย…':`แตะเลือกฟักทอง <b>${round.sel.length}/4</b> ลูก (แตะซ้ำเพื่อยกเลิก)`}
+  function hud(){st.querySelector('#pkhud').innerHTML=round.phase==='lock'?'🔒 ล็อกแล้ว! กำลังเฉลย…':`แตะเลือกกระทง <b>${round.sel.length}/4</b> ลูก (แตะซ้ำเพื่อยกเลิก)`}
   async function reveal(){const out=await cloud('minigames',{type:'pk-finish',round:round.id,picks:round.sel});if(!out){modal('<h2>ยังบันทึกผลไม่สำเร็จ</h2>',[{t:'ลองอีกครั้ง',f:reveal}]);return;}round.kind=out.state.pk.kind;round.phase='lock';
     hud();
     st.querySelectorAll('.pkc').forEach(c=>{const i=+c.dataset.i,k=round.kind[i];c.innerHTML=sprite('pkt-'+k,15,'pks');const sp=c.querySelector('.spr');playSprite(sp,11,false);if(!round.sel.includes(i))setTimeout(()=>c.classList.add('dim'),1600)});
@@ -229,17 +230,17 @@ GAMES.pk=(()=>{
     if(p.k>0)line=`<p class="plus">${p.t}</p><p class="note">ส่งเข้าไปรษณีย์แล้ว ไปกดรับได้เลย</p>`;else if(p.box)line=`<p class="plus">${p.t}</p><p class="note">ส่งกล่องนกเข้าไปรษณีย์แล้ว</p>`;else line=`<p class="minus">${p.t}</p><p class="note">หักจากกระเป๋าบนคลาวด์แล้ว</p>`;
     st.querySelector('#pkhud').textContent='เฉลยแล้ว! กรอบเหลือง = ลูกที่คุณเลือก';
     const nA=round.kind.filter(k=>k==='angel').length;
-    modal(`<h2>${a>=3?'🎉':a===2?'🙂':'😱'} เฉลยแล้ว!</h2><p>คุณได้ฟักทองนางฟ้า <b>${a}</b> ลูก และฟักทองผี <b>${d}</b> ลูก</p>${line}<p class="note">รอบนี้บนชั้นมีฟักทองนางฟ้า ${nA} ลูก จาก 16 ลูก · เล่นรอบต่อไปได้ในอีก ${MG_CD.pk} นาที</p>`,[{t:'ดูชั้นวาง',c:'gray'},{t:'กลับหน้าเกม',f:()=>{round=null;lobby()}}]);
+    modal(`<h2>${a>=3?'🎉':a===2?'🙂':'😱'} เฉลยแล้ว!</h2><p>คุณได้กระทงนางฟ้า <b>${a}</b> ลูก และกระทงผี <b>${d}</b> ลูก</p>${line}<p class="note">รอบนี้บนชั้นมีกระทงนางฟ้า ${nA} ลูก จาก 16 ลูก · เล่นรอบต่อไปได้ในอีก ${MG_CD.pk} นาที</p>`,[{t:'ดูชั้นวาง',c:'gray'},{t:'กลับหน้าเกม',f:()=>{round=null;lobby()}}]);
     round.phase='done';
     const p2=st.querySelector('#pkp');p2.style.display='';p2.innerHTML='<button class="btn big-btn" id="again">กลับหน้าเกม</button>';p2.querySelector('#again').onclick=()=>{round=null;lobby()};
   }
-  return {title:'🎃 จิ้มฟักทอง',open,close,refresh(){if(!round)lobby()},canLeave(){if(round&&round.phase==='lock'){toast('รอเฉลยก่อนนะ');return false}if(round&&(round.phase==='pick'||round.phase==='ready'||round.phase==='pop')){toast('เลือกฟักทองให้ครบ 4 ลูกก่อนนะ จ่ายเหรียญไปแล้ว');return false}return true}};
+  return {title:'🪷 จิ้มกระทง',open,close,refresh(){if(!round)lobby()},canLeave(){if(round&&round.phase==='lock'){toast('รอเฉลยก่อนนะ');return false}if(round&&(round.phase==='pick'||round.phase==='ready'||round.phase==='pop')){toast('เลือกกระทงให้ครบ 4 ลูกก่อนนะ จ่ายเหรียญไปแล้ว');return false}return true}};
 })();
 
 
-/* ---------- ยิงนกฮาโลวีน (fix13: นกร้าย + เอฟเฟกต์ชุดใหม่) ---------- */
+/* ---------- ยิงลูกโป่งงานวัด (fix13: ลูกโป่งร้าย + เอฟเฟกต์ชุดใหม่) ---------- */
 GAMES.bs=(()=>{
- const BIRDS=[['ghost','นกผี'],['pumpkin','นกฟักทอง'],['witch','นกแม่มด'],['skeleton','นกโครงกระดูก'],['crow','อีกาสาปแช่ง'],['owl','นกฮูกระเบิด'],['bat','ค้างคาวขโมยกระสุน']];
+ const BIRDS=[['ghost','ลูกโป่งหัวใจ'],['pumpkin','ลูกโป่งดาว'],['witch','ลูกโป่งดอกบัว'],['skeleton','ลูกโป่งทอง'],['crow','กระสือ'],['owl','ลูกโป่งช้างระเบิด'],['bat','ลูกโป่งปลาขโมยกระสุน']];
  const EVIL={4:{val:-3000,col:'#b06bff',info:'จอมืด 2 วิ'},5:{val:-4000,col:'#ff8a3d',info:'ระเบิด นกรอบๆ หายหมด'},6:{val:-2000,col:'#ff4d5e',info:'ขโมยกระสุน ต้องบรรจุใหม่'}};
  const I={};const img=(k,src)=>{const im=new Image();im.src=src;I[k]=im;return im;};BIRDS.forEach(([k])=>img(k,IMG['b-'+k]));img('bg',IMG['bs-bg']);
  let st,cv,cx,W=0,H=0,DPR=1,Q=1,round=null,raf=0,timer=null,ending=false,pendingShot=false,queuedShots=[],syncTimer=null,resTimer=null,tab='val';
@@ -249,7 +250,7 @@ GAMES.bs=(()=>{
  const valOf=(v,i)=>v[i]||(EVIL[i]?{role:'evil',val:EVIL[i].val}:null);
  const q=s=>st?.querySelector(s);
  const elapsed=()=>round?Math.round(time()-round.start):0;
- function showRules(){rules('ยิงนกฮาโลวีน',[['🎯','แตะนกเพื่อยิง','ยิงได้ใน 60 วินาที'],['🎲','ค่านกสุ่มใหม่','ดูค่าก่อนกดเริ่ม'],['⭐','นกนำโชค','ค่าสูงสุด บินเร็ว'],['☠️','นกต้องสาป','โดนแล้วหักกุศล'],['😈','นกร้าย 3 แบบ','บินประกบนกดี ยิ่งท้ายยิ่งเยอะ'],['🔫','กระสุน 6 นัด','บรรจุ 1.5 วินาที'],['🔥','ไม่เกิน 4 นัด/วิ','กดรัวเกินไปปืนร้อน'],['📉','ติดลบสูงสุด','−30,000 · บวกไม่จำกัด'],['☀️','เปิด '+hoursText('bs'),feeText('bs')+' · พัก '+MG_CD.bs+' นาที']]);}
+ function showRules(){rules('ยิงลูกโป่งงานวัด',[['🎯','แตะนกเพื่อยิง','ยิงได้ใน 60 วินาที'],['🎲','ค่านกสุ่มใหม่','ดูค่าก่อนกดเริ่ม'],['⭐','นกนำโชค','ค่าสูงสุด บินเร็ว'],['☠️','นกต้องสาป','โดนแล้วหักกุศล'],['😈','ลูกโป่งร้าย 3 แบบ','บินประกบนกดี ยิ่งท้ายยิ่งเยอะ'],['🔫','กระสุน 6 นัด','บรรจุ 1.5 วินาที'],['🔥','ไม่เกิน 4 นัด/วิ','กดรัวเกินไปปืนร้อน'],['📉','ติดลบสูงสุด','−30,000 · บวกไม่จำกัด'],['☀️','เปิด '+hoursText('bs'),feeText('bs')+' · พัก '+MG_CD.bs+' นาที']]);}
  async function open(){st=stage('bs-bg');st.classList.add('bsstage');await cloud('minigames',{type:'status'});if(CUR!=='bs')return;
   st.innerHTML=`<canvas class="bx-cv"></canvas><img class="bx-gun" src="${IMG.gun}" alt=""><div class="bx-hud bx-hide"><div class="bx-row"><div class="bx-pill">🎯 <b class="bx-cnt">0</b><span class="bx-sep"></span>✨ <b class="bx-sum">0</b></div><div class="bx-time">60</div><div class="bx-pill bx-ammo"></div></div><div class="bx-combo"></div><div class="bx-msg"></div><div class="bx-legend"></div></div><div class="bx-screen bx-lobby"></div><div class="bx-screen bx-res bx-hide"><div class="bx-box"></div></div>`;
   cv=q('.bx-cv');cx=cv.getContext('2d');fit();addEventListener('resize',fit);st.addEventListener('pointerdown',shoot);
@@ -258,13 +259,13 @@ GAMES.bs=(()=>{
   timer=setInterval(()=>{if(!round&&q('.bx-lobby')&&!q('.bx-lobby').classList.contains('bx-hide'))lobbyStatus();},1000);}
  function close(){clearInterval(timer);clearInterval(syncTimer);clearInterval(resTimer);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',fit);st?.removeEventListener('pointerdown',shoot);round=null;st=null;}
  function fit(){if(!st)return;const r=st.getBoundingClientRect();W=r.width||1;H=r.height||1;DPR=Math.min(window.devicePixelRatio||1,Q?2:1.25);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);}
- /* ---------- lobby: tabs (ค่านก / นกร้าย / กติกา) ---------- */
+ /* ---------- lobby: tabs (ค่านก / ลูกโป่งร้าย / กติกา) ---------- */
  const tileH=(src,name,amt,cls,sub,tcls='',tag='')=>`<div class="bx-tile ${tcls}">${tag}${src.startsWith('images/')?`<img src="${src}" alt="">`:`<div class="bx-em">${src}</div>`}<b>${name}</b>${amt?`<span class="bx-amt ${cls}">${amt}</span>`:''}${sub?`<small>${sub}</small>`:''}</div>`;
  function lobby(){round=null;clearInterval(syncTimer);const L=q('.bx-lobby');q('.bx-hud').classList.add('bx-hide');q('.bx-res').classList.add('bx-hide');L.classList.remove('bx-hide');const v=values();
   const val=`<div class="bx-grid">${[0,1,2,3].map(i=>{const x=valOf(v,i);if(!x)return '';return tileH(IMG['bi-'+BIRDS[i][0]],BIRDS[i][1],sgn(x.val),x.val<0?'neg':x.role==='lucky'?'gold':'pos','',x.role,x.role==='lucky'?'<span class="bx-tag l">⭐ นำโชค</span>':x.role==='cursed'?'<span class="bx-tag c">☠️ ต้องสาป</span>':'');}).join('')}</div><div class="bx-sec">🎲 ค่านกสุ่มใหม่ทุกรอบ ดูก่อนกดเริ่ม</div>`;
   const evil=`<div class="bx-sec" style="margin-top:0">😈 ร้ายทุกรอบ · บินประกบนกดี · ยิ่งท้ายยิ่งเยอะ</div><div class="bx-grid three">${[4,5,6].map(i=>tileH(IMG['bi-'+BIRDS[i][0]],BIRDS[i][1],sgn(valOf(v,i).val),'neg',EVIL[i].info,'evil')).join('')}</div>`;
   const how=`<div class="bx-grid three">${tileH('🎯','แตะยิง','60 วิ','pos')}${tileH('🔫','6 นัด','บรรจุ 1.5 วิ','gold')}${tileH('🔥','ไม่เกิน','4 นัด/วิ','neg','รัวไป ปืนร้อน')}${tileH('⚡','ยิงติดกัน','คอมโบ','pos')}${tileH('📈','บวก','ไม่จำกัด','pos','คนเก่งได้เต็ม')}${tileH('📉','ติดลบ','สูงสุด −30,000','neg')}</div>`;
-  L.innerHTML=`<div class="bx-wrap"><div class="bx-title"><h1>🐦 ยิงนกฮาโลวีน</h1><p>เล็งให้ดี · นกร้ายบินปนมากับนกดี</p></div><div class="bx-card"><div class="bx-tabs">${[['val','ค่านกรอบนี้'],['evil','นกร้าย'],['how','กติกา']].map(([k,t])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${t}</button>`).join('')}</div><div class="bx-tab">${{val,evil,how}[tab]}</div></div>
+  L.innerHTML=`<div class="bx-wrap"><div class="bx-title"><h1>🐦 ยิงลูกโป่งงานวัด</h1><p>เล็งให้ดี · ลูกโป่งร้ายบินปนมากับนกดี</p></div><div class="bx-card"><div class="bx-tabs">${[['val','ค่านกรอบนี้'],['evil','ลูกโป่งร้าย'],['how','กติกา']].map(([k,t])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${t}</button>`).join('')}</div><div class="bx-tab">${{val,evil,how}[tab]}</div></div>
    <div class="bx-fee">${[['coin','coin'],['hat','hat'],['mb','mb']].map(([k])=>`<span class="${lacks('bs').includes(k)?'no':''}"><img src="${IMG[k]}" alt="">${feeOf('bs')[k]}</span>`).join('')}<span>⏳ พัก ${MG_CD.bs} นาที</span></div><div class="bx-status"></div><button class="bx-go">🔫 เริ่มยิง</button><button class="bx-rules">📜 กติกาเต็ม</button></div>`;
   L.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;lobby();});L.querySelector('.bx-go').onclick=start;L.querySelector('.bx-rules').onclick=showRules;lobbyStatus();}
  function lobbyStatus(){const s=q('.bx-status'),go=q('.bx-go');if(!s||!go)return;const b=blockers('bs');let h='';
@@ -273,7 +274,7 @@ GAMES.bs=(()=>{
  async function start(){const out=await cloud('minigames',{type:'bs-start'});if(out?.state?.bs?.phase==='active'){round=out.state.bs;play();}else lobbyStatus();}
  /* ---------- play ---------- */
  function play(){ending=false;queuedShots=[];fx=[];dead=[];combo=0;hh='';clearInterval(syncTimer);syncTimer=setInterval(()=>flushShots(),1500);
-  q('.bx-lobby').classList.add('bx-hide');q('.bx-res').classList.add('bx-hide');q('.bx-hud').classList.remove('bx-hide');legend(round.values);hud();if(elapsed()<3000)msg(round.values[4]?'🎯 เล็งให้ดี! นกร้ายบินปนมา':'🎯 เล็งให้ดี!','#ffe08a');}
+  q('.bx-lobby').classList.add('bx-hide');q('.bx-res').classList.add('bx-hide');q('.bx-hud').classList.remove('bx-hide');legend(round.values);hud();if(elapsed()<3000)msg(round.values[4]?'🎯 เล็งให้ดี! ลูกโป่งร้ายบินปนมา':'🎯 เล็งให้ดี!','#ffe08a');}
  function legend(v){const row=list=>list.map(i=>{const x=v[i];return x?`<span class="${x.role}"><img src="${IMG['bi-'+BIRDS[i][0]]}" alt="">${sgn(x.val)}</span>`:'';}).join('');q('.bx-legend').innerHTML=`<div class="bx-lrow">${row([0,1,2,3])}</div>${v[4]?`<div class="bx-lrow evil">${row([4,5,6])}</div>`:''}`;}
  function hud(){if(!round||!st)return;const t=elapsed(),left=Math.max(0,Math.ceil((round.until-time())/1000)),te=q('.bx-time');if(te.textContent!==String(left)){te.textContent=left;te.classList.toggle('hot',left<=10&&left>0);}
   q('.bx-cnt').textContent=round.count;const s=q('.bx-sum');s.textContent=sgn(round.sum);s.className='bx-sum '+(round.sum<0?'neg':'pos');
@@ -292,7 +293,7 @@ GAMES.bs=(()=>{
    if(v.role==='evil'){combo=0;showCombo();
     if(h.type===4){msg('🐦‍⬛ อีกาสาปแช่ง! มืด 2 วิ','#c79bff');for(let i=0;i<16;i++)fx.push({k:'smoke',x:X+rnd(-1,1)*W*.06,y:Y+rnd(-1,1)*W*.04,r:W*rnd(.04,.08),c:'#3a1660',t:0,life:rnd(.8,1.4)});}
     if(h.type===5){msg('💥 นกฮูกระเบิด!'+(res.blown.length?' ลูกหลง '+res.blown.length+' ตัว':''),'#ff9d3c');shake=.6;flash=.5;flashCol='#ff8a3d';boom(X,Y);res.blown.forEach(b=>{const qp=birdPosition(b,t);if(qp)kill(b,qp,1,X,Y);});}
-    if(h.type===6){msg('🦇 กระสุนโดนขโมย!','#ff6b81');const g=gunTip();for(let i=0;i<6;i++)fx.push({k:'bullet',x0:g.x+rnd(-1,1)*W*.04,y0:g.y,x:X,y:Y,t:-i*.05,life:.45});}
+    if(h.type===6){msg('✨ กระสุนโดนขโมย!','#ff6b81');const g=gunTip();for(let i=0;i<6;i++)fx.push({k:'bullet',x0:g.x+rnd(-1,1)*W*.04,y0:g.y,x:X,y:Y,t:-i*.05,life:.45});}
     shake=Math.max(shake,.32);}
    else if(v.val<0){combo=0;showCombo();msg('☠️ โดนนกต้องสาป!','#ff6b81');shake=.35;flash=.3;flashCol='#ff3b5c';}
    else{combo=Date.now()-lastHit<1500?combo+1:1;lastHit=Date.now();showCombo();if(v.role==='lucky'){msg('⭐ นกนำโชค!','#ffd27a');flash=Math.max(flash,.18);flashCol='#ffe08a';}}}
@@ -365,7 +366,7 @@ GAMES.bs=(()=>{
   if(r.sum<cap)rows+=row(IMG['bi-crow'],'เพดานติดลบ','ลบได้มากสุด '+sgn(cap),sgn(cap-r.sum),'pos');
   const R=q('.bx-res');R.classList.remove('bx-hide');R.querySelector('.bx-box').innerHTML=`<h2>⏰ หมดเวลา!</h2><div class="bx-sub">ยิงโดน <b>${r.count}</b> ตัว · ยิงไป ${r.shots||0} นัด</div><div class="bx-rows">${rows||'<div class="bx-r"><div class="lb">ยังไม่โดนนกเลย</div><div class="v dim">0</div></div>'}</div><div class="bx-total ${g>=0?'pos':'neg'}"><span>รวมกุศล</span><b>${sgn(g)}</b></div><div class="bx-hint">${g>0?'📮 กุศลส่งเข้าไปรษณีย์แล้ว':g<0?'หักจากกุศลแล้ว (ไม่ต่ำกว่า 0)':'ไม่มีผลกับกุศล'} · พัก ${MG_CD.bs} นาที</div><button class="bx-go" id="bxBack">🎮 กลับหน้ายิงนก (<span id="bxBc">30</span>)</button>`;
   let n=30;clearInterval(resTimer);resTimer=setInterval(()=>{n--;const c=q('#bxBc');if(c)c.textContent=n;if(n<=0){clearInterval(resTimer);lobby();}},1000);R.querySelector('#bxBack').onclick=()=>{clearInterval(resTimer);lobby();};renderWallet();}
- return{title:'🐦 ยิงนกฮาโลวีน',open,close,busy:()=>!!round&&round.phase==='active',refresh(){if(!round)lobby();},canLeave(){if(round&&round.phase==='active'){modal('<h2>ออกจากลานยิง?</h2><p>ผลที่ยิงสำเร็จบันทึกบนคลาวด์แล้ว เวลาในรอบยังเดินต่อ กลับมารับผลรอบเดิมได้</p>',[{t:'เล่นต่อ'},{t:'ออก',c:'gray',f:closeGame}]);return false;}return true;}};
+ return{title:'🐦 ยิงลูกโป่งงานวัด',open,close,busy:()=>!!round&&round.phase==='active',refresh(){if(!round)lobby();},canLeave(){if(round&&round.phase==='active'){modal('<h2>ออกจากลานยิง?</h2><p>ผลที่ยิงสำเร็จบันทึกบนคลาวด์แล้ว เวลาในรอบยังเดินต่อ กลับมารับผลรอบเดิมได้</p>',[{t:'เล่นต่อ'},{t:'ออก',c:'gray',f:closeGame}]);return false;}return true;}};
 })();
 
 /* ---------- ไพ่แคง (fix13: นั่ง → พร้อม/ออก · ครบ 4 นับ 10 วิ · ผล 30 วิ แล้วล้างห้อง) ---------- */
@@ -387,7 +388,7 @@ GAMES.kang=(()=>{
     if(cur==null){const s=seatedIn();if(s!=null){enter(s);return;}lobby();return;}
     if(i!==cur)return;const r=pub[cur],m=me();
     if(m<0){ // off the table: cleared after a round, freed for not being ready, or the owner cleared the room
-      if(lastState&&lastState!=='waiting'){finishToHub('🧹 ล้างห้องแล้ว ทุกคนกลับหน้ามินิเกม');return;}
+      if(lastState&&lastState!=='waiting'){finishToHub('🏮 ล้างห้องแล้ว ทุกคนกลับหน้ามินิเกม');return;}
       if(wasSeated)toast('🪑 ลุกจากที่นั่งแล้ว (ไม่ได้กดพร้อมใน 60 วิ หรือเจ้าของเคลียร์ห้อง)');
       wasSeated=false;cur=null;lastState='';watchRooms([0,1]);lobby();return;}
     wasSeated=true;
@@ -415,7 +416,7 @@ GAMES.kang=(()=>{
       const free=r.state==='waiting'||!r.state||r.state==='result'&&now>=(r.endAt||0);const label=closed?'ปิดชั่วคราว':free?(seats>=4?'เต็ม':'ว่าง'):r.state==='countdown'?'กำลังจะเริ่ม':r.state==='result'?'ขึ้นผล':'กำลังเล่น';
       return `<div class="kx-room"><div class="kx-rh"><b>ห้อง ${i+1}</b><span class="kx-seats">${[0,1,2,3].map(k=>`<i class="${(r.seats?r.seats[k]:k<seats)?'on':''}"></i>`).join('')} ${free&&r.state==='result'?0:seats}/4</span></div>
        <div class="kx-facts"><div><small>ทุนต่อแต้ม</small><b>${fmt(base)}</b></div><div><small>กุศลขั้นต่ำ</small><b class="${w.merit<base*8?'kx-no':''}">${fmt(base*8)}</b></div><div><small>สถานะ</small><b>${label}</b></div></div>
-       <button class="kx-go sm" data-sit="${i}" ${closed||rest||!free||seats>=4&&r.state!=='result'?'disabled':''}>🪑 นั่งห้องนี้</button>${S.owner?`<button class="kx-btn2 sm" data-kclear="${i}">🧹 เคลียร์ห้อง</button>`:''}</div>`;}).join('');
+       <button class="kx-go sm" data-sit="${i}" ${closed||rest||!free||seats>=4&&r.state!=='result'?'disabled':''}>🪑 นั่งห้องนี้</button>${S.owner?`<button class="kx-btn2 sm" data-kclear="${i}">🏮 เคลียร์ห้อง</button>`:''}</div>`;}).join('');
     const L=root.querySelector('.kx-lobby');
     L.innerHTML=`<div class="kx-wrap"><div class="kx-title"><h1>🃏 ไพ่แคง</h1><p>4 คน · ใครแต้มน้อยสุดชนะ</p></div>
      <div class="kx-wallet"><span><img src="${IMG.coin}" alt="">${fmt(w.coin)}</span><span><img src="${IMG.hat}" alt="">${fmt(w.hat)}</span><span><img src="${IMG.mb}" alt="">${fmt(w.mb)}</span><span class="m">✨ ${fmt(w.merit)}</span></div>
@@ -480,7 +481,7 @@ GAMES.kang=(()=>{
     root.querySelectorAll('[data-ring]').forEach(c=>c.setAttribute('stroke-dasharray',(Math.max(0,(r.deadline-now)/(r.duration||KANG.turnMs))*100)+' 100'));
     if(qq('kxBar')){const left=Math.max(0,KANG.readyMs/1000-(now-(r.seatAt?.[m]||now))/1000);qq('kxBar').style.width=(left/60*100)+'%';qq('kxSec').textContent=Math.ceil(left);}
     if(qq('kxCdn'))qq('kxCdn').textContent=Math.max(1,Math.ceil((r.startAt-now)/1000));
-    if(qq('kxRsec')){const left=Math.max(0,Math.ceil((r.endAt-now)/1000));qq('kxRsec').textContent=left;if(left<=0&&CUR==='kang'){const room=cur,seat=Math.max(0,m);finishToHub('🧹 ล้างห้องแล้ว ทุกคนกลับหน้ามินิเกม');
+    if(qq('kxRsec')){const left=Math.max(0,Math.ceil((r.endAt-now)/1000));qq('kxRsec').textContent=left;if(left<=0&&CUR==='kang'){const room=cur,seat=Math.max(0,m);finishToHub('🏮 ล้างห้องแล้ว ทุกคนกลับหน้ามินิเกม');
       // Ask the server to clear the table now (staggered by seat; later calls are no-ops) so the hub shows 0/4 at once.
       setTimeout(()=>cloud('kang',{type:'tick',room}).then(out=>{if(out&&!CUR)renderHub();}),300+seat*900);}}}
   function flowFxCheck(r){const flow=(r.tx||[]).filter(t=>t.reason?.startsWith('FLOW')).at(-1);if(!flow){lastFlow='none';return;}const key=r.round+'-'+flow.at+'-'+flow.from+'-'+flow.to+'-'+r.tx.length;
@@ -499,7 +500,7 @@ GAMES.kang=(()=>{
       return true;}};
 })();
 
-/* ---------- ตุ่นบุกสวน! + จัดตะกร้าให้แม่มด (isolated screens, server rounds) ---------- */
+/* ---------- ตีปลาบ่อกระทง! + จัดกระทงให้นางในวรรณคดี (isolated screens, server rounds) ---------- */
 function soloScreen(key,title,mount){let screen=null;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const api={S:new Proxy({},{get:(o,p)=>p==='coins'?wallet().coin:p==='kusal'?wallet().merit:S[p]}),time,offer:()=>soloState[key+'Offer']||null,current:()=>soloState[key]||null,cost:()=>feeOf(key).coin,closed:()=>S.rules.off(key),
   lack:()=>lacks(key).length>0,lackText:()=>'ขาด '+lacks(key).map(x=>LACK_NAME[x]).join(' · '),feeText:()=>feeText(key),cdMin:()=>MG_CD[key],minMerit:()=>MG_MIN[key],
@@ -511,10 +512,10 @@ function soloScreen(key,title,mount){let screen=null;const sleep=ms=>new Promise
  return {title,async open(){await cloud('minigames',{type:'status'});if(CUR!==key)return;const g=$('#gbody');g.innerHTML='';const host=document.createElement('div');host.className='solohost';g.appendChild(host);screen=mount(host,api);},
   close(){screen?.close();screen=null;},refresh(){},busy:()=>soloState[key]?.phase==='active',
   canLeave(){if(!screen||screen.canLeave())return true;modal('<h2>ออกจากเกม?</h2><p>เวลาในรอบยังเดินต่อ ผลที่ทำได้บันทึกแล้ว กลับมาเปิดเกมนี้เพื่อรับผลได้</p>',[{t:'เล่นต่อ',c:'gray'},{t:'ออก',c:'pink',f:closeGame}]);return false;}};}
-GAMES.mole=soloScreen('mole','🔨 ตุ่นบุกสวน!',mountMole);
-GAMES.basket=soloScreen('basket','🧺 จัดตะกร้าให้แม่มด',mountBasket);
+GAMES.mole=soloScreen('mole','🔨 ตีปลาบ่อกระทง!',mountMole);
+GAMES.basket=soloScreen('basket','🧺 จัดกระทงให้นางในวรรณคดี',mountBasket);
 
-/* ---------- แม่มดซิ่งไม้กวาด + โรงงานลูกกวาด: standalone pages in a full-screen frame, talking by postMessage ----------
+/* ---------- น้ำผึ้งซิ่งโคมลอย + โรงงานขนม: standalone pages in a full-screen frame, talking by postMessage ----------
    page→here {mg:'ready'|'start'|'checkpoint'|'finish'|'close'} · here→page {mg:'init'|'started'|'result'|'error'}. Only this frame, same origin. */
 function frameGame(k,src,title){let frame=null,round=null,cps=0,readyT=null;
  const post=m=>{try{frame?.contentWindow?.postMessage(m,location.origin);}catch{}};
@@ -535,8 +536,8 @@ function frameGame(k,src,title){let frame=null,round=null,cps=0,readyT=null;
    readyT=setTimeout(()=>{const w=st()?.querySelector('.mgwait p');if(w)w.textContent='โหลดเกมไม่สำเร็จ กรุณากลับแล้วลองใหม่';},15000);},
   close(){clearTimeout(readyT);removeEventListener('message',onMsg);if(frame){try{frame.src='about:blank';}catch{}frame.remove();}frame=null;round=null;},
   busy:()=>!!round||!!active(),refresh(){}};}
-GAMES.witch=frameGame('witch','witch-game.html','🧹 แม่มดซิ่งไม้กวาด');
-GAMES.candy=frameGame('candy','candy-game.html','🍭 โรงงานลูกกวาดต้องคำสาป');
+GAMES.witch=frameGame('witch','witch-game.html?h=8cfb8a9d','🏮 น้ำผึ้งซิ่งโคมลอย');
+GAMES.candy=frameGame('candy','candy-game.html?h=99f33959','🍮 โรงงานขนมไทย');
 
 cloud('minigames',{type:'status'}).then(renderHub);
 addEventListener('pagehide',()=>{if(CUR)GAMES[CUR].close();});
@@ -547,3 +548,31 @@ const stopOwner=Host.watchWorld('minigameOwner',d=>{S.owner=d?.uid?d.uid===Host.
    Never while a round is running (busy), and Kang leaves only a waiting seat (normal refund). */
 for(const ev of ['pointerdown','pointermove','touchstart','touchmove','keydown','wheel','click'])addEventListener(ev,touch,{capture:true,passive:true});
 setInterval(async()=>{if(!CUR||Date.now()-lastTouch<5*60000)return;const k=CUR,G=GAMES[k];if(G.busy?.())return;touch();try{await G.idle?.();}catch{}if(CUR===k){closeGame();modal('<h2>⏰ ไม่ได้เล่นนานเกิน 5 นาที</h2><p>ระบบพากลับหน้าแรกมินิเกมแล้ว</p>');}},10000);
+
+/* ===== ซีซัน 4: หน้าต้อนรับลานมินิเกม (ของที่มี) · การ์ดเกมเล็กลง 3 คอลัมน์ · กาชาปองย้ายไปอยู่ Top Spenders ===== */
+(()=>{const css=document.createElement('style');css.textContent=`
+.hgrid{grid-template-columns:repeat(3,1fr)!important;gap:7px!important}.hcard{border-radius:14px!important}
+.hth{aspect-ratio:1/1!important}.hbody{padding:0 6px 7px!important;margin-top:-22px!important}.ht{font-size:12.5px!important}.hmeta{font-size:9px!important}
+.hfee{gap:2px!important;margin-top:4px!important}.hfee span{font-size:9.5px!important;padding:0 4px 0 1px!important}.hfee img{width:12px!important;height:12px!important}
+.hnew{font-size:8.5px!important;padding:0 5px!important;top:5px!important;left:5px!important}.hst{font-size:8.5px!important;transform:scale(.9);transform-origin:top right}
+#frCard{display:none!important}
+#mgw{position:fixed;inset:0;z-index:2147480000;background-color:#120a2a;background-position:center top;background-size:cover;background-repeat:no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;animation:mgwIn .45s ease-out}
+#mgw.out{opacity:0;transform:scale(1.04);transition:.35s;pointer-events:none}@keyframes mgwIn{from{opacity:0}}
+#mgw .bx{width:min(340px,90vw);margin-top:12vh;background:rgba(255,248,236,.94);border:3px solid #ffd36b;border-radius:24px;padding:12px 12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.45);text-align:center;color:#5a3412}
+#mgw h2{margin:0 0 2px;font:400 21px 'Itim','Mali',sans-serif}#mgw p{margin:0 0 9px;font-size:11.5px;color:#9a6b44}
+#mgw .g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#mgw .c{background:#fff;border:2px solid #f6dfb2;border-radius:14px;padding:5px 2px}#mgw .c img{width:34px;height:34px;object-fit:contain;display:block;margin:0 auto}#mgw .c i{display:block;font-style:normal;font-size:26px;line-height:34px}
+#mgw .c b{display:block;font-size:13px}#mgw .c small{display:block;font-size:8.5px;color:#9a6b44;line-height:1.1}
+#mgw button{margin-top:11px;border:0;border-radius:999px;padding:10px 26px;font:400 18px 'Itim','Mali',sans-serif;color:#5a3412;background:linear-gradient(#fff6d9,#ffd36b);box-shadow:0 4px 0 #c98a1b,0 8px 18px rgba(0,0,0,.25);cursor:pointer}`;
+document.head.appendChild(css);
+const show=()=>{const w=wallet();const d=document.createElement('div');d.id='mgw';d.style.backgroundImage='url(images/mg-welcome-bg.webp)';
+ d.innerHTML=`<div class="bx"><h2>🏮 ลานมินิเกมลอยกระทง</h2><p>ของที่ใช้เข้าเล่นเกม · มีอยู่ตอนนี้</p><div class="g">
+ <div class="c"><img src="${IMG.coin}" alt=""><b>${fmt(w.coin)}</b><small>เหรียญกระทงทอง</small></div>
+ <div class="c"><img src="${IMG.hat}" alt=""><b>${fmt(w.hat)}</b><small>หมวกกะลาสี</small></div>
+ <div class="c"><img src="${IMG.mb}" alt=""><b>${fmt(w.mb)}</b><small>กล่องดนตรี</small></div>
+ <div class="c"><i>🪷</i><b>${fmt(w.merit)}</b><small>กุศล</small></div></div>
+ <button type="button">▶ เข้าลานเกม</button></div>`;
+ document.body.appendChild(d);const go=()=>{d.classList.add('out');setTimeout(()=>d.remove(),380);};d.querySelector('button').onclick=go;};
+if(document.readyState==='loading')addEventListener('DOMContentLoaded',show);else setTimeout(show,50);})();
+
+/* S4: ปุ่มเลือกธีมมินิเกม */document.addEventListener('click',e=>{const b=e.target&&e.target.closest&&e.target.closest('.mgth [data-th]');if(!b||!window.MGT)return;const v=b.dataset.th==='hw';if(v===MGT.hw)return;MGT.set(v);try{toast(v?'🎃 เปลี่ยนเป็นธีมฮาโลวีนแล้ว · ค่าเข้าเกมเดี่ยว ×2':'🪷 กลับเป็นธีมลอยกระทงแล้ว');}catch(_){}setTimeout(()=>location.reload(),600);});

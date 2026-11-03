@@ -1,11 +1,11 @@
-/* ฮาโลวีนวุ่น ตุ่นบุกสวน! — client screen (locked to preview v2). Round data and scoring come from the server. */
+/* ลอยกระทงวุ่น ตีปลาบ่อกระทง! — client screen (locked to preview v2). Round data and scoring come from the server. */
 const CSS=__CSS__;
 export function mountMole(host,api){
 const root=host.attachShadow({mode:'open'});root.innerHTML=`<style>${CSS}</style><div id="wrap"><div id="stage"></div></div>`;
-const IMGS={bg:'images/mole-bg.webp',hammer:'images/mole-hammer.webp'};
+const IMGS={bg:(window.MGT?MGT.img('images/mole-bg.webp'):'images/mole-bg.webp'),hammer:(window.MGT?MGT.img('images/mole-hammer.webp'):'images/mole-hammer.webp')};
 const CELLS={pumpkin:[186,253],vampire:[208,148],ghost:[216,206],witch:[193,197],mummy:[228,240],devil:[173,171]};
 const NAMES={pumpkin:'ฟักทอง',vampire:'แวมไพร์',ghost:'ผี',witch:'แม่มด',mummy:'มัมมี่',devil:'ปีศาจ'};
-const TYPES=Object.keys(CELLS);Object.assign(IMGS,{pumpkin:'images/mole-hit-pumpkin.webp',vampire:'images/mole-hit-vampire.webp',ghost:'images/mole-hit-ghost.webp',witch:'images/mole-hit-witch.webp',mummy:'images/mole-hit-mummy.webp',devil:'images/mole-hit-devil.webp'});
+const TYPES=Object.keys(CELLS);Object.assign(IMGS,{pumpkin:(window.MGT?MGT.img('images/mole-hit-pumpkin.webp'):'images/mole-hit-pumpkin.webp'),vampire:(window.MGT?MGT.img('images/mole-hit-vampire.webp'):'images/mole-hit-vampire.webp'),ghost:(window.MGT?MGT.img('images/mole-hit-ghost.webp'):'images/mole-hit-ghost.webp'),witch:(window.MGT?MGT.img('images/mole-hit-witch.webp'):'images/mole-hit-witch.webp'),mummy:(window.MGT?MGT.img('images/mole-hit-mummy.webp'):'images/mole-hit-mummy.webp'),devil:(window.MGT?MGT.img('images/mole-hit-devil.webp'):'images/mole-hit-devil.webp')});
 const A=api.assets?{...IMGS,...api.assets}:IMGS;
 const HOLES=[[22.9,35.0],[50.2,35.0],[77.6,35.0],[22.6,45.4],[50.6,45.4],[78.0,45.3],[22.1,56.3],[49.8,56.5],[78.1,56.2],[21.7,67.6],[50.3,67.7],[78.3,67.6]];
 const R0={GOLD_NEED:6,WIN:75000,BONUS:50000,LOSE:-15000,NEAR:.8,COST:2,MIN:15000};
@@ -29,7 +29,7 @@ function lobbyAction(){const S=api.S,cd=(S.cd.mole||0)-api.time(),closed=api.clo
  const okC=api.lack?!api.lack():S.coins>=cost(),okK=S.kusal>=R0.MIN;
  return `${okC&&okK?'':`<div class="wait">${!okC?(api.lackText?api.lackText():'ใช้ '+cost()+' เหรียญ'):'ต้องมีกุศล '+num(R0.MIN)+' ขึ้นไป'}</div>`}<button class="go" id="goBtn" ${okC&&okK?'':'disabled'}>เริ่มตี! · ${api.feeText?api.feeText():'🪙 '+cost()}</button>`;}
 function lobby(){cancelAnimationFrame(raf);G=null;R=api.offer();measure();if(!R){st.innerHTML='<div class="title">กำลังโหลด…</div>';return;}
- st.innerHTML=`<div class="title">ฮาโลวีนวุ่น<br>ตุ่นบุกสวน!<small>ตีตุ่นให้ถึงเป้าใน 60 วินาที</small></div>
+ st.innerHTML=`<div class="title">ลอยกระทงวุ่น<br>ตีปลาบ่อกระทง!<small>ตีตุ่นให้ถึงเป้าใน 60 วินาที</small></div>
  <div class="card"><div class="row"><h1>ค่าตุ่นรอบนี้</h1><button class="ibtn" id="rulesBtn">กติกา</button></div>
  <div class="vals">${chipHTML('v',W*.115)}</div>
  <div class="goal"><div class="t"><small>เป้าหมายรอบนี้</small><b>${num(R.target)}</b>${R.easy?'<br><span class="lucky">🍀 รอบดวงดี เป้าง่าย</span>':''}</div><div class="gb">ถึงเป้า +75,000<br>ตุ่นทอง ${R0.GOLD_NEED}/${R.goldTotal} +50,000</div></div>

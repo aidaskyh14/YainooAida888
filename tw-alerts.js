@@ -1,5 +1,5 @@
-/* fix19 🌳👻 ศึกต้นไม้ผี — เด้งทุกหน้า (เปลือกเกม)
-   · 🦇 เตือนค้างคาว 15 วินาที + ป้ายระหว่างเล่น (แตะไปหน้าศึก)
+/* fix19 🌳🏮 ศึกโคมลอย — เด้งทุกหน้า (เปลือกเกม)
+   · ✨ เตือนค้างคาว 15 วินาที + ป้ายระหว่างเล่น (แตะไปหน้าศึก)
    · 12:05 / 00:05 สรุปผลรอบ (ทุกคน ครั้งเดียว) · แผ่นป้ายกุศล (บ้านที่ชนะ) · การ์ดแกล้ง (คนที่ถูกสุ่ม) · การ์ดเซอร์ไพรส์ (คนเก็บค้างคาวได้มากสุด)
    ข้อมูลการ์ดอยู่บนเซิร์ฟเวอร์ทั้งหมด หน้าเว็บรู้หน้าการ์ดหลังเปิดแล้วเท่านั้น */
 const CSS=`
@@ -41,7 +41,7 @@ const CSS=`
 .tw-warn h3{margin:0;font:400 1.2rem 'Itim','Mali',sans-serif}.tw-warn .cd{font:400 2.4rem 'Itim',sans-serif;color:#FFD36B}.tw-warn p{font-size:.74rem;color:#CDB8E6;margin:.2rem 0 .5rem;line-height:1.5}
 @media (prefers-reduced-motion:reduce){.tw-card .in{transition:none}.tw-pill{animation:none}}`;
 const MIMG={5000000:'mBronze',10000000:'mSilver',30000000:'mGold',50000000:'mRainbow'};
-const PR={rob:['pRob','🧺 ปล้นเสบียง 3 บ้าน','ทุกคนใน 3 บ้าน โดนทิ้งของ 1,000–5,000 ชิ้น/คน'],cut1:['pCut1','🪓 ตัด 1 บ้าน','ทุกคนในบ้านนั้น −10 ล้าน'],cutAll:['pCutAll','💀 ตัดทุกบ้านที่แพ้','ทุกคน −3 ล้าน'],cut4:['pCut4','🎯 ตัด 4 คน','เลือก 4 คนจากบ้านที่แพ้ คนละ −15 ล้าน']};
+const PR={rob:['pRob','🧺 ปล้นเสบียง 3 บ้าน','ทุกคนใน 3 บ้าน โดนทิ้งของ 1,000–5,000 ชิ้น/คน'],cut1:['pCut1','🪓 ตัด 1 บ้าน','ทุกคนในบ้านนั้น −10 ล้าน'],cutAll:['pCutAll','🔮 ตัดทุกบ้านที่แพ้','ทุกคน −3 ล้าน'],cut4:['pCut4','🎯 ตัด 4 คน','เลือก 4 คนจากบ้านที่แพ้ คนละ −15 ล้าน']};
 const SU={supply:['sSupply','🎁 เติมเสบียง'],shield:['sShield','🛡️ โล่ป้องกัน'],merit:['sMerit','💰 +15,000,000']};
 export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledger,hold}){
  if(!document.getElementById('twcss')){const s=document.createElement('style');s.id='twcss';s.textContent=CSS;document.head.appendChild(s);}
@@ -63,16 +63,16 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
  function timer(el,until){const f=()=>{if(el.isConnected)el.textContent='⏳ '+clock(until-now());};f();const t=setInterval(()=>{if(!el.isConnected)return clearInterval(t);f();},500);}
  const sumSeen=new Set();const lastOk=()=>st?.last&&!st.last.done&&!st.last.cancelled;
  function tick(){const t=now(),scr=screen?.();
-  /* 🦇 */
+  /* ✨ */
   const b=st?.bat;const batLive=b&&!b.settled&&t<b.end&&st.round;
-  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>🦇 ค้างคาวขนลูกอมกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกต้นไม้ผี ลากนิ้วฟันลูกอมรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันลูกอม</button>';
+  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>✨ หิ่งห้อยขนดอกดาวเรืองกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกโคมลอย ลากนิ้วฟันดอกดาวเรืองรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันดอกดาวเรือง</button>';
     warnEl.querySelector('button').onclick=()=>{warnEl?.remove();warnEl=null;go?.('treewar');};document.body.appendChild(warnEl);}
    warnEl.querySelector('.cd').textContent=Math.ceil((b.start-t)/1000);}else if(warnEl){warnEl.remove();warnEl=null;}
   /* โดนปล้น/ตัดตอนออนไลน์: เรียก ledger ให้หักและแจ้งทันที (ไม่ทำระหว่างเล่นมินิเกม/แข่ง/ค้างคาว) */
   const hit=mine?.hit;if(hit?.at&&!hitDone.has(hit.at)&&ledger&&!hold?.()&&!(batLive&&scr==='treewar')){hitDone.add(hit.at);ledger().catch(()=>hitDone.delete(hit.at));}
   /* งานที่รอ */
   const jobs=[];
-  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','🦇 ฟันลูกอม ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
+  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','✨ ฟันดอกดาวเรือง ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
   const L=st?.last;
   if(lastOk()&&t>=L.openAt&&t<L.until+60000){
    if(mine?.merit?.round===L.id&&!mine.merit.done)jobs.push(['merit:'+L.id,'🏆 เลือกแผ่นป้ายกุศล ⏳ '+clock(L.until-t),()=>meritPop(L)]);
@@ -87,7 +87,7 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
   if(show.length){if(!pill){pill=document.createElement('button');pill.type='button';pill.className='tw-pill';document.body.appendChild(pill);}
    const j=show[0];pill.textContent=j[1];pill.onclick=()=>{mini.delete(j[0]);j[2]();};}else if(pill){pill.remove();pill=null;}}
  function summaryPop(L){const w=L.winner?L.houses[L.winner]:null;ls.set('twSum:'+L.id,'1');sumSeen.add(L.id);
-  const o=open('sum:'+L.id,'<div style="font-size:2.4rem">'+(w?'🏆':'🌙')+'</div><h2>'+(w?esc(w.n)+' ชนะ!':'รอบนี้ไม่มีบ้านชนะ')+'</h2><p>สรุปผลศึกต้นไม้ผี '+(L.id.endsWith('A')?'รอบเช้า':L.id.endsWith('B')?'รอบบ่าย':'')+'</p><table class="tw-rk">'+(L.ranks||[]).map((r,i)=>'<tr><td>'+(i===0&&w?'👑':i+1)+'</td><td><img src="'+emb(r.em)+'" alt=""> '+esc(r.n)+'</td><td class="n">'+fmt(r.score)+'</td></tr>').join('')+'</table>'+(w?'<p>สมาชิก '+esc(w.n)+' ได้เลือกแผ่นป้ายกุศลคนละ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง</p>':'')+'<div class="tw-row"><button class="tw-big" data-x>ปิด</button></div>');
+  const o=open('sum:'+L.id,'<div style="font-size:2.4rem">'+(w?'🏆':'🌙')+'</div><h2>'+(w?esc(w.n)+' ชนะ!':'รอบนี้ไม่มีบ้านชนะ')+'</h2><p>สรุปผลศึกโคมลอย '+(L.id.endsWith('A')?'รอบเช้า':L.id.endsWith('B')?'รอบบ่าย':'')+'</p><table class="tw-rk">'+(L.ranks||[]).map((r,i)=>'<tr><td>'+(i===0&&w?'👑':i+1)+'</td><td><img src="'+emb(r.em)+'" alt=""> '+esc(r.n)+'</td><td class="n">'+fmt(r.score)+'</td></tr>').join('')+'</table>'+(w?'<p>สมาชิก '+esc(w.n)+' ได้เลือกแผ่นป้ายกุศลคนละ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง</p>':'')+'<div class="tw-row"><button class="tw-big" data-x>ปิด</button></div>');
   o.querySelector('[data-x]').onclick=closeOv;}
  async function meritPop(L){const key='merit:'+L.id;const o=open(key,'<div style="font-size:2.4rem">🏆</div><h2>'+esc(L.houses[L.winner]?.n)+' ชนะ!</h2><p>ทุกคนในบ้านได้เลือกแผ่นป้ายกุศลคนละ 1 ใบ</p><div class="tm"></div>'+cardsHtml(6,'mBack','c6')+'<p>ไม่เลือกใน 10 นาที ระบบเลือกใบที่น้อยที่สุดให้ · กุศลส่งเข้าไปรษณีย์</p>');
   timer(o.querySelector('.tm'),L.until);
@@ -111,7 +111,7 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
    catch(e){toast?.(e.message||'ลองใหม่อีกครั้ง');go.disabled=sel.length!==need;}finally{busy=false;}};}
  async function surprisePop(S){const key='surprise:'+S.bat;let me=null;opening=true;try{me=(await call({type:'status'}))?.me?.surprise;}catch(e){}finally{opening=false;}
   if(me?.card==='shield'&&!me.done)return shieldPick(S,key);
-  const o=open(key,'<div style="font-size:2.2rem">🏅</div><h2>คุณเก็บกุศลจากค้างคาวได้มากที่สุด!</h2><p>เลือกการ์ดเซอร์ไพรส์ 1 ใบ</p><div class="tm"></div>'+cardsHtml(3,'sBack','c3')+'<p>ไม่เลือกใน 10 นาที ระบบเลือกให้</p>');
+  const o=open(key,'<div style="font-size:2.2rem">🏅</div><h2>คุณเก็บกุศลจากหิ่งห้อยได้มากที่สุด!</h2><p>เลือกการ์ดเซอร์ไพรส์ 1 ใบ</p><div class="tm"></div>'+cardsHtml(3,'sBack','c3')+'<p>ไม่เลือกใน 10 นาที ระบบเลือกให้</p>');
   timer(o.querySelector('.tm'),S.until);
   o.querySelectorAll('.tw-card').forEach(c=>c.onclick=async()=>{if(busy)return;busy=true;o.querySelectorAll('.tw-card').forEach(x=>x.disabled=true);
    try{const r=await call({type:'surprise',i:Number(c.dataset.i)});reveal(o,r.deck,r.i,k=>SU[k][0],k=>SU[k][1]);

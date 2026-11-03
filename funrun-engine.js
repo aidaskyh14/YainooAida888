@@ -69,7 +69,7 @@ export function funrunAction(source,account,ctx,input){
  }
  if(type==='ready'){
   if(r.status!=='lobby')fail('ห้องกำลังแข่งอยู่');if(seat.ready)return result();
-  if((game.merit||0)<FR.MIN_MERIT)fail('🙏 กุศลไม่พอ (ต้องมี '+FR.MIN_MERIT.toLocaleString('en-US')+')');
+  
   if(!hasFee(game,coins))fail('ค่าเข้าไม่พอ: ต้องมี 🪙'+FR.FEE.coin+' 🎩'+FR.FEE.hat+' 🎵'+FR.FEE.mb);
   coins-=FR.FEE.coin;game.bag.item.hat-=FR.FEE.hat;game.bag.item.musicbox-=FR.FEE.mb;seat.paid={...FR.FEE};seat.ready=true;r.lastAt=now;
   if(r.seats.length===FR.SEATS&&r.seats.every(s=>s.ready)){r.status='countdown';r.game='fr'+now.toString(36)+Math.floor(Math.random()*1e6).toString(36);r.seed=Math.floor(Math.random()*2e9)+1;r.startAt=now+FR.COUNTDOWN;r.round=1;r.roundStart=r.startAt+FR.ROUND_CD;r.reports={};r.totals={};r.first=0;}

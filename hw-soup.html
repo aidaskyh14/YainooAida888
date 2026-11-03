@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="th">
-<head>
+<head><script src="pv/s4icon.js?h=edc9f144"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ร้านซุปแม่มด</title>
+<title>ร้านแฮมสเตอร์</title>
 <style>
 :root{--w:360px;--cream:#FFFBF5;--cocoa:#6E4B3A;--soft:#9A7A68;--line:#F3E9DE;--bg:#1E1030;color-scheme:dark}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#1E1030}}
@@ -86,13 +86,13 @@ body{background:radial-gradient(circle at 50% 0,#4A2A78,#1E1030 70%)}
 </head>
 <body>
 <div class="wrap" id="wrap">
- <div class="top"><button class="back" id="back">‹ หลังบ้าน</button><h1>🎃 ร้านซุปแม่มด</h1><span class="chip" id="merit">🙏 0</span></div>
+ <div class="top"><button class="back" id="back">‹ หลังบ้าน</button><h1>🐹 ร้านแฮมสเตอร์</h1><span class="chip" id="merit">🙏 0</span></div>
  <div class="stage" id="stage"></div>
  <div class="panel" id="panel"></div>
 </div>
 <div class="fx" id="fx" aria-hidden="true"></div>
 <script>
-/* fix16 🎃 ร้านซุปแม่มด — หน้าเกมเปิดทับหลังบ้าน · เซิร์ฟเวอร์ (hwmini) จ่ายค่าเข้า ตรวจเวลา ตัดสินผล จ่ายกุศล */
+/* fix16 🐹 ร้านแฮมสเตอร์ — หน้าเกมเปิดทับหลังบ้าน · เซิร์ฟเวอร์ (hwmini) จ่ายค่าเข้า ตรวจเวลา ตัดสินผล จ่ายกุศล */
 const API=parent.__HWAPI;let V=null,busy=false;
 const nf=n=>Math.round(n).toLocaleString('en-US'),I=n=>'images/'+(/^halloween-|^lux-/.test(n)?n:'sp-'+n)+'.webp',$=id=>document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
 function fit(){const vw=document.documentElement.clientWidth||innerWidth||390,vh=(window.visualViewport&&visualViewport.height)||innerHeight||0;let w=Math.min(vw-16,480);if(vh>=560)w=Math.min(w,(vh-205)*1086/1448);w=Math.max(260,w);document.documentElement.style.setProperty('--w',w+'px');}
@@ -111,23 +111,23 @@ const SOUPT={candy:'it-candy',batchip:'it-batchip',web:'it-web'},CAKET={eye:'it-
 let state='ready',level=0,bank=0,last=null,G=null;
 /* ---------- วาดจาน ---------- */
 function dishHTML(d){if(!d)return'';
- if(d.k==='potion')return `<div class="dish"><img src="${I('it-potion')}" alt="น้ำยาแม่มด" style="width:70%;bottom:0"></div>`;
- if(d.k==='soup')return `<div class="dish"><img src="${I('it-soup')}" alt="ซุปฟักทอง" style="width:100%;bottom:0">${d.t?`<img src="${I(SOUPT[d.t])}" alt="" style="width:48%;bottom:30%">`:''}</div>`;
- return `<div class="dish"><img src="${I(d.f==='p'?'it-cake-p':d.f==='o'?'it-cake-o':'it-cake')}" alt="คัพเค้ก" style="width:82%;bottom:0">${d.t?`<img src="${I(CAKET[d.t])}" alt="" style="width:36%;bottom:${d.f?62:48}%">`:''}</div>`;}
+ if(d.k==='potion')return `<div class="dish"><img src="${I('it-potion')}" alt="น้ำยาวิเศษ" style="width:70%;bottom:0"></div>`;
+ if(d.k==='soup')return `<div class="dish"><img src="${I('it-soup')}" alt="บัวลอย" style="width:100%;bottom:0">${d.t?`<img src="${I(SOUPT[d.t])}" alt="" style="width:48%;bottom:30%">`:''}</div>`;
+ return `<div class="dish"><img src="${I(d.f==='p'?'it-cake-p':d.f==='o'?'it-cake-o':'it-cake')}" alt="ขนมถ้วย" style="width:82%;bottom:0">${d.t?`<img src="${I(CAKET[d.t])}" alt="" style="width:36%;bottom:${d.f?62:48}%">`:''}</div>`;}
 /* ---------- เตรียมฉาก ---------- */
 function scene(){const s=$('stage');s.innerHTML=`<div class="lvchip" id="lvchip"></div><div class="hud" id="hud"></div><div id="custs" style="inset:0"></div>
- ${['candy','batchip','web','eye','minipump'].map((t,i)=>`<div class="src" data-a="tr:${t}" style="left:${11+i*19.5}%;top:68.5%;width:17.5%" role="button" tabindex="0"><img src="${I('tr-'+t)}" alt=""><span class="tag">${{candy:'ลูกอม',batchip:'ปีกค้างคาว',web:'ครีมใย',eye:'ลูกตา',minipump:'ฟักทองจิ๋ว'}[t]}</span></div>`).join('')}
- <div class="src" data-a="soup" style="left:10%;top:81%;width:17%" role="button" tabindex="0"><img src="${I('it-soup')}" alt=""><span class="tag">ซุป</span></div>
- <div class="src" data-a="cake" style="left:10%;top:93.5%;width:13%" role="button" tabindex="0"><img src="${I('it-cake')}" alt=""><span class="tag">คัพเค้ก</span></div>
- <div class="src" data-a="fp" style="left:27%;top:81%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-p')}" alt=""><span class="tag">ครีมม่วง</span></div>
- <div class="src" data-a="fo" style="left:27%;top:93.5%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-o')}" alt=""><span class="tag">ครีมส้ม</span></div>
+ ${['candy','batchip','web','eye','minipump'].map((t,i)=>`<div class="src" data-a="tr:${t}" style="left:${11+i*19.5}%;top:68.5%;width:17.5%" role="button" tabindex="0"><img src="${I('tr-'+t)}" alt=""><span class="tag">${{candy:'ทองหยิบ',batchip:'ดอกจอก',web:'วิปครีม',eye:'ลูกชุบ',minipump:'มะม่วง'}[t]}</span></div>`).join('')}
+ <div class="src" data-a="soup" style="left:10%;top:81%;width:17%" role="button" tabindex="0"><img src="${I('it-soup')}" alt=""><span class="tag">บัวลอย</span></div>
+ <div class="src" data-a="cake" style="left:10%;top:93.5%;width:13%" role="button" tabindex="0"><img src="${I('it-cake')}" alt=""><span class="tag">ขนมถ้วย</span></div>
+ <div class="src" data-a="fp" style="left:27%;top:81%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-p')}" alt=""><span class="tag">หน้าบัวชมพู</span></div>
+ <div class="src" data-a="fo" style="left:27%;top:93.5%;width:11%" role="button" tabindex="0"><img src="${I('it-cake-o')}" alt=""><span class="tag">หน้าทองหยอด</span></div>
  <div class="src plate" data-a="plate" style="left:51%;top:91%;width:27%"><img src="${I('it-tray')}" alt="ถาดเสิร์ฟ"><div id="plate"></div></div>
  <div class="src cauld" id="cauld" data-a="cauld" style="left:76%;top:84%;width:21%" role="button" tabindex="0"><img src="${I('cauldron')}" alt="หม้อต้มน้ำยา"><span class="ring" id="cring">แตะเพื่อต้ม</span><div class="bar"><i id="cbar" style="width:0"></i></div></div>
  <div class="src drink" data-a="drink" style="left:93.5%;top:79%;width:10%"><div style="position:relative;width:100%;aspect-ratio:3/4;border:2px dashed rgba(255,255,255,.45);border-radius:2cqw" id="drink"></div></div>
  <div class="src" data-a="trash" style="left:93.5%;top:93.5%;width:10%" role="button" tabindex="0"><img src="${I('it-trash')}" alt="ถังขยะ"></div>`;
  s.querySelectorAll('.src').forEach(e=>{e.onpointerdown=ev=>{ev.preventDefault();act(e.dataset.a,e);};e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' ')act(e.dataset.a,e)};});}
 /* ---------- เกม: ใช้กติกาเดียวกับเซิร์ฟเวอร์ (soup-sim.js) · บันทึกทุกการกดส่งให้เซิร์ฟเวอร์เล่นซ้ำตัดสินผล ---------- */
-let SIM=null,simLoad=import('./soup-sim.js?v=ss3-fix16').then(m=>{SIM=m;});
+let SIM=null,simLoad=import('./soup-sim.js?v=ss3-fix16&h=ec743e0e').then(m=>{SIM=m;});
 let t0=0,LOG=[],EL={};
 const T=()=>Math.round(performance.now()-t0);
 function nope(e){if(!e)return;e.classList.remove('nope');void e.offsetWidth;e.classList.add('nope');}
@@ -180,15 +180,15 @@ async function sync(){let out;try{out=await call({type:'status',game:'soup'});}c
 /* ---------- แผงล่าง ---------- */
 function panel(){const me=API.fresh(),bag=me.hw||{};$('merit').textContent='🙏 '+nf(me.merit||0);const p=$('panel');
  const can=Object.entries(COST).every(([k,q])=>(bag[k]||0)>=q),cdl=Math.max(0,((V&&V.cd&&V.cd.soup)||0)-now());
- const IC={cauldron:['halloween-hw-cauldron','หม้อยา'],pumpkin:['halloween-hw-pumpkin','ฟักทอง'],candle:['halloween-hw-candle','เทียน']};
+ const IC={cauldron:['halloween-hw-cauldron','กระทงทอง'],pumpkin:['halloween-hw-pumpkin','กระทงใบตอง'],candle:['halloween-hw-candle','ธูปหอม']};
  const lvs=`<div class="lvs">${LV.map((l,i)=>`<span class="${i<level?'done':i===level&&state!=='ready'&&state!=='done'?'on':''}">${l.name} 🙏 ${l.lo/1000}–${l.hi/1000}k</span>`).join('')}</div>`;
- if(state==='ready'||state==='done')p.innerHTML=`${last!==null?`<div class="bank">${last>0?`🎉 ได้ <b>+${nf(last)}</b> กุศล`:last<0?`😿 เสีย <b style="color:#B02A44">${nf(last)}</b> กุศล`:'😿 ไม่ได้อะไรเลย'}</div>`:''}${lvs}<div class="row">ค่าเข้าเล่น ${Object.entries(COST).map(([k,q])=>`<span class="cost"><img src="${I(IC[k][0])}" alt="${IC[k][1]}">${q} <small>/${nf(bag[k]||0)}</small></span>`).join('')}</div><div class="btns"><button class="btn full" id="go" ${V&&can&&!cdl&&isOpen()&&!busy?'':'disabled'}>${!V?'กำลังโหลด…':busy?'⏳ กำลังเปิดร้าน…':!isOpen()?closedMsg():cdl?`⏳ เปิดร้านได้อีกใน ${Math.floor(cdl/60000)}:${String(Math.floor(cdl/1000)%60).padStart(2,'0')}`:!can?'ของฮาโลวีนไม่พอ':'🎃 เปิดร้าน!'}</button></div>`;
+ if(state==='ready'||state==='done')p.innerHTML=`${last!==null?`<div class="bank">${last>0?`🎉 ได้ <b>+${nf(last)}</b> กุศล`:last<0?`😿 เสีย <b style="color:#B02A44">${nf(last)}</b> กุศล`:'😿 ไม่ได้อะไรเลย'}</div>`:''}${lvs}<div class="row">ค่าเข้าเล่น ${Object.entries(COST).map(([k,q])=>`<span class="cost"><img src="${I(IC[k][0])}" alt="${IC[k][1]}">${q} <small>/${nf(bag[k]||0)}</small></span>`).join('')}</div><div class="btns"><button class="btn full" id="go" ${V&&can&&!cdl&&isOpen()&&!busy?'':'disabled'}>${!V?'กำลังโหลด…':busy?'⏳ กำลังเปิดร้าน…':!isOpen()?closedMsg():cdl?`⏳ เปิดร้านได้อีกใน ${Math.floor(cdl/60000)}:${String(Math.floor(cdl/1000)%60).padStart(2,'0')}`:!can?'ของลอยกระทงไม่พอ':'🐹 เปิดร้าน!'}</button></div>`;
  else if(state==='won'){const nx=LV[level];p.innerHTML=`${lvs}<div class="bank">✅ ผ่าน${LV[level-1].name} · ตอนนี้ได้ <b>${nf(bank)}</b> กุศล</div><div class="row">ไปต่อ${nx.name}: ผ่านได้ <span class="prize">🙏 ${nf(nx.lo)}–${nf(nx.hi)}</span> พลาด = ไม่ได้อะไรเลย</div><div class="btns"><button class="btn g" id="take" ${busy?'disabled':''}>💰 พอแค่นี้</button><button class="btn" id="more" ${busy?'disabled':''}>🔥 ไปต่อ</button></div>`;}
- else p.innerHTML=`${lvs}<div class="row">🥣 ซุป → ท็อปปิ้ง · 🧁 คัพเค้ก → ครีม → ของแต่ง · 🧪 ต้มแล้วรีบตัก · แตะลูกค้าเพื่อเสิร์ฟ</div>`;
+ else p.innerHTML=`${lvs}<div class="row">🥣 บัวลอย → ท็อปปิ้ง · 🧁 ขนมถ้วย → ครีม → ของแต่ง · 🧪 ต้มแล้วรีบตัก · แตะลูกค้าเพื่อเสิร์ฟ</div>`;
  if($('go'))$('go').onclick=start;if($('take'))$('take').onclick=take;if($('more'))$('more').onclick=more;}
-function boom(){const fx=$('fx'),set=['🎃','⭐','🍬','✨'];for(let i=0;i<30;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.5)+'s';e.style.animationDelay=Math.random()*.4+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML=`<img src="${I('lux-coin')}" alt="">`;else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4000);}}
+function boom(){const fx=$('fx'),set=['🐹','⭐','🍬','✨'];for(let i=0;i<30;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.5)+'s';e.style.animationDelay=Math.random()*.4+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML=`<img src="${I('lux-coin')}" alt="">`;else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4000);}}
 /* ฉากเริ่ม: ลูกค้ายืนโชว์ */
-scene();G={plate:{k:'cake',f:'p',t:'eye'},drink:true,slots:[],cd:{s:'idle'}};drawPlate();drawDrink();drawCauld();$('hud').innerHTML='🎃 พร้อมเปิดร้าน';$('lvchip').textContent='ร้านซุปแม่มด';
+scene();G={plate:{k:'cake',f:'p',t:'eye'},drink:true,slots:[],cd:{s:'idle'}};drawPlate();drawDrink();drawCauld();$('hud').innerHTML='🐹 พร้อมเปิดร้าน';$('lvchip').textContent='ร้านแฮมสเตอร์';
 ['vamp','ghost','witch'].forEach((h,i)=>{const el=document.createElement('div');el.className='cust in';el.style.left=(20+i*30)+'%';el.innerHTML=`<img class="h" src="${I('hm-'+h+'-h')}" alt="">`;$('custs').append(el);});
 panel();sync();setInterval(()=>{if(state==='ready'||state==='done')panel();},1000);
 $('back').onclick=()=>{if(state==='play'||state==='end'||busy)return err('รอให้จบรอบนี้ก่อนนะ');API.close();};

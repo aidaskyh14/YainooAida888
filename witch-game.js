@@ -1,8 +1,8 @@
-/* แม่มดซิ่งไม้กวาด — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน witch-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix15';
-import {mgFrame} from './mg-frame.js?v=ss3-fix15';
+/* น้ำผึ้งซิ่งโคมลอย — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน witch-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
+import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix15&h=b520a90e';
+import {mgFrame} from './mg-frame.js?v=ss3-fix15&h=c21dcdbe';
 (()=>{
-const IMG={};['bat','batstill','bg1','bg2','bg3','bg4','bg5','bubble','candy','comet','corn','crash','gate','lose','magnet','meteor','moon','poster','pumpkin','shield','star','storm','win','witch'].forEach(k=>IMG[k]='images/wg-'+k+'.webp');
+const IMG={};['bat','batstill','bg1','bg2','bg3','bg4','bg5','bubble','candy','comet','corn','crash','gate','lose','magnet','meteor','moon','poster','pumpkin','shield','star','storm','win','witch'].forEach(k=>IMG[k]=(window.MGT?MGT.img('images/wg-'+k+'.webp'):'images/wg-'+k+'.webp'));
 const isImg=s=>typeof s==='string'&&s.startsWith('images/');
 const $=id=>document.getElementById(id);
 const cv=$('c'),cx=cv.getContext('2d');
@@ -11,6 +11,9 @@ const sgn=n=>(n>0?'+':n<0?'−':'')+fmt(Math.abs(n));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,lerp=(a,b,t)=>a+(b-a)*t,rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
 const I={};let loaded=0;const names=Object.keys(IMG);
 names.forEach(k=>{const im=new Image();im.onload=im.onerror=()=>{if(++loaded===names.length)ready();};im.src=IMG[k];I[k]=im;});
+/* ประทัดกับเมฆพายุ: เล่นภาพ 16 ท่าวนไป */
+['meteor','storm'].forEach(k=>{const sh=new Image();sh.onload=()=>{const fw=sh.width/4,fh=sh.height/4,cv=document.createElement('canvas');cv.width=fw;cv.height=fh;const g=cv.getContext('2d');let f=0;
+ const draw=()=>{g.clearRect(0,0,fw,fh);g.drawImage(sh,(f%4)*fw,Math.floor(f/4)*fh,fw,fh,0,0,fw,fh);f=(f+1)%16;};draw();I[k]=cv;setInterval(draw,70);};sh.src='images/wg-'+k+'-4x4.webp';});
 let FR=null;
 
 /* ---------- กติกา (ตัวเลขจาก witch-engine.js) ---------- */
@@ -22,15 +25,15 @@ const ZONES=[
  {n:'ฝนดาวตก',bg:'bg4',rate:1.7,mix:{meteor:4,bat:2,storm:2,pumpkin:2,comet:4},col:'#ff4fa0'},
  {n:'ประตูพระจันทร์',bg:'bg5',rate:2,mix:{meteor:3,bat:2,storm:2,pumpkin:3,comet:3},col:'#dfe7ff'}].map((z,i)=>({...WITCH.ZONES[i],...z}));
 const OB={
- meteor:{img:'meteor',name:'อุกกาบาต',size:.30,hw:.17,pen:2000,col:'#ff8a3d',fx:'ชนแรง จอสั่นหนัก'},
+ meteor:{img:'meteor',name:'ประทัดพุ่ง',size:.30,hw:.17,pen:2000,col:'#ff8a3d',fx:'ชนแรง จอสั่นหนัก'},
  bat:{img:'bat',name:'ค้างคาว',size:.34,hw:.17,pen:1500,col:'#c06bff',fx:'ขโมยดาว 5 ดวง'},
  storm:{img:'storm',name:'เมฆพายุ',size:.34,hw:.19,pen:1500,col:'#9f7bff',fx:'จอมัว + เลี้ยวกลับด้าน 3 วิ'},
  pumpkin:{img:'pumpkin',name:'ฟักทองผี',size:.32,hw:.16,pen:2500,blast:.34,col:'#ffb13b',fx:'ระเบิดเป็นวง ต้องหลบให้ห่าง'},
  comet:{img:'comet',name:'ดาวหาง',size:.30,hw:.15,pen:3000,fast:1.9,col:'#7ad7ff',fx:'พุ่งเร็ว มีลูกศรเตือน'}};
 const IT={
  star:{img:'star',name:'ดาวทอง',size:.15,pts:200,col:'#ffd76a'},
- candy:{img:'candy',name:'ลูกกวาด',size:.19,pts:500,col:'#ff9a4d'},
- corn:{img:'corn',name:'ข้าวโพดลูกกวาด',size:.18,pts:500,col:'#ffc04d'},
+ candy:{img:'candy',name:'ขนม',size:.19,pts:500,col:'#ff9a4d'},
+ corn:{img:'corn',name:'ข้าวโพดขนม',size:.18,pts:500,col:'#ffc04d'},
  moon:{img:'moon',name:'เศษพระจันทร์',size:.22,pts:3000,col:'#9fe0ff'},
  shield:{img:'shield',name:'โล่เวทมนตร์',size:.2,col:'#c79bff'},
  magnet:{img:'magnet',name:'แม่เหล็กดูดดาว',size:.2,col:'#ff8bd8'},
@@ -215,7 +218,7 @@ function drawObj(o){
  if(o.ob&&o.z>0&&o.z<40&&Q){const sh=w*.42;cx.save();cx.globalAlpha=alpha*.35;cx.fillStyle='#000';cx.beginPath();cx.ellipse(X,Y+w*.45,sh,sh*.22,0,0,6.3);cx.fill();cx.restore();}
  if(o.ob)auraBad(X,Y,w,alpha,o.ph);else auraGood(X,Y,w,alpha,o.ph,o.k==='gold'||o.k==='moon');
  if(o.k==='bat')sprite(I.bat,4,1,Math.floor(s.t*12+o.ph)%4,X,Y,w*1.25,alpha);
- else if(o.k==='meteor'||o.k==='comet')drawImg(I[def.img],X,Y,w,alpha,o.k==='comet'?(o.sx<0?.5:-.5)+Math.PI*0:o.rot+s.t*o.spin);
+ else if(o.k==='meteor'||o.k==='comet')drawImg(I[def.img],X,Y,w,alpha,o.k==='comet'?(o.sx<0?.5:-.5)+Math.PI*0:0);
  else if(o.k==='storm'){drawImg(I.storm,X,Y,w,alpha,Math.sin(s.t*2+o.ph)*.06);if(Math.random()<.05)glow(X,Y,w,'rgba(200,180,255,1)',alpha*.6);}
  else if(o.k==='pumpkin')drawImg(I.pumpkin,X+Math.sin(s.t*3+o.ph)*w*.06,Y,w,alpha,Math.sin(s.t*2.4+o.ph)*.12);
  else if(o.k==='gold'){cx.save();cx.filter='sepia(1) saturate(4) brightness(1.2)';drawImg(I.comet,X,Y,w,alpha,-.6);cx.filter='none';cx.globalCompositeOperation='lighter';drawImg(I.star,X,Y,w*.55,alpha*.9,s.t*2);cx.restore();glow(X,Y,w*1.2,'rgba(255,215,120,1)',alpha*.6);}
@@ -402,14 +405,14 @@ function showResult(res){
  const k=Math.min(1,d/GOAL),bk=Math.min(1,best/GOAL);
  $('resBox').innerHTML=
   '<img class="hero" src="'+(total>=0?IMG.win:IMG.lose)+'" alt="">'+
-  '<h2>'+(b.abandoned?'ปิดรอบที่ค้างไว้':r.fin?'ถึงประตูพระจันทร์! 🌙':b.quit&&!hitN?'จบรอบนี้แล้ว':total>=0?'บินได้สวยมาก!':'ตกไม้กวาดซะแล้ว')+'</h2>'+
+  '<h2>'+(b.abandoned?'ปิดรอบที่ค้างไว้':r.fin?'ถึงประตูพระจันทร์! 🌙':b.quit&&!hitN?'จบรอบนี้แล้ว':total>=0?'บินได้สวยมาก!':'ตกใบตองทองซะแล้ว')+'</h2>'+
   '<div class="sub">ไปได้ไกล <b style="color:#fff;font-size:16px">'+fmt(d)+' ม.</b> · สถิติของคุณ '+fmt(best)+' ม.</div>'+
   '<div class="rprog"><div class="fill" style="width:'+(k*100)+'%"></div><div class="th" style="left:'+(MIN_LINE/GOAL*100)+'%"><span>🚩 '+fmt(MIN_LINE)+'</span></div><div class="best" style="left:'+(bk*100)+'%">🏆</div></div>'+
   (!r.passed?'<div class="hint">ขาดอีก <b style="color:#fff">'+fmt(MIN_LINE-d)+' ม.</b> ถึงเส้นขั้นต่ำ</div>':'')+
   '<div class="rows">'+
-   row('🧹','ระยะทาง',r.fin?'ถึงประตูพระจันทร์':r.passed?'ผ่านเส้นขั้นต่ำแล้ว':'ยังไม่ถึงเส้นขั้นต่ำ',sgn(r.dist),r.dist>=0?'pos':'neg')+
+   row('🍃','ระยะทาง',r.fin?'ถึงประตูพระจันทร์':r.passed?'ผ่านเส้นขั้นต่ำแล้ว':'ยังไม่ถึงเส้นขั้นต่ำ',sgn(r.dist),r.dist>=0?'pos':'neg')+
    row(IMG.star,'ดาวทอง ×'+c.star,itemsNote,r.passed&&c.star?sgn(c.star*IT.star.pts):'—',r.passed&&c.star?'pos':'dim')+
-   row(IMG.candy,'ลูกกวาด ×'+(c.candy+c.corn),itemsNote,r.passed&&(c.candy+c.corn)?sgn((c.candy+c.corn)*IT.candy.pts):'—',r.passed&&(c.candy+c.corn)?'pos':'dim')+
+   row(IMG.candy,'ขนม ×'+(c.candy+c.corn),itemsNote,r.passed&&(c.candy+c.corn)?sgn((c.candy+c.corn)*IT.candy.pts):'—',r.passed&&(c.candy+c.corn)?'pos':'dim')+
    row(IMG.moon,'เศษพระจันทร์ ×'+c.moon,itemsNote,r.passed&&c.moon?sgn(c.moon*IT.moon.pts):'—',r.passed&&c.moon?'pos':'dim')+
    (r.passed&&r.raw>ITEM_CAP?row('📦','เพดานของเก็บ','นับได้สูงสุด +'+fmt(ITEM_CAP),sgn(ITEM_CAP-r.raw),'neg'):'')+
    row('💥','ชนอุปสรรค ×'+hitN,hitSub,hitN?sgn(-hitPen):'—',hitN?'neg':'dim')+

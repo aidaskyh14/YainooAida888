@@ -1,6 +1,6 @@
-/* fix16 เปิดมินิเกมฮาโลวีนทับหน้าสัตว์ (คอกแมว → หาแมวในแก้ว · หลังบ้าน → ร้านซุปแม่มด)
+/* fix16 เปิดมินิเกมลอยกระทงทับหน้าสัตว์ (คอกแมว → หาแมวในแก้ว · หลังบ้าน → ร้านซุปแม่มด)
    ระหว่างเปิดเกม หน้าสัตว์ด้านหลัง "หยุดบันทึก" (กันเซฟเก่าทับกุศล/ของที่เซิร์ฟเวอร์เพิ่งเปลี่ยน) · ปิดเกมแล้วโหลดข้อมูลล่าสุดใหม่
-   HwMini.mount({game:'cup'|'soup', page:'hw-cup.html', save:()=>save(), load:()=>load(), reload:fresh=>{...}}) */
+   HwMini.mount({game:'cup'|'soup', page:'hw-cup.html?h=61670aaa', save:()=>save(), load:()=>load(), reload:fresh=>{...}}) */
 (function(){
 function mount(o){
  const H=parent.__HOST;let fr=null,frozen=null;
@@ -15,7 +15,7 @@ function mount(o){
   close:()=>{if(fr){fr.remove();fr=null;}thaw();try{o.reload();}catch(e){}}
  };
  function open(){if(fr)return;try{o.save();}catch(e){}freeze();
-  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix23b';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปแม่มด';
+  fr=document.createElement('iframe');fr.src=o.page+'?v=ss3-fix23b';fr.title=o.game==='cup'?'หาแมวในแก้ว':'ร้านซุปนางนพมาศ';
   fr.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147480000;background:#1E1030';document.body.appendChild(fr);}
  addEventListener('pagehide',thaw);
  return {open};

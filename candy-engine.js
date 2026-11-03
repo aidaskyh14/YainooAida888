@@ -1,7 +1,7 @@
 /* โรงงานลูกกวาดต้องคำสาป — shared rules (Cloud Functions + candy-game.js).
    Pure ES module. Same idea as witch-engine.js: seeded streams + one scoring function used by both sides;
    the server re-scores the finish report and rejects anything the seed and the real clock cannot produce. */
-import {seededRng,makeSeed} from './witch-engine.js';
+import {seededRng,makeSeed} from './witch-engine.js?h=b520a90e';
 export {seededRng};
 const fail=m=>{throw new Error(m);};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;

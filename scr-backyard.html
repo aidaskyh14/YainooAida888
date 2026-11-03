@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix15"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="pv/s4icon.js?h=edc9f144"></script><script src="craft-result.js?v=ss3-fix15&h=e654a3c6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>หลังบ้าน – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
@@ -104,7 +104,7 @@ h3{margin:0 0 .3rem;font-size:1.02rem;text-align:center}.hint{font-size:.7rem;co
 .stage.flipin{animation:flipin .55s ease-out}
 @keyframes flipin{0%{transform:translate(-50%,-50%) perspective(1100px) rotateY(-90deg);filter:brightness(1.8)}100%{transform:translate(-50%,-50%) perspective(1100px) rotateY(0);filter:none}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
-</style></head><body>
+</style><link rel="stylesheet" href="pv/s4ui.css?h=0adfba44"><style>html.s4emb,html.s4emb body{background:#8fc7e8!important}html.s4emb body{visibility:hidden!important}</style><script>document.documentElement.classList.add("s4emb")</script></head><body>
 <div id="view"><div class="stage" id="stage"></div></div>
 <div class="top">🏡 หลังบ้าน<small id="sub"></small></div>
 <button class="collect" id="collect"><img id="cImg" alt=""><span id="cTxt"></span></button>
@@ -121,25 +121,25 @@ const ING={chili:['crop','พริก'],mango:['crop','มะม่วง'],wat
 const GCAT={n:'🍽️ ทั่วไป',night:'🌙 รอบดึก',boat:'⛵ เสบียงเรือ'};
 const GF=[
 ['r1','n','แกงเปรตลิ้นยาว','🍲',80,[100,150],{chili:100,mango:100,waterspinach:100}],
-['r2','n','ฟักทองต้มกองกอย','🎃',75,[100,150],{pumpkin:130,lettuce:100}],
-['r3','n','ตำมรกตผีหลอก','🍓',65,[180,240],{strawberry:180,chili:150,mango:120}],
+['r2','n','ฟักทองต้มกองกอย','🪷',75,[100,150],{pumpkin:130,lettuce:100}],
+['r3','n','ตำมรกตเดือนเพ็ญ','🍓',65,[180,240],{strawberry:180,chili:150,mango:120}],
 ['r4','n','ยำองุ่นครุ่นจิต','🍇',60,[180,240],{grape:210,chili:180,waterspinach:150}],
-['r5','n','ข้าวคลุกวิญญาณ','🍚',55,[180,240],{lettuce:240,pumpkin:210,lychee:180,chili:150}],
+['r5','n','ข้าวคลุกต้องมนต์','🍚',55,[180,240],{lettuce:240,pumpkin:210,lychee:180,chili:150}],
 ['r6','n','ลิ้นจี่น้ำแข็งหลุมศพ','🍧',45,[240,300],{lychee:360,grape:320,strawberry:280}],
 ['r7','n','ก๋วยเตี๋ยวเปรตแตก','🍜',35,[240,300],{waterspinach:440,chili:400,lettuce:360,pumpkin:320}],
 ['r8','n','น้ำปั่นคืนชีพ','🧪',25,[240,300],{grape:600,strawberry:520,lychee:440,mango:360}],
 ['n1','night','กล้วยทอดกอดเปรต','🍌',65,[180,240],{banana:200,strawberry:100}],
-['n2','night','ตำมะยมผสมกุมาร','👻',50,[180,240],{gooseberry:200,chili:100,mango:100}],
-['n3','night','กล้วยคลุกเถ้าผี','💀',35,[240,300],{banana:300,lychee:200,grape:100}],
+['n2','night','ตำมะยมผสมกุมาร','🏮',50,[180,240],{gooseberry:200,chili:100,mango:100}],
+['n3','night','กล้วยคลุกมะพร้าว','🥥',35,[240,300],{banana:300,lychee:200,grape:100}],
 ['n4','night','ยำมะยมสมน้ำหน้า','🥗',25,[240,300],{gooseberry:300,chili:200,waterspinach:100,banana:100}],
-['b1','boat','ผักกาดห่อผีหนีวัด','🥬',70,[100,150],{lettuce:750,waterspinach:380,truffle:100}],
-['b2','boat','ผักบุ้งผัดสะดุ้งผี','🌿',65,[100,150],{waterspinach:810,lettuce:380,truffle:100}],
-['b3','boat','ปลาผีราดซอสมะม่วงหน้าเน่า','🥭',60,[180,240],{mango:690,lettuce:440,fishmeat:130}],
-['b4','boat','ปลาผีซอสองุ่นครุ่นจิต','🍇',60,[180,240],{grape:690,waterspinach:440,fishmeat:130}],
-['b5','boat','ยำผักสวนผีแตก','🥗',55,[180,240],{lettuce:500,waterspinach:500,mango:380,truffle:100}],
-['b6','boat','ปลาผีลุยสวนยัยหนู','🐟',50,[180,240],{waterspinach:500,mango:440,grape:380,fishmeat:150}],
+['b1','boat','ผักกาดห่อกระทงไปวัด','🥬',70,[100,150],{lettuce:750,waterspinach:380,truffle:100}],
+['b2','boat','ผักบุ้งผัดสะดุ้งพลุ','🌿',65,[100,150],{waterspinach:810,lettuce:380,truffle:100}],
+['b3','boat','ปลาโคมลอยราดซอสมะม่วงหน้าเน่า','🥭',60,[180,240],{mango:690,lettuce:440,fishmeat:130}],
+['b4','boat','ปลาโคมลอยซอสองุ่นครุ่นจิต','🍇',60,[180,240],{grape:690,waterspinach:440,fishmeat:130}],
+['b5','boat','ยำผักสวนพลุแตก','🥗',55,[180,240],{lettuce:500,waterspinach:500,mango:380,truffle:100}],
+['b6','boat','ปลาโคมลอยลุยสวนยัยหนู','🐟',50,[180,240],{waterspinach:500,mango:440,grape:380,fishmeat:150}],
 ['b7','boat','แกงทรัฟเฟิลผักหลอน','🍲',45,[240,300],{lettuce:560,waterspinach:560,grape:440,truffle:150}],
-['b8','boat','สำรับผีแดกไม่เลือก','👑',40,[240,300],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}]
+['b8','boat','สำรับยักษ์แดกไม่เลือก','👑',40,[240,300],{lettuce:500,waterspinach:500,mango:500,grape:500,fishmeat:130,truffle:130}]
 ].map(([id,cat,n,ic,ch,mer,need])=>({id,cat,n,ic,ch,mer,need}));
 const GFBY=Object.fromEntries(GF.map(g=>[g.id,g]));
 const emo=(e,bg)=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'+(bg?'<circle cx="50" cy="50" r="46" fill="'+bg+'"/>':'')+'<text x="50" y="54" font-size="62" text-anchor="middle" dominant-baseline="middle">'+e+'</text></svg>');
@@ -239,9 +239,9 @@ function confirmCook(id){const g=GFBY[id],q=gq[id];
  $('cGo').onclick=async e=>{if(window.foodCraftBusy)return;window.foodCraftBusy=true;e.target.disabled=true;try{const out=await __H.cloud('craft',{recipe:'gfood:'+id,quantity:q});S=load();closeAll();showCraftResult(out,openBook);hud();}catch(err){ann(err.message,1);S=load();openBook();}finally{window.foodCraftBusy=false;}};}
 /* ---------- วางแฮมสเตอร์ ---------- */
 function openPlace(){closeAll();const n=S.ham.list.length;
- open('<h3>🐹 วางแฮมสเตอร์ลงคอก</h3><div class="hint">ในคอก '+n+'/8 ตัว • วางแล้ว<b>เอากลับเข้ากระเป๋าไม่ได้</b> • อยู่ได้ 48 ชม.</div><div class="cards">'+Object.keys(HT).map(t=>{const c=S.bag.hamster[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+HT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div>'+
+ open('<h3>🐹 วางแฮมสเตอร์ลงคอก</h3><div class="hint">ในคอก '+n+'/12 ตัว • วางแล้ว<b>เอากลับเข้ากระเป๋าไม่ได้</b> • อยู่ได้ 48 ชม.</div><div class="cards">'+Object.keys(HT).map(t=>{const c=S.bag.hamster[t]||0;return '<div class="cd'+(c?'':' off')+'" data-t="'+t+'"><img src="'+IMG['card-'+t]+'" alt=""><b>'+HT[t]+'</b>'+(c?'<span>×'+c+'</span>':'')+'</div>'}).join('')+'</div>'+
  '<div class="row"><button class="btn sm" id="pBox">🎁 ไปเปิดกล่องสุ่มแฮมสเตอร์</button></div>');
- $('sb').querySelectorAll('[data-t]').forEach(d=>d.onclick=()=>{const t=d.dataset.t;if(!(S.bag.hamster[t]>0))return ann('ยังไม่มี'+HT[t]+'ในกระเป๋า',1);if(S.ham.list.length>=8)return ann('คอกเต็มแล้ว (8/8)',1);
+ $('sb').querySelectorAll('[data-t]').forEach(d=>d.onclick=()=>{const t=d.dataset.t;if(!(S.bag.hamster[t]>0))return ann('ยังไม่มี'+HT[t]+'ในกระเป๋า',1);if(S.ham.list.length>=12)return ann('คอกเต็มแล้ว (12/12)',1);
   open('<div style="text-align:center"><img src="'+IMG['card-'+t]+'" style="width:9rem" alt=""><h3>วาง'+HT[t]+'?</h3><div class="hint">วางแล้วเอากลับไม่ได้ • อยู่ในคอก 48 ชม. แล้วจะกลับบ้านไปเอง</div><div class="row"><button class="btn gray" id="pNo">ยกเลิก</button><button class="btn g" id="pYes">วางเลย</button></div></div>');
   $('pNo').onclick=openPlace;$('pYes').onclick=()=>{S.bag.hamster[t]--;const now=Date.now();S.ham.list.push({id:now.toString(36)+rnd(10,99),type:t,at:now,fed:now});save();closeAll();draw();ann(HTE[t]+' '+HT[t]+'เข้าคอกแล้ว!')}});
  $('pBox').onclick=openBox}
@@ -303,12 +303,12 @@ function openSet(){closeAll();
  $('sBox').onclick=()=>{S.bag.box.hamster=(S.bag.box.hamster||0)+500;save();ann('🎁 รับกล่องสุ่มแฮมสเตอร์ +500')};
  $('sHam').onclick=()=>{Object.keys(HT).forEach(t=>S.bag.hamster[t]=(S.bag.hamster[t]||0)+1);save();ann('🐹 รับแฮมสเตอร์ทุกแบบอย่างละ 1 ตัว')};
  $('sReset').onclick=()=>{S.ham={list:[],drop:0};actors={};drops=[];save();closeAll();draw();ann('🔄 ล้างคอกแล้ว')}}
-const FANF=[['🎃','มินิเกม ร้านซุปแม่มด',()=>{if(window.HWG)HWG.open()}],['🐹','วางแฮมสเตอร์',openPlace],['🍽️','ให้อาหารแฮมสเตอร์',openFeed],['🎁','กล่องสุ่มแฮมสเตอร์',openBox],['🔥','เตาทำอาหารสวน',()=>openBook()],['🎒','กระเป๋าของหลังบ้าน',openBag],['🌱','กลับฟาร์ม',()=>{try{parent.postMessage({go:'farm'},'*')}catch(e){}}]];
+const FANF=[['🪷','มินิเกม ร้านซุปนางนพมาศ',()=>{if(window.HWG)HWG.open()}],['🐹','วางแฮมสเตอร์',openPlace],['🍽️','ให้อาหารแฮมสเตอร์',openFeed],['🎁','กล่องสุ่มแฮมสเตอร์',openBox],['🔥','เตาทำอาหารสวน',()=>openBook()],['🎒','กระเป๋าของหลังบ้าน',openBag],['🌱','กลับฟาร์ม',()=>{try{parent.postMessage({go:'farm'},'*')}catch(e){}}]];
 $('fan').innerHTML=FANF.map(([i,t],n)=>'<button data-f="'+n+'"><i>'+i+'</i>'+t+'</button>').join('');
 $('fan').onclick=e=>{const b=e.target.closest('button');if(b)FANF[+b.dataset.f][2]()};
 $('toolBtn').onclick=()=>{$('toolBtn').classList.toggle('open');$('fan').classList.toggle('open')};
 function hud(){const n=S.ham.drop;$('collect').style.display=n?'flex':'none';$('cImg').src=IMG.musicbox;$('cTxt').textContent='เก็บกล่องดนตรี ×'+n;
- $('sub').textContent='🐹 '+S.ham.list.length+'/8 ตัว • 🙏 '+fmt(S.merit)}
+ $('sub').textContent='🐹 '+S.ham.list.length+'/12 ตัว • 🙏 '+fmt(S.merit)}
 function fit(){const u=Math.min(innerWidth/390,innerHeight/760);document.documentElement.style.fontSize=(16*Math.max(.82,Math.min(u,1.35)))+'px';const s=$('stage'),sc=Math.min(innerWidth/W,innerHeight/H);s.style.width=W*sc+'px';s.style.height=H*sc+'px'}
 document.documentElement.style.setProperty('--bg','url('+IMG.bg+')');
 addEventListener('resize',fit);fit();draw();requestAnimationFrame(loop);setInterval(expire,1000);
@@ -344,6 +344,6 @@ tool.addEventListener('click',()=>{cur='';setTimeout(render,0)},true);
 new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childList:true});
 render();
 })();
-</script><script src="loot-box-link.js?v=ss3-fix15" data-box="hamster"></script><script src="lux-feed.js?v=ss3-fix16"></script><script>/* fix16 🍽️ ให้อาหารหรูแฮมสเตอร์ */
-if(typeof LuxFeed!=='undefined')LuxFeed.mount({ls:__LS,page:'backyard',state:()=>S,visible:()=>S.ham.list.length>0,reload:()=>{S=load();draw();hud()},target:()=>{const h=S.ham.list[0];return h&&actors[h.id]&&actors[h.id].el},toast:(m,e)=>ann(m,e),bottom:'4.3rem'});</script><script src="hw-mini-host.js?v=ss3-fix16"></script><script>/* fix16 มินิเกมฮาโลวีน */
-if(typeof HwMini!=='undefined')window.HWG=HwMini.mount({game:'soup',page:'hw-soup.html',save:()=>save(),load:()=>load(),reload:()=>{syncFromHost();try{hud()}catch(e){}}});</script></body></html>
+</script><script src="loot-box-link.js?v=ss3-fix15&h=d58a70da" data-box="hamster"></script><script src="lux-feed.js?v=ss3-fix16&h=eef4c1e0"></script><script>/* fix16 🍽️ ให้อาหารหรูแฮมสเตอร์ */
+if(typeof LuxFeed!=='undefined')LuxFeed.mount({ls:__LS,page:'backyard',state:()=>S,visible:()=>S.ham.list.length>0,reload:()=>{S=load();draw();hud()},target:()=>{const h=S.ham.list[0];return h&&actors[h.id]&&actors[h.id].el},toast:(m,e)=>ann(m,e),bottom:'4.3rem'});</script><script src="hw-mini-host.js?v=ss3-fix16&h=c3616244"></script><script>/* fix16 มินิเกมลอยกระทง */
+if(false&&typeof HwMini!=='undefined')window.HWG=HwMini.mount({game:'soup',page:'hw-soup.html?h=901fc5a4',save:()=>save(),load:()=>load(),reload:()=>{syncFromHost();try{hud()}catch(e){}}});</script><script src="pv/s4view.js?h=e7935ecb" data-src="zone3d/index.html?z=hamster&h=07ac70b1" data-acts="{&quot;pen&quot;: &quot;openFeed()&quot;, &quot;stove&quot;: &quot;openBook()&quot;, &quot;sit&quot;: &quot;&quot;}" data-dock="[[&quot;🍽️&quot;, &quot;ให้อาหาร&quot;, &quot;openFeed()&quot;], [&quot;🍳&quot;, &quot;ทำอาหาร&quot;, &quot;openBook()&quot;], [&quot;🐹&quot;, &quot;วางแฮมสเตอร์&quot;, &quot;openPlace()&quot;], [&quot;📦&quot;, &quot;เปิดกล่อง&quot;, &quot;openBox()&quot;], [&quot;🎵&quot;, &quot;เก็บกล่องดนตรี&quot;, &quot;(document.getElementById(&#x27;collect&#x27;)||{click(){}}).click()&quot;], [&quot;🎒&quot;, &quot;กระเป๋า&quot;, &quot;openBag()&quot;]]"></script></body></html>

@@ -1,19 +1,19 @@
-import {payBroom,altHave,ALT_X} from './broom-pay.js';
+import {payBroom,altHave,ALT_X} from './broom-pay.js?h=92e78b5b';
 /* fix15 แกล้งสวนเพื่อน (ทำที่หน้าเยี่ยมสวน) — กติกาล้วน ใช้ทั้งบนคลาวด์และหน้าเว็บ
-   คนแกล้งจ่ายของฮาโลวีน · เจ้าของสวนแก้เอง เลือกจ่ายกุศล (ติดลบได้) หรือไม้กวาดแม่มด (ต้องมีพอ) อย่างใดอย่างหนึ่ง
+   คนแกล้งจ่ายของลอยกระทง · เจ้าของสวนแก้เอง เลือกจ่ายกุศล (ติดลบได้) หรือใบตองทอง (ต้องมีพอ) อย่างใดอย่างหนึ่ง
    แกล้งแปลง: แปลงหยุดโต เก็บ/ขโมย/ถอนไม่ได้ จนกว่าเจ้าของจะแก้ (เวลาที่หยุดไปไม่นับ)
    ค้างคาว: สวนมืดทั้งสวน (ทีละ 1) · ป้ายแซว: สูงสุด 20 ป้าย เจ้าของต้องเปิดอ่าน (ค้างคาวบังป้าย)
-   หุ่นไล่กา: ไม้กวาด 150 ฟักทอง 30 เทียน 50 ใยแมงมุม 50 กันการแกล้ง 59 นาที (ไม่กันขโมย) · คนหนึ่งแกล้งได้วันละ 30 · สวนหนึ่งโดนได้วันละ 30 · ไม่บอกชื่อคนแกล้ง */
+   หุ่นไล่กา: ใบตองทอง 150 ฟักทอง 30 เทียน 50 ดอกบัว 50 กันการแกล้ง 59 นาที (ไม่กันขโมย) · คนหนึ่งแกล้งได้วันละ 30 · สวนหนึ่งโดนได้วันละ 30 · ไม่บอกชื่อคนแกล้ง */
 export const PRANKS={
  worm:{n:'ปล่อยหนอน',icon:'🪱',img:'prank-worm',pay:['candy',20],merit:30000,broom:50,plot:true,desc:'หนอนกินผัก แปลงนี้หยุดโตและเก็บไม่ได้'},
  dry:{n:'ดินแห้งแตกระแหง',icon:'🏜️',img:'prank-dry',pay:['candle',15],merit:30000,broom:50,plot:true,desc:'ดินแห้ง ผักหยุดโต'},
  snail:{n:'หอยทากเกาะแปลง',icon:'🐌',img:'prank-snail',pay:['web',15],merit:50000,broom:75,plot:true,desc:'หอยทากเกาะ ผักหยุดโต'},
- pumpkin:{n:'ฟักทองผีขวางแปลง',icon:'🎃',img:'prank-pumpkin',pay:['pumpkin',5],merit:80000,broom:125,plot:true,desc:'ฟักทองผีนั่งทับ เก็บ/ถอนไม่ได้'},
- bat:{n:'ค้างคาวบังสวน',icon:'🦇',img:'prank-bat',pay:['bat',20],merit:50000,broom:75,plot:false,desc:'สวนมืดสนิท ฟ้าผ่าเป็นระยะ'},
+ pumpkin:{n:'ดอกบัวยักษ์ขวางแปลง',icon:'🪷',img:'prank-pumpkin',pay:['pumpkin',5],merit:80000,broom:125,plot:true,desc:'ดอกบัวยักษ์นั่งทับ เก็บ/ถอนไม่ได้'},
+ bat:{n:'หิ่งห้อยบังสวน',icon:'✨',img:'prank-bat',pay:['bat',20],merit:50000,broom:75,plot:false,desc:'สวนมืดสนิท ฟ้าผ่าเป็นระยะ'},
  sign:{n:'ปักป้ายแซว',icon:'🪧',img:'prank-sign',pay:['candy',5],merit:15000,broom:25,plot:false,desc:'เจ้าของสวนต้องเปิดอ่าน'}};
-export const HW_NAMES={candy:'ลูกอมผี',candle:'เทียนผี',web:'ใยแมงมุม',pumpkin:'ฟักทองแกะสลักเรืองแสง',bat:'ค้างคาวจิ๋ว',broom:'ไม้กวาดแม่มด'};
+export const HW_NAMES={candy:'ดอกดาวเรือง',candle:'ธูปหอม',web:'ดอกบัว',pumpkin:'กระทงใบตอง',bat:'หิ่งห้อยน้อย',broom:'ใบตองทอง'};
 export const PRANK_MSGS=['ปลูกบ้างนะผักอ่ะเล่นแต่มินิเกม','นอนบ้างนะจ๊ะ จะชนะให้ได้เลยมั้ง','อย่างอแงค่ะ','จุ๊กกรู้วววว มีใครอยู่บ้างไหม ร้างหมดแล้วบ้าน','สวนอะไรดูเหมือนไม่ได้รับการดูแลมานาน','ไม่เลิศ','ว่างๆ ปลูกผักบ้างเด้อ','ซีซั่นนี้ยังเล่นอยู่ไหม ถ้า ไม่ จะได้ไปแจ้งความคนหายสาปสูญ','ป๊าาาาาดนอนดึกเกินไปป๊ะ','เห็นเล่นตลอด แต่แอ๊บ ทำเป็นไม่ค่อยได้เล่น รู้ทันนะ','แหมๆๆ เก่งทุกอย่าง ยกเว้นการปลูกผัก','เติมโปรบ้างนะ จะได้เอาไอเท็มมาปลูกผัก ไม่ใช่เติมแต่โปรเหรียญ'];
-export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:750,pumpkin:150,candle:250,web:250}/* fix19: ×5 (กุศลแก้ ×10 · ไม้กวาด ×5) */,SCARE_TIME=59*60000;
+export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:750,pumpkin:150,candle:250,web:250}/* fix19: ×5 (กุศลแก้ ×10 · ใบตองทอง ×5) */,SCARE_TIME=59*60000;
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const num=n=>Number.isSafeInteger(Number(n))&&Number(n)>0?Math.floor(Number(n)):0;
 export const thaiDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);
@@ -31,7 +31,7 @@ export function prankAction(actor,target,own,ctx,input){
   const farm=input.farm??1,arr=target.farms?.[farm]||[],i=input.index;if(!Number.isInteger(i)||i<0||i>=arr.length)fail('แปลงไม่ถูกต้อง');const p=arr[i];
   if(!p||!p.c)fail('แปลงว่าง แกล้งไม่ได้');if(p.pk)fail('แปลงนี้โดนแกล้งอยู่แล้ว');if(p.magicUntil>now)fail('แปลงมีมนต์ดำอยู่');
   p.pk={k,at:now};where={farm,index:i,crop:p.c};
- } else if(k==='bat'){if(st.bat)fail('สวนนี้มีค้างคาวอยู่แล้ว');st.bat={at:now};}
+ } else if(k==='bat'){if(st.bat)fail('สวนนี้มีหิ่งห้อยอยู่แล้ว');st.bat={at:now};}
  else {const m=input.msg;if(!Number.isInteger(m)||!PRANK_MSGS[m])fail('เลือกข้อความบนป้าย');if(st.signs.length>=SIGN_MAX)fail('สวนนี้มีป้ายครบ '+SIGN_MAX+' ป้ายแล้ว');st.signs.push({m,at:now});}
  actor.bag.halloween[item]=have-q;own.pranks=num(own.pranks)+1;st.day.n=num(st.day.n)+1;st.last=now;
  return {prank:k,where,paid:{item,q}};
@@ -40,7 +40,7 @@ export function prankAction(actor,target,own,ctx,input){
 function pay(game,P,n,how,alt){
  const merit=P.merit*n,broom=P.broom*n;
  if(how==='merit'){game.merit=(Number(game.merit)||0)-merit;return {merit};}
- if(how==='broom')return payBroom(game,broom,alt);/* fix23: ใช้ของแทนไม้กวาดได้ ×5 */
+ if(how==='broom')return payBroom(game,broom,alt);/* fix23: ใช้ของแทนใบตองทองได้ ×5 */
  fail('เลือกวิธีแก้');
 }
 const unfreeze=(p,now)=>{const d=Math.max(0,now-(p.pk?.at||now));if(Number.isFinite(p.t))p.t+=d;delete p.pk;};
@@ -55,12 +55,12 @@ export function prankFix(game,ctx,input){
   else for(const [k,n]of Object.entries(need)){const r=pay(game,PRANKS[k],n,input.how);out.merit+=r.merit||0;out.broom+=r.broom||0;}
   for(const p of plots)unfreeze(p,now);return {fixed:plots.length,...out};
  }
- if(kind==='bat'){if(!st.bat)fail('ไม่มีค้างคาวแล้ว');const r=pay(game,PRANKS.bat,1,input.how,input.alt);st.bat=null;return {fixed:1,...r};}
+ if(kind==='bat'){if(!st.bat)fail('ไม่มีหิ่งห้อยแล้ว');const r=pay(game,PRANKS.bat,1,input.how,input.alt);st.bat=null;return {fixed:1,...r};}
  if(kind==='sign'){
   const ids=input.all?st.signs.map((_,i)=>i):Array.isArray(input.ids)?[...new Set(input.ids)]:[];if(!ids.length||ids.some(i=>!Number.isInteger(i)||!st.signs[i]))fail('เลือกป้ายที่จะถอน');
   const r=pay(game,PRANKS.sign,ids.length,input.how,input.alt);st.signs=st.signs.filter((_,i)=>!ids.includes(i));return {fixed:ids.length,...r};
  }
- if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const alt=input.alt&&input.alt!=='broom'?input.alt:null,hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>!(alt&&k==='broom')&&num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));let bp=null;if(alt){const need=SCARE_COST.broom*ALT_X;if(altHave(game,alt)<need)fail('ของแทนไม้กวาดไม่พอ ต้องมี '+need.toLocaleString('en-US')+' ชิ้น');}
+ if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const alt=input.alt&&input.alt!=='broom'?input.alt:null,hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>!(alt&&k==='broom')&&num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));let bp=null;if(alt){const need=SCARE_COST.broom*ALT_X;if(altHave(game,alt)<need)fail('ของแทนใบตองทองไม่พอ ต้องมี '+need.toLocaleString('en-US')+' ชิ้น');}
   for(const[k,q]of Object.entries(SCARE_COST)){if(k==='broom'&&alt){bp=payBroom(game,q,alt);continue;}game.bag.halloween[k]=num(game.bag.halloween[k])-q;}st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,paid:{...SCARE_COST,...(bp?{broom:0}:{})},items:bp?.items};}
  if(kind==='seen'){st.seen=now;return {seen:now};}
  fail('คำสั่งแก้การแกล้งไม่ถูกต้อง');

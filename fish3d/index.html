@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="th"><head><script src="../pv/s4icon.js?h=edc9f144"></script><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>บ่อตกปลา 20 แท่น</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&family=Itim&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<style>
+:root{--sea:#0152b0;--cream:#fff8ec;--ink:#4a2a14}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--sea);font-family:'Mali','Itim',system-ui,sans-serif;color:var(--ink);-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+.chip{border:2px solid #fff;border-radius:999px;background:rgba(255,248,236,.95);padding:5px 11px;font:700 13px 'Mali',sans-serif;color:var(--ink);box-shadow:0 3px 10px rgba(10,50,110,.35);white-space:nowrap}
+button.chip{cursor:pointer}
+#top{position:fixed;z-index:6;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;justify-content:space-between;gap:6px;padding:0 max(10px,env(safe-area-inset-left,0px));pointer-events:none}
+#top>div{display:flex;gap:5px;align-items:center;pointer-events:auto}
+#top>div:last-child{justify-content:flex-end}
+#st.off{background:#ffe2e2}
+#mine{position:fixed;z-index:6;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 106px);display:none;background:linear-gradient(#fff6d9,#ffd36b);border-color:#fff;box-shadow:0 4px 0 #c98a1b,0 8px 18px rgba(0,0,0,.25)}
+#mine.on{display:block;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,-3px)}}
+#feed{position:fixed;z-index:5;left:max(10px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 148px);display:flex;flex-direction:column;gap:5px;pointer-events:none;max-width:62vw}
+#feed div{background:rgba(255,248,236,.94);border:1.5px solid #fff;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;box-shadow:0 3px 10px rgba(10,50,110,.3);animation:fin .35s cubic-bezier(.2,.9,.3,1.3);transition:opacity .6s,transform .6s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#feed div.out{opacity:0;transform:translateX(-20px)}
+@keyframes fin{from{opacity:0;transform:translateX(-20px)}}
+#tools{position:fixed;z-index:6;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 50px);display:flex;gap:6px}
+#tools button,#zoom button{width:46px;height:46px;border-radius:16px;border:2px solid #fff;background:rgba(255,248,236,.95);box-shadow:0 3px 10px rgba(10,50,110,.35);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;font:700 9px 'Mali',sans-serif;color:var(--ink);line-height:1.1}
+#tools button i{font-style:normal;font-size:20px;line-height:1}
+#zoom{position:fixed;z-index:6;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 70px);display:flex;flex-direction:column;gap:7px}
+#zoom button{font-size:20px;border-radius:50%}
+#zoom button.fit{font-size:9px;border-radius:16px}
+#zoom button.fit i{font-style:normal;font-size:18px}
+.sh{position:fixed;inset:0;z-index:9;display:grid;place-items:center;background:rgba(5,30,70,.5);opacity:0;pointer-events:none;transition:opacity .3s}
+.sh.on{opacity:1;pointer-events:auto}
+.sh .box{width:min(320px,86vw);background:var(--cream);border:3px solid #f7c95a;border-radius:24px;padding:12px 14px 14px;text-align:center;transform:scale(.7);transition:transform .4s cubic-bezier(.2,.9,.3,1.4);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.sh.on .box{transform:scale(1)}
+.sh .tag{display:inline-block;color:#fff;font:700 22px 'Itim',sans-serif;border-radius:14px;padding:2px 14px;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.sh h3{margin:6px 0 2px;font:700 17px 'Itim','Mali',sans-serif}
+.sh .sub{font-size:12px;color:#8a6040}
+.sh .pv{margin-top:8px;width:100%;aspect-ratio:16/10;border-radius:16px;overflow:hidden;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.sh .pv canvas{width:100%;height:100%;display:block}
+.sh p{font-size:12.5px;margin:8px 0 0;color:#7a5236}
+.sh .row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.sh button{border:0;border-radius:999px;padding:9px 16px;font:700 15px 'Itim','Mali',sans-serif;color:#fff;background:linear-gradient(180deg,#5fc06a,#3a9a48);box-shadow:0 4px 0 #2a7434;cursor:pointer}
+.sh button.gold{background:linear-gradient(180deg,#ffd76a,#f0a91c);box-shadow:0 4px 0 #b8770e;color:#5a3412}
+.sh button.gray{background:linear-gradient(180deg,#b9b2a6,#8f877b);box-shadow:0 4px 0 #6b655c}
+.sh button[disabled]{filter:grayscale(1);opacity:.6}
+#load{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:linear-gradient(180deg,#bfe9f7,#0a7ad8);transition:opacity .6s}
+#load.done{opacity:0;pointer-events:none}
+#load .t{font:700 20px 'Itim','Mali',sans-serif;color:#fff;text-shadow:0 2px 0 #1d6693;text-align:center}
+#p3{position:fixed;inset:0;z-index:30;background:#8fd6f5;opacity:0;pointer-events:none;transition:opacity .35s}
+#p3.on{opacity:1;pointer-events:auto}
+#p3stage,#p3stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.p3top{position:absolute;z-index:3;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;justify-content:space-between;align-items:center;padding:0 max(10px,env(safe-area-inset-left,0px));pointer-events:none}
+.p3top>*{pointer-events:auto}
+.p3chip{border:2px solid #fff;border-radius:999px;background:rgba(255,248,236,.96);padding:6px 12px;font:700 14px 'Mali',sans-serif;color:#4a2a14;box-shadow:0 3px 10px rgba(20,80,120,.3)}
+button.p3chip{cursor:pointer}
+#p3feed{position:absolute;z-index:3;left:max(10px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 54px);display:flex;flex-direction:column;gap:5px;pointer-events:none;max-width:70vw}
+#p3feed div{background:rgba(255,248,236,.94);border:1.5px solid #fff;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:600;box-shadow:0 3px 10px rgba(20,80,120,.3);animation:fin .35s cubic-bezier(.2,.9,.3,1.3);transition:opacity .6s,transform .6s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#p3feed div.out{opacity:0;transform:translateX(-20px)}
+#p3mis{position:absolute;z-index:3;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 54px);display:flex;align-items:center;gap:8px;background:rgba(255,248,236,.96);border:2px solid #f2b33a;border-radius:16px;padding:5px 12px 5px 6px;font-size:13px;box-shadow:0 3px 10px rgba(20,80,120,.3);white-space:nowrap}
+#p3mis img{width:40px;height:40px;object-fit:contain}
+#p3mis div{display:flex;flex-direction:column}
+.p3bot{position:absolute;z-index:3;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 12px;pointer-events:none}
+.p3bot>*{pointer-events:auto}
+#p3rods{display:flex;gap:6px}
+#p3rods button{width:66px;border:2px solid #fff;border-radius:14px;background:rgba(255,248,236,.92);padding:4px 2px 3px;font:600 10.5px 'Mali',sans-serif;color:#4a2a14;box-shadow:0 3px 8px rgba(20,80,120,.3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
+#p3rods button img{width:38px;height:38px;object-fit:contain}
+#p3rods button.on{border-color:#f2b33a;background:#fff3cf;transform:translateY(-3px)}
+.act{border:0;border-radius:999px;padding:12px 26px;font:700 17px 'Itim','Mali',sans-serif;color:#fff;background:linear-gradient(180deg,#5fc06a,#3a9a48);box-shadow:0 5px 0 #2a7434,0 8px 18px rgba(0,0,0,.25);cursor:pointer;min-width:200px}
+.act.wait{background:linear-gradient(180deg,#9fd3ea,#5aa9cf);box-shadow:0 5px 0 #3b7fa3}
+.act.bite{background:linear-gradient(180deg,#ff7a6a,#e2453a);box-shadow:0 5px 0 #a8302a;animation:pulse .5s infinite alternate}
+.act.pull{background:linear-gradient(180deg,#ffc94a,#f29a1a);box-shadow:0 5px 0 #b86e10;font-size:22px;min-width:160px}
+@keyframes pulse{to{transform:scale(1.07)}}
+#p3bar2{width:min(320px,84vw);height:26px;border:3px solid #fff;border-radius:999px;background:rgba(30,90,130,.55);position:relative;overflow:hidden;display:none;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#p3bar2.on{display:block}
+#p3zone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,#8ff08a,#43c34e);border-left:2px solid #fff;border-right:2px solid #fff}
+#p3needle{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:#fff;border-radius:3px;box-shadow:0 0 6px #fff}
+#p3card{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(10,50,90,.45);opacity:0;pointer-events:none;transition:opacity .3s}
+#p3card.on{opacity:1;pointer-events:auto}
+#p3card .box{width:min(320px,86vw);background:#fff8ec;border:3px solid #f7c95a;border-radius:24px;padding:14px 16px 16px;text-align:center;transform:scale(.7);transition:transform .4s cubic-bezier(.2,.9,.3,1.4);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#p3card.on .box{transform:scale(1)}
+#p3card h3{margin:2px 0 8px;font:700 19px 'Itim','Mali',sans-serif}
+#p3card .fs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#p3card .f{flex:1;min-width:80px;max-width:130px;background:#fff;border-radius:16px;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;font-size:12px}
+#p3card .f img{width:100%;aspect-ratio:1;object-fit:contain}
+#p3card .f.none img{filter:grayscale(.7);opacity:.7}
+#p3card .f span{color:#8a6a4a}
+#p3card button{margin-top:12px;border:0;border-radius:999px;padding:9px 26px;font:700 15px 'Itim','Mali',sans-serif;color:#fff;background:linear-gradient(180deg,#5fc06a,#3a9a48);box-shadow:0 4px 0 #2a7434;cursor:pointer}
+#p3load{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:linear-gradient(180deg,#bfe9f7,#08a0ee);transition:opacity .5s}
+#p3load.done{opacity:0;pointer-events:none}
+#p3load .w{width:min(240px,70vw);text-align:center;font:700 17px 'Itim','Mali',sans-serif;color:#fff;text-shadow:0 2px 0 #1d6693}
+#p3load .b{margin-top:10px;height:12px;border:2px solid #fff;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.3)}
+#p3bar{height:100%;width:0;background:#ffcf5a;transition:width .3s}
+
+/* ===== S4: ด้านบนเว้นที่ให้ปุ่ม 🌱 กลับฟาร์ม · ป้ายเล็กลง ===== */
+#top{padding-left:118px!important;justify-content:flex-end!important;flex-wrap:wrap}
+#top .chip{font-size:11px;padding:4px 9px}
+.p3top{padding-left:118px!important}
+/* ===== S4: เครื่องมือรวมเป็นปุ่มเดียว มุมขวาล่าง กดแล้วแถบเลื่อนขึ้น ===== */
+#tmenu{position:fixed;z-index:8;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:56px;height:56px;border-radius:16px;border:3px solid #fff;background:linear-gradient(180deg,#ff9fc0,#e8578a);box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);color:#fff;font:800 9px 'Mali',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:0}
+#tmenu i{font-style:normal;font-size:22px;line-height:1}
+#tools{top:auto!important;left:0!important;right:0;bottom:0;transform:translateY(110%)!important;transition:transform .24s cubic-bezier(.3,1.25,.5,1);z-index:9!important;padding:12px 10px calc(env(safe-area-inset-bottom,0px) + 14px);background:linear-gradient(180deg,#fff9ee,#ffefd6);border-radius:22px 22px 0 0;box-shadow:0 -6px 22px rgba(70,40,10,.22);justify-content:center;flex-wrap:wrap;gap:10px!important}
+#tools.on{transform:none!important}
+#tools button{width:58px!important;height:62px!important;border-radius:16px!important;gap:3px}
+#tveil{position:fixed;inset:0;z-index:8;display:none}#tveil.on{display:block}
+#zoom{bottom:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
+</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=c59dc02d"></script>
+<canvas id="cv"></canvas>
+<div id="top"><div><span class="chip" id="st">🎣 บ่อตกปลา</span></div><div><button class="chip" id="vroom">👑 VIP ห้อง 1</button><span class="chip" id="vcard">🎫 0</span></div></div>
+<button class="chip" id="mine"></button>
+<div id="feed"></div>
+<div id="tools">
+ <button data-a="bag"><i>🧰</i>กระเป๋า</button>
+ <button data-a="craft"><i>🔨</i>คราฟ</button>
+ <button data-a="board"><i>⚖️</i>บอร์ด</button>
+ <button data-a="book"><i>📖</i>สมุดปลา</button>
+ <button data-a="rules"><i>📋</i>กติกา</button>
+ <button data-a="admin" id="adm" style="display:none"><i>👑</i>ควบคุม</button>
+</div>
+<div id="zoom"><button id="zin" aria-label="ซูมเข้า">＋</button><button id="zout" aria-label="ซูมออก">－</button><button class="fit" id="zfit"><i>🗺️</i>ทั้งแผนที่</button></div>
+<div class="sh" id="sh"><div class="box"><span class="tag" id="stag"></span><h3 id="sname"></h3><div class="sub" id="ssub"></div><div class="pv"><canvas id="pv" width="640" height="400"></canvas></div><p id="sinfo"></p><div class="row" id="srow"></div></div></div>
+<button id="tmenu" type="button"><i>🧰</i>เมนู</button><div id="tveil"></div>
+<div id="p3"><div id="p3stage"></div>
+<div class="p3top"><button class="p3chip" id="p3back">⬅ แผนที่</button><span class="p3chip" id="p3title"></span><span class="p3chip" id="p3bag">🧺 0</span></div>
+<div id="p3feed"></div><div id="p3mis" style="display:none"></div>
+<div class="p3bot"><div id="p3rods"></div><div id="p3bar2"><div id="p3zone"></div><div id="p3needle"></div></div><button class="act" id="p3act">🎣 หย่อนเบ็ด</button></div>
+<div id="p3card"><div class="box"><h3></h3><div class="fs"></div><button id="p3ok">โอเค</button></div></div>
+<div id="p3load"><div class="w">🎣 กำลังพาไปที่แท่น…<div class="b"><div id="p3bar"></div></div></div></div></div>
+<div id="load"><div class="t">🗺️ กำลังกางแผนที่บ่อตกปลา…</div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cv=$('cv'),cx=cv.getContext('2d');let W=0,H=0,DPR=1;
+const MW=1254,MH=1254;
+const size=()=>{DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;clampCam();};
+// ---- แท่น 20 แท่น (ตำแหน่งเบาะบนรูป) · A-B = บ่อทั่วไป 1 · C-D = บ่อทั่วไป 2 · V = ห้อง VIP (S3: v1/v2 ห้องละ 8 ท่า) ----
+const Z={A:{n:'น้ำตก',e:'💧',c:'#2f8ff0',p:'n1',chip:[545,515]},B:{n:'ป่าไผ่',e:'🎋',c:'#35a852',p:'n1',chip:[190,492]},
+ C:{n:'ชายหาด',e:'🏖️',c:'#f08a1c',p:'n2',chip:[935,505]},D:{n:'สวนดอกไม้',e:'🌸',c:'#ee4f93',p:'n2',chip:[552,935]},
+ V:{n:'วิหาร VIP',e:'👑',c:'#e3a400',p:'v',chip:[1022,318]}};
+const PL_N={};
+const PL=[['A',435,462,0],['A',542,460,1],['A',648,462,2],
+ ['B',323,580,3],['B',300,652,4],['B',303,732,5],
+ ['C',810,587,0],['C',842,655,1],['C',830,735,2],
+ ['D',437,848,3],['D',552,862,4],['D',670,850,5],
+ ['V',869,170,0],['V',882,212,1],['V',945,251,2],['V',1022,265,3],['V',1100,252,4],['V',1162,222,5],['V',1180,179,6],['V',1022,88,7]]
+ .map(([z,x,y,seat],k)=>{const n=PL_N[z]=(PL_N[z]||0)+1;return{z,x,y,seat,code:z+n,k,rip:Math.random()*3};});
+// ---- สถานะจากเกมซีซัน 3 (s4view ส่งมาทุก 1 วินาที) ----
+let G={open:true,today:null,vipCd:0,vipUsed:0,vip:0,admin:false,seats:{n1:[],n2:[],v1:[],v2:[]}},live=false,vroom='v1';
+const pondOf=p=>p.z==='V'?vroom:Z[p.z].p;
+const who=p=>(G.seats[pondOf(p)]||[])[p.seat]||null;
+const pname=p=>({n1:'บ่อทั่วไป 1',n2:'บ่อทั่วไป 2',v1:'ห้อง VIP 1',v2:'ห้อง VIP 2'})[pondOf(p)];
+// ---- กล้อง: ลากเลื่อน · หยิกซูม · ไม่หลุดขอบแผนที่ ----
+let camX=700,camY=520,zoom=1,ZMIN=.3,ZMAX=3;let anim=null;
+const fitZ=()=>Math.max(W/MW,H/MH);
+function clampCam(){ZMIN=fitZ()*.98;zoom=Math.max(ZMIN,Math.min(ZMAX,zoom));const hw=W/2/zoom,hh=H/2/zoom;
+ camX=hw*2>=MW?MW/2:Math.max(hw,Math.min(MW-hw,camX));camY=hh*2>=MH?MH/2:Math.max(hh,Math.min(MH-hh,camY));}
+const toS=(x,y)=>[W/2+(x-camX)*zoom,H/2+(y-camY)*zoom];
+const toM=(sx,sy)=>[camX+(sx-W/2)/zoom,camY+(sy-H/2)/zoom];
+const ptr=new Map();let drag=null,pinch=null,moved=0,vx=0,vy=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;vx=vy=0;anim=null;
+ if(ptr.size===1)drag={x:e.clientX,y:e.clientY,t:performance.now()};else if(ptr.size===2){const [a,b]=[...ptr.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:zoom,m:toM((a.x+b.x)/2,(a.y+b.y)/2)};drag=null;}});
+cv.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId))return;ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pinch&&ptr.size===2){const [a,b]=[...ptr.values()];zoom=Math.max(ZMIN,Math.min(ZMAX,pinch.z*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(20,pinch.d)));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;camX=pinch.m[0]-(mx-W/2)/zoom;camY=pinch.m[1]-(my-H/2)/zoom;clampCam();moved=99;return;}
+ if(drag){const now=performance.now(),dx=e.clientX-drag.x,dy=e.clientY-drag.y,dt=Math.max(8,now-drag.t);moved+=Math.abs(dx)+Math.abs(dy);camX-=dx/zoom;camY-=dy/zoom;clampCam();vx=-dx/zoom/dt*16;vy=-dy/zoom/dt*16;drag={x:e.clientX,y:e.clientY,t:now};}});
+cv.addEventListener('pointerup',e=>{ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;if(ptr.size===0){drag=null;if(moved<8){vx=vy=0;tap(e.clientX,e.clientY);}}});
+cv.addEventListener('pointercancel',e=>{ptr.delete(e.pointerId);pinch=null;drag=null;});
+cv.addEventListener('wheel',e=>{e.preventDefault();const m=toM(e.clientX,e.clientY);zoom=Math.max(ZMIN,Math.min(ZMAX,zoom*(e.deltaY>0?.9:1.1)));camX=m[0]-(e.clientX-W/2)/zoom;camY=m[1]-(e.clientY-H/2)/zoom;clampCam();},{passive:false});
+$('zin').onclick=()=>{anim={z:Math.min(ZMAX,zoom*1.4)};};$('zout').onclick=()=>{anim={z:Math.max(ZMIN,zoom/1.4)};};
+$('zfit').onclick=()=>{anim={x:MW/2,y:MH/2,z:ZMIN};};
+// ---- รูปแผนที่ + จุดน้ำสำหรับเอฟเฟกต์ ----
+const img=new Image();let ready=false;const SEA=[],POND=[],VIPW=[];
+img.onload=()=>{try{const c=document.createElement('canvas');c.width=MW;c.height=MH;const g=c.getContext('2d');g.drawImage(img,0,0);const d=g.getImageData(0,0,MW,MH).data;
+  for(let n=0;n<26000&&(SEA.length<520||POND.length<260);n++){const x=Math.random()*MW|0,y=Math.random()*MH|0,o=(y*MW+x)*4,r=d[o],gg=d[o+1],b=d[o+2];
+   if(r<40&&gg<130&&b>140){if(SEA.length<520)SEA.push([x,y,Math.random()*6.3,.6+Math.random()*1.6]);}
+   else if(r<150&&gg>165&&b>215){const inV=Math.hypot((x-1022)/190,(y-205)/120)<1;if(inV){if(VIPW.length<70)VIPW.push([x,y,Math.random()*6.3,.8+Math.random()*1.4]);}else if(POND.length<260&&x>330&&x<800&&y>420&&y<880)POND.push([x,y,Math.random()*6.3,.5+Math.random()]);}}}catch(e){}
+ ready=true;size();zoom=Math.max(ZMIN,W<H?W/720:Math.min(W/980,H/860));camX=W<H?570:640;camY=W<H?560:520;clampCam();setTimeout(()=>$('load').classList.add('done'),250);};
+img.src='map20.webp';
+// ---- เอฟเฟกต์มีชีวิต ----
+const FALL=[],MIST=[],PET=[],GOLD=[],KOI=[];
+for(let i=0;i<70;i++)FALL.push(newDrop(true));
+function newDrop(any){const y=any?195+Math.random()*190:195+Math.random()*20;return{y,x:0,u:Math.random(),v:150+Math.random()*130,l:10+Math.random()*18,a:.35+Math.random()*.45};}
+const fallW=y=>y<235?[505,560]:y<300?[478,582]:[458,592];
+for(let i=0;i<34;i++)PET.push({x:Math.random()*MW,y:Math.random()*MH,r:Math.random()*6.3,s:.4+Math.random()*.8,c:['#ffb3cf','#ffd1e3','#fff0f6','#d9b3ff'][i%4]});
+for(let i=0;i<7;i++)KOI.push({a:Math.random()*6.3,s:(.12+Math.random()*.16)*(i%2?1:-1),k:.45+Math.random()*.5,w:Math.random()*6.3,c:[['#ff7a2e','#fff'],['#fff','#ff5a3a'],['#ffcc33','#ff8a1c'],['#ff4f4f','#fff'],['#fff','#222'],['#ff9b54','#ffe0b0'],['#f6d04d','#fff']][i]});
+const LAMP=[[832,127],[819,155],[1212,130],[1227,175],[947,282],[987,290],[1132,280],[1062,290],[905,96],[1140,96]];
+function star(x,y,r,a){cx.globalAlpha=a;cx.beginPath();cx.moveTo(x,y-r);cx.quadraticCurveTo(x,y,x+r,y);cx.quadraticCurveTo(x,y,x,y+r);cx.quadraticCurveTo(x,y,x-r,y);cx.quadraticCurveTo(x,y,x,y-r);cx.fill();}
+function fx(t,dt){
+ cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle='#fff';
+ for(const [x,y,p,s] of SEA){const a=Math.pow(Math.max(0,Math.sin(t*s+p)),10);if(a>.05)star(x,y,2+4*a,a*.9);}
+ for(const [x,y,p,s] of VIPW){const a=Math.pow(Math.max(0,Math.sin(t*s*1.3+p)),8);if(a>.05){cx.fillStyle='#fff3b0';star(x,y,2+5*a,a);}}
+ cx.fillStyle='#fff';cx.strokeStyle='#fff';cx.lineCap='round';
+ for(const [x,y,p,s] of POND){const a=Math.max(0,Math.sin(t*s+p));if(a<.2)continue;cx.globalAlpha=a*.32;cx.lineWidth=1.6;const o=Math.sin(t*.6+p)*5;cx.beginPath();cx.moveTo(x-7+o,y);cx.quadraticCurveTo(x+o,y-3,x+7+o,y);cx.stroke();}
+ // น้ำตก: สายน้ำไหล + ละอองน้ำ + รุ้ง
+ for(const d of FALL){d.y+=d.v*dt;if(d.y>388){if(Math.random()<.5)MIST.push({x:fallW(388)[0]+Math.random()*(fallW(388)[1]-fallW(388)[0]),y:384+Math.random()*10,r:4,a:.5,vx:(Math.random()-.5)*14,vy:-6-Math.random()*10});Object.assign(d,newDrop(false));}
+  const w=fallW(d.y);const x=w[0]+d.u*(w[1]-w[0]);cx.globalAlpha=d.a;cx.lineWidth=2.2;cx.beginPath();cx.moveTo(x,d.y-d.l);cx.lineTo(x,d.y);cx.stroke();}
+ for(let i=MIST.length-1;i>=0;i--){const m=MIST[i];m.x+=m.vx*dt;m.y+=m.vy*dt;m.r+=14*dt;m.a-=.42*dt;if(m.a<=0){MIST.splice(i,1);continue;}cx.globalAlpha=m.a*.6;cx.beginPath();cx.arc(m.x,m.y,m.r,0,7);cx.fill();}
+ while(MIST.length>90)MIST.shift();
+ cx.globalCompositeOperation='source-over';
+ const ra=.13+.06*Math.sin(t*.8);['#ff5b5b','#ffa53a','#ffe94a','#5ce06a','#4ab8ff','#9a6bff'].forEach((c,i)=>{cx.globalAlpha=ra;cx.strokeStyle=c;cx.lineWidth=5;cx.beginPath();cx.arc(525,420,112-i*5,Math.PI*1.08,Math.PI*1.92);cx.stroke();});
+ // ปลาคาร์ปว่ายใต้น้ำ
+ for(const f of KOI){f.a+=f.s*dt;const x=548+Math.cos(f.a)*155*f.k+Math.sin(t*.7+f.w)*12,y=655+Math.sin(f.a)*125*f.k+Math.cos(t*.5+f.w)*10;
+  const hx=-Math.sin(f.a)*f.s*155*f.k,hy=Math.cos(f.a)*f.s*125*f.k,ang=Math.atan2(hy,hx);
+  cx.save();cx.translate(x,y);cx.rotate(ang);cx.globalAlpha=.22;cx.fillStyle='#003a6a';cx.beginPath();cx.ellipse(-3,6,15,6,0,0,7);cx.fill();
+  cx.globalAlpha=.78;const wag=Math.sin(t*9+f.w)*.5;cx.fillStyle=f.c[0];cx.beginPath();cx.moveTo(-11,0);cx.lineTo(-22,-6+wag*4);cx.lineTo(-22,6+wag*4);cx.closePath();cx.fill();
+  cx.beginPath();cx.ellipse(0,0,13,5.5,0,0,7);cx.fill();cx.fillStyle=f.c[1];cx.beginPath();cx.ellipse(3,-1,5,3,0,0,7);cx.fill();cx.restore();}
+ // ระลอกน้ำรอบแท่น + ทุ่นของคนที่กำลังตก
+ cx.lineWidth=2;
+ for(const p of PL){const s=who(p);p.rip+=dt*(s?1.4:.55);if(p.rip>3)p.rip=0;const q=p.rip/3;cx.globalAlpha=(1-q)*.55;cx.strokeStyle='#fff';cx.beginPath();cx.ellipse(p.x,p.y+8,16+q*34,(16+q*34)*.45,0,0,7);cx.stroke();
+  if(s){const vd=p.code==='V8'?[1060,300]:(()=>{const dx=p.x-1022,dy=p.y-140,l=Math.hypot(dx,dy)||1;return[p.x+dx/l*34,p.y+dy/l*34];})();const fx2=p.z==='V'?vd[0]:p.x+(548-p.x)*.16,fy=(p.z==='V'?vd[1]:p.y+(655-p.y)*.16)+Math.sin(t*3+p.k)*2+(s.ph==='hook'?Math.sin(t*22)*3:0);
+   cx.globalAlpha=.6;cx.strokeStyle='#fff';cx.beginPath();cx.ellipse(fx2,fy+4,9+Math.sin(t*3)*2,4,0,0,7);cx.stroke();
+   cx.globalAlpha=1;cx.fillStyle='#ff3b3b';cx.beginPath();cx.arc(fx2,fy-2,4.2,Math.PI,0);cx.fill();cx.fillStyle='#fff';cx.beginPath();cx.arc(fx2,fy-2,4.2,0,Math.PI);cx.fill();
+   cx.globalAlpha=.5;cx.strokeStyle='#fff';cx.lineWidth=1;cx.beginPath();cx.moveTo(p.x,p.y-24);cx.quadraticCurveTo((p.x+fx2)/2,Math.min(p.y,fy)-40,fx2,fy-6);cx.stroke();cx.lineWidth=2;}}
+ // แสงตะเกียงวิหาร + ประกายทองลอยขึ้น
+ cx.globalCompositeOperation='lighter';
+ for(const [x,y] of LAMP){const a=.35+.2*Math.sin(t*2.2+x);const g=cx.createRadialGradient(x,y,0,x,y,26);g.addColorStop(0,'rgba(255,220,120,'+a+')');g.addColorStop(1,'rgba(255,200,80,0)');cx.globalAlpha=1;cx.fillStyle=g;cx.beginPath();cx.arc(x,y,26,0,7);cx.fill();}
+ if(GOLD.length<40&&Math.random()<.5){const a=Math.random()*6.3;GOLD.push({x:1022+Math.cos(a)*170*Math.random(),y:205+Math.sin(a)*105*Math.random(),l:1,s:1.5+Math.random()*2});}
+ cx.fillStyle='#ffe58a';for(let i=GOLD.length-1;i>=0;i--){const g=GOLD[i];g.y-=18*dt;g.l-=.35*dt;if(g.l<=0){GOLD.splice(i,1);continue;}star(g.x+Math.sin(t*2+i)*3,g.y,g.s+1.5,Math.sin(g.l*Math.PI));}
+ cx.globalCompositeOperation='source-over';
+ // กลีบดอกไม้ปลิว
+ for(const p of PET){p.x+=(14+Math.sin(t+p.r)*10)*p.s*dt;p.y+=22*p.s*dt;p.r+=dt*2;if(p.y>MH+10){p.y=-10;p.x=Math.random()*MW;}if(p.x>MW+10)p.x=-10;
+  cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.scale(1,.55+.45*Math.sin(p.r*1.7));cx.globalAlpha=.85;cx.fillStyle=p.c;cx.beginPath();cx.ellipse(0,0,4.5,2.6,0,0,7);cx.fill();cx.restore();}
+ cx.restore();}
+// ---- ป้ายแท่น (ขนาดคงที่บนจอ) ----
+function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();}
+function label(t){const sc=Math.max(.72,Math.min(1.15,zoom*.95));
+ for(const z in Z){const [x,y]=toS(...Z[z].chip);const lock=z!=='V'&&G.today&&G.today!==Z[z].p;const sub=z==='V'?(vroom==='v1'?'ห้อง 1':'ห้อง 2'):(Z[z].p==='n1'?'บ่อ 1':'บ่อ 2');
+  const txt=Z[z].e+' '+z+' · '+Z[z].n+(lock?' 🔒':'');cx.font='700 '+Math.round(12*sc)+'px Mali,Itim,sans-serif';const w=cx.measureText(txt).width+18*sc,h=22*sc;
+  cx.globalAlpha=.94;cx.fillStyle=Z[z].c;rr(x-w/2,y-h/2,w,h,h/2);cx.fill();cx.strokeStyle='#fff';cx.lineWidth=2;cx.stroke();cx.globalAlpha=1;cx.fillStyle='#fff';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,y+1);
+  cx.font='700 '+Math.round(9.5*sc)+'px Mali,sans-serif';cx.fillStyle='rgba(255,255,255,.95)';cx.strokeStyle='rgba(0,40,90,.55)';cx.lineWidth=3;cx.strokeText(sub,x,y+h*.95);cx.fillText(sub,x,y+h*.95);}
+ for(const p of PL){const [x,y0]=toS(p.x,p.y);const y=y0-30*zoom-6;if(x<-40||x>W+40||y<-40||y>H+40)continue;const s=who(p),z=Z[p.z];const lock=p.z!=='V'&&G.today&&G.today!==z.p;
+  const r=12*sc;if(s&&s.me){const pu=1+.18*Math.sin(t*5);cx.globalAlpha=.45;cx.fillStyle='#fff36a';cx.beginPath();cx.arc(x,y,r*1.65*pu,0,7);cx.fill();}
+  else if(!s&&!lock){cx.globalAlpha=.35*(1-(t*.8+p.k*.13)%1);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(x,y,r*(1+((t*.8+p.k*.13)%1)*.9),0,7);cx.stroke();}
+  cx.globalAlpha=1;cx.fillStyle='rgba(0,30,70,.35)';cx.beginPath();cx.arc(x+1.5,y+2.5,r,0,7);cx.fill();
+  cx.fillStyle=lock?'#9a958c':z.c;cx.beginPath();cx.arc(x,y,r,0,7);cx.fill();cx.strokeStyle='#fff';cx.lineWidth=2.5;cx.stroke();
+  cx.fillStyle='#fff';cx.font='800 '+Math.round(10.5*sc)+'px Mali,Itim,sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(p.code,x,y+1);
+  const nm=s?(s.me?'⭐ ฉัน':s.w):(lock?'🔒':'');if(nm){cx.font='700 '+Math.round(10*sc)+'px Mali,sans-serif';const w=Math.min(90,cx.measureText(nm).width+12);
+   cx.fillStyle=s&&s.me?'#fff3b0':'rgba(255,248,236,.95)';rr(x-w/2,y+r+2,w,15*sc,7*sc);cx.fill();cx.fillStyle=s&&s.ph==='hook'?'#e2453a':'#4a2a14';cx.fillText(nm.length>10?nm.slice(0,9)+'…':nm,x,y+r+2+7.8*sc);}}}
+// ---- วาด ----
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;requestAnimationFrame(frame);if(!ready)return;
+ if(anim){const k=1-Math.pow(.0015,dt);if(anim.z!=null)zoom+= (anim.z-zoom)*k;if(anim.x!=null){camX+=(anim.x-camX)*k;camY+=(anim.y-camY)*k;}clampCam();
+  anim.n=(anim.n||0)+1;if(anim.n>70||Math.abs((anim.z??zoom)-zoom)<.004&&(anim.x==null||Math.hypot(anim.x-camX,anim.y-camY)<1)){const cb=anim.cb;anim=null;cb&&cb();}}
+ else if(!drag&&(Math.abs(vx)+Math.abs(vy))>.05){camX+=vx;camY+=vy;vx*=.9;vy*=.9;clampCam();}
+ cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='#0152b0';cx.fillRect(0,0,W,H);
+ cx.setTransform(DPR*zoom,0,0,DPR*zoom,DPR*(W/2-camX*zoom),DPR*(H/2-camY*zoom));cx.imageSmoothingQuality='high';cx.drawImage(img,0,0);fx(t,dt);
+ cx.setTransform(DPR,0,0,DPR,0,0);label(t);}
+requestAnimationFrame(frame);addEventListener('resize',size);
+window.__fz={PL,toS:(x,y)=>toS(x,y)};
+// ---- แตะแท่น ----
+function hit(sx,sy){let best=null,bd=1e9;for(const p of PL){const [x,y]=toS(p.x,p.y);const yb=y-30*zoom-6;const d=Math.min(Math.hypot(sx-x,sy-y),Math.hypot(sx-x,sy-yb));if(d<bd){bd=d;best=p;}}return bd<Math.max(26,34*zoom)?best:null;}
+function tap(sx,sy){const p=hit(sx,sy);if(p)openSpot(p);}
+const send=(a,id)=>{try{parent.postMessage({s4z:a,id:id||''},'*');}catch(e){}};
+let cur=null;
+function openSpot(p){cur=p;const z=Z[p.z],s=who(p),lock=p.z!=='V'&&G.today&&G.today!==z.p,vip=p.z==='V';
+ $('stag').textContent=p.code;$('stag').style.background=z.c;$('sname').textContent=z.e+' แท่น '+p.code+' · โซน'+z.n;$('ssub').textContent=pname(p)+' · ท่า '+(p.seat+1)+(vip?' (ใช้บัตร VIP)':'');
+ const pc=$('pv').getContext('2d');pc.fillStyle='#0152b0';pc.fillRect(0,0,640,400);const w=vip?300:260;pc.drawImage(img,p.x-w/2,p.y-w*.3,w,w*.625,0,0,640,400);
+ pc.strokeStyle='#fff';pc.lineWidth=5;pc.beginPath();pc.arc(320,192,46,0,7);pc.stroke();
+ let info='',btn='';const now=Date.now();
+ if(!G.open){info='🌙 บ่อปิดอยู่ · เปิด 11:00–17:00 และ 21:00–07:00 (เวลาไทย)';}
+ else if(s&&s.me){info='⭐ คุณนั่งอยู่แท่นนี้'+(s.ph==='hook'?' · 🐟 ปลากินเบ็ดแล้ว!':s.ph==='wait'?' · รอปลากินเบ็ด':'');btn='<button class="gold" data-go="mine">🎣 ไปตกต่อ</button>';}
+ else if(s){info='👤 '+s.w+' นั่งอยู่แท่นนี้ · แตะทุ่นในบ่อเพื่อใช้กรรไกรปู ✂️ หรือปลาไหล ⚡ ได้';btn='<button data-go="peek">👀 ไปดูในบ่อ</button>';}
+ else if(lock){info='🔒 วันนี้เลือก'+(G.today==='n1'?'บ่อทั่วไป 1 (โซน A–B)':'บ่อทั่วไป 2 (โซน C–D)')+'ไปแล้ว · เปลี่ยนได้หลังเที่ยงคืน';}
+ else if(vip&&G.vipCd>now){info='⏳ ห้อง VIP พักอยู่ อีก '+Math.ceil((G.vipCd-now)/60000)+' นาที · ใช้บัตรติดกันได้ 5 ใบแล้วพัก 30 นาที';}
+ else if(vip){info='👑 ใช้บัตร VIP 1 ใบ (1 ชั่วโมง) ทำภารกิจ 8 ด่าน · มีบัตร '+G.vip+' ใบ · รอบนี้ใช้ '+G.vipUsed+'/5';btn=G.vip>0?'<button class="gold" data-go="sit">🎫 ใช้บัตรนั่งแท่นนี้</button>':'<button class="gold" data-go="craft">🔨 คราฟบัตร VIP</button>';}
+ else{info='แท่นว่าง · '+(G.today?'':'บ่อทั่วไปเลือกได้วันละ 1 บ่อ (A–B = บ่อ 1 · C–D = บ่อ 2) · ')+'รอปลา 10 นาที หรือใช้เหยื่อวิเศษ 3 นาที';btn='<button data-go="sit">🎣 นั่งตกแท่นนี้</button>';}
+ $('sinfo').textContent=info;$('srow').innerHTML='<button class="gray" data-go="x">กลับแผนที่</button>'+btn;$('sh').classList.add('on');}
+$('sh').onclick=e=>{const b=e.target.closest('[data-go]');if(!b){if(e.target.id==='sh')$('sh').classList.remove('on');return;}$('sh').classList.remove('on');const g=b.dataset.go,p=cur;if(g==='x'||!p)return;
+ if(g==='craft')return send('craft');if(g==='mine')return send('mine');
+ anim={x:p.x,y:p.y+20,z:Math.max(zoom,1.7),cb:()=>send('seat',pondOf(p)+':'+p.seat+(g==='peek'?':peek':''))};};
+const tclose=()=>{$('tools').classList.remove('on');$('tveil').classList.remove('on');};
+$('tmenu').onclick=()=>{$('tools').classList.add('on');$('tveil').classList.add('on');};$('tveil').onclick=tclose;
+$('tools').onclick=e=>{const b=e.target.closest('[data-a]');if(b){tclose();send(b.dataset.a);}};
+$('mine').onclick=()=>openP3(true);
+$('vroom').onclick=()=>{vroom=vroom==='v1'?'v2':'v1';$('vroom').textContent='👑 VIP ห้อง '+(vroom==='v1'?1:2);feed('👑 สลับไปดู'+(vroom==='v1'?'ห้อง VIP 1':'ห้อง VIP 2')+' (แท่น V1–V8)');};
+function feed(t){const d=document.createElement('div');d.textContent=t;$('feed').prepend(d);while($('feed').children.length>3)$('feed').lastChild.remove();setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),700);},4200);}
+// ---- รับสถานะจากหน้าเกม ----
+let prev=null;
+addEventListener('message',e=>{const v=e.data&&e.data.s4sync;if(!v)return;live=true;G=Object.assign(G,v);
+ const cur2={};for(const p of PL){const s=who(p);cur2[pondOf(p)+p.seat]=s?s.w:null;}
+ if(prev)for(const p of PL){const k=pondOf(p)+p.seat;if(cur2[k]&&cur2[k]!==prev[k])feed('🎣 '+cur2[k]+' นั่งแท่น '+p.code);}
+ prev=cur2;hud();});
+function hud(){const st=$('st');st.textContent=G.open?'🟢 บ่อเปิดอยู่':'🌙 ปิด · เปิด 11–17, 21–07';st.classList.toggle('off',!G.open);
+ $('vcard').textContent='🎫 '+(G.vip>9999?'9,999+':(G.vip||0).toLocaleString());$('adm').style.display=G.admin?'':'none';
+ let me=null;for(const p of PL){const s=who(p);if(s&&s.me)me=p;}
+ if(!me){for(const pn of ['n1','n2','v1','v2']){const i=(G.seats[pn]||[]).findIndex(s=>s&&s.me);if(i>=0){me={code:pn[0]==='v'?'V'+(i+1)+' ห้อง '+pn[1]:(pn==='n1'?['A1','A2','A3','B1','B2','B3']:['C1','C2','C3','D1','D2','D3'])[i]};if(pn[0]==='v'&&pn!==vroom){vroom=pn;$('vroom').textContent='👑 VIP ห้อง '+pn[1];}}}}
+ const m=$('mine');if(me){const s=(()=>{for(const pn in G.seats){const x=(G.seats[pn]||[]).find(s=>s&&s.me);if(x)return x;}})();m.textContent=(s&&s.ph==='hook'?'🐟 ปลากินเบ็ดแล้ว! ':'⭐ ')+'คุณอยู่แท่น '+me.code+' · แตะไปตกต่อ';m.classList.add('on');}else m.classList.remove('on');}
+
+// ---- S4: ฉากนั่งตกปลา 3D — ตัวละครเรานั่งที่แท่นจริง ใช้กติกาซีซัน 3 (หย่อนเบ็ด/รอ/ดึง ส่งไปหน้าเกม) ----
+const ZK={A:'falls',B:'bamboo',C:'beach',D:'lotus',V:'vip'};let P3=null,p3open=false,p3code=null,p3skip=null,prevMine=null;
+function mySeatInfo(){for(const p of PL){const s=who(p);if(s&&s.me)return {p,s};}return null;}
+function openP3(){const m=mySeatInfo();if(!m){send('mine');return;}if(p3open)return;p3open=true;p3code=m.p.code;
+ const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));
+ import('./pond3d.js?h=c9fd959c').then(mod=>{P3=mod;return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
+addEventListener('message',e=>{const d=e.data;if(!d)return;if(d.p3res&&P3&&p3open)P3.result(d.p3res);
+ if(d.s4sync){const m=mySeatInfo();if(m){if(p3open&&P3&&P3.isOpen())P3.sync(m.s);else if(!p3open&&prevMine!==m.p.code&&p3skip!==m.p.code)openP3();prevMine=m.p.code;}else{prevMine=null;p3skip=null;if(p3open&&P3&&P3.isOpen())P3.standby();}}});
+window.__fzP3=()=>({open:p3open,code:p3code});
+hud();
+setTimeout(()=>{if(!live)feed('🗺️ แตะแท่นที่ว่างเพื่อนั่งตกปลา');},1500);
+})();
+</script>
+</body></html>

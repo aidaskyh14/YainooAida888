@@ -1,9 +1,9 @@
 /* fix24 💰 ขายของได้ทุกอย่างในกระเป๋า — อย่างละหลายชิ้น หลายอย่างในรอบเดียว (ตะกร้าขาย) + ประเมินราคาโดยรวม
    (ต่อจาก fix20: ขายสัตว์ทีละหลายตัว + ของแถม · ไวน์ 80% ของตลาดสวน)
    ราคาจริงคิดที่เซิร์ฟเวอร์ทุกครั้ง หน้านี้แค่แสดง · ราคาอยู่ใน sell-price.js */
-import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22';
-import {PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX} from './pet-sell-engine.js';
-import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24';
+import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
+import {PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX} from './pet-sell-engine.js?h=c397ae44';
+import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=e1b8b556';
 const H=parent.__HOST,W=window;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Math.round(Number(n)||0).toLocaleString('en-US');
@@ -96,7 +96,7 @@ const oldRender=renderBag;renderBag=function(){
   grid.insertAdjacentHTML('afterbegin','<div class="sxbar"><div><b>💰 ขายของได้ทุกอย่างในกระเป๋า</b><small>ทั้งกระเป๋ามูลค่าประมาณ '+nf(all.v)+(all.unk?'+':'')+' กุศล</small></div><button data-a="on">💰 เริ่มขาย</button></div>');
   grid.insertAdjacentHTML('beforeend',dock());return;}
  const list=rowsFor(bagTab),w=worth(list),g=bagTab==='alp'?ghostsHeld():[];
- grid.innerHTML=(g.length?'<div class="bagghost"><img src="images/alpaca-hw-ghost.webp" alt=""><div><b>👻 ของผีสิงในมือ ×'+g.length+'</b><small>ต้องส่งให้เพื่อนภายใน '+hms2(g[0].until-Date.now())+' ไม่งั้นระเบิดใส่ตัวเอง</small></div><button id="bgSend">💌 ส่งให้เพื่อน</button></div>':'')+
+ grid.innerHTML=(g.length?'<div class="bagghost"><img src="images/alpaca-hw-ghost.webp" alt=""><div><b>🏮 ของต้องมนต์ในมือ ×'+g.length+'</b><small>ต้องส่งให้เพื่อนภายใน '+hms2(g[0].until-Date.now())+' ไม่งั้นระเบิดใส่ตัวเอง</small></div><button id="bgSend">💌 ส่งให้เพื่อน</button></div>':'')+
   '<div class="sxbar"><div><b>💰 แตะของที่จะขาย</b><small>แผนกนี้ '+nf(list.length)+' อย่าง ≈ '+nf(w.v)+(w.unk?'+':'')+' กุศล</small></div>'+(list.length?'<button class="lt" data-a="tab">🧺 ใส่ทั้งแผนก</button>':'')+(OWN[bagTab]?'':'<button class="x" data-a="off" aria-label="ออกจากโหมดขาย">✕</button>')+'</div>'+
   (list.length?list.map(cell).join(''):'<div class="empty" style="grid-column:1/-1">ไม่มีของที่ขายได้ในแผนกนี้</div>')+dock();
  const bs=$('bgSend');if(bs)bs.onclick=e=>{e.stopPropagation();try{closeAll();parent.__DEMON?.openGhost?.();}catch(err){}};
@@ -110,7 +110,7 @@ $('bagGrid').addEventListener('click',e=>{const a=e.target.closest('[data-a]'),i
 
 /* ---------- แผ่นขายทีละอย่าง ---------- */
 const bonusNote=left=>left>0?'🎁 สัตว์ขายครบทุก '+PET_BONUS_EVERY+' ตัว ได้ของแถมสุ่ม 1 อย่าง '+PET_BONUS_MIN+'–'+PET_BONUS_MAX+' ชิ้น ('+PET_BONUS.map(b=>b[1]).join(' / ')+') · วันนี้นับของแถมได้อีก '+nf(left)+' ตัว':'🎁 วันนี้รับของแถมจากการขายสัตว์ครบแล้ว (ขายต่อได้ตามปกติ)';
-const kindNote=r=>r.k==='atm-card'?'⚠️ ขายบัตรแล้วจะใช้ตู้ ATM (โอน/แลกเงิน) ไม่ได้อีก':r.kind==='wine'?'🍷 ราคา 80% ของตลาดสวน ขึ้นลงตามหุ้นไวน์':r.kind==='hw'?'🎃 ราคาร้านฮาโลวีน ช่วงผีออกได้โบนัส':r.kind==='pet'?bonusNote(quote?quote.left:PET_BONUS_DAY):'';
+const kindNote=r=>r.k==='atm-card'?'⚠️ ขายบัตรแล้วจะใช้ตู้ ATM (โอน/แลกเงิน) ไม่ได้อีก':r.kind==='wine'?'🍷 ราคา 80% ของตลาดสวน ขึ้นลงตามหุ้นไวน์':r.kind==='hw'?'🪷 ราคาร้านลอยกระทง ช่วงโคมลอยได้โบนัส':r.kind==='pet'?bonusNote(quote?quote.left:PET_BONUS_DAY):'';
 function itemSheet(k){const r=SELL_BY_KEY.get(k);if(!r)return;const have=haveOf(r);if(!have)return toast('ไม่มีของนี้แล้ว',1);
  let q=Math.min(have,cart.get(k)||1);const chips=[1,10,100,1000];
  show('<h4>'+pic(imgOf(r),'h')+'<span>ขาย'+esc(r.n)+'</span></h4>'+

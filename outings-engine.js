@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js';
+import {CATALOG} from './catalog.js?h=fd044428';
 export const VEHICLES={jeep:{trays:[3,6],menus:[1,2],wait:20,merit:[300,600],chance:.2,oil:300,hat:0},ship:{trays:[7,12],menus:[2,3],wait:10,merit:[800,1500],chance:.3,oil:100,hat:50},raft:{trays:[13,20],menus:[3,4],wait:5,merit:[5000,10000],chance:.5,oil:500,hat:100}};
 const int=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
 const fail=m=>{throw new Error(m);};
@@ -42,7 +42,7 @@ export function outingsAction(account,ctx,input,rng=Math.random){
   if((game.bag.item.hat||0)<v.hat)fail('หมวกกะลาสีไม่พอ ต้องใช้ '+v.hat);
   if(free){game.fuel=0;game.fuelAt=ctx.now;}else game.bag.item.fuel-=v.oil;
   if(v.hat)game.bag.item.hat-=v.hat;
-  const pool=CATALOG.filter(c=>c.p.startsWith('food.')||c.p.startsWith('gfood.')).map(c=>[c.p.startsWith('food.')?'h':'g',c.p.split('.').slice(1).join('.')]);
+  const pool=CATALOG.filter(c=>(c.p.startsWith('food.')||c.p.startsWith('gfood.'))&&c.g!=='เมนูมีคลาส').map(c=>[c.p.startsWith('food.')?'h':'g',c.p.split('.').slice(1).join('.')]);
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   const count=int(rng,...v.menus),trays=int(rng,...v.trays),req=pool.slice(0,count).map(([k,id])=>[k,id,1]);for(let i=count;i<trays;i++)req[int(rng,0,count-1)][2]++;
   game.honey={v:input.vehicle,req,arriveAt:ctx.now+3000,until:ctx.now+3000+v.wait*60000};return {game};

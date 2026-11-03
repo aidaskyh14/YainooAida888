@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="craft-result.js?v=ss3-fix17"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="pv/s4icon.js?h=edc9f144"></script><script src="craft-result.js?v=ss3-fix17&h=e654a3c6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS={getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5}
 *,*::before,*::after{box-sizing:border-box}
@@ -110,7 +110,7 @@ h3 .fimg{width:auto;height:1.8rem;vertical-align:middle}
 .tcard .bk,.tcard .fr{padding:0;overflow:hidden;background:none;border:0;box-shadow:none}
 .tcard .bk img,.tcard .fr img{width:100%;height:100%;object-fit:contain}
 .cimg{height:11rem;display:block;margin:0 auto .3rem}
-</style></head><body><div id="view"><div class="stage" id="stage"></div></div>
+</style><link rel="stylesheet" href="pv/s4ui.css?h=0adfba44"><style>html.s4emb,html.s4emb body{background:transparent!important}html.s4emb body{visibility:hidden!important}</style><script>if(/s4host/.test(location.search))document.documentElement.classList.add("s4emb")</script></head><body><div id="view"><div class="stage" id="stage"></div></div>
 <div class="fan" id="fan"></div><button class="rbtn tool" id="toolBtn">🧰</button>
 <div class="shade" id="shade"></div>
 <section class="sheet" id="sheet"><div id="sheetBody"></div></section>
@@ -327,5 +327,15 @@ window.openUpgrade=function(){const nx=(S.lv||1)+1;if(nx>3)return toast('🏠 �
  const rows=Object.entries(need).map(([k,n])=>{const h=quantity(f[k]);if(h<n)ok=false;return '<div style="display:flex;justify-content:space-between;padding:.2rem 0"><span>'+{wood:'ไม้',stone:'หิน',rope:'เชือก',steel:'เหล็ก'}[k]+'</span><b style="color:'+(h>=n?'#2F8A65':'#C8443D')+'">'+Math.min(h,n).toLocaleString()+' / '+n.toLocaleString()+'</b></div>'}).join('');
  H.ask('🏠 อัปเกรดบ้านเป็น Lv.'+nx,rows+'<div style="font-size:.75rem;color:#9A7A68;margin-top:.3rem">บ้านใหญ่ขึ้น เม่นแคระเพิ่มเป็น '+({2:3,3:5}[nx])+' ตัว</div>',ok?'อัปเกรดเลย':'',()=>{if((S.lv||1)+1!==nx)return;if(!Object.entries(need).every(([k,n])=>quantity((S.bag.forest||{})[k])>=n))return toast('วัสดุไม่พอแล้ว',1);for(const k in need)S.bag.forest[k]-=need[k];S.lv=nx;save();build();toast('🎉 บ้านเลเวล '+nx+' แล้ว!')})};
 const b=document.createElement('button');b.textContent='🏠⬆️';b.title='อัปเกรดบ้าน';b.style.cssText='position:fixed;left:.6rem;bottom:calc(env(safe-area-inset-bottom,0px) + .7rem);z-index:30;border:2px solid #fff;border-radius:999px;background:rgba(255,251,245,.92);font-size:1.05rem;padding:.35rem .6rem;box-shadow:0 3px 8px rgba(0,0,0,.2)';b.onclick=()=>openUpgrade();document.body.appendChild(b);
-})();</script><script src="lux-feed.js?v=ss3-fix17"></script><script type="module" src="mahakusal-ui.js?v=ss3-fix18"></script><script>/* fix16 🍽️ ให้อาหารหรูเม่น (เฉพาะสวนเม่นชั้นล่าง) */
-if(typeof LuxFeed!=='undefined')LuxFeed.mount({ls:__LS,page:'house',state:()=>S,visible:()=>room!=='up',guard:()=>guard(),reload:()=>{S=loadS();draw()},target:()=>hedges[0]&&hedges[0].el,toast:(m,e)=>toast(m,e),bottom:'.7rem'});</script></body></html>
+})();</script><script src="lux-feed.js?v=ss3-fix17&h=eef4c1e0"></script><script type="module" src="mahakusal-ui.js?v=ss3-fix18&h=297b1d58"></script><script>/* fix16 🍽️ ให้อาหารหรูเม่น (เฉพาะสวนเม่นชั้นล่าง) */
+if(typeof LuxFeed!=='undefined')LuxFeed.mount({ls:__LS,page:'house',state:()=>S,visible:()=>room!=='up',guard:()=>guard(),reload:()=>{S=loadS();draw()},target:()=>hedges[0]&&hedges[0].el,toast:(m,e)=>toast(m,e),bottom:'.7rem'});</script><script>/* S4HOSTONLY: ซีซัน 4 ใช้หน้านี้เป็นเบื้องหลังของบ้าน 3D (กติกา/จำนวนของซีซัน 3 · มองเห็นแค่หน้าต่างเลือก) */
+if(/s4host/.test(location.search)){document.write('<script src="pv/s4view.js?h=e7935ecb"><\/script>');
+ while((S.plots||[]).length<12)S.plots.push(null);
+ window.__s4h={bed:()=>openBed(),cook:()=>openKitchen(),wine:i=>tapBarrel(+i||0),flower:i=>tapPlot(+i||0),fert:()=>fertAll(),pick:()=>pickAll(),plantAll:()=>openFlowerPick(-1),hedge:()=>{const ids=(S.drops||[]).map(d=>d.id);if(!ids.length){try{parent.toast('🦔 ยังไม่มีของที่เม่นทิ้งไว้ รอสักพักนะ');}catch(e){}return;}const before=JSON.stringify(S.bag.hedge||{});collectDrops(ids);try{parent.toast('🦔 เก็บของเม่น '+ids.length+' ชิ้น · เข้ากระเป๋าแล้ว');}catch(e){}},fortune:()=>openFortune(),
+  state:()=>({plots:(S.plots||[]).map(p=>p?{f:p.f,st:fStage(p),left:Math.max(0,p.t+mins(FLOWERS[p.f][1])-Date.now())}:null),barrels:(S.barrels||[]).map(b=>b?{w:b.w,ready:Date.now()>=b.end}:null),rest:(typeof resting==='function'&&resting())?1:0})};
+ const busy=()=>[...document.querySelectorAll('.s4ov')].filter(el=>/sheet|modal|pop|dialog|dlg|panel|book|card|receipt|result/i.test((el.id||'')+' '+el.className)).some(el=>{const cs=getComputedStyle(el);if(cs.display==='none'||+cs.opacity<.05||cs.visibility==='hidden')return false;const r=el.getBoundingClientRect();return r.bottom>10&&r.top<innerHeight-10&&r.width>40&&r.height>40&&!!el.querySelector('button,input,.opt,.cell,.card,.tcard,.rc,[data-k],[data-r],[data-w],[data-i]');});
+ window.__s4busy=busy;
+ /* เบื้องหลัง: ไม่ต้องวาดภาพเคลื่อนไหวของบ้านซีซัน 3 (มองไม่เห็นอยู่แล้ว) เครื่องจะได้ไม่หน่วง */
+ {const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=f=>f&&f.name==='anim'?0:raf(f);}}
+</script>
+</body></html>

@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — กติกาล้วน (ใช้ทั้งบนคลาวด์และในหน้าเว็บ ไม่มี Firebase) */
-import {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward} from './nb-quest.js?v=ss3-fix21';
+import {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward} from './nb-quest.js?v=ss3-fix21&h=57e77d71';
 export {NB_QUESTS,NB_DAILY,NB_FIXED,nbPicks,nbReward};
 export const NB_MIN=3,NB_MAX=4;
 export const NB_LOCK=30*3600000;            // เข้าแล้วต้องอยู่อย่างน้อย 30 ชม. ถึงออกได้
@@ -7,7 +7,7 @@ export const NB_GIFT_DAY=30,NB_GIFT_KINDS=10,NB_GIFT_MAX=999;
 export const NB_FINE=5000;                  // ไม่มีเนเบอร์ฮูด หักเที่ยงคืนละ 5,000 (ไม่ติดลบ)
 export const NB_PER_QUEST=50000,NB_ALL_BONUS=500000;
 export const NB_EMBLEMS=['pumpkin','bee','sakura','mushroom','star','moon','clover','paw'];
-export const NB_STICKERS=['👍','🎉','❤️','🌸','🎃'];
+export const NB_STICKERS=['👍','🎉','❤️','🌸','🪷'];
 /* ค่าสร้าง (ลงขันรวมทั้งทีม) [catalog key, path ในกระเป๋า, จำนวน] */
 export const NB_COST=[['wood','forest.wood',5000],['stone','forest.stone',5000],['rope','forest.rope',30],['steel','forest.steel',50],
  ['halloween-candy','halloween.candy',50],['halloween-bat','halloween.bat',50],['halloween-candle','halloween.candle',50],['halloween-web','halloween.web',50],

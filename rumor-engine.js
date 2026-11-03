@@ -2,7 +2,7 @@
    ข่าวดี: กดรับใน 10 นาทีได้กุศล · กด ✕ หรือไม่รับในเวลา = ไม่ได้อะไร
    ข่าวร้าย: 10 นาที · "ข่าวมั่ว!" จ่ายของตามรายการ (ไม่เสียกุศล) · "ยอมรับ" หรือไม่ตอบ/ไม่อยู่ในเกม = หักกุศล (ติดลบได้)
    ของที่ไม่ได้ระบุชนิด คละได้ (หักจากกองที่มากที่สุดก่อน) · "ชนิดเดียว" เลือก 1 ชนิด · ผลไม้ = 4 ชนิดของฟาร์ม 4 */
-import {CATALOG} from './catalog.js';
+import {CATALOG} from './catalog.js?h=fd044428';
 export const RUMOR_TIME=10*60000,RUMOR_GRACE=20000;
 export const RUMOR_GOOD=[
 ['ระบบ ได้เห็นความตั้งใจของคุณในการเป็นชาวสวนที่ดี   เพาะปลูก อย่างสม่ำเสมอ  ทำดีมากค่ะ',3000],
@@ -22,11 +22,11 @@ export const RUMOR_GOOD=[
 /* ข่าวร้าย [ข้อความ, กุศลที่หัก, ของที่ใช้แก้ [ชื่อ, จำนวน, path | '@กลุ่ม' | '$coin', 'one'|'mix']] */
 export const RUMOR_BAD=[
 ['ฉันได้ยินข่าวซุบซิบกันให้แซด จากชาวสวนท่านอื่น ว่า คุณไม่หลับไม่นอน มีเงิน มีคำ เข้าบ่อนตลอด   ฉันอายจริงๆนะ',5000,[['ขนอัลปาก้า',10,'sub.alpaca.bag.wool'],['ดอกกุหลาบ',50,'flower.rose'],['ไข่ไก่',100,'product.egg']]],
-['ฉันได้ข่าวว่า  เธอเป็นคนที่กลั่นแกล้งเพื่อน อย่างหนักหน่วงที่เทศกาลการพายเรือ   ทำให้เพื่อนหลายคนต้องเสียใจ   เธอมันใจร้ายจริงๆ   มันเป็นนางมารร้าย',5000,[['ข้าวคลุกวิญญาณ',5,'gfood.r5'],['เห็ดทรัฟเฟิล',30,'product.truffle'],['องุ่น',100,'crop.grape']]],
+['ฉันได้ข่าวว่า  เธอเป็นคนที่กลั่นแกล้งเพื่อน อย่างหนักหน่วงที่เทศกาลการพายเรือ   ทำให้เพื่อนหลายคนต้องเสียใจ   เธอมันใจร้ายจริงๆ   มันเป็นนางมารร้าย',5000,[['ข้าวคลุกต้องมนต์',5,'gfood.r5'],['เห็ดทรัฟเฟิล',30,'product.truffle'],['องุ่น',100,'crop.grape']]],
 ['ฉันได้ข่าวว่า  เธอไม่ค่อยเข้าระบบเลย   เธอเอาเวลาไปทำอย่างอื่นเธอไม่สนใจสวน ของตัวเองเลยนะ',7500,[['ของดร็อปเม่น (ชนิดเดียว)',10,'@hedge','one']]],
 ['ฉันได้ข่าวว่า  เธอไม่ยอมทำแคมเปญคะแนนก็น้อย  แล้วก็ไม่รับฟังเวลายัยหนู บอกว่าให้ทำแคมเปญ  มัวแต่เอาเวลาไปทำอย่างอื่น',3000,[['หมวกกะลาสี',10,'item.hat'],['กล่องดนตรี',10,'item.musicbox']]],
 ['ฉันได้ข่าวว่าเธอ  ตกปลาบ่อยมาก  ส่งผลให้ทัศนียภาพของบ่อตกปลา   สกปรกไปหมด  มอม สะบัด  นี่มันพื้นที่ส่วนรวมนะไม่ใช่พื้นที่ส่วนตัว',10000,[['ขนอัลปาก้า',30,'sub.alpaca.bag.wool'],['กล่องดนตรี',30,'item.musicbox']]],
-['ฉันได้ข่าวว่าเธอปล่อยสัตว์เลี้ยงที่บ้านให้ตาย  ถึงเป็นโรคซึมเศร้าไปหมด    วันวันเธอเอาเวลาไปทำอะไรหรอ    นี่แค่ข้อความเตือนนะ  อย่าให้ฉันได้วีน',5000,[['ยาน้ำผึ้งมะนาว',30,'item.medicine'],['เหรียญฮาโลวีน',3,'$coin']]],
+['ฉันได้ข่าวว่าเธอปล่อยสัตว์เลี้ยงที่บ้านให้ตาย  ถึงเป็นโรคซึมเศร้าไปหมด    วันวันเธอเอาเวลาไปทำอะไรหรอ    นี่แค่ข้อความเตือนนะ  อย่าให้ฉันได้วีน',5000,[['ยาน้ำผึ้งมะนาว',30,'item.medicine'],['เหรียญกระทงทอง',3,'$coin']]],
 ['ฉันได้ข่าวว่าเธอไปทำเรื่องบัดสีบัดเถลิง   กับชาวบ้าน ชาวสวที่อื่น ฉันเข้าใจนะว่าเธอคงจะเป็นหนึ่งในมือตบ ในอดีต แต่ที่นี่เรารักความสงบค่ะ',3000,[['ชีส',50,'product.cheese'],['ไม้',100,'forest.wood'],['ดอกอัญชัน',50,'flower.butterflypea']]],
 ['ฉันได้ข่าว  ว่าเธอเป็นหนึ่งในขาเมาส์   นินทา ซุบซิบ ชาวสวนชาวบ้านคนอื่นไปวันวัน   เธอนี่มันร้ายจริงๆ',1000,[['กล้วย',300,'crop.banana'],['สตรอว์เบอร์รี',300,'crop.strawberry'],['ลิ้นจี่',300,'crop.lychee']]],
 ['ฉันได้ข่าวว่าเวลาเธอเข้าไป mini game เธอเล่นแค่เกมเดียวเกมที่เธอถนัดจนเธอไม่ สนใจเกมอื่น   เธอนี่เป็นคน ไม่กล้ายอมรับความเสี่ยงอะไรในชีวิตจริงๆ',2500,[['ยาน้ำผึ้งมะนาว',10,'item.medicine'],['หิน',200,'forest.stone']]],
@@ -56,7 +56,7 @@ export const rumorName=p=>CATALOG.find(c=>c.p===p)?.n||p;
 export function rumorPlan(game,coins,needs,picks={}){
  const take=[];let coinNeed=0;
  needs.forEach(([label,q,spec,mode],j)=>{
-  if(spec==='$coin'){if((coins||0)<q)fail('เหรียญฮาโลวีนไม่พอ');coinNeed+=q;return;}
+  if(spec==='$coin'){if((coins||0)<q)fail('เหรียญกระทงทองไม่พอ');coinNeed+=q;return;}
   if(!spec.startsWith('@')){if(get(game,spec)<q)fail(label+' ไม่พอ (มี '+get(game,spec)+'/'+q+')');take.push([spec,q]);return;}
   const pool=RUMOR_GROUPS[spec.slice(1)]||[];
   if(mode==='one'){const p=picks[j];if(!pool.includes(p))fail('เลือกชนิดของ'+label);if(get(game,p)<q)fail(rumorName(p)+' ไม่พอ');take.push([p,q]);return;}
@@ -78,7 +78,7 @@ export function rumorAction(state,account,ctx,input){
   else if(late||(type==='settle'&&now>=cur.until))res='exp';
   else fail('คำสั่งข่าวลือไม่ถูกต้อง');
  } else {
-  if(type==='fix'&&!late){const plan=rumorPlan(game,coins,row[2],input.picks||{});for(const [p,q]of plan.take)put(game,p,get(game,p)-q);coins-=plan.coins;res='fix';result.paid=plan.take.map(([p,q])=>({name:rumorName(p),q}));if(plan.coins)result.paid.push({name:'เหรียญฮาโลวีน',q:plan.coins});}
+  if(type==='fix'&&!late){const plan=rumorPlan(game,coins,row[2],input.picks||{});for(const [p,q]of plan.take)put(game,p,get(game,p)-q);coins-=plan.coins;res='fix';result.paid=plan.take.map(([p,q])=>({name:rumorName(p),q}));if(plan.coins)result.paid.push({name:'เหรียญกระทงทอง',q:plan.coins});}
   else if(type==='accept'&&!late){game.merit=(Number(game.merit)||0)-row[1];res='acc';result.merit=-row[1];}
   else if(late||(type==='settle'&&now>=cur.until)){game.merit=(Number(game.merit)||0)-row[1];res='auto';result.merit=-row[1];}
   else if(type==='settle')fail('ยังไม่หมดเวลาแก้ข่าว');

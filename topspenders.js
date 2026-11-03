@@ -26,7 +26,7 @@ render();
 (()=>{
 const IMG={"machine": "images/gacha-machine.webp", "m-idle": "images/gacha-machine-idle.webp", "m-shake": "images/gacha-machine-shake.webp", "coinspin": "images/gacha-coin-spin.webp", "coin": "images/gacha-coin.webp", "c-orange": "images/gacha-candy-orange.webp", "c-purple": "images/gacha-candy-purple.webp", "c-pink": "images/gacha-candy-pink.webp", "c-witch": "images/gacha-candy-witch.webp", "sad": "images/gacha-sad.webp"},DIM={"m-idle": [206.0, 300.0], "m-shake": [200.0, 300.0], "coinspin": [184.0, 160.0]};
 const q=s=>document.querySelector(s),rnd=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rnd(a,b+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
-const ITEMS=[['🌿','หญ้าครบ 5 สี','สีละ 1,000'],['🪵','ไม้ + หิน','อย่างละ 3,000'],['🥗','อาหารสวน 1 เมนู','5 ถาด'],['🍛','อาหารในบ้าน 1 เมนู','5 ถาด'],['⛽','แกลลอนน้ำมัน','1,000 แกลลอน'],['⚓','หมวกกะลาสี','50 ชิ้น'],['🎵','กล่องดนตรี','100 ชิ้น'],['✨','ขนทองอัลปาก้า','100 ชิ้น'],['🍷','ไวน์ครบ 4 ชนิด','อย่างละ 3'],['🥣','สากกะเบือ','100 ชิ้น'],['👻','วัตถุดิบโลกวิญญาณ 12 อย่าง','อย่างละ 100'],['📦','กล่องสุ่มหมา + แมว','อย่างละ 10'],['🎣','เบ็ดตกปลา','5 คัน คละแบบ'],['🎫','บัตรตกปลา VIP','3 ใบ']];
+const ITEMS=[['🌿','หญ้าครบ 5 สี','สีละ 1,000'],['🪵','ไม้ + หิน','อย่างละ 3,000'],['🥗','อาหารสวน 1 เมนู','5 ถาด'],['🍛','อาหารในบ้าน 1 เมนู','5 ถาด'],['⛽','แกลลอนน้ำมัน','1,000 แกลลอน'],['⚓','หมวกกะลาสี','50 ชิ้น'],['🎵','กล่องดนตรี','100 ชิ้น'],['✨','ขนทองอัลปาก้า','100 ชิ้น'],['🍷','ไวน์ครบ 4 ชนิด','อย่างละ 3'],['🥣','สากกะเบือ','100 ชิ้น'],['🏮','วัตถุดิบต้องมนต์ 12 อย่าง','อย่างละ 100'],['📦','กล่องสุ่มหมา + แมว','อย่างละ 10'],['🎣','เบ็ดตกปลา','5 คัน คละแบบ'],['🎫','บัตรตกปลา VIP','3 ใบ']];
 const RODS=['เบ็ดไผ่ลมหวน','เบ็ดจันทร์เสี้ยว','เบ็ดน้ำผึ้งหวานเจี๊ยบ','เบ็ดซากุระพลิ้ว'],CANDY=['orange','purple','pink','witch'];
 const G={coins:{},kusal:150000,mail:{},log:[],sel:[],amt:2,busy:false,seq:1};
 G.coins[ME]=Host.coins;G.mail[ME]=[];G.kusal=JSON.parse(Host.get('s3all-v1')||'{}').merit||0;
@@ -42,11 +42,11 @@ function frame(el,f){el.style.backgroundPosition=`${(f%4)*100/3}% ${Math.floor(f
 function idle(){clearInterval(idleIv);const m=q('#mspr');if(!m)return;m.style.backgroundImage=`url(${IMG['m-idle']})`;let f=0;idleIv=setInterval(()=>{frame(m,f);f=(f+1)%16},110)}
 function showItems(){modal(`<h2>🎁 ของในตู้</h2><div class="igrid">${ITEMS.map(i=>`<div class="ig"><span>${i[0]}</span><b>${i[1]}</b>${i[2]}</div>`).join('')}<div class="ig k"><span>✨</span><b>กุศล</b>5–30,000</div><div class="ig n"><span>😢</span><b>ไม่ได้อะไร</b>ลุ้นใหม่</div></div><div class="odds" style="color:var(--cocoa)"><span style="background:#F3E9DE">🎁 ไอเทม 60%</span><span style="background:#F3E9DE">✨ กุศล 20%</span><span style="background:#F3E9DE">😢 20%</span></div>`)}
 function renderG(){
-  q('#gacha').innerHTML=`${[...Array(18)].map(()=>`<span class="star" style="left:${rnd(2,98)}%;top:${rnd(2,60)}%;animation-delay:${rnd(0,2.4)}s"></span>`).join('')}<span class="floaty" style="top:10%;animation-duration:19s">👻</span><span class="floaty" style="top:34%;animation-duration:27s;animation-delay:-9s">🦇</span><span class="floaty" style="top:52%;animation-duration:23s;animation-delay:-15s">👻</span>
-    <div class="gtitle"><p>หมุนละ 2 เหรียญฮาโลวีน</p></div><div class="mwrap" id="mwrap"><div class="spr" id="mspr"></div></div>
+  q('#gacha').innerHTML=`${[...Array(18)].map(()=>`<span class="star" style="left:${rnd(2,98)}%;top:${rnd(2,60)}%;animation-delay:${rnd(0,2.4)}s"></span>`).join('')}<span class="floaty" style="top:10%;animation-duration:19s">🏮</span><span class="floaty" style="top:34%;animation-duration:27s;animation-delay:-9s">✨</span><span class="floaty" style="top:52%;animation-duration:23s;animation-delay:-15s">🏮</span>
+    <div class="gtitle"><p>หมุนละ 2 เหรียญกระทงทอง</p></div><div class="mwrap" id="mwrap"><div class="spr" id="mspr"></div></div>
     <div class="gctl"><button class="btn spin" id="spin">หมุนเลย!</button><div class="odds"><span>🎁 ไอเทม 60%</span><span>✨ กุศล 20%</span><span>😢 20%</span></div><button class="mini" id="items">🎁 ดูของในตู้</button></div>`;
   q('#spin').onclick=spin;q('#items').onclick=showItems;
-  q('#gadmin').innerHTML=admin?'<div class="gbox"><h3>👑 ส่งเหรียญฮาโลวีน</h3><p class="note">เลือกผู้รับและจำนวนในหน้าส่งของแอดมิน เหรียญเข้าไปรษณีย์ผู้รับ</p><button class="btn g" id="sendCoins">📮 เปิดหน้าส่งของ</button></div>':'';
+  q('#gadmin').innerHTML=admin?'<div class="gbox"><h3>👑 ส่งเหรียญกระทงทอง</h3><p class="note">เลือกผู้รับและจำนวนในหน้าส่งของแอดมิน เหรียญเข้าไปรษณีย์ผู้รับ</p><button class="btn g" id="sendCoins">📮 เปิดหน้าส่งของ</button></div>':'';
   if(admin)q('#sendCoins').onclick=()=>Host.openAdmin();
   wal();idle();
 }

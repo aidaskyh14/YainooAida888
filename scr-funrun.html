@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>แรลลี่ฟักทอง – ในสวนของยัยหนู</title>
+<!DOCTYPE html><html lang="th"><head><script src="pv/s4icon.js?h=edc9f144"></script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>แรลลี่ฟักทอง – ในสวนของยัยหนู</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Itim&family=Mali:wght@400;500;600;700;800&display=swap">
 <style>
 /* Layout: a portrait game screen like the other minigames — lobby → canvas race → results, all inside one 9:16 stage on a dark purple ground. Single look (night Halloween), matching the game's Mali/Itim and cream panels. */
@@ -106,11 +106,11 @@ canvas{will-change:contents}
 .wait{font-size:12px;font-weight:800;text-align:center;color:#FFE08A;margin-top:6px}
 .slot.r{opacity:.55}
 .lead{position:absolute;right:3%;top:24%;font-size:11px;font-weight:800;background:rgba(26,15,43,.7);border-radius:999px;padding:2px 9px}
-</style></head><body>
+</style><link rel="stylesheet" href="pv/s4ui.css?h=0adfba44"></head><body>
 <div id="rot"><span>📱</span>หมุนมือถือเป็นแนวนอน<small style="font-family:var(--body);font-size:13px;color:#E7DBF7">แรลลี่ฟักทองเล่นแนวนอน เห็นทางข้างหน้าได้ไกลกว่า</small></div>
 <div id="wrap">
   <section class="scr" id="lobby">
-    <div class="lt"><h1>🎃 แรลลี่ฟักทอง</h1><p>ห้องละ 6 คน · ครบแล้วทุกคนกดพร้อม → เริ่มใน 10 วินาที</p><button class="back" id="back">‹ กลับหน้ามินิเกม</button></div>
+    <div class="lt"><h1>🪷 แรลลี่ฟักทอง</h1><p>ห้องละ 6 คน · ครบแล้วทุกคนกดพร้อม → เริ่มใน 10 วินาที</p><button class="back" id="back">‹ กลับหน้ามินิเกม</button></div>
     <div class="room">
       <h2>🚪 ห้องแข่ง · 3 ด่าน <span id="cnt">0/6</span></h2>
       <div class="fee"><span>🎟️ ค่าเข้า</span><span>🪙 20</span><span>🎩 100</span><span>🎵 100</span></div>
@@ -119,7 +119,7 @@ canvas{will-change:contents}
       <div class="pick" id="pick" role="group" aria-label="เลือกตัวละคร"></div>
       <button class="ready" id="ready">🪑 เข้าห้อง</button><div class="wait" id="wait"></div>
     </div>
-    <div class="cd" id="lcd"></div><button class="adm" id="adm" hidden>🧹 ล้างห้อง</button>
+    <div class="cd" id="lcd"></div><button class="adm" id="adm" hidden>🍃 ล้างห้อง</button>
   </section>
   <section class="scr" id="game" hidden>
     <canvas id="cv"></canvas>
@@ -130,7 +130,7 @@ canvas{will-change:contents}
       <button class="jumpbtn" id="jump" aria-label="กระโดด">⬆️</button>
       <div class="aim" id="aim" hidden><button data-dir="-1">◀ โยนหลัง</button><button data-dir="1">โยนหน้า ▶</button></div><button class="slotbtn empty" id="use" aria-label="ใช้ไอเทม"><img id="useimg" alt=""></button>
     </div>
-    <div class="cd" id="gcd"></div><button class="adm" id="adm2" hidden style="top:auto;bottom:8px;left:50%;transform:translateX(-50%)">🧹 ล้างห้อง</button>
+    <div class="cd" id="gcd"></div><button class="adm" id="adm2" hidden style="top:auto;bottom:8px;left:50%;transform:translateX(-50%)">🍃 ล้างห้อง</button>
   </section>
   <section class="scr" id="results" hidden>
     <h1 id="rtitle">🏁 สรุปคะแนน</h1>
@@ -140,5 +140,5 @@ canvas{will-change:contents}
     <button class="home" id="home">🏠 กลับหน้ามินิเกม</button>
   </section>
 </div>
-<script type="module" src="funrun.js?v=ss3-fix15"></script>
+<script type="module" src="funrun.js?v=ss3-fix15&h=b943b9d3"></script>
 </body></html>

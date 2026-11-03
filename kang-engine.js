@@ -93,7 +93,7 @@ export function kangAction(source,account,ctx,input,rng=Math.random){
   if(rules.emergency)fail(EMERGENCY);if(!r.open||r.state!=='waiting')fail('ห้องยังไม่พร้อม');if(r.ready[index])return out();
   if(restLeft())fail('⏳ พักไพ่แคงอีก '+Math.ceil(restLeft()/60000)+' นาที');applyBase();
   const it=game.bag?.item||{},lack=[];if(coins<fee3.coin)lack.push('🪙 เหรียญอีก '+(fee3.coin-coins));if((Number(it.hat)||0)<fee3.hat)lack.push('👒 หมวกกะลาสีอีก '+(fee3.hat-(Number(it.hat)||0)));if((Number(it.musicbox)||0)<fee3.mb)lack.push('🎵 กล่องดนตรีอีก '+(fee3.mb-(Number(it.musicbox)||0)));
-  if((game.merit||0)<r.base*8)lack.push('✨ กุศลขั้นต่ำ '+(r.base*8).toLocaleString('en-US'));if(lack.length)fail('ยังพร้อมไม่ได้ ขาด '+lack.join(' · '));
+  if(lack.length)fail('ยังพร้อมไม่ได้ ขาด '+lack.join(' · '));
   coins-=fee3.coin;if(fee3.hat||fee3.mb){game.bag ||= {};game.bag.item ||= {};if(fee3.hat)game.bag.item.hat=(Number(game.bag.item.hat)||0)-fee3.hat;if(fee3.mb)game.bag.item.musicbox=(Number(game.bag.item.musicbox)||0)-fee3.mb;}
   r.paid[index]=fee3.coin;(r.feeRec ||= [false,false,false,false])[index]=true;r.paidHat[index]=fee3.hat;r.paidMb[index]=fee3.mb;game.merit-=r.base*8;r.match='kang-'+input.room+'-'+(r.round+1);r.pool[index]=r.base*8;r.ready[index]=true;r.settled=false;min.escrows['kang-'+input.room]={round:r.round+1,merit:r.base*8};
   // 3 rounds in a row, then a 10-minute rest (a gap of 10 minutes also resets the streak).

@@ -1,4 +1,4 @@
-import {useBoost,boostUsed,boostHave,cut30,BOOST_LIMIT} from './boost-engine.js';
+import {useBoost,boostUsed,boostHave,cut30,BOOST_LIMIT} from './boost-engine.js?h=4e7979ab';
 /* fix15: รางวัลวิจัยใหม่ (ตัดไวน์ออกจากโจทย์) · จำนวนวัตถุดิบ โอกาสสำเร็จ และ 10 ครั้ง/วัน เท่าเดิม */
 export const SAFARI_RULES=[["zebra", "ม้าลาย", 75, 500, 1500, 100, 200], ["giraffe", "ยีราฟ", 60, 1000, 3000, 200, 400], ["hippo", "ฮิปโป", 55, 1500, 4000, 300, 600], ["elephant", "ช้าง", 50, 2000, 5000, 400, 800], ["rhino", "แรด", 40, 3000, 7000, 600, 1200], ["lion", "สิงโต", 25, 5000, 12000, 800, 1600]];
 export const SAFARI_ITEMS=[["c-waterspinach", "crop.waterspinach"], ["c-lettuce", "crop.lettuce"], ["c-mango", "crop.mango"], ["c-chili", "crop.chili"], ["c-pumpkin", "crop.pumpkin"], ["c-lychee", "crop.lychee"], ["c-strawberry", "crop.strawberry"], ["c-grape", "crop.grape"], ["c-banana", "crop.banana"], ["c-gooseberry", "crop.gooseberry"], ["c-carrot", "crop.carrot"], ["c-corn", "crop.corn"], ["c-mushroom", "crop.mushroom"], ["c-melon", "crop.melon"], ["c-bamboo", "crop.bamboo"], ["c-plankton", "crop.plankton"], ["c-potato", "crop.potato"], ["c-cucumber", "crop.cucumber"], ["c-watermelon", "crop.watermelon"], ["c-cabbage", "crop.cabbage"], ["c-pea", "crop.pea"], ["c-tomato", "crop.tomato"], ["a-egg", "product.egg"], ["a-feather", "product.feather"], ["a-drumstick", "product.drumstick"], ["a-fishmeat", "product.fishmeat"], ["a-roe", "product.roe"], ["a-scale", "product.scale"], ["a-truffle", "product.truffle"], ["a-pork", "product.pork"], ["a-trotter", "product.trotter"], ["a-milk", "product.milk"], ["a-cheese", "product.cheese"], ["a-cream", "product.cream"], ["b-ostrich-egg", "bird.ostrich-egg"], ["b-ostrich-feather", "bird.ostrich-feather"], ["b-dodo-egg", "bird.dodo-egg"], ["b-dodo-feather", "bird.dodo-feather"], ["b-dodo-pebble", "bird.dodo-pebble"], ["f-0", "food.ข้าวผัดไข่"], ["f-1", "food.ซุปฟักทอง"], ["f-2", "food.ปลาย่างซอสมะม่วง"], ["f-3", "food.สตูว์รวมมิตร"], ["f-4", "food.ไข่อบชีส"], ["f-5", "food.น่องไก่อบครีม"], ["f-6", "food.ขนมลิ้นจี่มะยม"], ["f-7", "food.จานรวมมิตร"], ["f-8", "food.ออมเล็ตโรซี่"], ["f-9", "food.ไข่อบอัญชัน"], ["f-10", "food.ไข่ตุ๋นหกบุปผา"], ["f-11", "food.ไข่ย่างสปาฟลาวเวอร์"], ["fl-daisy", "flower.daisy"], ["fl-rose", "flower.rose"], ["fl-butterflypea", "flower.butterflypea"], ["fl-sunflower", "flower.sunflower"], ["fl-lotus", "flower.lotus"], ["fl-orchid", "flower.orchid"], ["fl-tulip", "flower.tulip"], ["fl-lavender", "flower.lavender"], ["fl-marigold", "flower.marigold"], ["fl-hydrangea", "flower.hydrangea"], ["fl-plumeria", "flower.plumeria"], ["fl-hibiscus", "flower.hibiscus"], ["h-fang", "hedge.fang"], ["h-quills", "hedge.quills"], ["h-claw", "hedge.claw"], ["h-tail", "hedge.tail"]];
@@ -19,7 +19,7 @@ export function safariAction(account,ctx,input,rng=Math.random){
  if(input.type!=='status'){
   if(!a)fail('เลือกสัตว์วิจัยให้ถูกต้อง');const used=count(state.quota.counts[a[0]]);
   if(used>=10)fail('สัตว์นี้วิจัยครบ 10 ครั้งวันนี้แล้ว รอ 00:00 น. เวลาไทย');
-  if(input.type==='reroll'){if(count(game.merit)<100)fail('กุศลไม่พอ');game.merit-=100;state.tasks[a[0]]=newTask(a);}
+  if(input.type==='reroll'){game.merit=(Number(game.merit)||0)-100;state.tasks[a[0]]=newTask(a);}
   else if(input.type==='research'){
    const task=state.tasks[a[0]];
    if(JSON.stringify(input.task)!==JSON.stringify(task))fail('โจทย์เปลี่ยนแล้ว ตรวจโจทย์ล่าสุดก่อนวิจัย');
@@ -30,7 +30,7 @@ export function safariAction(account,ctx,input,rng=Math.random){
    if(lens)useBoost(game,state,'lens',ctx.now);
    for(const i of consumed)set(game.bag,i.path,count(get(game.bag,i.path))-i.quantity);
    const win=rng()*100<a[2],gain=win?a[3]+Math.floor(rng()*(a[4]-a[3]+1)):0;
-   game.merit=count(game.merit)+gain;state.quota.counts[a[0]]=used+1;state.nextAt=ctx.now+4000;
+   game.merit=(Number(game.merit)||0)+gain;state.quota.counts[a[0]]=used+1;state.nextAt=ctx.now+4000;
    for(const k of ['runs','wins','fails','merit'])state.stats[k]=count(state.stats[k]);
    state.stats.runs++;state.stats[win?'wins':'fails']++;state.stats.merit+=gain;
    state.log.unshift((win?'✅ ':'❌ ')+a[1]+(win?' +'+gain+' กุศล':' ล้มเหลว'));state.log=state.log.slice(0,10);state.tasks[a[0]]=newTask(a);

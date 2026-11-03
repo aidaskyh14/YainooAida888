@@ -1,10 +1,10 @@
 /* fix24 💰 ราคาขายของทุกอย่างในกระเป๋า (ปลายซีซั่น) — ใช้ร่วมกันทั้งหน้าเว็บและเซิร์ฟเวอร์ (เซิร์ฟเวอร์คิดเงินจริง)
-   ราคาเป็นกุศลต่อชิ้น · ไวน์ = 80% ราคาตลาดสวน (ขึ้นลงตามหุ้น) · ของฮาโลวีน 8 อย่าง = ราคาร้านฮาโลวีนเดิม (ช่วงผีออกได้โบนัส)
+   ราคาเป็นกุศลต่อชิ้น · ไวน์ = 80% ราคาตลาดสวน (ขึ้นลงตามหุ้น) · ของลอยกระทง 8 อย่าง = ราคาร้านลอยกระทงเดิม (ช่วงผีออกได้โบนัส)
    สัตว์ = ราคาเดิมจากระบบขายสัตว์ (มีของแถมทุก 100 ตัว) · ของแปรรูปอัลปาก้า = 30% ของกุศลเมนู
    💳 บัตร ATM ขายได้ใบละ 100,000,000 (ขายแล้วใช้ตู้ ATM ไม่ได้จนกว่าจะได้บัตรใหม่) */
-import {CATALOG} from './catalog.js';
-import {ALPACA_MENU} from './alpaca-menu.js';
-import {PET_SELL} from './pet-sell-engine.js';
+import {CATALOG} from './catalog.js?h=fd044428';
+import {ALPACA_MENU} from './alpaca-menu.js?h=4c9e1f4e';
+import {PET_SELL} from './pet-sell-engine.js?h=c397ae44';
 const T=(list,p)=>Object.fromEntries(list.map(k=>[k,p]));
 export const SELL_PRICE={
  /* 🥬 ผัก (ตามราคาเมล็ด/เวลาปลูก) */
@@ -39,7 +39,7 @@ export const SELL_PRICE={
  'birdfood-corn':200,'birdfood-pumpkin':300,'birdfood-melon':400,'birdfood-carrot':600,'birdfood-fruit':800,'birdfood-mushroom':1000,
  /* 🎣 ตกปลา */
  'rod-bamboo':500,'rod-moon':1500,'rod-honey':2500,'rod-sakura':4000,'fishing-crab':300,'fishing-vip':1000,'fishing-eel':1000,
- /* 🧪 น้ำมนต์ (80% ของวัตถุดิบฮาโลวีน) */
+ /* 🧪 น้ำมนต์ (80% ของวัตถุดิบลอยกระทง) */
  'antidote-0':3200,'antidote-1':8000,'antidote-2':11500,'antidote-3':46400,
  /* 🧃 เครื่องดื่มป่า · ⚙️ ไอเทมบูสต์ */
  'drink-watermelon':500,'drink-butterflypea':800,'drink-smoothie':1200,'drink-elixir':2000,'boost-bait':1000,'boost-lens':1000,'boost-gear':1500,

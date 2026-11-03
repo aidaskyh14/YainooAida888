@@ -2,8 +2,14 @@
    · ทุกคนเห็นฝนชุดเดียวกัน (seed จากเซิร์ฟเวอร์) · กดฟองเก็บไว้ในเครื่อง แล้วส่งรายการกดครั้งเดียวตอนฝนหยุด → เซิร์ฟเวอร์คิดคะแนนเอง
    · 👑 ฟองทอง: ถามเซิร์ฟเวอร์ทันที (คนแรกคนเดียว) · พลังทีมสด: ส่งคะแนนตัวเองทุก ~5 วิ และฟังกระดานทีมเฉพาะตอนฝนตก
    · ไม่มีฝน = ไม่ฟังอะไรเพิ่ม ไม่อ่านอะไรเพิ่ม */
-import {rainLogic,rainGeom,RAIN_MS,RAIN_WARN,RAIN_STORM,RAIN_PLUS,RAIN_LEVELS,RAIN_SETTLE,RAIN_FREE_MISS,RAIN_MISS,RAIN_RATE,RAIN_LAG} from './rain-engine.js?v=ss3-fix17';
-const LEVELS=[{lvl:1,e:'🌦️',name:'ฝนปรอย',est:'~5 แสน'},{lvl:2,e:'🌧️',name:'ฝนหนัก',est:'~1 ล้าน'},{lvl:5,e:'⛈️',name:'พายุ',est:'~2.5–3 ล้าน'}];
+import {rainLogic,rainGeom,RAIN_MS,RAIN_WARN,RAIN_STORM,RAIN_PLUS,RAIN_LEVELS,RAIN_SETTLE,RAIN_FREE_MISS,RAIN_MISS,RAIN_RATE,RAIN_LAG} from './rain-engine.js?v=ss3-fix17&h=2e082531';
+const LEVELS=[{lvl:1,e:'✨',name:'เบาๆ',est:'~5 แสน'},{lvl:2,e:'🌟',name:'คึกคัก',est:'~1 ล้าน'},{lvl:5,e:'💥',name:'มหาเทศกาล',est:'~2.5–3 ล้าน'}];
+// ลอยกระทง: แอดมินเลือกหน้าตาได้ 4 แบบ กติกาเหมือนกันทุกแบบ (บวก · ลบ · สมอ · ทองคำ)
+const THEMES={lantern:{e:'🏮',name:'โคมลอยกุศล',thing:'โคม',img:'lantern',warn:'🏮 โคมลอยกุศลกำลังจะขึ้นฟ้า',storm:'🌬️ ลมแรง'},
+  krathong:{e:'🪷',name:'กระทงกุศล',thing:'กระทง',img:'krathong',warn:'🪷 กระทงกุศลกำลังจะลอยมา',storm:'🌊 น้ำหลาก'},
+  firework:{e:'🎆',name:'ดอกไม้ไฟกุศล',thing:'พลุ',img:'firework',warn:'🎆 ดอกไม้ไฟกุศลกำลังจะจุด',storm:'🎇 พลุชุดใหญ่'},
+  rain:{e:'🌧️',name:'ฝนกุศล',thing:'ฟอง',img:null,warn:'⛈️ ฝนกุศลกำลังจะตก',storm:'⛈️ พายุ'}};
+const SPR={};if(typeof Image==='function')for(const t of ['lantern','krathong','firework'])for(const k of ['plus','minus','anchor','gold']){const i=new Image();i.src='images/boat-drop-'+t+'-'+k+'.webp';SPR[t+'-'+k]=i;}
 const CSS=`
 #rnSky{position:fixed;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 2.5s ease;background:linear-gradient(180deg,rgba(14,22,48,.82) 0%,rgba(20,34,70,.5) 32%,rgba(20,40,80,.18) 70%,rgba(20,40,80,.1) 100%)}
 #rnSky.on{opacity:1}
@@ -26,7 +32,7 @@ const CSS=`
 .rn-timer .st{font-size:.66rem;opacity:.9}
 .rn-mys{background:rgba(255,251,245,.95);border:2px solid #fff;border-radius:999px;padding:.22rem .6rem;font-weight:700;font-size:.78rem;box-shadow:0 4px 10px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;color:#6E4B3A}
 .rn-mys.neg{color:#E0475E}
-#rnCombo{position:fixed;z-index:7;left:50%;top:calc(env(safe-area-inset-top,0px) + 5.7rem);transform:translateX(-50%) scale(.7);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;font-weight:800;font-size:.95rem;color:#fff;background:linear-gradient(180deg,#FFB547,#F07A2A);border:2px solid #fff;border-radius:999px;padding:.15rem .7rem;box-shadow:0 0 16px rgba(255,170,60,.8)}
+#rnCombo{display:inline-block;width:max-content;max-width:70vw;height:auto;max-height:2.2rem;bottom:auto;right:auto;line-height:1.35;white-space:nowrap;overflow:hidden;box-sizing:border-box;position:fixed;z-index:7;left:50%;top:calc(env(safe-area-inset-top,0px) + 5.7rem);transform:translateX(-50%) scale(.7);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;font-weight:800;font-size:.95rem;color:#fff;background:linear-gradient(180deg,#FFB547,#F07A2A);border:2px solid #fff;border-radius:999px;padding:.15rem .7rem;box-shadow:0 0 16px rgba(255,170,60,.8)}
 #rnCombo.on{opacity:1;transform:translateX(-50%) scale(1)}#rnCombo.pop{animation:rnCpop .25s}
 @keyframes rnCpop{50%{transform:translateX(-50%) scale(1.2)}}
 #rnCombo.broke{animation:rnCbreak .45s forwards}
@@ -75,6 +81,11 @@ const CSS=`
 @keyframes rnDrop{0%{opacity:0;transform:translate(-50%,8px) scale(.6)}12%{opacity:1;transform:translate(-50%,0) scale(1.15)}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}
 .stage.rn-shake{animation:rnShake .45s cubic-bezier(.36,.07,.19,.97)}
 @keyframes rnShake{20%{transform:translate(calc(-50% - 4px),-50%)}40%{transform:translate(calc(-50% + 4px),calc(-50% + 2px))}60%{transform:translate(calc(-50% - 3px),-50%)}80%{transform:translate(calc(-50% + 2px),-50%)}}
+.rn-themes{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin:.2rem 0 .6rem}
+.rn-th{display:flex;flex-direction:column;align-items:center;gap:.15rem;border:2px solid #F3E9DE;background:#fff;border-radius:.9rem;padding:.35rem .2rem;font:inherit;color:#6E4B3A;cursor:pointer}
+.rn-th img{width:2.4rem;height:2.4rem;object-fit:contain}.rn-th span{font-size:1.9rem;line-height:2.4rem}.rn-th b{font-size:.6rem;line-height:1.2;text-align:center}
+.rn-th[aria-pressed="true"]{border-color:#F2B33D;background:linear-gradient(180deg,#FFF7E0,#fff);box-shadow:0 0 0 3px rgba(242,179,61,.3)}
+#rnSky.lk{background:linear-gradient(180deg,rgba(14,22,60,.55) 0%,rgba(20,30,70,.25) 40%,rgba(20,40,80,0) 100%)}#rnSky.lk i{display:none}
 @media (prefers-reduced-motion:reduce){#rnSky i{animation:none}.stage.rn-shake{animation:none}}`;
 const fmt=n=>Math.round(n).toLocaleString('en-US');
 const sgn=n=>(n>=0?'+':'−')+fmt(Math.abs(n));
@@ -96,7 +107,7 @@ export function mountRain(X){
   const toS=(x,y)=>[SR.left+x/X.W*SR.width,SR.top+y/X.H*SR.height],sc=()=>SR.width/X.W;
   /* ---------- สถานะ ---------- */
   let rain=null,list=[],phase='idle',me=null,taps=[],miss=[],tapTimes=[],fxs=[],texts=[],drops=[],stormOn=false,lastFlash=0,lastPing=0,stops=[],board={},goldTaken={},submitted=new Set(),resShown=new Set(),pinged=0,settledShown=new Set(),pending=false;
-  const lv=()=>LEVELS.find(l=>l.lvl===rain?.lvl)||LEVELS[0];
+  const lv=()=>LEVELS.find(l=>l.lvl===rain?.lvl)||LEVELS[0];const TH=()=>THEMES[rain?.theme]||THEMES.rain;
   const keyOf=id=>'rnTaps:'+id,save=()=>{try{sessionStorage.setItem(keyOf(rain.id),JSON.stringify({taps,miss}));}catch(e){}};
   const load=id=>{try{return JSON.parse(sessionStorage.getItem(keyOf(id))||'null');}catch(e){return null;}};
   const inTeam=()=>!X.admin&&!!X.team()[X.me];
@@ -104,7 +115,18 @@ export function mountRain(X){
   const rainDrops=[];for(let i=0;i<180;i++)rainDrops.push({x:Math.random(),y:Math.random(),l:.6+Math.random()*.8,s:.7+Math.random()*.6});
   const elapsed=()=>X.now()-(rain?.start||0);
   function bubbleState(b,e){const a=e-b.t0;if(a<0||a>b.life||b.done)return null;const app=Math.min(1,a/180),fade=a>b.life-300?(b.life-a)/300:1;return {x:b.x+Math.sin(b.ph+a/420)*6,y:b.y-b.vy*a/1000,s:.55+.45*easeOut(app),al:fade*app};}
-  function drawBubble(b,x,y,r,al,e){ctx.save();ctx.globalAlpha=al;
+  function drawBubble(b,x,y,r,al,e){const th=TH();if(th.img){const T=b.type,k=T==='neg'?'minus':T==='anchor'?'anchor':T==='gold'?'gold':'plus',im=SPR[th.img+'-'+k];
+      if(im&&im.complete&&im.naturalWidth){ctx.save();ctx.globalAlpha=al;let s=r*(T==='gold'?2.9:T==='big'?2.6:2.4);if(th.img==='krathong')s*=1.35;if(T==='gold')s*=1+Math.sin(e/90)*.06;
+        if(T==='gold'||T==='rainbow'||k==='plus'){ctx.shadowColor=T==='rainbow'?'rgba(255,170,240,.9)':'rgba(255,205,90,.85)';ctx.shadowBlur=T==='gold'?28:T==='rainbow'?22:14;}
+        const w=s*im.naturalWidth/Math.max(im.naturalWidth,im.naturalHeight),h=s*im.naturalHeight/Math.max(im.naturalWidth,im.naturalHeight);
+        ctx.translate(x,y);if(th.img==='krathong'||th.img==='lantern')ctx.rotate(Math.sin(e/500+b.ph)*.06);
+        if(th.img==='firework'){// a real burst: starts as a small bright spark, flies open, then keeps glowing and slowly turns
+          const age=e-b.t0,k2=Math.min(1,age/520),open=1-Math.pow(1-k2,3);ctx.shadowBlur=0;ctx.globalCompositeOperation=k==='minus'?'source-over':'lighter';
+          const sc=1.25*(.22+.98*open);ctx.rotate(age/4000);ctx.scale(sc,sc);
+          if(k2<1){ctx.globalAlpha=al*(1-k2)*.9;const g=ctx.createRadialGradient(0,0,0,0,0,w*.35);g.addColorStop(0,'rgba(255,255,240,1)');g.addColorStop(1,'rgba(255,230,160,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,w*.35,0,6.283);ctx.fill();ctx.globalAlpha=al;}
+          if(k==='minus')ctx.translate(0,Math.min(1,age/1800)*h*.08);}
+        ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();return;}}
+    ctx.save();ctx.globalAlpha=al;
     ctx.fillStyle='rgba(0,28,70,.22)';ctx.beginPath();ctx.ellipse(x+r*.25,y+r*1.28,r*.78,r*.24,0,0,6.283);ctx.fill();
     let g;const T=b.type;
     if(T==='gold'){r*=1+Math.sin(e/90)*.06;ctx.save();ctx.translate(x,y);ctx.rotate(e/900);for(let i=0;i<12;i++){ctx.rotate(Math.PI/6);ctx.fillStyle='rgba(255,220,110,.28)';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(r*2.3,-r*.18);ctx.lineTo(r*2.3,r*.18);ctx.fill();}ctx.restore();
@@ -125,7 +147,7 @@ export function mountRain(X){
   function hurt(){hurtEl.classList.add('on');setTimeout(()=>hurtEl.classList.remove('on'),60);}
   function frame(){requestAnimationFrame(frame);const active=phase!=='idle'||fxs.length||texts.length||drops.length;if(!active)return;
     SR=X.stage.getBoundingClientRect();ctx.clearRect(0,0,CW,CH);const now=performance.now();
-    if(phase==='warn'||phase==='rain'||phase==='end'){const n=stormOn?180:phase==='warn'?50:110;ctx.strokeStyle='rgba(200,225,255,.38)';ctx.lineWidth=1.2;ctx.beginPath();
+    if((phase==='warn'||phase==='rain'||phase==='end')&&!TH().img){const n=stormOn?180:phase==='warn'?50:110;ctx.strokeStyle='rgba(200,225,255,.38)';ctx.lineWidth=1.2;ctx.beginPath();
       for(let i=0;i<n;i++){const d=rainDrops[i];d.y+=.012*d.s*(stormOn?1.6:1);if(d.y>1.05){d.y=-.05;d.x=Math.random();}const x=d.x*CW,y=d.y*CH,l=14*d.l*(stormOn?1.4:1);ctx.moveTo(x,y);ctx.lineTo(x-l*.28,y+l);}ctx.stroke();}
     if(phase==='rain'){const e=elapsed(),k=sc();for(const b of list){if(b.t0>e)break;const st=bubbleState(b,e);if(!st)continue;const [x,y]=toS(st.x,st.y);drawBubble(b,x,y,b.r*k*st.s,st.al,e);}}
     fxs=fxs.filter(p=>{const a=(now-p.t)/380;if(a>1)return false;ctx.save();ctx.globalAlpha=1-a;ctx.strokeStyle=p.col;ctx.lineWidth=3*(1-a)+1;ctx.beginPath();ctx.arc(p.x,p.y,p.r*(1+a*.9),0,6.283);ctx.stroke();ctx.restore();return true;});
@@ -144,7 +166,7 @@ export function mountRain(X){
     hit(best.b,best.x,best.y,best.r,e);save();});
   function hit(b,x,y,r,e){const M=m();
     if(b.type==='gold'){b.done=true;addPop(x,y,r*1.4,'#FFD86B');taps.push([b.id,Math.round(e)]);
-      X.raw({type:'rainGold',id:rain.id,gid:b.id}).then(o=>{if(o?.ok){me.gold++;const v=b.v*M;me.plus+=v;me.pos++;addText(x,y,'👑 +'+fmt(v),'#FFE08A',true);X.ann('👑 <b>คุณ</b> คว้าฟองทองคำ! +'+fmt(v));flash();hudUpd();}
+      X.raw({type:'rainGold',id:rain.id,gid:b.id}).then(o=>{if(o?.ok){me.gold++;const v=b.v*M;me.plus+=v;me.pos++;addText(x,y,'👑 +'+fmt(v),'#FFE08A',true);X.ann('👑 <b>คุณ</b> คว้า'+TH().thing+'ทองคำ! +'+fmt(v));flash();hudUpd();}
         else if(o?.by)X.ann('👑 <b>'+esc(o.by)+'</b> (เรือ '+o.boat+') คว้าไปก่อนแล้ว!',1);else addText(x,y,'💨','#CFEFFF');}).catch(()=>addText(x,y,'💨','#CFEFFF'));return;}
     b.done=true;me.popped++;taps.push([b.id,Math.round(e)]);
     if(b.type==='neg'){const v=b.v*M;me.minus+=v;addPop(x,y,r,'#C88BEB');addText(x,y,'−'+fmt(v),'#FF8FA6');hurt();breakCombo();}
@@ -165,7 +187,7 @@ export function mountRain(X){
   /* ---------- ลำดับเวลา ---------- */
   function start(){phase='rain';reset();const saved=load(rain.id);if(saved){taps=saved.taps||[];miss=saved.miss||[];}
     cv.classList.toggle('live',inTeam());hud.classList.add('on');teamsEl.classList.add('on');$('rnTst').textContent=lv().e+' '+lv().name;hudUpd();teamUI();listen();
-    X.ann(inTeam()?'🌧️ ฝนกุศลตกแล้ว! กดฟองให้ไว':'🌧️ ฝนกุศลตกแล้ว');}
+    X.ann(inTeam()?TH().e+' '+TH().name+'มาแล้ว! แตะ'+TH().thing+'ให้ไว':TH().e+' '+TH().name+'มาแล้ว');}
   function stopRain(){phase='end';cv.classList.remove('live');hud.classList.remove('on');teamsEl.classList.remove('on');comboEl.className='';$('rnTimer').classList.remove('storm');unlisten();
     setTimeout(()=>{if(phase==='end')phase='idle';sky.classList.remove('on');},6000);
     if(inTeam())submit();}
@@ -177,16 +199,16 @@ export function mountRain(X){
       else if(tries<6){pending=false;return submit(tries+1);}}
     finally{pending=false;}}
   function showResult(s,id){if(resShown.has(id))return;resShown.add(id);const net=s.net||0,L=lv();
-    resEl.innerHTML='<div class="hd"><div class="e">🌧️</div><h3>ฝนกุศลจบแล้ว!</h3><span class="lv">'+L.e+' '+L.name+' ×'+L.lvl+'</span></div>'+
+    resEl.innerHTML='<div class="hd"><div class="e">'+TH().e+'</div><h3>'+TH().name+'จบแล้ว!</h3><span class="lv">'+L.e+' '+L.name+' ×'+L.lvl+'</span></div>'+
       '<div class="rn-sec"><h5>👤 ของคุณ</h5><div class="rn-tiles"><div class="rn-tile p"><small>➕ ได้</small><b>'+fmt(s.plus||0)+'</b></div><div class="rn-tile m"><small>➖ เสีย</small><b>'+fmt(s.minus||0)+'</b></div><div class="rn-tile n'+(net<0?' neg':'')+'"><small>✨ สุทธิ</small><b>'+sgn(net)+'</b></div></div>'+
-      '<div class="rn-facts"><span>🫧 ฟองบวก '+(s.pos||0)+' ลูก</span><span>🔥 คอมโบสูงสุด '+(s.best||0)+'</span>'+(s.missPen?'<span>💦 จิ้มพลาด −'+fmt(s.missPen)+'</span>':'')+(s.gold?'<span class="g">👑 ฟองทองคำ ×'+s.gold+'</span>':'')+(s.anc?'<span>⚓ เรือ '+X.myBoat()+' −'+s.anc*2+'</span>':'')+'</div>'+
+      '<div class="rn-facts"><span>'+TH().e+' '+TH().thing+'บวก '+(s.pos||0)+'</span><span>🔥 คอมโบสูงสุด '+(s.best||0)+'</span>'+(s.missPen?'<span>💦 จิ้มพลาด −'+fmt(s.missPen)+'</span>':'')+(s.gold?'<span class="g">👑 '+TH().thing+'ทองคำ ×'+s.gold+'</span>':'')+(s.anc?'<span>⚓ เรือ '+X.myBoat()+' −'+s.anc*2+'</span>':'')+'</div>'+
       ((s.pos||0)<3?'<div class="rn-facts"><span style="background:#FFEFF2;color:#E0475E">กดฟองบวกไม่ถึง 3 ลูก ไม่นับว่าช่วยทีม</span></div>':'')+'</div>'+
       '<div class="rn-sec"><h5>🚤 ทีม</h5><div class="rn-facts"><span>👥 ทีมต้องมีอย่างน้อย 3 คนที่กดฟองบวก ≥3 ลูก</span><span>⏳ สรุปทีมหลังฝนหยุด</span></div></div>'+
       '<div class="rn-paid">✅ กุศลเข้ากระเป๋าแล้ว ไม่ต้องไปรับที่ไปรษณีย์</div><button class="rn-big gold" id="rnOk">✨ รับทราบ</button>';
     resEl.classList.add('on');$('rnOk').onclick=()=>{resEl.classList.remove('on');if(net>0)X.fx('coins',X.W/2,X.H*.45,24);};}
   function warnTick(){const left=Math.max(0,Math.ceil((rain.start-X.now())/1000));$('rnWnum').textContent=left;$('rnWarc').style.strokeDashoffset=94.25*(1-left/15);}
   function rainTick(){const e=elapsed(),left=Math.max(0,RAIN_MS-e),s=Math.ceil(left/1000);$('rnTval').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');$('rnTarc').style.strokeDashoffset=94.25*(1-left/RAIN_MS);
-    if(!stormOn&&left<=RAIN_STORM){stormOn=true;$('rnTimer').classList.add('storm');$('rnTst').textContent='⛈️ พายุ ×2';X.ann('⛈️ พายุเข้า! 15 วิสุดท้าย ค่าฟอง ×2');flash();}
+    if(!stormOn&&left<=RAIN_STORM){stormOn=true;$('rnTimer').classList.add('storm');$('rnTst').textContent=TH().storm+' ×2';X.ann(TH().storm+'! 15 วิสุดท้าย ค่า'+TH().thing+' ×2');flash();}
     if(stormOn&&e-lastFlash>2200+Math.random()*1500){lastFlash=e;flash();}
     if(inTeam()&&Date.now()-lastPing>5000){lastPing=Date.now();X.raw({type:'rainPing',id:rain.id,net:me.plus-me.minus}).catch(()=>{});}
     if(Date.now()-pinged>2500){pinged=Date.now();teamUI();}}
@@ -198,7 +220,7 @@ export function mountRain(X){
     // ทีมที่ถอยหลังจากการตัดสิน
     if(r.done&&Array.isArray(r.back)&&!settledShown.has(r.id)){settledShown.add(r.id);if(now<r.end+RAIN_SETTLE+120000){for(const b of r.back){const d=document.createElement('span');d.className='rn-drop';d.textContent='⬇️ −10';X.boatEls[b-1]?.appendChild(d);setTimeout(()=>d.remove(),3000);}
       if(r.back.length)X.fx('banner','stop','⛈️ ฝนกุศลจบ · เรือ <b>'+r.back.join(', ')+'</b> ช่วยกันไม่ถึง 3 คน<small>ถอย −10</small>');else X.fx('banner','merit','⛈️ ฝนกุศลจบ · ทุกเรือช่วยกันครบ 👏');}}
-    if(now<r.start){if(phase!=='warn'){phase='warn';sky.classList.add('on');warnEl.classList.add('on');}warnTick();return;}
+    if(now<r.start){if(phase!=='warn'){phase='warn';sky.classList.add('on');sky.classList.toggle('lk',!!TH().img);warnEl.querySelector('.wt').innerHTML=TH().warn+'<small>เตรียมรับกุศล!</small>';warnEl.classList.add('on');}warnTick();return;}
     if(phase==='warn')warnEl.classList.remove('on');
     if(now<r.end){if(phase!=='rain'){sky.classList.add('on');start();}rainTick();return;}
     if(phase==='rain')stopRain();
@@ -206,9 +228,10 @@ export function mountRain(X){
     if(inTeam()&&!submitted.has(r.id)&&!R.rainRes?.[X.me]&&now<r.end+10*60000&&!pending){const saved=load(r.id);if(saved){taps=saved.taps||[];miss=saved.miss||[];}submit();}
   }
   /* ---------- แอดมิน: เรียกฝน ---------- */
-  function openAdmin(){let pick=LEVELS[2];const render=()=>{X.open('<h3>🌧️ ฝนกุศล</h3><div class="hint">🔒 เห็นเฉพาะบัญชีแอดมิน · รอบละ 1 นาที · เตือนทุกคน 15 วินาที</div><div class="rn-lvls">'+LEVELS.map(l=>'<button class="rn-lvl" data-l="'+l.lvl+'" aria-pressed="'+(l===pick)+'"><span class="e">'+l.e+'</span><div><b>'+l.name+' ×'+l.lvl+'</b><small>ฟองบวก '+short(3000*l.lvl)+'–'+short(10000*l.lvl)+' · ฟองลบ '+short(1000*l.lvl)+'–'+short(5000*l.lvl)+'</small></div><span>'+l.est+'</span></button>').join('')+'</div>'+
-      '<div class="rn-rules"><span>🫧 ➕ 3k–10k</span><span>🟣 ➖ 1k–5k</span><span>⚓ เรือทีมตัวเอง −2</span><span>👑 ฟองทอง 6–8 ลูก (แย่งกัน)</span><span>🔥 คอมโบ ×1.5/×2/×3</span><span>⛈️ 15 วิสุดท้าย ×2</span><span>👥 ทีมกดไม่ถึง 3 คน = เรือ −10</span></div><button class="rn-big" id="rnCall">🌧️ เรียกฝนกุศล</button>');
+  function openAdmin(){let pick=LEVELS[2],tpick='lantern';const render=()=>{X.open('<h3>'+THEMES[tpick].e+' '+THEMES[tpick].name+'</h3><div class="hint">🔒 เห็นเฉพาะบัญชีแอดมิน · รอบละ 1 นาที · เตือนทุกคน 15 วินาที</div><div class="rn-themes">'+['lantern','krathong','firework','rain'].map(t=>'<button class="rn-th" data-t="'+t+'" aria-pressed="'+(t===tpick)+'">'+(THEMES[t].img?'<img src="images/boat-drop-'+THEMES[t].img+'-plus.webp" alt="">':'<span>🌧️</span>')+'<b>'+THEMES[t].name+'</b></button>').join('')+'</div><div class="rn-lvls">'+LEVELS.map(l=>'<button class="rn-lvl" data-l="'+l.lvl+'" aria-pressed="'+(l===pick)+'"><span class="e">'+l.e+'</span><div><b>'+l.name+' ×'+l.lvl+'</b><small>'+THEMES[tpick].thing+'บวก '+short(3000*l.lvl)+'–'+short(10000*l.lvl)+' · '+THEMES[tpick].thing+'ลบ '+short(1000*l.lvl)+'–'+short(5000*l.lvl)+'</small></div><span>'+l.est+'</span></button>').join('')+'</div>'+
+      '<div class="rn-rules"><span>🫧 ➕ 3k–10k</span><span>🟣 ➖ 1k–5k</span><span>⚓ เรือทีมตัวเอง −2</span><span>👑 '+THEMES[tpick].thing+'ทอง 6–8 (แย่งกัน)</span><span>🔥 คอมโบ ×1.5/×2/×3</span><span>'+THEMES[tpick].storm+' 15 วิสุดท้าย ×2</span><span>👥 ทีมกดไม่ถึง 3 คน = เรือ −10</span></div><button class="rn-big" id="rnCall">'+THEMES[tpick].e+' เรียก'+THEMES[tpick].name+'</button>');
+    document.querySelectorAll('.rn-th').forEach(b=>b.onclick=()=>{tpick=b.dataset.t;render();});
     document.querySelectorAll('.rn-lvl').forEach(b=>b.onclick=()=>{pick=LEVELS.find(l=>l.lvl===+b.dataset.l);render();});
-    document.getElementById('rnCall').onclick=async e=>{e.currentTarget.disabled=true;const out=await X.act({type:'rainCall',lvl:pick.lvl});if(out&&!out.error){X.closeAll();X.ann('⛈️ เรียกฝนกุศลแล้ว! เตือนทุกคน 15 วินาที');}else e.currentTarget.disabled=false;};};render();}
+    document.getElementById('rnCall').onclick=async e=>{e.currentTarget.disabled=true;const out=await X.act({type:'rainCall',lvl:pick.lvl,theme:tpick});if(out&&!out.error){X.closeAll();X.ann(THEMES[tpick].e+' เรียก'+THEMES[tpick].name+'แล้ว! เตือนทุกคน 15 วินาที');}else e.currentTarget.disabled=false;};};render();}
   return {update,openAdmin,active:()=>!!rain&&phase!=='idle'};
 }

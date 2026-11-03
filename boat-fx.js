@@ -6,7 +6,7 @@
 'use strict';
 const AURA={supply:'#4FE08A',cut:'#FF5A5A',merit:'#FFD24A',stop:'#5BC8FF',kick:'#FF4D7A',kickall:'#FF4D7A',kick2:'#FF2E63',pull:'#9B6BFF',swap:'#FF8AD0',revive:'#7FFFE0',reviveall:'#B8FFF0',ink:'#8A6AC8',freeze:'#9FE3FF',crab:'#FF7A45',gift:'#FFB3D1'};
 const CARD_LABEL={supply:'เติมเสบียง +10',cut:'ตัดเสบียง −10',merit:'กุศลทั้งทีม',stop:'หยุดเรือ 30 นาที',kick:'การ์ดเตะ',pull:'ดึงตัว',swap:'สลับตัว',revive:'ชุบชีวิต',ink:'พ่นหมึก',freeze:'แช่แข็ง',crab:'ปูหนีบ'};
-const CARD_ICON={supply:'🍱',cut:'🎃',merit:'🪙',stop:'🧊',kick:'🦶',kickall:'🌊',kick2:'🎯',pull:'🏴‍☠️',swap:'🔄',revive:'💫',reviveall:'😇',ink:'🐙',freeze:'🧊',crab:'🦀',gift:'🎁'};
+const CARD_ICON={supply:'🍱',cut:'🪷',merit:'🪙',stop:'🧊',kick:'🦶',kickall:'🌊',kick2:'🎯',pull:'🏴‍☠️',swap:'🔄',revive:'💫',reviveall:'😇',ink:'🐙',freeze:'🧊',crab:'🦀',gift:'🎁'};
 Object.assign(CARD_LABEL,{cut:'ตัดเสบียง 2 ทีม −20',kickall:'เตะกวาดทุกทีม',kick2:'เตะเจาะทีม 2 คน',reviveall:'ชุบชีวิตทุกทีม',gift:'กล่องของขวัญ 150,000'});
 
 /* ---------- เหตุการณ์จากการเทียบข้อมูล (ฟังก์ชันล้วน ทดสอบได้ใน node) ---------- */
@@ -97,7 +97,7 @@ const later=(fn,ms)=>setTimeout(fn,ms);
 function floatText(x,y,txt,col){if(!stage)return;const d=el('fxf',txt,x,y);d.style.color=col||'#fff';later(()=>d.remove(),1500);}
 function boatClass(boatEl,cls,ms){if(!boatEl)return;boatEl.classList.remove(cls);void boatEl.offsetWidth;boatEl.classList.add(cls);later(()=>boatEl.classList.remove(cls),ms);}
 function lineGlow(lineEl){if(!lineEl)return;lineEl.classList.remove('glow');void lineEl.offsetWidth;lineEl.classList.add('glow');later(()=>lineEl.classList.remove('glow'),2200);}
-function pumpkin(x,y,done){if(!stage)return done&&done();const d=el('fxpk','🎃',x,y);later(()=>{d.remove();explode(x,y);done&&done();},Q.reduced?60:720);}
+function pumpkin(x,y,done){if(!stage)return done&&done();const d=el('fxpk','🪷',x,y);later(()=>{d.remove();explode(x,y);done&&done();},Q.reduced?60:720);}
 function iceRing(x,y){if(!stage)return;const d=el('fxice','<i></i>',x,y);snow(x,y);later(()=>d.remove(),2400);}
 /* หน่วย em ในฉาก = 18 หน่วยฉาก (stage.fontSize ตั้งใน fit()) จึงเลื่อนตามขนาดจอเสมอ */
 function nameFly(x,y,name,dir){if(!stage)return;const d=el('fxname','❌ '+name,x,y);

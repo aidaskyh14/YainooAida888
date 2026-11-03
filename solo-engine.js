@@ -1,13 +1,13 @@
-import {seeded,bkkHour} from './campaigns-engine.js';
-import {moleRound,moleHits,moleResult,MOLE} from './mole-engine.js';
-import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js';
-import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js';
-import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js';
+import {seeded,bkkHour} from './campaigns-engine.js?h=4c0a763a';
+import {moleRound,moleHits,moleResult,MOLE} from './mole-engine.js?h=96f1c725';
+import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js?h=892382c6';
+import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js?h=b520a90e';
+import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js?h=0be29d27';
 const fail=m=>{throw new Error(m);},choose=(r,a)=>a[Math.floor(r()*a.length)],int=(r,a,b)=>a+Math.floor(r()*(b-a+1));
 const shuffle=(r,a)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,num=n=>Math.round(n).toLocaleString('en-US');
 
-/* ---------- ยิงนกฮาโลวีน (fix13: นกร้าย type 4–6) ---------- */
+/* ---------- ยิงนกลอยกระทง (fix13: นกร้าย type 4–6) ---------- */
 export const BIRD_EVIL={4:{key:'crow',val:-3000},5:{key:'owl',val:-4000},6:{key:'bat',val:-2000}};
 export const BIRD_LOSS_CAP=-30000,BIRD_LOSS_CAP_OLD=-10000,BIRD_BLAST={rx:.17,ry:.1};
 /* The four normal birds keep their exact old draw; evil values are added after it. */
@@ -53,7 +53,7 @@ export const MG_CD={bs:45,mole:40,witch:40,pk:35,basket:25,candy:20};          /
 export const MG_MIN={bs:30000,mole:15000,witch:60000,pk:25000,basket:20000,candy:20000};
 export const MG_MAX_MS={witch:30*60000,candy:15*60000};                           // an active round older than this is settled as abandoned
 export const MG_HOURS={pk:[19,5],bs:[10,18]};
-export const MG_NAMES={bs:'ยิงนกฮาโลวีน',mole:'ตุ่นบุกสวน!',witch:'แม่มดซิ่งไม้กวาด',pk:'จิ้มฟักทอง',basket:'จัดตะกร้าให้แม่มด',candy:'โรงงานลูกกวาดต้องคำสาป',kang:'ไพ่แคง'};
+export const MG_NAMES={bs:'ยิงนกลอยกระทง',mole:'ตุ่นบุกสวน!',witch:'น้ำผึ้งซิ่งใบตองทอง',pk:'จิ้มกระทง',basket:'จัดกระทงให้นางนพมาศ',candy:'โรงงานขนมไทย',kang:'ไพ่แคง'};
 export const MG_EMERGENCY='ขออภัย ระบบปิดฉุกเฉิน แวะมาใหม่โอกาสหน้า';
 const LEGACY_FEE={pk:2,bs:3,mole:3,basket:3};
 export const inHours=(hour,[a,b])=>a<b?hour>=a&&hour<b:hour>=a||hour<b;
@@ -95,7 +95,7 @@ export function feeLack(game,coins,fee){const it=bagItem(game),lack=[];
  if((Number(it.musicbox)||0)<fee.mb)lack.push('🎵 กล่องดนตรีอีก '+num(fee.mb-(Number(it.musicbox)||0)));
  return lack;}
 /* Checks everything first; nothing is taken unless all of it is there. Returns the new coin balance. */
-export function payFee(game,coins,fee,minMerit=0){const lack=feeLack(game,coins,fee);if((game.merit||0)<minMerit)lack.push('✨ กุศลขั้นต่ำ '+num(minMerit));
+export function payFee(game,coins,fee,minMerit=0){const lack=feeLack(game,coins,fee);
  if(lack.length)fail('ยังเล่นไม่ได้ ขาด '+lack.join(' · '));
  if(fee.hat||fee.mb){game.bag ||= {};game.bag.item ||= {};if(fee.hat)game.bag.item.hat=(Number(game.bag.item.hat)||0)-fee.hat;if(fee.mb)game.bag.item.musicbox=(Number(game.bag.item.musicbox)||0)-fee.mb;}
  return coins-fee.coin;}
@@ -108,7 +108,7 @@ export const feeMailItems=fee=>Object.fromEntries([['hat',fee.hat||0],['musicbox
 
 export function soloPublic(state){const out=structuredClone(state);if(out.pk?.phase==='active')delete out.pk.kind;
  for(const k of ['witch','candy'])if(out[k])for(const key of Object.keys(out[k]))if(key.startsWith('_'))delete out[k][key];return out;}
-const EXT={witch:{start:witchStart,cp:witchCheckpoint,finish:witchFinish,abandon:witchAbandon,icon:'🧹'},candy:{start:candyStart,cp:candyCheckpoint,finish:candyFinish,abandon:candyAbandon,icon:'🍭'}};
+const EXT={witch:{start:witchStart,cp:witchCheckpoint,finish:witchFinish,abandon:witchAbandon,icon:'🍃'},candy:{start:candyStart,cp:candyCheckpoint,finish:candyFinish,abandon:candyAbandon,icon:'🍭'}};
 const MAX_CP=12;
 export function soloAction(source,account,ctx,input,rng=Math.random){const state=structuredClone(source||{}),game=structuredClone(account);game.sub ||= {};const progress=game.sub.minigames ||= {cd:{},escrows:{}};progress.cd ||= {};let coins=ctx.coins;const rewards=[];const hours=bkkHour(ctx.now),nonce=ctx.nonce;
  const rules=ctx.rules||minigameRules({solo:ctx.controls||{}}),fee3=rules.fee3;
@@ -121,21 +121,21 @@ export function soloAction(source,account,ctx,input,rng=Math.random){const state
  for(const k of MG_SOLO){const r=state[k];if(r?.phase!=='active')continue;const paid=r.paidAt??r.start??0;if(rules.emergency||rules.emergencyAt&&paid<=rules.emergencyAt){const fee=paidFee(r,k);r.phase='void';coins=refundInto(game,coins,fee);voided.push({game:k,coins:fee.coin,hat:fee.hat,mb:fee.mb});}}
  /* Witch / candy rounds left past their maximum length (pauses included) are settled from their last checkpoint. */
  const settleExt=(k,res)=>{const r=state[k],gain=Math.round(Number(res?.gain));if(!Number.isSafeInteger(gain))fail('ผลรอบไม่ถูกต้อง');r.phase='done';r.gain=gain;r.breakdown=res.breakdown??null;r.doneAt=ctx.now;progress.cd[k]=ctx.now+MG_CD[k]*60000;
-  if(gain>0)reward(k,EXT[k].icon,MG_NAMES[k]+' +'+num(gain)+' กุศล',gain);else if(gain<0){const m0=game.merit||0;game.merit=Math.max(Math.min(m0,0),m0+gain);}return r;};
+  if(gain>0)reward(k,EXT[k].icon,MG_NAMES[k]+' +'+num(gain)+' กุศล',gain);else if(gain<0){const m0=game.merit||0;game.merit=m0+gain;}return r;};
  const overdue=(k,r)=>r?.phase==='active'&&ctx.now-(r.startedAt??r.paidAt??0)>(r.maxMs||MG_MAX_MS[k])+60000;   // one minute of grace for a late finish
  const abandoned=[];
  if(!rules.emergency)for(const k of ['witch','candy'])if(overdue(k,state[k])){settleExt(k,EXT[k].abandon(structuredClone(state[k]),ctx.now));state[k].abandoned=true;abandoned.push(k);}
  const result=()=>({state,game,coins,reward:rewards[0]||null,rewards,voided,abandoned});
  if(rules.emergency&&/-start$/.test(String(input.type)))fail(MG_EMERGENCY);
  const checkStart=(k,scheduled=true)=>{if(!opened(k,scheduled))fail(MG_HOURS[k]&&rules.solo[k]!=='closed'?MG_NAMES[k]+' เปิด '+hh(k)+' เวลาไทย':MG_NAMES[k]+' ปิดอยู่ชั่วคราว');
-  if((progress.cd[k]||0)>ctx.now)fail('⏳ พัก'+MG_NAMES[k]+'อีก '+cdLeft(k)+' นาที');const fee={...fee3[k]};coins=payFee(game,coins,fee,MG_MIN[k]);return fee;};
+  if((progress.cd[k]||0)>ctx.now)fail('⏳ พัก'+MG_NAMES[k]+'อีก '+cdLeft(k)+' นาที');/* S4: ธีมฮาโลวีนในมินิเกม = ค่าเข้า ×2 (เฉพาะเกมเดี่ยว ไม่รวมไพ่แคง) */const mul=input&&input.theme==='hw'&&k!=='kang'?2:1;const fee={coin:fee3[k].coin*mul,hat:fee3[k].hat*mul,mb:fee3[k].mb*mul};coins=payFee(game,coins,fee,MG_MIN[k]);return fee;};
  if(input.type==='status'){state.offer=state.offer?withEvil(state.offer):birdOffer(nonce);state.moleOffer ||= moleRound(rng,0,'offer');state.basketOffer ||= basketRound(rng,0,'offer');return result();}
  if(input.type==='pk-start'){
   if(state.pk?.phase==='active')return result();const fee=checkStart('pk',inHours(hours,rules.hours.pk));const angels=int(rng,5,10);state.pk={id:nonce,phase:'active',start:ctx.now,paidAt:ctx.now,fee,kind:shuffle(rng,Array.from({length:16},(_,i)=>i<angels?'angel':'devil'))};return result();
  }
  if(input.type==='pk-finish'){
-  const r=state.pk;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบจิ้มฟักทองไม่ถูกต้อง');const picks=input.picks;if(!Array.isArray(picks)||picks.length!==4||new Set(picks).size!==4||picks.some(i=>!Number.isInteger(i)||i<0||i>15))fail('เลือกฟักทอง 4 ลูกที่ต่างกัน');r.picks=picks;r.angels=picks.filter(i=>r.kind[i]==='angel').length;r.phase='done';progress.cd.pk=ctx.now+MG_CD.pk*60000;const merit={4:100000,3:20000,2:0,1:-5000,0:-15000}[r.angels];
-  if(merit>0)reward('pk','🎃','จิ้มฟักทอง +'+num(merit)+' กุศล',merit);else if(r.angels===2)reward('pk','📦','รางวัลปลอบใจจิ้มฟักทอง',0,{'bird-box-ostrich':10,'bird-box-dodo':10});else game.merit=Math.max(0,(game.merit||0)+merit);r.gain=merit;return result();
+  const r=state.pk;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบจิ้มกระทงไม่ถูกต้อง');const picks=input.picks;if(!Array.isArray(picks)||picks.length!==4||new Set(picks).size!==4||picks.some(i=>!Number.isInteger(i)||i<0||i>15))fail('เลือกฟักทอง 4 ลูกที่ต่างกัน');r.picks=picks;r.angels=picks.filter(i=>r.kind[i]==='angel').length;r.phase='done';progress.cd.pk=ctx.now+MG_CD.pk*60000;const merit={4:100000,3:20000,2:0,1:-5000,0:-15000}[r.angels];
+  if(merit>0)reward('pk','🪷','จิ้มกระทง +'+num(merit)+' กุศล',merit);else if(r.angels===2)reward('pk','📦','รางวัลปลอบใจจิ้มกระทง',0,{'bird-box-ostrich':10,'bird-box-dodo':10});else game.merit=(game.merit||0)+merit;r.gain=merit;return result();
  }
  if(input.type==='bs-start'){
   if(state.bs?.phase==='active'&&ctx.now<state.bs.until)return result();if(state.bs?.phase==='active')fail('รับผลรอบเดิมก่อน');const fee=checkStart('bs',inHours(hours,rules.hours.bs));
@@ -149,16 +149,16 @@ export function soloAction(source,account,ctx,input,rng=Math.random){const state
   for(const shot of shots){if(ctx.now>r.until+maxAge||shot.t>ctx.now-r.start+500||ctx.now-r.start-shot.t>maxAge)fail('เวลายิงหมดแล้วหรือรายการเก่า');fireBird(r,shot);}return result();
  }
  if(input.type==='bs-finish'){
-  const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round||ctx.now<r.until)fail('รอบยิงนกยังไม่จบ');r.phase='done';r.gain=birdGain(r);progress.cd.bs=ctx.now+MG_CD.bs*60000;if(r.gain>0)reward('bs','🐦','ยิงนกฮาโลวีน +'+num(r.gain)+' กุศล',r.gain);else game.merit=Math.max(0,(game.merit||0)+r.gain);state.offer=birdOffer(nonce);return result();
+  const r=state.bs;if(!r||r.phase!=='active'||r.id!==input.round||ctx.now<r.until)fail('รอบยิงนกยังไม่จบ');r.phase='done';r.gain=birdGain(r);progress.cd.bs=ctx.now+MG_CD.bs*60000;if(r.gain>0)reward('bs','🐦','ยิงนกลอยกระทง +'+num(r.gain)+' กุศล',r.gain);else game.merit=(game.merit||0)+r.gain;state.offer=birdOffer(nonce);return result();
  }
  const roundStart=(key,grace0,make)=>{const cur=state[key];if(cur?.phase==='active'&&ctx.now<cur.until+grace0)return result();if(cur?.phase==='active')fail('รับผลรอบเดิมก่อน');const fee=checkStart(key);state[key]={...make(),paidAt:ctx.now,fee};return result();};
- const settle=(key,res,icon,title)=>{const r=state[key];r.phase='done';r.result=res;state[key+'Offer']=key==='mole'?moleRound(rng,0,'offer'):basketRound(rng,0,'offer');progress.cd[key]=ctx.now+MG_CD[key]*60000;if(res.merit>0)reward(key,icon,title+' +'+num(res.merit)+' กุศล',res.merit);else if(res.merit<0)game.merit=Math.max(0,(game.merit||0)+res.merit);return result();};
+ const settle=(key,res,icon,title)=>{const r=state[key];r.phase='done';r.result=res;state[key+'Offer']=key==='mole'?moleRound(rng,0,'offer'):basketRound(rng,0,'offer');progress.cd[key]=ctx.now+MG_CD[key]*60000;if(res.merit>0)reward(key,icon,title+' +'+num(res.merit)+' กุศล',res.merit);else if(res.merit<0)game.merit=(game.merit||0)+res.merit;return result();};
  if(input.type==='mole-start')return roundStart('mole',0,()=>{const o=state.moleOffer||moleRound(rng,0,nonce);delete state.moleOffer;return {...o,id:nonce,phase:'active',start:ctx.now+3000,until:ctx.now+3000+MOLE.length};});
  if(input.type==='mole-hits'){const r=state.mole;if(!r||r.id!==input.round)fail('รอบตีตุ่นไม่ถูกต้อง');moleHits(r,input.hits,ctx.now);return result();}
  if(input.type==='mole-finish'){const r=state.mole;if(!r||r.phase!=='active'||r.id!==input.round||ctx.now<r.until)fail('รอบตีตุ่นยังไม่จบ');return settle('mole',moleResult(r),'🔨','ตีตุ่น');}
  if(input.type==='basket-start')return roundStart('basket',BASKET.grace,()=>{const o=state.basketOffer||basketRound(rng,0,nonce);delete state.basketOffer;return {...o,id:nonce,phase:'active',start:ctx.now+3000,until:ctx.now+3000+BASKET.length};});
  if(input.type==='basket-send'){const r=state.basket;if(!r||r.id!==input.round)fail('รอบจัดตะกร้าไม่ถูกต้อง');basketSend(r,input.witch,input.items,ctx.now);return result();}
- if(input.type==='basket-finish'){const r=state.basket;if(!r||r.phase!=='active'||r.id!==input.round||(ctx.now<r.until&&r.sent.some(x=>!x)))fail('รอบจัดตะกร้ายังไม่จบ');return settle('basket',basketResult(r),'🧺','จัดตะกร้าให้แม่มด');}
+ if(input.type==='basket-finish'){const r=state.basket;if(!r||r.phase!=='active'||r.id!==input.round||(ctx.now<r.until&&r.sent.some(x=>!x)))fail('รอบจัดตะกร้ายังไม่จบ');return settle('basket',basketResult(r),'🧺','จัดกระทงให้นางนพมาศ');}
  /* ---------- แม่มดซิ่ง / โรงงานลูกกวาด: rounds run in their own page; the server checks start, checkpoints and the final report ---------- */
  const m=/^(witch|candy)-(start|cp|finish)$/.exec(String(input.type));
  if(m){const [,k,op]=m,E=EXT[k];let r=state[k];

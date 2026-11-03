@@ -1,15 +1,15 @@
-/* fix19 🌳👻 ศึกต้นไม้ผี (เนเบอร์ฮูดแข่งกัน) — กติกาล้วน ใช้ร่วมกันทั้งเซิร์ฟเวอร์และหน้าเว็บ
+/* fix19 🌳🏮 ศึกโคมลอย (เนเบอร์ฮูดแข่งกัน) — กติกาล้วน ใช้ร่วมกันทั้งเซิร์ฟเวอร์และหน้าเว็บ
    · วันละ 2 รอบ (เวลาไทย): 01:00–12:00 และ 13:00–24:00 · จบรอบ +5 นาทีเปิดการ์ด เลือกภายใน 10 นาที · ที่เหลือเป็นพักเบรก
    · แต้มจากกิจกรรม 1–10 แต้มต่อครั้ง (ไม่จำกัดต่อคน) · ต้นไม้ 12 ขั้นตามแต้มสูงสุดของบ้านในรอบ (โดนขวานต้นไม่หด)
    · บ้านชนะ: ทุกคนเลือกแผ่นป้ายกุศลคว่ำ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง 1 ใบ (ปล้นเสบียง/ตัดบ้าน/ตัดทุกบ้าน/ตัด 4 คน) */
-import {FISH} from './fishing-catalog.js';
-import {FOOD_RECIPES} from './food-craft-engine.js';
+import {FISH} from './fishing-catalog.js?h=92b72ca3';
+import {FOOD_RECIPES} from './food-craft-engine.js?h=aa2d9199';
 export const TW_TH=[0,150,400,750,1200,1800,2600,3600,4800,6200,7800,9600];
 export const TW_TREES=7,TW_PICK_OPEN=5*60000,TW_PICK_TIME=10*60000;
 export const TW_MERIT=[5e6,5e6,10e6,10e6,30e6,50e6];
 export const TW_PRANKS=['rob','cut1','cutAll','cut4'],TW_CUT={cut1:10e6,cutAll:3e6,cut4:15e6},TW_ROB=[1000,5000],TW_ROB_HOUSES=3,TW_CUT4=4;
 export const TW_SURPRISE=['supply','shield','merit'],TW_SURPRISE_MERIT=15e6,TW_SHIELD_DROP=2e6;
-export const TW_SUPPLY=[['box','กล่องสุ่ม',500],['item.pestle','สากกะเบือ',1000],['item.angel','ปีกนางฟ้า',999],['item.coconut','มะพร้าว',999],['item.cake','เค้ก',999],['wine','ไวน์',100],['halloween.cauldron','หม้อยาแม่มด',30],['item.hat','หมวกกะลาสี',999],['item.musicbox','กล่องดนตรี',999],['coins','เหรียญฮาโลวีน',199]];
+export const TW_SUPPLY=[['box','กล่องสุ่ม',500],['item.pestle','สากกะเบือ',1000],['item.angel','ปีกนางฟ้า',999],['item.coconut','มะพร้าว',999],['item.cake','เค้ก',999],['wine','ไวน์',100],['halloween.cauldron','กระทงทอง',30],['item.hat','หมวกกะลาสี',999],['item.musicbox','กล่องดนตรี',999],['coins','เหรียญกระทงทอง',199]];
 export const TW_AXES={w:5,s:10,g:20},TW_CATS=['veg','fish','pet','honey','cook'];
 /* ---------- เวลา ---------- */
 const H=3600000,thai=now=>now+7*H;
@@ -65,10 +65,10 @@ export const TW_ROB_PATHS=['bag.item.boxdog','bag.box.cat','bag.box.hamster','ba
  'bag.rod.bamboo','bag.rod.moon','bag.rod.honey','bag.rod.sakura','bag.boost.bait','bag.fishing.crab'];
 export const TW_ROB_NAME={'bag.item.boxdog':'กล่องสุ่มหมา','bag.box.cat':'กล่องสุ่มแมว','bag.box.hamster':'กล่องสุ่มแฮมสเตอร์','bag.box.plant':'กล่องสุ่มพืช','bag.box.fruit':'กล่องสุ่มผลไม้','bag.box.mahakusal':'กล่องสุ่มมหากุศล','bag.birdbox.ostrich':'กล่องสุ่มนกกระจอกเทศ','bag.birdbox.dodo':'กล่องสุ่มโดโด้','sub.alpaca.bag.box':'กล่องสุ่มอัลปาก้า',
  'bag.item.hat':'หมวกกะลาสี','sub.alpaca.bag.wool':'ขนอัลปาก้า','bag.item.musicbox':'กล่องดนตรี','bag.item.battery':'แบตเตอรี่โรงงาน','bag.item.pestle':'สากกะเบือ','bag.item.cake':'เค้ก','bag.item.coconut':'มะพร้าว','bag.wine.moon':'ไวน์จันทร์','bag.wine.rose':'ไวน์กุหลาบ','bag.wine.blood':'ไวน์เลือด','bag.wine.eclipse':'ไวน์สุริยคราส',
- 'bag.rod.bamboo':'เบ็ดไผ่','bag.rod.moon':'เบ็ดจันทร์เสี้ยว','bag.rod.honey':'เบ็ดน้ำผึ้ง','bag.rod.sakura':'เบ็ดซากุระ','bag.boost.bait':'เหยื่อวิเศษ','bag.fishing.crab':'กรรไกรปู',coins:'เหรียญฮาโลวีน'};
+ 'bag.rod.bamboo':'เบ็ดไผ่','bag.rod.moon':'เบ็ดจันทร์เสี้ยว','bag.rod.honey':'เบ็ดน้ำผึ้ง','bag.rod.sakura':'เบ็ดซากุระ','bag.boost.bait':'เหยื่อวิเศษ','bag.fishing.crab':'กรรไกรปู',coins:'เหรียญกระทงทอง'};
 const getP=(g,p)=>{const v=p.split('.').reduce((o,k)=>o?.[k],g);return Number.isSafeInteger(v)&&v>0?v:0;};
 const setP=(g,p,n)=>{const ks=p.split('.'),last=ks.pop();let o=g;for(const k of ks){o[k] ||= {};o=o[k];}o[last]=n;};
-/* เอาของออกรวมไม่เกิน need ชิ้น · แต่ละชนิดไม่เกินครึ่งหนึ่งของที่มี (ครั้งนี้) · coins = เหรียญฮาโลวีนบนบัญชี */
+/* เอาของออกรวมไม่เกิน need ชิ้น · แต่ละชนิดไม่เกินครึ่งหนึ่งของที่มี (ครั้งนี้) · coins = เหรียญกระทงทองบนบัญชี */
 export function twRobTake(game,need,coins=0){const have=TW_ROB_PATHS.map(p=>[p,getP(game,p)]).filter(x=>x[1]>1);if(coins>1)have.push(['coins',coins]);
  const taken={};let left=Math.max(0,Math.floor(need));
  for(let pass=0;pass<200&&left>0;pass++){const open=have.filter(([p,n])=>Math.floor(n/2)-(taken[p]||0)>0);if(!open.length)break;const share=Math.max(1,Math.ceil(left/open.length));
@@ -80,7 +80,7 @@ const SUP_KEYS={box:['box-dog','box-cat','box-hamster','box-alpaca','box-plant',
  'item.pestle':'pestle','item.angel':'wings','item.coconut':'coconut','item.cake':'cake','halloween.cauldron':'halloween-cauldron','item.hat':'hat','item.musicbox':'musicbox'};
 export function twSupply(rng){const [path,name,n]=TW_SUPPLY[Math.floor(rng()*TW_SUPPLY.length)];
  if(path==='coins')return {name,n,coins:n,items:{}};const k=SUP_KEYS[path];const key=Array.isArray(k)?k[Math.floor(rng()*k.length)]:k;return {name,n,coins:0,items:{[key]:n},key};}
-/* ---------- 🦇 ค้างคาวขนลูกอม (1 นาที · ลากนิ้วฟัน) — รายการของเหมือนกันทุกเครื่องจาก seed · เซิร์ฟเวอร์คิดกุศลจากรายการที่ฟันจริง ---------- */
+/* ---------- ✨ ค้างคาวขนลูกอม (1 นาที · ลากนิ้วฟัน) — รายการของเหมือนกันทุกเครื่องจาก seed · เซิร์ฟเวอร์คิดกุศลจากรายการที่ฟันจริง ---------- */
 export const TW_BAT_MS=60000,TW_BAT_WARN=15000,TW_BAT_LIFE=3400,TW_BAT_RATE=10,TW_BAT_SETTLE=120000,TW_BAT_LEVELS=[1,2,5],TW_BAT_MAX_HITS=600;
 export const TW_BAT_ITEMS={candyO:[3000,36],candyP:[6000,22],candyG:[30000,4],rotten:[-3000,9],poison:[-6000,6],cursed:[-8000,5],cat:[-5000,9],skull:[-10000,7],axeW:[0,4],axeS:[0,2],axeG:[0,1]};
 export const TW_BAT_AXE={axeW:'w',axeS:'s',axeG:'g'};

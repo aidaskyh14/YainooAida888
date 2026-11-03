@@ -1,5 +1,5 @@
-import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js';
-import {SELL_BY_KEY,sellHave} from './sell-price.js';
+import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js?h=c397ae44';
+import {SELL_BY_KEY,sellHave} from './sell-price.js?h=e1b8b556';
 const TICK=15*60e3,DAY=864e5;
 const ST=[{k:'veg',n:'หุ้นผัก',b:3000,v:.014,lo:2000,hi:4500},{k:'fruit',n:'หุ้นผลไม้',b:4000,v:.02,lo:2500,hi:6500},{k:'fish',n:'หุ้นบ่อปลา',b:4500,v:.02,lo:2500,hi:7500},
 {k:'wine',n:'หุ้นไวน์',b:6000,v:.026,lo:3500,hi:10000},{k:'alpaca',n:'หุ้นอัลปาก้า',b:7500,v:.026,lo:4000,hi:12000},{k:'bee',n:'หุ้นซิ่ง',b:5000,v:.05,lo:500,hi:15000}];
@@ -17,8 +17,8 @@ const NEWS=[
 ['🐝','ราชินีผึ้งตื่นจากจำศีล!',{bee:40}],['🍯','น้ำผึ้งเดือนห้าขายดีถล่มทลาย!',{bee:30}],['🌸','ดอกไม้บานทั้งเมือง ผึ้งขยันสุดๆ!',{bee:25}],['🚀','หุ้นซิ่งถูกพูดถึงทั่วกลุ่ม!',{bee:35}],
 ['🐝','ผึ้งหนีรัง!!',{bee:-45}],['🐻','หมีขโมยน้ำผึ้งหมดรัง!',{bee:-35}],['🌧️','ฝนตกทั้งอาทิตย์ ผึ้งไม่ออกจากรัง!',{bee:-25}],['😵','ข่าวลือ: เจ้าของรังผึ้งหายตัว!',{bee:-30}],
 ['🎉','เทศกาลสวนประจำปีเริ่มแล้ว!',{all:10}],['🎆','ปีใหม่มาแล้ว ทุกคนใช้จ่ายสนุก!',{all:12}],['💰','นักลงทุนต่างเมืองบุกตลาดสวน!',{all:8}],['🐷','น้องน้ำผึ้งบอกว่า…วันนี้ลางดี',{rnd:30}],
-['👻','ข่าวลือ: ผีหลอกในตลาด!',{all:-10}],['🌀','พายุใหญ่ผ่านเมือง!',{all:-12}],['🧾','สรรพากรสวนมาตรวจ!',{all:-8}],['🐷','น้องน้ำผึ้งทำแจกันแตก…ลางร้าย',{rnd:-30}],
-['🔀','ขาใหญ่ย้ายพอร์ต!',{swap:20}],['🎰','ตลาดปั่นป่วน!!',{chaos:25}],['🧙','แม่มดร่ายมนต์ใส่ตลาด!',{chaos:20}],['🎲','ลูกเต๋ายักษ์กลิ้งผ่านตลาด!',{rnd:25}]];
+['🏮','ข่าวลือ: โคมลอยตกใส่ตลาด!',{all:-10}],['🌀','พายุใหญ่ผ่านเมือง!',{all:-12}],['🧾','สรรพากรสวนมาตรวจ!',{all:-8}],['🐷','น้องน้ำผึ้งทำแจกันแตก…ลางร้าย',{rnd:-30}],
+['🔀','ขาใหญ่ย้ายพอร์ต!',{swap:20}],['🎰','ตลาดปั่นป่วน!!',{chaos:25}],['👸','นางนพมาศร่ายรำกลางตลาด!',{chaos:20}],['🎲','ลูกเต๋ายักษ์กลิ้งผ่านตลาด!',{rnd:25}]];
 export const WINE_BAG_RATE=.8,BAG_SELL_ROWS=300;
 const WINES=[['rose','ไวน์กุหลาบวิญญาณ',2500],['moon','ไวน์องุ่นแสงจันทร์',4000],['blood','ไวน์องุ่นโลหิต',6000],['eclipse','ไวน์ราชันสุริยคราส',10000]];
 
@@ -43,7 +43,8 @@ function autoNews(sl){if(autoCache[sl]!==undefined)return autoCache[sl];const sd
  const ix=Math.floor(h32(sd,sl,11)*NEWS.length),n=NEWS[ix],t=sl*SLOT+Math.floor(h32(sd,sl,13)*SLOT);
  const o={t,e:n[0],txt:n[1],ef:n[2],auto:true,pick:Math.floor(h32(sd,sl,17)*6),top:Math.floor(h32(sd,sl,19)*6),bot:Math.floor(h32(sd,sl,23)*6)};return autoCache[sl]=o}
 function newsAt(sl){const ad=S.news.find(n=>Math.floor(n.t/SLOT)===sl);return ad||autoNews(sl)}
-function newsUpTo(t,from){const L=[];for(let sl=Math.floor(from/SLOT);sl<=Math.floor(t/SLOT);sl++){const n=newsAt(sl);if(n.t<=t&&n.t>=from)L.push(n)}return L}
+/* ซีซัน 4: แอดมินส่งข่าวได้ทุกเมื่อ (หลายข่าวต่อรอบได้) · ข่าวสุ่มของรอบยังอยู่ถ้าออกก่อนข่าวแอดมิน */
+function newsUpTo(t,from){const L=[];for(let sl=Math.floor(from/SLOT);sl<=Math.floor(t/SLOT);sl++){const ads=S.news.filter(n=>Math.floor(n.t/SLOT)===sl),au=autoNews(sl);if(!ads.length||au.t<ads[0].t)ads.unshift(au);for(const n of ads)if(n.t<=t&&n.t>=from)L.push(n)}return L}
 function effect(i,t){let m=1;const s=ST[i].k;
  newsUpTo(t,t-400).forEach(n=>{const dt=t-n.t;if(dt<0||dt>400)return;const f=Math.pow(.985,dt);let p=0;const ef=n.ef;
   if(ef.all)p=ef.all;else if(ef[s]!=null)p=ef[s];else if(ef.rnd&&n.pick===i)p=ef.rnd;else if(ef.swap){if(n.top===i)p=-ef.swap;if(n.bot===i)p=ef.swap}else if(ef.chaos)p=(h32(n.t,i,5)*2-1)*ef.chaos;
@@ -54,8 +55,8 @@ function price(i,t){build(t);const a=BASE[ST[i].k];return Math.exp(a[t-T0])*effe
 return {price,newsUpTo,autoNews,modeAt,daySeed,h32,SLOT,MODES,clear(){for(const k in BASE)delete BASE[k];for(const k in autoCache)delete autoCache[k];}};
 }
 
-/* fix14 มุมฮาโลวีน: ขายของฮาโลวีน (ช่วงหลอน 18:00–22:00 เวลาไทย +20%) + หีบแม่มด (ชนิดละ 3 ครบ 8 ชนิด) */
-export const HW_ITEMS=[['candy','ลูกอมผี',200],['bat','ค้างคาวจิ๋ว',200],['candle','เทียนผี',400],['web','ใยแมงมุม',600],['hat','หมวกแม่มด',1200],['broom','ไม้กวาดแม่มด',1200],['pumpkin','ฟักทองแกะสลักเรืองแสง',3000],['cauldron','หม้อยาแม่มด',10000]];
+/* fix14 มุมลอยกระทง: ขายของลอยกระทง (ช่วงหลอน 18:00–22:00 เวลาไทย +20%) + หีบแม่มด (ชนิดละ 3 ครบ 8 ชนิด) */
+export const HW_ITEMS=[['candy','ดอกดาวเรือง',200],['bat','หิ่งห้อยน้อย',200],['candle','ธูปหอม',400],['web','ดอกบัว',600],['hat','พวงมาลัย',1200],['broom','ใบตองทอง',1200],['pumpkin','กระทงใบตอง',3000],['cauldron','กระทงทอง',10000]];
 export const HW_CHEST_COST=3,HW_HAUNT_BONUS=.2;
 export const hwHaunting=now=>{const h=new Date(now+7*3600000).getUTCHours();return h>=18&&h<22;};
 export const hwPrice=(k,now)=>{const it=HW_ITEMS.find(x=>x[0]===k);return it?Math.round(it[2]*(hwHaunting(now)?1+HW_HAUNT_BONUS:1)):0;};
@@ -65,7 +66,7 @@ export const HW_GFOOD=['r1','r2','r3','r4','r5','r6','r7','r8','n1','n2','n3','n
 // fix15f: ยาพิษแม่มด 20% (เล็ก 10 · กลาง 6 · ใหญ่ 3 · ใหญ่สุด 1) แบ่งมาจากของเดิม
 export const HW_PRIZES=[[15,'merit'],[3,'boost'],[8,'wine'],[8,'gfood'],[8,'box'],[7,'musicbox'],[7,'hat'],[7,'cake'],[7,'wings'],[6,'coconut'],[4,'fert'],[10,'p0'],[6,'p1'],[3,'p2'],[1,'p3']];
 /* ยาพิษ: ได้แล้วต้องสาดใส่เพื่อนทันที (เลือกใน 1 นาที ไม่เลือก = ระบบสุ่มเพื่อน) · คนโดนลดกุศลผ่าน ledger · ไม่บอกชื่อคนสาด */
-export const HW_POISON=[{n:'ยาพิษฟักทอง',size:'ขวดเล็ก',d:20000},{n:'ยาพิษค้างคาว',size:'ขวดกลาง',d:50000},{n:'ยาพิษหัวกะโหลก',size:'ขวดใหญ่',d:100000},{n:'ยาพิษปีศาจแดง',size:'ขวดใหญ่สุด',d:200000}];// fix19: ×4 (เดิม 5k/12k/25k/50k) · ขวดที่สาดไปแล้วหักตามค่าที่บันทึกตอนสาด
+export const HW_POISON=[{n:'ยาพิษดอกบัว',size:'ขวดเล็ก',d:20000},{n:'ยาพิษหิ่งห้อย',size:'ขวดกลาง',d:50000},{n:'ยาพิษดวงจันทร์',size:'ขวดใหญ่',d:100000},{n:'ยาพิษยักษ์แดง',size:'ขวดใหญ่สุด',d:200000}];// fix19: ×4 (เดิม 5k/12k/25k/50k) · ขวดที่สาดไปแล้วหักตามค่าที่บันทึกตอนสาด
 /* fix16 น้ำมนต์แก้พิษ: คู่กับยาพิษ 1:1 (a0 แก้ขวดเล็กเท่านั้น …) · คราฟสำเร็จ 100% · เก็บที่ bag.antidote.a0..a3 */
 /* fix19: ของคราฟ ×2 */
 export const HW_ANTI=[{n:'น้ำมนต์ดอกมะลิ',coin:16,items:{candy:10,bat:10},pestle:100},{n:'น้ำมนต์โบว์ฟ้า',coin:30,items:{candle:10,web:10},pestle:200},
@@ -149,7 +150,7 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
  if(input.type==='anti-craft'){
  const k=input.k,n=input.qty??1,R=HW_ANTI[k];if(!Number.isInteger(k)||!R||!Number.isInteger(n)||n<1||n>10)fail('น้ำมนต์หรือจำนวนไม่ถูกต้อง');
  const coins=Number.isSafeInteger(ctx.coins)?ctx.coins:0,pestle=Number(game.bag?.item?.pestle)||0;
- const short=[...Object.entries(R.items).filter(([i,q])=>hwHave(game,i)<q*n).map(([i,q])=>HW_ITEMS.find(x=>x[0]===i)[1]+' '+hwHave(game,i)+'/'+q*n),...(pestle<R.pestle*n?['สากกะเบือ '+pestle+'/'+R.pestle*n]:[]),...(coins<R.coin*n?['เหรียญฮาโลวีน '+coins+'/'+R.coin*n]:[])];
+ const short=[...Object.entries(R.items).filter(([i,q])=>hwHave(game,i)<q*n).map(([i,q])=>HW_ITEMS.find(x=>x[0]===i)[1]+' '+hwHave(game,i)+'/'+q*n),...(pestle<R.pestle*n?['สากกะเบือ '+pestle+'/'+R.pestle*n]:[]),...(coins<R.coin*n?['เหรียญกระทงทอง '+coins+'/'+R.coin*n]:[])];
  if(short.length)fail('วัตถุดิบไม่พอ: '+short.join(' • '));
  game.bag.halloween ||= {};for(const [i,q] of Object.entries(R.items))game.bag.halloween[i]=hwHave(game,i)-q*n;game.bag.item ||= {};game.bag.item.pestle=pestle-R.pestle*n;
  game.bag.antidote ||= {};game.bag.antidote['a'+k]=antiHave(game,k)+n;
@@ -161,7 +162,7 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
  return {...result(),thrown:{p:it.p,d:HW_POISON[it.p].d,id:it.id}};
  }
  if(input.type==='hw-chest'){
- if(Array.isArray(market.poison)&&market.poison.length)fail('☠️ สาดยาพิษที่ได้ให้เสร็จก่อนนะ');
+ if(Array.isArray(market.poison)&&market.poison.length)fail('🧪 สาดยาพิษที่ได้ให้เสร็จก่อนนะ');
  const n=input.count??1;if(!Number.isInteger(n)||n<1||n>10)fail('จำนวนหีบไม่ถูกต้อง');
  const short=HW_ITEMS.filter(([k])=>hwHave(game,k)<HW_CHEST_COST*n);if(short.length)fail('ของยังไม่ครบ: '+short.map(([k,nm])=>nm+' '+hwHave(game,k)+'/'+HW_CHEST_COST*n).join(' • '));
  for(const [k] of HW_ITEMS)game.bag.halloween[k]=hwHave(game,k)-HW_CHEST_COST*n;
@@ -170,7 +171,7 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
  }
  if(input.type==='news'||input.type==='mode'){
  if(!ctx.admin)fail('เฉพาะแอดมิน');if(input.type==='mode'){if(!maths.MODES[input.mode])fail('รูปแบบตลาดไม่ถูกต้อง');config.modes.push({t:tick+1,m:input.mode});}
- else{const slot=Math.floor(tick/maths.SLOT);if(config.news.some(n=>Math.floor(n.t/maths.SLOT)===slot)||maths.autoNews(slot).t<=tick)fail('รอบข่าวนี้ส่งไปแล้ว');const n=NEWS[input.index];if(!Number.isInteger(input.index)||!n)fail('ข่าวไม่ถูกต้อง');const nw={t:tick,e:n[0],txt:n[1],ef:n[2]};if(n[2].rnd)nw.pick=Math.floor(maths.h32(ctx.now,slot,7)*6);if(n[2].swap){const c=ST.map((_,i)=>price(i)/maths.price(i,tick-96)-1);nw.top=c.indexOf(Math.max(...c));nw.bot=c.indexOf(Math.min(...c));}config.news.push(nw);}
+ else{const slot=Math.floor(tick/maths.SLOT);const n=NEWS[input.index];if(!Number.isInteger(input.index)||!n)fail('ข่าวไม่ถูกต้อง');const nw={t:tick,e:n[0],txt:n[1],ef:n[2]};if(n[2].rnd)nw.pick=Math.floor(maths.h32(ctx.now,slot,7)*6);if(n[2].swap){const c=ST.map((_,i)=>price(i)/maths.price(i,tick-96)-1);nw.top=c.indexOf(Math.max(...c));nw.bot=c.indexOf(Math.min(...c));}config.news.push(nw);}
  // Only the latest 35 days influence displayed history. Bound configuration entries.
  config.news=config.news.filter(n=>n.t>=tick-3360).slice(-280);config.modes=config.modes.slice(-128);return result();
  }

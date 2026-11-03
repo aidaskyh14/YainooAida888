@@ -1,4 +1,4 @@
-/* ฮาโลวีนวุ่น ตุ่นบุกสวน! — server rules. The client only animates what this round object says. */
+/* ลอยกระทงวุ่น ตุ่นบุกสวน! — server rules. The client only animates what this round object says. */
 const fail=m=>{throw new Error(m);};
 const int=(r,a,b)=>a+Math.floor(r()*(b-a+1)),pick=(r,a)=>a[Math.floor(r()*a.length)],uni=(r,a,b)=>a+r()*(b-a);
 export const MOLE_TYPES=['pumpkin','vampire','ghost','witch','mummy','devil'];
