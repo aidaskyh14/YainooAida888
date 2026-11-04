@@ -13,7 +13,7 @@ export const PRANKS={
  sign:{n:'ปักป้ายแซว',icon:'🪧',img:'prank-sign',pay:['candy',5],merit:15000,broom:25,plot:false,desc:'เจ้าของสวนต้องเปิดอ่าน'}};
 export const HW_NAMES={candy:'ดอกดาวเรือง',candle:'ธูปหอม',web:'ดอกบัว',pumpkin:'กระทงใบตอง',bat:'หิ่งห้อยน้อย',broom:'ใบตองทอง'};
 export const PRANK_MSGS=['ปลูกบ้างนะผักอ่ะเล่นแต่มินิเกม','นอนบ้างนะจ๊ะ จะชนะให้ได้เลยมั้ง','อย่างอแงค่ะ','จุ๊กกรู้วววว มีใครอยู่บ้างไหม ร้างหมดแล้วบ้าน','สวนอะไรดูเหมือนไม่ได้รับการดูแลมานาน','ไม่เลิศ','ว่างๆ ปลูกผักบ้างเด้อ','ซีซั่นนี้ยังเล่นอยู่ไหม ถ้า ไม่ จะได้ไปแจ้งความคนหายสาปสูญ','ป๊าาาาาดนอนดึกเกินไปป๊ะ','เห็นเล่นตลอด แต่แอ๊บ ทำเป็นไม่ค่อยได้เล่น รู้ทันนะ','แหมๆๆ เก่งทุกอย่าง ยกเว้นการปลูกผัก','เติมโปรบ้างนะ จะได้เอาไอเท็มมาปลูกผัก ไม่ใช่เติมแต่โปรเหรียญ'];
-export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:750,pumpkin:150,candle:250,web:250}/* fix19: ×5 (กุศลแก้ ×10 · ใบตองทอง ×5) */,SCARE_TIME=59*60000;
+export const PRANK_DAY=30,PRANK_GARDEN_DAY=30,SIGN_MAX=20,SCARE_COST={broom:750,pumpkin:150,candle:250,web:250}/* fix19: ×5 (กุศลแก้ ×10 · ใบตองทอง ×5) */,SCARE_TIME=59*60000,SCARE_MULT={1:1,2:2,3:4,4:8},SCARE_NAMES={1:'หุ่นฟางชาวนา',2:'หุ่นยักษ์ทวารบาล',3:'หุ่นทหารเฝ้าสวน',4:'หุ่นพญานาคทอง'};
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const num=n=>Number.isSafeInteger(Number(n))&&Number(n)>0?Math.floor(Number(n)):0;
 export const thaiDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);
@@ -29,7 +29,7 @@ export function prankAction(actor,target,own,ctx,input){
  let where=null;
  if(P.plot){
   const farm=input.farm??1,arr=target.farms?.[farm]||[],i=input.index;if(!Number.isInteger(i)||i<0||i>=arr.length)fail('แปลงไม่ถูกต้อง');const p=arr[i];
-  if(!p||!p.c)fail('แปลงว่าง แกล้งไม่ได้');if(p.pk)fail('แปลงนี้โดนแกล้งอยู่แล้ว');if(p.magicUntil>now)fail('แปลงมีมนต์ดำอยู่');
+  if(!p||!p.c)fail('แปลงว่าง แกล้งไม่ได้');if(p.pk)fail('แปลงนี้โดนแกล้งอยู่แล้ว');if(p.magicUntil>now)fail('แปลงมีมนต์จันทร์อยู่');
   p.pk={k,at:now};where={farm,index:i,crop:p.c};
  } else if(k==='bat'){if(st.bat)fail('สวนนี้มีหิ่งห้อยอยู่แล้ว');st.bat={at:now};}
  else {const m=input.msg;if(!Number.isInteger(m)||!PRANK_MSGS[m])fail('เลือกข้อความบนป้าย');if(st.signs.length>=SIGN_MAX)fail('สวนนี้มีป้ายครบ '+SIGN_MAX+' ป้ายแล้ว');st.signs.push({m,at:now});}
@@ -60,8 +60,9 @@ export function prankFix(game,ctx,input){
   const ids=input.all?st.signs.map((_,i)=>i):Array.isArray(input.ids)?[...new Set(input.ids)]:[];if(!ids.length||ids.some(i=>!Number.isInteger(i)||!st.signs[i]))fail('เลือกป้ายที่จะถอน');
   const r=pay(game,PRANKS.sign,ids.length,input.how,input.alt);st.signs=st.signs.filter((_,i)=>!ids.includes(i));return {fixed:ids.length,...r};
  }
- if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const alt=input.alt&&input.alt!=='broom'?input.alt:null,hwb=game.bag?.halloween||{},lack=Object.entries(SCARE_COST).filter(([k,q])=>!(alt&&k==='broom')&&num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));let bp=null;if(alt){const need=SCARE_COST.broom*ALT_X;if(altHave(game,alt)<need)fail('ของแทนใบตองทองไม่พอ ต้องมี '+need.toLocaleString('en-US')+' ชิ้น');}
-  for(const[k,q]of Object.entries(SCARE_COST)){if(k==='broom'&&alt){bp=payBroom(game,q,alt);continue;}game.bag.halloween[k]=num(game.bag.halloween[k])-q;}st.scareUntil=now+SCARE_TIME;return {scare:st.scareUntil,paid:{...SCARE_COST,...(bp?{broom:0}:{})},items:bp?.items};}
+ /* S4 ข้อ 143: หุ่น 4 แบบ (sk 1–4): ฟางชาวนา ×1 (59 นาที) · ยักษ์ทวารบาล ×2 (2 ชม.) · ทหารเฝ้าสวน ×4 (4 ชม.) · พญานาคทอง ×8 (8 ชม.) · ของที่ใช้คูณตามเท่า */
+ if(kind==='scare'){if((st.scareUntil||0)>now)fail('หุ่นไล่กายังเฝ้าอยู่');const sk=[1,2,3,4].includes(input.sk)?input.sk:1,mult=SCARE_MULT[sk],COST=Object.fromEntries(Object.entries(SCARE_COST).map(([k,q])=>[k,q*mult]));const alt=input.alt&&input.alt!=='broom'?input.alt:null,hwb=game.bag?.halloween||{},lack=Object.entries(COST).filter(([k,q])=>!(alt&&k==='broom')&&num(hwb[k])<q).map(([k,q])=>HW_NAMES[k]+' อีก '+(q-num(hwb[k])));if(lack.length)fail('ของไม่พอ: '+lack.join(' · '));let bp=null;if(alt){const need=COST.broom*ALT_X;if(altHave(game,alt)<need)fail('ของแทนใบตองทองไม่พอ ต้องมี '+need.toLocaleString('en-US')+' ชิ้น');}
+  for(const[k,q]of Object.entries(COST)){if(k==='broom'&&alt){bp=payBroom(game,q,alt);continue;}game.bag.halloween[k]=num(game.bag.halloween[k])-q;}st.scareUntil=now+SCARE_TIME*mult;st.scareKind=sk;return {scare:st.scareUntil,scareKind:sk,paid:{...COST,...(bp?{broom:0}:{})},items:bp?.items};}
  if(kind==='seen'){st.seen=now;return {seen:now};}
  fail('คำสั่งแก้การแกล้งไม่ถูกต้อง');
 }

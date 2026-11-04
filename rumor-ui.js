@@ -1,6 +1,6 @@
 /* fix15 ข่าวลือในหมู่บ้าน — ป๊อปอัปบนหน้าหลัก (ทับทุกหน้าเกม) ฟังเอกสาร rumors/{uid} เอกสารเดียว ไม่ถามซ้ำ
    ทุกการกดส่งไปเซิร์ฟเวอร์ (rumorActionCloud) · เวลา 10 นาทีนับจากเวลาเซิร์ฟเวอร์ (cur.until) */
-import {RUMOR_GOOD,RUMOR_BAD,RUMOR_GROUPS,rumorName} from './rumor-engine.js?v=ss3-fix16&h=d18e32c7';
+import {RUMOR_GOOD,RUMOR_BAD,RUMOR_GROUPS,rumorName,rumorRow} from './rumor-engine.js?v=ss3-fix16&h=78c0a2cd';
 const css=`
 #rmr{position:fixed;inset:0;z-index:90;overflow-y:auto;padding:max(4vh,env(safe-area-inset-top,0px)) 4vw 6vh;display:flex;flex-direction:column;animation:rmfade .25s;font-family:'Mali','Itim',sans-serif;container-type:inline-size}
 #rmr.bad{background:radial-gradient(circle at 50% 40%,rgba(40,22,14,.35),rgba(20,10,6,.75))}
@@ -46,11 +46,12 @@ const css=`
 #rmr .news .story{font-size:4.9cqw;color:#3A2A22}
 #rmr .news .pen{position:absolute;right:9%;bottom:8.5%;font-size:4cqw;font-weight:700;color:#C8372D;background:rgba(255,240,232,.92);border:.5cqw dashed rgba(200,55,45,.6);border-radius:999px;padding:.4cqw 2.6cqw}
 #rmr .stamp{position:absolute;display:grid;place-items:center;background:center/contain no-repeat;font-family:'Chonburi','Mali',serif;pointer-events:none}
-#rmr .stamp.tag{left:-3cqw;top:-2cqw;width:28cqw;aspect-ratio:285/184;background-image:url(images/rumor-stamp-tag.webp);transform:rotate(-8deg);color:#C8372D;font-size:4.6cqw;animation:rmstamp .4s cubic-bezier(.3,1.8,.5,1) .35s both;z-index:2}
+#rmr .stamp span{opacity:0}/* S4: ตราของเธอมีคำอยู่ในรูปแล้ว */
+#rmr .stamp.tag{left:-3cqw;top:-2cqw;width:26cqw;aspect-ratio:1;background-image:url(images/rumor-stamp-tag.webp);transform:rotate(-8deg);color:#C8372D;font-size:4.6cqw;animation:rmstamp .4s cubic-bezier(.3,1.8,.5,1) .35s both;z-index:2}
 #rmr .stamp.tag span{transform:rotate(-13deg)}
 #rmr .stamp.big{left:50%;top:48%;transform:translate(-50%,-50%) rotate(-10deg);z-index:4;animation:rmstampb .45s cubic-bezier(.3,1.8,.5,1) both}
 #rmr .stamp.real{width:50cqw;aspect-ratio:1;background-image:url(images/rumor-stamp-real.webp);color:#C8372D;font-size:8cqw}
-#rmr .stamp.fake{width:66cqw;aspect-ratio:285/184;background-image:url(images/rumor-stamp-fake.webp);color:#2F8A4C;font-size:8cqw}
+#rmr .stamp.fake{width:60cqw;aspect-ratio:1;background-image:url(images/rumor-stamp-fake.webp);color:#2F8A4C;font-size:8cqw}
 #rmr .stamp.fake span{transform:rotate(-14deg)}
 @keyframes rmstamp{from{transform:scale(2.6) rotate(-8deg);opacity:0}}@keyframes rmstampb{from{transform:translate(-50%,-50%) scale(2.4) rotate(-10deg);opacity:0}}
 #rmr .acts{display:grid;gap:2cqw}
@@ -88,7 +89,7 @@ export function startRumors(api){
  async function settle(c){if(settling===c.id)return;settling=c.id;const out=await send({type:'settle'},true);
   if(!out){settling=null;tries++;return;}tries=0;
   if(c.k==='B'&&out.result?.merit)toast('⌛ ไม่ได้แก้ข่าวลือทันเวลา<br>ถือว่ายอมรับ <b>'+fmt(out.result.merit)+'</b> กุศล');else if(c.k==='G')toast('⌛ ข่าวดีหายไปแล้ว ไม่ได้กดรับภายใน 10 นาที');}
- function showGood(c){const [txt,amt]=RUMOR_GOOD[c.i]||[];if(txt==null)return;const v=document.createElement('div');v.id='rmr';v.className='good';
+ function showGood(c){const [txt,amt]=rumorRow(c)||[];if(txt==null)return;const v=document.createElement('div');v.id='rmr';v.className='good';
   v.innerHTML=`<div class="pop" role="dialog" aria-label="ข่าวลือดีๆ"><div class="g-top"><div class="g-rib"><span>ข่าวลือดีๆ ในหมู่บ้าน</span></div><div class="g-birds"></div></div>
    <div class="letter"><span class="spark" style="left:2%;top:40%">✨</span><span class="spark" style="right:0;top:48%;animation-delay:.6s">💖</span><span class="spark" style="left:30%;bottom:2%;animation-delay:1.1s">⭐</span>
     <div class="txt"><div class="from">🐦 นกน้อยกระซิบมาว่า…</div><p class="story">${esc(txt)}</p></div><div class="reward"><b>🙏 +${fmt(amt)} กุศล</b></div></div>
@@ -101,7 +102,7 @@ export function startRumors(api){
    const conf=document.createElement('div');conf.className='conf';conf.innerHTML=Array.from({length:44},(_,k)=>`<i style="left:${Math.random()*100}%;background:${['#FF9DB7','#FFD95A','#7ED6A0','#9DC8FF','#C7A4EE'][k%5]};animation-delay:${Math.random()*.4}s"></i>`).join('');v.querySelector('.pop').append(conf);
    setTimeout(()=>{close();toast('🎉 ได้รับ <b>+'+fmt(out.result?.merit||amt)+'</b> กุศล');},1400);};
   v.querySelector('#rmNo').onclick=async()=>{const out=await send({type:'close'});if(out)close();};}
- function showBad(c){const [txt,pen,needs]=RUMOR_BAD[c.i]||[];if(txt==null)return;const v=document.createElement('div');v.id='rmr';v.className='bad';
+ function showBad(c){const [txt,pen,needs]=rumorRow(c)||[];if(txt==null)return;const v=document.createElement('div');v.id='rmr';v.className='bad';
   v.innerHTML=`<div class="pop" role="dialog" aria-label="ข่าวลือ"><div class="b-wrap"><div class="b-crows"></div>
    <div class="news"><div class="stamp tag"><span>ข่าวลือ!</span></div><div class="mast">ซุบซิบหมู่บ้าน</div><div class="ed">ฉบับพิเศษ · เขาลือกันว่า…</div>
     <div class="txt"><p class="story">${esc(txt)}</p></div><div class="pen">ถ้าเป็นข่าวจริง −${fmt(pen)} กุศล</div></div></div>

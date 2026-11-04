@@ -6,12 +6,12 @@ import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=cb6616b6';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss3-fix17&h=8a15b474';
+import {startRumors} from './rumor-ui.js?v=ss3-fix17&h=9147b483';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18&h=6cb9340c';
-import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=4f7d2104';
-import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=e118caf6';
-import './mahakusal-ui.js?v=ss3-fix18&h=297b1d58';import './atm-ui.js?v=ss3-fix24&h=c024a2ff';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17&h=d18e32c7';
+import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=126b4f9c';
+import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
+import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17&h=78c0a2cd';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=3ff672c0';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss3-fix19&h=fd044428';
+import { CATALOG } from './catalog.js?v=ss3-fix19&h=0182268e';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -78,7 +78,7 @@ function queueGameplay(before,after,source,boxes){
  const craft=['farm','house','backyard'].includes(source);
  const stockChanged=pet&&JSON.stringify(before.bag)!==JSON.stringify(after.bag);
  const meritChanged=pet&&(after.merit||0)>(before.merit||0);
- if(meritChanged&&typeof petEarnBuf==='number')petEarnBuf=Math.min(5e5,petEarnBuf+(after.merit||0)-(before.merit||0));/* fix17 😈 ตั๋วดร็อปจากการดูแลสัตว์ (สุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้าสัตว์) */
+ if(meritChanged&&typeof petEarnBuf==='number')petEarnBuf=Math.min(5e5,petEarnBuf+(after.merit||0)-(before.merit||0));/* fix17 🎭 ตั๋วดร็อปจากการดูแลสัตว์ (สุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้าสัตว์) */
  const craftChanged=craft&&['food','gfood','wine','flower','hedge','crop'].some(k=>increased(before.bag?.[k],after.bag?.[k]));
  // `at` is the device clock; the server offset is applied when the job is scored.
  const petEarn=craft&&((after.hedgeEarn||0)>(before.hedgeEarn||0)||(after.ham?.earn||0)>(before.ham?.earn||0));
@@ -277,7 +277,7 @@ async function enter(user) {
     stage='ตรวจกุศลที่รอปรับจากเกมอื่น';await cloudAction('ledger',{type:'status'}).catch(()=>null);
     renderGame('loading');
     // fix15 ข่าวลือ: ฟังเอกสารของตัวเองเอกสารเดียว (แอดมินไม่รับข่าวลือ)
-    watchRumors();watchAlerts();
+    watchRumors();watchAlerts();watchGameOpen();
   } catch (e) {
     clearInterval(S.timer);
     const message=e?.message||'ไม่พบรายละเอียด',code=e?.code||'ไม่ระบุรหัส';
@@ -464,8 +464,20 @@ async function tabApprovals(){
  B.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>decide(b.dataset.approve,'approved'));B.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>decide(b.dataset.reject,'rejected'));
  }catch(e){B.textContent=thaiError(e);}
 }
+/* S4 ข้อ 158: แอดมินกดปิดเกม → ผู้เล่นทุกคนที่อยู่ในเกมเห็นหน้าแจ้งเตือนทันที (ฟัง settings/global สด) · เปิดใหม่แล้วโหลดเกมให้เอง */
+let gameOpenStop=null,emergencyShown=false;
+function watchGameOpen(){if(S.admin)return;gameOpenStop?.();gameOpenStop=onSnapshot(doc(db,'settings','global'),snap=>{const open=snap.exists()?!!snap.data().open:false;if(!open&&!emergencyShown)showEmergency();else if(open&&emergencyShown)location.reload();},()=>{});}
+function showEmergency(){emergencyShown=true;try{frameSave(true);}catch(e){}try{if(S.frame)blankScene();}catch(e){}
+  let o=document.getElementById('s4emerg');if(!o){o=document.createElement('div');o.id='s4emerg';document.body.appendChild(o);}
+  o.innerHTML=`<style>#s4emerg{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#3a2a5e,#1b1433 70%);font-family:Mali,sans-serif;color:#fff;text-align:center;padding:24px}
+  #s4emerg .card{position:relative;z-index:2;max-width:360px;width:100%;background:rgba(255,248,236,.96);color:#5a3e2b;border-radius:28px;padding:22px 20px 24px;box-shadow:0 20px 60px rgba(0,0,0,.45);border:4px solid #fff}
+  #s4emerg img{width:150px;height:150px;object-fit:contain;display:block;margin:0 auto 8px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.25))}
+  #s4emerg h2{margin:.2rem 0 .6rem;font-size:1.25rem;color:#c0392b}#s4emerg p{margin:.35rem 0;font-size:1rem;line-height:1.55}#s4emerg small{display:block;margin-top:.9rem;color:#9a7a68;font-size:.8rem}
+  #s4emerg .lan{position:absolute;width:26px;height:34px;border-radius:8px 8px 10px 10px;background:linear-gradient(#ffd27a,#ff9a3c);opacity:.85;animation:s4lan 7s linear infinite;box-shadow:0 0 18px #ffb347}@keyframes s4lan{from{transform:translateY(110vh)}to{transform:translateY(-20vh)}}</style>
+  ${[12,28,55,72,88].map((x,i)=>`<i class="lan" style="left:${x}%;animation-delay:${-i*1.6}s"></i>`).join('')}
+  <div class="card"><img src="${IMG('honey-face-oops.webp')}" alt=""><h2>⛔ ปิดเกมชั่วคราว</h2><p>ยัยหนู สั่งปิดเกมฉุกเฉิน<br>รบกวนออกจากหน้านี้ตอนนี้ด้วยค่ะ</p><p>หากเกมกลับมาปกติแล้ว<br>ยัยหนู จะแจ้งในกลุ่มแชตค่ะ</p><small>หน้านี้จะเปิดเกมให้เองเมื่อยัยหนูเปิดเกมอีกครั้ง</small></div>`;}
 function renderClosed() {
-  $('#app').innerHTML = `<div class="home"><div class="soon"><h2>🌙 สวนกำลังจะเปิด</h2><p>ยัยหนูกำลังเตรียมซีซั่น 3 อยู่ เข้าระบบไว้แล้ว รอประกาศในกลุ่มได้เลย</p>
+  $('#app').innerHTML = `<div class="home"><div class="soon"><h2>🌙 สวนกำลังจะเปิด</h2><p>ยัยหนูกำลังเตรียมซีซั่น 4 อยู่ เข้าระบบไว้แล้ว รอประกาศในกลุ่มได้เลย</p>
     <div class="grid2"><button class="tile" id="tMail"><span>📮</span>ไปรษณีย์</button><button class="tile" id="tOut"><span>🚪</span>ออกจากระบบ</button></div></div></div>`;
   $('#tMail').onclick = openMail; $('#tOut').onclick = logout;
 }
@@ -611,7 +623,7 @@ function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null
  /* fix19 🌳 ศึกโคมลอย: ทุกคน (รวมแอดมิน) */
  twStop=startTreeWar({watchState:fn=>onSnapshot(doc(db,'world','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),watchMine:fn=>onSnapshot(doc(db,'players',S.user.uid,'gameViews','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),call:input=>httpsCallable(functions,'treeWarActionCloud')({input}).then(r=>r.data),now:()=>Date.now()+serverOffset,toast,screen:()=>S.screen,go:n=>goScreen(n),ledger:()=>sceneSafeAction('ledger',{type:'login'}),hold:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen()});
  if(S.admin)return;
- /* fix17 😈 ไอเทมปีศาจ: ฝั่งคนโดน + กระเป๋า 48 ชม. (อ่าน gameViews/demon ของตัวเองเท่านั้น) */
+ /* fix17 🎭 ไอเทมปีศาจ: ฝั่งคนโดน + กระเป๋า 48 ชม. (อ่าน gameViews/demon ของตัวเองเท่านั้น) */
  demonStop=startDemon({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>hwOpen()||RUMOR_HOLD.has(S.screen)||S.navigating?cloudAction(sys,input):sys==='demon'&&['settle','sync','seal','pass'].includes(input?.type)&&S.frame&&S.screen?demonQuiet(sys,input):sceneSafeAction(sys,input),now:()=>Date.now()+serverOffset,game:()=>S.P?.g,x17:()=>S.P?.x17||{},uid:S.user.uid,roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,screen:()=>S.screen});
  alertStop=startAlerts({watch:(name,fn)=>onSnapshot(doc(db,'players',S.user.uid,'gameViews',name),snap=>fn(snap.exists()?snap.data():null),()=>{}),act:(sys,input)=>{/* fix16: ไม่โหลดหน้าใหม่ตอนแค่ "เห็นยาพิษ" หรือระหว่างมินิเกม/แข่ง (หน้าพวกนั้นไม่ได้บันทึกทับ) */return input?.type==='poison-seen'||hwOpen()||RUMOR_HOLD.has(S.screen)?cloudAction(sys,input):sceneSafeAction(sys,input);},now:()=>Date.now()+serverOffset,toast,game:()=>S.P?.g,x17:()=>S.P?.x17||{},screen:()=>S.screen,go:n=>goScreen(n)});}
 function watchRumors(){rumorStop?.();rumorStop=null;if(!S.user)return;
@@ -660,7 +672,7 @@ const HOST_BASE = {
   watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[],serverNow())})),
   // Loot boxes open over the live scene (no blank frame). While the overlay owns the inventory the old
   // scene is frozen: its saves are dropped so a stale copy can never write box counts back; it reloads after close.
-  openBoxes:async kind=>{const H=window.__HOST;let frozen=null;
+  openBoxes:async (kind,opt)=>{const H=window.__HOST;let frozen=null;
     // The freeze ends as soon as the reloaded scene (a new document) first reads the Host, not at its slower load event.
     const freeze=()=>{if(frozen)return;let doc=null;try{doc=S.frame?.contentDocument||null;}catch(e){}frozen={set:H.set,del:H.del,get:H.get,doc};H.set=()=>{};H.del=()=>{};
       H.get=function(k){let d=null;try{d=S.frame?.contentDocument||null;}catch(e){}if(frozen&&reloading&&d&&d!==frozen.doc&&d.URL!=='about:blank')thaw();return (frozen?frozen.get:H.get).call(H,k);};stopSceneSubscriptions();};
@@ -670,14 +682,14 @@ const HOST_BASE = {
     /* fix17c 📦 กล่องมหากุศล: เปิดจากกระเป๋าได้เลยทุกหน้า (หน้าฉากหยุดบันทึกระหว่างเปิด แล้วโหลดใหม่ให้ตรง) · คราฟอยู่ห้องใต้ดิน */
     /* fix19 🏧 ตู้ ATM: เปิดทับฉากแบบเดียวกับกล่องมหากุศล (ฉากหยุดบันทึกระหว่างโอน แล้วโหลดใหม่) */
     if(kind==='atm'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
-      return window.atmOpen?.({toast,uid:S.user?.uid,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,onClose:ch=>{if(ch)refreshScene();else thaw();}});}
+      return window.atmOpen?.({toast,bank:(opt&&opt.bank)||'lotus',uid:S.user?.uid,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,onClose:ch=>{if(ch)refreshScene();else thaw();}});}
     if(kind==='mahakusal'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
       return window.mkOpenMenu?.({toast,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},onClose:ch=>{if(ch)refreshScene();else thaw();}});}
     return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
       open:input=>{freeze();return cloudAction('boxes',input);},
       refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
   isAdmin(){return !!S.admin;},
-  openAtm(){return HOST_BASE.openBoxes('atm');},
+  openAtm(bank){return HOST_BASE.openBoxes('atm',{bank:bank==='moon'?'moon':'lotus'});},
   catalogItem(path){return CATALOG.find(c=>c.p===path.replace(/^bag\./,''));},
   catalogName(name){return CATALOG.find(c=>c.n===name||c.k===name);},
   get catalog(){return CATALOG;},
@@ -698,8 +710,12 @@ const HOST_BASE = {
   cloudRaw:(system,input)=>CLOUD_HANDLERS[system]?httpsCallable(functions,CLOUD_HANDLERS[system])({raw:true,input}).then(r=>r.data):Promise.reject(new Error('ไม่พบระบบที่เรียก')),
   x17:()=>JSON.parse(JSON.stringify(S.P?.x17||{})),
   watchWorld(system,fn){return sceneWatch(doc(db,'world',system),fn);},
-  // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
+  // fix14 แรลลี่กระทง: ตำแหน่งระหว่างวิ่ง (เขียนเฉพาะของตัวเอง) และเหตุการณ์ไอเทม
   frPublish(game,data){if(!S.user)return;try{setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),JSON.parse(JSON.stringify(data||{}))).catch(()=>{});}catch(e){}},
+  /* S4 ข้อ 180/181 เยี่ยมบ้านเรียลไทม์: presence/{owner}/v/{uid} เขียนเฉพาะของตัวเอง (ฝั่งหน้าฟาร์มคุมความถี่ ≤1 ครั้ง/1.2 วิ เฉพาะตอนขยับ · นิ่งทุก 25 วิ) · ออก = ลบ · อ่านด้วย 1 listener ต่อฟาร์ม */
+  prWrite(owner,data){if(!S.user||!owner)return;try{setDoc(doc(db,'presence',String(owner),'v',S.user.uid),{...JSON.parse(JSON.stringify(data||{})),t:Date.now()}).catch(()=>{});}catch(e){}},
+  prLeave(owner){if(!S.user||!owner)return;try{deleteDoc(doc(db,'presence',String(owner),'v',S.user.uid)).catch(()=>{});}catch(e){}},
+  prWatch(owner,fn){const version=sceneVersion;const a=onSnapshot(collection(db,'presence',String(owner),'v'),snap=>{if(version===sceneVersion)fn(snap.docs.map(d=>({uid:d.id,...d.data()})));},()=>{});sceneSubscriptions.add(a);return()=>{a();sceneSubscriptions.delete(a);};},
   frEvent(game,ev){if(!S.user)return;try{addDoc(collection(db,'funrunLive',String(game),'ev'),{...JSON.parse(JSON.stringify(ev||{})),from:S.user.uid}).catch(()=>{});}catch(e){}},
   frWatch(game,onPlayers,onEvent){const version=sceneVersion,start=Date.now()-5000;
     const a=onSnapshot(collection(db,'funrunLive',String(game),'p'),snap=>{if(version===sceneVersion)onPlayers(snap.docs.map(d=>({uid:d.id,...d.data()})));},()=>{});
@@ -743,15 +759,23 @@ function hostSet(k, v, scope) {
 }
 function renderGame(screen) {
   if (!document.getElementById('scr')) {
-    $('#app').innerHTML = `<div id="gbar" class="gbar" hidden><button id="gback">🌱 กลับฟาร์ม</button><b id="gttl"></b></div><iframe id="scr" title="ในสวนของยัยหนู"></iframe><div id="ov" class="ov" hidden></div>`;
+    $('#app').innerHTML = `<div id="gbar" class="gbar" hidden><button id="gback">🌱 กลับฟาร์ม</button><button id="gnav" aria-label="ทางลัดไประบบอื่น">🗺️</button><b id="gttl"></b></div><iframe id="scr" title="ในสวนของยัยหนู"></iframe><div id="ov" class="ov" hidden></div><div id="s4navP" hidden></div>`;
     $('#gback').onclick = () => goScreen('farm');
+    /* S4 ข้อ 40: ทุกหน้ามีทางลัดไประบบอื่นตรง ไม่ต้องผ่านฟาร์มหลัก */
+    $('#gnav').onclick = () => { const P=$('#s4navP'); if(!P.hidden){P.hidden=true;return;}
+      const SYS=[['farm','🌾','ฟาร์ม'],['house','🏠','บ้าน'],['backyard','🍳','หลังบ้าน'],['barn','🐔','โรงเรือนสัตว์'],['birds','🦒','ซาฟารี'],['dog','🐶','สวนหมา'],['catpen','🐱','สวนแมว'],['alpaca','🦙','ทุ่งอัลปาก้า'],['fishing','🎣','ตกปลา'],['shop','📈','ตลาดสวน'],['neighborhood','🏘️','เนเบอร์ฮูด'],['boat','🚤','แข่งเรือ'],['minigames','🎮','มินิเกม'],['topspenders','🏆','Top Spenders'],['campaigns','🏅','แคมเปญ']];
+      P.innerHTML='<div class="s4navB"><h3>🗺️ ไปที่…</h3><div class="s4navG">'+SYS.map(x=>'<button data-g="'+x[0]+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join('')+'</div></div>';P.hidden=false;
+      P.onclick=e=>{const b=e.target.closest('[data-g]');if(b){P.hidden=true;goScreen(b.dataset.g);}else if(e.target===P)P.hidden=true;}; };
     S.frame = $('#scr');
   }
   goScreen(screen);
 }
 async function goScreen(n) {
+  /* S4: ซีซั่นลอยกระทงไม่มีแรลลี่ (แรลลี่ฟักทองอยู่เฉพาะโหมดฮาโลวีน) */if(n==='funrun'){toast('🪷 ซีซั่นนี้ไม่มีแรลลี่นะ');return;}
   if (n === 'admin') { if (S.admin) openAdminOverlay(); return; }
   if (n === 'login') { logout(); return; }
+  /* S4: หน้า 2D ซีซัน 3 ของบ้าน/ป่า/โรงเรือน ไม่ใช่หน้าที่ผู้เล่นเข้าได้อีก (ระบบอยู่ในฟาร์ม 3D แล้ว) */
+  if (n === 'house' || n === 'forest' || n === 'barn') { try{const f=S.frame&&S.frame.contentWindow;if(n==='house'&&f&&f.__S4B&&f.__S4B.house)return f.__S4B.house();if(n==='barn'&&f&&f.__S4B&&f.__S4B.zone)return f.__S4B.zone('barn');if(n==='forest'&&f&&f.__S4B&&f.__S4B.hact)return f.__S4B.hact('drinks');}catch(e){} toast('🌾 ระบบนี้อยู่ในฟาร์มแล้ว แตะที่อาคารในสวนได้เลย'); return; }
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
   if (S.navigating) return; S.navigating = true;
   if(S.frame)S.frame.style.pointerEvents='none';
@@ -770,7 +794,7 @@ async function goScreen(n) {
   }catch(e){toast(e.message||thaiError(e));if(retired){S.navigating=false;if(prevIds)store.activate(prevIds);reloadScreen();}}
   finally{S.navigating=false;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
-/* fix17 😈 ตั๋วดร็อปจากการดูแลสัตว์: สะสมกุศลที่ได้จากหน้าสัตว์ แล้วสุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้า (หน้าเก่าปิดแล้ว ไม่ทับกระเป๋า) */
+/* fix17 🎭 ตั๋วดร็อปจากการดูแลสัตว์: สะสมกุศลที่ได้จากหน้าสัตว์ แล้วสุ่มบนเซิร์ฟเวอร์ตอนออกจากหน้า (หน้าเก่าปิดแล้ว ไม่ทับกระเป๋า) */
 var petEarnBuf=0;
 async function petFlush(){if(petEarnBuf<5000||!S.user||S.admin)return;const earned=Math.floor(petEarnBuf);petEarnBuf=0;try{await cloudAction('demon',{type:'petRoll',earned});}catch(e){}}
 // Retire the scene in the frame: new inert Host handle (old page's saves are refused), navigate to about:blank and wait
@@ -788,8 +812,20 @@ function blankScene(){
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
-function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=a08c98e6'+extra;return true;}
-function reloadScreen() { if (S.navigating) return; stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
+function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return false;meritShift=0;window.__HOST=sceneHost(ids);
+  /* S4 ข้อ 119: เข้าหน้าใดก็ตามจากทางลัด → หน้าโหลด % ขึ้นทันที (ไม่มีจอเขียวว่าง) · หน้า 3D ส่งตัวเลขต่อเอง (s4zload) · หน้าธรรมดาปิดเมื่อโหลดเสร็จ */
+  const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
+    const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
+  window.__s4zl=0;
+  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=02036048'+extra;return true;}
+/* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
+   → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
+function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
+  const doc=w.document;if(w.__s4reload){w.__s4reload();ok=true;}
+  for(const f of doc.querySelectorAll('iframe')){try{const c=f.contentWindow;if(c&&c.__s4reload){c.__s4reload();}}catch(e){}}
+  try{if(typeof w.render==='function'&&ok)w.render();}catch(e){}
+  return ok;}catch(e){return false;}}
+function reloadScreen() { if (S.navigating) return; if(sceneApplyLive()){try{S.frame.dispatchEvent(new Event('load'));}catch(e){}return;} stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {
@@ -815,15 +851,31 @@ async function openMail(keep) {
   expired.forEach(g => deleteDoc(doc(db, 'mail', S.user.uid, 'items', g.id)).catch(() => { }));
   // A page of 60 envelopes is not the full mailbox count. Keep the cloud counter.
   if (!live.length) { modal('<h2>📮 ไปรษณีย์</h2><p class="note">ยังไม่มีของในไปรษณีย์</p>'); return; }
-  const html = '<h2>📮 ไปรษณีย์</h2>' + live.map(g => `<div class="mail"><span class="ic">${esc(g.icon || '🎁')}</span><b>${esc(g.title)}<small>${esc(g.msg || '')}</small>
-    <span class="items">${g.kusal ? `<span>✨ กุศล ${fmt(g.kusal)}</span>` : ''}${g.coins ? `<span><img src="${COIN_IMG}" alt="">เหรียญกระทงทอง ×${fmt(g.coins)}</span>` : ''}${itemsHtml(g.items)}</span></b>
-    <button class="btn sm" data-id="${g.id}">กดรับ</button></div>`).join('') + `<p class="note">กดรับแล้วซองหายทันที ซองของขวัญทั่วไปหมดอายุใน ${MAIL_DAYS} วัน · เงินทุนคืนและรางวัลสะสมไม่มีวันหมดอายุ</p>`;
+  /* S4 ข้อ 138: หน้าไปรษณีย์ใหม่ — แท็บตามที่มา (แอดมิน/ระบบ/เพื่อน/มินิเกม) · การ์ดมีรูปของ · ตัวหนังสือน้อย */
+  const srcOf=g=>{const id=String(g.id||''),fr=String(g.from||'');if(fr==='ยัยหนู'||/^[A-Za-z0-9]{15,}-\d+$/.test(id))return 'admin';if(fr==='เนเบอร์ฮูด'||/^nb-gift/.test(id))return 'friend';if(/^(boat|fishing|kang|gacha|br-|funrun|mg-|solo|minigame|tw-|treewar|bs-|mole|witch|candy|basket|pk-)/.test(id))return 'game';return 'system';};
+  live.forEach(g=>g._src=srcOf(g));
+  const TABS=[['all','📮 ทั้งหมด'],['admin','👑 ยัยหนู'],['system','🪷 ระบบ'],['friend','🎁 เพื่อน'],['game','🎮 มินิเกม']];
+  const tab=(keep&&window.__mailTab)||'all';window.__mailTab=tab;
+  const shown=tab==='all'?live:live.filter(g=>g._src===tab);
+  const cnt=k=>k==='all'?live.length:live.filter(g=>g._src===k).length;
+  const SRC_ICON={admin:'👑',system:'🪷',friend:'🎁',game:'🎮'};
+  const card=g=>`<div class="mail2 ${g._src}"><div class="mh"><span class="ic">${esc(g.icon||SRC_ICON[g._src]||'🎁')}</span><div class="mt"><b>${esc(g.title)}</b>${g.msg?`<small>${esc(g.msg)}</small>`:''}</div></div>
+    <div class="mi">${g.kusal?`<span class="chip k">🪷 ${fmt(g.kusal)}</span>`:''}${g.coins?`<span class="chip"><img src="${COIN_IMG}" alt="">×${fmt(g.coins)}</span>`:''}${Object.entries(g.items||{}).map(([k,n])=>{const c=CAT[k];return `<span class="chip">${c?`<img src="${IMG(c.i)}" alt="">`:'🎁'}<u>${esc(c?c.n:k)}</u>×${fmt(n)}</span>`;}).join('')}</div>
+    <button class="btn sm" data-id="${g.id}">กดรับ</button></div>`;
+  const html='<h2>📮 ไปรษณีย์ <small style="font-weight:600;color:#9a7a68">'+live.length+' ซอง</small></h2><div class="mtabs">'+TABS.map(([k,t])=>`<button class="${k===tab?'on':''}" data-mt="${k}">${t}${cnt(k)?`<em>${cnt(k)}</em>`:''}</button>`).join('')+'</div>'
+    +(shown.length?shown.map(card).join(''):'<p class="note" style="text-align:center">ไม่มีซองในหมวดนี้</p>')
+    +(shown.length>1?`<button class="btn" id="mAll" style="width:100%;margin:.4rem 0">🎁 รับทั้งหมดในหมวดนี้ (${shown.length} ซอง)</button>`:'')
+    +`<p class="note">กดรับแล้วซองหายทันที · ซองทั่วไปหมดอายุใน ${MAIL_DAYS} วัน</p>`;
   modal(html, [{ t: 'ปิด', c: 'gray' }]);if(top)$('#mcard').scrollTop=top;
+  $('#mcard').querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{window.__mailTab=b.dataset.mt;openMail(true);});
   $('#mcard').querySelectorAll('[data-id]').forEach(b => b.onclick = () => claim(b.dataset.id, b));
+  const all=$('#mAll');if(all)all.onclick=async()=>{all.disabled=true;all.textContent='กำลังรับ…';let n=0;for(const g of shown){const ok=await claim(g.id,null,true);if(ok===false)break;n++;all.textContent='กำลังรับ… '+n+'/'+shown.length;}if(!hwOpen())reloadScreen();toast('🎒 รับแล้ว '+n+' ซอง เข้ากระเป๋าเรียบร้อย');refreshBar();openMail(true);};
 }
+/* S4 ข้อ 137: เอฟเฟกต์ของบินเข้ากระเป๋า (จากปุ่มที่กด → มุมซ้ายบน) */
+function flyToBag(from,icon){try{const r=from&&from.getBoundingClientRect?from.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};for(let i=0;i<5;i++){const e=document.createElement('span');e.textContent=icon||'🎁';e.style.cssText=`position:fixed;left:${r.left+r.width/2}px;top:${r.top+r.height/2}px;z-index:10000;font-size:22px;pointer-events:none;transition:all .75s cubic-bezier(.3,-.2,.6,1);transform:translate(-50%,-50%) scale(1)`;document.body.appendChild(e);setTimeout(()=>{e.style.left=(28+i*4)+'px';e.style.top=(24+i*2)+'px';e.style.opacity='0';e.style.transform='translate(-50%,-50%) scale(.4)';},40+i*70);setTimeout(()=>e.remove(),1000);}}catch(e){}}
 function gpath(k) { const c = CAT[k], p = c ? c.p : 'pend.' + k; return p.startsWith('pend.') || p.startsWith('sub.') ? 'g.' + p : 'g.bag.' + p; }
 function addPath(o, path, n) { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); t[x] = t[x] || {}; t = t[x]; } t[ks[0]] = (t[ks[0]] || 0) + n; }
-async function claim(id, btn) {
+async function claim(id, btn, quiet) {
   busy(btn, true, 'กำลังรับ…'); if(cloudPromise)await cloudPromise;frameSave();
   const mref = doc(db, 'mail', S.user.uid, 'items', id);
   let got;
@@ -839,14 +891,16 @@ async function claim(id, btn) {
       for (const [k,n] of Object.entries(mail.items || {})) addPath(game, gpath(k).slice(2), n);
       refillAdminInventory(game,S.admin,CATALOG);
     });
-  } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); openMail(true); } else toast(thaiError(e)); return; }
+  } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); if(!quiet)openMail(true); } else toast(thaiError(e)); return false; }
   finally { if(H&&held){H.set=held.set;H.del=held.del;} S.claiming=null; release?.(); }
   // ส่งขึ้นระบบสำเร็จแล้ว จึงเพิ่มในเครื่องให้ตรงกัน
   S.P.coins += got.coins || 0; S.P.mailCount = Math.max(0, S.P.mailCount - 1);
   S.P.g=joinGame(store.parts.values());
   refillAdminInventory(S.P.g,S.admin,CATALOG);
+  flyToBag(btn||$('#mAll'),got.kusal?'✨':'🎁');
+  if(quiet)return true;
   if(!hwOpen())reloadScreen();
-  toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail(true);
+  toast('รับแล้ว เข้ากระเป๋าเรียบร้อย'); refreshBar(); openMail(true);return true;
 }
 
 // ---------- ศูนย์แอดมิน ----------
@@ -862,18 +916,18 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '😈 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['players', '👥 ผู้เล่น'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '🎭 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['players', '👥 ผู้เล่น'], ['reset', '🧹 เริ่มศูนย์'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, players: tabPlayers, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, players: tabPlayers, reset: tabReset, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 /* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
 const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
 function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=false;if(fresh)return fn(...a);
   const ov=$('#ov'),host=ov&&!ov.hidden?ov:(document.scrollingElement||document.documentElement),top=host.scrollTop,body=$('#aBody'),inner=ADMIN_LISTS.map(q=>body?.querySelector(q)?.scrollTop||0);
   const out=await fn(...a);host.scrollTop=top;const b2=$('#aBody');ADMIN_LISTS.forEach((q,i)=>{const e=b2?.querySelector(q);if(e&&inner[i])e.scrollTop=inner[i];});return out;};}
-/* fix17 😈 บันทึกการแกล้งด้วยไอเทมปีศาจ — เห็นเฉพาะแอดมิน (ผู้เล่นไม่มีทางรู้ว่าใครแกล้ง) */
+/* fix17 🎭 บันทึกการแกล้งด้วยไอเทมปีศาจ — เห็นเฉพาะแอดมิน (ผู้เล่นไม่มีทางรู้ว่าใครแกล้ง) */
 /* fix19 🏧 ATM: บันทึกการโอนทั้งหมด · เปิด/ปิดตู้ · ล้าง PIN ให้คนที่ลืม (บัตรส่งได้จากแท็บ 🎁 ส่งของ หมวด "บัตร ATM") */
 async function tabAtm(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'atmActionCloud')({input}).then(r=>r.data);
  try{const out=await call({type:'admin-list'});let q='';const when=t=>new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -890,10 +944,10 @@ async function tabAtm(){const B=$('#aBody');B.innerHTML='<div class="box">กำ
    $('#atmR').onclick=async()=>{const u=$('#atmU').value;if(!u)return;await call({type:'admin-reset',uid:u});toast('🔑 ล้าง PIN แล้ว ผู้เล่นตั้งใหม่ได้ที่ตู้');};};
   draw();}catch(e){B.innerHTML='<div class="box">'+esc(e.message||'โหลดไม่สำเร็จ')+'</div>';}}
 async function tabDemon(day){const B=$('#aBody');const d=day||new Date(Date.now()+serverOffset+7*3600e3).toISOString().slice(0,10);B.innerHTML='<div class="box">กำลังโหลดบันทึก…</div>';
- try{const out=(await httpsCallable(functions,'demonActionCloud')({input:{type:'log',day:d}})).data,E={music:'🎶',hour:'⏳',coffin:'⛓️',heart:'💖'},W={send:'ใช้',pass:'ส่งหัวใจต่อ',seal:'เปิดหีบ'},R={g:'🟢 หลุดคำสาป',r:'🔴 คำสาปเต็ม',x:'🔁 สะท้อนกลับ'};
+ try{const out=(await httpsCallable(functions,'demonActionCloud')({input:{type:'log',day:d}})).data,E={music:'🎶',hour:'⏳',coffin:'⛓️',heart:'💖'},W={send:'ใช้',pass:'ส่งหัวใจต่อ',seal:'เปิดหีบ'},R={g:'🟢 หลุดมนต์',r:'🔴 โดนมนต์เต็ม',x:'🔁 สะท้อนกลับ'};
   const prev=new Date(Date.parse(d)-864e5).toISOString().slice(0,10),next=new Date(Date.parse(d)+864e5).toISOString().slice(0,10);
-  B.innerHTML='<div class="box"><div class="row" style="justify-content:space-between"><button class="btn sm gray" id="dlPrev">‹ '+prev.slice(5)+'</button><b>😈 '+d+' · '+out.rows.length+' รายการ</b><button class="btn sm gray" id="dlNext">'+next.slice(5)+' ›</button></div><p style="font-size:.78rem;color:#9A7A68;margin:.3rem 0">เห็นเฉพาะแอดมิน · ผู้เล่นไม่เห็นชื่อคนแกล้ง</p>'
-   +(out.rows.length?out.rows.map(r=>'<div style="display:flex;gap:.5rem;align-items:center;padding:.3rem 0;border-top:1px solid #F3E9DE;font-size:.82rem"><span style="color:#9A7A68;font-variant-numeric:tabular-nums">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</span><span>'+(E[r.k]||'😈')+'</span><span>'+(r.w==='seal'?esc(r.tn||r.to)+' เปิดหีบ → '+(R[r.r]||''):'<b>'+esc(r.fn||r.from)+'</b> '+(W[r.w]||r.w)+' → <b>'+esc(r.tn||r.to)+'</b>'+(r.n?' (ทอด '+r.n+')':''))+'</span></div>').join(''):'<p>ไม่มีรายการ</p>')+'</div>';
+  B.innerHTML='<div class="box"><div class="row" style="justify-content:space-between"><button class="btn sm gray" id="dlPrev">‹ '+prev.slice(5)+'</button><b>🎭 '+d+' · '+out.rows.length+' รายการ</b><button class="btn sm gray" id="dlNext">'+next.slice(5)+' ›</button></div><p style="font-size:.78rem;color:#9A7A68;margin:.3rem 0">เห็นเฉพาะแอดมิน · ผู้เล่นไม่เห็นชื่อคนแกล้ง</p>'
+   +(out.rows.length?out.rows.map(r=>'<div style="display:flex;gap:.5rem;align-items:center;padding:.3rem 0;border-top:1px solid #F3E9DE;font-size:.82rem"><span style="color:#9A7A68;font-variant-numeric:tabular-nums">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</span><span>'+(E[r.k]||'🎭')+'</span><span>'+(r.w==='seal'?esc(r.tn||r.to)+' เปิดหีบ → '+(R[r.r]||''):'<b>'+esc(r.fn||r.from)+'</b> '+(W[r.w]||r.w)+' → <b>'+esc(r.tn||r.to)+'</b>'+(r.n?' (ทอด '+r.n+')':''))+'</span></div>').join(''):'<p>ไม่มีรายการ</p>')+'</div>';
   $('#dlPrev').onclick=()=>tabDemon(prev);$('#dlNext').onclick=()=>tabDemon(next);}catch(e){B.innerHTML='<div class="box">'+esc(e.message||'โหลดไม่สำเร็จ')+'</div>';}}
 async function tabSend(){
  const B=$('#aBody'),g=A.gift;let ps;
@@ -941,7 +995,7 @@ async function tabSend(){
  const chips=()=>{const q=A.pq.toLowerCase(),vis=ps.filter(p=>!q||String(p.name||'').toLowerCase().includes(q));
   $('#asChips').innerHTML=vis.map(p=>`<button class="as-pc${A.sel.has(p.uid)?' on':''}" style="--c:${colOf(p.uid)}" data-u="${esc(p.uid)}" aria-pressed="${A.sel.has(p.uid)}"><span class="av"><b>${ini(p.name)}</b></span>${esc(p.name)}</button>`).join('')||'<span class="note">ไม่พบชื่อนี้</span>';};
  const selList=()=>{const sel=[...A.sel];if(!sel.length){$('#asSel').innerHTML='<div class="as-empty"><b>👆</b>เลือกผู้รับในข้อ 3 ก่อน แล้วตั้งจำนวนแพ็กตรงนี้</div>';dock();return;}
-  $('#asSel').innerHTML=`<div class="as-bulk">⚡ ทุกคน = <span class="as-seg">${[1,3,5,10,15].map(n=>`<button data-bulk="${n}">${n}</button>`).join('')}</span> แพ็ก</div><div>${sel.map(uid=>{const n=A.packs[uid]||1;return `<div class="as-sr"><span class="av" style="--c:${colOf(uid)}">${ini(nameOf(uid))}</span><span class="nm">${esc(nameOf(uid))}</span><div class="as-step"><button data-dec="${esc(uid)}" aria-label="ลด">−</button><input data-packs="${esc(uid)}" type="number" min="1" max="1000000" value="${n}" inputmode="numeric" aria-label="จำนวนแพ็กของ ${esc(nameOf(uid))}"><small>แพ็ก</small><button data-inc="${esc(uid)}" aria-label="เพิ่ม">＋</button></div><span class="tot" data-tot="${esc(uid)}">${line(n)}</span><button class="as-rm" data-unsel="${esc(uid)}">เอาออก</button></div>`;}).join('')}</div>`;dock();};
+  $('#asSel').innerHTML=`<div class="as-bulk">⚡ ทุกคน = <span class="as-seg">${[1,5,10,20,30,50,60,100].map(n=>`<button data-bulk="${n}">${n}</button>`).join('')}</span> <input id="asBulkN" type="number" min="1" max="1000000" inputmode="numeric" placeholder="พิมพ์" style="width:4.6em" aria-label="จำนวนแพ็กทุกคน"> <button data-bulk="input">ตั้ง</button> แพ็ก</div><div>${sel.map(uid=>{const n=A.packs[uid]||1;return `<div class="as-sr"><span class="av" style="--c:${colOf(uid)}">${ini(nameOf(uid))}</span><span class="nm">${esc(nameOf(uid))}</span><div class="as-step"><button data-dec="${esc(uid)}" aria-label="ลด">−</button><input data-packs="${esc(uid)}" type="number" min="1" max="1000000" value="${n}" inputmode="numeric" aria-label="จำนวนแพ็กของ ${esc(nameOf(uid))}"><small>แพ็ก</small><button data-inc="${esc(uid)}" aria-label="เพิ่ม">＋</button></div><span class="as-seg as-pre">${[5,10,20,30,50,60,100].map(k=>`<button data-pre="${esc(uid)}" data-n="${k}">${k}</button>`).join('')}</span><span class="tot" data-tot="${esc(uid)}">${line(n)}</span><button class="as-rm" data-unsel="${esc(uid)}">เอาออก</button></div>`;}).join('')}</div>`;dock();};
  const setPacks=(uid,n)=>{n=Math.max(1,Math.min(1000000,Math.floor(Number(n)||1)));A.packs[uid]=n;const inp=B.querySelector(`[data-packs="${CSS.escape(uid)}"]`);if(inp&&Number(inp.value)!==n)inp.value=n;const t=B.querySelector(`[data-tot="${CSS.escape(uid)}"]`);if(t)t.textContent=line(n);dock();};
  chips();selList();
  B.querySelector('.asd').onclick=async e=>{const t=e.target;
@@ -950,7 +1004,8 @@ async function tabSend(){
   const u=t.closest('[data-u]');if(u){const id=u.dataset.u;A.sel.has(id)?A.sel.delete(id):A.sel.add(id);u.classList.toggle('on',A.sel.has(id));u.setAttribute('aria-pressed',A.sel.has(id));selList();return;}
   const dc=t.closest('[data-dec]');if(dc)return setPacks(dc.dataset.dec,(A.packs[dc.dataset.dec]||1)-1);
   const ic=t.closest('[data-inc]');if(ic)return setPacks(ic.dataset.inc,(A.packs[ic.dataset.inc]||1)+1);
-  const bk=t.closest('[data-bulk]');if(bk){A.sel.forEach(uid=>A.packs[uid]=+bk.dataset.bulk);selList();toast('⚡ ตั้งทุกคนเป็น '+bk.dataset.bulk+' แพ็กแล้ว');return;}
+  const pr=t.closest('[data-pre]');if(pr)return setPacks(pr.dataset.pre,+pr.dataset.n);
+  const bk=t.closest('[data-bulk]');if(bk){let n=bk.dataset.bulk==='input'?Number(B.querySelector('#asBulkN')&&B.querySelector('#asBulkN').value):+bk.dataset.bulk;n=Math.max(1,Math.min(1000000,Math.floor(n||0)));if(!n)return toast('พิมพ์จำนวนแพ็กก่อนนะ');A.sel.forEach(uid=>A.packs[uid]=n);selList();toast('⚡ ตั้งทุกคนเป็น '+n+' แพ็กแล้ว');return;}
   const un=t.closest('[data-unsel]');if(un){A.sel.delete(un.dataset.unsel);chips();selList();return;}
   const ad=t.closest('[data-add]');if(ad){keep();g.items[ad.dataset.add]=(g.items[ad.dataset.add]||0)+1;A.tpl=-1;tabSend();return;}
   const rm=t.closest('[data-rm]');if(rm){keep();delete g.items[rm.dataset.rm];A.tpl=-1;tabSend();return;}
@@ -991,7 +1046,7 @@ async function sendGift(uids, names, packs={}) {
 // fix14 เนเบอร์ฮูด: อนุมัติคำขอสร้าง + ดูรายการที่เปิดอยู่
 /* fix15 📰 ข่าวลือ: เลือกข่าว → เลือกผู้รับ (คนเดียว/หลายคน/ทุกคน) → ส่ง · ดูสถานะของแต่ละคน
    ผู้เล่นไม่เห็นว่าใครส่ง · คนที่ยังมีข่าวค้างส่งข่าวใหม่ไม่ได้ */
-const RM={kind:'G',pick:0,sel:new Set(),all:false,q:'',rows:{},players:null,at:0};
+const RM={kind:'G',pick:0,sel:new Set(),all:false,q:'',rows:{},players:null,at:0,ct:'',cn:''};
 const RM_ST={ok:['ok','✅ กดรับแล้ว'],no:['no','✕ ปิดทิ้ง'],exp:['no','⌛ หมดเวลา'],fix:['ok','🙅 แก้ข่าวแล้ว'],acc:['bad','😔 ยอมรับ'],auto:['bad','⌛ ไม่ตอบ (หักแล้ว)']};
 function rmStatus(r,now){if(!r)return ['none','—'];if(r.res)return RM_ST[r.res]||['no',r.res];return now<r.until?['wait','⏳ รอตอบ']:['wait','⌛ รอเข้าเกม'];}
 async function tabRumor(){const B=$('#aBody');
@@ -1001,22 +1056,24 @@ async function tabRumor(){const B=$('#aBody');
  const ppl=RM.players.filter(p=>!RM.q||String(p.name).includes(RM.q));
  B.innerHTML=`<div class="rma">
  <section class="card"><h3>1 · เลือกข่าวลือ</h3><div class="seg"><button data-k="G" class="${RM.kind==='G'?'on':''}">💌 ข่าวดี (${RUMOR_GOOD.length})</button><button data-k="B" class="${RM.kind==='B'?'on':''}">📰 ข่าวร้าย (${RUMOR_BAD.length})</button></div>
-  <div class="news">${list.map((x,i)=>`<button class="nw${RM.pick===i?' on':''}" data-i="${i}"><b class="${RM.kind==='G'?'g':'r'}">${RM.kind==='G'?'🎁 +':'⚠️ −'}${fmt(x[1])}</b><span>${i+1}. ${esc(x[0])}</span></button>`).join('')}</div></section>
+  <div class="news">${list.map((x,i)=>`<button class="nw${RM.pick===i?' on':''}" data-i="${i}"><b class="${RM.kind==='G'?'g':'r'}">${RM.kind==='G'?'🎁 +':'⚠️ −'}${fmt(x[1])}</b><span>${i+1}. ${esc(x[0])}</span></button>`).join('')}
+  <button class="nw${RM.pick===-1?' on':''}" data-i="-1"><b class="${RM.kind==='G'?'g':'r'}">✍️</b><span>พิมพ์ข่าวเอง</span></button></div>
+  <div id="rmCustom" ${RM.pick===-1?'':'hidden'} style="margin-top:.5rem;display:grid;gap:.4rem"><textarea id="rmCT" rows="3" maxlength="300" placeholder="พิมพ์ข่าวลือ (ไม่เกิน 300 ตัวอักษร)" style="width:100%;border:1.5px solid #E8D9CB;border-radius:12px;padding:.5rem;font:inherit">${esc(RM.ct)}</textarea><input id="rmCN" inputmode="numeric" placeholder="${RM.kind==='G'?'กุศลที่ได้ (+)':'กุศลที่โดนหัก (−)'}" value="${esc(RM.cn)}"><small class="note">${RM.kind==='G'?'ผู้เล่นกดรับ = ได้กุศลตามที่ใส่':'ผู้เล่นแก้ข่าวด้วยของชุดเดียวกับข่าวร้าย #1 หรือยอมรับ/ปล่อยหมดเวลา = โดนหัก'}</small></div></section>
  <section class="card"><h3>2 · เลือกผู้รับ <small style="color:#957863;font-weight:400">${RM.all?'ทุกคน':RM.sel.size+' คน'}</small></h3>
   <div class="row" style="margin-bottom:.45rem"><input id="rmQ" placeholder="🔍 ค้นหาชื่อ" value="${esc(RM.q)}"><button class="btn sm ${RM.all?'':'gray'}" id="rmAll">${RM.all?'✅ ทุกคน':'👥 ทุกคน'}</button><button class="btn sm gray" id="rmNone">ล้าง</button></div>
   <div class="ppl">${ppl.map(p=>{const busy=busyOf(p.uid);return `<button data-u="${esc(p.uid)}" class="${RM.all||RM.sel.has(p.uid)?'on':''}" ${busy||RM.all?'disabled':''}>${busy?'⏳ ':''}${esc(p.name||'ผู้เล่น')}</button>`;}).join('')||'<span class="note">ไม่พบชื่อ</span>'}</div>
   <div class="note">⏳ = ยังมีข่าวค้างอยู่ ส่งข่าวใหม่ไม่ได้จนกว่าจะตอบ · ผู้เล่นเห็นแค่ "ข่าวลือในหมู่บ้าน" ไม่รู้ว่าใครส่ง</div></section>
  <section class="card"><div class="row"><button class="btn" id="rmSend" ${RM.all||RM.sel.size?'':'disabled'}>📨 ส่งข่าวลือ${RM.all?' ให้ทุกคน':RM.sel.size?' ('+RM.sel.size+' คน)':''}</button><button class="btn sm gray" id="rmRe">🔄 สถานะล่าสุด</button></div></section>
- <section class="card"><h3>📋 สถานะข่าวลือ</h3><table>${RM.players.map(p=>{const r=RM.rows[p.uid],[c,t]=rmStatus(r,now);return r?`<tr><td>${esc(p.name||'ผู้เล่น')}</td><td>${r.k==='G'?'💌':'📰'} #${r.i+1}</td><td><span class="st ${c}">${t}</span></td></tr>`:'';}).join('')||'<tr><td class="note">ยังไม่เคยส่งข่าวลือ</td></tr>'}</table></section></div>`;
+ <section class="card"><h3>📋 สถานะข่าวลือ</h3><table>${RM.players.map(p=>{const r=RM.rows[p.uid],[c,t]=rmStatus(r,now);return r?`<tr><td>${esc(p.name||'ผู้เล่น')}</td><td>${r.k==='G'?'💌':'📰'} ${r.c?'✍️':'#'+(r.i+1)}</td><td><span class="st ${c}">${t}</span></td></tr>`:'';}).join('')||'<tr><td class="note">ยังไม่เคยส่งข่าวลือ</td></tr>'}</table></section></div>`;
  B.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{RM.kind=b.dataset.k;RM.pick=0;tabRumor();});
- B.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{RM.pick=+b.dataset.i;B.querySelectorAll('.nw').forEach(x=>x.classList.toggle('on',x===b));});
+ B.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{RM.pick=+b.dataset.i;B.querySelectorAll('.nw').forEach(x=>x.classList.toggle('on',x===b));const cu=$('#rmCustom');if(cu)cu.hidden=RM.pick!==-1;});const ct=$('#rmCT'),cn=$('#rmCN');if(ct)ct.oninput=()=>RM.ct=ct.value;if(cn)cn.oninput=()=>RM.cn=cn.value;
  B.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=b.dataset.u;RM.sel.has(u)?RM.sel.delete(u):RM.sel.add(u);tabRumor();});
  $('#rmQ').oninput=e=>{RM.q=e.target.value.trim();const pos=e.target.selectionStart;tabRumor().then(()=>{const q=$('#rmQ');if(q){q.focus();q.setSelectionRange(pos,pos);}});};
  $('#rmAll').onclick=()=>{RM.all=!RM.all;tabRumor();};$('#rmNone').onclick=()=>{RM.all=false;RM.sel.clear();tabRumor();};
  $('#rmRe').onclick=()=>{RM.at=0;tabRumor();};
- $('#rmSend').onclick=async()=>{const n=RM.all?'ทุกคน':RM.sel.size+' คน',x=list[RM.pick];if(!confirm('ส่งข่าวลือ #'+(RM.pick+1)+' ('+(RM.kind==='G'?'ข่าวดี':'ข่าวร้าย')+') ให้ '+n+'?'))return;
+ $('#rmSend').onclick=async()=>{const n=RM.all?'ทุกคน':RM.sel.size+' คน',x=list[RM.pick];const custom=RM.pick===-1?{t:RM.ct.trim(),n:Math.round(+String(RM.cn).replace(/[^0-9]/g,'')||0)}:null;if(custom&&(custom.t.length<5||!(custom.n>=1)))return toast('พิมพ์ข่าวและจำนวนกุศลก่อน');if(!confirm('ส่งข่าวลือ '+(custom?'ที่พิมพ์เอง':'#'+(RM.pick+1))+' ('+(RM.kind==='G'?'ข่าวดี':'ข่าวร้าย')+') ให้ '+n+'?'))return;
   const b=$('#rmSend');b.disabled=true;b.textContent='กำลังส่ง…';
-  try{const out=(await httpsCallable(functions,'rumorAdminCloud')({type:'send',k:RM.kind,i:RM.pick,...(RM.all?{all:true}:{uids:[...RM.sel]})})).data;toast('📨 ส่งแล้ว '+out.sent+' คน'+(out.busy?' · ข้าม '+out.busy+' คนที่ยังมีข่าวค้าง':''));RM.sel.clear();RM.all=false;RM.at=0;tabRumor();}catch(e){toast(thaiError(e));b.disabled=false;}};
+  try{const out=(await httpsCallable(functions,'rumorAdminCloud')({type:'send',k:RM.kind,i:RM.pick,...(custom?{custom}:{}),...(RM.all?{all:true}:{uids:[...RM.sel]})})).data;toast('📨 ส่งแล้ว '+out.sent+' คน'+(out.busy?' · ข้าม '+out.busy+' คนที่ยังมีข่าวค้าง':''));RM.sel.clear();RM.all=false;RM.at=0;tabRumor();}catch(e){toast(thaiError(e));b.disabled=false;}};
 }
 tabSend=keepAdminScroll(tabSend);tabRumor=keepAdminScroll(tabRumor);tabApprovals=keepAdminScroll(tabApprovals);tabNb=keepAdminScroll(tabNb);
 async function tabNb(){
@@ -1039,11 +1096,37 @@ async function tabNb(){
 async function tabPlayers() {
   const B = $('#aBody'); B.innerHTML = '<div class="box"><p class="note">กำลังโหลด…</p></div>';
   let ps; try { ps = await loadPlayers(true); } catch (e) { B.innerHTML = `<div class="box">${thaiError(e)}</div>`; return; }
-  const big = ps.filter(p => p._size > SIZE_WARN);
-  B.innerHTML = `<div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ ส่วนเซฟใหญ่เกิน 200KB ${big.length} คน แจ้งผู้พัฒนาได้เลย</p>` : '<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>'}
-    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>ส่วนใหญ่ที่สุด</th><th>เข้าล่าสุด</th></tr>${ps.map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${p._size > SIZE_WARN ? 'warn' : ''}">${(p._size / 1024).toFixed(1)}KB</td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
+  /* S4 ข้อ 156: ขนาดเซฟ = KB · % ของขีด 128KB ต่อส่วน · ชื่อส่วนที่ใหญ่สุด · สีเตือนเมื่อ ≥70% / ≥90% */
+  const pct=p=>Math.round(p._size/LS_CAP*100),cls=p=>pct(p)>=90?'warn':pct(p)>=70?'near':'';
+  const big = ps.filter(p => pct(p)>=90),near=ps.filter(p=>pct(p)>=70&&pct(p)<90);
+  B.innerHTML = `<style>.pl td.near{background:#fff3c4;color:#8a5a00;font-weight:800}.pl td.warn{background:#ffd9d9;color:#b00020;font-weight:800}.pl .bar{display:inline-block;width:60px;height:8px;border-radius:4px;background:#eee;vertical-align:middle;margin-left:4px;overflow:hidden}.pl .bar i{display:block;height:100%;background:#58b368}.pl td.near .bar i{background:#f0a500}.pl td.warn .bar i{background:#e23c3c}</style><div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ เซฟใกล้เต็ม (≥90% ของ 128KB) ${big.length} คน</p>` : ''}${near.length?`<p class="note">🟡 เซฟเกิน 70%: ${near.length} คน</p>`:''}${!big.length&&!near.length?'<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>':''}
+    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ (ส่วนใหญ่สุด / ขีด 128KB)</th><th>เข้าล่าสุด</th></tr>${[...ps].sort((a,b)=>b._size-a._size).map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${cls(p)}">${(p._size / 1024).toFixed(1)}KB · ${pct(p)}%${p.maxPartName?` · ${esc(p.maxPartName)}`:''}<span class="bar"><i style="width:${Math.min(100,pct(p))}%"></i></span></td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
     <p class="note">หน้านี้อ่านข้อมูลเฉพาะตอนกดเปิด ไม่อ่านค้าง</p></div>`;
 }
+/* S4 ข้อ 162/162b/157 🧹 เริ่มศูนย์ผู้เล่น: ดูก่อน (ขนาดก่อน→หลัง · กระเป๋าตรงทุกชิ้น) → พิมพ์ "รีเซ็ต" → ล้างจริง (สำรองก่อน) · ทั้งหมดครั้งเดียวต่อซีซั่น */
+async function tabReset(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'adminResetCloud')({...input,session:S.sessionId}).then(r=>r.data);
+ const kb=n=>(n/1024).toFixed(1)+'KB',when=t=>t?new Date(t).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'-';
+ let st;try{st=await call({type:'status'});}catch(e){B.innerHTML='<div class="box">'+esc(thaiError(e))+'</div>';return;}
+ let roster=[];try{roster=((await httpsCallable(functions,'gameRoster')({})).data||[]).filter(x=>x&&x.uid).sort((a,b)=>String(a.name).localeCompare(String(b.name),'th'));}catch(e){}
+ let mode='all',preview=null,result=null;
+ const draw=()=>{B.innerHTML='<div class="box"><h3>🧹 เริ่มศูนย์ผู้เล่น (เก็บกระเป๋า)</h3>'
+  +'<p class="note">เก็บ: ของในกระเป๋าทุกชิ้นตามจำนวนเดิม (รวมสัตว์/นก/ของหมา/อัลปาก้าที่อยู่ในกระเป๋า) + รูปโปรไฟล์<br>ล้าง: กุศล→0 · เลเวล→1 · แปลงผัก · บ้าน/หลังบ้าน/แมว/หมา/อัลปาก้าที่วางแล้ว · ของตกแต่งทุกโซน · สมุดปลา · พอร์ตหุ้น · จดหมาย · บัตร ATM ซีซั่น 3 + PIN · เหรียญกระทงทอง · ของค้างรับ<br>สำรองเซฟเดิมไว้ที่ resetBackups ก่อนทุกครั้ง · เครื่องที่เปิดเกมค้างอยู่ต้องเข้าเกมใหม่</p>'
+  +(st.resetAt?'<p class="warn">✅ รีเซ็ตทั้งหมดทำไปแล้วเมื่อ '+when(st.resetAt)+' ('+st.resetCount+' คน) — ทำได้ครั้งเดียวต่อซีซั่น (รายคนยังทำได้)</p>':'<p class="note">ยังไม่เคยรีเซ็ตทั้งหมดในซีซั่นนี้</p>')
+  +'<div class="row" style="gap:.4rem;flex-wrap:wrap;margin:.4rem 0"><label><input type="radio" name="rsM" value="all" '+(mode==='all'?'checked':'')+'> ทุกคน (ยกเว้นแอดมิน)</label><label><input type="radio" name="rsM" value="one" '+(mode==='one'?'checked':'')+'> รายคน</label>'
+  +'<select id="rsU" '+(mode==='one'?'':'disabled')+' style="padding:.35rem;border-radius:.5rem;border:2px solid #F3E9DE;font:inherit">'+roster.map(x=>'<option value="'+esc(x.uid)+'">'+esc(x.name)+(x.admin?' 👑':'')+'</option>').join('')+'</select></div>'
+  +'<div class="row" style="gap:.4rem"><button class="btn sm" id="rsPv">👀 ขั้น 1 ดูก่อน (ไม่แก้อะไร)</button></div><div id="rsOut" style="margin-top:.5rem"></div></div>';
+  B.querySelectorAll('[name=rsM]').forEach(r=>r.onchange=()=>{mode=r.value;preview=null;draw();});
+  $('#rsPv').onclick=async()=>{const o=$('#rsOut');o.innerHTML='<p class="note">กำลังอ่านเซฟทุกคน…</p>';try{preview=await call({type:'preview',all:mode==='all',uid:$('#rsU').value});result=null;drawOut();}catch(e){o.innerHTML='<p class="warn">'+esc(thaiError(e))+'</p>';}};
+  drawOut();};
+ const drawOut=()=>{const o=$('#rsOut');if(!o)return;
+  if(result){o.innerHTML='<h4>✅ ล้างแล้ว '+result.rows.length+' คน'+(result.errors.length?' · ❌ ผิดพลาด '+result.errors.length:'')+'</h4><table class="pl"><tr><th>ชื่อ</th><th>กุศลเดิม</th><th>เซฟ ก่อน→หลัง</th><th>ส่วน</th><th>ของในกระเป๋า</th><th>จดหมายที่ล้าง</th></tr>'+result.rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.merit)+'</td><td>'+kb(r.before)+' → '+kb(r.after)+'</td><td>'+r.nBefore+'→'+r.nAfter+'</td><td>'+r.bagN+' ชนิด ✓</td><td>'+r.mails+'</td></tr>').join('')+'</table>'+result.errors.map(e=>'<p class="warn">'+esc(e.name)+': '+esc(e.error)+'</p>').join('');return;}
+  if(!preview)return;const p=preview;
+  o.innerHTML='<h4>ขั้น 1 ผล: '+p.tot.n+' คน · เซฟรวม '+kb(p.tot.before)+' → '+kb(p.tot.after)+(p.tot.bad?' · <span class="warn">⚠️ กระเป๋าไม่ตรง/อ่านไม่ได้ '+p.tot.bad+' คน (จะไม่ล้างคนนั้น)</span>':' · กระเป๋าตรงทุกชิ้นทุกคน ✓')+'</h4>'
+   +'<div style="max-height:16rem;overflow:auto"><table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ ก่อน→หลัง</th><th>ส่วน</th><th>กระเป๋า</th><th>จดหมาย</th></tr>'+p.rows.map(r=>r.error?'<tr><td>'+esc(r.name)+'</td><td colspan="6" class="warn">'+esc(r.error)+'</td></tr>':'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.merit)+'</td><td>'+fmt(r.coins)+'</td><td>'+kb(r.before)+' → '+kb(r.after)+'</td><td>'+r.nBefore+'→'+r.nAfter+'</td><td'+(r.ok?'>'+r.bagN+' ชนิด ✓':' class="warn">✗ '+esc(r.diff.map(d=>d[0]+' '+d[1]+'→'+d[2]).join(', '))+'</td>')+'<td>'+r.mails+'</td></tr>').join('')+'</table></div>'
+   +'<div style="margin-top:.6rem;border-top:2px dashed #F3E9DE;padding-top:.5rem"><b>ขั้น 2 ล้างจริง</b><p class="note">พิมพ์คำว่า <b>รีเซ็ต</b> แล้วกดปุ่ม · ย้อนกลับไม่ได้ (มีสำรองใน resetBackups)</p><div class="row" style="gap:.4rem"><input id="rsC" placeholder="พิมพ์ รีเซ็ต" style="padding:.4rem .6rem;border:2px solid #F3E9DE;border-radius:.6rem;font:inherit"><button class="btn sm" id="rsGo" style="background:#e23c3c;color:#fff">🧹 ล้างจริง'+(mode==='all'?' ทุกคน':'')+'</button>'+(mode==='all'&&st.resetAt?'<label style="font-size:.75rem"><input type="checkbox" id="rsF"> ทำซ้ำทั้งที่เคยทำแล้ว</label>':'')+'</div></div>';
+  $('#rsGo').onclick=async()=>{const c=$('#rsC').value.trim();if(c!=='รีเซ็ต')return toast('พิมพ์คำว่า รีเซ็ต ก่อน');if(!confirm('ยืนยันล้างข้อมูล '+(mode==='all'?'ผู้เล่นทุกคน':'ผู้เล่นคนนี้')+' (เก็บกระเป๋า) ?'))return;
+   const b=$('#rsGo');b.disabled=true;b.textContent='⏳ กำลังล้าง… ห้ามปิดหน้า';try{result=await call({type:'run',all:mode==='all',uid:$('#rsU').value,confirm:c,force:!!($('#rsF')&&$('#rsF').checked)});toast('🧹 เริ่มศูนย์เสร็จ '+result.rows.length+' คน');try{st=await call({type:'status'});}catch(e){}draw();}catch(e){b.disabled=false;b.textContent='🧹 ล้างจริง';toast(thaiError(e));}};};
+ draw();}
 async function tabInventory() {
   const B = $('#aBody'); B.textContent = 'กำลังโหลดรายชื่อ…';
   try {

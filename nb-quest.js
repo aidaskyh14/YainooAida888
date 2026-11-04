@@ -1,27 +1,30 @@
 /* fix14 เนเบอร์ฮูด: นับความคืบหน้าเควสต์จากผลของรายการบนเซิร์ฟเวอร์ (ฟังก์ชันล้วน)
    นับเฉพาะสิ่งที่เซิร์ฟเวอร์เป็นคนตัดสินผล ไม่เชื่อตัวเลขจากหน้าเว็บ */
-/* fix15: เควสต์ 13 แบบ สุ่มวันละ 10 ข้อ แยกแต่ละบ้าน · เป้าเป็นยอดรวมทั้งบ้าน (บ้าน 3 คนและ 4 คนเป้าเท่ากัน) */
+/* fix15: เควสต์สุ่มวันละ 10 ข้อ แยกแต่ละบ้าน · เป้าเป็นยอดรวมทั้งบ้าน
+   S4 ข้อ 112: ออกแบบชุดภารกิจใหม่ — ตัดวิจัยซาฟารี/ยาพิษ · เพิ่ม ธนาคาร/กระทงรางวัล/เยี่ยมบ้าน · มี 2 ระดับ: กลาง (50,000) · ยาก (100,000 · เป้าสูงกว่า) · ข้อพิเศษ 150,000–300,000
+   ความคืบหน้าเป็น % ต่อข้อ · ตะกร้าท้ายวันหักตามจำนวนข้อที่ไม่เสร็จ: ครบ 10 ไม่หัก (+โบนัส 500,000) · 7–9 ข้อ หัก 20% · 4–6 ข้อ หัก 50% · ต่ำกว่า 4 ข้อ ไม่ได้ตะกร้า */
 import {ALPACA_MB} from './alpaca-menu.js?h=4c9e1f4e';
 export const NB_QUESTS=[
- // [key, ชื่อ, เป้ารวมทั้งบ้าน, หน่วย, ไอคอน]
- ['harvest','เก็บผักในแปลง',1400,'แปลง','img:nb-q-harvest'],
+ // ปกติ: [key, ชื่อ, เป้ารวมทั้งบ้าน, หน่วย, ไอคอน, รางวัล(ไม่ใส่=50,000 กลาง · 100,000=ยาก)]
+ ['harvest','เก็บผักในแปลง',1400,'แปลง','img:nb-q-harvest',100000],
  ['pumpkin','เก็บแปลงฟักทอง',600,'แปลง','img:nb-q-pumpkin'],
  ['tree','เก็บผลไม้จากต้น',200,'ครั้ง','🍑'],
  ['cook','ทำอาหาร',60,'จาน','img:nb-q-cook'],
  ['fish','ตกปลา',50,'ตัว','img:nb-q-fish'],
- ['mgmerit','ได้กุศลจากมินิเกม',750000,'กุศล','img:nb-q-minigame'],
+ ['mgmerit','ได้กุศลจากมินิเกม',750000,'กุศล','img:nb-q-minigame',100000],
  ['delivery','ส่งของกับน้องน้ำผึ้ง',50,'ครั้ง','img:nb-q-delivery'],
- ['box','เปิดกล่องสุ่ม',1000,'กล่อง','img:nb-q-box'],
- ['prank','แกล้งสวนเพื่อน',20,'ครั้ง','😈'],
- ['sell','ขายของในร้านของเพื่อน',100,'ครั้ง','🏪'],
+ ['box','เปิดกล่องสุ่ม',1000,'กล่อง','img:nb-q-box',100000],
+ ['prank','แกล้งสวนเพื่อน',20,'ครั้ง','🎭'],
+ ['sell','ขายของในร้านของเพื่อน',100,'ครั้ง','🏪',100000],
  ['shear','ตัดขนอัลปาก้า',100,'ตัว','🦙'],
- ['research','วิจัยซาฟารี',40,'ครั้ง','🔬'],
  ['flower','เก็บดอกไม้',200,'แปลง','🌸'],
+ ['atm','ใช้บริการธนาคาร (โอน/แลก)',30,'ครั้ง','🏦'],
+ ['krathong','เก็บกระทงรางวัลในฟาร์ม',60,'ใบ','🪷'],
+ ['visit','ไปเยี่ยมบ้านเพื่อน',40,'ครั้ง','👋'],
  /* fix19 ภารกิจพิเศษ ขึ้นทุกวันทุกบ้าน · ข้อละ 150,000 (ต่อคน) · [.., รางวัล, ทุกวัน] */
- ['poison','ปรุงยาพิษจากหีบนางนพมาศ',150,'แต้ม','🧪',150000,true],
- ['demon','ป่วนด้วยไอเทมจอมแสบ',40,'แต้ม','😈',150000,true],
- ['mkcode','นักถอดรหัสมหากุศล',80,'แต้ม','📦',150000,true],
- /* fix21 ภารกิจพิเศษ: แปรรูปโรงงานอัลปาก้า (เมนูเดิม 1 · เมนูลอยกระทง 3 ต่อชิ้น · ชิ้นผีสิงก็นับ) */
+ ['demon','ป่วนด้วยไอเทมจอมแสบ',40,'แต้ม','🎭',150000,true],
+ ['mkcode','นักเปิดกล่องมหากุศล',80,'กล่อง','📦',150000,true],/* S4 ข้อ 21: ไม่มีทายรหัสแล้ว → นับกล่องมหากุศลที่เปิด (เปิดด่วน) */
+ /* fix21 ภารกิจพิเศษ: แปรรูปโรงงานอัลปาก้า (เมนูเดิม 1 · เมนูลอยกระทง 3 ต่อชิ้น · ชิ้นพิเศษก็นับ) */
  ['alpaca','นักแปรรูปตัวยง',300,'แต้ม','🏭',300000,true]
 ];
 export const NB_FIXED=NB_QUESTS.filter(q=>q[6]).map(q=>q[0]);
@@ -61,16 +64,18 @@ export function questDeltas(system,before,after,input={},response={}){
   const total=g=>sum(g?.bag?.box)+sum(g?.bag?.birdbox)+BOX_PATHS.reduce((s,p)=>s+at(g,p),0);add('box',Math.max(0,total(before)-total(after)));
  }
  if(system==='friends'&&type==='prank')add('prank',1);
- if(system==='safari'&&type==='research'&&response?.receipt)add('research',1);
+ /* S4 ข้อ 112: ธนาคาร · กระทงรางวัล · เยี่ยมบ้าน (นับจากผลที่เซิร์ฟเวอร์ตัดสิน) */
+ if(system==='atm'&&(type==='transfer'||type==='fx')&&response?.receipt)add('atm',1);
+ if(system==='drops'&&type==='krathong'&&response?.krathong)add('krathong',1);
+ if(system==='friends'&&type==='visit'&&(input?.farm??1)===1)add('visit',1);
  // ตัดขนอัลปาก้า / เก็บดอกไม้ เกิดในหน้าเกม แจ้งผ่านเนเบอร์ฮูด (จำกัดต่อครั้ง)
  if(system==='nb'&&type==='report'&&['shear','flower'].includes(input?.kind)&&Number.isInteger(input?.n))add(input.kind,Math.min(50,Math.max(0,input.n)));
  if(system==='farmshop'&&type==='clear')add('sell',1);
  /* fix19 ภารกิจพิเศษ: ยาพิษจากหีบแม่มด (เล็ก1 กลาง2 ใหญ่4 ปีศาจแดง10) · ไอเทมปีศาจที่ส่งสำเร็จ (1/2/3/4 · ส่งต่อหัวใจ 4) · เดารหัสมหากุศลถูก (ครั้งที่ 1/2/3 = 3/2/1) */
- if(system==='market'&&type==='hw-chest')for(const p of response?.prizes||[])if(p?.kind==='poison'&&[0,1,2,3].includes(p.p))add('poison',[1,2,4,10][p.p]);
  if(system==='demon'&&type==='send'&&response?.sent?.kind)add('demon',{music:1,hour:2,coffin:3,heart:4}[response.sent.kind]||0);
  if(system==='demon'&&type==='pass'&&response?.pass)add('demon',4);
  if(system==='alpaca'&&type==='claim'&&response?.claim){const c=response.claim,pt=k=>ALPACA_MB[k]?.hw?3:1;let n=0;for(const [k,v] of Object.entries(c.got||{}))n+=pt(k)*(Number(v)||0);for(const x of c.ghosts||[])n+=pt(x?.g);add('alpaca',n);}
- if(system==='mahakusal'&&type==='guess'&&response?.result?.win&&[1,2,3].includes(response.result.tries))add('mkcode',4-response.result.tries);
+ if(system==='mahakusal'&&type==='fast'&&response?.fast?.n>0)add('mkcode',Math.min(5000,response.fast.n));/* S4 ข้อ 21 */
  return Object.keys(q).length?q:null;
 }
 /* วันของเนเบอร์ฮูด = วันตามเวลาไทย (เที่ยงคืนไทยรีเซ็ต) */

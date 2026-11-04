@@ -1,8 +1,8 @@
-import {SHOP_CATALOG} from './farmshop-catalog.js?h=3e5ba50b';
+import {SHOP_CATALOG} from './farmshop-catalog.js?h=d327e54e';
 const ITEMS=Object.fromEntries(SHOP_CATALOG.flatMap(c=>c.items.map(([key,name,price])=>[key,{name,price}])));
 const fail=m=>{throw new Error(m);};
 export const farmshopDay=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
-export const farmshopOpen=now=>{const h=+new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',hour12:false}).format(new Date(now));return h>=6&&h<18;};
+export const farmshopOpen=now=>{/* S4 ข้อ 172: เปิด 06:00–17:59 เวลาไทย (เหมือน S3) */const h=+new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',hour12:false}).format(new Date(now));return h>=6&&h<18;};
 export const freshFarmshop=(uid,name,now)=>({uid,ownerName:name,name:'',note:'ผักสดจากสวน ไข่ไก่เพิ่งเก็บ 🥚',slots:Array(18).fill(null),day:farmshopDay(now),listed:0,earnedToday:0});
 export function shopInventoryPath(key){if(key.startsWith('c-'))return 'bag.crop.'+key.slice(2);if(key.startsWith('a-'))return 'bag.product.'+key.slice(2);if(key.startsWith('b-'))return 'bag.bird.'+key.slice(2);if(key.startsWith('f-'))return 'bag.food.'+ITEMS[key].name;if(key.startsWith('fl-'))return 'bag.flower.'+key.slice(3);if(key.startsWith('w-'))return 'bag.wine.'+key.slice(2);if(key.startsWith('h-'))return 'bag.hedge.'+key.slice(2);throw new Error('ไอเทมร้านค้าไม่ถูกต้อง');}
 const get=(o,p)=>p.split('.').reduce((v,k)=>v?.[k],o)||0;

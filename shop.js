@@ -1,4 +1,4 @@
-import {ST,NEWS,WINES,TICK,DAY,marketMath,HW_ITEMS,HW_CHEST_COST,hwHaunting,hwPrice,HW_POISON,HW_ANTI} from './market-engine.js?v=ss3-fix19&h=4ea55aa2';
+import {ST,NEWS,WINES,TICK,DAY,marketMath,HW_ITEMS,HW_CHEST_COST,hwHaunting,hwPrice,HW_POISON,HW_ANTI} from './market-engine.js?v=ss3-fix19&h=2997a883';
 const __H=parent.__HOST;if(!__H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const __LS={getItem:k=>__H.get(k),setItem:(k,v)=>{__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh)Object.assign(S,fresh)}},removeItem:k=>__H.del(k)};
 
 const IMG={"shop-bg":"images/shop-bg.webp","item-coinbag":"images/shop-item-coinbag.webp","stock-veg":"images/shop-stock-veg.webp","stock-fruit":"images/shop-stock-fruit.webp","stock-fish":"images/shop-stock-fish.webp","stock-wine":"images/shop-stock-wine.webp","stock-alpaca":"images/shop-stock-alpaca.webp","stock-bee":"images/shop-stock-bee.webp","wine-rose":"images/house-wine-rose.webp","wine-moon":"images/house-wine-moon.webp","wine-blood":"images/house-wine-blood.webp","wine-eclipse":"images/house-wine-eclipse.webp"};
@@ -134,7 +134,7 @@ function hwRender(){
  $('hw').innerHTML=`<div class="bats">${[0,1,2].map(i=>`<span class="bat" style="top:${8+i*22}%;animation-duration:${14+i*5}s;animation-delay:${-i*4}s">✨</span>`).join('')}</div><div class="wrap">
  <div class="hbar"><button class="back" id="hwBack">‹ กลับตลาด</button><span class="mchip">💛 ${nf(merit)}</span></div>
  <div class="banner" role="img" aria-label="น้องน้ำผึ้งในชุดนางนพมาศกำลังลอยกระทง"><div class="tt"><h1><span>🪷 มุม</span>ลอยกระทง</h1><p><i>🏪 ขายของต้องมนต์</i><i>👸 หีบนางนพมาศ</i></p></div><span class="spark" style="left:8%;top:14%">✦</span><span class="spark" style="left:34%;top:10%;animation-delay:.8s">✦</span><span class="spark" style="left:22%;top:84%;animation-delay:1.5s">✦</span></div>
- <div class="haunt ${haunt?'on':''}"><span class="g">🏮</span><div><b>${haunt?'🏮 ช่วงหลอนมาแล้ว!':'ช่วงหลอน 18:00–22:00'}</b><span>${haunt?'ราคาขายทุกชิ้น +20% ถึง 22:00':'ราคาขาย +20% ทุกวัน'}</span></div></div>
+ <div class="haunt ${haunt?'on':''}"><span class="g">🏮</span><div><b>${haunt?'🏮 ช่วงลอยกระทงมาแล้ว!':'ช่วงลอยกระทง 18:00–22:00'}</b><span>${haunt?'ราคาขายทุกชิ้น +20% ถึง 22:00':'ราคาขาย +20% ทุกวัน'}</span></div></div>
  <section class="card"><div class="ch"><h2>👸 หีบนางนพมาศ</h2><span class="pill p-grape">${can?'แลกได้ '+nf(can)+' ใบ':'ของยังไม่ครบ'}</span></div>
   <div class="chest"><img src="images/hw-chest.webp" alt="หีบนางนพมาศ"><div><div style="font-size:.72rem;font-weight:700;margin-bottom:.3rem">ใช้ของครบ 8 ชนิด ชนิดละ ${HW_CHEST_COST}</div><div class="req">${HW_ITEMS.map(([k,n])=>`<span class="rq ${hwHave(k)>=HW_CHEST_COST?'ok':'no'}" title="${n}"><img src="${HW_IMG(k)}" alt="">${Math.min(hwHave(k),99)}/${HW_CHEST_COST}</span>`).join('')}</div></div></div>
   <button class="bigp" id="hwOpenBtn" ${can?'':'disabled'}>✨ แลกหีบนางนพมาศ</button>
@@ -159,7 +159,7 @@ async function hwChest(){if(hwBusy)return;if(PZQ.length)return poisonResume();if
  if(out.prizes[0].kind==='poison')return poisonGot(out.prizes[0].p);
  const v=hwPrizeView(out.prizes[0]);$('hwcimgI').src='images/hw-chest-open.webp';c.className='cimg boom';$('hwsh').textContent='✨ ได้ของจากหีบนางนพมาศ!';
  $('hwprize').innerHTML=(v.img?`<img class="e" src="${v.img}" alt="">`:`<span class="e">${v.e}</span>`)+`<b>${v.amt}</b><small>${v.name}</small>`;$('hwprize').className='prize on';$('hwsrow').hidden=false;
- for(let i=0;i<26;i++){const f=document.createElement('span');f.className='cf';f.textContent=['✨','🍬','⭐','✨','💜'][i%5];f.style.left=Math.random()*100+'%';f.style.setProperty('--dx',(Math.random()*80-40)+'px');f.style.animationDelay=Math.random()*.5+'s';st.append(f);setTimeout(()=>f.remove(),3200)}
+ for(let i=0;i<26;i++){const f=document.createElement('span');f.className='cf';f.textContent=['✨','🪷','⭐','✨','💜'][i%5];f.style.left=Math.random()*100+'%';f.style.setProperty('--dx',(Math.random()*80-40)+'px');f.style.animationDelay=Math.random()*.5+'s';st.append(f);setTimeout(()=>f.remove(),3200)}
  $('hwsAgain').disabled=HW_ITEMS.some(([k])=>hwHave(k)<HW_CHEST_COST);$('hwsAgain').onclick=hwChest;$('hwsClose').onclick=()=>{st.classList.remove('on');hwRender();};
  hwRender();
 }

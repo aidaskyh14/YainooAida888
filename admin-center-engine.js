@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=fd044428';
+import {CATALOG} from './catalog.js?h=0182268e';
 const fail=(message,code='invalid-argument')=>{throw Object.assign(new Error(message),{code});};
 const cleanText=(s,max)=>typeof s==='string'?s.slice(0,max):'';
 export async function adminCenter(db,uid,input,fields){
@@ -50,7 +50,7 @@ export async function adminCenter(db,uid,input,fields){
    const recipients=op.uids.slice(start,start+chunk);
    for(const [i,to]of recipients.entries()){
     const n=op.packs[to];tx.set(db.doc('mail/'+to+'/items/'+op.operationId+'-'+(start+i)),{...op.body,kusal:op.body.kusal*n,coins:op.body.coins*n,items:Object.fromEntries(Object.entries(op.body.items).map(([k,q])=>[k,q*n])),createdAt:fields.timestamp(),expireAt:fields.expires(Date.now()+60*864e5)});
-    tx.update(db.doc('players/'+to),{mailCount:fields.increment(1),...(Object.keys(op.body.items||{}).some(k=>k.startsWith('demon-'))?{dmMail:true}:{})});/* fix17 😈 ไอเทมปีศาจในไปรษณีย์ย้ายเข้ากระเป๋าเองหลัง 24 ชม. */
+    tx.update(db.doc('players/'+to),{mailCount:fields.increment(1),...(Object.keys(op.body.items||{}).some(k=>k.startsWith('demon-'))?{dmMail:true}:{})});/* fix17 🎭 ไอเทมปีศาจในไปรษณีย์ย้ายเข้ากระเป๋าเองหลัง 24 ชม. */
    }
    const done=[...op.done,start],status=done.length===Math.ceil(op.uids.length/chunk)?'done':'sending';tx.update(state,{done,status,updatedAt:fields.timestamp()});
    if(status==='done')tx.set(db.doc('adminLog/'+op.operationId),{sender:uid,at:fields.timestamp(),expireAt:fields.expires(Date.now()+60*864e5),type:'gift',packs:op.packs,to:op.names,count:op.uids.length,...op.body});

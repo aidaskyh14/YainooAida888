@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=fd044428';
+import {CATALOG} from './catalog.js?h=0182268e';
 import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?h=5f019114';
 const fullPath=c=>/^(sub|pend)\./.test(c.p)?c.p:'bag.'+c.p;
 const error=message=>{throw Object.assign(new Error(message),{code:'invalid-argument'});};

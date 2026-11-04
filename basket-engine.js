@@ -20,7 +20,7 @@ export function basketRound(rng,now,id){
   return {id,phase:'active',tier,start:now,until:now+BASKET.length,orders,pieces:shuffle(rng,pieces).map((x,i)=>({id:x,slot:slots[i]})),events,shadowList:tier==='hard'?int(rng,0,2):-1,sent:[null,null,null]};
 }
 export function basketSend(r,witch,items,now){
-  if(!r||r.phase!=='active')fail('รอบจัดตะกร้าไม่ถูกต้อง');if(![0,1,2].includes(witch))fail('แม่มดไม่ถูกต้อง');if(r.sent[witch])fail('ส่งตะกร้านี้ไปแล้ว');
+  if(!r||r.phase!=='active')fail('รอบจัดตะกร้าไม่ถูกต้อง');if(![0,1,2].includes(witch))fail('นางในวรรณคดีไม่ถูกต้อง');if(r.sent[witch])fail('ส่งตะกร้านี้ไปแล้ว');
   if(now>r.until+BASKET.grace)fail('หมดเวลาแล้ว');if(!items||typeof items!=='object'||Array.isArray(items))fail('ตะกร้าไม่ถูกต้อง');
   const got={};for(const [k,n] of Object.entries(items)){const x=Number(k);if(!Number.isInteger(x)||x<0||x>=BASKET.items||!Number.isInteger(n)||n<1||n>BASKET.slots)fail('ของในตะกร้าไม่ถูกต้อง');got[x]=n;}
   // pieces must exist on the table and not already be in a basket that was sent

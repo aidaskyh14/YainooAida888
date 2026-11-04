@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th"><head><script src="../pv/s4icon.js?h=edc9f144"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<html lang="th"><head><script src="../pv/s4loop.js?h=2b770a67"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>โซนซาฟารี</title>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -12,7 +12,7 @@ canvas{display:block}
 #load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#f9b26b,#f7d58f);color:var(--ink);font-weight:700;font-size:20px;z-index:20;transition:opacity .6s}
 #load .bar{width:220px;height:14px;border-radius:9px;background:#fff6;margin-top:14px;overflow:hidden;border:2px solid #fff}
 #load .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
-.top{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:118px;right:12px;display:flex;justify-content:space-between;align-items:center;z-index:5;pointer-events:none}
+.top{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:158px;right:12px;display:flex;justify-content:space-between;align-items:center;z-index:5;pointer-events:none}
 .pill{pointer-events:auto;background:var(--card);color:var(--ink);border:3px solid #fff;box-shadow:0 3px 0 #0002;border-radius:22px;padding:7px 14px;font-weight:700;font-size:16px}
 .btn{pointer-events:auto;width:52px;height:52px;border-radius:50%;background:var(--card);border:3px solid #fff;box-shadow:0 3px 0 #0002;font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .side{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 18px);display:flex;flex-direction:column;gap:10px;z-index:5}
@@ -86,7 +86,7 @@ body.edit .side,body.edit #hint{display:none}
 #map .z.here{border-color:var(--acc);background:#fff1dc}
 #map .z b{font-size:28px}
 #map .z small{margin-left:auto;font-size:13px;color:#a0703c}
-</style><style>/* S4: ปุ่มเครื่องมือยุบรวมเป็นปุ่มเดียว แตะแล้วเด้งออก (ไม่บังฉาก) · ไม่มีปุ่มทดสอบกลางคืนในเกมจริง */#side .btn:not(#sideT){display:none}#side.open .btn:not(#nightBtn){display:flex;animation:s4sideIn .22s cubic-bezier(.3,1.4,.5,1) both}#nightBtn{display:none!important}#side.open #sideT{background:linear-gradient(180deg,#ffd76a,#f39a1e);color:#fff}@keyframes s4sideIn{from{transform:translateX(30px) scale(.6);opacity:0}}</style></head><body><script src="../pv/s4cc.js?h=27404a56"></script><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=c59dc02d"></script>
+</style><style>/* S4: ปุ่มเครื่องมือยุบรวมเป็นปุ่มเดียว แตะแล้วเด้งออก (ไม่บังฉาก) · ไม่มีปุ่มทดสอบกลางคืนในเกมจริง */#side .btn:not(#sideT){display:none}#side.open .btn:not(#nightBtn){display:flex;animation:s4sideIn .22s cubic-bezier(.3,1.4,.5,1) both}#nightBtn{display:none!important}#side.open #sideT{background:linear-gradient(180deg,#ffd76a,#f39a1e);color:#fff}@keyframes s4sideIn{from{transform:translateX(30px) scale(.6);opacity:0}}</style></head><body><script src="../pv/s4cc.js?h=27404a56"></script><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="stage"></div>
 <div id="load"><div>🦁 กำลังเข้าซาฟารี…</div><div class="bar"><i></i></div></div>
 <div class="top"><div class="pill">🦁 โซนซาฟารี</div><div class="btn" id="mapBtn">🗺️</div></div>
@@ -103,7 +103,7 @@ body.edit .side,body.edit #hint{display:none}
 <div class="z" data-z="pet"><b>🐶</b>สวนหมาแมว<small>เดินทาง</small></div>
 <div class="z here" data-z="safari"><b>🦁</b>ซาฟารี<small>อยู่ที่นี่</small></div>
 </div></div>
-<script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=240ef027"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -168,7 +168,7 @@ const LAMPS=[];
 const DECOR=[],DB=new Map(),DEFAULTS=[];let decorReady=false;
 const SZ={c2_sf_windmill:{h:7},c2_sf_treehouse:{w:6.5},c2_sf_acacia:{h:5.4},c2_sf_baobab:{h:6.2},c2_sf_tree2:{h:5},c2_sf_rocks:{w:2.6},c2_sf_termite:{h:2.4},c2_sf_grass:{h:1.3},c2_sf_lantern:{h:2.3},c2_sf_chair:{h:1.5},c2_sf_crates:{w:2.4},c2_sf_hut:{h:3.4},c2_sf_tent:{h:3.6},c2_sf_jeep:{w:4.2},c2_sf_jeep2:{w:4.4},c2_sf_picnic:{w:3},c2_sf_signpost:{h:2.6},c2_sf_hat:{h:.8},c2_sf_pond:{w:4.6},c2_sf_campfire:{w:2.4}};
 const NAME={c2_sf_windmill:'กังหันลม',c2_sf_treehouse:'บ้านต้นไม้',c2_sf_acacia:'ต้นอาเคเซีย',c2_sf_baobab:'ต้นเบาบับ',c2_sf_tree2:'ต้นไม้ใบเขียว',c2_sf_rocks:'กองหิน',c2_sf_termite:'จอมปลวก',c2_sf_grass:'พุ่มหญ้าทอง',c2_sf_lantern:'เสาตะเกียง',c2_sf_chair:'เก้าอี้แคมป์',c2_sf_crates:'ลังไม้',c2_sf_hut:'กระท่อม',c2_sf_tent:'เต็นท์',c2_sf_jeep:'รถจี๊ป',c2_sf_jeep2:'รถจี๊ปหลังคา',c2_sf_picnic:'โต๊ะปิกนิก',c2_sf_signpost:'ป้ายบอกทาง',c2_sf_hat:'หมวกนักสำรวจ',c2_sf_pond:'บ่อน้ำ',c2_sf_campfire:'กองไฟ'};
-let BAGINV={c2_sf_windmill:1,c2_sf_treehouse:1,c2_sf_acacia:2,c2_sf_baobab:1,c2_sf_tree2:2,c2_sf_rocks:2,c2_sf_termite:2,c2_sf_grass:4,c2_sf_lantern:3,c2_sf_chair:2,c2_sf_crates:2,c2_sf_hut:1,c2_sf_tent:1,c2_sf_jeep:1,c2_sf_jeep2:0,c2_sf_picnic:1,c2_sf_signpost:1,c2_sf_hat:1,c2_sf_pond:1,c2_sf_campfire:1};
+let BAGINV={};/* S4: ถุงแต่งซาฟารีเริ่มว่าง — ของฟรี/ซื้อ/เงื่อนไข ตามสมุดของตกแต่งที่แอดมินกำหนด (จะเติมจากเซิร์ฟเวอร์) */
 const relCache=new Map();
 async function relOf(n,opt){const key=n+JSON.stringify([opt.h,opt.w]);if(relCache.has(key))return relCache.get(key);const g=await get(n);const o=fit(g.scene,opt);o.updateMatrixWorld(true);const out=[];const bb=new THREE.Box3().setFromObject(o),sz=bb.getSize(new THREE.Vector3());out.size=sz;
   o.traverse(m=>{if(m.isMesh)out.push({key:m.geometry.uuid+'|'+[].concat(m.material).map(x=>x.uuid).join(','),g:m.geometry,mat:m.material,rel:m.matrixWorld.clone()});});relCache.set(key,out);return out;}
@@ -185,7 +185,9 @@ const SAVEK='safari-pv-decor-v4';
 function saveDecor(){try{localStorage.setItem(SAVEK,JSON.stringify({d:DECOR.map(it=>[it.n,+it.x.toFixed(2),+it.z.toFixed(2),+it.ry.toFixed(3),it.opt]),b:BAGINV}));}catch(e){}}
 async function loadDecor(){let saved=null;try{saved=JSON.parse(localStorage.getItem(SAVEK)||'null');}catch(e){}
   const list=saved&&saved.d?saved.d:DEFAULTS;if(saved&&saved.b)BAGINV=saved.b;await Promise.all(list.map(([n,x,z,ry,opt])=>addDecor(n,x,z,ry,opt)));decorReady=true;}
-async function put(n,x,z,opt={}){if(SZ[n]&&!opt.dyn&&!opt.fixed){DEFAULTS.push([n,x*K,z*K,opt.ry||0,{h:opt.h,w:opt.w}]);if(n==='c2_sf_lantern'){const h=opt.h||2.3,ry=opt.ry||0;LAMPS.push([x*K+Math.cos(ry)*.2*h,h*.42,z*K-Math.sin(ry)*.2*h]);}return null;}
+/* S4 รีเซ็ตผู้เล่น: ของแต่งซาฟารี (ต้นไม้ เต็นท์ จี๊ป บ่อ ฯลฯ ที่โค้ดวางให้) · ซิปไลน์ · ลิง มีเฉพาะฟาร์มแอดมิน · ผู้เล่นเริ่มด้วยคอกเปล่า+ศูนย์+ประตู แล้ววางเองจากถุง */
+const ADMINZ=(()=>{try{const P=parent;const H=P.__HOST||(P.parent&&P.parent.__HOST);const u=JSON.parse((H&&H.get('s3user'))||(0,P.eval)("localStorage.getItem('s3user')")||'null');return !!(u&&u.admin)&&!(0,P.eval)('!!window.visiting');}catch(e){return false;}})();
+async function put(n,x,z,opt={}){if(!ADMINZ&&SZ[n]&&!opt.fixed&&!opt.keep)return new THREE.Group();if(SZ[n]&&!opt.dyn&&!opt.fixed){DEFAULTS.push([n,x*K,z*K,opt.ry||0,{h:opt.h,w:opt.w}]);if(n==='c2_sf_lantern'){const h=opt.h||2.3,ry=opt.ry||0;LAMPS.push([x*K+Math.cos(ry)*.2*h,h*.42,z*K-Math.sin(ry)*.2*h]);}return null;}
   x*=K;z*=K;const g=await get(n);const o=fit(g.scene,opt);o.position.set(x,opt.y||0,z);o.rotation.y=opt.ry||0;if(n==='c2_sf_lantern'){const h=opt.h||2.3,ry=opt.ry||0;LAMPS.push([x+Math.cos(ry)*.2*h,h*.42,z-Math.sin(ry)*.2*h]);}if(opt.dyn)sc.add(o);else addStatic(o);return o;}
 // flowing water: bright streaks run down the steep blue parts, slow ripples on the flat pool
 const WT={value:0};
@@ -277,7 +279,7 @@ document.getElementById('bellBtn').onclick=()=>{const out=walkers.filter(a=>a.ou
 function stepBell(){if(!BELL)return;if(walkers.every(a=>!a.out&&!a.leaving)){BELL=false;for(const p of pens)p.want=0;toast('✅ นกกลับเข้าคอกครบแล้ว · ปิดประตูให้แล้ว');}}
 // baboons that walk around (skinned + walk clip)
 const babs=[];
-async function baboon(x,z,area){const g=await get('c2_an_baboon_walk');const o=fit(g.scene,{h:1.35,skin:true});noShadow(o);const body=new THREE.Group();body.add(o);const w=new THREE.Group();w.add(body);blob(w,1.1);sc.add(w);
+async function baboon(x,z,area){if(!ADMINZ)return;const g=await get('c2_an_baboon_walk');const o=fit(g.scene,{h:1.35,skin:true});noShadow(o);const body=new THREE.Group();body.add(o);const w=new THREE.Group();w.add(body);blob(w,1.1);sc.add(w);
   const root=o.children[0];const mx=new THREE.AnimationMixer(root);const clip=g.animations[0];const act=mx.clipAction(clip);act.play();act.timeScale=1.2;
   // standing pose = the walk frame where both feet are closest together (so a resting baboon does not freeze mid-stride)
   let feet=[];root.traverse(b=>{if(b.isBone&&/foot|ankle/i.test(b.name))feet.push(b);});let best=0;
@@ -313,7 +315,9 @@ function stepBab(a,dt){const idx=babs.indexOf(a);a.ph+=dt;
 // ---------- zipline network: 4 towers, 5 cables, baboons pick a new cable at every tower ----------
 const TW=[],LEGS=[],RIDERS=[];
 function catenary(A,B,sag,t){const p=new THREE.Vector3().lerpVectors(A,B,t);p.y-=Math.sin(Math.PI*t)*sag;return p;}
-async function zipline(){
+/* S4 ข้อ 51 🐒 ลิงซิปไลน์: แอดมินเห็นครบ 3 ตัวเสมอ · ผู้เล่นเห็นเท่าจำนวนลิงที่ได้จากแอดมิน (item.monkey สูงสุด 3) */
+const MONKEYN=(()=>{try{if(ADMINZ)return 3;const P=parent;const H=P.__HOST||(P.parent&&P.parent.__HOST);const g=JSON.parse((H&&H.get('s3all-v1'))||'{}');return Math.min(3,Math.max(0,(g.bag&&g.bag.item&&g.bag.item.monkey)|0));}catch(e){return 0;}})();
+async function zipline(){if(!MONKEYN)return;
   const DEF=[['c2_sf_tower',-6,-23,6.4,.45],['c2_sf_tower2',13,-21,5.6,-.5],['c2_sf_tower',26,12,6.0,-1.6],['c2_sf_tower2',5,25,5.6,2.4]];
   for(const [n,x,z,h,ry] of DEF){await put(n,x,z,{h,ry,fixed:1});TW.push({x:x*K,z:z*K,h});}
   const cableM=new THREE.MeshStandardMaterial({color:0x5b4636,roughness:.6}),knobM=new THREE.MeshStandardMaterial({color:0xd99a3c,roughness:.5});
@@ -323,7 +327,7 @@ async function zipline(){
     for(const P of [A,B]){const k=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),knobM);k.position.copy(P);sc.add(k);}
     LEGS.push({i,j,A,B,sag,len:d,yaw:Math.atan2(dx,dz)-Math.PI/2});}
   const g=await get('c2_an_baboon_hang');
-  for(const [leg,t] of [[0,.1],[2,.45],[4,.75]]){const o=fit(g.scene,{h:1.45});noShadow(o);const rig=new THREE.Group(),swing=new THREE.Group();rig.add(swing);swing.add(o);o.position.y-=1.45+.22;
+  for(const [leg,t] of [[0,.1],[2,.45],[4,.75]].slice(0,MONKEYN)){const o=fit(g.scene,{h:1.45});noShadow(o);const rig=new THREE.Group(),swing=new THREE.Group();rig.add(swing);swing.add(o);o.position.y-=1.45+.22;
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.12,18),new THREE.MeshStandardMaterial({color:0xe2e2e2,roughness:.35,metalness:.2}));wheel.rotation.z=Math.PI/2;rig.add(wheel);
     const hook=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.24,8),new THREE.MeshStandardMaterial({color:0x777777}));hook.position.y=-.14;swing.add(hook);sc.add(rig);
     RIDERS.push({rig,swing,wheel,leg,t,v:.4,a:rnd()*6,hold:0});}}
@@ -464,7 +468,7 @@ document.getElementById('nightBtn').onclick=()=>{night=night?0:1;document.getEle
 let edit=false,sel=null,drag=null,pan=null;const F={x:0,z:0};
 const tray=document.getElementById('tray'),selBar=document.getElementById('selBar'),tList=document.getElementById('tList');
 const ring=new THREE.Mesh(new THREE.RingGeometry(.9,1.15,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));ring.visible=false;ring.renderOrder=2;sc.add(ring);
-const THUMB={};
+const THUMB={};window.__safThumb=THUMB;window.__safName=NAME;
 async function makeThumbs(){const TS=200;const rt=new THREE.WebGLRenderTarget(TS,TS);rt.texture.colorSpace=THREE.SRGBColorSpace;const ts=new THREE.Scene();ts.add(new THREE.HemisphereLight(0xffffff,0xb08a60,2.4));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(3,5,6);ts.add(dl);
   const tc=new THREE.PerspectiveCamera(30,1,.1,200);const buf=new Uint8Array(TS*TS*4);const cv=document.createElement('canvas');cv.width=cv.height=TS;const cx=cv.getContext('2d');
   for(const n of Object.keys(SZ)){const g=await get(n);const o=fit(g.__s,{h:1});ts.add(o);const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new THREE.Vector3()),R0=b.getSize(new THREE.Vector3()).length()*.5;
@@ -473,22 +477,24 @@ async function makeThumbs(){const TS=200;const rt=new THREE.WebGLRenderTarget(TS
   r.setClearColor(0x000000,1);}
 const CATS=[['🌳 ต้นไม้',['c2_sf_acacia','c2_sf_baobab','c2_sf_tree2','c2_sf_grass']],['🪨 หิน·น้ำ',['c2_sf_rocks','c2_sf_termite','c2_sf_pond']],['⛺ บ้าน·แคมป์',['c2_sf_windmill','c2_sf_treehouse','c2_sf_tent','c2_sf_hut','c2_sf_campfire']],['🪑 นั่งเล่น',['c2_sf_chair','c2_sf_picnic']],['🏮 ของจุกจิก',['c2_sf_crates','c2_sf_lantern','c2_sf_signpost','c2_sf_hat']],['🚙 รถ',['c2_sf_jeep','c2_sf_jeep2']]];CATS.unshift(['✨ ทั้งหมด',CATS.flatMap(c=>c[1])]);const CATE={};CATS.slice(1).forEach(c=>c[1].forEach(n=>CATE[n]=c[0]));let cat=0;
 const tCats=document.getElementById('tCats');tCats.onclick=e=>{const b=e.target.closest('button');if(!b)return;cat=+b.dataset.c;drawTray();};
-function drawTray(){tCats.innerHTML=CATS.map((c,i)=>`<button data-c="${i}" class="${i===cat?'on':''}">${c[0]}</button>`).join('');tList.innerHTML=CATS[cat][1].map(n=>`<div class="it${BAGINV[n]>0?'':' zero'}${carry&&carry.n===n?' pick':''}" data-n="${n}" title="${NAME[n]}"><img draggable="false" src="${THUMB[n]||''}" alt="${NAME[n]}"><b>${NAME[n]}</b><i>${BAGINV[n]||0}</i><em class="zm" data-zm="${n}">🔍</em></div>`).join('');}
+/* S4 ข้อ 32/53: สิทธิ์ของแต่ง = ฟรีชิ้นละ 1 + ที่ยัยหนูส่ง (bag.decor) − ที่วาง (pv/s4own.js) · แอดมินไม่จำกัด */
+const AVAIL=n=>{try{if(ADMINZ||!window.S4OWN)return Infinity;return window.S4OWN.avail(n,{src:'safari',n:DECOR.filter(d=>d.n===n).length});}catch(e){return Infinity;}};const AVS=n=>{const a=AVAIL(n);return a===Infinity?'∞':a;};
+function drawTray(){tCats.innerHTML=CATS.map((c,i)=>`<button data-c="${i}" class="${i===cat?'on':''}">${c[0]}</button>`).join('');tList.innerHTML=CATS[cat][1].map(n=>`<div class="it${AVAIL(n)>0?'':' zero'}${carry&&carry.n===n?' pick':''}" data-n="${n}" title="${NAME[n]}"><img draggable="false" src="${THUMB[n]||''}" alt="${NAME[n]}"><b>${NAME[n]}</b><i>${AVS(n)}</i><em class="zm" data-zm="${n}">🔍</em></div>`).join('');}
 function select(it){sel=it;selBar.classList.toggle('on',!!it);ring.visible=!!it;if(it){const s=Math.max(1.2,(it.opt.w||it.opt.h||2)*.55);ring.scale.set(s,1,s);ring.position.set(it.x,.06,it.z);}}
 function setEdit(on){if(!on)dropCarry&&dropCarry();edit=on;document.body.classList.toggle('edit',on);tray.classList.toggle('on',on);if(on){F.x=P.x;F.z=P.z-3;drawTray();overview=false;}else{select(null);saveDecor();r.shadowMap.needsUpdate=true;}}
 document.getElementById('bagBtn').onclick=()=>setEdit(true);
 document.getElementById('tDone').onclick=()=>{setEdit(false);toast('✅ บันทึกการตกแต่งแล้ว');};
 document.getElementById('sRot').onclick=()=>{if(!sel)return;sel.ry-=Math.PI/4;place(sel);};
-document.getElementById('sPick').onclick=()=>{if(!sel)return;BAGINV[sel.n]=(BAGINV[sel.n]||0)+1;removeDecor(sel);select(null);drawTray();toast('📦 เก็บเข้ากระเป๋าแล้ว');};
+document.getElementById('sPick').onclick=()=>{if(!sel)return;removeDecor(sel);select(null);drawTray();try{saveDecor();}catch(e){}toast('📦 เก็บเข้ากระเป๋าแล้ว');};
 // carrying a piece from the bag: a see-through copy follows the finger; let go (or tap the ground) to put it down
 let carry=null;
 async function makeGhost(n){const g=await get(n);const o=fit(g.scene,SZ[n]);o.traverse(m=>{if(m.isMesh){m.material=[].concat(m.material).map(x=>{const c=x.clone();c.transparent=true;c.opacity=.6;c.depthWrite=false;return c;});if(m.material.length===1)m.material=m.material[0];m.castShadow=false;}});o.visible=false;sc.add(o);return o;}
 function dropCarry(){if(!carry)return;if(carry.ghost)sc.remove(carry.ghost);carry=null;document.getElementById('tTip').textContent='ลากของไปวาง หรือแตะของแล้วแตะพื้น';setTimeout(drawTray,0);}
 const trayTop=()=>tray.getBoundingClientRect().top;
-tList.addEventListener('pointerdown',async e=>{const zm=e.target.closest('[data-zm]');if(zm){e.stopPropagation();showPv(zm.dataset.zm);return;}const el=e.target.closest('.it');if(!el)return;const n=el.dataset.n;if(!(BAGINV[n]>0)){toast('ของชิ้นนี้หมดกระเป๋าแล้ว');return;}
+tList.addEventListener('pointerdown',async e=>{const zm=e.target.closest('[data-zm]');if(zm){e.stopPropagation();showPv(zm.dataset.zm);return;}const el=e.target.closest('.it');if(!el)return;const n=el.dataset.n;if(!(AVAIL(n)>0)){toast('📦 ของชิ้นนี้วางครบแล้ว · เก็บชิ้นเดิมหรือรับเพิ่มจากยัยหนู');return;}
   if(carry&&carry.n===n){dropCarry();return;}if(carry){if(carry.ghost)sc.remove(carry.ghost);carry=null;}select(null);carry={n,sx:e.clientX,sy:e.clientY,drag:false,ghost:null};tList.querySelectorAll('.it').forEach(x=>x.classList.toggle('pick',x===el));document.getElementById('tTip').textContent='แตะพื้นตรงที่จะวาง · แตะของเดิมเพื่อยกเลิก';const me=carry;const gh=await makeGhost(n);if(carry!==me){sc.remove(gh);return;}carry.ghost=gh;});
 addEventListener('pointermove',e=>{if(!carry)return;if(e.clientY<trayTop()-6){if(Math.hypot(e.clientX-carry.sx,e.clientY-carry.sy)>14)carry.drag=true;if(!carry.ghost)return;const g=groundAt(e);if(g){carry.ghost.visible=true;carry.ghost.position.set(g.x,.25,g.z);}if(Math.hypot(e.clientX-carry.sx,e.clientY-carry.sy)>14)carry.drag=true;}});
-async function putCarry(e){const g=groundAt(e);if(!g||!carry)return;const n=carry.n;BAGINV[n]--;dropCarry();const it=await addDecor(n,Math.max(B.x0+1,Math.min(B.x1-1,g.x)),Math.max(B.z0+1,Math.min(B.z1-1.5,g.z)),0,SZ[n]);select(it);drawTray();r.shadowMap.needsUpdate=true;toast('✅ วางแล้ว · ลากเพื่อขยับ · 🔄 หมุน');}
+async function putCarry(e){const g=groundAt(e);if(!g||!carry)return;const n=carry.n;if(!(AVAIL(n)>0)){dropCarry();toast('📦 วางครบแล้ว');return;}dropCarry();const it=await addDecor(n,Math.max(B.x0+1,Math.min(B.x1-1,g.x)),Math.max(B.z0+1,Math.min(B.z1-1.5,g.z)),0,SZ[n]);select(it);drawTray();r.shadowMap.needsUpdate=true;try{saveDecor();}catch(e){}toast('✅ วางแล้ว · ลากเพื่อขยับ · 🔄 หมุน');}
 addEventListener('pointerup',e=>{if(!carry||!carry.drag)return;if(e.clientY<trayTop()-6)putCarry(e);else{if(carry.ghost)carry.ghost.visible=false;carry.drag=false;}},true);
 const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hitP=new THREE.Vector3();
 function groundAt(e){nd.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(nd,cam);return ray.ray.intersectPlane(plane,hitP)?hitP.clone():null;}
@@ -574,7 +580,7 @@ async function build(){
   await zipline();
   flushStatic();flushTufts();await loadDecor();await makeThumbs();
   // where the baboons sleep at night: a rock den and two leaf beds beside the big acacia
-  await put('c2_sf_den',16,-14.7,{w:3.1,dyn:1});await put('c2_sf_leafbed',9,-6.6,{w:1.8,dyn:1});await put('c2_sf_leafbed',14.2,-8.3,{w:1.8,dyn:1,ry:.4});
+  if(ADMINZ){await put('c2_sf_den',16,-14.7,{w:3.1,dyn:1});await put('c2_sf_leafbed',9,-6.6,{w:1.8,dyn:1});await put('c2_sf_leafbed',14.2,-8.3,{w:1.8,dyn:1,ry:.4});}
   await baboon(-3,-9,[-6,-12,5,-7]);await baboon(4,-11,[-5,-13,7,-8]);await baboon(-1,-12,[-8,-14,6,-9]);
   await ccBuild();await loadGirl();BDROP=BDM;setupNight();
   // campfire glow
@@ -584,7 +590,7 @@ async function build(){
 }
 // ---------- loop ----------
 const clock=new THREE.Clock();let T=0,frame=0;
-function loop(){const dt=Math.min(.05,clock.getDelta());T+=dt;frame++;
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||!!carry||!!window.__zsnap||(typeof BELL!=='undefined'&&BELL));function loop(dt){clock.getDelta();T+=dt;frame++;
   WT.value=T;stepMist(dt);for(const w of WM)w.spin.rotation.z+=dt*1.4;stepNight(dt);for(const a of walkers)stepBird(a,dt);stepBell();for(const b of babs)stepBab(b,dt);for(const p of PETS)stepPet(p,dt);stepZip(dt);
   for(const p of pens){const w=(p.want||BELL)?1:0;p.open+=(w-p.open)*Math.min(1,dt*4);p.hinge.rotation.y=p.open*1.75;}
   if(girl){let moving=false;
@@ -602,10 +608,10 @@ function loop(){const dt=Math.min(.05,clock.getDelta());T+=dt;frame++;
     else{d.children[0].rotation.y+=dt*.6;}}
   if(balloon){balloon.position.set(-8+Math.sin(T*.07)*7,12+Math.sin(T*.5)*.6,-24+Math.cos(T*.05)*2);balloon.rotation.y+=dt*.1;}
   if(fireLight&&fireGlow){const f=.85+Math.sin(T*13)*.08+Math.sin(T*7.3)*.07;fireLight.pool.material.opacity=(.4+.5*nightK)*f;fireGlow.scale.setScalar((3.2+1.6*nightK)*f);}
-  camUpdate(dt);if(!MOBILE||(frame&1)===0||window.__zsnap)r.render(sc,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(r.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}requestAnimationFrame(loop);}
+  camUpdate(dt);r.render(sc,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(r.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}}
 build().then(()=>{camUpdate(0,true);sc.updateMatrixWorld(true);r.shadowMap.needsUpdate=true;const l=document.getElementById('load');l.style.opacity=0;setTimeout(()=>l.remove(),700);window.__ready=1;
   try{r.compile(sc,cam);}catch(e){}}).catch(e=>{console.log('build fail',e&&e.message,e&&e.stack);document.querySelector('#load div').textContent='โหลดไม่สำเร็จ ลองรีเฟรช';});
-requestAnimationFrame(loop);setTimeout(()=>{const h=document.getElementById('hint');if(h)h.style.opacity=0;},9000);
+S4LOOP.run(loop);setTimeout(()=>{const h=document.getElementById('hint');if(h)h.style.opacity=0;},9000);
 
 // ===== ซีซัน 4: หมุนกล้อง · ดูของแต่งภาพใหญ่ · เอฟเฟกต์ · ผูกกับระบบนกซีซัน 3 =====
 document.getElementById('rotL').onclick=()=>{YAWT+=Math.PI/4;};document.getElementById('rotR').onclick=()=>{YAWT-=Math.PI/4;};

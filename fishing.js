@@ -93,7 +93,7 @@ addEventListener('resize',()=>{fitStage();if($('book').classList.contains('on'))
 function renderTop(){$('top').innerHTML='';}
 
 /* ---------- lobby ---------- */
-function boardRows(){return Object.entries(S.board).filter(([n,w])=>w>0||n===Host.uid).sort((a,b)=>b[1]-a[1]);}
+function boardRows(){/* S4 ข้อ 85: มีแถวของตัวเองเสมอ (0 lb ก็เห็นอันดับ) */const b={...S.board};if(b[Host.uid]==null)b[Host.uid]=0;return Object.entries(b).filter(([n,w])=>w>0||n===Host.uid).sort((a,b)=>b[1]-a[1]);}
 function renderLobby(){const st=$('stage');document.documentElement.style.setProperty('--bg',`url(${IMG['fish-lobby-bg']})`);
  st.style.backgroundImage=`url(${IMG['fish-lobby-bg']})`;const lk=S.open?'':' 🔒';
  st.innerHTML=`<div class="sign ${S.open?'':'locked'}" id="pnorm" style="left:27%;top:24%"><div class="plank">🎣 บ่อทั่วไป${lk}<small>${S.pondToday?'วันนี้: '+PONDS[S.pondToday].name.replace('บ่อทั่วไป ','บ่อ '):'เลือกได้วันละ 1 บ่อ'}</small></div><div class="post"></div><div class="rip"></div></div>
@@ -108,7 +108,8 @@ function updateLobby(){const w=$('bwrap');if(!w)return;
   if(!S.open){setBoard(w,`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00<br>บ่อปิดตามเวลาไทย</small></div>`);return}
   const rows=boardRows();
   const html=rows.map(([n,v],i)=>`<div class="row ${i<5?'t5':''} ${n===Host.uid?'me':''}"><span class="rk">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><b>${esc(world?.board?.[n]?.name||ME)+(n===Host.uid?' (ฉัน)':'')}</b><span class="w">${f2(v)} lb</span></div>`).join('');
-  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 150,000–3,000,000 กุศล</div><div class="blist" id="blist" style="max-height:52vh">${html}</div>`);
+  const meI=rows.findIndex(([n])=>n===Host.uid),meW=meI>=0?rows[meI][1]:0;
+  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 150,000–3,000,000 กุศล</div><div class="bnote" style="font-weight:800">🙋 ฉัน: อันดับ ${meI+1}/${rows.length} · ${f2(meW)} lb</div><div class="blist" id="blist" style="max-height:52vh">${html||'<div class="hint">ยังไม่มีใครตกปลาวันนี้</div>'}</div>`);
  }else{
   const html=[...S.hist].reverse().map(d=>`<div class="day"><h4>📅 ${esc(d.d)}</h4>${d.top.map((p,i)=>`<div class="r ${p.name===ME?'me':''}"><span>${['🥇','🥈','🥉','4','5'][i]}</span><b>${esc(p.name)}</b><span>${f2(p.w)} lb</span>${p.st>1?`<span class="s">🔥${p.st} วัน</span>`:''}<span class="m">+${nf(p.rw)}</span>${p.name===ME?(S.gifts.some(g=>g.d===d.d)?'<span class="m">🎁</span>':'<span class="m">✅</span>'):''}</div>`).join('')}</div>`).join('');
   setBoard(w,`<div class="bnote">🥇 3,000,000 · 🥈 1,000,000 · 🥉 500,000 · 4️⃣ 300,000 · 5️⃣ 150,000 · ติดต่อกันบวกวันละ 10,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`)}}
@@ -165,7 +166,7 @@ function updateMission(){const m=$('mis');if(!m)return;const ms=mySeat();const r
 let barKey='';
 function renderPondBar(force){const b=$('bar'),ms=mySeat(),now=Date.now()+serverOffset,k=PONDS[S.pond].k;let mid='',key='',cd=0;
  if(ms&&ms.p===S.pond){const s=ms.s;key=s.ph+(s.vip?'v'+s.stage:'');
-  if(s.ph==='wait'){cd=s.t-now;mid=`<span class="big info">🎣 รอปลากิน <span id="cd"></span></span>`}
+  if(s.ph==='wait'){cd=s.t-now;const bOk=!s.vip&&!s.bait&&(S.bait&&S.bait.have>0);mid=`<span class="big info">🎣 รอปลากิน <span id="cd"></span></span>${bOk?`<button class="big" id="baitNow" style="margin-top:.3rem">🎣 ใช้เหยื่อวิเศษ (รอสั้นลงครึ่งหนึ่ง · มี ${S.bait.have})</button>`:''}`}
   else if(s.ph==='hook'){cd=s.t-now;mid=`<button class="big hot" id="hookb">❗ รับปลา! <small id="cd"></small></button>`}
   else if(s.ph==='idle')mid=`<button class="big ${s.vip?'gold':''}" id="castb">${s.vip?'🎣 หย่อนเบ็ดด่าน '+(s.stage+1):'🎣 หย่อนเบ็ดใหม่'}</button>`;
  }else if(ms){key='else';mid=`<span class="big info">นั่งอยู่ที่${PONDS[ms.p].name}</span>`}
@@ -181,7 +182,7 @@ function renderPondBar(force){const b=$('bar'),ms=mySeat(),now=Date.now()+server
  $('homeb').onclick=()=>{S.screen='lobby';S.pond=null;render()};$('toolbtn').onclick=tools;
  if($('skipb'))$('skipb').onclick=()=>{const m=mySeat();if(m){m.s.t=Date.now();tick()}};
  if($('skipcd'))$('skipcd').onclick=()=>{S.cdEnd=0;updatePond()};
- if($('hookb'))$('hookb').onclick=collect;if($('standb'))$('standb').onclick=standUp;if($('admb2'))$('admb2').onclick=adminPanel;
+ if($('hookb'))$('hookb').onclick=collect;if($('baitNow'))$('baitNow').onclick=async()=>{if(await act({type:'bait'}))ann('🎣 ใช้เหยื่อวิเศษแล้ว ปลาจะกินเร็วขึ้น');};if($('standb'))$('standb').onclick=standUp;if($('admb2'))$('admb2').onclick=adminPanel;
  if($('castb'))$('castb').onclick=()=>{const m=mySeat();if(m)chooseRod(m.p,m.i)}}
 /* fix18: ลุกออกจากท่าได้ทุกเมื่อ ไม่ต้องพัก */
 function standUp(){const m=mySeat();if(!m)return;const s=m.s,busy=s.ph==='wait'||s.ph==='hook';
@@ -192,7 +193,7 @@ async function tapDock(i){const p=S.pond,s=S.seats[p][i];if(s){if(s.me){if(s.ph=
 function chooseRod(p,i){const s=S.seats[p][i];
  const o=RK.map(r=>`<div class="opt ${S.bag.rod[r]?'':'off'}" data-r="${r}"><img src="${IMG['rod-'+r]}" alt=""><div>${RODS[r].e} ${RODS[r].n}</div><span>มี ${S.bag.rod[r]} อัน</span></div>`).join('');
  const B=S.bait||{have:0,used:0,limit:0},bOk=B.have>0;if(useBait&&!bOk)useBait=false;
- const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}${bOk&&!useBait?' glow':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><span>${useBait?'✅ ใช้เหยื่อวิเศษ รอปลาแค่ 3 นาที':'🎣 ใช้เหยื่อวิเศษ (รอปลาแค่ 3 นาที)'}<small>${B.have?'มี '+nf(B.have)+' ชิ้น · ใช้ได้ไม่จำกัด':'🛒 รับจากโปรฯ ยัยหนู · ตลาดลอยกระทง'}</small></span></button>`;
+ const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}${bOk&&!useBait?' glow':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><span>${useBait?'✅ ใช้เหยื่อวิเศษ รอปลาแค่ 5 นาที':'🎣 ใช้เหยื่อวิเศษ (รอปลาแค่ 5 นาที)'}<small>${B.have?'มี '+nf(B.have)+' ชิ้น · ใช้ได้ไม่จำกัด':'🛒 รับจากโปรฯ ยัยหนู · ตลาดลอยกระทง'}</small></span></button>`;
  sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 3 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
  $('sheet').querySelectorAll('.opt').forEach(x=>x.onclick=()=>{const r=x.dataset.r;if(!S.bag.rod[r])return ann('เบ็ดแบบนี้หมดแล้ว',false);closeSheet();cast(p,i,r)});
  $('leaveb').onclick=()=>{closeSheet();if(!s.vip&&s.ph==='idle'){act({type:'leave'})}};if($('baitb'))$('baitb').onclick=()=>{useBait=!useBait;chooseRod(p,i)}}
@@ -259,7 +260,7 @@ function rulesView(){sheet(`<h3>📋 กติกาตกปลา</h3><div cla
 <p>✂️ บ่อทั่วไป: ตัดเบ็ดเพื่อนได้วันละ 30 ครั้ง ใช้กรรไกรปู 1 อัน ต้องหย่อนเบ็ดอยู่ทั้งคู่ · คนหนึ่งโดนตัดได้ไม่เกิน 30 ครั้ง/วัน</p>
 <p>✂️ ห้อง VIP: ต้องนั่งห้องเดียวกัน ใช้กรรไกรปู 10 อัน · คนโดนตัดหลุดออกจากห้อง VIP · คนหนึ่งโดนได้ 100 ครั้ง/วัน</p>
 <p>🤫 คนโดนตัดจะเห็นแค่ว่า "ใครสักคน" ตัดเบ็ด ไม่บอกชื่อ</p>
-<p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาแค่ 3 นาที · ใช้ได้ไม่จำกัด</p>
+<p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาแค่ 5 นาที · ใช้ได้ไม่จำกัด</p>
 <p>⚡ ปลาไหลไฟฟ้า: แตะทุ่นเพื่อนในบ่อเดียวกัน ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว เพื่อนหลุดจากห้อง) · ปล่อยได้วันละ 20 ตัว · คนหนึ่งโดนได้ 50 ครั้ง/วัน · คนโดนเห็นแค่ "ใครสักคน"</p>
 <p>⚡ ได้ปลาไหลไฟฟ้าจาก: ตกได้ปลาไหลแถม 5% (21:00–07:00 = 10%) · คราฟที่ร้าน</p>
 <p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 3 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>

@@ -46,8 +46,8 @@ function renderG(){
     <div class="gtitle"><p>หมุนละ 2 เหรียญกระทงทอง</p></div><div class="mwrap" id="mwrap"><div class="spr" id="mspr"></div></div>
     <div class="gctl"><button class="btn spin" id="spin">หมุนเลย!</button><div class="odds"><span>🎁 ไอเทม 60%</span><span>✨ กุศล 20%</span><span>😢 20%</span></div><button class="mini" id="items">🎁 ดูของในตู้</button></div>`;
   q('#spin').onclick=spin;q('#items').onclick=showItems;
-  q('#gadmin').innerHTML=admin?'<div class="gbox"><h3>👑 ส่งเหรียญกระทงทอง</h3><p class="note">เลือกผู้รับและจำนวนในหน้าส่งของแอดมิน เหรียญเข้าไปรษณีย์ผู้รับ</p><button class="btn g" id="sendCoins">📮 เปิดหน้าส่งของ</button></div>':'';
-  if(admin)q('#sendCoins').onclick=()=>Host.openAdmin();
+  q('#gadmin').innerHTML='';/* S4 ข้อ 130: ย้ายการส่งเหรียญไปรวมที่ศูนย์แอดมิน (ส่งของ) ไม่แสดงในหน้ากาชาปอง */
+  
   wal();idle();
 }
 async function spin(){

@@ -1,7 +1,7 @@
 /* โรงงานลูกกวาดต้องคำสาป — shared rules (Cloud Functions + candy-game.js).
    Pure ES module. Same idea as witch-engine.js: seeded streams + one scoring function used by both sides;
    the server re-scores the finish report and rejects anything the seed and the real clock cannot produce. */
-import {seededRng,makeSeed} from './witch-engine.js?h=b520a90e';
+import {seededRng,makeSeed} from './witch-engine.js?h=fe3693c0';
 export {seededRng};
 const fail=m=>{throw new Error(m);};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -87,21 +87,21 @@ export function candyPtsBound(st){
   return up-down;
 }
 function checkPlausible(round,s,now){
-  if(!round||typeof round.seed!=='string'||!Number.isFinite(round.startedAt))fail('รอบโรงงานลูกกวาดไม่ถูกต้อง');
+  if(!round||typeof round.seed!=='string'||!Number.isFinite(round.startedAt))fail('รอบโรงงานขนมไทยไม่ถูกต้อง');
   const elapsed=(now-round.startedAt)/1000,st=s.st;
   if(s.t>elapsed+CANDY.SLACK_S)fail('เวลาในเกมมากกว่าเวลาจริง');
   const resolved=st.good+st.bad+st.fake+st.mimic+st.bomb+st.wrong+st.miss+st.cat;
-  if(resolved>candySpawnBound(round.seed,s.t))fail('จำนวนลูกกวาดมากเกินกว่าที่สายพานปล่อยได้');
+  if(resolved>candySpawnBound(round.seed,s.t))fail('จำนวนขนมมากเกินกว่าที่สายพานปล่อยได้');
   if(st.heart+st.clock+st.gold>st.good)fail('ข้อมูลผลเกมไม่ถูกต้อง');
   if(st.lost>CANDY.HEARTS+st.heart)fail('จำนวนหัวใจที่เสียไม่ถูกต้อง');
   if(st.lost>st.wrong+st.miss)fail('จำนวนหัวใจที่เสียไม่ถูกต้อง');
   if(st.cat+st.shoo>catBound(s.t))fail('จำนวนแมวไม่ถูกต้อง');
   if(s.orders>orderBound(s.t)||s.orders*3>st.good)fail('จำนวนออเดอร์มากเกินจริง');
   if(s.pts>candyPtsBound(st)+1)fail('แต้มมากเกินกว่าที่คัดได้จริง');
-  if(st.gold>1)fail('ข้อมูลลูกกวาดทองไม่ถูกต้อง');
+  if(st.gold>1)fail('ข้อมูลขนมทองไม่ถูกต้อง');
   if(s.gold||st.gold){
-    if(!(round.goldAt>0))fail('รอบนี้ไม่มีลูกกวาดทอง');
-    if(s.t<round.goldAt||s.t<CANDY.PASS_T)fail('ยังทำงานไม่ถึงเวลาลูกกวาดทอง');
+    if(!(round.goldAt>0))fail('รอบนี้ไม่มีขนมทอง');
+    if(s.t<round.goldAt||s.t<CANDY.PASS_T)fail('ยังทำงานไม่ถึงเวลาขนมทอง');
   }
   const cp=lastCp(round);
   if(cp){

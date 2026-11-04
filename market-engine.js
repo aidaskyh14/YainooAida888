@@ -1,5 +1,5 @@
 import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_BY_KEY,sellHave} from './sell-price.js?h=e1b8b556';
+import {SELL_BY_KEY,sellHave} from './sell-price.js?h=82a9f3af';
 const TICK=15*60e3,DAY=864e5;
 const ST=[{k:'veg',n:'หุ้นผัก',b:3000,v:.014,lo:2000,hi:4500},{k:'fruit',n:'หุ้นผลไม้',b:4000,v:.02,lo:2500,hi:6500},{k:'fish',n:'หุ้นบ่อปลา',b:4500,v:.02,lo:2500,hi:7500},
 {k:'wine',n:'หุ้นไวน์',b:6000,v:.026,lo:3500,hi:10000},{k:'alpaca',n:'หุ้นอัลปาก้า',b:7500,v:.026,lo:4000,hi:12000},{k:'bee',n:'หุ้นซิ่ง',b:5000,v:.05,lo:500,hi:15000}];
@@ -20,7 +20,7 @@ const NEWS=[
 ['🏮','ข่าวลือ: โคมลอยตกใส่ตลาด!',{all:-10}],['🌀','พายุใหญ่ผ่านเมือง!',{all:-12}],['🧾','สรรพากรสวนมาตรวจ!',{all:-8}],['🐷','น้องน้ำผึ้งทำแจกันแตก…ลางร้าย',{rnd:-30}],
 ['🔀','ขาใหญ่ย้ายพอร์ต!',{swap:20}],['🎰','ตลาดปั่นป่วน!!',{chaos:25}],['👸','นางนพมาศร่ายรำกลางตลาด!',{chaos:20}],['🎲','ลูกเต๋ายักษ์กลิ้งผ่านตลาด!',{rnd:25}]];
 export const WINE_BAG_RATE=.8,BAG_SELL_ROWS=300;
-const WINES=[['rose','ไวน์กุหลาบวิญญาณ',2500],['moon','ไวน์องุ่นแสงจันทร์',4000],['blood','ไวน์องุ่นโลหิต',6000],['eclipse','ไวน์ราชันสุริยคราส',10000]];
+const WINES=[['rose','ไวน์กุหลาบนพมาศ',2500],['moon','ไวน์องุ่นแสงจันทร์',4000],['blood','ไวน์องุ่นทับทิม',6000],['eclipse','ไวน์ราชันสุริยคราส',10000]];
 
 export {ST,NEWS,WINES,TICK,DAY};
 export function marketMath(S){
@@ -55,7 +55,7 @@ function price(i,t){build(t);const a=BASE[ST[i].k];return Math.exp(a[t-T0])*effe
 return {price,newsUpTo,autoNews,modeAt,daySeed,h32,SLOT,MODES,clear(){for(const k in BASE)delete BASE[k];for(const k in autoCache)delete autoCache[k];}};
 }
 
-/* fix14 มุมลอยกระทง: ขายของลอยกระทง (ช่วงหลอน 18:00–22:00 เวลาไทย +20%) + หีบแม่มด (ชนิดละ 3 ครบ 8 ชนิด) */
+/* fix14 มุมลอยกระทง: ขายของลอยกระทง (ช่วงลอยกระทง 18:00–22:00 เวลาไทย +20%) + หีบแม่มด (ชนิดละ 3 ครบ 8 ชนิด) */
 export const HW_ITEMS=[['candy','ดอกดาวเรือง',200],['bat','หิ่งห้อยน้อย',200],['candle','ธูปหอม',400],['web','ดอกบัว',600],['hat','พวงมาลัย',1200],['broom','ใบตองทอง',1200],['pumpkin','กระทงใบตอง',3000],['cauldron','กระทงทอง',10000]];
 export const HW_CHEST_COST=3,HW_HAUNT_BONUS=.2;
 export const hwHaunting=now=>{const h=new Date(now+7*3600000).getUTCHours();return h>=18&&h<22;};

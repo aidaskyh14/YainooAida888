@@ -47,9 +47,10 @@ body.s4open #s4dockR{transform:translateY(130%);opacity:0;pointer-events:none}
 body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4tool{display:none!important}`;
  document.head.appendChild(css);
  // โปรไฟล์ (มุมซ้ายบน)
- const prof=document.createElement('div');prof.id='s4prof';prof.innerHTML='<div class="av">🐷</div><div><b>-</b><small>🪷 0</small></div>';document.body.appendChild(prof);
- prof.onclick=()=>click('pname');
- const upd=()=>{try{prof.querySelector('b').textContent=($('nm')||{}).textContent||'';prof.querySelector('small').textContent='🪷 '+(($('ptsv')||{}).textContent||'0');const im=$('av')&&$('av').querySelector('img');const pa=prof.querySelector('.av');if(im&&!pa.querySelector('img')){pa.innerHTML='';pa.appendChild(im.cloneNode());}}catch(e){}};
+ const prof=document.createElement('div');prof.id='s4prof';prof.innerHTML='<div class="av">🐷</div><div><b>-</b><small>🪷 0</small></div><i class="shield" style="display:none;position:absolute;right:-6px;top:-6px;width:22px;height:22px;border-radius:50%;background:#ffd24a;border:2px solid #fff;font-size:12px;font-style:normal;display:none;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.25)">🛡️</i>';prof.style.position=prof.style.position||'fixed';document.body.appendChild(prof);
+ /* S4 ข้อ 142: ไอคอนโล่เมื่อมีหุ่นไล่กาเฝ้า (ของเรา/ของเพื่อนตอนเยี่ยม) · แตะดูเวลาที่เหลือ */const shield=prof.querySelector('.shield');const scareU=()=>{try{const f=document.getElementById('f3d');return +((f&&f.contentWindow&&f.contentWindow.__scareUntil)||0);}catch(e){return 0;}};shield.onclick=e=>{e.stopPropagation();const l=Math.max(0,scareU()-Date.now());try{toast('🛡️ หุ่นไล่กาเฝ้าสวนอยู่ · เหลือ '+(l>=3600000?Math.floor(l/3600000)+' ชม. ':'')+Math.ceil(l%3600000/60000)+' นาที');}catch(e){}};
+ prof.onclick=()=>{try{if(window.__s4avatar)window.__s4avatar();else click('pname');}catch(e){click('pname');}};
+ const upd=()=>{try{shield.style.display=scareU()>Date.now()?'flex':'none';prof.querySelector('b').textContent=($('nm')||{}).textContent||'';prof.querySelector('small').textContent='🪷 '+(($('ptsv')||{}).textContent||'0');const im=$('av')&&$('av').querySelector('img');const pa=prof.querySelector('.av');const cur=pa.querySelector('img');if(im&&(!cur||cur.getAttribute('src')!==im.getAttribute('src'))){pa.innerHTML='';const c=im.cloneNode();c.removeAttribute('style');pa.appendChild(c);}}catch(e){}};
  upd();setInterval(upd,1000);
  // ปุ่มมุมขวาล่าง
  const dockR=document.createElement('div');dockR.id='s4dockR';
@@ -79,9 +80,52 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
   use:(k)=>{const N={cake:'เค้ก',coconut:'มะพร้าว',angel:'ปีกนางฟ้า'}[k];return {t:N,back:'boost',items:[T('👆','ใช้ทีละแปลง',()=>{close();setTool(k);},'c2'),T('✨','ใช้ทั้งหมด',()=>{close();k==='angel'?both('angel',{all:true}):both('boost',{all:true,item:k});},'c3')]};},
   scare:()=>{const d=document.querySelector('.pkdock');const bs=d?[...d.querySelectorAll('button')].filter(b=>b.style.display!=='none'&&!b.hidden):[];
     return {t:'🛡️ หุ่นไล่กา',back:'menu',items:bs.map(b=>{const im=b.querySelector('img');return T(im?'<img src="'+im.getAttribute('src')+'">':'🛡️',(b.textContent||'').trim(),()=>{close();b.click();},'c5');}),empty:'ตอนนี้ไม่มีอะไรต้องจัดการ'};},
-  friends:()=>({t:'👥 เพื่อน',back:'menu',friends:1}),
+  friends:()=>{setTimeout(openRank,0);return {t:'👥 เพื่อน',back:'menu',items:[],empty:'⏳'};},
   map:()=>{const SY=(window.__s4SYS||[]).filter(s=>s[0]!=='farm'),C=['c4','c2','c1','c3','c5'];const G=[['home','🏡 บ้านของฉัน'],['ani','🐾 สัตว์'],['place','🗺️ สถานที่']];let k=0;
     return {t:'🗺️ ทางลัด',grid:G.map(([g,t])=>({t,items:SY.filter(s=>s[4]===g).map(s=>{const sp=s[1].indexOf(' ');return T(s[1].slice(0,sp),s[1].slice(sp+1),()=>{close();s[3]();},C[(k++)%C.length],s[5]?'🔒':null);})})),items:[]};}};
+ /* S4 ข้อ 38/39/134/135: หน้าอันดับ+เพื่อน แบบเกมใหญ่ — โพเดียม 3 อันดับ · แถว 4+ (อันดับ รูป ชื่อ 🪷กุศล ▲▼) · แถวตัวเองไฮไลต์+ปักล่าง · แตะ = เยี่ยมบ้าน · ข้อมูลจาก roster (อ่านเอกสารเดียว) */
+ {const st=document.createElement('style');st.textContent=`
+#s4rank{position:fixed;inset:0;z-index:60;background:linear-gradient(180deg,#2a1b4e 0,#4b2c7a 38%,#fff6ea 38%,#fff6ea 100%);display:flex;flex-direction:column;font-family:Mali,sans-serif;color:#4a3328}
+#s4rank .hd{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 6px;color:#fff;font-weight:800;font-size:17px}
+#s4rank .hd button{all:unset;cursor:pointer;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);text-align:center;line-height:36px;font-size:18px}
+#s4rank .pod{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:4px 14px 0;height:34%}
+#s4rank .pd{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+#s4rank .pd .av{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;border:4px solid #c0c0c0;box-shadow:0 4px 12px rgba(0,0,0,.3);position:relative;overflow:visible}
+#s4rank .pd .av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+#s4rank .pd.g .av{width:80px;height:80px;font-size:32px;border-color:#ffd54a;box-shadow:0 0 0 3px #b8860b,0 6px 16px rgba(0,0,0,.35)}
+#s4rank .pd.b .av{border-color:#d58a4a}
+#s4rank .pd .crown{position:absolute;top:-26px;left:50%;transform:translateX(-50%);font-size:26px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+#s4rank .pd .nm{color:#fff;font-weight:800;font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+#s4rank .pd .mr{color:#ffe29a;font-weight:800;font-size:12px}
+#s4rank .pd .blk{width:100%;border-radius:12px 12px 0 0;background:linear-gradient(180deg,#e6e6ec,#b9b9c4);color:#4a3328;font-weight:900;font-size:22px;text-align:center;padding-top:6px;height:46px}
+#s4rank .pd.g .blk{height:74px;background:linear-gradient(180deg,#ffe58a,#f2b53c);font-size:28px}
+#s4rank .pd.b .blk{height:34px;background:linear-gradient(180deg,#f0b98a,#c97a3f)}
+#s4rank .list{flex:1;overflow:auto;padding:10px 12px 90px}
+#s4rank .r{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;border-radius:16px;background:#fff;border:2px solid #f1e3cf;cursor:pointer}
+#s4rank .r.me{background:#fff3c4;border-color:#f2b53c}
+#s4rank .r .rk{width:28px;text-align:center;font-weight:900;font-size:15px;color:#8a6a52}
+#s4rank .r .av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.2);overflow:hidden}
+#s4rank .r .av img{width:100%;height:100%;object-fit:cover}
+#s4rank .r .nm{flex:1;font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#s4rank .r .mr{font-weight:800;font-size:13px;color:#6b4a7a}
+#s4rank .r .dl{width:30px;text-align:center;font-size:12px;font-weight:900}#s4rank .r .dl.up{color:#2e9e4f}#s4rank .r .dl.dn{color:#d63a3a}#s4rank .r .dl.eq{color:#b3a79c}
+#s4rank .pin{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:61;display:none}
+#s4rank .pin.on{display:block}#s4rank .pin .r{margin:0;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+@keyframes s4rkIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}#s4rank .r,#s4rank .pd{animation:s4rkIn .35s ease both}`;document.head.appendChild(st);}
+ async function openRank(){let R=document.getElementById('s4rank');if(R)R.remove();R=document.createElement('div');R.id='s4rank';R.innerHTML='<div class="hd"><span>🏆 อันดับกุศล · เพื่อน</span><button data-x="1">✕</button></div><div class="pod"></div><div class="list"><div class="msg" style="text-align:center;padding:30px;color:#9a7a68">⏳ กำลังโหลดอันดับ…</div></div><div class="pin"></div>';
+  document.body.appendChild(R);document.body.classList.add('s4sheet');const bye=()=>{R.remove();document.body.classList.remove('s4sheet');try{close();}catch(e){}};R.querySelector('[data-x]').onclick=bye;
+  let rows=[];try{const h=H();rows=(await h.roster()).filter(r=>!r.admin);}catch(e){R.querySelector('.list').innerHTML='<div class="msg">โหลดรายชื่อไม่สำเร็จ</div>';return;}
+  const me=H().uid;rows.sort((a,b)=>(b.merit||0)-(a.merit||0));
+  let prev={};try{prev=JSON.parse(localStorage.getItem('s4rank-prev')||'{}');}catch(e){}
+  const nowR={};rows.forEach((r,i)=>nowR[r.uid]=i+1);try{localStorage.setItem('s4rank-prev',JSON.stringify(nowR));}catch(e){}
+  const av=(r,i)=>{const im=r.photo||r.avatar;return '<div class="av" style="background:'+COL[i%COL.length]+'">'+(im?'<img src="'+esc(im)+'" alt="">':esc((r.name||'?')[0]))+'</div>';};
+  const full=n=>(Number(n)||0).toLocaleString('en-US');
+  const top=rows.slice(0,3),order=[top[1],top[0],top[2]],cls=['s','g','b'],rk=[2,1,3];
+  R.querySelector('.pod').innerHTML=order.map((r,k)=>r?'<div class="pd '+cls[k]+'" data-u="'+esc(r.uid)+'">'+(k===1?'<div style="position:relative">'+av(r,rk[k]-1)+'<span class="crown">👑</span></div>':av(r,rk[k]-1))+'<div class="nm">'+esc(r.uid===me?'ฉัน':r.name)+'</div><div class="mr">🪷 '+full(r.merit)+'</div><div class="blk">'+rk[k]+'</div></div>':'<div class="pd"></div>').join('');
+  const row=(r,i)=>{const p=prev[r.uid],d=p?p-(i+1):0;return '<div class="r'+(r.uid===me?' me':'')+'" data-u="'+esc(r.uid)+'"><span class="rk">'+(i+1)+'</span>'+av(r,i)+'<span class="nm">'+esc(r.uid===me?'ฉัน ('+(r.name||'')+')':r.name)+'</span><span class="mr">🪷 '+full(r.merit)+'</span><span class="dl '+(d>0?'up':d<0?'dn':'eq')+'">'+(d>0?'▲'+d:d<0?'▼'+(-d):'–')+'</span></div>';};
+  const L=R.querySelector('.list');L.innerHTML=rows.slice(3).map((r,i)=>row(r,i+3)).join('')||'<div class="msg" style="text-align:center;color:#9a7a68">ยังไม่มีเพื่อนคนอื่น</div>';
+  const mi=rows.findIndex(r=>r.uid===me);const pin=R.querySelector('.pin');if(mi>=0){pin.innerHTML=row(rows[mi],mi);const upd=()=>{const el=L.querySelector('.r.me');let vis=false;if(el){const a=el.getBoundingClientRect(),b=L.getBoundingClientRect();vis=a.bottom>b.top&&a.top<b.bottom;}else if(mi<3)vis=true;pin.classList.toggle('on',!vis);};L.addEventListener('scroll',upd);setTimeout(upd,50);}
+  R.onclick=e=>{const u=e.target.closest('[data-u]');if(!u)return;const uid=u.dataset.u;bye();close();if(uid===me){if(visiting())click('vHome');return;}try{visit(uid);}catch(err){console.error(err);}};}
  let cur=null;
  function close(){strip.classList.remove('on');shade.classList.remove('on');document.body.classList.remove('s4open');cur=null;}
  function go(k){const [a,b]=k.split(':');const L=LV[a](b);cur=k;
@@ -129,9 +173,16 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
    else if(w.__s4photo)S4PHOTO.shoot(()=>w.__s4photo(),{name});};}
  // ปุ่มกล้อง (มุมขวาบน) แตะสลับมุม: มองกว้าง → ปกติ → มุมใกล้
  {const cb=document.createElement('button');cb.id='s4cam';cb.className='s4k c5';cb.title='มุมกล้อง';cb.textContent='📷';cb.style.cssText='position:fixed;z-index:7;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);width:42px;height:42px;font-size:19px;border-radius:13px';document.body.appendChild(cb);
-  let ci=1;try{const v=localStorage.getItem('farm1-cam');if(v!==null)ci=+v;}catch(e){}cb.onclick=()=>{ci=(ci+1)%3;const w=f3w();if(w&&w.__s4setCam)w.__s4setCam(ci);};
-  const st=document.createElement('style');st.textContent='body.s4full #s4cam{display:none!important}';document.head.appendChild(st);}
- window.__s4curTool='auto';
+  /* S4 ข้อ 18: กล้องปุ่มเดียว แตะแล้วกางเป็นไอคอน 3 มุม (ไม่มีตัวหนังสือ) เลือกแล้วหุบ */
+  let ci=1;try{const v=localStorage.getItem('farm1-cam');if(v!==null)ci=+v;}catch(e){}
+  const row=document.createElement('div');row.id='s4camRow';row.style.cssText='position:fixed;z-index:7;right:10px;top:calc(env(safe-area-inset-top,0px) + 58px);display:none;flex-direction:column;gap:6px';
+  const ICO=['<svg viewBox="0 0 24 24" width="22" height="22"><rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M6 9h4M6 15h4M14 9h4M14 15h4" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>','<svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 11l9-7 9 7v9H3z" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><rect x="9.5" y="13" width="5" height="7" fill="#fff"/></svg>','<svg viewBox="0 0 24 24" width="22" height="22"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M15 15l6 6" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>'];
+  const paint=()=>{row.querySelectorAll('button').forEach((b,i)=>{b.style.opacity=i===ci?'1':'.55';b.style.transform=i===ci?'scale(1.08)':'';});};
+  ICO.forEach((ic,i)=>{const b=document.createElement('button');b.className='s4k c5';b.innerHTML=ic;b.setAttribute('aria-label',['มุมกว้าง','มุมปกติ','มุมใกล้'][i]);b.style.cssText='width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center';b.onclick=e=>{e.stopPropagation();ci=i;const w=f3w();if(w&&w.__s4setCam)w.__s4setCam(ci);paint();row.style.display='none';};row.appendChild(b);});
+  document.body.appendChild(row);cb.onclick=()=>{const on=row.style.display!=='flex';row.style.display=on?'flex':'none';if(on)paint();};
+  document.addEventListener('pointerdown',e=>{if(row.style.display==='flex'&&!row.contains(e.target)&&e.target!==cb)row.style.display='none';},true);
+  const st=document.createElement('style');st.textContent='body.s4full #s4cam,body.s4full #s4camRow,body.s4sheet #s4camRow,body.s4photo #s4camRow,body.s4pmode #s4camRow{display:none!important}';document.head.appendChild(st);}
+ window.__s4curTool='auto';window.__s4go=go;
  // ---- กระเป๋าแบบเกมใหญ่: ช่องรูปของล้วน ตัวเลขมุมช่อง แตะแล้วโชว์ชื่อด้านบน (ไม่มีตัวหนังสือเต็มจอ) ----
  {const bc=document.createElement('style');bc.textContent=`
 #bagSheet{background:linear-gradient(180deg,#fff9ef,#ffeed5)!important;border:3px solid #fff!important;box-shadow:0 -8px 30px rgba(80,40,10,.32),inset 0 0 0 2px #f1cd98!important;padding-top:.6rem!important}

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th"><head><script src="../pv/s4icon.js?h=edc9f144"></script><meta charset="utf-8">
+<html lang="th"><head><script src="../pv/s4loop.js?h=2b770a67"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>เนเบอร์ฮูด 3D</title>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap" rel="stylesheet">
@@ -9,7 +9,7 @@
 html,body{margin:0;height:100%;background:#9fd6f5;color:var(--ink);font-family:Mali,system-ui,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
 #app{position:relative;height:100%;overflow:hidden}
 canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
-.top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0 118px;display:flex;gap:6px;align-items:center;z-index:5;pointer-events:none}
+.top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0 158px;display:flex;gap:6px;align-items:center;z-index:5;pointer-events:none}
 .top>*{pointer-events:auto}
 .pill{background:rgba(255,248,236,.95);border:2px solid #fff;border-radius:999px;padding:5px 11px;font-weight:700;font-size:12.5px;box-shadow:0 3px 10px rgba(40,60,90,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .pill:first-child{flex:1;min-width:0}
@@ -51,7 +51,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pvw .g{background:#e98a2b;color:#fff}#pvw .x{background:#fff;border:2px solid #f1e2c8;color:var(--ink)}
 #load{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:linear-gradient(#bfe9f7,#9fd6f5);font-weight:700;color:#2a5a7a}
 #load .bar{width:60%;height:10px;border-radius:6px;background:#ffffff88;overflow:hidden}#load .bar i{display:block;height:100%;width:0;background:#ffb347;transition:width .2s}
-</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=c59dc02d"></script>
+#nbNone{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;width:min(320px,86vw)}#nbNone .bx{background:rgba(255,250,240,.96);border:3px solid #fff;border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:Mali,sans-serif;color:#5a3e2b}#nbNone .ic{font-size:40px}#nbNone b{font-size:17px;display:block;margin:4px 0}#nbNone p{margin:4px 0 10px;font-size:13px;color:#8a6a52}#nbNone .row{display:flex;gap:8px;justify-content:center}#nbNone button{all:unset;cursor:pointer;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#ffe58a,#f2b53c);font-weight:800;font-size:13px;box-shadow:0 3px 0 #c98a1b}#nbNone button+button{background:#fff;border:2px solid #f1e3cf;box-shadow:none}</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="app">
  <canvas id="c"></canvas>
  <div class="top"><span class="pill" id="title">🏘️ เนเบอร์ฮูด</span><span class="pill" id="cnt">🌸 0/20</span><button class="rb" id="me" title="บ้านฉัน">🏠</button><button class="rb" id="all" title="ทั้งหมู่บ้าน">🗺️</button></div>
@@ -117,7 +117,10 @@ function load(n){return cache[n] ||= loadJ(n);}
 async function loadX(url,base){const t=await (await fetch(url)).text();return new Promise((res,rej)=>LD.parse(t,base,res,rej));}
 async function inst(n,size){const s=(await load(n)).clone(true);const b=new THREE.Box3().setFromObject(s),sz=b.getSize(new THREE.Vector3()),k=size/Math.max(sz.x,sz.y,sz.z);
  s.scale.setScalar(k);const b2=new THREE.Box3().setFromObject(s),c=b2.getCenter(new THREE.Vector3());s.position.set(-c.x,-b2.min.y,-c.z);
- const g=new THREE.Group();g.add(s);s.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});g.userData.size=b2.getSize(new THREE.Vector3());return g;}
+ const g=new THREE.Group();g.add(s);s.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});g.userData.size=b2.getSize(new THREE.Vector3());
+ /* S4 ข้อ 113: น้ำพุมีน้ำพุ่ง */if(/fountain/.test(n)){const sz2=g.userData.size,N=22,sp=new THREE.Group(),mat=new THREE.SpriteMaterial({map:SPRTEX,color:0xdff6ff,transparent:true,depthWrite:false,opacity:.9});for(let i=0;i<N;i++){const d=new THREE.Sprite(mat);d.scale.setScalar(.14);d.userData={ph:i/N,ang:Math.random()*6.3};sp.add(d);}g.add(sp);const y0=sz2.y*.75,r=Math.min(sz2.x,sz2.z)*.4;ANIM.push(tt=>{if(!sp.parent)return;for(const d of sp.children){const u=d.userData,t=(tt*.75+u.ph)%1,rr=r*(.15+.85*t),a=u.ang+t*.4;d.position.set(Math.cos(a)*rr,y0+.8*(1.3*t-1.3*t*t)+.05,Math.sin(a)*rr);d.material.opacity=.9*(1-t*.6);d.scale.setScalar(.1+.08*(1-t));}});}
+ return g;}
+const SPRTEX=(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d'),g=x.createRadialGradient(16,16,0,16,16,16);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.5,'rgba(235,248,255,.9)');g.addColorStop(1,'rgba(220,240,255,0)');x.fillStyle=g;x.fillRect(0,0,32,32);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 
 const cv=document.getElementById('c');
 const R=new THREE.WebGLRenderer({canvas:cv,antialias:true});
@@ -140,7 +143,7 @@ const plaza=new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.6,.08,48),new THREE.
 
 /* ---------- 8 แปลงบ้าน: แถวหน้า 4 หลัง หันเข้าทาง · แถวหลัง 4 หลัง ---------- */
 const ZW=10,ZD=9.5,MAXD=20;
-const LOTS=[[7,7,Math.PI],[-7,7,Math.PI],[-7,-7,0],[7,-7,0],[0,-20,0]];// 4 หลัง (ข้อมูลซีซัน 3) + ที่ว่างหลังที่ 5
+const LOTS=[[7,7,Math.PI],[-7,7,Math.PI],[-7,-7,0],[7,-7,0],[-7,-20,0],[7,-20,0]];// S4 ข้อ 107: 6 ช่องบ้าน (4 + ช่องว่าง 5,6)
 const DEMO=[{u:'me',n:'บ้านฉัน',me:1,lv:1,st:0},{u:'f1',n:'น้องบัว',lv:2,st:3},{u:'f2',n:'น้องดาวเรือง',lv:3,st:2},{u:'f3',n:'น้องมะลิ',lv:1,st:1}];
 const FDECO=[[['nb_bench',-2,1.5,0],['nb_flower_urn',2.6,2.2,0],['nb_street_lamp',3.6,-1,0],['nb_mailbox',-3.4,2.6,0]],
  [['nb_gazebo',-2.4,1.6,.6],['nb_tier_fountain',2.4,2,0],['nb_hedge_arch',0,3.2,0],['nb_swing',3.4,-1.8,-.4]],
@@ -157,7 +160,7 @@ const houseZ=z=>z.cz+(z.face===Math.PI?-(ZD/2-2.6):(ZD/2-2.6));
 async function putHouse(z){if(z.house){S.remove(z.house);z.house=null;}if(z.tag){S.remove(z.tag);z.tag=null;}if(z.sign){S.remove(z.sign);z.sign=null;}
  if(!z.id){// แปลงว่าง: ป้าย + ดอกไม้
   const sp=await inst('nb_signpost',1.4);sp.position.set(z.cx,0,houseZ(z));sp.userData.lot=z;S.add(sp);z.sign=sp;
-  z.tag=tag(z.i<4?'ว่าง · แตะเพื่อเชิญ':'ที่ดินว่าง · ขยายได้','rgba(90,70,50,.6)');z.tag.scale.set(3.6,.9,1);z.tag.position.set(z.cx,2.4,houseZ(z));S.add(z.tag);return;}
+  z.tag=tag('ว่าง · แตะเพื่อเชิญ','rgba(90,70,50,.6)');z.tag.scale.set(3.6,.9,1);z.tag.position.set(z.cx,2.4,houseZ(z));S.add(z.tag);return;}
  const [n]=HOUSES[z.lv][z.st];const g=await inst(n,HOUSE_SIZE[z.lv]);g.position.set(z.cx,0,houseZ(z));g.rotation.y=z.face===Math.PI?0:Math.PI;g.userData.lot=z;S.add(g);z.house=g;
  z.tag=tag((z.lead?'👑 ':'')+z.name,z.me?'#ff6fa8':null);S.add(z.tag);z.tag.position.set(z.cx,HOUSE_SIZE[z.lv]+1.2,g.position.z);}
 const placed=[];
@@ -200,12 +203,20 @@ function rock(x,z,s){const r=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),n
 function buildTheme(){thG.clear();ANIM.length=0;
  const ringT=(r0,n,kinds)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(r0%2)*.13,r=r0+(i%3)*2.6;const x=Math.cos(a)*r,z=Math.sin(a)*r*.82;if(theme==='sea'&&z>14)continue;if(theme==='river'&&Math.abs(z-24)<6)continue;placeTree(x,z,1.05+(i%4)*.16,kinds[i%kinds.length]);}};
  if(theme==='forest'){ringT(31,30,['green','sakura','green','maple','gold','purple']);ringT(40,30,['green','pine','green','pine']);for(const [x,z] of [[-24,2],[24,2],[-14,-13],[14,-13]])placeTree(x,z,1.15,'sakura');for(let i=0;i<10;i++)rock(-30+i*6.5,30+Math.sin(i)*2,.6);}
- if(theme==='mount'){ringT(32,26,['pine','green','pine','gold']);ringT(41,26,['pine']);for(let i=0;i<14;i++)rock(Math.cos(i)*28,Math.sin(i*1.7)*22,.7+(i%3)*.3);}
+ if(theme==='mount'){/* S4 ข้อ 105: ภูเขาต้องต่างจริง — พื้นหินเทารอบนอก · ยอดเขาหิมะ · สนล้วน · หินใหญ่ */
+  const ring=new THREE.Mesh(new THREE.RingGeometry(27,90,64),new THREE.MeshLambertMaterial({color:0xb9b2a4}));ring.rotation.x=-Math.PI/2;ring.position.y=.015;ring.receiveShadow=true;thG.add(ring);
+  const rim=new THREE.Mesh(new THREE.RingGeometry(26,27.6,64),new THREE.MeshLambertMaterial({color:0x8e8577}));rim.rotation.x=-Math.PI/2;rim.position.y=.02;thG.add(rim);
+  for(let i=0;i<9;i++){const a=i/9*Math.PI*2,r=58+(i%2)*8,h=16+(i%3)*6,w=10+(i%3)*3;const mt=new THREE.Mesh(new THREE.ConeGeometry(w,h,7),new THREE.MeshLambertMaterial({color:0x7d7468,flatShading:true}));mt.position.set(Math.cos(a)*r,h/2-.5,Math.sin(a)*r*.85);thG.add(mt);const sn=new THREE.Mesh(new THREE.ConeGeometry(w*.38,h*.38,7),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}));sn.position.set(mt.position.x,h-h*.19-.5,mt.position.z);thG.add(sn);}
+  ringT(32,26,['pine','pine','pine','gold']);ringT(41,26,['pine']);for(let i=0;i<18;i++)rock(Math.cos(i)*(28+(i%3)*4),Math.sin(i*1.7)*24,.8+(i%3)*.45);S.background.set(0xdbe9f3);}
  if(theme==='sea'){const sand=new THREE.Mesh(new THREE.PlaneGeometry(140,16),new THREE.MeshLambertMaterial({color:0xf3dfb0}));sand.rotation.x=-Math.PI/2;sand.position.set(0,.02,26);thG.add(sand);
   const sea=new THREE.Mesh(new THREE.PlaneGeometry(220,80),new THREE.MeshLambertMaterial({map:WTX,color:0x7fd0f0}));WTX.repeat.set(30,12);sea.rotation.x=-Math.PI/2;sea.position.set(0,.04,72);thG.add(sea);ANIM.push(t=>{WTX.offset.x=t*.01;WTX.offset.y=Math.sin(t*.5)*.03;});
   if(KITP)KITP.then(()=>{if(!KIT||!KIT.makePalm)return;for(const x of [-26,-16,16,26]){const pm=KIT.makePalm(x*3+7);pm.position.set(x,0,24);pm.scale.setScalar(1.1);thG.add(pm);}});ringT(31,22,['green','sakura','maple']);}
  if(theme==='river'){river([[-70,30],[-40,24],[-16,26],[0,23],[18,25],[42,22],[70,28]],5);ANIM.push(t=>{WTX.offset.y=-t*.12;});WTX.repeat.set(1,1);
-  for(const x of [-2.2,2.2]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.2,1,8),new THREE.MeshLambertMaterial({color:0x9a6a3e}));rail.position.set(x,.8,23.5);thG.add(rail);}const deck=new THREE.Mesh(new THREE.BoxGeometry(4.4,.3,8),new THREE.MeshLambertMaterial({color:0xc49464}));deck.position.set(0,.3,23.5);thG.add(deck);
+  /* S4 ข้อ 110: สะพานโค้งไม้แบบเดียวกับฟาร์มหลัก (แผ่นไม้สลับสี · เสา · ราว) */
+  {const L1=new THREE.MeshLambertMaterial({color:0xc98d4c}),L2=new THREE.MeshLambertMaterial({color:0xb27638}),DK=new THREE.MeshLambertMaterial({color:0x7a4a26}),RD=new THREE.MeshLambertMaterial({color:0x8a5a30});const W=4.4,z0=18.5,z1=28.5,N=18,len=z1-z0,brY=z=>.35+1.1*Math.sin(Math.PI*(z-z0)/len);
+   for(let i=0;i<N;i++){const a0=z0+len*i/N,a1=z0+len*(i+1)/N,zc=(a0+a1)/2,an=Math.atan2(brY(a1)-brY(a0),a1-a0);const b=new THREE.Mesh(new THREE.BoxGeometry(W,.18,len/N*1.12),i%2?L1:L2);b.position.set(0,brY(zc),zc);b.rotation.x=-an;b.castShadow=b.receiveShadow=true;thG.add(b);for(const sx of [-1,1]){const e=new THREE.Mesh(new THREE.BoxGeometry(.26,.34,len/N*1.02),DK);e.position.set(sx*(W/2+.05),brY(zc)-.06,zc);e.rotation.x=-an;thG.add(e);}}
+   for(const sx of [-1,1])for(let k=0;k<=6;k++){const z=z0+len*k/6,y=brY(z);const post=new THREE.Mesh(new THREE.BoxGeometry(.22,1.1,.22),DK);post.position.set(sx*(W/2+.05),y+.5,z);thG.add(post);if(k<6){const zn=z0+len*(k+1)/6,yn=brY(zn);const r=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,Math.hypot(zn-z,yn-y)),RD);r.position.set(sx*(W/2+.05),(y+yn)/2+1,(z+zn)/2);r.rotation.x=-Math.atan2(yn-y,zn-z);thG.add(r);}}
+   for(const z of [z0-.3,z1+.3])for(const sx of [-1,1]){const pr=new THREE.Mesh(new THREE.CylinderGeometry(.5,.6,.9,8),new THREE.MeshLambertMaterial({color:0x9c948a}));pr.position.set(sx*1.6,.3,z);thG.add(pr);}}
   ringT(32,28,['green','sakura','green','maple','purple']);}
  S.background.set(0xcfe9f7);S.fog.color.set(0xf4e4d6);R.shadowMap.needsUpdate=true;}
 
@@ -232,20 +243,22 @@ const qb=await inst('nb_quest_board',1.7);qb.position.set(-2.6,.09,1.6);qb.rotat
 const sp0=await inst('nb_signpost',1.5);sp0.position.set(2.7,.09,1.7);sp0.rotation.y=-.5;S.add(sp0);
 const pt=tag('ลานกลาง · 📋 ภารกิจทีม','rgba(233,138,43,.9)');pt.position.set(0,5.6,-1.2);pt.scale.set(5.4,1.35,1);S.add(pt);
 buildTheme();
-let MEMBERS=DEMO.slice(),live=false;
+let MEMBERS=DEMO.slice(),live=false;let NBS=null;/* ข้อมูลชุมชนจากเซิร์ฟเวอร์ (theme/deco/houses) */const ODECO=new Map();/* ของแต่งของสมาชิกคนอื่นที่วางแล้ว uid→[objs] */
 let MYH=null;async function layout(){for(const z of ZONES){const m=MEMBERS[z.i]||null;const key=m?m.u+':'+(m.lv||1)+':'+(m.st||0):'';if(z.key===key&&(z.house||z.sign))continue;z.key=key;
-  z.id=m?m.u:null;z.name=m?m.n:'';z.me=!!(m&&m.me);z.lead=!!(m&&m.lead);if(m){z.lv=m.lv||1+(z.i%3);z.st=m.st??(z.i%4);}if(z.me&&MYH){z.lv=MYH.lv;z.st=MYH.st;}
-  frameOf(z,z.me);await putHouse(z);
-  if(m&&!m.me&&!z.decoDone&&FDECO[(z.i-1)%3]){z.decoDone=1;for(const d of FDECO[(z.i-1)%3])await putDeco(z,...d,false);}}}
+  z.id=m?m.u:null;z.name=m?m.n:'';z.me=!!(m&&m.me);z.lead=!!(m&&m.lead);if(m){z.lv=m.lv||1;z.st=m.st??0;}/* S4 ข้อ 109: เลเวล/แบบบ้านจากเอกสารชุมชน (เริ่ม Lv1 · อัปเกรดที่ชุมชน) */if(z.me&&MYH){z.lv=MYH.lv;z.st=MYH.st;}
+  frameOf(z,z.me);await putHouse(z);}}
+/* S4 ข้อ 108: ของแต่งของสมาชิกคนอื่น = ข้อมูลจริงจากเซิร์ฟเวอร์ (ไม่ใช่ของตัวอย่าง) · อัปเดตเมื่อเปลี่ยน */
+async function othersDeco(){if(!NBS||!NBS.deco)return;for(const z of ZONES){if(!z.id||z.me)continue;const rec=NBS.deco[z.id];const key=rec?JSON.stringify(rec.d||[]):'';if(z.dkey===key)continue;z.dkey=key;for(const g of ODECO.get(z.id)||[]){S.remove(g);const i=placed.indexOf(g);if(i>=0)placed.splice(i,1);}const arr=[];ODECO.set(z.id,arr);if(rec&&Array.isArray(rec.d))for(const [n,lx,lz,ry] of rec.d.slice(0,MAXD)){if(!DS[n]||!isFinite(lx)||!isFinite(lz))continue;try{arr.push(await putDeco(z,n,lx,lz,+ry||0,false));}catch(e){}}}}
 /* S4: บ้าน+ของแต่งของฉันในหมู่บ้าน บันทึกในเซฟผู้เล่นเอง (module-s4deco-nb) เปิดเครื่องไหนก็เหมือนเดิม · เลเวลบ้าน = เลเวลบ้านจริงในฟาร์ม */
 const NBH=(()=>{try{return (parent.parent&&parent.parent.__HOST)||parent.__HOST||null;}catch(e){return null;}})();
 const realHLv=()=>{try{const v=NBH&&NBH.get('s3all-v1');return Math.max(1,Math.min(3,(JSON.parse(v)||{}).lv|0||1));}catch(e){return 1;}};
 let NBD=null;try{NBD=JSON.parse((NBH&&NBH.get('s4deco-nb'))||'null');}catch(e){NBD=null;}
-if(NBD&&typeof NBD==='object'){const hl=realHLv();MYH={lv:Math.max(1,Math.min(hl,NBD.lv|0||1)),st:Math.max(0,NBD.st|0)};}else{MYH={lv:realHLv(),st:0};}
+MYH={lv:1,st:Math.max(0,(NBD&&NBD.st)|0)};/* S4 ข้อ 109: เริ่ม Lv1 เสมอ · เลเวลจริงมาจากเอกสารชุมชน (houses) */
 let nbT=0;function nbSave(){clearTimeout(nbT);nbT=setTimeout(nbFlush,800);}
 function nbFlush(){clearTimeout(nbT);if(!NBH||window.__SHOW)return;const m=ME();if(!m)return;const fz=m.face===Math.PI?1:-1;
  const d=placed.filter(p=>p.userData.mine).slice(0,MAXD).map(g=>[g.userData.n,+(g.position.x-m.cx).toFixed(2),+((g.position.z-m.cz)*fz).toFixed(2),+(g.rotation.y-(m.face===Math.PI?0:Math.PI)).toFixed(3)]);
- try{NBH.set('s4deco-nb',JSON.stringify({v:1,lv:m.lv||1,st:m.st||0,th:theme,d}));}catch(e){console.warn('nb save',e&&e.message);}}
+ try{NBH.set('s4deco-nb',JSON.stringify({v:1,lv:m.lv||1,st:m.st||0,th:theme,d}));}catch(e){console.warn('nb save',e&&e.message);}
+ /* S4 ข้อ 108: ส่งขึ้นเอกสารชุมชนให้เพื่อนเห็น (เฉพาะตอนเปลี่ยนจริง) */try{const key=JSON.stringify([d,m.st||0]);if(live&&key!==nbFlush.k){nbFlush.k=key;const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);fn&&fn({type:'nbDeco',d,st:m.st||0});}}catch(e){}}
 addEventListener('pagehide',nbFlush);
 await layout();
 try{if(NBD&&NBD.th&&NBD.th!==theme&&TH.some(x=>x[0]===NBD.th)){theme=NBD.th;buildTheme();}}catch(e){}
@@ -268,16 +281,17 @@ function drawPanel(){const T=[['deco','🌸 ของแต่ง'],['house','�
  $('#tabs').innerHTML=T.map(([k,t])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${t}</button>`).join('')+(tab==='deco'?'<span style="flex:0 0 6px"></span>'+DCAT.map(([k,t])=>`<button data-dc="${k}" class="${dcat===k?'on':''}">${t}</button>`).join(''):'');
  const me=ME();
  if(tab==='deco'){const L=DECO.filter(d=>dcat==='all'||d[3]===dcat);$('#pbody').innerHTML=`<div class="hint">แตะของ แล้วแตะพื้นในกรอบชมพู · 🔍 ดูภาพใหญ่ · ของที่มี 🪑 นั่งได้</div><div class="grid">`+L.map(([n,t,,c])=>`<button class="it ${pick===n?'on':''}" data-n="${n}"><img src="t/${n}.png" alt=""><span>${c==='seat'?'🪑':''}${t}</span><em class="zm" data-zm="${n}">🔍</em></button>`).join('')+'</div>';}
- else if(tab==='house'){$('#pbody').innerHTML=`<div class="row">${[1,2,3].map(l=>`<button class="lv ${me.lv===l?'on':''}" data-l="${l}">เลเวล ${l}<small>${l===1?'เริ่มต้น':l<=realHLv()?'บ้านฉันถึงแล้ว':'🔒 อัปบ้านในฟาร์มก่อน'}</small></button>`).join('')}</div><div class="grid">`+HOUSES[me.lv].map(([n,t],i)=>`<button class="it ${me.st===i?'on':''}" data-hs="${i}"><img src="t/${n}.png" alt=""><span>${t}</span></button>`).join('')+'</div>';}
- else{$('#pbody').innerHTML='<div class="hint">เลือกบรรยากาศรอบหมู่บ้าน</div><div class="th">'+TH.map(([k,e,t])=>`<button data-th="${k}" class="${theme===k?'on':''}"><i>${e}</i>${t}</button>`).join('')+'</div>';}}
+ else if(tab==='house'){const H=(NBS&&NBS.houses&&NBS.houses[(ME()||{}).id])||{lv:1,st:0};const now=(NBS&&NBS.now)||Date.now();const up=H.up&&now<H.up.end?H.up:null;const lv=up?Math.max(1,H.lv|0||1):Math.max(1,H.lv|0||1,(H.up&&H.up.to)|0);const C={2:{flower:500,fruit:300,grass:200,h:10},3:{flower:1500,fruit:1000,grass:500,h:24}}[lv+1];
+   $('#pbody').innerHTML=`<div class="row">${[1,2,3].map(l=>`<button class="lv ${lv===l?'on':''}" disabled>เลเวล ${l}<small>${l===lv?'บ้านฉันตอนนี้':l<lv?'ผ่านแล้ว':'🔒'}</small></button>`).join('')}</div>`+(up?`<div class="hint" style="color:#b02a44;font-weight:800">🏗️ กำลังอัปเกรดเป็นเลเวล ${up.to} · เสร็จใน ${Math.ceil((up.end-now)/3600000)} ชม. (ระหว่างนี้แต่ง/เปลี่ยนแบบบ้านไม่ได้)</div>`:C?`<div class="hint">อัปเกรดเป็นเลเวล ${lv+1} ใช้ 🌸 ดอกไม้ ${C.flower.toLocaleString()} · 🍎 ผลไม้ ${C.fruit.toLocaleString()} · 🌿 หญ้า ${C.grass.toLocaleString()} (รวมทุกชนิด) · ใช้เวลา ${C.h} ชม.</div><div class="row"><button class="lv on" data-up="1">⬆️ อัปเกรดบ้านเป็นเลเวล ${lv+1}</button></div>`:'<div class="hint">🏆 บ้านเลเวลสูงสุดแล้ว</div>')+(up?'':'<div class="hint">เลือกแบบบ้าน</div><div class="grid">'+HOUSES[lv].map(([n,t],i)=>`<button class="it ${me.st===i?'on':''}" data-hs="${i}"><img src="t/${n}.png" alt=""><span>${t}</span></button>`).join('')+'</div>');}
+ else{const locked=!!(NBS&&NBS.theme),lead=!!(NBS&&NBS.leader);$('#pbody').innerHTML='<div class="hint">'+(locked?'🎨 ธีมหมู่บ้าน: '+((TH.find(x=>x[0]===theme)||[])[2]||'')+' (หัวหน้าเลือกไว้แล้ว เปลี่ยนไม่ได้)':lead?'หัวหน้าเลือกบรรยากาศรอบหมู่บ้าน <b>ครั้งเดียว</b> ทุกคนเห็นเหมือนกัน':'รอหัวหน้าเนเบอร์ฮูดเลือกธีม')+'</div><div class="th">'+TH.map(([k,e,t])=>`<button data-th="${k}" class="${theme===k?'on':''}" ${(locked||!lead)&&live?'disabled':''}><i>${e}</i>${t}</button>`).join('')+'</div>';}}
 $('#panel').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const me=ME();
  if(b.dataset.tab){tab=b.dataset.tab;pick=null;drawPanel();if(tab!=='theme')focusMe();return;}
  if(b.dataset.dc){dcat=b.dataset.dc;drawPanel();return;}
  const zm=e.target.closest('[data-zm]');if(zm){showPv(zm.dataset.zm);return;}
  if(b.dataset.n){pick=pick===b.dataset.n?null:b.dataset.n;drawPanel();if(pick){toast('แตะพื้นในกรอบชมพูเพื่อวาง');load(pick);}return;}
- if(b.dataset.l){const L=+b.dataset.l,hl=realHLv();if(L>hl){toast('🔒 อัปเกรดบ้านในฟาร์มเป็นเลเวล '+L+' ก่อนนะ');return;}me.lv=L;MYH={lv:me.lv,st:me.st||0};me.key='';drawPanel();await putHouse(me);nbSave();toast('🏠 บ้านเลเวล '+me.lv);focusMe();return;}
+ if(b.dataset.up){try{const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);if(!fn)return toast('ยังไม่เชื่อมกับเนเบอร์ฮูด');b.disabled=true;const out=await fn({type:'nbUpgrade'});if(out&&out.upgrade)toast('🏗️ เริ่มอัปเกรดแล้ว เสร็จใน '+Math.ceil((out.upgrade.up.end-Date.now())/3600000)+' ชม.');}catch(e){}return;}
  if(b.dataset.hs){me.st=+b.dataset.hs;MYH={lv:me.lv||1,st:me.st};drawPanel();await putHouse(me);nbSave();focusMe();return;}
- if(b.dataset.th){theme=b.dataset.th;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();nbSave();drawPanel();toast('🎨 เปลี่ยนธีมเป็น'+TH.find(x=>x[0]===theme)[2]);fly(new THREE.Vector3(0,0,-6),new THREE.Vector3(0,30,40));}});
+ if(b.dataset.th){if(live&&NBS){const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);if(fn){b.disabled=true;const out=await fn({type:'nbTheme',th:b.dataset.th});if(!out)return;}}theme=b.dataset.th;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();nbSave();drawPanel();toast('🎨 ธีมหมู่บ้าน: '+TH.find(x=>x[0]===theme)[2]);fly(new THREE.Vector3(0,0,-6),new THREE.Vector3(0,30,40));}});
 let pvN=null;function showPv(n){pvN=n;$('#pvImg').src='t/'+n+'.png';$('#pvName').textContent=DS[n][1]+(SEATS[n]?' · 🪑 นั่งได้':'');$('#pvw').classList.add('on');}
 $('#pvX').onclick=()=>$('#pvw').classList.remove('on');$('#pvGo').onclick=()=>{$('#pvw').classList.remove('on');pick=pvN;drawPanel();toast('แตะพื้นในกรอบชมพูเพื่อวาง');load(pick);};
 function focusMe(){const m=ME();fly(new THREE.Vector3(m.cx,0,m.cz+(m.face===Math.PI?1:-1)*3),new THREE.Vector3(m.cx+7,17,m.cz+(m.face===Math.PI?1:-1)*20));}
@@ -301,12 +315,13 @@ addEventListener('pointerup',async e=>{const was=drag;drag=null;ctr.enabled=true
  cast(e);
  if(pick){if(!ray.ray.intersectPlane(plane,hitP))return;
   if(!inMine(hitP)){toast('วางได้เฉพาะโซนบ้านตัวเอง (กรอบชมพู)');return;}
+  if(upNow()){toast('🏗️ บ้านกำลังอัปเกรด แต่งไม่ได้จนกว่าจะเสร็จ');return;}
   if(placed.filter(p=>p.userData.mine).length>=MAXD){toast('วางครบ '+MAXD+' ชิ้นแล้ว');return;}
   const m=ME();const g=await putDeco(m,pick,hitP.x-m.cx,(hitP.z-m.cz)*(m.face===Math.PI?1:-1),0,true);g.scale.setScalar(.01);let k=0;const pop=()=>{k=Math.min(1,k+.12);g.scale.setScalar(Math.max(.01,k)*(1+Math.sin(k*Math.PI)*.2));if(k<1)requestAnimationFrame(pop);else g.scale.setScalar(1);};pop();cnt();burst(hitP.x,hitP.z);nbSave();return;}
  const hits=ray.intersectObjects([...placed,...ZONES.map(z=>z.house||z.sign).filter(Boolean),qb],true);const g=hits.length?rootOf(hits[0].object):null;
  if(g&&g.userData.quest){walkTo(-2.6,3.4);toast('📋 เปิดภารกิจทีม');setTimeout(()=>send('quest'),500);return;}
  if(g&&g.userData.n&&SEATS[g.userData.n]&&sitOn(g))return;
- if(g&&g.userData.lot){const z=g.userData.lot;if(!z.id){if(z.i<4){toast('📨 เชิญเพื่อนบ้าน');send('invite');}else toast('🏗️ ที่ดินว่าง · รองรับการขยายทีมในอนาคต');return;}
+ if(g&&g.userData.lot){const z=g.userData.lot;if(!z.id){if(z.i<6){toast('📨 เชิญเพื่อนบ้าน');send('invite');}else toast('🏗️ ที่ดินว่าง · รองรับการขยายทีมในอนาคต');return;}
   if(z.me){focusMe();return;}toast('🎁 ส่งของให้ '+z.name);send('gift',z.id);return;}
  if(ray.ray.intersectPlane(plane,hitP)&&Math.hypot(hitP.x,hitP.z)<40){P.goSeat=null;walkTo(hitP.x,hitP.z);ring(hitP.x,hitP.z);}});
 function showPop(g,e){sel=g;const p=$('#pop'),r=cv.getBoundingClientRect();p.style.left=(e.clientX-r.left)+'px';p.style.top=(e.clientY-r.top)+'px';p.style.display='flex';}
@@ -321,12 +336,20 @@ function burst(x,z){for(let i=0;i<18;i++){const m=new THREE.Mesh(new THREE.Spher
 addEventListener('message',async e=>{const d=e.data&&e.data.s4sync;if(!d||!d.nb)return;live=true;
  $('#title').textContent=d.status==='active'?'🏘️ '+(d.name||'เนเบอร์ฮูด'):d.status==='none'?'🏘️ ยังไม่มีเนเบอร์ฮูด':'🏗️ '+(d.name||'')+' · กำลังสร้าง';
  $('#cq').textContent='📋 ภารกิจทีม'+(d.q?' '+d.q[0]+'/'+d.q[1]:'');$('#cq').style.display=d.status==='active'?'':'none';$('#cb').style.display=d.status==='active'?'':'none';
- const ms=(d.members||[]).slice();ms.sort((a,b)=>(b.me?1:0)-(a.me?1:0));const nm=ms.map((m,i)=>({u:m.u,n:m.me?'บ้านฉัน':m.n,me:m.me,lead:m.lead}));if(!nm.length)nm.push({u:'me',n:'บ้านฉัน',me:1});
- const key=JSON.stringify(nm);if(key!==layout.k){layout.k=key;MEMBERS=nm;await layout();}});
+ /* S4 ข้อ 103: ยังไม่มีเนเบอร์ฮูด → แผ่นบอกทางชัดเจน (สร้าง / ดูคำเชิญ) แทนที่ดินว่างเงียบๆ */
+ {let w=document.getElementById('nbNone');if(d.status!=='active'){if(!w){w=document.createElement('div');w.id='nbNone';w.innerHTML='<div class="bx"><div class="ic">🏘️</div><b>'+(d.status==='none'?'ยังไม่มีเนเบอร์ฮูด':'เนเบอร์ฮูดกำลังสร้าง')+'</b><p>'+(d.status==='none'?'รวมกลุ่มเพื่อน 3–6 คน ทำภารกิจทีม แต่งชุมชนด้วยกัน':'รอสมาชิกครบ/ลงขันให้ครบ แล้วชุมชนจะเปิด')+'</p><div class="row"><button data-a="create">🏘️ สร้างเนเบอร์ฮูด</button><button data-a="invites">📨 คำเชิญที่ได้รับ</button></div></div>';document.body.appendChild(w);w.onclick=ev=>{const b=ev.target.closest('[data-a]');if(!b)return;send(b.dataset.a);};}}else if(w)w.remove();}
+ NBS=d;const HS=d.houses||{},nowS=d.now||Date.now();const lvOf=u=>{const h=HS[u];if(!h)return {lv:1,st:0};const done=h.up&&nowS>=h.up.end;return {lv:Math.max(1,Math.min(3,done?Math.max(h.lv|0||1,h.up.to|0):(h.lv|0||1))),st:Math.max(0,h.st|0),up:h.up&&!done?h.up:null};};
+ const ms=(d.members||[]).slice();ms.sort((a,b)=>(b.me?1:0)-(a.me?1:0));const nm=ms.map((m,i)=>({u:m.u,n:m.me?'บ้านฉัน':m.n,me:m.me,lead:m.lead,...lvOf(m.u)}));if(!nm.length)nm.push({u:'me',n:'บ้านฉัน',me:1,lv:1,st:0});
+ const mine=nm.find(x=>x.me);if(mine)MYH={lv:mine.lv,st:mine.st};
+ if(d.theme&&d.theme!==theme&&TH.some(x=>x[0]===d.theme)){theme=d.theme;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();}
+ const key=JSON.stringify(nm);if(key!==layout.k){layout.k=key;MEMBERS=nm;await layout();}
+ try{await othersDeco();}catch(e){}try{upSigns(nm);}catch(e){}});
+const upNow=()=>{try{const h=NBS&&NBS.houses&&NBS.houses[(ME()||{}).id];return !!(h&&h.up&&((NBS.now||Date.now())<h.up.end));}catch(e){return false;}};
+/* S4 ข้อ 109: ป้าย 🏗️ กำลังอัปเกรด เหนือบ้านที่กำลังอัป */function upSigns(nm){for(const z of ZONES){const m=nm.find(x=>x.u===z.id);const up=m&&m.up;if(z.upTag){S.remove(z.upTag);z.upTag=null;}if(up&&z.house){const left=Math.max(0,up.end-((NBS&&NBS.now)||Date.now()));z.upTag=tag('🏗️ กำลังอัปเกรด Lv'+up.to+' · '+Math.ceil(left/3600000)+' ชม.','#e98a2b');z.upTag.scale.set(4.2,1,1);z.upTag.position.set(z.cx,HOUSE_SIZE[z.lv]+2.4,z.house.position.z);S.add(z.upTag);}}}
 
 /* ---------- วนลูป ---------- */
 const clock=new THREE.Clock();let T=0;
-function loop(){const dt=Math.min(.05,clock.getDelta());T+=dt;if(KIT)KIT.treeTime.value=T;
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||P.goSeat||FX.length>0||!!window.__zsnap);function loop(dt){clock.getDelta();T+=dt;if(KIT)KIT.treeTime.value=T;
  for(const f of ANIM)f(T);
  for(let i=FX.length-1;i>=0;i--){const f=FX[i];f.t+=dt;const k=f.t/f.l;if(f.ring){f.m.scale.setScalar(1+k*4);f.m.material.opacity=1-k;}else{f.v.y-=9*dt;f.m.position.addScaledVector(f.v,dt);}if(k>=1){S.remove(f.m);FX.splice(i,1);}}
  if(girl){let moving=false;
@@ -335,8 +358,8 @@ function loop(){const dt=Math.min(.05,clock.getDelta());T+=dt;if(KIT)KIT.treeTim
    gset(moving?'walk':'idle');girl.position.set(P.x,0,P.z);girl.rotation.y=P.dir;
     /* S4: กล้องเลื่อนตามตัวละครตอนเดิน (หมุน/ซูมเองได้ตามเดิม) */if(moving){const k=Math.min(1,dt*2.4),dx=(P.x-ctr.target.x)*k,dz=(P.z-1.5-ctr.target.z)*k;ctr.target.x+=dx;ctr.target.z+=dz;cam.position.x+=dx;cam.position.z+=dz;}}
   gmix.update(dt);}
- ctr.update();R.render(S,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(R.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}requestAnimationFrame(loop);}
-loop();
+ ctr.update();R.render(S,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(R.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}}
+S4LOOP.run(loop);
 /* S4: เข้าเนเบอร์ฮูดแล้วเห็นตัวเองทันที: ตัวละครเดินเข้ามาจากทางเข้า กล้องมุมเฉียงใกล้ๆ (ไม่ใช่มุมสูงไกล) */
 (function s4Intro(){if(!girl){focusMe();return;}const sx=P.x,sz=P.z;P.x=sx;P.z=sz+6;girl.position.set(P.x,0,P.z);ctr.target.set(P.x,0,P.z-1.5);cam.position.set(P.x+3,11,P.z+11);walkTo(sx,sz);})();
 window.__ready=true;window.__nbT={ZONES,P,placed,sitOn,send,buildTheme,get theme(){return theme},set theme(v){theme=v;},openPanel};

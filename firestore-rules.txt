@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function approved() { return signedIn() && (isAdmin() || get(/databases/$(database)/documents/players/$(request.auth.uid)).data.get('approval','approved') == 'approved'); }
+    function sameDevice() { return request.resource.data.by == request.resource.data.session; }
+    function smallSave() { return !request.resource.data.keys().hasAny(['size']) || request.resource.data.size == null || request.resource.data.size < 900000; }
+
+    match /world/{system} { allow read: if approved(); allow write: if false; }
+    match /privateWorld/{system} { allow read, write: if false; }
+    match /players/{uid}/gameViews/{system} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /players/{uid}/actionGates/{system} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /players/{uid}/ledger/{id} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /players/{uid}/saves/{part} {
+      function owner() { return approved() && request.auth.uid == uid; }
+      function profile() { return getAfter(/databases/$(database)/documents/players/$(uid)).data; }
+      function validPart() {
+        return request.resource.data.keys().hasOnly(['path','system','payload','rev','by','updatedAt'])
+          && request.resource.data.path is list && request.resource.data.path.size() >= 1 && request.resource.data.path.size() <= 2
+          && request.resource.data.payload is string && request.resource.data.payload.size() <= 131072
+          && request.resource.data.system is string && request.resource.data.system.size() <= 80
+          && request.resource.data.rev is int && request.resource.data.rev > 0
+          && request.resource.data.by == profile().session;
+      }
+      allow read: if owner() || isAdmin();
+      allow create: if (owner() && validPart() && request.resource.data.rev == 1) || isAdmin();
+      allow update: if (owner() && validPart() && request.resource.data.rev == resource.data.rev + 1) || isAdmin();
+      allow delete: if owner() || isAdmin();
+    }
+    match /players/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid && sameDevice() && request.resource.data.approval == 'pending' && request.resource.data.coins == 0 && request.resource.data.kusal == 0 && request.resource.data.bag.size() == 0;
+      allow update: if (signedIn() && request.auth.uid == uid && sameDevice() && request.resource.data.get('approval','approved') == resource.data.get('approval','approved') && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvedAt','approvedBy','ledgerPending','nb','x17','dmc','dmp','dmMail']) && smallSave() && (resource.data.get('storageVersion', 0) != 2 || !request.resource.data.keys().hasAny(['g']))) || isAdmin();
+      allow delete: if false;
+    }
+    match /mail/{uid}/items/{id} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAdmin();
+      allow delete: if approved() && (request.auth.uid == uid || isAdmin());
+      allow update: if false;
+    }
+    match /backups/{day} {
+      allow read, write: if isAdmin();
+      match /players/{uid} {
+        allow read, write: if isAdmin();
+        match /saves/{part} { allow read, write: if isAdmin(); }
+      }
+    }
+    match /adminGiftRuns/{uid} {
+      allow read, write: if isAdmin() && request.auth.uid == uid;
+    }
+    match /birdAdmissions/{uid} { allow read: if approved() && (request.auth.uid == uid || isAdmin()); allow write: if false; }
+    // fix14: ระบบล่อนกถอดออกแล้ว ไม่รับคำขอใหม่
+    match /birdReqs/{id} {
+      allow create: if false;
+      allow read, update: if isAdmin();
+    }
+    match /adminPreferences/{uid} { allow read: if isAdmin() && request.auth.uid == uid; allow write: if isAdmin() && request.auth.uid == uid && request.resource.data.templates is list && request.resource.data.templates.size() <= 30 && request.resource.data.favorites is list && request.resource.data.favorites.size() <= 300; }
+    // fix15 ข่าวลือ: ผู้เล่นอ่านเฉพาะของตัวเอง · แอดมินอ่านกระดานสถานะ · เขียนผ่านเซิร์ฟเวอร์เท่านั้น
+    match /rumors/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /adminRumors/{id} { allow read: if isAdmin(); allow write: if false; }
+    // fix14 เนเบอร์ฮูด: อ่านได้ เขียนผ่านเซิร์ฟเวอร์เท่านั้น
+    match /neighborhoods/{id} {
+      allow read: if approved();
+      allow write: if false;
+      match /days/{day} { allow read: if approved(); allow write: if false; }
+    }
+    // fix14 แรลลี่ฟักทอง: ตำแหน่งระหว่างวิ่ง (ไม่เกี่ยวกับเงิน) เขียนได้เฉพาะของตัวเอง ขนาดเล็ก
+    match /funrunLive/{game}/p/{uid} {
+      allow read: if approved();
+      allow write: if approved() && request.auth.uid == uid && request.resource.data.size() <= 16;
+    }
+    match /funrunLive/{game}/ev/{ev} {
+      allow read: if approved();
+      allow create: if approved() && request.resource.data.from == request.auth.uid && request.resource.data.size() <= 12;
+    }
+    // S4 ข้อ 180/181 เยี่ยมบ้านเรียลไทม์: ตำแหน่ง/ท่าของตัวเองในฟาร์มที่กำลังอยู่ (เล็ก ไม่เกี่ยวกับเงิน) เขียนได้เฉพาะของตัวเอง · ทุกคนอ่านได้
+    match /presence/{owner}/v/{uid} {
+      allow read: if approved();
+      allow write: if approved() && request.auth.uid == uid && request.resource.data.size() <= 10;
+      allow delete: if approved() && request.auth.uid == uid;
+    }
+    // S4 ข้อ 162 สำรองก่อนเริ่มศูนย์ (เซิร์ฟเวอร์เท่านั้น)
+    match /resetBackups/{uid} { allow read: if isAdmin(); allow write: if false; match /parts/{part} { allow read: if isAdmin(); allow write: if false; } }
+    match /nbInvites/{uid} { allow read: if signedIn() && (request.auth.uid == uid || isAdmin()); allow write: if false; }
+    match /adminLog/{id} {
+      allow read, create: if isAdmin();
+    }
+  }
+}

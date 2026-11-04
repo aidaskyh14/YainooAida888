@@ -1,5 +1,5 @@
 /* น้ำผึ้งซิ่งโคมลอย — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน witch-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix15&h=b520a90e';
+import {WITCH,witchScore,witchStreams} from './witch-engine.js?v=ss3-fix15&h=fe3693c0';
 import {mgFrame} from './mg-frame.js?v=ss3-fix15&h=c21dcdbe';
 (()=>{
 const IMG={};['bat','batstill','bg1','bg2','bg3','bg4','bg5','bubble','candy','comet','corn','crash','gate','lose','magnet','meteor','moon','poster','pumpkin','shield','star','storm','win','witch'].forEach(k=>IMG[k]=(window.MGT?MGT.img('images/wg-'+k+'.webp'):'images/wg-'+k+'.webp'));
@@ -21,14 +21,14 @@ const {GOAL,MIN_LINE}=WITCH;
 const ZONES=[
  {n:'กาแล็กซีม่วงทอง',bg:'bg1',rate:.8,mix:{meteor:5,bat:4},col:'#c08bff'},
  {n:'เมฆพายุ',bg:'bg2',rate:1.1,mix:{meteor:4,bat:3,storm:4},col:'#5fe3ff'},
- {n:'ดงฟักทอง',bg:'bg3',rate:1.4,mix:{meteor:3,bat:3,storm:2,pumpkin:4},col:'#ffae3c'},
+ {n:'ดงบัวทอง',bg:'bg3',rate:1.4,mix:{meteor:3,bat:3,storm:2,pumpkin:4},col:'#ffae3c'},
  {n:'ฝนดาวตก',bg:'bg4',rate:1.7,mix:{meteor:4,bat:2,storm:2,pumpkin:2,comet:4},col:'#ff4fa0'},
  {n:'ประตูพระจันทร์',bg:'bg5',rate:2,mix:{meteor:3,bat:2,storm:2,pumpkin:3,comet:3},col:'#dfe7ff'}].map((z,i)=>({...WITCH.ZONES[i],...z}));
 const OB={
  meteor:{img:'meteor',name:'ประทัดพุ่ง',size:.30,hw:.17,pen:2000,col:'#ff8a3d',fx:'ชนแรง จอสั่นหนัก'},
- bat:{img:'bat',name:'ค้างคาว',size:.34,hw:.17,pen:1500,col:'#c06bff',fx:'ขโมยดาว 5 ดวง'},
+ bat:{img:'bat',name:'นกเอี้ยงจอมขโมย',size:.34,hw:.17,pen:1500,col:'#c06bff',fx:'ขโมยดาว 5 ดวง'},
  storm:{img:'storm',name:'เมฆพายุ',size:.34,hw:.19,pen:1500,col:'#9f7bff',fx:'จอมัว + เลี้ยวกลับด้าน 3 วิ'},
- pumpkin:{img:'pumpkin',name:'ฟักทองผี',size:.32,hw:.16,pen:2500,blast:.34,col:'#ffb13b',fx:'ระเบิดเป็นวง ต้องหลบให้ห่าง'},
+ pumpkin:{img:'pumpkin',name:'บัวทองระเบิด',size:.32,hw:.16,pen:2500,blast:.34,col:'#ffb13b',fx:'ระเบิดเป็นวง ต้องหลบให้ห่าง'},
  comet:{img:'comet',name:'ดาวหาง',size:.30,hw:.15,pen:3000,fast:1.9,col:'#7ad7ff',fx:'พุ่งเร็ว มีลูกศรเตือน'}};
 const IT={
  star:{img:'star',name:'ดาวทอง',size:.15,pts:200,col:'#ffd76a'},
@@ -435,7 +435,7 @@ function buildStart(){
  $('t-how').innerHTML='<div class="grid">'+tile('📱','ตะแคง หรือ ลากนิ้ว','','','ใช้ได้ทั้งสองแบบ')+tile('❤️','หัวใจ 3 ดวง','','','ชนครบ 3 ครั้งจบรอบ')+tile(IMG.gate,'ประตูพระจันทร์','20,000 ม.','gold','ยิ่งไกลยิ่งเร็ว')+'</div>'+
   '<div class="sec">🌌 5 ช่วง ยิ่งไกลยิ่งยาก</div><div class="zones">'+ZONES.map((z,i)=>'<div><i style="background-image:url('+IMG[z.bg]+');border-color:'+z.col+'"></i>'+(i+1)+'. '+z.n+'</div>').join('')+'</div>';
  $('t-obs').innerHTML='<div class="grid">'+Object.entries(OB).map(([k,d])=>tile(IMG[k==='bat'?'batstill':d.img],d.name,'−'+fmt(d.pen),'neg',d.fx,false,'badimg')).join('')+tile(IMG.shield,'มีโล่','ไม่โดนหัก','pos','กันชนได้ 1 ครั้ง')+'</div>';
- $('t-get').innerHTML='<div class="sec" style="margin-top:2px">✨ ของดีมีวงแสงทองเขียว · ☠️ ของร้ายมีควันแดงขอบหนาม</div><div class="grid">'+['star','candy','corn','moon'].map(k=>tile(IMG[IT[k].img],IT[k].name,'+'+fmt(IT[k].pts),'pos',k==='moon'?'นานๆ ออกที':'',false,'goodimg')).join('')+tile(IMG.comet,'ดาวหางทอง','+30,000','gold','ไม่ได้ออกทุกรอบ',true,'goldimg')+tile(IMG.shield,'โล่เวทมนตร์','','','กันชน 1 ครั้ง')+tile(IMG.magnet,'แม่เหล็ก','','','ดูดของ 8 วิ')+'</div>';
+ $('t-get').innerHTML='<div class="sec" style="margin-top:2px">✨ ของดีมีวงแสงทองเขียว · 💥 ของร้ายมีควันแดงขอบหนาม</div><div class="grid">'+['star','candy','corn','moon'].map(k=>tile(IMG[IT[k].img],IT[k].name,'+'+fmt(IT[k].pts),'pos',k==='moon'?'นานๆ ออกที':'',false,'goodimg')).join('')+tile(IMG.comet,'ดาวหางทอง','+30,000','gold','ไม่ได้ออกทุกรอบ',true,'goldimg')+tile(IMG.shield,'โล่เวทมนตร์','','','กันชน 1 ครั้ง')+tile(IMG.magnet,'แม่เหล็ก','','','ดูดของ 8 วิ')+'</div>';
  $('t-prize').innerHTML='<div class="rbar"><span class="m" style="left:25%"></span>'+
   '<span class="l t" style="left:4%">−60,000</span><span class="l t" style="left:25%">🚩 +10,000</span><span class="l t" style="left:93%">+50,000</span>'+
   '<span class="l b" style="left:4%">ชนเร็ว</span><span class="l b" style="left:25%">3,000 ม.</span><span class="l b" style="left:93%">🌙 20,000 ม.</span></div>'+

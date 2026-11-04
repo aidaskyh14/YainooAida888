@@ -5,14 +5,21 @@
    data-sync  : นิพจน์ที่ส่งสถานะให้ฉาก 3D ทุก 1 วินาที
    data-dock  : [[อีโมจิ, ชื่อสั้น, โค้ด], ...] แถบปุ่มเล็กสไตล์ซีซัน 4 */
 (()=>{
- const me=document.currentScript||[...document.querySelectorAll('script[src*="s4view.js?h=e7935ecb"]')].pop();if(!me||!me.dataset)return;const src=me.dataset.src;let ACTS={},DOCK=[];
+ const me=document.currentScript||[...document.querySelectorAll('script[src*="s4view.js?h=a241fa36"]')].pop();if(!me||!me.dataset)return;const src=me.dataset.src;let ACTS={},DOCK=[];
  try{ACTS=JSON.parse(me.dataset.acts||'{}');}catch(e){}try{DOCK=JSON.parse(me.dataset.dock||'[]');}catch(e){}
  const css=document.createElement('style');css.textContent=`
 html.s4emb,html.s4emb body{background:transparent!important}
 html.s4emb body{visibility:hidden!important}
-html.s4emb body *:not(.s4ov):not(.s4ov *):not(#s4f):not(#s4dock):not(#s4ring):not(#s4ring *):not(#s4dveil){visibility:hidden!important}
+html.s4emb body *:not(.s4ov):not(.s4ov *):not(#s4f):not(#s4dock):not(#s4ring):not(#s4ring *):not(#s4dveil):not(#s4dbar):not(#s4dbar *){visibility:hidden!important}
 :where(html.s4emb) :where(.s4ov){visibility:visible}
-html.s4emb #s4f,html.s4emb #s4dock,html.s4emb #s4ring,html.s4emb #s4dveil{visibility:visible!important}
+html.s4emb #s4f,html.s4emb #s4dock,html.s4emb #s4ring,html.s4emb #s4dveil,html.s4emb #s4dbar,html.s4emb #s4dbar *{visibility:visible!important}
+/* S4 ข้อ 29: ปุ่มหลักของโซน (4 ปุ่มแรก) เห็นชัดที่มุมซ้ายล่าง ไม่ต้องกด ☰ */
+#s4dbar{position:fixed;z-index:30;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:8px}
+#s4dbar button{all:unset;box-sizing:border-box;cursor:pointer;width:54px;display:flex;flex-direction:column;align-items:center;gap:2px}
+#s4dbar button i{width:50px;height:50px;border-radius:15px;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:24px;box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);position:relative}
+#s4dbar button span{font:800 10px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap}
+#s4dbar button:active i{transform:translateY(3px)}
+body.s4dedit #s4dbar,body.s4sheet #s4dbar,body.s4photo #s4dbar,body.s4pmode #s4dbar{display:none!important}
 #s4f{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;display:block;background:#bfe6a0}
 #s4dock{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;width:56px;height:56px;border-radius:16px;border:3px solid #fff;padding:0;cursor:pointer;background:linear-gradient(180deg,#ff9fc0,#e8578a);box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);font-size:26px;color:#fff;display:flex;align-items:center;justify-content:center;transition:transform .1s,opacity .2s}
 #s4dock::after{content:'';position:absolute;left:5px;right:5px;top:3px;height:40%;border-radius:12px 12px 20px 20px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
@@ -43,7 +50,8 @@ html.s4emb #s4f,html.s4emb #s4dock,html.s4emb #s4ring,html.s4emb #s4dveil{visibi
    rg.innerHTML='<div class="hd"><span>เมนู</span><button type="button" data-x="1">✕</button></div><div class="row">'+DOCK.map(([e,t],i)=>`<button type="button" class="t" data-i="${i}"><i style="background:${C[i%C.length]}">${e}</i><span>${t}</span></button>`).join('')+'</div>';
    const close=()=>{rg.classList.remove('on');o.classList.remove('on');vl.classList.remove('on');};vl.onclick=close;
    o.onclick=()=>{rg.classList.add('on');o.classList.add('on');vl.classList.add('on');};
-   rg.onclick=ev=>{if(ev.target.closest('[data-x]'))return close();const b=ev.target.closest('[data-i]');if(!b)return;close();run(DOCK[+b.dataset.i][2]);};}
+   rg.onclick=ev=>{if(ev.target.closest('[data-x]'))return close();const b=ev.target.closest('[data-i]');if(!b)return;close();run(DOCK[+b.dataset.i][2]);};
+   const bar=document.createElement('div');bar.id='s4dbar';bar.innerHTML=DOCK.slice(0,4).map(([e,t],i)=>`<button type="button" data-i="${i}"><i style="background:${C[i%C.length]}">${e}</i><span>${t}</span></button>`).join('');document.body.appendChild(bar);bar.onclick=ev=>{const b=ev.target.closest('[data-i]');if(!b)return;run(DOCK[+b.dataset.i][2]);};}
   scan();setTimeout(scan,600);setTimeout(scan,1800);
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.parentNode===document.body&&n instanceof HTMLElement&&n!==f&&!/^s4(dock|ring|dveil)$/.test(n.id)){const cs=getComputedStyle(n);if(cs.position==='fixed'||cs.position==='absolute')n.classList.add('s4ov');}}).observe(document.body,{childList:true});};
  if(document.body)add();else document.addEventListener('DOMContentLoaded',add);

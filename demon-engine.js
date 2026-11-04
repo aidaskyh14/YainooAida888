@@ -1,8 +1,8 @@
 import {altTake,altHave,payBroom} from './broom-pay.js?h=92e78b5b';
-/* fix17 😈 ไอเทมปีศาจ 4 ชิ้น (แกล้งสวนเพื่อน) — กติกาล้วน ใช้บนคลาวด์ (หน้าเว็บใช้ค่าคงที่/ข้อความเท่านั้น)
+/* fix17 🎭 ไอเทมปีศาจ 4 ชิ้น (แกล้งสวนเพื่อน) — กติกาล้วน ใช้บนคลาวด์ (หน้าเว็บใช้ค่าคงที่/ข้อความเท่านั้น)
    🎶 กล่องดนตรีหมูปีศาจ −50,000 ทันที (fix18: เดิม −20,000)
    ⏳ นาฬิกาทรายปีศาจ ดูด −10,000 ทุก 6 นาที 1 ชม. (รวม −100,000) · เจ้าของคว่ำได้ด้วยใบตองทอง 20 · สวนหนึ่งมีพร้อมกันได้ 3 อัน
-   ⛓️ หีบโลงต้องสาป ล็อกสวน · เจ้าของเลือกตรา 1 ใน 3 (−50,000 / −150,000 / สะท้อน −150,000 ใส่คนแกล้ง หน่วง 5–30 นาที) · ไม่เปิดใน 30 นาที = −150,000 · ทีละ 1 อัน
+   ⛓️ หีบบัวต้องมนต์ ล็อกสวน · เจ้าของเลือกตรา 1 ใน 3 (−50,000 / −150,000 / สะท้อน −150,000 ใส่คนแกล้ง หน่วง 5–30 นาที) · ไม่เปิดใน 30 นาที = −150,000 · ทีละ 1 อัน
    💖 หัวใจทับทิมปีศาจ คนถือมีเวลา 10 นาที (นับเมื่อออนไลน์) ส่งต่อได้ 3 ทอด ห้ามคืนคนส่ง · หมดเวลา −250,000 · ทะลุหุ่นไล่กา
    ของในกระเป๋าต้องใช้ใน 48 ชม. ไม่งั้นระเบิดใส่ตัวเอง (≈2 เท่า) · ทิ้งลงบ่อได้ (ครึ่งหนึ่งของระเบิด)
    ไม่บอก ไม่เก็บชื่อคนแกล้งในข้อมูลที่คนโดนอ่านได้ · ส่งไม่ได้ทุกกรณี = ข้อความเดียวกัน */
@@ -10,9 +10,9 @@ export const DEMON_KINDS=['music','hour','coffin','heart'];
 export const DEMON={
  music:{n:'กล่องดนตรีหมูจอมแสบ',e:'🎶',img:'prank-musicbox',amt:50000,boom:100000,toss:50000,cap:150,pair:50},
  hour:{n:'นาฬิกาทรายจอมแสบ',e:'⏳',img:'prank-hourglass',tick:10000,every:6*60000,ticks:10,boom:200000,toss:100000,cap:30,pair:8,max:3,flip:100},
- coffin:{n:'หีบโลงต้องสาป',e:'⛓️',img:'prank-coffin',green:50000,red:150000,reflect:150000,time:30*60000,boom:300000,toss:150000,cap:25,pair:6,max:1},
+ coffin:{n:'หีบบัวต้องมนต์',e:'⛓️',img:'prank-coffin',green:50000,red:150000,reflect:150000,time:30*60000,boom:300000,toss:150000,cap:25,pair:6,max:1},
  heart:{n:'หัวใจทับทิมจอมแสบ',e:'💖',img:'prank-heart',amt:250000,time:10*60000,passes:3,boom:500000,toss:250000,cap:25,resend:60*60000}};
-export const HEART_MSG='หัวใจต้องคำสาป  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
+export const HEART_MSG='หัวใจต้องมนต์  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
 export const DEMON_MUSIC_BULK=50,DEMON_HEART_HOLD=10;
 /* fix23 💖 หัวใจทอดสุดท้าย (ส่งต่อไม่ได้แล้ว) แตกตอนไม่อยู่ในเกม = หักของ 1,000 ชิ้น · หัวใจทุกดวงที่อยู่ในมือ เลือกจ่ายเองได้: ของ 1,500 ชิ้น หรือหัก 250,000 (ติดลบได้) · อยู่ในเกมแต่ไม่เลือก/ไม่ส่ง = หัก 250,000 เหมือนเดิม
    ของที่หัก: คละจาก 7 อย่างใน broom-pay.js หักจากกองที่เยอะที่สุดก่อนทีละชิ้น · ของรวมไม่พอ = หักเท่าที่มี ส่วนที่ขาดคิดชิ้นละ 250 กุศล
@@ -25,7 +25,7 @@ export const heartTakeItems=(game,n)=>altTake(game,n,'mix');
    คนแปรรูป: ต้องส่งให้เพื่อนภายใน 24 ชม. ไม่งั้นระเบิดใส่ตัวเอง (มูลค่าของชิ้นนั้น) · ทะลุหุ่นไล่กา
    คนโดน: เข้ากองรอจัดการเงียบ ๆ 24 ชม. · ใช้ใบตองทอง 100/ชิ้น ลดยอดสุ่ม 20–50% หรือรับทราบหักเต็ม · ไม่จัดการ = หักเต็มอัตโนมัติ · ส่งต่อไม่ได้ */
 export const GHOST_TIME=24*3600000,GHOST_HOLD=200,GHOST_HAND=1000,GHOST_BROOM=100,GHOST_CUT=[.2,.5];
-export const DEMON_EXPIRE=48*3600000,DEMON_USER_DAY=400,DEMON_PAIR_GAP=60000,DEMON_REFLECT=[5*60000,30*60000],DEMON_NOPE='😈 ตอนนี้ใช้กับคนนี้ไม่ได้ ลองใหม่ทีหลังนะ';
+export const DEMON_EXPIRE=48*3600000,DEMON_USER_DAY=400,DEMON_PAIR_GAP=60000,DEMON_REFLECT=[5*60000,30*60000],DEMON_NOPE='🎭 ตอนนี้ใช้กับคนนี้ไม่ได้ ลองใหม่ทีหลังนะ';
 /* ของดร็อป: ดูแลสัตว์ (ตั๋วละ 5,000 กุศลจากสัตว์ วันละไม่เกิน 40 ตั๋ว) · กล่องสุ่มสัตว์เลี้ยง (ซ่อน: เฉลี่ย 1–2 ชิ้น/500 กล่อง) */
 export const PET_TICKET=5000,PET_TICKETS_DAY=40,PET_EARN_CAP=500000;
 export const PET_ODDS=[['music',.06],['hour',.03],['coffin',.015],['heart',.01]];
@@ -117,7 +117,7 @@ export function demonSend({game,ax17,d,priv,actor,victim,kind,now,scare,rng,n=1}
   for(const [u,p] of Object.entries(s.p))if(p.d!==day&&!(p.lh>now-DEMON.heart.resend))delete s.p[u];
   const pair=s.p[victim]&&s.p[victim].d===day?s.p[victim]:(s.p[victim]={d:day,m:0,h:0,c:0,last:0,lh:s.p[victim]?.lh||0});
   const nope=()=>fail(DEMON_NOPE);
-  /* fix20: ไม่จำกัดการแกล้งแล้ว (ไม่มีเพดานต่อวันของคนแกล้ง/คนโดน/คู่เดิม) · เหลือเฉพาะกลไกของไอเทม: หุ่นไล่กา · นาฬิกาทราย 3 อัน/สวน · หีบโลงทีละ 1 · หัวใจค้างพร้อมกัน 3 · กล่องดนตรีส่งทีละหลายกล่องได้ */
+  /* fix20: ไม่จำกัดการแกล้งแล้ว (ไม่มีเพดานต่อวันของคนแกล้ง/คนโดน/คู่เดิม) · เหลือเฉพาะกลไกของไอเทม: หุ่นไล่กา · นาฬิกาทราย 3 อัน/สวน · หีบบัวทีละ 1 · หัวใจค้างพร้อมกัน 3 · กล่องดนตรีส่งทีละหลายกล่องได้ */
   if(kind!=='heart'&&(scare||0)>now)nope();
   if(kind==='hour'&&d.hg.length>=D.max)nope();if(kind==='coffin'&&d.cf.length>=D.max)nope();
   if(kind==='heart'&&d.ht.length>=DEMON_HEART_HOLD)nope();
@@ -130,7 +130,7 @@ export function demonSend({game,ax17,d,priv,actor,victim,kind,now,scare,rng,n=1}
     d.cf.push({id,at:now,until:now+D.time});priv.cf ||= {};priv.cf[id]={by:actor,seal:perm,at:now};out.dmc=now+D.time;vLog(d,{k:'coffin',amt:0,at:now,w:'placed'});}
   if(kind==='heart'){d.ht.push({id,at:now,seen:0,passes:0});priv.ht ||= {};priv.ht[id]={from:actor,chain:[actor],at:now};vLog(d,{k:'heart',amt:0,at:now,w:'got'});}
   return out;}
-/* เปิดหีบโลง: ผลสุ่มไว้ตั้งแต่วาง · สะท้อน = คนแกล้งเสีย (หน่วง 5–30 นาที) */
+/* เปิดหีบบัว: ผลสุ่มไว้ตั้งแต่วาง · สะท้อน = คนแกล้งเสีย (หน่วง 5–30 นาที) */
 export function coffinOpen(d,priv,game,id,pick,now,rng){const c=d.cf.find(x=>x.id===id),p=priv.cf?.[id];if(!c||!p)fail('หีบนี้เปิดไปแล้ว');if(!Number.isInteger(pick)||pick<0||pick>2)fail('เลือกตราผนึก 1 ดวง');
   const r=p.seal[pick],D=DEMON.coffin;let amt=0,reflect=null;
   if(r==='g')amt=D.green;else if(r==='r')amt=D.red;else reflect={to:p.by,merit:-D.reflect,after:now+DEMON_REFLECT[0]+Math.floor(rng()*(DEMON_REFLECT[1]-DEMON_REFLECT[0]))};

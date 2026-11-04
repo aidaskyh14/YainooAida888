@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="th">
-<head><script src="pv/s4icon.js?h=edc9f144"></script>
+<head><script src="pv/s4icon.js?h=37261d11"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>หาแมวในแก้ว</title>
@@ -146,7 +146,7 @@ async function pick(c){if(state!=='pick')return;clearInterval(timer);state='reve
 async function take(){if(busy)return;busy=true;panel();let out;try{out=await call({type:'take',game:'cup'});}catch(e){busy=false;err(e.message);await sync();return;}busy=false;
  last=out.result?.gain||bank;msg('💰 เก็บรางวัลแล้ว');state='done';bank=0;level=0;panel();}
 function pop(t){const p=document.createElement('div');p.className='pop';p.textContent=t;stage.append(p);setTimeout(()=>p.remove(),1700);}
-function boom(){const fx=$('fx');const set=['🪷','⭐','🍬','✨'];for(let i=0;i<34;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.6)+'s';e.style.animationDelay=Math.random()*.5+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML='<img src="images/lux-coin.webp" alt="">';else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4200);}}
+function boom(){const fx=$('fx');const set=['🪷','⭐','🌸','✨'];for(let i=0;i<34;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.6)+'s';e.style.animationDelay=Math.random()*.5+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML='<img src="images/lux-coin.webp" alt="">';else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4200);}}
 /* โหลดสถานะ: รอบค้างที่รอเลือก → เลือกต่อได้ · รอบค้างกลางเกม → นับว่าไม่ผ่าน */
 async function sync(){let out;try{out=await call({type:'status',game:'cup'});}catch(e){err(e.message);return;}
  const t=out.tidy;if(t&&t.g==='cup'){if(t.result==='lose'){last=-(t.loss||0);msg('⌛ รอบที่ค้างไว้หมดเวลา นับว่าไม่ผ่าน');}else if(t.result==='take'){last=t.gain;msg('💰 รับรางวัลรอบที่ค้างไว้ให้แล้ว');}}

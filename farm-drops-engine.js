@@ -1,5 +1,5 @@
 /* Bounded collection receipts. No clock writes and no writes to the visited owner. */
-import {seeded} from './campaigns-engine.js?h=4c0a763a';
+import {seeded} from './campaigns-engine.js?h=6795f504';
 export const DROP_OWN_MS=20*60000,DROP_FRIEND_MS=45*60000;
 export function farmDropRows(owner,farm,now,friend=false){
  const period=friend?DROP_FRIEND_MS:DROP_OWN_MS,epoch=Math.floor(now/period),rng=seeded(owner+'|'+farm+'|'+epoch+'|'+(friend?'friend':'own'));
@@ -13,6 +13,11 @@ export function farmDropsAction(account,ctx,input){
  for(const[k,v]of Object.entries(state.claims))if(v.until<=ctx.now)delete state.claims[k];
  const view=farmDropRows(owner,farm,ctx.now,friend),key=owner+'-'+farm+'-'+(friend?'f':'o'),prior=state.claims[key],taken=prior?.epoch===view.epoch?prior.ids:[];
  let available=view.rows.filter(r=>!taken.includes(r.id));const collected=[];
+ /* S4 ข้อ 13: กระทงรางวัล 1 ครั้งต่อช่อง 5 นาที (เวลาไทย) ผล +100/−100 สุ่มที่เซิร์ฟเวอร์ (60% ได้) */
+ if(input.type==='krathong'){const slot=Math.floor((ctx.now+7*3600000)/300000);if(input.slot!=null&&Number(input.slot)!==slot)throw Error('กระทงลำนี้หมดเวลาแล้ว');
+  const kk='kt-'+slot;if(state.claims[kk])throw Error('ช่วงนี้เก็บกระทงรางวัลไปแล้ว รออีกสักครู่นะ');
+  const r=seeded(ctx.uid+'|kt|'+slot)();const delta=r<.6?100:-100;game.merit=Math.max(0,(Number(game.merit)||0)+delta);state.claims[kk]={epoch:slot,ids:[],until:(slot+1)*300000-7*3600000+300000};
+  return {game,view:{...view,rows:available,owner,farm,friend},collected,krathong:{delta,slot}};}
  if(input.type==='collect'){
   if(input.epoch!==view.epoch)throw Error('ของรอบเดิมหมดเวลาแล้ว กรุณาดูรอบใหม่');
   const ids=input.all?available.map(r=>r.id):[input.index];if(ids.some(i=>!Number.isInteger(i)||!available.some(r=>r.id===i)))throw Error('เก็บของชิ้นนี้แล้วหรือยังไม่มีของ');

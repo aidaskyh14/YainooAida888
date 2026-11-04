@@ -1,36 +1,37 @@
-import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=d18e32c7';
-import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=aa2d9199';
+import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=78c0a2cd';
+import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=325c2f52';
 import {safariAction} from './safari-engine.js?h=b8c86111';
-import {adminCenter} from './admin-center-engine.js?h=cd05e762';
+import {adminCenter} from './admin-center-engine.js?h=13458e60';
+import {adminReset} from './admin-reset.js?h=30e79a6c';
 import {openLootBoxes} from './loot-box-engine.js?h=1f16d6b0';
-import {farmDropsAction} from './farm-drops-engine.js?h=13937ad4';
+import {farmDropsAction} from './farm-drops-engine.js?h=7932d513';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
-import {farmAction,friendAction} from './farm-engine.js?h=eaf8bdc5';
+import {farmAction,friendAction} from './farm-engine.js?h=d0a60471';
 import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
 import {observeGameplay} from './campaign-progress.js?h=cb6616b6';
-import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=4ea55aa2';
-import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=b21cc564';
+import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=2997a883';
+import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=b166c6ce';
 import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=f5b32ed5';
-import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=4c0a763a';
+import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=6795f504';
 import {randomUUID,randomInt,createHash} from 'node:crypto';
-import {ATM_CARD,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=cf94edcd';
-import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=81ea9898';
+import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
+import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=b5d612b9';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
-import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=37c712fc';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=fd044428';
-import {NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ff5f9ad4';
-import {nbDay} from './nb-quest.js?h=57e77d71';
-import {funrunAction,funrunPublic} from './funrun-engine.js?h=86927985';
+import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=0182268e';
+import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
+import {nbDay} from './nb-quest.js?h=94056e26';
+import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
-import {createCloudCore,refuse} from './cloud-core.js?h=7e6e6503';
+import {createCloudCore,refuse} from './cloud-core.js?h=e1b3d33d';
 import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=f7ba43c9';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
-import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=a57baf20';
+import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=9407f14e';
 import {hwmAction} from './hwmini-engine.js?h=ffca3ddc';
-import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=1f186c68';
-import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=1d3efbde';
+import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=13fbcd77';
+import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=af571787';
 import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=77e14398';
 initializeApp();
 const db=getFirestore(),core=createCloudCore(db,()=>FieldValue.serverTimestamp());
@@ -41,6 +42,8 @@ const callable=(fn,opt=options)=>onCall(opt,async req=>{
 });
 export const gameApiStatus=callable(async()=>({release:'ss3-recovery6'}));
 export const adminCenterCloud=callable(req=>adminCenter(db,req.auth.uid,req.data,{timestamp:()=>FieldValue.serverTimestamp(),increment:n=>FieldValue.increment(n),expires:n=>Timestamp.fromMillis(n)}));
+/* S4 ข้อ 162 🧹 เริ่มศูนย์ผู้เล่น (ดูก่อน/ล้างจริง · สำรองก่อน · ทั้งหมดครั้งเดียวต่อซีซั่น) */
+export const adminResetCloud=callable(req=>adminReset(db,req.auth.uid,req.data||{},{timestamp:()=>FieldValue.serverTimestamp(),increment:n=>FieldValue.increment(n),expires:n=>Timestamp.fromMillis(n)}));
 /* fix13 roster: one document (privateWorld/roster) instead of reading every player on each open of boat / friend shop /
    Top Spenders. Rebuilt (all players, no 200 cap) when missing, when player/pending/rejected counts change (sign-up,
    approve, reject), every 6 h (catches console renames), or on {rebuild:true} from an admin. A player's own name/approval
@@ -120,7 +123,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=fd044428');
+     const {CATALOG}=await import('./catalog.js?h=0182268e');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -225,7 +228,7 @@ export const campaignsActionCloud=callable(async req=>{
  const rebuild=['start','stop'].includes(input.type)||!prior.exists||Date.now()-(prior.data().updatedAt||0)>=RANK_STALE;
  const scores=rebuild?await collectCampaignScores():null;
  return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'campaigns',partIds:['wallet','animals-campaigns'],worldIds:['world/campaigns','world/campaign-ranks'],apply:async(game,worlds,ctx,tx)=>{
- const {campaignControl,claimCampaign,buildBoards}=await import('./campaigns-engine.js?h=4c0a763a'),config=worlds['world/campaigns']||{},writes={};let reward=0;
+ const {campaignControl,claimCampaign,buildBoards}=await import('./campaigns-engine.js?h=6795f504'),config=worlds['world/campaigns']||{},writes={};let reward=0;
  if(['start','stop','news'].includes(input.type))writes['world/campaigns']=campaignControl(config,input,ctx);
  else if(input.type==='claim')reward=claimCampaign(game,config,input);
  else if(input.type!=='status')refuse('รายการไม่ถูกต้อง');
@@ -346,9 +349,9 @@ export const minigamesActionCloud=callable(async req=>core.action({uid:req.auth.
 export const ledgerCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'ledger',partIds:['inventory','wallet'],apply:async(game,worlds,ctx,tx)=>{
  // fix16: เข้าเกม = ตัดสินขวดที่ครบ 10 นาทีแล้ว · ขวดที่โดนตอนออฟไลน์เริ่มนับ 10 นาทีตอนนี้ (ทีละขวด)
  const vref=db.doc('players/'+ctx.uid+'/gameViews/poison'),vs=await tx.get(vref),writes={};const v0=vs.exists?vs.data():null,unseen=(v0?.hits||[]).some(h=>h&&h.st==='p'&&!h.seen);const pv=poisonSettle(game,v0,ctx.now,unseen?hits=>poisonStartClocks(hits,ctx.now):undefined);if(pv)writes[vref.path]=pv;
- // fix17 😈 ของปีศาจที่ค้างตอนออฟไลน์: หักตามเวลาจริงทันทีที่เข้าเกม (อ่านเฉพาะคนที่มีของค้าง)
+ // fix17 🎭 ของปีศาจที่ค้างตอนออฟไลน์: หักตามเวลาจริงทันทีที่เข้าเกม (อ่านเฉพาะคนที่มีของค้าง)
  const updates={};let demonLost=0;if(ctx.dmp){demonLost=(await dmSettleSelf(tx,game,ctx,writes,updates)).lost;}
- // fix17 😈 ไอเทมปีศาจในไปรษณีย์ที่ไม่กดรับเกิน 24 ชม. → ย้ายเข้ากระเป๋าเอง (เริ่มนับ 48 ชม. ตอนเข้ากระเป๋า)
+ // fix17 🎭 ไอเทมปีศาจในไปรษณีย์ที่ไม่กดรับเกิน 24 ชม. → ย้ายเข้ากระเป๋าเอง (เริ่มนับ 48 ชม. ตอนเข้ากระเป๋า)
  const deletes=[];let mailDelta=0,dmMoved=null;
  if(ctx.dmMail){const snap=await tx.get(db.collection('mail/'+ctx.uid+'/items').limit(200));let keep=false;
   for(const d of snap.docs||[]){const m=d.data()||{},items=m.items||{},dk=Object.keys(items).filter(k=>k.startsWith('demon-')&&DEMON[k.slice(6)]&&Number.isSafeInteger(items[k])&&items[k]>0);if(!dk.length)continue;
@@ -412,7 +415,7 @@ export const marketActionCloud=callable(async req=>core.action({uid:req.auth.uid
  const coins=out.coinsUsed?ctx.coins-out.coinsUsed:undefined;
  return {writes,...(coins!==undefined?{coins}:{}),response:{config:out.config,dividend:out.dividend,gain:(game.merit||0)-(prior.merit||0),serverNow:ctx.now,poison:Array.isArray(market.poison)?market.poison:[],antidote:game.bag?.antidote||{},...(out.sold?{sold:out.sold}:{}),...(out.prizes?{prizes:out.prizes}:{}),...(out.crafted?{crafted:out.crafted}:{}),...(out.extra||{}),...(thrown?{thrown}:{})}};}}));
 
-export const farmActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'farm',partIds:['inventory','wallet','house','farm-settings','farm-1','farm-2','farm-3','farm-4','animals-alpaca','animals-campaigns','animals-prank'],worldIds:['world/campaigns'],apply:async(game,worlds,ctx)=>{if(ctx.dmc>ctx.now&&(req.data?.input?.type||'status')!=='status')refuse('⛓️ สวนถูกหีบโลงต้องสาปล็อกอยู่ เปิดตราผนึกก่อนนะ');Object.assign(game,farmAction(game,ctx,{type:'status',farm:req.data?.input?.farm??1}).game);recordCampaign(game,worlds['world/campaigns']||{},'pump',0,ctx.now);const prior=structuredClone(game),out=farmAction(game,ctx,req.data?.input||{},()=>randomInt(4294967296)/4294967296);Object.assign(game,out.game);observeGameplay(prior,game,'farm',worlds['world/campaigns']||{},ctx.now,[],()=>randomInt(4294967296)/4294967296,{pumpHarvests:out.pump||0});const halloween=Object.entries(game.bag?.halloween||{}).flatMap(([k,q])=>q>(prior.bag?.halloween?.[k]||0)?[{path:'halloween.'+k,quantity:q-(prior.bag?.halloween?.[k]||0)}]:[]);return {response:{count:out.count,items:out.items,harvested:out.harvested||[],results:out.results||[],outputs:out.outputs||[],consumed:out.consumed||[],...(out.prank?{prank:out.prank}:{}),halloween,pumpPlots:game.sub?.campaigns?.pump?.pumpPlots||0,pumpActive:!!worlds['world/campaigns']?.pump?.start&&worlds['world/campaigns'].pump.start<=ctx.now&&worlds['world/campaigns'].pump.end>ctx.now,serverNow:ctx.now}};}}));
+export const farmActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'farm',partIds:['inventory','wallet','house','farm-settings','farm-1','farm-2','farm-3','farm-4','animals-alpaca','animals-campaigns','animals-prank'],worldIds:['world/campaigns'],apply:async(game,worlds,ctx)=>{if(ctx.dmc>ctx.now&&(req.data?.input?.type||'status')!=='status')refuse('⛓️ สวนถูกหีบบัวต้องมนต์ล็อกอยู่ เปิดตราผนึกก่อนนะ');Object.assign(game,farmAction(game,ctx,{type:'status',farm:req.data?.input?.farm??1}).game);recordCampaign(game,worlds['world/campaigns']||{},'pump',0,ctx.now);const prior=structuredClone(game),out=farmAction(game,ctx,req.data?.input||{},()=>randomInt(4294967296)/4294967296);Object.assign(game,out.game);observeGameplay(prior,game,'farm',worlds['world/campaigns']||{},ctx.now,[],()=>randomInt(4294967296)/4294967296,{pumpHarvests:out.pump||0});const halloween=Object.entries(game.bag?.halloween||{}).flatMap(([k,q])=>q>(prior.bag?.halloween?.[k]||0)?[{path:'halloween.'+k,quantity:q-(prior.bag?.halloween?.[k]||0)}]:[]);return {response:{count:out.count,items:out.items,harvested:out.harvested||[],results:out.results||[],outputs:out.outputs||[],consumed:out.consumed||[],...(out.prank?{prank:out.prank}:{}),halloween,pumpPlots:game.sub?.campaigns?.pump?.pumpPlots||0,pumpActive:!!worlds['world/campaigns']?.pump?.start&&worlds['world/campaigns'].pump.start<=ctx.now&&worlds['world/campaigns'].pump.end>ctx.now,serverNow:ctx.now}};}}));
 export const friendsActionCloud=callable(async req=>{
  const input=req.data?.input||{},owner=input.owner;if(typeof owner!=='string'||!/^[-a-zA-Z0-9_]{1,128}$/.test(owner)||owner===req.auth.uid)refuse('สวนไม่ถูกต้อง');const farm=input.farm??1;if(!Number.isInteger(farm)||farm<1||farm>4)refuse('ฟาร์มไม่ถูกต้อง');
  return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'friends',partIds:['inventory','wallet','animals-friends'],apply:async(game,worlds,ctx,tx)=>{
@@ -420,9 +423,10 @@ export const friendsActionCloud=callable(async req=>{
  const target=joinGame([part,house,settings,prankPart].filter(d=>d.exists).map(d=>d.data()));const out=friendAction(game,target,ctx,input,()=>randomInt(4294967296)/4294967296);Object.assign(game,out.game);const writes={},updates={},next=splitGame(out.target).get('farm-'+farm);
  if(next&&next.payload!==(part.exists?part.data().payload:null)){writes[farmRef.path]={...next,rev:((part.exists?part.data().rev:0)||0)+1,by:profile.data().session,updatedAt:FieldValue.serverTimestamp()};updates[rootRef.path]={saveRevision:FieldValue.increment(1)};}
  const pnext=splitGame(out.target).get('animals-prank');if(pnext&&pnext.payload!==(prankPart.exists?prankPart.data().payload:null)){writes[prankRef.path]={...pnext,rev:((prankPart.exists?prankPart.data().rev:0)||0)+1,by:profile.data().session,updatedAt:FieldValue.serverTimestamp()};updates[rootRef.path]={saveRevision:FieldValue.increment(1)};if(!prankPart.exists)updates[rootRef.path].partCount=FieldValue.increment(1);}
- if(out.notice){const mailRef=db.doc('mail/'+owner+'/items/friend-news'),prior=await tx.get(mailRef);writes[mailRef.path]={title:'การเยี่ยมสวน',msg:ctx.name+' · '+({steal:'ขโมยผัก',water:'รดน้ำ',worm:'กำจัดหนอน',magic:'เล่นของ 3 ชั่วโมง'}[out.notice])+' ฟาร์ม '+farm+' แปลง '+(input.index+1),icon:'👥',kusal:0,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:ctx.name};if(!prior.exists)updates[rootRef.path]={...(updates[rootRef.path]||{}),mailCount:FieldValue.increment(1)};}
+ if(out.notice){const mailRef=db.doc('mail/'+owner+'/items/friend-news'),prior=await tx.get(mailRef);writes[mailRef.path]={title:'การเยี่ยมสวน',msg:ctx.name+' · '+({steal:'ขโมยผัก',water:'รดน้ำ',worm:'กำจัดหนอน',magic:'ร่ายมนต์จันทร์ 3 ชั่วโมง'}[out.notice])+' ฟาร์ม '+farm+' แปลง '+(input.index+1),icon:'👥',kusal:0,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:ctx.name};if(!prior.exists)updates[rootRef.path]={...(updates[rootRef.path]||{}),mailCount:FieldValue.increment(1)};}
  const pk=out.target.sub?.prank||{};
- return {writes,updates,response:{owner,atm:ownerAdmin,name:profile.data().name,farm,plots:out.target.farms?.[farm]||[],fruit:out.target.fruit||null,quota:game.sub.friends,prankState:{bat:!!pk.bat,signs:(pk.signs||[]).length,scareUntil:pk.scareUntil||0,gardenDay:pk.day?.d===new Date(ctx.now+7*3600000).toISOString().slice(0,10)?pk.day.n||0:0},...(out.prank?{prank:out.prank}:{}),...(out.stolen?{stolen:out.stolen}:{}),serverNow:ctx.now}};
+ /* S4 ข้อ 180: ส่งเลย์เอาต์ฟาร์ม 3D ของเจ้าของให้ผู้เยี่ยม (เฉพาะตอนเริ่มเยี่ยม · 1 อ่าน) */let deco=null,honey=null;if(input.type==='visit'&&farm===1){try{const d=await tx.get(rootRef.collection('saves').doc('module-s4deco-farm'));deco=d.exists?d.data().payload:null;}catch(e){}/* S4 ข้อ 93: น้องน้ำผึ้งของเพื่อน (รถ/เรือที่จอด) */try{const o=await tx.get(rootRef.collection('saves').doc('outings'));if(o.exists){const g=JSON.parse(o.data().payload||'{}');const h=g&&g.honey;if(h&&typeof h==='object')honey={v:h.v,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,n:(h.req||[]).length};}}catch(e){}}
+ return {writes,updates,response:{owner,deco,honey,atm:ownerAdmin,name:profile.data().name,farm,plots:out.target.farms?.[farm]||[],fruit:out.target.fruit||null,quota:game.sub.friends,prankState:{bat:!!pk.bat,signs:(pk.signs||[]).length,scareUntil:pk.scareUntil||0,scareKind:pk.scareKind||1,gardenDay:pk.day?.d===new Date(ctx.now+7*3600000).toISOString().slice(0,10)?pk.day.n||0:0},...(out.prank?{prank:out.prank}:{}),...(out.stolen?{stolen:out.stolen}:{}),serverNow:ctx.now}};
  }});
 });
 
@@ -437,7 +441,7 @@ const boxesHandler=(req,system)=>core.action({uid:req.auth.uid,session:req.data?
  if(system==='birdbox'&&!['ostrich','dodo'].includes(request.box))refuse('กล่องนกไม่ถูกต้อง');
  const prior=structuredClone(game),out=openLootBoxes(game,request,()=>randomInt(4294967296)/4294967296);
  Object.assign(game,out.game);observeGameplay(prior,game,'boxes',worlds['world/campaigns']||{},ctx.now,out.outcomes);
- let demon={},merges={};if(!ctx.admin&&PET_BOXES.includes(request.box)){/* fix17 😈 โอกาสซ่อน · ตัวนับการันตีอยู่ฝั่งเซิร์ฟเวอร์ */const pref=db.doc(DM_PRIV(ctx.uid)),ps=await tx.get(pref),pity={n:Number(ps.exists?ps.data().box?.n:0)||0},n0=pity.n;
+ let demon={},merges={};if(!ctx.admin&&PET_BOXES.includes(request.box)){/* fix17 🎭 โอกาสซ่อน · ตัวนับการันตีอยู่ฝั่งเซิร์ฟเวอร์ */const pref=db.doc(DM_PRIV(ctx.uid)),ps=await tx.get(pref),pity={n:Number(ps.exists?ps.data().box?.n:0)||0},n0=pity.n;
   demon=boxRoll(game,ctx.x17,request.box,request.quantity,ctx.now,()=>randomInt(4294967296)/4294967296,pity);if(pity.n!==n0)merges[pref.path]={box:{n:pity.n}};}
  return {merges,response:{...out.receipt,species:system==='birdbox'?request.box:null,...(Object.keys(demon).length?{demon}:{})}};
 }});
@@ -447,7 +451,7 @@ export const birdboxActionCloud=callable(async req=>boxesHandler(req,'birdbox'))
 
 // fix14: ร้านค้ายัยหนูถอดออกทั้งระบบ — ของที่ผู้เล่นซื้อไปแล้วอยู่ในกระเป๋าตามเดิม
 
-export const dropsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'drops',partIds:['inventory','wallet','animals-farmdrops'],apply:async(game,worlds,ctx,tx)=>{const input=req.data?.input||{};if(input.owner&&input.owner!==ctx.uid){const target=await tx.get(db.doc('players/'+input.owner));if(!target.exists||target.data().approval&&target.data().approval!=='approved')refuse('ไม่พบสวนสมาชิกที่อนุมัติแล้ว');}const out=farmDropsAction(game,ctx,input);Object.assign(game,out.game);return {response:{view:out.view,collected:out.collected,serverNow:ctx.now}};}}));
+export const dropsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'drops',partIds:['inventory','wallet','animals-farmdrops'],apply:async(game,worlds,ctx,tx)=>{const input=req.data?.input||{};if(input.owner&&input.owner!==ctx.uid){const target=await tx.get(db.doc('players/'+input.owner));if(!target.exists||target.data().approval&&target.data().approval!=='approved')refuse('ไม่พบสวนสมาชิกที่อนุมัติแล้ว');}const out=farmDropsAction(game,ctx,input);Object.assign(game,out.game);return {response:{view:out.view,collected:out.collected,krathong:out.krathong||null,serverNow:ctx.now}};}}));
 
 // fix14: ระบบล่อนก (คัมภีร์ → คำขอ → แอดมินอนุมัติ) ถอดออกทั้งระบบ · คำขอที่ค้างไม่ถูกตัดสินอีก · นกที่อนุมัติแล้วยังอยู่ครบ 48 ชม. (birdAdmissions)
 // Server clock for pages (48 h lure expiry, campaign timestamps). No reads or writes.
@@ -531,6 +535,18 @@ export const nbActionCloud=callable(async req=>{
   }
   if(!nb)fail('คุณยังไม่มีเนเบอร์ฮูด');
   const leader=nb.leader===uid,save=()=>{writes['neighborhoods/'+nbId]=nb;};
+  if(nbHousesTick(nb,now))save();/* S4 ข้อ 109: ปิดงานอัปเกรดบ้านที่ครบเวลา */
+  /* S4 ข้อ 108: ของแต่ง+แบบบ้านของฉันในชุมชน เก็บที่เอกสารชุมชน ให้สมาชิกทุกคนเห็นทันที (แต่งได้เฉพาะช่องของตัวเอง) */
+  if(type==='nbDeco'){const d=Array.isArray(input.d)?input.d.slice(0,NB_DECO_MAX):[];for(const r of d){if(!Array.isArray(r)||r.length<3||typeof r[0]!=='string'||r[0].length>40||![1,2,3].every(i=>r[i]===undefined||(Number.isFinite(Number(r[i]))&&Math.abs(Number(r[i]))<100)))fail('ข้อมูลของแต่งไม่ถูกต้อง');}
+   nb.deco ||= {};nb.deco[uid]={d:d.map(r=>[String(r[0]),+(+r[1]).toFixed(2),+(+r[2]).toFixed(2),+(+(r[3]||0)).toFixed(3)]),at:now};
+   const h=nbHouseOf(nb,uid,now);if(input.st!==undefined&&!h.up){nb.houses ||= {};nb.houses[uid]={lv:h.lv,st:Math.max(0,Math.min(9,input.st|0))};}save();return reply();}
+  /* S4 ข้อ 105: ธีมชุมชน หัวหน้าเลือกครั้งแรกครั้งเดียว (ทุกคนเห็นธีมเดียวกัน) */
+  if(type==='nbTheme'){if(!leader)fail('หัวหน้าเนเบอร์ฮูดเท่านั้นที่เลือกธีมได้');if(nb.theme&&!ctx.admin)fail('เลือกธีมได้ครั้งเดียว (เลือกแล้ว: '+nb.theme+')');if(!NB_THEMES.includes(input.th))fail('ไม่มีธีมนี้');nb.theme=input.th;nbLog(nb,'🎨',(ctx.name||'หัวหน้า')+' เลือกธีมหมู่บ้าน',now);save();return reply();}
+  /* S4 ข้อ 109: อัปเกรดบ้านในชุมชน Lv1→2→3 ใช้ดอกไม้/ผลไม้/หญ้า · รอ ≥10 ชม. */
+  if(type==='nbUpgrade'){if(nb.status!=='active')fail('อัปเกรดได้เมื่อเนเบอร์ฮูดเปิดใช้แล้ว');const h=nbHouseOf(nb,uid,now);if(h.up)fail('กำลังอัปเกรดอยู่ เสร็จใน '+Math.ceil((h.up.end-now)/3600000)+' ชม.');const to=h.lv+1,c=NB_HOUSE_UP[to];if(!c)fail('บ้านเลเวลสูงสุดแล้ว');
+   for(const g of ['flower','fruit','grass'])if(bagTotal(game,g)<c[g])fail({flower:'ดอกไม้',fruit:'ผลไม้',grass:'หญ้า'}[g]+'ไม่พอ (ต้องใช้ '+c[g].toLocaleString('en-US')+' มี '+bagTotal(game,g).toLocaleString('en-US')+')');
+   for(const g of ['flower','fruit','grass'])bagTake(game,g,c[g]);
+   nb.houses ||= {};nb.houses[uid]={lv:h.lv,st:h.st,up:{to,end:now+c.h*3600000,at:now}};nbLog(nb,'🏗️',(ctx.name||'ผู้เล่น')+' เริ่มอัปเกรดบ้านเป็นเลเวล '+to,now);save();return reply({upgrade:nb.houses[uid]});}
   if(type==='invite'){
    if(nb.status==='pending')fail('รอยัยหนูอนุมัติอยู่ เชิญเพิ่มไม่ได้');const to=input.to;if(!uidOk(to)||to===uid)fail('เลือกผู้เล่น');
    if((nb.members.length+(nb.invites||[]).length)>=NB_MAX)fail('เชิญได้รวมไม่เกิน '+NB_MAX+' คน');if((nb.invites||[]).includes(to))fail('เชิญคนนี้ไปแล้ว');
@@ -680,7 +696,7 @@ async function nbMidnightRun(now=Date.now()){
 }
 export const nbMidnight=onSchedule({...options,schedule:'0 0 * * *',timeZone:'Asia/Bangkok',timeoutSeconds:540},async event=>nbMidnightRun(event?.testNow||Date.now()));
 
-/* ---------- fix14 แรลลี่ฟักทอง (เล่นพร้อมกัน 6 คน) ----------
+/* ---------- fix14 แรลลี่กระทง (เล่นพร้อมกัน 6 คน) ----------
    privateWorld/funrun = ห้องจริง (เซิร์ฟเวอร์เท่านั้น) · world/funrun = มุมมองสาธารณะ · ตำแหน่งระหว่างวิ่งอยู่ใน funrunLive/{game}/p/{uid} (หน้าเกมเขียนเอง ไม่เกี่ยวกับเงิน) */
 export const funrunActionCloud=callable(async req=>{
  const input=req.data?.input||{};
@@ -689,8 +705,8 @@ export const funrunActionCloud=callable(async req=>{
   const writes={},updates={};let mailDelta=0;
   if(!sameData(out.room,prior||{})){writes['privateWorld/funrun']=out.room;writes['world/funrun']={...funrunPublic(out.room),serverNow:ctx.now};}
   for(const p of out.payouts||[]){if(!p.merit)continue;if(p.uid===ctx.uid){const m0=game.merit||0;game.merit=p.merit<0?m0+p.merit:m0+p.merit;continue;}
-   writes['players/'+p.uid+'/ledger/funrun-'+out.room.game+'-'+p.uid]={merit:p.merit,title:'🪷 แรลลี่ฟักทอง',msg:(p.merit>0?'ได้':'เสีย')+' '+Math.abs(p.merit).toLocaleString('en-US')+' กุศล',at:FieldValue.serverTimestamp(),source:'funrun'};}
-  for(const x of out.refunds||[]){if(x.self)continue;writes['mail/'+x.uid+'/items/funrun-refund-'+ctx.now]={title:'🪷 คืนค่าเข้าแรลลี่ฟักทอง',msg:'ห้องถูกล้าง คืนค่าเข้าครบ',icon:'🪷',kusal:0,coins:x.fee.coin,items:{hat:x.fee.hat,musicbox:x.fee.mb},createdAt:FieldValue.serverTimestamp(),from:'มินิเกม'};updates['players/'+x.uid]={mailCount:FieldValue.increment(1)};}
+   writes['players/'+p.uid+'/ledger/funrun-'+out.room.game+'-'+p.uid]={merit:p.merit,title:'🪷 แรลลี่กระทง',msg:(p.merit>0?'ได้':'เสีย')+' '+Math.abs(p.merit).toLocaleString('en-US')+' กุศล',at:FieldValue.serverTimestamp(),source:'funrun'};}
+  for(const x of out.refunds||[]){if(x.self)continue;writes['mail/'+x.uid+'/items/funrun-refund-'+ctx.now]={title:'🪷 คืนค่าเข้าแรลลี่กระทง',msg:'ห้องถูกล้าง คืนค่าเข้าครบ',icon:'🪷',kusal:0,coins:x.fee.coin,items:{hat:x.fee.hat,musicbox:x.fee.mb},createdAt:FieldValue.serverTimestamp(),from:'มินิเกม'};updates['players/'+x.uid]={mailCount:FieldValue.increment(1)};}
   return {writes,updates,mailDelta,coins:out.coins,response:{room:funrunPublic(out.room),serverNow:ctx.now,payouts:out.payouts||null}};
  }});
 });
@@ -715,7 +731,10 @@ export const rumorAdminCloud=callable(async req=>{
  const board=db.doc('adminRumors/board'),now=Date.now();
  if(input.type==='status'){const b=await board.get();return {rows:b.exists?b.data().rows||{}:{},serverNow:now};}
  if(input.type!=='send')refuse('คำสั่งไม่ถูกต้อง','invalid-argument');
- const k=input.k==='B'?'B':'G',i=input.i,list=k==='G'?RUMOR_GOOD:RUMOR_BAD;if(!Number.isInteger(i)||!list[i])refuse('เลือกข่าวลือ','invalid-argument');
+ const k=input.k==='B'?'B':'G',list=k==='G'?RUMOR_GOOD:RUMOR_BAD;let i=input.i,c=null;
+ /* S4 ข้อ 173: ข่าวที่แอดมินพิมพ์เอง */
+ if(input.custom&&typeof input.custom.t==='string'){const t=input.custom.t.trim().slice(0,300),n=Math.round(+input.custom.n||0);if(t.length<5)refuse('พิมพ์ข่าวอย่างน้อย 5 ตัวอักษร','invalid-argument');if(!(n>=1&&n<=1000000000))refuse('ใส่จำนวนกุศล 1–1,000,000,000','invalid-argument');c={t,n};i=-1;}
+ else if(!Number.isInteger(i)||!list[i])refuse('เลือกข่าวลือ','invalid-argument');
  let uids=[];
  if(input.all===true){const ps=await db.collection('players').get();uids=ps.docs.filter(d=>(!d.data().approval||d.data().approval==='approved')&&d.data().storageVersion===2).map(d=>d.id);}
  else uids=[...new Set(Array.isArray(input.uids)?input.uids:[])].filter(u=>typeof u==='string'&&/^[-a-zA-Z0-9_]{1,128}$/.test(u));
@@ -727,16 +746,16 @@ export const rumorAdminCloud=callable(async req=>{
    const [docs,roots,b]=await Promise.all([Promise.all(chunk.map(u=>tx.get(db.doc('rumors/'+u)))),Promise.all(chunk.map(u=>tx.get(db.doc('players/'+u)))),tx.get(board)]);
    const rows=b.exists?{...(b.data().rows||{})}:{};
    chunk.forEach((u,j)=>{if(!roots[j].exists)return;const d=docs[j].exists?docs[j].data():{};if(d.cur){busy.push(u);return;}
-    const id=randomUUID().slice(0,12),cur={id,k,i,at:now,until:now+RUMOR_TIME};tx.set(db.doc('rumors/'+u),{...d,cur});
-    rows[u]={k,i,at:now,until:now+RUMOR_TIME,name:String(roots[j].data().name||'ผู้เล่น').slice(0,40)};sent.push(u);});
+    const id=randomUUID().slice(0,12),cur={id,k,i,at:now,until:now+RUMOR_TIME,...(c?{c}:{})};tx.set(db.doc('rumors/'+u),{...d,cur});
+    rows[u]={k,i,at:now,until:now+RUMOR_TIME,...(c?{c}:{}),name:String(roots[j].data().name||'ผู้เล่น').slice(0,40)};sent.push(u);});
    tx.set(board,{rows,updatedAt:FieldValue.serverTimestamp()});
   });
  }
  return {sent:sent.length,busy:busy.length,serverNow:now};
 });
 
-/* fix17 😈 ไอเทมปีศาจ: players/{uid}/gameViews/demon = สิ่งที่คนโดนเห็น (ไม่มีชื่อคนแกล้ง) · privateDemon/{uid} = ใครวาง (เซิร์ฟเวอร์เท่านั้น)
-   root.dmp = มีของค้างให้ตัดสิน (เข้าเกมแล้วตัดสินทันที) · root.dmc = สวนถูกหีบโลงล็อกถึงเวลา · demonLog/{วัน}/e/* = บันทึกเฉพาะแอดมิน */
+/* fix17 🎭 ไอเทมปีศาจ: players/{uid}/gameViews/demon = สิ่งที่คนโดนเห็น (ไม่มีชื่อคนแกล้ง) · privateDemon/{uid} = ใครวาง (เซิร์ฟเวอร์เท่านั้น)
+   root.dmp = มีของค้างให้ตัดสิน (เข้าเกมแล้วตัดสินทันที) · root.dmc = สวนถูกหีบบัวล็อกถึงเวลา · demonLog/{วัน}/e/* = บันทึกเฉพาะแอดมิน */
 const DM_VIEW=u=>'players/'+u+'/gameViews/demon',DM_PRIV=u=>'privateDemon/'+u,dmRng=()=>randomInt(4294967296)/4294967296;
 const dmOkPlayer=d=>d.exists&&d.data().storageVersion===2&&(!d.data().approval||d.data().approval==='approved');
 async function dmLoad(tx,u,now){const [v,p]=await Promise.all([tx.get(db.doc(DM_VIEW(u))),tx.get(db.doc(DM_PRIV(u)))]);const v0=v.exists?v.data():null;return {d:dmView(v0,now),priv:p.exists?structuredClone(p.data()):{},v0,p0:p.exists?p.data():null};}
@@ -775,7 +794,7 @@ export const demonActionCloud=callable(async req=>{
    const tbox=t?await dmLoad(tx,input.to,now):null;
    const r=victimSettle(box.d,game,now);res.lost=r.lost;
    if(type==='seal'){const o=coffinOpen(box.d,box.priv,game,String(input.id||''),input.pick,now,dmRng);res.seal={result:o.result,amt:o.amt,seal:o.seal};
-    if(o.reflect)writes['players/'+o.reflect.to+'/ledger/zz-dm-'+String(input.id).slice(0,40)]={merit:o.reflect.merit,title:'⛓️ คำสาปหีบโลงสะท้อนกลับ',msg:'คำสาปที่คุณส่งไป ย้อนกลับมาหาคุณ',after:o.reflect.after,at:FieldValue.serverTimestamp(),source:'demon'};
+    if(o.reflect)writes['players/'+o.reflect.to+'/ledger/zz-dm-'+String(input.id).slice(0,40)]={merit:o.reflect.merit,title:'⛓️ มนต์หีบบัวสะท้อนกลับ',msg:'มนต์ที่คุณส่งไป ย้อนกลับมาหาคุณ',after:o.reflect.after,at:FieldValue.serverTimestamp(),source:'demon'};
     dmLog(writes,now,{w:'seal',k:'coffin',r:o.result,from:o.reflect?.to||null,to:ctx.uid,tn:String(ctx.name||'').slice(0,40)});}
    if(type==='flip')res.flip=hourFlip(box.d,game,String(input.id||''),now,input.alt);
    if(type==='hpay')res.hpay=heartPay(box.d,box.priv,game,String(input.id||''),input.how,now);
@@ -819,8 +838,12 @@ export const mahakusalActionCloud=callable(async req=>{
    privateAtm/{uid} = {pin(แฮช),salt,fails,lockUntil,day,sent:{uid:n},hist:[...]} เซิร์ฟเวอร์เท่านั้น
    atmLog/{id} = บันทึกทุกรายการ (แอดมินอ่าน) · world/atm = {open} · กุศลเข้าไปรษณีย์คนรับทันที */
 const atmHash=s=>createHash('sha256').update(String(s)).digest('hex');
-const atmView=(game,priv,open,now,coins=0)=>({hasCard:atmHasCard(game),pinSet:!!priv?.pin,open,locked:(priv?.lockUntil||0)>now?priv.lockUntil:0,today:atmToday(priv,now),hist:(priv?.hist||[]).slice(0,30),merit:game.merit||0,
- fx:{rate:fxRateCents(now),prev:fxRateCents(now-3600000),next:(Math.floor((now+7*3600000)/3600000)+1)*3600000-7*3600000,used:fxToday(priv,now),perDay:FX_PER_DAY,max:FX_MAX,coins:Number(coins)||0,cauldron:Number(game.bag?.halloween?.cauldron)||0}});
+const atmBank=(game,priv,now,b)=>({n:BANKS[b].n,ic:BANKS[b].ic,hasCard:atmHasCard(game,b),rate:fxRateCents(now,b),prev:fxRateCents(now-3600000,b),bonus:bankBonus(b,now),prime:bankPrime(now)===b,gold:bankGold(now)===b,fee:atmFeeRate(b,now),uses:atmUses(priv,b),every:ATM_BONUS_EVERY,bonusMerit:ATM_BONUS});
+const atmView=(game,priv,open,now,coins=0,bank='lotus')=>({bank,name:BANKS[bank].n,ic:BANKS[bank].ic,hasCard:atmHasCard(game,bank),oldCard:(Number(game.bag?.item?.[ATM_CARD])||0)>0,pinSet:!!priv?.pin,open,locked:(priv?.lockUntil||0)>now?priv.lockUntil:0,today:atmToday(priv,now),sentN:atmSentN(priv,now),perDay:ATM_PER_DAY,feeRate:atmFeeRate(bank,now),bonus:bankBonus(bank,now),prime:bankPrime(now)===bank,gold:bankGold(now)===bank,uses:atmUses(priv,bank),every:ATM_BONUS_EVERY,bonusMerit:ATM_BONUS,hist:(priv?.hist||[]).slice(0,30),merit:game.merit||0,
+ banks:{lotus:atmBank(game,priv,now,'lotus'),moon:atmBank(game,priv,now,'moon')},next:(Math.floor((now+7*3600000)/3600000)+1)*3600000-7*3600000,
+ fx:{rate:fxRateCents(now,bank),base:fxRateCents(now),prev:fxRateCents(now-3600000,bank),next:(Math.floor((now+7*3600000)/3600000)+1)*3600000-7*3600000,used:fxToday(priv,now),perDay:FX_PER_DAY,max:FX_MAX,coins:Number(coins)||0,cauldron:Number(game.bag?.halloween?.cauldron)||0}});
+/* ใช้ครบทุก 100 ครั้งต่อธนาคาร → 100,000 กุศลเข้าไปรษณีย์ */
+const atmBonusMail=(writes,uid,bank,n,now)=>{writes['mail/'+uid+'/items/atmbonus-'+bank+'-'+n]={title:'🎁 โบนัสลูกค้าประจำ '+BANKS[bank].n,msg:BANKS[bank].ic+' ใช้บริการครบ '+n.toLocaleString('en-US')+' ครั้ง ธนาคารขอมอบ '+ATM_BONUS.toLocaleString('en-US')+' กุศลเป็นของขวัญ ขอบคุณที่ใช้บริการนะคะ',icon:'🎁',kusal:ATM_BONUS,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:'ATM'};};
 export const atmActionCloud=callable(async req=>{
  const input=req.data?.input||{},type=input.type,uid=req.auth.uid,isAdmin=(await db.doc('admins/'+uid).get()).exists;
  if(type&&type.startsWith('admin-')){
@@ -828,48 +851,54 @@ export const atmActionCloud=callable(async req=>{
   if(type==='admin-list'){const [rows,w]=await Promise.all([db.collection('atmLog').orderBy('at','desc').limit(300).get(),db.doc('world/atm').get()]);return {open:w.exists?w.data().open!==false:true,rows:rows.docs.map(d=>d.data())};}
   if(type==='admin-open'){await db.doc('world/atm').set({open:input.open===true,at:Date.now()},{merge:true});return {open:input.open===true};}
   if(type==='admin-reset'){const to=String(input.uid||'');if(!/^[-a-zA-Z0-9_]{1,128}$/.test(to))refuse('ไม่พบผู้เล่น');await db.doc('privateAtm/'+to).set({pin:null,salt:null,fails:0,lockUntil:0},{merge:true});return {reset:true};}
+  /* S4 เริ่มศูนย์: ล้าง PIN/ประวัติ/ยอดนับของทุกคน (ทุกคนตั้ง PIN ใหม่กับบัตร S4) */
+  if(type==='admin-reset-all'){const all=await db.collection('privateAtm').get();let n=0;for(let i=0;i<all.docs.length;i+=400){const b=db.batch();for(const d of all.docs.slice(i,i+400)){b.delete(d.ref);n++;}await b.commit();}return {reset:n};}
   refuse('รายการไม่ถูกต้อง','invalid-argument');}
  if(!['status','pin','transfer','fx'].includes(type))refuse('รายการไม่ถูกต้อง','invalid-argument');
+ const bank=bankOk(input.bank)?input.bank:'lotus';
  return core.action({uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input,system:'atm',partIds:['inventory','wallet'],worldIds:['world/atm'],readOnly:type==='status',apply:async(game,worlds,ctx,tx)=>{
   const now=ctx.now,open=worlds['world/atm']?.open!==false,pref=db.doc('privateAtm/'+uid),ps=await tx.get(pref),priv=ps.exists?structuredClone(ps.data()):{};
-  if(type==='status')return {response:{atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};
+  if(type==='status')return {response:{atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};
   if(ctx.admin)refuse('บัญชีแอดมินไม่ใช้ตู้ ATM');
   if(!open)refuse('🏧 ตู้ ATM ปิดอยู่ชั่วคราว');
-  if(!atmHasCard(game))refuse('ต้องมี 💳 บัตร ATM กุศล (รับได้จากยัยหนูเท่านั้น)');
+  if(!atmHasCard(game,bank))refuse('ต้องมี 💳 '+BANKS[bank].cardName+' ถึงจะใช้ตู้'+BANKS[bank].n+'ได้ (รับได้จากยัยหนูเท่านั้น)');
   const writes={},updates={};
   if(type==='pin'){if(priv.pin)refuse('ตั้งรหัส PIN ไปแล้ว');if(!atmPinOk(input.pin))refuse('PIN ต้องเป็นตัวเลข 4 หลัก');
    priv.salt=randomUUID();priv.pin=atmHash(priv.salt+':'+input.pin);priv.fails=0;priv.lockUntil=0;writes[pref.path]=priv;
-   return {writes,response:{atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};}
-  /* fix19 💱 แลกเงิน: เหรียญกระทงทอง + กระทงทอง → กุศลเข้าไปรษณีย์ (พร้อมใบเสร็จ) */
-  if(type==='fx'){const n=Number(input.n),rate=fxRateCents(now);
-   if(Number(input.rate)!==rate)return {response:{rateChanged:true,rate,atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};
+   return {writes,response:{atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};}
+  /* fix19 💱 แลกเงิน: เหรียญกระทงทอง + กระทงทอง → กุศลเข้าไปรษณีย์ (พร้อมใบเสร็จ) · เรทตามธนาคาร */
+  if(type==='fx'){const n=Number(input.n),rate=fxRateCents(now,bank);
+   if(Number(input.rate)!==rate)return {response:{rateChanged:true,rate,atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};
    game.bag ||= {};game.bag.halloween ||= {};fxCheck(n,ctx.coins,game.bag.halloween.cauldron,priv,now);
-   if(!atmCheckPin(priv,input.pin,now,atmHash)){writes[pref.path]=priv;return {writes,response:{pinWrong:true,atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};}
-   const amount=fxPay(n,now);game.bag.halloween.cauldron=(Number(game.bag.halloween.cauldron)||0)-n;fxRecord(priv,now);
+   if(!atmCheckPin(priv,input.pin,now,atmHash)){writes[pref.path]=priv;return {writes,response:{pinWrong:true,atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};}
+   const amount=fxPay(n,now,bank);game.bag.halloween.cauldron=(Number(game.bag.halloween.cauldron)||0)-n;fxRecord(priv,now);
    const id='FX-'+atmDay(now).replace(/-/g,'').slice(2)+'-'+randomUUID().slice(0,6).toUpperCase(),fn=String(ctx.name||'ผู้เล่น').slice(0,40);
-   const receipt={id,kind:'fx',at:now,from:uid,fn,n,rate,amount};atmPushHist(priv,{...receipt,dir:'fx'});writes[pref.path]=priv;
+   const receipt={id,kind:'fx',bank,at:now,from:uid,fn,n,rate,amount};atmPushHist(priv,{...receipt,dir:'fx'});
+   const hit=atmUse(priv,bank);writes[pref.path]=priv;
    const when=new Date(now+7*3600000).toISOString().slice(0,16).replace('T',' '),r2=(rate/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-   writes['mail/'+uid+'/items/fx-'+id]={title:'💱 แลกเงินที่ตู้ ATM',msg:'🧾 ใบเสร็จ '+id+' · '+when+' · เหรียญกระทงทอง '+n.toLocaleString('en-US')+' + กระทงทอง '+n.toLocaleString('en-US')+' × เรท '+r2+' = '+amount.toLocaleString('en-US')+' กุศล',icon:'💱',kusal:amount,coins:0,items:{},receipt,createdAt:FieldValue.serverTimestamp(),from:'ATM'};
+   writes['mail/'+uid+'/items/fx-'+id]={title:'💱 แลกเงินที่'+BANKS[bank].n,msg:'🧾 ใบเสร็จ '+id+' · '+when+' · เหรียญกระทงทอง '+n.toLocaleString('en-US')+' + กระทงทอง '+n.toLocaleString('en-US')+' × เรท '+r2+' = '+amount.toLocaleString('en-US')+' กุศล',icon:'💱',kusal:amount,coins:0,items:{},receipt,createdAt:FieldValue.serverTimestamp(),from:'ATM'};
+   let md=1;if(hit){atmBonusMail(writes,uid,bank,atmUses(priv,bank),now);md++;}
    writes['atmLog/'+id]={...receipt,day:atmDay(now)};
-   return {writes,coins:ctx.coins-n,mailDelta:1,response:{receipt,atm:atmView(game,priv,open,now,ctx.coins-n),serverNow:now}};}
+   return {writes,coins:ctx.coins-n,mailDelta:md,response:{receipt,bonus:hit?ATM_BONUS:0,atm:atmView(game,priv,open,now,ctx.coins-n,bank),serverNow:now}};}
   /* transfer */
   const to=String(input.to||''),amount=Number(input.amount);
   if(!/^[-a-zA-Z0-9_]{1,128}$/.test(to)||to===uid)refuse('เลือกผู้รับให้ถูกต้อง');
   const [tdoc,tadmin,tps]=await Promise.all([tx.get(db.doc('players/'+to)),tx.get(db.doc('admins/'+to)),tx.get(db.doc('privateAtm/'+to))]);
   if(!tdoc.exists||tadmin.exists||(tdoc.data().approval&&tdoc.data().approval!=='approved'))refuse('โอนให้ผู้เล่นคนนี้ไม่ได้');
   const why=atmCanSend(priv,to,now);if(why)refuse(why);
-  const {fee,total,rate}=atmCheckAmount(amount,game.merit);
-  if(!atmCheckPin(priv,input.pin,now,atmHash)){writes[pref.path]=priv;return {writes,response:{pinWrong:true,atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};}
+  const {fee,total,rate}=atmCheckAmount(amount,game.merit,bank,now);
+  if(!atmCheckPin(priv,input.pin,now,atmHash)){writes[pref.path]=priv;return {writes,response:{pinWrong:true,atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};}
   game.merit=(game.merit||0)-total;atmRecord(priv,now,to);
   const id='ATM-'+atmDay(now).replace(/-/g,'').slice(2)+'-'+randomUUID().slice(0,6).toUpperCase(),fn=String(ctx.name||'ผู้เล่น').slice(0,40),tn=String(tdoc.data().name||'ผู้เล่น').slice(0,40);
-  const receipt={id,at:now,from:uid,fn,to,tn,amount,fee,rate,total};
-  atmPushHist(priv,{...receipt,dir:'out'});writes[pref.path]=priv;
+  const receipt={id,bank,at:now,from:uid,fn,to,tn,amount,fee,rate,total};
+  atmPushHist(priv,{...receipt,dir:'out'});const hit=atmUse(priv,bank);writes[pref.path]=priv;
   const tpriv=tps.exists?structuredClone(tps.data()):{};atmPushHist(tpriv,{...receipt,dir:'in'});writes['privateAtm/'+to]=tpriv;
   const when=new Date(now+7*3600000).toISOString().slice(0,16).replace('T',' ');
-  writes['mail/'+to+'/items/atm-'+id]={title:'🏧 โอนกุศลจาก '+fn,msg:'🧾 ใบเสร็จ '+id+' · '+when+' · จาก '+fn+' ถึง '+tn+' · ยอดโอน '+amount.toLocaleString('en-US')+' กุศล',icon:'🏧',kusal:amount,coins:0,items:{},receipt,createdAt:FieldValue.serverTimestamp(),from:'ATM'};
+  writes['mail/'+to+'/items/atm-'+id]={title:'🏧 โอนกุศลจาก '+fn,msg:'🧾 ใบเสร็จ '+id+' · '+when+' · '+BANKS[bank].n+' · จาก '+fn+' ถึง '+tn+' · ยอดโอน '+amount.toLocaleString('en-US')+' กุศล',icon:'🏧',kusal:amount,coins:0,items:{},receipt,createdAt:FieldValue.serverTimestamp(),from:'ATM'};
   updates['players/'+to]={mailCount:FieldValue.increment(1)};
+  if(hit)atmBonusMail(writes,uid,bank,atmUses(priv,bank),now);
   writes['atmLog/'+id]={...receipt,day:atmDay(now)};
-  return {writes,updates,response:{receipt,atm:atmView(game,priv,open,now,ctx.coins),serverNow:now}};
+  return {writes,updates,...(hit?{mailDelta:1}:{}),response:{receipt,bonus:hit?ATM_BONUS:0,atm:atmView(game,priv,open,now,ctx.coins,bank),serverNow:now}};
  }});
 });
 

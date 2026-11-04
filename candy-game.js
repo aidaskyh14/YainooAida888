@@ -1,5 +1,5 @@
 /* โรงงานขนมไทย — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน candy-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix15&h=0be29d27';
+import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix15&h=31f3aa4b';
 import {mgFrame} from './mg-frame.js?v=ss3-fix15&h=c21dcdbe';
 (()=>{
 const IMG={};['belt','bg','bluecandy','bomb','boss','box','cane','caramel','cat','catgrab','cauldron','choco','clock','corn','cupcake','eyeball','ghost','ghostcandy','gold','heart','jelly','lolli','lose','mold','poster','pumpkinchoco','redeye','skull','spider','ticket','win','worm','zhand','zombiegummy'].forEach(k=>IMG[k]=(window.MGT?MGT.img('images/cf-'+k+'.webp'):'images/cf-'+k+'.webp'));
@@ -126,7 +126,7 @@ function sortCandy(c,dir){
  }else{ // ผิด
   s.combo=0;s.st.wrong++;
   if(c.good){s.pts-=PEN.wrongGood;floatText(tg.x,tg.y-100,'−'+PEN.wrongGood+' ของดีหาย!','#ff9db0',true);if(c.type==='gold'){floatText(HX,TOP+L*.4,'ขนมทองละลาย…','#ffd27a',true);}}
-  else{s.pts-=PEN.wrongBad;loseHeart(c.type==='fake'?'🎭 ของปลอม!':isMimic?'🔄 แปลงร่าง!':'☠️ ต้องคำสาป!',tg);}
+  else{s.pts-=PEN.wrongBad;loseHeart(c.type==='fake'?'🎭 ของปลอม!':isMimic?'🔄 แปลงร่าง!':'💥 ของเสีย!',tg);}
   bossFace(3);
  }
  if(s.combo>s.maxCombo)s.maxCombo=s.combo;
@@ -140,7 +140,7 @@ function orderDone(){const s=S;s.orders++;floatText(W*.78,TOP+70,'📋 ออเ
 function bossFace(f){S.boss=f;S.bossT=f?1:0;}
 
 /* ---------- ตัวป่วน ---------- */
-function startCat(){const side=ST.evt()<.5?-1:1;S.cat={side,ph:'run',t:0,x:side<0?-60:W+60,y:TOP+L*R(ST.evt,.42,.62),grab:null};floatText(side<0?70:W-70,S.cat.y-50,'🐈‍⬛ แตะไล่!','#fff',true);}
+function startCat(){const side=ST.evt()<.5?-1:1;S.cat={side,ph:'run',t:0,x:side<0?-60:W+60,y:TOP+L*R(ST.evt,.42,.62),grab:null};floatText(side<0?70:W-70,S.cat.y-50,'🐈 แตะไล่!','#fff',true);}
 function shooCat(){const k=S.cat;if(!k||k.ph!=='run')return;k.ph='flee';k.t=0;S.pts+=80;S.st.shoo++;floatText(k.x,k.y-50,'ชิ่ว! +80','#a8ffcf',true);burst(k.x,k.y,'#ffffff',12);updateHud(true);}
 function catLogic(dt){
  const s=S,k=s.cat;
@@ -155,7 +155,7 @@ function catLogic(dt){
 function ghostLogic(dt){
  const s=S;if(s.dark>0)s.dark-=dt;
  if(!s.ghost){if(s.shift>=2&&!s.ended){s.nextGhost-=dt;if(s.nextGhost<=0){s.nextGhost=R(ST.evt,16,26);s.ghost={t:0};}}return;}
- const g=s.ghost;g.t+=dt;if(g.t>1.3&&!g.blown){g.blown=true;s.dark=6;banner('🏮 ผีปิดไฟ!','ใช้นิ้วส่องไฟหาของต้องคำสาป','#c79bff',1.6);}
+ const g=s.ghost;g.t+=dt;if(g.t>1.3&&!g.blown){g.blown=true;s.dark=6;banner('🏮 ลมพัดไฟดับ!','ใช้นิ้วส่องไฟหาของเสีย','#c79bff',1.6);}
  if(g.t>7.5)s.ghost=null;
 }
 function joltLogic(dt){
@@ -306,7 +306,7 @@ function step(dt){
  else s.t+=dt;
  const si=shiftAt(s.t);
  if(si!==s.shift&&!s.ended){s.shiftPts+=SHIFT_BONUS[s.shift]||0;if(SHIFT_BONUS[s.shift])floatText(HX,TOP+L*.3,'ผ่าน'+SHIFTS[s.shift].n+' +'+fmt(SHIFT_BONUS[s.shift]),'#a8ffcf',true);
-  s.shift=si;s.trans=1;const z=SHIFTS[si];banner(z.ic+' '+z.n,si===1?'มีของปลอม + ออเดอร์ + แมวขโมย':si===2?'ผีปิดไฟ · ขนมแปลงร่าง · ระเบิด':'สายพาน 2 เลน! เร็วสุด',z.col,2.4);
+  s.shift=si;s.trans=1;const z=SHIFTS[si];banner(z.ic+' '+z.n,si===1?'มีของปลอม + ออเดอร์ + แมวขโมย':si===2?'ไฟดับ · ขนมแปลงร่าง · ระเบิด':'สายพาน 2 เลน! เร็วสุด',z.col,2.4);
   if(z.lanes===2){s.quiet=2.2;}}
  if(s.t>=PASS_T&&!s.passed){s.passed=true;banner('✅ ผ่านเกณฑ์แล้ว!','ได้กุศลบวกแน่นอน +15,000 ขึ้นไป','#6ff0b5',2);burst(HX,TOP+L*.4,'#6ff0b5',40,400);}
  while(!s.ended&&s.cpI<CANDY.CPS.length&&s.t>=CANDY.CPS[s.cpI]){s.cpI++;if(FR&&s.round)FR.checkpoint(snap());}
@@ -326,7 +326,7 @@ function step(dt){
   if(c.type==='bomb'){c.fuse-=dt;if(c.fuse<=0){const p=candyPos(c);s.c.splice(i,1);s.pts-=PEN.bomb;s.combo=0;s.st.wrong++;burst(p.x,p.y,'#ff8a3d',40,420);smokePuff(p.x,p.y,1.2);loseHeart('💣 ระเบิด! −'+PEN.bomb,p);updateHud(true);continue;}}
   if(c.y>1.04){s.c.splice(i,1);const p={x:laneX(c.lane),y:END};s.combo=0;s.st.miss++;
    if(c.good){if(c.type!=='heart'&&c.type!=='clock'){s.pts-=PEN.missGood;floatText(p.x,p.y-30,c.type==='gold'?'ขนมทองหล่นหาย!':'หล่น −'+PEN.missGood,'#ff9db0');}}
-   else{s.pts-=PEN.missBad;loseHeart('☠️ หลุดลงกล่อง! −'+PEN.missBad,p);}
+   else{s.pts-=PEN.missBad;loseHeart('💥 หลุดลงกล่อง! −'+PEN.missBad,p);}
    bossFace(3);updateHud(true);}
  }
  updateHud(false);
@@ -413,7 +413,7 @@ function showResult(res){
  const miss='พลาด '+st.wrong+' · หล่น '+st.miss+' · แมวขโมย '+st.cat;
  $('resBox').innerHTML=
   '<img class="hero" src="'+(total>=0?IMG.win:IMG.lose)+'" alt="">'+
-  '<h2>'+(b.abandoned?'ปิดรอบที่ค้างไว้':r.fin?'เลิกงานครบ 4 กะ! 🎉':b.quit&&!st.lost?'จบกะนี้แล้ว':total>=0?'ทำงานเก่งมาก!':'โดนคำสาปซะแล้ว')+'</h2>'+
+  '<h2>'+(b.abandoned?'ปิดรอบที่ค้างไว้':r.fin?'เลิกงานครบ 4 กะ! 🎉':b.quit&&!st.lost?'จบกะนี้แล้ว':total>=0?'ทำงานเก่งมาก!':'ขนมเสียซะแล้ว')+'</h2>'+
   '<div class="sub">ทำงานได้ <b style="color:#fff;font-size:16px">'+tm(t)+'</b> นาที · สถิติ '+tm(best)+' · '+miss+'</div>'+
   '<div class="rprog"><div class="fill" style="width:'+(k*100)+'%"></div><div class="th" style="left:50%"><span>🚩 2 กะ</span></div><div class="best" style="left:'+(bk*100)+'%">🏆</div></div>'+
   '<div class="rows">'+rows+'</div>'+
@@ -434,21 +434,21 @@ function buildStart(){
  const sec=(t,amt,cls)=>'<div class="sec">'+t+(amt?'<span class="amt '+cls+'">'+amt+'</span>':'')+'</div>';
  $('t-how').innerHTML='<div class="legend"><div class="l"><img src="'+IMG.cauldron+'">👈 ปัดซ้าย<br>ทิ้งลงหม้อ</div><div class="r"><img src="'+IMG.box+'">ปัดขวา 👉<br>ใส่กล่อง</div></div>'+
   '<div class="grid" style="margin-top:8px">'+tile('❤️','หัวใจ 3 ดวง','','','ใส่ผิดกล่อง −1')+tile('🔥','คอมโบ','สูงสุด ×2','pos','ถูกติดกัน 20')+tile('⏱️','4 กะ','กะละ 55 วิ','gold','')+'</div>'+
-  sec('🏭 ยิ่งดึก ยิ่งเร็ว ยิ่งยาก')+'<div class="grid two">'+SHIFTS.map((z,i)=>tile(z.ic,z.n,'','','<div class="tags">'+(i===0?'<span>🍬 ของดี</span><span>☠️ ของร้าย</span>':i===1?'<span>🎭 ของปลอม</span><span>📋 ออเดอร์</span><span>🐈‍⬛ แมว</span>':i===2?'<span>🔄 แปลงร่าง</span><span>💣 ระเบิด</span><span>🏮 ปิดไฟ</span>':'<span>🛤️ 2 เลน</span><span>🚀 เร็วสุด</span>')+'</div>')).join('')+'</div>';
+  sec('🏭 ยิ่งดึก ยิ่งเร็ว ยิ่งยาก')+'<div class="grid two">'+SHIFTS.map((z,i)=>tile(z.ic,z.n,'','','<div class="tags">'+(i===0?'<span>🍮 ของดี</span><span>💥 ของเสีย</span>':i===1?'<span>🎭 ของปลอม</span><span>📋 ออเดอร์</span><span>🐈‍⬛ แมว</span>':i===2?'<span>🔄 แปลงร่าง</span><span>💣 ระเบิด</span><span>🏮 ปิดไฟ</span>':'<span>🛤️ 2 เลน</span><span>🚀 เร็วสุด</span>')+'</div>')).join('')+'</div>';
  $('t-obs').innerHTML=sec('🎁 ของดี → ปัดขวา','+40','pos').replace('class="sec"','class="sec" style="margin-top:2px"')+strip(GOOD,'good')+
-  sec('🧪 ของต้องคำสาป → ปัดซ้าย','+60','pos')+strip(CURSED,'bad')+
+  sec('🧪 ของเสีย → ปัดซ้าย','+60','pos')+strip(CURSED,'bad')+
   sec('🎭 ตัวหลอก → ปัดซ้าย')+'<div class="grid">'+
-   tile(IMG.lolli,'ของปลอม','+120','pos','<div class="tags"><span>💀</span><span>👁️</span><span>💧</span><span>🔯</span><span>👣</span></div>',false,'badimg')+
+   tile(IMG.lolli,'ของปลอม','+120','pos','<div class="tags"><span>🐛</span><span>🕳️</span><span>💧</span><span>✖️</span><span>👣</span></div>',false,'badimg')+
    tile(IMG.ghostcandy,'แปลงร่าง','+120','pos','สั่น → กลายร่าง',false,'badimg')+
    tile(IMG.bomb,'ระเบิด','+100','pos','⏱️ ทิ้งก่อนตูม',false,'badimg')+'</div>'+
   sec('✨ ของพิเศษ → ปัดขวา')+'<div class="grid">'+tile(IMG.heart,'หัวใจ','+1 ❤️','pos','')+tile(IMG.clock,'นาฬิกา','⏳ ช้า 6 วิ','pos','')+tile(IMG.gold,'ขนมทอง','+10k~50k','gold','',true,'')+'</div>';
- $('t-get').innerHTML=sec('😈 ตัวป่วน').replace('class="sec"','class="sec" style="margin-top:2px"')+'<div class="grid two">'+tile(IMG.ticket,'ใบออเดอร์','+1,500','pos','คัดครบก่อนหมดเวลา')+tile('🐈‍⬛','แมวดำ','แตะไล่ +80','pos','ปล่อยไว้ −150')+tile('🏮','ผีปิดไฟ','6 วิ','neg','👆 ใช้นิ้วส่องไฟ')+tile('⚡','สายพานกระตุก','1.6 วิ','neg','เร่งเร็วกะทันหัน')+'</div>'+
+ $('t-get').innerHTML=sec('🌀 ตัวป่วน').replace('class="sec"','class="sec" style="margin-top:2px"')+'<div class="grid two">'+tile(IMG.ticket,'ใบออเดอร์','+1,500','pos','คัดครบก่อนหมดเวลา')+tile('🐈‍⬛','แมวดำ','แตะไล่ +80','pos','ปล่อยไว้ −150')+tile('🏮','ผีปิดไฟ','6 วิ','neg','👆 ใช้นิ้วส่องไฟ')+tile('⚡','สายพานกระตุก','1.6 วิ','neg','เร่งเร็วกะทันหัน')+'</div>'+
   sec('❌ พลาดแล้วโดนหัก')+'<div class="grid">'+tile('🎁','ของร้าย→กล่อง','−400 · ❤️','neg','')+tile('🧪','ของดี→หม้อ','−150','neg','')+tile('⬇️','หล่นปลายทาง','−100~300','neg','ของร้ายหล่น ❤️')+'</div>';
  $('t-prize').innerHTML='<div class="rbar" style="background:linear-gradient(90deg,#ff5a78 0%,#ff9db0 30%,#fff2 31%,#8ff0c7 32%,#57e6a4 92%,#ffd27a 100%)"><span class="m" style="left:31%"></span>'+
   '<span class="l t" style="left:6%">−20,000</span><span class="l t" style="left:31%">🚩 +15,000</span><span class="l t" style="left:92%">+50,000</span>'+
   '<span class="l b" style="left:6%">💥 ตายเร็ว</span><span class="l b" style="left:31%">ครบ 2 กะ</span><span class="l b" style="left:92%">🏆 ครบ 4 กะ</span></div>'+
   '<div class="facts">'+tile('🚩','ไม่ถึง 2 กะ','−20k → −5k','neg','อยู่นาน ลบน้อย')+tile('🎯','ผ่านเกณฑ์','+15k → +50k','pos','แต้มคัด · คอมโบ · ออเดอร์')+tile(IMG.gold,'โบนัสทอง','+10k~50k','gold','นานๆ ออกที',true)+'</div>'+
-  sec('🎯 แต้มคัด (ได้หลังผ่านเกณฑ์)')+'<div class="grid">'+tile('🍬','ของดี','+40','pos','')+tile('☠️','ของร้าย','+60','pos','')+tile('🎭','ตัวหลอก','+120','pos','')+tile('📋','ออเดอร์','+1,500','pos','')+tile('🌙','ผ่านกะค่ำ','+3,000','pos','')+tile('🕛','ผ่านกะเที่ยงคืน','+5,000','pos','')+'</div>'+
+  sec('🎯 แต้มคัด (ได้หลังผ่านเกณฑ์)')+'<div class="grid">'+tile('🍮','ของดี','+40','pos','')+tile('☠️','ของร้าย','+60','pos','')+tile('🎭','ตัวหลอก','+120','pos','')+tile('📋','ออเดอร์','+1,500','pos','')+tile('🌙','ผ่านกะค่ำ','+3,000','pos','')+tile('🕛','ผ่านกะเที่ยงคืน','+5,000','pos','')+'</div>'+
   '<div class="sec" style="justify-content:center;margin-top:12px">🔥 คอมโบคูณแต้มคัดได้ถึง ×2</div>';
  document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));['how','obs','get','prize'].forEach(t=>$('t-'+t).classList.toggle('hide',t!==b.dataset.t));});
  $('goBtn').onclick=()=>FR.start();$('closeBtn').onclick=()=>FR.close();

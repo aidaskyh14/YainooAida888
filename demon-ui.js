@@ -1,16 +1,16 @@
 import {ALPACA_MB} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
 import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23&h=92e78b5b';
-/* fix17 😈 ไอเทมปีศาจ — ฝั่งเปลือกเกม (ทุกหน้า): ฝั่งคนโดน + กระเป๋า 48 ชม.
+/* fix17 🎭 ไอเทมปีศาจ — ฝั่งเปลือกเกม (ทุกหน้า): ฝั่งคนโดน + กระเป๋า 48 ชม.
    อ่าน players/{uid}/gameViews/demon ของตัวเองเท่านั้น (ไม่มีชื่อคนแกล้ง) · หักอัตโนมัติตามเวลาจริง (ส่ง settle เมื่อถึงกำหนด)
-   วิดเจ็ตเล็กชิดขอบขวา (หัวใจ · หีบโลง · นาฬิกาทราย · กระเป๋า) · แจ้งเตือนเป็นแคปซูลเล็กมุมซ้ายบน · ฉากสวนวาดโดย prank-ui (อ่าน window.__DEMON) */
+   วิดเจ็ตเล็กชิดขอบขวา (หัวใจ · หีบบัว · นาฬิกาทราย · กระเป๋า) · แจ้งเตือนเป็นแคปซูลเล็กมุมซ้ายบน · ฉากสวนวาดโดย prank-ui (อ่าน window.__DEMON) */
 const IT={
  music:{n:'กล่องดนตรีหมูจอมแสบ',img:'images/prank-musicbox.webp',e:'🎶',boom:100000,toss:50000},
  hour:{n:'นาฬิกาทรายจอมแสบ',img:'images/prank-hourglass.webp',e:'⏳',boom:200000,toss:100000},
- coffin:{n:'หีบโลงต้องสาป',img:'images/prank-coffin.webp',e:'⛓️',boom:300000,toss:150000},
+ coffin:{n:'หีบบัวต้องมนต์',img:'images/prank-coffin.webp',e:'⛓️',boom:300000,toss:150000},
  heart:{n:'หัวใจทับทิมจอมแสบ',img:'images/prank-heart.webp',e:'💖',boom:500000,toss:250000},
  ghost:{n:'ของต้องมนต์',img:'images/alpaca-hw-ghost.webp',e:'🏮'}};/* fix21 🏮 ไม่ใช่ของในกระเป๋า (bag.demon ไม่มี ghost) */
 const GHOST_BROOM=100,MB=k=>ALPACA_MB[k]||{n:'ของแปรรูป',img:'images/alpaca-hw-ghost.webp',merit:0};
-const HEART_MSG='หัวใจต้องคำสาป  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
+const HEART_MSG='หัวใจต้องมนต์  คุณจำเป็นที่จะจะต้องส่งต่อ  หัวใจนี้ถ้าไม่อย่างนั้น จะมีอันเป็นไป  ไม่เชื่อใช่ไหม   ก็ลองดูสิ ฮ่า ฮ่า ฮ่า';
 const HG_EVERY=6*60000,HG_TICKS=10,HG_TICK=10000,HEART_TIME=10*60000,EXPIRE=48*3600000,FLIP=100,HEART_STAY=1500,HEART_AWAY=1000,HEART_AMT=250000;
 const CSS=`
 .dm-tst{position:fixed;z-index:9001;left:max(.6rem,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 3.3rem);display:flex;flex-direction:column;gap:.25rem;pointer-events:none;max-width:min(62vw,calc(100vw - 11.5rem));font-family:'Mali',system-ui,sans-serif}
@@ -101,13 +101,13 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   function open(h,dark,locked){sheet.className='dm-sheet'+(dark?' dark':'');sheet.innerHTML=h;void sheet.offsetWidth;sheet.classList.add('on');shade.classList.add('on');lock=!!locked;}
   function close(){sheet.classList.remove('on');shade.classList.remove('on');lock=false;}
   shade.onclick=()=>{if(!lock)close();};
-  async function run(input,quiet,wait){if(busy&&wait){for(let i=0;i<80&&busy;i++)await new Promise(r=>setTimeout(r,250));}if(busy){if(wait&&!quiet)tt(null,'⏳ ระบบกำลังบันทึกรายการอื่น ลองกดอีกครั้งนะ','');return wait?{busy:true}:null;}busy=true;/* fix20: ส่งต่อหัวใจรอรายการอัตโนมัติจบก่อน (เดิมชนกันแล้วขึ้น 'ตอนนี้ไม่ได้') */try{const out=await act('demon',input);if(out?.view){view=out.view;paint();}boomNotice(out?.boom);return out;}catch(e){if(!quiet)tt(null,'😈 '+esc(e.message||'ลองใหม่อีกครั้ง'),'');return null;}finally{busy=false;}}
+  async function run(input,quiet,wait){if(busy&&wait){for(let i=0;i<80&&busy;i++)await new Promise(r=>setTimeout(r,250));}if(busy){if(wait&&!quiet)tt(null,'⏳ ระบบกำลังบันทึกรายการอื่น ลองกดอีกครั้งนะ','');return wait?{busy:true}:null;}busy=true;/* fix20: ส่งต่อหัวใจรอรายการอัตโนมัติจบก่อน (เดิมชนกันแล้วขึ้น 'ตอนนี้ไม่ได้') */try{const out=await act('demon',input);if(out?.view){view=out.view;paint();}boomNotice(out?.boom);return out;}catch(e){if(!quiet)tt(null,'🎭 '+esc(e.message||'ลองใหม่อีกครั้ง'),'');return null;}finally{busy=false;}}
   /* ---------- กระเป๋า 48 ชม. ---------- */
   const bag=()=>{const b=game?.()?.bag?.demon||{};return Object.fromEntries(Object.keys(IT).map(k=>[k,Math.max(0,Math.floor(Number(b[k])||0))]));};
   const lots=()=>{const L=x17?.()?.dm?.b;return Array.isArray(L)?L:[];};
   const lotsOf=k=>lots().filter(x=>x.k===k&&x.n>0).sort((a,b)=>a.at-b.at);
   function bagSheet(){const b=bag(),t=now();const rows=Object.entries(IT).filter(([k])=>b[k]>0);
-    open('<h3>🎒 ไอเทมจอมแสบของฉัน</h3><div class="dm-hint">ของแต่ละก้อนนับ 48 ชม. แยกกัน ตั้งแต่ตอนเข้ากระเป๋า · ก้อนไหนหมดเวลา 💥 ระเบิดเฉพาะก้อนนั้น · ใช้/ทิ้ง จะหยิบก้อนที่ใกล้หมดเวลาก่อนเสมอ · ใช้ที่สวนเพื่อน (ปุ่ม 😈)</div>'
+    open('<h3>🎒 ไอเทมจอมแสบของฉัน</h3><div class="dm-hint">ของแต่ละก้อนนับ 48 ชม. แยกกัน ตั้งแต่ตอนเข้ากระเป๋า · ก้อนไหนหมดเวลา 💥 ระเบิดเฉพาะก้อนนั้น · ใช้/ทิ้ง จะหยิบก้อนที่ใกล้หมดเวลาก่อนเสมอ · ใช้ที่สวนเพื่อน (ปุ่ม 🎭)</div>'
       +(rows.length?rows.map(([k,it])=>{const L=lotsOf(k);return '<div class="dm-it"><img src="'+it.img+'" alt=""><div><b>'+it.e+' '+it.n+' ×'+b[k]+'</b>'+(L.length?'<div class="dm-next">💥 ก้อนแรกระเบิดในอีก <em>'+hms(L[0].at+EXPIRE-t)+'</em> · '+fmt(L[0].n)+' ชิ้น = −'+fmt(L[0].n*it.boom)+'</div>'+L.slice(0,8).map(x=>{const left=x.at+EXPIRE-t;return '<span class="dm-exp'+(left<6*3600e3?' warn':'')+'">⏳ '+hms(left)+' ×'+fmt(x.n)+'</span>';}).join('')+(L.length>8?'<span class="dm-exp">+อีก '+(L.length-8)+' ก้อน</span>':''):'<span class="dm-exp">⏳ 48:00 ชม.</span>')+'<br><button class="dm-mini" data-t="'+k+'">🗑️ ทิ้งลงบ่อ 1 ชิ้น (−'+fmt(it.toss)+')</button></div><div class="r">💥 −'+fmt(it.boom)+'<small>ถ้าหมดเวลา</small></div></div>';}).join('')
         :'<div class="dm-fine">ยังไม่มีไอเทมจอมแสบ</div>')+'<div class="dm-fine">ได้จากการดูแลสัตว์เลี้ยง และเปิดกล่องสุ่มสัตว์</div>');
     sheet.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{const k=x.dataset.t,it=IT[k];
@@ -121,27 +121,27 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   /* ---------- ฝั่งคนโดน ---------- */
   const seenKey='dmSeen:'+uid;let seenAt=Number(ls.get(seenKey)||0),firstView=true;
   const rowKey=r=>r.at+'|'+r.k+'|'+r.w+'|'+(r.n||0)+'|'+(r.amt||0);
-  const WHY={made:r=>'แปรรูปพลาด! ได้ของต้องมนต์ ×'+(r.n||1)+' ต้องส่งให้เพื่อนใน 24 ชม.',gsent:r=>'ส่งของต้องมนต์แล้ว ×'+(r.n||1),gsweep:r=>'🍃 ปัดกวาดของต้องมนต์ ×'+(r.n||1),gaccept:r=>'รับทราบของต้องมนต์ ×'+(r.n||1),gauto:r=>'ของต้องมนต์ครบ 24 ชม. หักอัตโนมัติ ×'+(r.n||1),hit:(r)=>IT.music.n+(r.n>1?' ×'+r.n:''),placed:r=>r.k==='hour'?'ใครสักคนวางนาฬิกาทรายจอมแสบในสวนคุณ':'ใครสักคนวางหีบโลงต้องสาป สวนถูกล็อก',tick:r=>'ทรายดูดกุศล'+(r.n>1?' ×'+r.n:''),timeout:r=>r.k==='coffin'?'ไม่เปิดหีบโลงใน 30 นาที':r.k==='ghost'?'ไม่ได้ส่งต่อ ของต้องมนต์ระเบิดในมือคุณ':'หัวใจต้องคำสาปแตกในมือคุณ',flip:()=>'คว่ำนาฬิกาทรายแล้ว ทรายหยุด',green:()=>'เปิดหีบโลง หลุดคำสาป',red:()=>'เปิดหีบโลง โดนคำสาปเต็ม',reflect:()=>'คำสาปสะท้อนกลับใส่คนแกล้ง คุณไม่เสียอะไร 😎',got:()=>'ใครสักคนส่งหัวใจทับทิมจอมแสบมาให้คุณ',passed:()=>'ส่งหัวใจต่อแล้ว 💌',items:r=>'หัวใจแตก หักของแทน '+fmt(r.n||0)+' ชิ้น',pay:()=>'จ่ายแทนหัวใจ'};
+  const WHY={made:r=>'แปรรูปพลาด! ได้ของต้องมนต์ ×'+(r.n||1)+' ต้องส่งให้เพื่อนใน 24 ชม.',gsent:r=>'ส่งของต้องมนต์แล้ว ×'+(r.n||1),gsweep:r=>'🍃 ปัดกวาดของต้องมนต์ ×'+(r.n||1),gaccept:r=>'รับทราบของต้องมนต์ ×'+(r.n||1),gauto:r=>'ของต้องมนต์ครบ 24 ชม. หักอัตโนมัติ ×'+(r.n||1),hit:(r)=>IT.music.n+(r.n>1?' ×'+r.n:''),placed:r=>r.k==='hour'?'ใครสักคนวางนาฬิกาทรายจอมแสบในสวนคุณ':'ใครสักคนวางหีบบัวต้องมนต์ สวนถูกล็อก',tick:r=>'ทรายดูดกุศล'+(r.n>1?' ×'+r.n:''),timeout:r=>r.k==='coffin'?'ไม่เปิดหีบบัวใน 30 นาที':r.k==='ghost'?'ไม่ได้ส่งต่อ ของต้องมนต์ระเบิดในมือคุณ':'หัวใจต้องมนต์แตกในมือคุณ',flip:()=>'คว่ำนาฬิกาทรายแล้ว ทรายหยุด',green:()=>'เปิดหีบบัว หลุดมนต์',red:()=>'เปิดหีบบัว โดนมนต์เต็ม',reflect:()=>'มนต์สะท้อนกลับใส่คนแกล้ง คุณไม่เสียอะไร 😎',got:()=>'ใครสักคนส่งหัวใจทับทิมจอมแสบมาให้คุณ',passed:()=>'ส่งหัวใจต่อแล้ว 💌',items:r=>'หัวใจแตก หักของแทน '+fmt(r.n||0)+' ชิ้น',pay:()=>'จ่ายแทนหัวใจ'};
   let selfPaid=0;/* fix23b: จ่ายแทนหัวใจเอง ไม่ต้องเล่นเอฟเฟกต์/นับซ้ำ */
   function logs(){const L=(view?.log||[]).slice().sort((a,b)=>a.at-b.at).filter(r=>!(r.k==='heart'&&(r.w==='pay'||(r.w==='items'&&r.at<=selfPaid))));const fresh=L.filter(r=>r.at>seenAt);if(L.length)seenAt=Math.max(seenAt,L.at(-1).at);ls.set(seenKey,String(seenAt));
     if(!fresh.length){firstView=false;return;}
     const lost=fresh.filter(r=>r.amt>0);
     const hits=fresh.filter(r=>r.amt>0||(r.w==='placed')||(r.w==='got')||(r.w==='items'));if(hits.length)setUnseen(unseen+hits.length);
     if(firstView&&lost.length>=2&&now()-fresh[0].at>60000){firstView=false;paint();return;}firstView=false;
-    if(fresh.length>3){const sum=lost.reduce((a,r)=>a+r.amt,0);if(sum){const [cx,cy]=center();fxt(cx,cy,'😈 −'+fmt(sum));}paint();return;}
-    for(const r of fresh.filter(r=>!['gsweep','gaccept','gsent'].includes(r.w)).slice(-3)){const it=IT[r.k],why=(WHY[r.w]||(()=>it.n))(r),good=['flip','reflect','passed','gsent'].includes(r.w);/* fix23: ไม่ขึ้นข้อความ เหลือแต่เอฟเฟกต์ · ดูรายละเอียดที่ปุ่ม 😈 */
+    if(fresh.length>3){const sum=lost.reduce((a,r)=>a+r.amt,0);if(sum){const [cx,cy]=center();fxt(cx,cy,'🎭 −'+fmt(sum));}paint();return;}
+    for(const r of fresh.filter(r=>!['gsweep','gaccept','gsent'].includes(r.w)).slice(-3)){const it=IT[r.k],why=(WHY[r.w]||(()=>it.n))(r),good=['flip','reflect','passed','gsent'].includes(r.w);/* fix23: ไม่ขึ้นข้อความ เหลือแต่เอฟเฟกต์ · ดูรายละเอียดที่ปุ่ม 🎭 */
       const [cx,cy]=center();if(r.w==='hit'){notes();setTimeout(()=>fxt(cx,cy,'🎶 −'+fmt(r.amt)),500);}else if(r.amt>=20000)fxt(cx,cy,(r.w==='timeout'&&r.k==='heart'?'💔 ':'')+'−'+fmt(r.amt));
       if(r.w==='reflect')fxt(cx,cy,'🔁 สะท้อนกลับ!',true);if(r.w==='items'&&r.n)fxt(cx,cy,'💔 −'+fmt(r.n)+' ชิ้น');
     }paint();}
   function awaySum(rows){const g={};for(const r of rows){const k=r.k+'|'+(r.w==='timeout'?'t':r.w);(g[k] ||= {k:r.k,w:r.w,n:0,amt:0}).n+=r.n||1;g[k].amt+=r.amt;}
-    const list=Object.values(g),tot=list.reduce((a,x)=>a+x.amt,0);const label={hit:'กล่องดนตรีหมูจอมแสบ',tick:'นาฬิกาทรายดูดกุศล',timeout:'',green:'เปิดหีบโลง (หลุดคำสาป)',red:'เปิดหีบโลง (คำสาปเต็ม)'};
-    open('<h3>😈 ระหว่างที่คุณไม่อยู่…</h3><div class="dm-hint">ใครสักคนแกล้งคุณ · หักไปแล้วตามเวลาจริง · ไม่มีใครรู้ว่าใครแกล้ง</div><div class="dm-sum">'+list.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+(x.w==='timeout'?(x.k==='coffin'?'หีบโลงหมดเวลา':'หัวใจแตกในมือ'):(label[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวม</span><b>−'+fmt(tot)+'</b></div></div><div class="dm-row"><button class="dm-big" id="dmOkA">😤 รับทราบ</button></div>');
+    const list=Object.values(g),tot=list.reduce((a,x)=>a+x.amt,0);const label={hit:'กล่องดนตรีหมูจอมแสบ',tick:'นาฬิกาทรายดูดกุศล',timeout:'',green:'เปิดหีบบัว (หลุดมนต์)',red:'เปิดหีบบัว (โดนมนต์เต็ม)'};
+    open('<h3>🎭 ระหว่างที่คุณไม่อยู่…</h3><div class="dm-hint">ใครสักคนแกล้งคุณ · หักไปแล้วตามเวลาจริง · ไม่มีใครรู้ว่าใครแกล้ง</div><div class="dm-sum">'+list.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+(x.w==='timeout'?(x.k==='coffin'?'หีบบัวหมดเวลา':'หัวใจแตกในมือ'):(label[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวม</span><b>−'+fmt(tot)+'</b></div></div><div class="dm-row"><button class="dm-big" id="dmOkA">😤 รับทราบ</button></div>');
     sheet.querySelector('#dmOkA').onclick=close;}
   function todaySheet(){const L=(view?.log||[]).filter(r=>r.amt>0).slice(0,14);
-    open('<h3>😈 วันนี้โดนแกล้ง</h3><div class="dm-hint">ไม่มีใครรู้ว่าใครแกล้ง · ระบบไม่เก็บชื่อให้ดู</div>'+(L.length?'<div class="dm-sum">'+L.map(r=>'<div><img src="'+IT[r.k].img+'" alt=""><span>'+esc((WHY[r.w]||(()=>IT[r.k].n))(r))+'<br><small style="color:#9A7A68">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</small></span><b>−'+fmt(r.amt)+'</b></div>').join('')+'<div class="tot"><span>😈</span><span>รวมวันนี้</span><b>−'+fmt(view?.tot?.n||0)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่โดนแกล้ง 🎉</div>'));}
-  /* หีบโลง: เลือกตรา 1 ดวง (ผลสุ่มไว้ตั้งแต่วาง) */
+    open('<h3>🎭 วันนี้โดนแกล้ง</h3><div class="dm-hint">ไม่มีใครรู้ว่าใครแกล้ง · ระบบไม่เก็บชื่อให้ดู</div>'+(L.length?'<div class="dm-sum">'+L.map(r=>'<div><img src="'+IT[r.k].img+'" alt=""><span>'+esc((WHY[r.w]||(()=>IT[r.k].n))(r))+'<br><small style="color:#9A7A68">'+new Date(r.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</small></span><b>−'+fmt(r.amt)+'</b></div>').join('')+'<div class="tot"><span>🎭</span><span>รวมวันนี้</span><b>−'+fmt(view?.tot?.n||0)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่โดนแกล้ง 🎉</div>'));}
+  /* หีบบัว: เลือกตรา 1 ดวง (ผลสุ่มไว้ตั้งแต่วาง) */
   function sealSheet(){const c=view?.cf?.[0];if(!c)return;
-    open('<img class="dm-bigimg" src="'+IT.coffin.img+'" alt=""><h3>⛓️ เลือกตราผนึก 1 ดวง</h3><div class="dm-hint">⏳ <b class="dmcd">'+hms(c.until-now())+'</b> · ไม่เปิดในเวลา = −150,000 · ระหว่างนี้สวนถูกล็อก</div><div class="dm-seals">'+[0,1,2].map(i=>'<button class="dm-seal" data-s="'+i+'" aria-label="ตราผนึก '+(i+1)+'">🔮</button>').join('')+'</div><div class="dm-fine">🟢 หลุดคำสาป −50,000 · 🔴 คำสาปเต็ม −150,000 · 🔁 สะท้อนกลับใส่คนแกล้ง</div>',true);
+    open('<img class="dm-bigimg" src="'+IT.coffin.img+'" alt=""><h3>⛓️ เลือกตราผนึก 1 ดวง</h3><div class="dm-hint">⏳ <b class="dmcd">'+hms(c.until-now())+'</b> · ไม่เปิดในเวลา = −150,000 · ระหว่างนี้สวนถูกล็อก</div><div class="dm-seals">'+[0,1,2].map(i=>'<button class="dm-seal" data-s="'+i+'" aria-label="ตราผนึก '+(i+1)+'">🔮</button>').join('')+'</div><div class="dm-fine">🟢 หลุดมนต์ −50,000 · 🔴 โดนมนต์เต็ม −150,000 · 🔁 สะท้อนกลับใส่คนแกล้ง</div>',true);
     const cd=setInterval(()=>{const e=sheet.querySelector('.dmcd');if(!e||!sheet.classList.contains('on'))return clearInterval(cd);e.textContent=hms(c.until-now());},1000);
     sheet.querySelectorAll('.dm-seal').forEach(b=>b.onclick=async()=>{const i=+b.dataset.s;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=true);const out=await run({type:'seal',id:c.id,pick:i},false,true);
       if(out?.busy){lock=false;sheet.querySelectorAll('.dm-seal').forEach(x=>x.disabled=false);return;}if(!out?.seal){lock=false;close();return;}const res=out.seal.seal;sheet.querySelectorAll('.dm-seal').forEach((x,j)=>{x.classList.add(j===i?'r':'dim');x.textContent={g:'🟢',r:'🔴',x:'🔁'}[res[j]];});
@@ -173,7 +173,7 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   function ghostHoldSheet(){const list=(view?.gh||[]).slice().sort((a,b)=>a.until-b.until);if(!list.length)return close();const t=now(),tot=list.reduce((a,h)=>a+(Number(h.amt)||0),0);
     open('<h3>🏮 ของต้องมนต์ในมือคุณ ×'+list.length+'</h3><div class="dm-hint">แปรรูปพลาด ของต้องมนต์! ส่งให้เพื่อนภายใน 24 ชม. · ไม่ส่ง = 💥 ระเบิดใส่ตัวเอง −'+fmt(tot)+' · ส่งได้ทุกคน (ทะลุหุ่นไล่กา) · เพื่อนจะไม่รู้ว่าใครส่ง</div>'
       +groupBy(list).map(x=>'<div class="dm-gl">'+ghostPic(x.g)+'<div><b>'+esc(MB(x.g).n)+'ต้องมนต์ ×'+x.n+'</b><small>⏳ '+hms(x.until-t)+' · ถ้าระเบิด −'+fmt(x.amt/x.n)+'/ชิ้น</small></div><div class="r">−'+fmt(x.amt)+'</div></div>').join('')
-      +'<div class="dm-row"><button class="dm-big devil" id="dmGSend">💌 เลือกเพื่อนส่งให้</button><button class="dm-big dark" id="dmGLater">ไว้ก่อน</button></div><div class="dm-fine">หรือไปสวนเพื่อนแล้วกด 😈 → 🏮 ส่งของต้องมนต์</div>');
+      +'<div class="dm-row"><button class="dm-big devil" id="dmGSend">💌 เลือกเพื่อนส่งให้</button><button class="dm-big dark" id="dmGLater">ไว้ก่อน</button></div><div class="dm-fine">หรือไปสวนเพื่อนแล้วกด 🎭 → 🏮 ส่งของต้องมนต์</div>');
     sheet.querySelector('#dmGSend').onclick=ghostSendSheet;sheet.querySelector('#dmGLater').onclick=close;}
   async function ghostSendSheet(){const list=(view?.gh||[]).slice().sort((a,b)=>a.until-b.until);if(!list.length)return close();let cnt=list.length;
     const qs=[...new Set([1,5,10,list.length].filter(q=>q<=list.length))];
@@ -201,11 +201,11 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     sheet.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>go([b.dataset.sw],true));sheet.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>go([b.dataset.ok],false));}
   /* fix22 📋 ศูนย์สรุปโดนแกล้ง (ไม่เด้งรัว): ต้องจัดการอะไร · ใช้อะไรแก้ · วันนี้โดนอะไรไปเท่าไหร่ */
   let unseen=Number(ls.get('dmUnseen:'+uid)||0);const setUnseen=n=>{unseen=n;ls.set('dmUnseen:'+uid,String(n));};
-  const LBL={hit:'กล่องดนตรีหมูจอมแสบ',tick:'นาฬิกาทรายดูดกุศล',timeout:'',green:'เปิดหีบโลง (หลุดคำสาป)',red:'เปิดหีบโลง (คำสาปเต็ม)',gauto:'ของต้องมนต์ครบ 24 ชม.',gaccept:'รับทราบของต้องมนต์',gsweep:'ปัดกวาดของต้องมนต์ (ลดแล้ว)',items:'หัวใจ (หักของไม่พอ ส่วนที่ขาด)',pay:'จ่ายแทนหัวใจด้วยกุศล'};
+  const LBL={hit:'กล่องดนตรีหมูจอมแสบ',tick:'นาฬิกาทรายดูดกุศล',timeout:'',green:'เปิดหีบบัว (หลุดมนต์)',red:'เปิดหีบบัว (โดนมนต์เต็ม)',gauto:'ของต้องมนต์ครบ 24 ชม.',gaccept:'รับทราบของต้องมนต์',gsweep:'ปัดกวาดของต้องมนต์ (ลดแล้ว)',items:'หัวใจ (หักของไม่พอ ส่วนที่ขาด)',pay:'จ่ายแทนหัวใจด้วยกุศล'};
   function summarySheet(){setUnseen(0);paint();const v=view||{},t=now(),br=broom(),todo=[];
     const btn=(id,txt,dis)=>'<button class="dm-mini2 sw" data-do="'+id+'"'+(dis?' disabled':'')+'>'+txt+'</button>';
     if(v.ht?.length){const h=v.ht[0],l=h.seen?h.seen+HEART_TIME-t:HEART_TIME;todo.push(['heart','💖 หัวใจทับทิมจอมแสบ ×'+v.ht.length,'ต้องส่งต่อใน '+hms(l)+' · ไม่ส่ง −250,000/ดวง','ไม่ต้องใช้ของ · แค่เลือกเพื่อนส่งต่อ',btn('ht','💌 ส่งต่อ')]);}
-    if(v.cf?.length){const c=v.cf[0];todo.push(['coffin','⛓️ หีบโลงต้องสาป (สวนถูกล็อก)','ต้องเปิดใน '+hms(c.until-t)+' · ไม่เปิด −150,000','ไม่ต้องใช้ของ · เลือกตราผนึก 1 ใน 3',btn('cf','🔮 เลือกตรา')]);}
+    if(v.cf?.length){const c=v.cf[0];todo.push(['coffin','⛓️ หีบบัวต้องมนต์ (สวนถูกล็อก)','ต้องเปิดใน '+hms(c.until-t)+' · ไม่เปิด −150,000','ไม่ต้องใช้ของ · เลือกตราผนึก 1 ใน 3',btn('cf','🔮 เลือกตรา')]);}
     if(v.hg?.length)todo.push(['hour','⏳ นาฬิกาทรายจอมแสบ ×'+v.hg.length,'ดูด −10,000 ทุก 6 นาที','🍃 ใบตองทอง '+FLIP+' อัน/อัน (มี '+fmt(br)+')',btn('hg','🔄 คว่ำ',br<FLIP)]);
     if(v.gr?.length){const tot=v.gr.reduce((a,h)=>a+(Number(h.amt)||0),0),u=Math.min(...v.gr.map(h=>Number(h.until)||Infinity));todo.push(['ghost','🏮 ของต้องมนต์ที่มีคนส่งมา ×'+v.gr.length,'รวม −'+fmt(tot)+' · หักเต็มอัตโนมัติในอีก '+hms(u-t),'🍃 ใบตองทอง '+GHOST_BROOM+' อัน/ชิ้น ลด 20–50% (มี '+fmt(br)+')',btn('gr','🍃 จัดการ')]);}
     if(v.gh?.length){const u=Math.min(...v.gh.map(h=>Number(h.until)||Infinity));todo.push(['ghost','🏮 ของต้องมนต์ในมือคุณ ×'+v.gh.length,'ต้องส่งให้เพื่อนใน '+hms(u-t)+' ไม่งั้นระเบิดใส่ตัวเอง','ไม่ต้องใช้ของ · เลือกเพื่อนส่ง',btn('gh','💌 ส่ง')]);}
@@ -214,7 +214,7 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     const rows=Object.values(g).sort((a,b)=>b.amt-a.amt),tot=rows.reduce((a,x)=>a+x.amt,0);
     open('<h3>📋 สรุปการโดนแกล้ง</h3><div class="dm-hint">ไม่มีใครรู้ว่าใครแกล้ง · ดูทีเดียวตรงนี้ได้ ไม่ต้องกดทีละอัน</div>'
       +'<div class="dm-sec">⚠️ ต้องจัดการตอนนี้</div>'+(todo.length?todo.map(([k,a,b2,need,act])=>'<div class="dm-gl"><span class="pic"><img src="'+IT[k].img+'" alt=""></span><div><b>'+a+'</b><small>'+b2+'</small><small class="nd">🧰 '+need+'</small></div><div class="r">'+act+'</div></div>').join(''):'<div class="dm-fine">ไม่มีอะไรค้าง 🎉</div>')
-      +'<div class="dm-sec">😈 วันนี้โดนอะไรไปบ้าง</div>'+(rows.length?'<div class="dm-sum">'+rows.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+esc(x.w==='timeout'?(x.k==='coffin'?'หีบโลงหมดเวลา':x.k==='ghost'?'ของต้องมนต์ระเบิดในมือ':'หัวใจแตกในมือ'):(LBL[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวมวันนี้</span><b>−'+fmt(tot)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่เสียอะไร 🎉</div>')
+      +'<div class="dm-sec">🎭 วันนี้โดนอะไรไปบ้าง</div>'+(rows.length?'<div class="dm-sum">'+rows.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+esc(x.w==='timeout'?(x.k==='coffin'?'หีบบัวหมดเวลา':x.k==='ghost'?'ของต้องมนต์ระเบิดในมือ':'หัวใจแตกในมือ'):(LBL[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวมวันนี้</span><b>−'+fmt(tot)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่เสียอะไร 🎉</div>')
       +'<div class="dm-fine">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ (💖 🏮 ทะลุ) · 🍃 ใบตองทองคราฟได้ที่ร้านลอยกระทง</div>');
     sheet.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>({ht:passSheet,cf:sealSheet,hg:flipSheet,gr:ghostPileSheet,gh:ghostHoldSheet})[b.dataset.do]?.());}
   /* fix23 💌 ส่งหัวใจหลายดวงทีเดียว: เลือกเพื่อนได้หลายคน (คนละ 1 ดวง) · ส่งดวงที่ใกล้หมดเวลาก่อน */
@@ -241,7 +241,7 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     sheet.querySelectorAll('[data-hw]').forEach(b=>b.onclick=async()=>{sheet.querySelectorAll('button').forEach(x=>x.disabled=true);selfPaid=now()+30000;const out=await run({type:'hpay',id:h.id,how:b.dataset.hw},false,true);
       if(out?.hpay){const [cx,cy]=center();if(out.hpay.how==='items'){fxt(cx,cy,'🎁 −'+fmt(out.hpay.n)+' ชิ้น');tt(IT.heart,'จ่ายแทนหัวใจ: '+esc(altText(out.hpay.items)),'',true);}else fxt(cx,cy,'💔 −'+fmt(out.hpay.amt));}
       centerSheet();});}
-  /* fix23 😈 ศูนย์ปีศาจ: ปุ่มเดียว + ตัวเลข (ไม่เด้ง ไม่เปลี่ยนทุกวินาที กดได้แน่นอน) · กดแล้วเห็นทุกอย่างทีละชิ้นพร้อมรูป เวลา และปุ่มจัดการ */
+  /* fix23 🎭 ศูนย์ปีศาจ: ปุ่มเดียว + ตัวเลข (ไม่เด้ง ไม่เปลี่ยนทุกวินาที กดได้แน่นอน) · กดแล้วเห็นทุกอย่างทีละชิ้นพร้อมรูป เวลา และปุ่มจัดการ */
   function centerSheet(){setUnseen(0);const v=view||{},t=now(),br=broom(),b=bag();
     const cd=u=>'<b class="dm-cd" data-u="'+u+'">'+hms(u-t)+'</b>';
     const row=(img,title,sub,act,amt)=>'<div class="dm-gl"><span class="pic"><img src="'+img+'" alt=""></span><div><b>'+title+'</b><small>'+sub+'</small></div><div class="r">'+(amt?'<span class="dm-amt">'+amt+'</span>':'')+(act||'')+'</div></div>';
@@ -249,18 +249,18 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
     let H='';
     const ht=(v.ht||[]).slice().sort((a,c)=>(a.seen?a.seen:t)-(c.seen?c.seen:t));
     if(ht.length)H+='<div class="dm-sec">💖 หัวใจทับทิมจอมแสบ ×'+ht.length+' <small>ส่งต่อไม่ทัน = −250,000/ดวง · หรือกด 🎁 จ่ายด้วยของ '+fmt(HEART_STAY)+' ชิ้นแทน</small></div>'+(ht.filter(h=>(h.passes||0)<3).length>1?'<div class="dm-gb"><button data-mp="1" class="on">💌 ส่งหลายดวงทีเดียว (เลือกหลายคน)</button></div>':'')+ht.map((h,i)=>{const last=(h.passes||0)>=3;return row(IT.heart.img,'หัวใจดวงที่ '+(i+1)+(last?' <span class="dm-last">ทอดสุดท้าย</span>':''),(h.seen?'⏳ '+(last?'แตกใน ':'ส่งต่อภายใน ')+cd(h.seen+HEART_TIME):'⏳ เริ่มนับเมื่อเข้าเกม')+(last?' · ส่งต่อไม่ได้แล้ว':''),(last?'':btn('data-ph="'+esc(h.id)+'"','💌 ส่งต่อ'))+btn('data-hp="'+esc(h.id)+'"','🎁 จ่าย'),last?'':'ส่งได้อีก '+(3-(h.passes||0))+' ทอด');}).join('');
-    if(v.cf?.length)H+='<div class="dm-sec">⛓️ หีบโลงต้องสาป <small>สวนถูกล็อกจนกว่าจะเปิด</small></div>'+v.cf.map(c=>row(IT.coffin.img,'หีบโลงในสวนคุณ','⏳ ต้องเปิดภายใน '+cd(c.until)+' · ไม่เปิด −150,000',btn('data-do="cf"','🔮 เลือกตรา'))).join('');
+    if(v.cf?.length)H+='<div class="dm-sec">⛓️ หีบบัวต้องมนต์ <small>สวนถูกล็อกจนกว่าจะเปิด</small></div>'+v.cf.map(c=>row(IT.coffin.img,'หีบบัวในสวนคุณ','⏳ ต้องเปิดภายใน '+cd(c.until)+' · ไม่เปิด −150,000',btn('data-do="cf"','🔮 เลือกตรา'))).join('');
     if(v.hg?.length)H+='<div class="dm-sec">⏳ นาฬิกาทรายจอมแสบ ×'+v.hg.length+' <small>ดูด −10,000 ทุก 6 นาที</small></div>'+v.hg.map(h=>row(IT.hour.img,'นาฬิกาทรายในสวน','⏳ หมดใน '+cd(h.end)+' · 🍃 คว่ำใช้ใบตองทอง '+FLIP+' (มี '+fmt(br)+') หรือของ '+fmt(FLIP*ALT_X)+' ชิ้น',btn('data-do="hg"','🔄 คว่ำ'))).join('');
     if(v.gh?.length){const g=groupBy(v.gh);H+='<div class="dm-sec">🏮 ของต้องมนต์ในมือคุณ ×'+v.gh.length+' <small>ต้องส่งให้เพื่อน ไม่งั้นระเบิดใส่ตัวเอง</small></div>'+g.map(x=>'<div class="dm-gl">'+ghostPic(x.g)+'<div><b>'+esc(MB(x.g).n)+'ต้องมนต์ ×'+x.n+'</b><small>⏳ ส่งภายใน '+cd(x.until)+'</small></div><div class="r"><span class="dm-amt">−'+fmt(x.amt)+'</span>'+btn('data-do="gh"','💌 ส่ง')+'</div></div>').join('');}
     if(v.gr?.length){H+='<div class="dm-sec">🏮 ของต้องมนต์ที่มีคนส่งมา ×'+v.gr.length+' <small>🍃 ใบตองทอง '+GHOST_BROOM+'/ชิ้น (หรือของ '+fmt(GHOST_BROOM*ALT_X)+') ลด 20–50% · ไม่จัดการ = หักเต็ม</small></div>'+v.gr.slice().sort((a,c)=>a.until-c.until).map(h=>'<div class="dm-gl">'+ghostPic(h.g)+'<div><b>'+esc(MB(h.g).n)+'ต้องมนต์</b><small>⏳ หักอัตโนมัติใน '+cd(h.until)+'</small></div><div class="r"><span class="dm-amt">−'+fmt(h.amt)+'</span>'+btn('data-do="gr"','🍃 จัดการ')+'</div></div>').join('');}
     const mine=Object.entries(IT).filter(([k])=>b[k]>0);
-    if(mine.length)H+='<div class="dm-sec">🎒 ไอเทมจอมแสบของฉัน <small>ใช้แกล้งเพื่อนได้ · ต้องใช้ภายใน 48 ชม.</small></div>'+mine.map(([k,it])=>{const L=lotsOf(k);return row(it.img,it.n+' ×'+fmt(b[k]),L.length?'⏳ ก้อนแรกระเบิดใน '+cd(L[0].at+EXPIRE)+' ('+fmt(L[0].n)+' ชิ้น)':'ใช้ที่สวนเพื่อน (ปุ่ม 😈)',btn('data-do="bag"','ดู'));}).join('');
+    if(mine.length)H+='<div class="dm-sec">🎒 ไอเทมจอมแสบของฉัน <small>ใช้แกล้งเพื่อนได้ · ต้องใช้ภายใน 48 ชม.</small></div>'+mine.map(([k,it])=>{const L=lotsOf(k);return row(it.img,it.n+' ×'+fmt(b[k]),L.length?'⏳ ก้อนแรกระเบิดใน '+cd(L[0].at+EXPIRE)+' ('+fmt(L[0].n)+' ชิ้น)':'ใช้ที่สวนเพื่อน (ปุ่ม 🎭)',btn('data-do="bag"','ดู'));}).join('');
     if(!H)H='<div class="dm-fine" style="font-size:.85rem;margin:1rem 0">ตอนนี้ไม่มีอะไรค้าง 🎉</div>';
     const day=new Date(t+7*3600e3).toISOString().slice(0,10),isToday=r=>new Date(r.at+7*3600e3).toISOString().slice(0,10)===day;
     const g={};for(const r of (v.log||[]).filter(r=>r.amt>0&&isToday(r))){const key=r.k+'|'+r.w;(g[key] ||= {k:r.k,w:r.w,n:0,amt:0}).n+=r.n||1;g[key].amt+=r.amt;}
     const rows=Object.values(g).sort((a,c)=>c.amt-a.amt),tot=rows.reduce((a,x)=>a+x.amt,0);
-    open('<h3>😈 ศูนย์จอมแสบ</h3><div class="dm-hint">ทุกอย่างที่โดน/ที่ถืออยู่ รวมไว้ตรงนี้ · ไม่มีใครรู้ว่าใครแกล้ง</div><div class="dm-scroll">'+H
-      +'<div class="dm-sec">📉 วันนี้เสียไปแล้ว</div>'+(rows.length?'<div class="dm-sum">'+rows.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+esc(x.w==='timeout'?(x.k==='coffin'?'หีบโลงหมดเวลา':x.k==='ghost'?'ของต้องมนต์ระเบิดในมือ':'หัวใจแตกในมือ'):(LBL[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวมวันนี้</span><b>−'+fmt(tot)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่เสียอะไร 🎉</div>')
+    open('<h3>🎭 ศูนย์จอมแสบ</h3><div class="dm-hint">ทุกอย่างที่โดน/ที่ถืออยู่ รวมไว้ตรงนี้ · ไม่มีใครรู้ว่าใครแกล้ง</div><div class="dm-scroll">'+H
+      +'<div class="dm-sec">📉 วันนี้เสียไปแล้ว</div>'+(rows.length?'<div class="dm-sum">'+rows.map(x=>'<div><img src="'+IT[x.k].img+'" alt=""><span>'+esc(x.w==='timeout'?(x.k==='coffin'?'หีบบัวหมดเวลา':x.k==='ghost'?'ของต้องมนต์ระเบิดในมือ':'หัวใจแตกในมือ'):(LBL[x.w]||IT[x.k].n))+' ×'+x.n+'</span><b>−'+fmt(x.amt)+'</b></div>').join('')+'<div class="tot"><span>💸</span><span>รวมวันนี้</span><b>−'+fmt(tot)+'</b></div></div>':'<div class="dm-fine">วันนี้ยังไม่เสียอะไร 🎉</div>')
       +itemsLost(v.log,isToday)+'</div><div class="dm-fine">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ (💖 🏮 ทะลุ) · 🍃 ใบตองทองคราฟได้ที่ร้านลอยกระทง</div><div class="dm-row"><button class="dm-big dark" id="dmCClose">ปิด</button></div>');
     sheet.querySelector('#dmCClose').onclick=close;
     sheet.querySelectorAll('[data-ph]').forEach(x=>x.onclick=()=>passSheet(x.dataset.ph));sheet.querySelectorAll('[data-hp]').forEach(x=>x.onclick=()=>heartPaySheet(x.dataset.hp));sheet.querySelector('[data-mp]')?.addEventListener('click',multiPassSheet);
@@ -273,10 +273,10 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
   function paint(){if(stopped)return;const t=now(),v=view||{},b=bag(),parts=[];
     prevBag=b;
     const farm=(screen?.()||'farm')==='farm',pill=(w,img,txt,extra='')=>'<div class="dm-p '+w+extra+'" data-w="'+w+'" role="button" tabindex="0"><img src="'+img+'" alt="">'+txt+'</div>';
-    /* fix23: ปุ่มเดียว 😈 + ตัวเลขของที่ค้าง (หัวใจ/หีบโลง/นาฬิกาทราย/ผีสิง) · เนื้อหาเปลี่ยนเฉพาะตอนจำนวนเปลี่ยน → กดได้ทุกครั้ง */
+    /* fix23: ปุ่มเดียว 🎭 + ตัวเลขของที่ค้าง (หัวใจ/หีบบัว/นาฬิกาทราย/ผีสิง) · เนื้อหาเปลี่ยนเฉพาะตอนจำนวนเปลี่ยน → กดได้ทุกครั้ง */
     {const n=(v.ht?.length||0)+(v.cf?.length||0)+(v.hg?.length||0)+(v.gh?.length||0)+(v.gr?.length||0),mine=Object.values(b).reduce((a,x)=>a+x,0);
      const hot=(v.ht||[]).some(h=>h.seen&&h.seen+HEART_TIME-t<5*60000)||(v.cf||[]).length>0||(v.gh||[]).some(h=>h.until-t<3600e3);
-     if(n||mine||unseen)parts.push('<div class="dm-p dm-one'+(hot?' hot':'')+(n?' has':'')+'" data-w="center" role="button" tabindex="0"><img src="'+IT.heart.img+'" alt="">😈'+(n?'<b class="dm-badge">'+(n>99?'99+':n)+'</b>':(unseen?'<b class="dm-badge dot">•</b>':''))+'</div>');}
+     if(n||mine||unseen)parts.push('<div class="dm-p dm-one'+(hot?' hot':'')+(n?' has':'')+'" data-w="center" role="button" tabindex="0"><img src="'+IT.heart.img+'" alt="">🎭'+(n?'<b class="dm-badge">'+(n>99?'99+':n)+'</b>':(unseen?'<b class="dm-badge dot">•</b>':''))+'</div>');}
     const html=parts.join('');if(col._h!==html){col._h=html;col.innerHTML=html;
       col.querySelectorAll('[data-w]').forEach(x=>x.onclick=e=>{e.stopPropagation();const w=x.dataset.w;({center:centerSheet,ht:()=>{if(!sheet.classList.contains('on'))heartIntro();},sum:centerSheet,pass:passSheet,gh:ghostHoldSheet,gr:ghostPileSheet,cf:sealSheet,hg:flipSheet,flip:flipSheet,bag:bagSheet,today:todaySheet})[w]?.();});}
     if(vig){vig.remove();vig=null;}/* fix23: ไม่มีจอแดงกะพริบแล้ว */

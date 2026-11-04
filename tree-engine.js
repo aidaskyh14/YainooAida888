@@ -3,7 +3,7 @@
    · แต้มจากกิจกรรม 1–10 แต้มต่อครั้ง (ไม่จำกัดต่อคน) · ต้นไม้ 12 ขั้นตามแต้มสูงสุดของบ้านในรอบ (โดนขวานต้นไม่หด)
    · บ้านชนะ: ทุกคนเลือกแผ่นป้ายกุศลคว่ำ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง 1 ใบ (ปล้นเสบียง/ตัดบ้าน/ตัดทุกบ้าน/ตัด 4 คน) */
 import {FISH} from './fishing-catalog.js?h=92b72ca3';
-import {FOOD_RECIPES} from './food-craft-engine.js?h=aa2d9199';
+import {FOOD_RECIPES} from './food-craft-engine.js?h=325c2f52';
 export const TW_TH=[0,150,400,750,1200,1800,2600,3600,4800,6200,7800,9600];
 export const TW_TREES=7,TW_PICK_OPEN=5*60000,TW_PICK_TIME=10*60000;
 export const TW_MERIT=[5e6,5e6,10e6,10e6,30e6,50e6];
@@ -64,7 +64,7 @@ export const TW_ROB_PATHS=['bag.item.boxdog','bag.box.cat','bag.box.hamster','ba
  'bag.item.hat','sub.alpaca.bag.wool','bag.item.musicbox','bag.item.battery','bag.item.pestle','bag.item.cake','bag.item.coconut','bag.wine.moon','bag.wine.rose','bag.wine.blood','bag.wine.eclipse',
  'bag.rod.bamboo','bag.rod.moon','bag.rod.honey','bag.rod.sakura','bag.boost.bait','bag.fishing.crab'];
 export const TW_ROB_NAME={'bag.item.boxdog':'กล่องสุ่มหมา','bag.box.cat':'กล่องสุ่มแมว','bag.box.hamster':'กล่องสุ่มแฮมสเตอร์','bag.box.plant':'กล่องสุ่มพืช','bag.box.fruit':'กล่องสุ่มผลไม้','bag.box.mahakusal':'กล่องสุ่มมหากุศล','bag.birdbox.ostrich':'กล่องสุ่มนกกระจอกเทศ','bag.birdbox.dodo':'กล่องสุ่มโดโด้','sub.alpaca.bag.box':'กล่องสุ่มอัลปาก้า',
- 'bag.item.hat':'หมวกกะลาสี','sub.alpaca.bag.wool':'ขนอัลปาก้า','bag.item.musicbox':'กล่องดนตรี','bag.item.battery':'แบตเตอรี่โรงงาน','bag.item.pestle':'สากกะเบือ','bag.item.cake':'เค้ก','bag.item.coconut':'มะพร้าว','bag.wine.moon':'ไวน์จันทร์','bag.wine.rose':'ไวน์กุหลาบ','bag.wine.blood':'ไวน์เลือด','bag.wine.eclipse':'ไวน์สุริยคราส',
+ 'bag.item.hat':'หมวกกะลาสี','sub.alpaca.bag.wool':'ขนอัลปาก้า','bag.item.musicbox':'กล่องดนตรี','bag.item.battery':'แบตเตอรี่โรงงาน','bag.item.pestle':'สากกะเบือ','bag.item.cake':'เค้ก','bag.item.coconut':'มะพร้าว','bag.wine.moon':'ไวน์จันทร์','bag.wine.rose':'ไวน์กุหลาบ','bag.wine.blood':'ไวน์ทับทิม','bag.wine.eclipse':'ไวน์สุริยคราส',
  'bag.rod.bamboo':'เบ็ดไผ่','bag.rod.moon':'เบ็ดจันทร์เสี้ยว','bag.rod.honey':'เบ็ดน้ำผึ้ง','bag.rod.sakura':'เบ็ดซากุระ','bag.boost.bait':'เหยื่อวิเศษ','bag.fishing.crab':'กรรไกรปู',coins:'เหรียญกระทงทอง'};
 const getP=(g,p)=>{const v=p.split('.').reduce((o,k)=>o?.[k],g);return Number.isSafeInteger(v)&&v>0?v:0;};
 const setP=(g,p,n)=>{const ks=p.split('.'),last=ks.pop();let o=g;for(const k of ks){o[k] ||= {};o=o[k];}o[last]=n;};

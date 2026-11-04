@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th"><head><script src="../pv/s4icon.js?h=edc9f144"></script><meta charset="utf-8">
+<html lang="th"><head><script src="../pv/s4loop.js?h=2b770a67"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <title>บ่อตกปลา 20 แท่น</title>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&family=Itim&display=swap" rel="stylesheet">
@@ -92,9 +92,9 @@ button.p3chip{cursor:pointer}
 #p3bar{height:100%;width:0;background:#ffcf5a;transition:width .3s}
 
 /* ===== S4: ด้านบนเว้นที่ให้ปุ่ม 🌱 กลับฟาร์ม · ป้ายเล็กลง ===== */
-#top{padding-left:118px!important;justify-content:flex-end!important;flex-wrap:wrap}
+#top{padding-left:158px!important;justify-content:flex-end!important;flex-wrap:wrap}
 #top .chip{font-size:11px;padding:4px 9px}
-.p3top{padding-left:118px!important}
+.p3top{padding-left:158px!important}
 /* ===== S4: เครื่องมือรวมเป็นปุ่มเดียว มุมขวาล่าง กดแล้วแถบเลื่อนขึ้น ===== */
 #tmenu{position:fixed;z-index:8;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:56px;height:56px;border-radius:16px;border:3px solid #fff;background:linear-gradient(180deg,#ff9fc0,#e8578a);box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);color:#fff;font:800 9px 'Mali',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:0}
 #tmenu i{font-style:normal;font-size:22px;line-height:1}
@@ -103,7 +103,7 @@ button.p3chip{cursor:pointer}
 #tools button{width:58px!important;height:62px!important;border-radius:16px!important;gap:3px}
 #tveil{position:fixed;inset:0;z-index:8;display:none}#tveil.on{display:block}
 #zoom{bottom:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
-</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=c59dc02d"></script>
+</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <canvas id="cv"></canvas>
 <div id="top"><div><span class="chip" id="st">🎣 บ่อตกปลา</span></div><div><button class="chip" id="vroom">👑 VIP ห้อง 1</button><span class="chip" id="vcard">🎫 0</span></div></div>
 <button class="chip" id="mine"></button>
@@ -220,12 +220,15 @@ function fx(t,dt){
   cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.scale(1,.55+.45*Math.sin(p.r*1.7));cx.globalAlpha=.85;cx.fillStyle=p.c;cx.beginPath();cx.ellipse(0,0,4.5,2.6,0,0,7);cx.fill();cx.restore();}
  cx.restore();}
 // ---- ป้ายแท่น (ขนาดคงที่บนจอ) ----
+const SIGN={};for(const [z,f] of [['A','a'],['B','b'],['C','c'],['D','d'],['V','vip']]){const i=new Image();i.src='../images/fz-sign-'+f+'.webp';SIGN[z]=i;}window.__fzSign=SIGN;
 function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();}
 function label(t){const sc=Math.max(.72,Math.min(1.15,zoom*.95));
  for(const z in Z){const [x,y]=toS(...Z[z].chip);const lock=z!=='V'&&G.today&&G.today!==Z[z].p;const sub=z==='V'?(vroom==='v1'?'ห้อง 1':'ห้อง 2'):(Z[z].p==='n1'?'บ่อ 1':'บ่อ 2');
-  const txt=Z[z].e+' '+z+' · '+Z[z].n+(lock?' 🔒':'');cx.font='700 '+Math.round(12*sc)+'px Mali,Itim,sans-serif';const w=cx.measureText(txt).width+18*sc,h=22*sc;
-  cx.globalAlpha=.94;cx.fillStyle=Z[z].c;rr(x-w/2,y-h/2,w,h,h/2);cx.fill();cx.strokeStyle='#fff';cx.lineWidth=2;cx.stroke();cx.globalAlpha=1;cx.fillStyle='#fff';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,y+1);
-  cx.font='700 '+Math.round(9.5*sc)+'px Mali,sans-serif';cx.fillStyle='rgba(255,255,255,.95)';cx.strokeStyle='rgba(0,40,90,.55)';cx.lineWidth=3;cx.strokeText(sub,x,y+h*.95);cx.fillText(sub,x,y+h*.95);}
+  /* S4: ป้ายไม้ของเธอ (fz-sign-*.webp) แทนชิปสี · ล็อก = จาง + 🔒 */
+  const im=SIGN[z];const h=(z==='V'?80:72)*sc,w=im&&im.naturalWidth?h*im.naturalWidth/im.naturalHeight:h*1.6;
+  if(im&&im.complete&&im.naturalWidth){cx.globalAlpha=lock?.55:1;cx.drawImage(im,x-w/2,y-h*.6,w,h);cx.globalAlpha=1;}
+  else{const txt=Z[z].e+' '+z+' · '+Z[z].n;cx.font='700 '+Math.round(12*sc)+'px Mali,Itim,sans-serif';const tw=cx.measureText(txt).width+18*sc,th=22*sc;cx.globalAlpha=.94;cx.fillStyle=Z[z].c;rr(x-tw/2,y-th/2,tw,th,th/2);cx.fill();cx.globalAlpha=1;cx.fillStyle='#fff';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(txt,x,y+1);}
+  const sub2=(lock?'🔒 ':'')+z+' · '+sub;cx.font='700 '+Math.round(10*sc)+'px Mali,sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillStyle='rgba(255,255,255,.97)';cx.strokeStyle='rgba(0,40,90,.6)';cx.lineWidth=3;cx.strokeText(sub2,x,y+h*.55);cx.fillText(sub2,x,y+h*.55);}
  for(const p of PL){const [x,y0]=toS(p.x,p.y);const y=y0-30*zoom-6;if(x<-40||x>W+40||y<-40||y>H+40)continue;const s=who(p),z=Z[p.z];const lock=p.z!=='V'&&G.today&&G.today!==z.p;
   const r=12*sc;if(s&&s.me){const pu=1+.18*Math.sin(t*5);cx.globalAlpha=.45;cx.fillStyle='#fff36a';cx.beginPath();cx.arc(x,y,r*1.65*pu,0,7);cx.fill();}
   else if(!s&&!lock){cx.globalAlpha=.35*(1-(t*.8+p.k*.13)%1);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(x,y,r*(1+((t*.8+p.k*.13)%1)*.9),0,7);cx.stroke();}
@@ -235,15 +238,14 @@ function label(t){const sc=Math.max(.72,Math.min(1.15,zoom*.95));
   const nm=s?(s.me?'⭐ ฉัน':s.w):(lock?'🔒':'');if(nm){cx.font='700 '+Math.round(10*sc)+'px Mali,sans-serif';const w=Math.min(90,cx.measureText(nm).width+12);
    cx.fillStyle=s&&s.me?'#fff3b0':'rgba(255,248,236,.95)';rr(x-w/2,y+r+2,w,15*sc,7*sc);cx.fill();cx.fillStyle=s&&s.ph==='hook'?'#e2453a':'#4a2a14';cx.fillText(nm.length>10?nm.slice(0,9)+'…':nm,x,y+r+2+7.8*sc);}}}
 // ---- วาด ----
-let last=performance.now();
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;requestAnimationFrame(frame);if(!ready)return;
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>!!anim||drag||(Math.abs(vx)+Math.abs(vy))>.05||(typeof PL!=='undefined'&&PL&&PL.tx!=null));function frame(dt,now){const t=now/1000;if(!ready)return;
  if(anim){const k=1-Math.pow(.0015,dt);if(anim.z!=null)zoom+= (anim.z-zoom)*k;if(anim.x!=null){camX+=(anim.x-camX)*k;camY+=(anim.y-camY)*k;}clampCam();
   anim.n=(anim.n||0)+1;if(anim.n>70||Math.abs((anim.z??zoom)-zoom)<.004&&(anim.x==null||Math.hypot(anim.x-camX,anim.y-camY)<1)){const cb=anim.cb;anim=null;cb&&cb();}}
  else if(!drag&&(Math.abs(vx)+Math.abs(vy))>.05){camX+=vx;camY+=vy;vx*=.9;vy*=.9;clampCam();}
  cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='#0152b0';cx.fillRect(0,0,W,H);
  cx.setTransform(DPR*zoom,0,0,DPR*zoom,DPR*(W/2-camX*zoom),DPR*(H/2-camY*zoom));cx.imageSmoothingQuality='high';cx.drawImage(img,0,0);fx(t,dt);
  cx.setTransform(DPR,0,0,DPR,0,0);label(t);}
-requestAnimationFrame(frame);addEventListener('resize',size);
+S4LOOP.run(frame);addEventListener('resize',size);
 window.__fz={PL,toS:(x,y)=>toS(x,y)};
 // ---- แตะแท่น ----
 function hit(sx,sy){let best=null,bd=1e9;for(const p of PL){const [x,y]=toS(p.x,p.y);const yb=y-30*zoom-6;const d=Math.min(Math.hypot(sx-x,sy-y),Math.hypot(sx-x,sy-yb));if(d<bd){bd=d;best=p;}}return bd<Math.max(26,34*zoom)?best:null;}

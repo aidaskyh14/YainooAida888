@@ -5,7 +5,7 @@
  const post=m=>{try{const f=window.__s4f;if(f&&f.contentWindow)f.contentWindow.postMessage(m,'*');}catch(e){}};
  try{const _fx=fx;fx=function(x,y,t){post({s4fx:[x/W,y/H,String(t)]});return _fx.apply(this,arguments);};}catch(e){}
  const pct=v=>parseFloat(v)/100;
- setInterval(()=>{try{const A=[];for(const c of list()){const a=actors[c.id];if(!a)continue;A.push([c.id,a.x/W,a.y/H,a.pose||'idle',a.flip?1:0,a.inbox?1:0]);}
+ setInterval(()=>{try{const A=[];for(const c of list()){const a=actors[c.id];if(!a)continue;A.push([c.id,a.x/W,a.y/H,a.pose||'idle',a.flip?1:0,a.inbox?1:0,c.type||'']);}
   const st=document.getElementById('stage');const bl=st&&st.querySelector('img.ball');const ball=bl?[pct(bl.style.left),pct(bl.style.top)]:null;
   const mounds=st?[...st.querySelectorAll('img.mound')].map(e=>[pct(e.style.left),pct(e.style.top),+(e.style.opacity||1)]):[];
   const box=K==='cat'&&S.cat.cboxAt?[S.cat.cboxAt[0]/W,S.cat.cboxAt[1]/H]:null;

@@ -1,7 +1,7 @@
 /* ซีซัน 4: การจัด/ตกแต่งฟาร์ม 3D บันทึกขึ้นเซิร์ฟเวอร์ (เซฟของผู้เล่นเอง ส่วน module-s4deco-farm)
    เดิมเก็บแค่ในเครื่อง → เปลี่ยนเครื่อง/ล็อกอินใหม่แล้วฟาร์มกลับเป็นค่าเริ่มต้น
    วิธี: ค่า localStorage ที่ขึ้นต้น farm1- ของหน้า 3D นี้ อ่าน/เขียนผ่านเซฟบนคลาวด์แทน (ไม่แตะกระเป๋า/กุศล) */
-(()=>{const KEY='s4deco-farm',RE=/^farm1-(?!roomphoto-)/;/* รูปถ่ายห้อง (ไฟล์ใหญ่) ยังเก็บในเครื่อง */let H=null;
+(()=>{const DS=(document.currentScript&&document.currentScript.dataset)||{};const KEY=DS.key||'s4deco-farm',RE=DS.re?new RegExp(DS.re):/^farm1-(?!roomphoto-)/;/* S4: ใช้ซ้ำได้กับโซนอื่นผ่าน data-key/data-re (ซาฟารี) *//* รูปถ่ายห้อง (ไฟล์ใหญ่) ยังเก็บในเครื่อง */let H=null;
  try{H=(parent.parent&&parent.parent.__HOST)||parent.__HOST||null;}catch(e){H=null;}
  if(!H||typeof H.get!=='function'||typeof H.set!=='function'||window.__SHOW)return;
  let MEM={};try{const v=H.get(KEY);if(v)MEM=JSON.parse(v)||{};}catch(e){MEM={};}

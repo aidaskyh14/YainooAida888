@@ -5,7 +5,7 @@ export function mountMole(host,api){
 const root=host.attachShadow({mode:'open'});root.innerHTML=`<style>${CSS}</style><div id="wrap"><div id="stage"></div></div>`;
 const IMGS={bg:(window.MGT?MGT.img('images/mole-bg.webp'):'images/mole-bg.webp'),hammer:(window.MGT?MGT.img('images/mole-hammer.webp'):'images/mole-hammer.webp')};
 const CELLS={pumpkin:[186,253],vampire:[208,148],ghost:[216,206],witch:[193,197],mummy:[228,240],devil:[173,171]};
-const NAMES=window.MGT&&MGT.hw?{pumpkin:'ฟักทอง',vampire:'แวมไพร์',ghost:'ผี',witch:'แม่มด',mummy:'มัมมี่',devil:'ปีศาจ'}:{pumpkin:'ปู',vampire:'ผีพราย',ghost:'กบ',witch:'ปลาทอง',mummy:'เต่า',devil:'พญานาค'};
+const NAMES=window.MGT&&MGT.hw?{pumpkin:'ฟักทอง',vampire:'แวมไพร์',ghost:'ผี',witch:'แม่มด',mummy:'มัมมี่',devil:'ปีศาจ'}:{pumpkin:'ปู',vampire:'นางเงือกน้อย',ghost:'กบ',witch:'ปลาทอง',mummy:'เต่า',devil:'พญานาค'};
 const TYPES=Object.keys(CELLS);Object.assign(IMGS,{pumpkin:(window.MGT?MGT.img('images/mole-hit-pumpkin.webp'):'images/mole-hit-pumpkin.webp'),vampire:(window.MGT?MGT.img('images/mole-hit-vampire.webp'):'images/mole-hit-vampire.webp'),ghost:(window.MGT?MGT.img('images/mole-hit-ghost.webp'):'images/mole-hit-ghost.webp'),witch:(window.MGT?MGT.img('images/mole-hit-witch.webp'):'images/mole-hit-witch.webp'),mummy:(window.MGT?MGT.img('images/mole-hit-mummy.webp'):'images/mole-hit-mummy.webp'),devil:(window.MGT?MGT.img('images/mole-hit-devil.webp'):'images/mole-hit-devil.webp')});
 const A=api.assets?{...IMGS,...api.assets}:IMGS;
 const HOLES=[[22.9,40.0],[50.2,40.0],[77.6,40.0],[22.6,50.4],[50.6,50.4],[78.0,50.3],[22.1,61.3],[49.8,61.5],[78.1,61.2],[21.7,72.6],[50.3,72.7],[78.3,72.6]];
@@ -42,7 +42,7 @@ function rules(){const s=sheet(`<h2>กติกา</h2><div class="rules">
  <div class="rule"><span class="e">🔨</span><div><b>แตะตุ่นเพื่อตี</b><span>60 วินาที ยิ่งท้ายยิ่งเร็ว</span></div></div>
  <div class="rule"><span class="e">🎯</span><div><b>ถึงเป้า +75,000</b><span>แต้มรวมต้องถึงเป้า</span></div></div>
  <div class="rule"><span class="e">✨</span><div><b>ตุ่นทอง ${R?.goldTotal||7} ตัว</b><span>ตีได้ 6 ตัว + ถึงเป้า = โบนัส +50,000</span></div></div>
- <div class="rule"><span class="e">☠️</span><div><b>ตุ่นต้องสาป</b><span>ตีโดนแล้วแต้มลด</span></div></div>
+ <div class="rule"><span class="e">💥</span><div><b>ตุ่นตัวซวย</b><span>ตีโดนแล้วแต้มลด</span></div></div>
  <div class="rule"><span class="e">😮</span><div><b>เกือบถึง (80%)</b><span>ไม่ได้ ไม่เสีย</span></div></div>
  <div class="rule"><span class="e">💔</span><div><b>ต่ำกว่านั้น</b><span>เสีย 15,000 กุศล</span></div></div>
  <div class="rule wide"><span class="e">🎲</span><div><b>ค่าตุ่นและเป้าสุ่มใหม่ทุกรอบ</b><span>ดูค่าบนการ์ดก่อนกดเริ่ม · ${api.feeText?api.feeText():'🪙 '+cost()+' เหรียญ'} · พัก ${api.cdMin?api.cdMin():15} นาที</span></div></div></div><button class="close">เข้าใจแล้ว</button>`);s.querySelector('.close').onclick=()=>s.remove();}
@@ -78,7 +78,7 @@ function hitMole(m,now){m.hit=true;G.done.add(m.p.i);G.queue.push({i:m.p.i,t:Mat
  const v=R.values[m.type],role=R.roles[m.type],hx=m.h.x,hy=m.h.y-moleW()*.55;G.score+=v;
  m.el.classList.remove('idle');m.el.classList.add('hit');const sp=m.el.firstChild;let f=0;const iv=setInterval(()=>{f++;if(f>11){clearInterval(iv);m.el.classList.add('sink');m.el.classList.remove('up');return;}sp.style.backgroundPosition=`${(f%4)*100/3}% ${Math.floor(f/4)*50}%`;},45);
  retire(m,true);ring(hx,m.h.y-H*.01);
- if(role==='cursed'){G.combo=0;snd('curse');shake();vign('radial-gradient(ellipse at center,transparent 45%,rgba(150,20,80,.6))');burst(hx,hy,['#4a2a63','#7d4aa8','#2a1638'],14,true);popText(hx,hy,fmt(v),'#ffb3c4',false);call('☠️ ตุ่นต้องสาป!','#ffb3c4');}
+ if(role==='cursed'){G.combo=0;snd('curse');shake();vign('radial-gradient(ellipse at center,transparent 45%,rgba(150,20,80,.6))');burst(hx,hy,['#4a2a63','#7d4aa8','#2a1638'],14,true);popText(hx,hy,fmt(v),'#ffb3c4',false);call('💥 ตุ่นตัวซวย!','#ffb3c4');}
  else{G.combo=now-G.last<1300?G.combo+1:1;G.last=now;
   if(role==='gold'){G.golds++;snd('gold');shake();vign('radial-gradient(ellipse at center,rgba(255,220,120,.35),transparent 70%)');burst(hx,hy,['#ffe07a','#ffc93c','#fff6cf','#ffffff'],26,false);stars(hx,hy,8);popText(hx,hy,fmt(v),'var(--gold)',true);
    if(G.golds===R0.GOLD_NEED){$('#gb').classList.add('ok');call('✨ ครบเงื่อนไขโบนัส!','var(--gold)');}else call('✨ ตุ่นทอง!','var(--gold)');}

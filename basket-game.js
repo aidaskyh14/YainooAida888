@@ -5,7 +5,7 @@ export function mountBasket(host,api){
 const root=host.attachShadow({mode:'open'});root.innerHTML=`<style>${CSS}</style><div id="wrap"><div id="stage"></div></div>`;
 const IMGS={bg:(window.MGT?MGT.img('images/basket-table-bg.webp'):'images/basket-table-bg.webp'),items:(window.MGT?MGT.img('images/basket-items.webp'):'images/basket-items.webp'),w_pumpkin:(window.MGT?MGT.img('images/basket-witch-pumpkin.webp'):'images/basket-witch-pumpkin.webp'),w_moon:(window.MGT?MGT.img('images/basket-witch-moon.webp'):'images/basket-witch-moon.webp'),w_candy:(window.MGT?MGT.img('images/basket-witch-candy.webp'):'images/basket-witch-candy.webp')};
 const A=api.assets?{...IMGS,...api.assets}:IMGS;
-const WITCHES=window.MGT&&MGT.hw?[{k:'pumpkin',n:'แม่มดฟักทอง',x:19},{k:'moon',n:'แม่มดจันทร์',x:50},{k:'candy',n:'แม่มดลูกกวาด',x:81}]:[{k:'pumpkin',n:'นางในวรรณคดีฟักทอง',x:19},{k:'moon',n:'นางในวรรณคดีจันทร์',x:50},{k:'candy',n:'นางในวรรณคดีดาวเรือง',x:81}];
+const WITCHES=window.MGT&&MGT.hw?[{k:'pumpkin',n:'แม่มดฟักทอง',x:19},{k:'moon',n:'แม่มดจันทร์',x:50},{k:'candy',n:'แม่มดลูกกวาด',x:81}]:[{k:'pumpkin',n:'นางในวรรณคดีบัวหลวง',x:19},{k:'moon',n:'นางในวรรณคดีจันทร์',x:50},{k:'candy',n:'นางในวรรณคดีดาวเรือง',x:81}];
 const TIME=30,SLOTS=30,MIN=20000;
 const cost=()=>api.cost?api.cost():6;
 const $=s=>root.querySelector(s), st=$('#stage');
@@ -100,7 +100,7 @@ function loop(){if(dead||!G||G.over)return;const t=el(),left=Math.max(0,Math.min
  if(t>=TIME*1000){finish();return;}requestAnimationFrame(loop);}
 function banner(t){const b=document.createElement('div');b.className='banner';b.textContent=t;st.appendChild(b);setTimeout(()=>b.remove(),1500);}
 function fire(e){snd('event');
- if(e==='bats'){banner('✨ ค้างคาวบินผ่าน!');const sw=document.createElement('div');sw.className='bats';sw.style.top='40%';sw.style.height='38%';sw.innerHTML=[...Array(9)].map(()=>`<i style="left:${rnd(0,85)}%;top:${rnd(5,80)}%;${icon(8)};animation-delay:${rnd(0,.25)}s"></i>`).join('');st.appendChild(sw);setTimeout(()=>sw.remove(),3500);}
+ if(e==='bats'){banner('✨ หิ่งห้อยบินผ่าน!');const sw=document.createElement('div');sw.className='bats';sw.style.top='40%';sw.style.height='38%';sw.innerHTML=[...Array(9)].map(()=>`<i style="left:${rnd(0,85)}%;top:${rnd(5,80)}%;${icon(8)};animation-delay:${rnd(0,.25)}s"></i>`).join('');st.appendChild(sw);setTimeout(()=>sw.remove(),3500);}
  if(e==='candle'){banner('🕯️ เทียนดับ!');const d=$('#dark');d.classList.add('on');const mv=ev=>{const r=st.getBoundingClientRect();d.style.setProperty('--lx',(ev.clientX-r.left)+'px');d.style.setProperty('--ly',(ev.clientY-r.top-r.height*.38)+'px');};st.addEventListener('pointermove',mv);st.addEventListener('pointerdown',mv);setTimeout(()=>{d.classList.remove('on');st.removeEventListener('pointermove',mv);st.removeEventListener('pointerdown',mv);},4500);}
  if(e==='wind'){banner('🌀 ลมพัด ของสลับที่!');const free=G.items.filter(t=>t.inBasket<0),slots=shuffle(free.map(t=>t.slot));free.forEach((t,k)=>{t.slot=slots[k];const [x,y]=slotPos(t.slot);t.x=x;t.y=y;t.el.style.left=x+'%';t.el.style.top=y+'%';t.el.style.setProperty('--rot',rnd(-25,25)+'deg');});}}
 function part(x,y,css,dx,dy,d,rot=0){const p=document.createElement('div');p.className='pt';p.style.cssText=`left:${x}px;top:${y}px;--dx:${dx}px;--dy:${dy}px;--d:${d}s;--r:${rot}deg;${css}`;st.appendChild(p);setTimeout(()=>p.remove(),d*1000+60);return p;}

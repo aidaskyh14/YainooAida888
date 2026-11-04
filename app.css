@@ -89,6 +89,18 @@ input,select,textarea{font-size:16px}
 /* mail */
 .mail{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid var(--line);border-radius:1rem;padding:.5rem .6rem;margin:.35rem 0}
 .mail .ic{font-size:1.5rem;width:2rem;text-align:center}.mail b{flex:1;font-size:.84rem}.mail small{display:block;color:var(--soft);font-size:.72rem;font-weight:600}
+/* S4 ข้อ 138: ไปรษณีย์ใหม่ */
+.mtabs{display:flex;gap:.3rem;overflow-x:auto;padding:.2rem 0 .5rem;scrollbar-width:none}.mtabs::-webkit-scrollbar{display:none}
+.mtabs button{flex:none;border:2px solid #f1e3cf;background:#fff;border-radius:999px;padding:.3rem .7rem;font:800 .78rem Mali,sans-serif;color:#7a5a48;display:flex;align-items:center;gap:.3rem}
+.mtabs button.on{background:linear-gradient(180deg,#ffe58a,#f2b53c);border-color:#fff;color:#5a3412;box-shadow:0 3px 0 rgba(0,0,0,.1)}
+.mtabs button em{font-style:normal;background:#e23c3c;color:#fff;border-radius:999px;padding:0 .4rem;font-size:.68rem}
+.mail2{background:#fff;border:2px solid #f1e3cf;border-radius:18px;padding:.6rem .7rem;margin:.4rem 0;display:flex;flex-direction:column;gap:.45rem;position:relative}
+.mail2.admin{border-color:#ffd27a;background:linear-gradient(180deg,#fffaf0,#fff)}.mail2.friend{border-color:#f6a9bd}.mail2.game{border-color:#b9a3f0}
+.mail2 .mh{display:flex;align-items:center;gap:.55rem}.mail2 .ic{font-size:1.7rem;width:2.4rem;height:2.4rem;border-radius:12px;background:#fff6dc;display:flex;align-items:center;justify-content:center;flex:none}
+.mail2 .mt{flex:1;min-width:0}.mail2 .mt b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mail2 .mt small{display:block;color:var(--soft);font-size:.7rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mail2 .mi{display:flex;flex-wrap:wrap;gap:.35rem}.mail2 .chip{display:inline-flex;align-items:center;gap:.25rem;background:#fff6ea;border:1px solid #f1e3cf;border-radius:999px;padding:.15rem .5rem .15rem .25rem;font-size:.74rem;font-weight:800;color:#5a3e2b}
+.mail2 .chip img{width:22px;height:22px;object-fit:contain}.mail2 .chip u{text-decoration:none;font-weight:600;max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mail2 .chip.k{background:#fde7f0;border-color:#f6a9bd}
+.mail2 .btn.sm{align-self:flex-end;min-width:6em}
 .items{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.2rem}.items span{display:inline-flex;align-items:center;gap:.15rem;background:#FFF6EC;border-radius:999px;padding:0 .45rem 0 .1rem;font-size:.7rem;font-weight:700}.items img{width:1.2rem;height:1.2rem;object-fit:contain}
 /* admin */
 .page{max-width:640px;margin:0 auto;padding:.7rem .7rem 5rem}
@@ -173,6 +185,7 @@ body.sub #scr{top:calc(env(safe-area-inset-top,0px) + 2.4rem);height:calc(100% -
 .as-seg{display:flex;background:#FAF5EF;border-radius:999px;padding:.15rem}
 .as-seg button{border:0;background:none;border-radius:999px;font-size:.72rem;font-weight:800;padding:.18rem .6rem;color:var(--soft)}
 .as-seg button:hover{background:#fff;color:var(--pink-d)}
+.as-bulk{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem}.as-pre{flex-wrap:wrap;margin:.2rem 0 0 2.4rem}.as-pre button{padding:.12rem .45rem;font-size:.68rem}
 .as-sr{display:grid;grid-template-columns:auto 1fr auto;gap:.15rem .6rem;align-items:center;padding:.55rem .1rem;border-top:1.5px solid #FAF3EC}
 .as-sr:first-child{border-top:0}
 .as-sr .av,.as-rl .av{width:2.3rem;height:2.3rem;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;background:var(--c);grid-row:span 2}

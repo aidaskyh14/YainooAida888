@@ -1,6 +1,6 @@
 /* fix16 เปิดมินิเกมลอยกระทงทับหน้าสัตว์ (คอกแมว → หาแมวในแก้ว · หลังบ้าน → ร้านซุปแม่มด)
    ระหว่างเปิดเกม หน้าสัตว์ด้านหลัง "หยุดบันทึก" (กันเซฟเก่าทับกุศล/ของที่เซิร์ฟเวอร์เพิ่งเปลี่ยน) · ปิดเกมแล้วโหลดข้อมูลล่าสุดใหม่
-   HwMini.mount({game:'cup'|'soup', page:'hw-cup.html?h=61670aaa', save:()=>save(), load:()=>load(), reload:fresh=>{...}}) */
+   HwMini.mount({game:'cup'|'soup', page:'hw-cup.html?h=1e7e4bd5', save:()=>save(), load:()=>load(), reload:fresh=>{...}}) */
 (function(){
 function mount(o){
  const H=parent.__HOST;let fr=null,frozen=null;

@@ -9,10 +9,13 @@
  const sync=()=>{const w=W3();if(!w||!w.__s3sync)return;const vis=!!visiting;const src=vis?(window.__ffc||{}):S.farms||{};
   const pl=a=>(a||[]).slice(0,12).map(p=>{if(!p)return null;let st=0,pr=0;try{st=pstage(p);pr=pprog(p);}catch(e){st=p.ph==='ready'?4:2;}return {c:p.c,ph:p.ph,st,pr,angel:!!p.angel,magic:!!(p.magicUntil>Date.now()),pk:(p.pk&&p.pk.k)||null};});
   let fr=[];try{const F4=window.__F4;fr=(vis?(window.friendFarm&&window.friendFarm.fruit&&window.friendFarm.fruit.plots)||[]:(S.fruit&&S.fruit.plots)||[]).map(p=>{if(!p)return null;const I=F4?F4.info(p):{grow:1,fr:0};return {t:p.t,grow:I.grow,fr:I.fr};});}catch(e){}
-  try{w.__s3sync({f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
- setInterval(sync,450);
+  let hn=null;try{if(!vis&&S.honey&&typeof hPhase==='function'){const h=S.honey,ph=hPhase();if(ph!=='home'&&ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:(h.req||[]).map(r=>({img:fImg(r),n:r[2],ok:fHave(r)>=r[2]}))};}}catch(e){}
+  /* S4 ข้อ 93: ตอนเยี่ยม เห็นรถ/เรือน้ำผึ้งของเพื่อนจอดอยู่ (ไม่เห็นรายการของ) */try{if(vis&&window.__fhoney){const h=window.__fhoney,n=Date.now();let ph;if(h.leaveAt){ph=(n<h.leaveAt&&!h.fail)?'parked':n<h.leaveAt+4000?'leaving':'gone';}else ph=n<h.arriveAt?'coming':n<h.until?'parked':'late';if(ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:[],vis:1};}}catch(e){}
+  try{if(w.__visitLayout){const ff=vis&&window.friendFarm;if(ff&&ff.deco!==undefined){if(ff.deco)window.__fdeco=ff.deco;}w.__visitLayout(vis?(window.__fdeco||'{}'):null,vis?(ff&&ff.owner)||'x':null);if(!vis)window.__fdeco=null;}}catch(e){}
+  try{w.__s3sync({dr:(vis?[]:(window.__dropRows||[])),fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
+ setInterval(()=>{if(!document.hidden)sync();},450);
  let lastFarm=0;const followFarm=()=>{const w=W3();if(!w||!w.__s3farm||farm===lastFarm)return;lastFarm=farm;try{w.__s3farm(farm===3?2:farm);}catch(e){}};
- setInterval(followFarm,300);
+ setInterval(()=>{if(!document.hidden)followFarm();},300);
  const useFarm=n=>{if(farm!==n){farm=n;try{render();}catch(e){}}lastFarm=n;};
  window.__S4B={
   ready(){sync();lastFarm=0;followFarm();},
@@ -22,9 +25,14 @@
   mail(){openMail();},
   ccLv(){try{return window.__s4ccF?window.__s4ccF.lv():1;}catch(e){return 1;}},
   mailN(){try{const H=window.__HOST||parent.__HOST;return Number(H&&H.mailCount&&H.mailCount())||0;}catch(e){return 0;}},
-  house(){if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');if(typeof hPhase==='function'&&hPhase()!=='home')return toast('รอน้องน้ำผึ้งเสร็จงานก่อนนะ',1);closeAll();const w=W3();w&&w.__s4openHouse&&w.__s4openHouse();},
+  house(){if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');closeAll();const w=W3();w&&w.__s4openHouse&&w.__s4openHouse();},
   stall(){if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');goScreen('farmshop');},
   zone(z){const w=W3();w&&w.__s4zone&&w.__s4zone(z);},
+  /* S4 ข้อ 153/175 🏦 ตู้ธนาคาร 2 ตู้ที่ฟาร์มยัยหนู · แอดมินเองเปิดไม่ได้ (ดูรายการที่ศูนย์แอดมิน) */
+  atm(bank){const Hh=window.__HOST||parent.__HOST;try{if(Hh.isAdmin&&Hh.isAdmin()&&!visiting){toast('🏦 ตู้ธนาคารของผู้เล่น · ดูรายการโอนได้ที่ 👑 ศูนย์แอดมิน → 🏧 ATM',1);return;}}catch(e){}closeAll();Hh.openAtm&&Hh.openAtm(bank);},
+  wave(){try{window.__s4wave&&window.__s4wave();}catch(e){}},
+  atmBoard(){const Hh=window.__HOST||parent.__HOST;return Hh.cloud('atm',{type:'status',bank:'lotus'}).then(o=>o&&o.atm&&o.atm.banks||null).catch(()=>null);},
+  krathong(slot){const Hh=window.__HOST||parent.__HOST;return Hh.cloud('drops',{type:'krathong',owner:Hh.uid,farm:1,slot}).then(out=>{try{Object.assign(S,JSON.parse(Hh.get('s3all-v1')));pts=S.merit;render();}catch(e){}const k=out&&out.krathong;if(k){const w=W3();if(w)w.__ktDone=k.slot;}return k||null;});},
   res(g,k,n){S.bag[g]=S.bag[g]||{};S.bag[g][k]=(S.bag[g][k]||0)+n;try{save();}catch(e){console.error(e);}}
  };
  // ---- บ้าน/เรือนกระจก: ใช้กติกาและของในกระเป๋าซีซัน 3 ผ่านหน้าบ้านเดิมที่ซ่อนอยู่ (เห็นแค่หน้าต่างเลือก) ----
@@ -32,9 +40,9 @@
  const hf=document.createElement('iframe');hf.id='s3host';hf.src='scr-house.html?s4host=1';hf.title='บ้าน';
  hf.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;background:transparent;visibility:hidden;pointer-events:none';hf.setAttribute('allowtransparency','true');document.body.appendChild(hf);
  const HW=()=>{try{return hf.contentWindow;}catch(e){return null;}};
- const hostShow=on=>{hf.style.visibility=on?'visible':'hidden';hf.style.pointerEvents=on?'auto':'none';};
+ const hostShow=on=>{hf.style.setProperty('visibility',on?'visible':'hidden','important');hf.style.pointerEvents=on?'auto':'none';if(on){const w=HW();try{if(w&&w.__s4reload)w.__s4reload();}catch(e){}}else{const f=W3();try{if(f&&f.S4LOOP)f.S4LOOP.wake('host-close');}catch(e){}}};
  let hostAt=0,hostOn=false;
-setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade');const pz=hostOn||!!(sh&&sh.classList.contains('on'))||!!document.getElementById('craftReceipt');if(w.__s4pause!==pz)w.__s4pause=pz;}}catch(e){}},150);
+setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade');const pz=hostOn||!!(sh&&sh.classList.contains('on'))||!!document.getElementById('craftReceipt');if(w.__s4pause!==pz){w.__s4pause=pz;if(!pz&&w.S4LOOP)w.S4LOOP.wake('unpause');}}}catch(e){}},300);
  setInterval(()=>{const w=HW();if(!w||!w.__s4busy)return;let b=false;try{b=w.__s4busy();}catch(e){}if(b){if(!hostOn){hostOn=true;hostShow(true);}}else if(hostOn||hf.style.visibility!=='hidden'){if(Date.now()-hostAt<900)return;hostOn=false;hostShow(false);}},200);
  // เบื้องหลังเพิ่มเติม (โหลดเมื่อใช้ครั้งแรก): ป่าเดิม = เครื่องดื่มป่า/เชือก/เหล็ก · โรงเรือนเดิม = สัตว์ภาคการเกษตร
  const XH={};const XK={drinks:'forest',craftDrink:'forest',tools:'forest',bpen:'barn',bcc:'barn',bboost:'barn',bcollect:'barn',bcure:'barn',bbag:'barn'};
@@ -48,6 +56,7 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
  const hact=(k,i)=>{if(XK[k])return xact(k,i);hostAt=Date.now();const w=HW();if(!w||!w.__s4h||!w.__s4h[k]){toast('⏳ กำลังเตรียมบ้าน ลองอีกครั้งนะ');return;}hf.style.visibility='visible';try{w.__s4h[k](i);}catch(err){console.error(err);}};
  setInterval(()=>{const w=HW(),f3=W3();if(!w||!w.__s4h||!f3||!f3.__ghSync)return;try{f3.__ghSync(w.__s4h.state());}catch(e){}},1000);
  window.__S4B.hact=hact;
+ window.__S4B.honeyTap=()=>{try{if(visiting){toast('🚚 น้องน้ำผึ้งของเพื่อนมาส่งของอยู่ 👀');return;}if(typeof hPhase==='function'&&hPhase()==='parked')openReq();else{closeAll();if(typeof renderHoney==='function')renderHoney();open('honeySheet');}}catch(e){console.error(e);}};
  // แตะในฉาก 3D / หน้าต่างบ้าน = ยังเล่นอยู่ (ไม่ให้ขึ้น "พักสวน" ระหว่างเล่น)
  const bump=()=>{try{if(!$('sleep').classList.contains('on')){clearTimeout(idleT);idleT=setTimeout(sleep,3*60*1000);}}catch(e){}};
  for(const fr of [f,hf])fr.addEventListener('load',()=>{try{fr.contentWindow.addEventListener('pointerdown',bump,true);}catch(e){}});
@@ -65,7 +74,7 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
  window.__S4B.bagc=()=>{const it=(S.bag&&S.bag.item)||{};return{cake:it.cake||0,coconut:it.coconut||0,angel:it.angel||0,seed:LASTSEED};};
 
  // น้องน้ำผึ้งส่งของ: ให้ฉาก 3D เล่นเรือ/แพ/รถด้วย
- try{const _ch=callHoney;callHoney=function(kind){const before=typeof hPhase==='function'?hPhase():'';const r=_ch.apply(this,arguments);try{if(before==='home'&&hPhase()!=='home'){const w=W3();const v=kind==='ship'||kind==='raft'?kind:'jeep';w&&w.__honey&&(w.__honey.spawn(v),w.__honey.cur&&(w.__honey.cur.x=-30));}}catch(e){}return r;};}catch(e){}
+ /* S4 ข้อ 11/43: น้องน้ำผึ้ง 3D ขับเคลื่อนจาก S.honey ผ่าน sync (ไม่ใช้ wrapper เดิมที่เรียกก่อนเซิร์ฟเวอร์ตอบ) */
  // ปุ่ม 🌾 เลือกฟาร์ม: ซีซัน 4 มีฟาร์ม 1 (หน้าบ้าน 12 แปลง) · ฟาร์ม 2 (ข้ามสะพาน 12 แปลง) · สวนผลไม้
  const fb=document.getElementById('farmBtn');if(fb)fb.onclick=()=>{closeAll();const L=[[1,'🌾 ฟาร์ม 1 · หน้าบ้าน'],[2,'🌾 ฟาร์ม 2 · ข้ามสะพาน'],[4,'🍑 สวนผลไม้']];
   $('fgrid').innerHTML=L.map(([n,t])=>'<div class="fcard'+(n===farm?' cur':'')+(n>1&&!(S.unl||{})['f'+n]?' lk':'')+(n===4?' fruit4':'')+'" data-f="'+n+'" style="background:linear-gradient(160deg,#a7dc7c,#5fae4a)"><b>'+(n===farm?'📍 ':'')+t+'</b></div>').join('');open('farmSheet');};
@@ -77,7 +86,7 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
   box.onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');const w=W3();if(!w)return;try{const d=w.document;if(b.dataset.a==='edit'){d.getElementById('bEdit').click();}else{d.getElementById('bAlbum').click();}}catch(err){console.error(err);}};}
 
  // ตอนแต่งฟาร์ม / เปิดสมุด / อยู่ในบ้าน 3D: ซ่อนปุ่มซีซัน 3 ไม่ให้บังวิว
- {const st=document.createElement('style');st.textContent='body.s4full>*:not(#f3d):not(#toast):not(.toast){visibility:hidden!important}';document.head.appendChild(st);
+ {const st=document.createElement('style');st.textContent='body.s4full>*:not(#f3d):not(#toast):not(.toast):not(#s3host):not(#s3forest):not(#s3barn){visibility:hidden!important}';document.head.appendChild(st);
   setInterval(()=>{const w=W3();let full=false;try{const d=w.document,vis=el=>{if(!el||el.hidden)return false;const cs=w.getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden';};const hv=d.querySelector('.hvTop');full=vis(d.getElementById('tray'))||vis(d.getElementById('selBar'))||vis(d.getElementById('album'))||(hv&&hv.parentNode&&vis(hv.parentNode))||!!(w.__room&&w.__room.on);}catch(e){}document.body.classList.toggle('s4full',full);},350);}
  window.harvestPop=(fn=>function(src,rect,n){if(!rect||!rect.width)rect={left:innerWidth/2-30,top:innerHeight/2-30,width:60,height:60,right:innerWidth/2+30,bottom:innerHeight/2+30};return fn?fn.call(this,src,rect,n):null;})(window.harvestPop);
 })();
@@ -87,6 +96,16 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
  window.__ffc={};const keepProject=window.__ffProject;
  // จำแปลงของเพื่อนแยกตามฟาร์มทุกครั้งที่โหลด
  setInterval(()=>{const ff=window.friendFarm;if(visiting&&ff&&ff.plots){window.__ffc[ff.farm||farm]=ff.plots;}if(!visiting)window.__ffc={};},400);
+ /* S4 ข้อ 180/181: ส่งตำแหน่งตัวเรา (ฟาร์มที่อยู่ = ของเรา หรือของเพื่อนที่กำลังเยี่ยม) · ฟังคนอื่นในฟาร์มเดียวกัน 1 listener */
+ (()=>{const H=window.__HOST||parent.__HOST;if(!H||!H.prWrite)return;let prOwner=null,prLast=0,prPos=null,prStop=null,waveN=0;const W3=()=>{try{const f=document.getElementById('f3d');return f&&f.contentWindow;}catch(e){return null;}};
+  const me=()=>{const w=W3();return w&&w.__me?w.__me():null;};
+  window.__s4wave=()=>{waveN++;prLast=0;};
+  setInterval(()=>{try{const w=W3();if(!w||!w.__me||!H.uid)return;const owner=visiting?(window.friendFarm&&window.friendFarm.owner):H.uid;if(!owner)return;
+    if(owner!==prOwner){if(prOwner)H.prLeave(prOwner);if(prStop)prStop();prOwner=owner;prPos=null;prLast=0;const own=owner;prStop=H.prWatch(own,list=>{const w2=W3();if(!w2||!w2.__peers||prOwner!==own)return;const now=Date.now();w2.__peers(list.filter(r=>r.uid!==H.uid&&now-(+r.t||0)<90000));});}
+    const m=me();if(!m)return;const now=Date.now();const moved=!prPos||Math.hypot(m.x-prPos.x,m.z-prPos.z)>.2||m.s!==prPos.s||Math.abs(m.d-prPos.d)>.6;
+    if((moved&&now-prLast>1200)||now-prLast>25000){prLast=now;prPos=m;H.prWrite(owner,{n:String((typeof USER!=='undefined'&&USER&&USER.name)||'เพื่อน').slice(0,24),x:+m.x.toFixed(1),z:+m.z.toFixed(1),d:+(+m.d||0).toFixed(2),s:m.s||null,...(waveN?{w:waveN}:{})});}}catch(e){console.log('pres',e&&e.message);}},400);
+  addEventListener('pagehide',()=>{try{if(prOwner)H.prLeave(prOwner);}catch(e){}});
+ })();
  const v0=visit;visit=async function(uid){window.__ffc={};await v0(uid);try{if(window.friendFarm){window.__ffc[1]=window.friendFarm.plots;farm=2;await window.cloudFriend('visit');if(window.friendFarm)window.__ffc[2]=window.friendFarm.plots;farm=1;window.friendFarm.plots=window.__ffc[1];}}catch(e){console.error(e);}
   try{const w=W3();if(w&&w.__s4walkHome)w.__s4walkHome();}catch(e){}};};tryWrap();})();
 // ป้ายเยี่ยมสวนแบบซีซัน 4 (เล็ก กลางบน) แทนแถบซีซัน 3

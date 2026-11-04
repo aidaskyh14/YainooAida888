@@ -11,17 +11,36 @@ html{font-size:14px!important}
 .toast.on,.toast.show{animation:s4toast .45s cubic-bezier(.2,1.4,.4,1)}
 @keyframes s4toast{from{transform:translate(-50%,14px) scale(.85)}}
 button.big,.btn,.big{position:relative;overflow:hidden}
-button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:s4shine 3.2s ease-in-out infinite}
-@keyframes s4shine{0%,60%{left:-60%}100%{left:130%}}
+button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:s4shine 3.2s ease-in-out infinite;will-change:transform}
+@keyframes s4shine{0%,60%{transform:translateX(0) skewX(-20deg)}100%{transform:translateX(475%) skewX(-20deg)}}
 .opt,.cell,.item,.pcard,.cat{transition:transform .12s}
 .opt:active,.cell:active,.item:active,.pcard:active,.cat:active{transform:scale(.96)}
 .demo{display:none!important}
 
 /* ซีซัน 4: แถบบนของหน้าระบบ = ปุ่มกลับฟาร์มเล็กๆ มุมซ้ายบน (ไม่มีแถบขาวเต็มกว้าง) ฉากเต็มจอ */
-.gbar{background:transparent!important;border:0!important;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0!important}
-.gbar button{pointer-events:auto;background:rgba(48,34,72,.8)!important;color:#fff!important;font:800 11px Mali,sans-serif!important;padding:.42rem .8rem!important;box-shadow:0 4px 12px rgba(20,10,40,.25)!important;border:1px solid rgba(255,255,255,.5)!important}
-.gbar b{display:none!important}
+#gbar.gbar{background:transparent!important;border:0!important;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0!important}
+#gbar.gbar button{pointer-events:auto;background:rgba(48,34,72,.8)!important;color:#fff!important;font:800 11px Mali,sans-serif!important;padding:.42rem .8rem!important;box-shadow:0 4px 12px rgba(20,10,40,.25)!important;border:1px solid rgba(255,255,255,.5)!important}
+#gbar.gbar b{display:none!important}
 #scr{top:0!important;height:100%!important}
 
 /* ซีซัน 4: ปุ่มเก็บของดรอปบนฟาร์ม = ปุ่มเล็กไอคอน ไม่ใช่ป้ายตัวหนังสือใหญ่ */
-#dropCollectVisible{font:800 11px Mali,sans-serif!important;padding:6px 11px!important;border-radius:999px!important;border:2px solid #fff!important;background:linear-gradient(180deg,#ffe58a,#f2b33c)!important;color:#6b3f12!important;box-shadow:0 3px 0 rgba(0,0,0,.15),0 4px 10px rgba(60,30,0,.2)!important;bottom:calc(env(safe-area-inset-bottom,0px) + 84px)!important}
+#dropCollectVisible{width:56px!important;height:56px!important;padding:0!important;border-radius:50%!important;border:3px solid #fff!important;background:linear-gradient(180deg,#fff9ea,#ffe9b8)!important;box-shadow:0 3px 0 rgba(0,0,0,.15),0 4px 10px rgba(60,30,0,.25)!important;right:14px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 176px)!important;overflow:visible!important}/* S4 ข้อ 7: ไอคอนเคียว + วงแดง */
+
+/* S4 ข้อ 40: แผ่นทางลัดทุกหน้า */
+#s4navP{position:fixed;inset:0;z-index:60;background:rgba(30,20,50,.45);display:flex;align-items:flex-end;justify-content:center}
+#s4navP[hidden]{display:none}
+#s4navP .s4navB{width:100%;max-width:520px;background:#fff8ec;border-radius:26px 26px 0 0;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 16px);box-shadow:0 -8px 30px rgba(0,0,0,.25);max-height:78vh;overflow:auto}
+#s4navP h3{margin:0 0 10px;font:800 16px Mali,sans-serif;color:#5a3e2b;text-align:center}
+#s4navP .s4navG{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#s4navP .s4navG button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:16px;background:#fff;border:2px solid #f1e3cf;box-shadow:0 3px 0 rgba(0,0,0,.08);text-align:center}
+#s4navP .s4navG button i{font-style:normal;font-size:26px;line-height:1}
+#s4navP .s4navG button span{font:800 11px Mali,sans-serif;color:#5a3e2b}
+
+/* S4 ข้อ 122: หน้ามินิเกม — แถบของเกม (กลับ/กระเป๋า) เลื่อนลงใต้ปุ่มของซีซัน 4 ไม่ทับกัน · กล่องรอผู้เล่นเล็กลง ไม่บังโต๊ะไพ่ */
+#game .gbar{padding-top:calc(env(safe-area-inset-top,0px) + 50px)!important}
+.kx-wbox{padding:2.2cqw 3cqw!important;font-size:.9em}
+.kx-wbox b{font-size:4.4cqw!important}
+.kx-wait{bottom:2cqw!important}
+/* S4 ข้อ 131: หน้าแคมเปญ/มินิเกม — หัวหน้าเลื่อนลงใต้ปุ่มกลับฟาร์ม · ซ่อนตัวจำลองเวลา (ของทดสอบ) */
+.hdr{padding-top:calc(env(safe-area-inset-top,0px) + 54px)!important}
+.hdr .clock{display:none!important}

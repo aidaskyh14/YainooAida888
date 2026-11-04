@@ -1,7 +1,7 @@
 export const GTM={waterspinach:25,lettuce:35,pea:40,mango:45,carrot:50,chili:55,corn:60,potato:65,pumpkin:70,cucumber:75,tomato:80,cabbage:80,lychee:85,strawberry:100,watermelon:110,grape:115,banana:130,gooseberry:150,mushroom:160,melon:180,bamboo:200,plankton:240};
 const SPR={waterspinach:1,lettuce:1,pea:3,mango:3,carrot:3,chili:5,corn:5,potato:5,pumpkin:5,cucumber:8,tomato:8,cabbage:8,lychee:8,strawberry:10,watermelon:10,grape:12,banana:12,gooseberry:15,mushroom:18,melon:20,bamboo:25,plankton:30},NOWORM=new Set(['waterspinach','lettuce','mango','bamboo','plankton']);
 const fail=m=>{throw new Error(m);};
-import {prankAction,prankFix} from './prank-engine.js?h=36d7a6a7';
+import {prankAction,prankFix} from './prank-engine.js?h=5e199672';
 export function farmTick(p,now,fortune){if(!p)return p;if(p.pk)return p;if(p.magicUntil>now)return p;if(p.magicUntil){p.t+=3*3600000;delete p.magicUntil;}const ms=(GTM[p.c]||30)*60000;if(p.ph==='g1'&&now-p.t>=ms*.4*(fortune?.i===1&&fortune.day===new Date(now).toDateString()?.7:1)){p.ph='water';p.t=now;}if(p.ph==='worm'&&now-p.t>=300000){p.ph='g2';p.wormPenalty=true;p.t+=300000;}if(p.ph==='g2'&&now-p.t>=ms*.6){p.ph='ready';p.t=now;}return p;}
 export const FRUIT_TREES={peach:{grow:2,every:1,life:3,nF:3,pF:1},apple:{grow:3,every:2,life:4,nF:4,pF:2},orange:{grow:4,every:3,life:4,nF:5,pF:2},cherry:{grow:6,every:4,life:5,nF:6,pF:3}};
 const UNLOCKS=[['c3',{wood:500,stone:500,'crop.waterspinach':300}],['c4',{wood:1000,stone:1000,rope:5,'crop.chili':300}],['f2',{wood:3000,stone:3000,rope:10,steel:10,anycrop:500}],['f3',{wood:6000,stone:6000,rope:30,steel:30,anyflower:300}],['f4',{wood:10000,stone:10000,rope:50,steel:50,grass5:300}]];
@@ -43,16 +43,19 @@ export function farmAction(account,ctx,input,rng=Math.random){
  else if(input.type==='angel'&&!p.angel&&(game.bag.item.angel||0)>0){game.bag.item.angel--;p.angel=true;count++;}
  else if(input.type==='dig'){arr[i]=null;count++;}
  }
+ /* S4 ข้อ 100: เก็บผัก → สุ่มได้ของลอยกระทง (8 ชนิด) แปลงละ 3% · วันละไม่เกิน 5 ชิ้น (เวลาไทย) · ผมตัดสินใจระดับปานกลาง–ยาก 4 พ.ย. */
+ if(input.type==='harvest'&&harvested.length){const LK=['candy','bat','candle','web','hat','broom','pumpkin','cauldron'];const day=new Date(ctx.now+7*3600000).toISOString().slice(0,10);const st=game.lkdrop ||= {};if(st.d!==day){st.d=day;st.n=0;}
+  for(let j=0;j<harvested.length&&st.n<5;j++){if(rng()<.03){const k=LK[Math.floor(rng()*LK.length)];game.bag.halloween ||= {};game.bag.halloween[k]=(game.bag.halloween[k]||0)+1;items['lk-'+k]=(items['lk-'+k]||0)+1;st.n++;}}}
  if(!count)fail('ไม่มีแปลงที่ทำรายการนี้ได้ หรือของไม่พอ');return {game,count,pump,items,harvested};
 }
 export function friendAction(actor,owner,ctx,input,rng=Math.random){
  const game=structuredClone(actor),target=structuredClone(owner);game.sub ||= {};const own=game.sub.friends ||= {day:'',steals:0,magics:0};const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ctx.now));if(own.day!==day){own.day=day;own.steals=own.magics=0;}const farm=input.farm??1;if(!Number.isInteger(farm)||farm<1||farm>4)fail('ฟาร์มไม่ถูกต้อง');const arr=target.farms?.[farm]||[];arr.forEach(p=>farmTick(p,ctx.now,target.fortune));
  if(input.type==='visit')return {game,target};
  if(input.type==='prank'){own.day=day;const prank=prankAction(game,target,own,ctx,input);return {game,target,prank};}
- const i=input.index;if(!Number.isInteger(i)||i<0||i>=arr.length)fail('แปลงไม่ถูกต้อง');const p=arr[i];if(!p)fail('แปลงว่างแล้ว');if(p.magicUntil>ctx.now)fail('แปลงมีมนต์ดำอยู่');if(p.pk)fail('แปลงนี้โดนแกล้งอยู่ ทำอะไรไม่ได้');
+ const i=input.index;if(!Number.isInteger(i)||i<0||i>=arr.length)fail('แปลงไม่ถูกต้อง');const p=arr[i];if(!p)fail('แปลงว่างแล้ว');if(p.magicUntil>ctx.now)fail('แปลงมีมนต์จันทร์อยู่');if(p.pk)fail('แปลงนี้โดนแกล้งอยู่ ทำอะไรไม่ได้');
  if(input.type==='steal'){if(p.angel)fail('นางฟ้าปกป้องแปลงนี้');if(p.ph!=='ready')fail('ผักยังไม่พร้อมเก็บ');if(own.steals>=15)fail('ขโมยครบ 15 ครั้งวันนี้แล้ว');game.bag ||= {};game.bag.crop ||= {};game.bag.crop[p.c]=(game.bag.crop[p.c]||0)+1;arr[i]=null;own.steals++;return {game,target,notice:'steal',stolen:{crop:p.c,quantity:1}};}
  else if(input.type==='water'){if(p.ph!=='water')fail('แปลงไม่ต้องการน้ำ');p.ph=!NOWORM.has(p.c)&&rng()<.35?'worm':'g2';p.t=ctx.now;}
  else if(input.type==='worm'){if(p.ph!=='worm')fail('ไม่มีหนอน');game.merit=(game.merit||0)-1;p.ph='g2';p.t=ctx.now;}
- else if(input.type==='magic'){if(p.angel)fail('นางฟ้าปกป้องแปลงนี้');if(own.magics>=20)fail('เล่นของครบ 20 ครั้งวันนี้แล้ว');p.magicUntil=ctx.now+3*3600000;own.magics++;}
+ else if(input.type==='magic'){if(p.angel)fail('นางฟ้าปกป้องแปลงนี้');if(own.magics>=20)fail('ร่ายมนต์ครบ 20 ครั้งวันนี้แล้ว');p.magicUntil=ctx.now+3*3600000;own.magics++;}
  else fail('คำสั่งเยี่ยมสวนไม่ถูกต้อง');return {game,target,notice:input.type};
 }

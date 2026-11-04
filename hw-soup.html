@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="th">
-<head><script src="pv/s4icon.js?h=edc9f144"></script>
+<head><script src="pv/s4icon.js?h=37261d11"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ร้านแฮมสเตอร์</title>
@@ -186,7 +186,7 @@ function panel(){const me=API.fresh(),bag=me.hw||{};$('merit').textContent='🙏
  else if(state==='won'){const nx=LV[level];p.innerHTML=`${lvs}<div class="bank">✅ ผ่าน${LV[level-1].name} · ตอนนี้ได้ <b>${nf(bank)}</b> กุศล</div><div class="row">ไปต่อ${nx.name}: ผ่านได้ <span class="prize">🙏 ${nf(nx.lo)}–${nf(nx.hi)}</span> พลาด = ไม่ได้อะไรเลย</div><div class="btns"><button class="btn g" id="take" ${busy?'disabled':''}>💰 พอแค่นี้</button><button class="btn" id="more" ${busy?'disabled':''}>🔥 ไปต่อ</button></div>`;}
  else p.innerHTML=`${lvs}<div class="row">🥣 บัวลอย → ท็อปปิ้ง · 🧁 ขนมถ้วย → ครีม → ของแต่ง · 🧪 ต้มแล้วรีบตัก · แตะลูกค้าเพื่อเสิร์ฟ</div>`;
  if($('go'))$('go').onclick=start;if($('take'))$('take').onclick=take;if($('more'))$('more').onclick=more;}
-function boom(){const fx=$('fx'),set=['🐹','⭐','🍬','✨'];for(let i=0;i<30;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.5)+'s';e.style.animationDelay=Math.random()*.4+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML=`<img src="${I('lux-coin')}" alt="">`;else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4000);}}
+function boom(){const fx=$('fx'),set=['🐹','⭐','🪷','✨'];for(let i=0;i<30;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.animationDuration=(1.8+Math.random()*1.5)+'s';e.style.animationDelay=Math.random()*.4+'s';e.style.setProperty('--r',(Math.random()*720-360)+'deg');if(i%3===0)e.innerHTML=`<img src="${I('lux-coin')}" alt="">`;else e.textContent=set[i%4];fx.append(e);setTimeout(()=>e.remove(),4000);}}
 /* ฉากเริ่ม: ลูกค้ายืนโชว์ */
 scene();G={plate:{k:'cake',f:'p',t:'eye'},drink:true,slots:[],cd:{s:'idle'}};drawPlate();drawDrink();drawCauld();$('hud').innerHTML='🐹 พร้อมเปิดร้าน';$('lvchip').textContent='ร้านแฮมสเตอร์';
 ['vamp','ghost','witch'].forEach((h,i)=>{const el=document.createElement('div');el.className='cust in';el.style.left=(20+i*30)+'%';el.innerHTML=`<img class="h" src="${I('hm-'+h+'-h')}" alt="">`;$('custs').append(el);});

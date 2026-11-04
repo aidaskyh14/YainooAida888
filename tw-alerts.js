@@ -41,14 +41,14 @@ const CSS=`
 .tw-warn h3{margin:0;font:400 1.2rem 'Itim','Mali',sans-serif}.tw-warn .cd{font:400 2.4rem 'Itim',sans-serif;color:#FFD36B}.tw-warn p{font-size:.74rem;color:#CDB8E6;margin:.2rem 0 .5rem;line-height:1.5}
 @media (prefers-reduced-motion:reduce){.tw-card .in{transition:none}.tw-pill{animation:none}}`;
 const MIMG={5000000:'mBronze',10000000:'mSilver',30000000:'mGold',50000000:'mRainbow'};
-const PR={rob:['pRob','🧺 ปล้นเสบียง 3 บ้าน','ทุกคนใน 3 บ้าน โดนทิ้งของ 1,000–5,000 ชิ้น/คน'],cut1:['pCut1','🪓 ตัด 1 บ้าน','ทุกคนในบ้านนั้น −10 ล้าน'],cutAll:['pCutAll','🔮 ตัดทุกบ้านที่แพ้','ทุกคน −3 ล้าน'],cut4:['pCut4','🎯 ตัด 4 คน','เลือก 4 คนจากบ้านที่แพ้ คนละ −15 ล้าน']};
+const PR={rob:['pRob','🧺 ปล้นเสบียง 3 บ้าน','ทุกคนใน 3 บ้าน โดนทิ้งของ 1,000–5,000 ชิ้น/คน'],cut1:['pCut1','🪓 ตัด 1 บ้าน','ทุกคนในบ้านนั้น −10 ล้าน'],cutAll:['pCutAll','🌕 ตัดทุกบ้านที่แพ้','ทุกคน −3 ล้าน'],cut4:['pCut4','🎯 ตัด 4 คน','เลือก 4 คนจากบ้านที่แพ้ คนละ −15 ล้าน']};
 const SU={supply:['sSupply','🎁 เติมเสบียง'],shield:['sShield','🛡️ โล่ป้องกัน'],merit:['sMerit','💰 +15,000,000']};
 export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledger,hold}){
  if(!document.getElementById('twcss')){const s=document.createElement('style');s.id='twcss';s.textContent=CSS;document.head.appendChild(s);}
  const fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+ /* S4 ข้อ 80: จำว่าเห็นสรุปแล้ว ผ่าน HOST (เซฟถาวร ไม่ใช่ต่อหน้า) → ไม่เด้งซ้ำทุกหน้า */const HST=(()=>{try{return window.__HOST||(window.parent!==window&&window.parent.__HOST)||null;}catch(e){return null;}})();const ls={get:k=>{try{if(HST&&HST.get)return HST.get(k);return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{if(HST&&HST.set)HST.set(k,v);localStorage.setItem(k,v)}catch(e){}}};
  const clock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
- const emb=e=>'images/nb-emb-'+esc(e||'pumpkin')+'.webp';
+ const emb=e=>'images/nb-emb-'+esc((!e||e==='pumpkin')?'lotus':e)+'.webp';
  const hitDone=new Set(),doneKeys=new Set();let st=null,mine=null,ov=null,ovKey='',mini=new Set(),busy=false,opening=false,warnEl=null,pill=null;
  const stopA=watchState(v=>{st=v;tick();}),stopB=watchMine(v=>{mine=v;tick();});
  const T=setInterval(tick,1000);
@@ -65,21 +65,21 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
  function tick(){const t=now(),scr=screen?.();
   /* ✨ */
   const b=st?.bat;const batLive=b&&!b.settled&&t<b.end&&st.round;
-  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>✨ หิ่งห้อยขนดอกดาวเรืองกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกโคมลอย ลากนิ้วฟันดอกดาวเรืองรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันดอกดาวเรือง</button>';
+  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>✨ หิ่งห้อยขนดอกบัวกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกโคมลอย ลากนิ้วฟันดอกบัวรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันดอกบัว</button>';
     warnEl.querySelector('button').onclick=()=>{warnEl?.remove();warnEl=null;go?.('treewar');};document.body.appendChild(warnEl);}
    warnEl.querySelector('.cd').textContent=Math.ceil((b.start-t)/1000);}else if(warnEl){warnEl.remove();warnEl=null;}
   /* โดนปล้น/ตัดตอนออนไลน์: เรียก ledger ให้หักและแจ้งทันที (ไม่ทำระหว่างเล่นมินิเกม/แข่ง/ค้างคาว) */
   const hit=mine?.hit;if(hit?.at&&!hitDone.has(hit.at)&&ledger&&!hold?.()&&!(batLive&&scr==='treewar')){hitDone.add(hit.at);ledger().catch(()=>hitDone.delete(hit.at));}
   /* งานที่รอ */
   const jobs=[];
-  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','✨ ฟันดอกดาวเรือง ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
+  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','✨ ฟันดอกบัว ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
   const L=st?.last;
   if(lastOk()&&t>=L.openAt&&t<L.until+60000){
    if(mine?.merit?.round===L.id&&!mine.merit.done)jobs.push(['merit:'+L.id,'🏆 เลือกแผ่นป้ายกุศล ⏳ '+clock(L.until-t),()=>meritPop(L)]);
-   if(mine?.prank?.round===L.id&&!mine.prank.done)jobs.push(['prank:'+L.id,'😈 เลือกการ์ดแกล้ง ⏳ '+clock(L.until-t),()=>prankPop(L)]);}
+   if(mine?.prank?.round===L.id&&!mine.prank.done)jobs.push(['prank:'+L.id,'🎭 เลือกการ์ดแกล้ง ⏳ '+clock(L.until-t),()=>prankPop(L)]);}
   const S=st?.surprise;if(S&&!S.done&&mine?.surprise?.bat===S.bat&&!mine.surprise.done&&t<S.until+60000)jobs.push(['surprise:'+S.bat,'🎴 การ์ดเซอร์ไพรส์ ⏳ '+clock(S.until-t),()=>surprisePop(S)]);
   /* สรุปผลรอบ (ทุกคน ครั้งเดียว) */
-  if(L&&!L.cancelled&&t>=L.openAt&&t<L.openAt+20*60000&&!ls.get('twSum:'+L.id)&&!sumSeen.has(L.id)&&!jobs.some(j=>j[0].startsWith('merit')||j[0].startsWith('prank'))&&!ov)summaryPop(L);
+  const hasScore=L&&((L.ranks||[]).some(r=>Number(r.score)>0)||L.winner);if(L&&!L.cancelled&&hasScore&&t>=L.openAt&&t<L.openAt+20*60000&&!ls.get('twSum:'+L.id)&&!sumSeen.has(L.id)&&!jobs.some(j=>j[0].startsWith('merit')||j[0].startsWith('prank'))&&!ov)summaryPop(L);
   for(let i=jobs.length-1;i>=0;i--)if(doneKeys.has(jobs[i][0]))jobs.splice(i,1);
   const auto=jobs.find(j=>j[0]!=='bat'&&!mini.has(j[0]));if(auto&&!ov&&!busy&&!opening)auto[2]();
   if(ov&&ovKey&&!jobs.some(j=>j[0]===ovKey)&&!ovKey.startsWith('sum:')&&!ovKey.startsWith('done:'))closeOv();
@@ -97,17 +97,17 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
    catch(e){toast?.(e.message||'ลองใหม่อีกครั้ง');closeOv();}finally{busy=false;}});}
  async function prankPop(L){const key='prank:'+L.id;let me=null;opening=true;try{me=(await call({type:'status'}))?.me?.prank;}catch(e){}finally{opening=false;}
   if(me?.card&&!me.done)return targets(L,me.card,me.choices||[],me.need||0,key);
-  const o=open(key,'<div style="font-size:2.2rem">😈</div><h2>ระบบสุ่มให้คุณเป็นคนเลือกการ์ดแกล้ง</h2><p>เปิดการ์ดคว่ำ 1 ใบ ได้ใบไหนใช้ใบนั้น · บ้านที่โดนรู้แค่ว่ามาจากบ้านคุณ ไม่รู้ว่าใครเลือก</p><div class="tm"></div>'+cardsHtml(4,'pBack','c4')+'<p>ไม่เปิดใน 10 นาที ระบบเปิดและเลือกเป้าหมายให้</p>');
+  const o=open(key,'<div style="font-size:2.2rem">🎭</div><h2>ระบบสุ่มให้คุณเป็นคนเลือกการ์ดแกล้ง</h2><p>เปิดการ์ดคว่ำ 1 ใบ ได้ใบไหนใช้ใบนั้น · บ้านที่โดนรู้แค่ว่ามาจากบ้านคุณ ไม่รู้ว่าใครเลือก</p><div class="tm"></div>'+cardsHtml(4,'pBack','c4')+'<p>ไม่เปิดใน 10 นาที ระบบเปิดและเลือกเป้าหมายให้</p>');
   timer(o.querySelector('.tm'),L.until);
   o.querySelectorAll('.tw-card').forEach(c=>c.onclick=async()=>{if(busy)return;busy=true;o.querySelectorAll('.tw-card').forEach(x=>x.disabled=true);
    try{const r=await call({type:'prankFlip',i:Number(c.dataset.i)});reveal(o,r.deck,r.i,k=>PR[k][0],k=>PR[k][1]+'<small>'+PR[k][2]+'</small>');
     setTimeout(()=>{if(!o.isConnected)return;o.querySelector('.tw-pc').insertAdjacentHTML('beforeend','<h2 style="color:#FF5C7A">'+PR[r.card][1]+'</h2><div class="tw-row"><button class="tw-big red" data-n>เลือกเป้าหมาย</button></div>');o.querySelector('[data-n]').onclick=()=>targets(L,r.card,r.choices,r.need,key);},800);}
    catch(e){toast?.(e.message||'ลองใหม่อีกครั้ง');closeOv();}finally{busy=false;}});}
  function targets(L,card,choices,need,key){need=Math.min(need,choices.length);const sel=[];closeOv();
-  const o=open(key,'<h2>'+PR[card][1]+'</h2><p>'+PR[card][2]+'</p><div class="tm"></div>'+(need?'<p>เลือก '+need+' '+(card==='cut4'?'คน':'บ้าน')+' (<b class="cn">0</b>/'+need+')</p><div class="tw-pick">'+choices.map(x=>'<button data-id="'+esc(x.id)+'"><img src="'+emb(x.em)+'" alt=""><span>'+esc(x.n)+(card==='cut4'?'<small>'+esc(x.h)+'</small>':'')+'</span></button>').join('')+'</div>':'<p>บ้านที่แพ้ทุกบ้าน ทุกคนโดน −3,000,000</p>')+'<div class="tw-row"><button class="tw-big red" data-go'+(need?' disabled':'')+'>😈 ใช้การ์ด</button></div>');
+  const o=open(key,'<h2>'+PR[card][1]+'</h2><p>'+PR[card][2]+'</p><div class="tm"></div>'+(need?'<p>เลือก '+need+' '+(card==='cut4'?'คน':'บ้าน')+' (<b class="cn">0</b>/'+need+')</p><div class="tw-pick">'+choices.map(x=>'<button data-id="'+esc(x.id)+'"><img src="'+emb(x.em)+'" alt=""><span>'+esc(x.n)+(card==='cut4'?'<small>'+esc(x.h)+'</small>':'')+'</span></button>').join('')+'</div>':'<p>บ้านที่แพ้ทุกบ้าน ทุกคนโดน −3,000,000</p>')+'<div class="tw-row"><button class="tw-big red" data-go'+(need?' disabled':'')+'>🎭 ใช้การ์ด</button></div>');
   timer(o.querySelector('.tm'),L.until);const go=o.querySelector('[data-go]');
   o.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{const id=b.dataset.id,i=sel.indexOf(id);if(i>=0){sel.splice(i,1);b.classList.remove('on');}else if(sel.length<need){sel.push(id);b.classList.add('on');}o.querySelector('.cn').textContent=sel.length;go.disabled=sel.length!==need;});
-  go.onclick=async()=>{if(busy)return;busy=true;go.disabled=true;try{await call({type:'prankGo',targets:sel});doneKeys.add(key);closeOv();const d=open('done:'+key,'<div style="font-size:2.4rem">😈</div><h2>ใช้การ์ดแล้ว!</h2><p>ระบบหักให้อัตโนมัติ ทั้งคนที่อยู่และไม่อยู่ในเกม · คนโดนเห็นแจ้งเตือนตอนเข้าเกม · ไม่บอกชื่อคนเลือก</p><div class="tw-row"><button class="tw-big" data-x>ปิด</button></div>');d.querySelector('[data-x]').onclick=closeOv;}
+  go.onclick=async()=>{if(busy)return;busy=true;go.disabled=true;try{await call({type:'prankGo',targets:sel});doneKeys.add(key);closeOv();const d=open('done:'+key,'<div style="font-size:2.4rem">🎭</div><h2>ใช้การ์ดแล้ว!</h2><p>ระบบหักให้อัตโนมัติ ทั้งคนที่อยู่และไม่อยู่ในเกม · คนโดนเห็นแจ้งเตือนตอนเข้าเกม · ไม่บอกชื่อคนเลือก</p><div class="tw-row"><button class="tw-big" data-x>ปิด</button></div>');d.querySelector('[data-x]').onclick=closeOv;}
    catch(e){toast?.(e.message||'ลองใหม่อีกครั้ง');go.disabled=sel.length!==need;}finally{busy=false;}};}
  async function surprisePop(S){const key='surprise:'+S.bat;let me=null;opening=true;try{me=(await call({type:'status'}))?.me?.surprise;}catch(e){}finally{opening=false;}
   if(me?.card==='shield'&&!me.done)return shieldPick(S,key);

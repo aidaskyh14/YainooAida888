@@ -3,7 +3,7 @@
    ราคาจริงคิดที่เซิร์ฟเวอร์ทุกครั้ง หน้านี้แค่แสดง · ราคาอยู่ใน sell-price.js */
 import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
 import {PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=e1b8b556';
+import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=82a9f3af';
 const H=parent.__HOST,W=window;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Math.round(Number(n)||0).toLocaleString('en-US');
@@ -110,7 +110,7 @@ $('bagGrid').addEventListener('click',e=>{const a=e.target.closest('[data-a]'),i
 
 /* ---------- แผ่นขายทีละอย่าง ---------- */
 const bonusNote=left=>left>0?'🎁 สัตว์ขายครบทุก '+PET_BONUS_EVERY+' ตัว ได้ของแถมสุ่ม 1 อย่าง '+PET_BONUS_MIN+'–'+PET_BONUS_MAX+' ชิ้น ('+PET_BONUS.map(b=>b[1]).join(' / ')+') · วันนี้นับของแถมได้อีก '+nf(left)+' ตัว':'🎁 วันนี้รับของแถมจากการขายสัตว์ครบแล้ว (ขายต่อได้ตามปกติ)';
-const kindNote=r=>r.k==='atm-card'?'⚠️ ขายบัตรแล้วจะใช้ตู้ ATM (โอน/แลกเงิน) ไม่ได้อีก':r.kind==='wine'?'🍷 ราคา 80% ของตลาดสวน ขึ้นลงตามหุ้นไวน์':r.kind==='hw'?'🪷 ราคาร้านลอยกระทง ช่วงโคมลอยได้โบนัส':r.kind==='pet'?bonusNote(quote?quote.left:PET_BONUS_DAY):'';
+const kindNote=r=>/^atm-/.test(r.k)?'⚠️ ขายบัตรแล้วจะใช้ตู้ธนาคารนี้ (โอน/แลกเงิน) ไม่ได้อีก':r.kind==='wine'?'🍷 ราคา 80% ของตลาดสวน ขึ้นลงตามหุ้นไวน์':r.kind==='hw'?'🪷 ราคาร้านลอยกระทง ช่วงโคมลอยได้โบนัส':r.kind==='pet'?bonusNote(quote?quote.left:PET_BONUS_DAY):'';
 function itemSheet(k){const r=SELL_BY_KEY.get(k);if(!r)return;const have=haveOf(r);if(!have)return toast('ไม่มีของนี้แล้ว',1);
  let q=Math.min(have,cart.get(k)||1);const chips=[1,10,100,1000];
  show('<h4>'+pic(imgOf(r),'h')+'<span>ขาย'+esc(r.n)+'</span></h4>'+

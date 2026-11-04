@@ -1,8 +1,8 @@
-import {seeded,bkkHour} from './campaigns-engine.js?h=4c0a763a';
+import {seeded,bkkHour} from './campaigns-engine.js?h=6795f504';
 import {moleRound,moleHits,moleResult,MOLE} from './mole-engine.js?h=96f1c725';
-import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js?h=892382c6';
-import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js?h=b520a90e';
-import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js?h=0be29d27';
+import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js?h=6ca43a1f';
+import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js?h=fe3693c0';
+import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js?h=31f3aa4b';
 const fail=m=>{throw new Error(m);},choose=(r,a)=>a[Math.floor(r()*a.length)],int=(r,a,b)=>a+Math.floor(r()*(b-a+1));
 const shuffle=(r,a)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,num=n=>Math.round(n).toLocaleString('en-US');
@@ -108,7 +108,7 @@ export const feeMailItems=fee=>Object.fromEntries([['hat',fee.hat||0],['musicbox
 
 export function soloPublic(state){const out=structuredClone(state);if(out.pk?.phase==='active')delete out.pk.kind;
  for(const k of ['witch','candy'])if(out[k])for(const key of Object.keys(out[k]))if(key.startsWith('_'))delete out[k][key];return out;}
-const EXT={witch:{start:witchStart,cp:witchCheckpoint,finish:witchFinish,abandon:witchAbandon,icon:'🍃'},candy:{start:candyStart,cp:candyCheckpoint,finish:candyFinish,abandon:candyAbandon,icon:'🍭'}};
+const EXT={witch:{start:witchStart,cp:witchCheckpoint,finish:witchFinish,abandon:witchAbandon,icon:'🍃'},candy:{start:candyStart,cp:candyCheckpoint,finish:candyFinish,abandon:candyAbandon,icon:'🍮'}};
 const MAX_CP=12;
 export function soloAction(source,account,ctx,input,rng=Math.random){const state=structuredClone(source||{}),game=structuredClone(account);game.sub ||= {};const progress=game.sub.minigames ||= {cd:{},escrows:{}};progress.cd ||= {};let coins=ctx.coins;const rewards=[];const hours=bkkHour(ctx.now),nonce=ctx.nonce;
  const rules=ctx.rules||minigameRules({solo:ctx.controls||{}}),fee3=rules.fee3;
@@ -134,7 +134,7 @@ export function soloAction(source,account,ctx,input,rng=Math.random){const state
   if(state.pk?.phase==='active')return result();const fee=checkStart('pk',inHours(hours,rules.hours.pk));const angels=int(rng,5,10);state.pk={id:nonce,phase:'active',start:ctx.now,paidAt:ctx.now,fee,kind:shuffle(rng,Array.from({length:16},(_,i)=>i<angels?'angel':'devil'))};return result();
  }
  if(input.type==='pk-finish'){
-  const r=state.pk;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบจิ้มกระทงไม่ถูกต้อง');const picks=input.picks;if(!Array.isArray(picks)||picks.length!==4||new Set(picks).size!==4||picks.some(i=>!Number.isInteger(i)||i<0||i>15))fail('เลือกฟักทอง 4 ลูกที่ต่างกัน');r.picks=picks;r.angels=picks.filter(i=>r.kind[i]==='angel').length;r.phase='done';progress.cd.pk=ctx.now+MG_CD.pk*60000;const merit={4:100000,3:20000,2:0,1:-5000,0:-15000}[r.angels];
+  const r=state.pk;if(!r||r.phase!=='active'||r.id!==input.round)fail('รอบจิ้มกระทงไม่ถูกต้อง');const picks=input.picks;if(!Array.isArray(picks)||picks.length!==4||new Set(picks).size!==4||picks.some(i=>!Number.isInteger(i)||i<0||i>15))fail('เลือกกระทง 4 ลูกที่ต่างกัน');r.picks=picks;r.angels=picks.filter(i=>r.kind[i]==='angel').length;r.phase='done';progress.cd.pk=ctx.now+MG_CD.pk*60000;const merit={4:100000,3:20000,2:0,1:-5000,0:-15000}[r.angels];
   if(merit>0)reward('pk','🪷','จิ้มกระทง +'+num(merit)+' กุศล',merit);else if(r.angels===2)reward('pk','📦','รางวัลปลอบใจจิ้มกระทง',0,{'bird-box-ostrich':10,'bird-box-dodo':10});else game.merit=(game.merit||0)+merit;r.gain=merit;return result();
  }
  if(input.type==='bs-start'){

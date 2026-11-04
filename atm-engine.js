@@ -5,19 +5,35 @@
    · ค่าธรรมเนียม 12% ทุกยอด (คนโอนจ่ายเพิ่ม หายไปจากเกม)
    · โอนแล้วยกเลิกไม่ได้ · กุศลเข้าไปรษณีย์ของคนรับทันที พร้อมใบเสร็จ */
 export const ATM_MIN=1000000,ATM_MAX=100000000,ATM_PEOPLE=3,ATM_PER=5,ATM_PIN_TRIES=5,ATM_LOCK=15*60000,ATM_HIST=30;
-export const ATM_CARD='atmcard';/* bag.item.atmcard */
-export const ATM_FEE=.12,atmFeeRate=()=>ATM_FEE;
-export const atmFee=a=>Math.round(a*atmFeeRate(a));
+/* S4 ข้อ 153–155/175: 2 ธนาคาร · บัตรใครบัตรมัน ตู้ใครตู้มัน · บัตร S3 (item.atmcard) ใช้ไม่ได้แล้ว
+   · ธนาคารเด่นตามเวลา: ดอกบัวบาน 06–18 / พระจันทร์ยิ้ม 18–06 → เรทแลก +5%
+   · ✨ ชั่วโมงทอง: เซิร์ฟเวอร์สุ่ม 1 ธนาคารต่อชั่วโมง → เรทแลก +10% + ค่าธรรมเนียมโอน 10% (ปกติ 12%)
+   · ใช้ครบทุก 100 ครั้งต่อธนาคาร (โอน+แลก) → 100,000 กุศลเข้าไปรษณีย์ · โอนได้ 15 ครั้ง/วัน (รวมทุกธนาคาร กี่คนก็ได้) */
+export const BANKS={lotus:{n:'ธนาคารดอกบัวบาน',ic:'🪷',card:'atmlotus',cardName:'บัตรดอกบัวบาน',h0:6,h1:18},moon:{n:'ธนาคารพระจันทร์ยิ้ม',ic:'🌙',card:'atmmoon',cardName:'บัตรพระจันทร์ยิ้ม',h0:18,h1:6}};
+export const ATM_CARD='atmcard';/* S3 (เลิกใช้) */
+export const ATM_PER_DAY=15,ATM_BONUS_EVERY=100,ATM_BONUS=100000;
+export const ATM_FEE=.12,ATM_FEE_GOLD=.10;
+export const thaiHour=now=>new Date(now+7*3600000).getUTCHours();
+export const bankOk=b=>b==='lotus'||b==='moon';
+export const bankPrime=now=>{const h=thaiHour(now);return h>=6&&h<18?'lotus':'moon';};
+export const bankGold=now=>fxHash('atm-gold|'+fxHour(now))%2?'moon':'lotus';
+export const bankBonus=(bank,now)=>(bankPrime(now)===bank?5:0)+(bankGold(now)===bank?10:0);
+export const atmFeeRate=(bank,now)=>bankGold(now)===bank?ATM_FEE_GOLD:ATM_FEE;
+export const atmFee=(a,bank,now)=>Math.round(a*atmFeeRate(bank,now));
 export const atmDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);
-export const atmHasCard=game=>(Number(game?.bag?.item?.[ATM_CARD])||0)>0;
+export const atmHasCard=(game,bank)=>(Number(game?.bag?.item?.[BANKS[bank]?.card])||0)>0;
+export const atmUses=(priv,bank)=>Number(priv?.use?.[bank])||0;
+/* นับการใช้ตู้ (โอน/แลก) ต่อธนาคาร · คืน true เมื่อครบรอบ 100 */
+export function atmUse(priv,bank){priv.use=priv.use&&typeof priv.use==='object'?priv.use:{};priv.use[bank]=(Number(priv.use[bank])||0)+1;return priv.use[bank]%ATM_BONUS_EVERY===0;}
+export const atmSentN=(priv,now)=>{const t=atmToday(priv,now);return Object.values(t).reduce((a,b)=>a+(Number(b)||0),0);};
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 /* สถานะรายวันใน privateAtm: {day, sent:{uid:n}} */
 export function atmToday(priv,now){const d=atmDay(now);return priv?.day===d&&priv.sent&&typeof priv.sent==='object'?priv.sent:{};}
-export function atmCanSend(){return null;}/* fix24: ไม่จำกัดครั้ง/คน */
-export function atmCheckAmount(a,merit){
+export function atmCanSend(priv,to,now){return atmSentN(priv,now)>=ATM_PER_DAY?'วันนี้โอนครบ '+ATM_PER_DAY+' ครั้งแล้ว (รวมทุกธนาคาร) พรุ่งนี้โอนได้ใหม่':null;}
+export function atmCheckAmount(a,merit,bank,now){
  if(!Number.isSafeInteger(a)||a<ATM_MIN||a>ATM_MAX)fail('โอนได้ครั้งละ 1,000,000–100,000,000 กุศล');
- const fee=atmFee(a),total=a+fee;if((Number(merit)||0)<total)fail('กุศลไม่พอ (ต้องมี '+total.toLocaleString('en-US')+' รวมค่าธรรมเนียม)');
- return {fee,total,rate:atmFeeRate(a)};}
+ const fee=atmFee(a,bank,now),total=a+fee;if((Number(merit)||0)<total)fail('กุศลไม่พอ (ต้องมี '+total.toLocaleString('en-US')+' รวมค่าธรรมเนียม)');
+ return {fee,total,rate:atmFeeRate(bank,now)};}
 /* แฮช PIN (เซิร์ฟเวอร์ส่ง hash ฟังก์ชันจริงเข้ามา) */
 export function atmPinOk(pin){return typeof pin==='string'&&/^\d{4}$/.test(pin);}
 export function atmCheckPin(priv,pin,now,hash){
@@ -34,9 +50,11 @@ const fxHash=s=>{let h=2166136261>>>0;for(const c of String(s)){h^=c.codePointAt
 export const fxHour=now=>Math.floor((now+7*3600000)/3600000);
 export const fxHaunt=now=>{const h=new Date(now+7*3600000).getUTCHours();return h>=18&&h<22;};
 /* เรทเป็นหน่วย "สตางค์" (×100) เป็นจำนวนเต็ม กันทศนิยมคลาดเคลื่อน */
-export function fxRateCents(now){const hour=fxHour(now),[lo,hi]=fxHaunt(now)?[1800000,2500000]:[1300000,1800000];return lo+fxHash('atm-fx|'+hour)%(hi-lo+1);}
-export const fxRate=now=>fxRateCents(now)/100;
-export const fxPay=(n,now)=>Math.floor(n*fxRateCents(now)/100);
+export function fxBaseCents(now){const hour=fxHour(now),[lo,hi]=fxHaunt(now)?[1800000,2500000]:[1300000,1800000];return lo+fxHash('atm-fx|'+hour)%(hi-lo+1);}
+/* เรทของธนาคาร = เรทกลาง × (100+โบนัส)% (โบนัส: เด่นตามเวลา +5 · ชั่วโมงทอง +10) */
+export function fxRateCents(now,bank){const b=fxBaseCents(now);return bank?Math.round(b*(100+bankBonus(bank,now))/100):b;}
+export const fxRate=(now,bank)=>fxRateCents(now,bank)/100;
+export const fxPay=(n,now,bank)=>Math.floor(n*fxRateCents(now,bank)/100);
 export function fxToday(priv,now){return priv?.fxDay===atmDay(now)?Number(priv.fxN)||0:0;}
 export function fxCheck(n,coins,cauldron,priv,now){
  if(!Number.isSafeInteger(n)||n<1||n>FX_MAX)fail('แลกได้ครั้งละ 1–'+FX_MAX.toLocaleString('en-US')+' ชุด');

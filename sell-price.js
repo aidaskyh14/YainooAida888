@@ -2,7 +2,7 @@
    ราคาเป็นกุศลต่อชิ้น · ไวน์ = 80% ราคาตลาดสวน (ขึ้นลงตามหุ้น) · ของลอยกระทง 8 อย่าง = ราคาร้านลอยกระทงเดิม (ช่วงผีออกได้โบนัส)
    สัตว์ = ราคาเดิมจากระบบขายสัตว์ (มีของแถมทุก 100 ตัว) · ของแปรรูปอัลปาก้า = 30% ของกุศลเมนู
    💳 บัตร ATM ขายได้ใบละ 100,000,000 (ขายแล้วใช้ตู้ ATM ไม่ได้จนกว่าจะได้บัตรใหม่) */
-import {CATALOG} from './catalog.js?h=fd044428';
+import {CATALOG} from './catalog.js?h=0182268e';
 import {ALPACA_MENU} from './alpaca-menu.js?h=4c9e1f4e';
 import {PET_SELL} from './pet-sell-engine.js?h=c397ae44';
 const T=(list,p)=>Object.fromEntries(list.map(k=>[k,p]));
@@ -43,10 +43,10 @@ export const SELL_PRICE={
  'antidote-0':3200,'antidote-1':8000,'antidote-2':11500,'antidote-3':46400,
  /* 🧃 เครื่องดื่มป่า · ⚙️ ไอเทมบูสต์ */
  'drink-watermelon':500,'drink-butterflypea':800,'drink-smoothie':1200,'drink-elixir':2000,'boost-bait':1000,'boost-lens':1000,'boost-gear':1500,
- /* 😈 ไอเทมปีศาจ */
+ /* 🎭 ไอเทมปีศาจ */
  'demon-music':500,'demon-hour':1000,'demon-coffin':1500,'demon-heart':2500,
  /* 💳 บัตร ATM */
- 'atm-card':100000000};
+ 'atm-lotus':100000000,'atm-moon':100000000,'mkdiaper':2000000};
 export const SELL_NO=new Set();
 export const WINE_KEYS={'wine-moon':'moon','wine-rose':'rose','wine-blood':'blood','wine-eclipse':'eclipse'};
 export const HW_KEYS={'halloween-candy':'candy','halloween-bat':'bat','halloween-candle':'candle','halloween-web':'web','halloween-hat':'hat','halloween-broom':'broom','halloween-pumpkin':'pumpkin','halloween-cauldron':'cauldron'};

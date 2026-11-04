@@ -1,12 +1,12 @@
-/* fix14 แรลลี่ฟักทอง — หน้าเกม (แนวนอน)
+/* fix14 แรลลี่กระทง — หน้าเกม (แนวนอน)
    - ห้อง/ค่าเข้า/คะแนน/กุศล: เซิร์ฟเวอร์ (Host.cloud('funrun')) · ห้องสาธารณะ world/funrun
    - ระหว่างวิ่ง: ตัวเราจำลองในเครื่อง · เพื่อนอีก 5 คนเห็นจากตำแหน่งที่แต่ละเครื่องส่ง (funrunLive) วันละไม่กี่ครั้งต่อวินาที
    - ไอเทมที่โดนคนอื่นส่งเป็น "เหตุการณ์" แล้วเครื่องของผู้โดนเป็นคนคิดผลกับตัวเอง (โล่/ไฟกันได้ตามจริง) */
-import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix15&h=86927985';
+import {FR,FR_CHARS,buildCourse,roundScore} from './funrun-engine.js?v=ss3-fix15&h=e2d97b72';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),A='images/funrun/';
 const ME=H.uid,esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const CH=[['pig','น้ำผึ้ง'],['hedgehog','เม่นอ้วน'],['cat','แมวนางรำ'],['alpaca','อัลปาก้า'],['dog','หมาป่า'],['dodo','โดโด้']];
+const CH=[['pig','น้ำผึ้ง'],['hedgehog','เม่นอ้วน'],['cat','แมวนางรำ'],['alpaca','อัลปาก้า'],['dog','น้องหมา'],['dodo','โดโด้']];
 const CI=k=>Math.max(0,CH.findIndex(c=>c[0]===k));
 const COLORS=['#F28C28','#5BB6D4','#B07CC6','#6CC9A8','#F27E9B','#FFC94D'];
 const img=s=>{const i=new Image();i.src=A+s;return i};
@@ -33,7 +33,7 @@ $('pick').onclick=async e=>{const b=e.target.closest('[data-c]');if(!b)return;co
 $('ready').onclick=async()=>{const me=mySeat();if(room.status!=='lobby')return;if(!me)return cloud({type:'sit',c:CH[myChar][0]});if(!me.ready)return cloud({type:'ready'});};
 $('back').onclick=async()=>{const me=mySeat();if(me&&room.status==='lobby')await cloud({type:'leave'},true);goHome();};
 $('adm2').hidden=!H.admin;$('adm2').onclick=()=>$('adm').onclick();
-$('adm').onclick=()=>{if(confirm('ล้างห้องแรลลี่ฟักทอง? ถ้ากำลังแข่งจะยกเลิกและคืนค่าเข้าทางไปรษณีย์'))cloud({type:'clear'});};
+$('adm').onclick=()=>{if(confirm('ล้างห้องแรลลี่กระทง? ถ้ากำลังแข่งจะยกเลิกและคืนค่าเข้าทางไปรษณีย์'))cloud({type:'clear'});};
 function goHome(){try{parent.postMessage({go:'minigames'},location.origin);}catch(e){}}
 let lcdT=0;
 function setRoom(r){
@@ -55,7 +55,7 @@ function size(){const r=cv.getBoundingClientRect();cv.width=Math.round(r.width*D
 function off(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));return c}
 const LEN=FR.LEN,SPEED=FR.SPEED;
 const ZONES=[
- {bg:'bg-pumpkin',gr:'gr-pumpkin',surf:.33,nm:'🪷 ไร่ฟักทอง',soil:['#5A2E14','#24120A'],pit:['#B6FF6A','#5FD13A','#1F5A1C','120,255,90','230,255,200','210,255,170'],lip:['#5B4636','#7FAE3E'],pitNm:'ตกบ่อเมือก',pitC:'#9BFF6A'},
+ {bg:'bg-pumpkin',gr:'gr-pumpkin',surf:.33,nm:'🪷 ทุ่งบัวหลวง',soil:['#5A2E14','#24120A'],pit:['#B6FF6A','#5FD13A','#1F5A1C','120,255,90','230,255,200','210,255,170'],lip:['#5B4636','#7FAE3E'],pitNm:'ตกบ่อเมือก',pitC:'#9BFF6A'},
  {bg:'bg-volcano',gr:'gr-volcano',surf:.09,nm:'🌋 ภูเขาไฟ',soil:['#3A1E3C','#140A18'],pit:['#FFE07A','#FF7A1E','#8A1A0A','255,120,40','255,230,170','255,200,120'],lip:['#2E1A34','#4A2E52'],pitNm:'ตกบ่อลาวา',pitC:'#FF8A2A'},
  {bg:'bg-ice',gr:'gr-ice',surf:.04,nm:'❄️ ปราสาทน้ำแข็ง',soil:['#1E4FA8','#0C1E4A'],pit:['#E6FBFF','#6FD3FF','#1A4FA0','130,220,255','240,252,255','220,245,255'],lip:['#5C8FD0','#F2FAFF'],pitNm:'ตกบ่อน้ำแข็ง',pitC:'#9BE6FF'}];
 let round=1;const Z=()=>ZONES[Math.max(0,Math.min(2,(round||1)-1))];
@@ -93,7 +93,7 @@ function playerUse(k){if(k==='it-saw'){$('aim').hidden=false;return false}useIte
 $('use').onclick=e=>{e.stopPropagation();if(!myItem||state!=='run'||!alive(me))return;if(playerUse(myItem)){myItem=null;renderHUD()}};
 document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=e=>{e.stopPropagation();$('aim').hidden=true;if(myItem!=='it-saw'||state!=='run')return;useItem('it-saw',+b.dataset.dir);myItem=null;renderHUD();});
 const ITEMS=['it-cannon','it-roulette','it-saw','it-candyboost','it-rampage','it-phase','it-storm','it-blizzard','it-mushroom','it-batbox','it-web','it-spikes','it-shield','it-fireshield','it-magnet'];
-const INAME={'it-saw':'⚙️ จักรเหวี่ยง','it-spikes':'🌵 วางหนาม','it-rampage':'🔥 พุ่งชนไม่ยั้ง','it-cannon':'🪷 ปืนใหญ่ฟักทอง','it-roulette':'🎡 วงล้อโคมลอย','it-candyboost':'🍬 ขนมไทยพลังพิเศษ','it-phase':'🏮 ร่างโคมทะลุ','it-storm':'🌩️ พายุลมว่าว','it-blizzard':'❄️ พายุหิมะต้องมนต์','it-mushroom':'🍄 เห็ดเด้ง','it-batbox':'📦 กล่องหิ่งห้อย','it-web':'🪷 ดอกบัวไฟฟ้า','it-shield':'🫧 ฟองกันภัย','it-fireshield':'🔥 ฟองไฟฟักทอง','it-magnet':'🧲 แม่เหล็กโคมลอย'};
+const INAME={'it-saw':'⚙️ จักรเหวี่ยง','it-spikes':'🌵 วางหนาม','it-rampage':'🔥 พุ่งชนไม่ยั้ง','it-cannon':'🪷 ปืนใหญ่กระทง','it-roulette':'🎡 วงล้อโคมลอย','it-candyboost':'🍡 ขนมไทยพลังพิเศษ','it-phase':'🏮 ร่างโคมทะลุ','it-storm':'🌩️ พายุลมว่าว','it-blizzard':'❄️ พายุหิมะต้องมนต์','it-mushroom':'🍄 เห็ดเด้ง','it-batbox':'📦 กล่องหิ่งห้อย','it-web':'🪷 ดอกบัวไฟฟ้า','it-shield':'🫧 ฟองกันภัย','it-fireshield':'🔥 ฟองไฟโคมลอย','it-magnet':'🧲 แม่เหล็กโคมลอย'};
 const alive=r=>r&&!r.out&&!r.fin;
 const others=()=>[...remotes.values()].filter(alive);
 const aheadOf=x=>others().filter(o=>o.x>x).sort((a,b)=>a.x-b.x);
@@ -307,9 +307,9 @@ function showResults(title,rows,fin){
  $('game').hidden=true;$('lobby').hidden=true;$('results').hidden=false;$('rtitle').textContent=title;$('podium').hidden=!fin;$('home').hidden=!fin;
  const top=[rows[1],rows[0],rows[2]],hh=[60,86,44],cc=['#C0C7D4','#FFC94D','#E09A5A'],nn=[2,1,3];
  if(fin)$('podium').innerHTML=top.map((r,i)=>r?`<div class="pod">${i===1?'👑':''}<span class="spr big" style="background-image:url(${A}an/${esc(r.c)}-win.webp)"></span>${esc(r.name)}<div class="b" style="height:${hh[i]}px;width:66px;background:${cc[i]}">${nn[i]}</div></div>`:'').join('');
- $('rlist').innerHTML=rows.map((r,i)=>{const rw=fin?r.merit:null;return `<div class="row${r.uid===ME?' me':''}"><span>${i+1}</span><img src="${A}ch-${esc(r.c)}.webp" alt=""><div><div style="font-weight:800">${esc(r.name)}${!fin?` <small style="color:#B8601A">ด่านนี้ +${r.last}</small>`:''}</div><div class="sc"><span>⏱️ ${r.time||0}</span><span>❤️ ${r.heart||0}</span><span>🍬 ${r.got||0}</span></div></div><div style="text-align:right"><b data-v="${r.total||0}">0</b>${fin?`<div class="rw ${rw>0?'p':rw<0?'n':''}">${rw>0?'+':''}${(rw||0).toLocaleString('en-US')} 💛</div>`:''}</div></div>`;}).join('');
+ $('rlist').innerHTML=rows.map((r,i)=>{const rw=fin?r.merit:null;return `<div class="row${r.uid===ME?' me':''}"><span>${i+1}</span><img src="${A}ch-${esc(r.c)}.webp" alt=""><div><div style="font-weight:800">${esc(r.name)}${!fin?` <small style="color:#B8601A">ด่านนี้ +${r.last}</small>`:''}</div><div class="sc"><span>⏱️ ${r.time||0}</span><span>❤️ ${r.heart||0}</span><span>🪷 ${r.got||0}</span></div></div><div style="text-align:right"><b data-v="${r.total||0}">0</b>${fin?`<div class="rw ${rw>0?'p':rw<0?'n':''}">${rw>0?'+':''}${(rw||0).toLocaleString('en-US')} 💛</div>`:''}</div></div>`;}).join('');
  document.querySelectorAll('#rlist b').forEach(b=>{const v=+b.dataset.v;let k=0;const t=setInterval(()=>{k=Math.min(v,k+Math.ceil(v/25)||v);b.textContent=k;if(k>=v)clearInterval(t)},40)});
- if(fin)for(let i=0;i<24;i++){const c=document.createElement('span');c.className='conf';c.textContent=['🎉','✨','🍬','⭐','🪷'][i%5];c.style.left=Math.random()*100+'%';c.style.setProperty('--dx',(Math.random()*80-40)+'px');c.style.animationDelay=Math.random()*.6+'s';$('results').append(c);setTimeout(()=>c.remove(),3500)}
+ if(fin)for(let i=0;i<24;i++){const c=document.createElement('span');c.className='conf';c.textContent=['🎉','✨','🌸','⭐','🪷'][i%5];c.style.left=Math.random()*100+'%';c.style.setProperty('--dx',(Math.random()*80-40)+'px');c.style.animationDelay=Math.random()*.6+'s';$('results').append(c);setTimeout(()=>c.remove(),3500)}
 }
 $('home').onclick=()=>{clearInterval(rtimer);goHome();};
 /* ห้องเปลี่ยน (ทุกคนฟัง world/funrun) */

@@ -2,11 +2,11 @@ import {repairInventory,assertInventory} from './inventory-integrity.js?h=3eda51
 /* Transaction adapter shared by callable handlers and emulator tests. */
 import {splitGame,joinGame,bytes} from './save-schema.js?h=eef4832b';
 import {refillAdminInventory} from './admin-inventory.js?h=6c90d59e';
-import {CATALOG} from './catalog.js?h=fd044428';
-import {questDeltas,nbDay} from './nb-quest.js?h=57e77d71';
+import {CATALOG} from './catalog.js?h=0182268e';
+import {questDeltas,nbDay} from './nb-quest.js?h=94056e26';
 import {swimHook} from './swim-quest.js?h=c301332f';
-import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME} from './tree-engine.js?h=a57baf20';
-import {honeyMultiplier} from './campaigns-engine.js?h=4c0a763a';
+import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME} from './tree-engine.js?h=9407f14e';
+import {honeyMultiplier} from './campaigns-engine.js?h=6795f504';
 /* fix17: x17 = ข้อมูลส่วนตัวฝั่งเซิร์ฟเวอร์เล็ก ๆ บนเอกสาร players/{uid} (อ่านอยู่แล้วทุกรายการ ไม่เพิ่มการอ่าน)
    เช่น ภารกิจว่ายกลับ (sq) · เวลาจิ้มนางเงือก · ยอดเปิดกล่องมหากุศลรายวัน · ของแกล้งที่ถืออยู่ */
 const x17Of=root=>{const v=root.data().x17;return v&&typeof v==='object'&&!Array.isArray(v)?structuredClone(v):{};};
@@ -102,7 +102,7 @@ export function createCloudCore(db,timestamp) {
         let nbWrite=null;const nbId=root.data().nb;
         if(typeof nbId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(nbId)){
           let quest=questDeltas(system,beforeAction,game,input||{},result.response||{});
-          // fix15: กุศลที่ชนะจากแรลลี่ฟักทองเข้ามาทาง ledger นับเป็นเควสต์ "ได้กุศลจากมินิเกม"
+          // fix15: กุศลที่ชนะจากแรลลี่กระทงเข้ามาทาง ledger นับเป็นเควสต์ "ได้กุศลจากมินิเกม"
           const won=ledgerApplied.filter(r=>r.source==='funrun'&&r.merit>0).reduce((a,r)=>a+r.merit,0);if(won){quest ||= {};quest.mgmerit=(quest.mgmerit||0)+won;}
           if(quest){
             const nbRef=db.doc('neighborhoods/'+nbId),dayRef=db.doc('neighborhoods/'+nbId+'/days/'+nbDay(ctx.now));
@@ -133,6 +133,7 @@ export function createCloudCore(db,timestamp) {
           if(!docs[i].exists)added++;
           tx.set(refs[i],{...row,updatedAt:timestamp()});actorParts.push({id:key,part:row});
         }
+        /* S4 ข้อ 156: ขนาดส่วนเซฟปัจจุบัน (ไม่ใช่สถิติสูงสุดตลอดกาล) + ชื่อส่วนที่ใหญ่สุด */let curMax=0,curName='';for(const [k,p] of serialized){const b=bytes(p.payload);if(b>curMax){curMax=b;curName=k;}}max=curMax;
         for(const [path,data]of Object.entries(result.writes||{}))tx.set(db.doc(path),data);
         for(const [path,data]of Object.entries(result.merges||{}))tx.set(db.doc(path),data,{merge:true});
         if(nbWrite)tx.set(nbWrite[0],nbWrite[1]);
@@ -144,7 +145,7 @@ export function createCloudCore(db,timestamp) {
         const coins=result.coins??ctx.coins;
         if(!Number.isSafeInteger(coins)||coins<0)refuse('เหรียญไม่เพียงพอ');
         if((root.data().partCount||0)+added>240)refuse('ส่วนเซฟเกินขอบเขต','resource-exhausted');
-        const meta={coins,mailCount:(root.data().mailCount||0)+(result.mailDelta||0),displayMerit:game.merit||0,partCount:(root.data().partCount||0)+added,maxPartBytes:max,saveRevision:(root.data().saveRevision||0)+1,by:session,...(ledgerFlag!==undefined?{ledgerPending:ledgerFlag}:{}),...(x17Changed?{x17:JSON.parse(JSON.stringify(ctx.x17))}:{})};
+        const meta={coins,mailCount:(root.data().mailCount||0)+(result.mailDelta||0),displayMerit:game.merit||0,partCount:(root.data().partCount||0)+added,maxPartBytes:max,maxPartName:curName,saveRevision:(root.data().saveRevision||0)+1,by:session,...(ledgerFlag!==undefined?{ledgerPending:ledgerFlag}:{}),...(x17Changed?{x17:JSON.parse(JSON.stringify(ctx.x17))}:{})};
         tx.update(rootRef,meta);
         const {ledgerPending:_serverOnly,...clientMeta}=meta;clientMeta.x17=JSON.parse(JSON.stringify(ctx.x17||{}));
         const response=JSON.parse(JSON.stringify({...(result.response||{}),...(ledgerApplied.length?{ledgerApplied}:{}),actorParts,meta:clientMeta,seq,id}));

@@ -1,7 +1,11 @@
 /* ซีซัน 4: ให้ฉากซาฟารี 3D ใช้ข้อมูลนกจริงของซีซัน 3 (กติกาเดิมทุกอย่าง: อาหารต่อตัว เวลารอ ผลผลิต กุศล) */
-window.__bsync=()=>{const n={ostrich:0,dodo:0},h={ostrich:0,dodo:0},now=NOW();let dr=0;
+/* S4 ข้อ 51 🐒 ลิง: ได้จากยัยหนูเท่านั้น (item.monkey ในกระเป๋าหลัก สูงสุด 3 ตัวที่โหนซิปไลน์) · ทุก 6 ชม. ต่อตัว ได้ผ้าอ้อมลิง 1 ชิ้น (bird.mkdiaper · ขายได้ 2,000,000) · เก็บค้างได้สูงสุด 12 ชิ้น */
+const MK_EVERY=6*3600000,MK_MAX=3,MK_CAP=12;
+function mkCount(){try{const g=JSON.parse(parent.__HOST.get('s3all-v1')||'{}');return Math.min(MK_MAX,Math.max(0,(g.bag&&g.bag.item&&g.bag.item.monkey)|0));}catch(e){return 0;}}
+function mkTick(){const n=mkCount();if(!n){S.mkAt=0;return 0;}const now=NOW();if(!S.mkAt){S.mkAt=now;save();return 0;}let got=0;while(now-S.mkAt>=MK_EVERY&&(S.bag.mkdiaper||0)<MK_CAP){S.mkAt+=MK_EVERY;S.bag.mkdiaper=(S.bag.mkdiaper||0)+n;got+=n;}if((S.bag.mkdiaper||0)>=MK_CAP)S.mkAt=now;if(got)save();return got;}
+window.__bsync=()=>{const n={ostrich:0,dodo:0},h={ostrich:0,dodo:0},now=NOW();let dr=0;let mkGot=0;try{mkGot=mkTick();}catch(e){}if(mkGot){try{ann('🐒 ลิงให้ผ้าอ้อมลิง +'+mkGot+' ชิ้น (ขายได้ชิ้นละ 2,000,000)',0,4000);}catch(e){}}
  for(const p of [1,2]){for(const b of (S.pens[p]||[]).filter(alive)){n[b.sp]++;if(b.cd<=now)h[b.sp]++;}dr+=(S.drops[p]||[]).length;}
- return{birds:1,n,h,food:Object.assign({},S.food),drops:dr,merit:S.merit,cclv:Math.max(1,Math.min(3,(+S.s4cc|0)||1))};};
+ return{birds:1,n,h,food:Object.assign({},S.food),drops:dr,merit:S.merit,cclv:Math.max(1,Math.min(3,(+S.s4cc|0)||1)),mk:mkCount(),mkGot,mkNext:S.mkAt?Math.max(0,S.mkAt+MK_EVERY-NOW()):0,diapers:S.bag.mkdiaper||0};};
 window.__bfeed=k=>{const f=FOOD[k];if(!f)return{t:'feed',n:0};const now=NOW();const list=[];
  for(const p of [1,2])for(const b of (S.pens[p]||[]).filter(alive))if(b.sp===f[0]&&b.cd<=now)list.push([p,b]);
  if(!list.length)return{t:'feed',n:0,msg:'ยังไม่มีนกที่พร้อมกิน รอ ⏳ ก่อนนะ'};
@@ -27,5 +31,7 @@ let s4ccBusy=0;window.__bccup=()=>{const D=window.S4CC&&S4CC.safari,lv=Math.max(
  G.bag.forest=G.bag.forest||{};for(const r of need)if(r[0]==='f')G.bag.forest[r[1]]=s4ccHave(r,G)-r[2];
  try{__H.set(S4CCGK,JSON.stringify(G));}catch(e){return{t:'ccup',ok:0,lv,msg:(e&&e.message)||'บันทึกไม่สำเร็จ ของยังไม่เปลี่ยน'};}
  for(const r of need)if(r[0]==='b')S.bag[r[1]]=s4ccHave(r,G)-r[2];S.s4cc=nx;save();return{t:'ccup',ok:1,lv:nx};};
+/* S4 ข้อ 48/49: ไม่มีนกตัวอย่าง — นกมาจากกล่องนก/คลังนกจริงเท่านั้น */
+
 /* S4 (s4anim): หน้าเดิมซ่อนอยู่หลังฉาก 3D — หยุดภาพเคลื่อนไหว 2D ที่มองไม่เห็น (ไม่ให้แย่งเครื่องจนซาฟารีหน่วง) กติกา/ข้อมูลยังทำงานครบ */
 {const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=f=>f&&f.name==='anim'?0:raf(f);}

@@ -5,7 +5,7 @@ let API=null;/* เปิดจากกระเป๋า (เปลือก�
 const H={cloud:(sys,input)=>API?.cloud?API.cloud(sys,input):parent.__HOST.cloud(sys,input)};
 const IMG={mk:'images/mahakusal-box.webp',sheet:'images/mahakusal-open.webp'};
 const TIER={s:['🥉','มหากุศลขนาดเล็ก'],m:['🥈','มหากุศลขนาดกลาง'],l:['🥇','มหากุศลขนาดใหญ่']};
-const PAYP=[100,80,60],FAST_Q=[500,1000,1500,2000],FAST_MIN=500;
+const PAYP=[100,80,60],FAST_Q=[1,10,100,500,1000],FAST_MIN=1;/* S4 ข้อ 21: เปิดปกติตั้งแต่ 1 กล่อง ไม่มีทายรหัส */
 const BOXES=[['dog','หมา','dog-box-dog.webp'],['cat','แมว','cat-box-cat.webp'],['hamster','แฮมสเตอร์','hamster-box-hamster.webp'],['alpaca','อัลปาก้า','boxes-box-alpaca.webp'],['ostrich','นกกระจอกเทศ','boxes-box-ostrich.webp'],['dodo','โดโด้','boxes-box-dodo.webp'],['plant','พืช','boxes-box-clover.webp'],['fruit','ผลไม้','boxes-box-berry.webp']];
 const boxImg=(id,file)=>'images/'+file;
 const fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
@@ -16,7 +16,7 @@ const css=document.createElement('style');css.textContent=`
 .mk-sheet h3{margin:0 0 .15rem;font-size:1rem;text-align:center}
 .mk-hint{font-size:.66rem;color:#9A7A68;text-align:center;margin-bottom:.5rem}
 .mk-head{display:flex;align-items:center;gap:.6rem;justify-content:center;margin-bottom:.4rem}.mk-head img{width:4.2rem;filter:drop-shadow(0 0 10px rgba(255,200,60,.8))}.mk-head b{font-size:1.3rem;color:#B9761F;font-variant-numeric:tabular-nums}
-.mk-mode{display:grid;grid-template-columns:2.6rem 1fr;align-items:center;gap:.55rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.5rem .65rem;margin-bottom:.4rem;text-align:left;font:inherit;color:inherit}
+.mk-mode[hidden],.mk-tog[hidden]{display:none!important}.mk-mode{display:grid;grid-template-columns:2.6rem 1fr;align-items:center;gap:.55rem;width:100%;border:2px solid #F3E9DE;background:#fff;border-radius:1rem;padding:.5rem .65rem;margin-bottom:.4rem;text-align:left;font:inherit;color:inherit}
 .mk-mode .e{font-size:1.8rem;text-align:center}.mk-mode b{font-size:.88rem;display:block}.mk-mode small{font-size:.64rem;color:#9A7A68;font-weight:600;display:block}
 .mk-mode.fast{border-color:#FFE08A;background:linear-gradient(100deg,#fff 40%,#FFF7DA)}
 #mkPlay{position:relative;overflow:hidden;cursor:pointer;border:3px solid #fff;background:linear-gradient(135deg,#FFE58A,#F2A23A 55%,#E08A1E);box-shadow:0 0 0 2px #F2B33D,0 0 22px rgba(255,190,50,.85),0 6px 0 #B9761F;padding:.75rem .8rem;margin-bottom:.6rem;animation:mkpl 2s ease-in-out infinite}
@@ -95,16 +95,16 @@ function burst(n){const r=body.getBoundingClientRect(),cx=innerWidth/2,cy=r.top+
   p.animate([{transform:'translate(-50%,-50%) rotate(0)',opacity:1},{transform:'translate('+(Math.cos(a)*v)+'px,'+(Math.sin(a)*v+120)+'px) rotate('+(Math.random()*540)+'deg)',opacity:0}],{duration:1400+Math.random()*600,easing:'cubic-bezier(.2,.6,.4,1)'}).onfinish=()=>p.remove();}}
 function playSheet(el,done,speed){let f=0;rays.classList.add('hot');const tm=setInterval(()=>{el.style.backgroundPosition=((f%4)*100/3)+'% '+(Math.floor(f/4)*100/3)+'%';if(f===8)burst(26);if(++f>=16){clearInterval(tm);done&&done();}},speed||85);}
 /* ---------- เมนูเปิดกล่อง ---------- */
-let fq=500,keepL=false;
+let fq='max',keepL=false;
 async function openMenu(){if(!V){openSheet('<div class="mk-hint">กำลังโหลด…</div>');const o=await call({type:'status'});if(!o){closeSheet();done();return;}}
   const have=V.have||0,left=V.left??0,n=Math.min(have,left),q=[...FAST_Q,'max'];
   if(have&&!left){openSheet('<div class="mk-head"><img src="'+IMG.mk+'" alt=""><div><h3 style="margin:0">กล่องสุ่มมหากุศล</h3><b>'+fmt(have)+'</b> กล่อง</div></div><div class="mk-mode" style="grid-template-columns:2.6rem 1fr"><span class="e">🌙</span><div><b>วันนี้เปิดครบแล้ว</b><small>กลับมาเปิดต่อได้หลังเที่ยงคืน</small></div></div>'+(V.kept?keptBtn():''));bindKept();return;}
   const fqOk=v=>v==='max'?n>=FAST_MIN:n>=v&&have>=FAST_MIN;
   openSheet('<div class="mk-head"><img src="'+IMG.mk+'" alt=""><div><h3 style="margin:0">กล่องสุ่มมหากุศล</h3><b>'+fmt(have)+'</b> กล่อง</div></div>'
-   +'<button class="mk-mode" id="mkPlay" '+((n||V.cur)?'':'disabled')+'><span class="tag">⭐ ได้มากกว่า</span><span class="e">🔐</span><div><b>'+(V.cur?'เล่นกล่องที่เปิดค้างไว้':'เปิดลุ้นรหัส')+'</b><small>ทายรหัส 4 หลัก ได้ 3 ครั้ง · ทายถูกได้เต็มก้อน · ทายผิดก็ยังได้มากกว่าเปิดด่วน</small></div></button>'
-   +'<div class="mk-mode fast"><span class="e">⚡</span><div><b>เปิดด่วน · ไม่ต้องทาย</b><small>เปิดทีละ 500 กล่องขึ้นไป รับกุศลรวดเดียว</small><div class="mk-qty">'+q.map(v=>'<button data-q="'+v+'" class="'+(v===fq?'on':'')+'" '+(fqOk(v)?'':'disabled')+'>'+(v==='max'?'ทั้งหมด':'×'+fmt(v))+'</button>').join('')+'</div>'
-   +'<div class="mk-tog'+(keepL?' on':'')+'" id="mkKeep" role="switch" aria-checked="'+keepL+'" tabindex="0"><i></i>🥇 เก็บกล่องใหญ่ไว้ทายเอง</div></div></div>'
-   +'<div class="mk-row"><button class="mk-big blue" id="mkFast" '+(fqOk(fq)?'':'disabled')+'>⚡ เปิดด่วน '+(fq==='max'?'ทั้งหมด':'×'+fmt(fq))+'</button></div>'+(have<FAST_MIN?'<div class="mk-fine">เปิดด่วนได้เมื่อมีตั้งแต่ 500 กล่อง</div>':'')+(V.kept?keptBtn():'')
+   +'<button class="mk-mode" id="mkPlay" '+(V.cur?'':'hidden')+'><span class="tag">⭐ กล่องค้าง</span><span class="e">🔐</span><div><b>เล่นกล่องที่เปิดค้างไว้</b><small>กล่องเก่าที่ค้างจากระบบทายรหัส เล่นให้จบได้</small></div></button>'
+   +'<div class="mk-mode fast"><span class="e">⚡</span><div><b>เปิดกล่อง</b><small>เลือกจำนวนแล้วรับกุศลรวดเดียว (กล่องใหญ่จ่ายเต็มก้อน)</small><div class="mk-qty">'+q.map(v=>'<button data-q="'+v+'" class="'+(v===fq?'on':'')+'" '+(fqOk(v)?'':'disabled')+'>'+(v==='max'?'ทั้งหมด':'×'+fmt(v))+'</button>').join('')+'</div>'
+   +'<div class="mk-tog" id="mkKeep" hidden><i></i></div></div></div>'
+   +'<div class="mk-row"><button class="mk-big blue" id="mkFast" '+(fqOk(fq)?'':'disabled')+'>📦 เปิด '+(fq==='max'?'ทั้งหมด':'×'+fmt(fq))+'</button></div>'+(V.kept?keptBtn():'')
    +(have?'':'<div class="mk-fine">ได้จากนางในวรรณคดีตัวจริง · ท็อป 5 ตกปลา · ตกปลา (หายาก) · คราฟในห้องใต้ดิน</div>'));
   sheet.querySelector('#mkPlay').onclick=()=>{closeSheet();playNext();};
   sheet.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fq=b.dataset.q==='max'?'max':+b.dataset.q;openMenu();});

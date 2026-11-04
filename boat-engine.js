@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=fd044428';
+import {CATALOG} from './catalog.js?h=0182268e';
 import {rainLogic,rainScore,RAIN_MS,RAIN_WARN,RAIN_LEVELS,RAIN_SETTLE,RAIN_LATE,RAIN_TEAM_MIN,RAIN_TEAM_POS,RAIN_TEAM_BACK,RAIN_ANCHOR_BACK,RAIN_PLUS_CAP} from './rain-engine.js?h=2e082531';
 /* กติกาเรือเป็นฟังก์ชันล้วน: ใช้กับ transaction บนคลาวด์ ไม่สร้างผู้เล่นจำลอง */
 /* fix17: กล่องการ์ดทุก 30 (30…330) + เส้น 350 เดิม · พักส่ง 7 นาที · โล่กันเตะ 30 นาที · เตะย้อนศร · ว่ายกลับเรือ · นางในวรรณคดี 2 ตนแข่งส่งถาด · ฝนกุศล */

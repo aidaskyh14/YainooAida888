@@ -115,7 +115,7 @@ function normReport(rep){
 const hitTotal=h=>OBS.reduce((a,k)=>a+(h[k]|0),0);
 /* Throws a Thai Error when the stats cannot come from a real run of this round. */
 function checkPlausible(round,s,now){
-  if(!round||typeof round.seed!=='string'||!Number.isFinite(round.startedAt))fail('รอบแม่มดซิ่งไม่ถูกต้อง');
+  if(!round||typeof round.seed!=='string'||!Number.isFinite(round.startedAt))fail('รอบน้ำผึ้งซิ่งไม่ถูกต้อง');
   const elapsed=(now-round.startedAt)/1000;
   if(s.t>elapsed+WITCH.SLACK_S)fail('เวลาในเกมมากกว่าเวลาจริง');
   if(s.d>witchDistMax(s.t)*1.01+25)fail('ระยะทางไกลเกินกว่าที่บินได้ในเวลานี้');

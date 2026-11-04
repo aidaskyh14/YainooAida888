@@ -41,7 +41,7 @@ function rules(){const s=sheet(`<h2>กติกา</h2><div class="rules">
  <div class="rule"><span class="e">🔨</span><div><b>แตะตุ่นเพื่อตี</b><span>60 วินาที ยิ่งท้ายยิ่งเร็ว</span></div></div>
  <div class="rule"><span class="e">🎯</span><div><b>ถึงเป้า +75,000</b><span>แต้มรวมต้องถึงเป้า</span></div></div>
  <div class="rule"><span class="e">✨</span><div><b>ตุ่นทอง ${R?.goldTotal||7} ตัว</b><span>ตีได้ 6 ตัว + ถึงเป้า = โบนัส +50,000</span></div></div>
- <div class="rule"><span class="e">☠️</span><div><b>ตุ่นต้องสาป</b><span>ตีโดนแล้วแต้มลด</span></div></div>
+ <div class="rule"><span class="e">💥</span><div><b>ตุ่นตัวซวย</b><span>ตีโดนแล้วแต้มลด</span></div></div>
  <div class="rule"><span class="e">😮</span><div><b>เกือบถึง (80%)</b><span>ไม่ได้ ไม่เสีย</span></div></div>
  <div class="rule"><span class="e">💔</span><div><b>ต่ำกว่านั้น</b><span>เสีย 15,000 กุศล</span></div></div>
  <div class="rule wide"><span class="e">🎲</span><div><b>ค่าตุ่นและเป้าสุ่มใหม่ทุกรอบ</b><span>ดูค่าบนการ์ดก่อนกดเริ่ม · ${api.feeText?api.feeText():'🪙 '+cost()+' เหรียญ'} · พัก ${api.cdMin?api.cdMin():15} นาที</span></div></div></div><button class="close">เข้าใจแล้ว</button>`);s.querySelector('.close').onclick=()=>s.remove();}
@@ -77,7 +77,7 @@ function hitMole(m,now){m.hit=true;G.done.add(m.p.i);G.queue.push({i:m.p.i,t:Mat
  const v=R.values[m.type],role=R.roles[m.type],hx=m.h.x,hy=m.h.y-moleW()*.55;G.score+=v;
  m.el.classList.remove('idle');m.el.classList.add('hit');const sp=m.el.firstChild;let f=0;const iv=setInterval(()=>{f++;if(f>11){clearInterval(iv);m.el.classList.add('sink');m.el.classList.remove('up');return;}sp.style.backgroundPosition=`${(f%4)*100/3}% ${Math.floor(f/4)*50}%`;},45);
  retire(m,true);ring(hx,m.h.y-H*.01);
- if(role==='cursed'){G.combo=0;snd('curse');shake();vign('radial-gradient(ellipse at center,transparent 45%,rgba(150,20,80,.6))');burst(hx,hy,['#4a2a63','#7d4aa8','#2a1638'],14,true);popText(hx,hy,fmt(v),'#ffb3c4',false);call('☠️ ตุ่นต้องสาป!','#ffb3c4');}
+ if(role==='cursed'){G.combo=0;snd('curse');shake();vign('radial-gradient(ellipse at center,transparent 45%,rgba(150,20,80,.6))');burst(hx,hy,['#4a2a63','#7d4aa8','#2a1638'],14,true);popText(hx,hy,fmt(v),'#ffb3c4',false);call('💥 ตุ่นตัวซวย!','#ffb3c4');}
  else{G.combo=now-G.last<1300?G.combo+1:1;G.last=now;
   if(role==='gold'){G.golds++;snd('gold');shake();vign('radial-gradient(ellipse at center,rgba(255,220,120,.35),transparent 70%)');burst(hx,hy,['#ffe07a','#ffc93c','#fff6cf','#ffffff'],26,false);stars(hx,hy,8);popText(hx,hy,fmt(v),'var(--gold)',true);
    if(G.golds===R0.GOLD_NEED){$('#gb').classList.add('ok');call('✨ ครบเงื่อนไขโบนัส!','var(--gold)');}else call('✨ ตุ่นทอง!','var(--gold)');}

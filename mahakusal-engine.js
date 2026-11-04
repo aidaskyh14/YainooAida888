@@ -5,7 +5,7 @@
    คราฟ: กล่องสุ่ม 8 ชนิด อย่างละ 3 → 1–4 กล่อง (40/30/20/10%) */
 import {BOXES,getBoxCount} from './loot-box-catalog.js?h=5f019114';
 export const MK_TIERS=[{k:'s',w:50,min:1,max:9999,miss:900,fast:450},{k:'m',w:35,min:10000,max:59999,miss:3000,fast:1500},{k:'l',w:15,min:60000,max:100000,miss:7000,fast:3500}];
-export const MK_PAY=[1,.8,.6],MK_FAST_MIN=500,MK_FAST_Q=[500,1000,1500,2000],MK_DAY_MAX=30000,MK_HALF_AFTER=10000,MK_LUCKY_FIRST=10;
+/* S4 ข้อ 21: ตัดระบบทายรหัส → เปิดปกติ (fast) ตั้งแต่ 1 กล่อง · จำนวนที่เลือกได้ 1/10/100/500/1000/ทั้งหมด */export const MK_PAY=[1,.8,.6],MK_FAST_MIN=1,MK_FAST_Q=[1,10,100,500,1000,1500,2000],MK_DAY_MAX=30000,MK_HALF_AFTER=10000,MK_LUCKY_FIRST=10;
 export const MK_HINT=[.4,.2],MK_CRAFT_W=[[1,40],[2,30],[3,20],[4,10]],MK_CRAFT_EACH=3,MK_CRAFT_MAX=1000;
 export const MK_FISH_DROP=.004;/* ตกปลาได้ (ต่อครั้งที่ได้ปลา) — ซ่อน อยู่ฝั่งคลาวด์เท่านั้น */
 export const MK_BOXES=['dog','cat','hamster','alpaca','ostrich','dodo','plant','fruit'];
@@ -55,7 +55,7 @@ export function mahakusalAction(game,x17,input,now,rng){
     if(rng()<b.hp){const k=ri(rng,0,3);row.b=rng()<.5?{pos:k,d:b.code[k]}:{has:b.code[k]};}
     b.hist.push(row);return {box:mkPublic(b),view:mkView(game,x17,now,rng)};}
   if(type==='fast'){const have=mkHave(game),left=mkLeft(s);let n=input.n==='max'?Math.min(have,left):Number(input.n);
-    if(input.n!=='max'&&!MK_FAST_Q.includes(n))fail('เลือกจำนวนกล่อง');if(have<MK_FAST_MIN)fail('เปิดด่วนได้เมื่อมีตั้งแต่ 500 กล่อง');
+    if(input.n!=='max'&&!MK_FAST_Q.includes(n))fail('เลือกจำนวนกล่อง');if(have<MK_FAST_MIN)fail('ยังไม่มีกล่อง');
     if(!left)fail('🌙 วันนี้เปิดครบแล้ว กลับมาเปิดต่อได้หลังเที่ยงคืน');n=Math.min(n,have,left);if(n<1)fail('กล่องไม่พอ');
     const cnt={s:0,m:0,l:0};let total=0,kept=0,lucky=0;
     for(let i=0;i<n;i++){const b=newBox(s,rng);if(input.keep===true&&b.t==='l'){s.pl++;kept++;continue;}cnt[b.t]++;

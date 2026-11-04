@@ -2,7 +2,7 @@
    ข่าวดี: กดรับใน 10 นาทีได้กุศล · กด ✕ หรือไม่รับในเวลา = ไม่ได้อะไร
    ข่าวร้าย: 10 นาที · "ข่าวมั่ว!" จ่ายของตามรายการ (ไม่เสียกุศล) · "ยอมรับ" หรือไม่ตอบ/ไม่อยู่ในเกม = หักกุศล (ติดลบได้)
    ของที่ไม่ได้ระบุชนิด คละได้ (หักจากกองที่มากที่สุดก่อน) · "ชนิดเดียว" เลือก 1 ชนิด · ผลไม้ = 4 ชนิดของฟาร์ม 4 */
-import {CATALOG} from './catalog.js?h=fd044428';
+import {CATALOG} from './catalog.js?h=0182268e';
 export const RUMOR_TIME=10*60000,RUMOR_GRACE=20000;
 export const RUMOR_GOOD=[
 ['ระบบ ได้เห็นความตั้งใจของคุณในการเป็นชาวสวนที่ดี   เพาะปลูก อย่างสม่ำเสมอ  ทำดีมากค่ะ',3000],
@@ -67,10 +67,12 @@ export function rumorPlan(game,coins,needs,picks={}){
  const sum={};for(const [p,q]of take)sum[p]=(sum[p]||0)+q;for(const [p,q]of Object.entries(sum))if(get(game,p)<q)fail(rumorName(p)+' ไม่พอ');
  return {take,coins:coinNeed};
 }
+/* S4 ข้อ 173: ข่าวที่แอดมินพิมพ์เอง cur.c={t,n} → ข่าวดี [t,n] · ข่าวร้าย [t,n,needs ของข่าวร้าย #1] */
+export const rumorRow=cur=>{if(cur&&cur.c&&typeof cur.c.t==='string'){const n=Math.max(1,Math.min(1000000000,Math.round(+cur.c.n||0)));return cur.k==='G'?[cur.c.t,n]:[cur.c.t,n,(RUMOR_BAD[0]||[])[2]||[]];}return cur.k==='G'?RUMOR_GOOD[cur.i]:RUMOR_BAD[cur.i];};
 export function rumorAction(state,account,ctx,input){
  const s=structuredClone(state||{}),game=structuredClone(account),cur=s.cur,now=ctx.now;let coins=ctx.coins||0;
  if(!cur||cur.res)fail('ไม่มีข่าวลือที่รออยู่');
- const good=cur.k==='G',row=good?RUMOR_GOOD[cur.i]:RUMOR_BAD[cur.i];if(!row)fail('ข่าวลือไม่ถูกต้อง');
+ const good=cur.k==='G',row=rumorRow(cur);if(!row)fail('ข่าวลือไม่ถูกต้อง');
  const late=now>cur.until+RUMOR_GRACE,type=input.type;let res,result={};
  if(good){
   if(type==='claim'&&!late){game.merit=(Number(game.merit)||0)+row[1];res='ok';result.merit=row[1];}

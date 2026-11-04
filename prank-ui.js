@@ -1,7 +1,7 @@
 /* fix15 หน้าสวน: เยี่ยมสวนเพื่อนเห็นผักจริง + ระบบแกล้งเพื่อน (ค้างคาว ป้ายแซว แกล้งแปลง หุ่นไล่กา)
    ใช้ตัวแปรของหน้าสวน (S, farm, visiting, IMG, CN, P1, P2, W, H, box, toast, $, open, closeAll, render, plotEls, tapPlot, friendPlot)
    คำสั่งที่เปลี่ยนข้อมูลส่งผ่านคลาวด์ทั้งหมด (window.cloudFriend / window.cloudFarm จาก farm-cloud.js) */
-import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix23&h=36d7a6a7';
+import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix23&h=5e199672';
 import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23&h=92e78b5b';
 const HWI=k=>'images/halloween-hw-'+k+'.webp';
 const PIMG=k=>'images/'+PRANKS[k].img+'.webp';
@@ -39,7 +39,7 @@ const css=document.createElement('style');css.textContent=`
 #pkSheet .row2{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem}
 #pkSheet .lbl{font-size:.74rem;color:#8A6AA8;font-weight:700;margin:.35rem 0 .3rem}
 #pkSheet .pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem}
-/* fix17 😈 ไอเทมปีศาจในฉากสวน */
+/* fix17 🎭 ไอเทมปีศาจในฉากสวน */
 .dmobj{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:4}
 .dmhg{width:17%}.dmhg img{position:relative;z-index:2;width:100%;display:block;filter:drop-shadow(0 0 .8em rgba(255,40,80,.95)) drop-shadow(0 8px 6px rgba(0,0,0,.4));animation:dmsway 3s ease-in-out infinite}
 @keyframes dmsway{50%{transform:rotate(2deg) translateY(-2%)}}
@@ -123,9 +123,9 @@ function pkOpen(html){closeAll();sheetEl.innerHTML=html;open('pkSheet');sheetEl.
 const hw=k=>Number(S.bag?.halloween?.[k])||0;
 /* ---------- ระยะเวลาของแปลง (ใช้สูตรเดียวกับหน้าสวน) ---------- */
 const left=ms=>{const m=Math.max(0,Math.ceil(ms/60000));return m>=60?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':m+' นาที';};
-function plotInfo(p){if(!p)return {st:0,txt:'แปลงว่าง'};if(p.pk)return {st:Math.max(1,pstage(p)||1),txt:'😈 โดน'+PRANKS[p.pk.k].n+' · หยุดโต'};
+function plotInfo(p){if(!p)return {st:0,txt:'แปลงว่าง'};if(p.pk)return {st:Math.max(1,pstage(p)||1),txt:'🎭 โดน'+PRANKS[p.pk.k].n+' · หยุดโต'};
  const st=pstage(p),now=Date.now();let txt='';
- if(p.magicUntil>now)txt='🔮 มนต์ดำเหลือ '+left(p.magicUntil-now);
+ if(p.magicUntil>now)txt='🌙 มนต์จันทร์เหลือ '+left(p.magicUntil-now);
  else if(p.ph==='ready')txt='✨ สุกแล้ว';
  else if(p.ph==='water')txt='💧 รอรดน้ำ';
  else if(p.ph==='worm')txt='🪱 มีหนอน';
@@ -140,49 +140,53 @@ window.renderFriendPlots=function(s,list){const plots=window.friendFarm?.plots||
    d.querySelector('.pl').innerHTML='<img class="s'+st+'" src="'+srcOf(p,st)+'" alt="">';if(ready){d.classList.add('ready');d.insertAdjacentHTML('beforeend','<span class="pkspark">✨</span>');}
    const bt=p.ph==='water'?'💧':p.ph==='worm'?'🪱':'';const bd=d.querySelector('.badge');if(bt&&!p.pk){bd.textContent=bt;bd.style.display='grid';}
    if(p.angel)d.insertAdjacentHTML('beforeend','<span class="wing">😇</span>');
-   if(magic)d.insertAdjacentHTML('beforeend','<div class="pkmagic">🔮</div>');
+   if(magic)d.insertAdjacentHTML('beforeend','<div class="pkmagic">🌙</div>');
    if(p.pk)d.insertAdjacentHTML('beforeend','<div class="pkover"><img src="'+PIMG(p.pk.k)+'" alt=""></div>');
    const sh=(p.ph==='g1'||p.ph==='g2')&&!p.pk;if(sh){const b=d.querySelector('.bar');b.style.display='block';b.firstChild.style.width=Math.min(100,pprog(p))+'%';}}
   s.appendChild(d);plotEls.push(d);});};
-/* แตะแปลงเพื่อน: ชื่อผักจริง เวลาที่เหลือ + ขโมย/รดน้ำ/หนอน/มนต์ดำ + แกล้งแปลง */
+/* แตะแปลงเพื่อน: ชื่อผักจริง เวลาที่เหลือ + ขโมย/รดน้ำ/หนอน/มนต์จันทร์ + แกล้งแปลง */
 const prankCost=k=>{const [it,q]=PRANKS[k].pay;return '<span class="cost"><img src="'+HWI(it)+'" alt="">'+q+' <small style="font-weight:600;color:#9A7A68">(มี '+hw(it)+')</small></span>';};
 const canPay=k=>{const [it,q]=PRANKS[k].pay;return hw(it)>=q;};
 const scareOn=()=>(window.friendFarm?.prankState?.scareUntil||0)>Date.now();
 const myPranks=()=>{const q=window.friendFarm?.quota||{},d=new Date(Date.now()+7*3600e3).toISOString().slice(0,10);return q.pday===d?Number(q.pranks)||0:0;};
 friendPlot=function(i){const p=window.friendFarm?.plots?.[i];if(!p||!p.c)return toast('แปลงว่าง');
  const {st,txt}=plotInfo(p),now=Date.now(),magic=p.magicUntil>now,ready=p.ph==='ready'&&!p.pk&&!magic,mine=myPranks();
- const acts=[];if(!p.pk&&!magic){if(ready&&!p.angel)acts.push(['🧤 ขโมย','steal',1]);if(p.ph==='water')acts.push(['💧 รดน้ำ','water',0]);if(p.ph==='worm')acts.push(['🪱 กำจัดหนอน','worm',0]);if(!p.angel)acts.push(['🔮 มนต์ดำ 3 ชม.','magic',0]);}
- const lock=scareOn()?'🛡️ หุ่นไล่กาเฝ้าสวนนี้อยู่':p.pk?'แปลงนี้โดนแกล้งอยู่แล้ว':magic?'แปลงมีมนต์ดำอยู่':mine>=PRANK_DAY?'วันนี้แกล้งครบ '+PRANK_DAY+' ครั้งแล้ว':'';
+ const acts=[];if(!p.pk&&!magic){if(ready&&!p.angel)acts.push(['🧤 ขโมย','steal',1]);if(p.ph==='water')acts.push(['💧 รดน้ำ','water',0]);if(p.ph==='worm')acts.push(['🪱 กำจัดหนอน','worm',0]);if(!p.angel)acts.push(['🌙 มนต์จันทร์ 3 ชม.','magic',0]);}
+ const lock=scareOn()?'🛡️ หุ่นไล่กาเฝ้าสวนนี้อยู่':p.pk?'แปลงนี้โดนแกล้งอยู่แล้ว':magic?'แปลงมีมนต์จันทร์อยู่':mine>=PRANK_DAY?'วันนี้แกล้งครบ '+PRANK_DAY+' ครั้งแล้ว':'';
  pkOpen('<div class="ph"><img src="'+(p.pk?PIMG(p.pk.k):srcOf(p,st))+'" alt=""><div><b>'+esc(CN[p.c]||p.c)+' · แปลง '+(i+1)+'</b><small>'+txt+(p.angel?' · 😇 นางฟ้าปกป้อง':'')+'</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +(acts.length?'<div class="row2">'+acts.map(([l,t,main])=>'<button class="act'+(main?' gold':'')+'" data-a="'+t+'">'+l+'</button>').join('')+'</div>':'')
-  +'<div class="lbl">😈 แกล้งแปลงนี้ · ไม่บอกชื่อคนแกล้ง · วันนี้ '+mine+'/'+PRANK_DAY+'</div>'+(lock?'<div class="note">'+lock+'</div>':'')
+  +'<div class="lbl">🎭 แกล้งแปลงนี้ · ไม่บอกชื่อคนแกล้ง · วันนี้ '+mine+'/'+PRANK_DAY+'</div>'+(lock?'<div class="note">'+lock+'</div>':'')
   +'<div class="pgrid">'+Object.entries(PRANKS).filter(([,v])=>v.plot).map(([k,v])=>'<button class="pcard" data-k="'+k+'" '+(lock||!canPay(k)?'disabled':'')+'><img src="'+PIMG(k)+'" alt=""><div><b>'+v.n+'</b><small>'+v.desc+'</small>'+prankCost(k)+'</div></button>').join('')+'</div>');
  sheetEl.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{closeAll();window.cloudFriend(b.dataset.a,{index:i});});
- sheetEl.querySelectorAll('[data-k]').forEach(b=>b.onclick=async()=>{const k=b.dataset.k;closeAll();const out=await window.cloudFriend('prank',{prank:k,index:i});if(out?.prank)toast('😈 '+PRANKS[k].n+'แล้ว! เจ้าของสวนจะเห็นแค่ว่า "ใครสักคน"');});};
+ sheetEl.querySelectorAll('[data-k]').forEach(b=>b.onclick=async()=>{const k=b.dataset.k;closeAll();const out=await window.cloudFriend('prank',{prank:k,index:i});if(out?.prank)toast('🎭 '+PRANKS[k].n+'แล้ว! เจ้าของสวนจะเห็นแค่ว่า "ใครสักคน"');});};
 function gardenPrank(k){const st=window.friendFarm?.prankState||{},mine=myPranks(),P=PRANKS[k];
  const full=k==='bat'?st.bat:(st.signs||0)>=SIGN_MAX,lock=scareOn()?'🛡️ หุ่นไล่กาเฝ้าสวนนี้อยู่':mine>=PRANK_DAY?'วันนี้แกล้งครบ '+PRANK_DAY+' ครั้งแล้ว':full?(k==='bat'?'สวนนี้มีหิ่งห้อยอยู่แล้ว':'สวนนี้มีป้ายครบ '+SIGN_MAX+' ป้ายแล้ว'):!canPay(k)?HW_NAMES[P.pay[0]]+'ไม่พอ':'';
  pkOpen('<div class="ph"><img src="'+PIMG(k)+'" alt=""><div><b>'+P.n+'</b><small>'+P.desc+' · แกล้งทั้งสวน · วันนี้ '+mine+'/'+PRANK_DAY+'</small></div><button class="x" data-x aria-label="ปิด">✕</button></div><div class="lbl">จ่าย '+prankCost(k)+'</div>'+(lock?'<div class="note">'+lock+'</div>':'')
   +(k==='sign'?'<div class="lbl">🪧 เลือกข้อความบนป้าย · ในสวนนี้ '+(st.signs||0)+'/'+SIGN_MAX+'</div><div class="msgs">'+PRANK_MSGS.map((m,j)=>'<button data-m="'+j+'" '+(lock?'disabled':'')+'>'+esc(m)+'</button>').join('')+'</div>'
-   :'<button class="act gold" id="pkGo" style="width:100%" '+(lock?'disabled':'')+'>😈 ปล่อยหิ่งห้อย!</button>'));
+   :'<button class="act gold" id="pkGo" style="width:100%" '+(lock?'disabled':'')+'>✨ ปล่อยหิ่งห้อย!</button>'));
  sheetEl.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{closeAll();const out=await window.cloudFriend('prank',{prank:'sign',msg:+b.dataset.m});if(out?.prank)toast('🪧 ปักป้ายแล้ว! เจ้าของสวนจะเห็นแค่ว่า "ใครสักคน"');});
  sheetEl.querySelector('#pkGo')?.addEventListener('click',async()=>{closeAll();const out=await window.cloudFriend('prank',{prank:'bat'});if(out?.prank)toast('✨ ปล่อยหิ่งห้อยแล้ว! สวนมืดครึ้ม');});}
 /* ---------- เจ้าของสวน: แก้การแกล้ง ---------- */
 const myPrank=()=>S.sub?.prank||{};
 function fixSheet(kind,opt={}){const k=kind==='plot'?opt.k:kind,P=PRANKS[k],n=opt.n||1,merit=P.merit*n,broom=P.broom*n,have=hw('broom'),after=(Number(S.merit)||0)-merit;
  const title=kind==='sign'?'ป้ายแซว '+n+' ป้าย':kind==='plot'&&n>1?P.n+' '+n+' แปลง':P.n;
- pkOpen('<div class="ph"><img src="'+PIMG(k)+'" alt=""><div><b>😈 ใครสักคน'+title+'!</b><small>'+(n>1?'ราคาคิดต่อ'+(kind==='sign'?'ป้าย':'แปลง')+' · ':'')+'เลือกวิธีแก้ 1 อย่าง</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+ pkOpen('<div class="ph"><img src="'+PIMG(k)+'" alt=""><div><b>🎭 ใครสักคน'+title+'!</b><small>'+(n>1?'ราคาคิดต่อ'+(kind==='sign'?'ป้าย':'แปลง')+' · ':'')+'เลือกวิธีแก้ 1 อย่าง</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +'<button class="pay m" data-h="merit"><span class="ico">🙏</span><div><b>จ่าย '+fmtN(merit)+' กุศล</b><small>หลังจ่ายเหลือ '+fmtN(after)+(after<0?' · ติดลบได้':'')+'</small></div></button>'
   +'<button class="pay b" data-h="broom"><img src="'+HWI('broom')+'" alt=""><div><b>ใช้ใบตองทอง '+broom+' อัน</b><small>มี '+have+' อัน · หรือใช้ของแทน '+fmtN(broom*ALT_X)+' ชิ้น (สากกะเบือ มะพร้าว เค้ก ฯลฯ)</small></div></button>'
   +'<div class="note">เพื่อนช่วยแก้ไม่ได้ · ต้องแก้เอง</div>');
  sheetEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const how=b.dataset.h;let alt=null;if(how==='broom'){alt=await altPick(document,{n:broom,broom:have,game:S,title:'🍃 แก้การแกล้ง'});if(!alt)return;}closeAll();const out=await window.cloudFarm('prank-fix',{kind,how,alt,...opt.input});if(out&&out.prank){sweep(opt.rect);toast('🍃 แก้เรียบร้อย! '+(how==='merit'?'จ่าย '+fmtN(out.prank.merit)+' กุศล':out.prank.items?'จ่ายแทนใบตองทอง: '+altText(out.prank.items):'ใช้ใบตองทอง '+out.prank.broom+' อัน'));}});}
 function sweep(rect){const im=document.createElement('img');im.className='pksweep';im.src=HWI('broom');im.alt='';const r=rect||{left:innerWidth*.35,top:innerHeight*.4};im.style.left=r.left+'px';im.style.top=r.top+'px';document.body.appendChild(im);setTimeout(()=>im.remove(),950);}
 const prevTap=tapPlot;tapPlot=function(i){if(!visiting){const p=S.farms?.[farm]?.[i];if(p?.pk){const n=(S.farms[farm]||[]).filter(x=>x?.pk?.k===p.pk.k).length;return fixSheet('plot',{k:p.pk.k,input:{farm,index:i},rect:plotEls[i]?.getBoundingClientRect()});}}return prevTap(i);};
-function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),need=Object.entries(SCARE_COST),altOk=altHave(S)>=SCARE_COST.broom*ALT_X,ok=need.every(([k,q])=>hw(k)>=q||(k==='broom'&&altOk));
- pkOpen('<div class="ph"><img src="images/prank-scarecrow.webp" alt=""><div><b>🛡️ หุ่นไล่กา</b><small>กันเพื่อนแกล้งสวน 59 นาที (ไม่กันการขโมย)</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
-  +(on?'<div class="note" style="font-size:.85rem">🛡️ หุ่นไล่กาเฝ้าอยู่ อีก '+left(st.scareUntil-Date.now())+'</div>'
-   :'<div class="lbl">🧺 วัตถุดิบ</div><div class="pgrid">'+need.map(([k,q])=>'<div class="pcard" style="cursor:default'+(hw(k)>=q?'':';opacity:.55')+'"><img src="'+HWI(k)+'" alt=""><div><b>'+HW_NAMES[k]+'</b><span class="cost">'+(hw(k)>=q||(k==='broom'&&altOk)?'✅ ':'❌ ')+fmtN(q)+' <small style="font-weight:600;color:#9A7A68">(มี '+fmtN(hw(k))+')'+(k==='broom'?' หรือของแทน '+fmtN(q*ALT_X):'')+'</small></span></div></div>').join('')+'</div>'
-   +'<button class="act gold" id="pkScare" style="width:100%;margin-top:.6rem" '+(ok?'':'disabled')+'>🪷 ตั้งหุ่นไล่กา</button>'));
- sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{const alt=await altPick(document,{n:SCARE_COST.broom,broom:hw('broom'),game:S,title:'🛡️ ส่วนใบตองทองของหุ่นไล่กา'});if(!alt)return;closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare',alt});if(out?.prank)toast('🛡️ ตั้งหุ่นไล่กาแล้ว กันแกล้ง 59 นาที'+(out.prank.items?' · จ่ายแทนใบตองทอง: '+altText(out.prank.items):''));});}
+/* S4 ข้อ 143: หุ่นไล่กา 4 แบบ กันต่างกัน (เวลา×1/2/4/8 · ของที่ใช้คูณเท่ากัน) · โมเดล 3D ของเธอโผล่ในฟาร์ม */
+const SC4=[[1,'หุ่นฟางชาวนา','59 นาที',1],[2,'หุ่นยักษ์ทวารบาล','2 ชม.',2],[3,'หุ่นทหารเฝ้าสวน','4 ชม.',4],[4,'หุ่นพญานาคทอง','8 ชม.',8]];let scSel=1;
+function scareSheet(){const st=myPrank(),on=(st.scareUntil||0)>Date.now(),[sk,skn,sdur,mult]=SC4[scSel-1],need=Object.entries(SCARE_COST).map(([k,q])=>[k,q*mult]),altOk=altHave(S)>=SCARE_COST.broom*mult*ALT_X,ok=need.every(([k,q])=>hw(k)>=q||(k==='broom'&&altOk));
+ pkOpen('<div class="ph"><img src="farm3d/th/s4_sc'+sk+'.png" alt=""><div><b>🛡️ หุ่นไล่กา</b><small>กันเพื่อนแกล้งสวน (ไม่กันการขโมย) · เลือกแบบ</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+  +(on?'<div class="note" style="font-size:.85rem">🛡️ '+(SC4[(st.scareKind||1)-1][1])+'เฝ้าอยู่ อีก '+left(st.scareUntil-Date.now())+'</div>'
+   :'<div class="pgrid" style="grid-template-columns:repeat(4,1fr)">'+SC4.map(([k,n,d])=>'<div class="pcard sc'+(k===scSel?' on':'')+'" data-sk="'+k+'" style="flex-direction:column;text-align:center;padding:.3rem'+(k===scSel?';outline:3px solid #e98a2b;border-radius:.8rem':'')+'"><img src="farm3d/th/s4_sc'+k+'.png" alt="" style="width:64px;height:64px;object-fit:contain"><b style="font-size:.7rem">'+n+'</b><span style="font-size:.66rem;color:#9A7A68">กัน '+d+'</span></div>').join('')+'</div>'
+   +'<div class="lbl">🧺 วัตถุดิบ ('+skn+' · กัน '+sdur+')</div><div class="pgrid">'+need.map(([k,q])=>'<div class="pcard" style="cursor:default'+(hw(k)>=q?'':';opacity:.55')+'"><img src="'+HWI(k)+'" alt=""><div><b>'+HW_NAMES[k]+'</b><span class="cost">'+(hw(k)>=q||(k==='broom'&&altOk)?'✅ ':'❌ ')+fmtN(q)+' <small style="font-weight:600;color:#9A7A68">(มี '+fmtN(hw(k))+')'+(k==='broom'?' หรือของแทน '+fmtN(q*ALT_X):'')+'</small></span></div></div>').join('')+'</div>'
+   +'<button class="act gold" id="pkScare" style="width:100%;margin-top:.6rem" '+(ok?'':'disabled')+'>🪷 ตั้ง'+skn+'</button>'));
+ sheetEl.querySelectorAll('[data-sk]').forEach(d=>d.onclick=()=>{scSel=+d.dataset.sk;scareSheet();});
+ sheetEl.querySelector('#pkScare')?.addEventListener('click',async()=>{const alt=await altPick(document,{n:SCARE_COST.broom*mult,broom:hw('broom'),game:S,title:'🛡️ ส่วนใบตองทองของหุ่นไล่กา'});if(!alt)return;closeAll();const out=await window.cloudFarm('prank-fix',{kind:'scare',alt,sk});if(out?.prank)toast('🛡️ ตั้ง'+skn+'แล้ว กันแกล้ง '+sdur+(out.prank.items?' · จ่ายแทนใบตองทอง: '+altText(out.prank.items):''));});}
 function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0);
  const nn=document.createElement('div');nn.className='pknote';
  nn.innerHTML='<div class="paper" role="dialog"><img src="images/prank-sign.webp" alt="">'+(first?'<div class="sum">😱 ระหว่างที่คุณไม่อยู่ ใครสักคนแกล้งสวนคุณ!<br>'+[signs.length?'🪧 ป้าย '+signs.length:'',plots?'🌱 แปลง '+plots:'',st.bat?'✨ หิ่งห้อย 1':''].filter(Boolean).join(' · ')+'</div>':'')
@@ -191,11 +195,11 @@ function readSigns(first){const st=myPrank(),signs=st.signs||[],plots=[1,2,3].re
  document.body.appendChild(nn);const done=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'}).catch?.(()=>{});};
  nn.querySelector('#pnOk').onclick=done;nn.querySelector('#pnFix').onclick=()=>{nn.remove();if(first)window.cloudFarm('prank-fix',{kind:'seen'});setTimeout(()=>fixSheet('sign',{n:signs.length,input:{all:true}}),first?600:0);};}
 
-/* ---------- fix17 😈 ไอเทมปีศาจ ---------- */
-const DM={music:['กล่องดนตรีหมูจอมแสบ','🎶','prank-musicbox','หักทันที −50,000'],hour:['นาฬิกาทรายจอมแสบ','⏳','prank-hourglass','ดูด −10,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบโลงต้องสาป','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมจอมแสบ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −250,000 หรือเสียของ 1,500 ชิ้น']};
+/* ---------- fix17 🎭 ไอเทมปีศาจ ---------- */
+const DM={music:['กล่องดนตรีหมูจอมแสบ','🎶','prank-musicbox','หักทันที −50,000'],hour:['นาฬิกาทรายจอมแสบ','⏳','prank-hourglass','ดูด −10,000 ทุก 6 นาที · 1 ชม.'],coffin:['หีบบัวต้องมนต์','⛓️','prank-coffin','ล็อกสวน · เจ้าของเสี่ยงดวงเปิดหีบ'],heart:['หัวใจทับทิมจอมแสบ','💖','prank-heart','ส่งต่อใน 10 นาที ไม่งั้น −250,000 หรือเสียของ 1,500 ชิ้น']};
 const dmHms=ms=>{ms=Math.max(0,ms);const h=Math.floor(ms/3600e3),m=Math.floor(ms%3600e3/60e3),s=Math.floor(ms%60e3/1e3);return h?h+':'+String(m).padStart(2,'0')+' ชม.':m+':'+String(s).padStart(2,'0');};
 function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__HOST?.x17?.()?.dm?.b||[];}catch(e){return [];}})(),now=Date.now();
- pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>😈 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+ pkOpen('<div class="ph"><img src="images/prank-heart.webp" alt=""><div><b>🎭 แกล้งสวนของ '+esc(visiting||'')+'</b><small>ไม่บอกชื่อคนแกล้ง · คนโดนสืบไม่ได้ · ใช้ชิ้นที่ใกล้หมดเวลาก่อน</small></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
   +Object.entries(DM).map(([k,[n,e,img,desc]])=>{const have=Math.max(0,Math.floor(Number(bag[k])||0)),first=lots.filter(x=>x.k===k&&x.n>0).sort((a,b)=>a.at-b.at)[0],left=first?first.at+48*3600e3-now:0;
    return '<button class="dmit" data-dm="'+k+'" '+(have?'':'disabled')+'><img src="images/'+img+'.webp" alt=""><div><b>'+e+' '+n+'</b><small>'+desc+'</small>'+(first?'<span class="dmexp'+(left<6*3600e3?' warn':'')+'">⏳ '+dmHms(left)+'</span>':'')+'</div><div class="r">มี '+have+'</div></button>';}).join('')
   +((Math.floor(Number(bag.music)||0)>1)?'<div class="dmbulk">🎶 ส่งกล่องดนตรีทีละหลายกล่อง '+[10,50].filter(q=>Math.floor(Number(bag.music)||0)>=q).map(q=>'<button data-dmn="'+q+'">×'+q+'</button>').join('')+(Math.floor(Number(bag.music)||0)<10?'<button data-dmn="'+Math.floor(Number(bag.music)||0)+'">×'+Math.floor(Number(bag.music)||0)+'</button>':'')+'</div>':'')+ghostRow()+'<div class="note">🛡️ หุ่นไล่กากัน 🎶 ⏳ ⛓️ ได้ · 💖 🏮 ทะลุหุ่นไล่กา</div>');
@@ -204,7 +208,7 @@ function demonSheet(){const bag=S.bag?.demon||{},lots=(()=>{try{return parent.__
   const [cx,cy]=[innerWidth/2,innerHeight*.5],f=document.createElement('img');f.className='dmfly';f.src='images/'+DM[k][2]+'.webp';f.style.left=(cx-32)+'px';f.style.top=(innerHeight-120)+'px';document.body.appendChild(f);
   requestAnimationFrame(()=>{f.style.transform='translate(0,'+(cy-innerHeight+90)+'px) scale(1.4)';});
   setTimeout(()=>{f.style.opacity='0';const bm=document.createElement('div');bm.className='dmboom';bm.style.left=cx+'px';bm.style.top=cy+'px';document.body.appendChild(bm);setTimeout(()=>{bm.remove();f.remove();},600);const st=$('stage');st.classList.remove('pkshake');void st.offsetWidth;st.classList.add('pkshake');
-   toast('😈 '+({music:'ส่งกล่องดนตรี'+(out.sent.n>1?' ×'+out.sent.n:'')+' ให้ ',hour:'วางนาฬิกาทรายในสวน ',coffin:'วางหีบโลงในสวน ',heart:'ส่งหัวใจให้ '}[k])+esc(out.sent.name)+' แล้ว! เจ้าของสวนจะไม่รู้ว่าใคร');},900);});}
+   toast('🎭 '+({music:'ส่งกล่องดนตรี'+(out.sent.n>1?' ×'+out.sent.n:'')+' ให้ ',hour:'วางนาฬิกาทรายในสวน ',coffin:'วางหีบบัวในสวน ',heart:'ส่งหัวใจให้ '}[k])+esc(out.sent.name)+' แล้ว! เจ้าของสวนจะไม่รู้ว่าใคร');},900);});}
 /* fix21 🏮 ของผีสิงจากโรงงานอัลปาก้า: ส่งให้เจ้าของสวนนี้ (ส่งชิ้นที่ใกล้หมดเวลาก่อน) */
 const ghostHeld=()=>{try{return (parent.__DEMON?.view?.gh||[]).slice().sort((a,b)=>a.until-b.until);}catch(e){return [];}};
 function ghostRow(){const g=ghostHeld();if(!g.length)return '';const left=g[0].until-Date.now(),qs=[...new Set([1,5,10,g.length].filter(q=>q<=g.length))];
@@ -213,7 +217,7 @@ const HG_SPOT=[[80,30],[66,27],[90,46]];
 function demonGarden(s){if(visiting)return;let D=null;try{D=parent.__DEMON;}catch(e){}const v=D?.view;if(!v)return;const now=Date.now();
  (v.hg||[]).slice(0,3).forEach((h,j)=>{const [x,y]=HG_SPOT[j],o=document.createElement('div');o.className='dmobj dmhg';o.style.left=x+'%';o.style.top=y+'%';const paid=Math.min(10,Math.floor((now-h.at)/360000));
   o.innerHTML='<span class="rune"></span><span class="aura"></span><img src="images/prank-hourglass.webp" alt="นาฬิกาทรายจอมแสบ"><span class="neck"></span><span class="dmtag">⏳ '+dmHms(h.end-now)+' · −'+(paid*10000).toLocaleString('en-US')+'</span>';s.appendChild(o);});
- const c=(v.cf||[])[0];if(c){const l=document.createElement('div');l.className='dmlock';s.appendChild(l);const o=document.createElement('div');o.className='dmobj dmcf'+(window.__dmCf===c.id?'':' drop');window.__dmCf=c.id;o.style.left='52%';o.style.top='54%';o.setAttribute('role','button');o.setAttribute('aria-label','เปิดหีบโลง');
+ const c=(v.cf||[])[0];if(c){const l=document.createElement('div');l.className='dmlock';s.appendChild(l);const o=document.createElement('div');o.className='dmobj dmcf'+(window.__dmCf===c.id?'':' drop');window.__dmCf=c.id;o.style.left='52%';o.style.top='54%';o.setAttribute('role','button');o.setAttribute('aria-label','เปิดหีบบัว');
   o.innerHTML='<img src="images/prank-coffin.webp" alt=""><span class="dmtag">⛓️ แตะเพื่อเปิด · '+dmHms(c.until-now)+'</span>';o.onclick=e=>{e.stopPropagation();try{parent.__DEMON?.openSeal?.();}catch(err){}};s.appendChild(o);}}
 try{parent.__demonHook=()=>{try{render();}catch(e){}};}catch(e){}
 /* ---------- ฉาก: ค้างคาว ป้าย หุ่นไล่กา (ทั้งเจ้าของและคนเยี่ยม) ---------- */
@@ -257,7 +261,7 @@ window.prankDecorate=function(s){stopBats();dock?.remove();alert?.remove();dock=
  dock.querySelector('[data-dm]')?.addEventListener('click',demonSheet);demonGarden(s);
  dock.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const f=b.dataset.f;if(f==='scare')return scareSheet();if(f==='bat')return fixSheet('bat');readSigns(false);});
  if(!visiting){const plots=[1,2,3].reduce((a,f)=>a+(S.farms?.[f]||[]).filter(p=>p?.pk).length,0),n=plots+(st.bat?1:0)+st.signs.length;
-  if(n){alert=document.createElement('div');alert.className='pkalert';alert.textContent='😈 ใครสักคนแกล้งสวนของคุณ · '+n+' จุด';alert.onclick=()=>readSigns(false);document.body.appendChild(alert);}
-  /* fix22: ไม่เด้งเองแล้ว · แตะแถบ 😈 เพื่อดู */}};
+  if(n){alert=document.createElement('div');alert.className='pkalert';alert.textContent='🎭 ใครสักคนแกล้งสวนของคุณ · '+n+' จุด';alert.onclick=()=>readSigns(false);document.body.appendChild(alert);}
+  /* fix22: ไม่เด้งเองแล้ว · แตะแถบ 🎭 เพื่อดู */}};
 /* โมดูลนี้โหลดหลังหน้าสวนวาดเสร็จ: วาดใหม่หนึ่งครั้งให้เห็นสถานะการแกล้ง */
 try{render();}catch(e){console.error(e);}
