@@ -1,5 +1,5 @@
 import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_BY_KEY,sellHave} from './sell-price.js?h=82a9f3af';
+import {SELL_BY_KEY,sellHave} from './sell-price.js?h=f59c84c6';
 const TICK=15*60e3,DAY=864e5;
 const ST=[{k:'veg',n:'หุ้นผัก',b:3000,v:.014,lo:2000,hi:4500},{k:'fruit',n:'หุ้นผลไม้',b:4000,v:.02,lo:2500,hi:6500},{k:'fish',n:'หุ้นบ่อปลา',b:4500,v:.02,lo:2500,hi:7500},
 {k:'wine',n:'หุ้นไวน์',b:6000,v:.026,lo:3500,hi:10000},{k:'alpaca',n:'หุ้นอัลปาก้า',b:7500,v:.026,lo:4000,hi:12000},{k:'bee',n:'หุ้นซิ่ง',b:5000,v:.05,lo:500,hi:15000}];
@@ -126,6 +126,7 @@ export function marketAction(account,world,ctx,input,rng=Math.random){
   const seen=new Set(),pets=[],rows=[];let gain=0,count=0;
   for(const it of list){const R=typeof it?.k==='string'?SELL_BY_KEY.get(it.k):null;if(!R||seen.has(R.k))fail('มีของที่ขายไม่ได้ในรายการ');seen.add(R.k);
    if(R.kind==='pet'){if(it.q==='all'&&!petHave(game,R.path))continue;pets.push({k:R.k,q:it.q});continue;}
+   if(R.decor&&it.q==='all')fail('ของแต่งต้องระบุจำนวน (ขายได้เฉพาะชิ้นในกระเป๋า)');
    const have=sellHave(game,R.path),q=it.q==='all'?have:it.q;if(it.q==='all'&&!have)continue;
    if(!Number.isSafeInteger(q)||q<1)fail('จำนวนไม่ถูกต้อง');if(q>have)fail(R.n+' มีไม่พอขาย (มี '+have.toLocaleString('en-US')+')');
    const each=R.kind==='wine'?Math.round(wineEach(WINES.find(w=>w[0]===R.w))*WINE_BAG_RATE):R.kind==='hw'?hwPrice(R.h,ctx.now):R.price;if(!Number.isSafeInteger(each)||each<1)fail(R.n+' ยังขายไม่ได้');

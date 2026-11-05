@@ -1,4 +1,4 @@
-import {FISH_EVENTS} from './campaigns-engine.js?h=6795f504';
+import {FISH_EVENTS} from './campaigns-engine.js?h=a073b41e';
 import {FISH,RODS,RK,VIPL,SETS,LADDER,MERIT,PONDS} from './fishing-catalog.js?h=92b72ca3';
 import {useBoost,boostUsed,boostHave,BOOST_LIMIT,BOOST_CUT} from './boost-engine.js?h=4e7979ab';
 /* fix15: ตัดเบ็ดห้อง VIP (กรรไกรปู 10 อัน ต้องนั่งห้อง VIP เดียวกัน · คนหนึ่งโดนได้ 3 ครั้ง/วัน · โดนแล้วหลุดจากห้อง)
@@ -43,6 +43,8 @@ export function fishingAction(source,account,ctx,input,rng=Math.random){
   const s=seats[i];if(!s)continue;
   if(s.vip&&s.card<=ctx.now){release(p,i);continue;}
   if(s.ph==='idle'&&!s.vip&&s.idle<=ctx.now){release(p,i);continue;}
+  /* S4 รอบ 3 ข้อ 8: ห้อง VIP นั่งเฉยไม่หย่อนเบ็ดเกิน 5 นาที = ลุกให้อัตโนมัติ (เก็บเวลาบัตร+ด่านไว้ กลับมานั่งต่อได้) */
+  if(s.ph==='idle'&&s.vip){s.idleAt ||= ctx.now;if(ctx.now-s.idleAt>5*60000){r.vipCard ||= {};if(s.card>ctx.now)r.vipCard[s.uid]={card:s.card,stage:s.stage||0};r.seats[p][i]=null;continue;}}
   if(s.ph==='wait'&&s.t<=ctx.now){s.ph='hook';s.hookUntil=s.t+3*60000;}
   if(s.ph==='hook'&&s.hookUntil<=ctx.now){if(s.vip&&s.hearts>1){s.hearts--;s.ph='idle';delete s.res;delete s.mini;delete s.event;}else release(p,i);}
  }
@@ -103,14 +105,15 @@ export function fishingAction(source,account,ctx,input,rng=Math.random){
   const target=r.seats[input.pond]?.[input.seat];if(!own||found.p!==input.pond||own.vip||target?.vip||!target||target.uid===ctx.uid||!['wait','hook'].includes(own.ph)||!['wait','hook'].includes(target.ph))fail('ตัดเบ็ดนี้ไม่ได้');
   if((r.cuts[ctx.uid]||0)>=30||(r.taken[target.uid]||0)>=30)fail('ครบโควตาตัดเบ็ดวันนี้');if((game.bag.fishing.crab||0)<1)fail('ไม่มีกรรไกรปู');game.bag.fishing.crab--;r.cuts[ctx.uid]=(r.cuts[ctx.uid]||0)+1;r.taken[target.uid]=(r.taken[target.uid]||0)+1;target.ph='idle';target.idle=ctx.now+3*60000;delete target.res;delete target.mini;r.cutMsg[target.uid]={at:ctx.now};return result({mine:found});
  }
- if(!own)fail('คุณยังไม่ได้นั่งตกปลา');
+ /* S4 รอบ 3 ข้อ 8: ระบบตัดออกจากแท่นแล้ว (ลืมหย่อน/ลืมเก็บปลา) → ไม่ error ค้าง · ส่งสถานะใหม่กลับไปให้หน้าจอปิดแท่นนั้น (บันทึกการล้างแท่นด้วย) */
+ if(!own){if(input.type==='leave')return result({mine:null,left:true});return result({mine:null,notice:'⏰ หมดเวลาที่แท่นนี้แล้ว (ไม่ได้หย่อนเบ็ดหรือไม่ได้เก็บปลาภายใน 3 นาที) · เลือกแท่นใหม่ได้เลย'});}
  if(input.type==='leave'){/* fix18: ลุกเองได้ทุกเมื่อ ไม่ต้องพัก · ลุกตอนรอปลา = รอบนั้นหาย · VIP เก็บเวลาบัตร+ด่านที่ค้างไว้ กลับมานั่งห้อง VIP ไหนก็ได้จนบัตรหมด */
   r.vipCard ||= {};if(own.vip&&own.card>ctx.now)r.vipCard[ctx.uid]={card:own.card,stage:own.stage||0};r.seats[found.p][found.i]=null;return result({mine:null,left:true});}
  /* S4 ข้อ 82: ใช้เหยื่อวิเศษระหว่างรอปลาได้ (ลดเวลาที่เหลือครึ่งหนึ่ง · ครั้งเดียวต่อการหย่อน) */
  if(input.type==='bait'){if(own.ph!=='wait')fail('ยังไม่ได้รอปลาอยู่');if(own.vip)fail('บ่อ VIP ใช้เหยื่อไม่ได้');if(own.bait)fail('ใช้เหยื่อกับเบ็ดนี้ไปแล้ว');if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');
   useBoost(game,f,'bait',ctx.now);own.bait=true;own.t=ctx.now+Math.max(0,Math.round((own.t-ctx.now)*BAIT_MULT));own.hookUntil=own.t+3*60000;return result({mine:found,baited:true});}
  if(input.type==='cast'){
-  if(own.ph!=='idle')fail('หย่อนเบ็ดอยู่แล้ว');if(!own.vip&&input.bait===true){if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');}const rod=input.rod;if(!RK.includes(rod)||(game.bag.rod[rod]||0)<1)fail('ไม่มีเบ็ดแบบนี้');game.bag.rod[rod]--;own.rod=rod;own.ph='wait';const ev=ctx.fishEvent?.start&&ctx.fishEvent.end>ctx.now&&ctx.fishEvent.evHour===Math.floor(ctx.now/3600e3)?FISH_EVENTS[ctx.fishEvent.ev]?.[3]||{}:{};own.event=ev;const bait=!own.vip&&input.bait===true;if(bait)useBoost(game,f,'bait',ctx.now);own.t=ctx.now+Math.round((own.vip?VIP_WAIT_MIN:10)*60000*(ev.slow?2:1)*(bait?BAIT_MULT:1));if(bait)own.bait=true;else delete own.bait;own.hookUntil=own.t+3*60000;delete own.mini;
+  if(own.ph!=='idle')fail('หย่อนเบ็ดอยู่แล้ว');if(!own.vip&&input.bait===true){if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');}const rod=input.rod;if(!RK.includes(rod)||(game.bag.rod[rod]||0)<1)fail('ไม่มีเบ็ดแบบนี้');game.bag.rod[rod]--;own.rod=rod;own.ph='wait';delete own.idleAt;const ev=ctx.fishEvent?.start&&ctx.fishEvent.end>ctx.now&&ctx.fishEvent.evHour===Math.floor(ctx.now/3600e3)?FISH_EVENTS[ctx.fishEvent.ev]?.[3]||{}:{};own.event=ev;const bait=!own.vip&&input.bait===true;if(bait)useBoost(game,f,'bait',ctx.now);own.t=ctx.now+Math.round((own.vip?VIP_WAIT_MIN:10)*60000*(ev.slow?2:1)*(bait?BAIT_MULT:1));if(bait)own.bait=true;else delete own.bait;own.hookUntil=own.t+3*60000;delete own.mini;
   if(own.vip){const key=VIPL[own.stage][0],base=VIPL[own.stage][1]/100;let odds=base*(RK[r.lucky]===rod?1.15:1);if(ev.legend)odds*=ev.legend;if(ev.uni&&['unicorn','goldsheep'].includes(key))odds*=ev.uni;if(ev.gold&&key==='goldsheep')odds*=ev.gold;if(ev.shark&&own.stage<4)odds*=ev.shark;if(ev.rare&&own.stage>=4)odds*=ev.rare;own.hit=rng()<Math.min(1,odds)&&!(ev.miss&&rng()<ev.miss);}
   else {const info=RODS[rod],counts=[...info.cnt],tiers=[...info.tier];if(RK[r.lucky]===rod){counts[0]-=12;counts[1]+=9;counts[2]+=3;tiers[0]-=10;tiers[2]+=10;}const n=weighted(rng,counts)+1,caught=[];let level=1;for(let j=0;j<n;j++){const tier=weighted(rng,tiers)+1;level=Math.max(level,tier);const key=pick(rng,Object.keys(FISH).filter(k=>FISH[k][1]===tier));caught.push({k:key,w:fishWeight(rng,key)});}own.res={fish:caught,tier:level};}
   return result({mine:found});

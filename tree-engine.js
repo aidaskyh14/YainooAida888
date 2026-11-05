@@ -1,5 +1,5 @@
 /* fix19 🌳🏮 ศึกโคมลอย (เนเบอร์ฮูดแข่งกัน) — กติกาล้วน ใช้ร่วมกันทั้งเซิร์ฟเวอร์และหน้าเว็บ
-   · วันละ 2 รอบ (เวลาไทย): 01:00–12:00 และ 13:00–24:00 · จบรอบ +5 นาทีเปิดการ์ด เลือกภายใน 10 นาที · ที่เหลือเป็นพักเบรก
+   · วันละ 2 รอบ (เวลาไทย): 03:00–12:00 และ 15:00–24:00 (พัก 3 ชม.) · จบรอบ +5 นาทีเปิดการ์ด เลือกภายใน 10 นาที · ที่เหลือเป็นพักเบรก
    · แต้มจากกิจกรรม 1–10 แต้มต่อครั้ง (ไม่จำกัดต่อคน) · ต้นไม้ 12 ขั้นตามแต้มสูงสุดของบ้านในรอบ (โดนขวานต้นไม่หด)
    · บ้านชนะ: ทุกคนเลือกแผ่นป้ายกุศลคว่ำ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง 1 ใบ (ปล้นเสบียง/ตัดบ้าน/ตัดทุกบ้าน/ตัด 4 คน) */
 import {FISH} from './fishing-catalog.js?h=92b72ca3';
@@ -16,12 +16,13 @@ const H=3600000,thai=now=>now+7*H;
 export const twDayKey=now=>new Date(thai(now)).toISOString().slice(0,10);
 /* รอบที่กำลังแข่ง ณ เวลานี้ (null = พักเบรก) */
 export function twRoundAt(now){const t=thai(now),d0=Math.floor(t/864e5)*864e5,h=(t-d0)/H,day=new Date(d0).toISOString().slice(0,10);
- if(h>=1&&h<12)return {id:day+'A',start:d0+H-7*H,end:d0+12*H-7*H};
- if(h>=13)return {id:day+'B',start:d0+13*H-7*H,end:d0+24*H-7*H};return null;}
+ /* S4 ศึกโคมลอย: พักระหว่างรอบ 3 ชม. (ไม่กดดัน) · รอบ A 03:00–12:00 · รอบ B 15:00–24:00 เวลาไทย */
+ if(h>=3&&h<12)return {id:day+'A',start:d0+3*H-7*H,end:d0+12*H-7*H};
+ if(h>=15)return {id:day+'B',start:d0+15*H-7*H,end:d0+24*H-7*H};return null;}
 /* รอบถัดไปที่จะเริ่ม (ใช้ตอนแอดมินกด "เริ่มรอบถัดไป") */
 export function twNextRound(now){const t=thai(now),d0=Math.floor(t/864e5)*864e5,h=(t-d0)/H,day=x=>new Date(x).toISOString().slice(0,10);
- if(h<1)return {id:day(d0)+'A',start:d0+H-7*H,end:d0+12*H-7*H};if(h<13)return {id:day(d0)+'B',start:d0+13*H-7*H,end:d0+24*H-7*H};
- return {id:day(d0+864e5)+'A',start:d0+864e5+H-7*H,end:d0+864e5+12*H-7*H};}
+ if(h<3)return {id:day(d0)+'A',start:d0+3*H-7*H,end:d0+12*H-7*H};if(h<15)return {id:day(d0)+'B',start:d0+15*H-7*H,end:d0+24*H-7*H};
+ return {id:day(d0+864e5)+'A',start:d0+864e5+3*H-7*H,end:d0+864e5+12*H-7*H};}
 export const twStage=(peak,th=TW_TH)=>{let s=0;for(let i=0;i<th.length;i++)if(peak>=th[i])s=i;return s;};
 /* ---------- แต้มจากกิจกรรม ---------- */
 export const TW_CROP={waterspinach:1,lettuce:1,pea:2,mango:2,carrot:2,chili:2,corn:2,potato:3,pumpkin:3,cucumber:3,tomato:3,cabbage:3,lychee:3,strawberry:4,watermelon:4,grape:5,banana:5,gooseberry:6,mushroom:6,melon:7,bamboo:8,plankton:10};

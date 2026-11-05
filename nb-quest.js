@@ -21,6 +21,10 @@ export const NB_QUESTS=[
  ['atm','ใช้บริการธนาคาร (โอน/แลก)',30,'ครั้ง','🏦'],
  ['krathong','เก็บกระทงรางวัลในฟาร์ม',60,'ใบ','🪷'],
  ['visit','ไปเยี่ยมบ้านเพื่อน',40,'ครั้ง','👋'],
+ /* S4 5 พ.ย. (ยัยหนูขอเพิ่ม): ผ้าอ้อมลิง · ปลูกกล้วย · ได้ของแต่ง (จากกล่องสุ่ม/จดหมายยัยหนู) */
+ ['mkdiaper','เก็บผ้าอ้อมลิง',60,'ชิ้น','🐒'],
+ ['banana','ปลูกกล้วย',300,'แปลง','🍌'],
+ ['decor','ได้รับของประดับตกแต่ง',10,'ชิ้น','🎨',100000],
  /* fix19 ภารกิจพิเศษ ขึ้นทุกวันทุกบ้าน · ข้อละ 150,000 (ต่อคน) · [.., รางวัล, ทุกวัน] */
  ['demon','ป่วนด้วยไอเทมจอมแสบ',40,'แต้ม','🎭',150000,true],
  ['mkcode','นักเปิดกล่องมหากุศล',80,'กล่อง','📦',150000,true],/* S4 ข้อ 21: ไม่มีทายรหัสแล้ว → นับกล่องมหากุศลที่เปิด (เปิดด่วน) */
@@ -71,6 +75,9 @@ export function questDeltas(system,before,after,input={},response={}){
  // ตัดขนอัลปาก้า / เก็บดอกไม้ เกิดในหน้าเกม แจ้งผ่านเนเบอร์ฮูด (จำกัดต่อครั้ง)
  if(system==='nb'&&type==='report'&&['shear','flower'].includes(input?.kind)&&Number.isInteger(input?.n))add(input.kind,Math.min(50,Math.max(0,input.n)));
  if(system==='farmshop'&&type==='clear')add('sell',1);
+ if(system==='farm'&&type==='plant'&&input?.crop==='banana')add('banana',Math.max(0,Number(response?.count)||0));
+ if((system==='boxes'||system==='birdbox')&&Array.isArray(response?.items))add('decor',response.items.filter(i=>/^decor-/.test(String(i?.key||''))).reduce((a,i)=>a+(Number(i.quantity)||0),0));
+ if(system==='nb'&&type==='report'&&['mkdiaper','decor'].includes(input?.kind)&&Number.isInteger(input?.n))add(input.kind,Math.min(50,Math.max(0,input.n)));
  /* fix19 ภารกิจพิเศษ: ยาพิษจากหีบแม่มด (เล็ก1 กลาง2 ใหญ่4 ปีศาจแดง10) · ไอเทมปีศาจที่ส่งสำเร็จ (1/2/3/4 · ส่งต่อหัวใจ 4) · เดารหัสมหากุศลถูก (ครั้งที่ 1/2/3 = 3/2/1) */
  if(system==='demon'&&type==='send'&&response?.sent?.kind)add('demon',{music:1,hour:2,coffin:3,heart:4}[response.sent.kind]||0);
  if(system==='demon'&&type==='pass'&&response?.pass)add('demon',4);

@@ -104,7 +104,7 @@ body.edit .side,body.edit #hint{display:none}
 <div class="z" data-z="pet"><b>🐶</b>สวนหมาแมว<small>เดินทาง</small></div>
 <div class="z here" data-z="safari"><b>🦁</b>ซาฟารี<small>อยู่ที่นี่</small></div>
 </div></div>
-<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=13ae4e67"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=a78b8e55"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -675,8 +675,15 @@ function applySB(){for(const k in INV)if(SB.food&&SB.food[k]!=null)INV[k]=SB.foo
 const _ccFeed=ccFeed;ccFeed=function(kind){if(!SB)return _ccFeed(kind);const fk=CC.pick[kind],f=FOOD[fk],list=hungry(kind);if(!list.length){toast('ยังไม่มีตัวที่หิว รอ ⏳ ก่อนนะ');return;}const need=f[2]*list.length;if(INV[fk]<need){toast('อาหารไม่พอ ต้องใช้ '+need+' มี '+INV[fk]);return;}sendS3('bfeed',fk);};
 const _ccCol=ccCollect;ccCollect=function(){if(!SB)return _ccCol();sendS3('bcollect');};
 const _col=collect;collect=function(o){if(!SB){collectFx(o);return _col(o);}sendS3('bcollect');};
+/* S4 ข้อ 17: ผ้าอ้อมลิงที่หล่นบนพื้น (จากการให้อาหารลิง) · แตะ = เก็บพร้อมของนก */
+const MKIMG={mkdiaper:'s4-mkdiaper.webp',mkdiaper2:'s4-mkdiaper-2.webp',mkdiaper3:'s4-mkdiaper-3.webp',mkdiaper4:'s4-mkdiaper-4.webp'},MKT={};let MKDS=[];
+function mkTexOf(k){if(!MKT[k]){const t=new THREE.TextureLoader().load('../images/'+(MKIMG[k]||MKIMG.mkdiaper));t.colorSpace=THREE.SRGBColorSpace;MKT[k]=t;}return MKT[k];}
+function syncMkDrops(){const want=(SB&&SB.mkd)||[],key=JSON.stringify(want);if(key===syncMkDrops.k)return;syncMkDrops.k=key;
+ for(const o of MKDS){if(o.visible&&o.userData.pop==null){sc.remove(o);const i=drops.indexOf(o);if(i>=0)drops.splice(i,1);}}MKDS=[];
+ want.slice(0,40).forEach(([id,k],i)=>{const m=MKS.find(q=>q.id===id),bx=m?m.a.x:-9+rnd()*18,bz=m?m.a.z:-6+rnd()*16;const g=new THREE.Group(),sp=new THREE.Sprite(new THREE.SpriteMaterial({map:mkTexOf(k),transparent:true,depthWrite:false}));sp.scale.set(1.1,1.1,1);sp.position.y=.55;g.add(sp);
+  g.position.set(bx+(rnd()-.5)*2.4,0,bz+(rnd()-.5)*2.4);g.userData.drop='✨ ผ้าอ้อมลิง';g.userData.key=k;sc.add(g);drops.push(g);MKDS.push(g);});}
 addEventListener('message',e=>{const d=e.data||{};
-  if(d.s4sync&&d.s4sync.birds){SB=d.s4sync;applySB();{const k=JSON.stringify(SB.mkl||[]);if(k!==syncMonkeys.k){syncMonkeys.k=k;MKL=SB.mkl||[];syncMonkeys();}}}
+  if(d.s4sync&&d.s4sync.birds){SB=d.s4sync;applySB();try{syncMkDrops();}catch(e){}{const k=JSON.stringify(SB.mkl||[]);if(k!==syncMonkeys.k){syncMonkeys.k=k;MKL=SB.mkl||[];syncMonkeys();}}}
   const r=d.s4res;if(!r)return;
   if(r.t==='feed'){if(!r.n){toast(r.msg||'ยังไม่มีนกที่หิว');return;}const kind=r.sp==='ostrich'?'ost':'dodo',f=FOOD[r.k];const list=hungry(kind).slice(0,r.n);if(r.left!=null)INV[r.k]=r.left;
     list.forEach((a,i)=>{a.cd=T+f[3]*60;a.fedAt=T;a.peck=0;setTimeout(()=>feedFx(a,r.k),i*120);for(const [w,c] of f[4])for(let j=0;j<Math.min(c,2);j++)setTimeout(()=>spawnDrop(kind,w,a.x+(rnd()-.5)*1.2,a.z+(rnd()-.5)*1.2),900+i*120+rnd()*500);});

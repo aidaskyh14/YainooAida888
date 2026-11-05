@@ -3,24 +3,24 @@ import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=325c2f52';
 import {safariAction} from './safari-engine.js?h=b8c86111';
 import {adminCenter} from './admin-center-engine.js?h=13458e60';
 import {adminReset} from './admin-reset.js?h=30e79a6c';
-import {openLootBoxes} from './loot-box-engine.js?h=1f16d6b0';
-import {farmDropsAction} from './farm-drops-engine.js?h=7932d513';
+import {openLootBoxes} from './loot-box-engine.js?h=4542d2cf';
+import {farmDropsAction} from './farm-drops-engine.js?h=87d90d0c';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {farmAction,friendAction} from './farm-engine.js?h=70094cd2';
 import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
-import {observeGameplay} from './campaign-progress.js?h=cb6616b6';
-import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=2997a883';
+import {observeGameplay} from './campaign-progress.js?h=b36ef48c';
+import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=5101c8ec';
 import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=b166c6ce';
 import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=f5b32ed5';
-import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=6795f504';
+import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=a073b41e';
 import {randomUUID,randomInt,createHash} from 'node:crypto';
 import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
-import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=b5d612b9';
+import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=ae3af2ab';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=b7fdd38b';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=b889872d';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
-import {nbDay} from './nb-quest.js?h=94056e26';
+import {nbDay} from './nb-quest.js?h=02ff82da';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
@@ -28,7 +28,7 @@ import {onCall,HttpsError} from 'firebase-functions/v2/https';
 import {createCloudCore,refuse} from './cloud-core.js?h=e1b3d33d';
 import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=f7ba43c9';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
-import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=9407f14e';
+import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=4fbc22f0';
 import {hwmAction} from './hwmini-engine.js?h=ffca3ddc';
 import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=13fbcd77';
 import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=af571787';
@@ -123,7 +123,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=b7fdd38b');
+     const {CATALOG}=await import('./catalog.js?h=b889872d');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -195,7 +195,7 @@ export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.ui
  // fix17 ⚡🏮 ปลาไหลไฟฟ้าผี: หักกุศลคนโดนผ่าน ledger (ไม่บอกชื่อคนปล่อย)
  if(out.eelShock){const v=await tx.get(db.doc('players/'+out.eelShock.uid));if(v.exists)writes['players/'+out.eelShock.uid+'/ledger/eel-'+ctx.now+'-'+randomUUID().slice(0,8)]={merit:-out.eelShock.merit,title:'⚡ ปลาไหลไฟฟ้าช็อต',msg:'ใครสักคนปล่อยปลาไหลไฟฟ้าใส่คุณที่บ่อตกปลา',at:FieldValue.serverTimestamp(),source:'fishing'};}
  const race=view;const quota={eel:out.eel,bait:out.bait,vipTaken:out.race.vipTaken?.[ctx.uid]||0,cut:out.race.cuts[ctx.uid]||0,taken:out.race.taken[ctx.uid]||0,cd:out.race.cd[ctx.uid]||0,vipCount:out.race.vipCount[ctx.uid]||0,vipCd:out.race.vipCd[ctx.uid]||0,vipHeld:out.race.vipCard?.[ctx.uid]?.card||0,...(ctx.admin?{lucky:out.race.lucky}:{})};
- return {writes,updates,mailDelta:out.award.some(w=>w.uid===ctx.uid)?1:0,response:{race,quota,serverNow:ctx.now,...(out.challenge?{challenge:out.challenge}:{}),...(out.caught?{caught:out.caught,total:out.total,success:out.success,timing:out.timing,pond:out.pond}:{}),...(out.reward?{reward:out.reward}:{}),...(out.eelShock?{eelShock:{n:out.eelShock.n,vip:out.eelShock.vip}}:{}),...(out.eelBonus?{eelBonus:out.eelBonus}:{}),...(out.mkDrop?{mkDrop:out.mkDrop}:{}),...(out.crafted!==undefined?{crafted:out.crafted,results:out.results,outputs:out.outputs,consumed:out.consumed}:{})}};
+ return {writes,updates,mailDelta:out.award.some(w=>w.uid===ctx.uid)?1:0,response:{race,quota,serverNow:ctx.now,...(out.notice?{notice:out.notice}:{}),...(out.challenge?{challenge:out.challenge}:{}),...(out.caught?{caught:out.caught,total:out.total,success:out.success,timing:out.timing,pond:out.pond}:{}),...(out.reward?{reward:out.reward}:{}),...(out.eelShock?{eelShock:{n:out.eelShock.n,vip:out.eelShock.vip}}:{}),...(out.eelBonus?{eelBonus:out.eelBonus}:{}),...(out.mkDrop?{mkDrop:out.mkDrop}:{}),...(out.crafted!==undefined?{crafted:out.crafted,results:out.results,outputs:out.outputs,consumed:out.consumed}:{})}};
 }}));
 
 export const eventsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'events',worldIds:['world/topspenders'],apply:async(game,worlds,ctx,tx)=>{
@@ -218,7 +218,7 @@ async function collectCampaignScores(){
   let q=db.collection('players').orderBy(FieldPath.documentId()).limit(RANK_PAGE);if(last)q=q.startAfter(last);
   const snap=await q.get();if(snap.empty)break;
   const parts=await db.getAll(...snap.docs.map(p=>p.ref.collection('saves').doc('animals-campaigns')));
-  snap.docs.forEach((p,i)=>{if(!parts[i].exists)return;let data;try{data=JSON.parse(parts[i].data().payload);}catch(e){return;}rows.push({uid:p.id,name:p.data().name||'ผู้เล่น',data});});
+  snap.docs.forEach((p,i)=>{const pd=p.data()||{};if(pd.approval&&pd.approval!=='approved')return;/* S4: สมาชิกที่อนุมัติแล้วทุกคนขึ้นทุกแคมเปญ (ยังไม่มีแต้ม = 0) */let data={};if(parts[i].exists){try{data=JSON.parse(parts[i].data().payload)||{};}catch(e){data={};}}rows.push({uid:p.id,name:pd.name||'ผู้เล่น',data});});
   last=snap.docs.at(-1);if(snap.size<RANK_PAGE)break;
  }
  return rows;
@@ -228,7 +228,7 @@ export const campaignsActionCloud=callable(async req=>{
  const rebuild=['start','stop'].includes(input.type)||!prior.exists||Date.now()-(prior.data().updatedAt||0)>=RANK_STALE;
  const scores=rebuild?await collectCampaignScores():null;
  return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'campaigns',partIds:['wallet','animals-campaigns'],worldIds:['world/campaigns','world/campaign-ranks'],apply:async(game,worlds,ctx,tx)=>{
- const {campaignControl,claimCampaign,buildBoards}=await import('./campaigns-engine.js?h=6795f504'),config=worlds['world/campaigns']||{},writes={};let reward=0;
+ const {campaignControl,claimCampaign,buildBoards}=await import('./campaigns-engine.js?h=a073b41e'),config=worlds['world/campaigns']||{},writes={};let reward=0;
  if(['start','stop','news'].includes(input.type))writes['world/campaigns']=campaignControl(config,input,ctx);
  else if(input.type==='claim')reward=claimCampaign(game,config,input);
  else if(input.type!=='status')refuse('รายการไม่ถูกต้อง');
@@ -426,7 +426,8 @@ export const friendsActionCloud=callable(async req=>{
  if(out.notice){const mailRef=db.doc('mail/'+owner+'/items/friend-news'),prior=await tx.get(mailRef);writes[mailRef.path]={title:'การเยี่ยมสวน',msg:ctx.name+' · '+({steal:'ขโมยผัก',water:'รดน้ำ',worm:'กำจัดหนอน',magic:'ร่ายมนต์จันทร์ 3 ชั่วโมง'}[out.notice])+' ฟาร์ม '+farm+' แปลง '+(input.index+1),icon:'👥',kusal:0,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:ctx.name};if(!prior.exists)updates[rootRef.path]={...(updates[rootRef.path]||{}),mailCount:FieldValue.increment(1)};}
  const pk=out.target.sub?.prank||{};
  /* S4 ข้อ 180: ส่งเลย์เอาต์ฟาร์ม 3D ของเจ้าของให้ผู้เยี่ยม (เฉพาะตอนเริ่มเยี่ยม · 1 อ่าน) */let deco=null,honey=null;if(input.type==='visit'&&farm===1){try{const d=await tx.get(rootRef.collection('saves').doc('module-s4deco-farm'));deco=d.exists?d.data().payload:null;}catch(e){}/* S4 ข้อ 93: น้องน้ำผึ้งของเพื่อน (รถ/เรือที่จอด) */try{const o=await tx.get(rootRef.collection('saves').doc('outings'));if(o.exists){const g=JSON.parse(o.data().payload||'{}');const h=g&&g.honey;if(h&&typeof h==='object')honey={v:h.v,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,n:(h.req||[]).length};}}catch(e){}}
- return {writes,updates,response:{owner,deco,honey,atm:ownerAdmin,name:profile.data().name,farm,plots:out.target.farms?.[farm]||[],fruit:out.target.fruit||null,quota:game.sub.friends,prankState:{bat:!!pk.bat,signs:(pk.signs||[]).length,scareUntil:pk.scareUntil||0,scareKind:pk.scareKind||1,gardenDay:pk.day?.d===new Date(ctx.now+7*3600000).toISOString().slice(0,10)?pk.day.n||0:0},...(out.prank?{prank:out.prank}:{}),...(out.stolen?{stolen:out.stolen}:{}),serverNow:ctx.now}};
+ /* S4 รอบ 3 ข้อ 11: สถานะพื้นที่ฝั่งข้ามสะพานของเจ้าของ (null = ไม่ได้โหลดส่วนนี้) */const ul2=out.target&&out.target.unl?!!out.target.unl.f2:null;
+ return {writes,updates,response:{owner,deco,honey,ul2,atm:ownerAdmin,name:profile.data().name,farm,plots:out.target.farms?.[farm]||[],fruit:out.target.fruit||null,quota:game.sub.friends,prankState:{bat:!!pk.bat,signs:(pk.signs||[]).length,scareUntil:pk.scareUntil||0,scareKind:pk.scareKind||1,gardenDay:pk.day?.d===new Date(ctx.now+7*3600000).toISOString().slice(0,10)?pk.day.n||0:0},...(out.prank?{prank:out.prank}:{}),...(out.stolen?{stolen:out.stolen}:{}),serverNow:ctx.now}};
  }});
 });
 
@@ -443,7 +444,7 @@ const boxesHandler=(req,system)=>core.action({uid:req.auth.uid,session:req.data?
  Object.assign(game,out.game);observeGameplay(prior,game,'boxes',worlds['world/campaigns']||{},ctx.now,out.outcomes);
  let demon={},merges={};if(!ctx.admin&&PET_BOXES.includes(request.box)){/* fix17 🎭 โอกาสซ่อน · ตัวนับการันตีอยู่ฝั่งเซิร์ฟเวอร์ */const pref=db.doc(DM_PRIV(ctx.uid)),ps=await tx.get(pref),pity={n:Number(ps.exists?ps.data().box?.n:0)||0},n0=pity.n;
   demon=boxRoll(game,ctx.x17,request.box,request.quantity,ctx.now,()=>randomInt(4294967296)/4294967296,pity);if(pity.n!==n0)merges[pref.path]={box:{n:pity.n}};}
- return {merges,response:{...out.receipt,species:system==='birdbox'?request.box:null,...(Object.keys(demon).length?{demon}:{})}};
+ const cg=Number.isSafeInteger(out.receipt.coins)&&out.receipt.coins>0?out.receipt.coins:0;return {merges,...(cg?{coins:ctx.coins+cg}:{}),response:{...out.receipt,species:system==='birdbox'?request.box:null,...(Object.keys(demon).length?{demon}:{})}};
 }});
 export const boxesActionCloud=callable(async req=>boxesHandler(req,'boxes'));
 // Keep the deployed legacy callable, with the same server-authoritative tables.
@@ -485,7 +486,7 @@ function nbRefundMail(writes,updates,uid,items,title,now){
  updates['players/'+uid]={...(updates['players/'+uid]||{}),mailCount:FieldValue.increment(1)};
 }
 // fix15: ยอดตัดขน/เก็บดอกไม้ส่งตรงเข้าเควสต์บ้าน ไม่แตะเซฟ กุศล หรือกระเป๋าผู้เล่น (กันหน้าเกมที่เปิดอยู่บันทึกทับ)
-const NB_REPORT_CAP={shear:100,flower:200};
+const NB_REPORT_CAP={shear:100,flower:200,mkdiaper:300,decor:500};
 async function nbReport(uid,input){
  const kind=input.kind,n=input.n,now=Date.now();
  if(!Object.hasOwn(NB_REPORT_CAP,kind)||!Number.isInteger(n)||n<1)refuse('รายการไม่ถูกต้อง');
@@ -820,7 +821,7 @@ export const alpacaActionCloud=callable(async req=>{
   const writes={},updates={},now=ctx.now,res={serverNow:now};
   if(type==='order')res.order=factoryOrder(game,ctx.x17,input,now,dmRng);
   else if(type==='battery')res.battery=factoryBattery(game,ctx.x17,now,dmRng);
-  else{const box=ctx.admin?null:await dmLoad(tx,ctx.uid,now);const prior=structuredClone(game),out=factoryClaim(game,ctx.x17,now,ctx.admin?()=>.999999:dmRng);/* แอดมินไม่โดนผีสิง */observeGameplay(prior,game,'alpaca',worlds['world/campaigns']||{},now);/* fix22d: กุศลจากโรงงานนับเข้าแคมเปญเลี้ยงสัตว์เหมือนเดิม */
+  else{const box=ctx.admin?null:await dmLoad(tx,ctx.uid,now);const prior=structuredClone(game),out=factoryClaim(game,ctx.x17,now,ctx.admin?()=>.999999:dmRng);/* แอดมินไม่โดนผีสิง */observeGameplay(prior,game,'alpaca',worlds['world/campaigns']||{},now);/* fix22d: กุศลจากโรงงานนับเข้าแคมเปญเลี้ยงสัตว์เหมือนเดิม */{const {ALPACA_MENU:AM}=await import('./alpaca-menu.js?h=4c9e1f4e');let pp=0;for(const[k,q]of Object.entries(out.got||{})){const m=AM.find(v=>v.id===k);if(m)pp+=Math.round((m.merit||0)/100)*q;}if(pp>0)recordCampaign(game,worlds['world/campaigns']||{},'proc',pp,now);}/* S4: แคมเปญโรงงานนี้หนูคุม */
    if(out.ghosts.length){victimSettle(box.d,game,now);ghostGive(box.d,box.priv,ctx.uid,out.ghosts,now,dmRng,game);const lock=box.d.cf.length?Math.max(...box.d.cf.map(c=>c.until)):0;dmSave(writes,updates,ctx.uid,box,now,{dmc:lock});res.view=box.d;
     dmLog(writes,now,{w:'ghost',k:'ghost',n:out.ghosts.length,from:ctx.uid,fn:String(ctx.name||'').slice(0,40),to:ctx.uid,tn:String(ctx.name||'').slice(0,40)});}
    res.claim={got:out.got,merit:out.merit,ghosts:out.ghosts.map(x=>({g:x.g,amt:x.amt})),n:out.n};}

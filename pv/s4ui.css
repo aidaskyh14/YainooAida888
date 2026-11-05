@@ -18,7 +18,7 @@ button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:
 .demo{display:none!important}
 
 /* ซีซัน 4: แถบบนของหน้าระบบ = ปุ่มกลับฟาร์มเล็กๆ มุมซ้ายบน (ไม่มีแถบขาวเต็มกว้าง) ฉากเต็มจอ */
-#gbar.gbar{background:transparent!important;border:0!important;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0!important}
+#gbar.gbar{z-index:60!important;-webkit-transform:translateZ(0);transform:translateZ(0);background:transparent!important;border:0!important;pointer-events:none;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0!important}
 #gbar.gbar button{pointer-events:auto;background:rgba(48,34,72,.8)!important;color:#fff!important;font:800 11px Mali,sans-serif!important;padding:.42rem .8rem!important;box-shadow:0 4px 12px rgba(20,10,40,.25)!important;border:1px solid rgba(255,255,255,.5)!important}
 #gbar.gbar b{display:none!important}
 #scr{top:0!important;height:100%!important}
@@ -44,3 +44,5 @@ button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:
 /* S4 ข้อ 131: หน้าแคมเปญ/มินิเกม — หัวหน้าเลื่อนลงใต้ปุ่มกลับฟาร์ม · ซ่อนตัวจำลองเวลา (ของทดสอบ) */
 .hdr{padding-top:calc(env(safe-area-inset-top,0px) + 54px)!important}
 .hdr .clock{display:none!important}
+
+/* S4 รอบ 3 ข้อ 10: ปุ่มกลับฟาร์มต้องอยู่บนสุด (iPad แตะโดนหน้าในกรอบแทน) · หน้าตลาดเลื่อนแถบบนหลบปุ่ม */#scr{z-index:1}

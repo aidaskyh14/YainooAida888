@@ -1,12 +1,12 @@
-import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=5f019114';
-import {CATALOG} from './catalog.js?v=ss3-fix17&h=b7fdd38b';
+import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=38cd3fa7';
+import {CATALOG} from './catalog.js?v=ss3-fix17&h=b889872d';
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n).toLocaleString('th-TH');
 const itemFor=box=>CATALOG.find(c=>c.k===box.key)||{n:'กล่องสุ่ม',i:box.image};
 const byKey=k=>CATALOG.find(c=>c.k===k);
 const IMG='images/';
 // Backdrop tint per box: [light centre, glow, deep edge].
-const TINT={dog:['#fff1ec','#f4877b','#6e1f2b'],cat:['#f6efff','#a98be8','#352561'],hamster:['#f7fcff','#9fd6f5','#2e5579'],alpaca:['#fff7fb','#e3c8f2','#5f6c9c'],
+const TINT={decor:['#fdf6ff','#c9a6f0','#5b3d8c'],dog:['#fff1ec','#f4877b','#6e1f2b'],cat:['#f6efff','#a98be8','#352561'],hamster:['#f7fcff','#9fd6f5','#2e5579'],alpaca:['#fff7fb','#e3c8f2','#5f6c9c'],
  ostrich:['#fff3ec','#f7a284','#6f2e24'],dodo:['#effffb','#5fcab8','#164d4f'],plant:['#f3ffec','#8fd477','#24502a'],fruit:['#fff2f7','#f6a0c4','#6d2449']};
 const ANIMAL_GROUPS=['สัตว์','แมว','แฮมสเตอร์'];
 const isAnimal=c=>!!c&&ANIMAL_GROUPS.includes(c.g)&&/^(dog|cat|hamster|al|bird)-/.test(c.k)&&!/^bird-box-/.test(c.k);
@@ -92,7 +92,7 @@ function guardImages(scope){
 function iconHTML(c,fallback){
  const bird=birdOf(c);
  if(bird)return '<div class="lbbird lbic" data-bird="'+bird+'" data-scroll="'+escape(c.i)+'" style="background-image:url(&quot;'+IMG+'birds-'+bird+'-idle.webp&quot;)" role="img" aria-label="'+escape(c.n)+'"></div>';
- return '<img class="lbic" src="'+IMG+escape(c?.i||'')+'" alt="" data-fb="'+(fallback||'🎁')+'">';
+ const i=String(c?.i||'');return '<img class="lbic" src="'+(/^(data:|https?:)/.test(i)?escape(i):IMG+escape(i))+'" alt="" data-fb="'+(fallback||'🎁')+'">';
 }
 const nameOf=c=>birdOf(c)?'นก'+c.n.replace(/^นก/,''):c.n;
 let overlay=null,initializing=false;
@@ -126,24 +126,26 @@ const choice=message=>{
  const bindActions=()=>{panel.querySelector('[data-again]').onclick=()=>choice();panel.querySelector('[data-done]').onclick=close;};
  const reveal=r=>{
   const rows=(r.items||[]).map(({key,quantity})=>({c:byKey(key)||{k:key,n:key,i:''},quantity}));
-  const animals=rows.filter(x=>isAnimal(x.c)),others=rows.filter(x=>!isAnimal(x.c));
+  const animals=rows.filter(x=>isAnimal(x.c)),isDeco=x=>String(x.c.p||'').startsWith('decor.'),decos=rows.filter(x=>!isAnimal(x.c)&&isDeco(x)),others=rows.filter(x=>!isAnimal(x.c)&&!isDeco(x));
   const box=escape(itemFor(selected).n);
   if(r.quantity===1){
    let card;
    if(animals.length){const a=animals[0];card='<h2>🎉 ได้'+(birdOf(a.c)?'นก':'สัตว์')+'ตัวใหม่!</h2><div class="lbbig animal lbreveal">'+iconHTML(a.c,'🐾')+'<b>'+escape(nameOf(a.c))+'</b></div>';}
+   else if(decos.length){const a=decos[0];card='<h2>🎉 ได้ของแต่งใหม่!</h2><div class="lbbig animal lbreveal">'+iconHTML(a.c,'🎨')+'<b>'+escape(a.c.n)+'</b></div>';}
    else if(others.length===1){const o=others[0];card='<h2>ได้รับ</h2><div class="lbbig lbreveal">'+iconHTML(o.c)+'<b>'+escape(o.c.n)+'</b><span>×'+fmt(o.quantity)+'</span></div>';}
    else if(others.length){card='<h2>ได้รับ</h2><div class="lbresult lbreveal">'+others.map((o,i)=>award(o,i)).join('')+'</div>';}
    else if(r.merit){card='<h2>ได้รับ</h2><div class="lbbig lbreveal"><span class="lbemoji">🙏</span><b>กุศล</b><span>+'+fmt(r.merit)+'</span></div>';}
-   else card='<h2>กล่องเกลือ</h2><div class="lbbig lbreveal"><span class="lbemoji">🧂</span><b>ครั้งนี้ไม่ได้ไอเทม</b><span>ลองใหม่นะ</span></div>';
-   const extra=(animals.length||others.length)&&r.merit?'<div class="lbchips"><span class="lbchip">🙏 กุศล +'+fmt(r.merit)+'</span></div>':'';
+   else if(r.coins){card='<h2>ได้รับ</h2><div class="lbbig lbreveal"><img src="'+IMG+'gacha-coin.webp" alt="" style="width:120px;height:120px;object-fit:contain"><b>เหรียญกระทงทอง</b><span>+'+fmt(r.coins)+'</span></div>';}
+   else card='<h2>กล่องเกลือ</h2><div class="lbbig lbreveal"><img src="'+IMG+'lb-salt.webp" alt="" style="width:140px;height:140px;object-fit:contain"><b>ครั้งนี้ไม่ได้ไอเทม</b><span>ลองใหม่นะ</span></div>';
+   const extra=(animals.length||others.length||decos.length)&&r.merit?'<div class="lbchips"><span class="lbchip">🙏 กุศล +'+fmt(r.merit)+'</span></div>':'';
    show('<p class="lbnote">'+box+'</p>'+card+extra+'<p class="lbnote">ของเข้ากระเป๋าและบันทึกแล้ว ✓</p>'+actions);
   }else{
-   const chips=(r.merit?'<span class="lbchip">🙏 กุศล +'+fmt(r.merit)+'</span>':'')+(r.salt?'<span class="lbchip">🧂 กล่องเกลือ '+fmt(r.salt)+'</span>':'');
+   const chips=(r.merit?'<span class="lbchip">🙏 กุศล +'+fmt(r.merit)+'</span>':'')+(r.coins?'<span class="lbchip"><img src="'+IMG+'gacha-coin.webp" alt="" style="width:1.3em;height:1.3em;vertical-align:middle"> เหรียญกระทงทอง +'+fmt(r.coins)+'</span>':'')+(r.salt?'<span class="lbchip"><img src="'+IMG+'lb-salt.webp" alt="" style="width:1.5em;height:1.5em;vertical-align:middle"> กล่องเกลือ '+fmt(r.salt)+'</span>':'');
    show('<h2>🎁 เปิด '+fmt(r.quantity)+' กล่อง</h2><p class="lbnote">'+box+'</p>'+
     (animals.length?'<div class="lbsec">✨ สัตว์ที่ได้</div><div class="lbanimals">'+animals.map((a,i)=>award(a,i,true)).join('')+'</div>':'')+
-    (chips?'<div class="lbchips">'+chips+'</div>':'')+
+    (decos.length?'<div class="lbsec">🎨 ของแต่งที่ได้ ✨</div><div class="lbanimals lbdeco">'+decos.map((a,i)=>award(a,i,true)).join('')+'</div>':'')+    (chips?'<div class="lbchips">'+chips+'</div>':'')+
     (others.length?'<div class="lbsec">ของที่ได้</div><div class="lbresult">'+others.map((o,i)=>award(o,i+animals.length)).join('')+'</div>':'')+
-    (!animals.length&&!others.length&&!r.merit?'<p class="lbnote">ได้กล่องเกลือทั้งหมด ไม่ได้ไอเทม</p>':'')+
+    (!animals.length&&!others.length&&!decos.length&&!r.merit&&!r.coins?'<p class="lbnote">ได้กล่องเกลือทั้งหมด ไม่ได้ไอเทม</p>':'')+
     '<p class="lbnote">หักกล่องแล้ว • ของและกุศลเข้ากระเป๋าและบันทึกแล้ว ✓</p>'+actions);
   }
   bindActions();

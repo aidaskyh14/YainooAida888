@@ -3,7 +3,7 @@
    ราคาจริงคิดที่เซิร์ฟเวอร์ทุกครั้ง หน้านี้แค่แสดง · ราคาอยู่ใน sell-price.js */
 import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
 import {PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=82a9f3af';
+import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=f59c84c6';
 const H=parent.__HOST,W=window;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Math.round(Number(n)||0).toLocaleString('en-US');
@@ -17,7 +17,11 @@ const refresh=()=>{const from=Number(pts)||0;try{Object.assign(S,JSON.parse(H.ge
  try{const el=$('ptsv'),to=Number(pts)||0,t0=performance.now();if(el&&to!==from){(function step(t){const k=Math.min(1,(t-t0)/600);el.textContent=fmt(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);})(t0);const p=$('pts');p.classList.remove('up','dn');void p.offsetWidth;p.classList.add(to>from?'up':'dn');}}catch(e){}
  for(const [k,q] of cart){const r=SELL_BY_KEY.get(k),h=r?haveOf(r):0;if(!h)cart.delete(k);else if(q>h)cart.set(k,h);}try{render();}catch(e){}try{renderBag();}catch(e){}};
 async function getQuote(force){if(!force&&quote&&Date.now()-quoteAt<60000)return quote;const out=await call({type:'bag-quote'});quote={wine:out.wineQuote||{},hw:out.hwQuote||{},left:Number(out.petBonusLeft)||0};quoteAt=Date.now();return quote;}
-const haveOf=r=>sellHave(S,r.path);
+/* S4 ข้อ 20: ของแต่งขายได้เฉพาะชิ้นที่อยู่ในกระเป๋า (ชิ้นที่วางอยู่ในฟาร์ม/โซนขายไม่ได้) */
+const haveOf=r=>{const h=sellHave(S,r.path);if(!r.decor)return h;try{const O=W.S4OWN;if(!O)return 0;O.invalidate&&O.invalidate();const f=O.free(r.decor),pl=O.placed(r.decor);return Math.max(0,Math.min(h,h+(f===Infinity?0:f)-pl));}catch(e){return 0;}};
+/* ขายของธีมแล้วจะไม่ครบรับรางวัลสมุดรอบถัดไป → เตือนก่อน */
+let THEMES=null;import('./decor-prices.js?h=25c28b17').then(m=>{THEMES=m.THEME_SETS;}).catch(()=>{});
+function bookWarn(items){if(!THEMES)return [];const out=[];const d=(S.bag&&S.bag.decor)||{},unl=S.unl||{};for(const[t,L]of Object.entries(THEMES)){const need=(Math.floor(Number(unl['book_'+t])||0))+1;let hit=false;for(const it of items){const r=SELL_BY_KEY.get(it.k);if(!r||!r.decor||!L.includes(r.decor))continue;const q=it.q==='all'?haveOf(r):it.q;if((Number(d[r.decor])||0)-q<need&&(Number(d[r.decor])||0)>=need)hit=true;}if(hit)out.push(t);}return out;}
 const priceOf=r=>r.kind==='wine'?(quote?.wine?.[r.w]??null):r.kind==='hw'?(quote?.hw?.[r.h]??null):r.price;
 const imgOf=r=>{if(r.img)return r.img;const m=r.path.match(/^bag\.([^.]+)\.(.+)$/);try{return m?bagImg(m[1],m[2]):'';}catch(e){return '';}};
 /* แต่ละแผนกขายอะไรบ้าง */
@@ -125,7 +129,7 @@ function itemSheet(k){const r=SELL_BY_KEY.get(k);if(!r)return;const have=haveOf(
  inp.oninput=upd;upd();
  if(r.kind!=='fixed')getQuote().then(()=>{upd();const n=$('bsN');if(n)n.innerHTML=kindNote(r);}).catch(e=>toast(e?.message||'ดูราคาไม่ได้',1));
  $('bsC').onclick=()=>{if(!q)return;cart.set(k,q);close();renderBag();toast('🧺 ใส่'+r.n+' ×'+nf(q)+' ลงตะกร้าแล้ว');};
- $('bsGo').onclick=()=>{if(!q)return;sellNow([{k,q:q===have?'all':q}]);};}
+ $('bsGo').onclick=()=>{if(!q)return;const its=[{k,q:r.decor?q:(q===have?'all':q)}];const bw=bookWarn(its);if(bw.length&&!confirm('⚠️ ขายของธีมชิ้นนี้แล้ว ธีม '+bw.join(', ')+' จะมีของไม่ครบสำหรับรับรางวัลสมุดรอบถัดไป\nยังต้องการขายใช่ไหม?'))return;sellNow(its);};}
 
 /* ---------- ตะกร้าขาย ---------- */
 function cartSheet(){const rows=[...cart].map(([k,q])=>[SELL_BY_KEY.get(k),q]).filter(([r])=>r);if(!rows.length){close();return renderBag();}const c=cartTotal();
@@ -136,7 +140,8 @@ function cartSheet(){const rows=[...cart].map(([k,q])=>[SELL_BY_KEY.get(k),q]).f
  bx.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{cart.delete(b.dataset.rm);renderBag();cartSheet();});
  $('bsClr').onclick=()=>{cart.clear();close();renderBag();};$('bsGo').onclick=sellCart;
  if(rows.some(([r])=>r.kind!=='fixed')&&(!quote||Date.now()-quoteAt>60000))getQuote().then(()=>{if(box.classList.contains('on')&&bx.querySelector('#bsClr'))cartSheet();}).catch(()=>{});}
-function sellCart(){const items=[...cart].map(([k,q])=>{const r=SELL_BY_KEY.get(k),h=r?haveOf(r):0;return r&&h?{k,q:q>=h?'all':q}:null;}).filter(Boolean);if(!items.length){cart.clear();return renderBag();}sellNow(items,true);}
+function sellCart(){const items=[...cart].map(([k,q])=>{const r=SELL_BY_KEY.get(k),h=r?haveOf(r):0;return r&&h?{k,q:r.decor?Math.min(q,h):(q>=h?'all':q)}:null;}).filter(Boolean);if(!items.length){cart.clear();return renderBag();}
+ const bw=bookWarn(items);if(bw.length&&!confirm('⚠️ ขายของธีมชิ้นนี้แล้ว ธีม '+bw.join(', ')+' จะมีของไม่ครบสำหรับรับรางวัลสมุดรอบถัดไป\nยังต้องการขายใช่ไหม?'))return;sellNow(items,true);}
 
 /* ---------- ขายจริง (ทีละไม่เกิน 300 อย่างต่อรอบ) ---------- */
 async function sellNow(items,fromCart){if(busy)return;busy=true;const go=$('bsGo');if(go){go.disabled=true;go.textContent='⏳ กำลังขาย…';}else show('<div class="done"><div class="dbig">⏳</div><div class="note">กำลังขาย…</div></div>');

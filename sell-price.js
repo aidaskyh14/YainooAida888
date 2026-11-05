@@ -2,9 +2,10 @@
    ราคาเป็นกุศลต่อชิ้น · ไวน์ = 80% ราคาตลาดสวน (ขึ้นลงตามหุ้น) · ของลอยกระทง 8 อย่าง = ราคาร้านลอยกระทงเดิม (ช่วงผีออกได้โบนัส)
    สัตว์ = ราคาเดิมจากระบบขายสัตว์ (มีของแถมทุก 100 ตัว) · ของแปรรูปอัลปาก้า = 30% ของกุศลเมนู
    💳 บัตร ATM ขายได้ใบละ 100,000,000 (ขายแล้วใช้ตู้ ATM ไม่ได้จนกว่าจะได้บัตรใหม่) */
-import {CATALOG} from './catalog.js?h=b7fdd38b';
+import {CATALOG} from './catalog.js?h=b889872d';
 import {ALPACA_MENU} from './alpaca-menu.js?h=4c9e1f4e';
 import {PET_SELL} from './pet-sell-engine.js?h=c397ae44';
+import {decorSellPrice} from './decor-prices.js?h=25c28b17';
 const T=(list,p)=>Object.fromEntries(list.map(k=>[k,p]));
 export const SELL_PRICE={
  /* 🥬 ผัก (ตามราคาเมล็ด/เวลาปลูก) */
@@ -27,7 +28,7 @@ export const SELL_PRICE={
  musicbox:50,bell:300,fuel:10,hat:300,cake:200,coconut:100,wings:300,fert:100,pestle:30,hay:20,medicine:200,fertfruit:100,treat:100,collar:300,boot:50,
  afood0:200,afood1:300,afood2:500,fertfruitP:300,
  /* 🎁 กล่องสุ่ม */
- 'box-dog':200,'box-cat':200,'box-hamster':200,'box-plant':200,'box-fruit':200,'box-alpaca':300,'bird-box-ostrich':500,'bird-box-dodo':500,'box-mahakusal':500,
+ 'box-dog':200,'box-cat':200,'box-hamster':200,'box-plant':200,'box-fruit':200,'box-decor':500,'mk-smoothie':8000,'mk-cake':20000,'box-alpaca':300,'bird-box-ostrich':500,'bird-box-dodo':500,'box-mahakusal':500,
  /* 🍲 อาหาร: อาหารบ้าน 2,000 · เมนูมีคลาส 6,000 · อาหารสวนตามระดับ */
  ...T(['food-01','food-02','food-03','food-04','food-05','food-06','food-07','food-08','food-09','food-10','food-11','food-12'],2000),
  ...T(['food-13','food-14','food-15','food-16','food-17','food-18','food-19','food-20'],6000),
@@ -46,7 +47,7 @@ export const SELL_PRICE={
  /* 🎭 ไอเทมปีศาจ */
  'demon-music':500,'demon-hour':1000,'demon-coffin':1500,'demon-heart':2500,
  /* 💳 บัตร ATM */
- 'atm-lotus':100000000,'atm-moon':100000000,'mkdiaper':2000000};
+ 'atm-lotus':100000000,'atm-moon':100000000,'mkdiaper':2000000,'mkdiaper2':5000000,'mkdiaper3':12000000,'mkdiaper4':40000000};
 export const SELL_NO=new Set();
 export const WINE_KEYS={'wine-moon':'moon','wine-rose':'rose','wine-blood':'blood','wine-eclipse':'eclipse'};
 export const HW_KEYS={'halloween-candy':'candy','halloween-bat':'bat','halloween-candle':'candle','halloween-web':'web','halloween-hat':'hat','halloween-broom':'broom','halloween-pumpkin':'pumpkin','halloween-cauldron':'cauldron'};
@@ -56,6 +57,7 @@ const PET=new Map(PET_SELL.map(p=>[p[0],p]));
 export const SELL_ROWS=(()=>{const out=[],seen=new Set();
  for(const c of CATALOG){if(SELL_NO.has(c.k)||seen.has(c.k))continue;seen.add(c.k);
   const path=/^(sub|pend)\./.test(c.p)?c.p:'bag.'+c.p,img=c.i?(c.i.startsWith('images/')?c.i:'images/'+c.i):'',base={k:c.k,n:String(c.n).replace(/\s*\(.*\)$/,''),img,g:c.g,path};
+  if(c.p.startsWith('decor.')){const id=c.p.slice(6),pr=decorSellPrice(id);if(pr>0&&!out.some(r=>r.decor===id))out.push({...base,kind:'fixed',price:pr,decor:id});continue;}/* S4 ข้อ 20: ของแต่งขายได้ (เฉพาะชิ้นในกระเป๋า) */
   if(PET.has(c.k)){const P=PET.get(c.k);out.push({...base,path:P[1],kind:'pet',price:P[2]});continue;}
   if(WINE_KEYS[c.k]){out.push({...base,kind:'wine',price:0,w:WINE_KEYS[c.k]});continue;}
   if(HW_KEYS[c.k]){out.push({...base,kind:'hw',price:0,h:HW_KEYS[c.k]});continue;}

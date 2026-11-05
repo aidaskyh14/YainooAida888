@@ -65,14 +65,14 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
  function tick(){const t=now(),scr=screen?.();
   /* ✨ */
   const b=st?.bat;const batLive=b&&!b.settled&&t<b.end&&st.round;
-  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>✨ หิ่งห้อยขนดอกบัวกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกโคมลอย ลากนิ้วฟันดอกบัวรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันดอกบัว</button>';
+  if(batLive&&t<b.start&&scr!=='treewar'){if(!warnEl){warnEl=document.createElement('div');warnEl.className='tw-warn';warnEl.setAttribute('role','alert');warnEl.innerHTML='<h3>🦇 ค้างคาวขนโคมลอยกำลังมา!</h3><div class="cd"></div><p>ไปหน้าศึกโคมลอย ลากนิ้วฟันโคมลอยรับกุศล ×'+b.lvl+' และเก็บขวานไว้ตัดต้นไม้บ้านอื่น</p><button class="tw-big">🌳 ไปฟันโคมลอย</button>';
     warnEl.querySelector('button').onclick=()=>{warnEl?.remove();warnEl=null;go?.('treewar');};document.body.appendChild(warnEl);}
    warnEl.querySelector('.cd').textContent=Math.ceil((b.start-t)/1000);}else if(warnEl){warnEl.remove();warnEl=null;}
   /* โดนปล้น/ตัดตอนออนไลน์: เรียก ledger ให้หักและแจ้งทันที (ไม่ทำระหว่างเล่นมินิเกม/แข่ง/ค้างคาว) */
   const hit=mine?.hit;if(hit?.at&&!hitDone.has(hit.at)&&ledger&&!hold?.()&&!(batLive&&scr==='treewar')){hitDone.add(hit.at);ledger().catch(()=>hitDone.delete(hit.at));}
   /* งานที่รอ */
   const jobs=[];
-  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','✨ ฟันดอกบัว ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
+  if(batLive&&t>=b.start&&scr!=='treewar')jobs.push(['bat','🏮 ฟันโคมลอย ⏳ '+clock(b.end-t),()=>go?.('treewar')]);
   const L=st?.last;
   if(lastOk()&&t>=L.openAt&&t<L.until+60000){
    if(mine?.merit?.round===L.id&&!mine.merit.done)jobs.push(['merit:'+L.id,'🏆 เลือกแผ่นป้ายกุศล ⏳ '+clock(L.until-t),()=>meritPop(L)]);
@@ -111,7 +111,7 @@ export function startTreeWar({watchState,watchMine,call,now,go,screen,toast,ledg
    catch(e){toast?.(e.message||'ลองใหม่อีกครั้ง');go.disabled=sel.length!==need;}finally{busy=false;}};}
  async function surprisePop(S){const key='surprise:'+S.bat;let me=null;opening=true;try{me=(await call({type:'status'}))?.me?.surprise;}catch(e){}finally{opening=false;}
   if(me?.card==='shield'&&!me.done)return shieldPick(S,key);
-  const o=open(key,'<div style="font-size:2.2rem">🏅</div><h2>คุณเก็บกุศลจากหิ่งห้อยได้มากที่สุด!</h2><p>เลือกการ์ดเซอร์ไพรส์ 1 ใบ</p><div class="tm"></div>'+cardsHtml(3,'sBack','c3')+'<p>ไม่เลือกใน 10 นาที ระบบเลือกให้</p>');
+  const o=open(key,'<div style="font-size:2.2rem">🏅</div><h2>คุณเก็บกุศลจากค้างคาวได้มากที่สุด!</h2><p>เลือกการ์ดเซอร์ไพรส์ 1 ใบ</p><div class="tm"></div>'+cardsHtml(3,'sBack','c3')+'<p>ไม่เลือกใน 10 นาที ระบบเลือกให้</p>');
   timer(o.querySelector('.tm'),S.until);
   o.querySelectorAll('.tw-card').forEach(c=>c.onclick=async()=>{if(busy)return;busy=true;o.querySelectorAll('.tw-card').forEach(x=>x.disabled=true);
    try{const r=await call({type:'surprise',i:Number(c.dataset.i)});reveal(o,r.deck,r.i,k=>SU[k][0],k=>SU[k][1]);

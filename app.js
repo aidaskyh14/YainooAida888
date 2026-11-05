@@ -1,14 +1,14 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=5f019114';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=38cd3fa7';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss3-fix20&h=a601f762';
-import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=cb6616b6';
+import {showLootBoxes} from './loot-boxes.js?v=ss3-fix20&h=383836a6';
+import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
 import {startRumors} from './rumor-ui.js?v=ss3-fix17&h=9147b483';
 import {startAlerts} from './alerts-ui.js?v=ss3-fix18&h=6cb9340c';
-import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=126b4f9c';
+import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17&h=78c0a2cd';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=d92811ef';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss3-fix19&h=b7fdd38b';
+import { CATALOG } from './catalog.js?v=ss3-fix19&h=b889872d';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -84,7 +84,7 @@ function queueGameplay(before,after,source,boxes){
  const petEarn=craft&&((after.hedgeEarn||0)>(before.hedgeEarn||0)||(after.ham?.earn||0)>(before.ham?.earn||0));
  if(boxes.length||stockChanged||meritChanged||craftChanged||petEarn)campaignJobs.push({before:clone(before),after:clone(after),source,boxes,petEarn,at:Date.now()});
 }
-const CAMPAIGN_SOURCES={pet:['barn','birds','dog','alpaca','catpen','house','backyard'],cook:['farm','house','backyard'],pump:['farm','house','backyard']};
+const CAMPAIGN_SOURCES={pet:['barn','birds','dog','alpaca','catpen','house','backyard'],cook:['farm','house','backyard'],pump:['farm','house','backyard'],mkd:['birds']};
 // A cached config is only trusted for a job after the fetch when every campaign that job could score is already running.
 function configCovers(cfg,job,now){const ids=job.boxes?.length?['box']:Object.keys(CAMPAIGN_SOURCES).filter(id=>CAMPAIGN_SOURCES[id].includes(job.source)&&(id!=='pet'||!['house','backyard'].includes(job.source)||job.petEarn));return ids.every(id=>cfg?.[id]?.start&&cfg[id].start<=now&&now<cfg[id].end);}
 async function prepareGameplay(){
@@ -499,7 +499,7 @@ async function logout() {
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
 // g คือภาพข้อมูลในหน่วยความจำเพื่อรองรับหน้าชุด 2–3 เดิม; ฐานข้อมูลแยกเอกสารแล้ว
-const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'เกล็ดปลาจันทร์': 'product.scale' };
+const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'กล้วย': 'crop.banana', 'นมวัว': 'product.milk', 'ไข่ไก่': 'product.egg', 'เกล็ดปลาจันทร์': 'product.scale' };
 const SUBS = {
   ...{"s3safari1": {"id": "safari", "maps": {"bag.c-waterspinach": "bag.crop.waterspinach", "bag.c-lettuce": "bag.crop.lettuce", "bag.c-mango": "bag.crop.mango", "bag.c-chili": "bag.crop.chili", "bag.c-pumpkin": "bag.crop.pumpkin", "bag.c-lychee": "bag.crop.lychee", "bag.c-strawberry": "bag.crop.strawberry", "bag.c-grape": "bag.crop.grape", "bag.c-banana": "bag.crop.banana", "bag.c-gooseberry": "bag.crop.gooseberry", "bag.c-carrot": "bag.crop.carrot", "bag.c-corn": "bag.crop.corn", "bag.c-mushroom": "bag.crop.mushroom", "bag.c-melon": "bag.crop.melon", "bag.c-bamboo": "bag.crop.bamboo", "bag.c-plankton": "bag.crop.plankton", "bag.c-potato": "bag.crop.potato", "bag.c-cucumber": "bag.crop.cucumber", "bag.c-watermelon": "bag.crop.watermelon", "bag.c-cabbage": "bag.crop.cabbage", "bag.c-pea": "bag.crop.pea", "bag.c-tomato": "bag.crop.tomato", "bag.a-egg": "bag.product.egg", "bag.a-feather": "bag.product.feather", "bag.a-drumstick": "bag.product.drumstick", "bag.a-fishmeat": "bag.product.fishmeat", "bag.a-roe": "bag.product.roe", "bag.a-scale": "bag.product.scale", "bag.a-truffle": "bag.product.truffle", "bag.a-pork": "bag.product.pork", "bag.a-trotter": "bag.product.trotter", "bag.a-milk": "bag.product.milk", "bag.a-cheese": "bag.product.cheese", "bag.a-cream": "bag.product.cream", "bag.b-ostrich-egg": "bag.bird.ostrich-egg", "bag.b-ostrich-feather": "bag.bird.ostrich-feather", "bag.b-dodo-egg": "bag.bird.dodo-egg", "bag.b-dodo-feather": "bag.bird.dodo-feather", "bag.b-dodo-pebble": "bag.bird.dodo-pebble", "bag.f-0": "bag.food.ข้าวผัดไข่", "bag.f-1": "bag.food.ซุปฟักทอง", "bag.f-2": "bag.food.ปลาย่างซอสมะม่วง", "bag.f-3": "bag.food.สตูว์รวมมิตร", "bag.f-4": "bag.food.ไข่อบชีส", "bag.f-5": "bag.food.น่องไก่อบครีม", "bag.f-6": "bag.food.ขนมลิ้นจี่มะยม", "bag.f-7": "bag.food.จานรวมมิตร", "bag.f-8": "bag.food.ออมเล็ตโรซี่", "bag.f-9": "bag.food.ไข่อบอัญชัน", "bag.f-10": "bag.food.ไข่ตุ๋นหกบุปผา", "bag.f-11": "bag.food.ไข่ย่างสปาฟลาวเวอร์", "bag.fl-daisy": "bag.flower.daisy", "bag.fl-rose": "bag.flower.rose", "bag.fl-butterflypea": "bag.flower.butterflypea", "bag.fl-sunflower": "bag.flower.sunflower", "bag.fl-lotus": "bag.flower.lotus", "bag.fl-orchid": "bag.flower.orchid", "bag.fl-tulip": "bag.flower.tulip", "bag.fl-lavender": "bag.flower.lavender", "bag.fl-marigold": "bag.flower.marigold", "bag.fl-hydrangea": "bag.flower.hydrangea", "bag.fl-plumeria": "bag.flower.plumeria", "bag.fl-hibiscus": "bag.flower.hibiscus", "bag.w-moon": "bag.wine.moon", "bag.w-rose": "bag.wine.rose", "bag.w-blood": "bag.wine.blood", "bag.w-eclipse": "bag.wine.eclipse", "bag.h-fang": "bag.hedge.fang", "bag.h-quills": "bag.hedge.quills", "bag.h-claw": "bag.hedge.claw", "bag.h-tail": "bag.hedge.tail"}, "fresh": {"merit": 0, "bag": {}, "tasks": {}, "sel": 1, "stats": {"runs": 0, "wins": 0, "fails": 0, "merit": 0}, "log": []}}, "s3market1": {"id": "market", "maps": {"bag.rose": "bag.wine.rose", "bag.moon": "bag.wine.moon", "bag.blood": "bag.wine.blood", "bag.eclipse": "bag.wine.eclipse"}, "fresh": {"lots": [], "bag": {}, "news": [], "modes": [], "divGot": {}, "mailSeen": 0, "mail": []}}},
   's3barn3': { id: 'barn', maps: { items: 'bag.item', bag: 'bag.product' } },
@@ -704,7 +704,7 @@ const HOST_BASE = {
   serverNow(){return serverNow();},
   cloud:sceneCloud,
   // fix15: ตัดขนอัลปาก้า/เก็บดอกไม้ทำในหน้าเกม แจ้งยอดให้เควสต์เนเบอร์ฮูดแบบรวมเป็นชุด (ไม่เกินทุก 20 วินาที)
-  nbReport(kind,n){if(!['shear','flower'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
+  nbReport(kind,n){if(!['shear','flower','mkdiaper','decor'].includes(kind)||!(n>0))return;nbReportBuf[kind]=(nbReportBuf[kind]||0)+Math.floor(n);if(!nbReportTimer)nbReportTimer=setTimeout(flushNbReport,20000);},
   roster:async()=>{const rows=(await httpsCallable(functions,'gameRoster')({})).data;return rows;},
   /* fix17: เรียกคลาวด์แบบไม่ผ่านประตูลำดับรายการ (ฝนกุศล: ฟองทอง/คะแนนสด) · ข้อมูลส่วนตัวฝั่งเซิร์ฟเวอร์ (x17) */
   cloudRaw:(system,input)=>CLOUD_HANDLERS[system]?httpsCallable(functions,CLOUD_HANDLERS[system])({raw:true,input}).then(r=>r.data):Promise.reject(new Error('ไม่พบระบบที่เรียก')),
@@ -817,7 +817,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=dc80272a'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=3ccc0075'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -889,6 +889,7 @@ async function claim(id, btn, quiet) {
       const release=mail.escrowRelease;if(release&&game.sub?.minigames?.escrows?.[release.system]?.round===release.round)delete game.sub.minigames.escrows[release.system];
       if (mail.kusal) game.merit = (game.merit || 0) + mail.kusal;
       for (const [k,n] of Object.entries(mail.items || {})) addPath(game, gpath(k).slice(2), n);
+      {let dn=0;for(const [k,n] of Object.entries(mail.items||{}))if(/^decor-/.test(k))dn+=Math.max(0,Number(n)||0);if(dn)setTimeout(()=>{try{window.__HOST?.nbReport?.('decor',dn);}catch(e){}},0);}/* S4 ภารกิจชุมชน: ได้ของแต่งจากจดหมาย */
       refillAdminInventory(game,S.admin,CATALOG);
     });
   } catch (e) { busy(btn, false, 'กดรับ'); if (e.code === 'save/conflict') otherDevice(); else if (e.thai) { toast(e.thai); if(!quiet)openMail(true); } else toast(thaiError(e)); return false; }

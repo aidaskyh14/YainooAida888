@@ -1,5 +1,7 @@
-import {CATALOG} from './catalog.js?h=b7fdd38b';
-import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?h=5f019114';
+import {CATALOG} from './catalog.js?h=b889872d';
+import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=38cd3fa7';
+import {decorBoxPool} from './decor-prices.js?h=25c28b17';
+let POOLS=null;const pools=()=>{if(POOLS)return POOLS;POOLS={};for(const c of CATALOG){if(!c.p.startsWith('decor.'))continue;const k=decorBoxPool(c.p.slice(6));if(k)(POOLS[k] ||= []).push(c);}return POOLS;};
 const fullPath=c=>/^(sub|pend)\./.test(c.p)?c.p:'bag.'+c.p;
 const error=message=>{throw Object.assign(new Error(message),{code:'invalid-argument'});};
 function add(game,path,amount){const keys=path.split('.');let o=game;for(const k of keys.slice(0,-1))o=o[k]||=( {} );const k=keys.at(-1);o[k]=(o[k]||0)+amount;}
@@ -7,12 +9,13 @@ export function openLootBoxes(game,input,rng=Math.random){
  const box=BOXES.find(b=>b.id===input.box),quantity=input.quantity;
  if(input.type!=='open'||!box||!BOX_QUANTITIES.includes(quantity))error('กล่องหรือจำนวนไม่ถูกต้อง');
  if(getBoxCount(game,box)<quantity)error('กล่องสุ่มไม่พอ');
- const next=structuredClone(game),totals=new Map(),outcomes=[];let merit=0,salt=0;
+ const next=structuredClone(game),totals=new Map(),outcomes=[];let merit=0,salt=0,coins=0;
  const rand=()=>{const n=rng();if(!Number.isFinite(n)||n<0||n>=1)throw new Error('ผลสุ่มไม่ถูกต้อง');return n;};
  const int=(lo,hi)=>lo+Math.floor(rand()*(hi-lo+1));
  const pick=pool=>{if(!pool.length)throw new Error('ไม่พบรายการรางวัล');return pool[Math.floor(rand()*pool.length)];};
  const grant=(item,n)=>{if(!item)throw new Error('ไม่พบไอเทมรางวัล');add(next,fullPath(item),n);totals.set(item.k,(totals.get(item.k)||0)+n);};
  const byKey=k=>CATALOG.find(c=>c.k===k);
+ const wpick=t=>{let r=rand()*t.reduce((a,x)=>a+x[1],0);for(const x of t){r-=x[1];if(r<0)return x[0];}return t.at(-1)[0];};
  add(next,box.path,-quantity);
  for(let i=0;i<quantity;i++){
   let chance=rand()*100;const row=box.rows.find(r=>(chance-=r.weight)<0)||box.rows.at(-1);let category='item',amount=0;
@@ -38,10 +41,14 @@ export function openLootBoxes(game,input,rng=Math.random){
     const pool=CATALOG.filter(c=>c.p.startsWith('crop.')),n=int(2,5);
     for(let j=0;j<n;j++){const c=pool.splice(Math.floor(rand()*pool.length),1)[0],bias=rand();grant(c,bias<.8?int(30,50):bias<.95?int(10,29):int(51,150));}break;
    }
+   case 'meritT':amount=wpick(MERIT_TABLE);merit+=amount;next.merit=(next.merit||0)+amount;category='merit';break;
+   case 'speed':grant(byKey(wpick(SPEED_TABLE)),int(1,3));break;
+   case 'coins':amount=int(...row.value);coins+=amount;category='coins';break;
+   case 'decor':{const pool=pools()[row.value]||pools().small;grant(pick(pool),1);category='decor';break;}
    default:throw new Error('ตารางกล่องไม่ครบ');
   }
   outcomes.push({k:category,q:amount});
  }
  const items=[...totals].map(([key,quantity])=>({key,quantity}));
- return {game:next,outcomes,receipt:{box:box.id,quantity,merit,salt,items,remaining:getBoxCount(next,box)}};
+ return {game:next,outcomes,receipt:{box:box.id,quantity,merit,salt,coins,items,remaining:getBoxCount(next,box)}};
 }

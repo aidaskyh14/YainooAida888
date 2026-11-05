@@ -1,4 +1,4 @@
-import {seeded,bkkHour} from './campaigns-engine.js?h=6795f504';
+import {seeded,bkkHour} from './campaigns-engine.js?h=a073b41e';
 import {moleRound,moleHits,moleResult,MOLE} from './mole-engine.js?h=96f1c725';
 import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js?h=6ca43a1f';
 import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js?h=fe3693c0';

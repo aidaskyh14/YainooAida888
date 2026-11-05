@@ -13,7 +13,7 @@
  const SIZE={d_hot_air_balloon:5,d_wooden_gazebo:5.5,d_windmill:5,d_carousel_horse:4,d_fountain:4,d_water_lily_pond:4.5,d_playground_slide:4,d_wooden_hot_tub:3.6,d_purple_polka_teacup:3.6,d_cartoon_rowboat:3.6};
  window.S4DECO={init(o){
   const {THREE,sc,cam,dom,key}=o;const MAX=o.max||60,TH=o.thBase||'../farm3d/th4/';const fitM=o.fit,model=o.model;let H=null;try{H=(parent.parent&&parent.parent.__HOST)||parent.__HOST||null;}catch(e){}
-  if(o.names)Object.assign(NAMES,o.names);const CUS=o.custom||{},FREEZ=o.free||{};const SKEY='s4deco-'+key;let LIST=[];try{const v=H&&H.get(SKEY);if(v)LIST=JSON.parse(v)||[];}catch(e){LIST=[];}if(!Array.isArray(LIST))LIST=[];
+  if(o.names)Object.assign(NAMES,o.names);/* S4 รอบ 3: ของเก่าที่ถูกแทนที่ (ลบออกจากถาดและจากที่วางไว้) */if(o.drop)for(const n of o.drop)delete NAMES[n];const CUS=o.custom||{},FREEZ=o.free||{};const SKEY='s4deco-'+key;let LIST=[];try{const v=H&&H.get(SKEY);if(v)LIST=JSON.parse(v)||[];}catch(e){LIST=[];}if(!Array.isArray(LIST))LIST=[];
   let CAT=Object.keys(NAMES);if(o.order)CAT=[...o.order.filter(n=>NAMES[n]),...CAT.filter(n=>!o.order.includes(n))];const objs=new Map();let seq=Date.now()%1e6;
   /* แจ้งโซน: ตำแหน่ง+ขนาดของที่วาง (ให้สัตว์/ตัวละครเดินอ้อม) */let chT=0;const chg=()=>{if(!o.onChange)return;clearTimeout(chT);chT=setTimeout(chg0,60);};const chg0=()=>{try{const out=[];for(const it of LIST){const g=objs.get(it.id);if(!g)continue;
    if(o.obFor){const r=o.obFor(it,g);if(r!==undefined){if(r)out.push(...r);continue;}}

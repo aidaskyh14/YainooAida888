@@ -1,4 +1,4 @@
-import {recordCampaign,bkkHour,dayKey,HALLOWEEN,featuredMenus} from './campaigns-engine.js?v=ss3-fix16&h=6795f504';
+import {recordCampaign,bkkHour,dayKey,HALLOWEEN,featuredMenus} from './campaigns-engine.js?v=ss3-fix16&h=a073b41e';
 const at=(g,p)=>p.split('.').reduce((o,k)=>o?.[k],g)||0;
 const increase=(a,b,p)=>Math.max(0,at(b,p)-at(a,p));
 const values=g=>Object.values(g||{}).reduce((s,n)=>s+(Number(n)||0),0);
@@ -14,6 +14,7 @@ export function observeGameplay(before,after,source,config,now,boxes=[],rng=Math
  if(!boxes.length&&['barn','birds','dog','alpaca','catpen'].includes(source)){
    let pts=merit;for(const[p,w]of Object.entries(DROP_POINTS))pts+=increase(before,after,p)*w;recordCampaign(after,config,'pet',pts,now);
  }
+ if(source==='birds'){const mp=increase(before,after,'sub.birds.mkpts');if(mp>0)recordCampaign(after,config,'mkd',mp,now);}/* S4 แคมเปญแม่ลิงขยันเก็บ */
  // fix16: เม่น (hedgeEarn) และแฮมสเตอร์ (ham.earn) นับเข้าแคมเปญเลี้ยงสัตว์ผ่านตัวนับกุศลจากสัตว์โดยตรง
  if(!boxes.length&&['house','backyard'].includes(source)){const pts=increase(before,after,'hedgeEarn')+increase(before,after,'ham.earn');if(pts>0)recordCampaign(after,config,'pet',pts,now);}
  if(['farm','house','backyard'].includes(source)){

@@ -1,10 +1,11 @@
 /* Bounded collection receipts. No clock writes and no writes to the visited owner. */
-import {seeded} from './campaigns-engine.js?h=6795f504';
-export const DROP_OWN_MS=20*60000,DROP_FRIEND_MS=45*60000;
+import {seeded} from './campaigns-engine.js?h=a073b41e';
+/* S4 รอบ 3 ข้อ 13: ไม้/หิน/หญ้าขึ้นเร็วขึ้น — ฟาร์มตัวเองทุก 10 นาที (ขึ้นแน่ 2–4 ชิ้น) · ฟาร์มเพื่อนทุก 20 นาที (2–5 ชิ้น มีไม้/หินด้วย) */
+export const DROP_OWN_MS=10*60000,DROP_FRIEND_MS=20*60000;
 export function farmDropRows(owner,farm,now,friend=false){
  const period=friend?DROP_FRIEND_MS:DROP_OWN_MS,epoch=Math.floor(now/period),rng=seeded(owner+'|'+farm+'|'+epoch+'|'+(friend?'friend':'own'));
- const n=friend?2+Math.floor(rng()*4):rng()<.5?1+Math.floor(rng()*3):0,rows=[];
- for(let i=0;i<n;i++){const kind=friend?'grass':rng()<.6?'grass':rng()<.5?'wood':'stone';let color='green',w=rng()*100;for(const[k,q]of [['green',40],['yellow',25],['red',20],['pink',10],['blue',5]]){w-=q;if(w<0){color=k;break;}}rows.push({id:i,group:kind==='grass'?'grass':'forest',key:kind==='grass'?color:kind,quantity:kind==='grass'?5+Math.floor(rng()*11):10+Math.floor(rng()*11),position:i});}
+ const n=friend?2+Math.floor(rng()*4):2+Math.floor(rng()*3),rows=[];
+ for(let i=0;i<n;i++){const kind=rng()<.6?'grass':rng()<.5?'wood':'stone';let color='green',w=rng()*100;for(const[k,q]of [['green',40],['yellow',25],['red',20],['pink',10],['blue',5]]){w-=q;if(w<0){color=k;break;}}rows.push({id:i,group:kind==='grass'?'grass':'forest',key:kind==='grass'?color:kind,quantity:kind==='grass'?5+Math.floor(rng()*11):10+Math.floor(rng()*11),position:i});}
  return {epoch,period,rows,nextAt:(epoch+1)*period};
 }
 export function farmDropsAction(account,ctx,input){
