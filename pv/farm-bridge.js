@@ -12,7 +12,7 @@
   let hn=null;try{if(!vis&&S.honey&&typeof hPhase==='function'){const h=S.honey,ph=hPhase();if(ph!=='home'&&ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:(h.req||[]).map(r=>({img:fImg(r),n:r[2],ok:fHave(r)>=r[2]}))};}}catch(e){}
   /* S4 ข้อ 93: ตอนเยี่ยม เห็นรถ/เรือน้ำผึ้งของเพื่อนจอดอยู่ (ไม่เห็นรายการของ) */try{if(vis&&window.__fhoney){const h=window.__fhoney,n=Date.now();let ph;if(h.leaveAt){ph=(n<h.leaveAt&&!h.fail)?'parked':n<h.leaveAt+4000?'leaving':'gone';}else ph=n<h.arriveAt?'coming':n<h.until?'parked':'late';if(ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:[],vis:1};}}catch(e){}
   try{if(w.__visitLayout){const ff=vis&&window.friendFarm;if(ff&&ff.deco!==undefined){if(ff.deco)window.__fdeco=ff.deco;}w.__visitLayout(vis?(window.__fdeco||'{}'):null,vis?(ff&&ff.owner)||'x':null);if(!vis)window.__fdeco=null;}}catch(e){}
-  try{w.__s3sync({dr:(vis?[]:(window.__dropRows||[])),fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
+  try{w.__s3sync({ul2:vis?true:!!((S.unl||{}).f2),dr:(vis?[]:(window.__dropRows||[])),fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
  setInterval(()=>{if(!document.hidden)sync();},450);
  let lastFarm=0;const followFarm=()=>{const w=W3();if(!w||!w.__s3farm||farm===lastFarm)return;lastFarm=farm;try{w.__s3farm(farm===3?2:farm);}catch(e){}};
  setInterval(()=>{if(!document.hidden)followFarm();},300);
@@ -23,6 +23,9 @@
   fruit(i){if(visiting){toast('🍑 ดูได้อย่างเดียว เด็ดไม่ได้นะ');return;}if(!(S.unl||{}).f4){showUnlock&&showUnlock('f4');return;}useFarm(4);const F4=window.__F4;if(!F4)return;const p=S.fruit.plots[i];try{p?F4.tapTree(i):F4.openPlant(i);}catch(e){console.error(e);}setTimeout(sync,60);},
   go(g){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}goScreen(g);},
   mail(){openMail();},
+  fruitPick(i){/* S4 ข้อ 3: ตะกร้าเก็บผลไม้ (ลากนิ้วผ่านหลายต้น) */if(visiting)return null;if(!(S.unl||{}).f4)return null;const p=S.fruit&&S.fruit.plots&&S.fruit.plots[i];if(!p)return null;if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{index:i});return null;},
+  lock2(){if(visiting)return;try{showUnlock('f2');}catch(e){toast('🔒 ใช้กุญแจดอกบัวจากยัยหนูเพื่อปลดล็อก');}},
+  honey(){/* S4 ข้อ 12: ระฆังท่าเรือ = เรียกน้องน้ำผึ้ง (กติกาเดียวกับเมนู) */if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');const b=document.getElementById('mHoney');if(b)b.click();},
   ccLv(){try{return window.__s4ccF?window.__s4ccF.lv():1;}catch(e){return 1;}},
   mailN(){try{const H=window.__HOST||parent.__HOST;return Number(H&&H.mailCount&&H.mailCount())||0;}catch(e){return 0;}},
   house(){if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');closeAll();const w=W3();w&&w.__s4openHouse&&w.__s4openHouse();},

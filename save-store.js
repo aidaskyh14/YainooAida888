@@ -132,7 +132,7 @@ export class SplitSaveStore {
       const snaps=await Promise.all(changes.map(([id])=>tx.get(this.ref(id))));
       snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==(expected.get(changes[i][0])??this.revs.get(changes[i][0])??0))throw conflict();});
       changes.forEach(([id,p])=>tx.set(this.ref(id),{...p,rev:(expected.get(id)??this.revs.get(id)??0)+1,by:this.session,updatedAt:serverTimestamp()}));
-      tx.update(this.root(),{displayMerit:game.merit||0,coins:(root.data().coins||0)+(m.coins||0),mailCount:Math.max(0,(root.data().mailCount||0)-1),by:this.session,partCount:(root.data().partCount||0)+changes.filter(([id,p])=>p&&!base.has(id)).length,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
+      tx.update(this.root(),{displayMerit:game.merit||0,avatar:(g=>{const v=g&&g.av;if(typeof v==='string'&&/^preset:[a-z0-9-]{1,40}$/.test(v))return v;const t=g&&g.avs;return typeof t==='string'&&t.startsWith('data:image/')&&t.length<4000?t:null;})(game),coins:(root.data().coins||0)+(m.coins||0),mailCount:Math.max(0,(root.data().mailCount||0)-1),by:this.session,partCount:(root.data().partCount||0)+changes.filter(([id,p])=>p&&!base.has(id)).length,maxPartBytes:Math.max(root.data().maxPartBytes||0,...[...next.values()].map(p=>bytes(p.payload))),saveRevision:(root.data().saveRevision||0)+1});
       tx.delete(mailRef);result=m;
       changes=changes.map(([id,p])=>[id,{...p,rev:(expected.get(id)??this.revs.get(id)??0)+1}]);
       mailDocs.forEach((d,i)=>{if(d.exists()&&!changes.some(([id])=>id===mailIds[i]))changes.push([mailIds[i],d.data()]);});

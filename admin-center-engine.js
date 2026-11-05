@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=0182268e';
+import {CATALOG} from './catalog.js?h=b7fdd38b';
 const fail=(message,code='invalid-argument')=>{throw Object.assign(new Error(message),{code});};
 const cleanText=(s,max)=>typeof s==='string'?s.slice(0,max):'';
 export async function adminCenter(db,uid,input,fields){

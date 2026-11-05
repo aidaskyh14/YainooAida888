@@ -77,7 +77,7 @@ function mount(o){
   add('lxrays','',{left:x+'px',top:y+'px'});add('lxring','',{left:x+'px',top:y+'px'});setTimeout(()=>add('lxring','',{left:x+'px',top:y+'px'}),180);
   for(let i=0;i<16;i++){const a=Math.random()*Math.PI*2,R=60+Math.random()*90;add('lxspark','✦',{left:x+'px',top:y+'px','--dx':Math.cos(a)*R+'px','--dy':Math.sin(a)*R+'px',animationDelay:Math.random()*.2+'s'});}
   const cx=60,cy=30;
-  for(let i=0;i<18;i++){const a=-Math.PI/2+(Math.random()-.5)*2.4,R=70+Math.random()*80;add('lxcoin','<img src="images/lux-coin.webp" alt="">',{left:x+'px',top:y+'px','--dx':Math.cos(a)*R+'px','--dy':Math.sin(a)*R+'px','--ex':(cx-x)+'px','--ey':(cy-y)+'px',animationDelay:(.15+i*.035)+'s'});}
+  for(let i=0;i<18;i++){const a=-Math.PI/2+(Math.random()-.5)*2.4,R=70+Math.random()*80;add('lxcoin','<img src="images/gacha-coin.webp" alt="">',{left:x+'px',top:y+'px','--dx':Math.cos(a)*R+'px','--dy':Math.sin(a)*R+'px','--ex':(cx-x)+'px','--ey':(cy-y)+'px',animationDelay:(.15+i*.035)+'s'});}
   const gn=add('lxgain','<div class="n">+0</div><span class="l">🙏 กุศลจากเมนูมีคลาส</span>',{left:x+'px',top:(y-90)+'px'}),n=gn.querySelector('.n'),t0=performance.now();
   (function step(t){const k=Math.min(1,(t-t0)/1000);n.textContent='+'+nf(g*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step);})(t0);
   setTimeout(()=>{fx.innerHTML='';},2600);}

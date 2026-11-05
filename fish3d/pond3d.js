@@ -242,6 +242,7 @@ function ui(){const me=S.me,st=me?.state||'idle';const b=$('p3act');
   else if(st==='bite'){b.textContent='❗ ปลากินเบ็ดแล้ว แตะเลย!';b.className='act bite';}
   else if(st==='mini'){b.textContent='ดึง!';b.className='act pull';}
   else{b.textContent='🎣 กำลังดึง…';b.className='act wait';}
+  {const row=$('p3row');if(row){row.hidden=!S.real||!!S.standby;const bb=$('p3bait');bb.hidden=!(S.real&&(st==='wait'||st==='cast')&&!S.baited&&!S.vipSeat&&S.baitHave>0);bb.textContent='⚡ ใช้บูสเตอร์ (เหลือ '+S.baitHave+')';}}
   $('p3mis').style.display='none';
   $('p3bag').textContent='🧺 '+S.bag;}
 function rodsUI(){$('p3rods').innerHTML=Object.entries(RODS).map(([k,r])=>`<button data-k="${k}" class="${k===S.rod?'on':''}"><img src="fish/rod-${k}.webp" alt=""><span>${r.n.replace('เบ็ด','')}</span></button>`).join('');
@@ -268,6 +269,9 @@ function card(fs,title){const c=$('p3card');c.querySelector('h3').textContent=(f
   c.classList.add('on');}
 $('p3ok').onclick=()=>{$('p3card').classList.remove('on');if(S.me){S.me.state='idle';S.me.rod.bob.visible=false;}ui();};
 $('p3act').onclick=act;
+/* S4 ข้อ 40/41: ปุ่มลุกจากที่นั่ง (ถามยืนยันก่อน แล้วกลับหน้าแผนที่ตกปลา) · ปุ่มบูสเตอร์ระหว่างรอปลา */
+$('p3bait').onclick=e=>{e.stopPropagation();if(S&&S.real)S.post('p3bait');};
+$('p3leave').onclick=e=>{e.stopPropagation();if(!S||!S.real)return;S.leaving=Date.now();S.post('p3leave');};
 $('p3back').onclick=()=>close();
 
 // ---------- เปิด / ปิด ----------
@@ -282,8 +286,8 @@ export async function openPond(o){if(!R)init();onClose=o.onClose;
   cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(loop);}
 /* ---------- ผูกกับกติกาจริงของซีซัน 3: สถานะแท่นของเรามาจากหน้าเกมทุก 1 วินาที ---------- */
 const mmss=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
-export function standby(){if(!S||!S.me)return;S.standby=true;const me=S.me;if(me.state!=='reel'){me.state='idle';me.rod.bob.visible=false;}ui();}
-export function sync(s){if(!S||!S.me||!s)return;const me=S.me,now=performance.now();S.ph=s.ph;S.standby=false;
+export function standby(){if(!S||!S.me)return;if(S.leaving&&Date.now()-S.leaving<90000){S.leaving=0;close();return;}S.standby=true;const me=S.me;if(me.state!=='reel'){me.state='idle';me.rod.bob.visible=false;}ui();}
+export function sync(s){if(!S||!S.me||!s)return;const me=S.me,now=performance.now();S.ph=s.ph;S.standby=false;S.baited=!!s.b;S.vipSeat=!!s.v;S.baitHave=s.bh|0;
   if(s.ph==='wait'){S.waitEnd=now+(s.l||0);if(me.state==='idle'){me.state='cast';me.t=0;me.rod.bob.visible=true;setTimeout(()=>{if(S&&S.me===me&&me.state==='cast'){me.state='wait';me.t=0;ripple(me.target.x,me.target.z);ui();}},1000);}}
   else if(s.ph==='hook'){if(me.state!=='bite'&&me.state!=='reel'){me.state='bite';me.t=0;me.rod.bob.visible=true;ripple(me.target.x,me.target.z);splash(me.target.x,me.target.z);feed('❗ ปลากินเบ็ดแล้ว แตะปุ่มด้านล่างเลย!');}}
   else if(me.state!=='idle'&&me.state!=='reel'){me.state='idle';me.rod.bob.visible=false;}

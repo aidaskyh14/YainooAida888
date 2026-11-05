@@ -352,7 +352,7 @@ function openAvatar(){closeAll();open('avSheet');const g=$('avGrid');g.innerHTML
  g.querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{S.av='preset:'+b.dataset.av;save();avDraw();closeAll();toast('🌸 เปลี่ยนรูปโปรไฟล์แล้ว');});$('avUp').onclick=()=>$('file').click();}
 $('av').onclick=openAvatar;window.__s4avatar=openAvatar;
 $('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const m=Math.min(img.width,img.height);const x=c.getContext('2d');x.beginPath();x.arc(48,48,48,0,7);x.clip();
- x.drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,96,96);S.av=c.toDataURL('image/webp',.72);save();avDraw();closeAll();toast('🌸 เปลี่ยนรูปโปรไฟล์แล้ว')};img.src=URL.createObjectURL(f)};
+ x.drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,96,96);S.av=c.toDataURL('image/webp',.72);/* S4 ข้อ 7: รูปเล็ก 40px ไว้โชว์ในป้ายอันดับ */{const c2=document.createElement('canvas');c2.width=c2.height=40;c2.getContext('2d').drawImage(c,0,0,40,40);S.avs=c2.toDataURL('image/webp',.6);}save();avDraw();closeAll();toast('🌸 เปลี่ยนรูปโปรไฟล์แล้ว')};img.src=URL.createObjectURL(f)};
 try{avDraw();}catch(e){}
 $('pname').onclick=()=>{closeAll();$('nameIn').value=$('nm').textContent;open('nameModal')};
 $('nameOk').onclick=()=>{const v=$('nameIn').value.trim();if(v.length<2||/\s/.test(v))return toast('🐷 ชื่อต้องมี 2–10 ตัว และห้ามเว้นวรรคนะ',1);$('nm').textContent=v;closeAll();saving();toast('🌸 เปลี่ยนชื่อเป็น '+v+' แล้ว')};
@@ -384,12 +384,12 @@ const ITN={fert:'ปุ๋ยนางฟ้า',cake:'เค้ก',coconut:'�
 /* ชื่อ/รูปจากแคตตาล็อกกลาง (Host.catalogItem) เมื่อหน้านี้ไม่รู้จักไอเทม เช่น น้ำมัน หมวก ใบอนุญาต กล่องดนตรี */
 const BAGX={fruit:'🍎 ผลไม้',grass:'🌿 หญ้า',forest:'🪵 วัสดุป่า',product:'🥚 ผลผลิตสัตว์',bird:'🪶 ของนก',tree:'🌳 ต้นผลไม้',gfood:'🍲 อาหารสวน',drink:'🧃 เครื่องดื่ม',box:'🎁 กล่องสุ่ม',birdbox:'🎁 กล่องนก',halloween:'🪷 ลอยกระทง',rod:'🎣 เบ็ด',fishing:'🎣 ตกปลา',catfood:'🐟 อาหารแมว',cat:'🐱 แมว',hamster:'🐹 แฮมสเตอร์',decor:'🎨 ของแต่ง'};
 const bagCat=(t,k)=>{try{return parent.__HOST.catalogItem(t+'.'+k)||null}catch(e){return null}},bagQ=v=>Number.isSafeInteger(v)&&v>0?v:0;
-function bagTabsAll(){const t={...BT};for(const[g,o]of Object.entries(S.bag||{}))if(!t[g]&&o&&typeof o==='object'&&Object.values(o).some(bagQ))t[g]=BAGX[g]||((Object.keys(o).map(k=>bagCat(g,k)).find(Boolean)||{}).g)||g;return t}
+function bagTabsAll(){const t={...BT};/* S4 ข้อ 11: กล่องนกรวมอยู่ในแท็บกล่องสุ่ม */for(const[g,o]of Object.entries(S.bag||{}))if(g==='birdbox'&&Object.values(o||{}).some(bagQ)&&!t.box){t.box=BAGX.box;}else if(g!=='birdbox'&&!t[g]&&o&&typeof o==='object'&&Object.values(o).some(bagQ))t[g]=BAGX[g]||((Object.keys(o).map(k=>bagCat(g,k)).find(Boolean)||{}).g)||g;return t}
 function bagName(t,k){return (t==='crop'?CN[k]:t==='flower'?FLN[k]:t==='wine'?WN[k]:t==='hedge'?HN[k]:t==='item'?ITN[k]:null)||(bagCat(t,k)||{}).n||k}
 function bagImg(t,k){const l=t==='crop'?(IMG['p-'+k]||IMG[k+'4']):t==='flower'?IMG['fl-'+k]:t==='wine'?IMG['wine-'+k]:t==='hedge'?IMG['hedge-'+k]:t==='item'?IMG['it-'+k]:t==='food'?IMG[FOODIMG[k]]:'';if(l)return l;const c=bagCat(t,k);return c&&c.i?'images/'+c.i:''}
 function renderBag(){const tabs=bagTabsAll();if(!tabs[bagTab])bagTab='crop';$('bagTabs').innerHTML=Object.entries(tabs).map(([k,v])=>'<button class="'+(k===bagTab?'on':'')+'" data-k="'+k+'">'+v+'</button>').join('');
- const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>bagQ(q));
- $('bagGrid').innerHTML=e.length?e.map(([k,q])=>{const im=bagImg(bagTab,k);return '<div class="it'+(HOWTO[bagTab+'.'+k]||bagTab==='decor'?' how':'')+'" data-g="'+bagTab+'" data-k="'+k+'">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(bagTab,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
+ const e=Object.entries(S.bag[bagTab]||{}).filter(([,q])=>bagQ(q)).map(([k,q])=>[bagTab,k,q]);if(bagTab==='box')for(const[k,q]of Object.entries(S.bag.birdbox||{}))if(bagQ(q))e.push(['birdbox',k,q]);
+ $('bagGrid').innerHTML=e.length?e.map(([g,k,q])=>{const im=bagImg(g,k);return '<div class="it'+(HOWTO[g+'.'+k]||g==='decor'?' how':'')+'" data-g="'+g+'" data-k="'+k+'">'+(im?'<img src="'+im+'">':'<div style="font-size:1.8rem">✨</div>')+'<b>'+bagName(g,k)+'</b><span>×'+fmt(q)+'</span></div>'}).join(''):'<div class="empty" style="grid-column:1/-1">ยังไม่มีของในแผนกนี้</div>'}
 $('bagTabs').onclick=e=>{const b=e.target.closest('button');if(b){bagTab=b.dataset.k;renderBag()}};
 /* fix17: แตะไอเทมพิเศษ → การ์ดวิธีใช้ + ปุ่ม "ไปใช้เลย" */
 const HOWTO_DECOR=['🎨 ของตกแต่ง','ไปโหมดแต่งฟาร์ม (ปุ่ม 🎨) หรือโซนสัตว์ → แตะของในถุงเพื่อดูรอบด้าน → กดวาง · เก็บคืนได้ทุกชิ้น นับคืนให้อัตโนมัติ · ของแต่งใช้ได้ทุกโซนร่วมกัน','farm','🎨 ไปแต่งฟาร์ม'];
@@ -477,7 +477,7 @@ document.querySelectorAll('.hopt').forEach(b=>b.onclick=()=>{if(farm!==1){closeA
 /* ================= ปลูกผัก (ระบบที่คอนเฟิร์มแล้ว) ================= */
 const NOWORM=new Set(['waterspinach','lettuce','mango','bamboo','plankton']);let growMs=20000,pending=null,plantAll=false,cur=null,plotEls=[];
 const GTM={"waterspinach": 25, "lettuce": 35, "pea": 40, "mango": 45, "carrot": 50, "chili": 55, "corn": 60, "potato": 65, "pumpkin": 70, "cucumber": 75, "tomato": 80, "cabbage": 80, "lychee": 85, "strawberry": 100, "watermelon": 110, "grape": 115, "banana": 130, "gooseberry": 150, "mushroom": 160, "melon": 180, "bamboo": 200, "plankton": 240},SPR={"waterspinach": 1, "lettuce": 1, "pea": 3, "mango": 3, "carrot": 3, "chili": 5, "corn": 5, "potato": 5, "pumpkin": 5, "cucumber": 8, "tomato": 8, "cabbage": 8, "lychee": 8, "strawberry": 10, "watermelon": 10, "grape": 12, "banana": 12, "gooseberry": 15, "mushroom": 18, "melon": 20, "bamboo": 25, "plankton": 30};const gms=p=>(GTM[p&&p.c]||30)*60000;const G1=p=>gms(p)*.4,G2=p=>gms(p)*.6;
-const isLocked=i=>{const u=S.unl||{};if(farm===1)return (i%4)===2?!u.c3:(i%4)===3?!u.c4:false;return !u['f'+farm]};
+const isLocked=i=>{const u=S.unl||{};if(farm===1)return false;return !u['f'+farm]};/* S4: ฟาร์ม 1 เปิดครบ */
 function ptick(p){if(!p||p.pk)return;const n=Date.now();if(p.ph==='g1'&&n-p.t>=G1(p)*(S.fortune&&S.fortune.i===1&&S.fortune.day===new Date().toDateString()?.7:1)){p.ph='water';p.t=n}if(p.ph==='g2'&&n-p.t>=G2(p)){p.ph='ready';p.t=n}}
 function pstage(p){if(!p)return 0;ptick(p);if(p.ph==='ready')return 4;if(p.ph==='g2'||p.ph==='worm')return 3;if(p.ph==='water')return 2;return (Date.now()-p.t)>=G1(p)*.48?2:1}
 function pprog(p){if(p.ph==='g1')return (Date.now()-p.t)/G1(p)*40;if(p.ph==='g2')return 40+(Date.now()-p.t)/G2(p)*60;return 40}
@@ -857,7 +857,13 @@ const UNL=[['c3','ฟาร์ม 1 แปลงคอลัมน์ที่ 3
 const GN={green:'เขียว',yellow:'เหลือง',red:'แดง',pink:'ชมพู',blue:'ฟ้า'};
 function have(k){const b=S.bag;if(['wood','stone','rope','steel'].includes(k))return (b.forest||{})[k]||0;if(k.startsWith('crop.'))return (b.crop||{})[k.slice(5)]||0;return 0}
 function bestOf(o){let bk=null,bv=0;for(const k in o||{})if(o[k]>bv){bk=k;bv=o[k]}return[bk,bv]}
-window.showUnlock=function(id){S.unl=S.unl||{};const ix=UNL.findIndex(u=>u[0]===id);if(ix<0)return;
+window.showUnlock=function(id){S.unl=S.unl||{};
+ /* S4: ฝั่งข้ามสะพานปลดด้วยกุญแจดอกบัวจากยัยหนู (ครั้งเดียว ถาวร) */
+ if(id==='f2'){if(S.unl.f2)return toast('🔓 ปลดล็อกแล้ว');const k=(S.bag&&S.bag.item&&S.bag.item.farmkey)||0;closeAll();
+  /* S4 สมุดผู้เล่น: กุญแจดอกบัว (ยัยหนูส่งให้) ปลดฝั่งข้ามสะพานถาวร · ใช้หน้าต่างถามแบบเดียวกับปลดล็อกอื่น */
+  const body='<div style="text-align:center"><img src="images/s4-farmkey.webp" style="height:5.5rem"></div><p style="text-align:center">'+(k?'มีกุญแจดอกบัว <b>'+k+'</b> ดอก · ใช้ 1 ดอกเปิดพื้นที่ฝั่งข้ามสะพาน <b>ถาวร</b>':'ปลดล็อกได้ด้วย <b>กุญแจดอกบัว</b> 1 ดอก<br>(รับได้จากยัยหนูเท่านั้น)')+'</p><p style="text-align:center;color:#9a7b66;font-size:.85em">ปลดแล้วได้แปลงผักเพิ่ม 12 แปลง + กรีนเฮาส์อีก 1 หลัง + พื้นที่วางของเพิ่ม · ใช้ครั้งเดียว ไม่ล็อกกลับ</p>';
+  H.ask(k?'🔑 ใช้กุญแจดอกบัว?':'🔒 พื้นที่ฝั่งข้ามสะพาน',body,k?'🔓 ปลดล็อกเลย':'',async()=>{try{await window.farmUnlock('f2');}catch(e){}if((S.unl||{}).f2){toast('🎉 ปลดล็อกพื้นที่ฝั่งข้ามสะพานแล้ว!');try{const f=document.getElementById('f3d');f&&f.contentWindow&&f.contentWindow.__s4Lock2&&f.contentWindow.__s4Lock2(false);}catch(e){}}});return;}
+ const ix=UNL.findIndex(u=>u[0]===id);if(ix<0)return;
  if(ix>0&&!S.unl[UNL[ix-1][0]])return toast('🔒 ต้องปลด'+UNL[ix-1][1]+'ก่อนนะ',1);
  const[ ,title,need]=UNL[ix];let ok=true,rows=[];
  for(const k in need){let n=need[k],h,lab;
@@ -884,4 +890,4 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix17&h=9dcbfbde"></script><script src="farm-cloud.js?v=ss3-fix22&h=35cc16ef"></script><script type="module" src="bag-sell.js?v=ss3-fix24&h=741adfd5"></script><script type="module" src="prank-ui.js?v=ss3-fix23&h=f6bc463b"></script><script src="farm-drops.js?v=ss3-recovery6&h=3c0afc55"></script><script src="loot-box-link.js?v=ss3-fix17&h=d58a70da" data-box="all"></script><script src="pv/farm-bridge.js?h=21ab7678"></script><script src="pv/s4nav.js?h=7f39155e"></script><script src="pv/s4photo.js?h=2983f296"></script><script src="pv/s4hud.js?h=36768a52"></script></body></html>
+})();</script><script src="outings.js?v=ss3-fix17&h=9dcbfbde"></script><script src="farm-cloud.js?v=ss3-fix22&h=161ea958"></script><script type="module" src="bag-sell.js?v=ss3-fix24&h=741adfd5"></script><script type="module" src="prank-ui.js?v=ss3-fix23&h=f6bc463b"></script><script src="farm-drops.js?v=ss3-recovery6&h=3c0afc55"></script><script src="loot-box-link.js?v=ss3-fix17&h=d58a70da" data-box="all"></script><script src="pv/farm-bridge.js?h=b20a7d5f"></script><script src="pv/s4nav.js?h=7f39155e"></script><script src="pv/s4photo.js?h=2983f296"></script><script src="pv/s4hud.js?h=36768a52"></script></body></html>

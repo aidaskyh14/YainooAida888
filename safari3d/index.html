@@ -15,6 +15,7 @@ canvas{display:block}
 .top{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:158px;right:12px;display:flex;justify-content:space-between;align-items:center;z-index:5;pointer-events:none}
 .pill{pointer-events:auto;background:var(--card);color:var(--ink);border:3px solid #fff;box-shadow:0 3px 0 #0002;border-radius:22px;padding:7px 14px;font-weight:700;font-size:16px}
 .btn{pointer-events:auto;width:52px;height:52px;border-radius:50%;background:var(--card);border:3px solid #fff;box-shadow:0 3px 0 #0002;font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+/* S4 ข้อ 24: ปุ่มขวาไม่ซ้อนกัน — กล้องถ่ายรูปอยู่ใต้ปุ่มแผนที่ · ตอนเปิดถาดของแต่ง ซ่อนแถบเครื่องมือขวาล่าง */body.trayon .side{display:none}
 .side{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 18px);display:flex;flex-direction:column;gap:10px;z-index:5}
 #hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translateX(-50%);background:#fffaf0e8;color:var(--ink);border-radius:18px;padding:8px 16px;font-size:15px;font-weight:700;z-index:5;white-space:nowrap;transition:opacity .5s}
 #toast{position:fixed;left:50%;top:22%;transform:translate(-50%,0) scale(.8);background:#fffaf0;color:var(--ink);border:3px solid #fff;border-radius:20px;padding:10px 18px;font-weight:700;font-size:18px;box-shadow:0 4px 0 #0002;opacity:0;transition:all .25s;z-index:8;pointer-events:none}
@@ -90,7 +91,7 @@ body.edit .side,body.edit #hint{display:none}
 <div id="stage"></div>
 <div id="load"><div>🦁 กำลังเข้าซาฟารี…</div><div class="bar"><i></i></div></div>
 <div class="top"><div class="pill">🦁 โซนซาฟารี</div><div class="btn" id="mapBtn">🗺️</div></div>
-<div class="side" id="side"><div class="btn" id="sideT">🧰</div><div class="btn" id="bellBtn">🔔</div><div class="btn" id="bagBtn">🎒</div><div class="btn" id="nightBtn">🌙</div><div class="btn" id="camBtn">🎥</div><div class="btn" id="rotL">⟲</div><div class="btn" id="rotR">⟳</div></div>
+<div class="side" id="side"><div class="btn" id="sideT">🧰</div><div class="btn" id="bellBtn">🔔</div><div class="btn" id="bagBtn">🎒</div><div class="btn" id="mkBtn" title="วางลิง">🐒</div><div class="btn" id="nightBtn">🌙</div><div class="btn" id="camBtn">🎥</div><div class="btn" id="rotL">⟲</div><div class="btn" id="rotR">⟳</div></div>
 <div id="selBar"><button id="sRot">🔄 หมุน</button><button id="sPick">📦 เก็บเข้ากระเป๋า</button></div>
 <div id="tray"><div class="th"><b>🎒 กระเป๋าของแต่ง</b><span id="tTip">ลากของไปวาง หรือแตะของแล้วแตะพื้น</span><button id="tDone">✅ เสร็จ</button></div><div id="tCats"></div><div id="tList"></div></div>
 <div id="hint">แตะพื้นเพื่อเดิน · แตะไข่ ขน หินกรวด เพื่อเก็บ</div>
@@ -103,12 +104,12 @@ body.edit .side,body.edit #hint{display:none}
 <div class="z" data-z="pet"><b>🐶</b>สวนหมาแมว<small>เดินทาง</small></div>
 <div class="z here" data-z="safari"><b>🦁</b>ซาฟารี<small>อยู่ที่นี่</small></div>
 </div></div>
-<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=240ef027"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=13ae4e67"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
-{const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
+{const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 74px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 const stage=document.getElementById('stage');
@@ -154,7 +155,10 @@ async function loadJ(name){/* S4: ตัวละครโหลดจากไ�
 // phones: smaller textures = less memory, smoother frames
 function shrink(root,max){const seen=new Set();root.traverse(o=>{if(!o.isMesh)return;for(const mt of [].concat(o.material)){const t=mt.map;if(!t||seen.has(t)||!t.image)continue;seen.add(t);const im=t.image,w=im.width,h=im.height;if(Math.max(w,h)<=max)continue;const k=max/Math.max(w,h);const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);t.image=c;t.needsUpdate=true;}});}
 const BIG=/tower|tent|hut|jeep|acacia|baobab|tree2|waterfall|treehouse|an_/;
-function get(n){if(!cache[n]){NAMES.push(n);cache[n]=loadJ(n).then(g=>{done++;barI.style.width=(done/NAMES.length*100)+'%';try{shrink(g.scene,MOBILE?(BIG.test(n)?512:256):(BIG.test(n)?1024:512));}catch(e){}
+/* S4 ลิง/ซิปไลน์ (แยกกัน 2 ชิ้น · ได้จากยัยหนูเท่านั้น): sf_monkey = ลิงเดินเล่น 1 ตัว · sf_zipline = ต้นไม้ 2 ต้น + เชือกอัตโนมัติ */
+const ZL=11,ZH1=6.2,ZH2=5.6;
+function get(n){  if(n==='sf_zipline'){if(!cache[n])cache[n]=Promise.all([get('c2_sf_tower'),get('c2_sf_tower2')]).then(([a,b])=>{const g=new THREE.Group();const o1=fit(a.scene,{h:ZH1});o1.position.x=-ZL/2;const o2=fit(b.scene,{h:ZH2});o2.position.x=ZL/2;o2.rotation.y=Math.PI;g.add(o1,o2);return {scene:g,__s:g,animations:[]};});return cache[n];}
+  if(!cache[n]){NAMES.push(n);cache[n]=loadJ(n).then(g=>{done++;barI.style.width=(done/NAMES.length*100)+'%';try{shrink(g.scene,MOBILE?(BIG.test(n)?512:256):(BIG.test(n)?1024:512));}catch(e){}
   g.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;const cv=m=>{if(o.isSkinnedMesh||!m.isMeshStandardMaterial)return m;const n=new THREE.MeshLambertMaterial({map:m.map,color:m.color,transparent:m.transparent,opacity:m.opacity,alphaTest:m.alphaTest,side:m.side,vertexColors:m.vertexColors});n.name=m.name;return n;};o.material=Array.isArray(o.material)?o.material.map(cv):cv(o.material);}});g.__s=g.scene;return g;});}return cache[n];}
 // scale so the biggest of (height | width) matches
 function fit(src,{h,w,skin}={}){const o=skin?SU.clone(src):src.clone(true);const b=new THREE.Box3().setFromObject(o),s=b.getSize(new THREE.Vector3());const k=h?h/s.y:w/Math.max(s.x,s.z);o.scale.setScalar(k);
@@ -166,8 +170,8 @@ function flushStatic(){for(const b of BATCH.values()){const im=new THREE.Instanc
 const LAMPS=[];
 // ---------- editable decor: one instanced mesh per model part, each piece can be moved ----------
 const DECOR=[],DB=new Map(),DEFAULTS=[];let decorReady=false;
-const SZ={c2_sf_windmill:{h:7},c2_sf_treehouse:{w:6.5},c2_sf_acacia:{h:5.4},c2_sf_baobab:{h:6.2},c2_sf_tree2:{h:5},c2_sf_rocks:{w:2.6},c2_sf_termite:{h:2.4},c2_sf_grass:{h:1.3},c2_sf_lantern:{h:2.3},c2_sf_chair:{h:1.5},c2_sf_crates:{w:2.4},c2_sf_hut:{h:3.4},c2_sf_tent:{h:3.6},c2_sf_jeep:{w:4.2},c2_sf_jeep2:{w:4.4},c2_sf_picnic:{w:3},c2_sf_signpost:{h:2.6},c2_sf_hat:{h:.8},c2_sf_pond:{w:4.6},c2_sf_campfire:{w:2.4}};
-const NAME={c2_sf_windmill:'กังหันลม',c2_sf_treehouse:'บ้านต้นไม้',c2_sf_acacia:'ต้นอาเคเซีย',c2_sf_baobab:'ต้นเบาบับ',c2_sf_tree2:'ต้นไม้ใบเขียว',c2_sf_rocks:'กองหิน',c2_sf_termite:'จอมปลวก',c2_sf_grass:'พุ่มหญ้าทอง',c2_sf_lantern:'เสาตะเกียง',c2_sf_chair:'เก้าอี้แคมป์',c2_sf_crates:'ลังไม้',c2_sf_hut:'กระท่อม',c2_sf_tent:'เต็นท์',c2_sf_jeep:'รถจี๊ป',c2_sf_jeep2:'รถจี๊ปหลังคา',c2_sf_picnic:'โต๊ะปิกนิก',c2_sf_signpost:'ป้ายบอกทาง',c2_sf_hat:'หมวกนักสำรวจ',c2_sf_pond:'บ่อน้ำ',c2_sf_campfire:'กองไฟ'};
+const SZ={c2_sf_windmill:{h:7},c2_sf_treehouse:{w:6.5},c2_sf_acacia:{h:5.4},c2_sf_baobab:{h:6.2},c2_sf_tree2:{h:5},c2_sf_rocks:{w:2.6},c2_sf_termite:{h:2.4},c2_sf_grass:{h:1.3},c2_sf_lantern:{h:2.3},c2_sf_chair:{h:1.5},c2_sf_crates:{w:2.4},c2_sf_hut:{h:3.4},c2_sf_tent:{h:3.6},c2_sf_jeep:{w:4.2},c2_sf_jeep2:{w:4.4},c2_sf_picnic:{w:3},c2_sf_signpost:{h:2.6},c2_sf_hat:{h:.8},c2_sf_pond:{w:4.6},c2_sf_campfire:{w:2.4},sf_zipline:{h:ZH1}};
+const NAME={c2_sf_windmill:'กังหันลม',c2_sf_treehouse:'บ้านต้นไม้',c2_sf_acacia:'ต้นอาเคเซีย',c2_sf_baobab:'ต้นเบาบับ',c2_sf_tree2:'ต้นไม้ใบเขียว',c2_sf_rocks:'กองหิน',c2_sf_termite:'จอมปลวก',c2_sf_grass:'พุ่มหญ้าทอง',c2_sf_lantern:'เสาตะเกียง',c2_sf_chair:'เก้าอี้แคมป์',c2_sf_crates:'ลังไม้',c2_sf_hut:'กระท่อม',c2_sf_tent:'เต็นท์',c2_sf_jeep:'รถจี๊ป',c2_sf_jeep2:'รถจี๊ปหลังคา',c2_sf_picnic:'โต๊ะปิกนิก',c2_sf_signpost:'ป้ายบอกทาง',c2_sf_hat:'หมวกนักสำรวจ',c2_sf_pond:'บ่อน้ำ',c2_sf_campfire:'กองไฟ',sf_zipline:'🌳 ซิปไลน์ (ต้นไม้ 2 ต้น+เชือก)'};
 let BAGINV={};/* S4: ถุงแต่งซาฟารีเริ่มว่าง — ของฟรี/ซื้อ/เงื่อนไข ตามสมุดของตกแต่งที่แอดมินกำหนด (จะเติมจากเซิร์ฟเวอร์) */
 const relCache=new Map();
 async function relOf(n,opt){const key=n+JSON.stringify([opt.h,opt.w]);if(relCache.has(key))return relCache.get(key);const g=await get(n);const o=fit(g.scene,opt);o.updateMatrixWorld(true);const out=[];const bb=new THREE.Box3().setFromObject(o),sz=bb.getSize(new THREE.Vector3());out.size=sz;
@@ -177,10 +181,16 @@ function slotFor(key,g,mat){let b=DB.get(key);if(!b){b={g,mat,cap:0,im:null,item
 function rebuild(b){const cap=Math.max(4,b.items.length+6);if(b.im&&b.cap>=b.items.length)return;if(b.im){sc.remove(b.im);b.im.dispose();}b.im=new THREE.InstancedMesh(b.g,b.mat,cap);b.cap=cap;b.im.castShadow=true;b.im.receiveShadow=true;b.im.userData.db=b;b.im.frustumCulled=false;sc.add(b.im);b.items.forEach((it,i)=>{it.slots.find(sl=>sl.b===b).i=i;});b.items.forEach(it=>place(it));}
 const WM=[];
 function placeProp(it){if(!it.prop)return;const H=it.opt.h||7;const off=new THREE.Vector3(0,H*.86,-H*.2).applyAxisAngle(_Y,it.ry);it.prop.position.set(it.x+off.x,(it.lift||0)+off.y,it.z+off.z);it.prop.rotation.y=it.ry+Math.PI;}
-function place(it){placeProp(it);_m.compose(_p.set(it.x,it.y||0,it.z),_q.setFromAxisAngle(_Y,it.ry),_s1);for(const sl of it.slots){const M=new THREE.Matrix4().multiplyMatrices(_m,sl.rel);if(it.lift)M.premultiply(new THREE.Matrix4().makeTranslation(0,it.lift,0));sl.b.im.setMatrixAt(sl.i,M);sl.b.im.instanceMatrix.needsUpdate=true;sl.b.im.count=sl.b.items.length;}}
+const zCableM=new THREE.MeshStandardMaterial({color:0x5b4636,roughness:.6}),zKnobM=new THREE.MeshStandardMaterial({color:0xd99a3c,roughness:.5});
+function zipCable(it){if(it.n!=='sf_zipline')return;const A=new THREE.Vector3(-ZL/2+.35,ZH1*.8,0).applyAxisAngle(_Y,it.ry).add(new THREE.Vector3(it.x,0,it.z)),B=new THREE.Vector3(ZL/2-.35,ZH2*.6,0).applyAxisAngle(_Y,it.ry).add(new THREE.Vector3(it.x,0,it.z));
+  const len=Math.hypot(B.x-A.x,B.z-A.z),sag=len*.035;it.zA=A;it.zB=B;it.zLen=len;it.zSag=sag;it.zYaw=Math.atan2(B.x-A.x,B.z-A.z)-Math.PI/2;
+  if(!it.cable){it.cable=new THREE.Group();sc.add(it.cable);}for(const c of [...it.cable.children]){it.cable.remove(c);c.geometry&&c.geometry.dispose();}
+  const pts=[];for(let k=0;k<=30;k++)pts.push(catenary(A,B,sag,k/30));const t=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),60,.045,7),zCableM);t.castShadow=true;it.cable.add(t);
+  for(const P of [A,B]){const k=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),zKnobM);k.position.copy(P);it.cable.add(k);}}
+function place(it){placeProp(it);zipCable(it);_m.compose(_p.set(it.x,it.y||0,it.z),_q.setFromAxisAngle(_Y,it.ry),_s1);for(const sl of it.slots){if(!sl.b.im)continue;const M=new THREE.Matrix4().multiplyMatrices(_m,sl.rel);if(it.lift)M.premultiply(new THREE.Matrix4().makeTranslation(0,it.lift,0));sl.b.im.setMatrixAt(sl.i,M);sl.b.im.instanceMatrix.needsUpdate=true;sl.b.im.count=sl.b.items.length;}}
 async function addDecor(n,x,z,ry,opt){const rel=await relOf(n,opt);const it={n,x,z,ry,opt,slots:[],size:rel.size};for(const r0 of rel){const b=slotFor(r0.key,r0.g,r0.mat);it.slots.push({b,rel:r0.rel,i:b.items.length});b.items.push(it);}DECOR.push(it);if(n==='c2_sf_windmill'){const pg=await get('c2_sf_wm_prop');const H=opt.h||7;const p=fit(pg.scene,{h:H*.62});p.position.y=-H*.31;const spin=new THREE.Group();spin.add(p);const hold=new THREE.Group();hold.add(spin);sc.add(hold);it.prop=hold;it.spin=spin;WM.push(it);}
   for(const sl of it.slots)if(!sl.b.im||sl.b.cap<sl.b.items.length){sl.b.im&&(sl.b.cap=0);rebuild(sl.b);}place(it);return it;}
-function removeDecor(it){for(const sl of it.slots){const b=sl.b;const i=b.items.indexOf(it);b.items.splice(i,1);b.items.forEach((o,k)=>{o.slots.find(q=>q.b===b).i=k;});b.items.forEach(o=>place(o));b.im.count=b.items.length;}DECOR.splice(DECOR.indexOf(it),1);if(it.prop){sc.remove(it.prop);WM.splice(WM.indexOf(it),1);}}
+function removeDecor(it){for(const sl of it.slots){const b=sl.b;const i=b.items.indexOf(it);b.items.splice(i,1);b.items.forEach((o,k)=>{o.slots.find(q=>q.b===b).i=k;});b.items.forEach(o=>place(o));b.im.count=b.items.length;}DECOR.splice(DECOR.indexOf(it),1);if(it.cable){sc.remove(it.cable);it.cable=null;}if(it.prop){sc.remove(it.prop);WM.splice(WM.indexOf(it),1);}}
 const SAVEK='safari-pv-decor-v4';
 function saveDecor(){try{localStorage.setItem(SAVEK,JSON.stringify({d:DECOR.map(it=>[it.n,+it.x.toFixed(2),+it.z.toFixed(2),+it.ry.toFixed(3),it.opt]),b:BAGINV}));}catch(e){}}
 async function loadDecor(){let saved=null;try{saved=JSON.parse(localStorage.getItem(SAVEK)||'null');}catch(e){}
@@ -279,7 +289,7 @@ document.getElementById('bellBtn').onclick=()=>{const out=walkers.filter(a=>a.ou
 function stepBell(){if(!BELL)return;if(walkers.every(a=>!a.out&&!a.leaving)){BELL=false;for(const p of pens)p.want=0;toast('✅ นกกลับเข้าคอกครบแล้ว · ปิดประตูให้แล้ว');}}
 // baboons that walk around (skinned + walk clip)
 const babs=[];
-async function baboon(x,z,area){if(!ADMINZ)return;const g=await get('c2_an_baboon_walk');const o=fit(g.scene,{h:1.35,skin:true});noShadow(o);const body=new THREE.Group();body.add(o);const w=new THREE.Group();w.add(body);blob(w,1.1);sc.add(w);
+async function baboon(x,z,area,force){if(!ADMINZ&&!force)return;const g=await get('c2_an_baboon_walk');const o=fit(g.scene,{h:1.35,skin:true});noShadow(o);const body=new THREE.Group();body.add(o);const w=new THREE.Group();w.add(body);blob(w,1.1);sc.add(w);
   const root=o.children[0];const mx=new THREE.AnimationMixer(root);const clip=g.animations[0];const act=mx.clipAction(clip);act.play();act.timeScale=1.2;
   // standing pose = the walk frame where both feet are closest together (so a resting baboon does not freeze mid-stride)
   let feet=[];root.traverse(b=>{if(b.isBone&&/foot|ankle/i.test(b.name))feet.push(b);});let best=0;
@@ -316,7 +326,7 @@ function stepBab(a,dt){const idx=babs.indexOf(a);a.ph+=dt;
 const TW=[],LEGS=[],RIDERS=[];
 function catenary(A,B,sag,t){const p=new THREE.Vector3().lerpVectors(A,B,t);p.y-=Math.sin(Math.PI*t)*sag;return p;}
 /* S4 ข้อ 51 🐒 ลิงซิปไลน์: แอดมินเห็นครบ 3 ตัวเสมอ · ผู้เล่นเห็นเท่าจำนวนลิงที่ได้จากแอดมิน (item.monkey สูงสุด 3) */
-const MONKEYN=(()=>{try{if(ADMINZ)return 3;const P=parent;const H=P.__HOST||(P.parent&&P.parent.__HOST);const g=JSON.parse((H&&H.get('s3all-v1'))||'{}');return Math.min(3,Math.max(0,(g.bag&&g.bag.item&&g.bag.item.monkey)|0));}catch(e){return 0;}})();
+const MONKEYN=ADMINZ?3:0;/* ผู้เล่น: ลิง/ซิปไลน์ มาจากของที่วางเอง (sf_monkey · sf_zipline) */
 async function zipline(){if(!MONKEYN)return;
   const DEF=[['c2_sf_tower',-6,-23,6.4,.45],['c2_sf_tower2',13,-21,5.6,-.5],['c2_sf_tower',26,12,6.0,-1.6],['c2_sf_tower2',5,25,5.6,2.4]];
   for(const [n,x,z,h,ry] of DEF){await put(n,x,z,{h,ry,fixed:1});TW.push({x:x*K,z:z*K,h});}
@@ -336,6 +346,29 @@ function stepZip(dt){for(const R of RIDERS){const Lg=LEGS[R.leg];if(nightK>.5){R
   R.v=Math.min(1,R.v+dt*.5);const speed=4.2*(.35+R.v)*(1-.55*Math.max(0,R.t-.82)/.18);R.t+=dt*speed/Lg.len;
   const p=catenary(Lg.A,Lg.B,Lg.sag,Math.min(1,R.t));R.rig.position.copy(p);R.rig.position.y+=.18;R.rig.rotation.y=Lg.yaw;R.a+=dt;R.swing.rotation.z=Math.sin(R.a*2.4)*.14-.13*R.v;R.wheel.rotation.x+=dt*16*R.v;
   if(R.t>=1){R.hold=1.2+rnd()*1.2;}}}
+/* ลิงที่ผู้เล่นวาง: เดินเล่นรอบจุดที่วาง · ถ้ามีซิปไลน์ ลิงเดินไปโคนต้นแรก ปีนขึ้นโหนเชือกไปต้นที่สอง แล้วลงมาเดินต่อ */
+const MKS=[];let mkHang=null;
+async function mkRider(){if(!mkHang)mkHang=await get('c2_an_baboon_hang');const o=fit(mkHang.scene,{h:1.45});noShadow(o);const rig=new THREE.Group(),swing=new THREE.Group();rig.add(swing);swing.add(o);o.position.y-=1.45+.22;
+  const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.12,18),new THREE.MeshStandardMaterial({color:0xe2e2e2,roughness:.35,metalness:.2}));wheel.rotation.z=Math.PI/2;rig.add(wheel);
+  const hook=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.24,8),new THREE.MeshStandardMaterial({color:0x777777}));hook.position.y=-.14;swing.add(hook);rig.visible=false;sc.add(rig);return {rig,swing,wheel};}
+const mkArea=(x,z)=>[Math.max(B.x0+1,x-6),Math.max(B.z0+1,z-6),Math.min(B.x1-1,x+6),Math.min(B.z1-1.5,z+6)];
+/* ลิงที่วางแล้ว (จากเซฟ: กดปุ่ม 🐒 วางลิง · อยู่ได้ 36 ชม.) → MKL=[[id,at],...] */
+let MKL=[];const mkHome=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return [-9+(h%1800)/100,-6+((h>>>11)%1600)/100];};
+let mkBusy=false;async function syncMonkeys(){if(mkBusy){syncMonkeys.again=1;return;}mkBusy=true;try{
+  const ids=MKL.map(r=>String(r[0]));
+  for(let i=MKS.length-1;i>=0;i--){const m=MKS[i];if(!ids.includes(m.id)){sc.remove(m.a.w);const k=babs.indexOf(m.a);if(k>=0)babs.splice(k,1);sc.remove(m.r.rig);MKS.splice(i,1);}}
+  for(const id of ids){if(MKS.some(q=>q.id===id))continue;const [x,z]=mkHome(id);const a=await baboon(x,z,mkArea(x,z),1);const r=await mkRider();MKS.push({id,a,r,mode:'walk',wait:4+rnd()*8,zl:null,t:0,hold:0});}
+}finally{mkBusy=false;if(syncMonkeys.again){syncMonkeys.again=0;syncMonkeys();}}}
+function stepMonkeys(dt){if(!MKS.length)return;
+  const zips=DECOR.filter(d=>d.n==='sf_zipline'&&d.zA);
+  for(const m of MKS){const a=m.a;
+    if(m.mode==='ride'){if(!zips.includes(m.zl)||nightK>.5){m.mode='walk';m.r.rig.visible=false;a.w.visible=true;continue;}
+      const Z=m.zl;if(m.hold>0){m.hold-=dt;m.r.swing.rotation.z*=.92;if(m.hold<=0){m.mode='walk';m.r.rig.visible=false;a.x=Z.zB.x;a.z=Z.zB.z;a.tx=null;a.t=1+rnd()*2;a.w.visible=true;m.wait=10+rnd()*14;}continue;}
+      m.v=Math.min(1,(m.v||.3)+dt*.5);const speed=4.2*(.35+m.v)*(1-.55*Math.max(0,m.t-.82)/.18);m.t+=dt*speed/Z.zLen;const p=catenary(Z.zA,Z.zB,Z.zSag,Math.min(1,m.t));
+      m.r.rig.position.copy(p);m.r.rig.position.y+=.18;m.r.rig.rotation.y=Z.zYaw;m.ph=(m.ph||0)+dt;m.r.swing.rotation.z=Math.sin(m.ph*2.4)*.14-.13*m.v;m.r.wheel.rotation.x+=dt*16*m.v;if(m.t>=1)m.hold=1+rnd();continue;}
+    a.w.visible=true;if(nightK>.5||!zips.length){a.goZip=0;continue;}
+    if(a.goZip){const Z=m.zl;if(!zips.includes(Z)){a.goZip=0;continue;}if(a.tx==null||Math.hypot(a.x-Z.zA.x,a.z-Z.zA.z)<.6){a.goZip=0;m.mode='ride';m.t=0;m.v=.3;m.hold=0;a.w.visible=false;m.r.rig.visible=true;}continue;}
+    m.wait-=dt;if(m.wait<=0){const free=zips.filter(z=>!MKS.some(o=>o!==m&&o.zl===z&&(o.mode==='ride'||o.a.goZip)));if(free.length){const Z=free[Math.floor(rnd()*free.length)];m.zl=Z;a.goZip=1;a.tx=Z.zA.x;a.tz=Z.zA.z;}else m.wait=5+rnd()*6;}}}
 // ---------- drops (tap to collect) ----------
 const drops=[];
 // ---------- safari control center: feed, collect and level up from one place ----------
@@ -475,13 +508,13 @@ async function makeThumbs(){const TS=200;const rt=new THREE.WebGLRenderTarget(TS
     tc.position.set(c.x+R0*1.9,c.y+R0*1.5,c.z+R0*2.6);tc.lookAt(c);r.setRenderTarget(rt);r.setClearColor(0x000000,0);r.clear();r.render(ts,tc);r.readRenderTargetPixels(rt,0,0,TS,TS,buf);r.setRenderTarget(null);ts.remove(o);
     const id=cx.createImageData(TS,TS);for(let y=0;y<TS;y++)id.data.set(buf.subarray((TS-1-y)*TS*4,(TS-y)*TS*4),y*TS*4);cx.clearRect(0,0,TS,TS);cx.putImageData(id,0,0);THUMB[n]=cv.toDataURL();}
   r.setClearColor(0x000000,1);}
-const CATS=[['🌳 ต้นไม้',['c2_sf_acacia','c2_sf_baobab','c2_sf_tree2','c2_sf_grass']],['🪨 หิน·น้ำ',['c2_sf_rocks','c2_sf_termite','c2_sf_pond']],['⛺ บ้าน·แคมป์',['c2_sf_windmill','c2_sf_treehouse','c2_sf_tent','c2_sf_hut','c2_sf_campfire']],['🪑 นั่งเล่น',['c2_sf_chair','c2_sf_picnic']],['🏮 ของจุกจิก',['c2_sf_crates','c2_sf_lantern','c2_sf_signpost','c2_sf_hat']],['🚙 รถ',['c2_sf_jeep','c2_sf_jeep2']]];CATS.unshift(['✨ ทั้งหมด',CATS.flatMap(c=>c[1])]);const CATE={};CATS.slice(1).forEach(c=>c[1].forEach(n=>CATE[n]=c[0]));let cat=0;
+const CATS=[['🌳 ต้นไม้',['c2_sf_acacia','c2_sf_baobab','c2_sf_tree2','c2_sf_grass']],['🪨 หิน·น้ำ',['c2_sf_rocks','c2_sf_termite','c2_sf_pond']],['⛺ บ้าน·แคมป์',['c2_sf_windmill','c2_sf_treehouse','c2_sf_tent','c2_sf_hut','c2_sf_campfire']],['🪑 นั่งเล่น',['c2_sf_chair','c2_sf_picnic']],['🏮 ของจุกจิก',['c2_sf_crates','c2_sf_lantern','c2_sf_signpost','c2_sf_hat']],['🚙 รถ',['c2_sf_jeep','c2_sf_jeep2']],['🌳 ซิปไลน์',['sf_zipline']]];CATS.unshift(['✨ ทั้งหมด',CATS.flatMap(c=>c[1])]);const CATE={};CATS.slice(1).forEach(c=>c[1].forEach(n=>CATE[n]=c[0]));let cat=0;
 const tCats=document.getElementById('tCats');tCats.onclick=e=>{const b=e.target.closest('button');if(!b)return;cat=+b.dataset.c;drawTray();};
 /* S4 ข้อ 32/53: สิทธิ์ของแต่ง = ฟรีชิ้นละ 1 + ที่ยัยหนูส่ง (bag.decor) − ที่วาง (pv/s4own.js) · แอดมินไม่จำกัด */
 const AVAIL=n=>{try{if(ADMINZ||!window.S4OWN)return Infinity;return window.S4OWN.avail(n,{src:'safari',n:DECOR.filter(d=>d.n===n).length});}catch(e){return Infinity;}};const AVS=n=>{const a=AVAIL(n);return a===Infinity?'∞':a;};
 function drawTray(){tCats.innerHTML=CATS.map((c,i)=>`<button data-c="${i}" class="${i===cat?'on':''}">${c[0]}</button>`).join('');tList.innerHTML=CATS[cat][1].map(n=>`<div class="it${AVAIL(n)>0?'':' zero'}${carry&&carry.n===n?' pick':''}" data-n="${n}" title="${NAME[n]}"><img draggable="false" src="${THUMB[n]||''}" alt="${NAME[n]}"><b>${NAME[n]}</b><i>${AVS(n)}</i><em class="zm" data-zm="${n}">🔍</em></div>`).join('');}
 function select(it){sel=it;selBar.classList.toggle('on',!!it);ring.visible=!!it;if(it){const s=Math.max(1.2,(it.opt.w||it.opt.h||2)*.55);ring.scale.set(s,1,s);ring.position.set(it.x,.06,it.z);}}
-function setEdit(on){if(!on)dropCarry&&dropCarry();edit=on;document.body.classList.toggle('edit',on);tray.classList.toggle('on',on);if(on){F.x=P.x;F.z=P.z-3;drawTray();overview=false;}else{select(null);saveDecor();r.shadowMap.needsUpdate=true;}}
+function setEdit(on){if(!on)dropCarry&&dropCarry();edit=on;document.body.classList.toggle('edit',on);tray.classList.toggle('on',on),document.body.classList.toggle('trayon',!!on);if(on){F.x=P.x;F.z=P.z-3;drawTray();overview=false;}else{select(null);saveDecor();r.shadowMap.needsUpdate=true;}}
 document.getElementById('bagBtn').onclick=()=>setEdit(true);
 document.getElementById('tDone').onclick=()=>{setEdit(false);toast('✅ บันทึกการตกแต่งแล้ว');};
 document.getElementById('sRot').onclick=()=>{if(!sel)return;sel.ry-=Math.PI/4;place(sel);};
@@ -578,7 +611,7 @@ async function build(){
   W.push(put('c2_sf_balloon',-10,-30,{h:6,y:13,dyn:true}).then(o=>{noShadow(o);balloon=o;}));
   await Promise.all(W);
   await zipline();
-  flushStatic();flushTufts();await loadDecor();await makeThumbs();
+  flushStatic();flushTufts();await loadDecor();await makeThumbs();try{await syncMonkeys();}catch(e){console.log('mk',e&&e.message);}
   // where the baboons sleep at night: a rock den and two leaf beds beside the big acacia
   if(ADMINZ){await put('c2_sf_den',16,-14.7,{w:3.1,dyn:1});await put('c2_sf_leafbed',9,-6.6,{w:1.8,dyn:1});await put('c2_sf_leafbed',14.2,-8.3,{w:1.8,dyn:1,ry:.4});}
   await baboon(-3,-9,[-6,-12,5,-7]);await baboon(4,-11,[-5,-13,7,-8]);await baboon(-1,-12,[-8,-14,6,-9]);
@@ -591,7 +624,7 @@ async function build(){
 // ---------- loop ----------
 const clock=new THREE.Clock();let T=0,frame=0;
 /* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||!!carry||!!window.__zsnap||(typeof BELL!=='undefined'&&BELL));function loop(dt){clock.getDelta();T+=dt;frame++;
-  WT.value=T;stepMist(dt);for(const w of WM)w.spin.rotation.z+=dt*1.4;stepNight(dt);for(const a of walkers)stepBird(a,dt);stepBell();for(const b of babs)stepBab(b,dt);for(const p of PETS)stepPet(p,dt);stepZip(dt);
+  WT.value=T;stepMist(dt);for(const w of WM)w.spin.rotation.z+=dt*1.4;stepNight(dt);for(const a of walkers)stepBird(a,dt);stepBell();for(const b of babs)stepBab(b,dt);stepMonkeys(dt);for(const p of PETS)stepPet(p,dt);stepZip(dt);
   for(const p of pens){const w=(p.want||BELL)?1:0;p.open+=(w-p.open)*Math.min(1,dt*4);p.hinge.rotation.y=p.open*1.75;}
   if(girl){let moving=false;
     if(P.sit){gset('sit');gmix.update(dt);girl.position.set(P.sit.x,P.sit.y-.38,P.sit.z);girl.rotation.y=P.sit.dir;}
@@ -615,9 +648,9 @@ S4LOOP.run(loop);setTimeout(()=>{const h=document.getElementById('hint');if(h)h.
 
 // ===== ซีซัน 4: หมุนกล้อง · ดูของแต่งภาพใหญ่ · เอฟเฟกต์ · ผูกกับระบบนกซีซัน 3 =====
 document.getElementById('rotL').onclick=()=>{YAWT+=Math.PI/4;};document.getElementById('rotR').onclick=()=>{YAWT-=Math.PI/4;};
-let pvN=null;function showPv(n){pvN=n;document.getElementById('pvImg').src=THUMB[n]||'';document.getElementById('pvName').textContent=NAME[n]||n;document.getElementById('pvInfo').textContent=(CATE[n]||'')+' · มีในกระเป๋า '+(BAGINV[n]||0)+' ชิ้น';document.getElementById('pvGo').disabled=!(BAGINV[n]>0);document.getElementById('pvw').classList.add('on');}
+let pvN=null;function showPv(n){pvN=n;document.getElementById('pvImg').src=THUMB[n]||'';document.getElementById('pvName').textContent=NAME[n]||n;/* S4: ใช้สิทธิ์ของแต่งกลาง (S4OWN) · หมดแล้วซื้อได้ถ้ามีราคา */const av=AVAIL(n),pr=window.S4OWN&&S4OWN.price?S4OWN.price(n):0;document.getElementById('pvInfo').textContent=(CATE[n]||'')+' · '+(av===Infinity?'วางได้ไม่จำกัด':'มี '+av+' ชิ้น');const gb=document.getElementById('pvGo');gb.dataset.buy=av<=0&&pr?String(pr):'';gb.disabled=av<=0&&!pr;gb.textContent=av>0?'📍 หยิบไปวาง':pr?'💰 ซื้อ '+pr.toLocaleString()+' กุศล':'📦 รับจากยัยหนูเท่านั้น';document.getElementById('pvw').classList.add('on');}
 document.getElementById('pvX').onclick=()=>document.getElementById('pvw').classList.remove('on');
-document.getElementById('pvGo').onclick=()=>{document.getElementById('pvw').classList.remove('on');const el=tList.querySelector('.it[data-n="'+pvN+'"]');if(el&&BAGINV[pvN]>0){if(carry&&carry.ghost)sc.remove(carry.ghost);select(null);carry={n:pvN,sx:-99,sy:-99,drag:false,ghost:null};tList.querySelectorAll('.it').forEach(x=>x.classList.toggle('pick',x===el));document.getElementById('tTip').textContent='แตะพื้นตรงที่จะวาง';makeGhost(pvN).then(g=>{if(carry&&carry.n===pvN){carry.ghost=g;g.visible=false;}}).catch(()=>{});}};
+document.getElementById('pvGo').onclick=async()=>{const gb=document.getElementById('pvGo');if(gb.dataset.buy){gb.disabled=true;gb.textContent='⏳ กำลังซื้อ…';try{await S4OWN.buy(pvN,1);gb.dataset.buy='';drawTray();}catch(e){gb.disabled=false;gb.textContent='💰 ซื้อ '+Number(gb.dataset.buy).toLocaleString()+' กุศล';return;}}document.getElementById('pvw').classList.remove('on');const el=tList.querySelector('.it[data-n="'+pvN+'"]');if(el&&(AVAIL(pvN)>0||BAGINV[pvN]>0)){if(carry&&carry.ghost)sc.remove(carry.ghost);select(null);carry={n:pvN,sx:-99,sy:-99,drag:false,ghost:null};tList.querySelectorAll('.it').forEach(x=>x.classList.toggle('pick',x===el));document.getElementById('tTip').textContent='แตะพื้นตรงที่จะวาง';makeGhost(pvN).then(g=>{if(carry&&carry.n===pvN){carry.ghost=g;g.visible=false;}}).catch(()=>{});}};
 // เอฟเฟกต์อีโมจิลอย (สไปรต์)
 const EMT={};function emTex(e){if(EMT[e])return EMT[e];const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');g.font='72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(e,48,54);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return EMT[e]=t;}
 const FXS=[];function emo(e,x,y,z,o={}){const m=new THREE.Sprite(new THREE.SpriteMaterial({map:emTex(e),transparent:true,depthWrite:false,depthTest:false}));m.renderOrder=20;m.position.set(x,y,z);const sz=o.s||.7;m.scale.setScalar(sz);sc.add(m);FXS.push({m,vx:o.vx||0,vy:o.vy||0,vz:o.vz||0,g:o.g??0,life:o.life||1.4,t:0,sz,spin:o.spin||0,grow:o.grow||0,delay:o.delay||0});m.visible=!o.delay;}
@@ -643,14 +676,16 @@ const _ccFeed=ccFeed;ccFeed=function(kind){if(!SB)return _ccFeed(kind);const fk=
 const _ccCol=ccCollect;ccCollect=function(){if(!SB)return _ccCol();sendS3('bcollect');};
 const _col=collect;collect=function(o){if(!SB){collectFx(o);return _col(o);}sendS3('bcollect');};
 addEventListener('message',e=>{const d=e.data||{};
-  if(d.s4sync&&d.s4sync.birds){SB=d.s4sync;applySB();}
+  if(d.s4sync&&d.s4sync.birds){SB=d.s4sync;applySB();{const k=JSON.stringify(SB.mkl||[]);if(k!==syncMonkeys.k){syncMonkeys.k=k;MKL=SB.mkl||[];syncMonkeys();}}}
   const r=d.s4res;if(!r)return;
   if(r.t==='feed'){if(!r.n){toast(r.msg||'ยังไม่มีนกที่หิว');return;}const kind=r.sp==='ostrich'?'ost':'dodo',f=FOOD[r.k];const list=hungry(kind).slice(0,r.n);if(r.left!=null)INV[r.k]=r.left;
     list.forEach((a,i)=>{a.cd=T+f[3]*60;a.fedAt=T;a.peck=0;setTimeout(()=>feedFx(a,r.k),i*120);for(const [w,c] of f[4])for(let j=0;j<Math.min(c,2);j++)setTimeout(()=>spawnDrop(kind,w,a.x+(rnd()-.5)*1.2,a.z+(rnd()-.5)*1.2),900+i*120+rnd()*500);});
     toast('🍽️ ให้'+f[1]+' '+r.n+' ตัว · ผลผลิตหล่นบนพื้นแล้ว!');ccDraw();}
+  else if(r.t==='mkp'){toast(r.msg||'');if(r.ok&&r.mkl){MKL=r.mkl;syncMonkeys.k=JSON.stringify(MKL);syncMonkeys().then(()=>{const m=MKS[MKS.length-1];if(m)bigBurst(m.a.x,m.a.z);});}}
   else if(r.t==='ccinfo'){CCI=r;if(r.lv&&r.lv!==CC.lv){CC.lv=r.lv;ccBuild();}if(ccEl.classList.contains('on'))ccDraw();}
   else if(r.t==='ccup'){if(r.ok){CC.lv=r.lv;ccBuild();bigBurst(CC.x,CC.z);toast('🎉 ศูนย์ดรอปซาฟารี Lv'+r.lv+' แล้ว!');CCI=null;sendS3('bccinfo');ccDraw();}else if(!r.busy){toast(r.msg||'ของยังไม่พอ');sendS3('bccinfo');}}
   else if(r.t==='col'){if(!r.n){toast('ยังไม่มีของให้เก็บ');return;}const ready=drops.filter(o=>o.visible&&o.userData.pop==null);ready.forEach((o,i)=>setTimeout(()=>{collectFx(o);o.userData.pop=0;},i*45));bigBurst(P.x,P.z);
     toast('🧺 เก็บ '+r.got.map(([k,q])=>k+' ×'+q).join(' · ')+(r.merit?' · 🪷 +'+r.merit.toLocaleString():''));setTimeout(ccDraw,600);}});
-window.__T={openCC,ccFeed,ccCollect,sim:(n)=>{for(let i=0;i<n;i++){for(const p of pens){const w=(p.want||BELL)?1:0;p.open+=(w-p.open)*.2;}for(const a of walkers)stepBird(a,.05);stepBell();}return {out:walkers.filter(a=>a.out).length,leaving:walkers.filter(a=>a.leaving).length,bell:BELL,open:pens.map(p=>+p.open.toFixed(2))};},pens,ringBell:()=>document.getElementById('bellBtn').onclick(),sitAt,blocked,get carry(){return carry},setEdit,DECOR,select,place,info:()=>r.info.render,setNight:v=>{night=v;nightK=v;},P,cam,get overview(){return overview},set overview(v){overview=v},camUpdate,babs,walkers,pens,RIDERS,goTo,r};
+{const mb=document.getElementById('mkBtn');if(mb)mb.onclick=()=>{try{parent.postMessage({s4z:'mkplace',id:'',stay:1},'*');}catch(e){}};}
+window.__mk={MKS,syncMonkeys,DECOR,addDecor,setEdit:o=>setEdit(o),setList:l=>{MKL=l;return syncMonkeys();}};window.__T={openCC,ccFeed,ccCollect,sim:(n)=>{for(let i=0;i<n;i++){for(const p of pens){const w=(p.want||BELL)?1:0;p.open+=(w-p.open)*.2;}for(const a of walkers)stepBird(a,.05);stepBell();}return {out:walkers.filter(a=>a.out).length,leaving:walkers.filter(a=>a.leaving).length,bell:BELL,open:pens.map(p=>+p.open.toFixed(2))};},pens,ringBell:()=>document.getElementById('bellBtn').onclick(),sitAt,blocked,get carry(){return carry},setEdit,DECOR,select,place,info:()=>r.info.render,setNight:v=>{night=v;nightK=v;},P,cam,get overview(){return overview},set overview(v){overview=v},camUpdate,babs,walkers,pens,RIDERS,goTo,r};
 </script><script>(()=>{const sd=document.getElementById('side'),t=document.getElementById('sideT');if(!sd||!t)return;t.addEventListener('click',e=>{e.stopPropagation();sd.classList.toggle('open');});sd.addEventListener('click',e=>{const b=e.target.closest('.btn');if(b&&b!==t)setTimeout(()=>sd.classList.remove('open'),250);});})();</script></body></html>

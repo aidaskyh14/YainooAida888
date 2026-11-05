@@ -95,7 +95,7 @@ function openSheet(id,refresh){const nb=V.nb;if(!nb)return;const p=prog();
 }
 /* ---------- ส่งของ ---------- */
 let giftTo=null,giftQ={},sticker='❤️',giftSearch='';
-function giftables(){const g=game();return CAT.filter(c=>!c.p.startsWith('sub.')&&bagGet(g,c.p)>0).map(c=>({c,have:bagGet(g,c.p)}));}
+function giftables(){const g=game();return CAT.filter(c=>!c.p.startsWith('sub.')&&!c.p.startsWith('decor.')&&c.p!=='item.monkey'&&bagGet(g,c.p)>0).map(c=>({c,have:bagGet(g,c.p)}));}
 function openGift(uid){giftTo=uid;giftQ={};giftSearch='';drawGift();}
 function drawGift(){const list=giftables().filter(x=>!giftSearch||x.c.n.includes(giftSearch)),left=Math.max(0,NB_GIFT_DAY-(Number(V.today?.gifts?.[ME])||0));
  sheet('gift',head('<img src="images/nb-gift.webp" alt="">','ส่งให้ '+esc(nameOf(giftTo)))+`<div class="ppl" style="margin-bottom:.5rem"><span class="pill p-mint">🔁 เหลือ ${left}/${NB_GIFT_DAY}</span><span class="pill p-gold" id="gk">📦 0/${NB_GIFT_KINDS} ชนิด</span><span class="pill p-gray">🔢 ชนิดละ ≤${NB_GIFT_MAX}</span></div>
@@ -163,7 +163,7 @@ setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true
 /* ซีซัน 4: ส่งสถานะเนเบอร์ฮูดให้ฉาก 3D (อ่านอย่างเดียว · กติกาเดิมทั้งหมด) */
 window.__nbS=()=>{const nb=V.nb;let q=null;try{if(nb&&nb.status==='active'){const p=prog();q=[p.done,p.rows.length];}}catch(e){}
  return{nb:1,status:nb?(nb.status||'active'):'none',name:nb?.name||'',members:(nb?.members||[]).map(u=>({u,n:nameOf(u),me:u===ME,lead:u===nb.leader})),max:NB_MAX,q,
-  /* S4 ข้อ 105/108/109: ธีม · ของแต่ง/แบบบ้านของทุกคน · เลเวลบ้าน+งานอัปเกรด จากเอกสารชุมชน */theme:nb?.theme||null,deco:nb?.deco||{},houses:nb?.houses||{},leader:nb?nb.leader===ME:false,now:Date.now()+off};};
+  /* S4 ข้อ 105/108/109: ธีม · ของแต่ง/แบบบ้านของทุกคน · เลเวลบ้าน+งานอัปเกรด จากเอกสารชุมชน */theme:nb?.theme||null,deco:nb?.deco||{},houses:nb?.houses||{},trees:nb?.trees||null,leader:nb?nb.leader===ME:false,now:Date.now()+off};};
 window.__nbAct=input=>act(input,false);
 window.__nbOpen=k=>{try{if(k==='invite'){if(typeof openInvitePicker==='function')openInvitePicker();return;}openSheet(k);}catch(e){console.log(e);}};
 window.__nbGift=u=>{try{openGift(u);}catch(e){}};

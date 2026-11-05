@@ -1,6 +1,6 @@
 <!doctype html><html><head><script src="../pv/s4icon.js?h=37261d11"></script><script src="../pv/s4loop.js?h=2b770a67"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta charset="utf-8">
-<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=1b7c8815"></script><script src="../pv/s4own.js?h=240ef027"></script>
+<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=1b7c8815"></script><script src="../pv/s4own.js?h=13ae4e67"></script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap">
 <style>
@@ -661,7 +661,7 @@ const T={
   d_lotus_candle2:{w:1,d:1,must:0,block:1,name:'เทียนดอกบัว',icon:'🕯️',th:'th/s4_d_lotus_candle2.png',make:()=>{const g=new THREE.Group();g.userData.ready=(DLOAD.d_lotus_candle2=DLOAD.d_lotus_candle2||loadG('d_lotus_candle2').then(x=>{matte(x.scene);PROTO.d_lotus_candle2=x.scene;})).then(()=>{g.add(fitAuto(PROTO.d_lotus_candle2,1,1,.9));});return g;}},
   /* S4 4 พ.ย.: โมเดลเพิ่มจากเธอ — เชิงเทียนบัว · เสาระฆังไม้ */
   d_lotus_holder:{w:1,d:1,must:0,block:1,name:'เชิงเทียนบัว',icon:'🪷',th:'th/s4_d_lotus_holder.png',make:()=>{const g=new THREE.Group();g.userData.ready=(DLOAD.d_lotus_holder=DLOAD.d_lotus_holder||loadG('d_lotus_holder').then(x=>{matte(x.scene);PROTO.d_lotus_holder=x.scene;})).then(()=>{g.add(fitAuto(PROTO.d_lotus_holder,1,1,1.1));});return g;}},
-  d_bell_post:{w:1,d:1,must:0,block:1,name:'เสาระฆังไม้',icon:'🔔',th:'th/s4_d_bell_post.png',make:()=>{const g=new THREE.Group();g.userData.ready=(DLOAD.d_bell_post=DLOAD.d_bell_post||loadG('d_bell_post').then(x=>{matte(x.scene);PROTO.d_bell_post=x.scene;})).then(()=>{g.add(fitAuto(PROTO.d_bell_post,1,1,2.2));});return g;}},
+  d_bell_post:{w:1,d:1,must:1,block:1,name:'🔔 ระฆังเรียกน้องน้ำผึ้ง',icon:'🔔',th:'th/s4_d_bell_post.png',make:()=>{const g=new THREE.Group();g.userData.ready=(DLOAD.d_bell_post=DLOAD.d_bell_post||loadG('d_bell_post').then(x=>{matte(x.scene);PROTO.d_bell_post=x.scene;})).then(()=>{g.add(fitAuto(PROTO.d_bell_post,1,1,2.2));});return g;}},
   mailbox:{w:1,d:1,must:1,block:1,name:'ตู้จดหมาย',make:()=>{const g=fitModel(PROTO.mailbox,{h:1.2});/* กล่องล่องหนให้แตะโดนง่าย */const hb=new THREE.Mesh(new THREE.BoxGeometry(1.3,1.9,1.3),new THREE.MeshBasicMaterial({visible:false}));hb.position.y=.95;g.add(hb);return g;}},
   plot:{w:3,d:3,must:1,block:0,name:'แปลงผัก',make:makePlot},
     path:{w:1,d:4,must:0,block:0,name:'ทางเดินหิน',icon:'🪨',make:makePath},
@@ -808,7 +808,18 @@ let S3V=null;
 function s4PlotVis(it,p){s4PkVis(it,p);const key=p?p.c+'|'+(p.st>=4?'R':p.st<=1?'S':p.st===2?'A':'B'):'';if(it.s3k===key)return;it.s3k=key;
  if(it.s3o){it.obj.remove(it.s3o);it.s3o=null;}if(!p){setCrop(it,0);return;}if(p.st>=4){setCrop(it,p.c);return;}
  setCrop(it,0);const g=p.st<=1?s4Seeds():s4Sprouts(p.st===2?.75:1.15);it.obj.add(g);it.s3o=g;}
-window.__s3sync=v=>{S3V=v;if(!items.length)return;try{if(v.fa!=null)finZone(!!v.fa||!!window.__ADMINF);}catch(e){}const [n,s]=s4Plots();n.forEach((it,i)=>s4PlotVis(it,v.f1?v.f1[i]:null));s.forEach((it,i)=>s4PlotVis(it,v.f2?v.f2[i]:null));s4DrawFruit(v.fr||[]);try{s4Garden(v.g||null);}catch(e){}try{if(v.g)s4Guard(v.g);}catch(e){}try{window.__honey&&window.__honey.sync(v.h||null);}catch(e){console.error(e);}try{s4Drops(v.dr||[]);}catch(e){console.error(e);}};
+/* S4 สมุดผู้เล่น: ฝั่งข้ามสะพาน (ล่าง) ล็อกไว้จนกว่าจะใช้กุญแจดอกบัวที่ยัยหนูส่ง · ปลดแล้วถาวร
+   ล็อกอยู่ = ของฝั่งล่างซ่อน (ไม่ลบ) · มีม่านหมอกกับป้ายกุญแจที่ปลายสะพาน แตะป้าย = หน้าปลดล็อก · เดิน/วางของข้ามไปไม่ได้ */
+const LOCK2={on:false,grp:null};function lock2(on){on=!!on&&!window.__SHOW;if(on===LOCK2.on&&(LOCK2.grp||!on))return;LOCK2.on=on;
+ for(const it of items){if(it.z>=NB1&&it.x<ZONEX&&it.obj)it.obj.visible=!on;}
+ if(on&&!LOCK2.grp){const g=new THREE.Group();const W=ZONEX-FARM.x0,D=FARM.z1-NB1;const fog=new THREE.Mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshBasicMaterial({color:0xf3ecff,transparent:true,opacity:.62,depthWrite:false}));fog.rotation.x=-Math.PI/2;fog.position.set(FARM.x0+W/2,.35,NB1+D/2);fog.renderOrder=5;g.add(fog);
+  const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d');x.fillStyle='#fff8ec';x.strokeStyle='#8a5a2e';x.lineWidth=10;x.beginPath();x.roundRect(8,8,496,240,40);x.fill();x.stroke();x.fillStyle='#6b3a1e';x.font='bold 64px Mali, sans-serif';x.textAlign='center';x.fillText('🔒 พื้นที่ล็อก',256,105);x.font='bold 40px Mali, sans-serif';x.fillStyle='#b0562e';x.fillText('ใช้กุญแจดอกบัวปลดล็อก',256,180);
+  const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;const sg=new THREE.Mesh(new THREE.PlaneGeometry(5,2.5),new THREE.MeshBasicMaterial({map:tx,transparent:true}));sg.position.set(BRXS[0],2.4,NB1+2.2);sg.rotation.x=-.35;g.add(sg);
+  for(const dx of [-1.9,1.9]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1.3,8),new THREE.MeshLambertMaterial({color:0x8a5a36}));post.position.set(BRXS[0]+dx,.65,NB1+2.3);g.add(post);}
+  sc.add(g);LOCK2.grp=g;LOCK2.sign=sg;}
+ if(LOCK2.grp)LOCK2.grp.visible=on;try{if(typeof rebuildTiles==='function'&&0)rebuildTiles();}catch(e){}}
+window.__s4Lock2=v=>lock2(!!v);window.__lock2=()=>LOCK2.on;
+window.__s3sync=v=>{S3V=v;if(!items.length)return;try{if(v.ul2!=null)lock2(!v.ul2&&!window.__ADMINF);}catch(e){}try{if(v.fa!=null)finZone(!!v.fa||!!window.__ADMINF);}catch(e){}const [n,s]=s4Plots();n.forEach((it,i)=>s4PlotVis(it,v.f1?v.f1[i]:null));s.forEach((it,i)=>s4PlotVis(it,v.f2?v.f2[i]:null));s4DrawFruit(v.fr||[]);try{s4Garden(v.g||null);}catch(e){}try{if(v.g)s4Guard(v.g);}catch(e){}try{window.__honey&&window.__honey.sync(v.h||null);}catch(e){console.error(e);}try{s4Drops(v.dr||[]);}catch(e){console.error(e);}};
 /* S4 ข้อ 164: วัตถุดิบป่า (ไม้/หิน/หญ้า จากระบบของดรอป S3) โผล่เป็นชิ้นบนพื้นว่างของฟาร์ม 3D · ตำแหน่งคงที่ตาม id · แตะ = เก็บชิ้นนั้น (หรือกดปุ่มเคียวเก็บทั้งหมด) */
 const DRG=new THREE.Group();sc.add(DRG);window.__DRG=DRG;window.__s4Drops=r=>s4Drops(r);const DRS=new Map(),DRTEX={};
 function drTex(f){if(DRTEX[f])return DRTEX[f];const t=TL.load('../images/'+f+'.webp');t.colorSpace=THREE.SRGBColorSpace;return DRTEX[f]=t;}
@@ -836,6 +847,7 @@ const s4go=g=>(it)=>{const b=S4B();if(!b)return false;b.go(g);};
 T.barn.onTap=(it)=>{const b=S4B();if(!b)return false;s4Walk(it);s4Act('bcc');};/* S4: โรงนา = ศูนย์สัตว์ (ไม่ไปหน้า S3) */T.stall.onTap=(it)=>{const b=S4B();if(!b)return false;s4Walk(it);b.stall();};if(T.mstall)T.mstall.onTap=T.stall.onTap;
 T.ghouse.onTap=()=>false;
 T.mailbox.onTap=()=>{const b=S4B();if(!b)return false;b.mail();};
+T.d_bell_post.onTap=(it)=>{const b=S4B();if(!b||!b.honey)return false;try{s4Walk(it);}catch(e){}setTimeout(()=>b.honey(),450);};
 /* ---- 🏦 โซนการเงิน ---- */
 const FINZ={x0:8,z0:33,x1:20,z1:43};/* ลานหินมุมล่างขวา */
 function ATMMAKE(f,glow){const g=new THREE.Group();const base=new THREE.Mesh(new THREE.CylinderGeometry(1.45,1.55,.14,28),new THREE.MeshLambertMaterial({color:0xf3e9dc}));base.position.set(1,.07,1);base.receiveShadow=true;g.add(base);
@@ -865,7 +877,7 @@ for(const k of ['sc1','sc2','sc3','sc4'])T[k].onTap=()=>{const l=Math.max(0,(win
 T.atm_lotus.onTap=atmTap('lotus');T.atm_moon.onTap=atmTap('moon');T.atm_sign.onTap=()=>{say('📋 เรทแลกเงินเปลี่ยนทุกชั่วโมง · ธนาคารเด่น: ดอกบัวบาน 06–18 น. / พระจันทร์ยิ้ม 18–06 น.');};
 let FINON=false,FINBAK=null;
 function finZone(on){/* ตู้+ป้ายโผล่ทุกครั้งที่โหลด (ไม่เซฟ) · เฉพาะฟาร์มยัยหนู (ของตัวเอง หรือตอนเพื่อนมาเยี่ยม — เปิด/ปิดตามสถานะเยี่ยม) */
-  if(on==null){on=false;try{on=!!window.__ADMINF||(0,parent.eval)('!!(window.visiting&&window.friendFarm&&window.friendFarm.atm)');}catch(e){}}
+  if(on==null){on=false;try{on=!!window.__ADMINF||(0,parent.eval)('!!(typeof visiting!=="undefined"&&visiting&&window.friendFarm&&window.friendFarm.atm)');}catch(e){}}
   if(window.__SHOW)return;on=!!on;if(on===FINON)return;FINON=on;
   const del=f=>{for(const it of items.filter(f)){sc.remove(it.obj);items.splice(items.indexOf(it),1);}};
   if(!on){del(o=>T[o.t].fix);if(FINBAK){for(const [k,t] of FINBAK){if(t==null)TILES.delete(k);else TILES.set(k,t);}FINBAK=null;}rebuildTiles();return;}
@@ -877,7 +889,7 @@ function finZone(on){/* ตู้+ป้ายโผล่ทุกครั้�
   if(first)del(o=>!T[o.t].must&&o.t!=='house'&&o.t!=='ghouse'&&o.t!=='fspot'&&over(o,FINZ.x0-1,FINZ.z0-1,FINZ.x1+1,FINZ.z1+1));
   if(!vis)del(o=>/^rs_/.test(o.t)&&over(o,FINZ.x0,FINZ.z0,FINZ.x1,FINZ.z1));
   const fx=(t,x,z,rot=0)=>{if(items.some(i=>i.t===t))return;const it=addItem(t,x,z,rot);it.x=x;it.z=z;posObj(it);};
-  fx('atm_lotus',10,36);fx('atm_moon',15,36);fx('atm_sign',12,34);
+  fx('atm_lotus',10,36);fx('atm_moon',15,36);/* S4 ข้อ 1: ไม่มีป้ายเรท (ขึ้นแต่ “กำลังโหลด”) */
   if(first){const put=(t,x,z)=>{if(!T[t])return;const it=addItem(t,0,0);if(fits(it,x,z,0)){it.x=x;it.z=z;posObj(it);}else{sc.remove(it.obj);items.pop();}};
     put('d_stylized_lanterns',8,34);put('d_stylized_lanterns',18,34);put('d_flower_planter',8,39);put('d_flower_planter',18,39);put('bench',10,40);put('bench',15,40);put('d_stylized_lanterns',8,41);put('d_stylized_lanterns',18,41);put('d_flower_pots',13,40);
     for(let x=8;x<20;x+=2){FENCES.set('h,'+x+','+FINZ.z0,'wood');}FENCES.delete('h,12,'+FINZ.z0);FENCES.delete('h,14,'+FINZ.z0);for(let z=FINZ.z0;z<FINZ.z1;z+=2)FENCES.set('v,'+FINZ.x0+','+z,'wood');
@@ -951,12 +963,23 @@ function s4Fly(it,html,cls){s4v.copy(it.obj.position);s4v.y+=1.2;s4v.project(cam
  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go')));setTimeout(()=>el.remove(),1300);}
 {const c=document.createElement('style');c.textContent='.s4fly{position:fixed;z-index:9;transform:translate(-50%,-50%);pointer-events:none;font:800 13px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);transition:transform .9s cubic-bezier(.3,1.6,.5,1),opacity .9s;display:flex;align-items:center;gap:2px}.s4fly img{width:30px;height:30px;object-fit:contain;}.s4fly.go{transform:translate(-50%,-160%) scale(1.25);opacity:0}.s4fly.h.go{transform:translate(calc(50vw - 100% - 30px),-40vh) scale(.5);opacity:.2}';document.head.appendChild(c);}
 let sw=null;
-addEventListener('pointerdown',e=>{if(!S4EMB||edit||(window.__room&&window.__room.on)||!stage.contains(e.target)||e.button>0)return;const it=s4PlotAt(e.clientX,e.clientY);if(!it)return;e.stopPropagation();sw={id:e.pointerId,x:e.clientX,y:e.clientY,on:false,done:new Set(),q:[]};},true);
+addEventListener('pointerdown',e=>{if(!S4EMB||edit||BASKET||(window.__room&&window.__room.on)||!stage.contains(e.target)||e.button>0)return;const it=s4PlotAt(e.clientX,e.clientY);if(!it)return;e.stopPropagation();sw={id:e.pointerId,x:e.clientX,y:e.clientY,on:false,done:new Set(),q:[]};},true);
 addEventListener('pointermove',e=>{if(!sw||e.pointerId!==sw.id)return;e.stopPropagation();if(!sw.on&&Math.hypot(e.clientX-sw.x,e.clientY-sw.y)>9)sw.on=true;if(!sw.on)return;
  const it=s4PlotAt(e.clientX,e.clientY);if(it&&!sw.done.has(it)){sw.done.add(it);s4Sweep(it);}},true);
 addEventListener('pointerup',e=>{if(!sw||e.pointerId!==sw.id)return;e.stopPropagation();const was=sw;sw=null;if(!was.on){try{tap(e.clientX,e.clientY);}catch(err){console.error(err);}}},true);
 addEventListener('pointercancel',()=>{sw=null;},true);
 let swBusy=Promise.resolve();
+/* S4 ข้อ 3: 🧺 ตะกร้าเก็บผลไม้ — กดปุ่มตะกร้า แล้วลากนิ้วผ่านต้นผลไม้ ต้นไหนมีผลก็เก็บให้ทุกต้นที่ลากผ่าน (แตะต้นเดียวก็ได้) */
+let BASKET=false,bsw=null,bBusy=Promise.resolve();
+const bBtn=(()=>{if(window.__SHOW||!S4EMB)return null;const b=document.createElement('button');b.id='s4basket';b.type='button';b.innerHTML='<i>🧺</i><span>ตะกร้า</span>';document.body.appendChild(b);const st=document.createElement('style');st.textContent='#s4basket{position:fixed;z-index:8;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;font:800 10px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);cursor:pointer}#s4basket i{width:48px;height:48px;border-radius:15px;border:3px solid #fff;font-style:normal;font-size:24px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffd9a0,#f0a640);box-shadow:0 4px 0 rgba(0,0,0,.18)}#s4basket.on i{background:linear-gradient(180deg,#9fe38a,#4bb04a);transform:scale(1.08)}body.edit #s4basket{display:none}';document.head.appendChild(st);
+ b.onclick=e=>{e.stopPropagation();BASKET=!BASKET;b.classList.toggle('on',BASKET);say(BASKET?'🧺 ลากนิ้วผ่านต้นผลไม้ เก็บทุกต้นที่มีผล · แตะ 🧺 อีกครั้งเพื่อเลิก':'🧺 เก็บตะกร้าแล้ว');};return b;})();
+function s4TreeAt(cx,cy){const p=groundAt(cx,cy);if(!p)return null;return s4FSpots().find(o=>{const [w,d]=dims(o);return p.x>o.x-.6&&p.x<o.x+w+.6&&p.z>o.z-.6&&p.z<o.z+d+.6;})||null;}
+function s4BPick(it){const b=S4B();if(!b||!b.fruitPick)return;const i=s4FSpots().indexOf(it);if(i<0)return;const fr=S3V&&S3V.fr&&S3V.fr[i];if(!fr||fr.grow<1||!(fr.fr>0)){s4Fly(it,'💤');return;}
+ it.obj.scale.setScalar(1.08);setTimeout(()=>it.obj.scale.setScalar(1),180);s4Fly(it,'🧺','h');bBusy=bBusy.then(()=>b.fruitPick(i)).catch(()=>{});}
+addEventListener('pointerdown',e=>{if(!BASKET||edit||!stage.contains(e.target)||e.button>0)return;e.stopPropagation();bsw={id:e.pointerId,x:e.clientX,y:e.clientY,done:new Set()};const it=s4TreeAt(e.clientX,e.clientY);if(it){bsw.done.add(it);s4BPick(it);}},true);
+addEventListener('pointermove',e=>{if(!bsw||e.pointerId!==bsw.id)return;e.stopPropagation();const it=s4TreeAt(e.clientX,e.clientY);if(it&&!bsw.done.has(it)){bsw.done.add(it);s4BPick(it);}},true);
+addEventListener('pointerup',e=>{if(!bsw||e.pointerId!==bsw.id)return;e.stopPropagation();bsw=null;},true);
+window.__basket=()=>BASKET;window.__bpick=i=>s4BPick(s4FSpots()[i]);window.__s3fr=()=>S3V&&S3V.fr;
 // ตัวละครต้องยืนใกล้แปลงก่อนถึงจะทำได้ ถ้าไกลจะเดินไปก่อน
 const S4R=6;function s4Far(it){const [w,d]=dims(it);return Math.hypot(P.x-(it.x+w/2),P.z-(it.z+d/2))>S4R;}
 function s4Near(it){return new Promise(res=>{if(!s4Far(it))return res(true);s4Walk(it);if(!window.__SHOW)return res(true);/* S4 ข้อ 1: แตะ = ทำทันที ไม่รอเดินถึง */const t0=performance.now();const iv=setInterval(()=>{if(!s4Far(it)){clearInterval(iv);res(true);}else if(performance.now()-t0>9000||(P.tx==null&&s4Far(it)&&performance.now()-t0>600)){clearInterval(iv);res(false);}},90);});}
@@ -1425,7 +1448,7 @@ let items=[];// {key,t,x,z,rot,obj}
 const dims=it=>{const t=T[it.t];return it.rot%2?[t.d,t.w]:[t.w,t.d];};
 function posObj(it,lift=0){const [w,d]=dims(it);it.obj.position.set(it.x+w/2,lift,it.z+d/2);it.obj.rotation.y=it.rot*Math.PI/2;if(T[it.t].gh)for(const p of items)if(p.ghk===it.key){p.x=it.x+p.gox;p.z=it.z+p.goz;posObj(p,lift);}}
 function addItem(t,x,z,rot=0,key){const it={key:key||(Date.now()+'-'+Math.random().toString(36).slice(2)),t,x,z,rot,seed:Math.floor(Math.random()*90)+1,color:T[t].pal!=null?T[t].pal:null};it.obj=T[t].make(it.seed,it.color);it.obj.userData.item=it;it.obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.userData.item=it;}});sc.add(it.obj);posObj(it);items.push(it);return it;}
-function fits(it,x,z,rot){const t=T[it.t];const [w,d]=rot%2?[t.d,t.w]:[t.w,t.d];if(x<FARM.x0||z<FARM.z0||x+w>FARM.x1||z+d>FARM.z1)return false;if(z<NB1&&z+d>NB0)return false;if(z<BRZ1&&z+d>NB0&&BRXS.some(BX=>x<BX+BRW/2+.2&&x+w>BX-BRW/2-.2))return false;
+function fits(it,x,z,rot){const t=T[it.t];const [w,d]=rot%2?[t.d,t.w]:[t.w,t.d];if(LOCK2.on&&z+d>NB1&&x<ZONEX&&!LOCK2.seeding)return false;if(x<FARM.x0||z<FARM.z0||x+w>FARM.x1||z+d>FARM.z1)return false;if(z<NB1&&z+d>NB0)return false;if(z<BRZ1&&z+d>NB0&&BRXS.some(BX=>x<BX+BRW/2+.2&&x+w>BX-BRW/2-.2))return false;
   if(!t.water)for(let xx=x;xx<x+w;xx++)for(let zz=z;zz<z+d;zz++)if(tT(TILES.get(xx+','+zz))==='water')return false;
   return !items.some(o=>{if(o===it||!o.obj.parent)return false;if((T[it.t].cover&&o.t==='plot'&&o.ghk===it.key)||(T[o.t].cover&&it.t==='plot'&&it.ghk===o.key))return false;if(T[it.t].edge&&T[o.t].edge&&(o.rot%2)!==(rot%2))return false;const [ow,od]=dims(o);return x<o.x+ow&&o.x<x+w&&z<o.z+od&&o.z<z+d;});}
 function seatsOf(it){const S=T[it.t].seats;if(!S)return [];const [w,d]=dims(it),a=it.rot*Math.PI/2,c=Math.cos(a),sn=Math.sin(a),cx=it.x+w/2,cz=it.z+d/2,dl=T[it.t].d;
@@ -1472,7 +1495,7 @@ function clampView(){V.tx=THREE.MathUtils.clamp(V.tx,-20,FARM.x1);V.tz=THREE.Mat
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function setRay(cx,cy){const rc=stage.getBoundingClientRect();ndc.set((cx-rc.left)/rc.width*2-1,-((cy-rc.top)/rc.height)*2+1);ray.setFromCamera(ndc,cam);}
 function groundAt(cx,cy){setRay(cx,cy);if(ray.ray.direction.y>=-1e-3)return null;const t=ray.ray.origin.y/-ray.ray.direction.y;return ray.ray.origin.clone().addScaledVector(ray.ray.direction,t);}
-function pickItem(cx,cy){setRay(cx,cy);const hs=ray.intersectObjects(items.map(i=>i.obj),true);/* S4 ข้อ 136: ของชิ้นเล็ก (ตู้ไปรษณีย์) ที่ซ้อนอยู่หลังรั้ว/ใกล้บ้าน ต้องเลือกได้ — ถ้าหลายชิ้นโดนใกล้กัน เอาชิ้นที่ฐานเล็กสุด */const got=[];for(const h of hs){let o=h.object;while(o&&!o.userData.item)o=o.parent;if(o&&!got.some(g=>g.it===o.userData.item))got.push({it:o.userData.item,d:h.distance});if(got.length>=3)break;}if(got.length){const d0=got[0].d;let best=got[0];for(const g of got){if(g.d-d0<2.5){const a=dims(g.it),b=dims(best.it);if(a[0]*a[1]<b[0]*b[1])best=g;}}return best.it;}
+function pickItem(cx,cy){setRay(cx,cy);const hs=ray.intersectObjects(items.map(i=>i.obj).filter(o=>o.visible!==false),true);/* S4 ข้อ 136: ของชิ้นเล็ก (ตู้ไปรษณีย์) ที่ซ้อนอยู่หลังรั้ว/ใกล้บ้าน ต้องเลือกได้ — ถ้าหลายชิ้นโดนใกล้กัน เอาชิ้นที่ฐานเล็กสุด */const got=[];for(const h of hs){let o=h.object;while(o&&!o.userData.item)o=o.parent;if(o&&!got.some(g=>g.it===o.userData.item))got.push({it:o.userData.item,d:h.distance});if(got.length>=3)break;}if(got.length){const d0=got[0].d;let best=got[0];for(const g of got){if(g.d-d0<2.5){const a=dims(g.it),b=dims(best.it);if(a[0]*a[1]<b[0]*b[1])best=g;}}return best.it;}
   if(ray.ray.direction.y<0){const t=ray.ray.origin.y/-ray.ray.direction.y,g=ray.ray.origin.clone().addScaledVector(ray.ray.direction,t);for(const o of items){const [w,d]=dims(o);if(g.x>=o.x&&g.x<o.x+w&&g.z>=o.z&&g.z<o.z+d)return o;}}return null;}
 // ---- moving things ----
 let sel=null,drag=null,orig=null;const selBar=document.getElementById('selBar'),bar=document.getElementById('bar');
@@ -1723,7 +1746,7 @@ function renderTray(){tray.classList.toggle('mini',bagMini);
   tItems.innerHTML='';for(const t of cur.items){const b=document.createElement('button');b.type='button';const th=bagGroup!=='gen';b.className='slot'+(th?' '+BAGTHEMES[bagGroup].cls:'')+(tool===t?' on':'');
     const nm=t==='erase'?'ลบทางเดิน':T[t].name,S=T[t]&&T[t].seats?T[t].seats.length:0;const bd=[S?`<i>🪑${S}</i>`:'',GLOWY(t)?'<i>✨</i>':''].join('');
     const av=OWNAV(t);b.dataset.t=t;if(av===0)b.classList.add('none');
-    b.innerHTML=`<span class="box">${th?`<span class="moon">${{nature:'🌿',thai:'🛕'}[bagGroup]||'🌙'}</span>`:''}${imgOf(t)}${bd?`<span class="bd">${bd}</span>`:''}${av===Infinity?'':`<span class="cnt">มี ${av}</span>`}</span><span class="nm">${nm}</span>`;
+    b.innerHTML=`<span class="box">${th?`<span class="moon">${{nature:'🌿',thai:'🛕'}[bagGroup]||'🌙'}</span>`:''}${imgOf(t)}${bd?`<span class="bd">${bd}</span>`:''}${av===Infinity?'':`<span class="cnt">${av===0&&window.S4OWN&&S4OWN.price&&S4OWN.price(t)?'💰 '+S4OWN.price(t).toLocaleString():'มี '+av}</span>`}</span><span class="nm">${nm}</span>`;
     /* S4 ข้อ 139: แตะของ → ดูรอบด้านก่อน แล้วค่อยกด "วาง" (พื้น/รั้ว/ลบ วางได้เลย) */
     b.onclick=()=>{if(t==='erase'||(T[t]&&(T[t].tile||T[t].fz)))return setTool(tool===t?null:t);if(tool===t)return setTool(null);window.__view3D(t,{place:true});};tItems.appendChild(b);}
   // info strip for the chosen piece (size, seats, glow, colours)
@@ -1752,7 +1775,7 @@ const ptrs=new Map();let gesture=null,lpTimer=null,dragOff=null;
 stage.addEventListener('pointerdown',e=>{stage.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,t:performance.now()});
   if(ptrs.size>1){if(gesture==='paint'&&paint&&!erase&&lastCell){}gesture='zoom';clearTimeout(lpTimer);if(drag){drag=null;}return;}
   if(edit&&tool){gesture='stamp';lastCell=null;lastStamp=null;doStamp(e);return;}
-  gesture=null;applyCam();const hit=face?null:pickItem(e.clientX,e.clientY);
+  gesture=null;applyCam();/* S4 ข้อ 2: โหมดเล่นไม่ต้องยิงหาของตอนนิ้วแตะลง (ทำตอนปล่อยนิ้วครั้งเดียว) → แตะตอบสนองไวขึ้นบน iPad */const hit=face||!edit?null:pickItem(e.clientX,e.clientY);
   const startDrag=it=>{const g=groundAt(e.clientX,e.clientY);const [w,d]=dims(it);dragOff=[g.x-(it.x+w/2),g.z-(it.z+d/2)];drag=it;gesture='drag';};
   if(hit&&hit===sel){startDrag(hit);return;}
   if(!edit){holdId=e.pointerId;const id=e.pointerId;clearTimeout(holdTimer);holdTimer=setTimeout(()=>{const q=ptrs.get(id);if(q&&holdId===id&&!gesture){gesture='hold';setWalk(q.x,q.y);}},180);return;}
@@ -1760,7 +1783,7 @@ stage.addEventListener('pointerdown',e=>{stage.setPointerCapture(e.pointerId);pt
 });
 stage.addEventListener('pointermove',e=>{const q=ptrs.get(e.pointerId);if(!q)return;const ox=q.x,oy=q.y;q.x=e.clientX;q.y=e.clientY;
   if(gesture==='stamp'&&ptrs.size===1){doStamp(e);return;}
-  if(!edit&&holdId===e.pointerId&&ptrs.size===1){if(!gesture&&Math.hypot(e.clientX-q.sx,e.clientY-q.sy)>8)gesture='hold';if(gesture==='hold')setWalk(q.x,q.y);return;}
+  if(!edit&&holdId===e.pointerId&&ptrs.size===1){if(!gesture&&Math.hypot(e.clientX-q.sx,e.clientY-q.sy)>(e.pointerType==='touch'?14:8))gesture='hold';if(gesture==='hold')setWalk(q.x,q.y);return;}
   if(gesture==='drag'&&drag){const g=groundAt(e.clientX,e.clientY);if(!g)return;const [w,d]=dims(drag);drag.x=Math.round(g.x-dragOff[0]-w/2);drag.z=Math.round(g.z-dragOff[1]-d/2);posObj(drag,.35);showFoot(drag);return;}
   if(ptrs.size===1){if(!gesture&&Math.hypot(e.clientX-q.sx,e.clientY-q.sy)>8){gesture='pan';clearTimeout(lpTimer);}
     if(gesture==='pan'&&edit){applyCam();const a=groundAt(ox,oy),b=groundAt(e.clientX,e.clientY);if(a&&b){V.tx-=b.x-a.x;V.tz-=b.z-a.z;follow=false;clampView();}}}
@@ -1769,7 +1792,7 @@ stage.addEventListener('pointermove',e=>{const q=ptrs.get(e.pointerId);if(!q)ret
 function endPtr(e){if(!ptrs.has(e.pointerId))return;const q0=ptrs.get(e.pointerId);ptrs.delete(e.pointerId);clearTimeout(lpTimer);clearTimeout(holdTimer);if(holdId===e.pointerId)holdId=null;
   if(gesture==='drag'){drag=null;if(sel){showFoot(sel);if(fits(sel,sel.x,sel.z,sel.rot)){orig={x:sel.x,z:sel.z,rot:sel.rot};save();}}}
   else if(!gesture&&ptrs.size===0)tap(e.clientX,e.clientY);
-  else if(gesture==='hold'&&ptrs.size===0&&q0&&Math.hypot(q0.x-q0.sx,q0.y-q0.sy)<12&&performance.now()-q0.t<700)tap(e.clientX,e.clientY);
+  else if(gesture==='hold'&&ptrs.size===0&&q0&&Math.hypot(q0.x-q0.sx,q0.y-q0.sy)<18&&performance.now()-q0.t<800)tap(e.clientX,e.clientY);
   if(ptrs.size===0)gesture=null;}
 stage.addEventListener('pointerup',endPtr);stage.addEventListener('pointercancel',endPtr);
 stage.addEventListener('wheel',e=>{e.preventDefault();if(face){faceDist=THREE.MathUtils.clamp(faceDist*(1+e.deltaY*.0012),3.2,10);return;}V.dist=THREE.MathUtils.clamp(V.dist*(1+e.deltaY*.0012),DMIN,DMAX);},{passive:false});
@@ -1782,6 +1805,7 @@ function tap(cx,cy){applyCam();if(!menu.hidden){menu.hidden=true;return;}
       if(fits(sel,nx,nz,sel.rot)){sel.x=nx;sel.z=nz;orig={x:nx,z:nz,rot:sel.rot};posObj(sel,.35);showFoot(sel);save();}
       else{const o={x:sel.x,z:sel.z};sel.x=nx;sel.z=nz;showFoot(sel);sel.x=o.x;sel.z=o.z;editHint('ตรงนั้นวางไม่ได้ (ทับของอื่นหรือนอกรั้ว)');setTimeout(()=>{if(sel)showFoot(sel);if(edit)editHint();},900);}}
     return;}
+  if(LOCK2.on&&p&&p.z>NB1-.3&&p.x<ZONEX){const b=S4B();if(b&&b.lock2)b.lock2();return;}
   if(hit&&T[hit.t].onTap&&T[hit.t].onTap(hit,cx,cy)!==false)return;
   if(hit&&T[hit.t].gh&&hit.obj.userData.gh){const u=hit.obj.userData.gh;
     const [lx,lz]=p?ghLocal(hit,p.x,p.z):[99,99];
@@ -1802,7 +1826,7 @@ function tap(cx,cy){applyCam();if(!menu.hidden){menu.hidden=true;return;}
   marker.position.set(p.x,.05,p.z);marker.visible=true;}
 // ---- walking ----
 const onWalk=(x,z)=>items.find(o=>{if(!T[o.t].walk||!o.obj||!o.obj.parent)return false;const [w,d]=dims(o);return x>o.x&&x<o.x+w&&z>o.z&&z<o.z+d;});
-function blocked(x,z){if(FENCES.size&&fenceAt2(x,z))return true;if(tT(TILES.get(Math.floor(x)+','+Math.floor(z)))==='water'&&!onWalk(x,z))return true;if(x<FARM.x0+.3||x>FARM.x1-.3||z<FARM.z0+.3||z>FARM.z1-.3)return true;if(z>ROADZ+1.1&&z<NB1+.15&&!nearBR(x,BRW/2-.35))return true;
+function blocked(x,z){if(LOCK2.on&&z>NB1-.6&&x<ZONEX)return true;if(FENCES.size&&fenceAt2(x,z))return true;if(tT(TILES.get(Math.floor(x)+','+Math.floor(z)))==='water'&&!onWalk(x,z))return true;if(x<FARM.x0+.3||x>FARM.x1-.3||z<FARM.z0+.3||z>FARM.z1-.3)return true;if(z>ROADZ+1.1&&z<NB1+.15&&!nearBR(x,BRW/2-.35))return true;
   for(const o of items){const pk=T[o.t].pen;if(!pk||o===sel)continue;const D=PENDEF[pk],[lx,lz]=penLocal(o,x,z),hx=PHX(D),f=D.fz*PSZ(D),bk=D.bz*PSZ(D);
     if(lx<-hx-.3||lx>hx+.3||lz<bk-.3||lz>f+.3)continue;if(lx>-hx+.45&&lx<hx-.45&&lz>bk+.45&&lz<f-.45)continue;
     const u=o.obj.userData.pen;if(u&&u.open&&Math.abs(lx)<D.gap*PSX(D)/2-.2&&lz>f-.7)continue;return true;}
@@ -1967,7 +1991,7 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
   const names=['house','barn','pine','mailbox','fence','sakura','oak','jaca'];
   const gs=await Promise.all(names.map(loadG));gs.forEach((g,i)=>{matte(g.scene);PROTO[names[i]]=g.scene;});
   /* S4 รีเซ็ตผู้เล่น: ของตกแต่งที่โค้ดเคยวางให้ (โซนสัตว์/ม้านั่ง/ต้นไม้แต่ง) มีเฉพาะฟาร์มแอดมิน · ผู้เล่นวางเองจากถุง */
-  const ADMINF=(()=>{try{const H=parent.__HOST||(parent.parent&&parent.parent.__HOST);const u=JSON.parse((H&&H.get('s3user'))||(0,parent.eval)("localStorage.getItem('s3user')")||'null');return !!(u&&u.admin)&&!(0,parent.eval)('!!window.visiting');}catch(e){return false;}})();window.__ADMINF=ADMINF;
+  const ADMINF=(()=>{try{const H=parent.__HOST||(parent.parent&&parent.parent.__HOST);const u=JSON.parse((H&&H.get('s3user'))||(0,parent.eval)("localStorage.getItem('s3user')")||'null');return !!(u&&u.admin)&&!(0,parent.eval)('typeof visiting!=="undefined"&&!!visiting');}catch(e){return false;}})();/* S4 ข้อ 5: แอดมินไปเยี่ยมบ้านเพื่อน (หน้าเดิมไม่โหลดใหม่) ต้องไม่ถือว่าเป็นฟาร์มแอดมิน → ตู้ ATM ไม่ไปโผล่บ้านเพื่อน */try{Object.defineProperty(window,'__ADMINF',{configurable:true,get:()=>{try{return ADMINF&&!(0,parent.eval)('typeof visiting!=="undefined"&&!!visiting');}catch(e){return ADMINF;}}});}catch(e){window.__ADMINF=ADMINF;}
   let saved=null;if(!window.__SHOW)try{saved=JSON.parse(localStorage.getItem(SAVEKEY)||'null');}catch(e){}
   if(saved&&saved.length)for(const [t,x,z,rot,key,crop,color] of saved){if(T[t]&&!/Tree$/.test(t)){const it=addItem(t,x,z,rot,key);if(color!=null&&color>=0&&T[t].pal!=null){it.color=color;recolor(it,color);}if(crop)setCrop(it,crop);}}else{for(const [t,x,z] of DEFAULT)addItem(t,x,z,0);save();}
   try{let ch=false;for(const it of items.filter(i=>i.t==='mstall')){sc.remove(it.obj);items.splice(items.indexOf(it),1);ch=true;}if(ch&&!window.__SHOW)save();}catch(e){}
@@ -2106,6 +2130,8 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
     const C=[[h.x+hw+1,h.z+hd-1],[h.x+hw+1,h.z+hd],[h.x-2,h.z+hd-1],[h.x+hw+2,h.z+hd+1],[h.x+hw,h.z+hd+1]];let ok=false;const ox=mb.x,oz=mb.z;
     for(const [x,z] of C){mb.x=-999;mb.z=-999;if(fits(mb,Math.round(x),Math.round(z),0)){mb.x=Math.round(x);mb.z=Math.round(z);posObj(mb);ok=true;break;}}
     if(!ok){mb.x=ox;mb.z=oz;posObj(mb);}save();localStorage.setItem('farm1-s4mail1','1');console.log('mailbox',ok,mb.x,mb.z);}}}catch(e){console.log('mail',e&&e.message);}
+  /* S4 ข้อ 12: ระฆังเรียกน้องน้ำผึ้งตั้งที่ท่าน้ำหน้าบ้าน (ข้างสะพาน) ทุกฟาร์ม · ย้ายได้ แต่เก็บเข้ากระเป๋าไม่ได้ */
+  if(!window.__SHOW)try{if(!items.some(i=>i.t==='d_bell_post')){const it=addItem('d_bell_post',0,0);let ok=false;for(const [x,z] of [[3,4],[4,4],[-4,4],[-5,4],[3,3],[5,4],[-6,4],[3,2],[6,4]]){it.x=-999;it.z=-999;if(fits(it,x,z,0)){it.x=x;it.z=z;posObj(it);ok=true;break;}}if(!ok){sc.remove(it.obj);items.splice(items.indexOf(it),1);}else save();}}catch(e){console.log('bell',e&&e.message);}
   try{finZone();}catch(e){console.log('fin',e&&e.message);}
   // โหมดแต่งฟาร์ม: ถุงของแต่งพับเล็กไว้ก่อน (ไม่บังครึ่งจอ) · ซูมออกให้เห็นทั้งโซน · บอกว่าแปลงผักและสะพานย้ายได้
   if(S4EMB)try{bagMini=true;const _se=setEdit;setEdit=function(on){_se(on);if(on){if(!bagMini){bagMini=true;renderTray();}V.dist=Math.max(V.dist,58);say('🎨 แตะของเพื่อเลือก แล้วลากย้าย · แปลงผัก สะพาน กรีนเฮาส์ ก็ย้ายได้ · แตะ ▴ เพื่อเปิดถุงของแต่ง');}};}catch(e){console.log('edit mini',e&&e.message);}
@@ -2292,6 +2318,33 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
   if(!S4EMB)spawnFriends(SRCREST,CLIPS);
   PEERSRC={body,clips:{walk:find('walk.001'),idle:find('A girl stands relaxed'),sit:find('A girl sits upright on a bench'),wave:find('A girl stands and waves')||find('A girl waves')}};
 }catch(e){console.log('loadfail',e&&e.message,e&&e.stack);loadEl.textContent='โหลดฟาร์มไม่สำเร็จ ลองรีเฟรชหน้า';}})();
+const BOOK3={"thai": [["d_t3_throne", "แท่นประทับฉัตร"], ["d_t3_pavilion", "ศาลาไทยหลังคาแดง"], ["d_t3_gazebo", "ศาลาริมน้ำ"], ["d_t3_swing", "ชิงช้าไทย"], ["d_t3_arch", "ซุ้มประตูไทย"], ["d_t3_bambooarch", "ซุ้มไม้ไผ่โคมไทย"], ["d_t3_well", "บ่อน้ำหลังคาไทย"], ["d_t3_market", "ร้านไม้ตลาดไทย"], ["d_t3_oxcart", "เกวียนควาย"], ["d_t3_boat", "เรือหลังคาไทย"], ["d_t3_waterfall", "น้ำตกหินชั้น"], ["d_t3_nagafountain", "น้ำพุพญานาค"], ["d_t3_jarfountain", "น้ำพุโอ่งดินเผา"], ["d_t3_pourjar", "โอ่งน้ำไหล"], ["d_t3_lotuspond", "บ่อบัวหลวง"], ["d_t3_banners", "ราวธงตุง"], ["d_t3_buddhatree", "ต้นโพธิ์พระพุทธรูป"], ["d_t3_lion", "สิงห์ทองเฝ้าประตู"], ["d_t3_horse", "ม้าทองเทวดา"]], "nature": [["d_n2_treeswing", "ชิงช้าซุ้มต้นไม้"], ["d_n2_hammock", "เปลญวนใต้ใบไม้"], ["d_n2_leafboat", "เรือใบไม้กลางบ่อ"], ["d_n2_pumpkinlamp", "โคมเทียนบัว"], ["d_n2_treelamp", "ต้นไม้โคมไฟ"], ["d_n2_cave", "ถ้ำหินมอส"], ["d_n2_treehouse", "บ้านตอไม้คริสตัล"], ["d_n2_waterwheel", "กังหันน้ำหิน"], ["d_n2_well", "บ่อน้ำหลังคาใบไม้"], ["d_n2_fountain", "น้ำพุใบบัว"], ["d_n2_logtunnel", "อุโมงค์ขอนไม้"], ["d_n2_platform", "ลานไม้"], ["d_n2_stonetile", "แผ่นหินทางเดิน"]], "moon": [["d_m1_lamp", "เสาไฟดอกไม้"], ["d_m2_moonlamp", "โคมพระจันทร์เสี้ยว"], ["d_m2_orb", "โคมลูกแก้วคริสตัล"], ["d_m2_tulip", "โคมดอกทิวลิป"], ["d_m2_gem", "โคมคริสตัลหยดน้ำ"], ["d_m2_domehouse", "บ้านโดมแก้ว"], ["d_m2_cloudhouse", "บ้านก้อนเมฆสายรุ้ง"], ["d_m2_treehouse", "บ้านต้นไม้"], ["d_m2_shellsofa", "โซฟาเปลือกหอย"], ["d_m2_moonsofa", "โซฟาพระจันทร์เสี้ยว"], ["d_m2_cloudbed", "เตียงก้อนเมฆ"], ["d_m2_shellstage", "เวทีเปลือกหอยมุก"], ["d_m2_whaleship", "เรือเหาะปลาวาฬ"], ["d_m2_deerstatue", "รูปปั้นกวางน้อย"]]};
+const BK3T=[['thai','🛕 ไทยแลนด์เอิงเอ๊ย','book-bg-loy'],['nature','🌿 รักษ์ธรรมชาติ','book-bg-day'],['moon','🌙 ป่าแสงจันทร์','book-bg-night']];
+let BK3=null,BK3i=0;function openBook3(){if(!BK3){BK3=document.createElement('div');BK3.id='book3';document.body.appendChild(BK3);const st=document.createElement('style');st.textContent=`
+#book3{position:fixed;inset:0;z-index:60;background:radial-gradient(circle at 50% 30%,#fff3e6,#f1d9ef 60%,#cdbde8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 56px) 10px calc(env(safe-area-inset-bottom,0px) + 96px);font-family:Mali,sans-serif;touch-action:pan-y}
+#book3[hidden]{display:none}#book3 .tabs{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:0;right:0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:0 60px}
+#book3 .tabs button{border:3px solid #fff;border-radius:999px;padding:6px 14px;font:800 13px Mali,sans-serif;color:#6b3a52;background:#fff8ec;box-shadow:0 3px 0 rgba(0,0,0,.12)}#book3 .tabs button.on{background:linear-gradient(180deg,#ffd76a,#f39a1e);color:#fff}
+#book3 .x{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;width:40px;height:40px;border-radius:50%;border:3px solid #fff;background:#ff8fb3;color:#fff;font:900 18px Mali,sans-serif}
+#book3 .bk{position:relative;width:min(94vw,calc((100vh - 260px)*1.95),1100px);aspect-ratio:1.95;background-size:100% 100%;background-repeat:no-repeat;filter:drop-shadow(0 10px 18px rgba(90,40,80,.25))}
+#book3 .pg{position:absolute;top:14%;bottom:15%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4%}
+#book3 .pg.l{left:9.5%;right:52.5%}#book3 .pg.r{left:52.5%;right:9.5%}
+#book3 .it{position:relative;background:rgba(255,255,255,.82);border-radius:16%;box-shadow:0 2px 0 rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;min-height:0;min-width:0}
+#book3 .it img.t{width:86%;height:86%;object-fit:contain}#book3 .it.no img.t{filter:brightness(0) opacity(.18)}#book3 .it .ck{position:absolute;right:-6%;top:-10%;height:42%;aspect-ratio:1}
+#book3 .bk3bar{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.85);border:3px solid #fff;border-radius:22px;padding:6px 16px;box-shadow:0 4px 0 rgba(0,0,0,.08)}
+#book3 .bk3bar img.c{width:62px;height:62px;object-fit:contain}#book3 .bk3bar b{font-size:18px;color:#6b3a52}#book3 .bk3bar small{display:block;color:#9a6b7e;font-weight:700;font-size:12px}
+#book3 .done{position:absolute;left:50%;top:50%;width:min(34vw,220px);transform:translate(-50%,-50%) scale(0);animation:bk3pop .6s .2s cubic-bezier(.3,1.6,.5,1) forwards;pointer-events:none}@keyframes bk3pop{to{transform:translate(-50%,-50%) scale(1)}}
+#book3 .nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:3px solid #fff;background:rgba(255,255,255,.85);font:900 22px Mali,sans-serif;color:#8a5a2e}#book3 .nav.p{left:6px}#book3 .nav.n{right:6px}`;document.head.appendChild(st);
+  BK3.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-a]');if(!t)return;if(t.dataset.tab!=null){BK3i=+t.dataset.tab;drawBook3();}else if(t.dataset.a==='x')BK3.hidden=true;else if(t.dataset.a==='claim'){t.disabled=true;t.textContent='⏳ กำลังรับ…';const H=parent.__HOST||(parent.parent&&parent.parent.__HOST);Promise.resolve(H&&H.cloud&&H.cloud('farm',{type:'book-claim',theme:BK3T[BK3i][0]})).then(()=>{say('🎉 ได้รับรางวัลสมุดสะสมแล้ว!');drawBook3();}).catch(err=>{t.disabled=false;t.textContent='🎁 รับรางวัล';say('⚠️ '+(err&&err.message||'รับไม่สำเร็จ'));});}else if(t.dataset.a==='p'){BK3i=(BK3i+2)%3;drawBook3();}else if(t.dataset.a==='n'){BK3i=(BK3i+1)%3;drawBook3();}});
+  let sx=null;BK3.addEventListener('pointerdown',e=>{sx=e.clientX;});BK3.addEventListener('pointerup',e=>{if(sx==null)return;const d=e.clientX-sx;sx=null;if(Math.abs(d)>60){BK3i=(BK3i+(d<0?1:2))%3;drawBook3();}});}
+ BK3.hidden=false;drawBook3();}
+function bk3Has(id){/* นับเฉพาะที่อยู่ในกระเป๋าของแต่ง (ของที่วางไม่หักจากกระเป๋า) ตรงกับที่เซิร์ฟเวอร์ตรวจ */try{return window.S4OWN?(S4OWN.owned(id)||0):0;}catch(e){return 0;}}
+function drawBook3(){const [k,name,bg]=BK3T[BK3i];const L=BOOK3[k]||[];const done=bk3Claimed(k),round=done+1,RW=[1000000000,500000000,250000000,200000000][round-1]||100000000;const got=L.filter(([id])=>bk3Has(id)>=round).length,full=L.length&&got===L.length;const half=Math.ceil(L.length/2);const own1=L.every(([id])=>bk3Has(id)>0);
+ const cell=([id,n])=>{const c=bk3Has(id),h=c>0;const th=(T[id]&&T[id].th)||'';return `<div class="it ${h?'got':'no'}" title="${n}"><img class="t" src="${th}" alt="${n}" loading="lazy">${c>=round?'<img class="ck" src="../images/book-check.webp" alt="">':''}${c>1?`<i style="position:absolute;left:6%;bottom:4%;font:800 11px Mali,sans-serif;font-style:normal;color:#fff;background:#8a5a2e;border-radius:999px;padding:0 6px">×${c}</i>`:''}</div>`;};
+ const fm=v=>v>=1e9?(v/1e9)+',000 ล้าน':(v/1e6)+' ล้าน';
+ BK3.innerHTML=`<div class="tabs">${BK3T.map((t,i)=>`<button type="button" data-tab="${i}" class="${i===BK3i?'on':''}">${t[1]}</button>`).join('')}</div><button type="button" class="x" data-a="x" aria-label="ปิด">✕</button>
+  <div class="bk" style="background-image:url(../images/${bg}.webp)"><div class="pg l" style="grid-template-rows:repeat(${Math.ceil(half/4)},minmax(0,1fr))">${L.slice(0,half).map(cell).join('')}</div><div class="pg r" style="grid-template-rows:repeat(${Math.ceil(half/4)},minmax(0,1fr))">${L.slice(half).map(cell).join('')}</div>${own1&&done>0||full?'<img class="done" src="../images/book-complete.webp" alt="สะสมครบ">':''}<button type="button" class="nav p" data-a="p">‹</button><button type="button" class="nav n" data-a="n">›</button></div>
+  <div class="bk3bar"><img class="c" src="../images/${full?'book-chest-open':'book-chest'}.webp" alt=""><div><b>รอบที่ ${round} · สะสมแล้ว ${got} / ${L.length}</b><small>${full?'🎉 ครบรอบนี้แล้ว! รับ '+fm(RW)+' กุศล':'ต้องมีครบทุกชิ้น ชิ้นละ '+round+' → รับ '+fm(RW)+' กุศล'}${done?' · รับไปแล้ว '+done+' รอบ':''}</small></div>${full&&!window.__ADMINF?`<button type="button" data-a="claim" style="border:0;border-radius:999px;padding:10px 16px;font:800 14px Mali,sans-serif;color:#fff;background:linear-gradient(180deg,#ffd76a,#f39a1e);box-shadow:0 3px 0 #c97a10">🎁 รับ ${fm(RW)}</button>`:''}</div>`;}
+function bk3Claimed(k){try{const H=parent.__HOST||(parent.parent&&parent.parent.__HOST);const g=JSON.parse(H.get('s3all-v1')||'{}');return Math.floor(Number(g.unl&&g.unl['book_'+k])||0);}catch(e){return 0;}}
 // ---- สมุดสะสม (collection album) ----
 const ALB=(()=>{const RS={c:1,r:2,e:3,l:4},RN={c:'ธรรมดา',r:'หายาก',e:'หายากมาก',l:'ตำนาน'};
   const RAR=['c','c','c','c','c','c','r','r','r','e','e','l'];
@@ -2365,8 +2418,8 @@ const ALB=(()=>{const RS={c:1,r:2,e:3,l:4},RN={c:'ธรรมดา',r:'หา�
       ov.onclick=e=>{if(e.target.closest('canvas')||e.target.closest('.v3act'))return;ov.hidden=true;cancelAnimationFrame(VR.raf);};}
     const D=typeof t==='string'?T[t]:t;t=typeof t==='string'?t:(D.id||D.name);ov.hidden=false;ov.dataset.id=t;ov.querySelector('b').textContent=D.name;
     {const act=ov.querySelector('.v3act'),nn=ov.querySelector('.v3n');act.innerHTML='';nn.textContent='';if(opt&&opt.place&&typeof t==='string'&&T[t]){const av=OWNAV(t),tot=OWNTOT(t);const S=T[t].seats?T[t].seats.length:0;nn.textContent=(av===Infinity?'วางได้ไม่จำกัด':'มี '+av+' ชิ้น (ทั้งหมด '+tot+')')+' · ขนาด '+T[t].w+'×'+T[t].d+(S?' · นั่งได้ '+S:'');
-      act.innerHTML='<button type="button" class="g" data-a="x">ปิด</button><button type="button" data-a="p"'+(av<=0?' disabled':'')+'>'+(av<=0?'📦 ยังไม่มีชิ้นนี้':'✅ วาง')+'</button>';
-      act.onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;ov.hidden=true;cancelAnimationFrame(VR.raf);if(b.dataset.a==='p')window.__s4setTool(t);};}}const V=viewer();ov.querySelector('.v3').appendChild(V.cv);V.piv.clear();V.rotor=null;V.spin.rotation.y=-.5;V.cv.classList.remove('in');
+      const pr=(window.S4OWN&&S4OWN.price)?S4OWN.price(t):0;act.innerHTML='<button type="button" class="g" data-a="x">ปิด</button>'+(av<=0&&pr?'<button type="button" data-a="b">💰 ซื้อ '+pr.toLocaleString()+' กุศล</button>':'<button type="button" data-a="p"'+(av<=0?' disabled':'')+'>'+(av<=0?'📦 รับจากยัยหนูเท่านั้น':'✅ วาง')+'</button>');
+      act.onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;if(b.dataset.a==='b'){b.disabled=true;b.textContent='⏳ กำลังซื้อ…';try{await S4OWN.buy(t,1);say('💰 ซื้อ'+T[t].name+'แล้ว · วางได้เลย');ov.hidden=true;cancelAnimationFrame(VR.raf);updCounts();window.__s4setTool(t);}catch(err){b.disabled=false;b.textContent='💰 ซื้อ '+pr.toLocaleString()+' กุศล';say('⚠️ '+(err&&err.message||'ซื้อไม่สำเร็จ'));}return;}ov.hidden=true;cancelAnimationFrame(VR.raf);if(b.dataset.a==='p')window.__s4setTool(t);};}}const V=viewer();ov.querySelector('.v3').appendChild(V.cv);V.piv.clear();V.rotor=null;V.spin.rotation.y=-.5;V.cv.classList.remove('in');
     const o=D.make();(o.userData.ready||Promise.resolve()).then(()=>{if(ov.hidden||ov.dataset.id!==t)return;const b0=new THREE.Box3().setFromObject(o),s0=b0.getSize(new THREE.Vector3()),k=2/Math.max(s0.x,s0.y,s0.z);o.scale.multiplyScalar(k);const b1=new THREE.Box3().setFromObject(o),c1=b1.getCenter(new THREE.Vector3());o.position.x-=c1.x;o.position.z-=c1.z;o.position.y-=b1.min.y;
       const sz=new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3());V.piv.add(o);const R=Math.max(sz.x,sz.z,sz.y)*.62;V.cm.position.set(0,sz.y*.5+R*1.1,R/Math.tan(14*Math.PI/180)*1.55);V.cm.lookAt(0,sz.y*.45,0);V.disc.scale.setScalar(Math.max(sz.x,sz.z)/2);V.cv.classList.add('in');});
     cancelAnimationFrame(V.raf);let last=performance.now();const tick=tt=>{if(ov.hidden)return;const dt=Math.min(.05,(tt-last)/1000);last=tt;const box=V.cv.parentElement.getBoundingClientRect(),w=Math.round(box.width),h=Math.round(box.height);
@@ -2382,7 +2435,9 @@ const ALB=(()=>{const RS={c:1,r:2,e:3,l:4},RN={c:'ธรรมดา',r:'หา�
   
   el.querySelector('.aclose').onclick=()=>{el.hidden=true;pop.hidden=true;if(VR)cancelAnimationFrame(VR.raf);};
   {let sx=null;stage.addEventListener('pointerdown',e=>{sx=e.clientX;});stage.addEventListener('pointerup',e=>{if(sx==null)return;const d=e.clientX-sx;sx=null;if(d<-40)nav.querySelector('.nx').onclick();else if(d>40)nav.querySelector('.pv').onclick();});}
-  document.getElementById('bAlbum').onclick=()=>{menu.hidden=true;el.hidden=false;pg=0;half=0;stage.innerHTML='';curHTML='';curP=null;render(0);};
+  /* S4 ข้อ 10: สมุดสะสมแบบใหม่ หน้าละธีม (รูปจากยัยหนู) · นับจากของแต่งที่มีจริง (ในกระเป๋า + วางอยู่) · ครบธีม = หีบเปิด + ตรา "สะสมครบ" */
+  document.getElementById('bAlbum').onclick=()=>{menu.hidden=true;openBook3();};
+  window.__openBook3=()=>openBook3();
   return {own,SETS};})();
 
 // ---- player bag: every Season 3 item (Halloween removed) shown from one icon sheet ----
@@ -2493,10 +2548,11 @@ window.__room=(()=>{
   const RCATS=[['bed','เตียง'],['sofa','โซฟา'],['tv','ทีวี'],['ctable','โต๊ะกลาง'],['store','ตู้'],['table','โต๊ะ'],['light','โคมไฟ'],['rug','พรม'],['plant','ต้นไม้'],['stove','เตา'],['sink','ซิงก์'],['fridge','ตู้เย็น'],['dtable','โต๊ะกินข้าว'],['shelf','ชั้นวาง'],['jar','โอ่งหมักไวน์']];
   for(const id in RT){const t=RT[id];t.id=id;t.make=()=>{const g=new THREE.Group();g.userData.ready=c2p(t.file).then(s=>{g.add(fitAuto(s,t.w,t.d,t.h));});return g;};}
   const OWN={r_bed:1,r_wardrobe:1,r_vanity:1,r_lamp:1,r_rug:1,l_sofa:1,l_tv:1,l_ctable:1,l_rug:1,l_plant:1,k_stove:1,k_sink:1,k_fridge:1,k_dtable:1,k_shelf:1,c_jar:10};
-  const ROOMS={bed:{key:KEY,title:'ห้องนอน',def:{wall:0,floor:0,items:[['r_wardrobe',-3.5,-3.5,0],['r_bed',-1.5,-3.5,0],['r_lamp',1,-3.5,0],['r_vanity',2.5,-1,3],['r_rug',-1.5,0,0]]}},
-    living:{key:'farm1-room-living',title:'ห้องนั่งเล่น',def:{wall:11,floor:7,items:[['l_tv',0,-3.5,0],['l_rug',-.5,-2,0],['l_ctable',0,-1.5,0],['l_sofa',-.5,1,2],['l_plant',3,-3.5,0]]}},
-    kitchen:{key:'farm1-room-kitchen',title:'ห้องครัว',def:{wall:6,floor:15,items:[['k_fridge',-1.5,-3.5,0],['k_stove',0,-3.5,0],['k_sink',2,-3.5,0],['k_shelf',3,-1.5,3],['k_dtable',-2,.5,0]]}},
-    cellar:{key:'farm1-room-cellar',title:'ห้องใต้ดิน',def:{wall:5,floor:14,items:[['c_jar',.5,-3,0]]}}};
+  /* S4 สมุดผู้เล่น: ผู้เล่นใหม่ 4 ห้องเริ่มว่าง · เฟอร์นิเจอร์ทุกชิ้นอยู่ในกระเป๋าห้องละชิ้น (OWN) วางเองได้ · ฟาร์มยัยหนูเริ่มแบบจัดไว้ */
+  const ROOMS={bed:{key:KEY,title:'ห้องนอน',def:{wall:0,floor:0,items:(window.__ADMINF?[['r_wardrobe',-3.5,-3.5,0],['r_bed',-1.5,-3.5,0],['r_lamp',1,-3.5,0],['r_vanity',2.5,-1,3],['r_rug',-1.5,0,0]]:[])}},
+    living:{key:'farm1-room-living',title:'ห้องนั่งเล่น',def:{wall:11,floor:7,items:(window.__ADMINF?[['l_tv',0,-3.5,0],['l_rug',-.5,-2,0],['l_ctable',0,-1.5,0],['l_sofa',-.5,1,2],['l_plant',3,-3.5,0]]:[])}},
+    kitchen:{key:'farm1-room-kitchen',title:'ห้องครัว',def:{wall:6,floor:15,items:(window.__ADMINF?[['k_fridge',-1.5,-3.5,0],['k_stove',0,-3.5,0],['k_sink',2,-3.5,0],['k_shelf',3,-1.5,3],['k_dtable',-2,.5,0]]:[])}},
+    cellar:{key:'farm1-room-cellar',title:'ห้องใต้ดิน',def:{wall:5,floor:14,items:(window.__ADMINF?[['c_jar',.5,-3,0]]:[])}}};
   let CUR='bed',ST={wall:0,floor:0,items:[]};
   // items are saved as [type, x, z, turn (quarter turns, half steps = 45°), mirrored]
   const saveST=()=>{try{localStorage.setItem(ROOMS[CUR].key,JSON.stringify({wall:ST.wall,floor:ST.floor,items:RI.map(i=>[i.t,i.x,i.z,i.rot,i.flip|0])}));}catch(e){}};

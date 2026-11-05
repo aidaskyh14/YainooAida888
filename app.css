@@ -167,7 +167,7 @@ body.sub #scr{top:calc(env(safe-area-inset-top,0px) + 2.4rem);height:calc(100% -
 .as-form input{border:2px solid var(--line);border-radius:.7rem;padding:.3rem .5rem;background:#fff;min-width:0;font-size:16px;color:var(--cocoa)}
 .as-srch{display:flex;align-items:center;gap:.4rem;background:#FAF5EF;border-radius:999px;padding:.35rem .8rem}
 .as-srch input{border:0;background:none;flex:1;min-width:0;outline:none}
-.as-cats{display:flex;gap:.3rem;overflow-x:auto;scrollbar-width:none;margin:.5rem 0}.as-cats::-webkit-scrollbar{display:none}
+.as-cats{display:flex;flex-wrap:wrap;gap:.3rem;overflow:visible;margin:.5rem 0}.as-subs{background:#FFF6EA;border-radius:.8rem;padding:.35rem}.as-subs button{background:#fff!important}.as-subs button.on{background:#ffd76a!important;color:#6b3a1e}.as-cats::-webkit-scrollbar{display:none}
 .as-cats button{flex:none;border:0;border-radius:999px;background:#FAF5EF;font-size:.72rem;font-weight:700;padding:.25rem .65rem;color:var(--soft)}
 .as-cats button.on{background:var(--gold-bg);color:#A86A00}
 .as-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(8rem,1fr));gap:.35rem;max-height:16rem;overflow:auto}

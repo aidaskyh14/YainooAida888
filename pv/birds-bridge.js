@@ -1,11 +1,19 @@
 /* ซีซัน 4: ให้ฉากซาฟารี 3D ใช้ข้อมูลนกจริงของซีซัน 3 (กติกาเดิมทุกอย่าง: อาหารต่อตัว เวลารอ ผลผลิต กุศล) */
 /* S4 ข้อ 51 🐒 ลิง: ได้จากยัยหนูเท่านั้น (item.monkey ในกระเป๋าหลัก สูงสุด 3 ตัวที่โหนซิปไลน์) · ทุก 6 ชม. ต่อตัว ได้ผ้าอ้อมลิง 1 ชิ้น (bird.mkdiaper · ขายได้ 2,000,000) · เก็บค้างได้สูงสุด 12 ชิ้น */
 const MK_EVERY=6*3600000,MK_MAX=3,MK_CAP=12;
-function mkCount(){try{const g=JSON.parse(parent.__HOST.get('s3all-v1')||'{}');return Math.min(MK_MAX,Math.max(0,(g.bag&&g.bag.item&&g.bag.item.monkey)|0));}catch(e){return 0;}}
+/* S4 ลิง (คำตอบยัยหนู 4 พ.ย.): ยัยหนูส่ง → รับที่ไปรษณีย์ → อยู่ในกระเป๋า (item.monkey) → กด 🐒 วางลิง ในซาฟารี → เริ่มนับ 36 ชม. · วางได้ไม่จำกัด · เก็บในเซฟนก S.mk */
+const MK_LIFE=36*3600000;function mkAlive(){const now=NOW();S.mk=(S.mk||[]).filter(r=>r&&now<r.at+MK_LIFE);return S.mk;}
+function mkExpire(){const before=(S.mk||[]).length;const left=mkAlive().length;if(left<before){save();try{ann('👋 ลิง '+(before-left)+' ตัว ครบ 36 ชม. กลับป่าแล้ว',0,3500);}catch(e){}}}
+function mkCount(){try{return Math.min(MK_MAX,mkAlive().length);}catch(e){return 0;}}
+let mkBusy=0;window.__mkPlace=()=>{if(Date.now()-mkBusy<1200)return{t:'mkp',ok:0,msg:''};mkBusy=Date.now();const G=s4ccMain();if(!G||!G.bag)return{t:'mkp',ok:0,msg:'ยังโหลดกระเป๋าไม่เสร็จ ลองใหม่อีกครั้งนะ'};
+ const have=Math.max(0,(G.bag.item&&G.bag.item.monkey)|0);if(have<1)return{t:'mkp',ok:0,msg:'🐒 ไม่มีลิงในกระเป๋า · ลิงได้จากยัยหนูส่งให้เท่านั้น'};
+ G.bag.item.monkey=have-1;try{__H.set(S4CCGK,JSON.stringify(G));}catch(e){return{t:'mkp',ok:0,msg:(e&&e.message)||'บันทึกไม่สำเร็จ'};}
+ mkAlive();S.mk.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:NOW()});save();
+ return{t:'mkp',ok:1,msg:'🐒 วางลิงแล้ว อยู่ได้ 36 ชม. · เหลือในกระเป๋า '+(have-1)+' ตัว',mkl:S.mk.map(r=>[r.id,r.at])};};
 function mkTick(){const n=mkCount();if(!n){S.mkAt=0;return 0;}const now=NOW();if(!S.mkAt){S.mkAt=now;save();return 0;}let got=0;while(now-S.mkAt>=MK_EVERY&&(S.bag.mkdiaper||0)<MK_CAP){S.mkAt+=MK_EVERY;S.bag.mkdiaper=(S.bag.mkdiaper||0)+n;got+=n;}if((S.bag.mkdiaper||0)>=MK_CAP)S.mkAt=now;if(got)save();return got;}
 window.__bsync=()=>{const n={ostrich:0,dodo:0},h={ostrich:0,dodo:0},now=NOW();let dr=0;let mkGot=0;try{mkGot=mkTick();}catch(e){}if(mkGot){try{ann('🐒 ลิงให้ผ้าอ้อมลิง +'+mkGot+' ชิ้น (ขายได้ชิ้นละ 2,000,000)',0,4000);}catch(e){}}
  for(const p of [1,2]){for(const b of (S.pens[p]||[]).filter(alive)){n[b.sp]++;if(b.cd<=now)h[b.sp]++;}dr+=(S.drops[p]||[]).length;}
- return{birds:1,n,h,food:Object.assign({},S.food),drops:dr,merit:S.merit,cclv:Math.max(1,Math.min(3,(+S.s4cc|0)||1)),mk:mkCount(),mkGot,mkNext:S.mkAt?Math.max(0,S.mkAt+MK_EVERY-NOW()):0,diapers:S.bag.mkdiaper||0};};
+ try{mkExpire();}catch(e){}return{birds:1,mkl:(S.mk||[]).map(r=>[r.id,r.at]),n,h,food:Object.assign({},S.food),drops:dr,merit:S.merit,cclv:Math.max(1,Math.min(3,(+S.s4cc|0)||1)),mk:mkCount(),mkGot,mkNext:S.mkAt?Math.max(0,S.mkAt+MK_EVERY-NOW()):0,diapers:S.bag.mkdiaper||0};};
 window.__bfeed=k=>{const f=FOOD[k];if(!f)return{t:'feed',n:0};const now=NOW();const list=[];
  for(const p of [1,2])for(const b of (S.pens[p]||[]).filter(alive))if(b.sp===f[0]&&b.cd<=now)list.push([p,b]);
  if(!list.length)return{t:'feed',n:0,msg:'ยังไม่มีนกที่พร้อมกิน รอ ⏳ ก่อนนะ'};

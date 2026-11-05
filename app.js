@@ -16,10 +16,10 @@ import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss3-fix17&h=78c0a2cd';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=3ff672c0';
+import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=d92811ef';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss3-fix19&h=0182268e';
+import { CATALOG } from './catalog.js?v=ss3-fix19&h=b7fdd38b';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -40,7 +40,7 @@ const auth = getAuth(app);
 const functions=getFunctions(app,'us-central1');
 const db = getFirestore(app);
 const CAT = Object.fromEntries(CATALOG.map(c => [c.k, c]));
-const IMG = n => 'images/' + n;
+const IMG = n => /^(data:|https?:|\.\.\/)/.test(String(n||''))?n:'images/' + n;
 const COIN_IMG = IMG('gacha-coin.webp');
 
 // ---------- เครื่องมือหน้าจอ ----------
@@ -817,7 +817,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=02036048'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=dc80272a'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -959,10 +959,10 @@ async function tabSend(){
  const eligible=new Set(ps.map(p=>p.uid));A.sel=new Set([...A.sel].filter(uid=>eligible.has(uid)));
  if(A.pendingRun){const r=A.pendingRun;B.innerHTML=`<div class="box"><h3>รายการส่งค้าง: ${esc(r.body.title)}</h3><button class="btn" id="gResume">ส่งรายการเดิมต่อ</button><p>รายการสำเร็จจะไม่ส่งซ้ำ แม้สมาชิกกดรับไปแล้ว</p></div>`;$('#gResume').onclick=()=>{A.gift={...r.body,operationId:r.operationId};sendGift(r.uids,r.names,r.packs||{});};return;}
  // fix14: หน้าส่งของแบบใหม่ (ตาม Preview) — การ์ด 4 ขั้น + แถบสรุปลอยด้านล่าง · แตะชื่อแล้วอัปเดตทันที · ตั้งแพ็กรายคนได้
- A.packs ||= {};A.pq ??= '';A.tpl ??= -1;const categories=[...new Set(CATALOG.map(c=>c.g))];A.category ||= categories[0];
+ A.packs ||= {};A.pq ??= '';A.tpl ??= -1;/* S4 ข้อ 14: หมวดเป็นตาราง ไม่ต้องเลื่อนขวา · ของตกแต่งรวมเป็นหมวดเดียว มีหมวดย่อย */const DECO='🎨 ของตกแต่ง',topOf=g=>/^ของแต่ง·/.test(g)?DECO:g;const SUBORD=['ของในฟาร์ม','ธีมไทย','ธีมธรรมชาติ','ธีมจันทร์','ในบ้าน','หลังบ้าน','หมา/แมว','อัลปาก้า','ซาฟารี','พื้น/รั้ว','ต้นไม้','ดอกไม้','นั่งเล่น','พักผ่อน','น้ำ','ไฟ/จุกจิก','สวนสนุก','ยานพาหนะ','ร้าน/ของกิน','รั้ว','อื่นๆ'];const categories=[...new Set(CATALOG.map(c=>topOf(c.g)))];const subs=[...new Set(CATALOG.filter(c=>/^ของแต่ง·/.test(c.g)).map(c=>c.g.slice(8)))].sort((a,b)=>(SUBORD.indexOf(a)+99)%99-(SUBORD.indexOf(b)+99)%99||(SUBORD.indexOf(a)<0)-(SUBORD.indexOf(b)<0));A.category ||= categories[0];if(!categories.includes(A.category)&&A.category!=='favorites')A.category=categories[0];A.sub ||= subs[0];
  const COL=['#F2A23A','#5BB6D4','#B07CC6','#F27E9B','#6CC9A8','#E07A5F','#7C9CE0','#D4A017'],TINT=['#FFEBD9','#EFE6FF','#E4F7EF','#FFF5D6','#FFE3EC','#E3F1FB'];
  const colOf=uid=>COL[Math.max(0,ps.findIndex(p=>p.uid===uid))%COL.length],ini=s=>esc([...String(s||'?')][0].toUpperCase()),nameOf=uid=>ps.find(p=>p.uid===uid)?.name||uid;
- const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
+ const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:A.category===DECO?c.g==='ของแต่ง·'+A.sub:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
  const parts=(n=1)=>[g.kusal?['<span class="as-e">💛</span>','กุศล',g.kusal*n,1]:null,g.coins?['<span class="as-e">🪙</span>','เหรียญกระทงทอง',g.coins*n,1]:null,...Object.entries(g.items).filter(([k])=>CAT[k]).map(([k,q])=>[`<img class="as-e" src="${IMG(CAT[k].i)}" alt="">`,CAT[k].n,q*n,0,k])].filter(Boolean);
  const line=n=>parts(n).map(([e,nm,v])=>`${esc(nm)} ×${fmt(v)}`).join(' · ')||'แพ็กยังว่าง';
  const tplCard=(t,i)=>{const b=t.body||{},its=Object.keys(b.items||{}).filter(k=>CAT[k]);return `<button class="as-tpl${i===A.tpl?' on':''}" style="--tint:${TINT[i%TINT.length]}" data-template="${i}"><span class="as-bi">${its[0]?`<img src="${IMG(CAT[its[0]].i)}" alt="">`:esc(b.icon||'🎁')}</span><b>${esc(t.name)}</b><span class="as-mini">${its.slice(1,5).map(k=>`<img src="${IMG(CAT[k].i)}" alt="">`).join('')}</span><span class="as-ks">${b.kusal?'💛 '+fmt(b.kusal):b.coins?'🪙 '+fmt(b.coins):'📦 '+its.length+' อย่าง'}</span><i data-del-template="${i}" aria-label="ลบแพ็ก">✕</i></button>`;};
@@ -972,16 +972,16 @@ async function tabSend(){
  <section class="as-card"><div class="as-ch"><span class="as-n">2</span><div class="as-grow"><h2>ของใน 1 แพ็ก</h2><small>${esc(g.icon||'🎁')} ${esc(g.title)}</small></div><button class="as-link" id="asEdit">${A.editOpen?'✓ เสร็จ':'✏️ แก้ไข'}</button></div>
   <div class="as-items">${parts().map(([e,nm,v,k,key])=>`<div class="as-it${k?' k':''}">${e}<span>${esc(nm)}</span>${A.editOpen&&key?`<input type="number" min="0" data-k="${key}" value="${v}" aria-label="จำนวน ${esc(nm)}"><button class="as-x" data-rm="${key}" aria-label="ลบ">✕</button>`:`<b>×${fmt(v)}</b>`}</div>`).join('')||'<div class="as-empty" style="grid-column:1/-1"><b>📦</b>แตะ ✏️ แก้ไข เพื่อใส่ของ</div>'}</div>
   <div class="as-editor" ${A.editOpen?'':'hidden'}>
-   <div class="as-form"><label>📝 หัวข้อ<input id="gT" value="${esc(g.title)}"></label><label>💬 ข้อความ<input id="gM" value="${esc(g.msg)}"></label><label>💛 กุศล<input id="gK" type="number" min="0" value="${g.kusal||0}"></label><label>🪙 เหรียญ<input id="gC" type="number" min="0" value="${g.coins||0}"></label></div>
+   <div class="as-form"><label>📝 หัวข้อ<input id="gT" value="${esc(g.title)}"></label><label>💬 ข้อความ<input id="gM" value="${esc(g.msg)}"></label><label>💛 กุศล<input id="gK" type="number" min="0" value="${g.kusal||0}"></label><label>🪙 เหรียญกระทงทอง<input id="gC" type="number" min="0" value="${g.coins||0}"></label></div>
    <div class="as-srch">🔍<input id="gQ" placeholder="ค้นหาไอเทมทุกหมวด" value="${esc(A.q)}"></div>
-   <div class="as-cats"><button data-cat="favorites" class="${A.category==='favorites'?'on':''}">⭐ โปรด</button>${categories.map(c=>`<button data-cat="${esc(c)}" class="${A.category===c&&!A.q?'on':''}">${esc(c)}</button>`).join('')}</div>
+   <div class="as-cats"><button data-cat="favorites" class="${A.category==='favorites'?'on':''}">⭐ โปรด</button>${categories.map(c=>`<button data-cat="${esc(c)}" class="${A.category===c&&!A.q?'on':''}">${esc(c)}</button>`).join('')}</div>${A.category===DECO&&!A.q?`<div class="as-cats as-subs">${subs.map(c=>`<button data-sub="${esc(c)}" class="${A.sub===c?'on':''}">${esc(c)}</button>`).join('')}</div>`:''}
    <div class="as-pick">${filt.map(c=>`<div><img src="${IMG(c.i)}" loading="lazy" alt=""><span>${esc(c.n)}</span><button class="star" data-favorite="${c.k}" aria-label="รายการโปรด">${A.favorites.includes(c.k)?'★':'☆'}</button><button data-add="${c.k}" aria-label="เพิ่ม">＋</button></div>`).join('')||'<p class="note">หมวดนี้ยังไม่มีรายการ</p>'}</div>
   </div></section>
  <section class="as-card"><div class="as-ch"><span class="as-n">3</span><div class="as-grow"><h2>ผู้รับ</h2><small>แตะชื่อเพื่อเลือก</small></div><span class="as-count" id="asCount"></span></div>
   <div class="as-srch">🔍<input id="asQ" placeholder="ค้นหาชื่อผู้เล่น" autocomplete="off" value="${esc(A.pq)}"><button class="as-link" id="sAll">ทุกคน</button><button class="as-link" id="sReload" aria-label="โหลดรายชื่อใหม่">🔄</button></div>
   <div class="as-chips" id="asChips"></div></section>
  <section class="as-card"><div class="as-ch"><span class="as-n">4</span><div class="as-grow"><h2>จำนวนแพ็กของแต่ละคน</h2><small>ระบบคูณยอดให้เอง</small></div></div><div id="asSel"></div></section>
- <details class="as-card as-hist"><summary>📜 ประวัติส่งล่าสุด ${A.history.length} รายการ</summary>${A.history.filter(h=>h.type==='gift').map(h=>`<div class="hist"><b>${esc(h.title)}</b><small> · ${h.at?new Date(typeof h.at==='number'?h.at:h.at.toMillis()).toLocaleString('th-TH'):''}</small><p>${esc((h.to||[]).join(', '))} (${h.count} คน)</p><div class="items">${itemsHtml(h.items||{})}</div><p>กุศลต่อแพ็ก ${fmt(h.kusal)} · เหรียญ ${fmt(h.coins)}</p>${h.packs?'<p>แพ็ก: '+Object.entries(h.packs).map(([uid,n])=>esc(nameOf(uid))+' ×'+n).join(' · ')+'</p>':''}</div>`).join('')||'ยังไม่มีประวัติ'}</details>
+ <details class="as-card as-hist"><summary>📜 ประวัติส่งล่าสุด ${A.history.length} รายการ</summary>${A.history.filter(h=>h.type==='gift').map(h=>`<div class="hist"><b>${esc(h.title)}</b><small> · ${h.at?new Date(typeof h.at==='number'?h.at:h.at.toMillis()).toLocaleString('th-TH'):''}</small><p>${esc((h.to||[]).join(', '))} (${h.count} คน)</p><div class="items">${itemsHtml(h.items||{})}</div><p>กุศลต่อแพ็ก ${fmt(h.kusal)} · เหรียญกระทงทอง ${fmt(h.coins)}</p>${h.packs?'<p>แพ็ก: '+Object.entries(h.packs).map(([uid,n])=>esc(nameOf(uid))+' ×'+n).join(' · ')+'</p>':''}</div>`).join('')||'ยังไม่มีประวัติ'}</details>
  <div class="as-dock"><div class="in"><div class="as-stack" id="asStack"></div><div class="as-sum" id="asSum"></div><button class="as-go" id="gSend">ตรวจยอด →</button></div></div>
  <div class="as-modal" id="asModal"><div class="as-sheet" id="asSheet"></div></div></div>`;
  const keep=()=>{const v=id=>B.querySelector('#'+id);if(v('gT')){g.title=v('gT').value.trim()||'ของขวัญจากยัยหนู';g.msg=v('gM').value.trim();g.kusal=Math.max(0,Math.floor(Number(v('gK').value)||0));g.coins=Math.max(0,Math.floor(Number(v('gC').value)||0));}B.querySelectorAll('[data-k]').forEach(i=>{const n=Math.floor(Number(i.value)||0);if(n>0)g.items[i.dataset.k]=n;else delete g.items[i.dataset.k];});};
@@ -1010,6 +1010,7 @@ async function tabSend(){
   const ad=t.closest('[data-add]');if(ad){keep();g.items[ad.dataset.add]=(g.items[ad.dataset.add]||0)+1;A.tpl=-1;tabSend();return;}
   const rm=t.closest('[data-rm]');if(rm){keep();delete g.items[rm.dataset.rm];A.tpl=-1;tabSend();return;}
   const ct=t.closest('[data-cat]');if(ct){keep();A.category=ct.dataset.cat;A.q='';tabSend();return;}
+  const sb=t.closest('[data-sub]');if(sb){keep();A.sub=sb.dataset.sub;tabSend();return;}
   const fv=t.closest('[data-favorite]');if(fv){keep();const k=fv.dataset.favorite;A.favorites=A.favorites.includes(k)?A.favorites.filter(x=>x!==k):[...A.favorites,k];try{await persist();tabSend();}catch(err){toast(thaiError(err));}return;}
   if(t.closest('[data-close]')||t.id==='asModal'){$('#asModal').classList.remove('on');return;}
  };
@@ -1100,7 +1101,7 @@ async function tabPlayers() {
   const pct=p=>Math.round(p._size/LS_CAP*100),cls=p=>pct(p)>=90?'warn':pct(p)>=70?'near':'';
   const big = ps.filter(p => pct(p)>=90),near=ps.filter(p=>pct(p)>=70&&pct(p)<90);
   B.innerHTML = `<style>.pl td.near{background:#fff3c4;color:#8a5a00;font-weight:800}.pl td.warn{background:#ffd9d9;color:#b00020;font-weight:800}.pl .bar{display:inline-block;width:60px;height:8px;border-radius:4px;background:#eee;vertical-align:middle;margin-left:4px;overflow:hidden}.pl .bar i{display:block;height:100%;background:#58b368}.pl td.near .bar i{background:#f0a500}.pl td.warn .bar i{background:#e23c3c}</style><div class="box"><h3>👥 ผู้เล่นทั้งหมด ${ps.length} คน</h3>${big.length ? `<p class="warn">⚠️ เซฟใกล้เต็ม (≥90% ของ 128KB) ${big.length} คน</p>` : ''}${near.length?`<p class="note">🟡 เซฟเกิน 70%: ${near.length} คน</p>`:''}${!big.length&&!near.length?'<p class="ok">✅ ขนาดเซฟทุกคนปกติ</p>':''}
-    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ (ส่วนใหญ่สุด / ขีด 128KB)</th><th>เข้าล่าสุด</th></tr>${[...ps].sort((a,b)=>b._size-a._size).map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${cls(p)}">${(p._size / 1024).toFixed(1)}KB · ${pct(p)}%${p.maxPartName?` · ${esc(p.maxPartName)}`:''}<span class="bar"><i style="width:${Math.min(100,pct(p))}%"></i></span></td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
+    <table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>🪙 กระทงทอง</th><th>เซฟ (ส่วนใหญ่สุด / ขีด 128KB)</th><th>เข้าล่าสุด</th></tr>${[...ps].sort((a,b)=>b._size-a._size).map(p => `<tr><td>${esc(p.name)}</td><td>${fmt(p.g && p.g.merit)}</td><td>${fmt(p.coins)}</td><td class="${cls(p)}">${(p._size / 1024).toFixed(1)}KB · ${pct(p)}%${p.maxPartName?` · ${esc(p.maxPartName)}`:''}<span class="bar"><i style="width:${Math.min(100,pct(p))}%"></i></span></td><td>${p.lastLogin && p.lastLogin.toDate ? p.lastLogin.toDate().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td></tr>`).join('')}</table>
     <p class="note">หน้านี้อ่านข้อมูลเฉพาะตอนกดเปิด ไม่อ่านค้าง</p></div>`;
 }
 /* S4 ข้อ 162/162b/157 🧹 เริ่มศูนย์ผู้เล่น: ดูก่อน (ขนาดก่อน→หลัง · กระเป๋าตรงทุกชิ้น) → พิมพ์ "รีเซ็ต" → ล้างจริง (สำรองก่อน) · ทั้งหมดครั้งเดียวต่อซีซั่น */
@@ -1122,7 +1123,7 @@ async function tabReset(){const B=$('#aBody');B.innerHTML='<div class="box">ก�
   if(result){o.innerHTML='<h4>✅ ล้างแล้ว '+result.rows.length+' คน'+(result.errors.length?' · ❌ ผิดพลาด '+result.errors.length:'')+'</h4><table class="pl"><tr><th>ชื่อ</th><th>กุศลเดิม</th><th>เซฟ ก่อน→หลัง</th><th>ส่วน</th><th>ของในกระเป๋า</th><th>จดหมายที่ล้าง</th></tr>'+result.rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.merit)+'</td><td>'+kb(r.before)+' → '+kb(r.after)+'</td><td>'+r.nBefore+'→'+r.nAfter+'</td><td>'+r.bagN+' ชนิด ✓</td><td>'+r.mails+'</td></tr>').join('')+'</table>'+result.errors.map(e=>'<p class="warn">'+esc(e.name)+': '+esc(e.error)+'</p>').join('');return;}
   if(!preview)return;const p=preview;
   o.innerHTML='<h4>ขั้น 1 ผล: '+p.tot.n+' คน · เซฟรวม '+kb(p.tot.before)+' → '+kb(p.tot.after)+(p.tot.bad?' · <span class="warn">⚠️ กระเป๋าไม่ตรง/อ่านไม่ได้ '+p.tot.bad+' คน (จะไม่ล้างคนนั้น)</span>':' · กระเป๋าตรงทุกชิ้นทุกคน ✓')+'</h4>'
-   +'<div style="max-height:16rem;overflow:auto"><table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>เหรียญ</th><th>เซฟ ก่อน→หลัง</th><th>ส่วน</th><th>กระเป๋า</th><th>จดหมาย</th></tr>'+p.rows.map(r=>r.error?'<tr><td>'+esc(r.name)+'</td><td colspan="6" class="warn">'+esc(r.error)+'</td></tr>':'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.merit)+'</td><td>'+fmt(r.coins)+'</td><td>'+kb(r.before)+' → '+kb(r.after)+'</td><td>'+r.nBefore+'→'+r.nAfter+'</td><td'+(r.ok?'>'+r.bagN+' ชนิด ✓':' class="warn">✗ '+esc(r.diff.map(d=>d[0]+' '+d[1]+'→'+d[2]).join(', '))+'</td>')+'<td>'+r.mails+'</td></tr>').join('')+'</table></div>'
+   +'<div style="max-height:16rem;overflow:auto"><table class="pl"><tr><th>ชื่อ</th><th>กุศล</th><th>🪙 กระทงทอง</th><th>เซฟ ก่อน→หลัง</th><th>ส่วน</th><th>กระเป๋า</th><th>จดหมาย</th></tr>'+p.rows.map(r=>r.error?'<tr><td>'+esc(r.name)+'</td><td colspan="6" class="warn">'+esc(r.error)+'</td></tr>':'<tr><td>'+esc(r.name)+'</td><td>'+fmt(r.merit)+'</td><td>'+fmt(r.coins)+'</td><td>'+kb(r.before)+' → '+kb(r.after)+'</td><td>'+r.nBefore+'→'+r.nAfter+'</td><td'+(r.ok?'>'+r.bagN+' ชนิด ✓':' class="warn">✗ '+esc(r.diff.map(d=>d[0]+' '+d[1]+'→'+d[2]).join(', '))+'</td>')+'<td>'+r.mails+'</td></tr>').join('')+'</table></div>'
    +'<div style="margin-top:.6rem;border-top:2px dashed #F3E9DE;padding-top:.5rem"><b>ขั้น 2 ล้างจริง</b><p class="note">พิมพ์คำว่า <b>รีเซ็ต</b> แล้วกดปุ่ม · ย้อนกลับไม่ได้ (มีสำรองใน resetBackups)</p><div class="row" style="gap:.4rem"><input id="rsC" placeholder="พิมพ์ รีเซ็ต" style="padding:.4rem .6rem;border:2px solid #F3E9DE;border-radius:.6rem;font:inherit"><button class="btn sm" id="rsGo" style="background:#e23c3c;color:#fff">🧹 ล้างจริง'+(mode==='all'?' ทุกคน':'')+'</button>'+(mode==='all'&&st.resetAt?'<label style="font-size:.75rem"><input type="checkbox" id="rsF"> ทำซ้ำทั้งที่เคยทำแล้ว</label>':'')+'</div></div>';
   $('#rsGo').onclick=async()=>{const c=$('#rsC').value.trim();if(c!=='รีเซ็ต')return toast('พิมพ์คำว่า รีเซ็ต ก่อน');if(!confirm('ยืนยันล้างข้อมูล '+(mode==='all'?'ผู้เล่นทุกคน':'ผู้เล่นคนนี้')+' (เก็บกระเป๋า) ?'))return;
    const b=$('#rsGo');b.disabled=true;b.textContent='⏳ กำลังล้าง… ห้ามปิดหน้า';try{result=await call({type:'run',all:mode==='all',uid:$('#rsU').value,confirm:c,force:!!($('#rsF')&&$('#rsF').checked)});toast('🧹 เริ่มศูนย์เสร็จ '+result.rows.length+' คน');try{st=await call({type:'status'});}catch(e){}draw();}catch(e){b.disabled=false;b.textContent='🧹 ล้างจริง';toast(thaiError(e));}};};

@@ -176,7 +176,7 @@ const protoOf=async n=>{const ab=await (await fetch('../farm3d/'+n+'.gltf.json')
 let KIT=null;const KITP=(async()=>{try{KIT=makeTreeKit(THREE,BGU,{oak:await protoOf('oak_l'),sakura:await protoOf('sakura_l'),jaca:await protoOf('jaca_l')});}catch(e){console.log('treekit',e&&e.message);}})();
 const TPR={};const tproto=(k,v)=>TPR[k+v]||(TPR[k+v]=k==='pine'?KIT.makeChubbyPine(5+v*13,6.2):KIT.lushTree(k,9+v*19+k.length*3,5.4));
 const KINDS=['green','sakura','maple','purple','gold','green'];let TI=0;
-function placeTree(x,z,s,kind){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=Math.random()*6.3;thG.add(g);const v=(TI++)%2;
+const TREES=[];function placeTree(x,z,s,kind){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=Math.random()*6.3;thG.add(g);g.userData.tree=TREES.length;g.userData.home=[x,z];TREES.push(g);const v=(TI++)%2;
  KITP.then(()=>{if(!KIT)return;try{const t=tproto(kind,v).clone(true);const b=new THREE.Box3().setFromObject(t),h=(b.max.y-b.min.y)||1;t.scale.setScalar(4.6*s/h);t.traverse(m=>{if(m.isMesh)m.castShadow=true;});g.add(t);}catch(e){console.log('lush',e&&e.message);}});return g;}
 function tree(x,z,s,col){const hex=typeof col==='number'?col:0;const r=(hex>>16)&255,gg=(hex>>8)&255,b=hex&255;const kind=r>200&&b>150?'sakura':r>200&&gg<190?'maple':b>gg&&b>r*.8?'purple':r>200&&gg>180?'gold':KINDS[(TI)%KINDS.length];return placeTree(x,z,s,kind);}
 function pine(x,z,s){return placeTree(x,z,s,'pine');}
@@ -200,7 +200,7 @@ function ribbon(pts,w,y,mat){const cvv=new THREE.CatmullRomCurve3(pts.map(([x,z]
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(Pp,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;thG.add(m);return m;}
 function river(pts,w){ribbon(pts,w+2.4,.03,new THREE.MeshLambertMaterial({color:0xd9b57e}));ribbon(pts,w+1,.04,new THREE.MeshLambertMaterial({color:0xa98a5f}));ribbon(pts,w,.06,new THREE.MeshLambertMaterial({map:WTX,color:0x9fdcf5}));}
 function rock(x,z,s){const r=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),new THREE.MeshLambertMaterial({color:0xb9b3a8,flatShading:true}));r.scale.y=.6;r.position.set(x,s*.25,z);r.castShadow=true;thG.add(r);}
-function buildTheme(){thG.clear();ANIM.length=0;
+function buildTheme(){thG.clear();ANIM.length=0;TREES.length=0;
  const ringT=(r0,n,kinds)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(r0%2)*.13,r=r0+(i%3)*2.6;const x=Math.cos(a)*r,z=Math.sin(a)*r*.82;if(theme==='sea'&&z>14)continue;if(theme==='river'&&Math.abs(z-24)<6)continue;placeTree(x,z,1.05+(i%4)*.16,kinds[i%kinds.length]);}};
  if(theme==='forest'){ringT(31,30,['green','sakura','green','maple','gold','purple']);ringT(40,30,['green','pine','green','pine']);for(const [x,z] of [[-24,2],[24,2],[-14,-13],[14,-13]])placeTree(x,z,1.15,'sakura');for(let i=0;i<10;i++)rock(-30+i*6.5,30+Math.sin(i)*2,.6);}
  if(theme==='mount'){/* S4 ข้อ 105: ภูเขาต้องต่างจริง — พื้นหินเทารอบนอก · ยอดเขาหิมะ · สนล้วน · หินใหญ่ */
@@ -218,7 +218,10 @@ function buildTheme(){thG.clear();ANIM.length=0;
    for(const sx of [-1,1])for(let k=0;k<=6;k++){const z=z0+len*k/6,y=brY(z);const post=new THREE.Mesh(new THREE.BoxGeometry(.22,1.1,.22),DK);post.position.set(sx*(W/2+.05),y+.5,z);thG.add(post);if(k<6){const zn=z0+len*(k+1)/6,yn=brY(zn);const r=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,Math.hypot(zn-z,yn-y)),RD);r.position.set(sx*(W/2+.05),(y+yn)/2+1,(z+zn)/2);r.rotation.x=-Math.atan2(yn-y,zn-z);thG.add(r);}}
    for(const z of [z0-.3,z1+.3])for(const sx of [-1,1]){const pr=new THREE.Mesh(new THREE.CylinderGeometry(.5,.6,.9,8),new THREE.MeshLambertMaterial({color:0x9c948a}));pr.position.set(sx*1.6,.3,z);thG.add(pr);}}
   ringT(32,28,['green','sakura','green','maple','purple']);}
- S.background.set(0xcfe9f7);S.fog.color.set(0xf4e4d6);R.shadowMap.needsUpdate=true;}
+ S.background.set(0xcfe9f7);S.fog.color.set(0xf4e4d6);try{applyTrees();}catch(e){}R.shadowMap.needsUpdate=true;}
+/* S4 ข้อ 43: ต้นไม้ส่วนกลาง หัวหน้าย้ายได้ (บันทึกที่เอกสารชุมชน ทุกคนเห็นเหมือนกัน) */
+let TMV={};function applyTrees(){const t=typeof NBS!=='undefined'&&NBS&&NBS.trees;TMV=t&&t.th===theme&&t.m?Object.assign({},t.m):(applyTrees.loc&&applyTrees.loc.th===theme?Object.assign({},applyTrees.loc.m):{});for(const g of TREES){const v=TMV[g.userData.tree];const [x,z]=v||g.userData.home;g.position.set(x,0,z);}try{R.shadowMap.needsUpdate=true;}catch(e){}}
+const treeOk=p=>{if(Math.hypot(p.x,p.z)>46||Math.hypot(p.x,p.z-1)<6.5)return false;for(const [cx,cz] of LOTS)if(Math.abs(p.x-cx)<ZW/2+.8&&Math.abs(p.z-cz)<ZD/2+.8)return false;return true;};
 
 /* ---------- ตัวละคร (เดินได้ นั่งเฟอร์นิเจอร์ได้) ---------- */
 const P={x:7,z:13,tx:null,tz:null,dir:Math.PI,sit:null,goSeat:null};let girl=null,gmix=null,gacts={},gcur=null;
@@ -283,7 +286,7 @@ function drawPanel(){const T=[['deco','🌸 ของแต่ง'],['house','�
  if(tab==='deco'){const L=DECO.filter(d=>dcat==='all'||d[3]===dcat);$('#pbody').innerHTML=`<div class="hint">แตะของ แล้วแตะพื้นในกรอบชมพู · 🔍 ดูภาพใหญ่ · ของที่มี 🪑 นั่งได้</div><div class="grid">`+L.map(([n,t,,c])=>`<button class="it ${pick===n?'on':''}" data-n="${n}"><img src="t/${n}.png" alt=""><span>${c==='seat'?'🪑':''}${t}</span><em class="zm" data-zm="${n}">🔍</em></button>`).join('')+'</div>';}
  else if(tab==='house'){const H=(NBS&&NBS.houses&&NBS.houses[(ME()||{}).id])||{lv:1,st:0};const now=(NBS&&NBS.now)||Date.now();const up=H.up&&now<H.up.end?H.up:null;const lv=up?Math.max(1,H.lv|0||1):Math.max(1,H.lv|0||1,(H.up&&H.up.to)|0);const C={2:{flower:500,fruit:300,grass:200,h:10},3:{flower:1500,fruit:1000,grass:500,h:24}}[lv+1];
    $('#pbody').innerHTML=`<div class="row">${[1,2,3].map(l=>`<button class="lv ${lv===l?'on':''}" disabled>เลเวล ${l}<small>${l===lv?'บ้านฉันตอนนี้':l<lv?'ผ่านแล้ว':'🔒'}</small></button>`).join('')}</div>`+(up?`<div class="hint" style="color:#b02a44;font-weight:800">🏗️ กำลังอัปเกรดเป็นเลเวล ${up.to} · เสร็จใน ${Math.ceil((up.end-now)/3600000)} ชม. (ระหว่างนี้แต่ง/เปลี่ยนแบบบ้านไม่ได้)</div>`:C?`<div class="hint">อัปเกรดเป็นเลเวล ${lv+1} ใช้ 🌸 ดอกไม้ ${C.flower.toLocaleString()} · 🍎 ผลไม้ ${C.fruit.toLocaleString()} · 🌿 หญ้า ${C.grass.toLocaleString()} (รวมทุกชนิด) · ใช้เวลา ${C.h} ชม.</div><div class="row"><button class="lv on" data-up="1">⬆️ อัปเกรดบ้านเป็นเลเวล ${lv+1}</button></div>`:'<div class="hint">🏆 บ้านเลเวลสูงสุดแล้ว</div>')+(up?'':'<div class="hint">เลือกแบบบ้าน</div><div class="grid">'+HOUSES[lv].map(([n,t],i)=>`<button class="it ${me.st===i?'on':''}" data-hs="${i}"><img src="t/${n}.png" alt=""><span>${t}</span></button>`).join('')+'</div>');}
- else{const locked=!!(NBS&&NBS.theme),lead=!!(NBS&&NBS.leader);$('#pbody').innerHTML='<div class="hint">'+(locked?'🎨 ธีมหมู่บ้าน: '+((TH.find(x=>x[0]===theme)||[])[2]||'')+' (หัวหน้าเลือกไว้แล้ว เปลี่ยนไม่ได้)':lead?'หัวหน้าเลือกบรรยากาศรอบหมู่บ้าน <b>ครั้งเดียว</b> ทุกคนเห็นเหมือนกัน':'รอหัวหน้าเนเบอร์ฮูดเลือกธีม')+'</div><div class="th">'+TH.map(([k,e,t])=>`<button data-th="${k}" class="${theme===k?'on':''}" ${(locked||!lead)&&live?'disabled':''}><i>${e}</i>${t}</button>`).join('')+'</div>';}}
+ else{const locked=!!(NBS&&NBS.theme),lead=!!(NBS&&NBS.leader);$('#pbody').innerHTML='<div class="hint">'+(locked?'🎨 ธีมหมู่บ้าน: '+((TH.find(x=>x[0]===theme)||[])[2]||'')+' (หัวหน้าเลือกไว้แล้ว เปลี่ยนไม่ได้)':lead?'หัวหน้าเลือกบรรยากาศรอบหมู่บ้าน <b>ครั้งเดียว</b> ทุกคนเห็นเหมือนกัน':'รอหัวหน้าเนเบอร์ฮูดเลือกธีม')+'</div>'+(lead||!live?'<div class="hint"><button data-ted="1" style="padding:8px 14px;border-radius:14px;border:0;background:#4caf50;color:#fff;font-weight:800">🌳 ย้ายต้นไม้ส่วนกลาง</button> หัวหน้าย้ายได้คนเดียว ทุกคนเห็นเหมือนกัน</div>':'')+'<div class="th">'+TH.map(([k,e,t])=>`<button data-th="${k}" class="${theme===k?'on':''}" ${(locked||!lead)&&live?'disabled':''}><i>${e}</i>${t}</button>`).join('')+'</div>';}}
 $('#panel').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const me=ME();
  if(b.dataset.tab){tab=b.dataset.tab;pick=null;drawPanel();if(tab!=='theme')focusMe();return;}
  if(b.dataset.dc){dcat=b.dataset.dc;drawPanel();return;}
@@ -291,7 +294,11 @@ $('#panel').addEventListener('click',async e=>{const b=e.target.closest('button'
  if(b.dataset.n){pick=pick===b.dataset.n?null:b.dataset.n;drawPanel();if(pick){toast('แตะพื้นในกรอบชมพูเพื่อวาง');load(pick);}return;}
  if(b.dataset.up){try{const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);if(!fn)return toast('ยังไม่เชื่อมกับเนเบอร์ฮูด');b.disabled=true;const out=await fn({type:'nbUpgrade'});if(out&&out.upgrade)toast('🏗️ เริ่มอัปเกรดแล้ว เสร็จใน '+Math.ceil((out.upgrade.up.end-Date.now())/3600000)+' ชม.');}catch(e){}return;}
  if(b.dataset.hs){me.st=+b.dataset.hs;MYH={lv:me.lv||1,st:me.st};drawPanel();await putHouse(me);nbSave();focusMe();return;}
+  if(b.dataset.ted){closePanel();treeEdit(true);return;}
  if(b.dataset.th){if(live&&NBS){const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);if(fn){b.disabled=true;const out=await fn({type:'nbTheme',th:b.dataset.th});if(!out)return;}}theme=b.dataset.th;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();nbSave();drawPanel();toast('🎨 ธีมหมู่บ้าน: '+TH.find(x=>x[0]===theme)[2]);fly(new THREE.Vector3(0,0,-6),new THREE.Vector3(0,30,40));}});
+let ttT=0;function treeSave(){clearTimeout(ttT);ttT=setTimeout(async()=>{const m=Object.assign({},TMV);applyTrees.loc={th:theme,m};if(!live)return;try{const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);if(fn){const out=await fn({type:'nbTrees',m});if(!out)toast('บันทึกต้นไม้ไม่สำเร็จ');}}catch(e){}},700);}
+function treeEdit(on){TED=!!on;let b=document.getElementById('tedDone');if(on){if(!b){b=document.createElement('button');b.id='tedDone';b.textContent='✅ เสร็จ (ย้ายต้นไม้)';b.style.cssText='position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;padding:12px 22px;border-radius:18px;border:0;background:#4caf50;color:#fff;font:800 16px Mali,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';b.onclick=()=>treeEdit(false);document.body.appendChild(b);}b.style.display='';toast('🌳 กดค้างที่ต้นไม้แล้วลากไปวาง');allV();}else{if(b)b.style.display='none';TDRAG=null;ctr.enabled=true;toast('✅ บันทึกตำแหน่งต้นไม้แล้ว');}}
+window.__nbt={TREES,treeEdit,TMV:()=>TMV,apply:()=>applyTrees(),proj:(x,y,z)=>{const v=new THREE.Vector3(x,y,z).project(cam);const r=cv.getBoundingClientRect();return [r.left+(v.x+1)/2*r.width,r.top+(1-v.y)/2*r.height];}};
 let pvN=null;function showPv(n){pvN=n;$('#pvImg').src='t/'+n+'.png';$('#pvName').textContent=DS[n][1]+(SEATS[n]?' · 🪑 นั่งได้':'');$('#pvw').classList.add('on');}
 $('#pvX').onclick=()=>$('#pvw').classList.remove('on');$('#pvGo').onclick=()=>{$('#pvw').classList.remove('on');pick=pvN;drawPanel();toast('แตะพื้นในกรอบชมพูเพื่อวาง');load(pick);};
 function focusMe(){const m=ME();fly(new THREE.Vector3(m.cx,0,m.cz+(m.face===Math.PI?1:-1)*3),new THREE.Vector3(m.cx+7,17,m.cz+(m.face===Math.PI?1:-1)*20));}
@@ -306,11 +313,12 @@ function cast(e){const r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.
 const inMine=p=>{const m=ME();return Math.abs(p.x-m.cx)<ZW/2-.5&&Math.abs(p.z-m.cz)<ZD/2-.5&&!(Math.abs(p.z-houseZ(m))<2.4&&Math.abs(p.x-m.cx)<2.6);};
 let drag=null,down=null,sel=null;
 function rootOf(o){while(o&&!o.userData?.n&&!o.userData?.lot&&!o.userData?.quest)o=o.parent;return o;}
-cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};cast(e);const hits=ray.intersectObjects(placed,true);const g=hits.length?rootOf(hits[0].object):null;
+let TED=false,TDRAG=null;
+cv.addEventListener('pointerdown',e=>{if(TED){cast(e);const h=ray.intersectObjects(TREES,true);let o=h.length?h[0].object:null;while(o&&o.userData.tree==null)o=o.parent;if(o){TDRAG={g:o,moved:false,x:e.clientX,y:e.clientY};ctr.enabled=false;e.stopImmediatePropagation();}return;}down={x:e.clientX,y:e.clientY};cast(e);const hits=ray.intersectObjects(placed,true);const g=hits.length?rootOf(hits[0].object):null;
  if(g&&g.userData.mine&&$('#panel').classList.contains('on')){drag={g,moved:false};ctr.enabled=false;}hidePop();});
-cv.addEventListener('pointermove',e=>{if(!drag)return;cast(e);if(!ray.ray.intersectPlane(plane,hitP))return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)drag.moved=true;
+cv.addEventListener('pointermove',e=>{if(TDRAG){cast(e);if(!ray.ray.intersectPlane(plane,hitP))return;if(Math.hypot(e.clientX-TDRAG.x,e.clientY-TDRAG.y)>6)TDRAG.moved=true;if(TDRAG.moved&&treeOk(hitP)){TDRAG.g.position.set(hitP.x,0,hitP.z);R.shadowMap.needsUpdate=true;}return;}if(!drag)return;cast(e);if(!ray.ray.intersectPlane(plane,hitP))return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)drag.moved=true;
  if(drag.moved&&inMine(hitP))drag.g.position.set(hitP.x,0,hitP.z);});
-addEventListener('pointerup',async e=>{const was=drag;drag=null;ctr.enabled=true;if(was&&was.moved)nbSave();if(!down)return;const tap=Math.hypot(e.clientX-down.x,e.clientY-down.y)<6;down=null;if(!tap||e.target!==cv)return;
+addEventListener('pointerup',async e=>{if(TED){const t=TDRAG;TDRAG=null;ctr.enabled=true;if(t&&t.moved){TMV[t.g.userData.tree]=[+t.g.position.x.toFixed(2),+t.g.position.z.toFixed(2)];treeSave();}return;}const was=drag;drag=null;ctr.enabled=true;if(was&&was.moved)nbSave();if(!down)return;const tap=Math.hypot(e.clientX-down.x,e.clientY-down.y)<6;down=null;if(!tap||e.target!==cv)return;
  if(was&&!was.moved){showPop(was.g,e);return;}
  cast(e);
  if(pick){if(!ray.ray.intersectPlane(plane,hitP))return;
@@ -342,6 +350,7 @@ addEventListener('message',async e=>{const d=e.data&&e.data.s4sync;if(!d||!d.nb)
  const ms=(d.members||[]).slice();ms.sort((a,b)=>(b.me?1:0)-(a.me?1:0));const nm=ms.map((m,i)=>({u:m.u,n:m.me?'บ้านฉัน':m.n,me:m.me,lead:m.lead,...lvOf(m.u)}));if(!nm.length)nm.push({u:'me',n:'บ้านฉัน',me:1,lv:1,st:0});
  const mine=nm.find(x=>x.me);if(mine)MYH={lv:mine.lv,st:mine.st};
  if(d.theme&&d.theme!==theme&&TH.some(x=>x[0]===d.theme)){theme=d.theme;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();}
+ {const tk=JSON.stringify(d.trees||null);if(tk!==applyTrees.k){applyTrees.k=tk;if(!TDRAG)applyTrees();}}
  const key=JSON.stringify(nm);if(key!==layout.k){layout.k=key;MEMBERS=nm;await layout();}
  try{await othersDeco();}catch(e){}try{upSigns(nm);}catch(e){}});
 const upNow=()=>{try{const h=NBS&&NBS.houses&&NBS.houses[(ME()||{}).id];return !!(h&&h.up&&((NBS.now||Date.now())<h.up.end));}catch(e){return false;}};
@@ -349,7 +358,7 @@ const upNow=()=>{try{const h=NBS&&NBS.houses&&NBS.houses[(ME()||{}).id];return !
 
 /* ---------- วนลูป ---------- */
 const clock=new THREE.Clock();let T=0;
-/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||P.goSeat||FX.length>0||!!window.__zsnap);function loop(dt){clock.getDelta();T+=dt;if(KIT)KIT.treeTime.value=T;
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||P.goSeat||FX.length>0||!!window.__zsnap||!!TDRAG);function loop(dt){clock.getDelta();T+=dt;if(KIT)KIT.treeTime.value=T;
  for(const f of ANIM)f(T);
  for(let i=FX.length-1;i>=0;i--){const f=FX[i];f.t+=dt;const k=f.t/f.l;if(f.ring){f.m.scale.setScalar(1+k*4);f.m.material.opacity=1-k;}else{f.v.y-=9*dt;f.m.position.addScaledVector(f.v,dt);}if(k>=1){S.remove(f.m);FX.splice(i,1);}}
  if(girl){let moving=false;

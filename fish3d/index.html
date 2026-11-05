@@ -66,6 +66,7 @@ button.p3chip{cursor:pointer}
 #p3rods button img{width:38px;height:38px;object-fit:contain}
 #p3rods button.on{border-color:#f2b33a;background:#fff3cf;transform:translateY(-3px)}
 .act{border:0;border-radius:999px;padding:12px 26px;font:700 17px 'Itim','Mali',sans-serif;color:#fff;background:linear-gradient(180deg,#5fc06a,#3a9a48);box-shadow:0 5px 0 #2a7434,0 8px 18px rgba(0,0,0,.25);cursor:pointer;min-width:200px}
+#p3row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}#p3row[hidden]{display:none}.p3s{border:3px solid #fff;border-radius:999px;padding:9px 18px;font:700 15px 'Itim','Mali',sans-serif;color:#5b3a1e;background:linear-gradient(180deg,#fff8ec,#f6e2c2);box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.2);cursor:pointer}.p3s.boost{color:#fff;background:linear-gradient(180deg,#ffd24a,#f29a1a);box-shadow:0 4px 0 #b86e10,0 6px 14px rgba(0,0,0,.2)}.p3s[hidden]{display:none}
 .act.wait{background:linear-gradient(180deg,#9fd3ea,#5aa9cf);box-shadow:0 5px 0 #3b7fa3}
 .act.bite{background:linear-gradient(180deg,#ff7a6a,#e2453a);box-shadow:0 5px 0 #a8302a;animation:pulse .5s infinite alternate}
 .act.pull{background:linear-gradient(180deg,#ffc94a,#f29a1a);box-shadow:0 5px 0 #b86e10;font-size:22px;min-width:160px}
@@ -122,7 +123,7 @@ button.p3chip{cursor:pointer}
 <div id="p3"><div id="p3stage"></div>
 <div class="p3top"><button class="p3chip" id="p3back">⬅ แผนที่</button><span class="p3chip" id="p3title"></span><span class="p3chip" id="p3bag">🧺 0</span></div>
 <div id="p3feed"></div><div id="p3mis" style="display:none"></div>
-<div class="p3bot"><div id="p3rods"></div><div id="p3bar2"><div id="p3zone"></div><div id="p3needle"></div></div><button class="act" id="p3act">🎣 หย่อนเบ็ด</button></div>
+<div class="p3bot"><div id="p3rods"></div><div id="p3bar2"><div id="p3zone"></div><div id="p3needle"></div></div><button class="act" id="p3act">🎣 หย่อนเบ็ด</button><div id="p3row"><button class="p3s boost" id="p3bait" type="button">⚡ ใช้บูสเตอร์</button><button class="p3s" id="p3leave" type="button">🚪 ลุกจากที่นั่ง</button></div></div>
 <div id="p3card"><div class="box"><h3></h3><div class="fs"></div><button id="p3ok">โอเค</button></div></div>
 <div id="p3load"><div class="w">🎣 กำลังพาไปที่แท่น…<div class="b"><div id="p3bar"></div></div></div></div></div>
 <div id="load"><div class="t">🗺️ กำลังกางแผนที่บ่อตกปลา…</div></div>
@@ -291,7 +292,7 @@ const ZK={A:'falls',B:'bamboo',C:'beach',D:'lotus',V:'vip'};let P3=null,p3open=f
 function mySeatInfo(){for(const p of PL){const s=who(p);if(s&&s.me)return {p,s};}return null;}
 function openP3(){const m=mySeatInfo();if(!m){send('mine');return;}if(p3open)return;p3open=true;p3code=m.p.code;
  const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));
- import('./pond3d.js?h=c9fd959c').then(mod=>{P3=mod;return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
+ import('./pond3d.js?h=651c77f5').then(mod=>{P3=mod;return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
 addEventListener('message',e=>{const d=e.data;if(!d)return;if(d.p3res&&P3&&p3open)P3.result(d.p3res);
  if(d.s4sync){const m=mySeatInfo();if(m){if(p3open&&P3&&P3.isOpen())P3.sync(m.s);else if(!p3open&&prevMine!==m.p.code&&p3skip!==m.p.code)openP3();prevMine=m.p.code;}else{prevMine=null;p3skip=null;if(p3open&&P3&&P3.isOpen())P3.standby();}}});
 window.__fzP3=()=>({open:p3open,code:p3code});

@@ -36,14 +36,14 @@ function showPage(p){PG=p;document.querySelectorAll('#nav button').forEach(b=>b.
   if(p==='ts'){q('#gpage').classList.add('hidden');closeEdit()}else{$('view').classList.add('hidden');$('edit').classList.add('hidden');q('#gpage').classList.remove('hidden');$('bar').innerHTML='';renderG()}window.scrollTo(0,0)}
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>showPage(b.dataset.pg));
 
-function wal(){G.coins[ME]=Host.coins;G.kusal=JSON.parse(Host.get('s3all-v1')||'{}').merit||0;q('#gwal').innerHTML=`<span class="chip"><img src="${IMG.coin}" alt="">${G.coins[ME]}</span><span class="chip">✨${fmt(G.kusal)}</span><button class="chip mail" id="mb">📮 ไปรษณีย์${Host.mailCount()?`<i>${Host.mailCount()}</i>`:''}</button>`;q('#mb').onclick=openMail;const sp=q('#spin');if(sp)sp.disabled=G.busy||G.coins[ME]<2}
+function wal(){G.coins[ME]=Host.coins;G.kusal=JSON.parse(Host.get('s3all-v1')||'{}').merit||0;q('#gwal').innerHTML=`<span class="chip"><img src="${IMG.coin}" alt="">${G.coins[ME]}</span><span class="chip">✨${fmt(G.kusal)}</span><button class="chip mail" id="mb">📮 ไปรษณีย์${Host.mailCount()?`<i>${Host.mailCount()}</i>`:''}</button>`;q('#mb').onclick=openMail;const sp=q('#spin');if(sp)sp.disabled=G.busy||G.coins[ME]<10}
 function openMail(){Host.openMail();}
 function frame(el,f){el.style.backgroundPosition=`${(f%4)*100/3}% ${Math.floor(f/4)*100/3}%`}
 function idle(){clearInterval(idleIv);const m=q('#mspr');if(!m)return;m.style.backgroundImage=`url(${IMG['m-idle']})`;let f=0;idleIv=setInterval(()=>{frame(m,f);f=(f+1)%16},110)}
 function showItems(){modal(`<h2>🎁 ของในตู้</h2><div class="igrid">${ITEMS.map(i=>`<div class="ig"><span>${i[0]}</span><b>${i[1]}</b>${i[2]}</div>`).join('')}<div class="ig k"><span>✨</span><b>กุศล</b>5–30,000</div><div class="ig n"><span>😢</span><b>ไม่ได้อะไร</b>ลุ้นใหม่</div></div><div class="odds" style="color:var(--cocoa)"><span style="background:#F3E9DE">🎁 ไอเทม 60%</span><span style="background:#F3E9DE">✨ กุศล 20%</span><span style="background:#F3E9DE">😢 20%</span></div>`)}
 function renderG(){
   q('#gacha').innerHTML=`${[...Array(18)].map(()=>`<span class="star" style="left:${rnd(2,98)}%;top:${rnd(2,60)}%;animation-delay:${rnd(0,2.4)}s"></span>`).join('')}<span class="floaty" style="top:10%;animation-duration:19s">🏮</span><span class="floaty" style="top:34%;animation-duration:27s;animation-delay:-9s">✨</span><span class="floaty" style="top:52%;animation-duration:23s;animation-delay:-15s">🏮</span>
-    <div class="gtitle"><p>หมุนละ 2 เหรียญกระทงทอง</p></div><div class="mwrap" id="mwrap"><div class="spr" id="mspr"></div></div>
+    <div class="gtitle"><p>หมุนละ 10 เหรียญกระทงทอง</p></div><div class="mwrap" id="mwrap"><div class="spr" id="mspr"></div></div>
     <div class="gctl"><button class="btn spin" id="spin">หมุนเลย!</button><div class="odds"><span>🎁 ไอเทม 60%</span><span>✨ กุศล 20%</span><span>😢 20%</span></div><button class="mini" id="items">🎁 ดูของในตู้</button></div>`;
   q('#spin').onclick=spin;q('#items').onclick=showItems;
   q('#gadmin').innerHTML='';/* S4 ข้อ 130: ย้ายการส่งเหรียญไปรวมที่ศูนย์แอดมิน (ส่งของ) ไม่แสดงในหน้ากาชาปอง */
@@ -51,7 +51,7 @@ function renderG(){
   wal();idle();
 }
 async function spin(){
-  if(G.busy||Host.coins<2)return;G.busy=true;wal();const out=await action({type:'spin'});if(!out){G.busy=false;wal();return;}G.coins[ME]=Host.coins;
+  if(G.busy||Host.coins<10)return;G.busy=true;wal();const out=await action({type:'spin'});if(!out){G.busy=false;wal();return;}G.coins[ME]=Host.coins;
   const wrap=q('#mwrap'),m=q('#mspr'),btn=q('#spin'),g=q('#gacha');const res=out.reward,color=pick(CANDY);
   const c=document.createElement('div');c.className='coinfly';c.style.backgroundImage=`url(${IMG.coinspin})`;const br=btn.getBoundingClientRect(),gr=g.getBoundingClientRect(),wr=wrap.getBoundingClientRect();
   c.style.left=(br.left-gr.left+br.width/2-24)+'px';c.style.top=(br.top-gr.top-10)+'px';g.appendChild(c);let cf=0;const civ=setInterval(()=>{frame(c,cf);cf=(cf+1)%16},45);

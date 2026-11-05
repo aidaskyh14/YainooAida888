@@ -6,7 +6,7 @@ import {adminReset} from './admin-reset.js?h=30e79a6c';
 import {openLootBoxes} from './loot-box-engine.js?h=1f16d6b0';
 import {farmDropsAction} from './farm-drops-engine.js?h=7932d513';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
-import {farmAction,friendAction} from './farm-engine.js?h=d0a60471';
+import {farmAction,friendAction} from './farm-engine.js?h=70094cd2';
 import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
 import {observeGameplay} from './campaign-progress.js?h=cb6616b6';
 import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=2997a883';
@@ -18,7 +18,7 @@ import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,at
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=b5d612b9';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=0182268e';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=b7fdd38b';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
 import {nbDay} from './nb-quest.js?h=94056e26';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
@@ -51,7 +51,7 @@ export const adminResetCloud=callable(req=>adminReset(db,req.auth.uid,req.data||
    fix14: the friends ranking shows merit, so the list is rebuilt every 10 minutes (was 6 h) and the caller's own merit is
    always read live; `at` = when the other players' numbers were taken. */
 const ROSTER_PATH='privateWorld/roster',ROSTER_REFRESH=15e3,ROSTER_PAGE=300;
-const rosterRow=d=>({n:String(d.name||'ผู้เล่น'),m:d.displayMerit??d.g?.merit??0,l:d.level||1,a:d.approval||'approved',...(d.nb?{h:1}:{})});
+const rosterRow=d=>({n:String(d.name||'ผู้เล่น'),m:d.displayMerit??d.g?.merit??0,l:d.level||1,a:d.approval||'approved',...(d.nb?{h:1}:{}),...(typeof d.avatar==='string'&&d.avatar.length<4000?{v:d.avatar}:{})});
 async function rosterCounts(){
  const players=db.collection('players');if(typeof players.count!=='function')return null;
  const [all,pending,rejected]=await Promise.all([players.count().get(),players.where('approval','==','pending').count().get(),players.where('approval','==','rejected').count().get()]);
@@ -66,7 +66,7 @@ async function buildRoster(counts){
  }
  const roster={v:1,rows,builtAt:Date.now(),...(counts||{})};await db.doc(ROSTER_PATH).set(roster);return roster;
 }
-const rosterList=(roster,ownerIds,me)=>Object.keys(roster.rows).sort().map(uid=>[uid,roster.rows[uid]]).filter(([uid,r])=>r.a==='approved'||ownerIds.has(uid)).map(([uid,r])=>({uid,name:r.n,merit:me&&uid===me.id?rosterRow(me.data()).m:r.m,level:r.l,admin:ownerIds.has(uid),hasNb:!!(me&&uid===me.id?me.data().nb:r.h),at:roster.builtAt||0}));
+const rosterList=(roster,ownerIds,me)=>Object.keys(roster.rows).sort().map(uid=>[uid,roster.rows[uid]]).filter(([uid,r])=>r.a==='approved'||ownerIds.has(uid)).map(([uid,r])=>({uid,name:r.n,av:r.v||null,merit:me&&uid===me.id?rosterRow(me.data()).m:r.m,level:r.l,admin:ownerIds.has(uid),hasNb:!!(me&&uid===me.id?me.data().nb:r.h),at:roster.builtAt||0}));
 export const gameRoster=callable(async req=>{
  const ref=db.doc(ROSTER_PATH);
  const [snap,owners,me,counts]=await Promise.all([ref.get(),db.collection('admins').limit(20).get(),db.doc('players/'+req.auth.uid).get(),rosterCounts().catch(()=>null)]);
@@ -76,7 +76,7 @@ export const gameRoster=callable(async req=>{
  const stale=!roster||roster.v!==1||!roster.rows||Date.now()-(roster.builtAt||0)>ROSTER_REFRESH||(req.data?.rebuild===true&&ownerIds.has(req.auth.uid))
   ||(counts&&(counts.total!==roster.total||counts.pending!==roster.pending||counts.rejected!==roster.rejected));
  if(stale)roster=await buildRoster(counts);
- else if(me.exists){const row=rosterRow(me.data()),old=roster.rows[req.auth.uid];if(!old||old.n!==row.n||old.a!==row.a){roster.rows[req.auth.uid]=row;await ref.set(roster);}}
+ else if(me.exists){const row=rosterRow(me.data()),old=roster.rows[req.auth.uid];if(!old||old.n!==row.n||old.a!==row.a||old.v!==row.v){roster.rows[req.auth.uid]=row;await ref.set(roster);}}
  return rosterList(roster,ownerIds,me.exists?me:null);
 });
 // Key-order-insensitive equality (Firestore does not keep the key order an object was written with).
@@ -123,7 +123,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=0182268e');
+     const {CATALOG}=await import('./catalog.js?h=b7fdd38b');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -201,9 +201,9 @@ export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.ui
 export const eventsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'events',worldIds:['world/topspenders'],apply:async(game,worlds,ctx,tx)=>{
  const {rollGacha,topSpenders}=await import('./events-engine.js?h=8158ac5c');const input=req.data?.input||{},writes={},updates={};
  if(input.type==='spin'){
-   if(ctx.coins<2)refuse('ต้องใช้เหรียญกระทงทอง 2 เหรียญ');const reward=rollGacha();
+   /* S4 ข้อ 47: หมุนละ 10 เหรียญ */if(ctx.coins<10)refuse('ต้องใช้เหรียญกระทงทอง 10 เหรียญ');const reward=rollGacha();
    if(reward.type!=='none'){const ref=db.doc('mail/'+ctx.uid+'/items/gacha-rewards'),prior=await tx.get(ref),old=prior.exists?prior.data():{},items={...(old.items||{})};for(const[k,n]of Object.entries(reward.items||{}))items[k]=(items[k]||0)+n;writes[ref.path]={title:'รางวัลลัคกี้กาชาปองสะสม',msg:reward.extra||'จากตู้กาชาปอง',icon:'🎁',kusal:(old.kusal||0)+(reward.k||0),coins:0,items,createdAt:FieldValue.serverTimestamp(),from:'กาชาปอง'};if(!prior.exists)updates['players/'+ctx.uid]={mailCount:FieldValue.increment(1)};reward.mailNew=!prior.exists;}
-   return {writes,updates,mailDelta:reward.mailNew?1:0,coins:ctx.coins-2,response:{reward}};
+   return {writes,updates,mailDelta:reward.mailNew?1:0,coins:ctx.coins-10,response:{reward}};
  }
  if(input.type==='save'){if(!ctx.admin)refuse('เฉพาะแอดมิน','permission-denied');const kept=await tx.get(db.doc(ROSTER_PATH));let roster=kept.exists&&kept.data().rows?Object.entries(kept.data().rows).map(([uid,r])=>({uid,name:r.n})):null;if(!roster){const players=await tx.get(db.collection('players').limit(5000));roster=players.docs.map(d=>({uid:d.id,name:d.data().name||'ผู้เล่น'}));}writes['world/topspenders']=topSpenders(input,ctx,roster);}
  else if(input.type!=='status')refuse('รายการไม่ถูกต้อง');
@@ -476,7 +476,7 @@ export const inventoryRepairReportCloud=callable(async req=>{if(!(await db.doc('
 const nbRef=id=>db.doc('neighborhoods/'+id),nbDayRef=(id,day)=>db.doc('neighborhoods/'+id+'/days/'+day),nbInviteRef=uid=>db.doc('nbInvites/'+uid);
 const nbIdOk=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
 const uidOk=id=>typeof id==='string'&&/^[-a-zA-Z0-9_]{1,128}$/.test(id);
-const NB_CAT=new Map(CATALOG_ALL.filter(c=>!c.p.startsWith('sub.')).map(c=>[c.k,c]));
+/* S4: ของตกแต่งส่งให้เพื่อนบ้านไม่ได้ (ได้จากยัยหนูส่งเท่านั้น) */const NB_CAT=new Map(CATALOG_ALL.filter(c=>!c.p.startsWith('sub.')&&!c.p.startsWith('decor.')&&c.p!=='item.monkey').map(c=>[c.k,c]));
 function nbPublic(nb){if(!nb)return null;const {contrib,...rest}=nb;return {...rest,contrib:contrib||{}};}
 function nbLog(nb,e,t,now){nb.log=[{e,t,at:now},...(nb.log||[])].slice(0,40);}
 function nbRefundMail(writes,updates,uid,items,title,now){
@@ -542,6 +542,10 @@ export const nbActionCloud=callable(async req=>{
    const h=nbHouseOf(nb,uid,now);if(input.st!==undefined&&!h.up){nb.houses ||= {};nb.houses[uid]={lv:h.lv,st:Math.max(0,Math.min(9,input.st|0))};}save();return reply();}
   /* S4 ข้อ 105: ธีมชุมชน หัวหน้าเลือกครั้งแรกครั้งเดียว (ทุกคนเห็นธีมเดียวกัน) */
   if(type==='nbTheme'){if(!leader)fail('หัวหน้าเนเบอร์ฮูดเท่านั้นที่เลือกธีมได้');if(nb.theme&&!ctx.admin)fail('เลือกธีมได้ครั้งเดียว (เลือกแล้ว: '+nb.theme+')');if(!NB_THEMES.includes(input.th))fail('ไม่มีธีมนี้');nb.theme=input.th;nbLog(nb,'🎨',(ctx.name||'หัวหน้า')+' เลือกธีมหมู่บ้าน',now);save();return reply();}
+  /* S4 ข้อ 43 (รอบเก็บตก): ต้นไม้ส่วนกลางของหมู่บ้าน ย้ายได้เฉพาะหัวหน้า · เก็บตำแหน่งตามธีม */
+  if(type==='nbTrees'){if(!leader)fail('หัวหน้าเนเบอร์ฮูดเท่านั้นที่ย้ายต้นไม้ส่วนกลางได้');const m=input.m&&typeof input.m==='object'&&!Array.isArray(input.m)?input.m:null;if(!m)fail('ข้อมูลต้นไม้ไม่ถูกต้อง');const ks=Object.keys(m);if(ks.length>200)fail('ข้อมูลต้นไม้ไม่ถูกต้อง');const out={};
+   for(const k of ks){const v=m[k];if(!/^\d{1,3}$/.test(k)||!Array.isArray(v)||v.length!==2||!v.every(n=>Number.isFinite(Number(n))&&Math.abs(Number(n))<70))fail('ข้อมูลต้นไม้ไม่ถูกต้อง');out[k]=[+(+v[0]).toFixed(2),+(+v[1]).toFixed(2)];}
+   nb.trees={th:nb.theme||'forest',m:out};save();return reply();}
   /* S4 ข้อ 109: อัปเกรดบ้านในชุมชน Lv1→2→3 ใช้ดอกไม้/ผลไม้/หญ้า · รอ ≥10 ชม. */
   if(type==='nbUpgrade'){if(nb.status!=='active')fail('อัปเกรดได้เมื่อเนเบอร์ฮูดเปิดใช้แล้ว');const h=nbHouseOf(nb,uid,now);if(h.up)fail('กำลังอัปเกรดอยู่ เสร็จใน '+Math.ceil((h.up.end-now)/3600000)+' ชม.');const to=h.lv+1,c=NB_HOUSE_UP[to];if(!c)fail('บ้านเลเวลสูงสุดแล้ว');
    for(const g of ['flower','fruit','grass'])if(bagTotal(game,g)<c[g])fail({flower:'ดอกไม้',fruit:'ผลไม้',grass:'หญ้า'}[g]+'ไม่พอ (ต้องใช้ '+c[g].toLocaleString('en-US')+' มี '+bagTotal(game,g).toLocaleString('en-US')+')');

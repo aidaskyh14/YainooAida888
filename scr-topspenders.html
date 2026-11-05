@@ -60,6 +60,7 @@ body{margin:0;min-height:100vh;font-family:'Mali',sans-serif;color:var(--cocoa);
 .candy.drop{animation:cdrop .9s cubic-bezier(.3,1.4,.5,1) forwards}@keyframes cdrop{0%{transform:scale(.2) translateY(-30%);opacity:0}30%{opacity:1}100%{transform:scale(1.25) translateY(40%)}}
 .candy.wob{animation:wob .5s ease-in-out 2;transform:scale(1.25) translateY(40%)}@keyframes wob{25%{rotate:-12deg}75%{rotate:12deg}}
 .burst{position:absolute;inset:0;pointer-events:none;z-index:7}.burst i{position:absolute;left:50%;top:80%;width:.5rem;height:.5rem;border-radius:50%;animation:bs .8s ease-out forwards}@keyframes bs{to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+/* S4 ข้อ 48: กล่องกาชาปองใหญ่ขึ้น (กว้างเกือบเต็มจอ · สูงลงมาถึงล่าง) */.gacha{width:min(calc(100vw - 1.6rem),48rem);margin-left:50%;translate:-50% 0;min-height:min(74vh,62rem);display:flex;flex-direction:column;justify-content:center;padding:1.4rem 1rem 1.6rem}.gacha .mwrap{width:min(66%,440px,calc((74vh - 15rem)*154/225))}.gtitle p{font-size:clamp(.85rem,2.4vw,1.2rem)}.gacha .spin{font-size:clamp(1.05rem,2.8vw,1.5rem);padding:.8rem 2.6rem}.gacha .odds{font-size:clamp(.72rem,2vw,1rem)}.gacha .mini{font-size:clamp(.78rem,2vw,1rem);padding:.4rem 1.1rem}
 .gctl{display:flex;flex-direction:column;align-items:center;gap:.5rem;margin-top:.7rem}
 .spin{font-size:1.05rem;padding:.7rem 2rem;background:linear-gradient(#FFB45A,#F28C28);box-shadow:0 4px 0 #A9560E,0 0 18px rgba(255,180,90,.5)}
 .btn:disabled{background:#cfc6d6;box-shadow:none;cursor:default}
@@ -83,7 +84,7 @@ body{margin:0;min-height:100vh;font-family:'Mali',sans-serif;color:var(--cocoa);
 <button class="sw" id="sw">👀 มุมมอง: ผู้เล่น</button>
 <nav class="nav" id="nav"><button data-pg="ts" class="on">💎 Top Spenders</button><button data-pg="ga">🏮 ลัคกี้กาชาปอง</button></nav>
 <div class="wrap" id="view" style="padding-top:.3rem">
- <div class="head"><small>SEASON 3</small><h1>💎 Top Spenders</h1><p>ขอบคุณทุกคนที่สนับสนุนสวนของยัยหนู 💕</p></div>
+ <div class="head"><small>SEASON 4</small><h1>💎 Top Spenders</h1><p>ขอบคุณทุกคนที่สนับสนุนสวนของยัยหนู 💕</p></div>
  <div class="podium" id="podium"><canvas class="spark" id="spark" width="256" height="128"></canvas><div class="col c2"><div class="av" style="background:#F6B43C">K</div><div class="nm">Kongkwan</div><div class="pt">💎 41,200</div><div class="step">2</div></div><div class="col c1"><div class="av" style="background:#B49BE0">P</div><div class="nm">Porpla</div><div class="pt">💎 48,500</div><div class="step">1</div></div><div class="col c3"><div class="av" style="background:#B49BE0">E</div><div class="nm">Earn</div><div class="pt">💎 39,900</div><div class="step">3</div></div></div>
  <div class="cols"><span>อันดับ</span><span>ผู้เล่น</span><span>วันนี้</span><span>สะสม</span></div>
  <div class="list" id="list"><div class="row me"><span class="r">#4</span><b>มดแดง</b><small>+300</small><strong>12,800</strong></div><div class="row"><span class="r">#5</span><b>ส้มโอ</b><small>+150</small><strong>9,600</strong></div><div class="row"><span class="r">#6</span><b>ฟ้าใส</b><small>–</small><strong>5,400</strong></div><div class="row"><span class="r">#7</span><b>Tangtang</b><small>+500</small><strong>3,200</strong></div></div>
@@ -95,7 +96,7 @@ body{margin:0;min-height:100vh;font-family:'Mali',sans-serif;color:var(--cocoa);
  <div id="edList"></div>
 </div>
 <div class="wrap hidden" id="gpage" style="padding-top:.3rem">
- <div class="head"><small>SEASON 3</small><h1>🏮 ลัคกี้กาชาปอง</h1><p>ขอบคุณที่อุดหนุนนะคะ 💜</p></div>
+ <div class="head"><small>SEASON 4</small><h1>🏮 ลัคกี้กาชาปอง</h1><p>ขอบคุณที่อุดหนุนนะคะ 💜</p></div>
  <div class="wal" id="gwal"></div>
  <section class="gacha" id="gacha"></section>
  <div id="gadmin"></div>
@@ -104,7 +105,7 @@ body{margin:0;min-height:100vh;font-family:'Mali',sans-serif;color:var(--cocoa);
 <div class="bar" id="bar"></div>
 <div class="toast" id="toast"></div>
 
-<script src="topspenders.js?v=ss3-recovery6&h=78f212e6"></script><style>/* ซีซัน 4: พื้นหลังคืนพระจันทร์เต็มดวง ลอยกระทง */
+<script src="topspenders.js?v=ss3-recovery6&h=fcea5f22"></script><style>/* ซีซัน 4: พื้นหลังคืนพระจันทร์เต็มดวง ลอยกระทง */
 body{background-color:#1b2a6b!important;background-size:cover!important;background-position:center top!important;background-attachment:fixed!important}
 .head h1{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#fff3c4!important;text-shadow:0 2px 0 #b5741b,0 0 18px rgba(255,214,120,.8)}
 .head,.head p,.head small,.head div{color:#fff7e6;text-shadow:0 1px 3px rgba(0,0,0,.85)}</style>

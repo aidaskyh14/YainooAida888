@@ -13,7 +13,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#9fd27a;font-family:Ma
 .fx{position:fixed;transform:translate(-50%,-50%);pointer-events:none;z-index:4;font-size:20px;transition:transform 1s cubic-bezier(.2,1,.4,1),opacity 1s}
 .fx.go{opacity:0}
 </style>
-<script src="../pv/s4photo.js?h=2983f296"></script><script src="../pv/s4own.js?h=240ef027"></script><script src="../pv/s4deco.js?h=c6a8888e"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4photo.js?h=2983f296"></script><script src="../pv/s4own.js?h=13ae4e67"></script><script src="../pv/s4deco.js?h=df990c63"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 </head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="c"></div><div id="tip"></div>
 <div id="load"><div id="lt">กำลังเปิดโซน…</div><div class="bar"><i id="lb"></i></div></div><script>try{document.getElementById('lt').textContent=({hamster:'🐹 กำลังเข้าสวนหลังบ้าน…',dog:'🐶 กำลังเข้าสวนหมา…',cat:'🐱 กำลังเข้าสวนแมว…',alpaca:'🦙 กำลังเข้าทุ่งอัลปาก้า…'})[new URLSearchParams(location.search).get('z')]||'🌿 กำลังเข้าโซน…';}catch(e){}</script>
@@ -27,7 +27,7 @@ const P=(()=>{try{return parent!==window?parent:null;}catch(e){return null;}})()
 const send=(a,id)=>{try{P&&P.postMessage({s4z:a,id:id||''},'*');}catch(e){}};
 const tipEl=document.getElementById('tip');let tipT=0;const tip=t=>{tipEl.textContent=t;tipEl.style.opacity=1;clearTimeout(tipT);tipT=setTimeout(()=>tipEl.style.opacity=0,2400);};
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
-const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?2:1.5));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?(innerWidth>700?1.2:1.5):1.5)/* S4 ข้อ 2: iPad จอใหญ่ ลดความละเอียดเรนเดอร์ แตะตอบสนองไวขึ้น */);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
 document.getElementById('c').appendChild(R.domElement);
 const sc=new THREE.Scene();sc.background=new THREE.Color(0x9fd8f5);sc.fog=new THREE.Fog(0x9fd8f5,70,140);
 const cam=new THREE.PerspectiveCamera(30,1,.5,300);
@@ -39,8 +39,8 @@ const grass=tl.load('../farm3d/grass.jpg');grass.wrapS=grass.wrapT=THREE.RepeatW
 const g0=new THREE.Mesh(new THREE.PlaneGeometry(140,140),new THREE.MeshLambertMaterial({map:grass,color:0xd8f0b0}));g0.rotation.x=-Math.PI/2;g0.receiveShadow=true;sc.add(g0);
 const soil=tl.load('../farm3d/road.jpg');soil.wrapS=soil.wrapT=THREE.RepeatWrapping;soil.colorSpace=THREE.SRGBColorSpace;
 function path(pts,w){const sh=new THREE.Group();const m=new THREE.MeshLambertMaterial({map:soil,color:0xf3e2bf});for(let i=0;i<pts.length-1;i++){const [x1,z1]=pts[i],[x2,z2]=pts[i+1];const L=Math.hypot(x2-x1,z2-z1);const t=soil.clone();t.needsUpdate=true;t.repeat.set(w/3,L/3);
-  const p=new THREE.Mesh(new THREE.PlaneGeometry(w,L+w*.6),new THREE.MeshLambertMaterial({map:t,color:0xf3e2bf}));p.rotation.x=-Math.PI/2;p.rotation.z=-Math.atan2(x2-x1,z2-z1);p.position.set((x1+x2)/2,.02+i*.001,(z1+z2)/2);p.receiveShadow=true;sh.add(p);
-  const d=new THREE.Mesh(new THREE.CircleGeometry(w/2,20),m);d.rotation.x=-Math.PI/2;d.position.set(x2,.025,z2);d.receiveShadow=true;sh.add(d);}sc.add(sh);}
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(w,L+w*.6),new THREE.MeshLambertMaterial({map:t,color:0xf3e2bf}));p.rotation.x=-Math.PI/2;p.rotation.z=-Math.atan2(x2-x1,z2-z1);p.position.set((x1+x2)/2,.05+i*.002,(z1+z2)/2);p.receiveShadow=true;sh.add(p);
+  const d=new THREE.Mesh(new THREE.CircleGeometry(w/2,20),m);d.rotation.x=-Math.PI/2;d.position.set(x2,.051+i*.002,z2)/* S4 ข้อ 38: ยกทางเดินเหนือพื้นดิน ไม่กะพริบ */;d.receiveShadow=true;sh.add(d);}sc.add(sh);}
 // โหลดโมเดล: แพ็กของโซน (อัลปาก้า แฮมสเตอร์) + โมเดลในฟาร์ม
 let PACK=null;const packP=fetch('pack.json').then(r=>r.json()).then(j=>PACK=j);
 const loader=new GLTFLoader();const CACHE={};let nLoad=0,nDone=0;const prog=()=>{document.getElementById('lb').style.width=(nLoad?nDone/nLoad*100:0)+'%';};
@@ -55,9 +55,9 @@ function fit(src,w,d,h){const o=src.clone(true);const b=new THREE.Box3().setFrom
  const b2=new THREE.Box3().setFromObject(o),c=b2.getCenter(new THREE.Vector3());o.position.x-=c.x;o.position.z-=c.z;o.position.y-=b2.min.y;const g=new THREE.Group();g.add(o);return g;}
 const TAPS=[];// [object, action, label]
 // ---- ลานดินขอบนุ่มกลืนหญ้า + ลำธารไหลผ่าน (แบบเกมฟาร์ม) ----
-const DIRT=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createRadialGradient(128,128,20,128,128,128);g.addColorStop(0,'rgba(140,96,58,1)');g.addColorStop(.62,'rgba(132,90,54,.96)');g.addColorStop(.86,'rgba(120,84,50,.45)');g.addColorStop(1,'rgba(120,84,50,0)');x.fillStyle=g;x.fillRect(0,0,256,256);
- for(let i=0;i<900;i++){const a=Math.random()*6.28,r=Math.random()*100;x.fillStyle=Math.random()<.5?'rgba(95,62,34,.35)':'rgba(176,130,84,.35)';x.beginPath();x.arc(128+Math.cos(a)*r,128+Math.sin(a)*r,1+Math.random()*3,0,7);x.fill();}
- for(let i=0;i<40;i++){x.strokeStyle='rgba(230,200,110,.55)';x.lineWidth=1.4;const a=Math.random()*6.28,r=Math.random()*90,px=128+Math.cos(a)*r,py=128+Math.sin(a)*r;x.beginPath();x.moveTo(px,py);x.lineTo(px+(Math.random()-.5)*14,py+(Math.random()-.5)*6);x.stroke();}
+/* S4 ข้อ 27/37: พื้นดินสีพาสเทลอ่อน เรียบ ไม่มีจุดดำ (เดิมน้ำตาลเข้มมีจุดเหมือนเชื้อโรค) · สีตามโซน */
+const DIRT=(()=>{const C={dog:[246,214,200],cat:[246,222,206],alpaca:[236,216,178],hamster:[242,222,186]}[Z]||[238,218,184];const [r,g0,b]=C;const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createRadialGradient(128,128,20,128,128,128);g.addColorStop(0,`rgba(${r},${g0},${b},1)`);g.addColorStop(.66,`rgba(${r},${g0},${b},.97)`);g.addColorStop(.88,`rgba(${r},${g0},${b},.45)`);g.addColorStop(1,`rgba(${r},${g0},${b},0)`);x.fillStyle=g;x.fillRect(0,0,256,256);
+ for(let i=0;i<260;i++){const a=Math.random()*6.28,rr=Math.random()*96;x.fillStyle='rgba(255,255,255,.22)';x.beginPath();x.arc(128+Math.cos(a)*rr,128+Math.sin(a)*rr,2+Math.random()*4,0,7);x.fill();}
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 function dirt(x,z,w,d,ry=0){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({map:DIRT,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.rotation.z=ry;m.position.set(x,.025,z);m.receiveShadow=true;m.renderOrder=1;sc.add(m);return m;}
 const WTX=(()=>{const t=tl.load('../farm3d/water.jpg');t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;})();
@@ -85,16 +85,18 @@ let WB=null,ROAM=true;try{ROAM=localStorage.getItem('zone3d-roam-'+Z)!=='0';}cat
 // ---- สัตว์ออกมาเดินเล่นนอกคอกได้ · ปุ่ม 🔔 เรียกกลับคอก ----
 
 /* S4 รีเซ็ตผู้เล่น: ของตกแต่งที่โค้ดวางให้ (d_* ไม่มี act, ของเล่นคอก pz) จะมีเฉพาะฟาร์มแอดมิน · ผู้เล่นเริ่มคอกเปล่า วางเองจากถุงตกแต่ง */
-const ADMINZ=(()=>{try{const H=P.__HOST||(P.parent&&P.parent.__HOST);const u=JSON.parse((H&&H.get('s3user'))||(0,P.eval)("localStorage.getItem('s3user')")||'null');return !!(u&&u.admin)&&!(0,P.eval)('!!window.visiting');}catch(e){return false;}})();
-async function put(name,x,z,w,d,h,ry=0,act=null,label=null){if(!ADMINZ&&/^d_/.test(name)&&!act)return new THREE.Group();const s=await model(name);const o=fit(s,w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
+const ADMINZ=(()=>{try{const H=P.__HOST||(P.parent&&P.parent.__HOST);const u=JSON.parse((H&&H.get('s3user'))||(0,P.eval)("localStorage.getItem('s3user')")||'null');return !!(u&&u.admin)&&!(0,P.eval)('typeof visiting!=="undefined"&&!!visiting');}catch(e){return false;}})();
+/* S4 สมุดผู้เล่นเริ่มต้น (4 พ.ย.): ผู้เล่นใหม่ได้แค่ของพื้นฐาน · ของแต่ง/ของใช้ที่เธอไม่ติ๊ก (เตาสวน ม้านั่ง ชามอาหาร บ่อน้ำพุร้อน ฯลฯ) ขึ้นเมื่อมีในกระเป๋า bag.decor[ชื่อ] (ยัยหนูส่ง/ซื้อ/รางวัล) */
+const OWNB=(()=>{try{const H=P.__HOST||(P.parent&&P.parent.__HOST);const g=JSON.parse((H&&H.get('s3all-v1'))||'{}');return (g.bag&&g.bag.decor)||{};}catch(e){return {};}})();const OWN=k=>ADMINZ||(Number(OWNB[k])||0)>0;
+async function put(name,x,z,w,d,h,ry=0,act=null,label=null){if(!ADMINZ&&/^d_/.test(name)&&(!act||act==='stove'||act==='sit')&&!OWN(name))return new THREE.Group();const s=await model(name);const o=fit(s,w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
 // สัตว์เดินในคอก: ก้าวเดินนุ่มๆ หยุดกินหญ้า ไม่เด้งแบบลูกโป่ง
 const WALK=[];window.__WALKn=()=>WALK.length+":"+WALK.filter(a=>a.alid||a.ham).map(a=>(a.alid||"ham")+"@"+a.w.uuid.slice(0,4)).join(",");
 async function animal(name,bx,h,sp){const s=await model(name);const o=fit(s,0,0,h);const w=new THREE.Group();w.add(o);sc.add(w);
  const a={w,o,x:bx.x0+Math.random()*(bx.x1-bx.x0),z:bx.z0+Math.random()*(bx.z1-bx.z0),tx:null,tz:null,t:Math.random()*3,dir:Math.random()*6.3,ph:Math.random()*6,bx,sp,h};w.position.set(a.x,0,a.z);WALK.push(a);return a;}
-function stepAnimals(dt){for(const a of WALK){a.t-=dt;if(a.tx==null&&a.t<=0){if(Math.random()<.6){const B=ROAM&&WB?WB:a.bx;a.tx=B.x0+Math.random()*(B.x1-B.x0);a.tz=B.z0+Math.random()*(B.z1-B.z0);}else a.t=1.5+Math.random()*3.5;}
+function stepAnimals(dt){for(const a of WALK){if(a.ham)continue;a.t-=dt;if(a.tx==null&&a.t<=0){if(Math.random()<.6){const B=ROAM&&WB?WB:a.bx;for(let k=0;k<12;k++){const x=B.x0+Math.random()*(B.x1-B.x0),z=B.z0+Math.random()*(B.z1-B.z0);if((!(ROAM&&WB)||regIn(x,z))&&!inOb(x,z,.6)){a.tx=x;a.tz=z;break;}}if(a.tx==null)a.t=1;}else a.t=1.5+Math.random()*3.5;}
  let mv=0;if(a.tx!=null){const dx=a.tx-a.x,dz=a.tz-a.z,l=Math.hypot(dx,dz);if(l<.08){a.tx=null;a.fast=0;a.t=1.2+Math.random()*3;}else{/* S4 ข้อ 78: เดินเร็วขึ้น · เรียกมารวมวิ่ง 2.5× */const s=Math.min(l,(a.fast?a.sp*2.5:a.sp)*dt);a.x+=dx/l*s;a.z+=dz/l*s;let d=Math.atan2(dx,dz)-a.dir;d=Math.atan2(Math.sin(d),Math.cos(d));a.dir+=d*Math.min(1,dt*5);mv=1;}}
- for(const b of WALK){if(b===a)continue;const sx=a.x-b.x,sz=a.z-b.z,dd=Math.hypot(sx,sz),mn=(a.h+b.h)*.45;if(dd>0&&dd<mn){const p=(mn-dd)*.5;a.x+=sx/dd*p;a.z+=sz/dd*p;}}
- a.x=Math.min(a.bx.x1,Math.max(a.bx.x0,a.x));a.z=Math.min(a.bx.z1,Math.max(a.bx.z0,a.z));
+for(const b of WALK){if(b===a||b.ham)continue;const sx=a.x-b.x,sz=a.z-b.z,dd=Math.hypot(sx,sz),mn=(a.h+b.h)*.45;if(dd>0&&dd<mn){const p=(mn-dd)*.5;a.x+=sx/dd*p;a.z+=sz/dd*p;}}
+ if(ROAM&&WB){regPull(a);const o=inOb(a.x,a.z,.3);if(o){const dx=a.x-o[0],dz=a.z-o[1],l=Math.hypot(dx,dz)||1;a.x=o[0]+dx/l*(o[2]+.32);a.z=o[1]+dz/l*(o[2]+.32);if(a.tx!=null&&inOb(a.tx,a.tz,.3)){a.tx=null;a.t=.5;}}}else{a.x=Math.min(a.bx.x1,Math.max(a.bx.x0,a.x));a.z=Math.min(a.bx.z1,Math.max(a.bx.z0,a.z));}
  a.ph+=dt*(mv?7:1.4);a.w.position.set(a.x,mv?Math.abs(Math.sin(a.ph))*.015*a.h:0,a.z);a.w.rotation.y=a.dir;a.o.rotation.z=mv?Math.sin(a.ph)*.035:0;a.o.rotation.x=!mv&&Math.sin(a.ph*.5)>.7?.12:0;}}
 // ต้นไม้ล้อมโซน (ขอบเขตชัดเจน แต่งแน่นแบบ Hay Day)
 const TREEPAL=[[0x7cc85a,0x9ad86a,0x5fae48],[0xffa8c8,0xffc4da,0xf590b8],[0x7cc85a,0x8fd46a,0x6aba50],[0xffb347,0xffc96b,0xf59a3a],[0x8fd9a8,0xa8e6bc,0x74c792]];
@@ -156,22 +158,10 @@ function tallGrass(x0,x1,z0,z1,n){const geo=new THREE.ConeGeometry(.16,1,5);cons
 function patio(x,z,w,d,c){const m=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d),tm(c||0xe9dcc4));m.position.set(x,.06,z);m.receiveShadow=true;sc.add(m);const ln=tm(0xd8c7a8);for(let i=-w/2+1.5;i<w/2;i+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(.05,.13,d),ln);l.position.set(x+i,.065,z);sc.add(l);}for(let k=-d/2+1.5;k<d/2;k+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(w,.13,.05),ln);l.position.set(x,.065,z+k);sc.add(l);}}
 async function buildAlpaca(){
  // ทุ่งกว้าง: คอกใหญ่กลาง หญ้าสูง · โรงงานขน (ซ้ายล่าง) และโรงงานเนื้อ (ขวาล่าง) ใหญ่ชัด · กังหันลมหมุนมุมซ้ายบน · บ่อน้ำมุมขวาบน
- path([[0,28],[0,6]],2.6);path([[0,16],[-9,16]],2.2);path([[0,16],[9,16]],2.2);
- dirt(0,-9.5,42,26);dirt(-11,14,13,11,.4);dirt(11,14,13,11,-.4);stream([[-34,-30],[-27,-18],[-26,-4],[-29,8],[-26,18],[-30,32]]);WB={x0:-20,x1:20,z0:-21,z1:9};
- /* S4: อัลปาก้าสูงสุด 36 ตัว = 6 คอก (คอกละ 6 ตัว) เรียง 3 x 2 */
+ /* S4 ข้อ 33–39: คอก โรงงาน ทางเดิน พื้นดิน กังหันลม ต้นไม้ เป็นของตกแต่งทั้งหมด ย้าย/หมุน/เก็บได้ · อัลปาก้าเดินได้ทั้งทุ่ง */
+ path([[0,28],[0,22]],2.6);stream([[-34,-30],[-27,-18],[-26,-4],[-29,8],[-26,18],[-30,32]]);WB={x0:REG.cx-REG.rx,x1:REG.cx+REG.rx,z0:REG.cz-REG.rz,z1:REG.cz+REG.rz};
  const PENS=[[-12.5,-16],[0,-16],[12.5,-16],[-12.5,-4.5],[0,-4.5],[12.5,-4.5]];
- /* S4: คอก 3D 2 คอก = คอกซีซัน 3 หนึ่งคอก (ซีซัน 3 มี 3 คอก คอกละ 12 ตัว) · แตะคอก = หน้าต่างดูแลคอกนั้น */
- PENS.forEach(([x,z],k)=>{put('c2_pen_cow',x,z,11,8.6,0,0).then(o=>{TAPS.push([o,'pen',null,String(Math.floor(k/2))]);}).catch(()=>{});tallGrass(x-4.6,x+4.6,z-3.6,z+3.2,150);});
- put('c2_al_yarn_factory',-10,13,9,9,8.6,.3,'factory','🧶 โรงงานขน');
- put('c2_al_meat_shop',10,13,9,9,8.6,-.3,'factory2','🥩 โรงงานเนื้อ');
- /* S4 ข้อ 69: กันชนโรงงาน 2 หลัง + คอก (ตัวละคร/อัลปาก้าไม่ทะลุ) */OB.push([-10,13,4.6],[10,13,4.6]);PENS.forEach(([x,z])=>OB.push([x,z,0]));
- put('c2_al_spinning_wheel',-15,19,3.2,3.2,3.2,.6,'factory');
- put('d_hay_bale',-6.2,1.6,2.6,2.6,1.8,.3).catch(()=>{});put('d_hay_bale',6.2,1.6,2.6,2.6,1.8,-.3).catch(()=>{});
- put('d_wooden_barrels',15,19,3,3,2.8,.6).catch(()=>{});
- if(ADMINZ)windmill(23,-24,1.15);put('d_stone_well',23,-2,3.6,3.6,3.6,-.4).catch(()=>{});
- put('d_sunflowers',-20,4,3.2,3.2,3,0).catch(()=>{});put('d_sunflowers',20,6,3.2,3.2,3,0).catch(()=>{});
- put('d_flower_planter',-3.2,22,3,2.4,1.6,0).catch(()=>{});put('d_flower_planter',3.2,22,3,2.4,1.6,0).catch(()=>{});
- ring(0,-2,34,32,30,a=>Math.abs(a-Math.PI/2)<.2);
+ {const pts=[];for(let k=0;k<=64;k++){const a=k/64*Math.PI*2;pts.push([REG.cx+Math.cos(a)*REG.rx*1.03,REG.cz+Math.sin(a)*REG.rz*1.03]);}ribbon(pts,.4,.05,new THREE.MeshBasicMaterial({color:0xfff3d6,transparent:true,opacity:.55,depthWrite:false}),3);}
  let L=[];try{L=JSON.parse((0,P.eval)('JSON.stringify((S.pens||[]).map(q=>(q||[]).slice(0,12)))'))||[];}catch(e){}
  const CM={green:'c2_al_green',lavender:'c2_al_purple',blue:'c2_al_blue',yellow:'c2_al_yellow',cream:'c2_al_cream'};
  const AL=[];(L||[]).slice(0,3).forEach((q,p)=>(q||[]).forEach((a,j)=>{if(a)AL.push({n:a.gold?'c2_al_gold':CM[a.color]||'c2_al_cream',pen:p*2+(j<6?0:1),id:a.id,sp:String(p)});}));
@@ -187,7 +177,7 @@ async function buildAlpaca(){
  tip(demo?'🦙 อัลปาก้าตัวอย่าง':'🦙 แตะคอก = ดูแลอัลปาก้า · แตะโรงงาน = แปรรูป');}
 
 // ---- ♨️ บ่อน้ำพุร้อนแบบบ่อหินธรรมชาติ (ทรงรีขอบไม่เรียบ · หินแบนสีเทาล้อมสองชั้น · ก้อนหินใหญ่ด้านหลัง · ไอน้ำลอย · รั้วไม้ไผ่ด้านหลัง) ----
-let SPRING=null;function hotSpring(cx,cz,ry){const g=new THREE.Group();SPRING=g;g.position.set(cx,0,cz);g.rotation.y=ry||0;sc.add(g);
+let SPRING=null;const SPRINGS=[];function hotSpring(cx,cz,ry,noAdd){const g=new THREE.Group();SPRING=g;g.position.set(cx||0,0,cz||0);g.rotation.y=ry||0;if(!noAdd)sc.add(g);g.userData.spring=1;
  const RX=4.4,RZ=3.5,rr=a=>1+.07*Math.sin(3*a+.6)+.045*Math.sin(5*a+1.9)+.03*Math.sin(7*a);
  const sh=new THREE.Shape();const N=72;for(let k=0;k<=N;k++){const a=k/N*Math.PI*2,r=rr(a),x=Math.cos(a)*RX*r,y=Math.sin(a)*RZ*r;k?sh.lineTo(x,y):sh.moveTo(x,y);}
  const geo=new THREE.ShapeGeometry(sh,48);geo.rotateX(Math.PI/2);
@@ -208,47 +198,152 @@ let SPRING=null;function hotSpring(cx,cz,ry){const g=new THREE.Group();SPRING=g;
  for(let k=0;k<=26;k++){const a=-Math.PI*.98+k/26*Math.PI*.96,r=1.55,x=Math.cos(a)*RX*r,z=Math.sin(a)*RZ*r,h=1.5+((k*37)%5)*.07;const o=new THREE.Mesh(pg,k%3?bm:bm2);o.scale.y=h;o.position.set(x,h/2,z);o.castShadow=true;g.add(o);}
  for(const y of [.55,1.15]){const pts=[];for(let k=0;k<=24;k++){const a=-Math.PI*.98+k/24*Math.PI*.96;pts.push(new THREE.Vector3(Math.cos(a)*RX*1.55,y,Math.sin(a)*RZ*1.55));}const tb=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),48,.06,6,false),bm2);tb.castShadow=true;g.add(tb);}
  TAPS.push([water,'sit']);return g;}
+/* ===== S4 หลังบ้านใหม่ (ข้อ 16–18) =====
+   ของทุกชิ้นเป็นของตกแต่ง (S4DECO) ย้าย/หมุน/เก็บเข้ากระเป๋าได้ รวมถึงบ้าน พื้น ต้นไม้ บ่อน้ำพุร้อน คอก ของเล่น
+   แอดมิน: เริ่มจากการจัดวางเดิม · ผู้เล่นใหม่: บ้าน + เตาปิ้งย่าง + ต้นไม้ล้อม (ที่เหลืออยู่ในกระเป๋าชิ้นละ 1)
+   แฮมสเตอร์เดินได้ทั่วสนามหญ้า (พื้นที่สีแดงที่เธอวาด) ไม่ทะลุของ · ลงแช่บ่อน้ำพุร้อนได้ · มีท่าเดิน วิ่ง ดม นั่ง เกา กระโดด เล่นของเล่น */
+const HR={cx:-2,cz:3.5,rx:21.5,rz:18.5,x1:18,z0:-14.5};
+const hamIn=(x,z)=>x<HR.x1&&z>HR.z0&&((x-HR.cx)/HR.rx)**2+((z-HR.cz)/HR.rz)**2<1;
+function hamPull(x,z){if(hamIn(x,z))return [x,z];let dx=x-HR.cx,dz=z-HR.cz;const k=.96/Math.sqrt((dx/HR.rx)**2+(dz/HR.rz)**2);if(k<1){dx*=k;dz*=k;}return [Math.min(HR.x1-.4,HR.cx+dx),Math.max(HR.z0+.4,HR.cz+dz)];}
+function springAt(x,z,sh){for(const g of SPRINGS){if(g.parent!==sc)continue;const p=g.position,t=g.rotation.y,dx=x-p.x,dz=z-p.z,lx=dx*Math.cos(t)-dz*Math.sin(t),lz=dx*Math.sin(t)+dz*Math.cos(t);if((lx/(4.4*(sh||.8)))**2+(lz/(3.5*(sh||.8)))**2<1)return g;}return null;}
+function springSpot(g){const t=g.rotation.y;for(let k=0;k<12;k++){const a=Math.random()*6.283,r=Math.sqrt(Math.random())*.62,lx=Math.cos(a)*4.4*r,lz=Math.sin(a)*3.5*r;const x=g.position.x+lx*Math.cos(t)+lz*Math.sin(t),z=g.position.z-lx*Math.sin(t)+lz*Math.cos(t);if(!WALK.some(b=>b.ham&&Math.hypot(b.x-x,b.z-z)<1.1))return [x,z];}return [g.position.x,g.position.z];}
+const HAMSZ={house:[10,8,0],c2_pen_hedge:[17,12,0],c2_hm_wheel:[4.64,4.64,3.6],c2_hm_carousel:[4.96,4.96,3.9],c2_hm_house_strawberry:[4.8,4.8,3.75],c2_hm_seesaw:[2.56,2.56,2],c2_hm_tube_cross:[2.4,2.4,1.9],c2_hm_playground:[2.9,2.9,2.25],
+ d_barbecue_grill:[4.2,4.2,3.8],d_wooden_tea_table:[4,4,2.4],d_picnic_basket_food:[4,4,2.4],d_wicker_garden_furniture:[4.4,4.4,2.6],d_decorative_string_light:[12,2.4,4.2],d_flower_wheelbarrow:[3.4,2.4,2.4],d_birdhouse:[2.6,2.6,3.8],d_beehive_cluster:[3.4,2.4,2.8]};
+const TKN={green:'เขียว',sakura:'ซากุระ',maple:'เมเปิล',purple:'ม่วง',gold:'ทอง'};
+const HZN={z_house:'บ้าน',c2_pen_hedge:'คอกแฮมสเตอร์',c2_hm_wheel:'ล้อวิ่ง',c2_hm_carousel:'ม้าหมุนแฮมสเตอร์',c2_hm_house_strawberry:'บ้านสตรอว์เบอร์รี',c2_hm_seesaw:'กระดานหกจิ๋ว',c2_hm_tube_cross:'ท่อลอด',c2_hm_playground:'สนามเด็กเล่นจิ๋ว',
+ z_deck:'ระเบียงไม้',z_sand:'ลานทราย',z_tile:'พื้นกระเบื้องครีม',z_tile_pink:'พื้นกระเบื้องชมพู',z_hotspring:'บ่อน้ำพุร้อน'};for(const k in TKN)HZN['z_tree_'+k]='ต้นไม้'+TKN[k];
+const HZI={z_house:'🏠',z_deck:'🟫',z_sand:'🟨',z_tile:'⬜',z_tile_pink:'🟪',z_hotspring:'♨️',z_tree_green:'🌳',z_tree_sakura:'🌸',z_tree_maple:'🍁',z_tree_purple:'💜',z_tree_gold:'🌼'};
+const PAL={green:TREEPAL[0],sakura:TREEPAL[1],maple:TREEPAL[3],purple:TREEPAL[4],gold:TREEPAL[2]};
+function grp(){const g=new THREE.Group();return g;}
+function mkPatio(w,d,c){const g=grp();const m=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d),tm(c||0xe9dcc4));m.position.y=.06;m.receiveShadow=true;g.add(m);const ln=tm(0xd8c7a8);for(let i=-w/2+1.5;i<w/2;i+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(.05,.13,d),ln);l.position.set(i,.065,0);g.add(l);}for(let k=-d/2+1.5;k<d/2;k+=1.5){const l=new THREE.Mesh(new THREE.BoxGeometry(w,.13,.05),ln);l.position.set(0,.065,k);g.add(l);}return g;}
+function mkDirt(w,d){const g=grp();const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({map:DIRT,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.025;m.receiveShadow=true;m.renderOrder=1;g.add(m);return g;}
+async function mkTree(kind){const g=grp();g.userData.sw=Math.random()*6;await KITP;const s=1.3;if(KIT){try{const t=treeProto(kind==='gold'?'gold':kind,0).clone(true);const b=new THREE.Box3().setFromObject(t),h=b.max.y-b.min.y||1;t.scale.setScalar(5.6*s/h);g.add(t);t.traverse(m=>{if(m.isMesh)m.castShadow=true;});}catch(e){}}
+ if(!g.children.length){const pal=PAL[kind]||TREEPAL[0];const tr=new THREE.Mesh(TRG,TRK);tr.scale.set(s,1.9*s,s);tr.position.y=.95*s;g.add(tr);[[0,2.65,0,1.45],[.95,2.25,.35,1.05],[-.9,2.3,-.25,1.08],[0,3.45,.1,1]].forEach(([dx,dy,dz,r],i)=>{const b=new THREE.Mesh(BLOB,tm(pal[i%3]));b.position.set(dx*s,dy*s,dz*s);b.scale.setScalar(r*s);b.castShadow=true;g.add(b);});}
+ TREES.push(g);return g;}
+const HCUS={z_house:()=>model('house').then(s=>fit(s,10,8,0)),z_deck:async()=>mkPatio(16,3.2,0xc99a6a),z_sand:async()=>mkDirt(22,17),z_tile:async()=>mkPatio(9,8),z_tile_pink:async()=>mkPatio(9,8,0xf3e3e8),
+ z_hotspring:async()=>{const g=hotSpring(0,0,0,true);SPRINGS.push(g);return g;}};for(const k in TKN)HCUS['z_tree_'+k]=()=>mkTree(k);
+/* ของที่มีหน้าที่: เตา = ทำอาหาร · ชุดหวาย/บ่อน้ำพุ = นั่ง · คอก/ของเล่น = ดูแลแฮมสเตอร์ */
+/* ของทุกโซน (หมา แมว อัลปาก้า): รั้ว ทางเดิน ลาน คอก กังหัน — สร้างจากของเดิมแล้วเก็บเป็นกลุ่ม ย้ายได้ทั้งชิ้น */
+function capture(fn){const n0=sc.children.length;fn();const g=new THREE.Group();for(const c of sc.children.slice(n0)){sc.remove(c);g.add(c);}return g;}
+Object.assign(HZN,{z_picket:'รั้วไม้ขาว',z_path:'ทางเดินทราย',z_plaza:'ลานหินวงกลม',z_plaza_in:'วงกลมชมพู',z_field:'ลานดินใหญ่',z_windmill:'กังหันลม',z_alpen_a:'คอกอัลปาก้า 1',z_alpen_b:'คอกอัลปาก้า 2',z_alpen_c:'คอกอัลปาก้า 3',
+ c2_al_yarn_factory:'โรงงานขน',c2_al_meat_shop:'โรงงานเนื้อ',c2_al_spinning_wheel:'เครื่องปั่นด้าย'});
+Object.assign(HZI,{z_picket:'🤍',z_path:'🟧',z_plaza:'⚪',z_plaza_in:'🩷',z_field:'🟫',z_windmill:'🌬️'});
+Object.assign(HCUS,{z_picket:async()=>capture(()=>picket(-2,0,2,0)),z_path:async()=>capture(()=>path([[0,-4],[0,4]],2.6)),z_field:async()=>mkDirt(20,13),
+ z_plaza:async()=>{const g=grp();const pzT=soil.clone();pzT.needsUpdate=true;pzT.repeat.set(5,5);const pl=new THREE.Mesh(new THREE.CylinderGeometry(12,12,.12,48),new THREE.MeshLambertMaterial({map:pzT,color:0xfff1e4}));pl.position.y=.06;pl.receiveShadow=true;g.add(pl);const rim=new THREE.Mesh(new THREE.TorusGeometry(12,.28,8,64),tm(0xe8b9c8));rim.rotation.x=Math.PI/2;rim.position.y=.12;g.add(rim);return g;},
+ z_plaza_in:async()=>{const g=grp();const m=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.2,.14,40),tm(0xf9d6e2));m.position.y=.08;g.add(m);return g;},
+ z_windmill:async()=>capture(()=>windmill(0,0,1.6)),z_sand_s:async()=>mkDirt(10,8),z_patch:async()=>mkDirt(13,11),z_bigfield:async()=>mkDirt(42,26)});Object.assign(HZN,{z_sand_s:'ลานทรายเล็ก',z_patch:'ลานดินกลาง',z_bigfield:'ลานดินกว้าง'});Object.assign(HZI,{z_sand_s:'🟨',z_patch:'🟫',z_bigfield:'🟫'});
+for(const k of ['a','b','c'])HCUS['z_alpen_'+k]=()=>model('c2_pen_cow').then(s=>{const g=grp();g.add(fit(s,11,8.6,0));g.add(capture(()=>tallGrass(-4.6,4.6,-3.6,3.2,150)));return g;});
+const ZSZ={d_wooden_signpost:[2.4,2.4,3.4],d_water_lily_pond:[5,5,.9],d_flower_frame:[3.4,2.4,4.4],d_hay_bale:[2.6,2.6,1.8],d_wooden_barrels:[3,3,2.8],d_stone_well:[3.6,3.6,3.6],d_sunflowers:[3.2,3.2,3],d_flower_planter:[3,2.4,1.6],c2_al_yarn_factory:[9,9,8.6],c2_al_meat_shop:[9,9,8.6],c2_al_spinning_wheel:[3.2,3.2,3.2]};
+const HACT={d_barbecue_grill:'stove',d_wicker_garden_furniture:'sit',c2_pen_hedge:'pen',p_pet_feeding_station:'feed',c2_al_yarn_factory:'factory',c2_al_meat_shop:'factory2',c2_al_spinning_wheel:'factory'};
+function treeRing(cx,cz,rx,rz,n,skip){const out=[];const K=Object.keys(TKN);for(let i=0;i<n;i++){const a=i/n*Math.PI*2;if(skip&&skip(a))continue;const k=1+((i*37)%10)/100;out.push(['z_tree_'+K[(i*7)%K.length],+(cx+Math.cos(a)*rx*k).toFixed(2),+(cz+Math.sin(a)*rz*k).toFixed(2),0]);}return out;}
+const HTREES=treeRing(0,0,28,27,24,a=>Math.abs(a-Math.PI/2)<.2);
+const HSEED_ADMIN=[['z_house',0,-19,Math.PI],['z_deck',0,-12.2,0],['z_sand',0,-3,0],['c2_pen_hedge',0,-3,0],['c2_hm_wheel',-5.4,-6.6,0],['c2_hm_carousel',0,-7,0],['c2_hm_house_strawberry',5.4,-6.6,0],['c2_hm_seesaw',-5,1.2,0],['c2_hm_tube_cross',5,1,0],['c2_hm_playground',0,1.4,0],
+ ['z_tile',-9,13,0],['z_tile_pink',9,13,0],['d_barbecue_grill',-9.5,11,.3],['d_wooden_tea_table',-9,15.5,.3],['d_picnic_basket_food',9,12.5,-.3],['d_wicker_garden_furniture',9.5,16.5,-.3],['d_decorative_string_light',0,8,0],['d_flower_wheelbarrow',-12.5,21,.6],['z_hotspring',-17.5,1,Math.PI/2],['d_birdhouse',-15,-12,.3],['d_beehive_cluster',15,-12,-.3],...HTREES];
+const HSEED_PLAYER=[['z_house',0,-19,Math.PI],['d_barbecue_grill',-9.5,11,.3],...HTREES];
+/* ผู้เล่น: ของประจำหลังบ้านได้ฟรีชิ้นละ 1 (อยู่ในกระเป๋า) · ต้นไม้ = จำนวนที่มีตอนเริ่ม · พื้นวางได้ 10 */
+const HFREE={z_house:1,z_deck:1,z_sand:3,z_tile:10,z_tile_pink:10,z_hotspring:1,c2_pen_hedge:1,c2_hm_wheel:1,c2_hm_carousel:1,c2_hm_house_strawberry:1,c2_hm_seesaw:1,c2_hm_tube_cross:1,c2_hm_playground:1};
+for(const [n] of HTREES)HFREE[n]=(HFREE[n]||0)+1;
+/* ขอบสิ่งกีดขวางของแต่ละชิ้น (ให้แฮมสเตอร์/ตัวละครเดินอ้อม) */
+function hamOb(it,g){const n=it.n,r=it.r||0,c=Math.cos(r),sn=Math.sin(r),W=(lx,lz,rad)=>[it.x+lx*c+lz*sn,it.z-lx*sn+lz*c,rad];
+ if(/^z_(deck|sand|tile|path|plaza|field|patch|bigfield)/.test(n))return null;
+ if(n==='z_picket')return [W(-1.5,0,.3),W(-.5,0,.3),W(.5,0,.3),W(1.5,0,.3)];
+ if(/^z_alpen_/.test(n)){const o=[],hw=5.3,hd=4.1;for(let x=-hw;x<=hw+.01;x+=1.2){o.push(W(x,-hd,.4));if(Math.abs(x)>1.8)o.push(W(x,hd,.4));}for(let z=-hd;z<=hd+.01;z+=1.2){o.push(W(-hw,z,.4),W(hw,z,.4));}return o;}
+ if(/^z_tree_/.test(n))return [[it.x,it.z,.9]];
+ if(n==='z_hotspring'){const o=[];for(let k=0;k<=8;k++){const a=-Math.PI*.98+k/8*Math.PI*.96;o.push(W(Math.cos(a)*4.4*1.55,Math.sin(a)*3.5*1.55,.7));}return o;}
+ if(n==='d_decorative_string_light')return [W(-5.4,0,.6),W(5.4,0,.6)];
+ if(n==='c2_pen_hedge'){const o=[],hw=7.8,hd=5.5;for(let x=-hw;x<=hw+.01;x+=1.3){o.push(W(x,-hd,.45));if(Math.abs(x)>2.2)o.push(W(x,hd,.45));}for(let z=-hd;z<=hd+.01;z+=1.3){o.push(W(-hw,z,.45),W(hw,z,.45));}return o;}
+ return undefined;}
+function fenceSegs(x0,z0,x1,z1,gap){const L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.round(L/4)),r=Math.abs(x1-x0)>Math.abs(z1-z0)?0:Math.PI/2,o=[];for(let i=0;i<n;i++){const t=(i+.5)/n,x=+(x0+(x1-x0)*t).toFixed(2),z=+(z0+(z1-z0)*t).toFixed(2);if(gap&&Math.hypot(x-gap[0],z-gap[1])<gap[2])continue;o.push(['z_picket',x,z,r]);}return o;}
+let ZSEED=null;const ZSEEDF=()=>{if(ZSEED)return ZSEED;ZSEED={
+ dog:(()=>{const T=treeRing(0,-2,24,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a)<.12);const base=[['p_pet_feeding_station',0,-4.5,0],['d_wooden_signpost',17,-2.5,-.6],...T];
+  const F=[...fenceSegs(-13,-13,13,-13),...fenceSegs(-13,-13,-13,9),...fenceSegs(13,-13,13,9,[13,0,2]),...fenceSegs(-13,9,-2,9),...fenceSegs(2,9,13,9)];
+  return {admin:[...base,['z_sand_s',-8,0,.5],['z_sand_s',8,-1,-.3],['z_sand_s',0,4,0],...F,...(PZSEED.dog||[])],player:base,free:{z_picket:40,z_sand_s:3,z_sand:2,z_tile:10,z_tile_pink:10}};})(),
+ cat:(()=>{const T=treeRing(0,-1,23,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a-Math.PI)<.12);const base=[['p_pet_feeding_station',0,-4,0],['d_wooden_signpost',-17,-3.5,.6],...T];
+  return {admin:[['z_plaza',0,-1,0],['z_plaza_in',0,1,0],['d_water_lily_pond',0,1,0],['d_flower_frame',-12.5,6,.8],['d_flower_frame',12.5,6,-.8],...base,...(PZSEED.cat||[])],player:base,free:{z_plaza:1,z_plaza_in:1,z_picket:40,z_sand_s:3,z_tile:10,z_tile_pink:10}};})(),
+ alpaca:(()=>{const T=treeRing(0,-2,34,32,30,a=>Math.abs(a-Math.PI/2)<.2);const PN=[[-12.5,-16],[0,-16],[12.5,-16],[-12.5,-4.5],[0,-4.5],[12.5,-4.5]];
+  const pens=PN.map(([x,z],k)=>['z_alpen_'+'abc'[Math.floor(k/2)],x,z,0]);
+  const ground=[['z_bigfield',0,-9.5,0],['z_patch',-11,14,.4],['z_patch',11,14,-.4],['z_path',0,10,0],['z_path',0,18,0],['z_path',-5,16,Math.PI/2],['z_path',5,16,Math.PI/2]];
+  const base=[...pens,['c2_al_yarn_factory',-10,13,.3],['c2_al_meat_shop',10,13,-.3],...ground,...T];
+  return {admin:[...base,['c2_al_spinning_wheel',-15,19,.6],['d_hay_bale',-6.2,1.6,.3],['d_hay_bale',6.2,1.6,-.3],['d_wooden_barrels',15,19,.6],['z_windmill',23,-24,0],['d_stone_well',23,-2,-.4],['d_sunflowers',-20,4,0],['d_sunflowers',20,6,0],['d_flower_planter',-3.2,22,0],['d_flower_planter',3.2,22,0]],
+   player:base,free:{c2_al_spinning_wheel:1,z_windmill:0,z_path:8,z_patch:2,z_bigfield:1,z_picket:40,z_tile:10,z_tile_pink:10}};})()};
+ZSEED.hamster={admin:HSEED_ADMIN,player:HSEED_PLAYER,free:HFREE};
+for(const z of ['dog','cat','alpaca']){const f=ZSEED[z].free;for(const [n] of ZSEED[z].player)f[n]=(f[n]||0)+(/^(z_|c2_)/.test(n)?1:0);}return ZSEED;};
+/* พื้นที่เดินของสัตว์ (สนามหญ้าทั้งหมดในวงต้นไม้) */
+const REG={dog:{cx:0,cz:-2,rx:20.5,rz:18.5},cat:{cx:0,cz:-1,rx:19.5,rz:18.5},alpaca:{cx:0,cz:-2,rx:30,rz:27},hamster:{cx:HR.cx,cz:HR.cz,rx:HR.rx,rz:HR.rz}}[Z]||{cx:0,cz:0,rx:20,rz:18};
+const regIn=(x,z)=>((x-REG.cx)/REG.rx)**2+((z-REG.cz)/REG.rz)**2<1;
+function regPull(a){if(regIn(a.x,a.z))return false;const dx=a.x-REG.cx,dz=a.z-REG.cz,k=.97/Math.sqrt((dx/REG.rx)**2+(dz/REG.rz)**2);a.x=REG.cx+dx*k;a.z=REG.cz+dz*k;return true;}
+function buildHamsterBase(){
+ stream([[28,-24],[21,-12],[22,0],[19,10],[23,22],[20,32]],2.6);WB={x0:-14,x1:14,z0:-9,z1:7};
+ path([[0,28],[0,21]],2.4);
+ /* เส้นขอบเขตหลังบ้าน (นุ่มๆ สีครีม) */
+ {const pts=[];for(let k=0;k<=64;k++){const a=k/64*Math.PI*2;let x=HR.cx+Math.cos(a)*HR.rx*1.02,z=HR.cz+Math.sin(a)*HR.rz*1.02;x=Math.min(x,HR.x1+.6);z=Math.max(z,HR.z0-.6);pts.push([x,z]);}
+  const m=new THREE.MeshBasicMaterial({color:0xfff3d6,transparent:true,opacity:.55,depthWrite:false});ribbon(pts,.35,.05,m,3);}}
 async function buildHamster(){
- // หลังบ้าน: ระเบียงไม้หลังบ้าน · สนามเด็กเล่นแฮมสเตอร์ตรงกลาง (สูงสุด 12 ตัว) · ลานหินครัวกลางแจ้ง (ซ้าย) · ผ้าปิกนิก (ขวา) · สวนผักกระบะ (ล่าง)
- put('house',0,-19,10,8,0,Math.PI).catch(()=>{});
- patio(0,-12.2,16,3.2,0xc99a6a);
- dirt(0,-3,22,17);stream([[28,-24],[21,-12],[22,0],[19,10],[23,22],[20,32]],2.6);WB={x0:-14,x1:14,z0:-9,z1:7};
- await put('c2_pen_hedge',0,-3,17,12,0,0,'pen');
- const props=[['c2_hm_wheel',-5.4,-6.6,2.9],['c2_hm_carousel',0,-7,3.1],['c2_hm_house_strawberry',5.4,-6.6,3],['c2_hm_seesaw',-5,1.2,1.6],['c2_hm_tube_cross',5,1,1.5],['c2_hm_playground',0,1.4,1.8]];
- if(ADMINZ)for(const [n,x,z,h] of props)put(n,x,z,h*1.6,h*1.6,h*1.25,0,'pen').catch(()=>{});
- patio(-9,13,9,8);patio(9,13,9,8,0xf3e3e8);
- put('d_barbecue_grill',-9.5,11,4.2,4.2,3.8,.3,'stove').catch(()=>{});
- put('d_wooden_tea_table',-9,15.5,4,4,2.4,.3).catch(()=>{});
- put('d_picnic_basket_food',9,12.5,4,4,2.4,-.3).catch(()=>{});
- put('d_wicker_garden_furniture',9.5,16.5,4.4,4.4,2.6,-.3,'sit').catch(()=>{});
- put('d_decorative_string_light',0,8,12,2.4,4.2,0).catch(()=>{});
- put('d_flower_wheelbarrow',-12.5,21,3.4,2.4,2.4,.6).catch(()=>{});
- if(ADMINZ)try{hotSpring(-17.5,1,Math.PI/2);}catch(e){console.log('spring',e&&e.message);}
- put('d_birdhouse',-15,-12,2.6,2.6,3.8,.3).catch(()=>{});put('d_beehive_cluster',15,-12,3.4,2.4,2.8,-.3).catch(()=>{});
- path([[0,28],[0,9]],2.4);
- ring(0,0,28,27,24,a=>Math.abs(a-Math.PI/2)<.2);
+ buildHamsterBase();
  const HM={gardener:'c2_hm_farmer',baker:'c2_hm_chef',explorer:'c2_hm_explorer',scholar:'c2_hm_doctor',wizard:'c2_hm_wizard',sailor:'c2_hm_sailor'};
  let L=[];try{L=JSON.parse((0,P.eval)('JSON.stringify((S.ham&&S.ham.list)||[])'))||[];}catch(e){}
- let names=L.slice(0,8).map(h=>HM[h&&h.type]||'c2_hm_farmer');const demo=false;/* S4: ไม่มีแฮมสเตอร์ตัวอย่าง */
- const bx={x0:-6.4,x1:6.4,z0:-4.2,z1:3};
- /* ♨️ แฮมสเตอร์ 3 ตัวแรกลงไปแช่บ่อน้ำพุร้อน (จมถึงไหล่ ผ้าขนหนูบนหัว) ที่เหลือเล่นในคอก */
- const bathers=names.slice(0,Math.min(3,Math.max(0,names.length-1))),rest=names.slice(bathers.length);
- if(SPRING)bathers.forEach((n,i)=>{const [lx,lz,ry]=[[-1.8,-.5,.6],[1.7,-.2,-.7],[.1,1.5,.1]][i];model(n).then(src=>{const o=fit(src,0,0,1.8);const b=new THREE.Box3().setFromObject(o);const sink=(b.max.y-b.min.y)*.3;
-   const hold=new THREE.Group();hold.add(o);o.position.y=-b.min.y-sink;hold.position.set(lx,0,lz);hold.rotation.y=ry;SPRING.add(hold);
-   const rp=new THREE.Mesh(new THREE.RingGeometry(.55,.75,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.35,depthWrite:false}));rp.rotation.x=-Math.PI/2;rp.position.y=.2;hold.add(rp);
-   const ph=i*2.1;ANIMW.push(t=>{hold.position.y=Math.sin(t*1.4+ph)*.05;rp.scale.setScalar(1+((t*.6+ph)%1)*.5);rp.material.opacity=.35*(1-((t*.6+ph)%1));});
-   TAPS.push([hold,'sit']);}).catch(()=>{});});
- for(const n of rest)animal(n,bx,1.7,1.3).then(a=>{a.ham=1;TAPS.push([a.w,'pen']);});
- /* S4 ข้อ 30/168: แฮมสเตอร์ sync รายชื่อจริงทุก 2 วิ (วางใหม่โผล่ · เอาออกหาย) */
- setInterval(()=>{try{const L2=JSON.parse((0,P.eval)('JSON.stringify((S.ham&&S.ham.list)||[])'))||[];const want=L2.slice(0,8).length;const have=WALK.filter(a=>a.ham).length;
-  if(want>have&&!window.__hamPend){window.__hamPend=1;const h=L2[want-1];animal(HM[h&&h.type]||'c2_hm_farmer',bx,1.7,1.3).then(a=>{a.ham=1;TAPS.push([a.w,'pen']);window.__hamPend=0;S4LOOP&&S4LOOP.wake('ham');}).catch(()=>{window.__hamPend=0;});}
+ const names=L.slice(0,12).map(h=>HM[h&&h.type]||'c2_hm_farmer');
+ const bx={x0:HR.cx-HR.rx,x1:HR.x1,z0:HR.z0,z1:HR.cz+HR.rz};
+ const mk=n=>animal(n,bx,1.5,1.3).then(a=>{a.ham=1;a.s0=1;const [x,z]=hamSpot();a.x=x;a.z=z;a.t=Math.random()*2;a.act='idle';a.ph=Math.random()*9;TAPS.push([a.w,'pen']);return a;});
+ for(const n of names)mk(n).catch(()=>{});
+ /* S4 ข้อ 30/168: sync รายชื่อจริงทุก 2 วิ */
+ setInterval(()=>{try{const L2=JSON.parse((0,P.eval)('JSON.stringify((S.ham&&S.ham.list)||[])'))||[];const want=L2.slice(0,12).length;const have=WALK.filter(a=>a.ham).length;
+  if(want>have&&!window.__hamPend){window.__hamPend=1;const h=L2[want-1];mk(HM[h&&h.type]||'c2_hm_farmer').then(()=>{window.__hamPend=0;S4LOOP&&S4LOOP.wake('ham');}).catch(()=>{window.__hamPend=0;});}
   else if(want<have){const a=WALK.filter(a=>a.ham).pop();sc.remove(a.w);WALK.splice(WALK.indexOf(a),1);for(let k=TAPS.length-1;k>=0;k--)if(TAPS[k][0]===a.w)TAPS.splice(k,1);}}catch(e){}},2000);
  VIEW={x:0,z:2,dist:52,min:9,max:70};HOME=[0,22];
- tip(demo?'🐹 แฮมสเตอร์ตัวอย่าง':'🐹 แตะคอก = ให้อาหาร · แตะเตา = ทำอาหารในสวน');}
+ tip('🐹 แตะแฮมสเตอร์ = ดูแล · 🔔 เรียกมารวม แตะบ่อน้ำพุ = ไปแช่น้ำ · 🎨 ย้ายของได้ทุกชิ้น');}
+function hamSpot(){for(let k=0;k<40;k++){const x=HR.cx+(Math.random()*2-1)*HR.rx,z=HR.cz+(Math.random()*2-1)*HR.rz;if(hamIn(x,z)&&!inOb(x,z,.5))return [x,z];}return [0,14];}
+function hamFree(x,z,pad){return (hamIn(x,z)||springAt(x,z,.95))&&!inOb(x,z,pad);}
+function hamPick(a){const r=Math.random();let L=[];try{L=window.__s4dz?__s4dz.list():[];}catch(e){}a.goal='';a.zoom=Math.random()<.18;
+ if(SPRINGS.some(g=>g.parent===sc)&&r<.16){const g=SPRINGS.find(g=>g.parent===sc);[a.tx,a.tz]=springSpot(g);a.goal='bath';return;}
+ const toys=L.filter(it=>/^(c2_hm_(?!pen)|d_|p_)/.test(it.n)&&it.n!=='d_decorative_string_light');
+ if(toys.length&&r<.45){const it=toys[Math.floor(Math.random()*toys.length)];const ob=inOb(it.x,it.z,0);const rr=(ob?ob[2]:1.2)+.6;for(let k=0;k<8;k++){const an=Math.random()*6.283,x=it.x+Math.cos(an)*rr,z=it.z+Math.sin(an)*rr;if(hamFree(x,z,.3)){a.tx=x;a.tz=z;a.goal='play';a.toy=[it.x,it.z];return;}}}
+ const hs=WALK.filter(b=>b.ham&&b!==a);if(hs.length&&r<.56){const b=hs[Math.floor(Math.random()*hs.length)];const x=b.x+(Math.random()-.5)*2.6,z=b.z+(Math.random()-.5)*2.6;if(hamFree(x,z,.4)){a.tx=x;a.tz=z;a.goal='social';return;}}
+ for(let k=0;k<18;k++){const an=Math.random()*6.283,d=3+Math.random()*11,x=a.x+Math.cos(an)*d,z=a.z+Math.sin(an)*d;if(hamIn(x,z)&&!inOb(x,z,.45)){a.tx=x;a.tz=z;return;}}
+ const [x,z]=hamSpot();a.tx=x;a.tz=z;}
+function hamDo(a,act,t){a.act=act;a.t=t;a.at=0;}
+function hamArrive(a){a.tx=null;a.fast=0;a.zoom=0;const sp=springAt(a.x,a.z,.85);
+ if(sp){hamDo(a,'bath',a.gsit?16:9+Math.random()*12);a.gsit=0;return;}
+ if(a.gsit){a.gsit=0;hamDo(a,'sit',6+Math.random()*5);return;}
+ if(a.goal==='play'&&a.toy){a.dir=Math.atan2(a.toy[0]-a.x,a.toy[1]-a.z);hamDo(a,'play',2.6+Math.random()*2.6);a.goal='';return;}
+ const o=['sniff','sniff','sit','groom','look','hop','eat','idle'];hamDo(a,o[Math.floor(Math.random()*o.length)],1.4+Math.random()*3);}
+function stepHams(dt){for(const a of WALK){if(!a.ham||a.held)continue;a.at=(a.at||0)+dt;a.ph+=dt;
+  if(a.tx!=null&&(a.tx!==a.vtx||a.tz!==a.vtz)){/* ตรวจเป้าใหม่ (รวมจากปุ่มเรียกมารวม) */if(!springAt(a.tx,a.tz,.9)){[a.tx,a.tz]=hamPull(a.tx,a.tz);const o=inOb(a.tx,a.tz,.35);if(o){const dx=a.tx-o[0],dz=a.tz-o[1],l=Math.hypot(dx,dz)||1;a.tx=o[0]+dx/l*(o[2]+.6);a.tz=o[1]+dz/l*(o[2]+.6);}}a.vtx=a.tx;a.vtz=a.tz;a.blk=0;}
+  if(a.tx==null){a.t-=dt;if(a.t<=0){if(a.act==='bath'&&Math.random()<.35){a.t=5+Math.random()*6;}else hamPick(a);}}
+  let mv=0;if(a.tx!=null){const dx=a.tx-a.x,dz=a.tz-a.z,l=Math.hypot(dx,dz);
+   if(l<.15)hamArrive(a);
+   else{const wet=!!springAt(a.x,a.z,.85),run=a.fast||a.zoom,sp=(run?3.8:1.55)*(wet?.55:1),s=Math.min(l,sp*dt);const ux=dx/l,uz=dz/l;let nx=a.x+ux*s,nz=a.z+uz*s;const o=inOb(nx,nz,.32);
+    if(o){const rx=a.x-o[0],rz=a.z-o[1],rl=Math.hypot(rx,rz)||1;let tx=-rz/rl,tz=rx/rl;if(tx*ux+tz*uz<0){tx=-tx;tz=-tz;}nx=a.x+tx*s;nz=a.z+tz*s;a.blk=(a.blk||0)+dt;const o2=inOb(nx,nz,.32);if(o2){const ex=nx-o2[0],ez=nz-o2[1],el=Math.hypot(ex,ez)||1;nx=o2[0]+ex/el*(o2[2]+.33);nz=o2[1]+ez/el*(o2[2]+.33);}}
+    else a.blk=Math.max(0,(a.blk||0)-dt*.5);
+    if(hamIn(nx,nz)||springAt(nx,nz,1)){const mx=nx-a.x,mz=nz-a.z;if(mx*mx+mz*mz>1e-6){let d=Math.atan2(mx,mz)-a.dir;d=Math.atan2(Math.sin(d),Math.cos(d));a.dir+=d*Math.min(1,dt*8);}a.x=nx;a.z=nz;mv=1;}else a.blk=(a.blk||0)+dt;
+    if(a.blk>1.8){a.blk=0;a.tx=null;hamDo(a,'look',1+Math.random());}
+    a.act=wet?'swim':run?'run':'walk';}}
+  for(const b of WALK){if(b===a||!b.ham)continue;const sx=a.x-b.x,sz=a.z-b.z,dd=Math.hypot(sx,sz),mn=1.05;if(dd>0&&dd<mn){const p=(mn-dd)*.5;a.x+=sx/dd*p;a.z+=sz/dd*p;}}
+  {const o=inOb(a.x,a.z,.2);if(o){const dx=a.x-o[0],dz=a.z-o[1],l=Math.hypot(dx,dz)||1;a.x=o[0]+dx/l*(o[2]+.22);a.z=o[1]+dz/l*(o[2]+.22);}}
+  hamPose(a,dt);}}
+function hamPose(a,dt){const o=a.o,h=a.h,t=a.ph,k=a.at;let y=0,rx=0,rz=0,sx=1,sy=1,look=0;const wet=a.act==='bath'||a.act==='swim';
+ switch(a.act){case 'walk':y=Math.abs(Math.sin(t*10))*.07*h;rz=Math.sin(t*10)*.09;rx=.07;break;
+  case 'run':y=Math.abs(Math.sin(t*16))*.13*h;rz=Math.sin(t*16)*.05;rx=.15;sy=1+Math.sin(t*32)*.05;sx=1-Math.sin(t*32)*.03;break;
+  case 'sniff':rx=.2+Math.sin(t*24)*.05;sy=1+Math.sin(t*24)*.015;look=Math.sin(t*2.3)*.4;break;
+  case 'sit':sy=.9+Math.sin(t*2.2)*.014;sx=1.07;rx=-.1;look=Math.sin(t*.8)*.25;break;
+  case 'groom':rz=Math.sin(t*13)*.13;rx=-.12;sy=.94;break;
+  case 'look':look=Math.sin(k*1.7)*.75;sy=1+Math.sin(t*2.6)*.012;break;
+  case 'hop':{const q=(k%.75)/.75;y=Math.sin(Math.PI*q)*.3*h;sy=q<.12||q>.88?.86:1.07;sx=q<.12||q>.88?1.08:.97;}break;
+  case 'eat':rx=.28;sy=1+Math.sin(t*18)*.025;break;
+  case 'play':y=Math.abs(Math.sin(k*6.5))*.16*h;look=Math.sin(k*3.2)*.7;rz=Math.sin(k*6.5)*.13;break;
+  case 'bath':y=Math.sin(t*1.5)*.04;look=Math.sin(t*.6)*.45;rz=Math.sin(t*1.1)*.05;break;
+  case 'swim':y=Math.sin(t*6)*.04;rz=Math.sin(t*6)*.07;break;
+  default:sy=1+Math.sin(t*2.4)*.014;}
+ a.sk=(a.sk||0)+(((wet?-.42*h:0))-(a.sk||0))*Math.min(1,dt*3);
+ a.w.position.set(a.x,y+a.sk,a.z);a.w.rotation.y=a.dir+look;o.rotation.set(rx,0,rz);o.scale.set(sx,sy,sx);
+ if(wet&&!a.rp){a.rp=new THREE.Mesh(new THREE.RingGeometry(.5,.72,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.35,depthWrite:false}));a.rp.rotation.x=-Math.PI/2;sc.add(a.rp);}
+ if(a.rp){a.rp.visible=wet;if(wet){a.rp.position.set(a.x,.21,a.z);const q=(t*.6)%1;a.rp.scale.setScalar(1+q*.6);a.rp.material.opacity=.38*(1-q);}}}
 // ---- Pet Care: สวนหมา / สวนแมว (ของตกแต่งชุดสัตว์เลี้ยง 3D + น้องหมาน้องแมวจากซีซัน 3 เดินเล่น) ----
-async function pz(k,x,z,w,d,h,ry=0,act=null,label=null){if(!ADMINZ&&!act)return new THREE.Group();const s=await model('c2_petzone');const o=fit(s.children[k],w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
+async function pz(k,x,z,w,d,h,ry=0,act=null,label=null){if(!ADMINZ&&(!act||(act==='feed'&&!OWN('pz_feed'))))return new THREE.Group();const s=await model('c2_petzone');const o=fit(s.children[k],w,d,h);o.position.set(x,0,z);o.rotation.y=ry;sc.add(o);if(act)TAPS.push([o,act,label]);return o;}
 const SPR=[];const TEXC={};window.__SPRn=()=>SPR.length;
-function sheetTex(kind,type,act){const k=kind+type+act;if(!TEXC[k]){const t=tl.load('../images/'+kind+'-'+type+'-'+act+'-4x4.webp',tx=>{tx.userData.ok=1;});t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(.25,.25);TEXC[k]=t;}return TEXC[k];}
+function sheetTex(kind,type,act){const k=kind+type+act;if(!TEXC[k]){const u='../images/'+kind+'-'+type+'-'+act+'-4x4.webp';
+  /* S4 ข้อ 32: แมวสีเข้ม/สดขึ้น (กรองสีภาพก่อนใช้) */if(kind==='cat'){const t=new THREE.Texture();t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(.25,.25);const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.filter='saturate(1.7) contrast(1.15) brightness(.9)';x.drawImage(im,0,0);t.image=c;t.userData.ok=1;t.needsUpdate=true;for(const a of SPR)if(a.kind==='cat'){a.sized=0;if(a.mat.map)a.mat.map.needsUpdate=true;}};im.src=u;TEXC[k]=t;}
+  else{const t=tl.load(u,tx=>{tx.userData.ok=1;});t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(.25,.25);TEXC[k]=t;}}return TEXC[k];}
 function sprite(kind,type,x,z,H,bx,id){/* S4 ข้อ 66: สีสัตว์ไม่ซีด — ไม่ผ่าน tone mapping/หมอก */const mat=new THREE.SpriteMaterial({map:null,alphaTest:.5,transparent:false,toneMapped:false,fog:false});const sp=new THREE.Sprite(mat);sp.center.set(.5,.04);const w=new THREE.Group();w.add(sp);
  const sh=new THREE.Mesh(new THREE.CircleGeometry(H*.32,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.18,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.02;w.add(sh);w.position.set(x,0,z);sc.add(w);
  const a={kind,type,w,sp,mat,x,z,H,bx,act:'',fr:0,ft:0,t:Math.random()*2,tx:null,flip:false,id};SPR.push(a);setA(a,'idle');TAPS.push([w,'pet',null,id]);return a;}
@@ -257,13 +352,13 @@ function setA(a,act){if(a.act===act)return;a.act=act;const t=sheetTex(a.kind,a.t
 /* S4 หมา/แมว: (1) เดินหันหน้าถูกทาง (ภาพเดินข้างหันขวาเป็นค่าเริ่ม → เดินไปซ้ายค่อยกลับด้าน เหมือนซีซัน 3)
    (2) ไม่เดินทะลุรั้ว/ของในสวน (3) ทุกท่าทางมาจากระบบซีซัน 3 จริง: โยนบอล วิ่งไปคาบ · พาเดินขุด · กินข้าว · อาบน้ำ/นวด · ลังแมว · ของตกพื้น */
 const OB=[];function inOb(x,z,pad){for(const o of OB){if(Math.hypot(x-o[0],z-o[1])<o[2]+(pad||0))return o;}return null;}
-function inPetArea(x,z){if(Z==='cat'){return Math.hypot(x,z+1)<10.6;}const B=WB||{x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};return x>B.x0&&x<B.x1&&z>B.z0&&z<B.z1;}
+function inPetArea(x,z){return regIn(x,z);}
 function pickSpot(a){const B=ROAM&&WB?WB:a.bx;for(let k=0;k<14;k++){const x=B.x0+Math.random()*(B.x1-B.x0),z=B.z0+Math.random()*(B.z1-B.z0);if(inPetArea(x,z)&&!inOb(x,z,.4))return [x,z];}return [a.x,a.z];}
 function pushOut(a){const o=inOb(a.x,a.z,.25);if(!o)return false;const dx=a.x-o[0],dz=a.z-o[1],l=Math.hypot(dx,dz)||1,r=o[2]+.26;a.x=o[0]+dx/l*r;a.z=o[1]+dz/l*r;return true;}
-function clampArea(a){if(Z==='cat'){const dx=a.x,dz=a.z+1,l=Math.hypot(dx,dz);if(l>10.6){a.x=dx/l*10.6;a.z=dz/l*10.6-1;return true;}return false;}const B=WB||{x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};const x=Math.max(B.x0,Math.min(B.x1,a.x)),z=Math.max(B.z0,Math.min(B.z1,a.z));const c=x!==a.x||z!==a.z;a.x=x;a.z=z;return c;}
+function clampArea(a){return regPull(a);}
 /* ข้อมูลสดจากหน้าเดิม (ซีซัน 3) ทุก 0.12 วิ: ตำแหน่ง/ท่าของแต่ละตัว ลูกบอล หลุมขุด ลังแมว ของตกพื้น */
 let MIR=null,MIRT=-1e9;var GATHER=false;const MIRA=new Map();
-const PET2=(nx,ny)=>Z==='cat'?[-9.5+((nx*941-70)/810)*19,-10+((ny*1672-430)/960)*18.5]:[-11.5+((nx*941-60)/820)*23,-11.5+((ny*1672-560)/860)*19.3];
+/* S4 ข้อ 30: ตำแหน่งจากหน้าเดิม ขยายให้เต็มสนามหญ้า (ไม่ใช่แค่วงกลมเล็ก) */const PET2=(nx,ny)=>Z==='cat'?[REG.cx-REG.rx*.86+((nx*941-70)/810)*REG.rx*1.72,REG.cz-REG.rz*.86+((ny*1672-430)/960)*REG.rz*1.72]:[REG.cx-REG.rx*.86+((nx*941-60)/820)*REG.rx*1.72,REG.cz-REG.rz*.86+((ny*1672-560)/860)*REG.rz*1.72];
 const HAS={dog:['idle','sit','bark','dig','fetch','sleep','walk-side','walk-front','walk-back'],cat:['idle','sit','sleep','walk-side','walk-front','walk-back']};
 function stepSprites(dt){const live=performance.now()-MIRT<1500;
  for(const a of SPR){a.ft+=dt;if(a.ft>.09){a.ft=0;a.fr=(a.fr+1)%16;const t=a.mat.map;if(t){const c=a.fr%4,r=Math.floor(a.fr/4);if(a.flip){t.repeat.x=-.25;t.offset.x=(c+1)/4;}else{t.repeat.x=.25;t.offset.x=c/4;}t.offset.y=1-(r+1)/4;
@@ -301,29 +396,12 @@ addEventListener('message',e=>{const d=e.data||{};
  if(d.s4fx&&(Z==='dog'||Z==='cat')){const [nx,ny,t]=d.s4fx;const [x,z]=PET2(nx,ny);try{fx(x,1.4,z,[t]);}catch(_){}}});
 function picket(x0,z0,x1,z1,gap){const m=tm(0xfffaf0),r=tm(0xf1d9c4);const L=Math.hypot(x1-x0,z1-z0),n=Math.round(L/.7),a=Math.atan2(x1-x0,z1-z0);for(let k=0;k<=n;k++){const t=k/n,x=x0+(x1-x0)*t,z=z0+(z1-z0)*t;if(gap&&Math.hypot(x-gap[0],z-gap[1])<gap[2])continue;const p=new THREE.Mesh(new THREE.BoxGeometry(.22,1.1,.12),m);p.position.set(x,.55,z);p.rotation.y=a;p.castShadow=true;sc.add(p);const c=new THREE.Mesh(new THREE.ConeGeometry(.16,.24,4),m);c.position.set(x,1.2,z);c.rotation.y=a+Math.PI/4;sc.add(c);}
  for(const y of [.35,.8]){const b=new THREE.Mesh(new THREE.BoxGeometry(.08,.1,L),r);b.position.set((x0+x1)/2,y,(z0+z1)/2);b.rotation.y=a;sc.add(b);}}
-async function buildPets(kind){const pzB=(k,x,z,w,d,h,ry,a,l)=>{if(h>1)OB.push([x,z,Math.max(w,d)*1.2*.5+.15]);return pz(k,x,z,w*1.2,d*1.2,h*1.25,ry,a,l);};
- if(kind==='dog'){
-  // สวนหมา: สนามหญ้าสี่เหลี่ยมรั้วขาว · บ้านหมาใหญ่กลางบน · ลานวิ่งเล่นซ้าย · สระน้ำขวา · ประตูไปสวนแมว
-  dirt(-8,0,11,9,.5);dirt(8,-1,10,8,-.3);dirt(0,4,9,7);stream([[-30,-20],[-21,-12],[-20,0],[-23,10],[-20,20],[-26,30]],2.8);WB={x0:-11.5,x1:11.5,z0:-11.5,z1:7.8};
-  picket(-13,-13,13,-13);picket(-13,-13,-13,9);picket(13,-13,13,9,[13,0,1.6]);picket(-13,9,-2,9);picket(2,9,13,9);
-  path([[0,28],[0,9]],2.6);path([[13,0],[22,0]],2.2);
-  /* S4 ข้อ 33: เฟอร์นิเจอร์สัตว์เลี้ยง (บ้าน โซฟา น้ำพุ บ่อบอล สไลเดอร์ ...) เป็นของตกแต่งในถุง (S4DECO seed) ย้าย/เก็บได้ทุกชิ้น · เหลือชามอาหารเป็นของประจำโซน */
-  pzB(5,0,-4.5,3.6,1.8,1.3,0,'feed');
-  put('d_wooden_signpost',17,-2.5,2.4,2.4,3.4,-.6,'gocat','🐱 ไปสวนแมว').catch(()=>{});
-  ring(0,-2,24,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a)<.12);
- }else{
-  // สวนแมว: ลานหินวงกลมสีครีม · คอนโดแมวสูงกลางบน · ซุ้มดอกไม้ · บ่อปลาเล็ก · ประตูไปสวนหมา
-  const pzT=soil.clone();pzT.needsUpdate=true;pzT.repeat.set(5,5);const plaza=new THREE.Mesh(new THREE.CylinderGeometry(12,12,.12,48),new THREE.MeshLambertMaterial({map:pzT,color:0xfff1e4}));plaza.position.set(0,.06,-1);plaza.receiveShadow=true;sc.add(plaza);
-  const rim=new THREE.Mesh(new THREE.TorusGeometry(12,.28,8,64),tm(0xe8b9c8));rim.rotation.x=Math.PI/2;rim.position.set(0,.12,-1);sc.add(rim);
-  const inner=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.2,.14,40),tm(0xf9d6e2));inner.position.set(0,.08,1);sc.add(inner);
-  stream([[30,-20],[21,-12],[20,0],[23,10],[20,20],[26,30]],2.8);WB={x0:-10.5,x1:10.5,z0:-11,z1:9};
-  path([[0,28],[0,11]],2.6);path([[-12,-1],[-22,-1]],2.2);
-  pzB(5,0,-4,3.6,1.8,1.3,0,'feed');
-  put('d_water_lily_pond',0,1,5,5,.9,0).catch(()=>{});
-  put('d_flower_frame',-12.5,6,3.4,2.4,4.4,.8).catch(()=>{});put('d_flower_frame',12.5,6,3.4,2.4,4.4,-.8).catch(()=>{});
-  put('d_wooden_signpost',-17,-3.5,2.4,2.4,3.4,.6,'godog','🐶 ไปสวนหมา').catch(()=>{});
-  ring(0,-1,23,22,22,a=>Math.abs(a-Math.PI/2)<.2||Math.abs(a-Math.PI)<.12);
- }
+async function buildPets(kind){
+ /* S4 ข้อ 25–31: ของทุกชิ้นในสวน (ชามอาหาร รั้ว พื้น ต้นไม้ ป้าย ลานหิน บ่อ ซุ้ม) เป็นของตกแต่ง ย้าย/หมุน/เก็บได้ (S4DECO) · เหลือแค่ลำธารกับทางเข้า */
+ if(kind==='dog'){stream([[-30,-20],[-21,-12],[-20,0],[-23,10],[-20,20],[-26,30]],2.8);path([[0,28],[0,9]],2.6);path([[13,0],[22,0]],2.2);}
+ else{stream([[30,-20],[21,-12],[20,0],[23,10],[20,20],[26,30]],2.8);path([[0,28],[0,11]],2.6);path([[-12,-1],[-22,-1]],2.2);}
+ WB={x0:REG.cx-REG.rx,x1:REG.cx+REG.rx,z0:REG.cz-REG.rz,z1:REG.cz+REG.rz};
+ {const pts=[];for(let k=0;k<=64;k++){const a=k/64*Math.PI*2;pts.push([REG.cx+Math.cos(a)*REG.rx*1.03,REG.cz+Math.sin(a)*REG.rz*1.03]);}ribbon(pts,.35,.05,new THREE.MeshBasicMaterial({color:0xfff3d6,transparent:true,opacity:.55,depthWrite:false}),3);}
  let L=[];try{L=JSON.parse((0,P.eval)(kind==='dog'?'JSON.stringify((S.dog&&S.dog.list)||[])':'JSON.stringify((S.cat&&S.cat.list)||[])'))||[];}catch(e){}
  const ALL=kind==='dog'?['husky','bichon','poodle','pomeranian','dachshund','dalmatian']:['calico','ginger','cream','gray','explorer'];
  let list=L.slice(0,10).map(p=>({t:ALL.includes(p.type)?p.type:ALL[0],id:p.id}));const demo=false;/* S4: ไม่มีหมา/แมวตัวอย่าง */
@@ -346,7 +424,7 @@ const gplane=new THREE.Plane(new THREE.Vector3(0,1,0),0),gp=new THREE.Vector3();
 const FX={pen:['💕','✨','🌾'],stove:['🔥','✨','🍳'],factory:['🧶','✨'],factory2:['🥩','✨'],pet:['💖','✨','💕'],menu:['✨'],sit:['🪑']};
 function tap(x,y){if(window.__s4dEdit)return;/* S4: โหมดตกแต่ง แตะพื้นไม่เดิน/ไม่เปิดหน้าต่าง */ndc.set(x/innerWidth*2-1,-(y/innerHeight)*2+1);ray.setFromCamera(ndc,cam);
  if(GATHER){GATHER=false;try{window.__s4gDraw&&__s4gDraw();}catch(_){}if(ray.ray.intersectPlane(gplane,gp)){const X=gp.x,Zp=gp.z;ringM.position.set(X,.05,Zp);ringM.visible=true;ringT=0;
-   const nx=Z==='cat'?((X+9.5)/19*810+70)/941:((X+11.5)/23*820+60)/941,ny=Z==='cat'?((Zp+10)/18.5*960+430)/1672:((Zp+11.5)/19.3*860+560)/1672;
+   const ux=(X-(REG.cx-REG.rx*.86))/(REG.rx*1.72),uz=(Zp-(REG.cz-REG.rz*.86))/(REG.rz*1.72);const nx=Z==='cat'?(ux*810+70)/941:(ux*820+60)/941,ny=Z==='cat'?(uz*960+430)/1672:(uz*860+560)/1672;
    if(performance.now()-MIRT<1500)send('gather',nx.toFixed(4)+','+ny.toFixed(4));
    else{let n=0;for(const a of [...SPR,...WALK]){a.tx=X+((n%3)-1)*1.2;a.tz=Zp+Math.floor(n/3)*1.1;a.gsit=1;a.fast=1;a.t=0;n++;}tip('🔔 เรียกมารวมแล้ว');}}return;}const hs=ray.intersectObjects(TAPS.map(t=>t[0]),true);
  if(!hs.length){if(ray.ray.intersectPlane(gplane,gp)){walkTo(gp.x,gp.z);ringM.position.set(gp.x,.05,gp.z);ringM.visible=true;ringT=0;}return;}
@@ -370,21 +448,25 @@ let s4IT=0;function s4Interact(a,spr,t){const now=performance.now();if(now-s4IT<
 // ป้ายชื่อจุดสำคัญ
 const v3=new THREE.Vector3();function labels(){/* S4: ไม่มีป้ายตัวหนังสือลอยในฉาก (แตะที่ของได้เลย) */return;for(const t of TAPS){if(!t[2])continue;if(!t.el){t.el=document.createElement('div');t.el.className='lab';t.el.textContent=t[2];document.body.appendChild(t.el);}
  const b=t.bb||(t.bb=new THREE.Box3().setFromObject(t[0]));v3.set((b.min.x+b.max.x)/2,b.max.y+.4,(b.min.z+b.max.z)/2).project(cam);t.el.style.left=((v3.x+1)/2*innerWidth)+'px';t.el.style.top=((1-v3.y)/2*innerHeight)+'px';t.el.style.display=v3.z<1?'':'none';}}
-let TT=0;/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ (pv/s4loop.js) */S4LOOP.busy(()=>PL.tx!=null||ringM.visible||(performance.now()-MIRT<1500)||SPR.some(a=>a.tx!=null||a.held)||(typeof CAMV!=='undefined'&&CAMV));function loop(dt){TT+=dt;for(const f of ANIMW)f(TT);stepAnimals(dt);stepSprites(dt);stepGirl(dt);
+let TT=0;/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ (pv/s4loop.js) */S4LOOP.busy(()=>/* S4: สัตว์ขยับตลอด ไม่ค้างเป็นรูปปั้น */WALK.some(a=>a.ham||a.tx!=null)||PL.tx!=null||ringM.visible||(performance.now()-MIRT<1500)||SPR.some(a=>a.tx!=null||a.held)||(typeof CAMV!=='undefined'&&CAMV));function loop(dt){TT+=dt;for(const f of ANIMW)f(TT);stepAnimals(dt);if(Z==='hamster')stepHams(dt);stepSprites(dt);stepGirl(dt);
  for(const h of SPIN)h.rotation.z+=dt*1.1;for(const tr of TREES)tr.rotation.z=Math.sin(TT*.8+tr.userData.sw)*.012;if(KIT)KIT.treeTime.value=TT;
  if(ringM.visible){ringT+=dt;ringM.scale.setScalar(1+ringT*2.4);ringM.material.opacity=Math.max(0,1-ringT*1.6);if(ringT>.7)ringM.visible=false;}
  applyCam();labels();R.render(sc,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(R.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}}
 /* S4: 🎨 ตกแต่งโซน (บันทึกในเซฟผู้เล่นเอง module-s4deco-<โซน>) · ของที่วางเป็นสิ่งกีดขวาง สัตว์เดินอ้อม */
-window.__zt=()=>({SPR,WALK,PL,girl,pose:()=>GPOSE&&GPOSE.n,s4Interact,OB});
+window.__zt=()=>({SPR,WALK,PL,girl,pose:()=>GPOSE&&GPOSE.n,s4Interact,OB});window.__zcam=(x,z,d,pt)=>{VIEW.x=x;VIEW.z=z;if(d)VIEW.dist=d;if(pt!=null)PITCH=pt;try{S4LOOP.wake('cam');}catch(e){}};window.__zsc=()=>sc;window.__zproj=(x,y,z)=>{const v=new THREE.Vector3(x,y,z).project(cam);return [(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight];};window.__zspr=(k,t,x,z)=>sprite(k,t,x,z,k==="dog"?1.4:1.2,{x0:-8,x1:8,z0:-6,z1:7},null);
 const PZN=['heart_shaped_plush_bed','canopy_throne_chair','teepee','cat_tree','yellow_sofa','pet_feeding_station','pet_fountain','dog_house','ball_pit','orange_striped_pipe_elbow','toy_barrier','children_slide','cute_archway','wooden_fence_toy','paw_print_disc','bone_shaped_sign'];
 const PZSZ={p_dog_house:[6.4,6.4,5.2],p_yellow_sofa:[5.6,3.6,2.4],p_pet_fountain:[3.6,3.6,2.6],p_ball_pit:[5.6,5.6,2],p_children_slide:[5.6,3.6,3.6],p_orange_striped_pipe_elbow:[5.2,3.6,2.1],p_toy_barrier:[3.6,3.6,2.1],p_paw_print_disc:[5,5,.7],p_cat_tree:[4.6,4.6,5.6],p_canopy_throne_chair:[4.2,4.2,3.8],p_teepee:[4.2,4.2,4],p_heart_shaped_plush_bed:[4,4,1.6],p_cute_archway:[4,1.6,4.2],p_wooden_fence_toy:[3,1.5,1.5],p_bone_shaped_sign:[3,1.5,2.8],p_pet_feeding_station:[3.6,1.8,1.3]};
 for(const k in PZSZ){const v=PZSZ[k];PZSZ[k]=[v[0]*1.2,v[1]*1.2,v[2]*1.25];}
 const PZSEED={dog:[['p_dog_house',0,-10,0],['p_yellow_sofa',-8,-8,.35],['p_pet_fountain',8,-8,-.35],['p_ball_pit',-8.4,0,.2],['p_children_slide',8.4,-1,-.2],['p_orange_striped_pipe_elbow',-7.5,5.5,.3],['p_toy_barrier',7.5,5.5,-.3],['p_paw_print_disc',0,2,0]],
  cat:[['p_cat_tree',0,-9.5,0],['p_canopy_throne_chair',-7.6,-6,.4],['p_teepee',7.6,-6,-.4],['p_heart_shaped_plush_bed',-8.2,2,.2],['p_pet_fountain',8.2,2,-.2],['p_yellow_sofa',-5,7.5,.3],['p_orange_striped_pipe_elbow',5,7.5,-.3]]};
 const modelX=n=>/^p_/.test(n)?model('c2_petzone').then(s=>s.children[PZN.indexOf(n.slice(2))]):model(n);
-let DOB=[];function s4DecoInit(){if(!window.S4DECO||window.__SHOW)return;try{S4DECO.init({THREE,sc,cam,dom:R.domElement,key:Z,fit,model:modelX,max:60,sizes:PZSZ,seed:PZSEED[Z]||null,seedKey:'s4deco-'+Z+'-s1',
- onPlace:(g,it)=>{if(/^p_/.test(it.n)&&it.n!=='p_paw_print_disc'&&(Z==='dog'||Z==='cat'))TAPS.push([g,'menu',null]);},
- bounds:{x0:-22,x1:22,z0:-20,z1:26},btnTop:'calc(env(safe-area-inset-top,0px) + 156px)',tip:t=>tip(t),
+let DOB=[];const tapsOf=g=>{for(let k=TAPS.length-1;k>=0;k--){let q=TAPS[k][0];while(q&&q!==g)q=q.parent;if(q===g)TAPS.splice(k,1);}};
+function s4DecoInit(){if(!window.S4DECO||window.__SHOW)return;const HAM=Z==='hamster';try{window.__s4dz=S4DECO.init({THREE,sc,cam,dom:R.domElement,key:Z,fit,model:modelX,max:110,sizes:Object.assign({},PZSZ,HAMSZ,ZSZ),
+ ...(ZSEEDF()[Z]?{names:HZN,custom:HCUS,icons:HZI,free:ZSEEDF()[Z].free,merge:true,zoneGroup:{hamster:'🏡 หลังบ้าน',dog:'🐶 สวนหมา',cat:'🐱 สวนแมว',alpaca:'🦙 ทุ่งอัลปาก้า'}[Z],order:Object.keys(HZN),obFor:hamOb,
+   onRemove:(g,it)=>{tapsOf(g);const i=TREES.indexOf(g);if(i>=0)TREES.splice(i,1);const j=SPRINGS.indexOf(g);if(j>=0)SPRINGS.splice(j,1);}}:{}),
+ seed:ZSEEDF()[Z]?(ADMINZ?ZSEEDF()[Z].admin:ZSEEDF()[Z].player):null,seedKey:'s4deco-'+Z+'-s2',
+ onPlace:(g,it)=>{const a=it.n==='d_wooden_signpost'?(Z==='dog'?'gocat':'godog'):/^z_alpen_/.test(it.n)?'pen':HACT[it.n]||(/^c2_hm_/.test(it.n)?'pen':null);if(a)TAPS.push([g,a,null,/^z_alpen_/.test(it.n)?String('abc'.indexOf(it.n.slice(-1))):undefined]);else if(/^p_/.test(it.n)&&it.n!=='p_paw_print_disc'&&(Z==='dog'||Z==='cat'))TAPS.push([g,'menu',null]);},
+ bounds:HAM?{x0:-31,x1:31,z0:-30,z1:31}:{x0:-22,x1:22,z0:-20,z1:26},btnTop:'calc(env(safe-area-inset-top,0px) + 156px)',tip:t=>tip(t),
  onChange:l=>{for(const d of DOB){const i=OB.indexOf(d);if(i>=0)OB.splice(i,1);}DOB=l;OB.push(...l);}});}catch(e){console.warn('s4deco',e&&e.message);}}
 (Z==='hamster'?buildHamster():Z==='dog'||Z==='cat'?buildPets(Z):buildAlpaca()).catch(e=>{console.error(e);window.__zerr=(e&&e.message)||String(e);}).then(()=>loadGirl().catch(e=>{console.error(e);window.__zerr2=(e&&e.message)||String(e);})).then(()=>{s4DecoInit();const L=document.getElementById('load');if(window.__zerr){const lt=document.getElementById('lt');lt.innerHTML='โหลดบางส่วนไม่สำเร็จ ลองเปิดใหม่<br><small style="font-size:9px;opacity:.6">'+String(window.__zerr).slice(0,80)+'</small>';setTimeout(()=>{if(L)L.style.display='none';},2500);}});
 const done=()=>{if(nLoad&&nDone>=nLoad){document.getElementById('load').style.display='none';window.__ready=1;}else setTimeout(done,300);};setTimeout(done,600);setTimeout(()=>{document.getElementById('load').style.display='none';window.__ready=1;},25000);
