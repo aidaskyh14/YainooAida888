@@ -2,7 +2,7 @@
    ราคาเป็นกุศลต่อชิ้น · ไวน์ = 80% ราคาตลาดสวน (ขึ้นลงตามหุ้น) · ของลอยกระทง 8 อย่าง = ราคาร้านลอยกระทงเดิม (ช่วงผีออกได้โบนัส)
    สัตว์ = ราคาเดิมจากระบบขายสัตว์ (มีของแถมทุก 100 ตัว) · ของแปรรูปอัลปาก้า = 30% ของกุศลเมนู
    💳 บัตร ATM ขายได้ใบละ 100,000,000 (ขายแล้วใช้ตู้ ATM ไม่ได้จนกว่าจะได้บัตรใหม่) */
-import {CATALOG} from './catalog.js?h=751f4cba';
+import {CATALOG} from './catalog.js?h=e1d6338f';
 import {ALPACA_MENU} from './alpaca-menu.js?h=4c9e1f4e';
 import {PET_SELL} from './pet-sell-engine.js?h=c397ae44';
 import {decorSellPrice} from './decor-prices.js?h=25c28b17';

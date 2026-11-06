@@ -1460,9 +1460,13 @@ for(const o of OUTFIT_CATALOG)CATALOG.push(o);
 CATALOG.push({k:'surgery',n:'🏥 บัตรศัลยกรรม (เปลี่ยนตัวละคร)',i:'s4-surgery.webp',g:'บัตร ATM',p:'item.surgery'});
 CATALOG.push({k:'cityfuel',n:'⛽ น้ำมันรถ (แกลลอน)',i:'s4-fuel.webp',g:'นครยัยหนู',p:'item.cityfuel'});
 CATALOG.push({k:'box-outfit',n:'👗 กล่องสุ่มเสื้อผ้า',i:'box-outfit.webp',g:'กล่องสุ่ม',p:'box.outfit'});
-CATALOG.push({k:'car-small',n:'🚗 รถเล็กสีมิ้นต์ (ซื้อจากยัยหนู · ไปนคร)',i:'s4-car-small.webp',g:'นครยัยหนู',p:'item.car-small'});
-CATALOG.push({k:'car-luxury',n:'🚘 รถหรูเปิดประทุนสีม่วง (ซื้อจากยัยหนู · ไปนคร)',i:'s4-car-luxury.webp',g:'นครยัยหนู',p:'item.car-luxury'});
+/* ส่วน ⑤: รถ 4 คัน (ของตกแต่งหมวด "รถ" · ได้จากยัยหนูเท่านั้น · วางในฟาร์มได้ · แตะ = ขับไปนคร) · รถเก่า 2 คันถูกแปลงให้อัตโนมัติ */
+CATALOG.push({k:'decor-d_city_car_yellow',n:'🚕 รถเหลือง',i:'s4-car-yellow.webp',g:'รถ',p:'decor.d_city_car_yellow'});
+CATALOG.push({k:'decor-d_city_car_pink',n:'🚗 รถชมพู',i:'s4-car-pink.webp',g:'รถ',p:'decor.d_city_car_pink'});
+CATALOG.push({k:'decor-d_city_car_green',n:'🚙 รถเขียว',i:'s4-car-green.webp',g:'รถ',p:'decor.d_city_car_green'});
+CATALOG.push({k:'decor-d_city_car_purple',n:'🚘 รถม่วงเปิดประทุน',i:'s4-car-purple.webp',g:'รถ',p:'decor.d_city_car_purple'});
+CATALOG.push({k:'car-small',n:'🚗 รถเล็ก (รุ่นเก่า · แปลงเป็นรถเขียวอัตโนมัติ)',i:'s4-car-green.webp',g:'นครยัยหนู',p:'item.car-small'});
+CATALOG.push({k:'car-luxury',n:'🚘 รถหรู (รุ่นเก่า · แปลงเป็นรถม่วงอัตโนมัติ)',i:'s4-car-purple.webp',g:'นครยัยหนู',p:'item.car-luxury'});
 CATALOG.push({k:'ring',n:'💍 แหวนแต่งงาน (ซื้อจากยัยหนู)',i:'s4-ring.webp',g:'นครยัยหนู',p:'item.ring'});
 CATALOG.push({k:'garland',n:'🌸 พวงมาลัยเชียร์นางงาม',i:'s4-garland.webp',g:'นครยัยหนู',p:'item.garland'});
-CATALOG.push({k:'decor-carport',n:'🏠 โรงจอดรถ (ได้คู่กับรถ)',i:'s4-carport.webp',g:'ของแต่ง·นครยัยหนู',p:'decor.d_city_carport'});
 CATALOG.push({k:'decor-husband-house',n:'🏡 บ้านสามี (ได้ตอนแต่งงาน)',i:'s4-husband-house.webp',g:'ของแต่ง·นครยัยหนู',p:'decor.d_city_husband'});

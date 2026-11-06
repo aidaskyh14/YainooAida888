@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=7b421524';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);
@@ -21,7 +21,7 @@
   ready(){sync();lastFarm=0;followFarm();},
   plot(n,i){if(visiting){if(farm!==n){farm=n;}const ff=window.__ffc&&window.__ffc[n];if(ff&&window.friendFarm){window.friendFarm.plots=ff;FRIEND_PLOTS.length=0;ff.forEach(p=>FRIEND_PLOTS.push(!p?'empty':p.magicUntil>Date.now()?'magic':p.angel?'angel':p.ph==='g1'||p.ph==='g2'?'grow':p.ph));}try{friendPlot(i);}catch(e){console.error(e);}return;}if(n===2&&!(S.unl||{}).f2){useFarm(1);showUnlock&&showUnlock('f2');return;}useFarm(n);try{tapPlot(i);}catch(e){console.error(e);toast(e.message,1);}setTimeout(sync,60);},
   fruit(i){if(visiting){toast('🍑 ดูได้อย่างเดียว เด็ดไม่ได้นะ');return;}if(!(S.unl||{}).f4){showUnlock&&showUnlock('f4');return;}useFarm(4);const F4=window.__F4;if(!F4)return;const p=S.fruit.plots[i];try{p?F4.tapTree(i):F4.openPlant(i);}catch(e){console.error(e);}setTimeout(sync,60);},
-  go(g){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}goScreen(g);},
+  go(g,opt){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}/* ส่วน ⑤: แตะรถคันไหนในฟาร์ม = ขับคันนั้นเข้านคร */try{window.__S4PICKCAR=opt&&opt.car||null;}catch(e){}goScreen(g);},
   mail(){openMail();},
   fruitPick(i){/* S4 ข้อ 3: ตะกร้าเก็บผลไม้ (ลากนิ้วผ่านหลายต้น) */if(visiting)return null;if(!(S.unl||{}).f4)return null;const p=S.fruit&&S.fruit.plots&&S.fruit.plots[i];if(!p)return null;if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{index:i});return null;},
   lock2(){if(visiting)return;try{showUnlock('f2');}catch(e){toast('🔒 ใช้กุญแจดอกบัวจากยัยหนูเพื่อปลดล็อก');}},

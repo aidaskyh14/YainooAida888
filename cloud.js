@@ -18,7 +18,7 @@ import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,at
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=9fca90b8';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=751f4cba';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=e1d6338f';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
 import {nbDay} from './nb-quest.js?h=02ff82da';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
@@ -125,7 +125,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=751f4cba');
+     const {CATALOG}=await import('./catalog.js?h=e1d6338f');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -978,7 +978,8 @@ export const pageantActionCloud=callable(async req=>{
 export const pageantAdminCloud=callable(async req=>{const uid=req.auth.uid;if(!(await db.doc('admins/'+uid).get()).exists)refuse('เฉพาะแอดมิน','permission-denied');const input=req.data?.input||{},type=String(input.type||'');const now=Date.now();const ctx={uid,admin:true,now,name:'ยัยหนู'};
  if(type==='qAdd'){const d=questionDoc(input,ctx);const id=randomUUID().replace(/-/g,'').slice(0,20);await db.doc('cityQuestions/'+id).set(d);return {id};}
  if(type==='qDel'){const id=String(input.id||'');if(!/^[A-Za-z0-9]{1,40}$/.test(id))refuse('ไม่พบคำถาม');await db.doc('cityQuestions/'+id).delete();return {ok:true};}
- if(type==='qSeed'){/* นำเข้าคำถามตั้งต้น (ข้ามข้อที่มีแล้ว ตามข้อความคำถาม) */const have=new Set((await db.collection('cityQuestions').limit(500).get()).docs.map(d=>d.data().q));let n=0;for(const [list,kind] of [[YAINOO_QUESTIONS,'yainoo'],[GENERAL_QUESTIONS,'general']])for(const [q,a,correct] of list){if(have.has(q))continue;const d=questionDoc({q,a,correct,kind},ctx);await db.doc('cityQuestions/'+randomUUID().replace(/-/g,'').slice(0,20)).set(d);n++;}return {added:n};}
+ if(type==='qDedupe'){/* ส่วน ⑥: ลบคำถามซ้ำ (ข้อความเดียวกัน เก็บข้อแรก) */const qs=await db.collection('cityQuestions').limit(1000).get();const seen=new Set();let n=0;for(const d of qs.docs){const k=String(d.data().q||'').trim();if(seen.has(k)){await d.ref.delete();n++;}else seen.add(k);}return {removed:n,left:qs.size-n};}
+ if(type==='qSeed'){/* นำเข้าคำถามตั้งต้น (ข้ามข้อที่มีแล้ว ตามข้อความคำถาม · เทียบแบบตัดช่องว่าง กันนำเข้าซ้ำ) */const have=new Set((await db.collection('cityQuestions').limit(1000).get()).docs.map(d=>String(d.data().q||'').trim()));let n=0;for(const [list,kind] of [[YAINOO_QUESTIONS,'yainoo'],[GENERAL_QUESTIONS,'general']])for(const [q,a,correct] of list){if(have.has(String(q).trim()))continue;have.add(String(q).trim());const d=questionDoc({q,a,correct,kind},ctx);await db.doc('cityQuestions/'+randomUUID().replace(/-/g,'').slice(0,20)).set(d);n++;}return {added:n};}
  if(type==='qList'){const qs=await db.collection('cityQuestions').limit(500).get();return {questions:qs.docs.map(d=>({id:d.id,...d.data()}))};}
  const bank=['ask','askRandom'].includes(type)?(await db.collection('cityQuestions').limit(500).get()).docs.map(d=>({id:d.id,...d.data()})):[];
  return db.runTransaction(async tx=>{const ref=db.doc('world/pageant'),cref=db.doc('world/city');const [snap,c]=await Promise.all([tx.get(ref),tx.get(cref)]);const P=pageantAdmin(snap.exists?snap.data():{state:'idle'},ctx,input,()=>randomInt(4294967296)/4294967296,bank);tx.set(ref,P);

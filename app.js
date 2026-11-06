@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=d92811ef';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss3-fix19&h=751f4cba';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=e1d6338f';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -487,7 +487,7 @@ function s4RollScreen(){return new Promise(resolve=>{
    #s4roll .plate{display:none;margin:0 auto 12px;width:min(88vw,360px);background:linear-gradient(#fff6d6,#f3c86a);border:3px solid #fff;border-radius:20px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 30px rgba(255,210,122,.5);animation:s4plate .5s cubic-bezier(.2,1.4,.4,1)}@keyframes s4plate{from{transform:translateY(30px) scale(.7);opacity:0}to{transform:none;opacity:1}}#s4roll .plate b{display:block;font-size:1.25rem;color:#5a2a3c}#s4roll .plate small{color:#7a4a5c;font-size:.78rem}
    #s4roll .btn{width:min(88vw,360px);font-size:1.1rem;padding:14px;border-radius:18px;border:0;background:linear-gradient(#fff3c4,#e8b64c);color:#4a2333;font-weight:800;box-shadow:0 5px 0 #b9852a,0 10px 24px rgba(0,0,0,.4)}#s4roll .btn:disabled{opacity:.6}#s4roll .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b9852a}
    #s4roll .ld{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;background:#140a1f;transition:opacity .4s}#s4roll .ld.off{opacity:0;pointer-events:none}</style>
-   <iframe src="roll3d/index.html?h=9810e9ad" allow="autoplay" title="เวที"></iframe><div class="ld" id="s4rollLd">✨ กำลังเตรียมเวที…</div>
+   <iframe src="roll3d/index.html?h=236e6fd6" allow="autoplay" title="เวที"></iframe><div class="ld" id="s4rollLd">✨ กำลังเตรียมเวที…</div>
    <div class="top"><h2>🎲 สุ่มตัวละครของคุณ</h2><p>ซีซั่น 4 ทุกคนสุ่มได้ครั้งเดียว · ตัวละครที่ได้จะอยู่กับคุณไปตลอด (เปลี่ยนได้ด้วยบัตรศัลยกรรมเท่านั้น)</p></div>
    <div class="bot"><div class="plate" id="s4res"></div><button class="btn" id="s4rollBtn" disabled>กำลังโหลด…</button></div></div>`;
   const btn=$('#s4rollBtn'),ifr=app.querySelector('#s4roll iframe'),ld=$('#s4rollLd');let ready=false,done=false,tribe=null;
@@ -696,6 +696,7 @@ async function cloudAction(system,input) {
 }
 const HOST_BASE = {
   /* S4 นครยัยหนู: เอกสารโลก/ตำแหน่งคนในนคร/การประกวด (ฟังเฉพาะตอนอยู่ในหน้านคร) · แอดมินเรียกตรง */
+  cityDrive:()=>{const d=S4CITY.drive;S4CITY.drive=null;return d;},/* ส่วน ⑤: ฉากขับรถใช้ครั้งเดียวต่อการเข้า */
   watchCity:fn=>sceneWatch(doc(db,'world','city'),fn),watchPageant:fn=>sceneWatch(doc(db,'world','pageant'),fn),
   watchPresence:fn=>{const version=sceneVersion;const stop=onSnapshot(query(collection(db,'cityPresence'),where('exp','>',Date.now())),snap=>{if(version===sceneVersion)fn(snap.docs.map(d=>d.data()));},e=>{});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};},
   cityAdmin:input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pageantAdmin:input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data),pageantView:()=>httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),
@@ -849,7 +850,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=881e663d'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=8bf117da'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -966,12 +967,12 @@ function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=fa
 const S4CITY={going:false};
 async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',{type:'status'});if(st.sync)st=await cloudAction('city',{type:'sync'});const e=st.view.entry;const W=st.world||{};
   if(W.open===false&&!S.admin){modal('<h2>⛔ นครปิดอยู่</h2><div>ยัยหนูปิดนครชั่วคราว รอประกาศเปิดนะ</div>');return;}
-  if(!e.ok){modal('<h2>🏙️ ยังเข้านครไม่ได้</h2><div>ขาด: <b>'+e.miss.map(esc).join('</b> · <b>')+'</b><br><small>เกณฑ์: ชุด '+e.need.outfits+' ชุดไม่ซ้ำ (ชุดเริ่มต้นนับ) · บ้าน Lv.'+e.need.houseLv+' · รถ (ซื้อจากยัยหนู) · น้ำมัน '+e.need.fuelMin+'–'+e.need.fuelMax+' แกลลอน/รอบ</small></div>');return;}
-  const go=async()=>{const d=document.createElement('div');d.id='s4drive';d.innerHTML='<div class="t">🚗 กำลังขับรถไปนครยัยหนู…</div><div class="car">'+(st.view.car==='luxury'?'🚘':'🚗')+'</div><div class="f" id="s4driveF"></div>';document.body.appendChild(d);const t0=Date.now();
-   try{const r=await cloudAction('city',{type:'enter'});$('#s4driveF').textContent=r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'');await new Promise(r=>setTimeout(r,Math.max(0,3200-(Date.now()-t0))));d.classList.add('out');setTimeout(()=>d.remove(),600);S4CITY.going=false;S4CITY.pass=true;goScreen('city');}
-   catch(err){d.remove();S4CITY.going=false;toast(thaiError(err));}};
-  const fuelTxt=e.free?'วันนี้เข้าฟรี ไม่ใช้น้ำมัน':'จะใช้น้ำมัน '+e.need.fuelMin+'–'+e.need.fuelMax+' แกลลอน (มี '+e.fuel+')';
-  modal('<h2>🚗 ไปนครยัยหนู</h2><div>'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:'ออกเดินทาง',f:go}]);return;}
+  if(!e.ok){/* ส่วน ⑤: เช็คลิสต์มีไอคอน ✓/✗ */const hasCar=!!((st.view.cars||[]).length||st.view.car);const rows=[['images/box-outfit.webp','ชุดไม่ซ้ำ','ชุด '+e.outfits+'/'+e.need.outfits,e.outfits>=e.need.outfits],['images/house-interior-lv1.webp','บ้าน','Lv.'+e.lv+'/'+e.need.houseLv,e.lv>=e.need.houseLv],['images/s4-car-yellow.webp','รถ',hasCar?'มีแล้ว':'ยังไม่มี (ได้จากยัยหนู)',hasCar],['images/city-item-fuel.webp','น้ำมัน',e.free?'วันนี้ฟรี':e.fuel+'/'+e.need.fuelMin+' แกลลอน',e.free||e.fuel>=e.need.fuelMin]];
+   modal('<div style="text-align:center"><h2 style="margin:0 0 6px">🏙️ ยังเข้านครไม่ได้</h2><div style="font-size:.85rem;color:#7a4a5a">ยังขาดของตามรายการนี้</div></div><div style="margin-top:8px;display:grid;gap:6px">'+rows.map(([im,n,v,ok])=>'<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:14px;background:'+(ok?'rgba(120,220,160,.18)':'rgba(255,120,150,.16)')+';border:1.5px solid '+(ok?'#8fd9a8':'#ff9bb5')+'"><img src="'+im+'" style="width:30px;height:30px;object-fit:contain"><div style="flex:1;text-align:left"><b>'+n+'</b><div style="font-size:.82rem">'+esc(v)+'</div></div><span style="font-size:1.1rem">'+(ok?'✅':'❌')+'</span></div>').join('')+'</div>');return;}
+  const go=async()=>{/* ส่วน ⑤: ไม่ใช้อีโมจิแล้ว → ฉากขับรถ 3D อยู่ในหน้านคร (city3d ?drive=) โหลดเมืองระหว่างขับ */try{const r=await cloudAction('city',{type:'enter'});S4CITY.drive={car:(window.__S4PICKCAR||st.view.car||'small'),fuel:r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'')};S4CITY.going=false;S4CITY.pass=true;goScreen('city');}
+   catch(err){S4CITY.going=false;toast(thaiError(err));}};
+  const carK=window.__S4PICKCAR||(st.view.cars||[])[0]||st.view.car||'yellow';const CARN={yellow:'รถเหลือง',pink:'รถชมพู',green:'รถเขียว',purple:'รถม่วงเปิดประทุน',small:'รถเขียว',luxury:'รถม่วงเปิดประทุน'};/* ส่วน ⑤: หน้าต่างถามน้ำมัน มีรูปรถ+รูปน้ำมัน */const fuelTxt=e.free?'🎉 วันนี้เข้าฟรี ไม่ใช้น้ำมัน':'<img src="images/s4-fuel.webp" style="width:34px;height:34px;vertical-align:middle;object-fit:contain"> ใช้น้ำมัน <b>'+e.need.fuelMin+'–'+e.need.fuelMax+'</b> แกลลอน (สุ่ม) · มีอยู่ <b>'+e.fuel+'</b>';
+  modal('<div style="text-align:center"><img src="images/s4-car-'+({small:'green',luxury:'purple'})[carK]||carK)+'.webp" style="width:150px;height:110px;object-fit:contain"><h2 style="margin:4px 0">🚗 ไปนครยัยหนู</h2><div style="font-size:.9rem">ด้วย'+(CARN[carK]||'รถ')+'</div></div><div style="text-align:center;margin-top:6px">'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:'ออกเดินทาง',f:go}]);return;}
  catch(err){toast(thaiError(err));}finally{setTimeout(()=>{S4CITY.going=false;},8000);}}
 /* ---------- S4 นครยัยหนู: ฉากแต่งงาน/หย่า (ทุกคนเห็น) + ป้ายนับถอยหลังประกวด ---------- */
 const CITYFX={seen:new Set(),timer:0,world:null};
@@ -985,7 +986,7 @@ function s4WeddingShow(w,now){const wait=Math.max(0,w.at-now);const b=s4Banner('
 function s4Banner(id,html,ms){let b=document.getElementById('s4bn-'+id);if(!b){b=document.createElement('div');b.id='s4bn-'+id;b.className='s4bn';document.body.appendChild(b);}
  const tick=()=>{const left=Math.max(0,Math.round((ms-(Date.now()-t0))/1000));b.innerHTML='<span>'+html+'</span><b>'+(left>0?left+' วิ':'เริ่มแล้ว')+'</b>';if(left>0)b._t=setTimeout(tick,1000);};const t0=Date.now();tick();b.remove=()=>{clearTimeout(b._t);b.parentNode&&b.parentNode.removeChild(b);};return b;}
 function s4PageantBanner(at,now){let b=document.getElementById('s4bn-pageant');const left=at-now;if(!at||left<-15*60000||left>10*60000){if(b)b.remove();return;}
- if(!b){b=document.createElement('div');b.id='s4bn-pageant';b.className='s4bn pg';document.body.appendChild(b);b.onclick=()=>{if(S.screen!=='city')goScreen('city');};}
+ if(!b){b=document.createElement('div');b.id='s4bn-pageant';b.className='s4bn pg';document.body.appendChild(b);b.onclick=()=>{/* ส่วน ⑥: แตะป้ายจากทุกหน้า รวมศูนย์แอดมิน → ปิดแผงแล้วเด้งไปนคร */try{const o=$('#ov');if(o&&!o.hidden){o.hidden=true;o.innerHTML='';}}catch(e){}if(S.screen!=='city'){S4CITY.pass=true;goScreen('city');}else toast('👑 อยู่ในนครแล้ว · กดปุ่ม 👑 ในแถบเครื่องมือ');};}
  const tick=()=>{const l=at-serverNow();const m=Math.floor(Math.abs(l)/60000),sec=Math.floor(Math.abs(l)%60000/1000);b.innerHTML='<span>👑 ประกวดนางนพมาศ '+(l>0?'อีก '+m+':'+String(sec).padStart(2,'0')+(l<=3*60000?' · <b>เปิดแย่งโพเดียมแล้ว!</b>':''):'<b>เริ่มแล้ว!</b>')+'</span><i>แตะเพื่อไปนคร</i>';if(document.contains(b))b._t=setTimeout(tick,1000);};clearTimeout(b._t);tick();}
 const s4Q=p=>p+(p.includes('?')?'&':'?');/* ลิงก์+แฮชแคชแล้วค่อยต่อพารามิเตอร์ */
 function s4Overlay(src,ms,title,lock){let o=document.getElementById('s4cityov');if(o)o.remove();o=document.createElement('div');o.id='s4cityov';o.innerHTML='<iframe src="'+src+'" title="'+esc(title)+'"></iframe><button class="x" aria-label="ปิด">✕</button>';document.body.appendChild(o);
@@ -1014,7 +1015,7 @@ async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">ก�
  <div class="box"><h3>❓ ธนาคารคำถาม (${Q.length} ข้อ)</h3><p class="note">เพิ่มได้ตลอด ไม่ต้องรออัปเดต · "ยัยหนู" ใช้รอบคำถาม · "ความรู้ทั่วไป" ใช้ 5 ข้อสุดท้าย</p>
   <input id="qQ" placeholder="คำถาม" style="width:100%;margin:.2rem 0;padding:.45rem;border-radius:10px;border:1px solid #ddd">
   ${[0,1,2,3].map(i=>`<div class="row" style="margin:.2rem 0"><input type="radio" name="qC" value="${i}" ${i===0?'checked':''}><input id="qA${i}" placeholder="คำตอบ ${i+1}${i===0?' (ติ๊กข้อที่ถูก)':''}" style="flex:1;padding:.4rem;border-radius:10px;border:1px solid #ddd"></div>`).join('')}
-  <div class="row"><button class="btn sm gray" id="qSeed">📥 นำเข้าคำถามของยัยหนู 29 ข้อ + ความรู้ทั่วไป 52 ข้อ</button></div><div class="row"><select id="qK"><option value="yainoo">เกี่ยวกับยัยหนู</option><option value="general">ความรู้ทั่วไป</option></select><button class="btn" id="qAdd">➕ เพิ่มคำถาม</button></div>
+  <div class="row"><button class="btn sm gray" id="qSeed">📥 นำเข้าคำถามของยัยหนู 29 ข้อ + ความรู้ทั่วไป 52 ข้อ</button><button class="btn sm gray" id="qDedupe">🧹 ลบคำถามซ้ำ</button></div><div class="row"><select id="qK"><option value="yainoo">เกี่ยวกับยัยหนู</option><option value="general">ความรู้ทั่วไป</option></select><button class="btn" id="qAdd">➕ เพิ่มคำถาม</button></div>
   <div style="max-height:40vh;overflow:auto;margin-top:.4rem">${Q.map(q=>`<div style="display:flex;gap:.4rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid #f1e3cf"><span style="flex:1"><b>${esc(q.q)}</b> <small>(${q.kind==='general'?'ทั่วไป':'ยัยหนู'})</small><br><small>${q.a.map((a,i)=>(i===q.correct?'✅ ':'')+esc(a)).join(' · ')}</small></span><button data-qd="${esc(q.id)}" class="btn sm gray">ลบ</button></div>`).join('')}</div></div>`;
  const run=async(fn,ok)=>{try{await fn();if(ok)toast(ok);}catch(e){toast(thaiError(e));}tabCity();};
  const on=(id,fn)=>{const e=$('#'+id);if(e)e.onclick=fn;};
@@ -1027,7 +1028,7 @@ async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">ก�
  on('pgCancel',()=>modal('<h2>ยกเลิกการประกวด</h2><div>ล้างทุกอย่าง ผู้ประกวดกลับสู่ปกติ</div>',[{t:'ไม่',c:'gray'},{t:'ยกเลิก',f:()=>run(()=>pA({type:'cancel'}),'ยกเลิกแล้ว')}]));
  on('pgTalent',()=>run(()=>pA({type:'talent'}),'🎯 เริ่มโชว์แล้ว'));on('pgRnd',()=>run(()=>pA({type:'askRandom'}),'🎲 ส่งคำถามแล้ว'));on('pgAsk',()=>{const id=$('#pgQ')?.value;if(id)run(()=>pA({type:'ask',id}),'❓ ส่งคำถามแล้ว');});on('pgNext',()=>run(()=>pA({type:'next'})));
  B.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>run(()=>pA({type:'forfeit',uid:b.dataset.ff})));
- on('qSeed',()=>run(()=>pA({type:'qSeed'}).then(r=>toast('นำเข้า '+r.added+' ข้อ')),''));
+ on('qSeed',()=>run(()=>pA({type:'qSeed'}).then(r=>toast('นำเข้า '+r.added+' ข้อ (ข้อที่มีแล้วไม่นำเข้าซ้ำ)')),''));on('qDedupe',()=>run(()=>pA({type:'qDedupe'}).then(r=>toast('ลบซ้ำ '+r.removed+' ข้อ · เหลือ '+r.left)),''));
  on('qAdd',()=>{const q=$('#qQ').value,a=[0,1,2,3].map(i=>$('#qA'+i).value),correct=+(B.querySelector('input[name=qC]:checked')?.value||0),kind=$('#qK').value;run(()=>pA({type:'qAdd',q,a,correct,kind}),'➕ เพิ่มคำถามแล้ว');});
  B.querySelectorAll('[data-qd]').forEach(b=>b.onclick=()=>run(()=>pA({type:'qDel',id:b.dataset.qd}),'ลบแล้ว'));
  if(P.state!=='idle'){clearTimeout(A.cityT);A.cityT=setTimeout(()=>{if(A.tab==='city'&&document.contains(B))tabCity();},5000);}}
