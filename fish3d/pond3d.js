@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
+import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
 const $=id=>document.getElementById(id);
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 
@@ -119,7 +120,7 @@ async function build(o){
   const P=fit(G[Z.plat].scene,o.zone==='vip'?{w:3.0}:{w:2.8});const hTop=new THREE.Box3().setFromObject(P).max.y;
   const deck0=hitY(P,0,-1.05,o.zone==='vip'?hTop*.45:1e9)??hTop*.6;
   const mY=o.zone==='vip'?hTop*.45:1e9,cush0=Math.max(...[[.32,0],[-.32,0],[0,.32],[0,-.32]].map(([a,b])=>hitY(P,a,b,mY)??deck0+.3));S.seatY=DECK-deck0+cush0;
-  S.seats=[];for(let k=0;k<NSEAT;k++){const p=P.clone(true);p.position.set(X(k),DECK-deck0,0);root.add(p);if(o.zone==='vip')ghostTop(p,S.seatY+.06,X(k),DECK+.06);S.seats.push({k,x:X(k),who:o.seats[k]});}
+  S.seats=[];for(let k=0;k<NSEAT;k++){const p=P.clone(true);p.position.set(X(k),DECK-deck0,0);root.add(p);if(o.zone==='vip')ghostTop(p,S.seatY+.06,X(k),DECK+.06);S.seats.push({k,x:X(k),who:o.seats[k],o:(o.outfits&&o.outfits[k])||null});}
   // สะพานไม้ยาวด้านหลัง เชื่อมทุกแท่น
   const [c1,c2,cp]=Z.walk;const pl1=new THREE.MeshLambertMaterial({color:c1}),pl2=new THREE.MeshLambertMaterial({color:c2}),po=new THREE.MeshLambertMaterial({color:cp});
   const plG=new THREE.BoxGeometry(.42,.12,1.8),poG=new THREE.CylinderGeometry(.11,.13,1.6,8),cnG=new THREE.BoxGeometry(1.2,.12,.42);
@@ -145,8 +146,8 @@ async function build(o){
   if(PADS[o.zone][0])place('fz_lotus_leaves',PADS[o.zone][0],2.2,.02);if(PADS[o.zone][1])place('fz_lotus_flower',PADS[o.zone][1],1.1,0);
   if(o.zone==='vip')for(const s of S.seats)aura(s.x);
   // คน: ฉัน + เพื่อนบนแท่นข้างๆ
-  S.girl=G.punk;S.people=[];
-  for(const s of S.seats){if(s.k===o.idx)S.me=makeChar(s,'ฉัน',true);else if(s.who&&s.who!=='ฉัน')makeChar(s,s.who,false);}
+  S.girl=G.punk;S.people=[];/* S4 3.6: ตัวเราใส่ชุดจริง */try{const CH=await loadCharacter({THREE,loader:LD,base:'../ch/'});S.meBody=CH.body;S.meClips=CH.clips;window.__s4wearNow=CH.wear;}catch(e){console.log('me outfit',e&&e.message);}
+  for(const s of S.seats){if(s.k===o.idx)S.me=makeChar(s,'ฉัน',true);else if(s.who&&s.who!=='ฉัน')makeChar(s,s.who,false);}S.peopleReady=true;
   // ปลาว่ายใต้น้ำ
   S.swim=[];const TL=new THREE.TextureLoader(),pool=Object.keys(FISH).filter(k=>FISH[k][1]<=3);
   const fg=new THREE.PlaneGeometry(1,1);fg.rotateX(-Math.PI/2);
@@ -177,13 +178,15 @@ function aura(x){auraG??={col:new THREE.CylinderGeometry(1.75,1.85,5,40,1,true).
 function auraTick(dt,t){for(const A of S.aura){A.colM.uniforms.t.value=t;const k=(t*.5+A.x)%1;A.ring.scale.setScalar(1+k*.35);A.ringM.opacity=.85*(1-k);
   const p=A.pg.attributes.position;A.sp.forEach((q,i)=>{q.y+=q.v*dt;q.a+=dt*.4;if(q.y>4.2)q.y=0;p.setXYZ(i,A.x+Math.cos(q.a)*q.r,DECK+q.y,Math.sin(q.a)*q.r);});p.needsUpdate=true;}}
 // ---------- ตัวละคร + เบ็ด + ทุ่น ----------
-function makeChar(seat,name,me){const body=SU.clone(S.girl.scene);body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;}});
+function makeChar(seat,name,me){const body=me&&S.meBody?S.meBody:SU.clone(S.girl.scene);if(me&&S.meBody)S.meBody=null;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;}});
   const b=new THREE.Box3().setFromObject(body);const s=1.75/(b.max.y-b.min.y);body.scale.setScalar(s);body.position.y=-b.min.y*s;
   const g=new THREE.Group();g.add(body);root.add(g);g.position.set(seat.x,S.seatY-.12,.05);g.rotation.y=Math.PI;
-  const mx=new THREE.AnimationMixer(body);const clip=p=>S.girl.animations.find(c=>c.name.startsWith(p));const a=mx.clipAction(clip('A girl sits upright'));a.play();mx.update(Math.random()*2);
+  const mx=new THREE.AnimationMixer(body);const clip=p=>S.girl.animations.find(c=>c.name.startsWith(p));const sitClip=me&&S.meClips&&S.meClips.dock?S.meClips.dock:me&&S.meClips&&S.meClips.sit?S.meClips.sit:clip('A girl sits upright');const a=mx.clipAction(sitClip);a.play();mx.update(Math.random()*2);
   const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex(name,me?'#ffcf5a':'rgba(255,248,236,.95)','#4a2a14',256,72),depthTest:false}));tag.scale.set(1.1,.3,1);tag.position.set(seat.x,S.seatY+1.05,0);tag.renderOrder=6;tag.visible=!me;root.add(tag);
   const c={seat,name,me,g,body,mx,hand:body.getObjectByName('R_Hand'),state:'idle',t:0,tag};S.people.push(c);
-  setRod(c,me?S.rod:pick(Object.keys(RODS)));if(!me){c.state='cast';c.t=-Math.random()*3;}return c;}
+  setRod(c,me?S.rod:pick(Object.keys(RODS)));if(!me){c.state='cast';c.t=-Math.random()*3;if(seat.o&&seat.o!=='punk')dressFriend(c,seat.o);}return c;}
+/* S4 3.6: เพื่อนบนแท่นใส่ชุดจริง (โหลดทีหลัง แทนตัว punk) */async function dressFriend(c,wear){try{const CH=await loadCharacter({THREE,loader:LD,base:'../ch/',wear});if(!S||!S.people.includes(c))return;const nb=CH.body;nb.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;}});const b=new THREE.Box3().setFromObject(nb);const s=1.75/(b.max.y-b.min.y);nb.scale.setScalar(s);nb.position.y=-b.min.y*s;
+ const was=c.body;c.g.remove(was);c.g.add(nb);c.body=nb;c.dressed=true;c.hand=nb.getObjectByName('R_Hand')||c.hand;const mx=new THREE.AnimationMixer(nb);const sc=CH.clips.dock||CH.clips.sit;if(sc){mx.clipAction(sc).play();mx.update(Math.random()*2);}c.mx=mx;}catch(e){console.log('friend outfit',e&&e.message);}}
 async function setRod(c,kind){const [rg,fg]=await Promise.all([get('fz_rod_'+kind),get('fz_float_'+kind)]);
   if(c.rod){root.remove(c.rod.piv,c.rod.bob,c.rod.line);}
   const rod=fit(rg.scene,{w:1.45});rod.updateMatrixWorld(true);
@@ -249,7 +252,7 @@ function rodsUI(){$('p3rods').innerHTML=Object.entries(RODS).map(([k,r])=>`<butt
   $('p3rods').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.rod=b.dataset.k;rodsUI();setRod(S.me,S.rod);});}
 function act(){const me=S.me;if(!me)return;
   if(S.real){const st=me.state;if(S.standby){S.post('resit');return;}if(st==='idle')S.post('p3rod');else if(st==='bite')S.post('p3collect');else if(st==='wait'||st==='cast')feed('⏳ รอปลากินเบ็ดอีก '+mmss(S.waitEnd-performance.now()));return;}
-  if(me.state==='idle'){me.state='cast';me.t=0;me.rod.bob.visible=true;setTimeout(()=>{if(me.state==='cast'){me.state='wait';me.t=0;ripple(me.target.x,me.target.z);S.waitEnd=performance.now()+WAIT_DEMO*1000*(S.vip?.6:1)+Math.random()*3000;}},1000);}
+  if(me.state==='idle'){me.state='cast';me.t=0;(me.rod&&(me.rod.bob.visible=true));setTimeout(()=>{if(me.state==='cast'){me.state='wait';me.t=0;ripple(me.target.x,me.target.z);S.waitEnd=performance.now()+WAIT_DEMO*1000*(S.vip?.6:1)+Math.random()*3000;}},1000);}
   else if(me.state==='bite'){startMini();}
   else if(me.state==='mini'){pull();}
   ui();}
@@ -263,11 +266,11 @@ function rollCatch(){const r=RODS[S.rod];const n=1+weighted(r.cnt);const out=[];
 function pull(){const me=S.me,now=performance.now();const x=[needle(now-120),needle(now)];const ok=Math.max(...x)>=S.mini.zone&&Math.min(...x)<=S.mini.zone+S.mini.width;
   me.state='reel';me.t=0;ui();
   if(ok){const fs=S.res;leap(me,fs[0],()=>{card(fs,fs.length>1?`ได้ ${fs.length} ตัว!`:'ได้ปลาแล้ว!');S.bag+=fs.length;});}
-  else{splash(me.rod.bob.position.x,me.rod.bob.position.z);setTimeout(()=>card([],'ดึงพลาดจังหวะ ปลาหนีไปแล้ว'),700);}}
+  else{(me.rod&&splash(me.rod.bob.position.x,me.rod.bob.position.z));setTimeout(()=>card([],'ดึงพลาดจังหวะ ปลาหนีไปแล้ว'),700);}}
 function card(fs,title){const c=$('p3card');c.querySelector('h3').textContent=(fs.length?'🎉 ':'💦 ')+title;
   c.querySelector('.fs').innerHTML=fs.map(k=>`<div class="f"><img src="fish/${k}.webp" alt=""><b>${FISH[k][0]}</b><span>${S.vip?'👑 ':''}${lb(k,S.vip)} lb · ${'⭐'.repeat(FISH[k][1])}</span></div>`).join('')||`<div class="f none"><img src="fish/rod-${S.rod}.webp" alt=""></div>`;
   c.classList.add('on');}
-$('p3ok').onclick=()=>{$('p3card').classList.remove('on');if(S.me){S.me.state='idle';S.me.rod.bob.visible=false;}ui();};
+$('p3ok').onclick=()=>{$('p3card').classList.remove('on');if(S.me){S.me.state='idle';(S.me.rod&&(S.me.rod.bob.visible=false));}ui();};
 $('p3act').onclick=act;
 /* S4 ข้อ 40/41: ปุ่มลุกจากที่นั่ง (ถามยืนยันก่อน แล้วกลับหน้าแผนที่ตกปลา) · ปุ่มบูสเตอร์ระหว่างรอปลา */
 $('p3bait').onclick=e=>{e.stopPropagation();if(S&&S.real)S.post('p3bait');};
@@ -286,16 +289,23 @@ export async function openPond(o){if(!R)init();onClose=o.onClose;
   cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(loop);}
 /* ---------- ผูกกับกติกาจริงของซีซัน 3: สถานะแท่นของเรามาจากหน้าเกมทุก 1 วินาที ---------- */
 const mmss=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
-export function standby(){if(!S||!S.me)return;if(S.leaving&&Date.now()-S.leaving<90000){S.leaving=0;close();return;}S.standby=true;const me=S.me;if(me.state!=='reel'){me.state='idle';me.rod.bob.visible=false;}ui();}
+export function standby(){if(!S||!S.me)return;if(S.leaving&&Date.now()-S.leaving<90000){S.leaving=0;close();return;}S.standby=true;const me=S.me;if(me.state!=='reel'){me.state='idle';(me.rod&&(me.rod.bob.visible=false));}ui();}
 export function sync(s){if(!S||!S.me||!s)return;const me=S.me,now=performance.now();S.ph=s.ph;S.standby=false;S.baited=!!s.b;S.vipSeat=!!s.v;S.baitHave=s.bh|0;
-  if(s.ph==='wait'){S.waitEnd=now+(s.l||0);if(me.state==='idle'){me.state='cast';me.t=0;me.rod.bob.visible=true;setTimeout(()=>{if(S&&S.me===me&&me.state==='cast'){me.state='wait';me.t=0;ripple(me.target.x,me.target.z);ui();}},1000);}}
-  else if(s.ph==='hook'){if(me.state!=='bite'&&me.state!=='reel'){me.state='bite';me.t=0;me.rod.bob.visible=true;ripple(me.target.x,me.target.z);splash(me.target.x,me.target.z);feed('❗ ปลากินเบ็ดแล้ว แตะปุ่มด้านล่างเลย!');}}
-  else if(me.state!=='idle'&&me.state!=='reel'){me.state='idle';me.rod.bob.visible=false;}
+  /* เก็บตก 10: เบ็ดในฉากเปลี่ยนตามเบ็ดที่เลือกจริง (เดิมค้างเป็นเบ็ดไม้ไผ่สีเขียวตลอด) */if(s.r&&RODS[s.r]&&S.rod!==s.r&&me.rod&&me.rod.kind!==s.r){S.rod=s.r;setRod(me,s.r);}
+  if(s.ph==='wait'){S.waitEnd=now+(s.l||0);if(me.state==='idle'){me.state='cast';me.t=0;(me.rod&&(me.rod.bob.visible=true));setTimeout(()=>{if(S&&S.me===me&&me.state==='cast'){me.state='wait';me.t=0;ripple(me.target.x,me.target.z);ui();}},1000);}}
+  else if(s.ph==='hook'){if(me.state!=='bite'&&me.state!=='reel'){me.state='bite';me.t=0;(me.rod&&(me.rod.bob.visible=true));ripple(me.target.x,me.target.z);splash(me.target.x,me.target.z);feed('❗ ปลากินเบ็ดแล้ว แตะปุ่มด้านล่างเลย!');}}
+  else if(me.state!=='idle'&&me.state!=='reel'){me.state='idle';(me.rod&&(me.rod.bob.visible=false));}
   ui();}
 export function result(r){if(!S||!S.me||!r)return;const me=S.me;me.state='reel';me.t=0;ui();
-  const f=(r.caught||[])[0];if(r.ok&&f&&FISH[f.k]){leap(me,f.k,()=>{if(!S)return;S.bag+=(r.caught||[]).length;me.state='idle';me.rod.bob.visible=false;ui();});}
-  else{splash(me.rod.bob.position.x,me.rod.bob.position.z);setTimeout(()=>{if(S&&S.me===me){me.state='idle';me.rod.bob.visible=false;ui();}},900);}}
+  const f=(r.caught||[])[0];if(r.ok&&f&&FISH[f.k]){leap(me,f.k,()=>{if(!S)return;S.bag+=(r.caught||[]).length;me.state='idle';(me.rod&&(me.rod.bob.visible=false));ui();});}
+  else{(me.rod&&splash(me.rod.bob.position.x,me.rod.bob.position.z));setTimeout(()=>{if(S&&S.me===me){me.state='idle';(me.rod&&(me.rod.bob.visible=false));ui();}},900);}}
 export function isOpen(){return !!S;}
+export function people(){return S?S.people.map(c=>({n:c.name,me:c.me,o:c.seat.o||null,dressed:!!c.dressed})):[];}
+/* S4 3.6: อัปเดตเพื่อนบนแท่น (มาใหม่ = สร้างตัว · ลุกไป = เอาออก) */
+export function roster(names,outfits){if(!S||!S.seats||!S.peopleReady)return;/* ยังสร้างคนตอนเปิดบ่อไม่เสร็จ = รอ กันสร้างซ้ำ */for(const s of S.seats){const nm=names[s.k]||null;const cur=S.people.find(c=>c.seat===s&&!c.me);
+  if(cur&&(!nm||nm==='ฉัน')){removeChar(cur);s.who=null;s.o=null;}
+  else if(!cur&&nm&&nm!=='ฉัน'){s.who=nm;s.o=(outfits&&outfits[s.k])||null;makeChar(s,nm,false);}}}
+function removeChar(c){try{root.remove(c.g);root.remove(c.tag);if(c.rod){root.remove(c.rod.piv,c.rod.bob,c.rod.line);}S.people=S.people.filter(x=>x!==c);}catch(e){}}
 export function shut(){if(S)close();}
 function close(){cancelAnimationFrame(raf);$('p3').classList.remove('on');$('p3card').classList.remove('on');if(root){sc.remove(root);root=null;}RIP.length=DROPS.length=JUMP.length=0;S=null;onClose&&onClose();}
 function loop(now){raf=requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;waterU.t.value=t;

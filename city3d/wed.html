@@ -1,0 +1,36 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>งานแต่ง</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#2a1030;font-family:Mali,sans-serif}#bg{position:fixed;inset:0;background:#2a1030 center/cover no-repeat}canvas{position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 18px);text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);background:linear-gradient(transparent,rgba(30,10,40,.85))}
+#ttl{font-size:1.5rem;font-weight:800;margin:0 0 4px;letter-spacing:.02em}#nm{font-size:1rem;font-weight:700;opacity:.95}#nm b{color:#ffd27a}
+#bless{margin-top:12px;font:800 1.05rem Mali,sans-serif;padding:12px 26px;border-radius:999px;border:3px solid #fff;background:linear-gradient(#ffb6d5,#ff6fa8);color:#5a1a3a;box-shadow:0 6px 0 #c23f78,0 10px 24px rgba(0,0,0,.4)}#bless:active{transform:translateY(4px);box-shadow:0 2px 0 #c23f78}#bless.done{opacity:.6}
+#hearts{position:fixed;inset:0;pointer-events:none;overflow:hidden}#hearts i{position:absolute;bottom:-40px;font-style:normal;font-size:28px;animation:up 4s ease-out forwards;opacity:0}@keyframes up{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-95vh) scale(1.3) rotate(20deg);opacity:0}}
+#top{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 14px);text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.7);font-weight:800;font-size:1.1rem}
+body.divorce #bless{display:none}body.divorce #ttl{color:#cfd8ff}</style></head><body>
+<div id="bg"></div><div id="hearts"></div><div id="top"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<div id="ui"><p id="ttl"></p><div id="nm"></div><button id="bless">💐 อวยพร</button></div>
+<script type="module">
+/* ฉากแต่งงาน/หย่า (ทุกคนเห็น): เจ้าสาว (ชุดคลาสสูงสุดที่มี) + เจ้าบ่าว (โมเดลผู้ชาย) ยืนบนวงแสง 2 วง พื้นหลัง city-wedding-bg · หัวใจลอย · ปุ่มอวยพร */
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,fetchGlb,manClips} from '../pv/s4char.js?h=bd13d8c1';
+const Q=new URLSearchParams(location.search);const mode=Q.get('mode')||'wedding';const bride=Q.get('bride')||'punk',man=Q.get('man')||'m01',name=Q.get('name')||'ผู้เล่น',manName=Q.get('manName')||'';
+document.body.classList.toggle('divorce',mode==='divorce');document.getElementById('bg').style.backgroundImage='url(../images/'+(mode==='divorce'?'city-divorce-bg.webp':'city-wedding-bg.webp')+')';
+document.getElementById('ttl').textContent=mode==='divorce'?'💔 การหย่าร้าง':'💒 งานแต่งงาน แห่งนครยัยหนู';document.getElementById('nm').innerHTML=mode==='divorce'?'<b>'+esc(name)+'</b> และ <b>'+esc(manName)+'</b> แยกทางกันแล้ว':'<b>'+esc(name)+'</b> ♥ <b>'+esc(manName)+'</b>';
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const W=innerWidth,H=innerHeight;const sc=new THREE.Scene();const cam=new THREE.PerspectiveCamera(36,W/H,.1,50);cam.position.set(0,1.6,5.6);cam.lookAt(0,1,0);
+const rd=new THREE.WebGLRenderer({antialias:true,alpha:true});rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.setSize(W,H);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;document.body.insertBefore(rd.domElement,document.getElementById('ui'));
+sc.add(new THREE.AmbientLight(0xffffff,1.3));const key=new THREE.DirectionalLight(0xfff0e0,1.2);key.position.set(2,5,4);sc.add(key);
+const ringMat=c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false});
+const rings=[];for(const [x,c] of [[-.75,0xffb6d5],[.75,0x9ad9ff]]){const r=new THREE.Mesh(new THREE.RingGeometry(.55,.72,48),ringMat(c));r.rotation.x=-Math.PI/2;r.position.set(x,.02,0);sc.add(r);rings.push(r);const glow=new THREE.PointLight(c,2,4);glow.position.set(x,1,.5);sc.add(glow);}
+const loader=new GLTFLoader();const fit=(b,h)=>{const bb=new THREE.Box3().setFromObject(b);const k=h/(bb.max.y-bb.min.y);b.scale.setScalar(k);b.position.y=-bb.min.y*k;return b;};
+const mixers=[];
+async function girl(){try{const CH=await loadCharacter({THREE,loader,base:'../ch/',wear:bride});const b=fit(CH.body,1.7);b.position.x=-.75;b.rotation.y=.25;sc.add(b);const mx=new THREE.AnimationMixer(b);const c=CH.clips[mode==='divorce'?'sulk':'shy']||CH.clips.idle;if(c)mx.clipAction(c).play();mixers.push(mx);}catch(e){console.log('bride',e.message);}}
+async function groom(){try{const ab=await fetchGlb('../men/'+man+'.glb');const g=await new Promise((res,rej)=>loader.parse(ab,'../men/',res,rej));const b=fit(g.scene,1.8);b.position.x=.75;b.rotation.y=-.25;b.traverse(o=>{if(o.isMesh&&o.material){o.material.metalness=0;o.material.roughness=.9;}});sc.add(b);const clips=await manClips({THREE,loader,base:'../ch/',body:g.scene,walkClips:g.animations});const c=clips[mode==='divorce'?'sulk':'shy']||clips.idle;if(c){const mx=new THREE.AnimationMixer(g.scene);mx.clipAction(c).play();mixers.push(mx);}}catch(e){console.log('groom',e.message);}}
+girl();groom();
+const clk=new THREE.Clock();(function tick(){requestAnimationFrame(tick);const dt=clk.getDelta();for(const m of mixers)m.update(dt);const t=performance.now()/1000;rings.forEach((r,i)=>{r.rotation.z=t*(i?-.6:.6);r.material.opacity=.6+Math.sin(t*3+i)*.2;});rd.render(sc,cam);})();
+/* หัวใจลอย + อวยพร */
+const hearts=document.getElementById('hearts');const pop=(n,em)=>{for(let i=0;i<n;i++){const e=document.createElement('i');e.textContent=em[Math.floor(Math.random()*em.length)];e.style.left=(10+Math.random()*80)+'%';e.style.animationDelay=(Math.random()*1.2)+'s';e.style.fontSize=(20+Math.random()*22)+'px';hearts.appendChild(e);setTimeout(()=>e.remove(),5500);}};
+if(mode==='wedding'){setInterval(()=>pop(3,['💗','💕','🌸','✨']),900);}else{setInterval(()=>pop(2,['💔','🌧️','🥀']),1200);}
+const bl=document.getElementById('bless');let n=0;bl.onclick=()=>{n++;pop(14,['💐','💗','🎉','✨']);bl.textContent='💐 อวยพรแล้ว ×'+n;};
+/* นับเวลาฉาก (แม่ปิดเองเมื่อครบ) */const t0=Date.now();setInterval(()=>{const s=Math.floor((Date.now()-t0)/1000);document.getElementById('top').textContent=mode==='wedding'?(s<8?'ขอเชิญทุกคนร่วมยินดี 🎊':s<20?'เจ้าสาวสวยที่สุดในนคร 👰':'ขอให้รักกันตลอดไป 💕'):'';},1000);
+</script></body></html>

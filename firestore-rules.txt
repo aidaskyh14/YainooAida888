@@ -91,6 +91,10 @@ service cloud.firestore {
     }
     // S4 ข้อ 162 สำรองก่อนเริ่มศูนย์ (เซิร์ฟเวอร์เท่านั้น)
     match /resetBackups/{uid} { allow read: if isAdmin(); allow write: if false; match /parts/{part} { allow read: if isAdmin(); allow write: if false; } }
+    // S4 นครยัยหนู: ตำแหน่งคนในนคร (เซิร์ฟเวอร์เขียนผ่าน cityActionCloud raw) · ผู้เล่นอ่านอย่างเดียว · world/city, world/pageant อยู่ใต้ /world แล้ว
+    match /cityPresence/{uid} { allow read: if approved(); allow write: if false; }
+    match /players/{uid}/public/{doc} { allow read: if approved(); allow write: if false; }
+    match /cityQuestions/{id} { allow read, write: if false; }
     match /nbInvites/{uid} { allow read: if signedIn() && (request.auth.uid == uid || isAdmin()); allow write: if false; }
     match /adminLog/{id} {
       allow read, create: if isAdmin();

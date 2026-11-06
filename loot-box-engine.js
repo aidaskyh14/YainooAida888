@@ -1,6 +1,7 @@
-import {CATALOG} from './catalog.js?h=b889872d';
-import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=38cd3fa7';
+import {CATALOG} from './catalog.js?h=751f4cba';
+import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=e54c5cef';
 import {decorBoxPool} from './decor-prices.js?h=25c28b17';
+import {OUTFITS,BOX_CLASS} from './outfit-catalog.js?h=16ac9bbc';
 let POOLS=null;const pools=()=>{if(POOLS)return POOLS;POOLS={};for(const c of CATALOG){if(!c.p.startsWith('decor.'))continue;const k=decorBoxPool(c.p.slice(6));if(k)(POOLS[k] ||= []).push(c);}return POOLS;};
 const fullPath=c=>/^(sub|pend)\./.test(c.p)?c.p:'bag.'+c.p;
 const error=message=>{throw Object.assign(new Error(message),{code:'invalid-argument'});};
@@ -45,6 +46,12 @@ export function openLootBoxes(game,input,rng=Math.random){
    case 'speed':grant(byKey(wpick(SPEED_TABLE)),int(1,3));break;
    case 'coins':amount=int(...row.value);coins+=amount;category='coins';break;
    case 'decor':{const pool=pools()[row.value]||pools().small;grant(pick(pool),1);category='decor';break;}
+   /* S4 3.7 กล่องเสื้อผ้า */
+   case 'animalProduct':grant(pick(CATALOG.filter(c=>c.p.startsWith('product.')||(c.p.startsWith('bird.')&&/-(egg|feather|pebble)$/.test(c.k)))),int(1,3));category='animal';break;
+   case 'farmMat':grant(pick(CATALOG.filter(c=>c.p.startsWith('forest.')||c.p.startsWith('grass.'))),int(5,20));category='mat';break;
+   case 'lk':grant(pick(CATALOG.filter(c=>c.p.startsWith('halloween.'))),int(1,3));category='lk';break;
+   case 'drops':grant(pick(CATALOG.filter(c=>c.p.startsWith('hedge.')||c.p.startsWith('boost.'))),int(1,3));category='drop';break;
+   case 'outfit':{const tribe=game.sub?.char?.tribe;if(!tribe){salt++;category='salt';break;}const cls=wpick(BOX_CLASS);const pool=Object.values(OUTFITS).filter(o=>o.tribe===tribe&&o.cls===cls);const o=pick(pool);add(next,'bag.outfit.'+o.id,1);totals.set('outfit-'+o.id,(totals.get('outfit-'+o.id)||0)+1);category='outfit';break;}
    default:throw new Error('ตารางกล่องไม่ครบ');
   }
   outcomes.push({k:category,q:amount});

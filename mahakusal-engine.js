@@ -3,7 +3,7 @@
    ทุกครั้งที่ผิดบอก ⬆️⬇️✅ รายหลัก · คำใบ้โบนัสซ่อน · 10 กล่องแรกของวันถูกแน่ 2–3 กล่อง (ซ่อน)
    เปิดด่วนทีละ ≥500 · วันละไม่เกิน 30,000 กล่อง (ทายเอง+เปิดด่วน) · เกิน 10,000 ต่อวันได้ครึ่ง (ซ่อน) · รีเซ็ตเที่ยงคืนไทย
    คราฟ: กล่องสุ่ม 8 ชนิด อย่างละ 3 → 1–4 กล่อง (40/30/20/10%) */
-import {BOXES,getBoxCount} from './loot-box-catalog.js?h=38cd3fa7';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?h=e54c5cef';
 export const MK_TIERS=[{k:'s',w:50,min:1,max:9999,miss:900,fast:450},{k:'m',w:35,min:10000,max:59999,miss:3000,fast:1500},{k:'l',w:15,min:60000,max:100000,miss:7000,fast:3500}];
 /* S4 ข้อ 21: ตัดระบบทายรหัส → เปิดปกติ (fast) ตั้งแต่ 1 กล่อง · จำนวนที่เลือกได้ 1/10/100/500/1000/ทั้งหมด */export const MK_PAY=[1,.8,.6],MK_FAST_MIN=1,MK_FAST_Q=[1,10,100,500,1000,1500,2000],MK_DAY_MAX=30000,MK_HALF_AFTER=10000,MK_LUCKY_FIRST=10;
 export const MK_HINT=[.4,.2],MK_CRAFT_W=[[1,40],[2,30],[3,20],[4,10]],MK_CRAFT_EACH=3,MK_CRAFT_MAX=1000;

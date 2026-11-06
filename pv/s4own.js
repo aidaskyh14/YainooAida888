@@ -3,7 +3,7 @@
    · พื้น/ทางเดิน/รั้ว ไม่จำกัด · ของที่วางอยู่ไม่หักจากกระเป๋า (เก็บเข้าถุง = นับคืนอัตโนมัติ) · เซิร์ฟเวอร์เก็บ bag.decor แบบจำนวนเต็มไม่ติดลบ
    แก้สิทธิ์ฟรีได้ที่ S4FREE ด้านล่าง (ตามสมุดเล่ม 2 เมื่อเธอติ๊ก) */
 (function(){
- const S4FREE={_default:1,_inf:/^(tile_|fz_|path$|erase$|fence$)/,oak:3,bush:3,pine:2,sakura:2,tree:2,bench:2,d_stylized_lanterns:2,d_flower_planter:2,d_flower_pots:2,d_sunflowers:2,fspot:0,plot:0,sf_zipline:0,d_y7_piggy:0,d_y7_lamp:0,d_y7_rope:0,d_y7_topiary:0,d_y7_coinseat:0,z_hm_cake:0,z_hm_castle:0,z_hm_space:0,z_dog_circus:0,z_cat_catfount:0};
+ const S4FREE={_default:1,d_city_carport:0,d_city_husband:0,_inf:/^(tile_|fz_|path$|erase$|fence$)/,oak:3,bush:3,pine:2,sakura:2,tree:2,bench:2,d_stylized_lanterns:2,d_flower_planter:2,d_flower_pots:2,d_sunflowers:2,fspot:0,plot:0,sf_zipline:0,d_y7_piggy:0,d_y7_lamp:0,d_y7_rope:0,d_y7_topiary:0,d_y7_coinseat:0,z_hm_cake:0,z_hm_castle:0,z_hm_space:0,z_dog_circus:0,z_cat_catfount:0};
  const H=(()=>{try{let w=window;for(let i=0;i<4;i++){if(w.__HOST)return w.__HOST;if(w===w.parent)break;w=w.parent;}}catch(e){}return null;})();
  const ZONES=['dog','cat','hamster','alpaca'];
  let cache=null,cacheAt=0;

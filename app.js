@@ -1,5 +1,5 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=38cd3fa7';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=e54c5cef';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
 import {showLootBoxes} from './loot-boxes.js?v=ss3-fix20&h=383836a6';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=d92811ef';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss3-fix19&h=b889872d';
+import { CATALOG } from './catalog.js?v=ss3-fix19&h=751f4cba';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -49,14 +49,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const fmt = n => Math.round(n || 0).toLocaleString('en-US');
 let store;
 let campaignConfig={},campaignStop=null,campaignBoxes=[];
-const BASE_PARTS=['inventory','wallet'];
+const BASE_PARTS=['inventory','wallet','animals-char','animals-city'];/* animals-city: รถ/สามี/ลูก ต้องรู้ที่ฟาร์ม (โรงจอด บ้านสามี) */
 const SCREEN_PARTS={
  loading:[],farm:['animals-farmdrops','animals-prank','farm-settings','farm-1','farm-2','farm-3','farm-4','module-s3fg-col','module-s3by-entry','house','animals-barn','module-s3forest-v1','outings','module-s4deco-farm'],/* S4: บ้าน/โรงเรือน/เครื่องดื่มป่า ทำงานในหน้าฟาร์ม 3D */
  house:['house'],backyard:['backyard','module-s3by-entry','module-s4deco-hamster'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds','module-s4deco-safari'],dog:['animals-dog','module-s4deco-dog'],alpaca:['animals-alpaca','module-s4deco-alpaca'],
  catpen:['catpen','module-s4deco-cat'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
  boat:[],neighborhood:['module-s4deco-nb'],treewar:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
- minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[]
+ minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[],city:['animals-city']/* S4 นครยัยหนู */
 };
 const sceneSubscriptions=new Set();
 let sceneVersion=0,campaignJobs=[];
@@ -275,6 +275,7 @@ async function enter(user) {
     stage='เปิดหน้าโหลดสวน';
     startSaver();await loadSettings();if(!S.admin&&!S.settings.open){renderClosed();return;}
     stage='ตรวจกุศลที่รอปรับจากเกมอื่น';await cloudAction('ledger',{type:'status'}).catch(()=>null);
+    /* S4 3.2: ทุกคน (ยกเว้นแอดมิน) ต้องสุ่มตัวละครครั้งเดียวก่อนเข้าสวน · ผลออกจากเซิร์ฟเวอร์และบันทึกก่อนเล่นอนิเมชัน */stage='สุ่มตัวละคร';if(!S.admin){const c0=S.P.g?.sub?.char;if(!c0||!c0.tribe)await s4RollScreen();}
     renderGame('loading');
     // fix15 ข่าวลือ: ฟังเอกสารของตัวเองเอกสารเดียว (แอดมินไม่รับข่าวลือ)
     watchRumors();watchAlerts();watchGameOpen();
@@ -476,6 +477,30 @@ function showEmergency(){emergencyShown=true;try{frameSave(true);}catch(e){}try{
   #s4emerg .lan{position:absolute;width:26px;height:34px;border-radius:8px 8px 10px 10px;background:linear-gradient(#ffd27a,#ff9a3c);opacity:.85;animation:s4lan 7s linear infinite;box-shadow:0 0 18px #ffb347}@keyframes s4lan{from{transform:translateY(110vh)}to{transform:translateY(-20vh)}}</style>
   ${[12,28,55,72,88].map((x,i)=>`<i class="lan" style="left:${x}%;animation-delay:${-i*1.6}s"></i>`).join('')}
   <div class="card"><img src="${IMG('honey-face-oops.webp')}" alt=""><h2>⛔ ปิดเกมชั่วคราว</h2><p>ยัยหนู สั่งปิดเกมฉุกเฉิน<br>รบกวนออกจากหน้านี้ตอนนี้ด้วยค่ะ</p><p>หากเกมกลับมาปกติแล้ว<br>ยัยหนู จะแจ้งในกลุ่มแชตค่ะ</p><small>หน้านี้จะเปิดเกมให้เองเมื่อยัยหนูเปิดเกมอีกครั้ง</small></div>`;}
+/* S4 3.2 หน้าสุ่มตัวละคร: ลูกเต๋าหมุน → เผยตัวละคร → ชุดเริ่มต้นเข้าตู้ · กดซ้ำ/รีเฟรชได้ผลเดิม (เซิร์ฟเวอร์จำไว้) */
+const S4TRIBE={pink:['💗','ชมพู','#f06ba8','punk'],mint:['💚','หัวเขียว','#5cc9a0','m01'],red:['❤️','หัวแดง','#e0554f','r01'],bob:['🖤','ผมบ็อบดำ','#5d5d7a','b01']};
+function s4RollScreen(){return new Promise(resolve=>{
+  /* หน้าสุ่มตัวละคร (3.2) แบบเวที 3D: โมเดลจริง 4 ตัวในกรอบ roll3d · ชื่อ/ปุ่มอยู่หน้าแม่ · ผลออกจากเซิร์ฟเวอร์ก่อนแล้วค่อยให้ไฟหยุด */
+  const app=$('#app');app.innerHTML=`<div id="s4roll" style="position:fixed;inset:0;background:#140a1f;overflow:hidden">
+   <style>#s4roll iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#140a1f}#s4roll .top{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 14px);text-align:center;color:#fff;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.6)}#s4roll .top h2{margin:0;font-size:1.35rem;letter-spacing:.02em}#s4roll .top p{margin:.25rem 14px 0;font-size:.78rem;opacity:.85}
+   #s4roll .bot{position:absolute;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 16px);background:linear-gradient(transparent,rgba(20,10,31,.92) 40%);text-align:center}
+   #s4roll .plate{display:none;margin:0 auto 12px;width:min(88vw,360px);background:linear-gradient(#fff6d6,#f3c86a);border:3px solid #fff;border-radius:20px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 30px rgba(255,210,122,.5);animation:s4plate .5s cubic-bezier(.2,1.4,.4,1)}@keyframes s4plate{from{transform:translateY(30px) scale(.7);opacity:0}to{transform:none;opacity:1}}#s4roll .plate b{display:block;font-size:1.25rem;color:#5a2a3c}#s4roll .plate small{color:#7a4a5c;font-size:.78rem}
+   #s4roll .btn{width:min(88vw,360px);font-size:1.1rem;padding:14px;border-radius:18px;border:0;background:linear-gradient(#fff3c4,#e8b64c);color:#4a2333;font-weight:800;box-shadow:0 5px 0 #b9852a,0 10px 24px rgba(0,0,0,.4)}#s4roll .btn:disabled{opacity:.6}#s4roll .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b9852a}
+   #s4roll .ld{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;background:#140a1f;transition:opacity .4s}#s4roll .ld.off{opacity:0;pointer-events:none}</style>
+   <iframe src="roll3d/index.html?h=9810e9ad" allow="autoplay" title="เวที"></iframe><div class="ld" id="s4rollLd">✨ กำลังเตรียมเวที…</div>
+   <div class="top"><h2>🎲 สุ่มตัวละครของคุณ</h2><p>ซีซั่น 4 ทุกคนสุ่มได้ครั้งเดียว · ตัวละครที่ได้จะอยู่กับคุณไปตลอด (เปลี่ยนได้ด้วยบัตรศัลยกรรมเท่านั้น)</p></div>
+   <div class="bot"><div class="plate" id="s4res"></div><button class="btn" id="s4rollBtn" disabled>กำลังโหลด…</button></div></div>`;
+  const btn=$('#s4rollBtn'),ifr=app.querySelector('#s4roll iframe'),ld=$('#s4rollLd');let ready=false,done=false,tribe=null;
+  const stageOk=()=>{if(ready)return;ready=true;ld.classList.add('off');btn.disabled=false;btn.textContent='🎲 ทอยลูกเต๋า';};
+  const showResult=()=>{if(done||!tribe)return;done=true;const T=S4TRIBE[tribe];const r=$('#s4res');r.style.display='block';r.innerHTML=`<b>${T[0]} ตัวละคร${T[1]}</b><small>ได้ชุดเริ่มต้นเข้าตู้เสื้อผ้าแล้ว · ไปแต่งตัวได้ที่ตู้ในห้องนอน</small>`;btn.disabled=false;btn.textContent='🌾 เข้าสวนเลย';btn.onclick=()=>{removeEventListener('message',onMsg);resolve(tribe);};};
+  const onMsg=e=>{const m=e.data&&e.data.s4roll;if(!m)return;if(m.t==='ready')stageOk();else if(m.t==='fail')stageOk();else if(m.t==='done')showResult();};
+  addEventListener('message',onMsg);setTimeout(stageOk,12000);/* เวทีโหลดช้า/ไม่ได้ ก็ยังสุ่มได้ */
+  const send=m=>{try{ifr.contentWindow.postMessage({s4roll:m},'*');}catch(e){}};
+  btn.onclick=async()=>{btn.disabled=true;btn.textContent='กำลังสุ่ม…';send({t:'spin'});const t0=Date.now();
+   let out=null;try{out=await cloudAction('char',{type:'roll'});}catch(e){btn.disabled=false;btn.textContent='ลองอีกครั้ง';toast(thaiError(e));return;}
+   const v=out&&out.view;tribe=v&&v.tribe;if(!tribe){btn.disabled=false;btn.textContent='ลองอีกครั้ง';toast('สุ่มไม่สำเร็จ ลองใหม่');return;}
+   setTimeout(()=>{send({t:'stop',tribe});setTimeout(showResult,6500);/* ถ้าเวทีไม่ตอบ ก็โชว์ผลเอง */},Math.max(0,1800-(Date.now()-t0)));};
+});}
 function renderClosed() {
   $('#app').innerHTML = `<div class="home"><div class="soon"><h2>🌙 สวนกำลังจะเปิด</h2><p>ยัยหนูกำลังเตรียมซีซั่น 4 อยู่ เข้าระบบไว้แล้ว รอประกาศในกลุ่มได้เลย</p>
     <div class="grid2"><button class="tile" id="tMail"><span>📮</span>ไปรษณีย์</button><button class="tile" id="tOut"><span>🚪</span>ออกจากระบบ</button></div></div></div>`;
@@ -562,7 +587,7 @@ function subSet(K, v, scope) {
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = {neighborhood:'🏘️ เนเบอร์ฮูด',treewar:'🌳 ศึกโคมลอย',funrun:'🪷 แรลลี่กระทง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders',fishing:'🎣 ตกปลา',farmshop:'🛒 แผงขายหน้าบ้าน',boat:'🚤 แข่งเรือ', safari: '🔬 วิจัยซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์ภาคการเกษตร', birds: '🦒 ซาฟารี', catpen: '🐱 สวนแมว', dog: '🐶 สวนหมา', alpaca: '🦙 ทุ่งอัลปาก้า' };
+const SCREENS = {city:'🏙️ นครยัยหนู',neighborhood:'🏘️ เนเบอร์ฮูด',treewar:'🌳 ศึกโคมลอย',funrun:'🪷 แรลลี่กระทง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders',fishing:'🎣 ตกปลา',farmshop:'🛒 แผงขายหน้าบ้าน',boat:'🚤 แข่งเรือ', safari: '🔬 วิจัยซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์ภาคการเกษตร', birds: '🦒 ซาฟารี', catpen: '🐱 สวนแมว', dog: '🐶 สวนหมา', alpaca: '🦙 ทุ่งอัลปาก้า' };
 const LS_CAP = 128 * 1024;
 // lastSetError: the latest failed Host.set/subSet (cleared at the start of every set). frameSave(true) throws it.
 let lastSetError = null;
@@ -575,7 +600,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
+const CLOUD_HANDLERS={char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -600,7 +625,7 @@ async function sceneSafeAction(system,input){
 const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return false;}};/* fix16: มินิเกมลอยกระทงเปิดอยู่ (หน้าสัตว์หยุดบันทึก รอโหลดใหม่ตอนปิดเกม) */
 const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
-let alertStop=null,demonStop=null,twStop=null;
+let alertStop=null,demonStop=null,twStop=null;let cityStop=null;
 /* fix20: โดนไอเทมปีศาจ (ตัดสินอัตโนมัติ/เลือกตราหีบ/ส่งต่อหัวใจ) ไม่โหลดหน้าใหม่แล้ว — ผู้เล่นทำต่อได้ ไม่เด้งกลับหน้าแรก
    หน้าเกมยังถือกุศลเลขเดิม: เก็บส่วนต่างไว้ใน meritShift แล้วบวกคืนตอนหน้าเกมบันทึก (และหักออกตอนหน้าเกมอ่าน) ให้ตรงกับเซิร์ฟเวอร์เสมอ
    ถ้ามีของระเบิดออกจากกระเป๋า (ของในกระเป๋าเปลี่ยน) ค่อยโหลดหน้าใหม่แบบเดิม */
@@ -619,7 +644,8 @@ async function demonQuiet(sys,input){if(cloudPromise)await cloudPromise;if(!S.fr
    if(!put)meritShift+=d;}
  }catch(e){throw e;}finally{if(thaw&&H&&held){H.set=held.set;H.del=held.del;}}
  return out;}
-function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;twStop?.();twStop=null;if(!S.user)return;
+function watchAlerts(){alertStop?.();alertStop=null;demonStop?.();demonStop=null;twStop?.();twStop=null;cityStop?.();cityStop=null;if(!S.user)return;
+ /* S4 นครยัยหนู: งานแต่ง/หย่า/นับถอยหลังประกวด เห็นทุกคนทุกหน้า (เอกสารเดียว เปลี่ยนเฉพาะมีเหตุการณ์) */cityStop=onSnapshot(doc(db,'world','city'),snap=>s4CityEvents(snap.exists()?snap.data():null),()=>{});
  /* fix19 🌳 ศึกโคมลอย: ทุกคน (รวมแอดมิน) */
  twStop=startTreeWar({watchState:fn=>onSnapshot(doc(db,'world','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),watchMine:fn=>onSnapshot(doc(db,'players',S.user.uid,'gameViews','treeWar'),snap=>fn(snap.exists()?snap.data():null),()=>{}),call:input=>httpsCallable(functions,'treeWarActionCloud')({input}).then(r=>r.data),now:()=>Date.now()+serverOffset,toast,screen:()=>S.screen,go:n=>goScreen(n),ledger:()=>sceneSafeAction('ledger',{type:'login'}),hold:()=>RUMOR_HOLD.has(S.screen)||S.navigating||hwOpen()});
  if(S.admin)return;
@@ -658,7 +684,7 @@ async function cloudAction(system,input) {
     cloudSequences.set(system,response.seq);cloudPending.delete(system);
     if(response.ledgerApplied?.length&&typeof showLedger==='function')showLedger(response.ledgerApplied);
     if(recover&&attempt===0){pending={input,seq:response.seq+1,id:crypto.randomUUID(),session:S.sessionId};cloudPending.set(system,pending);continue;}
-    if(input.type!=='status')showSave('บันทึกแล้ว ✓');return response;
+    if(input.type!=='status')showSave('บันทึกแล้ว ✓');if(system==='city'&&input.type==='divorce'){try{for(const f of document.querySelectorAll('iframe')){const w=f.contentWindow;if(w&&typeof w.s4HusbandSync==='function')w.s4HusbandSync();}}catch(e){}}return response;
     }
   } catch(e) {
     const c=e.code||'';
@@ -669,6 +695,11 @@ async function cloudAction(system,input) {
   } finally {cloudBusy=false;finishCloud();cloudPromise=null;if(S.frame&&!S.blocked)S.frame.style.pointerEvents='';}
 }
 const HOST_BASE = {
+  /* S4 นครยัยหนู: เอกสารโลก/ตำแหน่งคนในนคร/การประกวด (ฟังเฉพาะตอนอยู่ในหน้านคร) · แอดมินเรียกตรง */
+  watchCity:fn=>sceneWatch(doc(db,'world','city'),fn),watchPageant:fn=>sceneWatch(doc(db,'world','pageant'),fn),
+  watchPresence:fn=>{const version=sceneVersion;const stop=onSnapshot(query(collection(db,'cityPresence'),where('exp','>',Date.now())),snap=>{if(version===sceneVersion)fn(snap.docs.map(d=>d.data()));},e=>{});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};},
+  cityAdmin:input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pageantAdmin:input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data),pageantView:()=>httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),
+  isAdmin:()=>!!S.admin,myName:()=>S.P?.name||S.user?.displayName||'ผู้เล่น',myUid:()=>S.user?.uid||'',
   watchLures:fn=>sceneWatch(doc(db,'birdAdmissions',S.user.uid),state=>fn({birds:lurePen([],state?.birds||[],serverNow())})),
   // Loot boxes open over the live scene (no blank frame). While the overlay owns the inventory the old
   // scene is frozen: its saves are dropped so a stale copy can never write box counts back; it reloads after close.
@@ -751,7 +782,7 @@ function sceneHost(ids){
 window.__HOST = sceneHost(null);
 function hostSet(k, v, scope) {
     if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }if(meritShift&&o&&typeof o==='object')o.merit=(Number(o.merit)||0)+meritShift;/* fix20: กุศลที่เซิร์ฟเวอร์หักระหว่างที่หน้านี้ไม่ได้โหลดใหม่ */ if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }if(meritShift&&o&&typeof o==='object')o.merit=(Number(o.merit)||0)+meritShift;/* fix20: กุศลที่เซิร์ฟเวอร์หักระหว่างที่หน้านี้ไม่ได้โหลดใหม่ */ if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;/* S4 ตัวละคร: เซิร์ฟเวอร์เป็นเจ้าของ sub.char · bag.outfit · บัตรศัลยกรรม (หน้าในเกมห้ามเขียนทับด้วยสำเนาเก่า) */if(S.P.g.sub?.char)o.sub.char=clone(S.P.g.sub.char);else delete o.sub.char;if(o.bag||S.P.g.bag?.outfit){o.bag ||= {};if(S.P.g.bag?.outfit)o.bag.outfit=clone(S.P.g.bag.outfit);else delete o.bag.outfit;if(o.bag.item||S.P.g.bag?.item?.surgery!=null){o.bag.item ||= {};if(S.P.g.bag?.item?.surgery!=null)o.bag.item.surgery=S.P.g.bag.item.surgery;else delete o.bag.item.surgery;}}const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v, scope); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
@@ -763,7 +794,7 @@ function renderGame(screen) {
     $('#gback').onclick = () => goScreen('farm');
     /* S4 ข้อ 40: ทุกหน้ามีทางลัดไประบบอื่นตรง ไม่ต้องผ่านฟาร์มหลัก */
     $('#gnav').onclick = () => { const P=$('#s4navP'); if(!P.hidden){P.hidden=true;return;}
-      const SYS=[['farm','🌾','ฟาร์ม'],['house','🏠','บ้าน'],['backyard','🍳','หลังบ้าน'],['barn','🐔','โรงเรือนสัตว์'],['birds','🦒','ซาฟารี'],['dog','🐶','สวนหมา'],['catpen','🐱','สวนแมว'],['alpaca','🦙','ทุ่งอัลปาก้า'],['fishing','🎣','ตกปลา'],['shop','📈','ตลาดสวน'],['neighborhood','🏘️','เนเบอร์ฮูด'],['boat','🚤','แข่งเรือ'],['minigames','🎮','มินิเกม'],['topspenders','🏆','Top Spenders'],['campaigns','🏅','แคมเปญ']];
+      const SYS=[['farm','🌾','ฟาร์ม'],['city','🏙️','นครยัยหนู'],['house','🏠','บ้าน'],['backyard','🍳','หลังบ้าน'],['barn','🐔','โรงเรือนสัตว์'],['birds','🦒','ซาฟารี'],['dog','🐶','สวนหมา'],['catpen','🐱','สวนแมว'],['alpaca','🦙','ทุ่งอัลปาก้า'],['fishing','🎣','ตกปลา'],['shop','📈','ตลาดสวน'],['neighborhood','🏘️','เนเบอร์ฮูด'],['boat','🚤','แข่งเรือ'],['minigames','🎮','มินิเกม'],['topspenders','🏆','Top Spenders'],['campaigns','🏅','แคมเปญ']];
       P.innerHTML='<div class="s4navB"><h3>🗺️ ไปที่…</h3><div class="s4navG">'+SYS.map(x=>'<button data-g="'+x[0]+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join('')+'</div></div>';P.hidden=false;
       P.onclick=e=>{const b=e.target.closest('[data-g]');if(b){P.hidden=true;goScreen(b.dataset.g);}else if(e.target===P)P.hidden=true;}; };
     S.frame = $('#scr');
@@ -774,6 +805,7 @@ async function goScreen(n) {
   /* S4: ซีซั่นลอยกระทงไม่มีแรลลี่ (แรลลี่ฟักทองอยู่เฉพาะโหมดฮาโลวีน) */if(n==='funrun'){toast('🪷 ซีซั่นนี้ไม่มีแรลลี่นะ');return;}
   if (n === 'admin') { if (S.admin) openAdminOverlay(); return; }
   if (n === 'login') { logout(); return; }
+  /* S4 นครยัยหนู: ผ่านประตูก่อน (ชุด 5 · บ้าน Lv.2 · รถ · น้ำมัน) → ฉากรถวิ่ง → เข้านคร */if(n==='city'&&S.screen!=='city'&&!S4CITY.pass){return s4CityGo();}if(n==='city')S4CITY.pass=false;
   /* S4: หน้า 2D ซีซัน 3 ของบ้าน/ป่า/โรงเรือน ไม่ใช่หน้าที่ผู้เล่นเข้าได้อีก (ระบบอยู่ในฟาร์ม 3D แล้ว) */
   if (n === 'house' || n === 'forest' || n === 'barn') { try{const f=S.frame&&S.frame.contentWindow;if(n==='house'&&f&&f.__S4B&&f.__S4B.house)return f.__S4B.house();if(n==='barn'&&f&&f.__S4B&&f.__S4B.zone)return f.__S4B.zone('barn');if(n==='forest'&&f&&f.__S4B&&f.__S4B.hact)return f.__S4B.hact('drinks');}catch(e){} toast('🌾 ระบบนี้อยู่ในฟาร์มแล้ว แตะที่อาคารในสวนได้เลย'); return; }
   if (!(n in SCREENS)) { toast('🚧 ส่วนนี้จะเปิดในอัปเดตถัดไป'); return; }
@@ -817,7 +849,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=3ccc0075'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss3-fix24&h=881e663d'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -917,11 +949,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '🎭 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['players', '👥 ผู้เล่น'], ['reset', '🧹 เริ่มศูนย์'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '🎭 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['char', '🎭 ตัวละครผู้เล่น'], ['city', '🏙️ นคร/ประกวด'], ['players', '👥 ผู้เล่น'], ['reset', '🧹 เริ่มศูนย์'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, players: tabPlayers, reset: tabReset, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, char: tabChar, city: tabCity, players: tabPlayers, reset: tabReset, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 /* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
 const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
@@ -930,6 +962,88 @@ function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=fa
   const out=await fn(...a);host.scrollTop=top;const b2=$('#aBody');ADMIN_LISTS.forEach((q,i)=>{const e=b2?.querySelector(q);if(e&&inner[i])e.scrollTop=inner[i];});return out;};}
 /* fix17 🎭 บันทึกการแกล้งด้วยไอเทมปีศาจ — เห็นเฉพาะแอดมิน (ผู้เล่นไม่มีทางรู้ว่าใครแกล้ง) */
 /* fix19 🏧 ATM: บันทึกการโอนทั้งหมด · เปิด/ปิดตู้ · ล้าง PIN ให้คนที่ลืม (บัตรส่งได้จากแท็บ 🎁 ส่งของ หมวด "บัตร ATM") */
+
+const S4CITY={going:false};
+async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',{type:'status'});if(st.sync)st=await cloudAction('city',{type:'sync'});const e=st.view.entry;const W=st.world||{};
+  if(W.open===false&&!S.admin){modal('<h2>⛔ นครปิดอยู่</h2><div>ยัยหนูปิดนครชั่วคราว รอประกาศเปิดนะ</div>');return;}
+  if(!e.ok){modal('<h2>🏙️ ยังเข้านครไม่ได้</h2><div>ขาด: <b>'+e.miss.map(esc).join('</b> · <b>')+'</b><br><small>เกณฑ์: ชุด '+e.need.outfits+' ชุดไม่ซ้ำ (ชุดเริ่มต้นนับ) · บ้าน Lv.'+e.need.houseLv+' · รถ (ซื้อจากยัยหนู) · น้ำมัน '+e.need.fuelMin+'–'+e.need.fuelMax+' แกลลอน/รอบ</small></div>');return;}
+  const go=async()=>{const d=document.createElement('div');d.id='s4drive';d.innerHTML='<div class="t">🚗 กำลังขับรถไปนครยัยหนู…</div><div class="car">'+(st.view.car==='luxury'?'🚘':'🚗')+'</div><div class="f" id="s4driveF"></div>';document.body.appendChild(d);const t0=Date.now();
+   try{const r=await cloudAction('city',{type:'enter'});$('#s4driveF').textContent=r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'');await new Promise(r=>setTimeout(r,Math.max(0,3200-(Date.now()-t0))));d.classList.add('out');setTimeout(()=>d.remove(),600);S4CITY.going=false;S4CITY.pass=true;goScreen('city');}
+   catch(err){d.remove();S4CITY.going=false;toast(thaiError(err));}};
+  const fuelTxt=e.free?'วันนี้เข้าฟรี ไม่ใช้น้ำมัน':'จะใช้น้ำมัน '+e.need.fuelMin+'–'+e.need.fuelMax+' แกลลอน (มี '+e.fuel+')';
+  modal('<h2>🚗 ไปนครยัยหนู</h2><div>'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:'ออกเดินทาง',f:go}]);return;}
+ catch(err){toast(thaiError(err));}finally{setTimeout(()=>{S4CITY.going=false;},8000);}}
+/* ---------- S4 นครยัยหนู: ฉากแต่งงาน/หย่า (ทุกคนเห็น) + ป้ายนับถอยหลังประกวด ---------- */
+const CITYFX={seen:new Set(),timer:0,world:null};
+function s4CityEvents(W){CITYFX.world=W;if(!W)return;const now=serverNow();
+ for(const w of W.weddings||[]){const key='w'+w.uid+w.at;if(CITYFX.seen.has(key)||w.at<now-90000)continue;if(w.at-now>45000){clearTimeout(CITYFX.timer);CITYFX.timer=setTimeout(()=>s4CityEvents(CITYFX.world),Math.max(1000,w.at-now-40000));continue;}CITYFX.seen.add(key);s4WeddingShow(w,now);}
+ for(const d of W.divorces||[]){const key='d'+d.uid+d.at;if(CITYFX.seen.has(key)||d.at<now-120000)continue;CITYFX.seen.add(key);s4Overlay(s4Q('city3d/wed.html?h=e29b3b3c')+'mode=divorce&name='+encodeURIComponent(d.name)+'&man='+encodeURIComponent(d.man)+'&manName='+encodeURIComponent(d.manName||''),12000,'💔 '+d.name+' หย่ากับ'+(d.manName||'สามี')+'แล้ว');}
+ if(W.announce&&W.announce.at>now-60000&&!CITYFX.seen.has('a'+W.announce.at)){CITYFX.seen.add('a'+W.announce.at);toast('📢 นคร: '+W.announce.msg);}
+ s4PageantBanner(W.pageantAt||0,now);}
+function s4WeddingShow(w,now){const wait=Math.max(0,w.at-now);const b=s4Banner('wedding','💒 งานแต่งของ <b>'+esc(w.name)+'</b> กับ <b>'+esc(w.manName)+'</b> กำลังจะเริ่ม',wait);
+ setTimeout(()=>{b.remove();s4Overlay(s4Q('city3d/wed.html?h=e29b3b3c')+'mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),75000,'💒 งานแต่ง '+w.name+' ♥ '+w.manName,true);},wait);}
+function s4Banner(id,html,ms){let b=document.getElementById('s4bn-'+id);if(!b){b=document.createElement('div');b.id='s4bn-'+id;b.className='s4bn';document.body.appendChild(b);}
+ const tick=()=>{const left=Math.max(0,Math.round((ms-(Date.now()-t0))/1000));b.innerHTML='<span>'+html+'</span><b>'+(left>0?left+' วิ':'เริ่มแล้ว')+'</b>';if(left>0)b._t=setTimeout(tick,1000);};const t0=Date.now();tick();b.remove=()=>{clearTimeout(b._t);b.parentNode&&b.parentNode.removeChild(b);};return b;}
+function s4PageantBanner(at,now){let b=document.getElementById('s4bn-pageant');const left=at-now;if(!at||left<-15*60000||left>10*60000){if(b)b.remove();return;}
+ if(!b){b=document.createElement('div');b.id='s4bn-pageant';b.className='s4bn pg';document.body.appendChild(b);b.onclick=()=>{if(S.screen!=='city')goScreen('city');};}
+ const tick=()=>{const l=at-serverNow();const m=Math.floor(Math.abs(l)/60000),sec=Math.floor(Math.abs(l)%60000/1000);b.innerHTML='<span>👑 ประกวดนางนพมาศ '+(l>0?'อีก '+m+':'+String(sec).padStart(2,'0')+(l<=3*60000?' · <b>เปิดแย่งโพเดียมแล้ว!</b>':''):'<b>เริ่มแล้ว!</b>')+'</span><i>แตะเพื่อไปนคร</i>';if(document.contains(b))b._t=setTimeout(tick,1000);};clearTimeout(b._t);tick();}
+const s4Q=p=>p+(p.includes('?')?'&':'?');/* ลิงก์+แฮชแคชแล้วค่อยต่อพารามิเตอร์ */
+function s4Overlay(src,ms,title,lock){let o=document.getElementById('s4cityov');if(o)o.remove();o=document.createElement('div');o.id='s4cityov';o.innerHTML='<iframe src="'+src+'" title="'+esc(title)+'"></iframe><button class="x" aria-label="ปิด">✕</button>';document.body.appendChild(o);
+ const close=()=>{o.remove();};o.querySelector('.x').onclick=close;if(lock){o.querySelector('.x').style.display='none';setTimeout(()=>{o.querySelector('.x').style.display='';},20000);}setTimeout(close,ms);
+ /* ล็อกจอแต่ของที่ทำค้างอยู่ไม่หาย: แค่ซ้อนทับ ไม่โหลดหน้าใหม่ */}
+/* S4 นครยัยหนู: ศูนย์แอดมิน "นคร/ประกวด" — ปุ่มชัด กดแล้วมีผลทันที · ปิดนคร = ทุกคนเด้งกลับฟาร์ม · คอนโซลเวทีประกวด (สำคัญที่สุด) · ธนาคารคำถาม */
+async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const cA=input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pA=input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data);
+ let st,pv,qs;try{[st,pv,qs]=await Promise.all([cA({type:'status'}),httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),pA({type:'qList'})]);}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;
+ const W=st.world,P=pv.view,Q=qs.questions||[];const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+ const ST={idle:'ยังไม่มีการประกวด',announce:'ประกาศแล้ว รอเวลาเริ่ม',podium:'เปิดให้แย่งโพเดียม',lights:'รอบดับไฟ (คนตกรอบจ่ายเพื่ออยู่ต่อ)',thai:'รอบชุดไทย + โชว์ความสามารถ',quiz:'รอบคำถามเกี่ยวกับยัยหนู',cut5:'คัดเหลือ 5 คนแล้ว',swim:'รอบชุดว่ายน้ำ (เดินแบบ)',final:'คำถามสุดท้าย 5 ข้อ',count:'กรรมการกำลังนับคะแนน',result:'ประกาศผลแล้ว',party:'ร่วมแสดงความยินดี'};
+ const NEXTL={lights:'▶ ไปรอบชุดไทย',thai:'▶ ไปรอบคำถาม',quiz:'▶ คัดเหลือ 5 คน',cut5:'▶ ไปรอบชุดว่ายน้ำ',swim:'▶ ไปคำถามสุดท้าย',final:'▶ กรรมการนับคะแนน',count:'▶ ประกาศผล',result:'▶ ร่วมยินดี',party:'▶ จบการประกวด'};
+ const alive=Object.values(P.contestants||{}).filter(c=>c.alive).length;
+ B.innerHTML=`<div class="box"><h3>🏙️ นครยัยหนู</h3><p>สถานะ: <b>${W.open?'เปิด':'ปิด'}</b> · ในนครตอนนี้ <b>${st.inside.length}</b> คน · เกณฑ์เข้า: ชุด ${W.entry.outfits} · บ้าน Lv.${W.entry.houseLv} · น้ำมัน ${W.entry.fuelMin}–${W.entry.fuelMax}/รอบ${W.free?' · <b>เปิดฟรีชั่วคราว</b>':''}${W.hungry?' · <b>รถกินน้ำมัน (6)</b>':''}${W.pageantDay?' · <b>วันประกวด เข้าฟรี</b>':''}</p>
+  <div class="row">${W.open?'<button class="btn" id="cClose" style="background:#C8372D;color:#fff">⛔ ปิดนคร (ทุกคนเด้งกลับฟาร์ม)</button>':'<button class="btn" id="cOpen" style="background:#2F7A48;color:#fff">✅ เปิดนคร</button>'}<button class="btn sm gray" id="cFree">${W.free?'ปิดฟรีชั่วคราว':'เปิดฟรีชั่วคราว'}</button><button class="btn sm gray" id="cHungry">${W.hungry?'ปิดโหมดรถกินน้ำมัน':'เปิดโหมดรถกินน้ำมัน'}</button></div>
+  <div class="row" style="margin-top:.4rem"><label>ชุด <input id="cOut" type="number" min="0" max="20" value="${W.entry.outfits}" style="width:4rem"></label><label>บ้าน Lv. <input id="cLv" type="number" min="1" max="3" value="${W.entry.houseLv}" style="width:3.5rem"></label><button class="btn sm" id="cSet">บันทึกเกณฑ์</button></div>
+  <div class="row" style="margin-top:.4rem"><input id="cMsg" placeholder="ประกาศในนคร (ทุกคนเห็น)" style="flex:1"><button class="btn sm" id="cAnn">📢 ประกาศ</button></div>
+  ${st.inside.length?`<div class="ppl" style="margin-top:.4rem">${st.inside.map(x=>`<button data-kick="${esc(x.uid)}">${esc(x.name)} ✕</button>`).join('')}</div><p class="note">แตะชื่อเพื่อเตะออกจากนคร</p>`:''}</div>
+ <div class="box"><h3>👑 เวทีประกวดนางนพมาศ</h3><p>สถานะ: <b>${ST[P.state]||P.state}</b>${P.startAt?' · เริ่ม '+when(P.startAt):''} · ผู้ประกวด ${P.n||0} คน (เหลือ ${alive})${P.round?' · โชว์รอบ '+P.round+'/3':''}${P.quiz?' · กำลังถาม: '+esc(P.quiz.q):''}</p>
+  ${P.state==='idle'?`<div class="row"><input id="pgAt" type="datetime-local" style="flex:1"><button class="btn" id="pgSch">🗓️ ตั้งเวลาประกวด</button></div><p class="note">ตั้งแล้ว: ป้ายนับถอยหลังขึ้นทุกคน · ก่อนเริ่ม 3 นาทีเปิดแย่งโพเดียม · วันนั้นเข้านครฟรี</p>`:''}
+  ${['announce','podium'].includes(P.state)?`<div class="row"><button class="btn" id="pgStart" style="background:#6B3FA0;color:#fff">🎬 เริ่มประกวด (รอบดับไฟ)</button><button class="btn sm gray" id="pgCancel">ยกเลิกการประกวด</button></div>`:''}
+  ${P.state==='thai'?`<div class="row"><button class="btn" id="pgTalent" ${P.round>=3?'disabled':''}>🎯 เริ่มโชว์ความสามารถรอบ ${Math.min(3,(P.round||0)+1)}</button></div>`:''}
+  ${['quiz','final'].includes(P.state)?`<div class="row"><select id="pgQ" style="flex:1;padding:.4rem">${Q.filter(q=>(P.state==='final'?q.kind==='general':q.kind!=='general')).map(q=>`<option value="${q.id}">${esc(q.q)}</option>`).join('')}</select><button class="btn" id="pgAsk">❓ ถามข้อนี้</button><button class="btn sm gray" id="pgRnd">🎲 สุ่มข้อที่ยังไม่เคยถาม</button></div><p class="note">${P.quiz?'ตอบแล้ว '+(P.quiz.answered||[]).length+'/'+alive+' คน · เฉลย: ข้อ '+((P.quiz.correct??-1)+1):'เลือกคำถามแล้วกดถาม ทีละข้อ'}</p>`:''}
+  ${NEXTL[P.state]?`<div class="row" style="margin-top:.4rem"><button class="btn" id="pgNext" style="background:#E8A317;color:#4a2333">${NEXTL[P.state]}</button>${P.state!=='party'?'<button class="btn sm gray" id="pgCancel">ยกเลิกทั้งหมด</button>':''}</div>`:''}
+  ${P.n?`<table style="margin-top:.5rem"><tr><td>เบอร์</td><td>ชื่อ</td><td>คะแนน</td><td>พวงมาลัย</td><td></td></tr>${Object.entries(P.contestants).sort((a,b)=>a[1].no-b[1].no).map(([u,c])=>`<tr style="${c.alive?'':'opacity:.45'}"><td><b>${c.no}</b></td><td>${esc(c.name)}${c.gray?' (สละสิทธิ์)':c.alive?'':' (ตกรอบ)'}</td><td>${c.total==null?'🙈':c.total}</td><td>${c.garland||0}</td><td>${c.alive?`<button data-ff="${esc(u)}" class="btn sm gray">ตัดสิทธิ์</button>`:''}</td></tr>`).join('')}</table>`:''}
+  ${P.result?`<p><b>ผล:</b> ${P.result.map(r=>r.rank+'. '+esc(r.name)+' ('+r.total+')').join(' · ')}</p>`:''}</div>
+ <div class="box"><h3>❓ ธนาคารคำถาม (${Q.length} ข้อ)</h3><p class="note">เพิ่มได้ตลอด ไม่ต้องรออัปเดต · "ยัยหนู" ใช้รอบคำถาม · "ความรู้ทั่วไป" ใช้ 5 ข้อสุดท้าย</p>
+  <input id="qQ" placeholder="คำถาม" style="width:100%;margin:.2rem 0;padding:.45rem;border-radius:10px;border:1px solid #ddd">
+  ${[0,1,2,3].map(i=>`<div class="row" style="margin:.2rem 0"><input type="radio" name="qC" value="${i}" ${i===0?'checked':''}><input id="qA${i}" placeholder="คำตอบ ${i+1}${i===0?' (ติ๊กข้อที่ถูก)':''}" style="flex:1;padding:.4rem;border-radius:10px;border:1px solid #ddd"></div>`).join('')}
+  <div class="row"><button class="btn sm gray" id="qSeed">📥 นำเข้าคำถามของยัยหนู 29 ข้อ + ความรู้ทั่วไป 52 ข้อ</button></div><div class="row"><select id="qK"><option value="yainoo">เกี่ยวกับยัยหนู</option><option value="general">ความรู้ทั่วไป</option></select><button class="btn" id="qAdd">➕ เพิ่มคำถาม</button></div>
+  <div style="max-height:40vh;overflow:auto;margin-top:.4rem">${Q.map(q=>`<div style="display:flex;gap:.4rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid #f1e3cf"><span style="flex:1"><b>${esc(q.q)}</b> <small>(${q.kind==='general'?'ทั่วไป':'ยัยหนู'})</small><br><small>${q.a.map((a,i)=>(i===q.correct?'✅ ':'')+esc(a)).join(' · ')}</small></span><button data-qd="${esc(q.id)}" class="btn sm gray">ลบ</button></div>`).join('')}</div></div>`;
+ const run=async(fn,ok)=>{try{await fn();if(ok)toast(ok);}catch(e){toast(thaiError(e));}tabCity();};
+ const on=(id,fn)=>{const e=$('#'+id);if(e)e.onclick=fn;};
+ on('cClose',()=>modal('<h2>ปิดนคร</h2><div>ทุกคนในนครจะเด้งกลับฟาร์มทันที</div>',[{t:'ยกเลิก',c:'gray'},{t:'ปิดนคร',f:()=>run(()=>cA({type:'kickAll'}),'⛔ ปิดนครแล้ว')}]));
+ on('cOpen',()=>run(()=>cA({type:'open'}),'✅ เปิดนครแล้ว'));on('cFree',()=>run(()=>cA({type:'settings',free:!W.free})));on('cHungry',()=>run(()=>cA({type:'settings',hungry:!W.hungry})));
+ on('cSet',()=>run(()=>cA({type:'settings',outfits:+$('#cOut').value,houseLv:+$('#cLv').value}),'บันทึกเกณฑ์แล้ว'));on('cAnn',()=>{const m=$('#cMsg').value.trim();if(m)run(()=>cA({type:'announce',msg:m}),'📢 ประกาศแล้ว');});
+ B.querySelectorAll('[data-kick]').forEach(b=>b.onclick=()=>run(()=>cA({type:'kick',uid:b.dataset.kick}),'เตะออกแล้ว'));
+ on('pgSch',()=>{const v=$('#pgAt').value;const t=v?new Date(v).getTime():0;if(!t)return toast('เลือกวันเวลา');run(()=>pA({type:'schedule',startAt:t}),'🗓️ ตั้งเวลาแล้ว ทุกคนจะเห็นป้ายนับถอยหลัง');});
+ on('pgStart',()=>modal('<h2>เริ่มประกวด</h2><div>รอบดับไฟจะสุ่มตกรอบ 8 คนทันที</div>',[{t:'ยกเลิก',c:'gray'},{t:'เริ่ม!',f:()=>run(()=>pA({type:'start'}),'🎬 เริ่มแล้ว')}]));
+ on('pgCancel',()=>modal('<h2>ยกเลิกการประกวด</h2><div>ล้างทุกอย่าง ผู้ประกวดกลับสู่ปกติ</div>',[{t:'ไม่',c:'gray'},{t:'ยกเลิก',f:()=>run(()=>pA({type:'cancel'}),'ยกเลิกแล้ว')}]));
+ on('pgTalent',()=>run(()=>pA({type:'talent'}),'🎯 เริ่มโชว์แล้ว'));on('pgRnd',()=>run(()=>pA({type:'askRandom'}),'🎲 ส่งคำถามแล้ว'));on('pgAsk',()=>{const id=$('#pgQ')?.value;if(id)run(()=>pA({type:'ask',id}),'❓ ส่งคำถามแล้ว');});on('pgNext',()=>run(()=>pA({type:'next'})));
+ B.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>run(()=>pA({type:'forfeit',uid:b.dataset.ff})));
+ on('qSeed',()=>run(()=>pA({type:'qSeed'}).then(r=>toast('นำเข้า '+r.added+' ข้อ')),''));
+ on('qAdd',()=>{const q=$('#qQ').value,a=[0,1,2,3].map(i=>$('#qA'+i).value),correct=+(B.querySelector('input[name=qC]:checked')?.value||0),kind=$('#qK').value;run(()=>pA({type:'qAdd',q,a,correct,kind}),'➕ เพิ่มคำถามแล้ว');});
+ B.querySelectorAll('[data-qd]').forEach(b=>b.onclick=()=>run(()=>pA({type:'qDel',id:b.dataset.qd}),'ลบแล้ว'));
+ if(P.state!=='idle'){clearTimeout(A.cityT);A.cityT=setTimeout(()=>{if(A.tab==='city'&&document.contains(B))tabCity();},5000);}}
+/* S4 3.10 ศูนย์แอดมิน "ตัวละครผู้เล่น": สุ่มแล้ว/ยังไม่สุ่ม · ต่อตัวละคร · กำหนดตัวละครรายคน */
+async function tabChar(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'charAdminCloud')({input}).then(r=>r.data);
+ let st;try{st=await call({type:'stats'});}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;
+ const T={pink:'💗 ชมพู',mint:'💚 หัวเขียว',red:'❤️ หัวแดง',bob:'🖤 ผมบ็อบดำ'};A.charQ ??= '';
+ const rows=st.rows.filter(r=>!A.charQ||r.name.includes(A.charQ)).sort((a,b)=>(a.tribe?1:0)-(b.tribe?1:0)||a.name.localeCompare(b.name,'th'));
+ B.innerHTML=`<div class="box"><h3>🎭 ตัวละครผู้เล่น</h3><p>สุ่มแล้ว <b>${st.rolled}</b> / ${st.total} คน · ยังไม่สุ่ม <b>${st.notRolled.length}</b> คน</p>
+  <p>${Object.entries(T).map(([k,n])=>`${n} ${st.per[k]||0}`).join(' · ')}</p>
+  ${st.notRolled.length?`<p class="note">ยังไม่สุ่ม: ${st.notRolled.map(r=>esc(r.name)).join(', ')}</p>`:'<p class="note ok">ทุกคนสุ่มตัวละครแล้ว 🎉</p>'}</div>
+  <div class="box"><h3>กำหนดตัวละครรายคน</h3><p class="note">ใช้เมื่อจำเป็นเท่านั้น · ชุดของตัวละครเดิมจะถูกขายคืน (20% / 2,000,000) ตอนเขาเข้าเกมครั้งถัดไป · ชุดเริ่มต้นใหม่ส่งทางไปรษณีย์</p>
+  <input id="chQ" placeholder="ค้นหาชื่อ" value="${esc(A.charQ)}" style="width:100%;margin:.3rem 0;padding:.5rem;border-radius:10px;border:1px solid #ddd">
+  <div style="max-height:50vh;overflow:auto">${rows.map(r=>`<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem 0;border-bottom:1px solid #f1e3cf"><span style="flex:1"><b>${esc(r.name)}</b><br><small>${r.tribe?T[r.tribe]+' · ใส่ '+esc(r.wear||'')+(r.by==='admin'?' · แอดมินกำหนด':r.by==='surgery'?' · ศัลยกรรม':''):'ยังไม่สุ่ม'}</small></span><select data-u="${r.uid}" style="padding:.35rem;border-radius:8px"><option value="">— กำหนด —</option>${Object.entries(T).map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></div>`).join('')}</div></div>`;
+ $('#chQ').oninput=e=>{A.charQ=e.target.value;clearTimeout(A.charT);A.charT=setTimeout(tabChar,300);};
+ B.querySelectorAll('select[data-u]').forEach(sel=>sel.onchange=()=>{const tribe=sel.value;if(!tribe)return;const name=rows.find(r=>r.uid===sel.dataset.u)?.name||'';modal('<h2>กำหนดตัวละคร</h2><div>ให้ <b>'+esc(name)+'</b> เป็น '+T[tribe]+'?</div>',[{t:'ยกเลิก',c:'gray',f:()=>{sel.value='';}},{t:'กำหนดเลย',f:async()=>{try{await call({type:'set',uid:sel.dataset.u,tribe});toast('✅ กำหนดตัวละครแล้ว');tabChar();}catch(e){toast(thaiError(e));sel.value='';}}}]);});}
 async function tabAtm(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'atmActionCloud')({input}).then(r=>r.data);
  try{const out=await call({type:'admin-list'});let q='';const when=t=>new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const draw=()=>{const rows=out.rows.filter(r=>!q||String(r.fn).includes(q)||String(r.tn||'').includes(q)),tr=rows.filter(r=>r.kind!=='fx'),fx=rows.filter(r=>r.kind==='fx'),sum=tr.reduce((a,r)=>a+r.amount,0),fees=tr.reduce((a,r)=>a+(r.fee||0),0),fxSum=fx.reduce((a,r)=>a+r.amount,0),fxN=fx.reduce((a,r)=>a+(r.n||0),0);
@@ -960,10 +1074,10 @@ async function tabSend(){
  const eligible=new Set(ps.map(p=>p.uid));A.sel=new Set([...A.sel].filter(uid=>eligible.has(uid)));
  if(A.pendingRun){const r=A.pendingRun;B.innerHTML=`<div class="box"><h3>รายการส่งค้าง: ${esc(r.body.title)}</h3><button class="btn" id="gResume">ส่งรายการเดิมต่อ</button><p>รายการสำเร็จจะไม่ส่งซ้ำ แม้สมาชิกกดรับไปแล้ว</p></div>`;$('#gResume').onclick=()=>{A.gift={...r.body,operationId:r.operationId};sendGift(r.uids,r.names,r.packs||{});};return;}
  // fix14: หน้าส่งของแบบใหม่ (ตาม Preview) — การ์ด 4 ขั้น + แถบสรุปลอยด้านล่าง · แตะชื่อแล้วอัปเดตทันที · ตั้งแพ็กรายคนได้
- A.packs ||= {};A.pq ??= '';A.tpl ??= -1;/* S4 ข้อ 14: หมวดเป็นตาราง ไม่ต้องเลื่อนขวา · ของตกแต่งรวมเป็นหมวดเดียว มีหมวดย่อย */const DECO='🎨 ของตกแต่ง',topOf=g=>/^ของแต่ง·/.test(g)?DECO:g;const SUBORD=['ของในฟาร์ม','ธีมไทย','ธีมธรรมชาติ','ธีมจันทร์','ในบ้าน','หลังบ้าน','หมา/แมว','อัลปาก้า','ซาฟารี','พื้น/รั้ว','ต้นไม้','ดอกไม้','นั่งเล่น','พักผ่อน','น้ำ','ไฟ/จุกจิก','สวนสนุก','ยานพาหนะ','ร้าน/ของกิน','รั้ว','อื่นๆ'];const categories=[...new Set(CATALOG.map(c=>topOf(c.g)))];const subs=[...new Set(CATALOG.filter(c=>/^ของแต่ง·/.test(c.g)).map(c=>c.g.slice(8)))].sort((a,b)=>(SUBORD.indexOf(a)+99)%99-(SUBORD.indexOf(b)+99)%99||(SUBORD.indexOf(a)<0)-(SUBORD.indexOf(b)<0));A.category ||= categories[0];if(!categories.includes(A.category)&&A.category!=='favorites')A.category=categories[0];A.sub ||= subs[0];
+ A.packs ||= {};A.pq ??= '';A.tpl ??= -1;/* S4 ข้อ 14: หมวดเป็นตาราง ไม่ต้องเลื่อนขวา · ของตกแต่งรวมเป็นหมวดเดียว มีหมวดย่อย */const DECO='🎨 ของตกแต่ง',OUTF='👗 เครื่องแต่งกาย',topOf=g=>/^ของแต่ง·/.test(g)?DECO:/^ชุด·/.test(g)?OUTF:g;/* S4 3.9: หมวดเครื่องแต่งกาย แยกตามตัวละคร */const SUBORD=['ของในฟาร์ม','ธีมไทย','ธีมธรรมชาติ','ธีมจันทร์','ในบ้าน','หลังบ้าน','หมา/แมว','อัลปาก้า','ซาฟารี','พื้น/รั้ว','ต้นไม้','ดอกไม้','นั่งเล่น','พักผ่อน','น้ำ','ไฟ/จุกจิก','สวนสนุก','ยานพาหนะ','ร้าน/ของกิน','รั้ว','อื่นๆ'];const categories=[...new Set(CATALOG.map(c=>topOf(c.g)))];A.category ||= categories[0];if(!categories.includes(A.category)&&A.category!=='favorites')A.category=categories[0];const SUBPFX=A.category===OUTF?'ชุด·':'ของแต่ง·';const subs=[...new Set(CATALOG.filter(c=>c.g.startsWith(SUBPFX)).map(c=>c.g.slice(SUBPFX.length)))].sort((a,b)=>(SUBORD.indexOf(a)+99)%99-(SUBORD.indexOf(b)+99)%99||(SUBORD.indexOf(a)<0)-(SUBORD.indexOf(b)<0));if(!subs.includes(A.sub))A.sub=subs[0];
  const COL=['#F2A23A','#5BB6D4','#B07CC6','#F27E9B','#6CC9A8','#E07A5F','#7C9CE0','#D4A017'],TINT=['#FFEBD9','#EFE6FF','#E4F7EF','#FFF5D6','#FFE3EC','#E3F1FB'];
  const colOf=uid=>COL[Math.max(0,ps.findIndex(p=>p.uid===uid))%COL.length],ini=s=>esc([...String(s||'?')][0].toUpperCase()),nameOf=uid=>ps.find(p=>p.uid===uid)?.name||uid;
- const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:A.category===DECO?c.g==='ของแต่ง·'+A.sub:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
+ const filt=CATALOG.filter(c=>(A.category==='favorites'?A.favorites.includes(c.k):A.q?true:(A.category===DECO||A.category===OUTF)?c.g===SUBPFX+A.sub:c.g===A.category)&&(!A.q||c.n.includes(A.q)||c.k.includes(A.q.toLowerCase())));
  const parts=(n=1)=>[g.kusal?['<span class="as-e">💛</span>','กุศล',g.kusal*n,1]:null,g.coins?['<span class="as-e">🪙</span>','เหรียญกระทงทอง',g.coins*n,1]:null,...Object.entries(g.items).filter(([k])=>CAT[k]).map(([k,q])=>[`<img class="as-e" src="${IMG(CAT[k].i)}" alt="">`,CAT[k].n,q*n,0,k])].filter(Boolean);
  const line=n=>parts(n).map(([e,nm,v])=>`${esc(nm)} ×${fmt(v)}`).join(' · ')||'แพ็กยังว่าง';
  const tplCard=(t,i)=>{const b=t.body||{},its=Object.keys(b.items||{}).filter(k=>CAT[k]);return `<button class="as-tpl${i===A.tpl?' on':''}" style="--tint:${TINT[i%TINT.length]}" data-template="${i}"><span class="as-bi">${its[0]?`<img src="${IMG(CAT[its[0]].i)}" alt="">`:esc(b.icon||'🎁')}</span><b>${esc(t.name)}</b><span class="as-mini">${its.slice(1,5).map(k=>`<img src="${IMG(CAT[k].i)}" alt="">`).join('')}</span><span class="as-ks">${b.kusal?'💛 '+fmt(b.kusal):b.coins?'🪙 '+fmt(b.coins):'📦 '+its.length+' อย่าง'}</span><i data-del-template="${i}" aria-label="ลบแพ็ก">✕</i></button>`;};
@@ -975,7 +1089,7 @@ async function tabSend(){
   <div class="as-editor" ${A.editOpen?'':'hidden'}>
    <div class="as-form"><label>📝 หัวข้อ<input id="gT" value="${esc(g.title)}"></label><label>💬 ข้อความ<input id="gM" value="${esc(g.msg)}"></label><label>💛 กุศล<input id="gK" type="number" min="0" value="${g.kusal||0}"></label><label>🪙 เหรียญกระทงทอง<input id="gC" type="number" min="0" value="${g.coins||0}"></label></div>
    <div class="as-srch">🔍<input id="gQ" placeholder="ค้นหาไอเทมทุกหมวด" value="${esc(A.q)}"></div>
-   <div class="as-cats"><button data-cat="favorites" class="${A.category==='favorites'?'on':''}">⭐ โปรด</button>${categories.map(c=>`<button data-cat="${esc(c)}" class="${A.category===c&&!A.q?'on':''}">${esc(c)}</button>`).join('')}</div>${A.category===DECO&&!A.q?`<div class="as-cats as-subs">${subs.map(c=>`<button data-sub="${esc(c)}" class="${A.sub===c?'on':''}">${esc(c)}</button>`).join('')}</div>`:''}
+   <div class="as-cats"><button data-cat="favorites" class="${A.category==='favorites'?'on':''}">⭐ โปรด</button>${categories.map(c=>`<button data-cat="${esc(c)}" class="${A.category===c&&!A.q?'on':''}">${esc(c)}</button>`).join('')}</div>${(A.category===DECO||A.category===OUTF)&&!A.q?`<div class="as-cats as-subs">${subs.map(c=>`<button data-sub="${esc(c)}" class="${A.sub===c?'on':''}">${esc(c)}</button>`).join('')}</div>`:''}
    <div class="as-pick">${filt.map(c=>`<div><img src="${IMG(c.i)}" loading="lazy" alt=""><span>${esc(c.n)}</span><button class="star" data-favorite="${c.k}" aria-label="รายการโปรด">${A.favorites.includes(c.k)?'★':'☆'}</button><button data-add="${c.k}" aria-label="เพิ่ม">＋</button></div>`).join('')||'<p class="note">หมวดนี้ยังไม่มีรายการ</p>'}</div>
   </div></section>
  <section class="as-card"><div class="as-ch"><span class="as-n">3</span><div class="as-grow"><h2>ผู้รับ</h2><small>แตะชื่อเพื่อเลือก</small></div><span class="as-count" id="asCount"></span></div>

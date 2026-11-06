@@ -87,7 +87,7 @@ body.edit .side,body.edit #hint{display:none}
 #map .z.here{border-color:var(--acc);background:#fff1dc}
 #map .z b{font-size:28px}
 #map .z small{margin-left:auto;font-size:13px;color:#a0703c}
-</style><style>/* S4: ปุ่มเครื่องมือยุบรวมเป็นปุ่มเดียว แตะแล้วเด้งออก (ไม่บังฉาก) · ไม่มีปุ่มทดสอบกลางคืนในเกมจริง */#side .btn:not(#sideT){display:none}#side.open .btn:not(#nightBtn){display:flex;animation:s4sideIn .22s cubic-bezier(.3,1.4,.5,1) both}#nightBtn{display:none!important}#side.open #sideT{background:linear-gradient(180deg,#ffd76a,#f39a1e);color:#fff}@keyframes s4sideIn{from{transform:translateX(30px) scale(.6);opacity:0}}</style></head><body><script src="../pv/s4cc.js?h=27404a56"></script><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
+</style><style>/* S4: ปุ่มเครื่องมือยุบรวมเป็นปุ่มเดียว แตะแล้วเด้งออก (ไม่บังฉาก) · ไม่มีปุ่มทดสอบกลางคืนในเกมจริง */#side .btn:not(#sideT){display:none}#side.open .btn:not(#nightBtn){display:flex;animation:s4sideIn .22s cubic-bezier(.3,1.4,.5,1) both}#nightBtn{display:none!important}#side.open #sideT{background:linear-gradient(180deg,#ffd76a,#f39a1e);color:#fff}@keyframes s4sideIn{from{transform:translateX(30px) scale(.6);opacity:0}}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body><script src="../pv/s4cc.js?h=27404a56"></script><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="stage"></div>
 <div id="load"><div>🦁 กำลังเข้าซาฟารี…</div><div class="bar"><i></i></div></div>
 <div class="top"><div class="pill">🦁 โซนซาฟารี</div><div class="btn" id="mapBtn">🗺️</div></div>
@@ -104,11 +104,12 @@ body.edit .side,body.edit #hint{display:none}
 <div class="z" data-z="pet"><b>🐶</b>สวนหมาแมว<small>เดินทาง</small></div>
 <div class="z here" data-z="safari"><b>🦁</b>ซาฟารี<small>อยู่ที่นี่</small></div>
 </div></div>
-<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=a78b8e55"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4store.js?h=1b7c8815" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=3c830957"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
+import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
 {const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 74px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
@@ -454,10 +455,10 @@ function stepPet(a,dt){a.ft+=dt;if(a.ft>.09){a.ft=0;a.fr=(a.fr+1)%16;pframe(a);}
 // ---------- player ----------
 const P={x:0,z:17,tx:null,tz:null,dir:Math.PI,q:[]};
 let girl,gmix,gacts={},gcur;
-async function loadGirl(){const g=await get('punk');const body=g.scene;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;for(const mt of [].concat(o.material)){mt.metalness=0;mt.roughness=.85;}}});
+async function loadGirl(){/* S4 3.6: ชุดที่ใส่อยู่จริง */const CH=await loadCharacter({THREE,loader:L,base:'../ch/'});window.__s4wearNow=CH.wear;const g={scene:CH.body,animations:[]};const body=g.scene;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;for(const mt of [].concat(o.material)){mt.metalness=0;mt.roughness=.85;}}});
   const b=new THREE.Box3().setFromObject(body);const s=1.45/(b.max.y-b.min.y);body.scale.setScalar(s);body.position.y=-b.min.y*s;noShadow(body);girl=new THREE.Group();girl.add(body);blob(girl,.95);sc.add(girl);
   for(const c of g.animations)c.tracks=c.tracks.filter(t=>!(t.name.endsWith('.position')&&/BoneRoot|Armature/.test(t.name)));
-  gmix=new THREE.AnimationMixer(body);const f=p=>g.animations.find(c=>c.name.startsWith(p));gacts.walk=gmix.clipAction(f('walk.001'));gacts.walk.timeScale=1.55;gacts.idle=gmix.clipAction(f('A girl stands relaxed'));gacts.sit=gmix.clipAction(f('A girl sits upright'));gset('idle');}
+  gmix=new THREE.AnimationMixer(body);const C=CH.clips;gacts.walk=gmix.clipAction(C.walk);gacts.walk.timeScale=1.55;gacts.idle=gmix.clipAction(C.idle);gacts.sit=gmix.clipAction(C.sit);if(C.wave)gacts.wave=gmix.clipAction(C.wave);gset('idle');}
 function gset(n){if(gcur===n)return;const a=gacts[n];a.reset().play();if(gacts[gcur])gacts[gcur].crossFadeTo(a,.2,false);gcur=n;}
 // walk to a point; going into or out of a pen goes through its gate
 // things you bump into: [shape, half-x, half-z] as fractions of the piece's size; trees block only at the trunk
@@ -554,6 +555,9 @@ addEventListener('pointerup',()=>{if(!edit)setTimeout(()=>{down=null;},0);});
 r.domElement.addEventListener('pointerup',e=>{if(edit)return;if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>12)return;nd.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(nd,cam);
   const v=new THREE.Vector3();for(const d of drops){if(!d.visible)continue;v.copy(d.position);v.y+=.3;v.project(cam);const sx=(v.x+1)/2*innerWidth,sy=(1-v.y)/2*innerHeight;if(Math.hypot(sx-e.clientX,sy-e.clientY)<40){collect(d);return;}}
   if(CC.obj&&ray.intersectObject(CC.obj,true)[0]){openCC();return;}
+  /* เก็บตก 7: แตะลิง = เห็นเวลาที่เหลือ (36 ชม.) + เปิดเมนูให้อาหารลิง · แตะนก = เห็นว่าหิว/อิ่มอีกกี่นาที */
+  {const hm=ray.intersectObjects(MKS.map(m=>m.a.w).filter(o=>o&&o.visible),true)[0];if(hm){let o=hm.object;const m=MKS.find(q=>{let ok=false;q.a.w.traverse(x=>{if(x===o)ok=true;});return ok;});const rec=m&&MKL.find(r=>String(r[0])===m.id);const left=rec?Math.max(0,rec[1]+36*3600000-Date.now()):0;const h=Math.floor(left/3600000),mi=Math.floor(left%3600000/60000);toast('🐒 ลิงอยู่ได้อีก '+h+' ชม. '+mi+' นาที');sendS3('mkmenu');return;}}
+  {const hb=ray.intersectObjects(walkers.filter(a=>!a.gone&&a.w&&a.w.visible).map(a=>a.w),true)[0];if(hb){let o=hb.object;const a=walkers.find(q=>{let ok=false;q.w.traverse(x=>{if(x===o)ok=true;});return ok;});if(a){const left=(a.cd||0)-T;toast(left>0?'🐦 อิ่มอยู่ · หิวอีกใน '+Math.ceil(left/60)+' นาที':'🐦 หิวแล้ว · กดให้อาหารได้เลย');return;}}}
   {const gh=ray.intersectObjects(pens.map(p=>p.hinge),true)[0];if(gh){let o=gh.object;while(o&&!o.userData.pen)o=o.parent;if(o){const p=o.userData.pen;p.want=p.want?0:1;toast(p.want?'🚪 เปิดประตูคอก · นกออกมาเดินเล่นได้':'🚪 ปิดประตูคอกแล้ว');return;}}}
   {const it=pickDecor(e);if(it&&SEATS[it.n]){if(overview)overview=false;sitAt(it);document.getElementById('hint').style.opacity=0;return;}}
   const g=ray.intersectObject(ground)[0];if(g){if(overview)overview=false;P.goSeat=null;goTo(Math.max(B.x0+.8,Math.min(B.x1-.8,g.point.x)),Math.max(B.z0+.8,Math.min(B.z1+3,g.point.z)));document.getElementById('hint').style.opacity=0;}});

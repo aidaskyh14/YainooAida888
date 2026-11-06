@@ -13,7 +13,7 @@ export const EEL_RECIPE=[['fishing','crab',20],['halloween','candle',10],['hallo
 export const fishNight=now=>{const h=+new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',hour12:false}).format(new Date(now));return h>=21||h<7;};
 /* fix17 เหยื่อวิเศษ (ใช้ได้ไม่จำกัด) · fix18: รอปลา 10 → 3 นาที */
 export const BAIT_MULT=.5;/* S4 ข้อ 82: เหยื่อวิเศษ รอปลา 10 → 5 นาที ตามกติกา S3 */
-export const VIP_WAIT_MIN=3;/* fix18: บ่อ VIP รอด่านละ 5 → 3 นาที */
+export const VIP_WAIT_MIN=3;export const VIP_CARDS=10,CAST_RUN=10,CAST_REST=10*60000,VIP_W=1.6,VIP_ODDS=.8;/* เก็บตก 10: VIP ใช้บัตร 10 ใบ · ปลาหนักขึ้น 1.6 เท่า · โอกาสติดน้อยลง · หย่อนติดกัน 10 ครั้ง พัก 10 นาที *//* fix18: บ่อ VIP รอด่านละ 5 → 3 นาที */
 const fail=m=>{throw new Error(m);};
 const pick=(rng,a)=>a[Math.floor(rng()*a.length)];
 const int=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
@@ -28,17 +28,17 @@ export function needleInZone(m,at){const lo=Math.max(m.startedAt,at-TAP_GRACE),h
  return Math.max(...xs)>=m.zone&&Math.min(...xs)<=m.zone+m.width;}
 const fishWeight=(rng,k)=>Math.round((FISH[k][2]+rng()*(FISH[k][3]-FISH[k][2]))*100)/100;
 export const freshFishing=now=>({day:fishDay(now),closed:false,seats:{n1:Array(6).fill(null),n2:Array(6).fill(null),v1:Array(8).fill(null),v2:Array(8).fill(null)},board:{},hist:[],cuts:{},taken:{},cd:{},vipCount:{},vipCd:{},vipTaken:{},cutMsg:{},eelBy:{},eelHit:{},lucky:int(Math.random,0,3)});
-export function fishingPublic(r,now){const view=structuredClone(r);delete view.lucky;delete view.cuts;delete view.taken;delete view.cd;delete view.vipCount;delete view.vipCard;delete view.vipCd;delete view.vipTaken;delete view.eelBy;delete view.eelHit;if(view.cutMsg){for(const[u,m]of Object.entries(view.cutMsg))if(!(m?.at>now-CUT_MSG_TTL))delete view.cutMsg[u];}view.open=r.mode==='open'||(r.mode!=='closed'&&!r.closed&&fishOpen(now));for(const seats of Object.values(view.seats))for(const s of seats)if(s){delete s.res;delete s.hit;delete s.mini;delete s.event;}return view;}
+export function fishingPublic(r,now){const view=structuredClone(r);delete view.lucky;delete view.cuts;delete view.taken;delete view.cd;delete view.castRun;delete view.vipCount;delete view.vipCard;delete view.vipCd;delete view.vipTaken;delete view.eelBy;delete view.eelHit;if(view.cutMsg){for(const[u,m]of Object.entries(view.cutMsg))if(!(m?.at>now-CUT_MSG_TTL))delete view.cutMsg[u];}view.open=r.mode==='open'||(r.mode!=='closed'&&!r.closed&&fishOpen(now));for(const seats of Object.values(view.seats))for(const s of seats)if(s){delete s.res;delete s.hit;delete s.mini;delete s.event;}return view;}
 export function fishingAction(source,account,ctx,input,rng=Math.random){
  const r=structuredClone(source),game=structuredClone(account);game.sub ||= {};const f=game.sub.fishing ||= {cat:{},claimed:Array(8).fill(0)};f.cat ||= {};f.claimed ||= Array(8).fill(0);for(const k of Object.keys(FISH))f.cat[k] ||= {n:0,best:0};
  game.bag ||= {};game.bag.rod ||= {};game.bag.fishing ||= {};game.bag.item ||= {};
  r.updatedAt=ctx.now;const award=[];const hour=Math.floor(ctx.now/3600000);if(r.luckyHour!==hour){r.luckyHour=hour;r.lucky=int(rng,0,3);}
  if(r.day!==fishDay(ctx.now)) {
    const prev=r.hist.at(-1),top=Object.entries(r.board).sort((a,b)=>b[1].w-a[1].w).slice(0,5).map(([uid,row],rank)=>{const old=prev?.top.find(p=>p.uid===uid),consecutive=prev&&Date.parse(r.day)-Date.parse(prev.day)===864e5,st=old&&consecutive?old.st+1:1;const winner={uid,name:row.name,w:row.w,st,rw:FISH_TOP[rank]+FISH_STREAK*(st-1)};award.push(winner);return winner;});
-   if(top.length)r.hist.push({day:r.day,top});r.hist=r.hist.slice(-5);r.day=fishDay(ctx.now);r.board={};r.cuts={};r.taken={};r.cd={};r.vipCount={};r.vipCd={};r.vipTaken={};r.cutMsg={};r.eelBy={};r.eelHit={};r.lucky=int(rng,0,3);
+   if(top.length)r.hist.push({day:r.day,top});r.hist=r.hist.slice(-5);r.day=fishDay(ctx.now);r.board={};r.cuts={};r.taken={};r.cd={};r.castRun={};r.vipCount={};r.vipCd={};r.vipTaken={};r.cutMsg={};r.eelBy={};r.eelHit={};r.lucky=int(rng,0,3);
  }
  if(f.day!==r.day){f.day=r.day;f.pondToday=null;}
- const release=(p,i)=>{const s=r.seats[p][i];if(!s)return;r.cd[s.uid]=ctx.now+int(rng,3,5)*60000;if(s.vip&&(r.vipCount[s.uid]||0)>=5){r.vipCd[s.uid]=ctx.now+30*60000;r.vipCount[s.uid]=0;}r.seats[p][i]=null;};
+ /* เก็บตก 10: ลุกจากท่า/พลาดปลา ไม่ต้องพัก 3–5 นาทีอีก (กติกาใหม่: หย่อนติดกัน 10 ครั้ง แล้วพัก 10 นาที) */const release=(p,i)=>{const s=r.seats[p][i];if(!s)return;r.cd[s.uid]=0;if(s.vip&&(r.vipCount[s.uid]||0)>=5){r.vipCd[s.uid]=ctx.now+30*60000;r.vipCount[s.uid]=0;}r.seats[p][i]=null;};
  for(const[p,seats]of Object.entries(r.seats))for(let i=0;i<seats.length;i++){
   const s=seats[i];if(!s)continue;
   if(s.vip&&s.card<=ctx.now){release(p,i);continue;}
@@ -78,9 +78,9 @@ export function fishingAction(source,account,ctx,input,rng=Math.random){
   if(found)fail('คุณนั่งอยู่แล้ว');if((r.cd[ctx.uid]||0)>ctx.now)fail('ยังอยู่ในช่วงพักตกปลา');const p=input.pond,i=input.seat;
   if(!PONDS[p]||!Number.isInteger(i)||i<0||i>=r.seats[p].length)fail('ท่าไม่ถูกต้อง');if(r.seats[p][i])fail('มีคนนั่งก่อนแล้ว');const vip=PONDS[p].k==='v';
   r.vipCard ||= {};const held=vip&&r.vipCard[ctx.uid]?.card>ctx.now?r.vipCard[ctx.uid]:null;if(r.vipCard[ctx.uid]&&!(r.vipCard[ctx.uid].card>ctx.now))delete r.vipCard[ctx.uid];
-  if(vip&&!held){if((r.vipCd[ctx.uid]||0)>ctx.now)fail('บ่อ VIP ยังพักอยู่');if((game.bag.fishing.vip||0)<1)fail('ไม่มีบัตร VIP');game.bag.fishing.vip--;r.vipCount[ctx.uid]=(r.vipCount[ctx.uid]||0)+1;}
+  if(vip&&!held){if((r.vipCd[ctx.uid]||0)>ctx.now)fail('บ่อ VIP ยังพักอยู่');if((game.bag.fishing.vip||0)<VIP_CARDS)fail('ต้องใช้บัตร VIP '+VIP_CARDS+' ใบ มี '+(game.bag.fishing.vip||0));game.bag.fishing.vip-=VIP_CARDS;r.vipCount[ctx.uid]=(r.vipCount[ctx.uid]||0)+1;}
   else {if(f.pondToday&&f.pondToday!==p)fail('บ่อทั่วไปเลือกได้วันละหนึ่งบ่อ');f.pondToday=p;}
-  r.seats[p][i]={uid:ctx.uid,who:ctx.name,rod:'bamboo',ph:'idle',vip,stage:held?held.stage:0,tot:0,hearts:2,card:held?held.card:ctx.now+60*60000,idle:ctx.now+3*60000};if(held)delete r.vipCard[ctx.uid];return result({mine:locate(ctx.uid),...(held?{vipResume:true}:{})});
+  r.seats[p][i]={uid:ctx.uid,who:ctx.name,o:String(game.sub?.char?.wear||'punk').slice(0,16),/* S4 3.6: ชุดที่ใส่ ให้เพื่อนเห็น */rod:'bamboo',ph:'idle',vip,stage:held?held.stage:0,tot:0,hearts:2,card:held?held.card:ctx.now+60*60000,idle:ctx.now+3*60000};if(held)delete r.vipCard[ctx.uid];return result({mine:locate(ctx.uid),...(held?{vipResume:true}:{})});
  }
  if(input.type==='eel'){
   const target=r.seats[input.pond]?.[input.seat],vip=PONDS[input.pond]?.k==='v',cost=vip?EEL_VIP_COST:1;
@@ -113,8 +113,8 @@ export function fishingAction(source,account,ctx,input,rng=Math.random){
  if(input.type==='bait'){if(own.ph!=='wait')fail('ยังไม่ได้รอปลาอยู่');if(own.vip)fail('บ่อ VIP ใช้เหยื่อไม่ได้');if(own.bait)fail('ใช้เหยื่อกับเบ็ดนี้ไปแล้ว');if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');
   useBoost(game,f,'bait',ctx.now);own.bait=true;own.t=ctx.now+Math.max(0,Math.round((own.t-ctx.now)*BAIT_MULT));own.hookUntil=own.t+3*60000;return result({mine:found,baited:true});}
  if(input.type==='cast'){
-  if(own.ph!=='idle')fail('หย่อนเบ็ดอยู่แล้ว');if(!own.vip&&input.bait===true){if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');}const rod=input.rod;if(!RK.includes(rod)||(game.bag.rod[rod]||0)<1)fail('ไม่มีเบ็ดแบบนี้');game.bag.rod[rod]--;own.rod=rod;own.ph='wait';delete own.idleAt;const ev=ctx.fishEvent?.start&&ctx.fishEvent.end>ctx.now&&ctx.fishEvent.evHour===Math.floor(ctx.now/3600e3)?FISH_EVENTS[ctx.fishEvent.ev]?.[3]||{}:{};own.event=ev;const bait=!own.vip&&input.bait===true;if(bait)useBoost(game,f,'bait',ctx.now);own.t=ctx.now+Math.round((own.vip?VIP_WAIT_MIN:10)*60000*(ev.slow?2:1)*(bait?BAIT_MULT:1));if(bait)own.bait=true;else delete own.bait;own.hookUntil=own.t+3*60000;delete own.mini;
-  if(own.vip){const key=VIPL[own.stage][0],base=VIPL[own.stage][1]/100;let odds=base*(RK[r.lucky]===rod?1.15:1);if(ev.legend)odds*=ev.legend;if(ev.uni&&['unicorn','goldsheep'].includes(key))odds*=ev.uni;if(ev.gold&&key==='goldsheep')odds*=ev.gold;if(ev.shark&&own.stage<4)odds*=ev.shark;if(ev.rare&&own.stage>=4)odds*=ev.rare;own.hit=rng()<Math.min(1,odds)&&!(ev.miss&&rng()<ev.miss);}
+  if(own.ph!=='idle')fail('หย่อนเบ็ดอยู่แล้ว');{const CR=r.castRun ||= {};const c=CR[ctx.uid] ||= {n:0,until:0};if(c.until>ctx.now)fail('พักตกปลาก่อนนะ อีก '+Math.ceil((c.until-ctx.now)/60000)+' นาที (หย่อนติดกันครบ '+CAST_RUN+' ครั้งแล้ว)');c.n=(c.n|0)+1;if(c.n>=CAST_RUN){c.n=0;c.until=ctx.now+CAST_REST;}}if(!own.vip&&input.bait===true){if(boostHave(game,'bait')<1)fail('ไม่มีเหยื่อวิเศษในกระเป๋า');}const rod=input.rod;if(!RK.includes(rod)||(game.bag.rod[rod]||0)<1)fail('ไม่มีเบ็ดแบบนี้');game.bag.rod[rod]--;own.rod=rod;own.ph='wait';delete own.idleAt;const ev=ctx.fishEvent?.start&&ctx.fishEvent.end>ctx.now&&ctx.fishEvent.evHour===Math.floor(ctx.now/3600e3)?FISH_EVENTS[ctx.fishEvent.ev]?.[3]||{}:{};own.event=ev;const bait=!own.vip&&input.bait===true;if(bait)useBoost(game,f,'bait',ctx.now);own.t=ctx.now+Math.round((own.vip?VIP_WAIT_MIN:10)*60000*(ev.slow?2:1)*(bait?BAIT_MULT:1));if(bait)own.bait=true;else delete own.bait;own.hookUntil=own.t+3*60000;delete own.mini;
+  if(own.vip){const key=VIPL[own.stage][0],base=VIPL[own.stage][1]/100;let odds=base*(RK[r.lucky]===rod?1.15:1)*VIP_ODDS;if(ev.legend)odds*=ev.legend;if(ev.uni&&['unicorn','goldsheep'].includes(key))odds*=ev.uni;if(ev.gold&&key==='goldsheep')odds*=ev.gold;if(ev.shark&&own.stage<4)odds*=ev.shark;if(ev.rare&&own.stage>=4)odds*=ev.rare;own.hit=rng()<Math.min(1,odds)&&!(ev.miss&&rng()<ev.miss);}
   else {const info=RODS[rod],counts=[...info.cnt],tiers=[...info.tier];if(RK[r.lucky]===rod){counts[0]-=12;counts[1]+=9;counts[2]+=3;tiers[0]-=10;tiers[2]+=10;}const n=weighted(rng,counts)+1,caught=[];let level=1;for(let j=0;j<n;j++){const tier=weighted(rng,tiers)+1;level=Math.max(level,tier);const key=pick(rng,Object.keys(FISH).filter(k=>FISH[k][1]===tier));caught.push({k:key,w:fishWeight(rng,key)});}own.res={fish:caught,tier:level};}
   return result({mine:found});
  }
@@ -124,7 +124,7 @@ export function fishingAction(source,account,ctx,input,rng=Math.random){
  if(input.type==='collect'){
   const m=own.mini;if(own.ph!=='hook'||!m||input.token!==m.token)fail('รอบตกปลาไม่ถูกต้อง');const at=input.hitAt;
   if(!Number.isFinite(at)||at<m.startedAt||at>ctx.now+1500||ctx.now-at>6000)fail('เวลาจับปลาไม่ถูกต้อง');const success=needleInZone(m,at);
-  const caught=success?(own.vip?(own.hit?[{k:VIPL[own.stage][0],w:fishWeight(rng,VIPL[own.stage][0])}]:[]):own.res.fish):[];
+  const caught=success?(own.vip?(own.hit?[{k:VIPL[own.stage][0],w:Math.round(fishWeight(rng,VIPL[own.stage][0])*VIP_W*100)/100}]:[]):own.res.fish):[];
   if(caught.length&&own.event?.two)caught.push(...structuredClone(caught));let total=0,eelBonus=0;
   for(const fish of caught)if(fish.k==='eel'&&rng()<(fishNight(ctx.now)?EEL_DROP_NIGHT:EEL_DROP))eelBonus++;if(eelBonus)game.bag.fishing.eel=(Number(game.bag.fishing.eel)||0)+eelBonus;for(const fish of caught){const c=f.cat[fish.k];c.n++;c.best=Math.max(c.best,fish.w);total+=fish.w;}if(total){if(Object.keys(r.board).length>=200&&!r.board[ctx.uid])fail('สมาชิกในบอร์ดมากเกินไป');const row=r.board[ctx.uid] ||= {name:ctx.name,w:0};row.w=Math.round((row.w+total)*100)/100;own.tot+=total;}
   if(own.vip){if(caught.length){own.stage=Math.min(7,own.stage+1);own.hearts=2;}else own.hearts--;if(own.hearts<=0)release(found.p,found.i);else{own.ph='idle';delete own.mini;delete own.res;}}

@@ -2,7 +2,7 @@ import {repairInventory,assertInventory} from './inventory-integrity.js?h=3eda51
 /* Transaction adapter shared by callable handlers and emulator tests. */
 import {splitGame,joinGame,bytes} from './save-schema.js?h=eef4832b';
 import {refillAdminInventory} from './admin-inventory.js?h=6c90d59e';
-import {CATALOG} from './catalog.js?h=b889872d';
+import {CATALOG} from './catalog.js?h=751f4cba';
 import {questDeltas,nbDay} from './nb-quest.js?h=02ff82da';
 import {swimHook} from './swim-quest.js?h=c301332f';
 import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME} from './tree-engine.js?h=4fbc22f0';
@@ -134,7 +134,7 @@ export function createCloudCore(db,timestamp) {
           tx.set(refs[i],{...row,updatedAt:timestamp()});actorParts.push({id:key,part:row});
         }
         /* S4 ข้อ 156: ขนาดส่วนเซฟปัจจุบัน (ไม่ใช่สถิติสูงสุดตลอดกาล) + ชื่อส่วนที่ใหญ่สุด */let curMax=0,curName='';for(const [k,p] of serialized){const b=bytes(p.payload);if(b>curMax){curMax=b;curName=k;}}max=curMax;
-        for(const [path,data]of Object.entries(result.writes||{}))tx.set(db.doc(path),data);
+        for(const [path,data]of Object.entries(result.writes||{})){if(data===null)tx.delete(db.doc(path));else tx.set(db.doc(path),data);}/* S4: null = ลบเอกสาร (เช่น ออกจากนคร) */
         for(const [path,data]of Object.entries(result.merges||{}))tx.set(db.doc(path),data,{merge:true});
         if(nbWrite)tx.set(nbWrite[0],nbWrite[1]);
         if(twWrite)tx.set(twWrite[0],twWrite[1]);

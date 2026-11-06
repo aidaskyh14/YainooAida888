@@ -125,7 +125,7 @@ function pondPicker(k){if(!S.open)return ann('บ่อปิดอยู่ เ
  const card=p=>{const lock=k==='n'&&S.pondToday&&S.pondToday!==p;return`<div class="pcard ${k==='v'?'vip':''} ${lock?'locked':''}" data-p="${p}"><span class="e">${k==='v'?'👑':'🎣'}</span><div>${PONDS[p].name}${lock?' 🔒':''}${S.pondToday===p?' ⭐':''}<small>นั่งอยู่ <span id="oc-${p}">${occ(p)}</span> คน</small></div></div>`};
  const rest=k==='v'&&S.vipCd>Date.now();
  if(rest){sheet(`<h3>👑 บ่อ VIP พักอยู่</h3><div class="catch"><div class="fcard" style="width:12rem"><img src="${IMG['vip-card']}" alt="" style="filter:grayscale(.6)"><div class="w">อีก ${mm(S.vipCd-Date.now())} นาที</div></div></div><div class="hint">ใช้บัตรครบ 5 ใบแล้ว บ่อ VIP พัก 30 นาที<br>ระหว่างนี้ไปตกบ่อทั่วไป ปลูกผัก หรือเล่นอย่างอื่นก่อนนะ<br>พักเสร็จใช้ได้อีก 5 ใบ · ทั้งวันใช้กี่รอบก็ได้</div><div class="btns"><button class="big" onclick="closeSheet()">โอเค</button></div>`);return}
- sheet(`<h3>${k==='v'?'👑 บ่อ VIP':'🎣 บ่อทั่วไป'}</h3><div class="hint">${k==='v'?'บ่อละ 8 ท่า · ใช้บัตร VIP 1 ใบต่อ 1 รอบภารกิจ<br>ใช้ได้ติดกัน 5 ใบ แล้วพัก 30 นาที · รอบนี้ใช้ไป '+S.vipUsed+'/5 ใบ':'บ่อละ 6 ท่า · เลือกได้วันละ 1 บ่อ เปลี่ยนได้หลังเที่ยงคืน'}</div>${ps.map(card).join('')}`);
+ sheet(`<h3>${k==='v'?'👑 บ่อ VIP':'🎣 บ่อทั่วไป'}</h3><div class="hint">${k==='v'?'บ่อละ 8 ท่า · ใช้บัตร VIP 10 ใบต่อ 1 รอบภารกิจ<br>ใช้ได้ติดกัน 5 ใบ แล้วพัก 30 นาที · รอบนี้ใช้ไป '+S.vipUsed+'/5 ใบ':'บ่อละ 6 ท่า · เลือกได้วันละ 1 บ่อ เปลี่ยนได้หลังเที่ยงคืน'}</div>${ps.map(card).join('')}`);
  $('sheet').querySelectorAll('.pcard').forEach(c=>c.onclick=()=>{closeSheet();goPond(c.dataset.p)})}
 function goPond(p){if(!S.open)return ann('บ่อปิดอยู่ เปิด 11:00–17:00 และ 21:00–07:00',false);
  const v=PONDS[p].k==='v';const myp=mySeatPond();
@@ -161,7 +161,7 @@ function updatePond(){const p=S.pond,k=PONDS[p].k,seats=S.seats[p];const ms=mySe
  if(k==='v')updateMission();
  renderPondBar()}
 function updateMission(){const m=$('mis');if(!m)return;const ms=mySeat();const run=ms&&ms.p===S.pond&&ms.s.vip;
- if(!run){m.className='mission idle';m.innerHTML=`<img src="${IMG['vip-card']}" alt=""><div><div class="t">แตะท่าว่าง แล้วใช้บัตร VIP 1 ใบเริ่มภารกิจ</div><div class="s">ทำภารกิจทีละด่าน · ด่านละ ❤️❤️ พลาดได้ 1 ครั้ง · พลาดครบ 2 ครั้งจบรอบ · ✂️ ตัดเบ็ดได้ (กรรไกรปู 10 อัน)</div></div>`;return}
+ if(!run){m.className='mission idle';m.innerHTML=`<img src="${IMG['vip-card']}" alt=""><div><div class="t">แตะท่าว่าง แล้วใช้บัตร VIP 10 ใบเริ่มภารกิจ</div><div class="s">ทำภารกิจทีละด่าน · ด่านละ ❤️❤️ พลาดได้ 1 ครั้ง · พลาดครบ 2 ครั้งจบรอบ · ✂️ ตัดเบ็ดได้ (กรรไกรปู 10 อัน)</div></div>`;return}
  const s=ms.s,tk=vipTarget(s.stage);
  m.className='mission';m.innerHTML=`<img src="${IMG['fish-'+tk]}" alt=""><div><div class="t">ด่าน ${s.stage+1} · ตก${FISH[tk][0]}ให้ได้ <span style="white-space:nowrap">${(s.hearts||2)>1?'❤️❤️':'❤️🤍'}</span></div><div class="s">สะสมรอบนี้ ${f2(s.tot)} lb · บัตรเหลือ ${mm(s.card-Date.now())} นาที</div></div>`}
 let barKey='';
@@ -190,13 +190,13 @@ function renderPondBar(force){const b=$('bar'),ms=mySeat(),now=Date.now()+server
 async function standUp(direct){const m=mySeat();if(!m||direct){const s=m&&m.s,busy=s&&(s.ph==='wait'||s.ph==='hook');const out=await act({type:'leave'});if(out!==null&&out!==false)ann('🚪 ลุกจากที่นั่งแล้ว'+(busy?' · ปลารอบนี้หายไป':'')+(s&&s.vip?' · เวลาบัตร VIP เก็บไว้ให้':''));return;}const s=m.s,busy=s.ph==='wait'||s.ph==='hook';
  ask('🚪 ลุกออกจากท่า?',(busy?'ปลารอบนี้จะหายไป เบ็ดที่หย่อนไปแล้วไม่คืน · ':'')+(s.vip?'เวลาบัตร VIP ยังเดินต่อ กลับมานั่งห้อง VIP ไหนก็ได้จนบัตรหมด (ทำต่อจากด่านเดิม)':'ลุกแล้วนั่งท่าใหม่ได้เลย ไม่ต้องพัก'),'ลุกออก',()=>act({type:'leave'}));}
 async function tapDock(i){const p=S.pond,s=S.seats[p][i];if(s){if(s.me){if(s.ph==='idle')chooseRod(p,i);else if(s.ph==='hook')collect();else ann('รอปลากินอยู่ค่ะ');}else ann(s.who+' นั่งอยู่ท่านี้');return;}
- const sit=async()=>{if(await act({type:'sit',pond:p,seat:i}))chooseRod(p,i);};if(PONDS[p].k==='v'){if(S.vipHeld>now())ask('กลับเข้าห้อง VIP?','บัตรเดิมเหลือเวลา '+mm(S.vipHeld-now())+' · ทำต่อจากด่านเดิม ไม่เสียบัตรใหม่','กลับเข้าห้อง',sit);else ask('ใช้บัตร VIP 1 ใบ?','บัตรใช้ได้หนึ่งชั่วโมง ทำภารกิจ 8 ด่าน','ใช้บัตร',sit);}else await sit();}
+ const sit=async()=>{if(await act({type:'sit',pond:p,seat:i}))chooseRod(p,i);};if(PONDS[p].k==='v'){if(S.vipHeld>now())ask('กลับเข้าห้อง VIP?','บัตรเดิมเหลือเวลา '+mm(S.vipHeld-now())+' · ทำต่อจากด่านเดิม ไม่เสียบัตรใหม่','กลับเข้าห้อง',sit);else ask('ใช้บัตร VIP 10 ใบ?','บัตรใช้ได้หนึ่งชั่วโมง ทำภารกิจ 8 ด่าน · ปลาหนักกว่าบ่อทั่วไป แต่พลาดง่ายกว่า','ใช้บัตร',sit);}else await sit();}
 
 function chooseRod(p,i){const s=S.seats[p][i];
  const o=RK.map(r=>`<div class="opt ${S.bag.rod[r]?'':'off'}" data-r="${r}"><img src="${IMG['rod-'+r]}" alt=""><div>${RODS[r].e} ${RODS[r].n}</div><span>มี ${S.bag.rod[r]} อัน</span></div>`).join('');
  const B=S.bait||{have:0,used:0,limit:0},bOk=B.have>0;if(useBait&&!bOk)useBait=false;
  const baitBtn=s.vip?'':`<button class="baitb${useBait?' on':''}${bOk&&!useBait?' glow':''}" id="baitb"${bOk||useBait?'':' disabled'}><img src="images/boost-bait.webp" alt=""><i class="bchk">${useBait?'✔':''}</i><span>${useBait?'⚡ ใช้บูสเตอร์แล้ว · รอปลาแค่ 5 นาที':'⚡ ใช้บูสเตอร์ เหยื่อวิเศษ · แตะเพื่อเลือก (รอแค่ 5 นาที)'}<small>${B.have?'มี '+nf(B.have)+' ชิ้น · ใช้ได้ไม่จำกัด':'🛒 รับจากโปรฯ ยัยหนู · ตลาดลอยกระทง'}</small></span></button>`;
- sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · รอปลา${s.vip?' 3 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
+ sheet(`<h3>เลือกเบ็ด</h3><div class="hint">หย่อน 1 ครั้งใช้เบ็ด 1 อัน · หย่อนติดกันได้ 10 ครั้ง แล้วพัก 10 นาที · รอปลา${s.vip?' 3 นาที (บ่อ VIP)':' 10 นาที'}<br>เบ็ดแต่ละแบบมีดวงต่างกัน ลองเดาเอาเองนะ 😉</div>${baitBtn}<div class="opts">${o}</div><div class="btns"><button class="ghost" id="leaveb">${s.vip?'ปิด':'ลุกจากท่า'}</button></div>`);
  $('sheet').querySelectorAll('.opt').forEach(x=>x.onclick=()=>{const r=x.dataset.r;if(!S.bag.rod[r])return ann('เบ็ดแบบนี้หมดแล้ว',false);closeSheet();cast(p,i,r)});
  $('leaveb').onclick=()=>{closeSheet();if(!s.vip&&s.ph==='idle'){act({type:'leave'})}};if($('baitb'))$('baitb').onclick=()=>{useBait=!useBait;chooseRod(p,i)}}
 async function cast(p,i,r){const bait=useBait&&PONDS[p].k==='n';if(await act({type:'cast',rod:r,...(bait?{bait:true}:{})})){if(bait)useBait=false;ann('หย่อนเบ็ดแล้ว '+RODS[r].e+(bait?' 🎣 ใช้เหยื่อวิเศษ':'')+' รอปลากินนะ');}}
@@ -265,7 +265,7 @@ function rulesView(){sheet(`<h3>📋 กติกาตกปลา</h3><div cla
 <p>🎣 เหยื่อวิเศษ (บ่อทั่วไป): รอปลาแค่ 5 นาที · ใช้ได้ไม่จำกัด</p>
 <p>⚡ ปลาไหลไฟฟ้า: แตะทุ่นเพื่อนในบ่อเดียวกัน ช็อต −35,000 กุศล + เบ็ดขาด 3 นาที (ห้อง VIP ใช้ 3 ตัว เพื่อนหลุดจากห้อง) · ปล่อยได้วันละ 20 ตัว · คนหนึ่งโดนได้ 50 ครั้ง/วัน · คนโดนเห็นแค่ "ใครสักคน"</p>
 <p>⚡ ได้ปลาไหลไฟฟ้าจาก: ตกได้ปลาไหลแถม 5% (21:00–07:00 = 10%) · คราฟที่ร้าน</p>
-<p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 1 ใบ (1 ชม.) รอด่านละ 3 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
+<p>👑 บ่อ VIP 2 บ่อ บ่อละ 8 ท่า ใช้บัตร 10 ใบ (1 ชม.) รอด่านละ 3 นาที ทำภารกิจทีละด่าน ผ่านได้ 50–100 lb ต่อด่าน · ด่านละ ❤️❤️ พลาดครบ 2 ครั้งจบรอบ · ใช้บัตรติดกันได้ 5 ใบ แล้วบ่อ VIP พัก 30 นาที (ทั้งวันกี่รอบก็ได้)</p>
 <p>⚖️ น้ำหนักทุกบ่อรวมบอร์ดเดียว รีเซ็ตเที่ยงคืน · ท็อป 5 ได้ 150,000–3,000,000 กุศล ติดต่อกัน +10,000 ทุกวัน</p>
 <p>📖 ปลาทุกตัวนับเข้าสมุดสะสม ครบเซ็ตรับรางวัล</p></div><div class="btns"><button class="ghost" onclick="tools()">◀ กลับ</button></div>`)}
 

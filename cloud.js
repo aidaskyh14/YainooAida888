@@ -3,7 +3,7 @@ import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=325c2f52';
 import {safariAction} from './safari-engine.js?h=b8c86111';
 import {adminCenter} from './admin-center-engine.js?h=13458e60';
 import {adminReset} from './admin-reset.js?h=30e79a6c';
-import {openLootBoxes} from './loot-box-engine.js?h=4542d2cf';
+import {openLootBoxes} from './loot-box-engine.js?h=36180acf';
 import {farmDropsAction} from './farm-drops-engine.js?h=87d90d0c';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {farmAction,friendAction} from './farm-engine.js?h=70094cd2';
@@ -11,21 +11,21 @@ import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
 import {observeGameplay} from './campaign-progress.js?h=b36ef48c';
 import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=5101c8ec';
 import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=b166c6ce';
-import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=f5b32ed5';
+import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=82312623';
 import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=a073b41e';
 import {randomUUID,randomInt,createHash} from 'node:crypto';
 import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
-import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=ae3af2ab';
+import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=9fca90b8';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=b889872d';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=751f4cba';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
 import {nbDay} from './nb-quest.js?h=02ff82da';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
-import {createCloudCore,refuse} from './cloud-core.js?h=e1b3d33d';
+import {createCloudCore,refuse} from './cloud-core.js?h=2d85b38e';
 import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=f7ba43c9';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
 import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=4fbc22f0';
@@ -33,6 +33,8 @@ import {hwmAction} from './hwmini-engine.js?h=ffca3ddc';
 import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=13fbcd77';
 import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=af571787';
 import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=77e14398';
+import {charAction,charAdminSet,charOf} from './char-engine.js?h=cf50917a';import {TRIBES,TRIBE_IDS} from './outfit-catalog.js?h=16ac9bbc';
+import {cityAction,cityAdmin,cityView,publicWorld,manState} from './city-engine.js?h=44c22f95';import {pageantAdmin,pageantAction,pageantView,garland,questionDoc} from './pageant-engine.js?h=57a4a41c';import {YAINOO_QUESTIONS,GENERAL_QUESTIONS} from './city-questions.js?h=10246fe6';import {MAX_IN_CITY,MAN} from './city-catalog.js?h=d68f3e58';
 initializeApp();
 const db=getFirestore(),core=createCloudCore(db,()=>FieldValue.serverTimestamp());
 const options={region:'us-central1',minInstances:0,maxInstances:3,memory:'512MiB',timeoutSeconds:60};
@@ -123,7 +125,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=b889872d');
+     const {CATALOG}=await import('./catalog.js?h=751f4cba');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -181,7 +183,7 @@ export const outingsActionCloud=callable(async req=>core.action({uid:req.auth.ui
 
 // fix13: 'status' is read-only (no transaction, no writes). Other actions write privateWorld/fishing only when it changes and
 // world/fishing (read by every listener in the pond) only when the public view changes. Cast results stay private.
-export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'fishing',partIds:['inventory','wallet','animals-fishing','animals-campaigns'],worldIds:['privateWorld/fishing','world/campaigns'],readOnly:req.data?.input?.type==='status',apply:async(game,worlds,ctx,tx)=>{
+export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'fishing',partIds:['inventory','wallet','animals-fishing','animals-campaigns','animals-char'],worldIds:['privateWorld/fishing','world/campaigns'],readOnly:req.data?.input?.type==='status',apply:async(game,worlds,ctx,tx)=>{
  ctx.nonce=randomUUID();ctx.fishEvent=worlds['world/campaigns']?.fish;const input=req.data?.input||{},out=fishingAction(worlds['privateWorld/fishing']||freshFishing(ctx.now),game,ctx,input);Object.assign(game,out.game);if(out.caught?.length&&!ctx.readOnly&&randomInt(1e6)<MK_FISH_DROP*1e6){game.bag ||= {};game.bag.box ||= {};game.bag.box.mahakusal=(Number(game.bag.box.mahakusal)||0)+1;out.mkDrop=1;}/* fix17 📦 ดร็อปหายาก (ซ่อนบนคลาวด์) */if(out.caught){const values={catshark:1,angelshark:2,manta:3,hammerhead:4,mola:6,strawberry:8,unicorn:12,goldsheep:20},event=ctx.fishEvent?.evHour===Math.floor(ctx.now/3600e3)?FISH_EVENTS[ctx.fishEvent.ev]?.[3]||{}:{};const points=out.caught.reduce((n,f)=>n+(values[f.k]||0)*(event.pts||1)*(event.sharkpts&&['catshark','angelshark','manta','hammerhead'].includes(f.k)?event.sharkpts:1),0);recordCampaign(game,worlds['world/campaigns'],'fish',points,ctx.now);}
  const prior=worlds['privateWorld/fishing'],view=fishingPublic(out.race,ctx.now),writes={},updates={};
  const publicChanged=!prior||!sameData({...view,updatedAt:0,luckyHour:0},{...fishingPublic(prior,ctx.now),updatedAt:0,luckyHour:0});
@@ -437,7 +439,7 @@ export const fishingMidnight=onSchedule({...options,schedule:'0 0 * * *',timeZon
  const recipients=await Promise.all(out.award.map(w=>tx.get(db.doc('players/'+w.uid))));out.award.forEach((w,i)=>{if(!recipients[i].exists)return;tx.set(db.doc('mail/'+w.uid+'/items/fishing-'+snap.data().day),{title:'ท็อป 5 ตกปลา '+snap.data().day,msg:'น้ำหนัก '+w.w+' lb · ติดต่อกัน '+w.st+' วัน · 📦 กล่องมหากุศล 30 กล่อง',icon:'🎣',kusal:w.rw,coins:0,items:{'box-mahakusal':30},createdAt:FieldValue.serverTimestamp(),expireAt:Timestamp.fromMillis(now+60*864e5),from:'บ่อตกปลา'});tx.update(db.doc('players/'+w.uid),{mailCount:FieldValue.increment(1)});});tx.set(ref,out.race);tx.set(db.doc('world/fishing'),fishingPublic(out.race,now));
 }));
 
-const boxesHandler=(req,system)=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system,partIds:['inventory','wallet','animals-campaigns'],worldIds:['world/campaigns'],apply:async(game,worlds,ctx,tx)=>{
+const boxesHandler=(req,system)=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system,partIds:['inventory','wallet','animals-campaigns','animals-char']/* S4: กล่องสุ่มชุดต้องรู้ตัวละคร */,worldIds:['world/campaigns'],apply:async(game,worlds,ctx,tx)=>{
  const input=req.data?.input||{},request=system==='birdbox'?{...input,box:input.species}:input;
  if(system==='birdbox'&&!['ostrich','dodo'].includes(request.box))refuse('กล่องนกไม่ถูกต้อง');
  const prior=structuredClone(game),out=openLootBoxes(game,request,()=>randomInt(4294967296)/4294967296);
@@ -680,7 +682,7 @@ async function nbMidnightRun(now=Date.now()){
   await db.runTransaction(async tx=>{
    const dref=nbDayRef(d.id,day),ds=await tx.get(dref),dd=ds.exists?ds.data():{q:{}};if(dd.paid)return;
    const prog=nbProgress(dd,nb.members||[],d.id,day),roots=await Promise.all((nb.members||[]).map(u=>tx.get(db.doc('players/'+u))));
-   (nb.members||[]).forEach((u,i)=>{if(!roots[i].exists||prog.net<=0)return;tx.set(db.doc('mail/'+u+'/items/nb-basket-'+day),{title:'🧺 ตะกร้าเนเบอร์ฮูด '+day,msg:'เควสต์สำเร็จ '+prog.done+'/'+prog.rows.length+' · ตะกร้า '+prog.base.toLocaleString('en-US')+(prog.cut?' · หัก '+Math.round(prog.cut*100)+'%':''),icon:'🧺',kusal:prog.net,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:'เนเบอร์ฮูด'});tx.update(db.doc('players/'+u),{mailCount:FieldValue.increment(1)});});
+   /* เก็บตก 12: บ้านเลเวลสูงได้กุศลตะกร้ามากขึ้น Lv1 ×1 · Lv2 ×1.2 · Lv3 ×1.5 */(nb.members||[]).forEach((u,i)=>{if(!roots[i].exists||prog.net<=0)return;const hl=nbHouseOf(nb,u,Date.now()).lv,mul=hl>=3?1.5:hl===2?1.2:1,net=Math.round(prog.net*mul);tx.set(db.doc('mail/'+u+'/items/nb-basket-'+day),{title:'🧺 ตะกร้าเนเบอร์ฮูด '+day,msg:'เควสต์สำเร็จ '+prog.done+'/'+prog.rows.length+' · ตะกร้า '+prog.base.toLocaleString('en-US')+(prog.cut?' · หัก '+Math.round(prog.cut*100)+'%':'')+(mul>1?' · บ้าน Lv'+hl+' ×'+mul:''),icon:'🧺',kusal:net,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:'เนเบอร์ฮูด'});tx.update(db.doc('players/'+u),{mailCount:FieldValue.increment(1)});});
    tx.set(dref,{...dd,paid:true,result:{done:prog.done,base:prog.base,cut:prog.cut,net:prog.net,members:(nb.members||[]).length}});summary.paid++;
   });
  }
@@ -849,6 +851,34 @@ const atmView=(game,priv,open,now,coins=0,bank='lotus')=>({bank,name:BANKS[bank]
  fx:{rate:fxRateCents(now,bank),base:fxRateCents(now),prev:fxRateCents(now-3600000,bank),next:(Math.floor((now+7*3600000)/3600000)+1)*3600000-7*3600000,used:fxToday(priv,now),perDay:FX_PER_DAY,max:FX_MAX,coins:Number(coins)||0,cauldron:Number(game.bag?.halloween?.cauldron)||0}});
 /* ใช้ครบทุก 100 ครั้งต่อธนาคาร → 100,000 กุศลเข้าไปรษณีย์ */
 const atmBonusMail=(writes,uid,bank,n,now)=>{writes['mail/'+uid+'/items/atmbonus-'+bank+'-'+n]={title:'🎁 โบนัสลูกค้าประจำ '+BANKS[bank].n,msg:BANKS[bank].ic+' ใช้บริการครบ '+n.toLocaleString('en-US')+' ครั้ง ธนาคารขอมอบ '+ATM_BONUS.toLocaleString('en-US')+' กุศลเป็นของขวัญ ขอบคุณที่ใช้บริการนะคะ',icon:'🎁',kusal:ATM_BONUS,coins:0,items:{},createdAt:FieldValue.serverTimestamp(),from:'ATM'};};
+
+/* ===== S4 ระบบตัวละคร (3.2 สุ่ม · 3.5 ใส่ชุด · 3.11 ศัลยกรรม · ขายชุดซ้ำ) ===== */
+export const charActionCloud=callable(async req=>{
+ const input=req.data?.input||{},type=String(input.type||'');if(!['status','roll','wear','sell','surgery'].includes(type))refuse('รายการไม่ถูกต้อง','invalid-argument');
+ return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input,system:'char',partIds:['inventory','wallet','animals-char'],worldIds:[],readOnly:type==='status',apply:async(game,worlds,ctx,tx)=>{
+  const out=charAction(game,ctx,input,()=>randomInt(4294967296)/4294967296);
+  const writes={};if(out.rolled||out.surgery){writes['players/'+ctx.uid+'/public/char']={tribe:game.sub.char.tribe,wear:game.sub.char.wear,at:ctx.now};}
+  if(type==='wear'){writes['players/'+ctx.uid+'/public/char']={tribe:game.sub.char.tribe,wear:game.sub.char.wear,at:ctx.now};}
+  return {writes,response:{...out,serverNow:ctx.now}};}});});
+/* ศูนย์แอดมิน "ตัวละครผู้เล่น" (3.10): นับคนสุ่มแล้ว/ยังไม่สุ่ม · ต่อตัวละคร · รายชื่อยังไม่สุ่ม · กำหนดตัวละครรายคน */
+export const charAdminCloud=callable(async req=>{
+ const uid=req.auth.uid;if(!(await db.doc('admins/'+uid).get()).exists)refuse('เฉพาะแอดมิน','permission-denied');
+ const input=req.data?.input||{},type=String(input.type||'');
+ if(type==='stats'){const ps=await db.collection('players').where('approval','==','approved').limit(500).get();const rows=[];const admins=new Set((await db.collection('admins').get()).docs.map(d=>d.id));/* แอดมินเป็นชมพูอัตโนมัติ ไม่นับในรายชื่อ */
+  for(let i=0;i<ps.docs.length;i+=50){const chunk=ps.docs.slice(i,i+50).filter(d=>!admins.has(d.id));const saves=await Promise.all(chunk.map(d=>db.doc('players/'+d.id+'/saves/animals-char').get()));
+   chunk.forEach((d,k)=>{let c=null;try{const sv=saves[k];if(sv.exists){const pl=sv.data().payload;c=typeof pl==='string'?JSON.parse(pl):pl;}}catch(e){}rows.push({uid:d.id,name:String(d.data().name||'ผู้เล่น').slice(0,40),tribe:c&&TRIBES[c.tribe]?c.tribe:null,wear:c?c.wear||null:null,by:c?c.by||null:null});});}
+  const per=Object.fromEntries(TRIBE_IDS.map(t=>[t,rows.filter(r=>r.tribe===t).length]));
+  return {total:rows.length,rolled:rows.filter(r=>r.tribe).length,per,notRolled:rows.filter(r=>!r.tribe).map(r=>({uid:r.uid,name:r.name})),rows};}
+ if(type==='set'){const to=String(input.uid||''),tribe=String(input.tribe||'');if(!/^[-a-zA-Z0-9_]{1,128}$/.test(to))refuse('ไม่พบผู้เล่น');if(!TRIBES[tribe])refuse('ไม่มีตัวละครนี้');
+  /* เขียนเฉพาะส่วนตัวละคร (ส่วนเซฟของเขา) + ส่งชุดเริ่มต้นทางไปรษณีย์ · ชุดตัวละครเดิมคืนเงินตอนเขาเรียกระบบครั้งถัดไป (cleanup) */
+  const ref=db.doc('players/'+to+'/saves/animals-char'),now=Date.now();
+  await db.runTransaction(async tx=>{const sv=await tx.get(ref);let c={};try{if(sv.exists){const pl=sv.data().payload;c=typeof pl==='string'?JSON.parse(pl):(pl||{});}}catch(e){c={};}
+   const next={tribe,wear:TRIBES[tribe].start,rolledAt:c.rolledAt||now,by:'admin',adminAt:now,cleanup:c.tribe&&c.tribe!==tribe?c.tribe:null};
+   tx.set(ref,{path:['sub','char'],system:'char',payload:JSON.stringify(next),rev:(sv.exists&&sv.data().rev||0)+1,by:'admin'},{merge:true});
+   tx.set(db.doc('players/'+to+'/public/char'),{tribe,wear:next.wear,at:now,by:'admin'});
+   tx.set(db.doc('mail/'+to+'/items/char-start-'+now),{title:'👗 ชุดเริ่มต้น '+TRIBES[tribe].n,msg:'ยัยหนูกำหนดตัวละครให้แล้ว · รับชุดเริ่มต้นเข้าตู้เสื้อผ้า',icon:'👗',kusal:0,coins:0,items:{['outfit-'+TRIBES[tribe].start]:1},createdAt:FieldValue.serverTimestamp(),from:'ยัยหนู'});tx.set(db.doc('players/'+to),{mailCount:FieldValue.increment(1)},{merge:true});});
+  return {set:tribe};}
+ refuse('รายการไม่ถูกต้อง','invalid-argument');});
 export const atmActionCloud=callable(async req=>{
  const input=req.data?.input||{},type=input.type,uid=req.auth.uid,isAdmin=(await db.doc('admins/'+uid).get()).exists;
  if(type&&type.startsWith('admin-')){
@@ -907,6 +937,53 @@ export const atmActionCloud=callable(async req=>{
  }});
 });
 
+
+/* ---------- S4 นครยัยหนู (บรีฟ §4–7) ----------
+   ความลับต่อบัญชี (ของรักลับ · ของที่อยากได้ · เหตุการณ์) คิดจาก sha256(CITY_SECRET+…) ที่นี่เท่านั้น ไม่ส่งไปหน้าเกม
+   world/city = เปิด/ปิด เกณฑ์เข้า เดตที่กำลังเกิด คิวงานแต่ง · cityPresence/{uid} = ตำแหน่งในนคร (ส่งเฉพาะตอนกดเดิน) · world/pageant = การประกวด · cityQuestions/{id} = ธนาคารคำถาม */
+const CITY_SECRET='yainoo-city-9f3c1b7e-2026';const cityHash=s=>parseInt(createHash('sha256').update(CITY_SECRET+'|'+s).digest('hex').slice(0,12),16)/0xffffffffffff;
+const CITY_PARTS=['inventory','wallet','animals-city','animals-char'];
+async function cityRaw(uid,input){const type=String(input?.type||'');
+ /* ตำแหน่ง: เขียนเอกสารเดียวต่อคน ไม่ผ่านประตูลำดับ ไม่แตะเซฟ · หมดอายุ 6 นาที (ไม่แตะจอ 5 นาทีหน้าเกมเด้งกลับเอง) */
+ if(type==='move'){const n=v=>Math.max(-60,Math.min(60,Number(v)||0));const [root,pub]=await Promise.all([db.doc('players/'+uid).get(),db.doc('players/'+uid+'/public/char').get()]);if(!root.exists)refuse('ไม่พบผู้เล่น');
+  const pc=pub.exists?pub.data():{};await db.doc('cityPresence/'+uid).set({uid,name:String(root.data().name||'ผู้เล่น').slice(0,40),o:pc.wear||'punk',tribe:pc.tribe||'pink',x:n(input.x),z:n(input.z),tx:n(input.tx),tz:n(input.tz),at:Date.now(),exp:Date.now()+6*60000,v:input.v?1:0},{merge:true});return {ok:true};}
+ if(type==='bye'){await db.doc('cityPresence/'+uid).delete().catch(()=>{});return {ok:true};}
+ if(type==='men'){/* สถานะผู้ชายตอนนี้ (public) */const w=await db.doc('world/city').get();const W=w.exists?w.data():{};const now=Date.now();return {now,men:Object.fromEntries(Object.keys(MAN).map(m=>[m,manState(m,now,W).st]))};}
+ refuse('รายการไม่ถูกต้อง','invalid-argument');}
+export const cityActionCloud=callable(async req=>{
+ if(req.data?.raw===true)return cityRaw(req.auth.uid,req.data?.input||{});
+ const input=req.data?.input||{},type=String(input.type||'');if(!['status','sync','enter','leave','talk','gift','date','propose','divorce','husband','talkHusband','houseUp','kid','claimReward'].includes(type))refuse('รายการไม่ถูกต้อง','invalid-argument');
+ if(type==='enter'){/* รองรับ 50 คนพร้อมกัน (นับก่อนทำรายการ) */const live=await db.collection('cityPresence').where('exp','>',Date.now()).get();if(live.size>=MAX_IN_CITY&&!live.docs.some(d=>d.id===req.auth.uid)&&!(await db.doc('admins/'+req.auth.uid).get()).exists)refuse('นครเต็ม ('+MAX_IN_CITY+' คน) ลองใหม่อีกสักครู่','resource-exhausted');}
+ return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input,system:'city',partIds:CITY_PARTS,worldIds:['world/city'],readOnly:type==='status',apply:async(game,worlds,ctx,tx)=>{
+  ctx.h=cityHash;const W0=worlds['world/city']||{};
+  const out=cityAction(game,W0,ctx,input,()=>randomInt(4294967296)/4294967296);
+  const writes={},updates={};let mailDelta=0;if(out.worldWrite)writes['world/city']=out.worldDoc;
+  for(const m of out.mails||[]){writes['mail/'+ctx.uid+'/items/city-'+m.key]={title:m.title,msg:m.msg,icon:'🏙️',kusal:m.kusal||0,coins:0,items:m.items||{},createdAt:FieldValue.serverTimestamp(),from:'นครยัยหนู'};mailDelta++;}
+  if(type==='leave')writes['cityPresence/'+ctx.uid]=null;
+  const {mails,worldDoc,worldWrite,...resp}=out;return {writes,updates,mailDelta,response:{...resp,serverNow:ctx.now}};}});});
+export const cityAdminCloud=callable(async req=>{const uid=req.auth.uid;if(!(await db.doc('admins/'+uid).get()).exists)refuse('เฉพาะแอดมิน','permission-denied');const input=req.data?.input||{},type=String(input.type||'');const now=Date.now();
+ if(type==='status'){const [w,pres]=await Promise.all([db.doc('world/city').get(),db.collection('cityPresence').where('exp','>',now).get()]);const W=w.exists?w.data():{};return {world:publicWorld(W,now),inside:pres.docs.map(d=>({uid:d.id,name:d.data().name,o:d.data().o,at:d.data().at}))};}
+ if(type==='kickAll'){/* ปิดนคร: ทุกคนเด้งกลับฟาร์ม (หน้าเกมดูธง closedAt) */const W=cityAdmin((await db.doc('world/city').get()).data()||{},{now},{type:'close'});await db.doc('world/city').set(W);const pres=await db.collection('cityPresence').get();await Promise.all(pres.docs.map(d=>d.ref.delete()));return {world:publicWorld(W,now)};}
+ if(['open','close','settings','announce'].includes(type)){return db.runTransaction(async tx=>{const ref=db.doc('world/city');const snap=await tx.get(ref);const W=cityAdmin(snap.exists?snap.data():{},{now,uid},input);tx.set(ref,W);return {world:publicWorld(W,now)};});}
+ if(type==='kick'){const to=String(input.uid||'');if(!/^[-a-zA-Z0-9_]{1,128}$/.test(to))refuse('ไม่พบผู้เล่น');await db.doc('cityPresence/'+to).delete().catch(()=>{});return {ok:true};}
+ refuse('รายการไม่ถูกต้อง','invalid-argument');});
+/* ประกวดนางนพมาศ: ผู้ประกวดส่งคำตอบ/โชว์ผ่านประตูลำดับ (กันกดซ้ำ) · การจ่ายของ/พวงมาลัยแตะเซฟ */
+export const pageantActionCloud=callable(async req=>{
+ if(req.data?.raw===true){/* ดูสถานะ (ไม่แตะเซฟ) */const [p,a]=await Promise.all([db.doc('world/pageant').get(),db.doc('admins/'+req.auth.uid).get()]);return {view:pageantView(p.exists?p.data():{state:'idle'},{uid:req.auth.uid,admin:a.exists,now:Date.now()}),now:Date.now()};}
+ const input=req.data?.input||{},type=String(input.type||'');if(!['podium','leave','pay','talent','answer','garland'].includes(type))refuse('รายการไม่ถูกต้อง','invalid-argument');
+ return core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input,system:'pageant',partIds:['inventory','wallet','animals-char'],worldIds:['world/pageant'],apply:async(game,worlds,ctx,tx)=>{
+  const P0=worlds['world/pageant']||{state:'idle'};let P,extra={};
+  if(type==='garland'){P=garland(P0,game,ctx,String(input.to||''));}else{const r=pageantAction(P0,game,ctx,input);P=r.P;const {P:_,...rest}=r;extra=rest;}
+  return {writes:{'world/pageant':P},response:{...extra,view:pageantView(P,ctx),serverNow:ctx.now}};}});});
+export const pageantAdminCloud=callable(async req=>{const uid=req.auth.uid;if(!(await db.doc('admins/'+uid).get()).exists)refuse('เฉพาะแอดมิน','permission-denied');const input=req.data?.input||{},type=String(input.type||'');const now=Date.now();const ctx={uid,admin:true,now,name:'ยัยหนู'};
+ if(type==='qAdd'){const d=questionDoc(input,ctx);const id=randomUUID().replace(/-/g,'').slice(0,20);await db.doc('cityQuestions/'+id).set(d);return {id};}
+ if(type==='qDel'){const id=String(input.id||'');if(!/^[A-Za-z0-9]{1,40}$/.test(id))refuse('ไม่พบคำถาม');await db.doc('cityQuestions/'+id).delete();return {ok:true};}
+ if(type==='qSeed'){/* นำเข้าคำถามตั้งต้น (ข้ามข้อที่มีแล้ว ตามข้อความคำถาม) */const have=new Set((await db.collection('cityQuestions').limit(500).get()).docs.map(d=>d.data().q));let n=0;for(const [list,kind] of [[YAINOO_QUESTIONS,'yainoo'],[GENERAL_QUESTIONS,'general']])for(const [q,a,correct] of list){if(have.has(q))continue;const d=questionDoc({q,a,correct,kind},ctx);await db.doc('cityQuestions/'+randomUUID().replace(/-/g,'').slice(0,20)).set(d);n++;}return {added:n};}
+ if(type==='qList'){const qs=await db.collection('cityQuestions').limit(500).get();return {questions:qs.docs.map(d=>({id:d.id,...d.data()}))};}
+ const bank=['ask','askRandom'].includes(type)?(await db.collection('cityQuestions').limit(500).get()).docs.map(d=>({id:d.id,...d.data()})):[];
+ return db.runTransaction(async tx=>{const ref=db.doc('world/pageant'),cref=db.doc('world/city');const [snap,c]=await Promise.all([tx.get(ref),tx.get(cref)]);const P=pageantAdmin(snap.exists?snap.data():{state:'idle'},ctx,input,()=>randomInt(4294967296)/4294967296,bank);tx.set(ref,P);
+  /* วันประกวด: เข้านครฟรี (ตั้งเวลา=เปิด · ยกเลิก/จบ=ปิด) */if(type==='schedule'||type==='cancel'||(type==='next'&&P.state==='idle')){const W=c.exists?c.data():{};W.pageantDay=type==='schedule';W.pageantAt=type==='schedule'?P.startAt:0;tx.set(cref,W);}
+  return {view:pageantView(P,ctx)};});});
 /* ---------- fix19 🌳🏮 ศึกโคมลอย (7 เนเบอร์ฮูดแข่งกัน วันละ 2 รอบ) ----------
    world/treeWar = สถานะสาธารณะ {on,from,stopAfter,th,mul,round,last,bat,surprise,shields} · world/tw-{nb} = แต้มบ้าน (เขียนจาก cloud-core)
    privateWorld/twPick = การ์ดคว่ำ (เซิร์ฟเวอร์เท่านั้น) · privateWorld/twBat = กุศลค้างคาวของแต่ละคน · privateWorld/twAxes = ขวานที่ถืออยู่

@@ -2,7 +2,7 @@ const fail=m=>{throw new Error(m);};
 const shuffle=(rng,a)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 /* fix13 room flow (server clock only): sit → ready within 60 s or the seat is freed → 4 ready = 10 s countdown → play
    → result shown 30 s → the room is cleared to 0/4. Clients only call a cheap 'tick' when one of these deadlines passes. */
-export const KANG={readyMs:60000,countdownMs:10000,resultMs:30000,turnMs:20000,rounds:3,restMs:10*60000};
+export const KANG={goneMs:90000,readyMs:60000,countdownMs:10000,resultMs:30000,turnMs:20000,rounds:3,restMs:10*60000};
 export const cardPoints=c=>Math.min(c.r,10);
 export const handPoints=h=>h.reduce((s,c)=>s+cardPoints(c),0);
 export const kangFeePaid=(r,i)=>r.feeRec?.[i]&&Number.isSafeInteger(r.paid?.[i])?r.paid[i]:Number.isSafeInteger(r.paid?.[i])&&r.paid[i]>0?r.paid[i]:r.fee;
@@ -46,6 +46,7 @@ export function kangAction(source,account,ctx,input,rng=Math.random){
  const clock=()=>{const n=ctx.now;
   if(r.state==='countdown'&&n>=(r.startAt||0)){if(r.seats.every(Boolean)&&r.ready.every(Boolean))startRound();else{r.state='waiting';delete r.startAt;}}
   if(r.state==='waiting')r.seats.forEach((s,i)=>{if(s&&!r.ready[i]&&n-(r.seatAt[i]||0)>=KANG.readyMs){r.seats[i]=null;r.seatAt[i]=0;}});
+  if(r.state==='waiting'){r.seenAt ||= [0,0,0,0];r.seats.forEach((s,i)=>{if(s&&r.ready[i]&&n-Math.max(r.seenAt[i]||0,r.seatAt[i]||0)>=KANG.goneMs){/* หายไป: เก็บของที่จ่ายไว้คืนให้ตอนเขากลับมา (ของเขาอยู่คนละบัญชี แตะตรงนี้ไม่ได้) */(r.owed ||= {})[s.uid]={merit:r.pool[i]||0,coin:r.paid[i]||0,hat:r.paidHat[i]||0,mb:r.paidMb[i]||0,round:r.round+1};r.pool[i]=0;r.ready[i]=false;r.paid[i]=0;if(r.feeRec)r.feeRec[i]=false;r.paidHat[i]=0;r.paidMb[i]=0;r.seats[i]=null;r.seatAt[i]=0;}});}
   // Timed-out turns are played by the system. A table left alone catches up in one call: when a whole turn length has been missed, each further turn ends 20 s after the previous deadline.
   for(let guard=0;r.state==='playing'&&n>=r.deadline&&guard<80;guard++){const d=r.deadline;auto();late=true;if(r.state==='playing'&&n-d>r.duration)r.deadline=d+r.duration;}
   if(r.state==='result'&&r.settled&&n>=(r.endAt||0)){kangClear(r);cleared=true;applyBase();}
@@ -58,6 +59,10 @@ export function kangAction(source,account,ctx,input,rng=Math.random){
  try{return play();}catch(e){if(!ticked)throw e;for(const key of Object.keys(r))delete r[key];Object.assign(r,snapRoom);for(const key of Object.keys(game))delete game[key];Object.assign(game,snapGame);coins=snapCoins;refund=0;return out({notice:e.message});}
  function play(){
  const index=slot();
+ /* เก็บตก 11: ใครนั่งอยู่แล้วเรียกเซิร์ฟเวอร์ = ยังอยู่จริง (ping ทุก 30 วิ ตอนรอ) · นั่งพร้อมแล้วหายไป 90 วิ (เน็ตหลุด) → ลุกให้ คืนค่าเข้า */
+ r.seenAt ||= [0,0,0,0];if(index>=0)r.seenAt[index]=ctx.now;
+ {const o=r.owed&&r.owed[ctx.uid];if(o){delete r.owed[ctx.uid];game.merit=(game.merit||0)+(o.merit||0);coins+=o.coin||0;if(o.hat||o.mb){game.bag ||= {};game.bag.item ||= {};if(o.hat)game.bag.item.hat=(Number(game.bag.item.hat)||0)+o.hat;if(o.mb)game.bag.item.musicbox=(Number(game.bag.item.musicbox)||0)+o.mb;}delete min.escrows['kang-'+input.room];refund=(refund||0)+(o.merit||0);}}
+ if(input.type==='ping'||(index<0&&input.type==='leave'&&refund))return out();
  const k=min.kang ||= {n:0,at:0,rest:0};
  const restLeft=()=>Math.max(0,(k.rest||0)-ctx.now);
  if(input.type==='configure'){

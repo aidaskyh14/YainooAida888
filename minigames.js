@@ -1,5 +1,5 @@
 import {birdPosition,fireBird,birdGain,minigameRules,MG_EMERGENCY,MG_CD,MG_MIN,MG_FEE3,MG_NAMES,BIRD_BLAST} from './solo-engine.js?v=ss3-fix15c&h=b166c6ce';import {FR} from './funrun-engine.js?v=ss3-fix15c&h=e2d97b72';
-import {KANG} from './kang-engine.js?v=ss3-fix15&h=f5b32ed5';
+import {KANG} from './kang-engine.js?v=ss3-fix15&h=82312623';
 import {mountMole} from './mole-game.js?v=ss3-fix15&h=69ae8092';
 import {mountBasket} from './basket-game.js?v=ss3-fix15&h=b9bc40f7';
 import {MOLE} from './mole-engine.js?v=ss3-fix15&h=96f1c725';
@@ -383,7 +383,8 @@ GAMES.kang=(()=>{
   function watchRooms(rooms){stop();for(const i of rooms){stops.push(Host.watchWorld('kang-'+i,d=>{if(!d)return;pub[i]=d;onRoom(i);}));}
     if(cur!=null)stops.push(Host.watchGameView('kang-'+cur,d=>{hand=d;if(cur!=null)draw();}));}
   async function open(){st=stage('kg-bg');st.classList.add('kgstage');st.innerHTML='<div class="kx"><div class="kx-lobby kx-on"></div><div class="kx-table"></div></div>';root=st.querySelector('.kx');
-    await cloud('minigames',{type:'status'});if(CUR!=='kang')return;cur=null;watchRooms([0,1]);lobby();clearInterval(tickIv);tickIv=setInterval(clockTick,250);}
+    await cloud('minigames',{type:'status'});if(CUR!=='kang')return;cur=null;watchRooms([0,1]);lobby();clearInterval(tickIv);tickIv=setInterval(clockTick,250);
+    /* เก็บตก 11: นั่งรอที่โต๊ะ = ส่งสัญญาณ "ยังอยู่" ทุก 30 วิ · เน็ตหลุดเกิน 90 วิ เซิร์ฟเวอร์ลุกให้ ห้องไม่ค้าง */let pingAt=0;stops.push((()=>{const iv=setInterval(()=>{try{if(cur==null)return;const r=pub[cur],m=me();if(!r||m<0||r.state!=='waiting'||!r.ready[m])return;if(Date.now()-pingAt<30000)return;pingAt=Date.now();act({type:'ping'}).catch(()=>{});}catch(e){}},5000);return ()=>clearInterval(iv);})());}
   function close(){stop();clearInterval(tickIv);cur=null;st=null;root=null;pub=[null,null];hand=null;}
   function onRoom(i){
     if(cur==null){const s=seatedIn();if(s!=null){enter(s);return;}lobby();return;}

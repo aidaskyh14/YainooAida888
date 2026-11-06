@@ -104,7 +104,7 @@ button.p3chip{cursor:pointer}
 #tools button{width:58px!important;height:62px!important;border-radius:16px!important;gap:3px}
 #tveil{position:fixed;inset:0;z-index:8;display:none}#tveil.on{display:block}
 #zoom{bottom:calc(env(safe-area-inset-bottom,0px) + 76px)!important}
-</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
+</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <canvas id="cv"></canvas>
 <div id="top"><div><span class="chip" id="st">🎣 บ่อตกปลา</span></div><div><button class="chip" id="vroom">👑 VIP ห้อง 1</button><span class="chip" id="vcard">🎫 0</span></div></div>
 <button class="chip" id="mine"></button>
@@ -157,7 +157,7 @@ function clampCam(){ZMIN=fitZ()*.98;zoom=Math.max(ZMIN,Math.min(ZMAX,zoom));cons
 const toS=(x,y)=>[W/2+(x-camX)*zoom,H/2+(y-camY)*zoom];
 const toM=(sx,sy)=>[camX+(sx-W/2)/zoom,camY+(sy-H/2)/zoom];
 const ptr=new Map();let drag=null,pinch=null,moved=0,vx=0,vy=0;
-cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;vx=vy=0;anim=null;
+cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId);}catch(_){}/* เก็บตก 5: นิ้วค้าง (iPhone ไม่ส่ง pointerup) → ล้างก่อน ไม่งั้นทุกแตะกลายเป็นซูม */if(e.isPrimary&&ptr.size){ptr.clear();drag=null;pinch=null;}ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;vx=vy=0;anim=null;
  if(ptr.size===1)drag={x:e.clientX,y:e.clientY,t:performance.now()};else if(ptr.size===2){const [a,b]=[...ptr.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:zoom,m:toM((a.x+b.x)/2,(a.y+b.y)/2)};drag=null;}});
 cv.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId))return;ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(pinch&&ptr.size===2){const [a,b]=[...ptr.values()];zoom=Math.max(ZMIN,Math.min(ZMAX,pinch.z*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(20,pinch.d)));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;camX=pinch.m[0]-(mx-W/2)/zoom;camY=pinch.m[1]-(my-H/2)/zoom;clampCam();moved=99;return;}
@@ -292,9 +292,9 @@ const ZK={A:'falls',B:'bamboo',C:'beach',D:'lotus',V:'vip'};let P3=null,p3open=f
 function mySeatInfo(){for(const p of PL){const s=who(p);if(s&&s.me)return {p,s};}return null;}
 function openP3(){const m=mySeatInfo();if(!m){send('mine');return;}if(p3open)return;p3open=true;p3code=m.p.code;
  const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));
- import('./pond3d.js?h=651c77f5').then(mod=>{P3=mod;return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
+ import('./pond3d.js?h=f8905b6a').then(mod=>{P3=mod;window.__p3people=()=>mod.people();return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),outfits:zs.map(q=>{const s=who(q);return s&&!s.me?(s.o||null):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
 addEventListener('message',e=>{const d=e.data;if(!d)return;if(d.p3res&&P3&&p3open)P3.result(d.p3res);
- if(d.s4sync){const m=mySeatInfo();if(m){if(p3open&&P3&&P3.isOpen())P3.sync(m.s);else if(!p3open&&prevMine!==m.p.code&&p3skip!==m.p.code)openP3();prevMine=m.p.code;}else{prevMine=null;p3skip=null;if(p3open&&P3&&P3.isOpen())P3.standby();}}});
+ if(d.s4sync){const m=mySeatInfo();if(m){if(p3open&&P3&&P3.isOpen()){P3.sync(m.s);/* S4 3.6: เพื่อนมานั่ง/ลุกระหว่างเราอยู่ในฉาก */try{const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));P3.roster(zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),zs.map(q=>{const s=who(q);return s&&!s.me?(s.o||null):null;}));}catch(e){}}else if(!p3open&&prevMine!==m.p.code&&p3skip!==m.p.code)openP3();prevMine=m.p.code;}else{prevMine=null;p3skip=null;if(p3open&&P3&&P3.isOpen())P3.standby();}}});
 window.__fzP3=()=>({open:p3open,code:p3code});
 hud();
 setTimeout(()=>{if(!live)feed('🗺️ แตะแท่นที่ว่างเพื่อนั่งตกปลา');},1500);

@@ -1,0 +1,61 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>เวทีสุ่มตัวละคร</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#140a1f}canvas{display:block;width:100%;height:100%}
+#stars{position:fixed;inset:0;pointer-events:none}#stars i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;opacity:0;animation:tw 3s ease-in-out infinite}@keyframes tw{0%,100%{opacity:0;transform:translateY(0) scale(.6)}50%{opacity:.9;transform:translateY(-14px) scale(1.2)}}
+#cf{position:fixed;inset:0;pointer-events:none;overflow:hidden}#cf i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall 2.6s linear forwards}@keyframes fall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(110vh) rotate(720deg)}}</style></head><body>
+<div id="stars"></div><div id="cf"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script type="module">
+/* เวทีสุ่มตัวละคร (ซีซั่น 4 ข้อ 3.2): โมเดลจริง 4 ตัวบนเวที สปอตไลต์วิ่งไล่แล้วหยุดที่ตัวที่ได้ · คุยกับหน้าแม่ด้วย postMessage
+   แม่ → {t:'spin'} เริ่มไฟวิ่ง · {t:'stop',tribe} หยุดที่ตัวนั้น · ลูก → {t:'ready'} โหลดเสร็จ · {t:'done'} โชว์ผลเสร็จ */
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
+const TRIBES=[['pink','punk',0xf06ba8],['mint','m01',0x5cc9a0],['red','r01',0xe0554f],['bob','b01',0x8f8fc0]];
+const post=m=>{try{parent.postMessage({s4roll:m},'*');}catch(e){}};
+const st=document.getElementById('stars');for(let i=0;i<28;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.top=Math.random()*100+'%';e.style.animationDelay=(Math.random()*3)+'s';e.style.animationDuration=(2.4+Math.random()*2.4)+'s';st.appendChild(e);}
+const sc=new THREE.Scene();sc.fog=new THREE.Fog(0x140a1f,9,16);
+const W=innerWidth,H=innerHeight,cam=new THREE.PerspectiveCamera(40,W/H,.1,60);cam.position.set(0,2.0,6.6);cam.lookAt(0,1.0,0);
+const rd=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.setSize(W,H);rd.shadowMap.enabled=true;rd.shadowMap.type=THREE.PCFSoftShadowMap;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(rd.domElement);
+sc.add(new THREE.AmbientLight(0x7a6a9a,1.1));const key=new THREE.DirectionalLight(0xfff0e0,.6);key.position.set(2,6,5);sc.add(key);
+/* เวทีหมุน (แบบเกมใหญ่): ตัวละคร 4 ตัวยืนบนแท่นกลมหันออก · หมุนไล่แล้วหยุดให้ตัวที่ได้อยู่หน้าสุด ใกล้กล้อง ตัวใหญ่ */
+const R=1.45;const stage=new THREE.Group();sc.add(stage);const turn=new THREE.Group();stage.add(turn);
+const disc=(r,h,c,y,par)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.04,h,64),new THREE.MeshStandardMaterial({color:c,roughness:.55,metalness:.15}));m.position.y=y;m.receiveShadow=true;par.add(m);return m;};
+disc(3.3,.3,0x2b1a44,-.15,stage);disc(2.75,.14,0x3a2560,.07,turn);const rim=new THREE.Mesh(new THREE.TorusGeometry(2.78,.05,12,96),new THREE.MeshBasicMaterial({color:0xffd27a}));rim.rotation.x=Math.PI/2;rim.position.y=.14;turn.add(rim);
+const floor=new THREE.Mesh(new THREE.CircleGeometry(14,48),new THREE.MeshStandardMaterial({color:0x1a0f2c,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.3;floor.receiveShadow=true;sc.add(floor);
+/* สปอตไลต์หน้าเวที (ส่องตำแหน่งหน้าสุดเสมอ) + ไฟวิ่งรอบแท่น */
+const front=new THREE.Object3D();front.position.set(0,0,R);sc.add(front);const spot=new THREE.SpotLight(0xffffff,0,12,.5,.55,1.1);spot.position.set(0,6.2,R+2.2);spot.target=front;spot.castShadow=true;spot.shadow.mapSize.set(1024,1024);sc.add(spot);
+const chars=[];const rings=[];window.__chars=chars;
+for(let i=0;i<4;i++){const [tribe,wear,col]=TRIBES[i];const ang=i*Math.PI/2;const g=new THREE.Group();g.position.set(Math.sin(ang)*R,.14,Math.cos(ang)*R);g.rotation.y=ang;turn.add(g);
+ const pad=new THREE.Mesh(new THREE.CylinderGeometry(.6,.64,.1,48),new THREE.MeshStandardMaterial({color:0x4a3270,roughness:.5,emissive:col,emissiveIntensity:.1}));pad.position.y=.05;pad.receiveShadow=true;g.add(pad);
+ const ring=new THREE.Mesh(new THREE.RingGeometry(.62,.72,48),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.3,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.11;g.add(ring);rings.push(ring);
+ chars.push({tribe,wear,col,g,ang,body:null,mix:null,clips:null,act:null});}
+const loader=new GLTFLoader();
+const play=(c,name,once)=>{if(!c.clips||!c.clips[name])return;const a=c.mix.clipAction(c.clips[name]);if(c.act===a)return;if(c.act)c.act.fadeOut(.25);a.reset().setLoop(once?THREE.LoopOnce:THREE.LoopRepeat).fadeIn(.25).play();if(once)a.clampWhenFinished=true;c.act=a;};
+async function build(c){const N=await loadCharacter({THREE,loader,base:'../ch/',wear:c.wear});const b=N.body;b.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;const m=o.material;if(m){m.metalness=0;m.roughness=.9;m.needsUpdate=true;}}});
+ const bb=new THREE.Box3().setFromObject(b);const k=1.55/(bb.max.y-bb.min.y);b.scale.setScalar(k);b.position.y=.1-bb.min.y*k;c.g.add(b);c.body=b;c.clips=N.clips;c.mix=new THREE.AnimationMixer(b);play(c,'idle');c.mix.update(Math.random()*2);}
+let ready=false;Promise.all(chars.map(build)).then(()=>{ready=true;post({t:'ready'});}).catch(e=>{console.log('roll3d',e&&e.message);post({t:'fail'});});
+/* หมุน: idle = หมุนช้า ๆ โชว์ทุกตัว · spin = หมุนเร็ว · stop = ผ่อนไปหยุดที่ตัวที่ได้ (อีก 2 รอบ) · done = ตัวที่ได้ไหว้ + คอนเฟตตี */
+let mode='idle',vel=0,target=null,t0=0,a0=0,winner=-1,tw=0;
+const norm=a=>{a%=Math.PI*2;if(a<0)a+=Math.PI*2;return a;};
+function startSpin(){if(!ready||mode!=='idle')return;mode='spin';vel=7;}
+function stopAt(t){const i=chars.findIndex(c=>c.tribe===t);if(i<0)return;winner=i;if(mode==='idle'){mode='spin';vel=7;}
+ /* มุมที่ทำให้ตัว i มาอยู่หน้าสุด (มุม 0 = +z): turn.rotation.y = -ang_i */const cur=norm(turn.rotation.y);const want=norm(-chars[i].ang);let d=norm(want-cur);target=turn.rotation.y+d+Math.PI*4;a0=turn.rotation.y;t0=performance.now();mode='stop';}
+function finish(){mode='done';turn.rotation.y=target;spot.intensity=16;rings.forEach((r,i)=>r.material.opacity=i===winner?1:.15);const c=chars[winner];tw=performance.now();
+ chars.forEach((o,i)=>{if(i!==winner)o.body&&o.body.traverse(m=>{if(m.isMesh&&m.material){m.material=m.material.clone();m.material.color.multiplyScalar(.4);}});});
+ play(c,'wai',true);confetti(c.col);setTimeout(()=>{play(c,'happy');post({t:'done'});},2600);}
+function confetti(col){const cf=document.getElementById('cf');const cs=['#ffd27a','#fff','#'+col.toString(16).padStart(6,'0'),'#9ad9ff','#ffb3e6'];for(let i=0;i<80;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.background=cs[i%cs.length];e.style.animationDelay=(Math.random()*.9)+'s';e.style.animationDuration=(2+Math.random()*1.4)+'s';cf.appendChild(e);setTimeout(()=>e.remove(),4200);}}
+addEventListener('message',e=>{const m=e.data&&e.data.s4roll;if(!m)return;if(m.t==='spin')startSpin();else if(m.t==='stop')stopAt(m.tribe);});
+const clk=new THREE.Clock();const DUR=4200;
+function tick(){requestAnimationFrame(tick);const dt=Math.min(.05,clk.getDelta());const now=performance.now();
+ for(const c of chars)if(c.mix)c.mix.update(dt);
+ if(mode==='idle')turn.rotation.y+=dt*.35;
+ else if(mode==='spin')turn.rotation.y+=dt*vel;
+ else if(mode==='stop'){const k=Math.min(1,(now-t0)/DUR);const e=1-Math.pow(1-k,3);turn.rotation.y=a0+(target-a0)*e;if(k>=1)finish();}
+ /* สปอตไลต์สว่างตามตัวที่ผ่านหน้าเวที */if(mode!=='done'){let best=0,bi=-1;for(let i=0;i<4;i++){const z=Math.cos(chars[i].ang+turn.rotation.y);if(z>best){best=z;bi=i;}}spot.intensity=mode==='idle'?6:12;rings.forEach((r,i)=>r.material.opacity=i===bi?.95:.3);}
+ if(mode==='done'&&winner>=0){const c=chars[winner];const k=Math.min(1,(now-tw)/900);c.g.position.z=Math.cos(c.ang)*R+Math.sin(c.ang)*0+k*.5*Math.cos(c.ang);c.g.position.x=Math.sin(c.ang)*R+k*.5*Math.sin(c.ang);}
+ for(const c of chars)c.g.rotation.y=-turn.rotation.y;/* ทุกตัวหันหน้าหากล้องเสมอ (ตั้งหลังหมุนแท่นแล้ว) */
+ rim.material.color.setHSL(.11,.9,.55+Math.sin(now/300)*.1);
+ rd.render(sc,cam);}
+tick();
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();rd.setSize(innerWidth,innerHeight);});
+</script></body></html>

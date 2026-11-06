@@ -51,7 +51,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pvw .g{background:#e98a2b;color:#fff}#pvw .x{background:#fff;border:2px solid #f1e2c8;color:var(--ink)}
 #load{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:linear-gradient(#bfe9f7,#9fd6f5);font-weight:700;color:#2a5a7a}
 #load .bar{width:60%;height:10px;border-radius:6px;background:#ffffff88;overflow:hidden}#load .bar i{display:block;height:100%;width:0;background:#ffb347;transition:width .2s}
-#nbNone{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;width:min(320px,86vw)}#nbNone .bx{background:rgba(255,250,240,.96);border:3px solid #fff;border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:Mali,sans-serif;color:#5a3e2b}#nbNone .ic{font-size:40px}#nbNone b{font-size:17px;display:block;margin:4px 0}#nbNone p{margin:4px 0 10px;font-size:13px;color:#8a6a52}#nbNone .row{display:flex;gap:8px;justify-content:center}#nbNone button{all:unset;cursor:pointer;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#ffe58a,#f2b53c);font-weight:800;font-size:13px;box-shadow:0 3px 0 #c98a1b}#nbNone button+button{background:#fff;border:2px solid #f1e3cf;box-shadow:none}</style></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
+#nbNone{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;width:min(320px,86vw)}#nbNone .bx{background:rgba(255,250,240,.96);border:3px solid #fff;border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:Mali,sans-serif;color:#5a3e2b}#nbNone .ic{font-size:40px}#nbNone b{font-size:17px;display:block;margin:4px 0}#nbNone p{margin:4px 0 10px;font-size:13px;color:#8a6a52}#nbNone .row{display:flex;gap:8px;justify-content:center}#nbNone button{all:unset;cursor:pointer;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#ffe58a,#f2b53c);font-weight:800;font-size:13px;box-shadow:0 3px 0 #c98a1b}#nbNone button+button{background:#fff;border:2px solid #f1e3cf;box-shadow:none}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="app">
  <canvas id="c"></canvas>
  <div class="top"><span class="pill" id="title">🏘️ เนเบอร์ฮูด</span><span class="pill" id="cnt">🌸 0/20</span><button class="rb" id="me" title="บ้านฉัน">🏠</button><button class="rb" id="all" title="ทั้งหมู่บ้าน">🗺️</button></div>
@@ -73,12 +73,13 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
+import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
 {const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
 const $=s=>document.querySelector(s);
 /* ---------- กล้องหมุนรอบ 360° · ลากนิ้วเดียว = หมุน · สองนิ้ว = ซูม ---------- */
 class Orbit{constructor(cam,el){this.cam=cam;this.el=el;this.target=new THREE.Vector3();this.enabled=true;this.minDistance=7;this.maxDistance=105;this.minPolarAngle=.35;this.maxPolarAngle=1.3;this.pts=new Map();
- el.addEventListener('pointerdown',e=>{this.pts.set(e.pointerId,{x:e.clientX,y:e.clientY});});
+ el.addEventListener('pointerdown',e=>{if(e.isPrimary&&this.pts.size)this.pts.clear();this.pts.set(e.pointerId,{x:e.clientX,y:e.clientY});});
  addEventListener('pointermove',e=>{const o=this.pts.get(e.pointerId);if(!o)return;const dx=e.clientX-o.x,dy=e.clientY-o.y;
   if(this.pts.size===1&&this.enabled){this.rot(dx,dy);}
   else if(this.pts.size===2){const [a,b]=[...this.pts.values()];const d0=Math.hypot(a.x-b.x,a.y-b.y);o.x=e.clientX;o.y=e.clientY;const [c,d]=[...this.pts.values()];const d1=Math.hypot(c.x-d.x,c.y-d.y);this.zoom(d0/d1);return;}
@@ -226,11 +227,9 @@ const treeOk=p=>{if(Math.hypot(p.x,p.z)>46||Math.hypot(p.x,p.z-1)<6.5)return fal
 /* ---------- ตัวละคร (เดินได้ นั่งเฟอร์นิเจอร์ได้) ---------- */
 const P={x:7,z:13,tx:null,tz:null,dir:Math.PI,sit:null,goSeat:null};let girl=null,gmix=null,gacts={},gcur=null;
 function gset(n){if(gcur===n||!gacts[n])return;const a=gacts[n];a.reset().play();if(gacts[gcur])gacts[gcur].crossFadeTo(a,.2,false);gcur=n;}
-async function loadGirl(){/* S4: ตัวละครโหลดจากไฟล์เดียวกับฟาร์ม (ไฟล์ไบนารีที่โหลดไว้แล้ว) — เร็วกว่าและไม่ต้องโหลดไฟล์ใหญ่อีกก้อน (iPhone เคยไม่ขึ้นตัวละคร) */let g=null;try{const ab=await (await fetch('../farm3d/punk.gltf.json')).arrayBuffer();if(new DataView(ab).getUint32(0,true)===0x46546C67)g=await new Promise((res,rej)=>LD.parse(ab,new URL('../farm3d/',location.href).href,res,rej));}catch(e){console.log('punk glb',e&&e.message);}
- if(!g)g=await loadX('../safari3d/m/punk.gltf.json','../safari3d/m/');const body=g.scene;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;for(const mt of [].concat(o.material)){mt.metalness=0;mt.roughness=.85;}}});
+async function loadGirl(){/* S4 3.6: ชุดที่ใส่อยู่จริง */const CH=await loadCharacter({THREE,loader:LD,base:'../ch/'});window.__s4wearNow=CH.wear;const body=CH.body;body.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=true;for(const mt of [].concat(o.material)){mt.metalness=0;mt.roughness=.85;}}});
  const b=new THREE.Box3().setFromObject(body);const s=1.45/(b.max.y-b.min.y);body.scale.setScalar(s);body.position.y=-b.min.y*s;girl=new THREE.Group();girl.add(body);S.add(girl);
- for(const c of g.animations)c.tracks=c.tracks.filter(t=>!(t.name.endsWith('.position')&&/BoneRoot|Armature/.test(t.name)));
- gmix=new THREE.AnimationMixer(body);const f=p=>g.animations.find(c=>c.name.startsWith(p));gacts.walk=gmix.clipAction(f('walk.001'));gacts.walk.timeScale=1.55;gacts.idle=gmix.clipAction(f('A girl stands relaxed'));gacts.sit=gmix.clipAction(f('A girl sits upright'));gacts.wave=gmix.clipAction(f('A cheerful girl'));gset('idle');}
+ gmix=new THREE.AnimationMixer(body);const C=CH.clips;gacts.walk=gmix.clipAction(C.walk);gacts.walk.timeScale=1.55;gacts.idle=gmix.clipAction(C.idle);gacts.sit=gmix.clipAction(C.sit);gacts.wave=gmix.clipAction(C.wave);gset('idle');}
 function seatOf(g){const n=g.userData.n,L=SEATS[n];if(!L)return null;const sz=g.userData.size||new THREE.Vector3(1,1,1);let best=null,bd=1e9;
  for(const s of L){const lx=s[0]*sz.x,lz=s[1]*sz.z,c=Math.cos(g.rotation.y),sn=Math.sin(g.rotation.y);const w={x:g.position.x+lx*c+lz*sn,z:g.position.z-lx*sn+lz*c,y:s[2]*sz.y,dir:g.rotation.y+s[3]};const d=Math.hypot(w.x-P.x,w.z-P.z);if(d<bd){bd=d;best=w;}}return best;}
 function walkTo(x,z){P.sit=null;P.tx=x;P.tz=z;}
@@ -330,7 +329,7 @@ addEventListener('pointerup',async e=>{if(TED){const t=TDRAG;TDRAG=null;ctr.enab
  if(g&&g.userData.quest){walkTo(-2.6,3.4);toast('📋 เปิดภารกิจทีม');setTimeout(()=>send('quest'),500);return;}
  if(g&&g.userData.n&&SEATS[g.userData.n]&&sitOn(g))return;
  if(g&&g.userData.lot){const z=g.userData.lot;if(!z.id){if(z.i<6){toast('📨 เชิญเพื่อนบ้าน');send('invite');}else toast('🏗️ ที่ดินว่าง · รองรับการขยายทีมในอนาคต');return;}
-  if(z.me){focusMe();return;}toast('🎁 ส่งของให้ '+z.name);send('gift',z.id);return;}
+  if(z.me){focusMe();return;}/* เก็บตก 12: หัวหน้าแตะบ้านสมาชิก = เปิดหน้าสมาชิก (ส่งของ · เตะออก) · สมาชิกทั่วไป = ส่งของ */if(window.__nbLead){toast('👥 สมาชิก · ส่งของ / เชิญออก');send('members');return;}toast('🎁 ส่งของให้ '+z.name);send('gift',z.id);return;}
  if(ray.ray.intersectPlane(plane,hitP)&&Math.hypot(hitP.x,hitP.z)<40){P.goSeat=null;walkTo(hitP.x,hitP.z);ring(hitP.x,hitP.z);}});
 function showPop(g,e){sel=g;const p=$('#pop'),r=cv.getBoundingClientRect();p.style.left=(e.clientX-r.left)+'px';p.style.top=(e.clientY-r.top)+'px';p.style.display='flex';}
 function hidePop(){$('#pop').style.display='none';}
@@ -348,7 +347,7 @@ addEventListener('message',async e=>{const d=e.data&&e.data.s4sync;if(!d||!d.nb)
  {let w=document.getElementById('nbNone');if(d.status!=='active'){if(!w){w=document.createElement('div');w.id='nbNone';w.innerHTML='<div class="bx"><div class="ic">🏘️</div><b>'+(d.status==='none'?'ยังไม่มีเนเบอร์ฮูด':'เนเบอร์ฮูดกำลังสร้าง')+'</b><p>'+(d.status==='none'?'รวมกลุ่มเพื่อน 3–6 คน ทำภารกิจทีม แต่งชุมชนด้วยกัน':'รอสมาชิกครบ/ลงขันให้ครบ แล้วชุมชนจะเปิด')+'</p><div class="row"><button data-a="create">🏘️ สร้างเนเบอร์ฮูด</button><button data-a="invites">📨 คำเชิญที่ได้รับ</button></div></div>';document.body.appendChild(w);w.onclick=ev=>{const b=ev.target.closest('[data-a]');if(!b)return;send(b.dataset.a);};}}else if(w)w.remove();}
  NBS=d;const HS=d.houses||{},nowS=d.now||Date.now();const lvOf=u=>{const h=HS[u];if(!h)return {lv:1,st:0};const done=h.up&&nowS>=h.up.end;return {lv:Math.max(1,Math.min(3,done?Math.max(h.lv|0||1,h.up.to|0):(h.lv|0||1))),st:Math.max(0,h.st|0),up:h.up&&!done?h.up:null};};
  const ms=(d.members||[]).slice();ms.sort((a,b)=>(b.me?1:0)-(a.me?1:0));const nm=ms.map((m,i)=>({u:m.u,n:m.me?'บ้านฉัน':m.n,me:m.me,lead:m.lead,...lvOf(m.u)}));if(!nm.length)nm.push({u:'me',n:'บ้านฉัน',me:1,lv:1,st:0});
- const mine=nm.find(x=>x.me);if(mine)MYH={lv:mine.lv,st:mine.st};
+ const mine=nm.find(x=>x.me);if(mine)MYH={lv:mine.lv,st:mine.st};window.__nbLead=!!(mine&&mine.lead);
  if(d.theme&&d.theme!==theme&&TH.some(x=>x[0]===d.theme)){theme=d.theme;try{localStorage.setItem('nb3d-theme',theme);}catch(_){}buildTheme();}
  {const tk=JSON.stringify(d.trees||null);if(tk!==applyTrees.k){applyTrees.k=tk;if(!TDRAG)applyTrees();}}
  const key=JSON.stringify(nm);if(key!==layout.k){layout.k=key;MEMBERS=nm;await layout();}
