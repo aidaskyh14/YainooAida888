@@ -1,5 +1,5 @@
 import {BOXES,BOX_QUANTITIES,getBoxCount} from './loot-box-catalog.js?v=ss3-fix20&h=e54c5cef';
-import {CATALOG} from './catalog.js?v=ss4-nakorn1&h=e1d6338f';
+import {CATALOG} from './catalog.js?v=ss4-nakorn1&h=4f1d65be';
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n).toLocaleString('th-TH');
 const itemFor=box=>CATALOG.find(c=>c.k===box.key)||{n:'กล่องสุ่ม',i:box.image};

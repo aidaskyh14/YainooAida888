@@ -18,7 +18,7 @@ import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,at
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=9fca90b8';
 import {outingsAction} from './outings-engine.js?h=0e63a6eb';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=e1d6338f';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=4f1d65be';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
 import {nbDay} from './nb-quest.js?h=02ff82da';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
@@ -125,7 +125,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=e1d6338f');
+     const {CATALOG}=await import('./catalog.js?h=4f1d65be');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}

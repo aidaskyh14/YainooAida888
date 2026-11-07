@@ -13,9 +13,10 @@
 #s4prof .av img{width:100%;height:100%;object-fit:cover}
 #s4prof b{display:block;font-size:11px;max-width:34vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #s4prof small{display:block;font-size:10px;color:#ffe7a6}
-#s4dockR{position:fixed;z-index:9;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:8px;transition:transform .22s ease,opacity .22s}
+#s4dockR{position:fixed;z-index:9;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:6px;transition:transform .22s ease,opacity .22s}
+body:not(.s4loaded) #s4dockR,body:not(.s4loaded) #s4tool,body:not(.s4loaded) #s4strip{opacity:0!important;pointer-events:none!important}/* เก็บตก: แถบเครื่องมือโผล่หลังฉากโหลดครบ 100% เท่านั้น */
 body.s4open #s4dockR{transform:translateY(130%);opacity:0;pointer-events:none}
-.s4k{position:relative;width:56px;height:56px;border-radius:16px;border:3px solid #fff;padding:0;cursor:pointer;font-size:27px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);transition:transform .1s}
+.s4k{position:relative;width:42px;height:42px;border-radius:13px;border:2px solid #fff;padding:0;cursor:pointer;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(40,20,0,.25);transition:transform .1s}
 .s4k:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
 .s4k::after{content:'';position:absolute;left:5px;right:5px;top:3px;height:40%;border-radius:12px 12px 20px 20px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
 .s4k.c1{background:linear-gradient(180deg,#8fd0ff,#3f94e4)}.s4k.c2{background:linear-gradient(180deg,#ffd76a,#f39a1e)}.s4k.c3{background:linear-gradient(180deg,#ff9fc0,#e8578a)}.s4k.c4{background:linear-gradient(180deg,#9fe38a,#4bb04a)}.s4k.c5{background:linear-gradient(180deg,#d2b4ff,#8a5ce0)}
@@ -28,7 +29,7 @@ body.s4open #s4dockR{transform:translateY(130%);opacity:0;pointer-events:none}
 #s4strip .hd .x{margin-left:auto}
 #s4strip .row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
 #s4strip .row::-webkit-scrollbar{display:none}
-#s4strip .t{flex:0 0 auto;width:60px;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#6e4b3a;position:relative}
+#s4strip .t{flex:0 0 auto;width:46px;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#6e4b3a;position:relative}
 #s4strip .t .s4k{width:52px;height:52px;font-size:24px;pointer-events:none}
 #s4strip .t span{max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #s4strip .t.cur .s4k{box-shadow:0 0 0 3px #ffd36b,0 4px 0 rgba(0,0,0,.18)}
@@ -59,6 +60,7 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
  const strip=document.createElement('div');strip.id='s4strip';
  const tool=document.createElement('div');tool.id='s4tool';
  document.body.append(shade,strip,tool,dockR);
+ {const iv=setInterval(()=>{try{const w=f3w();if(w&&w.__ready){document.body.classList.add('s4loaded');clearInterval(iv);}}catch(e){}},300);setTimeout(()=>{document.body.classList.add('s4loaded');clearInterval(iv);},25000);}
  const f3w=()=>{try{return $('f3d').contentWindow;}catch(e){return null;}};
  const f3click=id=>{const w=f3w();const b=w&&w.document.getElementById(id);if(b)b.click();};
  const bag=()=>{try{return (typeof S!=='undefined'&&S&&S.bag&&S.bag.item)||{};}catch(e){return {};}};

@@ -46,3 +46,6 @@ button.big::after,.btn::after{content:'';position:absolute;top:0;bottom:0;width:
 .hdr .clock{display:none!important}
 
 /* S4 รอบ 3 ข้อ 10: ปุ่มกลับฟาร์มต้องอยู่บนสุด (iPad แตะโดนหน้าในกรอบแทน) · หน้าตลาดเลื่อนแถบบนหลบปุ่ม */#scr{z-index:1}
+
+/* เก็บตก: ปุ่มกลับฟาร์ม = ไอคอนเล็กจาง ไม่บังหัวตัวละคร · แตะแล้วชัด */
+.gbar #gback{font-size:0!important;width:34px;height:34px;padding:0!important;border-radius:50%!important;opacity:.55;display:flex;align-items:center;justify-content:center}.gbar #gback::before{content:'🌾';font-size:17px}.gbar #gback:active{opacity:1}.gbar #gnav{opacity:.7;padding:.3rem .55rem!important;font-size:13px!important}
