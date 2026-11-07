@@ -808,7 +808,11 @@ function renderGame(screen) {
   }
   goScreen(screen);
 }
+/* fix18: อัปเดตอัตโนมัติ — เทียบแฮช app.js ใน index.html กับตัวที่กำลังรัน */
+let __upd=null;async function __updCheck(){try{const me=(import.meta.url.match(/h=([0-9a-f]{8})/)||[])[1];if(!me)return;const t=await fetch('index.html?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'');const h=(t.match(/app\.js\?[^"']*h=([0-9a-f]{8})/)||[])[1];if(h&&h!==me){if(!__upd){__upd=h;try{toast('🆕 มีเวอร์ชันใหม่ จะอัปเดตให้ตอนเปลี่ยนหน้า');}catch(e){}}}}catch(e){}}
+setTimeout(__updCheck,60000);setInterval(__updCheck,300000);
 async function goScreen(n) {
+  if(__upd&&!S.admin){try{sessionStorage.setItem('s4go',n);}catch(e){}location.reload();return;}
   /* S4: ซีซั่นลอยกระทงไม่มีแรลลี่ (แรลลี่ฟักทองอยู่เฉพาะโหมดฮาโลวีน) */if(n==='funrun'){toast('🪷 ซีซั่นนี้ไม่มีแรลลี่นะ');return;}
   if (n === 'admin') { if (S.admin) openAdminOverlay(); return; }
   if (n === 'login') { logout(); return; }
