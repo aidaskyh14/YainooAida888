@@ -789,7 +789,9 @@ function hostSet(k, v, scope) {
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v, scope); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
-    S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {}; S.P.g._ls[k] = String(v); change('g');
+    S.P.g = S.P.g || {}; S.P.g._ls = S.P.g._ls || {};
+    if(/^s4deco-/.test(k)){try{const cntL=x=>{try{const m=JSON.parse(x||'{}');const lk=Object.keys(m).find(q=>/layout|decor/.test(q));const a=lk?JSON.parse(m[lk]):null;return Array.isArray(a)?a.length:(a&&Array.isArray(a.d)?a.d.length:0);}catch(e){return 0;}};const o=cntL(S.P.g._ls[k]),n=cntL(v);if(o>=15&&n<o*.6){console.warn('host: ไม่บันทึกเลย์เอาต์ '+k+' ของหาย '+o+'→'+n);window.__s4hostBlocked=(window.__s4hostBlocked||0)+1;return;}}catch(e){}}
+    S.P.g._ls[k] = String(v); change('g');
 }
 function renderGame(screen) {
   if (!document.getElementById('scr')) {
