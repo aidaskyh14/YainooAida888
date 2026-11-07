@@ -756,6 +756,8 @@ const HOST_BASE = {
     const b=onSnapshot(collection(db,'funrunLive',String(game),'ev'),snap=>{if(version!==sceneVersion)return;for(const ch of snap.docChanges())if(ch.type==='added'){const e=ch.doc.data();if((e.at||0)>=start)onEvent({id:ch.doc.id,...e});}},()=>{});
     sceneSubscriptions.add(a);sceneSubscriptions.add(b);return()=>{a();b();sceneSubscriptions.delete(a);sceneSubscriptions.delete(b);};},
   watchNb(id,fn){return sceneWatch(doc(db,'neighborhoods',String(id)),fn);},
+  /* fix15: คำเชิญเนเบอร์ฮูดของตัวเอง (nbInvites/{uid}) แบบสด */
+  watchNbInv(fn){if(!S.user)return()=>{};return sceneWatch(doc(db,'nbInvites',S.user.uid),fn);},
   watchNbDay(id,day,fn){return sceneWatch(doc(db,'neighborhoods',String(id),'days',String(day)),fn);},
   get(k) {
     if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);if(!S.P?.g)return null;const v=inventoryView(S.P.g);if(meritShift&&typeof v==='object')v.merit=(Number(v.merit)||0)-meritShift;return JSON.stringify(v); }

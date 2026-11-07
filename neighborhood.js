@@ -149,6 +149,7 @@ document.addEventListener('click',e=>{
  if(e.target.closest('[data-pclose]'))$('pop').classList.remove('on');
 });
 fit();render();act({type:'status'});
+/* fix15: คำเชิญมาถึงทันทีแม้เปิดหน้าชุมชนค้างอยู่ */try{if(H.watchNbInv)H.watchNbInv(d=>{try{const list=((d&&d.list)||[]).filter(x=>x&&x.nb);const was=V.invites.length;V.invites=list;render();if(list.length>was)toast('nb-invite','💌 มีคำเชิญเข้าเนเบอร์ฮูดใหม่');}catch(e){}});}catch(e){}
 setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true);},60000);
 /* fix19 🌳 ศึกโคมลอย: การ์ดแถบเดียว (แตะไปหน้าศึก) */
 (()=>{if(!H.watchWorld)return;const bar=document.createElement('button');bar.type='button';bar.id='twBar';bar.hidden=true;
