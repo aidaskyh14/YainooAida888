@@ -1,38 +1,38 @@
-import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=78c0a2cd';
+import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=68ba35d9';
 import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=325c2f52';
 import {safariAction} from './safari-engine.js?h=b8c86111';
-import {adminCenter} from './admin-center-engine.js?h=13458e60';
+import {adminCenter} from './admin-center-engine.js?h=1dd6c5cb';
 import {adminReset} from './admin-reset.js?h=30e79a6c';
-import {openLootBoxes} from './loot-box-engine.js?h=9f3e914c';
+import {openLootBoxes} from './loot-box-engine.js?h=fc94a5aa';
 import {farmDropsAction} from './farm-drops-engine.js?h=87d90d0c';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {farmAction,friendAction} from './farm-engine.js?h=e8d83600';
 import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
 import {observeGameplay} from './campaign-progress.js?h=b36ef48c';
-import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=123598f3';
+import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=4edda6dd';
 import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=b166c6ce';
 import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=82312623';
 import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=a073b41e';
 import {randomUUID,randomInt,createHash} from 'node:crypto';
 import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=9fca90b8';
-import {outingsAction} from './outings-engine.js?h=0e63a6eb';
+import {outingsAction} from './outings-engine.js?h=508950ec';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=a458b097';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=4f1d65be';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=de52fd45';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=ab4dad61';
 import {nbDay} from './nb-quest.js?h=02ff82da';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
-import {createCloudCore,refuse} from './cloud-core.js?h=2d85b38e';
-import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=f7ba43c9';
+import {createCloudCore,refuse} from './cloud-core.js?h=d4424d66';
+import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=dfd33cd7';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
 import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=4fbc22f0';
 import {hwmAction} from './hwmini-engine.js?h=ffca3ddc';
-import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=13fbcd77';
+import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=2e26d2ed';
 import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=af571787';
-import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=77e14398';
+import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=1e39d21f';
 import {charAction,charAdminSet,charOf} from './char-engine.js?h=cf50917a';import {TRIBES,TRIBE_IDS} from './outfit-catalog.js?h=16ac9bbc';
 import {cityAction,cityAdmin,cityView,publicWorld,manState} from './city-engine.js?h=44c22f95';import {pageantAdmin,pageantAction,pageantView,garland,questionDoc} from './pageant-engine.js?h=57a4a41c';import {YAINOO_QUESTIONS,GENERAL_QUESTIONS} from './city-questions.js?h=10246fe6';import {MAX_IN_CITY,MAN} from './city-catalog.js?h=d68f3e58';
 initializeApp();
@@ -125,7 +125,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=4f1d65be');
+     const {CATALOG}=await import('./catalog.js?h=de52fd45');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -201,7 +201,7 @@ export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.ui
 }}));
 
 export const eventsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'events',worldIds:['world/topspenders'],apply:async(game,worlds,ctx,tx)=>{
- const {rollGacha,topSpenders}=await import('./events-engine.js?h=8158ac5c');const input=req.data?.input||{},writes={},updates={};
+ const {rollGacha,topSpenders}=await import('./events-engine.js?h=c0ccacc3');const input=req.data?.input||{},writes={},updates={};
  if(input.type==='spin'){
    /* S4 ข้อ 47: หมุนละ 10 เหรียญ */if(ctx.coins<10)refuse('ต้องใช้เหรียญกระทงทอง 10 เหรียญ');const reward=rollGacha();
    if(reward.type!=='none'){const ref=db.doc('mail/'+ctx.uid+'/items/gacha-rewards'),prior=await tx.get(ref),old=prior.exists?prior.data():{},items={...(old.items||{})};for(const[k,n]of Object.entries(reward.items||{}))items[k]=(items[k]||0)+n;writes[ref.path]={title:'รางวัลลัคกี้กาชาปองสะสม',msg:reward.extra||'จากตู้กาชาปอง',icon:'🎁',kusal:(old.kusal||0)+(reward.k||0),coins:0,items,createdAt:FieldValue.serverTimestamp(),from:'กาชาปอง'};if(!prior.exists)updates['players/'+ctx.uid]={mailCount:FieldValue.increment(1)};reward.mailNew=!prior.exists;}
