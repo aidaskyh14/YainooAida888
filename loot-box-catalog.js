@@ -17,7 +17,7 @@ const SALT=22;for(const b of BOXES){const rows=b.rows.map(r=>({...r})),other=row
 /* S4 ข้อ 18: 🎁 กล่องสุ่มของประดับตกแต่ง (ยัยหนูส่งทางไปรษณีย์เท่านั้น · ไม่แสดงอัตรา) · ของแต่งเฉลี่ย ~8.5 ชิ้น ต่อ 1,000 กล่อง */
 BOXES.push(box('decor','box-decor','bag.box.decor','box-decor2.webp',[row(25,'salt'),row(50,'meritT'),row(21.65,'speed'),row(2,'item',['cityfuel',3]),row(.5,'coins',[1,5]),row(.3,'decor','theme'),row(.35,'decor','small'),row(.15,'decor','normal'),row(.04,'decor','rare'),row(.01,'decor','house')]));/* S4 3.8: น้ำมันรถ 2% ครั้งละ 3 แกลลอน */
 /* S4 3.7: 👗 กล่องสุ่มเสื้อผ้า (ยัยหนูส่งเท่านั้น) · ชุด 0.25% เฉพาะตัวละครที่เป็นอยู่ (คลาส 80/16/3.5/0.5) · ผลผลิตสัตว์ 50% · กุศล 22% (300–3,000) · วัสดุฟาร์ม 10% · ของลอยกระทง 5% · ดรอป 5.75% · เกลือ 5% · น้ำมันรถ 2% */
-BOXES.push(box('outfit','box-outfit','bag.box.outfit','box-outfit.webp',[row(50,'animalProduct'),row(22,'merit',[300,3000]),row(10,'farmMat'),row(5,'lk'),row(5.75,'drops'),row(5,'salt'),row(2,'item',['cityfuel',3]),row(.25,'outfit')]));
+BOXES.push(box('outfit','box-outfit','bag.box.outfit','box-outfit2.webp',[row(50,'animalProduct'),row(22,'merit',[300,3000]),row(10,'farmMat'),row(5,'lk'),row(5.75,'drops'),row(5,'salt'),row(2,'item',['cityfuel',3]),row(.25,'outfit')]));
 export const MERIT_TABLE=[[100,50],[300,30],[500,15],[2000,4.5],[10000,.45],[100000,.05]];
 export const SPEED_TABLE=[['fert',17],['fertfruit',17],['potion',17],['battery',17],['boost-bait',17],['fertfruitP',5],['boost-lens',5],['boost-gear',5]];
 export const BOX_QUANTITIES=[1,10,50,100,500,1000,2000,5000];

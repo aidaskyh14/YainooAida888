@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
-import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=b5188dad';
+import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=fa0dba36';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=8fe71d3c';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=0274fb7f';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=d0385ad4';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=68ba35d9';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=9e381439';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss3-fix17&h=d92811ef';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=de52fd45';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=768ce276';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -850,7 +850,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=5d681011'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=e746af77'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -967,7 +967,7 @@ function keepAdminScroll(fn){return async(...a)=>{const fresh=A.fresh;A.fresh=fa
 const S4CITY={going:false};
 async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',{type:'status'});if(st.sync)st=await cloudAction('city',{type:'sync'});const e=st.view.entry;const W=st.world||{};
   if(W.open===false&&!S.admin){modal('<h2>⛔ นครปิดอยู่</h2><div>ยัยหนูปิดนครชั่วคราว รอประกาศเปิดนะ</div>');return;}
-  if(!e.ok){/* ส่วน ⑤: เช็คลิสต์มีไอคอน ✓/✗ */const hasCar=!!((st.view.cars||[]).length||st.view.car);const rows=[['images/box-outfit.webp','ชุดไม่ซ้ำ','ชุด '+e.outfits+'/'+e.need.outfits,e.outfits>=e.need.outfits],['images/house-interior-lv1.webp','บ้าน','Lv.'+e.lv+'/'+e.need.houseLv,e.lv>=e.need.houseLv],['images/s4-car-yellow.webp','รถ',hasCar?'มีแล้ว':'ยังไม่มี (ได้จากยัยหนู)',hasCar],['images/city-item-fuel.webp','น้ำมัน',e.free?'วันนี้ฟรี':e.fuel+'/'+e.need.fuelMin+' แกลลอน',e.free||e.fuel>=e.need.fuelMin]];
+  if(!e.ok){/* ส่วน ⑤: เช็คลิสต์มีไอคอน ✓/✗ */const hasCar=!!((st.view.cars||[]).length||st.view.car);const rows=[['images/box-outfit2.webp','ชุดไม่ซ้ำ','ชุด '+e.outfits+'/'+e.need.outfits,e.outfits>=e.need.outfits],['images/house-interior-lv1.webp','บ้าน','Lv.'+e.lv+'/'+e.need.houseLv,e.lv>=e.need.houseLv],['images/s4-car-yellow.webp','รถ',hasCar?'มีแล้ว':'ยังไม่มี (ได้จากยัยหนู)',hasCar],['images/city-item-fuel.webp','น้ำมัน',e.free?'วันนี้ฟรี':e.fuel+'/'+e.need.fuelMin+' แกลลอน',e.free||e.fuel>=e.need.fuelMin]];
    modal('<div style="text-align:center"><h2 style="margin:0 0 6px">🏙️ ยังเข้านครไม่ได้</h2><div style="font-size:.85rem;color:#7a4a5a">ยังขาดของตามรายการนี้</div></div><div style="margin-top:8px;display:grid;gap:6px">'+rows.map(([im,n,v,ok])=>'<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:14px;background:'+(ok?'rgba(120,220,160,.18)':'rgba(255,120,150,.16)')+';border:1.5px solid '+(ok?'#8fd9a8':'#ff9bb5')+'"><img src="'+im+'" style="width:30px;height:30px;object-fit:contain"><div style="flex:1;text-align:left"><b>'+n+'</b><div style="font-size:.82rem">'+esc(v)+'</div></div><span style="font-size:1.1rem">'+(ok?'✅':'❌')+'</span></div>').join('')+'</div>');return;}
   const carK=window.__S4PICKCAR||st.view.car||(st.view.cars||[])[0]||'yellow';window.__S4PICKCAR=null;
   const go=async()=>{/* ส่วน ⑤: ไม่ใช้อีโมจิแล้ว → ฉากขับรถ 3D อยู่ในหน้านคร (city3d ?drive=) โหลดเมืองระหว่างขับ */try{const r=await cloudAction('city',{type:'enter',car:carK});S4CITY.drive={car:carK,fuel:r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'')};S4CITY.going=false;S4CITY.pass=true;goScreen('city');}

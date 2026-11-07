@@ -1459,7 +1459,7 @@ const OUTFIT_CATALOG=[{"k":"outfit-punk","n":"👗 Punk · เริ่มต้
 for(const o of OUTFIT_CATALOG)CATALOG.push(o);
 CATALOG.push({k:'surgery',n:'🏥 บัตรศัลยกรรม (เปลี่ยนตัวละคร)',i:'s4-surgery.webp',g:'บัตร ATM',p:'item.surgery'});
 CATALOG.push({k:'cityfuel',n:'⛽ น้ำมันรถ (แกลลอน)',i:'s4-fuel.webp',g:'นครยัยหนู',p:'item.cityfuel'});
-CATALOG.push({k:'box-outfit',n:'👗 กล่องสุ่มเสื้อผ้า',i:'box-outfit.webp',g:'กล่องสุ่ม',p:'box.outfit'});
+CATALOG.push({k:'box-outfit',n:'👗 กล่องสุ่มเสื้อผ้า',i:'box-outfit2.webp',g:'กล่องสุ่ม',p:'box.outfit'});
 /* ส่วน ⑤: รถ 4 คัน (ของตกแต่งหมวด "รถ" · ได้จากยัยหนูเท่านั้น · วางในฟาร์มได้ · แตะ = ขับไปนคร) · รถเก่า 2 คันถูกแปลงให้อัตโนมัติ */
 CATALOG.push({k:'decor-d_city_car_yellow',n:'🚕 รถเหลือง',i:'s4-car-yellow.webp',g:'รถ',p:'decor.d_city_car_yellow'});
 CATALOG.push({k:'decor-d_city_car_pink',n:'🚗 รถชมพู',i:'s4-car-pink.webp',g:'รถ',p:'decor.d_city_car_pink'});

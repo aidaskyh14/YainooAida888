@@ -1,5 +1,5 @@
-import {CATALOG} from './catalog.js?h=de52fd45';
-import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=b5188dad';
+import {CATALOG} from './catalog.js?h=768ce276';
+import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=03cb46b1';
 import {decorBoxPool} from './decor-prices.js?h=d1908c7e';
 import {OUTFITS,BOX_CLASS} from './outfit-catalog.js?h=16ac9bbc';
 let POOLS=null;const pools=()=>{if(POOLS)return POOLS;POOLS={};for(const c of CATALOG){if(!c.p.startsWith('decor.'))continue;const k=decorBoxPool(c.p.slice(6));if(k)(POOLS[k] ||= []).push(c);}return POOLS;};

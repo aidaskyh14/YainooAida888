@@ -1,5 +1,5 @@
 import {petSell,petBonusLeft,petHave} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_BY_KEY,sellHave} from './sell-price.js?h=34fc4762';
+import {SELL_BY_KEY,sellHave} from './sell-price.js?h=ab2faec6';
 const TICK=15*60e3,DAY=864e5;
 const ST=[{k:'veg',n:'หุ้นผัก',b:3000,v:.014,lo:2000,hi:4500},{k:'fruit',n:'หุ้นผลไม้',b:4000,v:.02,lo:2500,hi:6500},{k:'fish',n:'หุ้นบ่อปลา',b:4500,v:.02,lo:2500,hi:7500},
 {k:'wine',n:'หุ้นไวน์',b:6000,v:.026,lo:3500,hi:10000},{k:'alpaca',n:'หุ้นอัลปาก้า',b:7500,v:.026,lo:4000,hi:12000},{k:'bee',n:'หุ้นซิ่ง',b:5000,v:.05,lo:500,hi:15000}];
