@@ -1,0 +1,92 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>ทอยลูกเต๋าสุ่มตัวละคร</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#140a1f}canvas{display:block;width:100%;height:100%}
+#stars{position:fixed;inset:0;pointer-events:none}#stars i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;opacity:0;animation:tw 3s ease-in-out infinite}@keyframes tw{0%,100%{opacity:0;transform:translateY(0) scale(.6)}50%{opacity:.9;transform:translateY(-14px) scale(1.2)}}
+#cf{position:fixed;inset:0;pointer-events:none;overflow:hidden}#cf i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall 2.6s linear forwards}@keyframes fall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(110vh) rotate(720deg)}}
+#flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 58%,#fff 0,#ffe9b8 30%,#ff9ad0 60%,transparent 75%);opacity:0;transition:opacity .25s}
+#petals{position:fixed;inset:0;pointer-events:none;overflow:hidden}#petals i{position:absolute;bottom:-20px;width:14px;height:14px;border-radius:50% 0 50% 0;animation:rise 3.2s ease-out forwards;opacity:.95}@keyframes rise{0%{transform:translateY(0) rotate(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-105vh) rotate(540deg) scale(1.1);opacity:0}}
+#plate{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none;color:#fff;font:800 19px/1.25 Mali,sans-serif;text-align:center;text-shadow:0 3px 14px #000,0 0 30px #ff9ad0;transition:transform .5s cubic-bezier(.2,1.6,.4,1),opacity .3s;white-space:nowrap}
+#plate.on{opacity:1;transform:translate(-50%,-50%) scale(1)}#plate small{display:block;font-size:11.5px;font-weight:600;opacity:.9;margin-top:4px;text-shadow:0 2px 8px #000}</style></head><body>
+<div id="stars"></div><div id="cf"></div><div id="petals"></div><div id="flash"></div><div id="plate"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script type="module">
+/* ฉากทอยลูกเต๋าสุ่มตัวละคร (ซีซั่น 4 · ทำใหม่ตามสั่ง 6 พ.ย.): ไม่มีแท่น ไม่มีวงกลม
+   ลูกเต๋า 6 ด้าน = หน้า 4 ตัวละคร + "?" 2 ด้าน (ออก ? = ทอยซ้ำอัตโนมัติ) · ตกจากฟ้า กระดอน หมุน หยุดหงายหน้าที่ได้ → แสงวาบ → ตัวละครลอยลงมาในลำแสง
+   คุยกับหน้าแม่ด้วย postMessage: แม่ → {t:'spin'} เริ่มทอย · {t:'stop',tribe} ให้หยุดที่ตัวนั้น · ลูก → {t:'ready'} โหลดเสร็จ · {t:'done'} โชว์ผลเสร็จ */
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {loadCharacter} from '../../pv/s4char.js';
+const post=m=>{try{parent.postMessage({s4roll:m},'*');}catch(e){}};
+const TRIBES={pink:['ชมพู','punk',0xf06ba8],mint:['หัวเขียว','m01',0x5cc9a0],red:['หัวแดง','r01',0xe0554f],bob:['ผมบ็อบดำ','b01',0x8f8fc0]};
+/* ด้านลูกเต๋า: +x pink · -x mint · +y ? · -y ? · +z red · -z bob (ลำดับ BoxGeometry material index) */
+const FACES=['pink','mint','q','q','red','bob'];const FACE_NORMAL=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(Math.min(2,devicePixelRatio||1));r.setSize(innerWidth,innerHeight);r.outputColorSpace=THREE.SRGBColorSpace;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(r.domElement);
+const sc=new THREE.Scene();sc.fog=new THREE.Fog(0x140a1f,14,34);
+const cam=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);cam.position.set(0,7.5,11);cam.lookAt(0,1.2,0);
+sc.add(new THREE.HemisphereLight(0xffe6f3,0x3a1a4a,1.0));const sun=new THREE.DirectionalLight(0xfff2dc,1.6);sun.position.set(4,9,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-8;sun.shadow.camera.right=8;sun.shadow.camera.top=8;sun.shadow.camera.bottom=-8;sc.add(sun);
+const rim=new THREE.PointLight(0xff8ad0,20,16);rim.position.set(-4,3,-3);sc.add(rim);const rim2=new THREE.PointLight(0x8ad0ff,14,16);rim2.position.set(4,2,-4);sc.add(rim2);
+/* พื้นกำมะหยี่ + ม่านแสง + ดาว */
+const velvetT=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#2a1446';x.fillRect(0,0,256,256);for(let i=0;i<2600;i++){x.fillStyle=`rgba(${120+Math.random()*60|0},${40+Math.random()*30|0},${120+Math.random()*60|0},${.25+Math.random()*.4})`;x.fillRect(Math.random()*256,Math.random()*256,1.5,1.5);}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(6,6);return t;})();
+const floor=new THREE.Mesh(new THREE.CircleGeometry(16,48),new THREE.MeshStandardMaterial({map:velvetT,color:0xffffff,roughness:.95}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;sc.add(floor);
+const glow=new THREE.Mesh(new THREE.CircleGeometry(3.2,48),new THREE.MeshBasicMaterial({color:0xff9ad0,transparent:true,opacity:.0,depthWrite:false}));glow.rotation.x=-Math.PI/2;glow.position.y=.02;sc.add(glow);
+{const g=new THREE.PlaneGeometry(26,16);const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,0,256);gr.addColorStop(0,'rgba(255,150,210,0)');gr.addColorStop(.55,'rgba(255,170,220,.35)');gr.addColorStop(1,'rgba(90,30,120,0)');x.fillStyle=gr;x.fillRect(0,0,512,256);for(let i=0;i<9;i++){const w=18+Math.random()*40;const gx=x.createLinearGradient(0,0,0,256);gx.addColorStop(0,'rgba(255,255,255,0)');gx.addColorStop(.5,'rgba(255,230,250,.22)');gx.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gx;x.fillRect(Math.random()*512,0,w,256);}const t=new THREE.CanvasTexture(c);const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,fog:false}));m.position.set(0,6,-9);sc.add(m);}
+const S=document.getElementById('stars');for(let i=0;i<70;i++){const s=document.createElement('i');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*62+'%';s.style.animationDelay=(Math.random()*3)+'s';s.style.width=s.style.height=(2+Math.random()*3)+'px';S.appendChild(s);}
+/* ลูกเต๋า: ขอบทองมน + หน้าครีม + วงชมพู/เครื่องหมาย ? (ตามภาพที่ยัยหนูส่ง) */
+const faceImgs={};const texOf=(key)=>new Promise(res=>{const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');x.fillStyle='#fde9c4';x.fillRect(0,0,512,512);
+ const done=()=>{const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;res(t);};
+ if(key==='q'){x.font='900 360px Mali, Arial Rounded MT Bold, Arial';x.textAlign='center';x.textBaseline='middle';x.lineWidth=28;x.strokeStyle='#b3245f';x.strokeText('?',256,276);x.fillStyle='#ff3f8e';x.fillText('?',256,276);x.fillStyle='rgba(255,255,255,.55)';x.beginPath();x.ellipse(200,150,46,20,-.5,0,Math.PI*2);x.fill();x.lineWidth=10;x.strokeStyle='rgba(212,160,60,.75)';x.strokeRect(22,22,468,468);done();return;}
+ /* ส่วน ⑧: ไม่ใช้วงกลมขาว (ดูเหมือนรูปตัดต่อ) → หน้าตัวละครใหญ่เต็มหน้าลูกเต๋า มีแสงสีประจำตัวจาง ๆ หลังหัว ขอบล่างค่อย ๆ กลืนกับสีครีม ขอบทองบาง */
+ const col=TRIBES[key]?'#'+TRIBES[key][2].toString(16).padStart(6,'0'):'#ff9ad0';const img=new Image();img.onload=()=>{const rg=x.createRadialGradient(256,230,20,256,230,230);rg.addColorStop(0,col+'99');rg.addColorStop(.55,col+'33');rg.addColorStop(1,'rgba(253,233,196,0)');x.fillStyle=rg;x.fillRect(0,0,512,512);
+  x.drawImage(img,44,40,424,424);
+  x.lineWidth=10;x.strokeStyle='rgba(212,160,60,.75)';x.strokeRect(22,22,468,468);x.lineWidth=3;x.strokeStyle='rgba(255,255,255,.6)';x.strokeRect(34,34,444,444);done();};img.onerror=()=>{x.lineWidth=10;x.strokeStyle='rgba(212,160,60,.75)';x.strokeRect(22,22,468,468);done();};img.src='f/'+key+'.webp';});
+const die=new THREE.Group();sc.add(die);const DS=1.45;
+const goldM=new THREE.MeshStandardMaterial({color:0xf4b82e,metalness:.55,roughness:.28,emissive:0x3a2600,emissiveIntensity:.25});
+/* กล่องมน = กล่องกลาง + ขอบทรงกระบอก 12 เส้น + มุมกลม 8 ลูก (ไม่พึ่ง addon) */const R=.3,H=DS/2-R;const gold=new THREE.Group();
+for(const [sx,sy,sz] of [[DS-2*R,DS,DS-2*R],[DS,DS-2*R,DS-2*R],[DS-2*R,DS-2*R,DS]]){const b=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),goldM);b.castShadow=true;b.receiveShadow=true;gold.add(b);}
+const cyl=new THREE.CylinderGeometry(R,R,DS-2*R,14);for(const ax of ['x','y','z'])for(const a of [-H,H])for(const b of [-H,H]){const c=new THREE.Mesh(cyl,goldM);c.castShadow=true;if(ax==='y'){c.position.set(a,0,b);}else if(ax==='x'){c.position.set(0,a,b);c.rotation.z=Math.PI/2;}else{c.position.set(a,b,0);c.rotation.x=Math.PI/2;}gold.add(c);}
+const sph=new THREE.SphereGeometry(R,14,10);for(const x of [-H,H])for(const y of [-H,H])for(const z of [-H,H]){const m=new THREE.Mesh(sph,goldM);m.position.set(x,y,z);m.castShadow=true;gold.add(m);}
+die.add(gold);
+const faceMats=[];const FT=await Promise.all(FACES.map(texOf));
+for(let i=0;i<6;i++){const m=new THREE.MeshStandardMaterial({map:FT[i],roughness:.5,metalness:.05});faceMats.push(m);const f=new THREE.Mesh(new THREE.PlaneGeometry(DS*.78,DS*.78),m);const n=FACE_NORMAL[i];f.position.set(n[0]*(DS/2+.004),n[1]*(DS/2+.004),n[2]*(DS/2+.004));f.lookAt(n[0]*5,n[1]*5,n[2]*5);die.add(f);}
+die.position.set(0,12,0);die.visible=false;
+/* ตัวละคร (โหลดครบ 4 ไว้ก่อน เผยทีละตัว) */
+const loader=new GLTFLoader();const CH={};
+async function build(tribe){const [name,wear]=TRIBES[tribe];const ch=await loadCharacter({THREE,loader,base:'../../ch/',wear,tribe});const g=new THREE.Group();g.add(ch.body);ch.body.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});g.visible=false;g.position.set(0,0,1.2);sc.add(g);const mixer=new THREE.AnimationMixer(ch.body);CH[tribe]={g,ch,mixer,name};}
+let ready=false;Promise.all(Object.keys(TRIBES).map(build)).then(()=>{ready=true;post({t:'ready'});}).catch(e=>{console.log('roll3d',e&&e.message);post({t:'fail'});});
+function play(c,n,once){const clip=c.ch.clips[n]||c.ch.clips.idle;if(!clip)return;c.mixer.stopAllAction();const a=c.mixer.clipAction(clip);a.reset();if(once){a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;}a.play();}
+/* ---------- การทอย ---------- */
+let mode='idle',target=null,t0=0;const V={pos:new THREE.Vector3(),vel:new THREE.Vector3(),ang:new THREE.Vector3()};
+const qTarget=new THREE.Quaternion();let settleFrom=null,settleT=0,bounces=0,rerolls=0;
+function startSpin(){if(!ready||mode!=='idle')return;mode='fall';t0=performance.now();die.visible=true;die.position.set(-.6,11,.6);V.vel.set(1.2,-2,-.6);V.ang.set(6+Math.random()*4,5+Math.random()*4,4+Math.random()*3);die.quaternion.setFromEuler(new THREE.Euler(Math.random()*3,Math.random()*3,Math.random()*3));bounces=0;glow.material.opacity=0;document.getElementById('plate').classList.remove('on');}
+function stopAt(tribe){target=tribe;if(mode==='idle')startSpin();}
+/* คำนวณท่าให้ด้านที่ต้องการหงายขึ้น (+y) และหันหน้าเข้ากล้อง (+z) */
+function faceUpQuat(key){const i=FACES.indexOf(key);const n=new THREE.Vector3(...FACE_NORMAL[i]);const q=new THREE.Quaternion().setFromUnitVectors(n,new THREE.Vector3(0,1,0));return q;}
+function facePick(){/* ถ้า target ยังไม่มา → สุ่ม ? เพื่อให้ลุ้น · มีโอกาส 35% ออก ? หนึ่งครั้งก่อนออกจริง (สูงสุด 1 ครั้ง) */if(!target)return 'q';if(rerolls<1&&Math.random()<.35){rerolls++;return 'q';}return target;}
+let picked=null;
+function physics(dt){const g=-22;V.vel.y+=g*dt;die.position.addScaledVector(V.vel,dt);die.rotation.x+=V.ang.x*dt;die.rotation.y+=V.ang.y*dt;die.rotation.z+=V.ang.z*dt;
+ const floorY=DS/2*1.05;if(die.position.y<floorY){die.position.y=floorY;bounces++;const k=bounces===1?.45:bounces===2?.32:.18;V.vel.y=-V.vel.y*k;V.vel.x*=.7;V.vel.z*=.7;V.ang.multiplyScalar(.55);sparkle(die.position,bounces===1?26:12);if(bounces>=3||Math.abs(V.vel.y)<1.2){mode='settle';picked=facePick();settleFrom=die.quaternion.clone();qTarget.copy(faceUpQuat(picked));settleT=0;}}}
+function settle(dt){settleT=Math.min(1,settleT+dt/.55);const e=1-Math.pow(1-settleT,3);die.quaternion.slerpQuaternions(settleFrom,qTarget,e);die.position.y=DS/2+Math.sin(settleT*Math.PI)*.25;die.position.x*=1-dt*2;die.position.z*=1-dt*2;if(settleT>=1){mode='show';t0=performance.now();}}
+/* หลังหยุด: ซูม → ถ้า ? สั่นแล้วทอยใหม่ · ถ้าตัวละคร → แสงวาบ ลำแสง ตัวละครลอยลง */
+let revealT=0,beam=null,cur=null;
+function show(dt){const el=(performance.now()-t0)/1000;cam.position.lerp(new THREE.Vector3(0,3.6,6.2),Math.min(1,dt*2.2));cam.lookAt(0,DS/2+.2,0);/* ส่วน ⑧: เอียงหน้าที่ออกมาหาคนดู (ไม่ใช่หงายขึ้นฟ้าอย่างเดียว) */{const tilt=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.62);const q=tilt.clone().multiply(qTarget);die.quaternion.slerp(q,Math.min(1,dt*3));}glow.material.opacity=Math.min(.35,el*.6);
+ if(picked==='q'){die.position.x=Math.sin(el*40)*.08*Math.max(0,1.2-el);if(el>1.1){sparkle(die.position,40);mode='fall';die.position.set(0,11,0);V.vel.set((Math.random()-.5)*2,-2,(Math.random()-.5)*2);V.ang.set(8,7,6);bounces=0;glow.material.opacity=0;}return;}
+ if(el>.9&&!cur){flash();cur=CH[picked];cur.g.visible=true;cur.g.position.set(0,7,1.4);cur.g.scale.setScalar(.01);play(cur,'wai',true);beam=makeBeam();petals(TRIBES[picked][2]);revealT=0;die.visible=false;}
+ if(cur){revealT=Math.min(1,revealT+dt/1.4);const e=1-Math.pow(1-revealT,3);cur.g.position.y=7-7*e;cur.g.scale.setScalar(.01+.99*e);cur.g.rotation.y=Math.sin((1-e)*6)*.6;if(beam){beam.material.opacity=.2*(1-revealT*.6);beam.scale.set(1+revealT*.3,1,1+revealT*.3);}cam.position.lerp(new THREE.Vector3(0,2.4,6.4),Math.min(1,dt*1.6));cam.lookAt(0,1.1,1.2);
+  if(revealT>=1&&mode==='show'){mode='done';const p=document.getElementById('plate');p.innerHTML=`${['💗','💚','❤️','🖤'][['pink','mint','red','bob'].indexOf(picked)]} ตัวละคร${TRIBES[picked][0]}<small>ยินดีด้วย! ตัวละครนี้อยู่กับคุณไปตลอด</small>`;p.classList.add('on');confetti(TRIBES[picked][2]);setTimeout(()=>{play(cur,'happy');post({t:'done',tribe:picked});},2200);}}}
+function makeBeam(){const g=new THREE.CylinderGeometry(.55,1.5,9,32,1,true);const m=new THREE.MeshBasicMaterial({color:0xffd9f0,transparent:true,opacity:.2,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});const b=new THREE.Mesh(g,m);b.position.set(0,4.5,1.2);sc.add(b);return b;}
+function flash(){const f=document.getElementById('flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,220);}
+/* ประกาย 3 มิติ */
+const sparks=[];const spG=new THREE.SphereGeometry(.06,6,6);const spM=new THREE.MeshBasicMaterial({color:0xffe08a,fog:false});
+function sparkle(p,n){for(let i=0;i<n;i++){const s=new THREE.Mesh(spG,spM);s.position.copy(p);s.userData.v=new THREE.Vector3((Math.random()-.5)*6,Math.random()*5+1,(Math.random()-.5)*6);s.userData.life=.6+Math.random()*.5;sc.add(s);sparks.push(s);}}
+function petals(col){const P=document.getElementById('petals');const c='#'+col.toString(16).padStart(6,'0');for(let i=0;i<40;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.background=i%3?c:'#fff';e.style.animationDelay=(Math.random()*1.4)+'s';P.appendChild(e);setTimeout(()=>e.remove(),5000);}}
+function confetti(col){const C=document.getElementById('cf');const cols=['#'+col.toString(16).padStart(6,'0'),'#ffd27a','#fff','#8ad0ff'];for(let i=0;i<90;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.background=cols[i%4];e.style.animationDelay=(Math.random()*.9)+'s';C.appendChild(e);setTimeout(()=>e.remove(),4000);}}
+addEventListener('message',e=>{const m=e.data&&e.data.s4roll;if(!m)return;if(m.t==='spin')startSpin();else if(m.t==='stop')stopAt(m.tribe);});
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();r.setSize(innerWidth,innerHeight);});
+const clock=new THREE.Clock();let idleT=0;
+function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta());idleT+=dt;
+ if(mode==='idle'){/* ก่อนทอย: ลูกเต๋าลอยหมุนช้า ๆ กลางจอ */die.visible=ready;die.position.set(0,1.4+Math.sin(idleT*1.6)*.15,0);die.rotation.y+=dt*.6;die.rotation.x=Math.sin(idleT*.8)*.25;glow.material.opacity=.25+Math.sin(idleT*2)*.08;cam.position.lerp(new THREE.Vector3(0,4.6,9.8),dt);cam.lookAt(0,1.1,0);}
+ else if(mode==='fall')physics(dt);else if(mode==='settle')settle(dt);else if(mode==='show'||mode==='done')show(dt);
+ for(const c of Object.values(CH))c.mixer.update(dt);
+ for(let i=sparks.length-1;i>=0;i--){const s=sparks[i];s.userData.life-=dt;s.userData.v.y-=12*dt;s.position.addScaledVector(s.userData.v,dt);s.scale.setScalar(Math.max(.01,s.userData.life));if(s.userData.life<=0){sc.remove(s);sparks.splice(i,1);}}
+ r.render(sc,cam);}
+loop();window.__roll={get mode(){return mode;},die,CH,startSpin,stopAt};
+</script></body></html>

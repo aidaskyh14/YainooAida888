@@ -1,0 +1,22 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>พรีวิว นครยัยหนู</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#9fd3ff;font-family:Mali,sans-serif}#scr{position:fixed;inset:0;width:100%;height:100%;border:0}
+#tpBtn{position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:70;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:rgba(255,255,255,.85);font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+#tp{position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 42px);z-index:70;width:230px;background:rgba(40,12,70,.9);color:#fff;border-radius:14px;padding:8px;font-size:11px;display:none;backdrop-filter:blur(6px)}#tp.on{display:block}
+#tp .st,#tp .who{font-weight:800;margin:0 0 4px;font-size:11px;color:#ffd27a}#tp h5{margin:6px 0 3px;font-size:10px;color:#f5a3c7}
+#tp .r{display:flex;flex-wrap:wrap;gap:4px}#tp button{all:unset;cursor:pointer;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 8px;font:700 10.5px Mali;color:#fff}#tp button:active{background:rgba(255,255,255,.35)}
+#ptoast{position:fixed;z-index:80;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);background:rgba(40,12,70,.9);color:#fff;padding:.35rem .8rem;border-radius:999px;font-weight:700;font-size:.75rem;opacity:0;transition:.25s;pointer-events:none;max-width:84vw;text-align:center}#ptoast.on{opacity:1}
+#ov{position:fixed;inset:0;z-index:90;background:#000}#ov iframe{width:100%;height:100%;border:0}#ov button{position:absolute;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.4);color:#fff;font-weight:800}
+#bye{position:fixed;inset:0;z-index:50;background:rgba(20,10,30,.8);color:#fff;display:none;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:1.1rem;line-height:1.7}</style></head><body>
+<button id="tpBtn" title="แผงทดสอบ">🧪</button>
+<div id="tp"><p class="who"></p><p class="st"></p>
+ <h5>ทั่วไป</h5><div class="r"><button data-a="role">สลับ แอดมิน/ผู้เล่น</button><button data-a="hour">⏩ 1 ชม.</button><button data-a="day">⏩ 1 วัน</button><button data-a="noon">⏩ เวลาสามีกลับ</button></div>
+ <h5>จีบ/แต่งงาน (เล่นเป็นผู้เล่น)</h5><div class="r"><button data-a="love">💘 หัวใจเต็มกับทอม</button></div>
+ <h5>ประกวดนางนพมาศ (ยัยหนูคุม)</h5><div class="r"><button data-a="schedule">👑 ตั้งประกวด</button><button data-a="bots">🤖 บอทเข้า 15</button><button data-a="start">🏁 เริ่ม</button><button data-a="next">⏭️ รอบถัดไป</button><button data-a="talent">🎯 เริ่มโชว์</button><button data-a="ask">❓ ส่งคำถาม</button><button data-a="botsgo">🤖 บอทตอบ</button><button data-a="closeq">⏱️ ปิดคำถาม</button><button data-a="cancel">✖️ ยกเลิก</button></div>
+</div>
+<iframe id="scr" data-src="scr-city.html?h=db4c011c" title="นครยัยหนู"></iframe>
+<div id="ptoast"></div>
+<div id="bye">🌾 กลับฟาร์ม (จบพรีวิว)<br><small>แตะเพื่อเข้าใหม่</small></div>
+<script type="module" src="fake.js"></script>
+</body></html>
