@@ -4,7 +4,7 @@
 (()=>{const DS=(document.currentScript&&document.currentScript.dataset)||{};const KEY=DS.key||'s4deco-farm',RE=DS.re?new RegExp(DS.re):/^farm1-(?!roomphoto-)/;/* S4: ใช้ซ้ำได้กับโซนอื่นผ่าน data-key/data-re (ซาฟารี) *//* รูปถ่ายห้อง (ไฟล์ใหญ่) ยังเก็บในเครื่อง */let H=null;
  try{H=(parent.parent&&parent.parent.__HOST)||parent.__HOST||null;}catch(e){H=null;}
  if(!H||typeof H.get!=='function'||typeof H.set!=='function'||window.__SHOW)return;
- let MEM={};try{const v=H.get(KEY);if(v)MEM=JSON.parse(v)||{};}catch(e){MEM={};}
+ let MEM={};try{const v=H.get(KEY);if(v)MEM=JSON.parse(v)||{};}catch(e){console.warn('s4store init err',e&&e.message);MEM={};}
  const P=Storage.prototype,g=P.getItem,s=P.setItem,r=P.removeItem,kf=P.key;
  const isLS=st=>{try{return st===window.localStorage;}catch(e){return false;}};
  let t=0,warned=0;const queue=()=>{clearTimeout(t);t=setTimeout(flush,1200);};
