@@ -850,7 +850,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=52ebbf2c'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=d4f98c19'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -972,7 +972,7 @@ async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',
   const go=async()=>{/* ส่วน ⑤: ไม่ใช้อีโมจิแล้ว → ฉากขับรถ 3D อยู่ในหน้านคร (city3d ?drive=) โหลดเมืองระหว่างขับ */try{const r=await cloudAction('city',{type:'enter'});S4CITY.drive={car:(window.__S4PICKCAR||st.view.car||'small'),fuel:r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'')};S4CITY.going=false;S4CITY.pass=true;goScreen('city');}
    catch(err){S4CITY.going=false;toast(thaiError(err));}};
   const carK=window.__S4PICKCAR||(st.view.cars||[])[0]||st.view.car||'yellow';const CARN={yellow:'รถเหลือง',pink:'รถชมพู',green:'รถเขียว',purple:'รถม่วงเปิดประทุน',small:'รถเขียว',luxury:'รถม่วงเปิดประทุน'};/* ส่วน ⑤: หน้าต่างถามน้ำมัน มีรูปรถ+รูปน้ำมัน */const fuelTxt=e.free?'🎉 วันนี้เข้าฟรี ไม่ใช้น้ำมัน':'<img src="images/s4-fuel.webp" style="width:34px;height:34px;vertical-align:middle;object-fit:contain"> ใช้น้ำมัน <b>'+e.need.fuelMin+'–'+e.need.fuelMax+'</b> แกลลอน (สุ่ม) · มีอยู่ <b>'+e.fuel+'</b>';
-  modal('<div style="text-align:center"><img src="images/s4-car-'+({small:'green',luxury:'purple'})[carK]||carK)+'.webp" style="width:150px;height:110px;object-fit:contain"><h2 style="margin:4px 0">🚗 ไปนครยัยหนู</h2><div style="font-size:.9rem">ด้วย'+(CARN[carK]||'รถ')+'</div></div><div style="text-align:center;margin-top:6px">'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:'ออกเดินทาง',f:go}]);return;}
+  modal('<div style="text-align:center"><img src="images/s4-car-'+(({small:'green',luxury:'purple'})[carK]||carK)+'.webp" style="width:150px;height:110px;object-fit:contain"><h2 style="margin:4px 0">🚗 ไปนครยัยหนู</h2><div style="font-size:.9rem">ด้วย'+(CARN[carK]||'รถ')+'</div></div><div style="text-align:center;margin-top:6px">'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:'ออกเดินทาง',f:go}]);return;}
  catch(err){toast(thaiError(err));}finally{setTimeout(()=>{S4CITY.going=false;},8000);}}
 /* ---------- S4 นครยัยหนู: ฉากแต่งงาน/หย่า (ทุกคนเห็น) + ป้ายนับถอยหลังประกวด ---------- */
 const CITYFX={seen:new Set(),timer:0,world:null};

@@ -54,7 +54,7 @@ export function cityAction(game,world,ctx,input,rng=Math.random){const type=Stri
   c.visits++;c.lastEnter=now;husbandTick(game,c,ctx,out);return {...out,fuelUsed:used,view:cityView(game,W,ctx),world:publicWorld(W,now),worldDoc:W};}
  if(type==='leave'){c.lastLeave=now;return {...out,view:cityView(game,W,ctx)};}
  const man=input.man?String(input.man):null;const M=man&&MAN[man];
- if(['talk','gift','date','propose'].includes(type)){if(!M)fail('ไม่พบผู้ชายคนนี้');if(ctx.admin)fail('บัญชีแอดมินจีบไม่ได้');const st=manState(man,now,W);if(st.st!=='walk')fail(M.name+'ยังไม่ว่าง ('+({work:'กำลังทำงาน',rest:'กำลังพัก',date:'กำลังเดตกับคนอื่น'})[st.st]+')');if(c.husband&&c.husband.id!==man&&(type==='date'||type==='propose'))fail('แต่งงานแล้ว ต้องหย่าก่อน')/* แต่งแล้วยังคุย/ให้ของคนอื่นได้ (สร้างปฏิสัมพันธ์) แต่เดต/ขอแต่งไม่ได้ */;}
+ if(['talk','gift','date','propose'].includes(type)){if(!M)fail('ไม่พบผู้ชายคนนี้');const st=manState(man,now,W);if(st.st!=='walk')fail(M.name+'ยังไม่ว่าง ('+({work:'กำลังทำงาน',rest:'กำลังพัก',date:'กำลังเดตกับคนอื่น'})[st.st]+')');if(c.husband&&c.husband.id!==man&&(type==='date'||type==='propose'))fail('แต่งงานแล้ว ต้องหย่าก่อน')/* แต่งแล้วยังคุย/ให้ของคนอื่นได้ (สร้างปฏิสัมพันธ์) แต่เดต/ขอแต่งไม่ได้ */;}
  if(type==='talk'){const L=loveOf(c,man,now);settle(L,man,now);const d=dayOf(now);let pts=0,first=false;if(L.talkDay!==d){L.talkDay=d;first=true;pts=GIFT_PTS.talk;}
   /* เหตุการณ์พิเศษ: คุยตอนเงื่อนไขครบ = ปลดล็อกดวงถัดไป */let unlocked=0;const nl=LOCK_HEARTS.find(h=>!L.ev[h]);if(nl&&heartsOf(L)>=nl&&eventPassed(man,nl,now)){L.ev[nl]=true;unlocked=nl;}
   addPts(L,man,pts);L.seen=d;settle(L,man,now);const before=L.h;rewards(c,L,man,ctx,out);
@@ -82,7 +82,7 @@ export function cityAction(game,world,ctx,input,rng=Math.random){const type=Stri
   c.husband={id:man,at,happy:HUSBAND.happyStart,house:{lv:1},kids:[],pend:[],lastSlot:slotKey(now)};const cl=c.claimed[man] ||= {h:{}};if(!cl.wed&&!c.ex[man]){cl.wed=true;game.merit=(game.merit||0)+WED_REWARD.merit;out.mails.push({key:'wed-'+man,title:'💍 ของขวัญแต่งงาน',msg:'ยินดีด้วย! แต่งงานกับ'+M.name+'แล้ว',kusal:0,items:{'wine-rose':1,cake:1}});}
   bagAdd(game,'decor-husband-house',1);/* บ้านสามีเข้ากระเป๋าของแต่ง ต้องกดวางเอง */
   return {...out,wedding:{man,at,wear},view:cityView(game,W,ctx),world:publicWorld(W,now),worldDoc:W};}
- if(type==='divorce'){if(!c.husband)fail('ยังไม่ได้แต่งงาน');if(ctx.admin)fail('แอดมินไม่มีคู่');if(String(input.confirm)!=='หย่า')fail('พิมพ์ "หย่า" เพื่อยืนยัน');if((game.merit||0)<WED.divorce)fail('ค่าหย่า '+WED.divorce.toLocaleString('en-US')+' กุศล ไม่พอ');
+ if(type==='divorce'){if(!c.husband)fail('ยังไม่ได้แต่งงาน');if(String(input.confirm)!=='หย่า')fail('พิมพ์ "หย่า" เพื่อยืนยัน');if((game.merit||0)<WED.divorce)fail('ค่าหย่า '+WED.divorce.toLocaleString('en-US')+' กุศล ไม่พอ');
   game.merit-=WED.divorce;const h=c.husband;c.ex[h.id]=true;const kids=(h.kids||[]).length;c.husband=null;const L=c.love[h.id];if(L){L.p=0;L.h=0;L.dates=0;L.ev={};}
   /* บ้านสามีหายทั้งที่วางและในกระเป๋า · ของในบ้านย้ายเข้ากระเป๋าทำที่หน้าเกม (ของแต่ง) */if(bagGet(game,'decor-husband-house')>0)bagAdd(game,'decor-husband-house',-bagGet(game,'decor-husband-house'));
   W.divorces ||= [];W.divorces.push({uid:ctx.uid,name:ctx.name||'ผู้เล่น',man:h.id,manName:MAN[h.id]?.name,at:now});W.divorces=W.divorces.filter(d=>d.at>now-600000);out.worldWrite=true;

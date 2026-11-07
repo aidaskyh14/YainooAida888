@@ -10,7 +10,7 @@ const NEXT={lights:'thai',thai:'quiz',quiz:'cut5',cut5:'swim',swim:'final',final
 const r2=x=>Math.round(x*100)/100;
 export const speedScore=(ms,maxMs)=>{if(!(ms>=0))return 0;const k=Math.max(0,Math.min(1,ms/maxMs));return r2(Math.max(0.5,9.99-k*8.5));};/* เร็วสุด 9.99 (ไม่มีใครได้ 10) ช้าสุด 0.5 */
 export const TALENT_POOL=['corn','rose','egg','wine-rose','apple','cheese','tulip','lotus','truffle','peach','daisy','milk','lavender','cherry','orange','pumpkin'];
-export const QUIZ_MAX_MS=30000,TALENT_MAX_MS=25000;
+export const QUIZ_MAX_MS=15000,TALENT_MAX_MS=15000;
 const hasOutfits=game=>{const bag=game.bag?.outfit||{};const ids=Object.keys(bag).filter(k=>OUTFITS[k]&&bag[k]>0);const has=f=>ids.some(k=>OUTFITS[k][f]);return {swim:has('swim'),thai:has('thai')};};
 export const bestOf=(game,field)=>{const bag=game.bag?.outfit||{};const order={q:7,c4:6,c3:5,c2:4,c1:3,c0:2,s:1};let best=null,bs=-1;for(const [k,n] of Object.entries(bag)){const o=OUTFITS[k];if(!o||!(n>0)||!o[field])continue;const s=order[o.cls]||0;if(s>bs){bs=s;best=k;}}return best;};
 export const total=c=>r2((c.scores.talent||[]).reduce((a,b)=>a+b,0)+(c.scores.quiz||[]).reduce((a,b)=>a+b,0)+(c.scores.final||[]).reduce((a,b)=>a+b,0));
