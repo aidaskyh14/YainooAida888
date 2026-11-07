@@ -8,7 +8,7 @@
  const P=Storage.prototype,g=P.getItem,s=P.setItem,r=P.removeItem,kf=P.key;
  const isLS=st=>{try{return st===window.localStorage;}catch(e){return false;}};
  let t=0,warned=0;const queue=()=>{clearTimeout(t);t=setTimeout(flush,1200);};
- function flush(){clearTimeout(t);try{backup();const out=JSON.stringify(MEM);if(new TextEncoder().encode(out).length>126000){if(!warned++)console.warn('s4store: layout too big',out.length);return;}H.set(KEY,out);}catch(e){console.warn('s4store',e&&e.message);}}
+ function flush(){clearTimeout(t);try{backup();const out=JSON.stringify(MEM);const _sz=new TextEncoder().encode(out).length;if(_sz>126000){if(!warned++){console.warn('s4store: layout too big',out.length);try{(typeof toast==='function'?toast:(parent&&parent.toast))('⚠️ ของตกแต่งในฟาร์มเยอะเกินเพดานเซฟแล้ว กรุณาเก็บของบางชิ้นเข้ากระเป๋า ไม่งั้นการจัดวางใหม่จะไม่ถูกบันทึก',1);}catch(e){}}return;}if(_sz>110000&&!window.__s4big){window.__s4big=1;try{(typeof toast==='function'?toast:(parent&&parent.toast))('⚠️ ของตกแต่งในฟาร์มใกล้เต็มเพดานเซฟ (ประมาณ '+Math.round(_sz/1260)+'%)',1);}catch(e){}}H.set(KEY,out);}catch(e){console.warn('s4store',e&&e.message);}}
  /* ครั้งแรกของบัญชีนี้: เอาฟาร์มที่จัดไว้ในเครื่องนี้ขึ้นเซิร์ฟเวอร์ */
  if(!Object.keys(MEM).length){try{const ls=window.localStorage;for(let i=0;i<ls.length;i++){const kk=kf.call(ls,i);if(kk&&RE.test(kk))MEM[kk]=g.call(ls,kk);}}catch(e){}if(Object.keys(MEM).length)queue();}
  /* เก็บตก (กันฟาร์มหาย): ① สำรองเลย์เอาต์ล่าสุดที่ดีไว้ในเครื่อง ② ถ้าเซิร์ฟเวอร์ให้เลย์เอาต์ว่าง/ไม่มี แต่เครื่องมีสำรอง → ใช้สำรองแล้วส่งกลับขึ้นเซิร์ฟเวอร์ ③ ห้ามเขียนทับด้วยเลย์เอาต์ที่ของหายเกินครึ่งในครั้งเดียว */

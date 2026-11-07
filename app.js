@@ -746,6 +746,8 @@ const HOST_BASE = {
   frPublish(game,data){if(!S.user)return;try{setDoc(doc(db,'funrunLive',String(game),'p',S.user.uid),JSON.parse(JSON.stringify(data||{}))).catch(()=>{});}catch(e){}},
   /* S4 ข้อ 180/181 เยี่ยมบ้านเรียลไทม์: presence/{owner}/v/{uid} เขียนเฉพาะของตัวเอง (ฝั่งหน้าฟาร์มคุมความถี่ ≤1 ครั้ง/1.2 วิ เฉพาะตอนขยับ · นิ่งทุก 25 วิ) · ออก = ลบ · อ่านด้วย 1 listener ต่อฟาร์ม */
   prWrite(owner,data){if(!S.user||!owner)return;try{setDoc(doc(db,'presence',String(owner),'v',S.user.uid),{...JSON.parse(JSON.stringify(data||{})),t:Date.now()}).catch(()=>{});}catch(e){}},
+  /* S4: ชุด/เผ่าของเจ้าบ้าน ให้ผู้เยี่ยมเห็นตัวเจ้าบ้านยืนอยู่แม้เจ้าบ้านไม่ออนไลน์ · 1 อ่านต่อการเยี่ยม */
+  pubChar(uid){if(!S.user||!uid)return Promise.resolve(null);try{return getDoc(doc(db,'players',String(uid),'public','char')).then(s=>s.exists()?s.data():null).catch(()=>null);}catch(e){return Promise.resolve(null);}},
   prLeave(owner){if(!S.user||!owner)return;try{deleteDoc(doc(db,'presence',String(owner),'v',S.user.uid)).catch(()=>{});}catch(e){}},
   prWatch(owner,fn){const version=sceneVersion;const a=onSnapshot(collection(db,'presence',String(owner),'v'),snap=>{if(version===sceneVersion)fn(snap.docs.map(d=>({uid:d.id,...d.data()})));},()=>{});sceneSubscriptions.add(a);return()=>{a();sceneSubscriptions.delete(a);};},
   frEvent(game,ev){if(!S.user)return;try{addDoc(collection(db,'funrunLive',String(game),'ev'),{...JSON.parse(JSON.stringify(ev||{})),from:S.user.uid}).catch(()=>{});}catch(e){}},

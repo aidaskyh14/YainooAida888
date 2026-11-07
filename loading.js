@@ -27,8 +27,8 @@
       const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),20000);
       let response,html;
       try {
-        response=await fetch('scr-farm.html?v=ss4-nakorn1&h=2e04453a',{signal:ctrl.signal});
-        if(!response.ok)throw new Error('scr-farm.html?h=2e04453a');html=await response.text();
+        response=await fetch('scr-farm.html?v=ss4-nakorn1&h=e59ad1c7',{signal:ctrl.signal});
+        if(!response.ok)throw new Error('scr-farm.html?h=e59ad1c7');html=await response.text();
       } finally { clearTimeout(timer); }
       const urls=[...new Set([...html.matchAll(/images\/[A-Za-z0-9_.-]+\.(?:webp|png|jpe?g|gif)/g)].map(m=>m[0]))];
       urls.push('images/s4-load-pig-toss-4x4.webp');

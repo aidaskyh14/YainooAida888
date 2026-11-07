@@ -260,14 +260,14 @@ function openSpot(p){cur=p;const z=Z[p.z],s=who(p),lock=p.z!=='V'&&G.today&&G.to
  let info='',btn='';const now=Date.now();
  if(!G.open){info='🌙 บ่อปิดอยู่ · เปิด 11:00–17:00 และ 21:00–07:00 (เวลาไทย)';}
  else if(s&&s.me){info='⭐ คุณนั่งอยู่แท่นนี้'+(s.ph==='hook'?' · 🐟 ปลากินเบ็ดแล้ว!':s.ph==='wait'?' · รอปลากินเบ็ด':'');btn='<button class="gold" data-go="mine">🎣 ไปตกต่อ</button>';}
- else if(s){info='👤 '+s.w+' นั่งอยู่แท่นนี้ · นั่งบ่อเดียวกันแล้วแตะตัวเพื่อนหรือทุ่นของเพื่อน เพื่อใช้กรรไกรปู ✂️ หรือปลาไหล ⚡';btn='<button data-go="peek">👀 ไปดูในบ่อ</button>';}
+ else if(s){info='👤 '+s.w+' นั่งอยู่แท่นนี้ · กดปุ่มด้านล่าง หรือแตะตัวเพื่อน/ทุ่นในบ่อ เพื่อใช้กรรไกรปู ✂️ / ปลาไหล ⚡';btn='<button class="gold" data-go="tool">✂️⚡ ใช้กรรไกรปู/ปลาไหลกับคนนี้</button><button data-go="peek">👀 ไปดูในบ่อ</button>';}
  else if(lock){info='🔒 วันนี้เลือก'+(G.today==='n1'?'บ่อทั่วไป 1 (โซน A–B)':'บ่อทั่วไป 2 (โซน C–D)')+'ไปแล้ว · เปลี่ยนได้หลังเที่ยงคืน';}
  else if(vip&&G.vipCd>now){info='⏳ ห้อง VIP พักอยู่ อีก '+Math.ceil((G.vipCd-now)/60000)+' นาที · ใช้บัตรติดกันได้ 5 ใบแล้วพัก 30 นาที';}
  else if(vip){info='👑 ใช้บัตร VIP 1 ใบ (1 ชั่วโมง) ทำภารกิจ 8 ด่าน · มีบัตร '+G.vip+' ใบ · รอบนี้ใช้ '+G.vipUsed+'/5';btn=G.vip>0?'<button class="gold" data-go="sit">🎫 ใช้บัตรนั่งแท่นนี้</button>':'<button class="gold" data-go="craft">🔨 คราฟบัตร VIP</button>';}
  else{info='แท่นว่าง · '+(G.today?'':'บ่อทั่วไปเลือกได้วันละ 1 บ่อ (A–B = บ่อ 1 · C–D = บ่อ 2) · ')+'รอปลา 10 นาที หรือใช้เหยื่อวิเศษ 3 นาที';btn='<button data-go="sit">🎣 นั่งตกแท่นนี้</button>';}
  $('sinfo').textContent=info;$('srow').innerHTML='<button class="gray" data-go="x">กลับแผนที่</button>'+btn;$('sh').classList.add('on');}
 $('sh').onclick=e=>{const b=e.target.closest('[data-go]');if(!b){if(e.target.id==='sh')$('sh').classList.remove('on');return;}$('sh').classList.remove('on');const g=b.dataset.go,p=cur;if(g==='x'||!p)return;
- if(g==='craft')return send('craft');if(g==='mine')return send('mine');
+ if(g==='craft')return send('craft');if(g==='mine')return send('mine');if(g==='tool')return send('p3tool',pondOf(p)+':'+p.seat);
  anim={x:p.x,y:p.y+20,z:Math.max(zoom,1.7),cb:()=>send('seat',pondOf(p)+':'+p.seat+(g==='peek'?':peek':''))};};
 const tclose=()=>{$('tools').classList.remove('on');$('tveil').classList.remove('on');};
 $('tmenu').onclick=()=>{$('tools').classList.add('on');$('tveil').classList.add('on');};$('tveil').onclick=tclose;

@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=2afba2a7';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=211e882f';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);
@@ -9,7 +9,7 @@
  const sync=()=>{const w=W3();if(!w||!w.__s3sync)return;const vis=!!visiting;const src=vis?(window.__ffc||{}):S.farms||{};
   const pl=a=>(a||[]).slice(0,12).map(p=>{if(!p)return null;let st=0,pr=0;try{st=pstage(p);pr=pprog(p);}catch(e){st=p.ph==='ready'?4:2;}return {c:p.c,ph:p.ph,st,pr,angel:!!p.angel,magic:!!(p.magicUntil>Date.now()),pk:(p.pk&&p.pk.k)||null};});
   let fr=[];try{const F4=window.__F4;fr=(vis?(window.friendFarm&&window.friendFarm.fruit&&window.friendFarm.fruit.plots)||[]:(S.fruit&&S.fruit.plots)||[]).map(p=>{if(!p)return null;const I=F4?F4.info(p):{grow:1,fr:0};return {t:p.t,grow:I.grow,fr:I.fr};});}catch(e){}
-  let hn=null;try{if(!vis&&S.honey&&typeof hPhase==='function'){const h=S.honey,ph=hPhase();if(ph!=='home'&&ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:(h.req||[]).map(r=>({img:fImg(r),n:r[2],ok:fHave(r)>=r[2]}))};}}catch(e){}
+  let hn=null;try{if(!vis&&S.honey&&S.honey.v){const h=S.honey,n=Date.now();let ph;try{ph=typeof hPhase==='function'?hPhase():null;}catch(e){ph=null;}if(!ph){if(h.leaveAt){ph=(n<h.leaveAt&&!h.fail)?'parked':n<h.leaveAt+3000?'leaving':'gone';}else ph=n<(h.arriveAt||0)?'coming':n<(h.until||0)?'parked':'late';}if(ph!=='home'&&ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt||n,until:h.until||n,leaveAt:h.leaveAt||0,fail:!!h.fail,req:(h.req||[]).map(r=>{let img=null,ok=false;try{img=fImg(r);}catch(e){}try{ok=fHave(r)>=r[2];}catch(e){}return {img,n:r[2],ok};})};}}catch(e){console.error('honey sync',e);}
   /* S4 ข้อ 93: ตอนเยี่ยม เห็นรถ/เรือน้ำผึ้งของเพื่อนจอดอยู่ (ไม่เห็นรายการของ) */try{if(vis&&window.__fhoney){const h=window.__fhoney,n=Date.now();let ph;if(h.leaveAt){ph=(n<h.leaveAt&&!h.fail)?'parked':n<h.leaveAt+4000?'leaving':'gone';}else ph=n<h.arriveAt?'coming':n<h.until?'parked':'late';if(ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:[],vis:1};}}catch(e){}
   try{if(w.__visitLayout){const ff=vis&&window.friendFarm;if(ff&&ff.deco!==undefined){if(ff.deco)window.__fdeco=ff.deco;}w.__visitLayout(vis?(window.__fdeco||'{}'):null,vis?(ff&&ff.owner)||'x':null);if(!vis)window.__fdeco=null;}}catch(e){}
   try{w.__s3sync({ul2:vis?!(window.friendFarm&&window.friendFarm.ul2===false):!!((S.unl||{}).f2),dr:(vis?[]:(window.__dropRows||[])),fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
@@ -100,11 +100,12 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
  // จำแปลงของเพื่อนแยกตามฟาร์มทุกครั้งที่โหลด
  setInterval(()=>{const ff=window.friendFarm;if(visiting&&ff&&ff.plots){window.__ffc[ff.farm||farm]=ff.plots;}if(!visiting)window.__ffc={};},400);
  /* S4 ข้อ 180/181: ส่งตำแหน่งตัวเรา (ฟาร์มที่อยู่ = ของเรา หรือของเพื่อนที่กำลังเยี่ยม) · ฟังคนอื่นในฟาร์มเดียวกัน 1 listener */
- (()=>{const H=window.__HOST||parent.__HOST;if(!H||!H.prWrite)return;let prOwner=null,prLast=0,prPos=null,prStop=null,waveN=0;const W3=()=>{try{const f=document.getElementById('f3d');return f&&f.contentWindow;}catch(e){return null;}};
+ (()=>{const H=window.__HOST||parent.__HOST;if(!H||!H.prWrite)return;let prPub=null,prList=[],prOwner=null,prLast=0,prPos=null,prStop=null,waveN=0;const W3=()=>{try{const f=document.getElementById('f3d');return f&&f.contentWindow;}catch(e){return null;}};
   const me=()=>{const w=W3();return w&&w.__me?w.__me():null;};
   window.__s4wave=()=>{waveN++;prLast=0;};
   setInterval(()=>{try{const w=W3();if(!w||!w.__me||!H.uid)return;const owner=visiting?(window.friendFarm&&window.friendFarm.owner):H.uid;if(!owner)return;
-    if(owner!==prOwner){if(prOwner)H.prLeave(prOwner);if(prStop)prStop();prOwner=owner;prPos=null;prLast=0;const own=owner;prStop=H.prWatch(own,list=>{const w2=W3();if(!w2||!w2.__peers||prOwner!==own)return;const now=Date.now();w2.__peers(list.filter(r=>r.uid!==H.uid&&now-(+r.t||0)<90000));});}
+    if(owner!==prOwner){if(prOwner)H.prLeave(prOwner);if(prStop)prStop();prOwner=owner;prPos=null;prLast=0;const own=owner;prPub=null;prList=[];const pushPeers=()=>{const w2=W3();if(!w2||!w2.__peers||prOwner!==own)return;const now=Date.now();const L=prList.filter(r=>r.uid!==H.uid&&now-(+r.t||0)<90000);if(visiting&&own!==H.uid&&!L.some(r=>r.uid===own))L.push({uid:own,n:String((window.friendFarm&&window.friendFarm.name)||'เจ้าบ้าน').slice(0,24),home:1,o:(prPub&&prPub.wear)||null,t:now});w2.__peers(L,{notify:false});};
+    prStop=H.prWatch(own,list=>{prList=list||[];pushPeers();});if(visiting&&own!==H.uid&&H.pubChar){H.pubChar(own).then(d=>{if(prOwner!==own)return;prPub=d||{};pushPeers();});}}
     const m=me();if(!m)return;const now=Date.now();const moved=!prPos||Math.hypot(m.x-prPos.x,m.z-prPos.z)>.2||m.s!==prPos.s||m.o!==prPos.o||Math.abs(m.d-prPos.d)>.6;
     if((moved&&now-prLast>1200)||now-prLast>25000){prLast=now;prPos=m;H.prWrite(owner,{n:String((typeof USER!=='undefined'&&USER&&USER.name)||'เพื่อน').slice(0,24),x:+m.x.toFixed(1),z:+m.z.toFixed(1),d:+(+m.d||0).toFixed(2),s:m.s||null,o:m.o||null,...(waveN?{w:waveN}:{})});}}catch(e){console.log('pres',e&&e.message);}},400);
   addEventListener('pagehide',()=>{try{if(prOwner)H.prLeave(prOwner);}catch(e){}});
