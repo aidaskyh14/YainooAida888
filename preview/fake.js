@@ -1,6 +1,6 @@
 /* พรีวิวนครยัยหนู — โฮสต์จำลอง: ใช้ "กติกาจริง" (city-engine / pageant-engine ชุดเดียวกับหลังบ้าน) แต่ข้อมูลอยู่ในเครื่องนี้ ไม่แตะเซิร์ฟเวอร์จริง
    ความลับ (ของชอบ/คะแนน) ในพรีวิวเป็นค่าสุ่ม ไม่ใช่ค่าจริง */
-import {cityAction,cityAdmin,cityView,publicWorld,manState} from './city-engine.js';
+import {cityAction,cityAdmin,cityView,publicWorld,manState,cityOf} from './city-engine.js';
 import {pageantAdmin,pageantAction,pageantView,garland,STATES} from './pageant-engine.js';
 import {MAN,MEN,PAGEANT,HEART,KIDS} from './city-catalog.js';
 import {OUTFITS} from '../outfit-catalog.js';
@@ -48,6 +48,7 @@ function bot(i){const id='bot'+i;if(BOTS[id])return id;const tr=['pink','mint','
 const $=s=>document.querySelector(s);const panel=$('#tp');
 function paintPanel(){const P=world.pageant;const n=Object.keys(P.contestants||{}).length;const alive=Object.values(P.contestants||{}).filter(c=>c.alive).length;
  panel.querySelector('.st').textContent=`👑 ${P.state} · คน ${n} · อยู่ ${alive}`+(P.quiz?' · ❓':'')+(P.talent?' · 🎯'+P.talent.round:'');panel.querySelector('.who').textContent=(ADMIN?'🧑‍💼 แอดมิน':'👩 ผู้เล่น')+' · '+NAME+' · เวลา+'+Math.round(OFFSET/3600000)+'ชม.';}
+const refreshCity=()=>{try{const f=document.getElementById('scr');const w=f&&f.contentWindow;const c=w&&w.__city;if(c)c.refresh();}catch(e){}};
 const acts={
  role:()=>{const u=new URL(location.href);u.searchParams.set('as',ADMIN?'player':'admin');location.href=u.toString();},
  schedule:()=>{try{pgAdmin({type:'schedule',startAt:now()+90000});toast('👑 ตั้งประกวด เริ่มใน 1.5 นาที (เปิดแย่งโพเดียมแล้ว)');}catch(e){toast(e.message);}},
@@ -59,14 +60,15 @@ const acts={
  closeq:()=>{try{pgAdmin({type:'closeQ'});toast('⏱️ ปิดคำถาม');}catch(e){toast(e.message);}},
  botsgo:()=>botsAnswer(),
  cancel:()=>{try{pgAdmin({type:'cancel'});toast('✖️ ยกเลิก');}catch(e){toast(e.message);}},
- love:(id)=>{/* เลือกคนที่อยู่ข้างนอกตอนนี้ (ถ้าไม่ระบุ) */if(!id){id=MEN.find(m=>manState(m.id,now(),world.city).st==='walk')?.id||'m01';}const c=games[ME].sub.city;c.love=c.love||{};const L=c.love[id]||(c.love[id]={h:0,p:0,dates:0,ev:{},gifts:{}});L.h=10;L.p=1000;L.dates=7;L.first=Math.floor((now()+7*3600000)/86400000)-9;L.since=now()-8*86400000;L.ev={3:true,6:true,9:true};toast('💘 หัวใจเต็มกับ'+MAN[id].name+' ('+id+') แล้ว · แตะตัวเขาแล้วกด 💍');return id;},
+ love:(id)=>{/* เลือกคนที่อยู่ข้างนอกตอนนี้ (ถ้าไม่ระบุ) */if(!id){id=MEN.find(m=>manState(m.id,now(),world.city).st==='walk')?.id||'m01';}const c=cityOf(games[ME]);c.love=c.love||{};const L=c.love[id]||(c.love[id]={h:0,p:0,dates:0,ev:{},gifts:{}});L.h=10;L.p=1000;L.dates=7;L.first=Math.floor((now()+7*3600000)/86400000)-9;L.since=now()-8*86400000;L.ev={3:true,6:true,9:true};refreshCity();toast('💘 หัวใจเต็มกับ'+MAN[id].name+' ('+id+') แล้ว · แตะตัวเขาแล้วกด 💍');return id;},
+ dice:()=>{let o=document.getElementById('ov');if(o)o.remove();o=document.createElement('div');o.id='ov';o.innerHTML='<iframe src="roll.html"></iframe><button>✕</button>';document.body.appendChild(o);o.querySelector('button').onclick=()=>o.remove();},
  day:()=>{OFFSET+=86400000;toast('⏩ ข้ามไป 1 วัน');},
  /* ปุ่มทดสอบชัดๆ: กดแล้วเกิดผลทันที บอกว่าต้องทำอะไรต่อ */
- love2:()=>{const id=MEN.find(m=>manState(m.id,now(),world.city).st==='walk')?.id||'m01';const c=games[ME].sub.city;c.love=c.love||{};const L=c.love[id]||(c.love[id]={h:0,p:0,dates:0,ev:{},gifts:{}});L.h=Math.max(L.h,2);L.p=Math.max(L.p,HEART*2);toast('💘 มี 2 หัวใจกับ'+MAN[id].name+'แล้ว → แตะตัวเขา กด 🍽️ ออกเดท ได้เลย');},
- wed:async()=>{const id=acts.love();try{const r=await city(ME,{type:'propose',man:id});toast('💍 ขอแต่งงาน'+MAN[id].name+'สำเร็จ · งานแต่งจะเริ่มใน ~30 วิ (ดูฉากได้เลย)');}catch(e){toast('💍 '+e.message);}},
- wedNow:()=>{const W=world.city;const w=(W.weddings||[]).at(-1);if(!w){toast('ยังไม่ได้ขอแต่ง กด 💍 ก่อน');return;}OFFSET+=Math.max(0,w.at-now())+1000;toast('⏩ ข้ามไปเวลางานแต่ง');},
- divorce:async()=>{try{await city(ME,{type:'divorce'});toast('💔 หย่าแล้ว (ดูฉากหย่า)');}catch(e){toast('💔 '+e.message);}},
- kid:async()=>{const c=games[ME].sub.city;const h=c.husband;if(!h){toast('ยังไม่มีสามี กด 💍 ก่อน');return;}h.at=Math.min(h.at,now()-KIDS.first.days*86400000-1);h.happy=Math.max(h.happy||0,90);h.house=h.house||{lv:1};h.house.lv=Math.max(h.house.lv,KIDS.first.houseLv);try{const r=await city(ME,{type:'kid',name:'น้องถั่ว'});if(r.kid)toast('👶 คลอดแล้ว: '+r.kid.name);else{toast('🤰 ตั้งท้องแล้ว → ข้ามเวลาไป 2 วัน (กดปุ่มนี้อีกครั้งเพื่อคลอด)');OFFSET+=2*86400000+60000;}}catch(e){toast('👶 '+e.message);}},
+ love2:()=>{const id=MEN.find(m=>manState(m.id,now(),world.city).st==='walk')?.id||'m01';const c=cityOf(games[ME]);c.love=c.love||{};const L=c.love[id]||(c.love[id]={h:0,p:0,dates:0,ev:{},gifts:{}});L.h=Math.max(L.h,2);L.p=Math.max(L.p,HEART*2);refreshCity();toast('💘 มี 2 หัวใจกับ'+MAN[id].name+'แล้ว → แตะตัวเขา กด 🍽️ ออกเดท ได้เลย');},
+ wed:async()=>{const id=acts.love();try{const r=await city(ME,{type:'propose',man:id,confirm:id});refreshCity();toast('💍 ขอแต่งงาน'+MAN[id].name+'สำเร็จ · งานแต่งจะเริ่มใน ~30 วิ (ดูฉากได้เลย)');}catch(e){toast('💍 '+e.message);}},
+ wedNow:()=>{const W=world.city;const w=(W.weddings||[]).at(-1);if(!w){toast('ยังไม่ได้ขอแต่ง กด 💍 ก่อน');return;}OFFSET+=Math.max(0,w.at-now())+1000;toast('⏩ ข้ามไปเวลางานแต่ง');overlay('../city3d/wed.html?mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),40000);},
+ divorce:async()=>{try{await city(ME,{type:'divorce',confirm:'หย่า'});refreshCity();toast('💔 หย่าแล้ว (ดูฉากหย่า)');}catch(e){toast('💔 '+e.message);}},
+ kid:async()=>{const c=cityOf(games[ME]);const h=c.husband;if(!h){toast('ยังไม่มีสามี กด 💍 ก่อน');return;}h.at=Math.min(h.at,now()-KIDS.first.days*86400000-1);h.happy=Math.max(h.happy||0,90);h.house=h.house||{lv:1};h.house.lv=Math.max(h.house.lv,KIDS.first.houseLv);try{const r=await city(ME,{type:'kid',name:'น้องถั่ว'});refreshCity();if(r.kid)toast('👶 คลอดแล้ว: '+r.kid.name);else{toast('🤰 ตั้งท้องแล้ว → ข้ามเวลาไป 2 วัน (กดปุ่มนี้อีกครั้งเพื่อคลอด)');OFFSET+=2*86400000+60000;}}catch(e){toast('👶 '+e.message);}},
  gifts:()=>{const b=games[ME].bag;b.flower=Object.assign(b.flower||{},{rose:20,daisy:20,sunflower:20,tulip:20,lotus:20});b.food=Object.assign(b.food||{},{'ข้าวผัดไข่':9,'ซุปฟักทอง':9});b.crop=Object.assign(b.crop||{},{mango:20,strawberry:20});toast('🎒 เติมของขวัญในกระเป๋าแล้ว → กด ✨ › 🎒 เลือกของ แล้วแตะผู้ชาย');},
  /* 🎬 ดูประกวดทั้งงานอัตโนมัติ: ตั้ง→บอทเข้า→เริ่ม→โชว์ 3 รอบ→คำถาม 3 ข้อ→คัด 5→ชุดว่ายน้ำ→คำถามสุดท้าย→นับคะแนน→ประกาศผล→ฉลอง */
  auto:async()=>{if(acts._auto){acts._auto=false;toast('⏹️ หยุดเล่นอัตโนมัติ');return;}acts._auto=true;const w=ms=>new Promise(r=>setTimeout(r,ms));const P=()=>world.pageant;const nx=()=>{try{pgAdmin({type:'next'});}catch(e){toast(e.message);}};
@@ -74,12 +76,12 @@ const acts={
    toast('🎬 เล่นอัตโนมัติ: จะเดินทุกรอบให้เอง (กดปุ่มเดิมเพื่อหยุด)');
    while(acts._auto&&P().state!=='idle'){const st=P().state;
     if(st==='announce'||st==='podium'){pgAdmin({type:'start'});await w(6000);}
-    else if(st==='lights'){await w(9000);nx();await w(7000);}
-    else if(st==='thai'){for(let r=0;r<3&&acts._auto;r++){try{pgAdmin({type:'talent'});}catch(e){}setTimeout(()=>botsAnswer(),1500);await w(13000);}nx();await w(7000);}
-    else if(st==='quiz'){for(let r=0;r<3&&acts._auto;r++){try{pgAdmin({type:'askRandom'});}catch(e){}setTimeout(()=>botsAnswer(),1500);await w(13000);try{pgAdmin({type:'closeQ'});}catch(e){}await w(2500);}nx();await w(9000);}
-    else if(st==='cut5'){await w(9000);nx();await w(7000);}
-    else if(st==='swim'){const n=Object.values(P().contestants||{}).filter(c=>c.alive&&!c.gray).length;await w(6500*n+4500);nx();await w(5000);}
-    else if(st==='final'){for(let r=0;r<2&&acts._auto;r++){try{pgAdmin({type:'askRandom'});}catch(e){}setTimeout(()=>botsAnswer(),1500);await w(13000);try{pgAdmin({type:'closeQ'});}catch(e){}await w(2500);}nx();await w(4000);}
+    else if(st==='lights'){await w(9000);nx();await w(16000);}
+    else if(st==='thai'){for(let r=0;r<3&&acts._auto;r++){try{pgAdmin({type:'talent'});}catch(e){await w(3000);continue;}setTimeout(()=>botsAnswer(),1500);await w(13000);}nx();await w(16000);}
+    else if(st==='quiz'){for(let r=0;r<3&&acts._auto;r++){try{pgAdmin({type:'askRandom'});}catch(e){await w(3000);continue;}setTimeout(()=>botsAnswer(),1500);await w(13000);try{pgAdmin({type:'closeQ'});}catch(e){}await w(2500);}nx();await w(9000);}
+    else if(st==='cut5'){await w(30000);nx();await w(5000);}
+    else if(st==='swim'){const n=Object.values(P().contestants||{}).filter(c=>c.alive&&!c.gray).length;await w(10500*n+7000);nx();await w(5000);}
+    else if(st==='final'){await w(16000);for(let r=0;r<2&&acts._auto;r++){try{pgAdmin({type:'askRandom'});}catch(e){await w(3000);continue;}setTimeout(()=>botsAnswer(),1500);await w(13000);try{pgAdmin({type:'closeQ'});}catch(e){}await w(2500);}nx();await w(4000);}
     else if(st==='count'){await w(9000);nx();await w(3000);}
     else if(st==='result'){await w(22000);nx();await w(3000);}
     else if(st==='party'){await w(15000);acts._auto=false;toast('🎉 จบงานแล้ว');break;}

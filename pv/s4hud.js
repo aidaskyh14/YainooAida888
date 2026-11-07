@@ -60,7 +60,7 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
  const strip=document.createElement('div');strip.id='s4strip';
  const tool=document.createElement('div');tool.id='s4tool';
  document.body.append(shade,strip,tool,dockR);
- {const iv=setInterval(()=>{try{const w=f3w();if(w&&w.__ready){document.body.classList.add('s4loaded');clearInterval(iv);}}catch(e){}},300);setTimeout(()=>{document.body.classList.add('s4loaded');clearInterval(iv);},25000);}
+ {const iv=setInterval(()=>{try{const w=f3w();if(w&&w.__ready){document.body.classList.add('s4loaded');clearInterval(iv);}}catch(e){}},300);setTimeout(()=>{document.body.classList.add('s4loaded');clearInterval(iv);},120000);}
  const f3w=()=>{try{return $('f3d').contentWindow;}catch(e){return null;}};
  const f3click=id=>{const w=f3w();const b=w&&w.document.getElementById(id);if(b)b.click();};
  const bag=()=>{try{return (typeof S!=='undefined'&&S&&S.bag&&S.bag.item)||{};}catch(e){return {};}};

@@ -327,7 +327,7 @@ function stepBab(a,dt){const idx=babs.indexOf(a);a.ph+=dt;
 const TW=[],LEGS=[],RIDERS=[];
 function catenary(A,B,sag,t){const p=new THREE.Vector3().lerpVectors(A,B,t);p.y-=Math.sin(Math.PI*t)*sag;return p;}
 /* S4 ข้อ 51 🐒 ลิงซิปไลน์: แอดมินเห็นครบ 3 ตัวเสมอ · ผู้เล่นเห็นเท่าจำนวนลิงที่ได้จากแอดมิน (item.monkey สูงสุด 3) */
-const MONKEYN=ADMINZ?3:0;/* ผู้เล่น: ลิง/ซิปไลน์ มาจากของที่วางเอง (sf_monkey · sf_zipline) */
+const MONKEYN=0;/* ผู้เล่น: ลิง/ซิปไลน์ มาจากของที่วางเอง (sf_monkey · sf_zipline) */
 async function zipline(){if(!MONKEYN)return;
   const DEF=[['c2_sf_tower',-6,-23,6.4,.45],['c2_sf_tower2',13,-21,5.6,-.5],['c2_sf_tower',26,12,6.0,-1.6],['c2_sf_tower2',5,25,5.6,2.4]];
   for(const [n,x,z,h,ry] of DEF){await put(n,x,z,{h,ry,fixed:1});TW.push({x:x*K,z:z*K,h});}
@@ -621,7 +621,7 @@ async function build(){
   flushStatic();flushTufts();await loadDecor();await makeThumbs();try{await syncMonkeys();}catch(e){console.log('mk',e&&e.message);}
   // where the baboons sleep at night: a rock den and two leaf beds beside the big acacia
   if(ADMINZ){await put('c2_sf_den',16,-14.7,{w:3.1,dyn:1});await put('c2_sf_leafbed',9,-6.6,{w:1.8,dyn:1});await put('c2_sf_leafbed',14.2,-8.3,{w:1.8,dyn:1,ry:.4});}
-  await baboon(-3,-9,[-6,-12,5,-7]);await baboon(4,-11,[-5,-13,7,-8]);await baboon(-1,-12,[-8,-14,6,-9]);
+  /* เก็บตก: ตัดลิงประดับ (เดิมโชว์เฉพาะแอดมิน) */
   await ccBuild();await loadGirl();BDROP=BDM;setupNight();
   // campfire glow
   fireLight={};
