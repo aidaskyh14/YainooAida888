@@ -260,7 +260,7 @@ function openSpot(p){cur=p;const z=Z[p.z],s=who(p),lock=p.z!=='V'&&G.today&&G.to
  let info='',btn='';const now=Date.now();
  if(!G.open){info='🌙 บ่อปิดอยู่ · เปิด 11:00–17:00 และ 21:00–07:00 (เวลาไทย)';}
  else if(s&&s.me){info='⭐ คุณนั่งอยู่แท่นนี้'+(s.ph==='hook'?' · 🐟 ปลากินเบ็ดแล้ว!':s.ph==='wait'?' · รอปลากินเบ็ด':'');btn='<button class="gold" data-go="mine">🎣 ไปตกต่อ</button>';}
- else if(s){info='👤 '+s.w+' นั่งอยู่แท่นนี้ · แตะทุ่นในบ่อเพื่อใช้กรรไกรปู ✂️ หรือปลาไหล ⚡ ได้';btn='<button data-go="peek">👀 ไปดูในบ่อ</button>';}
+ else if(s){info='👤 '+s.w+' นั่งอยู่แท่นนี้ · นั่งบ่อเดียวกันแล้วแตะตัวเพื่อนหรือทุ่นของเพื่อน เพื่อใช้กรรไกรปู ✂️ หรือปลาไหล ⚡';btn='<button data-go="peek">👀 ไปดูในบ่อ</button>';}
  else if(lock){info='🔒 วันนี้เลือก'+(G.today==='n1'?'บ่อทั่วไป 1 (โซน A–B)':'บ่อทั่วไป 2 (โซน C–D)')+'ไปแล้ว · เปลี่ยนได้หลังเที่ยงคืน';}
  else if(vip&&G.vipCd>now){info='⏳ ห้อง VIP พักอยู่ อีก '+Math.ceil((G.vipCd-now)/60000)+' นาที · ใช้บัตรติดกันได้ 5 ใบแล้วพัก 30 นาที';}
  else if(vip){info='👑 ใช้บัตร VIP 1 ใบ (1 ชั่วโมง) ทำภารกิจ 8 ด่าน · มีบัตร '+G.vip+' ใบ · รอบนี้ใช้ '+G.vipUsed+'/5';btn=G.vip>0?'<button class="gold" data-go="sit">🎫 ใช้บัตรนั่งแท่นนี้</button>':'<button class="gold" data-go="craft">🔨 คราฟบัตร VIP</button>';}
@@ -292,7 +292,7 @@ const ZK={A:'falls',B:'bamboo',C:'beach',D:'lotus',V:'vip'};let P3=null,p3open=f
 function mySeatInfo(){for(const p of PL){const s=who(p);if(s&&s.me)return {p,s};}return null;}
 function openP3(){const m=mySeatInfo();if(!m){send('mine');return;}if(p3open)return;p3open=true;p3code=m.p.code;
  const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));
- import('./pond3d.js?h=f8905b6a').then(mod=>{P3=mod;window.__p3people=()=>mod.people();return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),outfits:zs.map(q=>{const s=who(q);return s&&!s.me?(s.o||null):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):send(a),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
+ import('./pond3d.js?h=963b4a30').then(mod=>{P3=mod;window.__p3people=()=>mod.people();return mod.openPond({zone:ZK[m.p.z]||'lotus',idx:Math.max(0,zs.indexOf(m.p)),name:' '+m.p.code,seats:zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),outfits:zs.map(q=>{const s=who(q);return s&&!s.me?(s.o||null):null;}),post:a=>a==='resit'?send('seat',pondOf(m.p)+':'+m.p.seat):(String(a).startsWith('tool:')?(()=>{const q=zs[+String(a).slice(5)];if(q)send('p3tool',pondOf(q)+':'+q.seat);})():send(a)),onClose:()=>{p3open=false;p3skip=p3code;}});}).then(()=>{const m2=mySeatInfo();if(P3&&m2)P3.sync(m2.s);}).catch(e=>{p3open=false;console.error(e);feed('⚠️ เปิดฉากนั่งตกปลาไม่สำเร็จ ลองแตะอีกครั้ง');});}
 addEventListener('message',e=>{const d=e.data;if(!d)return;if(d.p3res&&P3&&p3open)P3.result(d.p3res);
  if(d.s4sync){const m=mySeatInfo();if(m){if(p3open&&P3&&P3.isOpen()){P3.sync(m.s);/* S4 3.6: เพื่อนมานั่ง/ลุกระหว่างเราอยู่ในฉาก */try{const zs=PL.filter(q=>q.z===m.p.z&&pondOf(q)===pondOf(m.p));P3.roster(zs.map(q=>{const s=who(q);return s?(s.me?'ฉัน':s.w):null;}),zs.map(q=>{const s=who(q);return s&&!s.me?(s.o||null):null;}));}catch(e){}}else if(!p3open&&prevMine!==m.p.code&&p3skip!==m.p.code)openP3();prevMine=m.p.code;}else{prevMine=null;p3skip=null;if(p3open&&P3&&P3.isOpen())P3.standby();}}});
 window.__fzP3=()=>({open:p3open,code:p3code});

@@ -72,6 +72,13 @@ function init(){
   cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,{x:e.clientX,y:e.clientY});if(P.size===2){const[a,b]=[...P.values()];pd={d:Math.hypot(a.x-b.x,a.y-b.y),k:S.dist};}});
   cv.addEventListener('pointermove',e=>{const p=P.get(e.pointerId);if(!p||!S)return;if(P.size===2&&pd){P.set(e.pointerId,{x:e.clientX,y:e.clientY});const[a,b]=[...P.values()];S.dist=Math.max(.7,Math.min(1.5,pd.k*pd.d/Math.max(20,Math.hypot(a.x-b.x,a.y-b.y))));return;}
     S.yaw=Math.max(-1.65,Math.min(1.65,S.yaw-(e.clientX-p.x)*.005));S.pitch=Math.max(-.15,Math.min(.45,S.pitch+(e.clientY-p.y)*.003));P.set(e.pointerId,{x:e.clientX,y:e.clientY});});
+  /* S4: แตะตัวเพื่อน/ทุ่นเพื่อนในบ่อ → เลือกกรรไกรปู ✂️ หรือปลาไหล ⚡ (ใช้หน้าต่างเดิมของเกม) */
+  const DN=new Map();cv.addEventListener('pointerdown',e=>{DN.set(e.pointerId,{x:e.clientX,y:e.clientY,t:performance.now()});},true);
+  cv.addEventListener('pointerup',e=>{const d=DN.get(e.pointerId);DN.delete(e.pointerId);if(!d||!S||!S.real||P.size>1)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>12||performance.now()-d.t>600)return;
+   try{const r=cv.getBoundingClientRect();const v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);RC.setFromCamera(v,cam);
+    let best=null,bd=1e9;for(const c of S.people){if(c.me)continue;const objs=[c.g];if(c.rod){if(c.rod.bob)objs.push(c.rod.bob);if(c.rod.piv)objs.push(c.rod.piv);}const h=RC.intersectObjects(objs,true)[0];if(h&&h.distance<bd){bd=h.distance;best=c;}
+     if(!best&&c.rod&&c.rod.bob){const w=new THREE.Vector3();c.rod.bob.getWorldPosition(w);w.project(cam);const sx=(w.x+1)/2*r.width,sy=(1-w.y)/2*r.height;if(Math.hypot(sx-(e.clientX-r.left),sy-(e.clientY-r.top))<44)best=c;}}
+    if(best){S.post('tool:'+best.seat.k);}}catch(err){console.log('p3tap',err&&err.message);}});
   const up=e=>{P.delete(e.pointerId);if(P.size<2)pd=null;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
   cv.addEventListener('wheel',e=>{e.preventDefault();if(S)S.dist=Math.max(.7,Math.min(1.5,S.dist*(e.deltaY>0?1.08:.93)));},{passive:false});
 }
