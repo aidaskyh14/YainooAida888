@@ -2,7 +2,7 @@ export const GTM={waterspinach:25,lettuce:35,pea:40,mango:45,carrot:50,chili:55,
 const SPR={waterspinach:1,lettuce:1,pea:3,mango:3,carrot:3,chili:5,corn:5,potato:5,pumpkin:5,cucumber:8,tomato:8,cabbage:8,lychee:8,strawberry:10,watermelon:10,grape:12,banana:12,gooseberry:15,mushroom:18,melon:20,bamboo:25,plankton:30},NOWORM=new Set(['waterspinach','lettuce','mango','bamboo','plankton']);
 const fail=m=>{throw new Error(m);};
 import {prankAction,prankFix} from './prank-engine.js?h=5e199672';
-import {decorPrice,THEME_SETS,BOOK_REWARD,bookReward} from './decor-prices.js?h=25c28b17';
+import {decorPrice,THEME_SETS,BOOK_REWARD,bookReward} from './decor-prices.js?h=d1908c7e';
 export function farmTick(p,now,fortune){if(!p)return p;if(p.pk)return p;if(p.magicUntil>now)return p;if(p.magicUntil){p.t+=3*3600000;delete p.magicUntil;}const ms=(GTM[p.c]||30)*60000;if(p.ph==='g1'&&now-p.t>=ms*.4*(fortune?.i===1&&fortune.day===new Date(now).toDateString()?.7:1)){p.ph='water';p.t=now;}if(p.ph==='worm'&&now-p.t>=300000){p.ph='g2';p.wormPenalty=true;p.t+=300000;}if(p.ph==='g2'&&now-p.t>=ms*.6){p.ph='ready';p.t=now;}return p;}
 export const FRUIT_TREES={peach:{grow:2,every:1,life:3,nF:3,pF:1},apple:{grow:3,every:2,life:4,nF:4,pF:2},orange:{grow:4,every:3,life:4,nF:5,pF:2},cherry:{grow:6,every:4,life:5,nF:6,pF:3}};
 const UNLOCKS=[['c3',{wood:500,stone:500,'crop.waterspinach':300}],['c4',{wood:1000,stone:1000,rope:5,'crop.chili':300}],['f2',{wood:3000,stone:3000,rope:10,steel:10,anycrop:500}],['f3',{wood:6000,stone:6000,rope:30,steel:30,anyflower:300}],['f4',{wood:10000,stone:10000,rope:50,steel:50,grass5:300}]];

@@ -12,7 +12,7 @@ export const bookReward=r=>[1000000000,500000000,250000000,200000000][r-1]||1000
    theme = ของธีม/ของสะสม (สมุด) · house = บ้านสัตว์พิเศษ · rare = ซิปไลน์ · normal = ของที่มีราคาขาย · small = ของชิ้นเล็กไม่มีราคา
    ราคาขาย: theme 1,000,000 · house 10,000,000 · rare 3,000,000 · normal 50% ของราคาซื้อ (ขั้นต่ำ 1,000) · small 1,000 */
 export const DECOR_SKIP=/^(tile_|fz_|path$|erase$|fence$|pen|mstall$|plot$|fspot$|ghouse$)/;
-export const decorClass=id=>{id=String(id||'');if(!id||DECOR_SKIP.test(id))return null;if(/^d_y7_/.test(id))return null;/* เฉพาะยัยหนู: ไม่ขาย ไม่อยู่ในกล่องสุ่ม */if(THEME_DECOR.includes(id))return 'theme';if(/^z_(hm|dog|cat)_/.test(id))return 'house';if(id==='sf_zipline')return 'rare';
+export const decorClass=id=>{id=String(id||'');if(!id||DECOR_SKIP.test(id))return null;if(/^d_y7_/.test(id)||/^d_city_/.test(id)||id==='sf_zipline'||id==='sf_monkey')return null;/* รถ/บ้านสามี/ซิปไลน์/ลิง: ได้จากยัยหนูเท่านั้น *//* เฉพาะยัยหนู: ไม่ขาย ไม่อยู่ในกล่องสุ่ม */if(THEME_DECOR.includes(id))return 'theme';if(/^z_(hm|dog|cat)_/.test(id))return 'house';if(id==='sf_zipline')return 'rare';
  const r=DECOR_RULES[id];if(r&&(r.x||r.f<0))return null;if(r&&Number(r.p)>0)return 'normal';return 'small';};
 /* กองสุ่มในกล่องของประดับ: rare = ซิปไลน์ + ของที่ราคา 50,000 ขึ้นไป · normal = ของมีราคาต่ำกว่านั้น */
 export const decorBoxPool=id=>{const c=decorClass(id);if(c==='normal')return decorPrice(id)>=50000?'rare':'normal';return c;};

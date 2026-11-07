@@ -3,7 +3,7 @@
    ราคาจริงคิดที่เซิร์ฟเวอร์ทุกครั้ง หน้านี้แค่แสดง · ราคาอยู่ใน sell-price.js */
 import {ALPACA_MENU} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
 import {PET_BONUS,PET_BONUS_EVERY,PET_BONUS_DAY,PET_BONUS_MIN,PET_BONUS_MAX} from './pet-sell-engine.js?h=c397ae44';
-import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss3-fix24&h=f59c84c6';
+import {SELL_ROWS,SELL_BY_KEY,sellHave} from './sell-price.js?v=ss4-nakorn1&h=1d1d19bf';
 const H=parent.__HOST,W=window;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Math.round(Number(n)||0).toLocaleString('en-US');
@@ -20,7 +20,7 @@ async function getQuote(force){if(!force&&quote&&Date.now()-quoteAt<60000)return
 /* S4 ข้อ 20: ของแต่งขายได้เฉพาะชิ้นที่อยู่ในกระเป๋า (ชิ้นที่วางอยู่ในฟาร์ม/โซนขายไม่ได้) */
 const haveOf=r=>{const h=sellHave(S,r.path);if(!r.decor)return h;try{const O=W.S4OWN;if(!O)return 0;O.invalidate&&O.invalidate();const f=O.free(r.decor),pl=O.placed(r.decor);return Math.max(0,Math.min(h,h+(f===Infinity?0:f)-pl));}catch(e){return 0;}};
 /* ขายของธีมแล้วจะไม่ครบรับรางวัลสมุดรอบถัดไป → เตือนก่อน */
-let THEMES=null;import('./decor-prices.js?h=25c28b17').then(m=>{THEMES=m.THEME_SETS;}).catch(()=>{});
+let THEMES=null;import('./decor-prices.js?h=d1908c7e').then(m=>{THEMES=m.THEME_SETS;}).catch(()=>{});
 function bookWarn(items){if(!THEMES)return [];const out=[];const d=(S.bag&&S.bag.decor)||{},unl=S.unl||{};for(const[t,L]of Object.entries(THEMES)){const need=(Math.floor(Number(unl['book_'+t])||0))+1;let hit=false;for(const it of items){const r=SELL_BY_KEY.get(it.k);if(!r||!r.decor||!L.includes(r.decor))continue;const q=it.q==='all'?haveOf(r):it.q;if((Number(d[r.decor])||0)-q<need&&(Number(d[r.decor])||0)>=need)hit=true;}if(hit)out.push(t);}return out;}
 const priceOf=r=>r.kind==='wine'?(quote?.wine?.[r.w]??null):r.kind==='hw'?(quote?.hw?.[r.h]??null):r.price;
 const imgOf=r=>{if(r.img)return r.img;const m=r.path.match(/^bag\.([^.]+)\.(.+)$/);try{return m?bagImg(m[1],m[2]):'';}catch(e){return '';}};
