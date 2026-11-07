@@ -97,7 +97,7 @@ export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
       c.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=b.dataset.u,i=sel.indexOf(u);if(i>=0)sel.splice(i,1);else{if(sel.length>=need)sel.shift();sel.push(u);}sync();});
       go.onclick=async e=>{const b=e.currentTarget;if(sel.length!==need)return;b.disabled=true;busy.add(id);try{await act('boat',{type:'mmFire',boat:d.boat,uids:sel.slice()});drop(id);toast?.('🔨 นางในวรรณคดีตัดสินแล้ว!');}catch(err){b.disabled=false;toast?.(err.message||'ลองใหม่อีกครั้ง');}finally{busy.delete(id);}};}}
   /* ---- fix17 ⛈️ ฝนกุศล: เตือน 15 วินาทีทุกหน้า (หน้าแข่งเรือมีเตือนของตัวเองแล้ว) · ไม่บอกให้ไปหน้าไหน ---- */
-  let rainT=0;function rainCard(v){const r=v?.rain;clearInterval(rainT);if(!r||!r.start){drop('rain');return;}
+  let rainT=0;function rainCard(v){drop('rain');return;/* S4: ปิดการ์ดพายุเรือ */const r=v?.rain;clearInterval(rainT);if(!r||!r.start){drop('rain');return;}
     const left=()=>r.start-now();if(left()<=0||screen?.()==='boat'){drop('rain');return;}
     if(!cards.has('rain')){card('rain','<div class="ax-row"><div style="font-size:2.6rem;text-align:center;filter:drop-shadow(0 0 10px #9FD8FF)">⛈️</div><div><h3 style="color:#2F5FA8">⛈️ ฝนกุศลกำลังจะตก</h3><p>เตรียมรับกุศล!</p><div class="cd">⏱️ <span>'+Math.ceil(left()/1000)+'</span> วินาที</div></div></div>',{glow:'#9FD8FF'});}
     rainT=setInterval(()=>{const l=left();const c=cards.get('rain');if(l<=0||screen?.()==='boat'){clearInterval(rainT);drop('rain');return;}if(c)c.querySelector('.cd span').textContent=Math.ceil(l/1000);},250);}
@@ -113,7 +113,7 @@ export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
     pill.innerHTML='<span class="i">🏊</span><b>'+Math.min(p,need).toLocaleString('en-US')+'/'+need.toLocaleString('en-US')+'</b><span class="t">'+(done?'✅':'⏳ '+fmt(sq.until-now()))+'</span><span class="more">'+ICON[sq.kind]+' '+TXT[sq.kind]+' ('+UNIT[sq.kind]+') · ทำครบแล้วกลับเรือให้เอง</span>';
     pill.setAttribute('aria-label','ภารกิจว่ายกลับเรือ '+Math.min(p,need)+' จาก '+need+' '+UNIT[sq.kind]);}
   function dropSwim(){document.getElementById('axSwim')?.remove();}
-  const swimT=setInterval(swimCard,1000);
+  /* S4: ปิดภารกิจว่ายกลับเรือ */const swimT=0;
   const stopMm=watch('mermaid',v=>{mm=v;notice(v);checkCard();dismissCards();rainCard(v);});
   /* fix18: โดนเตะจากเรือแล้วอยู่หน้าอื่น → ป้ายเล็กนับถอยหลัง แตะกลับไปตัดสินใจ · หมดเวลาตอบให้อัตโนมัติ (กติกาเดิม)
      ไม่อยู่ในเกมจนเซิร์ฟเวอร์ตัดสินให้ออก → การ์ดแจ้งครั้งเดียวตอนกลับมา (ข้อความของแอดมินตามตัวอักษร) */
@@ -130,6 +130,6 @@ export function startAlerts({watch,act,now,toast,game,go,x17,screen}){
     const c=card('away','<div class="ax-row"><div style="font-size:2.4rem;text-align:center">🚣💦</div><div><h3 style="color:#B02A44">ออกจากเรือแล้ว</h3><p>'+AWAY_MSG+'</p></div></div><button class="ax-btn r" type="button">รับทราบ</button>',{glow:'#FF9DB8'});
     c.querySelector('button').onclick=()=>{ls.set('axAway:'+w.at,'1');drop('away');};}
   const offT=setInterval(offTick,500);
-  const stopOff=watch('boatOffer',v=>{boff=v;offTick();awayCard(v);});
+  /* S4: ปิดแจ้งเตือนเรือทุกหน้า (ออกจากเรือ/โดนเตะ/ข้อเสนออยู่ต่อ) — เป็นของซีซันก่อน */const stopOff=()=>{};
   return ()=>{clearInterval(offT);dropOff();stopOff?.();clearInterval(pzRe);clearInterval(swimT);dropSwim();clearInterval(rainT);stopPoison?.();stopMm?.();clearTimeout(tCheck);for(const id of [...cards.keys()])drop(id);wrap.remove();};
 }

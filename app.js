@@ -7,7 +7,7 @@ import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.g
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
 import {startRumors} from './rumor-ui.js?v=ss3-fix17&h=9147b483';
-import {startAlerts} from './alerts-ui.js?v=ss3-fix18&h=6cb9340c';
+import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
