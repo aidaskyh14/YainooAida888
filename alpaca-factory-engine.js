@@ -1,7 +1,7 @@
 /* fix21 🏭 โรงงานแปรรูปอัลปาก้า — คิดบนเซิร์ฟเวอร์ (สั่งงาน / รับของ) · ไฟล์นี้อยู่ฝั่งเซิร์ฟเวอร์เท่านั้น (โอกาสผีสิงไม่ส่งไปหน้าเว็บ)
    ของในเกม: คีย์แคตตาล็อก → ที่เก็บจริง (bag.* / sub.*) · คีย์ที่ไม่อยู่ในแคตตาล็อก (ของที่แปรรูปได้) = sub.alpaca.bag.<คีย์>
    'wine' = ไวน์ทุกชนิดรวมกัน (หักกองใหญ่ก่อน) · 'anyflower' = ดอกไม้กองที่มากที่สุดกองเดียว — เหมือนหน้าโรงงานเดิมทุกอย่าง */
-import {CATALOG} from './catalog.js?h=17d0dd51';
+import {CATALOG} from './catalog.js?h=475fbe38';
 import {ALPACA_MB} from './alpaca-menu.js?h=4c9e1f4e';
 export const GHOST_ODDS={old:.5,hw:.5},JOBS_MAX=100,ORDER_MAX=10,HOUR=3600e3,GEAR_KEY='boost-gear',GEAR_CUT=.7,CLAIM_BONUS=1.2;
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
