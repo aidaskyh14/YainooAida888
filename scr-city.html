@@ -77,7 +77,7 @@ table{width:100%;border-collapse:collapse;font-size:.8rem}td{padding:.35rem .25r
 .blur{filter:blur(6px)}
 #drive{position:fixed;inset:0;z-index:80;background:#000 url(images/city-drive-bg.webp) center/cover;display:none;align-items:flex-end;justify-content:center;padding-bottom:18vh}#drive.on{display:flex}#drive .car{font-size:84px;animation:drv 1.2s ease-in-out infinite alternate}@keyframes drv{from{transform:translateX(-18px)}to{transform:translateX(18px)}}#drive .t{position:absolute;top:calc(env(safe-area-inset-top,0px) + 30px);left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:1.2rem;text-shadow:0 2px 8px #000}
 </style><link rel="stylesheet" href="pv/s4ui.css?h=2196727d"><script src="pv/s4fit.js"></script></head><body>
-<iframe id="s4f" data-src="city3d/index.html?h=c8adc04f" title="นครยัยหนู"></iframe>
+<iframe id="s4f" data-src="city3d/index.html?h=c59ead17" title="นครยัยหนู"></iframe>
 <div id="top" class="hud"><span class="pill" id="pFuel">⛽ —</span><span class="pill" id="pTime">🕒 —</span><span class="pill" id="pN">👥 —</span><span class="pill" id="pMsg" style="display:none"></span></div>
 <style>
 #gift{position:fixed;left:0;top:26%;z-index:60;pointer-events:none;transform:translateX(-130%);opacity:0;transition:transform .55s cubic-bezier(.2,1.4,.4,1),opacity .3s}#gift.on{transform:none;opacity:1}
@@ -93,7 +93,7 @@ table{width:100%;border-collapse:collapse;font-size:.8rem}td{padding:.35rem .25r
 <div id="drive"><div class="t">🚗 กำลังขับรถไปนครยัยหนู…</div><div class="car">🚗</div></div>
 <script type="module">
 import {MEN,MAN,BUILDINGS,BUILDING,DATES,HARD,HARD_NAME,MOODS,PAGEANT,HOUSE_UP,KIDS,SEASONS,SEASON_DAYS,HEART,HEARTS,LOCK_HEARTS,IDLE_SOFT_MIN,IDLE_KICK_MIN,GIFT_KIND,WED} from './city-public.js';
-import {CATALOG} from './catalog.js?h=f385b8f0';import {pickLine} from './city-lines.js?h=c6bfa409';
+import {CATALOG} from './catalog.js?h=cc372ca3';import {pickLine} from './city-lines.js?h=c6bfa409';
 const Host=parent.__HOST;const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>Math.round(n||0).toLocaleString('en-US');
 const F=$('#s4f');/* ส่วน ⑤: บอกฉากว่าเข้าด้วยรถคันไหน (ฉากขับรถ 3D ระหว่างโหลด) */{let q='';try{const d=Host.cityDrive&&Host.cityDrive();if(d&&d.car)q=(F.dataset.src.includes('?')?'&':'?')+'drive='+encodeURIComponent(d.car)+'&fuel='+encodeURIComponent(d.fuel||'');}catch(e){}F.src=F.dataset.src+q;}const send=m=>{try{F.contentWindow.postMessage({city:m},'*');}catch(e){}};
 const BY=Object.fromEntries(CATALOG.map(c=>[c.k,c]));const img=k=>BY[k]&&BY[k].i?('images/'+BY[k].i.replace(/^\.\.\/farm3d\//,'../farm3d/')):'';
@@ -246,6 +246,7 @@ $('#bHeart').onclick=()=>{fabClose();openHeart();};$('#vClap').onclick=()=>{if(D
 async function leave(){try{await Host.cloud('city',{type:'leave'});}catch(e){}try{Host.cloudRaw('city',{type:'bye'});}catch(e){}parent.postMessage({go:'farm'},'*');}
 addEventListener('message',e=>{const m=e.data&&e.data.s4city;if(!m||e.source!==F.contentWindow)return;lastTap=Date.now();if(m.s==='move'||m.s==='tapMan'||m.s==='tapBuilding')fabClose();if(m.s==='drive'){document.body.classList.toggle('driving',!!m.on);return;}
  if(m.s==='tapPod'){onTapPod(m.no);}
+ if(m.s==='squid'){try{window.squidGo&&window.squidGo();}catch(e){}}
  if(m.s==='ready'){sceneReady=true;paint();/* ฉากเพิ่งโหลด: ส่งสถานะประกวด/คนในนครที่มาถึงก่อนหน้านี้ซ้ำ (ไม่งั้นเวทีไม่ขึ้นตอนเข้ามาระหว่างประกวด) */send({c:'pageant',p:P});send({c:'presence',list:PRES});}else if(m.s==='tapMan'){if(HOLD){const h=HOLD;giveConfirm(m.man,h.k);}else openMan(m.man);}else if(m.s==='tapBuilding')openBuild(m.id);else if(m.s==='move'){Host.cloudRaw('city',{type:'move',x:m.x,z:m.z,tx:m.tx,tz:m.tz}).catch(()=>{});}else if(m.s==='men'){men=m.men||{};}else if(m.s==='toast')toast(m.msg);});
 /* ไม่แตะจอ: 3 นาทีจอพัก · 5 นาทีเด้งกลับฟาร์ม */['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{lastTap=Date.now();}));
 setInterval(()=>{/* เก็บตก: ระหว่างประกวด ผู้ชมนั่งดูเฉยๆ ได้ ไม่ขึ้นจอพัก/ไม่เตะออก */if(P&&P.state&&P.state!=='idle')lastTap=Date.now();const idle=Date.now()-lastTap;if(idle>IDLE_KICK_MIN*60000){leave();return;}send({c:'idle',on:idle>IDLE_SOFT_MIN*60000});if(W&&W.open===false&&!ADMIN){toast('⛔ ยัยหนูปิดนครแล้ว');setTimeout(leave,1200);}},5000);
@@ -259,4 +260,5 @@ refresh();setInterval(()=>{if(!document.hidden)refresh();},90000);
 /* ส่วน ⑥: รอบโชว์ 3 รอบต่อเนื่องอัตโนมัติ (เครื่องของยัยหนู/พิธีกรเป็นคนสั่ง): ทุกคนส่งครบ หรือหมดเวลา 25 วิ → รอบถัดไปทันที · ครบ 3 รอบ → ไปรอบคำถาม */
 let pgAutoKey='';if(ADMIN)setInterval(()=>{try{if(!P||P.state!=='thai'||!P.talent)return;const alive=Object.values(P.contestants||{}).filter(c=>c.alive&&!c.gray).length;const done=(P.talent.done||[]).length;const over=Date.now()-(P.talent.startAt||0)>27000;if(!(done>=alive||over))return;const key='r'+P.talent.round;if(pgAutoKey===key)return;pgAutoKey=key;Host.cloud('pageantAdmin',{type:P.talent.round<PAGEANT.talentRounds?'talent':'next'}).then(()=>toast(P.talent.round<PAGEANT.talentRounds?'🎯 โชว์รอบถัดไปเริ่ม':'❓ ไปรอบคำถาม')).catch(e=>{pgAutoKey='';});}catch(e){}},2000);/* ส่งตำแหน่งต่ออายุทุก 2 นาที ทำในฉาก */
 window.__city={openMan,openHeart,openHome,openPg,openBuild,refresh,closeAll,get V(){return V;},get P(){return P;}};
-</script></body></html>
+</script><script src="pv/squid-dock.js?h=219d5239"></script>
+</body></html>

@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=0632c2b8';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=beccc0fb';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=1eb63c15';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=d604d611';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=35d7c339';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=72af3d12';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=f5a1e5fd';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=f385b8f0';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=cc372ca3';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -532,6 +532,8 @@ const SUBS = {
   's3dog-v1': { id: 'dog', maps: { 'bag.item': 'bag.item', 'bag.grass': 'bag.grass', 'bag.product': 'bag.product', 'bag.crop': 'bag.crop' } },
   's3alpaca-v1': { id: 'alpaca', flat: true }
 };
+/* fix27: ผสานตัวเลขในกระเป๋าแบบส่วนต่าง: base=ที่หน้าอ่านไป cur=ที่มีจริงตอนนี้ scr=ที่หน้าส่งมา → ถ้ามีคนอื่นเปลี่ยนระหว่างนั้น ใช้ cur+(scr-base) */const INV_SUBKEYS=['stock','bag','items'];function invDelta(base,cur,scr,label){let n=0;const walk=(b,c,o,path)=>{const keys=new Set([...Object.keys(b||{}),...Object.keys(c||{}),...Object.keys(o||{})]);for(const k of keys){const bv=b?b[k]:undefined,cv=c?c[k]:undefined,ov=o?o[k]:undefined;const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);if(isObj(bv)||isObj(cv)||isObj(ov)){if(typeof ov==='number'||typeof cv==='number'||typeof bv==='number')continue;if(cv===undefined&&ov===undefined)continue;if(!isObj(o[k]))o[k]={};walk(isObj(bv)?bv:{},isObj(cv)?cv:{},o[k],path+k+'.');continue;}if(Array.isArray(bv)||Array.isArray(cv)||Array.isArray(ov))continue;if([bv,cv,ov].some(x=>x!=null&&typeof x!=='number'))continue;const bn=Number(bv)||0,cn=Number(cv)||0;if(bn!==cn){const sn=Number(ov)||0,nv=Math.max(0,cn+(sn-bn));if(nv!==sn){o[k]=nv;n++;console.warn('fix27 '+label+' '+path+k+': อ่านไป '+bn+' ตอนนี้ '+cn+' หน้าส่ง '+sn+' → '+nv);}}}};try{if(scr&&typeof scr==='object')walk(base||{},cur||{},scr,'');}catch(e){console.warn('fix27 invDelta',e&&e.message);}return n;}
+window.__invBase=null;function invSnap(g){try{const o={bag:clone(g.bag||{}),sub:{}};for(const id in (g.sub||{})){const u=g.sub[id];if(!u||typeof u!=='object')continue;const t={};for(const k of INV_SUBKEYS)if(u[k]&&typeof u[k]==='object')t[k]=clone(u[k]);if(Object.keys(t).length)o.sub[id]=t;}return o;}catch(e){return null;}}
 const getp = (o, path) => path.split('.').reduce((t, k) => t == null ? undefined : t[k], o);
 const setp = (o, path, v) => { const ks = path.split('.'); let t = o; while (ks.length > 1) { const x = ks.shift(); if (!t[x] || typeof t[x] !== 'object') t[x] = {}; t = t[x]; } t[ks[0]] = v; };
 const delp = (o, path) => { const ks = path.split('.'); const last = ks.pop(); const t = ks.reduce((a, k) => a && a[k], o); if (t) delete t[last]; };
@@ -543,6 +545,7 @@ function subGet(K) {
   for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{}));
   if (C.mats) { sub.mats = {}; for (const n in C.mats) sub.mats[n] = getp(G, 'bag.' + C.mats[n]) || 0; }
   if (C.flat) { sub.bag = sub.bag || {}; for (const c of FLAT) { const v = getp(G, 'bag.' + c.p); if (v) sub.bag[c.k] = v; else delete sub.bag[c.k]; } }
+  window.__subInvBase=window.__subInvBase||{};window.__subInvBase[C.id]=invSnap({bag:{},sub:{[C.id]:sub}}).sub[C.id]||{};try{window.__subInvBase[C.id].__maps={};for(const a in C.maps||{})window.__subInvBase[C.id].__maps[a]=clone(getp(sub,a));if(C.mats)window.__subInvBase[C.id].__mats=clone(sub.mats);}catch(e){}/* fix27 */
   return JSON.stringify(sub);
 }
 // ---- Barn save guards: placed animals may only disappear through a sell/clear the page declared this session ----
@@ -581,6 +584,7 @@ function subSet(K, v, scope) {
   if (C.id === 'barn') guardBarn(G, o, typeof serverNow === 'function' ? serverNow() : Date.now());
   if (!first && typeof o.merit === 'number') {const base=typeof window.__subMeritBase==='number'?window.__subMeritBase:(Number(G.merit)||0),cur=Number(G.merit)||0,d=Number(o.merit)-base;G.merit=Math.max(0,cur+(Number.isFinite(d)?d:0));window.__subMeritBase=G.merit;/* fix26: ส่วนต่าง */}
   delete o.merit;
+  /* fix27: ส่วนต่าง */const SB=(window.__subInvBase||{})[C.id];if(SB&&!first){try{for(const a in C.maps||{}){const bv=SB.__maps?SB.__maps[a]:undefined,cv=getp(G,C.maps[a]),ov=getp(o,a);if(ov&&typeof ov==='object'&&!Array.isArray(ov))invDelta(bv,cv,ov,C.id+'.'+a);else if(typeof ov==='number'||typeof cv==='number'){const bn=Number(bv)||0,cn=Number(cv)||0;if(bn!==cn){const nv=Math.max(0,cn+((Number(ov)||0)-bn));setp(o,a,nv);console.warn('fix27 '+C.id+'.'+a+' → '+nv);}}}if(C.mats&&o.mats){const curM={};for(const n in C.mats)curM[n]=getp(G,'bag.'+C.mats[n])||0;invDelta(SB.__mats,curM,o.mats,C.id+'.mats');}for(const k of INV_SUBKEYS){if(Object.keys(C.maps||{}).some(a=>a===k||a.startsWith(k+'.')))continue;if(o[k]&&typeof o[k]==='object')invDelta(SB[k],G.sub[C.id]&&G.sub[C.id][k],o[k],C.id+'.'+k);}}catch(e){console.warn('fix27 sub',e&&e.message);}const snap=invSnap({bag:{},sub:{[C.id]:o}}).sub[C.id]||{};snap.__maps={};for(const a in C.maps||{})snap.__maps[a]=clone(getp(o,a));snap.__mats=clone(o.mats);window.__subInvBase[C.id]=snap;}
   for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{})); delp(o, a); }
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
   if (C.flat) { for (const c of FLAT) { if (!first && o.bag) setp(G, 'bag.' + c.p, o.bag[c.k] || 0); if (o.bag) delete o.bag[c.k]; } }
@@ -600,7 +604,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
+const CLOUD_HANDLERS={squid:'squidActionCloud',char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -760,7 +764,7 @@ const HOST_BASE = {
   watchNbInv(fn){if(!S.user)return()=>{};return sceneWatch(doc(db,'nbInvites',S.user.uid),fn);},
   watchNbDay(id,day,fn){return sceneWatch(doc(db,'neighborhoods',String(id),'days',String(day)),fn);},
   get(k) {
-    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);if(!S.P?.g)return null;const v=inventoryView(S.P.g);if(meritShift&&typeof v==='object')v.merit=(Number(v.merit)||0)-meritShift;window.__meritBase=Number(S.P.g.merit)||0;/* fix21 */return JSON.stringify(v); }
+    if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);if(!S.P?.g)return null;const v=inventoryView(S.P.g);if(meritShift&&typeof v==='object')v.merit=(Number(v.merit)||0)-meritShift;window.__meritBase=Number(S.P.g.merit)||0;/* fix21 */window.__invBase=invSnap(v);/* fix27 */return JSON.stringify(v); }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
     if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
@@ -787,7 +791,7 @@ function sceneHost(ids){
 window.__HOST = sceneHost(null);
 function hostSet(k, v, scope) {
     if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
-    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }if(meritShift&&o&&typeof o==='object')o.merit=(Number(o.merit)||0)+meritShift;/* fix20: กุศลที่เซิร์ฟเวอร์หักระหว่างที่หน้านี้ไม่ได้โหลดใหม่ */ /* fix21: กุศลเป็นส่วนต่างจากตอนที่หน้านี้อ่านไป */{const cur=Number(S.P.g.merit)||0,seen=Number(o.merit);if(!Number.isFinite(seen)){o.merit=cur;}else{const base=typeof window.__meritBase==='number'?window.__meritBase:cur;const d=seen-base;if(base!==cur){o.merit=Math.max(0,cur+d);console.warn('fix21: กุศลเปลี่ยนระหว่างเปิดหน้า '+base+'→'+cur+' · ใช้ส่วนต่าง '+d);}if(o.merit<cur&&((cur>=1e5&&o.merit<cur*.5)||(cur>=1e3&&o.merit<=0))){showSave('🛡️ กันกุศลหาย: ไม่บันทึกรายการที่กุศลลดฮวบ ('+cur.toLocaleString()+'→'+o.merit.toLocaleString()+')',true);console.warn('fix21 block',cur,o.merit);try{reloadScreen();}catch(e){}return;}window.__meritBase=o.merit;}}if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;/* S4 ตัวละคร: เซิร์ฟเวอร์เป็นเจ้าของ sub.char · bag.outfit · บัตรศัลยกรรม (หน้าในเกมห้ามเขียนทับด้วยสำเนาเก่า) */if(S.P.g.sub?.char)o.sub.char=clone(S.P.g.sub.char);else delete o.sub.char;if(o.bag||S.P.g.bag?.outfit){o.bag ||= {};if(S.P.g.bag?.outfit)o.bag.outfit=clone(S.P.g.bag.outfit);else delete o.bag.outfit;if(o.bag.item||S.P.g.bag?.item?.surgery!=null){o.bag.item ||= {};if(S.P.g.bag?.item?.surgery!=null)o.bag.item.surgery=S.P.g.bag.item.surgery;else delete o.bag.item.surgery;}}const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
+    if (k === GAME_KEY) { let o; try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }if(meritShift&&o&&typeof o==='object')o.merit=(Number(o.merit)||0)+meritShift;/* fix20: กุศลที่เซิร์ฟเวอร์หักระหว่างที่หน้านี้ไม่ได้โหลดใหม่ */ /* fix21: กุศลเป็นส่วนต่างจากตอนที่หน้านี้อ่านไป */{const cur=Number(S.P.g.merit)||0,seen=Number(o.merit);if(!Number.isFinite(seen)){o.merit=cur;}else{const base=typeof window.__meritBase==='number'?window.__meritBase:cur;const d=seen-base;if(base!==cur){o.merit=Math.max(0,cur+d);console.warn('fix21: กุศลเปลี่ยนระหว่างเปิดหน้า '+base+'→'+cur+' · ใช้ส่วนต่าง '+d);}if(o.merit<cur&&((cur>=1e5&&o.merit<cur*.5)||(cur>=1e3&&o.merit<=0))){console.warn('fix21 block (เงียบ)',cur,o.merit);o.merit=cur;/* fix27: แก้เงียบ ไม่เด้งเตือน */}window.__meritBase=o.merit;}}if(S.screen==='farm')o.farms=S.P.g.farms;const ls = S.P.g && S.P.g._ls; if(ls)o._ls=ls;else delete o._ls; if (JSON.stringify(S.P.g) === JSON.stringify(o)) return; o.sub ||= {};if(S.P.g.sub?.campaigns)o.sub.campaigns=clone(S.P.g.sub.campaigns);else delete o.sub.campaigns;/* S4 ตัวละคร: เซิร์ฟเวอร์เป็นเจ้าของ sub.char · bag.outfit · บัตรศัลยกรรม (หน้าในเกมห้ามเขียนทับด้วยสำเนาเก่า) */if(S.P.g.sub?.char)o.sub.char=clone(S.P.g.sub.char);else delete o.sub.char;if(o.bag||S.P.g.bag?.outfit){o.bag ||= {};if(S.P.g.bag?.outfit)o.bag.outfit=clone(S.P.g.bag.outfit);else delete o.bag.outfit;if(o.bag.item||S.P.g.bag?.item?.surgery!=null){o.bag.item ||= {};if(S.P.g.bag?.item?.surgery!=null)o.bag.item.surgery=S.P.g.bag.item.surgery;else delete o.bag.item.surgery;}}/* fix27: กระเป๋า/สต็อก เป็นส่วนต่าง */{const B=window.__invBase;if(B){const sent=invSnap(o);if(o.bag)invDelta(B.bag,S.P.g.bag,o.bag,'กระเป๋า');for(const id in (o.sub||{})){const u=o.sub[id];if(!u||typeof u!=='object')continue;for(const k of INV_SUBKEYS){if(u[k]&&typeof u[k]==='object')invDelta(B.sub&&B.sub[id]&&B.sub[id][k],S.P.g.sub&&S.P.g.sub[id]&&S.P.g.sub[id][k],u[k],id+'.'+k);}}if(sent)window.__invBase=sent;}}const merged=store.mergeProjection(S.P.g,o,scope);assertInventory(merged,S.P.g);queueGameplay(S.P.g,merged,S.screen,campaignBoxes.splice(0));S.P.g = merged; change('g'); return; }
     if (k === 's3user') return;
     if (SUBS[k]) { subSet(k, v, scope); return; }
     if (new TextEncoder().encode(String(v)).length > LS_CAP) { showSave('ข้อมูล '+k+' ใหญ่เกินขอบเขต ยังไม่ได้บันทึก', true); throw new Error('ข้อมูลระบบใหญ่เกินขอบเขต'); }
@@ -860,7 +864,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=77c59b2c'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=4abc7c65'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
