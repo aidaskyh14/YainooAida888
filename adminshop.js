@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=cc372ca3';
+import {CATALOG} from './catalog.js?h=17d0dd51';
 const H=parent.__HOST,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let shop={open:true,offers:[]},busy=false,offset=0;const now=()=>Date.now()+offset,fmt=n=>Number(n).toLocaleString();
 function notice(s){$('message').textContent=s;$('message').style.display='block';}

@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=cc372ca3';
+import {CATALOG} from './catalog.js?h=17d0dd51';
 import {BOXES,BOX_QUANTITIES,getBoxCount,MERIT_TABLE,SPEED_TABLE} from './loot-box-catalog.js?h=03cb46b1';
 import {decorBoxPool} from './decor-prices.js?h=d1908c7e';
 import {OUTFITS,BOX_CLASS} from './outfit-catalog.js?h=16ac9bbc';

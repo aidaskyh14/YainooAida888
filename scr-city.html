@@ -93,7 +93,7 @@ table{width:100%;border-collapse:collapse;font-size:.8rem}td{padding:.35rem .25r
 <div id="drive"><div class="t">🚗 กำลังขับรถไปนครยัยหนู…</div><div class="car">🚗</div></div>
 <script type="module">
 import {MEN,MAN,BUILDINGS,BUILDING,DATES,HARD,HARD_NAME,MOODS,PAGEANT,HOUSE_UP,KIDS,SEASONS,SEASON_DAYS,HEART,HEARTS,LOCK_HEARTS,IDLE_SOFT_MIN,IDLE_KICK_MIN,GIFT_KIND,WED} from './city-public.js';
-import {CATALOG} from './catalog.js?h=cc372ca3';import {pickLine} from './city-lines.js?h=c6bfa409';
+import {CATALOG} from './catalog.js?h=17d0dd51';import {pickLine} from './city-lines.js?h=c6bfa409';
 const Host=parent.__HOST;const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>Math.round(n||0).toLocaleString('en-US');
 const F=$('#s4f');/* ส่วน ⑤: บอกฉากว่าเข้าด้วยรถคันไหน (ฉากขับรถ 3D ระหว่างโหลด) */{let q='';try{const d=Host.cityDrive&&Host.cityDrive();if(d&&d.car)q=(F.dataset.src.includes('?')?'&':'?')+'drive='+encodeURIComponent(d.car)+'&fuel='+encodeURIComponent(d.fuel||'');}catch(e){}F.src=F.dataset.src+q;}const send=m=>{try{F.contentWindow.postMessage({city:m},'*');}catch(e){}};
 const BY=Object.fromEntries(CATALOG.map(c=>[c.k,c]));const img=k=>BY[k]&&BY[k].i?('images/'+BY[k].i.replace(/^\.\.\/farm3d\//,'../farm3d/')):'';
@@ -260,5 +260,6 @@ refresh();setInterval(()=>{if(!document.hidden)refresh();},90000);
 /* ส่วน ⑥: รอบโชว์ 3 รอบต่อเนื่องอัตโนมัติ (เครื่องของยัยหนู/พิธีกรเป็นคนสั่ง): ทุกคนส่งครบ หรือหมดเวลา 25 วิ → รอบถัดไปทันที · ครบ 3 รอบ → ไปรอบคำถาม */
 let pgAutoKey='';if(ADMIN)setInterval(()=>{try{if(!P||P.state!=='thai'||!P.talent)return;const alive=Object.values(P.contestants||{}).filter(c=>c.alive&&!c.gray).length;const done=(P.talent.done||[]).length;const over=Date.now()-(P.talent.startAt||0)>27000;if(!(done>=alive||over))return;const key='r'+P.talent.round;if(pgAutoKey===key)return;pgAutoKey=key;Host.cloud('pageantAdmin',{type:P.talent.round<PAGEANT.talentRounds?'talent':'next'}).then(()=>toast(P.talent.round<PAGEANT.talentRounds?'🎯 โชว์รอบถัดไปเริ่ม':'❓ ไปรอบคำถาม')).catch(e=>{pgAutoKey='';});}catch(e){}},2000);/* ส่งตำแหน่งต่ออายุทุก 2 นาที ทำในฉาก */
 window.__city={openMan,openHeart,openHome,openPg,openBuild,refresh,closeAll,get V(){return V;},get P(){return P;}};
-</script><script src="pv/squid-dock.js?h=219d5239"></script>
+</script><script src="pv/squid-dock.js?h=ddc286e6"></script>
+<script src="pv/squid-dock.js?h=ddc286e6"></script>
 </body></html>
