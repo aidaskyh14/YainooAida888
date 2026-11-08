@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=8fe71d3c';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=0632c2b8';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=d0385ad4';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=1eb63c15';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=9e381439';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=35d7c339';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=f5a1e5fd';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=768ce276';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=f385b8f0';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -524,7 +524,7 @@ async function logout() {
 // ---------- โฮสต์เกม: แต่ละหน้าเกมโหลดใน iframe และเซฟผ่านตัวกลางนี้ ----------
 const GAME_KEY = 's3all-v1';
 // g คือภาพข้อมูลในหน่วยความจำเพื่อรองรับหน้าชุด 2–3 เดิม; ฐานข้อมูลแยกเอกสารแล้ว
-const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'กล้วย': 'crop.banana', 'นมวัว': 'product.milk', 'ไข่ไก่': 'product.egg', 'เกล็ดปลาจันทร์': 'product.scale' };
+const MATS = { 'ข้าวโพด': 'crop.corn', 'ฟักทอง': 'crop.pumpkin', 'แตงโม': 'crop.watermelon', 'แตงกวา': 'crop.cucumber', 'แครอท': 'crop.carrot', 'องุ่น': 'crop.grape', 'สตรอว์เบอร์รี': 'crop.strawberry', 'เห็ดไขลาน': 'crop.mushroom', 'มันฝรั่ง': 'crop.potato', 'ขนเม่น': 'hedge.quills', 'หางเม่น': 'hedge.tail', 'ชีส': 'product.cheese', 'กล้วย': 'crop.banana', 'นมวัว': 'product.milk', 'ไข่ไก่': 'product.egg', 'เกล็ดปลาจันทร์': 'product.scale', 'หญ้าฟ้า':'grass.blue','หญ้าแดง':'grass.red','หญ้าเขียว':'grass.green','หญ้าเหลือง':'grass.yellow','หญ้าชมพู':'grass.pink','เดซี่':'flower.daisy','กุหลาบ':'flower.rose','อัญชัน':'flower.butterflypea','ทานตะวัน':'flower.sunflower','ดอกบัว':'flower.lotus','กล้วยไม้':'flower.orchid','ทิวลิป':'flower.tulip','ลาเวนเดอร์':'flower.lavender','ดาวเรือง':'flower.marigold','ไฮเดรนเยีย':'flower.hydrangea','ลีลาวดี':'flower.plumeria','ชบา':'flower.hibiscus' };
 const SUBS = {
   ...{"s3safari1": {"id": "safari", "maps": {"bag.c-waterspinach": "bag.crop.waterspinach", "bag.c-lettuce": "bag.crop.lettuce", "bag.c-mango": "bag.crop.mango", "bag.c-chili": "bag.crop.chili", "bag.c-pumpkin": "bag.crop.pumpkin", "bag.c-lychee": "bag.crop.lychee", "bag.c-strawberry": "bag.crop.strawberry", "bag.c-grape": "bag.crop.grape", "bag.c-banana": "bag.crop.banana", "bag.c-gooseberry": "bag.crop.gooseberry", "bag.c-carrot": "bag.crop.carrot", "bag.c-corn": "bag.crop.corn", "bag.c-mushroom": "bag.crop.mushroom", "bag.c-melon": "bag.crop.melon", "bag.c-bamboo": "bag.crop.bamboo", "bag.c-plankton": "bag.crop.plankton", "bag.c-potato": "bag.crop.potato", "bag.c-cucumber": "bag.crop.cucumber", "bag.c-watermelon": "bag.crop.watermelon", "bag.c-cabbage": "bag.crop.cabbage", "bag.c-pea": "bag.crop.pea", "bag.c-tomato": "bag.crop.tomato", "bag.a-egg": "bag.product.egg", "bag.a-feather": "bag.product.feather", "bag.a-drumstick": "bag.product.drumstick", "bag.a-fishmeat": "bag.product.fishmeat", "bag.a-roe": "bag.product.roe", "bag.a-scale": "bag.product.scale", "bag.a-truffle": "bag.product.truffle", "bag.a-pork": "bag.product.pork", "bag.a-trotter": "bag.product.trotter", "bag.a-milk": "bag.product.milk", "bag.a-cheese": "bag.product.cheese", "bag.a-cream": "bag.product.cream", "bag.b-ostrich-egg": "bag.bird.ostrich-egg", "bag.b-ostrich-feather": "bag.bird.ostrich-feather", "bag.b-dodo-egg": "bag.bird.dodo-egg", "bag.b-dodo-feather": "bag.bird.dodo-feather", "bag.b-dodo-pebble": "bag.bird.dodo-pebble", "bag.f-0": "bag.food.ข้าวผัดไข่", "bag.f-1": "bag.food.ซุปฟักทอง", "bag.f-2": "bag.food.ปลาย่างซอสมะม่วง", "bag.f-3": "bag.food.สตูว์รวมมิตร", "bag.f-4": "bag.food.ไข่อบชีส", "bag.f-5": "bag.food.น่องไก่อบครีม", "bag.f-6": "bag.food.ขนมลิ้นจี่มะยม", "bag.f-7": "bag.food.จานรวมมิตร", "bag.f-8": "bag.food.ออมเล็ตโรซี่", "bag.f-9": "bag.food.ไข่อบอัญชัน", "bag.f-10": "bag.food.ไข่ตุ๋นหกบุปผา", "bag.f-11": "bag.food.ไข่ย่างสปาฟลาวเวอร์", "bag.fl-daisy": "bag.flower.daisy", "bag.fl-rose": "bag.flower.rose", "bag.fl-butterflypea": "bag.flower.butterflypea", "bag.fl-sunflower": "bag.flower.sunflower", "bag.fl-lotus": "bag.flower.lotus", "bag.fl-orchid": "bag.flower.orchid", "bag.fl-tulip": "bag.flower.tulip", "bag.fl-lavender": "bag.flower.lavender", "bag.fl-marigold": "bag.flower.marigold", "bag.fl-hydrangea": "bag.flower.hydrangea", "bag.fl-plumeria": "bag.flower.plumeria", "bag.fl-hibiscus": "bag.flower.hibiscus", "bag.w-moon": "bag.wine.moon", "bag.w-rose": "bag.wine.rose", "bag.w-blood": "bag.wine.blood", "bag.w-eclipse": "bag.wine.eclipse", "bag.h-fang": "bag.hedge.fang", "bag.h-quills": "bag.hedge.quills", "bag.h-claw": "bag.hedge.claw", "bag.h-tail": "bag.hedge.tail"}, "fresh": {"merit": 0, "bag": {}, "tasks": {}, "sel": 1, "stats": {"runs": 0, "wins": 0, "fails": 0, "merit": 0}, "log": []}}, "s3market1": {"id": "market", "maps": {"bag.rose": "bag.wine.rose", "bag.moon": "bag.wine.moon", "bag.blood": "bag.wine.blood", "bag.eclipse": "bag.wine.eclipse"}, "fresh": {"lots": [], "bag": {}, "news": [], "modes": [], "divGot": {}, "mailSeen": 0, "mail": []}}},
   's3barn3': { id: 'barn', maps: { items: 'bag.item', bag: 'bag.product' } },
@@ -539,7 +539,7 @@ const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
 const FLAT = CATALOG.filter(c => !c.p.startsWith('pend.') && !c.p.startsWith('sub.'));
 function subGet(K) {
   const C = SUBS[K], G = inventoryView(S.P.g || {}); const sub = clone((G.sub && G.sub[C.id]) || C.fresh); if (!sub) return null;
-  sub.merit = G.merit || 0;
+  sub.merit = G.merit || 0;window.__subMeritBase=Number(G.merit)||0;/* fix26 */
   for (const a in C.maps || {}) setp(sub, a, clone(getp(G, C.maps[a])) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{}));
   if (C.mats) { sub.mats = {}; for (const n in C.mats) sub.mats[n] = getp(G, 'bag.' + C.mats[n]) || 0; }
   if (C.flat) { sub.bag = sub.bag || {}; for (const c of FLAT) { const v = getp(G, 'bag.' + c.p); if (v) sub.bag[c.k] = v; else delete sub.bag[c.k]; } }
@@ -579,7 +579,7 @@ function subSet(K, v, scope) {
   if (scope && !scope.includes('animals-'+C.id)) throw new Error('หน้านี้ไม่ได้เปิดข้อมูลส่วนนี้ ไม่บันทึกทับ'); try { o = JSON.parse(v); } catch (e) { throw new Error('ข้อมูลเซฟของหน้านี้ไม่ถูกต้อง ยังไม่ได้บันทึก'); }
   const G = clone(S.P.g || {}); G.sub = G.sub || {}; const first = !G.sub[C.id];
   if (C.id === 'barn') guardBarn(G, o, typeof serverNow === 'function' ? serverNow() : Date.now());
-  if (!first && typeof o.merit === 'number') G.merit = o.merit;
+  if (!first && typeof o.merit === 'number') {const base=typeof window.__subMeritBase==='number'?window.__subMeritBase:(Number(G.merit)||0),cur=Number(G.merit)||0,d=Number(o.merit)-base;G.merit=Math.max(0,cur+(Number.isFinite(d)?d:0));window.__subMeritBase=G.merit;/* fix26: ส่วนต่าง */}
   delete o.merit;
   for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{})); delp(o, a); }
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
@@ -860,7 +860,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=e746af77'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=77c59b2c'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;

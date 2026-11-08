@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=768ce276';
+import {CATALOG} from './catalog.js?h=f385b8f0';
 import {rainLogic,rainScore,RAIN_MS,RAIN_WARN,RAIN_LEVELS,RAIN_SETTLE,RAIN_LATE,RAIN_TEAM_MIN,RAIN_TEAM_POS,RAIN_TEAM_BACK,RAIN_ANCHOR_BACK,RAIN_PLUS_CAP} from './rain-engine.js?h=2e082531';
 /* กติกาเรือเป็นฟังก์ชันล้วน: ใช้กับ transaction บนคลาวด์ ไม่สร้างผู้เล่นจำลอง */
 /* fix17: กล่องการ์ดทุก 30 (30…330) + เส้น 350 เดิม · พักส่ง 7 นาที · โล่กันเตะ 30 นาที · เตะย้อนศร · ว่ายกลับเรือ · นางในวรรณคดี 2 ตนแข่งส่งถาด · ฝนกุศล */
@@ -82,7 +82,7 @@ export function rollCard(rng,line,canRevive){const table=(BOAT_CARD_TABLES[line]
 const boatOk=b=>Number.isInteger(b)&&b>=1&&b<=5;
 /* fix17: เครื่องดื่มป่า 4 ชนิด ตั้งเป็นเสบียงเรือได้ (bag.drink.*) */
 const SUPPLY_GROUPS=['food','gfood','drink'];
-const foodKeys=new Set(CATALOG.filter(c=>SUPPLY_GROUPS.some(g=>c.p.startsWith(g+'.'))).map(c=>c.k));
+const foodKeys=new Set(CATALOG.filter(c=>SUPPLY_GROUPS.some(g=>c.p.startsWith(g+'.'))||/^(bird\.mkdish|fish\.sqdish)/.test(c.p)).map(c=>c.k));/* fix26: เมนูลิง/เมนูหมึก เป็นเสบียงได้ */
 const catOf=k=>CATALOG.find(c=>c.k===k);
 /* outbox: ไปรษณีย์ / มุมมองส่วนตัว / ledger ที่คลาวด์ต้องเขียนหลังธุรกรรม (ดึงออกก่อนบันทึก) */
 const outbox=(r,x)=>{(r.outbox ||= []).push(x);};
