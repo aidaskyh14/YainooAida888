@@ -97,6 +97,7 @@ export class SplitSaveStore {
   }
   async save(profile,fields) {
     const next=this.scopedNext(profile.g||{}), changes=fields.includes('g')?diffs(this.parts,next):[];
+    /* fix21: ด่านสุดท้าย กันกุศลหาย */try{const w=changes.find(([id])=>id==='wallet');if(w&&w[1]&&this.parts.has('wallet')){const m=x=>{try{return Number(JSON.parse(x.payload).merit)||0;}catch(e){return 0;}};const o=m(this.parts.get('wallet')),n=m(w[1]);if((o>=1e5&&n<o*.5)||(o>=1e3&&n<=0))throw Object.assign(new Error('🛡️ กันกุศลหาย: กุศลจะลดจาก '+o.toLocaleString()+' เหลือ '+n.toLocaleString()+' ในครั้งเดียว ไม่บันทึก กรุณารีเฟรช'),{code:'save/merit-guard'});}}catch(e){if(e.code==='save/merit-guard')throw e;}
     if(!changes.length && fields.every(f=>f==='g'))return;
     const meta={by:this.session};
     for(const f of fields)if(f!=='g'&&f!=='size'&&f!=='storageVersion')meta[f]=profile[f];
