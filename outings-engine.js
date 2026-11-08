@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=475fbe38';
+import {CATALOG} from './catalog.js?h=2b3d165c';
 export const VEHICLES={jeep:{trays:[3,6],menus:[1,2],wait:20,merit:[300,600],chance:.2,oil:300,hat:0},ship:{trays:[7,12],menus:[2,3],wait:10,merit:[800,1500],chance:.3,oil:100,hat:50},raft:{trays:[13,20],menus:[3,4],wait:5,merit:[5000,10000],chance:.5,oil:500,hat:100}};
 const int=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
 const fail=m=>{throw new Error(m);};

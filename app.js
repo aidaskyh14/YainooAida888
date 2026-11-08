@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=51ed26d1';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=2a74654f';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=b36ef48c';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=b1f7dcb5';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=0398cfe0';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=cbbc5f91';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=2b4c9fce';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=99c8707f';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=f5a1e5fd';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=b85eb5c5';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=475fbe38';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=2b3d165c';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -585,6 +585,7 @@ function subSet(K, v, scope) {
   if (!first && typeof o.merit === 'number') {const base=typeof window.__subMeritBase==='number'?window.__subMeritBase:(Number(G.merit)||0),cur=Number(G.merit)||0,d=Number(o.merit)-base;G.merit=Math.max(0,cur+(Number.isFinite(d)?d:0));window.__subMeritBase=Number(o.merit);/* fix27: ฐาน = ค่าที่หน้าถือ */}
   delete o.merit;
   
+  
   /* fix27: ส่วนต่าง */const SB=(window.__subInvBase||{})[C.id];if(SB&&!first){try{for(const a in C.maps||{}){const bv=SB.__maps?SB.__maps[a]:undefined,cv=getp(G,C.maps[a]),ov=getp(o,a);if(ov&&typeof ov==='object'&&!Array.isArray(ov))invDelta(bv,cv,ov,C.id+'.'+a);else if(typeof ov==='number'||typeof cv==='number'){const bn=Number(bv)||0,cn=Number(cv)||0;if(cn>bn){const nv=(Number(ov)||0)+(cn-bn);setp(o,a,nv);console.warn('fix27 '+C.id+'.'+a+' → '+nv);}}}if(C.mats&&o.mats){const curM={};for(const n in C.mats)curM[n]=getp(G,'bag.'+C.mats[n])||0;invDelta(SB.__mats,curM,o.mats,C.id+'.mats');}for(const k of INV_SUBKEYS){if(Object.keys(C.maps||{}).some(a=>a===k||a.startsWith(k+'.')))continue;if(o[k]&&typeof o[k]==='object')invDelta(SB[k],G.sub[C.id]&&G.sub[C.id][k],o[k],C.id+'.'+k);}}catch(e){console.warn('fix27 sub',e&&e.message);}const snap=invSnap({bag:{},sub:{[C.id]:o}}).sub[C.id]||{};snap.__maps={};for(const a in C.maps||{})snap.__maps[a]=clone(getp(o,a));snap.__mats=clone(o.mats);window.__subInvBase[C.id]=snap;}
   for (const a in C.maps || {}) { if (!first) setp(G, C.maps[a], getp(o, a) ?? (C.maps[a].startsWith('bag.')&&C.maps[a].split('.').length>2?0:{})); delp(o, a); }
   if (C.mats) { if (!first) for (const n in C.mats) setp(G, 'bag.' + C.mats[n], (o.mats || {})[n] || 0); delete o.mats; }
@@ -811,6 +812,7 @@ function renderGame(screen) {
       P.onclick=e=>{const b=e.target.closest('[data-g]');if(b){P.hidden=true;goScreen(b.dataset.g);}else if(e.target===P)P.hidden=true;}; };
     S.frame = $('#scr');
   }
+  try{const g=sessionStorage.getItem('s4go');if(g){sessionStorage.removeItem('s4go');screen=g;}}catch(e){}/* fix28 */
   goScreen(screen);
 }
 /* fix18: อัปเดตอัตโนมัติ — เทียบแฮช app.js ใน index.html กับตัวที่กำลังรัน */
@@ -865,7 +867,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=283f0198'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=301f4f15'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
