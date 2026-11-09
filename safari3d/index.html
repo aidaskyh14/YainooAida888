@@ -310,8 +310,8 @@ function stepBab(a,dt){const idx=babs.indexOf(a);a.ph+=dt;
     const br=Math.sin(a.ph*1.5);a.sl.scale.set(1+br*.03,1+br*.05,1+br*.03);a.yw.scale.setScalar(1+Math.sin(a.ph*3)*.02);
     a.sl.position.y=a.yw.position.y=Bd.y;a.w.position.set(a.x,0,a.z);a.w.rotation.y=a.dir;return;}
   if(a.tx==null&&!a.bed){a.t-=dt;if(a.t<=0){const A=a.area;a.tx=A[0]+rnd()*(A[2]-A[0]);a.tz=A[1]+rnd()*(A[3]-A[1]);}}
-  let moving=false;if(a.tx!=null){const dx=a.tx-a.x,dz=a.tz-a.z,d=Math.hypot(dx,dz);if(d<.2){a.tx=null;a.t=1.5+rnd()*3.5;if(a.bed)a.dir=a.bedDir;}else{const want=Math.atan2(dx,dz);let df=Math.atan2(Math.sin(want-a.dir),Math.cos(want-a.dir));a.dir+=df*Math.min(1,dt*5);if(Math.abs(df)<.5){const s=Math.min(d,a.sp*dt);a.x+=Math.sin(a.dir)*s;a.z+=Math.cos(a.dir)*s;moving=true;}}}
-  if(moving){a.act.paused=false;a.mx.update(dt);a.wasMoving=1;a.body.position.y=0;a.body.rotation.set(0,0,0);a.body.scale.set(1,1,1);}
+  let moving=false;if(a.tx!=null){const dx=a.tx-a.x,dz=a.tz-a.z,d=Math.hypot(dx,dz);if(d<.2){a.tx=null;a.t=1.5+rnd()*3.5;if(a.bed)a.dir=a.bedDir;}else{const want=Math.atan2(dx,dz);let df=Math.atan2(Math.sin(want-a.dir),Math.cos(want-a.dir));a.dir+=df*Math.min(1,dt*4);{const s=Math.min(d,a.sp*dt*Math.max(.25,Math.cos(Math.min(Math.abs(df),1.2))));a.x+=Math.sin(a.dir)*s;a.z+=Math.cos(a.dir)*s;moving=true;}}}/* fix30: เลี้ยวไปเดินไป ไม่หยุดสะดุด */
+  if(moving){a.act.paused=false;a.mx.update(dt*.85);a.wasMoving=1;a.body.position.y=0;a.body.rotation.set(0,0,0);a.body.scale.set(1,1,1);}
   else{if(a.wasMoving){a.mx.setTime(a.rest);a.wasMoving=0;}
     const sleepy=a.bed&&!a.tx;
     // breathing
@@ -352,7 +352,7 @@ const MKS=[];let mkHang=null;
 async function mkRider(){if(!mkHang)mkHang=await get('c2_an_baboon_hang');const o=fit(mkHang.scene,{h:1.45});noShadow(o);const rig=new THREE.Group(),swing=new THREE.Group();rig.add(swing);swing.add(o);o.position.y-=1.45+.22;
   const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.12,18),new THREE.MeshStandardMaterial({color:0xe2e2e2,roughness:.35,metalness:.2}));wheel.rotation.z=Math.PI/2;rig.add(wheel);
   const hook=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.24,8),new THREE.MeshStandardMaterial({color:0x777777}));hook.position.y=-.14;swing.add(hook);rig.visible=false;sc.add(rig);return {rig,swing,wheel};}
-const mkArea=(x,z)=>[Math.max(B.x0+1,x-6),Math.max(B.z0+1,z-6),Math.min(B.x1-1,x+6),Math.min(B.z1-1.5,z+6)];
+const mkArea=(x,z)=>[B.x0+1.5,B.z0+1.5,B.x1-1.5,B.z1-2];/* fix30: ลิงเดินทั่วซาฟารี */
 /* ลิงที่วางแล้ว (จากเซฟ: กดปุ่ม 🐒 วางลิง · อยู่ได้ 36 ชม.) → MKL=[[id,at],...] */
 let MKL=[];const mkHome=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return [-9+(h%1800)/100,-6+((h>>>11)%1600)/100];};
 let mkBusy=false;async function syncMonkeys(){if(mkBusy){syncMonkeys.again=1;return;}mkBusy=true;try{

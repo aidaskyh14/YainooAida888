@@ -1,0 +1,76 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>เหมืองใต้ดิน</title>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#05060c;font-family:Mali,sans-serif;touch-action:none}canvas{display:block}
+#ld{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0b0810;color:#ffe6a7;font-weight:800;z-index:5;transition:opacity .6s}#ld.off{opacity:0;pointer-events:none}#ld .bar{width:min(70vw,320px);height:12px;border-radius:999px;background:#2a2030;overflow:hidden}#ld .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb36b,#ffe6a7);transition:width .3s}
+#tip{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:rgba(20,10,30,.75);color:#ffe6a7;border-radius:999px;padding:7px 16px;font-weight:800;font-size:.85rem;white-space:nowrap;z-index:4;transition:opacity .4s;pointer-events:none}
+#fade{position:fixed;inset:0;background:#000;opacity:1;pointer-events:none;z-index:6;transition:opacity 1.2s}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script></head>
+<body><div id="ld"><div>⛏️ กำลังลงเหมือง…</div><div class="bar"><i id="ldi"></i></div><small id="ldt">เตรียมรถราง</small></div><div id="tip">🚃 รถรางกำลังพาลงไป…</div><div id="fade"></div>
+<script type="module">
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,MOVES} from '../pv/s4char.js';
+const Q=new URLSearchParams(location.search);const IS_MOB=/iPhone|iPad|Android/i.test(navigator.userAgent);const $=s=>document.querySelector(s);
+const post=m=>{try{parent.postMessage({mine3d:m},'*');}catch(e){}};
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x05060c);sc.fog=new THREE.Fog(0x05060c,9,36);
+const cam=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.3,120);
+const rd=new THREE.WebGLRenderer({antialias:!IS_MOB,powerPreference:'high-performance'});rd.setPixelRatio(IS_MOB?1:Math.min(devicePixelRatio,1.5));rd.setSize(innerWidth,innerHeight);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.25;document.body.appendChild(rd.domElement);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();rd.setSize(innerWidth,innerHeight);});
+sc.add(new THREE.HemisphereLight(0x4a4668,0x1a1208,.4));sc.add(new THREE.AmbientLight(0x2a2436,.5));
+const loader=new GLTFLoader();const TL=new THREE.TextureLoader();
+const ldSet=(p,t)=>{$('#ldi').style.width=p+'%';if(t)$('#ldt').textContent=t;};
+const mat=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.95,metalness:0},o));
+/* ---------- ถ้ำ ---------- */
+{const t=TL.load('../city3d/tx-dirt.webp');t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(18,18);t.colorSpace=THREE.SRGBColorSpace;const fl=new THREE.Mesh(new THREE.PlaneGeometry(90,90),new THREE.MeshStandardMaterial({map:t,color:0x6a5240,roughness:1}));fl.rotation.x=-Math.PI/2;fl.receiveShadow=true;sc.add(fl);}
+let sd=3;const rn=()=>(sd=(sd*16807)%2147483647)/2147483647;
+const rockM=mat(0x3b3439,{flatShading:true}),rockM2=mat(0x4a3f44,{flatShading:true});
+/* ผนังก้อนหินรอบโพรง (ศูนย์กลาง 0,-8 รัศมี ~30) + หินย้อยเพดาน */
+for(let i=0;i<46;i++){const a=i/46*Math.PI*2+rn()*.1,r=29+rn()*4;const s=3+rn()*3.5;const m=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),rn()<.5?rockM:rockM2);m.position.set(Math.cos(a)*r,s*.5-rn()*.8,-8+Math.sin(a)*r*.85);m.rotation.set(rn()*3,rn()*3,rn()*3);m.castShadow=true;sc.add(m);if(rn()<.6){const m2=new THREE.Mesh(new THREE.DodecahedronGeometry(s*.7,0),rockM);m2.position.set(Math.cos(a)*(r-1.5),s*1.1,-8+Math.sin(a)*(r-1.5)*.85);m2.rotation.set(rn()*3,rn()*3,0);sc.add(m2);}}
+for(let i=0;i<28;i++){const x=-26+rn()*52,z=-34+rn()*52;if(Math.hypot(x,z+8)<9&&rn()<.7)continue;const h=1.5+rn()*3;const c=new THREE.Mesh(new THREE.ConeGeometry(.35+rn()*.5,h,6),rockM2);c.position.set(x,9-h/2,z);c.rotation.x=Math.PI;sc.add(c);}
+/* ---------- โมเดล ---------- */
+const MC={};const mdl=name=>MC[name]||(MC[name]=new Promise(ok=>loader.load('../city3d/m/'+name+'.glb',g=>{const m=g.scene;m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.metalness=0;}}});m.updateMatrixWorld(true);ok(m);},undefined,()=>ok(null))));
+async function place(name,x,y,z,h,ry){const src=await mdl(name);if(!src)return null;const m=src.clone();const bb=new THREE.Box3().setFromObject(m);const sz=bb.getSize(new THREE.Vector3());const k=h/(sz.y||1);m.scale.setScalar(k);const b2=new THREE.Box3().setFromObject(m);m.position.set(x-(b2.min.x+b2.max.x)/2,y-b2.min.y,z-(b2.min.z+b2.max.z)/2);m.rotation.y=ry||0;sc.add(m);return m;}
+/* ทางเข้า + ราง + โคม */
+const RAIL_Z0=-32,RAIL_Z1=-6;
+async function buildPath(){await place('mine-elevator',0,0,-35.5,5.2,0);
+ const rail=await mdl('mine-rail-1m');if(rail){const bb=new THREE.Box3().setFromObject(rail);const sz=bb.getSize(new THREE.Vector3());const L=1.3,k=L/(sz.z||1);const parts=[];rail.traverse(o=>{if(o.isMesh)parts.push(o);});const n=Math.ceil((RAIL_Z1-RAIL_Z0)/L)+1;const O=new THREE.Matrix4().makeTranslation(-(bb.min.x+bb.max.x)/2,-bb.min.y,-(bb.min.z+bb.max.z)/2);const S=new THREE.Matrix4().makeScale(k,k,k);for(const p of parts){const im=new THREE.InstancedMesh(p.geometry,p.material,n);im.receiveShadow=true;const M=new THREE.Matrix4(),T=new THREE.Matrix4();for(let i=0;i<n;i++){T.makeTranslation(0,.01,RAIL_Z0+i*L);M.copy(T).multiply(S).multiply(O).multiply(p.matrixWorld);im.setMatrixAt(i,M);}im.instanceMatrix.needsUpdate=true;sc.add(im);}}
+ for(const [x,z] of [[-2.6,-26],[2.6,-19],[-2.6,-12],[2.6,-5],[-9,2],[9,2],[-14,-14],[14,-14]]){const m=await place('mine-lantern',x,0,z,.9,rn()*6);if(m){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.6,6),mat(0x3a2a20));pole.position.set(x,.8,z);sc.add(pole);m.position.y+=1.5;const pl=new THREE.PointLight(0xffa64d,IS_MOB?1.1:1.4,8,2);pl.position.set(x,2.2,z);sc.add(pl);LAMPS.push({pl,ph:rn()*6});}}
+}
+const LAMPS=[];
+/* ---------- ตัวละคร ---------- */
+let me=null;function play(c,name,once){const clip=c.clips[name]||c.clips.idle;if(!clip)return;if(c.actName===name)return;const a=c.mx.clipAction(clip);if(c.act)c.act.fadeOut(.2);a.reset().setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,Infinity).fadeIn(.2).play();if(once)a.clampWhenFinished=true;c.act=a;c.actName=name;}
+async function makeMe(){const CH=await loadCharacter({THREE,loader,base:'../ch/',wear:Q.get('wear')||'punk'});const body=CH.body;body.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const bb=new THREE.Box3().setFromObject(body);const k=1.75/(bb.max.y-bb.min.y);body.scale.setScalar(k);body.position.y=-bb.min.y*k;const g=new THREE.Group();g.add(body);const mx=new THREE.AnimationMixer(body);me={g,body,mx,clips:CH.clips,act:null,actName:'',tgt:null,speed:3.2,onArrive:null};
+ /* ตะเกียงในมือ: แสงอุ่นรอบตัว */const lamp=new THREE.PointLight(0xffb36b,IS_MOB?3.0:3.4,15,1.5);lamp.position.set(.35,1.25,.2);lamp.castShadow=false;g.add(lamp);me.lamp=lamp;const bulb=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),new THREE.MeshBasicMaterial({color:0xffe6a7}));bulb.position.copy(lamp.position);g.add(bulb);sc.add(g);play(me,'idle');return me;}
+/* ---------- รถราง ---------- */
+let tram=null,RIDE=null;
+async function rideIn(){tram=await place('mine-tram',0,0,RAIL_Z0+1,1.5,0);if(!tram)return;const bb=new THREE.Box3().setFromObject(tram);const c=bb.getCenter(new THREE.Vector3());tram.updateMatrixWorld(true);const seat=tram.worldToLocal(new THREE.Vector3(c.x,bb.min.y+(bb.max.y-bb.min.y)*.52,c.z-.1));me.g.position.copy(seat);me.g.rotation.y=0;me.g.scale.setScalar(1/tram.scale.x);tram.add(me.g);play(me,'sit');RIDE={t:0,dur:9,from:RAIL_Z0+1,to:RAIL_Z1-.5};$('#tip').textContent='🚃 รถรางกำลังพาลงไป… นั่งให้ดีนะ';}
+function rideTick(dt){if(!RIDE)return;RIDE.t+=dt;const k=Math.min(1,RIDE.t/RIDE.dur),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;tram.position.z=RIDE.from+(RIDE.to-RIDE.from)*e;tram.position.y=Math.sin(RIDE.t*9)*.015;tram.rotation.z=Math.sin(RIDE.t*7)*.01;
+ if(k>=1){RIDE=null;me.g.scale.setScalar(1);tram.remove(me.g);sc.add(me.g);me.g.position.set(1.8,0,tram.position.z+1.2);me.g.rotation.y=Math.PI/2;play(me,'idle');$('#tip').textContent='⛏️ แตะก้อนหินเพื่อขุด · แตะพื้นเพื่อเดิน';setTimeout(()=>{$('#tip').style.opacity=0;},5000);post({s:'ready'});}}
+/* ---------- หิน ---------- */
+const ROCKS=new Map();const ROCK_H={small:.9,medium:1.5,large:2.3};const ROCK_M={small:'mine-rock-1',medium:'mine-rock-2',large:'mine-rock-3'};
+async function setRocks(list,tool){for(const [id,r] of ROCKS){sc.remove(r.m);}ROCKS.clear();for(const r of list){const m=await place(ROCK_M[r.size],r.x,0,r.z,ROCK_H[r.size],r.ry||0);if(!m)continue;m.traverse(o=>{if(o.isMesh)o.userData.rock=r.id;});ROCKS.set(r.id,{m,r});
+ if(r.size==='large'){/* หินใหญ่เรืองแสงเบาๆ ให้เห็นในความมืด */const pl=new THREE.PointLight(0xb080ff,.9,6,2);pl.position.set(r.x,1.6,r.z);sc.add(pl);ROCKS.get(r.id).pl=pl;}}}
+window.__firstRock=()=>{const it=ROCKS.keys().next();if(it.done)return null;tryDig(it.value);return it.value;};Object.defineProperty(window,'__rocksN',{get:()=>ROCKS.size});
+let digging=null;
+function tryDig(id){const R=ROCKS.get(id);if(!R||digging||RIDE)return;const r=R.r;const dx=me.g.position.x-r.x,dz=me.g.position.z-r.z;const d=Math.hypot(dx,dz)||1;const stand=ROCK_H[r.size]*.9+.7;const tx=r.x+dx/d*stand,tz=r.z+dz/d*stand;
+ walkTo(tx,tz,()=>{me.g.rotation.y=Math.atan2(r.x-me.g.position.x,r.z-me.g.position.z);digging={id,t:0};play(me,'dig');});}
+function digTick(dt){if(!digging)return;digging.t+=dt;if(digging.t>1.5&&!digging.sent){digging.sent=true;post({s:'dig',rock:digging.id});}if(digging.t>4.5){/* เซิร์ฟเวอร์ไม่ตอบ */digging=null;play(me,'idle');}}
+function onDug(id,ok,fail){const R=ROCKS.get(id);if(digging&&digging.id===id){digging=null;play(me,'idle');}if(!R||fail)return;const p=R.m.position.clone();p.y+=ROCK_H[R.r.size]*.5;sc.remove(R.m);if(R.pl)sc.remove(R.pl);ROCKS.delete(id);burst(p,ok?0xd8c8b0:0x7a7070,ok);}
+const BITS=[];function burst(p,col,sparkle){const g=new THREE.DodecahedronGeometry(.18,0);for(let i=0;i<14;i++){const m=new THREE.Mesh(g,mat(col,{flatShading:true}));m.position.copy(p);m.userData.v=new THREE.Vector3((Math.random()-.5)*5,2+Math.random()*4,(Math.random()-.5)*5);m.userData.t=0;sc.add(m);BITS.push(m);}if(sparkle){const pl=new THREE.PointLight(0xffe6a7,3,8,2);pl.position.copy(p);pl.userData.t=0;sc.add(pl);BITS.push(pl);}}
+function bitsTick(dt){for(let i=BITS.length-1;i>=0;i--){const b=BITS[i];b.userData.t+=dt;if(b.isMesh){b.userData.v.y-=12*dt;b.position.addScaledVector(b.userData.v,dt);b.rotation.x+=dt*5;b.rotation.y+=dt*4;if(b.position.y<0)b.position.y=0;if(b.userData.t>1.6){sc.remove(b);BITS.splice(i,1);}}else{b.intensity=3*(1-b.userData.t/.8);if(b.userData.t>.8){sc.remove(b);BITS.splice(i,1);}}}}
+/* ---------- เดิน / แตะ ---------- */
+function walkTo(x,z,cb){x=Math.max(-24,Math.min(24,x));z=Math.max(-33,Math.min(16,z));me.tgt=new THREE.Vector3(x,0,z);me.onArrive=cb||null;ring(x,z);}
+function stepMe(dt){if(!me)return;me.mx.update(dt);if(me.tgt&&!RIDE){const d=me.tgt.clone().sub(me.g.position);d.y=0;const L=d.length();if(L<.08){me.g.position.copy(me.tgt);me.tgt=null;play(me,'idle');if(me.onArrive){const f=me.onArrive;me.onArrive=null;f();}}else{const st=Math.min(L,me.speed*dt);me.g.position.add(d.multiplyScalar(st/L));me.g.rotation.y=Math.atan2(d.x,d.z);play(me,'walk');}}}
+function ring(x,z){const r=new THREE.Mesh(new THREE.RingGeometry(.3,.5,24),new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.9}));r.rotation.x=-Math.PI/2;r.position.set(x,.05,z);sc.add(r);const t0=performance.now();const t=()=>{const k=(performance.now()-t0)/600;if(k>=1){sc.remove(r);return;}r.scale.setScalar(1+k*2);r.material.opacity=1-k;requestAnimationFrame(t);};t();}
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshBasicMaterial({visible:false}));ground.rotation.x=-Math.PI/2;sc.add(ground);
+let pd=null;rd.domElement.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,t:Date.now()};});rd.domElement.addEventListener('pointerup',e=>{if(!pd)return;const mv=Math.hypot(e.clientX-pd.x,e.clientY-pd.y);const ok=mv<12&&Date.now()-pd.t<600;pd=null;if(ok)tap(e.clientX,e.clientY);});
+function tap(cx,cy){if(!me||RIDE)return;ptr.set((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1);ray.setFromCamera(ptr,cam);const objs=[];for(const [,R] of ROCKS)R.m.traverse(o=>{if(o.isMesh)objs.push(o);});const h=ray.intersectObjects(objs,false);if(h.length){const id=h[0].object.userData.rock;if(id){tryDig(id);return;}}const g=ray.intersectObject(ground,false);if(g.length){if(digging)return;walkTo(g[0].point.x,g[0].point.z);}}
+/* ---------- กล้อง ---------- */
+const look=new THREE.Vector3();function camTick(dt){const T=RIDE?tram.position:me?me.g.position:look;const tx=T.x+(RIDE?5.5:0),ty=RIDE?6:7.2,tz=T.z+(RIDE?7:8.5);cam.position.x+=(tx-cam.position.x)*Math.min(1,dt*3);cam.position.y+=(ty-cam.position.y)*Math.min(1,dt*3);cam.position.z+=(tz-cam.position.z)*Math.min(1,dt*3);look.lerp(new THREE.Vector3(T.x,1,T.z-1.5),Math.min(1,dt*4));cam.lookAt(look);}
+/* ---------- วนเฟรม ---------- */
+const clock=new THREE.Clock();let last=0;
+function tick(){requestAnimationFrame(tick);const n=performance.now();if(IS_MOB&&n-last<31)return;last=n;const dt=Math.min(.05,clock.getDelta());const t=n/1000;
+ rideTick(dt);stepMe(dt);digTick(dt);bitsTick(dt);for(const L of LAMPS)L.pl.intensity=(IS_MOB?1.1:1.4)*(.9+Math.sin(t*7+L.ph)*.08+Math.sin(t*13+L.ph)*.04);if(me&&me.lamp)me.lamp.intensity=(IS_MOB?3.0:3.4)*(.93+Math.sin(t*9)*.05);camTick(dt);rd.render(sc,cam);}
+/* ---------- ข้อความจากหน้าแม่ ---------- */
+addEventListener('message',e=>{const m=e.data&&e.data.mine;if(!m)return;if(m.c==='rocks')setRocks(m.rocks||[],m.tool);else if(m.c==='dug')onDug(m.rock,!!m.ok,!!m.fail);else if(m.c==='exit'){$('#fade').style.opacity=1;}});
+/* ---------- เริ่ม ---------- */
+(async()=>{try{ldSet(10,'จุดตะเกียง');await buildPath();ldSet(55,'เรียกรถราง');await makeMe();ldSet(85,'ออกเดินทาง');cam.position.set(6,6,RAIL_Z0+9);look.set(0,1,RAIL_Z0);await rideIn();ldSet(100);$('#ld').classList.add('off');$('#fade').style.opacity=0;tick();}catch(e){console.log('mine',e&&e.message);$('#ldt').textContent='โหลดไม่สำเร็จ: '+(e&&e.message);post({s:'toast',msg:'เหมืองโหลดไม่สำเร็จ ลองใหม่'});}})();
+</script></body></html>
