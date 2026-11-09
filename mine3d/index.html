@@ -10,11 +10,11 @@
 import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,MOVES} from '../pv/s4char.js';
 const Q=new URLSearchParams(location.search);const IS_MOB=/iPhone|iPad|Android/i.test(navigator.userAgent);const $=s=>document.querySelector(s);
 const post=m=>{try{parent.postMessage({mine3d:m},'*');}catch(e){}};
-const sc=new THREE.Scene();sc.background=new THREE.Color(0x05060c);sc.fog=new THREE.Fog(0x05060c,9,36);
+const sc=new THREE.Scene();window.__mineScene=sc;sc.background=new THREE.Color(0x05060c);sc.fog=new THREE.Fog(0x05060c,9,36);
 const cam=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.3,120);
-const rd=new THREE.WebGLRenderer({antialias:!IS_MOB,powerPreference:'high-performance'});rd.setPixelRatio(IS_MOB?1:Math.min(devicePixelRatio,1.5));rd.setSize(innerWidth,innerHeight);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.25;document.body.appendChild(rd.domElement);
+const rd=new THREE.WebGLRenderer({antialias:!IS_MOB,powerPreference:'high-performance'});rd.setPixelRatio(IS_MOB?1:Math.min(devicePixelRatio,1.5));rd.setSize(innerWidth,innerHeight);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.55;document.body.appendChild(rd.domElement);
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();rd.setSize(innerWidth,innerHeight);});
-sc.add(new THREE.HemisphereLight(0x4a4668,0x1a1208,.4));sc.add(new THREE.AmbientLight(0x2a2436,.5));
+/* fix31: เหมืองสว่างขึ้น (ไอโฟนเห็นมืดสนิท) · ไฟจุดน้อยลงกันร้อน */sc.add(new THREE.HemisphereLight(0x7a74a8,0x4a3a28,1.1));sc.add(new THREE.AmbientLight(0x5a5070,1.0));const KEY=new THREE.DirectionalLight(0xffe2c0,.55);KEY.position.set(4,12,6);sc.add(KEY);
 const loader=new GLTFLoader();const TL=new THREE.TextureLoader();
 const ldSet=(p,t)=>{$('#ldi').style.width=p+'%';if(t)$('#ldt').textContent=t;};
 const mat=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.95,metalness:0},o));
@@ -32,13 +32,13 @@ async function place(name,x,y,z,h,ry){const src=await mdl(name);if(!src)return n
 const RAIL_Z0=-32,RAIL_Z1=-6;
 async function buildPath(){await place('mine-elevator',0,0,-35.5,5.2,0);
  const rail=await mdl('mine-rail-1m');if(rail){const bb=new THREE.Box3().setFromObject(rail);const sz=bb.getSize(new THREE.Vector3());const L=1.3,k=L/(sz.z||1);const parts=[];rail.traverse(o=>{if(o.isMesh)parts.push(o);});const n=Math.ceil((RAIL_Z1-RAIL_Z0)/L)+1;const O=new THREE.Matrix4().makeTranslation(-(bb.min.x+bb.max.x)/2,-bb.min.y,-(bb.min.z+bb.max.z)/2);const S=new THREE.Matrix4().makeScale(k,k,k);for(const p of parts){const im=new THREE.InstancedMesh(p.geometry,p.material,n);im.receiveShadow=true;const M=new THREE.Matrix4(),T=new THREE.Matrix4();for(let i=0;i<n;i++){T.makeTranslation(0,.01,RAIL_Z0+i*L);M.copy(T).multiply(S).multiply(O).multiply(p.matrixWorld);im.setMatrixAt(i,M);}im.instanceMatrix.needsUpdate=true;sc.add(im);}}
- for(const [x,z] of [[-2.6,-26],[2.6,-19],[-2.6,-12],[2.6,-5],[-9,2],[9,2],[-14,-14],[14,-14]]){const m=await place('mine-lantern',x,0,z,.9,rn()*6);if(m){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.6,6),mat(0x3a2a20));pole.position.set(x,.8,z);sc.add(pole);m.position.y+=1.5;const pl=new THREE.PointLight(0xffa64d,IS_MOB?1.1:1.4,8,2);pl.position.set(x,2.2,z);sc.add(pl);LAMPS.push({pl,ph:rn()*6});}}
+ for(const [x,z] of [[-2.6,-26],[2.6,-19],[-2.6,-12],[2.6,-5],[-9,2],[9,2],[-14,-14],[14,-14]]){const m=await place('mine-lantern',x,0,z,.9,rn()*6);if(m){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.6,6),mat(0x3a2a20));pole.position.set(x,.8,z);sc.add(pole);m.position.y+=1.5;const glow=new THREE.Mesh(new THREE.SphereGeometry(.13,8,6),new THREE.MeshBasicMaterial({color:0xffc98a}));glow.position.set(x,2.15,z);sc.add(glow);if(LAMPS.length<3){const pl=new THREE.PointLight(0xffa64d,2.2,14,1.6);pl.position.set(x,2.2,z);sc.add(pl);LAMPS.push({pl,ph:rn()*6});}}}
 }
 const LAMPS=[];
 /* ---------- ตัวละคร ---------- */
 let me=null;function play(c,name,once){const clip=c.clips[name]||c.clips.idle;if(!clip)return;if(c.actName===name)return;const a=c.mx.clipAction(clip);if(c.act)c.act.fadeOut(.2);a.reset().setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,Infinity).fadeIn(.2).play();if(once)a.clampWhenFinished=true;c.act=a;c.actName=name;}
-async function makeMe(){const CH=await loadCharacter({THREE,loader,base:'../ch/',wear:Q.get('wear')||'punk'});const body=CH.body;body.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const bb=new THREE.Box3().setFromObject(body);const k=1.75/(bb.max.y-bb.min.y);body.scale.setScalar(k);body.position.y=-bb.min.y*k;const g=new THREE.Group();g.add(body);const mx=new THREE.AnimationMixer(body);me={g,body,mx,clips:CH.clips,act:null,actName:'',tgt:null,speed:3.2,onArrive:null};
- /* ตะเกียงในมือ: แสงอุ่นรอบตัว */const lamp=new THREE.PointLight(0xffb36b,IS_MOB?3.0:3.4,15,1.5);lamp.position.set(.35,1.25,.2);lamp.castShadow=false;g.add(lamp);me.lamp=lamp;const bulb=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),new THREE.MeshBasicMaterial({color:0xffe6a7}));bulb.position.copy(lamp.position);g.add(bulb);sc.add(g);play(me,'idle');return me;}
+async function makeMe(){const CH=await loadCharacter({THREE,loader,base:'../ch/',wear:Q.get('wear')||undefined});const body=CH.body;body.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const bb=new THREE.Box3().setFromObject(body);const k=1.75/(bb.max.y-bb.min.y);body.scale.setScalar(k);body.position.y=-bb.min.y*k;const g=new THREE.Group();g.add(body);const mx=new THREE.AnimationMixer(body);me={g,body,mx,clips:CH.clips,act:null,actName:'',tgt:null,speed:3.2,onArrive:null};
+ /* ตะเกียงในมือ: แสงอุ่นรอบตัว */const lamp=new THREE.PointLight(0xffb36b,4.5,18,1.3);lamp.position.set(.35,1.25,.2);lamp.castShadow=false;g.add(lamp);me.lamp=lamp;const bulb=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),new THREE.MeshBasicMaterial({color:0xffe6a7}));bulb.position.copy(lamp.position);g.add(bulb);sc.add(g);play(me,'idle');return me;}
 /* ---------- รถราง ---------- */
 let tram=null,RIDE=null;
 async function rideIn(){tram=await place('mine-tram',0,0,RAIL_Z0+1,1.5,0);if(!tram)return;const bb=new THREE.Box3().setFromObject(tram);const c=bb.getCenter(new THREE.Vector3());tram.updateMatrixWorld(true);const seat=tram.worldToLocal(new THREE.Vector3(c.x,bb.min.y+(bb.max.y-bb.min.y)*.52,c.z-.1));me.g.position.copy(seat);me.g.rotation.y=0;me.g.scale.setScalar(1/tram.scale.x);tram.add(me.g);play(me,'sit');RIDE={t:0,dur:9,from:RAIL_Z0+1,to:RAIL_Z1-.5};$('#tip').textContent='🚃 รถรางกำลังพาลงไป… นั่งให้ดีนะ';}
@@ -47,7 +47,7 @@ function rideTick(dt){if(!RIDE)return;RIDE.t+=dt;const k=Math.min(1,RIDE.t/RIDE.
 /* ---------- หิน ---------- */
 const ROCKS=new Map();const ROCK_H={small:.9,medium:1.5,large:2.3};const ROCK_M={small:'mine-rock-1',medium:'mine-rock-2',large:'mine-rock-3'};
 async function setRocks(list,tool){for(const [id,r] of ROCKS){sc.remove(r.m);}ROCKS.clear();for(const r of list){const m=await place(ROCK_M[r.size],r.x,0,r.z,ROCK_H[r.size],r.ry||0);if(!m)continue;m.traverse(o=>{if(o.isMesh)o.userData.rock=r.id;});ROCKS.set(r.id,{m,r});
- if(r.size==='large'){/* หินใหญ่เรืองแสงเบาๆ ให้เห็นในความมืด */const pl=new THREE.PointLight(0xb080ff,.9,6,2);pl.position.set(r.x,1.6,r.z);sc.add(pl);ROCKS.get(r.id).pl=pl;}}}
+ if(r.size==='large'){/* fix31: หินใหญ่เรืองแสงด้วยวัสดุ ไม่ใช้ไฟจุด (กันร้อน) */const rk=ROCKS.get(r.id);rk&&rk.m&&rk.m.traverse&&rk.m.traverse(o=>{if(o.isMesh&&o.material){o.material=o.material.clone();o.material.emissive=new THREE.Color(0x5a3a9a);o.material.emissiveIntensity=.35;}});}}}
 window.__firstRock=()=>{const it=ROCKS.keys().next();if(it.done)return null;tryDig(it.value);return it.value;};Object.defineProperty(window,'__rocksN',{get:()=>ROCKS.size});
 let digging=null;
 function tryDig(id){const R=ROCKS.get(id);if(!R||digging||RIDE)return;const r=R.r;const dx=me.g.position.x-r.x,dz=me.g.position.z-r.z;const d=Math.hypot(dx,dz)||1;const stand=ROCK_H[r.size]*.9+.7;const tx=r.x+dx/d*stand,tz=r.z+dz/d*stand;
@@ -68,7 +68,7 @@ const look=new THREE.Vector3();function camTick(dt){const T=RIDE?tram.position:m
 /* ---------- วนเฟรม ---------- */
 const clock=new THREE.Clock();let last=0;
 function tick(){requestAnimationFrame(tick);const n=performance.now();if(IS_MOB&&n-last<31)return;last=n;const dt=Math.min(.05,clock.getDelta());const t=n/1000;
- rideTick(dt);stepMe(dt);digTick(dt);bitsTick(dt);for(const L of LAMPS)L.pl.intensity=(IS_MOB?1.1:1.4)*(.9+Math.sin(t*7+L.ph)*.08+Math.sin(t*13+L.ph)*.04);if(me&&me.lamp)me.lamp.intensity=(IS_MOB?3.0:3.4)*(.93+Math.sin(t*9)*.05);camTick(dt);rd.render(sc,cam);}
+ rideTick(dt);stepMe(dt);digTick(dt);bitsTick(dt);for(const L of LAMPS)L.pl.intensity=2.2*(.9+Math.sin(t*7+L.ph)*.08+Math.sin(t*13+L.ph)*.04);if(me&&me.lamp)me.lamp.intensity=4.5*(.93+Math.sin(t*9)*.05);camTick(dt);rd.render(sc,cam);}
 /* ---------- ข้อความจากหน้าแม่ ---------- */
 addEventListener('message',e=>{const m=e.data&&e.data.mine;if(!m)return;if(m.c==='rocks')setRocks(m.rocks||[],m.tool);else if(m.c==='dug')onDug(m.rock,!!m.ok,!!m.fail);else if(m.c==='exit'){$('#fade').style.opacity=1;}});
 /* ---------- เริ่ม ---------- */

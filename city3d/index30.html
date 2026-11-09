@@ -12,7 +12,7 @@
    คุยกับหน้าแม่ (scr-city.html) ด้วย postMessage: แม่→ {city:{c}} · ลูก→ {s4city:{s}} */
 import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {loadCharacter,parseGlb,fetchGlb,manClips,restOf,retargetClip,MOVES} from '../pv/s4char.js';
-import {MEN,MAN,BUILDINGS,BUILDING,RX,RZ,GATE,RIVER_Z,PAGEANT,MOODS,DATES} from '../city-public.js';import {installSquid} from '../pv/squid3d.js?h=8e46496e';/* fix30 */import {dayOf,fnv,manState as MS,isRaining} from '../city-time.js?h=c4c712d4';const STAGE_Z=RIVER_Z-16;/* เวทีประกวดลอยกลางแม่น้ำ ห่างศาลากลางพอให้กล้องถอย */
+import {MEN,MAN,BUILDINGS,BUILDING,RX,RZ,GATE,RIVER_Z,PAGEANT,MOODS,DATES} from '../city-public.js';import {installSquid} from '../pv/squid3d.js?h=65503261';/* fix30 */import {dayOf,fnv,manState as MS,isRaining} from '../city-time.js?h=c4c712d4';const STAGE_Z=RIVER_Z-16;/* เวทีประกวดลอยกลางแม่น้ำ ห่างศาลากลางพอให้กล้องถอย */
 const post=m=>{try{parent.postMessage({s4city:m},'*');}catch(e){}};const $=s=>document.querySelector(s);
 const Q=new URLSearchParams(location.search);const DRIVE=Q.get('drive');let ldp=0;const ld=(p,t)=>{ldp=p;$('#ldi').style.width=p+'%';$('#drvI').style.width=p+'%';if(t)$('#ldt').textContent=t;if(p>=100&&!DRIVE)setTimeout(()=>$('#ld').classList.add('off'),300);};if(DRIVE){$('#ld').classList.add('off');$('#drv').classList.add('on');$('#drvF').textContent=Q.get('fuel')||'';}
 /* ---------- ฉาก ---------- */

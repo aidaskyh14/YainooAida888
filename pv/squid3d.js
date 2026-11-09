@@ -15,9 +15,9 @@ export function installSquid(C){
   boatHead:0,                  /* หมุนหัวเรือเพิ่ม (เรเดียน) ถ้าโมเดลหันผิดทาง */
   rideSec:15,                  /* เวลาแล่น */
   camBackZ:8.5,camUp:7.5,camSideX:1.4,camLookZ:-9,camLookY:.4,fov:48,rodTilt:-.85,bowZ:2.3, /* กล้องตอนตก (เฉียงจากบน แบบ SoS) */
-  rideCamX:7.5,rideCamY:6.5,rideCamZ:8.5,
+  rideCamX:9,rideCamY:11,rideCamZ:-16,
   castDist:6.2,                /* ทุ่นห่างจากท่า */
- },(()=>{try{return JSON.parse(localStorage.getItem('sq3tune')||'{}');}catch(e){return {};}})());
+ },(()=>{try{const t=JSON.parse(localStorage.getItem('sq3tune')||'{}');/* fix31: มุมกล้องตอนแล่นใช้ค่าใหม่เสมอ (ค่าที่เคยจูนไว้ในเครื่องไม่ทับ) */delete t.rideCamX;delete t.rideCamY;delete t.rideCamZ;return t;}catch(e){return {};}})());
  window.__sq3tune=TUNE;
  const FAR=()=>({x:TUNE.farX,z:TUNE.farZ});
  const v3=(x,y,z)=>new THREE.Vector3(x,y,z);
@@ -72,6 +72,9 @@ export function installSquid(C){
  const wake=[];const wakeG=new THREE.RingGeometry(.4,.6,20).rotateX(-Math.PI/2);
  function wakeAt(x,z){const m=new THREE.Mesh(wakeG,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7,depthWrite:false}));m.position.set(x,.1,z);m.renderOrder=4;sc.add(m);wake.push({m,t:0});}
  const boat=()=>window.__sqBoat||null;
+ /* fix31: เงาปลาว่ายใต้น้ำระหว่างแล่น */const FISH=[];let fishOn=false;function showFish(B){if(!fishOn){fishOn=true;for(let i=0;i<7;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.1+Math.random()*.8,.55+Math.random()*.3),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false,opacity:.55}));m.rotation.x=-Math.PI/2;m.position.y=.06;m.renderOrder=3;m.userData={ox:(Math.random()-.5)*14,oz:(Math.random()-.5)*14,sp:.6+Math.random()*.9,ph:Math.random()*6,dir:Math.random()*6.3};sc.add(m);FISH.push(m);}}for(const f of FISH)f.visible=true;}
+ function fishTickRide(dt,B,t){if(!fishOn)return;for(const f of FISH){const u=f.userData;u.ox+=Math.sin(u.dir)*u.sp*dt;u.oz+=Math.cos(u.dir)*u.sp*dt;u.dir+=Math.sin(t*.7+u.ph)*dt*.6;if(Math.hypot(u.ox,u.oz)>11){u.dir+=Math.PI;u.ox*=.8;u.oz*=.8;}f.position.x=B.position.x+u.ox;f.position.z=B.position.z+u.oz;f.rotation.z=u.dir+Math.sin(t*5+u.ph)*.2;f.material.opacity=.35+.25*Math.sin(t*1.3+u.ph);}}
+ function hideFish(){for(const f of FISH)f.visible=false;}
  let SPL=null;function bowSplash(B){if(!SPL){try{const t=new THREE.TextureLoader().load('../city3d/fx-splash.png');t.colorSpace=THREE.SRGBColorSpace;SPL=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,opacity:.95}));SPL.scale.set(2.2,1.7,1);SPL.renderOrder=5;}catch(e){return;}}if(SPL.parent!==B){if(SPL.parent)SPL.parent.remove(SPL);B.add(SPL);}SPL.position.set(0,.35,TUNE.bowZ);SPL.visible=true;}
  function hideSplash(){if(SPL)SPL.visible=false;}
  let boatHome=null;
@@ -81,20 +84,20 @@ export function installSquid(C){
   buildPier();widenWater();if(!boatHome)boatHome={x:B.position.x,z:B.position.z,ry:B.rotation.y};
   const from=out?{x:boatHome.x,z:boatHome.z}:boatMoor(),to=out?boatMoor():{x:boatHome.x,z:boatHome.z};
   B.position.set(from.x,B.position.y,from.z);
-  /* ตัวเราขึ้นเรือ */me.tgt=null;me.onArrive=null;if(me.tag)me.tag.visible=false;sc.remove(me.g);B.add(me.g);me.g.position.set(0,TUNE.boatDeck,-.6);me.g.rotation.y=0;play(me,'idle');
+  /* fix31: ระหว่างแล่น ไม่มีคนบนเรือ (เรือเด่น) → ซ่อนตัวเรา */me.tgt=null;me.onArrive=null;if(me.tag)me.tag.visible=false;me.g.visible=false;play(me,'idle');
   if(!FS.saved)FS.saved={pos:out?me.g.position.clone():null,cm:getCamMode(),dist:VIEW.dist,yaw:getZYAW(),vx:VIEW.x,vz:VIEW.z};
   setCamMode('squid');setFollow(false);FS.mode='ride';FS.ride={from,to,t:0,out,res,B,me,wk:0};post({s:'sq',ev:out?'depart':'return'});});}
  function rideTick(dt){const R=FS.ride;if(!R)return;R.t+=dt;const k=Math.min(1,R.t/TUNE.rideSec),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;/* เร่ง-ชะลอ */
   const bx=R.from.x+(R.to.x-R.from.x)*e,bz=R.from.z+(R.to.z-R.from.z)*e;const B=R.B;
   const dx=R.to.x-R.from.x,dz=R.to.z-R.from.z;B.rotation.y=Math.atan2(dx,dz)+TUNE.boatHead;B.position.x=bx;B.position.z=bz;B.position.y=.2+Math.sin(R.t*2.1)*.06;B.rotation.z=Math.sin(R.t*1.7)*.03;B.rotation.x=Math.sin(R.t*2.6)*.02;
-  R.wk+=dt;const spd=Math.sin(k*Math.PI);if(R.wk>.16&&k>.03&&k<.97){R.wk=0;wakeAt(bx-Math.sin(B.rotation.y)*2.2,bz-Math.cos(B.rotation.y)*2.2);const sx=Math.cos(B.rotation.y),sz=-Math.sin(B.rotation.y);wakeAt(bx+Math.sin(B.rotation.y)*1.4+sx*1.1,bz+Math.cos(B.rotation.y)*1.4+sz*1.1);wakeAt(bx+Math.sin(B.rotation.y)*1.4-sx*1.1,bz+Math.cos(B.rotation.y)*1.4-sz*1.1);}if(spd>.15){bowSplash(B);if(SPL){const pz=Math.sin(R.t*9);SPL.scale.set(1.6+spd*1.2+pz*.15,1.2+spd*.9+pz*.12,1);SPL.material.opacity=.5+spd*.5;}}else hideSplash();
-  if(k>=1){const me=R.me;B.remove(me.g);sc.add(me.g);FS.ride=null;hideSplash();if(DECK.sign)DECK.sign.visible=!R.out;
+  R.wk+=dt;const spd=Math.sin(k*Math.PI);showFish(B);fishTickRide(dt,B,R.t);if(R.wk>.16&&k>.03&&k<.97){R.wk=0;wakeAt(bx-Math.sin(B.rotation.y)*2.2,bz-Math.cos(B.rotation.y)*2.2);const sx=Math.cos(B.rotation.y),sz=-Math.sin(B.rotation.y);wakeAt(bx+Math.sin(B.rotation.y)*1.4+sx*1.1,bz+Math.cos(B.rotation.y)*1.4+sz*1.1);wakeAt(bx+Math.sin(B.rotation.y)*1.4-sx*1.1,bz+Math.cos(B.rotation.y)*1.4-sz*1.1);}if(spd>.15){bowSplash(B);if(SPL){const pz=Math.sin(R.t*9);SPL.scale.set(1.6+spd*1.2+pz*.15,1.2+spd*.9+pz*.12,1);SPL.material.opacity=.5+spd*.5;}}else hideSplash();
+  if(k>=1){const me=R.me;me.g.visible=true;FS.ride=null;hideSplash();hideFish();if(DECK.sign)DECK.sign.visible=!R.out;
    if(R.out){FS.spot=mySpot();const S=spotPos(FS.spot);me.g.position.set(S.x,S.y,S.z);faceWater(me);FS.mode='fish';FS.state='idle';ensureRod().then(()=>setRodVisible(true));post({s:'sq',ev:'arrive',x:S.x,z:S.z});post({s:'move',x:S.x,z:S.z,tx:S.x,tz:S.z});}
    else{const sv=FS.saved;const P=sv&&sv.pos?sv.pos:{x:boatHome.x+3,z:boatHome.z+6};me.g.position.set(boatHome.x+3,0,RIVER_Z+2.5);me.g.rotation.y=0;if(me.tag)me.tag.visible=true;setRodVisible(false);FS.mode='off';FS.state='idle';setCamMode('follow');if(sv){VIEW.dist=sv.dist;setZYAW(sv.yaw);}VIEW.x=me.g.position.x;VIEW.z=me.g.position.z;setFollow(true);FS.saved=null;B.position.set(boatHome.x,.2,boatHome.z);B.rotation.set(0,boatHome.ry,0);post({s:'sq',ev:'left'});post({s:'move',x:me.g.position.x,z:me.g.position.z,tx:me.g.position.x,tz:me.g.position.z});}
    R.res(true);}}
  /* ---------- ตก ---------- */
- function cast(k){if(FS.mode!=='fish'||!ROD)return false;if(FS.state!=='idle')return false;const me=getMe();FS.k=k||'pink';FS.state='cast';FS.t=0;FS.wait=2.2+Math.random()*3.8;
-  const S={x:me.g.position.x,z:me.g.position.z};ROD.target.set(S.x+(Math.random()-.5)*1.6,0,S.z-TUNE.castDist-Math.random()*1.5);ROD.bob.visible=true;ROD.line.visible=true;
+ function cast(k,power){if(FS.mode!=='fish'||!ROD)return false;if(FS.state!=='idle')return false;const me=getMe();FS.k=k||'pink';FS.state='cast';FS.t=0;FS.wait=2.2+Math.random()*3.8;const pw=Math.max(0,Math.min(1,Number(power)));FS.pw=Number.isFinite(pw)?pw:.5;
+  const S={x:me.g.position.x,z:me.g.position.z};const dist=TUNE.castDist*(.55+.95*FS.pw);ROD.target.set(S.x+(Math.random()-.5)*1.2,0,S.z-dist-Math.random()*.8);ROD.bob.visible=true;ROD.line.visible=true;
   shadow.visible=false;shadow.material.opacity=0;post({s:'sq',ev:'cast'});return true;}
  /* ดึง: คืน {ok,late} · ok = กดภายในช่วงกัด */
  function pull(){if(FS.mode!=='fish')return {ok:false,early:true};if(FS.state==='bite'){const dtm=Date.now()-FS.biteAt;FS.state='reel';FS.t=0;bang.visible=false;return {ok:true,ms:dtm};}
@@ -123,7 +126,7 @@ export function installSquid(C){
  /* ---------- กล้อง ---------- */
  const camTarget=new THREE.Vector3();
  function camTick(dt){const me=getMe();if(!me)return false;
-  if(FS.mode==='ride'&&FS.ride){const B=FS.ride.B;const tx=B.position.x+TUNE.rideCamX,ty=TUNE.rideCamY,tz=B.position.z+TUNE.rideCamZ;cam.position.x+=(tx-cam.position.x)*Math.min(1,dt*2.5);cam.position.y+=(ty-cam.position.y)*Math.min(1,dt*2.5);cam.position.z+=(tz-cam.position.z)*Math.min(1,dt*2.5);camTarget.set(B.position.x,1.2,B.position.z-2.5);cam.lookAt(camTarget);if(Math.abs(cam.fov-46)>.1){cam.fov+=(46-cam.fov)*Math.min(1,dt*2);cam.updateProjectionMatrix();}return true;}
+  if(FS.mode==='ride'&&FS.ride){const B=FS.ride.B;const tx=B.position.x+TUNE.rideCamX,ty=TUNE.rideCamY,tz=B.position.z+TUNE.rideCamZ;cam.position.x+=(tx-cam.position.x)*Math.min(1,dt*2.5);cam.position.y+=(ty-cam.position.y)*Math.min(1,dt*2.5);cam.position.z+=(tz-cam.position.z)*Math.min(1,dt*2.5);camTarget.set(B.position.x,.8,B.position.z+1);cam.lookAt(camTarget);if(Math.abs(cam.fov-46)>.1){cam.fov+=(46-cam.fov)*Math.min(1,dt*2);cam.updateProjectionMatrix();}return true;}
   if(FS.mode==='fish'){const P=me.g.position;const tx=P.x+TUNE.camSideX,ty=P.y+TUNE.camUp,tz=P.z+TUNE.camBackZ;cam.position.x+=(tx-cam.position.x)*Math.min(1,dt*3);cam.position.y+=(ty-cam.position.y)*Math.min(1,dt*3);cam.position.z+=(tz-cam.position.z)*Math.min(1,dt*3);camTarget.set(P.x,P.y+TUNE.camLookY,P.z+TUNE.camLookZ);cam.lookAt(camTarget);if(Math.abs(cam.fov-TUNE.fov)>.1){cam.fov+=(TUNE.fov-cam.fov)*Math.min(1,dt*3);cam.updateProjectionMatrix();}return true;}
   return false;}
  /* ---------- วนทุกเฟรม ---------- */
@@ -138,5 +141,5 @@ export function installSquid(C){
  /* ---------- ปรับแต่งสดบนมือถือ (?sqtune=1): ปุ่ม +/− แล้วส่งตัวเลขให้ผม ---------- */
  if(Q.get('sqtune')==='1')try{const box=document.createElement('div');box.style.cssText='position:fixed;left:8px;top:40%;z-index:99999;background:rgba(0,0,0,.6);color:#fff;font:12px monospace;padding:6px;border-radius:8px;max-height:50vh;overflow:auto';const keys=['farZ','deckW','deckY','boatDeck','boatHead','bowZ','rodTilt','camBackZ','camUp','camLookZ','fov','castDist'];const step={farZ:1,deckW:1,deckY:.1,boatDeck:.1,boatHead:.26,bowZ:.2,rodTilt:.1,camBackZ:.5,camUp:.5,camLookZ:.5,fov:2,castDist:.5};const draw=()=>{box.innerHTML=keys.map(k=>'<div>'+k+' <b>'+(+TUNE[k]).toFixed(2)+'</b> <button data-k="'+k+'" data-d="-1">−</button><button data-k="'+k+'" data-d="1">+</button></div>').join('')+'<button id="sqtSave">บันทึก</button> <button id="sqtReset">ค่าเดิม</button>';};draw();document.body.appendChild(box);box.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='sqtSave'){localStorage.setItem('sq3tune',JSON.stringify(TUNE));alert('บันทึกแล้ว · ถ่ายภาพหน้านี้ส่งให้ผม:\n'+JSON.stringify(TUNE));return;}if(b.id==='sqtReset'){localStorage.removeItem('sq3tune');location.reload();return;}const k=b.dataset.k;TUNE[k]=+(TUNE[k]+step[k]*(+b.dataset.d)).toFixed(2);if(k==='farZ'||k==='deckY'){pier.position.z=TUNE.farZ;}draw();};}catch(e){}
  /* ทะเลและท่ากลางน้ำมีให้เห็นตั้งแต่เข้านคร */setTimeout(()=>{try{buildPier();widenWater();}catch(e){}},1500);
- const api={ride,cast,pull,result,tick,cam:camTick,state:()=>({mode:FS.mode,state:FS.state}),TUNE,buildPier,tapDeck,onDeck,deckY};window.__sq3=api;return api;
+ const api={ride,cast,pull,result,tick,cam:camTick,state:()=>({mode:FS.mode,state:FS.state}),TUNE,buildPier,tapDeck,onDeck,deckY,castTarget:()=>ROD&&ROD.target.clone()};window.__sq3=api;return api;
 }
