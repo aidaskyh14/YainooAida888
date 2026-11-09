@@ -7,7 +7,7 @@ export function installSquid(C){
  let Q=new URLSearchParams(location.search);try{if(!Q.get('sqtune')&&top&&top.location&&top.location.search)Q=new URLSearchParams(top.location.search);}catch(e){}
  /* ---------- ค่าปรับแต่ง ---------- */
  const TUNE=Object.assign({
-  farX:46,farZ:-108,            /* ท่ากลางน้ำ */
+  farX:58,farZ:-108,            /* ท่ากลางน้ำ */
   deckW:26,deckD:6.2,deckY:1.55, /* แท่นยืน */
   spots:6,                     /* ที่ยืน */
   boatDockX:40,boatDockZ:-61,  /* เรือจอดท่าริมเมือง */
@@ -27,7 +27,7 @@ export function installSquid(C){
  /* เดินบนท่า: แตะพื้นท่า (เฉพาะตอนว่าง) */const _ptr=new THREE.Vector2(),_ray=new THREE.Raycaster();
  function onDeck(x,z){const F=FAR();return Math.abs(x-F.x)<=TUNE.deckW/2-.6&&Math.abs(z-F.z)<=TUNE.deckD/2-.5;}
  function deckY(){return TUNE.deckY+.16;}
- function tapDeck(cx,cy){const me=getMe();if(!me||FS.mode!=='fish'||!DECK.top)return false;if(FS.state!=='idle')return false;_ptr.set((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1);_ray.setFromCamera(_ptr,cam);const h=_ray.intersectObject(DECK.top,false);if(!h.length)return false;const F=FAR();const x=Math.max(F.x-TUNE.deckW/2+.8,Math.min(F.x+TUNE.deckW/2-.8,h[0].point.x)),z=Math.max(F.z-TUNE.deckD/2+.6,Math.min(F.z+TUNE.deckD/2-.7,h[0].point.z));me.tgt=new THREE.Vector3(x,deckY(),z);me.onArrive=()=>faceWater(me);ripple(x,z,.5,0xfff0b0);post({s:'move',x:me.g.position.x,z:me.g.position.z,tx:x,tz:z});return true;}
+ function tapDeck(cx,cy){const me=getMe();if(!me||FS.mode!=='fish'||!DECK.top)return false;if(FS.state!=='idle')return false;_ptr.set((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1);_ray.setFromCamera(_ptr,cam);const h=_ray.intersectObject(DECK.top,false);if(!h.length)return false;const F=FAR();const x=Math.max(F.x-TUNE.deckW/2+.8,Math.min(F.x+TUNE.deckW/2-.8,h[0].point.x)),z=Math.max(F.z-TUNE.deckD/2+.6,Math.min(F.z+TUNE.deckD/2-.7,h[0].point.z));me.tgt=new THREE.Vector3(x,deckY(),z);me.path=null;me.pathTgt=null;me.onArrive=()=>faceWater(me);ripple(x,z,.5,0xfff0b0);post({s:'move',x:me.g.position.x,z:me.g.position.z,tx:x,tz:z});return true;}
  function buildPier(){if(pierBuilt)return;pierBuilt=true;const F=FAR();pier.position.set(F.x,0,F.z);
   const wood=mat(0xd9a066),dark=mat(0xa8743f);
   const top=new THREE.Mesh(new THREE.BoxGeometry(TUNE.deckW,.32,TUNE.deckD),wood);top.position.y=TUNE.deckY;top.castShadow=top.receiveShadow=true;pier.add(top);DECK.top=top;/* fix30 พื้นไม้กระดาน (ภาพจริง) */try{const pt=new THREE.TextureLoader().load('../city3d/tx-wood-plank.webp');pt.wrapS=pt.wrapT=THREE.RepeatWrapping;pt.repeat.set(TUNE.deckW/4.2,TUNE.deckD/4.2);pt.colorSpace=THREE.SRGBColorSpace;const pm=new THREE.Mesh(new THREE.PlaneGeometry(TUNE.deckW,TUNE.deckD),new THREE.MeshStandardMaterial({map:pt,roughness:.9}));pm.rotation.x=-Math.PI/2;pm.position.y=TUNE.deckY+.165;pm.receiveShadow=true;pier.add(pm);}catch(e){}
@@ -84,7 +84,7 @@ export function installSquid(C){
   buildPier();widenWater();if(!boatHome)boatHome={x:B.position.x,z:B.position.z,ry:B.rotation.y};
   const from=out?{x:boatHome.x,z:boatHome.z}:boatMoor(),to=out?boatMoor():{x:boatHome.x,z:boatHome.z};
   B.position.set(from.x,B.position.y,from.z);
-  /* fix31: ระหว่างแล่น ไม่มีคนบนเรือ (เรือเด่น) → ซ่อนตัวเรา */me.tgt=null;me.onArrive=null;if(me.tag)me.tag.visible=false;me.g.visible=false;play(me,'idle');
+  /* fix31: ระหว่างแล่น ไม่มีคนบนเรือ (เรือเด่น) → ซ่อนตัวเรา */me.tgt=null;me.path=null;me.pathTgt=null;me.onArrive=null;if(me.tag)me.tag.visible=false;me.g.visible=false;play(me,'idle');
   if(!FS.saved)FS.saved={pos:out?me.g.position.clone():null,cm:getCamMode(),dist:VIEW.dist,yaw:getZYAW(),vx:VIEW.x,vz:VIEW.z};
   setCamMode('squid');setFollow(false);FS.mode='ride';FS.ride={from,to,t:0,out,res,B,me,wk:0};post({s:'sq',ev:out?'depart':'return'});});}
  function rideTick(dt){const R=FS.ride;if(!R)return;R.t+=dt;const k=Math.min(1,R.t/TUNE.rideSec),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;/* เร่ง-ชะลอ */

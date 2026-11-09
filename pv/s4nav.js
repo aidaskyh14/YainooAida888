@@ -24,8 +24,7 @@
   ['minigames','🎮 มินิเกม','เหรียญกระทงทอง',G('minigames'),'place'],
   ['topspenders','🏆 Top Spenders','อันดับ · กาชาปอง',G('topspenders'),'place'],
   ['campaigns','🏅 แคมเปญ','รางวัล 10 ขั้น',G('campaigns'),'place'],
-  ['treewar','🏮 ศึกโคมลอย','7 บ้าน · 12 ขั้น',G('treewar'),'place'],
-  ['city','🏯 นครยัยหนู','เร็วๆ นี้',soon('นครยัยหนู'),'place',1]];
+  ['treewar','🏮 ศึกโคมลอย','7 บ้าน · 12 ขั้น',G('treewar'),'place']];/* fix32: นครเข้าได้จากรถเท่านั้น ไม่อยู่ในทางลัด */
  const css=document.createElement('style');css.textContent=`
 #places .s4g{margin:.55rem 0 .25rem;font-size:.72rem;font-weight:800;color:#9a7a68;letter-spacing:.02em}
 #places .s4r{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}

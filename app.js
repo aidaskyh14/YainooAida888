@@ -871,7 +871,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=ef19c65e'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=743bdcd7'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
