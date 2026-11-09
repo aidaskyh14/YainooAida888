@@ -106,11 +106,11 @@ function boardSheet(){sheet(`<h3>⚖️ บอร์ดน้ำหนัก</h3
 function setBoard(w,html){if(w.dataset.h===html)return;const old=w.querySelector('.blist'),top=old?old.scrollTop:0;w.dataset.h=html;w.innerHTML=html;const nw=w.querySelector('.blist');if(nw&&top)nw.scrollTop=top;}
 function updateLobby(){const w=$('bwrap');if(!w)return;
  if(S.tab==='today'){
-  if(!S.open){setBoard(w,`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00<br>บ่อปิดตามเวลาไทย</small></div>`);return}
+  const closedNote=!S.open?`<div class="closedbox">🌙 บ่อปิดอยู่<br><small>เปิด 11:00–17:00 และ 21:00–07:00 · บ่อปิดตามเวลาไทย · ดูคะแนนย้อนหลังได้</small></div>`:'';/* fix29: บอร์ดดูได้แม้บ่อปิด */
   const rows=boardRows();
   const html=rows.map(([n,v],i)=>`<div class="row ${i<5?'t5':''} ${n===Host.uid?'me':''}"><span class="rk">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><b>${esc(world?.board?.[n]?.name||ME)+(n===Host.uid?' (ฉัน)':'')}</b><span class="w">${f2(v)} lb</span></div>`).join('');
   const meI=rows.findIndex(([n])=>n===Host.uid),meW=meI>=0?rows[meI][1]:0;
-  setBoard(w,`<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 150,000–3,000,000 กุศล</div><div class="bnote" style="font-weight:800">🙋 ฉัน: อันดับ ${meI+1}/${rows.length} · ${f2(meW)} lb</div><div class="blist" id="blist" style="max-height:52vh">${html||'<div class="hint">ยังไม่มีใครตกปลาวันนี้</div>'}</div>`);
+  setBoard(w,`${closedNote}<div class="bnote">น้ำหนักรวมวันนี้ · ทุกบ่อรวมกัน · รีเซ็ตเที่ยงคืน · ท็อป 5 รับ 150,000–3,000,000 กุศล</div><div class="bnote" style="font-weight:800">🙋 ฉัน: อันดับ ${meI+1}/${rows.length} · ${f2(meW)} lb</div><div class="blist" id="blist" style="max-height:52vh">${html||'<div class="hint">ยังไม่มีใครตกปลาวันนี้</div>'}</div>`);
  }else{
   const html=[...S.hist].reverse().map(d=>`<div class="day"><h4>📅 ${esc(d.d)}</h4>${d.top.map((p,i)=>`<div class="r ${p.name===ME?'me':''}"><span>${['🥇','🥈','🥉','4','5'][i]}</span><b>${esc(p.name)}</b><span>${f2(p.w)} lb</span>${p.st>1?`<span class="s">🔥${p.st} วัน</span>`:''}<span class="m">+${nf(p.rw)}</span>${p.name===ME?(S.gifts.some(g=>g.d===d.d)?'<span class="m">🎁</span>':'<span class="m">✅</span>'):''}</div>`).join('')}</div>`).join('');
   setBoard(w,`<div class="bnote">🥇 3,000,000 · 🥈 1,000,000 · 🥉 500,000 · 4️⃣ 300,000 · 5️⃣ 150,000 · ติดต่อกันบวกวันละ 10,000 · ดูย้อนหลัง 5 วัน<br>รางวัลส่งเป็นของขวัญ 🎁 ให้เองทุกเที่ยงคืน · รับรางวัลที่ไปรษณีย์</div><div class="blist" style="max-height:52vh">${html}</div>`)}}

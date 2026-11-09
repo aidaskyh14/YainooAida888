@@ -12,6 +12,7 @@ function css(){if(document.getElementById('s4wdCss'))return;const st=document.cr
 #s4wd .veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,240,250,.1),rgba(60,30,60,.35));pointer-events:auto}
 #s4wd .dr{position:absolute;left:0;right:0;bottom:0;max-height:54%;background:linear-gradient(#fff6f9,#fde9f1);border-top:6px solid #e3a352;border-radius:22px 22px 0 0;display:flex;flex-direction:column;transform:translateY(105%);transition:transform .45s cubic-bezier(.2,.9,.25,1.05);pointer-events:auto;box-shadow:0 -10px 30px rgba(74,35,51,.25)}
 #s4wd.on .dr{transform:none}
+#s4wd:not(.on){visibility:hidden;transition:visibility 0s .45s}#s4wd:not(.on) .veil,#s4wd:not(.on) .dr{pointer-events:none}#s4wd .veil{opacity:0;transition:opacity .3s}#s4wd.on .veil{opacity:1}/* fix29: ปิดตู้แล้วม่านต้องปล่อยนิ้ว (เดิมค้างทับจอ → เดิน/กดไม่ได้) */
 #s4wd .hd{display:flex;align-items:center;gap:8px;padding:10px 14px 4px}
 #s4wd .hd b{font-size:15px}#s4wd .hd .tr{margin-left:auto;font-size:12px;font-weight:700;color:#8a5a6c}
 #s4wd .hd .x{width:32px;height:32px;border-radius:50%;border:2.5px solid #4a2333;background:#fffaf6;font:800 14px Mali,sans-serif;box-shadow:0 2px 0 #4a2333;padding:0}
@@ -54,7 +55,7 @@ export function openWardrobe(){css();const info=charInfo();state={tribe:info.tri
   EL.querySelector('.veil').onclick=()=>closeWardrobe();
   EL.addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(a){if(a.dataset.a==='x')closeWardrobe();else if(a.dataset.a==='wear')wearNow(state.pv||state.wear);else if(a.dataset.a==='sell')sellDup(state.pv||state.wear);return;}
    const c=e.target.closest('.card');if(!c)return;const id=c.dataset.id;const own=(Number(state.bag[id])||0)>0;state.pv=id;render();if(own){if(window.__s4wear)window.__s4wear(id);}else tip('🔒 '+OUTFITS[id].n+' · '+(OUTFITS[id].cls==='c4'?'ได้จากยัยหนูส่งเท่านั้น':'ลุ้นจากกล่องสุ่มเสื้อผ้า'));});}
- render();EL.classList.add('on');try{document.body.classList.add('s4wardrobe');}catch(e){}
+ render();EL.classList.add('on');EL.style.pointerEvents='';/* fix29 */try{document.body.classList.add('s4wardrobe');}catch(e){}
  /* ซิงก์กับเซิร์ฟเวอร์เบื้องหลัง (กันของในเซฟยังไม่อัปเดต) */try{const H=host();if(H&&H.cloud)H.cloud('char',{type:'status'}).then(out=>{const v=out&&out.view;if(!v||!EL)return;if(v.tribe){state.tribe=v.tribe;state.wear=v.wear;state.bag=v.outfits||{};state.admin=!!v.admin;rememberChar({tribe:v.tribe,wear:v.wear});render();}}).catch(()=>{});}catch(e){}}
-export function closeWardrobe(){if(!EL)return;EL.classList.remove('on');document.body.classList.remove('s4wardrobe');try{window.__room&&window.__room.zoomTo(1);}catch(e){}if(state.pv&&state.pv!==state.wear&&window.__s4wear)window.__s4wear(state.wear);state.pv=null;}
+export function closeWardrobe(){if(!EL)return;EL.classList.remove('on');EL.style.pointerEvents='none';/* fix29 */document.body.classList.remove('s4wardrobe');try{window.__room&&window.__room.zoomTo(1);}catch(e){}if(state.pv&&state.pv!==state.wear&&window.__s4wear)window.__s4wear(state.wear);state.pv=null;}
 export const wardrobeOpen=()=>!!(EL&&EL.classList.contains('on'));

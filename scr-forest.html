@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="pv/s4ls.js?h=de36d53e"></script><script src="pv/s4icon.js?h=37261d11"></script><script src="craft-result.js?v=ss3-fix15&h=e654a3c6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
+<!DOCTYPE html><html lang="th"><head><script src="pv/s4ls.js?h=bacffdc6"></script><script src="pv/s4icon.js?h=37261d11"></script><script src="craft-result.js?v=ss3-fix15&h=e654a3c6"></script><script>/* เชื่อมกับเซฟบนคลาวด์ (ไม่เก็บอะไรในเครื่อง) */
 const __H=parent.__HOST;const __LS=(typeof window!=='undefined'&&window.__S4LS)||{getItem:k=>__H?__H.get(k):null,setItem:(k,v)=>{if(__H){__H.set(k,String(v));if(__H.admin){const fresh=JSON.parse(__H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh)}}},removeItem:k=>{if(__H)__H.del(k)}};/* fallback = สะพาน S3 เดิม (ชุดทดสอบหลังบ้านรันใน vm ไม่มี window) *//* S4: เซฟแบบรวม ไม่ทับกันระหว่างหน้า (pv/s4ls.js) */
 </script><style>.demo{display:none!important}#mUnlock{display:none!important}</style><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ทดลองป่าต้องห้าม – ในสวนของยัยหนู</title><link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
 :root{--cocoa:#6E4B3A;--soft:#9A7A68;--aqua:#5BB6D4;--mint:#BDEBDD;--pig:#F6A9BD;--cream:#FFFBF5;--moss:#6CC9A8;--gold:#F2B33D;--night:#28345E}
@@ -323,7 +323,7 @@ new MutationObserver(()=>{if(self)return;cur='';render()}).observe(fan,{childLis
 render();
 })();
 </script><script>/* S4HOSTONLY: ซีซัน 4 ใช้หน้าป่าเดิมเป็นเบื้องหลัง (ตู้เย็นในครัว = เครื่องดื่มป่า · โต๊ะช่าง = เชือก/เหล็ก) · ป่าต้องห้ามตัดออกแล้ว เปิดได้ตลอด */
-if(/s4host/.test(location.search)){document.write('<script src="pv/s4view.js?h=9b080ebd"><\/script>');
+if(/s4host/.test(location.search)){document.write('<script src="pv/s4view.js?h=74884b5d"><\/script>');
  try{isOpen=function(){return true};}catch(e){}
  window.__s4reload=()=>{try{S=loadAll();}catch(e){}};window.__s4h={drinks:()=>{__s4reload();openDrinks();},craftDrink:()=>{__s4reload();openCraft('drink');},tools:()=>{__s4reload();openCraft('tool');}};
  const busy=()=>!!document.querySelector('.sheet.on,.shade.on,.s4ov.on,#craftReceipt')||[...document.querySelectorAll('.s4ov')].filter(el=>/sheet|modal|pop|dialog|dlg|panel|book|card|receipt|result/i.test((el.id||'')+' '+el.className)).some(el=>{const cs=getComputedStyle(el);if(cs.display==='none'||+cs.opacity<.05||cs.visibility==='hidden')return false;const r=el.getBoundingClientRect();return r.bottom>10&&r.top<innerHeight-10&&r.width>40&&r.height>40&&!!el.querySelector('button,input,.opt,.cell,.card,.tcard,.rc,[data-k],[data-r],[data-w],[data-i]');});

@@ -1,5 +1,5 @@
 /* fix14 เนเบอร์ฮูด — หน้าเกม (หน้าตาตามที่อนุมัติ) · ทุกอย่างที่เปลี่ยนข้อมูลทำบนเซิร์ฟเวอร์ (Host.cloud('nb',…)) */
-import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone,nbEmb} from './nb-engine.js?v=ss3-fix21&h=ab4dad61';
+import {NB_QUESTS,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,nbBasket,costLeft,costDone,nbEmb} from './nb-engine.js?v=ss3-fix21&h=99f92a56';
 const H=parent.__HOST;if(!H)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');
 const $=id=>document.getElementById(id),fmt=n=>Math.round(Number(n)||0).toLocaleString('en-US');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -149,7 +149,7 @@ document.addEventListener('click',e=>{
  if(e.target.closest('[data-pclose]'))$('pop').classList.remove('on');
 });
 fit();render();act({type:'status'});
-/* fix15: คำเชิญมาถึงทันทีแม้เปิดหน้าชุมชนค้างอยู่ */try{if(H.watchNbInv)H.watchNbInv(d=>{try{const list=((d&&d.list)||[]).filter(x=>x&&x.nb);const was=V.invites.length;V.invites=list;render();if(list.length>was)toast('nb-invite','💌 มีคำเชิญเข้าเนเบอร์ฮูดใหม่');}catch(e){}});}catch(e){}
+/* fix15: คำเชิญมาถึงทันทีแม้เปิดหน้าชุมชนค้างอยู่ */try{if(H.watchNbInv)H.watchNbInv(d=>{try{const list=((d&&d.list)||[]).filter(x=>x&&x.nb);const was=V.invites.length;V.invites=list;render();if(list.length>was){toast('nb-invite','💌 มีคำเชิญเข้าเนเบอร์ฮูดใหม่');/* fix29: ยังไม่มีบ้าน → เปิดหน้าคำเชิญให้เลย */try{if(!V.nb&&!document.querySelector('.sheet.on,#sheet.on'))openInvites();}catch(e){}}}catch(e){}});}catch(e){}
 setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true);},60000);
 /* fix19 🌳 ศึกโคมลอย: การ์ดแถบเดียว (แตะไปหน้าศึก) */
 (()=>{if(!H.watchWorld)return;const bar=document.createElement('button');bar.type='button';bar.id='twBar';bar.hidden=true;
@@ -163,8 +163,9 @@ setInterval(()=>{if(!document.hidden&&!busy&&!H.watchNb)act({type:'status'},true
 
 /* ซีซัน 4: ส่งสถานะเนเบอร์ฮูดให้ฉาก 3D (อ่านอย่างเดียว · กติกาเดิมทั้งหมด) */
 window.__nbS=()=>{const nb=V.nb;let q=null;try{if(nb&&nb.status==='active'){const p=prog();q=[p.done,p.rows.length];}}catch(e){}
- return{nb:1,status:nb?(nb.status||'active'):'none',name:nb?.name||'',members:(nb?.members||[]).map(u=>({u,n:nameOf(u),me:u===ME,lead:u===nb.leader})),max:NB_MAX,q,
+ return{nb:1,inv:(V.invites||[]).length,/* fix29: จำนวนคำเชิญให้ฉาก 3D */status:nb?(nb.status||'active'):'none',name:nb?.name||'',members:(nb?.members||[]).map(u=>({u,n:nameOf(u),me:u===ME,lead:u===nb.leader})),max:NB_MAX,q,
   /* S4 ข้อ 105/108/109: ธีม · ของแต่ง/แบบบ้านของทุกคน · เลเวลบ้าน+งานอัปเกรด จากเอกสารชุมชน */theme:nb?.theme||null,deco:nb?.deco||{},houses:nb?.houses||{},trees:nb?.trees||null,leader:nb?nb.leader===ME:false,now:Date.now()+off};};
 window.__nbAct=input=>act(input,false);
-window.__nbOpen=k=>{try{if(k==='invite'){if(typeof openInvitePicker==='function')openInvitePicker();return;}openSheet(k);}catch(e){console.log(e);}};
+window.__nbOpen=k=>{try{if(k==='invite'){if(typeof openInvitePicker==='function')openInvitePicker();return;}if(k==='invites')return openInvites();if(k==='create')return openCreate();openSheet(k);}catch(e){console.log(e);}};
+/* fix29: ปุ่มในฉาก 3D (s4view data-acts) เรียกผ่าน global eval แต่ไฟล์นี้เป็นโมดูล → ต้องประกาศให้เห็นจากข้างนอก ไม่งั้นกดแล้วเงียบ (ReferenceError) */window.openInvites=openInvites;window.openCreate=openCreate;
 window.__nbGift=u=>{try{openGift(u);}catch(e){}};

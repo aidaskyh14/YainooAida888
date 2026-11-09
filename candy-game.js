@@ -1,5 +1,5 @@
 /* โรงงานขนมไทย — หน้าเกมเต็มจอ (เปิดใน iframe จากหน้ามินิเกม) · กติกา/คะแนนอยู่ใน candy-engine.js (ใช้ร่วมกับเซิร์ฟเวอร์) */
-import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix15&h=31f3aa4b';
+import {CANDY,candyScore,candyStreams,candySpawnGap} from './candy-engine.js?v=ss3-fix15&h=cb33d34d';
 import {mgFrame} from './mg-frame.js?v=ss3-fix15&h=c21dcdbe';
 (()=>{
 const IMG={};['belt','bg','bluecandy','bomb','boss','box','cane','caramel','cat','catgrab','cauldron','choco','clock','corn','cupcake','eyeball','ghost','ghostcandy','gold','heart','jelly','lolli','lose','mold','poster','pumpkinchoco','redeye','skull','spider','ticket','win','worm','zhand','zombiegummy'].forEach(k=>IMG[k]=(window.MGT?MGT.img('images/cf-'+k+'.webp'):'images/cf-'+k+'.webp'));

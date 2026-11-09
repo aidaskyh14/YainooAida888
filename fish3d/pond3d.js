@@ -35,7 +35,7 @@ async function loadJ(name){/* S4: ตัวละครโหลดจากไ�
   dv.setUint32(20+jl,bl,true);dv.setUint32(24+jl,0x004E4942,true);out.set(bin,28+jl);
   return new Promise((res,rej)=>LD.parse(out.buffer,new URL('./m/',location.href).href,res,rej));}
 let need=0,got=0;
-function get(n){if(!cache[n]){need++;cache[n]=loadJ(n).then(g=>{got++;prog();g.scene.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh){o.castShadow=true;o.receiveShadow=true;const m=o.material;if(m&&m.isMeshStandardMaterial)o.material=new THREE.MeshLambertMaterial({map:m.map,color:m.color,transparent:m.transparent,alphaTest:m.alphaTest,side:m.side});}});return g;});}else if(!cache[n].done){}return cache[n];}
+function get(n){if(!cache[n]){need++;cache[n]=loadJ(n).catch(e=>{delete cache[n];throw e;}).then(g=>{/* fix29: โหลดพลาดแล้วลองใหม่ได้ */got++;prog();g.scene.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh){o.castShadow=true;o.receiveShadow=true;const m=o.material;if(m&&m.isMeshStandardMaterial)o.material=new THREE.MeshLambertMaterial({map:m.map,color:m.color,transparent:m.transparent,alphaTest:m.alphaTest,side:m.side});}});return g;});}else if(!cache[n].done){}return cache[n];}
 function prog(){const b=$('p3bar');if(b)b.style.width=Math.round(got/Math.max(1,need)*100)+'%';}
 function fit(src,{h,w,sy=1}){const o=src.clone(true);const b=new THREE.Box3().setFromObject(o),s=b.getSize(new THREE.Vector3());const k=h?h/s.y:w/Math.max(s.x,s.z);o.scale.set(k,k*sy,k);
   const b2=new THREE.Box3().setFromObject(o),c=b2.getCenter(new THREE.Vector3());o.position.set(-c.x,-b2.min.y,-c.z);const g=new THREE.Group();g.add(o);return g;}

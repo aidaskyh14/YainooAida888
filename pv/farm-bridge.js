@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=782c9757';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=8a9368d3';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);
@@ -19,7 +19,7 @@
  setInterval(()=>{if(!document.hidden)followFarm();},300);
  const useFarm=n=>{if(farm!==n){farm=n;try{render();}catch(e){}}lastFarm=n;};
  window.__S4B={
-  ready(){sync();lastFarm=0;followFarm();},
+  ready(){sync();lastFarm=farm;followFarm();/* fix29: เริ่มที่หน้าประตูบ้าน ไม่วาร์ปไปแปลงผัก (ปัดเปลี่ยนฟาร์มยังวาร์ปตามเดิม) */try{const w=W3();if(!visiting&&w&&w.__s4walkHome)w.__s4walkHome();}catch(e){}},
   plot(n,i){if(visiting){if(farm!==n){farm=n;}const ff=window.__ffc&&window.__ffc[n];if(ff&&window.friendFarm){window.friendFarm.plots=ff;FRIEND_PLOTS.length=0;ff.forEach(p=>FRIEND_PLOTS.push(!p?'empty':p.magicUntil>Date.now()?'magic':p.angel?'angel':p.ph==='g1'||p.ph==='g2'?'grow':p.ph));}try{friendPlot(i);}catch(e){console.error(e);}return;}if(n===2&&!(S.unl||{}).f2){useFarm(1);showUnlock&&showUnlock('f2');return;}useFarm(n);try{tapPlot(i);}catch(e){console.error(e);toast(e.message,1);}setTimeout(sync,60);},
   fruit(i){if(visiting){toast('🍑 ดูได้อย่างเดียว เด็ดไม่ได้นะ');return;}if(!(S.unl||{}).f4){showUnlock&&showUnlock('f4');return;}useFarm(4);const F4=window.__F4;if(!F4)return;const p=S.fruit.plots[i];try{p?F4.tapTree(i):F4.openPlant(i);}catch(e){console.error(e);}setTimeout(sync,60);},
   go(g,opt){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}/* ส่วน ⑤: แตะรถคันไหนในฟาร์ม = ขับคันนั้นเข้านคร */try{window.__S4PICKCAR=opt&&opt.car||null;/* เก็บตก: ต้องส่งถึงหน้าแม่ (app.js อ่านจาก window ของหน้าแม่) */(window.top||parent).__S4PICKCAR=opt&&opt.car||null;}catch(e){}goScreen(g);},
@@ -54,7 +54,7 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
  const xMake=n=>{if(XH[n])return XH[n];const el=document.createElement('iframe');el.id='s3'+n;el.src=XSRC[n];el.style.cssText=hf.style.cssText;el.style.visibility='hidden';el.style.pointerEvents='none';el.setAttribute('allowtransparency','true');document.body.appendChild(el);
   const H={el,on:false,at:0,w:()=>{try{return el.contentWindow;}catch(e){return null;}}};XH[n]=H;
   setInterval(()=>{const w=H.w();if(!w||!w.__s4busy)return;let b=false;try{b=w.__s4busy();}catch(e){}if(b){if(!H.on){H.on=true;hostOn=true;el.style.visibility='visible';el.style.pointerEvents='auto';}}else if(H.on){if(Date.now()-H.at<900)return;H.on=false;hostOn=false;el.style.visibility='hidden';el.style.pointerEvents='none';}},200);return H;};
- const xact=(k,i,n=0)=>{const H=xMake(XK[k]);H.at=Date.now();const w=H.w();if(!w||!w.__s4h||!w.__s4h[k]){if(n<40){setTimeout(()=>xact(k,i,n+1),250);if(n===0)toast('⏳ กำลังเปิด…');}return;}H.el.style.visibility='visible';try{w.__s4h[k](i);}catch(err){console.error(err);}};
+ const xact=(k,i,n=0)=>{const H=xMake(XK[k]);H.at=Date.now();const w=H.w();if(!w||!w.__s4h||!w.__s4h[k]){if(n<40){setTimeout(()=>xact(k,i,n+1),250);if(n===0)toast('⏳ กำลังเปิด…');}return;}H.el.style.visibility='visible';try{if(w.__s4reload)w.__s4reload();}catch(e){}/* fix29: อ่านค่าล่าสุดก่อนทำรายการ */try{w.__s4h[k](i);}catch(err){console.error(err);}};
  window.__S4B.xstate=n=>{const H=XH[n];const w=H&&H.w();try{return w&&w.__s4h&&w.__s4h.state?w.__s4h.state():null;}catch(e){return null;}};
  window.__S4B.xwarm=n=>xMake(n);
  const hact=(k,i)=>{if(XK[k])return xact(k,i);hostAt=Date.now();const w=HW();if(!w||!w.__s4h||!w.__s4h[k]){toast('⏳ กำลังเตรียมบ้าน ลองอีกครั้งนะ');return;}hf.style.visibility='visible';try{w.__s4h[k](i);}catch(err){console.error(err);}};

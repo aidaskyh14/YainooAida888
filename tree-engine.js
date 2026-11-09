@@ -3,7 +3,7 @@
    · แต้มจากกิจกรรม 1–10 แต้มต่อครั้ง (ไม่จำกัดต่อคน) · ต้นไม้ 12 ขั้นตามแต้มสูงสุดของบ้านในรอบ (โดนขวานต้นไม่หด)
    · บ้านชนะ: ทุกคนเลือกแผ่นป้ายกุศลคว่ำ 1 ใบ · สุ่ม 1 คนเปิดการ์ดแกล้ง 1 ใบ (ปล้นเสบียง/ตัดบ้าน/ตัดทุกบ้าน/ตัด 4 คน) */
 import {FISH} from './fishing-catalog.js?h=92b72ca3';
-import {FOOD_RECIPES} from './food-craft-engine.js?h=325c2f52';
+import {FOOD_RECIPES} from './food-craft-engine.js?h=478bcc41';
 export const TW_TH=[0,150,400,750,1200,1800,2600,3600,4800,6200,7800,9600];
 export const TW_TREES=7,TW_PICK_OPEN=5*60000,TW_PICK_TIME=10*60000;
 export const TW_MERIT=[5e6,5e6,10e6,10e6,30e6,50e6];

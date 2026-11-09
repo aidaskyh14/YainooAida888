@@ -27,7 +27,7 @@
  const LS={
   getItem:k=>{const v=H?H.get(k):null;if(MERGE_KEYS.has(k)){try{base[k]=v?JSON.parse(v):null;}catch(e){base[k]=null;}}return v;},
   setItem:(k,v)=>{if(!H)return;let out=String(v);
-   if(MERGE_KEYS.has(k)){try{const neu=JSON.parse(out),liveS=H.get(k),live=liveS?JSON.parse(liveS):null;if(live&&base[k]){const m=merge(live,base[k],neu);out=JSON.stringify(m);base[k]=m;if(typeof S!=='undefined'&&isObj(S))Object.assign(S,m);}else base[k]=neu;}catch(e){}}
+   if(MERGE_KEYS.has(k)){try{const neu=JSON.parse(out),liveS=H.get(k),live=liveS?JSON.parse(liveS):null;if(live&&base[k]){const m=merge(live,base[k],neu);out=JSON.stringify(m);base[k]=m;if(typeof S!=='undefined'&&isObj(S))Object.assign(S,m);}else if(live&&!base[k]){/* fix29: หน้านี้อ่านครั้งแรกไม่ได้ค่า (เซฟยังไม่พร้อม) → ใช้ค่าจริงแทน ไม่เขียนค่าเริ่มต้นทับ */base[k]=live;if(typeof S!=='undefined'&&isObj(S))Object.assign(S,live);console.warn('s4ls fix29: ใช้ค่าจริงจากเซฟแทนค่าเริ่มต้นของหน้า');try{parent.postMessage({s4ls:k,from:location.pathname},'*');}catch(e){}return;}else base[k]=neu;}catch(e){}}
    H.set(k,out);
    if(H.admin){try{const fresh=JSON.parse(H.get(k)||'null');if(fresh&&typeof S!=='undefined')Object.assign(S,fresh);}catch(e){}}
    try{parent.postMessage({s4ls:k,from:location.pathname},'*');}catch(e){}},

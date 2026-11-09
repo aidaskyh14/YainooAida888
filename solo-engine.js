@@ -2,7 +2,7 @@ import {seeded,bkkHour} from './campaigns-engine.js?h=a073b41e';
 import {moleRound,moleHits,moleResult,MOLE} from './mole-engine.js?h=96f1c725';
 import {basketRound,basketSend,basketResult,BASKET} from './basket-engine.js?h=6ca43a1f';
 import {witchStart,witchCheckpoint,witchFinish,witchAbandon} from './witch-engine.js?h=fe3693c0';
-import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js?h=31f3aa4b';
+import {candyStart,candyCheckpoint,candyFinish,candyAbandon} from './candy-engine.js?h=cb33d34d';
 const fail=m=>{throw new Error(m);},choose=(r,a)=>a[Math.floor(r()*a.length)],int=(r,a,b)=>a+Math.floor(r()*(b-a+1));
 const shuffle=(r,a)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v,num=n=>Math.round(n).toLocaleString('en-US');

@@ -1,6 +1,6 @@
 <!doctype html><html><head><script src="../pv/s4icon.js?h=37261d11"></script><script src="../pv/s4loop.js?h=2b770a67"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body>
 <meta charset="utf-8">
-<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=9dff20b5"></script><script src="../pv/s4own.js?h=3c830957"></script>
+<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=2fb0bb43"></script><script src="../pv/s4own.js?h=2570901e"></script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap">
 <style>
@@ -317,7 +317,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {loadCharacter,charInfo,rememberChar,auraBurst,MOVES as S4MOVES} from '../pv/s4char.js?h=bd13d8c1';
-import {openWardrobe,closeWardrobe,wardrobeOpen} from '../pv/s4wardrobe.js?h=0c38559e';
+import {openWardrobe,closeWardrobe,wardrobeOpen} from '../pv/s4wardrobe.js?h=e7399530';
 import {mergeVertices,mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 const ICON_BACK="<svg viewBox=\"0 0 24 24\" class=\"ln\"><path d=\"M3 11l9-7 9 7\"/><path d=\"M5.5 9.5V20h13V9.5\"/></svg>",ICON_CAM="<svg viewBox=\"0 0 24 24\" class=\"ln\"><rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"3\"/><path d=\"M8.5 7l1.5-2.5h4L15.5 7\"/><circle cx=\"12\" cy=\"13.5\" r=\"3.6\"/></svg>",ICON_CHECK="<svg viewBox=\"0 0 24 24\" class=\"ln\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>",ICON_MENU="<svg viewBox=\"0 0 24 24\"><circle cx=\"6\" cy=\"6\" r=\"2.2\"/><circle cx=\"12\" cy=\"6\" r=\"2.2\"/><circle cx=\"18\" cy=\"6\" r=\"2.2\"/><circle cx=\"6\" cy=\"12\" r=\"2.2\"/><circle cx=\"12\" cy=\"12\" r=\"2.2\"/><circle cx=\"18\" cy=\"12\" r=\"2.2\"/><circle cx=\"6\" cy=\"18\" r=\"2.2\"/><circle cx=\"12\" cy=\"18\" r=\"2.2\"/><circle cx=\"18\" cy=\"18\" r=\"2.2\"/></svg>";
 function say(t){if(now.dataset.t===t)return;now.dataset.t=t;now.textContent=t;now.style.opacity=1;clearTimeout(say.h);say.h=setTimeout(()=>{now.style.opacity=0;},2600);}
@@ -936,9 +936,11 @@ function s4HouseBar(){const hv=document.getElementById('hview');if(!hv||hv.query
 {const c=document.createElement('style');c.textContent='.s4hb{position:absolute;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;justify-content:flex-start;overflow-x:auto;padding:0 10px;z-index:30;scrollbar-width:none}.s4hb::-webkit-scrollbar{display:none}.s4hb button{flex:none;border:3px solid #fff;border-radius:16px;width:64px;height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:800 10.5px Mali,sans-serif;color:#5a3412;background:linear-gradient(#fff6d9,#ffd36b);box-shadow:0 3px 0 #c98a1b,0 5px 12px rgba(0,0,0,.2)}.s4hb button i{font-style:normal;font-size:22px;line-height:1}';document.head.appendChild(c);}
 window.__s4openHouse=()=>{if(window.__room)window.__room.openHouse();};
 // เปลี่ยนฟาร์มจากปุ่ม 🌾 = พาตัวละครไปโซนนั้น
-window.__s4zone=z=>{const L=items.filter(i=>/^pen/.test(i.t));if(!L.length)return;const cx=L.reduce((a,i)=>a+i.x+dims(i)[0]/2,0)/L.length,cz=L.reduce((a,i)=>a+i.z+dims(i)[1]/2,0)/L.length;P.x=cx;P.z=cz+4;P.tx=null;P.tz=null;P.task=null;if(char)char.position.set(P.x,0,P.z);V.tx=cx;V.tz=cz;if(typeof CC!=='undefined')CC.dist=V.dist=Math.max(V.dist,52);say('🐔 โรงเรือนสัตว์ภาคการเกษตร');};
+window.__s4zone=z=>{const L=items.filter(i=>/^pen/.test(i.t));if(!L.length)return;const cx=L.reduce((a,i)=>a+i.x+dims(i)[0]/2,0)/L.length,cz=L.reduce((a,i)=>a+i.z+dims(i)[1]/2,0)/L.length;[P.x,P.z]=(typeof freeNear==='function'?freeNear(cx,cz+4):[cx,cz+4]);P.tx=null;P.tz=null;P.task=null;if(char)char.position.set(P.x,0,P.z);V.tx=cx;V.tz=cz;if(typeof CC!=='undefined')CC.dist=V.dist=Math.max(V.dist,52);say('🐔 โรงเรือนสัตว์ภาคการเกษตร');};
+/* fix29: หาจุดว่างที่เดินได้ใกล้ที่สุด (กันเกิดในบ่อน้ำ/ในรั้ว) */const freeNear=(x,z)=>{try{if(!blocked(x,z))return [x,z];for(let r=.5;r<=14;r+=.5)for(let a=0;a<Math.PI*2;a+=Math.PI/8){const nx=x+Math.cos(a)*r,nz=z+Math.sin(a)*r;if(!blocked(nx,nz))return [nx,nz];}}catch(e){}return [x,z];};
+/* fix29: เข้าสวน/รีโหลด → ยืนหน้าประตูบ้านเสมอ */window.__s4walkHome=()=>{try{const h=items.find(i=>i.t==='house');let x=0,z=-7.5;if(h){const [w,d]=dims(h);x=h.x+w/2;z=h.z+d+1.6;}[x,z]=freeNear(x,z);P.x=x;P.z=z;P.tx=null;P.tz=null;P.task=null;if(P.mode)P.mode='idle';if(char)char.position.set(x,0,z);V.tx=x;V.tz=z-2;try{S4LOOP.wake('home');}catch(e){}}catch(e){console.log('walkHome',e&&e.message);}};
 window.__s3farm=n=>{let L=[];if(n===1)L=s4Plots()[0];else if(n===2)L=s4Plots()[1];else if(n===4)L=s4FSpots();if(!L.length)return;
- const cx=L.reduce((a,i)=>a+i.x+dims(i)[0]/2,0)/L.length,cz=Math.max(...L.map(i=>i.z+dims(i)[1]));P.x=cx;P.z=cz+1.6;P.tx=null;P.tz=null;P.task=null;if(P.mode)P.mode='idle';if(char)char.position.set(P.x,0,P.z);V.tx=cx;V.tz=cz-2;
+ const cx=L.reduce((a,i)=>a+i.x+dims(i)[0]/2,0)/L.length,cz=Math.max(...L.map(i=>i.z+dims(i)[1]));[P.x,P.z]=freeNear(cx,cz+1.6);P.tx=null;P.tz=null;P.task=null;if(P.mode)P.mode='idle';if(char)char.position.set(P.x,0,P.z);V.tx=cx;V.tz=cz-2;
  say(n===4?'🍑 สวนผลไม้':n===2?'🌾 ฟาร์ม 2 (ข้ามสะพาน)':'🌾 ฟาร์ม 1 หน้าบ้าน');};
 
 // ===== ซีซัน 4 รอบแก้ฟาร์มหลัก =====
@@ -2199,7 +2201,7 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
     try{for(const [x,z,t] of JSON.parse(get('farm1-tiles')||'[]'))TILES.set(x+','+z,t);}catch(e){}try{for(const [k,t] of JSON.parse(get('farm1-fences')||'[]'))if(FZ[t])FENCES.set(k,t);}catch(e){}
     for(const g of items)if(T[g.t]&&T[g.t].gh)ghOwnPlots(g);rebuildTiles();rebuildFences();if(typeof lawnSoon==='function')lawnSoon();try{if(S3V)window.__s3sync(S3V);}catch(e){}}
   let VISITID=null;window.__visitLayout=(deco,id)=>{try{if(deco){if(VISIT&&VISITID===id)return;let M=null;try{M=JSON.parse(deco);if(typeof M==='string')M=JSON.parse(M);}catch(e){M=null;}if(!M||typeof M!=='object')M={};VISIT=true;VISITID=id;if(edit)setEdit(false);layoutLoad(k=>Object.prototype.hasOwnProperty.call(M,k)?M[k]:null);P.x=0;P.z=-7;P.tx=null;}
-    else if(VISIT){VISIT=false;VISITID=null;layoutLoad(k=>localStorage.getItem(k));}}catch(e){console.log('visitLayout',e&&e.message);}};
+    else if(VISIT){VISIT=false;VISITID=null;layoutLoad(k=>localStorage.getItem(k));try{window.__s4walkHome&&window.__s4walkHome();}catch(e){}/* fix29: กลับจากเยี่ยมเพื่อน → หน้าบ้านตัวเอง */}}catch(e){console.log('visitLayout',e&&e.message);}};
   window.__isVisit=()=>VISIT;
   // hedgehog pens: two pens in a new column at the east end of the animal area (clears what stands there first)
   if(!window.__SHOW&&FARM.x1>ZONEX+1)try{if(!localStorage.getItem('farm1-hedge1')&&!items.some(i=>i.t==='penhedge')){

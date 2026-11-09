@@ -1,7 +1,7 @@
 /* fix15 หน้าสวน: เยี่ยมสวนเพื่อนเห็นผักจริง + ระบบแกล้งเพื่อน (ค้างคาว ป้ายแซว แกล้งแปลง หุ่นไล่กา)
    ใช้ตัวแปรของหน้าสวน (S, farm, visiting, IMG, CN, P1, P2, W, H, box, toast, $, open, closeAll, render, plotEls, tapPlot, friendPlot)
    คำสั่งที่เปลี่ยนข้อมูลส่งผ่านคลาวด์ทั้งหมด (window.cloudFriend / window.cloudFarm จาก farm-cloud.js) */
-import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix23&h=5e199672';
+import {PRANKS,PRANK_MSGS,PRANK_DAY,SIGN_MAX,SCARE_COST,HW_NAMES} from './prank-engine.js?v=ss3-fix23&h=352d79c0';
 import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23&h=92e78b5b';
 const HWI=k=>'images/halloween-hw-'+k+'.webp';
 const PIMG=k=>'images/'+PRANKS[k].img+'.webp';
