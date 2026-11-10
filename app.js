@@ -250,7 +250,7 @@ async function enter(user) {
     S.admin = !!(adm && adm.exists());
     // ซีซั่น 4 ยังไม่เปิด: ผู้เล่นทั่วไปออกจากระบบทันที (ไม่มีการเขียนข้อมูลใดๆ) · แอดมินเข้าได้ตามปกติ
     if (S4_CLOSED && !S.admin) await loadSettings();
-    if (S4_CLOSED && !S.admin) { S.user = null; s4Closed = true; await signOut(auth).catch(() => {}); return; }
+    if (S4_CLOSED && !S.admin && !(S.pendingName && !snap.exists())) { S.user = null; s4Closed = true; await signOut(auth).catch(() => {}); return; }/* fix33s: สมัครใหม่ตอนปิดซีซั่น → สร้างบัญชีรออนุมัติก่อน */
     stage='เปิดข้อมูลบัญชีบนคลาวด์';
     if (!snap.exists()) {
       const name = S.pendingName || 'ผู้เล่น';
@@ -313,7 +313,8 @@ function renderLogin() {
       <label class="s4l-lab" for="ln">ชื่อในเกม</label><div class="s4l-field"><span>🌱</span><input id="ln" placeholder="เช่น มดแดง" autocomplete="username" maxlength="10"></div>
       <label class="s4l-lab" for="lp">รหัสผ่าน</label><div class="s4l-field"><span>🔑</span><input id="lp" type="password" placeholder="อย่างน้อย 6 ตัว" autocomplete="current-password"></div>
       <div class="s4l-err" id="lerr"></div>
-      <button class="s4l-go" id="lgo">เข้าสวนเลย</button><p class="s4l-foot">ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า</p></main>
+      <div id="lp2w" hidden><label class="s4l-lab" for="lp2">ยืนยันรหัสผ่าน</label><div class="s4l-field"><span>🔁</span><input id="lp2" type="password" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password"></div></div>
+      <button class="s4l-go" id="lgo">เข้าสวนเลย</button><button class="s4l-go s4l-reg" id="lreg">✨ สมัครสมาชิกใหม่</button><p class="s4l-foot" id="lfoot">ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า</p></main>
   </div>`;
   const card = $('#lcard'), go = $('#lgo'), start = $('#lstart'), msgEl = $('#s4msg');
   let msgT = 0;
@@ -344,7 +345,20 @@ function renderLogin() {
     catch (e) { err.textContent = '🐷 ' + thaiError(e); busy(go, false, 'เข้าสวนเลย'); }
   };
   go.onclick = doGo;
-  card.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') doGo(); }));
+  /* fix33s: สมัครสมาชิกใหม่ (กดปุ่มครั้งแรก = เปิดช่องยืนยันรหัส · ครั้งที่สอง = สมัคร) */
+  const reg = $('#lreg'); let regMode = false;
+  const setMode = m => { regMode = m; $('#lp2w').hidden = !m; go.hidden = m; reg.textContent = m ? '✨ สมัครเลย' : '✨ สมัครสมาชิกใหม่'; $('#lfoot').innerHTML = m ? 'มีบัญชีแล้ว? <a href="#" id="lback">กลับไปเข้าสวน</a>' : 'ลืมรหัสผ่าน? ทักแอดมินได้เลยจ้า'; card.querySelector('.s4l-ribbon').textContent = m ? 'สมัครสมาชิกใหม่' : 'ยินดีต้อนรับสู่สวน'; $('#lerr').textContent = ''; const b = $('#lback'); if (b) b.onclick = e => { e.preventDefault(); setMode(false); }; };
+  const doReg = async () => {
+    const name = $('#ln').value.trim(), pw = $('#lp').value, pw2 = $('#lp2').value, err = $('#lerr');
+    const bad = checkName(name); if (bad) { err.textContent = '🐷 ' + bad; return; }
+    if (pw.length < 6) { err.textContent = '🐷 รหัสผ่านต้องมีอย่างน้อย 6 ตัวนะ'; return; }
+    if (pw !== pw2) { err.textContent = '🐷 รหัสผ่านสองช่องไม่ตรงกัน'; return; }
+    err.textContent = ''; busy(reg, true, 'กำลังสมัคร…');
+    try { const email = await emailFor(name); S.pendingName = name; await createUserWithEmailAndPassword(auth, email, pw); }
+    catch (e) { S.pendingName = ''; err.textContent = '🐷 ' + thaiError(e); busy(reg, false, '✨ สมัครเลย'); }
+  };
+  reg.onclick = () => { if (!regMode) { setMode(true); $('#lp2').focus(); } else doReg(); };
+  card.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') { if (regMode) doReg(); else doGo(); } }));
   const FX = s4LoginFx();
   if (s4Closed) { s4Closed = false; setTimeout(showMsg, 400); }
 }

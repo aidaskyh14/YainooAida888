@@ -264,6 +264,7 @@ body.sub #scr{top:calc(env(safe-area-inset-top,0px) + 2.4rem);height:calc(100% -
 .s4l-err{min-height:20px;font-size:13px;color:#c8263f;margin:8px 4px 0;font-weight:600}
 .s4l-go{width:100%;margin-top:6px;border:0;border-radius:16px;padding:14px;font:700 19px 'Itim','Mali',system-ui,sans-serif;color:#fff6d8;background:linear-gradient(180deg,#e0414f,#c8263f 60%,#7d1027);box-shadow:0 5px 0 #5a0b1c;cursor:pointer;text-shadow:0 1px 0 #5a0b1c}
 .s4l-go:active{transform:translateY(3px);box-shadow:0 2px 0 #5a0b1c}
+.s4l-go.s4l-reg{margin-top:10px;background:linear-gradient(180deg,#63b86f,#2f8a46 60%,#1d5a2d);box-shadow:0 5px 0 #11391c;text-shadow:0 1px 0 #11391c}.s4l-go.s4l-reg:active{box-shadow:0 2px 0 #11391c}.s4l-go[hidden]{display:none}#lfoot a{color:#c8263f;font-weight:700}
 .s4l-foot{text-align:center;font-size:12.5px;color:#9a6a45;margin:10px 0 0}
 .s4l-tro{position:absolute;z-index:11;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;width:min(340px,calc(100vw - 24px));box-sizing:border-box;padding:8px 10px 10px;border-radius:18px;text-align:center;
   background:linear-gradient(180deg,rgba(60,22,96,.93),rgba(23,10,46,.95));border:2px solid #f7c95a;box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 22px rgba(247,201,90,.35);
