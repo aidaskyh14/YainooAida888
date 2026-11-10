@@ -3,11 +3,11 @@
    ไฟล์โมเดล: ch/<file>.glb (กระดูกชุดเดียวกัน 78 ชิ้น · ท่าทาง 38 ท่าอยู่ใน pink-punk.glb) · ไอคอน: images/outfit-<id>.webp */
 export const TRIBES={pink:{n:'💗 ชมพู',short:'ชมพู',start:'punk',col:'#f06ba8'},mint:{n:'💚 หัวเขียว',short:'หัวเขียว',start:'m01',col:'#5cc9a0'},red:{n:'❤️ หัวแดง',short:'หัวแดง',start:'r01',col:'#e0554f'},bob:{n:'🖤 ผมบ็อบดำ',short:'ผมบ็อบดำ',start:'b01',col:'#5d5d7a'}};
 export const TRIBE_IDS=['pink','mint','red','bob'];
-export const CLASS={s:{n:'เริ่มต้น',sell:0},c0:{n:'ธรรมดา',sell:100000},c1:{n:'หายาก',sell:500000},c2:{n:'หายากมาก',sell:2000000},c3:{n:'ตำนาน',sell:10000000},c4:{n:'ยัยหนูส่งเท่านั้น',sell:0},q:{n:'👑 ราชินียัยหนู',sell:0}};
+export const CLASS={s:{n:'เริ่มต้น',sell:0},c0:{n:'ธรรมดา',sell:100000},c1:{n:'หายาก',sell:500000},c2:{n:'หายากมาก',sell:2000000},c3:{n:'ตำนาน',sell:10000000},c4:{n:'ยัยหนูส่งเท่านั้น',sell:0},r:{n:'🚣 รางวัลแข่งเรือ',sell:0},q:{n:'👑 ราชินียัยหนู',sell:0}};/* fix34 */
 /* กล่องสุ่มเสื้อผ้า: ออกเฉพาะคลาสนี้ (สัดส่วน 80 / 16 / 3.5 / 0.5) */
 export const BOX_CLASS=[['c0',80],['c1',16],['c2',3.5],['c3',.5]];
 /* ศัลยกรรม: ชุดเดิมขายคืน 20% ของราคาคลาส · c4 คืน 2,000,000 */
-export const SURGERY_REFUND={c0:20000,c1:100000,c2:400000,c3:2000000,c4:2000000,s:0,q:0};
+export const SURGERY_REFUND={c0:20000,c1:100000,c2:400000,c3:2000000,c4:2000000,s:0,q:0,r:0};
 const MC=['s','c0','c0','c0','c0','c0','c1','c1','c1','c1','c1','c2','c2','c2','c2','c3','c3','c4','c4','c4'];
 const PINK=[['queen','ชุดราชินียัยหนู','q','pink-queen'],['punk','Punk','s','pink-punk'],
  ['figure','ลายทาง','c0','pink-figure'],['cute','เอี๊ยม','c0','pink-cute'],['play','ชุดเล่นลายจุด','c0','pink-play'],['swim','ชุดว่ายน้ำ','c0','pink-swim'],['n4','เชฟขนม','c0','pink-n4'],
@@ -20,7 +20,8 @@ const RN=['ฮู้ดดี้เชอร์รี่','ชุดเทนน
 const BN=['สเวตเตอร์พระจันทร์','ชุดบัลเลต์','เสื้อกันฝน','ชุดนอนดาว','ชุดว่ายน้ำม่วง','ชุดคนขายดอกไม้','ชุดดิสโก้','ชุดเลหังกา','ชุดฟลาเมงโก','ไทยปักษ์ใต้','สูทกางเกงทางการ','ไทยเงิน','ไทยโรสโกลด์','ไทยเขียวมะกอก','เจ้าหญิงฟักทอง','เทพีจันทรา','เจ้าหญิงสายรุ้ง','ไทยทองแดง','ไทยพีช','ไทยหยก'];
 const mk=(pre,names)=>names.map((n,i)=>[pre+String(i+1).padStart(2,'0'),n,MC[i],pre+String(i+1).padStart(2,'0')]);
 export const OUTFITS={};
-for(const [tribe,list] of [['pink',PINK],['mint',mk('m',MN)],['red',mk('r',RN)],['bob',mk('b',BN)]])for(const [id,n,cls,file] of list)OUTFITS[id]={id,n,cls,tribe,file,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};
+/* fix34 ชุดรางวัลแข่งเรือ (ทุกสีผม) */const RW=pre=>[[pre+'jelly','เจ้าแม่เจลลี่ฟิช','r',pre+'jelly'],[pre+'swan','ราชินีหงส์โรส','r',pre+'swan'],[pre+'ruby','เจ้าแม่ไพ่ทับทิม','r',pre+'ruby']];
+for(const [tribe,list] of [['pink',PINK.concat(RW(''))],['mint',mk('m',MN).concat(RW('m'))],['red',mk('r',RN).concat(RW('r'))],['bob',mk('b',BN).concat(RW('b'))]])for(const [id,n,cls,file] of list)OUTFITS[id]={id,n,cls,tribe,file,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};
 export const outfitsOf=tribe=>Object.values(OUTFITS).filter(o=>o.tribe===tribe);
 export const outfitIcon=id=>id==='queen'?'outfit-queen.webp':'outfit-'+id+'.webp';
 export const canSendOutfit=id=>!!OUTFITS[id]&&OUTFITS[id].cls!=='q';

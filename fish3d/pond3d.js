@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
-import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
+import {loadCharacter} from '../pv/s4char.js?h=d066529e';
 const $=id=>document.getElementById(id);
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 

@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=16e5d46b';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=8662865d';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=3f8f0ba3';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=91968b45';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=c96e2312';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=5729cb09';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=0b77dfba';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=d3d93a15';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=7d24af04';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=0cfb4645';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=3eb9d621';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=f37a59df';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -885,7 +885,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=6e148368'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=610c300f'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -1015,11 +1015,11 @@ async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',
 const CITYFX={seen:new Set(),timer:0,world:null};
 function s4CityEvents(W){CITYFX.world=W;if(!W)return;const now=serverNow();
  for(const w of W.weddings||[]){const key='w'+w.uid+w.at;if(CITYFX.seen.has(key)||w.at<now-90000)continue;if(w.at-now>45000){clearTimeout(CITYFX.timer);CITYFX.timer=setTimeout(()=>s4CityEvents(CITYFX.world),Math.max(1000,w.at-now-40000));continue;}CITYFX.seen.add(key);s4WeddingShow(w,now);}
- for(const d of W.divorces||[]){const key='d'+d.uid+d.at;if(CITYFX.seen.has(key)||d.at<now-120000)continue;CITYFX.seen.add(key);s4Overlay(s4Q('city3d/wed.html?h=9b4ce89f')+'mode=divorce&name='+encodeURIComponent(d.name)+'&man='+encodeURIComponent(d.man)+'&manName='+encodeURIComponent(d.manName||''),12000,'💔 '+d.name+' หย่ากับ'+(d.manName||'สามี')+'แล้ว');}
+ for(const d of W.divorces||[]){const key='d'+d.uid+d.at;if(CITYFX.seen.has(key)||d.at<now-120000)continue;CITYFX.seen.add(key);s4Overlay(s4Q('city3d/wed.html?h=65dfd0f2')+'mode=divorce&name='+encodeURIComponent(d.name)+'&man='+encodeURIComponent(d.man)+'&manName='+encodeURIComponent(d.manName||''),12000,'💔 '+d.name+' หย่ากับ'+(d.manName||'สามี')+'แล้ว');}
  if(W.announce&&W.announce.at>now-60000&&!CITYFX.seen.has('a'+W.announce.at)){CITYFX.seen.add('a'+W.announce.at);toast('📢 นคร: '+W.announce.msg);}
  s4PageantBanner(W.pageantAt||0,now);}
 function s4WeddingShow(w,now){const wait=Math.max(0,w.at-now);const b=s4Banner('wedding','💒 งานแต่งของ <b>'+esc(w.name)+'</b> กับ <b>'+esc(w.manName)+'</b> กำลังจะเริ่ม',wait);
- setTimeout(()=>{b.remove();s4Overlay(s4Q('city3d/wed.html?h=9b4ce89f')+'mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),75000,'💒 งานแต่ง '+w.name+' ♥ '+w.manName,true);},wait);}
+ setTimeout(()=>{b.remove();s4Overlay(s4Q('city3d/wed.html?h=65dfd0f2')+'mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),75000,'💒 งานแต่ง '+w.name+' ♥ '+w.manName,true);},wait);}
 function s4Banner(id,html,ms){let b=document.getElementById('s4bn-'+id);if(!b){b=document.createElement('div');b.id='s4bn-'+id;b.className='s4bn';document.body.appendChild(b);}
  const tick=()=>{const left=Math.max(0,Math.round((ms-(Date.now()-t0))/1000));b.innerHTML='<span>'+html+'</span><b>'+(left>0?left+' วิ':'เริ่มแล้ว')+'</b>';if(left>0)b._t=setTimeout(tick,1000);};const t0=Date.now();tick();b.remove=()=>{clearTimeout(b._t);b.parentNode&&b.parentNode.removeChild(b);};return b;}
 function s4PageantBanner(at,now){let b=document.getElementById('s4bn-pageant');const left=at-now;if(!at||left<-15*60000||left>10*60000){if(b)b.remove();return;}

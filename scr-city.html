@@ -93,7 +93,7 @@ table{width:100%;border-collapse:collapse;font-size:.8rem}td{padding:.35rem .25r
 <div id="drive"><div class="t">🚗 กำลังขับรถไปนครยัยหนู…</div><div class="car">🚗</div></div>
 <script type="module">
 import {MEN,MAN,BUILDINGS,BUILDING,DATES,HARD,HARD_NAME,MOODS,PAGEANT,HOUSE_UP,KIDS,SEASONS,SEASON_DAYS,HEART,HEARTS,LOCK_HEARTS,IDLE_SOFT_MIN,IDLE_KICK_MIN,GIFT_KIND,WED} from './city-public.js';
-import {CATALOG} from './catalog.js?h=3eb9d621';import {pickLine} from './city-lines.js?h=c6bfa409';
+import {CATALOG} from './catalog.js?h=f37a59df';import {pickLine} from './city-lines.js?h=c6bfa409';
 const Host=parent.__HOST;const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>Math.round(n||0).toLocaleString('en-US');
 const F=$('#s4f');/* ส่วน ⑤: บอกฉากว่าเข้าด้วยรถคันไหน (ฉากขับรถ 3D ระหว่างโหลด) */{let q='';try{const d=Host.cityDrive&&Host.cityDrive();if(d&&d.car)q=(F.dataset.src.includes('?')?'&':'?')+'drive='+encodeURIComponent(d.car)+'&fuel='+encodeURIComponent(d.fuel||'');}catch(e){}F.src=(window.__PV30?window.__PV30SRC:F.dataset.src)+q;}/* fix30 พรีวิว */const send=m=>{try{F.contentWindow.postMessage({city:m},'*');}catch(e){}};
 const BY=Object.fromEntries(CATALOG.map(c=>[c.k,c]));const img=k=>BY[k]&&BY[k].i?('images/'+BY[k].i.replace(/^\.\.\/farm3d\//,'../farm3d/')):'';

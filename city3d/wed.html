@@ -12,7 +12,7 @@ body.divorce #bless{display:none}body.divorce #ttl{color:#cfd8ff}</style></head>
 <div id="ui"><p id="ttl"></p><div id="nm"></div><button id="bless">💐 อวยพร</button></div>
 <script type="module">
 /* ฉากแต่งงาน/หย่า (ทุกคนเห็น): เจ้าสาว (ชุดคลาสสูงสุดที่มี) + เจ้าบ่าว (โมเดลผู้ชาย) ยืนบนวงแสง 2 วง พื้นหลัง city-wedding-bg · หัวใจลอย · ปุ่มอวยพร */
-import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,fetchGlb,manClips} from '../pv/s4char.js?h=bd13d8c1';
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,fetchGlb,manClips} from '../pv/s4char.js?h=d066529e';
 const Q=new URLSearchParams(location.search);const mode=Q.get('mode')||'wedding';const bride=Q.get('bride')||'punk',man=Q.get('man')||'m01',name=Q.get('name')||'ผู้เล่น',manName=Q.get('manName')||'';
 document.body.classList.toggle('divorce',mode==='divorce');document.getElementById('bg').style.backgroundImage='url(../images/'+(mode==='divorce'?'city-divorce-bg.webp':'city-wedding-bg.webp')+')';
 document.getElementById('ttl').textContent=mode==='divorce'?'💔 การหย่าร้าง':'💒 งานแต่งงาน แห่งนครยัยหนู';document.getElementById('nm').innerHTML=mode==='divorce'?'<b>'+esc(name)+'</b> และ <b>'+esc(manName)+'</b> แยกทางกันแล้ว':'<b>'+esc(name)+'</b> ♥ <b>'+esc(manName)+'</b>';

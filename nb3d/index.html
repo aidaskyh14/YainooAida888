@@ -73,7 +73,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
-import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
+import {loadCharacter} from '../pv/s4char.js?h=d066529e';
 {const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
 const $=s=>document.querySelector(s);

@@ -22,7 +22,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
-import {loadCharacter} from '../pv/s4char.js?h=bd13d8c1';
+import {loadCharacter} from '../pv/s4char.js?h=d066529e';
 const Z=new URLSearchParams(location.search).get('z')||'alpaca';
 const P=(()=>{try{return parent!==window?parent:null;}catch(e){return null;}})();
 const send=(a,id)=>{try{P&&P.postMessage({s4z:a,id:id||''},'*');}catch(e){}};

@@ -1,9 +1,9 @@
 /* ซีซั่น 4 · ตู้เสื้อผ้าในห้องนอน (บรีฟ 3.5): ลิ้นชักเลื่อนขึ้นจากด้านล่าง ตัวละครในห้องเปลี่ยนชุดให้ดูทันที (พรีวิวฟรี)
    กด ✓ ใส่ชุดนี้ = บันทึกที่เซิร์ฟเวอร์ (char/wear) · ชุดที่ยังไม่มี = เงาเรืองแสง · ชุดซ้ำขายได้ตามคลาส
    ต้องเบา: ไม่มีฉาก 3D เพิ่ม ใช้ตัวละครในห้องเดิม · เปลี่ยน 100 ครั้ง/วันก็ไม่หน่วง (แค่สลับโมเดล 1 ตัว) */
-import {OUTFITS,TRIBES,CLASS,outfitsOf} from '../outfit-catalog.js?h=16ac9bbc';
-import {charInfo,rememberChar,fetchGlb,OUTFIT_FILE} from './s4char.js?h=bd13d8c1';
-const CC={s:'#7bbf6a',c0:'#9aa3ad',c1:'#4f9be0',c2:'#9a5fd6',c3:'#e8a91e',c4:'#e0457a',q:'#b9852a'};
+import {OUTFITS,TRIBES,CLASS,outfitsOf} from '../outfit-catalog.js?h=dfadc7d8';
+import {charInfo,rememberChar,fetchGlb,OUTFIT_FILE} from './s4char.js?h=d066529e';
+const CC={s:'#7bbf6a',c0:'#9aa3ad',c1:'#4f9be0',c2:'#9a5fd6',c3:'#e8a91e',c4:'#e0457a',r:'#1f9fb8',q:'#b9852a'};
 let EL=null,busy=false;
 const host=()=>{try{return parent.__HOST||parent.parent.__HOST;}catch(e){return null;}};
 function bagOutfits(){try{const g=JSON.parse(host().get('s3all-v1')||'{}');return (g.bag&&g.bag.outfit)||{};}catch(e){return {};}}
@@ -40,7 +40,7 @@ function css(){if(document.getElementById('s4wdCss'))return;const st=document.cr
 #s4wd .tip{position:absolute;left:50%;top:14%;transform:translateX(-50%);background:#4a2333;color:#fffaf6;font-weight:700;font-size:12.5px;padding:6px 14px;border-radius:14px;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .25s}
 #s4wd .tip.on{opacity:1}`;document.head.appendChild(st);}
 let state={tribe:'pink',wear:'punk',pv:null,bag:{}};
-function cards(){const L=outfitsOf(state.tribe).filter(o=>o.cls!=='q'||state.bag.queen>0);const order={q:0,s:1,c0:2,c1:3,c2:4,c3:5,c4:6};L.sort((a,b)=>order[a.cls]-order[b.cls]);
+function cards(){const L=outfitsOf(state.tribe).filter(o=>o.cls!=='q'||state.bag.queen>0);const order={q:0,s:1,c0:2,c1:3,c2:4,c3:5,c4:6,r:7};L.sort((a,b)=>order[a.cls]-order[b.cls]);
  return L.map(o=>{const n=Number(state.bag[o.id])||0,lock=n<1;return `<button type="button" class="card ${o.cls==='q'?'q':''} ${lock?'lock':''} ${state.wear===o.id?'wear':''} ${state.pv===o.id?'pv':''}" data-id="${o.id}" style="--cc:${CC[o.cls]}"><img src="../images/outfit-${o.id}.webp" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="q">${lock?'🔒':n>1?'×'+n:''}</span><span class="nm">${o.n}</span></button>`;}).join('');}
 function nowBar(){const id=state.pv||state.wear,o=OUTFITS[id];if(!o)return '';const n=Number(state.bag[id])||0,own=n>0,isWear=state.wear===id,price=CLASS[o.cls].sell,dup=n>1&&price>0&&!state.admin;
  return `<img src="../images/outfit-${id}.webp" alt=""><span>${o.n}</span><span class="chip" style="background:${CC[o.cls]}">${CLASS[o.cls].n}</span>${dup?`<button type="button" class="sell" data-a="sell">ขายซ้ำ ${(price).toLocaleString('en-US')}</button>`:''}<button type="button" data-a="wear" ${(!own||isWear)?'disabled':''}>${isWear?'ใส่อยู่':own?'✓ ใส่ชุดนี้':'ยังไม่มี'}</button>`;}
@@ -54,7 +54,7 @@ export function openWardrobe(){css();const info=charInfo();state={tribe:info.tri
  if(!EL){EL=document.createElement('div');EL.id='s4wd';EL.innerHTML=`<div class="veil"></div><div class="flash"></div><div class="tip"></div><div class="dr"><div class="hd"><b>👗 ตู้เสื้อผ้า</b><span class="tr"></span><button type="button" class="x" data-a="x">✕</button></div><div class="now"></div><div class="grid"></div></div>`;document.body.appendChild(EL);
   EL.querySelector('.veil').onclick=()=>closeWardrobe();
   EL.addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(a){if(a.dataset.a==='x')closeWardrobe();else if(a.dataset.a==='wear')wearNow(state.pv||state.wear);else if(a.dataset.a==='sell')sellDup(state.pv||state.wear);return;}
-   const c=e.target.closest('.card');if(!c)return;const id=c.dataset.id;const own=(Number(state.bag[id])||0)>0;state.pv=id;render();if(own){if(window.__s4wear)window.__s4wear(id);}else tip('🔒 '+OUTFITS[id].n+' · '+(OUTFITS[id].cls==='c4'?'ได้จากยัยหนูส่งเท่านั้น':'ลุ้นจากกล่องสุ่มเสื้อผ้า'));});}
+   const c=e.target.closest('.card');if(!c)return;const id=c.dataset.id;const own=(Number(state.bag[id])||0)>0;state.pv=id;render();if(own){if(window.__s4wear)window.__s4wear(id);}else tip('🔒 '+OUTFITS[id].n+' · '+(OUTFITS[id].cls==='c4'?'ได้จากยัยหนูส่งเท่านั้น':OUTFITS[id].cls==='r'?'รางวัลแข่งเรือ · ยัยหนูส่งให้ผู้ชนะทางตู้ไปรษณีย์':'ลุ้นจากกล่องสุ่มเสื้อผ้า'));});}
  render();EL.classList.add('on');EL.style.pointerEvents='';/* fix29 */try{document.body.classList.add('s4wardrobe');}catch(e){}
  /* ซิงก์กับเซิร์ฟเวอร์เบื้องหลัง (กันของในเซฟยังไม่อัปเดต) */try{const H=host();if(H&&H.cloud)H.cloud('char',{type:'status'}).then(out=>{const v=out&&out.view;if(!v||!EL)return;if(v.tribe){state.tribe=v.tribe;state.wear=v.wear;state.bag=v.outfits||{};state.admin=!!v.admin;rememberChar({tribe:v.tribe,wear:v.wear});render();}}).catch(()=>{});}catch(e){}}
 export function closeWardrobe(){if(!EL)return;EL.classList.remove('on');EL.style.pointerEvents='none';/* fix29 */document.body.classList.remove('s4wardrobe');try{window.__room&&window.__room.zoomTo(1);}catch(e){}if(state.pv&&state.pv!==state.wear&&window.__s4wear)window.__s4wear(state.wear);state.pv=null;}
