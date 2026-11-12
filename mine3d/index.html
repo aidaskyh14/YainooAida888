@@ -4,7 +4,7 @@
 #ld{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#0b0810;color:#ffe6a7;font-weight:800;z-index:5;transition:opacity .6s}#ld.off{opacity:0;pointer-events:none}#ld .bar{width:min(70vw,320px);height:12px;border-radius:999px;background:#2a2030;overflow:hidden}#ld .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb36b,#ffe6a7);transition:width .3s}
 #tip{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:rgba(20,10,30,.75);color:#ffe6a7;border-radius:999px;padding:7px 16px;font-weight:800;font-size:.85rem;white-space:nowrap;z-index:4;transition:opacity .4s;pointer-events:none}
 #fade{position:fixed;inset:0;background:#000;opacity:1;pointer-events:none;z-index:6;transition:opacity 1.2s}</style>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script></head>
+<script src="../pv/s4lite.js"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script></head>
 <body><div id="ld"><div>⛏️ กำลังลงเหมือง…</div><div class="bar"><i id="ldi"></i></div><small id="ldt">เตรียมรถราง</small></div><div id="tip">🚃 รถรางกำลังพาลงไป…</div><div id="fade"></div>
 <script type="module">
 import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {loadCharacter,MOVES} from '../pv/s4char.js';
@@ -12,7 +12,7 @@ const Q=new URLSearchParams(location.search);const IS_MOB=/iPhone|iPad|Android/i
 const post=m=>{try{parent.postMessage({mine3d:m},'*');}catch(e){}};
 const sc=new THREE.Scene();window.__mineScene=sc;sc.background=new THREE.Color(0x05060c);sc.fog=new THREE.Fog(0x05060c,9,36);
 const cam=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.3,120);
-const rd=new THREE.WebGLRenderer({antialias:!IS_MOB,powerPreference:'high-performance'});rd.setPixelRatio(IS_MOB?1:Math.min(devicePixelRatio,1.5));rd.setSize(innerWidth,innerHeight);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.55;document.body.appendChild(rd.domElement);
+const rd=new THREE.WebGLRenderer({antialias:!IS_MOB&&!window.S4LITE,powerPreference:'high-performance'});rd.setPixelRatio(IS_MOB||window.S4LITE?1:Math.min(devicePixelRatio,1.5));rd.setSize(innerWidth,innerHeight);rd.outputColorSpace=THREE.SRGBColorSpace;rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.55;document.body.appendChild(rd.domElement);
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();rd.setSize(innerWidth,innerHeight);});
 /* fix31: เหมืองสว่างขึ้น (ไอโฟนเห็นมืดสนิท) · ไฟจุดน้อยลงกันร้อน */sc.add(new THREE.HemisphereLight(0x7a74a8,0x4a3a28,1.1));sc.add(new THREE.AmbientLight(0x5a5070,1.0));const KEY=new THREE.DirectionalLight(0xffe2c0,.55);KEY.position.set(4,12,6);sc.add(KEY);
 const loader=new GLTFLoader();const TL=new THREE.TextureLoader();

@@ -11,6 +11,20 @@ export async function installBackupUI({db,store,$,modal,toast,thaiError,esc,toda
       for(const u of users){const parts=await store.readParts(u.id,'backups',day);parts.forEach(p=>ops.push(b=>b.delete(p.ref)));ops.push(b=>b.delete(u.ref));}
       ops.push(b=>b.delete(doc(db,'backups',day)));await writeOperations(ops);
     }
+    /* fix35 🔍 ตรวจกุศลผู้เล่น (อ่านอย่างเดียว) */host.insertAdjacentHTML('beforeend','<div class="box"><h3>🔍 ตรวจกุศลผู้เล่น</h3><p class="note">ดูกุศลตอนนี้ เทียบกับชุดสำรองแต่ละวัน + รายการหักล่าสุดที่เซิร์ฟเวอร์จำไว้ (ตัด/ปล้น/ขวด/ปีศาจ) · อ่านอย่างเดียว</p><div class="row"><input id="mQ" placeholder="ชื่อผู้เล่น" style="flex:1"><button class="btn sm" id="mGo">ตรวจ</button></div><div id="mOut"></div></div>');
+    const fmtM=n=>Math.round(Number(n)||0).toLocaleString('en-US');const tsM=v=>{try{const d=v&&v.toDate?v.toDate():v?new Date(Number(v.ms||v)):null;return d&&!isNaN(d)?d.toLocaleString('th-TH',{hour12:false}):'';}catch(e){return '';}};
+    const wm=p=>{try{let v=JSON.parse(p);if(typeof v==='string')v=JSON.parse(v);return v&&typeof v==='object'?Number(v.merit)||0:null;}catch(e){return null;}};
+    $('#mGo').onclick=async()=>{const q=($('#mQ').value||'').trim();const out=$('#mOut');if(!q)return;out.textContent='กำลังตรวจ…';
+      try{const all=(await getDocs(collection(db,'players'))).docs.filter(d=>String(d.data().name||'').includes(q)).slice(0,3);if(!all.length){out.textContent='ไม่พบผู้เล่นชื่อมี "'+q+'"';return;}let html='';
+        for(const p of all){const uid=p.id,R=p.data();const parts=await store.readParts(uid);const w=parts.find(x=>x.id==='wallet');const cur=w?wm(w.data().payload):null;
+          html+='<div class="row" style="flex-direction:column;align-items:stretch"><b>👤 '+esc(R.name)+'</b><div>💰 กุศลตอนนี้ <b>'+(cur==null?'?':fmtM(cur))+'</b> (หน้าอันดับ '+fmtM(R.displayMerit)+') · เซฟล่าสุด '+esc(tsM(w&&w.data().updatedAt))+'</div>';
+          const rows=[];for(const d of days){try{const b=await getDoc(doc(db,'backups',d.id,'players',uid,'saves','wallet'));const m=b.exists()?wm(b.data().payload):null;rows.push('<div>📦 '+esc(d.id)+': '+(m==null?'ไม่มี':'<b>'+fmtM(m)+'</b>'+(cur!=null?' ('+(cur-m>=0?'+':'')+fmtM(cur-m)+' เทียบตอนนี้)':''))+'</div>');}catch(e){rows.push('<div>📦 '+esc(d.id)+': อ่านไม่ได้</div>');}}
+          html+=rows.join('');
+          try{const gates=(await getDocs(collection(db,'players',uid,'actionGates'))).docs.map(g=>({id:g.id,at:g.data().updatedAt,r:g.data().result||{}})).sort((a,b)=>((b.at&&b.at.toMillis?b.at.toMillis():0)-(a.at&&a.at.toMillis?a.at.toMillis():0)));
+            html+='<div style="margin-top:6px"><b>🧾 รายการล่าสุดต่อระบบ</b></div>';for(const g of gates.slice(0,14)){const la=g.r.ledgerApplied||[];html+='<div style="font-size:.85rem">'+esc(tsM(g.at))+' · '+esc(g.id)+(g.r.meta&&g.r.meta.displayMerit!=null?' · กุศลหลังรายการ '+fmtM(g.r.meta.displayMerit):'')+'</div>';for(const x of la)html+='<div style="font-size:.85rem;color:#B02A44">⚠️ '+(x.merit?(x.merit>0?'+':'')+fmtM(x.merit)+' ':'')+esc(x.title||'')+' — '+esc(String(x.msg||'').slice(0,120))+(x.lines?' '+esc(x.lines.join(', ').slice(0,160)):'')+'</div>';}}catch(e){html+='<div class="note">อ่านรายการล่าสุดไม่ได้: '+esc(e.message)+'</div>';}
+          try{const led=(await getDocs(collection(db,'players',uid,'ledger'))).docs;if(led.length)html+='<div>📨 รายการค้างรอหัก: '+led.map(d=>esc(d.id)+' '+fmtM(d.data().merit)+(d.data().rob?' ปล้น '+d.data().rob:'')).join(' · ')+'</div>';}catch(e){}
+          html+='<div class="note">ถ้าหายจริงและจะชดเชย: ไปแท็บ 🎁 ส่งของ ส่งกุศลเท่าส่วนต่างให้ผู้เล่น (ไม่ต้องกู้คืนทั้งเซฟ)</div></div>';}
+        out.innerHTML=html;}catch(e){out.textContent='ตรวจไม่ได้: '+(e.message||thaiError(e));}};
     $('#bNow').onclick=async e=>{
       e.target.disabled=true;
       try {
@@ -36,11 +50,11 @@ export async function installBackupUI({db,store,$,modal,toast,thaiError,esc,toda
       const list=$('#rList');list.textContent='กำลังโหลด…';
       const users=(await getDocs(collection(db,'backups',day,'players'))).docs;
       list.innerHTML=users.map(u=>'<div class="row"><b style="flex:1">'+esc(u.data().name)+'</b><button class="btn sm pink" data-restore="'+esc(u.id)+'">กู้คืน</button></div>').join('');
-      list.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>modal('<h2>กู้คืน '+esc(users.find(u=>u.id===b.dataset.restore).data().name)+'?</h2><p>ใช้ข้อมูลวันที่ '+esc(day)+' แทนปัจจุบัน ผู้เล่นต้องเข้าเกมใหม่</p>',[{t:'ยกเลิก',c:'gray'},{t:'กู้คืน',f:async()=>{
+      list.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>modal('<h2>กู้คืน '+esc(users.find(u=>u.id===b.dataset.restore).data().name)+'?</h2><p>ใช้ข้อมูลวันที่ '+esc(day)+' แทนปัจจุบัน · ถ้าผู้เล่นอยู่ในเกม ระบบจะเตะออกให้เองแล้วกู้ ผู้เล่นเข้าเกมใหม่ได้ทันที</p>',[{t:'ยกเลิก',c:'gray'},{t:'กู้คืน',f:async()=>{
         try {
           const uid=b.dataset.restore;const old=users.find(u=>u.id===uid).data();
           const parts=old.storageVersion===2?new Map((await store.readParts(uid,'backups',day)).map(p=>[p.id,p.data()])):splitGame(old.g||{});
-          const before=await getDoc(doc(db,'players',uid));const current=await store.readParts(uid);const kick='restored-'+Date.now();delete old.g;delete old.size;
+          const kick='restored-'+Date.now();/* fix35: เตะผู้เล่นออกก่อนกู้ (ไม่ต้องรอให้ปิดเกม) */try{await setDoc(doc(db,'players',uid),{session:kick},{merge:true});}catch(e){}await new Promise(r=>setTimeout(r,1500));const before=await getDoc(doc(db,'players',uid));const current=await store.readParts(uid);delete old.g;delete old.size;
           await runTransaction(db,async tx=>{
             const status=await tx.get(doc(db,'backups',day));if(!status.exists()||status.data().status==='building')throw new Error('ชุดสำรองนี้ยังไม่พร้อมกู้คืน');
             const root=await tx.get(doc(db,'players',uid));if(JSON.stringify(root.data())!==JSON.stringify(before.data()))throw new Error('เซฟกำลังเปลี่ยน กรุณาปิดเกมผู้เล่นแล้วลองใหม่');

@@ -3,7 +3,7 @@
    · พื้น/ทางเดิน/รั้ว ไม่จำกัด · ของที่วางอยู่ไม่หักจากกระเป๋า (เก็บเข้าถุง = นับคืนอัตโนมัติ) · เซิร์ฟเวอร์เก็บ bag.decor แบบจำนวนเต็มไม่ติดลบ
    แก้สิทธิ์ฟรีได้ที่ S4FREE ด้านล่าง (ตามสมุดเล่ม 2 เมื่อเธอติ๊ก) */
 (function(){
- const S4FREE={_default:1,d_city_car_yellow:0,d_city_car_pink:0,d_city_car_green:0,d_city_car_purple:0,d_city_husband:0,/* รถ: ไม่มีฟรี ต้องได้จากยัยหนู · โรงจอดรถตัดออกแล้ว */_inf:/^(tile_|fz_|path$|erase$|fence$)/,oak:3,bush:3,pine:2,sakura:2,tree:2,bench:2,d_stylized_lanterns:2,d_flower_planter:2,d_flower_pots:2,d_sunflowers:2,fspot:0,plot:0,sf_zipline:0,d_y7_piggy:0,d_y7_lamp:0,d_y7_rope:0,d_y7_topiary:0,d_y7_coinseat:0,z_hm_cake:0,z_hm_castle:0,z_hm_space:0,z_dog_circus:0,z_cat_catfount:0};
+ const S4FREE={_default:1,d_city_car_yellow:0,d_city_car_pink:0,d_city_car_green:0,d_city_car_purple:0,d_city_drill_1:0,d_city_drill_2:0,d_city_drill_3:0,d_city_drill_4:0,/* fix35 */d_city_husband:0,/* รถ: ไม่มีฟรี ต้องได้จากยัยหนู · โรงจอดรถตัดออกแล้ว */_inf:/^(tile_|fz_|path$|erase$|fence$)/,oak:3,bush:3,pine:2,sakura:2,tree:2,bench:2,d_stylized_lanterns:2,d_flower_planter:2,d_flower_pots:2,d_sunflowers:2,fspot:0,plot:0,sf_zipline:0,d_y7_piggy:0,d_y7_lamp:0,d_y7_rope:0,d_y7_topiary:0,d_y7_coinseat:0,z_hm_cake:0,z_hm_castle:0,z_hm_space:0,z_dog_circus:0,z_cat_catfount:0};
  const H=(()=>{try{let w=window;for(let i=0;i<4;i++){if(w.__HOST)return w.__HOST;if(w===w.parent)break;w=w.parent;}}catch(e){}return null;})();
  const ZONES=['dog','cat','hamster','alpaca'];
  let cache=null,cacheAt=0;
@@ -19,7 +19,8 @@
  const price=t=>{if(THEME.has(t))return 0;const r=RULES[t];return r&&!r.x?Number(r.p)||0:0;};
  /* local={src:'farm'|'dog'|..., n:จำนวนที่วางในโซนนี้ตอนนี้ (สด แทนค่าที่เซฟไว้ของโซนนั้น)} */
  const placedN=(t,local)=>{const c=read();let n=0;for(const src in c.placed){if(local&&src===local.src)continue;n+=c.placed[src][t]||0;}return n+(local?local.n:0);};
- window.S4OWN={free,price,theme:t=>THEME.has(t),
+ /* fix35: ของชิ้นนี้ลุ้นได้จากกล่องสุ่มของตกแต่งไหม (กติกาเดียวกับ decor-prices.js decorClass) */const ADMIN_ONLY=t=>/^(d_y7_|d_city_)/.test(t)||t==='sf_zipline'||t==='sf_monkey'||t==='d_scarecrow_plush'||/^(tile_|fz_|path$|erase$|fence$)/.test(t)||t==='d_city_husband';
+ window.S4OWN={free,price,theme:t=>THEME.has(t),boxable:t=>!ADMIN_ONLY(String(t||'')),
   /* 💰 ซื้อของแต่งด้วยกุศล (เซิร์ฟเวอร์ตรวจราคา/หักเงิน) */buy:async(t,n=1)=>{if(!price(t))throw new Error('ของชิ้นนี้ไม่ได้ขาย');if(!H||!H.cloud)throw new Error('ซื้อไม่ได้ตอนนี้');await H.cloud('farm',{type:'decor-buy',id:t,n});cache=null;return true;},
   owned:t=>read().owned[t]||0,
   placed:placedN,

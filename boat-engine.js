@@ -1,4 +1,4 @@
-import {CATALOG} from './catalog.js?h=f37a59df';
+import {CATALOG} from './catalog.js?h=0ecf6d0e';
 import {rainLogic,rainScore,RAIN_MS,RAIN_WARN,RAIN_LEVELS,RAIN_SETTLE,RAIN_LATE,RAIN_TEAM_MIN,RAIN_TEAM_POS,RAIN_TEAM_BACK,RAIN_ANCHOR_BACK,RAIN_PLUS_CAP} from './rain-engine.js?h=2e082531';
 /* กติกาเรือเป็นฟังก์ชันล้วน: ใช้กับ transaction บนคลาวด์ ไม่สร้างผู้เล่นจำลอง */
 /* fix17: กล่องการ์ดทุก 30 (30…330) + เส้น 350 เดิม · พักส่ง 7 นาที · โล่กันเตะ 30 นาที · เตะย้อนศร · ว่ายกลับเรือ · นางในวรรณคดี 2 ตนแข่งส่งถาด · ฝนกุศล */
@@ -46,7 +46,7 @@ export const BOAT_BIRD_ITEMS=['ostrich-egg','ostrich-feather','dodo-egg','dodo-f
 export const BOAT_COOK_POOL=['food.ออมเล็ตโรซี่','gfood.r1','gfood.r2','gfood.r3','gfood.r4','gfood.r5','gfood.r6','gfood.b1','gfood.b2','gfood.b3','gfood.b4','gfood.b5','gfood.b6','gfood.b7','gfood.b8'];
 /* fix17 นางในวรรณคดี 2 ตน */
 export const BOAT_MM_SPELL=10; // 🌊 คลื่นมนต์ทวนกระแส: เรือที่นำ ถอย 10 ครั้งเดียวต่อการแข่ง
-export const BOAT_MM_SHARE=.4,BOAT_MM_NEED=2,BOAT_MM_GOAL=100,BOAT_MM_STEP=20,BOAT_MM_BONUS=300000,BOAT_MM_LOSE=500000,BOAT_MM_LATE=300000,BOAT_MM_CD=5*60000,BOAT_MM_SEND=[1,2,3];
+export const BOAT_MM_SHARE=.4,BOAT_MM_NEED=3,BOAT_MM_N=3,BOAT_MM_LINE=90,/* fix35 */BOAT_MM_GOAL=100,BOAT_MM_STEP=20,BOAT_MM_BONUS=300000,BOAT_MM_LOSE=500000,BOAT_MM_LATE=300000,BOAT_MM_CD=5*60000,BOAT_MM_SEND=[1,2,3];
 export const BOAT_MM_POKE=5000,BOAT_MM_POKE_BOXES=10,BOAT_MM_POKE_CD=15*60000;
 export const BOAT_MM_MENUS=['food-01','food-02','food-03','food-04','food-05','food-06','food-07','food-08','food-09','food-10','food-11','food-12','gfood-r1','gfood-r2','gfood-r3','gfood-r4','gfood-r5','gfood-r6','gfood-r7','gfood-r8','gfood-b1','gfood-b2','gfood-b3','gfood-b4','gfood-b5','gfood-b6','gfood-b7','gfood-b8'];
 /* กล่องสุ่มจากการจิ้มนางในวรรณคดี (อยู่ในกระเป๋าหลัก · กล่องอัลปาก้าอยู่หน้าฟาร์มจึงไม่รวม) */
@@ -339,9 +339,15 @@ const dLeft=d=>Number.isInteger(d?.left)?d.left:1;
    · เรือถึง 350 ก่อนมีใครครบ 100 → ทั้งคู่ −300,000 · ถาดมากกว่าชนะ (เท่ากัน = ถึงจำนวนนั้นก่อน) */
 const mmOn=r=>!!(r.mm&&Array.isArray(r.mm.a)&&!r.mm.done);
 export const mmIndex=(r,uid)=>mmOn(r)?r.mm.a.findIndex(x=>x.uid===uid):-1;
-const mmLive=(r,i)=>mmOn(r)&&i>=0&&r.mm.lose!==i;
+/* fix35: คลังนาง 10 ตน · รอบละ 3 ตน (mm.k = คีย์นางของแต่ละที่นั่ง) · ผู้แพ้หลายคน (mm.lost = รายการที่นั่งที่สลาย · mm.lose = คนแรกเพื่อหน้าเก่า) */
+export const BOAT_NANG=[['manora','นางมโนราห์'],['bussaba','นางบุษบา'],['wanthong','นางวันทอง'],['laweng','นางละเวงวัณฬา'],['ngueak','นางเงือก'],['sida','นางสีดา'],['matsi','นางมัทรี'],['kaki','นางกากี'],['rotchana','นางรจนา'],['ketsuri','นางเกศสุริยง']];
+export const mmKeys=mm=>Array.isArray(mm?.k)&&mm.k.length?mm.k:['manora','bussaba'];
+export const mmName=(mm,i)=>{const k=mmKeys(mm)[i];const f=BOAT_NANG.find(x=>x[0]===k);return f?f[1]:'นางในวรรณคดี';};
+export const mmLost=(mm,i)=>!!mm&&(Array.isArray(mm.lost)?mm.lost.includes(i):mm.lose===i);
+const mmOthers=(mm,i)=>mm.a.map((_,k)=>k).filter(k=>k!==i&&!mmLost(mm,k));
+const mmLive=(r,i)=>mmOn(r)&&i>=0&&!mmLost(r.mm,i);
 export const mmReal=r=>mmOn(r)&&r.mm.win!==null?r.mm.a[r.mm.win].uid:null;
-function mmView(r,i){const mm=r.mm;if(!mm||mm.done||mm.lose===i)return {round:r.round||0,active:false};
+function mmView(r,i){const mm=r.mm;if(!mm||mm.done||mmLost(mm,i))return {round:r.round||0,active:false};
   const real=mm.win===i;
   return {round:r.round||0,active:true,since:mm.since,real,menus:[...mm.menus],t:mm.a[i].t,earn:mm.a[i].earn,
     dismiss:real?Object.entries(r.dismiss||{}).map(([b,d])=>({boat:+b,until:d.until,left:dLeft(d),crew:members(r,+b).map(u=>({u,n:nameOf(r,u)}))})):[]};}// Firestore: ห้าม array ซ้อน array
@@ -353,27 +359,29 @@ function mmPay(r,i,why){const x=r.mm.a[i];if(x.paid)return;x.paid=true;
 function ensureMermaid(r,now){
   if(r.status!=='running'||r.mm)return;
   if(Object.keys(r.dismiss||{}).length||r.p.some(p=>p>=350))return;// ถึง 350 แล้ว ไม่แต่งตั้ง (ระบบจ้างออกเอง)
+  if(r.p.filter(p=>p>=BOAT_MM_LINE).length*2<=r.p.length)return;// fix35: รอให้เรือเกินครึ่งเลยเส้น 90 ก่อน
   const pool=Object.keys(r.kicked||{}).filter(u=>r.kicked[u]&&r.team[u]&&!r.offers?.[u]&&!r.swim?.[u]&&!r.mmEx?.[u]&&!r.burned?.[u]&&!r.fired?.[u]).sort();
   if(pool.length<BOAT_MM_NEED)return;
   const rng=seededRng((r.round||0)+'|mm2|'+pool.join(',')),a=[...pool],two=[];
-  while(two.length<2)two.push(a.splice(Math.min(a.length-1,Math.floor(rng()*a.length)),1)[0]);
+  while(two.length<BOAT_MM_N&&a.length)two.push(a.splice(Math.min(a.length-1,Math.floor(rng()*a.length)),1)[0]);
+  const ks=BOAT_NANG.map(x=>x[0]),k3=[];while(k3.length<two.length)k3.push(ks.splice(Math.min(ks.length-1,Math.floor(rng()*ks.length)),1)[0]);/* fix35: สุ่มนาง 3 ตนจากคลัง 10 ไม่ซ้ำ */
   const menus=[...BOAT_MM_MENUS],picked=[];while(picked.length<2)picked.push(menus.splice(Math.min(menus.length-1,Math.floor(rng()*menus.length)),1)[0]);
-  r.mm={since:now,menus:picked,a:two.map(uid=>({uid,t:0,cd:0,earn:0,at:0})),ms:{},win:null,lose:null,late:false,done:false};
+  r.mm={since:now,k:k3,menus:picked,a:two.map(uid=>({uid,t:0,cd:0,earn:0,at:0})),ms:{},win:null,lose:null,lost:[],late:false,done:false};
   r.mmBan ||= {};for(const u of two)r.mmBan[u]=true;r.mmSig={};
-  log(r,'👸👸 นางในวรรณคดี 2 ตนปรากฏตัว! '+two.map(u=>nameOf(r,u)).join(' กับ ')+' แข่งส่งถาดให้ครบ 100');
+  log(r,'👸'.repeat(two.length)+' นางในวรรณคดี '+two.length+' ตนปรากฏตัว! '+two.map((u,i)=>mmName(r.mm,i)+' ('+nameOf(r,u)+')').join(' · ')+' แข่งส่งถาดให้ครบ 100');
   for(const u of two)mmNotice(r,u,'appointed',{menus:picked});
 }
-function mmResolve(r,win,why){const mm=r.mm,lose=1-win;mm.win=win;mm.lose=lose;mmPay(r,lose,why);
+function mmResolve(r,win,why){const mm=r.mm,losers=mmOthers(mm,win);mm.win=win;mm.lost=[...new Set([...(Array.isArray(mm.lost)?mm.lost:[]),...losers])];mm.lose=mm.lost.length?mm.lost[0]:null;for(const l of losers)mmPay(r,l,why);
   outbox(r,{mail:{uid:mm.a[win].uid,key:'boat-mm-mk-'+(r.round||0),title:'👑 รางวัลนางในวรรณคดีตัวจริง',msg:'ได้กล่องสุ่มมหากุศล 10 กล่อง',icon:'📦',kusal:0,items:{'box-mahakusal':10}}});/* fix17 📦 */
-  mmNotice(r,mm.a[win].uid,'real');mmNotice(r,mm.a[lose].uid,'lost',{late:!!mm.late});mmSpell(r,win);}
+  mmNotice(r,mm.a[win].uid,'real');for(const l of losers)mmNotice(r,mm.a[l].uid,'lost',{late:!!mm.late});mmSpell(r,win);}
 // 🌊 the real heroine casts once, automatically: the leading boat (every boat tied for the lead) goes back 10
 function mmSpell(r,win){const mm=r.mm;if(mm.spell||r.status!=='running')return;const max=Math.max(...r.p);if(!(max>0))return;
   const boats=[];r.p.forEach((p,i)=>{if(p===max)boats.push(i+1);});for(const b of boats)boatProgress(r,b,-BOAT_MM_SPELL,()=>.5);
-  mm.spell={k:win,boats,at:r._now||0,n:BOAT_MM_SPELL};log(r,'🌊 '+['นางมโนราห์','นางบุษบา'][win]+'ร่ายคลื่นมนต์ทวนกระแส! เรือ '+boats.join(', ')+' ถอย '+BOAT_MM_SPELL);}
+  mm.spell={k:win,boats,at:r._now||0,n:BOAT_MM_SPELL};log(r,'🌊 '+mmName(mm,win)+'ร่ายคลื่นมนต์ทวนกระแส! เรือ '+boats.join(', ')+' ถอย '+BOAT_MM_SPELL);}
 function mmLate(r,now){const mm=r.mm;if(!mmOn(r)||mm.win!==null)return;mm.late=true;
   for(const x of mm.a)ledgerOut(r,x.uid,-BOAT_MM_LATE,'👸 ส่งถาดไม่ครบ 100','เรือถึงเส้น 350 ก่อนนางในวรรณคดีส่งถาดครบ 100','boat-mm-late-'+(r.round||0)+'-'+x.uid);
-  const [A,B]=mm.a,win=A.t!==B.t?(A.t>B.t?0:1):((A.at||Infinity)<=(B.at||Infinity)?0:1);
-  log(r,'⏰ เรือถึงเส้น 350 ก่อนนางในวรรณคดีส่งครบ 100 · ทั้งคู่ −300,000 · 👑 '+nameOf(r,mm.a[win].uid)+' ถาดมากกว่า เป็นนางในวรรณคดีตัวจริง');
+  let win=0;mm.a.forEach((x,i)=>{const w=mm.a[win];if(mmLost(mm,i))return;if(mmLost(mm,win)||x.t>w.t||(x.t===w.t&&(x.at||Infinity)<(w.at||Infinity)))win=i;});/* fix35: ถาดมากสุด (เท่ากัน=ถึงก่อน) */
+  log(r,'⏰ เรือถึงเส้น 350 ก่อนนางในวรรณคดีส่งครบ 100 · ทุกตน −300,000 · 👑 '+nameOf(r,mm.a[win].uid)+' ถาดมากกว่า เป็นนางในวรรณคดีตัวจริง');
   mmResolve(r,win,'การแข่งส่งถาดจบที่เส้น 350 ขอบคุณที่ทำหน้าที่');}
 function fireOut(r,b,u,ctx,player,ledger,auto){
   r.kicked[u]=true;r.fired ||= {};r.fired[u]=true;r.noSwim ||= {};r.noSwim[u]=true;delete r.offers?.[u];
@@ -416,8 +424,8 @@ function finishExtras(r){
   for(const u of Object.keys(r.swim||{})){delete r.swim[u];log(r,'🏊 การแข่งจบระหว่าง '+nameOf(r,u)+' ว่ายกลับ (ไม่หักอะไร)');}
   if(r.rain&&!r.rain.done)r.rain.done=true;
   if(mmOn(r)){const mm=r.mm;mm.done=true;r.mmSig={};
-    mm.a.forEach((x,i)=>{if(mm.lose===i)return;mmPay(r,i,'ขอบคุณที่ทำหน้าที่นางในวรรณคดีจนจบการแข่ง');outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false,notice:{k:'paid',earn:x.earn,at:r._now||0}}}});});
-    for(const x of mm.a)if(mm.lose===mm.a.indexOf(x))outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false}}});}
+    mm.a.forEach((x,i)=>{if(mmLost(mm,i))return;mmPay(r,i,'ขอบคุณที่ทำหน้าที่นางในวรรณคดีจนจบการแข่ง');outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false,notice:{k:'paid',earn:x.earn,at:r._now||0}}}});});
+    for(const x of mm.a)if(mmLost(mm,mm.a.indexOf(x)))outbox(r,{view:{uid:x.uid,data:{round:r.round||0,active:false}}});}
 }
 function shiftTimers(r,now) {
   const at=r.pausedAt,d=Number.isFinite(at)?Math.max(0,now-at):0;r.pausedAt=null;if(!d)return;
@@ -519,7 +527,7 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
     log(r,'⛈️ ฝนกุศลกำลังจะตก!');outbox(r,{rain:{id,lvl,seed,theme,start,end:start+RAIN_MS}});return done();
   }
   if(type==='mmPoke'){
-    const i=input.i===1?1:0;if(!mmLive(r,i))fail('ตอนนี้ไม่มีนางในวรรณคดีตนนี้');if(mmIndex(r,uid)>=0)fail('นางในวรรณคดีจิ้มกันเองไม่ได้');if(admin)fail('แอดมินไม่ต้องจิ้ม');
+    const i=Number.isInteger(input.i)?input.i:0;if(!mmOn(r)||i<0||i>=r.mm.a.length||!mmLive(r,i))fail('ตอนนี้ไม่มีนางในวรรณคดีตนนี้');if(mmIndex(r,uid)>=0)fail('นางในวรรณคดีจิ้มกันเองไม่ได้');if(admin)fail('แอดมินไม่ต้องจิ้ม');
     const x17=ctx.x17 ||= {};const last=Number(x17.pokeAt)||0;if(now<last+BOAT_MM_POKE_CD)fail('⏳ จิ้มนางในวรรณคดีได้อีกใน '+Math.ceil((last+BOAT_MM_POKE_CD-now)/60000)+' นาที');
     x17.pokeAt=now;
     if(rng()<.5){const before=player.merit||0;player.merit=floorAdd(before,-BOAT_MM_POKE);return done({poke:{lose:before-(player.merit||0),i}});}
@@ -534,14 +542,14 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
     if(a.cd>now)fail('⏳ ส่งถาดได้อีกใน '+Math.ceil((a.cd-now)/60000)+' นาที');
     const c=catOf(input.menu);if(!c)fail('เมนูไม่ถูกต้อง');const [g,id]=[c.p.split('.')[0],c.p.slice(c.p.indexOf('.')+1)];
     const have=Number(player.bag?.[g]?.[id])||0;if(have<qty)fail('อาหารไม่พอ');player.bag[g][id]=have-qty;
-    const before=a.t;a.t=Math.min(BOAT_MM_GOAL,a.t+qty);a.cd=now+BOAT_MM_CD;a.at=now;const other=mm.a[1-i],steps=[];
+    const before=a.t;a.t=Math.min(BOAT_MM_GOAL,a.t+qty);a.cd=now+BOAT_MM_CD;a.at=now;const others=mmOthers(mm,i),steps=[];
     for(let s=BOAT_MM_STEP;s<BOAT_MM_GOAL;s+=BOAT_MM_STEP)if(before<s&&a.t>=s&&mm.ms[s]===undefined){mm.ms[s]=i;steps.push(s);
       player.merit=(player.merit||0)+BOAT_MM_BONUS;ledger.push({uid,id:'boat-mm-step-'+(r.round||0)+'-'+s,merit:BOAT_MM_BONUS,self:true,title:'🎯 ถาดครบ '+s+' ก่อน'});
-      if(mm.lose!==1-i)ledgerOut(r,other.uid,-BOAT_MM_BONUS,'🎯 นางในวรรณคดีอีกตนถึง '+s+' ถาดก่อน','นางในวรรณคดีอีกตนส่งถาดครบ '+s+' ก่อน','boat-mm-step-'+(r.round||0)+'-'+s+'-x');
-      log(r,'🎯 นางในวรรณคดี '+nameOf(r,uid)+' ถึง '+s+' ถาดก่อน! +300,000 · '+nameOf(r,other.uid)+' −300,000');}
+      for(const o of others)ledgerOut(r,mm.a[o].uid,-BOAT_MM_BONUS,'🎯 นางในวรรณคดีอีกตนถึง '+s+' ถาดก่อน','นางในวรรณคดีอีกตนส่งถาดครบ '+s+' ก่อน','boat-mm-step-'+(r.round||0)+'-'+s+'-x'+o);
+      log(r,'🎯 นางในวรรณคดี '+nameOf(r,uid)+' ถึง '+s+' ถาดก่อน! +300,000 · '+others.map(o=>nameOf(r,mm.a[o].uid)).join(', ')+' −300,000');}
     let won=false;
-    if(a.t>=BOAT_MM_GOAL&&mm.win===null){won=true;ledgerOut(r,other.uid,-BOAT_MM_LOSE,'💔 นางในวรรณคดีสลาย','นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน','boat-mm-lose-'+(r.round||0)+'-'+other.uid);
-      log(r,'👑 '+nameOf(r,uid)+' ส่งถาดครบ 100 เป็นนางในวรรณคดีตัวจริง! · 💔 '+nameOf(r,other.uid)+' สลาย −500,000');mmResolve(r,i,'นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน ขอบคุณที่ทำหน้าที่');}
+    if(a.t>=BOAT_MM_GOAL&&mm.win===null){won=true;for(const o of others)ledgerOut(r,mm.a[o].uid,-BOAT_MM_LOSE,'💔 นางในวรรณคดีสลาย','นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน','boat-mm-lose-'+(r.round||0)+'-'+mm.a[o].uid);
+      log(r,'👑 '+nameOf(r,uid)+' ส่งถาดครบ 100 เป็นนางในวรรณคดีตัวจริง! · 💔 '+others.map(o=>nameOf(r,mm.a[o].uid)).join(', ')+' สลาย −500,000');mmResolve(r,i,'นางในวรรณคดีอีกตนส่งถาดครบ 100 ก่อน ขอบคุณที่ทำหน้าที่');}
     return done({mmSend:{t:a.t,steps,won,cd:a.cd}});
   }
   if(type==='mmFire'){
@@ -608,7 +616,7 @@ export function boatAction(source,account,ctx,input,rng=Math.random) {
     for(let i=0;i<qty;i++)gain+=alp?BOAT_STAR_MERIT[BOAT_ALPACA[k][0]]:BOAT_FOOD_MERIT[0]+Math.floor(rng()*(BOAT_FOOD_MERIT[1]-BOAT_FOOD_MERIT[0]+1));
     r.combo ||= {};let c=r.combo[uid];if(!c||c.b!==boat)c=r.combo[uid]={b:boat,got:[]};let combo=0;
     const menus=r.menus[boat]||[];if(menus.length&&!c.got.includes(menuKey)){c.got.push(menuKey);if(menus.every(m=>c.got.includes(m))){combo=BOAT_COMBO;c.got=[];c.n=(c.n||0)+1;log(r,'🍱 '+nameOf(r,uid)+' ส่งเสบียงครบทุกเมนู รับคอมโบ +20,000 กุศล');
-      if(mmOn(r))r.mm.a.forEach((x,i)=>{if(r.mm.lose!==i)x.earn+=Math.round(BOAT_COMBO*BOAT_MM_SHARE);});}}
+      if(mmOn(r))r.mm.a.forEach((x,i)=>{if(!mmLost(r.mm,i))x.earn+=Math.round(BOAT_COMBO*BOAT_MM_SHARE);});}}
     player.merit=(player.merit||0)+gain+combo;
     r.cd[uid]=now+BOAT_COOLDOWN;r.sent[uid]=(r.sent[uid]||0)+qty;
     log(r,nameOf(r,uid)+' ส่งเสบียงเรือ '+boat+(qty>1?' ×'+qty:''));boatProgress(r,boat,qty,rng);return done({supply:{qty,gain,combo}});

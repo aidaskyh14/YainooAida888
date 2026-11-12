@@ -1,39 +1,39 @@
-import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=d3d93a15';
+import {rumorAction,RUMOR_GOOD,RUMOR_BAD,RUMOR_TIME} from './rumor-engine.js?h=0cc9c615';
 import {foodCraftAction,luxFeedAction} from './food-craft-engine.js?h=478bcc41';
 import {safariAction} from './safari-engine.js?h=e590b6b9';
-import {adminCenter} from './admin-center-engine.js?h=1fea0580';
+import {adminCenter} from './admin-center-engine.js?h=457883ec';
 import {adminReset} from './admin-reset.js?h=57055b90';
-import {openLootBoxes} from './loot-box-engine.js?h=77c729c8';
+import {openLootBoxes} from './loot-box-engine.js?h=8a32552e';
 import {farmDropsAction} from './farm-drops-engine.js?h=97968586';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {farmAction,friendAction} from './farm-engine.js?h=45dd755f';
 import {splitGame,joinGame} from './save-schema.js?h=eef4832b';
 import {observeGameplay} from './campaign-progress.js?h=3f8f0ba3';
-import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=6656518b';
+import {marketAction,HW_POISON,HW_ANTI,HW_DECIDE,antiHave,poisonApply,poisonExpired,poisonStartClocks} from './market-engine.js?h=30a33456';
 import {soloAction,soloPublic,minigameRules,minigameConfigure,feeMailItems} from './solo-engine.js?h=a8d2168e';
 import {kangAction,freshKang,kangPublic,kangFeePaid,kangItemsPaid,kangClear} from './kang-engine.js?h=82312623';
 import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?h=a073b41e';
 import {randomUUID,randomInt,createHash} from 'node:crypto';
 import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=19bb27fe';
-import {outingsAction} from './outings-engine.js?h=bc6136c9';
+import {outingsAction} from './outings-engine.js?h=e5247fd1';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=02866494';
-import {CATALOG as CATALOG_ALL} from './catalog.js?h=f37a59df';
+import {CATALOG as CATALOG_ALL} from './catalog.js?h=0ecf6d0e';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=99f92a56';
 import {nbDay} from './nb-quest.js?h=8e07529b';
 import {funrunAction,funrunPublic} from './funrun-engine.js?h=e2d97b72';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
-import {createCloudCore,refuse} from './cloud-core.js?h=033e8778';
-import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=1fe38363';
+import {createCloudCore,refuse} from './cloud-core.js?h=7cee7b67';
+import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=e93b7722';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
-import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore} from './tree-engine.js?h=14a5ec48';
+import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore,TW_ROB_PAY,twRobGive} from './tree-engine.js?h=3c9defae';
 import {hwmAction} from './hwmini-engine.js?h=0b53b869';
 import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=30175f9e';
 import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=5c8a0990';
-import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=cb261774';
-import {charAction,charAdminSet,charOf} from './char-engine.js?h=34303489';import {TRIBES,TRIBE_IDS} from './outfit-catalog.js?h=dfadc7d8';
+import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=4d46e89f';
+import {charAction,charAdminSet,charOf} from './char-engine.js?h=01082278';import {TRIBES,TRIBE_IDS} from './outfit-catalog.js?h=3e120340';
 import {cityAction,cityAdmin,cityView,publicWorld,manState} from './city-engine.js?h=44c22f95';import {pageantAdmin,pageantAction,pageantView,garland,questionDoc} from './pageant-engine.js?h=57a4a41c';import {YAINOO_QUESTIONS,GENERAL_QUESTIONS} from './city-questions.js?h=10246fe6';import {MAX_IN_CITY,MAN} from './city-catalog.js?h=d68f3e58';
 initializeApp();
 const db=getFirestore(),core=createCloudCore(db,()=>FieldValue.serverTimestamp());
@@ -125,7 +125,7 @@ export const boatActionCloud=callable(async req=>{
    } else {delete input.roster;delete input.names;}
    if(input.type==='supply'&&input.group!=='alpaca') {
      const path=(input.group==='food'?'food.':input.group==='drink'?'drink.':'gfood.')+input.food;
-     const {CATALOG}=await import('./catalog.js?h=f37a59df');
+     const {CATALOG}=await import('./catalog.js?h=0ecf6d0e');
      if(!CATALOG.some(c=>c.p===path))refuse('อาหารไม่ถูกต้อง','invalid-argument');
    }
    if(input.type==='card'){const box=(current.boxes||[]).find(b=>b.id===input.box);if(box){const card=box.deck?.[input.index];input.target=['cut','cut1','burn','ink','crab'].includes(card)?input.targetBoat:input.targetPerson;}}
@@ -201,7 +201,7 @@ export const fishingActionCloud=callable(async req=>core.action({uid:req.auth.ui
 }}));
 
 export const eventsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'events',worldIds:['world/topspenders'],apply:async(game,worlds,ctx,tx)=>{
- const {rollGacha,topSpenders}=await import('./events-engine.js?h=35135df6');const input=req.data?.input||{},writes={},updates={};
+ const {rollGacha,topSpenders}=await import('./events-engine.js?h=06a662cd');const input=req.data?.input||{},writes={},updates={};
  if(input.type==='spin'){
    /* S4 ข้อ 47: หมุนละ 10 เหรียญ */if(ctx.coins<10)refuse('ต้องใช้เหรียญกระทงทอง 10 เหรียญ');const reward=rollGacha();
    if(reward.type!=='none'){const ref=db.doc('mail/'+ctx.uid+'/items/gacha-rewards'),prior=await tx.get(ref),old=prior.exists?prior.data():{},items={...(old.items||{})};for(const[k,n]of Object.entries(reward.items||{}))items[k]=(items[k]||0)+n;writes[ref.path]={title:'รางวัลลัคกี้กาชาปองสะสม',msg:reward.extra||'จากตู้กาชาปอง',icon:'🎁',kusal:(old.kusal||0)+(reward.k||0),coins:0,items,createdAt:FieldValue.serverTimestamp(),from:'กาชาปอง'};if(!prior.exists)updates['players/'+ctx.uid]={mailCount:FieldValue.increment(1)};reward.mailNew=!prior.exists;}
@@ -1111,6 +1111,15 @@ export const treeWarActionCloud=callable(async req=>{
     const bat={id:'bat-'+now.toString(36),lvl,seed:randomInt(2147483647),start,end,round:rd.id,settled:false};
     tx.set(db.doc(TW_STATE),{...st,bat,at:now});tx.set(db.doc(TW_BATDOC),{id:bat.id,s:{},n:{}});return {ok:true,bat};});}
   refuse('รายการไม่ถูกต้อง','invalid-argument');}
+ if(type==='robPay'){/* fix35 💰 ขอชำระเป็นแต้ม: จ่าย 10 ล้านกุศล → คืนของที่ถูกปล้นรอบนั้น · ยกเลิกส่วนที่ยังค้างปล้นต่อ · ทำครั้งเดียว (ลบใบเสร็จ) */
+  const key=String(input.key||'');if(!/^tw-[\w.-]+-rob$/.test(key))refuse('รายการไม่ถูกต้อง','invalid-argument');
+  return core.action({uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:{type,key},system:'treewar',partIds:['inventory','wallet'],worldIds:[],apply:async(game,worlds,ctx,tx)=>{
+   const ref=db.doc('players/'+uid+'/twrob/'+key);const s=await tx.get(ref);if(!s.exists)refuse('ไม่พบรายการปล้นเสบียงรอบนี้ (หมดเวลา หรือชำระไปแล้ว)');const rc=s.data()||{};
+   if((rc.until||0)<=ctx.now)refuse('เลยกำหนดชำระแล้ว (ชำระได้ภายใน 3 วันหลังโดนปล้น)');
+   const m0=Number(game.merit)||0;if(m0<TW_ROB_PAY)refuse('กุศลไม่พอ ต้องมี '+TW_ROB_PAY.toLocaleString('en-US')+' กุศล (มี '+m0.toLocaleString('en-US')+')');
+   game.merit=m0-TW_ROB_PAY;const back=twRobGive(game,rc.taken||{});const coinsBack=Number.isSafeInteger(rc.coinsTaken)&&rc.coinsTaken>0?rc.coinsTaken:0;if(coinsBack)back.push('+'+coinsBack.toLocaleString('en-US')+' เหรียญกระทงทอง');
+   const writes={};writes[ref.path]=null;writes['players/'+uid+'/ledger/'+key]=null;
+   return {writes,updates:{},coins:ctx.coins+coinsBack,response:{ok:true,paid:TW_ROB_PAY,back,merit:game.merit}};}});}
  if(type==='batEnd'){
   /* อ่านแค่สถานะศึก (ไม่อ่านเอกสารรวมคะแนน/ขวาน) ทุกคนส่งพร้อมกันตอนจบได้ไม่ชนกัน · คะแนนและขวานเขียนแบบเพิ่มค่า */
   return core.action({uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:{type},system:'treewar',partIds:['inventory','wallet'],worldIds:[TW_STATE],apply:async(game,worlds,ctx)=>{

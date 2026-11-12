@@ -2,10 +2,10 @@ import {repairInventory,assertInventory} from './inventory-integrity.js?h=3eda51
 /* Transaction adapter shared by callable handlers and emulator tests. */
 import {splitGame,joinGame,bytes} from './save-schema.js?h=eef4832b';
 import {refillAdminInventory} from './admin-inventory.js?h=6c90d59e';
-import {CATALOG} from './catalog.js?h=f37a59df';
+import {CATALOG} from './catalog.js?h=0ecf6d0e';
 import {questDeltas,nbDay} from './nb-quest.js?h=8e07529b';
 import {swimHook} from './swim-quest.js?h=c301332f';
-import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME} from './tree-engine.js?h=14a5ec48';
+import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME,TW_ROB_PAY} from './tree-engine.js?h=3c9defae';
 import {honeyMultiplier} from './campaigns-engine.js?h=a073b41e';
 /* fix17: x17 = ข้อมูลส่วนตัวฝั่งเซิร์ฟเวอร์เล็ก ๆ บนเอกสาร players/{uid} (อ่านอยู่แล้วทุกรายการ ไม่เพิ่มการอ่าน)
    เช่น ภารกิจว่ายกลับ (sq) · เวลาจิ้มนางเงือก · ยอดเปิดกล่องมหากุศลรายวัน · ของแกล้งที่ถืออยู่ */
@@ -74,7 +74,7 @@ export function createCloudCore(db,timestamp) {
         // Pending merit changes written by other players' actions (players/{uid}/ledger). Applied only when merit (wallet) is saved by this action.
         // fix13: queried only when the root flag says entries may exist (ledgerPending true or never set). The login call
         // (system 'ledger') always queries, so an entry written by an older server without the flag is applied at the next login.
-        const ledgerApplied=[],ledgerDone=[],ledgerKeep=[];let ledgerFlag;
+        const ledgerApplied=[],ledgerDone=[],ledgerKeep=[],robReceipts=[];/* fix35 */let ledgerFlag;
         if(partIds.includes('wallet')&&typeof db.collection==='function'&&(system==='ledger'||root.data().ledgerPending!==false)){
           const pending=await tx.get(db.collection('players/'+uid+'/ledger').limit(LEDGER_PAGE));ledgerFlag=(pending.docs||[]).length>=LEDGER_PAGE;
           for(const d of pending.docs||[]){const row=d.data()||{};if(Number.isFinite(row.after)&&row.after>ctx.now){ledgerFlag=true;continue;}/* fix17 คำสาปสะท้อน: ถึงเวลาแล้วค่อยหัก */
@@ -84,7 +84,8 @@ export function createCloudCore(db,timestamp) {
               if((row.until||0)<=ctx.now){ledgerDone.push(d.ref);continue;}if((row.nextAt||0)>ctx.now)continue;
               const r=twRobTake(game,row.rob,ctx.coins);ctx.coins-=r.coinsTaken;const lines=Object.entries(r.taken).map(([p,n])=>'−'+n.toLocaleString('en-US')+' '+(TW_ROB_NAME[p]||p));
               if(r.left>0)ledgerKeep.push([d.ref,{...row,rob:r.left,seen:true,nextAt:ctx.now+6*3600000}]);else ledgerDone.push(d.ref);
-              if(lines.length||!row.seen)ledgerApplied.push({merit:0,tw:'rob',title:String(row.title||''),msg:String(row.msg||''),lines:lines.length?lines:['(ตอนนี้ไม่มีของให้ปล้น)']});continue;}
+              /* fix35 💰 ใบเสร็จของที่ถูกปล้น (รวมทุกครั้งของรอบนี้) → ผู้เล่นขอชำระ 10 ล้านกุศลเพื่อรับคืนได้ภายในกำหนด */let payKey=null;try{const rp='players/'+uid+'/twrob/'+d.ref.id;const rs=await tx.get(db.doc(rp));const rc=rs.exists?rs.data():{taken:{},coinsTaken:0};const tk={...(rc.taken||{})};for(const [p,n] of Object.entries(r.taken)){if(p==='coins')continue;tk[p]=(tk[p]||0)+n;}const total=Object.values(tk).reduce((a,b)=>a+b,0)+(rc.coinsTaken||0)+r.coinsTaken;if(total>0){robReceipts.push([rp,{taken:tk,coinsTaken:(rc.coinsTaken||0)+r.coinsTaken,until:row.until||0,at:rc.at||ctx.now,round:String(row.round||d.ref.id)}]);payKey=d.ref.id;}}catch(e){}
+              if(lines.length||!row.seen)ledgerApplied.push({merit:0,tw:'rob',title:String(row.title||''),msg:String(row.msg||''),lines:lines.length?lines:['(ตอนนี้ไม่มีของให้ปล้น)'],...(payKey?{payKey,payMerit:TW_ROB_PAY,payUntil:row.until||0}:{})});continue;}
             ledgerDone.push(d.ref);if(!Number.isSafeInteger(row.merit)||!row.merit)continue;
             {const m0=game.merit||0;game.merit=row.merit<0?m0+row.merit:m0+row.merit;}ledgerApplied.push({merit:row.merit,title:String(row.title||''),msg:String(row.msg||''),...(row.source==='funrun'?{source:'funrun'}:{}),...(row.tw?{tw:String(row.tw)}:{})});}
         }
@@ -138,7 +139,7 @@ export function createCloudCore(db,timestamp) {
         for(const [path,data]of Object.entries(result.merges||{}))tx.set(db.doc(path),data,{merge:true});
         if(nbWrite)tx.set(nbWrite[0],nbWrite[1]);
         if(twWrite)tx.set(twWrite[0],twWrite[1]);
-        for(const [ref,row]of ledgerKeep)tx.set(ref,row);
+        for(const [ref,row]of ledgerKeep)tx.set(ref,row);for(const [p,data]of robReceipts)tx.set(db.doc(p),data);/* fix35 */
         for(const [path,data]of Object.entries(result.updates||{}))tx.update(db.doc(path),data);
         for(const ref of ledgerDone)tx.delete(ref);
         for(const path of result.deletes||[])tx.delete(db.doc(path));

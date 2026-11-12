@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th"><head><script src="../pv/s4loop.js?h=2b770a67"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<html lang="th"><head><script src="../pv/s4lite.js"></script><script src="../pv/s4loop.js?h=b43f4bea"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>โซนซาฟารี</title>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -104,19 +104,19 @@ body.edit .side,body.edit #hint{display:none}
 <div class="z" data-z="pet"><b>🐶</b>สวนหมาแมว<small>เดินทาง</small></div>
 <div class="z here" data-z="safari"><b>🦁</b>ซาฟารี<small>อยู่ที่นี่</small></div>
 </div></div>
-<script src="../pv/s4store.js?h=2fb0bb43" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=2570901e"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4store.js?h=2fb0bb43" data-key="s4deco-safari" data-re="^safari-pv-decor"></script><script src="../pv/s4own.js?h=d1d70466"></script><script src="../pv/s4photo.js?h=2983f296"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SU from 'three/addons/utils/SkeletonUtils.js';
-import {loadCharacter} from '../pv/s4char.js?h=d066529e';
+import {loadCharacter} from '../pv/s4char.js?h=ba9fdd5b';
 {const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 74px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 const stage=document.getElementById('stage');
-const r=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+const r=new THREE.WebGLRenderer({antialias:!window.S4LITE,powerPreference:'high-performance'});
 r.setPixelRatio(Math.min(MOBILE?1.25:1.75,devicePixelRatio||1));r.setSize(innerWidth,innerHeight);r.outputColorSpace=THREE.SRGBColorSpace;
-r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFShadowMap;r.shadowMap.autoUpdate=false;stage.appendChild(r.domElement);
+r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFShadowMap;if(window.S4LITE){r.setPixelRatio(1);r.shadowMap.enabled=false;}/* fix35 🔋 */r.shadowMap.autoUpdate=false;stage.appendChild(r.domElement);
 const sc=new THREE.Scene();sc.background=new THREE.Color(0xf7b57a);sc.fog=new THREE.Fog(0xf6c38e,60,140);
 const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,400);
 const hemi=new THREE.HemisphereLight(0xfff1d8,0xb98a52,1.6);sc.add(hemi);
@@ -630,7 +630,7 @@ async function build(){
 }
 // ---------- loop ----------
 const clock=new THREE.Clock();let T=0,frame=0;
-/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||!!carry||!!window.__zsnap||(typeof BELL!=='undefined'&&BELL));function loop(dt){clock.getDelta();T+=dt;frame++;
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||!!carry||!!window.__zsnap||(typeof BELL!=='undefined'&&BELL)||/* fix35: ลิง/บาบูน/นกกำลังเดินหรือโหนซิปไลน์ → วาดต่อ ไม่หลับกลางทาง */(typeof babs!=='undefined'&&babs.some(a=>a.tx!=null))||(typeof MKS!=='undefined'&&MKS.some(m=>m.mode==='ride'||(m.a&&m.a.goZip)))||(typeof walkers!=='undefined'&&walkers.some(a=>a.st==='walk'||(a.q&&a.q.length))));function loop(dt){clock.getDelta();T+=dt;frame++;
   WT.value=T;stepMist(dt);for(const w of WM)w.spin.rotation.z+=dt*1.4;stepNight(dt);for(const a of walkers)stepBird(a,dt);stepBell();for(const b of babs)stepBab(b,dt);stepMonkeys(dt);for(const p of PETS)stepPet(p,dt);stepZip(dt);
   for(const p of pens){const w=(p.want||BELL)?1:0;p.open+=(w-p.open)*Math.min(1,dt*4);p.hinge.rotation.y=p.open*1.75;}
   if(girl){let moving=false;
@@ -655,7 +655,7 @@ S4LOOP.run(loop);setTimeout(()=>{const h=document.getElementById('hint');if(h)h.
 
 // ===== ซีซัน 4: หมุนกล้อง · ดูของแต่งภาพใหญ่ · เอฟเฟกต์ · ผูกกับระบบนกซีซัน 3 =====
 document.getElementById('rotL').onclick=()=>{YAWT+=Math.PI/4;};document.getElementById('rotR').onclick=()=>{YAWT-=Math.PI/4;};
-let pvN=null;function showPv(n){pvN=n;document.getElementById('pvImg').src=THUMB[n]||'';document.getElementById('pvName').textContent=NAME[n]||n;/* S4: ใช้สิทธิ์ของแต่งกลาง (S4OWN) · หมดแล้วซื้อได้ถ้ามีราคา */const av=AVAIL(n),pr=window.S4OWN&&S4OWN.price?S4OWN.price(n):0;document.getElementById('pvInfo').textContent=(CATE[n]||'')+' · '+(av===Infinity?'วางได้ไม่จำกัด':'มี '+av+' ชิ้น');const gb=document.getElementById('pvGo');gb.dataset.buy=av<=0&&pr?String(pr):'';gb.disabled=av<=0&&!pr;gb.textContent=av>0?'📍 หยิบไปวาง':pr?'💰 ซื้อ '+pr.toLocaleString()+' กุศล':'📦 รับจากยัยหนูเท่านั้น';document.getElementById('pvw').classList.add('on');}
+let pvN=null;function showPv(n){pvN=n;document.getElementById('pvImg').src=THUMB[n]||'';document.getElementById('pvName').textContent=NAME[n]||n;/* S4: ใช้สิทธิ์ของแต่งกลาง (S4OWN) · หมดแล้วซื้อได้ถ้ามีราคา */const av=AVAIL(n),pr=window.S4OWN&&S4OWN.price?S4OWN.price(n):0;document.getElementById('pvInfo').textContent=(CATE[n]||'')+' · '+(av===Infinity?'วางได้ไม่จำกัด':'มี '+av+' ชิ้น');const gb=document.getElementById('pvGo');gb.dataset.buy=av<=0&&pr?String(pr):'';gb.disabled=av<=0&&!pr;gb.textContent=av>0?'📍 หยิบไปวาง':pr?'💰 ซื้อ '+pr.toLocaleString()+' กุศล':(window.S4OWN&&S4OWN.boxable&&S4OWN.boxable(n)?'🎁 ลุ้นจากกล่องสุ่มของตกแต่ง':'📦 รับจากยัยหนูเท่านั้น');document.getElementById('pvw').classList.add('on');}
 document.getElementById('pvX').onclick=()=>document.getElementById('pvw').classList.remove('on');
 document.getElementById('pvGo').onclick=async()=>{const gb=document.getElementById('pvGo');if(gb.dataset.buy){gb.disabled=true;gb.textContent='⏳ กำลังซื้อ…';try{await S4OWN.buy(pvN,1);gb.dataset.buy='';drawTray();}catch(e){gb.disabled=false;gb.textContent='💰 ซื้อ '+Number(gb.dataset.buy).toLocaleString()+' กุศล';return;}}document.getElementById('pvw').classList.remove('on');const el=tList.querySelector('.it[data-n="'+pvN+'"]');if(el&&(AVAIL(pvN)>0||BAGINV[pvN]>0)){if(carry&&carry.ghost)sc.remove(carry.ghost);select(null);carry={n:pvN,sx:-99,sy:-99,drag:false,ghost:null};tList.querySelectorAll('.it').forEach(x=>x.classList.toggle('pick',x===el));document.getElementById('tTip').textContent='แตะพื้นตรงที่จะวาง';makeGhost(pvN).then(g=>{if(carry&&carry.n===pvN){carry.ghost=g;g.visible=false;}}).catch(()=>{});}};
 // เอฟเฟกต์อีโมจิลอย (สไปรต์)

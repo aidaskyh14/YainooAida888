@@ -75,7 +75,7 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
  async function both(type,data){const keep=farm;try{farm=zoneFarm();await cloudFarm(type,data);}catch(e){}farm=keep;try{render();}catch(e){}}
  const T=(ic,lab,act,c,badge)=>({ic,lab,act,c:c||'c2',badge});
  const LV={
-  menu:()=>({t:'เมนู',items:[...(visiting()?[T('🏠','กลับบ้าน',()=>{close();click('vHome');},'c4')]:[]),T('👥','เพื่อน',()=>go('friends'),'c1'),T('🎒','กระเป๋า',()=>{close();click('mBag');},'c2'),T('🎨','แต่งฟาร์ม',()=>{close();f3click('bEdit');},'c5'),
+  menu:()=>({t:'เมนู',items:[...(visiting()?[T('🏠','กลับบ้าน',()=>{close();click('vHome');},'c4')]:[]),T('👥','เพื่อน',()=>go('friends'),'c1'),T('🎒','กระเป๋า',()=>{close();click('mBag');},'c2'),T('🎨','แต่งฟาร์ม',()=>{close();f3click('bEdit');},'c5'),T('🔋',(()=>{let on=false,why='';try{const w=f3w();on=!!(w&&w.S4LITE);why=(w&&w.S4LITE_WHY)||'';}catch(e){}return 'โหมดประหยัด: '+(on?'เปิด':'ปิด')+(on&&why?' ('+why+')':'');})(),()=>{/* fix35: สลับโหมดประหยัด (ผู้เล่นเลือกเองชนะอัตโนมัติ) แล้วโหลดหน้าใหม่ */let on=false;try{const w=f3w();on=!!(w&&w.S4LITE);}catch(e){}try{localStorage.setItem('s4lite',on?'0':'1');}catch(e){}close();try{toast((on?'🔆 ปิด':'🔋 เปิด')+'โหมดประหยัดแล้ว กำลังโหลดใหม่…');}catch(e){}setTimeout(()=>{try{(window.top||window).location.reload();}catch(e){location.reload();}},700);},'c3'),
     T('📖','สมุดสะสม',()=>{close();f3click('bAlbum');},'c3'),T('🐷','น้ำผึ้ง',()=>{close();click('mHoney');},'c3'),(visiting()?T('🎭','แกล้งเพื่อน (จอมแสบ)',()=>go('scare'),'c1'):T('🛡️','หุ่นไล่กา',()=>go('scare'),'c5')),T('📮','จดหมาย',()=>{close();try{H().openMail();}catch(e){try{openMail();}catch(e2){}}},'c1',mailN()),
     ...(isAdm()?[T('👑','แอดมิน',()=>{close();click('mAdmin');},'c2')]:[]),T('🚪','ออก',()=>{close();click('mLogout');},'c3')]}),
   farm:()=>({t:'ฟาร์ม',items:[T('🚜','เก็บทั้งหมด',()=>{close();both('harvest',{all:true});},'c2'),T('🌱','ปลูกทั้งหมด',()=>{close();plantAllBoth();},'c4'),T('💧','รดน้ำทั้งหมด',()=>{close();both('water',{all:true});},'c1'),
@@ -119,11 +119,14 @@ body.s4full #s4prof,body.s4full #s4dockR,body.s4full #s4strip,body.s4full #s4too
 @keyframes s4rkIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}#s4rank .r,#s4rank .pd{animation:s4rkIn .35s ease both}`;document.head.appendChild(st);}
  async function openRank(){let R=document.getElementById('s4rank');if(R)R.remove();R=document.createElement('div');R.id='s4rank';R.innerHTML='<div class="hd"><span>🏆 อันดับกุศล · เพื่อน</span><button data-x="1">✕</button></div><div class="pod"></div><div class="list"><div class="msg" style="text-align:center;padding:30px;color:#9a7a68">⏳ กำลังโหลดอันดับ…</div></div><div class="pin"></div>';
   document.body.appendChild(R);document.body.classList.add('s4sheet');const bye=()=>{R.remove();document.body.classList.remove('s4sheet');try{close();}catch(e){}};R.querySelector('[data-x]').onclick=bye;
-  let rows=[];try{const h=H();rows=(await h.roster()).filter(r=>!r.admin);}catch(e){R.querySelector('.list').innerHTML='<div class="msg">โหลดรายชื่อไม่สำเร็จ</div>';return;}
-  const me=H().uid;rows.sort((a,b)=>(b.merit||0)-(a.merit||0));
+  const me=H().uid;let rows=[];try{const h=H();rows=(await h.roster()).filter(r=>!r.admin);}catch(e){R.querySelector('.list').innerHTML='<div class="msg">โหลดรายชื่อไม่สำเร็จ</div>';return;}
+  rows.sort((a,b)=>(b.merit||0)-(a.merit||0));
   let prev={};try{prev=JSON.parse(localStorage.getItem('s4rank-prev')||'{}');}catch(e){}
   const nowR={};rows.forEach((r,i)=>nowR[r.uid]=i+1);try{localStorage.setItem('s4rank-prev',JSON.stringify(nowR));}catch(e){}
-  const av=(r,i)=>{const im=r.photo||r.avatar;return '<div class="av" style="background:'+COL[i%COL.length]+'">'+(im?'<img src="'+esc(im)+'" alt="">':esc((r.name||'?')[0]))+'</div>';};
+  /* fix35: รูปโปรไฟล์เพื่อน — roster ส่งมาใน r.av (preset:ชื่อ | data:...) · ไม่มี/โหลดไม่ได้ → น้องน้ำผึ้ง (สุ่มคงที่ตาม uid) · ของตัวเองใช้ค่าล่าสุดในเซฟ */
+  const honeyAv=uid=>'images/av-honey-'+(1+[...String(uid||'')].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)%16)+'.webp';
+  const avSrcOf=r=>{let v=r.av||r.photo||r.avatar||'';if(r.uid===me){try{const g=JSON.parse(H().get('s3all-v1')||'{}');if(g.av)v=g.av;}catch(e){}}if(!v)return honeyAv(r.uid);if(/^data:image\//.test(v))return v;if(/^preset:[a-z0-9-]{1,40}$/.test(v))return 'images/'+v.slice(7)+'.webp';return honeyAv(r.uid);};
+  const av=(r,i)=>{const src=avSrcOf(r),fb=honeyAv(r.uid);return '<div class="av" style="background:'+COL[i%COL.length]+'"><img src="'+esc(src)+'" alt="" onerror="if(this.dataset.fb!==\'1\'){this.dataset.fb=\'1\';this.src=\''+esc(fb)+'\';}else this.remove();"></div>';};
   const full=n=>(Number(n)||0).toLocaleString('en-US');
   const top=rows.slice(0,3),order=[top[1],top[0],top[2]],cls=['s','g','b'],rk=[2,1,3];
   R.querySelector('.pod').innerHTML=order.map((r,k)=>r?'<div class="pd '+cls[k]+'" data-u="'+esc(r.uid)+'">'+(k===1?'<div style="position:relative">'+av(r,rk[k]-1)+'<span class="crown">👑</span></div>':av(r,rk[k]-1))+'<div class="nm">'+esc(r.uid===me?'ฉัน':r.name)+'</div><div class="mr">🪷 '+full(r.merit)+'</div><div class="blk">'+rk[k]+'</div></div>':'<div class="pd"></div>').join('');

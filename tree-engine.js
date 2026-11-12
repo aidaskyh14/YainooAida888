@@ -76,6 +76,8 @@ export function twRobTake(game,need,coins=0){const have=TW_ROB_PATHS.map(p=>[p,g
   for(const [p,n]of open){if(left<=0)break;const t=Math.min(share,Math.floor(n/2)-(taken[p]||0),left);if(t>0){taken[p]=(taken[p]||0)+t;left-=t;}}}
  let coinsTaken=0;for(const [p,t]of Object.entries(taken)){if(p==='coins'){coinsTaken=t;continue;}setP(game,p,getP(game,p)-t);}
  return {taken,coinsTaken,left};}
+/* fix35 💰 ขอชำระเป็นแต้ม: จ่าย 10,000,000 กุศล แล้วคืนของที่ถูกปล้นรอบนั้นทั้งหมด */export const TW_ROB_PAY=10000000;
+export function twRobGive(game,taken){const back=[];for(const [p,n] of Object.entries(taken||{})){if(p==='coins'||!Number.isSafeInteger(n)||n<=0||!TW_ROB_PATHS.includes(p))continue;setP(game,p,getP(game,p)+n);back.push('+'+n.toLocaleString('en-US')+' '+(TW_ROB_NAME[p]||p));}return back;}
 /* การ์ดเติมเสบียง (สุ่ม 1 อย่าง) → ส่งเป็นจดหมาย (คีย์ของแคตตาล็อก) */
 const SUP_KEYS={box:['box-dog','box-cat','box-hamster','box-alpaca','box-plant','box-fruit','bird-box-ostrich','bird-box-dodo'],wine:['wine-moon','wine-rose','wine-blood','wine-eclipse'],
  'item.pestle':'pestle','item.angel':'wings','item.coconut':'coconut','item.cake':'cake','halloween.cauldron':'halloween-cauldron','item.hat':'hat','item.musicbox':'musicbox'};

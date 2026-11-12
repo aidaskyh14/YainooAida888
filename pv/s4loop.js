@@ -20,6 +20,7 @@
   S.stat.mode=mode;
   if(mode==='sleep'){/* หลับ: วาด 1 เฟรมทุก 2 วิ (กันภาพหาย/ถ่ายรูปได้) ตื่นเต็มเมื่อ wake() */if(t-lastDraw<2000){S.stat.skipped++;S.raf=0;setTimeout(()=>{if(!S.raf&&S.fn)S.raf=requestAnimationFrame(tick);},2000-(t-lastDraw));return;}}
   if(mode==='ambient'&&t-lastDraw<1000/AMB_FPS){S.stat.skipped++;S.raf=requestAnimationFrame(tick);return;}
+  /* fix35: โหมดประหยัด จำกัดเฟรมเต็ม (30/วิ) */if(mode==='full'&&window.__s4fullFps&&t-lastDraw<1000/window.__s4fullFps-1){S.stat.skipped++;S.raf=requestAnimationFrame(tick);return;}
   const dt=Math.min(.05,(t-S.last)/1000);S.last=t;lastDraw=t;S.stat.frames++;
   try{S.fn(dt,t,mode);}catch(e){console.error('[s4loop]',e);}
   S.raf=requestAnimationFrame(tick);}

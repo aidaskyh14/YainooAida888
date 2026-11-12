@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="th"><head><script src="../pv/s4loop.js?h=2b770a67"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8">
+<!DOCTYPE html><html lang="th"><head><script src="../pv/s4lite.js"></script><script src="../pv/s4loop.js?h=b43f4bea"></script><script src="../pv/s4icon.js?h=37261d11"></script><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>โซน 3D</title>
 <style>
@@ -13,7 +13,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#9fd27a;font-family:Ma
 .fx{position:fixed;transform:translate(-50%,-50%);pointer-events:none;z-index:4;font-size:20px;transition:transform 1s cubic-bezier(.2,1,.4,1),opacity 1s}
 .fx.go{opacity:0}
 </style>
-<script src="../pv/s4photo.js?h=2983f296"></script><script src="../pv/s4own.js?h=2570901e"></script><script src="../pv/s4deco.js?h=85b68648"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script src="../pv/s4photo.js?h=2983f296"></script><script src="../pv/s4own.js?h=d1d70466"></script><script src="../pv/s4deco.js?h=ec4b13bc"></script><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <script src="../pv/s4fit.js?h=7d03d256"></script></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="c"></div><div id="tip"></div>
 <div id="load"><div id="lt">กำลังเปิดโซน…</div><div class="bar"><i id="lb"></i></div></div><script>try{document.getElementById('lt').textContent=({hamster:'🐹 กำลังเข้าสวนหลังบ้าน…',dog:'🐶 กำลังเข้าสวนหมา…',cat:'🐱 กำลังเข้าสวนแมว…',alpaca:'🦙 กำลังเข้าทุ่งอัลปาก้า…'})[new URLSearchParams(location.search).get('z')]||'🌿 กำลังเข้าโซน…';}catch(e){}</script>
@@ -22,13 +22,13 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
-import {loadCharacter} from '../pv/s4char.js?h=d066529e';
+import {loadCharacter} from '../pv/s4char.js?h=ba9fdd5b';
 const Z=new URLSearchParams(location.search).get('z')||'alpaca';
 const P=(()=>{try{return parent!==window?parent:null;}catch(e){return null;}})();
 const send=(a,id)=>{try{P&&P.postMessage({s4z:a,id:id||''},'*');}catch(e){}};
 const tipEl=document.getElementById('tip');let tipT=0;const tip=t=>{tipEl.textContent=t;tipEl.style.opacity=1;clearTimeout(tipT);tipT=setTimeout(()=>tipEl.style.opacity=0,2400);};
 const MOBILE=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
-const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?(innerWidth>700?1.2:1.5):1.5)/* S4 ข้อ 2: iPad จอใหญ่ ลดความละเอียดเรนเดอร์ แตะตอบสนองไวขึ้น */);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
+const R=new THREE.WebGLRenderer({antialias:!window.S4LITE});R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?(innerWidth>700?1.2:1.5):1.5)/* S4 ข้อ 2: iPad จอใหญ่ ลดความละเอียดเรนเดอร์ แตะตอบสนองไวขึ้น */);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;if(window.S4LITE){R.setPixelRatio(1);R.shadowMap.enabled=false;}/* fix35 🔋 */R.outputColorSpace=THREE.SRGBColorSpace;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
 document.getElementById('c').appendChild(R.domElement);
 const sc=new THREE.Scene();sc.background=new THREE.Color(0x9fd8f5);sc.fog=new THREE.Fog(0x9fd8f5,70,140);
 const cam=new THREE.PerspectiveCamera(30,1,.5,300);
@@ -43,7 +43,7 @@ function path(pts,w){const sh=new THREE.Group();const m=new THREE.MeshLambertMat
   const p=new THREE.Mesh(new THREE.PlaneGeometry(w,L+w*.6),new THREE.MeshLambertMaterial({map:t,color:0xf3e2bf}));p.rotation.x=-Math.PI/2;p.rotation.z=-Math.atan2(x2-x1,z2-z1);p.position.set((x1+x2)/2,.05+i*.002,(z1+z2)/2);p.receiveShadow=true;sh.add(p);
   const d=new THREE.Mesh(new THREE.CircleGeometry(w/2,20),m);d.rotation.x=-Math.PI/2;d.position.set(x2,.051+i*.002,z2)/* S4 ข้อ 38: ยกทางเดินเหนือพื้นดิน ไม่กะพริบ */;d.receiveShadow=true;sh.add(d);}sc.add(sh);}
 // โหลดโมเดล: แพ็กของโซน (อัลปาก้า แฮมสเตอร์) + โมเดลในฟาร์ม
-let PACK=null;const packP=fetch('pack.json').then(r=>r.json()).then(j=>PACK=j);
+let PACK=null;const packP=fetch('pack.json?h=f60c21cc').then(r=>r.json()).then(j=>PACK=j);
 const loader=new GLTFLoader();const CACHE={};let nLoad=0,nDone=0;const prog=()=>{document.getElementById('lb').style.width=(nLoad?nDone/nLoad*100:0)+'%';};
 function toGLB(j){const bin=Uint8Array.from(atob(j.buffers[0].uri.split(',')[1]),c=>c.charCodeAt(0));j=structuredClone(j);delete j.buffers[0].uri;
  const js=new TextEncoder().encode(JSON.stringify(j));const jl=Math.ceil(js.length/4)*4,bl=Math.ceil(bin.length/4)*4;const out=new Uint8Array(28+jl+bl);const dv=new DataView(out.buffer);
@@ -179,7 +179,7 @@ async function buildAlpaca(){
  const PENS=[[-12.5,-16],[0,-16],[12.5,-16],[-12.5,-4.5],[0,-4.5],[12.5,-4.5]];
  {const pts=[];for(let k=0;k<=64;k++){const a=k/64*Math.PI*2;pts.push([REG.cx+Math.cos(a)*REG.rx*1.03,REG.cz+Math.sin(a)*REG.rz*1.03]);}ribbon(pts,.4,.05,new THREE.MeshBasicMaterial({color:0xfff3d6,transparent:true,opacity:.55,depthWrite:false}),3);}
  let L=[];try{L=JSON.parse((0,P.eval)('JSON.stringify((S.pens||[]).map(q=>(q||[]).slice(0,12)))'))||[];}catch(e){}
- const CM={green:'c2_al_green',lavender:'c2_al_purple',blue:'c2_al_blue',yellow:'c2_al_yellow',cream:'c2_al_cream'};
+ const CM={green:'c2_al_green',lavender:'c2_al_purple',blue:'c2_al_blue',yellow:'c2_al_yellow',cream:'c2_al_cream',rainbow:'c2_al_rainbow'/* fix35 */};
  const AL=[];(L||[]).slice(0,3).forEach((q,p)=>(q||[]).forEach((a,j)=>{if(a)AL.push({n:a.gold?'c2_al_gold':CM[a.color]||'c2_al_cream',pen:p*2+(j<6?0:1),id:a.id,sp:String(p)});}));
  const demo=false;/* S4: ไม่มีสัตว์ตัวอย่าง คอกว่างจนกว่าผู้เล่นวางเอง */
  const ALP=new Set();const mkAl=q=>{const k=q.id||('p'+q.sp);if(ALP.has(k)||WALK.some(a=>a.alid===k))return Promise.resolve(null);ALP.add(k);const [x,z]=PENS[q.pen%6];const bx={x0:x-4.2,x1:x+4.2,z0:z-3.2,z1:z+2.8};return animal(q.n,bx,2.2,.9).then(a=>{ALP.delete(k);if(WALK.some(b=>b!==a&&b.alid===k)){sc.remove(a.w);WALK.splice(WALK.indexOf(a),1);return null;}a.alid=k;TAPS.push([a.w,q.id?'al':'pen',null,q.id||q.sp]);return a;}).catch(()=>{ALP.delete(k);});};
