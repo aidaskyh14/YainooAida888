@@ -57,9 +57,9 @@ export class SplitSaveStore {
     return joinGame(current.values());
   }
   accept(rows) {
-    for(const row of rows){this.parts.set(row.id,row.part);this.revs.set(row.id,row.part.rev);this.loadedIds.add(row.id);}
+    for(const row of rows){this.parts.set(row.id,row.part);this.revs.set(row.id,row.part.rev);this.loadedIds.add(row.id);if(row.id==='wallet'){/* fix35b: ค่าจากระบบกลาง = ฐานใหม่ */try{const mm=Number(JSON.parse(row.part.payload).merit)||0;this.mA={m:mm,t:Date.now()};this.mPeak=mm;}catch(e){}}}
   }
-  async load(profile,options={}) {
+  async load(profile,options={}) {this.mA=null;this.mPeak=0;/* fix35b: โหลดใหม่ = ตั้งฐานใหม่จากค่าในคลาวด์ */
     this.partial=Array.isArray(options.ids);
     if(profile.storageVersion!==STORAGE_VERSION) {
       // Migrate from the transaction's authoritative cloud snapshot.
@@ -98,6 +98,7 @@ export class SplitSaveStore {
   async save(profile,fields) {
     const next=this.scopedNext(profile.g||{}), changes=fields.includes('g')?diffs(this.parts,next):[];
     /* fix21: ด่านสุดท้าย กันกุศลหาย */try{const w=changes.find(([id])=>id==='wallet');if(w&&w[1]&&this.parts.has('wallet')){const m=x=>{try{return Number(JSON.parse(x.payload).merit)||0;}catch(e){return 0;}};const o=m(this.parts.get('wallet')),n=m(w[1]);if((o>=1e5&&n<o*.5)||(o>=1e3&&n<=0))throw Object.assign(new Error('🛡️ กันกุศลหาย: กุศลจะลดจาก '+o.toLocaleString()+' เหลือ '+n.toLocaleString()+' ในครั้งเดียว ไม่บันทึก กรุณารีเฟรช'),{code:'save/merit-guard'});}}catch(e){if(e.code==='save/merit-guard')throw e;}
+/* fix35b 🛡️ ด่านกันกุศลหายแบบสะสม: ฐาน = ค่าที่คลาวด์ยืนยันล่าสุด (โหลด/รายการระบบกลาง) หรือจุดสูงสุดที่เครื่องนี้เซฟใน 60 นาที · ลดเกิน 25% และ ≥ 200,000 (หรือ ≥ 2 ล้าน) โดยไม่ผ่านระบบกลาง = ไม่บันทึก · จดทุกครั้งที่ลด */try{const w=changes.find(([id])=>id==='wallet');if(w&&w[1]&&this.parts.has('wallet')){const m=x=>{try{return Number(JSON.parse(x.payload).merit)||0;}catch(e){return 0;}};const o=m(this.parts.get('wallet')),n=m(w[1]);const now=Date.now();if(!this.mA||now-this.mA.t>3600e3){this.mA={m:o,t:now};this.mPeak=o;}this.mPeak=Math.max(this.mPeak||0,o);if(n<o){const base=Math.max(this.mA.m,this.mPeak,o),drop=base-n;let trips=0;try{trips=Number(sessionStorage.getItem('s4mg-'+this.uid))||0;}catch(e){}const bad=(drop>=200000&&drop>base*.25)||drop>=2e6||(trips>=2&&drop>=50000);try{if(window.__meritLog)window.__meritLog({from:o,to:n,base,blocked:bad,trips});}catch(e){}if(bad){try{sessionStorage.setItem('s4mg-'+this.uid,String(trips+1));}catch(e){}throw Object.assign(new Error('🛡️ กันกุศลหาย: กุศลลดจาก '+base.toLocaleString()+' เหลือ '+n.toLocaleString()+' ภายใน 1 ชั่วโมงโดยไม่ผ่านระบบกลาง ไม่บันทึก · ดึงค่าจริงกลับมาแล้ว'),{code:'save/merit-guard'});}}}}catch(e){if(e.code==='save/merit-guard')throw e;}
     /* fix29: ด่านสุดท้าย กันกระเป๋าหายยกใบ */try{const w=changes.find(([id])=>id==='inventory');if(w&&w[1]&&this.parts.has('inventory')){const tot=x=>{let t=0;const walk=o=>{for(const v of Object.values(o||{})){if(v&&typeof v==='object'&&!Array.isArray(v))walk(v);else if(typeof v==='number'&&v>0)t+=v;}};try{const p=JSON.parse(x.payload);walk(p.bag);for(const m of (p.$moduleInventory||[]))walk(m&&m.data);}catch(e){}return t;};const o=tot(this.parts.get('inventory')),n=tot(w[1]);if(o>=20&&n<o*.4)throw Object.assign(new Error('🛡️ กันกระเป๋าหาย: ของจะลดจาก '+o.toLocaleString()+' เหลือ '+n.toLocaleString()+' ชิ้นในครั้งเดียว ไม่บันทึก'),{code:'save/inv-guard'});}}catch(e){if(e.code==='save/inv-guard')throw e;}
     if(!changes.length && fields.every(f=>f==='g'))return;
     const meta={by:this.session};

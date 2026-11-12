@@ -16,9 +16,9 @@ import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=0cc9c615';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=7d24af04';
+import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=9219d22e';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
-import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=04f32153';
+import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=9459b54f';
 import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=0ecf6d0e';
 
 const firebaseConfig = {
@@ -264,7 +264,7 @@ async function enter(user) {
     if(!S.admin && S.P.approval && S.P.approval !== 'approved'){renderApproval();return;}
     if(S.admin)watchPendingMembers();
     stage='โหลดกระเป๋าและเงินจากคลาวด์';
-    store = new SplitSaveStore(db, user.uid, S.sessionId);
+    store = new SplitSaveStore(db, user.uid, S.sessionId);/* fix35b 📉 */window.__call=(name,data)=>httpsCallable(functions,name)(data).then(r=>r.data);window.__meritLog=(()=>{let last=0;return info=>{const now=Date.now();if(now-last<2500&&!info.blocked)return;last=now;try{httpsCallable(functions,'meritLogCloud')({...info,screen:String(S.screen||'').slice(0,40),session:S.sessionId}).catch(()=>{});}catch(e){}};})();
     S.P = await store.load(S.P,{ids:BASE_PARTS});
     stage='ตรวจความถูกต้องของจำนวนของ';
     if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
@@ -885,7 +885,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=d246650c'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=763dc347'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -1008,7 +1008,7 @@ async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',
   const go=async()=>{/* ส่วน ⑤: ไม่ใช้อีโมจิแล้ว → ฉากขับรถ 3D อยู่ในหน้านคร (city3d ?drive=) โหลดเมืองระหว่างขับ */try{const r=await cloudAction('city',{type:'enter',car:carK});/* fix35 ⛏️ รถขุดเจาะ: เล่นแอนิเมชันขุดลงดินในฟาร์มก่อน (ไม่เกิน 3.6 วิ) · ช่องจอดที่เหมืองคงที่ต่อคน */if(r.drill){try{const w=S.frame&&S.frame.contentWindow.document.getElementById('f3d').contentWindow;if(w&&w.__digCar)await Promise.race([w.__digCar(carK),new Promise(ok=>setTimeout(ok,3600))]);}catch(err){}}let slot=0;try{const u=String(S.user&&S.user.uid||'');let h=0;for(let i=0;i<u.length;i++)h=(h*31+u.charCodeAt(i))>>>0;slot=h%8;}catch(err){}S4CITY.drive={car:carK,slot,fuel:r.fuelUsed?'⛽ ใช้น้ำมัน '+r.fuelUsed+' แกลลอน · เหลือ '+r.view.fuel:(e.free?'🎉 วันนี้เข้าฟรี':'')};S4CITY.going=false;S4CITY.pass=true;goScreen('city');}
    catch(err){S4CITY.going=false;toast(thaiError(err));}};
   const CARN={yellow:'รถเหลือง',pink:'รถชมพู',green:'รถเขียว',purple:'รถม่วงเปิดประทุน',small:'รถเขียว',luxury:'รถม่วงเปิดประทุน',drill1:'รถขุดเจาะโรเวอร์ขาว',drill2:'รถขุดเจาะมุกรุ้ง',drill3:'รถขุดเจาะแดงเพลิง',drill4:'รถขุดเจาะส้มคริสตัล'};const isDrill=/^drill[1-4]$/.test(carK);/* fix35 ⛏️ *//* ส่วน ⑤: หน้าต่างถามน้ำมัน มีรูปรถ+รูปน้ำมัน */const fuelTxt=(e.free&&!e.hourFuel)?'🎉 วันนี้เข้าฟรี ไม่ใช้น้ำมัน':isDrill?'<img src="images/s4-fuel.webp" style="width:34px;height:34px;vertical-align:middle;object-fit:contain"> ⛏️ รถขุดเจาะใช้น้ำมัน <b>25–50</b> แกลลอนต่อเที่ยว · มีอยู่ <b>'+e.fuel+'</b>'+(e.fuel<25?'<div style="color:#c0392b;font-weight:800">น้ำมันไม่พอ (ต้องมีอย่างน้อย 25)</div>':''):'<img src="images/s4-fuel.webp" style="width:34px;height:34px;vertical-align:middle;object-fit:contain"> ชั่วโมงนี้ใช้น้ำมัน <b>'+(e.hourFuel||e.need.fuelMin)+'</b> แกลลอน · มีอยู่ <b>'+e.fuel+'</b>';
-  /* fix23: หน้าต่างรถใหม่ — รูปฉากรถตามสีที่กด */const carImg='images/s4-car-scene-'+(({small:'green',luxury:'purple'})[carK]||carK)+'.webp';
+  /* fix23: หน้าต่างรถใหม่ — รูปฉากรถตามสีที่กด */const carImg='images/s4-car-scene-'+(({small:'green',luxury:'purple'})[carK]||carK)+'.webp'+(isDrill?'?h=35b':'');/* fix35b: รูปรถขุดเจาะชุดใหม่ */
   modal('<div style="margin:-14px -14px 0;border-radius:22px 22px 0 0;overflow:hidden;position:relative"><img src="'+carImg+'" style="display:block;width:100%;aspect-ratio:1/1;object-fit:cover" onerror="this.src=\'images/s4-car-'+(({small:'green',luxury:'purple'})[carK]||carK)+'.webp\';this.style.objectFit=\'contain\'"><div style="position:absolute;left:0;right:0;bottom:0;padding:34px 14px 10px;background:linear-gradient(transparent,rgba(40,12,70,.78));color:#fff;text-align:left"><div style="font-size:1.25rem;font-weight:800;text-shadow:0 2px 6px rgba(0,0,0,.4)">🏙️ ไปนครยัยหนู</div><div style="font-size:.9rem;opacity:.95">ด้วย'+(CARN[carK]||'รถ')+'</div></div></div><div style="text-align:center;margin-top:10px;font-size:.95rem">'+fuelTxt+'</div>',[{t:'ยกเลิก',c:'gray',f:()=>{S4CITY.going=false;}},{t:isDrill?'⛏️ ขุดลงใต้ดิน':'🚗 ออกเดินทาง',f:go}]);return;}
  catch(err){toast(thaiError(err));}finally{setTimeout(()=>{S4CITY.going=false;},8000);}}
 /* ---------- S4 นครยัยหนู: ฉากแต่งงาน/หย่า (ทุกคนเห็น) + ป้ายนับถอยหลังประกวด ---------- */

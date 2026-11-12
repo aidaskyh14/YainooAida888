@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=deb440f0';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=d0855474';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);
@@ -25,6 +25,7 @@
   go(g,opt){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}/* ส่วน ⑤: แตะรถคันไหนในฟาร์ม = ขับคันนั้นเข้านคร */try{window.__S4PICKCAR=opt&&opt.car||null;/* เก็บตก: ต้องส่งถึงหน้าแม่ (app.js อ่านจาก window ของหน้าแม่) */(window.top||parent).__S4PICKCAR=opt&&opt.car||null;}catch(e){}goScreen(g);},
   mail(){openMail();},
   fruitPick(i){/* S4 ข้อ 3: ตะกร้าเก็บผลไม้ (ลากนิ้วผ่านหลายต้น) */if(visiting)return null;if(!(S.unl||{}).f4)return null;const p=S.fruit&&S.fruit.plots&&S.fruit.plots[i];if(!p)return null;if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{index:i});return null;},
+  fruitAll(){/* fix35b 🧺 เก็บผลไม้ทุกต้นที่มีผล (ปุ่มในฟาร์ม 3D) */if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return null;}if(!(S.unl||{}).f4){showUnlock&&showUnlock('f4');return null;}useFarm(4);if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{all:true});return null;},
   lock2(){if(visiting)return;try{showUnlock('f2');}catch(e){toast('🔒 ใช้กุญแจดอกบัวจากยัยหนูเพื่อปลดล็อก');}},
   honey(){/* S4 ข้อ 12: ระฆังท่าเรือ = เรียกน้องน้ำผึ้ง (กติกาเดียวกับเมนู) */if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');const b=document.getElementById('mHoney');if(b)b.click();},
   ccLv(){try{return window.__s4ccF?window.__s4ccF.lv():1;}catch(e){return 1;}},
