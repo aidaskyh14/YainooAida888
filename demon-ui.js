@@ -1,5 +1,5 @@
 import {ALPACA_MB} from './alpaca-menu.js?v=ss3-fix22&h=4c9e1f4e';
-import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23&h=92e78b5b';
+import {altPick,altHave,altText,ALT_X} from './broom-pay.js?v=ss3-fix23&h=92e78b5b';import {demonTossLeft,DEMON_TOSS_FREE} from './demon-engine.js?h=c65fa133';/* fix37 🗑️ */
 /* fix17 🎭 ไอเทมปีศาจ — ฝั่งเปลือกเกม (ทุกหน้า): ฝั่งคนโดน + กระเป๋า 48 ชม.
    อ่าน players/{uid}/gameViews/demon ของตัวเองเท่านั้น (ไม่มีชื่อคนแกล้ง) · หักอัตโนมัติตามเวลาจริง (ส่ง settle เมื่อถึงกำหนด)
    วิดเจ็ตเล็กชิดขอบขวา (หัวใจ · หีบบัว · นาฬิกาทราย · กระเป๋า) · แจ้งเตือนเป็นแคปซูลเล็กมุมซ้ายบน · ฉากสวนวาดโดย prank-ui (อ่าน window.__DEMON) */
@@ -111,8 +111,8 @@ export function startDemon({watch,act,now,game,x17,uid,roster,screen}){
       +(rows.length?rows.map(([k,it])=>{const L=lotsOf(k);return '<div class="dm-it"><img src="'+it.img+'" alt=""><div><b>'+it.e+' '+it.n+' ×'+b[k]+'</b>'+(L.length?'<div class="dm-next">💥 ก้อนแรกระเบิดในอีก <em>'+hms(L[0].at+EXPIRE-t)+'</em> · '+fmt(L[0].n)+' ชิ้น = −'+fmt(L[0].n*it.boom)+'</div>'+L.slice(0,8).map(x=>{const left=x.at+EXPIRE-t;return '<span class="dm-exp'+(left<6*3600e3?' warn':'')+'">⏳ '+hms(left)+' ×'+fmt(x.n)+'</span>';}).join('')+(L.length>8?'<span class="dm-exp">+อีก '+(L.length-8)+' ก้อน</span>':''):'<span class="dm-exp">⏳ 48:00 ชม.</span>')+'<br><button class="dm-mini" data-t="'+k+'">🗑️ ทิ้งลงบ่อ 1 ชิ้น (−'+fmt(it.toss)+')</button></div><div class="r">💥 −'+fmt(it.boom)+'<small>ถ้าหมดเวลา</small></div></div>';}).join('')
         :'<div class="dm-fine">ยังไม่มีไอเทมจอมแสบ</div>')+'<div class="dm-fine">ได้จากการดูแลสัตว์เลี้ยง และเปิดกล่องสุ่มสัตว์</div>');
     sheet.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{const k=x.dataset.t,it=IT[k];
-      open('<img class="dm-bigimg" src="'+it.img+'" alt=""><h3>🗑️ ทิ้ง'+it.n+'ลงบ่อ?</h3><div class="dm-hint">ทิ้ง 1 ชิ้น เสีย −'+fmt(it.toss)+' กุศล (ครึ่งหนึ่งของตอนระเบิด)</div><div class="dm-row"><button class="dm-big devil" id="dmTossGo">🗑️ ทิ้งเลย</button><button class="dm-big dark" id="dmTossNo">ไม่ทิ้ง</button></div>');
-      sheet.querySelector('#dmTossNo').onclick=bagSheet;sheet.querySelector('#dmTossGo').onclick=async e=>{e.currentTarget.disabled=true;const out=await run({type:'toss',kind:k});if(out?.toss){close();const [cx,cy]=center();fxt(cx,cy,'🗑️ −'+fmt(out.toss.amt));tt(it,'ทิ้ง'+it.n+'ลงบ่อแล้ว','−'+fmt(out.toss.amt));seenDl();}else bagSheet();};});}
+      const tl=(()=>{try{return demonTossLeft(x17?.()||{},Date.now());}catch(e){return 0;}})();open('<img class="dm-bigimg" src="'+it.img+'" alt=""><h3>🗑️ ทิ้ง'+it.n+'ลงบ่อ?</h3><div class="dm-hint">'+(tl>0?'🆓 วันนี้ทิ้งฟรีได้อีก <b>'+tl+'/'+DEMON_TOSS_FREE+'</b> ชิ้น (ไม่เสียกุศล)':'วันนี้ใช้สิทธิ์ทิ้งฟรี '+DEMON_TOSS_FREE+' ชิ้นครบแล้ว · ทิ้งชิ้นนี้เสีย −'+fmt(it.toss)+' กุศล')+'</div><div class="dm-row"><button class="dm-big devil" id="dmTossGo">🗑️ ทิ้งเลย</button><button class="dm-big dark" id="dmTossNo">ไม่ทิ้ง</button></div>');
+      sheet.querySelector('#dmTossNo').onclick=bagSheet;sheet.querySelector('#dmTossGo').onclick=async e=>{e.currentTarget.disabled=true;const out=await run({type:'toss',kind:k});if(out?.toss){close();const [cx,cy]=center();fxt(cx,cy,out.toss.free?'🗑️ ฟรี':'🗑️ −'+fmt(out.toss.amt));tt(it,'ทิ้ง'+it.n+'ลงบ่อแล้ว',out.toss.free?'ฟรี · เหลือฟรีอีก '+out.toss.freeLeft+' ชิ้นวันนี้':'−'+fmt(out.toss.amt));seenDl();}else bagSheet();};});}
   /* ระเบิด/ทิ้งของตัวเอง (x17.dm.dl) */
   const dlKey='dmDl:'+uid;
   function seenDl(){const dl=x17?.()?.dm?.dl||[];if(dl[0])ls.set(dlKey,String(dl[0].at));}

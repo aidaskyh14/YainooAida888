@@ -9,7 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=396b699a';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
-import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=5729cb09';
+import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=3b8b83ef';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=0cc9c615';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
@@ -186,7 +186,7 @@ function change(field) {
 function addItem(key, n) { S.P.bag[key] = Math.max(0, (S.P.bag[key] || 0) + n); if (!S.P.bag[key]) delete S.P.bag[key]; change('bag'); }
 function sizeOf(o) { return new Blob([JSON.stringify(o)]).size; }
 let saveDotT;
-function showSave(t, bad) { const d = $('#saveDot'); d.hidden = false; d.textContent = t; d.classList.toggle('bad', !!bad); clearTimeout(saveDotT); if (!bad && t.includes('✓')) saveDotT = setTimeout(() => d.hidden = true, 1500); }
+function showSave(t, bad) { if(!S.P&&!S.user)return;/* fix37: ยังไม่เข้าเกม ไม่ต้องโชว์ */const d = $('#saveDot');if(!d)return; d.hidden = false; d.textContent = t; d.classList.toggle('bad', !!bad); clearTimeout(saveDotT); if (!bad && t.includes('✓')) saveDotT = setTimeout(() => d.hidden = true, 1500); }
 async function flush() {
   if (!S.user || !S.P || S.blocked || (!S.dirty.size && !campaignJobs.length)) return;
   if (S.saving) { await S.saving; return flush(); }
@@ -304,7 +304,7 @@ function renderLogin() {
     <img class="s4l-pic" src="images/s4-login-poster.webp" alt="ในสวนของยัยหนู ซีซั่น 4">
     <video class="s4l-pic s4l-vid" id="s4vid" src="images/s4-login-loop.mp4" poster="images/s4-login-poster.webp" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
     <canvas class="s4l-fx" id="s4fx"></canvas><div class="s4l-vign"></div>
-    <button class="s4l-hof" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button>
+    <button class="s4l-hof" id="hofBtn" aria-label="หอเกียรติยศ">🏆</button><a class="s4l-vote" id="voteBtn" href="vote.html" aria-label="โหวตสวนสวย">🗳️<small>โหวต</small></a>
     <button class="s4l-start" id="lstart"><span><i>🪷</i>เข้าสวน<i>🪷</i></span></button>
     <div class="s4l-tro" id="s4tro" role="dialog" aria-label="หอเกียรติยศ"><i class="s4l-tw" style="left:16px;top:8px">✨</i><i class="s4l-tw" style="right:16px;top:10px;animation-delay:.6s">✨</i>
       <div class="s4l-thead">${CUP}<h3>หอเกียรติยศ</h3></div>
@@ -723,7 +723,7 @@ async function cloudAction(system,input) {
 const HOST_BASE = {
   /* S4 นครยัยหนู: เอกสารโลก/ตำแหน่งคนในนคร/การประกวด (ฟังเฉพาะตอนอยู่ในหน้านคร) · แอดมินเรียกตรง */
   cityDrive:()=>{const d=S4CITY.drive;S4CITY.drive=null;return d;},/* ส่วน ⑤: ฉากขับรถใช้ครั้งเดียวต่อการเข้า */
-  watchCity:fn=>sceneWatch(doc(db,'world','city'),fn),watchPageant:fn=>sceneWatch(doc(db,'world','pageant'),fn),watchKrathongs:fn=>sceneWatch(doc(db,'world','krathongs'),fn),/* fix36 🪷 */
+  watchCity:fn=>sceneWatch(doc(db,'world','city'),fn),watchPageant:fn=>sceneWatch(doc(db,'world','pageant'),fn),watchVotes:fn=>sceneWatch(doc(db,'world','vote'),fn),/* fix37 🗳️ */watchKrathongs:fn=>sceneWatch(doc(db,'world','krathongs'),fn),/* fix36 🪷 */
   watchPresence:fn=>{const version=sceneVersion;const stop=onSnapshot(query(collection(db,'cityPresence'),where('exp','>',Date.now())),snap=>{if(version===sceneVersion)fn(snap.docs.map(d=>d.data()));},e=>{});sceneSubscriptions.add(stop);return()=>{stop();sceneSubscriptions.delete(stop);};},
   cityAdmin:input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pageantAdmin:input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data),pageantView:()=>httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),
   isAdmin:()=>!!S.admin,myName:()=>S.P?.name||S.user?.displayName||'ผู้เล่น',myUid:()=>S.user?.uid||'',
@@ -810,6 +810,7 @@ function sceneHost(ids){
   h.del=function(k){if(gen!==sceneGen){staleSaves++;return;}HOST_BASE.del(k);};
   return h;
 }
+/* fix37 🗳️ เปิดหน้าโหวตในเกม (ไม่ออกจากเกม · ล็อกอินอยู่ = นับเป็นผู้เล่น) */window.__openVote=()=>{try{let o=document.getElementById('s4voteOv');if(o)o.remove();o=document.createElement('div');o.id='s4voteOv';o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:#fff6fb';o.innerHTML='<iframe src="vote.html?in=1&h='+Date.now().toString(36)+'" style="width:100%;height:100%;border:0" title="โหวตสวนสวย"></iframe>';document.body.appendChild(o);const onMsg=e=>{if(e.data&&e.data.s4vote==='close'){o.remove();removeEventListener('message',onMsg);}};addEventListener('message',onMsg);}catch(e){console.warn('vote',e);}};
 window.__HOST = sceneHost(null);
 function hostSet(k, v, scope) {
     if (!S.P || S.blocked) { setFailed(new Error(S.blocked ? 'เครื่องนี้หยุดบันทึกแล้ว ของยังไม่เปลี่ยน' : 'ยังโหลดเซฟไม่เสร็จ ของยังไม่เปลี่ยน')); return; }
@@ -821,16 +822,25 @@ function hostSet(k, v, scope) {
     if(/^s4deco-/.test(k)&&!k.includes('#')){try{const cntL=x=>{try{const m=JSON.parse(x||'{}');const lk=Object.keys(m).find(q=>/layout|decor/.test(q));if(lk&&m[lk]&&typeof m[lk]==='object'&&m[lk].$chunks)return -1;/* fix36: เลย์เอาต์ถูกแบ่งชิ้น (s4store ตรวจเอง) */const a=lk?JSON.parse(m[lk]):null;return Array.isArray(a)?a.length:(a&&Array.isArray(a.d)?a.d.length:0);}catch(e){return 0;}};const o=cntL(S.P.g._ls[k]),n=cntL(v);if(o>=15&&n>=0&&n<o*.6){/* fix36: ยอมเมื่อยืนยันซ้ำ (จำนวนเท่าเดิม ≥3 ครั้ง ห่าง ≥6 วิ) */const B=window.__s4hostBlk||(window.__s4hostBlk={});const b=B[k],now=Date.now();if(b&&Math.abs(b.n-n)<=Math.max(2,n*.05)){if(now-b.at>=6000){b.times++;b.at=now;}if(b.times>=3){console.warn('host: ยอมบันทึกเลย์เอาต์ '+k+' ตามที่จัดใหม่ (ยืนยันซ้ำ)',o,'→',n);delete B[k];}else{window.__s4hostBlocked=(window.__s4hostBlocked||0)+1;return;}}else{B[k]={n,at:now,times:1};console.warn('host: ไม่บันทึกเลย์เอาต์ '+k+' ของหาย '+o+'→'+n);window.__s4hostBlocked=(window.__s4hostBlocked||0)+1;return;}}}catch(e){}}
     S.P.g._ls[k] = String(v); change('g');
 }
-/* fix36 🔔 กระดิ่งกุศลลด: เล็ก ไม่บังวิว · จุดแดงเมื่อมีรายการใหม่ตั้งแต่ครั้งล่าสุดที่เปิดดู · แตะ = รายการย้อนหลัง */
-window.__s4bell=(()=>{const ICON=w=>/ปีศาจ|จอมแสบ|หีบบัว|กล่องดนตรี|นาฬิกาทราย|หัวใจทับทิม|ระเบิด/.test(w)?'😈':/ปล้น/.test(w)?'🏴‍☠️':/ตัด/.test(w)?'🪓':/ขวด|ยาพิษ/.test(w)?'🧪':/โคม|ศึก/.test(w)?'🏮':/นคร|ของขวัญ|แต่งงาน/.test(w)?'🏙️':/เรือ|แข่ง/.test(w)?'🚣':'📉';
+/* fix36 🔔 กระดิ่งกุศลลด · fix37: การ์ดแจ้งเตือนน่ารัก มีรูปไอเทม/ไอคอน เด้งใต้กระดิ่ง ไม่บังจอ · แตะ = รายการย้อนหลัง (มีรูป) */
+window.__s4bell=(()=>{const PIC=w=>/กล่องดนตรี/.test(w)?'images/prank-musicbox.webp':/นาฬิกา/.test(w)?'images/prank-hourglass.webp':/หีบ/.test(w)?'images/prank-coffin.webp':/หัวใจ/.test(w)?'images/prank-heart.webp':/ขวด|ยาพิษ/.test(w)?'images/hw-poison-1.webp':/แกล้ง|ปีศาจ|จอมแสบ/.test(w)?'images/prank-bat.webp':null;
+ const ICON=w=>/ระเบิด/.test(w)?'💥':/ปีศาจ|จอมแสบ|หีบบัว|กล่องดนตรี|นาฬิกาทราย|หัวใจทับทิม|แกล้ง/.test(w)?'😈':/ปล้น/.test(w)?'🏴‍☠️':/ตัด/.test(w)?'🪓':/ขวด|ยาพิษ/.test(w)?'🧪':/โคม|ศึก/.test(w)?'🏮':/นคร|ของขวัญ|แต่งงาน/.test(w)?'🏙️':/เรือ|แข่ง/.test(w)?'🚣':'📉';
+ const TITLE=w=>/ระเบิดคาตัว/.test(w)?'ระเบิดคาตัว!':/โดนแกล้ง/.test(w)?'โดนแกล้งแล้ว!':/ปล้น/.test(w)?'โดนปล้น!':/ตัด/.test(w)?'โดนตัดต้นไม้!':/ขวด|ยาพิษ/.test(w)?'โดนขวดยาพิษ!':'กุศลถูกหัก';
  const seenKey=()=>'s4bell-seen-'+(S.user&&S.user.uid||'');let rows=[],lastAt=0;
- const label=x=>{if(x.note){return {i:ICON(x.note),t:x.note,d:x.delta};}if(x.why&&x.why.length){const w=x.why[0];return {i:ICON(w.t+w.msg),t:w.t+(x.why.length>1?' +'+(x.why.length-1):''),d:w.m||x.delta};}return {i:x.src==='client'?'📱':'📉',t:x.src==='client'?'กุศลลดจากเครื่องผู้เล่น ('+(x.system||'หน้าเกม')+')':'ระบบ '+(x.system||'')+' '+(x.type||''),d:x.delta};};
- const el=()=>{let b=$('#s4bell');if(b)return b;b=document.createElement('button');b.id='s4bell';b.type='button';b.setAttribute('aria-label','ประวัติกุศลลด');b.style.cssText='position:fixed;left:.5rem;top:calc(env(safe-area-inset-top,0px) + 2.9rem);z-index:69;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:rgba(42,33,64,.72);color:#fff;font-size:15px;line-height:1;padding:0;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.25)';b.innerHTML='🔔<i style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#ff4d6d;color:#fff;font:800 10px/16px Mali,sans-serif;font-style:normal;padding:0 3px;display:none"></i>';b.onclick=()=>open();document.body.appendChild(b);return b;};
+ const label=x=>{let txt='',d=x.delta;if(x.note)txt=x.note;else if(x.why&&x.why.length){const w=x.why[0];txt=w.t+' '+(w.msg||'');d=w.m||x.delta;}else txt=x.src==='client'?'กุศลลดจากเครื่องผู้เล่น ('+(x.system||'หน้าเกม')+')':'ระบบ '+(x.system||'')+' '+(x.type||'');
+  const parts=txt.split(': ');const sub=(parts.length>1?parts.slice(1).join(': '):txt).replace(/^[^\wก-๙]+/,'');return {i:ICON(txt),t:TITLE(txt),sub,d,pic:PIC(txt)};};
+ const css=()=>{if(document.getElementById('s4bellCss'))return;const st=document.createElement('style');st.id='s4bellCss';st.textContent='#s4bell{position:fixed;left:.5rem;top:calc(env(safe-area-inset-top,0px) + 2.9rem);z-index:69;width:32px;height:32px;border-radius:50%;border:2px solid #fff;background:linear-gradient(180deg,#ffd1e6,#ff9cc6);color:#7a1f47;font-size:15px;line-height:1;padding:0;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,126,182,.4)}#s4bell i{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:#ff4d6d;color:#fff;font:800 10px/17px Mali,sans-serif;font-style:normal;padding:0 4px;display:none;border:2px solid #fff}#s4bell.ring{animation:s4ring .6s ease}@keyframes s4ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg)}50%{transform:rotate(14deg)}75%{transform:rotate(-8deg)}}'+
+  '.s4bcard{position:fixed;left:.5rem;z-index:70;display:flex;align-items:center;gap:8px;max-width:min(78vw,300px);background:linear-gradient(135deg,#fff7fb,#ffe4f0);border:2px solid #ffb3d1;border-radius:18px;padding:6px 10px 6px 6px;box-shadow:0 6px 18px rgba(176,42,91,.18);font-family:Mali,sans-serif;color:#5a2a44;transform:translateX(-110%);transition:transform .35s cubic-bezier(.2,1.2,.4,1),opacity .3s;opacity:0;cursor:pointer}.s4bcard.on{transform:none;opacity:1}.s4bcard .pc{width:40px;height:40px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;overflow:hidden;border:1.5px solid #ffd3e6}.s4bcard .pc img{width:100%;height:100%;object-fit:contain}.s4bcard b{display:block;font-size:.85rem;line-height:1.2}.s4bcard small{display:block;font-size:.72rem;color:#9a5d7c;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}.s4bcard .amt{color:#B02A44;font-weight:800;font-size:.8rem}'+
+  '.s4brow{display:flex;gap:.55rem;align-items:center;padding:.4rem 0;border-bottom:1px dashed rgba(176,42,91,.15)}.s4brow .pc{width:40px;height:40px;border-radius:12px;background:#fff0f6;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;overflow:hidden;border:1.5px solid #ffd3e6}.s4brow .pc img{width:100%;height:100%;object-fit:contain}.s4brow .tx{flex:1;min-width:0;font-size:.86rem}.s4brow .tx small{display:block;font-size:.74rem;color:#9a5d7c}.s4brow .amt{color:#B02A44;font-weight:800;white-space:nowrap}';document.head.appendChild(st);};
+ const el=()=>{let b=$('#s4bell');if(b)return b;css();b=document.createElement('button');b.id='s4bell';b.type='button';b.setAttribute('aria-label','ประวัติกุศลลด');b.innerHTML='🔔<i></i>';b.onclick=()=>open();document.body.appendChild(b);return b;};
  const unseen=()=>{let seen=0;try{seen=Number(localStorage.getItem(seenKey()))||0;}catch(e){}return rows.filter(x=>x.ms>seen);};
  const draw=()=>{const b=el();const u=unseen();b.style.display=rows.length?'flex':'none';const dot=b.querySelector('i');dot.style.display=u.length?'block':'none';dot.textContent=u.length>9?'9+':String(u.length);};
- const open=()=>{try{localStorage.setItem(seenKey(),String(Date.now()));}catch(e){}draw();const html='<h2>🔔 กุศลที่ถูกหัก</h2><p class="note" style="font-size:.85rem">รายการที่ระบบหักกุศล (โดนแกล้ง · ระเบิดคาตัวจากไอเทมจอมแสบที่ถือไว้ · โดนตัด/ปล้น · อื่น ๆ) ย้อนหลัง 30 รายการ</p>'+(rows.length?rows.slice(0,30).map(x=>{const L=label(x);return '<div style="display:flex;gap:.5rem;align-items:flex-start;padding:.35rem 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.9rem"><span style="font-size:1.2rem">'+L.i+'</span><div style="flex:1;min-width:0"><div><b style="color:#B02A44">'+(L.d>0?'+':'')+fmt(L.d)+'</b> · '+esc(L.t)+'</div><div class="note" style="font-size:.78rem">'+esc(new Date(x.ms).toLocaleString('th-TH',{hour12:false}))+' · กุศล '+fmt(x.from)+' → '+fmt(x.to)+(x.why&&x.why[0]&&x.why[0].msg?' · '+esc(x.why[0].msg.slice(0,80)):'')+'</div></div></div>';}).join(''):'<p>ยังไม่มีรายการ 🎉</p>');modal(html);};
- const notify=u=>{/* ป้ายเล็กน่ารัก ไม่บังวิว: โชว์ทีละรายการ ไม่เกิน 3 */const top=u.slice(0,3);top.forEach((x,i)=>setTimeout(()=>{try{const L=label(x);toast(L.i+' '+esc(L.t)+' '+fmt(L.d)+' กุศล · แตะ 🔔 ดูรายละเอียด');}catch(e){}},900+i*2700));};
+ const pic=L=>'<span class="pc">'+(L.pic?'<img src="'+L.pic+'" alt="" onerror="this.replaceWith(document.createTextNode(\''+L.i+'\'))">':L.i)+'</span>';
+ const open=()=>{try{localStorage.setItem(seenKey(),String(Date.now()));}catch(e){}draw();css();const html='<h2>🔔 กุศลที่ถูกหัก</h2><p class="note" style="font-size:.82rem">โดนแกล้ง · ระเบิดคาตัวจากไอเทมจอมแสบที่ถือเกิน 48 ชม. · โดนตัด/ปล้น · อื่น ๆ (ย้อนหลัง 30 รายการ)</p>'+(rows.length?rows.slice(0,30).map(x=>{const L=label(x);return '<div class="s4brow">'+pic(L)+'<div class="tx"><b>'+esc(L.t)+'</b> <span class="amt">'+(L.d>0?'+':'')+fmt(L.d)+'</span><small>'+esc(L.sub.slice(0,90))+'</small><small>'+esc(new Date(x.ms).toLocaleString('th-TH',{hour12:false,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+' · กุศล '+fmt(x.from)+' → '+fmt(x.to)+'</small></div></div>';}).join(''):'<p style="text-align:center">ยังไม่มีรายการ 🎉</p>');modal(html);};
+ const card=(L,x,i)=>{css();const c=document.createElement('div');c.className='s4bcard';c.style.top='calc(env(safe-area-inset-top,0px) + '+(5.4+i*3.6)+'rem)';c.innerHTML=pic(L)+'<div style="min-width:0"><b>'+L.i+' '+esc(L.t)+' <span class="amt">'+(L.d>0?'+':'')+fmt(L.d)+'</span></b><small>'+esc(L.sub.slice(0,60))+'</small></div>';c.onclick=()=>{c.remove();open();};document.body.appendChild(c);requestAnimationFrame(()=>c.classList.add('on'));setTimeout(()=>{c.classList.remove('on');setTimeout(()=>c.remove(),400);},5200+i*400);};
+ const notify=u=>{/* การ์ดเล็กน่ารัก ไม่บังวิว: ไม่เกิน 3 ใบ เรียงใต้กระดิ่ง */const top=u.slice(0,3);top.forEach((x,i)=>setTimeout(()=>{try{const b=el();b.classList.remove('ring');void b.offsetWidth;b.classList.add('ring');card(label(x),x,i);}catch(e){}},700+i*450));};
  const refresh=async(force)=>{try{if(!S.user||!window.__call)return;const now=Date.now();if(!force&&now-lastAt<5*60000)return;lastAt=now;const r=await window.__call('meritHistoryCloud',{});const had=new Set(rows.map(x=>x.ms));rows=(r&&r.rows)||[];draw();const fresh=unseen().filter(x=>!had.has(x.ms));if(fresh.length&&(force!=='quiet'))notify(fresh);}catch(e){}};
+ window.__s4bellDemo=()=>{rows=[{ms:Date.now(),delta:-123456,from:9000000,to:8876544,note:'😈 โดนแกล้ง: ไอเทมจอมแสบในสวน −123,456'},{ms:Date.now()-1,delta:-100000,from:9100000,to:9000000,note:'💥 ระเบิดคาตัว: กล่องดนตรีหมู ×1 (ถือไว้เกิน 48 ชม. ไม่ส่งออก)'},{ms:Date.now()-2,delta:-50000,from:9150000,to:9100000,why:[{t:'🏴‍☠️ โดนปล้นเสบียง',msg:'ศึกโคมลอย บ้านดอกบัว',m:-50000}]}];draw();notify(rows);};
  return {refresh,open,rows:()=>rows,draw,label};})();
 function renderGame(screen) {
   if (!document.getElementById('scr')) {
@@ -898,7 +908,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=4f9e1339'+extra;return true;}
+  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=6be4a89f'+extra;return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -1000,11 +1010,11 @@ function renderAdmin() {
   const host = $('#ov') && !$('#ov').hidden ? $('#ov') : $('#app');
   host.innerHTML = `<div class="home" style="background:#FFF4EA"><div class="page">
     <div class="row"><button class="btn sm gray" id="aBack">‹ กลับ</button><b style="font-size:1.05rem">👑 ศูนย์แอดมิน</b></div>
-    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '🎭 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['char', '🎭 ตัวละครผู้เล่น'], ['city', '🏙️ นคร/ประกวด'], ['players', '👥 ผู้เล่น'], ['reset', '🧹 เริ่มศูนย์'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="atabs">${[['approvals', '📋 สมาชิกใหม่ ('+pendingCount+')'], ['send', '🎁 ส่งของ'], ['nb', '🏘️ เนเบอร์ฮูด'], ['rumor', '📰 ข่าวลือ'], ['demon', '🎭 บันทึกแกล้ง'], ['atm', '🏧 ATM'], ['char', '🎭 ตัวละครผู้เล่น'], ['city', '🏙️ นคร/ประกวด'], ['vote', '🗳️ โหวต'], ['players', '👥 ผู้เล่น'], ['reset', '🧹 เริ่มศูนย์'], ['inventory', '🎒 ตรวจของ'], ['backup', '💾 สำรอง/กู้คืน'], ['settings', '⚙️ ตั้งค่าเกม']].map(([k, t]) => `<button data-t="${k}" class="${A.tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="aBody"></div></div></div>`;
   $('#aBack').onclick = () => { const o = $('#ov'); if (o && !o.hidden) { o.hidden = true; o.innerHTML = ''; reloadScreen(); } else renderClosed(); };
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { A.tab = b.dataset.t; renderAdmin(); });
-  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, char: tabChar, city: tabCity, players: tabPlayers, reset: tabReset, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
+  A.fresh=true;({ approvals: tabApprovals, send: tabSend, nb: tabNb, rumor: tabRumor, demon: tabDemon, atm: tabAtm, char: tabChar, city: tabCity, vote: tabVote, players: tabPlayers, reset: tabReset, inventory: tabInventory, backup: tabBackup, settings: tabSettings })[A.tab]();
 }
 /* fix15f: แท็บแอดมินวาดตัวเองซ้ำ (กดเพิ่มของ/เลือกคน/อนุมัติ) → คงตำแหน่งที่เลื่อนไว้ ทั้งหน้าและรายการย่อย */
 const ADMIN_LISTS=['.as-pick','.as-chips','.ppl','.news'];
@@ -1045,6 +1055,26 @@ function s4Overlay(src,ms,title,lock){let o=document.getElementById('s4cityov');
  const close=()=>{o.remove();};o.querySelector('.x').onclick=close;if(lock){o.querySelector('.x').style.display='none';setTimeout(()=>{o.querySelector('.x').style.display='';},20000);}setTimeout(close,ms);
  /* ล็อกจอแต่ของที่ทำค้างอยู่ไม่หาย: แค่ซ้อนทับ ไม่โหลดหน้าใหม่ */}
 /* S4 นครยัยหนู: ศูนย์แอดมิน "นคร/ประกวด" — ปุ่มชัด กดแล้วมีผลทันที · ปิดนคร = ทุกคนเด้งกลับฟาร์ม · คอนโซลเวทีประกวด (สำคัญที่สุด) · ธนาคารคำถาม */
+/* fix37 🗳️ ศูนย์แอดมิน: โหวตสวนสวย — เปิด/ปิด · ช่วงเวลา · ยอดรวม · ยอดรายวันต่อคน (เห็นเฉพาะแอดมิน) · ใครให้ใจ (จับโกง) · รีเซ็ต */
+async function tabVote(day){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const vA=input=>httpsCallable(functions,'voteActionCloud')({input:{type:'admin',...input}}).then(r=>r.data);
+ let st;try{st=await vA({op:'view',...(day?{day}:{})});}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;
+ const C=st.cfg;const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';const toLocal=t=>{if(!t)return '';const d=new Date(t+7*3600000);return d.toISOString().slice(0,16);};
+ const link=location.origin+location.pathname.replace(/[^/]*$/,'')+'vote.html';
+ B.innerHTML=`<div class="box"><h3>🗳️ โหวตสวนสวย</h3><p>สถานะ: <b>${C.open?'🟢 เปิด':'🔴 ปิด'}</b> · รอบที่ ${C.round} · ยอดใจรวมสะสม <b>💗 ${fmt(st.total)}</b>${C.from?' · เริ่ม '+when(C.from):''}${C.to?' · ถึง '+when(C.to):''}</p>
+  <p class="note">ลิงก์ให้คนนอก: <input value="${esc(link)}" readonly style="width:100%;font-size:.85rem" onclick="this.select()"> <button class="btn sm" id="vCopy">คัดลอกลิงก์</button></p>
+  <div class="row"><label>ชื่อหัวข้อ <input id="vTitle" value="${esc(C.title||'โหวตสวนสวยในสวนของยัยหนู')}" maxlength="60" style="width:100%"></label></div>
+  <div class="row"><label>เริ่ม (เวลาไทย) <input type="datetime-local" id="vFrom" value="${toLocal(C.from)}"></label><label>ถึง <input type="datetime-local" id="vTo" value="${toLocal(C.to)}"></label></div>
+  <p class="note">ปล่อยว่าง = ไม่จำกัดเวลา (เปิด/ปิดด้วยปุ่มเท่านั้น) · กติกา: 5 ใจ/ชั่วโมง/เครื่อง · เครือข่ายเดียวกันรวม 15 ใจ/ชม. 60/วัน · ต้องดูสวน ≥10 วิ · ยอดรวมไม่รีเซ็ตเอง</p>
+  <div class="row">${C.open?'<button class="btn sm red" id="vClose">⏸ ปิดโหวต</button>':'<button class="btn sm" id="vOpen">▶ เปิดโหวต</button>'}<button class="btn sm gray" id="vSave">💾 บันทึกชื่อ/เวลา</button><button class="btn sm gray" id="vReset">🧹 รีเซ็ตยอดรวม (เริ่มรอบใหม่)</button></div></div>
+  <div class="box"><h3>🏆 อันดับยอดรวม (ทุกคนเห็น)</h3>${st.list.length?st.list.slice(0,60).map(x=>`<div class="row" style="justify-content:space-between;padding:.15rem 0;border-bottom:1px solid rgba(0,0,0,.05)"><span>${x.r<=3?['🥇','🥈','🥉'][x.r-1]:x.r+'.'} ${esc(x.n)}</span><b>💗 ${fmt(x.v)}</b></div>`).join(''):'<p class="note">ยังไม่มีคะแนน</p>'}</div>
+  <div class="box"><h3>📅 ยอดใจรายวัน (เห็นเฉพาะแอดมิน)</h3><div class="row"><label>วัน <select id="vDay">${(st.days.length?st.days:[{day:st.day,total:st.dayTotal}]).map(d=>`<option value="${d.day}" ${d.day===st.day?'selected':''}>${d.day} (💗 ${d.total})</option>`).join('')}</select></label><span>รวมวันนี้ <b>💗 ${fmt(st.dayTotal)}</b></span></div>
+  ${st.daily.length?st.daily.map((x,i)=>`<div class="row" style="justify-content:space-between;padding:.15rem 0;border-bottom:1px solid rgba(0,0,0,.05)"><span>${i+1}. ${esc(x.n)}</span><b>💗 ${fmt(x.v)}</b></div>`).join(''):'<p class="note">ไม่มีใจในวันนี้</p>'}
+  <details style="margin-top:.5rem"><summary>🔎 ใครให้ใจวันนี้ (เครื่อง/บัญชี · เครือข่าย) ${st.voters.length} ราย</summary>${st.voters.map(v=>`<div class="note" style="display:flex;justify-content:space-between"><span>${esc(v.k)}</span><b>${v.n}</b></div>`).join('')||'<p class="note">—</p>'}</details></div>`;
+ const ms=v=>{if(!v)return 0;const t=Date.parse(v+':00Z');return Number.isFinite(t)?t-7*3600000:0;};
+ const doSet=async(extra)=>{try{await vA({op:'set',title:$('#vTitle').value,from:ms($('#vFrom').value),to:ms($('#vTo').value),...extra});toast('✅ บันทึกแล้ว');tabVote();}catch(e){toast(thaiError(e));}};
+ $('#vSave').onclick=()=>doSet({});if($('#vOpen'))$('#vOpen').onclick=()=>doSet({open:true});if($('#vClose'))$('#vClose').onclick=()=>doSet({open:false});
+ $('#vReset').onclick=async()=>{if(!confirm('รีเซ็ตยอดใจรวมทุกคนเป็น 0 และเริ่มรอบใหม่? (ยอดเดิมเก็บไว้ในประวัติ)'))return;try{await vA({op:'reset'});toast('🧹 เริ่มรอบใหม่แล้ว');tabVote();}catch(e){toast(thaiError(e));}};
+ $('#vDay').onchange=e=>tabVote(e.target.value);$('#vCopy').onclick=async()=>{try{await navigator.clipboard.writeText(link);toast('📋 คัดลอกลิงก์แล้ว');}catch(e){toast('คัดลอกเองจากช่องด้านบนนะ');}};}
 async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const cA=input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pA=input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data);
  let st,pv,qs;try{[st,pv,qs]=await Promise.all([cA({type:'status'}),httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),pA({type:'qList'})]);}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;
  const W=st.world,P=pv.view,Q=qs.questions||[];const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';

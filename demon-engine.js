@@ -56,7 +56,8 @@ export function demonSync(game,x17,now){
 export function demonTake(game,x17,k,now){demonSync(game,x17,now);const s=dmState(x17);if(bagHave(game,k)<1)fail('ไม่มี'+DEMON[k].n+'ในกระเป๋า');
   const lot=s.b.filter(x=>x.k===k).sort((a,b)=>a.at-b.at)[0];if(lot)lot.n--;s.b=s.b.filter(x=>x.n>0);bagSet(game,k,bagHave(game,k)-1);return lot?lot.at:now;}
 export function demonGive(game,x17,k,n,now){bagSet(game,k,bagHave(game,k)+n);demonSync(game,x17,now);}
-export function demonToss(game,x17,k,now){if(!DEMON[k])fail('ไอเทมไม่ถูกต้อง');demonTake(game,x17,k,now);const amt=DEMON[k].toss;game.merit=floorAdd(game.merit,-amt);selfLog(dmState(x17),{k,n:1,amt,at:now,w:'toss'});return {k,amt};}
+export const DEMON_TOSS_FREE=3;/* fix37: ทิ้งลงบ่อฟรีวันละ 3 ชิ้น */export const demonTossLeft=(x17,now)=>{const s=(x17&&x17.dm)||{};const d=thaiDay(now);return s.tf&&s.tf.d===d?Math.max(0,DEMON_TOSS_FREE-(Number(s.tf.n)||0)):DEMON_TOSS_FREE;};
+export function demonToss(game,x17,k,now){if(!DEMON[k])fail('ไอเทมไม่ถูกต้อง');demonTake(game,x17,k,now);const s=dmState(x17);const day=thaiDay(now);if(!s.tf||s.tf.d!==day)s.tf={d:day,n:0};const free=(Number(s.tf.n)||0)<DEMON_TOSS_FREE;const amt=free?0:DEMON[k].toss;if(free)s.tf.n=(Number(s.tf.n)||0)+1;game.merit=floorAdd(game.merit,-amt);selfLog(s,{k,n:1,amt,at:now,w:'toss',free});return {k,amt,free,freeLeft:Math.max(0,DEMON_TOSS_FREE-(Number(s.tf.n)||0))};}
 /* ---------- ดร็อปจากการดูแลสัตว์ (สุ่มบนเซิร์ฟเวอร์) ---------- */
 export function petRoll(game,x17,earned,now,rng){const s=dmState(x17),day=thaiDay(now);if(s.pet?.d!==day)s.pet={d:day,t:0,acc:0};
   const e=Math.max(0,Math.min(PET_EARN_CAP,Math.floor(Number(earned)||0)));let acc=num(s.pet.acc)+e,t=Math.floor(acc/PET_TICKET);acc-=t*PET_TICKET;t=Math.max(0,Math.min(t,PET_TICKETS_DAY-num(s.pet.t)));
