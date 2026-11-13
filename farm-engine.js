@@ -51,6 +51,7 @@ export function farmAction(account,ctx,input,rng=Math.random){
  /* S4 ข้อ 100: เก็บผัก → สุ่มได้ของลอยกระทง (8 ชนิด) แปลงละ 3% · วันละไม่เกิน 5 ชิ้น (เวลาไทย) · ผมตัดสินใจระดับปานกลาง–ยาก 4 พ.ย. */
  if(input.type==='harvest'&&harvested.length){const LK=['candy','bat','candle','web','hat','broom','pumpkin','cauldron'];const day=new Date(ctx.now+7*3600000).toISOString().slice(0,10);const st=game.lkdrop ||= {};if(st.d!==day){st.d=day;st.n=0;}
   for(let j=0;j<harvested.length&&st.n<5;j++){if(rng()<.03){const k=LK[Math.floor(rng()*LK.length)];game.bag.halloween ||= {};game.bag.halloween[k]=(game.bag.halloween[k]||0)+1;items['lk-'+k]=(items['lk-'+k]||0)+1;st.n++;}}}
+ /* fix36 🪽 บอกเหตุผลที่ใส่ปีกนางฟ้าไม่ได้ให้ชัด */if(!count&&input.type==='angel'){const ps=indices.map(i=>arr[i]);if(!ps.some(Boolean))fail('แปลงว่าง ปลูกผักก่อนค่อยใส่ปีกนางฟ้า');if((game.bag.item.angel||0)<1)fail('ไม่มีปีกนางฟ้าในกระเป๋า');if(ps.some(p=>p&&p.pk))fail('แปลงนี้โดนแกล้งอยู่ แก้ก่อนค่อยใส่ปีกนางฟ้า');if(ps.some(p=>p&&p.magicUntil>ctx.now))fail('แปลงมีมนต์จันทร์อยู่ รอหมดเวลาก่อน');fail('แปลงนี้มีปีกนางฟ้าอยู่แล้ว');}
  if(!count)fail('ไม่มีแปลงที่ทำรายการนี้ได้ หรือของไม่พอ');return {game,count,pump,items,harvested};
 }
 export function friendAction(actor,owner,ctx,input,rng=Math.random){

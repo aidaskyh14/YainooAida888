@@ -46,7 +46,7 @@ export const BOAT_BIRD_ITEMS=['ostrich-egg','ostrich-feather','dodo-egg','dodo-f
 export const BOAT_COOK_POOL=['food.ออมเล็ตโรซี่','gfood.r1','gfood.r2','gfood.r3','gfood.r4','gfood.r5','gfood.r6','gfood.b1','gfood.b2','gfood.b3','gfood.b4','gfood.b5','gfood.b6','gfood.b7','gfood.b8'];
 /* fix17 นางในวรรณคดี 2 ตน */
 export const BOAT_MM_SPELL=10; // 🌊 คลื่นมนต์ทวนกระแส: เรือที่นำ ถอย 10 ครั้งเดียวต่อการแข่ง
-export const BOAT_MM_SHARE=.4,BOAT_MM_NEED=3,BOAT_MM_N=3,BOAT_MM_LINE=90,/* fix35 */BOAT_MM_GOAL=100,BOAT_MM_STEP=20,BOAT_MM_BONUS=300000,BOAT_MM_LOSE=500000,BOAT_MM_LATE=300000,BOAT_MM_CD=5*60000,BOAT_MM_SEND=[1,2,3];
+export const BOAT_MM_SHARE=.4,BOAT_MM_NEED=1,BOAT_MM_N=3,BOAT_MM_LINE=90,BOAT_MM_WAIT=8*60000,/* fix35/fix36 */BOAT_MM_GOAL=100,BOAT_MM_STEP=20,BOAT_MM_BONUS=300000,BOAT_MM_LOSE=500000,BOAT_MM_LATE=300000,BOAT_MM_CD=5*60000,BOAT_MM_SEND=[1,2,3];
 export const BOAT_MM_POKE=5000,BOAT_MM_POKE_BOXES=10,BOAT_MM_POKE_CD=15*60000;
 export const BOAT_MM_MENUS=['food-01','food-02','food-03','food-04','food-05','food-06','food-07','food-08','food-09','food-10','food-11','food-12','gfood-r1','gfood-r2','gfood-r3','gfood-r4','gfood-r5','gfood-r6','gfood-r7','gfood-r8','gfood-b1','gfood-b2','gfood-b3','gfood-b4','gfood-b5','gfood-b6','gfood-b7','gfood-b8'];
 /* กล่องสุ่มจากการจิ้มนางในวรรณคดี (อยู่ในกระเป๋าหลัก · กล่องอัลปาก้าอยู่หน้าฟาร์มจึงไม่รวม) */
@@ -359,10 +359,10 @@ function mmPay(r,i,why){const x=r.mm.a[i];if(x.paid)return;x.paid=true;
 function ensureMermaid(r,now){
   if(r.status!=='running'||r.mm)return;
   if(Object.keys(r.dismiss||{}).length||r.p.some(p=>p>=350))return;// ถึง 350 แล้ว ไม่แต่งตั้ง (ระบบจ้างออกเอง)
-  if(r.p.filter(p=>p>=BOAT_MM_LINE).length*2<=r.p.length)return;// fix35: รอให้เรือเกินครึ่งเลยเส้น 90 ก่อน
+  /* fix36: นางต้องขึ้นทุกการแข่ง — เรือลำใดลำหนึ่งถึงเส้น 90 หรือผ่านไป 8 นาทีหลังเริ่ม */if(!r.p.some(p=>p>=BOAT_MM_LINE)&&!(r.round&&now-r.round>=BOAT_MM_WAIT))return;
   const pool=Object.keys(r.kicked||{}).filter(u=>r.kicked[u]&&r.team[u]&&!r.offers?.[u]&&!r.swim?.[u]&&!r.mmEx?.[u]&&!r.burned?.[u]&&!r.fired?.[u]).sort();
-  if(pool.length<BOAT_MM_NEED)return;
-  const rng=seededRng((r.round||0)+'|mm2|'+pool.join(',')),a=[...pool],two=[];
+  /* fix36: ไม่มีคนถูกเตะ → ใช้สมาชิกเรือที่ตามหลัง (ยังไม่ถึงเส้น 30) · มีกี่คนก็แต่งตั้ง */let cand=pool;if(!cand.length){cand=[1,2,3,4,5].filter(b=>(r.p[b-1]||0)<30).flatMap(b=>Object.keys(r.team).filter(u=>r.team[u]===b&&!r.kicked[u]&&!r.offers?.[u]&&!r.swim?.[u]&&!r.mmEx?.[u]&&!r.burned?.[u]&&!r.fired?.[u])).sort();}if(!cand.length){cand=Object.keys(r.team).filter(u=>!r.offers?.[u]&&!r.swim?.[u]&&!r.mmEx?.[u]).sort().slice(-3);}if(!cand.length)return;
+  const rng=seededRng((r.round||0)+'|mm2|'+cand.join(',')),a=[...cand],two=[];
   while(two.length<BOAT_MM_N&&a.length)two.push(a.splice(Math.min(a.length-1,Math.floor(rng()*a.length)),1)[0]);
   const ks=BOAT_NANG.map(x=>x[0]),k3=[];while(k3.length<two.length)k3.push(ks.splice(Math.min(ks.length-1,Math.floor(rng()*ks.length)),1)[0]);/* fix35: สุ่มนาง 3 ตนจากคลัง 10 ไม่ซ้ำ */
   const menus=[...BOAT_MM_MENUS],picked=[];while(picked.length<2)picked.push(menus.splice(Math.min(menus.length-1,Math.floor(rng()*menus.length)),1)[0]);

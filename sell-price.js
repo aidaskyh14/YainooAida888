@@ -48,7 +48,7 @@ export const SELL_PRICE={
  'demon-music':500,'demon-hour':1000,'demon-coffin':1500,'demon-heart':2500,
  /* 💳 บัตร ATM */
  'atm-lotus':100000000,'atm-moon':100000000,'mkdiaper':2000000,'mkdiaper2':5000000,'mkdiaper3':12000000,'mkdiaper4':40000000};
-export const SELL_NO=new Set();
+export const SELL_NO=new Set(['demon-music','demon-hour','demon-coffin','demon-heart']);/* fix36 😈 ไอเทมจอมแสบขายไม่ได้ ใช้แกล้งเพื่อนเท่านั้น */
 export const WINE_KEYS={'wine-moon':'moon','wine-rose':'rose','wine-blood':'blood','wine-eclipse':'eclipse'};
 export const HW_KEYS={'halloween-candy':'candy','halloween-bat':'bat','halloween-candle':'candle','halloween-web':'web','halloween-hat':'hat','halloween-broom':'broom','halloween-pumpkin':'pumpkin','halloween-cauldron':'cauldron'};
 export const ALP_RATE=.3;

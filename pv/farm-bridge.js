@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=d0855474';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=edb45ee8';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);
@@ -13,7 +13,7 @@
   /* S4 ข้อ 93: ตอนเยี่ยม เห็นรถ/เรือน้ำผึ้งของเพื่อนจอดอยู่ (ไม่เห็นรายการของ) */try{if(vis&&window.__fhoney){const h=window.__fhoney,n=Date.now();let ph;if(h.leaveAt){ph=(n<h.leaveAt&&!h.fail)?'parked':n<h.leaveAt+4000?'leaving':'gone';}else ph=n<h.arriveAt?'coming':n<h.until?'parked':'late';if(ph!=='gone')hn={v:h.v,ph,arriveAt:h.arriveAt,until:h.until,leaveAt:h.leaveAt||0,fail:!!h.fail,req:[],vis:1};}}catch(e){}
   try{if(w.__visitLayout){const ff=vis&&window.friendFarm;if(ff&&ff.deco!==undefined){if(ff.deco)window.__fdeco=ff.deco;}w.__visitLayout(vis?(window.__fdeco||'{}'):null,vis?(ff&&ff.owner)||'x':null);if(!vis)window.__fdeco=null;}}catch(e){}
   try{if(!vis){const lv=Math.min(3,Math.max(1,Number(S.lv)||1));if(w.__setFarmHouseLv&&w.__hlvSent!==lv){w.__hlvSent=lv;w.__setFarmHouseLv(lv);}}}catch(e){}
-  try{w.__s3sync({ul2:vis?!(window.friendFarm&&window.friendFarm.ul2===false):!!((S.unl||{}).f2),dr:(vis?[]:(window.__dropRows||[])),fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
+  try{w.__s3sync({ul2:vis?!(window.friendFarm&&window.friendFarm.ul2===false):!!((S.unl||{}).f2),dr:(vis?[]:(window.__dropRows||[])),tr:(window.__trashRows||[]),tl:window.__trashLeft,/* fix36 🗑️ */fa:!!(vis&&window.friendFarm&&window.friendFarm.atm),h:hn,f1:pl(src[1]),f2:pl(src[2]),fr,g:(()=>{try{if(vis){const t=(window.friendFarm&&window.friendFarm.prankState)||{};return {vis:1,bat:!!t.bat,signs:+t.signs||0,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}const t=(S.sub&&S.sub.prank)||{};return {vis:0,bat:!!t.bat,signs:(t.signs||[]).length,sc:(+t.scareUntil||0)>Date.now()?(+t.scareKind||1):0,scU:+t.scareUntil||0};}catch(e){return null;}})()});}catch(e){console.warn(e);}};
  setInterval(()=>{if(!document.hidden)sync();},450);
  let lastFarm=0;const followFarm=()=>{const w=W3();if(!w||!w.__s3farm||farm===lastFarm)return;lastFarm=farm;try{w.__s3farm(farm===3?2:farm);}catch(e){}};
  setInterval(()=>{if(!document.hidden)followFarm();},300);
@@ -25,6 +25,8 @@
   go(g,opt){if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return;}/* ส่วน ⑤: แตะรถคันไหนในฟาร์ม = ขับคันนั้นเข้านคร */try{window.__S4PICKCAR=opt&&opt.car||null;/* เก็บตก: ต้องส่งถึงหน้าแม่ (app.js อ่านจาก window ของหน้าแม่) */(window.top||parent).__S4PICKCAR=opt&&opt.car||null;}catch(e){}goScreen(g);},
   mail(){openMail();},
   fruitPick(i){/* S4 ข้อ 3: ตะกร้าเก็บผลไม้ (ลากนิ้วผ่านหลายต้น) */if(visiting)return null;if(!(S.unl||{}).f4)return null;const p=S.fruit&&S.fruit.plots&&S.fruit.plots[i];if(!p)return null;if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{index:i});return null;},
+  trashThrow(){if(!visiting){toast('🗑️ ทิ้งขยะได้ตอนไปเยี่ยมบ้านเพื่อนเท่านั้น');return null;}if(window.__trashThrow)return window.__trashThrow();return null;},
+  trashSweep(){if(visiting){toast('🧹 กวาดได้เฉพาะบ้านตัวเอง');return null;}if(window.__trashSweep)return window.__trashSweep();return null;},
   fruitAll(){/* fix35b 🧺 เก็บผลไม้ทุกต้นที่มีผล (ปุ่มในฟาร์ม 3D) */if(visiting){toast('👀 กำลังเยี่ยมสวนเพื่อน');return null;}if(!(S.unl||{}).f4){showUnlock&&showUnlock('f4');return null;}useFarm(4);if(window.fruitCommand)return window.fruitCommand('fruit-harvest',{all:true});return null;},
   lock2(){if(visiting)return;try{showUnlock('f2');}catch(e){toast('🔒 ใช้กุญแจดอกบัวจากยัยหนูเพื่อปลดล็อก');}},
   honey(){/* S4 ข้อ 12: ระฆังท่าเรือ = เรียกน้องน้ำผึ้ง (กติกาเดียวกับเมนู) */if(visiting)return toast('👀 กำลังเยี่ยมสวนเพื่อน');const b=document.getElementById('mHoney');if(b)b.click();},
@@ -68,9 +70,9 @@ setInterval(()=>{try{const w=W3();if(w){const sh=document.getElementById('shade'
 
  // ---- ลากนิ้วผ่านแปลง: ใช้คำสั่งเดิมของซีซัน 3 (คลาวด์) ทีละแปลง ของเข้ากระเป๋าจริง หักของจริง ----
  let LASTSEED=null;document.addEventListener('click',e=>{const sd=e.target.closest&&e.target.closest('#seeds .seed');if(sd)LASTSEED=sd.dataset.k;},true);
- window.__S4B.sweep=async(n,i,tool)=>{if(visiting||!window.cloudFarm)return null;if(n===2&&!(S.unl||{}).f2)return null;useFarm(n);const p=(S.farms[n]||[])[i];let r=null;
+ window.__S4B.sweep=async(n,i,tool)=>{if(visiting||!window.cloudFarm)return null;try{const w=W3();if(w&&!w.__visiting)w.__visiting=()=>!!visiting;}catch(e){}if(n===2&&!(S.unl||{}).f2)return null;useFarm(n);const p=(S.farms[n]||[])[i];let r=null;
   try{if(tool==='cake'||tool==='coconut'){if(p&&/^g|water|worm/.test(p.ph||'')&&p.ph!=='ready'){if(((S.bag.item||{})[tool]||0)<1){toast('ไม่มี'+(tool==='cake'?'🍰 เค้ก':'🥥 มะพร้าว')+'แล้วนะ',1);return null;}await cloudFarm('boost',{index:i,item:tool});r='boost';}}
-   else if(tool==='angel'){if(p&&!p.angel&&p.ph!=='ready'){if(((S.bag.item||{}).angel||0)<1){toast('ไม่มีปีกนางฟ้าแล้วนะ',1);return null;}await cloudFarm('angel',{index:i});r='angel';}}
+   else if(tool==='angel'){/* fix36 🪽 ใส่ได้ทุกแปลงที่มีผัก (รวมพร้อมเก็บ) · มีแล้วบอก */if(!p)r='empty';else if(p.angel)r='angelHas';else{if(((S.bag.item||{}).angel||0)<1){toast('ไม่มีปีกนางฟ้าแล้วนะ',1);return null;}await cloudFarm('angel',{index:i});r='angel';}}
    else if(!p){const k=tool&&tool.startsWith('seed:')?tool.slice(5):LASTSEED;if(k){await cloudFarm('plant',{crop:k,index:i,all:false});r='plant';}else{pending=i;plantAll=false;try{tapPlot(i);}catch(e){}}}
    else if(p.ph==='ready'){const c=p.c,q=p.angel?10:1;await cloudFarm('harvest',{index:i});r={h:c,q,img:(typeof IMG!=='undefined'&&(IMG['p-'+c]||IMG[c+'4']))||''};}
    else if(p.ph==='water'){await cloudFarm('water',{index:i});r='water';}
