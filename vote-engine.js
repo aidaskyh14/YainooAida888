@@ -1,7 +1,7 @@
 /* fix37 🗳️ โหวตสวนสวย — กติกาล้วน ใช้ร่วมเว็บ (แสดงผล) + เซิร์ฟเวอร์ (นับคะแนน/กันโกง)
    ผู้โหวต 1 "เครื่อง" (หรือ 1 บัญชีผู้เล่น) มี 5 ใจ/ชั่วโมง แจกให้บ้านไหนก็ได้ (บ้านเดียวซ้ำได้) · เครือข่ายเดียวกัน (IP) รวมไม่เกิน 15 ใจ/ชม. และ 60 ใจ/วัน
    ต้องเปิดดูสวนก่อน ≥10 วิ (โทเคนจากเซิร์ฟเวอร์) · โหวตได้เฉพาะช่วงเวลาที่แอดมินเปิด · ผู้เล่นโหวตตัวเองไม่ได้ */
-export const VOTE_HEARTS=5,VOTE_IP_HOUR=15,VOTE_IP_DAY=60,VOTE_VIEW_MS=10000,VOTE_TOKEN_MAX=2*3600000,VOTE_TOP_AVATAR=60,VOTE_FARM_IP_HOUR=120;
+export const VOTE_HEARTS=5,VOTE_IP_HOUR=40,VOTE_IP_DAY=400,VOTE_VIEW_MS=10000,VOTE_TOKEN_MAX=2*3600000,VOTE_TOP_AVATAR=60,VOTE_FARM_IP_HOUR=120;
 export const thaiDay=now=>new Date(now+7*3600000).toISOString().slice(0,10);
 export const hourKey=now=>Math.floor(now/3600000);
 /* ช่วงเวลาเปิดโหวต: cfg={open,from,to,title,round} */
