@@ -1,8 +1,8 @@
 /* ซีซั่น 4 · ตู้เสื้อผ้าในห้องนอน (บรีฟ 3.5): ลิ้นชักเลื่อนขึ้นจากด้านล่าง ตัวละครในห้องเปลี่ยนชุดให้ดูทันที (พรีวิวฟรี)
    กด ✓ ใส่ชุดนี้ = บันทึกที่เซิร์ฟเวอร์ (char/wear) · ชุดที่ยังไม่มี = เงาเรืองแสง · ชุดซ้ำขายได้ตามคลาส
    ต้องเบา: ไม่มีฉาก 3D เพิ่ม ใช้ตัวละครในห้องเดิม · เปลี่ยน 100 ครั้ง/วันก็ไม่หน่วง (แค่สลับโมเดล 1 ตัว) */
-import {OUTFITS,TRIBES,CLASS,outfitsOf} from '../outfit-catalog.js?h=3e120340';
-import {charInfo,rememberChar,fetchGlb,OUTFIT_FILE} from './s4char.js?h=ba9fdd5b';
+import {OUTFITS,TRIBES,CLASS,outfitsOf} from '../outfit-catalog.js?h=e8d9e6ca';
+import {charInfo,rememberChar,fetchGlb,OUTFIT_FILE} from './s4char.js?h=dc582f68';
 const CC={s:'#7bbf6a',c0:'#9aa3ad',c1:'#4f9be0',c2:'#9a5fd6',c3:'#e8a91e',c4:'#e0457a',r:'#1f9fb8',q:'#b9852a'};
 let EL=null,busy=false;
 const host=()=>{try{return parent.__HOST||parent.parent.__HOST;}catch(e){return null;}};

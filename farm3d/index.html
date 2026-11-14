@@ -316,8 +316,8 @@ body.roomedit #rbag.mini{display:none}
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import {loadCharacter,charInfo,rememberChar,auraBurst,MOVES as S4MOVES} from '../pv/s4char.js?h=ba9fdd5b';
-import {openWardrobe,closeWardrobe,wardrobeOpen} from '../pv/s4wardrobe.js?h=9ebcd4e3';
+import {loadCharacter,charInfo,rememberChar,auraBurst,MOVES as S4MOVES} from '../pv/s4char.js?h=dc582f68';
+import {openWardrobe,closeWardrobe,wardrobeOpen} from '../pv/s4wardrobe.js?h=b50ad97c';
 import {mergeVertices,mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 const ICON_BACK="<svg viewBox=\"0 0 24 24\" class=\"ln\"><path d=\"M3 11l9-7 9 7\"/><path d=\"M5.5 9.5V20h13V9.5\"/></svg>",ICON_CAM="<svg viewBox=\"0 0 24 24\" class=\"ln\"><rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"3\"/><path d=\"M8.5 7l1.5-2.5h4L15.5 7\"/><circle cx=\"12\" cy=\"13.5\" r=\"3.6\"/></svg>",ICON_CHECK="<svg viewBox=\"0 0 24 24\" class=\"ln\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>",ICON_MENU="<svg viewBox=\"0 0 24 24\"><circle cx=\"6\" cy=\"6\" r=\"2.2\"/><circle cx=\"12\" cy=\"6\" r=\"2.2\"/><circle cx=\"18\" cy=\"6\" r=\"2.2\"/><circle cx=\"6\" cy=\"12\" r=\"2.2\"/><circle cx=\"12\" cy=\"12\" r=\"2.2\"/><circle cx=\"18\" cy=\"12\" r=\"2.2\"/><circle cx=\"6\" cy=\"18\" r=\"2.2\"/><circle cx=\"12\" cy=\"18\" r=\"2.2\"/><circle cx=\"18\" cy=\"18\" r=\"2.2\"/></svg>";
 function say(t){if(now.dataset.t===t)return;now.dataset.t=t;now.textContent=t;now.style.opacity=1;clearTimeout(say.h);say.h=setTimeout(()=>{now.style.opacity=0;},2600);}

@@ -2,7 +2,7 @@ import {repairInventory,assertInventory} from './inventory-integrity.js?h=3eda51
 /* Transaction adapter shared by callable handlers and emulator tests. */
 import {splitGame,joinGame,bytes} from './save-schema.js?h=eef4832b';
 import {refillAdminInventory} from './admin-inventory.js?h=6c90d59e';
-import {CATALOG} from './catalog.js?h=0ecf6d0e';
+import {CATALOG} from './catalog.js?h=de7c123d';
 import {questDeltas,nbDay} from './nb-quest.js?h=8e07529b';
 import {swimHook} from './swim-quest.js?h=c301332f';
 import {twDeltas,twAddPts,twRobTake,TW_ROB_NAME,TW_ROB_PAY} from './tree-engine.js?h=3c9defae';

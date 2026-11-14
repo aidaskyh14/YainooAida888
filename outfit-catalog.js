@@ -21,7 +21,8 @@ const BN=['สเวตเตอร์พระจันทร์','ชุดบ
 const mk=(pre,names)=>names.map((n,i)=>[pre+String(i+1).padStart(2,'0'),n,MC[i],pre+String(i+1).padStart(2,'0')]);
 export const OUTFITS={};
 /* fix34 ชุดรางวัลแข่งเรือ (ทุกสีผม) */const RW=pre=>[[pre+'jelly','เจ้าแม่เจลลี่ฟิช','r',pre+'jelly'],[pre+'swan','ราชินีหงส์โรส','r',pre+'swan'],[pre+'ruby','เจ้าแม่ไพ่ทับทิม','r',pre+'ruby'],[pre+'strawb','สตอร์แบรี่มรกตชิลล์','r',pre+'strawb']/* fix35 */];
-for(const [tribe,list] of [['pink',PINK.concat(RW(''))],['mint',mk('m',MN).concat(RW('m'))],['red',mk('r',RN).concat(RW('r'))],['bob',mk('b',BN).concat(RW('b'))]])for(const [id,n,cls,file] of list)OUTFITS[id]={id,n,cls,tribe,file,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};
+/* fix39 🍉 ชุดว่ายน้ำวอเท่อเมล่อน (ทุกตัวละคร · ยัยหนูส่งเท่านั้น) */const WM=pre=>[[pre+'wmswim','วอเท่อเมล่อน','c4',pre+'wmswim']];
+for(const [tribe,list] of [['pink',PINK.concat(RW(''),WM(''))],['mint',mk('m',MN).concat(RW('m'),WM('m'))],['red',mk('r',RN).concat(RW('r'),WM('r'))],['bob',mk('b',BN).concat(RW('b'),WM('b'))]])for(const [id,n,cls,file] of list)OUTFITS[id]={id,n,cls,tribe,file,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};
 export const outfitsOf=tribe=>Object.values(OUTFITS).filter(o=>o.tribe===tribe);
 export const outfitIcon=id=>id==='queen'?'outfit-queen.webp':'outfit-'+id+'.webp';
 export const canSendOutfit=id=>!!OUTFITS[id]&&OUTFITS[id].cls!=='q';

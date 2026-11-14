@@ -2,7 +2,7 @@
    เก็บใน game.sub.char = {tribe, wear, rolledAt, by} · ชุดอยู่ใน game.bag.outfit[id] (จำนวน · ซ้ำได้)
    กติกา (บรีฟข้อ 3.2 3.5 3.11): สุ่มครั้งเดียวตลอดชีพ 25% เท่ากัน · ได้ชุดเริ่มต้น 1 ชุด · เปลี่ยนตัวละครได้ด้วยบัตรศัลยกรรมเท่านั้น
    ศัลยกรรม: ชุดเดิมทุกชุด (รวมที่ใส่อยู่) ขายคืนอัตโนมัติ 20% ของราคาคลาส · คลาสยัยหนูส่งเท่านั้นคืน 2,000,000/ชุด · ได้ชุดเริ่มต้นของตัวละครใหม่ */
-import {OUTFITS,TRIBES,TRIBE_IDS,CLASS,SURGERY_REFUND} from './outfit-catalog.js?h=3e120340';
+import {OUTFITS,TRIBES,TRIBE_IDS,CLASS,SURGERY_REFUND} from './outfit-catalog.js?h=e8d9e6ca';
 const fail=m=>{throw new Error(m);};
 export const charOf=game=>{const c=game.sub?.char;return c&&TRIBES[c.tribe]?c:null;};
 export const charView=(game,ctx)=>{const c=charOf(game);const bag=game.bag?.outfit||{};

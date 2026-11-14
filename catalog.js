@@ -1479,3 +1479,7 @@ CATALOG.push({k:'garland',n:'🌸 พวงมาลัยเชียร์น�
 CATALOG.push({k:'decor-husband-house',n:'🏡 บ้านสามี (ได้ตอนแต่งงาน)',i:'s4-husband-house.webp',g:'ของแต่ง·นครยัยหนู',p:'decor.d_city_husband'});
 /* fix35 🌈 อัลปาก้าสายรุ้ง (กล่องสุ่ม 0.1% / ยัยหนูส่ง) */
 CATALOG.push({k:'al-rainbow',n:'อัลปาก้าสายรุ้ง',i:'icon-alpaca-rainbow.webp',g:'สัตว์',p:'sub.alpaca.bag.al-rainbow'});
+CATALOG.push({"k":"outfit-wmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-wmswim.webp","g":"ชุด·ชมพู","p":"outfit.wmswim"});
+CATALOG.push({"k":"outfit-mwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-mwmswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mwmswim"});
+CATALOG.push({"k":"outfit-rwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-rwmswim.webp","g":"ชุด·หัวแดง","p":"outfit.rwmswim"});
+CATALOG.push({"k":"outfit-bwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-bwmswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bwmswim"});
