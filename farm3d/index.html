@@ -1,6 +1,6 @@
 <!doctype html><html><head><script src="../pv/s4icon.js?h=37261d11"></script><script src="../pv/s4lite.js"></script><script src="../pv/s4loop.js?h=b43f4bea"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body>
 <meta charset="utf-8">
-<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=bbb2434d"></script><script src="../pv/s4own.js?h=d1d70466"></script>
+<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=dff7ce20"></script><script src="../pv/s4own.js?h=d1d70466"></script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap">
 <style>
@@ -1658,7 +1658,7 @@ function pickItem(cx,cy){setRay(cx,cy);const hs=ray.intersectObjects(items.map(i
 // ---- moving things ----
 let sel=null,drag=null,orig=null;const selBar=document.getElementById('selBar'),bar=document.getElementById('bar');
 function showFoot(it){const [w,d]=dims(it);foot.scale.set(w,d,1);foot.position.set(it.x+w/2,.04,it.z+d/2);foot.material.color.set(fits(it,it.x,it.z,it.rot)?0x7be07b:0xff6b6b);foot.visible=true;}
-let edit=false;const bRot=document.getElementById('bRot'),bPick=document.getElementById('bPick');
+let edit=false;window.__s4userEdit=()=>!!edit;/* fix41: บอก s4store ว่าอยู่โหมดแต่ง (ของลดเพราะผู้เล่นเก็บเอง) */const bRot=document.getElementById('bRot'),bPick=document.getElementById('bPick');
 function editHint(msg){say(msg||(sel?'แตะพื้นตรงไหนก็ได้เพื่อย้าย '+T[sel.t].name+' ไปที่นั่น':'🛠️ แต่งฟาร์ม · แตะของที่อยากย้าย'));}
 function updBtns(){bRot.hidden=!sel;bPick.hidden=!sel||!!T[sel.t].must;if(edit)editHint();}
 function setEdit(on){if(on&&VISIT){say('👀 กำลังเยี่ยมสวนเพื่อน แต่งฟาร์มของเพื่อนไม่ได้');return;}if(!on){tool=null;paint=null;erase=false;/* fix36: ออกจากโหมดแต่ง → บันทึกเลย์เอาต์ขึ้นเซิร์ฟเวอร์ทันที */try{save();}catch(e){}try{if(window.__s4storeFlush)window.__s4storeFlush();}catch(e){}}tray.hidden=!on;fab.style.visibility=on?'hidden':'';if(on){renderTray();}if(on&&face)setFace(false);edit=on;fab.classList.toggle('edit',on);fab.innerHTML=on?ICON_CHECK:ICON_MENU;bagFab.hidden=true;menu.hidden=true;if(!on)deselect();gridGroup.visible=on;selBar.hidden=!on;bar.hidden=on;if(on){P.tx=null;P.task=null;marker.visible=false;}updBtns();}
@@ -2200,7 +2200,10 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
   /* fix15: ฟาร์มที่เคยถูกเซฟทับเป็นค่าเริ่มต้น → ขาดส่วนมาตรฐาน (คอก/แนวพุ่มไม้/แปลงผลไม้/กรีนเฮาส์/หิน) → ล้างธงการจัดวางให้ระบบจัดวางมาตรฐานใหม่ทั้งชุดในรอบนี้ (ได้เท่าฟาร์มใหม่ ของในกระเป๋าไม่กระทบ) */
   try{if(!window.__SHOW&&saved&&saved.length&&!sessionStorage.getItem('s4refill')){const noPen=!items.some(i=>T[i.t]&&T[i.t].pen),noFs=!items.some(i=>i.t==='fspot'),gh=items.filter(i=>i.t==='ghouse').length<2,noHedge=!items.some(i=>i.t==='bush'&&i.x===20),noHouse=!items.some(i=>i.t==='house');
     /* ไม่มีบ้าน (เลย์เอาต์เหลือแต่เศษ) → วางของเริ่มต้นคืนในช่องที่ว่าง */if(noHouse){for(const [t,x,z] of DEFAULT){if(!T[t])continue;const it=addItem(t,0,0);if(fits(it,x,z,0)){it.x=x;it.z=z;posObj(it);}else{sc.remove(it.obj);items.pop();}}console.log('fix15: วางบ้าน/ของเริ่มต้นคืน');}
-    if(noPen||noFs||gh||noHedge||noHouse){for(const k of ['east1','east2','east3','east4','hedge1','s4emb4','s4emb5','s4emb6','s4rs7','gh1','s4barn9','s4orch8','south1','s4mail1'])localStorage.removeItem('farm1-'+k);try{sessionStorage.setItem('s4refill','1');}catch(e){}window.__s4refill=1;console.log('fix15: จัดวางมาตรฐานใหม่',{noPen,noFs,gh,noHedge});}}}catch(e){console.log('refill',e&&e.message);}
+    /* fix42: เฉพาะเลย์เอาต์พังจริง (ไม่มีบ้าน+คอก+แปลงผลไม้) และครั้งเดียวต่อบัญชี — พุ่มไม้แนวรั้ว/กรีนเฮาส์ ผู้เล่นย้าย/เก็บได้ ไม่ใช่สัญญาณว่าเซฟพัง */if(noHouse&&noPen&&noFs&&!localStorage.getItem('farm1-s4refill42')){localStorage.setItem('farm1-s4refill42','1');for(const k of ['east1','east2','east3','east4','hedge1','s4emb4','s4emb5','s4emb6','s4rs7','gh1','s4barn9','s4orch8','south1','s4mail1'])localStorage.removeItem('farm1-'+k);try{sessionStorage.setItem('s4refill','1');}catch(e){}window.__s4refill=1;console.log('fix15: จัดวางมาตรฐานใหม่',{noPen,noFs,gh,noHedge});}}}catch(e){console.log('refill',e&&e.message);}
+  /* fix42 🧱 ของจำเป็นในชุดเริ่มต้นหาย (แผงขายของ/บ้าน/โรงนา/ตู้ไปรษณีย์) → วางคืนที่ตำแหน่งเดิมหรือช่องว่างใกล้สุด */
+  try{if(!window.__SHOW&&!VISIT&&saved&&saved.length){const healed=[];for(const [t,x0,z0] of DEFAULT){if(!T[t]||T[t].must!==1||T[t].fix||items.some(i=>i.t===t))continue;const it=addItem(t,0,0);let ok=false;for(let r=0;r<=16&&!ok;r++)for(let dx=-r;dx<=r&&!ok;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;if(fits(it,x0+dx,z0+dz,0)){it.x=x0+dx;it.z=z0+dz;posObj(it);ok=true;break;}}if(ok)healed.push(T[t].name);else{sc.remove(it.obj);items.splice(items.indexOf(it),1);}}
+   if(healed.length){window.__s4healed=healed;save();console.warn('fix42: วางของจำเป็นคืน',healed);setTimeout(()=>{try{say('🧱 วาง '+healed.join(' · ')+' คืนให้แล้ว (ย้ายได้ในโหมดแต่ง)');}catch(e){}},1500);}}}catch(e){console.log('heal42',e&&e.message);}
   try{let ch=false;for(const it of items.filter(i=>i.t==='mstall')){sc.remove(it.obj);items.splice(items.indexOf(it),1);ch=true;}if(ch&&!window.__SHOW)save();}catch(e){}
   /* นคร: หย่าแล้วบ้านสามีที่วางไว้หายไป (เซิร์ฟเวอร์ลบของในกระเป๋าแล้ว) */window.s4HusbandSync=function(){try{if(window.__SHOW||VISIT)return;const c=cityInfo();try{const lv=Math.min(3,Math.max(1,Number(c.husband&&c.husband.house&&c.husband.house.lv)||1));for(const it of items.filter(i=>i.t==='d_city_husband')){if(it.obj&&it.obj.userData&&it.obj.userData.hlv&&it.obj.userData.hlv!==lv){sc.remove(it.obj);it.obj=T[it.t].make();it.obj.userData.item=it;it.obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.userData.item=it;}});sc.add(it.obj);posObj(it);}}}catch(e){}if(c.husband)return;let ch=false;for(const it of items.filter(i=>i.t==='d_city_husband')){sc.remove(it.obj);for(const k of ['mx','walker']){const mi=S4MIX.indexOf(it.obj.userData[k]);if(mi>=0)S4MIX.splice(mi,1);}items.splice(items.indexOf(it),1);ch=true;}if(ch){save();if(typeof rebuildTiles==='function')rebuildTiles();}}catch(e){}};window.s4HusbandSync();
   if(!window.__SHOW&&FARM.x1>ZONEX+1)try{if(!localStorage.getItem('farm1-east1')){
@@ -2215,7 +2218,7 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
     rebuildTiles();saveTiles();save();localStorage.setItem('farm1-east1','1');localStorage.setItem('farm1-east2','1');localStorage.setItem('farm1-east3','1');}
   // farms made with the first layout: add the second pen of each kind and move the pond down
   else if(!localStorage.getItem('farm1-east2')){const keep=new Set(['penchick','pencow','penpig']);
-    for(const it of [...items]){const [w,d]=dims(it);if(((it.x>=21&&it.x<=55&&it.z+d>-22&&it.z<-10)||(it.x+w>32&&it.x<44&&it.z+d>-10&&it.z<-2))&&!keep.has(it.t)){sc.remove(it.obj);items.splice(items.indexOf(it),1);}
+    for(const it of [...items]){const [w,d]=dims(it);if(((it.x>=21&&it.x<=55&&it.z+d>-22&&it.z<-10)||(it.x+w>32&&it.x<44&&it.z+d>-10&&it.z<-2))&&!keep.has(it.t)&&T[it.t].must!==1/* fix42 */){sc.remove(it.obj);items.splice(items.indexOf(it),1);}
       if(it.t==='bush'&&it.x===20&&it.z>=-13&&it.z<=-11){sc.remove(it.obj);items.splice(items.indexOf(it),1);}}
     for(const [k] of [...TILES]){const [x,z]=k.split(',').map(Number);if(x>=21&&x<=55&&z>=-21&&z<=-10)TILES.delete(k);}
     const put=(t,x,z)=>{if(!T[t])return;const it=addItem(t,0,0);if(fits(it,x,z,0)){it.x=x;it.z=z;posObj(it);}else{sc.remove(it.obj);items.pop();}};
@@ -2224,7 +2227,7 @@ S4LOOP.run((dt,_t,mode)=>{clock.getDelta();const rawDt=dt;if(!ALBEL.hidden)retur
     rebuildTiles();saveTiles();save();localStorage.setItem('farm1-east2','1');}
   if(localStorage.getItem('farm1-east1')&&!localStorage.getItem('farm1-east3')&&!items.some(i=>i.t==='penfish')){
     for(const [k,v] of [...TILES]){const [x,z]=k.split(',').map(Number);if(x>=29&&x<=47&&z>=-9&&z<=-2&&/^(water|stone)/.test(v))TILES.delete(k);}
-    for(const it of [...items]){const [w,d]=dims(it);if(it.x+w>30&&it.x<47&&it.z+d>-9&&it.z<-2&&!T[it.t].pen){sc.remove(it.obj);items.splice(items.indexOf(it),1);}}
+    for(const it of [...items]){const [w,d]=dims(it);if(it.x+w>30&&it.x<47&&it.z+d>-9&&it.z<-2&&!T[it.t].pen&&T[it.t].must!==1/* fix42 */){sc.remove(it.obj);items.splice(items.indexOf(it),1);}}
     for(const [x,z] of [[30,-9],[40,-9]]){const it=addItem('penfish',0,0);if(fits(it,x,z,0)){it.x=x;it.z=z;posObj(it);}else{sc.remove(it.obj);items.pop();}}
     rebuildTiles();saveTiles();save();localStorage.setItem('farm1-east3','1');}
   // keep the way onto the animal-area bridge clear
