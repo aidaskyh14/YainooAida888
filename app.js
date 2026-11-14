@@ -1,7 +1,7 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=7f6fb6b4';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=96446a2d';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=3f8f0ba3';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
@@ -16,7 +16,7 @@ import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=0cc9c615';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, writeBatch, runTransaction, increment, serverTimestamp, Timestamp, FieldPath, addDoc, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=9219d22e';
+import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=abd818ce';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=1d921b5e';
 import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=0ecf6d0e';
@@ -209,18 +209,40 @@ async function flush() {
     if (campaignJobs.length < before) { S.dirty.add('g'); return flush(); }
   }
 }
+let staleRuns=0;
+async function resyncParts(ids,why){/* fix38 🔀 */
+  try{showSave('🔄 รวมข้อมูลจากคลาวด์ ('+(ids?ids.join(', '):'ทั้งหมด')+')…');const merged=await store.resync(ids,S.P.g);S.P.g=merged;window.__meritBase=undefined;S.dirty.add('g');
+    try{window.__s4logReload('🔀 รวมเซฟ: '+(why||'')+' '+(ids?ids.join(','):'all'));}catch(_){}
+    try{if(ids&&ids.some(id=>!/^module-/.test(id))&&typeof sceneApplyLive==='function')sceneApplyLive();}catch(_){}
+    showSave('🔄 รวมข้อมูลล่าสุดแล้ว');return true;}
+  catch(err){console.warn('fix38 resync',err);showSave(err.message||'รวมข้อมูลไม่สำเร็จ',true);return false;}
+}
 function onSaveError(e) {
-  if (e.code === 'save/conflict') { otherDevice(); return; }
+  if (e.code === 'save/stale') { if (++staleRuns > 6) { staleRuns = 0; otherDevice(e); return; } resyncParts(e.ids, 'rev ไม่ตรง').then(ok => { if (ok) setTimeout(() => { flush().catch(() => {}); staleRuns = Math.max(0, staleRuns - 1); }, 300); }); return; }
+  if (e.code === 'save/conflict') { otherDevice(e); return; }
   if ((e.code || '').includes('permission-denied')) { showSave('Firebase ไม่อนุญาตให้บันทึก ตรวจ Rules ก่อนเล่นต่อ', true); return; }
   /* fix29: ด่านกันกุศล/กระเป๋าหายฟ้อง = ค่าในเครื่องเพี้ยน → ดึงค่าจริงจากคลาวด์กลับมา แล้วโหลดหน้าใหม่ (ไม่ค้าง ไม่เด้งเตือนซ้ำ) */
   if (e.code === 'save/merit-guard' || e.code === 'save/inv-guard') { try { const live = joinGame(store.parts.values()); if (e.code === 'save/merit-guard') S.P.g.merit = Number(live.merit) || 0; else { S.P.g.bag = live.bag || {}; if (live.sub) for (const id of ['barn','birds','dog','alpaca']) if (live.sub[id] && S.P.g.sub && S.P.g.sub[id]) for (const f of ['stock','food','vault','bag']) if (live.sub[id][f] !== undefined) S.P.g.sub[id][f] = live.sub[id][f]; } window.__meritBase = undefined; window.__gameRead = -1; console.warn('fix29 ซิงก์จากคลาวด์หลังด่านฟ้อง', e.code); showSave('🔄 ซิงก์ข้อมูลล่าสุดแล้ว', false); setTimeout(() => { try { reloadScreen(); } catch (_) {} flush().catch(() => {}); }, 300); } catch (_) { showSave(e.message, true); } return; }
   if ((e.code || '').startsWith('save/')) { showSave(e.message, true); return; }
   showSave('ยังบันทึกไม่ได้ จะลองใหม่อัตโนมัติ', true);
 }
-function otherDevice() {
+/* fix38 📱 รับช่วงเซฟมาเครื่องนี้โดยไม่โหลดหน้า: ตั้ง session เป็นของเรา → ดึงทุกส่วนจากคลาวด์มารวม 3 ทางกับของในเครื่อง → ส่งของค้างจากหน้า 3D → เซฟ */
+async function reclaimHere(){
+  try{showSave('🔄 กำลังรับช่วงเซฟมาที่เครื่องนี้…');await updateDoc(playerRef(),{session:S.sessionId,by:S.sessionId,lastLogin:serverTimestamp()});
+    const merged=await store.resync(null,S.P.g);S.P.g=merged;window.__meritBase=undefined;S.blocked=false;S.dirty.add('g');staleRuns=0;
+    try{if(S.frame)S.frame.style.pointerEvents='';}catch(_){}startSaver();try{flushFrames();}catch(_){}await flush();
+    try{window.__s4logReload('📱 รับช่วงเซฟมาเครื่องนี้ (เก็บของที่จัดไว้)');}catch(_){}toast('✅ เล่นต่อที่เครื่องนี้ได้แล้ว ของที่จัดไว้ยังอยู่ครบ');
+    try{if(typeof sceneApplyLive==='function'&&!sceneApplyLive())reloadScreen('หลังรับช่วงเซฟ');}catch(_){}}
+  catch(e){console.warn('fix38 reclaim',e);showSave((e&&e.message)||'รับช่วงเซฟไม่สำเร็จ กำลังโหลดใหม่',true);setTimeout(()=>location.reload(),900);}
+}
+function otherDevice(err) {
   S.blocked = true; clearInterval(S.timer);
-  modal('<h2>📱 บัญชีนี้เปิดอยู่ที่เครื่องอื่น</h2><p>เล่นได้ทีละ 1 เครื่อง เครื่องนี้หยุดบันทึกแล้ว เพื่อไม่ให้เซฟทับกันจนของหาย</p><p class="note">ถ้าจะเล่นที่เครื่องนี้ต่อ กด "เล่นที่เครื่องนี้" ระบบจะโหลดเซฟล่าสุดจากเครื่องอื่นมาให้</p>',
-    [{ t: 'ออกจากระบบ', c: 'gray', f: () => signOut(auth) }, { t: 'เล่นที่เครื่องนี้', f: () => location.reload() }]);
+  try{window.__s4logReload('📱 เครื่องอื่น/เซฟชน: '+String((err&&err.message)||'').slice(0,60));}catch(_){}
+  /* fix38: ตรวจก่อนว่า session บนคลาวด์เป็นของใคร (เป็นของเราเอง = ชนที่ rev ไม่ใช่เครื่องอื่น → รวมใหม่แล้วเล่นต่อได้เลย) */
+  getDoc(playerRef()).then(snap=>{const ses=snap.exists()?snap.data().session:null;if(ses===S.sessionId){S.blocked=false;startSaver();resyncParts(null,'session ตรง rev ไม่ตรง').then(ok=>{if(ok)flush().catch(()=>{});});return;}
+    modal('<h2>📱 บัญชีนี้เปิดอยู่ที่เครื่องอื่น</h2><p>เล่นได้ทีละ 1 เครื่อง เครื่องนี้หยุดบันทึกไว้ก่อน เพื่อไม่ให้เซฟทับกันจนของหาย</p><p class="note">กด "เล่นที่เครื่องนี้ต่อ" ระบบจะรับช่วงเซฟมาเครื่องนี้ รวมของล่าสุดจากคลาวด์กับของที่จัดไว้บนเครื่องนี้ให้ (ไม่หาย) · เครื่องอื่นจะหยุดบันทึกแทน</p>',
+      [{ t: 'ออกจากระบบ', c: 'gray', f: () => signOut(auth) }, { t: 'เล่นที่เครื่องนี้ต่อ (เก็บของที่จัดไว้)', f: () => reclaimHere() }]);}).catch(()=>{
+    modal('<h2>📱 บัญชีนี้เปิดอยู่ที่เครื่องอื่น</h2><p>เล่นได้ทีละ 1 เครื่อง เครื่องนี้หยุดบันทึกไว้ก่อน</p>',[{ t: 'ออกจากระบบ', c: 'gray', f: () => signOut(auth) }, { t: 'เล่นที่เครื่องนี้ต่อ (เก็บของที่จัดไว้)', f: () => reclaimHere() }]);});
 }
 async function critical(fn, okMsg) {
   // ส่งค่าที่ค้างก่อน แล้วทำรายการสำคัญใน transaction เดียว
@@ -228,12 +250,18 @@ async function critical(fn, okMsg) {
   try { const r = await runTransaction(db, fn); if (okMsg) toast(okMsg); return r; }
   catch (e) { if ((e.code || '').includes('permission-denied')) otherDevice(); else if (e.thai) toast(e.thai); else toast(thaiError(e)); throw e; }
 }
+/* fix38 🛟 ให้หน้าในทุกชั้น (scr-* → farm3d/zone3d …) ส่งของที่ค้างใน s4store มาก่อน แล้วค่อยเซฟ (pagehide ของหน้านอกวิ่งก่อนหน้าใน) */
+function flushFrames(root){try{const w=root||(S.frame&&S.frame.contentWindow);if(!w)return;try{if(typeof w.__s4storeFlush==='function')w.__s4storeFlush();}catch(e){}let fr=[];try{fr=[...w.document.querySelectorAll('iframe')];}catch(e){}for(const f of fr){try{if(f.contentWindow)flushFrames(f.contentWindow);}catch(e){}}}catch(e){}}
+window.__flushFrames=flushFrames;
+function flushNow(){try{flushFrames();}catch(e){}clearTimeout(cloudSaveTimer);return flush().catch(()=>{});}
+let saverHooked=false;
 function startSaver() {
   clearInterval(S.timer); S.timer = setInterval(() => flush().catch(() => {}), SAVE_EVERY_MS);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush().catch(() => {}); });
-  window.addEventListener('pagehide', () => flush().catch(() => {}));
+  if(saverHooked)return;saverHooked=true;/* fix38: ผูกตัวฟังครั้งเดียว (เรียกซ้ำตอนรับช่วงเซฟได้) */
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushNow(); });
+  window.addEventListener('pagehide', () => flushNow());
   // fix16: ปิด/รีเฟรชหน้าก่อนบันทึกเสร็จ → เตือนก่อน (กันขายแล้วสัตว์กลับมา / วางแล้วหาย)
-  window.addEventListener('beforeunload', e => { try { frameSave(); } catch (_) {} if (S.user && !S.blocked && (S.dirty.size || S.saving || S.claiming || cloudPromise)) { flush().catch(() => {}); e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { try { frameSave(); } catch (_) {} try{flushFrames();}catch(_){} if (S.user && !S.blocked && (S.dirty.size || S.saving || S.claiming || cloudPromise)) { flush().catch(() => {}); e.preventDefault(); e.returnValue = ''; } });
   window.addEventListener('online', () => flush().catch(() => {}));
 }
 
@@ -788,7 +816,7 @@ const HOST_BASE = {
   get(k) {
     if (k === GAME_KEY) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);if(!S.P?.g)return null;const v=inventoryView(S.P.g);if(meritShift&&typeof v==='object')v.merit=(Number(v.merit)||0)-meritShift;window.__meritBase=Number(S.P.g.merit)||0;/* fix21 */window.__invBase=invSnap(v);/* fix27 */window.__gameRead=sceneGen;/* fix29 */return JSON.stringify(v); }
     if (SUBS[k]) { if(S.P?.g)refillAdminInventory(S.P.g,S.admin,CATALOG);return S.P?subGet(k):null; }
-    if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin });
+    if (k === 's3user') return JSON.stringify({ name: S.P ? S.P.name : '', admin: S.admin, uid: S.user ? S.user.uid : '' });/* fix38: uid ให้ s4store แยกสำรองต่อบัญชี */
     const L = S.P && S.P.g && S.P.g._ls; return L && k in L ? L[k] : null;
   },
   set(k, v) { lastSetError = null; try { hostSet(k, v); } catch (e) { throw setFailed(e); } },
@@ -796,6 +824,8 @@ const HOST_BASE = {
   del(k) { const L = S.P && S.P.g && S.P.g._ls; if (L && k in L) { delete L[k]; change('g'); } },
   serverNow:()=>serverNow(),
   syncClock:()=>syncClock(),
+  cloudIdle:()=>cloudPromise?cloudPromise.catch(()=>{}):Promise.resolve(),/* fix38: รอให้รายการก่อนหน้าเสร็จ */
+  cloudBusy:()=>!!cloudBusy,
   barnRelease(type,slot,born){if(barnReleases.size<200)barnReleases.add(type+':'+slot+':'+born);},
   openMail: () => openMail(), logout: () => logout(), mailCount: () => (S.P && S.P.mailCount) || 0,
   ask(title, body, okLabel, fn) { const acts = [{ t: okLabel ? 'ยกเลิก' : 'ปิด', c: 'gray' }]; if (okLabel) acts.push({ t: okLabel, f: fn }); modal(`<h2>${title}</h2><div>${body}</div>${okLabel ? '' : '<p class="note">ของยังไม่พอ เก็บเพิ่มอีกนิดนะ</p>'}`, acts); }
@@ -872,12 +902,12 @@ async function goScreen(n) {
   if(S.frame)S.frame.style.pointerEvents='none';
   const prevIds=store&&store.activeIds?[...store.activeIds]:null;let retired=false;
   try {
-    if(cloudPromise)await cloudPromise;frameSave();await flush();
+    if(cloudPromise)await cloudPromise;try{flushFrames();}catch(e){}frameSave();await flush();/* fix38: ส่งของค้างหน้า 3D ก่อน */
     const ids=[...BASE_PARTS,...SCREEN_PARTS[n]];
     await store.loadIds(ids); // read the next screen's parts while the current page still owns the save scope
     // fix13: close the old page first (its Host handle stops saving, frame goes to about:blank and we wait for it),
     // save what it wrote before that, and only then switch the save scope to the new screen.
-    frameSave();retired=true;const nav=await blankScene();await flush();await petFlush();
+    try{flushFrames();}catch(e){}frameSave();retired=true;const nav=await blankScene();await flush();await petFlush();
     S.P.g=await store.loadIds(ids);store.activate(ids);if(inventoryIssues(S.P.g).length)await cloudAction('integrity',{type:'repair'});
     stopSceneSubscriptions();S.screen=n;
     const t=SCREENS[n];$('#gbar').hidden=!t;$('#gttl').textContent=t;document.body.classList.toggle('sub',!!t);
@@ -891,15 +921,17 @@ async function petFlush(){if(petEarnBuf<5000||!S.user||S.admin)return;const earn
 // Retire the scene in the frame: new inert Host handle (old page's saves are refused), navigate to about:blank and wait
 // until the old document is gone (or 4 s; the refused handle already protects the save). Resolves with a navigation token.
 let sceneNav=0;
+/* fix38 🧭 เปลี่ยนหน้าใน iframe แบบไม่สร้างประวัติย้อนกลับ (ปัดขอบจอ/ปุ่มย้อนกลับจะไม่เด้งไปหน้าก่อน) */
+function frameGo(f,url){S.frameUrl=url;let done=false;try{const w=f&&f.contentWindow;if(w&&w.location&&typeof w.location.replace==='function'){w.location.replace(url==='about:blank'?'about:blank':new URL(url,location.href).href);done=true;}}catch(e){}if(!done)f.src=url;}
 function blankScene(){
   const nav=++sceneNav,f=S.frame;window.__HOST=sceneHost([]);
-  let cur='';try{cur=(f&&typeof f.getAttribute==='function'&&f.getAttribute('src'))||'';}catch(e){}
-  if(!f||typeof f.addEventListener!=='function'||!cur||cur==='about:blank'){if(f)f.src='about:blank';return Promise.resolve(nav);}
+  let cur='';try{cur=S.frameUrl||(f&&typeof f.getAttribute==='function'&&f.getAttribute('src'))||'';}catch(e){}
+  if(!f||typeof f.addEventListener!=='function'||!cur||cur==='about:blank'){if(f)frameGo(f,'about:blank');return Promise.resolve(nav);}
   return new Promise(done=>{
     let timer=0;
     const end=()=>{clearTimeout(timer);f.removeEventListener('load',onLoad);done(nav);};
     const onLoad=()=>{let href='';try{href=f.contentWindow.location.href;}catch(e){}if(href==='about:blank')end();};
-    f.addEventListener('load',onLoad);timer=setTimeout(end,4000);f.src='about:blank';
+    f.addEventListener('load',onLoad);timer=setTimeout(end,4000);frameGo(f,'about:blank');
   });
 }
 // Show a screen with a fresh Host handle scoped to the parts that screen loaded; a newer navigation wins.
@@ -908,7 +940,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  S.frame.src='scr-'+screen+'.html?v=ss4-nakorn1&h=2a18fa9d'+extra;return true;}
+  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=9de6d680'+extra);return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -917,7 +949,7 @@ function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)retur
   try{if(typeof w.render==='function'&&ok)w.render();}catch(e){}
   return ok;}catch(e){return false;}}
 /* fix36 🩺 จดเหตุผลที่หน้าโหลดใหม่ (ดูย้อนหลังได้ใน 🔍 ตรวจกุศล/เมนู) */window.__s4logReload=function(why){try{const L=JSON.parse(localStorage.getItem('s4-reloadlog')||'[]');L.push({t:Date.now(),s:S.screen||'',w:String(why||'').slice(0,80)});while(L.length>40)L.shift();localStorage.setItem('s4-reloadlog',JSON.stringify(L));}catch(e){}};
-function reloadScreen(why) { try{window.__s4logReload(why||(new Error().stack||'').split('\n')[2]||'reloadScreen');}catch(e){} if (S.navigating) return; if(sceneApplyLive()){try{S.frame.dispatchEvent(new Event('load'));}catch(e){}return;} stopSceneSubscriptions();if (!S.frame || !S.screen) return;const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
+function reloadScreen(why) { try{window.__s4logReload(why||(new Error().stack||'').split('\n')[2]||'reloadScreen');}catch(e){} if (S.navigating) return; if(sceneApplyLive()){try{S.frame.dispatchEvent(new Event('load'));}catch(e){}return;} stopSceneSubscriptions();if (!S.frame || !S.screen) return;try{flushFrames();}catch(e){}/* fix38 */const screen=S.screen,ids=store&&store.activeIds?[...store.activeIds]:null;blankScene().then(nav=>showScene(screen,ids,nav,'&r=' + Date.now())); }
 window.addEventListener('message', e => { if (e.data && e.data.go && S.frame && e.source === S.frame.contentWindow) goScreen(e.data.go); });
 async function openAdminOverlay() { A.sendLoaded=false;try{await checkApi();if(cloudPromise)await cloudPromise;frameSave();await flush();stopSceneSubscriptions();if(S.frame)blankScene();const o=$('#ov');o.hidden=false;renderAdmin();}catch(e){toast(e.message||thaiError(e));} }
 function itemsHtml(items) {

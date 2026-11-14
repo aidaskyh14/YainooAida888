@@ -1,16 +1,17 @@
 /* Loaded after the farm preview scripts; actions commit before the animation. */
 const OutingsHost=parent.__HOST;
 let outingBusy=false;
-async function outingAction(input){if(outingBusy)return null;outingBusy=true;try{const out=await OutingsHost.cloud('outings',input);Object.assign(S,JSON.parse(OutingsHost.get('s3all-v1')));fuel=S.fuel;pts=S.merit;render();return out;}catch(e){toast(e.message,1);return null;}finally{outingBusy=false;}}
+async function outingAction(input){if(outingBusy)return null;outingBusy=true;try{let out;for(let a=0;;a++){try{out=await OutingsHost.cloud('outings',input);break;}catch(e){/* fix38: ระบบกำลังทำรายการอื่น (คนกดรัว/แคมเปญ) → รอให้เสร็จแล้วทำต่อเอง ไม่เด้ง error */if(a<4&&/กำลังทำรายการก่อนหน้า/.test((e&&e.message)||'')&&OutingsHost.cloudIdle){try{await OutingsHost.cloudIdle();}catch(_){}await new Promise(r=>setTimeout(r,150+a*120));continue;}throw e;}}Object.assign(S,JSON.parse(OutingsHost.get('s3all-v1')));fuel=S.fuel;pts=S.merit;render();return out;}catch(e){toast(e.message,1);return null;}finally{outingBusy=false;}}
 const HONEY_UI={jeep:{oil:300,hat:0,wait:20,merit:[300,600],chance:20},ship:{oil:100,hat:50,wait:10,merit:[800,1500],chance:30},raft:{oil:500,hat:100,wait:5,merit:[5000,10000],chance:50}};
 let honeyOffset=0;
-const honeyNow=()=>Date.now()+honeyOffset;
+const honeyNow=()=>{try{const n=OutingsHost&&OutingsHost.serverNow&&OutingsHost.serverNow();if(n&&isFinite(n))return n;}catch(e){}return Date.now()+honeyOffset;};/* fix38: เวลาเซิร์ฟเวอร์ */
 const honeyHour=()=>+new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',hour12:false}).format(new Date(honeyNow()));
 const honeyOpen=v=>v==='jeep'||(v==='ship'?(honeyHour()>=18||honeyHour()<6):honeyHour()>=6&&honeyHour()<18);
 const honeyFuel=()=>Math.min(100,(S.fuel||0)+Math.max(0,honeyNow()-(S.fuelAt??honeyNow()))*100/(4*3600000));
-callHoney=async kind=>{const v=kind==='ship'||kind==='raft'?kind:'jeep';if(await outingAction({type:'call',vehicle:v})){closeAll();toast('🐷 น้องน้ำผึ้งกำลังมา');}};
+callHoney=async kind=>{const v=kind==='ship'||kind==='raft'?kind:'jeep';const out=await outingAction({type:'call',vehicle:v});if(out){closeAll();const u=out.used;const where=v==='jeep'?'จอดริมถนนหน้าบ้าน':'จอดริมน้ำหน้าบ้าน';toast(u?('🐷 น้องน้ำผึ้งกำลังมา ('+where+') · '+(u.free?'เรียกฟรี':'ใช้น้ำมัน '+u.oil)+(u.hat?' + หมวก '+u.hat:'')):'🐷 น้องน้ำผึ้งกำลังมา ('+where+')');}};/* fix38: บอกว่าหักอะไรไปเท่าไหร่ */
 renderHoney=function(){
  fuel=honeyFuel();$('fuelFill').style.width=fuel+'%';$('fuelTxt').textContent=Math.floor(fuel)+'%';
+ /* fix38: สถานะค้าง (เลยเวลา/กลับแล้ว) → ดึงสถานะจากเซิร์ฟเวอร์ใหม่เอง (ไม่เกิน 1 ครั้ง/8 วิ) แล้ววาดใหม่ */try{const ph=S.honey?hPhase():'home';if(S.honey&&(ph==='late'||ph==='gone')&&honeyNow()-(window.__honeyRefreshAt||0)>8000){window.__honeyRefreshAt=honeyNow();outingAction({type:'status'}).then(()=>{try{renderHoney();}catch(e){}});}}catch(e){}
  const busy=!!S.honey&&hPhase()!=='gone';$('honeyNote').textContent=busy?'🐷 น้องน้ำผึ้งกำลังทำงานอยู่':'จี๊ปเรียกฟรีเมื่อแถบเต็ม (4 ชั่วโมง) หรือใช้น้ำมัน 300 แกลลอน';
  document.querySelectorAll('.hopt').forEach(b=>{const v=b.dataset.v,c=HONEY_UI[v],free=v==='jeep'&&fuel>=100;b.disabled=busy||!honeyOpen(v)||(!free&&(S.bag.item.fuel||0)<c.oil)||(S.bag.item.hat||0)<c.hat;
  b.querySelector('small').textContent=(v==='jeep'?'เปิดตลอดวัน':v==='ship'?'18:00–05:59':'06:00–17:59')+' · '+(free?'เรียกฟรี':'น้ำมัน '+c.oil)+(c.hat?' + หมวก '+c.hat:'')+' · รอ '+c.wait+' นาที';});

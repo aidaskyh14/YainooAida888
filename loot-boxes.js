@@ -154,7 +154,7 @@ const choice=message=>{
   if(busy)return;busy=true;opened=true;
   show('<div class="lbstage"><div class="lbtitle">🎁 '+escape(itemFor(selected).n)+'</div><img class="lbclosed lbshake" src="'+IMG+selected.image+'" alt="" data-fb="🎁"><div class="lbnote" style="color:#fff">กำลังเปิดกล่อง…</div></div>',true);
   try{
-   const preload=loadSheet(selected),r=await host.open({type:'open',box:selected.id,quantity});
+   const preload=loadSheet(selected);let r;for(let a=0;;a++){try{r=await host.open({type:'open',box:selected.id,quantity});break;}catch(e){/* fix38: ระบบกำลังทำรายการอื่น → รอแล้วเปิดต่อเอง */if(a<4&&/กำลังทำรายการก่อนหน้า/.test((e&&e.message)||'')&&window.__HOST&&window.__HOST.cloudIdle){try{await window.__HOST.cloudIdle();}catch(_){}await wait(150+a*120);continue;}throw e;}}
    const sheet=await preload;
    if(sheet){
     show('<div class="lbstage"><div class="lbtitle">🎁 '+escape(itemFor(selected).n)+(quantity>1?' ×'+fmt(quantity):'')+'</div><div class="lbsprite"></div></div>',true);

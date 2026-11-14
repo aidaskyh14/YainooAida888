@@ -16,7 +16,7 @@ import {recordCampaign,FISH_EVENTS,honeyMultiplier} from './campaigns-engine.js?
 import {randomUUID,randomInt,createHash} from 'node:crypto';
 import {ATM_CARD,BANKS,bankOk,bankPrime,bankGold,bankBonus,atmFeeRate,atmUses,atmUse,atmSentN,ATM_PER_DAY,ATM_BONUS_EVERY,ATM_BONUS,atmHasCard,atmToday,atmCanSend,atmCheckAmount,atmPinOk,atmCheckPin,atmRecord,atmPushHist,atmDay,FX_PER_DAY,FX_MAX,fxRateCents,fxPay,fxToday,fxCheck,fxRecord} from './atm-engine.js?h=bce581be';
 import {fishingAction,freshFishing,fishingPublic} from './fishing-engine.js?h=19bb27fe';
-import {outingsAction} from './outings-engine.js?h=e5247fd1';
+import {outingsAction} from './outings-engine.js?h=51255edd';
 import {farmshopAction,freshFarmshop} from './farmshop-engine.js?h=02866494';
 import {CATALOG as CATALOG_ALL} from './catalog.js?h=0ecf6d0e';
 import {NB_HOUSE_UP,NB_THEMES,NB_DECO_MAX,bagTotal,bagTake,nbHouseOf,nbHousesTick,NB_MIN,NB_MAX,NB_LOCK,NB_GIFT_DAY,NB_GIFT_KINDS,NB_GIFT_MAX,NB_FINE,NB_EMBLEMS,NB_STICKERS,NB_COST,nbProgress,bagGet,bagPut,costDone,cleanName} from './nb-engine.js?h=99f92a56';
@@ -26,7 +26,7 @@ import {initializeApp} from 'firebase-admin/app';
 import {getFirestore,FieldValue,FieldPath,Timestamp} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
 import {createCloudCore,refuse} from './cloud-core.js?h=7cee7b67';
-import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=7b011861';
+import {boatAction,freshBoat,publicBoat,myPicks} from './boat-engine.js?h=5a4724af';
 import {rainLogic,rainGoldOpen,RAIN_MS,RAIN_GOLD_MAX} from './rain-engine.js?h=2e082531';
 import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_ROB,TW_ROB_HOUSES,TW_CUT4,TW_SURPRISE,TW_SURPRISE_MERIT,TW_SHIELD_DROP,TW_AXES,TW_CATS,TW_BAT_MS,TW_BAT_WARN,TW_BAT_SETTLE,TW_BAT_LEVELS,twRoundAt,twNextRound,twHouseScore,twRank,twShuffle,twSupply,twBatLogic,twBatScore,TW_ROB_PAY,twRobGive} from './tree-engine.js?h=3c9defae';
 import {hwmAction} from './hwmini-engine.js?h=0b53b869';
@@ -159,7 +159,7 @@ export const boatActionCloud=callable(async req=>{
    Object.assign(game,out.player);const view={...publicBoat(out.race),serverNow:ctx.now};
     if(!sameData(out.race,current)){writes['privateWorld/boat']=out.race;writes['world/boat']=view;}// fix15f: เขียนเฉพาะเมื่อข้อมูลการแข่งเปลี่ยน (กดนางเงือกไม่เขียนทั้งการแข่ง)
    const meritSelf=(out.ledger||[]).filter(e=>e.self).map(e=>({boat:e.boat,merit:e.merit,...(e.title?{title:e.title}:{})}));
-   return {writes,updates,merges,mailDelta,...(out.coins!==undefined?{coins:out.coins}:{}),response:{race:view,card:out.card||null,reveal:out.reveal||null,serverNow:ctx.now,meritSelf,myPicks:myPicks(out.race,ctx.uid),...(out.rain?{rain:out.rain}:{}),...(out.mmSend?{mmSend:out.mmSend}:{}),...(out.swimBack?{swimBack:out.swimBack}:{}),...(out.stay?{stay:out.stay}:{}),...(out.supply?{supply:out.supply}:{}),...(out.poke?{poke:out.poke}:{}),...(out.check?{check:out.check}:{}),...(out.fire!==undefined?{fire:out.fire}:{}),...(out.fires?{fires:out.fires}:{}),...(out.burnPaid?{burnPaid:out.burnPaid,saved:!!out.saved}:{})}};
+   return {writes,updates,merges,mailDelta,...(out.coins!==undefined?{coins:out.coins}:{}),response:{race:view,card:out.card||null,reveal:out.reveal||null,serverNow:ctx.now,meritSelf,myPicks:myPicks(out.race,ctx.uid),...(out.rain?{rain:out.rain}:{}),...(out.mmSend?{mmSend:out.mmSend}:{}),...(out.swimBack?{swimBack:out.swimBack}:{}),...(out.stay?{stay:out.stay}:{}),...(out.supply?{supply:out.supply}:{}),...(out.stats?{stats:out.stats}:{}),/* fix38 📊 */...(out.poke?{poke:out.poke}:{}),...(out.check?{check:out.check}:{}),...(out.fire!==undefined?{fire:out.fire}:{}),...(out.fires?{fires:out.fires}:{}),...(out.burnPaid?{burnPaid:out.burnPaid,saved:!!out.saved}:{})}};
  }});
 });
 
@@ -179,7 +179,7 @@ export const farmshopActionCloud=callable(async req=>{
  }});
 });
 
-export const outingsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'outings',partIds:['inventory','wallet','outings','house','animals-alpaca','animals-campaigns'],worldIds:['world/campaigns'],apply:async(game,worlds,ctx)=>{const out=outingsAction(game,ctx,req.data?.input||{});Object.assign(game,out.game);if(out.gain)recordCampaign(game,worlds['world/campaigns'],'honey',out.gain*honeyMultiplier(ctx.now),ctx.now);const coinGain=Number.isSafeInteger(out.coins)&&out.coins>0?out.coins:0;return {...(coinGain?{coins:ctx.coins+coinGain}:{}),response:{gain:out.gain||0,items:out.items||{},coinGain,crafted:out.crafted??null,quantity:out.quantity??null,results:out.results||[],outputs:out.outputs||[],consumed:out.consumed||[]}};}}));
+export const outingsActionCloud=callable(async req=>core.action({uid:req.auth.uid,session:req.data?.session,id:req.data?.id,seq:req.data?.seq,input:req.data?.input,system:'outings',partIds:['inventory','wallet','outings','house','animals-alpaca','animals-campaigns'],worldIds:['world/campaigns'],apply:async(game,worlds,ctx)=>{const out=outingsAction(game,ctx,req.data?.input||{});Object.assign(game,out.game);if(out.gain)recordCampaign(game,worlds['world/campaigns'],'honey',out.gain*honeyMultiplier(ctx.now),ctx.now);const coinGain=Number.isSafeInteger(out.coins)&&out.coins>0?out.coins:0;return {...(coinGain?{coins:ctx.coins+coinGain}:{}),response:{gain:out.gain||0,items:out.items||{},coinGain,crafted:out.crafted??null,quantity:out.quantity??null,results:out.results||[],outputs:out.outputs||[],consumed:out.consumed||[],...(out.used?{used:out.used}:{})}};}}));
 
 // fix13: 'status' is read-only (no transaction, no writes). Other actions write privateWorld/fishing only when it changes and
 // world/fishing (read by every listener in the pond) only when the public view changes. Cast results stay private.

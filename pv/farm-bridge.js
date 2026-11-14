@@ -1,7 +1,7 @@
 /* ตัวอย่างซีซัน 4: หน้าฟาร์มซีซัน 3 ตัวจริง (ปุ่ม เมนู กระเป๋า ทางลัด ระบบปลูก/รดน้ำ/เก็บ) แต่ฉากเป็นฟาร์ม 3D ซีซัน 4
    ฉาก 3D อยู่ใน farm3d/ · แตะแปลง/ต้นไม้/อาคารใน 3D → เรียกฟังก์ชันเดิมของหน้านี้ */
 (()=>{
- const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=edb45ee8';
+ const f=document.createElement('iframe');f.id='f3d';f.title='ฟาร์ม 3D';f.src='farm3d/index.html?embed=1&h=e9479f8e';
  f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:0;background:#7fb85a';
  document.body.insertBefore(f,document.body.firstChild);
  const css=document.createElement('style');css.textContent='#view{visibility:hidden!important;pointer-events:none!important}body{background:#7fb85a}';document.head.appendChild(css);

@@ -45,7 +45,7 @@ export function outingsAction(account,ctx,input,rng=Math.random){
   const pool=CATALOG.filter(c=>(c.p.startsWith('food.')||c.p.startsWith('gfood.'))&&c.g!=='เมนูมีคลาส').map(c=>[c.p.startsWith('food.')?'h':'g',c.p.split('.').slice(1).join('.')]);
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   const count=int(rng,...v.menus),trays=int(rng,...v.trays),req=pool.slice(0,count).map(([k,id])=>[k,id,1]);for(let i=count;i<trays;i++)req[int(rng,0,count-1)][2]++;
-  game.honey={v:input.vehicle,req,arriveAt:ctx.now+3000,until:ctx.now+3000+v.wait*60000};return {game};
+  const used={oil:free?0:v.oil,hat:v.hat||0,free};/* fix38: จดว่าหักอะไรไปเท่าไหร่ */game.honey={v:input.vehicle,req,arriveAt:ctx.now+3000,until:ctx.now+3000+v.wait*60000,cost:used};return {game,used};
  }
  if(input.type==='deliver'){
   const h=game.honey;if(!h||h.delivered||h.leaveAt||ctx.now<h.arriveAt||ctx.now>=h.until)fail('รายการนี้ยังส่งไม่ได้หรือหมดเวลาแล้ว');

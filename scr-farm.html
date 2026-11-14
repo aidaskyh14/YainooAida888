@@ -231,7 +231,7 @@ h3{margin:0 0 .5rem;font-size:1.05rem}h4{margin:.8rem .1rem .35rem;font-size:.75
  <h4>🛣️ ขนส่งทางบก</h4><button class="hopt" data-v="jeep"><i>🚙</i><span><b>รถจี๊ป</b><small>ขับมาตามถนน จอดกลางถนน</small></span></button>
  <h4>🌊 ขนส่งทางน้ำ</h4><button class="hopt" data-v="ship"><i>🏴‍☠️</i><span><b>เรือโจรสลัด</b><small>ลอยมาตามคลอง จอดกลางคลอง</small></span></button>
  <button class="hopt" data-v="raft"><i>🪵</i><span><b>แพไม้</b><small>ลอยมาตามคลอง จอดกลางคลอง</small></span></button>
- <div class="hint" style="text-align:center;margin-top:.5rem">น้องน้ำผึ้งมารับของได้เฉพาะที่ฟาร์ม 1</div></section>
+ <div class="hint" style="text-align:center;margin-top:.5rem">🐷 น้องน้ำผึ้งจะมาจอดหน้าบ้าน (จี๊ปริมถนน · เรือ/แพริมน้ำ) แตะน้องเพื่อส่งอาหาร · แพรอแค่ 5 นาที เรือ 10 จี๊ป 20</div></section>
 <section class="sheet" id="delSheet"><h3>📦 ฝากของให้น้องน้ำผึ้ง</h3><div class="hint" style="text-align:center;margin:-.3rem 0 .6rem">เลือกอาหารที่คราฟแล้ว 3–10 ชิ้น • แตะซ้ำเพื่อเพิ่ม • แตะเลขสีเขียวเพื่อลด</div><div class="dlist" id="dlist"></div><div class="dcount" id="dcount"></div><button class="big" id="dSend">🐷 ส่งให้น้องน้ำผึ้ง</button></section>
 <section class="sheet" id="seedSheet"><h3 id="seedTitle"></h3><div class="hint" id="seedHint" style="text-align:center"></div><div class="seeds" id="seeds"></div></section>
 <section class="sheet" id="actSheet"><h3 id="actTitle"></h3><div class="info"><img id="actImg"><div class="hint" id="actSub" style="text-align:center"></div></div>
@@ -359,7 +359,9 @@ try{if(typeof S.av==='string'&&S.av.startsWith('data:image/')&&!(typeof S.avs===
 $('pname').onclick=()=>{closeAll();$('nameIn').value=$('nm').textContent;open('nameModal')};
 $('nameOk').onclick=()=>{const v=$('nameIn').value.trim();if(v.length<2||/\s/.test(v))return toast('🐷 ชื่อต้องมี 2–10 ตัว และห้ามเว้นวรรคนะ',1);$('nm').textContent=v;closeAll();saving();toast('🌸 เปลี่ยนชื่อเป็น '+v+' แล้ว')};
 /* ---------- แผงต่างๆ ---------- */
-function open(id){$(id).classList.add('on');$('shade').classList.add('on')}
+let sheetOpenAt=0;function open(id){sheetOpenAt=Date.now();$(id).classList.add('on');$('shade').classList.add('on')}
+/* fix38 🌱 กัน ghost click: แตะแปลงใน 3D → แผงโผล่ทับนิ้ว → ตอนยกนิ้ว iOS ส่ง click ไปโดนม่าน/ปุ่มในแผงที่เพิ่งเปิด → แผงปิดเอง/เลือกผิด · 0.45 วิแรกหลังเปิดแผง ไม่รับ click บนม่าน/แผง/โมดัล */
+document.addEventListener('click',e=>{try{if(Date.now()-sheetOpenAt<450&&e.target&&e.target.closest&&e.target.closest('.shade,.sheet,.modal,.drawer')){e.stopPropagation();e.preventDefault();window.__ghostBlocked=(window.__ghostBlocked||0)+1;}}catch(err){}},true);
 function closeAll(){['avSheet','seedSheet','actSheet','boostSheet','angelSheet','honeySheet','farmSheet','delSheet','drawer','mailSheet','menuSheet','bagSheet','friendSheet','nameModal','friendModal','plotModal','shade'].forEach(i=>$(i).classList.remove('on'))}
 $('shade').onclick=closeAll;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeAll);
 const PL=[["บ้านของฉัน",[["🏠","บ้าน","ห้องนอน • นั่งเล่น • ครัว","house"],["🕯️","ห้องใต้ดิน","ดอกไม้ • ไวน์ • เม่นแคระ","house"]]],
@@ -478,7 +480,7 @@ $('mHoney').onclick=()=>{closeAll();renderHoney();open('honeySheet')};
 function renderHoney(){$('fuelFill').style.width=fuel+'%';$('fuelTxt').textContent=fuel+'%';
  const busy=dState!=='home';$('honeyNote').textContent=busy?'🐷 น้องน้ำผึ้งกำลังทำงานอยู่นะ':fuel<100?'⛽ น้ำมันต้องเต็ม 100% ก่อนถึงจะเรียกน้องได้':'✨ น้ำมันเต็มแล้ว เลือกวิธีขนส่งได้เลย';
  document.querySelectorAll('.hopt').forEach(b=>b.disabled=busy||fuel<100)}
-document.querySelectorAll('.hopt').forEach(b=>b.onclick=()=>{if(farm!==1){closeAll();go(1-farm,1);setTimeout(()=>callHoney(b.dataset.v),450)}else callHoney(b.dataset.v)});
+document.querySelectorAll('.hopt').forEach(b=>b.onclick=()=>{if(farm!==1){try{farm=1;}catch(e){}}callHoney(b.dataset.v);});/* fix38: ซีซัน 4 สวนเดียว ไม่ต้องเลื่อนไปฟาร์ม 1 ก่อน */
 
 
 
@@ -656,7 +658,7 @@ const HOUSE=Object.keys(FOODIMG);
 const fName=([k,id])=>k==='h'?id:GFBY[id].n,fImg=([k,id])=>k==='h'?IMG[FOODIMG[id]]:'images/gfood-'+id+'.webp',fHave=([k,id])=>k==='h'?(S.bag.food[id]||0):(S.bag.gfood[id]||0);
 function makeReq(v){const c=HV[v],m=ri(c.menu[0],c.menu[1]),t=ri(c.tray[0],c.tray[1]);const pool=[...HOUSE.map(n=>['h',n]),...GF.map(g=>['g',g.id])].sort(()=>Math.random()-.5).slice(0,m);
  const q=pool.map(()=>1);for(let i=m;i<t;i++)q[ri(0,m-1)]++;return pool.map((p,i)=>[p[0],p[1],q[i]])}
-function hPhase(){const h=S.honey;if(!h)return 'home';const n=Date.now();if(h.leaveAt){if(n<h.leaveAt&&!h.fail)return 'parked';return n<h.leaveAt+MOVE?'leaving':'gone'}if(n<h.arriveAt)return 'coming';if(n<h.until)return 'parked';return 'late'}
+function hPhase(){const h=S.honey;if(!h)return 'home';const n=(typeof honeyNow==='function'?honeyNow():Date.now());/* fix38: เวลาเซิร์ฟเวอร์ */if(h.leaveAt){if(n<h.leaveAt&&!h.fail)return 'parked';return n<h.leaveAt+MOVE?'leaving':'gone'}if(n<h.arriveAt)return 'coming';if(n<h.until)return 'parked';return 'late'}
 Object.assign(globalThis,{hPhase,fName,fImg,fHave});
 drawDelivery=function(s){const ph=hPhase();if(ph==='home'||ph==='gone')return;const h=S.honey,c=HV[h.v],pose=ph==='coming'?'in':ph==='leaving'?'out':'wave',dm=HDIM[c.sp][pose];
  const el=document.createElement('div');el.className='hv';el.id='hv';const ww=c.w,hh=ww*W/H*dm[1]/dm[0];
@@ -906,7 +908,7 @@ const PL2=[["บ้านของฉัน",[["🏠","บ้าน","ห้อ�
 $('places').innerHTML=PL2.map(([g,it])=>'<h4>'+g+'</h4>'+it.map(([e,n,s,k])=>'<button class="place" data-n="'+n+'" data-k="'+k+'"><i>'+e+'</i><span><b>'+n+'</b>'+(s?'<small>'+s+'</small>':'')+'</span>'+(k?'':'<span class="soon">เร็วๆ นี้</span>')+'</button>').join('')).join('');
 $('places').onclick=e=>{const b=e.target.closest('.place');if(!b)return;const k=b.dataset.k;if(!k)return toast('🚧 '+b.dataset.n+' จะเปิดในอัปเดตถัดไป',1);closeAll();if(k==='f4'){if(farm!==4)go(4-farm,4)}else goScreen(k)};
 $('seeds').querySelectorAll('.seed').forEach(c=>{const k=c.dataset.k;const t=document.createElement('small');t.style.cssText='display:block;font-size:.58rem;color:#9A7A68';t.textContent='✨'+(SPR[k]||1)+' • '+(GTM[k]||30)+' นาที';c.appendChild(t)});
-})();</script><script src="outings.js?v=ss3-fix17&h=9dcbfbde"></script><script src="farm-cloud.js?v=ss4-nakorn1&h=29b0b109"></script><script src="pv/s4own.js?h=d1d70466"></script><script type="module" src="bag-sell.js?v=ss4-nakorn1&h=7ac870bf"></script><script type="module" src="prank-ui.js?v=ss3-fix23&h=3efebf90"></script><script src="farm-drops.js?v=ss3-recovery6&h=8008fa2b"></script><script src="loot-box-link.js?v=ss3-fix17&h=d58a70da" data-box="all"></script><script src="pv/farm-bridge.js?h=e7d95070"></script><script src="pv/s4nav.js?h=5d7bb11f"></script><script src="pv/s4photo.js?h=2983f296"></script><script src="pv/s4hud.js?h=c98948bb"></script><script>
+})();</script><script src="outings.js?v=ss3-fix17&h=24b3ef38"></script><script src="farm-cloud.js?v=ss4-nakorn1&h=29b0b109"></script><script src="pv/s4own.js?h=d1d70466"></script><script type="module" src="bag-sell.js?v=ss4-nakorn1&h=7ac870bf"></script><script type="module" src="prank-ui.js?v=ss3-fix23&h=3efebf90"></script><script src="farm-drops.js?v=ss3-recovery6&h=8008fa2b"></script><script src="loot-box-link.js?v=ss3-fix17&h=d58a70da" data-box="all"></script><script src="pv/farm-bridge.js?h=cce07771"></script><script src="pv/s4nav.js?h=5d7bb11f"></script><script src="pv/s4photo.js?h=2983f296"></script><script src="pv/s4hud.js?h=c98948bb"></script><script>
 /* fix37 🗳️ ป้ายใจ 💗 เล็ก ๆ: ของเรา (ข้างชื่อ) · ของเพื่อนตอนเยี่ยม · ในรายชื่อเพื่อน · ปุ่มเมนูเปิดหน้าโหวตในเกม */
 {const st=document.createElement('style');st.textContent='.s4hearts{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding:1px 7px;border-radius:999px;background:linear-gradient(180deg,#fff0f6,#ffd3e6);border:1.5px solid #ffb3d1;color:#b02a5b;font:800 .72rem/1.3 Mali,sans-serif;vertical-align:middle;box-shadow:0 1px 3px rgba(0,0,0,.08)}.s4hearts.big{font-size:.8rem}.s4hearts.pulse{animation:s4hb .6s ease}@keyframes s4hb{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}';document.head.appendChild(st);}
 (()=>{window.__votes={counts:{},total:0};const H=parent.__HOST;const myUid=()=>{try{return H&&H.uid;}catch(e){return '';}};

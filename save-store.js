@@ -2,6 +2,24 @@ import { doc, collection, getDocs, getDoc, runTransaction, serverTimestamp, dele
 import { STORAGE_VERSION, MAX_PARTS, bytes, splitGame, joinGame, diffs } from './save-schema.js?v=ss3-fix16&h=eef4832b';
 const conflict = () => Object.assign(new Error('เซฟเปลี่ยนจากเครื่องอื่น กรุณาเข้าเกมใหม่ก่อนเล่นต่อ'),{code:'save/conflict'});
 const copy = o => JSON.parse(JSON.stringify(o));
+/* fix38 🔀 รวม 3 ทาง: base = ส่วนเซฟที่เครื่องนี้เคยอ่าน · mine = ค่าในเครื่อง · theirs = ค่าบนคลาวด์ตอนนี้ (ถูกระบบกลาง/แอดมิน/เพื่อนแก้)
+   ฝั่งไหนไม่เปลี่ยน → เอาอีกฝั่ง · เปลี่ยนทั้งคู่: ตัวเลขนับได้ = คลาวด์ + ส่วนต่างของเรา (ไม่ติดลบ) · เวลา/อย่างอื่น = ของเรา (เครื่องที่กำลังเล่น) · รายการ (array) = คลาวด์ */
+const isObjM=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+export function merge3(base,mine,theirs){
+  if(same(mine,base))return theirs;if(same(theirs,base))return mine;if(same(mine,theirs))return mine;
+  if(isObjM(mine)&&isObjM(theirs)){const b=isObjM(base)?base:{},out={};const keys=new Set([...Object.keys(b),...Object.keys(mine),...Object.keys(theirs)]);
+    for(const k of keys){if(['__proto__','constructor','prototype'].includes(k))continue;const inB=k in b,inM=k in mine,inT=k in theirs;
+      if(!inM&&!inT)continue;
+      if(!inM){if(inB&&same(theirs[k],b[k]))continue;out[k]=theirs[k];continue;}/* เราลบ · คลาวด์ไม่เปลี่ยน → ลบ · คลาวด์เปลี่ยน → เอาคลาวด์ */
+      if(!inT){if(inB&&same(mine[k],b[k]))continue;out[k]=mine[k];continue;}
+      const v=merge3(inB?b[k]:undefined,mine[k],theirs[k]);if(v!==undefined)out[k]=v;}
+    return out;}
+  if(typeof mine==='number'&&typeof theirs==='number'){const bn=typeof base==='number'?base:0;
+    if(Math.abs(mine)<1e11&&Math.abs(theirs)<1e11&&Math.abs(bn)<1e11){const v=theirs+(mine-bn);return (bn>=0&&mine>=0&&theirs>=0)?Math.max(0,Math.round(v*1e6)/1e6):v;}
+    return mine;}
+  if(Array.isArray(mine)||Array.isArray(theirs))return theirs;
+  return mine;}
 /* fix13 second guard: these parts hold placed animals / pens / house slots. A write may empty them (sold, expired, released)
    but must never make the collection itself disappear (part missing, key missing, or {} / []), which is what a stale page
    that never loaded the part produces. Such a write keeps the stored part instead. */
@@ -108,7 +126,7 @@ export class SplitSaveStore {
     await runTransaction(this.db,async tx=>{
       const root=await tx.get(this.root());if(!root.exists()||root.data().session!==this.session)throw conflict();
       const snaps=await Promise.all(changes.map(([id])=>tx.get(this.ref(id))));
-      snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==expected.get(changes[i][0]))throw conflict();});
+      /* fix38: rev ไม่ตรงแต่ session ตรง = ส่วนนั้นถูกระบบกลาง/แอดมิน/เพื่อนแก้ ไม่ใช่เครื่องอื่น → แจ้งรายชื่อส่วนให้ไปดึงมารวมใหม่ */{const stale=[];snaps.forEach((s,i)=>{if((s.exists()?s.data().rev:0)!==expected.get(changes[i][0]))stale.push(changes[i][0]);});if(stale.length)throw Object.assign(new Error('ส่วนเซฟ '+stale.join(', ')+' ถูกแก้จากระบบกลาง กำลังรวมข้อมูลใหม่'),{code:'save/stale',ids:stale});}
       changes.forEach(([id,p],i)=>{if(p)tx.set(this.ref(id),{...p,rev:expected.get(id)+1,by:this.session,updatedAt:serverTimestamp()});else tx.delete(this.ref(id));});
       const added=changes.filter(([id,p])=>p&&!this.parts.has(id)).length,removed=changes.filter(([id,p])=>!p&&this.parts.has(id)).length;
       const count=this.partial?(root.data().partCount||0)+added-removed:next.size;
@@ -117,6 +135,18 @@ export class SplitSaveStore {
     });
     for(const [id,p] of changes){if(p){this.parts.set(id,p);this.revs.set(id,expected.get(id)+1);}else{this.parts.delete(id);this.revs.delete(id);}}
   }
+  /* fix38 🔀 ดึงส่วนเซฟที่ระบุ (หรือทั้งหมด) จากคลาวด์มาใหม่ แล้วรวมกับค่าในเครื่องแบบ 3 ทาง · คืนเกมที่รวมแล้ว (parts/revs = ค่าคลาวด์ ให้รอบเซฟถัดไปเขียนเฉพาะส่วนต่าง) */
+  async resync(ids,mineGame){
+    const base=joinGame([...this.parts.values()]);
+    const docs=ids?await Promise.all(ids.map(id=>getDoc(this.ref(id)))):await this.readParts();
+    const rows=[];docs.forEach((d,i)=>{const id=ids?ids[i]:d.id;if(d.exists()){rows.push({id,part:d.data()});}else{this.parts.delete(id);this.revs.set(id,0);this.loadedIds.add(id);}});
+    if(!ids){for(const id of [...this.parts.keys()])if(!rows.some(r=>r.id===id)){this.parts.delete(id);this.revs.delete(id);}}
+    this.accept(rows);
+    const theirs=joinGame([...this.parts.values()]),mine=mineGame||base;const out={};
+    const keys=new Set([...Object.keys(base),...Object.keys(mine),...Object.keys(theirs)]);
+    for(const k of keys){if(k==='_ls'){/* เลย์เอาต์ 3D: เครื่องที่กำลังเล่นชนะรายคีย์ */const b=base._ls||{},m=mine._ls||{},t=theirs._ls||{},o={};for(const kk of new Set([...Object.keys(m),...Object.keys(t)])){if(kk in m&&kk in t)o[kk]=same(m[kk],b[kk])?t[kk]:m[kk];else if(kk in m){if(!(kk in b)||!same(m[kk],b[kk]))o[kk]=m[kk];}else if(!(kk in b)||!same(t[kk],b[kk]))o[kk]=t[kk];}out._ls=o;continue;}
+      const v=merge3(base[k],mine[k],theirs[k]);if(v!==undefined)out[k]=v;}
+    this.resynced=(this.resynced||0)+1;return out;}
   async claimMail(mailRef,grant) {
     let result,next,changes;
     await runTransaction(this.db,async tx=>{

@@ -1,6 +1,6 @@
 <!doctype html><html><head><script src="../pv/s4icon.js?h=37261d11"></script><script src="../pv/s4lite.js"></script><script src="../pv/s4loop.js?h=b43f4bea"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body>
 <meta charset="utf-8">
-<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=11efc36f"></script><script src="../pv/s4own.js?h=d1d70466"></script>
+<title>ฟาร์ม 3D</title><script src="../pv/s4store.js?h=bbb2434d"></script><script src="../pv/s4own.js?h=d1d70466"></script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap">
 <style>
@@ -1833,7 +1833,7 @@ delete FZ.toy;// dropped by owner
  const cv=new THREE.CatmullRomCurve3([new THREE.Vector3(-1,.98,0),new THREE.Vector3(-.5,.8,0),new THREE.Vector3(0,.74,0),new THREE.Vector3(.5,.8,0),new THREE.Vector3(1,.98,0)]);g.add(new THREE.Mesh(new THREE.TubeGeometry(cv,24,.055,8,false),Rd));PROTO['c2_y7_goldrope_fence']=g;}
 for(const k in FZ)T['fz_'+k]={fz:k,w:1,d:1,name:FZ[k][1],th:'th/c2_'+FZ[k][0]+'.png'};T.fz_erase={fz:'x',w:1,d:1,name:'ลบรั้ว',icon:'🧽'};
 const FENCES=new Map();if(!window.__SHOW)try{for(const [k,t] of JSON.parse(localStorage.getItem('farm1-fences')||'[]'))if(FZ[t])FENCES.set(k,t);}catch(e){}
-function saveFences(){if(window.__SHOW||VISIT)return;try{localStorage.setItem('farm1-fences',JSON.stringify([...FENCES]));}catch(e){}}
+function saveFences(){if(window.__SHOW||VISIT||window.__S4NOSAVE)return;/* fix38 */try{localStorage.setItem('farm1-fences',JSON.stringify([...FENCES]));}catch(e){}}
 const fzGroup=new THREE.Group();sc.add(fzGroup);const FZPARTS={};
 function fzParts(t){if(FZPARTS[t])return FZPARTS[t];return FZPARTS[t]=c2p(FZ[t][0]).then(s=>{const o=s.clone(true);o.updateMatrixWorld(true);const parts=[];
   o.traverse(m=>{if(m.isMesh){const g=m.geometry.clone();g.applyMatrix4(m.matrixWorld);parts.push([g,m.material]);}});
