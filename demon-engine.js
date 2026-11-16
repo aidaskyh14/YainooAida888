@@ -56,6 +56,21 @@ export function demonSync(game,x17,now){
 export function demonTake(game,x17,k,now){demonSync(game,x17,now);const s=dmState(x17);if(bagHave(game,k)<1)fail('ไม่มี'+DEMON[k].n+'ในกระเป๋า');
   const lot=s.b.filter(x=>x.k===k).sort((a,b)=>a.at-b.at)[0];if(lot)lot.n--;s.b=s.b.filter(x=>x.n>0);bagSet(game,k,bagHave(game,k)-1);return lot?lot.at:now;}
 export function demonGive(game,x17,k,n,now){bagSet(game,k,bagHave(game,k)+n);demonSync(game,x17,now);}
+/* fix47 🧪 ยาแก้พิษจอมแสบ (bag.item.democure) — 1 ขวด = แก้ได้ 1 ชิ้น ไม่หักกุศล · หยิบจากก้อนในกระเป๋าที่ใกล้ระเบิดก่อน แล้วค่อยของที่ค้างในไปรษณีย์ (mailN)
+   ของที่ระเบิดไปแล้วไม่คืน · ขวดถูกหักเท่าที่ใช้จริงเท่านั้น */
+export const cureHave=game=>num(game?.bag?.item?.democure);
+export function demonCure(game,x17,kind,n,now,mailN=0){if(!DEMON[kind])fail('ไอเทมไม่ถูกต้อง');n=Math.floor(Number(n));if(!Number.isSafeInteger(n)||n<1)fail('ใส่จำนวนอย่างน้อย 1');
+  const bottles=cureHave(game);if(bottles<1)fail('ไม่มียาแก้พิษจอมแสบ');demonSync(game,x17,now);const have=bagHave(game,kind),mail=num(mailN);if(have+mail<1)fail('ไม่มี'+DEMON[kind].n+'ให้แก้');
+  const use=Math.min(n,bottles,have+mail),fromBag=Math.min(use,have),fromMail=use-fromBag;
+  if(fromBag){bagSet(game,kind,have-fromBag);demonSync(game,x17,now);}
+  game.bag.item ||= {};game.bag.item.democure=bottles-use;const s=dmState(x17);selfLog(s,{k:kind,n:use,amt:0,at:now,w:'cure'});
+  return {k:kind,n:use,fromBag,fromMail,left:bottles-use,saved:use*DEMON[kind].boom};}
+/* ตัดของจอมแสบออกจากจดหมายที่ยังไม่กดรับ: mails=[{path,m}] → {writes:{path:doc},deletes:[path]} (จดหมายที่ไม่เหลืออะไรเลย = ลบ) */
+export function cureMailPlan(mails,kind,cut){const key='demon-'+kind,writes={},deletes=[];let left=num(cut);
+  for(const {path,m} of mails){if(!left)break;const have=num(m?.items?.[key]);if(!have)continue;const t=Math.min(left,have);left-=t;const items={...m.items};items[key]=have-t;if(!items[key])delete items[key];
+    if(!Object.keys(items).length&&!(m.kusal>0)&&!(m.coins>0))deletes.push(path);else writes[path]={...m,items};}
+  return {writes,deletes,short:left};}
+export const cureMailCount=(mails,kind)=>mails.reduce((a,{m})=>a+num(m?.items?.['demon-'+kind]),0);
 export const DEMON_TOSS_FREE=3;/* fix37: ทิ้งลงบ่อฟรีวันละ 3 ชิ้น */export const demonTossLeft=(x17,now)=>{const s=(x17&&x17.dm)||{};const d=thaiDay(now);return s.tf&&s.tf.d===d?Math.max(0,DEMON_TOSS_FREE-(Number(s.tf.n)||0)):DEMON_TOSS_FREE;};
 export function demonToss(game,x17,k,now){if(!DEMON[k])fail('ไอเทมไม่ถูกต้อง');demonTake(game,x17,k,now);const s=dmState(x17);const day=thaiDay(now);if(!s.tf||s.tf.d!==day)s.tf={d:day,n:0};const free=(Number(s.tf.n)||0)<DEMON_TOSS_FREE;const amt=free?0:DEMON[k].toss;if(free)s.tf.n=(Number(s.tf.n)||0)+1;game.merit=floorAdd(game.merit,-amt);selfLog(s,{k,n:1,amt,at:now,w:'toss',free});return {k,amt,free,freeLeft:Math.max(0,DEMON_TOSS_FREE-(Number(s.tf.n)||0))};}
 /* ---------- ดร็อปจากการดูแลสัตว์ (สุ่มบนเซิร์ฟเวอร์) ---------- */

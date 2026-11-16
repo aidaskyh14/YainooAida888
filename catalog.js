@@ -1487,3 +1487,4 @@ CATALOG.push({"k":"outfit-seaswim","n":"👗 จะพาเธอนั้น�
 CATALOG.push({"k":"outfit-mseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-mseaswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mseaswim"});
 CATALOG.push({"k":"outfit-rseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-rseaswim.webp","g":"ชุด·หัวแดง","p":"outfit.rseaswim"});
 CATALOG.push({"k":"outfit-bseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-bseaswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bseaswim"});
+CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});/* fix47 🧪 */
