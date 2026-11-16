@@ -1483,3 +1483,7 @@ CATALOG.push({"k":"outfit-wmswim","n":"👗 วอเท่อเมล่อน
 CATALOG.push({"k":"outfit-mwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-mwmswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mwmswim"});
 CATALOG.push({"k":"outfit-rwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-rwmswim.webp","g":"ชุด·หัวแดง","p":"outfit.rwmswim"});
 CATALOG.push({"k":"outfit-bwmswim","n":"👗 วอเท่อเมล่อน · ยัยหนูส่งเท่านั้น","i":"outfit-bwmswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bwmswim"});
+CATALOG.push({"k":"outfit-seaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-seaswim.webp","g":"ชุด·ชมพู","p":"outfit.seaswim"});
+CATALOG.push({"k":"outfit-mseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-mseaswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mseaswim"});
+CATALOG.push({"k":"outfit-rseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-rseaswim.webp","g":"ชุด·หัวแดง","p":"outfit.rseaswim"});
+CATALOG.push({"k":"outfit-bseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-bseaswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bseaswim"});

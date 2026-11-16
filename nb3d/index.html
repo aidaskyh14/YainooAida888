@@ -51,11 +51,12 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
 #pvw .g{background:#e98a2b;color:#fff}#pvw .x{background:#fff;border:2px solid #f1e2c8;color:var(--ink)}
 #load{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:linear-gradient(#bfe9f7,#9fd6f5);font-weight:700;color:#2a5a7a}
 #load .bar{width:60%;height:10px;border-radius:6px;background:#ffffff88;overflow:hidden}#load .bar i{display:block;height:100%;width:0;background:#ffb347;transition:width .2s}
+body.pub .top,body.pub .side,body.pub .chips,body.pub #photoB,body.pub #nbNone,body.pub #panel,body.pub #pop{display:none!important}/* fix45 🪷 */
 #nbNone{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;width:min(320px,86vw)}#nbNone .bx{background:rgba(255,250,240,.96);border:3px solid #fff;border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:Mali,sans-serif;color:#5a3e2b}#nbNone .ic{font-size:40px}#nbNone b{font-size:17px;display:block;margin:4px 0}#nbNone p{margin:4px 0 10px;font-size:13px;color:#8a6a52}#nbNone .row{display:flex;gap:8px;justify-content:center}#nbNone button{all:unset;cursor:pointer;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#ffe58a,#f2b53c);font-weight:800;font-size:13px;box-shadow:0 3px 0 #c98a1b}#nbNone button+button{background:#fff;border:2px solid #f1e3cf;box-shadow:none}</style><script src="../pv/s4fit.js?h=7d03d256"></script></head><body><script src="../pv/s4ov.js?h=32a94ca6"></script><script src="../pv/s4zload.js?h=db6ca6ac"></script>
 <div id="app">
  <canvas id="c"></canvas>
  <div class="top"><span class="pill" id="title">🏘️ เนเบอร์ฮูด</span><span class="pill" id="cnt">🌸 0/20</span><button class="rb" id="me" title="บ้านฉัน">🏠</button><button class="rb" id="all" title="ทั้งหมู่บ้าน">🗺️</button></div>
- <div class="chips"><button class="pill" id="cq">📋 ภารกิจทีม</button><button class="pill" id="cb">🧺 ตะกร้ากุศล</button></div>
+ <div class="chips"><button class="pill" id="cq">📋 ภารกิจทีม</button><button class="pill" id="cb">🧺 ตะกร้ากุศล</button><button class="pill" id="cg" style="display:none;background:linear-gradient(180deg,#ffe9a8,#f3c54a);color:#5a3a00;font-weight:800">🐉 ลงขันกระทงยักษ์</button></div>
  <div class="side"><button class="rb" id="bag">🎒</button><button class="rb" id="thb">🎨</button><button class="rb" id="rl">⟲</button><button class="rb" id="rr">⟳</button></div>
  <div id="toast"></div>
  <div id="pop"><button id="rot">↻ หมุน</button><button id="del">📦 เก็บคืน</button></div>
@@ -73,10 +74,11 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeTreeKit} from '../pv/s4tree.js?h=1280726f';
-import {loadCharacter} from '../pv/s4char.js?h=dc582f68';
+import {makeLoy} from './loy3d.js?h=fae3824f';/* fix45 🪷 */
+import {loadCharacter} from '../pv/s4char.js?h=fd9bc6ee';
 {const pb=document.createElement('button');pb.id='photoB';pb.innerHTML='<i>📸</i>ถ่ายรูป';document.body.appendChild(pb);const st=document.createElement('style');st.textContent='#photoB{position:fixed;z-index:6;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:0;cursor:pointer;font:800 9.5px Mali,sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}#photoB i{width:44px;height:44px;border-radius:14px;border:3px solid #fff;font-style:normal;font-size:21px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#8fd0ff,#3f94e4);box-shadow:0 4px 0 rgba(0,0,0,.18)}body.s4photo #photoB{visibility:hidden}';document.head.appendChild(st);
  pb.onclick=e=>{e.stopPropagation();if(window.S4PHOTO)S4PHOTO.shoot(()=>new Promise(res=>{window.__zsnap=res;}));};}
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s);/* fix45 🪷 */const PUB=/[?&]pub=1/.test(location.search);if(PUB)document.body.classList.add('pub');
 /* ---------- กล้องหมุนรอบ 360° · ลากนิ้วเดียว = หมุน · สองนิ้ว = ซูม ---------- */
 class Orbit{constructor(cam,el){this.cam=cam;this.el=el;this.target=new THREE.Vector3();this.enabled=true;this.minDistance=7;this.maxDistance=105;this.minPolarAngle=.35;this.maxPolarAngle=1.3;this.pts=new Map();
  el.addEventListener('pointerdown',e=>{if(e.isPrimary&&this.pts.size)this.pts.clear();this.pts.set(e.pointerId,{x:e.clientX,y:e.clientY});});
@@ -128,7 +130,7 @@ const R=new THREE.WebGLRenderer({canvas:cv,antialias:true});
 R.setPixelRatio(Math.min(devicePixelRatio,2));R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;R.outputColorSpace=THREE.SRGBColorSpace;
 R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
 const S=new THREE.Scene();const cam=new THREE.PerspectiveCamera(42,1,.1,320);
-S.add(new THREE.HemisphereLight(0xfff1dc,0x9a8fb8,1.75));const sun=new THREE.DirectionalLight(0xffd9a0,2.2);sun.position.set(14,24,16);
+const HEMI=new THREE.HemisphereLight(0xfff1dc,0x9a8fb8,1.75);S.add(HEMI);/* fix45 */const sun=new THREE.DirectionalLight(0xffd9a0,2.2);sun.position.set(14,24,16);
 sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-30,right:30,top:24,bottom:-24,near:1,far:90});sun.shadow.bias=-.0005;S.add(sun);
 function size(){const w=cv.clientWidth,h=cv.clientHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
 addEventListener('resize',size);size();
@@ -171,6 +173,7 @@ async function putDeco(z,n,lx,lz,ry,mine){const g=await inst(n,DS[n][2]*.8);g.po
 const TH=[['forest','🌲','ป่าไม้'],['mount','⛰️','ภูเขา'],['sea','🌊','ทะเล'],['river','🏞️','แม่น้ำ']];
 let theme='forest';try{theme=localStorage.getItem('nb3d-theme')||'forest';}catch(e){}if(theme==='garden')theme='forest';if(theme==='falls')theme='river';
 const thG=new THREE.Group();S.add(thG);const ANIM=[];
+/* fix45 🪷 ชั้นเทศกาลลอยกระทง (ประกาศหลัง TREES ด้านล่าง → ใช้ตัวแปรแบบ late-bind) */let LOY={on:false,theme(){},tick(){},data(){}};
 const flat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.9,flatShading:true});
 // ต้นไม้แบบเดียวกับฟาร์มหลัก (ใบฟูหนา) · โหลดต้นแบบครั้งเดียวแล้วโคลน
 const protoOf=async n=>{const ab=await (await fetch('../farm3d/'+n+'.gltf.json')).arrayBuffer();const glb=ab.byteLength>4&&new DataView(ab).getUint32(0,true)===0x46546C67;const g=await new Promise((r,j)=>LD.parse(glb?ab:new TextDecoder().decode(ab),new URL('../farm3d/',location.href).href,r,j));return g.scene;};
@@ -199,11 +202,24 @@ const GARDEN_COL=[0x6cc24a,0x8ad35a,0xffa8c8,0xf7c948,0x5cb85c];
 const WTX=TL.load('../farm3d/water.jpg');WTX.wrapS=WTX.wrapT=THREE.RepeatWrapping;WTX.colorSpace=THREE.SRGBColorSpace;
 function ribbon(pts,w,y,mat){const cvv=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,0,z)));const N=120,Pp=[],U=[],I=[];for(let i=0;i<=N;i++){const t=i/N,p=cvv.getPoint(t),tg=cvv.getTangent(t),nx=-tg.z,nz=tg.x;Pp.push(p.x+nx*w/2,y,p.z+nz*w/2,p.x-nx*w/2,y,p.z-nz*w/2);U.push(0,t*10,1,t*10);if(i<N){const a=i*2;I.push(a,a+2,a+1,a+1,a+2,a+3);}}
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(Pp,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;thG.add(m);return m;}
-function river(pts,w){ribbon(pts,w+2.4,.03,new THREE.MeshLambertMaterial({color:0xd9b57e}));ribbon(pts,w+1,.04,new THREE.MeshLambertMaterial({color:0xa98a5f}));ribbon(pts,w,.06,new THREE.MeshLambertMaterial({map:WTX,color:0x9fdcf5}));}
+function river(pts,w){/* fix45 🪷 แม่น้ำแบบฟาร์มหลัก: ถนนทราย · ตลิ่งดิน · หินริมตลิ่ง · น้ำลาย/สีเดียวกับฟาร์ม + ประกายน้ำ + ฟองลอย */
+ const cvv=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,0,z)));const LEN=cvv.getLength();
+ const rib=(ww,y,mat,vrep)=>{const N=160,Pp=[],U=[],I=[];for(let i=0;i<=N;i++){const t=i/N,p=cvv.getPoint(t),tg=cvv.getTangent(t),nx=-tg.z,nz=tg.x;Pp.push(p.x+nx*ww/2,y,p.z+nz*ww/2,p.x-nx*ww/2,y,p.z-nz*ww/2);U.push(0,t*vrep,1,t*vrep);if(i<N){const a=i*2;I.push(a,a+2,a+1,a+1,a+2,a+3);}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(Pp,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;thG.add(m);return m;};
+ const RT=TL.load('../farm3d/road.jpg');RT.wrapS=RT.wrapT=THREE.RepeatWrapping;RT.colorSpace=THREE.SRGBColorSpace;rib(w+5.2,.03,new THREE.MeshLambertMaterial({map:RT}),LEN/3);
+ rib(w+1.4,.045,new THREE.MeshLambertMaterial({color:0x7a5a3a}),LEN/6);
+ const WT=TL.load('../farm3d/water.jpg');WT.wrapS=WT.wrapT=THREE.RepeatWrapping;WT.colorSpace=THREE.SRGBColorSpace;{const wm=new THREE.MeshLambertMaterial({map:WT});wm.userData.water=1;rib(w,.06,wm,LEN/3.3);}
+ const WT2=TL.load('../farm3d/water.jpg');WT2.wrapS=WT2.wrapT=THREE.RepeatWrapping;WT2.colorSpace=THREE.SRGBColorSpace;const shm=new THREE.MeshBasicMaterial({map:WT2,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false});shm.userData.shimmer=1;const shimmer=rib(w,.075,shm,LEN/5);
+ const stoneM=new THREE.MeshLambertMaterial({color:0xbab3a5}),stoneG=new THREE.SphereGeometry(.46,10,8);const ps=[];
+ for(let d=0;d<LEN;d+=.78){const t=d/LEN,p=cvv.getPoint(t),tg=cvv.getTangent(t),nx=-tg.z,nz=tg.x;if(Math.abs(p.x)<3.4)continue;for(const sgn of [1,-1]){const off=w/2+.35;ps.push([p.x+nx*off*sgn+Math.sin(d*3.1)*.12,p.z+nz*off*sgn+Math.cos(d*2.3)*.1]);}}
+ const im=new THREE.InstancedMesh(stoneG,stoneM,ps.length),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),sc3=new THREE.Vector3(1,.55,.8);ps.forEach(([x,z],i)=>{m4.compose(new THREE.Vector3(x,.05,z),q,sc3);im.setMatrixAt(i,m4);});im.receiveShadow=true;im.castShadow=true;thG.add(im);
+ const foams=[];const foamIM=new THREE.InstancedMesh(new THREE.CircleGeometry(.12,8).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthWrite:false}),60);for(let i=0;i<60;i++)foams.push({t:Math.random(),o:(Math.random()-.5)*(w-1.2),s:.6+Math.random()*.7,p:Math.random()*6});thG.add(foamIM);const fv=new THREE.Vector3(),fs=new THREE.Vector3();
+ ANIM.push(t=>{WT.offset.y=t*.075;WT.offset.x=Math.sin(t*.6)*.02;WT2.offset.y=-t*.12;WT2.offset.x=t*.015;shimmer.material.opacity=(LOY.on?.5:.28)+Math.sin(t*1.7)*.08;
+  foams.forEach((f,i)=>{f.t+=.0006;if(f.t>1)f.t-=1;const p=cvv.getPoint(f.t),tg=cvv.getTangent(f.t);const k=f.s*(.6+.4*Math.sin(t*2+f.p));fv.set(p.x-tg.z*f.o,.08,p.z+tg.x*f.o);m4.compose(fv,q,fs.set(k,1,k));foamIM.setMatrixAt(i,m4);});foamIM.instanceMatrix.needsUpdate=true;});}
 function rock(x,z,s){const r=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),new THREE.MeshLambertMaterial({color:0xb9b3a8,flatShading:true}));r.scale.y=.6;r.position.set(x,s*.25,z);r.castShadow=true;thG.add(r);}
 function buildTheme(){thG.clear();ANIM.length=0;TREES.length=0;
- const ringT=(r0,n,kinds)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(r0%2)*.13,r=r0+(i%3)*2.6;const x=Math.cos(a)*r,z=Math.sin(a)*r*.82;if(theme==='sea'&&z>14)continue;if(theme==='river'&&Math.abs(z-24)<6)continue;placeTree(x,z,1.05+(i%4)*.16,kinds[i%kinds.length]);}};
- if(theme==='forest'){ringT(31,30,['green','sakura','green','maple','gold','purple']);ringT(40,30,['green','pine','green','pine']);for(const [x,z] of [[-24,2],[24,2],[-14,-13],[14,-13]])placeTree(x,z,1.15,'sakura');for(let i=0;i<10;i++)rock(-30+i*6.5,30+Math.sin(i)*2,.6);}
+ const ringT=(r0,n,kinds)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(r0%2)*.13,r=r0+(i%3)*2.6;const x=Math.cos(a)*r,z=Math.sin(a)*r*.82;if(theme==='sea'&&z>14)continue;if((theme==='river'||LOY.on)&&Math.abs(z-24)<7)continue;placeTree(x,z,1.05+(i%4)*.16,kinds[i%kinds.length]);}};
+ if(theme==='forest'){ringT(31,30,['green','sakura','green','maple','gold','purple']);ringT(40,30,['green','pine','green','pine']);for(const [x,z] of [[-24,2],[24,2],[-14,-13],[14,-13]])placeTree(x,z,1.15,'sakura');if(!LOY.on)for(let i=0;i<10;i++)rock(-30+i*6.5,30+Math.sin(i)*2,.6);}
  if(theme==='mount'){/* S4 ข้อ 105: ภูเขาต้องต่างจริง — พื้นหินเทารอบนอก · ยอดเขาหิมะ · สนล้วน · หินใหญ่ */
   const ring=new THREE.Mesh(new THREE.RingGeometry(27,90,64),new THREE.MeshLambertMaterial({color:0xb9b2a4}));ring.rotation.x=-Math.PI/2;ring.position.y=.015;ring.receiveShadow=true;thG.add(ring);
   const rim=new THREE.Mesh(new THREE.RingGeometry(26,27.6,64),new THREE.MeshLambertMaterial({color:0x8e8577}));rim.rotation.x=-Math.PI/2;rim.position.y=.02;thG.add(rim);
@@ -211,15 +227,15 @@ function buildTheme(){thG.clear();ANIM.length=0;TREES.length=0;
   ringT(32,26,['pine','pine','pine','gold']);ringT(41,26,['pine']);for(let i=0;i<18;i++)rock(Math.cos(i)*(28+(i%3)*4),Math.sin(i*1.7)*24,.8+(i%3)*.45);S.background.set(0xdbe9f3);}
  if(theme==='sea'){const sand=new THREE.Mesh(new THREE.PlaneGeometry(140,16),new THREE.MeshLambertMaterial({color:0xf3dfb0}));sand.rotation.x=-Math.PI/2;sand.position.set(0,.02,26);thG.add(sand);
   const sea=new THREE.Mesh(new THREE.PlaneGeometry(220,80),new THREE.MeshLambertMaterial({map:WTX,color:0x7fd0f0}));WTX.repeat.set(30,12);sea.rotation.x=-Math.PI/2;sea.position.set(0,.04,72);thG.add(sea);ANIM.push(t=>{WTX.offset.x=t*.01;WTX.offset.y=Math.sin(t*.5)*.03;});
-  if(KITP)KITP.then(()=>{if(!KIT||!KIT.makePalm)return;for(const x of [-26,-16,16,26]){const pm=KIT.makePalm(x*3+7);pm.position.set(x,0,24);pm.scale.setScalar(1.1);thG.add(pm);}});ringT(31,22,['green','sakura','maple']);}
- if(theme==='river'){river([[-70,30],[-40,24],[-16,26],[0,23],[18,25],[42,22],[70,28]],5);ANIM.push(t=>{WTX.offset.y=-t*.12;});WTX.repeat.set(1,1);
+  if(KITP)KITP.then(()=>{if(!KIT||!KIT.makePalm)return;for(const x of [-26,-16,16,26]){if(LOY&&LOY.on)continue;const pm=KIT.makePalm(x*3+7);pm.position.set(x,0,24);pm.scale.setScalar(1.1);pm.userData.palm=1;thG.add(pm);}});ringT(31,22,['green','sakura','maple']);}
+ if(theme==='river'){river([[-70,30],[-40,24],[-16,26],[0,23],[18,25],[42,22],[70,28]],5);
   /* S4 ข้อ 110: สะพานโค้งไม้แบบเดียวกับฟาร์มหลัก (แผ่นไม้สลับสี · เสา · ราว) */
   {const L1=new THREE.MeshLambertMaterial({color:0xc98d4c}),L2=new THREE.MeshLambertMaterial({color:0xb27638}),DK=new THREE.MeshLambertMaterial({color:0x7a4a26}),RD=new THREE.MeshLambertMaterial({color:0x8a5a30});const W=4.4,z0=18.5,z1=28.5,N=18,len=z1-z0,brY=z=>.35+1.1*Math.sin(Math.PI*(z-z0)/len);
    for(let i=0;i<N;i++){const a0=z0+len*i/N,a1=z0+len*(i+1)/N,zc=(a0+a1)/2,an=Math.atan2(brY(a1)-brY(a0),a1-a0);const b=new THREE.Mesh(new THREE.BoxGeometry(W,.18,len/N*1.12),i%2?L1:L2);b.position.set(0,brY(zc),zc);b.rotation.x=-an;b.castShadow=b.receiveShadow=true;thG.add(b);for(const sx of [-1,1]){const e=new THREE.Mesh(new THREE.BoxGeometry(.26,.34,len/N*1.02),DK);e.position.set(sx*(W/2+.05),brY(zc)-.06,zc);e.rotation.x=-an;thG.add(e);}}
    for(const sx of [-1,1])for(let k=0;k<=6;k++){const z=z0+len*k/6,y=brY(z);const post=new THREE.Mesh(new THREE.BoxGeometry(.22,1.1,.22),DK);post.position.set(sx*(W/2+.05),y+.5,z);thG.add(post);if(k<6){const zn=z0+len*(k+1)/6,yn=brY(zn);const r=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,Math.hypot(zn-z,yn-y)),RD);r.position.set(sx*(W/2+.05),(y+yn)/2+1,(z+zn)/2);r.rotation.x=-Math.atan2(yn-y,zn-z);thG.add(r);}}
    for(const z of [z0-.3,z1+.3])for(const sx of [-1,1]){const pr=new THREE.Mesh(new THREE.CylinderGeometry(.5,.6,.9,8),new THREE.MeshLambertMaterial({color:0x9c948a}));pr.position.set(sx*1.6,.3,z);thG.add(pr);}}
   ringT(32,28,['green','sakura','green','maple','purple']);}
- S.background.set(0xcfe9f7);S.fog.color.set(0xf4e4d6);try{applyTrees();}catch(e){}R.shadowMap.needsUpdate=true;}
+ S.background.set(0xcfe9f7);S.fog.color.set(0xf4e4d6);try{applyTrees();}catch(e){}/* fix45 🪷 */try{LOY.theme();}catch(e){console.warn('loy theme',e&&e.message);}R.shadowMap.needsUpdate=true;}
 /* S4 ข้อ 43: ต้นไม้ส่วนกลาง หัวหน้าย้ายได้ (บันทึกที่เอกสารชุมชน ทุกคนเห็นเหมือนกัน) */
 let TMV={};function applyTrees(){const t=typeof NBS!=='undefined'&&NBS&&NBS.trees;TMV=t&&t.th===theme&&t.m?Object.assign({},t.m):(applyTrees.loc&&applyTrees.loc.th===theme?Object.assign({},applyTrees.loc.m):{});for(const g of TREES){const v=TMV[g.userData.tree];const [x,z]=v||g.userData.home;g.position.set(x,0,z);}try{R.shadowMap.needsUpdate=true;}catch(e){}}
 const treeOk=p=>{if(Math.hypot(p.x,p.z)>46||Math.hypot(p.x,p.z-1)<6.5)return false;for(const [cx,cz] of LOTS)if(Math.abs(p.x-cx)<ZW/2+.8&&Math.abs(p.z-cz)<ZD/2+.8)return false;return true;};
@@ -244,6 +260,7 @@ const ftn=await inst('nb_dolphin_fountain',1.9);ftn.position.set(0,.09,2);S.add(
 const qb=await inst('nb_quest_board',1.7);qb.position.set(-2.6,.09,1.6);qb.rotation.y=.5;qb.userData.quest=1;S.add(qb);
 const sp0=await inst('nb_signpost',1.5);sp0.position.set(2.7,.09,1.7);sp0.rotation.y=-.5;S.add(sp0);
 const pt=tag('ลานกลาง · 📋 ภารกิจทีม','rgba(233,138,43,.9)');pt.position.set(0,5.6,-1.2);pt.scale.set(5.4,1.35,1);S.add(pt);
+try{LOY=makeLoy({THREE,BGU,GLTFLoader,S,thG,ANIM,TL,cam,ctr,R,HEMI,sun,TREES,PUB,river,theme:()=>theme,rebuild:()=>buildTheme()});window.__loy=LOY;}catch(e){console.warn('loy init',e&&e.message);}/* fix45 🪷 */
 buildTheme();
 let MEMBERS=DEMO.slice(),live=false;let NBS=null;/* ข้อมูลชุมชนจากเซิร์ฟเวอร์ (theme/deco/houses) */const ODECO=new Map();/* ของแต่งของสมาชิกคนอื่นที่วางแล้ว uid→[objs] */
 let MYH=null;async function layout(){for(const z of ZONES){const m=MEMBERS[z.i]||null;const key=m?m.u+':'+(m.lv||1)+':'+(m.st||0):'';if(z.key===key&&(z.house||z.sign))continue;z.key=key;
@@ -257,7 +274,7 @@ const realHLv=()=>{try{const v=NBH&&NBH.get('s3all-v1');return Math.max(1,Math.m
 let NBD=null;try{NBD=JSON.parse((NBH&&NBH.get('s4deco-nb'))||'null');}catch(e){NBD=null;}
 MYH={lv:1,st:Math.max(0,(NBD&&NBD.st)|0)};/* S4 ข้อ 109: เริ่ม Lv1 เสมอ · เลเวลจริงมาจากเอกสารชุมชน (houses) */
 let nbT=0;function nbSave(){clearTimeout(nbT);nbT=setTimeout(nbFlush,800);}
-function nbFlush(){clearTimeout(nbT);if(!NBH||window.__SHOW)return;const m=ME();if(!m)return;const fz=m.face===Math.PI?1:-1;
+function nbFlush(){clearTimeout(nbT);if(!NBH||window.__SHOW||PUB)return;const m=ME();if(!m)return;const fz=m.face===Math.PI?1:-1;
  const d=placed.filter(p=>p.userData.mine).slice(0,MAXD).map(g=>[g.userData.n,+(g.position.x-m.cx).toFixed(2),+((g.position.z-m.cz)*fz).toFixed(2),+(g.rotation.y-(m.face===Math.PI?0:Math.PI)).toFixed(3)]);
  try{NBH.set('s4deco-nb',JSON.stringify({v:1,lv:m.lv||1,st:m.st||0,th:theme,d}));}catch(e){console.warn('nb save',e&&e.message);}
  /* S4 ข้อ 108: ส่งขึ้นเอกสารชุมชนให้เพื่อนเห็น (เฉพาะตอนเปลี่ยนจริง) */try{const key=JSON.stringify([d,m.st||0]);if(live&&key!==nbFlush.k){nbFlush.k=key;const P=parent,fn=P.__nbAct||(P.parent&&P.parent.__nbAct);fn&&fn({type:'nbDeco',d,st:m.st||0});}}catch(e){}}
@@ -265,7 +282,7 @@ addEventListener('pagehide',nbFlush);
 await layout();
 try{if(NBD&&NBD.th&&NBD.th!==theme&&TH.some(x=>x[0]===NBD.th)){theme=NBD.th;buildTheme();}}catch(e){}
 try{const m=ZONES.find(z=>z.me)||ZONES[0];if(NBD&&Array.isArray(NBD.d))for(const [n,lx,lz,ry] of NBD.d.slice(0,MAXD))if(DS[n]&&isFinite(lx)&&isFinite(lz))await putDeco(m,n,lx,lz,+ry||0,true);}catch(e){console.log('nb deco',e&&e.message);}
-try{await loadGirl();}catch(e){console.log('girl',e&&e.message);}
+if(!PUB){try{await loadGirl();}catch(e){console.log('girl',e&&e.message);}}/* fix45: โหมดสาธารณะไม่มีตัวละคร */
 lb.style.width='100%';document.getElementById('load').remove();
 const ME=()=>ZONES.find(z=>z.me)||ZONES[0];
 
@@ -340,7 +357,7 @@ const FX=[];function ring(x,z){const m=new THREE.Mesh(new THREE.RingGeometry(.3,
 function burst(x,z){for(let i=0;i<18;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.09,6,5),new THREE.MeshBasicMaterial({color:[0xffd25e,0xff8fc0,0xffffff,0x8fe3ff][i%4]}));const a=i/18*6.28;m.position.set(x,.4,z);S.add(m);FX.push({m,t:0,l:.9,v:new THREE.Vector3(Math.cos(a)*3,3+Math.random()*2,Math.sin(a)*3)});}ring(x,z);}
 
 /* ---------- ผูกกับเนเบอร์ฮูดซีซัน 3 ---------- */
-addEventListener('message',async e=>{const d=e.data&&e.data.s4sync;if(!d||!d.nb)return;live=true;
+addEventListener('message',async e=>{const d=e.data&&e.data.s4sync;if(!d||!d.nb)return;live=true;/* fix45 🪷 */try{if(d.loy)LOY.data(d.loy);const cg=document.getElementById('cg');if(cg){const show=!PUB&&d.loy&&d.loy.on&&d.loy.giantOk===false;cg.style.display=show?'':'none';if(show)cg.textContent='🐉 ลงขันกระทงยักษ์ '+(Number(d.loy.fund)||0)+'%';cg.onclick=()=>send('giant');}}catch(e2){}
  $('#title').textContent=d.status==='active'?'🏘️ '+(d.name||'เนเบอร์ฮูด'):d.status==='none'?'🏘️ ยังไม่มีเนเบอร์ฮูด':'🏗️ '+(d.name||'')+' · กำลังสร้าง';
  $('#cq').textContent='📋 ภารกิจทีม'+(d.q?' '+d.q[0]+'/'+d.q[1]:'');$('#cq').style.display=d.status==='active'?'':'none';$('#cb').style.display=d.status==='active'?'':'none';
  /* S4 ข้อ 103: ยังไม่มีเนเบอร์ฮูด → แผ่นบอกทางชัดเจน (สร้าง / ดูคำเชิญ) แทนที่ดินว่างเงียบๆ */
@@ -357,8 +374,8 @@ const upNow=()=>{try{const h=NBS&&NBS.houses&&NBS.houses[(ME()||{}).id];return !
 
 /* ---------- วนลูป ---------- */
 const clock=new THREE.Clock();let T=0;
-/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||P.goSeat||FX.length>0||!!window.__zsnap||!!TDRAG);function loop(dt){clock.getDelta();T+=dt;if(KIT)KIT.treeTime.value=T;
- for(const f of ANIM)f(T);
+/* S4 P1: วาดเฉพาะตอนมีอะไรขยับ */S4LOOP.busy(()=>P.tx!=null||P.goSeat||FX.length>0||!!window.__zsnap||!!TDRAG||LOY.on);function loop(dt){clock.getDelta();T+=dt;if(KIT)KIT.treeTime.value=T;
+ for(const f of ANIM)f(T);/* fix45 🪷 */try{LOY.tick(T);}catch(e){}
  for(let i=FX.length-1;i>=0;i--){const f=FX[i];f.t+=dt;const k=f.t/f.l;if(f.ring){f.m.scale.setScalar(1+k*4);f.m.material.opacity=1-k;}else{f.v.y-=9*dt;f.m.position.addScaledVector(f.v,dt);}if(k>=1){S.remove(f.m);FX.splice(i,1);}}
  if(girl){let moving=false;
   if(P.sit){gset('sit');girl.position.set(P.sit.x,P.sit.y-.38,P.sit.z);girl.rotation.y=P.sit.dir;}
@@ -369,7 +386,7 @@ const clock=new THREE.Clock();let T=0;
  ctr.update();R.render(S,cam);if(window.__zsnap){const f=window.__zsnap;window.__zsnap=null;try{f(R.domElement.toDataURL('image/jpeg',.92));}catch(e){f(null);}}}
 S4LOOP.run(loop);
 /* S4: เข้าเนเบอร์ฮูดแล้วเห็นตัวเองทันที: ตัวละครเดินเข้ามาจากทางเข้า กล้องมุมเฉียงใกล้ๆ (ไม่ใช่มุมสูงไกล) */
-(function s4Intro(){if(!girl){focusMe();return;}const sx=P.x,sz=P.z;P.x=sx;P.z=sz+6;girl.position.set(P.x,0,P.z);ctr.target.set(P.x,0,P.z-1.5);cam.position.set(P.x+3,11,P.z+11);walkTo(sx,sz);})();
-window.__ready=true;window.__nbT={ZONES,P,placed,sitOn,send,buildTheme,get theme(){return theme},set theme(v){theme=v;},openPanel};
+(function s4Intro(){if(PUB)return;/* fix45 */if(!girl){focusMe();return;}const sx=P.x,sz=P.z;P.x=sx;P.z=sz+6;girl.position.set(P.x,0,P.z);ctr.target.set(P.x,0,P.z-1.5);cam.position.set(P.x+3,11,P.z+11);walkTo(sx,sz);})();
+window.__ready=true;window.__nbT={ZONES,P,placed,sitOn,send,buildTheme,get theme(){return theme},set theme(v){theme=v;},openPanel,R/* fix45: นับ draw call ในเทสต์ */};
 </script>
 </body></html>
