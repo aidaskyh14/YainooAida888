@@ -78,7 +78,7 @@ async function doCast(){if(busy||castInfo)return;if(!V||V.rods<5){toast('🎣 �
 async function doPull(){if(!castInfo||pulling)return;pulling=true;c3d({c:'sqpull'});/* ผล 'pulled' จะมาจาก 3D */}
 async function settle(ok,ms){const ci=castInfo;castInfo=null;if(!ci){pulling=false;setAct('cast');return;}
  /* ช่วงกัด: หมึกยากช่วงสั้นกว่า (outer จากเซิร์ฟเวอร์ .55–.85 → 735–945 ms) */const win=350+700*ci.outer;const hitNow=ok&&ms<=win;const scale=hitNow?(ci.inner+ci.outer)/2:0;
- setAct('wait');try{const out=await cloud({type:'catch',scale});if(out&&out.chest)window.__sqChestPending=out.chest;/* fix35 */c3d({c:'sqresult',hit:!!out.hit,k:out.got&&out.got[0]});
+ setAct('wait');try{const out=await cloud({type:'catch',scale});if(out&&out.chest)window.__sqChestPending=out.chest;/* fix35 */if(out&&out.dolphin&&window.__dolphinPop)setTimeout(()=>{try{window.__dolphinPop({k:out.dolphin.k});}catch(e){}},out.chest?5200:1700);/* fix51 🐬 */c3d({c:'sqresult',hit:!!out.hit,k:out.got&&out.got[0]});
   if(!out.hit){if(out.junk&&JUNK[out.junk.k]){const J=JUNK[out.junk.k];showGot(J[1],'ติด'+J[0]+'ขึ้นมา','กุศล −'+Number(out.junk.penalty||0).toLocaleString(),true);}else toast(ok?'💨 ดึงช้าไป หมึกหนี (ใช้เบ็ด 5)':'💨 ดึงก่อนหมึกกัด หมึกตกใจหนี (ใช้เบ็ด 5)',2400);}
   else if(out.other){showGot(out.other.k==='cityfuel'?'city-item-fuel.webp':'box-decor2.webp','🎁 ของจากใต้ทะเล',out.other.k==='cityfuel'?'น้ำมัน +2 แกลลอน':'กล่องสุ่มของตกแต่ง +1',false);}
   else{showGot(SQ[out.got[0]][1],SQ[out.got[0]][0]+(out.got.length>1?' ×'+out.got.length:''),'เข้ากระเป๋าแล้ว ✓',false,out.got[0]);}

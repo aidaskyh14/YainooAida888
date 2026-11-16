@@ -1487,4 +1487,8 @@ CATALOG.push({"k":"outfit-seaswim","n":"👗 จะพาเธอนั้น�
 CATALOG.push({"k":"outfit-mseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-mseaswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mseaswim"});
 CATALOG.push({"k":"outfit-rseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-rseaswim.webp","g":"ชุด·หัวแดง","p":"outfit.rseaswim"});
 CATALOG.push({"k":"outfit-bseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-bseaswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bseaswim"});
-CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});/* fix47 🧪 */
+CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});
+CATALOG.push({"k":"dol1","n":"🐬 กระทงโลมามาลัย (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +10 แต้ม)","i":"loy-dol1.webp","g":"กระทงโลมา","p":"item.dol1"});/* fix51 🐬 */
+CATALOG.push({"k":"dol2","n":"🐬 กระทงโลมาดาวเรือง (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +30 แต้ม)","i":"loy-dol2.webp","g":"กระทงโลมา","p":"item.dol2"});/* fix51 🐬 */
+CATALOG.push({"k":"dol3","n":"🐬 กระทงโลมานางรำ (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +50 แต้ม)","i":"loy-dol3.webp","g":"กระทงโลมา","p":"item.dol3"});/* fix51 🐬 */
+CATALOG.push({"k":"dol4","n":"🐬 กระทงโลมาเทวา (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +100 แต้ม)","i":"loy-dol4.webp","g":"กระทงโลมา","p":"item.dol4"});/* fix51 🐬 *//* fix47 🧪 */

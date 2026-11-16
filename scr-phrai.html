@@ -1,0 +1,223 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>ศึกพรายชิงธง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0c1638;color:#fff;font-family:'Mali',system-ui,sans-serif;overflow:hidden}
+button{font:inherit;cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+.top{flex:none;display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + .5rem) .6rem .35rem 162px;min-height:3.2rem}
+.chip{background:rgba(255,255,255,.14);border-radius:999px;padding:.18rem .6rem;font-size:.74rem;font-weight:700;white-space:nowrap}
+.chip.tide{background:linear-gradient(180deg,#6fd6ff,#2f93ec);box-shadow:0 0 10px rgba(110,210,255,.7)}
+.chip.en b{letter-spacing:1px}
+.rbtn{width:2.2rem;height:2.2rem;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:1rem}
+.sp{flex:1}
+.stageBox{position:relative;flex:1;min-height:0;margin:0 .5rem;border-radius:18px;overflow:hidden;background:#07204a;box-shadow:inset 0 0 0 2px rgba(255,255,255,.18)}
+.scroll{position:absolute;inset:0;overflow-x:scroll;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x;overscroll-behavior:contain;cursor:grab}.scroll.drag{cursor:grabbing}.scroll::-webkit-scrollbar{display:none}.scene img{-webkit-user-drag:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.nav{position:absolute;top:50%;z-index:6;width:2.1rem;height:2.1rem;margin-top:-1.05rem;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:rgba(10,30,70,.55);color:#fff;font-size:1.1rem;font-weight:700;line-height:1;padding:0;cursor:pointer;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}.nav.l{left:2.3rem}.nav.r{right:.35rem}.nav:active{transform:scale(.92)}.scroll::-webkit-scrollbar{display:none}
+.scene{position:relative;height:100%;width:calc(var(--S)*0.563*3)}
+.bgt{position:absolute;top:0;height:100%;width:calc(var(--S)*0.563 + 1px);background:url(images/phrai/bg.jpg) center/100% 100% no-repeat}.bgt.f{transform:scaleX(-1)}
+.guide{position:absolute;left:0;right:0;height:0;border-top:1px dashed rgba(255,255,255,.16);pointer-events:none}.guide.b{border-top:1px dashed rgba(255,255,255,.34)}
+.water{position:absolute;left:0;right:0;top:50.8%;bottom:0;background:linear-gradient(180deg,rgba(40,170,190,.16),rgba(10,60,120,.34));pointer-events:none;z-index:4}
+.pole{position:absolute;bottom:7%;height:83%;z-index:2;transform:translateX(-21.5%)}.pole img{height:100%;display:block}
+.pole.win img{animation:wig .5s ease-in-out 8}@keyframes wig{0%,100%{transform:rotate(0)}25%{transform:rotate(1.2deg)}75%{transform:rotate(-1.2deg)}}
+.ghost{position:absolute;z-index:3;height:11.5%;transform:translate(-88%,-50%);transition:top .9s cubic-bezier(.3,1.4,.5,1),filter .6s;will-change:top}
+.ghost img{height:100%;display:block;animation:bob 1.8s ease-in-out infinite}
+.ghost.under{filter:saturate(.75) brightness(.82)}.ghost.win{transform:translate(-70%,-50%)}.ghost.win img{animation:hop .6s ease-in-out infinite}.ghost.off{opacity:.35;filter:grayscale(.8)}
+/* ธงที่ปิดในรอบนี้: เสา/ธง/ผีพรายเป็นสีเทา */
+.pole.shut img{filter:grayscale(1) brightness(.62);opacity:.55}.ghost.shut{opacity:.22!important;filter:grayscale(1)!important}.tag.shut{background:#7d8594!important;opacity:.85}.sc.shut{display:none}
+/* เอฟเฟกต์ตอนปีน: ป้าย +N ลอยขึ้น · วงแสง · ตัวเรืองแวบหนึ่ง */
+.plus{position:absolute;pointer-events:none;z-index:7;transform:translate(-50%,0);font-weight:700;font-size:.82rem;color:#fff;background:linear-gradient(180deg,#ffd76a,#ff9f3a);border:2px solid #fff;border-radius:999px;padding:0 .5rem;box-shadow:0 3px 8px rgba(0,0,0,.35);white-space:nowrap;animation:plus 1.5s ease-out forwards}
+.plus.t{background:linear-gradient(180deg,#8fe0ff,#3fa9ff)}
+@keyframes plus{0%{transform:translate(-50%,6px) scale(.5);opacity:0}18%{transform:translate(-50%,-6px) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
+.ringfx{position:absolute;pointer-events:none;z-index:4;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:3px solid rgba(255,235,160,.95);box-shadow:0 0 12px rgba(255,220,120,.9);animation:ringfx .8s ease-out forwards}
+@keyframes ringfx{from{transform:scale(.4);opacity:1}to{transform:scale(5.5);opacity:0}}
+.ghost.boost img{filter:drop-shadow(0 0 10px rgba(255,236,150,.95)) brightness(1.18)}
+.fsel{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem;margin:.5rem 0}.fsel button{border:0;border-radius:14px;color:#fff;font-weight:700;padding:.45rem 0 .35rem;font-size:.8rem;box-shadow:0 3px 0 rgba(0,0,0,.18);line-height:1.15}.fsel button small{display:block;font-size:.62rem;font-weight:400}.fsel button.shut{background:#aab0bb!important;color:#f3f3f3;box-shadow:inset 0 0 0 2px #8d94a1}
+.tsel button.shut{background:#aab0bb!important}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-3%) rotate(2deg)}}@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-8%)}}
+.tag{position:absolute;z-index:6;top:5%;transform:translate(-50%,-50%);font-weight:700;font-size:.66rem;color:#fff;padding:.02rem .42rem;border-radius:999px;border:0;box-shadow:0 2px 0 rgba(0,0,0,.25);white-space:nowrap}
+.tag.me{outline:2px solid #fff;box-shadow:0 0 12px #fff}
+.sc{position:absolute;z-index:6;transform:translate(-50%,0);font-weight:700;font-size:.64rem;color:#fff;background:rgba(10,20,50,.62);padding:0 .36rem;border-radius:999px;transition:top .9s cubic-bezier(.3,1.4,.5,1)}
+.ruler{position:absolute;left:0;top:0;bottom:0;width:26px;z-index:7;pointer-events:none;background:linear-gradient(90deg,rgba(8,14,40,.55),rgba(8,14,40,0))}
+.ruler span{position:absolute;left:3px;transform:translateY(-50%);font-size:.56rem;font-weight:700;text-shadow:0 1px 3px #000}
+.bub,.spl,.spk{position:absolute;pointer-events:none;z-index:5}
+.bub{width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(220,250,255,.8);animation:up 1.6s linear forwards}@keyframes up{to{transform:translateY(-70px);opacity:0}}
+.spl{width:46px;height:12px;border-radius:50%;border:2px solid rgba(230,250,255,.9);transform:translate(-50%,-50%);animation:rip .8s ease-out forwards}@keyframes rip{from{transform:translate(-50%,-50%) scale(.3);opacity:1}to{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+.spk{font-size:16px;animation:spk 1s ease-out forwards}@keyframes spk{from{transform:translate(0,0) scale(.4);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1.3);opacity:0}}
+.banner{cursor:pointer;position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);z-index:9;background:linear-gradient(180deg,#fff3c4,#ffd25e);color:#5a3a00;font-weight:700;padding:.45rem 1rem;border-radius:18px;box-shadow:0 6px 0 #c9922a,0 0 30px rgba(255,220,120,.8);opacity:0;transition:all .4s cubic-bezier(.3,1.5,.5,1);pointer-events:none;text-align:center;white-space:nowrap}.banner.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.dock{flex:none;padding:.45rem .6rem calc(env(safe-area-inset-bottom,0px) + .5rem)}
+.card{background:linear-gradient(180deg,#fffaf0,#ffeed6);color:#5b3a22;border-radius:18px;padding:.5rem .6rem;display:flex;gap:.6rem;align-items:center;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.card .wimg{width:3.2rem;height:3.2rem;object-fit:contain;flex:none;filter:drop-shadow(0 3px 4px rgba(120,70,20,.3))}
+.card .mid{flex:1;min-width:0}.card .mid small{display:block;font-size:.7rem;color:#a07a55}.card .mid b{display:block;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.go{border:0;border-radius:999px;padding:.55rem 1rem;font-weight:700;color:#fff;background:linear-gradient(180deg,#8fe0bf,#5bbd97);box-shadow:0 3px 0 #3f9a78;white-space:nowrap}.go:disabled{background:#cfc6b8;box-shadow:0 3px 0 #a99f90;color:#fff}
+.menus{display:flex;gap:.3rem;overflow-x:auto;margin-top:.35rem;scrollbar-width:none}.menus::-webkit-scrollbar{display:none}
+.menus span{flex:none;display:flex;align-items:center;gap:.2rem;background:rgba(255,255,255,.12);border-radius:999px;padding:.1rem .5rem .1rem .15rem;font-size:.66rem;font-weight:700}.menus span img{width:1.4rem;height:1.4rem;object-fit:contain}.menus span.w{background:#ffd25e;color:#5a3a00}
+.shade{position:fixed;inset:0;background:rgba(5,10,30,.6);z-index:20;display:none}.shade.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:linear-gradient(180deg,#fffaf0,#ffefd9);color:#5b3a22;border-radius:22px 22px 0 0;max-height:82vh;overflow:auto;padding:.7rem .8rem calc(env(safe-area-inset-bottom,0px) + .9rem);transform:translateY(110%);transition:transform .25s}.sheet.on{transform:none}
+.sheet h3{margin:.1rem 0 .4rem;font-size:1.02rem;display:flex;align-items:center;gap:.4rem}.sheet h3 .x{margin-left:auto;border:0;background:#f1e3cf;border-radius:50%;width:2rem;height:2rem}
+.hint{font-size:.74rem;color:#a07a55;margin:.1rem 0 .5rem;line-height:1.45}
+.row{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;margin:.3rem 0}
+.btn{border:0;border-radius:999px;padding:.4rem .85rem;font-weight:700;background:#f1e3cf;color:#6b4424}.btn.y{background:linear-gradient(180deg,#ffd98a,#f5b04a);color:#fff;box-shadow:0 2px 0 #c98a2c}.btn.g{background:linear-gradient(180deg,#8fe0bf,#5bbd97);color:#fff;box-shadow:0 2px 0 #3f9a78}.btn.r{background:linear-gradient(180deg,#ffa9c6,#ff6f9d);color:#fff;box-shadow:0 2px 0 #c9456f}.btn.on{outline:2px solid #5bbd97}.btn:disabled{opacity:.5}
+.tsel{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.3rem 0}.tsel button{border:0;border-radius:12px;padding:.3rem 0;font-weight:700;color:#fff;font-size:.8rem}.tsel button small{display:block;font-size:.62rem;opacity:.9}.tsel button.on{outline:3px solid #5b3a22}
+.plist{display:grid;grid-template-columns:repeat(2,1fr);gap:.3rem}.plist label{display:flex;align-items:center;gap:.35rem;background:#fff;border-radius:12px;padding:.3rem .5rem;font-size:.8rem;font-weight:700;min-width:0}.plist label span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plist label i{font-style:normal;font-size:.62rem;color:#fff;border-radius:999px;padding:0 .35rem}.plist input{width:1.1rem;height:1.1rem;flex:none}
+.fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem}.fgrid button{border:2px solid #f1e3cf;background:#fff;border-radius:12px;padding:.25rem .1rem;font-size:.6rem;font-weight:700;color:#6b4424;min-width:0}.fgrid button img{width:2.2rem;height:2.2rem;object-fit:contain;display:block;margin:0 auto}.fgrid button span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fgrid button.on{border-color:#5bbd97;background:#e9fbf2;box-shadow:0 0 0 2px rgba(91,189,151,.3)}
+.tm{background:#fff;border-radius:14px;padding:.4rem .55rem;margin-bottom:.35rem}.tm b{display:flex;align-items:center;gap:.35rem;font-size:.86rem}.tm b i{font-style:normal;color:#fff;border-radius:999px;padding:0 .5rem;font-size:.74rem}.tm small{display:block;font-size:.74rem;color:#8a6a4a;line-height:1.5}
+.lg{font-size:.78rem;padding:.25rem 0;border-bottom:1px solid #f1e3cf}.lg small{color:#b0906c;margin-right:.35rem}
+.notes{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 3.4rem);z-index:40;display:flex;flex-direction:column;align-items:center;gap:.4rem;pointer-events:none;padding:0 .7rem}
+.note{display:flex;align-items:center;gap:.6rem;max-width:min(26rem,100%);background:linear-gradient(180deg,#fffdf6,#fff1da);color:#5b3a22;border-radius:20px;padding:.5rem .9rem .5rem .55rem;box-shadow:0 8px 22px rgba(0,0,0,.38),inset 0 0 0 2px #fff,inset 0 0 0 4px var(--ac,#ffd98a);animation:nin .45s cubic-bezier(.3,1.5,.5,1) both}
+.note.out{animation:nout .3s ease-in forwards}
+@keyframes nin{from{opacity:0;transform:translateY(-18px) scale(.9)}to{opacity:1;transform:none}}@keyframes nout{to{opacity:0;transform:translateY(-12px) scale(.95)}}
+.note .ic{flex:none;width:2.6rem;height:2.6rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--ac,#ffd98a));display:flex;align-items:center;justify-content:center;font-size:1.35rem;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.note .ic img{width:2.3rem;height:2.3rem;object-fit:contain}
+.note .tx{min-width:0}.note .tx b{display:block;font-size:.92rem;line-height:1.25}.note .tx small{display:block;font-size:.74rem;color:#9a7a55;line-height:1.35}
+.note .tx em{font-style:normal;font-weight:700;color:#e08a00}
+.note.good{--ac:#9be8c9}.note.tide{--ac:#8fd8ff}.note.gold{--ac:#ffd25e}.note.err{--ac:#ffb3c7;background:linear-gradient(180deg,#fff7f9,#ffe6ec);color:#a3264a}.note.err .tx small{color:#c06a82}
+.winov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(255,235,170,.35),rgba(6,12,36,.82) 65%);padding:1rem}
+.winov.on{display:flex}
+.winbx{position:relative;width:min(17rem,88vw);text-align:center;background:linear-gradient(180deg,#fffdf6,#ffeccb);color:#5b3a22;border-radius:22px;padding:.55rem .7rem .55rem;box-shadow:0 12px 32px rgba(0,0,0,.5),inset 0 0 0 2px #fff,inset 0 0 0 4px #ffd25e;animation:nin .5s cubic-bezier(.3,1.5,.5,1) both}
+.winbx .wx{position:absolute;right:-.45rem;top:-.45rem;width:1.9rem;height:1.9rem;border-radius:50%;border:2px solid #fff;background:#ff8fab;color:#fff;font-size:.9rem;font-weight:700;line-height:1;box-shadow:0 3px 0 rgba(0,0,0,.2);z-index:2;cursor:pointer;padding:0}
+.winbx .gimg{height:5.4rem;margin-top:-2.2rem;filter:drop-shadow(0 6px 8px rgba(120,70,20,.35));animation:hop .7s ease-in-out infinite}
+.winbx .fl{display:inline-block;color:#fff;font-weight:700;border-radius:999px;padding:0 .55rem;font-size:.85rem;box-shadow:0 2px 0 rgba(0,0,0,.18);vertical-align:middle}
+.winbx h2{margin:.1rem 0 0;font-size:1rem;color:#c9742a;line-height:1.5}.winbx p{margin:0 0 .3rem;font-size:.7rem;color:#9a7a55;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.winbx .cf{position:absolute;top:-8px;font-size:13px;animation:cf 2.6s linear infinite;pointer-events:none}@keyframes cf{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(15rem) rotate(360deg);opacity:0}}
+.wsum{display:flex;flex-direction:column;gap:2px;background:rgba(255,255,255,.65);border-radius:12px;padding:.3rem .4rem}
+.wr{display:flex;align-items:center;gap:.35rem;font-size:.7rem;line-height:1.2;border-radius:8px;padding:1px 2px}
+.wr .wt{flex:none;width:2.9rem;color:#fff;font-weight:700;border-radius:999px;font-size:.66rem;padding:1px 0}
+.wr i{flex:1;min-width:0;height:.42rem;border-radius:999px;background:#f1e2c8;overflow:hidden;display:block}.wr i b{display:block;height:100%;border-radius:999px}
+.wr em{flex:none;width:3.3rem;text-align:right;font-style:normal;font-weight:700;color:#5b3a22}.wr em small{font-weight:400;color:#b09575;font-size:.62rem}
+.wr.wwin{background:#fff3c4;box-shadow:inset 0 0 0 1px #ffd25e}.wr.wme .wt{box-shadow:0 0 0 2px #fff,0 0 0 3px #5b3a22}
+.wcd{margin-top:.3rem;font-size:.62rem;color:#b09575}
+.dlg{text-align:center}.dlg .big{font-size:2.4rem;line-height:1}.dlg h3{justify-content:center;margin:.3rem 0 .2rem}.dlg .row{justify-content:center}
+@media (prefers-reduced-motion: reduce){.plus,.ringfx{animation-duration:.01s}.ghost img,.pole.win img{animation:none}.ghost,.sc{transition:none}}
+</style></head><body>
+<div id="app">
+  <div class="top"><span class="chip" id="cStatus">กำลังโหลด…</span><span class="chip" id="cTide"></span><span class="chip en" id="cEn"></span><span class="sp"></span><button class="rbtn" id="bTeams" aria-label="ทีม">👥</button><button class="rbtn" id="bLog" aria-label="บันทึก">📜</button><button class="rbtn" id="bSet" aria-label="ตั้งค่า" hidden>⚙️</button></div>
+  <div class="stageBox"><div class="ruler" id="ruler"></div><div class="scroll" id="scroll"><div class="scene" id="scene"></div></div><button class="nav l" id="navL" aria-label="เลื่อนไปซ้าย" hidden>‹</button><button class="nav r" id="navR" aria-label="เลื่อนไปขวา">›</button><div class="banner" id="banner"></div></div>
+  <div class="dock"><div class="card" id="card"></div><div class="menus" id="menus"></div></div>
+</div>
+<div class="shade" id="shade"></div><section class="sheet" id="sheet"></section><div class="notes" id="notes"></div><div class="winov" id="winov"></div>
+<script type="module">
+import {CATALOG} from './catalog.js?h=fb20d645';import {PH_GOAL,PH_STEP,PH_TEAMS,PH_ENERGY,PH_MENU_MAX,PH_COLORS,PH_FOOD_KEYS,phTide} from './phrai-engine.js?h=a0c06fa3';import {BOAT_ALPACA} from './boat-engine.js?h=8c7e02f8';import {ALPACA_MENU} from './alpaca-menu.js?h=4c9e1f4e';
+const Host=parent.__HOST;if(!Host)throw new Error('กรุณาเข้าเกมจากหน้าล็อกอิน');const ME=Host.uid,ADMIN=!!Host.admin;
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const N=PH_TEAMS,Y0=.86,Y1=.17,WATER=.508,KIND=i=>(i%5)+1,IMGP='images/phrai/';
+let R=null,MEI={team:0,energy:PH_ENERGY,next:0,max:PH_ENERGY},off=0,roster=[],busy=false,built=false,S=400,won=0;const SNow=()=>Date.now()+off;
+const yOf=p=>Y0+(Y1-Y0)*Math.min(PH_GOAL,p)/PH_GOAL,fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+/* การแจ้งเตือนแบบการ์ด: note({icon|img,title,sub,tone,ms}) · toast(ข้อความ, ผิดพลาด?) ใช้การ์ดเดียวกัน */
+function note(o){const box=$('notes');while(box.children.length>=3)box.firstChild.remove();const d=document.createElement('div');d.className='note '+(o.tone||'');d.innerHTML='<div class="ic">'+(o.img?'<img src="'+esc(o.img)+'" alt="">':esc(o.icon||'🌊'))+'</div><div class="tx"><b>'+(o.html||esc(o.title||''))+'</b>'+(o.sub?'<small>'+(o.subHtml||esc(o.sub))+'</small>':'')+'</div>';box.appendChild(d);setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),320);},o.ms||2800);return d;}
+function toast(m,err){const s=String(m);const mm=s.match(/^(\p{Extended_Pictographic}\uFE0F?)\s*(.*)$/u);note({icon:err?'⚠️':(mm?mm[1]:'✨'),title:mm&&!err?mm[2]:s,tone:err?'err':'good'});}
+/* ---------- เสบียง: ข้อมูลเมนู ---------- */
+const CAT=Object.fromEntries(CATALOG.map(c=>[c.k,c])),ALP=Object.fromEntries(ALPACA_MENU.map(m=>[m.id,m]));
+function food(k){if(String(k).startsWith('alp-')){const id=k.slice(4),m=ALP[id]||{};return {k,n:(BOAT_ALPACA[id]||[])[1]||m.n||id,img:m.img||'',group:'alpaca',food:id};}const c=CAT[k];if(!c)return {k,n:k,img:'',group:'',food:''};const [g,...r]=c.p.split('.');return {k,n:String(c.n).replace(/\s*\(.*\)$/,''),img:c.i?(c.i.startsWith('images/')?c.i:'images/'+c.i):'',group:g,food:r.join('.')};}
+const ALL_FOODS=[...CATALOG.filter(c=>PH_FOOD_KEYS.has(c.k)).map(c=>c.k),...Object.keys(BOAT_ALPACA).map(k=>'alp-'+k)];
+function have(k){let g={};try{g=JSON.parse(Host.get('s3all-v1')||'{}');}catch(e){}const f=food(k);const n=f.group==='alpaca'?g.sub?.alpaca?.bag?.[f.food]:g.bag?.[f.group]?.[f.food];return Math.max(0,Math.floor(Number(n)||0));}
+const nameOf=u=>esc(roster.find(x=>x.uid===u)?.name||R?.names?.[u]||'สมาชิก'),members=t=>Object.keys(R?.team||{}).filter(u=>R.team[u]===t);
+/* ---------- ฉาก ---------- */
+const G=[],PO=[],SC=[],TG=[];
+function build(){const box=document.querySelector('.stageBox');S=Math.max(260,box.clientHeight);document.documentElement.style.setProperty('--S',S+'px');const scene=$('scene'),W=S*.563*3,gap=(W-70)/N;
+  scene.innerHTML='<div class="bgt" style="left:0"></div><div class="bgt f" style="left:calc(var(--S)*0.563)"></div><div class="bgt" style="left:calc(var(--S)*0.563*2)"></div><div class="water"></div>';$('ruler').innerHTML='';G.length=PO.length=SC.length=TG.length=0;
+  for(let l=0;l<=PH_GOAL;l+=PH_STEP){const g=document.createElement('div');g.className='guide'+(l%50===0?' b':'');g.style.top=(yOf(l)*100)+'%';scene.appendChild(g);if(l%20===0){const r=document.createElement('span');r.textContent=l;r.style.top=(yOf(l)*S)+'px';$('ruler').appendChild(r);}}
+  for(let i=0;i<N;i++){const x=56+gap*i+gap/2-14;
+    const po=document.createElement('div');po.className='pole';po.style.left=x+'px';po.innerHTML='<img src="'+IMGP+'pole-'+(i+1)+'.webp" alt="">';scene.appendChild(po);PO.push(po);
+    const t=document.createElement('button');t.className='tag';t.style.left=x+'px';t.style.background=PH_COLORS[i];t.dataset.t=i+1;t.onclick=()=>teamsSheet(i+1);scene.appendChild(t);TG.push(t);
+    const g=document.createElement('div');g.className='ghost under';g.style.left=x+'px';g.style.top=(Y0*100)+'%';g.innerHTML='<img src="'+IMGP+'ghost'+KIND(i)+'-climb.webp" alt="" decoding="async">';scene.appendChild(g);G.push(g);
+    const s=document.createElement('div');s.className='sc';s.style.left=(x-20)+'px';scene.appendChild(s);SC.push(s);}
+  built=true;}
+function fx(cls,x,y,txt,dx,dy){const e=document.createElement('div');e.className=cls;e.style.left=x+'px';e.style.top=y+'px';if(txt)e.textContent=txt;if(dx!==undefined){e.style.setProperty('--dx',dx+'px');e.style.setProperty('--dy',dy+'px');}$('scene').appendChild(e);setTimeout(()=>e.remove(),1700);}
+/* เลื่อนฉากซ้าย–ขวา: นิ้วปัด (ทุกมือถือ/แท็บเล็ต) · เมาส์ลาก · ล้อเมาส์ · ปุ่ม ‹ › (กันทุกเครื่องเลื่อนไม่ได้) */
+(function(){const sc=$('scroll'),L=$('navL'),Rr=$('navR');const upd=()=>{const mx=sc.scrollWidth-sc.clientWidth;L.hidden=sc.scrollLeft<=4;Rr.hidden=mx<=4||sc.scrollLeft>=mx-4;};
+ const go=d=>{const mx=sc.scrollWidth-sc.clientWidth,to=Math.max(0,Math.min(mx,sc.scrollLeft+d*sc.clientWidth*.7));try{sc.scrollTo({left:to,behavior:'smooth'});}catch(e){sc.scrollLeft=to;}setTimeout(()=>{if(Math.abs(sc.scrollLeft-to)>8)sc.scrollLeft=to;upd();},450);};
+ L.onclick=()=>go(-1);Rr.onclick=()=>go(1);sc.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);setTimeout(upd,300);setTimeout(upd,1500);
+ sc.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){sc.scrollLeft+=e.deltaY;e.preventDefault();}},{passive:false});
+ let dn=false,x0=0,s0=0;sc.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;dn=true;x0=e.clientX;s0=sc.scrollLeft;sc.classList.add('drag');});
+ addEventListener('pointermove',e=>{if(dn)sc.scrollLeft=s0-(e.clientX-x0);});const up=()=>{dn=false;sc.classList.remove('drag');};addEventListener('pointerup',up);addEventListener('pointercancel',up);addEventListener('blur',up);})();
+function focus(t){const sc=$('scroll'),x=parseFloat(G[t-1].style.left);sc.scrollTo({left:Math.max(0,x-sc.clientWidth/2),behavior:'smooth'});}
+const shut=t=>!!(R&&R.off&&R.off[t]);
+function paintScene(prev){if(!built||!R)return;for(let i=0;i<N;i++){const p=R.p[i]||0,pp=prev?prev.p[i]||0:p,y=yOf(p),g=G[i],x=parseFloat(g.style.left),n=members(i+1).length,sh=shut(i+1);
+    PO[i].classList.toggle('shut',sh);g.classList.toggle('shut',sh);TG[i].classList.toggle('shut',sh);SC[i].classList.toggle('shut',sh);
+    g.style.top=(y*100)+'%';SC[i].style.top=((y+.066)*100)+'%';SC[i].textContent=p;g.classList.toggle('under',y>WATER+.02);g.classList.toggle('off',n===0);
+    TG[i].textContent=(R.team[ME]===i+1?'⭐ ':'')+'ทีม '+(i+1)+(sh?' · ปิด':'');TG[i].classList.toggle('me',R.team[ME]===i+1);
+    if(prev&&p>pp){const dd=p-pp;fx('plus'+(dd>1?' t':''),x-18,y*S-S*.085-14,'+'+dd);fx('ringfx',x-18,y*S);g.classList.add('boost');setTimeout(()=>g.classList.remove('boost'),900);for(let k=0;k<5;k++)fx('spk',x-18,y*S-6,['✨','⭐','💫'][k%3],(Math.random()*70-35),(Math.random()*-50-8));
+     if(yOf(pp)>WATER&&y<=WATER){fx('spl',x-10,WATER*S);fx('spl',x+6,WATER*S+3);}if(y>WATER)for(let k=0;k<3;k++)setTimeout(()=>fx('bub',x-30+Math.random()*24,y*S-10),k*160);}
+    const win=R.winner===i+1;if(win&&!g.classList.contains('win')){g.classList.add('win');g.querySelector('img').src=IMGP+'ghost'+KIND(i)+'-win.webp';PO[i].classList.add('win');for(let k=0;k<10;k++)fx('spk',x+8,Y1*S-20,['✨','⭐','🎉'][k%3],(Math.random()*120-60),(Math.random()*-90-10));}
+    else if(!win&&g.classList.contains('win')){g.classList.remove('win');g.querySelector('img').src=IMGP+'ghost'+KIND(i)+'-climb.webp';PO[i].classList.remove('win');}}
+  const wo=$('winov');if(R.status==='finished'&&R.winner&&won!==R.winner){showWin();}else if(R.status!=='finished')closeWin();
+  const b=$('banner');b.onclick=()=>{if(R&&R.status==='finished')showWin();};if(R.status==='finished'&&R.winner){b.innerHTML='🏁 ทีม '+R.winner+' คว้าธงได้ก่อน!'+(R.team[ME]===R.winner?'<br>ทีมของฉันชนะ 🎉':'');b.classList.add('on');if(won!==R.winner){won=R.winner;focus(R.winner);}}else{b.classList.remove('on');won=0;}}
+/* ---------- แถบบน + การ์ดส่งของ ---------- */
+let tideWas=null,enWas=null;
+/* การ์ดทีมชนะ: กะทัดรัด · สรุปแต้มทุกทีมจากเต็ม · กด ✕ ปิด หรือปิดเองใน 30 วิ · แตะป้าย 🏁 เพื่อเปิดดูอีกครั้ง */
+let winT=0;function closeWin(){clearInterval(winT);winT=0;$('winov').classList.remove('on');}
+function showWin(){if(!R||!R.winner)return;const wo=$('winov'),w=R.winner,mine=R.team[ME]===w,ms=members(w);
+  const rows=Array.from({length:PH_TEAMS},(_,k)=>({t:k+1,p:Math.min(PH_GOAL,Math.max(0,Math.floor((R.p||[])[k]||0)))})).filter(r=>!shut(r.t)).sort((a,b)=>b.p-a.p||a.t-b.t);
+  wo.innerHTML='<div class="winbx"><button class="wx" id="winX" aria-label="ปิด">✕</button>'+Array.from({length:8},(_,k)=>'<span class="cf" style="left:'+(6+k*12)+'%;animation-delay:'+((k*5%8)*.3)+'s">'+['🎉','✨','⭐','🪷'][k%4]+'</span>').join('')
+   +'<img class="gimg" src="'+IMGP+'ghost'+KIND(w-1)+'-win.webp" alt=""><h2><span class="fl" style="background:'+PH_COLORS[w-1]+'">ทีม '+w+'</span> คว้าธงได้ก่อน! 🏁</h2>'
+   +'<p>'+(mine?'<b>ทีมของฉันชนะ 🎉</b> ':'')+(ms.length?esc(ms.map(u=>nameOf(u)).join(' · ')):'')+'</p>'
+   +'<div class="wsum">'+rows.map(r=>'<div class="wr'+(r.t===w?' wwin':'')+(R.team[ME]===r.t?' wme':'')+'"><span class="wt" style="background:'+PH_COLORS[r.t-1]+'">ทีม '+r.t+'</span><i><b style="width:'+(r.p/PH_GOAL*100)+'%;background:'+PH_COLORS[r.t-1]+'"></b></i><em>'+r.p+'<small>/'+PH_GOAL+'</small></em></div>').join('')+'</div>'
+   +'<div class="wcd">ปิดเองใน <b id="winCd">30</b> วิ</div></div>';
+  wo.classList.add('on');$('winX').onclick=closeWin;wo.onclick=e=>{if(e.target===wo)closeWin();};
+  let n=30;clearInterval(winT);winT=setInterval(()=>{n--;const c=$('winCd');if(c)c.textContent=n;if(n<=0)closeWin();},1000);}
+function paintHud(){if(!R)return;const st={setup:'🛠️ รอยัยหนูเริ่มแข่ง',running:'🏁 กำลังแข่ง',paused:'⏸️ พักการแข่ง',finished:'🏆 จบแล้ว'}[R.status]||R.status;$('cStatus').textContent=st;
+  const now=SNow(),td=phTide(now),ct=$('cTide');ct.className='chip'+(td.on?' tide':'');ct.textContent=td.on?'🌊 น้ำขึ้น ×2 · '+fmt(td.until-now):'🌙 น้ำขึ้นอีก '+fmt(td.next-now);
+  let e=MEI.energy,nx=MEI.next;while(e<PH_ENERGY&&nx&&nx<=now){e++;nx=e<PH_ENERGY?nx+20*60000:0;}if(R.status==='running'){if(tideWas===false&&td.on)note({icon:'🌊',html:'น้ำขึ้นแล้ว!',sub:'ส่งตอนนี้ปีน ×2 นาน 15 นาที',tone:'tide',ms:4200});if(enWas!==null&&e>enWas&&R.team[ME])note({icon:'💪',html:'แรงฟื้นแล้ว <em>'+'●'.repeat(e)+'</em>',sub:'ส่งของให้ผีพรายได้อีก',tone:'good'});}tideWas=td.on;enWas=e;
+  $('cEn').innerHTML='💪 <b>'+'●'.repeat(e)+'○'.repeat(Math.max(0,PH_ENERGY-e))+'</b>'+(e<PH_ENERGY&&nx?' '+fmt(nx-now):'');
+  const t=R.team[ME]||0,card=$('card'),mn=$('menus');
+  if(ADMIN&&!t){card.innerHTML='<div class="mid"><b>👑 ยัยหนูเป็นผู้จัดการแข่งขัน</b><small>กด ⚙️ มุมขวาบน เพื่อจัดทีม · ตั้งเสบียง · เริ่ม/พัก/รีเซ็ต</small></div>';mn.innerHTML='';return;}
+  if(t&&shut(t)){card.innerHTML='<div class="mid"><b>รอบนี้ธงทีม '+t+' ปิดอยู่</b><small>ดูการแข่งได้ · รอยัยหนูเปิดธงรอบถัดไป</small></div>';mn.innerHTML='';return;}
+  if(!t){card.innerHTML='<div class="mid"><b>ยังไม่มีทีม</b><small>รอยัยหนูจัดทีมให้ก่อนนะ · ดูการแข่งได้</small></div>';mn.innerHTML='';return;}
+  const menus=R.menus?.[t]||[],w=R.want?.[t]||null,f=w?food(w):null,hv=w?have(w):0;
+  if(R.status!=='running'){card.innerHTML='<div class="mid"><b>ผีพรายทีม '+t+' · '+(R.p[t-1]||0)+'/'+PH_GOAL+'</b><small>'+esc(st)+'</small></div>';}
+  else if(f){const can=e>0&&hv>0&&!busy;card.innerHTML=(f.img?'<img class="wimg" src="'+esc(f.img)+'" alt="">':'')+'<div class="mid"><small>ผีพรายทีม '+t+' อยากกิน</small><b>'+esc(f.n)+'</b><small>ในกระเป๋ามี '+hv.toLocaleString()+' · ปีนแล้ว '+(R.p[t-1]||0)+'/'+PH_GOAL+'</small></div><button class="go" id="bSend" '+(can?'':'disabled')+'>'+(e<1?'แรงหมด':hv<1?'ไม่มีของ':'ส่ง'+(td.on?' ×2':''))+'</button>';
+    const b=$('bSend');if(b)b.onclick=()=>send(f);}
+  else card.innerHTML='<div class="mid"><b>ผีพรายทีม '+t+' · '+(R.p[t-1]||0)+'/'+PH_GOAL+'</b><small>ทีมนี้ยังไม่ได้ตั้งเสบียง</small></div>';
+  mn.innerHTML=menus.map(k=>{const x=food(k);return '<span class="'+(k===w?'w':'')+'">'+(x.img?'<img src="'+esc(x.img)+'" alt="">':'')+esc(x.n)+' ×'+have(k).toLocaleString()+'</span>';}).join('');}
+function setRace(next,me){const prev=R;if(next)R=next;if(me)MEI=me;
+  /* รีเซ็ต/เริ่มรอบใหม่: ล้างการแจ้งเตือน การ์ดทีมชนะ และเอฟเฟกต์ที่ค้างของรอบก่อนทันที */if(prev&&R&&(prev.status!==R.status&&R.status==='setup'||prev.round!==R.round)){$('notes').innerHTML='';closeWin();$('banner').classList.remove('on');won=0;tideWas=null;enWas=null;$('scene').querySelectorAll('.plus,.ringfx,.spk,.spl,.bub').forEach(e=>e.remove());}paintScene(prev&&prev.round===R.round?prev:null);paintHud();}
+let inflight=Promise.resolve();/* เรียกเซิร์ฟเวอร์ทีละรายการ (ถามสถานะกับกดส่งไม่ชนกัน) */
+function call(input,quiet){const run=inflight.then(()=>call1(input,quiet));inflight=run.catch(()=>{});return run;}
+async function call1(input,quiet){try{const out=await Host.cloud('phrai',input);if(Number.isFinite(out?.serverNow))off=out.serverNow-Date.now();setRace(out.race,out.me);return out;}catch(e){if(!quiet)toast(e.message||'ทำรายการไม่สำเร็จ',true);return null;}}
+async function send(f){if(busy)return;busy=true;paintHud();const out=await call({type:'supply',group:f.group,food:f.food});busy=false;if(out?.supply){const s=out.supply,t=R.team[ME];note({img:IMGP+'ghost'+KIND(t-1)+'-climb.webp',html:'ปีนขึ้น <em>+'+s.step+'</em>'+(s.tide?' 🌊 น้ำขึ้น ×2':''),sub:'x',subHtml:'🪷 ได้กุศล <em>+'+s.gain.toLocaleString()+'</em> · ตอนนี้ '+s.p+'/'+PH_GOAL,tone:s.tide?'tide':'good'});
+   if(s.combo)setTimeout(()=>note({icon:'🍱',html:'คอมโบ! ส่งครบทุกเมนู',sub:'x',subHtml:'รับโบนัส <em>+'+s.combo.toLocaleString()+'</em> กุศล',tone:'gold',ms:3600}),500);
+   if(s.lineUp&&s.want){const w=food(s.want);setTimeout(()=>note({img:w.img||null,icon:'🍽️',html:'ถึงเส้น <em>'+s.line+'</em> แล้ว!',sub:'ผีพรายเปลี่ยนใจ อยากกิน '+w.n,tone:'gold',ms:3800}),s.combo?1100:500);}
+   focus(t);}paintHud();}
+/* ---------- หน้าต่าง ---------- */
+function open(h){closeWin();$('sheet').innerHTML=h;$('sheet').classList.add('on');$('shade').classList.add('on');const x=$('sheet').querySelector('.x');if(x)x.onclick=closeAll;}
+function closeAll(){$('sheet').classList.remove('on');$('shade').classList.remove('on');}$('shade').onclick=closeAll;
+function teamsSheet(t0){if(!R)return;const order=Array.from({length:N},(_,i)=>i+1).sort((a,b)=>(R.p[b-1]||0)-(R.p[a-1]||0)||a-b);
+  open('<h3>👥 ทีมผีพราย<button class="x">✕</button></h3>'+order.map((t,r)=>{const m=members(t),w=R.want?.[t]?food(R.want[t]).n:'';return '<div class="tm" id="tm'+t+'"><b><i style="background:'+PH_COLORS[t-1]+'">ทีม '+t+'</i>'+(r===0&&(R.p[t-1]||0)>0?'👑 ':'')+(R.p[t-1]||0)+'/'+PH_GOAL+(R.team[ME]===t?' ⭐':'')+'</b><small>'+(m.length?m.map(u=>nameOf(u)+(R.sent?.[u]?' ('+R.sent[u]+')':'')).join(' · '):'ยังไม่มีสมาชิก')+(w&&R.status==='running'?'<br>🍽️ อยากกิน: '+esc(w):'')+'</small></div>';}).join(''));
+  if(t0){const el=$('tm'+t0);if(el)el.scrollIntoView({block:'center'});}}
+$('bTeams').onclick=()=>teamsSheet();
+$('bLog').onclick=()=>open('<h3>📜 บันทึกการแข่ง<button class="x">✕</button></h3>'+((R?.log||[]).map(l=>'<div class="lg"><small>'+new Date(l.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+'</small>'+esc(l.t)+'</div>').join('')||'<p class="hint">ยังไม่มีบันทึก</p>'));
+/* ---------- แอดมิน ---------- */
+async function adminSheet(){try{roster=await Host.roster();}catch(e){}const st=R.status,run=st==='running'||st==='paused';
+  open('<h3>⚙️ จัดการศึกพรายชิงธง<button class="x">✕</button></h3><div class="hint">สถานะ: <b>'+esc({setup:'ตั้งค่า (ยังไม่เริ่ม)',running:'กำลังแข่ง',paused:'พักอยู่',finished:'จบแล้ว'}[st])+'</b> · จัดทีมแล้ว '+Object.keys(R.team).length+' คน · ตั้งเสบียงแล้ว '+Object.keys(R.menus||{}).length+'/'+N+' ทีม</div>'
+   +'<div class="row">'+(st==='setup'?'<button class="btn g" data-a="start">▶ เริ่มแข่ง</button>':'')+(st==='running'?'<button class="btn y" data-a="pause">⏸ พัก</button>':'')+(st==='paused'?'<button class="btn g" data-a="resume">▶ แข่งต่อ</button>':'')+(st!=='setup'?'<button class="btn r" data-a="reset">↺ รีเซ็ตรอบ (ทีม/เสบียงยังอยู่)</button>':'')+'</div>'
+   +'<div class="row"><button class="btn" id="aTeams">👥 '+(run?'เพิ่มสมาชิกเข้าทีม':'จัดทีม')+'</button>'+(run?'':'<button class="btn" id="aMenus">🍱 ตั้งเสบียง</button>')+(st==='setup'?'<button class="btn" id="aFlags">🚩 เปิด/ปิดธง</button>':'')+'</div>'+(st==='setup'?'<div class="hint">ธงที่เปิด: '+(Array.from({length:N},(_,i)=>i+1).filter(t=>!shut(t)).join(', ')||'-')+(Object.keys(R.off||{}).length?' · ปิด '+Object.keys(R.off).length+' ธง':'')+'</div>':'')+'<div class="hint">จัดทีม/ตั้งเสบียงได้ก่อนเริ่มรอบ · ระหว่างแข่งเพิ่มสมาชิกใหม่เข้าทีมได้ (ย้ายทีมไม่ได้)</div>');
+  $('sheet').querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const a=b.dataset.a;if(a==='reset'&&!b.dataset.ok){open('<div class="dlg"><div class="big">↺</div><h3>รีเซ็ตรอบนี้?</h3><div class="hint">แต้มทุกทีมกลับเป็น 0 และกลับไปหน้าตั้งค่า<br>ทีมและเสบียงที่ตั้งไว้ยังอยู่</div><div class="row"><button class="btn" id="rNo">ยกเลิก</button><button class="btn r" id="rYes">↺ รีเซ็ตเลย</button></div></div>');$('rNo').onclick=adminSheet;$('rYes').onclick=async e=>{e.currentTarget.disabled=true;if(await call({type:'reset'}))note({icon:'↺',title:'รีเซ็ตรอบแล้ว',sub:'ทีมและเสบียงยังอยู่ พร้อมเริ่มรอบใหม่',tone:'gold'});adminSheet();};return;}b.disabled=true;const out=await call({type:a});if(out){toast({start:'🏁 เริ่มแข่งแล้ว',pause:'⏸ พักการแข่ง',resume:'▶ แข่งต่อ',reset:'↺ รีเซ็ตแล้ว'}[a]);adminSheet();}else b.disabled=false;});
+  const af=$('aFlags');if(af)af.onclick=()=>flagEdit();
+  $('aTeams').onclick=()=>teamEdit(1);const am=$('aMenus');if(am)am.onclick=()=>menuEdit(0);}
+/* 🚩 เปิด/ปิดธง: แตะสลับทีละเสา (เทา = ปิด) · ปุ่มลัดเปิด N เสาแรก · บันทึกแล้วมีผลทันที (ก่อนเริ่มรอบ) */
+function flagEdit(init){const off=new Set(init||Object.keys(R.off||{}).map(Number));
+  const paint=()=>{open('<h3>🚩 เปิด/ปิดธง<button class="x">✕</button></h3><div class="hint">แตะเสาเพื่อเปิด/ปิด · เสาที่ปิดจะเป็นสีเทา ทีมนั้นไม่ร่วมแข่งรอบนี้ และไม่อยู่ในสรุปผล</div><div class="fsel">'+Array.from({length:N},(_,i)=>'<button data-f="'+(i+1)+'" class="'+(off.has(i+1)?'shut':'')+'" style="background:'+PH_COLORS[i]+'">ทีม '+(i+1)+'<small>'+(off.has(i+1)?'ปิด':'เปิด · '+members(i+1).length+' คน')+'</small></button>').join('')+'</div><div class="row"><button class="btn" data-q="10">เปิดครบ 10</button><button class="btn" data-q="5">เปิด 5 เสาแรก</button><button class="btn" data-q="2">เปิด 2 เสาแรก</button></div><div class="row"><button class="btn" id="fBack">← กลับ</button><button class="btn g" id="fSave">บันทึก (เปิด '+(N-off.size)+' ธง)</button></div>');
+    $('sheet').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const t=+b.dataset.f;off.has(t)?off.delete(t):off.add(t);paint();});
+    $('sheet').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const q=+b.dataset.q;off.clear();for(let t=q+1;t<=N;t++)off.add(t);paint();});
+    $('fBack').onclick=adminSheet;$('fSave').onclick=async e=>{if(off.size>=N){toast('ต้องเปิดธงไว้อย่างน้อย 1 ทีม',1);return;}e.currentTarget.disabled=true;if(await call({type:'flags',off:[...off].sort((a,b)=>a-b)})){note({icon:'🚩',title:'บันทึกธงแล้ว',sub:'เปิด '+(N-off.size)+' ธง · ปิด '+off.size+' ธง',tone:'gold'});adminSheet();}else e.currentTarget.disabled=false;};};paint();}
+function tsel(cur,all){return '<div class="tsel">'+(all?'<button data-t="0" class="'+(cur===0?'on':'')+'" style="background:#8a6a4a;grid-column:span 5">ทุกทีมใช้เสบียงเดียวกัน</button>':'')+Array.from({length:N},(_,i)=>'<button data-t="'+(i+1)+'" class="'+(cur===i+1?'on':'')+(shut(i+1)?' shut':'')+'" style="background:'+PH_COLORS[i]+'">ทีม '+(i+1)+(shut(i+1)?' 🚫':'')+'<small>'+(all?(R.menus?.[i+1]||[]).length+' เมนู':members(i+1).length+' คน')+'</small></button>').join('')+'</div>';}
+function teamEdit(t){const run=R.status==='running'||R.status==='paused',ps=roster.filter(p=>!p.admin).sort((a,b)=>String(a.name).localeCompare(String(b.name),'th'));
+  open('<h3>👥 '+(run?'เพิ่มสมาชิกเข้าทีม':'จัดทีม')+'<button class="x">✕</button></h3>'+tsel(t)+'<div class="hint">'+(run?'ติ๊กคนที่ยังไม่มีทีมเพื่อเพิ่มเข้าทีม '+t+' (คนที่มีทีมแล้วย้ายไม่ได้ระหว่างแข่ง)':'ติ๊กสมาชิกของทีม '+t+' แล้วกดบันทึก · คนที่อยู่ทีมอื่นถ้าติ๊กจะย้ายมาทีมนี้')+' · รายชื่อทั้งหมด '+ps.length+' คน (สมาชิกใหม่ขึ้นเองอัตโนมัติ)</div><div class="plist">'+ps.map(p=>{const cur=R.team[p.uid]||0;return '<label><input type="checkbox" value="'+esc(p.uid)+'" '+(cur===t?'checked':'')+(run&&cur?' disabled':'')+'><span>'+esc(p.name||'สมาชิก')+'</span>'+(cur&&cur!==t?'<i style="background:'+PH_COLORS[cur-1]+'">'+cur+'</i>':'')+'</label>';}).join('')+'</div><div class="row" style="position:sticky;bottom:0;background:#ffefd9;padding:.4rem 0"><button class="btn g" id="tSave">💾 บันทึกทีม '+t+'</button><button class="btn" id="tBack">‹ กลับ</button></div>');
+  $('sheet').querySelectorAll('.tsel [data-t]').forEach(b=>b.onclick=()=>teamEdit(+b.dataset.t));$('tBack').onclick=adminSheet;
+  $('tSave').onclick=async e=>{e.currentTarget.disabled=true;const ids=[...$('sheet').querySelectorAll('.plist input:checked:not(:disabled)')].map(i=>i.value);let okN=0;
+    if(run){for(const u of ids.filter(u=>!R.team[u])){if(await call({type:'addMember',uid:u,team:t}))okN++;}toast(okN?'เพิ่ม '+okN+' คนเข้าทีม '+t+' แล้ว':'ไม่มีคนใหม่ให้เพิ่ม');}
+    else if(await call({type:'teams',team:t,members:ids}))toast('บันทึกทีม '+t+' แล้ว ('+ids.length+' คน)');teamEdit(run?t:(t<N?t+1:1));};}
+function menuEdit(t){const cur=new Set(t===0?(R.menus?.[1]||[]):(R.menus?.[t]||[]));
+  const render=()=>{open('<h3>🍱 ตั้งเสบียง<button class="x">✕</button></h3>'+tsel(t,true)+'<div class="hint">เลือก 1–'+PH_MENU_MAX+' เมนู (เลือกแล้ว <b>'+cur.size+'</b>) · ระหว่างแข่ง ผีพรายจะสุ่ม "อยากกิน" ทีละอย่างจากรายการนี้ ทุกเส้น 10</div><div class="fgrid">'+ALL_FOODS.map(k=>{const f=food(k);return '<button data-k="'+esc(k)+'" class="'+(cur.has(k)?'on':'')+'">'+(f.img?'<img src="'+esc(f.img)+'" alt="" loading="lazy">':'')+'<span>'+esc(f.n)+'</span></button>';}).join('')+'</div><div class="row" style="position:sticky;bottom:0;background:#ffefd9;padding:.4rem 0"><button class="btn g" id="mSave">💾 บันทึก'+(t===0?'ให้ทุกทีม':'ทีม '+t)+'</button><button class="btn" id="mBack">‹ กลับ</button></div>');
+    $('sheet').querySelectorAll('.tsel [data-t]').forEach(b=>b.onclick=()=>menuEdit(+b.dataset.t));$('mBack').onclick=adminSheet;
+    $('sheet').querySelectorAll('.fgrid [data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(cur.has(k))cur.delete(k);else{if(cur.size>=PH_MENU_MAX)return toast('เลือกได้ไม่เกิน '+PH_MENU_MAX+' เมนู',true);cur.add(k);}const top=$('sheet').scrollTop;render();$('sheet').scrollTop=top;});
+    $('mSave').onclick=async e=>{if(!cur.size)return toast('เลือกอย่างน้อย 1 เมนู',true);e.currentTarget.disabled=true;if(await call(t===0?{type:'menus',all:true,menus:[...cur]}:{type:'menus',team:t,menus:[...cur]})){toast('บันทึกเสบียง'+(t===0?'ทุกทีม':'ทีม '+t)+' แล้ว');menuEdit(t===0?0:(t<N?t+1:1));}else e.currentTarget.disabled=false;};};render();}
+if(ADMIN){$('bSet').hidden=false;$('bSet').onclick=adminSheet;}
+/* ---------- เริ่ม ---------- */
+window.__phrai={state:()=>({R,MEI,off}),refresh:()=>call({type:'status'},true)};
+(async()=>{build();try{roster=await Host.roster();}catch(e){}const out=await call({type:'status'});if(out&&R.team[ME])setTimeout(()=>focus(R.team[ME]),400);
+  setInterval(()=>{if(R)paintHud();},1000);
+  /* ไม่มีการฟังแบบสด: ถามสถานะทุก 10 วิ ตอนหน้านี้เปิดอยู่และไม่ได้กำลังส่งของ */setInterval(()=>{if(!document.hidden&&!busy&&!$('sheet').classList.contains('on'))call({type:'status'},true);},10000);
+  let rT=0;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{build();paintScene(null);},250);});})();
+</script></body></html>

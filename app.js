@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=e2cfc4d8';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=0a0ffa5e';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=3f8f0ba3';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=e35b4080';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=1c227c7c';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=66a99a14';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=383f3126';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=e4770fd2';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocFromServer, getDocs, setDoc, updateDoc
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=abd818ce';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=1d921b5e';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=de0400c6';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=fb20d645';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -55,7 +55,7 @@ const SCREEN_PARTS={
  house:['house'],backyard:['backyard','module-s3by-entry','module-s4deco-hamster'],forest:['module-s3forest-v1'],
  barn:['animals-barn'],birds:['animals-birds','module-s4deco-safari'],dog:['animals-dog','module-s4deco-dog'],alpaca:['animals-alpaca','module-s4deco-alpaca'],
  catpen:['catpen','module-s4deco-cat'],safari:['inventory','wallet','animals-safari'],shop:['animals-market'],outings:['outings','house'],
- boat:[],neighborhood:['module-s4deco-nb'],treewar:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
+ boat:[],phrai:['animals-alpaca'],/* fix50 */neighborhood:['module-s4deco-nb'],treewar:[],funrun:[],farmshop:['animals-farmshop'],fishing:['animals-fishing'],
  minigames:['animals-minigames'],campaigns:['animals-campaigns'],topspenders:[],city:['animals-city']/* S4 นครยัยหนู */
 };
 const sceneSubscriptions=new Set();
@@ -641,7 +641,7 @@ function subSet(K, v, scope) {
   if (first && G.sub[C.id] === undefined) { G.sub[C.id] = o; assertInventory(G,prior); S.P.g=G; queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); change('g'); setTimeout(reloadScreen, 50); return; }
   G.sub[C.id] = Object.assign(G.sub[C.id] || {}, o);/* fix29 */if(invWipe(prior,G,'โมดูล '+C.id)){showSave('🛡️ ข้อมูลกระเป๋าในหน้านี้ไม่ตรงกับล่าสุด กำลังโหลดใหม่…',true);try{if(Date.now()-(window.__fix29ReloadAt||0)>3000){window.__fix29ReloadAt=Date.now();setTimeout(reloadScreen,50);}}catch(e){}return;}assertInventory(G,prior);S.P.g=G;queueGameplay(prior,G,C.id,campaignBoxes.splice(0)); if (before !== JSON.stringify(G)) change('g');
 }
-const SCREENS = {city:'🏙️ นครยัยหนู',neighborhood:'🏘️ เนเบอร์ฮูด',treewar:'🌳 ศึกโคมลอย',funrun:'🪷 แรลลี่กระทง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders',fishing:'🎣 ตกปลา',farmshop:'🛒 แผงขายหน้าบ้าน',boat:'🚤 แข่งเรือ', safari: '🔬 วิจัยซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์ภาคการเกษตร', birds: '🦒 ซาฟารี', catpen: '🐱 สวนแมว', dog: '🐶 สวนหมา', alpaca: '🦙 ทุ่งอัลปาก้า' };
+const SCREENS = {city:'🏙️ นครยัยหนู',neighborhood:'🏘️ เนเบอร์ฮูด',treewar:'🌳 ศึกโคมลอย',funrun:'🪷 แรลลี่กระทง',minigames:'🎮 มินิเกม',campaigns:'🏅 แคมเปญ',topspenders:'🏆 Top Spenders',fishing:'🎣 ตกปลา',farmshop:'🛒 แผงขายหน้าบ้าน',boat:'🚤 แข่งเรือ',phrai:'🌊 ศึกพรายชิงธง',/* fix50 */ safari: '🔬 วิจัยซาฟารี', shop: '🏪 ตลาดสวน', loading: '', farm: '', house: '', backyard: '🏡 หลังบ้าน', forest: '🌲 ป่าต้องห้าม', barn: '🐔 โรงเรือนสัตว์ภาคการเกษตร', birds: '🦒 ซาฟารี', catpen: '🐱 สวนแมว', dog: '🐶 สวนหมา', alpaca: '🦙 ทุ่งอัลปาก้า' };
 const LS_CAP = 128 * 1024;
 // lastSetError: the latest failed Host.set/subSet (cleared at the start of every set). frameSave(true) throws it.
 let lastSetError = null;
@@ -654,7 +654,7 @@ function frameSave(strict) {
   if (err && strict) throw err;
   return err;
 }
-const CLOUD_HANDLERS={loyg:'loyGiantCloud',/* fix45 🐉 */loy:'loyActionCloud',/* fix36 🪷 */mine:'mineActionCloud',/* fix30 เหมือง */squid:'squidActionCloud',char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
+const CLOUD_HANDLERS={loyd:'loyDolphinCloud',/* fix51 🐬 */phrai:'phraiActionCloud',/* fix50 🌊 */loyg:'loyGiantCloud',/* fix45 🐉 */loy:'loyActionCloud',/* fix36 🪷 */mine:'mineActionCloud',/* fix30 เหมือง */squid:'squidActionCloud',char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
 let cloudBusy=false,cloudPromise=null;
 let apiCheckedSession='';
@@ -677,7 +677,7 @@ async function sceneSafeAction(system,input){
  finally{if(!changed||!S.frame||!S.screen)thaw();else{reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}}
 }
 const hwOpen=()=>{try{return !!S.frame?.contentWindow?.__hwOpen;}catch(e){return false;}};/* fix16: มินิเกมลอยกระทงเปิดอยู่ (หน้าสัตว์หยุดบันทึก รอโหลดใหม่ตอนปิดเกม) */
-const RUMOR_HOLD=new Set(['funrun','minigames','boat','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
+const RUMOR_HOLD=new Set(['funrun','minigames','boat','phrai','fishing','loading']);// ไม่เด้งข่าวลือระหว่างแข่ง/เล่นมินิเกม รอออกจากหน้านั้นก่อน
 /* fix15f แจ้งเตือนทุกหน้า: ยาพิษที่โดนสาด · นางเงือก (เช็กอิน/จ้างออก) — อ่าน gameViews ของตัวเองเท่านั้น */
 let alertStop=null,demonStop=null,twStop=null;let cityStop=null;let nbInvStop=null,nbInvSeen=-1;/* fix29 */
 /* fix20: โดนไอเทมปีศาจ (ตัดสินอัตโนมัติ/เลือกตราหีบ/ส่งต่อหัวใจ) ไม่โหลดหน้าใหม่แล้ว — ผู้เล่นทำต่อได้ ไม่เด้งกลับหน้าแรก
@@ -886,7 +886,7 @@ function renderGame(screen) {
     $('#gback').onclick = () => goScreen('farm');
     /* S4 ข้อ 40: ทุกหน้ามีทางลัดไประบบอื่นตรง ไม่ต้องผ่านฟาร์มหลัก */
     $('#gnav').onclick = () => { const P=$('#s4navP'); if(!P.hidden){P.hidden=true;return;}
-      const SYS=[['farm','🌾','ฟาร์ม'],['house','🏠','บ้าน'],['backyard','🍳','หลังบ้าน'],['barn','🐔','โรงเรือนสัตว์'],['birds','🦒','ซาฟารี'],['dog','🐶','สวนหมา'],['catpen','🐱','สวนแมว'],['alpaca','🦙','ทุ่งอัลปาก้า'],['fishing','🎣','ตกปลา'],['shop','📈','ตลาดสวน'],['neighborhood','🏘️','เนเบอร์ฮูด'],['boat','🚤','แข่งเรือ'],['minigames','🎮','มินิเกม'],['topspenders','🏆','Top Spenders'],['campaigns','🏅','แคมเปญ']];
+      const SYS=[['farm','🌾','ฟาร์ม'],['house','🏠','บ้าน'],['backyard','🍳','หลังบ้าน'],['barn','🐔','โรงเรือนสัตว์'],['birds','🦒','ซาฟารี'],['dog','🐶','สวนหมา'],['catpen','🐱','สวนแมว'],['alpaca','🦙','ทุ่งอัลปาก้า'],['fishing','🎣','ตกปลา'],['shop','📈','ตลาดสวน'],['neighborhood','🏘️','เนเบอร์ฮูด'],['boat','🚤','แข่งเรือ'],['phrai','🌊','ศึกพรายชิงธง'],/* fix50 */['minigames','🎮','มินิเกม'],['topspenders','🏆','Top Spenders'],['campaigns','🏅','แคมเปญ']];
       P.innerHTML='<div class="s4navB"><h3>🗺️ ไปที่…</h3><div class="s4navG">'+SYS.map(x=>'<button data-g="'+x[0]+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join('')+'</div></div>';P.hidden=false;
       P.onclick=e=>{const b=e.target.closest('[data-g]');if(b){P.hidden=true;goScreen(b.dataset.g);}else if(e.target===P)P.hidden=true;}; };
     S.frame = $('#scr');
@@ -948,7 +948,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=b0ea42b8'+extra);return true;}
+  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=7c3520de'+extra);return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
