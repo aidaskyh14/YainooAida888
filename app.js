@@ -9,7 +9,7 @@ import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v
 import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=e35b4080';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
-import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=83efc5ed';
+import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=66a99a14';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=383f3126';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
@@ -948,7 +948,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=cd0ad3f3'+extra);return true;}
+  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=b0ea42b8'+extra);return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
