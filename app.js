@@ -10,7 +10,7 @@ import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=1c227c7c';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=66a99a14';
-import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=9dfd2d68';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
+import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=181738ff';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
 import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=e4770fd2';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -656,7 +656,7 @@ function frameSave(strict) {
 }
 const CLOUD_HANDLERS={loyd:'loyDolphinCloud',/* fix51 🐬 */phrai:'phraiActionCloud',/* fix50 🌊 */loyg:'loyGiantCloud',/* fix45 🐉 */loy:'loyActionCloud',/* fix36 🪷 */mine:'mineActionCloud',/* fix30 เหมือง */squid:'squidActionCloud',char:'charActionCloud',city:'cityActionCloud',pageant:'pageantActionCloud',rumor:'rumorActionCloud',nb:'nbActionCloud',funrun:'funrunActionCloud',integrity:'inventoryIntegrityCloud',craft:'craftActionCloud',hwmini:'hwminiActionCloud',safari:'safariActionCloud',boxes:'boxesActionCloud',drops:'dropsActionCloud',birdbox:'birdboxActionCloud',farm:'farmActionCloud',friends:'friendsActionCloud',market:'marketActionCloud',minigames:'minigamesActionCloud',kang:'kangActionCloud',campaigns:'campaignsActionCloud',events:'eventsActionCloud',fishing:'fishingActionCloud',boat:'boatActionCloud',farmshop:'farmshopActionCloud',outings:'outingsActionCloud',ledger:'ledgerCloud',demon:'demonActionCloud',mahakusal:'mahakusalActionCloud',atm:'atmActionCloud',treewar:'treeWarActionCloud',alpaca:'alpacaActionCloud'};
 const cloudPending=new Map(),cloudSequences=new Map();
-let cloudBusy=false,cloudPromise=null;
+let cloudBusy=false,cloudPromise=null,cloudCurStatus=false,cloudUserWait=false;/* fix59 */
 let apiCheckedSession='';
 async function checkApi(){if(apiCheckedSession===S.sessionId)return;try{const status=(await httpsCallable(functions,'gameApiStatus')({})).data;if(status.release!=='ss3-recovery6')throw new Error('รุ่นระบบกลางไม่ตรงกับเว็บ กรุณาติดตั้ง cloud-update.zip รุ่น recovery6 ให้ครบ');apiCheckedSession=S.sessionId;}catch(e){if(e.code)throw new Error('ยังตรวจรุ่นระบบกลางไม่ได้ กรุณา deploy Cloud Functions ทั้งชุด recovery6: '+(e.message||e.code));throw e;}}
 const nbReportBuf={};let nbReportTimer=0;
@@ -716,7 +716,8 @@ async function sceneCloud(system,input){let shield=document.getElementById('clou
  try{return await cloudAction(system,input);}finally{if(!quiet)shield.remove();}}
 async function cloudAction(system,input) {
   if(!S.user||S.blocked)throw new Error('กรุณาเข้าเกมใหม่');
-  if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');
+  if(cloudBusy){/* fix59 🚦 เช็คสถานะเบื้องหลังกับรายการที่ผู้เล่นกด ไม่ชนกันอีก: รอคิวแทนขึ้น error (กดรายการซ้อนรายการยังปฏิเสธเหมือนเดิม กันกดซ้ำ) */const st59=!!(input&&input.type==='status');if(!st59&&(!cloudCurStatus||cloudUserWait))throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');if(!st59)cloudUserWait=true;try{for(let i59=0;i59<80&&cloudBusy;i59++){try{await cloudPromise;}catch(e){}}}finally{if(!st59)cloudUserWait=false;}if(cloudBusy)throw new Error('กำลังทำรายการก่อนหน้า กรุณารอสักครู่');}
+  cloudCurStatus=!!(input&&input.type==='status');
   if(!CLOUD_HANDLERS[system])throw new Error('ไม่พบระบบที่เรียก');
   let finishCloud;cloudPromise=new Promise(resolve=>{finishCloud=resolve;});cloudBusy=true;if(input.type!=='status')showSave('กำลังบันทึกรายการ…');
   try {
@@ -769,9 +770,9 @@ const HOST_BASE = {
     /* fix17c 📦 กล่องมหากุศล: เปิดจากกระเป๋าได้เลยทุกหน้า (หน้าฉากหยุดบันทึกระหว่างเปิด แล้วโหลดใหม่ให้ตรง) · คราฟอยู่ห้องใต้ดิน */
     /* fix19 🏧 ตู้ ATM: เปิดทับฉากแบบเดียวกับกล่องมหากุศล (ฉากหยุดบันทึกระหว่างโอน แล้วโหลดใหม่) */
     if(kind==='atm'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
-      return window.atmOpen?.({toast,bank:(opt&&opt.bank)||'lotus',uid:S.user?.uid,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,onClose:ch=>{if(ch)refreshScene();else thaw();}});}
+      return window.atmOpen?.({toast,bank:(opt&&opt.bank)||'lotus',uid:S.user?.uid,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},roster:async()=>(await httpsCallable(functions,'gameRoster')({})).data,onClose:ch=>{if(ch||frozen)refreshScene();/* fix59: ตั้ง PIN/ทำรายการแล้วปิด → ฉากอ่านค่าล่าสุดเสมอ */else thaw();}});}
     if(kind==='mahakusal'){if(cloudPromise)await cloudPromise;frameSave(true);await flush();
-      return window.mkOpenMenu?.({toast,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},onClose:ch=>{if(ch)refreshScene();else thaw();}});}
+      return window.mkOpenMenu?.({toast,cloud:(sys,input)=>{if(input?.type!=='status')freeze();return cloudAction(sys,input);},onClose:ch=>{if(ch||frozen)refreshScene();/* fix59: ตั้ง PIN/ทำรายการแล้วปิด → ฉากอ่านค่าล่าสุดเสมอ */else thaw();}});}
     return showLootBoxes(kind,{commit:async()=>{if(cloudPromise)await cloudPromise;frameSave(true);await flush();},game:()=>S.P.g,
       open:input=>{freeze();return cloudAction('boxes',input);},
       refresh:()=>{if(!frozen)return;if(!S.frame||!S.screen){thaw();return;}reloading=true;let done=false;const fin=()=>{if(done)return;done=true;thaw();};S.frame.addEventListener('load',fin,{once:true});setTimeout(fin,20000);reloadScreen();}});},
@@ -948,7 +949,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=424202d4'+extra);return true;}
+  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=7b3e420a'+extra);return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -1152,9 +1153,10 @@ async function tabLoy(day){const B=$('#aBody');B.innerHTML='<div class="box">ก
  $('#kWinAdd').onclick=()=>{const d=document.createElement('div');d.className='row';d.dataset.wi='x';d.style.cssText='flex-wrap:wrap;border:1px dashed #ccc;border-radius:8px;padding:.3rem;margin:.3rem 0';d.innerHTML=`<input class="wName" placeholder="ชื่อช่วง" style="width:9rem"> <input class="wFrom" placeholder="19:00" style="width:4.5rem"> – <input class="wTo" placeholder="21:00" style="width:4.5rem"> <input class="wDays" placeholder="วันที่ (ว่าง=ทุกวัน)" style="width:14rem"> <label><input type="checkbox" class="wNS"> ไม่คิดโทษลอยติดกัน</label>${IT.map(it=>`<label>${it.e}${esc(it.n)} <input class="wW" data-k="${it.k}" type="number" min="0" max="1000" value="${it.k==='kt'?100:0}" style="width:3.6rem"></label>`).join(' ')} <button class="btn sm red wDel">ลบ</button>`;$('#kWins').appendChild(d);};
  $('#kWins').addEventListener('click',e=>{const b=e.target.closest('.wDel');if(b)b.closest('[data-wi]').remove();});
  $('#kSave').onclick=async()=>{try{await lA({op:'cfg',devN:+$('#kDevN').value,uaN:+$('#kUaN').value,ipN:+$('#kIpN').value,viewMs:Math.max(0,+$('#kView').value)*1000,streakMul:+$('#kSM').value,streakKt:+$('#kSK').value,meritPerFloat:+$('#kMF').value,meritPerPt:+$('#kMP').value,meritCap:+$('#kMC').value,clearHour:+$('#kCH').value,w:Object.fromEntries([...document.querySelectorAll('.kW')].map(i=>[i.dataset.k,+i.value||0])),win:readWins()});toast('🔒 บันทึกค่าลับแล้ว');tabLoy();}catch(e){toast(thaiError(e));}};}
-async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const cA=input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pA=input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data);
- let st,pv,qs;try{[st,pv,qs]=await Promise.all([cA({type:'status'}),httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),pA({type:'qList'})]);}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;
- const W=st.world,P=pv.view,Q=qs.questions||[];const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+/* fix59 🧷 แท็บประกวด/นคร: รีเฟรชเงียบ ๆ ไม่ล้างจอ ไม่เลื่อนจอ ไม่ลบที่พิมพ์ค้าง */const s4Keep=B=>{const v={};B.querySelectorAll('input[id],select[id],textarea[id]').forEach(e=>{v[e.id]=e.value;});const rc=B.querySelector('input[name=qC]:checked');const sc=[];for(let e=B;e;e=e.parentElement)if(e.scrollTop>0)sc.push([e,e.scrollTop]);const ql=B.querySelector('[data-qd]');const qs=ql&&ql.parentElement&&ql.parentElement.parentElement?ql.parentElement.parentElement.scrollTop:0;return {v,rc:rc?rc.value:null,sc,qs,pg:window.scrollY||0};},s4Restore=(B,K)=>{try{for(const [id,val] of Object.entries(K.v)){const e=B.querySelector('#'+CSS.escape(id));if(!e||val==null)continue;if(e.tagName==='SELECT'){if([...e.options].some(o=>o.value===val))e.value=val;}else e.value=val;}if(K.rc!=null){const r=B.querySelector('input[name=qC][value="'+K.rc+'"]');if(r)r.checked=true;}const ql=B.querySelector('[data-qd]');if(ql&&K.qs)ql.parentElement.parentElement.scrollTop=K.qs;for(const [e,t] of K.sc)e.scrollTop=t;if(K.pg)window.scrollTo(0,K.pg);}catch(e){}};
+async function tabCity(quiet){const B=$('#aBody');if(!quiet||!B.querySelector('#qQ'))B.innerHTML='<div class="box">กำลังโหลด…</div>';else quiet=2;const cA=input=>httpsCallable(functions,'cityAdminCloud')({input}).then(r=>r.data),pA=input=>httpsCallable(functions,'pageantAdminCloud')({input}).then(r=>r.data);
+ let st,pv,qs;try{[st,pv,qs]=await Promise.all([cA({type:'status'}),httpsCallable(functions,'pageantActionCloud')({raw:true,input:{}}).then(r=>r.data),pA({type:'qList'})]);}catch(e){if(quiet===2){clearTimeout(A.cityT);A.cityT=setTimeout(()=>{if(A.tab==='city'&&document.contains(B))tabCity(true);},5000);return;}B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B)||A.tab!=='city')return;
+ const KEEP59=quiet===2?s4Keep(B):null;const W=st.world,P=pv.view,Q=qs.questions||[];const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
  const ST={idle:'ยังไม่มีการประกวด',announce:'ประกาศแล้ว รอเวลาเริ่ม',podium:'เปิดให้แย่งโพเดียม',lights:'รอบดับไฟ (คนตกรอบจ่ายเพื่ออยู่ต่อ)',thai:'รอบชุดไทย + โชว์ความสามารถ',quiz:'รอบคำถามเกี่ยวกับยัยหนู',cut5:'คัดเหลือ 5 คนแล้ว',swim:'รอบชุดว่ายน้ำ (เดินแบบ)',final:'คำถามสุดท้าย 5 ข้อ',count:'กรรมการกำลังนับคะแนน',result:'ประกาศผลแล้ว',party:'ร่วมแสดงความยินดี'};
  const NEXTL={lights:'▶ ไปรอบชุดไทย',thai:'▶ ไปรอบคำถาม',quiz:'▶ คัดเหลือ 5 คน',cut5:'▶ ไปรอบชุดว่ายน้ำ',swim:'▶ ไปคำถามสุดท้าย',final:'▶ กรรมการนับคะแนน',count:'▶ ประกาศผล',result:'▶ ร่วมยินดี',party:'▶ จบการประกวด'};
  const alive=Object.values(P.contestants||{}).filter(c=>c.alive).length;
@@ -1176,7 +1178,8 @@ async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">ก�
   ${[0,1,2,3].map(i=>`<div class="row" style="margin:.2rem 0"><input type="radio" name="qC" value="${i}" ${i===0?'checked':''}><input id="qA${i}" placeholder="คำตอบ ${i+1}${i===0?' (ติ๊กข้อที่ถูก)':''}" style="flex:1;padding:.4rem;border-radius:10px;border:1px solid #ddd"></div>`).join('')}
   <div class="row"><button class="btn sm gray" id="qSeed">📥 นำเข้าคำถามของยัยหนู 29 ข้อ + ความรู้ทั่วไป 52 ข้อ</button><button class="btn sm gray" id="qDedupe">🧹 ลบคำถามซ้ำ</button></div><div class="row"><select id="qK"><option value="yainoo">เกี่ยวกับยัยหนู</option><option value="general">ความรู้ทั่วไป</option></select><button class="btn" id="qAdd">➕ เพิ่มคำถาม</button></div>
   <div style="max-height:40vh;overflow:auto;margin-top:.4rem">${Q.map(q=>`<div style="display:flex;gap:.4rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid #f1e3cf"><span style="flex:1"><b>${esc(q.q)}</b> <small>(${q.kind==='general'?'ทั่วไป':'ยัยหนู'})</small><br><small>${q.a.map((a,i)=>(i===q.correct?'✅ ':'')+esc(a)).join(' · ')}</small></span><button data-qd="${esc(q.id)}" class="btn sm gray">ลบ</button></div>`).join('')}</div></div>`;
- const run=async(fn,ok)=>{try{await fn();if(ok)toast(ok);}catch(e){toast(thaiError(e));}tabCity();};
+ if(KEEP59)s4Restore(B,KEEP59);
+ const run=async(fn,ok)=>{try{await fn();if(ok)toast(ok);}catch(e){toast(thaiError(e));}tabCity(true);};
  const on=(id,fn)=>{const e=$('#'+id);if(e)e.onclick=fn;};
  on('cClose',()=>modal('<h2>ปิดนคร</h2><div>ทุกคนในนครจะเด้งกลับฟาร์มทันที</div>',[{t:'ยกเลิก',c:'gray'},{t:'ปิดนคร',f:()=>run(()=>cA({type:'kickAll'}),'⛔ ปิดนครแล้ว')}]));
  on('cOpen',()=>run(()=>cA({type:'open'}),'✅ เปิดนครแล้ว'));on('cFree',()=>run(()=>cA({type:'settings',free:!W.free})));on('cHungry',()=>run(()=>cA({type:'settings',hungry:!W.hungry})));
@@ -1190,7 +1193,7 @@ async function tabCity(){const B=$('#aBody');B.innerHTML='<div class="box">ก�
  on('qSeed',()=>run(()=>pA({type:'qSeed'}).then(r=>toast('นำเข้า '+r.added+' ข้อ (ข้อที่มีแล้วไม่นำเข้าซ้ำ)')),''));on('qDedupe',()=>run(()=>pA({type:'qDedupe'}).then(r=>toast('ลบซ้ำ '+r.removed+' ข้อ · เหลือ '+r.left)),''));
  on('qAdd',()=>{const q=$('#qQ').value,a=[0,1,2,3].map(i=>$('#qA'+i).value),correct=+(B.querySelector('input[name=qC]:checked')?.value||0),kind=$('#qK').value;run(()=>pA({type:'qAdd',q,a,correct,kind}),'➕ เพิ่มคำถามแล้ว');});
  B.querySelectorAll('[data-qd]').forEach(b=>b.onclick=()=>run(()=>pA({type:'qDel',id:b.dataset.qd}),'ลบแล้ว'));
- if(P.state!=='idle'){clearTimeout(A.cityT);A.cityT=setTimeout(()=>{if(A.tab==='city'&&document.contains(B))tabCity();},5000);}}
+ if(P.state!=='idle'){clearTimeout(A.cityT);A.cityT=setTimeout(function tk59(){if(A.tab!=='city'||!document.contains(B))return;const ae=document.activeElement;if(ae&&B.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)){A.cityT=setTimeout(tk59,3000);return;}/* กำลังพิมพ์/เลือกอยู่ → ยังไม่รีเฟรช */tabCity(true);},5000);}}
 /* S4 3.10 ศูนย์แอดมิน "ตัวละครผู้เล่น": สุ่มแล้ว/ยังไม่สุ่ม · ต่อตัวละคร · กำหนดตัวละครรายคน */
 async function tabChar(){const B=$('#aBody');B.innerHTML='<div class="box">กำลังโหลด…</div>';const call=input=>httpsCallable(functions,'charAdminCloud')({input}).then(r=>r.data);
  let st;try{st=await call({type:'stats'});}catch(e){B.innerHTML='<div class="box">โหลดไม่สำเร็จ: '+esc(thaiError(e))+'</div>';return;}if(!document.contains(B))return;

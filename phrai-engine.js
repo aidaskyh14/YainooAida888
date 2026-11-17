@@ -7,6 +7,7 @@ import {BOAT_ALPACA} from './boat-engine.js?h=8c7e02f8';
    ③ น้ำขึ้น: นาทีที่ 0–14 ของทุกชั่วโมง ส่ง 1 ชิ้นปีน 2 ขั้น (นอกช่วง = 1 ขั้น)
    เสบียง/จัดทีม/เพิ่มคนระหว่างแข่ง/พัก/รีเซ็ต = แบบเดียวกับแข่งเรือ (แอดมินเท่านั้น) */
 export const PH_TEAMS=10,PH_GOAL=200,PH_STEP=10,PH_MENU_MAX=8;
+/* fix59 🏁 เส้นชัยเลือกได้ต่อรอบ (แอดมินตั้งก่อนเริ่ม) */export const PH_GOALS=[100,200,300,400],phGoal=r=>PH_GOALS.includes(Number(r&&r.goal))?Number(r.goal):PH_GOAL;
 export const PH_SEND_MAX=3,PH_COOLDOWN=5*60000,PH_BOOST_MAX=10;
 /* ค่าเร่ง: [รหัส, ชื่อ, จำนวน, เส้นทางในกระเป๋า, รูป] · ไวน์ = ชนิดใดชนิดหนึ่ง 10 ขวด */
 export const PH_BOOSTS=[['wine-moon','ไวน์องุ่นแสงจันทร์',10,'wine.moon','house-wine-moon.webp'],['wine-rose','ไวน์กุหลาบนพมาศ',10,'wine.rose','house-wine-rose.webp'],['wine-blood','ไวน์องุ่นทับทิม',10,'wine.blood','house-wine-blood.webp'],['wine-eclipse','ไวน์ราชันสุริยคราส',10,'wine.eclipse','house-wine-eclipse.webp'],
@@ -33,7 +34,7 @@ export const phMembers=(r,t)=>Object.keys(r.team||{}).filter(u=>r.team[u]===t);
 export function phTide(now){const H=3600000,into=((now%H)+H)%H,win=PH_TIDE_MIN*60000;return into<win?{on:true,until:now-into+win,next:now-into+H}:{on:false,until:0,next:now-into+H};}
 const pickWant=(r,t,rng)=>{const m=r.menus?.[t]||[];if(!m.length){delete r.want[t];return null;}const prev=r.want[t],pool=m.length>1?m.filter(k=>k!==prev):m;const k=pool[Math.floor(rng()*pool.length)%pool.length];r.want[t]=k;return k;};
 const SEND_GROUP=g=>g==='food'?'food':g==='drink'?'drink':g==='bird'?'bird':g==='fishing'?'fishing':'gfood';
-export function publicPhrai(r,now){const v={status:r.status,p:r.p,team:r.team,names:r.names,menus:r.menus,want:r.want,sent:r.sent,log:(r.log||[]).slice(0,30),winner:r.winner,round:r.round||0,pausedAt:r.pausedAt||null,goal:PH_GOAL,off:r.off||{}};return v;}
+export function publicPhrai(r,now){const v={status:r.status,p:r.p,team:r.team,names:r.names,menus:r.menus,want:r.want,sent:r.sent,log:(r.log||[]).slice(0,30),winner:r.winner,round:r.round||0,pausedAt:r.pausedAt||null,goal:phGoal(r),off:r.off||{}};return v;}
 export function phraiAction(source,account,ctx,input,rng=Math.random){
   const r={...freshPhrai(),...structuredClone(source||{})},player=structuredClone(account),{uid,admin,now}=ctx;
   if(!uid||!Number.isFinite(now))fail('ไม่มีบัญชีหรือเวลาเซิร์ฟเวอร์');
@@ -64,13 +65,14 @@ export function phraiAction(source,account,ctx,input,rng=Math.random){
     if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='setup')fail('เปิด/ปิดธงได้ก่อนเริ่มรอบเท่านั้น (รีเซ็ตรอบก่อน)');const off=input.off;
     if(!Array.isArray(off)||off.some(t=>!teamOk(t))||new Set(off).size!==off.length)fail('รายการธงไม่ถูกต้อง');if(off.length>=PH_TEAMS)fail('ต้องเปิดธงไว้อย่างน้อย 1 ทีม');
     r.off=Object.fromEntries(off.map(t=>[t,1]));return done();}
+  if(type==='goal'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='setup')fail('ตั้งเส้นชัยได้ก่อนเริ่มรอบเท่านั้น (รีเซ็ตรอบก่อน)');const g=Number(input.goal);if(!PH_GOALS.includes(g))fail('เส้นชัยต้องเป็น 100, 200, 300 หรือ 400');r.goal=g;return done();}
   if(type==='pause'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='running')fail('สถานะไม่ถูกต้อง');r.status='paused';r.pausedAt=now;log(r,'⏸️ แอดมินพักการแข่งขัน');return done();}
   if(type==='resume'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='paused')fail('สถานะไม่ถูกต้อง');const d=Math.max(0,now-(r.pausedAt||now));for(const k of Object.keys(r.cd))if(r.cd[k]>r.pausedAt)r.cd[k]+=d;/* เวลาที่พักไม่นับเป็นเวลารอ */r.status='running';r.pausedAt=null;log(r,'▶️ แข่งต่อ');return done();}
   if(type==='start'){
     if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='setup')fail('รีเซ็ตรอบเดิมก่อนเริ่มรอบใหม่');if(!Object.keys(r.team).length)fail('ต้องจัดทีมก่อน');if(!TEAMS.some(t=>!phOff(r,t)&&phMembers(r,t).length))fail('ธงที่เปิดอยู่ยังไม่มีสมาชิกเลย จัดทีมหรือเปิดธงก่อน');
-    const f=freshPhrai();f.team={...r.team};f.menus={...r.menus};f.names={...r.names};f.off={...r.off};f.round=now;f.status='running';f._now=now;for(const t of TEAMS)if(!phOff(f,t)&&phMembers(f,t).length)pickWant(f,t,rng);log(f,'🏁 เริ่มแข่งผีพรายปีนเสา');delete f._now;
+    const f=freshPhrai();f.team={...r.team};f.menus={...r.menus};f.names={...r.names};f.off={...r.off};f.goal=phGoal(r);f.round=now;f.status='running';f._now=now;for(const t of TEAMS)if(!phOff(f,t)&&phMembers(f,t).length)pickWant(f,t,rng);log(f,'🏁 เริ่มแข่งผีพรายปีนเสา');delete f._now;
     return {race:f,player,me:meOf(f),tide:phTide(now)};}
-  if(type==='reset'){if(!admin)fail('เฉพาะแอดมิน');const f=freshPhrai();f.team={...r.team};f.names={...r.names};f.menus={...r.menus};f.off={...r.off};f.lastWinner=r.winner||null;return {race:f,player,me:meOf(f),tide:phTide(now)};}
+  if(type==='reset'){if(!admin)fail('เฉพาะแอดมิน');const f=freshPhrai();f.team={...r.team};f.names={...r.names};f.menus={...r.menus};f.off={...r.off};f.goal=phGoal(r);f.lastWinner=r.winner||null;return {race:f,player,me:meOf(f),tide:phTide(now)};}
   if(type==='boost'){/* จ่ายค่าเร่ง → ส่งต่อได้ทันที (คนละ PH_BOOST_MAX ครั้งต่อการแข่งขัน) */
     if(r.status==='paused')fail('⏸️ แอดมินพักการแข่งขันอยู่');if(r.status!=='running')fail(r.status==='finished'?'การแข่งขันจบแล้ว':'ยังไม่เริ่มการแข่งขัน');
     if(!teamOk(t0))fail('คุณยังไม่มีทีม');if(phOff(r,t0))fail('รอบนี้ธงของทีมคุณปิดอยู่');const c=phCool(r,uid,now);if(c.ready)fail('ตอนนี้ส่งได้เลย ไม่ต้องเร่ง');if(c.boostLeft<1)fail('เร่งครบ '+PH_BOOST_MAX+' ครั้งของการแข่งขันนี้แล้ว รอเวลานะ');
@@ -96,9 +98,9 @@ export function phraiAction(source,account,ctx,input,rng=Math.random){
   if(menus.length&&!c.got.includes(menuKey)){c.got.push(menuKey);if(menus.every(m=>c.got.includes(m))){combo=PH_COMBO;c.got=[];c.n=(c.n||0)+1;log(r,'🍱 '+nameOf(r,uid)+' ส่งเสบียงครบทุกเมนู รับคอมโบ +'+PH_COMBO.toLocaleString('en-US')+' กุศล');}}
   player.merit=(Number(player.merit)||0)+gain+combo;
   r.cd[uid]=now+PH_COOLDOWN;r.sent[uid]=(r.sent[uid]||0)+qty;r.items[menuKey]=(r.items[menuKey]||0)+qty;
-  const tide=phTide(now),step=(tide.on?PH_TIDE_GAIN:1)*qty,before=r.p[t0-1],after=Math.min(PH_GOAL,before+step);r.p[t0-1]=after;
+  const tide=phTide(now),step=(tide.on?PH_TIDE_GAIN:1)*qty,before=r.p[t0-1],after=Math.min(phGoal(r),before+step);r.p[t0-1]=after;
   log(r,nameOf(r,uid)+' ส่งเสบียง '+qty+' ชิ้นให้ผีพรายทีม '+t0+(tide.on?' 🌊 น้ำขึ้น ×2':''));
-  let lineUp=false;if(Math.floor(after/PH_STEP)>Math.floor(before/PH_STEP)&&after<PH_GOAL){lineUp=true;const w=pickWant(r,t0,rng);log(r,'⬆️ ผีพรายทีม '+t0+' ปีนถึงเส้น '+Math.floor(after/PH_STEP)*PH_STEP+(w?' · เปลี่ยนของที่อยากกิน':''));}
-  if(after>=PH_GOAL){r.status='finished';r.winner=t0;log(r,'🏁 ผีพรายทีม '+t0+' คว้าธงที่ '+PH_GOAL+' ชนะ!');}
-  return done({supply:{gain,combo,step,qty,tide:tide.on,p:after,lineUp,line:Math.floor(after/PH_STEP)*PH_STEP,win:after>=PH_GOAL,want:r.want[t0]||null}});
+  let lineUp=false;if(Math.floor(after/PH_STEP)>Math.floor(before/PH_STEP)&&after<phGoal(r)){lineUp=true;const w=pickWant(r,t0,rng);log(r,'⬆️ ผีพรายทีม '+t0+' ปีนถึงเส้น '+Math.floor(after/PH_STEP)*PH_STEP+(w?' · เปลี่ยนของที่อยากกิน':''));}
+  if(after>=phGoal(r)){r.status='finished';r.winner=t0;log(r,'🏁 ผีพรายทีม '+t0+' คว้าธงที่ '+phGoal(r)+' ชนะ!');}
+  return done({supply:{gain,combo,step,qty,tide:tide.on,p:after,lineUp,line:Math.floor(after/PH_STEP)*PH_STEP,win:after>=phGoal(r),want:r.want[t0]||null}});
 }
