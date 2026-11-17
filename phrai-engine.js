@@ -2,12 +2,18 @@ import {CATALOG} from './catalog.js?h=fb20d645';
 import {BOAT_ALPACA} from './boat-engine.js?h=8c7e02f8';
 /* fix50 🌊 แข่งผีพรายปีนเสา — กติกาเป็นฟังก์ชันล้วน (ใช้ใน transaction บนคลาวด์ · หน้าเว็บใช้แค่ค่าคงที่)
    10 ทีม · ผีพรายปีนจาก 0 ถึง 200 (เส้นละ 10) ทีมแรกที่ถึง 200 = คว้าธง ชนะ · ไม่มีการ์ด/เตะ/เผา/นางในวรรณคดี/ฝน
-   ① แรงผีพราย: คนละ 3 ดวง ส่ง 1 ชิ้นใช้ 1 ดวง ฟื้น 1 ดวงทุก 20 นาที (มีของเยอะก็ส่งรัวไม่ได้)
+   ① จังหวะส่ง (fix53): ส่งได้ครั้งละ 1–3 ชิ้น แล้วต้องรอ 5 นาทีก่อนส่งครั้งถัดไป · ไม่อยากรอ = จ่ายค่าเร่ง (ไวน์ 10 ขวด หรือ หมวกกะลาสี/ปีกนางฟ้า/เค้ก/มะพร้าว 300) ส่งต่อได้ทันที · เร่งได้คนละ 10 ครั้งต่อการแข่งขัน
    ② ผีพรายอยากกิน: ทุกเส้น 10 แต่ละทีมสุ่ม "ของที่อยากกิน" 1 อย่างจากเสบียงที่แอดมินตั้ง ต้องส่งของอย่างนั้นถึงจะปีน
    ③ น้ำขึ้น: นาทีที่ 0–14 ของทุกชั่วโมง ส่ง 1 ชิ้นปีน 2 ขั้น (นอกช่วง = 1 ขั้น)
    เสบียง/จัดทีม/เพิ่มคนระหว่างแข่ง/พัก/รีเซ็ต = แบบเดียวกับแข่งเรือ (แอดมินเท่านั้น) */
 export const PH_TEAMS=10,PH_GOAL=200,PH_STEP=10,PH_MENU_MAX=8;
-export const PH_ENERGY=3,PH_REGEN=20*60000;
+export const PH_SEND_MAX=3,PH_COOLDOWN=5*60000,PH_BOOST_MAX=10;
+/* ค่าเร่ง: [รหัส, ชื่อ, จำนวน, เส้นทางในกระเป๋า, รูป] · ไวน์ = ชนิดใดชนิดหนึ่ง 10 ขวด */
+export const PH_BOOSTS=[['wine-moon','ไวน์องุ่นแสงจันทร์',10,'wine.moon','house-wine-moon.webp'],['wine-rose','ไวน์กุหลาบนพมาศ',10,'wine.rose','house-wine-rose.webp'],['wine-blood','ไวน์องุ่นทับทิม',10,'wine.blood','house-wine-blood.webp'],['wine-eclipse','ไวน์ราชันสุริยคราส',10,'wine.eclipse','house-wine-eclipse.webp'],
+ ['hat','หมวกกะลาสี',300,'item.hat','honey-sailorhat.webp'],['angel','ปีกนางฟ้า',300,'item.angel','item-angelwings.webp'],['cake','เค้ก',300,'item.cake','item-cake.webp'],['coconut','มะพร้าว',300,'item.coconut','item-coconut.webp']];
+export const phBagGet=(g,path)=>{const [a,b]=String(path).split('.');const v=Math.floor(Number(g?.bag?.[a]?.[b]));return Number.isSafeInteger(v)&&v>0?v:0;};
+/* จังหวะส่งของผู้เล่น: ready = ส่งได้เลย · next = เวลาที่ส่งได้ (0 = ได้เลย) · boost = เร่งไปแล้วกี่ครั้ง */
+export function phCool(r,uid,now){const at=Number(r.cd?.[uid])||0,used=Math.max(0,Math.floor(Number(r.boost?.[uid])||0));const ready=!(at>now);return {ready,next:ready?0:at,boost:used,boostLeft:Math.max(0,PH_BOOST_MAX-used)};}
 export const PH_TIDE_MIN=15,PH_TIDE_GAIN=2;
 export const PH_FOOD_MERIT=[500,2000],PH_COMBO=100000;/* กุศลต่อชิ้น 500–2,000 · คอมโบส่งครบทุกเมนู 100,000 */
 export const PH_COLORS=['#ff5a7a','#ff9f2e','#e6b800','#4fb83a','#1fa99c','#2f93ec','#5b6cff','#a66bff','#f04fc4','#a07850'];
@@ -17,14 +23,12 @@ export const phMenuOk=k=>PH_FOOD_KEYS.has(k)||(typeof k==='string'&&k.startsWith
 const fail=m=>{throw Object.assign(new Error(m),{code:'failed-precondition'});};
 const teamOk=t=>Number.isInteger(t)&&t>=1&&t<=PH_TEAMS;
 const TEAMS=Array.from({length:PH_TEAMS},(_,i)=>i+1);
-export const freshPhrai=()=>({status:'setup',p:Array(PH_TEAMS).fill(0),team:{},names:{},menus:{},want:{},en:{},sent:{},combo:{},items:{},log:[],winner:null,round:0,pausedAt:null,off:{}});
+export const freshPhrai=()=>({status:'setup',p:Array(PH_TEAMS).fill(0),team:{},names:{},menus:{},want:{},en:{},sent:{},combo:{},items:{},log:[],winner:null,round:0,pausedAt:null,off:{},cd:{},boost:{}});
 /* ปิดธง: off={[ทีม]:1} · ทีมที่ปิดไม่ร่วมแข่งรอบนั้น (เสาเทา ส่งไม่ได้ ไม่อยู่ในสรุป) · แอดมินตั้งได้ก่อนเริ่มรอบ */
 export const phOff=(r,t)=>!!(r&&r.off&&r.off[t]);
 const nameOf=(r,u)=>String(r.names?.[u]||'สมาชิก');
 const log=(r,t)=>{r.log.unshift({t,at:r._now});r.log=r.log.slice(0,40);};
 export const phMembers=(r,t)=>Object.keys(r.team||{}).filter(u=>r.team[u]===t);
-/* ① แรง: เก็บ {n,at} · at = เวลาที่เริ่มนับฟื้นดวงถัดไป */
-export function phEnergy(r,uid,now){const e=r.en?.[uid];if(!e)return {n:PH_ENERGY,next:0};let n=Math.max(0,Math.min(PH_ENERGY,Number(e.n)||0)),at=Number(e.at)||now;if(n<PH_ENERGY){const k=Math.floor((now-at)/PH_REGEN);if(k>0){n=Math.min(PH_ENERGY,n+k);at+=k*PH_REGEN;}}return {n,next:n<PH_ENERGY?at+PH_REGEN:0,at};}
 /* ③ น้ำขึ้น: นาทีที่ 0–14 ของทุกชั่วโมง (นาทีของนาฬิกาเหมือนกันทุกเขตเวลาที่เป็นชั่วโมงเต็ม/ครึ่ง → ใช้เวลาไทย UTC+7) */
 export function phTide(now){const H=3600000,into=((now%H)+H)%H,win=PH_TIDE_MIN*60000;return into<win?{on:true,until:now-into+win,next:now-into+H}:{on:false,until:0,next:now-into+H};}
 const pickWant=(r,t,rng)=>{const m=r.menus?.[t]||[];if(!m.length){delete r.want[t];return null;}const prev=r.want[t],pool=m.length>1?m.filter(k=>k!==prev):m;const k=pool[Math.floor(rng()*pool.length)%pool.length];r.want[t]=k;return k;};
@@ -33,9 +37,10 @@ export function publicPhrai(r,now){const v={status:r.status,p:r.p,team:r.team,na
 export function phraiAction(source,account,ctx,input,rng=Math.random){
   const r={...freshPhrai(),...structuredClone(source||{})},player=structuredClone(account),{uid,admin,now}=ctx;
   if(!uid||!Number.isFinite(now))fail('ไม่มีบัญชีหรือเวลาเซิร์ฟเวอร์');
-  for(const k of ['team','names','menus','want','en','sent','combo','items','off'])r[k] ||= {};if(!Array.isArray(r.p)||r.p.length!==PH_TEAMS)r.p=Array(PH_TEAMS).fill(0);if(!Array.isArray(r.log))r.log=[];
+  for(const k of ['team','names','menus','want','en','sent','combo','items','off','cd','boost'])r[k] ||= {};if(!Array.isArray(r.p)||r.p.length!==PH_TEAMS)r.p=Array(PH_TEAMS).fill(0);if(!Array.isArray(r.log))r.log=[];
   r._now=now;const type=input?.type;if(ctx.name&&r.team[uid])r.names[uid]=String(ctx.name).slice(0,40);
-  const done=extra=>{delete r._now;const e=phEnergy(r,uid,now);return {race:r,player,me:{team:r.team[uid]||0,energy:e.n,next:e.next,max:PH_ENERGY},tide:phTide(now),...extra};};
+  const meOf=R=>{const c=phCool(R,uid,now);return {team:R.team[uid]||0,ready:c.ready,next:c.next,boost:c.boost,boostMax:PH_BOOST_MAX,cooldown:PH_COOLDOWN,sendMax:PH_SEND_MAX};};
+  const done=extra=>{delete r._now;return {race:r,player,me:meOf(r),tide:phTide(now),...extra};};
   const addNames=()=>{for(const [id,n]of Object.entries(input.names||{}))if(typeof n==='string')r.names[id]=n.slice(0,40);};
   const t0=r.team[uid];
   if(type==='status')return done();
@@ -60,33 +65,40 @@ export function phraiAction(source,account,ctx,input,rng=Math.random){
     if(!Array.isArray(off)||off.some(t=>!teamOk(t))||new Set(off).size!==off.length)fail('รายการธงไม่ถูกต้อง');if(off.length>=PH_TEAMS)fail('ต้องเปิดธงไว้อย่างน้อย 1 ทีม');
     r.off=Object.fromEntries(off.map(t=>[t,1]));return done();}
   if(type==='pause'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='running')fail('สถานะไม่ถูกต้อง');r.status='paused';r.pausedAt=now;log(r,'⏸️ แอดมินพักการแข่งขัน');return done();}
-  if(type==='resume'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='paused')fail('สถานะไม่ถูกต้อง');const d=Math.max(0,now-(r.pausedAt||now));for(const e of Object.values(r.en))if(e&&Number.isFinite(e.at))e.at+=d;/* เวลาที่พักไม่นับเป็นเวลาฟื้นแรง */r.status='running';r.pausedAt=null;log(r,'▶️ แข่งต่อ');return done();}
+  if(type==='resume'){if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='paused')fail('สถานะไม่ถูกต้อง');const d=Math.max(0,now-(r.pausedAt||now));for(const k of Object.keys(r.cd))if(r.cd[k]>r.pausedAt)r.cd[k]+=d;/* เวลาที่พักไม่นับเป็นเวลารอ */r.status='running';r.pausedAt=null;log(r,'▶️ แข่งต่อ');return done();}
   if(type==='start'){
     if(!admin)fail('เฉพาะแอดมิน');if(r.status!=='setup')fail('รีเซ็ตรอบเดิมก่อนเริ่มรอบใหม่');if(!Object.keys(r.team).length)fail('ต้องจัดทีมก่อน');if(!TEAMS.some(t=>!phOff(r,t)&&phMembers(r,t).length))fail('ธงที่เปิดอยู่ยังไม่มีสมาชิกเลย จัดทีมหรือเปิดธงก่อน');
     const f=freshPhrai();f.team={...r.team};f.menus={...r.menus};f.names={...r.names};f.off={...r.off};f.round=now;f.status='running';f._now=now;for(const t of TEAMS)if(!phOff(f,t)&&phMembers(f,t).length)pickWant(f,t,rng);log(f,'🏁 เริ่มแข่งผีพรายปีนเสา');delete f._now;
-    const e=phEnergy(f,uid,now);return {race:f,player,me:{team:f.team[uid]||0,energy:e.n,next:e.next,max:PH_ENERGY},tide:phTide(now)};}
-  if(type==='reset'){if(!admin)fail('เฉพาะแอดมิน');const f=freshPhrai();f.team={...r.team};f.names={...r.names};f.menus={...r.menus};f.off={...r.off};f.lastWinner=r.winner||null;return {race:f,player,me:{team:f.team[uid]||0,energy:PH_ENERGY,next:0,max:PH_ENERGY},tide:phTide(now)};}
+    return {race:f,player,me:meOf(f),tide:phTide(now)};}
+  if(type==='reset'){if(!admin)fail('เฉพาะแอดมิน');const f=freshPhrai();f.team={...r.team};f.names={...r.names};f.menus={...r.menus};f.off={...r.off};f.lastWinner=r.winner||null;return {race:f,player,me:meOf(f),tide:phTide(now)};}
+  if(type==='boost'){/* จ่ายค่าเร่ง → ส่งต่อได้ทันที (คนละ PH_BOOST_MAX ครั้งต่อการแข่งขัน) */
+    if(r.status==='paused')fail('⏸️ แอดมินพักการแข่งขันอยู่');if(r.status!=='running')fail(r.status==='finished'?'การแข่งขันจบแล้ว':'ยังไม่เริ่มการแข่งขัน');
+    if(!teamOk(t0))fail('คุณยังไม่มีทีม');if(phOff(r,t0))fail('รอบนี้ธงของทีมคุณปิดอยู่');const c=phCool(r,uid,now);if(c.ready)fail('ตอนนี้ส่งได้เลย ไม่ต้องเร่ง');if(c.boostLeft<1)fail('เร่งครบ '+PH_BOOST_MAX+' ครั้งของการแข่งขันนี้แล้ว รอเวลานะ');
+    const row=PH_BOOSTS.find(b=>b[0]===input.pay);if(!row)fail('เลือกของที่ใช้เร่งไม่ถูกต้อง');const have=phBagGet(player,row[3]);if(have<row[2])fail(row[1]+'ไม่พอ ต้องใช้ '+row[2]+' (มี '+have+')');
+    const [a,b]=row[3].split('.');player.bag[a][b]=have-row[2];delete r.cd[uid];r.boost[uid]=c.boost+1;log(r,'⚡ '+nameOf(r,uid)+' เร่งผีพรายทีม '+t0);
+    return done({boosted:{pay:row[0],n:row[2],name:row[1],left:PH_BOOST_MAX-c.boost-1}});}
   if(type!=='supply')fail('คำสั่งไม่ถูกต้อง');
   if(r.status==='paused')fail('⏸️ แอดมินพักการแข่งขันอยู่');if(r.status!=='running')fail(r.status==='finished'?'การแข่งขันจบแล้ว':'ยังไม่เริ่มการแข่งขัน');
   if(!teamOk(t0))fail('คุณยังไม่มีทีม รอยัยหนูจัดทีมให้ก่อนนะ');if(phOff(r,t0))fail('รอบนี้ธงของทีมคุณปิดอยู่ ดูการแข่งได้นะ');
-  const en=phEnergy(r,uid,now);if(en.n<1)fail('แรงหมดแล้ว รอฟื้นอีกสักครู่');
+  const cool=phCool(r,uid,now);if(!cool.ready){const w=Math.max(1,Math.ceil((cool.next-now)/1000));fail('รออีก '+Math.floor(w/60)+':'+String(w%60).padStart(2,'0')+' นาที ถึงจะส่งได้อีก (หรือจ่ายค่าเร่ง)');}
+  const qty=Number(input.n??1);if(!Number.isInteger(qty)||qty<1||qty>PH_SEND_MAX)fail('ส่งได้ครั้งละ 1–'+PH_SEND_MAX+' ชิ้น');
   const alp=input.group==='alpaca',k=String(input.food);let menuKey,have,take;
-  if(alp){if(!BOAT_ALPACA[k])fail('ของแปรรูปนี้ส่งเป็นเสบียงไม่ได้');menuKey='alp-'+k;have=Number(player.sub?.alpaca?.bag?.[k])||0;take=()=>{player.sub.alpaca.bag[k]=have-1;};}
+  if(alp){if(!BOAT_ALPACA[k])fail('ของแปรรูปนี้ส่งเป็นเสบียงไม่ได้');menuKey='alp-'+k;have=Number(player.sub?.alpaca?.bag?.[k])||0;take=()=>{player.sub.alpaca.bag[k]=have-qty;};}
   else{const group=SEND_GROUP(input.group),menu=CATALOG.find(c=>c.p===group+'.'+k);menuKey=menu?.k||null;if(!menuKey||!PH_FOOD_KEYS.has(menuKey))fail('อาหารนี้ส่งเป็นเสบียงไม่ได้');
-    have=Number(player.bag?.[group]?.[k])||0;take=()=>{player.bag[group] ||= {};player.bag[group][k]=have-1;};}
+    have=Number(player.bag?.[group]?.[k])||0;take=()=>{player.bag[group] ||= {};player.bag[group][k]=have-qty;};}
   const menus=r.menus[t0]||[];if(menus.length&&!menus.includes(menuKey))fail('อาหารนี้ไม่อยู่ในเสบียงของทีม');
   if(menus.length&&r.want[t0]&&!menus.includes(r.want[t0]))pickWant(r,t0,rng);/* เสบียงถูกแก้ระหว่างรอบ (ไม่ควรเกิด) */
   if(menus.length&&!r.want[t0])pickWant(r,t0,rng);
   if(menus.length&&r.want[t0]!==menuKey)fail('ตอนนี้ผีพรายอยากกินอย่างอื่น ส่งของที่ผีพรายขอนะ');
-  if(!Number.isSafeInteger(have)||have<1)fail(alp?'ของแปรรูปไม่พอ':'อาหารไม่พอ');
-  take();const gain=PH_FOOD_MERIT[0]+Math.floor(rng()*(PH_FOOD_MERIT[1]-PH_FOOD_MERIT[0]+1));
+  if(!Number.isSafeInteger(have)||have<qty)fail((alp?'ของแปรรูปไม่พอ':'อาหารไม่พอ')+' (มี '+(Number.isSafeInteger(have)?have:0)+' จะส่ง '+qty+')');
+  take();let gain=0;for(let i=0;i<qty;i++)gain+=PH_FOOD_MERIT[0]+Math.floor(rng()*(PH_FOOD_MERIT[1]-PH_FOOD_MERIT[0]+1));
   let c=r.combo[uid];if(!c||c.t!==t0)c=r.combo[uid]={t:t0,got:[]};let combo=0;
   if(menus.length&&!c.got.includes(menuKey)){c.got.push(menuKey);if(menus.every(m=>c.got.includes(m))){combo=PH_COMBO;c.got=[];c.n=(c.n||0)+1;log(r,'🍱 '+nameOf(r,uid)+' ส่งเสบียงครบทุกเมนู รับคอมโบ +'+PH_COMBO.toLocaleString('en-US')+' กุศล');}}
   player.merit=(Number(player.merit)||0)+gain+combo;
-  r.en[uid]={n:en.n-1,at:en.n>=PH_ENERGY?now:(en.at||now)};r.sent[uid]=(r.sent[uid]||0)+1;r.items[menuKey]=(r.items[menuKey]||0)+1;
-  const tide=phTide(now),step=tide.on?PH_TIDE_GAIN:1,before=r.p[t0-1],after=Math.min(PH_GOAL,before+step);r.p[t0-1]=after;
-  log(r,nameOf(r,uid)+' ส่งเสบียงให้ผีพรายทีม '+t0+(tide.on?' 🌊 น้ำขึ้น ×2':''));
+  r.cd[uid]=now+PH_COOLDOWN;r.sent[uid]=(r.sent[uid]||0)+qty;r.items[menuKey]=(r.items[menuKey]||0)+qty;
+  const tide=phTide(now),step=(tide.on?PH_TIDE_GAIN:1)*qty,before=r.p[t0-1],after=Math.min(PH_GOAL,before+step);r.p[t0-1]=after;
+  log(r,nameOf(r,uid)+' ส่งเสบียง '+qty+' ชิ้นให้ผีพรายทีม '+t0+(tide.on?' 🌊 น้ำขึ้น ×2':''));
   let lineUp=false;if(Math.floor(after/PH_STEP)>Math.floor(before/PH_STEP)&&after<PH_GOAL){lineUp=true;const w=pickWant(r,t0,rng);log(r,'⬆️ ผีพรายทีม '+t0+' ปีนถึงเส้น '+Math.floor(after/PH_STEP)*PH_STEP+(w?' · เปลี่ยนของที่อยากกิน':''));}
   if(after>=PH_GOAL){r.status='finished';r.winner=t0;log(r,'🏁 ผีพรายทีม '+t0+' คว้าธงที่ '+PH_GOAL+' ชนะ!');}
-  return done({supply:{gain,combo,step,tide:tide.on,p:after,lineUp,line:Math.floor(after/PH_STEP)*PH_STEP,win:after>=PH_GOAL,want:r.want[t0]||null}});
+  return done({supply:{gain,combo,step,qty,tide:tide.on,p:after,lineUp,line:Math.floor(after/PH_STEP)*PH_STEP,win:after>=PH_GOAL,want:r.want[t0]||null}});
 }
