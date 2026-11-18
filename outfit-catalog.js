@@ -24,6 +24,12 @@ export const OUTFITS={};
 /* fix39 🍉 ชุดว่ายน้ำวอเท่อเมล่อน (ทุกตัวละคร · ยัยหนูส่งเท่านั้น) */const WM=pre=>[[pre+'wmswim','วอเท่อเมล่อน','c4',pre+'wmswim']];
 /* fix44 🌊 ชุดว่ายน้ำ จะพาเธอนั้นไปลอยทะเล (ทุกตัวละคร · ยัยหนูส่งเท่านั้น) */const SEA=pre=>[[pre+'seaswim','จะพาเธอนั้นไปลอยทะเล','c4',pre+'seaswim']];
 for(const [tribe,list] of [['pink',PINK.concat(RW(''),WM(''),SEA(''))],['mint',mk('m',MN).concat(RW('m'),WM('m'),SEA('m'))],['red',mk('r',RN).concat(RW('r'),WM('r'),SEA('r'))],['bob',mk('b',BN).concat(RW('b'),WM('b'),SEA('b'))]])for(const [id,n,cls,file] of list)OUTFITS[id]={id,n,cls,tribe,file,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};
+/* fix60 ชุด:durian */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"durian",n="ทุรง ทุเรียน";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix61 ชุด:teacher */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"teacher",n="ฉันเป็นครู";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix62 ชุด:police */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"police",n="ผู้พิทักษ์สันติราช";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix63 ชุด:farmer */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"farmer",n="เราชาวนาอยู่กับควาย";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix64 ชุด:nurse */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"nurse",n="นางพยาบาล";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix65 ชุด:win */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"win",n="วินป๊ะจ๊ะ";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 export const outfitsOf=tribe=>Object.values(OUTFITS).filter(o=>o.tribe===tribe);
 export const outfitIcon=id=>id==='queen'?'outfit-queen.webp':'outfit-'+id+'.webp';
 export const canSendOutfit=id=>!!OUTFITS[id]&&OUTFITS[id].cls!=='q';

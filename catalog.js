@@ -1487,6 +1487,30 @@ CATALOG.push({"k":"outfit-seaswim","n":"👗 จะพาเธอนั้น�
 CATALOG.push({"k":"outfit-mseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-mseaswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mseaswim"});
 CATALOG.push({"k":"outfit-rseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-rseaswim.webp","g":"ชุด·หัวแดง","p":"outfit.rseaswim"});
 CATALOG.push({"k":"outfit-bseaswim","n":"👗 จะพาเธอนั้นไปลอยทะเล · ยัยหนูส่งเท่านั้น","i":"outfit-bseaswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bseaswim"});
+CATALOG.push({"k":"outfit-durian","n":"👗 ทุรง ทุเรียน · ยัยหนูส่งเท่านั้น","i":"outfit-durian.webp","g":"ชุด·ชมพู","p":"outfit.durian"});
+CATALOG.push({"k":"outfit-mdurian","n":"👗 ทุรง ทุเรียน · ยัยหนูส่งเท่านั้น","i":"outfit-mdurian.webp","g":"ชุด·หัวเขียว","p":"outfit.mdurian"});
+CATALOG.push({"k":"outfit-rdurian","n":"👗 ทุรง ทุเรียน · ยัยหนูส่งเท่านั้น","i":"outfit-rdurian.webp","g":"ชุด·หัวแดง","p":"outfit.rdurian"});
+CATALOG.push({"k":"outfit-bdurian","n":"👗 ทุรง ทุเรียน · ยัยหนูส่งเท่านั้น","i":"outfit-bdurian.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bdurian"});
+CATALOG.push({"k":"outfit-teacher","n":"👗 ฉันเป็นครู · ยัยหนูส่งเท่านั้น","i":"outfit-teacher.webp","g":"ชุด·ชมพู","p":"outfit.teacher"});
+CATALOG.push({"k":"outfit-mteacher","n":"👗 ฉันเป็นครู · ยัยหนูส่งเท่านั้น","i":"outfit-mteacher.webp","g":"ชุด·หัวเขียว","p":"outfit.mteacher"});
+CATALOG.push({"k":"outfit-rteacher","n":"👗 ฉันเป็นครู · ยัยหนูส่งเท่านั้น","i":"outfit-rteacher.webp","g":"ชุด·หัวแดง","p":"outfit.rteacher"});
+CATALOG.push({"k":"outfit-bteacher","n":"👗 ฉันเป็นครู · ยัยหนูส่งเท่านั้น","i":"outfit-bteacher.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bteacher"});
+CATALOG.push({"k":"outfit-police","n":"👗 ผู้พิทักษ์สันติราช · ยัยหนูส่งเท่านั้น","i":"outfit-police.webp","g":"ชุด·ชมพู","p":"outfit.police"});
+CATALOG.push({"k":"outfit-mpolice","n":"👗 ผู้พิทักษ์สันติราช · ยัยหนูส่งเท่านั้น","i":"outfit-mpolice.webp","g":"ชุด·หัวเขียว","p":"outfit.mpolice"});
+CATALOG.push({"k":"outfit-rpolice","n":"👗 ผู้พิทักษ์สันติราช · ยัยหนูส่งเท่านั้น","i":"outfit-rpolice.webp","g":"ชุด·หัวแดง","p":"outfit.rpolice"});
+CATALOG.push({"k":"outfit-bpolice","n":"👗 ผู้พิทักษ์สันติราช · ยัยหนูส่งเท่านั้น","i":"outfit-bpolice.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bpolice"});
+CATALOG.push({"k":"outfit-farmer","n":"👗 เราชาวนาอยู่กับควาย · ยัยหนูส่งเท่านั้น","i":"outfit-farmer.webp","g":"ชุด·ชมพู","p":"outfit.farmer"});
+CATALOG.push({"k":"outfit-mfarmer","n":"👗 เราชาวนาอยู่กับควาย · ยัยหนูส่งเท่านั้น","i":"outfit-mfarmer.webp","g":"ชุด·หัวเขียว","p":"outfit.mfarmer"});
+CATALOG.push({"k":"outfit-rfarmer","n":"👗 เราชาวนาอยู่กับควาย · ยัยหนูส่งเท่านั้น","i":"outfit-rfarmer.webp","g":"ชุด·หัวแดง","p":"outfit.rfarmer"});
+CATALOG.push({"k":"outfit-bfarmer","n":"👗 เราชาวนาอยู่กับควาย · ยัยหนูส่งเท่านั้น","i":"outfit-bfarmer.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bfarmer"});
+CATALOG.push({"k":"outfit-nurse","n":"👗 นางพยาบาล · ยัยหนูส่งเท่านั้น","i":"outfit-nurse.webp","g":"ชุด·ชมพู","p":"outfit.nurse"});
+CATALOG.push({"k":"outfit-mnurse","n":"👗 นางพยาบาล · ยัยหนูส่งเท่านั้น","i":"outfit-mnurse.webp","g":"ชุด·หัวเขียว","p":"outfit.mnurse"});
+CATALOG.push({"k":"outfit-rnurse","n":"👗 นางพยาบาล · ยัยหนูส่งเท่านั้น","i":"outfit-rnurse.webp","g":"ชุด·หัวแดง","p":"outfit.rnurse"});
+CATALOG.push({"k":"outfit-bnurse","n":"👗 นางพยาบาล · ยัยหนูส่งเท่านั้น","i":"outfit-bnurse.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bnurse"});
+CATALOG.push({"k":"outfit-win","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-win.webp","g":"ชุด·ชมพู","p":"outfit.win"});
+CATALOG.push({"k":"outfit-mwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-mwin.webp","g":"ชุด·หัวเขียว","p":"outfit.mwin"});
+CATALOG.push({"k":"outfit-rwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-rwin.webp","g":"ชุด·หัวแดง","p":"outfit.rwin"});
+CATALOG.push({"k":"outfit-bwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-bwin.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bwin"});
 CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});
 CATALOG.push({"k":"dol1","n":"🐬 กระทงโลมามาลัย (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +10 แต้ม)","i":"loy-dol1.webp","g":"กระทงโลมา","p":"item.dol1"});/* fix51 🐬 */
 CATALOG.push({"k":"dol2","n":"🐬 กระทงโลมาดาวเรือง (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +30 แต้ม)","i":"loy-dol2.webp","g":"กระทงโลมา","p":"item.dol2"});/* fix51 🐬 */
