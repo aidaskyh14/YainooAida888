@@ -30,6 +30,10 @@ for(const [tribe,list] of [['pink',PINK.concat(RW(''),WM(''),SEA(''))],['mint',m
 /* fix63 ชุด:farmer */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"farmer",n="เราชาวนาอยู่กับควาย";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 /* fix64 ชุด:nurse */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"nurse",n="นางพยาบาล";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 /* fix65 ชุด:win */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"win",n="วินป๊ะจ๊ะ";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix79 ชุด:icecream */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"icecream",n="ไอติมแท่งใหญ่ๆ";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix79 ชุด:ghostswim */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"ghostswim",n="ผีน้อย";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix79 ชุด:egypt */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"egypt",n="อิยิปต์แก่!";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix79 ชุด:pearlswim */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"pearlswim",n="หอยมุกอันดามัน";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 export const outfitsOf=tribe=>Object.values(OUTFITS).filter(o=>o.tribe===tribe);
 export const outfitIcon=id=>id==='queen'?'outfit-queen.webp':'outfit-'+id+'.webp';
 export const canSendOutfit=id=>!!OUTFITS[id]&&OUTFITS[id].cls!=='q';

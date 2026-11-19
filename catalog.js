@@ -1511,6 +1511,22 @@ CATALOG.push({"k":"outfit-win","n":"👗 วินป๊ะจ๊ะ · ยั�
 CATALOG.push({"k":"outfit-mwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-mwin.webp","g":"ชุด·หัวเขียว","p":"outfit.mwin"});
 CATALOG.push({"k":"outfit-rwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-rwin.webp","g":"ชุด·หัวแดง","p":"outfit.rwin"});
 CATALOG.push({"k":"outfit-bwin","n":"👗 วินป๊ะจ๊ะ · ยัยหนูส่งเท่านั้น","i":"outfit-bwin.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bwin"});
+CATALOG.push({"k":"outfit-icecream","n":"👗 ไอติมแท่งใหญ่ๆ · ยัยหนูส่งเท่านั้น","i":"outfit-icecream.webp","g":"ชุด·ชมพู","p":"outfit.icecream"});
+CATALOG.push({"k":"outfit-micecream","n":"👗 ไอติมแท่งใหญ่ๆ · ยัยหนูส่งเท่านั้น","i":"outfit-micecream.webp","g":"ชุด·หัวเขียว","p":"outfit.micecream"});
+CATALOG.push({"k":"outfit-ricecream","n":"👗 ไอติมแท่งใหญ่ๆ · ยัยหนูส่งเท่านั้น","i":"outfit-ricecream.webp","g":"ชุด·หัวแดง","p":"outfit.ricecream"});
+CATALOG.push({"k":"outfit-bicecream","n":"👗 ไอติมแท่งใหญ่ๆ · ยัยหนูส่งเท่านั้น","i":"outfit-bicecream.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bicecream"});
+CATALOG.push({"k":"outfit-ghostswim","n":"👗 ผีน้อย · ยัยหนูส่งเท่านั้น","i":"outfit-ghostswim.webp","g":"ชุด·ชมพู","p":"outfit.ghostswim"});
+CATALOG.push({"k":"outfit-mghostswim","n":"👗 ผีน้อย · ยัยหนูส่งเท่านั้น","i":"outfit-mghostswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mghostswim"});
+CATALOG.push({"k":"outfit-rghostswim","n":"👗 ผีน้อย · ยัยหนูส่งเท่านั้น","i":"outfit-rghostswim.webp","g":"ชุด·หัวแดง","p":"outfit.rghostswim"});
+CATALOG.push({"k":"outfit-bghostswim","n":"👗 ผีน้อย · ยัยหนูส่งเท่านั้น","i":"outfit-bghostswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bghostswim"});
+CATALOG.push({"k":"outfit-egypt","n":"👗 อิยิปต์แก่! · ยัยหนูส่งเท่านั้น","i":"outfit-egypt.webp","g":"ชุด·ชมพู","p":"outfit.egypt"});
+CATALOG.push({"k":"outfit-megypt","n":"👗 อิยิปต์แก่! · ยัยหนูส่งเท่านั้น","i":"outfit-megypt.webp","g":"ชุด·หัวเขียว","p":"outfit.megypt"});
+CATALOG.push({"k":"outfit-regypt","n":"👗 อิยิปต์แก่! · ยัยหนูส่งเท่านั้น","i":"outfit-regypt.webp","g":"ชุด·หัวแดง","p":"outfit.regypt"});
+CATALOG.push({"k":"outfit-begypt","n":"👗 อิยิปต์แก่! · ยัยหนูส่งเท่านั้น","i":"outfit-begypt.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.begypt"});
+CATALOG.push({"k":"outfit-pearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-pearlswim.webp","g":"ชุด·ชมพู","p":"outfit.pearlswim"});
+CATALOG.push({"k":"outfit-mpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-mpearlswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mpearlswim"});
+CATALOG.push({"k":"outfit-rpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-rpearlswim.webp","g":"ชุด·หัวแดง","p":"outfit.rpearlswim"});
+CATALOG.push({"k":"outfit-bpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-bpearlswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bpearlswim"});
 CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});
 CATALOG.push({"k":"dol1","n":"🐬 กระทงโลมามาลัย (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +10 แต้ม)","i":"loy-dol1.webp","g":"กระทงโลมา","p":"item.dol1"});/* fix51 🐬 */
 CATALOG.push({"k":"dol2","n":"🐬 กระทงโลมาดาวเรือง (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +30 แต้ม)","i":"loy-dol2.webp","g":"กระทงโลมา","p":"item.dol2"});/* fix51 🐬 */
