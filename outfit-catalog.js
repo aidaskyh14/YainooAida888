@@ -34,6 +34,9 @@ for(const [tribe,list] of [['pink',PINK.concat(RW(''),WM(''),SEA(''))],['mint',m
 /* fix79 ชุด:ghostswim */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"ghostswim",n="ผีน้อย";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 /* fix79 ชุด:egypt */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"egypt",n="อิยิปต์แก่!";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 /* fix79 ชุด:pearlswim */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"pearlswim",n="หอยมุกอันดามัน";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix84 ชุด:hawaii */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"hawaii",n="ฮาวายฮาใจ";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix84 ชุด:poor */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"poor",n="ยาใจคนจน";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
+/* fix84 ชุด:thaimod */for(const [tribe,pre] of [['pink',''],['mint','m'],['red','r'],['bob','b']]){const id=pre+"thaimod",n="ไทยแฟชั่นร่วมสมัย";OUTFITS[id]={id,n,cls:'c4',tribe,file:id,swim:/ว่ายน้ำ|swim/.test(n+id),thai:/ไทย|thai|ล้านนา|girl/.test(n+id)};}
 export const outfitsOf=tribe=>Object.values(OUTFITS).filter(o=>o.tribe===tribe);
 export const outfitIcon=id=>id==='queen'?'outfit-queen.webp':'outfit-'+id+'.webp';
 export const canSendOutfit=id=>!!OUTFITS[id]&&OUTFITS[id].cls!=='q';

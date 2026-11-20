@@ -1,17 +1,17 @@
 import {quantity,inventoryIssues,inventoryView,assertInventory} from './inventory-integrity.js?v=ss3-fix17&h=3eda517a';
 import {BOXES,getBoxCount} from './loot-box-catalog.js?v=ss4-nakorn1&h=03cb46b1';
 import {lurePen} from './bird-lure-engine.js?v=ss3-fix17&h=0d1af33c';
-import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=6aca0eee';
+import {showLootBoxes} from './loot-boxes.js?v=ss4-nakorn1&h=2a39b303';
 import {observeGameplay} from './campaign-progress.js?v=ss3-fix17&h=3f8f0ba3';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
 import { deliverAdminGift } from './admin-mail.js?v=ss3-recovery6&h=a11eb208';
 import { refillAdminInventory, consolidatePending } from './admin-inventory.js?v=ss3-recovery6&h=6c90d59e';
-import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=d05451aa';
+import {startRumors} from './rumor-ui.js?v=ss4-nakorn1&h=d96329f0';
 import {startAlerts} from './alerts-ui.js?v=ss4-nakorn1&h=8bcd6002';
 import {startTreeWar} from './tw-alerts.js?v=ss3-fix19&h=e26661d1';
 import {startDemon} from './demon-ui.js?v=ss3-fix23b&h=66a99a14';
 import './mahakusal-ui.js?v=ss3-fix18&h=df1982ce';import './atm-ui.js?v=ss3-fix24&h=181738ff';/* fix19 🏧 *//* fix17c: เปิดกล่องมหากุศลจากกระเป๋าได้ทุกหน้า */
-import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=a9644faa';
+import {RUMOR_GOOD,RUMOR_BAD} from './rumor-engine.js?v=ss4-nakorn1&h=fa502e07';
 // ในสวนของยัยหนู ซีซั่น 3 — ชุดที่ 1 (รากฐาน)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -19,7 +19,7 @@ import { getFirestore, doc, getDoc, getDocFromServer, getDocs, setDoc, updateDoc
 import { SplitSaveStore } from './save-store.js?v=ss4-nakorn1&h=abd818ce';
 import { splitGame,joinGame } from './save-schema.js?v=ss3-fix17&h=eef4832b';
 import { installBackupUI } from './save-backup.js?v=ss3-fix17&h=1d921b5e';
-import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=fd509ee6';
+import { CATALOG } from './catalog.js?v=ss4-nakorn1&h=9392920e';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAwg72Kj2gMsv9cOCCwmLiEY6CioF_1b64',
@@ -949,7 +949,7 @@ function showScene(screen,ids,nav,extra){if(nav!==sceneNav||!S.frame)return fals
   const L=window.__s4ld;if(L&&screen!=='loading'&&screen!=='farm'&&!L.on){try{L.show();L.set(8,'🚶 กำลังเดินไป…');}catch(e){}
     const f=S.frame;const onld=()=>{setTimeout(()=>{try{const w=f.contentWindow;if(L.on&&!(w&&w.__s4zl)&&!window.__s4zl)L.finish();}catch(e){if(L.on)L.finish();}},1200);};f.addEventListener('load',onld,{once:true});setTimeout(()=>{if(L.on&&!window.__s4zl)L.finish();},25000);}
   window.__s4zl=0;
-  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=0f71619b'+extra);return true;}
+  frameGo(S.frame,'scr-'+screen+'.html?v=ss4-nakorn1&h=2c97c988'+extra);return true;}
 /* S4 P1: หลังทำรายการคลาวด์ ไม่โหลดหน้าฉากใหม่ทั้งหน้า (ฟาร์ม 3D โหลด 10–60 วิ ทำให้กล่องสุ่ม/ATM ช้าและค้าง)
    → ส่งค่าล่าสุดเข้าหน้าที่เปิดอยู่แทน (__s4reload ใน scr-farm/scr-house/scr-forest + ฉาก 3D อ่านผ่าน bridge เอง) · โหลดใหม่เฉพาะหน้าที่ไม่รองรับ */
 function sceneApplyLive(){try{const w=S.frame&&S.frame.contentWindow;if(!w)return false;let ok=false;
@@ -1081,11 +1081,11 @@ async function s4CityGo(){S4CITY.going=true;try{let st=await cloudAction('city',
 const CITYFX={seen:new Set(),timer:0,world:null};
 function s4CityEvents(W){CITYFX.world=W;if(!W)return;const now=serverNow();
  for(const w of W.weddings||[]){const key='w'+w.uid+w.at;if(CITYFX.seen.has(key)||w.at<now-90000)continue;if(w.at-now>45000){clearTimeout(CITYFX.timer);CITYFX.timer=setTimeout(()=>s4CityEvents(CITYFX.world),Math.max(1000,w.at-now-40000));continue;}CITYFX.seen.add(key);s4WeddingShow(w,now);}
- for(const d of W.divorces||[]){const key='d'+d.uid+d.at;if(CITYFX.seen.has(key)||d.at<now-120000)continue;CITYFX.seen.add(key);s4Overlay(s4Q('city3d/wed.html?h=a174f901')+'mode=divorce&name='+encodeURIComponent(d.name)+'&man='+encodeURIComponent(d.man)+'&manName='+encodeURIComponent(d.manName||''),12000,'💔 '+d.name+' หย่ากับ'+(d.manName||'สามี')+'แล้ว');}
+ for(const d of W.divorces||[]){const key='d'+d.uid+d.at;if(CITYFX.seen.has(key)||d.at<now-120000)continue;CITYFX.seen.add(key);s4Overlay(s4Q('city3d/wed.html?h=9867ccbe')+'mode=divorce&name='+encodeURIComponent(d.name)+'&man='+encodeURIComponent(d.man)+'&manName='+encodeURIComponent(d.manName||''),12000,'💔 '+d.name+' หย่ากับ'+(d.manName||'สามี')+'แล้ว');}
  if(W.announce&&W.announce.at>now-60000&&!CITYFX.seen.has('a'+W.announce.at)){CITYFX.seen.add('a'+W.announce.at);toast('📢 นคร: '+W.announce.msg);}
  s4PageantBanner(W.pageantAt||0,now);}
 function s4WeddingShow(w,now){const wait=Math.max(0,w.at-now);const b=s4Banner('wedding','💒 งานแต่งของ <b>'+esc(w.name)+'</b> กับ <b>'+esc(w.manName)+'</b> กำลังจะเริ่ม',wait);
- setTimeout(()=>{b.remove();s4Overlay(s4Q('city3d/wed.html?h=a174f901')+'mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),75000,'💒 งานแต่ง '+w.name+' ♥ '+w.manName,true);},wait);}
+ setTimeout(()=>{b.remove();s4Overlay(s4Q('city3d/wed.html?h=9867ccbe')+'mode=wedding&bride='+encodeURIComponent(w.wear||'punk')+'&tribe='+encodeURIComponent(w.tribe||'pink')+'&name='+encodeURIComponent(w.name)+'&man='+encodeURIComponent(w.man)+'&manName='+encodeURIComponent(w.manName||''),75000,'💒 งานแต่ง '+w.name+' ♥ '+w.manName,true);},wait);}
 function s4Banner(id,html,ms){let b=document.getElementById('s4bn-'+id);if(!b){b=document.createElement('div');b.id='s4bn-'+id;b.className='s4bn';document.body.appendChild(b);}
  const tick=()=>{const left=Math.max(0,Math.round((ms-(Date.now()-t0))/1000));b.innerHTML='<span>'+html+'</span><b>'+(left>0?left+' วิ':'เริ่มแล้ว')+'</b>';if(left>0)b._t=setTimeout(tick,1000);};const t0=Date.now();tick();b.remove=()=>{clearTimeout(b._t);b.parentNode&&b.parentNode.removeChild(b);};return b;}
 function s4PageantBanner(at,now){let b=document.getElementById('s4bn-pageant');const left=at-now;if(!at||left<-15*60000||left>10*60000){if(b)b.remove();return;}
@@ -1318,8 +1318,23 @@ async function tabSend(){
   $('#asSendNow').onclick=()=>{$('#asModal').classList.remove('on');sendGift(users.map(p=>p.uid),users.map(p=>p.name),Object.fromEntries(users.map(p=>[p.uid,A.packs[p.uid]||1])));};
  };
 }
+/* fix80 👗 เตือนก่อนส่งชุดผิดสีตัวละคร: ชุดในแพ็กเป็นของตัวละครสีหนึ่ง แต่ผู้รับเป็นอีกสี (รับได้แต่ใส่ไม่ได้) → ถามก่อนส่ง · ไม่มีชุดในแพ็ก = ไม่เช็ก ไม่เรียกเซิร์ฟเวอร์เพิ่ม */
+async function tribeAsk80(uids,names,items){
+ const ids=Object.keys(items||{}).filter(k=>k.startsWith('outfit-')&&items[k]>0).map(k=>k.slice(7));if(!ids.length)return true;
+ const E={pink:'💗',mint:'💚',red:'❤️',bob:'🖤'};const bad=[];let err=false;
+ try{const {OUTFITS}=await import('./outfit-catalog.js?h=9c9b09d7');const fits=ids.map(id=>OUTFITS[id]).filter(o=>o&&E[o.tribe]);if(!fits.length)return true;
+  if(!A.tribes80||Date.now()-A.tribes80.at>60000){const st=(await httpsCallable(functions,'charAdminCloud')({input:{type:'stats'}})).data;A.tribes80={at:Date.now(),m:Object.fromEntries((st.rows||[]).map(r=>[r.uid,r.tribe||'?']))};}
+  uids.forEach((u,i)=>{const t=A.tribes80.m[u];if(!t)return;for(const o of fits)if(o.tribe!==t)bad.push({n:names[i]||'ผู้เล่น',t,o});});
+ }catch(e){err=true;}
+ if(!bad.length&&!err)return true;
+ return new Promise(res=>{document.getElementById('tw80')?.remove();const w=document.createElement('div');w.id='tw80';w.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(40,20,50,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  const row=b=>'<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px"><span>'+(E[b.t]||'❔')+'</span><b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.n)+'</b><span>✖️ '+E[b.o.tribe]+'</span><span style="max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8a6a7a">'+esc(String(b.o.n||b.o.id))+'</span></div>';
+  w.innerHTML='<div style="background:#fff;border-radius:18px;box-sizing:border-box;padding:14px;width:100%;max-width:300px;box-shadow:0 8px 30px rgba(0,0,0,.25);font-family:inherit;color:#4a3340"><div style="font-weight:700;font-size:15px;text-align:center">'+(err?'⚠️ เช็กสีชุดไม่ได้':'⚠️ ชุดไม่ตรงสี '+bad.length)+'</div><div style="margin:8px 0;max-height:150px;overflow:auto">'+(err?'<div style="font-size:13px;text-align:center">📶❓</div>':bad.slice(0,5).map(row).join('')+(bad.length>5?'<div style="font-size:12px;text-align:center;color:#8a6a7a">+'+(bad.length-5)+'</div>':''))+'</div><div style="font-size:12px;text-align:center;color:#8a6a7a;margin-bottom:8px">📮✅ · 👗🚫</div><div style="display:flex;gap:8px"><button data-a="0" style="flex:1;border:0;border-radius:12px;padding:10px 0;font:inherit;font-weight:700;background:#ff8fc0;color:#fff">↩️ แก้</button><button data-a="1" style="flex:1;border:0;border-radius:12px;padding:10px 0;font:inherit;font-weight:700;background:#eee3ea;color:#4a3340">📨 ส่งเลย</button></div></div>';
+  const t0=Date.now();let done=false;w.addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b||done||Date.now()-t0<500)return;done=true;w.remove();res(b.dataset.a==='1');});document.body.appendChild(w);});
+}
 async function sendGift(uids, names, packs={}) {
   if(A.sending)return;A.sending=true;
+  /* fix80 */if(!A.gift.operationId){let go=true;try{go=await tribeAsk80(uids,names,A.gift.items||{});}catch(e){go=true;}if(!go){A.sending=false;return;}}
   const g = A.gift, exp = Timestamp.fromMillis(Date.now() + MAIL_DAYS * 864e5);
   const body = { title: g.title, msg: g.msg, icon: g.icon, kusal: g.kusal || 0, coins: g.coins || 0, items: { ...g.items }, createdAt: serverTimestamp(), expireAt: exp, from: 'ยัยหนู' };
   toast('กำลังส่ง…');

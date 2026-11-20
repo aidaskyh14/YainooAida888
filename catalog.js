@@ -1527,6 +1527,18 @@ CATALOG.push({"k":"outfit-pearlswim","n":"👗 หอยมุกอันดา
 CATALOG.push({"k":"outfit-mpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-mpearlswim.webp","g":"ชุด·หัวเขียว","p":"outfit.mpearlswim"});
 CATALOG.push({"k":"outfit-rpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-rpearlswim.webp","g":"ชุด·หัวแดง","p":"outfit.rpearlswim"});
 CATALOG.push({"k":"outfit-bpearlswim","n":"👗 หอยมุกอันดามัน · ยัยหนูส่งเท่านั้น","i":"outfit-bpearlswim.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bpearlswim"});
+CATALOG.push({"k":"outfit-hawaii","n":"👗 ฮาวายฮาใจ · ยัยหนูส่งเท่านั้น","i":"outfit-hawaii.webp","g":"ชุด·ชมพู","p":"outfit.hawaii"});
+CATALOG.push({"k":"outfit-mhawaii","n":"👗 ฮาวายฮาใจ · ยัยหนูส่งเท่านั้น","i":"outfit-mhawaii.webp","g":"ชุด·หัวเขียว","p":"outfit.mhawaii"});
+CATALOG.push({"k":"outfit-rhawaii","n":"👗 ฮาวายฮาใจ · ยัยหนูส่งเท่านั้น","i":"outfit-rhawaii.webp","g":"ชุด·หัวแดง","p":"outfit.rhawaii"});
+CATALOG.push({"k":"outfit-bhawaii","n":"👗 ฮาวายฮาใจ · ยัยหนูส่งเท่านั้น","i":"outfit-bhawaii.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bhawaii"});
+CATALOG.push({"k":"outfit-poor","n":"👗 ยาใจคนจน · ยัยหนูส่งเท่านั้น","i":"outfit-poor.webp","g":"ชุด·ชมพู","p":"outfit.poor"});
+CATALOG.push({"k":"outfit-mpoor","n":"👗 ยาใจคนจน · ยัยหนูส่งเท่านั้น","i":"outfit-mpoor.webp","g":"ชุด·หัวเขียว","p":"outfit.mpoor"});
+CATALOG.push({"k":"outfit-rpoor","n":"👗 ยาใจคนจน · ยัยหนูส่งเท่านั้น","i":"outfit-rpoor.webp","g":"ชุด·หัวแดง","p":"outfit.rpoor"});
+CATALOG.push({"k":"outfit-bpoor","n":"👗 ยาใจคนจน · ยัยหนูส่งเท่านั้น","i":"outfit-bpoor.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bpoor"});
+CATALOG.push({"k":"outfit-thaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-thaimod.webp","g":"ชุด·ชมพู","p":"outfit.thaimod"});
+CATALOG.push({"k":"outfit-mthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-mthaimod.webp","g":"ชุด·หัวเขียว","p":"outfit.mthaimod"});
+CATALOG.push({"k":"outfit-rthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-rthaimod.webp","g":"ชุด·หัวแดง","p":"outfit.rthaimod"});
+CATALOG.push({"k":"outfit-bthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-bthaimod.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bthaimod"});
 CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});
 CATALOG.push({"k":"dol1","n":"🐬 กระทงโลมามาลัย (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +10 แต้ม)","i":"loy-dol1.webp","g":"กระทงโลมา","p":"item.dol1"});/* fix51 🐬 */
 CATALOG.push({"k":"dol2","n":"🐬 กระทงโลมาดาวเรือง (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +30 แต้ม)","i":"loy-dol2.webp","g":"กระทงโลมา","p":"item.dol2"});/* fix51 🐬 */
