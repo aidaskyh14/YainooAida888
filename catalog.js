@@ -1539,6 +1539,22 @@ CATALOG.push({"k":"outfit-thaimod","n":"👗 ไทยแฟชั่นร่�
 CATALOG.push({"k":"outfit-mthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-mthaimod.webp","g":"ชุด·หัวเขียว","p":"outfit.mthaimod"});
 CATALOG.push({"k":"outfit-rthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-rthaimod.webp","g":"ชุด·หัวแดง","p":"outfit.rthaimod"});
 CATALOG.push({"k":"outfit-bthaimod","n":"👗 ไทยแฟชั่นร่วมสมัย · ยัยหนูส่งเท่านั้น","i":"outfit-bthaimod.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bthaimod"});
+CATALOG.push({"k":"outfit-catcat","n":"👗 แมววันนาแมววันนาแมว · ยัยหนูส่งเท่านั้น","i":"outfit-catcat.webp","g":"ชุด·ชมพู","p":"outfit.catcat"});
+CATALOG.push({"k":"outfit-mcatcat","n":"👗 แมววันนาแมววันนาแมว · ยัยหนูส่งเท่านั้น","i":"outfit-mcatcat.webp","g":"ชุด·หัวเขียว","p":"outfit.mcatcat"});
+CATALOG.push({"k":"outfit-rcatcat","n":"👗 แมววันนาแมววันนาแมว · ยัยหนูส่งเท่านั้น","i":"outfit-rcatcat.webp","g":"ชุด·หัวแดง","p":"outfit.rcatcat"});
+CATALOG.push({"k":"outfit-bcatcat","n":"👗 แมววันนาแมววันนาแมว · ยัยหนูส่งเท่านั้น","i":"outfit-bcatcat.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bcatcat"});
+CATALOG.push({"k":"outfit-catplay","n":"👗 แมววันนาแมววันนาแมว (ชุดเล่น) · ยัยหนูส่งเท่านั้น","i":"outfit-catplay.webp","g":"ชุด·ชมพู","p":"outfit.catplay"});
+CATALOG.push({"k":"outfit-mcatplay","n":"👗 แมววันนาแมววันนาแมว (ชุดเล่น) · ยัยหนูส่งเท่านั้น","i":"outfit-mcatplay.webp","g":"ชุด·หัวเขียว","p":"outfit.mcatplay"});
+CATALOG.push({"k":"outfit-rcatplay","n":"👗 แมววันนาแมววันนาแมว (ชุดเล่น) · ยัยหนูส่งเท่านั้น","i":"outfit-rcatplay.webp","g":"ชุด·หัวแดง","p":"outfit.rcatplay"});
+CATALOG.push({"k":"outfit-bcatplay","n":"👗 แมววันนาแมววันนาแมว (ชุดเล่น) · ยัยหนูส่งเท่านั้น","i":"outfit-bcatplay.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bcatplay"});
+CATALOG.push({"k":"outfit-catwinter","n":"👗 แมววันนาแมววันนาแมว (ชุดฤดูหนาว) · ยัยหนูส่งเท่านั้น","i":"outfit-catwinter.webp","g":"ชุด·ชมพู","p":"outfit.catwinter"});
+CATALOG.push({"k":"outfit-mcatwinter","n":"👗 แมววันนาแมววันนาแมว (ชุดฤดูหนาว) · ยัยหนูส่งเท่านั้น","i":"outfit-mcatwinter.webp","g":"ชุด·หัวเขียว","p":"outfit.mcatwinter"});
+CATALOG.push({"k":"outfit-rcatwinter","n":"👗 แมววันนาแมววันนาแมว (ชุดฤดูหนาว) · ยัยหนูส่งเท่านั้น","i":"outfit-rcatwinter.webp","g":"ชุด·หัวแดง","p":"outfit.rcatwinter"});
+CATALOG.push({"k":"outfit-bcatwinter","n":"👗 แมววันนาแมววันนาแมว (ชุดฤดูหนาว) · ยัยหนูส่งเท่านั้น","i":"outfit-bcatwinter.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bcatwinter"});
+CATALOG.push({"k":"outfit-catnight","n":"👗 แมววันนาแมววันนาแมว (ชุดนอน) · ยัยหนูส่งเท่านั้น","i":"outfit-catnight.webp","g":"ชุด·ชมพู","p":"outfit.catnight"});
+CATALOG.push({"k":"outfit-mcatnight","n":"👗 แมววันนาแมววันนาแมว (ชุดนอน) · ยัยหนูส่งเท่านั้น","i":"outfit-mcatnight.webp","g":"ชุด·หัวเขียว","p":"outfit.mcatnight"});
+CATALOG.push({"k":"outfit-rcatnight","n":"👗 แมววันนาแมววันนาแมว (ชุดนอน) · ยัยหนูส่งเท่านั้น","i":"outfit-rcatnight.webp","g":"ชุด·หัวแดง","p":"outfit.rcatnight"});
+CATALOG.push({"k":"outfit-bcatnight","n":"👗 แมววันนาแมววันนาแมว (ชุดนอน) · ยัยหนูส่งเท่านั้น","i":"outfit-bcatnight.webp","g":"ชุด·ผมบ็อบดำ","p":"outfit.bcatnight"});
 CATALOG.push({"k":"democure","n":"🧪 ยาแก้พิษจอมแสบ (1 ขวดแก้ได้ 1 ชิ้น · ยัยหนูส่งเท่านั้น)","i":"prank-cure.webp","g":"ไอเทมจอมแสบ","p":"item.democure"});
 CATALOG.push({"k":"dol1","n":"🐬 กระทงโลมามาลัย (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +10 แต้ม)","i":"loy-dol1.webp","g":"กระทงโลมา","p":"item.dol1"});/* fix51 🐬 */
 CATALOG.push({"k":"dol2","n":"🐬 กระทงโลมาดาวเรือง (ลอยในแม่น้ำลอยกระทงของบ้านตัวเอง +30 แต้ม)","i":"loy-dol2.webp","g":"กระทงโลมา","p":"item.dol2"});/* fix51 🐬 */
