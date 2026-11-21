@@ -34,5 +34,7 @@
   removeItem:k=>{if(H)H.del(k);}};
  /* หน้าอื่นเซฟคีย์เดียวกัน → โหลด S ใหม่ (ถ้าหน้านั้นมี __s4reload) */
  addEventListener('message',e=>{const d=e.data||{};if(d.s4ls&&MERGE_KEYS.has(d.s4ls)&&d.from!==location.pathname){try{window.__s4reload&&window.__s4reload();}catch(err){}}});
+ /* fix87: หน้ารับค่าใหม่จากเซิร์ฟเวอร์มาใส่ S ตรง ๆ (ไม่ผ่าน getItem) → ต้องอัปเดต "สำเนาที่อ่านครั้งล่าสุด" ด้วย ไม่งั้นตอนเซฟครั้งถัดไปจะคิดส่วนต่างซ้ำ (ของถูกหัก/ได้ 2 เท่า) */
+ window.__S4LS_sync=function(g){try{if(g&&typeof g==='object')base['s3all-v1']=JSON.parse(JSON.stringify(g));}catch(e){}return g;};
  window.__S4LS=LS;window.__S4LS_base=base;
 })();

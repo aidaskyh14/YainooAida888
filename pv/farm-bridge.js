@@ -39,7 +39,7 @@
   atm(bank){const Hh=window.__HOST||parent.__HOST;try{if(Hh.isAdmin&&Hh.isAdmin()&&!visiting){toast('🏦 ตู้ธนาคารของผู้เล่น · ดูรายการโอนได้ที่ 👑 ศูนย์แอดมิน → 🏧 ATM',1);return;}}catch(e){}closeAll();Hh.openAtm&&Hh.openAtm(bank);},
   wave(){try{window.__s4wave&&window.__s4wave();}catch(e){}},
   atmBoard(){const Hh=window.__HOST||parent.__HOST;return Hh.cloud('atm',{type:'status',bank:'lotus'}).then(o=>o&&o.atm&&o.atm.banks||null).catch(()=>null);},
-  krathong(slot){const Hh=window.__HOST||parent.__HOST;return Hh.cloud('drops',{type:'krathong',owner:Hh.uid,farm:1,slot}).then(out=>{try{Object.assign(S,JSON.parse(Hh.get('s3all-v1')));pts=S.merit;render();}catch(e){}const k=out&&out.krathong;if(k){const w=W3();if(w)w.__ktDone=k.slot;}return k||null;});},
+  krathong(slot){const Hh=window.__HOST||parent.__HOST;return Hh.cloud('drops',{type:'krathong',owner:Hh.uid,farm:1,slot}).then(out=>{try{(Object.assign(S,JSON.parse(Hh.get('s3all-v1'))),window.__S4LS_sync&&window.__S4LS_sync(S),S);pts=S.merit;render();}catch(e){}const k=out&&out.krathong;if(k){const w=W3();if(w)w.__ktDone=k.slot;}return k||null;});},
   res(g,k,n){S.bag[g]=S.bag[g]||{};S.bag[g][k]=(S.bag[g][k]||0)+n;try{save();}catch(e){console.error(e);}}
  };
  // ---- บ้าน/เรือนกระจก: ใช้กติกาและของในกระเป๋าซีซัน 3 ผ่านหน้าบ้านเดิมที่ซ่อนอยู่ (เห็นแค่หน้าต่างเลือก) ----

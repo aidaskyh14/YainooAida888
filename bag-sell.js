@@ -13,7 +13,7 @@ const pic=(src,cls)=>!src?'<div class="noimg">✨</div>':SPR.test(src)?'<div cla
 const ROWMAX=300,sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let busy=false,quote=null,quoteAt=0,sellMode=false;const cart=new Map();
 async function call(input){for(let i=0;;i++){try{return await H.cloud('market',input);}catch(e){if(i<4&&/รายการก่อนหน้า/.test(e?.message||'')){await sleep(1200);continue;}throw e;}}}
-const refresh=()=>{const from=Number(pts)||0;try{Object.assign(S,JSON.parse(H.get('s3all-v1')));pts=S.merit;}catch(e){}
+const refresh=()=>{const from=Number(pts)||0;try{(Object.assign(S,JSON.parse(H.get('s3all-v1'))),window.__S4LS_sync&&window.__S4LS_sync(S),S);pts=S.merit;}catch(e){}
  try{const el=$('ptsv'),to=Number(pts)||0,t0=performance.now();if(el&&to!==from){(function step(t){const k=Math.min(1,(t-t0)/600);el.textContent=fmt(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);})(t0);const p=$('pts');p.classList.remove('up','dn');void p.offsetWidth;p.classList.add(to>from?'up':'dn');}}catch(e){}
  for(const [k,q] of cart){const r=SELL_BY_KEY.get(k),h=r?haveOf(r):0;if(!h)cart.delete(k);else if(q>h)cart.set(k,h);}try{render();}catch(e){}try{renderBag();}catch(e){}};
 async function getQuote(force){if(!force&&quote&&Date.now()-quoteAt<60000)return quote;const out=await call({type:'bag-quote'});quote={wine:out.wineQuote||{},hw:out.hwQuote||{},left:Number(out.petBonusLeft)||0};quoteAt=Date.now();return quote;}
