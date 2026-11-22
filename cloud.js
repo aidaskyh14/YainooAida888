@@ -32,7 +32,7 @@ import {TW_TH,TW_TREES,TW_PICK_OPEN,TW_PICK_TIME,TW_MERIT,TW_PRANKS,TW_CUT,TW_RO
 import {hwmAction} from './hwmini-engine.js?h=0b53b869';
 import {mahakusalAction,mkBoxCounts,MK_FISH_DROP} from './mahakusal-engine.js?h=30175f9e';
 import {DEMON,DEMON_NOPE,PET_BOXES,dmView,dmActive,demonSync,demonSend,demonToss,petRoll,boxRoll,victimSettle,coffinOpen,hourFlip,heartPass,heartPay,ghostGive,ghostSend,ghostClear} from './demon-engine.js?h=605b12b9';
-import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=48ec3453';
+import {factoryOrder,factoryClaim,factoryBattery} from './alpaca-factory-engine.js?h=480934df';
 import {charAction,charAdminSet,charOf} from './char-engine.js?h=85e86d21';import {TRIBES,TRIBE_IDS} from './outfit-catalog.js?h=bd2b6e12';
 import {cityAction,cityAdmin,cityView,publicWorld,manState} from './city-engine.js?h=44c22f95';import {pageantAdmin,pageantAction,pageantView,garland,questionDoc} from './pageant-engine.js?h=57a4a41c';import {YAINOO_QUESTIONS,GENERAL_QUESTIONS} from './city-questions.js?h=10246fe6';import {MAX_IN_CITY,MAN} from './city-catalog.js?h=d68f3e58';
 initializeApp();
@@ -826,7 +826,7 @@ export const alpacaActionCloud=callable(async req=>{
   else{const box=ctx.admin?null:await dmLoad(tx,ctx.uid,now);const prior=structuredClone(game),out=factoryClaim(game,ctx.x17,now,ctx.admin?()=>.999999:dmRng);/* แอดมินไม่โดนผีสิง */observeGameplay(prior,game,'alpaca',worlds['world/campaigns']||{},now);/* fix22d: กุศลจากโรงงานนับเข้าแคมเปญเลี้ยงสัตว์เหมือนเดิม */{const {ALPACA_MENU:AM}=await import('./alpaca-menu.js?h=4c9e1f4e');let pp=0;for(const[k,q]of Object.entries(out.got||{})){const m=AM.find(v=>v.id===k);if(m)pp+=Math.round((m.merit||0)/100)*q;}if(pp>0)recordCampaign(game,worlds['world/campaigns']||{},'proc',pp,now);}/* S4: แคมเปญโรงงานนี้หนูคุม */
    if(out.ghosts.length){victimSettle(box.d,game,now);ghostGive(box.d,box.priv,ctx.uid,out.ghosts,now,dmRng,game);const lock=box.d.cf.length?Math.max(...box.d.cf.map(c=>c.until)):0;dmSave(writes,updates,ctx.uid,box,now,{dmc:lock});res.view=box.d;
     dmLog(writes,now,{w:'ghost',k:'ghost',n:out.ghosts.length,from:ctx.uid,fn:String(ctx.name||'').slice(0,40),to:ctx.uid,tn:String(ctx.name||'').slice(0,40)});}
-   res.claim={got:out.got,merit:out.merit,ghosts:out.ghosts.map(x=>({g:x.g,amt:x.amt})),n:out.n};}
+   res.claim={got:out.got,merit:out.merit,ghosts:out.ghosts.map(x=>({g:x.g,amt:x.amt})),n:out.n,stale:out.stale||0};}
   return {writes,updates,response:res};}});
 });
 

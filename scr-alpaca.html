@@ -313,6 +313,7 @@ async function order(id,q){const x=MB[id];if(fBusy)return;if(S.jobs.length+q>100
  catch(e){syncFromHost();ann(e?.message||'สั่งงานไม่สำเร็จ',1);}finally{fBusy=false;}}
 async function claim(){const now=fNow(),d=S.jobs.filter(j=>j.dn||now>=j.end);if(!d.length||fBusy)return;fBusy=true;let out;
  try{out=await HC('claim',{});}catch(e){syncFromHost();fBusy=false;return ann(e?.message||'รับของไม่สำเร็จ',1);}fBusy=false;syncFromHost();
+ if(out.claim&&!out.claim.n&&out.claim.stale){/* fix98 */view='factory';openFactory();return ann('🧹 ล้างรายการค้าง '+out.claim.stale+' งานแล้ว · สั่งงานใหม่ได้เลย');}
  const c=out.claim||{got:{},merit:0,ghosts:[]},gh=c.ghosts||[],ok=Object.values(c.got||{}).reduce((a,b)=>a+b,0);
  closeAll();showCraftResult({title:'รับของจากโรงงาน'+(gh.length?' · 🏮 ต้องมนต์ '+gh.length+' ชิ้น!':''),results:[...Array(ok).fill(true),...Array(gh.length).fill(false)],outputs:Object.entries(c.got||{}).map(([k,q])=>({name:MB[k]?.n||k,image:MB[k]?.img,quantity:q})),merit:c.merit},()=>{view='factory';openFactory();});hud();
  if(gh.length)ann('🏮 ของต้องมนต์ '+gh.length+' ชิ้น! ส่งให้เพื่อนภายใน 24 ชม. ไม่งั้นระเบิดใส่ตัวเอง',1);}

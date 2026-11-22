@@ -45,8 +45,8 @@ export function factoryBattery(game,x17,now,rng=Math.random){const a=alp(game),a
   const run=af.filter(r=>r.e>now).sort((x,y)=>x.e-y.e)[0];if(!run)fail('ไม่มีงานที่กำลังทำ');const cut=run.e-now;
   for(const r of af)if(r!==run&&r.m===run.m&&r.st>=run.st){r.st-=cut;r.e-=cut;}run.e=now;setQ(game,'battery',getQ(game,'battery')-1);syncJobs(a,af);return {id:run.id};}
 /* รับของ: งานที่เสร็จ → ของ + กุศล (×1.2 เหมือนเดิม) · งานจากทะเบียนบางชิ้นผีสิง (ไม่ได้ของ/กุศล · ได้ของผีสิงที่ต้องส่งต่อ) */
-export function factoryClaim(game,x17,now,rng){const a=alp(game),af=reg(x17);adopt(a,x17,now,rng);syncJobs(a,af);
-  const done=a.jobs.filter(j=>af.find(r=>r.s===j.sk)?.e<=now);if(!done.length)fail('ยังไม่มีงานที่เสร็จ');
+export function factoryClaim(game,x17,now,rng){const a=alp(game),af=reg(x17);adopt(a,x17,now,rng);const n0=a.jobs.length;syncJobs(a,af);const stale=n0-a.jobs.length;/* fix98: งานในเซฟที่ไม่มีในทะเบียน = รายการค้าง (รับของไปแล้ว) */
+  const done=a.jobs.filter(j=>af.find(r=>r.s===j.sk)?.e<=now);if(!done.length){if(stale>0)return {got:{},merit:0,ghosts:[],n:0,stale};fail('ยังไม่มีงานที่เสร็จ');}
   const got={},ghosts=[];let merit=0;
   for(const j of done){const x=menu(j.id);if(!x)continue;
     if(rng()<(x.hw?GHOST_ODDS.hw:GHOST_ODDS.old)){ghosts.push({g:x.id,amt:x.merit*2});continue;}
